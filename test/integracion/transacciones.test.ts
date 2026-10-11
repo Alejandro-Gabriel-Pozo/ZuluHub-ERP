@@ -41,9 +41,9 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
       const r = await entorno.ejecutar({ contexto: comoEmpresa(a.empresa) }, async ({ db }) => {
         const { rows } = await sql<Record<string, string>>`select
           current_user as rol,
-          current_setting('app.empresa_id') as empresa,
-          current_setting('app.tenant_id') as tenant,
-          current_setting('app.persona_id') as persona`.execute(db);
+          coalesce(app_empresa_id()::text, '') as empresa,
+          coalesce(app_tenant_id()::text, '') as tenant,
+          coalesce(app_persona_id()::text, '') as persona`.execute(db);
         return ok(rows[0]);
       });
       expect(r).toEqual({
@@ -61,6 +61,7 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
       if (base === null) return;
       const sinPlataforma = crearTransacciones({
         urls: { OPERATIVO: base.app },
+        clave: base.clave,
         armar: () => ({}),
       });
       try {
@@ -397,6 +398,7 @@ describe.skipIf(base === null)("conexiones ociosas cortadas por el servidor", ()
     const avisos: Error[] = [];
     const entorno = crearTransacciones({
       urls: { PLATAFORMA: base.plataforma },
+      clave: base.clave,
       armar: (db) => ({ db }),
       maximoDeConexiones: 1,
       alCortarseUnaConexionOciosa: (e) => avisos.push(e),
@@ -430,6 +432,7 @@ describe.skipIf(base === null)("registro de errores inesperados", () => {
   function entornoConRegistro(registro: (e: unknown) => void) {
     return crearTransacciones({
       urls: { PLATAFORMA: base!.plataforma, OPERATIVO: base!.app },
+      clave: base!.clave,
       armar: (db) => ({ db }),
       maximoDeConexiones: 2,
       alRegistrarErrorInesperado: registro,

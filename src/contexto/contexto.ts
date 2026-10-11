@@ -31,7 +31,24 @@ export type ContextoDePlataforma = Readonly<{
 /** El cron que avanza la cola de trabajos: no ve datos de negocio. */
 export type ContextoDeTrabajos = Readonly<{ tipo: "TRABAJOS"; ahora: Date }>;
 
+/**
+ * Alguien que todavía no tiene cuenta y llega con un enlace de invitación. Entra por el rol de la
+ * aplicación, pero sin empresa ni persona: lo único que el contexto firmado declara es el hash del
+ * token, y las políticas del tramo de invitaciones (H3) muestran solo la invitación que le
+ * corresponde. `tokenHash` es el sha256 en hexadecimal (64 caracteres) del token: el token en sí
+ * nunca viaja a la base.
+ */
+export type ContextoDeInvitacion = Readonly<{
+  tipo: "INVITACION";
+  tokenHash: string;
+  ahora: Date;
+}>;
+
 export type Contexto =
-  ContextoOperativo | ContextoDeGrupo | ContextoDePlataforma | ContextoDeTrabajos;
+  | ContextoOperativo
+  | ContextoDeGrupo
+  | ContextoDePlataforma
+  | ContextoDeTrabajos
+  | ContextoDeInvitacion;
 
 export type TipoDeContexto = Contexto["tipo"];

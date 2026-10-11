@@ -3,6 +3,7 @@ import { join } from "node:path";
 import pg from "pg";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
+import { instalarClaveDeContexto } from "../../src/adaptadores/postgres/contexto-firmado";
 import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
 import {
   crearTransacciones,
@@ -67,6 +68,7 @@ export function crearEntornoDePrueba(
       sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
     }),
     maximoDeConexiones,
+    clave: base.clave,
   });
 }
 
@@ -188,10 +190,14 @@ export async function crearPropietario(
   return resultado.valor;
 }
 
-/** Una base descartable propia, para pruebas que cambian la instalación o el esquema. */
+/**
+ * Una base descartable propia, para pruebas que cambian la instalación o el esquema. Si se migra,
+ * se le instala la clave de contexto de la corrida (así `crearEntornoDePrueba` funciona), salvo con
+ * `sinClave: true` (falla cerrada: la base no tiene ninguna clave).
+ */
 export async function crearBaseAparte(
   base: BaseDePruebas,
-  opciones: { migrar?: boolean } = {},
+  opciones: { migrar?: boolean; sinClave?: boolean } = {},
 ): Promise<{ base: BaseDePruebas; destruir: () => Promise<void> }> {
   const nombre = `zuluhub_it_${randomBytes(6).toString("hex")}`;
   const admin = new pg.Client({ connectionString: base.admin });
@@ -209,9 +215,11 @@ export async function crearBaseAparte(
     grupo: conBase(base.grupo),
     trabajos: conBase(base.trabajos),
     plataforma: conBase(base.plataforma),
+    clave: base.clave,
   };
   if (opciones.migrar !== false) {
     await aplicarMigraciones(propia.dueno, join(import.meta.dirname, "../../migraciones"));
+    if (opciones.sinClave !== true) await instalarClaveDeContexto(propia.dueno, base.clave);
   }
   return {
     base: propia,

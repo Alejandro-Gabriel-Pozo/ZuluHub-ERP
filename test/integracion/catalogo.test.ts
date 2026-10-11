@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { firmarCarga } from "../../src/adaptadores/postgres/contexto-firmado";
 import { cuitDesdeTexto } from "../../src/primitivas/identificacion-fiscal/cuit";
 import type { EstadoDeEmpresa } from "../../src/contexto/estados";
 import { crearBaseAparte, cuitAlAzar } from "./entorno";
@@ -68,13 +69,48 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       }>(
         `select c.relname, c.relrowsecurity, c.relforcerowsecurity
          from pg_class c join pg_namespace n on n.oid = c.relnamespace
-         where n.nspname = 'public' and c.relkind = 'r' and c.relname <> 'migracion'`,
+         where n.nspname = 'public' and c.relkind = 'r'
+           and c.relname not in ('migracion', 'contexto_clave')`,
       );
       expect(tablas.map((t) => t.relname).sort()).toEqual([...TABLAS_DE_NEGOCIO].sort());
       for (const tabla of tablas) {
         expect(tabla.relrowsecurity, `${tabla.relname}: RLS activo`).toBe(true);
         expect(tabla.relforcerowsecurity, `${tabla.relname}: RLS forzado`).toBe(true);
       }
+    });
+
+    it("contexto_clave tiene RLS activo (sin FORCE ni políticas) y nadie más que el dueño la toca", async () => {
+      const tabla = await filas<{ relrowsecurity: boolean; relforcerowsecurity: boolean }>(
+        `select relrowsecurity, relforcerowsecurity from pg_class
+         where oid = 'public.contexto_clave'::regclass`,
+      );
+      expect(tabla).toEqual([{ relrowsecurity: true, relforcerowsecurity: false }]);
+      expect(
+        await filas(`select 1 from pg_policies where tablename = 'contexto_clave'`),
+        "contexto_clave no tiene políticas",
+      ).toEqual([]);
+      // Ni privilegios de tabla ni de columna, para los cuatro roles ni para PUBLIC.
+      expect(
+        await filas(
+          `select grantee, privilege_type from information_schema.table_privileges
+           where table_schema = 'public' and table_name = 'contexto_clave'
+             and (grantee = any($1) or grantee = 'PUBLIC')`,
+          [[...ROLES]],
+        ),
+      ).toEqual([]);
+      expect(
+        await filas(
+          `select grantee, column_name, privilege_type from information_schema.column_privileges
+           where table_schema = 'public' and table_name = 'contexto_clave'
+             and (grantee = any($1) or grantee = 'PUBLIC')`,
+          [[...ROLES]],
+        ),
+      ).toEqual([]);
+      // Y la tabla es del dueño de la migración, no de un rol limitado.
+      const duenos = await filas<{ tableowner: string }>(
+        `select tableowner from pg_tables where schemaname = 'public' and tablename = 'contexto_clave'`,
+      );
+      expect(ROLES).not.toContain(duenos[0]?.tableowner);
     });
 
     it("toda tabla con empresa_id tiene una clave foránea a empresa(id)", async () => {
@@ -327,6 +363,42 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       expect(sinFijar, "funciones sin search_path fijo").toEqual([]);
     });
 
+    it("la ÚNICA función SECURITY DEFINER del esquema public es contexto_firmado, con search_path fijo y dueña ajena a los roles limitados", async () => {
+      const definer = await filas<{
+        proname: string;
+        proconfig: string[] | null;
+        dueno: string;
+      }>(
+        `select p.proname, p.proconfig, r.rolname as dueno
+         from pg_proc p
+         join pg_namespace n on n.oid = p.pronamespace
+         join pg_roles r on r.oid = p.proowner
+         where n.nspname = 'public' and p.prosecdef
+         order by 1`,
+      );
+      expect(definer.map((f) => f.proname)).toEqual(["contexto_firmado"]);
+      expect(definer[0]?.proconfig).toContain(SEARCH_PATH_FIJO);
+      expect(ROLES).not.toContain(definer[0]?.dueno);
+    });
+
+    it("los cuatro roles pueden ejecutar contexto_firmado y las app_*, y PUBLIC no", async () => {
+      for (const funcion of [
+        "contexto_firmado()",
+        "app_empresa_id()",
+        "app_tenant_id()",
+        "app_persona_id()",
+        "app_token_invitacion()",
+      ]) {
+        for (const rol of ROLES) {
+          const { rows } = await dueno.query<{ puede: boolean }>(
+            `select has_function_privilege($1, $2::regprocedure, 'EXECUTE') as puede`,
+            [rol, `public.${funcion}`],
+          );
+          expect(rows[0]?.puede, `${rol} ejecuta ${funcion}`).toBe(true);
+        }
+      }
+    });
+
     it("ninguna función del esquema public es ejecutable por PUBLIC", async () => {
       const abiertas = await filas<{ firma: string }>(
         `select p.oid::regprocedure::text as firma
@@ -435,7 +507,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
          where schemaname = 'public' and policyname = 'auditoria_empresa_app_alta'`,
       );
       expect(rows[0]?.with_check).toMatch(
-        /NOT \(actor_persona_id IS DISTINCT FROM app_persona_id\(\)\)/,
+        /NOT \(actor_persona_id IS DISTINCT FROM \(\s*SELECT app_persona_id\(\)/,
       );
     });
 
@@ -563,7 +635,17 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "insert into pg_temp.membresia_tenant (persona_id, tenant_id, rol, activo) values ($1, $2, 'PROPIETARIO', true)",
           [persona, tenant],
         );
-        await dueno.query("select set_config('app.persona_id', $1, true)", [persona]);
+        // El dueño también pasa por el contexto firmado: token de SU rol de sesión y de esa persona.
+        const { rows: sesion } = await dueno.query<{ u: string }>("select session_user::text as u");
+        const token = firmarCarga(base!.clave, {
+          u: sesion[0]?.u as string,
+          e: null,
+          t: null,
+          p: persona,
+          i: null,
+          x: Math.floor(Date.now() / 1000) + 300,
+        });
+        await dueno.query("select set_config('app.ctx', $1, true)", [token]);
         return { tenant, empresa, otraEmpresa, persona };
       };
 

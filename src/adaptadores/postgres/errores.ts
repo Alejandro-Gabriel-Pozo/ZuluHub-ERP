@@ -1,6 +1,14 @@
 import pg from "pg";
 import type { ErrorDePersistencia } from "../../puertos/transacciones";
 
+/** Falta o es inválida una pieza de configuración (cadena de conexión, clave de contexto). */
+export class ErrorDeConfiguracion extends Error {
+  constructor(mensaje: string) {
+    super(mensaje);
+    this.name = "ErrorDeConfiguracion";
+  }
+}
+
 /** SQLSTATE de un conflicto de serialización y de un deadlock: el trabajo se repite. */
 export const SQLSTATE_REINTENTABLES: ReadonlySet<string> = new Set(["40001", "40P01"]);
 

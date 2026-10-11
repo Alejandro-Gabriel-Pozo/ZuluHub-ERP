@@ -102,20 +102,138 @@ ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 -- Funciones. TODAS fijan `search_path = pg_catalog, public, pg_temp` (pg_temp al final) y nombran
 -- sus tablas con `public.`: un test del catálogo lo exige para cada función del esquema.
 --
--- Funciones de contexto: el servidor las fija por transacción con set_config(..., true).
--- Sin contexto devuelven NULL y las políticas no dejan ver ninguna fila.
--- ---------------------------------------------------------------------------------------------
+-- Contexto FIRMADO (ADR-011, endurecido en H2).
+--
+-- Antes el servidor fijaba el contexto con tres `set_config('app.empresa_id' ...)`. Esas variables
+-- son de USUARIO: cualquier rol limitado podía ejecutar `select set_config('app.empresa_id', <uuid
+-- ajeno>, true)` y ver los datos de otra empresa. El aislamiento dependía de que ningún código
+-- ejecutara SQL controlado por un atacante.
+--
+-- Ahora el servidor firma el contexto y lo fija con UNA sola variable, `app.ctx`:
+--
+--     v1.<kid>.<payloadHex>.<macHex>
+--
+--   payloadHex  hex del JSON UTF-8 {u, e, t, p, i, x}:
+--                 u  rol de base con el que se conecta (zuluhub_app, zuluhub_grupo, ...)
+--                 e  empresa (uuid o null)      t  tenant (uuid o null)
+--                 p  persona (uuid o null)      i  hash sha256 hex del token de invitación (o null)
+--                 x  vencimiento, epoch en segundos
+--   macHex      HMAC-SHA256 hex del texto `v1.<kid>.<payloadHex>` con el secreto de la clave `kid`.
+--
+-- `contexto_firmado()` verifica todo y devuelve el payload, o NULL ante CUALQUIER problema (falla
+-- cerrado, jamás lanza error): variable ausente o mal formada, clave inexistente o no vigente,
+-- firma que no cuadra, rol `u` distinto del rol con el que inició la sesión el cliente
+-- (`session_user`: un token del rol de grupo no sirve en una sesión del rol app) o token vencido.
+-- Las funciones `app_*` leen de ahí; con NULL las políticas no dejan ver ninguna fila.
+--
+-- Límites que conviene tener presentes:
+--  * Quien ejecuta SQL arbitrario dentro de la transacción puede leer `app.ctx` y reusarlo hasta su
+--    vencimiento, pero solo para el mismo rol y el mismo contexto que el servidor ya le dio: no
+--    puede cambiar de empresa, de tenant, de persona ni de rol, y no puede extender el vencimiento.
+--  * Una transacción más larga que la vigencia del token (300 s) deja de ver datos: falla cerrado.
+--  * Rotación: se instala una clave nueva (otro `kid`), el servidor pasa a firmar con ella y, cuando
+--    ya no quedan tokens de la vieja, se la marca `vigente = false`. La migración NO inserta claves:
+--    las carga quien opera, fuera del repositorio (ver `instalarClaveDeContexto`).
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+
+-- Secretos de firma. NINGÚN privilegio para ninguno de los cuatro roles ni para PUBLIC, y RLS
+-- activo sin políticas (sin FORCE): aunque alguien otorgara un permiso por error, los roles
+-- limitados no verían filas. Solo la lee el dueño, y por eso `contexto_firmado()` (que corre con
+-- los permisos del dueño) es la única vía de acceso al secreto, y no lo devuelve.
+CREATE TABLE contexto_clave (
+  kid       smallint PRIMARY KEY CONSTRAINT contexto_clave_kid_ck CHECK (kid > 0),
+  secreto   bytea NOT NULL CONSTRAINT contexto_clave_secreto_ck CHECK (octet_length(secreto) >= 32),
+  vigente   boolean NOT NULL DEFAULT true,
+  creado_en timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE contexto_clave ENABLE ROW LEVEL SECURITY;
+
+-- ÚNICA función SECURITY DEFINER del esquema (un meta-test lo exige): corre con los permisos del
+-- dueño para poder leer `contexto_clave`. Por eso fija su search_path y califica todo con `public.`.
+CREATE FUNCTION contexto_firmado() RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER
+  SET search_path = pg_catalog, public, pg_temp AS
+$$
+DECLARE
+  v_token   text := pg_catalog.current_setting('app.ctx', true);
+  v_partes  text[];
+  v_secreto bytea;
+  v_cuerpo  text;
+  v_esperado text;
+  v_carga   jsonb;
+BEGIN
+  IF v_token IS NULL OR v_token = '' THEN
+    RETURN NULL;
+  END IF;
+
+  -- Forma exacta: cuatro partes, versión v1, kid canónico, payload en hex de bytes completos y
+  -- firma de 64 dígitos hex. Cualquier otra cosa es basura: NULL, no error.
+  v_partes := string_to_array(v_token, '.');
+  IF cardinality(v_partes) <> 4
+     OR v_partes[1] <> 'v1'
+     OR v_partes[2] !~ '^[1-9][0-9]{0,4}$'
+     OR v_partes[3] !~ '^([0-9a-f]{2})+$'
+     OR v_partes[4] !~ '^[0-9a-f]{64}$'
+  THEN
+    RETURN NULL;
+  END IF;
+
+  -- El kid se compara como texto: un kid fuera del rango de smallint simplemente no existe.
+  SELECT k.secreto INTO v_secreto
+    FROM public.contexto_clave k
+   WHERE k.kid::text = v_partes[2] AND k.vigente;
+  IF v_secreto IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  v_cuerpo := 'v1.' || v_partes[2] || '.' || v_partes[3];
+  v_esperado := encode(public.hmac(convert_to(v_cuerpo, 'utf8'), v_secreto, 'sha256'), 'hex');
+  -- Comparación en tiempo constante: se comparan los HMAC de ambas firmas, así el tiempo no revela
+  -- cuántos dígitos iniciales coinciden.
+  IF public.hmac(convert_to(v_partes[4], 'utf8'), v_secreto, 'sha256')
+     IS DISTINCT FROM public.hmac(convert_to(v_esperado, 'utf8'), v_secreto, 'sha256')
+  THEN
+    RETURN NULL;
+  END IF;
+
+  -- La firma es válida, así que el payload lo armó el servidor; igual se lo protege: cualquier
+  -- anomalía al leerlo (UTF-8 inválido, JSON roto, `x` no numérico) devuelve NULL.
+  BEGIN
+    v_carga := convert_from(decode(v_partes[3], 'hex'), 'utf8')::jsonb;
+    IF jsonb_typeof(v_carga) <> 'object' THEN
+      RETURN NULL;
+    END IF;
+    IF NOT coalesce(v_carga->>'u' = session_user::text, false) THEN
+      RETURN NULL;
+    END IF;
+    IF NOT coalesce((v_carga->>'x')::bigint > extract(epoch FROM clock_timestamp()), false) THEN
+      RETURN NULL;
+    END IF;
+  EXCEPTION WHEN others THEN
+    RETURN NULL;
+  END;
+  RETURN v_carga;
+END
+$$;
+
+-- Funciones de contexto: leen del payload firmado. Sin contexto válido devuelven NULL.
 CREATE FUNCTION app_empresa_id() RETURNS uuid LANGUAGE sql STABLE
   SET search_path = pg_catalog, public, pg_temp AS
-$$ SELECT nullif(current_setting('app.empresa_id', true), '')::uuid $$;
+$$ SELECT nullif(public.contexto_firmado()->>'e', '')::uuid $$;
 
 CREATE FUNCTION app_tenant_id() RETURNS uuid LANGUAGE sql STABLE
   SET search_path = pg_catalog, public, pg_temp AS
-$$ SELECT nullif(current_setting('app.tenant_id', true), '')::uuid $$;
+$$ SELECT nullif(public.contexto_firmado()->>'t', '')::uuid $$;
 
 CREATE FUNCTION app_persona_id() RETURNS uuid LANGUAGE sql STABLE
   SET search_path = pg_catalog, public, pg_temp AS
-$$ SELECT nullif(current_setting('app.persona_id', true), '')::uuid $$;
+$$ SELECT nullif(public.contexto_firmado()->>'p', '')::uuid $$;
+
+-- Hash sha256 (hex) del token de invitación del contexto. Lo usarán las políticas del tramo de
+-- invitaciones (H3).
+CREATE FUNCTION app_token_invitacion() RETURNS text LANGUAGE sql STABLE
+  SET search_path = pg_catalog, public, pg_temp AS
+$$ SELECT nullif(public.contexto_firmado()->>'i', '') $$;
 
 -- CUIT: 11 dígitos y dígito verificador módulo 11 (pesos 5,4,3,2,7,6,5,4,3,2). Misma regla que
 -- primitivas/identificacion-fiscal; un test compara ambas.
@@ -474,11 +592,15 @@ $$;
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION
-  app_empresa_id(), app_tenant_id(), app_persona_id(), cuit_valido(text),
+  contexto_firmado(), app_empresa_id(), app_tenant_id(), app_persona_id(), app_token_invitacion(),
+  cuit_valido(text),
   zona_horaria_valida(text), empresa_operable(uuid), es_propietario_activo(uuid), tenant_de_empresa(uuid),
   tenant_activo(uuid)
 TO zuluhub_app, zuluhub_grupo, zuluhub_trabajos, zuluhub_plataforma;
 GRANT USAGE ON SCHEMA public TO zuluhub_app, zuluhub_grupo, zuluhub_trabajos, zuluhub_plataforma;
+-- Los secretos de firma no se tocan: ningún privilegio sobre `contexto_clave` (ya cerrado para
+-- PUBLIC arriba; explícito acá por si alguien lo hubiera otorgado a mano antes).
+REVOKE ALL ON contexto_clave FROM zuluhub_app, zuluhub_grupo, zuluhub_trabajos, zuluhub_plataforma;
 
 -- app: opera dentro de una empresa
 GRANT SELECT ON empresa, tenant, persona, membresia_tenant TO zuluhub_app;
@@ -542,49 +664,49 @@ CREATE POLICY instalacion_plataforma ON instalacion FOR SELECT TO zuluhub_plataf
 
 -- tenant
 CREATE POLICY tenant_app_leer ON tenant FOR SELECT TO zuluhub_app
-  USING (id = (SELECT e.tenant_id FROM empresa e WHERE e.id = app_empresa_id()));
+  USING (id = (SELECT e.tenant_id FROM empresa e WHERE e.id = (SELECT app_empresa_id())));
 CREATE POLICY tenant_grupo_leer ON tenant FOR SELECT TO zuluhub_grupo
-  USING (id = app_tenant_id() AND es_propietario_activo(id));
+  USING (id = (SELECT app_tenant_id()) AND es_propietario_activo(id));
 CREATE POLICY tenant_plataforma_leer ON tenant FOR SELECT TO zuluhub_plataforma USING (true);
 CREATE POLICY tenant_plataforma_alta ON tenant FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
 CREATE POLICY tenant_plataforma_cambiar ON tenant FOR UPDATE TO zuluhub_plataforma USING (true) WITH CHECK (true);
 
 -- empresa
-CREATE POLICY empresa_app_leer ON empresa FOR SELECT TO zuluhub_app USING (id = app_empresa_id());
+CREATE POLICY empresa_app_leer ON empresa FOR SELECT TO zuluhub_app USING (id = (SELECT app_empresa_id()));
 CREATE POLICY empresa_grupo_leer ON empresa FOR SELECT TO zuluhub_grupo
-  USING (tenant_id = app_tenant_id() AND es_propietario_activo(tenant_id));
+  USING (tenant_id = (SELECT app_tenant_id()) AND es_propietario_activo(tenant_id));
 CREATE POLICY empresa_plataforma_leer ON empresa FOR SELECT TO zuluhub_plataforma USING (true);
 CREATE POLICY empresa_plataforma_alta ON empresa FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
 CREATE POLICY empresa_plataforma_cambiar ON empresa FOR UPDATE TO zuluhub_plataforma USING (true) WITH CHECK (true);
 
 -- sucursal: la plataforma solo puede sembrarla (INSERT sin SELECT: no lee datos operativos)
-CREATE POLICY sucursal_app_leer ON sucursal FOR SELECT TO zuluhub_app USING (empresa_id = app_empresa_id());
+CREATE POLICY sucursal_app_leer ON sucursal FOR SELECT TO zuluhub_app USING (empresa_id = (SELECT app_empresa_id()));
 CREATE POLICY sucursal_app_alta ON sucursal FOR INSERT TO zuluhub_app
-  WITH CHECK (empresa_id = app_empresa_id() AND empresa_operable(empresa_id));
+  WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
 CREATE POLICY sucursal_app_cambiar ON sucursal FOR UPDATE TO zuluhub_app
-  USING (empresa_id = app_empresa_id() AND empresa_operable(empresa_id))
-  WITH CHECK (empresa_id = app_empresa_id() AND empresa_operable(empresa_id));
+  USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id))
+  WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
 -- El dueño del grupo ve las sucursales mientras el TENANT esté activo (diseno-inicial §4.1 y R3);
 -- que una empresa puntual esté suspendida no se las oculta: ese estado lo ve en su lista.
 CREATE POLICY sucursal_grupo_leer ON sucursal FOR SELECT TO zuluhub_grupo
   USING (
-    tenant_de_empresa(empresa_id) = app_tenant_id()
-    AND es_propietario_activo(app_tenant_id())
-    AND tenant_activo(app_tenant_id())
+    tenant_de_empresa(empresa_id) = (SELECT app_tenant_id())
+    AND es_propietario_activo((SELECT app_tenant_id()))
+    AND tenant_activo((SELECT app_tenant_id()))
   );
 CREATE POLICY sucursal_plataforma_sembrar ON sucursal FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
 
 -- persona y membresia_tenant: cada rol ve su propia fila
-CREATE POLICY persona_propia_app ON persona FOR SELECT TO zuluhub_app USING (id = app_persona_id());
-CREATE POLICY persona_propia_grupo ON persona FOR SELECT TO zuluhub_grupo USING (id = app_persona_id());
+CREATE POLICY persona_propia_app ON persona FOR SELECT TO zuluhub_app USING (id = (SELECT app_persona_id()));
+CREATE POLICY persona_propia_grupo ON persona FOR SELECT TO zuluhub_grupo USING (id = (SELECT app_persona_id()));
 CREATE POLICY persona_plataforma_leer ON persona FOR SELECT TO zuluhub_plataforma USING (true);
 CREATE POLICY persona_plataforma_alta ON persona FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
 CREATE POLICY persona_plataforma_cambiar ON persona FOR UPDATE TO zuluhub_plataforma USING (true) WITH CHECK (true);
 
 CREATE POLICY membresia_tenant_propia_app ON membresia_tenant FOR SELECT TO zuluhub_app
-  USING (persona_id = app_persona_id());
+  USING (persona_id = (SELECT app_persona_id()));
 CREATE POLICY membresia_tenant_propia_grupo ON membresia_tenant FOR SELECT TO zuluhub_grupo
-  USING (persona_id = app_persona_id());
+  USING (persona_id = (SELECT app_persona_id()));
 CREATE POLICY membresia_tenant_plataforma_leer ON membresia_tenant FOR SELECT TO zuluhub_plataforma USING (true);
 CREATE POLICY membresia_tenant_plataforma_alta ON membresia_tenant FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
 CREATE POLICY membresia_tenant_plataforma_cambiar ON membresia_tenant FOR UPDATE TO zuluhub_plataforma
@@ -592,24 +714,24 @@ CREATE POLICY membresia_tenant_plataforma_cambiar ON membresia_tenant FOR UPDATE
 
 -- auditorías
 CREATE POLICY auditoria_empresa_app_leer ON auditoria_empresa FOR SELECT TO zuluhub_app
-  USING (empresa_id = app_empresa_id());
+  USING (empresa_id = (SELECT app_empresa_id()));
 CREATE POLICY auditoria_empresa_app_alta ON auditoria_empresa FOR INSERT TO zuluhub_app
   WITH CHECK (
-    empresa_id = app_empresa_id()
+    empresa_id = (SELECT app_empresa_id())
     AND empresa_operable(empresa_id)
-    AND actor_persona_id IS NOT DISTINCT FROM app_persona_id()
+    AND actor_persona_id IS NOT DISTINCT FROM (SELECT app_persona_id())
   );
 CREATE POLICY auditoria_empresa_plataforma_alta ON auditoria_empresa FOR INSERT TO zuluhub_plataforma
   WITH CHECK (true);
 CREATE POLICY auditoria_plataforma_leer ON auditoria_plataforma FOR SELECT TO zuluhub_plataforma USING (true);
 CREATE POLICY auditoria_plataforma_alta ON auditoria_plataforma FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
 CREATE POLICY auditoria_acceso_grupo_alta ON auditoria_acceso_grupo FOR INSERT TO zuluhub_grupo
-  WITH CHECK (tenant_id = app_tenant_id() AND persona_id = app_persona_id() AND es_propietario_activo(tenant_id));
+  WITH CHECK (tenant_id = (SELECT app_tenant_id()) AND persona_id = (SELECT app_persona_id()) AND es_propietario_activo(tenant_id));
 
 -- trabajo
-CREATE POLICY trabajo_app_leer ON trabajo FOR SELECT TO zuluhub_app USING (empresa_id = app_empresa_id());
+CREATE POLICY trabajo_app_leer ON trabajo FOR SELECT TO zuluhub_app USING (empresa_id = (SELECT app_empresa_id()));
 CREATE POLICY trabajo_app_alta ON trabajo FOR INSERT TO zuluhub_app
-  WITH CHECK (empresa_id = app_empresa_id() AND empresa_operable(empresa_id));
+  WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
 CREATE POLICY trabajo_trabajos_leer ON trabajo FOR SELECT TO zuluhub_trabajos USING (true);
 CREATE POLICY trabajo_trabajos_avanzar ON trabajo FOR UPDATE TO zuluhub_trabajos USING (true) WITH CHECK (true);
 CREATE POLICY trabajo_plataforma_leer ON trabajo FOR SELECT TO zuluhub_plataforma USING (true);

@@ -1,27 +1,41 @@
 import { Kysely, PostgresDialect, sql } from "kysely";
 import pg from "pg";
-import type { Contexto, TipoDeContexto } from "../../contexto/contexto";
+import type { TipoDeContexto } from "../../contexto/contexto";
 import type {
   ErrorDePersistencia,
   OpcionesDeTransaccion,
   Transacciones,
 } from "../../puertos/transacciones";
 import { err, type Resultado } from "../../primitivas/resultado/resultado";
-import { esReintentable, traducirErrorDeBase } from "./errores";
+import { firmarContexto, type ClaveDeContexto } from "./contexto-firmado";
+import { ErrorDeConfiguracion, esReintentable, traducirErrorDeBase } from "./errores";
+
+export { ErrorDeConfiguracion };
 
 /**
  * Implementación de `Transacciones` sobre Postgres (ADR-004, ADR-009, ADR-010).
  *
  * - Una cadena de conexión por puerta (aplicación, grupo, trabajos, plataforma): cada una entra
  *   con su propio rol de base. Si falta la de la puerta pedida, falla: nunca cae en otra (R10).
- * - La primera sentencia de cada transacción fija el contexto con `set_config(..., true)`, que vale
- *   solo dentro de la transacción y por eso funciona detrás del pooler de Neon (P1).
+ * - La primera sentencia de cada transacción fija el contexto FIRMADO con un único
+ *   `set_config('app.ctx', <token>, true)`, que vale solo dentro de la transacción y por eso funciona
+ *   detrás del pooler de Neon (P1). El token se firma con la clave obligatoria `clave` y se vuelve a
+ *   firmar en cada reintento (ver `contexto-firmado.ts`). Sin clave no se construye el adaptador.
  * - Ante 40001 o 40P01 repite el trabajo completo, con espera creciente y al azar.
  */
 
 export type ConfiguracionDeTransacciones<Tx> = Readonly<{
-  /** Cadena de conexión por puerta. Los valores los carga el dueño en el entorno; acá solo se usan. */
+  /**
+   * Cadena de conexión por puerta. Los valores los carga el dueño en el entorno; acá solo se usan.
+   * La puerta `INVITACION` es opcional: si falta, usa la de `OPERATIVO` (ambas entran con el rol de
+   * base de la aplicación, `zuluhub_app`; lo que las distingue es el contexto firmado).
+   */
   urls: Readonly<Partial<Record<TipoDeContexto, string>>>;
+  /**
+   * Clave con la que se firma el contexto de cada transacción (de `leerClaveDeContexto`).
+   * Obligatoria: sin ella el aislamiento entre empresas no tiene con qué verificarse.
+   */
+  clave: ClaveDeContexto;
   /**
    * Arma lo que recibe el trabajo a partir de la conexión de la transacción. El `Kysely` es de uso
    * interno de las carpetas de persistencia: nunca se pasa al dominio. Llega sin tablas conocidas:
@@ -46,13 +60,6 @@ type ErrorInesperado = Extract<ErrorDePersistencia, { tipo: "Inesperado" }>;
 /** Base sin tablas tipadas: cada módulo declara las suyas (`withTables`). */
 export type SinTablas = Record<never, never>;
 
-export class ErrorDeConfiguracion extends Error {
-  constructor(mensaje: string) {
-    super(mensaje);
-    this.name = "ErrorDeConfiguracion";
-  }
-}
-
 export type TransaccionesDePostgres<Tx> = Transacciones<Tx> & {
   /** Cierra todas las conexiones abiertas. */
   cerrar(): Promise<void>;
@@ -64,29 +71,28 @@ const REINTENTOS_POR_DEFECTO = 6;
 const ESPERA_BASE_EN_MS = 10;
 const ESPERA_MAXIMA_EN_MS = 250;
 
-function valoresDeContexto(contexto: Contexto): [empresa: string, tenant: string, persona: string] {
-  switch (contexto.tipo) {
-    case "OPERATIVO":
-      return [contexto.empresaId, "", contexto.personaId ?? ""];
-    case "GRUPO":
-      return ["", contexto.tenantId, contexto.personaId];
-    case "PLATAFORMA":
-    case "TRABAJOS":
-      return ["", "", ""];
-  }
-}
-
 const esperar = (ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms));
 
 export function crearTransacciones<Tx>(
   configuracion: ConfiguracionDeTransacciones<Tx>,
 ): TransaccionesDePostgres<Tx> {
+  // Falla cerrado: sin una clave utilizable no se construye el adaptador.
+  const clave: ClaveDeContexto = configuracion.clave;
+  if (
+    !Buffer.isBuffer((clave as Partial<ClaveDeContexto> | undefined)?.secreto) ||
+    clave.secreto.length < 32
+  ) {
+    throw new ErrorDeConfiguracion("falta la clave de contexto (de 32 bytes o más)");
+  }
   const conexiones = new Map<TipoDeContexto, Kysely<SinTablas>>();
 
   function conexionPara(tipo: TipoDeContexto): Kysely<SinTablas> {
     const existente = conexiones.get(tipo);
     if (existente !== undefined) return existente;
-    const url = configuracion.urls[tipo];
+    // La invitación comparte el rol de base de la aplicación: sin cadena propia, usa la operativa.
+    const url =
+      configuracion.urls[tipo] ??
+      (tipo === "INVITACION" ? configuracion.urls.OPERATIVO : undefined);
     if (url === undefined || url === "") {
       throw new ErrorDeConfiguracion(`falta la cadena de conexión de la puerta ${tipo}`);
     }
@@ -106,7 +112,6 @@ export function crearTransacciones<Tx>(
     trabajo: (tx: Tx) => Promise<Resultado<T, E>>,
   ): Promise<Resultado<T, E>> {
     const db = conexionPara(opciones.contexto.tipo);
-    const [empresa, tenant, persona] = valoresDeContexto(opciones.contexto);
 
     let transaccion = db.transaction().setIsolationLevel(opciones.aislamiento ?? "serializable");
     if (opciones.soloLectura === true) transaccion = transaccion.setAccessMode("read only");
@@ -119,10 +124,10 @@ export function crearTransacciones<Tx>(
     }
     try {
       return await transaccion.execute(async (trx) => {
-        await sql`select
-          set_config('app.empresa_id', ${empresa}, true),
-          set_config('app.tenant_id', ${tenant}, true),
-          set_config('app.persona_id', ${persona}, true)`.execute(trx);
+        // Se firma en cada intento, con el reloj real del servidor (no `contexto.ahora`: ese es un
+        // dato de negocio). El token fijado vale solo dentro de esta transacción.
+        const token = firmarContexto(clave, opciones.contexto, Math.floor(Date.now() / 1000));
+        await sql`select set_config('app.ctx', ${token}, true)`.execute(trx);
         const resultado = await trabajo(configuracion.armar(trx));
         if (!resultado.ok) throw new Abortar(resultado);
         // Si el trabajo atrapó un error de la base y devolvió `ok`, la transacción quedó abortada y

@@ -2,6 +2,10 @@ import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import pg from "pg";
 import type { TestProject } from "vitest/node";
+import {
+  instalarClaveDeContexto,
+  type ClaveDeContexto,
+} from "../../src/adaptadores/postgres/contexto-firmado";
 import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
 
 /**
@@ -22,6 +26,8 @@ export type BaseDePruebas = Readonly<{
   grupo: string;
   trabajos: string;
   plataforma: string;
+  /** Clave de firma del contexto de ESTA corrida (kid 1), instalada en la base con `dueno`. */
+  clave: ClaveDeContexto;
 }>;
 
 declare module "vitest" {
@@ -70,6 +76,10 @@ export default async function setup(project: TestProject): Promise<() => Promise
   const urlDueno = conBase(urlAdmin, nombre);
   await aplicarMigraciones(urlDueno, join(import.meta.dirname, "../../migraciones"));
 
+  // Clave de contexto al azar por corrida: nunca se repite ni se escribe en el repositorio.
+  const claveDeContexto: ClaveDeContexto = { kid: 1, secreto: randomBytes(32) };
+  await instalarClaveDeContexto(urlDueno, claveDeContexto);
+
   const claves = Object.fromEntries(ROLES.map((r) => [r, randomBytes(18).toString("hex")]));
   for (const rol of ROLES) {
     await admin.query(`ALTER ROLE zuluhub_${rol} LOGIN PASSWORD '${claves[rol]}'`);
@@ -84,6 +94,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
     grupo: url("grupo"),
     trabajos: url("trabajos"),
     plataforma: url("plataforma"),
+    clave: claveDeContexto,
   });
 
   return async () => {
