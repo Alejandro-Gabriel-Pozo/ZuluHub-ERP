@@ -1,0 +1,213 @@
+import type { Generated, Kysely, Selectable } from "kysely";
+import type { EstadoDeEmpresa } from "../../../contexto/estados";
+import type { Cuit } from "../../../primitivas/identificacion-fiscal/cuit";
+import {
+  empresaId,
+  sucursalId,
+  tenantId,
+  type EmpresaId,
+  type SucursalId,
+  type TenantId,
+} from "../../../primitivas/identificadores/marca";
+import type { CambioDeEstadoDeEmpresa, Empresa } from "../dominio/empresa";
+import type { Sucursal } from "../dominio/sucursal";
+
+/** Tablas del módulo; un test compara estas columnas con el catálogo de la base. */
+export type EmpresasDb = {
+  empresa: {
+    id: Generated<string>;
+    tenant_id: string;
+    cuit: string;
+    razon_social: string;
+    estado: Generated<EstadoDeEmpresa>;
+    motivo_estado: string | null;
+    zona_horaria: Generated<string>;
+    moneda: Generated<string>;
+    creado_en: Generated<Date>;
+    actualizado_en: Generated<Date>;
+    version: Generated<number>;
+  };
+  sucursal: {
+    id: Generated<string>;
+    empresa_id: string;
+    nombre: string;
+    activa: Generated<boolean>;
+    creado_en: Generated<Date>;
+    actualizado_en: Generated<Date>;
+    version: Generated<number>;
+  };
+};
+
+export const COLUMNAS_DE_EMPRESAS = {
+  empresa: [
+    "id",
+    "tenant_id",
+    "cuit",
+    "razon_social",
+    "estado",
+    "motivo_estado",
+    "zona_horaria",
+    "moneda",
+    "creado_en",
+    "actualizado_en",
+    "version",
+  ],
+  sucursal: ["id", "empresa_id", "nombre", "activa", "creado_en", "actualizado_en", "version"],
+} as const;
+
+/** Restricción de la base → error de negocio (ADR-004). Un test exige que no falte ninguna. */
+export const ERRORES_DE_EMPRESAS_POR_RESTRICCION: Readonly<Record<string, string>> = {
+  empresa_pkey: "NO_TRADUCIDA",
+  empresa_cuit_ck: "CUIT_INVALIDO",
+  empresa_cuit_uk: "CUIT_DUPLICADO",
+  empresa_razon_social_ck: "RAZON_SOCIAL_INVALIDA",
+  empresa_estado_ck: "NO_TRADUCIDA",
+  empresa_zona_horaria_ck: "ZONA_HORARIA_INVALIDA",
+  empresa_moneda_ck: "MONEDA_NO_SOPORTADA",
+  empresa_motivo_ck: "MOTIVO_OBLIGATORIO",
+  empresa_tenant_id_fkey: "TENANT_INEXISTENTE",
+  empresa_tenant_inmutable: "EMPRESA_NO_SE_REASIGNA",
+  empresa_transicion_invalida: "TRANSICION_NO_PERMITIDA",
+  sucursal_pkey: "NO_TRADUCIDA",
+  sucursal_id_empresa_uk: "NO_TRADUCIDA",
+  sucursal_nombre_ck: "NOMBRE_DE_SUCURSAL_INVALIDO",
+  sucursal_nombre_uk: "SUCURSAL_DUPLICADA",
+  sucursal_empresa_id_fkey: "EMPRESA_INEXISTENTE",
+};
+
+export type ErrorDeRepositorioDeEmpresas = "EMPRESA_NO_ENCONTRADA" | "VERSION_DESACTUALIZADA";
+
+export type NuevaEmpresa = Readonly<{
+  tenantId: TenantId;
+  cuit: Cuit;
+  razonSocial: string;
+  zonaHoraria?: string;
+}>;
+
+export interface RepositorioDeEmpresas {
+  crear(datos: NuevaEmpresa): Promise<Empresa>;
+  obtener(id: EmpresaId): Promise<Empresa | null>;
+  listarDelTenant(tenant: TenantId): Promise<Empresa[]>;
+  cambiarEstado(
+    id: EmpresaId,
+    versionEsperada: number,
+    cambio: CambioDeEstadoDeEmpresa,
+  ): Promise<{ ok: true; empresa: Empresa } | { ok: false; error: ErrorDeRepositorioDeEmpresas }>;
+}
+
+export interface RepositorioDeSucursales {
+  crear(empresa: EmpresaId, nombre: string): Promise<Sucursal>;
+  listar(empresa: EmpresaId): Promise<Sucursal[]>;
+  renombrar(id: SucursalId, versionEsperada: number, nombre: string): Promise<Sucursal | null>;
+}
+
+function aEmpresa(fila: Selectable<EmpresasDb["empresa"]>): Empresa {
+  return {
+    id: empresaId(fila.id),
+    tenantId: tenantId(fila.tenant_id),
+    cuit: fila.cuit as Cuit,
+    razonSocial: fila.razon_social,
+    estado: fila.estado,
+    motivoEstado: fila.motivo_estado,
+    zonaHoraria: fila.zona_horaria,
+    version: fila.version,
+  };
+}
+
+function aSucursal(fila: Selectable<EmpresasDb["sucursal"]>): Sucursal {
+  return {
+    id: sucursalId(fila.id),
+    empresaId: empresaId(fila.empresa_id),
+    nombre: fila.nombre,
+    activa: fila.activa,
+    version: fila.version,
+  };
+}
+
+export function crearRepositorioDeEmpresas(db: Kysely<EmpresasDb>): RepositorioDeEmpresas {
+  async function obtener(id: EmpresaId): Promise<Empresa | null> {
+    const fila = await db.selectFrom("empresa").selectAll().where("id", "=", id).executeTakeFirst();
+    return fila === undefined ? null : aEmpresa(fila);
+  }
+
+  return {
+    obtener,
+
+    async crear(datos) {
+      const fila = await db
+        .insertInto("empresa")
+        .values({
+          tenant_id: datos.tenantId,
+          cuit: datos.cuit,
+          razon_social: datos.razonSocial,
+          motivo_estado: null,
+          ...(datos.zonaHoraria === undefined ? {} : { zona_horaria: datos.zonaHoraria }),
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      return aEmpresa(fila);
+    },
+
+    async listarDelTenant(tenant) {
+      const filas = await db
+        .selectFrom("empresa")
+        .selectAll()
+        .where("tenant_id", "=", tenant)
+        .orderBy("razon_social")
+        .orderBy("id")
+        .execute();
+      return filas.map(aEmpresa);
+    },
+
+    async cambiarEstado(id, versionEsperada, cambio) {
+      const fila = await db
+        .updateTable("empresa")
+        .set({ estado: cambio.estado, motivo_estado: cambio.motivoEstado })
+        .where("id", "=", id)
+        .where("version", "=", versionEsperada)
+        .returningAll()
+        .executeTakeFirst();
+      if (fila !== undefined) return { ok: true, empresa: aEmpresa(fila) };
+      const existente = await obtener(id);
+      return {
+        ok: false,
+        error: existente === null ? "EMPRESA_NO_ENCONTRADA" : "VERSION_DESACTUALIZADA",
+      };
+    },
+  };
+}
+
+export function crearRepositorioDeSucursales(db: Kysely<EmpresasDb>): RepositorioDeSucursales {
+  return {
+    async crear(empresa, nombre) {
+      const fila = await db
+        .insertInto("sucursal")
+        .values({ empresa_id: empresa, nombre })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      return aSucursal(fila);
+    },
+
+    async listar(empresa) {
+      const filas = await db
+        .selectFrom("sucursal")
+        .selectAll()
+        .where("empresa_id", "=", empresa)
+        .orderBy("nombre")
+        .orderBy("id")
+        .execute();
+      return filas.map(aSucursal);
+    },
+
+    async renombrar(id, versionEsperada, nombre) {
+      const fila = await db
+        .updateTable("sucursal")
+        .set({ nombre })
+        .where("id", "=", id)
+        .where("version", "=", versionEsperada)
+        .returningAll()
+        .executeTakeFirst();
+      return fila === undefined ? null : aSucursal(fila);
+    },
+  };
+}

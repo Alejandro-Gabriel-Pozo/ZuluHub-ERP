@@ -149,6 +149,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "empresas-no-conoce-tenants",
+      archivos: {
+        "src/modulos/empresas/dominio/d.ts": importa("../../tenants/publico"),
+        "src/modulos/tenants/publico.ts": exporta,
+      },
+    },
+    {
       regla: "apps-sin-persistencia-ni-adaptadores",
       archivos: {
         "apps/web/a.ts": importa("../../src/modulos/empresas/persistencia/r"),

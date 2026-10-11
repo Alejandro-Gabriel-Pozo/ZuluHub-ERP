@@ -113,6 +113,14 @@ const reglas = [
     to: { path: "^src/primitivas/(dinero|cantidad)/interno\\.ts$" },
   },
   {
+    name: "empresas-no-conoce-tenants",
+    severity: "error",
+    comment:
+      "Lo de abajo no conoce lo de arriba (R3): la empresa guarda solo el identificador de su tenant y no importa el módulo de tenants.",
+    from: { path: "^src/modulos/empresas/" },
+    to: { path: "^src/modulos/tenants/" },
+  },
+  {
     name: "apps-sin-persistencia-ni-adaptadores",
     severity: "error",
     comment:
