@@ -1,4 +1,7 @@
 {
+  "git": {
+    "deploymentEnabled": false
+  },
   "functions": {
     "api/spike.ts": { "maxDuration": 60 }
   }
