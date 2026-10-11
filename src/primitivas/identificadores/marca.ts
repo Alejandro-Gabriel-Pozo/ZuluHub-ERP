@@ -25,3 +25,6 @@ export const tenantId = (valor: string): TenantId => crear<TenantId>("TenantId",
 export const personaId = (valor: string): PersonaId => crear<PersonaId>("PersonaId", valor);
 export type SucursalId = Marca<string, "SucursalId">;
 export const sucursalId = (valor: string): SucursalId => crear<SucursalId>("SucursalId", valor);
+export type InvitacionId = Marca<string, "InvitacionId">;
+export const invitacionId = (valor: string): InvitacionId =>
+  crear<InvitacionId>("InvitacionId", valor);
