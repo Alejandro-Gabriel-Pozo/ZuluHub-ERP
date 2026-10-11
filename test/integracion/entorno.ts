@@ -142,6 +142,29 @@ export async function crearEmpresaActiva(
   return resultado.valor;
 }
 
+/** Crea una empresa que sigue en alta (PROVISIONING): existe, pero todavía no opera. */
+export async function crearEmpresaEnAlta(
+  entorno: TransaccionesDePostgres<TxDePrueba>,
+  opciones: { tenant?: TenantId } = {},
+): Promise<EmpresaDePrueba> {
+  const resultado = await entorno.ejecutar(
+    { contexto: comoPlataforma(), aislamiento: "read committed" },
+    async ({ tenants, empresas }) => {
+      const tenant = opciones.tenant ?? (await tenants.crear(nombreAlAzar("tenant"))).id;
+      const cuit = cuitAlAzar();
+      const creada = await empresas.crear({
+        tenantId: tenant,
+        cuit,
+        razonSocial: nombreAlAzar("empresa"),
+      });
+      return { ok: true as const, valor: { tenant, empresa: creada.id, cuit } };
+    },
+  );
+  if (!resultado.ok)
+    throw new Error(`no se pudo crear la empresa en alta: ${JSON.stringify(resultado.error)}`);
+  return resultado.valor;
+}
+
 /** Crea una persona y la hace propietaria del tenant. */
 export async function crearPropietario(
   entorno: TransaccionesDePostgres<TxDePrueba>,

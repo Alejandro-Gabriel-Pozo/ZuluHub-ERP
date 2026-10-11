@@ -20,7 +20,7 @@ export type EmpresasDb = {
     cuit: string;
     razon_social: string;
     estado: Generated<EstadoDeEmpresa>;
-    motivo_estado: string | null;
+    motivo_estado: Generated<string | null>;
     zona_horaria: Generated<string>;
     moneda: Generated<string>;
     creado_en: Generated<Date>;
@@ -67,6 +67,7 @@ export const ERRORES_DE_EMPRESAS_POR_RESTRICCION: Readonly<Record<string, string
   empresa_motivo_ck: "MOTIVO_OBLIGATORIO",
   empresa_tenant_id_fkey: "TENANT_INEXISTENTE",
   empresa_tenant_inmutable: "EMPRESA_NO_SE_REASIGNA",
+  empresa_tenant_no_activo: "TENANT_NO_ACTIVO",
   empresa_transicion_invalida: "TRANSICION_NO_PERMITIDA",
   sucursal_pkey: "NO_TRADUCIDA",
   sucursal_id_empresa_uk: "NO_TRADUCIDA",
@@ -140,7 +141,6 @@ export function crearRepositorioDeEmpresas(db: Kysely<EmpresasDb>): RepositorioD
           tenant_id: datos.tenantId,
           cuit: datos.cuit,
           razon_social: datos.razonSocial,
-          motivo_estado: null,
           ...(datos.zonaHoraria === undefined ? {} : { zona_horaria: datos.zonaHoraria }),
         })
         .returningAll()

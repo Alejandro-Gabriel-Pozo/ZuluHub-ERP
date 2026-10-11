@@ -1,7 +1,8 @@
-import { sql } from "kysely";
+import { sql, type RawBuilder } from "kysely";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { personaId } from "../../src/primitivas/identificadores/marca";
+import type { Contexto } from "../../src/contexto/contexto";
+import { personaId, type PersonaId } from "../../src/primitivas/identificadores/marca";
 import { ok } from "../../src/primitivas/resultado/resultado";
 import {
   comoEmpresa,
@@ -9,8 +10,10 @@ import {
   comoPlataforma,
   comoTrabajos,
   crearEmpresaActiva,
+  crearEmpresaEnAlta,
   crearEntornoDePrueba,
   crearPropietario,
+  cuitAlAzar,
   nombreAlAzar,
   type EmpresaDePrueba,
 } from "./entorno";
@@ -18,6 +21,8 @@ import {
 const base = inject("baseDePruebas");
 
 type Entorno = ReturnType<typeof crearEntornoDePrueba>;
+
+const DENEGADO = { ok: false, error: { tipo: "AccesoDenegado" } } as const;
 
 describe.skipIf(base === null)("aislamiento por empresa (RLS)", () => {
   let entorno: Entorno;
@@ -37,6 +42,17 @@ describe.skipIf(base === null)("aislamiento por empresa (RLS)", () => {
   afterAll(async () => {
     await entorno.cerrar();
   });
+
+  /** Ejecuta una sentencia con el contexto dado y devuelve ok(null) o el error de persistencia. */
+  const intentar = (contexto: Contexto, consulta: RawBuilder<unknown>) =>
+    entorno.ejecutar({ contexto }, async ({ db }) => {
+      await consulta.execute(db);
+      return ok(null);
+    });
+  const comoPlataformaEjecutar = async (consulta: RawBuilder<unknown>) => {
+    const r = await intentar(comoPlataforma(), consulta);
+    if (!r.ok) throw new Error(`falló la preparación: ${JSON.stringify(r.error)}`);
+  };
 
   const nombresDeSucursales = async (contexto: ReturnType<typeof comoEmpresa>) => {
     const r = await entorno.ejecutar({ contexto }, async ({ db }) => {
@@ -162,7 +178,13 @@ describe.skipIf(base === null)("aislamiento por empresa (RLS)", () => {
       }
     });
 
-    it("el contexto de una transacción no se filtra a la siguiente en la misma conexión", async () => {
+    // Limitación honesta: cada transacción vuelve a fijar los tres valores de contexto, así que este
+    // test NO detectaría un set_config(..., false) (de sesión) que dejara el contexto "pegado": la
+    // transacción siguiente lo pisaría igual. Lo que sí prueba es que, compartiendo la única
+    // conexión del pool, cada transacción ve exclusivamente los datos de su propio contexto. Que
+    // el contexto sea local a la transacción (set_config con `true`) lo garantiza el adaptador;
+    // este test no lo verifica por sí solo.
+    it("cada transacción ve solo lo de su contexto aunque comparta conexión", async () => {
       const unaSola = crearEntornoDePrueba(base!, 1);
       try {
         const contar = async (contexto: ReturnType<typeof comoEmpresa>) => {
@@ -323,6 +345,29 @@ describe.skipIf(base === null)("aislamiento por empresa (RLS)", () => {
       });
     });
 
+    it("con una empresa suspendida y el tenant activo, el propietario sí ve sus sucursales", async () => {
+      const aparte = await crearEmpresaActiva(entorno, { nombreDeSucursal: "Sucursal suspendida" });
+      const dueno = await crearPropietario(entorno, aparte.tenant);
+      await comoPlataformaEjecutar(
+        sql`update empresa set estado = 'SUSPENDED', motivo_estado = 'revisión' where id = ${aparte.empresa}`,
+      );
+      const r = await entorno.ejecutar(
+        { contexto: comoGrupo(aparte.tenant, dueno) },
+        async ({ db }) => {
+          const e = await sql<{ estado: string }>`select estado from empresa`.execute(db);
+          const s = await sql<{ nombre: string }>`select nombre from sucursal`.execute(db);
+          return ok({
+            empresas: e.rows.map((f) => f.estado),
+            sucursales: s.rows.map((f) => f.nombre),
+          });
+        },
+      );
+      expect(r).toEqual({
+        ok: true,
+        valor: { empresas: ["SUSPENDED"], sucursales: ["Sucursal suspendida"] },
+      });
+    });
+
     it("deja registro de su acceso, y no puede registrarlo a nombre de otro", async () => {
       const dueno = await crearPropietario(entorno, a.tenant);
       const otro = await crearPropietario(entorno, a.tenant);
@@ -434,6 +479,37 @@ describe.skipIf(base === null)("aislamiento por empresa (RLS)", () => {
       }
     });
 
+    it("la misma clave de idempotencia puede usarse desde dos empresas distintas", async () => {
+      const clave = nombreAlAzar("compartida");
+      const encolar = (e: EmpresaDePrueba) =>
+        intentar(
+          comoEmpresa(e.empresa),
+          sql`insert into trabajo (empresa_id, tipo, clave_idempotencia)
+              values (${e.empresa}, 'enviar_invitacion', ${clave})`,
+        );
+      expect(await encolar(a)).toEqual({ ok: true, valor: null });
+      expect(await encolar(b)).toEqual({ ok: true, valor: null });
+      // Y dentro de cada empresa sigue siendo única.
+      const repetida = { ok: false, error: { tipo: "Unicidad", restriccion: "trabajo_clave_uk" } };
+      expect(await encolar(a)).toEqual(repetida);
+      expect(await encolar(b)).toEqual(repetida);
+    });
+
+    it("dos trabajos del ámbito plataforma (sin empresa) con la misma clave chocan", async () => {
+      const clave = nombreAlAzar("plataforma");
+      const encolar = () =>
+        intentar(
+          comoPlataforma(),
+          sql`insert into trabajo (empresa_id, tipo, clave_idempotencia)
+              values (null, 'mantenimiento', ${clave})`,
+        );
+      expect(await encolar()).toEqual({ ok: true, valor: null });
+      expect(await encolar()).toEqual({
+        ok: false,
+        error: { tipo: "Unicidad", restriccion: "trabajo_clave_uk" },
+      });
+    });
+
     it("encolar dos veces la misma clave deja una sola fila", async () => {
       const clave = nombreAlAzar("idem");
       const encolar = () =>
@@ -447,6 +523,241 @@ describe.skipIf(base === null)("aislamiento por empresa (RLS)", () => {
         ok: false,
         error: { tipo: "Unicidad", restriccion: "trabajo_clave_uk" },
       });
+    });
+  });
+
+  describe("una empresa que no está operable no encola ni audita", () => {
+    const CASOS: ReadonlyArray<{ nombre: string; preparar: () => Promise<EmpresaDePrueba> }> = [
+      {
+        nombre: "el tenant suspendido",
+        preparar: async () => {
+          const e = await crearEmpresaActiva(entorno);
+          await comoPlataformaEjecutar(
+            sql`update tenant set estado = 'SUSPENDED', motivo_estado = 'prueba' where id = ${e.tenant}`,
+          );
+          return e;
+        },
+      },
+      {
+        nombre: "la empresa suspendida (con el tenant activo)",
+        preparar: async () => {
+          const e = await crearEmpresaActiva(entorno);
+          await comoPlataformaEjecutar(
+            sql`update empresa set estado = 'SUSPENDED', motivo_estado = 'prueba' where id = ${e.empresa}`,
+          );
+          return e;
+        },
+      },
+      { nombre: "la empresa todavía en alta", preparar: () => crearEmpresaEnAlta(entorno) },
+    ];
+
+    const encolar = (e: EmpresaDePrueba) =>
+      intentar(
+        comoEmpresa(e.empresa),
+        sql`insert into trabajo (empresa_id, tipo, clave_idempotencia)
+            values (${e.empresa}, 'enviar_invitacion', ${nombreAlAzar("clave")})`,
+      );
+    const auditar = (e: EmpresaDePrueba, actor: PersonaId | null = null) =>
+      intentar(
+        comoEmpresa(e.empresa, actor),
+        sql`insert into auditoria_empresa (empresa_id, actor_persona_id, accion, entidad, entidad_id)
+            values (${e.empresa}, ${actor}, 'PRUEBA', 'sucursal', 'x')`,
+      );
+
+    for (const caso of CASOS) {
+      it(`con ${caso.nombre}: ni encola un trabajo ni escribe una auditoría`, async () => {
+        const e = await caso.preparar();
+        expect(await encolar(e)).toEqual(DENEGADO);
+        expect(await auditar(e)).toEqual(DENEGADO);
+      });
+    }
+
+    it("al reactivar el tenant vuelve a poder encolar y auditar", async () => {
+      const e = await crearEmpresaActiva(entorno);
+      await comoPlataformaEjecutar(
+        sql`update tenant set estado = 'SUSPENDED', motivo_estado = 'prueba' where id = ${e.tenant}`,
+      );
+      expect(await encolar(e)).toEqual(DENEGADO);
+      await comoPlataformaEjecutar(
+        sql`update tenant set estado = 'ACTIVE', motivo_estado = null where id = ${e.tenant}`,
+      );
+      expect(await encolar(e)).toEqual({ ok: true, valor: null });
+      expect(await auditar(e)).toEqual({ ok: true, valor: null });
+    });
+
+    it("la auditoría de la aplicación se escribe a nombre de la persona del contexto, no de otra", async () => {
+      const e = await crearEmpresaActiva(entorno);
+      const yo = await crearPropietario(entorno, e.tenant);
+      const otra = await crearPropietario(entorno, e.tenant);
+      expect(await auditar(e, yo)).toEqual({ ok: true, valor: null });
+      expect(await auditar(e, null)).toEqual({ ok: true, valor: null });
+
+      const comoYoAuditandoA = (actor: PersonaId | null) =>
+        intentar(
+          comoEmpresa(e.empresa, yo),
+          sql`insert into auditoria_empresa (empresa_id, actor_persona_id, accion, entidad, entidad_id)
+              values (${e.empresa}, ${actor}, 'PRUEBA', 'sucursal', 'x')`,
+        );
+      expect(await comoYoAuditandoA(yo)).toEqual({ ok: true, valor: null });
+      expect(await comoYoAuditandoA(otra)).toEqual(DENEGADO);
+      expect(await comoYoAuditandoA(null)).toEqual(DENEGADO);
+      // Sin persona en el contexto tampoco se puede firmar a nombre de alguien.
+      const sinPersona = await intentar(
+        comoEmpresa(e.empresa),
+        sql`insert into auditoria_empresa (empresa_id, actor_persona_id, accion, entidad, entidad_id)
+            values (${e.empresa}, ${otra}, 'PRUEBA', 'sucursal', 'x')`,
+      );
+      expect(sinPersona).toEqual(DENEGADO);
+    });
+  });
+
+  describe("el INSERT es por columna: nadie falsea creado_en, version, estado ni intentos", () => {
+    const hace = "2001-01-01T00:00:00Z";
+    const CASOS: ReadonlyArray<{
+      nombre: string;
+      contexto: () => Contexto;
+      consulta: () => RawBuilder<unknown>;
+    }> = [
+      {
+        nombre: "plataforma: una empresa dada de alta directamente como ACTIVE",
+        contexto: comoPlataforma,
+        consulta: () =>
+          sql`insert into empresa (tenant_id, cuit, razon_social, estado)
+              values (${a.tenant}, ${cuitAlAzar()}, ${nombreAlAzar("e")}, 'ACTIVE')`,
+      },
+      {
+        nombre: "plataforma: una empresa con creado_en antedatado",
+        contexto: comoPlataforma,
+        consulta: () =>
+          sql`insert into empresa (tenant_id, cuit, razon_social, creado_en)
+              values (${a.tenant}, ${cuitAlAzar()}, ${nombreAlAzar("e")}, ${hace})`,
+      },
+      {
+        nombre: "plataforma: un tenant con creado_en antedatado",
+        contexto: comoPlataforma,
+        consulta: () =>
+          sql`insert into tenant (nombre, creado_en) values (${nombreAlAzar("t")}, ${hace})`,
+      },
+      {
+        nombre: "plataforma: un tenant con version elegida",
+        contexto: comoPlataforma,
+        consulta: () => sql`insert into tenant (nombre, version) values (${nombreAlAzar("t")}, 99)`,
+      },
+      {
+        nombre: "plataforma: un tenant dado de alta ya SUSPENDED",
+        contexto: comoPlataforma,
+        consulta: () =>
+          sql`insert into tenant (nombre, estado, motivo_estado)
+              values (${nombreAlAzar("t")}, 'SUSPENDED', 'x')`,
+      },
+      {
+        nombre: "plataforma: un trabajo ya HECHO",
+        contexto: comoPlataforma,
+        consulta: () =>
+          sql`insert into trabajo (tipo, clave_idempotencia, estado)
+              values ('mantenimiento', ${nombreAlAzar("clave")}, 'HECHO')`,
+      },
+      {
+        nombre: "plataforma: una auditoría de plataforma con creado_en antedatado",
+        contexto: comoPlataforma,
+        consulta: () =>
+          sql`insert into auditoria_plataforma (actor, accion, entidad, entidad_id, creado_en)
+              values ('admin-de-prueba', 'PRUEBA', 'tenant', 'x', ${hace})`,
+      },
+      {
+        nombre: "plataforma: una persona dada de alta ya desactivada globalmente",
+        contexto: comoPlataforma,
+        consulta: () =>
+          sql`insert into persona (email, activo_global)
+              values (${`${nombreAlAzar("p")}@prueba.test`}, false)`,
+      },
+      {
+        nombre: "aplicación: un trabajo ya HECHO",
+        contexto: () => comoEmpresa(a.empresa),
+        consulta: () =>
+          sql`insert into trabajo (empresa_id, tipo, clave_idempotencia, estado)
+              values (${a.empresa}, 'enviar_invitacion', ${nombreAlAzar("clave")}, 'HECHO')`,
+      },
+      {
+        nombre: "aplicación: un trabajo con intentos ya gastados",
+        contexto: () => comoEmpresa(a.empresa),
+        consulta: () =>
+          sql`insert into trabajo (empresa_id, tipo, clave_idempotencia, intentos)
+              values (${a.empresa}, 'enviar_invitacion', ${nombreAlAzar("clave")}, 5)`,
+      },
+      {
+        nombre: "aplicación: una sucursal con creado_en antedatado",
+        contexto: () => comoEmpresa(a.empresa),
+        consulta: () =>
+          sql`insert into sucursal (empresa_id, nombre, creado_en)
+              values (${a.empresa}, ${nombreAlAzar("s")}, ${hace})`,
+      },
+      {
+        nombre: "aplicación: una sucursal con version elegida",
+        contexto: () => comoEmpresa(a.empresa),
+        consulta: () =>
+          sql`insert into sucursal (empresa_id, nombre, version)
+              values (${a.empresa}, ${nombreAlAzar("s")}, 7)`,
+      },
+      {
+        nombre: "aplicación: una auditoría con creado_en antedatado",
+        contexto: () => comoEmpresa(a.empresa),
+        consulta: () =>
+          sql`insert into auditoria_empresa (empresa_id, accion, entidad, entidad_id, creado_en)
+              values (${a.empresa}, 'PRUEBA', 'sucursal', 'x', ${hace})`,
+      },
+      {
+        nombre: "aplicación: una auditoría con el id elegido",
+        contexto: () => comoEmpresa(a.empresa),
+        consulta: () =>
+          sql`insert into auditoria_empresa (id, empresa_id, accion, entidad, entidad_id)
+              overriding system value
+              values (-1, ${a.empresa}, 'PRUEBA', 'sucursal', 'x')`,
+      },
+    ];
+
+    for (const caso of CASOS) {
+      it(`se rechaza ${caso.nombre}`, async () => {
+        expect(await intentar(caso.contexto(), caso.consulta())).toEqual(DENEGADO);
+      });
+    }
+
+    it("el registro de acceso del grupo no admite un creado_en antedatado", async () => {
+      const dueno = await crearPropietario(entorno, a.tenant);
+      const r = await intentar(
+        comoGrupo(a.tenant, dueno),
+        sql`insert into auditoria_acceso_grupo (tenant_id, persona_id, creado_en)
+            values (${a.tenant}, ${dueno}, ${hace})`,
+      );
+      expect(r).toEqual(DENEGADO);
+    });
+  });
+
+  describe("sin tablas temporales no hay suplantación", () => {
+    it("ningún rol limitado puede crear una tabla temporal, ni una que se llame como una de las reales", async () => {
+      const dueno = await crearPropietario(entorno, a.tenant);
+      const contextos: ReadonlyArray<readonly [string, Contexto]> = [
+        ["aplicación", comoEmpresa(a.empresa)],
+        ["grupo", comoGrupo(a.tenant, dueno)],
+        ["trabajos", comoTrabajos()],
+        ["plataforma", comoPlataforma()],
+      ];
+      for (const [rol, contexto] of contextos) {
+        for (const consulta of [
+          sql`create temp table empresa (id uuid, tenant_id uuid, estado text)`,
+          sql`create temporary table tenant (id uuid, estado text)`,
+          sql`create table pg_temp.membresia_tenant (persona_id uuid)`,
+          sql`create function pg_temp.empresa_operable(uuid) returns boolean language sql as 'select true'`,
+        ]) {
+          expect(await intentar(contexto, consulta), rol).toEqual(DENEGADO);
+        }
+      }
+    });
+
+    it("tampoco puede crear objetos en el esquema público", async () => {
+      expect(
+        await intentar(comoEmpresa(a.empresa), sql`create table public.puerta_trasera (id int)`),
+      ).toEqual(DENEGADO);
     });
   });
 

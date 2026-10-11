@@ -9,7 +9,7 @@ export type TenantsDb = {
     id: Generated<string>;
     nombre: string;
     estado: Generated<EstadoDeTenant>;
-    motivo_estado: string | null;
+    motivo_estado: Generated<string | null>;
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
@@ -70,7 +70,7 @@ export function crearRepositorioDeTenants(db: Kysely<TenantsDb>): RepositorioDeT
     async crear(nombre) {
       const fila = await db
         .insertInto("tenant")
-        .values({ nombre, motivo_estado: null })
+        .values({ nombre })
         .returningAll()
         .executeTakeFirstOrThrow();
       return aTenant(fila);
