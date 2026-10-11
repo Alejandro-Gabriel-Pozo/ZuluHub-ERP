@@ -60,18 +60,26 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
     parametros: unknown[] = [],
   ) => (await dueno.query<T>(texto, parametros)).rows;
 
-  describe("aislamiento", () => {
-    it("toda tabla de negocio tiene RLS activo y forzado", async () => {
-      const tablas = await filas<{
+  // Tablas ordinarias ('r') y particionadas ('p'): una tabla madre particionada también tiene que
+  // pasar por el control de RLS. (Las particiones son 'r' y se revisan como cualquier tabla.)
+  const tablasDeNegocio = async (cliente: pg.Client) =>
+    (
+      await cliente.query<{
         relname: string;
+        relkind: string;
         relrowsecurity: boolean;
         relforcerowsecurity: boolean;
       }>(
-        `select c.relname, c.relrowsecurity, c.relforcerowsecurity
+        `select c.relname, c.relkind, c.relrowsecurity, c.relforcerowsecurity
          from pg_class c join pg_namespace n on n.oid = c.relnamespace
-         where n.nspname = 'public' and c.relkind = 'r'
+         where n.nspname = 'public' and c.relkind in ('r', 'p')
            and c.relname not in ('migracion', 'contexto_clave')`,
-      );
+      )
+    ).rows;
+
+  describe("aislamiento", () => {
+    it("toda tabla de negocio tiene RLS activo y forzado", async () => {
+      const tablas = await tablasDeNegocio(dueno);
       expect(tablas.map((t) => t.relname).sort()).toEqual([...TABLAS_DE_NEGOCIO].sort());
       for (const tabla of tablas) {
         expect(tabla.relrowsecurity, `${tabla.relname}: RLS activo`).toBe(true);
@@ -437,22 +445,41 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       }
     });
 
+    // `security_invoker` solo existe en las vistas comunes ('v'): Postgres lo rechaza en las vistas
+    // materializadas ("unrecognized parameter") y en las tablas particionadas ("cannot specify
+    // storage parameters"). Por eso cada clase tiene su propia regla.
     const vistasSinSecurityInvoker = async (cliente: pg.Client) =>
       (
         await cliente.query<{ relname: string; relkind: string }>(
           `select c.relname, c.relkind
            from pg_class c join pg_namespace n on n.oid = c.relnamespace
-           where n.nspname = 'public' and c.relkind in ('v', 'm', 'p')
+           where n.nspname = 'public' and c.relkind = 'v'
              and not ('security_invoker=true' = any (coalesce(c.reloptions, '{}')))
            order by 1`,
         )
       ).rows;
 
-    it("no hay vistas, vistas materializadas ni tablas particionadas sin security_invoker", async () => {
+    // Una vista materializada no admite RLS y se llena con los permisos de su dueño (en Neon, un rol
+    // que evade RLS): mezclaría clientes. Las alternativas son una tabla de resumen común, con RLS.
+    const vistasMaterializadas = async (cliente: pg.Client) =>
+      (
+        await cliente.query<{ relname: string; relkind: string }>(
+          `select c.relname, c.relkind
+           from pg_class c join pg_namespace n on n.oid = c.relnamespace
+           where n.nspname = 'public' and c.relkind = 'm'
+           order by 1`,
+        )
+      ).rows;
+
+    it("no hay vistas comunes sin security_invoker", async () => {
       expect(await vistasSinSecurityInvoker(dueno)).toEqual([]);
     });
 
-    it("el chequeo de vistas muerde: detecta las que no tienen security_invoker y acepta la que lo tiene", async () => {
+    it("no hay vistas materializadas (no admiten RLS: se usa una tabla de resumen con RLS)", async () => {
+      expect(await vistasMaterializadas(dueno)).toEqual([]);
+    });
+
+    it("los chequeos de vistas y de tablas particionadas muerden", async () => {
       if (base === null) return;
       const aparte = await crearBaseAparte(base);
       const cliente = new pg.Client({ connectionString: aparte.base.dueno });
@@ -465,10 +492,20 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         await cliente.query(
           "create materialized view vista_materializada as select id from tenant",
         );
+        await cliente.query("create table madre (id int not null, v int) partition by range (id)");
         expect(await vistasSinSecurityInvoker(cliente)).toEqual([
           { relname: "vista_abierta", relkind: "v" },
+        ]);
+        expect(await vistasMaterializadas(cliente)).toEqual([
           { relname: "vista_materializada", relkind: "m" },
         ]);
+        // La tabla madre particionada aparece en el control de RLS, sin RLS: ese test fallaría.
+        const madre = (await tablasDeNegocio(cliente)).find((t) => t.relname === "madre");
+        expect(madre).toMatchObject({
+          relkind: "p",
+          relrowsecurity: false,
+          relforcerowsecurity: false,
+        });
       } finally {
         await cliente.end();
         await aparte.destruir();
