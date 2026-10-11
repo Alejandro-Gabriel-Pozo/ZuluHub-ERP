@@ -23,6 +23,15 @@ export function traducirErrorDeBase(error: unknown): ErrorDePersistencia | null 
       return { tipo: "Check", restriccion };
     case "42501":
       return { tipo: "AccesoDenegado" };
+    case "25P02":
+      // Lo produce el adaptador al verificar, antes de confirmar, que la transacción siga sana.
+      return {
+        tipo: "Inesperado",
+        sqlstate: "25P02",
+        mensaje:
+          "la transacción quedó abortada: el trabajo atrapó un error de la base y siguió; " +
+          "un error de la base se propaga, no se atrapa",
+      };
     default:
       return { tipo: "Inesperado", sqlstate: error.code ?? null, mensaje: error.message };
   }
