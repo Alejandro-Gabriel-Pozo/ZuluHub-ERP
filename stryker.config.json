@@ -13,6 +13,7 @@
     "src/modulos/fiscal/dominio/**/*.ts",
     "src/modulos/tenants/dominio/**/*.ts",
     "src/modulos/empresas/dominio/**/*.ts",
+    "src/modulos/identidad/dominio/**/*.ts",
     "!src/**/*.test.ts"
   ],
   "coverageAnalysis": "off",
