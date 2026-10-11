@@ -105,6 +105,14 @@ const reglas = [
     to: { path: FRAMEWORK },
   },
   {
+    name: "dinero-constructores-internos",
+    severity: "error",
+    comment:
+      "Los constructores sin parser de dinero y cantidad (interno.ts) solo los usan las propias primitivas: fuera de ellas un importe nace de texto validado, de sumar/restar, de redondear o de prorratear (caso 0b).",
+    from: { path: "^src/", pathNot: "^src/primitivas/(dinero|cantidad)/" },
+    to: { path: "^src/primitivas/(dinero|cantidad)/interno\\.ts$" },
+  },
+  {
     name: "apps-sin-persistencia-ni-adaptadores",
     severity: "error",
     comment:

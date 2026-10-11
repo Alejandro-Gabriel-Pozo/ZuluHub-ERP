@@ -6,3 +6,5 @@ coverage/
 .vercel/
 .neon
 *.log
+reports/
+.stryker-tmp/

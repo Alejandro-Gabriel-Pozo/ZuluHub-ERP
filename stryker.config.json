@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "command",
+  "commandRunner": { "command": "npx vitest run --reporter=dot" },
+  "mutate": [
+    "src/primitivas/dinero/**/*.ts",
+    "src/primitivas/cantidad/**/*.ts",
+    "src/modulos/fiscal/dominio/**/*.ts",
+    "!src/**/*.test.ts"
+  ],
+  "coverageAnalysis": "off",
+  "reporters": ["clear-text", "progress", "html"],
+  "htmlReporter": { "fileName": "reports/mutation/index.html" },
+  "tempDirName": ".stryker-tmp",
+  "cleanTempDir": true,
+  "timeoutMS": 30000,
+  "thresholds": { "high": 100, "low": 95, "break": null }
+}

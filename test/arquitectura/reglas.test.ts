@@ -142,6 +142,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "dinero-constructores-internos",
+      archivos: {
+        "src/modulos/fiscal/dominio/d.ts": importa("../../../primitivas/dinero/interno"),
+        "src/primitivas/dinero/interno.ts": exporta,
+      },
+    },
+    {
       regla: "apps-sin-persistencia-ni-adaptadores",
       archivos: {
         "apps/web/a.ts": importa("../../src/modulos/empresas/persistencia/r"),
@@ -167,6 +174,16 @@ describe("reglas de arquitectura (ADR-001)", () => {
       expect(v).toContain(caso.regla);
     });
   }
+
+  it("las primitivas de dinero sí pueden usar sus propios constructores internos", async () => {
+    const v = await violacionesDe({
+      "src/primitivas/dinero/importe.ts": importa("./interno"),
+      "src/primitivas/dinero/interno.ts": exporta,
+      "src/primitivas/dinero/interno-desde-cantidad.ts": importa("../cantidad/interno"),
+      "src/primitivas/cantidad/interno.ts": exporta,
+    });
+    expect(v).toEqual([]);
+  });
 
   it("el ORM sí se puede importar en la persistencia de un módulo y en el adaptador de Postgres", async () => {
     const v = await violacionesDe({

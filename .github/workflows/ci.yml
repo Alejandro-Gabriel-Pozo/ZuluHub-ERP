@@ -56,10 +56,25 @@ jobs:
       - run: npm ci
       - run: npm audit --audit-level=high
 
+  mutacion:
+    name: Mutación (dinero e IVA)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run mutacion
+        env:
+          FC_SEMILLA: "20261011"
+
   gate:
     name: Gate
     runs-on: ubuntu-latest
-    needs: [estatico, pruebas, seguridad]
+    needs: [estatico, pruebas, seguridad, mutacion]
     if: always()
     steps:
       - name: Todos los jobs en verde
@@ -67,3 +82,4 @@ jobs:
           test "${{ needs.estatico.result }}" = "success"
           test "${{ needs.pruebas.result }}" = "success"
           test "${{ needs.seguridad.result }}" = "success"
+          test "${{ needs.mutacion.result }}" = "success"

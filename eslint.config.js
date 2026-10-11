@@ -1,9 +1,10 @@
 import js from "@eslint/js";
 import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
+import { bloques as bloquesDeDinero } from "./arquitectura/lint-dinero.cjs";
 
 export default defineConfig(
-  { ignores: ["node_modules", "coverage", ".claude"] },
+  { ignores: ["node_modules", "coverage", ".claude", ".stryker-tmp", "reports"] },
   js.configs.recommended,
   {
     files: ["**/*.ts"],
@@ -17,6 +18,7 @@ export default defineConfig(
       "@typescript-eslint/consistent-type-imports": "error",
     },
   },
+  ...bloquesDeDinero,
   {
     files: ["**/*.cjs"],
     languageOptions: {
