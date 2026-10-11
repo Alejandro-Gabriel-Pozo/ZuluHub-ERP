@@ -861,6 +861,62 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       expect(sobrantes, "traducciones de restricciones que no existen").toEqual([]);
     });
 
+    // Una restricción única que NO incluye `empresa_id` deja que un cliente detecte, por el error de
+    // duplicado (o por un `ON CONFLICT DO NOTHING` que no inserta nada), que un valor existe en OTRO
+    // cliente. Se exceptúan las columnas que el cliente no elige (identidad o valor por defecto: ids
+    // generados por la base). La unicidad global es una decisión de negocio explícita (por ejemplo el
+    // CUIT), y vive en tablas que no tienen `empresa_id`.
+    const unicasSinEmpresa = async (cliente: pg.Client) =>
+      (
+        await cliente.query<{ tabla: string; indice: string }>(
+          `select c.relname as tabla, ic.relname as indice
+           from pg_index i
+           join pg_class c on c.oid = i.indrelid
+           join pg_class ic on ic.oid = i.indexrelid
+           join pg_namespace n on n.oid = c.relnamespace
+           join pg_attribute e on e.attrelid = c.oid and e.attname = 'empresa_id' and not e.attisdropped
+           where n.nspname = 'public' and i.indisunique
+             and not (e.attnum = any (i.indkey::int2[]))
+             and exists (
+               select 1
+               from unnest(i.indkey::int2[]) as k(attnum)
+               join pg_attribute a on a.attrelid = c.oid and a.attnum = k.attnum
+               where a.attidentity = ''
+                 and not exists (select 1 from pg_attrdef d where d.adrelid = c.oid and d.adnum = a.attnum)
+             )
+           order by 1, 2`,
+        )
+      ).rows;
+
+    it("toda restricción única de una tabla con empresa_id la incluye (nada de detectar datos de otro cliente)", async () => {
+      expect(await unicasSinEmpresa(dueno)).toEqual([]);
+    });
+
+    it("el chequeo de unicidad muerde: detecta una única sin empresa_id y acepta las que corresponden", async () => {
+      if (base === null) return;
+      const aparte = await crearBaseAparte(base);
+      const cliente = new pg.Client({ connectionString: aparte.base.dueno });
+      await cliente.connect();
+      try {
+        await cliente.query(`create table producto_mala (
+          id uuid primary key default gen_random_uuid(), empresa_id uuid not null, sku text not null,
+          unique (sku))`);
+        await cliente.query(`create table producto_buena (
+          id uuid primary key default gen_random_uuid(), empresa_id uuid not null, sku text not null,
+          unique (empresa_id, sku))`);
+        await cliente.query(`create table producto_clave_propia (
+          codigo text primary key, empresa_id uuid not null)`);
+        await cliente.query(`create table producto_global (id uuid primary key, sku text unique)`);
+        expect(await unicasSinEmpresa(cliente)).toEqual([
+          { tabla: "producto_clave_propia", indice: "producto_clave_propia_pkey" },
+          { tabla: "producto_mala", indice: "producto_mala_sku_key" },
+        ]);
+      } finally {
+        await cliente.end();
+        await aparte.destruir();
+      }
+    });
+
     it("las columnas de cada tabla coinciden con los tipos del módulo", async () => {
       const columnasDe = async (tabla: string) =>
         (
