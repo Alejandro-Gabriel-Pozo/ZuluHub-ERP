@@ -732,6 +732,17 @@ function hostTienePooler(url: string): boolean {
   }
 }
 
+/** Identificador del endpoint de Neon (`ep-…`), sin `-pooler`. No es un secreto; permite comparar ramas. */
+function endpointDe(url: string | undefined): string {
+  try {
+    if (!url) return "(falta)";
+    const primera = new URL(url).hostname.split(".")[0] ?? "";
+    return primera.replace(/-pooler$/, "");
+  } catch {
+    return "(inválida)";
+  }
+}
+
 function hostDe(url: string | undefined): string {
   try {
     return url ? new URL(url).hostname.replace(/^[^.]*/, (e) => e.replace(/./g, "*")) : "(falta)";
@@ -760,8 +771,16 @@ export default {
       databaseUrlUnpooledEsDirecta:
         config.urlDirecta !== "" && !config.urlDirecta.includes("-pooler"),
       hostPooler: hostDe(config.urlPooler),
+      endpointPooler: endpointDe(config.urlPooler),
+      endpointDirecto: endpointDe(config.urlDirecta),
+      mismoEndpoint: endpointDe(config.urlPooler) === endpointDe(config.urlDirecta),
     };
     const problemas = validarEntorno(config);
+    if (problemas.length === 0 && !info.mismoEndpoint) {
+      problemas.push(
+        "DATABASE_URL y DATABASE_URL_UNPOOLED apuntan a endpoints distintos (ramas de Neon distintas): el spike crearía los objetos en una y probaría en la otra. Cargá ambas desde la misma rama.",
+      );
+    }
     if (problemas.length > 0) {
       return Response.json({ entorno: info, problemas }, { status: 412 });
     }
