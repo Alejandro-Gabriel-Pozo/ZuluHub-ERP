@@ -70,7 +70,9 @@ describe("MontoExacto", () => {
     const otra = { ...exactoDeImporte(ars("1.00")), moneda: "USD" } as unknown as ReturnType<
       typeof exactoDeImporte
     >;
-    expect(() => sumarExactos(exactoDeImporte(ars("1.00")), otra)).toThrow(ErrorDeValor);
+    expect(() => sumarExactos(exactoDeImporte(ars("1.00")), otra)).toThrow(
+      "MONEDA_DISTINTA: no se puede combinar ARS con USD",
+    );
     expect(() => restarExactos(exactoDeImporte(ars("1.00")), otra)).toThrow(ErrorDeValor);
   });
 });
@@ -78,7 +80,8 @@ describe("MontoExacto", () => {
 describe("PrecioUnitario", () => {
   it("escala 6, no negativo, ida y vuelta", () => {
     expect(precioUnitarioATexto(precioUnitarioDesdeTexto("9.95"))).toBe("9.950000");
-    expect(() => precioUnitarioDesdeTexto("-1")).toThrow(ErrorDeValor);
+    expect(() => precioUnitarioDesdeTexto("-1")).toThrow(/precio unitario:/);
+    expect(() => precioUnitarioDesdeTexto("x")).toThrow(/precio unitario:/);
     expect(() => precioUnitarioDesdeTexto("1.0000001")).toThrow(ErrorDeValor);
   });
 });

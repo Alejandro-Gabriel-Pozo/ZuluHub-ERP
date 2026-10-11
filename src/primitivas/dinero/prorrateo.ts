@@ -35,19 +35,25 @@ export function prorratear(total: Importe, pesos: readonly MontoExacto[]): Impor
     piso: (total.unidades * peso) / suma,
     resto: (total.unidades * peso) % suma,
   }));
-  let faltan = total.unidades - partes.reduce((acumulado, p) => acumulado + p.piso, 0n);
-
-  const porResto = [...partes].sort((a, b) =>
-    a.resto > b.resto ? -1 : a.resto < b.resto ? 1 : a.posicion - b.posicion,
-  );
   const extra = new Set<number>();
-  for (const parte of porResto) {
-    if (faltan === 0n) break;
-    extra.add(parte.posicion);
-    faltan -= 1n;
+  for (
+    let faltan = total.unidades - partes.reduce((acumulado, p) => acumulado + p.piso, 0n);
+    faltan > 0n;
+    faltan -= 1n
+  ) {
+    extra.add(indiceDelMayorResto(partes, extra));
   }
 
   return partes.map((parte) =>
     crearImporte(total.moneda, parte.piso + (extra.has(parte.posicion) ? 1n : 0n)),
   );
+}
+
+/** El mayor resto que aún no recibió un centavo; ante un empate gana el que está primero. */
+function indiceDelMayorResto(
+  partes: readonly { posicion: number; resto: bigint }[],
+  elegidos: ReadonlySet<number>,
+): number {
+  const candidatas = partes.filter((parte) => !elegidos.has(parte.posicion));
+  return candidatas.reduce((mejor, parte) => (parte.resto > mejor.resto ? parte : mejor)).posicion;
 }

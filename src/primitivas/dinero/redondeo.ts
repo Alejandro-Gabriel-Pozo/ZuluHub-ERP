@@ -15,6 +15,7 @@ export const POLITICA_VIGENTE: Politica = "MITAD_SUBE_SIMETRICA";
 
 /** Única puerta de `MontoExacto` a `Importe`. */
 export function redondear(monto: MontoExacto, politica: Politica): Importe {
+  // Stryker disable next-line EqualityOperator: con numerador cero el signo no cambia el resultado
   const negativo = monto.numerador < 0n;
   const absoluto = negativo ? -monto.numerador : monto.numerador;
   const entero = absoluto / monto.denominador;

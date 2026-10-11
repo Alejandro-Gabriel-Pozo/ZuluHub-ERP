@@ -18,10 +18,11 @@ export function parsearDecimalFijo(texto: string, escala: number, nombre: string
     throw new ErrorDeValor("FORMATO_INVALIDO", `${nombre}: texto demasiado largo`);
   }
   const grupos = PATRON.exec(texto)?.groups;
-  const entera = grupos?.["entera"];
-  if (grupos === undefined || entera === undefined) {
+  if (grupos === undefined) {
     throw new ErrorDeValor("FORMATO_INVALIDO", `${nombre}: no es un decimal en forma canónica`);
   }
+  // Stryker disable next-line StringLiteral: rama inalcanzable, el grupo `entera` es obligatorio en PATRON
+  const entera = grupos["entera"] ?? "";
   const fraccion = grupos["fraccion"] ?? "";
   if (fraccion.length > escala) {
     throw new ErrorDeValor("DECIMALES_DE_MAS", `${nombre}: admite hasta ${escala} decimales`);
@@ -38,6 +39,7 @@ export function parsearDecimalFijo(texto: string, escala: number, nombre: string
 
 export function formatearDecimalFijo(unidades: bigint, escala: number): string {
   const signo = unidades < 0n ? "-" : "";
+  // Stryker disable next-line EqualityOperator: con cero, `-0n` y `0n` son el mismo valor
   const digitos = (unidades < 0n ? -unidades : unidades).toString().padStart(escala + 1, "0");
   if (escala === 0) return `${signo}${digitos}`;
   const corte = digitos.length - escala;

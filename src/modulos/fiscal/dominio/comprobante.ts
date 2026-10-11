@@ -85,6 +85,7 @@ export function calcularComprobante(
   const importes = prorratear(total, exactas);
 
   const desglose = CODIGOS_DE_ALICUOTA.flatMap((codigo) => {
+    // Stryker disable next-line OptionalChaining: `importes` y `lineas` tienen el mismo largo; el `?.` solo satisface noUncheckedIndexedAccess
     const delaAlicuota = importes.filter((_, posicion) => lineas[posicion]?.alicuota === codigo);
     if (delaAlicuota.length === 0) return [];
     const totalDeAlicuota = delaAlicuota.reduce(sumar, importeCero(moneda));

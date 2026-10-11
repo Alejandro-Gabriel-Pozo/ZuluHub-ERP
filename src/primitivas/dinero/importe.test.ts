@@ -33,6 +33,16 @@ describe("moneda", () => {
       expect(codigoDe(() => moneda(otra))).toBe("MONEDA_NO_SOPORTADA");
     }
   });
+
+  it("el error no repite entero un texto largo y dice cuál fue la moneda", () => {
+    expect(() => moneda("USD")).toThrow("MONEDA_NO_SOPORTADA: moneda no soportada: USD");
+    const largo = `XYZ${"-".repeat(50)}`;
+    try {
+      moneda(largo);
+    } catch (e) {
+      expect((e as Error).message).toBe("MONEDA_NO_SOPORTADA: moneda no soportada: XYZ-----");
+    }
+  });
 });
 
 describe("Importe", () => {
@@ -64,6 +74,14 @@ describe("Importe", () => {
   it("compara por moneda y unidades", () => {
     expect(importesIguales(ars("1.00"), ars("1.0"))).toBe(true);
     expect(importesIguales(ars("1.00"), ars("1.01"))).toBe(false);
+    const dolares = { ...ars("1.00"), moneda: "USD" } as unknown as ReturnType<typeof ars>;
+    expect(importesIguales(ars("1.00"), dolares)).toBe(false);
+  });
+
+  it("los errores de formato dicen qué campo falló", () => {
+    expect(() => ars("1,5")).toThrow(/importe:/);
+    const sinTexto = { moneda: "ARS", monto: 5 } as unknown as modulo.ImporteJson;
+    expect(() => importeDesdeJson(sinTexto)).toThrow(/importe: moneda y monto deben ser texto/);
   });
 
   it("JSON en la frontera: texto, nunca number", () => {

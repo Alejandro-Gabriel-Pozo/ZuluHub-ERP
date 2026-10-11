@@ -36,7 +36,8 @@ export function crearPrecioUnitario(unidades: bigint): PrecioUnitario {
   return Object.freeze({ unidades }) as PrecioUnitario;
 }
 
-function mcd(a: bigint, b: bigint): bigint {
+export function mcd(a: bigint, b: bigint): bigint {
+  // Stryker disable next-line EqualityOperator: con cero, `-0n` y `0n` son el mismo valor
   let x = a < 0n ? -a : a;
   let y = b;
   while (y !== 0n) [x, y] = [y, x % y];
