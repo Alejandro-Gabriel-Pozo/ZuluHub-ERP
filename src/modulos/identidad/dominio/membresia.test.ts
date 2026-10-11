@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { empresaId, personaId } from "../../../primitivas/identificadores/marca";
-import { decidirApagado, type Membresia, type RolDeEmpresa } from "./membresia";
+import {
+  decidirApagado,
+  puedeAdministrarAccesos,
+  type Membresia,
+  type RolDeEmpresa,
+} from "./membresia";
 
 const EMPRESA = empresaId("e-1");
 
@@ -85,5 +90,26 @@ describe("decidirApagado", () => {
       ok: false,
       error: "ULTIMO_ADMIN",
     });
+  });
+});
+
+describe("puedeAdministrarAccesos (control de piso transitorio)", () => {
+  it("el gerente y el administrador activos pueden", () => {
+    expect(puedeAdministrarAccesos(gerente)).toBe(true);
+    expect(puedeAdministrarAccesos(admin)).toBe(true);
+  });
+
+  it("el operador no puede", () => {
+    expect(puedeAdministrarAccesos(operador)).toBe(false);
+  });
+
+  it("quien está apagado no puede, sea cual sea su rol", () => {
+    for (const rol of ["GERENTE", "ADMINISTRADOR", "OPERADOR"] as const) {
+      expect(puedeAdministrarAccesos(membresia("p-x", rol, false))).toBe(false);
+    }
+  });
+
+  it("quien no es miembro no puede", () => {
+    expect(puedeAdministrarAccesos(null)).toBe(false);
   });
 });

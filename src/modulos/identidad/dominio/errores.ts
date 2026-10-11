@@ -14,6 +14,16 @@ export type EmpresaNoOpera = Readonly<{
   motivo: Exclude<EstadoEfectivo, "OPERA">;
 }>;
 
+/**
+ * Falla de `ROL_DISTINTO_AL_ANTERIOR`: la persona ya tuvo una membresía (apagada) en esa empresa con
+ * otro rol. Reactivarla con un rol distinto no se soporta por ahora (el rol de una membresía no se
+ * cambia: ningún rol de base tiene permiso para actualizarlo).
+ */
+export type RolDistintoAlAnterior = Readonly<{
+  codigo: "ROL_DISTINTO_AL_ANTERIOR";
+  empresaId: EmpresaId;
+}>;
+
 /** Creación, reenvío y consulta de invitaciones. */
 export type ErrorDeInvitacion =
   | "INVITACION_NO_ENCONTRADA"
@@ -29,6 +39,8 @@ export type ErrorDeInvitacion =
   // Solo se reenvían las invitaciones de usuario; el reenvío del alta es de plataforma (H5).
   | "REENVIO_NO_PERMITIDO"
   | "ALTA_YA_TIENE_INVITACION"
+  // Invitar a quien ya es miembro activo de la empresa.
+  | "YA_ES_MIEMBRO"
   | "SIN_PERMISO";
 
 /** Aceptación de una invitación. */
@@ -41,7 +53,8 @@ export type ErrorDeAceptacion =
   | "INVITACION_DE_OTRO_EMAIL"
   | "PERSONA_SUSPENDIDA"
   | "YA_ES_MIEMBRO"
-  | EmpresaNoOpera;
+  | EmpresaNoOpera
+  | RolDistintoAlAnterior;
 
 /** Apagado de una membresía. */
 export type ErrorDeMembresia =

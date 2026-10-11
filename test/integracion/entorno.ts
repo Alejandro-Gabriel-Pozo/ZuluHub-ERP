@@ -10,7 +10,7 @@ import {
   type SinTablas,
   type TransaccionesDePostgres,
 } from "../../src/adaptadores/postgres/transacciones";
-import type { Contexto } from "../../src/contexto/contexto";
+import type { Contexto, ContextoOperativo } from "../../src/contexto/contexto";
 import {
   digitoVerificadorDeCuit,
   cuitDesdeTexto,
@@ -30,10 +30,23 @@ import {
   type RepositorioDeSucursales,
 } from "../../src/modulos/empresas/publico";
 import {
+  crearRepositorioDeAsignaciones,
+  crearRepositorioDeInvitaciones,
+  crearRepositorioDeMembresias,
+  crearRepositorioDePersonas,
+  type IdentidadDb,
+  type TxDeIdentidad,
+} from "../../src/modulos/identidad/publico";
+import {
   crearRepositorioDeTenants,
   type RepositorioDeTenants,
   type TenantsDb,
 } from "../../src/modulos/tenants/publico";
+import {
+  crearAuditoriaDePostgres,
+  type AuditoriaDb,
+} from "../../src/adaptadores/postgres/auditoria";
+import { crearTrabajosDePostgres, type TrabajosDb } from "../../src/adaptadores/postgres/trabajos";
 import type { BaseDePruebas } from "./global";
 
 /**
@@ -48,11 +61,17 @@ export type TxDePrueba = Readonly<{
   tenants: RepositorioDeTenants;
   empresas: RepositorioDeEmpresas;
   sucursales: RepositorioDeSucursales;
-}>;
+}> &
+  TxDeIdentidad;
 
+/**
+ * `ajustar` envuelve lo que recibe el trabajo (para inyectar una falla o una barrera en las pruebas
+ * de concurrencia); sin él, es exactamente lo que armaría la composición.
+ */
 export function crearEntornoDePrueba(
   base: BaseDePruebas,
   maximoDeConexiones = 5,
+  ajustar: (tx: TxDePrueba) => TxDePrueba = (tx) => tx,
 ): TransaccionesDePostgres<TxDePrueba> {
   return crearTransacciones<TxDePrueba>({
     urls: {
@@ -61,12 +80,19 @@ export function crearEntornoDePrueba(
       PLATAFORMA: base.plataforma,
       TRABAJOS: base.trabajos,
     },
-    armar: (db) => ({
-      db,
-      tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
-      empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
-      sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
-    }),
+    armar: (db) =>
+      ajustar({
+        db,
+        tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
+        empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
+        sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
+        personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
+        membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
+        asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
+        invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
+        trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
+        auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
+      }),
     maximoDeConexiones,
     clave: base.clave,
   });
@@ -80,7 +106,10 @@ export const comoPlataforma = (): Contexto => ({
   ahora: AHORA,
 });
 
-export const comoEmpresa = (empresa: EmpresaId, persona: PersonaId | null = null): Contexto => ({
+export const comoEmpresa = (
+  empresa: EmpresaId,
+  persona: PersonaId | null = null,
+): ContextoOperativo => ({
   tipo: "OPERATIVO",
   empresaId: empresa,
   personaId: persona,

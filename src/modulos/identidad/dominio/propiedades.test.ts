@@ -168,6 +168,7 @@ describe("propiedades de decidirAceptacion", () => {
       persona,
       estados,
       miembroActivoEn: new Set(empresasIds.filter((_, n) => e.miembro[n])),
+      rolesAnteriores: new Map(),
     });
     return { i, persona, estados, resultado, ahoraMs };
   }

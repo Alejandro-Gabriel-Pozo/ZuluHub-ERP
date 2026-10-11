@@ -60,6 +60,10 @@ export async function crearInvitacionDeBase(
   c: pg.Client,
   datos: {
     tenant: string;
+    /** Por defecto, uno al azar; sirve para que el token se derive de él (`tokens.emitir()`). */
+    id?: string;
+    /** Por defecto, el de un token al azar que nadie conoce. */
+    tokenHash?: string;
     tipo?: TipoDeInvitacionDePrueba;
     email?: string;
     emitidaPor?: string | null;
@@ -67,10 +71,10 @@ export async function crearInvitacionDeBase(
     venceEn?: Date;
   },
 ): Promise<InvitacionDePrueba> {
-  const id = randomUUID();
+  const id = datos.id ?? randomUUID();
   const email = datos.email ?? emailAlAzar("invitado");
   const tipo = datos.tipo ?? "USUARIO";
-  const { tokenHash } = tokenAlAzar();
+  const tokenHash = datos.tokenHash ?? tokenAlAzar().tokenHash;
   await c.query(
     `insert into invitacion (id, tenant_id, tipo, email, token_hash, emitida_en, vence_en, emitida_por)
      values ($1, $2, $3, $4, $5, $6, $7, $8)`,
@@ -151,5 +155,19 @@ export async function revocarDeBase(
   await c.query(
     "update invitacion set estado = 'REVOCADA', revocada_en = $2, motivo_revocacion = $3 where id = $1",
     [invitacion.id, new Date("2026-10-11T12:00:00Z"), motivo],
+  );
+}
+
+/** Asigna a una persona (que ya es miembro) a una sucursal de la empresa. */
+export async function crearAsignacionDeBase(
+  c: pg.Client,
+  empresa: string,
+  persona: string,
+  sucursal: string,
+  activa = true,
+): Promise<void> {
+  await c.query(
+    "insert into asignacion_sucursal (empresa_id, persona_id, sucursal_id, activa) values ($1, $2, $3, $4)",
+    [empresa, persona, sucursal, activa],
   );
 }

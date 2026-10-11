@@ -143,6 +143,11 @@ export type DatosDeAceptacion = Readonly<{
   /** Estado de CADA empresa de la invitación; si falta alguna es un error de programación. */
   estados: EstadosDeEmpresa;
   miembroActivoEn: ReadonlySet<EmpresaId>;
+  /**
+   * El rol que la persona tenía en cada empresa donde ya tuvo una membresía APAGADA. Reactivarla
+   * con otro rol no se soporta (el rol de una membresía no se cambia). Sin entrada: nunca fue miembro.
+   */
+  rolesAnteriores: ReadonlyMap<EmpresaId, RolDeEmpresa>;
 }>;
 
 export type DecisionDeAceptacion =
@@ -173,12 +178,14 @@ function estadosDe(estados: EstadosDeEmpresa, empresaId: EmpresaId) {
  *    gerente la empresa está en `PROVISIONING` y la propia aceptación la activa, así que se evalúa
  *    como si ya estuviera `ACTIVE` (solo puede frenarla el tenant suspendido).
  * 8. Ya es miembro activo de alguna empresa: `YA_ES_MIEMBRO`.
+ * 9. Tuvo una membresía apagada en alguna empresa con un rol distinto al de la invitación:
+ *    `ROL_DISTINTO_AL_ANTERIOR` con la PRIMERA (en el orden de la invitación).
  */
 export function decidirAceptacion(
   invitacion: Invitacion,
   datos: DatosDeAceptacion,
 ): Resultado<DecisionDeAceptacion, ErrorDeAceptacion> {
-  const { ahora, emailAutenticado, persona, estados, miembroActivoEn } = datos;
+  const { ahora, emailAutenticado, persona, estados, miembroActivoEn, rolesAnteriores } = datos;
   const esAlta = invitacion.tipo === "ALTA_GERENTE";
 
   if (esAlta && invitacion.estado !== "ACEPTADA") {
@@ -204,7 +211,50 @@ export function decidirAceptacion(
   if (invitacion.empresas.some((e) => miembroActivoEn.has(e.empresaId))) {
     return err("YA_ES_MIEMBRO");
   }
+  for (const { empresaId, rol } of invitacion.empresas) {
+    const anterior = rolesAnteriores.get(empresaId);
+    if (anterior !== undefined && anterior !== rol) {
+      return err({ codigo: "ROL_DISTINTO_AL_ANTERIOR", empresaId });
+    }
+  }
   return ok({ tipo: "ACEPTAR" });
+}
+
+export type DatosDeInvitacionDeUsuario = Readonly<{
+  ahora: Date;
+  /** El email ya pertenece a un miembro ACTIVO de la empresa. */
+  esMiembroActivo: boolean;
+  /**
+   * La invitación guardada como `PENDIENTE` que ya incluye a esa empresa para ese email. La base
+   * admite a lo sumo una (índice único parcial); puede estar vencida (el vencimiento no se guarda).
+   */
+  pendiente: Invitacion | null;
+}>;
+
+export type DecisionDeInvitacionDeUsuario =
+  | Readonly<{ tipo: "CREAR" }>
+  /** La pendiente venció: se revoca y nace otra que la reemplaza. */
+  | Readonly<{ tipo: "REEMPLAZAR_VENCIDA"; vencida: InvitacionId }>
+  /** Ya hay una vigente: se devuelve esa, sin escribir (idempotencia por clave natural). */
+  | Readonly<{ tipo: "YA_EXISTE"; invitacion: InvitacionId }>;
+
+/**
+ * Decide si se emite una invitación de usuario a una empresa. Orden: quien ya es miembro activo
+ * (`YA_ES_MIEMBRO`); sin pendiente se crea; con una vigente se devuelve esa; con una vencida se
+ * reemplaza. Una invitación que no está guardada como `PENDIENTE` es un error del llamador y lanza.
+ */
+export function decidirInvitacionDeUsuario(
+  datos: DatosDeInvitacionDeUsuario,
+): Resultado<DecisionDeInvitacionDeUsuario, "YA_ES_MIEMBRO"> {
+  const { ahora, esMiembroActivo, pendiente } = datos;
+  if (esMiembroActivo) return err("YA_ES_MIEMBRO");
+  if (pendiente === null) return ok({ tipo: "CREAR" });
+  if (pendiente.estado !== "PENDIENTE") {
+    throw new RangeError(`la invitación ${pendiente.id} no está pendiente`);
+  }
+  return estadoDeInvitacion(pendiente, ahora) === "VENCIDA"
+    ? ok({ tipo: "REEMPLAZAR_VENCIDA", vencida: pendiente.id })
+    : ok({ tipo: "YA_EXISTE", invitacion: pendiente.id });
 }
 
 export type DatosDeReenvio = Readonly<{

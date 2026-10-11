@@ -5,7 +5,9 @@ import { describe, expect, it } from "vitest";
 /**
  * U8: el dominio de identidad no usa reloj ni aleatoriedad. La hora (`ahora`), los ids y el hash
  * del token entran como datos; así cada decisión se repite igual (idempotencia) y se prueba sin
- * simular el tiempo.
+ * simular el tiempo. Lo mismo vale para los casos de uso: corren dentro de la transacción, que el
+ * adaptador repite entera ante un conflicto de serialización (ADR-004, G4), así que tampoco leen el
+ * reloj ni sortean nada (el id y el token se emiten ANTES, fuera de la transacción, por el puerto).
  */
 const PROHIBIDOS: readonly { nombre: string; patron: RegExp }[] = [
   { nombre: "Date.now", patron: /\bDate\s*\.\s*now\b/ },
@@ -21,18 +23,35 @@ function usosProhibidos(fuente: string): string[] {
   return PROHIBIDOS.filter(({ patron }) => patron.test(fuente)).map(({ nombre }) => nombre);
 }
 
-const carpeta = fileURLToPath(new URL(".", import.meta.url));
-const fuentes = readdirSync(carpeta).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"));
+const carpetas = [
+  fileURLToPath(new URL(".", import.meta.url)),
+  fileURLToPath(new URL("../casos-de-uso/", import.meta.url)),
+];
+const fuentes = carpetas.flatMap((carpeta) =>
+  readdirSync(carpeta)
+    .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
+    .map((f) => `${carpeta}${f}`),
+);
+const nombres = fuentes.map((ruta) => ruta.slice(ruta.lastIndexOf("/") + 1));
 
 describe("U8: el dominio de identidad no usa reloj ni aleatoriedad", () => {
   it("encuentra los archivos de dominio a revisar", () => {
-    expect(fuentes).toEqual(
-      expect.arrayContaining(["email.ts", "errores.ts", "invitacion.ts", "membresia.ts"]),
+    expect(nombres).toEqual(
+      expect.arrayContaining([
+        "email.ts",
+        "errores.ts",
+        "invitacion.ts",
+        "membresia.ts",
+        "aceptar-invitacion.ts",
+        "invitar-usuario.ts",
+        "apagar-membresia.ts",
+        "reenviar-invitacion.ts",
+      ]),
     );
   });
 
-  it.each(fuentes)("%s no usa reloj ni aleatoriedad", (archivo) => {
-    expect(usosProhibidos(readFileSync(`${carpeta}${archivo}`, "utf8"))).toEqual([]);
+  it.each(fuentes)("%s no usa reloj ni aleatoriedad", (ruta) => {
+    expect(usosProhibidos(readFileSync(ruta, "utf8"))).toEqual([]);
   });
 
   describe("el detector (con la violación inyectada)", () => {

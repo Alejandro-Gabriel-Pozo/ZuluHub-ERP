@@ -13,6 +13,7 @@ import {
   PLAZOS_EN_MS,
   TRANSICIONES_DE_INVITACION,
   decidirAceptacion,
+  decidirInvitacionDeUsuario,
   decidirReenvio,
   estadoDeInvitacion,
   nuevaInvitacion,
@@ -79,6 +80,7 @@ const datos = (cambios: Partial<DatosDeAceptacion> = {}): DatosDeAceptacion => (
   persona: null,
   estados: estados([E1, "ACTIVE"]),
   miembroActivoEn: new Set(),
+  rolesAnteriores: new Map(),
   ...cambios,
 });
 
@@ -436,6 +438,126 @@ describe("U4: decidirAceptacion", () => {
     });
   });
 
+  describe("ROL_DISTINTO_AL_ANTERIOR: reactivar con otro rol no se soporta", () => {
+    const roles = (...filas: [EmpresaId, RolDeEmpresa][]) => new Map(filas);
+
+    it("una membresía apagada con otro rol rechaza la aceptación e informa la empresa", () => {
+      expect(
+        decidirAceptacion(
+          invitacion({ empresas: [asignacion(E1, "OPERADOR")] }),
+          datos({ persona: personaAna, rolesAnteriores: roles([E1, "ADMINISTRADOR"]) }),
+        ),
+      ).toEqual(error({ codigo: "ROL_DISTINTO_AL_ANTERIOR", empresaId: E1 }));
+    });
+
+    it("cada rol anterior distinto del invitado falla (los seis cruces posibles)", () => {
+      const todos: RolDeEmpresa[] = ["GERENTE", "ADMINISTRADOR", "OPERADOR"];
+      for (const invitado of ["ADMINISTRADOR", "OPERADOR"] as const) {
+        for (const anterior of todos) {
+          const r = decidirAceptacion(
+            invitacion({ empresas: [asignacion(E1, invitado)] }),
+            datos({ persona: personaAna, rolesAnteriores: roles([E1, anterior]) }),
+          );
+          expect(r.ok, `${anterior} -> ${invitado}`).toBe(anterior === invitado);
+        }
+      }
+    });
+
+    it("el mismo rol que tenía se reactiva (ACEPTAR)", () => {
+      expect(
+        decidirAceptacion(
+          invitacion({ empresas: [asignacion(E1, "ADMINISTRADOR")] }),
+          datos({ persona: personaAna, rolesAnteriores: roles([E1, "ADMINISTRADOR"]) }),
+        ),
+      ).toEqual({ ok: true, valor: { tipo: "ACEPTAR" } });
+    });
+
+    it("sin membresía anterior en esa empresa, acepta con cualquier rol", () => {
+      expect(
+        decidirAceptacion(invitacion(), datos({ persona: personaAna, rolesAnteriores: roles() })),
+      ).toEqual({ ok: true, valor: { tipo: "ACEPTAR" } });
+    });
+
+    it("los roles anteriores de empresas ajenas a la invitación no cuentan", () => {
+      expect(
+        decidirAceptacion(
+          invitacion({ empresas: [asignacion(E1, "OPERADOR")] }),
+          datos({ persona: personaAna, rolesAnteriores: roles([E2, "ADMINISTRADOR"]) }),
+        ),
+      ).toEqual({ ok: true, valor: { tipo: "ACEPTAR" } });
+    });
+
+    it("con varias empresas informa la PRIMERA (en el orden de la invitación) que no coincide", () => {
+      const tres = invitacion({
+        empresas: [asignacion(E1, "OPERADOR"), asignacion(E2, "OPERADOR"), asignacion(E3)],
+      });
+      const todas = estados([E1, "ACTIVE"], [E2, "ACTIVE"], [E3, "ACTIVE"]);
+      // El mapa se arma en orden inverso a propósito.
+      expect(
+        decidirAceptacion(
+          tres,
+          datos({
+            persona: personaAna,
+            estados: todas,
+            rolesAnteriores: roles([E3, "ADMINISTRADOR"], [E2, "ADMINISTRADOR"], [E1, "OPERADOR"]),
+          }),
+        ),
+      ).toEqual(error({ codigo: "ROL_DISTINTO_AL_ANTERIOR", empresaId: E2 }));
+      // Si la que no coincide es la última, también la encuentra.
+      expect(
+        decidirAceptacion(
+          tres,
+          datos({
+            persona: personaAna,
+            estados: todas,
+            rolesAnteriores: roles([E1, "OPERADOR"], [E2, "OPERADOR"], [E3, "ADMINISTRADOR"]),
+          }),
+        ),
+      ).toEqual(error({ codigo: "ROL_DISTINTO_AL_ANTERIOR", empresaId: E3 }));
+    });
+
+    it("9. es el último paso: YA_ES_MIEMBRO, EMPRESA_NO_OPERA y los anteriores le ganan", () => {
+      const anterior = roles([E1, "ADMINISTRADOR"]);
+      expect(
+        decidirAceptacion(
+          invitacion(),
+          datos({ persona: personaAna, rolesAnteriores: anterior, miembroActivoEn: new Set([E1]) }),
+        ),
+      ).toEqual(error("YA_ES_MIEMBRO"));
+      expect(
+        decidirAceptacion(
+          invitacion(),
+          datos({
+            persona: personaAna,
+            rolesAnteriores: anterior,
+            estados: estados([E1, "SUSPENDED"]),
+          }),
+        ),
+      ).toEqual(error({ codigo: "EMPRESA_NO_OPERA", empresaId: E1, motivo: "EMPRESA_SUSPENDIDA" }));
+      expect(
+        decidirAceptacion(
+          invitacion(),
+          datos({ persona: { ...personaAna, activoGlobal: false }, rolesAnteriores: anterior }),
+        ),
+      ).toEqual(error("PERSONA_SUSPENDIDA"));
+      expect(
+        decidirAceptacion(
+          invitacion(),
+          datos({ persona: personaAna, rolesAnteriores: anterior, emailAutenticado: OTRO_EMAIL }),
+        ),
+      ).toEqual(error("INVITACION_DE_OTRO_EMAIL"));
+    });
+
+    it("una invitación ya aceptada por esta persona sigue siendo YA_ACEPTADA (no mira los roles)", () => {
+      expect(
+        decidirAceptacion(
+          invitacion({ estado: "ACEPTADA", aceptadaPor: ANA }),
+          datos({ persona: personaAna, rolesAnteriores: roles([E1, "ADMINISTRADOR"]) }),
+        ),
+      ).toEqual({ ok: true, valor: { tipo: "YA_ACEPTADA" } });
+    });
+  });
+
   describe("alta del gerente", () => {
     it("el tenant suspendido frena el alta: la empresa se evalúa como ya activa", () => {
       expect(
@@ -775,5 +897,60 @@ describe("decidirReenvio", () => {
     expect(
       decidirReenvio(invitacion({ empresas: [asignacion(E1, "GERENTE")] }), ahora, nueva),
     ).toEqual(error("ROL_NO_INVITABLE"));
+  });
+});
+
+describe("decidirInvitacionDeUsuario", () => {
+  const ahora = mas(T0, DIA);
+  const vigente = invitacion({ venceEn: mas(T0, 7 * DIA) });
+  const vencida = invitacion({ venceEn: ahora });
+
+  it("sin pendiente se crea", () => {
+    expect(decidirInvitacionDeUsuario({ ahora, esMiembroActivo: false, pendiente: null })).toEqual({
+      ok: true,
+      valor: { tipo: "CREAR" },
+    });
+  });
+
+  it("con una pendiente vigente devuelve esa, sin crear otra", () => {
+    expect(
+      decidirInvitacionDeUsuario({ ahora, esMiembroActivo: false, pendiente: vigente }),
+    ).toEqual({ ok: true, valor: { tipo: "YA_EXISTE", invitacion: vigente.id } });
+  });
+
+  it("el último milisegundo de vigencia todavía es vigente; el vencimiento exacto ya no", () => {
+    const hasta = (ms: number) => invitacion({ venceEn: new Date(ahora.getTime() + ms) });
+    expect(
+      decidirInvitacionDeUsuario({ ahora, esMiembroActivo: false, pendiente: hasta(1) }),
+    ).toEqual({ ok: true, valor: { tipo: "YA_EXISTE", invitacion: vigente.id } });
+    expect(
+      decidirInvitacionDeUsuario({ ahora, esMiembroActivo: false, pendiente: hasta(0) }),
+    ).toEqual({ ok: true, valor: { tipo: "REEMPLAZAR_VENCIDA", vencida: vencida.id } });
+  });
+
+  it("con una pendiente vencida la reemplaza", () => {
+    expect(
+      decidirInvitacionDeUsuario({ ahora, esMiembroActivo: false, pendiente: vencida }),
+    ).toEqual({ ok: true, valor: { tipo: "REEMPLAZAR_VENCIDA", vencida: vencida.id } });
+  });
+
+  it("YA_ES_MIEMBRO le gana a todo: sin pendiente, con vigente o con vencida", () => {
+    for (const pendiente of [null, vigente, vencida]) {
+      expect(decidirInvitacionDeUsuario({ ahora, esMiembroActivo: true, pendiente })).toEqual(
+        error("YA_ES_MIEMBRO"),
+      );
+    }
+  });
+
+  it("una invitación que no está guardada como pendiente es un error del llamador", () => {
+    for (const estado of ["ACEPTADA", "REVOCADA"] as const) {
+      expect(() =>
+        decidirInvitacionDeUsuario({
+          ahora,
+          esMiembroActivo: false,
+          pendiente: invitacion({ estado }),
+        }),
+      ).toThrow(new RangeError(`la invitación ${invitacion().id} no está pendiente`));
+    }
   });
 });
