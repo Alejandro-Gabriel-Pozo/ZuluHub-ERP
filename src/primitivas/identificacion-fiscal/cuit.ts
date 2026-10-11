@@ -16,9 +16,9 @@ const PESOS = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2] as const;
 const FORMA_CANONICA = /^[0-9]{11}$/;
 const FORMA_CON_GUIONES = /^([0-9]{2})-([0-9]{8})-([0-9])$/;
 
-/** Dígito verificador que corresponde a los primeros diez dígitos, o `null` si no existe. */
-export function digitoVerificadorDeCuit(primerosDiez: string): number | null {
-  const suma = PESOS.reduce((acumulado, peso, i) => acumulado + peso * Number(primerosDiez[i]), 0);
+/** Dígito verificador que corresponde a los primeros diez dígitos (el resto se ignora), o `null` si no existe. */
+export function digitoVerificadorDeCuit(digitos: string): number | null {
+  const suma = PESOS.reduce((acumulado, peso, i) => acumulado + peso * Number(digitos[i]), 0);
   const resto = 11 - (suma % 11);
   if (resto === 11) return 0;
   return resto === 10 ? null : resto;
@@ -28,8 +28,8 @@ export function cuitDesdeTexto(texto: string): Resultado<Cuit, ErrorDeCuit> {
   const conGuiones = FORMA_CON_GUIONES.exec(texto);
   const digitos = conGuiones === null ? texto : conGuiones.slice(1).join("");
   if (!FORMA_CANONICA.test(digitos)) return err("CUIT_FORMATO_INVALIDO");
-  const verificador = digitoVerificadorDeCuit(digitos.slice(0, 10));
-  if (verificador === null || verificador !== Number(digitos[10])) {
+  // Si no existe dígito verificador (`null`), la comparación también falla: el CUIT se rechaza.
+  if (digitoVerificadorDeCuit(digitos) !== Number(digitos[10])) {
     return err("CUIT_DIGITO_VERIFICADOR_INVALIDO");
   }
   return ok(digitos as Cuit);

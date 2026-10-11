@@ -27,5 +27,6 @@
     "high": 100,
     "low": 95,
     "break": 100
-  }
+  },
+  "ignorePatterns": [".claude", "reports", ".stryker-tmp"]
 }

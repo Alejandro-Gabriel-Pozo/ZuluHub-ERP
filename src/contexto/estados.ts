@@ -20,16 +20,8 @@ export type EstadoEfectivo =
  * de la empresa (cancelada, en baja) se informan primero: no cambian por reactivar el tenant.
  */
 export function estadoEfectivo(tenant: EstadoDeTenant, empresa: EstadoDeEmpresa): EstadoEfectivo {
-  switch (empresa) {
-    case "CANCELLED":
-      return "EMPRESA_CANCELADA";
-    case "DELETING":
-      return "EMPRESA_EN_BAJA";
-    case "PROVISIONING":
-    case "SUSPENDED":
-    case "ACTIVE":
-      break;
-  }
+  if (empresa === "CANCELLED") return "EMPRESA_CANCELADA";
+  if (empresa === "DELETING") return "EMPRESA_EN_BAJA";
   if (tenant === "SUSPENDED") return "TENANT_SUSPENDIDO";
   if (empresa === "PROVISIONING") return "EMPRESA_EN_ALTA";
   return empresa === "SUSPENDED" ? "EMPRESA_SUSPENDIDA" : "OPERA";

@@ -22,6 +22,9 @@ describe("CUIT", () => {
     "20_12345678_6",
     "２０１２３４５６７８６",
     "20123456786\n",
+    "x20-12345678-6",
+    "abc20-12345678-6",
+    "20-12345678-6x",
   ])("rechaza %j por formato", (entrada) => {
     expect(cuitDesdeTexto(entrada)).toEqual({ ok: false, error: "CUIT_FORMATO_INVALIDO" });
   });
