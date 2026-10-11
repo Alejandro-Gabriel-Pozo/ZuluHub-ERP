@@ -31,6 +31,12 @@ const TABLAS_DE_NEGOCIO = [
   "auditoria_plataforma",
   "auditoria_acceso_grupo",
   "trabajo",
+  // H3 (0002_identidad)
+  "membresia",
+  "asignacion_sucursal",
+  "invitacion",
+  "invitacion_empresa",
+  "invitacion_sucursal",
 ] as const;
 const TABLAS_DE_AUDITORIA = ["auditoria_empresa", "auditoria_plataforma", "auditoria_acceso_grupo"];
 
@@ -222,8 +228,13 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           .map((p) => `${p.table_name}:${p.privilege_type}`);
       expect(porRol("zuluhub_app")).toEqual(
         [
+          "asignacion_sucursal:SELECT",
           "auditoria_empresa:SELECT",
           "empresa:SELECT",
+          "invitacion:SELECT",
+          "invitacion_empresa:SELECT",
+          "invitacion_sucursal:SELECT",
+          "membresia:SELECT",
           "membresia_tenant:SELECT",
           "persona:SELECT",
           "sucursal:SELECT",
@@ -246,6 +257,8 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "auditoria_plataforma:SELECT",
           "empresa:SELECT",
           "instalacion:SELECT",
+          "invitacion:SELECT",
+          "invitacion_empresa:SELECT",
           "membresia_tenant:SELECT",
           "persona:SELECT",
           "tenant:SELECT",
@@ -264,6 +277,16 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       const permitidas = columnas.map((c) => `${c.grantee}:${c.table_name}.${c.column_name}`);
       expect(permitidas).toEqual(
         [
+          "zuluhub_app:asignacion_sucursal.activa",
+          "zuluhub_app:empresa.estado", // solo para activar el alta del gerente (política acotada)
+          "zuluhub_app:empresa.motivo_estado",
+          "zuluhub_app:invitacion.aceptada_en",
+          "zuluhub_app:invitacion.aceptada_por",
+          "zuluhub_app:invitacion.estado",
+          "zuluhub_app:invitacion.motivo_revocacion",
+          "zuluhub_app:invitacion.reemplazada_por",
+          "zuluhub_app:invitacion.revocada_en",
+          "zuluhub_app:membresia.activo", // `rol` no está: nadie asciende
           "zuluhub_app:sucursal.activa",
           "zuluhub_app:sucursal.nombre",
           "zuluhub_plataforma:empresa.cuit",
@@ -271,6 +294,10 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "zuluhub_plataforma:empresa.motivo_estado",
           "zuluhub_plataforma:empresa.razon_social",
           "zuluhub_plataforma:empresa.zona_horaria",
+          "zuluhub_plataforma:invitacion.estado",
+          "zuluhub_plataforma:invitacion.motivo_revocacion",
+          "zuluhub_plataforma:invitacion.reemplazada_por",
+          "zuluhub_plataforma:invitacion.revocada_en",
           "zuluhub_plataforma:membresia_tenant.activo",
           "zuluhub_plataforma:persona.activo_global",
           "zuluhub_plataforma:tenant.estado",
@@ -306,9 +333,35 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         "antes",
         "despues",
       ].map((c) => `auditoria_empresa.${c}`);
+      const invitacionEmitida = [
+        "id",
+        "tenant_id",
+        "tipo",
+        "email",
+        "token_hash",
+        "emitida_en",
+        "vence_en",
+        "emitida_por",
+      ].map((c) => `invitacion.${c}`);
+      const invitacionEmpresa = [
+        "invitacion_id",
+        "empresa_id",
+        "tenant_id",
+        "rol",
+        "email",
+        "token_hash",
+        "estado",
+        "tipo",
+      ].map((c) => `invitacion_empresa.${c}`);
       expect(porRol("zuluhub_app")).toEqual(
         [
           ...auditoriaDeEmpresa,
+          ...["empresa_id", "persona_id", "sucursal_id"].map((c) => `asignacion_sucursal.${c}`),
+          ...invitacionEmitida,
+          ...invitacionEmpresa,
+          ...["invitacion_id", "empresa_id", "sucursal_id"].map((c) => `invitacion_sucursal.${c}`),
+          ...["empresa_id", "persona_id", "rol", "invitacion_id"].map((c) => `membresia.${c}`),
+          "persona.email",
           "sucursal.empresa_id",
           "sucursal.nombre",
           "trabajo.empresa_id",
@@ -328,6 +381,8 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             (c) => `auditoria_plataforma.${c}`,
           ),
           ...["tenant_id", "cuit", "razon_social", "zona_horaria"].map((c) => `empresa.${c}`),
+          ...invitacionEmitida,
+          ...invitacionEmpresa,
           ...["persona_id", "tenant_id", "rol", "activo"].map((c) => `membresia_tenant.${c}`),
           "persona.email",
           "sucursal.empresa_id",
@@ -531,6 +586,8 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
          order by 1, 2`,
       );
       expect(existentes).toEqual([
+        { tablename: "auditoria_empresa", cmd: "INSERT" },
+        // La del contexto de invitación (H3): también exige empresa_operable, o la empresa en alta.
         { tablename: "auditoria_empresa", cmd: "INSERT" },
         { tablename: "sucursal", cmd: "INSERT" },
         { tablename: "sucursal", cmd: "UPDATE" },

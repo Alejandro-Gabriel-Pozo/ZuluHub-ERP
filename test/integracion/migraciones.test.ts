@@ -23,9 +23,12 @@ describe.skipIf(base === null)("migraciones", () => {
     const aparte = await crearBaseAparte(base, { migrar: false });
     try {
       const primera = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
-      expect(primera.aplicadas).toEqual(["0001_base.sql"]);
+      expect(primera.aplicadas).toEqual(["0001_base.sql", "0002_identidad.sql"]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
-      expect(segunda).toEqual({ aplicadas: [], yaAplicadas: ["0001_base.sql"] });
+      expect(segunda).toEqual({
+        aplicadas: [],
+        yaAplicadas: ["0001_base.sql", "0002_identidad.sql"],
+      });
     } finally {
       await aparte.destruir();
     }
@@ -124,7 +127,11 @@ describe.skipIf(base === null)("migraciones", () => {
         aplicarMigraciones(aparte.base.dueno, CARPETA_REAL),
         aplicarMigraciones(aparte.base.dueno, CARPETA_REAL),
       ]);
-      expect([x.aplicadas.length, y.aplicadas.length].sort()).toEqual([0, 1]);
+      // Cada migración se aplica una sola vez: entre las dos ejecuciones suman exactamente las dos.
+      expect([...x.aplicadas, ...y.aplicadas].sort()).toEqual([
+        "0001_base.sql",
+        "0002_identidad.sql",
+      ]);
     } finally {
       await aparte.destruir();
     }
@@ -360,9 +367,22 @@ describe.skipIf(base === null)("migraciones", () => {
     }
   });
 
-  it("la migración no contiene contraseñas ni cadenas de conexión", async () => {
-    const sql = await readFile(join(CARPETA_REAL, "0001_base.sql"), "utf8");
-    expect(sql).not.toMatch(/PASSWORD\s+'/i);
-    expect(sql).not.toMatch(/postgres(ql)?:\/\//i);
+  it.each(["0001_base.sql", "0002_identidad.sql"])(
+    "la migración %s no contiene contraseñas ni cadenas de conexión",
+    async (archivo) => {
+      const sql = await readFile(join(CARPETA_REAL, archivo), "utf8");
+      expect(sql).not.toMatch(/PASSWORD\s+'/i);
+      expect(sql).not.toMatch(/postgres(ql)?:\/\//i);
+    },
+  );
+
+  it("0002 es compatible hacia atrás: no borra ni reescribe nada, y no agrega ninguna función SECURITY DEFINER", async () => {
+    const sql = await readFile(join(CARPETA_REAL, "0002_identidad.sql"), "utf8");
+    // Sin comentarios: lo que se ejecuta de verdad.
+    const codigo = sql.replace(/--.*$/gm, "");
+    expect(codigo).not.toMatch(/\b(DROP|TRUNCATE|DELETE\s+FROM)\b/i);
+    expect(codigo).not.toMatch(/\bALTER\s+TABLE\s+\w+\s+(DROP|RENAME|ALTER\s+COLUMN)\b/i);
+    expect(codigo).not.toMatch(/SECURITY\s+DEFINER/i);
+    expect(codigo).not.toMatch(/CREATE\s+(OR\s+REPLACE\s+)?ROLE|ALTER\s+ROLE/i);
   });
 });

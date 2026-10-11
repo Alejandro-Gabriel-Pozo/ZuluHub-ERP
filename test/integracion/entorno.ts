@@ -96,6 +96,16 @@ export const comoGrupo = (tenant: TenantId, persona: PersonaId): Contexto => ({
 
 export const comoTrabajos = (): Contexto => ({ tipo: "TRABAJOS", ahora: AHORA });
 
+/** Quien llega con un enlace de invitación: sin empresa ni persona, solo el hash del token. */
+export const comoInvitacion = (tokenHash: string): Contexto => ({
+  tipo: "INVITACION",
+  tokenHash,
+  ahora: AHORA,
+});
+
+/** El `ahora` de las pruebas (el mismo de todos los contextos de este archivo). */
+export const AHORA_DE_PRUEBA = AHORA;
+
 /** CUIT válido al azar (único con altísima probabilidad dentro de una corrida). */
 export function cuitAlAzar(): Cuit {
   for (;;) {

@@ -127,10 +127,34 @@ describe.skipIf(base === null)("aislamiento por empresa (RLS)", () => {
       expect(r).toEqual({ ok: true, valor: { empresas: [a.empresa], tenants: [a.tenant] } });
     });
 
-    it("la empresa no puede cambiar su propio CUIT, estado ni tenant: no tiene permiso de escritura", async () => {
+    it("la empresa no puede cambiar su propio estado: la política de activación del alta (H3) no deja pasar nada sin una aceptación de alta", async () => {
+      // Desde H3 la aplicación tiene UPDATE(estado, motivo_estado) sobre `empresa`, acotado por una
+      // política que solo se abre con el contexto de INVITACION de un alta aceptada: en el contexto
+      // operativo no afecta ninguna fila (ni se rechaza: simplemente no ve filas que actualizar).
+      for (const consulta of [
+        sql`update empresa set estado = 'SUSPENDED', motivo_estado = 'x'`,
+        sql`update empresa set estado = 'ACTIVE'`,
+        sql`update empresa set estado = 'CANCELLED', motivo_estado = 'x' where id = ${a.empresa}`,
+      ]) {
+        const r = await entorno.ejecutar({ contexto: comoEmpresa(a.empresa) }, async ({ db }) => {
+          const res = await consulta.execute(db);
+          return ok(Number(res.numAffectedRows));
+        });
+        expect(r).toEqual({ ok: true, valor: 0 });
+      }
+      const estado = await entorno.ejecutar(
+        { contexto: comoEmpresa(a.empresa) },
+        async ({ db }) => {
+          const { rows } = await sql<{ estado: string }>`select estado from empresa`.execute(db);
+          return ok(rows.map((f) => f.estado));
+        },
+      );
+      expect(estado).toEqual({ ok: true, valor: ["ACTIVE"] });
+    });
+
+    it("la empresa no puede cambiar su propio CUIT ni tenant, ni tocar el tenant: no tiene permiso de escritura", async () => {
       for (const consulta of [
         sql`update empresa set cuit = '20123456786'`,
-        sql`update empresa set estado = 'SUSPENDED', motivo_estado = 'x'`,
         sql`update empresa set tenant_id = tenant_id`,
         sql`update tenant set nombre = 'otro'`,
         sql`insert into tenant (nombre) values ('nuevo')`,

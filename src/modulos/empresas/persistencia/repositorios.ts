@@ -58,6 +58,7 @@ export const COLUMNAS_DE_EMPRESAS = {
 /** Restricción de la base → error de negocio (ADR-004). Un test exige que no falte ninguna. */
 export const ERRORES_DE_EMPRESAS_POR_RESTRICCION: Readonly<Record<string, string>> = {
   empresa_pkey: "NO_TRADUCIDA",
+  empresa_id_tenant_uk: "NO_TRADUCIDA", // apoyo de la FK compuesta de las invitaciones (0002)
   empresa_cuit_ck: "CUIT_INVALIDO",
   empresa_cuit_uk: "CUIT_DUPLICADO",
   empresa_razon_social_ck: "RAZON_SOCIAL_INVALIDA",
