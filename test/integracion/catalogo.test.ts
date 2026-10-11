@@ -1,8 +1,11 @@
 import { randomInt } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { cuitDesdeTexto } from "../../src/primitivas/identificacion-fiscal/cuit";
 import type { EstadoDeEmpresa } from "../../src/contexto/estados";
+import { crearBaseAparte, cuitAlAzar } from "./entorno";
 import {
   COLUMNAS_DE_EMPRESAS,
   ERRORES_DE_EMPRESAS_POR_RESTRICCION,
@@ -33,7 +36,9 @@ const TABLAS_DE_AUDITORIA = ["auditoria_empresa", "auditoria_plataforma", "audit
 /** Restricciones que no están en el catálogo porque las lanzan los disparadores con nombre propio. */
 const RESTRICCIONES_DE_DISPARADORES = [
   "empresa_tenant_inmutable",
+  "empresa_tenant_no_activo",
   "empresa_transicion_invalida",
+  "empresa_zona_horaria_ck",
   "tenant_instalacion_single",
 ];
 
@@ -157,7 +162,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       expect(permitidos).toEqual([]);
     });
 
-    it("los privilegios de tabla por rol son exactamente los esperados (los UPDATE, por columna, en el test siguiente)", async () => {
+    it("los privilegios de tabla por rol son exactamente los esperados (INSERT y UPDATE van por columna, en los tests siguientes)", async () => {
       const privilegios = await filas<{
         grantee: string;
         table_name: string;
@@ -173,21 +178,17 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           .map((p) => `${p.table_name}:${p.privilege_type}`);
       expect(porRol("zuluhub_app")).toEqual(
         [
-          "auditoria_empresa:INSERT",
           "auditoria_empresa:SELECT",
           "empresa:SELECT",
           "membresia_tenant:SELECT",
           "persona:SELECT",
-          "sucursal:INSERT",
           "sucursal:SELECT",
           "tenant:SELECT",
-          "trabajo:INSERT",
           "trabajo:SELECT",
         ].sort(),
       );
       expect(porRol("zuluhub_grupo")).toEqual(
         [
-          "auditoria_acceso_grupo:INSERT",
           "empresa:SELECT",
           "membresia_tenant:SELECT",
           "persona:SELECT",
@@ -198,20 +199,12 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       expect(porRol("zuluhub_trabajos")).toEqual(["trabajo:SELECT"]);
       expect(porRol("zuluhub_plataforma")).toEqual(
         [
-          "auditoria_empresa:INSERT",
-          "auditoria_plataforma:INSERT",
           "auditoria_plataforma:SELECT",
-          "empresa:INSERT",
           "empresa:SELECT",
           "instalacion:SELECT",
-          "membresia_tenant:INSERT",
           "membresia_tenant:SELECT",
-          "persona:INSERT",
           "persona:SELECT",
-          "sucursal:INSERT",
-          "tenant:INSERT",
           "tenant:SELECT",
-          "trabajo:INSERT",
           "trabajo:SELECT",
         ].sort(),
       );
@@ -248,11 +241,480 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       );
     });
 
+    it("los INSERT son por columna, con la lista exacta por rol: nadie da de alta una fila con creado_en, version, estado ni intentos a mano", async () => {
+      const columnas = await filas<{ grantee: string; table_name: string; column_name: string }>(
+        `select grantee, table_name, column_name from information_schema.column_privileges
+         where table_schema = 'public' and grantee = any($1) and privilege_type = 'INSERT'
+         order by 1, 2, 3`,
+        [[...ROLES]],
+      );
+      const porRol = (rol: string) =>
+        columnas
+          .filter((c) => c.grantee === rol)
+          .map((c) => `${c.table_name}.${c.column_name}`)
+          .sort();
+      const auditoriaDeEmpresa = [
+        "empresa_id",
+        "actor_persona_id",
+        "accion",
+        "entidad",
+        "entidad_id",
+        "antes",
+        "despues",
+      ].map((c) => `auditoria_empresa.${c}`);
+      expect(porRol("zuluhub_app")).toEqual(
+        [
+          ...auditoriaDeEmpresa,
+          "sucursal.empresa_id",
+          "sucursal.nombre",
+          "trabajo.empresa_id",
+          "trabajo.tipo",
+          "trabajo.datos",
+          "trabajo.clave_idempotencia",
+        ].sort(),
+      );
+      expect(porRol("zuluhub_grupo")).toEqual(
+        ["tenant_id", "persona_id", "empresa_id"].map((c) => `auditoria_acceso_grupo.${c}`).sort(),
+      );
+      expect(porRol("zuluhub_trabajos")).toEqual([]);
+      expect(porRol("zuluhub_plataforma")).toEqual(
+        [
+          ...auditoriaDeEmpresa,
+          ...["actor", "accion", "entidad", "entidad_id", "antes", "despues"].map(
+            (c) => `auditoria_plataforma.${c}`,
+          ),
+          ...["tenant_id", "cuit", "razon_social", "zona_horaria"].map((c) => `empresa.${c}`),
+          ...["persona_id", "tenant_id", "rol", "activo"].map((c) => `membresia_tenant.${c}`),
+          "persona.email",
+          "sucursal.empresa_id",
+          "sucursal.nombre",
+          "tenant.nombre",
+          "trabajo.empresa_id",
+          "trabajo.tipo",
+          "trabajo.datos",
+          "trabajo.clave_idempotencia",
+        ].sort(),
+      );
+    });
+
     it("PUBLIC no tiene privilegios sobre las tablas", async () => {
       const publicos = await filas(
         `select 1 from information_schema.table_privileges where table_schema = 'public' and grantee = 'PUBLIC'`,
       );
       expect(publicos).toEqual([]);
+    });
+  });
+
+  describe("endurecimiento del esquema", () => {
+    const MIGRACION = readFileSync(
+      join(import.meta.dirname, "../../migraciones/0001_base.sql"),
+      "utf8",
+    );
+    const SEARCH_PATH_FIJO = "search_path=pg_catalog, public, pg_temp";
+
+    it("toda función del esquema public fija su search_path (con pg_temp al final)", async () => {
+      const funciones = await filas<{ firma: string; proconfig: string[] | null }>(
+        `select p.oid::regprocedure::text as firma, p.proconfig
+         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname = 'public'
+           and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')
+         order by 1`,
+      );
+      expect(funciones.length, "hay funciones que revisar").toBeGreaterThan(10);
+      const sinFijar = funciones
+        .filter((f) => !(f.proconfig ?? []).includes(SEARCH_PATH_FIJO))
+        .map((f) => f.firma);
+      expect(sinFijar, "funciones sin search_path fijo").toEqual([]);
+    });
+
+    it("ninguna función del esquema public es ejecutable por PUBLIC", async () => {
+      const abiertas = await filas<{ firma: string }>(
+        `select p.oid::regprocedure::text as firma
+         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname = 'public'
+           and (
+             p.proacl is null
+             or exists (
+               select 1 from aclexplode(p.proacl) a where a.grantee = 0 and a.privilege_type = 'EXECUTE'
+             )
+           )
+         order by 1`,
+      );
+      expect(abiertas, "funciones con EXECUTE para PUBLIC").toEqual([]);
+    });
+
+    it("las funciones que se creen después también nacen cerradas (privilegios por defecto)", async () => {
+      if (base === null) return;
+      const aparte = await crearBaseAparte(base);
+      const cliente = new pg.Client({ connectionString: aparte.base.dueno });
+      await cliente.connect();
+      try {
+        await cliente.query(
+          "create function funcion_futura() returns int language sql as 'select 1'",
+        );
+        const { rows } = await cliente.query<{ abierta: boolean }>(
+          `select (p.proacl is null or exists (
+                     select 1 from aclexplode(p.proacl) a where a.grantee = 0 and a.privilege_type = 'EXECUTE'
+                   )) as abierta
+           from pg_proc p where p.proname = 'funcion_futura'`,
+        );
+        expect(rows).toEqual([{ abierta: false }]);
+      } finally {
+        await cliente.end();
+        await aparte.destruir();
+      }
+    });
+
+    const vistasSinSecurityInvoker = async (cliente: pg.Client) =>
+      (
+        await cliente.query<{ relname: string; relkind: string }>(
+          `select c.relname, c.relkind
+           from pg_class c join pg_namespace n on n.oid = c.relnamespace
+           where n.nspname = 'public' and c.relkind in ('v', 'm', 'p')
+             and not ('security_invoker=true' = any (coalesce(c.reloptions, '{}')))
+           order by 1`,
+        )
+      ).rows;
+
+    it("no hay vistas, vistas materializadas ni tablas particionadas sin security_invoker", async () => {
+      expect(await vistasSinSecurityInvoker(dueno)).toEqual([]);
+    });
+
+    it("el chequeo de vistas muerde: detecta las que no tienen security_invoker y acepta la que lo tiene", async () => {
+      if (base === null) return;
+      const aparte = await crearBaseAparte(base);
+      const cliente = new pg.Client({ connectionString: aparte.base.dueno });
+      await cliente.connect();
+      try {
+        await cliente.query("create view vista_abierta as select id from tenant");
+        await cliente.query(
+          "create view vista_cerrada with (security_invoker = true) as select id from tenant",
+        );
+        await cliente.query(
+          "create materialized view vista_materializada as select id from tenant",
+        );
+        expect(await vistasSinSecurityInvoker(cliente)).toEqual([
+          { relname: "vista_abierta", relkind: "v" },
+          { relname: "vista_materializada", relkind: "m" },
+        ]);
+      } finally {
+        await cliente.end();
+        await aparte.destruir();
+      }
+    });
+
+    it("toda política de alta o cambio de la aplicación sobre sucursal, trabajo y auditoria_empresa exige empresa_operable", async () => {
+      const sinEmpresaOperable = await filas<{ tablename: string; policyname: string }>(
+        `select tablename, policyname from pg_policies
+         where schemaname = 'public' and 'zuluhub_app' = any (roles)
+           and tablename in ('sucursal', 'trabajo', 'auditoria_empresa')
+           and cmd in ('INSERT', 'UPDATE', 'ALL')
+           and coalesce(with_check, qual, '') not like '%empresa_operable(%'
+         order by 1, 2`,
+      );
+      expect(sinEmpresaOperable, "políticas sin empresa_operable").toEqual([]);
+      // Y existen todas las que tienen que existir (el test anterior no pasa por vacío).
+      const existentes = await filas<{ tablename: string; cmd: string }>(
+        `select tablename, cmd from pg_policies
+         where schemaname = 'public' and 'zuluhub_app' = any (roles)
+           and tablename in ('sucursal', 'trabajo', 'auditoria_empresa')
+           and cmd in ('INSERT', 'UPDATE', 'ALL')
+         order by 1, 2`,
+      );
+      expect(existentes).toEqual([
+        { tablename: "auditoria_empresa", cmd: "INSERT" },
+        { tablename: "sucursal", cmd: "INSERT" },
+        { tablename: "sucursal", cmd: "UPDATE" },
+        { tablename: "trabajo", cmd: "INSERT" },
+      ]);
+    });
+
+    it("la auditoría de la aplicación exige que el actor sea la persona del contexto", async () => {
+      const { rows } = await dueno.query<{ with_check: string }>(
+        `select with_check from pg_policies
+         where schemaname = 'public' and policyname = 'auditoria_empresa_app_alta'`,
+      );
+      expect(rows[0]?.with_check).toMatch(
+        /NOT \(actor_persona_id IS DISTINCT FROM app_persona_id\(\)\)/,
+      );
+    });
+
+    it("la zona horaria se valida con un disparador y no con un CHECK que cambiaría con tzdata", async () => {
+      const { rows } = await dueno.query<{ conname: string }>(
+        `select conname from pg_constraint where conrelid = 'public.empresa'::regclass and contype = 'c'`,
+      );
+      expect(rows.map((r) => r.conname)).not.toContain("empresa_zona_horaria_ck");
+    });
+
+    it("ningún rol limitado tiene TEMP sobre la base, ni PUBLIC", async () => {
+      const { rows } = await dueno.query<{ rol: string; temp: boolean }>(
+        `select r as rol, has_database_privilege(r, current_database(), 'TEMP') as temp
+         from unnest($1::text[]) as r order by 1`,
+        [[...ROLES]],
+      );
+      expect(rows).toEqual([...ROLES].sort().map((rol) => ({ rol, temp: false })));
+      const { rows: publico } = await dueno.query(
+        `select 1 from pg_database d, aclexplode(d.datacl) a
+         where d.datname = current_database() and a.grantee = 0 and a.privilege_type = 'TEMPORARY'`,
+      );
+      expect(publico).toEqual([]);
+    });
+
+    it("cada rol tiene fijados statement_timeout, idle_in_transaction_session_timeout y lock_timeout", async () => {
+      const { rows } = await dueno.query<{ rolname: string; setconfig: string[] }>(
+        `select r.rolname, s.setconfig
+         from pg_db_role_setting s join pg_roles r on r.oid = s.setrole
+         where s.setdatabase = 0 and r.rolname = any($1) order by 1`,
+        [[...ROLES]],
+      );
+      expect(rows.map((r) => r.rolname)).toEqual([...ROLES].sort());
+      for (const fila of rows) {
+        expect([...fila.setconfig].sort(), fila.rolname).toEqual([
+          "idle_in_transaction_session_timeout=60s",
+          "lock_timeout=15s",
+          "statement_timeout=30s",
+        ]);
+      }
+    });
+
+    describe("la migración frena a un rol que es miembro de otro", () => {
+      // El primer bloque DO del archivo crea y revisa los roles. Se corre en una transacción que
+      // se deshace: ni la pertenencia de prueba ni nada de lo que haga queda en el servidor.
+      const bloqueDeRoles = /^DO \$\$[\s\S]*?^\$\$;/m.exec(MIGRACION)?.[0] ?? "";
+
+      it("el bloque de roles se localiza y, sin pertenencias ajenas, corre sin errores", async () => {
+        expect(bloqueDeRoles).toContain("CREATE ROLE");
+        await dueno.query("begin");
+        try {
+          await expect(dueno.query(bloqueDeRoles)).resolves.toBeDefined();
+        } finally {
+          await dueno.query("rollback");
+        }
+      });
+
+      it("falla con un mensaje claro si uno de los cuatro roles es miembro de otro rol", async () => {
+        await dueno.query("begin");
+        try {
+          await dueno.query("grant pg_monitor to zuluhub_app");
+          await expect(dueno.query(bloqueDeRoles)).rejects.toThrow(
+            /zuluhub_app es miembro de pg_monitor/,
+          );
+        } finally {
+          await dueno.query("rollback");
+        }
+      });
+    });
+
+    describe("las funciones no se dejan suplantar con tablas temporales", () => {
+      // Lo que prueban estos tests no depende de REVOKE TEMPORARY: el dueño de la base (que sí
+      // puede crear temporales) arma tablas falsas y las funciones deben ignorarlas. Se hace todo
+      // en una transacción que se deshace.
+      const enTransaccion = async (cuerpo: () => Promise<void>) => {
+        await dueno.query("begin");
+        try {
+          await cuerpo();
+        } finally {
+          await dueno.query("rollback");
+        }
+      };
+      const escalar = async <T>(texto: string, parametros: unknown[] = []) =>
+        (await dueno.query<{ v: T }>(`select ${texto} as v`, parametros)).rows[0]?.v;
+
+      /** Un tenant suspendido con una empresa ACTIVE, y copias temporales "falsas" donde todo opera. */
+      const armarSuplantacion = async () => {
+        const { rows: t } = await dueno.query<{ id: string }>(
+          "insert into public.tenant (nombre) values ('suplantacion') returning id",
+        );
+        const tenant = t[0]?.id as string;
+        const { rows: e } = await dueno.query<{ id: string }>(
+          `insert into public.empresa (tenant_id, cuit, razon_social, estado)
+           values ($1, '30500010912', 'suplantacion', 'ACTIVE') returning id`,
+          [tenant],
+        );
+        const empresa = e[0]?.id as string;
+        const { rows: o } = await dueno.query<{ id: string }>(
+          `insert into public.empresa (tenant_id, cuit, razon_social, estado)
+           values ($1, $2, 'suplantacion 2', 'ACTIVE') returning id`,
+          [tenant, cuitAlAzar()],
+        );
+        const otraEmpresa = o[0]?.id as string;
+        await dueno.query(
+          "update public.tenant set estado = 'SUSPENDED', motivo_estado = 'prueba' where id = $1",
+          [tenant],
+        );
+        const { rows: p } = await dueno.query<{ id: string }>(
+          "insert into public.persona (email) values ('suplantacion@prueba.test') returning id",
+        );
+        const persona = p[0]?.id as string;
+        // Las copias falsas: el tenant figura ACTIVE (y `empresa` cuelga de él, así que parece
+        // operable), `otraEmpresa` cuelga de un tenant inventado, y la persona es propietaria.
+        await dueno.query("create temp table tenant as select * from public.tenant");
+        await dueno.query("update pg_temp.tenant set estado = 'ACTIVE', motivo_estado = null");
+        await dueno.query("create temp table empresa as select * from public.empresa");
+        await dueno.query(
+          "update pg_temp.empresa set tenant_id = gen_random_uuid() where id = $1",
+          [otraEmpresa],
+        );
+        await dueno.query("create temp table persona as select * from public.persona");
+        await dueno.query(
+          "create temp table membresia_tenant (like public.membresia_tenant including defaults)",
+        );
+        await dueno.query(
+          "insert into pg_temp.membresia_tenant (persona_id, tenant_id, rol, activo) values ($1, $2, 'PROPIETARIO', true)",
+          [persona, tenant],
+        );
+        await dueno.query("select set_config('app.persona_id', $1, true)", [persona]);
+        return { tenant, empresa, otraEmpresa, persona };
+      };
+
+      it("empresa_operable, tenant_activo, tenant_de_empresa y es_propietario_activo miran las tablas reales", async () => {
+        await enTransaccion(async () => {
+          const { tenant, empresa, otraEmpresa } = await armarSuplantacion();
+          expect(await escalar<boolean>("public.empresa_operable($1)", [empresa])).toBe(false);
+          expect(await escalar<boolean>("public.tenant_activo($1)", [tenant])).toBe(false);
+          expect(await escalar<string>("public.tenant_de_empresa($1)", [otraEmpresa])).toBe(tenant);
+          expect(await escalar<boolean>("public.es_propietario_activo($1)", [tenant])).toBe(false);
+        });
+      });
+
+      it("los disparadores de alta de tenant y de empresa tampoco leen tablas temporales", async () => {
+        await enTransaccion(async () => {
+          const { tenant } = await armarSuplantacion();
+          // Instalación SINGLE de verdad, con un "MULTI" falso en una temporal.
+          await dueno.query("create temp table instalacion as select * from public.instalacion");
+          await dueno.query("update public.instalacion set modo = 'SINGLE'");
+          await dueno.query("savepoint s1");
+          await expect(
+            dueno.query("insert into public.tenant (nombre) values ('segundo')"),
+          ).rejects.toMatchObject({ code: "23514", constraint: "tenant_instalacion_single" });
+          await dueno.query("rollback to savepoint s1");
+          // El tenant real está suspendido (el falso, ACTIVE): la empresa nueva se rechaza igual.
+          await dueno.query("update public.instalacion set modo = 'MULTI'");
+          await expect(
+            dueno.query(
+              `insert into public.empresa (tenant_id, cuit, razon_social) values ($1, $2, 'nueva')`,
+              [tenant, cuitAlAzar()],
+            ),
+          ).rejects.toMatchObject({ code: "23514", constraint: "empresa_tenant_no_activo" });
+        });
+      });
+    });
+
+    it("sin la fila de instalación el alta de tenant falla cerrado, no asume MULTI", async () => {
+      await dueno.query("begin");
+      try {
+        await dueno.query("delete from public.instalacion");
+        await expect(
+          dueno.query("insert into public.tenant (nombre) values ('sin instalacion')"),
+        ).rejects.toThrow(/falta su fila/);
+      } finally {
+        await dueno.query("rollback");
+      }
+    });
+
+    it("los nombres no aceptan espacios en blanco al inicio ni al final (tampoco tabulaciones ni saltos)", async () => {
+      for (const nombre of [" a", "a ", "\ta", "a\n", "", " "]) {
+        await dueno.query("begin");
+        try {
+          await expect(
+            dueno.query("insert into public.tenant (nombre) values ($1)", [nombre]),
+            JSON.stringify(nombre),
+          ).rejects.toMatchObject({ code: "23514", constraint: "tenant_nombre_ck" });
+        } finally {
+          await dueno.query("rollback");
+        }
+      }
+      await dueno.query("begin");
+      try {
+        await dueno.query("insert into public.tenant (nombre) values ('Grupo Uno  Sur')");
+      } finally {
+        await dueno.query("rollback");
+      }
+    });
+
+    it("lo mismo vale para la razón social de la empresa y el nombre de la sucursal", async () => {
+      await dueno.query("begin");
+      try {
+        const { rows } = await dueno.query<{ id: string }>(
+          "insert into public.tenant (nombre) values ('espacios') returning id",
+        );
+        const tenant = rows[0]?.id as string;
+        const alta = (razonSocial: string) =>
+          dueno.query(
+            "insert into public.empresa (tenant_id, cuit, razon_social) values ($1, '30500010912', $2)",
+            [tenant, razonSocial],
+          );
+        for (const razonSocial of [
+          " Mi Empresa",
+          "Mi Empresa ",
+          "\tMi Empresa",
+          "Mi Empresa\n",
+          "",
+        ]) {
+          await dueno.query("savepoint s");
+          await expect(alta(razonSocial), JSON.stringify(razonSocial)).rejects.toMatchObject({
+            code: "23514",
+            constraint: "empresa_razon_social_ck",
+          });
+          await dueno.query("rollback to savepoint s");
+        }
+        await alta("Mi Empresa");
+        const { rows: e } = await dueno.query<{ id: string }>(
+          "select id from public.empresa where tenant_id = $1",
+          [tenant],
+        );
+        for (const nombre of [" Central", "Central ", "\tCentral", "Central\n", ""]) {
+          await dueno.query("savepoint s");
+          await expect(
+            dueno.query("insert into public.sucursal (empresa_id, nombre) values ($1, $2)", [
+              e[0]?.id,
+              nombre,
+            ]),
+            JSON.stringify(nombre),
+          ).rejects.toMatchObject({ code: "23514", constraint: "sucursal_nombre_ck" });
+          await dueno.query("rollback to savepoint s");
+        }
+      } finally {
+        await dueno.query("rollback");
+      }
+    });
+
+    it("la zona horaria se valida al dar de alta y al cambiarla, con el nombre de restricción que el módulo traduce", async () => {
+      await dueno.query("begin");
+      try {
+        const { rows } = await dueno.query<{ id: string }>(
+          "insert into public.tenant (nombre) values ('zonas') returning id",
+        );
+        const tenant = rows[0]?.id as string;
+        const alta = (zona: string | null) =>
+          dueno.query(
+            "insert into public.empresa (tenant_id, cuit, razon_social, zona_horaria) values ($1, '30500010912', 'zonas', $2)",
+            [tenant, zona],
+          );
+        await dueno.query("savepoint s");
+        await expect(alta("Marte/Olympus")).rejects.toMatchObject({
+          code: "23514",
+          constraint: "empresa_zona_horaria_ck",
+        });
+        await dueno.query("rollback to savepoint s");
+        // Un NULL lo rechaza NOT NULL, no el disparador.
+        await expect(alta(null)).rejects.toMatchObject({ code: "23502" });
+        await dueno.query("rollback to savepoint s");
+        await alta("America/Argentina/Cordoba");
+        await dueno.query("savepoint s");
+        await expect(
+          dueno.query(
+            "update public.empresa set zona_horaria = 'Marte/Olympus' where tenant_id = $1",
+            [tenant],
+          ),
+        ).rejects.toMatchObject({ code: "23514", constraint: "empresa_zona_horaria_ck" });
+        await dueno.query("rollback to savepoint s");
+        await dueno.query("update public.empresa set zona_horaria = 'UTC' where tenant_id = $1", [
+          tenant,
+        ]);
+      } finally {
+        await dueno.query("rollback");
+      }
     });
   });
 

@@ -52,7 +52,7 @@ describe.skipIf(base === null)("migraciones", () => {
       ]);
       expect(rows.every((r) => !r.rolbypassrls && !r.rolsuper)).toBe(true);
       const { rows: puede } = await cliente.query<{ ok: boolean }>(
-        "select has_table_privilege('zuluhub_app', 'public.sucursal', 'INSERT') as ok",
+        "select has_any_column_privilege('zuluhub_app', 'public.sucursal', 'INSERT') as ok",
       );
       expect(puede[0]?.ok).toBe(true);
     } finally {

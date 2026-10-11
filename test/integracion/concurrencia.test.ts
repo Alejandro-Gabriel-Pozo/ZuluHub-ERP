@@ -9,6 +9,7 @@ import {
   comoPlataforma,
   crearBaseAparte,
   crearEmpresaActiva,
+  crearEmpresaEnAlta,
   crearEntornoDePrueba,
   cuitAlAzar,
   nombreAlAzar,
@@ -60,7 +61,9 @@ describe.skipIf(base === null)("concurrencia e idempotencia de la base de tenanc
       }
     });
 
-    it("el mismo alta repetida (doble clic) tampoco duplica: una empresa", async () => {
+    // Ojo: esto prueba la unicidad del CUIT bajo concurrencia, no idempotencia de la operación (no hay
+    // clave de idempotencia en una alta de plataforma): las repetidas se rechazan, no se "recuerdan".
+    it("una ráfaga de altas con el mismo CUIT deja una sola empresa", async () => {
       const t = await entorno.ejecutar({ contexto: comoPlataforma() }, async ({ tenants }) =>
         ok((await tenants.crear(nombreAlAzar("t"))).id),
       );
@@ -70,6 +73,10 @@ describe.skipIf(base === null)("concurrencia e idempotencia de la base de tenanc
         Array.from({ length: 5 }, () => altaDeEmpresa(t.valor, cuit)),
       );
       expect(rafaga.filter((r) => r.ok)).toHaveLength(1);
+      const rechazadas = rafaga.filter((r) => !r.ok).map((r) => (r.ok ? null : r.error));
+      expect(rechazadas).toEqual(
+        Array.from({ length: 4 }, () => ({ tipo: "Unicidad", restriccion: "empresa_cuit_uk" })),
+      );
     });
 
     it("un CUIT de alta cancelada se puede volver a usar; antes de cancelar, no", async () => {
@@ -91,6 +98,86 @@ describe.skipIf(base === null)("concurrencia e idempotencia de la base de tenanc
       });
       expect(cancelada.ok).toBe(true);
       expect((await altaDeEmpresa(t.valor, cuit)).ok).toBe(true);
+    });
+  });
+
+  describe("dar de alta una empresa en un tenant suspendido", () => {
+    const suspender_ = (tenant: string) =>
+      entorno.ejecutar({ contexto: comoPlataforma() }, async ({ db }) => {
+        await sql`update tenant set estado = 'SUSPENDED', motivo_estado = 'falta de pago' where id = ${tenant}`.execute(
+          db,
+        );
+        return ok(null);
+      });
+
+    it("se rechaza con empresa_tenant_no_activo, y al reactivar el tenant se puede de nuevo", async () => {
+      const t = await entorno.ejecutar({ contexto: comoPlataforma() }, async ({ tenants }) =>
+        ok((await tenants.crear(nombreAlAzar("t"))).id),
+      );
+      if (!t.ok) throw new Error("sin tenant");
+      expect((await altaDeEmpresa(t.valor, cuitAlAzar())).ok).toBe(true);
+      expect((await suspender_(t.valor)).ok).toBe(true);
+      expect(await altaDeEmpresa(t.valor, cuitAlAzar())).toEqual({
+        ok: false,
+        error: { tipo: "Check", restriccion: "empresa_tenant_no_activo" },
+      });
+      await entorno.ejecutar({ contexto: comoPlataforma() }, async ({ db }) => {
+        await sql`update tenant set estado = 'ACTIVE', motivo_estado = null where id = ${t.valor}`.execute(
+          db,
+        );
+        return ok(null);
+      });
+      expect((await altaDeEmpresa(t.valor, cuitAlAzar())).ok).toBe(true);
+    });
+
+    it("un tenant que no existe sigue dando el error de clave foránea, no el de estado", async () => {
+      expect(await altaDeEmpresa("00000000-0000-4000-8000-000000000000", cuitAlAzar())).toEqual({
+        ok: false,
+        error: { tipo: "Referencia", restriccion: "empresa_tenant_id_fkey" },
+      });
+    });
+
+    it("una suspensión que llega durante un alta en curso espera a que esta termine", async () => {
+      const t = await entorno.ejecutar({ contexto: comoPlataforma() }, async ({ tenants }) =>
+        ok((await tenants.crear(nombreAlAzar("t"))).id),
+      );
+      if (!t.ok) throw new Error("sin tenant");
+      let altaInsertada: () => void = () => undefined;
+      const yaInserto = new Promise<void>((resolver) => (altaInsertada = resolver));
+      let terminarAlta: () => void = () => undefined;
+      const puedeTerminar = new Promise<void>((resolver) => (terminarAlta = resolver));
+
+      const alta = entorno.ejecutar(
+        { contexto: comoPlataforma(), aislamiento: "read committed" },
+        async ({ db }) => {
+          await sql`insert into empresa (tenant_id, cuit, razon_social)
+                    values (${t.valor}, ${cuitAlAzar()}, ${nombreAlAzar("alta")})`.execute(db);
+          altaInsertada();
+          await puedeTerminar;
+          return ok("creada" as const);
+        },
+      );
+      await yaInserto;
+      let suspensionTermino = false;
+      const suspension = entorno
+        .ejecutar({ contexto: comoPlataforma(), aislamiento: "read committed" }, async ({ db }) => {
+          await sql`update tenant set estado = 'SUSPENDED', motivo_estado = 'falta de pago' where id = ${t.valor}`.execute(
+            db,
+          );
+          return ok("suspendido" as const);
+        })
+        .then((r) => {
+          suspensionTermino = true;
+          return r;
+        });
+      await new Promise((resolver) => setTimeout(resolver, 400));
+      expect(
+        suspensionTermino,
+        "la suspensión no debería terminar mientras el alta está abierta",
+      ).toBe(false);
+      terminarAlta();
+      expect(await alta).toEqual({ ok: true, valor: "creada" });
+      expect(await suspension).toEqual({ ok: true, valor: "suspendido" });
     });
   });
 
@@ -210,7 +297,10 @@ describe.skipIf(base === null)("concurrencia e idempotencia de la base de tenanc
       expect(nombres).toEqual({ ok: true, valor: ["Casa central", "antes", "despues"] });
     });
 
-    it("una empresa suspendida o en alta tampoco opera, aunque su tenant esté activo", async () => {
+    // Determinista: la política de alta de sucursal exige el estado EFECTIVO (empresa y tenant
+    // ACTIVE). Cubre las tres formas de no estar operable: tenant suspendido (test anterior),
+    // empresa suspendida con el tenant activo, y empresa todavía en alta.
+    it("una empresa suspendida tampoco opera, aunque su tenant esté activo", async () => {
       const e = await crearEmpresaActiva(entorno);
       await entorno.ejecutar({ contexto: comoPlataforma() }, async ({ db }) => {
         await sql`update empresa set estado = 'SUSPENDED', motivo_estado = 'revisión' where id = ${e.empresa}`.execute(
@@ -221,7 +311,21 @@ describe.skipIf(base === null)("concurrencia e idempotencia de la base de tenanc
       expect(await crearSucursal(e, "x")).toEqual({ ok: false, error: { tipo: "AccesoDenegado" } });
     });
 
-    it("suspender y operar a la vez: el resultado es siempre consistente con algún orden (20 rondas)", async () => {
+    it("una empresa que sigue en alta (PROVISIONING) tampoco opera, aunque su tenant esté activo", async () => {
+      const e = await crearEmpresaEnAlta(entorno);
+      expect(await crearSucursal(e, "x")).toEqual({ ok: false, error: { tipo: "AccesoDenegado" } });
+    });
+
+    it("una empresa y un tenant activos sí operan (control de los tres rechazos anteriores)", async () => {
+      const e = await crearEmpresaActiva(entorno);
+      expect(await crearSucursal(e, "x")).toEqual({ ok: true, valor: "x" });
+    });
+
+    // Lo que prueba: bajo carrera real, nunca queda una sucursal a medias (confirmada si la
+    // operación se aceptó, inexistente si se rechazó). NO prueba que se exija empresa_operable:
+    // ambos órdenes son válidos y el test pasaría igual sin ella. Eso lo cubren los tests
+    // deterministas de arriba y el meta-test de las políticas.
+    it("nunca queda una sucursal a medias cuando se suspende y se opera a la vez (20 rondas)", async () => {
       for (let ronda = 0; ronda < 20; ronda++) {
         const e = await crearEmpresaActiva(entorno);
         const nombre = nombreAlAzar("simultanea");
