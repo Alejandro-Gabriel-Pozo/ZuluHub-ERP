@@ -12,7 +12,7 @@ describe.skipIf(urlPooler === "" || urlDirecta === "")("spike contra una base re
   it("las pruebas aplicables pasan", async () => {
     const informe = await ejecutarSpike(
       { urlPooler, urlDirecta },
-      { iteraciones: 300, corridas: 30 },
+      { iteraciones: 300, corridas: 30, esPooler: true },
     );
     for (const r of informe.resultados) {
       console.log(`${r.prueba} ${r.estado} (${r.milisegundos} ms): ${r.detalle}`);

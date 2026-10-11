@@ -641,20 +641,36 @@ export function validarEntorno(config: Partial<ConfiguracionSpike>): string[] {
 
 export async function ejecutarSpike(
   config: ConfiguracionSpike,
-  opciones: { iteraciones?: number; concurrencia?: number; corridas?: number } = {},
+  opciones: {
+    iteraciones?: number;
+    concurrencia?: number;
+    corridas?: number;
+    /** Por defecto se deduce del host (`-pooler`); en local se indica a mano. */
+    esPooler?: boolean;
+  } = {},
 ): Promise<InformeSpike> {
   const iteraciones = opciones.iteraciones ?? 1000;
   const concurrencia = opciones.concurrencia ?? 20;
   const corridas = opciones.corridas ?? 100;
+  const esPooler = opciones.esPooler ?? hostTienePooler(config.urlPooler);
   const resultados: ResultadoPrueba[] = [];
 
   await sqlDirecto(config.urlDirecta, SQL_LIMPIAR);
   await sqlDirecto(config.urlDirecta, SQL_PREPARAR);
   try {
     resultados.push(
-      await ejecutar("P1", "Contexto por transacción a través del pooler", config, () =>
-        p1(config, iteraciones, concurrencia),
-      ),
+      esPooler
+        ? await ejecutar("P1", "Contexto por transacción a través del pooler", config, () =>
+            p1(config, iteraciones, concurrencia),
+          )
+        : {
+            prueba: "P1",
+            titulo: "Contexto por transacción a través del pooler",
+            estado: "falla",
+            detalle:
+              "DATABASE_URL no es una cadena con pooler (el host no tiene -pooler), así que esta prueba no concluye: con una conexión directa nunca se comparten conexiones. Cargá la cadena con Connection pooling activado.",
+            milisegundos: 0,
+          },
       await ejecutar("P2", "Rol de la aplicación sin BYPASSRLS y no dueño", config, () =>
         p2(config),
       ),
@@ -708,6 +724,14 @@ export async function ejecutarSpike(
 
 // ---------- punto de entrada de la función de Vercel ----------
 
+function hostTienePooler(url: string): boolean {
+  try {
+    return new URL(url).hostname.includes("-pooler");
+  } catch {
+    return false;
+  }
+}
+
 function hostDe(url: string | undefined): string {
   try {
     return url ? new URL(url).hostname.replace(/^[^.]*/, (e) => e.replace(/./g, "*")) : "(falta)";
@@ -732,7 +756,7 @@ export default {
       node: process.version,
       tieneDatabaseUrl: config.urlPooler !== "",
       tieneDatabaseUrlUnpooled: config.urlDirecta !== "",
-      databaseUrlEsPooler: config.urlPooler.includes("-pooler"),
+      databaseUrlEsPooler: hostTienePooler(config.urlPooler),
       databaseUrlUnpooledEsDirecta:
         config.urlDirecta !== "" && !config.urlDirecta.includes("-pooler"),
       hostPooler: hostDe(config.urlPooler),
