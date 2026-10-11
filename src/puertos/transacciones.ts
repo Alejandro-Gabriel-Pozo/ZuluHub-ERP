@@ -16,7 +16,10 @@ export type OpcionesDeTransaccion = Readonly<{
   /** Por defecto `serializable`, que es el nivel de las escrituras con invariantes. */
   aislamiento?: Aislamiento;
   soloLectura?: boolean;
-  /** Reintentos máximos ante un conflicto de serialización o un deadlock. Por defecto 6. */
+  /**
+   * Reintentos máximos ante un conflicto de serialización o un deadlock. Entero mayor o igual a 0
+   * (si no, `ejecutar` lanza `RangeError`). Por defecto 6.
+   */
   reintentos?: number;
 }>;
 
@@ -37,6 +40,8 @@ export interface Transacciones<Tx> {
    *   error vuelve tal cual.
    * - Ante un conflicto de serialización o un deadlock, el trabajo COMPLETO se repite; por eso no
    *   puede tener efectos externos ni leer el reloj.
+   * - Si el trabajo atrapa un error de la base y devuelve `ok`, la transacción queda abortada y no se
+   *   confirma: vuelve `Inesperado` (SQLSTATE 25P02), nunca un éxito falso.
    * - Los errores de la base se traducen a `ErrorDePersistencia`. Una excepción que no viene de la
    *   base se vuelve a lanzar: nunca se traga.
    */

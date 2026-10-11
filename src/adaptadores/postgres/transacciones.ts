@@ -1,7 +1,11 @@
 import { Kysely, PostgresDialect, sql } from "kysely";
 import pg from "pg";
 import type { Contexto, TipoDeContexto } from "../../contexto/contexto";
-import type { OpcionesDeTransaccion, Transacciones } from "../../puertos/transacciones";
+import type {
+  ErrorDePersistencia,
+  OpcionesDeTransaccion,
+  Transacciones,
+} from "../../puertos/transacciones";
 import { err, type Resultado } from "../../primitivas/resultado/resultado";
 import { esReintentable, traducirErrorDeBase } from "./errores";
 
@@ -30,7 +34,14 @@ export type ConfiguracionDeTransacciones<Tx> = Readonly<{
    * afecta a ninguna operación: el pool descarta la conexión y abre otra. Sirve para registrarlo.
    */
   alCortarseUnaConexionOciosa?: (error: Error) => void;
+  /**
+   * Se avisa cada vez que `ejecutar` devuelve un error `Inesperado` (ADR-004: "se registra"). No
+   * cambia lo que se devuelve: si el aviso mismo falla, el resultado sigue igual.
+   */
+  alRegistrarErrorInesperado?: (error: ErrorInesperado) => void;
 }>;
+
+type ErrorInesperado = Extract<ErrorDePersistencia, { tipo: "Inesperado" }>;
 
 /** Base sin tablas tipadas: cada módulo declara las suyas (`withTables`). */
 export type SinTablas = Record<never, never>;
@@ -114,6 +125,10 @@ export function crearTransacciones<Tx>(
           set_config('app.persona_id', ${persona}, true)`.execute(trx);
         const resultado = await trabajo(configuracion.armar(trx));
         if (!resultado.ok) throw new Abortar(resultado);
+        // Si el trabajo atrapó un error de la base y devolvió `ok`, la transacción quedó abortada y
+        // Postgres respondería al COMMIT con un ROLLBACK SIN error: se informaría éxito sin haber
+        // guardado nada. Una sentencia trivial lo delata (25P02) antes de confirmar.
+        await sql`select 1`.execute(trx);
         return resultado;
       });
     } catch (error) {
@@ -122,9 +137,23 @@ export function crearTransacciones<Tx>(
     }
   }
 
+  function registrar(error: ErrorInesperado): void {
+    try {
+      configuracion.alRegistrarErrorInesperado?.(error);
+    } catch {
+      // Un registro que falla no puede tapar el resultado real de la operación.
+    }
+  }
+
   return {
     async ejecutar(opciones, trabajo) {
       const reintentos = opciones.reintentos ?? REINTENTOS_POR_DEFECTO;
+      // Un valor que no sea entero >= 0 (NaN, negativo, 1.5, Infinity) rompe el bucle de reintentos.
+      if (!Number.isInteger(reintentos) || reintentos < 0) {
+        throw new RangeError(
+          `reintentos debe ser un entero mayor o igual a 0 (llegó ${reintentos})`,
+        );
+      }
       for (let intento = 0; ; intento++) {
         try {
           return await unIntento(opciones, trabajo);
@@ -139,6 +168,7 @@ export function crearTransacciones<Tx>(
           }
           const traducido = traducirErrorDeBase(error);
           if (traducido === null) throw error;
+          if (traducido.tipo === "Inesperado") registrar(traducido);
           return err(traducido);
         }
       }

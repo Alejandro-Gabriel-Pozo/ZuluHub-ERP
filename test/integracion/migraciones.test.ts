@@ -130,6 +130,236 @@ describe.skipIf(base === null)("migraciones", () => {
     }
   });
 
+  it("rechaza una cadena de conexión con pooler, sin conectarse", async () => {
+    const carpeta = await carpetaTemporal({ "0001_uno.sql": "select 1;" });
+    try {
+      const error: unknown = await aplicarMigraciones(
+        "postgres://usuario@ep-ejemplo-pooler.sa-east-1.aws.neon.tech/base",
+        carpeta,
+      ).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(ErrorDeMigracion);
+      expect((error as Error).message).toMatch(/pooler/);
+      // El mensaje no filtra la cadena de conexión.
+      expect((error as Error).message).not.toMatch(/usuario|neon\.tech/);
+    } finally {
+      await rm(carpeta, { recursive: true, force: true });
+    }
+  });
+
+  it("rechaza una migración con control de transacción propio, antes de tocar la base", async () => {
+    if (base === null) return;
+    const aparte = await crearBaseAparte(base, { migrar: false });
+    const carpeta = await carpetaTemporal({
+      "0001_ok.sql": "create table ok_1 (id int);",
+      "0002_con_commit.sql": "create table t2 (id int);\nCOMMIT;\ncreate table t3 (id int);",
+    });
+    const cliente = new pg.Client({ connectionString: aparte.base.dueno });
+    await cliente.connect();
+    try {
+      await expect(aplicarMigraciones(aparte.base.dueno, carpeta)).rejects.toThrow(
+        ErrorDeMigracion,
+      );
+      await expect(aplicarMigraciones(aparte.base.dueno, carpeta)).rejects.toThrow(
+        /0002_con_commit\.sql.*COMMIT/,
+      );
+      // Ni siquiera la 0001, que estaba bien, se aplicó: se valida todo antes de conectarse.
+      const { rows } = await cliente.query<{ n: number }>(
+        "select count(*)::int as n from information_schema.tables where table_schema = 'public'",
+      );
+      expect(rows[0]?.n).toBe(0);
+    } finally {
+      await cliente.end();
+      await rm(carpeta, { recursive: true, force: true });
+      await aparte.destruir();
+    }
+  });
+
+  it.each([
+    ["BEGIN;", "BEGIN"],
+    ["  begin work;", "BEGIN"],
+    ["START TRANSACTION ISOLATION LEVEL SERIALIZABLE;", "START TRANSACTION"],
+    ["select 1;\nROLLBACK;", "ROLLBACK"],
+    ["select 1;\nEND;", "END"],
+    ["select 1; abort", "ABORT"],
+    ["select 1;\n  commit\n;", "COMMIT"],
+  ])("detecta el control de transacción %j", async (contenido, control) => {
+    const carpeta = await carpetaTemporal({ "0001_x.sql": contenido });
+    try {
+      await expect(aplicarMigraciones("postgres://usuario@localhost:1/x", carpeta)).rejects.toThrow(
+        new RegExp(`propio ${control}`),
+      );
+    } finally {
+      await rm(carpeta, { recursive: true, force: true });
+    }
+  });
+
+  it("no confunde con control de transacción lo que está en comentarios, textos, funciones o savepoints", async () => {
+    if (base === null) return;
+    const aparte = await crearBaseAparte(base, { migrar: false });
+    const carpeta = await carpetaTemporal({
+      "0001_inocente.sql": [
+        "-- una nota; COMMIT; y listo",
+        "/* otra nota; ROLLBACK; /* anidada; */ END; */",
+        "create table t (id int, nota text default 'x; COMMIT; y');",
+        "create function f() returns int language plpgsql as $cuerpo$",
+        "begin",
+        "  return 1;",
+        "end;",
+        "$cuerpo$;",
+        "do $$ begin perform 1; end $$;",
+        "savepoint uno;",
+        "rollback to savepoint uno;",
+        "select case when true then 1 else 2 end;",
+      ].join("\n"),
+    });
+    try {
+      const r = await aplicarMigraciones(aparte.base.dueno, carpeta);
+      expect(r.aplicadas).toEqual(["0001_inocente.sql"]);
+    } finally {
+      await rm(carpeta, { recursive: true, force: true });
+      await aparte.destruir();
+    }
+  });
+
+  it("el fin de línea CRLF no cuenta como edición: mismo contenido, mismo checksum", async () => {
+    if (base === null) return;
+    const aparte = await crearBaseAparte(base, { migrar: false });
+    const carpeta = await carpetaTemporal({
+      "0001_uno.sql": "create table uno (id int);\n-- fin\ncreate table dos (id int);\n",
+    });
+    try {
+      await aplicarMigraciones(aparte.base.dueno, carpeta);
+      await writeFile(
+        join(carpeta, "0001_uno.sql"),
+        "create table uno (id int);\r\n-- fin\r\ncreate table dos (id int);\r\n",
+      );
+      expect(await aplicarMigraciones(aparte.base.dueno, carpeta)).toEqual({
+        aplicadas: [],
+        yaAplicadas: ["0001_uno.sql"],
+      });
+      // Y al revés: una migración aplicada con CRLF tampoco rompe al volver a LF.
+      await writeFile(
+        join(carpeta, "0001_uno.sql"),
+        "create table uno (id int);\n-- fin\n-- otro\n",
+      );
+      await expect(aplicarMigraciones(aparte.base.dueno, carpeta)).rejects.toThrow(
+        /ya se aplicó y fue editada/,
+      );
+    } finally {
+      await rm(carpeta, { recursive: true, force: true });
+      await aparte.destruir();
+    }
+  });
+
+  it("una migración registrada cuyo archivo ya no existe rompe con un error claro", async () => {
+    if (base === null) return;
+    const aparte = await crearBaseAparte(base, { migrar: false });
+    const carpeta = await carpetaTemporal({
+      "0001_uno.sql": "create table uno (id int);",
+      "0002_dos.sql": "create table dos (id int);",
+    });
+    try {
+      await aplicarMigraciones(aparte.base.dueno, carpeta);
+      await rm(join(carpeta, "0002_dos.sql"));
+      const error: unknown = await aplicarMigraciones(aparte.base.dueno, carpeta).catch(
+        (e: unknown) => e,
+      );
+      expect(error).toBeInstanceOf(ErrorDeMigracion);
+      expect((error as Error).message).toMatch(/archivo ya no existe: 0002_dos\.sql/);
+    } finally {
+      await rm(carpeta, { recursive: true, force: true });
+      await aparte.destruir();
+    }
+  });
+
+  it("fija lock_timeout de 10 s y statement_timeout de 5 min en la sesión de migración", async () => {
+    if (base === null) return;
+    const aparte = await crearBaseAparte(base, { migrar: false });
+    const carpeta = await carpetaTemporal({
+      "0001_tiempos.sql": [
+        "do $$ begin",
+        "  if current_setting('lock_timeout') <> '10s' then",
+        "    raise exception 'lock_timeout inesperado: %', current_setting('lock_timeout');",
+        "  end if;",
+        "  if current_setting('statement_timeout') <> '5min' then",
+        "    raise exception 'statement_timeout inesperado: %', current_setting('statement_timeout');",
+        "  end if;",
+        "end $$;",
+      ].join("\n"),
+    });
+    try {
+      expect((await aplicarMigraciones(aparte.base.dueno, carpeta)).aplicadas).toEqual([
+        "0001_tiempos.sql",
+      ]);
+    } finally {
+      await rm(carpeta, { recursive: true, force: true });
+      await aparte.destruir();
+    }
+  });
+
+  it("una migración que necesita un bloqueo ajeno falla por lock_timeout en vez de hacer cola", async () => {
+    if (base === null) return;
+    const aparte = await crearBaseAparte(base, { migrar: false });
+    const carpeta = await carpetaTemporal({ "0001_tabla.sql": "create table bloqueada (id int);" });
+    const otraSesion = new pg.Client({ connectionString: aparte.base.dueno });
+    try {
+      await aplicarMigraciones(aparte.base.dueno, carpeta);
+      await writeFile(
+        join(carpeta, "0002_alter.sql"),
+        "alter table bloqueada add column extra int;",
+      );
+      await otraSesion.connect();
+      await otraSesion.query("BEGIN");
+      await otraSesion.query("LOCK TABLE bloqueada IN ACCESS EXCLUSIVE MODE");
+      const inicio = Date.now();
+      await expect(
+        aplicarMigraciones(aparte.base.dueno, carpeta, { esperaDeBloqueoEnMs: 300 }),
+      ).rejects.toMatchObject({ code: "55P03" });
+      expect(Date.now() - inicio).toBeLessThan(5000);
+      await otraSesion.query("ROLLBACK");
+      // Sin el bloqueo ajeno, la misma migración se aplica (no quedó registrada a medias).
+      expect((await aplicarMigraciones(aparte.base.dueno, carpeta)).aplicadas).toEqual([
+        "0002_alter.sql",
+      ]);
+    } finally {
+      await otraSesion.end();
+      await rm(carpeta, { recursive: true, force: true });
+      await aparte.destruir();
+    }
+  });
+
+  it("una sentencia que dura más que el máximo se corta por statement_timeout", async () => {
+    if (base === null) return;
+    const aparte = await crearBaseAparte(base, { migrar: false });
+    const carpeta = await carpetaTemporal({ "0001_lenta.sql": "select pg_sleep(10);" });
+    try {
+      const inicio = Date.now();
+      await expect(
+        aplicarMigraciones(aparte.base.dueno, carpeta, { duracionMaximaEnMs: 200 }),
+      ).rejects.toMatchObject({ code: "57014" });
+      expect(Date.now() - inicio).toBeLessThan(5000);
+    } finally {
+      await rm(carpeta, { recursive: true, force: true });
+      await aparte.destruir();
+    }
+  });
+
+  it("los tiempos máximos deben ser enteros positivos", async () => {
+    const carpeta = await carpetaTemporal({ "0001_uno.sql": "select 1;" });
+    try {
+      await expect(
+        aplicarMigraciones("postgres://usuario@localhost:1/x", carpeta, { esperaDeBloqueoEnMs: 0 }),
+      ).rejects.toBeInstanceOf(RangeError);
+      await expect(
+        aplicarMigraciones("postgres://usuario@localhost:1/x", carpeta, {
+          duracionMaximaEnMs: Number.NaN,
+        }),
+      ).rejects.toBeInstanceOf(RangeError);
+    } finally {
+      await rm(carpeta, { recursive: true, force: true });
+    }
+  });
+
   it("la migración no contiene contraseñas ni cadenas de conexión", async () => {
     const sql = await readFile(join(CARPETA_REAL, "0001_base.sql"), "utf8");
     expect(sql).not.toMatch(/PASSWORD\s+'/i);
