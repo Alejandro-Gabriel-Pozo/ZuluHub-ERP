@@ -14,5 +14,5 @@
   "tempDirName": ".stryker-tmp",
   "cleanTempDir": true,
   "timeoutMS": 30000,
-  "thresholds": { "high": 100, "low": 95, "break": null }
+  "thresholds": { "high": 100, "low": 95, "break": 100 }
 }
