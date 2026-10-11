@@ -1,0 +1,32 @@
+{
+  "name": "zuluhub-erp",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "ZuluHub: ERP multiempresa. Reglas y decisiones en el repositorio ZuluHub-docs.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "arquitectura": "depcruise src --config .dependency-cruiser.cjs",
+    "analizar:muerto": "knip",
+    "gate": "npm run typecheck && npm run lint && npm run format:check && npm run arquitectura && npm run analizar:muerto && npm test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@neon/config": "^1.8.6",
+    "@types/node": "^24.19.2",
+    "dependency-cruiser": "^18.5.0",
+    "eslint": "^10.12.0",
+    "knip": "^6.41.0",
+    "prettier": "^3.9.10",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
+  }
+}
