@@ -34,7 +34,8 @@ export const CATALOGO_DE_GRUPO = {
     datosRequeridos: [],
     implementadoPor: ["consultas-de-grupo"],
     acciones: {
-      "grupo.ver_empresas": { capacidad: null },
+      // Consulta: lee y deja su registro de acceso (D11). El núcleo (obligatorio) nunca está en solo lectura.
+      "grupo.ver_empresas": { capacidad: null, efecto: "LECTURA" },
     },
   },
 } as const satisfies CatalogoComercial;
