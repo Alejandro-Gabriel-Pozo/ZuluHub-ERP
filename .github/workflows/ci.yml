@@ -206,6 +206,9 @@ jobs:
           - grupo: domicilio
             archivos: "src/primitivas/domicilio/**/*.ts"
             pruebas: "src/primitivas/domicilio"
+          - grupo: tiempo
+            archivos: "src/primitivas/tiempo/**/*.ts"
+            pruebas: "src/primitivas/tiempo"
           - grupo: identidad (invitación)
             archivos: "src/modulos/identidad/dominio/invitacion.ts"
             pruebas: "src/modulos/identidad"
