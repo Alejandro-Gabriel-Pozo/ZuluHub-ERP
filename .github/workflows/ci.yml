@@ -194,6 +194,8 @@ jobs:
             archivos: "src/modulos/identidad/dominio/**/*.ts,!src/modulos/identidad/dominio/invitacion.ts"
           - grupo: permisos y módulos
             archivos: "src/capacidades/permisos/**/*.ts,src/capacidades/modulos/**/*.ts"
+          - grupo: plataforma (dominio)
+            archivos: "src/plataforma/dominio/**/*.ts"
           - grupo: trabajos y correo (lógica pura)
             archivos: "src/adaptadores/trabajos/reintentos.ts,src/adaptadores/trabajos/error-seguro.ts,src/adaptadores/correo/configuracion.ts"
     steps:

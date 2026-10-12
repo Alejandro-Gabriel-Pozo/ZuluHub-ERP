@@ -36,6 +36,14 @@ export type ErrorDeInvitacion =
   // Invitar a quien ya es miembro activo de la empresa.
   | "YA_ES_MIEMBRO";
 
+/**
+ * Reenvío de la invitación del alta del gerente (plataforma, H5): la empresa ya no está en alta
+ * (`ALTA_NO_PENDIENTE`, el mismo código que usa la aceptación), el email nuevo es de un administrador
+ * de plataforma (que no puede ser gerente) y los errores al armar la invitación nueva.
+ */
+export type ErrorDeReenvioDeAlta =
+  "ALTA_NO_PENDIENTE" | "EMAIL_DE_ADMIN_PLATAFORMA" | ErrorDeInvitacion;
+
 /** Aceptación de una invitación. */
 export type ErrorDeAceptacion =
   | "INVITACION_NO_ENCONTRADA"

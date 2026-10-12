@@ -266,3 +266,61 @@ describe("evaluarGuard: es puro", () => {
     expect(entrada.rol).toBe("OPERADOR");
   });
 });
+
+describe("evaluarGuard: el tipo de rol es un parámetro (H5 P1)", () => {
+  type RolAjeno = "JEFE" | "AYUDANTE";
+  type ModuloAjeno = "central";
+
+  const REGLAS_AJENAS: ReglasDelGuard<
+    ModuloAjeno,
+    "central.ver" | "central.cerrar",
+    never,
+    RolAjeno
+  > = {
+    catalogo: {
+      central: {
+        estado: "disponible",
+        obligatorio: true,
+        acciones: { "central.ver": { capacidad: null }, "central.cerrar": { capacidad: null } },
+      },
+    },
+    permisos: { "central.ver": ["JEFE", "AYUDANTE"], "central.cerrar": ["JEFE"] },
+  };
+
+  const evaluarAjena = (
+    accion: "central.ver" | "central.cerrar",
+    rol: RolAjeno | null,
+    modulosActivos: ReadonlySet<ModuloAjeno> = new Set<ModuloAjeno>(["central"]),
+  ) => evaluarGuard(REGLAS_AJENAS, accion, { rol, modulosActivos, capacidadesDeSucursal: null });
+
+  it("cada rol ajeno pasa solo donde la matriz lo nombra; los demás, SIN_PERMISO", () => {
+    expect(evaluarAjena("central.ver", "AYUDANTE")).toEqual(OK);
+    expect(evaluarAjena("central.ver", "JEFE")).toEqual(OK);
+    expect(evaluarAjena("central.cerrar", "JEFE")).toEqual(OK);
+    expect(evaluarAjena("central.cerrar", "AYUDANTE")).toEqual(rechazo("SIN_PERMISO"));
+  });
+
+  it("sin rol (null) nunca pasa, y un rol de empresa no tiene ningún trato especial", () => {
+    expect(evaluarAjena("central.ver", null)).toEqual(rechazo("SIN_PERMISO"));
+    // El guard compara el texto del rol con la matriz que recibe: "GERENTE" no está en esta.
+    const intruso = "GERENTE" as unknown as RolAjeno;
+    expect(evaluarAjena("central.ver", intruso)).toEqual(rechazo("SIN_PERMISO"));
+  });
+
+  it("la precedencia no cambia: el módulo inactivo gana sobre el rol", () => {
+    expect(evaluarAjena("central.ver", "JEFE", new Set<ModuloAjeno>())).toEqual(
+      rechazo("MODULO_NO_ACTIVO"),
+    );
+  });
+
+  it("un rol de otro tipo no compila (el tipo de rol lo fija la matriz)", () => {
+    const noSeEjecuta = () =>
+      evaluarGuard(REGLAS_AJENAS, "central.ver", {
+        // @ts-expect-error "GERENTE" no es un rol de esta matriz
+        rol: "GERENTE",
+        modulosActivos: new Set<ModuloAjeno>(["central"]),
+        capacidadesDeSucursal: null,
+      });
+    expect(noSeEjecuta).toBeTypeOf("function");
+  });
+});
