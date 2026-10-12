@@ -4,7 +4,7 @@ import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
 import type { Tokens } from "../../../puertos/tokens";
 import type { Trabajos } from "../../../puertos/trabajos";
 import type { Transacciones } from "../../../puertos/transacciones";
-import type { RepositorioDeEmpresas } from "../../empresas/publico";
+import type { RepositorioDeEmpresas, RepositorioDeSucursales } from "../../empresas/publico";
 import type { RepositorioDeTenants } from "../../tenants/publico";
 import type {
   RepositorioDeAsignaciones,
@@ -25,6 +25,8 @@ export type TxDeIdentidad = Readonly<{
   asignaciones: RepositorioDeAsignaciones;
   invitaciones: RepositorioDeInvitaciones;
   empresas: Pick<RepositorioDeEmpresas, "obtener" | "cambiarEstado">;
+  /** Para saber si una sucursal está activa (H6: no se invita a una desactivada). */
+  sucursales: Pick<RepositorioDeSucursales, "obtener">;
   tenants: Pick<RepositorioDeTenants, "obtener">;
   trabajos: Trabajos;
   auditoria: Auditoria;

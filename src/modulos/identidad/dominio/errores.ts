@@ -37,6 +37,18 @@ export type ErrorDeInvitacion =
   | "YA_ES_MIEMBRO";
 
 /**
+ * Revocación de una invitación de usuario desde la empresa (H6): no existe (o no la ve esta
+ * empresa), ya la aceptaron, o es el alta del gerente, que la revoca la plataforma y no la empresa.
+ */
+export type ErrorDeRevocacion =
+  "INVITACION_NO_ENCONTRADA" | "INVITACION_ACEPTADA" | "REVOCACION_NO_PERMITIDA";
+
+/**
+ * Invitar con sucursales (H6, D12): una sucursal desactivada no se asigna a quien se invita.
+ */
+export type ErrorDeSucursalesDeInvitacion = "SUCURSAL_INACTIVA";
+
+/**
  * Reenvío de la invitación del alta del gerente (plataforma, H5): la empresa ya no está en alta
  * (`ALTA_NO_PENDIENTE`, el mismo código que usa la aceptación), el email nuevo es de un administrador
  * de plataforma (que no puede ser gerente) y los errores al armar la invitación nueva.

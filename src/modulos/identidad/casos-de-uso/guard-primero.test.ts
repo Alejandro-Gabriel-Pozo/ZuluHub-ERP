@@ -20,6 +20,9 @@ import type { CargaDeAutorizacion, DatosDelActor } from "../../../puertos/autori
 import type { Tokens } from "../../../puertos/tokens";
 import type { Transacciones } from "../../../puertos/transacciones";
 import { crearCasosDeUsoDeIdentidad, type CasosDeUsoDeIdentidad } from "./casos-de-uso";
+import { crearConsultasDeIdentidad, type ConsultasDeIdentidad } from "../consultas/consultas";
+import type { TxDeConsultasDeIdentidad } from "../consultas/contrato";
+import { DECLARACIONES_DE_CONSULTAS } from "../consultas/declaraciones";
 import type { TxDeIdentidad } from "./contrato";
 import { DECLARACIONES } from "./declaraciones";
 
@@ -324,5 +327,108 @@ describe("el detector (con la violación inyectada)", () => {
 
   it("deja pasar uno que autoriza primero", async () => {
     expect(await guardVaPrimero(casoBienHecho)).toBe(true);
+  });
+});
+
+describe("P7: el guard va primero en cada consulta de identidad", () => {
+  type TxDeConsulta = TxDeConsultasDeIdentidad;
+  type Vigilada = Readonly<{ tx: TxDeConsulta; accesos: string[] }>;
+
+  const vigiladaDeConsulta = (actor: DatosDelActor): Vigilada => {
+    const accesos: string[] = [];
+    const tx = new Proxy({} as TxDeConsulta, {
+      get(_objetivo, propiedad) {
+        accesos.push(String(propiedad));
+        if (propiedad === "autorizacion") return { delActor: () => Promise.resolve(actor) };
+        throw new AccesoFueraDelGuard(String(propiedad));
+      },
+    });
+    return { tx, accesos };
+  };
+
+  const consultasCon = (
+    vigilada: Vigilada,
+    reglas: ReglasDeEmpresa = REGLAS_DE_EMPRESA,
+  ): ConsultasDeIdentidad => {
+    const transacciones: Transacciones<TxDeConsulta> = {
+      ejecutar: (_opciones, trabajo) => trabajo(vigilada.tx),
+    };
+    return crearConsultasDeIdentidad({ transacciones, reglas });
+  };
+
+  /** `traspasoEnCurso` la implementa el tramo T4 de H6 y entonces suma su fila acá. */
+  type Pendientes = "traspasoEnCurso";
+  type DeclaracionesDeConsultas = typeof DECLARACIONES_DE_CONSULTAS;
+  type ConsultaConAccion = {
+    [K in keyof DeclaracionesDeConsultas]: DeclaracionesDeConsultas[K] extends {
+      accion: ClaveAccion;
+    }
+      ? K
+      : never;
+  }[keyof DeclaracionesDeConsultas];
+  const LLAMADAS_DE_CONSULTAS: Record<
+    Exclude<ConsultaConAccion, Pendientes>,
+    (consultas: ConsultasDeIdentidad) => Promise<unknown>
+  > = {
+    listarMiembros: (c) => c.listarMiembros(contexto),
+    listarInvitacionesPendientes: (c) => c.listarInvitacionesPendientes(contexto),
+  };
+
+  const consultas = Object.entries(DECLARACIONES_DE_CONSULTAS).flatMap(([nombre, declaracion]) =>
+    esClaveDe(LLAMADAS_DE_CONSULTAS, nombre)
+      ? [{ nombre, accion: declaracion.accion, llamar: LLAMADAS_DE_CONSULTAS[nombre] }]
+      : [],
+  );
+
+  it("las consultas con acción que hay que probar", () => {
+    expect(consultas.map((c) => c.nombre).sort()).toEqual([
+      "listarInvitacionesPendientes",
+      "listarMiembros",
+    ]);
+  });
+
+  it.each(consultas)("$nombre: sin rol da SIN_PERMISO sin leer nada más", async ({ llamar }) => {
+    const vigilada = vigiladaDeConsulta(SIN_ROL);
+    expect(await llamar(consultasCon(vigilada))).toEqual({ ok: false, error: "SIN_PERMISO" });
+    expect(vigilada.accesos).toEqual(["autorizacion"]);
+  });
+
+  it.each(consultas.flatMap((c) => ROLES_DE_EMPRESA.map((rol) => ({ ...c, rol }))))(
+    "$nombre con $rol: la matriz decide; si no lo incluye da SIN_PERMISO sin tocar nada más, y si lo incluye pasa el guard y recién ahí toca lo demás",
+    async ({ llamar, accion, rol }) => {
+      const vigilada = vigiladaDeConsulta({ rol, modulosActivados: [] });
+      const llamada = llamar(consultasCon(vigilada));
+      if (!(PERMISOS_DE_EMPRESA[accion] as readonly RolDeEmpresa[]).includes(rol)) {
+        expect(await llamada).toEqual({ ok: false, error: "SIN_PERMISO" });
+        expect(vigilada.accesos).toEqual(["autorizacion"]);
+        return;
+      }
+      await expect(llamada).rejects.toBeInstanceOf(AccesoFueraDelGuard);
+      expect(vigilada.accesos[0]).toBe("autorizacion");
+    },
+  );
+
+  it("cada consulta exige SU acción (con permiso solo para la de la otra da SIN_PERMISO)", async () => {
+    const soloElOperadorPuede = (accion: ClaveAccion): ReglasDeEmpresa => {
+      const roles = (a: ClaveAccion): readonly RolDeEmpresa[] => (a === accion ? ["OPERADOR"] : []);
+      const permisos = Object.fromEntries(
+        clavesDe(PERMISOS_DE_EMPRESA).map((a) => [a, roles(a)]),
+      ) as unknown as ReglasDeEmpresa["permisos"];
+      return { catalogo: CATALOGO_DE_MODULOS, permisos };
+    };
+    for (const propia of consultas) {
+      const vigilada = vigiladaDeConsulta({ rol: "OPERADOR", modulosActivados: [] });
+      await expect(
+        propia.llamar(consultasCon(vigilada, soloElOperadorPuede(propia.accion))),
+      ).rejects.toBeInstanceOf(AccesoFueraDelGuard);
+    }
+    const vigilada = vigiladaDeConsulta({ rol: "OPERADOR", modulosActivados: [] });
+    const reglas = soloElOperadorPuede("usuarios.invitar");
+    for (const { llamar } of consultas) {
+      expect(await llamar(consultasCon(vigilada, reglas))).toEqual({
+        ok: false,
+        error: "SIN_PERMISO",
+      });
+    }
   });
 });
