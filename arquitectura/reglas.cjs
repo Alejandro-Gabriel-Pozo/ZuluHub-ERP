@@ -225,6 +225,22 @@ const reglas = [
     },
     to: { path: "^src/capacidades/permisos/guard\\.ts$" },
   },
+  {
+    name: "consultas-sin-dominio",
+    severity: "error",
+    comment:
+      "Una consulta por pantalla no importa el dominio de su módulo (ADR-005): lee y devuelve objetos planos; las reglas de negocio viven en los casos de uso.",
+    from: { path: "^src/modulos/[^/]+/consultas/" },
+    to: { path: "^src/modulos/[^/]+/dominio/" },
+  },
+  {
+    name: "empresas-no-conoce-identidad",
+    severity: "error",
+    comment:
+      "Identidad ya importa empresas/publico: si empresas importara identidad se formaría un ciclo. Lo que empresas necesita de ahí (el guard, los estados) vive en capacidades y en contexto (H6, B.0).",
+    from: { path: "^src/modulos/empresas/" },
+    to: { path: "^src/modulos/identidad/" },
+  },
 ];
 
 module.exports = { reglas };

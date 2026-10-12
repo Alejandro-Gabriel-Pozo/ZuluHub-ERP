@@ -245,6 +245,20 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "src/capacidades/permisos/guard.ts": exporta,
       },
     },
+    {
+      regla: "consultas-sin-dominio",
+      archivos: {
+        "src/modulos/empresas/consultas/c.ts": importa("../dominio/d"),
+        "src/modulos/empresas/dominio/d.ts": exporta,
+      },
+    },
+    {
+      regla: "empresas-no-conoce-identidad",
+      archivos: {
+        "src/modulos/empresas/casos-de-uso/c.ts": importa("../../identidad/publico"),
+        "src/modulos/identidad/publico.ts": exporta,
+      },
+    },
   ];
 
   it("cada regla definida tiene su caso de violación", () => {
@@ -298,6 +312,21 @@ describe("reglas de arquitectura (ADR-001)", () => {
       "src/plataforma/p.ts": importa("../capacidades/permisos/guard"),
       "src/consultas-de-grupo/g.ts": importa("../capacidades/permisos/guard"),
       "src/capacidades/permisos/guard.ts": exporta,
+    });
+    expect(v).toEqual([]);
+  });
+
+  it("una consulta sí puede usar el guard, los puertos y la persistencia de su módulo, y un caso de uso el dominio", async () => {
+    const v = await violacionesDe({
+      "src/primitivas/p.ts": exporta,
+      "src/contexto/c.ts": importa("../primitivas/p"),
+      "src/puertos/q.ts": importa("../contexto/c"),
+      "src/capacidades/permisos/guard.ts": exporta,
+      "src/modulos/empresas/persistencia/r.ts": exporta,
+      "src/modulos/empresas/dominio/d.ts": exporta,
+      "src/modulos/empresas/consultas/c.ts":
+        'import { x as a } from "../../../capacidades/permisos/guard";\nimport { x as b } from "../../../puertos/q";\nimport { x as c } from "../persistencia/r";\nexport const y = a + b + c;\n',
+      "src/modulos/empresas/casos-de-uso/u.ts": importa("../dominio/d"),
     });
     expect(v).toEqual([]);
   });
