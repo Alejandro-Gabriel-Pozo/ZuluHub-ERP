@@ -38,6 +38,20 @@ export {
   type Persona,
 } from "./dominio/membresia";
 export {
+  armarEnlaceDeInvitacion,
+  armarMensajeDeInvitacion,
+  decidirEnvioDeInvitacion,
+  type DatosDeEnvio,
+  type DecisionDeEnvio,
+  type MensajeDeInvitacion,
+  type MotivoDeOmision,
+} from "./dominio/envio";
+export {
+  crearManejadorDeEnviarInvitacion,
+  type DependenciasDeEnvioDeInvitacion,
+  type TxDeEnvioDeInvitacion,
+} from "./casos-de-uso/enviar-invitacion";
+export {
   crearCasosDeUsoDeIdentidad,
   type CasosDeUsoDeIdentidad,
 } from "./casos-de-uso/casos-de-uso";

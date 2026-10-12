@@ -47,6 +47,8 @@ import {
   type AuditoriaDb,
 } from "../../src/adaptadores/postgres/auditoria";
 import { crearTrabajosDePostgres, type TrabajosDb } from "../../src/adaptadores/postgres/trabajos";
+import { crearColaDePostgres, type ColaDb } from "../../src/adaptadores/postgres/cola-de-trabajos";
+import type { ColaDeTrabajos } from "../../src/puertos/cola-de-trabajos";
 import type { BaseDePruebas } from "./global";
 
 /**
@@ -61,6 +63,8 @@ export type TxDePrueba = Readonly<{
   tenants: RepositorioDeTenants;
   empresas: RepositorioDeEmpresas;
   sucursales: RepositorioDeSucursales;
+  /** La cola de trabajos del procesador (H5); se usa con el contexto `TRABAJOS`. */
+  cola: ColaDeTrabajos;
 }> &
   TxDeIdentidad;
 
@@ -92,6 +96,7 @@ export function crearEntornoDePrueba(
         invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
         trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
         auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
+        cola: crearColaDePostgres(db.withTables<ColaDb>()),
       }),
     maximoDeConexiones,
     clave: base.clave,

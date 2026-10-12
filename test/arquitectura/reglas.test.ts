@@ -156,6 +156,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "adaptadores-de-efectos-genericos",
+      archivos: {
+        "src/adaptadores/trabajos/a.ts": importa("../../modulos/identidad/publico"),
+        "src/modulos/identidad/publico.ts": exporta,
+      },
+    },
+    {
       regla: "apps-sin-persistencia-ni-adaptadores",
       archivos: {
         "apps/web/a.ts": importa("../../src/modulos/empresas/persistencia/r"),
@@ -188,6 +195,17 @@ describe("reglas de arquitectura (ADR-001)", () => {
       "src/primitivas/dinero/interno.ts": exporta,
       "src/primitivas/dinero/interno-desde-cantidad.ts": importa("../cantidad/interno"),
       "src/primitivas/cantidad/interno.ts": exporta,
+    });
+    expect(v).toEqual([]);
+  });
+
+  it("el procesador de trabajos y el correo sí pueden usar puertos, primitivas y contexto", async () => {
+    const v = await violacionesDe({
+      "src/primitivas/p.ts": exporta,
+      "src/contexto/c.ts": importa("../primitivas/p"),
+      "src/puertos/q.ts": importa("../contexto/c"),
+      "src/adaptadores/trabajos/a.ts": importa("../../puertos/q"),
+      "src/adaptadores/correo/b.ts": importa("../../puertos/q"),
     });
     expect(v).toEqual([]);
   });
