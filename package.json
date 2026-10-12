@@ -22,7 +22,7 @@
     "@eslint/js": "^10.0.1",
     "@neon/config": "^1.8.6",
     "@stryker-mutator/core": "^10.0.0",
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.4",
     "@types/pg": "^8.23.1",
     "dependency-cruiser": "^18.5.0",
     "eslint": "^10.12.0",
