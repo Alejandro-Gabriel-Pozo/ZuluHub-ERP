@@ -6,9 +6,10 @@ import type { InvitacionId, SucursalId } from "../../../primitivas/identificador
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import { emailDesdeTexto } from "../dominio/email";
-import type { ErrorDeInvitacion } from "../dominio/errores";
+import type { ErrorDeInvitacion, ErrorDeSucursalesDeInvitacion } from "../dominio/errores";
 import {
   decidirInvitacionDeUsuario,
+  decidirSucursalesDeInvitacion,
   nuevaInvitacion,
   type RolDeEmpresa,
 } from "../dominio/invitacion";
@@ -37,6 +38,7 @@ export type ErrorAlInvitarUsuario =
   | ErrorDeInvitacion
   | MotivoDeRechazo
   | EmpresaNoOpera
+  | ErrorDeSucursalesDeInvitacion
   | "SUCURSAL_NO_ES_DE_LA_EMPRESA"
   | ErrorDePersistencia;
 
@@ -53,6 +55,7 @@ const RESTRICCIONES_ADMITIDAS = [
  * una transacción serializable: el guard (la acción `usuarios.invitar` la puede el rol del actor,
  * leído en la misma transacción), la empresa opera, y entonces
  *
+ *  - alguna sucursal está desactivada → `SUCURSAL_INACTIVA`;
  *  - ya es miembro activo → `YA_ES_MIEMBRO`;
  *  - ya hay una pendiente vigente para ese email → se devuelve esa (`yaExistia: true`), sin escribir;
  *  - hay una pendiente VENCIDA → se revoca (queda `reemplazada_por`) y nace otra;
@@ -79,7 +82,10 @@ export function crearInvitarUsuario({ transacciones, tokens, reglas }: Dependenc
       async (
         tx,
       ): Promise<
-        Resultado<SalidaDeInvitarUsuario, ErrorDeInvitacion | MotivoDeRechazo | EmpresaNoOpera>
+        Resultado<
+          SalidaDeInvitarUsuario,
+          ErrorDeInvitacion | ErrorDeSucursalesDeInvitacion | MotivoDeRechazo | EmpresaNoOpera
+        >
       > => {
         const permiso = await exigirAccion(reglas, DECLARACIONES.invitarUsuario.accion, () =>
           tx.autorizacion.delActor(contexto),
@@ -104,6 +110,18 @@ export function crearInvitarUsuario({ transacciones, tokens, reglas }: Dependenc
           ahora,
         );
         if (!nueva.ok) return nueva;
+
+        // Una sucursal desactivada no se asigna (H6, D12). Una que no es de la empresa no aparece
+        // acá: la rechaza la base (`SUCURSAL_NO_ES_DE_LA_EMPRESA`). Si la desactivan después de esta
+        // lectura, la serializable lo ve: la invitación nace antes de la baja (orden válido) o el
+        // reintento ya la encuentra inactiva.
+        const estadosDeSucursales = new Map<SucursalId, boolean>();
+        for (const id of sucursales) {
+          const sucursal = await tx.sucursales.obtener(empresaId, id);
+          if (sucursal !== null) estadosDeSucursales.set(id, sucursal.activa);
+        }
+        const invitables = decidirSucursalesDeInvitacion(sucursales, estadosDeSucursales);
+        if (!invitables.ok) return invitables;
 
         // El contexto operativo solo ve a las personas de su empresa: quien no es miembro no aparece.
         const persona = await tx.personas.buscarPorEmail(email.valor);
