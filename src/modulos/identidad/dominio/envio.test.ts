@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { EstadoDeEmpresa, EstadoDeTenant } from "../../../contexto/estados";
 import {
@@ -163,14 +165,21 @@ describe("armarEnlaceDeInvitacion", () => {
 });
 
 describe("armarMensajeDeInvitacion", () => {
-  it("arma el asunto y el texto con la empresa y el enlace", () => {
-    const m = armarMensajeDeInvitacion("Panadería Sol", "https://app.ejemplo.test/invitaciones/t");
-    expect(m.asunto).toBe("Te invitaron a Panadería Sol en ZuluHub");
+  // Nombres de marca de prueba: el dominio no conoce ninguno.
+  const MARCA = { nombre: "Marca de Prueba" };
+
+  it("arma el asunto y el texto con la empresa, el enlace y la marca recibida", () => {
+    const m = armarMensajeDeInvitacion(
+      "Panadería Sol",
+      "https://app.ejemplo.test/invitaciones/t",
+      MARCA,
+    );
+    expect(m.asunto).toBe("Te invitaron a Panadería Sol en Marca de Prueba");
     expect(m.texto).toBe(
       [
         "Hola,",
         "",
-        "Te invitaron a sumarte a Panadería Sol en ZuluHub.",
+        "Te invitaron a sumarte a Panadería Sol en Marca de Prueba.",
         "",
         "Para aceptar la invitación, abrí este enlace e iniciá sesión con este mismo email:",
         "https://app.ejemplo.test/invitaciones/t",
@@ -181,15 +190,32 @@ describe("armarMensajeDeInvitacion", () => {
     );
   });
 
-  it("normaliza los blancos de la razón social (nada de saltos de línea en el asunto)", () => {
-    const m = armarMensajeDeInvitacion("  Panadería \n\r Sol\t S.A. ", "https://x.test/i/t");
-    expect(m.asunto).toBe("Te invitaron a Panadería Sol S.A. en ZuluHub");
-    expect(m.texto).toContain("sumarte a Panadería Sol S.A. en ZuluHub.");
+  it("el nombre que llega por parámetro es el que aparece en el asunto y en el texto", () => {
+    for (const nombre of ["Alfa", "Beta Segmento", "Ñandú & Co"]) {
+      const m = armarMensajeDeInvitacion("Sol", "https://x.test/i/t", { nombre });
+      expect(m.asunto).toBe(`Te invitaron a Sol en ${nombre}`);
+      expect(m.texto).toContain(`sumarte a Sol en ${nombre}.`);
+    }
+    const a = armarMensajeDeInvitacion("Sol", "https://x.test/i/t", { nombre: "Alfa" });
+    expect(a.asunto + a.texto).not.toContain("Beta");
   });
 
-  it("es determinista: el mismo enlace y la misma empresa dan el mismo mensaje", () => {
-    const a = armarMensajeDeInvitacion("Sol", "https://x.test/i/t");
-    const b = armarMensajeDeInvitacion("Sol", "https://x.test/i/t");
+  it("el dominio no tiene escrito ningún nombre de marca", () => {
+    const fuente = readFileSync(fileURLToPath(new URL("envio.ts", import.meta.url)), "utf8");
+    expect(fuente).not.toMatch(/zulu/i);
+  });
+
+  it("normaliza los blancos de la razón social y de la marca (nada de saltos de línea en el asunto)", () => {
+    const m = armarMensajeDeInvitacion("  Panadería \n\r Sol\t S.A. ", "https://x.test/i/t", {
+      nombre: " Marca \n de\tPrueba ",
+    });
+    expect(m.asunto).toBe("Te invitaron a Panadería Sol S.A. en Marca de Prueba");
+    expect(m.texto).toContain("sumarte a Panadería Sol S.A. en Marca de Prueba.");
+  });
+
+  it("es determinista: la misma empresa, el mismo enlace y la misma marca dan el mismo mensaje", () => {
+    const a = armarMensajeDeInvitacion("Sol", "https://x.test/i/t", MARCA);
+    const b = armarMensajeDeInvitacion("Sol", "https://x.test/i/t", MARCA);
     expect(b).toEqual(a);
   });
 });

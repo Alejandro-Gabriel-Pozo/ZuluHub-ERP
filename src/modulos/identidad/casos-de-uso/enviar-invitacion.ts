@@ -10,6 +10,7 @@ import {
   armarEnlaceDeInvitacion,
   armarMensajeDeInvitacion,
   decidirEnvioDeInvitacion,
+  type MarcaDeMail,
   type MotivoDeOmision,
 } from "../dominio/envio";
 import { claveDeEnvioDeInvitacion, type TxDeIdentidad } from "./contrato";
@@ -54,6 +55,8 @@ export type DependenciasDeEnvioDeInvitacion = Readonly<{
   correo: Correo;
   /** Origen público de la aplicación, ya validado (`ZULUHUB_URL_BASE`). */
   urlBase: string;
+  /** La marca del mail: la arma la composición desde la configuración (`ZULUHUB_NOMBRE_DE_MARCA`). */
+  marca: MarcaDeMail;
 }>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -85,6 +88,7 @@ export function crearManejadorDeEnviarInvitacion({
   tokens,
   correo,
   urlBase,
+  marca,
 }: DependenciasDeEnvioDeInvitacion): ManejadorDeTrabajo {
   return async (trabajo, ahora) => {
     const idCrudo = trabajo.datos["invitacionId"];
@@ -147,7 +151,7 @@ export function crearManejadorDeEnviarInvitacion({
 
     // 2. Enviar, fuera de toda transacción, con la clave de idempotencia del envío.
     const enlace = armarEnlaceDeInvitacion(urlBase, tokens.derivar(id));
-    const mensaje = armarMensajeDeInvitacion(decidido.razonSocial, enlace);
+    const mensaje = armarMensajeDeInvitacion(decidido.razonSocial, enlace, marca);
     const envio = await correo.enviar(
       { para: decidido.email, asunto: mensaje.asunto, texto: mensaje.texto },
       claveDeEnvioDeInvitacion(id),

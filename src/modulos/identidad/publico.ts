@@ -43,6 +43,7 @@ export {
   decidirEnvioDeInvitacion,
   type DatosDeEnvio,
   type DecisionDeEnvio,
+  type MarcaDeMail,
   type MensajeDeInvitacion,
   type MotivoDeOmision,
 } from "./dominio/envio";

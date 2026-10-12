@@ -25,6 +25,7 @@ import { crearManejadorDeEnviarInvitacion, type TxDeEnvioDeInvitacion } from "./
 const AHORA = new Date("2026-10-11T12:00:00.000Z");
 const mas = (ms: number) => new Date(AHORA.getTime() + ms);
 const URL_BASE = "https://app.ejemplo.test";
+const MARCA = "Marca de Prueba";
 const ID = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
 const EMPRESA = empresaId("0b0f6d6e-5c44-4b87-9b5c-1d2a3c4d5e6f");
 const TOKEN = "TOKEN-secreto-derivado-de-la-invitacion-1234567890";
@@ -142,6 +143,7 @@ function armar(escenario: Escenario = {}) {
     tokens: { derivar: () => TOKEN },
     correo,
     urlBase: URL_BASE,
+    marca: { nombre: MARCA },
   });
   return { manejador, auditoria, contextos, mensajes, consultadas };
 }
@@ -155,7 +157,8 @@ describe("manejador de enviar_invitacion", () => {
     const { mensaje, clave } = e.mensajes[0]!;
     expect(clave).toBe(`invitacion:${ID}:envio`);
     expect(mensaje.para).toBe("ana@ejemplo.test");
-    expect(mensaje.asunto).toBe("Te invitaron a Panadería Sol en ZuluHub");
+    expect(mensaje.asunto).toBe(`Te invitaron a Panadería Sol en ${MARCA}`);
+    expect(mensaje.texto).toContain(`en ${MARCA}.`);
     expect(mensaje.texto).toContain(`${URL_BASE}/invitaciones/${TOKEN}`);
     expect(e.auditoria).toEqual([
       {

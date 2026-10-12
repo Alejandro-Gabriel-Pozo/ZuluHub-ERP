@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ErrorDeConfiguracion } from "../postgres/errores";
 import {
   ZULUHUB_CORREO_REMITENTE,
+  ZULUHUB_NOMBRE_DE_MARCA,
   ZULUHUB_RESEND_API_KEY,
   ZULUHUB_URL_BASE,
   leerConfiguracionDeCorreo,
@@ -13,6 +14,7 @@ const BUENO = {
   [ZULUHUB_RESEND_API_KEY]: CLAVE,
   [ZULUHUB_CORREO_REMITENTE]: "ZuluHub <no-responder@ejemplo.test>",
   [ZULUHUB_URL_BASE]: "https://app.ejemplo.test",
+  [ZULUHUB_NOMBRE_DE_MARCA]: "Marca de Prueba",
 };
 
 function mensajeDe(entorno: Record<string, string | undefined>): string {
@@ -30,6 +32,7 @@ describe("leerConfiguracionDeCorreo", () => {
     expect(ZULUHUB_RESEND_API_KEY).toBe("ZULUHUB_RESEND_API_KEY");
     expect(ZULUHUB_CORREO_REMITENTE).toBe("ZULUHUB_CORREO_REMITENTE");
     expect(ZULUHUB_URL_BASE).toBe("ZULUHUB_URL_BASE");
+    expect(ZULUHUB_NOMBRE_DE_MARCA).toBe("ZULUHUB_NOMBRE_DE_MARCA");
   });
 
   it("con las tres variables devuelve la configuración", () => {
@@ -37,37 +40,66 @@ describe("leerConfiguracionDeCorreo", () => {
       claveDeApi: CLAVE,
       remitente: "ZuluHub <no-responder@ejemplo.test>",
       urlBase: "https://app.ejemplo.test",
+      nombreDeMarca: "Marca de Prueba",
     });
   });
 
-  it("falla cerrado: sin ninguna variable, nombra las tres y nunca un valor", () => {
+  it("falla cerrado: sin ninguna variable, nombra las cuatro y nunca un valor", () => {
     const mensaje = mensajeDe({});
     expect(mensaje).toContain(`${ZULUHUB_RESEND_API_KEY} falta`);
     expect(mensaje).toContain(`${ZULUHUB_CORREO_REMITENTE} falta`);
     expect(mensaje).toContain(`${ZULUHUB_URL_BASE} falta`);
+    expect(mensaje).toContain(`${ZULUHUB_NOMBRE_DE_MARCA} falta`);
   });
 
-  it.each([ZULUHUB_RESEND_API_KEY, ZULUHUB_CORREO_REMITENTE, ZULUHUB_URL_BASE])(
-    "si falta %s, falla nombrándola",
-    (nombre) => {
-      expect(mensajeDe({ ...BUENO, [nombre]: undefined })).toBe(
-        `configuración de correo incompleta: ${nombre} falta`,
-      );
-      expect(mensajeDe({ ...BUENO, [nombre]: "   " })).toContain(`${nombre} falta`);
-    },
-  );
+  it.each([
+    ZULUHUB_RESEND_API_KEY,
+    ZULUHUB_CORREO_REMITENTE,
+    ZULUHUB_URL_BASE,
+    ZULUHUB_NOMBRE_DE_MARCA,
+  ])("si falta %s, falla nombrándola", (nombre) => {
+    expect(mensajeDe({ ...BUENO, [nombre]: undefined })).toBe(
+      `configuración de correo incompleta: ${nombre} falta`,
+    );
+    expect(mensajeDe({ ...BUENO, [nombre]: "   " })).toContain(`${nombre} falta`);
+  });
 
   it("recorta los blancos de los valores", () => {
     const c = leerConfiguracionDeCorreo({
       [ZULUHUB_RESEND_API_KEY]: `  ${CLAVE}\n`,
       [ZULUHUB_CORREO_REMITENTE]: " no-responder@ejemplo.test ",
       [ZULUHUB_URL_BASE]: " https://app.ejemplo.test/ ",
+      [ZULUHUB_NOMBRE_DE_MARCA]: "  Marca de Prueba\n",
     });
     expect(c).toEqual({
       claveDeApi: CLAVE,
       remitente: "no-responder@ejemplo.test",
       urlBase: "https://app.ejemplo.test",
+      nombreDeMarca: "Marca de Prueba",
     });
+  });
+
+  it("el nombre de marca sin valor por defecto: no se inventa uno; admite acentos y &", () => {
+    expect(
+      leerConfiguracionDeCorreo({ ...BUENO, [ZULUHUB_NOMBRE_DE_MARCA]: "Ñandú & Co" })
+        .nombreDeMarca,
+    ).toBe("Ñandú & Co");
+  });
+
+  it("el nombre de marca rechaza saltos de línea, signos < > y largos de más de 60", () => {
+    const mal = (valor: string) => mensajeDe({ ...BUENO, [ZULUHUB_NOMBRE_DE_MARCA]: valor });
+    expect(mal("Uno\nDos")).toBe(
+      `configuración de correo incompleta: ${ZULUHUB_NOMBRE_DE_MARCA} inválida: no puede tener caracteres de control ni < >`,
+    );
+    expect(mal("Uno<Dos")).toContain("caracteres de control ni < >");
+    expect(mal("Uno>Dos")).toContain("caracteres de control ni < >");
+    expect(mal("x".repeat(61))).toBe(
+      `configuración de correo incompleta: ${ZULUHUB_NOMBRE_DE_MARCA} inválida: no puede pasar de 60 caracteres`,
+    );
+    expect(
+      leerConfiguracionDeCorreo({ ...BUENO, [ZULUHUB_NOMBRE_DE_MARCA]: "x".repeat(60) })
+        .nombreDeMarca,
+    ).toHaveLength(60);
   });
 
   it("la clave de API no puede tener espacios, y el mensaje no la repite", () => {
@@ -160,7 +192,8 @@ describe("leerConfiguracionDeCorreo", () => {
       [ZULUHUB_RESEND_API_KEY]: "a b",
       [ZULUHUB_CORREO_REMITENTE]: "mal",
       [ZULUHUB_URL_BASE]: "http://x.test",
+      [ZULUHUB_NOMBRE_DE_MARCA]: "a<b",
     });
-    expect(mensaje.split("; ")).toHaveLength(3);
+    expect(mensaje.split("; ")).toHaveLength(4);
   });
 });

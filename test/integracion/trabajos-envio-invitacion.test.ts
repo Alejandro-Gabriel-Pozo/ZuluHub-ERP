@@ -171,6 +171,7 @@ describe.skipIf(base === null)("enviar_invitacion: el trabajo contra una base re
             tokens,
             correo,
             urlBase: URL_BASE,
+            marca: { nombre: "Marca de Prueba" },
           }),
         ],
       ]),
@@ -293,6 +294,7 @@ describe.skipIf(base === null)("enviar_invitacion: el trabajo contra una base re
         tokens,
         correo,
         urlBase: URL_BASE,
+        marca: { nombre: "Marca de Prueba" },
       });
       const tomado = await enLaCola((c) => c.tomar(trabajoId, T0, T0));
       expect(await manejador(tomado!, T0)).toEqual({ tipo: "HECHO" });

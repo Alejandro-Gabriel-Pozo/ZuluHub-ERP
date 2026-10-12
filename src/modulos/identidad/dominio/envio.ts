@@ -58,20 +58,29 @@ export function armarEnlaceDeInvitacion(urlBase: string, token: string): string 
 
 export type MensajeDeInvitacion = Readonly<{ asunto: string; texto: string }>;
 
+/** La marca con la que sale el mail. Es un dato de configuración: el dominio no conoce ningún nombre. */
+export type MarcaDeMail = Readonly<{ nombre: string }>;
+
 const BLANCOS = /\s+/g;
 
 /**
- * Asunto y texto del mail. Determinista: dado el mismo enlace y la misma empresa, siempre el mismo
- * mensaje (los proveedores comparan el cuerpo al aplicar la clave de idempotencia).
+ * Asunto y texto del mail. El nombre del producto sale de `marca`, nunca del código. Determinista:
+ * dados la misma empresa, el mismo enlace y la misma marca, siempre el mismo mensaje (los proveedores
+ * comparan el cuerpo al aplicar la clave de idempotencia).
  */
-export function armarMensajeDeInvitacion(razonSocial: string, enlace: string): MensajeDeInvitacion {
+export function armarMensajeDeInvitacion(
+  razonSocial: string,
+  enlace: string,
+  marca: MarcaDeMail,
+): MensajeDeInvitacion {
   const empresa = razonSocial.replace(BLANCOS, " ").trim();
+  const producto = marca.nombre.replace(BLANCOS, " ").trim();
   return {
-    asunto: `Te invitaron a ${empresa} en ZuluHub`,
+    asunto: `Te invitaron a ${empresa} en ${producto}`,
     texto: [
       "Hola,",
       "",
-      `Te invitaron a sumarte a ${empresa} en ZuluHub.`,
+      `Te invitaron a sumarte a ${empresa} en ${producto}.`,
       "",
       "Para aceptar la invitación, abrí este enlace e iniciá sesión con este mismo email:",
       enlace,

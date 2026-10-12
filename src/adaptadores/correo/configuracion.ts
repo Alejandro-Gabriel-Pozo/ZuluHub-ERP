@@ -3,12 +3,13 @@ import { ErrorDeConfiguracion } from "../postgres/errores";
 /**
  * Configuración del envío de correo (ADR-007). Acá solo viven los NOMBRES de las variables de
  * entorno: los valores los carga el dueño en Vercel. Falla cerrado: si falta o es inválida
- * cualquiera de las tres, no se arma el adaptador. Los mensajes de error nombran la variable y el
+ * cualquiera de las cuatro, no se arma el adaptador. Los mensajes de error nombran la variable y el
  * motivo, nunca el valor recibido.
  */
 export const ZULUHUB_RESEND_API_KEY = "ZULUHUB_RESEND_API_KEY";
 export const ZULUHUB_CORREO_REMITENTE = "ZULUHUB_CORREO_REMITENTE";
 export const ZULUHUB_URL_BASE = "ZULUHUB_URL_BASE";
+export const ZULUHUB_NOMBRE_DE_MARCA = "ZULUHUB_NOMBRE_DE_MARCA";
 
 export type ConfiguracionDeCorreo = Readonly<{
   /** Credencial del proveedor. Es un secreto: no se registra ni se guarda. */
@@ -17,6 +18,8 @@ export type ConfiguracionDeCorreo = Readonly<{
   remitente: string;
   /** Origen público de la aplicación, sin barra final (`https://app.ejemplo.com`). */
   urlBase: string;
+  /** Nombre del producto que aparece en los mails. La marca es un dato, nunca código. */
+  nombreDeMarca: string;
 }>;
 
 type Entorno = Readonly<Record<string, string | undefined>>;
@@ -28,6 +31,8 @@ function remitenteValido(texto: string): boolean {
   // `texto` ya viene sin blancos en los extremos: el nombre, si lo hay, tiene al menos un carácter.
   return DIRECCION.test(texto) || CON_NOMBRE.test(texto);
 }
+
+const LARGO_MAXIMO_DE_MARCA = 60;
 
 const ES_LOCAL = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
@@ -80,8 +85,16 @@ export function leerConfiguracionDeCorreo(entorno: Entorno): ConfiguracionDeCorr
     return "motivo" in origen ? origen : origen.origen;
   });
 
+  const nombreDeMarca = leer(ZULUHUB_NOMBRE_DE_MARCA, (t) =>
+    t.length > LARGO_MAXIMO_DE_MARCA
+      ? { motivo: `no puede pasar de ${LARGO_MAXIMO_DE_MARCA} caracteres` }
+      : /[\p{Cc}<>]/u.test(t)
+        ? { motivo: "no puede tener caracteres de control ni < >" }
+        : t,
+  );
+
   if (problemas.length > 0) {
     throw new ErrorDeConfiguracion(`configuración de correo incompleta: ${problemas.join("; ")}`);
   }
-  return { claveDeApi, remitente, urlBase };
+  return { claveDeApi, remitente, urlBase, nombreDeMarca };
 }
