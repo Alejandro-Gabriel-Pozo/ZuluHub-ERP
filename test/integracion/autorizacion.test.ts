@@ -55,14 +55,22 @@ describe.skipIf(base === null)("autorización: el adaptador contra una base real
   it.each(ROLES_DE_EMPRESA)("un %s activo: devuelve su rol", async (rol) => {
     const empresa = await empresaNueva();
     const persona = await miembro(empresa, rol);
-    expect(await delActor(empresa, persona)).toEqual({ rol, modulosActivados: [] });
+    expect(await delActor(empresa, persona)).toEqual({
+      rol,
+      modulosActivados: [],
+      modulosHabilitados: [],
+    });
   });
 
   it("una membresía apagada: sin rol, sea cual sea el rol que tuvo", async () => {
     const empresa = await empresaNueva();
     for (const rol of ROLES_DE_EMPRESA) {
       const persona = await miembro(empresa, rol === "GERENTE" ? "OPERADOR" : rol, false);
-      expect(await delActor(empresa, persona)).toEqual({ rol: null, modulosActivados: [] });
+      expect(await delActor(empresa, persona)).toEqual({
+        rol: null,
+        modulosActivados: [],
+        modulosHabilitados: [],
+      });
     }
   });
 
@@ -70,21 +78,37 @@ describe.skipIf(base === null)("autorización: el adaptador contra una base real
     const empresa = await empresaNueva();
     await miembro(empresa, "GERENTE");
     const ajena = personaId((await crearPersonaDeBase(dueno)).id);
-    expect(await delActor(empresa, ajena)).toEqual({ rol: null, modulosActivados: [] });
+    expect(await delActor(empresa, ajena)).toEqual({
+      rol: null,
+      modulosActivados: [],
+      modulosHabilitados: [],
+    });
   });
 
   it("el sistema (sin persona): sin rol", async () => {
     const empresa = await empresaNueva();
     await miembro(empresa, "GERENTE");
-    expect(await delActor(empresa, null)).toEqual({ rol: null, modulosActivados: [] });
+    expect(await delActor(empresa, null)).toEqual({
+      rol: null,
+      modulosActivados: [],
+      modulosHabilitados: [],
+    });
   });
 
   it("el gerente de OTRA empresa no tiene rol en esta (ni siquiera ve la fila)", async () => {
     const empresa = await empresaNueva();
     const otra = await empresaNueva();
     const gerenteDeOtra = await miembro(otra, "GERENTE");
-    expect(await delActor(empresa, gerenteDeOtra)).toEqual({ rol: null, modulosActivados: [] });
-    expect(await delActor(otra, gerenteDeOtra)).toEqual({ rol: "GERENTE", modulosActivados: [] });
+    expect(await delActor(empresa, gerenteDeOtra)).toEqual({
+      rol: null,
+      modulosActivados: [],
+      modulosHabilitados: [],
+    });
+    expect(await delActor(otra, gerenteDeOtra)).toEqual({
+      rol: "GERENTE",
+      modulosActivados: [],
+      modulosHabilitados: [],
+    });
   });
 
   it("la persona con roles distintos en dos empresas tiene, en cada una, el suyo", async () => {
@@ -118,7 +142,11 @@ describe.skipIf(base === null)("autorización: el adaptador contra una base real
     expect((await delActor(empresa, gerente)).rol).toBe("GERENTE");
 
     await dueno.query("update persona set activo_global = false where id = $1", [gerente]);
-    expect(await delActor(empresa, gerente)).toEqual({ rol: null, modulosActivados: [] });
+    expect(await delActor(empresa, gerente)).toEqual({
+      rol: null,
+      modulosActivados: [],
+      modulosHabilitados: [],
+    });
     const { rows } = await dueno.query<{ activo: boolean }>(
       "select activo from membresia where empresa_id = $1 and persona_id = $2",
       [empresa, gerente],

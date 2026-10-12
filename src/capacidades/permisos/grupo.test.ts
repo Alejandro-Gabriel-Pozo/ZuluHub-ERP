@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { modulosActivosDe } from "../modulos/activos";
+import { estadoDeModulos } from "../modulos/activos";
 import { CATALOGO_DE_MODULOS } from "../modulos/catalogo";
 import { PERMISOS_DE_EMPRESA } from "./empresa";
 import {
@@ -46,7 +46,7 @@ describe("el catálogo de grupo", () => {
   });
 
   it("el módulo grupo está activo sin guardar nada", () => {
-    expect([...modulosActivosDe(CATALOGO_DE_GRUPO, [])]).toEqual(["grupo"]);
+    expect([...estadoDeModulos(CATALOGO_DE_GRUPO, [], []).modulosActivos]).toEqual(["grupo"]);
   });
 
   it("no existe grupo.invitar (función de pago futura) ni ninguna otra acción", () => {
@@ -84,7 +84,7 @@ describe("la matriz rol → acciones de grupo", () => {
 });
 
 describe("el guard con las reglas de grupo", () => {
-  const activos = modulosActivosDe(CATALOGO_DE_GRUPO, []);
+  const activos = estadoDeModulos(CATALOGO_DE_GRUPO, [], []).modulosActivos;
   const evaluar = (rol: RolDeGrupo | null) =>
     evaluarGuard(REGLAS_DE_GRUPO, "grupo.ver_empresas", {
       rol,

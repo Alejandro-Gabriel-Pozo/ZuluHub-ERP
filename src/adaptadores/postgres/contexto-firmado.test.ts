@@ -6,7 +6,9 @@ import {
   personaId,
   tenantId,
   type AdminPlataformaId,
+  type MarcaComercialId,
 } from "../../primitivas/identificadores/marca";
+import { MARCA_PRINCIPAL_DE_PRUEBA, OTRA_MARCA_DE_PRUEBA } from "../../../test/utilidades/marcas";
 import type { Contexto } from "../../contexto/contexto";
 import {
   ACTOR_DE_SISTEMA,
@@ -128,6 +130,7 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
         tipo: "OPERATIVO",
         empresaId: empresaId(EMPRESA),
         personaId: personaId(PERSONA),
+        marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
         ahora: AHORA,
       }),
     ).toEqual({ u: "zuluhub_app", e: EMPRESA, t: null, p: PERSONA, i: null, x: VENCE, a: null });
@@ -136,9 +139,33 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
         tipo: "OPERATIVO",
         empresaId: empresaId(EMPRESA),
         personaId: null,
+        marcaDeEntrada: null,
         ahora: AHORA,
       }),
     ).toEqual({ u: "zuluhub_app", e: EMPRESA, t: null, p: null, i: null, x: VENCE, a: null });
+  });
+
+  it("OPERATIVO: la marca de entrada NO viaja en el token (no es frontera de aislamiento, §B.10)", () => {
+    const con = (marcaDeEntrada: MarcaComercialId | null) =>
+      payloadDe({
+        tipo: "OPERATIVO",
+        empresaId: empresaId(EMPRESA),
+        personaId: personaId(PERSONA),
+        marcaDeEntrada,
+        ahora: AHORA,
+      });
+    // Dos puertas distintas (o ninguna) dan exactamente el mismo token: sin claim `m` ni nada parecido.
+    expect(con(MARCA_PRINCIPAL_DE_PRUEBA)).toEqual(con(OTRA_MARCA_DE_PRUEBA));
+    expect(con(null)).toEqual(con(MARCA_PRINCIPAL_DE_PRUEBA));
+    expect(Object.keys(con(MARCA_PRINCIPAL_DE_PRUEBA)).sort()).toEqual([
+      "a",
+      "e",
+      "i",
+      "p",
+      "t",
+      "u",
+      "x",
+    ]);
   });
 
   it("GRUPO: rol grupo, tenant y persona; sin empresa", () => {

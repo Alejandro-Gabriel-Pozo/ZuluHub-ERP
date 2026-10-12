@@ -29,6 +29,8 @@ describe("U8: el dominio de identidad no usa reloj ni aleatoriedad", () => {
         "errores.ts",
         "invitacion.ts",
         "membresia.ts",
+        "asignacion.ts",
+        "traspaso.ts",
         "aceptar-invitacion.ts",
         "invitar-usuario.ts",
         "apagar-membresia.ts",

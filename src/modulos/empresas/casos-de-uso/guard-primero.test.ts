@@ -9,6 +9,7 @@ import {
 import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "../../../capacidades/permisos/roles";
 import type { ContextoOperativo } from "../../../contexto/contexto";
+import { MARCA_PRINCIPAL_DE_PRUEBA } from "../../../../test/utilidades/marcas";
 import { empresaId, personaId, sucursalId } from "../../../primitivas/identificadores/marca";
 import type { CargaDeAutorizacion, DatosDelActor } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
@@ -30,6 +31,7 @@ const contexto: ContextoOperativo = {
   tipo: "OPERATIVO",
   empresaId: empresaId("e-1"),
   personaId: personaId("p-1"),
+  marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
   ahora: new Date(0),
 };
 
@@ -139,7 +141,7 @@ const consultas: Entrada[] = Object.entries(DECLARACIONES_DE_CONSULTAS).flatMap(
 );
 const todos: Entrada[] = [...casos, ...consultas];
 
-const SIN_ROL: DatosDelActor = { rol: null, modulosActivados: [] };
+const SIN_ROL: DatosDelActor = { rol: null, modulosActivados: [], modulosHabilitados: [] };
 
 describe("P7: el guard va primero en cada caso de uso y consulta de empresas", () => {
   it("hay casos de uso y consultas con acción que probar", () => {
@@ -168,7 +170,7 @@ describe("P7: el guard va primero en cada caso de uso y consulta de empresas", (
   it.each(todos.flatMap((c) => ROLES_DE_EMPRESA.map((rol) => ({ ...c, rol }))))(
     "$nombre con $rol: la matriz decide; si no lo incluye da SIN_PERMISO sin tocar nada más, y si lo incluye pasa el guard y recién ahí toca lo demás",
     async ({ llamar, accion, rol }) => {
-      const vigilada = vigilar({ rol, modulosActivados: [] });
+      const vigilada = vigilar({ rol, modulosActivados: [], modulosHabilitados: [] });
       const llamada = llamar(vigilada);
       if (!(PERMISOS_DE_EMPRESA[accion] as readonly RolDeEmpresa[]).includes(rol)) {
         expect(await llamada).toEqual({ ok: false, error: "SIN_PERMISO" });
@@ -182,7 +184,7 @@ describe("P7: el guard va primero en cada caso de uso y consulta de empresas", (
 
   it("el guard se pide en cada llamada: nada se guarda entre una operación y la siguiente", async () => {
     // Misma transacción vigilada, dos operaciones; el actor cambia entre ambas (lo apagaron).
-    let actor: DatosDelActor = { rol: "GERENTE", modulosActivados: [] };
+    let actor: DatosDelActor = { rol: "GERENTE", modulosActivados: [], modulosHabilitados: [] };
     const accesos: string[] = [];
     const tx = new Proxy({} as TxDeEmpresas & TxDeConsultasDeEmpresas, {
       get(_objetivo, propiedad) {
@@ -213,7 +215,7 @@ describe("cada caso de uso y cada consulta exigen SU acción (no la de otro)", (
       // Las dos consultas de sucursales comparten `sucursales.ver`: con ese permiso pasan las dos.
       const pasa = propio.accion === otro.accion;
       it(`con permiso solo para ${propio.accion} (${propio.nombre}): ${otro.nombre} ${pasa ? "pasa el guard" : "da SIN_PERMISO"}`, async () => {
-        const vigilada = vigilar({ rol: "OPERADOR", modulosActivados: [] });
+        const vigilada = vigilar({ rol: "OPERADOR", modulosActivados: [], modulosHabilitados: [] });
         const reglas = soloElOperadorPuede(propio.accion);
         if (pasa) {
           expect(await pasoElGuard(otro.llamar(vigilada, reglas))).toBe(true);
@@ -260,14 +262,18 @@ describe("los demás motivos del guard salen tal cual", () => {
   });
 
   it("un módulo no activo da MODULO_NO_ACTIVO (y el rol ya no importa)", async () => {
-    const vigilada = vigilar({ rol: "GERENTE", modulosActivados: [] });
+    const vigilada = vigilar({ rol: "GERENTE", modulosActivados: [], modulosHabilitados: [] });
     const casos = casosCon(vigilada, administracionComo("disponible", false));
     expect(await LLAMADAS.crearSucursal(casos)).toEqual({ ok: false, error: "MODULO_NO_ACTIVO" });
     expect(vigilada.accesos).toEqual(["autorizacion"]);
   });
 
   it("un módulo en desarrollo da MODULO_EN_DESARROLLO, también en las consultas", async () => {
-    const vigilada = vigilar({ rol: "GERENTE", modulosActivados: ["administracion"] });
+    const vigilada = vigilar({
+      rol: "GERENTE",
+      modulosActivados: ["administracion"],
+      modulosHabilitados: [],
+    });
     const reglas = administracionComo("en_desarrollo", true);
     expect(await LLAMADAS.desactivarSucursal(casosCon(vigilada, reglas))).toEqual({
       ok: false,

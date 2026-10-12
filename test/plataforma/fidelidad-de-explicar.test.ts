@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { exigirAccion } from "../../src/capacidades/permisos/exigir";
 import { PERMISOS_DE_EMPRESA, REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import type { ClaveAccion } from "../../src/capacidades/modulos/catalogo";
+import type { ReglasDelGuard } from "../../src/capacidades/permisos/guard";
 import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "../../src/capacidades/permisos/roles";
 import {
   comprobarQueOpera,
@@ -59,6 +60,7 @@ const hechosDeAccion: fc.Arbitrary<HechosDeAccion<RolDeEmpresa>> = fc.record({
     { nil: null },
   ),
   modulosActivados: fc.subarray(["administracion", "otro", "constructor", "__proto__"]),
+  modulosHabilitados: fc.subarray(["administracion", "otro", "constructor", "__proto__"]),
   estadoDeEmpresa: estadosDeEmpresa,
   estadoDeTenant: estadosDeTenant,
 });
@@ -74,7 +76,11 @@ describe("explicarAccionDeEmpresa = exigirAccion + comprobarQueOpera (reglas rea
     await fc.assert(
       fc.asyncProperty(fc.constantFrom(...acciones), hechosDeAccion, async (accion, h) => {
         const real = await exigirAccion(REGLAS_DE_EMPRESA, accion, () =>
-          Promise.resolve({ rol: rolReal(h), modulosActivados: h.modulosActivados }),
+          Promise.resolve({
+            rol: rolReal(h),
+            modulosActivados: h.modulosActivados,
+            modulosHabilitados: h.modulosHabilitados,
+          }),
         );
         const estados = new Map([
           [h.empresaId, { empresa: h.estadoDeEmpresa, tenant: h.estadoDeTenant }],
@@ -98,6 +104,68 @@ describe("explicarAccionDeEmpresa = exigirAccion + comprobarQueOpera (reglas rea
         const e = explicarAccionDeEmpresa(REGLAS_DE_EMPRESA, accion, h);
         expect(e.rol !== null).toBe(e.razonDelRol === "CON_ROL");
       }),
+    );
+  });
+});
+
+/**
+ * El catálogo real de empresa solo tiene el módulo obligatorio: la solo lectura (módulo activado que el
+ * plan ya no incluye) no se puede ejercitar con él. Esta prueba usa un catálogo de prueba con un módulo
+ * activable, en sus tres efectos, para comprobar que explicar y exigir deciden lo mismo también ahí.
+ */
+describe("explicarAccionDeEmpresa = exigirAccion con un módulo activable (solo lectura por plan)", () => {
+  type Modulo = "base" | "ventas";
+  type Accion = "base.ver" | "ventas.mirar" | "ventas.vender" | "ventas.cerrar";
+  const REGLAS_CON_PLAN: ReglasDelGuard<Modulo, Accion, never, "JEFE"> = {
+    catalogo: {
+      base: {
+        estado: "disponible",
+        obligatorio: true,
+        acciones: { "base.ver": { capacidad: null, efecto: "LECTURA" } },
+      },
+      ventas: {
+        estado: "disponible",
+        obligatorio: false,
+        acciones: {
+          "ventas.mirar": { capacidad: null, efecto: "LECTURA" },
+          "ventas.vender": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "ventas.cerrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+        },
+      },
+    },
+    permisos: {
+      "base.ver": ["JEFE"],
+      "ventas.mirar": ["JEFE"],
+      "ventas.vender": ["JEFE"],
+      "ventas.cerrar": ["JEFE"],
+    },
+  };
+  const claves = ["base", "ventas", "otro", "constructor"];
+
+  it("para cualquier acción, activación y plan, la explicación es la del guard real", async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.constantFrom<Accion>("base.ver", "ventas.mirar", "ventas.vender", "ventas.cerrar"),
+        fc.subarray(claves),
+        fc.subarray(claves),
+        fc.boolean(),
+        async (accion, modulosActivados, modulosHabilitados, conRol) => {
+          const rol = conRol ? ("JEFE" as const) : null;
+          const real = await exigirAccion(REGLAS_CON_PLAN, accion, () =>
+            Promise.resolve({ rol, modulosActivados, modulosHabilitados }),
+          );
+          const explicada = explicarAccionDeEmpresa(REGLAS_CON_PLAN, accion, {
+            empresaId: E1,
+            persona: { activoGlobal: true },
+            membresia: rol === null ? null : { rol, activo: true },
+            modulosActivados,
+            modulosHabilitados,
+            estadoDeEmpresa: "ACTIVE",
+            estadoDeTenant: "ACTIVE",
+          });
+          expect(explicada.guard).toEqual(real);
+        },
+      ),
     );
   });
 });

@@ -78,6 +78,9 @@ const TABLAS_LEGIBLES = [
   "tenant",
   "trabajo",
   "traspaso_gerencia", // 0005 (H6): propone y cancela; lee con el actor vigente
+  "emisor", // 0006 (H7): crea y corrige emisores
+  "punto_de_venta", // 0006: solo 4 columnas (las prueba `fiscal-sql.test.ts`)
+  "serie_comprobante", // 0006: la leen los disparadores de CUIT
 ] as const;
 
 /** Datos operativos: la plataforma no los lee, con ningún actor. */
@@ -257,6 +260,18 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
     await dueno.query(
       `insert into referencia_de_error (referencia, accion, motivo) values ('ZH-ABCD-1234', 'usuarios.invitar', 'SIN_PERMISO')`,
     );
+    // Un punto de venta (0006, H7): la plataforma lo lee por columna, así que tampoco puede estar vacío.
+    await dueno.query(
+      `insert into punto_de_venta (empresa_id, emisor_id, sucursal_id, numero)
+       select $1, e.id, s.id, 1 from emisor e, sucursal s
+        where e.empresa_id = $1 and e.es_principal and s.empresa_id = $1 limit 1`,
+      [activa.empresa],
+    );
+    await dueno.query(
+      `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
+       select empresa_id, id, emisor_id, 'FACTURA_B', 0 from punto_de_venta where empresa_id = $1`,
+      [activa.empresa],
+    );
   });
   afterAll(async () => {
     await entorno.cerrar();
@@ -376,6 +391,17 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           "tenant.tenant_plataforma_leer:SELECT:PERMISSIVE",
           "trabajo.trabajo_plataforma_alta:INSERT:PERMISSIVE",
           "trabajo.trabajo_plataforma_leer:SELECT:PERMISSIVE",
+          // 0006 (H7): emisores, puntos de venta y series, con sus restrictivas del actor
+          "emisor.emisor_plataforma_alta:INSERT:PERMISSIVE",
+          "emisor.emisor_plataforma_cambiar:UPDATE:PERMISSIVE",
+          "emisor.emisor_plataforma_leer:SELECT:PERMISSIVE",
+          "emisor.emisor_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "emisor.emisor_plataforma_admin_cambiar:UPDATE:RESTRICTIVE",
+          "emisor.emisor_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "punto_de_venta.punto_de_venta_plataforma_leer:SELECT:PERMISSIVE",
+          "punto_de_venta.punto_de_venta_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "serie_comprobante.serie_comprobante_plataforma_leer:SELECT:PERMISSIVE",
+          "serie_comprobante.serie_comprobante_plataforma_con_actor:SELECT:RESTRICTIVE",
           // 0005 (H6): el traspaso de gerencia, con sus restrictivas del actor
           "traspaso_gerencia.traspaso_gerencia_plataforma_alta:INSERT:PERMISSIVE",
           "traspaso_gerencia.traspaso_gerencia_plataforma_cancelar:UPDATE:PERMISSIVE",
@@ -625,7 +651,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       for (const { t, c } of reales) porTabla.set(t, [...(porTabla.get(t) ?? []), c]);
       expect([...porTabla.keys()].sort()).toEqual([...TABLAS_LEGIBLES].sort());
       for (const tabla of TABLAS_LEGIBLES) {
-        if (tabla === "membresia") continue;
+        if (tabla === "membresia" || tabla === "punto_de_venta") continue;
         const todas = await filas<{ column_name: string }>(
           `select column_name from information_schema.columns
            where table_schema = 'public' and table_name = $1 order by 1`,

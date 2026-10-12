@@ -1,6 +1,7 @@
 import type {
   AdminPlataformaId,
   EmpresaId,
+  MarcaComercialId,
   PersonaId,
   TenantId,
 } from "../primitivas/identificadores/marca";
@@ -16,6 +17,15 @@ export type ContextoOperativo = Readonly<{
   empresaId: EmpresaId;
   /** `null`: lo hace el sistema (por ejemplo, un trabajo programado). */
   personaId: PersonaId | null;
+  /**
+   * Por la puerta de qué marca entró la persona (marcas y planes, §B.2.4): la marca que resolvió el
+   * servidor a partir del host de la solicitud, nunca un dato que mande el navegador. La carga de
+   * autorización la compara con la marca del tenant de la empresa: si no coincide, no hay rol y todo
+   * da `SIN_PERMISO`. `null` solo para el sistema (trabajos, `personaId: null`), que no entra por
+   * ninguna puerta. Es obligatorio a propósito: un contexto armado sin decidir la marca no compila.
+   * La marca NO viaja en el token firmado (no es frontera de aislamiento, §B.10).
+   */
+  marcaDeEntrada: MarcaComercialId | null;
   ahora: Date;
 }>;
 

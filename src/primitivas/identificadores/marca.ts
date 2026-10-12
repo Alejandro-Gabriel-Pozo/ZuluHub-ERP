@@ -32,3 +32,20 @@ export const invitacionId = (valor: string): InvitacionId =>
 export type AdminPlataformaId = Marca<string, "AdminPlataformaId">;
 export const adminPlataformaId = (valor: string): AdminPlataformaId =>
   crear<AdminPlataformaId>("AdminPlataformaId", valor);
+/**
+ * Marca comercial (puerta de entrada y nombre comercial: la principal o un producto). No es el tipo
+ * `Marca<T, Nombre>` de arriba: ese marca identificadores; esta es una entidad de negocio (marcas y
+ * planes, §A.4 #1).
+ */
+export type MarcaComercialId = Marca<string, "MarcaComercialId">;
+export const marcaComercialId = (valor: string): MarcaComercialId =>
+  crear<MarcaComercialId>("MarcaComercialId", valor);
+/** Dominio de marca: un nombre de host por el que se entra a una marca. */
+export type DominioId = Marca<string, "DominioId">;
+export const dominioId = (valor: string): DominioId => crear<DominioId>("DominioId", valor);
+export type PlanId = Marca<string, "PlanId">;
+export const planId = (valor: string): PlanId => crear<PlanId>("PlanId", valor);
+/** Una versión congelada de un plan (la que se asigna a un tenant). */
+export type VersionDePlanId = Marca<string, "VersionDePlanId">;
+export const versionDePlanId = (valor: string): VersionDePlanId =>
+  crear<VersionDePlanId>("VersionDePlanId", valor);
