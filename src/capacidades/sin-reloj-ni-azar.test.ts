@@ -22,6 +22,7 @@ describe("las capacidades no usan reloj ni aleatoriedad", () => {
         "modulos/catalogo.ts",
         "permisos/empresa.ts",
         "permisos/guard.ts",
+        "permisos/plataforma.ts",
         "permisos/roles.ts",
       ]),
     );

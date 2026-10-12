@@ -15,6 +15,7 @@
     "src/modulos/tenants/dominio/**/*.ts",
     "src/modulos/empresas/dominio/**/*.ts",
     "src/modulos/identidad/dominio/**/*.ts",
+    "src/plataforma/dominio/**/*.ts",
     "src/adaptadores/trabajos/reintentos.ts",
     "src/adaptadores/trabajos/error-seguro.ts",
     "src/adaptadores/correo/configuracion.ts",

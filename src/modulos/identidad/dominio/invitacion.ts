@@ -1,4 +1,8 @@
-import { estadoEfectivo, type EstadosDeEmpresa } from "../../../contexto/estados";
+import {
+  estadoEfectivo,
+  type EstadoDeEmpresa,
+  type EstadosDeEmpresa,
+} from "../../../contexto/estados";
 import type {
   EmpresaId,
   InvitacionId,
@@ -8,7 +12,7 @@ import type {
 } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { Email } from "./email";
-import type { ErrorDeAceptacion, ErrorDeInvitacion } from "./errores";
+import type { ErrorDeAceptacion, ErrorDeInvitacion, ErrorDeReenvioDeAlta } from "./errores";
 import type { Persona, RolDeEmpresa } from "./membresia";
 
 /**
@@ -291,4 +295,78 @@ export function decidirReenvio(
     ahora,
   );
   return creada.ok ? ok({ tipo: "REENVIAR", nueva: creada.valor }) : creada;
+}
+
+export type DatosDeReenvioDeAlta = Readonly<{
+  id: InvitacionId;
+  tokenHash: string;
+  /** El email nuevo, ya normalizado con `emailDesdeTexto`; `null`: se reenvía al mismo email. */
+  email: Email | null;
+  /**
+   * El email al que va a llegar la invitación (el nuevo, o el de la última si `email` es `null`) es
+   * el de un administrador de plataforma activo: un administrador de plataforma no puede ser gerente.
+   */
+  emailEsDeAdminDePlataforma: boolean;
+}>;
+
+export type DecisionDeReenvioDeAlta =
+  | Readonly<{
+      tipo: "REENVIAR";
+      nueva: NuevaInvitacion;
+      /**
+       * La última, si sigue `PENDIENTE` (vigente o vencida): hay que revocarla ANTES de crear la
+       * nueva, porque ocupa el índice de "una sola invitación pendiente por alta". `null`: la última
+       * ya estaba revocada (por ejemplo, revocada por plataforma sin reenviar) y no hay nada que revocar.
+       */
+      revocar: InvitacionId | null;
+    }>
+  | Readonly<{ tipo: "YA_REENVIADA"; nueva: InvitacionId }>;
+
+/**
+ * Decide el reenvío de la invitación del ALTA del gerente (lo hace plataforma, H5). La invitación
+ * nueva lleva otro id y otro token, por el plazo completo del alta (24 h), al mismo email o a otro
+ * (el dueño corrige un email mal cargado), y no tiene emisor (`emitidaPor: null`, como el alta).
+ * `ultima` es la última invitación del alta de esa empresa, sea cual sea su estado.
+ *
+ * Un `ultima` que no es un alta de esa empresa es un error del llamador y lanza `RangeError`.
+ * Orden de los errores: la empresa ya no está en `PROVISIONING` (`ALTA_NO_PENDIENTE`, mismo código
+ * que la aceptación); si `ultima` ya fue reemplazada se devuelve la reemplazante (`YA_REENVIADA`,
+ * idempotente); una alta aceptada (no debería pasar con la empresa en alta) es `ALTA_NO_PENDIENTE`;
+ * el email de un administrador de plataforma (`EMAIL_DE_ADMIN_PLATAFORMA`); y los de armar la nueva.
+ * A diferencia de `decidirReenvio`, una última revocada sin reemplazo sí se reenvía: es la salida de
+ * "revocar sin reenviar". Una pendiente vencida también.
+ */
+export function decidirReenvioDeAlta(
+  empresa: Readonly<{ id: EmpresaId; estado: EstadoDeEmpresa }>,
+  ultima: Invitacion,
+  ahora: Date,
+  nueva: DatosDeReenvioDeAlta,
+): Resultado<DecisionDeReenvioDeAlta, ErrorDeReenvioDeAlta> {
+  if (ultima.tipo !== "ALTA_GERENTE" || !ultima.empresas.some((e) => e.empresaId === empresa.id)) {
+    throw new RangeError(`la invitación ${ultima.id} no es el alta de la empresa ${empresa.id}`);
+  }
+  if (empresa.estado !== "PROVISIONING") return err("ALTA_NO_PENDIENTE");
+  if (ultima.reemplazadaPor !== null) {
+    return ok({ tipo: "YA_REENVIADA", nueva: ultima.reemplazadaPor });
+  }
+  if (ultima.estado === "ACEPTADA") return err("ALTA_NO_PENDIENTE");
+  if (nueva.emailEsDeAdminDePlataforma) return err("EMAIL_DE_ADMIN_PLATAFORMA");
+  const creada = nuevaInvitacion(
+    {
+      id: nueva.id,
+      tokenHash: nueva.tokenHash,
+      tenantId: ultima.tenantId,
+      tipo: "ALTA_GERENTE",
+      email: nueva.email ?? ultima.email,
+      empresas: ultima.empresas,
+      emitidaPor: null,
+    },
+    ahora,
+  );
+  if (!creada.ok) return creada;
+  return ok({
+    tipo: "REENVIAR",
+    nueva: creada.valor,
+    revocar: ultima.estado === "PENDIENTE" ? ultima.id : null,
+  });
 }

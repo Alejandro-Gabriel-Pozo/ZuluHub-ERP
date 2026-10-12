@@ -6,6 +6,7 @@ import {
   type CatalogoComercial,
   type DefinicionDeModulo,
 } from "../../src/capacidades/modulos/catalogo";
+import { CATALOGO_DE_PLATAFORMA } from "../../src/capacidades/permisos/plataforma";
 import {
   DECLARACIONES_DE_EMPRESAS,
   DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS,
@@ -450,5 +451,38 @@ describe("P6: cada cruce se dispara con su violación inyectada", () => {
       todasExisten,
     );
     expect(p).toEqual([]);
+  });
+});
+
+describe("H5 P3: el catálogo de plataforma cumple los cruces", () => {
+  const acciones = Object.keys(CATALOGO_DE_PLATAFORMA.plataforma.acciones);
+
+  it("X3, X4 y los obligatorios: sin problemas (X1 se completa cuando P5 y P6 declaren los casos de uso)", () => {
+    // Acá se presenta cada acción como exigida por su carpeta: lo que se comprueba de verdad es el
+    // resto de los cruces (módulos que existen, sin ciclos, carpeta real, obligatorio disponible).
+    expect(crucesDelCatalogo(CATALOGO_DE_PLATAFORMA, { plataforma: acciones })).toEqual([]);
+  });
+
+  it("lo implementa exactamente la carpeta src/plataforma, que existe", () => {
+    expect(CATALOGO_DE_PLATAFORMA.plataforma.implementadoPor).toEqual(["plataforma"]);
+    expect(carpetaExiste("plataforma")).toBe(true);
+  });
+
+  it("X4 se dispara si la carpeta de plataforma no existe (violación inyectada)", () => {
+    expect(
+      crucesDelCatalogo(
+        CATALOGO_DE_PLATAFORMA,
+        { plataforma: acciones },
+        (carpeta) => carpeta !== "plataforma",
+      ),
+    ).toEqual(["X4: plataforma dice que lo implementa plataforma, que no existe en src/"]);
+  });
+
+  it("X1 se dispara si una acción de plataforma no la exige ningún caso de uso (violación inyectada)", () => {
+    expect(
+      crucesDelCatalogo(CATALOGO_DE_PLATAFORMA, {
+        plataforma: acciones.filter((a) => a !== "empresas.alta"),
+      }),
+    ).toEqual(["X1: la acción empresas.alta no la exige ningún caso de uso"]);
   });
 });

@@ -198,6 +198,54 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "permisos-plataforma-sin-empresa",
+      archivos: {
+        "src/capacidades/permisos/plataforma.ts": importa("./empresa"),
+        "src/capacidades/permisos/empresa.ts": exporta,
+      },
+    },
+    {
+      regla: "permisos-empresa-sin-plataforma",
+      archivos: {
+        "src/capacidades/permisos/empresa.ts": importa("./plataforma"),
+        "src/capacidades/permisos/plataforma.ts": exporta,
+      },
+    },
+    {
+      regla: "guard-generico-sin-catalogos",
+      archivos: {
+        "src/capacidades/permisos/guard.ts": importa("./plataforma"),
+        "src/capacidades/permisos/plataforma.ts": exporta,
+      },
+    },
+    {
+      regla: "modulos-sin-permisos-de-plataforma",
+      archivos: {
+        "src/modulos/identidad/dominio/d.ts": importa("../../../capacidades/permisos/plataforma"),
+        "src/capacidades/permisos/plataforma.ts": exporta,
+      },
+    },
+    {
+      regla: "plataforma-sin-framework",
+      archivos: {
+        "src/plataforma/dominio/d.ts": 'import "zod";\nexport const d = 1;\n',
+      },
+    },
+    {
+      regla: "plataforma-dominio-sin-puertos-ni-exigir",
+      archivos: {
+        "src/plataforma/dominio/d.ts": importa("../../puertos/q"),
+        "src/puertos/q.ts": exporta,
+      },
+    },
+    {
+      regla: "plataforma-dominio-sin-guard",
+      archivos: {
+        "src/plataforma/dominio/d.ts": importa("../../capacidades/permisos/guard"),
+        "src/capacidades/permisos/guard.ts": exporta,
+      },
+    },
+    {
       regla: "consultas-sin-dominio",
       archivos: {
         "src/modulos/empresas/consultas/c.ts": importa("../dominio/d"),
@@ -289,5 +337,99 @@ describe("reglas de arquitectura (ADR-001)", () => {
       "src/adaptadores/postgres/a.ts": 'import "kysely";\nexport const a = 1;\n',
     });
     expect(v).not.toContain("orm-solo-en-persistencia");
+  });
+
+  describe("H5 plataforma: catálogos de permisos independientes y dominio de plataforma puro", () => {
+    it("el guard genérico, el catálogo de empresa y el de plataforma conviven sin importarse entre sí", async () => {
+      const v = await violacionesDe({
+        "src/capacidades/permisos/roles.ts": exporta,
+        "src/capacidades/permisos/guard.ts": importa("./roles"),
+        "src/capacidades/permisos/exigir.ts": importa("./guard"),
+        "src/capacidades/permisos/empresa.ts": importa("./guard"),
+        "src/capacidades/permisos/plataforma.ts": importa("./guard"),
+      });
+      expect(v).toEqual([]);
+    });
+
+    it("las pruebas de cada catálogo pueden importar su propio archivo", async () => {
+      const v = await violacionesDe({
+        "src/capacidades/permisos/empresa.ts": exporta,
+        "src/capacidades/permisos/plataforma.ts": exporta,
+        "src/capacidades/permisos/empresa.test.ts": importa("./empresa"),
+        "src/capacidades/permisos/plataforma.test.ts": importa("./plataforma"),
+      });
+      expect(v).toEqual([]);
+    });
+
+    it("la plataforma sí puede usar el guard, su matriz, el estado efectivo y los módulos por publico.ts", async () => {
+      const v = await violacionesDe({
+        "src/primitivas/p.ts": exporta,
+        "src/contexto/estados.ts": importa("../primitivas/p"),
+        "src/capacidades/permisos/guard.ts": exporta,
+        "src/capacidades/permisos/exigir.ts": importa("./guard"),
+        "src/capacidades/permisos/plataforma.ts": importa("./guard"),
+        "src/modulos/identidad/publico.ts": exporta,
+        "src/puertos/q.ts": exporta,
+        "src/plataforma/casos-de-uso/c.ts": [
+          importa("../../capacidades/permisos/exigir"),
+          importa("../../capacidades/permisos/plataforma"),
+          importa("../../puertos/q"),
+          importa("../../modulos/identidad/publico"),
+        ].join(""),
+        "src/plataforma/dominio/admin.ts": [
+          importa("../../capacidades/permisos/plataforma"),
+          importa("../../contexto/estados"),
+          importa("../../modulos/identidad/publico"),
+        ].join(""),
+      });
+      expect(v).toEqual([]);
+    });
+
+    it("soporte/explicar es la única parte del dominio de plataforma que puede usar el guard", async () => {
+      const permitido = await violacionesDe({
+        "src/plataforma/dominio/soporte/explicar.ts": importa(
+          "../../../capacidades/permisos/guard",
+        ),
+        "src/plataforma/dominio/soporte/explicar.test.ts": importa(
+          "../../../capacidades/permisos/guard",
+        ),
+        "src/capacidades/permisos/guard.ts": exporta,
+      });
+      expect(permitido).toEqual([]);
+      const prohibido = await violacionesDe({
+        "src/plataforma/dominio/soporte/otro.ts": importa("../../../capacidades/permisos/guard"),
+        "src/capacidades/permisos/guard.ts": exporta,
+      });
+      expect(prohibido).toEqual(["plataforma-dominio-sin-guard"]);
+    });
+
+    it("ni siquiera explicar puede usar exigirAccion ni los puertos", async () => {
+      const v = await violacionesDe({
+        "src/plataforma/dominio/soporte/explicar.ts": [
+          importa("../../../capacidades/permisos/exigir"),
+          importa("../../../puertos/q"),
+        ].join(""),
+        "src/capacidades/permisos/exigir.ts": exporta,
+        "src/puertos/q.ts": exporta,
+      });
+      expect(v).toEqual(["plataforma-dominio-sin-puertos-ni-exigir"]);
+    });
+
+    it("los casos de uso de plataforma tampoco pueden importar Zod, React ni Next", async () => {
+      for (const paquete of ["zod", "react", "react-dom", "next"]) {
+        const v = await violacionesDe({
+          "src/plataforma/casos-de-uso/c.ts": `import "${paquete}";\nexport const c = 1;\n`,
+        });
+        expect(v, paquete).toContain("plataforma-sin-framework");
+      }
+    });
+
+    it("las consultas de grupo tampoco importan la matriz de plataforma", async () => {
+      const v = await violacionesDe({
+        "src/consultas-de-grupo/g.ts": importa("../capacidades/permisos/plataforma"),
+        "src/capacidades/permisos/plataforma.ts": exporta,
+      });
+      expect(v).toContain("modulos-sin-permisos-de-plataforma");
+    });
   });
 });

@@ -7,9 +7,12 @@ import type { RolDeEmpresa } from "./roles";
  * Guard de permisos (ADR-003, ADR-008). Es INTEGRIDAD, no un control configurable: la autorización
  * se decide siempre en el servidor, con datos leídos dentro de la transacción del caso de uso.
  *
- * Es genérico a propósito: el catálogo y la matriz rol → acciones llegan como PARÁMETRO (`reglas`).
- * Hoy son los fijos de `empresa.ts` (roles fijos para todas las empresas, decisión 18); el día que
- * los roles sean datos de cada empresa, cambia quien arma las `reglas`, no este archivo.
+ * Es genérico a propósito: el catálogo y la matriz rol → acciones llegan como PARÁMETRO (`reglas`),
+ * y el TIPO DE ROL también (`R`). Para la empresa son los fijos de `empresa.ts` (roles fijos para
+ * todas las empresas, decisión 18; es el valor por defecto de `R`, así que las llamadas de empresa
+ * no cambian); para la plataforma, los de `plataforma.ts` (`ADMIN`, `SOPORTE`). El día que los roles
+ * sean datos de cada empresa, cambia quien arma las `reglas`, no este archivo. Ninguno de los
+ * catálogos se importa acá: el guard no conoce ninguna matriz concreta.
  */
 
 /** Por qué se rechaza una acción, en este orden de precedencia (el primero que falle). */
@@ -17,9 +20,16 @@ export type MotivoDeRechazo =
   "MODULO_EN_DESARROLLO" | "MODULO_NO_ACTIVO" | "SIN_CAPACIDAD" | "SIN_PERMISO";
 
 /** Lo que el guard necesita saber de quien actúa y de su empresa (cargado en la misma transacción). */
-export type DatosDelGuard<M extends string, C extends string> = Readonly<{
-  /** `null`: sin persona, sin membresía activa o persona suspendida globalmente. */
-  rol: RolDeEmpresa | null;
+export type DatosDelGuard<
+  M extends string,
+  C extends string,
+  R extends string = RolDeEmpresa,
+> = Readonly<{
+  /**
+   * `null`: sin actor, sin rol vigente (para la empresa: sin membresía activa o persona suspendida
+   * globalmente; para la plataforma: administrador inexistente o inactivo).
+   */
+  rol: R | null;
   modulosActivos: ReadonlySet<M>;
   /** `null`: la operación no es de una sucursal. */
   capacidadesDeSucursal: ReadonlySet<C> | null;
@@ -29,9 +39,14 @@ export type DatosDelGuard<M extends string, C extends string> = Readonly<{
 export type ModuloDelGuard<C extends string> = Pick<DefinicionDeModulo, "estado" | "obligatorio"> &
   Readonly<{ acciones: Readonly<Record<string, DefinicionDeAccion<C>>> }>;
 
-export type ReglasDelGuard<M extends string, A extends string, C extends string> = Readonly<{
+export type ReglasDelGuard<
+  M extends string,
+  A extends string,
+  C extends string,
+  R extends string = RolDeEmpresa,
+> = Readonly<{
   catalogo: Readonly<Record<M, ModuloDelGuard<C>>>;
-  permisos: Readonly<Record<A, readonly RolDeEmpresa[]>>;
+  permisos: Readonly<Record<A, readonly R[]>>;
 }>;
 
 /** El módulo dueño de la acción y la capacidad que exige; `null` si ningún módulo la declara. */
@@ -52,10 +67,16 @@ function dondeEstaLaAccion<M extends string, A extends string, C extends string>
  * que ningún módulo declara, o sin permisos definidos, es un defecto (por tipos no puede pasar) y
  * lanza `RangeError`: nunca se autoriza por omisión.
  */
-export function evaluarGuard<M extends string, A extends string, C extends string>(
-  reglas: ReglasDelGuard<M, A, C>,
+export function evaluarGuard<
+  M extends string,
+  A extends string,
+  C extends string,
+  R extends string = RolDeEmpresa,
+>(
+  reglas: ReglasDelGuard<M, A, C, R>,
   accion: A,
-  datos: DatosDelGuard<M, C>,
+  // `NoInfer`: el tipo de rol lo fija la matriz; un rol de otro catálogo en `datos` no compila.
+  datos: DatosDelGuard<M, C, NoInfer<R>>,
 ): Resultado<null, MotivoDeRechazo> {
   const nombre: string = accion;
   const donde = dondeEstaLaAccion(reglas.catalogo, accion);
