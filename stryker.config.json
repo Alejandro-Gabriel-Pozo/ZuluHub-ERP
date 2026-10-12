@@ -28,6 +28,7 @@
     "src/capacidades/planes/**/*.ts",
     "src/capacidades/vocabulario/**/*.ts",
     "src/modulos/planes/dominio/**/*.ts",
+    "src/modulos/marcas/dominio/**/*.ts",
     "!src/**/*.test.ts"
   ],
   "coverageAnalysis": "off",

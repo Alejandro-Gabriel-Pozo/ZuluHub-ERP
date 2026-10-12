@@ -222,6 +222,15 @@ jobs:
           - grupo: identificadores
             archivos: "src/primitivas/identificadores/**/*.ts"
             pruebas: "src/primitivas/identificadores"
+          - grupo: vocabulario
+            archivos: "src/capacidades/vocabulario/**/*.ts"
+            pruebas: "src/capacidades/vocabulario"
+          - grupo: marcas (host, tema y jerarquía)
+            archivos: "src/modulos/marcas/dominio/host.ts,src/modulos/marcas/dominio/tema.ts,src/modulos/marcas/dominio/jerarquia.ts"
+            pruebas: "src/modulos/marcas"
+          - grupo: marcas (definición, versión y vigencia)
+            archivos: "src/modulos/marcas/dominio/**/*.ts,!src/modulos/marcas/dominio/host.ts,!src/modulos/marcas/dominio/tema.ts,!src/modulos/marcas/dominio/jerarquia.ts"
+            pruebas: "src/modulos/marcas"
           - grupo: trabajos y correo (lógica pura)
             archivos: "src/adaptadores/trabajos/reintentos.ts,src/adaptadores/trabajos/error-seguro.ts,src/adaptadores/correo/configuracion.ts,src/adaptadores/postgres/huella-canonica.ts"
             pruebas: "src/adaptadores"

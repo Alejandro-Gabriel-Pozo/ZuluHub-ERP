@@ -304,6 +304,14 @@ const reglas = [
     from: { path: "^src/modulos/", pathNot: "^src/modulos/(planes|marcas)/" },
     to: { path: "^src/modulos/planes/" },
   },
+  {
+    name: "modulos-sin-marcas",
+    severity: "error",
+    comment:
+      "Ningún otro módulo de negocio importa modulos/marcas (marcas y planes, §D «Arquitectura»): la marca es presentación y puerta, no una dependencia de negocio. Lo que un módulo necesita (los textos, los derechos de uso) lo toma de capacidades y de los puertos. La puerta web, la plataforma y las consultas sí entran por su publico.ts.",
+    from: { path: "^src/modulos/", pathNot: "^src/modulos/marcas/" },
+    to: { path: "^src/modulos/marcas/" },
+  },
 ];
 
 module.exports = { reglas };
