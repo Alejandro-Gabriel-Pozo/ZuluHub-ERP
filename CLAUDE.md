@@ -20,6 +20,20 @@ del ingeniero. Las decisiones están en el repositorio `ZuluHub-docs` (ADR 001 a
 - Migraciones: SQL revisado; avisar antes de cualquier cambio destructivo.
 - No hacer commit de `.env`, claves ni cadenas de conexión.
 
+## Justificar cada regla, abstracción y convención
+
+Fuente: `ZuluHub-docs/01-vision/reglas-transversales.md` §8. El sistema lo construye y mantiene una IA: una regla sin motivo se
+obedece igual, se acumula y compite con otras.
+
+- Toda regla, abstracción o convención nueva se justifica por **la ambigüedad que elimina**, **la categoría concreta de fallos que
+  previene** o **el coste significativo de agregarla después** (datos, aislamiento, auditoría, idempotencia, migraciones).
+- La justificación es **verificable**: nombra el fallo y hay un chequeo mecánico que falla si se la quita (regla de arquitectura con su
+  violación inyectada, prueba, debilitamiento propio detectado). Si no se puede chequear en general, se documenta al menos un caso real.
+- La justificación va **junto a la regla**, en una línea con el fallo que previene. Sin ensayos.
+- Antes de crear una abstracción o pieza común, verificá si otro módulo ya la tiene; se extrae cuando dos módulos reales la necesitan
+  (ADR-014), no antes. Si el módulo vecino ya resolvió algo, se reutiliza.
+- Al cerrar un tramo, revisá las reglas que sumaste: si perdió su motivo o quedó cubierta por otra, se elimina o se simplifica.
+
 ## Infraestructura
 
 - Vercel: proyecto `zuluhub-erp` (equipo `alepozod`), región de funciones `gru1`. Las compilaciones están
