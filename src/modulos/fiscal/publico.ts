@@ -97,7 +97,7 @@ export {
   resolverEmisor,
   resolverEmisoresDeLineas,
   type DatosDeLinea,
-  type DatosDeVenta,
+  type DatosAFacturar,
   type EmisorResuelto,
   type ErrorDeResolucion,
   type ErrorDeResolucionDeLinea,
@@ -115,16 +115,18 @@ export {
   totalDeLaVenta,
   type ComprobanteDeVentaCalculado,
   type ErrorDePlan,
-  type LineaDeVenta,
-  type LineaDeVentaCalculable,
+  type LineaAFacturar,
+  type LineaAFacturarCalculable,
   type PlanDeComprobante,
   type PuntoDeVentaDeSucursal,
 } from "./dominio/plan-de-comprobantes";
 export {
   TIPOS_DE_COMPROBANTE,
+  TIPOS_DE_ORIGEN,
   claseDeComprobante,
   claveDeIdempotenciaDeComprobante,
   esTipoDeComprobante,
+  esTipoDeOrigen,
   letraDeComprobante,
   type ClaseDeComprobante,
   type ClaveDeIdempotenciaDeComprobante,
@@ -137,6 +139,7 @@ export {
   type OrigenDeComprobante,
   type ResultadoDeAutorizacion,
   type TipoDeComprobante,
+  type TipoDeOrigen,
 } from "./dominio/comprobante-emitido";
 export {
   OPCIONES_DE_NUMERACION,

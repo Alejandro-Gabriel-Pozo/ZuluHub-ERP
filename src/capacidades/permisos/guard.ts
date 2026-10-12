@@ -1,6 +1,6 @@
 import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
 import { clavesDe, esClaveDe } from "../modulos/activos";
-import type { DefinicionDeAccion, DefinicionDeModulo } from "../modulos/catalogo";
+import type { DefinicionDeAccion, DefinicionDeModulo, EfectoDeAccion } from "../modulos/catalogo";
 import type { RolDeEmpresa } from "./roles";
 
 /**
@@ -15,9 +15,18 @@ import type { RolDeEmpresa } from "./roles";
  * catálogos se importa acá: el guard no conoce ninguna matriz concreta.
  */
 
-/** Por qué se rechaza una acción, en este orden de precedencia (el primero que falle). */
+/**
+ * Por qué se rechaza una acción, en este orden de precedencia (el primero que falle). Los dos del
+ * módulo van antes que capacidad y permiso: son una causa comercial o de construcción, no del actor.
+ * `MODULO_EN_SOLO_LECTURA` va después de «no activo» (el módulo existe para la empresa, pero una baja
+ * de plan lo dejó fuera del techo) y solo rechaza las acciones `CREA_AMPLIA`.
+ */
 export type MotivoDeRechazo =
-  "MODULO_EN_DESARROLLO" | "MODULO_NO_ACTIVO" | "SIN_CAPACIDAD" | "SIN_PERMISO";
+  | "MODULO_EN_DESARROLLO"
+  | "MODULO_NO_ACTIVO"
+  | "MODULO_EN_SOLO_LECTURA"
+  | "SIN_CAPACIDAD"
+  | "SIN_PERMISO";
 
 /** Lo que el guard necesita saber de quien actúa y de su empresa (cargado en la misma transacción). */
 export type DatosDelGuard<
@@ -30,7 +39,17 @@ export type DatosDelGuard<
    * globalmente; para la plataforma: administrador inexistente o inactivo).
    */
   rol: R | null;
+  /** Módulos que operan sin restricción (los obligatorios y los activados dentro del plan). */
   modulosActivos: ReadonlySet<M>;
+  /**
+   * Módulos que la empresa activó y una baja de plan dejó fuera del techo: pasan `LECTURA` y
+   * `COMPLETA_CIERRA`, y rechazan `CREA_AMPLIA` con `MODULO_EN_SOLO_LECTURA`. Opcional y aditivo:
+   * omitido es vacío, y el guard se comporta como antes. Quien lo arma (la futura lectura de
+   * `modulo_de_empresa` junto con el plan) mantiene los dos conjuntos DISJUNTOS; si un módulo
+   * figurara en ambos, gana el más restrictivo (solo lectura). Un módulo OBLIGATORIO (el núcleo, que
+   * no depende de un plan) nunca está en solo lectura: el guard ignora esta lista para él.
+   */
+  modulosEnSoloLectura?: ReadonlySet<M>;
   /** `null`: la operación no es de una sucursal. */
   capacidadesDeSucursal: ReadonlySet<C> | null;
 }>;
@@ -49,23 +68,25 @@ export type ReglasDelGuard<
   permisos: Readonly<Record<A, readonly R[]>>;
 }>;
 
-/** El módulo dueño de la acción y la capacidad que exige; `null` si ningún módulo la declara. */
+/** El módulo dueño de la acción, su capacidad y su efecto; `null` si ningún módulo la declara. */
 function dondeEstaLaAccion<M extends string, A extends string, C extends string>(
   catalogo: ReglasDelGuard<M, A, C>["catalogo"],
   accion: A,
-): { modulo: M; capacidad: C | null } | null {
+): { modulo: M; capacidad: C | null; efecto: EfectoDeAccion } | null {
   for (const modulo of clavesDe(catalogo)) {
     const { acciones } = catalogo[modulo];
     const definicion = esClaveDe(acciones, accion) ? acciones[accion] : undefined;
-    if (definicion !== undefined) return { modulo, capacidad: definicion.capacidad };
+    if (definicion !== undefined) {
+      return { modulo, capacidad: definicion.capacidad, efecto: definicion.efecto };
+    }
   }
   return null;
 }
 
 /**
- * Puro y síncrono. Orden fijo: módulo en desarrollo → módulo no activo → capacidad → rol. Una acción
- * que ningún módulo declara, o sin permisos definidos, es un defecto (por tipos no puede pasar) y
- * lanza `RangeError`: nunca se autoriza por omisión.
+ * Puro y síncrono. Orden fijo: módulo en desarrollo → módulo no activo → módulo en solo lectura →
+ * capacidad → rol. Una acción que ningún módulo declara, o sin permisos definidos, es un defecto
+ * (por tipos no puede pasar) y lanza `RangeError`: nunca se autoriza por omisión.
  */
 export function evaluarGuard<
   M extends string,
@@ -84,10 +105,14 @@ export function evaluarGuard<
   if (!esClaveDe(reglas.permisos, accion)) {
     throw new RangeError(`la acción ${nombre} no tiene permisos definidos`);
   }
-  if (reglas.catalogo[donde.modulo].estado === "en_desarrollo") {
-    return err("MODULO_EN_DESARROLLO");
-  }
-  if (!datos.modulosActivos.has(donde.modulo)) return err("MODULO_NO_ACTIVO");
+  const modulo = reglas.catalogo[donde.modulo];
+  if (modulo.estado === "en_desarrollo") return err("MODULO_EN_DESARROLLO");
+  // El núcleo (obligatorio) no depende de un plan: nunca entra en solo lectura. `=== true`: el
+  // conjunto es opcional y omitido no restringe nada.
+  const enSoloLectura =
+    !modulo.obligatorio && datos.modulosEnSoloLectura?.has(donde.modulo) === true;
+  if (!enSoloLectura && !datos.modulosActivos.has(donde.modulo)) return err("MODULO_NO_ACTIVO");
+  if (enSoloLectura && donde.efecto === "CREA_AMPLIA") return err("MODULO_EN_SOLO_LECTURA");
   if (
     donde.capacidad !== null &&
     (datos.capacidadesDeSucursal === null || !datos.capacidadesDeSucursal.has(donde.capacidad))

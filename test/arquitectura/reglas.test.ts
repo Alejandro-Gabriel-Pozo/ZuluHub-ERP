@@ -259,6 +259,34 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "src/modulos/identidad/publico.ts": exporta,
       },
     },
+    {
+      regla: "grupo-solo-escribe-su-auditoria",
+      archivos: {
+        "src/consultas-de-grupo/g.ts": importa("../puertos/auditoria"),
+        "src/puertos/auditoria.ts": exporta,
+      },
+    },
+    {
+      regla: "permisos-grupo-sin-otros-catalogos",
+      archivos: {
+        "src/capacidades/permisos/grupo.ts": importa("./empresa"),
+        "src/capacidades/permisos/empresa.ts": exporta,
+      },
+    },
+    {
+      regla: "permisos-sin-grupo",
+      archivos: {
+        "src/capacidades/permisos/empresa.ts": importa("./grupo"),
+        "src/capacidades/permisos/grupo.ts": exporta,
+      },
+    },
+    {
+      regla: "negocio-sin-permisos-de-grupo",
+      archivos: {
+        "src/modulos/identidad/dominio/d.ts": importa("../../../capacidades/permisos/grupo"),
+        "src/capacidades/permisos/grupo.ts": exporta,
+      },
+    },
   ];
 
   it("cada regla definida tiene su caso de violación", () => {
@@ -430,6 +458,86 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "src/capacidades/permisos/plataforma.ts": exporta,
       });
       expect(v).toContain("modulos-sin-permisos-de-plataforma");
+    });
+  });
+
+  describe("H6 grupo: consultas de solo lectura y catálogo de permisos propio", () => {
+    it("las consultas de grupo solo pueden usar las transacciones, la autorización de grupo y su registro de acceso", async () => {
+      const v = await violacionesDe({
+        "src/primitivas/p.ts": exporta,
+        "src/contexto/c.ts": importa("../primitivas/p"),
+        "src/capacidades/permisos/guard.ts": exporta,
+        "src/capacidades/permisos/exigir.ts": importa("./guard"),
+        "src/capacidades/permisos/grupo.ts": importa("./guard"),
+        "src/puertos/transacciones.ts": importa("../contexto/c"),
+        "src/puertos/autorizacion-de-grupo.ts": importa("../capacidades/permisos/grupo"),
+        "src/puertos/auditoria-de-acceso-de-grupo.ts": importa("../primitivas/p"),
+        "src/modulos/empresas/publico.ts": exporta,
+        "src/consultas-de-grupo/g.ts": [
+          importa("../capacidades/permisos/exigir"),
+          importa("../capacidades/permisos/grupo"),
+          importa("../contexto/c"),
+          importa("../modulos/empresas/publico"),
+          importa("../puertos/transacciones"),
+          importa("../puertos/autorizacion-de-grupo"),
+          importa("../puertos/auditoria-de-acceso-de-grupo"),
+        ].join(""),
+      });
+      expect(v).toEqual([]);
+    });
+
+    it("cualquier otro puerto de escritura queda prohibido por nombre", async () => {
+      for (const puerto of [
+        "auditoria",
+        "auditoria-de-plataforma",
+        "idempotencia",
+        "cola-de-trabajos",
+        "trabajos",
+        "correo",
+        "autorizacion",
+        "autorizacion-de-plataforma",
+        "admins-de-plataforma",
+      ]) {
+        const v = await violacionesDe({
+          "src/consultas-de-grupo/g.ts": importa(`../puertos/${puerto}`),
+          [`src/puertos/${puerto}.ts`]: exporta,
+        });
+        expect(v, puerto).toEqual(["grupo-solo-escribe-su-auditoria"]);
+      }
+    });
+
+    it("el guard genérico, exigirAccion y los otros catálogos tampoco importan la matriz de grupo", async () => {
+      for (const origen of ["guard", "exigir", "empresa", "plataforma"]) {
+        const v = await violacionesDe({
+          [`src/capacidades/permisos/${origen}.ts`]: importa("./grupo"),
+          "src/capacidades/permisos/grupo.ts": exporta,
+        });
+        expect(v, origen).toContain("permisos-sin-grupo");
+      }
+    });
+
+    it("el catálogo de grupo no importa el de plataforma, y la plataforma no importa el de grupo", async () => {
+      const a = await violacionesDe({
+        "src/capacidades/permisos/grupo.ts": importa("./plataforma"),
+        "src/capacidades/permisos/plataforma.ts": exporta,
+      });
+      expect(a).toContain("permisos-grupo-sin-otros-catalogos");
+      const b = await violacionesDe({
+        "src/plataforma/p.ts": importa("../capacidades/permisos/grupo"),
+        "src/capacidades/permisos/grupo.ts": exporta,
+      });
+      expect(b).toContain("negocio-sin-permisos-de-grupo");
+    });
+
+    it("el catálogo de grupo y su prueba conviven con el guard sin importarse entre sí con los demás", async () => {
+      const v = await violacionesDe({
+        "src/capacidades/permisos/guard.ts": exporta,
+        "src/capacidades/permisos/empresa.ts": importa("./guard"),
+        "src/capacidades/permisos/plataforma.ts": importa("./guard"),
+        "src/capacidades/permisos/grupo.ts": importa("./guard"),
+        "src/capacidades/permisos/grupo.test.ts": importa("./grupo"),
+      });
+      expect(v).toEqual([]);
     });
   });
 });

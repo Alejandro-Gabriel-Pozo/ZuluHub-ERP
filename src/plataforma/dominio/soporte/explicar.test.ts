@@ -33,17 +33,20 @@ const CATALOGO = {
   base: {
     estado: "disponible",
     obligatorio: true,
-    acciones: { "base.ver": { capacidad: null }, "base.cerrar": { capacidad: null } },
+    acciones: {
+      "base.ver": { capacidad: null, efecto: "LECTURA" },
+      "base.cerrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+    },
   },
   ventas: {
     estado: "disponible",
     obligatorio: false,
-    acciones: { "ventas.vender": { capacidad: null } },
+    acciones: { "ventas.vender": { capacidad: null, efecto: "CREA_AMPLIA" } },
   },
   futuro: {
     estado: "en_desarrollo",
     obligatorio: false,
-    acciones: { "futuro.pronosticar": { capacidad: null } },
+    acciones: { "futuro.pronosticar": { capacidad: null, efecto: "CREA_AMPLIA" } },
   },
 } as const satisfies Record<Modulo, ModuloDelGuard<never>>;
 

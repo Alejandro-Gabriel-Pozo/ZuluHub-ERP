@@ -63,24 +63,24 @@ describe("el catálogo de plataforma", () => {
         datosRequeridos: [],
         implementadoPor: ["plataforma"],
         acciones: {
-          "tenants.ver": { capacidad: null },
-          "empresas.ver": { capacidad: null },
-          "invitaciones.ver": { capacidad: null },
-          "trabajos.ver_fallidos": { capacidad: null },
-          "auditoria.ver": { capacidad: null },
-          "configuracion.ver": { capacidad: null },
-          "soporte.buscar_referencia": { capacidad: null },
-          "soporte.explicar": { capacidad: null },
-          "altas.reenviar_invitacion": { capacidad: null },
-          "altas.revocar_invitacion": { capacidad: null },
-          "empresas.alta": { capacidad: null },
-          "altas.cancelar": { capacidad: null },
-          "tenants.suspender": { capacidad: null },
-          "tenants.reactivar": { capacidad: null },
-          "empresas.suspender": { capacidad: null },
-          "empresas.reactivar": { capacidad: null },
-          "personas.suspender": { capacidad: null },
-          "personas.reactivar": { capacidad: null },
+          "tenants.ver": { capacidad: null, efecto: "LECTURA" },
+          "empresas.ver": { capacidad: null, efecto: "LECTURA" },
+          "invitaciones.ver": { capacidad: null, efecto: "LECTURA" },
+          "trabajos.ver_fallidos": { capacidad: null, efecto: "LECTURA" },
+          "auditoria.ver": { capacidad: null, efecto: "LECTURA" },
+          "configuracion.ver": { capacidad: null, efecto: "LECTURA" },
+          "soporte.buscar_referencia": { capacidad: null, efecto: "LECTURA" },
+          "soporte.explicar": { capacidad: null, efecto: "LECTURA" },
+          "altas.reenviar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "altas.revocar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "empresas.alta": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "altas.cancelar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "tenants.suspender": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "tenants.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "empresas.suspender": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "empresas.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "personas.suspender": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "personas.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
     });
@@ -246,5 +246,82 @@ describe("el guard con las reglas de plataforma", () => {
         capacidadesDeSucursal: null,
       }),
     ).toEqual({ ok: false, error: "MODULO_NO_ACTIVO" });
+  });
+});
+
+/**
+ * La clasificación de cada acción de plataforma por su efecto, fijada a propósito. La plataforma es
+ * un módulo obligatorio y nunca está en solo lectura; el efecto se declara por uniformidad del tipo
+ * (ninguna acción sin clasificar). Criterio: mirar y diagnosticar es `LECTURA`; dar de alta y
+ * reactivar lo suspendido es `CREA_AMPLIA`; suspender, cancelar un alta y reenviar o revocar su
+ * invitación RESTRINGEN o cierran algo iniciado: `COMPLETA_CIERRA`.
+ */
+const EFECTOS_DE_PLATAFORMA = {
+  LECTURA: [
+    "auditoria.ver",
+    "configuracion.ver",
+    "empresas.ver",
+    "invitaciones.ver",
+    "soporte.buscar_referencia",
+    "soporte.explicar",
+    "tenants.ver",
+    "trabajos.ver_fallidos",
+  ],
+  CREA_AMPLIA: ["empresas.alta", "empresas.reactivar", "personas.reactivar", "tenants.reactivar"],
+  COMPLETA_CIERRA: [
+    "altas.cancelar",
+    "altas.reenviar_invitacion",
+    "altas.revocar_invitacion",
+    "empresas.suspender",
+    "personas.suspender",
+    "tenants.suspender",
+  ],
+} as const;
+
+describe("el efecto de cada acción de plataforma", () => {
+  const acciones = Object.entries(CATALOGO_DE_PLATAFORMA.plataforma.acciones);
+  const de = (efecto: string) =>
+    acciones
+      .filter(([, definicion]) => definicion.efecto === efecto)
+      .map(([nombre]) => nombre)
+      .sort();
+
+  it("tabla de efectos: qué acción de plataforma mira, crea o amplía, o completa y cierra", () => {
+    expect({
+      LECTURA: de("LECTURA"),
+      CREA_AMPLIA: de("CREA_AMPLIA"),
+      COMPLETA_CIERRA: de("COMPLETA_CIERRA"),
+    }).toEqual(EFECTOS_DE_PLATAFORMA);
+  });
+
+  it("las 18 acciones tienen exactamente un efecto, y ninguna queda sin clasificar", () => {
+    const clasificadas = Object.values(EFECTOS_DE_PLATAFORMA).flat().sort();
+    expect(clasificadas).toEqual(TODAS.slice().sort());
+  });
+
+  it("todo lo que la plataforma deja en SOPORTE que cambia datos cierra o completa, no crea", () => {
+    // SOPORTE reenvía y revoca la invitación de un alta: retoma o cierra, no suma nada nuevo.
+    for (const accion of DE_SOPORTE) {
+      const efecto = CATALOGO_DE_PLATAFORMA.plataforma.acciones[accion].efecto;
+      expect(efecto === "LECTURA" || efecto === "COMPLETA_CIERRA", accion).toBe(true);
+    }
+  });
+});
+
+describe("el guard de plataforma ante la solo lectura", () => {
+  it("la plataforma es obligatoria: marcarla en solo lectura no cambia ninguna decisión", () => {
+    const activos = modulosActivosDe(CATALOGO_DE_PLATAFORMA, []);
+    for (const rol of ROLES_DE_PLATAFORMA) {
+      for (const accion of TODAS) {
+        const datos = { rol, modulosActivos: activos, capacidadesDeSucursal: null } as const;
+        expect(
+          evaluarGuard(REGLAS_DE_PLATAFORMA, accion, {
+            ...datos,
+            modulosEnSoloLectura: new Set(["plataforma"] as const),
+          }),
+          `${rol} ${accion}`,
+        ).toEqual(evaluarGuard(REGLAS_DE_PLATAFORMA, accion, datos));
+      }
+    }
   });
 });

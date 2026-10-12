@@ -6,8 +6,35 @@
 
 export type EstadoDeConstruccion = "disponible" | "en_desarrollo";
 
-/** Una acción del módulo. `capacidad`: la capacidad de sucursal que exige, o `null` si no exige ninguna. */
-export type DefinicionDeAccion<C extends string = string> = Readonly<{ capacidad: C | null }>;
+/**
+ * Qué hace una acción con lo que la empresa ya tiene (reglas transversales §7.9). Decide qué pasa
+ * cuando un módulo queda en SOLO LECTURA (una baja de plan lo dejó fuera del techo):
+ *  - `LECTURA`: solo mira. Se permite.
+ *  - `COMPLETA_CIERRA`: escritura que completa, cierra, cancela o reduce lo ya iniciado (cerrar una
+ *    cuenta, cancelar, anular, apagar, desactivar, responder una propuesta). Se permite: una baja de
+ *    plan no deja obligaciones existentes bloqueadas sin salida.
+ *  - `CREA_AMPLIA`: escritura que crea algo nuevo o amplía lo que hay (alta, cambio de configuración,
+ *    reactivar, ampliar un alcance). Se rechaza con `MODULO_EN_SOLO_LECTURA`.
+ * Ante la duda entre las dos escrituras, la acción es `CREA_AMPLIA`: bloquear de más es visible y se
+ * corrige reclasificando; permitir de más deja crecer un módulo que el plan ya no incluye.
+ */
+export type EfectoDeAccion = "LECTURA" | "CREA_AMPLIA" | "COMPLETA_CIERRA";
+
+/** Los tres efectos, en una lista que las pruebas recorren (el tipo `EfectoDeAccion` es la fuente). */
+export const EFECTOS_DE_ACCION = [
+  "LECTURA",
+  "CREA_AMPLIA",
+  "COMPLETA_CIERRA",
+] as const satisfies readonly EfectoDeAccion[];
+
+/**
+ * Una acción del módulo. `capacidad`: la capacidad de sucursal que exige, o `null` si no exige ninguna.
+ * `efecto`: obligatorio en TODA acción (una acción sin clasificar no compila): ver `EfectoDeAccion`.
+ */
+export type DefinicionDeAccion<C extends string = string> = Readonly<{
+  capacidad: C | null;
+  efecto: EfectoDeAccion;
+}>;
 
 export type DefinicionDeModulo = Readonly<{
   estado: EstadoDeConstruccion;
@@ -29,6 +56,14 @@ export type CatalogoComercial = Readonly<Record<string, DefinicionDeModulo>>;
  * Un solo módulo real: `administracion`, obligatorio (no hay tabla de módulos activos: ver la
  * especificación de H4, §B.4). Una acción por caso de uso (cruce X1); quién puede cada una se
  * define en `permisos/empresa.ts`.
+ *
+ * Es el NÚCLEO (empresas, sucursales, identidad): no depende de un plan, así que nunca queda en solo
+ * lectura (el guard ignora ese estado en los módulos obligatorios). Aun así cada acción declara su
+ * `efecto`, para que el día que un módulo con plan copie el patrón no haya acciones sin clasificar.
+ * Criterio: lo que quita, cierra o responde algo ya iniciado (apagar, revocar o reenviar una
+ * invitación, desactivar una sucursal, cancelar, aceptar o rechazar un traspaso) es `COMPLETA_CIERRA`;
+ * lo que da de alta, cambia la configuración, reactiva o amplía un alcance (invitar, asignar
+ * sucursales, crear, editar y reactivar sucursales, proponer un traspaso) es `CREA_AMPLIA`.
  */
 export const CATALOGO_DE_MODULOS = {
   administracion: {
@@ -39,24 +74,24 @@ export const CATALOGO_DE_MODULOS = {
     datosRequeridos: [],
     implementadoPor: ["modulos/identidad", "modulos/empresas"],
     acciones: {
-      "usuarios.invitar": { capacidad: null },
-      "usuarios.reenviar_invitacion": { capacidad: null },
-      "usuarios.apagar": { capacidad: null },
-      "usuarios.ver": { capacidad: null },
-      "usuarios.asignar_sucursales": { capacidad: null },
-      "usuarios.revocar_invitacion": { capacidad: null },
-      "sucursales.ver": { capacidad: null },
-      "sucursales.crear": { capacidad: null },
-      "sucursales.editar": { capacidad: null },
-      "sucursales.desactivar": { capacidad: null },
-      "sucursales.reactivar": { capacidad: null },
-      "gerencia.proponer_traspaso": { capacidad: null },
-      "gerencia.cancelar_traspaso": { capacidad: null },
-      "gerencia.ver_traspaso": { capacidad: null },
-      "gerencia.aceptar_traspaso": { capacidad: null },
-      "gerencia.rechazar_traspaso": { capacidad: null },
-      "modulos.ver": { capacidad: null },
-      "permisos.ver_propios": { capacidad: null },
+      "usuarios.invitar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "usuarios.reenviar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "usuarios.apagar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "usuarios.ver": { capacidad: null, efecto: "LECTURA" },
+      "usuarios.asignar_sucursales": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "usuarios.revocar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "sucursales.ver": { capacidad: null, efecto: "LECTURA" },
+      "sucursales.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "sucursales.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "sucursales.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "sucursales.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "gerencia.proponer_traspaso": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "gerencia.cancelar_traspaso": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "gerencia.ver_traspaso": { capacidad: null, efecto: "LECTURA" },
+      "gerencia.aceptar_traspaso": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "gerencia.rechazar_traspaso": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "modulos.ver": { capacidad: null, efecto: "LECTURA" },
+      "permisos.ver_propios": { capacidad: null, efecto: "LECTURA" },
     },
   },
 } as const satisfies CatalogoComercial;

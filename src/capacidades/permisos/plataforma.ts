@@ -20,6 +20,11 @@ export type RolDePlataforma = (typeof ROLES_DE_PLATAFORMA)[number];
  * Un único "módulo" `plataforma`, obligatorio y disponible, sin capacidades de sucursal: así el guard
  * de plataforma solo puede devolver `SIN_PERMISO` (no hay empresa, ni módulos activables, ni
  * sucursal). Una acción por caso de uso o consulta (cruce X1); quién puede cada una está abajo.
+ *
+ * Es obligatorio: nunca está en solo lectura (el guard lo ignora en los módulos obligatorios). El
+ * `efecto` se declara igual, por uniformidad del tipo y para que ninguna acción quede sin clasificar:
+ * mirar es `LECTURA`; dar de alta, y reactivar lo suspendido, es `CREA_AMPLIA`; suspender, cancelar un
+ * alta y reenviar o revocar su invitación es `COMPLETA_CIERRA`.
  */
 export const CATALOGO_DE_PLATAFORMA = {
   plataforma: {
@@ -30,24 +35,24 @@ export const CATALOGO_DE_PLATAFORMA = {
     datosRequeridos: [],
     implementadoPor: ["plataforma"],
     acciones: {
-      "tenants.ver": { capacidad: null },
-      "empresas.ver": { capacidad: null },
-      "invitaciones.ver": { capacidad: null },
-      "trabajos.ver_fallidos": { capacidad: null },
-      "auditoria.ver": { capacidad: null },
-      "configuracion.ver": { capacidad: null },
-      "soporte.buscar_referencia": { capacidad: null },
-      "soporte.explicar": { capacidad: null },
-      "altas.reenviar_invitacion": { capacidad: null },
-      "altas.revocar_invitacion": { capacidad: null },
-      "empresas.alta": { capacidad: null },
-      "altas.cancelar": { capacidad: null },
-      "tenants.suspender": { capacidad: null },
-      "tenants.reactivar": { capacidad: null },
-      "empresas.suspender": { capacidad: null },
-      "empresas.reactivar": { capacidad: null },
-      "personas.suspender": { capacidad: null },
-      "personas.reactivar": { capacidad: null },
+      "tenants.ver": { capacidad: null, efecto: "LECTURA" },
+      "empresas.ver": { capacidad: null, efecto: "LECTURA" },
+      "invitaciones.ver": { capacidad: null, efecto: "LECTURA" },
+      "trabajos.ver_fallidos": { capacidad: null, efecto: "LECTURA" },
+      "auditoria.ver": { capacidad: null, efecto: "LECTURA" },
+      "configuracion.ver": { capacidad: null, efecto: "LECTURA" },
+      "soporte.buscar_referencia": { capacidad: null, efecto: "LECTURA" },
+      "soporte.explicar": { capacidad: null, efecto: "LECTURA" },
+      "altas.reenviar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "altas.revocar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "empresas.alta": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "altas.cancelar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "tenants.suspender": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "tenants.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "empresas.suspender": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "empresas.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "personas.suspender": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "personas.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
 } as const satisfies CatalogoComercial;

@@ -53,8 +53,29 @@ export function letraDeComprobante(tipo: TipoDeComprobante): LetraDeComprobante 
 
 export type EstadoDeComprobante = "PENDIENTE" | "AUTORIZADO" | "RECHAZADO" | "INCIERTO";
 
-/** De dónde nace el comprobante. Hoy solo una venta. */
-export type OrigenDeComprobante = Readonly<{ tipo: "VENTA"; id: OrigenId }>;
+/**
+ * Catálogo cerrado de tipos de origen (spec H7 §B, ADR-014). Fiscal NO los interpreta: son nombres
+ * opacos que sirven para distinguir de dónde nace un comprobante y para la clave de idempotencia.
+ * Quien factura pone el tipo y el identificador; un módulo nuevo que factura suma un tipo acá, sin
+ * cambiar ninguna lógica. El facturador solo usa `MANUAL` (id = la clave de idempotencia que manda el
+ * cliente); `SUSCRIPCION` es la facturación del SaaS, futura.
+ */
+export const TIPOS_DE_ORIGEN = [
+  "MANUAL",
+  "EJEMPLAR_DE_TICKET",
+  "PROPINA_DE_TICKET",
+  "CORRECCION_DE_TICKET",
+  "SUSCRIPCION",
+] as const;
+
+export type TipoDeOrigen = (typeof TIPOS_DE_ORIGEN)[number];
+
+export function esTipoDeOrigen(texto: string): texto is TipoDeOrigen {
+  return (TIPOS_DE_ORIGEN as readonly string[]).includes(texto);
+}
+
+/** De dónde nace el comprobante: un tipo del catálogo y el identificador que da quien factura. */
+export type OrigenDeComprobante = Readonly<{ tipo: TipoDeOrigen; id: OrigenId }>;
 
 /**
  * Los datos del emisor tal como estaban al emitir: el CUIT, la razón social, la condición frente al
@@ -71,11 +92,13 @@ export type InstantaneaDeEmisor = Readonly<{
 }>;
 
 /**
- * Clave de idempotencia futura del comprobante `(empresa, origen, emisor, clase)`: una venta genera
- * a lo sumo un comprobante de cada clase por emisor. Repetir el pedido devuelve el mismo.
+ * Clave de idempotencia futura del comprobante `(empresa, origen_tipo, origen_id, emisor, clase)`:
+ * un origen genera a lo sumo un comprobante de cada clase por emisor. Repetir el pedido devuelve el
+ * mismo. El tipo forma parte de la clave: el mismo id con otro tipo de origen es otro origen.
  */
 export type ClaveDeIdempotenciaDeComprobante = Readonly<{
   empresaId: EmpresaId;
+  origenTipo: TipoDeOrigen;
   origenId: OrigenId;
   emisorId: EmisorId;
   clase: ClaseDeComprobante;
@@ -87,7 +110,13 @@ export function claveDeIdempotenciaDeComprobante(
   emisorId: EmisorId,
   tipo: TipoDeComprobante,
 ): ClaveDeIdempotenciaDeComprobante {
-  return { empresaId, origenId: origen.id, emisorId, clase: claseDeComprobante(tipo) };
+  return {
+    empresaId,
+    origenTipo: origen.tipo,
+    origenId: origen.id,
+    emisorId,
+    clase: claseDeComprobante(tipo),
+  };
 }
 
 /**

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { modulosActivosDe } from "../modulos/activos";
 import { CATALOGO_DE_MODULOS, type ClaveAccion, type ClaveModulo } from "../modulos/catalogo";
-import { PERMISOS_DE_EMPRESA, REGLAS_DE_EMPRESA, tablaDePermisos } from "./empresa";
+import {
+  PERMISOS_DE_EMPRESA,
+  REGLAS_DE_EMPRESA,
+  tablaDePermisos,
+  type ReglasDeEmpresa,
+} from "./empresa";
 import { evaluarGuard } from "./guard";
 import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "./roles";
 
@@ -190,5 +195,51 @@ describe("el guard con las reglas reales", () => {
         capacidadesDeSucursal: null,
       }),
     ).toEqual({ ok: false, error: "MODULO_NO_ACTIVO" });
+  });
+});
+
+describe("el guard con las reglas reales y la solo lectura (corrección 16)", () => {
+  const acciones = Object.keys(PERMISOS_DE_EMPRESA) as ClaveAccion[];
+  const enSoloLectura = new Set<ClaveModulo>(["administracion"]);
+  const activos = modulosActivosDe(CATALOGO_DE_MODULOS, []);
+
+  it("el núcleo no depende de un plan: marcarlo en solo lectura no cambia ninguna decisión", () => {
+    for (const rol of ROLES_DE_EMPRESA) {
+      for (const accion of acciones) {
+        const datos = { rol, modulosActivos: activos, capacidadesDeSucursal: null } as const;
+        expect(
+          evaluarGuard(REGLAS_DE_EMPRESA, accion, {
+            ...datos,
+            modulosEnSoloLectura: enSoloLectura,
+          }),
+          `${rol} ${accion}`,
+        ).toEqual(evaluarGuard(REGLAS_DE_EMPRESA, accion, datos));
+      }
+    }
+  });
+
+  it("si un día el módulo fuera activable y quedara en solo lectura, el gerente solo perdería lo que crea o amplía", () => {
+    const activable: ReglasDeEmpresa = {
+      catalogo: {
+        administracion: { ...CATALOGO_DE_MODULOS.administracion, obligatorio: false },
+      },
+      permisos: PERMISOS_DE_EMPRESA,
+    };
+    for (const accion of acciones) {
+      const efecto = CATALOGO_DE_MODULOS.administracion.acciones[accion].efecto;
+      expect(
+        evaluarGuard(activable, accion, {
+          rol: "GERENTE",
+          modulosActivos: new Set<ClaveModulo>(),
+          modulosEnSoloLectura: enSoloLectura,
+          capacidadesDeSucursal: null,
+        }),
+        `${accion} (${efecto})`,
+      ).toEqual(
+        efecto === "CREA_AMPLIA"
+          ? { ok: false, error: "MODULO_EN_SOLO_LECTURA" }
+          : { ok: true, valor: null },
+      );
+    }
   });
 });

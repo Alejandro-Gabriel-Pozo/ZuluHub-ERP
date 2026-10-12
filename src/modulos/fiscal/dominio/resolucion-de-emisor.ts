@@ -10,19 +10,19 @@ import {
 } from "./vigencia";
 
 /**
- * Regla de resolución del emisor (spec H7 §B.6, nivel 4): el emisor de cada línea de una venta se
+ * Regla de resolución del emisor (spec H7 §B.6, nivel 4): el emisor de cada línea a facturar se
  * resuelve en UN solo lugar, con una regla enchufable, versionada y confirmada por el gerente.
  *
  * Cascada (`funciones-de-pago.md`):
  * 1. producto o depósito EXCLUSIVO de un emisor: ese emisor. Si el producto y el depósito dicen
  *    emisores distintos es `EMISOR_EN_CONFLICTO` (no se descuenta stock de un depósito ajeno a su
  *    emisor). Lo exclusivo es una invariante, no una preferencia: ninguna regla lo pisa;
- * 2. el punto de venta elegido para la venta: su emisor;
+ * 2. el punto de venta elegido para lo que se factura: su emisor;
  * 3. la elección manual, solo si la regla la permite.
  *
  * «Enchufable» es un parámetro de tipo cerrado (`ReglaDeEmisor`): un paso nuevo (por ejemplo la
  * caja) es un campo y un caso más en este tipo, no un motor genérico. Función pura: sin reloj, sin
- * azar y sin I/O; los datos los aportan el catálogo, el stock y la venta.
+ * azar y sin I/O; los datos los aportan el catálogo, el stock y quien factura.
  */
 export type ReglaDeEmisor = Readonly<{ permitirEleccionManual: boolean }>;
 
@@ -82,7 +82,7 @@ export type DatosDeLinea = Readonly<{
   emisorDelDeposito: EmisorId | null;
 }>;
 
-export type DatosDeVenta = Readonly<{
+export type DatosAFacturar = Readonly<{
   puntoDeVentaElegido: Readonly<{ id: PuntoDeVentaId; emisorId: EmisorId }> | null;
   eleccionManual: EmisorId | null;
   /** Los emisores que hoy pueden emitir. Resolver a uno que no está acá es un error. */
@@ -99,7 +99,7 @@ export type EmisorResuelto = Readonly<{ emisorId: EmisorId; motivo: MotivoDeEmis
 /** Orden de los errores: conflicto exclusivo, y recién después que el emisor elegido esté activo. */
 export function resolverEmisor(
   regla: ReglaDeEmisor,
-  venta: DatosDeVenta,
+  datos: DatosAFacturar,
   linea: DatosDeLinea,
 ): Resultado<EmisorResuelto, ErrorDeResolucion> {
   const { emisorDelProducto, emisorDelDeposito } = linea;
@@ -111,21 +111,21 @@ export function resolverEmisor(
     return err("EMISOR_EN_CONFLICTO");
   }
   const exclusivo = emisorDelProducto ?? emisorDelDeposito;
-  if (exclusivo !== null) return conActivo(venta, exclusivo, "EXCLUSIVO");
-  if (venta.puntoDeVentaElegido !== null) {
-    return conActivo(venta, venta.puntoDeVentaElegido.emisorId, "PUNTO_DE_VENTA");
+  if (exclusivo !== null) return conActivo(datos, exclusivo, "EXCLUSIVO");
+  if (datos.puntoDeVentaElegido !== null) {
+    return conActivo(datos, datos.puntoDeVentaElegido.emisorId, "PUNTO_DE_VENTA");
   }
-  if (venta.eleccionManual === null) return err("EMISOR_NO_RESUELTO");
+  if (datos.eleccionManual === null) return err("EMISOR_NO_RESUELTO");
   if (!regla.permitirEleccionManual) return err("ELECCION_MANUAL_NO_PERMITIDA");
-  return conActivo(venta, venta.eleccionManual, "MANUAL");
+  return conActivo(datos, datos.eleccionManual, "MANUAL");
 }
 
 function conActivo(
-  venta: DatosDeVenta,
+  datos: DatosAFacturar,
   emisorId: EmisorId,
   motivo: MotivoDeEmisor,
 ): Resultado<EmisorResuelto, ErrorDeResolucion> {
-  return venta.emisoresActivos.has(emisorId) ? ok({ emisorId, motivo }) : err("EMISOR_INACTIVO");
+  return datos.emisoresActivos.has(emisorId) ? ok({ emisorId, motivo }) : err("EMISOR_INACTIVO");
 }
 
 export type LineaParaResolver = DatosDeLinea & Readonly<{ posicion: number }>;
@@ -138,15 +138,15 @@ export type LineaConEmisor = Readonly<{
 
 export type ErrorDeResolucionDeLinea = Readonly<{ posicion: number; error: ErrorDeResolucion }>;
 
-/** Resuelve el emisor de cada línea de la venta; el primer error (en orden de líneas) corta y dice cuál línea. */
+/** Resuelve el emisor de cada línea a facturar; el primer error (en orden de líneas) corta y dice cuál línea. */
 export function resolverEmisoresDeLineas(
   regla: ReglaDeEmisor,
-  venta: DatosDeVenta,
+  datos: DatosAFacturar,
   lineas: readonly LineaParaResolver[],
 ): Resultado<readonly LineaConEmisor[], ErrorDeResolucionDeLinea> {
   const resueltas: LineaConEmisor[] = [];
   for (const linea of lineas) {
-    const r = resolverEmisor(regla, venta, linea);
+    const r = resolverEmisor(regla, datos, linea);
     if (!r.ok) return err({ posicion: linea.posicion, error: r.error });
     resueltas.push({ posicion: linea.posicion, ...r.valor });
   }
