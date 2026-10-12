@@ -7,10 +7,11 @@ import {
   type ClaveDeContexto,
 } from "../../src/adaptadores/postgres/contexto-firmado";
 import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
+import { sembrarAdminsDePrueba } from "./admins-de-prueba";
 
 /**
  * Base compartida de las pruebas de integración: se crea una base descartable, se migra, se les da
- * LOGIN a los cuatro roles con contraseñas al azar de esta corrida, y se borra al terminar.
+ * LOGIN a los cinco roles con contraseñas al azar de esta corrida, y se borra al terminar.
  *
  * Variable: PRUEBAS_DATABASE_URL = cadena de un rol con permiso para crear bases y roles (por
  * ejemplo, un Postgres local o el servicio del CI). El valor no está en el repositorio.
@@ -26,6 +27,8 @@ export type BaseDePruebas = Readonly<{
   grupo: string;
   trabajos: string;
   plataforma: string;
+  /** El rol de la librería de autenticación (sin acceso a tablas de negocio). */
+  autenticacion: string;
   /** Clave de firma del contexto de ESTA corrida (kid 1), instalada en la base con `dueno`. */
   clave: ClaveDeContexto;
 }>;
@@ -36,7 +39,7 @@ declare module "vitest" {
   }
 }
 
-const ROLES = ["app", "grupo", "trabajos", "plataforma"] as const;
+const ROLES = ["app", "grupo", "trabajos", "plataforma", "autenticacion"] as const;
 
 function conBase(url: string, base: string): string {
   const u = new URL(url);
@@ -79,6 +82,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
   // Clave de contexto al azar por corrida: nunca se repite ni se escribe en el repositorio.
   const claveDeContexto: ClaveDeContexto = { kid: 1, secreto: randomBytes(32) };
   await instalarClaveDeContexto(urlDueno, claveDeContexto);
+  await sembrarAdminsDePrueba(urlDueno);
 
   const claves = Object.fromEntries(ROLES.map((r) => [r, randomBytes(18).toString("hex")]));
   for (const rol of ROLES) {
@@ -94,6 +98,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
     grupo: url("grupo"),
     trabajos: url("trabajos"),
     plataforma: url("plataforma"),
+    autenticacion: url("autenticacion"),
     clave: claveDeContexto,
   });
 

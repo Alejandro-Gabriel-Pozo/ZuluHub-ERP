@@ -28,3 +28,7 @@ export const sucursalId = (valor: string): SucursalId => crear<SucursalId>("Sucu
 export type InvitacionId = Marca<string, "InvitacionId">;
 export const invitacionId = (valor: string): InvitacionId =>
   crear<InvitacionId>("InvitacionId", valor);
+/** Administrador de plataforma: identidad propia, distinta de `Persona` (diseno-inicial §5). */
+export type AdminPlataformaId = Marca<string, "AdminPlataformaId">;
+export const adminPlataformaId = (valor: string): AdminPlataformaId =>
+  crear<AdminPlataformaId>("AdminPlataformaId", valor);

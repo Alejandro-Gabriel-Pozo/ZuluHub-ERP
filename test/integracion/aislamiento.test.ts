@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type { Contexto } from "../../src/contexto/contexto";
 import { personaId, type PersonaId } from "../../src/primitivas/identificadores/marca";
 import { ok } from "../../src/primitivas/resultado/resultado";
+import { ADMIN_DE_PRUEBA } from "./admins-de-prueba";
 import {
   comoEmpresa,
   comoGrupo,
@@ -686,7 +687,7 @@ describe.skipIf(base === null)("aislamiento por empresa (RLS)", () => {
         contexto: comoPlataforma,
         consulta: () =>
           sql`insert into auditoria_plataforma (actor, accion, entidad, entidad_id, creado_en)
-              values ('admin-de-prueba', 'PRUEBA', 'tenant', 'x', ${hace})`,
+              values (${ADMIN_DE_PRUEBA}, 'PRUEBA', 'tenant', 'x', ${hace})`,
       },
       {
         nombre: "plataforma: una persona dada de alta ya desactivada globalmente",
@@ -814,7 +815,7 @@ describe.skipIf(base === null)("aislamiento por empresa (RLS)", () => {
       const dueno_ = await crearPropietario(entorno, a.tenant);
       await entorno.ejecutar({ contexto: comoPlataforma() }, async ({ db }) => {
         await sql`insert into auditoria_plataforma (actor, accion, entidad, entidad_id)
-                  values ('admin-de-prueba', 'PRUEBA', 'tenant', 'x')`.execute(db);
+                  values (${ADMIN_DE_PRUEBA}, 'PRUEBA', 'tenant', 'x')`.execute(db);
         return ok(null);
       });
       await entorno.ejecutar({ contexto: comoGrupo(a.tenant, dueno_) }, async ({ db }) => {
