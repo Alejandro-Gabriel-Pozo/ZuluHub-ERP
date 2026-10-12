@@ -121,6 +121,14 @@ const reglas = [
     to: { path: "^src/modulos/tenants/" },
   },
   {
+    name: "adaptadores-de-efectos-genericos",
+    severity: "error",
+    comment:
+      "El procesador de la cola y el correo son mecanismos genéricos (ADR-007): no conocen ningún módulo de negocio. Cada tipo de trabajo trae su manejador desde la composición.",
+    from: { path: "^src/adaptadores/(trabajos|correo)/" },
+    to: { path: "^src/modulos/" },
+  },
+  {
     name: "dominio-sin-guard",
     severity: "error",
     comment:

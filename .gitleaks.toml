@@ -1,0 +1,20 @@
+# Configuración de gitleaks: las reglas por defecto más UNA excepción angosta.
+[extend]
+useDefault = true
+
+# Valores inventados que las pruebas usan a propósito para comprobar que un token nunca aparece en
+# errores ni en la auditoría. Solo se ignoran en esos tres archivos y solo estos valores (la
+# segunda cadena es la decodificación en base64 de la primera: gitleaks también la analiza).
+[[allowlists]]
+description = "Tokens de juguete de las pruebas de no-filtración de secretos"
+condition = "AND"
+paths = [
+  '''^src/adaptadores/trabajos/error-seguro\.test\.ts$''',
+  '''^src/adaptadores/trabajos/procesador\.test\.ts$''',
+  '''^test/integracion/trabajos-cola\.test\.ts$''',
+]
+regexes = [
+  '''^A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8S9t0-_$''',
+  '''^Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MGFiY2RlZmdoaWo$''',
+  '''^foobarbazqux1234567890abcdefghij$''',
+]
