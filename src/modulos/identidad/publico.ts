@@ -3,8 +3,13 @@ export { emailDesdeTexto, type Email } from "./dominio/email";
 export type { EmpresaNoOpera, EstadosDeEmpresa } from "../../contexto/estados";
 export type {
   ErrorDeAceptacion,
+  ErrorDeAceptacionDeTraspaso,
+  ErrorDeAsignaciones,
+  ErrorDeCancelacionDeTraspaso,
   ErrorDeInvitacion,
   ErrorDeMembresia,
+  ErrorDePropuestaDeTraspaso,
+  ErrorDeRechazoDeTraspaso,
   ErrorDeReenvioDeAlta,
   ErrorDeRevocacion,
   ErrorDeSucursalesDeInvitacion,
@@ -40,6 +45,30 @@ export {
   type TipoDeInvitacion,
 } from "./dominio/invitacion";
 export { decidirApagado, type Membresia, type Persona } from "./dominio/membresia";
+export {
+  decidirAsignaciones,
+  type AsignacionActual,
+  type CambioDeAsignaciones,
+  type SucursalDeLaEmpresa,
+} from "./dominio/asignacion";
+export {
+  PLAZO_DEL_TRASPASO_EN_MS,
+  TRANSICIONES_DE_TRASPASO,
+  decidirAceptacionDeTraspaso,
+  decidirCancelacion,
+  decidirPropuesta,
+  decidirRechazo,
+  estadoDeTraspaso,
+  vencimientoDeTraspaso,
+  type DecisionDeAceptacionDeTraspaso,
+  type DecisionDeCancelacion,
+  type DecisionDePropuesta,
+  type DecisionDeRechazo,
+  type EstadoDeTraspaso,
+  type EstadoGuardadoDeTraspaso,
+  type OrigenDeTraspaso,
+  type Traspaso,
+} from "./dominio/traspaso";
 export {
   armarEnlaceDeInvitacion,
   armarMensajeDeInvitacion,
