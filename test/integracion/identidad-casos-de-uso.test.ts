@@ -846,10 +846,12 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
 
     it("el último admin no se apaga: ULTIMO_ADMIN (sin gerente activo)", async () => {
       const e = await escenario();
-      await dueno.query(
-        "update membresia set activo = false where empresa_id = $1 and persona_id = $2",
-        [e.empresa, e.gerente],
-      );
+      // Desde 0005 la base no deja apagar a un gerente (`membresia_gerente_no_se_apaga`): una empresa
+      // sin gerente activo se arma quitando su membresía, como el dueño de la base.
+      await dueno.query("delete from membresia where empresa_id = $1 and persona_id = $2", [
+        e.empresa,
+        e.gerente,
+      ]);
       const unico = await miembro(e, "ADMINISTRADOR");
       const operador = await miembro(e, "OPERADOR");
       expect(await casos.apagarMembresia(unico.ctx, { personaId: unico.id })).toEqual({

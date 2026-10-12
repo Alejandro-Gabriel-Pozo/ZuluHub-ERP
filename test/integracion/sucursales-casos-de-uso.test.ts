@@ -247,9 +247,16 @@ describe.skipIf(base === null)(
         const e = await escenario();
         const primera = await casos.crearSucursal(e.ctx, { nombre: "Café Norte" });
         if (!primera.ok) throw new Error("tenía que salir bien");
-        // Las mayúsculas se prueban con letras ASCII: `lower()` de la base depende de su locale (en una
-        // base con locale C no pliega "É" con "é"), y eso está anotado como riesgo del tramo.
-        for (const nombre of ["CAFé NORTE", "café norte", "Café Norte", "  Café Norte  "]) {
+        // Con acentos y en una base con locale C (la de las pruebas): desde 0005 el índice usa un orden ICU
+        // y no `lower()`, que en locale C no pliega «É» con «é».
+        for (const nombre of [
+          "CAFé NORTE",
+          "CAFÉ NORTE",
+          "café norte",
+          "Café Norte",
+          "  Café Norte  ",
+          "Cafe\u0301 Norte",
+        ]) {
           const r = await casos.crearSucursal(e.ctx, { nombre });
           expect(r, nombre).toEqual({
             ok: true,
@@ -400,6 +407,20 @@ describe.skipIf(base === null)(
             sucursalId: e.sucursal,
             versionEsperada: 1,
             nombre: "SUCURSAL NORTE",
+          }),
+        ).toEqual({ ok: false, error: "SUCURSAL_DUPLICADA" });
+        expect(await foto(e.empresa)).toBe(antes);
+      });
+
+      it("un nombre que difiere solo en la mayúscula de una letra con acento también da SUCURSAL_DUPLICADA (sin depender del locale)", async () => {
+        const e = await escenario();
+        await sucursalNueva(e, "Café Norte");
+        const antes = await foto(e.empresa);
+        expect(
+          await casos.editarSucursal(e.ctx, {
+            sucursalId: e.sucursal,
+            versionEsperada: 1,
+            nombre: "CAFÉ NORTE",
           }),
         ).toEqual({ ok: false, error: "SUCURSAL_DUPLICADA" });
         expect(await foto(e.empresa)).toBe(antes);

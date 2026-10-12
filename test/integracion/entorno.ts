@@ -55,6 +55,7 @@ import { crearColaDePostgres, type ColaDb } from "../../src/adaptadores/postgres
 import type { ColaDeTrabajos } from "../../src/puertos/cola-de-trabajos";
 import { ADMIN_DE_PRUEBA, sembrarAdminsDePrueba } from "./admins-de-prueba";
 import type { BaseDePruebas } from "./global";
+import { OPCIONES_DE_BASE } from "./opciones-de-base";
 
 /**
  * Armado común de las pruebas de integración. Lo que recibe un trabajo de prueba es lo que
@@ -258,7 +259,7 @@ export async function crearBaseAparte(
   const nombre = `zuluhub_it_${randomBytes(6).toString("hex")}`;
   const admin = new pg.Client({ connectionString: base.admin });
   await admin.connect();
-  await admin.query(`CREATE DATABASE ${nombre}`);
+  await admin.query(`CREATE DATABASE ${nombre} ${OPCIONES_DE_BASE}`);
   const conBase = (url: string) => {
     const u = new URL(url);
     u.pathname = `/${nombre}`;

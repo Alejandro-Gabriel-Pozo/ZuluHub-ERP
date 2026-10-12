@@ -123,4 +123,31 @@ export const ERRORES_DE_IDENTIDAD_POR_RESTRICCION: Readonly<Record<string, strin
   invitacion_sucursal_invitacion_empresa_fkey: "EMPRESA_NO_INVITADA",
   invitacion_sucursal_sucursal_fkey: "SUCURSAL_NO_ES_DE_LA_EMPRESA",
   invitacion_sucursal_empresa_id_fkey: "EMPRESA_INEXISTENTE",
+
+  // membresia (0005, H6): las dos las lanza un disparador (`membresia_cambio`)
+  membresia_gerente_no_se_apaga: "ES_EL_GERENTE",
+  membresia_rol_sin_traspaso: "NO_TRADUCIDA", // el dominio decide antes; si salta, es un defecto
+
+  // traspaso_gerencia (0005, H6). Los ocho últimos los lanzan disparadores.
+  traspaso_gerencia_pkey: "NO_TRADUCIDA",
+  traspaso_gerencia_empresa_id_fkey: "EMPRESA_INEXISTENTE",
+  traspaso_gerencia_entrante_fkey: "ENTRANTE_NO_ES_MIEMBRO",
+  traspaso_gerencia_saliente_fkey: "SALIENTE_YA_NO_ES_GERENTE",
+  traspaso_gerencia_propuesto_por_fkey: "PERSONA_INEXISTENTE",
+  traspaso_gerencia_origen_ck: "NO_TRADUCIDA",
+  traspaso_gerencia_estado_ck: "NO_TRADUCIDA",
+  traspaso_gerencia_distintos_ck: "ENTRANTE_ES_EL_GERENTE",
+  traspaso_gerencia_vence_ck: "VENCIMIENTO_INVALIDO",
+  traspaso_gerencia_resolucion_ck: "NO_TRADUCIDA",
+  traspaso_gerencia_aceptado_ck: "TRASPASO_VENCIDO",
+  traspaso_gerencia_motivo_ck: "NO_TRADUCIDA",
+  traspaso_gerencia_en_curso_uk: "TRASPASO_EN_CURSO",
+  traspaso_entrante_inactivo: "ENTRANTE_INACTIVO",
+  traspaso_entrante_es_el_gerente: "ENTRANTE_ES_EL_GERENTE",
+  traspaso_saliente_no_es_gerente: "SALIENTE_YA_NO_ES_GERENTE",
+  traspaso_cancela_sin_permiso: "NO_TRADUCIDA", // el guard decide antes; si salta, es un defecto
+  traspaso_aceptado_incompleto: "NO_TRADUCIDA", // lo lanza la restricción diferida, al confirmar
+  traspaso_gerencia_inmutable: "NO_TRADUCIDA",
+  traspaso_gerencia_transicion_invalida: "TRASPASO_RESUELTO",
+  traspaso_gerencia_resuelto_inmutable: "TRASPASO_RESUELTO",
 };

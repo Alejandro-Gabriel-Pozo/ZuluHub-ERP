@@ -77,6 +77,7 @@ const TABLAS_LEGIBLES = [
   "referencia_de_error",
   "tenant",
   "trabajo",
+  "traspaso_gerencia", // 0005 (H6): propone y cancela; lee con el actor vigente
 ] as const;
 
 /** Datos operativos: la plataforma no los lee, con ningún actor. */
@@ -222,6 +223,15 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       tipo: "ALTA_GERENTE",
     });
     await incluirEmpresa(dueno, altaPendiente, enAlta.empresa, "GERENTE");
+    // Un traspaso de gerencia en curso (0005): así "0 filas" de la plataforma no se cumple por vacío.
+    const entrante = await crearPersonaDeBase(dueno);
+    await crearMembresiaDeBase(dueno, activa.empresa, entrante.id, "ADMINISTRADOR");
+    await dueno.query(
+      `insert into traspaso_gerencia (empresa_id, origen, propuesto_por, saliente_persona_id,
+                                      entrante_persona_id, propuesto_en, vence_en)
+       values ($1, 'GERENTE', $2, $2, $3, '2026-10-11T12:00:00Z', '2026-10-18T12:00:00Z')`,
+      [activa.empresa, personaMiembro, entrante.id],
+    );
     usuarioPendiente = await crearInvitacionDeBase(dueno, { tenant: activa.tenant });
     await incluirEmpresa(dueno, usuarioPendiente, activa.empresa, "OPERADOR");
     await dueno.query(
@@ -366,6 +376,13 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           "tenant.tenant_plataforma_leer:SELECT:PERMISSIVE",
           "trabajo.trabajo_plataforma_alta:INSERT:PERMISSIVE",
           "trabajo.trabajo_plataforma_leer:SELECT:PERMISSIVE",
+          // 0005 (H6): el traspaso de gerencia, con sus restrictivas del actor
+          "traspaso_gerencia.traspaso_gerencia_plataforma_alta:INSERT:PERMISSIVE",
+          "traspaso_gerencia.traspaso_gerencia_plataforma_cancelar:UPDATE:PERMISSIVE",
+          "traspaso_gerencia.traspaso_gerencia_plataforma_leer:SELECT:PERMISSIVE",
+          "traspaso_gerencia.traspaso_gerencia_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "traspaso_gerencia.traspaso_gerencia_plataforma_admin_cambiar:UPDATE:RESTRICTIVE",
+          "traspaso_gerencia.traspaso_gerencia_plataforma_con_actor:SELECT:RESTRICTIVE",
           // 0004 (restrictivas: se suman con AND)
           "auditoria_empresa.auditoria_empresa_plataforma_admin:INSERT:RESTRICTIVE",
           "auditoria_plataforma.auditoria_plataforma_actor_firmado:INSERT:RESTRICTIVE",
@@ -2488,11 +2505,15 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       { timeout: 30_000 },
       async () => {
         if (base === null) return;
-        const real = join(import.meta.dirname, "../../migraciones");
+        // Solo hasta 0004: lo que se prueba acá es 0004 sobre 0001 a 0003 (0005 tiene su propia prueba).
+        const carpetaReal = join(import.meta.dirname, "../../migraciones");
         const previas = await mkdtemp(join(tmpdir(), "zuluhub-mig-previas-"));
+        const real = await mkdtemp(join(tmpdir(), "zuluhub-mig-hasta-0004-"));
         for (const archivo of ["0001_base.sql", "0002_identidad.sql", "0003_trabajos.sql"]) {
-          await copyFile(join(real, archivo), join(previas, archivo));
+          await copyFile(join(carpetaReal, archivo), join(previas, archivo));
+          await copyFile(join(carpetaReal, archivo), join(real, archivo));
         }
+        await copyFile(join(carpetaReal, "0004_plataforma.sql"), join(real, "0004_plataforma.sql"));
         const aparte = await crearBaseAparte(base, { migrar: false });
         const cliente = new pg.Client({ connectionString: aparte.base.dueno });
         try {
@@ -2543,6 +2564,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
         } finally {
           await cliente.end().catch(() => undefined);
           await rm(previas, { recursive: true, force: true });
+          await rm(real, { recursive: true, force: true });
           await aparte.destruir();
         }
       },

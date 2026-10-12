@@ -28,6 +28,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0002_identidad.sql",
         "0003_trabajos.sql",
         "0004_plataforma.sql",
+        "0005_administracion.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -37,6 +38,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0002_identidad.sql",
           "0003_trabajos.sql",
           "0004_plataforma.sql",
+          "0005_administracion.sql",
         ],
       });
     } finally {
@@ -144,6 +146,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0002_identidad.sql",
         "0003_trabajos.sql",
         "0004_plataforma.sql",
+        "0005_administracion.sql",
       ]);
     } finally {
       await aparte.destruir();
@@ -380,14 +383,17 @@ describe.skipIf(base === null)("migraciones", () => {
     }
   });
 
-  it.each(["0001_base.sql", "0002_identidad.sql", "0003_trabajos.sql", "0004_plataforma.sql"])(
-    "la migración %s no contiene contraseñas ni cadenas de conexión",
-    async (archivo) => {
-      const sql = await readFile(join(CARPETA_REAL, archivo), "utf8");
-      expect(sql).not.toMatch(/PASSWORD\s+'/i);
-      expect(sql).not.toMatch(/postgres(ql)?:\/\//i);
-    },
-  );
+  it.each([
+    "0001_base.sql",
+    "0002_identidad.sql",
+    "0003_trabajos.sql",
+    "0004_plataforma.sql",
+    "0005_administracion.sql",
+  ])("la migración %s no contiene contraseñas ni cadenas de conexión", async (archivo) => {
+    const sql = await readFile(join(CARPETA_REAL, archivo), "utf8");
+    expect(sql).not.toMatch(/PASSWORD\s+'/i);
+    expect(sql).not.toMatch(/postgres(ql)?:\/\//i);
+  });
 
   it("0002 es compatible hacia atrás: no borra ni reescribe nada, y no agrega ninguna función SECURITY DEFINER", async () => {
     const sql = await readFile(join(CARPETA_REAL, "0002_identidad.sql"), "utf8");
@@ -442,6 +448,60 @@ describe.skipIf(base === null)("migraciones", () => {
       expect(codigo).toMatch(new RegExp(`ALTER TABLE ${tabla} ENABLE ROW LEVEL SECURITY`));
       expect(codigo).toMatch(new RegExp(`ALTER TABLE ${tabla} FORCE ROW LEVEL SECURITY`));
     }
+  });
+
+  it("0005 es aditiva: no borra ni reescribe nada, no agrega SECURITY DEFINER ni roles, nadie recibe DELETE y toda función fija su search_path", async () => {
+    const sql = await readFile(join(CARPETA_REAL, "0005_administracion.sql"), "utf8");
+    const codigo = sql.replace(/--.*$/gm, "");
+    expect(codigo).not.toMatch(/\b(DROP|TRUNCATE|DELETE\s+FROM)\b/i);
+    expect(codigo).not.toMatch(/\bALTER\s+TABLE\s+\w+\s+(DROP|RENAME|ALTER\s+COLUMN)\b/i);
+    expect(codigo).not.toMatch(/\b(ALTER|DROP)\s+POLICY\b/i);
+    expect(codigo).not.toMatch(/SECURITY\s+DEFINER/i);
+    // Ninguna concesión de DELETE, TRUNCATE ni ALL, y ninguna función se otorga (las de disparador no).
+    for (const concesion of codigo.match(/\bGRANT\b[^;]*;/gi) ?? []) {
+      expect(concesion).not.toMatch(/\b(DELETE|TRUNCATE|ALL|EXECUTE)\b/i);
+    }
+    // Roles: no crea ni toca ninguno, y no hay LOGIN ni contraseñas.
+    expect(codigo).not.toMatch(
+      /CREATE\s+(OR\s+REPLACE\s+)?ROLE|ALTER\s+ROLE|(?<!NO)LOGIN|PASSWORD/i,
+    );
+    // Solo agrega: las tablas viejas únicamente reciben restricciones (ADD CONSTRAINT), nada más.
+    for (const alter of codigo.match(/\bALTER\s+TABLE\s+\w+\s+\w+(\s+\w+)?/gi) ?? []) {
+      expect(alter).toMatch(/ALTER\s+TABLE\s+(\w+\s+(ADD\s+CONSTRAINT|ENABLE\s+ROW|FORCE\s+ROW))/i);
+    }
+    // Toda función nueva fija el search_path (con pg_temp al final) y califica con `public.`.
+    const funciones = codigo.match(/CREATE\s+FUNCTION[\s\S]*?\$\$;/gi) ?? [];
+    expect(funciones).toHaveLength(6);
+    for (const funcion of funciones) {
+      expect(funcion).toMatch(/SET\s+search_path\s*=\s*pg_catalog,\s*public,\s*pg_temp/);
+      expect(funcion).not.toMatch(/(?<!DISTINCT\s)\b(FROM|JOIN)\s+(?!public\.)(?!pg_)\w+/);
+    }
+    // Toda tabla nueva activa y fuerza RLS.
+    for (const tabla of codigo.match(/CREATE\s+TABLE\s+(\w+)/gi) ?? []) {
+      const nombre = tabla.split(/\s+/)[2] as string;
+      expect(codigo).toMatch(new RegExp(`ALTER TABLE ${nombre} ENABLE ROW LEVEL SECURITY`));
+      expect(codigo).toMatch(new RegExp(`ALTER TABLE ${nombre} FORCE ROW LEVEL SECURITY`));
+    }
+    // Las políticas de las tablas de 0001 y 0002 que agrega son solo de la aplicación (membresía y
+    // asignación); las de la plataforma sobre la tabla nueva incluyen sus restrictivas del actor.
+    const politicas = [
+      ...codigo.matchAll(
+        /CREATE\s+POLICY\s+(\w+)\s+ON\s+(\w+)\s+(AS\s+RESTRICTIVE\s+)?FOR\s+(\w+)\s+TO\s+(\w+)/gi,
+      ),
+    ];
+    expect(politicas.length).toBe(13);
+    for (const [, nombre, tabla, , , rol] of politicas) {
+      if (tabla === "traspaso_gerencia") continue;
+      expect(rol, `${nombre} sobre ${tabla}`).toBe("zuluhub_app");
+    }
+    // Las restrictivas son solo de la plataforma.
+    for (const restrictiva of codigo.match(/AS\s+RESTRICTIVE[^;]*;/gi) ?? []) {
+      expect(restrictiva).toMatch(/TO\s+zuluhub_plataforma\b/);
+      expect(restrictiva).not.toMatch(/zuluhub_(app|grupo|trabajos|autenticacion)/);
+    }
+    // Depende de 0004 (lo dice) y no referencia nada de 0003 ni de las migraciones siguientes.
+    expect(sql).toMatch(/necesita 0004_plataforma/);
+    expect(codigo).not.toMatch(/trabajo_validar_cambio|trabajo_ultimo_error_ck|trabajo_cambio/);
   });
 
   it("0003 es compatible hacia atrás, no ensancha privilegios y no agrega SECURITY DEFINER", async () => {

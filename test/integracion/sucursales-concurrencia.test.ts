@@ -1,5 +1,5 @@
 import pg from "pg";
-import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import {
@@ -27,6 +27,10 @@ import { crearMembresiaDeBase, crearPersonaDeBase, sucursalDe } from "./fixtures
  */
 
 const base = inject("baseDePruebas");
+// Cada ronda crea una empresa y compite dos o tres transacciones; las bajas de sucursales esperan hoy
+// el bloqueo de 0005 y repiten tras un aborto. Con la máquina cargada (todas las pruebas de
+// integración a la vez) las 25 rondas de S4 pasan de los 5 s que vale una prueba por defecto.
+vi.setConfig({ testTimeout: 60_000 });
 const RONDAS = 8;
 /** Las pruebas del invariante "nunca sin sucursal activa" se repiten más: es el riesgo más serio. */
 const RONDAS_CRITICAS = 25;

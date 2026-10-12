@@ -41,6 +41,8 @@ const TABLAS_DE_NEGOCIO = [
   "admin_plataforma",
   "idempotencia_plataforma",
   "referencia_de_error",
+  // H6 administración (0005_administracion)
+  "traspaso_gerencia",
 ] as const;
 const TABLAS_DE_AUDITORIA = ["auditoria_empresa", "auditoria_plataforma", "auditoria_acceso_grupo"];
 
@@ -51,6 +53,7 @@ const RESTRICCIONES_DE_DISPARADORES = [
   "empresa_transicion_invalida",
   "empresa_zona_horaria_ck",
   "tenant_instalacion_single",
+  "sucursal_ultima_activa", // 0005
 ];
 
 describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () => {
@@ -244,6 +247,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "sucursal:SELECT",
           "tenant:SELECT",
           "trabajo:SELECT",
+          "traspaso_gerencia:SELECT",
         ].sort(),
       );
       expect(porRol("zuluhub_grupo")).toEqual(
@@ -270,6 +274,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "referencia_de_error:SELECT",
           "tenant:SELECT",
           "trabajo:SELECT",
+          "traspaso_gerencia:SELECT",
         ].sort(),
       );
     });
@@ -293,9 +298,15 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "zuluhub_app:invitacion.motivo_revocacion",
           "zuluhub_app:invitacion.reemplazada_por",
           "zuluhub_app:invitacion.revocada_en",
-          "zuluhub_app:membresia.activo", // `rol` no está: nadie asciende
+          "zuluhub_app:membresia.activo",
+          // `rol` desde 0005: solo cambia al aceptar un traspaso (política + disparador `membresia_cambio`)
+          "zuluhub_app:membresia.rol",
           "zuluhub_app:sucursal.activa",
           "zuluhub_app:sucursal.nombre",
+          "zuluhub_app:traspaso_gerencia.estado",
+          "zuluhub_app:traspaso_gerencia.motivo",
+          "zuluhub_app:traspaso_gerencia.resuelto_en",
+          "zuluhub_app:traspaso_gerencia.saliente_persona_id",
           "zuluhub_plataforma:empresa.cuit",
           "zuluhub_plataforma:empresa.estado",
           "zuluhub_plataforma:empresa.motivo_estado",
@@ -310,6 +321,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "zuluhub_plataforma:tenant.estado",
           "zuluhub_plataforma:tenant.motivo_estado",
           "zuluhub_plataforma:tenant.nombre",
+          "zuluhub_plataforma:traspaso_gerencia.estado",
+          "zuluhub_plataforma:traspaso_gerencia.motivo",
+          "zuluhub_plataforma:traspaso_gerencia.resuelto_en",
           "zuluhub_trabajos:trabajo.estado",
           "zuluhub_trabajos:trabajo.intentos",
           "zuluhub_trabajos:trabajo.proximo_intento",
@@ -353,6 +367,22 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       const referenciaDeError = ["referencia", "accion", "motivo", "empresa_id", "persona_id"].map(
         (c) => `referencia_de_error.${c}`,
       );
+      const traspasoDeLaEmpresa = [
+        "empresa_id",
+        "origen",
+        "propuesto_por",
+        "saliente_persona_id",
+        "entrante_persona_id",
+        "propuesto_en",
+        "vence_en",
+      ].map((c) => `traspaso_gerencia.${c}`);
+      const traspasoDePlataforma = [
+        "empresa_id",
+        "origen",
+        "entrante_persona_id",
+        "propuesto_en",
+        "vence_en",
+      ].map((c) => `traspaso_gerencia.${c}`);
       const invitacionEmpresa = [
         "invitacion_id",
         "empresa_id",
@@ -379,6 +409,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "trabajo.tipo",
           "trabajo.datos",
           "trabajo.clave_idempotencia",
+          ...traspasoDeLaEmpresa,
         ].sort(),
       );
       expect(porRol("zuluhub_grupo")).toEqual(
@@ -410,6 +441,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "trabajo.tipo",
           "trabajo.datos",
           "trabajo.clave_idempotencia",
+          ...traspasoDePlataforma,
         ].sort(),
       );
     });
