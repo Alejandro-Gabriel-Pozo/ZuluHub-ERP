@@ -299,6 +299,8 @@ describe("reglas de arquitectura (ADR-001)", () => {
       archivos: {
         "src/modulos/fiscal/persistencia/r.ts": importa("../casos-de-uso/c"),
         "src/modulos/fiscal/casos-de-uso/c.ts": exporta,
+      },
+    },
     {
       regla: "capacidades-de-planes-fuera-del-dominio",
       archivos: {

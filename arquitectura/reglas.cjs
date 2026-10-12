@@ -292,6 +292,7 @@ const reglas = [
       "La persistencia no conoce a quien la usa: no importa los casos de uso ni las consultas de su módulo. Los casos de uso reciben los repositorios por su contrato (H7 T4).",
     from: { path: "^src/modulos/[^/]+/persistencia/" },
     to: { path: "^src/modulos/[^/]+/(casos-de-uso|consultas)/" },
+  },
   {
     name: "capacidades-de-planes-fuera-del-dominio",
     severity: "error",
