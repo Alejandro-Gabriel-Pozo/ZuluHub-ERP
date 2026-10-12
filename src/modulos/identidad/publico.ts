@@ -33,6 +33,21 @@ export {
 } from "./dominio/invitacion";
 export { decidirApagado, type Membresia, type Persona } from "./dominio/membresia";
 export {
+  armarEnlaceDeInvitacion,
+  armarMensajeDeInvitacion,
+  decidirEnvioDeInvitacion,
+  type DatosDeEnvio,
+  type DecisionDeEnvio,
+  type MarcaDeMail,
+  type MensajeDeInvitacion,
+  type MotivoDeOmision,
+} from "./dominio/envio";
+export {
+  crearManejadorDeEnviarInvitacion,
+  type DependenciasDeEnvioDeInvitacion,
+  type TxDeEnvioDeInvitacion,
+} from "./casos-de-uso/enviar-invitacion";
+export {
   crearCasosDeUsoDeIdentidad,
   type CasosDeUsoDeIdentidad,
 } from "./casos-de-uso/casos-de-uso";

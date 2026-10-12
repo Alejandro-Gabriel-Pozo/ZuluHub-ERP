@@ -23,11 +23,15 @@ describe.skipIf(base === null)("migraciones", () => {
     const aparte = await crearBaseAparte(base, { migrar: false });
     try {
       const primera = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
-      expect(primera.aplicadas).toEqual(["0001_base.sql", "0002_identidad.sql"]);
+      expect(primera.aplicadas).toEqual([
+        "0001_base.sql",
+        "0002_identidad.sql",
+        "0003_trabajos.sql",
+      ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
         aplicadas: [],
-        yaAplicadas: ["0001_base.sql", "0002_identidad.sql"],
+        yaAplicadas: ["0001_base.sql", "0002_identidad.sql", "0003_trabajos.sql"],
       });
     } finally {
       await aparte.destruir();
@@ -131,6 +135,7 @@ describe.skipIf(base === null)("migraciones", () => {
       expect([...x.aplicadas, ...y.aplicadas].sort()).toEqual([
         "0001_base.sql",
         "0002_identidad.sql",
+        "0003_trabajos.sql",
       ]);
     } finally {
       await aparte.destruir();
@@ -367,7 +372,7 @@ describe.skipIf(base === null)("migraciones", () => {
     }
   });
 
-  it.each(["0001_base.sql", "0002_identidad.sql"])(
+  it.each(["0001_base.sql", "0002_identidad.sql", "0003_trabajos.sql"])(
     "la migración %s no contiene contraseñas ni cadenas de conexión",
     async (archivo) => {
       const sql = await readFile(join(CARPETA_REAL, archivo), "utf8");
@@ -383,6 +388,18 @@ describe.skipIf(base === null)("migraciones", () => {
     expect(codigo).not.toMatch(/\b(DROP|TRUNCATE|DELETE\s+FROM)\b/i);
     expect(codigo).not.toMatch(/\bALTER\s+TABLE\s+\w+\s+(DROP|RENAME|ALTER\s+COLUMN)\b/i);
     expect(codigo).not.toMatch(/SECURITY\s+DEFINER/i);
+    expect(codigo).not.toMatch(/CREATE\s+(OR\s+REPLACE\s+)?ROLE|ALTER\s+ROLE/i);
+  });
+
+  it("0003 es compatible hacia atrás, no ensancha privilegios y no agrega SECURITY DEFINER", async () => {
+    const sql = await readFile(join(CARPETA_REAL, "0003_trabajos.sql"), "utf8");
+    const codigo = sql.replace(/--.*$/gm, "");
+    expect(codigo).not.toMatch(/\b(DROP|TRUNCATE|DELETE\s+FROM)\b/i);
+    expect(codigo).not.toMatch(/\bALTER\s+TABLE\s+\w+\s+(DROP|RENAME|ALTER\s+COLUMN)\b/i);
+    expect(codigo).not.toMatch(/SECURITY\s+DEFINER/i);
+    expect(codigo).not.toMatch(
+      /\b(GRANT|CREATE\s+POLICY|ALTER\s+POLICY|ALTER\s+DEFAULT\s+PRIVILEGES)\b/i,
+    );
     expect(codigo).not.toMatch(/CREATE\s+(OR\s+REPLACE\s+)?ROLE|ALTER\s+ROLE/i);
   });
 });
