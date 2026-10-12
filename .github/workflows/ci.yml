@@ -170,8 +170,14 @@ jobs:
             archivos: "src/primitivas/cantidad/**/*.ts"
           - grupo: identificación fiscal, resultado y estados
             archivos: "src/primitivas/identificacion-fiscal/**/*.ts,src/primitivas/resultado/**/*.ts,src/contexto/estados.ts"
-          - grupo: fiscal, tenants y empresas
-            archivos: "src/modulos/fiscal/dominio/**/*.ts,src/modulos/tenants/dominio/**/*.ts,src/modulos/empresas/dominio/**/*.ts"
+          - grupo: tenants y empresas
+            archivos: "src/modulos/tenants/dominio/**/*.ts,src/modulos/empresas/dominio/**/*.ts"
+          - grupo: fiscal (serie, plan y emisor)
+            archivos: "src/modulos/fiscal/dominio/numeracion.ts,src/modulos/fiscal/dominio/plan-de-comprobantes.ts,src/modulos/fiscal/dominio/resolucion-de-emisor.ts"
+          - grupo: fiscal (resto)
+            archivos: "src/modulos/fiscal/dominio/**/*.ts,!src/modulos/fiscal/dominio/numeracion.ts,!src/modulos/fiscal/dominio/plan-de-comprobantes.ts,!src/modulos/fiscal/dominio/resolucion-de-emisor.ts"
+          - grupo: domicilio
+            archivos: "src/primitivas/domicilio/**/*.ts"
           - grupo: identidad (invitación)
             archivos: "src/modulos/identidad/dominio/invitacion.ts"
           - grupo: identidad (resto)
