@@ -218,6 +218,7 @@ jobs:
             archivos: "src/capacidades/permisos/**/*.ts,src/capacidades/modulos/**/*.ts"
           - grupo: plataforma (dominio)
             archivos: "src/plataforma/dominio/**/*.ts"
+            pruebas: "src/plataforma test/plataforma"
           - grupo: identificadores
             archivos: "src/primitivas/identificadores/**/*.ts"
             pruebas: "src/primitivas/identificadores"
