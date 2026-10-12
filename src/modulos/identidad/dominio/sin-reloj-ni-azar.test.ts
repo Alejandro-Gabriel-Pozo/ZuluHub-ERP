@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { usosProhibidos } from "../../../../test/utilidades/reloj-y-azar";
 
 /**
  * U8: el dominio de identidad no usa reloj ni aleatoriedad. La hora (`ahora`), los ids y el hash
@@ -9,20 +10,6 @@ import { describe, expect, it } from "vitest";
  * adaptador repite entera ante un conflicto de serialización (ADR-004, G4), así que tampoco leen el
  * reloj ni sortean nada (el id y el token se emiten ANTES, fuera de la transacción, por el puerto).
  */
-const PROHIBIDOS: readonly { nombre: string; patron: RegExp }[] = [
-  { nombre: "Date.now", patron: /\bDate\s*\.\s*now\b/ },
-  // `new Date()` o `new Date` sin argumentos: la hora actual. Con argumento es una fecha dada.
-  { nombre: "new Date() sin argumentos", patron: /\bnew\s+Date\b(?!\s*\(\s*[^)\s])/ },
-  { nombre: "Math.random", patron: /\bMath\s*\.\s*random\b/ },
-  { nombre: "randomUUID", patron: /\brandomUUID\b/ },
-  { nombre: "getRandomValues", patron: /\bgetRandomValues\b/ },
-  { nombre: "performance.now", patron: /\bperformance\s*\.\s*now\b/ },
-];
-
-function usosProhibidos(fuente: string): string[] {
-  return PROHIBIDOS.filter(({ patron }) => patron.test(fuente)).map(({ nombre }) => nombre);
-}
-
 const carpetas = [
   fileURLToPath(new URL(".", import.meta.url)),
   fileURLToPath(new URL("../casos-de-uso/", import.meta.url)),

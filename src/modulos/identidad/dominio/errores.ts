@@ -4,7 +4,8 @@ import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 /**
  * Errores previstos del módulo de identidad (ADR-004). Son textos con el código, salvo
  * `EMPRESA_NO_OPERA`, que además informa cuál empresa no opera y por qué (unión discriminada
- * por `codigo`).
+ * por `codigo`). Los rechazos de permisos (`SIN_PERMISO` y los demás motivos del guard) no son del
+ * dominio: los devuelve el guard y se suman al error de cada caso de uso.
  */
 
 /** Falla de `EMPRESA_NO_OPERA`: la primera empresa de la invitación que no opera, y el motivo. */
@@ -40,8 +41,7 @@ export type ErrorDeInvitacion =
   | "REENVIO_NO_PERMITIDO"
   | "ALTA_YA_TIENE_INVITACION"
   // Invitar a quien ya es miembro activo de la empresa.
-  | "YA_ES_MIEMBRO"
-  | "SIN_PERMISO";
+  | "YA_ES_MIEMBRO";
 
 /** Aceptación de una invitación. */
 export type ErrorDeAceptacion =
@@ -57,5 +57,4 @@ export type ErrorDeAceptacion =
   | RolDistintoAlAnterior;
 
 /** Apagado de una membresía. */
-export type ErrorDeMembresia =
-  "MEMBRESIA_NO_ENCONTRADA" | "ES_EL_GERENTE" | "ULTIMO_ADMIN" | "SIN_PERMISO";
+export type ErrorDeMembresia = "MEMBRESIA_NO_ENCONTRADA" | "ES_EL_GERENTE" | "ULTIMO_ADMIN";

@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { crearTokensHmac } from "../../src/adaptadores/tokens/tokens-hmac";
+import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import {
   crearCasosDeUsoDeIdentidad,
@@ -73,7 +74,11 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
     dueno = new pg.Client({ connectionString: propia.base.dueno });
     await dueno.connect();
     tokens = crearTokensHmac(randomBytes(32));
-    casos = crearCasosDeUsoDeIdentidad({ transacciones: entorno, tokens });
+    casos = crearCasosDeUsoDeIdentidad({
+      transacciones: entorno,
+      tokens,
+      reglas: REGLAS_DE_EMPRESA,
+    });
   });
   afterAll(async () => {
     await dueno.end();
@@ -480,7 +485,11 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
         },
       }));
       try {
-        const roto = crearCasosDeUsoDeIdentidad({ transacciones: conFalla, tokens });
+        const roto = crearCasosDeUsoDeIdentidad({
+          transacciones: conFalla,
+          tokens,
+          reglas: REGLAS_DE_EMPRESA,
+        });
         const antes = await foto([e.empresa], [email]);
         await expect(
           roto.invitarUsuario(e.ctx, { email, rol: "OPERADOR", sucursales: [e.sucursal] }),
@@ -1011,9 +1020,9 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
   });
 
   // =============================================================================================
-  // Control de piso transitorio: lo verifica el caso de uso, no la base
+  // Guard de permisos (H4): lo verifica el caso de uso en el servidor, no la base
   // =============================================================================================
-  describe("control de piso: solo un gerente o administrador activo de la empresa", () => {
+  describe("guard de permisos: solo un gerente o administrador activo de la empresa, no suspendido", () => {
     type Actor = { nombre: string; armar: (e: Escenario) => Promise<ContextoOperativo> };
     const actores: Actor[] = [
       { nombre: "un operador", armar: async (e) => (await miembro(e, "OPERADOR")).ctx },
@@ -1038,6 +1047,22 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
         armar: async (e) => {
           const otra = await escenario(e.tenant);
           return comoEmpresa(e.empresa, otra.gerente);
+        },
+      },
+      // S4/D8: la suspensión de plataforma quita todos los permisos aunque la membresía siga activa.
+      {
+        nombre: "un gerente suspendido globalmente (persona.activo_global = false)",
+        armar: async (e) => {
+          await dueno.query("update persona set activo_global = false where id = $1", [e.gerente]);
+          return e.ctx;
+        },
+      },
+      {
+        nombre: "un administrador activo suspendido globalmente",
+        armar: async (e) => {
+          const admin = await miembro(e, "ADMINISTRADOR");
+          await dueno.query("update persona set activo_global = false where id = $1", [admin.id]);
+          return admin.ctx;
         },
       },
     ];
@@ -1073,6 +1098,37 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
         expect(await foto([e.empresa])).toBe(antes);
       });
     }
+
+    it("la suspensión global se lee en cada operación: al levantarla vuelve a poder, sin nada guardado", async () => {
+      const e = await escenario();
+      const entrada = { email: emailAlAzar(), rol: "OPERADOR", sucursales: [] } as const;
+      expect((await casos.invitarUsuario(e.ctx, entrada)).ok).toBe(true);
+
+      await dueno.query("update persona set activo_global = false where id = $1", [e.gerente]);
+      expect(await casos.invitarUsuario(e.ctx, { ...entrada, email: emailAlAzar() })).toEqual({
+        ok: false,
+        error: "SIN_PERMISO",
+      });
+
+      await dueno.query("update persona set activo_global = true where id = $1", [e.gerente]);
+      expect((await casos.invitarUsuario(e.ctx, { ...entrada, email: emailAlAzar() })).ok).toBe(
+        true,
+      );
+    });
+
+    it("una baja corta el acceso en la operación siguiente (los permisos no se guardan en sesión)", async () => {
+      const e = await escenario();
+      const admin = await miembro(e, "ADMINISTRADOR");
+      const entrada = { email: emailAlAzar(), rol: "OPERADOR", sucursales: [] } as const;
+      expect((await casos.invitarUsuario(admin.ctx, entrada)).ok).toBe(true);
+
+      expect((await casos.apagarMembresia(e.ctx, { personaId: admin.id })).ok).toBe(true);
+
+      expect(await casos.invitarUsuario(admin.ctx, { ...entrada, email: emailAlAzar() })).toEqual({
+        ok: false,
+        error: "SIN_PERMISO",
+      });
+    });
 
     it("un administrador activo sí puede (no hace falta ser gerente)", async () => {
       const e = await escenario();

@@ -31,12 +31,7 @@ export {
   type RolDeEmpresa,
   type TipoDeInvitacion,
 } from "./dominio/invitacion";
-export {
-  decidirApagado,
-  puedeAdministrarAccesos,
-  type Membresia,
-  type Persona,
-} from "./dominio/membresia";
+export { decidirApagado, type Membresia, type Persona } from "./dominio/membresia";
 export {
   armarEnlaceDeInvitacion,
   armarMensajeDeInvitacion,
@@ -66,6 +61,8 @@ export type {
   ErrorAlApagarMembresia,
   SalidaDeApagarMembresia,
 } from "./casos-de-uso/apagar-membresia";
+export { DECLARACIONES as DECLARACIONES_DE_IDENTIDAD } from "./casos-de-uso/declaraciones";
+export type { DeclaracionDeCaso } from "./casos-de-uso/declaraciones";
 export {
   TRABAJO_ENVIAR_INVITACION,
   claveDeEnvioDeInvitacion,

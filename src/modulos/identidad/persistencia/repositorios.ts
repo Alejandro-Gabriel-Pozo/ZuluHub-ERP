@@ -1,4 +1,5 @@
 import type { Kysely } from "kysely";
+import { ROLES_DE_EMPRESA } from "../../../capacidades/permisos/roles";
 import {
   empresaId,
   invitacionId,
@@ -37,7 +38,6 @@ import type { IdentidadDb } from "./tablas";
  *    operativo ve de una invitación solo la parte de su empresa.
  */
 
-const ROLES: readonly RolDeEmpresa[] = ["GERENTE", "ADMINISTRADOR", "OPERADOR"];
 const TIPOS: readonly TipoDeInvitacion[] = ["ALTA_GERENTE", "USUARIO"];
 const ESTADOS: readonly EstadoGuardado[] = ["PENDIENTE", "ACEPTADA", "REVOCADA"];
 
@@ -169,7 +169,7 @@ export function crearRepositorioDeMembresias(db: Kysely<IdentidadDb>): Repositor
   }): Membresia => ({
     empresaId: empresaId(fila.empresa_id),
     personaId: personaId(fila.persona_id),
-    rol: deLaLista(ROLES, fila.rol, "rol"),
+    rol: deLaLista(ROLES_DE_EMPRESA, fila.rol, "rol"),
     activo: fila.activo,
     version: fila.version,
   });
@@ -359,7 +359,7 @@ export function crearRepositorioDeInvitaciones(db: Kysely<IdentidadDb>): Reposit
         .filter((e) => e.invitacion_id === f.id)
         .map((e): EmpresaInvitada => ({
           empresaId: empresaId(e.empresa_id),
-          rol: deLaLista(ROLES, e.rol, "rol"),
+          rol: deLaLista(ROLES_DE_EMPRESA, e.rol, "rol"),
           sucursales: sucursales
             .filter((s) => s.invitacion_id === f.id && s.empresa_id === e.empresa_id)
             .map((s) => sucursalId(s.sucursal_id)),

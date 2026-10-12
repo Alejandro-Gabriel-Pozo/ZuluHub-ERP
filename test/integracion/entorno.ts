@@ -43,6 +43,10 @@ import {
   type TenantsDb,
 } from "../../src/modulos/tenants/publico";
 import {
+  crearAutorizacionDePostgres,
+  type AutorizacionDb,
+} from "../../src/adaptadores/postgres/autorizacion";
+import {
   crearAuditoriaDePostgres,
   type AuditoriaDb,
 } from "../../src/adaptadores/postgres/auditoria";
@@ -97,6 +101,7 @@ export function crearEntornoDePrueba(
         trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
         auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
         cola: crearColaDePostgres(db.withTables<ColaDb>()),
+        autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>()),
       }),
     maximoDeConexiones,
     clave: base.clave,

@@ -5,6 +5,7 @@ import { crearCorreoFalso, type CorreoFalso } from "../../src/adaptadores/correo
 import { crearProcesadorDeTrabajos } from "../../src/adaptadores/trabajos/procesador";
 import type { PoliticaDeReintentos } from "../../src/adaptadores/trabajos/reintentos";
 import { crearTokensHmac } from "../../src/adaptadores/tokens/tokens-hmac";
+import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import {
   TRABAJO_ENVIAR_INVITACION,
@@ -81,7 +82,11 @@ describe.skipIf(base === null)("enviar_invitacion: el trabajo contra una base re
     dueno = new pg.Client({ connectionString: propia.base.dueno });
     await dueno.connect();
     tokens = crearTokensHmac(randomBytes(32));
-    casos = crearCasosDeUsoDeIdentidad({ transacciones: entorno, tokens });
+    casos = crearCasosDeUsoDeIdentidad({
+      transacciones: entorno,
+      tokens,
+      reglas: REGLAS_DE_EMPRESA,
+    });
   });
   // Cada prueba parte de una cola sin pendientes de las anteriores.
   beforeEach(async () => {

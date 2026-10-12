@@ -1,15 +1,17 @@
+import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { InvitacionId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { EmpresaNoOpera, ErrorDeInvitacion } from "../dominio/errores";
 import { decidirReenvio } from "../dominio/invitacion";
-import { cargarEmpresas, comprobarQueOpera, exigirAdministrador } from "./comun";
+import { cargarEmpresas, comprobarQueOpera, exigirAccion } from "./comun";
 import {
   TRABAJO_ENVIAR_INVITACION,
   claveDeEnvioDeInvitacion,
   type DependenciasDeIdentidad,
 } from "./contrato";
+import { DECLARACIONES } from "./declaraciones";
 import { traducirErrores } from "./traducir";
 
 export type EntradaDeReenviarInvitacion = Readonly<{ invitacionId: InvitacionId }>;
@@ -21,14 +23,15 @@ export type SalidaDeReenviarInvitacion = Readonly<{
   yaEstabaReenviada: boolean;
 }>;
 
-export type ErrorAlReenviarInvitacion = ErrorDeInvitacion | EmpresaNoOpera | ErrorDePersistencia;
+export type ErrorAlReenviarInvitacion =
+  ErrorDeInvitacion | MotivoDeRechazo | EmpresaNoOpera | ErrorDePersistencia;
 
 /** Errores de restricciones que forman parte del contrato de este caso de uso. */
 const RESTRICCIONES_ADMITIDAS = ["INVITACION_NO_PENDIENTE"] as const;
 
 /**
  * Reenviar una invitación de usuario (diseño §6.3, R4). Contexto OPERATIVO con persona. En una
- * transacción serializable: control de piso, la empresa opera, la invitación incluye a la empresa,
+ * transacción serializable: el guard (`usuarios.reenviar_invitacion`), la empresa opera, la invitación incluye a la empresa,
  * y entonces el dominio decide (`decidirReenvio`):
  *
  *  - la de origen ya fue reemplazada → se devuelve la reemplazante (`yaEstabaReenviada: true`);
@@ -41,7 +44,11 @@ const RESTRICCIONES_ADMITIDAS = ["INVITACION_NO_PENDIENTE"] as const;
  * Límite conocido: el contexto operativo ve de una invitación solo la parte de SU empresa. La nueva
  * invitación cubre solo esa empresa; en H3 las invitaciones nacen de a una empresa (`invitarUsuario`).
  */
-export function crearReenviarInvitacion({ transacciones, tokens }: DependenciasDeIdentidad) {
+export function crearReenviarInvitacion({
+  transacciones,
+  tokens,
+  reglas,
+}: DependenciasDeIdentidad) {
   return async function reenviarInvitacion(
     contexto: ContextoOperativo,
     entrada: EntradaDeReenviarInvitacion,
@@ -53,8 +60,15 @@ export function crearReenviarInvitacion({ transacciones, tokens }: DependenciasD
       { contexto },
       async (
         tx,
-      ): Promise<Resultado<SalidaDeReenviarInvitacion, ErrorDeInvitacion | EmpresaNoOpera>> => {
-        const permiso = await exigirAdministrador(tx, contexto);
+      ): Promise<
+        Resultado<SalidaDeReenviarInvitacion, ErrorDeInvitacion | MotivoDeRechazo | EmpresaNoOpera>
+      > => {
+        const permiso = await exigirAccion(
+          tx,
+          contexto,
+          reglas,
+          DECLARACIONES.reenviarInvitacion.accion,
+        );
         if (!permiso.ok) return permiso;
         const { estados } = await cargarEmpresas(tx, [empresaId]);
         const opera = comprobarQueOpera(empresaId, estados);
