@@ -37,7 +37,7 @@ describe("el catálogo de grupo", () => {
         usaSiExiste: [],
         datosRequeridos: [],
         implementadoPor: ["consultas-de-grupo"],
-        acciones: { "grupo.ver_empresas": { capacidad: null } },
+        acciones: { "grupo.ver_empresas": { capacidad: null, efecto: "LECTURA" } },
       },
     });
     expectTypeOf<ClaveModuloDeGrupo>().toEqualTypeOf<"grupo">();
