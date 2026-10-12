@@ -1,16 +1,18 @@
+import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
+import { comprobarQueOpera, type EmpresaNoOpera } from "../../../contexto/estados";
 import type { InvitacionId, SucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import { emailDesdeTexto } from "../dominio/email";
-import type { EmpresaNoOpera, ErrorDeInvitacion } from "../dominio/errores";
+import type { ErrorDeInvitacion } from "../dominio/errores";
 import {
   decidirInvitacionDeUsuario,
   nuevaInvitacion,
   type RolDeEmpresa,
 } from "../dominio/invitacion";
-import { cargarEmpresas, comprobarQueOpera, exigirAccion } from "./comun";
+import { cargarEmpresas } from "./comun";
 import {
   TRABAJO_ENVIAR_INVITACION,
   claveDeEnvioDeInvitacion,
@@ -79,11 +81,8 @@ export function crearInvitarUsuario({ transacciones, tokens, reglas }: Dependenc
       ): Promise<
         Resultado<SalidaDeInvitarUsuario, ErrorDeInvitacion | MotivoDeRechazo | EmpresaNoOpera>
       > => {
-        const permiso = await exigirAccion(
-          tx,
-          contexto,
-          reglas,
-          DECLARACIONES.invitarUsuario.accion,
+        const permiso = await exigirAccion(reglas, DECLARACIONES.invitarUsuario.accion, () =>
+          tx.autorizacion.delActor(contexto),
         );
         if (!permiso.ok) return permiso;
         const { empresas, estados } = await cargarEmpresas(tx, [empresaId]);

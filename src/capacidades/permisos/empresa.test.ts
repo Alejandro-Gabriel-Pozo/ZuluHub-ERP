@@ -10,25 +10,91 @@ import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "./roles";
  * dueño lee la diferencia: es la única copia "a la vista" de quién puede qué.
  */
 
-const ACCIONES_DE_USUARIOS = [
+/** Las acciones que puede cada rol, escritas a mano desde la tabla de §B.4 de la especificación de H6. */
+const DEL_OPERADOR = [
+  "gerencia.aceptar_traspaso",
+  "gerencia.rechazar_traspaso",
+  "gerencia.ver_traspaso",
+  "permisos.ver_propios",
+] as const;
+
+const SOLO_DEL_GERENTE = [
+  "gerencia.cancelar_traspaso",
+  "gerencia.proponer_traspaso",
+  "sucursales.desactivar",
+  "sucursales.reactivar",
+] as const;
+
+const DEL_ADMINISTRADOR = [
+  ...DEL_OPERADOR,
+  "modulos.ver",
+  "sucursales.crear",
+  "sucursales.editar",
+  "sucursales.ver",
   "usuarios.apagar",
+  "usuarios.asignar_sucursales",
   "usuarios.invitar",
   "usuarios.reenviar_invitacion",
+  "usuarios.revocar_invitacion",
+  "usuarios.ver",
+].sort();
+
+const ACCIONES_DE_USUARIOS = [
+  "usuarios.apagar",
+  "usuarios.asignar_sucursales",
+  "usuarios.invitar",
+  "usuarios.reenviar_invitacion",
+  "usuarios.revocar_invitacion",
+  "usuarios.ver",
 ] as const;
 
 describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
-  it("tabla de permisos: qué puede cada rol", () => {
+  it("tabla de permisos: qué puede cada rol (§B.4 de la especificación de H6)", () => {
     expect(tablaDePermisos(PERMISOS_DE_EMPRESA)).toEqual({
-      GERENTE: ACCIONES_DE_USUARIOS,
-      ADMINISTRADOR: ACCIONES_DE_USUARIOS,
-      OPERADOR: [],
+      GERENTE: [...DEL_ADMINISTRADOR, ...SOLO_DEL_GERENTE].sort(),
+      ADMINISTRADOR: DEL_ADMINISTRADOR,
+      OPERADOR: [...DEL_OPERADOR],
     });
   });
 
-  it("el operador no puede ninguna acción de usuarios (decisión 2)", () => {
+  it("hay 18 acciones: 6 de usuarios, 5 de sucursales, 5 de gerencia, modulos.ver y permisos.ver_propios", () => {
+    const todas = Object.keys(PERMISOS_DE_EMPRESA);
+    expect(todas).toHaveLength(18);
+    const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
+    expect([
+      porPrefijo("usuarios"),
+      porPrefijo("sucursales"),
+      porPrefijo("gerencia"),
+      porPrefijo("modulos"),
+      porPrefijo("permisos"),
+    ]).toEqual([6, 5, 5, 1, 1]);
+  });
+
+  it("las acciones de usuarios son seis y las tienen exactamente el gerente y el administrador", () => {
+    const deUsuarios = Object.keys(PERMISOS_DE_EMPRESA)
+      .filter((a) => a.startsWith("usuarios."))
+      .sort();
+    expect(deUsuarios).toEqual([...ACCIONES_DE_USUARIOS]);
     for (const accion of ACCIONES_DE_USUARIOS) {
-      expect(PERMISOS_DE_EMPRESA[accion]).not.toContain("OPERADOR");
+      expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE", "ADMINISTRADOR"]);
     }
+  });
+
+  it("desactivar y reactivar una sucursal, y proponer o cancelar el traspaso, son solo del gerente (F4)", () => {
+    for (const accion of SOLO_DEL_GERENTE) {
+      expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE"]);
+    }
+  });
+
+  it("ver, aceptar y rechazar un traspaso, y ver los permisos propios, son de los tres roles", () => {
+    for (const accion of DEL_OPERADOR) {
+      expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE", "ADMINISTRADOR", "OPERADOR"]);
+    }
+  });
+
+  it("el operador no puede ninguna acción de usuarios (decisión 2) ni de sucursales ni de módulos", () => {
+    const tabla = tablaDePermisos(PERMISOS_DE_EMPRESA);
+    expect(tabla.OPERADOR.filter((a) => /^(usuarios|sucursales|modulos)\./.test(a))).toEqual([]);
   });
 
   it("los roles son exactamente estos tres, en este orden", () => {

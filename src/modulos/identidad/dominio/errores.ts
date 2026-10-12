@@ -1,19 +1,12 @@
-import type { EstadoEfectivo } from "../../../contexto/estados";
+import type { EmpresaNoOpera } from "../../../contexto/estados";
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 
 /**
  * Errores previstos del módulo de identidad (ADR-004). Son textos con el código, salvo
- * `EMPRESA_NO_OPERA`, que además informa cuál empresa no opera y por qué (unión discriminada
- * por `codigo`). Los rechazos de permisos (`SIN_PERMISO` y los demás motivos del guard) no son del
+ * `EMPRESA_NO_OPERA` (definido en `contexto/estados`), que además informa cuál empresa no opera y
+ * por qué. Los rechazos de permisos (`SIN_PERMISO` y los demás motivos del guard) no son del
  * dominio: los devuelve el guard y se suman al error de cada caso de uso.
  */
-
-/** Falla de `EMPRESA_NO_OPERA`: la primera empresa de la invitación que no opera, y el motivo. */
-export type EmpresaNoOpera = Readonly<{
-  codigo: "EMPRESA_NO_OPERA";
-  empresaId: EmpresaId;
-  motivo: Exclude<EstadoEfectivo, "OPERA">;
-}>;
 
 /**
  * Falla de `ROL_DISTINTO_AL_ANTERIOR`: la persona ya tuvo una membresía (apagada) en esa empresa con

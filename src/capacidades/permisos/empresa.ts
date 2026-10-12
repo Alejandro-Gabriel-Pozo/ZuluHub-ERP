@@ -15,11 +15,33 @@ import type { RolDeEmpresa } from "./roles";
  *
  * Usuarios (decisión 2, diseño §6.3): el gerente y el administrador gestionan usuarios por igual,
  * incluido invitar o apagar a otro administrador; el operador no gestiona ninguno.
+ *
+ * H6 (especificación §B.4, preguntas F1 y F4): las sucursales las ven, crean y editan el gerente y
+ * el administrador, pero desactivarlas y reactivarlas es solo del gerente; proponer y cancelar el
+ * traspaso de gerencia, también. Aceptar, rechazar y ver un traspaso son de los tres roles: quien
+ * responde es el entrante, que puede ser un operador, y el dominio exige que el actor sea él. Cada
+ * acción cumple el piso jerárquico: lo que puede el operador lo puede el administrador, y lo del
+ * administrador, el gerente.
  */
 export const PERMISOS_DE_EMPRESA = {
   "usuarios.invitar": ["GERENTE", "ADMINISTRADOR"],
   "usuarios.reenviar_invitacion": ["GERENTE", "ADMINISTRADOR"],
   "usuarios.apagar": ["GERENTE", "ADMINISTRADOR"],
+  "usuarios.ver": ["GERENTE", "ADMINISTRADOR"],
+  "usuarios.asignar_sucursales": ["GERENTE", "ADMINISTRADOR"],
+  "usuarios.revocar_invitacion": ["GERENTE", "ADMINISTRADOR"],
+  "sucursales.ver": ["GERENTE", "ADMINISTRADOR"],
+  "sucursales.crear": ["GERENTE", "ADMINISTRADOR"],
+  "sucursales.editar": ["GERENTE", "ADMINISTRADOR"],
+  "sucursales.desactivar": ["GERENTE"],
+  "sucursales.reactivar": ["GERENTE"],
+  "gerencia.proponer_traspaso": ["GERENTE"],
+  "gerencia.cancelar_traspaso": ["GERENTE"],
+  "gerencia.ver_traspaso": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "gerencia.aceptar_traspaso": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "gerencia.rechazar_traspaso": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "modulos.ver": ["GERENTE", "ADMINISTRADOR"],
+  "permisos.ver_propios": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
 } as const satisfies Record<ClaveAccion, readonly RolDeEmpresa[]>;
 
 export type ReglasDeEmpresa = ReglasDelGuard<ClaveModulo, ClaveAccion, ClaveCapacidad>;

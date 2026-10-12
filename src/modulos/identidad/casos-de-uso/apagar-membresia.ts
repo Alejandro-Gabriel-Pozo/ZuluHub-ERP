@@ -1,11 +1,13 @@
+import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
+import { comprobarQueOpera, type EmpresaNoOpera } from "../../../contexto/estados";
 import type { PersonaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
-import type { EmpresaNoOpera, ErrorDeMembresia } from "../dominio/errores";
+import type { ErrorDeMembresia } from "../dominio/errores";
 import { decidirApagado } from "../dominio/membresia";
-import { cargarEmpresas, comprobarQueOpera, exigirAccion } from "./comun";
+import { cargarEmpresas } from "./comun";
 import type { DependenciasDeIdentidad } from "./contrato";
 import { DECLARACIONES } from "./declaraciones";
 
@@ -48,11 +50,8 @@ export function crearApagarMembresia({ transacciones, reglas }: DependenciasDeId
       ): Promise<
         Resultado<SalidaDeApagarMembresia, ErrorDeMembresia | MotivoDeRechazo | EmpresaNoOpera>
       > => {
-        const permiso = await exigirAccion(
-          tx,
-          contexto,
-          reglas,
-          DECLARACIONES.apagarMembresia.accion,
+        const permiso = await exigirAccion(reglas, DECLARACIONES.apagarMembresia.accion, () =>
+          tx.autorizacion.delActor(contexto),
         );
         if (!permiso.ok) return permiso;
         const { estados } = await cargarEmpresas(tx, [empresaId]);

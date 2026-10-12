@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { EstadoDeEmpresa, EstadoDeTenant } from "../../../contexto/estados";
+import type { EstadoDeEmpresa, EstadoDeTenant, EstadosDeEmpresa } from "../../../contexto/estados";
 import {
   empresaId,
   invitacionId,
@@ -20,7 +20,6 @@ import {
   type DatosDeAceptacion,
   type EmpresaInvitada,
   type EstadoGuardado,
-  type EstadosDeEmpresa,
   type Invitacion,
   type RolDeEmpresa,
   type TipoDeInvitacion,

@@ -1,39 +1,7 @@
-import {
-  estadoEfectivo,
-  type EstadoDeEmpresa,
-  type EstadoDeTenant,
-} from "../../../contexto/estados";
-import { modulosActivosDe } from "../../../capacidades/modulos/activos";
-import type { ClaveAccion } from "../../../capacidades/modulos/catalogo";
-import { evaluarGuard, type MotivoDeRechazo } from "../../../capacidades/permisos/guard";
-import type { ContextoOperativo } from "../../../contexto/contexto";
+import type { EstadoDeEmpresa, EstadoDeTenant, EstadosDeEmpresa } from "../../../contexto/estados";
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
-import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { Empresa } from "../../empresas/publico";
-import type { EmpresaNoOpera } from "../dominio/errores";
-import type { EstadosDeEmpresa } from "../dominio/invitacion";
-import type { DependenciasDeIdentidad, TxDeIdentidad } from "./contrato";
-
-/**
- * El guard de permisos (ADR-003): el actor tiene que poder hacer la `accion` declarada del caso de
- * uso. Es lo PRIMERO que hace cada caso de uso dentro de la transacción, antes de leer o escribir
- * nada más. La base NO conoce el rol del actor: lo verifica el servidor, y lo lee acá, dentro de la
- * misma transacción serializable (así una membresía apagada un instante antes ya no pasa y un
- * reintento lo vuelve a leer). Nada de esto se guarda en sesión ni en caché.
- */
-export async function exigirAccion(
-  tx: TxDeIdentidad,
-  contexto: ContextoOperativo,
-  reglas: DependenciasDeIdentidad["reglas"],
-  accion: ClaveAccion,
-): Promise<Resultado<null, MotivoDeRechazo>> {
-  const actor = await tx.autorizacion.delActor(contexto);
-  return evaluarGuard(reglas, accion, {
-    rol: actor.rol,
-    modulosActivos: modulosActivosDe(reglas.catalogo, actor.modulosActivados),
-    capacidadesDeSucursal: null,
-  });
-}
+import type { TxDeIdentidad } from "./contrato";
 
 /** Las empresas y los estados (de la empresa y de su tenant) para decidir si operan. */
 export async function cargarEmpresas(
@@ -59,15 +27,4 @@ export async function cargarEmpresas(
     estados.set(id, { empresa: empresa.estado, tenant: tenantEstado });
   }
   return { empresas, estados };
-}
-
-/** `EMPRESA_NO_OPERA` con el motivo, si la empresa no está en condiciones de operar. */
-export function comprobarQueOpera(
-  id: EmpresaId,
-  estados: EstadosDeEmpresa,
-): Resultado<null, EmpresaNoOpera> {
-  const estado = estados.get(id);
-  if (estado === undefined) throw new RangeError(`falta el estado de la empresa ${id}`);
-  const motivo = estadoEfectivo(estado.tenant, estado.empresa);
-  return motivo === "OPERA" ? ok(null) : err({ codigo: "EMPRESA_NO_OPERA", empresaId: id, motivo });
 }

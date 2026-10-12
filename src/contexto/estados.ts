@@ -1,3 +1,6 @@
+import type { EmpresaId } from "../primitivas/identificadores/marca";
+import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
+
 /**
  * Estados de tenant y empresa, y el estado efectivo que combina ambos (diseno-inicial §4.1). Viven
  * en `contexto` porque los usan los módulos de tenants y de empresas, que son hermanos y no se
@@ -29,4 +32,31 @@ export function estadoEfectivo(tenant: EstadoDeTenant, empresa: EstadoDeEmpresa)
 
 export function puedeOperar(estado: EstadoEfectivo): boolean {
   return estado === "OPERA";
+}
+
+/** Los estados (de la empresa y de su tenant) de cada empresa que se quiere comprobar. */
+export type EstadosDeEmpresa = ReadonlyMap<
+  EmpresaId,
+  Readonly<{ empresa: EstadoDeEmpresa; tenant: EstadoDeTenant }>
+>;
+
+/** Falla de `EMPRESA_NO_OPERA`: cuál empresa no opera y por qué (unión discriminada por `codigo`). */
+export type EmpresaNoOpera = Readonly<{
+  codigo: "EMPRESA_NO_OPERA";
+  empresaId: EmpresaId;
+  motivo: Exclude<EstadoEfectivo, "OPERA">;
+}>;
+
+/**
+ * `EMPRESA_NO_OPERA` con el motivo, si la empresa no está en condiciones de operar. Que falte el
+ * estado de la empresa es un error del llamador, no de negocio: se lanza para no autorizar a ciegas.
+ */
+export function comprobarQueOpera(
+  id: EmpresaId,
+  estados: EstadosDeEmpresa,
+): Resultado<null, EmpresaNoOpera> {
+  const estado = estados.get(id);
+  if (estado === undefined) throw new RangeError(`falta el estado de la empresa ${id}`);
+  const motivo = estadoEfectivo(estado.tenant, estado.empresa);
+  return motivo === "OPERA" ? ok(null) : err({ codigo: "EMPRESA_NO_OPERA", empresaId: id, motivo });
 }

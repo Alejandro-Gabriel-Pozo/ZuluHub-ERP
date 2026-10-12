@@ -1,11 +1,13 @@
+import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
+import { comprobarQueOpera, type EmpresaNoOpera } from "../../../contexto/estados";
 import type { InvitacionId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
-import type { EmpresaNoOpera, ErrorDeInvitacion } from "../dominio/errores";
+import type { ErrorDeInvitacion } from "../dominio/errores";
 import { decidirReenvio } from "../dominio/invitacion";
-import { cargarEmpresas, comprobarQueOpera, exigirAccion } from "./comun";
+import { cargarEmpresas } from "./comun";
 import {
   TRABAJO_ENVIAR_INVITACION,
   claveDeEnvioDeInvitacion,
@@ -63,11 +65,8 @@ export function crearReenviarInvitacion({
       ): Promise<
         Resultado<SalidaDeReenviarInvitacion, ErrorDeInvitacion | MotivoDeRechazo | EmpresaNoOpera>
       > => {
-        const permiso = await exigirAccion(
-          tx,
-          contexto,
-          reglas,
-          DECLARACIONES.reenviarInvitacion.accion,
+        const permiso = await exigirAccion(reglas, DECLARACIONES.reenviarInvitacion.accion, () =>
+          tx.autorizacion.delActor(contexto),
         );
         if (!permiso.ok) return permiso;
         const { estados } = await cargarEmpresas(tx, [empresaId]);
