@@ -39,7 +39,7 @@ import {
 import {
   resolverEmisor,
   type DatosDeLinea,
-  type DatosDeVenta,
+  type DatosAFacturar,
   type ReglaDeEmisor,
 } from "./resolucion-de-emisor";
 import { estadoDeVersion, versionVigente, type VersionConfirmada } from "./vigencia";
@@ -136,7 +136,7 @@ const venta = fc.record({
   ),
   eleccionManual: emisorOpcional,
   emisoresActivos: activos,
-}) as fc.Arbitrary<DatosDeVenta>;
+}) as fc.Arbitrary<DatosAFacturar>;
 const linea = fc.record({
   emisorDelProducto: emisorOpcional,
   emisorDelDeposito: emisorOpcional,
