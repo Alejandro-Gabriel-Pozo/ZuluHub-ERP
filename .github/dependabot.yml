@@ -8,6 +8,11 @@ updates:
     # Espera unos días antes de ofrecer un paquete recién publicado: frena paquetes maliciosos.
     cooldown:
       default-days: 3
+    ignore:
+      # Los tipos de Node tienen que coincidir con el Node que corre (24): subir a otra mayor
+      # describiría funciones que el entorno de ejecución no tiene.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
