@@ -7,6 +7,8 @@ export {
   type Empresa,
   type ErrorDeEmpresa,
 } from "./dominio/empresa";
+export { DECLARACIONES as DECLARACIONES_DE_EMPRESAS } from "./casos-de-uso/declaraciones";
+export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS } from "./consultas/declaraciones";
 export { nombreDeSucursalValido, type ErrorDeSucursal, type Sucursal } from "./dominio/sucursal";
 export {
   COLUMNAS_DE_EMPRESAS,

@@ -1,7 +1,7 @@
 /** Entrada pública del módulo de identidad (ADR-001): dominio, persistencia y casos de uso. */
 export { emailDesdeTexto, type Email } from "./dominio/email";
+export type { EmpresaNoOpera, EstadosDeEmpresa } from "../../contexto/estados";
 export type {
-  EmpresaNoOpera,
   ErrorDeAceptacion,
   ErrorDeInvitacion,
   ErrorDeMembresia,
@@ -25,7 +25,6 @@ export {
   type EmpresaInvitada,
   type EstadoDeInvitacion,
   type EstadoGuardado,
-  type EstadosDeEmpresa,
   type Invitacion,
   type NuevaInvitacion,
   type RolDeEmpresa,
@@ -61,6 +60,7 @@ export type {
   ErrorAlApagarMembresia,
   SalidaDeApagarMembresia,
 } from "./casos-de-uso/apagar-membresia";
+export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_IDENTIDAD } from "./consultas/declaraciones";
 export { DECLARACIONES as DECLARACIONES_DE_IDENTIDAD } from "./casos-de-uso/declaraciones";
 export type { DeclaracionDeCaso } from "./casos-de-uso/declaraciones";
 export {

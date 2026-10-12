@@ -1,8 +1,4 @@
-import {
-  estadoEfectivo,
-  type EstadoDeEmpresa,
-  type EstadoDeTenant,
-} from "../../../contexto/estados";
+import { estadoEfectivo, type EstadosDeEmpresa } from "../../../contexto/estados";
 import type {
   EmpresaId,
   InvitacionId,
@@ -128,11 +124,6 @@ export function nuevaInvitacion(
     empresas,
   });
 }
-
-export type EstadosDeEmpresa = ReadonlyMap<
-  EmpresaId,
-  Readonly<{ empresa: EstadoDeEmpresa; tenant: EstadoDeTenant }>
->;
 
 export type DatosDeAceptacion = Readonly<{
   ahora: Date;

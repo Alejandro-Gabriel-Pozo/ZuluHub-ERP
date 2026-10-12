@@ -6,7 +6,14 @@ import {
   type CatalogoComercial,
   type DefinicionDeModulo,
 } from "../../src/capacidades/modulos/catalogo";
-import { DECLARACIONES_DE_IDENTIDAD } from "../../src/modulos/identidad/publico";
+import {
+  DECLARACIONES_DE_EMPRESAS,
+  DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS,
+} from "../../src/modulos/empresas/publico";
+import {
+  DECLARACIONES_DE_CONSULTAS_DE_IDENTIDAD,
+  DECLARACIONES_DE_IDENTIDAD,
+} from "../../src/modulos/identidad/publico";
 
 /**
  * P6: los cruces del catálogo comercial (ADR-003), cada uno con su violación inyectada.
@@ -25,7 +32,7 @@ const carpetaExiste = (carpeta: string): boolean => {
   return existsSync(ruta) && statSync(ruta).isDirectory();
 };
 
-/** Las acciones que exige cada carpeta de `src/` (hoy solo identidad tiene casos de uso). */
+/** Las acciones que exige cada carpeta de `src/` por sus casos de uso y sus consultas. */
 type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 
 function crucesDelCatalogo(
@@ -154,22 +161,80 @@ const DECLARADAS_SANAS: AccionesPorCarpeta = {
 const todasExisten = () => true;
 
 describe("P6: el catálogo REAL cumple los cruces", () => {
+  const accionesDe = (...declaraciones: Record<string, object>[]): string[] =>
+    declaraciones
+      .flatMap((d) => Object.values(d))
+      .flatMap((d) => ("accion" in d ? [d.accion] : [])) as string[];
+
   const declaradas: AccionesPorCarpeta = {
-    "modulos/identidad": Object.values(DECLARACIONES_DE_IDENTIDAD).flatMap((d) =>
-      "accion" in d ? [d.accion] : [],
+    "modulos/identidad": accionesDe(
+      DECLARACIONES_DE_IDENTIDAD,
+      DECLARACIONES_DE_CONSULTAS_DE_IDENTIDAD,
+    ),
+    "modulos/empresas": accionesDe(
+      DECLARACIONES_DE_EMPRESAS,
+      DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS,
     ),
   };
 
-  it("las acciones que exigen los casos de uso de identidad son las tres de usuarios", () => {
-    expect(declaradas["modulos/identidad"]).toEqual([
+  it("identidad exige las acciones de usuarios y de gerencia (casos de uso y consultas)", () => {
+    expect([...new Set(declaradas["modulos/identidad"])].sort()).toEqual([
+      "gerencia.aceptar_traspaso",
+      "gerencia.cancelar_traspaso",
+      "gerencia.proponer_traspaso",
+      "gerencia.rechazar_traspaso",
+      "gerencia.ver_traspaso",
+      "usuarios.apagar",
+      "usuarios.asignar_sucursales",
       "usuarios.invitar",
       "usuarios.reenviar_invitacion",
-      "usuarios.apagar",
+      "usuarios.revocar_invitacion",
+      "usuarios.ver",
     ]);
+  });
+
+  it("empresas exige las acciones de sucursales, módulos y permisos propios (casos de uso y consultas)", () => {
+    expect([...new Set(declaradas["modulos/empresas"])].sort()).toEqual([
+      "modulos.ver",
+      "permisos.ver_propios",
+      "sucursales.crear",
+      "sucursales.desactivar",
+      "sucursales.editar",
+      "sucursales.reactivar",
+      "sucursales.ver",
+    ]);
+  });
+
+  it("administracion lo implementan exactamente las carpetas que exigen sus acciones", () => {
+    expect([...CATALOGO_DE_MODULOS.administracion.implementadoPor].sort()).toEqual(
+      Object.keys(declaradas).sort(),
+    );
   });
 
   it("no tiene ningún problema de X1, X3, X4 ni de obligatorios", () => {
     expect(crucesDelCatalogo(CATALOGO_DE_MODULOS, declaradas)).toEqual([]);
+  });
+
+  it("X1 se dispara si empresas deja de exigir una acción del catálogo (violación inyectada)", () => {
+    const sinPermisosPropios: AccionesPorCarpeta = {
+      ...declaradas,
+      "modulos/empresas":
+        declaradas["modulos/empresas"]?.filter((a) => a !== "permisos.ver_propios") ?? [],
+    };
+    expect(crucesDelCatalogo(CATALOGO_DE_MODULOS, sinPermisosPropios)).toEqual([
+      "X1: la acción permisos.ver_propios no la exige ningún caso de uso",
+    ]);
+  });
+
+  it("X1 se dispara si una carpeta que el catálogo no lista exige una acción (violación inyectada)", () => {
+    expect(
+      crucesDelCatalogo(CATALOGO_DE_MODULOS, {
+        ...declaradas,
+        "modulos/tenants": ["usuarios.ver"],
+      }),
+    ).toEqual([
+      "X1: modulos/tenants exige usuarios.ver, pero administracion no figura implementado por esa carpeta",
+    ]);
   });
 });
 

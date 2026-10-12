@@ -1,15 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { esClaveDe } from "../../../capacidades/modulos/activos";
+import { clavesDe, esClaveDe } from "../../../capacidades/modulos/activos";
 import { CATALOGO_DE_MODULOS, type ClaveAccion } from "../../../capacidades/modulos/catalogo";
-import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
-import type { RolDeEmpresa } from "../../../capacidades/permisos/roles";
+import {
+  PERMISOS_DE_EMPRESA,
+  REGLAS_DE_EMPRESA,
+  type ReglasDeEmpresa,
+} from "../../../capacidades/permisos/empresa";
+import { exigirAccion } from "../../../capacidades/permisos/exigir";
+import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "../../../capacidades/permisos/roles";
 import type { ContextoOperativo } from "../../../contexto/contexto";
-import { empresaId, invitacionId, personaId } from "../../../primitivas/identificadores/marca";
+import {
+  empresaId,
+  invitacionId,
+  personaId,
+  sucursalId,
+} from "../../../primitivas/identificadores/marca";
 import type { CargaDeAutorizacion, DatosDelActor } from "../../../puertos/autorizacion";
 import type { Tokens } from "../../../puertos/tokens";
 import type { Transacciones } from "../../../puertos/transacciones";
 import { crearCasosDeUsoDeIdentidad, type CasosDeUsoDeIdentidad } from "./casos-de-uso";
-import { exigirAccion } from "./comun";
 import type { TxDeIdentidad } from "./contrato";
 import { DECLARACIONES } from "./declaraciones";
 
@@ -71,6 +80,33 @@ const LLAMADAS: Record<ConAccion, (casos: CasosDeUsoDeIdentidad) => Promise<unkn
     c.invitarUsuario(contexto, { email: "nueva@prueba.test", rol: "OPERADOR", sucursales: [] }),
   reenviarInvitacion: (c) => c.reenviarInvitacion(contexto, { invitacionId: invitacionId("i-1") }),
   apagarMembresia: (c) => c.apagarMembresia(contexto, { personaId: personaId("p-2") }),
+  revocarInvitacion: (c) => c.revocarInvitacion(contexto, { invitacionId: invitacionId("i-1") }),
+  asignarSucursales: (c) =>
+    c.asignarSucursales(contexto, { personaId: personaId("p-2"), sucursales: [sucursalId("s-1")] }),
+  proponerTraspaso: (c) => c.proponerTraspaso(contexto, { entrantePersonaId: personaId("p-2") }),
+  cancelarTraspaso: (c) => c.cancelarTraspaso(contexto, {}),
+  aceptarTraspaso: (c) => c.aceptarTraspaso(contexto, { traspasoId: "t-1" }),
+  rechazarTraspaso: (c) => c.rechazarTraspaso(contexto, { traspasoId: "t-1" }),
+};
+
+/**
+ * Un caso de uso todavía sin implementar (tramos T3a, T3b y T4 de H6) pasa el guard y devuelve
+ * `NO_IMPLEMENTADO` sin tocar nada más; uno implementado toca la transacción vigilada y corta con
+ * `AccesoFueraDelGuard`. Las dos cosas prueban que el guard ya pasó.
+ */
+const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
+  try {
+    const resultado = await llamada;
+    return (
+      typeof resultado === "object" &&
+      resultado !== null &&
+      "error" in resultado &&
+      resultado.error === "NO_IMPLEMENTADO"
+    );
+  } catch (e) {
+    if (e instanceof AccesoFueraDelGuard) return true;
+    throw e;
+  }
 };
 
 const conAccion = Object.entries(DECLARACIONES).flatMap(([nombre, declaracion]) =>
@@ -87,9 +123,15 @@ const SIN_ROL: DatosDelActor = { rol: null, modulosActivados: [] };
 describe("P7: el guard va primero en cada caso de uso", () => {
   it("hay casos de uso con acción que probar", () => {
     expect(conAccion.map((c) => c.nombre).sort()).toEqual([
+      "aceptarTraspaso",
       "apagarMembresia",
+      "asignarSucursales",
+      "cancelarTraspaso",
       "invitarUsuario",
+      "proponerTraspaso",
+      "rechazarTraspaso",
       "reenviarInvitacion",
+      "revocarInvitacion",
     ]);
   });
 
@@ -103,29 +145,18 @@ describe("P7: el guard va primero en cada caso de uso", () => {
     },
   );
 
-  it.each(conAccion)(
-    "$nombre: un rol que la matriz no incluye (operador) da SIN_PERMISO sin tocar nada más",
-    async ({ nombre }) => {
-      const vigilada = vigilar({ rol: "OPERADOR", modulosActivados: [] });
-      expect(await llamar(nombre, casosCon(vigilada))).toEqual({
-        ok: false,
-        error: "SIN_PERMISO",
-      });
-      expect(vigilada.accesos).toEqual(["autorizacion"]);
-    },
-  );
-
-  it.each(conAccion)(
-    "$nombre: un rol que la matriz incluye pasa el guard y recién ahí toca lo demás",
-    async ({ nombre }) => {
-      for (const rol of ["GERENTE", "ADMINISTRADOR"] as const) {
-        const vigilada = vigilar({ rol, modulosActivados: [] });
-        await expect(llamar(nombre, casosCon(vigilada))).rejects.toBeInstanceOf(
-          AccesoFueraDelGuard,
-        );
-        expect(vigilada.accesos[0]).toBe("autorizacion");
-        expect(vigilada.accesos.length).toBeGreaterThan(1);
+  it.each(conAccion.flatMap((c) => ROLES_DE_EMPRESA.map((rol) => ({ ...c, rol }))))(
+    "$nombre con $rol: la matriz decide; si no lo incluye da SIN_PERMISO sin tocar nada más, y si lo incluye pasa el guard y recién ahí toca lo demás",
+    async ({ nombre, accion, rol }) => {
+      const vigilada = vigilar({ rol, modulosActivados: [] });
+      const llamada = llamar(nombre, casosCon(vigilada));
+      if (!(PERMISOS_DE_EMPRESA[accion] as readonly RolDeEmpresa[]).includes(rol)) {
+        expect(await llamada).toEqual({ ok: false, error: "SIN_PERMISO" });
+        expect(vigilada.accesos).toEqual(["autorizacion"]);
+        return;
       }
+      expect(await pasoElGuard(llamada)).toBe(true);
+      expect(vigilada.accesos[0]).toBe("autorizacion");
     },
   );
 
@@ -141,7 +172,7 @@ describe("P7: el guard va primero en cada caso de uso", () => {
       },
     });
     const casos = casosCon({ tx, accesos });
-    await expect(LLAMADAS.invitarUsuario(casos)).rejects.toBeInstanceOf(AccesoFueraDelGuard);
+    expect(await pasoElGuard(LLAMADAS.invitarUsuario(casos))).toBe(true);
     actor = SIN_ROL;
     expect(await LLAMADAS.invitarUsuario(casos)).toEqual({ ok: false, error: "SIN_PERMISO" });
   });
@@ -151,14 +182,10 @@ describe("cada caso de uso exige SU acción (no la de otro)", () => {
   /** Reglas en las que SOLO el operador puede `accion`, y nadie puede las demás. */
   const soloElOperadorPuede = (accion: ClaveAccion): ReglasDeEmpresa => {
     const roles = (a: ClaveAccion): readonly RolDeEmpresa[] => (a === accion ? ["OPERADOR"] : []);
-    return {
-      catalogo: CATALOGO_DE_MODULOS,
-      permisos: {
-        "usuarios.invitar": roles("usuarios.invitar"),
-        "usuarios.reenviar_invitacion": roles("usuarios.reenviar_invitacion"),
-        "usuarios.apagar": roles("usuarios.apagar"),
-      },
-    };
+    const permisos = Object.fromEntries(
+      clavesDe(PERMISOS_DE_EMPRESA).map((a) => [a, roles(a)]),
+    ) as unknown as ReglasDeEmpresa["permisos"];
+    return { catalogo: CATALOGO_DE_MODULOS, permisos };
   };
 
   for (const propio of conAccion) {
@@ -168,7 +195,7 @@ describe("cada caso de uso exige SU acción (no la de otro)", () => {
         const vigilada = vigilar({ rol: "OPERADOR", modulosActivados: [] });
         const casos = casosCon(vigilada, soloElOperadorPuede(propio.accion));
         if (esElMismo) {
-          await expect(llamar(otro.nombre, casos)).rejects.toBeInstanceOf(AccesoFueraDelGuard);
+          expect(await pasoElGuard(llamar(otro.nombre, casos))).toBe(true);
         } else {
           expect(await llamar(otro.nombre, casos)).toEqual({ ok: false, error: "SIN_PERMISO" });
           expect(vigilada.accesos).toEqual(["autorizacion"]);
@@ -249,7 +276,9 @@ describe("el detector (con la violación inyectada)", () => {
   /** Un caso de uso mal hecho: lee un repositorio ANTES de pedir el permiso. */
   async function casoQueLeeAntes(tx: TxDeIdentidad) {
     await tx.empresas.obtener(contexto.empresaId);
-    return exigirAccion(tx, contexto, REGLAS_DE_EMPRESA, "usuarios.invitar");
+    return exigirAccion(REGLAS_DE_EMPRESA, "usuarios.invitar", () =>
+      tx.autorizacion.delActor(contexto),
+    );
   }
 
   /** Otro mal hecho: no pide el permiso. */
@@ -260,7 +289,9 @@ describe("el detector (con la violación inyectada)", () => {
 
   /** Uno bien hecho: pide el permiso y se detiene. */
   async function casoBienHecho(tx: TxDeIdentidad) {
-    return exigirAccion(tx, contexto, REGLAS_DE_EMPRESA, "usuarios.invitar");
+    return exigirAccion(REGLAS_DE_EMPRESA, "usuarios.invitar", () =>
+      tx.autorizacion.delActor(contexto),
+    );
   }
 
   const guardVaPrimero = async (caso: (tx: TxDeIdentidad) => Promise<unknown>) => {

@@ -6,7 +6,11 @@ import {
   type ClaveCapacidad,
   type ClaveModulo,
 } from "../../src/capacidades/modulos/catalogo";
-import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
+import {
+  PERMISOS_DE_EMPRESA,
+  REGLAS_DE_EMPRESA,
+  type ReglasDeEmpresa,
+} from "../../src/capacidades/permisos/empresa";
 import { evaluarGuard } from "../../src/capacidades/permisos/guard";
 import type { RolDeEmpresa } from "../../src/capacidades/permisos/roles";
 import type { ContextoDePlataforma, ContextoOperativo } from "../../src/contexto/contexto";
@@ -27,7 +31,24 @@ describe("tipos cerrados derivados del catálogo", () => {
   it("las claves salen del catálogo real", () => {
     expectTypeOf<ClaveModulo>().toEqualTypeOf<"administracion">();
     expectTypeOf<ClaveAccion>().toEqualTypeOf<
-      "usuarios.invitar" | "usuarios.reenviar_invitacion" | "usuarios.apagar"
+      | "usuarios.invitar"
+      | "usuarios.reenviar_invitacion"
+      | "usuarios.apagar"
+      | "usuarios.ver"
+      | "usuarios.asignar_sucursales"
+      | "usuarios.revocar_invitacion"
+      | "sucursales.ver"
+      | "sucursales.crear"
+      | "sucursales.editar"
+      | "sucursales.desactivar"
+      | "sucursales.reactivar"
+      | "gerencia.proponer_traspaso"
+      | "gerencia.cancelar_traspaso"
+      | "gerencia.ver_traspaso"
+      | "gerencia.aceptar_traspaso"
+      | "gerencia.rechazar_traspaso"
+      | "modulos.ver"
+      | "permisos.ver_propios"
     >();
     // Hoy ninguna acción exige una capacidad de sucursal.
     expectTypeOf<ClaveCapacidad>().toEqualTypeOf<never>();
@@ -51,25 +72,30 @@ describe("tipos cerrados derivados del catálogo", () => {
 
   it("una matriz a la que le falta una acción, o le sobra una, o trae un rol inexistente, no compila", () => {
     const matriz = (permisos: ReglasDeEmpresa["permisos"]) => permisos;
-    const sinUnaAccion = () =>
+    const sinUnaAccion: Omit<typeof PERMISOS_DE_EMPRESA, "usuarios.apagar"> = PERMISOS_DE_EMPRESA;
+    const faltaUna = () =>
       // @ts-expect-error falta "usuarios.apagar"
-      matriz({ "usuarios.invitar": ["GERENTE"], "usuarios.reenviar_invitacion": ["GERENTE"] });
-    const conAccionDeMas = () =>
+      matriz(sinUnaAccion);
+    const faltanLasNuevas = () =>
+      // @ts-expect-error faltan todas las acciones que sumó H6
       matriz({
         "usuarios.invitar": ["GERENTE"],
         "usuarios.reenviar_invitacion": ["GERENTE"],
         "usuarios.apagar": ["GERENTE"],
+      });
+    const conAccionDeMas = () =>
+      matriz({
+        ...PERMISOS_DE_EMPRESA,
         // @ts-expect-error esa acción no existe en el catálogo
         "usuarios.borrar_todo": ["GERENTE"],
       });
     const conRolInexistente = () =>
       matriz({
-        "usuarios.invitar": ["GERENTE"],
-        "usuarios.reenviar_invitacion": ["GERENTE"],
+        ...PERMISOS_DE_EMPRESA,
         // @ts-expect-error "SUPERVISOR" no es un rol de empresa
         "usuarios.apagar": ["SUPERVISOR"],
       });
-    expect([sinUnaAccion, conAccionDeMas, conRolInexistente]).toHaveLength(3);
+    expect([faltaUna, faltanLasNuevas, conAccionDeMas, conRolInexistente]).toHaveLength(4);
   });
 
   it("un módulo del catálogo con una forma incompleta no compila", () => {
@@ -112,11 +138,17 @@ describe("los casos de uso deben estar declarados", () => {
         invitarUsuario: 1,
         apagarMembresia: 1,
         reenviarInvitacion: 1,
+        revocarInvitacion: 1,
+        asignarSucursales: 1,
+        proponerTraspaso: 1,
+        cancelarTraspaso: 1,
+        aceptarTraspaso: 1,
+        rechazarTraspaso: 1,
         // @ts-expect-error un caso de uso nuevo sin entrada en DECLARACIONES
         nuevoCaso: 1,
       });
     const sinCaso = () =>
-      // @ts-expect-error una declaración sin caso de uso (falta reenviarInvitacion)
+      // @ts-expect-error una declaración sin caso de uso (faltan todos menos tres)
       exacto({ aceptarInvitacion: 1, invitarUsuario: 1, apagarMembresia: 1 });
     expect([sinDeclarar, sinCaso]).toHaveLength(2);
   });
