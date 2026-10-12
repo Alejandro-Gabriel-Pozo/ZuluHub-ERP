@@ -19,6 +19,7 @@ import {
 import {
   personaId,
   type EmpresaId,
+  type MarcaComercialId,
   type PersonaId,
   type TenantId,
 } from "../../src/primitivas/identificadores/marca";
@@ -75,6 +76,7 @@ import type { CargaDeAutorizacionDePlataforma } from "../../src/puertos/autoriza
 import type { ColaDeTrabajos } from "../../src/puertos/cola-de-trabajos";
 import type { IdempotenciaDePlataforma } from "../../src/puertos/idempotencia";
 import type { ReferenciasDeError } from "../../src/puertos/referencias-de-error";
+import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
 import { ADMIN_DE_PRUEBA, sembrarAdminsDePrueba } from "./admins-de-prueba";
 import type { BaseDePruebas } from "./global";
 import { OPCIONES_DE_BASE } from "./opciones-de-base";
@@ -164,13 +166,19 @@ export const comoPlataforma = (
   ahora: AHORA,
 });
 
+/**
+ * Por defecto entra por la marca principal (`MARCA_PRINCIPAL_DE_PRUEBA`): ese valor por defecto es SOLO
+ * de las pruebas. Para probar otra puerta se pasa su marca; `null` es el sistema (sin puerta).
+ */
 export const comoEmpresa = (
   empresa: EmpresaId,
   persona: PersonaId | null = null,
+  marca: MarcaComercialId | null = MARCA_PRINCIPAL_DE_PRUEBA,
 ): ContextoOperativo => ({
   tipo: "OPERATIVO",
   empresaId: empresa,
   personaId: persona,
+  marcaDeEntrada: marca,
   ahora: AHORA,
 });
 

@@ -43,6 +43,14 @@ const TABLAS_DE_NEGOCIO = [
   "referencia_de_error",
   // H6 administración (0005_administracion)
   "traspaso_gerencia",
+  // H7 fiscal (0006_fiscal)
+  "provincia",
+  "emisor",
+  "domicilio",
+  "datos_fiscales",
+  "regla_emisor",
+  "punto_de_venta",
+  "serie_comprobante",
 ] as const;
 const TABLAS_DE_AUDITORIA = ["auditoria_empresa", "auditoria_plataforma", "auditoria_acceso_grupo"];
 
@@ -237,6 +245,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         [
           "asignacion_sucursal:SELECT",
           "auditoria_empresa:SELECT",
+          "datos_fiscales:SELECT", // 0006
+          "domicilio:SELECT", // 0006
+          "emisor:SELECT", // 0006
           "empresa:SELECT",
           "invitacion:SELECT",
           "invitacion_empresa:SELECT",
@@ -244,6 +255,10 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "membresia:SELECT",
           "membresia_tenant:SELECT",
           "persona:SELECT",
+          "provincia:SELECT", // 0006
+          "punto_de_venta:SELECT", // 0006
+          "regla_emisor:SELECT", // 0006
+          "serie_comprobante:SELECT", // 0006
           "sucursal:SELECT",
           "tenant:SELECT",
           "trabajo:SELECT",
@@ -264,6 +279,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         [
           "admin_plataforma:SELECT",
           "auditoria_plataforma:SELECT",
+          "emisor:SELECT", // 0006
           "empresa:SELECT",
           "idempotencia_plataforma:SELECT",
           "instalacion:SELECT",
@@ -272,6 +288,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "membresia_tenant:SELECT",
           "persona:SELECT",
           "referencia_de_error:SELECT",
+          "serie_comprobante:SELECT", // 0006
           "tenant:SELECT",
           "trabajo:SELECT",
           "traspaso_gerencia:SELECT",
@@ -290,6 +307,21 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       expect(permitidas).toEqual(
         [
           "zuluhub_app:asignacion_sucursal.activa",
+          // 0006: los datos fiscales y la regla del emisor se editan en borrador y se confirman
+          ...[
+            "razon_social",
+            "condicion_iva",
+            "domicilio_fiscal_id",
+            "inicio_actividades",
+            "iibb_numero",
+            "iibb_condicion",
+            "estado",
+            "numero",
+            "vigente_desde",
+            "confirmada_en",
+            "confirmada_por",
+            "motivo",
+          ].map((c) => `zuluhub_app:datos_fiscales.${c}`),
           "zuluhub_app:empresa.estado", // solo para activar el alta del gerente (política acotada)
           "zuluhub_app:empresa.motivo_estado",
           "zuluhub_app:invitacion.aceptada_en",
@@ -301,12 +333,34 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "zuluhub_app:membresia.activo",
           // `rol` desde 0005: solo cambia al aceptar un traspaso (política + disparador `membresia_cambio`)
           "zuluhub_app:membresia.rol",
+          ...["numero", "sucursal_id", "domicilio_id", "estado"].map(
+            (c) => `zuluhub_app:punto_de_venta.${c}`,
+          ),
+          ...[
+            "permitir_eleccion_manual",
+            "estado",
+            "numero",
+            "vigente_desde",
+            "confirmada_en",
+            "confirmada_por",
+            "motivo",
+          ].map((c) => `zuluhub_app:regla_emisor.${c}`),
+          ...[
+            "ultimo_numero",
+            "estado",
+            "numero_en_curso",
+            "solicitud_en_curso",
+            "en_curso_hasta",
+            "motivo_bloqueo",
+          ].map((c) => `zuluhub_app:serie_comprobante.${c}`),
           "zuluhub_app:sucursal.activa",
           "zuluhub_app:sucursal.nombre",
           "zuluhub_app:traspaso_gerencia.estado",
           "zuluhub_app:traspaso_gerencia.motivo",
           "zuluhub_app:traspaso_gerencia.resuelto_en",
           "zuluhub_app:traspaso_gerencia.saliente_persona_id",
+          "zuluhub_plataforma:emisor.activo", // 0006
+          "zuluhub_plataforma:emisor.cuit", // 0006
           "zuluhub_plataforma:empresa.cuit",
           "zuluhub_plataforma:empresa.estado",
           "zuluhub_plataforma:empresa.motivo_estado",
@@ -393,6 +447,45 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         "estado",
         "tipo",
       ].map((c) => `invitacion_empresa.${c}`);
+      // 0006 (H7 fiscal): ninguna toma `creado_en`, `version`, `estado` inicial ni los datos de la confirmación.
+      const fiscalDeLaEmpresa = [
+        ...[
+          "id",
+          "empresa_id",
+          "calle",
+          "numero",
+          "piso",
+          "departamento",
+          "localidad",
+          "provincia",
+          "codigo_postal",
+        ].map((c) => `domicilio.${c}`),
+        ...[
+          "id",
+          "empresa_id",
+          "emisor_id",
+          "razon_social",
+          "condicion_iva",
+          "domicilio_fiscal_id",
+          "inicio_actividades",
+          "iibb_numero",
+          "iibb_condicion",
+          "creado_por",
+        ].map((c) => `datos_fiscales.${c}`),
+        ...["id", "empresa_id", "permitir_eleccion_manual", "creado_por"].map(
+          (c) => `regla_emisor.${c}`,
+        ),
+        ...["id", "empresa_id", "emisor_id", "sucursal_id", "numero", "domicilio_id"].map(
+          (c) => `punto_de_venta.${c}`,
+        ),
+        ...[
+          "empresa_id",
+          "punto_de_venta_id",
+          "emisor_id",
+          "tipo_comprobante",
+          "ultimo_numero",
+        ].map((c) => `serie_comprobante.${c}`),
+      ];
       expect(porRol("zuluhub_app")).toEqual(
         [
           ...auditoriaDeEmpresa,
@@ -410,6 +503,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "trabajo.datos",
           "trabajo.clave_idempotencia",
           ...traspasoDeLaEmpresa,
+          ...fiscalDeLaEmpresa,
         ].sort(),
       );
       expect(porRol("zuluhub_grupo")).toEqual(
@@ -430,6 +524,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ),
           ...referenciaDeError,
           ...["tenant_id", "cuit", "razon_social", "zona_horaria"].map((c) => `empresa.${c}`),
+          ...["empresa_id", "es_principal", "cuit"].map((c) => `emisor.${c}`), // 0006
           ...invitacionEmitida,
           ...invitacionEmpresa,
           ...["persona_id", "tenant_id", "rol", "activo"].map((c) => `membresia_tenant.${c}`),
@@ -996,8 +1091,25 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         )
       ).rows;
 
-    it("toda restricción única de una tabla con empresa_id la incluye (nada de detectar datos de otro cliente)", async () => {
-      expect(await unicasSinEmpresa(dueno)).toEqual([]);
+    it("toda restricción única de una tabla con empresa_id la incluye (nada de detectar datos de otro cliente), salvo la excepción explícita emisor_cuit_uk", async () => {
+      expect(await unicasSinEmpresa(dueno)).toEqual([
+        { tabla: "emisor", indice: "emisor_cuit_uk" }, // el CUIT del secundario es único en toda la instalación
+      ]);
+    });
+
+    it("la premisa de emisor_cuit_uk: solo la plataforma escribe emisor.cuit (si el cliente lo escribiera, el error de duplicado le mostraría los CUIT ajenos)", async () => {
+      const escriben = await filas<{ grantee: string; privilege_type: string }>(
+        `select grantee, privilege_type from information_schema.column_privileges
+         where table_schema = 'public' and table_name = 'emisor' and column_name = 'cuit'
+           and privilege_type in ('INSERT', 'UPDATE')
+           and (grantee = any($1) or grantee = 'PUBLIC' or grantee = 'zuluhub_autenticacion')
+         order by 1, 2`,
+        [[...ROLES]],
+      );
+      expect(escriben).toEqual([
+        { grantee: "zuluhub_plataforma", privilege_type: "INSERT" },
+        { grantee: "zuluhub_plataforma", privilege_type: "UPDATE" },
+      ]);
     });
 
     it("el chequeo de unicidad muerde: detecta una única sin empresa_id y acepta las que corresponden", async () => {
@@ -1016,6 +1128,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           codigo text primary key, empresa_id uuid not null)`);
         await cliente.query(`create table producto_global (id uuid primary key, sku text unique)`);
         expect(await unicasSinEmpresa(cliente)).toEqual([
+          { tabla: "emisor", indice: "emisor_cuit_uk" }, // la excepción explícita de 0006
           { tabla: "producto_clave_propia", indice: "producto_clave_propia_pkey" },
           { tabla: "producto_mala", indice: "producto_mala_sku_key" },
         ]);

@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import pg from "pg";
@@ -29,6 +29,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0003_trabajos.sql",
         "0004_plataforma.sql",
         "0005_administracion.sql",
+        "0006_fiscal.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -39,6 +40,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0003_trabajos.sql",
           "0004_plataforma.sql",
           "0005_administracion.sql",
+          "0006_fiscal.sql",
         ],
       });
     } finally {
@@ -147,6 +149,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0003_trabajos.sql",
         "0004_plataforma.sql",
         "0005_administracion.sql",
+        "0006_fiscal.sql",
       ]);
     } finally {
       await aparte.destruir();
@@ -389,6 +392,7 @@ describe.skipIf(base === null)("migraciones", () => {
     "0003_trabajos.sql",
     "0004_plataforma.sql",
     "0005_administracion.sql",
+    "0006_fiscal.sql",
   ])("la migración %s no contiene contraseñas ni cadenas de conexión", async (archivo) => {
     const sql = await readFile(join(CARPETA_REAL, archivo), "utf8");
     expect(sql).not.toMatch(/PASSWORD\s+'/i);
@@ -502,6 +506,85 @@ describe.skipIf(base === null)("migraciones", () => {
     // Depende de 0004 (lo dice) y no referencia nada de 0003 ni de las migraciones siguientes.
     expect(sql).toMatch(/necesita 0004_plataforma/);
     expect(codigo).not.toMatch(/trabajo_validar_cambio|trabajo_ultimo_error_ck|trabajo_cambio/);
+  });
+
+  it("0006 es aditiva: no borra ni reescribe nada, no agrega SECURITY DEFINER ni roles, nadie recibe DELETE, toda función fija su search_path y no crea las tablas de la facturación", async () => {
+    const sql = await readFile(join(CARPETA_REAL, "0006_fiscal.sql"), "utf8");
+    const codigo = sql.replace(/--.*$/gm, "");
+    // El disparador "BEFORE TRUNCATE" frena el TRUNCATE: no es uno.
+    const sinDisparadoresDeTruncate = codigo.replace(/BEFORE\s+TRUNCATE/gi, "");
+    expect(sinDisparadoresDeTruncate).not.toMatch(/\b(DROP|TRUNCATE|DELETE\s+FROM)\b/i);
+    // Las tablas viejas no se alteran: ni siquiera se les agrega una restricción (0006 solo suma
+    // disparadores sobre `empresa`). Lo único que se altera son las tablas nuevas, para activar RLS.
+    const tablasNuevas = (codigo.match(/CREATE\s+TABLE\s+\w+/gi) ?? []).map(
+      (t) => t.split(/\s+/)[2] as string,
+    );
+    expect(tablasNuevas.sort()).toEqual([
+      "datos_fiscales",
+      "domicilio",
+      "emisor",
+      "provincia",
+      "punto_de_venta",
+      "regla_emisor",
+      "serie_comprobante",
+    ]);
+    for (const alter of codigo.match(/\bALTER\s+TABLE\s+\w+\s+\w+(\s+\w+)?/gi) ?? []) {
+      expect(alter).toMatch(/ALTER\s+TABLE\s+(\w+)\s+(ENABLE\s+ROW|FORCE\s+ROW)/i);
+      expect(tablasNuevas).toContain(alter.split(/\s+/)[2] as string);
+    }
+    expect(codigo).not.toMatch(/\b(ALTER|DROP)\s+POLICY\b/i);
+    expect(codigo).not.toMatch(/SECURITY\s+DEFINER/i);
+    for (const concesion of codigo.match(/\bGRANT\b[^;]*;/gi) ?? []) {
+      expect(concesion).not.toMatch(/\b(DELETE|TRUNCATE|ALL|EXECUTE)\b/i);
+    }
+    expect(codigo).not.toMatch(
+      /CREATE\s+(OR\s+REPLACE\s+)?ROLE|ALTER\s+ROLE|(?<!NO)LOGIN|PASSWORD/i,
+    );
+    // Toda función nueva fija el search_path (con pg_temp al final) y califica con `public.`.
+    const funciones = codigo.match(/CREATE\s+FUNCTION[\s\S]*?\$\$;/gi) ?? [];
+    expect(funciones).toHaveLength(9);
+    for (const funcion of funciones) {
+      expect(funcion).toMatch(/SET\s+search_path\s*=\s*pg_catalog,\s*public,\s*pg_temp/);
+      expect(funcion).not.toMatch(/(?<!DISTINCT\s)\b(FROM|JOIN)\s+(?!public\.)(?!pg_)\w+/);
+    }
+    // Toda tabla nueva activa y fuerza RLS.
+    for (const nombre of tablasNuevas) {
+      expect(codigo).toMatch(new RegExp(`ALTER TABLE ${nombre} ENABLE ROW LEVEL SECURITY`));
+      expect(codigo).toMatch(new RegExp(`ALTER TABLE ${nombre} FORCE ROW LEVEL SECURITY`));
+    }
+    // Las restrictivas son solo de la plataforma.
+    for (const restrictiva of codigo.match(/AS\s+RESTRICTIVE[^;]*;/gi) ?? []) {
+      expect(restrictiva).toMatch(/TO\s+zuluhub_plataforma\b/);
+      expect(restrictiva).not.toMatch(/zuluhub_(app|grupo|trabajos|autenticacion)/);
+    }
+    // Ninguna política `FOR ALL`: cada comando tiene la suya.
+    expect(codigo).not.toMatch(/CREATE\s+POLICY[^;]*\bFOR\s+ALL\b/i);
+    // Depende de 0004 (lo dice) y no referencia nada de 0003 ni de 0005.
+    expect(sql).toMatch(/necesita 0004_plataforma/);
+    expect(codigo).not.toMatch(/trabajo_validar_cambio|trabajo_ultimo_error_ck|trabajo_cambio/);
+    expect(codigo).not.toMatch(/traspaso_gerencia|sucursal_nombre_ci|membresia_validar_cambio/);
+    // El relleno es lo único que escribe datos: una inserción del emisor principal de cada empresa.
+    const inserciones = [...codigo.matchAll(/INSERT\s+INTO\s+(?:public\.)?(\w+)/gi)].map((i) =>
+      (i[1] as string).toLowerCase(),
+    );
+    // `provincia` (el catálogo sembrado), el relleno y el disparador de las empresas nuevas.
+    expect(inserciones.sort()).toEqual(["emisor", "emisor", "provincia"]);
+    expect(codigo).not.toMatch(/\bUPDATE\s+(?!OF\b)\w+\s+SET\b/i);
+  });
+
+  it("la reversión de 0006 vive fuera de la carpeta que aplica el ejecutor, así que nunca se corre sola", async () => {
+    const aplicables = (await readdir(CARPETA_REAL)).filter((n) =>
+      /^\d{4}_[a-z0-9_]+\.sql$/.test(n),
+    );
+    expect(aplicables).not.toContain("0006_revertir_fiscal.sql");
+    expect(aplicables.filter((n) => n.startsWith("0006"))).toEqual(["0006_fiscal.sql"]);
+    const reversion = await readFile(
+      join(CARPETA_REAL, "reversiones", "0006_revertir_fiscal.sql"),
+      "utf8",
+    );
+    expect(reversion).toMatch(/DESTRUCTIVA/);
+    expect(reversion).not.toMatch(/PASSWORD\s+'/i);
+    expect(reversion.replace(/--.*$/gm, "")).not.toMatch(/\bCASCADE\b/i);
   });
 
   it("0003 es compatible hacia atrás, no ensancha privilegios y no agrega SECURITY DEFINER", async () => {

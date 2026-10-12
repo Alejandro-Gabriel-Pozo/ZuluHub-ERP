@@ -287,6 +287,34 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "src/capacidades/permisos/grupo.ts": exporta,
       },
     },
+    {
+      regla: "capacidades-de-planes-fuera-del-dominio",
+      archivos: {
+        "src/modulos/empresas/dominio/d.ts": importa("../../../capacidades/planes/niveles"),
+        "src/capacidades/planes/niveles.ts": exporta,
+      },
+    },
+    {
+      regla: "planes-sin-marcas",
+      archivos: {
+        "src/modulos/planes/dominio/d.ts": importa("../../marcas/publico"),
+        "src/modulos/marcas/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "modulos-sin-planes",
+      archivos: {
+        "src/modulos/empresas/casos-de-uso/c.ts": importa("../../planes/publico"),
+        "src/modulos/planes/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "modulos-sin-marcas",
+      archivos: {
+        "src/modulos/empresas/casos-de-uso/c.ts": importa("../../marcas/publico"),
+        "src/modulos/marcas/publico.ts": exporta,
+      },
+    },
   ];
 
   it("cada regla definida tiene su caso de violación", () => {
@@ -365,6 +393,32 @@ describe("reglas de arquitectura (ADR-001)", () => {
       "src/adaptadores/postgres/a.ts": 'import "kysely";\nexport const a = 1;\n',
     });
     expect(v).not.toContain("orm-solo-en-persistencia");
+  });
+
+  it("marcas: la plataforma, las consultas y la puerta web sí entran por su publico.ts; el dominio usa capacidades y primitivas", async () => {
+    const v = await violacionesDe({
+      "src/primitivas/p.ts": exporta,
+      "src/capacidades/vocabulario/v.ts": importa("../../primitivas/p"),
+      "src/modulos/marcas/dominio/d.ts": importa("../../../capacidades/vocabulario/v"),
+      "src/modulos/marcas/publico.ts": importa("./dominio/d"),
+      "src/plataforma/p.ts": importa("../modulos/marcas/publico"),
+      "src/consultas-de-grupo/g.ts": importa("../modulos/marcas/publico"),
+      "apps/web/a.ts": importa("../../src/modulos/marcas/publico"),
+    });
+    expect(v).toEqual([]);
+  });
+
+  it("marcas: un módulo de negocio no la importa ni por publico.ts, pero la regla no alcanza a la propia marca", async () => {
+    const dentro = await violacionesDe({
+      "src/modulos/marcas/dominio/a.ts": exporta,
+      "src/modulos/marcas/dominio/b.ts": importa("./a"),
+    });
+    expect(dentro).not.toContain("modulos-sin-marcas");
+    const fuera = await violacionesDe({
+      "src/modulos/identidad/dominio/d.ts": importa("../../marcas/publico"),
+      "src/modulos/marcas/publico.ts": exporta,
+    });
+    expect(fuera).toContain("modulos-sin-marcas");
   });
 
   describe("H5 plataforma: catálogos de permisos independientes y dominio de plataforma puro", () => {
@@ -536,6 +590,40 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "src/capacidades/permisos/plataforma.ts": importa("./guard"),
         "src/capacidades/permisos/grupo.ts": importa("./guard"),
         "src/capacidades/permisos/grupo.test.ts": importa("./grupo"),
+      });
+      expect(v).toEqual([]);
+    });
+  });
+
+  describe("marcas y planes M2: derechos de uso y módulo de planes", () => {
+    it("los casos de uso y las consultas de cualquier módulo, y la plataforma, sí piden capacidades/planes", async () => {
+      const v = await violacionesDe({
+        "src/capacidades/planes/niveles.ts": exporta,
+        "src/modulos/empresas/casos-de-uso/c.ts": importa("../../../capacidades/planes/niveles"),
+        "src/modulos/empresas/consultas/q.ts": importa("../../../capacidades/planes/niveles"),
+        "src/plataforma/casos-de-uso/p.ts": importa("../../capacidades/planes/niveles"),
+      });
+      expect(v).toEqual([]);
+    });
+
+    it("el dominio de otro módulo y el dominio de plataforma no pueden, pero el del propio módulo de planes sí", async () => {
+      const otros = await violacionesDe({
+        "src/capacidades/planes/niveles.ts": exporta,
+        "src/plataforma/dominio/d.ts": importa("../../capacidades/planes/niveles"),
+      });
+      expect(otros).toContain("capacidades-de-planes-fuera-del-dominio");
+      const propio = await violacionesDe({
+        "src/capacidades/planes/vigencia.ts": exporta,
+        "src/modulos/planes/dominio/asignacion.ts": importa("../../../capacidades/planes/vigencia"),
+      });
+      expect(propio).toEqual([]);
+    });
+
+    it("marcas sí importa el módulo de planes por su publico.ts, y la plataforma también", async () => {
+      const v = await violacionesDe({
+        "src/modulos/planes/publico.ts": exporta,
+        "src/modulos/marcas/casos-de-uso/c.ts": importa("../../planes/publico"),
+        "src/plataforma/casos-de-uso/p.ts": importa("../../modulos/planes/publico"),
       });
       expect(v).toEqual([]);
     });

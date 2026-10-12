@@ -26,11 +26,25 @@ const esRolDeEmpresa = (valor: string): valor is RolDeEmpresa =>
  */
 const SIN_MODULOS_ACTIVADOS: readonly string[] = [];
 
+/**
+ * Módulos que incluye el plan: todavía no existe (las tablas de planes llegan con la migración 0007).
+ * Sin plan solo rigen los obligatorios, que no dependen de él; cuando exista, esta lectura va en la
+ * misma consulta que el rol.
+ */
+const SIN_MODULOS_HABILITADOS: readonly string[] = [];
+
+/** Lo que carga el adaptador cuando no hay rol (ni, por lo tanto, nada que activar). */
+const SIN_ROL: DatosDelActor = {
+  rol: null,
+  modulosActivados: SIN_MODULOS_ACTIVADOS,
+  modulosHabilitados: SIN_MODULOS_HABILITADOS,
+};
+
 export function crearAutorizacionDePostgres(db: Kysely<AutorizacionDb>): CargaDeAutorizacion {
   return {
     async delActor(contexto): Promise<DatosDelActor> {
       if (contexto.personaId === null) {
-        return { rol: null, modulosActivados: SIN_MODULOS_ACTIVADOS };
+        return SIN_ROL;
       }
       const fila = await db
         .selectFrom("membresia as m")
@@ -41,11 +55,15 @@ export function crearAutorizacionDePostgres(db: Kysely<AutorizacionDb>): CargaDe
         .where("m.activo", "=", true)
         .where("p.activo_global", "=", true)
         .executeTakeFirst();
-      if (fila === undefined) return { rol: null, modulosActivados: SIN_MODULOS_ACTIVADOS };
+      if (fila === undefined) return SIN_ROL;
       // Un valor que el CHECK de la base no deja pasar: si llega otro, algo se rompió.
       if (!esRolDeEmpresa(fila.rol))
         throw new RangeError(`rol desconocido en la base: ${fila.rol}`);
-      return { rol: fila.rol, modulosActivados: SIN_MODULOS_ACTIVADOS };
+      return {
+        rol: fila.rol,
+        modulosActivados: SIN_MODULOS_ACTIVADOS,
+        modulosHabilitados: SIN_MODULOS_HABILITADOS,
+      };
     },
   };
 }

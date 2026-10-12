@@ -12,7 +12,13 @@ import type {
 } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { Email } from "./email";
-import type { ErrorDeAceptacion, ErrorDeInvitacion, ErrorDeReenvioDeAlta } from "./errores";
+import type {
+  ErrorDeAceptacion,
+  ErrorDeInvitacion,
+  ErrorDeReenvioDeAlta,
+  ErrorDeRevocacion,
+  ErrorDeSucursalesDeInvitacion,
+} from "./errores";
 import type { Persona, RolDeEmpresa } from "./membresia";
 
 /**
@@ -369,4 +375,36 @@ export function decidirReenvioDeAlta(
     nueva: creada.valor,
     revocar: ultima.estado === "PENDIENTE" ? ultima.id : null,
   });
+}
+
+export type DecisionDeRevocacion = "REVOCAR" | "YA_REVOCADA";
+
+/**
+ * Decide si la empresa revoca una invitación (H6, B.2). `invitacion` es lo que la empresa ve: `null`
+ * si no existe o es de otra empresa (la política de lectura no las distingue). Orden: no existe
+ * (`INVITACION_NO_ENCONTRADA`); el alta del gerente no la revoca la empresa sino la plataforma
+ * (`REVOCACION_NO_PERMITIDA`); ya aceptada (`INVITACION_ACEPTADA`: ya es miembro, se lo apaga con
+ * `usuarios.apagar`); ya revocada (ok `YA_REVOCADA`, idempotente, haya sido reemplazada o no); si
+ * está pendiente, vigente o vencida, `REVOCAR`.
+ */
+export function decidirRevocacion(
+  invitacion: Invitacion | null,
+): Resultado<DecisionDeRevocacion, ErrorDeRevocacion> {
+  if (invitacion === null) return err("INVITACION_NO_ENCONTRADA");
+  if (invitacion.tipo === "ALTA_GERENTE") return err("REVOCACION_NO_PERMITIDA");
+  if (invitacion.estado === "ACEPTADA") return err("INVITACION_ACEPTADA");
+  if (invitacion.estado === "REVOCADA") return ok("YA_REVOCADA");
+  return ok("REVOCAR");
+}
+
+/**
+ * Las sucursales de una invitación de usuario tienen que estar activas (H6, D12). `estados` dice si
+ * cada sucursal de la empresa está activa (`true`) o desactivada (`false`); una sucursal que falta
+ * no se juzga acá: no es de la empresa y lo rechaza la base (`SUCURSAL_NO_ES_DE_LA_EMPRESA`).
+ */
+export function decidirSucursalesDeInvitacion(
+  sucursales: readonly SucursalId[],
+  estados: ReadonlyMap<SucursalId, boolean>,
+): Resultado<null, ErrorDeSucursalesDeInvitacion> {
+  return sucursales.some((s) => estados.get(s) === false) ? err("SUCURSAL_INACTIVA") : ok(null);
 }

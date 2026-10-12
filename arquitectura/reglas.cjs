@@ -277,6 +277,41 @@ const reglas = [
     from: { path: "^src/(modulos|plataforma)/" },
     to: { path: "^src/capacidades/permisos/grupo\\.ts$" },
   },
+  {
+    name: "capacidades-de-planes-fuera-del-dominio",
+    severity: "error",
+    comment:
+      "Los derechos de uso y los niveles (capacidades/planes) se piden en el caso de uso, dentro de la transacción (marcas y planes §B.5.8): el dominio de negocio no pregunta por el plan. Única excepción: el dominio del propio módulo de planes, que decide las asignaciones y los ajustes.",
+    from: {
+      path: "^src/(modulos/[^/]+|plataforma)/dominio/",
+      pathNot: "^src/modulos/planes/dominio/",
+    },
+    to: { path: "^src/capacidades/planes/" },
+  },
+  {
+    name: "planes-sin-marcas",
+    severity: "error",
+    comment:
+      "La dependencia va de marcas a planes (marcas y planes §D): el módulo de planes no conoce el de marcas.",
+    from: { path: "^src/modulos/planes/" },
+    to: { path: "^src/modulos/marcas/" },
+  },
+  {
+    name: "modulos-sin-planes",
+    severity: "error",
+    comment:
+      "Ningún otro módulo importa el módulo de planes (marcas y planes §D): preguntan por sus derechos con capacidades/planes y los puertos. Solo marcas, que depende de planes.",
+    from: { path: "^src/modulos/", pathNot: "^src/modulos/(planes|marcas)/" },
+    to: { path: "^src/modulos/planes/" },
+  },
+  {
+    name: "modulos-sin-marcas",
+    severity: "error",
+    comment:
+      "Ningún otro módulo de negocio importa modulos/marcas (marcas y planes, §D «Arquitectura»): la marca es presentación y puerta, no una dependencia de negocio. Lo que un módulo necesita (los textos, los derechos de uso) lo toma de capacidades y de los puertos. La puerta web, la plataforma y las consultas sí entran por su publico.ts.",
+    from: { path: "^src/modulos/", pathNot: "^src/modulos/marcas/" },
+    to: { path: "^src/modulos/marcas/" },
+  },
 ];
 
 module.exports = { reglas };

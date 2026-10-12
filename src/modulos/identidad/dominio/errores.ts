@@ -37,6 +37,18 @@ export type ErrorDeInvitacion =
   | "YA_ES_MIEMBRO";
 
 /**
+ * Revocación de una invitación de usuario desde la empresa (H6): no existe (o no la ve esta
+ * empresa), ya la aceptaron, o es el alta del gerente, que la revoca la plataforma y no la empresa.
+ */
+export type ErrorDeRevocacion =
+  "INVITACION_NO_ENCONTRADA" | "INVITACION_ACEPTADA" | "REVOCACION_NO_PERMITIDA";
+
+/**
+ * Invitar con sucursales (H6, D12): una sucursal desactivada no se asigna a quien se invita.
+ */
+export type ErrorDeSucursalesDeInvitacion = "SUCURSAL_INACTIVA";
+
+/**
  * Reenvío de la invitación del alta del gerente (plataforma, H5): la empresa ya no está en alta
  * (`ALTA_NO_PENDIENTE`, el mismo código que usa la aceptación), el email nuevo es de un administrador
  * de plataforma (que no puede ser gerente) y los errores al armar la invitación nueva.
@@ -59,3 +71,25 @@ export type ErrorDeAceptacion =
 
 /** Apagado de una membresía. */
 export type ErrorDeMembresia = "MEMBRESIA_NO_ENCONTRADA" | "ES_EL_GERENTE" | "ULTIMO_ADMIN";
+
+/**
+ * Traspaso de gerencia (H6, especificación §B.3). Los errores de cada decisión: `TRASPASO_RESUELTO`
+ * es para una acción distinta sobre un traspaso que ya cambió de estado (aceptar uno rechazado);
+ * repetir la misma acción es ok ("ya estaba"), no un error.
+ */
+export type ErrorDePropuestaDeTraspaso =
+  "ENTRANTE_NO_ES_MIEMBRO" | "ENTRANTE_INACTIVO" | "ENTRANTE_ES_EL_GERENTE" | "TRASPASO_EN_CURSO";
+
+export type ErrorDeRechazoDeTraspaso =
+  "TRASPASO_NO_ENCONTRADO" | "TRASPASO_NO_ES_PARA_VOS" | "TRASPASO_VENCIDO" | "TRASPASO_RESUELTO";
+
+export type ErrorDeAceptacionDeTraspaso =
+  | ErrorDeRechazoDeTraspaso
+  | "SALIENTE_YA_NO_ES_GERENTE"
+  | "ENTRANTE_INACTIVO"
+  | "ENTRANTE_ES_EL_GERENTE";
+
+export type ErrorDeCancelacionDeTraspaso = "TRASPASO_RESUELTO";
+
+/** Cambio de las sucursales asignadas a un miembro (`asignarSucursales`). */
+export type ErrorDeAsignaciones = "SUCURSAL_NO_ES_DE_LA_EMPRESA" | "SUCURSAL_INACTIVA";

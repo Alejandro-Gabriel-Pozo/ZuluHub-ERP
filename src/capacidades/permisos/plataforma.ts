@@ -24,7 +24,11 @@ export type RolDePlataforma = (typeof ROLES_DE_PLATAFORMA)[number];
  * Es obligatorio: nunca está en solo lectura (el guard lo ignora en los módulos obligatorios). El
  * `efecto` se declara igual, por uniformidad del tipo y para que ninguna acción quede sin clasificar:
  * mirar es `LECTURA`; dar de alta, y reactivar lo suspendido, es `CREA_AMPLIA`; suspender, cancelar un
- * alta y reenviar o revocar su invitación es `COMPLETA_CIERRA`.
+ * alta y reenviar o revocar su invitación es `COMPLETA_CIERRA`. Con el mismo criterio, en marcas y
+ * planes: crear, editar un borrador, confirmar o publicar una versión, agregar un dominio, asignar un
+ * plan, ajustar una perilla y activar un módulo son `CREA_AMPLIA` (una asignación puede subir o bajar
+ * de plan: ante la duda manda la más amplia); retirar un dominio y desactivar un módulo, que quitan
+ * algo ya dado, son `COMPLETA_CIERRA`.
  */
 export const CATALOGO_DE_PLATAFORMA = {
   plataforma: {
@@ -53,6 +57,21 @@ export const CATALOGO_DE_PLATAFORMA = {
       "empresas.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "personas.suspender": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "personas.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      // Marcas y planes (especificación «marcas, productos y planes», §C): las 14 de una vez.
+      "marcas.ver": { capacidad: null, efecto: "LECTURA" },
+      "planes.ver": { capacidad: null, efecto: "LECTURA" },
+      "marcas.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "marcas.editar_borrador": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "marcas.confirmar_version": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "dominios.agregar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "dominios.retirar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "planes.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "planes.editar_borrador": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "planes.publicar_version": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "planes.asignar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "perillas.ajustar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "modulos_de_empresa.activar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "modulos_de_empresa.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
     },
   },
 } as const satisfies CatalogoComercial;
@@ -96,6 +115,22 @@ export const PERMISOS_DE_PLATAFORMA = {
   "empresas.reactivar": ["ADMIN"],
   "personas.suspender": ["ADMIN"],
   "personas.reactivar": ["ADMIN"],
+  // Marcas y planes: SOPORTE ve, no cambia estructura (coherente con H5 F3). Piso: lo que puede
+  // SOPORTE lo puede ADMIN.
+  "marcas.ver": ["ADMIN", "SOPORTE"],
+  "planes.ver": ["ADMIN", "SOPORTE"],
+  "marcas.crear": ["ADMIN"],
+  "marcas.editar_borrador": ["ADMIN"],
+  "marcas.confirmar_version": ["ADMIN"],
+  "dominios.agregar": ["ADMIN"],
+  "dominios.retirar": ["ADMIN"],
+  "planes.crear": ["ADMIN"],
+  "planes.editar_borrador": ["ADMIN"],
+  "planes.publicar_version": ["ADMIN"],
+  "planes.asignar": ["ADMIN"],
+  "perillas.ajustar": ["ADMIN"],
+  "modulos_de_empresa.activar": ["ADMIN"],
+  "modulos_de_empresa.desactivar": ["ADMIN"],
 } as const satisfies Record<ClaveAccionDePlataforma, readonly RolDePlataforma[]>;
 
 export type ReglasDePlataforma = ReglasDelGuard<

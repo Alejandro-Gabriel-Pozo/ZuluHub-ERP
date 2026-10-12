@@ -11,6 +11,12 @@ export type DatosDelActor = Readonly<{
   rol: RolDeEmpresa | null;
   /** Módulos activables que la empresa activó (los obligatorios no se guardan). */
   modulosActivados: readonly string[];
+  /**
+   * Módulos que el plan de su tenant incluye (el techo), leídos en la misma lectura que el rol.
+   * Obligatorio a propósito: una carga que se olvida del plan no compila. Un módulo activado que no
+   * figura acá queda en solo lectura (corrección 16).
+   */
+  modulosHabilitados: readonly string[];
 }>;
 
 /**

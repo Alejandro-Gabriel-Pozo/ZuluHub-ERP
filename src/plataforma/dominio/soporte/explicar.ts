@@ -1,4 +1,4 @@
-import { modulosActivosDe } from "../../../capacidades/modulos/activos";
+import { estadoDeModulos } from "../../../capacidades/modulos/activos";
 import {
   evaluarGuard,
   type MotivoDeRechazo,
@@ -48,6 +48,8 @@ export type HechosDeAccion<R extends string> = Readonly<{
   membresia: Readonly<{ rol: R; activo: boolean }> | null;
   /** Módulos activables que la empresa activó (los obligatorios no se guardan). */
   modulosActivados: readonly string[];
+  /** Módulos que el plan de su tenant incluye (el techo); los activados fuera de él quedan en solo lectura. */
+  modulosHabilitados: readonly string[];
   estadoDeEmpresa: EstadoDeEmpresa;
   estadoDeTenant: EstadoDeTenant;
 }>;
@@ -100,7 +102,7 @@ export function explicarAccionDeEmpresa<
   const { rol, razonDelRol } = rolYRazon(hechos);
   const guard = evaluarGuard(reglas, accion, {
     rol,
-    modulosActivos: modulosActivosDe(reglas.catalogo, hechos.modulosActivados),
+    ...estadoDeModulos(reglas.catalogo, hechos.modulosActivados, hechos.modulosHabilitados),
     capacidadesDeSucursal: null,
   });
   const opera = comprobarQueOpera(

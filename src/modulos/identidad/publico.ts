@@ -3,9 +3,16 @@ export { emailDesdeTexto, type Email } from "./dominio/email";
 export type { EmpresaNoOpera, EstadosDeEmpresa } from "../../contexto/estados";
 export type {
   ErrorDeAceptacion,
+  ErrorDeAceptacionDeTraspaso,
+  ErrorDeAsignaciones,
+  ErrorDeCancelacionDeTraspaso,
   ErrorDeInvitacion,
   ErrorDeMembresia,
+  ErrorDePropuestaDeTraspaso,
+  ErrorDeRechazoDeTraspaso,
   ErrorDeReenvioDeAlta,
+  ErrorDeRevocacion,
+  ErrorDeSucursalesDeInvitacion,
   RolDistintoAlAnterior,
 } from "./dominio/errores";
 export {
@@ -15,6 +22,8 @@ export {
   decidirInvitacionDeUsuario,
   decidirReenvio,
   decidirReenvioDeAlta,
+  decidirRevocacion,
+  decidirSucursalesDeInvitacion,
   estadoDeInvitacion,
   nuevaInvitacion,
   type DatosDeAceptacion,
@@ -26,6 +35,7 @@ export {
   type DecisionDeInvitacionDeUsuario,
   type DecisionDeReenvio,
   type DecisionDeReenvioDeAlta,
+  type DecisionDeRevocacion,
   type EmpresaInvitada,
   type EstadoDeInvitacion,
   type EstadoGuardado,
@@ -35,6 +45,30 @@ export {
   type TipoDeInvitacion,
 } from "./dominio/invitacion";
 export { decidirApagado, type Membresia, type Persona } from "./dominio/membresia";
+export {
+  decidirAsignaciones,
+  type AsignacionActual,
+  type CambioDeAsignaciones,
+  type SucursalDeLaEmpresa,
+} from "./dominio/asignacion";
+export {
+  PLAZO_DEL_TRASPASO_EN_MS,
+  TRANSICIONES_DE_TRASPASO,
+  decidirAceptacionDeTraspaso,
+  decidirCancelacion,
+  decidirPropuesta,
+  decidirRechazo,
+  estadoDeTraspaso,
+  vencimientoDeTraspaso,
+  type DecisionDeAceptacionDeTraspaso,
+  type DecisionDeCancelacion,
+  type DecisionDePropuesta,
+  type DecisionDeRechazo,
+  type EstadoDeTraspaso,
+  type EstadoGuardadoDeTraspaso,
+  type OrigenDeTraspaso,
+  type Traspaso,
+} from "./dominio/traspaso";
 export {
   armarEnlaceDeInvitacion,
   armarMensajeDeInvitacion,
@@ -65,6 +99,16 @@ export type {
   SalidaDeApagarMembresia,
 } from "./casos-de-uso/apagar-membresia";
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_IDENTIDAD } from "./consultas/declaraciones";
+export { crearConsultasDeIdentidad, type ConsultasDeIdentidad } from "./consultas/consultas";
+export type {
+  DependenciasDeConsultasDeIdentidad,
+  TxDeConsultasDeIdentidad,
+} from "./consultas/contrato";
+export type { ErrorAlListarMiembros, MiembroDeLista } from "./consultas/listar-miembros";
+export type {
+  ErrorAlListarInvitacionesPendientes,
+  InvitacionPendienteDeLaLista,
+} from "./consultas/listar-invitaciones-pendientes";
 export { DECLARACIONES as DECLARACIONES_DE_IDENTIDAD } from "./casos-de-uso/declaraciones";
 export type { DeclaracionDeCaso } from "./casos-de-uso/declaraciones";
 export {
@@ -78,6 +122,11 @@ export type {
   ErrorAlInvitarUsuario,
   SalidaDeInvitarUsuario,
 } from "./casos-de-uso/invitar-usuario";
+export type {
+  EntradaDeRevocarInvitacion,
+  ErrorAlRevocarInvitacion,
+  SalidaDeRevocarInvitacion,
+} from "./casos-de-uso/revocar-invitacion";
 export type {
   EntradaDeReenviarInvitacion,
   ErrorAlReenviarInvitacion,
@@ -93,6 +142,8 @@ export {
   crearRepositorioDeMembresias,
   crearRepositorioDePersonas,
   type Asignacion,
+  type InvitacionPendienteDeLista,
+  type MiembroConEmail,
   type RepositorioDeAsignaciones,
   type RepositorioDeInvitaciones,
   type RepositorioDeMembresias,

@@ -1,5 +1,5 @@
 import type { Resultado } from "../../primitivas/resultado/resultado";
-import { modulosActivosDe } from "../modulos/activos";
+import { estadoDeModulos } from "../modulos/activos";
 import { evaluarGuard, type MotivoDeRechazo, type ReglasDelGuard } from "./guard";
 import type { RolDeEmpresa } from "./roles";
 
@@ -16,6 +16,12 @@ export type ActorCargado<R extends string = RolDeEmpresa> = Readonly<{
   rol: R | null;
   /** Módulos activables que la empresa activó (los obligatorios no se guardan). */
   modulosActivados: readonly string[];
+  /**
+   * Módulos que su plan incluye (el techo): se leen en la misma lectura que el rol. Un módulo
+   * activado que no figura acá queda en solo lectura (`estadoDeModulos`). Obligatorio a propósito:
+   * una carga que se olvida del plan no compila.
+   */
+  modulosHabilitados: readonly string[];
 }>;
 
 /** Carga del actor, leída dentro de la transacción en curso y sin caché. */
@@ -44,7 +50,7 @@ export async function exigirAccion<
   const actor = await cargar();
   return evaluarGuard(reglas, accion, {
     rol: actor.rol,
-    modulosActivos: modulosActivosDe(reglas.catalogo, actor.modulosActivados),
+    ...estadoDeModulos(reglas.catalogo, actor.modulosActivados, actor.modulosHabilitados),
     capacidadesDeSucursal: null,
   });
 }

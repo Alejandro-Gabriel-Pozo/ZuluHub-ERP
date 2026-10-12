@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { modulosActivosDe } from "./activos";
+import { estadoDeModulos } from "./activos";
 import { CATALOGO_DE_MODULOS, EFECTOS_DE_ACCION, type EfectoDeAccion } from "./catalogo";
 
 /**
@@ -41,7 +41,9 @@ describe("el catálogo comercial de módulos", () => {
   });
 
   it("administracion está activo sin guardar nada por empresa", () => {
-    expect([...modulosActivosDe(CATALOGO_DE_MODULOS, [])]).toEqual(["administracion"]);
+    expect([...estadoDeModulos(CATALOGO_DE_MODULOS, [], []).modulosActivos]).toEqual([
+      "administracion",
+    ]);
   });
 });
 
