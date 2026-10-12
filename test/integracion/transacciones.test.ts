@@ -12,6 +12,7 @@ import {
   comoEmpresa,
   comoPlataforma,
   crearBarrera,
+  crearBaseAparte,
   crearEmpresaActiva,
   crearEntornoDePrueba,
   cuitAlAzar,
@@ -254,6 +255,27 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
 
   describe("reintentos ante conflicto de serialización", () => {
     /**
+     * Base PROPIA: bajo SERIALIZABLE, los otros archivos que escriben en `sucursal` al mismo tiempo
+     * generan conflictos falsos (el recuento por prefijo recorre la tabla entera) y la repetición
+     * también puede abortar hasta agotar los reintentos. Con una base aparte, el único conflicto es el
+     * de la carrera que la prueba arma a propósito.
+     */
+    let aparte: Awaited<ReturnType<typeof crearBaseAparte>>;
+    let propio: ReturnType<typeof crearEntornoDePrueba>;
+    let ea: EmpresaDePrueba;
+
+    beforeAll(async () => {
+      if (base === null) return;
+      aparte = await crearBaseAparte(base);
+      propio = crearEntornoDePrueba(aparte.base);
+      ea = await crearEmpresaActiva(propio);
+    });
+    afterAll(async () => {
+      await propio.cerrar();
+      await aparte.destruir();
+    });
+
+    /**
      * Dos transacciones leen "no hay sucursal con este prefijo" y las dos insertan una: el clásico
      * sesgo de escritura. Bajo SERIALIZABLE el motor aborta una; el adaptador repite el trabajo
      * completo y la repetición ya ve la fila de la otra.
@@ -263,8 +285,8 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
       const encuentro = crearBarrera(2);
       let intentos = 0;
       const intentar = (sufijo: string) =>
-        entorno.ejecutar(
-          { contexto: comoEmpresa(a.empresa), reintentos },
+        propio.ejecutar(
+          { contexto: comoEmpresa(ea.empresa), reintentos },
           async ({ db, sucursales }) => {
             intentos += 1;
             const primerIntento = intentos <= 2;
@@ -274,12 +296,12 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
             );
             if (primerIntento) await encuentro();
             if ((rows[0]?.n ?? 0) > 0) return ok("ya existia" as const);
-            await sucursales.crear(a.empresa, `${prefijo}-${sufijo}`);
+            await sucursales.crear(ea.empresa, `${prefijo}-${sufijo}`);
             return ok("creada" as const);
           },
         );
       const [uno, otro] = await Promise.all([intentar("1"), intentar("2")]);
-      const total = await entorno.ejecutar({ contexto: comoEmpresa(a.empresa) }, async ({ db }) => {
+      const total = await propio.ejecutar({ contexto: comoEmpresa(ea.empresa) }, async ({ db }) => {
         const { rows } = await sql<{ n: number }>`
           select count(*)::int as n from sucursal where nombre like ${`${prefijo}%`}`.execute(db);
         return ok(rows[0]?.n);
@@ -292,7 +314,10 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
       expect(total).toEqual({ ok: true, valor: 1 });
       const valores = [uno, otro].map((r) => (r.ok ? r.valor : "error")).sort();
       expect(valores).toEqual(["creada", "ya existia"]);
-      expect(intentos).toBe(3);
+      // Al menos las dos corridas iniciales más un reintento. No es un número exacto: SERIALIZABLE
+      // puede abortar también la repetición (falsos positivos del detector con tablas chicas) y
+      // eso sube el conteo sin romper la invariante, que es lo que esta prueba garantiza.
+      expect(intentos).toBeGreaterThanOrEqual(3);
     });
 
     it("sin reintentos disponibles, devuelve ConcurrenciaAgotada y no deja nada a medias", async () => {
@@ -311,7 +336,7 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
       async (_nombre, reintentos) => {
         let corrio = false;
         await expect(
-          entorno.ejecutar({ contexto: comoEmpresa(a.empresa), reintentos }, () => {
+          propio.ejecutar({ contexto: comoEmpresa(ea.empresa), reintentos }, () => {
             corrio = true;
             return Promise.resolve(ok(null));
           }),
@@ -322,7 +347,7 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
 
     it("reintentos: 0 es válido y el trabajo corre una vez", async () => {
       let corridas = 0;
-      const r = await entorno.ejecutar({ contexto: comoEmpresa(a.empresa), reintentos: 0 }, () => {
+      const r = await propio.ejecutar({ contexto: comoEmpresa(ea.empresa), reintentos: 0 }, () => {
         corridas += 1;
         return Promise.resolve(ok("listo"));
       });
@@ -342,9 +367,9 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
      * El deadlock es un problema de bloqueos de fila, igual en ambos niveles.
      */
     it("deadlock (40P01): el motor aborta una, el adaptador repite el trabajo y ambas terminan ok", async () => {
-      const par = await crearEmpresaActiva(entorno, { nombreDeSucursal: nombreAlAzar("s1") });
+      const par = await crearEmpresaActiva(propio, { nombreDeSucursal: nombreAlAzar("s1") });
       const s2 = nombreAlAzar("s2");
-      const filas = await entorno.ejecutar(
+      const filas = await propio.ejecutar(
         { contexto: comoEmpresa(par.empresa) },
         async ({ sucursales }) => {
           await sucursales.crear(par.empresa, s2);
@@ -358,7 +383,7 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
       const encuentro = crearBarrera(2);
       const intentos = { A: 0, B: 0 };
       const mover = (quien: "A" | "B", orden: [string, string]) =>
-        entorno.ejecutar(
+        propio.ejecutar(
           { contexto: comoEmpresa(par.empresa), aislamiento: "read committed" },
           async ({ db }) => {
             intentos[quien] += 1;

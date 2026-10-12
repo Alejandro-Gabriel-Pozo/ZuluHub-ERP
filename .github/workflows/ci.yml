@@ -18,8 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: npm
@@ -50,8 +52,10 @@ jobs:
     env:
       PRUEBAS_DATABASE_URL: postgres://postgres@localhost:5432/postgres
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: npm
@@ -59,37 +63,138 @@ jobs:
       - run: npm test
 
   seguridad:
-    name: Seguridad (dependencias)
+    name: Seguridad (dependencias y secretos)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Historial completo: el escaneo de secretos mira todos los commits, no solo el último.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: npm
       - run: npm ci
       - run: npm audit --audit-level=high
+      - name: Firmas de los paquetes
+        run: npm audit signatures
+      - name: Secretos en el historial (gitleaks)
+        run: >-
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo"
+          ghcr.io/gitleaks/gitleaks:v8.30.1
+          detect --source /repo --redact --no-banner --verbose
 
-  mutacion:
-    name: Mutación (dinero e IVA)
+  flujos:
+    name: Seguridad de los workflows (zizmor)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        with:
+          advanced-security: false
+          annotations: true
+
+  dependencias:
+    # Vulnerabilidades y licencias de lo que un pull request agrega. Solo corre en pull requests.
+    name: Revisión de dependencias del pull request
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          deny-licenses: AGPL-3.0-only, AGPL-3.0-or-later, GPL-3.0-only, GPL-3.0-or-later
+
+  estabilidad:
+    # Repite la integración en paralelo (12 copias) para detectar fallas intermitentes antes de
+    # integrar. Solo en pull requests: en main ya se probó antes de entrar.
+    name: Estabilidad (integración, copia ${{ matrix.corrida }})
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        corrida: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PRUEBAS_DATABASE_URL: postgres://postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run mutacion
+      - run: npx vitest run test/integracion
+
+  mutacion:
+    # En paralelo por grupos de archivos: el tiempo total pasa a ser el del grupo más lento. Cada
+    # grupo exige 100 % (thresholds.break en stryker.config.json).
+    name: Mutación (${{ matrix.grupo }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - grupo: dinero (cálculo exacto y redondeo)
+            archivos: "src/primitivas/dinero/monto-exacto.ts,src/primitivas/dinero/interno.ts,src/primitivas/dinero/redondeo.ts"
+          - grupo: dinero (importe, prorrateo y moneda)
+            archivos: "src/primitivas/dinero/**/*.ts,!src/primitivas/dinero/monto-exacto.ts,!src/primitivas/dinero/interno.ts,!src/primitivas/dinero/redondeo.ts"
+          - grupo: cantidad
+            archivos: "src/primitivas/cantidad/**/*.ts"
+          - grupo: identificación fiscal, resultado y estados
+            archivos: "src/primitivas/identificacion-fiscal/**/*.ts,src/primitivas/resultado/**/*.ts,src/contexto/estados.ts"
+          - grupo: fiscal, tenants y empresas
+            archivos: "src/modulos/fiscal/dominio/**/*.ts,src/modulos/tenants/dominio/**/*.ts,src/modulos/empresas/dominio/**/*.ts"
+          - grupo: identidad (invitación)
+            archivos: "src/modulos/identidad/dominio/invitacion.ts"
+          - grupo: identidad (resto)
+            archivos: "src/modulos/identidad/dominio/**/*.ts,!src/modulos/identidad/dominio/invitacion.ts"
+          - grupo: permisos y módulos
+            archivos: "src/capacidades/permisos/**/*.ts,src/capacidades/modulos/**/*.ts"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx stryker run --mutate "${{ matrix.archivos }},!src/**/*.test.ts"
         env:
           FC_SEMILLA: "20261011"
 
   gate:
     name: Gate
     runs-on: ubuntu-latest
-    needs: [estatico, pruebas, seguridad, mutacion]
+    needs: [estatico, pruebas, seguridad, flujos, dependencias, estabilidad, mutacion]
     if: always()
     steps:
       - name: Todos los jobs en verde
@@ -97,4 +202,9 @@ jobs:
           test "${{ needs.estatico.result }}" = "success"
           test "${{ needs.pruebas.result }}" = "success"
           test "${{ needs.seguridad.result }}" = "success"
+          test "${{ needs.flujos.result }}" = "success"
           test "${{ needs.mutacion.result }}" = "success"
+          # La revisión de dependencias y la estabilidad solo corren en pull requests
+          test "${{ needs.dependencias.result }}" = "success" || test "${{ needs.dependencias.result }}" = "skipped"
+          # La estabilidad solo corre en pull requests: en push a main queda "skipped".
+          test "${{ needs.estabilidad.result }}" = "success" || test "${{ needs.estabilidad.result }}" = "skipped"
