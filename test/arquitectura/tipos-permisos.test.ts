@@ -41,7 +41,7 @@ import {
 
 describe("tipos cerrados derivados del catálogo", () => {
   it("las claves salen del catálogo real", () => {
-    expectTypeOf<ClaveModulo>().toEqualTypeOf<"administracion">();
+    expectTypeOf<ClaveModulo>().toEqualTypeOf<"administracion" | "facturacion">();
     expectTypeOf<ClaveAccion>().toEqualTypeOf<
       | "usuarios.invitar"
       | "usuarios.reenviar_invitacion"
@@ -61,6 +61,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "gerencia.rechazar_traspaso"
       | "modulos.ver"
       | "permisos.ver_propios"
+      | "comprobantes.emitir"
     >();
     // Hoy ninguna acción exige una capacidad de sucursal.
     expectTypeOf<ClaveCapacidad>().toEqualTypeOf<never>();
@@ -114,7 +115,7 @@ describe("tipos cerrados derivados del catálogo", () => {
     // @ts-expect-error al módulo le faltan estado, obligatorio, requiere, etc.
     const incompleto: CatalogoComercial = { sin_ficha: { acciones: {} } };
     expect(incompleto).toBeDefined();
-    expect(Object.keys(CATALOGO_DE_MODULOS)).toEqual(["administracion"]);
+    expect(Object.keys(CATALOGO_DE_MODULOS)).toEqual(["administracion", "facturacion"]);
   });
 });
 

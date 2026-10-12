@@ -7,7 +7,7 @@ import { CATALOGO_DE_MODULOS, EFECTOS_DE_ACCION, type EfectoDeAccion } from "./c
  * actualizar esta prueba en el mismo cambio (y a pensar su matriz, sus cruces y su ficha).
  */
 describe("el catálogo comercial de módulos", () => {
-  it("tiene un solo módulo real: administracion, obligatorio y disponible", () => {
+  it("tiene dos módulos: administracion (obligatorio y disponible) y facturacion (en desarrollo)", () => {
     expect(CATALOGO_DE_MODULOS).toEqual({
       administracion: {
         estado: "disponible",
@@ -37,6 +37,17 @@ describe("el catálogo comercial de módulos", () => {
           "permisos.ver_propios": { capacidad: null, efecto: "LECTURA" },
         },
       },
+      facturacion: {
+        estado: "en_desarrollo",
+        obligatorio: false,
+        requiere: ["administracion"],
+        usaSiExiste: [],
+        datosRequeridos: ["emisor_principal.datos_fiscales_confirmados", "punto_de_venta.activo"],
+        implementadoPor: ["modulos/fiscal"],
+        acciones: {
+          "comprobantes.emitir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+        },
+      },
     });
   });
 
@@ -44,6 +55,12 @@ describe("el catálogo comercial de módulos", () => {
     expect([...estadoDeModulos(CATALOGO_DE_MODULOS, [], []).modulosActivos]).toEqual([
       "administracion",
     ]);
+  });
+
+  it("facturacion no se puede activar mientras esté en desarrollo, ni aunque el plan la incluya", () => {
+    const estado = estadoDeModulos(CATALOGO_DE_MODULOS, ["facturacion"], ["facturacion"]);
+    expect([...estado.modulosActivos]).toEqual(["administracion"]);
+    expect([...estado.modulosEnSoloLectura]).toEqual([]);
   });
 });
 
@@ -75,6 +92,7 @@ function accionesPorEfecto(
  *  - Cancelar, aceptar y rechazar un traspaso CIERRAN un proceso iniciado.
  *  - Reactivar una sucursal vuelve a consumir capacidad del plan: CREA_AMPLIA.
  *  - Editar una sucursal y asignar sucursales a una persona cambian o amplían lo que hay: CREA_AMPLIA.
+ *  - Emitir un comprobante completa algo ya vendido o cobrado (§C de H7): COMPLETA_CIERRA.
  */
 const EFECTOS_DE_EMPRESA = {
   LECTURA: [
@@ -93,6 +111,7 @@ const EFECTOS_DE_EMPRESA = {
     "usuarios.invitar",
   ],
   COMPLETA_CIERRA: [
+    "comprobantes.emitir",
     "gerencia.aceptar_traspaso",
     "gerencia.cancelar_traspaso",
     "gerencia.rechazar_traspaso",
