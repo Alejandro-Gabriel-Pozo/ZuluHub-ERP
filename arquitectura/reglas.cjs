@@ -277,6 +277,22 @@ const reglas = [
     from: { path: "^src/(modulos|plataforma)/" },
     to: { path: "^src/capacidades/permisos/grupo\\.ts$" },
   },
+  {
+    name: "dominio-sin-persistencia",
+    severity: "error",
+    comment:
+      "El dominio es puro: no conoce la persistencia de su módulo (tablas, repositorios ni traducción de restricciones). La dependencia va de la persistencia al dominio, nunca al revés (ADR-004, H7 T4).",
+    from: { path: "^src/modulos/[^/]+/dominio/" },
+    to: { path: "^src/modulos/[^/]+/persistencia/" },
+  },
+  {
+    name: "persistencia-sin-casos-de-uso",
+    severity: "error",
+    comment:
+      "La persistencia no conoce a quien la usa: no importa los casos de uso ni las consultas de su módulo. Los casos de uso reciben los repositorios por su contrato (H7 T4).",
+    from: { path: "^src/modulos/[^/]+/persistencia/" },
+    to: { path: "^src/modulos/[^/]+/(casos-de-uso|consultas)/" },
+  },
 ];
 
 module.exports = { reglas };

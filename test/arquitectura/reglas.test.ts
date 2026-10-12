@@ -287,6 +287,20 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "src/capacidades/permisos/grupo.ts": exporta,
       },
     },
+    {
+      regla: "dominio-sin-persistencia",
+      archivos: {
+        "src/modulos/fiscal/dominio/d.ts": importa("../persistencia/tablas"),
+        "src/modulos/fiscal/persistencia/tablas.ts": exporta,
+      },
+    },
+    {
+      regla: "persistencia-sin-casos-de-uso",
+      archivos: {
+        "src/modulos/fiscal/persistencia/r.ts": importa("../casos-de-uso/c"),
+        "src/modulos/fiscal/casos-de-uso/c.ts": exporta,
+      },
+    },
   ];
 
   it("cada regla definida tiene su caso de violación", () => {
@@ -357,6 +371,28 @@ describe("reglas de arquitectura (ADR-001)", () => {
       "src/modulos/empresas/casos-de-uso/u.ts": importa("../dominio/d"),
     });
     expect(v).toEqual([]);
+  });
+
+  it("la persistencia tampoco puede importar las consultas de su módulo", async () => {
+    const v = await violacionesDe({
+      "src/modulos/fiscal/persistencia/r.ts": importa("../consultas/q"),
+      "src/modulos/fiscal/consultas/q.ts": exporta,
+    });
+    expect(v).toContain("persistencia-sin-casos-de-uso");
+  });
+
+  it("la persistencia sí puede usar el dominio de su módulo, y los casos de uso y las consultas, la persistencia", async () => {
+    const v = await violacionesDe({
+      "src/modulos/fiscal/dominio/d.ts": exporta,
+      "src/modulos/fiscal/persistencia/r.ts": importa("../dominio/d"),
+      "src/modulos/fiscal/casos-de-uso/c.ts": [
+        importa("../dominio/d"),
+        importa("../persistencia/r"),
+      ].join(""),
+      "src/modulos/fiscal/consultas/q.ts": importa("../persistencia/r"),
+    });
+    expect(v).not.toContain("dominio-sin-persistencia");
+    expect(v).not.toContain("persistencia-sin-casos-de-uso");
   });
 
   it("el ORM sí se puede importar en la persistencia de un módulo y en el adaptador de Postgres", async () => {
