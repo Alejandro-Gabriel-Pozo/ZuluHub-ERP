@@ -5,9 +5,9 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    # Espera unos días antes de ofrecer un paquete recién publicado: frena paquetes maliciosos.
+    # Espera 7 días antes de ofrecer un paquete recién publicado: frena paquetes maliciosos.
     cooldown:
-      default-days: 3
+      default-days: 7
     ignore:
       # Los tipos de Node tienen que coincidir con el Node que corre (24): subir a otra mayor
       # describiría funciones que el entorno de ejecución no tiene.
@@ -18,4 +18,4 @@ updates:
     schedule:
       interval: weekly
     cooldown:
-      default-days: 3
+      default-days: 7
