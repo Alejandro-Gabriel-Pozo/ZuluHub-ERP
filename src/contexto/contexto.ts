@@ -1,4 +1,9 @@
-import type { EmpresaId, PersonaId, TenantId } from "../primitivas/identificadores/marca";
+import type {
+  AdminPlataformaId,
+  EmpresaId,
+  PersonaId,
+  TenantId,
+} from "../primitivas/identificadores/marca";
 
 /**
  * Quién actúa y desde qué puerta (diseno-inicial §5). Es una unión discriminada: cada puerta usa su
@@ -21,10 +26,19 @@ export type ContextoDeGrupo = Readonly<{
   ahora: Date;
 }>;
 
+/**
+ * Quién actúa en la plataforma. Viaja FIRMADO en el token del contexto (claim `a`) y la base lo usa
+ * en sus políticas: un administrador de plataforma (con su id; su rol, ADMIN o SOPORTE, lo lee la
+ * base de `admin_plataforma`, no viaja) o el sistema (el barrido de altas vencidas, que no es una
+ * persona). `proceso` nombra al proceso para la auditoría; no se firma.
+ */
+export type ActorDePlataforma =
+  | Readonly<{ tipo: "ADMIN"; id: AdminPlataformaId }>
+  | Readonly<{ tipo: "SISTEMA"; proceso: string }>;
+
 export type ContextoDePlataforma = Readonly<{
   tipo: "PLATAFORMA";
-  /** Identificador del administrador de plataforma (identidad propia, distinta de `Persona`). */
-  administrador: string;
+  actor: ActorDePlataforma;
   ahora: Date;
 }>;
 

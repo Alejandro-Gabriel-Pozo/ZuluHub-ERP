@@ -10,7 +10,7 @@ import {
   type SinTablas,
   type TransaccionesDePostgres,
 } from "../../src/adaptadores/postgres/transacciones";
-import type { Contexto, ContextoOperativo } from "../../src/contexto/contexto";
+import type { ActorDePlataforma, Contexto, ContextoOperativo } from "../../src/contexto/contexto";
 import {
   digitoVerificadorDeCuit,
   cuitDesdeTexto,
@@ -53,6 +53,7 @@ import {
 import { crearTrabajosDePostgres, type TrabajosDb } from "../../src/adaptadores/postgres/trabajos";
 import { crearColaDePostgres, type ColaDb } from "../../src/adaptadores/postgres/cola-de-trabajos";
 import type { ColaDeTrabajos } from "../../src/puertos/cola-de-trabajos";
+import { ADMIN_DE_PRUEBA, sembrarAdminsDePrueba } from "./admins-de-prueba";
 import type { BaseDePruebas } from "./global";
 
 /**
@@ -110,9 +111,15 @@ export function crearEntornoDePrueba(
 
 const AHORA = new Date("2026-10-11T12:00:00Z");
 
-export const comoPlataforma = (): Contexto => ({
+/**
+ * Por defecto actúa el ADMIN sembrado en toda base de prueba (`admins-de-prueba.ts`): sin un actor
+ * firmado la plataforma no ve ni escribe nada. Para otro actor, se pasa el suyo (`ActorDePlataforma`).
+ */
+export const comoPlataforma = (
+  actor: ActorDePlataforma = { tipo: "ADMIN", id: ADMIN_DE_PRUEBA },
+): Contexto => ({
   tipo: "PLATAFORMA",
-  administrador: "admin-de-prueba",
+  actor,
   ahora: AHORA,
 });
 
@@ -264,11 +271,13 @@ export async function crearBaseAparte(
     grupo: conBase(base.grupo),
     trabajos: conBase(base.trabajos),
     plataforma: conBase(base.plataforma),
+    autenticacion: conBase(base.autenticacion),
     clave: base.clave,
   };
   if (opciones.migrar !== false) {
     await aplicarMigraciones(propia.dueno, join(import.meta.dirname, "../../migraciones"));
     if (opciones.sinClave !== true) await instalarClaveDeContexto(propia.dueno, base.clave);
+    await sembrarAdminsDePrueba(propia.dueno);
   }
   return {
     base: propia,

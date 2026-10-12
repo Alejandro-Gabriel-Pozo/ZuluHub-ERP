@@ -37,6 +37,10 @@ const TABLAS_DE_NEGOCIO = [
   "invitacion",
   "invitacion_empresa",
   "invitacion_sucursal",
+  // H5 plataforma (0004_plataforma)
+  "admin_plataforma",
+  "idempotencia_plataforma",
+  "referencia_de_error",
 ] as const;
 const TABLAS_DE_AUDITORIA = ["auditoria_empresa", "auditoria_plataforma", "auditoria_acceso_grupo"];
 
@@ -254,13 +258,16 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       expect(porRol("zuluhub_trabajos")).toEqual(["trabajo:SELECT"]);
       expect(porRol("zuluhub_plataforma")).toEqual(
         [
+          "admin_plataforma:SELECT",
           "auditoria_plataforma:SELECT",
           "empresa:SELECT",
+          "idempotencia_plataforma:SELECT",
           "instalacion:SELECT",
           "invitacion:SELECT",
           "invitacion_empresa:SELECT",
           "membresia_tenant:SELECT",
           "persona:SELECT",
+          "referencia_de_error:SELECT",
           "tenant:SELECT",
           "trabajo:SELECT",
         ].sort(),
@@ -343,6 +350,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         "vence_en",
         "emitida_por",
       ].map((c) => `invitacion.${c}`);
+      const referenciaDeError = ["referencia", "accion", "motivo", "empresa_id", "persona_id"].map(
+        (c) => `referencia_de_error.${c}`,
+      );
       const invitacionEmpresa = [
         "invitacion_id",
         "empresa_id",
@@ -361,6 +371,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...invitacionEmpresa,
           ...["invitacion_id", "empresa_id", "sucursal_id"].map((c) => `invitacion_sucursal.${c}`),
           ...["empresa_id", "persona_id", "rol", "invitacion_id"].map((c) => `membresia.${c}`),
+          ...referenciaDeError,
           "persona.email",
           "sucursal.empresa_id",
           "sucursal.nombre",
@@ -371,7 +382,10 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         ].sort(),
       );
       expect(porRol("zuluhub_grupo")).toEqual(
-        ["tenant_id", "persona_id", "empresa_id"].map((c) => `auditoria_acceso_grupo.${c}`).sort(),
+        [
+          ...["tenant_id", "persona_id", "empresa_id"].map((c) => `auditoria_acceso_grupo.${c}`),
+          ...referenciaDeError,
+        ].sort(),
       );
       expect(porRol("zuluhub_trabajos")).toEqual([]);
       expect(porRol("zuluhub_plataforma")).toEqual(
@@ -380,6 +394,10 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...["actor", "accion", "entidad", "entidad_id", "antes", "despues"].map(
             (c) => `auditoria_plataforma.${c}`,
           ),
+          ...["admin_id", "clave", "operacion", "huella", "resultado"].map(
+            (c) => `idempotencia_plataforma.${c}`,
+          ),
+          ...referenciaDeError,
           ...["tenant_id", "cuit", "razon_social", "zona_horaria"].map((c) => `empresa.${c}`),
           ...invitacionEmitida,
           ...invitacionEmpresa,
@@ -738,6 +756,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           p: persona,
           i: null,
           x: Math.floor(Date.now() / 1000) + 300,
+          a: null,
         });
         await dueno.query("select set_config('app.ctx', $1, true)", [token]);
         return { tenant, empresa, otraEmpresa, persona };

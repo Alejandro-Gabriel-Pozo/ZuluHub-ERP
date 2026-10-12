@@ -36,7 +36,16 @@ const ahoraEnS = () => Math.floor(Date.now() / 1000);
 
 /** Una carga para el rol app, vigente 5 minutos, con lo que se le pase por encima. */
 function carga(cambios: Partial<CargaDeContexto> = {}): CargaDeContexto {
-  return { u: "zuluhub_app", e: null, t: null, p: null, i: null, x: ahoraEnS() + 300, ...cambios };
+  return {
+    u: "zuluhub_app",
+    e: null,
+    t: null,
+    p: null,
+    i: null,
+    x: ahoraEnS() + 300,
+    a: null,
+    ...cambios,
+  };
 }
 
 /** Firma con HMAC propio un payload arbitrario (en bytes), para armar tokens "válidos" con basura. */
@@ -126,8 +135,14 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
         return { filas: r.rows, texto: JSON.stringify(r.rows) };
       });
       expect(filas).toHaveLength(1);
-      expect(Object.keys(filas[0]?.ctx ?? {}).sort()).toEqual(["e", "i", "p", "t", "u", "x"]);
-      expect(filas[0]?.ctx).toMatchObject({ u: "zuluhub_app", e: a.empresa, t: null, p: null });
+      expect(Object.keys(filas[0]?.ctx ?? {}).sort()).toEqual(["a", "e", "i", "p", "t", "u", "x"]);
+      expect(filas[0]?.ctx).toMatchObject({
+        u: "zuluhub_app",
+        e: a.empresa,
+        t: null,
+        p: null,
+        a: null,
+      });
       expect(texto).not.toContain(clave().secreto.toString("hex"));
     });
   });

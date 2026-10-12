@@ -27,11 +27,17 @@ describe.skipIf(base === null)("migraciones", () => {
         "0001_base.sql",
         "0002_identidad.sql",
         "0003_trabajos.sql",
+        "0004_plataforma.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
         aplicadas: [],
-        yaAplicadas: ["0001_base.sql", "0002_identidad.sql", "0003_trabajos.sql"],
+        yaAplicadas: [
+          "0001_base.sql",
+          "0002_identidad.sql",
+          "0003_trabajos.sql",
+          "0004_plataforma.sql",
+        ],
       });
     } finally {
       await aparte.destruir();
@@ -53,6 +59,7 @@ describe.skipIf(base === null)("migraciones", () => {
       );
       expect(rows.map((r) => r.rolname)).toEqual([
         "zuluhub_app",
+        "zuluhub_autenticacion",
         "zuluhub_grupo",
         "zuluhub_plataforma",
         "zuluhub_trabajos",
@@ -136,6 +143,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0001_base.sql",
         "0002_identidad.sql",
         "0003_trabajos.sql",
+        "0004_plataforma.sql",
       ]);
     } finally {
       await aparte.destruir();
@@ -372,7 +380,7 @@ describe.skipIf(base === null)("migraciones", () => {
     }
   });
 
-  it.each(["0001_base.sql", "0002_identidad.sql", "0003_trabajos.sql"])(
+  it.each(["0001_base.sql", "0002_identidad.sql", "0003_trabajos.sql", "0004_plataforma.sql"])(
     "la migración %s no contiene contraseñas ni cadenas de conexión",
     async (archivo) => {
       const sql = await readFile(join(CARPETA_REAL, archivo), "utf8");
@@ -389,6 +397,51 @@ describe.skipIf(base === null)("migraciones", () => {
     expect(codigo).not.toMatch(/\bALTER\s+TABLE\s+\w+\s+(DROP|RENAME|ALTER\s+COLUMN)\b/i);
     expect(codigo).not.toMatch(/SECURITY\s+DEFINER/i);
     expect(codigo).not.toMatch(/CREATE\s+(OR\s+REPLACE\s+)?ROLE|ALTER\s+ROLE/i);
+  });
+
+  it("0004 es aditiva: no borra ni reescribe nada, no agrega SECURITY DEFINER, restringe a la plataforma solo con políticas RESTRICTIVE y su único rol nuevo nace NOLOGIN", async () => {
+    const sql = await readFile(join(CARPETA_REAL, "0004_plataforma.sql"), "utf8");
+    const codigo = sql.replace(/--.*$/gm, "");
+    // El disparador "BEFORE TRUNCATE" frena el TRUNCATE: no es uno.
+    const sinDisparadoresDeTruncate = codigo.replace(/BEFORE\s+TRUNCATE/gi, "");
+    expect(sinDisparadoresDeTruncate).not.toMatch(/\b(DROP|TRUNCATE|DELETE\s+FROM)\b/i);
+    expect(codigo).not.toMatch(/\bALTER\s+TABLE\s+\w+\s+(DROP|RENAME|ALTER\s+COLUMN|ADD)\b/i);
+    expect(codigo).not.toMatch(/\b(ALTER|DROP)\s+POLICY\b/i);
+    expect(codigo).not.toMatch(/SECURITY\s+DEFINER/i);
+    // Nadie recibe DELETE, TRUNCATE ni permisos sobre lo que no corresponde.
+    for (const concesion of codigo.match(/\bGRANT\b[^;]*;/gi) ?? []) {
+      expect(concesion).not.toMatch(/\b(DELETE|TRUNCATE|ALL)\b/i);
+    }
+    // Roles: se crea uno solo, sin LOGIN (ni contraseña), y no se toca ninguno de los existentes.
+    expect(codigo.match(/CREATE\s+ROLE/gi)).toHaveLength(1);
+    expect(codigo).toMatch(/CREATE ROLE %I NOLOGIN NOSUPERUSER NOBYPASSRLS/);
+    expect(codigo).not.toMatch(/(?<!NO)LOGIN/);
+    expect(codigo).not.toMatch(/PASSWORD/i);
+    // Toda política sobre una tabla de 0001 o 0002 es RESTRICTIVE (se suma con AND y solo puede quitar),
+    // salvo la lectura de las 4 columnas de membresia que da el GRANT por columna.
+    const nuevas = ["admin_plataforma", "idempotencia_plataforma", "referencia_de_error"];
+    const politicas = [
+      ...codigo.matchAll(/CREATE\s+POLICY\s+(\w+)\s+ON\s+(\w+)\s+(AS\s+RESTRICTIVE\s+)?/gi),
+    ];
+    expect(politicas.length).toBeGreaterThan(30);
+    for (const [, nombre, tabla, restrictiva] of politicas) {
+      if (nuevas.includes(tabla as string)) continue;
+      if (nombre === "membresia_plataforma_leer") continue;
+      // Las que no son del rol de plataforma son de la referencia de error (tabla nueva).
+      expect(restrictiva, `${nombre} sobre ${tabla} tiene que ser RESTRICTIVE`).toBeTruthy();
+    }
+    // Las restrictivas apuntan solo al rol de plataforma: no cambian nada para los demás.
+    for (const restrictiva of codigo.match(/AS\s+RESTRICTIVE[^;]*;/gi) ?? []) {
+      expect(restrictiva).toMatch(/TO\s+zuluhub_plataforma\b/);
+      expect(restrictiva).not.toMatch(/zuluhub_(app|grupo|trabajos|autenticacion)/);
+    }
+    // No referencia nada de 0003 (ni de migraciones posteriores).
+    expect(codigo).not.toMatch(/trabajo_validar_cambio|trabajo_ultimo_error_ck|trabajo_cambio/);
+    // Toda tabla nueva activa y fuerza RLS.
+    for (const tabla of nuevas) {
+      expect(codigo).toMatch(new RegExp(`ALTER TABLE ${tabla} ENABLE ROW LEVEL SECURITY`));
+      expect(codigo).toMatch(new RegExp(`ALTER TABLE ${tabla} FORCE ROW LEVEL SECURITY`));
+    }
   });
 
   it("0003 es compatible hacia atrás, no ensancha privilegios y no agrega SECURITY DEFINER", async () => {

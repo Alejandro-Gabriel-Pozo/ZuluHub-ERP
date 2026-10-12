@@ -296,12 +296,17 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
           "invitacion.invitacion_invitado_leer:SELECT:zuluhub_app",
           "invitacion.invitacion_plataforma_alta:INSERT:zuluhub_plataforma",
           "invitacion.invitacion_plataforma_cambiar:UPDATE:zuluhub_plataforma",
+          "invitacion.invitacion_plataforma_con_actor:SELECT:zuluhub_plataforma",
           "invitacion.invitacion_plataforma_leer:SELECT:zuluhub_plataforma",
+          "invitacion.invitacion_plataforma_quien_cambia:UPDATE:zuluhub_plataforma",
+          "invitacion.invitacion_plataforma_quien_emite:INSERT:zuluhub_plataforma",
           "invitacion_empresa.invitacion_empresa_app_alta:INSERT:zuluhub_app",
           "invitacion_empresa.invitacion_empresa_app_leer:SELECT:zuluhub_app",
           "invitacion_empresa.invitacion_empresa_invitado_leer:SELECT:zuluhub_app",
           "invitacion_empresa.invitacion_empresa_plataforma_alta:INSERT:zuluhub_plataforma",
+          "invitacion_empresa.invitacion_empresa_plataforma_con_actor:SELECT:zuluhub_plataforma",
           "invitacion_empresa.invitacion_empresa_plataforma_leer:SELECT:zuluhub_plataforma",
+          "invitacion_empresa.invitacion_empresa_plataforma_quien_emite:INSERT:zuluhub_plataforma",
           "invitacion_sucursal.invitacion_sucursal_app_alta:INSERT:zuluhub_app",
           "invitacion_sucursal.invitacion_sucursal_app_leer:SELECT:zuluhub_app",
           "invitacion_sucursal.invitacion_sucursal_invitado_leer:SELECT:zuluhub_app",
@@ -310,9 +315,12 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
           "membresia.membresia_invitado_alta:INSERT:zuluhub_app",
           "membresia.membresia_invitado_leer:SELECT:zuluhub_app",
           "membresia.membresia_invitado_reactivar:UPDATE:zuluhub_app",
+          "membresia.membresia_plataforma_con_actor:SELECT:zuluhub_plataforma",
+          "membresia.membresia_plataforma_leer:SELECT:zuluhub_plataforma",
           "persona.persona_invitado_alta:INSERT:zuluhub_app",
           "persona.persona_invitado_leer:SELECT:zuluhub_app",
           "persona.persona_miembros_app:SELECT:zuluhub_app",
+          "referencia_de_error.referencia_de_error_invitado_alta:INSERT:zuluhub_app",
           "tenant.tenant_invitado_leer:SELECT:zuluhub_app",
         ].sort(),
       );
@@ -2359,7 +2367,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
         }
       });
 
-      it("la plataforma no lee membresías, asignaciones ni sucursales invitadas, pero sí las invitaciones", async () => {
+      it("la plataforma no lee las membresías completas (solo 4 columnas, 0004), ni asignaciones ni sucursales invitadas, pero sí las invitaciones", async () => {
         for (const tabla of ["membresia", "asignacion_sucursal", "invitacion_sucursal"]) {
           expect(
             await escribir(comoPlataforma(), sql`select * from ${sql.table(tabla)}`),
@@ -2459,6 +2467,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
             p: null,
             i: invA.tokenHash,
             x: ahora - 5,
+            a: null,
           });
           await cliente.query("select set_config('app.ctx', $1, true)", [token]);
           const r = await cliente.query("select count(*)::int as n from invitacion");
@@ -2471,6 +2480,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
             p: null,
             i: invA.tokenHash,
             x: ahora + 60,
+            a: null,
           });
           await cliente.query("select set_config('app.ctx', $1, true)", [vigente]);
           const v = await cliente.query("select count(*)::int as n from invitacion");

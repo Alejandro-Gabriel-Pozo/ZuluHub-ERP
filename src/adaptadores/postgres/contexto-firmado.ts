@@ -13,7 +13,8 @@ import { ErrorDeConfiguracion } from "./errores";
  *
  *     v1.<kid>.<payloadHex>.<macHex>
  *
- * - `payloadHex`: hex del JSON UTF-8 `{u, e, t, p, i, x}` (claves cortas, siempre en ese orden).
+ * - `payloadHex`: hex del JSON UTF-8 `{u, e, t, p, i, x, a}` (claves cortas, siempre en ese orden).
+ *   `a` es el actor de plataforma (id del administrador o `sistema`); vale `null` en las demás puertas.
  * - `macHex`: HMAC-SHA256 hex del texto `v1.<kid>.<payloadHex>` con el secreto de la clave `kid`.
  */
 
@@ -25,6 +26,12 @@ export const VIGENCIA_DEL_CONTEXTO_EN_S = 300;
 
 const KID_MAXIMO = 32767; // smallint
 const HEX_MINIMO = 64; // 32 bytes
+
+/** El actor `a` del barrido y de los procesos de plataforma que no son una persona. */
+export const ACTOR_DE_SISTEMA = "sistema";
+
+/** Un uuid canónico (minúsculas): la base compara el actor como TEXTO con `admin_plataforma.id::text`. */
+const UUID_CANONICO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 export type ClaveDeContexto = Readonly<{ kid: number; secreto: Buffer }>;
 
@@ -39,6 +46,8 @@ export type CargaDeContexto = Readonly<{
   p: string | null;
   i: string | null;
   x: number;
+  /** Actor de plataforma: id del administrador, `sistema` o `null` (todas las demás puertas). */
+  a: string | null;
 }>;
 
 /** Rol de base de cada puerta. La invitación entra por el rol de la aplicación. */
@@ -90,6 +99,7 @@ export function firmarCarga(clave: ClaveDeContexto, carga: CargaDeContexto): str
     p: carga.p,
     i: carga.i,
     x: carga.x,
+    a: carga.a,
   });
   const cuerpo = `v1.${clave.kid}.${Buffer.from(json, "utf8").toString("hex")}`;
   const mac = createHmac("sha256", clave.secreto).update(cuerpo, "utf8").digest("hex");
@@ -101,14 +111,39 @@ function cargaDe(contexto: Contexto, vence: number): CargaDeContexto {
   const u = rolDeContexto(contexto.tipo);
   switch (contexto.tipo) {
     case "OPERATIVO":
-      return { u, e: contexto.empresaId, t: null, p: contexto.personaId, i: null, x: vence };
+      return {
+        u,
+        e: contexto.empresaId,
+        t: null,
+        p: contexto.personaId,
+        i: null,
+        x: vence,
+        a: null,
+      };
     case "GRUPO":
-      return { u, e: null, t: contexto.tenantId, p: contexto.personaId, i: null, x: vence };
+      return {
+        u,
+        e: null,
+        t: contexto.tenantId,
+        p: contexto.personaId,
+        i: null,
+        x: vence,
+        a: null,
+      };
     case "INVITACION":
-      return { u, e: null, t: null, p: null, i: contexto.tokenHash, x: vence };
+      return { u, e: null, t: null, p: null, i: contexto.tokenHash, x: vence, a: null };
     case "PLATAFORMA":
+      return {
+        u,
+        e: null,
+        t: null,
+        p: null,
+        i: null,
+        x: vence,
+        a: contexto.actor.tipo === "ADMIN" ? contexto.actor.id : ACTOR_DE_SISTEMA,
+      };
     case "TRABAJOS":
-      return { u, e: null, t: null, p: null, i: null, x: vence };
+      return { u, e: null, t: null, p: null, i: null, x: vence, a: null };
   }
 }
 
@@ -123,6 +158,13 @@ export function firmarContexto(
 ): string {
   if (contexto.tipo === "INVITACION" && !/^[0-9a-f]{64}$/.test(contexto.tokenHash)) {
     throw new RangeError("tokenHash debe ser un sha256 en hexadecimal minúsculo (64 caracteres)");
+  }
+  if (
+    contexto.tipo === "PLATAFORMA" &&
+    contexto.actor.tipo === "ADMIN" &&
+    !UUID_CANONICO.test(contexto.actor.id)
+  ) {
+    throw new RangeError("el id del administrador debe ser un uuid canónico en minúsculas");
   }
   return firmarCarga(clave, cargaDe(contexto, ahoraEnSegundos + VIGENCIA_DEL_CONTEXTO_EN_S));
 }
