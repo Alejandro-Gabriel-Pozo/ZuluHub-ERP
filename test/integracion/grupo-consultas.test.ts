@@ -67,6 +67,7 @@ type TxDeGrupoDePrueba = TxDeConsultasDeGrupo & Readonly<{ db: Kysely<SinTablas>
 type Ganchos = {
   llamadas: string[];
   intentos: number;
+  despuesDeAutorizar?: () => Promise<void>;
   despuesDeLeerElTenant?: () => Promise<void>;
   despuesDeRegistrar?: (intento: number) => Promise<void>;
   alRegistrar?: () => Promise<void>;
@@ -112,7 +113,9 @@ describe.skipIf(base === null)("consultas de grupo: listarEmpresasDelGrupo", () 
             delPropietario: async (c) => {
               ganchos.intentos += 1;
               ganchos.llamadas.push("autorizacion");
-              return autorizacion.delPropietario(c);
+              const datos = await autorizacion.delPropietario(c);
+              await ganchos.despuesDeAutorizar?.();
+              return datos;
             },
           },
           tenants: {
@@ -161,6 +164,7 @@ describe.skipIf(base === null)("consultas de grupo: listarEmpresasDelGrupo", () 
   const limpiarGanchos = () => {
     ganchos.llamadas = [];
     ganchos.intentos = 0;
+    delete ganchos.despuesDeAutorizar;
     delete ganchos.despuesDeLeerElTenant;
     delete ganchos.despuesDeRegistrar;
     delete ganchos.alRegistrar;
@@ -785,6 +789,25 @@ describe.skipIf(base === null)("consultas de grupo: listarEmpresasDelGrupo", () 
 
       expect(r).toEqual({ ok: false, error: { tipo: "AccesoDenegado" } });
       expect(ganchos.llamadas).toEqual(["autorizacion", "tenants", "empresas", "accesos"]);
+      expect(await accesosDe(tenant)).toEqual([]);
+    });
+
+    it("si apagan al propietario después del guard y antes de leer el tenant, da SIN_PERMISO (no una excepción) y no se lee ni se registra nada más", async () => {
+      limpiarGanchos();
+      const tenant = await tenantNuevo();
+      await empresaNueva(tenant, "Alguna SA");
+      const persona = await propietario(tenant);
+      ganchos.despuesDeAutorizar = async () => {
+        await dueno.query(
+          "update membresia_tenant set activo = false where persona_id = $1 and tenant_id = $2",
+          [persona, tenant],
+        );
+      };
+
+      const r = await consultas.listarEmpresasDelGrupo(grupo(tenant, persona));
+
+      expect(r).toEqual({ ok: false, error: "SIN_PERMISO" });
+      expect(ganchos.llamadas).toEqual(["autorizacion", "tenants"]);
       expect(await accesosDe(tenant)).toEqual([]);
     });
 

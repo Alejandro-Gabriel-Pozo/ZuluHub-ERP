@@ -1,7 +1,7 @@
 import { exigirAccion } from "../capacidades/permisos/exigir";
 import type { MotivoDeRechazo } from "../capacidades/permisos/guard";
 import type { ContextoDeGrupo } from "../contexto/contexto";
-import { ok, type Resultado } from "../primitivas/resultado/resultado";
+import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../puertos/transacciones";
 import type { DependenciasDeConsultasDeGrupo } from "./contrato";
 import { DECLARACIONES_DE_CONSULTAS_DE_GRUPO } from "./declaraciones";
@@ -26,7 +26,9 @@ const SIN_MODULOS_ACTIVADOS: readonly string[] = [];
  * lectura porque inserta ese único registro, y lo hace ANTES de devolver los datos: si la base rechaza
  * el registro (por ejemplo, porque apagaron al propietario a mitad de la consulta) no se entrega nada.
  * Cada llamada deja exactamente un registro; si la transacción se repite por un conflicto, el registro
- * de la que se revierte se revierte con ella. Un rechazo del guard no lee ni registra nada.
+ * de la que se revierte se revierte con ella. Un rechazo del guard no lee ni registra nada. Si apagan
+ * al propietario entre el guard y la lectura del tenant, el resultado es `SIN_PERMISO` y no se registra
+ * nada.
  *
  * Con el tenant suspendido devuelve igual la lista y los estados (`estadoEfectivo` lo informa).
  */
@@ -51,10 +53,10 @@ export function armarListarEmpresasDelGrupo({
         );
         if (!permiso.ok) return permiso;
         const tenant = await tx.tenants.obtener(tenantId);
-        // Con el guard aprobado la política de lectura deja ver el tenant propio: que falte es una
-        // configuración rota, no un error de negocio.
-        if (tenant === null)
-          throw new Error(`el tenant ${tenantId} no es visible para el contexto`);
+        // Con el guard aprobado la política de lectura deja ver el tenant propio. Si no lo ve es que
+        // apagaron al propietario entre el guard y esta lectura (el tenant no puede faltar: la
+        // membresía lo referencia): es lo mismo que no ser propietario, no una falla.
+        if (tenant === null) return err("SIN_PERMISO");
         const empresas = await tx.empresas.listarDelTenant(tenantId);
         await tx.accesos.registrar({ empresaId: null });
         return ok(armarVistaDeGrupo(tenant, empresas));

@@ -215,6 +215,39 @@ describe("P7: el guard va primero en cada consulta de grupo", () => {
   });
 });
 
+describe("si el propietario deja de serlo después del guard", () => {
+  it("un tenant que ya no se ve da SIN_PERMISO sin leer las empresas ni registrar el acceso", async () => {
+    const accesos: string[] = [];
+    const tx: TxDeConsultasDeGrupo = {
+      autorizacion: { delPropietario: () => Promise.resolve({ rol: "PROPIETARIO" }) },
+      tenants: {
+        obtener: () => {
+          accesos.push("tenants");
+          return Promise.resolve(null);
+        },
+      },
+      empresas: {
+        listarDelTenant: () => {
+          accesos.push("empresas");
+          return Promise.resolve([]);
+        },
+      },
+      accesos: {
+        registrar: () => {
+          accesos.push("accesos");
+          return Promise.resolve();
+        },
+      },
+    };
+    const consultas = consultasCon({ tx, accesos });
+    expect(await consultas.listarEmpresasDelGrupo(contexto)).toEqual({
+      ok: false,
+      error: "SIN_PERMISO",
+    });
+    expect(accesos).toEqual(["tenants"]);
+  });
+});
+
 describe("los demás motivos del guard salen tal cual", () => {
   const grupoComo = (
     estado: "disponible" | "en_desarrollo",
