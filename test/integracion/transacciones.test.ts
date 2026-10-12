@@ -415,7 +415,11 @@ describe.skipIf(base === null)("conexiones ociosas cortadas por el servidor", ()
       expect(primera.ok).toBe(true);
       // El servidor corta la conexión que quedó ociosa en el pool.
       await cliente.query("select pg_terminate_backend($1)", [primera.ok ? primera.valor : 0]);
-      await new Promise((resolver) => setTimeout(resolver, 100));
+      // Espera a que el pool se entere (hasta 5 s) en vez de una pausa fija: bajo carga el aviso
+      // puede tardar más de 100 ms y la prueba dependía de eso.
+      for (let espera = 0; avisos.length === 0 && espera < 100; espera += 1) {
+        await new Promise((resolver) => setTimeout(resolver, 50));
+      }
       const segunda = await rol();
       expect(segunda.ok).toBe(true);
       expect(segunda.ok && primera.ok && segunda.valor !== primera.valor).toBe(true);
