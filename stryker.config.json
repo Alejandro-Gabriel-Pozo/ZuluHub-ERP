@@ -2,12 +2,13 @@
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "testRunner": "command",
   "commandRunner": {
-    "command": "ZULUHUB_SIN_INTEGRACION=1 npx vitest run --reporter=dot"
+    "command": "ZULUHUB_SIN_INTEGRACION=1 npx vitest run --reporter=dot $ZULUHUB_FILTRO_PRUEBAS"
   },
   "mutate": [
     "src/primitivas/dinero/**/*.ts",
     "src/primitivas/cantidad/**/*.ts",
     "src/primitivas/identificacion-fiscal/**/*.ts",
+    "src/primitivas/domicilio/**/*.ts",
     "src/primitivas/resultado/**/*.ts",
     "src/contexto/estados.ts",
     "src/modulos/fiscal/dominio/**/*.ts",

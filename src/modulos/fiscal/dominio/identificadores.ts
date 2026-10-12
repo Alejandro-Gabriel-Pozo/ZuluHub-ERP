@@ -1,0 +1,31 @@
+import { esTextoDeIdentificador, type Marca } from "../../../primitivas/identificadores/marca";
+
+/**
+ * Identificadores propios de lo fiscal. Viven acá y no en `primitivas/identificadores` para no
+ * chocar con los otros frentes que tocan ese archivo (spec H7 §B.1). Mismas reglas que los demás:
+ * texto no vacío y sin blancos en los extremos.
+ */
+export type EmisorId = Marca<string, "EmisorId">;
+export type PuntoDeVentaId = Marca<string, "PuntoDeVentaId">;
+export type DomicilioId = Marca<string, "DomicilioId">;
+/** Una versión (de datos fiscales o de la regla del emisor). */
+export type VersionId = Marca<string, "VersionId">;
+/** La solicitud que reserva un número de comprobante: la clave de idempotencia de la reserva. */
+export type SolicitudId = Marca<string, "SolicitudId">;
+/** De dónde nace un comprobante (hoy una venta). Lo definirá quien tenga ese origen. */
+export type OrigenId = Marca<string, "OrigenId">;
+
+function crear<Id extends string>(nombre: string, valor: string): Id {
+  if (!esTextoDeIdentificador(valor)) {
+    throw new RangeError(`${nombre} inválido`);
+  }
+  return valor as Id;
+}
+
+export const emisorId = (valor: string): EmisorId => crear<EmisorId>("EmisorId", valor);
+export const puntoDeVentaId = (valor: string): PuntoDeVentaId =>
+  crear<PuntoDeVentaId>("PuntoDeVentaId", valor);
+export const domicilioId = (valor: string): DomicilioId => crear<DomicilioId>("DomicilioId", valor);
+export const versionId = (valor: string): VersionId => crear<VersionId>("VersionId", valor);
+export const solicitudId = (valor: string): SolicitudId => crear<SolicitudId>("SolicitudId", valor);
+export const origenId = (valor: string): OrigenId => crear<OrigenId>("OrigenId", valor);

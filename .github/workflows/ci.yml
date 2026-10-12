@@ -154,7 +154,8 @@ jobs:
 
   mutacion:
     # En paralelo por grupos de archivos: el tiempo total pasa a ser el del grupo más lento. Cada
-    # grupo exige 100 % (thresholds.break en stryker.config.json).
+    # grupo exige 100 % (thresholds.break en stryker.config.json). Si un grupo pasa de 35 minutos,
+    # se parte o se le acota `pruebas`.
     name: Mutación (${{ matrix.grupo }})
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -170,8 +171,23 @@ jobs:
             archivos: "src/primitivas/cantidad/**/*.ts"
           - grupo: identificación fiscal, resultado y estados
             archivos: "src/primitivas/identificacion-fiscal/**/*.ts,src/primitivas/resultado/**/*.ts,src/contexto/estados.ts"
-          - grupo: fiscal, tenants y empresas
-            archivos: "src/modulos/fiscal/dominio/**/*.ts,src/modulos/tenants/dominio/**/*.ts,src/modulos/empresas/dominio/**/*.ts"
+          - grupo: tenants y empresas
+            archivos: "src/modulos/tenants/dominio/**/*.ts,src/modulos/empresas/dominio/**/*.ts"
+          - grupo: fiscal (numeración)
+            archivos: "src/modulos/fiscal/dominio/numeracion.ts"
+            pruebas: "src/modulos/fiscal"
+          - grupo: fiscal (datos y vigencia)
+            archivos: "src/modulos/fiscal/dominio/datos-fiscales.ts,src/modulos/fiscal/dominio/vigencia.ts"
+            pruebas: "src/modulos/fiscal"
+          - grupo: fiscal (puntos de venta y emisor)
+            archivos: "src/modulos/fiscal/dominio/punto-de-venta.ts,src/modulos/fiscal/dominio/resolucion-de-emisor.ts"
+            pruebas: "src/modulos/fiscal"
+          - grupo: fiscal (resto)
+            archivos: "src/modulos/fiscal/dominio/**/*.ts,!src/modulos/fiscal/dominio/numeracion.ts,!src/modulos/fiscal/dominio/datos-fiscales.ts,!src/modulos/fiscal/dominio/vigencia.ts,!src/modulos/fiscal/dominio/punto-de-venta.ts,!src/modulos/fiscal/dominio/resolucion-de-emisor.ts"
+            pruebas: "src/modulos/fiscal"
+          - grupo: domicilio
+            archivos: "src/primitivas/domicilio/**/*.ts"
+            pruebas: "src/primitivas/domicilio"
           - grupo: identidad (invitación)
             archivos: "src/modulos/identidad/dominio/invitacion.ts"
           - grupo: identidad (resto)
@@ -192,6 +208,9 @@ jobs:
       - run: npx stryker run --mutate "${{ matrix.archivos }},!src/**/*.test.ts"
         env:
           FC_SEMILLA: "20261011"
+          # Filtro de archivos de prueba que corre cada mutante (vacío = toda la suite unitaria). Los
+          # grupos grandes lo acotan a las pruebas de su módulo para entrar en el tiempo del job.
+          ZULUHUB_FILTRO_PRUEBAS: ${{ matrix.pruebas }}
 
   gate:
     name: Gate
