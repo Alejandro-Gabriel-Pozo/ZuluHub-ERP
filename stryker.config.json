@@ -16,6 +16,7 @@
     "src/modulos/empresas/dominio/**/*.ts",
     "src/modulos/identidad/dominio/**/*.ts",
     "src/plataforma/dominio/**/*.ts",
+    "src/consultas-de-grupo/vista-de-grupo.ts",
     "src/adaptadores/postgres/huella-canonica.ts",
     "src/adaptadores/trabajos/reintentos.ts",
     "src/adaptadores/trabajos/error-seguro.ts",
