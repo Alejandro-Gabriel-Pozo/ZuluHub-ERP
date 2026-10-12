@@ -2848,7 +2848,11 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
         try {
           const datos = await sembrar(previa.cliente);
           const antes = await huella(previa.cliente);
-          const r = await aplicarMigraciones(previa.aparte.base.dueno, REAL);
+          // Solo hasta 0005: las migraciones posteriores (0006 fiscal) tienen sus propias pruebas.
+          const hasta0005 = await carpetaCon([...HASTA_0004, "0005_administracion.sql"]);
+          const r = await aplicarMigraciones(previa.aparte.base.dueno, hasta0005).finally(() =>
+            rm(hasta0005, { recursive: true, force: true }),
+          );
           expect(r.aplicadas).toEqual(["0005_administracion.sql"]);
           expect(await huella(previa.cliente)).toEqual(antes);
 
