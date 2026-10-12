@@ -12,6 +12,7 @@ import {
   ACTOR_DE_SISTEMA,
   VIGENCIA_DEL_CONTEXTO_EN_S,
   ZULUHUB_CLAVE_CONTEXTO,
+  actorFirmado,
   firmarCarga,
   firmarContexto,
   leerClaveDeContexto,
@@ -237,6 +238,18 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
     }
     expect(() => firmarAdmin(ADMIN)).not.toThrow();
     expect(adminPlataformaId(ADMIN)).toBe(ADMIN);
+  });
+
+  it("actorFirmado: el id del administrador, o `sistema` sin importar el nombre del proceso", () => {
+    expect(actorFirmado({ tipo: "ADMIN", id: adminPlataformaId(ADMIN) })).toBe(ADMIN);
+    expect(actorFirmado({ tipo: "SISTEMA", proceso: "barrido-de-altas" })).toBe(ACTOR_DE_SISTEMA);
+    expect(actorFirmado({ tipo: "SISTEMA", proceso: ADMIN })).toBe("sistema");
+    expect(() =>
+      actorFirmado({ tipo: "ADMIN", id: ADMIN.toUpperCase() as AdminPlataformaId }),
+    ).toThrow(new RangeError("el id del administrador debe ser un uuid canónico en minúsculas"));
+    expect(() => actorFirmado({ tipo: "ADMIN", id: "sistema" as AdminPlataformaId })).toThrow(
+      RangeError,
+    );
   });
 
   it("INVITACION: rol app, solo el hash del token de invitación", () => {

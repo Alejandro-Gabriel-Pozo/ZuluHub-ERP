@@ -197,7 +197,8 @@ jobs:
           - grupo: plataforma (dominio)
             archivos: "src/plataforma/dominio/**/*.ts"
           - grupo: trabajos y correo (lógica pura)
-            archivos: "src/adaptadores/trabajos/reintentos.ts,src/adaptadores/trabajos/error-seguro.ts,src/adaptadores/correo/configuracion.ts"
+            archivos: "src/adaptadores/trabajos/reintentos.ts,src/adaptadores/trabajos/error-seguro.ts,src/adaptadores/correo/configuracion.ts,src/adaptadores/postgres/huella-canonica.ts"
+            pruebas: "src/adaptadores"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

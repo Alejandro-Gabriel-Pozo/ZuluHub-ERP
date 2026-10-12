@@ -67,6 +67,14 @@ export interface RepositorioDePersonas {
   obtener(id: PersonaId): Promise<Persona | null>;
   /** Da de alta a una persona (solo con su email; el resto lo fija la base). */
   crear(email: Email): Promise<Persona>;
+  /**
+   * Suspende (`false`) o reactiva (`true`) a la persona en todas las empresas: `UPDATE ... SET
+   * activo_global = <nuevo> WHERE id = <id> AND activo_global <> <nuevo>`. La tabla no tiene versión; el
+   * estado esperado hace de control optimista. `true`: lo cambió. `false`: no lo cambió, porque ya estaba
+   * así, porque no existe, o porque la base no se lo permitió a ese actor (afecta 0 filas): el caso de
+   * uso lee a la persona antes y distingue `YA_SUSPENDIDA` / `NO_SUSPENDIDA`.
+   */
+  cambiarActivoGlobal(id: PersonaId, activo: boolean): Promise<boolean>;
 }
 
 export interface RepositorioDeMembresias {
@@ -104,6 +112,14 @@ export interface RepositorioDeInvitaciones {
   /** Por el hash del token (contexto de INVITACION). */
   obtenerPorHash(tokenHash: string): Promise<Invitacion | null>;
   obtenerPorId(id: InvitacionId): Promise<Invitacion | null>;
+  /**
+   * La ÚLTIMA invitación del alta del gerente de esa empresa (tipo `ALTA_GERENTE`, la de `emitida_en`
+   * más reciente, desempate por id), sea cual sea su estado: pendiente (vigente o vencida), aceptada o
+   * revocada con o sin reemplazo. `null`: la empresa nunca tuvo alta. Es lo que necesitan el reenvío y
+   * la revocación del alta. Sin `invitacion_sucursal` (la plataforma no la lee): las empresas de la
+   * invitación llegan con `sucursales: []`, que es lo que lleva un alta por construcción.
+   */
+  obtenerAltaVigente(empresa: EmpresaId): Promise<Invitacion | null>;
   /** Las guardadas como `PENDIENTE` que incluyen a la empresa, dirigidas a ese email. */
   pendientesDeEmail(empresa: EmpresaId, email: Email): Promise<Invitacion[]>;
   /** Cabecera, empresas y sucursales (en ese orden: la cabecera no se puede leer sola, D7). */
@@ -154,6 +170,16 @@ export function crearRepositorioDePersonas(db: Kysely<IdentidadDb>): Repositorio
         .returning(columnas)
         .executeTakeFirstOrThrow();
       return aPersona(fila);
+    },
+
+    async cambiarActivoGlobal(id, activo) {
+      const r = await db
+        .updateTable("persona")
+        .set({ activo_global: activo })
+        .where("id", "=", id)
+        .where("activo_global", "=", !activo)
+        .executeTakeFirst();
+      return r.numUpdatedRows === 1n;
     },
   };
 }
@@ -318,7 +344,11 @@ export function crearRepositorioDeInvitaciones(db: Kysely<IdentidadDb>): Reposit
     "version",
   ] as const;
 
-  /** Arma las invitaciones con sus empresas y sucursales (ordenadas por id: orden estable). */
+  /**
+   * Arma las invitaciones con sus empresas y sucursales (ordenadas por id: orden estable). Con
+   * `conSucursales: false` no lee `invitacion_sucursal` (la plataforma no tiene permiso) y todas las
+   * empresas llevan `sucursales: []`.
+   */
   async function armar(
     filas: readonly {
       id: string;
@@ -332,6 +362,7 @@ export function crearRepositorioDeInvitaciones(db: Kysely<IdentidadDb>): Reposit
       reemplazada_por: string | null;
       version: number;
     }[],
+    conSucursales = true,
   ): Promise<Invitacion[]> {
     if (filas.length === 0) return [];
     const ids = filas.map((f) => f.id);
@@ -341,12 +372,14 @@ export function crearRepositorioDeInvitaciones(db: Kysely<IdentidadDb>): Reposit
       .where("invitacion_id", "in", ids)
       .orderBy("empresa_id")
       .execute();
-    const sucursales = await db
-      .selectFrom("invitacion_sucursal")
-      .select(["invitacion_id", "empresa_id", "sucursal_id"])
-      .where("invitacion_id", "in", ids)
-      .orderBy("sucursal_id")
-      .execute();
+    const sucursales = conSucursales
+      ? await db
+          .selectFrom("invitacion_sucursal")
+          .select(["invitacion_id", "empresa_id", "sucursal_id"])
+          .where("invitacion_id", "in", ids)
+          .orderBy("sucursal_id")
+          .execute()
+      : [];
     return filas.map((f) => ({
       id: invitacionId(f.id),
       tenantId: tenantId(f.tenant_id),
@@ -387,6 +420,31 @@ export function crearRepositorioDeInvitaciones(db: Kysely<IdentidadDb>): Reposit
         .where("id", "=", id)
         .executeTakeFirst();
       return fila === undefined ? null : ((await armar([fila]))[0] ?? null);
+    },
+
+    async obtenerAltaVigente(empresa) {
+      const fila = await db
+        .selectFrom("invitacion as i")
+        .innerJoin("invitacion_empresa as ie", "ie.invitacion_id", "i.id")
+        .select([
+          "i.id",
+          "i.tenant_id",
+          "i.tipo",
+          "i.email",
+          "i.estado",
+          "i.emitida_en",
+          "i.vence_en",
+          "i.aceptada_por",
+          "i.reemplazada_por",
+          "i.version",
+        ])
+        .where("ie.empresa_id", "=", empresa)
+        .where("i.tipo", "=", "ALTA_GERENTE")
+        .orderBy("i.emitida_en", "desc")
+        .orderBy("i.id", "desc")
+        .limit(1)
+        .executeTakeFirst();
+      return fila === undefined ? null : ((await armar([fila], false))[0] ?? null);
     },
 
     async pendientesDeEmail(empresa, email) {
