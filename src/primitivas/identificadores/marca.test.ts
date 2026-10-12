@@ -11,6 +11,7 @@ import {
   planId,
   sucursalId,
   tenantId,
+  traspasoId,
   versionDePlanId,
 } from "./marca";
 import "../../../test/propiedades/configuracion";
@@ -124,5 +125,30 @@ describe("identificadores de marcas y planes: tipos distintos", () => {
       "v1",
       "d1",
     ]);
+  });
+});
+
+describe("TraspasoId (traspaso de gerencia)", () => {
+  it("acepta texto no vacío y lo devuelve tal cual", () => {
+    expect(traspasoId("0b9f2c1e-7a53-4e0a-9c1d-2f6a8d3e4b51")).toBe(
+      "0b9f2c1e-7a53-4e0a-9c1d-2f6a8d3e4b51",
+    );
+  });
+
+  it("rechaza vacío y espacios en los extremos, y el error lo nombra", () => {
+    for (const malo of ["", " x", "x ", "\tx", "x\n", " "]) {
+      expect(() => traspasoId(malo), JSON.stringify(malo)).toThrow(
+        new RangeError("TraspasoId inválido"),
+      );
+    }
+  });
+
+  it("no se mezcla con otros identificadores", () => {
+    const traspaso = traspasoId("t1");
+    // @ts-expect-error un traspaso no es una invitación
+    const comoInvitacion: ReturnType<typeof invitacionId> = traspaso;
+    // @ts-expect-error y una invitación no es un traspaso
+    const comoTraspaso: ReturnType<typeof traspasoId> = invitacionId("i1");
+    expect([comoInvitacion, comoTraspaso]).toEqual(["t1", "i1"]);
   });
 });

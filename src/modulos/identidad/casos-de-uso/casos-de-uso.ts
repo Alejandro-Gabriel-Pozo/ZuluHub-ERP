@@ -12,7 +12,7 @@ import { crearReenviarInvitacion } from "./reenviar-invitacion";
 import { crearRevocarInvitacion } from "./revocar-invitacion";
 
 /**
- * Los casos de uso de identidad (H3, y los de H6 que van llegando), listos para que la composición los ofrezca. El
+ * Los casos de uso de identidad (H3 y H6), listos para que la composición los ofrezca. El
  * `satisfies` exige que sean EXACTAMENTE los que declara `DECLARACIONES` (qué acción exige cada
  * uno): un caso de uso nuevo sin declarar, o una declaración sin caso de uso, no compila.
  */
@@ -22,7 +22,7 @@ export function crearCasosDeUsoDeIdentidad(dependencias: DependenciasDeIdentidad
     invitarUsuario: crearInvitarUsuario(dependencias),
     apagarMembresia: crearApagarMembresia(dependencias),
     reenviarInvitacion: crearReenviarInvitacion(dependencias),
-    // Pendientes de H6 (devuelven NO_IMPLEMENTADO tras el guard): T3a, T3b y T4.
+    // H6: administración de usuarios (T3a, T3b) y traspaso de gerencia (T4).
     revocarInvitacion: crearRevocarInvitacion(dependencias),
     asignarSucursales: crearAsignarSucursales(dependencias),
     proponerTraspaso: crearProponerTraspaso(dependencias),

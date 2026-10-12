@@ -109,10 +109,19 @@ export type {
   ErrorAlListarInvitacionesPendientes,
   InvitacionPendienteDeLaLista,
 } from "./consultas/listar-invitaciones-pendientes";
+export type {
+  ErrorAlConsultarTraspasoEnCurso,
+  PersonaDelTraspaso,
+  TraspasoEnCursoDeLaPantalla,
+} from "./consultas/traspaso-en-curso";
 export { DECLARACIONES as DECLARACIONES_DE_IDENTIDAD } from "./casos-de-uso/declaraciones";
 export type { DeclaracionDeCaso } from "./casos-de-uso/declaraciones";
 export {
+  TRABAJO_AVISAR_TRASPASO_ACEPTADO,
+  TRABAJO_AVISAR_TRASPASO_PROPUESTO,
+  TRABAJO_AVISAR_TRASPASO_RECHAZADO,
   TRABAJO_ENVIAR_INVITACION,
+  claveDeAvisoDeTraspaso,
   claveDeEnvioDeInvitacion,
   type DependenciasDeIdentidad,
   type TxDeIdentidad,
@@ -122,6 +131,31 @@ export type {
   ErrorAlInvitarUsuario,
   SalidaDeInvitarUsuario,
 } from "./casos-de-uso/invitar-usuario";
+export type {
+  EntradaDeAceptarTraspaso,
+  ErrorAlAceptarTraspaso,
+  SalidaDeAceptarTraspaso,
+} from "./casos-de-uso/aceptar-traspaso";
+export type {
+  EntradaDeAsignarSucursales,
+  ErrorAlAsignarSucursales,
+  SalidaDeAsignarSucursales,
+} from "./casos-de-uso/asignar-sucursales";
+export type {
+  EntradaDeCancelarTraspaso,
+  ErrorAlCancelarTraspaso,
+  SalidaDeCancelarTraspaso,
+} from "./casos-de-uso/cancelar-traspaso";
+export type {
+  EntradaDeProponerTraspaso,
+  ErrorAlProponerTraspaso,
+  SalidaDeProponerTraspaso,
+} from "./casos-de-uso/proponer-traspaso";
+export type {
+  EntradaDeRechazarTraspaso,
+  ErrorAlRechazarTraspaso,
+  SalidaDeRechazarTraspaso,
+} from "./casos-de-uso/rechazar-traspaso";
 export type {
   EntradaDeRevocarInvitacion,
   ErrorAlRevocarInvitacion,
@@ -141,6 +175,7 @@ export {
   crearRepositorioDeInvitaciones,
   crearRepositorioDeMembresias,
   crearRepositorioDePersonas,
+  crearRepositorioDeTraspasos,
   type Asignacion,
   type InvitacionPendienteDeLista,
   type MiembroConEmail,
@@ -148,5 +183,7 @@ export {
   type RepositorioDeInvitaciones,
   type RepositorioDeMembresias,
   type RepositorioDePersonas,
+  type RepositorioDeTraspasos,
+  type TraspasoGuardado,
 } from "./persistencia/repositorios";
 export type { IdentidadDb } from "./persistencia/tablas";
