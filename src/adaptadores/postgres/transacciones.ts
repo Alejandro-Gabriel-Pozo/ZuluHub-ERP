@@ -1,6 +1,6 @@
 import { Kysely, PostgresDialect, sql } from "kysely";
 import pg from "pg";
-import type { TipoDeContexto } from "../../contexto/contexto";
+import type { Contexto, TipoDeContexto } from "../../contexto/contexto";
 import type {
   ErrorDePersistencia,
   OpcionesDeTransaccion,
@@ -39,9 +39,11 @@ export type ConfiguracionDeTransacciones<Tx> = Readonly<{
   /**
    * Arma lo que recibe el trabajo a partir de la conexión de la transacción. El `Kysely` es de uso
    * interno de las carpetas de persistencia: nunca se pasa al dominio. Llega sin tablas conocidas:
-   * cada módulo agrega las suyas con `db.withTables<TablasDelModulo>()`.
+   * cada módulo agrega las suyas con `db.withTables<TablasDelModulo>()`. Recibe también el contexto
+   * de la transacción (el mismo que se firma): lo usan los adaptadores que escriben quién actuó
+   * (auditoría e idempotencia de plataforma) para sacar el actor del contexto y no del llamador.
    */
-  armar: (db: Kysely<SinTablas>) => Tx;
+  armar: (db: Kysely<SinTablas>, contexto: Contexto) => Tx;
   maximoDeConexiones?: number;
   /**
    * Se avisa cuando el servidor corta una conexión OCIOSA (por ejemplo, Neon al escalar a cero). No
@@ -128,7 +130,7 @@ export function crearTransacciones<Tx>(
         // dato de negocio). El token fijado vale solo dentro de esta transacción.
         const token = firmarContexto(clave, opciones.contexto, Math.floor(Date.now() / 1000));
         await sql`select set_config('app.ctx', ${token}, true)`.execute(trx);
-        const resultado = await trabajo(configuracion.armar(trx));
+        const resultado = await trabajo(configuracion.armar(trx, opciones.contexto));
         if (!resultado.ok) throw new Abortar(resultado);
         // Si el trabajo atrapó un error de la base y devolvió `ok`, la transacción quedó abortada y
         // Postgres respondería al COMMIT con un ROLLBACK SIN error: se informaría éxito sin haber

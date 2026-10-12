@@ -50,9 +50,31 @@ import {
   crearAuditoriaDePostgres,
   type AuditoriaDb,
 } from "../../src/adaptadores/postgres/auditoria";
+import {
+  crearAuditoriaDePlataformaDePostgres,
+  type AuditoriaDePlataformaDb,
+} from "../../src/adaptadores/postgres/auditoria-de-plataforma";
+import {
+  crearAutorizacionDePlataformaDePostgres,
+  type AutorizacionDePlataformaDb,
+} from "../../src/adaptadores/postgres/autorizacion-de-plataforma";
+import { crearAdminsDePostgres, type AdminsDb } from "../../src/adaptadores/postgres/admins";
+import {
+  crearIdempotenciaDePostgres,
+  type IdempotenciaDb,
+} from "../../src/adaptadores/postgres/idempotencia";
+import {
+  crearReferenciasDeErrorDePostgres,
+  type ReferenciasDeErrorDb,
+} from "../../src/adaptadores/postgres/referencias-de-error";
 import { crearTrabajosDePostgres, type TrabajosDb } from "../../src/adaptadores/postgres/trabajos";
 import { crearColaDePostgres, type ColaDb } from "../../src/adaptadores/postgres/cola-de-trabajos";
+import type { AdminsDePlataforma } from "../../src/puertos/admins-de-plataforma";
+import type { AuditoriaDePlataforma } from "../../src/puertos/auditoria-de-plataforma";
+import type { CargaDeAutorizacionDePlataforma } from "../../src/puertos/autorizacion-de-plataforma";
 import type { ColaDeTrabajos } from "../../src/puertos/cola-de-trabajos";
+import type { IdempotenciaDePlataforma } from "../../src/puertos/idempotencia";
+import type { ReferenciasDeError } from "../../src/puertos/referencias-de-error";
 import { ADMIN_DE_PRUEBA, sembrarAdminsDePrueba } from "./admins-de-prueba";
 import type { BaseDePruebas } from "./global";
 
@@ -70,6 +92,12 @@ export type TxDePrueba = Readonly<{
   sucursales: RepositorioDeSucursales;
   /** La cola de trabajos del procesador (H5); se usa con el contexto `TRABAJOS`. */
   cola: ColaDeTrabajos;
+  /** Puertos de plataforma (H5 P4): el actor sale del contexto de la transacción. */
+  auditoriaDePlataforma: AuditoriaDePlataforma;
+  idempotencia: IdempotenciaDePlataforma;
+  autorizacionDePlataforma: CargaDeAutorizacionDePlataforma;
+  admins: AdminsDePlataforma;
+  referenciasDeError: ReferenciasDeError;
 }> &
   TxDeIdentidad;
 
@@ -89,7 +117,7 @@ export function crearEntornoDePrueba(
       PLATAFORMA: base.plataforma,
       TRABAJOS: base.trabajos,
     },
-    armar: (db) =>
+    armar: (db, contexto) =>
       ajustar({
         db,
         tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
@@ -102,6 +130,18 @@ export function crearEntornoDePrueba(
         trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
         auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
         cola: crearColaDePostgres(db.withTables<ColaDb>()),
+        auditoriaDePlataforma: crearAuditoriaDePlataformaDePostgres(
+          db.withTables<AuditoriaDePlataformaDb>(),
+          contexto,
+        ),
+        idempotencia: crearIdempotenciaDePostgres(db.withTables<IdempotenciaDb>(), contexto),
+        autorizacionDePlataforma: crearAutorizacionDePlataformaDePostgres(
+          db.withTables<AutorizacionDePlataformaDb>(),
+        ),
+        admins: crearAdminsDePostgres(db.withTables<AdminsDb>()),
+        referenciasDeError: crearReferenciasDeErrorDePostgres(
+          db.withTables<ReferenciasDeErrorDb>(),
+        ),
         autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>()),
       }),
     maximoDeConexiones,
