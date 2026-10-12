@@ -366,8 +366,10 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
 
     it("las restricciones y los índices únicos de traspaso_gerencia son exactamente estos", async () => {
       const restricciones = await consultar<{ conname: string; contype: string }>(
+        // Postgres 18 registra cada NOT NULL como restricción propia (contype 'n'); Postgres 16 no.
+        // Se excluyen para que la lista sea la misma en ambas versiones.
         `select conname, contype from pg_constraint
-         where conrelid = 'public.traspaso_gerencia'::regclass order by 1`,
+         where conrelid = 'public.traspaso_gerencia'::regclass and contype <> 'n' order by 1`,
       );
       expect(restricciones.map((r) => `${r.conname}:${r.contype}`)).toEqual([
         "traspaso_gerencia_aceptado_ck:c",
