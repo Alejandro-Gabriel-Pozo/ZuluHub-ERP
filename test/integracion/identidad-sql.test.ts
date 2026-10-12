@@ -77,11 +77,35 @@ const COLUMNA_CUALQUIERA: Readonly<Record<(typeof TABLAS_NUEVAS)[number], string
   invitacion_sucursal: "empresa_id",
 };
 
-/** Restricciones que lanzan los disparadores de la migración 0002 (no están en el catálogo). */
+/**
+ * Restricciones que lanzan los disparadores (no están en el catálogo), por la función que las lanza:
+ * 0002 (invitación) y 0005 (traspaso y membresía).
+ */
+const DISPARADORES_DE_IDENTIDAD: Readonly<Record<string, readonly string[]>> = {
+  invitacion_validar_cambio: [
+    "invitacion_transicion_invalida",
+    "invitacion_inmutable",
+    "invitacion_resuelta_inmutable",
+  ],
+  membresia_validar_cambio: ["membresia_gerente_no_se_apaga", "membresia_rol_sin_traspaso"],
+  traspaso_gerencia_validar_alta: [
+    "traspaso_entrante_inactivo",
+    "traspaso_entrante_es_el_gerente",
+    "traspaso_saliente_no_es_gerente",
+  ],
+  traspaso_gerencia_validar_cambio: [
+    "traspaso_gerencia_inmutable",
+    "traspaso_gerencia_resuelto_inmutable",
+    "traspaso_gerencia_transicion_invalida",
+    "traspaso_saliente_no_es_gerente",
+    "traspaso_entrante_inactivo",
+    "traspaso_entrante_es_el_gerente",
+    "traspaso_cancela_sin_permiso",
+  ],
+  traspaso_gerencia_verificar_aceptado: ["traspaso_aceptado_incompleto"],
+};
 const RESTRICCIONES_DE_DISPARADORES_DE_IDENTIDAD = [
-  "invitacion_transicion_invalida",
-  "invitacion_inmutable",
-  "invitacion_resuelta_inmutable",
+  ...new Set(Object.values(DISPARADORES_DE_IDENTIDAD).flat()),
 ];
 
 describe.skipIf(base === null)("identidad: la migración 0002 contra una base real", () => {
@@ -212,7 +236,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
     });
 
     it("toda restricción de las tablas de identidad tiene su traducción declarada, y no sobra ninguna", async () => {
-      const tablas = ["persona", ...TABLAS_NUEVAS];
+      const tablas = ["persona", ...TABLAS_NUEVAS, "traspaso_gerencia"];
       const reales = await filas<{ nombre: string }>(
         `select conname as nombre from pg_constraint
          where conrelid = any($1::text[]::regclass[]) and contype in ('p', 'u', 'c', 'f', 'x')
@@ -233,12 +257,16 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
         ),
         "traducciones de restricciones que no existen",
       ).toEqual([]);
-      // Las restricciones de los disparadores existen de verdad: figuran en el cuerpo de la función.
-      const { rows } = await dueno.query<{ cuerpo: string }>(
-        `select pg_get_functiondef('public.invitacion_validar_cambio'::regproc) as cuerpo`,
-      );
-      for (const nombre of RESTRICCIONES_DE_DISPARADORES_DE_IDENTIDAD) {
-        expect(rows[0]?.cuerpo, nombre).toContain(`'${nombre}'`);
+      // Las restricciones de los disparadores existen de verdad: figuran en el cuerpo de la función
+      // que las lanza (y cada nombre de la lista figura en alguna).
+      for (const [funcion, nombres] of Object.entries(DISPARADORES_DE_IDENTIDAD)) {
+        const { rows } = await dueno.query<{ cuerpo: string }>(
+          `select pg_get_functiondef($1::regproc) as cuerpo`,
+          [`public.${funcion}`],
+        );
+        for (const nombre of nombres) {
+          expect(rows[0]?.cuerpo, `${funcion}: ${nombre}`).toContain(`'${nombre}'`);
+        }
       }
     });
 
@@ -281,8 +309,10 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
       );
       expect(politicas.map((f) => f.p)).toEqual(
         [
+          "asignacion_sucursal.asignacion_sucursal_app_alta:INSERT:zuluhub_app", // 0005
           "asignacion_sucursal.asignacion_sucursal_app_apagar:UPDATE:zuluhub_app",
           "asignacion_sucursal.asignacion_sucursal_app_leer:SELECT:zuluhub_app",
+          "asignacion_sucursal.asignacion_sucursal_app_reactivar:UPDATE:zuluhub_app", // 0005
           "asignacion_sucursal.asignacion_sucursal_invitado_alta:INSERT:zuluhub_app",
           "asignacion_sucursal.asignacion_sucursal_invitado_leer:SELECT:zuluhub_app",
           "asignacion_sucursal.asignacion_sucursal_invitado_reactivar:UPDATE:zuluhub_app",
@@ -312,6 +342,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
           "invitacion_sucursal.invitacion_sucursal_invitado_leer:SELECT:zuluhub_app",
           "membresia.membresia_app_apagar:UPDATE:zuluhub_app",
           "membresia.membresia_app_leer:SELECT:zuluhub_app",
+          "membresia.membresia_app_traspasar:UPDATE:zuluhub_app", // 0005
           "membresia.membresia_invitado_alta:INSERT:zuluhub_app",
           "membresia.membresia_invitado_leer:SELECT:zuluhub_app",
           "membresia.membresia_invitado_reactivar:UPDATE:zuluhub_app",
@@ -340,12 +371,15 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
         [[...TABLAS_NUEVAS]],
       );
       expect(politicas.map((p) => p.policyname)).toEqual([
+        "asignacion_sucursal_app_alta", // 0005
         "asignacion_sucursal_app_apagar",
+        "asignacion_sucursal_app_reactivar", // 0005
         "invitacion_app_alta",
         "invitacion_app_revocar",
         "invitacion_empresa_app_alta",
         "invitacion_sucursal_app_alta",
         "membresia_app_apagar",
+        "membresia_app_traspasar", // 0005
       ]);
       for (const p of politicas) {
         // El WITH CHECK de las políticas permisivas se suma (OR) entre todas las de la tabla: si
@@ -1293,7 +1327,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
         expect(await contar(comoEmpresa(b.empresa, opB as never), "membresia")).toBe(1);
       });
 
-      it("no puede crear membresías ni asignaciones: eso nace de aceptar una invitación", async () => {
+      it("no puede crear membresías ni personas: eso nace de aceptar una invitación (las asignaciones, desde 0005, sí: a un miembro activo y a una sucursal activa)", async () => {
         const nueva = await crearPersonaDeBase(dueno);
         expect(
           await escribir(
@@ -1302,21 +1336,39 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
           ),
         ).toEqual(DENEGADO);
         expect(
+          await escribir(comoA(), sql`insert into persona (email) values (${emailAlAzar()})`),
+        ).toEqual(DENEGADO);
+        // Una persona que no es miembro: no se la asigna (la política exige la membresía activa).
+        expect(
           await escribir(
             comoA(),
             sql`insert into asignacion_sucursal (empresa_id, persona_id, sucursal_id)
-                values (${a.empresa}, ${adminA}, ${sucursalA})`,
+                values (${a.empresa}, ${nueva.id}, ${sucursalA})`,
           ),
-        ).toEqual(DENEGADO);
-        expect(
-          await escribir(comoA(), sql`insert into persona (email) values (${emailAlAzar()})`),
         ).toEqual(DENEGADO);
       });
 
-      it("no puede ascender: UPDATE(rol) no tiene permiso, ni siquiera sobre su propia membresía", async () => {
+      it("no puede ascender: el rol solo cambia al aceptar un traspaso (la política, y el disparador de 0005), ni siquiera sobre su propia membresía", async () => {
+        // Sobre un miembro que puede apagar: la fila se ve; el disparador frena el cambio antes que
+        // el WITH CHECK (cada barrera por separado se prueba en administracion-sql.test.ts).
+        expect(
+          await escribir(
+            comoA(),
+            sql`update membresia set rol = 'GERENTE' where persona_id = ${opA}`,
+          ),
+        ).toEqual({
+          ok: false,
+          error: { tipo: "Check", restriccion: "membresia_rol_sin_traspaso" },
+        });
+        // Sobre el gerente: ninguna política deja ver la fila para actualizarla, así que son 0 filas.
+        expect(
+          await escribir(
+            comoA(),
+            sql`update membresia set rol = 'ADMINISTRADOR' where persona_id = ${gerenteA}`,
+          ),
+        ).toEqual({ ok: true, valor: 0 });
+        // Las demás columnas siguen sin permiso de actualización.
         for (const consulta of [
-          sql`update membresia set rol = 'GERENTE' where persona_id = ${opA}`,
-          sql`update membresia set rol = 'ADMINISTRADOR' where persona_id = ${gerenteA}`,
           sql`update membresia set persona_id = ${gerenteA} where persona_id = ${opA}`,
           sql`update membresia set empresa_id = ${b.empresa} where persona_id = ${opA}`,
           sql`update membresia set version = 99 where persona_id = ${opA}`,
@@ -2069,9 +2121,18 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
             ok: true,
             valor: 1,
           });
+          // El rol (0005): sobre una membresía activa el invitado no ve nada que reactivar (0 filas);
+          // sobre una apagada, el disparador lo frena (ver administracion-sql.test.ts).
           for (const consulta of [
             sql`update membresia set rol = 'GERENTE' where persona_id = ${persona}`,
             sql`update membresia set rol = 'ADMINISTRADOR' where persona_id = ${persona}`,
+          ]) {
+            expect(await escribir(comoInvitacion(inv.tokenHash), consulta)).toEqual({
+              ok: true,
+              valor: 0,
+            });
+          }
+          for (const consulta of [
             sql`update membresia set invitacion_id = ${invA.id} where persona_id = ${persona}`,
             sql`update asignacion_sucursal set sucursal_id = sucursal_id where persona_id = ${persona}`,
           ]) {
@@ -2217,7 +2278,13 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
           const persona = await aceptarComoInvitado(uno.inv);
           await altaDeMembresia(uno.inv, uno.empresa.empresa, persona, "GERENTE");
           await activar(uno.inv, uno.empresa.empresa);
-          await dueno.query("update membresia set activo = false where persona_id = $1", [persona]);
+          // Un gerente no se apaga (0005): se arma la membresía del gerente apagado a mano.
+          await dueno.query("delete from membresia where persona_id = $1", [persona]);
+          await dueno.query(
+            `insert into membresia (empresa_id, persona_id, rol, activo, invitacion_id)
+             values ($1, $2, 'GERENTE', false, $3)`,
+            [uno.empresa.empresa, persona, uno.inv.id],
+          );
           expect(
             await escribir(
               comoInvitacion(uno.inv.tokenHash),

@@ -75,6 +75,11 @@ export const ERRORES_DE_EMPRESAS_POR_RESTRICCION: Readonly<Record<string, string
   sucursal_nombre_ck: "NOMBRE_DE_SUCURSAL_INVALIDO",
   sucursal_nombre_uk: "SUCURSAL_DUPLICADA",
   sucursal_empresa_id_fkey: "EMPRESA_INEXISTENTE",
+  // 0005 (H6): el nombre sin depender del locale, su largo y sus caracteres, y la última sucursal.
+  sucursal_nombre_ci_uk: "SUCURSAL_DUPLICADA",
+  sucursal_nombre_largo_ck: "NOMBRE_DE_SUCURSAL_INVALIDO",
+  sucursal_nombre_control_ck: "NOMBRE_DE_SUCURSAL_INVALIDO",
+  sucursal_ultima_activa: "ULTIMA_SUCURSAL_ACTIVA", // la lanza un disparador
 };
 
 export type ErrorDeRepositorioDeEmpresas = "EMPRESA_NO_ENCONTRADA" | "VERSION_DESACTUALIZADA";
@@ -273,12 +278,14 @@ export function crearRepositorioDeSucursales(db: Kysely<EmpresasDb>): Repositori
         .returningAll()
         .executeTakeFirst();
       if (nueva !== undefined) return { creada: true, sucursal: aSucursal(nueva) };
-      // El índice único es (empresa, lower(nombre)): se busca por la misma expresión.
+      // El índice único `sucursal_nombre_ci_uk` (0005) compara con el orden ICU `sucursal_nombre_ci`
+      // (sin distinguir mayúsculas y sin depender del locale de la base): se busca con el mismo.
+      // Con `lower()` y un servidor en locale `C`, «CAFÉ» chocaría con «café» y no se encontraría.
       const existente = await db
         .selectFrom("sucursal")
         .selectAll()
         .where("empresa_id", "=", empresa)
-        .where(sql<boolean>`lower(nombre) = lower(${nombre})`)
+        .where(sql<boolean>`nombre = ${nombre} collate sucursal_nombre_ci`)
         .executeTakeFirst();
       if (existente === undefined) {
         throw new Error("el alta de sucursal no insertó y tampoco hay una con ese nombre");
