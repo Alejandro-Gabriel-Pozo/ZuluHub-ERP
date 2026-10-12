@@ -1,4 +1,4 @@
-import type { Generated, Kysely, Selectable } from "kysely";
+import { sql, type Generated, type Kysely, type Selectable } from "kysely";
 import type { EstadoDeEmpresa } from "../../../contexto/estados";
 import type { Cuit } from "../../../primitivas/identificacion-fiscal/cuit";
 import {
@@ -97,11 +97,32 @@ export interface RepositorioDeEmpresas {
   ): Promise<{ ok: true; empresa: Empresa } | { ok: false; error: ErrorDeRepositorioDeEmpresas }>;
 }
 
+/** Resultado de `crearSiNoExiste`: la sucursal nueva, o la que ya tenía ese nombre. */
+export type AltaDeSucursal = Readonly<{ creada: boolean; sucursal: Sucursal }>;
+
 export interface RepositorioDeSucursales {
   crear(empresa: EmpresaId, nombre: string): Promise<Sucursal>;
   listar(empresa: EmpresaId): Promise<Sucursal[]>;
   renombrar(id: SucursalId, versionEsperada: number, nombre: string): Promise<Sucursal | null>;
+  /** Una sucursal de la empresa; `null` si no existe o es de otra empresa. */
+  obtener(empresa: EmpresaId, id: SucursalId): Promise<Sucursal | null>;
+  /** Solo las activas de la empresa, ordenadas por nombre e id. */
+  listarActivas(empresa: EmpresaId): Promise<Sucursal[]>;
+  /**
+   * Crea la sucursal salvo que la empresa ya tenga una con ese nombre (sin distinguir mayúsculas,
+   * activa o no): `INSERT ... ON CONFLICT DO NOTHING` y, si no insertó, devuelve la existente.
+   */
+  crearSiNoExiste(empresa: EmpresaId, nombre: string): Promise<AltaDeSucursal>;
+  /** Activa o desactiva si la versión coincide; `null` si no coincide o no es de la empresa. */
+  cambiarActiva(
+    empresa: EmpresaId,
+    id: SucursalId,
+    versionEsperada: number,
+    activa: boolean,
+  ): Promise<Sucursal | null>;
 }
+
+const FORMA_DE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function aEmpresa(fila: Selectable<EmpresasDb["empresa"]>): Empresa {
   return {
@@ -180,6 +201,64 @@ export function crearRepositorioDeEmpresas(db: Kysely<EmpresasDb>): RepositorioD
 
 export function crearRepositorioDeSucursales(db: Kysely<EmpresasDb>): RepositorioDeSucursales {
   return {
+    async obtener(empresa, id) {
+      // Un texto que no es un UUID no puede ser el id de ninguna sucursal: la base lo rechazaría
+      // con un error de formato en lugar de "no existe".
+      if (!FORMA_DE_UUID.test(id)) return null;
+      const fila = await db
+        .selectFrom("sucursal")
+        .selectAll()
+        .where("empresa_id", "=", empresa)
+        .where("id", "=", id)
+        .executeTakeFirst();
+      return fila === undefined ? null : aSucursal(fila);
+    },
+
+    async listarActivas(empresa) {
+      const filas = await db
+        .selectFrom("sucursal")
+        .selectAll()
+        .where("empresa_id", "=", empresa)
+        .where("activa", "=", true)
+        .orderBy("nombre")
+        .orderBy("id")
+        .execute();
+      return filas.map(aSucursal);
+    },
+
+    async crearSiNoExiste(empresa, nombre) {
+      const nueva = await db
+        .insertInto("sucursal")
+        .values({ empresa_id: empresa, nombre })
+        .onConflict((oc) => oc.doNothing())
+        .returningAll()
+        .executeTakeFirst();
+      if (nueva !== undefined) return { creada: true, sucursal: aSucursal(nueva) };
+      // El índice único es (empresa, lower(nombre)): se busca por la misma expresión.
+      const existente = await db
+        .selectFrom("sucursal")
+        .selectAll()
+        .where("empresa_id", "=", empresa)
+        .where(sql<boolean>`lower(nombre) = lower(${nombre})`)
+        .executeTakeFirst();
+      if (existente === undefined) {
+        throw new Error("el alta de sucursal no insertó y tampoco hay una con ese nombre");
+      }
+      return { creada: false, sucursal: aSucursal(existente) };
+    },
+
+    async cambiarActiva(empresa, id, versionEsperada, activa) {
+      const fila = await db
+        .updateTable("sucursal")
+        .set({ activa })
+        .where("empresa_id", "=", empresa)
+        .where("id", "=", id)
+        .where("version", "=", versionEsperada)
+        .returningAll()
+        .executeTakeFirst();
+      return fila === undefined ? null : aSucursal(fila);
+    },
+
     async crear(empresa, nombre) {
       const fila = await db
         .insertInto("sucursal")
