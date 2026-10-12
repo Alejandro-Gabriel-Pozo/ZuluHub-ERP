@@ -236,12 +236,12 @@ $$
     WHEN t IS NULL OR p_maximo IS NULL OR char_length(t) NOT BETWEEN 1 AND p_maximo THEN false
     ELSE t IS NFC NORMALIZED
          AND t !~ ('[\x01-\x1f\x7f-\x9f<>'
-                   || '­؀-؅؜۝܏࢐࢑࣢᠎​-‏'
-                   || '‪-‮⁠-⁤⁦-⁯﻿￹-￻'
+                   || '\u00ad\u0600-\u0605\u061c\u06dd\u070f\u0890\u0891\u08e2\u180e\u200b-\u200f'
+                   || '\u202a-\u202e\u2060-\u2064\u2066-\u206f\ufeff\ufff9-\ufffb'
                    || '\U000110bd\U000110cd\U00013430-\U0001343f\U0001bca0-\U0001bca3'
                    || '\U0001d173-\U0001d17a\U000e0001\U000e0020-\U000e007f]')
-         AND t !~ '^[    -     　]'
-         AND t !~ '[    -     　]$'
+         AND t !~ '^[ \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]'
+         AND t !~ '[ \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]$'
   END
 $$;
 
@@ -296,7 +296,7 @@ $$
          AND NOT EXISTS (
            SELECT 1 FROM jsonb_each(p) AS e (perilla, valor)
             WHERE e.perilla !~ '^[a-z][a-z0-9_.]{1,63}$'
-               OR NOT (
+               OR NOT coalesce(  -- un campo que falta da NULL: cuenta como inválido
                  CASE jsonb_typeof(e.valor)
                    WHEN 'string' THEN p_admite_del_plan AND e.valor = '"DEL_PLAN"'::jsonb
                    WHEN 'object' THEN
@@ -313,7 +313,8 @@ $$
                        )
                      )
                    ELSE false
-                 END
+                 END,
+                 false
                )
          )
   END
@@ -565,7 +566,10 @@ BEGIN
   IF NEW.marca_padre_id IS NULL THEN
     NEW.nivel := 0;
   ELSE
-    SELECT m.nivel, m.estado INTO v_nivel, v_estado FROM public.marca m WHERE m.id = NEW.marca_padre_id;
+    -- FOR SHARE: retirar el padre a la vez que se le crea una hija espera a que termine una de las dos
+    -- (como `empresa_validar_alta` con el tenant); sin él, la hija podría nacer bajo un padre ya retirado.
+    SELECT m.nivel, m.estado INTO v_nivel, v_estado
+      FROM public.marca m WHERE m.id = NEW.marca_padre_id FOR SHARE;
     -- Un padre inexistente lo rechaza la clave foránea (marca_marca_padre_id_fkey).
     IF FOUND THEN
       IF v_estado <> 'ACTIVA' THEN
@@ -610,7 +614,7 @@ $$
 DECLARE
   v_estado text;
 BEGIN
-  SELECT m.estado INTO v_estado FROM public.marca m WHERE m.id = NEW.marca_id;
+  SELECT m.estado INTO v_estado FROM public.marca m WHERE m.id = NEW.marca_id FOR SHARE;
   -- Una marca inexistente la rechaza la clave foránea (dominio_de_marca_marca_id_fkey).
   IF FOUND AND v_estado <> 'ACTIVA' THEN
     RAISE EXCEPTION 'la marca está retirada: no admite dominios nuevos'
@@ -679,7 +683,7 @@ BEGIN
     RAISE EXCEPTION 'una versión de plan nace en borrador'
       USING ERRCODE = '23514', CONSTRAINT = 'version_de_plan_transicion_invalida';
   END IF;
-  SELECT p.estado INTO v_estado FROM public.plan p WHERE p.id = NEW.plan_id;
+  SELECT p.estado INTO v_estado FROM public.plan p WHERE p.id = NEW.plan_id FOR SHARE;
   -- Un plan inexistente lo rechaza la clave foránea (version_de_plan_plan_id_fkey).
   IF FOUND AND v_estado <> 'ACTIVO' THEN
     RAISE EXCEPTION 'el plan está retirado: no admite versiones nuevas'
@@ -706,7 +710,8 @@ BEGIN
     RAISE EXCEPTION 'una versión de plan publicada no se puede modificar: se publica una nueva'
       USING ERRCODE = '23514', CONSTRAINT = 'version_de_plan_publicada_inmutable';
   END IF;
-  IF NEW.estado = 'PUBLICADA' THEN
+  -- Solo al publicar (de borrador a publicada): a una versión ya publicada no se le llega acá.
+  IF OLD.estado = 'BORRADOR' AND NEW.estado = 'PUBLICADA' THEN
     SELECT coalesce(max(v.numero), 0) + 1 INTO v_siguiente
       FROM public.version_de_plan v WHERE v.plan_id = OLD.plan_id;
     IF NEW.numero IS DISTINCT FROM v_siguiente THEN
@@ -729,7 +734,7 @@ BEGIN
     RAISE EXCEPTION 'una versión de marca nace en borrador'
       USING ERRCODE = '23514', CONSTRAINT = 'version_de_marca_transicion_invalida';
   END IF;
-  SELECT m.estado INTO v_estado FROM public.marca m WHERE m.id = NEW.marca_id;
+  SELECT m.estado INTO v_estado FROM public.marca m WHERE m.id = NEW.marca_id FOR SHARE;
   -- Una marca inexistente la rechaza la clave foránea (version_de_marca_marca_id_fkey).
   IF FOUND AND v_estado <> 'ACTIVA' THEN
     RAISE EXCEPTION 'la marca está retirada: no admite versiones nuevas'
@@ -756,7 +761,8 @@ BEGIN
     RAISE EXCEPTION 'una versión de marca confirmada no se puede modificar: se confirma una nueva'
       USING ERRCODE = '23514', CONSTRAINT = 'version_de_marca_confirmada_inmutable';
   END IF;
-  IF NEW.estado = 'CONFIRMADA' THEN
+  -- Solo al confirmar (de borrador a confirmada): a una versión ya confirmada no se le llega acá.
+  IF OLD.estado = 'BORRADOR' AND NEW.estado = 'CONFIRMADA' THEN
     SELECT coalesce(max(v.numero), 0) + 1 INTO v_siguiente
       FROM public.version_de_marca v WHERE v.marca_id = OLD.marca_id;
     IF NEW.numero IS DISTINCT FROM v_siguiente THEN

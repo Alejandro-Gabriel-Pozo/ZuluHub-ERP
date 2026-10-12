@@ -269,7 +269,7 @@ export async function ajustarPerilla(
   return fila.numero;
 }
 
-export async function activarModulo(c: pg.Client, empresa: string, modulo: string): Promise<void> {
+async function activarModulo(c: pg.Client, empresa: string, modulo: string): Promise<void> {
   await c.query("insert into modulo_de_empresa (empresa_id, modulo) values ($1, $2)", [
     empresa,
     modulo,
@@ -350,20 +350,6 @@ export async function sembrarMarcasYPlanes(
   await activarModulo(c, e.empresa, "modulo_de_prueba");
 }
 
-/** Un cliente del dueño, cerrado al terminar el trabajo. */
-export async function conDueno<T>(
-  b: BaseDePruebas,
-  trabajo: (c: pg.Client) => Promise<T>,
-): Promise<T> {
-  const c = new pg.Client({ connectionString: b.dueno });
-  await c.connect();
-  try {
-    return await trabajo(c);
-  } finally {
-    await c.end();
-  }
-}
-
 /** Los archivos de migración dados, copiados a una carpeta temporal. */
 export async function carpetaCon(archivos: readonly string[]): Promise<string> {
   const carpeta = await mkdtemp(join(tmpdir(), "zuluhub-mig-0007-"));
@@ -430,6 +416,9 @@ export async function huellaDeCatalogo(c: pg.Client): Promise<Record<string, str
                      provolatile, coalesce(array_to_string(proconfig, ','), ''), md5(prosrc), coalesce(proacl::text, ''))
               as x
        from pg_proc where pronamespace = 'public'::regnamespace`,
+    ),
+    esquema: await lista(
+      `select coalesce(nspacl::text, '') as x from pg_namespace where nspname = 'public'`,
     ),
     tablas: await lista(
       `select format('%s:%s:%s:%s:%s', relname, relkind, relrowsecurity, relforcerowsecurity, coalesce(relacl::text, ''))

@@ -21,6 +21,9 @@
 -- nuevas. No usa CASCADE: si otro objeto depende de lo que se borra (una clave foránea de una migración
 -- posterior), el DROP falla y no se pierde nada.
 --
+-- Los intentos fallidos de la vista de grupo ('DENEGADO') NO se borran (la auditoría es de solo inserción):
+-- quedan como filas de acceso sin su marca de resultado.
+--
 -- NO borra el rol `zuluhub_publico`: los roles son del clúster y otras bases pueden usarlo. Le quita el
 -- acceso al esquema de esta base; si hace falta eliminarlo, se hace a mano cuando ninguna otra base lo use
 -- (`DROP OWNED BY zuluhub_publico; DROP ROLE zuluhub_publico;`).
@@ -59,6 +62,10 @@ $$;
 -- Parte 1, en orden inverso al de creación.
 DROP TRIGGER tenant_marca_inmutable ON tenant;
 ALTER TABLE tenant DROP COLUMN marca_id;
+
+-- La única política que mira otra tabla nueva (las versiones de plan que el tenant tiene asignadas): se quita
+-- antes, o `plan_de_tenant` no se podría borrar.
+DROP POLICY version_de_plan_app_leer ON version_de_plan;
 
 DROP TABLE nivel_de_control;
 DROP TABLE modulo_de_empresa;
