@@ -500,7 +500,10 @@ describe("verConfiguracion", () => {
       usaSiExiste: [],
       datosRequeridos: [],
       implementadoPor: [],
-      acciones: { "zeta.b": { capacidad: null }, "zeta.a": { capacidad: null } },
+      acciones: {
+        "zeta.b": { capacidad: null, efecto: "LECTURA" },
+        "zeta.a": { capacidad: null, efecto: "LECTURA" },
+      },
     } as const;
     const soporte = lecturaFalsa();
     const consultas = crearConsultasDePlataforma({
