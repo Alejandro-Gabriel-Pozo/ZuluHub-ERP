@@ -15,6 +15,7 @@ import {
   decidirAceptacion,
   decidirInvitacionDeUsuario,
   decidirReenvio,
+  decidirReenvioDeAlta,
   estadoDeInvitacion,
   nuevaInvitacion,
   type DatosDeAceptacion,
@@ -896,6 +897,196 @@ describe("decidirReenvio", () => {
     expect(
       decidirReenvio(invitacion({ empresas: [asignacion(E1, "GERENTE")] }), ahora, nueva),
     ).toEqual(error("ROL_NO_INVITABLE"));
+  });
+});
+
+describe("decidirReenvioDeAlta (plataforma, H5)", () => {
+  const ahora = mas(T0, 3 * HORA);
+  const enAlta = { id: E1, estado: "PROVISIONING" } as const;
+  const deAlta = (cambios: Partial<Invitacion> = {}) =>
+    alta({ empresas: [{ empresaId: E1, rol: "GERENTE", sucursales: [] }], ...cambios });
+  const nueva = {
+    id: invitacionId("inv-2"),
+    tokenHash: "hash-2",
+    email: null,
+    emailEsDeAdminDePlataforma: false,
+  };
+
+  it("una pendiente vigente se reenvía al mismo email: se revoca la última y nace otra por 24 h, sin emisor", () => {
+    const ultima = deAlta();
+    expect(decidirReenvioDeAlta(enAlta, ultima, ahora, nueva)).toEqual({
+      ok: true,
+      valor: {
+        tipo: "REENVIAR",
+        revocar: ultima.id,
+        nueva: {
+          id: nueva.id,
+          tokenHash: "hash-2",
+          tenantId: ultima.tenantId,
+          tipo: "ALTA_GERENTE",
+          email: EMAIL,
+          emitidaPor: null,
+          emitidaEn: ahora,
+          venceEn: mas(ahora, 24 * HORA),
+          empresas: [{ empresaId: E1, rol: "GERENTE", sucursales: [] }],
+        },
+      },
+    });
+  });
+
+  it("acepta otro email: la invitación nueva va a ese y no al de la última", () => {
+    const resultado = decidirReenvioDeAlta(enAlta, deAlta(), ahora, {
+      ...nueva,
+      email: OTRO_EMAIL,
+    });
+    expect(resultado.ok && resultado.valor.tipo === "REENVIAR" && resultado.valor.nueva.email).toBe(
+      OTRO_EMAIL,
+    );
+  });
+
+  it("una pendiente vencida también se reenvía (aun en el instante del vencimiento) y se revoca", () => {
+    const ultima = deAlta();
+    for (const cuando of [ultima.venceEn, mas(ultima.venceEn, 1), mas(ultima.venceEn, 3 * DIA)]) {
+      const resultado = decidirReenvioDeAlta(enAlta, ultima, cuando, nueva);
+      expect(resultado.ok && resultado.valor.tipo === "REENVIAR" && resultado.valor.revocar).toBe(
+        ultima.id,
+      );
+    }
+  });
+
+  it("una última revocada sin reemplazo (revocada por plataforma) se reenvía y no hay nada que revocar", () => {
+    const resultado = decidirReenvioDeAlta(enAlta, deAlta({ estado: "REVOCADA" }), ahora, nueva);
+    expect(resultado.ok).toBe(true);
+    expect(
+      resultado.ok && resultado.valor.tipo === "REENVIAR" && resultado.valor.revocar,
+    ).toBeNull();
+    expect(resultado.ok && resultado.valor.tipo === "REENVIAR" && resultado.valor.nueva.id).toBe(
+      nueva.id,
+    );
+  });
+
+  it("solo una empresa en PROVISIONING tiene alta que reenviar: ALTA_NO_PENDIENTE en los otros cuatro estados", () => {
+    const estadosDeEmpresa: EstadoDeEmpresa[] = ["ACTIVE", "SUSPENDED", "CANCELLED", "DELETING"];
+    for (const estado of estadosDeEmpresa) {
+      expect(decidirReenvioDeAlta({ id: E1, estado }, deAlta(), ahora, nueva), estado).toEqual(
+        error("ALTA_NO_PENDIENTE"),
+      );
+    }
+  });
+
+  it("ya reemplazada: devuelve la reemplazante, sin crear otra, esté revocada o no", () => {
+    const reemplazante = invitacionId("inv-7");
+    for (const estado of ["REVOCADA", "PENDIENTE"] as const) {
+      expect(
+        decidirReenvioDeAlta(
+          enAlta,
+          deAlta({ estado, reemplazadaPor: reemplazante }),
+          ahora,
+          nueva,
+        ),
+        estado,
+      ).toEqual({ ok: true, valor: { tipo: "YA_REENVIADA", nueva: reemplazante } });
+    }
+  });
+
+  it("una alta aceptada no se reenvía: ALTA_NO_PENDIENTE", () => {
+    expect(
+      decidirReenvioDeAlta(enAlta, deAlta({ estado: "ACEPTADA", aceptadaPor: ANA }), ahora, nueva),
+    ).toEqual(error("ALTA_NO_PENDIENTE"));
+  });
+
+  it("el email de un administrador de plataforma no puede ser gerente, ni el nuevo ni el de la última", () => {
+    const admin = { ...nueva, emailEsDeAdminDePlataforma: true };
+    expect(decidirReenvioDeAlta(enAlta, deAlta(), ahora, admin)).toEqual(
+      error("EMAIL_DE_ADMIN_PLATAFORMA"),
+    );
+    expect(decidirReenvioDeAlta(enAlta, deAlta(), ahora, { ...admin, email: OTRO_EMAIL })).toEqual(
+      error("EMAIL_DE_ADMIN_PLATAFORMA"),
+    );
+  });
+
+  it("precedencia: empresa fuera del alta, ya reenviada, aceptada, email de admin, y recién después los errores de armar la nueva", () => {
+    const admin = { ...nueva, emailEsDeAdminDePlataforma: true };
+    const reemplazante = invitacionId("inv-7");
+    // Empresa activa gana sobre todo lo demás.
+    expect(
+      decidirReenvioDeAlta(
+        { id: E1, estado: "ACTIVE" },
+        deAlta({ reemplazadaPor: reemplazante }),
+        ahora,
+        admin,
+      ),
+    ).toEqual(error("ALTA_NO_PENDIENTE"));
+    // Ya reenviada gana sobre el email de admin y sobre aceptada.
+    expect(
+      decidirReenvioDeAlta(enAlta, deAlta({ reemplazadaPor: reemplazante }), ahora, admin),
+    ).toEqual({ ok: true, valor: { tipo: "YA_REENVIADA", nueva: reemplazante } });
+    expect(
+      decidirReenvioDeAlta(
+        enAlta,
+        deAlta({ estado: "ACEPTADA", aceptadaPor: ANA, reemplazadaPor: reemplazante }),
+        ahora,
+        nueva,
+      ),
+    ).toEqual({ ok: true, valor: { tipo: "YA_REENVIADA", nueva: reemplazante } });
+    // Aceptada gana sobre el email de admin.
+    expect(
+      decidirReenvioDeAlta(enAlta, deAlta({ estado: "ACEPTADA", aceptadaPor: ANA }), ahora, admin),
+    ).toEqual(error("ALTA_NO_PENDIENTE"));
+    // El email de admin gana sobre un alta mal formada.
+    const malFormada = deAlta({ empresas: [{ empresaId: E1, rol: "OPERADOR", sucursales: [] }] });
+    expect(decidirReenvioDeAlta(enAlta, malFormada, ahora, admin)).toEqual(
+      error("EMAIL_DE_ADMIN_PLATAFORMA"),
+    );
+  });
+
+  it("si la última está mal formada, propaga el error de nuevaInvitacion", () => {
+    expect(
+      decidirReenvioDeAlta(
+        enAlta,
+        deAlta({ empresas: [{ empresaId: E1, rol: "OPERADOR", sucursales: [] }] }),
+        ahora,
+        nueva,
+      ),
+    ).toEqual(error("ALTA_INVALIDA"));
+  });
+
+  it("un alta con más de una empresa (mal formada) no es un defecto del llamador: se propaga ALTA_INVALIDA", () => {
+    const conDos = deAlta({
+      empresas: [
+        { empresaId: E1, rol: "GERENTE", sucursales: [] },
+        { empresaId: E2, rol: "GERENTE", sucursales: [] },
+      ],
+    });
+    expect(decidirReenvioDeAlta(enAlta, conDos, ahora, nueva)).toEqual(error("ALTA_INVALIDA"));
+  });
+
+  it("una invitación que no es el alta de esa empresa es un error del llamador", () => {
+    const ultimaDeUsuario = invitacion({
+      empresas: [{ empresaId: E1, rol: "OPERADOR", sucursales: [] }],
+    });
+    expect(() => decidirReenvioDeAlta(enAlta, ultimaDeUsuario, ahora, nueva)).toThrow(RangeError);
+    expect(() => decidirReenvioDeAlta(enAlta, ultimaDeUsuario, ahora, nueva)).toThrow(
+      "la invitación inv-1 no es el alta de la empresa e-1",
+    );
+    // Es un alta, pero de otra empresa.
+    expect(() =>
+      decidirReenvioDeAlta({ id: E2, estado: "PROVISIONING" }, deAlta(), ahora, nueva),
+    ).toThrow("la invitación inv-1 no es el alta de la empresa e-2");
+    // El defecto se detecta aunque la empresa ya no esté en alta.
+    expect(() =>
+      decidirReenvioDeAlta({ id: E2, estado: "ACTIVE" }, deAlta(), ahora, nueva),
+    ).toThrow(RangeError);
+    expect(() =>
+      decidirReenvioDeAlta({ id: E1, estado: "ACTIVE" }, ultimaDeUsuario, ahora, nueva),
+    ).toThrow(RangeError);
+  });
+
+  it("no modifica la última ni los datos recibidos", () => {
+    const ultima = deAlta();
+    const antes = JSON.stringify([ultima, nueva]);
+    decidirReenvioDeAlta(enAlta, ultima, ahora, nueva);
+    expect(JSON.stringify([ultima, nueva])).toBe(antes);
   });
 });
 
