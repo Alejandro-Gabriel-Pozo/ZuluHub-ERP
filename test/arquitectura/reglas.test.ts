@@ -156,6 +156,27 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "dominio-sin-guard",
+      archivos: {
+        "src/modulos/identidad/dominio/d.ts": importa("../../../capacidades/permisos/guard"),
+        "src/capacidades/permisos/guard.ts": exporta,
+      },
+    },
+    {
+      regla: "plataforma-sin-permisos-de-empresa",
+      archivos: {
+        "src/plataforma/p.ts": importa("../capacidades/permisos/empresa"),
+        "src/capacidades/permisos/empresa.ts": exporta,
+      },
+    },
+    {
+      regla: "grupo-sin-permisos-de-empresa",
+      archivos: {
+        "src/consultas-de-grupo/g.ts": importa("../capacidades/permisos/empresa"),
+        "src/capacidades/permisos/empresa.ts": exporta,
+      },
+    },
+    {
       regla: "apps-sin-persistencia-ni-adaptadores",
       archivos: {
         "apps/web/a.ts": importa("../../src/modulos/empresas/persistencia/r"),
@@ -188,6 +209,29 @@ describe("reglas de arquitectura (ADR-001)", () => {
       "src/primitivas/dinero/interno.ts": exporta,
       "src/primitivas/dinero/interno-desde-cantidad.ts": importa("../cantidad/interno"),
       "src/primitivas/cantidad/interno.ts": exporta,
+    });
+    expect(v).toEqual([]);
+  });
+
+  it("el dominio puede conocer los roles, pero no el guard ni la matriz de empresa", async () => {
+    const v = await violacionesDe({
+      "src/modulos/identidad/dominio/d.ts": importa("../../../capacidades/permisos/roles"),
+      "src/capacidades/permisos/roles.ts": exporta,
+    });
+    expect(v).not.toContain("dominio-sin-guard");
+    const w = await violacionesDe({
+      "src/modulos/identidad/dominio/d.ts": importa("../../../capacidades/permisos/empresa"),
+      "src/capacidades/permisos/empresa.ts": exporta,
+    });
+    expect(w).toContain("dominio-sin-guard");
+  });
+
+  it("los casos de uso sí piden el guard y la plataforma y el grupo sí pueden usar el guard genérico", async () => {
+    const v = await violacionesDe({
+      "src/modulos/identidad/casos-de-uso/c.ts": importa("../../../capacidades/permisos/guard"),
+      "src/plataforma/p.ts": importa("../capacidades/permisos/guard"),
+      "src/consultas-de-grupo/g.ts": importa("../capacidades/permisos/guard"),
+      "src/capacidades/permisos/guard.ts": exporta,
     });
     expect(v).toEqual([]);
   });

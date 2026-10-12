@@ -1,4 +1,6 @@
+import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { Auditoria } from "../../../puertos/auditoria";
+import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
 import type { Tokens } from "../../../puertos/tokens";
 import type { Trabajos } from "../../../puertos/trabajos";
 import type { Transacciones } from "../../../puertos/transacciones";
@@ -14,8 +16,8 @@ import type {
 /**
  * Lo que recibe el trabajo de una transacción de identidad (ADR-004, G5): los repositorios del
  * módulo, los de empresas y tenants que hacen falta para leer sus estados y activar el alta, y los
- * puertos de trabajos y auditoría. La composición lo arma a partir de la conexión de la transacción;
- * los casos de uso solo ven estas interfaces.
+ * puertos de trabajos, auditoría y autorización. La composición lo arma a partir de la conexión de
+ * la transacción; los casos de uso solo ven estas interfaces.
  */
 export type TxDeIdentidad = Readonly<{
   personas: RepositorioDePersonas;
@@ -26,11 +28,19 @@ export type TxDeIdentidad = Readonly<{
   tenants: Pick<RepositorioDeTenants, "obtener">;
   trabajos: Trabajos;
   auditoria: Auditoria;
+  /** Quién es el actor y qué módulos tiene la empresa, leído dentro de la transacción (sin caché). */
+  autorizacion: CargaDeAutorizacion;
 }>;
 
 export type DependenciasDeIdentidad = Readonly<{
   transacciones: Transacciones<TxDeIdentidad>;
   tokens: Tokens;
+  /**
+   * El catálogo y la matriz rol → acciones con los que el guard autoriza. Los pasa la composición:
+   * hoy son los fijos de `REGLAS_DE_EMPRESA`; si los roles pasan a ser datos de cada empresa, cambia
+   * quien arma esto, no el guard ni los casos de uso.
+   */
+  reglas: ReglasDeEmpresa;
 }>;
 
 /** Tipo de trabajo que manda el mail de una invitación (datos: solo el id, nunca el token). */

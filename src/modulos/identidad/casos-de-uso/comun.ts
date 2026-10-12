@@ -3,28 +3,36 @@ import {
   type EstadoDeEmpresa,
   type EstadoDeTenant,
 } from "../../../contexto/estados";
+import { modulosActivosDe } from "../../../capacidades/modulos/activos";
+import type { ClaveAccion } from "../../../capacidades/modulos/catalogo";
+import { evaluarGuard, type MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { Empresa } from "../../empresas/publico";
 import type { EmpresaNoOpera } from "../dominio/errores";
 import type { EstadosDeEmpresa } from "../dominio/invitacion";
-import { puedeAdministrarAccesos } from "../dominio/membresia";
-import type { TxDeIdentidad } from "./contrato";
+import type { DependenciasDeIdentidad, TxDeIdentidad } from "./contrato";
 
 /**
- * Control de piso transitorio (se reemplaza por el catálogo de acciones y el guard en H4): quien
- * actúa debe ser miembro ACTIVO de la empresa con rol de gerente o de administrador. La base NO
- * conoce el rol del actor: lo verifica el caso de uso, en el servidor, dentro de la misma
- * transacción (así una membresía apagada un instante antes ya no pasa).
+ * El guard de permisos (ADR-003): el actor tiene que poder hacer la `accion` declarada del caso de
+ * uso. Es lo PRIMERO que hace cada caso de uso dentro de la transacción, antes de leer o escribir
+ * nada más. La base NO conoce el rol del actor: lo verifica el servidor, y lo lee acá, dentro de la
+ * misma transacción serializable (así una membresía apagada un instante antes ya no pasa y un
+ * reintento lo vuelve a leer). Nada de esto se guarda en sesión ni en caché.
  */
-export async function exigirAdministrador(
+export async function exigirAccion(
   tx: TxDeIdentidad,
   contexto: ContextoOperativo,
-): Promise<Resultado<null, "SIN_PERMISO">> {
-  if (contexto.personaId === null) return err("SIN_PERMISO");
-  const actor = await tx.membresias.obtener(contexto.empresaId, contexto.personaId);
-  return puedeAdministrarAccesos(actor) ? ok(null) : err("SIN_PERMISO");
+  reglas: DependenciasDeIdentidad["reglas"],
+  accion: ClaveAccion,
+): Promise<Resultado<null, MotivoDeRechazo>> {
+  const actor = await tx.autorizacion.delActor(contexto);
+  return evaluarGuard(reglas, accion, {
+    rol: actor.rol,
+    modulosActivos: modulosActivosDe(reglas.catalogo, actor.modulosActivados),
+    capacidadesDeSucursal: null,
+  });
 }
 
 /** Las empresas y los estados (de la empresa y de su tenant) para decidir si operan. */

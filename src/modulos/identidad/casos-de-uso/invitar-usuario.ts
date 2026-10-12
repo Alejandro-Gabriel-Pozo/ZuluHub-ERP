@@ -1,3 +1,4 @@
+import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { InvitacionId, SucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
@@ -9,12 +10,13 @@ import {
   nuevaInvitacion,
   type RolDeEmpresa,
 } from "../dominio/invitacion";
-import { cargarEmpresas, comprobarQueOpera, exigirAdministrador } from "./comun";
+import { cargarEmpresas, comprobarQueOpera, exigirAccion } from "./comun";
 import {
   TRABAJO_ENVIAR_INVITACION,
   claveDeEnvioDeInvitacion,
   type DependenciasDeIdentidad,
 } from "./contrato";
+import { DECLARACIONES } from "./declaraciones";
 import { traducirErrores } from "./traducir";
 
 export type EntradaDeInvitarUsuario = Readonly<{
@@ -30,7 +32,11 @@ export type SalidaDeInvitarUsuario = Readonly<{
 }>;
 
 export type ErrorAlInvitarUsuario =
-  ErrorDeInvitacion | EmpresaNoOpera | "SUCURSAL_NO_ES_DE_LA_EMPRESA" | ErrorDePersistencia;
+  | ErrorDeInvitacion
+  | MotivoDeRechazo
+  | EmpresaNoOpera
+  | "SUCURSAL_NO_ES_DE_LA_EMPRESA"
+  | ErrorDePersistencia;
 
 /** Errores de restricciones que forman parte del contrato de este caso de uso. */
 const RESTRICCIONES_ADMITIDAS = [
@@ -42,8 +48,8 @@ const RESTRICCIONES_ADMITIDAS = [
 
 /**
  * Invitar a un usuario a la empresa del contexto (diseño §6.3). Contexto OPERATIVO con persona. En
- * una transacción serializable: control de piso (el actor es gerente o administrador activo), la
- * empresa opera, y entonces
+ * una transacción serializable: el guard (la acción `usuarios.invitar` la puede el rol del actor,
+ * leído en la misma transacción), la empresa opera, y entonces
  *
  *  - ya es miembro activo → `YA_ES_MIEMBRO`;
  *  - ya hay una pendiente vigente para ese email → se devuelve esa (`yaExistia: true`), sin escribir;
@@ -54,7 +60,7 @@ const RESTRICCIONES_ADMITIDAS = [
  * `emitir()` usa azar: se llama FUERA de la transacción, así un reintento serializable reutiliza el
  * mismo id y el mismo token.
  */
-export function crearInvitarUsuario({ transacciones, tokens }: DependenciasDeIdentidad) {
+export function crearInvitarUsuario({ transacciones, tokens, reglas }: DependenciasDeIdentidad) {
   return async function invitarUsuario(
     contexto: ContextoOperativo,
     entrada: EntradaDeInvitarUsuario,
@@ -70,8 +76,15 @@ export function crearInvitarUsuario({ transacciones, tokens }: DependenciasDeIde
       { contexto },
       async (
         tx,
-      ): Promise<Resultado<SalidaDeInvitarUsuario, ErrorDeInvitacion | EmpresaNoOpera>> => {
-        const permiso = await exigirAdministrador(tx, contexto);
+      ): Promise<
+        Resultado<SalidaDeInvitarUsuario, ErrorDeInvitacion | MotivoDeRechazo | EmpresaNoOpera>
+      > => {
+        const permiso = await exigirAccion(
+          tx,
+          contexto,
+          reglas,
+          DECLARACIONES.invitarUsuario.accion,
+        );
         if (!permiso.ok) return permiso;
         const { empresas, estados } = await cargarEmpresas(tx, [empresaId]);
         const opera = comprobarQueOpera(empresaId, estados);

@@ -121,6 +121,30 @@ const reglas = [
     to: { path: "^src/modulos/tenants/" },
   },
   {
+    name: "dominio-sin-guard",
+    severity: "error",
+    comment:
+      "El dominio no autoriza: el guard y la matriz de permisos de empresa se piden en el caso de uso, dentro de la transacción (ADR-003). El dominio solo puede conocer los roles (permisos/roles.ts).",
+    from: { path: "^src/modulos/[^/]+/dominio/" },
+    to: { path: "^src/capacidades/permisos/(guard|empresa)\\.ts$" },
+  },
+  {
+    name: "plataforma-sin-permisos-de-empresa",
+    severity: "error",
+    comment:
+      "La plataforma tiene su propio catálogo de acciones y su guard (H5): no reutiliza la matriz de roles de empresa.",
+    from: { path: "^src/plataforma/" },
+    to: { path: "^src/capacidades/permisos/empresa\\.ts$" },
+  },
+  {
+    name: "grupo-sin-permisos-de-empresa",
+    severity: "error",
+    comment:
+      "Las consultas de grupo tienen su propio catálogo de acciones de grupo (H6): no reutilizan la matriz de roles de empresa.",
+    from: { path: "^src/consultas-de-grupo/" },
+    to: { path: "^src/capacidades/permisos/empresa\\.ts$" },
+  },
+  {
     name: "apps-sin-persistencia-ni-adaptadores",
     severity: "error",
     comment:

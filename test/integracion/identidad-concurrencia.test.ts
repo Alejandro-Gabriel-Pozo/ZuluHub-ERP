@@ -3,6 +3,7 @@ import { sql } from "kysely";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { crearTokensHmac } from "../../src/adaptadores/tokens/tokens-hmac";
+import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import { cambiarEstado } from "../../src/modulos/empresas/publico";
 import { errorDeNegocioDeRestriccion } from "../../src/modulos/identidad/casos-de-uso/traducir";
@@ -77,7 +78,11 @@ describe.skipIf(base === null)("identidad: concurrencia de los casos de uso (K1 
     dueno = new pg.Client({ connectionString: propia.base.dueno });
     await dueno.connect();
     tokens = crearTokensHmac(randomBytes(32));
-    casos = crearCasosDeUsoDeIdentidad({ transacciones: entorno, tokens });
+    casos = crearCasosDeUsoDeIdentidad({
+      transacciones: entorno,
+      tokens,
+      reglas: REGLAS_DE_EMPRESA,
+    });
   });
   afterAll(async () => {
     await dueno.end();
@@ -93,7 +98,7 @@ describe.skipIf(base === null)("identidad: concurrencia de los casos de uso (K1 
 
   /** Espera en la primera lectura de cada transacción (cada intento arma su propio `tx`). */
   const trasLeer =
-    <K extends "invitaciones" | "membresias" | "empresas">(
+    <K extends "invitaciones" | "membresias" | "empresas" | "autorizacion">(
       repositorio: K,
       metodo: string,
     ): Gancho =>
@@ -638,6 +643,93 @@ describe.skipIf(base === null)("identidad: concurrencia de los casos de uso (K1 
       expect(
         await contar("select count(*) as n from invitacion where tenant_id = $1", [empresa.tenant]),
       ).toBe(1);
+    }
+  });
+
+  it("K10: apagan a un administrador mientras invita: o su invitación quedó antes, o ve su baja y da SIN_PERMISO", async () => {
+    const resultados = { invito: 0, sinPermiso: 0 };
+    for (let n = 0; n < RONDAS * 2; n++) {
+      const e = await escenario();
+      const admin = await crearPersonaDeBase(dueno);
+      await crearMembresiaDeBase(dueno, e.empresa, admin.id, "ADMINISTRADOR");
+      const email = emailAlAzar("invitado");
+      // Los dos leen quién es el actor (el guard) antes de que cualquiera escriba.
+      ronda(2, trasLeer("autorizacion", "delActor"));
+
+      const [invitar, apagar] = await Promise.all([
+        casos.invitarUsuario(comoEmpresa(e.empresa, personaId(admin.id)), {
+          email,
+          rol: "OPERADOR",
+          sucursales: [e.sucursal],
+        }),
+        casos.apagarMembresia(e.ctx, { personaId: personaId(admin.id) }),
+      ]);
+
+      expect(apagar.ok, `ronda ${n}`).toBe(true);
+      expect(
+        await contar(
+          "select count(*) as n from membresia where empresa_id = $1 and persona_id = $2 and activo",
+          [e.empresa, admin.id],
+        ),
+      ).toBe(0);
+      const invitaciones = await contar(
+        "select count(*) as n from invitacion_empresa where empresa_id = $1 and email = $2",
+        [e.empresa, email],
+      );
+      const enviosEncolados = await contar(
+        "select count(*) as n from trabajo where empresa_id = $1 and tipo = 'enviar_invitacion'",
+        [e.empresa],
+      );
+      const emitidas = await contar(
+        "select count(*) as n from auditoria_empresa where empresa_id = $1 and accion = 'INVITACION_EMITIDA'",
+        [e.empresa],
+      );
+      if (invitar.ok) {
+        resultados.invito += 1;
+        expect([invitaciones, enviosEncolados, emitidas], `ronda ${n}`).toEqual([1, 1, 1]);
+      } else {
+        resultados.sinPermiso += 1;
+        expect(invitar.error, `ronda ${n}`).toBe("SIN_PERMISO");
+        // Sin permiso no queda nada: ni invitación, ni envío, ni auditoría.
+        expect([invitaciones, enviosEncolados, emitidas], `ronda ${n}`).toEqual([0, 0, 0]);
+      }
+    }
+    expect(resultados.invito + resultados.sinPermiso).toBe(RONDAS * 2);
+  });
+
+  it("K11: suspenden a la persona (activo_global) mientras invita: o quedó antes, o da SIN_PERMISO", async () => {
+    for (let n = 0; n < RONDAS; n++) {
+      const e = await escenario();
+      const email = emailAlAzar("invitado");
+      ronda(2, trasLeer("autorizacion", "delActor"));
+
+      const suspender = entorno.ejecutar({ contexto: comoPlataforma() }, async (tx) => {
+        // Llega al punto de encuentro: la invitación ya leyó quién es el actor.
+        await barrera();
+        await sql`update persona set activo_global = false where id = ${e.gerente}`.execute(tx.db);
+        return ok(null);
+      });
+      const [invitar, suspension] = await Promise.all([
+        casos.invitarUsuario(e.ctx, { email, rol: "OPERADOR", sucursales: [e.sucursal] }),
+        suspender,
+      ]);
+
+      expect(suspension.ok, `ronda ${n}`).toBe(true);
+      const invitaciones = await contar(
+        "select count(*) as n from invitacion_empresa where empresa_id = $1 and email = $2",
+        [e.empresa, email],
+      );
+      // Una sola de dos: quedó antes de la suspensión o la vio y se rechazó. Nunca a medias.
+      expect(invitaciones, `ronda ${n}`).toBe(invitar.ok ? 1 : 0);
+      if (!invitar.ok) expect(invitar.error).toBe("SIN_PERMISO");
+      // Pase lo que pase, la operación siguiente ya no puede.
+      expect(
+        await casos.invitarUsuario(e.ctx, {
+          email: emailAlAzar("otro"),
+          rol: "OPERADOR",
+          sucursales: [],
+        }),
+      ).toEqual({ ok: false, error: "SIN_PERMISO" });
     }
   });
 });

@@ -1,11 +1,13 @@
+import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { PersonaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { EmpresaNoOpera, ErrorDeMembresia } from "../dominio/errores";
 import { decidirApagado } from "../dominio/membresia";
-import { cargarEmpresas, comprobarQueOpera, exigirAdministrador } from "./comun";
+import { cargarEmpresas, comprobarQueOpera, exigirAccion } from "./comun";
 import type { DependenciasDeIdentidad } from "./contrato";
+import { DECLARACIONES } from "./declaraciones";
 
 export type EntradaDeApagarMembresia = Readonly<{ personaId: PersonaId }>;
 
@@ -15,12 +17,14 @@ export type SalidaDeApagarMembresia = Readonly<{
   invitacionesRevocadas: number;
 }>;
 
-export type ErrorAlApagarMembresia = ErrorDeMembresia | EmpresaNoOpera | ErrorDePersistencia;
+export type ErrorAlApagarMembresia =
+  ErrorDeMembresia | MotivoDeRechazo | EmpresaNoOpera | ErrorDePersistencia;
 
 /**
  * Apagar la membresía de una persona en la empresa del contexto (diseño §6.3, R4). Contexto
- * OPERATIVO con persona. En una transacción serializable: control de piso, la empresa opera, y el
- * dominio decide (`decidirApagado`: no existe, ya apagada, es el gerente, es el último admin).
+ * OPERATIVO con persona. En una transacción serializable: el guard (`usuarios.apagar`), la empresa
+ * opera, y el dominio decide (`decidirApagado`: no existe, ya apagada, es el gerente, es el último
+ * admin).
  *
  * Apagar deja `activo = false`, apaga TODAS sus asignaciones de sucursal y revoca las invitaciones
  * pendientes dirigidas a su email que incluyan la empresa (si la invitación es de varias empresas
@@ -31,7 +35,7 @@ export type ErrorAlApagarMembresia = ErrorDeMembresia | EmpresaNoOpera | ErrorDe
  * escriben filas distintas (sesgo de escritura); la serializable aborta una y su reintento ve al
  * otro ya apagado, así que devuelve `ULTIMO_ADMIN`.
  */
-export function crearApagarMembresia({ transacciones }: DependenciasDeIdentidad) {
+export function crearApagarMembresia({ transacciones, reglas }: DependenciasDeIdentidad) {
   return async function apagarMembresia(
     contexto: ContextoOperativo,
     entrada: EntradaDeApagarMembresia,
@@ -41,8 +45,15 @@ export function crearApagarMembresia({ transacciones }: DependenciasDeIdentidad)
       { contexto },
       async (
         tx,
-      ): Promise<Resultado<SalidaDeApagarMembresia, ErrorDeMembresia | EmpresaNoOpera>> => {
-        const permiso = await exigirAdministrador(tx, contexto);
+      ): Promise<
+        Resultado<SalidaDeApagarMembresia, ErrorDeMembresia | MotivoDeRechazo | EmpresaNoOpera>
+      > => {
+        const permiso = await exigirAccion(
+          tx,
+          contexto,
+          reglas,
+          DECLARACIONES.apagarMembresia.accion,
+        );
         if (!permiso.ok) return permiso;
         const { estados } = await cargarEmpresas(tx, [empresaId]);
         const opera = comprobarQueOpera(empresaId, estados);

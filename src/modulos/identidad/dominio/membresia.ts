@@ -1,10 +1,14 @@
+import type { RolDeEmpresa } from "../../../capacidades/permisos/roles";
 import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { Email } from "./email";
 import type { ErrorDeMembresia } from "./errores";
 
-/** Rol de una persona en una empresa. Vive acá para que invitación y membresía no se importen entre sí. */
-export type RolDeEmpresa = "GERENTE" | "ADMINISTRADOR" | "OPERADOR";
+/**
+ * Rol de una persona en una empresa. La lista de roles es de `capacidades/permisos/roles.ts`; se
+ * reexporta acá para que invitación y membresía no se importen entre sí.
+ */
+export type { RolDeEmpresa };
 
 /** La pertenencia de una persona a una empresa, con su rol. */
 export type Membresia = Readonly<{
@@ -22,17 +26,13 @@ export type Persona = Readonly<{
   activoGlobal: boolean;
 }>;
 
-/** "Admin" de una empresa es el gerente o un administrador. */
+/**
+ * "Admin" de una empresa es el gerente o un administrador: los roles que gestionan usuarios según la
+ * matriz de permisos (una prueba comprueba que ambas listas dicen lo mismo). Cuando los roles sean
+ * datos de cada empresa, esta lista tendrá que venir de ellos.
+ */
 function esAdmin(rol: RolDeEmpresa): boolean {
   return rol === "GERENTE" || rol === "ADMINISTRADOR";
-}
-
-/**
- * Control de piso transitorio (se reemplaza por el catálogo de acciones en H4): administra
- * accesos quien es miembro ACTIVO de la empresa con rol de gerente o de administrador.
- */
-export function puedeAdministrarAccesos(actor: Membresia | null): boolean {
-  return actor !== null && actor.activo && esAdmin(actor.rol);
 }
 
 /**
