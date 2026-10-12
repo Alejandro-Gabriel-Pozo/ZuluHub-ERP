@@ -81,11 +81,13 @@ function deLaLista<T extends string>(lista: readonly T[], valor: string, nombre:
 
 /**
  * Serializa dos altas con el MISMO `id` (`pg_advisory_xact_lock`, se libera al terminar la
- * transacción). Sin esto, bajo READ COMMITTED dos altas simultáneas del mismo `id` pueden chocar en
- * OTRA única de la fila (el número del punto de venta, el borrador único del emisor) y la perdedora
- * recibiría un error de unicidad en vez del «ya estaba» (`ON CONFLICT (id) DO NOTHING` solo
- * absorbe el conflicto del `id`). Con el bloqueo, la segunda espera, ve la fila de la primera y no
- * hace nada. Bajo SERIALIZABLE la perdedora ve el aborto 40001 y el adaptador repite el trabajo.
+ * transacción). `ON CONFLICT (id) DO NOTHING` solo absorbe el conflicto del `id`: dos altas
+ * simultáneas de la misma fila chocan además en las OTRAS únicas que ella tiene (el par `(id,
+ * empresa_id)`, el número del punto de venta, el borrador único del emisor) y la perdedora recibía
+ * un error de unicidad en vez del «ya estaba», tanto bajo READ COMMITTED como bajo SERIALIZABLE
+ * (se comprobó contra la base real). Con el bloqueo, la segunda espera a que la primera termine, ve
+ * su fila y no hace nada (bajo SERIALIZABLE, además, el adaptador repite el trabajo si el motor
+ * aborta con 40001).
  */
 async function serializarAltaDeId(db: Kysely<FiscalDb>, tabla: string, id: string): Promise<void> {
   await sql`select pg_advisory_xact_lock(hashtextextended(${`zuluhub.fiscal.alta.${tabla}:${id}`}, 0))`.execute(
@@ -315,6 +317,7 @@ export function crearRepositorioDeDomicilios(db: Kysely<FiscalDb>): RepositorioD
     obtener,
 
     async crear(empresa, id, domicilio) {
+      await serializarAltaDeId(db, "domicilio", id);
       const nuevo = await db
         .insertInto("domicilio")
         .values({
