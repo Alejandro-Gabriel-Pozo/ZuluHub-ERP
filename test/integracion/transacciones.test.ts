@@ -280,13 +280,16 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
      * sesgo de escritura. Bajo SERIALIZABLE el motor aborta una; el adaptador repite el trabajo
      * completo y la repetición ya ve la fila de la otra.
      */
-    async function carrera(reintentos: number) {
+    async function carrera(reintentos?: number) {
       const prefijo = nombreAlAzar("unica");
       const encuentro = crearBarrera(2);
       let intentos = 0;
       const intentar = (sufijo: string) =>
         propio.ejecutar(
-          { contexto: comoEmpresa(ea.empresa), reintentos },
+          {
+            contexto: comoEmpresa(ea.empresa),
+            ...(reintentos === undefined ? {} : { reintentos }),
+          },
           async ({ db, sucursales }) => {
             intentos += 1;
             const primerIntento = intentos <= 2;
@@ -310,9 +313,13 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
     }
 
     it("repite el trabajo completo y la invariante se cumple", async () => {
-      const { uno, otro, total, intentos } = await carrera(3);
+      // Sin indicar reintentos rige el presupuesto de producción: la espera creciente de tres
+      // reintentos suma unas decenas de milisegundos, poco si el commit de la ganadora se demora
+      // (checkpoints de la base, CPU compartida) y la repetición de la perdedora todavía no ve su fila.
+      const { uno, otro, total, intentos } = await carrera();
       expect(total).toEqual({ ok: true, valor: 1 });
-      const valores = [uno, otro].map((r) => (r.ok ? r.valor : "error")).sort();
+      // Si falla, el mensaje muestra el tipo real del error (no solo "error").
+      const valores = [uno, otro].map((r) => (r.ok ? r.valor : `error:${r.error.tipo}`)).sort();
       expect(valores).toEqual(["creada", "ya existia"]);
       // Al menos las dos corridas iniciales más un reintento. No es un número exacto: SERIALIZABLE
       // puede abortar también la repetición (falsos positivos del detector con tablas chicas) y
