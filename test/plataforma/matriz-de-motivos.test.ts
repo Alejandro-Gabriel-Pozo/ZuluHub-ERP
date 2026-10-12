@@ -27,8 +27,8 @@ const actores: Actor[] = [
 ];
 
 describe("plataforma: acción × actor → permitido o SIN_PERMISO", () => {
-  it("hay 18 acciones y 5 actores: 90 combinaciones", () => {
-    expect(acciones.length * actores.length).toBe(90);
+  it("hay 32 acciones y 5 actores: 160 combinaciones", () => {
+    expect(acciones.length * actores.length).toBe(160);
   });
 
   it("solo un administrador ACTIVO con un rol que la matriz incluye puede; todo el resto es SIN_PERMISO", async () => {
@@ -36,7 +36,7 @@ describe("plataforma: acción × actor → permitido o SIN_PERMISO", () => {
       for (const { nombre, admin } of actores) {
         const rol = rolVigenteDeAdmin(admin);
         const resultado = await exigirAccion(REGLAS_DE_PLATAFORMA, accion, () =>
-          Promise.resolve({ rol, modulosActivados: [] }),
+          Promise.resolve({ rol, modulosActivados: [], modulosHabilitados: [] }),
         );
         const puede =
           admin !== null &&
@@ -53,7 +53,11 @@ describe("plataforma: acción × actor → permitido o SIN_PERMISO", () => {
     for (const accion of acciones) {
       for (const admin of [null, { rol: "ADMIN", activo: false }] as const) {
         const resultado = await exigirAccion(REGLAS_DE_PLATAFORMA, accion, () =>
-          Promise.resolve({ rol: rolVigenteDeAdmin(admin), modulosActivados: [] }),
+          Promise.resolve({
+            rol: rolVigenteDeAdmin(admin),
+            modulosActivados: [],
+            modulosHabilitados: [],
+          }),
         );
         expect(resultado, accion).toEqual({ ok: false, error: "SIN_PERMISO" });
       }
