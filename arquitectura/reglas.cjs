@@ -241,6 +241,42 @@ const reglas = [
     from: { path: "^src/modulos/empresas/" },
     to: { path: "^src/modulos/identidad/" },
   },
+  {
+    name: "grupo-solo-escribe-su-auditoria",
+    severity: "error",
+    comment:
+      "Las consultas de grupo son de solo lectura (R3, ADR-005): de los puertos solo conocen las transacciones, la carga de autorización de grupo y el registro de acceso de grupo, que es la única escritura permitida (D11 de H6). Cualquier otro puerto (auditoría de empresa o de plataforma, trabajos, idempotencia, correo) queda prohibido por nombre.",
+    from: { path: "^src/consultas-de-grupo/" },
+    to: {
+      path: "^src/puertos/",
+      pathNot:
+        "^src/puertos/(transacciones|autorizacion-de-grupo|auditoria-de-acceso-de-grupo)\\.ts$",
+    },
+  },
+  {
+    name: "permisos-grupo-sin-otros-catalogos",
+    severity: "error",
+    comment:
+      "Los catálogos de permisos son independientes (H6): el de grupo no importa la matriz de empresa ni la de plataforma.",
+    from: { path: "^src/capacidades/permisos/grupo\\.ts$" },
+    to: { path: "^src/capacidades/permisos/(empresa|plataforma)\\.ts$" },
+  },
+  {
+    name: "permisos-sin-grupo",
+    severity: "error",
+    comment:
+      "Los catálogos de permisos son independientes (H6): ni el de empresa ni el de plataforma, ni el guard genérico ni exigirAccion, importan la matriz de grupo.",
+    from: { path: "^src/capacidades/permisos/(empresa|plataforma|guard|exigir)\\.ts$" },
+    to: { path: "^src/capacidades/permisos/grupo\\.ts$" },
+  },
+  {
+    name: "negocio-sin-permisos-de-grupo",
+    severity: "error",
+    comment:
+      "La matriz de permisos de grupo es de la vista de grupo (H6): ni los módulos de negocio ni la plataforma la importan.",
+    from: { path: "^src/(modulos|plataforma)/" },
+    to: { path: "^src/capacidades/permisos/grupo\\.ts$" },
+  },
 ];
 
 module.exports = { reglas };
