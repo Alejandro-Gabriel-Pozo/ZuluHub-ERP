@@ -60,6 +60,15 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Registro de Postgres solo para fallos graves
+        # Las pruebas provocan errores a propósito (conflictos, bloqueos, permisos). Con el registro
+        # por defecto, el final del log del job son miles de líneas de Postgres y la salida de las
+        # pruebas queda fuera de lo que se puede leer. Esto lo silencia; no cambia ninguna prueba.
+        run: |
+          psql "$PRUEBAS_DATABASE_URL" \
+            -c "ALTER SYSTEM SET log_min_messages = 'fatal'" \
+            -c "ALTER SYSTEM SET log_min_error_statement = 'panic'" \
+            -c "SELECT pg_reload_conf()"
       - run: npm test
 
   seguridad:
@@ -150,6 +159,15 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Registro de Postgres solo para fallos graves
+        # Las pruebas provocan errores a propósito (conflictos, bloqueos, permisos). Con el registro
+        # por defecto, el final del log del job son miles de líneas de Postgres y la salida de las
+        # pruebas queda fuera de lo que se puede leer. Esto lo silencia; no cambia ninguna prueba.
+        run: |
+          psql "$PRUEBAS_DATABASE_URL" \
+            -c "ALTER SYSTEM SET log_min_messages = 'fatal'" \
+            -c "ALTER SYSTEM SET log_min_error_statement = 'panic'" \
+            -c "SELECT pg_reload_conf()"
       - run: npx vitest run test/integracion
 
   mutacion:
