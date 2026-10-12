@@ -205,6 +205,20 @@ describe("H5 P1: los tipos de plataforma salen de su catálogo y no se mezclan c
       | "empresas.reactivar"
       | "personas.suspender"
       | "personas.reactivar"
+      | "marcas.ver"
+      | "planes.ver"
+      | "marcas.crear"
+      | "marcas.editar_borrador"
+      | "marcas.confirmar_version"
+      | "dominios.agregar"
+      | "dominios.retirar"
+      | "planes.crear"
+      | "planes.editar_borrador"
+      | "planes.publicar_version"
+      | "planes.asignar"
+      | "perillas.ajustar"
+      | "modulos_de_empresa.activar"
+      | "modulos_de_empresa.desactivar"
     >();
     expectTypeOf<ClaveCapacidadDePlataforma>().toEqualTypeOf<never>();
     expectTypeOf<RolDePlataforma>().toEqualTypeOf<"ADMIN" | "SOPORTE">();

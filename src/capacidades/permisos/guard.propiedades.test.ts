@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import "../../../test/propiedades/configuracion";
-import { modulosActivosDe } from "../modulos/activos";
+import { estadoDeModulos } from "../modulos/activos";
 import { EFECTOS_DE_ACCION, type EfectoDeAccion } from "../modulos/catalogo";
 import { evaluarGuard, type ModuloDelGuard, type MotivoDeRechazo } from "./guard";
 import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "./roles";
@@ -283,7 +283,7 @@ describe("evaluarGuard: propiedades", () => {
   });
 });
 
-describe("modulosActivosDe: propiedades", () => {
+describe("estadoDeModulos: propiedades", () => {
   const generado = fc.record({
     modulos: fc.array(
       fc.record({
@@ -299,24 +299,89 @@ describe("modulosActivosDe: propiedades", () => {
       ),
       { maxLength: 8 },
     ),
+    habilitados: fc.array(
+      fc.oneof(
+        fc.constantFrom<string>("m0", "m1", "m2", "m3", "m4"),
+        fc.constantFrom<string>("desconocido", "constructor", "toString", "__proto__", ""),
+      ),
+      { maxLength: 8 },
+    ),
   });
 
-  it("(f) incluye siempre los obligatorios, e ignora claves desconocidas y módulos en desarrollo", () => {
+  const armar = (
+    modulos: readonly { estado: "disponible" | "en_desarrollo"; obligatorio: boolean }[],
+  ) => {
+    const catalogo: Record<string, ModuloDelGuard<string>> = {};
+    modulos.forEach((m, i) => {
+      catalogo[`m${i}`] = { ...m, acciones: {} };
+    });
+    return catalogo;
+  };
+
+  it("(f) activo ⇔ obligatorio, o activado Y habilitado Y disponible; el resto de claves no existe", () => {
     fc.assert(
-      fc.property(generado, ({ modulos, activados }) => {
-        const catalogo: Record<string, ModuloDelGuard<string>> = {};
-        modulos.forEach((m, i) => {
-          catalogo[`m${i}`] = { ...m, acciones: {} };
-        });
-        const activos = modulosActivosDe(catalogo, activados);
+      fc.property(generado, ({ modulos, activados, habilitados }) => {
+        const catalogo = armar(modulos);
+        const { modulosActivos } = estadoDeModulos(catalogo, activados, habilitados);
         for (const [clave, m] of Object.entries(catalogo)) {
-          if (m.obligatorio) expect(activos.has(clave)).toBe(true);
-          // Un no obligatorio está activo solo si lo activaron Y está disponible.
-          if (!m.obligatorio) {
-            expect(activos.has(clave)).toBe(m.estado === "disponible" && activados.includes(clave));
-          }
+          expect(modulosActivos.has(clave), clave).toBe(
+            m.obligatorio ||
+              (m.estado === "disponible" &&
+                activados.includes(clave) &&
+                habilitados.includes(clave)),
+          );
         }
-        for (const clave of activos) expect(Object.hasOwn(catalogo, clave)).toBe(true);
+        for (const clave of modulosActivos) expect(Object.hasOwn(catalogo, clave)).toBe(true);
+      }),
+    );
+  });
+
+  it("(g) solo lectura ⇔ no obligatorio, disponible, activado y NO habilitado", () => {
+    fc.assert(
+      fc.property(generado, ({ modulos, activados, habilitados }) => {
+        const catalogo = armar(modulos);
+        const { modulosEnSoloLectura } = estadoDeModulos(catalogo, activados, habilitados);
+        for (const [clave, m] of Object.entries(catalogo)) {
+          expect(modulosEnSoloLectura.has(clave), clave).toBe(
+            !m.obligatorio &&
+              m.estado === "disponible" &&
+              activados.includes(clave) &&
+              !habilitados.includes(clave),
+          );
+        }
+        for (const clave of modulosEnSoloLectura) expect(Object.hasOwn(catalogo, clave)).toBe(true);
+      }),
+    );
+  });
+
+  it("(h) los dos conjuntos son disjuntos, y un obligatorio nunca está en solo lectura", () => {
+    fc.assert(
+      fc.property(generado, ({ modulos, activados, habilitados }) => {
+        const catalogo = armar(modulos);
+        const { modulosActivos, modulosEnSoloLectura } = estadoDeModulos(
+          catalogo,
+          activados,
+          habilitados,
+        );
+        for (const clave of modulosEnSoloLectura) {
+          expect(modulosActivos.has(clave)).toBe(false);
+          expect(catalogo[clave]?.obligatorio).toBe(false);
+        }
+      }),
+    );
+  });
+
+  it("(i) ampliar el plan nunca saca un módulo de activo ni lo manda a solo lectura", () => {
+    fc.assert(
+      fc.property(generado, fc.constantFrom("m0", "m1", "m2", "m3", "m4"), (g, extra) => {
+        const catalogo = armar(g.modulos);
+        const antes = estadoDeModulos(catalogo, g.activados, g.habilitados);
+        const despues = estadoDeModulos(catalogo, g.activados, [...g.habilitados, extra]);
+        for (const clave of antes.modulosActivos)
+          expect(despues.modulosActivos.has(clave)).toBe(true);
+        for (const clave of despues.modulosEnSoloLectura) {
+          expect(antes.modulosEnSoloLectura.has(clave)).toBe(true);
+        }
       }),
     );
   });

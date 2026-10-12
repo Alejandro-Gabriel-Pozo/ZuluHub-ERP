@@ -9,8 +9,12 @@ import { armarVistaDeGrupo, type VistaDeGrupo } from "./vista-de-grupo";
 
 export type ErrorAlListarEmpresasDelGrupo = MotivoDeRechazo | ErrorDePersistencia;
 
-/** El grupo no tiene módulos activables: el único, `grupo`, es obligatorio y no se guarda por empresa. */
+/**
+ * El grupo no tiene módulos activables ni plan: el único, `grupo`, es obligatorio y no se guarda por
+ * empresa ni depende de un techo.
+ */
 const SIN_MODULOS_ACTIVADOS: readonly string[] = [];
+const SIN_MODULOS_HABILITADOS: readonly string[] = [];
 
 /**
  * Las empresas del grupo del tenant del contexto (pantalla «Vista de grupo», H6 §B.5). Contexto de
@@ -49,6 +53,7 @@ export function armarListarEmpresasDelGrupo({
           async () => ({
             ...(await tx.autorizacion.delPropietario(contexto)),
             modulosActivados: SIN_MODULOS_ACTIVADOS,
+            modulosHabilitados: SIN_MODULOS_HABILITADOS,
           }),
         );
         if (!permiso.ok) return permiso;
