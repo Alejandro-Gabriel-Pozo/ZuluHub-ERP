@@ -24,6 +24,9 @@
     "src/adaptadores/correo/configuracion.ts",
     "src/capacidades/permisos/**/*.ts",
     "src/capacidades/modulos/**/*.ts",
+    "src/primitivas/identificadores/**/*.ts",
+    "src/capacidades/planes/**/*.ts",
+    "src/capacidades/vocabulario/**/*.ts",
     "!src/**/*.test.ts"
   ],
   "coverageAnalysis": "off",
