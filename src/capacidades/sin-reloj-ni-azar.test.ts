@@ -24,6 +24,12 @@ describe("las capacidades no usan reloj ni aleatoriedad", () => {
         "permisos/guard.ts",
         "permisos/plataforma.ts",
         "permisos/roles.ts",
+        "planes/derechos.ts",
+        "planes/diferencia.ts",
+        "planes/niveles.ts",
+        "planes/valores.ts",
+        "planes/version-de-plan.ts",
+        "planes/vigencia.ts",
       ]),
     );
   });
