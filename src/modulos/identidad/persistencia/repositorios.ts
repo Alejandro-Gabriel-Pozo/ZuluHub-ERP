@@ -38,6 +38,8 @@ import type { IdentidadDb } from "./tablas";
  *    operativo ve de una invitación solo la parte de su empresa.
  */
 
+const FORMA_DE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const TIPOS: readonly TipoDeInvitacion[] = ["ALTA_GERENTE", "USUARIO"];
 const ESTADOS: readonly EstadoGuardado[] = ["PENDIENTE", "ACEPTADA", "REVOCADA"];
 
@@ -62,6 +64,22 @@ export type Asignacion = Readonly<{
   version: number;
 }>;
 
+/** Un miembro de la empresa (activo o no) con el email de su persona, para las listas de la pantalla. */
+export type MiembroConEmail = Readonly<{ membresia: Membresia; email: Email }>;
+
+/** Una invitación de usuario pendiente (vigente o vencida), tal como la lista la necesita. */
+export type InvitacionPendienteDeLista = Readonly<{
+  id: InvitacionId;
+  email: Email;
+  rol: RolDeEmpresa;
+  /** Las sucursales a las que se invitó, tal como se pidieron (hoy pueden estar desactivadas). */
+  sucursales: readonly SucursalId[];
+  emitidaEn: Date;
+  venceEn: Date;
+  /** `null`: la emitió el sistema (sin persona). */
+  emitidaPor: PersonaId | null;
+}>;
+
 export interface RepositorioDePersonas {
   buscarPorEmail(email: Email): Promise<Persona | null>;
   obtener(id: PersonaId): Promise<Persona | null>;
@@ -81,6 +99,8 @@ export interface RepositorioDeMembresias {
   obtener(empresa: EmpresaId, persona: PersonaId): Promise<Membresia | null>;
   /** Las membresías activas de la empresa. */
   listarActivas(empresa: EmpresaId): Promise<Membresia[]>;
+  /** TODAS las membresías de la empresa (activas o apagadas) con el email de su persona. */
+  listarConEmail(empresa: EmpresaId): Promise<MiembroConEmail[]>;
   /** Las membresías de la persona (activas o no) en las empresas indicadas. */
   deLaPersonaEn(persona: PersonaId, empresas: readonly EmpresaId[]): Promise<Membresia[]>;
   crear(datos: {
@@ -97,6 +117,8 @@ export interface RepositorioDeMembresias {
 
 export interface RepositorioDeAsignaciones {
   deLaPersona(empresa: EmpresaId, persona: PersonaId): Promise<Asignacion[]>;
+  /** Las asignaciones ACTIVAS de todos los miembros de la empresa (no mira si la sucursal está activa). */
+  activasDeLaEmpresa(empresa: EmpresaId): Promise<Asignacion[]>;
   crear(empresa: EmpresaId, persona: PersonaId, sucursales: readonly SucursalId[]): Promise<void>;
   reactivar(
     empresa: EmpresaId,
@@ -122,6 +144,12 @@ export interface RepositorioDeInvitaciones {
   obtenerAltaVigente(empresa: EmpresaId): Promise<Invitacion | null>;
   /** Las guardadas como `PENDIENTE` que incluyen a la empresa, dirigidas a ese email. */
   pendientesDeEmail(empresa: EmpresaId, email: Email): Promise<Invitacion[]>;
+  /**
+   * Las invitaciones de USUARIO guardadas como `PENDIENTE` que incluyen a la empresa (vigentes y
+   * vencidas: el vencimiento no se guarda), con el rol y las sucursales de ESTA empresa. El alta del
+   * gerente no entra: no la administra la empresa. Sin el token ni su hash.
+   */
+  pendientesDeLaEmpresa(empresa: EmpresaId): Promise<InvitacionPendienteDeLista[]>;
   /** Cabecera, empresas y sucursales (en ese orden: la cabecera no se puede leer sola, D7). */
   crear(nueva: NuevaInvitacion): Promise<void>;
   /** `PENDIENTE` → `ACEPTADA`. `false`: ya no estaba pendiente o cambió de versión. */
@@ -221,6 +249,24 @@ export function crearRepositorioDeMembresias(db: Kysely<IdentidadDb>): Repositor
       return filas.map(aMembresia);
     },
 
+    async listarConEmail(empresa) {
+      const filas = await db
+        .selectFrom("membresia as m")
+        .innerJoin("persona as p", "p.id", "m.persona_id")
+        .select([
+          "m.empresa_id",
+          "m.persona_id",
+          "m.rol",
+          "m.activo",
+          "m.version",
+          "p.email as email",
+        ])
+        .where("m.empresa_id", "=", empresa)
+        .orderBy("m.persona_id")
+        .execute();
+      return filas.map((fila) => ({ membresia: aMembresia(fila), email: aEmail(fila.email) }));
+    },
+
     async deLaPersonaEn(persona, empresas) {
       if (empresas.length === 0) return [];
       const filas = await db
@@ -272,6 +318,19 @@ export function crearRepositorioDeMembresias(db: Kysely<IdentidadDb>): Repositor
 }
 
 export function crearRepositorioDeAsignaciones(db: Kysely<IdentidadDb>): RepositorioDeAsignaciones {
+  const aAsignacion = (f: {
+    empresa_id: string;
+    persona_id: string;
+    sucursal_id: string;
+    activa: boolean;
+    version: number;
+  }): Asignacion => ({
+    empresaId: empresaId(f.empresa_id),
+    personaId: personaId(f.persona_id),
+    sucursalId: sucursalId(f.sucursal_id),
+    activa: f.activa,
+    version: f.version,
+  });
   return {
     async deLaPersona(empresa, persona) {
       const filas = await db
@@ -281,13 +340,19 @@ export function crearRepositorioDeAsignaciones(db: Kysely<IdentidadDb>): Reposit
         .where("persona_id", "=", persona)
         .orderBy("sucursal_id")
         .execute();
-      return filas.map((f) => ({
-        empresaId: empresaId(f.empresa_id),
-        personaId: personaId(f.persona_id),
-        sucursalId: sucursalId(f.sucursal_id),
-        activa: f.activa,
-        version: f.version,
-      }));
+      return filas.map(aAsignacion);
+    },
+
+    async activasDeLaEmpresa(empresa) {
+      const filas = await db
+        .selectFrom("asignacion_sucursal")
+        .select(["empresa_id", "persona_id", "sucursal_id", "activa", "version"])
+        .where("empresa_id", "=", empresa)
+        .where("activa", "=", true)
+        .orderBy("persona_id")
+        .orderBy("sucursal_id")
+        .execute();
+      return filas.map(aAsignacion);
     },
 
     async crear(empresa, persona, sucursales) {
@@ -414,6 +479,9 @@ export function crearRepositorioDeInvitaciones(db: Kysely<IdentidadDb>): Reposit
     },
 
     async obtenerPorId(id) {
+      // Un texto que no es un UUID no puede ser el id de ninguna invitación: la base lo rechazaría
+      // con un error de formato, y para quien pregunta es una invitación que no existe.
+      if (!FORMA_DE_UUID.test(id)) return null;
       const fila = await db
         .selectFrom("invitacion")
         .select(columnas)
@@ -467,6 +535,42 @@ export function crearRepositorioDeInvitaciones(db: Kysely<IdentidadDb>): Reposit
         .orderBy("id")
         .execute();
       return armar(filas);
+    },
+
+    async pendientesDeLaEmpresa(empresa) {
+      const filas = await db
+        .selectFrom("invitacion_empresa as ie")
+        .innerJoin("invitacion as i", "i.id", "ie.invitacion_id")
+        .select(["i.id", "ie.email", "ie.rol", "i.emitida_en", "i.vence_en", "i.emitida_por"])
+        .where("ie.empresa_id", "=", empresa)
+        .where("ie.tipo", "=", "USUARIO")
+        .where("i.estado", "=", "PENDIENTE")
+        .orderBy("ie.email")
+        .orderBy("i.id")
+        .execute();
+      if (filas.length === 0) return [];
+      const sucursales = await db
+        .selectFrom("invitacion_sucursal")
+        .select(["invitacion_id", "sucursal_id"])
+        .where("empresa_id", "=", empresa)
+        .where(
+          "invitacion_id",
+          "in",
+          filas.map((f) => f.id),
+        )
+        .orderBy("sucursal_id")
+        .execute();
+      return filas.map((f) => ({
+        id: invitacionId(f.id),
+        email: aEmail(f.email),
+        rol: deLaLista(ROLES_DE_EMPRESA, f.rol, "rol"),
+        sucursales: sucursales
+          .filter((s) => s.invitacion_id === f.id)
+          .map((s) => sucursalId(s.sucursal_id)),
+        emitidaEn: f.emitida_en,
+        venceEn: f.vence_en,
+        emitidaPor: f.emitida_por === null ? null : personaId(f.emitida_por),
+      }));
     },
 
     async crear(nueva) {

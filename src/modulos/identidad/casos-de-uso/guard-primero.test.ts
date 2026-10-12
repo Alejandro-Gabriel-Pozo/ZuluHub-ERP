@@ -9,6 +9,7 @@ import {
 import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "../../../capacidades/permisos/roles";
 import type { ContextoOperativo } from "../../../contexto/contexto";
+import { MARCA_PRINCIPAL_DE_PRUEBA } from "../../../../test/utilidades/marcas";
 import {
   empresaId,
   invitacionId,
@@ -19,6 +20,9 @@ import type { CargaDeAutorizacion, DatosDelActor } from "../../../puertos/autori
 import type { Tokens } from "../../../puertos/tokens";
 import type { Transacciones } from "../../../puertos/transacciones";
 import { crearCasosDeUsoDeIdentidad, type CasosDeUsoDeIdentidad } from "./casos-de-uso";
+import { crearConsultasDeIdentidad, type ConsultasDeIdentidad } from "../consultas/consultas";
+import type { TxDeConsultasDeIdentidad } from "../consultas/contrato";
+import { DECLARACIONES_DE_CONSULTAS } from "../consultas/declaraciones";
 import type { TxDeIdentidad } from "./contrato";
 import { DECLARACIONES } from "./declaraciones";
 
@@ -33,6 +37,7 @@ const contexto: ContextoOperativo = {
   tipo: "OPERATIVO",
   empresaId: empresaId("e-1"),
   personaId: personaId("p-1"),
+  marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
   ahora: new Date(0),
 };
 
@@ -118,7 +123,7 @@ const llamar = (nombre: string, casos: CasosDeUsoDeIdentidad): Promise<unknown> 
   return LLAMADAS[nombre](casos);
 };
 
-const SIN_ROL: DatosDelActor = { rol: null, modulosActivados: [] };
+const SIN_ROL: DatosDelActor = { rol: null, modulosActivados: [], modulosHabilitados: [] };
 
 describe("P7: el guard va primero en cada caso de uso", () => {
   it("hay casos de uso con acción que probar", () => {
@@ -148,7 +153,7 @@ describe("P7: el guard va primero en cada caso de uso", () => {
   it.each(conAccion.flatMap((c) => ROLES_DE_EMPRESA.map((rol) => ({ ...c, rol }))))(
     "$nombre con $rol: la matriz decide; si no lo incluye da SIN_PERMISO sin tocar nada más, y si lo incluye pasa el guard y recién ahí toca lo demás",
     async ({ nombre, accion, rol }) => {
-      const vigilada = vigilar({ rol, modulosActivados: [] });
+      const vigilada = vigilar({ rol, modulosActivados: [], modulosHabilitados: [] });
       const llamada = llamar(nombre, casosCon(vigilada));
       if (!(PERMISOS_DE_EMPRESA[accion] as readonly RolDeEmpresa[]).includes(rol)) {
         expect(await llamada).toEqual({ ok: false, error: "SIN_PERMISO" });
@@ -162,7 +167,7 @@ describe("P7: el guard va primero en cada caso de uso", () => {
 
   it("el guard se pide en cada llamada: nada se guarda entre una operación y la siguiente", async () => {
     // Misma transacción vigilada, dos operaciones; el actor cambia entre ambas (lo apagaron).
-    let actor: DatosDelActor = { rol: "GERENTE", modulosActivados: [] };
+    let actor: DatosDelActor = { rol: "GERENTE", modulosActivados: [], modulosHabilitados: [] };
     const accesos: string[] = [];
     const tx = new Proxy({} as TxDeIdentidad, {
       get(_objetivo, propiedad) {
@@ -192,7 +197,7 @@ describe("cada caso de uso exige SU acción (no la de otro)", () => {
     for (const otro of conAccion) {
       const esElMismo = propio.nombre === otro.nombre;
       it(`con permiso solo para ${propio.accion}: ${otro.nombre} ${esElMismo ? "pasa el guard" : "da SIN_PERMISO"}`, async () => {
-        const vigilada = vigilar({ rol: "OPERADOR", modulosActivados: [] });
+        const vigilada = vigilar({ rol: "OPERADOR", modulosActivados: [], modulosHabilitados: [] });
         const casos = casosCon(vigilada, soloElOperadorPuede(propio.accion));
         if (esElMismo) {
           expect(await pasoElGuard(llamar(otro.nombre, casos))).toBe(true);
@@ -228,20 +233,28 @@ describe("los demás motivos del guard salen tal cual por el caso de uso", () =>
   });
 
   it("un módulo no activo da MODULO_NO_ACTIVO (y el rol ya no importa)", async () => {
-    const vigilada = vigilar({ rol: "GERENTE", modulosActivados: [] });
+    const vigilada = vigilar({ rol: "GERENTE", modulosActivados: [], modulosHabilitados: [] });
     const casos = casosCon(vigilada, administracionComo("disponible", false));
     expect(await LLAMADAS.invitarUsuario(casos)).toEqual({ ok: false, error: "MODULO_NO_ACTIVO" });
     expect(vigilada.accesos).toEqual(["autorizacion"]);
   });
 
-  it("un módulo activado por la empresa pasa el guard", async () => {
-    const vigilada = vigilar({ rol: "GERENTE", modulosActivados: ["administracion"] });
+  it("un módulo activado por la empresa e incluido en su plan pasa el guard", async () => {
+    const vigilada = vigilar({
+      rol: "GERENTE",
+      modulosActivados: ["administracion"],
+      modulosHabilitados: ["administracion"],
+    });
     const casos = casosCon(vigilada, administracionComo("disponible", false));
     await expect(LLAMADAS.invitarUsuario(casos)).rejects.toBeInstanceOf(AccesoFueraDelGuard);
   });
 
   it("un módulo en desarrollo da MODULO_EN_DESARROLLO", async () => {
-    const vigilada = vigilar({ rol: "GERENTE", modulosActivados: ["administracion"] });
+    const vigilada = vigilar({
+      rol: "GERENTE",
+      modulosActivados: ["administracion"],
+      modulosHabilitados: [],
+    });
     const casos = casosCon(vigilada, administracionComo("en_desarrollo", true));
     expect(await LLAMADAS.invitarUsuario(casos)).toEqual({
       ok: false,
@@ -314,5 +327,116 @@ describe("el detector (con la violación inyectada)", () => {
 
   it("deja pasar uno que autoriza primero", async () => {
     expect(await guardVaPrimero(casoBienHecho)).toBe(true);
+  });
+});
+
+describe("P7: el guard va primero en cada consulta de identidad", () => {
+  type TxDeConsulta = TxDeConsultasDeIdentidad;
+  type Vigilada = Readonly<{ tx: TxDeConsulta; accesos: string[] }>;
+
+  const vigiladaDeConsulta = (actor: DatosDelActor): Vigilada => {
+    const accesos: string[] = [];
+    const tx = new Proxy({} as TxDeConsulta, {
+      get(_objetivo, propiedad) {
+        accesos.push(String(propiedad));
+        if (propiedad === "autorizacion") return { delActor: () => Promise.resolve(actor) };
+        throw new AccesoFueraDelGuard(String(propiedad));
+      },
+    });
+    return { tx, accesos };
+  };
+
+  const consultasCon = (
+    vigilada: Vigilada,
+    reglas: ReglasDeEmpresa = REGLAS_DE_EMPRESA,
+  ): ConsultasDeIdentidad => {
+    const transacciones: Transacciones<TxDeConsulta> = {
+      ejecutar: (_opciones, trabajo) => trabajo(vigilada.tx),
+    };
+    return crearConsultasDeIdentidad({ transacciones, reglas });
+  };
+
+  /** `traspasoEnCurso` la implementa el tramo T4 de H6 y entonces suma su fila acá. */
+  type Pendientes = "traspasoEnCurso";
+  type DeclaracionesDeConsultas = typeof DECLARACIONES_DE_CONSULTAS;
+  type ConsultaConAccion = {
+    [K in keyof DeclaracionesDeConsultas]: DeclaracionesDeConsultas[K] extends {
+      accion: ClaveAccion;
+    }
+      ? K
+      : never;
+  }[keyof DeclaracionesDeConsultas];
+  const LLAMADAS_DE_CONSULTAS: Record<
+    Exclude<ConsultaConAccion, Pendientes>,
+    (consultas: ConsultasDeIdentidad) => Promise<unknown>
+  > = {
+    listarMiembros: (c) => c.listarMiembros(contexto),
+    listarInvitacionesPendientes: (c) => c.listarInvitacionesPendientes(contexto),
+  };
+
+  const consultas = Object.entries(DECLARACIONES_DE_CONSULTAS).flatMap(([nombre, declaracion]) =>
+    esClaveDe(LLAMADAS_DE_CONSULTAS, nombre)
+      ? [{ nombre, accion: declaracion.accion, llamar: LLAMADAS_DE_CONSULTAS[nombre] }]
+      : [],
+  );
+
+  it("las consultas con acción que hay que probar", () => {
+    expect(consultas.map((c) => c.nombre).sort()).toEqual([
+      "listarInvitacionesPendientes",
+      "listarMiembros",
+    ]);
+  });
+
+  it.each(consultas)("$nombre: sin rol da SIN_PERMISO sin leer nada más", async ({ llamar }) => {
+    const vigilada = vigiladaDeConsulta(SIN_ROL);
+    expect(await llamar(consultasCon(vigilada))).toEqual({ ok: false, error: "SIN_PERMISO" });
+    expect(vigilada.accesos).toEqual(["autorizacion"]);
+  });
+
+  it.each(consultas.flatMap((c) => ROLES_DE_EMPRESA.map((rol) => ({ ...c, rol }))))(
+    "$nombre con $rol: la matriz decide; si no lo incluye da SIN_PERMISO sin tocar nada más, y si lo incluye pasa el guard y recién ahí toca lo demás",
+    async ({ llamar, accion, rol }) => {
+      const vigilada = vigiladaDeConsulta({ rol, modulosActivados: [], modulosHabilitados: [] });
+      const llamada = llamar(consultasCon(vigilada));
+      if (!(PERMISOS_DE_EMPRESA[accion] as readonly RolDeEmpresa[]).includes(rol)) {
+        expect(await llamada).toEqual({ ok: false, error: "SIN_PERMISO" });
+        expect(vigilada.accesos).toEqual(["autorizacion"]);
+        return;
+      }
+      await expect(llamada).rejects.toBeInstanceOf(AccesoFueraDelGuard);
+      expect(vigilada.accesos[0]).toBe("autorizacion");
+    },
+  );
+
+  it("cada consulta exige SU acción (con permiso solo para la de la otra da SIN_PERMISO)", async () => {
+    const soloElOperadorPuede = (accion: ClaveAccion): ReglasDeEmpresa => {
+      const roles = (a: ClaveAccion): readonly RolDeEmpresa[] => (a === accion ? ["OPERADOR"] : []);
+      const permisos = Object.fromEntries(
+        clavesDe(PERMISOS_DE_EMPRESA).map((a) => [a, roles(a)]),
+      ) as unknown as ReglasDeEmpresa["permisos"];
+      return { catalogo: CATALOGO_DE_MODULOS, permisos };
+    };
+    for (const propia of consultas) {
+      const vigilada = vigiladaDeConsulta({
+        rol: "OPERADOR",
+        modulosActivados: [],
+        modulosHabilitados: [],
+      });
+      await expect(
+        propia.llamar(consultasCon(vigilada, soloElOperadorPuede(propia.accion))),
+      ).rejects.toBeInstanceOf(AccesoFueraDelGuard);
+    }
+    const vigilada = vigiladaDeConsulta({
+      rol: "OPERADOR",
+      modulosActivados: [],
+      modulosHabilitados: [],
+    });
+    const reglas = soloElOperadorPuede("usuarios.invitar");
+    for (const { llamar } of consultas) {
+      expect(await llamar(consultasCon(vigilada, reglas))).toEqual({
+        ok: false,
+        error: "SIN_PERMISO",
+      });
+    }
   });
 });

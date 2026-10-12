@@ -218,9 +218,28 @@ jobs:
             archivos: "src/capacidades/permisos/**/*.ts,src/capacidades/modulos/**/*.ts"
           - grupo: plataforma (dominio)
             archivos: "src/plataforma/dominio/**/*.ts"
+            pruebas: "src/plataforma test/plataforma"
+          - grupo: identificadores
+            archivos: "src/primitivas/identificadores/**/*.ts"
+            pruebas: "src/primitivas/identificadores"
+          - grupo: vocabulario
+            archivos: "src/capacidades/vocabulario/**/*.ts"
+            pruebas: "src/capacidades/vocabulario"
+          - grupo: marcas (host, tema y jerarquía)
+            archivos: "src/modulos/marcas/dominio/host.ts,src/modulos/marcas/dominio/tema.ts,src/modulos/marcas/dominio/jerarquia.ts"
+            pruebas: "src/modulos/marcas"
+          - grupo: marcas (definición, versión y vigencia)
+            archivos: "src/modulos/marcas/dominio/**/*.ts,!src/modulos/marcas/dominio/host.ts,!src/modulos/marcas/dominio/tema.ts,!src/modulos/marcas/dominio/jerarquia.ts"
+            pruebas: "src/modulos/marcas"
           - grupo: trabajos y correo (lógica pura)
             archivos: "src/adaptadores/trabajos/reintentos.ts,src/adaptadores/trabajos/error-seguro.ts,src/adaptadores/correo/configuracion.ts,src/adaptadores/postgres/huella-canonica.ts"
             pruebas: "src/adaptadores"
+          - grupo: planes (derechos de uso, vigencia y niveles)
+            archivos: "src/capacidades/planes/**/*.ts"
+            pruebas: "src/capacidades/planes"
+          - grupo: planes (decisiones del módulo)
+            archivos: "src/modulos/planes/dominio/**/*.ts"
+            pruebas: "src/modulos/planes"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

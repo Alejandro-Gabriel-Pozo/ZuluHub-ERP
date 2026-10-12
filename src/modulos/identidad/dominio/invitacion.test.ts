@@ -16,6 +16,8 @@ import {
   decidirInvitacionDeUsuario,
   decidirReenvio,
   decidirReenvioDeAlta,
+  decidirRevocacion,
+  decidirSucursalesDeInvitacion,
   estadoDeInvitacion,
   nuevaInvitacion,
   type DatosDeAceptacion,
@@ -1142,5 +1144,94 @@ describe("decidirInvitacionDeUsuario", () => {
         }),
       ).toThrow(new RangeError(`la invitación ${invitacion().id} no está pendiente`));
     }
+  });
+});
+
+describe("decidirRevocacion (H6)", () => {
+  it("una pendiente vigente se revoca", () => {
+    expect(decidirRevocacion(invitacion())).toEqual({ ok: true, valor: "REVOCAR" });
+  });
+
+  it("una pendiente vencida también se revoca (el vencimiento no se guarda)", () => {
+    expect(decidirRevocacion(invitacion({ venceEn: mas(T0, -DIA) }))).toEqual({
+      ok: true,
+      valor: "REVOCAR",
+    });
+  });
+
+  it("una revocada es ok sin escribir, haya sido reemplazada o no (idempotente)", () => {
+    expect(decidirRevocacion(invitacion({ estado: "REVOCADA" }))).toEqual({
+      ok: true,
+      valor: "YA_REVOCADA",
+    });
+    expect(
+      decidirRevocacion(invitacion({ estado: "REVOCADA", reemplazadaPor: invitacionId("inv-2") })),
+    ).toEqual({ ok: true, valor: "YA_REVOCADA" });
+  });
+
+  it("una aceptada da INVITACION_ACEPTADA", () => {
+    expect(decidirRevocacion(invitacion({ estado: "ACEPTADA", aceptadaPor: ANA }))).toEqual(
+      error("INVITACION_ACEPTADA"),
+    );
+  });
+
+  it("una que la empresa no ve (o no existe) da INVITACION_NO_ENCONTRADA", () => {
+    expect(decidirRevocacion(null)).toEqual(error("INVITACION_NO_ENCONTRADA"));
+  });
+
+  it("el alta del gerente no la revoca la empresa, en cualquier estado", () => {
+    for (const estado of ["PENDIENTE", "ACEPTADA", "REVOCADA"] as const) {
+      expect(decidirRevocacion(alta({ estado }))).toEqual(error("REVOCACION_NO_PERMITIDA"));
+    }
+  });
+});
+
+describe("decidirSucursalesDeInvitacion (H6, D12)", () => {
+  const S1 = sucursalId("s-1");
+  const S2 = sucursalId("s-2");
+  const S3 = sucursalId("s-3");
+
+  it("sin sucursales no hay nada que rechazar", () => {
+    expect(decidirSucursalesDeInvitacion([], new Map())).toEqual({ ok: true, valor: null });
+  });
+
+  it("con todas activas pasa", () => {
+    const estados = new Map([
+      [S1, true],
+      [S2, true],
+    ]);
+    expect(decidirSucursalesDeInvitacion([S1, S2], estados)).toEqual({ ok: true, valor: null });
+  });
+
+  it("una desactivada da SUCURSAL_INACTIVA, esté primera, última o sola", () => {
+    const estados = new Map([
+      [S1, true],
+      [S2, false],
+      [S3, true],
+    ]);
+    expect(decidirSucursalesDeInvitacion([S2], estados)).toEqual(error("SUCURSAL_INACTIVA"));
+    expect(decidirSucursalesDeInvitacion([S2, S1], estados)).toEqual(error("SUCURSAL_INACTIVA"));
+    expect(decidirSucursalesDeInvitacion([S1, S3, S2], estados)).toEqual(
+      error("SUCURSAL_INACTIVA"),
+    );
+  });
+
+  it("las que no están en el mapa no se juzgan acá: no son de la empresa y las rechaza la base", () => {
+    expect(decidirSucursalesDeInvitacion([S3], new Map([[S1, false]]))).toEqual({
+      ok: true,
+      valor: null,
+    });
+  });
+
+  it("una desactivada que no se pidió no molesta", () => {
+    expect(
+      decidirSucursalesDeInvitacion(
+        [S1],
+        new Map([
+          [S1, true],
+          [S2, false],
+        ]),
+      ),
+    ).toEqual({ ok: true, valor: null });
   });
 });

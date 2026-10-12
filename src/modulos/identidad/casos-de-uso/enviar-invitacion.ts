@@ -100,7 +100,14 @@ export function crearManejadorDeEnviarInvitacion({
     }
     const id = invitacionId(idCrudo);
     const empresaId: EmpresaId = trabajo.empresaId;
-    const contexto: ContextoOperativo = { tipo: "OPERATIVO", empresaId, personaId: null, ahora };
+    // Lo hace el sistema: ni persona ni puerta de entrada (`marcaDeEntrada: null`, marcas y planes §B.2.4).
+    const contexto: ContextoOperativo = {
+      tipo: "OPERATIVO",
+      empresaId,
+      personaId: null,
+      marcaDeEntrada: null,
+      ahora,
+    };
 
     // 1. Decidir (y, si no se envía, dejar constancia), todo en una transacción.
     const preparacion = await transacciones.ejecutar(
