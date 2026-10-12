@@ -133,7 +133,7 @@ describe("explicarPorQue (acción) = exigirAccion + comprobarQueOpera reales", (
             ? h.membresia.rol
             : null;
         const real = await exigirAccion(REGLAS_DE_EMPRESA, h.accion, () =>
-          Promise.resolve({ rol, modulosActivados: h.modulosActivados }),
+          Promise.resolve({ rol, modulosActivados: h.modulosActivados, modulosHabilitados: [] }),
         );
         const opera = comprobarQueOpera(
           EMPRESA,

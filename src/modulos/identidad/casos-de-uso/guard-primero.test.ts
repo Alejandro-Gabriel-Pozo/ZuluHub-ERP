@@ -396,7 +396,7 @@ describe("P7: el guard va primero en cada consulta de identidad", () => {
   it.each(consultas.flatMap((c) => ROLES_DE_EMPRESA.map((rol) => ({ ...c, rol }))))(
     "$nombre con $rol: la matriz decide; si no lo incluye da SIN_PERMISO sin tocar nada más, y si lo incluye pasa el guard y recién ahí toca lo demás",
     async ({ llamar, accion, rol }) => {
-      const vigilada = vigiladaDeConsulta({ rol, modulosActivados: [] });
+      const vigilada = vigiladaDeConsulta({ rol, modulosActivados: [], modulosHabilitados: [] });
       const llamada = llamar(consultasCon(vigilada));
       if (!(PERMISOS_DE_EMPRESA[accion] as readonly RolDeEmpresa[]).includes(rol)) {
         expect(await llamada).toEqual({ ok: false, error: "SIN_PERMISO" });
@@ -417,12 +417,20 @@ describe("P7: el guard va primero en cada consulta de identidad", () => {
       return { catalogo: CATALOGO_DE_MODULOS, permisos };
     };
     for (const propia of consultas) {
-      const vigilada = vigiladaDeConsulta({ rol: "OPERADOR", modulosActivados: [] });
+      const vigilada = vigiladaDeConsulta({
+        rol: "OPERADOR",
+        modulosActivados: [],
+        modulosHabilitados: [],
+      });
       await expect(
         propia.llamar(consultasCon(vigilada, soloElOperadorPuede(propia.accion))),
       ).rejects.toBeInstanceOf(AccesoFueraDelGuard);
     }
-    const vigilada = vigiladaDeConsulta({ rol: "OPERADOR", modulosActivados: [] });
+    const vigilada = vigiladaDeConsulta({
+      rol: "OPERADOR",
+      modulosActivados: [],
+      modulosHabilitados: [],
+    });
     const reglas = soloElOperadorPuede("usuarios.invitar");
     for (const { llamar } of consultas) {
       expect(await llamar(consultasCon(vigilada, reglas))).toEqual({

@@ -23,5 +23,6 @@ export function exigirAccionDePlataforma(
   return exigirAccion(reglas, accion, async () => ({
     ...(await autorizacion.delActor(contexto)),
     modulosActivados: [],
+    modulosHabilitados: [],
   }));
 }

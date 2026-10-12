@@ -255,6 +255,8 @@ async function explicarAccion(
     persona: persona === null ? null : { activoGlobal: persona.activoGlobal },
     membresia: membresia === null ? null : { rol: membresia.rol, activo: membresia.activo },
     modulosActivados: await tx.soporte.modulosActivadosDe(objetivo.empresaId),
+    // Igual que `autorizacion.delActor`: sin plan todavía (0007), no hay módulos habilitados.
+    modulosHabilitados: [],
     estadoDeEmpresa: estadosDeLaEmpresa.empresa,
     estadoDeTenant: estadosDeLaEmpresa.tenant,
   };
