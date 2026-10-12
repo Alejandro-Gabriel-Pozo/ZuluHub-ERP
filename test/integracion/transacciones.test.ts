@@ -292,7 +292,10 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
       expect(total).toEqual({ ok: true, valor: 1 });
       const valores = [uno, otro].map((r) => (r.ok ? r.valor : "error")).sort();
       expect(valores).toEqual(["creada", "ya existia"]);
-      expect(intentos).toBe(3);
+      // Al menos las dos corridas iniciales más un reintento. No es un número exacto: SERIALIZABLE
+      // puede abortar también la repetición (falsos positivos del detector con tablas chicas) y
+      // eso sube el conteo sin romper la invariante, que es lo que esta prueba garantiza.
+      expect(intentos).toBeGreaterThanOrEqual(3);
     });
 
     it("sin reintentos disponibles, devuelve ConcurrenciaAgotada y no deja nada a medias", async () => {
