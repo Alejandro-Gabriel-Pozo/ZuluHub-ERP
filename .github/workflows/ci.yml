@@ -190,7 +190,7 @@ jobs:
           - grupo: identificación fiscal, resultado y estados
             archivos: "src/primitivas/identificacion-fiscal/**/*.ts,src/primitivas/resultado/**/*.ts,src/contexto/estados.ts"
           - grupo: tenants y empresas
-            archivos: "src/modulos/tenants/dominio/**/*.ts,src/modulos/empresas/dominio/**/*.ts"
+            archivos: "src/modulos/tenants/dominio/**/*.ts,src/modulos/empresas/dominio/**/*.ts,src/consultas-de-grupo/vista-de-grupo.ts"
           - grupo: fiscal (numeración)
             archivos: "src/modulos/fiscal/dominio/numeracion.ts"
             pruebas: "src/modulos/fiscal"
@@ -206,6 +206,9 @@ jobs:
           - grupo: domicilio
             archivos: "src/primitivas/domicilio/**/*.ts"
             pruebas: "src/primitivas/domicilio"
+          - grupo: tiempo
+            archivos: "src/primitivas/tiempo/**/*.ts"
+            pruebas: "src/primitivas/tiempo"
           - grupo: identidad (invitación)
             archivos: "src/modulos/identidad/dominio/invitacion.ts"
             pruebas: "src/modulos/identidad"

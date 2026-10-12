@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 import {
   CATALOGO_DE_MODULOS,
   type CatalogoComercial,
+  type DefinicionDeAccion,
   type DefinicionDeModulo,
+  EFECTOS_DE_ACCION,
 } from "../../src/capacidades/modulos/catalogo";
 import { CATALOGO_DE_PLATAFORMA } from "../../src/capacidades/permisos/plataforma";
 import {
@@ -23,6 +25,8 @@ import {
  *      carpeta lo implementa; y toda acción del catálogo la exige algún caso de uso.
  *  X3  `requiere` y `usaSiExiste` nombran módulos que existen, y `requiere` no tiene ciclos.
  *  X4  Cada carpeta de `implementadoPor` existe en `src/`; un módulo disponible tiene al menos una.
+ *  X5  Toda acción declara uno de los tres efectos para la solo lectura (corrección 16). El tipo ya lo
+ *      exige al compilar; este cruce cubre lo que llega sin pasar por el tipo (un `as`, un dato).
  *  Además: una acción pertenece a un solo módulo; un módulo obligatorio está disponible y solo
  *  requiere obligatorios.
  */
@@ -116,6 +120,16 @@ function crucesDelCatalogo(
     }
   }
 
+  // X5
+  const efectos: readonly unknown[] = EFECTOS_DE_ACCION;
+  for (const [clave, modulo] of modulos) {
+    for (const [nombre, definicion] of Object.entries(modulo.acciones)) {
+      if (!efectos.includes(definicion.efecto)) {
+        problemas.push(`X5: la acción ${nombre} de ${clave} no declara un efecto válido`);
+      }
+    }
+  }
+
   // Obligatorios
   for (const [clave, modulo] of modulos) {
     if (!modulo.obligatorio) continue;
@@ -142,7 +156,7 @@ const modulo = (parcial: Partial<DefinicionDeModulo> = {}): DefinicionDeModulo =
   ...parcial,
 });
 
-const accion = { capacidad: null };
+const accion: DefinicionDeAccion = { capacidad: null, efecto: "LECTURA" };
 
 /** Un catálogo de prueba sano: dos módulos, cada uno con su acción. */
 const SANO: CatalogoComercial = {
@@ -214,6 +228,11 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
 
   it("no tiene ningún problema de X1, X3, X4 ni de obligatorios", () => {
     expect(crucesDelCatalogo(CATALOGO_DE_MODULOS, declaradas)).toEqual([]);
+  });
+
+  it("X5: cada acción del catálogo real de empresa declara su efecto, y se usan los tres", () => {
+    const efectos = Object.values(CATALOGO_DE_MODULOS.administracion.acciones).map((a) => a.efecto);
+    expect(new Set(efectos)).toEqual(new Set(EFECTOS_DE_ACCION));
   });
 
   it("X1 se dispara si empresas deja de exigir una acción del catálogo (violación inyectada)", () => {
@@ -410,6 +429,52 @@ describe("P6: cada cruce se dispara con su violación inyectada", () => {
     expect(p).toEqual([]);
   });
 
+  it("X5: una acción sin efecto (un dato que esquivó el tipo)", () => {
+    const sinEfecto = { capacidad: null } as unknown as DefinicionDeAccion;
+    const p = crucesDelCatalogo(
+      con({ base: modulo({ obligatorio: true, acciones: { "base.ver": sinEfecto } }) }),
+      DECLARADAS_SANAS,
+      todasExisten,
+    );
+    expect(p).toEqual(["X5: la acción base.ver de base no declara un efecto válido"]);
+  });
+
+  it("X5: una acción con un efecto que no existe", () => {
+    const inventado = { capacidad: null, efecto: "ESCRITURA" } as unknown as DefinicionDeAccion;
+    const p = crucesDelCatalogo(
+      con({
+        stock: modulo({
+          implementadoPor: ["modulos/empresas"],
+          acciones: { "stock.mover": inventado },
+        }),
+      }),
+      DECLARADAS_SANAS,
+      todasExisten,
+    );
+    expect(p).toEqual(["X5: la acción stock.mover de stock no declara un efecto válido"]);
+  });
+
+  it("X5: los tres efectos válidos no dan problemas", () => {
+    const p = crucesDelCatalogo(
+      con({
+        base: modulo({
+          obligatorio: true,
+          acciones: {
+            "base.ver": { capacidad: null, efecto: "LECTURA" },
+            "base.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+            "base.cerrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          },
+        }),
+      }),
+      {
+        ...DECLARADAS_SANAS,
+        "modulos/identidad": ["base.ver", "base.crear", "base.cerrar"],
+      },
+      todasExisten,
+    );
+    expect(p).toEqual([]);
+  });
+
   it("un obligatorio que no está disponible", () => {
     const p = crucesDelCatalogo(
       con({
@@ -456,6 +521,11 @@ describe("P6: cada cruce se dispara con su violación inyectada", () => {
 
 describe("H5 P3: el catálogo de plataforma cumple los cruces", () => {
   const acciones = Object.keys(CATALOGO_DE_PLATAFORMA.plataforma.acciones);
+
+  it("X5: cada acción del catálogo de plataforma declara su efecto, y se usan los tres", () => {
+    const efectos = Object.values(CATALOGO_DE_PLATAFORMA.plataforma.acciones).map((a) => a.efecto);
+    expect(new Set(efectos)).toEqual(new Set(EFECTOS_DE_ACCION));
+  });
 
   it("X3, X4 y los obligatorios: sin problemas (X1 se completa cuando P5 y P6 declaren los casos de uso)", () => {
     // Acá se presenta cada acción como exigida por su carpeta: lo que se comprueba de verdad es el

@@ -1084,10 +1084,19 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           await s.intentar("insert into tenant (nombre) values ($1)", [nombreAlAzar("t")]),
           1,
         );
-        esperarFilas(
-          await s.intentar("update tenant set nombre = nombre"),
-          await s.contar("tenant"),
+        // El conteo y el UPDATE van en UNA sentencia: comparten la misma foto de los datos. Contar aparte
+        // después del UPDATE era una carrera con los demás archivos de pruebas, que insertan tenants en la
+        // misma base (esperaba 96 y el UPDATE había tocado 95).
+        const r = await s.intentar(
+          `with antes as (select count(*)::int as n from tenant),
+                u as (update tenant set nombre = nombre returning 1)
+           select (select n from antes) as visibles, (select count(*)::int from u) as actualizadas`,
         );
+        expect(r.ok, r.ok ? "" : r.mensaje).toBe(true);
+        if (r.ok) {
+          expect(Number(r.rows[0]?.["visibles"])).toBeGreaterThan(0);
+          expect(Number(r.rows[0]?.["actualizadas"])).toBe(Number(r.rows[0]?.["visibles"]));
+        }
       });
     });
   });

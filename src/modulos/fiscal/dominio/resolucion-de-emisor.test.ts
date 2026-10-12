@@ -15,7 +15,7 @@ import {
   resolverEmisor,
   resolverEmisoresDeLineas,
   type DatosDeLinea,
-  type DatosDeVenta,
+  type DatosAFacturar,
   type ReglaDeEmisor,
 } from "./resolucion-de-emisor";
 
@@ -23,7 +23,7 @@ const permisiva: ReglaDeEmisor = { permitirEleccionManual: true };
 const estricta: ReglaDeEmisor = { permitirEleccionManual: false };
 const activos = new Set([EMISOR_1, EMISOR_2]);
 
-const venta = (cambios: Partial<DatosDeVenta> = {}): DatosDeVenta => ({
+const venta = (cambios: Partial<DatosAFacturar> = {}): DatosAFacturar => ({
   puntoDeVentaElegido: null,
   eleccionManual: null,
   emisoresActivos: activos,
