@@ -285,7 +285,9 @@ describe("el detector (con la violación inyectada)", () => {
   async function consultaQueLeeAntes(tx: TxDeConsultasDeGrupo) {
     await tx.empresas.listarDelTenant(contexto.tenantId);
     return exigirAccion(REGLAS_DE_GRUPO, "grupo.ver_empresas", () =>
-      tx.autorizacion.delPropietario(contexto).then((p) => ({ ...p, modulosActivados: [] })),
+      tx.autorizacion
+        .delPropietario(contexto)
+        .then((p) => ({ ...p, modulosActivados: [], modulosHabilitados: [] })),
     );
   }
 
@@ -298,7 +300,9 @@ describe("el detector (con la violación inyectada)", () => {
   /** Una bien hecha: pide el permiso y se detiene. */
   async function consultaBienHecha(tx: TxDeConsultasDeGrupo) {
     return exigirAccion(REGLAS_DE_GRUPO, "grupo.ver_empresas", () =>
-      tx.autorizacion.delPropietario(contexto).then((p) => ({ ...p, modulosActivados: [] })),
+      tx.autorizacion
+        .delPropietario(contexto)
+        .then((p) => ({ ...p, modulosActivados: [], modulosHabilitados: [] })),
     );
   }
 

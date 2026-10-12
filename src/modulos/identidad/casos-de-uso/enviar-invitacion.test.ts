@@ -176,8 +176,20 @@ describe("manejador de enviar_invitacion", () => {
     const e = armar();
     await e.manejador(trabajo(), AHORA);
     expect(e.contextos).toEqual([
-      { tipo: "OPERATIVO", empresaId: EMPRESA, personaId: null, ahora: AHORA },
-      { tipo: "OPERATIVO", empresaId: EMPRESA, personaId: null, ahora: AHORA },
+      {
+        tipo: "OPERATIVO",
+        empresaId: EMPRESA,
+        personaId: null,
+        marcaDeEntrada: null,
+        ahora: AHORA,
+      },
+      {
+        tipo: "OPERATIVO",
+        empresaId: EMPRESA,
+        personaId: null,
+        marcaDeEntrada: null,
+        ahora: AHORA,
+      },
     ]);
   });
 

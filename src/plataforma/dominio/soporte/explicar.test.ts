@@ -67,6 +67,7 @@ const hechos = (cambios: Partial<HechosDeAccion<Rol>> = {}): HechosDeAccion<Rol>
   persona: { activoGlobal: true },
   membresia: { rol: "JEFE", activo: true },
   modulosActivados: ["ventas"],
+  modulosHabilitados: ["ventas"],
   estadoDeEmpresa: "ACTIVE",
   estadoDeTenant: "ACTIVE",
   ...cambios,
@@ -159,12 +160,29 @@ describe("explicarAccionDeEmpresa: módulos y empresa, en el orden de los casos 
     expect(explicarAccionDeEmpresa(REGLAS, "ventas.vender", hechos()).guard).toEqual(OK);
   });
 
+  it("un módulo activado que el plan ya no incluye queda en solo lectura: solo rechaza lo que crea o amplía", () => {
+    const sinPlan = hechos({ modulosHabilitados: [] });
+    expect(explicarAccionDeEmpresa(REGLAS, "ventas.vender", sinPlan).guard).toEqual(
+      rechazo("MODULO_EN_SOLO_LECTURA"),
+    );
+    // Al subir de plan vuelve a operar, sin haber perdido la activación.
+    expect(explicarAccionDeEmpresa(REGLAS, "ventas.vender", hechos()).guard).toEqual(OK);
+    // Un módulo que la empresa nunca activó sigue siendo MODULO_NO_ACTIVO, aunque el plan lo incluya.
+    expect(
+      explicarAccionDeEmpresa(
+        REGLAS,
+        "ventas.vender",
+        hechos({ modulosActivados: [], modulosHabilitados: ["ventas"] }),
+      ).guard,
+    ).toEqual(rechazo("MODULO_NO_ACTIVO"));
+  });
+
   it("un módulo en desarrollo: MODULO_EN_DESARROLLO, aunque esté 'activado'", () => {
     expect(
       explicarAccionDeEmpresa(
         REGLAS,
         "futuro.pronosticar",
-        hechos({ modulosActivados: ["futuro"] }),
+        hechos({ modulosActivados: ["futuro"], modulosHabilitados: ["futuro"] }),
       ).guard,
     ).toEqual(rechazo("MODULO_EN_DESARROLLO"));
   });

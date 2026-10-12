@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { modulosActivosDe } from "../modulos/activos";
+import { estadoDeModulos } from "../modulos/activos";
 import { CATALOGO_DE_MODULOS, type ClaveAccion, type ClaveModulo } from "../modulos/catalogo";
 import {
   PERMISOS_DE_EMPRESA,
@@ -151,7 +151,7 @@ describe("tablaDePermisos con otras matrices", () => {
 });
 
 describe("el guard con las reglas reales", () => {
-  const activos = modulosActivosDe(CATALOGO_DE_MODULOS, []);
+  const activos = estadoDeModulos(CATALOGO_DE_MODULOS, [], []).modulosActivos;
   const acciones = Object.keys(PERMISOS_DE_EMPRESA) as ClaveAccion[];
 
   it("administracion es obligatorio: está activo aunque no se haya activado nada", () => {
@@ -201,7 +201,7 @@ describe("el guard con las reglas reales", () => {
 describe("el guard con las reglas reales y la solo lectura (corrección 16)", () => {
   const acciones = Object.keys(PERMISOS_DE_EMPRESA) as ClaveAccion[];
   const enSoloLectura = new Set<ClaveModulo>(["administracion"]);
-  const activos = modulosActivosDe(CATALOGO_DE_MODULOS, []);
+  const activos = estadoDeModulos(CATALOGO_DE_MODULOS, [], []).modulosActivos;
 
   it("el núcleo no depende de un plan: marcarlo en solo lectura no cambia ninguna decisión", () => {
     for (const rol of ROLES_DE_EMPRESA) {
