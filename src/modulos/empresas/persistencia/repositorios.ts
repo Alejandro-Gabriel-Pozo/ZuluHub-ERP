@@ -91,6 +91,9 @@ export type NuevaEmpresa = Readonly<{
   zonaHoraria?: string;
 }>;
 
+/** Un alta que sigue en `PROVISIONING` y ya cumplió el plazo, con el instante en que se creó la empresa. */
+export type AltaVencida = Readonly<{ empresa: Empresa; creadoEn: Date }>;
+
 export interface RepositorioDeEmpresas {
   crear(datos: NuevaEmpresa): Promise<Empresa>;
   obtener(id: EmpresaId): Promise<Empresa | null>;
@@ -100,6 +103,13 @@ export interface RepositorioDeEmpresas {
     versionEsperada: number,
     cambio: CambioDeEstadoDeEmpresa,
   ): Promise<{ ok: true; empresa: Empresa } | { ok: false; error: ErrorDeRepositorioDeEmpresas }>;
+  /**
+   * Las altas que siguen en `PROVISIONING` y se crearon en `creadasHasta` o antes (INCLUSIVO:
+   * `creado_en <= creadasHasta`), de la más vieja a la más nueva (desempate por id), hasta `limite`.
+   * El llamador calcula `creadasHasta = ahora - 72 h` con la constante del dominio de plataforma: el
+   * plazo vive en un solo lugar y el repositorio no lo conoce. `limite` es un entero mayor o igual a 1.
+   */
+  listarAltasVencidas(creadasHasta: Date, limite: number): Promise<AltaVencida[]>;
 }
 
 /** Resultado de `crearSiNoExiste`: la sucursal nueva, o la que ya tenía ese nombre. */
@@ -109,6 +119,12 @@ export interface RepositorioDeSucursales {
   crear(empresa: EmpresaId, nombre: string): Promise<Sucursal>;
   listar(empresa: EmpresaId): Promise<Sucursal[]>;
   renombrar(id: SucursalId, versionEsperada: number, nombre: string): Promise<Sucursal | null>;
+  /**
+   * Da de alta la sucursal SIN leerla de vuelta (`INSERT` sin `RETURNING`): la plataforma puede crear
+   * la sucursal inicial de una empresa pero no tiene permiso de lectura sobre `sucursal` (son datos
+   * operativos), y un `RETURNING` exigiría ese permiso. Un nombre repetido sale como error de unicidad.
+   */
+  sembrar(empresa: EmpresaId, nombre: string): Promise<void>;
   /** Una sucursal de la empresa; `null` si no existe o es de otra empresa. */
   obtener(empresa: EmpresaId, id: SucursalId): Promise<Sucursal | null>;
   /** Solo las activas de la empresa, ordenadas por nombre e id. */
@@ -186,6 +202,25 @@ export function crearRepositorioDeEmpresas(db: Kysely<EmpresasDb>): RepositorioD
       return filas.map(aEmpresa);
     },
 
+    async listarAltasVencidas(creadasHasta, limite) {
+      if (!Number.isInteger(limite) || limite < 1) {
+        throw new RangeError(`limite debe ser un entero mayor o igual a 1 (llegó ${limite})`);
+      }
+      if (Number.isNaN(creadasHasta.getTime())) {
+        throw new RangeError("creadasHasta no es una fecha válida");
+      }
+      const filas = await db
+        .selectFrom("empresa")
+        .selectAll()
+        .where("estado", "=", "PROVISIONING")
+        .where("creado_en", "<=", creadasHasta)
+        .orderBy("creado_en")
+        .orderBy("id")
+        .limit(limite)
+        .execute();
+      return filas.map((fila) => ({ empresa: aEmpresa(fila), creadoEn: fila.creado_en }));
+    },
+
     async cambiarEstado(id, versionEsperada, cambio) {
       const fila = await db
         .updateTable("empresa")
@@ -229,6 +264,10 @@ export function crearRepositorioDeSucursales(db: Kysely<EmpresasDb>): Repositori
         .orderBy("id")
         .execute();
       return filas.map(aSucursal);
+    },
+
+    async sembrar(empresa, nombre) {
+      await db.insertInto("sucursal").values({ empresa_id: empresa, nombre }).execute();
     },
 
     async crearSiNoExiste(empresa, nombre) {

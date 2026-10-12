@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import pg from "pg";
-import type { Contexto, TipoDeContexto } from "../../contexto/contexto";
+import type { ActorDePlataforma, Contexto, TipoDeContexto } from "../../contexto/contexto";
 import { ErrorDeConfiguracion } from "./errores";
 
 /**
@@ -32,6 +32,20 @@ export const ACTOR_DE_SISTEMA = "sistema";
 
 /** Un uuid canónico (minúsculas): la base compara el actor como TEXTO con `admin_plataforma.id::text`. */
 const UUID_CANONICO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/**
+ * El actor de plataforma tal como se FIRMA en el claim `a` y tal como la base lo compara: el id del
+ * administrador (uuid canónico en minúsculas) o `sistema`. Es la única definición: lo que firma el
+ * contexto y lo que escriben los adaptadores de plataforma (auditoría, idempotencia) sale de acá, así
+ * que no pueden diferir. Un id que no es un uuid canónico lanza `RangeError`.
+ */
+export function actorFirmado(actor: ActorDePlataforma): string {
+  if (actor.tipo === "SISTEMA") return ACTOR_DE_SISTEMA;
+  if (!UUID_CANONICO.test(actor.id)) {
+    throw new RangeError("el id del administrador debe ser un uuid canónico en minúsculas");
+  }
+  return actor.id;
+}
 
 export type ClaveDeContexto = Readonly<{ kid: number; secreto: Buffer }>;
 
@@ -140,7 +154,7 @@ function cargaDe(contexto: Contexto, vence: number): CargaDeContexto {
         p: null,
         i: null,
         x: vence,
-        a: contexto.actor.tipo === "ADMIN" ? contexto.actor.id : ACTOR_DE_SISTEMA,
+        a: actorFirmado(contexto.actor),
       };
     case "TRABAJOS":
       return { u, e: null, t: null, p: null, i: null, x: vence, a: null };
@@ -158,13 +172,6 @@ export function firmarContexto(
 ): string {
   if (contexto.tipo === "INVITACION" && !/^[0-9a-f]{64}$/.test(contexto.tokenHash)) {
     throw new RangeError("tokenHash debe ser un sha256 en hexadecimal minúsculo (64 caracteres)");
-  }
-  if (
-    contexto.tipo === "PLATAFORMA" &&
-    contexto.actor.tipo === "ADMIN" &&
-    !UUID_CANONICO.test(contexto.actor.id)
-  ) {
-    throw new RangeError("el id del administrador debe ser un uuid canónico en minúsculas");
   }
   return firmarCarga(clave, cargaDe(contexto, ahoraEnSegundos + VIGENCIA_DEL_CONTEXTO_EN_S));
 }

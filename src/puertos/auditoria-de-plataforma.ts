@@ -1,0 +1,44 @@
+import type { Dato } from "./sin-secretos";
+
+/**
+ * Las acciones que la plataforma audita (H5 plataforma, §B.5). Una unión cerrada: una acción nueva se
+ * suma acá y en el caso de uso que la registra, y la base no acepta una acción vacía.
+ */
+export const ACCIONES_DE_PLATAFORMA = [
+  "TENANT_ALTA",
+  "EMPRESA_ALTA",
+  "TENANT_SUSPENDIDO",
+  "TENANT_REACTIVADO",
+  "EMPRESA_SUSPENDIDA",
+  "EMPRESA_REACTIVADA",
+  "ALTA_CANCELADA",
+  "ALTA_INVITACION_REENVIADA",
+  "ALTA_INVITACION_REVOCADA",
+  "PERSONA_SUSPENDIDA",
+  "PERSONA_REACTIVADA",
+  "SOPORTE_EXPLICAR",
+] as const;
+
+export type AccionDePlataforma = (typeof ACCIONES_DE_PLATAFORMA)[number];
+
+/**
+ * Lo que un caso de uso de plataforma deja asentado. NO lleva el actor: lo pone el adaptador, desde el
+ * contexto firmado de la transacción (el administrador o `sistema`), y la base exige que coincida. No
+ * lleva secretos (ni tokens ni hashes): `antes` y `despues` pasan por `exigirSinSecretos`.
+ */
+export type RegistroDeAuditoriaDePlataforma = Readonly<{
+  accion: AccionDePlataforma;
+  entidad: string;
+  entidadId: string;
+  antes?: Readonly<Record<string, Dato>> | null;
+  despues?: Readonly<Record<string, Dato>> | null;
+}>;
+
+/**
+ * Puerto de auditoría de plataforma (solo inserción). Va en la MISMA transacción del cambio que
+ * describe: si se revierte el cambio, se revierte el registro, y al revés. Solo existe con un contexto
+ * de plataforma; con cualquier otro lanza `RangeError`.
+ */
+export interface AuditoriaDePlataforma {
+  registrar(registro: RegistroDeAuditoriaDePlataforma): Promise<void>;
+}
