@@ -287,6 +287,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "src/capacidades/permisos/grupo.ts": exporta,
       },
     },
+    {
+      regla: "modulos-sin-marcas",
+      archivos: {
+        "src/modulos/empresas/casos-de-uso/c.ts": importa("../../marcas/publico"),
+        "src/modulos/marcas/publico.ts": exporta,
+      },
+    },
   ];
 
   it("cada regla definida tiene su caso de violación", () => {
@@ -365,6 +372,32 @@ describe("reglas de arquitectura (ADR-001)", () => {
       "src/adaptadores/postgres/a.ts": 'import "kysely";\nexport const a = 1;\n',
     });
     expect(v).not.toContain("orm-solo-en-persistencia");
+  });
+
+  it("marcas: la plataforma, las consultas y la puerta web sí entran por su publico.ts; el dominio usa capacidades y primitivas", async () => {
+    const v = await violacionesDe({
+      "src/primitivas/p.ts": exporta,
+      "src/capacidades/vocabulario/v.ts": importa("../../primitivas/p"),
+      "src/modulos/marcas/dominio/d.ts": importa("../../../capacidades/vocabulario/v"),
+      "src/modulos/marcas/publico.ts": importa("./dominio/d"),
+      "src/plataforma/p.ts": importa("../modulos/marcas/publico"),
+      "src/consultas-de-grupo/g.ts": importa("../modulos/marcas/publico"),
+      "apps/web/a.ts": importa("../../src/modulos/marcas/publico"),
+    });
+    expect(v).toEqual([]);
+  });
+
+  it("marcas: un módulo de negocio no la importa ni por publico.ts, pero la regla no alcanza a la propia marca", async () => {
+    const dentro = await violacionesDe({
+      "src/modulos/marcas/dominio/a.ts": exporta,
+      "src/modulos/marcas/dominio/b.ts": importa("./a"),
+    });
+    expect(dentro).not.toContain("modulos-sin-marcas");
+    const fuera = await violacionesDe({
+      "src/modulos/identidad/dominio/d.ts": importa("../../marcas/publico"),
+      "src/modulos/marcas/publico.ts": exporta,
+    });
+    expect(fuera).toContain("modulos-sin-marcas");
   });
 
   describe("H5 plataforma: catálogos de permisos independientes y dominio de plataforma puro", () => {

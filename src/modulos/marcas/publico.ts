@@ -1,0 +1,66 @@
+/** Entrada pública del módulo de marcas (ADR-001): dominio puro de la marca comercial y sus versiones. */
+export { normalizarHost, type ErrorDeHost, type Host } from "./dominio/host";
+export {
+  CONTRASTE_MINIMO_DEL_ACENTO,
+  CONTRASTE_MINIMO_DEL_TEXTO,
+  TOKENS_DE_TEMA,
+  contrasteSuficiente,
+  esTokenDeTema,
+  luminanciaRelativa,
+  parDeContrasteInsuficiente,
+  razonDeContraste,
+  validarTema,
+  type ErrorDeTema,
+  type ParDeContraste,
+  type Tema,
+  type TemaCompleto,
+  type TokenDeTema,
+} from "./dominio/tema";
+export {
+  DEFINICION_VACIA,
+  completarDefinicion,
+  resolverDefinicion,
+  validarLogo,
+  validarModulosIniciales,
+  validarNombreVisible,
+  type CampoFaltante,
+  type DefinicionCompleta,
+  type DefinicionDeMarca,
+  type DefinicionResuelta,
+  type ErrorDeModuloInicial,
+} from "./dominio/definicion";
+export {
+  NIVEL_MAXIMO_DE_LA_BASE,
+  campoInmutableModificado,
+  decidirAltaDeMarca,
+  nivelDeMarca,
+  validarCodigoDeMarca,
+  type CampoInmutable,
+  type DatosInmutablesDeMarca,
+  type ErrorDeAltaDeMarca,
+  type MarcaPorCrear,
+  type NivelDeMarca,
+  type PadreDeMarca,
+} from "./dominio/jerarquia";
+export {
+  TOLERANCIA_DE_RELOJ_EN_MS,
+  estadosDeVigencia,
+  hayProgramadaPendiente,
+  versionVigente,
+  type EstadoDeVigencia,
+  type VersionConVigencia,
+} from "./dominio/vigencia";
+export {
+  decidirConfirmacionDeMarca,
+  decidirGuardadoDeBorrador,
+  validarCambiosDeBorrador,
+  type BorradorGuardado,
+  type CambiosDeBorrador,
+  type CambiosValidadosDeBorrador,
+  type ConfirmacionDeMarca,
+  type DecisionDeBorrador,
+  type ErrorDeConfirmacion,
+  type ErrorDeFormaDeBorrador,
+  type PedidoDeConfirmacion,
+  type PlanPorDefecto,
+} from "./dominio/version";
