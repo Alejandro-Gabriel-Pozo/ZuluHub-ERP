@@ -9,12 +9,63 @@ export {
 } from "./dominio/empresa";
 export { DECLARACIONES as DECLARACIONES_DE_EMPRESAS } from "./casos-de-uso/declaraciones";
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS } from "./consultas/declaraciones";
-export { nombreDeSucursalValido, type ErrorDeSucursal, type Sucursal } from "./dominio/sucursal";
+export {
+  LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL,
+  decidirAltaConNombreOcupado,
+  decidirDesactivacion,
+  decidirEdicion,
+  decidirReactivacion,
+  nombreDeSucursalValido,
+  type DecisionDeAlta,
+  type DecisionDeDesactivacion,
+  type DecisionDeEdicion,
+  type DecisionDeReactivacion,
+  type ErrorDeNombreDeSucursal,
+  type ErrorDeSucursal,
+  type Sucursal,
+} from "./dominio/sucursal";
+export { crearCasosDeUsoDeEmpresas, type CasosDeUsoDeEmpresas } from "./casos-de-uso/casos-de-uso";
+export type { DependenciasDeEmpresas, TxDeEmpresas } from "./casos-de-uso/contrato";
+export type {
+  EntradaDeCrearSucursal,
+  ErrorAlCrearSucursal,
+  SalidaDeCrearSucursal,
+} from "./casos-de-uso/crear-sucursal";
+export type {
+  EntradaDeEditarSucursal,
+  ErrorAlEditarSucursal,
+  SalidaDeEditarSucursal,
+} from "./casos-de-uso/editar-sucursal";
+export type {
+  EntradaDeDesactivarSucursal,
+  ErrorAlDesactivarSucursal,
+  SalidaDeDesactivarSucursal,
+} from "./casos-de-uso/desactivar-sucursal";
+export type {
+  EntradaDeReactivarSucursal,
+  ErrorAlReactivarSucursal,
+  SalidaDeReactivarSucursal,
+} from "./casos-de-uso/reactivar-sucursal";
+export { crearConsultasDeEmpresas, type ConsultasDeEmpresas } from "./consultas/consultas";
+export type {
+  DependenciasDeConsultasDeEmpresas,
+  TxDeConsultasDeEmpresas,
+} from "./consultas/contrato";
+export type {
+  EntradaDeListarSucursales,
+  ErrorAlListarSucursales,
+} from "./consultas/listar-sucursales";
+export type {
+  EntradaDeFichaDeSucursal,
+  ErrorAlPedirLaFichaDeSucursal,
+} from "./consultas/ficha-de-sucursal";
+export type { FichaDeSucursal, SucursalDeLista } from "./consultas/sucursales";
 export {
   COLUMNAS_DE_EMPRESAS,
   ERRORES_DE_EMPRESAS_POR_RESTRICCION,
   crearRepositorioDeEmpresas,
   crearRepositorioDeSucursales,
+  type AltaDeSucursal,
   type EmpresasDb,
   type ErrorDeRepositorioDeEmpresas,
   type NuevaEmpresa,
