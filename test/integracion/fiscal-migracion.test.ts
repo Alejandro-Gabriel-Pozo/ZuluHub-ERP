@@ -2,7 +2,7 @@ import { copyFile, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import pg from "pg";
-import { describe, expect, inject, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { instalarClaveDeContexto } from "../../src/adaptadores/postgres/contexto-firmado";
 import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
 import { sembrarAdminsDePrueba } from "./admins-de-prueba";
@@ -24,7 +24,9 @@ import {
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 120_000 });
 
-const REAL = join(import.meta.dirname, "../../migraciones");
+const MIGRACIONES = join(import.meta.dirname, "../../migraciones");
+/** Para leer los archivos (también la reversión). */
+const REAL = MIGRACIONES;
 const HASTA_0005 = [
   "0001_base.sql",
   "0002_identidad.sql",
@@ -61,7 +63,8 @@ const TABLAS_VIEJAS = [
 
 const carpetaCon = async (archivos: readonly string[]): Promise<string> => {
   const carpeta = await mkdtemp(join(tmpdir(), "zuluhub-mig-0006-"));
-  for (const archivo of archivos) await copyFile(join(REAL, archivo), join(carpeta, archivo));
+  for (const archivo of archivos)
+    await copyFile(join(MIGRACIONES, archivo), join(carpeta, archivo));
   return carpeta;
 };
 
@@ -149,6 +152,15 @@ async function huellaDeCatalogo(c: pg.Client): Promise<Record<string, string[]>>
 describe.skipIf(base === null)(
   "fiscal: la migración 0006 sobre datos reales y su reversión",
   () => {
+    // Solo hasta 0006: las migraciones posteriores (0007 marcas y planes) tienen sus propias pruebas.
+    let CARPETA_HASTA_0006 = "";
+    beforeAll(async () => {
+      CARPETA_HASTA_0006 = await carpetaCon([...HASTA_0005, "0006_fiscal.sql"]);
+    });
+    afterAll(async () => {
+      await rm(CARPETA_HASTA_0006, { recursive: true, force: true });
+    });
+
     /** Empresas en todos los estados, con sucursales, personas, membresías y demás datos de 0001 a 0005. */
     const sembrar = async (c: pg.Client) => {
       const empresas: Array<{ id: string; estado: EstadoDeEmpresaDePrueba }> = [];
@@ -206,7 +218,7 @@ describe.skipIf(base === null)(
         ).toEqual({ t: null });
         const antes = await huella(previa.cliente);
 
-        const r = await aplicarMigraciones(previa.aparte.base.dueno, REAL);
+        const r = await aplicarMigraciones(previa.aparte.base.dueno, CARPETA_HASTA_0006);
         expect(r.aplicadas).toEqual(["0006_fiscal.sql"]);
 
         // Ni un dato de las tablas viejas cambió.
@@ -242,7 +254,7 @@ describe.skipIf(base === null)(
         }
         expect((await previa.cliente.query("select 1 from provincia")).rowCount).toBe(24);
         // Volver a correr no cambia nada: la migración ya está registrada.
-        const otra = await aplicarMigraciones(previa.aparte.base.dueno, REAL);
+        const otra = await aplicarMigraciones(previa.aparte.base.dueno, CARPETA_HASTA_0006);
         expect(otra.aplicadas).toEqual([]);
         expect(otra.yaAplicadas).toEqual([...HASTA_0005, "0006_fiscal.sql"]);
       } finally {
@@ -254,7 +266,7 @@ describe.skipIf(base === null)(
       const previa = await baseCon(HASTA_0005);
       try {
         const empresas = await sembrar(previa.cliente);
-        await aplicarMigraciones(previa.aparte.base.dueno, REAL);
+        await aplicarMigraciones(previa.aparte.base.dueno, CARPETA_HASTA_0006);
         const entorno = crearEntornoDePrueba(previa.aparte.base);
         try {
           // La plataforma (con su actor firmado) da de alta una empresa y la activa: sigue funcionando.
@@ -358,14 +370,16 @@ describe.skipIf(base === null)(
           [tenant],
         );
         await expect(
-          aplicarMigraciones(previa.aparte.base.dueno, REAL, { esperaDeBloqueoEnMs: 300 }),
+          aplicarMigraciones(previa.aparte.base.dueno, CARPETA_HASTA_0006, {
+            esperaDeBloqueoEnMs: 300,
+          }),
         ).rejects.toMatchObject({ code: "55P03" });
         expect(
           (await previa.cliente.query("select to_regclass('public.emisor') as t")).rows[0],
         ).toEqual({ t: null });
         await otra.query("commit");
         // Con el alta confirmada, la migración la ve y le da su principal.
-        const r = await aplicarMigraciones(previa.aparte.base.dueno, REAL);
+        const r = await aplicarMigraciones(previa.aparte.base.dueno, CARPETA_HASTA_0006);
         expect(r.aplicadas).toEqual(["0006_fiscal.sql"]);
         expect(
           (await previa.cliente.query("select 1 from emisor where es_principal")).rowCount,
@@ -472,11 +486,11 @@ describe.skipIf(base === null)(
         const previa = await baseCon(HASTA_0005);
         try {
           await sembrar(previa.cliente);
-          await aplicarMigraciones(previa.aparte.base.dueno, REAL);
+          await aplicarMigraciones(previa.aparte.base.dueno, CARPETA_HASTA_0006);
           await revertir(previa.cliente, false);
           // Una empresa que nació mientras estaba revertida no tiene emisor, y el relleno se lo da.
           await crearMundo(previa.cliente, { sinEmisor: true });
-          const r = await aplicarMigraciones(previa.aparte.base.dueno, REAL);
+          const r = await aplicarMigraciones(previa.aparte.base.dueno, CARPETA_HASTA_0006);
           expect(r.aplicadas).toEqual(["0006_fiscal.sql"]);
           expect(
             (

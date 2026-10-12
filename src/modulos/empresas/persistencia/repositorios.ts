@@ -52,7 +52,16 @@ export const COLUMNAS_DE_EMPRESAS = {
     "actualizado_en",
     "version",
   ],
-  sucursal: ["id", "empresa_id", "nombre", "activa", "creado_en", "actualizado_en", "version"],
+  sucursal: [
+    "id",
+    "empresa_id",
+    "nombre",
+    "activa",
+    "creado_en",
+    "actualizado_en",
+    "version",
+    "hora_de_corte", // 0007: la hora de corte de la jornada; el repositorio la lee y la escribe el tramo M4
+  ],
 } as const;
 
 /** Restricción de la base → error de negocio (ADR-004). Un test exige que no falte ninguna. */
@@ -80,6 +89,9 @@ export const ERRORES_DE_EMPRESAS_POR_RESTRICCION: Readonly<Record<string, string
   sucursal_nombre_largo_ck: "NOMBRE_DE_SUCURSAL_INVALIDO",
   sucursal_nombre_control_ck: "NOMBRE_DE_SUCURSAL_INVALIDO",
   sucursal_ultima_activa: "ULTIMA_SUCURSAL_ACTIVA", // la lanza un disparador
+  // 0007: la hora de corte de la jornada (minutos enteros, de 00:00 a 23:59). Sin error de negocio
+  // todavía: el tramo M4 le pone el suyo cuando el caso de uso que la edita exista.
+  sucursal_hora_de_corte_ck: "NO_TRADUCIDA",
 };
 
 export type ErrorDeRepositorioDeEmpresas = "EMPRESA_NO_ENCONTRADA" | "VERSION_DESACTUALIZADA";

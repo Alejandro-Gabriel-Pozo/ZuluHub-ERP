@@ -24,6 +24,7 @@ export const COLUMNAS_DE_TENANT = [
   "creado_en",
   "actualizado_en",
   "version",
+  "marca_id", // 0007: la lista solo nombra la columna; el repositorio la lee y la escribe el tramo M4
 ] as const;
 
 /** Restricción de la base → error de negocio (ADR-004). Un test exige que no falte ninguna. */
@@ -33,6 +34,10 @@ export const ERRORES_DE_TENANT_POR_RESTRICCION: Readonly<Record<string, string>>
   tenant_estado_ck: "NO_TRADUCIDA",
   tenant_motivo_ck: "MOTIVO_OBLIGATORIO",
   tenant_instalacion_single: "INSTALACION_SINGLE_YA_TIENE_TENANT",
+  // 0007: la marca del tenant (el alta la elige; después no cambia). Sin error de negocio todavía: lo
+  // definen M4 (persistencia) y M6 (alta de empresa con marca).
+  tenant_marca_id_fkey: "NO_TRADUCIDA",
+  tenant_marca_inmutable: "NO_TRADUCIDA",
 };
 
 export type ErrorDeRepositorioDeTenants = "TENANT_NO_ENCONTRADO" | "VERSION_DESACTUALIZADA";

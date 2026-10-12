@@ -8,6 +8,7 @@ import {
 } from "../../src/adaptadores/postgres/contexto-firmado";
 import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
 import { sembrarAdminsDePrueba } from "./admins-de-prueba";
+import { sembrarMarcaPrincipalDePrueba } from "./marcas-de-prueba";
 import { OPCIONES_DE_BASE } from "./opciones-de-base";
 
 /**
@@ -30,6 +31,8 @@ export type BaseDePruebas = Readonly<{
   plataforma: string;
   /** El rol de la librería de autenticación (sin acceso a tablas de negocio). */
   autenticacion: string;
+  /** El rol público (0007): lee las columnas públicas de las marcas SIN contexto firmado. */
+  publico: string;
   /** Clave de firma del contexto de ESTA corrida (kid 1), instalada en la base con `dueno`. */
   clave: ClaveDeContexto;
 }>;
@@ -40,7 +43,7 @@ declare module "vitest" {
   }
 }
 
-const ROLES = ["app", "grupo", "trabajos", "plataforma", "autenticacion"] as const;
+const ROLES = ["app", "grupo", "trabajos", "plataforma", "autenticacion", "publico"] as const;
 
 function conBase(url: string, base: string): string {
   const u = new URL(url);
@@ -84,6 +87,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
   const claveDeContexto: ClaveDeContexto = { kid: 1, secreto: randomBytes(32) };
   await instalarClaveDeContexto(urlDueno, claveDeContexto);
   await sembrarAdminsDePrueba(urlDueno);
+  await sembrarMarcaPrincipalDePrueba(urlDueno);
 
   const claves = Object.fromEntries(ROLES.map((r) => [r, randomBytes(18).toString("hex")]));
   for (const rol of ROLES) {
@@ -100,6 +104,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
     trabajos: url("trabajos"),
     plataforma: url("plataforma"),
     autenticacion: url("autenticacion"),
+    publico: url("publico"),
     clave: claveDeContexto,
   });
 

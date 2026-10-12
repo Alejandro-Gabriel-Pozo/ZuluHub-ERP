@@ -30,6 +30,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0004_plataforma.sql",
         "0005_administracion.sql",
         "0006_fiscal.sql",
+        "0007_marcas_y_planes.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -41,6 +42,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0004_plataforma.sql",
           "0005_administracion.sql",
           "0006_fiscal.sql",
+          "0007_marcas_y_planes.sql",
         ],
       });
     } finally {
@@ -66,6 +68,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "zuluhub_autenticacion",
         "zuluhub_grupo",
         "zuluhub_plataforma",
+        "zuluhub_publico",
         "zuluhub_trabajos",
       ]);
       expect(rows.every((r) => !r.rolbypassrls && !r.rolsuper)).toBe(true);
@@ -150,6 +153,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0004_plataforma.sql",
         "0005_administracion.sql",
         "0006_fiscal.sql",
+        "0007_marcas_y_planes.sql",
       ]);
     } finally {
       await aparte.destruir();
@@ -393,6 +397,7 @@ describe.skipIf(base === null)("migraciones", () => {
     "0004_plataforma.sql",
     "0005_administracion.sql",
     "0006_fiscal.sql",
+    "0007_marcas_y_planes.sql",
   ])("la migración %s no contiene contraseñas ni cadenas de conexión", async (archivo) => {
     const sql = await readFile(join(CARPETA_REAL, archivo), "utf8");
     expect(sql).not.toMatch(/PASSWORD\s+'/i);
@@ -580,6 +585,110 @@ describe.skipIf(base === null)("migraciones", () => {
     expect(aplicables.filter((n) => n.startsWith("0006"))).toEqual(["0006_fiscal.sql"]);
     const reversion = await readFile(
       join(CARPETA_REAL, "reversiones", "0006_revertir_fiscal.sql"),
+      "utf8",
+    );
+    expect(reversion).toMatch(/DESTRUCTIVA/);
+    expect(reversion).not.toMatch(/PASSWORD\s+'/i);
+    expect(reversion.replace(/--.*$/gm, "")).not.toMatch(/\bCASCADE\b/i);
+  });
+
+  it("0007 es aditiva: no borra ni reescribe datos, no agrega SECURITY DEFINER, crea solo el rol público (NOLOGIN), nadie recibe DELETE, toda función fija su search_path y exige 0004", async () => {
+    const sql = await readFile(join(CARPETA_REAL, "0007_marcas_y_planes.sql"), "utf8");
+    const codigo = sql.replace(/--.*$/gm, "");
+    // El disparador "BEFORE TRUNCATE" frena el TRUNCATE (no es uno) y `DROP DEFAULT` es el único DROP: quita
+    // el valor por defecto con que se rellenó `tenant.marca_id`, no borra nada.
+    const sinPermitidos = codigo
+      .replace(/BEFORE\s+TRUNCATE/gi, "")
+      .replace(/ALTER\s+COLUMN\s+marca_id\s+DROP\s+DEFAULT/gi, "");
+    expect(sinPermitidos).not.toMatch(/\b(DROP|TRUNCATE|DELETE\s+FROM)\b/i);
+    expect(codigo.match(/DROP\s+DEFAULT/gi)).toHaveLength(1);
+    // Tablas nuevas: las nueve, y nada más.
+    const tablasNuevas = (codigo.match(/CREATE\s+TABLE\s+\w+/gi) ?? []).map(
+      (t) => t.split(/\s+/)[2] as string,
+    );
+    expect(tablasNuevas.sort()).toEqual([
+      "ajuste_de_perilla",
+      "dominio_de_marca",
+      "marca",
+      "modulo_de_empresa",
+      "nivel_de_control",
+      "plan",
+      "plan_de_tenant",
+      "version_de_marca",
+      "version_de_plan",
+    ]);
+    // Las tablas viejas solo reciben lo declarado: dos columnas con valor por defecto, una única, y la
+    // columna de la marca del tenant (dentro de un bloque DO). Lo demás que se altera es RLS de las nuevas.
+    const alteraciones = (
+      codigo.match(/\bALTER\s+TABLE\s+(?:public\.)?\w+\s+\w+(\s+\w+)?/gi) ?? []
+    ).filter((a) => !/ENABLE\s+ROW|FORCE\s+ROW/i.test(a));
+    expect(alteraciones.map((a) => a.replace(/\s+/g, " ")).sort()).toEqual([
+      "ALTER TABLE auditoria_acceso_grupo ADD COLUMN",
+      "ALTER TABLE public.tenant ADD COLUMN",
+      "ALTER TABLE public.tenant ALTER COLUMN",
+      "ALTER TABLE referencia_de_error ADD CONSTRAINT",
+      "ALTER TABLE sucursal ADD COLUMN",
+    ]);
+    for (const nombre of tablasNuevas) {
+      expect(codigo).toMatch(new RegExp(`ALTER TABLE ${nombre} ENABLE ROW LEVEL SECURITY`));
+      expect(codigo).toMatch(new RegExp(`ALTER TABLE ${nombre} FORCE ROW LEVEL SECURITY`));
+    }
+    // La única política que se cambia es la de alta del acceso de grupo (intentos fallidos).
+    expect(codigo.match(/\bALTER\s+POLICY\s+\w+/gi)).toEqual([
+      "ALTER POLICY auditoria_acceso_grupo_alta",
+    ]);
+    expect(codigo).not.toMatch(/\bDROP\s+POLICY\b/i);
+    expect(codigo).not.toMatch(/SECURITY\s+DEFINER/i);
+    for (const concesion of codigo.match(/\bGRANT\b[^;]*;/gi) ?? []) {
+      expect(concesion).not.toMatch(/\b(DELETE|TRUNCATE|ALL)\b/i);
+      // EXECUTE: solo las funciones de validación y solo para la plataforma.
+      if (/\bEXECUTE\b/i.test(concesion)) expect(concesion).toMatch(/TO\s+zuluhub_plataforma;$/);
+    }
+    // El único rol que crea es el público, sin login ni contraseña.
+    expect(codigo.match(/CREATE\s+ROLE/gi)).toHaveLength(1);
+    expect(codigo).toMatch(/'CREATE ROLE %I NOLOGIN NOSUPERUSER NOBYPASSRLS/);
+    expect(codigo).not.toMatch(/(?<!NO)LOGIN|PASSWORD/i);
+    // Toda función nueva fija el search_path (con pg_temp al final) y califica sus tablas con `public.`
+    // (las funciones de conjunto de Postgres, como jsonb_each y unnest, no son tablas).
+    const funciones = codigo.match(/CREATE\s+FUNCTION[\s\S]*?\$\$;/gi) ?? [];
+    expect(funciones).toHaveLength(20);
+    for (const funcion of funciones) {
+      expect(funcion).toMatch(/SET\s+search_path\s*=\s*pg_catalog,\s*public,\s*pg_temp/);
+      expect(funcion).not.toMatch(
+        /(?<!DISTINCT\s)\b(FROM|JOIN)\s+(?!public\.)(?!pg_)\w+\b(?!\s*\()/,
+      );
+    }
+    // Las restrictivas son solo de la plataforma. Ninguna política `FOR ALL`.
+    for (const restrictiva of codigo.match(/AS\s+RESTRICTIVE[^;]*;/gi) ?? []) {
+      expect(restrictiva).toMatch(/TO\s+zuluhub_plataforma\b/);
+      expect(restrictiva).not.toMatch(/zuluhub_(app|grupo|trabajos|autenticacion|publico)/);
+    }
+    expect(codigo).not.toMatch(/CREATE\s+POLICY[^;]*\bFOR\s+ALL\b/i);
+    // El rol público solo lee: ningún INSERT, UPDATE ni EXECUTE para él (salvo USAGE del esquema).
+    for (const concesion of codigo.match(/\bGRANT\b[^;]*;/gi) ?? []) {
+      if (/zuluhub_publico/.test(concesion)) {
+        expect(concesion).toMatch(/^GRANT\s+(SELECT\s*\(|USAGE\s+ON\s+SCHEMA)/i);
+      }
+    }
+    // Depende de 0004 (lo comprueba al empezar) y no toca nada de 0005 ni de 0006.
+    expect(sql).toMatch(/requiere 0004_plataforma/);
+    expect(codigo).not.toMatch(/traspaso_gerencia|sucursal_nombre_ci|emisor|punto_de_venta/);
+    // Escribe datos en una sola tabla: inserta la marca principal. Ningún UPDATE ni DELETE de filas.
+    const inserciones = [...codigo.matchAll(/INSERT\s+INTO\s+(?:public\.)?(\w+)/gi)].map((i) =>
+      (i[1] as string).toLowerCase(),
+    );
+    expect(inserciones).toEqual(["marca"]);
+    expect(codigo).not.toMatch(/\bUPDATE\s+(?!OF\b)(?!ON\b)\w+\s+SET\b/i);
+  });
+
+  it("la reversión de 0007 vive fuera de la carpeta que aplica el ejecutor, así que nunca se corre sola", async () => {
+    const aplicables = (await readdir(CARPETA_REAL)).filter((n) =>
+      /^\d{4}_[a-z0-9_]+\.sql$/.test(n),
+    );
+    expect(aplicables).not.toContain("0007_revertir_marcas_y_planes.sql");
+    expect(aplicables.filter((n) => n.startsWith("0007"))).toEqual(["0007_marcas_y_planes.sql"]);
+    const reversion = await readFile(
+      join(CARPETA_REAL, "reversiones", "0007_revertir_marcas_y_planes.sql"),
       "utf8",
     );
     expect(reversion).toMatch(/DESTRUCTIVA/);

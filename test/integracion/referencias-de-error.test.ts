@@ -283,12 +283,16 @@ describe.skipIf(base === null)("referencias de error: escritura por puerta", () 
     });
   });
 
-  describe("sin unicidad, solo inserción, atómica y concurrente", () => {
-    it("dos referencias iguales (colisión de 32 bits) conviven, ninguna pisa a la otra", async () => {
+  describe("única (desde 0007), solo inserción, atómica y concurrente", () => {
+    it("dos referencias iguales (colisión de 32 bits): la segunda choca con la única y no pisa a la primera", async () => {
       const referencia = nuevaReferencia();
       expect((await registrar(comoAdmin(), { referencia, motivo: "UNO" }).resultado).ok).toBe(true);
-      expect((await registrar(comoAdmin(), { referencia, motivo: "DOS" }).resultado).ok).toBe(true);
-      expect((await guardadas(referencia)).map((f) => f["motivo"]).sort()).toEqual(["DOS", "UNO"]);
+      const segunda = await registrar(comoAdmin(), { referencia, motivo: "DOS" }).resultado;
+      expect(segunda).toMatchObject({
+        ok: false,
+        error: { tipo: "Unicidad", restriccion: "referencia_de_error_referencia_uk" },
+      });
+      expect((await guardadas(referencia)).map((f) => f["motivo"])).toEqual(["UNO"]);
     });
 
     it("es de solo inserción: ni UPDATE ni DELETE ni TRUNCATE, ni para plataforma", async () => {
@@ -347,13 +351,14 @@ describe.skipIf(base === null)("referencias de error: escritura por puerta", () 
             ? { personaId: c.personaId }
             : {};
       const barrera = crearBarrera(contextos.length);
-      const marca = nuevaReferencia();
+      // Una referencia distinta por escritura (la misma chocaría con la única de 0007).
+      const referencias = contextos.map(() => nuevaReferencia());
       const rs = await Promise.all(
-        contextos.map((contexto) =>
+        contextos.map((contexto, i) =>
           entorno.ejecutar({ contexto }, async ({ referenciasDeError }) => {
             await barrera();
             await referenciasDeError.registrar({
-              referencia: marca,
+              referencia: referencias[i] as string,
               accion: "usuarios.invitar",
               motivo: "SIN_PERMISO",
               empresaId: null,
@@ -365,7 +370,7 @@ describe.skipIf(base === null)("referencias de error: escritura por puerta", () 
         ),
       );
       expect(rs.every((r) => r.ok)).toBe(true);
-      expect(await guardadas(marca)).toHaveLength(contextos.length);
+      for (const referencia of referencias) expect(await guardadas(referencia)).toHaveLength(1);
     });
   });
 });
