@@ -12,7 +12,7 @@ export type DomicilioId = Marca<string, "DomicilioId">;
 export type VersionId = Marca<string, "VersionId">;
 /** La solicitud que reserva un número de comprobante: la clave de idempotencia de la reserva. */
 export type SolicitudId = Marca<string, "SolicitudId">;
-/** De dónde nace un comprobante (hoy una venta). Lo definirá quien tenga ese origen. */
+/** El identificador del origen de un comprobante, dentro de su tipo de origen. Lo da quien factura. */
 export type OrigenId = Marca<string, "OrigenId">;
 
 function crear<Id extends string>(nombre: string, valor: string): Id {

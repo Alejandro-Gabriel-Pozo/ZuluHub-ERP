@@ -12,12 +12,12 @@ import {
 import type { EmisorId, PuntoDeVentaId } from "./identificadores";
 
 /**
- * Venta → 1..N comprobantes (spec H7 §B.7, nivel 4): una venta genera UN comprobante por emisor
- * distinto, cada uno con su punto de venta. El redondeo se hace una vez POR COMPROBANTE (ADR-006);
- * el total a cobrar es la suma de sus totales y el cobro único se reparte entre ellos con
- * `prorratear` (pesos = totales). Todo puro: el orden de los planes es determinista.
+ * Renglones a facturar → 1..N comprobantes (spec H7 §B.7, nivel 4): quien factura da los renglones y
+ * se genera UN comprobante por emisor distinto, cada uno con su punto de venta. El redondeo se hace
+ * una vez POR COMPROBANTE (ADR-006); el total es la suma de sus totales y un cobro se puede repartir
+ * entre ellos con `prorratear` (pesos = totales). Todo puro: el orden de los planes es determinista.
  */
-export type LineaDeVenta = Readonly<{ posicion: number; emisorId: EmisorId }>;
+export type LineaAFacturar = Readonly<{ posicion: number; emisorId: EmisorId }>;
 
 export type PuntoDeVentaDeSucursal = Readonly<{ id: PuntoDeVentaId; emisorId: EmisorId }>;
 
@@ -36,7 +36,7 @@ export type ErrorDePlan =
 /**
  * Agrupa las líneas por emisor y asigna el punto de venta de cada grupo: el elegido, si es de ese
  * emisor; si no, el único habilitado del emisor en la sucursal. `habilitados` son los puntos de
- * venta habilitados de la sucursal de la venta.
+ * venta habilitados de la sucursal donde se factura.
  *
  * Orden de los errores: un punto de venta elegido que no está habilitado
  * (`PUNTO_DE_VENTA_ELEGIDO_NO_HABILITADO`, no se cambia en silencio por otro), y por cada plan, en
@@ -45,7 +45,7 @@ export type ErrorDePlan =
  * de programación y lanza.
  */
 export function planificarComprobantes(
-  lineas: readonly LineaDeVenta[],
+  lineas: readonly LineaAFacturar[],
   habilitados: readonly PuntoDeVentaDeSucursal[],
   elegido: PuntoDeVentaId | null,
 ): Resultado<readonly PlanDeComprobante[], ErrorDePlan> {
@@ -84,7 +84,7 @@ export function planificarComprobantes(
   return ok(planes);
 }
 
-export type LineaDeVentaCalculable = LineaDeVenta & Readonly<{ linea: LineaDeComprobante }>;
+export type LineaAFacturarCalculable = LineaAFacturar & Readonly<{ linea: LineaDeComprobante }>;
 
 export type ComprobanteDeVentaCalculado = Readonly<{
   plan: PlanDeComprobante;
@@ -97,7 +97,7 @@ export type ComprobanteDeVentaCalculado = Readonly<{
  */
 export function calcularComprobantesDeVenta(
   moneda: Moneda,
-  lineas: readonly LineaDeVentaCalculable[],
+  lineas: readonly LineaAFacturarCalculable[],
   planes: readonly PlanDeComprobante[],
   politica: Politica,
 ): readonly ComprobanteDeVentaCalculado[] {
@@ -112,7 +112,7 @@ export function calcularComprobantesDeVenta(
   });
 }
 
-/** El total de la venta: la suma de los totales de sus comprobantes (cada uno redondeado por separado). */
+/** El total de lo facturado: la suma de los totales de sus comprobantes (cada uno redondeado por separado). */
 export function totalDeLaVenta(
   moneda: Moneda,
   comprobantes: readonly ComprobanteDeVentaCalculado[],

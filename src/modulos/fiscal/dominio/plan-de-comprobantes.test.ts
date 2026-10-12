@@ -12,7 +12,7 @@ import {
   planificarComprobantes,
   repartirCobro,
   totalDeLaVenta,
-  type LineaDeVenta,
+  type LineaAFacturar,
 } from "./plan-de-comprobantes";
 
 const PV_1 = puntoDeVentaId("pv-1");
@@ -22,7 +22,7 @@ const delEmisor1 = { id: PV_1, emisorId: EMISOR_1 };
 const delEmisor2 = { id: PV_2, emisorId: EMISOR_2 };
 const otroDelEmisor1 = { id: PV_3, emisorId: EMISOR_1 };
 
-const lineas = (...emisores: [number, typeof EMISOR_1][]): LineaDeVenta[] =>
+const lineas = (...emisores: [number, typeof EMISOR_1][]): LineaAFacturar[] =>
   emisores.map(([posicion, emisorId]) => ({ posicion, emisorId }));
 
 describe("planificarComprobantes", () => {

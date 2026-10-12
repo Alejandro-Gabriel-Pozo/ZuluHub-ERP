@@ -2,6 +2,8 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   CATALOGO_DE_MODULOS,
   type CatalogoComercial,
+  type DefinicionDeAccion,
+  type EfectoDeAccion,
   type ClaveAccion,
   type ClaveCapacidad,
   type ClaveModulo,
@@ -11,7 +13,7 @@ import {
   REGLAS_DE_EMPRESA,
   type ReglasDeEmpresa,
 } from "../../src/capacidades/permisos/empresa";
-import { evaluarGuard } from "../../src/capacidades/permisos/guard";
+import { evaluarGuard, type MotivoDeRechazo } from "../../src/capacidades/permisos/guard";
 import {
   CATALOGO_DE_PLATAFORMA,
   PERMISOS_DE_PLATAFORMA,
@@ -306,5 +308,81 @@ describe("H5 P1: los tipos de plataforma salen de su catálogo y no se mezclan c
     const incompleto: CatalogoComercial = { plataforma: { acciones: {} } };
     expect(incompleto).toBeDefined();
     expect(Object.keys(CATALOGO_DE_PLATAFORMA)).toEqual(["plataforma"]);
+  });
+});
+
+describe("solo lectura (corrección 16): toda acción declara su efecto", () => {
+  it("los motivos del guard son exactamente estos cinco", () => {
+    expectTypeOf<MotivoDeRechazo>().toEqualTypeOf<
+      | "MODULO_EN_DESARROLLO"
+      | "MODULO_NO_ACTIVO"
+      | "MODULO_EN_SOLO_LECTURA"
+      | "SIN_CAPACIDAD"
+      | "SIN_PERMISO"
+    >();
+  });
+
+  it("los efectos posibles son exactamente tres", () => {
+    expectTypeOf<EfectoDeAccion>().toEqualTypeOf<"LECTURA" | "CREA_AMPLIA" | "COMPLETA_CIERRA">();
+  });
+
+  it("el efecto de cada acción real queda como literal, no como texto cualquiera", () => {
+    const empresa = CATALOGO_DE_MODULOS.administracion.acciones;
+    expectTypeOf(empresa["usuarios.invitar"].efecto).toEqualTypeOf<"CREA_AMPLIA">();
+    expectTypeOf(empresa["usuarios.apagar"].efecto).toEqualTypeOf<"COMPLETA_CIERRA">();
+    expectTypeOf(empresa["usuarios.ver"].efecto).toEqualTypeOf<"LECTURA">();
+    const plataforma = CATALOGO_DE_PLATAFORMA.plataforma.acciones;
+    expectTypeOf(plataforma["empresas.alta"].efecto).toEqualTypeOf<"CREA_AMPLIA">();
+    expectTypeOf(plataforma["empresas.suspender"].efecto).toEqualTypeOf<"COMPLETA_CIERRA">();
+    expectTypeOf(plataforma["empresas.ver"].efecto).toEqualTypeOf<"LECTURA">();
+  });
+
+  it("una acción sin efecto, o con un efecto inexistente, no compila", () => {
+    // @ts-expect-error falta `efecto`: una acción nueva no puede quedar sin clasificar
+    const sinEfecto: DefinicionDeAccion = { capacidad: null };
+    // @ts-expect-error "ESCRITURA" no es un efecto (el viejo booleano de lectura tampoco)
+    const inventado: DefinicionDeAccion = { capacidad: null, efecto: "ESCRITURA" };
+    // @ts-expect-error el booleano `lectura` que reemplaza `efecto` ya no existe
+    const booleano: DefinicionDeAccion = { capacidad: null, lectura: true };
+    expect([sinEfecto, inventado, booleano]).toHaveLength(3);
+  });
+
+  it("un módulo del catálogo con una acción sin efecto no compila", () => {
+    const base = {
+      estado: "disponible",
+      obligatorio: false,
+      requiere: [],
+      usaSiExiste: [],
+      datosRequeridos: [],
+      implementadoPor: [],
+    } as const;
+    const catalogo: CatalogoComercial = {
+      completo: { ...base, acciones: { "completo.ver": { capacidad: null, efecto: "LECTURA" } } },
+      incompleto: {
+        ...base,
+        // @ts-expect-error la acción "incompleto.ver" no declara su efecto
+        acciones: { "incompleto.ver": { capacidad: null } },
+      },
+    };
+    expect(Object.keys(catalogo)).toEqual(["completo", "incompleto"]);
+  });
+
+  it("el guard acepta como solo lectura únicamente módulos del catálogo", () => {
+    const noSeEjecuta = () => {
+      evaluarGuard(REGLAS_DE_EMPRESA, "usuarios.invitar", {
+        rol: "GERENTE",
+        modulosActivos: new Set<ClaveModulo>(["administracion"]),
+        modulosEnSoloLectura: new Set<ClaveModulo>(["administracion"]),
+        capacidadesDeSucursal: null,
+      });
+      evaluarGuard(REGLAS_DE_EMPRESA, "usuarios.invitar", {
+        rol: "GERENTE",
+        modulosActivos: new Set<ClaveModulo>(["administracion"]),
+        // @ts-expect-error "plataforma" no es un módulo de empresa
+        modulosEnSoloLectura: new Set<ClaveModuloDePlataforma>(["plataforma"]),
+        capacidadesDeSucursal: null,
+      });
+    };
+    expect(noSeEjecuta).toBeTypeOf("function");
   });
 });
