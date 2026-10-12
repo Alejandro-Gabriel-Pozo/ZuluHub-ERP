@@ -167,6 +167,64 @@ const reglas = [
     from: { path: "^apps/([^/]+)/" },
     to: { path: "^apps/", pathNot: "^apps/$1/" },
   },
+  {
+    name: "permisos-plataforma-sin-empresa",
+    severity: "error",
+    comment:
+      "Los catálogos de permisos son independientes (H5): el de plataforma no importa la matriz de roles de empresa.",
+    from: { path: "^src/capacidades/permisos/plataforma\\.ts$" },
+    to: { path: "^src/capacidades/permisos/empresa\\.ts$" },
+  },
+  {
+    name: "permisos-empresa-sin-plataforma",
+    severity: "error",
+    comment:
+      "Los catálogos de permisos son independientes (H5): el de empresa no importa la matriz de roles de plataforma.",
+    from: { path: "^src/capacidades/permisos/empresa\\.ts$" },
+    to: { path: "^src/capacidades/permisos/plataforma\\.ts$" },
+  },
+  {
+    name: "guard-generico-sin-catalogos",
+    severity: "error",
+    comment:
+      "El guard y exigirAccion son genéricos: reciben el catálogo y la matriz como parámetro y no importan ninguna matriz concreta (empresa ni plataforma).",
+    from: { path: "^src/capacidades/permisos/(guard|exigir)\\.ts$" },
+    to: { path: "^src/capacidades/permisos/(empresa|plataforma)\\.ts$" },
+  },
+  {
+    name: "modulos-sin-permisos-de-plataforma",
+    severity: "error",
+    comment:
+      "La matriz de permisos de plataforma es de la plataforma (H5): ni los módulos de negocio ni las consultas de grupo la importan.",
+    from: { path: "^src/(modulos|consultas-de-grupo)/" },
+    to: { path: "^src/capacidades/permisos/plataforma\\.ts$" },
+  },
+  {
+    name: "plataforma-sin-framework",
+    severity: "error",
+    comment: "El dominio y los casos de uso de plataforma no importan Zod, React ni Next (H5).",
+    from: { path: "^src/plataforma/(dominio|casos-de-uso)/" },
+    to: { path: FRAMEWORK },
+  },
+  {
+    name: "plataforma-dominio-sin-puertos-ni-exigir",
+    severity: "error",
+    comment:
+      "El dominio de plataforma es puro: no conoce puertos ni exigirAccion (que carga al actor de forma asíncrona). Eso es de los casos de uso.",
+    from: { path: "^src/plataforma/dominio/" },
+    to: { path: "^src/puertos/|^src/capacidades/permisos/exigir\\.ts$" },
+  },
+  {
+    name: "plataforma-dominio-sin-guard",
+    severity: "error",
+    comment:
+      "El dominio de plataforma no autoriza: el guard se pide en el caso de uso, dentro de la transacción (ADR-003). Única excepción: soporte/explicar, que repite la decisión del guard real a propósito, solo lectura.",
+    from: {
+      path: "^src/plataforma/dominio/",
+      pathNot: "^src/plataforma/dominio/soporte/explicar(\\.test)?\\.ts$",
+    },
+    to: { path: "^src/capacidades/permisos/guard\\.ts$" },
+  },
 ];
 
 module.exports = { reglas };

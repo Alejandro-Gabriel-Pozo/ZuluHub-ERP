@@ -2,14 +2,21 @@ import { describe, expect, it } from "vitest";
 import { CATALOGO_DE_MODULOS, type ClaveAccion, type ClaveModulo } from "../modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "./empresa";
 import { exigirAccion, type ActorCargado } from "./exigir";
-import { ROLES_DE_EMPRESA } from "./roles";
+import {
+  CATALOGO_DE_PLATAFORMA,
+  PERMISOS_DE_PLATAFORMA,
+  REGLAS_DE_PLATAFORMA,
+  ROLES_DE_PLATAFORMA,
+  type ClaveAccionDePlataforma,
+} from "./plataforma";
+import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "./roles";
 
 /**
  * `exigirAccion` es el primer paso de cada caso de uso: carga al actor UNA vez, arma los módulos
  * activos con lo que la empresa activó y deja decidir al guard. Sin base de datos ni puertos.
  */
 
-const cargaDe = (actor: ActorCargado) => {
+const cargaDe = <R extends string = RolDeEmpresa>(actor: ActorCargado<NoInfer<R>>) => {
   let llamadas = 0;
   const cargar = () => {
     llamadas += 1;
@@ -117,5 +124,61 @@ describe("exigirAccion", () => {
     expect(noSeEjecuta).toBeTypeOf("function");
     const claves: ClaveModulo[] = ["administracion"];
     expect(claves).toEqual(Object.keys(CATALOGO_DE_MODULOS));
+  });
+});
+
+describe("exigirAccion con las reglas de plataforma (H5 P1)", () => {
+  const todas = Object.keys(PERMISOS_DE_PLATAFORMA) as ClaveAccionDePlataforma[];
+
+  it("deja pasar al rol que la matriz incluye, y rechaza con SIN_PERMISO al que no", async () => {
+    for (const rol of ROLES_DE_PLATAFORMA) {
+      for (const accion of todas) {
+        const puede = (PERMISOS_DE_PLATAFORMA[accion] as readonly string[]).includes(rol);
+        const { cargar } = cargaDe<typeof rol>({ rol, modulosActivados: [] });
+        expect(
+          await exigirAccion(REGLAS_DE_PLATAFORMA, accion, cargar),
+          `${rol} ${accion}`,
+        ).toEqual(puede ? { ok: true, valor: null } : { ok: false, error: "SIN_PERMISO" });
+      }
+    }
+  });
+
+  it("sin rol (administrador inexistente o inactivo) da SIN_PERMISO en toda acción", async () => {
+    for (const accion of todas) {
+      const { cargar } = cargaDe<"ADMIN">({ rol: null, modulosActivados: [] });
+      expect(await exigirAccion(REGLAS_DE_PLATAFORMA, accion, cargar), accion).toEqual({
+        ok: false,
+        error: "SIN_PERMISO",
+      });
+    }
+  });
+
+  it("el módulo plataforma es obligatorio: está activo sin que nadie lo active", async () => {
+    const { cargar } = cargaDe<"ADMIN">({ rol: "ADMIN", modulosActivados: [] });
+    expect(await exigirAccion(REGLAS_DE_PLATAFORMA, "empresas.alta", cargar)).toEqual({
+      ok: true,
+      valor: null,
+    });
+    expect(Object.keys(CATALOGO_DE_PLATAFORMA)).toEqual(["plataforma"]);
+  });
+
+  it("una carga con un rol de empresa no compila, ni una acción de empresa", () => {
+    const delGerente = cargaDe({ rol: "GERENTE", modulosActivados: [] });
+    const noSeEjecuta = () => {
+      // @ts-expect-error "GERENTE" no es un rol de plataforma
+      void exigirAccion(REGLAS_DE_PLATAFORMA, "empresas.alta", delGerente.cargar);
+      // @ts-expect-error "usuarios.invitar" no es una acción de plataforma
+      void exigirAccion(REGLAS_DE_PLATAFORMA, "usuarios.invitar", delGerente.cargar);
+    };
+    expect(noSeEjecuta).toBeTypeOf("function");
+  });
+
+  it("una carga con un rol de plataforma no compila en el guard de empresa", () => {
+    const deAdmin = cargaDe<"ADMIN">({ rol: "ADMIN", modulosActivados: [] });
+    const noSeEjecuta = () => {
+      // @ts-expect-error "ADMIN" no es un rol de empresa
+      void exigirAccion(REGLAS_DE_EMPRESA, "usuarios.invitar", deAdmin.cargar);
+    };
+    expect(noSeEjecuta).toBeTypeOf("function");
   });
 });

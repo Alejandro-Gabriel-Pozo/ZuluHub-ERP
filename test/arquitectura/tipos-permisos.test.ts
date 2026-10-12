@@ -12,6 +12,16 @@ import {
   type ReglasDeEmpresa,
 } from "../../src/capacidades/permisos/empresa";
 import { evaluarGuard } from "../../src/capacidades/permisos/guard";
+import {
+  CATALOGO_DE_PLATAFORMA,
+  PERMISOS_DE_PLATAFORMA,
+  REGLAS_DE_PLATAFORMA,
+  type ClaveAccionDePlataforma,
+  type ClaveCapacidadDePlataforma,
+  type ClaveModuloDePlataforma,
+  type ReglasDePlataforma,
+  type RolDePlataforma,
+} from "../../src/capacidades/permisos/plataforma";
 import type { RolDeEmpresa } from "../../src/capacidades/permisos/roles";
 import type { ContextoDePlataforma, ContextoOperativo } from "../../src/contexto/contexto";
 import type { CargaDeAutorizacion } from "../../src/puertos/autorizacion";
@@ -168,5 +178,133 @@ describe("los casos de uso deben estar declarados", () => {
       return crearCasosDeUsoDeIdentidad({ transacciones, tokens });
     };
     expect(noSeEjecuta).toBeTypeOf("function");
+  });
+});
+
+describe("H5 P1: los tipos de plataforma salen de su catálogo y no se mezclan con los de empresa", () => {
+  it("las claves y los roles de plataforma son exactamente estos", () => {
+    expectTypeOf<ClaveModuloDePlataforma>().toEqualTypeOf<"plataforma">();
+    expectTypeOf<ClaveAccionDePlataforma>().toEqualTypeOf<
+      | "tenants.ver"
+      | "empresas.ver"
+      | "invitaciones.ver"
+      | "trabajos.ver_fallidos"
+      | "auditoria.ver"
+      | "configuracion.ver"
+      | "soporte.buscar_referencia"
+      | "soporte.explicar"
+      | "altas.reenviar_invitacion"
+      | "altas.revocar_invitacion"
+      | "empresas.alta"
+      | "altas.cancelar"
+      | "tenants.suspender"
+      | "tenants.reactivar"
+      | "empresas.suspender"
+      | "empresas.reactivar"
+      | "personas.suspender"
+      | "personas.reactivar"
+    >();
+    expectTypeOf<ClaveCapacidadDePlataforma>().toEqualTypeOf<never>();
+    expectTypeOf<RolDePlataforma>().toEqualTypeOf<"ADMIN" | "SOPORTE">();
+  });
+
+  it("el rol de plataforma y el de empresa son tipos distintos y disjuntos", () => {
+    expectTypeOf<RolDePlataforma>().not.toMatchTypeOf<RolDeEmpresa>();
+    expectTypeOf<RolDeEmpresa>().not.toMatchTypeOf<RolDePlataforma>();
+    expectTypeOf<Extract<RolDePlataforma, RolDeEmpresa>>().toEqualTypeOf<never>();
+    expectTypeOf<Extract<ClaveAccionDePlataforma, ClaveAccion>>().toEqualTypeOf<never>();
+  });
+
+  it("una acción de plataforma en el guard de empresa no compila, y una de empresa en el de plataforma tampoco", () => {
+    const datosDeEmpresa = {
+      rol: "GERENTE",
+      modulosActivos: new Set<ClaveModulo>(["administracion"]),
+      capacidadesDeSucursal: null,
+    } as const;
+    const datosDePlataforma = {
+      rol: "ADMIN",
+      modulosActivos: new Set<ClaveModuloDePlataforma>(["plataforma"]),
+      capacidadesDeSucursal: null,
+    } as const;
+    const noSeEjecuta = () => {
+      // @ts-expect-error "empresas.alta" es una acción de plataforma, no de empresa
+      evaluarGuard(REGLAS_DE_EMPRESA, "empresas.alta", datosDeEmpresa);
+      // @ts-expect-error "usuarios.invitar" es una acción de empresa, no de plataforma
+      evaluarGuard(REGLAS_DE_PLATAFORMA, "usuarios.invitar", datosDePlataforma);
+      // Las propias sí compilan.
+      evaluarGuard(REGLAS_DE_EMPRESA, "usuarios.invitar", datosDeEmpresa);
+      evaluarGuard(REGLAS_DE_PLATAFORMA, "empresas.alta", datosDePlataforma);
+    };
+    expect(noSeEjecuta).toBeTypeOf("function");
+  });
+
+  it("un rol de plataforma en el guard de empresa no compila, y uno de empresa en el de plataforma tampoco", () => {
+    const noSeEjecuta = () => {
+      evaluarGuard(REGLAS_DE_EMPRESA, "usuarios.invitar", {
+        // @ts-expect-error "SOPORTE" no es un rol de empresa
+        rol: "SOPORTE",
+        modulosActivos: new Set<ClaveModulo>(["administracion"]),
+        capacidadesDeSucursal: null,
+      });
+      evaluarGuard(REGLAS_DE_PLATAFORMA, "empresas.alta", {
+        // @ts-expect-error "GERENTE" no es un rol de plataforma
+        rol: "GERENTE",
+        modulosActivos: new Set<ClaveModuloDePlataforma>(["plataforma"]),
+        capacidadesDeSucursal: null,
+      });
+      evaluarGuard(REGLAS_DE_PLATAFORMA, "empresas.alta", {
+        // @ts-expect-error tampoco un texto cualquiera
+        rol: "SUPERUSUARIO",
+        modulosActivos: new Set<ClaveModuloDePlataforma>(["plataforma"]),
+        capacidadesDeSucursal: null,
+      });
+    };
+    expect(noSeEjecuta).toBeTypeOf("function");
+  });
+
+  it("los módulos activos de empresa no sirven para el guard de plataforma", () => {
+    const noSeEjecuta = () =>
+      evaluarGuard(REGLAS_DE_PLATAFORMA, "empresas.alta", {
+        rol: "ADMIN",
+        // @ts-expect-error "administracion" no es un módulo de plataforma
+        modulosActivos: new Set<ClaveModulo>(["administracion"]),
+        capacidadesDeSucursal: null,
+      });
+    expect(noSeEjecuta).toBeTypeOf("function");
+  });
+
+  it("una matriz de plataforma a la que le falta una acción, le sobra una o trae un rol inexistente, no compila", () => {
+    const matriz = (permisos: ReglasDePlataforma["permisos"]) => permisos;
+    const sinUnaAccion: Omit<typeof PERMISOS_DE_PLATAFORMA, "empresas.alta"> =
+      PERMISOS_DE_PLATAFORMA;
+    const faltaUna = () =>
+      // @ts-expect-error falta "empresas.alta"
+      matriz(sinUnaAccion);
+    const conAccionDeMas = () =>
+      matriz({
+        ...PERMISOS_DE_PLATAFORMA,
+        // @ts-expect-error esa acción no existe en el catálogo de plataforma
+        "empresas.borrar_todo": ["ADMIN"],
+      });
+    const conRolDeEmpresa = () =>
+      matriz({
+        ...PERMISOS_DE_PLATAFORMA,
+        // @ts-expect-error "GERENTE" no es un rol de plataforma
+        "empresas.alta": ["GERENTE"],
+      });
+    const conRolInexistente = () =>
+      matriz({
+        ...PERMISOS_DE_PLATAFORMA,
+        // @ts-expect-error "SUPERADMIN" no es un rol de plataforma
+        "empresas.alta": ["SUPERADMIN"],
+      });
+    expect([faltaUna, conAccionDeMas, conRolDeEmpresa, conRolInexistente]).toHaveLength(4);
+  });
+
+  it("un módulo de plataforma con una forma incompleta no compila", () => {
+    // @ts-expect-error al módulo le faltan estado, obligatorio, requiere, etc.
+    const incompleto: CatalogoComercial = { plataforma: { acciones: {} } };
+    expect(incompleto).toBeDefined();
+    expect(Object.keys(CATALOGO_DE_PLATAFORMA)).toEqual(["plataforma"]);
   });
 });
