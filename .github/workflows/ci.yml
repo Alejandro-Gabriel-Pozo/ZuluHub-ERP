@@ -208,6 +208,7 @@ jobs:
             pruebas: "src/primitivas/domicilio"
           - grupo: identidad (invitación)
             archivos: "src/modulos/identidad/dominio/invitacion.ts"
+            pruebas: "src/modulos/identidad"
           - grupo: identidad (resto)
             archivos: "src/modulos/identidad/dominio/**/*.ts,!src/modulos/identidad/dominio/invitacion.ts"
           - grupo: permisos y módulos
