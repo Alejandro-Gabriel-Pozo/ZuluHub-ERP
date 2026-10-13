@@ -704,6 +704,22 @@ describe("leerJpeg con bytes armados", () => {
     expect(con(largo(8 + 9))).toMatchObject({ ancho: 5 });
     expect(con(largo(8 + 9 + 1))).toBe("CABECERA_INVALIDA");
     expect(con(largo(8 + 9 - 1))).toBe("CABECERA_INVALIDA");
+    // Segmento bien armado por dentro pero con más (o menos) bytes de componentes que los declarados.
+    const conDatos = (componentes: number, bytesDeComponentes: number) =>
+      con(
+        segmentoJpeg(0xc0, [
+          8,
+          ...u16be(6),
+          ...u16be(5),
+          componentes,
+          ...new Array<number>(bytesDeComponentes).fill(1),
+        ]),
+      );
+    expect(conDatos(3, 9)).toMatchObject({ ancho: 5 });
+    expect(conDatos(3, 12)).toBe("CABECERA_INVALIDA");
+    expect(conDatos(4, 9)).toBe("CABECERA_INVALIDA");
+    expect(conDatos(1, 3)).toMatchObject({ ancho: 5 });
+    expect(conDatos(1, 6)).toBe("CABECERA_INVALIDA");
     // Un segmento SOF más corto que el mínimo no se lee fuera de su lugar.
     expect(con(segmentoJpeg(0xc0, [8, 0, 5, 0]))).toBe("CABECERA_INVALIDA");
     expect(con(segmentoJpeg(0xc0, [8, 0, 5, 0, 6]))).toBe("CABECERA_INVALIDA");
