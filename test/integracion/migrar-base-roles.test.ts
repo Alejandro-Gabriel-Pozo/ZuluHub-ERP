@@ -332,6 +332,24 @@ describe.skipIf(base === null)("migrar-base --preparar-roles", () => {
     expect(salida.error + salida.info + salida.secreto.join("\n")).not.toContain(clave);
   });
 
+  it("una falla inesperada al dar LOGIN se cuenta solo con el rol y el código: ni el texto original ni la contraseña", async () => {
+    const url = await nuevaBase();
+    const salida = await preparar(url, [], {
+      generarClave: () => {
+        throw new Error("MARCA_QUE_NO_DEBE_SALIR");
+      },
+    });
+    expect(salida.codigo).toBe(1);
+    expect(salida.error).toContain(
+      `no se pudo dar LOGIN al rol ${ROLES[0]?.rol} (SQLSTATE sin código); no se cambió ninguna contraseña`,
+    );
+    expect(salida.error + salida.info + salida.secreto.join("\n")).not.toContain(
+      "MARCA_QUE_NO_DEBE_SALIR",
+    );
+    expect(salida.secreto).toEqual([]);
+    expect(await puedeEntrar(ROLES[0]?.rol as string)).toBe(false);
+  });
+
   it("se niega a correr en GitHub Actions (el registro queda guardado) y no toca la base", async () => {
     const url = await nuevaBase();
     const salida = await preparar(url, [], { entorno: { GITHUB_ACTIONS: "true" } });
