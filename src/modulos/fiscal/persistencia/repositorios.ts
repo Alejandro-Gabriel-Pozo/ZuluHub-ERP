@@ -929,7 +929,7 @@ export function crearRepositorioDePuntosDeVenta(db: Kysely<FiscalDb>): Repositor
 }
 
 // =================================================================================================
-// Series de comprobantes (solo persistencia: reservar, cerrar y reconciliar son del tramo T6)
+// Series de comprobantes (solo persistencia: reservar, cerrar y reconciliar son casos de uso, T6)
 // =================================================================================================
 
 type FilaDeSerie = Readonly<{
@@ -1015,6 +1015,11 @@ export interface RepositorioDeSeries {
    * una transición que el dominio no hubiera permitido sale como error de la base.
    */
   guardar(serie: Serie): Promise<Serie | null>;
+  /**
+   * Las series de la empresa con una reserva vencida (`EN_CURSO` y `en_curso_hasta <= ahora`), las
+   * más viejas primero, hasta `limite`. Es lo que la reconciliación (T6) tiene que resolver.
+   */
+  enCursoVencidas(empresa: EmpresaId, ahora: Date, limite: number): Promise<Serie[]>;
   /**
    * ¿Alguna serie del emisor tiene `ultimo_numero > 0` o no está `LIBRE`? Es el contexto de
    * `corregirCuit` (`tieneNumerosUsados`). Sirve a la plataforma: las series enteras son legibles.
@@ -1113,6 +1118,19 @@ export function crearRepositorioDeSeries(db: Kysely<FiscalDb>): RepositorioDeSer
         .returning(COLUMNAS_DE_SERIE)
         .executeTakeFirst();
       return actualizada === undefined ? null : aSerie(actualizada);
+    },
+
+    async enCursoVencidas(empresa, ahora, limite) {
+      const filas = await seleccionar()
+        .where("empresa_id", "=", empresa)
+        .where("estado", "=", "EN_CURSO")
+        .where("en_curso_hasta", "<=", ahora)
+        .orderBy("en_curso_hasta")
+        .orderBy("punto_de_venta_id")
+        .orderBy("tipo_comprobante")
+        .limit(limite)
+        .execute();
+      return filas.map(aSerie);
     },
 
     hayNumerosUsadosDelEmisor: (empresa, emisor) => hayUsadas({ empresa, emisor }),

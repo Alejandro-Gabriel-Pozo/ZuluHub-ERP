@@ -204,3 +204,44 @@ export {
   type VersionDeRegla,
 } from "./persistencia/repositorios";
 export { errorFiscalDeRestriccion, traducirErroresDeFiscal } from "./persistencia/traducir";
+
+// H7 T6: casos de uso de numeración (reservar, cerrar y reconciliar), con el guard primero y el servicio
+// de emisión siempre fuera de la transacción. La composición los arma con `crearCasosDeUsoDeNumeracion`.
+export { DECLARACIONES as DECLARACIONES_DE_FISCAL } from "./casos-de-uso/declaraciones";
+export {
+  crearCasosDeUsoDeNumeracion,
+  type CasosDeUsoDeNumeracion,
+} from "./casos-de-uso/casos-de-uso";
+export type {
+  ContextoDeSistema,
+  DependenciasDeNumeracion,
+  TxDeNumeracion,
+} from "./casos-de-uso/contrato";
+export type {
+  EntradaDeReservarNumero,
+  ErrorAlReservarNumero,
+  SalidaDeReservarNumero,
+} from "./casos-de-uso/reservar-numero";
+export type {
+  EntradaDeCerrarReserva,
+  ErrorAlCerrarReserva,
+  SalidaDeCerrarReserva,
+} from "./casos-de-uso/cerrar-reserva";
+export type {
+  CierreSinConfirmar,
+  EntradaDeNumerarComprobante,
+  ErrorAlNumerarComprobante,
+  ReservaEnCurso,
+  SalidaDeNumerarComprobante,
+} from "./casos-de-uso/numerar-comprobante";
+export type {
+  EntradaDeReconciliarSerie,
+  ErrorAlReconciliarSerie,
+  SalidaDeReconciliarSerie,
+} from "./casos-de-uso/reconciliar-serie";
+export type {
+  EntradaDeReconciliarSeriesVencidas,
+  ErrorAlReconciliarSeriesVencidas,
+  ResultadoPorSerie,
+  SalidaDeReconciliarSeriesVencidas,
+} from "./casos-de-uso/reconciliar-series-vencidas";
