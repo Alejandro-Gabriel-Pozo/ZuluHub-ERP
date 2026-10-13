@@ -20,10 +20,6 @@ export const LETRA_BASE_POR_DEFECTO: LetraBase = "NORMAL";
 /** La única clave que la carta escribe en el navegador, y solo cuando el comensal toca «Letra». */
 export const CLAVE_DE_LETRA_GUARDADA = "zh-carta-letra";
 
-function esPasoDeLetra(valor: string): valor is PasoDeLetra {
-  return (PASOS_DE_LETRA as readonly string[]).includes(valor);
-}
-
 /** Estrecha un texto de la base a la perilla; lo desconocido es el valor por defecto, nunca un error. */
 export function leerLetraBase(valor: string | null | undefined): LetraBase {
   return (LETRAS_BASE as readonly (string | null | undefined)[]).includes(valor)
@@ -36,7 +32,5 @@ export function leerLetraBase(valor: string | null | undefined): LetraBase {
  * (almacenamiento vacío, valor roto) vuelve al paso normal: la carta se lee igual.
  */
 export function leerPasoDeLetra(guardado: string | null | undefined): PasoDeLetra {
-  return guardado !== null && guardado !== undefined && esPasoDeLetra(guardado)
-    ? guardado
-    : PASO_DE_LETRA_POR_DEFECTO;
+  return PASOS_DE_LETRA.find((paso) => paso === guardado) ?? PASO_DE_LETRA_POR_DEFECTO;
 }

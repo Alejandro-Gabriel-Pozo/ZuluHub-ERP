@@ -22,12 +22,10 @@ type Buscable = Readonly<{ nombre: string; descripcion: string | null }>;
  * normalizado contiene cada una de sus palabras, buscar el nombre exacto de un producto SIEMPRE lo encuentra.
  */
 export function coincideConLaBusqueda(producto: Buscable, consulta: string): boolean {
-  const palabras = normalizarParaBuscar(consulta)
-    .split(" ")
-    .filter((palabra) => palabra !== "");
-  if (palabras.length === 0) return true;
+  const buscada = normalizarParaBuscar(consulta);
+  // Una búsqueda vacía queda como [""] y todo texto la incluye: responde todo sin un caso aparte.
   const texto = normalizarParaBuscar(`${producto.nombre} ${producto.descripcion ?? ""}`);
-  return palabras.every((palabra) => texto.includes(palabra));
+  return buscada.split(" ").every((palabra) => texto.includes(palabra));
 }
 
 /**

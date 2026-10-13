@@ -62,6 +62,10 @@ describe("formatearImporte (es-AR, D3)", () => {
     expect(formatearImporte(ars(monto))).toBe(esperado);
   });
 
+  it("el texto de «a elección» es el del spec (§3.1)", () => {
+    expect(GUARNICION_A_ELECCION).toBe("Con guarnición a elección");
+  });
+
   it("sin parte decimal también anda", () => {
     expect(formatearImporte(ars("2500"))).toBe("$ 2.500");
   });
