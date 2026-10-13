@@ -22,6 +22,7 @@ del ingeniero. Las decisiones están en el repositorio `ZuluHub-docs` (ADR 001 a
 
 ## Infraestructura
 
-- Vercel: proyecto `zuluhub-erp` (equipo `alepozod`), región de funciones `gru1`. Las compilaciones están
-  salteadas hasta que exista `apps/`.
+- Vercel: proyecto `zuluhub-erp` (equipo `alepozod`), región de funciones `gru1`. Ya existe `apps/web` (Next,
+  npm workspaces) y el CI la compila sin secretos, pero el despliegue sigue deshabilitado
+  (`git.deploymentEnabled: false` en `vercel.json`) hasta que el dueño apruebe el primer despliegue.
 - Neon: proyecto `flat-flower-36030007`, rama `production`, región `aws-sa-east-1`, Postgres 18.
