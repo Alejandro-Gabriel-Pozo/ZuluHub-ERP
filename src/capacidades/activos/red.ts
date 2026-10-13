@@ -8,7 +8,9 @@
  *    (`0x7f.1`), entero (`2130706433`), abreviada (`127.1`), ceros a la izquierda, blancos: no son una
  *    IP para esta función, o sea `false`. Los motores de red las leen de formas distintas; acá no hay
  *    forma de que una dirección interna se disfrace de pública.
- *  - IPv6: solo `2000::/3` (unicast global) menos lo especial que contiene. Todo lo demás es `false`:
+ *  - IPv6: solo hexadecimal (una cola `a.b.c.d` no se lee: `dns.lookup` no la devuelve, y las que la usan
+ *    —mapeadas, compatibles, NAT64— están prohibidas igual) y solo `2000::/3` (unicast global) menos lo
+ *    especial que contiene. Todo lo demás es `false`:
  *    `::`, `::1`, mapeadas `::ffff:a.b.c.d` (con cualquier IPv4 adentro), compatibles, NAT64
  *    `64:ff9b::/96`, ULA `fc00::/7`, enlace local `fe80::/10`, multicast `ff00::/8`. Zonas (`%eth0`) y
  *    corchetes no se aceptan.
@@ -21,26 +23,26 @@ const LARGO_MAXIMO_DE_IP = 45;
 const DIGITOS = "0123456789";
 const HEXADECIMALES = "0123456789abcdef";
 
-const ip4 = (a: number, b: number, c: number, d: number): number =>
-  ((a * 256 + b) * 256 + c) * 256 + d;
+/** Los tres primeros octetos de un rango (el cuarto de todos es 0) → su primera dirección como entero. */
+const ip4 = (a: number, b: number, c: number): number => ((a * 256 + b) * 256 + c) * 256;
 
 /** Rangos IPv4 prohibidos: `[primera dirección, bits del prefijo]` (registro de direcciones de uso especial). */
 const PROHIBIDAS_V4: readonly (readonly [number, number])[] = [
-  [ip4(0, 0, 0, 0), 8], // «esta red», incluye 0.0.0.0
-  [ip4(10, 0, 0, 0), 8], // privada
-  [ip4(100, 64, 0, 0), 10], // CGNAT
-  [ip4(127, 0, 0, 0), 8], // loopback
-  [ip4(169, 254, 0, 0), 16], // enlace local, incluida la de metadatos 169.254.169.254
-  [ip4(172, 16, 0, 0), 12], // privada
-  [ip4(192, 0, 0, 0), 24], // asignaciones del IETF
-  [ip4(192, 0, 2, 0), 24], // documentación (TEST-NET-1)
-  [ip4(192, 88, 99, 0), 24], // relé 6to4 (en desuso)
-  [ip4(192, 168, 0, 0), 16], // privada
-  [ip4(198, 18, 0, 0), 15], // pruebas de rendimiento
-  [ip4(198, 51, 100, 0), 24], // documentación (TEST-NET-2)
-  [ip4(203, 0, 113, 0), 24], // documentación (TEST-NET-3)
-  [ip4(224, 0, 0, 0), 4], // multicast
-  [ip4(240, 0, 0, 0), 4], // reservada, incluye 255.255.255.255
+  [ip4(0, 0, 0), 8], // «esta red», incluye 0.0.0.0
+  [ip4(10, 0, 0), 8], // privada
+  [ip4(100, 64, 0), 10], // CGNAT
+  [ip4(127, 0, 0), 8], // loopback
+  [ip4(169, 254, 0), 16], // enlace local, incluida la de metadatos 169.254.169.254
+  [ip4(172, 16, 0), 12], // privada
+  [ip4(192, 0, 0), 24], // asignaciones del IETF
+  [ip4(192, 0, 2), 24], // documentación (TEST-NET-1)
+  [ip4(192, 88, 99), 24], // relé 6to4 (en desuso)
+  [ip4(192, 168, 0), 16], // privada
+  [ip4(198, 18, 0), 15], // pruebas de rendimiento
+  [ip4(198, 51, 100), 24], // documentación (TEST-NET-2)
+  [ip4(203, 0, 113), 24], // documentación (TEST-NET-3)
+  [ip4(224, 0, 0), 4], // multicast
+  [ip4(240, 0, 0), 4], // reservada, incluye 255.255.255.255
 ];
 
 /** Primeras palabras de 16 bits de un prefijo IPv6 → su valor de 128 bits. */
@@ -64,7 +66,7 @@ function enPrefijo6(valor: bigint, [base, bits]: readonly [bigint, number]): boo
 }
 
 function leerOcteto(texto: string): number | null {
-  if (texto.length < 1 || texto.length > 3) return null;
+  if (texto.length < 1) return null;
   if (texto.length > 1 && texto.startsWith("0")) return null;
   let valor = 0;
   for (const c of texto) {
@@ -99,21 +101,14 @@ function leerPalabra(texto: string): number | null {
   return valor;
 }
 
-/** Los grupos de un lado de `::`. Un `a.b.c.d` solo vale como último grupo del texto y cuenta por dos. */
-function leerLado(lado: string, admiteIPv4Final: boolean): number[] | null {
+/** Los grupos de un lado de `::`: cada uno de 1 a 4 hexadecimales (un `a.b.c.d` no es hexadecimal: `null`). */
+function leerLado(lado: string): number[] | null {
   if (lado === "") return [];
-  const grupos = lado.split(":");
   const palabras: number[] = [];
-  for (const [i, grupo] of grupos.entries()) {
-    if (grupo.includes(".")) {
-      const v4 = admiteIPv4Final && i === grupos.length - 1 ? leerIPv4(grupo) : null;
-      if (v4 === null) return null;
-      palabras.push(Math.floor(v4 / 65536), v4 % 65536);
-    } else {
-      const palabra = leerPalabra(grupo);
-      if (palabra === null) return null;
-      palabras.push(palabra);
-    }
+  for (const grupo of lado.split(":")) {
+    const palabra = leerPalabra(grupo);
+    if (palabra === null) return null;
+    palabras.push(palabra);
   }
   return palabras;
 }
@@ -123,13 +118,13 @@ function leerIPv6(texto: string): bigint | null {
   const corte = texto.indexOf("::");
   let palabras: number[];
   if (corte === -1) {
-    const todas = leerLado(texto, true);
+    const todas = leerLado(texto);
     if (todas === null || todas.length !== 8) return null;
     palabras = todas;
   } else {
     const derecha = texto.slice(corte + 2);
-    const antes = leerLado(texto.slice(0, corte), false);
-    const despues = derecha.includes("::") ? null : leerLado(derecha, true);
+    const antes = leerLado(texto.slice(0, corte));
+    const despues = derecha.includes("::") ? null : leerLado(derecha);
     if (antes === null || despues === null || antes.length + despues.length > 7) return null;
     palabras = [
       ...antes,

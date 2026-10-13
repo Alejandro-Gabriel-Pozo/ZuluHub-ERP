@@ -127,11 +127,12 @@ describe("direccionDeRedPermitida: propiedades", () => {
     );
   });
 
-  it("IPv6 en cualquier grafía válida: decide igual que el oráculo", () => {
+  it("IPv6 en cualquier grafía hexadecimal: decide igual que el oráculo; con cola a.b.c.d, nunca se permite", () => {
     fc.assert(
       fc.property(ipv6Cualquiera, fc.nat(4), (n, eleccion) => {
         const ip = grafiasV6(n, eleccion);
-        expect(direccionDeRedPermitida(ip), ip).toBe(oraculoPermitida(ip));
+        const conCola = eleccion % 5 === 3;
+        expect(direccionDeRedPermitida(ip), ip).toBe(conCola ? false : oraculoPermitida(ip));
       }),
     );
   });

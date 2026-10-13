@@ -104,9 +104,9 @@ function formadoPor(texto: string, alfabeto: string): boolean {
 
 /** Visibles de ASCII (0x21 a 0x7E) menos la barra invertida: fuera quedan controles, blancos, NUL, Unicode. */
 function soloAsciiVisible(texto: string): boolean {
-  for (let i = 0; i < texto.length; i++) {
-    const c = texto.charCodeAt(i);
-    if (c < 0x21 || c > 0x7e || c === 0x5c) return false;
+  for (const c of texto) {
+    const codigo = c.charCodeAt(0);
+    if (codigo < 0x21 || codigo > 0x7e || codigo === 0x5c) return false;
   }
   return true;
 }
@@ -134,14 +134,13 @@ function esVersion(version: unknown): boolean {
 function esIdPublico(id: unknown): boolean {
   return (
     typeof id === "string" &&
-    id.length >= 1 &&
     id.length <= CLOUDINARY.largoMaximoDelId &&
     id.split("/").every((tramo) => tramo.length >= 1 && formadoPor(tramo, ALFANUMERICOS))
   );
 }
 
 function esExtension(extension: unknown): boolean {
-  return typeof extension === "string" && EXTENSIONES.includes(extension);
+  return EXTENSIONES.some((permitida) => permitida === extension);
 }
 
 function sinComillas(texto: string): string {
@@ -151,11 +150,8 @@ function sinComillas(texto: string): string {
 
 /** Posición del primer `/`, `?` o `#` (donde termina el «quién»), o el largo si no hay. */
 function finDeAutoridad(texto: string): number {
-  for (let i = 0; i < texto.length; i++) {
-    const c = texto.charAt(i);
-    if (c === "/" || c === "?" || c === "#") return i;
-  }
-  return texto.length;
+  const posiciones = ["/", "?", "#"].map((c) => texto.indexOf(c)).filter((i) => i !== -1);
+  return Math.min(texto.length, ...posiciones);
 }
 
 function direccionCanonica(p: PartesDeDireccion): string {
@@ -217,7 +213,8 @@ export function leerDireccionPegada(texto: string): Resultado<DireccionLeida, Er
   const ultimo = tramosDelId.pop();
   if (ultimo === undefined) return err("ID_INVALIDO");
   const punto = ultimo.lastIndexOf(".");
-  const extension = punto === -1 ? "" : ultimo.slice(punto + 1).toLowerCase();
+  if (punto === -1) return err("EXTENSION_NO_PERMITIDA");
+  const extension = ultimo.slice(punto + 1).toLowerCase();
   if (!esExtension(extension)) return err("EXTENSION_NO_PERMITIDA");
   const idPublico = [...tramosDelId, ultimo.slice(0, punto)].join("/");
   if (!esIdPublico(idPublico)) return err("ID_INVALIDO");

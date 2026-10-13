@@ -87,6 +87,12 @@ describe("leerDireccionPegada: lo que se acepta (golden de normalización)", () 
       false,
     ],
     [
+      "una cuenta que se llama como una versión",
+      "https://res.cloudinary.com/v1/image/upload/v2/flan.jpg",
+      "https://res.cloudinary.com/v1/image/upload/v2/flan.jpg",
+      false,
+    ],
+    [
       "una carpeta que parece versión: manda la primera",
       "https://res.cloudinary.com/mi-cafe/image/upload/w_5/v5/v1700000000/flan.jpg",
       "https://res.cloudinary.com/mi-cafe/image/upload/v5/v1700000000/flan.jpg",
@@ -200,6 +206,22 @@ const CORPUS: readonly (readonly [string, string, ErrorDeDireccion])[] = [
   ["enlace en markdown", `![foto](${BASE})`, "ESQUEMA_NO_PERMITIDO"],
   ["dos direcciones juntas", `${BASE}${BASE}`, "RUTA_INVALIDA"],
   ["dos direcciones en líneas", `${BASE}\n${BASE}`, "CARACTER_NO_PERMITIDO"],
+
+  // Comillas sin par
+  ["comilla doble solo al principio", `"${BASE}`, "ESQUEMA_NO_PERMITIDO"],
+  ["comilla simple solo al principio", `'${BASE}`, "ESQUEMA_NO_PERMITIDO"],
+  ["comilla tipográfica doble solo al principio", `\u201C${BASE}`, "CARACTER_NO_PERMITIDO"],
+  ["comilla tipográfica simple solo al principio", `\u2018${BASE}`, "CARACTER_NO_PERMITIDO"],
+  ["comillas que no hacen par", `"${BASE}'`, "ESQUEMA_NO_PERMITIDO"],
+  ["comillas tipográficas cruzadas", `\u201C${BASE}\u2019`, "CARACTER_NO_PERMITIDO"],
+  ["comilla tipográfica abierta dos veces", `\u201C${BASE}\u201C`, "CARACTER_NO_PERMITIDO"],
+  ["comilla solo al final", `${BASE}"`, "EXTENSION_NO_PERMITIDA"],
+  ["comilla doble por dentro", `"${BASE}"x"`, "EXTENSION_NO_PERMITIDA"],
+  [
+    "termina en la palabra undefined",
+    "https://res.cloudinary.com/mi-cafe/image/upload/v1/undefined",
+    "EXTENSION_NO_PERMITIDA",
+  ],
 
   // Caracteres
   ["tab adentro", BASE.replace("flan", "fl\tan"), "CARACTER_NO_PERMITIDO"],
@@ -756,6 +778,37 @@ const CORPUS: readonly (readonly [string, string, ErrorDeDireccion])[] = [
   ],
 
   // Versión, id y extensión
+  ["sin nada después de upload", "https://res.cloudinary.com/mi-cafe/image/upload", "SIN_VERSION"],
+  [
+    "cuenta que parece versión y sin versión",
+    "https://res.cloudinary.com/v1/image/upload/flan.jpg",
+    "SIN_VERSION",
+  ],
+  [
+    "id con tilde de la eñe en ASCII (~)",
+    "https://res.cloudinary.com/mi-cafe/image/upload/v1/fl~an.jpg",
+    "ID_INVALIDO",
+  ],
+  [
+    "id con signo de exclamación",
+    "https://res.cloudinary.com/mi-cafe/image/upload/v1/fl!an.jpg",
+    "ID_INVALIDO",
+  ],
+  [
+    "el id es solo la extensión jpg",
+    "https://res.cloudinary.com/mi-cafe/image/upload/v1/jpg",
+    "EXTENSION_NO_PERMITIDA",
+  ],
+  [
+    "el id es solo la extensión png",
+    "https://res.cloudinary.com/mi-cafe/image/upload/v1/png",
+    "EXTENSION_NO_PERMITIDA",
+  ],
+  [
+    "el id es solo la extensión webp",
+    "https://res.cloudinary.com/mi-cafe/image/upload/v1/webp",
+    "EXTENSION_NO_PERMITIDA",
+  ],
   ["sin versión", "https://res.cloudinary.com/mi-cafe/image/upload/flan.jpg", "SIN_VERSION"],
   [
     "sin versión y con carpeta",
@@ -966,6 +1019,10 @@ describe("armarDestino", () => {
       { cuenta: "a".repeat(65) },
       { cuenta: "mi-cafe@evil.com" },
       { cuenta: 7 },
+      { cuenta: ["a"] },
+      { version: ["1"] },
+      { idPublico: ["a"] },
+      { extension: ["jpg"] },
       { idPublico: "" },
       { idPublico: "../etc/passwd" },
       { idPublico: "a/../b" },
@@ -996,7 +1053,7 @@ describe("armarDestino", () => {
     for (const mala of malas) {
       const partes = { ...PARTES, ...mala } as PartesDeDireccion;
       expect(
-        armarDestino(partes, 480, [PARTES.cuenta, String(mala.cuenta)]),
+        armarDestino(partes, 480, [PARTES.cuenta, mala.cuenta as string]),
         JSON.stringify(mala),
       ).toEqual({
         ok: false,
