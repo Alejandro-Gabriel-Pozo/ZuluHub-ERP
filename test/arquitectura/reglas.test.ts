@@ -1002,10 +1002,15 @@ function archivosDeClienteSinSufijo(raiz: string): string[] {
 function archivosDeServidorSinServerOnly(raiz: string): string[] {
   return archivosDeApps(raiz)
     .filter((f) => /^[^/]+\/servidor\//.test(f))
-    .filter(
-      (f) => readFileSync(join(raiz, "apps", f), "utf8").split("\n")[0] !== 'import "server-only";',
-    )
+    .filter((f) => primeraLineaDeCodigo(join(raiz, "apps", f)) !== 'import "server-only";')
     .map((f) => `apps/${f}`);
+}
+
+// Stryker antepone `// @ts-nocheck` a los archivos de su sandbox: esa línea no cuenta como código.
+function primeraLineaDeCodigo(ruta: string): string | undefined {
+  return readFileSync(ruta, "utf8")
+    .split("\n")
+    .find((linea) => linea !== "// @ts-nocheck");
 }
 
 describe("convenciones de apps: use client con sufijo y server-only en el servidor", () => {
