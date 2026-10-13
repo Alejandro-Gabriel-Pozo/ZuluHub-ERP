@@ -30,19 +30,26 @@ export {
   type ErrorDeEmisor,
 } from "./dominio/emisor";
 export {
+  certificadoId,
+  comprobanteId,
   domicilioId,
   emisorId,
+  intentoId,
   origenId,
   puntoDeVentaId,
   solicitudId,
   versionId,
+  type CertificadoId,
+  type ComprobanteId,
   type DomicilioId,
   type EmisorId,
+  type IntentoId,
   type OrigenId,
   type PuntoDeVentaId,
   type SolicitudId,
   type VersionId,
 } from "./dominio/identificadores";
+export { AMBIENTES, type Ambiente } from "./dominio/comprobante-nuevo";
 export {
   confirmarVersion,
   estadoDeVersion,
@@ -193,6 +200,7 @@ export {
   type BorradorDeReglaDeEmisor,
   type DomicilioGuardado,
   type ErrorDeAlta,
+  type PuntoDeVentaGuardado,
   type RepositorioDeDatosFiscales,
   type RepositorioDeDomicilios,
   type RepositorioDeEmisores,
@@ -200,9 +208,53 @@ export {
   type RepositorioDeReglasDeEmisor,
   type RepositorioDeSeries,
   type ResultadoDeAlta,
+  type SerieGuardada,
   type VersionDeDatosFiscales,
   type VersionDeRegla,
 } from "./persistencia/repositorios";
+// H7 facturación F3: comprobantes, intentos contra ARCA y certificados (0009).
+export {
+  crearRepositorioDeComprobantes,
+  type AltaDeComprobante,
+  type AsociadoGuardado,
+  type CambioDeComprobante,
+  type ComprobanteGuardado,
+  type DatosFiscalesDeLaFoto,
+  type EmisorCongelado,
+  type ErrorDeAltaDeComprobante,
+  type ImportesGuardados,
+  type RenglonGuardado,
+  type RepositorioDeComprobantes,
+  type ResueltoPor,
+} from "./persistencia/repositorio-de-comprobantes";
+export {
+  CLASES_DE_MENSAJE,
+  DESENLACES_DE_INTENTO,
+  OPERACIONES_DE_INTENTO,
+  crearRepositorioDeIntentos,
+  type ClaseDeMensaje,
+  type DesenlaceDeIntento,
+  type IntentoDeArca,
+  type MensajeDeIntento,
+  type OperacionDeIntento,
+  type RepositorioDeIntentos,
+} from "./persistencia/repositorio-de-intentos";
+export {
+  ESTADOS_DE_CERTIFICADO,
+  crearRepositorioDeAccesos,
+  crearRepositorioDeCertificados,
+  type AccesoGuardado,
+  type ActivacionDeCertificado,
+  type CargaDeCertificado,
+  type CertificadoGuardado,
+  type CredencialDeAcceso,
+  type EstadoDeCertificado,
+  type PedidoDeCertificado,
+  type RepositorioDeAccesos,
+  type RepositorioDeCertificados,
+  type ServicioDeArca,
+  type TextoCifrado,
+} from "./persistencia/repositorio-de-certificados";
 export { errorFiscalDeRestriccion, traducirErroresDeFiscal } from "./persistencia/traducir";
 
 // H7 T6: casos de uso de numeración (reservar, cerrar y reconciliar), con el guard primero y el servicio
