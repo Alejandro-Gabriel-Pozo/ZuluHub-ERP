@@ -31,11 +31,8 @@ export type DecisionDePuerta = Readonly<{
 
 /** Minúsculas, sin puerto (también el de una IPv6 entre corchetes) y sin punto final. */
 export function normalizarHost(crudo: string | null | undefined): string {
-  const host = (crudo ?? "").trim().toLowerCase();
-  const sinPuerto = host.startsWith("[")
-    ? host.slice(0, host.indexOf("]") + 1)
-    : host.replace(/:\d*$/, "");
-  return sinPuerto.replace(/\.+$/, "");
+  // Una IPv6 sin puerto termina en `]`, así que `:\d*$` solo puede ser un puerto.
+  return (crudo ?? "").trim().toLowerCase().replace(/:\d*$/, "").replace(/\.+$/, "");
 }
 
 /** Copia los encabezados sin ninguno interno. No modifica el original. */
