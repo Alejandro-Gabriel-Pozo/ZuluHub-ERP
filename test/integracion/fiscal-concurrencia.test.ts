@@ -223,6 +223,14 @@ describe.skipIf(base === null)("fiscal: concurrencia de lo que impone la 0006", 
     /**
      * Reconcilia una reserva ABANDONADA (el trabajador «se cayó» o no supo el resultado): se pasa
      * como `ahora` el fin del plazo, así que el plazo no depende del reloj de la prueba.
+     *
+     * Lo que devuelve `desfase`: el veredicto fue BLOQUEADA y la base lo aceptó. Un veredicto NO se
+     * puede juzgar adentro de la transacción: bajo SERIALIZABLE la serie se lee de la instantánea y
+     * la emisión falsa es memoria viva, así que otro trabajador pudo avanzar entre las dos lecturas
+     * (la instantánea dice «44 en curso» y la emisión ya autorizó 45) y el veredicto sale falso.
+     * Una decisión vieja la descarta la base misma: el UPDATE sobre una fila que cambió aborta con
+     * 40001 y el adaptador relee todo. Por eso se ESCRIBE el bloqueo, como haría el sistema real, y
+     * recién lo que la base confirma es un desfase de verdad.
      */
     const reconciliar = (
       e: Escena,
@@ -232,13 +240,24 @@ describe.skipIf(base === null)("fiscal: concurrencia de lo que impone la 0006", 
     ) =>
       entorno.ejecutar(
         { contexto: contexto(e), aislamiento },
-        async ({ db }): Promise<Resultado<string | null, ErrorDeNumeracion>> => {
+        async ({
+          db,
+        }): Promise<
+          Resultado<{ solicitud: string; desfase: boolean } | null, ErrorDeNumeracion>
+        > => {
           const serie = await leer(e, db, aislamiento);
           if (serie.estado !== "EN_CURSO" || !abandonadas.has(serie.solicitud)) return ok(null);
           const r = reconciliarSerie(serie, emision.ultimoAutorizado(), serie.enCursoHasta);
           if (!r.ok) return err(r.error);
-          if (r.valor.serie.estado === "BLOQUEADA")
-            throw new Error("la serie quedó bloqueada: desfase inesperado");
+          if (r.valor.serie.estado === "BLOQUEADA") {
+            await sql`update serie_comprobante
+                         set estado = 'BLOQUEADA', motivo_bloqueo = ${r.valor.serie.motivoBloqueo},
+                             numero_en_curso = null, solicitud_en_curso = null, en_curso_hasta = null
+                       where punto_de_venta_id = ${e.pv} and tipo_comprobante = 'FACTURA_B'`.execute(
+              db,
+            );
+            return ok({ solicitud: serie.solicitud, desfase: true });
+          }
           await sql`update serie_comprobante
                        set estado = 'LIBRE', ultimo_numero = ${r.valor.serie.ultimoNumero.toString()},
                            numero_en_curso = null, solicitud_en_curso = null, en_curso_hasta = null
@@ -248,7 +267,7 @@ describe.skipIf(base === null)("fiscal: concurrencia de lo que impone la 0006", 
           if (r.valor.resolucion === "CERRADA_COMO_AUTORIZADA") {
             await auditar(e, db, r.valor.serie.ultimoNumero);
           }
-          return ok(serie.solicitud);
+          return ok({ solicitud: serie.solicitud, desfase: false });
         },
       );
 
@@ -333,7 +352,12 @@ describe.skipIf(base === null)("fiscal: concurrencia de lo que impone la 0006", 
         if (pendientes.size === 0) return;
         const r = await reconciliar(e, emision, abandonadas, aislamiento);
         if (r.ok) {
-          if (r.valor !== null) pendientes.delete(r.valor);
+          if (r.valor?.desfase === true) {
+            throw new Error(
+              `la serie quedó BLOQUEADA por un desfase de verdad (${r.valor.solicitud})`,
+            );
+          }
+          if (r.valor !== null) pendientes.delete(r.valor.solicitud);
         } else if (!esConcurrenciaAgotada(r.error)) {
           throw new Error(`reconciliar: ${texto(r.error)}`);
         }
@@ -673,7 +697,7 @@ describe.skipIf(base === null)("fiscal: concurrencia de lo que impone la 0006", 
               expect(r1.ok, r1.ok ? "" : r1.mensaje).toBe(true);
               // La otra se cruza: espera a que la primera termine (bloqueo por CUIT) o ve su conflicto.
               const r2 = b(s2);
-              const esperaba = await esperarBloqueo(dueno, s2.pid, 1500);
+              const esperaba = await esperarBloqueo(dueno, s2.pid);
               expect(esperaba, "la segunda alta espera el bloqueo del CUIT").toBe(true);
               const c1 = await s1.confirmar();
               if (c1.ok) confirmaciones += 1;

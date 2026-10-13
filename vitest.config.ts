@@ -5,5 +5,6 @@ export default defineConfig({
     include: ["src/**/*.test.ts", "test/**/*.test.ts"],
     environment: "node",
     globalSetup: ["./test/integracion/global.ts"],
+    setupFiles: ["./test/integracion/topes.ts"],
   },
 });
