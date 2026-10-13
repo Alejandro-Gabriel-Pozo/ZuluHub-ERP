@@ -252,7 +252,7 @@ describe("direccionDeRedPermitida: formas ambiguas o mal formadas (todas false)"
     expect(direccionDeRedPermitida(texto)).toBe(false);
   });
 
-  it("el largo máximo es el de la IPv6 hexadecimal más larga (39): esa se lee y se permite", () => {
+  it("la IPv6 hexadecimal más larga (39 caracteres) se lee y se permite; una con grupos de más, no", () => {
     const publica39 = "2606:4700:0000:0000:0000:0000:0000:1111";
     expect(publica39).toHaveLength(39);
     expect(direccionDeRedPermitida(publica39)).toBe(true);

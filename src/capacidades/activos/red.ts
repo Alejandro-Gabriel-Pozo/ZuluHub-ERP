@@ -8,17 +8,15 @@
  *    (`0x7f.1`), entero (`2130706433`), abreviada (`127.1`), ceros a la izquierda, blancos: no son una
  *    IP para esta función, o sea `false`. Los motores de red las leen de formas distintas; acá no hay
  *    forma de que una dirección interna se disfrace de pública.
- *  - IPv6: solo hexadecimal (una cola `a.b.c.d` no se lee: `dns.lookup` no la devuelve, y las que la usan
- *    —mapeadas, compatibles, NAT64— están prohibidas igual) y solo `2000::/3` (unicast global) menos lo
+ *  - IPv6: solo hexadecimal (una cola `a.b.c.d` no se lee: las únicas que la usan —mapeadas,
+ *    compatibles, NAT64— están prohibidas igual) y solo `2000::/3` (unicast global) menos lo
  *    especial que contiene. Todo lo demás es `false`:
  *    `::`, `::1`, mapeadas `::ffff:a.b.c.d` (con cualquier IPv4 adentro), compatibles, NAT64
  *    `64:ff9b::/96`, ULA `fc00::/7`, enlace local `fe80::/10`, multicast `ff00::/8`. Zonas (`%eth0`) y
  *    corchetes no se aceptan.
- *  - Lo que no se puede clasificar con certeza es `false`.
+ *  - Lo que no se puede clasificar con certeza es `false`. Todo es lineal en el largo del texto (sin
+ *    expresiones regulares): un texto enorme se rechaza en el primer carácter que no encaja.
  */
-
-/** IPv6 más larga en texto hexadecimal: ocho grupos de cuatro y siete dos puntos. */
-const LARGO_MAXIMO_DE_IP = 39;
 
 const DIGITOS = "0123456789";
 const HEXADECIMALES = "0123456789abcdef";
@@ -140,7 +138,7 @@ function leerIPv6(texto: string): bigint | null {
  * Nunca lanza, para cualquier texto.
  */
 export function direccionDeRedPermitida(ip: string): boolean {
-  if (typeof ip !== "string" || ip.length > LARGO_MAXIMO_DE_IP) return false;
+  if (typeof ip !== "string") return false;
   const v4 = leerIPv4(ip);
   if (v4 !== null) {
     return !PROHIBIDAS_V4.some(
