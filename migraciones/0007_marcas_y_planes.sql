@@ -32,9 +32,11 @@
 -- Decisiones de diseño (todas probadas por tests; los números son de esta migración):
 --
 --  P1. La marca es presentación y puerta, no frontera de aislamiento: el aislamiento sigue siendo por
---      empresa. `zuluhub_publico` lee solo columnas públicas de marcas ACTIVAS, dominios activos y
---      versiones de marca confirmadas y ya vigentes (jamás módulos iniciales, plan por defecto, motivo
---      ni quién). La única tabla del esquema que ese rol puede leer sin contexto son estas tres.
+--      empresa. `zuluhub_publico` lee solo columnas públicas de marcas ACTIVAS, dominios ACTIVOS (por la
+--      vista `resolucion_de_host`) y versiones de marca confirmadas y ya vigentes (jamás módulos
+--      iniciales, plan por defecto, motivo ni quién). Ni `empresa` ni `tenant` se le abren: la marca de
+--      un host de empresa viaja DENTRO de la fila del dominio. Las únicas relaciones que ese rol puede
+--      leer sin contexto son estas tres tablas y la vista.
 --  P2. Las funciones de validación repiten en SQL lo que el dominio valida (`normalizarHost`,
 --      `validarTextoVisible`, `validarTema`, `validarVocabulario`, `validarVersionDePlan`) como
 --      defensa en profundidad: un test compara cada una con su par de TypeScript sobre cientos de
@@ -357,25 +359,58 @@ CREATE TABLE marca (
 -- A lo sumo una marca principal en toda la instalación.
 CREATE UNIQUE INDEX marca_principal_uk ON marca ((true)) WHERE es_principal;
 
--- Dominios de la marca: el nombre de host EXACTO por el que se entra (§B.2). Uno es el canónico (los
--- enlaces de los mails). Un dominio retirado no se vuelve a activar: se agrega otro.
-CREATE TABLE dominio_de_marca (
-  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  marca_id       uuid NOT NULL REFERENCES marca (id),
-  host           text NOT NULL CONSTRAINT dominio_de_marca_host_ck CHECK (host_valido(host)),
-  es_canonico    boolean NOT NULL DEFAULT false,
-  activo         boolean NOT NULL DEFAULT true,
-  motivo         text,
-  creado_por     text NOT NULL CONSTRAINT dominio_de_marca_creado_por_ck CHECK (creado_por <> ''),
-  creado_en      timestamptz NOT NULL DEFAULT now(),
-  actualizado_en timestamptz NOT NULL DEFAULT now(),
-  version        integer NOT NULL DEFAULT 1,
-  CONSTRAINT dominio_de_marca_retiro_ck CHECK (activo OR (motivo IS NOT NULL AND btrim(motivo) <> ''))
+-- Dominios por superficie (decisión del dueño, 2026-10-12): el nombre de host EXACTO por el que se entra
+-- (§B.2) y qué se sirve ahí. Un host tiene UNA superficie y UN dueño: una marca (host compartido, p. ej.
+-- la carta de muchas empresas) o una empresa (host dedicado, p. ej. la carta de una sola). La resolución
+-- es host -> (dueño, superficie): quien sirve una superficie solo acepta un host de ESA superficie; cualquier
+-- otra combinación es la página neutra (esa comparación es de la puerta; la base garantiza que un host
+-- tiene una sola superficie y un solo dueño).
+--   * `duenio_marca_id` / `duenio_empresa_id`: exactamente uno de los dos.
+--   * `marca_id`: la marca por cuya puerta se entra. En un host de marca es la marca dueña; en un host de
+--     empresa la fija el disparador desde el tenant de la empresa (el tenant no cambia de marca). Está
+--     acá para que el rol público resuelva el host sin leer `empresa` ni `tenant`.
+--   * `titular`: quién es el titular del dominio en el registrador (el cliente, o el operador cuando es
+--     del dueño de ZuluHub). ZuluHub no guarda credenciales del registrador ni del DNS.
+--   * Estados: PENDIENTE_VERIFICACION (registrado; sirve la página neutra) -> VERIFICADO (la
+--     comprobación dio bien) -> ACTIVO (sirve su superficie). Si la comprobación falla después, vuelve a
+--     PENDIENTE_VERIFICACION (página neutra, sin tocar datos). RETIRADO es terminal y se puede ir ahí
+--     desde cualquier estado, con motivo. Solo se activa con `verificado_en`.
+--   * `es_canonico`: el host que arma los enlaces de la marca para esa superficie (el host APP en los
+--     mails de invitación); solo en hosts de marca, a lo sumo uno vigente por (marca, superficie).
+-- Un dominio retirado no se vuelve a activar: se registra otro. El host es único mientras no esté
+-- retirado (uno retirado puede registrarse de nuevo, por ejemplo cuando se va el cliente y otro lo toma).
+CREATE TABLE dominio (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  host             text NOT NULL CONSTRAINT dominio_host_ck CHECK (host_valido(host)),
+  superficie       text NOT NULL CONSTRAINT dominio_superficie_ck
+                   CHECK (superficie IN ('APP', 'CARTA', 'LANDING', 'CONSOLA')),
+  duenio_marca_id   uuid REFERENCES marca (id),
+  duenio_empresa_id uuid REFERENCES empresa (id),
+  marca_id         uuid NOT NULL REFERENCES marca (id),
+  titular          text NOT NULL CONSTRAINT dominio_titular_ck CHECK (titular IN ('CLIENTE', 'OPERADOR')),
+  es_canonico      boolean NOT NULL DEFAULT false,
+  estado           text NOT NULL DEFAULT 'PENDIENTE_VERIFICACION' CONSTRAINT dominio_estado_ck
+                   CHECK (estado IN ('PENDIENTE_VERIFICACION', 'VERIFICADO', 'ACTIVO', 'RETIRADO')),
+  verificado_en    timestamptz,
+  motivo           text,
+  registrado_por   text NOT NULL CONSTRAINT dominio_registrado_por_ck CHECK (registrado_por <> ''),
+  creado_en        timestamptz NOT NULL DEFAULT now(),
+  actualizado_en   timestamptz NOT NULL DEFAULT now(),
+  version          integer NOT NULL DEFAULT 1,
+  CONSTRAINT dominio_duenio_ck CHECK ((duenio_marca_id IS NOT NULL) <> (duenio_empresa_id IS NOT NULL)),
+  CONSTRAINT dominio_marca_duena_ck CHECK (duenio_marca_id IS NULL OR marca_id = duenio_marca_id),
+  -- Una empresa tiene su aplicación o su carta; la landing y la consola son de una marca.
+  CONSTRAINT dominio_superficie_duenio_ck CHECK (duenio_empresa_id IS NULL OR superficie IN ('APP', 'CARTA')),
+  CONSTRAINT dominio_canonico_ck CHECK (NOT es_canonico OR duenio_marca_id IS NOT NULL),
+  CONSTRAINT dominio_verificacion_ck CHECK (
+    (estado = 'PENDIENTE_VERIFICACION' AND verificado_en IS NULL)
+    OR (estado IN ('VERIFICADO', 'ACTIVO') AND verificado_en IS NOT NULL)
+    OR (estado = 'RETIRADO' AND motivo IS NOT NULL AND btrim(motivo) <> '')
+  )
 );
--- El host es único solo mientras está activo (uno retirado puede registrarse de nuevo), y cada marca
--- tiene a lo sumo un dominio canónico activo.
-CREATE UNIQUE INDEX dominio_de_marca_host_uk ON dominio_de_marca (host) WHERE activo;
-CREATE UNIQUE INDEX dominio_de_marca_canonico_uk ON dominio_de_marca (marca_id) WHERE activo AND es_canonico;
+CREATE UNIQUE INDEX dominio_host_uk ON dominio (host) WHERE estado <> 'RETIRADO';
+CREATE UNIQUE INDEX dominio_canonico_uk ON dominio (duenio_marca_id, superficie)
+  WHERE es_canonico AND estado <> 'RETIRADO';
 
 -- Plan: un nombre comercial para un preset de perillas. Global de la fábrica, sin precio.
 CREATE TABLE plan (
@@ -525,6 +560,19 @@ CREATE TABLE modulo_de_empresa (
   CONSTRAINT modulo_de_empresa_pkey PRIMARY KEY (empresa_id, modulo)
 );
 
+-- La resolución de la puerta: host -> (dueño, superficie, marca). Es lo único de `dominio` que el rol
+-- público necesita, y la única forma de leerlo sin contexto: solo dominios ACTIVOS de marcas ACTIVAS, y
+-- de cada uno solo el host, su superficie, el dueño (marca o empresa, como identificadores opacos) y la
+-- marca de entrada. Nunca el titular, el motivo, quién lo registró ni dato alguno de una empresa o de un
+-- tenant. `security_invoker`: se ejecuta con los privilegios y las políticas de quien la consulta, así que
+-- no abre nada que ese rol no pueda leer ya en las tablas. Quien sirve una superficie consulta
+-- `WHERE host = $1 AND superficie = $2`: el mismo host en otra superficie no devuelve nada.
+CREATE VIEW resolucion_de_host WITH (security_invoker = true) AS
+  SELECT d.host, d.superficie, d.duenio_marca_id, d.duenio_empresa_id, d.marca_id
+    FROM dominio d
+    JOIN marca m ON m.id = d.marca_id   -- la política pública de `marca` deja pasar solo las ACTIVAS
+   WHERE d.estado = 'ACTIVO';
+
 -- ---------------------------------------------------------------------------------------------
 -- Disparadores: invariantes que la base impone aunque el código se olvide
 -- ---------------------------------------------------------------------------------------------
@@ -605,46 +653,96 @@ BEGIN
 END
 $$;
 
--- Dominio: se registra solo para una marca ACTIVA. Después no cambian ni el host, ni la marca, ni el
--- canónico, ni quién lo creó; solo se pasa de activo a retirado, y el canónico no se retira. Un dominio
--- retirado queda congelado.
-CREATE FUNCTION dominio_de_marca_validar_alta() RETURNS trigger LANGUAGE plpgsql
+-- Dominio: nace PENDIENTE_VERIFICACION, de una marca ACTIVA (la dueña, o la del tenant de la empresa
+-- dueña, que el disparador copia a `marca_id`). Después no cambian ni el host, ni la superficie, ni el
+-- dueño, ni la marca, ni el titular, ni el canónico, ni quién lo registró. El estado solo avanza por
+-- PENDIENTE_VERIFICACION -> VERIFICADO -> ACTIVO; de VERIFICADO o ACTIVO se vuelve a
+-- PENDIENTE_VERIFICACION (la comprobación falló); a RETIRADO se va desde cualquier estado menos el
+-- canónico, y de RETIRADO no se sale. `verificado_en` se fija al verificar, se conserva al activar y se
+-- borra al volver a pendiente.
+CREATE FUNCTION dominio_validar_alta() RETURNS trigger LANGUAGE plpgsql
   SET search_path = pg_catalog, public, pg_temp AS
 $$
 DECLARE
+  v_marca  uuid;
   v_estado text;
 BEGIN
-  SELECT m.estado INTO v_estado FROM public.marca m WHERE m.id = NEW.marca_id FOR SHARE;
-  -- Una marca inexistente la rechaza la clave foránea (dominio_de_marca_marca_id_fkey).
+  IF NEW.estado <> 'PENDIENTE_VERIFICACION' THEN
+    RAISE EXCEPTION 'un dominio nace pendiente de verificación'
+      USING ERRCODE = '23514', CONSTRAINT = 'dominio_nace_pendiente';
+  END IF;
+  IF NEW.duenio_marca_id IS NULL AND NEW.duenio_empresa_id IS NULL THEN
+    RAISE EXCEPTION 'un dominio tiene una marca o una empresa dueña'
+      USING ERRCODE = '23514', CONSTRAINT = 'dominio_duenio_ck';
+  END IF;
+  IF NEW.duenio_marca_id IS NOT NULL THEN
+    v_marca := NEW.duenio_marca_id;
+    SELECT m.estado INTO v_estado FROM public.marca m WHERE m.id = v_marca FOR SHARE;
+    -- Una marca inexistente la rechaza la clave foránea (dominio_duenio_marca_id_fkey).
+  ELSIF NEW.duenio_empresa_id IS NOT NULL THEN
+    -- La marca de una empresa es la de su tenant. FOR SHARE: retirar la marca a la vez que se le
+    -- registra un host espera a que termine una de las dos operaciones.
+    SELECT t.marca_id INTO v_marca
+      FROM public.empresa e JOIN public.tenant t ON t.id = e.tenant_id
+     WHERE e.id = NEW.duenio_empresa_id;
+    IF v_marca IS NULL THEN
+      RAISE EXCEPTION 'la empresa dueña del dominio no existe'
+        USING ERRCODE = '23503', CONSTRAINT = 'dominio_duenio_empresa_id_fkey';
+    END IF;
+    SELECT m.estado INTO v_estado FROM public.marca m WHERE m.id = v_marca FOR SHARE;
+  END IF;
   IF FOUND AND v_estado <> 'ACTIVA' THEN
     RAISE EXCEPTION 'la marca está retirada: no admite dominios nuevos'
-      USING ERRCODE = '23514', CONSTRAINT = 'dominio_de_marca_marca_retirada';
+      USING ERRCODE = '23514', CONSTRAINT = 'dominio_marca_retirada';
   END IF;
+  -- El dueño y la marca de entrada no los elige quien registra: la marca sale del dueño.
+  NEW.marca_id := v_marca;
   RETURN NEW;
 END
 $$;
 
-CREATE FUNCTION dominio_de_marca_validar_cambio() RETURNS trigger LANGUAGE plpgsql
+CREATE FUNCTION dominio_validar_cambio() RETURNS trigger LANGUAGE plpgsql
   SET search_path = pg_catalog, public, pg_temp AS
 $$
 BEGIN
   IF NEW.id IS DISTINCT FROM OLD.id
-     OR NEW.marca_id IS DISTINCT FROM OLD.marca_id
      OR NEW.host IS DISTINCT FROM OLD.host
+     OR NEW.superficie IS DISTINCT FROM OLD.superficie
+     OR NEW.duenio_marca_id IS DISTINCT FROM OLD.duenio_marca_id
+     OR NEW.duenio_empresa_id IS DISTINCT FROM OLD.duenio_empresa_id
+     OR NEW.marca_id IS DISTINCT FROM OLD.marca_id
+     OR NEW.titular IS DISTINCT FROM OLD.titular
      OR NEW.es_canonico IS DISTINCT FROM OLD.es_canonico
-     OR NEW.creado_por IS DISTINCT FROM OLD.creado_por
+     OR NEW.registrado_por IS DISTINCT FROM OLD.registrado_por
      OR NEW.creado_en IS DISTINCT FROM OLD.creado_en
   THEN
-    RAISE EXCEPTION 'el host, la marca y el carácter canónico de un dominio no se pueden cambiar'
-      USING ERRCODE = '23514', CONSTRAINT = 'dominio_de_marca_inmutable';
+    RAISE EXCEPTION 'el host, la superficie, el dueño y el titular de un dominio no se pueden cambiar'
+      USING ERRCODE = '23514', CONSTRAINT = 'dominio_inmutable';
   END IF;
-  IF NOT OLD.activo THEN
+  IF OLD.estado = 'RETIRADO' THEN
     RAISE EXCEPTION 'un dominio retirado no se modifica: se registra otro'
-      USING ERRCODE = '23514', CONSTRAINT = 'dominio_de_marca_retirado_inmutable';
+      USING ERRCODE = '23514', CONSTRAINT = 'dominio_retirado_inmutable';
   END IF;
-  IF OLD.es_canonico AND NOT NEW.activo THEN
+  IF NEW.estado IS DISTINCT FROM OLD.estado AND NOT (
+       (OLD.estado = 'PENDIENTE_VERIFICACION' AND NEW.estado IN ('VERIFICADO', 'RETIRADO'))
+    OR (OLD.estado = 'VERIFICADO' AND NEW.estado IN ('ACTIVO', 'PENDIENTE_VERIFICACION', 'RETIRADO'))
+    OR (OLD.estado = 'ACTIVO' AND NEW.estado IN ('PENDIENTE_VERIFICACION', 'RETIRADO'))
+  ) THEN
+    RAISE EXCEPTION 'transición de estado no permitida: % -> %', OLD.estado, NEW.estado
+      USING ERRCODE = '23514', CONSTRAINT = 'dominio_transicion_invalida';
+  END IF;
+  IF OLD.es_canonico AND NEW.estado = 'RETIRADO' THEN
     RAISE EXCEPTION 'el dominio canónico no se retira'
-      USING ERRCODE = '23514', CONSTRAINT = 'dominio_de_marca_canonico_no_se_retira';
+      USING ERRCODE = '23514', CONSTRAINT = 'dominio_canonico_no_se_retira';
+  END IF;
+  -- La fecha de verificación solo se escribe al verificar y solo se borra al volver a pendiente: activar
+  -- o retirar no la tocan (sin ella, un host se «activaría» con otra prueba de titularidad).
+  IF NEW.verificado_en IS DISTINCT FROM OLD.verificado_en
+     AND NOT (OLD.estado = 'PENDIENTE_VERIFICACION' AND NEW.estado = 'VERIFICADO')
+     AND NEW.estado <> 'PENDIENTE_VERIFICACION'
+  THEN
+    RAISE EXCEPTION 'la fecha de verificación del dominio solo cambia al verificarlo o al volver a pendiente'
+      USING ERRCODE = '23514', CONSTRAINT = 'dominio_verificacion_inmutable';
   END IF;
   RETURN NEW;
 END
@@ -851,15 +949,15 @@ CREATE TRIGGER marca_sin_borrado BEFORE DELETE ON marca
 CREATE TRIGGER marca_sin_truncate BEFORE TRUNCATE ON marca
   FOR EACH STATEMENT EXECUTE FUNCTION sin_borrado();
 
-CREATE TRIGGER dominio_de_marca_alta BEFORE INSERT ON dominio_de_marca
-  FOR EACH ROW EXECUTE FUNCTION dominio_de_marca_validar_alta();
-CREATE TRIGGER dominio_de_marca_cambio BEFORE UPDATE ON dominio_de_marca
-  FOR EACH ROW EXECUTE FUNCTION dominio_de_marca_validar_cambio();
-CREATE TRIGGER dominio_de_marca_version BEFORE UPDATE ON dominio_de_marca
+CREATE TRIGGER dominio_alta BEFORE INSERT ON dominio
+  FOR EACH ROW EXECUTE FUNCTION dominio_validar_alta();
+CREATE TRIGGER dominio_cambio BEFORE UPDATE ON dominio
+  FOR EACH ROW EXECUTE FUNCTION dominio_validar_cambio();
+CREATE TRIGGER dominio_version BEFORE UPDATE ON dominio
   FOR EACH ROW EXECUTE FUNCTION fijar_version_y_fecha();
-CREATE TRIGGER dominio_de_marca_sin_borrado BEFORE DELETE ON dominio_de_marca
+CREATE TRIGGER dominio_sin_borrado BEFORE DELETE ON dominio
   FOR EACH ROW EXECUTE FUNCTION sin_borrado();
-CREATE TRIGGER dominio_de_marca_sin_truncate BEFORE TRUNCATE ON dominio_de_marca
+CREATE TRIGGER dominio_sin_truncate BEFORE TRUNCATE ON dominio
   FOR EACH STATEMENT EXECUTE FUNCTION sin_borrado();
 
 CREATE TRIGGER plan_cambio BEFORE UPDATE ON plan
@@ -929,7 +1027,7 @@ CREATE TRIGGER tenant_marca_inmutable BEFORE UPDATE OF marca_id ON tenant
 -- ---------------------------------------------------------------------------------------------
 -- Privilegios: por columna, y nadie recibe DELETE
 -- ---------------------------------------------------------------------------------------------
-REVOKE ALL ON marca, dominio_de_marca, plan, version_de_plan, version_de_marca, plan_de_tenant,
+REVOKE ALL ON marca, dominio, resolucion_de_host, plan, version_de_plan, version_de_marca, plan_de_tenant,
               ajuste_de_perilla, modulo_de_empresa, nivel_de_control
   FROM PUBLIC;
 
@@ -942,14 +1040,15 @@ TO zuluhub_plataforma;
 -- público (sin contexto): solo las columnas que la puerta necesita para resolver la marca (P1).
 GRANT USAGE ON SCHEMA public TO zuluhub_publico;
 GRANT SELECT (id, codigo, marca_padre_id, nivel, es_principal) ON marca TO zuluhub_publico;
-GRANT SELECT (host, marca_id, es_canonico) ON dominio_de_marca TO zuluhub_publico;
+GRANT SELECT (host, superficie, estado, duenio_marca_id, duenio_empresa_id, marca_id) ON dominio TO zuluhub_publico;
+GRANT SELECT ON resolucion_de_host TO zuluhub_publico;
 GRANT SELECT (marca_id, numero, vigente_desde, nombre_visible, tema, logo, vocabulario)
   ON version_de_marca TO zuluhub_publico;
 
 -- app (contexto de empresa): la marca y su cadena (para heredar y para los mails), el dominio canónico,
 -- lo asignado a su tenant (sin el motivo ni quién lo decidió) y los módulos y niveles de su empresa.
 GRANT SELECT ON marca, modulo_de_empresa, nivel_de_control TO zuluhub_app;
-GRANT SELECT (host, marca_id, es_canonico) ON dominio_de_marca TO zuluhub_app;
+GRANT SELECT (host, superficie, marca_id, es_canonico) ON dominio TO zuluhub_app;
 GRANT SELECT (marca_id, numero, vigente_desde, nombre_visible, tema, logo, vocabulario)
   ON version_de_marca TO zuluhub_app;
 GRANT SELECT (id, plan_id, numero, nombre_comercial, modulos, perillas) ON version_de_plan TO zuluhub_app;
@@ -962,13 +1061,14 @@ GRANT UPDATE (nivel) ON nivel_de_control TO zuluhub_app;
 
 -- plataforma (actor firmado): lee todo lo nuevo (salvo los niveles de control, que son de la empresa) y
 -- escribe marcas, dominios, planes, asignaciones, ajustes y módulos; solo un ADMIN, por las restrictivas.
-GRANT SELECT ON marca, dominio_de_marca, plan, version_de_plan, version_de_marca, plan_de_tenant,
+GRANT SELECT ON marca, dominio, plan, version_de_plan, version_de_marca, plan_de_tenant,
                 ajuste_de_perilla, modulo_de_empresa
   TO zuluhub_plataforma;
 GRANT INSERT (codigo, marca_padre_id) ON marca TO zuluhub_plataforma;
 GRANT UPDATE (estado) ON marca TO zuluhub_plataforma;
-GRANT INSERT (marca_id, host, es_canonico, creado_por) ON dominio_de_marca TO zuluhub_plataforma;
-GRANT UPDATE (activo, motivo) ON dominio_de_marca TO zuluhub_plataforma;
+GRANT INSERT (host, superficie, duenio_marca_id, duenio_empresa_id, titular, es_canonico, registrado_por)
+  ON dominio TO zuluhub_plataforma;
+GRANT UPDATE (estado, verificado_en, motivo) ON dominio TO zuluhub_plataforma;
 GRANT INSERT (codigo) ON plan TO zuluhub_plataforma;
 GRANT UPDATE (estado) ON plan TO zuluhub_plataforma;
 GRANT INSERT (plan_id, nombre_comercial, modulos, perillas) ON version_de_plan TO zuluhub_plataforma;
@@ -993,8 +1093,8 @@ GRANT INSERT (marca_id) ON tenant TO zuluhub_plataforma;
 -- ---------------------------------------------------------------------------------------------
 ALTER TABLE marca ENABLE ROW LEVEL SECURITY;
 ALTER TABLE marca FORCE ROW LEVEL SECURITY;
-ALTER TABLE dominio_de_marca ENABLE ROW LEVEL SECURITY;
-ALTER TABLE dominio_de_marca FORCE ROW LEVEL SECURITY;
+ALTER TABLE dominio ENABLE ROW LEVEL SECURITY;
+ALTER TABLE dominio FORCE ROW LEVEL SECURITY;
 ALTER TABLE plan ENABLE ROW LEVEL SECURITY;
 ALTER TABLE plan FORCE ROW LEVEL SECURITY;
 ALTER TABLE version_de_plan ENABLE ROW LEVEL SECURITY;
@@ -1019,16 +1119,16 @@ ALTER TABLE nivel_de_control FORCE ROW LEVEL SECURITY;
 -- público: sin contexto, solo lo declarado (P1).
 CREATE POLICY marca_publico_leer ON marca FOR SELECT TO zuluhub_publico
   USING (estado = 'ACTIVA');
-CREATE POLICY dominio_de_marca_publico_leer ON dominio_de_marca FOR SELECT TO zuluhub_publico
-  USING (activo);
+CREATE POLICY dominio_publico_leer ON dominio FOR SELECT TO zuluhub_publico
+  USING (estado = 'ACTIVO');
 CREATE POLICY version_de_marca_publico_leer ON version_de_marca FOR SELECT TO zuluhub_publico
   USING (estado = 'CONFIRMADA' AND vigente_desde <= now());
 
 -- app: con un contexto firmado válido (no hay filas sin contexto, como en el resto del esquema).
 CREATE POLICY marca_app_leer ON marca FOR SELECT TO zuluhub_app
   USING ((SELECT contexto_firmado()) IS NOT NULL);
-CREATE POLICY dominio_de_marca_app_leer ON dominio_de_marca FOR SELECT TO zuluhub_app
-  USING (activo AND es_canonico AND (SELECT contexto_firmado()) IS NOT NULL);
+CREATE POLICY dominio_app_leer ON dominio FOR SELECT TO zuluhub_app
+  USING (estado = 'ACTIVO' AND es_canonico AND (SELECT contexto_firmado()) IS NOT NULL);
 CREATE POLICY version_de_marca_app_leer ON version_de_marca FOR SELECT TO zuluhub_app
   USING (estado = 'CONFIRMADA' AND vigente_desde <= now() AND (SELECT contexto_firmado()) IS NOT NULL);
 -- Solo las versiones que el tenant de la empresa tiene asignadas.
@@ -1062,10 +1162,10 @@ CREATE POLICY marca_plataforma_leer ON marca FOR SELECT TO zuluhub_plataforma US
 CREATE POLICY marca_plataforma_alta ON marca FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
 CREATE POLICY marca_plataforma_cambiar ON marca FOR UPDATE TO zuluhub_plataforma USING (true) WITH CHECK (true);
 
-CREATE POLICY dominio_de_marca_plataforma_leer ON dominio_de_marca FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY dominio_de_marca_plataforma_alta ON dominio_de_marca FOR INSERT TO zuluhub_plataforma
-  WITH CHECK (creado_por = (SELECT app_actor_plataforma()));
-CREATE POLICY dominio_de_marca_plataforma_cambiar ON dominio_de_marca FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY dominio_plataforma_leer ON dominio FOR SELECT TO zuluhub_plataforma USING (true);
+CREATE POLICY dominio_plataforma_alta ON dominio FOR INSERT TO zuluhub_plataforma
+  WITH CHECK (registrado_por = (SELECT app_actor_plataforma()));
+CREATE POLICY dominio_plataforma_cambiar ON dominio FOR UPDATE TO zuluhub_plataforma
   USING (true) WITH CHECK (true);
 
 CREATE POLICY plan_plataforma_leer ON plan FOR SELECT TO zuluhub_plataforma USING (true);
@@ -1103,7 +1203,7 @@ CREATE POLICY modulo_de_empresa_plataforma_cambiar ON modulo_de_empresa FOR UPDA
 -- y solo un ADMIN escribe (un SOPORTE ve, no cambia estructura).
 CREATE POLICY marca_plataforma_con_actor ON marca AS RESTRICTIVE FOR SELECT TO zuluhub_plataforma
   USING ((SELECT plataforma_actor_vigente()));
-CREATE POLICY dominio_de_marca_plataforma_con_actor ON dominio_de_marca AS RESTRICTIVE FOR SELECT
+CREATE POLICY dominio_plataforma_con_actor ON dominio AS RESTRICTIVE FOR SELECT
   TO zuluhub_plataforma USING ((SELECT plataforma_actor_vigente()));
 CREATE POLICY plan_plataforma_con_actor ON plan AS RESTRICTIVE FOR SELECT TO zuluhub_plataforma
   USING ((SELECT plataforma_actor_vigente()));
@@ -1123,9 +1223,9 @@ CREATE POLICY marca_plataforma_admin_alta ON marca AS RESTRICTIVE FOR INSERT TO 
 CREATE POLICY marca_plataforma_admin_cambiar ON marca AS RESTRICTIVE FOR UPDATE TO zuluhub_plataforma
   USING ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])))
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
-CREATE POLICY dominio_de_marca_plataforma_admin_alta ON dominio_de_marca AS RESTRICTIVE FOR INSERT
+CREATE POLICY dominio_plataforma_admin_alta ON dominio AS RESTRICTIVE FOR INSERT
   TO zuluhub_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
-CREATE POLICY dominio_de_marca_plataforma_admin_cambiar ON dominio_de_marca AS RESTRICTIVE FOR UPDATE
+CREATE POLICY dominio_plataforma_admin_cambiar ON dominio AS RESTRICTIVE FOR UPDATE
   TO zuluhub_plataforma
   USING ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])))
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));

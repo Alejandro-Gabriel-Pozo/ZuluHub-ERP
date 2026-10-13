@@ -20,6 +20,7 @@ import {
   crearBorradorDeMarca,
   crearBorradorDePlan,
   crearDominio,
+  crearDominioDeEmpresa,
   crearMarca,
   crearMundoDeMarca,
   crearPlan,
@@ -215,9 +216,14 @@ describe.skipIf(base === null)("marcas y planes: las reglas de la base", () => {
   });
 
   // ===========================================================================================
-  // dominio_de_marca
+  // dominio
   // ===========================================================================================
-  describe("dominio_de_marca", () => {
+  describe("dominio", () => {
+    const INSERTAR_DE_MARCA = `insert into dominio (host, superficie, duenio_marca_id, titular, registrado_por)
+                               values ($1, $2, $3, 'OPERADOR', 'x')`;
+    const INSERTAR_DE_EMPRESA = `insert into dominio (host, superficie, duenio_empresa_id, titular, registrado_por)
+                                 values ($1, $2, $3, 'CLIENTE', 'x')`;
+
     it("el host tiene que ser un host ya normalizado (la regla de normalizarHost, probada en marcas-sql)", async () => {
       await deshacer(async () => {
         for (const host of [
@@ -229,74 +235,294 @@ describe.skipIf(base === null)("marcas y planes: las reglas de la base", () => {
           "a_b.com",
           "ñ.com",
           "a.com/ruta",
-          "\u212alendar.com",
+          "Klendar.com",
           "a.0x1",
         ]) {
+          check(await q(INSERTAR_DE_MARCA, [host, "APP", principal]), "dominio_host_ck");
+        }
+        acepta(await q(INSERTAR_DE_MARCA, ["xn--cala-9qa.com", "APP", principal]));
+      });
+    });
+
+    it("la superficie es una de APP, CARTA, LANDING o CONSOLA; el titular, CLIENTE u OPERADOR", async () => {
+      await deshacer(async () => {
+        for (const superficie of ["app", "RESERVAS", "", "APP "]) {
           check(
-            await q(
-              "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, $2, 'x')",
-              [principal, host],
-            ),
-            "dominio_de_marca_host_ck",
+            await q(INSERTAR_DE_MARCA, [hostAlAzar(), superficie, principal]),
+            "dominio_superficie_ck",
           );
         }
-        acepta(
+        for (const superficie of ["APP", "CARTA", "LANDING", "CONSOLA"]) {
+          acepta(await q(INSERTAR_DE_MARCA, [hostAlAzar(), superficie, principal]));
+        }
+        for (const titular of ["", "cliente", "TERCERO"]) {
+          check(
+            await q(
+              `insert into dominio (host, superficie, duenio_marca_id, titular, registrado_por)
+               values ($1, 'APP', $2, $3, 'x')`,
+              [hostAlAzar(), principal, titular],
+            ),
+            "dominio_titular_ck",
+          );
+        }
+        check(
           await q(
-            "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, $2, 'x')",
-            [principal, "xn--cala-9qa.com"],
+            `insert into dominio (host, superficie, duenio_marca_id, titular, registrado_por)
+             values ($1, 'APP', $2, 'OPERADOR', '')`,
+            [hostAlAzar(), principal],
           ),
+          "dominio_registrado_por_ck",
         );
       });
     });
 
-    it("un host activo es único en toda la instalación; retirado, se puede registrar de nuevo (aun en otra marca)", async () => {
+    it("el dueño es una marca o una empresa, uno y solo uno; la marca de entrada la fija la base", async () => {
+      await deshacer(async () => {
+        const mundo = await crearMundoDeMarca(dueno, { marca: principal });
+        // los dos, o ninguno
+        check(
+          await q(
+            `insert into dominio (host, superficie, duenio_marca_id, duenio_empresa_id, titular, registrado_por)
+             values ($1, 'CARTA', $2, $3, 'CLIENTE', 'x')`,
+            [hostAlAzar(), principal, mundo.empresa],
+          ),
+          "dominio_duenio_ck",
+        );
+        check(
+          await q(
+            `insert into dominio (host, superficie, titular, registrado_por)
+             values ($1, 'APP', 'OPERADOR', 'x')`,
+            [hostAlAzar()],
+          ),
+          "dominio_duenio_ck",
+        );
+        // el dueño marca: la marca de entrada es esa, aunque se pida otra
+        const otra = await crearMarca(dueno);
+        const deMarca = await un<{ id: string; marca_id: string }>(
+          `insert into dominio (host, superficie, duenio_marca_id, marca_id, titular, registrado_por)
+           values ($1, 'APP', $2, $3, 'OPERADOR', 'x') returning id, marca_id`,
+          [hostAlAzar(), principal, otra],
+        );
+        expect(deMarca.marca_id).toBe(principal);
+        // el dueño empresa: la marca de entrada es la de SU tenant, aunque se pida otra
+        const deEmpresa = await un<{ marca_id: string }>(
+          `insert into dominio (host, superficie, duenio_empresa_id, marca_id, titular, registrado_por)
+           values ($1, 'CARTA', $2, $3, 'CLIENTE', 'x') returning marca_id`,
+          [hostAlAzar(), mundo.empresa, otra],
+        );
+        expect(deEmpresa.marca_id).toBe(principal);
+        const mundoDeOtra = await crearMundoDeMarca(dueno, { marca: otra });
+        const deOtra = await un<{ marca_id: string }>(
+          `insert into dominio (host, superficie, duenio_empresa_id, titular, registrado_por)
+           values ($1, 'APP', $2, 'CLIENTE', 'x') returning marca_id`,
+          [hostAlAzar(), mundoDeOtra.empresa],
+        );
+        expect(deOtra.marca_id).toBe(otra);
+      });
+    });
+
+    it("una empresa tiene su aplicación o su carta (no landing ni consola) y su host no es canónico", async () => {
+      await deshacer(async () => {
+        const mundo = await crearMundoDeMarca(dueno);
+        for (const superficie of ["LANDING", "CONSOLA"]) {
+          check(
+            await q(INSERTAR_DE_EMPRESA, [hostAlAzar(), superficie, mundo.empresa]),
+            "dominio_superficie_duenio_ck",
+          );
+        }
+        for (const superficie of ["APP", "CARTA"]) {
+          acepta(await q(INSERTAR_DE_EMPRESA, [hostAlAzar(), superficie, mundo.empresa]));
+        }
+        check(
+          await q(
+            `insert into dominio (host, superficie, duenio_empresa_id, titular, es_canonico, registrado_por)
+             values ($1, 'APP', $2, 'CLIENTE', true, 'x')`,
+            [hostAlAzar(), mundo.empresa],
+          ),
+          "dominio_canonico_ck",
+        );
+      });
+    });
+
+    it("nace pendiente de verificación: ni verificado ni activo de entrada", async () => {
+      await deshacer(async () => {
+        for (const estado of ["VERIFICADO", "ACTIVO", "RETIRADO"]) {
+          check(
+            await q(
+              `insert into dominio (host, superficie, duenio_marca_id, titular, registrado_por, estado, verificado_en, motivo)
+               values ($1, 'APP', $2, 'OPERADOR', 'x', $3, now(), 'x')`,
+              [hostAlAzar(), principal, estado],
+            ),
+            "dominio_nace_pendiente",
+          );
+        }
+        const d = await crearDominio(dueno, principal, { estado: "PENDIENTE_VERIFICACION" });
+        const fila = await un<{ estado: string; verificado_en: Date | null }>(
+          "select estado, verificado_en from dominio where id = $1",
+          [d.id],
+        );
+        expect(fila).toEqual({ estado: "PENDIENTE_VERIFICACION", verificado_en: null });
+      });
+    });
+
+    it("el host es único mientras no esté retirado (en cualquier estado, dueño o superficie); retirado, se puede registrar de nuevo", async () => {
       await deshacer(async () => {
         const otra = await crearMarca(dueno);
+        const mundo = await crearMundoDeMarca(dueno, { marca: otra });
+        for (const estado of ["PENDIENTE_VERIFICACION", "VERIFICADO", "ACTIVO"] as const) {
+          const host = hostAlAzar();
+          await crearDominio(dueno, principal, { host, estado });
+          clave(await q(INSERTAR_DE_MARCA, [host, "APP", otra]), "dominio_host_uk");
+          clave(await q(INSERTAR_DE_MARCA, [host, "CARTA", principal]), "dominio_host_uk");
+          clave(await q(INSERTAR_DE_EMPRESA, [host, "CARTA", mundo.empresa]), "dominio_host_uk");
+        }
         const host = hostAlAzar();
         const d = await crearDominio(dueno, principal, { host });
-        clave(
-          await q(
-            "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, $2, 'x')",
-            [otra, host],
-          ),
-          "dominio_de_marca_host_uk",
-        );
         acepta(
-          await q("update dominio_de_marca set activo = false, motivo = 'se fue' where id = $1", [
+          await q("update dominio set estado = 'RETIRADO', motivo = 'se fue' where id = $1", [
             d.id,
           ]),
         );
-        acepta(
-          await q(
-            "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, $2, 'x')",
-            [otra, host],
-          ),
-        );
+        acepta(await q(INSERTAR_DE_EMPRESA, [host, "CARTA", mundo.empresa]));
+        // y ahora el nuevo ocupa el host
+        clave(await q(INSERTAR_DE_MARCA, [host, "APP", principal]), "dominio_host_uk");
       });
     });
 
-    it("cada marca tiene un solo dominio canónico activo, y el canónico no se retira", async () => {
+    it("cada marca tiene un solo dominio canónico por superficie, sin contar los retirados; el canónico no se retira", async () => {
       await deshacer(async () => {
         const m = await crearMarca(dueno);
         const canonico = await crearDominio(dueno, m, { canonico: true });
         clave(
           await q(
-            "insert into dominio_de_marca (marca_id, host, es_canonico, creado_por) values ($1, $2, true, 'x')",
-            [m, hostAlAzar()],
+            `insert into dominio (host, superficie, duenio_marca_id, titular, es_canonico, registrado_por)
+             values ($1, 'APP', $2, 'OPERADOR', true, 'x')`,
+            [hostAlAzar(), m],
           ),
-          "dominio_de_marca_canonico_uk",
+          "dominio_canonico_uk",
+        );
+        // otra superficie de la misma marca, o la misma superficie de otra marca: sí
+        acepta(
+          await q(
+            `insert into dominio (host, superficie, duenio_marca_id, titular, es_canonico, registrado_por)
+             values ($1, 'CARTA', $2, 'OPERADOR', true, 'x')`,
+            [hostAlAzar(), m],
+          ),
+        );
+        const otra = await crearMarca(dueno);
+        acepta(
+          await q(
+            `insert into dominio (host, superficie, duenio_marca_id, titular, es_canonico, registrado_por)
+             values ($1, 'APP', $2, 'OPERADOR', true, 'x')`,
+            [hostAlAzar(), otra],
+          ),
         );
         const alias = await crearDominio(dueno, m);
         check(
-          await q("update dominio_de_marca set activo = false, motivo = 'x' where id = $1", [
+          await q("update dominio set estado = 'RETIRADO', motivo = 'x' where id = $1", [
             canonico.id,
           ]),
-          "dominio_de_marca_canonico_no_se_retira",
+          "dominio_canonico_no_se_retira",
+        );
+        // pero sí puede perder la verificación (queda sirviendo la página neutra)
+        acepta(
+          await q(
+            "update dominio set estado = 'PENDIENTE_VERIFICACION', verificado_en = null where id = $1",
+            [canonico.id],
+          ),
         );
         acepta(
-          await q("update dominio_de_marca set activo = false, motivo = 'x' where id = $1", [
-            alias.id,
+          await q("update dominio set estado = 'RETIRADO', motivo = 'x' where id = $1", [alias.id]),
+        );
+      });
+    });
+
+    it("las transiciones de estado son exactamente las declaradas (PENDIENTE -> VERIFICADO -> ACTIVO, de vuelta a PENDIENTE, y RETIRADO desde cualquiera)", async () => {
+      const ESTADOS = ["PENDIENTE_VERIFICACION", "VERIFICADO", "ACTIVO", "RETIRADO"] as const;
+      const PERMITIDAS: Readonly<Record<string, readonly string[]>> = {
+        PENDIENTE_VERIFICACION: ["VERIFICADO", "RETIRADO"],
+        VERIFICADO: ["ACTIVO", "PENDIENTE_VERIFICACION", "RETIRADO"],
+        ACTIVO: ["PENDIENTE_VERIFICACION", "RETIRADO"],
+        RETIRADO: [],
+      };
+      for (const desde of ESTADOS) {
+        for (const hacia of ESTADOS) {
+          if (desde === hacia) continue;
+          await deshacer(async () => {
+            const m = await crearMarca(dueno);
+            const d = await crearDominio(dueno, m, { estado: desde });
+            // el cambio completo y bien armado: lo único que varía es si la transición existe
+            const intento = await q(
+              `update dominio set estado = $2,
+                 verificado_en = case $2 when 'PENDIENTE_VERIFICACION' then null
+                                         when 'VERIFICADO' then coalesce(verificado_en, now())
+                                         else verificado_en end,
+                 motivo = case when $2 in ('RETIRADO', 'PENDIENTE_VERIFICACION') then 'x' else motivo end
+               where id = $1`,
+              [d.id, hacia],
+            );
+            if (PERMITIDAS[desde]?.includes(hacia)) acepta(intento);
+            else {
+              check(
+                intento,
+                desde === "RETIRADO" ? "dominio_retirado_inmutable" : "dominio_transicion_invalida",
+              );
+            }
+          });
+        }
+      }
+    });
+
+    it("solo se activa con prueba: la fecha de verificación se fija al verificar, se conserva al activar y se borra al volver a pendiente", async () => {
+      await deshacer(async () => {
+        const m = await crearMarca(dueno);
+        const d = await crearDominio(dueno, m, { estado: "PENDIENTE_VERIFICACION" });
+        // verificar sin fecha, o pendiente con fecha
+        check(
+          await q("update dominio set estado = 'VERIFICADO' where id = $1", [d.id]),
+          "dominio_verificacion_ck",
+        );
+        check(
+          await q("update dominio set verificado_en = now() where id = $1", [d.id]),
+          "dominio_verificacion_ck",
+        );
+        acepta(
+          await q("update dominio set estado = 'VERIFICADO', verificado_en = now() where id = $1", [
+            d.id,
           ]),
+        );
+        // activar con otra fecha, o sin fecha
+        check(
+          await q(
+            "update dominio set estado = 'ACTIVO', verificado_en = now() + interval '1 day' where id = $1",
+            [d.id],
+          ),
+          "dominio_verificacion_inmutable",
+        );
+        check(
+          await q("update dominio set estado = 'ACTIVO', verificado_en = null where id = $1", [
+            d.id,
+          ]),
+          "dominio_verificacion_inmutable",
+        );
+        acepta(await q("update dominio set estado = 'ACTIVO' where id = $1", [d.id]));
+        // activo: no se vuelve a sellar
+        check(
+          await q("update dominio set verificado_en = now() + interval '1 day' where id = $1", [
+            d.id,
+          ]),
+          "dominio_verificacion_inmutable",
+        );
+        // volver a pendiente exige borrar la fecha
+        check(
+          await q("update dominio set estado = 'PENDIENTE_VERIFICACION' where id = $1", [d.id]),
+          "dominio_verificacion_ck",
+        );
+        acepta(
+          await q(
+            "update dominio set estado = 'PENDIENTE_VERIFICACION', verificado_en = null where id = $1",
+            [d.id],
+          ),
         );
       });
     });
@@ -304,84 +530,93 @@ describe.skipIf(base === null)("marcas y planes: las reglas de la base", () => {
     it("retirar exige motivo", async () => {
       await deshacer(async () => {
         const m = await crearMarca(dueno);
-        const d = await crearDominio(dueno, m);
-        for (const motivo of ["", "   ", null]) {
-          check(
-            await q("update dominio_de_marca set activo = false, motivo = $2 where id = $1", [
-              d.id,
-              motivo,
-            ]),
-            "dominio_de_marca_retiro_ck",
-          );
+        for (const estado of ["PENDIENTE_VERIFICACION", "VERIFICADO", "ACTIVO"] as const) {
+          const d = await crearDominio(dueno, m, { estado });
+          for (const motivo of ["", "   ", null]) {
+            check(
+              await q("update dominio set estado = 'RETIRADO', motivo = $2 where id = $1", [
+                d.id,
+                motivo,
+              ]),
+              "dominio_verificacion_ck",
+            );
+          }
         }
       });
     });
 
-    it("el host, la marca y el carácter canónico no cambian; un dominio retirado queda congelado", async () => {
+    it("el host, la superficie, el dueño, la marca, el titular y el canónico no cambian; un dominio retirado queda congelado", async () => {
       await deshacer(async () => {
         const m = await crearMarca(dueno);
         const otra = await crearMarca(dueno);
+        const mundo = await crearMundoDeMarca(dueno, { marca: m });
         const d = await crearDominio(dueno, m);
         for (const cambio of [
           `host = '${hostAlAzar()}'`,
+          "superficie = 'CARTA'",
+          `duenio_marca_id = '${otra}'`,
           `marca_id = '${otra}'`,
           "es_canonico = true",
-          "creado_por = 'otro'",
+          "titular = 'CLIENTE'",
+          "registrado_por = 'otro'",
           "creado_en = now() - interval '1 day'",
         ]) {
-          check(
-            await q(`update dominio_de_marca set ${cambio} where id = $1`, [d.id]),
-            "dominio_de_marca_inmutable",
-          );
+          check(await q(`update dominio set ${cambio} where id = $1`, [d.id]), "dominio_inmutable");
         }
+        // pasar el host de una marca a una empresa (cambiar de dueño) tampoco
+        check(
+          await q(
+            `update dominio set duenio_marca_id = null, duenio_empresa_id = '${mundo.empresa}' where id = $1`,
+            [d.id],
+          ),
+          "dominio_inmutable",
+        );
+        const e = await crearDominioDeEmpresa(dueno, mundo.empresa);
+        check(
+          await q(`update dominio set duenio_empresa_id = '${randomUUID()}' where id = $1`, [e.id]),
+          "dominio_inmutable",
+        );
         acepta(
-          await q("update dominio_de_marca set activo = false, motivo = 'x' where id = $1", [d.id]),
+          await q("update dominio set estado = 'RETIRADO', motivo = 'x' where id = $1", [d.id]),
         );
         // retirado: ni reactivarlo ni cambiarle el motivo
         check(
-          await q("update dominio_de_marca set activo = true where id = $1", [d.id]),
-          "dominio_de_marca_retirado_inmutable",
+          await q("update dominio set estado = 'ACTIVO' where id = $1", [d.id]),
+          "dominio_retirado_inmutable",
         );
         check(
-          await q("update dominio_de_marca set motivo = 'otro' where id = $1", [d.id]),
-          "dominio_de_marca_retirado_inmutable",
+          await q("update dominio set motivo = 'otro' where id = $1", [d.id]),
+          "dominio_retirado_inmutable",
         );
       });
     });
 
-    it("una marca retirada no admite dominios nuevos; una marca inexistente, tampoco", async () => {
+    it("una marca retirada no admite dominios nuevos (ni propios ni de las empresas de sus tenants); una marca o empresa inexistente, tampoco", async () => {
       await deshacer(async () => {
         const m = await crearMarca(dueno);
+        const mundo = await crearMundoDeMarca(dueno, { marca: m });
         await dueno.query("update marca set estado = 'RETIRADA' where id = $1", [m]);
+        check(await q(INSERTAR_DE_MARCA, [hostAlAzar(), "APP", m]), "dominio_marca_retirada");
         check(
-          await q(
-            "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, $2, 'x')",
-            [m, hostAlAzar()],
-          ),
-          "dominio_de_marca_marca_retirada",
+          await q(INSERTAR_DE_EMPRESA, [hostAlAzar(), "CARTA", mundo.empresa]),
+          "dominio_marca_retirada",
         );
         referencia(
-          await q(
-            "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, $2, 'x')",
-            [randomUUID(), hostAlAzar()],
-          ),
-          "dominio_de_marca_marca_id_fkey",
+          await q(INSERTAR_DE_MARCA, [hostAlAzar(), "APP", randomUUID()]),
+          "dominio_duenio_marca_id_fkey",
+        );
+        referencia(
+          await q(INSERTAR_DE_EMPRESA, [hostAlAzar(), "CARTA", randomUUID()]),
+          "dominio_duenio_empresa_id_fkey",
         );
       });
     });
 
-    it("quién lo creó no puede quedar vacío; no se borra ni se vacía", async () => {
+    it("no se borra ni se vacía", async () => {
       await deshacer(async () => {
-        check(
-          await q("insert into dominio_de_marca (marca_id, host, creado_por) values ($1, $2, '')", [
-            principal,
-            hostAlAzar(),
-          ]),
-          "dominio_de_marca_creado_por_ck",
-        );
         const d = await crearDominio(dueno, principal);
-        denegado(await q("delete from dominio_de_marca where id = $1", [d.id]));
-        denegado(await q("truncate dominio_de_marca"));
+        denegado(await q("delete from dominio where id = $1", [d.id]));
+        denegado(await q("truncate dominio"));
       });
     });
   });

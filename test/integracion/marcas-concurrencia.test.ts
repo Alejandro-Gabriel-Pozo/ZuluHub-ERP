@@ -13,6 +13,7 @@ import {
   codigoAlAzar,
   crearBorradorDeMarca,
   crearBorradorDePlan,
+  crearDominio,
   crearMarca,
   crearMundoDeMarca,
   crearPlan,
@@ -455,41 +456,171 @@ describe.skipIf(base === null)("marcas y planes: concurrencia", () => {
   // hosts, módulos, niveles y referencias
   // ===========================================================================================
   describe("unicidad bajo carrera", () => {
-    it("dos marcas registran el MISMO host a la vez: se registra una; el host retirado se puede volver a registrar", async () => {
-      const host = hostAlAzar();
-      const [m1, m2] = [await crearMarca(dueno), await crearMarca(dueno)];
-      const sesiones = await Promise.all([
-        abrirAdmin("read committed"),
-        abrirAdmin("read committed"),
-      ]);
-      const rs = await carrera(
-        sesiones,
-        [m1, m2].map((m) => [
-          "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, $2, $3)",
-          [m, host, ACTOR_DE_PRUEBA],
-        ]),
-      );
-      expect(ganadores(rs)).toHaveLength(1);
-      const perdedor = perdedores(rs)[0];
-      expect(perdedor && !perdedor.ok && perdedor.restriccion).toBe("dominio_de_marca_host_uk");
+    const ALTA_DE_MARCA = `insert into dominio (host, superficie, duenio_marca_id, titular, registrado_por)
+                           values ($1, $2, $3, 'OPERADOR', $4)`;
+    const ALTA_DE_EMPRESA = `insert into dominio (host, superficie, duenio_empresa_id, titular, registrado_por)
+                             values ($1, $2, $3, 'CLIENTE', $4)`;
+
+    describe.each(AISLAMIENTOS)("el MISMO host a la vez (%s)", (aislamiento) => {
+      const casos: ReadonlyArray<
+        readonly [string, (host: string) => Promise<readonly [Sentencia, Sentencia]>]
+      > = [
+        [
+          "dos marcas distintas",
+          async (host) => {
+            const [m1, m2] = [await crearMarca(dueno), await crearMarca(dueno)];
+            return [
+              [ALTA_DE_MARCA, [host, "APP", m1, ACTOR_DE_PRUEBA]],
+              [ALTA_DE_MARCA, [host, "CARTA", m2, ACTOR_DE_PRUEBA]],
+            ];
+          },
+        ],
+        [
+          "una marca y una empresa",
+          async (host) => {
+            const m = await crearMarca(dueno);
+            const mundo = await crearMundoDeMarca(dueno);
+            return [
+              [ALTA_DE_MARCA, [host, "CARTA", m, ACTOR_DE_PRUEBA]],
+              [ALTA_DE_EMPRESA, [host, "CARTA", mundo.empresa, ACTOR_DE_PRUEBA]],
+            ];
+          },
+        ],
+        [
+          "el mismo pedido dos veces (mismo dueño y superficie: el reintento de un alta)",
+          async (host) => {
+            const mundo = await crearMundoDeMarca(dueno);
+            const sentencia: Sentencia = [
+              ALTA_DE_EMPRESA,
+              [host, "CARTA", mundo.empresa, ACTOR_DE_PRUEBA],
+            ];
+            return [sentencia, sentencia];
+          },
+        ],
+      ];
+      for (const [nombre, armar] of casos) {
+        it(`${nombre}: se registra UNO; el otro recibe la violación nombrada (dominio_host_uk); el host retirado se puede volver a registrar`, async () => {
+          for (let vuelta = 0; vuelta < 5; vuelta++) {
+            const host = hostAlAzar();
+            const sentencias = await armar(host);
+            const sesiones = await Promise.all([abrirAdmin(aislamiento), abrirAdmin(aislamiento)]);
+            const rs = await carrera(sesiones, sentencias);
+            expect(ganadores(rs), `vuelta ${vuelta}`).toHaveLength(1);
+            const perdedor = perdedores(rs)[0];
+            if (perdedor && !perdedor.ok) {
+              if (perdedor.codigo === "40001") expect(aislamiento).toBe("serializable");
+              else expect(perdedor.restriccion).toBe("dominio_host_uk");
+            }
+            const { rows } = await dueno.query(
+              "select id from dominio where host = $1 and estado <> 'RETIRADO'",
+              [host],
+            );
+            expect(rows).toHaveLength(1);
+          }
+        });
+      }
+
+      it("registrar el host de un dominio recién retirado, a la vez que se retira: o ve el retiro y entra, o espera y choca; nunca quedan dos vigentes", async () => {
+        for (let vuelta = 0; vuelta < 5; vuelta++) {
+          const host = hostAlAzar();
+          const m = await crearMarca(dueno);
+          const viejo = await crearDominio(dueno, m, { host });
+          const m2 = await crearMarca(dueno);
+          const sesiones = await Promise.all([abrirAdmin(aislamiento), abrirAdmin(aislamiento)]);
+          const rs = await carrera(sesiones, [
+            ["update dominio set estado = 'RETIRADO', motivo = 'x' where id = $1", [viejo.id]],
+            [ALTA_DE_MARCA, [host, "APP", m2, ACTOR_DE_PRUEBA]],
+          ]);
+          expect(rs[0]?.ok, "el retiro siempre se aplica").toBe(true);
+          const { rows } = await dueno.query(
+            "select id from dominio where host = $1 and estado <> 'RETIRADO'",
+            [host],
+          );
+          expect(rows.length).toBeLessThanOrEqual(1);
+          if (!rs[1]?.ok) {
+            const r = rs[1];
+            expect(r && !r.ok && ["23505", "40001"].includes(r.codigo)).toBe(true);
+          }
+        }
+      });
     });
 
-    it("dos dominios canónicos de la misma marca a la vez: uno", async () => {
+    it("dos dominios canónicos de la misma marca y superficie a la vez: uno; de superficies distintas, los dos", async () => {
       const m = await crearMarca(dueno);
-      const sesiones = await Promise.all([
+      const alta = `insert into dominio (host, superficie, duenio_marca_id, titular, es_canonico, registrado_por)
+                    values ($1, $2, $3, 'OPERADOR', true, $4)`;
+      let sesiones = await Promise.all([
         abrirAdmin("read committed"),
         abrirAdmin("read committed"),
       ]);
-      const rs = await carrera(
+      let rs = await carrera(
         sesiones,
-        sesiones.map(() => [
-          "insert into dominio_de_marca (marca_id, host, es_canonico, creado_por) values ($1, $2, true, $3)",
-          [m, hostAlAzar(), ACTOR_DE_PRUEBA],
-        ]),
+        sesiones.map(() => [alta, [hostAlAzar(), "APP", m, ACTOR_DE_PRUEBA]]),
       );
       expect(ganadores(rs)).toHaveLength(1);
       const perdedor = perdedores(rs)[0];
-      expect(perdedor && !perdedor.ok && perdedor.restriccion).toBe("dominio_de_marca_canonico_uk");
+      expect(perdedor && !perdedor.ok && perdedor.restriccion).toBe("dominio_canonico_uk");
+      sesiones = await Promise.all([abrirAdmin("read committed"), abrirAdmin("read committed")]);
+      rs = await carrera(
+        sesiones,
+        ["CARTA", "LANDING"].map((sup) => [alta, [hostAlAzar(), sup, m, ACTOR_DE_PRUEBA]]),
+      );
+      expect(ganadores(rs)).toHaveLength(2);
+    });
+
+    it("activar y retirar el mismo dominio a la vez: la fila queda en un estado legal y un retirado nunca vuelve a activo", async () => {
+      for (let vuelta = 0; vuelta < 10; vuelta++) {
+        const m = await crearMarca(dueno);
+        const d = await crearDominio(dueno, m, { estado: "VERIFICADO" });
+        const sesiones = await Promise.all([
+          abrirAdmin("read committed"),
+          abrirAdmin("read committed"),
+        ]);
+        const rs = await carrera(sesiones, [
+          ["update dominio set estado = 'ACTIVO' where id = $1", [d.id]],
+          ["update dominio set estado = 'RETIRADO', motivo = 'x' where id = $1", [d.id]],
+        ]);
+        const { estado } = await un<{ estado: string }>(
+          "select estado from dominio where id = $1",
+          [d.id],
+        );
+        // el retiro siempre entra (de VERIFICADO o de ACTIVO); la activación, solo si va primero
+        expect(rs[1]?.ok, "el retiro siempre se aplica").toBe(true);
+        expect(estado).toBe("RETIRADO");
+        const activacion = rs[0];
+        if (activacion && !activacion.ok) {
+          expect(activacion.restriccion).toBe("dominio_retirado_inmutable");
+        }
+      }
+    });
+
+    it("dos verificaciones del mismo dominio a la vez: una sola fija la fecha; la otra se rechaza o no cambia nada", async () => {
+      for (let vuelta = 0; vuelta < 10; vuelta++) {
+        const m = await crearMarca(dueno);
+        const d = await crearDominio(dueno, m, { estado: "PENDIENTE_VERIFICACION" });
+        const sesiones = await Promise.all([
+          abrirAdmin("read committed"),
+          abrirAdmin("read committed"),
+        ]);
+        const rs = await carrera(
+          sesiones,
+          sesiones.map(() => [
+            "update dominio set estado = 'VERIFICADO', verificado_en = clock_timestamp() where id = $1",
+            [d.id],
+          ]),
+        );
+        expect(ganadores(rs)).toHaveLength(1);
+        const perdedor = perdedores(rs)[0];
+        // la segunda ve el dominio ya verificado y quiere volver a sellar la fecha
+        expect(perdedor && !perdedor.ok && perdedor.restriccion).toBe(
+          "dominio_verificacion_inmutable",
+        );
+        const { estado } = await un<{ estado: string }>(
+          "select estado from dominio where id = $1",
+          [d.id],
+        );
+        expect(estado).toBe("VERIFICADO");
+      }
     });
 
     it("dos activaciones del mismo módulo en la misma empresa a la vez: una fila (la clave primaria)", async () => {
@@ -603,8 +734,26 @@ describe.skipIf(base === null)("marcas y planes: concurrencia", () => {
         crear: async () => crearMarca(dueno),
         alta: (m: string) =>
           [
-            "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, $2, $3)",
-            [m, hostAlAzar(), ACTOR_DE_PRUEBA],
+            `insert into dominio (host, superficie, duenio_marca_id, titular, registrado_por)
+             values ($1, 'APP', $2, 'OPERADOR', $3)`,
+            [hostAlAzar(), m, ACTOR_DE_PRUEBA],
+          ] as const,
+        retirar: "update marca set estado = 'RETIRADA' where id = $1",
+        mensaje: /marca está retirada/,
+      },
+      {
+        nombre: "un dominio de una empresa de la marca",
+        crear: async () => {
+          const m = await crearMarca(dueno);
+          await crearMundoDeMarca(dueno, { marca: m });
+          return m;
+        },
+        alta: (m: string) =>
+          [
+            `insert into dominio (host, superficie, duenio_empresa_id, titular, registrado_por)
+             select $1, 'CARTA', e.id, 'CLIENTE', $3
+               from empresa e join tenant t on t.id = e.tenant_id where t.marca_id = $2`,
+            [hostAlAzar(), m, ACTOR_DE_PRUEBA],
           ] as const,
         retirar: "update marca set estado = 'RETIRADA' where id = $1",
         mensaje: /marca está retirada/,
@@ -674,8 +823,9 @@ describe.skipIf(base === null)("marcas y planes: concurrencia", () => {
       const m2 = await crearMarca(dueno);
       const alta = await abrirAdmin("read committed");
       await alta.directo(
-        "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, $2, $3)",
-        [m1, hostAlAzar(), ACTOR_DE_PRUEBA],
+        `insert into dominio (host, superficie, duenio_marca_id, titular, registrado_por)
+         values ($1, 'APP', $2, 'OPERADOR', $3)`,
+        [hostAlAzar(), m1, ACTOR_DE_PRUEBA],
       );
       const otra = await abrirAdmin("read committed");
       // retirar OTRA marca no espera

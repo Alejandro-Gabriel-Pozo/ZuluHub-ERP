@@ -44,14 +44,19 @@ const COLUMNAS: Readonly<Record<string, readonly string[]>> = {
     "actualizado_en",
     "version",
   ],
-  dominio_de_marca: [
+  dominio: [
     "id",
-    "marca_id",
     "host",
+    "superficie",
+    "duenio_marca_id",
+    "duenio_empresa_id",
+    "marca_id",
+    "titular",
     "es_canonico",
-    "activo",
+    "estado",
+    "verificado_en",
     "motivo",
-    "creado_por",
+    "registrado_por",
     "creado_en",
     "actualizado_en",
     "version",
@@ -170,11 +175,18 @@ function privilegiosEsperados(): string[] {
     "nivel",
     "es_principal",
   ]);
-  dar("zuluhub_publico", "SELECT", "dominio_de_marca", ["host", "marca_id", "es_canonico"]);
+  dar("zuluhub_publico", "SELECT", "dominio", [
+    "host",
+    "superficie",
+    "estado",
+    "duenio_marca_id",
+    "duenio_empresa_id",
+    "marca_id",
+  ]);
   dar("zuluhub_publico", "SELECT", "version_de_marca", columnasPublicasDeVersionDeMarca);
   // app (contexto de empresa)
   dar("zuluhub_app", "SELECT", "marca", "todas");
-  dar("zuluhub_app", "SELECT", "dominio_de_marca", ["host", "marca_id", "es_canonico"]);
+  dar("zuluhub_app", "SELECT", "dominio", ["host", "superficie", "marca_id", "es_canonico"]);
   dar("zuluhub_app", "SELECT", "version_de_marca", columnasPublicasDeVersionDeMarca);
   dar("zuluhub_app", "SELECT", "version_de_plan", [
     "id",
@@ -218,13 +230,16 @@ function privilegiosEsperados(): string[] {
   }
   dar("zuluhub_plataforma", "INSERT", "marca", ["codigo", "marca_padre_id"]);
   dar("zuluhub_plataforma", "UPDATE", "marca", ["estado"]);
-  dar("zuluhub_plataforma", "INSERT", "dominio_de_marca", [
-    "marca_id",
+  dar("zuluhub_plataforma", "INSERT", "dominio", [
     "host",
+    "superficie",
+    "duenio_marca_id",
+    "duenio_empresa_id",
+    "titular",
     "es_canonico",
-    "creado_por",
+    "registrado_por",
   ]);
-  dar("zuluhub_plataforma", "UPDATE", "dominio_de_marca", ["activo", "motivo"]);
+  dar("zuluhub_plataforma", "UPDATE", "dominio", ["estado", "verificado_en", "motivo"]);
   dar("zuluhub_plataforma", "INSERT", "plan", ["codigo"]);
   dar("zuluhub_plataforma", "UPDATE", "plan", ["estado"]);
   dar("zuluhub_plataforma", "INSERT", "version_de_plan", [
@@ -485,7 +500,9 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
       expect(fk.map((f) => `${f.t}: ${f.def}`)).toEqual([
         "ajuste_de_perilla: FOREIGN KEY (empresa_id) REFERENCES empresa(id)",
         "ajuste_de_perilla: FOREIGN KEY (tenant_id) REFERENCES tenant(id)",
-        "dominio_de_marca: FOREIGN KEY (marca_id) REFERENCES marca(id)",
+        "dominio: FOREIGN KEY (duenio_empresa_id) REFERENCES empresa(id)",
+        "dominio: FOREIGN KEY (duenio_marca_id) REFERENCES marca(id)",
+        "dominio: FOREIGN KEY (marca_id) REFERENCES marca(id)",
         "marca: FOREIGN KEY (marca_padre_id) REFERENCES marca(id)",
         "modulo_de_empresa: FOREIGN KEY (empresa_id) REFERENCES empresa(id)",
         "nivel_de_control: FOREIGN KEY (empresa_id) REFERENCES empresa(id)",
@@ -509,8 +526,8 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
       const sinPk = unicas.filter((u) => !u.indice.endsWith("_pkey"));
       expect(sinPk.map((u) => `${u.tabla}.${u.indice}`)).toEqual([
         "ajuste_de_perilla.ajuste_de_perilla_numero_uk",
-        "dominio_de_marca.dominio_de_marca_canonico_uk",
-        "dominio_de_marca.dominio_de_marca_host_uk",
+        "dominio.dominio_canonico_uk",
+        "dominio.dominio_host_uk",
         "marca.marca_codigo_uk",
         "marca.marca_principal_uk",
         "nivel_de_control.nivel_de_control_uk",
@@ -522,11 +539,11 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
         "version_de_plan.version_de_plan_numero_uk",
       ]);
       const def = (indice: string) => unicas.find((u) => u.indice === indice)?.def ?? "";
-      // Las parciales: el host solo vale mientras está activo, el canónico es uno por marca, un borrador por
-      // marca y por plan, una sola principal.
-      expect(def("dominio_de_marca_host_uk")).toMatch(/\(host\) WHERE activo$/);
-      expect(def("dominio_de_marca_canonico_uk")).toMatch(
-        /\(marca_id\) WHERE \(activo AND es_canonico\)$/,
+      // Las parciales: el host solo vale mientras no está retirado, el canónico es uno por marca y
+      // superficie, un borrador por marca y por plan, una sola principal.
+      expect(def("dominio_host_uk")).toMatch(/\(host\) WHERE \(estado <> 'RETIRADO'::text\)$/);
+      expect(def("dominio_canonico_uk")).toMatch(
+        /\(duenio_marca_id, superficie\) WHERE \(es_canonico AND \(estado <> 'RETIRADO'::text\)\)$/,
       );
       expect(def("version_de_marca_borrador_uk")).toMatch(
         /\(marca_id\) WHERE \(estado = 'BORRADOR'::text\)$/,
@@ -545,16 +562,19 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
       expect(def("nivel_de_control_uk")).toMatch(/\(empresa_id, sucursal_id, control\)/);
     });
 
-    it("el catálogo no tiene vistas ni la única SECURITY DEFINER cambió: sigue siendo solo contexto_firmado", async () => {
+    it("la única vista es resolucion_de_host (con los privilegios de quien consulta) y la única SECURITY DEFINER sigue siendo contexto_firmado", async () => {
       const definer = await filas<{ proname: string }>(
         `select proname from pg_proc where pronamespace = 'public'::regnamespace and prosecdef order by 1`,
       );
       expect(definer.map((f) => f.proname)).toEqual(["contexto_firmado"]);
       expect(
         await filas(
-          `select relname from pg_class where relnamespace = 'public'::regnamespace and relkind in ('v', 'm')`,
+          `select relname, relkind, reloptions from pg_class
+           where relnamespace = 'public'::regnamespace and relkind in ('v', 'm')`,
         ),
-      ).toEqual([]);
+      ).toEqual([
+        { relname: "resolucion_de_host", relkind: "v", reloptions: ["security_invoker=true"] },
+      ]);
     });
 
     it("las funciones nuevas fijan su search_path, nacen cerradas para PUBLIC y las de validación son IMMUTABLE y las ejecuta solo la plataforma", async () => {
@@ -572,7 +592,7 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
            and p.proname in ('host_valido', 'texto_visible_valido', 'tema_valido', 'vocabulario_valido',
                              'perillas_validas', 'claves_de_modulo_validas', 'sin_borrado',
                              'version_congelada_no_se_borra', 'marca_validar_alta', 'marca_validar_cambio',
-                             'dominio_de_marca_validar_alta', 'dominio_de_marca_validar_cambio',
+                             'dominio_validar_alta', 'dominio_validar_cambio',
                              'plan_validar_cambio', 'version_de_plan_validar_alta', 'version_de_plan_validar_cambio',
                              'version_de_marca_validar_alta', 'version_de_marca_validar_cambio',
                              'plan_de_tenant_validar_alta', 'ajuste_de_perilla_validar_alta', 'tenant_validar_marca')
@@ -699,18 +719,20 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
       ).toEqual([]);
     });
 
-    it("lee exactamente las columnas públicas de tres tablas y ninguna tiene nombre de secreto (NOMBRE_DE_SECRETO)", async () => {
+    it("lee exactamente las columnas públicas de tres tablas y de la vista de resolución, y ninguna tiene nombre de secreto (NOMBRE_DE_SECRETO)", async () => {
       const columnas = await filas<{ table_name: string; column_name: string }>(
         `select table_name, column_name from information_schema.column_privileges
          where grantee = 'zuluhub_publico' and privilege_type = 'SELECT' and table_schema = 'public'
          order by 1, 2`,
       );
       expect([...new Set(columnas.map((c) => c.table_name))]).toEqual([
-        "dominio_de_marca",
+        "dominio",
         "marca",
+        "resolucion_de_host",
         "version_de_marca",
       ]);
-      expect(columnas).toHaveLength(15);
+      // marca (5) + dominio (6) + la vista (5) + version_de_marca (7)
+      expect(columnas).toHaveLength(23);
       const nombres = Object.fromEntries(
         columnas.map((c) => [`${c.table_name}.${c.column_name}`, ""]),
       );
@@ -725,26 +747,30 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
         "version_de_marca.motivo",
         "version_de_marca.confirmada_por",
         "version_de_marca.estado",
-        "dominio_de_marca.creado_por",
-        "dominio_de_marca.motivo",
-        "dominio_de_marca.activo",
+        "dominio.registrado_por",
+        "dominio.motivo",
+        "dominio.titular",
+        "dominio.verificado_en",
+        "dominio.es_canonico",
+        "resolucion_de_host.titular",
+        "resolucion_de_host.estado",
         "marca.estado",
       ]) {
         expect(vistas.has(privada), privada).toBe(false);
       }
     });
 
-    it("sus políticas son exactamente tres, y filtran por estado, actividad y vigencia", async () => {
+    it("sus políticas son exactamente tres, y filtran por estado y vigencia", async () => {
       const politicas = await filas<{ p: string; qual: string }>(
         `select format('%s.%s:%s:%s', tablename, policyname, cmd, permissive) as p, qual
          from pg_policies where schemaname = 'public' and 'zuluhub_publico' = any (roles) order by 1`,
       );
       expect(politicas.map((f) => f.p)).toEqual([
-        "dominio_de_marca.dominio_de_marca_publico_leer:SELECT:PERMISSIVE",
+        "dominio.dominio_publico_leer:SELECT:PERMISSIVE",
         "marca.marca_publico_leer:SELECT:PERMISSIVE",
         "version_de_marca.version_de_marca_publico_leer:SELECT:PERMISSIVE",
       ]);
-      expect(politicas[0]?.qual).toBe("activo");
+      expect(politicas[0]?.qual).toBe("(estado = 'ACTIVO'::text)");
       expect(politicas[1]?.qual).toBe("(estado = 'ACTIVA'::text)");
       expect(politicas[2]?.qual).toBe(
         "((estado = 'CONFIRMADA'::text) AND (vigente_desde <= now()))",

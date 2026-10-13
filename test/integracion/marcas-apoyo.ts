@@ -30,7 +30,7 @@ export const HASTA_0006 = [
 ] as const;
 export const ARCHIVO_0007 = "0007_marcas_y_planes.sql";
 
-/** El actor firmado de las pruebas, tal como lo guardan `creado_por`, `asignado_por` y compañía. */
+/** El actor firmado de las pruebas, tal como lo guardan `registrado_por`, `asignado_por` y compañía. */
 export const ACTOR_DE_PRUEBA: string = ADMIN_DE_PRUEBA;
 
 const un = async <T extends Record<string, unknown>>(
@@ -62,18 +62,85 @@ export async function crearMarca(
   ).id;
 }
 
+export type EstadoDeDominio = "PENDIENTE_VERIFICACION" | "VERIFICADO" | "ACTIVO" | "RETIRADO";
+export type SuperficieDeDominio = "APP" | "CARTA" | "LANDING" | "CONSOLA";
+
+/** Lleva un dominio recién registrado hasta `estado` por el camino legal (verificar, activar o retirar). */
+export async function llevarDominioA(
+  c: pg.Client,
+  id: string,
+  estado: EstadoDeDominio,
+  motivo = "baja de prueba",
+): Promise<void> {
+  if (estado === "PENDIENTE_VERIFICACION") return;
+  if (estado === "RETIRADO") {
+    await c.query("update dominio set estado = 'RETIRADO', motivo = $2 where id = $1", [
+      id,
+      motivo,
+    ]);
+    return;
+  }
+  await c.query("update dominio set estado = 'VERIFICADO', verificado_en = now() where id = $1", [
+    id,
+  ]);
+  if (estado === "ACTIVO")
+    await c.query("update dominio set estado = 'ACTIVO' where id = $1", [id]);
+}
+
+export type OpcionesDeDominio = Readonly<{
+  host?: string;
+  canonico?: boolean;
+  superficie?: SuperficieDeDominio;
+  titular?: "CLIENTE" | "OPERADOR";
+  /** El estado final (por defecto ACTIVO: el dominio ya sirve). */
+  estado?: EstadoDeDominio;
+  registradoPor?: string;
+}>;
+
+/** Un dominio de una MARCA (host compartido), llevado hasta el estado pedido. */
 export async function crearDominio(
   c: pg.Client,
   marca: string,
-  opciones: { host?: string; canonico?: boolean; creadoPor?: string } = {},
+  opciones: OpcionesDeDominio = {},
 ): Promise<{ id: string; host: string }> {
   const host = opciones.host ?? hostAlAzar();
   const fila = await un<{ id: string }>(
     c,
-    `insert into dominio_de_marca (marca_id, host, es_canonico, creado_por)
-     values ($1, $2, $3, $4) returning id`,
-    [marca, host, opciones.canonico ?? false, opciones.creadoPor ?? ACTOR_DE_PRUEBA],
+    `insert into dominio (host, superficie, duenio_marca_id, titular, es_canonico, registrado_por)
+     values ($1, $2, $3, $4, $5, $6) returning id`,
+    [
+      host,
+      opciones.superficie ?? "APP",
+      marca,
+      opciones.titular ?? "OPERADOR",
+      opciones.canonico ?? false,
+      opciones.registradoPor ?? ACTOR_DE_PRUEBA,
+    ],
   );
+  await llevarDominioA(c, fila.id, opciones.estado ?? "ACTIVO");
+  return { id: fila.id, host };
+}
+
+/** Un dominio de una EMPRESA (host dedicado): la marca de entrada sale del tenant de la empresa. */
+export async function crearDominioDeEmpresa(
+  c: pg.Client,
+  empresa: string,
+  opciones: OpcionesDeDominio = {},
+): Promise<{ id: string; host: string }> {
+  const host = opciones.host ?? hostAlAzar();
+  const fila = await un<{ id: string }>(
+    c,
+    `insert into dominio (host, superficie, duenio_empresa_id, titular, registrado_por)
+     values ($1, $2, $3, $4, $5) returning id`,
+    [
+      host,
+      opciones.superficie ?? "CARTA",
+      empresa,
+      opciones.titular ?? "CLIENTE",
+      opciones.registradoPor ?? ACTOR_DE_PRUEBA,
+    ],
+  );
+  await llevarDominioA(c, fila.id, opciones.estado ?? "ACTIVO");
   return { id: fila.id, host };
 }
 
@@ -343,6 +410,7 @@ export async function sembrarMarcasYPlanes(
 ): Promise<void> {
   const principal = await marcaPrincipal(c);
   await crearDominio(c, principal, { canonico: true });
+  await crearDominioDeEmpresa(c, e.empresa);
   await crearVersionDeMarcaConfirmada(c, principal, { nombreVisible: "Marca de prueba" });
   const { version } = await crearPlanPublicado(c, { modulos: [] });
   await asignarPlan(c, e.tenant, version, { origen: "ALTA" });

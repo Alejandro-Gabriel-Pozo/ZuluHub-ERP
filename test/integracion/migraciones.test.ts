@@ -608,7 +608,7 @@ describe.skipIf(base === null)("migraciones", () => {
     );
     expect(tablasNuevas.sort()).toEqual([
       "ajuste_de_perilla",
-      "dominio_de_marca",
+      "dominio",
       "marca",
       "modulo_de_empresa",
       "nivel_de_control",
@@ -667,7 +667,10 @@ describe.skipIf(base === null)("migraciones", () => {
     // El rol público solo lee: ningún INSERT, UPDATE ni EXECUTE para él (salvo USAGE del esquema).
     for (const concesion of codigo.match(/\bGRANT\b[^;]*;/gi) ?? []) {
       if (/zuluhub_publico/.test(concesion)) {
-        expect(concesion).toMatch(/^GRANT\s+(SELECT\s*\(|USAGE\s+ON\s+SCHEMA)/i);
+        // Columnas públicas de las tablas, el esquema y la vista de resolución del host (nada más).
+        expect(concesion).toMatch(
+          /^GRANT\s+(SELECT\s*\(|USAGE\s+ON\s+SCHEMA|SELECT\s+ON\s+resolucion_de_host\s+TO\s+zuluhub_publico\s*;$)/i,
+        );
       }
     }
     // Depende de 0004 (lo comprueba al empezar) y no toca nada de 0005 ni de 0006.

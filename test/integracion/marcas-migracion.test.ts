@@ -15,6 +15,7 @@ import {
   carpetaCon,
   crearBorradorDeMarca,
   crearDominio,
+  crearDominioDeEmpresa,
   crearMarca,
   crearPlan,
   crearPlanPublicado,
@@ -187,7 +188,7 @@ describe.skipIf(base === null)(
         expect(resultados).toEqual([{ resultado: "PERMITIDO" }]);
         // y las tablas nuevas están vacías, salvo la marca principal
         for (const tabla of [
-          "dominio_de_marca",
+          "dominio",
           "plan",
           "version_de_plan",
           "version_de_marca",
@@ -223,7 +224,7 @@ describe.skipIf(base === null)(
         await aplicarMigraciones(previa.aparte.base.dueno, con0007);
         const { rows } = await previa.cliente.query<{ tabla: string; n: number }>(
           `select 'marca' as tabla, count(*)::int as n from marca
-         union all select 'dominio_de_marca', count(*)::int from dominio_de_marca
+         union all select 'dominio', count(*)::int from dominio
          union all select 'plan', count(*)::int from plan
          union all select 'version_de_plan', count(*)::int from version_de_plan
          union all select 'version_de_marca', count(*)::int from version_de_marca
@@ -234,7 +235,7 @@ describe.skipIf(base === null)(
         );
         expect(Object.fromEntries(rows.map((r) => [r.tabla, r.n]))).toEqual({
           marca: 1,
-          dominio_de_marca: 0,
+          dominio: 0,
           plan: 0,
           version_de_plan: 0,
           version_de_marca: 0,
@@ -488,6 +489,10 @@ describe.skipIf(base === null)(
           },
         ],
         ["un dominio", async (c) => crearDominio(c, await marcaPrincipal(c))],
+        [
+          "un dominio de una empresa",
+          (c, m) => crearDominioDeEmpresa(c, m.empresa, { estado: "PENDIENTE_VERIFICACION" }),
+        ],
         ["un plan", (c) => crearPlan(c)],
         [
           "una asignación de plan",
@@ -565,6 +570,7 @@ describe.skipIf(base === null)(
           const principal = await marcaPrincipal(c);
           const hija = await crearMarca(c, { padre: principal });
           await crearDominio(c, principal, { canonico: true });
+          await crearDominioDeEmpresa(c, m.empresa);
           await crearVersionDeMarcaConfirmada(c, principal, { nombreVisible: "Marca" });
           await crearVersionDeMarcaConfirmada(c, hija, { nombreVisible: "Hija" });
           const { version } = await crearPlanPublicado(c);

@@ -53,7 +53,7 @@ const TABLAS_DE_NEGOCIO = [
   "serie_comprobante",
   // Marcas y planes (0007_marcas_y_planes)
   "marca",
-  "dominio_de_marca",
+  "dominio",
   "plan",
   "version_de_plan",
   "version_de_marca",
@@ -294,7 +294,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "admin_plataforma:SELECT",
           "ajuste_de_perilla:SELECT", // 0007
           "auditoria_plataforma:SELECT",
-          "dominio_de_marca:SELECT", // 0007
+          "dominio:SELECT", // 0007
           "emisor:SELECT", // 0006
           "empresa:SELECT",
           "idempotencia_plataforma:SELECT",
@@ -384,8 +384,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "zuluhub_app:traspaso_gerencia.resuelto_en",
           "zuluhub_app:traspaso_gerencia.saliente_persona_id",
           // 0007: la plataforma (solo un ADMIN, por las restrictivas) escribe marcas, dominios, planes y módulos
-          "zuluhub_plataforma:dominio_de_marca.activo",
-          "zuluhub_plataforma:dominio_de_marca.motivo",
+          "zuluhub_plataforma:dominio.estado",
+          "zuluhub_plataforma:dominio.motivo",
+          "zuluhub_plataforma:dominio.verificado_en",
           "zuluhub_plataforma:emisor.activo", // 0006
           "zuluhub_plataforma:emisor.cuit", // 0006
           "zuluhub_plataforma:empresa.cuit",
@@ -547,7 +548,15 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       );
       const marcasYPlanes = [
         ...["codigo", "marca_padre_id"].map((c) => `marca.${c}`),
-        ...["marca_id", "host", "es_canonico", "creado_por"].map((c) => `dominio_de_marca.${c}`),
+        ...[
+          "host",
+          "superficie",
+          "duenio_marca_id",
+          "duenio_empresa_id",
+          "titular",
+          "es_canonico",
+          "registrado_por",
+        ].map((c) => `dominio.${c}`),
         "plan.codigo",
         ...["plan_id", "nombre_comercial", "modulos", "perillas"].map(
           (c) => `version_de_plan.${c}`,

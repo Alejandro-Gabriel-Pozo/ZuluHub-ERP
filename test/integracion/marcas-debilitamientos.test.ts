@@ -25,6 +25,7 @@ import {
   carpetaCon,
   crearBorradorDeMarca,
   crearDominio,
+  crearDominioDeEmpresa,
   crearMarca,
   crearMundoDeMarca,
   crearPlanPublicado,
@@ -51,7 +52,7 @@ type Sonda = (ctx: Ctx) => Promise<boolean>;
 
 const TABLAS_NUEVAS = [
   "marca",
-  "dominio_de_marca",
+  "dominio",
   "plan",
   "version_de_plan",
   "version_de_marca",
@@ -169,6 +170,15 @@ async function conApp<T>(
 const filasDe = (r: Awaited<ReturnType<SesionDePrueba["intentar"]>>): number =>
   r.ok ? r.rows.length : -1;
 
+const INSERTAR_DE_MARCA = `insert into dominio (host, superficie, duenio_marca_id, titular, registrado_por)
+                           values ($1, $2, $3, 'OPERADOR', 'x')`;
+const INSERTAR_DE_EMPRESA = `insert into dominio (host, superficie, duenio_empresa_id, titular, registrado_por)
+                             values ($1, $2, $3, 'CLIENTE', 'x')`;
+const INSERTAR_ADMIN_DE_MARCA = `insert into dominio (host, superficie, duenio_marca_id, titular, registrado_por)
+                                 values ($1, 'APP', $2, 'OPERADOR', $3)`;
+const INSERTAR_ADMIN_DE_EMPRESA = `insert into dominio (host, superficie, duenio_empresa_id, titular, registrado_por)
+                                   values ($1, 'CARTA', $2, 'CLIENTE', $3)`;
+
 const SONDAS = {
   /** RLS forzada en la tabla. */
   rlsForzada:
@@ -216,20 +226,299 @@ const SONDAS = {
         ) === 0,
     );
   },
-  /** El público no ve un dominio retirado. */
+  /** El público ve solo los dominios ACTIVOS (ni pendientes, ni verificados, ni retirados), por la tabla y por la vista. */
   publicoSoloDominiosActivos: async (ctx: Ctx) => {
     const m = await crearMarca(ctx.dueno);
-    const d = await crearDominio(ctx.dueno, m);
-    await ctx.dueno.query(
-      "update dominio_de_marca set activo = false, motivo = 'x' where id = $1",
-      [d.id],
+    const pendiente = await crearDominio(ctx.dueno, m, { estado: "PENDIENTE_VERIFICACION" });
+    const verificado = await crearDominio(ctx.dueno, m, { estado: "VERIFICADO" });
+    const retirado = await crearDominio(ctx.dueno, m, { estado: "RETIRADO" });
+    const activo = await crearDominio(ctx.dueno, m, { estado: "ACTIVO" });
+    const hosts = [pendiente, verificado, retirado, activo].map((d) => d.host);
+    // un dominio ACTIVO de una marca RETIRADA: la tabla lo muestra (la política es por dominio), la vista no
+    const deMarcaRetirada = await crearMarca(ctx.dueno);
+    const huerfano = await crearDominio(ctx.dueno, deMarcaRetirada, { estado: "ACTIVO" });
+    await ctx.dueno.query("update marca set estado = 'RETIRADA' where id = $1", [deMarcaRetirada]);
+    return conPublico(ctx, async (s) => {
+      for (const relacion of ["dominio", "resolucion_de_host"]) {
+        const r = await s.intentar(`select host from ${relacion} where host = any($1)`, [hosts]);
+        if (!r.ok || r.rows.length !== 1 || r.rows[0]?.["host"] !== activo.host) return false;
+      }
+      const vista = await s.intentar("select host from resolucion_de_host where host = $1", [
+        huerfano.host,
+      ]);
+      return vista.ok && vista.rows.length === 0;
+    });
+  },
+  /** Un host sirve solo su superficie: pedido con la otra, la vista no devuelve nada. */
+  hostSoloSirveSuSuperficie: async (ctx: Ctx) => {
+    const m = await crearMarca(ctx.dueno);
+    const app = await crearDominio(ctx.dueno, m, { superficie: "APP" });
+    const carta = await crearDominio(ctx.dueno, m, { superficie: "CARTA" });
+    return conPublico(ctx, async (s) => {
+      const cuantos = async (host: string, superficie: string) =>
+        filasDe(
+          await s.intentar(
+            "select host from resolucion_de_host where host = $1 and superficie = $2",
+            [host, superficie],
+          ),
+        );
+      return (
+        (await cuantos(app.host, "APP")) === 1 &&
+        (await cuantos(app.host, "CARTA")) === 0 &&
+        (await cuantos(carta.host, "CARTA")) === 1 &&
+        (await cuantos(carta.host, "APP")) === 0
+      );
+    });
+  },
+  /** La vista muestra solo host, superficie, dueño y marca, y el público no abre empresa ni tenant. */
+  publicoNoVeDatosDeEmpresas: async (ctx: Ctx) => {
+    const m = await crearMarca(ctx.dueno);
+    const mundo = await crearMundoDeMarca(ctx.dueno, { marca: m });
+    const d = await crearDominioDeEmpresa(ctx.dueno, mundo.empresa);
+    const { rows: columnas } = await ctx.dueno.query<{ column_name: string }>(
+      `select column_name from information_schema.columns
+       where table_schema = 'public' and table_name = 'resolucion_de_host' order by 1`,
     );
-    return conPublico(
+    if (
+      columnas.map((c) => c.column_name).join() !==
+      "duenio_empresa_id,duenio_marca_id,host,marca_id,superficie"
+    )
+      return false;
+    return conPublico(ctx, async (s) => {
+      const fila = await s.intentar(
+        "select duenio_empresa_id, duenio_marca_id, marca_id from resolucion_de_host where host = $1",
+        [d.host],
+      );
+      if (!fila.ok || fila.rows[0]?.["duenio_empresa_id"] !== mundo.empresa) return false;
+      if (fila.rows[0]?.["marca_id"] !== m || fila.rows[0]?.["duenio_marca_id"] !== null)
+        return false;
+      return (
+        !(await s.intentar("select id from empresa")).ok &&
+        !(await s.intentar("select id from tenant")).ok &&
+        !(await s.intentar("select titular from resolucion_de_host")).ok
+      );
+    });
+  },
+  /** El host no se repite entre superficies ni dueños mientras no esté retirado. */
+  hostUnicoEntreSuperficies: async ({ dueno }: Ctx) =>
+    sinConfirmar(dueno, async () => {
+      const m = await crearMarca(dueno);
+      const otra = await crearMarca(dueno);
+      const d = await crearDominio(dueno, m, { superficie: "APP" });
+      return (
+        (await seRechaza(dueno, INSERTAR_DE_MARCA, [d.host, "CARTA", otra])) &&
+        (await seRechaza(dueno, INSERTAR_DE_MARCA, [d.host, "APP", m]))
+      );
+    }),
+  /** El dueño es una marca o una empresa, nunca las dos ni ninguna. */
+  duenioExclusivo: async ({ dueno }: Ctx) =>
+    sinConfirmar(dueno, async () => {
+      const mundo = await crearMundoDeMarca(dueno);
+      return (
+        (await seRechaza(
+          dueno,
+          `insert into dominio (host, superficie, duenio_marca_id, duenio_empresa_id, titular, registrado_por)
+           values ($1, 'CARTA', $2, $3, 'CLIENTE', 'x')`,
+          [hostAlAzar(), await marcaPrincipal(dueno), mundo.empresa],
+        )) &&
+        (await seRechaza(
+          dueno,
+          `insert into dominio (host, superficie, titular, registrado_por) values ($1, 'APP', 'OPERADOR', 'x')`,
+          [hostAlAzar()],
+        ))
+      );
+    }),
+  /** La marca de entrada de un host de empresa es la de su tenant, aunque quien registra pida otra. */
+  marcaDeEntradaDeLaEmpresa: async ({ dueno }: Ctx) =>
+    sinConfirmar(dueno, async () => {
+      const m = await crearMarca(dueno);
+      const otra = await crearMarca(dueno);
+      const mundo = await crearMundoDeMarca(dueno, { marca: m });
+      const r = await intentoDelDueno(
+        dueno,
+        `insert into dominio (host, superficie, duenio_empresa_id, marca_id, titular, registrado_por)
+         values ($1, 'CARTA', $2, $3, 'CLIENTE', 'x') returning marca_id`,
+        [hostAlAzar(), mundo.empresa, otra],
+      );
+      const { rows } = await dueno.query<{ marca_id: string }>(
+        "select marca_id from dominio where duenio_empresa_id = $1",
+        [mundo.empresa],
+      );
+      return rows.length === 0 ? !r.ok : rows[0]?.marca_id === m;
+    }),
+  /** Las transiciones de un dominio: de ACTIVO no se pasa a VERIFICADO; de VERIFICADO sí a ACTIVO. */
+  transicionesDeDominio: async ({ dueno }: Ctx) =>
+    sinConfirmar(dueno, async () => {
+      const m = await crearMarca(dueno);
+      const activo = await crearDominio(dueno, m, { estado: "ACTIVO" });
+      const verificado = await crearDominio(dueno, m, { estado: "VERIFICADO" });
+      return (
+        (await seRechaza(dueno, "update dominio set estado = 'VERIFICADO' where id = $1", [
+          activo.id,
+        ])) &&
+        !(await seRechaza(dueno, "update dominio set estado = 'ACTIVO' where id = $1", [
+          verificado.id,
+        ]))
+      );
+    }),
+  /** La fecha de verificación no se vuelve a sellar en un dominio activo. */
+  verificacionNoSeResella: async ({ dueno }: Ctx) =>
+    sinConfirmar(dueno, async () => {
+      const m = await crearMarca(dueno);
+      const activo = await crearDominio(dueno, m, { estado: "ACTIVO" });
+      return seRechaza(
+        dueno,
+        "update dominio set verificado_en = now() + interval '1 day' where id = $1",
+        [activo.id],
+      );
+    }),
+  /** Un dominio retirado queda congelado. */
+  dominioRetiradoCongelado: async ({ dueno }: Ctx) =>
+    sinConfirmar(dueno, async () => {
+      const m = await crearMarca(dueno);
+      const d = await crearDominio(dueno, m, { estado: "RETIRADO" });
+      return (
+        (await seRechaza(dueno, "update dominio set motivo = 'otro' where id = $1", [d.id])) &&
+        (await seRechaza(dueno, "update dominio set estado = 'ACTIVO' where id = $1", [d.id]))
+      );
+    }),
+  /** El dominio canónico no se retira. */
+  canonicoNoSeRetira: async ({ dueno }: Ctx) =>
+    sinConfirmar(dueno, async () => {
+      const m = await crearMarca(dueno);
+      const d = await crearDominio(dueno, m, { canonico: true });
+      return seRechaza(
+        dueno,
+        "update dominio set estado = 'RETIRADO', motivo = 'x' where id = $1",
+        [d.id],
+      );
+    }),
+  /** Un solo canónico por marca y superficie; de superficies distintas, uno cada una. */
+  canonicoPorSuperficie: async ({ dueno }: Ctx) =>
+    sinConfirmar(dueno, async () => {
+      const m = await crearMarca(dueno);
+      await crearDominio(dueno, m, { canonico: true, superficie: "APP" });
+      const otraSuperficie = await intentoDelDueno(
+        dueno,
+        `insert into dominio (host, superficie, duenio_marca_id, titular, es_canonico, registrado_por)
+         values ($1, 'CARTA', $2, 'OPERADOR', true, 'x')`,
+        [hostAlAzar(), m],
+      );
+      const repetido = await intentoDelDueno(
+        dueno,
+        `insert into dominio (host, superficie, duenio_marca_id, titular, es_canonico, registrado_por)
+         values ($1, 'APP', $2, 'OPERADOR', true, 'x')`,
+        [hostAlAzar(), m],
+      );
+      return otraSuperficie.ok && !repetido.ok;
+    }),
+  /** Una empresa solo tiene aplicación o carta. */
+  superficieDeEmpresaAcotada: async ({ dueno }: Ctx) =>
+    sinConfirmar(dueno, async () => {
+      const mundo = await crearMundoDeMarca(dueno);
+      return seRechaza(dueno, INSERTAR_DE_EMPRESA, [hostAlAzar(), "LANDING", mundo.empresa]);
+    }),
+  /** Una marca retirada no admite dominios, ni propios ni de las empresas de sus tenants. */
+  marcaRetiradaSinDominios: async ({ dueno }: Ctx) =>
+    sinConfirmar(dueno, async () => {
+      const m = await crearMarca(dueno);
+      const mundo = await crearMundoDeMarca(dueno, { marca: m });
+      await dueno.query("update marca set estado = 'RETIRADA' where id = $1", [m]);
+      return (
+        (await seRechaza(dueno, INSERTAR_DE_MARCA, [hostAlAzar(), "APP", m])) &&
+        (await seRechaza(dueno, INSERTAR_DE_EMPRESA, [hostAlAzar(), "CARTA", mundo.empresa]))
+      );
+    }),
+  /** Un dominio nace pendiente de verificación. */
+  dominioNacePendiente: async ({ dueno }: Ctx) =>
+    sinConfirmar(dueno, async () => {
+      const m = await crearMarca(dueno);
+      return seRechaza(
+        dueno,
+        `insert into dominio (host, superficie, duenio_marca_id, titular, registrado_por, estado, verificado_en)
+         values ($1, 'APP', $2, 'OPERADOR', 'x', 'ACTIVO', now())`,
+        [hostAlAzar(), m],
+      );
+    }),
+  /** Retirar la marca espera a un alta de dominio de esa marca (y de una empresa de esa marca). */
+  retirarEsperaAlAltaDeDominio: async (ctx: Ctx) => {
+    const m = await crearMarca(ctx.dueno);
+    const mundo = await crearMundoDeMarca(ctx.dueno, { marca: m });
+    for (const [texto, parametros] of [
+      [INSERTAR_ADMIN_DE_MARCA, [hostAlAzar(), m, ACTOR_DE_PRUEBA]],
+      [INSERTAR_ADMIN_DE_EMPRESA, [hostAlAzar(), mundo.empresa, ACTOR_DE_PRUEBA]],
+    ] as const) {
+      const alta = await SesionDePrueba.abrir(
+        ctx.base,
+        "zuluhub_plataforma",
+        comoPlataforma({ tipo: "ADMIN", id: adminPlataformaId(ADMIN_DE_PRUEBA) }),
+      );
+      const retiro = await SesionDePrueba.abrir(
+        ctx.base,
+        "zuluhub_plataforma",
+        comoPlataforma({ tipo: "ADMIN", id: adminPlataformaId(ADMIN_DE_PRUEBA) }),
+      );
+      try {
+        const r1 = await alta.directo(texto, [...parametros]);
+        if (!r1.ok) return false;
+        await retiro.directo("set local lock_timeout = '400ms'");
+        const r2 = await retiro.directo("update marca set estado = 'RETIRADA' where id = $1", [m]);
+        if (!(!r2.ok && r2.codigo === "55P03")) return false;
+      } finally {
+        await alta.cerrar();
+        await retiro.cerrar();
+      }
+    }
+    return true;
+  },
+  /** Un SOPORTE no registra ni cambia dominios. */
+  soporteNoRegistraDominios: async (ctx: Ctx) => {
+    const m = await crearMarca(ctx.dueno);
+    return conAdmin(
       ctx,
       async (s) =>
-        filasDe(await s.intentar("select host from dominio_de_marca where host = $1", [d.host])) ===
-        0,
+        !(
+          await s.intentar(
+            `insert into dominio (host, superficie, duenio_marca_id, titular, registrado_por)
+             values ($1, 'APP', $2, 'OPERADOR', $3)`,
+            [hostAlAzar(), m, SOPORTE_DE_PRUEBA],
+          )
+        ).ok,
+      SOPORTE_DE_PRUEBA,
     );
+  },
+  soporteNoVerificaDominios: async (ctx: Ctx) => {
+    const m = await crearMarca(ctx.dueno);
+    const d = await crearDominio(ctx.dueno, m, { estado: "PENDIENTE_VERIFICACION" });
+    return conAdmin(
+      ctx,
+      async (s) => {
+        const r = await s.intentar(
+          "update dominio set estado = 'VERIFICADO', verificado_en = now() where id = $1",
+          [d.id],
+        );
+        return r.ok && r.filas === 0;
+      },
+      SOPORTE_DE_PRUEBA,
+    );
+  },
+  /** La aplicación ve solo los dominios canónicos y ACTIVOS (y con contexto). */
+  appVeSoloCanonicosActivos: async (ctx: Ctx) => {
+    const m = await crearMarca(ctx.dueno);
+    const mundo = await crearMundoDeMarca(ctx.dueno, { marca: m });
+    const canonico = await crearDominio(ctx.dueno, m, { canonico: true, superficie: "APP" });
+    const alias = await crearDominio(ctx.dueno, m, { superficie: "CARTA" });
+    const pendiente = await crearDominio(ctx.dueno, m, {
+      canonico: true,
+      superficie: "LANDING",
+      estado: "PENDIENTE_VERIFICACION",
+    });
+    const deEmpresa = await crearDominioDeEmpresa(ctx.dueno, mundo.empresa);
+    const hosts = [canonico, alias, pendiente, deEmpresa].map((d) => d.host);
+    return conApp(ctx, mundo.empresa, async (s) => {
+      const r = await s.intentar("select host from dominio where host = any($1)", [hosts]);
+      return r.ok && r.rows.length === 1 && r.rows[0]?.["host"] === canonico.host;
+    });
   },
   /** El público no puede leer los módulos iniciales, el plan por defecto ni el motivo. */
   publicoNoLeeLoPrivado: async (ctx: Ctx) =>
@@ -243,7 +532,19 @@ const SONDAS = {
       ]) {
         if ((await s.intentar(`select ${columna} from version_de_marca`)).ok) return false;
       }
-      return !(await s.intentar("select estado from marca")).ok;
+      for (const columna of [
+        "titular",
+        "registrado_por",
+        "motivo",
+        "verificado_en",
+        "es_canonico",
+      ]) {
+        if ((await s.intentar(`select ${columna} from dominio`)).ok) return false;
+      }
+      return (
+        !(await s.intentar("select estado from marca")).ok &&
+        !(await s.intentar("select id from empresa")).ok
+      );
     }),
   /** El público no escribe. */
   publicoNoEscribe: async (ctx: Ctx) =>
@@ -309,25 +610,14 @@ const SONDAS = {
   hostUnicoSoloActivo: async ({ dueno }: Ctx) =>
     sinConfirmar(dueno, async () => {
       const m = await crearMarca(dueno);
-      const d = await crearDominio(dueno, m);
-      await dueno.query("update dominio_de_marca set activo = false, motivo = 'x' where id = $1", [
-        d.id,
-      ]);
-      return !(await seRechaza(
-        dueno,
-        "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, $2, 'x')",
-        [m, d.host],
-      ));
+      const d = await crearDominio(dueno, m, { estado: "RETIRADO" });
+      return !(await seRechaza(dueno, INSERTAR_DE_MARCA, [d.host, "APP", m]));
     }),
   /** El host tiene que ser un host ya normalizado. */
   hostValidoEnElCheck: async ({ dueno }: Ctx) =>
     sinConfirmar(dueno, async () => {
       const m = await crearMarca(dueno);
-      return seRechaza(
-        dueno,
-        "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, 'A.COM', 'x')",
-        [m],
-      );
+      return seRechaza(dueno, INSERTAR_DE_MARCA, ["A.COM", "APP", m]);
     }),
   /** Un SOPORTE no escribe marcas. */
   soporteNoCreaMarcas: async (ctx: Ctx) =>
@@ -498,12 +788,7 @@ const SONDAS = {
     return conAdmin(
       ctx,
       async (s) =>
-        (
-          await s.intentar(
-            "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, $2, $3)",
-            [m, hostAlAzar(), ACTOR_DE_PRUEBA],
-          )
-        ).ok,
+        (await s.intentar(INSERTAR_ADMIN_DE_MARCA, [hostAlAzar(), m, ACTOR_DE_PRUEBA])).ok,
     );
   },
   /** La hora de corte no admite las 24:00 ni segundos. */
@@ -683,12 +968,12 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
     sonda: SONDAS.publicoNoVeBorradores,
   },
   {
-    nombre: "la política pública de dominios sin «activo»",
+    nombre: "la política pública de dominios sin estado = 'ACTIVO'",
     romper: (sql) =>
       cambiar(
         sql,
-        "dominio_de_marca_publico_leer ON dominio_de_marca FOR SELECT TO zuluhub_publico\n  USING (activo);",
-        "dominio_de_marca_publico_leer ON dominio_de_marca FOR SELECT TO zuluhub_publico\n  USING (true);",
+        "dominio_publico_leer ON dominio FOR SELECT TO zuluhub_publico\n  USING (estado = 'ACTIVO');",
+        "dominio_publico_leer ON dominio FOR SELECT TO zuluhub_publico\n  USING (true);",
       ),
     sonda: SONDAS.publicoSoloDominiosActivos,
   },
@@ -823,6 +1108,228 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
       ),
     sonda: SONDAS.plataformaSinPrivilegiosDeIdentidad,
   },
+  // --- dominios por superficie (dueño, 2026-10-12)
+  {
+    nombre: "la vista de resolución sin security_invoker (corre con los permisos de su dueño)",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "CREATE VIEW resolucion_de_host WITH (security_invoker = true) AS",
+        "CREATE VIEW resolucion_de_host AS",
+      ),
+    sonda: SONDAS.publicoSoloDominiosActivos,
+  },
+  {
+    nombre: "la vista de resolución sin su filtro de dominios ACTIVOS Y sin la política pública",
+    romper: (sql) =>
+      cambiar(
+        cambiar(
+          sql,
+          "USING (estado = 'ACTIVO');\nCREATE POLICY version_de_marca_publico_leer",
+          "USING (true);\nCREATE POLICY version_de_marca_publico_leer",
+        ),
+        "   WHERE d.estado = 'ACTIVO';",
+        "   WHERE true;",
+      ),
+    sonda: SONDAS.publicoSoloDominiosActivos,
+  },
+  {
+    nombre: "la vista de resolución no distingue la superficie",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "SELECT d.host, d.superficie, d.duenio_marca_id",
+        "SELECT d.host, 'APP'::text AS superficie, d.duenio_marca_id",
+      ),
+    sonda: SONDAS.hostSoloSirveSuSuperficie,
+  },
+  {
+    nombre: "la vista de resolución expone el titular del dominio",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "SELECT d.host, d.superficie, d.duenio_marca_id",
+        "SELECT d.host, d.titular, d.superficie, d.duenio_marca_id",
+      ),
+    sonda: SONDAS.publicoNoVeDatosDeEmpresas,
+  },
+  {
+    nombre: "un GRANT de SELECT sobre empresa al rol público",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "GRANT SELECT ON resolucion_de_host TO zuluhub_publico;",
+        "GRANT SELECT ON resolucion_de_host TO zuluhub_publico;\nGRANT SELECT ON empresa TO zuluhub_publico;",
+      ),
+    sonda: SONDAS.publicoNoVeDatosDeEmpresas,
+  },
+  {
+    nombre: "un GRANT del titular del dominio al rol público",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "GRANT SELECT (host, superficie, estado, duenio_marca_id, duenio_empresa_id, marca_id) ON dominio TO zuluhub_publico;",
+        "GRANT SELECT (host, superficie, estado, duenio_marca_id, duenio_empresa_id, marca_id, titular) ON dominio TO zuluhub_publico;",
+      ),
+    sonda: SONDAS.publicoNoLeeLoPrivado,
+  },
+  {
+    nombre: "quitar dominio_host_uk",
+    romper: (sql) => quitar(sql, "CREATE UNIQUE INDEX dominio_host_uk"),
+    sonda: SONDAS.hostUnicoEntreSuperficies,
+  },
+  {
+    nombre: "quitar dominio_duenio_ck (el dueño deja de ser exclusivo)",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "  CONSTRAINT dominio_duenio_ck CHECK ((duenio_marca_id IS NOT NULL) <> (duenio_empresa_id IS NOT NULL)),\n",
+        "",
+      ),
+    sonda: SONDAS.duenioExclusivo,
+  },
+  {
+    nombre: "la marca de entrada de un host de empresa la elige quien lo registra",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "  NEW.marca_id := v_marca;\n  RETURN NEW;",
+        "  NEW.marca_id := COALESCE(NEW.marca_id, v_marca);\n  RETURN NEW;",
+      ),
+    sonda: SONDAS.marcaDeEntradaDeLaEmpresa,
+  },
+  {
+    nombre: "de ACTIVO se puede pasar a VERIFICADO",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "OR (OLD.estado = 'ACTIVO' AND NEW.estado IN ('PENDIENTE_VERIFICACION', 'RETIRADO'))",
+        "OR (OLD.estado = 'ACTIVO' AND NEW.estado IN ('PENDIENTE_VERIFICACION', 'VERIFICADO', 'RETIRADO'))",
+      ),
+    sonda: SONDAS.transicionesDeDominio,
+  },
+  {
+    nombre: "quitar el chequeo de transiciones de estado del dominio",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "IF NEW.estado IS DISTINCT FROM OLD.estado AND NOT (\n       (OLD.estado = 'PENDIENTE_VERIFICACION'",
+        "IF false AND NOT (\n       (OLD.estado = 'PENDIENTE_VERIFICACION'",
+      ),
+    sonda: SONDAS.transicionesDeDominio,
+  },
+  {
+    nombre: "la fecha de verificación se puede volver a sellar",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "IF NEW.verificado_en IS DISTINCT FROM OLD.verificado_en\n     AND NOT (OLD.estado",
+        "IF false\n     AND NOT (OLD.estado",
+      ),
+    sonda: SONDAS.verificacionNoSeResella,
+  },
+  {
+    nombre: "quitar el congelamiento del dominio retirado",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "IF OLD.estado = 'RETIRADO' THEN\n    RAISE EXCEPTION 'un dominio retirado",
+        "IF false THEN\n    RAISE EXCEPTION 'un dominio retirado",
+      ),
+    sonda: SONDAS.dominioRetiradoCongelado,
+  },
+  {
+    nombre: "el dominio canónico se puede retirar",
+    romper: (sql) =>
+      cambiar(sql, "IF OLD.es_canonico AND NEW.estado = 'RETIRADO' THEN", "IF false THEN"),
+    sonda: SONDAS.canonicoNoSeRetira,
+  },
+  {
+    nombre: "el canónico es uno por marca, sin distinguir la superficie",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "CREATE UNIQUE INDEX dominio_canonico_uk ON dominio (duenio_marca_id, superficie)",
+        "CREATE UNIQUE INDEX dominio_canonico_uk ON dominio (duenio_marca_id)",
+      ),
+    sonda: SONDAS.canonicoPorSuperficie,
+  },
+  {
+    nombre: "quitar dominio_canonico_uk",
+    romper: (sql) => quitar(sql, "CREATE UNIQUE INDEX dominio_canonico_uk"),
+    sonda: SONDAS.canonicoPorSuperficie,
+  },
+  {
+    nombre: "una empresa puede tener la landing o la consola",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "  CONSTRAINT dominio_superficie_duenio_ck CHECK (duenio_empresa_id IS NULL OR superficie IN ('APP', 'CARTA')),\n",
+        "",
+      ),
+    sonda: SONDAS.superficieDeEmpresaAcotada,
+  },
+  {
+    nombre: "una marca retirada admite dominios nuevos",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "  IF FOUND AND v_estado <> 'ACTIVA' THEN\n    RAISE EXCEPTION 'la marca está retirada: no admite dominios nuevos'",
+        "  IF false THEN\n    RAISE EXCEPTION 'la marca está retirada: no admite dominios nuevos'",
+      ),
+    sonda: SONDAS.marcaRetiradaSinDominios,
+  },
+  {
+    nombre: "un dominio puede nacer ya activo",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "IF NEW.estado <> 'PENDIENTE_VERIFICACION' THEN\n    RAISE EXCEPTION 'un dominio nace pendiente",
+        "IF false THEN\n    RAISE EXCEPTION 'un dominio nace pendiente",
+      ),
+    sonda: SONDAS.dominioNacePendiente,
+  },
+  {
+    nombre: "la marca del dominio sin FOR SHARE",
+    romper: (sql) => {
+      const de = "WHERE m.id = v_marca FOR SHARE;";
+      if (sql.split(de).length - 1 !== 2) throw new Error("tenía que aparecer dos veces");
+      return sql.replaceAll(de, "WHERE m.id = v_marca;");
+    },
+    sonda: SONDAS.retirarEsperaAlAltaDeDominio,
+  },
+  {
+    nombre: "quitar la restrictiva ADMIN del alta de dominios",
+    romper: (sql) =>
+      quitar(sql, "CREATE POLICY dominio_plataforma_admin_alta ON dominio AS RESTRICTIVE"),
+    sonda: SONDAS.soporteNoRegistraDominios,
+  },
+  {
+    nombre: "quitar la restrictiva ADMIN del cambio de dominios",
+    romper: (sql) =>
+      quitar(sql, "CREATE POLICY dominio_plataforma_admin_cambiar ON dominio AS RESTRICTIVE"),
+    sonda: SONDAS.soporteNoVerificaDominios,
+  },
+  {
+    nombre: "la aplicación lee también los dominios no canónicos",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "USING (estado = 'ACTIVO' AND es_canonico AND (SELECT contexto_firmado()) IS NOT NULL);",
+        "USING (estado = 'ACTIVO' AND (SELECT contexto_firmado()) IS NOT NULL);",
+      ),
+    sonda: SONDAS.appVeSoloCanonicosActivos,
+  },
+  {
+    nombre: "la aplicación lee también los dominios que no están activos",
+    romper: (sql) =>
+      cambiar(
+        sql,
+        "USING (estado = 'ACTIVO' AND es_canonico AND (SELECT contexto_firmado()) IS NOT NULL);",
+        "USING (es_canonico AND (SELECT contexto_firmado()) IS NOT NULL);",
+      ),
+    sonda: SONDAS.appVeSoloCanonicosActivos,
+  },
   // --- inmutabilidad y solo inserción
   {
     nombre: "quitar el disparador tenant_marca_inmutable",
@@ -870,8 +1377,8 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
     romper: (sql) =>
       cambiar(
         sql,
-        "CREATE UNIQUE INDEX dominio_de_marca_host_uk ON dominio_de_marca (host) WHERE activo;",
-        "CREATE UNIQUE INDEX dominio_de_marca_host_uk ON dominio_de_marca (host);",
+        "CREATE UNIQUE INDEX dominio_host_uk ON dominio (host) WHERE estado <> 'RETIRADO';",
+        "CREATE UNIQUE INDEX dominio_host_uk ON dominio (host);",
       ),
     sonda: SONDAS.hostUnicoSoloActivo,
   },

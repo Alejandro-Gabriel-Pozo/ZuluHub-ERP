@@ -18,6 +18,7 @@ import {
   crearBorradorDeMarca,
   crearBorradorDePlan,
   crearDominio,
+  crearDominioDeEmpresa,
   crearMarca,
   crearMundoDeMarca,
   crearPlan,
@@ -42,7 +43,7 @@ vi.setConfig({ testTimeout: 120_000 });
 
 const TABLAS_NUEVAS = [
   "marca",
-  "dominio_de_marca",
+  "dominio",
   "plan",
   "version_de_plan",
   "version_de_marca",
@@ -51,6 +52,8 @@ const TABLAS_NUEVAS = [
   "modulo_de_empresa",
   "nivel_de_control",
 ] as const;
+/** Las nueve tablas y la vista de resolución del host. */
+const RELACIONES_NUEVAS = [...TABLAS_NUEVAS, "resolucion_de_host"] as const;
 const LEIBLES_POR_LA_PLATAFORMA = TABLAS_NUEVAS.filter((t) => t !== "nivel_de_control");
 
 /** Rechazo por falta de permiso de tabla o de columna (42501 «permission denied»). */
@@ -144,10 +147,7 @@ describe.skipIf(base === null)(
 
       dominioA = (await crearDominio(dueno, principal, { canonico: true })).id;
       aliasA = (await crearDominio(dueno, principal)).id;
-      dominioRetiradoA = (await crearDominio(dueno, principal)).id;
-      await dueno.query("update dominio_de_marca set activo = false, motivo = 'x' where id = $1", [
-        dominioRetiradoA,
-      ]);
+      dominioRetiradoA = (await crearDominio(dueno, principal, { estado: "RETIRADO" })).id;
       await crearDominio(dueno, marcaB, { canonico: true });
       dominioDeRetirada = (await crearDominio(dueno, marcaRetirada, { canonico: true })).id;
       await dueno.query("update marca set estado = 'RETIRADA' where id = $1", [marcaRetirada]);
@@ -279,19 +279,29 @@ describe.skipIf(base === null)(
         });
       });
 
-      it("lee los dominios ACTIVOS (host, marca, canónico): ni los retirados, ni quién los creó, ni el motivo", async () => {
+      it("lee los dominios ACTIVOS (host, superficie, dueño, marca): ni los pendientes ni los retirados, ni el titular, ni quién los registró, ni el motivo", async () => {
         await publico(async (s) => {
-          const r = await s.intentar("select host, marca_id, es_canonico from dominio_de_marca");
+          const r = await s.intentar("select host, marca_id, superficie from dominio");
           expect(r.ok).toBe(true);
           if (!r.ok) return;
           const porMarca = new Map<string, number>();
           for (const f of r.rows)
             porMarca.set(f["marca_id"] as string, (porMarca.get(f["marca_id"] as string) ?? 0) + 1);
           expect(porMarca.get(principal)).toBe(2); // el canónico y un alias; el retirado no
+          for (const f of r.rows) expect(f["superficie"]).toBe("APP");
           expect(porMarca.get(marcaB)).toBe(1);
           expect(r.rows).toHaveLength(4); // y el de la marca retirada (lo filtra la unión con la marca)
-          for (const columna of ["id", "activo", "motivo", "creado_por", "creado_en", "version"]) {
-            sinPermiso(await s.intentar(`select ${columna} from dominio_de_marca`));
+          for (const columna of [
+            "id",
+            "es_canonico",
+            "titular",
+            "verificado_en",
+            "motivo",
+            "registrado_por",
+            "creado_en",
+            "version",
+          ]) {
+            sinPermiso(await s.intentar(`select ${columna} from dominio`));
           }
         });
       });
@@ -299,17 +309,14 @@ describe.skipIf(base === null)(
       it("resolver un host: el exacto sí; el desconocido, el de sufijo o prefijo engañoso, con mayúsculas, el retirado y el de una marca retirada, no", async () => {
         const host = (id: string) =>
           dueno
-            .query<{ host: string }>("select host from dominio_de_marca where id = $1", [id])
+            .query<{ host: string }>("select host from dominio where id = $1", [id])
             .then((r) => r.rows[0]?.host as string);
         const hostA = await host(dominioA);
         const hostRetirado = await host(dominioRetiradoA);
         const hostDeRetirada = await host(dominioDeRetirada);
         await publico(async (s) => {
           const resolver = (h: string) =>
-            s.intentar(
-              `select d.host, m.codigo from dominio_de_marca d join marca m on m.id = d.marca_id where d.host = $1`,
-              [h],
-            );
+            s.intentar(`select host, superficie from resolucion_de_host where host = $1`, [h]);
           expect(valores(await resolver(hostA), "host")).toEqual([hostA]);
           for (const h of [
             "desconocido.prueba.test",
@@ -319,7 +326,7 @@ describe.skipIf(base === null)(
             `${hostA}.`,
             `${hostA}:3000`,
             hostRetirado, // retirado
-            hostDeRetirada, // de una marca RETIRADA (la unión la deja afuera)
+            hostDeRetirada, // de una marca RETIRADA (la vista la deja afuera)
             "",
           ]) {
             expect(valores(await resolver(h), "host"), h).toEqual([]);
@@ -368,7 +375,7 @@ describe.skipIf(base === null)(
         await publico(async (s) => {
           const { rows } = await dueno.query<{ relname: string }>(
             `select relname from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r'
-             and relname not in ('marca', 'dominio_de_marca', 'version_de_marca', 'migracion') order by 1`,
+             and relname not in ('marca', 'dominio', 'version_de_marca', 'migracion') order by 1`,
           );
           expect(rows.length).toBeGreaterThan(30);
           for (const { relname } of rows) {
@@ -385,11 +392,11 @@ describe.skipIf(base === null)(
           sinPermiso(await s.intentar("truncate marca"));
           sinPermiso(
             await s.intentar(
-              "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, 'x.test', 'x')",
+              "insert into dominio (duenio_marca_id, host, superficie, titular, registrado_por) values ($1, 'x.test', 'APP', 'OPERADOR', 'x')",
               [principal],
             ),
           );
-          sinPermiso(await s.intentar("update dominio_de_marca set activo = false"));
+          sinPermiso(await s.intentar("update dominio set estado = 'RETIRADO'"));
           sinPermiso(await s.intentar("update version_de_marca set nombre_visible = 'x'"));
           sinPermiso(
             await s.intentar("insert into tenant (nombre, marca_id) values ('x', $1)", [principal]),
@@ -446,7 +453,7 @@ describe.skipIf(base === null)(
         try {
           for (const [tabla, columnas] of [
             ["marca", "id"],
-            ["dominio_de_marca", "host"],
+            ["dominio", "host"],
             ["version_de_marca", "marca_id"],
             ["version_de_plan", "id"],
             ["plan_de_tenant", "id"],
@@ -466,7 +473,7 @@ describe.skipIf(base === null)(
       it("con contexto ve las marcas (para heredar y para los mails), sus dominios CANÓNICOS activos y sus versiones vigentes", async () => {
         await conAppDe(b, e1a, async (s) => {
           expect(valores(await s.intentar("select id from marca"), "id")).toHaveLength(3);
-          const dominios = await s.intentar("select host, es_canonico from dominio_de_marca");
+          const dominios = await s.intentar("select host, es_canonico from dominio");
           expect(valores(dominios, "es_canonico")).toEqual([true, true, true]); // A, B y la retirada (canónicos activos)
           expect(
             valores(
@@ -486,8 +493,17 @@ describe.skipIf(base === null)(
           ]) {
             sinPermiso(await s.intentar(`select ${columna} from version_de_marca`));
           }
-          for (const columna of ["activo", "creado_por", "motivo", "id"]) {
-            sinPermiso(await s.intentar(`select ${columna} from dominio_de_marca`));
+          for (const columna of [
+            "id",
+            "estado",
+            "titular",
+            "motivo",
+            "registrado_por",
+            "verificado_en",
+            "duenio_marca_id",
+            "duenio_empresa_id",
+          ]) {
+            sinPermiso(await s.intentar(`select ${columna} from dominio`));
           }
         });
       });
@@ -609,7 +625,7 @@ describe.skipIf(base === null)(
           sinPermiso(await s.intentar("insert into plan (codigo) values ('intruso')"));
           sinPermiso(await s.intentar("update version_de_plan set nombre_comercial = 'x'"));
           sinPermiso(await s.intentar("update version_de_marca set nombre_visible = 'x'"));
-          sinPermiso(await s.intentar("update dominio_de_marca set activo = false"));
+          sinPermiso(await s.intentar("update dominio set estado = 'RETIRADO'"));
           sinPermiso(
             await s.intentar(
               `insert into plan_de_tenant (tenant_id, numero, version_de_plan_id, vigente_desde, origen, motivo, asignado_por)
@@ -749,11 +765,13 @@ describe.skipIf(base === null)(
     // El grupo, los trabajos y la autenticación: nada de lo nuevo (salvo lo que ya leían)
     // ===========================================================================================
     describe("zuluhub_grupo, zuluhub_trabajos y zuluhub_autenticacion", () => {
-      it("el grupo y los trabajos fallan cerrado en las nueve tablas (42501), también con contexto válido", async () => {
+      it("el grupo y los trabajos fallan cerrado en las nueve tablas y en la vista de resolución (42501), también con contexto válido", async () => {
         await grupo(e1a.tenant, propietario1, async (s) => {
-          for (const tabla of TABLAS_NUEVAS) {
+          for (const tabla of RELACIONES_NUEVAS) {
             sinPermiso(await s.intentar(`select 1 from ${tabla} limit 1`));
-            sinPermiso(await s.intentar(`delete from ${tabla}`));
+            if (tabla !== "resolucion_de_host") {
+              sinPermiso(await s.intentar(`delete from ${tabla}`));
+            }
           }
           sinPermiso(await s.intentar("insert into marca (codigo) values ('x')"));
           sinPermiso(
@@ -761,7 +779,7 @@ describe.skipIf(base === null)(
           );
         });
         await trabajos(async (s) => {
-          for (const tabla of TABLAS_NUEVAS) {
+          for (const tabla of RELACIONES_NUEVAS) {
             sinPermiso(await s.intentar(`select 1 from ${tabla} limit 1`));
           }
           sinPermiso(
@@ -777,7 +795,7 @@ describe.skipIf(base === null)(
         const c = new pg.Client({ connectionString: b.autenticacion });
         await c.connect();
         try {
-          for (const tabla of TABLAS_NUEVAS) {
+          for (const tabla of RELACIONES_NUEVAS) {
             await expect(c.query(`select 1 from ${tabla} limit 1`), tabla).rejects.toMatchObject({
               code: "42501",
             });
@@ -940,7 +958,8 @@ describe.skipIf(base === null)(
             violaPolitica(await s.intentar("insert into plan (codigo) values ('de-soporte')"));
             violaPolitica(
               await s.intentar(
-                "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, $2, $3)",
+                `insert into dominio (duenio_marca_id, host, superficie, titular, registrado_por)
+                 values ($1, $2, 'APP', 'OPERADOR', $3)`,
                 [principal, hostAlAzar(), actor === "SOPORTE" ? SOPORTE_DE_PRUEBA : "sistema"],
               ),
             );
@@ -966,7 +985,7 @@ describe.skipIf(base === null)(
               expect(r.ok && r.filas, texto).toBe(0);
             }
             const dom = await s.intentar(
-              "update dominio_de_marca set activo = false, motivo = 'x' where id = $1",
+              "update dominio set estado = 'RETIRADO', motivo = 'x' where id = $1",
               [aliasA],
             );
             expect(dom.ok && dom.filas).toBe(0);
@@ -1003,10 +1022,18 @@ describe.skipIf(base === null)(
               principal,
             ])
           )[0]?.["id"] as string;
+          const dominio = (
+            await un(
+              `insert into dominio (duenio_marca_id, host, superficie, titular, es_canonico, registrado_por)
+               values ($1, $2, 'APP', 'OPERADOR', true, $3) returning id`,
+              [marca, hostAlAzar(), ACTOR_DE_PRUEBA],
+            )
+          )[0]?.["id"] as string;
           await un(
-            "insert into dominio_de_marca (marca_id, host, es_canonico, creado_por) values ($1, $2, true, $3)",
-            [marca, hostAlAzar(), ACTOR_DE_PRUEBA],
+            "update dominio set estado = 'VERIFICADO', verificado_en = now() where id = $1",
+            [dominio],
           );
+          await un("update dominio set estado = 'ACTIVO' where id = $1", [dominio]);
           const plan = (
             await un("insert into plan (codigo) values ($1) returning id", [
               `circuito-${randomUUID().slice(0, 6)}`,
@@ -1063,11 +1090,12 @@ describe.skipIf(base === null)(
           ]);
           await un("update modulo_de_empresa set activo = false where empresa_id = $1", [empresa]);
           await un(
-            "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, $2, $3)",
+            `insert into dominio (duenio_marca_id, host, superficie, titular, registrado_por)
+             values ($1, $2, 'CARTA', 'OPERADOR', $3)`,
             [marca, hostAlAzar(), ACTOR_DE_PRUEBA],
           );
           const retirados = await s.intentar(
-            "update dominio_de_marca set activo = false, motivo = 'x' where marca_id = $1 and not es_canonico",
+            "update dominio set estado = 'RETIRADO', motivo = 'x' where duenio_marca_id = $1 and not es_canonico",
             [marca],
           );
           expect(retirados.ok && retirados.filas).toBe(1);
@@ -1081,11 +1109,12 @@ describe.skipIf(base === null)(
         });
       });
 
-      it("ADMIN no puede escribir en nombre de otro: creado_por, asignado_por, publicada_por y confirmada_por son el actor firmado", async () => {
+      it("ADMIN no puede escribir en nombre de otro: registrado_por, asignado_por, publicada_por y confirmada_por son el actor firmado", async () => {
         await conPlataformaDe(b, "ADMIN", async (s) => {
           violaPolitica(
             await s.intentar(
-              "insert into dominio_de_marca (marca_id, host, creado_por) values ($1, $2, $3)",
+              `insert into dominio (duenio_marca_id, host, superficie, titular, registrado_por)
+               values ($1, $2, 'APP', 'OPERADOR', $3)`,
               [principal, hostAlAzar(), SOPORTE_DE_PRUEBA],
             ),
           );
@@ -1157,7 +1186,7 @@ describe.skipIf(base === null)(
           );
           sinPermiso(await s.intentar("update plan_de_tenant set motivo = 'x'"));
           sinPermiso(await s.intentar("update ajuste_de_perilla set valor = '1'"));
-          sinPermiso(await s.intentar("update dominio_de_marca set host = 'otro.test'"));
+          sinPermiso(await s.intentar("update dominio set host = 'otro.test'"));
           sinPermiso(await s.intentar("update plan set codigo = 'x'"));
           sinPermiso(await s.intentar("update modulo_de_empresa set modulo = 'x1'"));
           sinPermiso(await s.intentar("delete from marca"));
@@ -1255,6 +1284,347 @@ describe.skipIf(base === null)(
             [suspendida.empresa],
           ),
         );
+      });
+    });
+
+    // ===========================================================================================
+    // Dominios por superficie: host -> (dueño, superficie, marca). Va antes de la vigencia programada
+    // porque crea marcas nuevas (los casos de arriba las cuentan).
+    // ===========================================================================================
+    describe("dominios por superficie", () => {
+      type Fila = Readonly<{
+        host: string;
+        superficie: string;
+        duenio_marca_id: string | null;
+        duenio_empresa_id: string | null;
+        marca_id: string;
+      }>;
+
+      /** Dos marcas con una empresa cada una y dominios de todos los estados y superficies. */
+      async function armarMundo() {
+        const mx = await crearMarca(dueno);
+        const my = await crearMarca(dueno);
+        const ex = await crearMundoDeMarca(dueno, { marca: mx });
+        const ey = await crearMundoDeMarca(dueno, { marca: my });
+        const appX = await crearDominio(dueno, mx, { superficie: "APP", canonico: true });
+        const cartaX = await crearDominio(dueno, mx, { superficie: "CARTA" });
+        const landingX = await crearDominio(dueno, mx, { superficie: "LANDING" });
+        const consolaX = await crearDominio(dueno, mx, { superficie: "CONSOLA" });
+        const cartaDeEx = await crearDominioDeEmpresa(dueno, ex.empresa, { superficie: "CARTA" });
+        const appDeEy = await crearDominioDeEmpresa(dueno, ey.empresa, { superficie: "APP" });
+        const pendienteDeEx = await crearDominioDeEmpresa(dueno, ex.empresa, {
+          superficie: "APP",
+          estado: "PENDIENTE_VERIFICACION",
+        });
+        const verificadoDeEy = await crearDominioDeEmpresa(dueno, ey.empresa, {
+          superficie: "CARTA",
+          estado: "VERIFICADO",
+        });
+        const retiradoDeEy = await crearDominioDeEmpresa(dueno, ey.empresa, {
+          superficie: "CARTA",
+          estado: "RETIRADO",
+        });
+        return {
+          mx,
+          my,
+          ex,
+          ey,
+          appX,
+          cartaX,
+          landingX,
+          consolaX,
+          cartaDeEx,
+          appDeEy,
+          pendienteDeEx,
+          verificadoDeEy,
+          retiradoDeEy,
+        };
+      }
+
+      it("el público resuelve host -> (dueño, superficie, marca): un host de marca devuelve la marca dueña; uno de empresa, la empresa y la marca de SU tenant", async () => {
+        const w = await armarMundo();
+        await publico(async (s) => {
+          const resolver = async (host: string): Promise<Fila[]> => {
+            const r = await s.intentar(
+              "select host, superficie, duenio_marca_id, duenio_empresa_id, marca_id from resolucion_de_host where host = $1",
+              [host],
+            );
+            expect(r.ok, r.ok ? "" : r.mensaje).toBe(true);
+            return r.ok ? (r.rows as Fila[]) : [];
+          };
+          expect(await resolver(w.appX.host)).toEqual([
+            {
+              host: w.appX.host,
+              superficie: "APP",
+              duenio_marca_id: w.mx,
+              duenio_empresa_id: null,
+              marca_id: w.mx,
+            },
+          ]);
+          for (const [d, superficie] of [
+            [w.cartaX, "CARTA"],
+            [w.landingX, "LANDING"],
+            [w.consolaX, "CONSOLA"],
+          ] as const) {
+            const [fila] = await resolver(d.host);
+            expect(fila?.superficie).toBe(superficie);
+            expect(fila?.duenio_marca_id).toBe(w.mx);
+          }
+          // host de empresa: dueño empresa, marca de entrada la de su tenant (cada una la suya)
+          expect(await resolver(w.cartaDeEx.host)).toEqual([
+            {
+              host: w.cartaDeEx.host,
+              superficie: "CARTA",
+              duenio_marca_id: null,
+              duenio_empresa_id: w.ex.empresa,
+              marca_id: w.mx,
+            },
+          ]);
+          expect(await resolver(w.appDeEy.host)).toEqual([
+            {
+              host: w.appDeEy.host,
+              superficie: "APP",
+              duenio_marca_id: null,
+              duenio_empresa_id: w.ey.empresa,
+              marca_id: w.my,
+            },
+          ]);
+        });
+      });
+
+      it("un host sirve SOLO su superficie: pedido con otra superficie no resuelve; tampoco el pendiente, el verificado ni el retirado", async () => {
+        const w = await armarMundo();
+        await publico(async (s) => {
+          const cuantos = async (host: string, superficie: string) =>
+            valores(
+              await s.intentar(
+                "select host from resolucion_de_host where host = $1 and superficie = $2",
+                [host, superficie],
+              ),
+              "host",
+            ).length;
+          const todas = ["APP", "CARTA", "LANDING", "CONSOLA"];
+          for (const [d, propia] of [
+            [w.appX, "APP"],
+            [w.cartaX, "CARTA"],
+            [w.landingX, "LANDING"],
+            [w.consolaX, "CONSOLA"],
+            [w.cartaDeEx, "CARTA"],
+            [w.appDeEy, "APP"],
+          ] as const) {
+            for (const superficie of todas) {
+              expect(await cuantos(d.host, superficie), `${propia} pedido como ${superficie}`).toBe(
+                superficie === propia ? 1 : 0,
+              );
+            }
+          }
+          for (const d of [w.pendienteDeEx, w.verificadoDeEy, w.retiradoDeEy]) {
+            for (const superficie of todas) expect(await cuantos(d.host, superficie)).toBe(0);
+          }
+        });
+      });
+
+      it("el público no ve datos de empresas ni de tenants: la vista trae solo cinco columnas y no se abre empresa, tenant, persona ni membresía", async () => {
+        const w = await armarMundo();
+        await publico(async (s) => {
+          const r = await s.intentar("select * from resolucion_de_host where host = $1", [
+            w.cartaDeEx.host,
+          ]);
+          expect(r.ok).toBe(true);
+          if (r.ok) {
+            expect(Object.keys(r.rows[0] ?? {}).sort()).toEqual([
+              "duenio_empresa_id",
+              "duenio_marca_id",
+              "host",
+              "marca_id",
+              "superficie",
+            ]);
+          }
+          for (const tabla of ["empresa", "tenant", "persona", "membresia_tenant", "sucursal"]) {
+            sinPermiso(await s.intentar(`select * from ${tabla} limit 1`));
+          }
+          // ni el titular, ni quién lo registró, ni el motivo, ni la verificación: ni por la vista ni por la tabla
+          for (const columna of ["titular", "registrado_por", "motivo", "verificado_en", "id"]) {
+            const enLaVista = await s.intentar(`select ${columna} from resolucion_de_host`);
+            expect(!enLaVista.ok && enLaVista.codigo, columna).toBe("42703"); // la vista no la tiene
+            sinPermiso(await s.intentar(`select ${columna} from dominio`));
+          }
+          // y no escribe
+          sinPermiso(await s.intentar("update dominio set estado = 'RETIRADO'"));
+          // la vista une dos tablas: no admite escrituras (55000) y, aunque pudiera, el rol no tiene el privilegio
+          for (const texto of [
+            "insert into resolucion_de_host (host) values ('x.test')",
+            "update resolucion_de_host set host = 'x.test'",
+            "delete from resolucion_de_host",
+          ]) {
+            const r = await s.intentar(texto);
+            expect(!r.ok && ["55000", "42501"].includes(r.codigo), texto).toBe(true);
+          }
+        });
+      });
+
+      it("entre marcas: el host de la empresa de una marca nunca resuelve a otra marca, y un tenant no cambia de marca", async () => {
+        const w = await armarMundo();
+        await publico(async (s) => {
+          const r = await s.intentar(
+            "select host, marca_id from resolucion_de_host where host = any($1)",
+            [[w.cartaDeEx.host, w.appDeEy.host, w.appX.host]],
+          );
+          const porHost = new Map(
+            (r.ok ? r.rows : []).map((f) => [f["host"] as string, f["marca_id"] as string]),
+          );
+          expect(porHost.get(w.cartaDeEx.host)).toBe(w.mx);
+          expect(porHost.get(w.appDeEy.host)).toBe(w.my);
+          expect(porHost.get(w.appX.host)).toBe(w.mx);
+        });
+        // el tenant de Ey no puede pasar a la marca de Ex (si pudiera, el host de su empresa cambiaría de puerta)
+        const r = await dueno
+          .query("update tenant set marca_id = $1 where id = $2", [w.mx, w.ey.tenant])
+          .then(
+            () => null,
+            (e: { constraint?: string }) => e.constraint,
+          );
+        expect(r).toBe("tenant_marca_inmutable");
+      });
+
+      it("la aplicación, con contexto de empresa, ve solo los dominios CANÓNICOS y ACTIVOS (de marcas), nunca los de empresas, ni los de su propia empresa, ni titular ni verificación", async () => {
+        const w = await armarMundo();
+        await conAppDe(b, w.ex, async (s) => {
+          const r = await s.intentar(
+            "select host, superficie, marca_id, es_canonico from dominio where host = any($1)",
+            [[w.appX.host, w.cartaX.host, w.cartaDeEx.host, w.pendienteDeEx.host, w.appDeEy.host]],
+          );
+          expect(r.ok).toBe(true);
+          expect(r.ok ? r.rows : []).toEqual([
+            { host: w.appX.host, superficie: "APP", marca_id: w.mx, es_canonico: true },
+          ]);
+          for (const columna of ["titular", "estado", "verificado_en", "duenio_empresa_id", "id"]) {
+            sinPermiso(await s.intentar(`select ${columna} from dominio`));
+          }
+          sinPermiso(await s.intentar("select * from resolucion_de_host"));
+          sinPermiso(await s.intentar("update dominio set estado = 'RETIRADO'"));
+        });
+      });
+
+      it("un ADMIN registra el host de una empresa, lo verifica, lo activa y lo retira; la marca de entrada la fija la base; un SOPORTE lo ve pero no lo cambia; sin actor vigente no ve nada", async () => {
+        const w = await armarMundo();
+        const host = hostAlAzar();
+        const id = await conPlataformaDe(b, "ADMIN", async (s) => {
+          const alta = await s.intentar(
+            `insert into dominio (host, superficie, duenio_empresa_id, titular, registrado_por)
+             values ($1, 'CARTA', $2, 'CLIENTE', $3) returning id, estado, marca_id`,
+            [host, w.ex.empresa, ACTOR_DE_PRUEBA],
+          );
+          expect(alta.ok, alta.ok ? "" : alta.mensaje).toBe(true);
+          if (!alta.ok) throw new Error("no se registró");
+          expect(alta.rows[0]).toMatchObject({ estado: "PENDIENTE_VERIFICACION", marca_id: w.mx });
+          const dominioId = alta.rows[0]?.["id"] as string;
+          for (const paso of [
+            "update dominio set estado = 'VERIFICADO', verificado_en = now() where id = $1",
+            "update dominio set estado = 'ACTIVO' where id = $1",
+          ]) {
+            const r = await s.intentar(paso, [dominioId]);
+            expect(r.ok && r.filas, paso).toBe(1);
+          }
+          const c = await s.confirmar();
+          expect(c.ok).toBe(true);
+          return dominioId;
+        });
+        await publico(async (s) => {
+          expect(
+            valores(
+              await s.intentar("select host from resolucion_de_host where host = $1", [host]),
+              "host",
+            ),
+          ).toEqual([host]);
+        });
+        // SOPORTE: ve, no cambia
+        await conPlataformaDe(b, "SOPORTE", async (s) => {
+          expect(
+            valores(await s.intentar("select estado from dominio where id = $1", [id]), "estado"),
+          ).toEqual(["ACTIVO"]);
+          const r = await s.intentar(
+            "update dominio set estado = 'RETIRADO', motivo = 'x' where id = $1",
+            [id],
+          );
+          expect(r.ok && r.filas).toBe(0);
+          violaPolitica(
+            await s.intentar(
+              `insert into dominio (host, superficie, duenio_empresa_id, titular, registrado_por)
+               values ($1, 'CARTA', $2, 'CLIENTE', $3)`,
+              [hostAlAzar(), w.ex.empresa, SOPORTE_DE_PRUEBA],
+            ),
+          );
+        });
+        // sin actor vigente (sin contexto, de baja o desconocido): no ve ni un dominio
+        for (const actor of [null, "BAJA", "INEXISTENTE"] as const) {
+          await plataforma(actor, async (s) => {
+            const r = await s.intentar("select id from dominio");
+            expect(r.ok && r.rows.length, String(actor)).toBe(0);
+          });
+        }
+        // el retiro vuelve a la página neutra de inmediato
+        await conPlataformaDe(b, "ADMIN", async (s) => {
+          const r = await s.intentar(
+            "update dominio set estado = 'RETIRADO', motivo = 'se fue el cliente' where id = $1",
+            [id],
+          );
+          expect(r.ok && r.filas).toBe(1);
+          expect((await s.confirmar()).ok).toBe(true);
+        });
+        await publico(async (s) => {
+          expect(
+            valores(
+              await s.intentar("select host from resolucion_de_host where host = $1", [host]),
+              "host",
+            ),
+          ).toEqual([]);
+        });
+      });
+
+      it("el alta es idempotente: repetir el pedido con la misma clave no duplica nada, y otro pedido con el mismo host choca con la única nombrada", async () => {
+        const w = await armarMundo();
+        const host = hostAlAzar();
+        const clave = `alta-dominio-${randomUUID()}`;
+        const huella = "a".repeat(64);
+        /** Lo que hace el caso de uso en UNA transacción: reserva la clave y registra el host. */
+        const pedido = async (claveDelPedido: string) =>
+          conPlataformaDe(b, "ADMIN", async (s) => {
+            const reserva = await s.intentar(
+              `insert into idempotencia_plataforma (admin_id, clave, operacion, huella, resultado)
+               values ($1, $2, 'dominios.agregar', $3, '{}'::jsonb)`,
+              [ACTOR_DE_PRUEBA, claveDelPedido, huella],
+            );
+            if (!reserva.ok) {
+              await s.deshacer();
+              return reserva;
+            }
+            const alta = await s.intentar(
+              `insert into dominio (host, superficie, duenio_empresa_id, titular, registrado_por)
+               values ($1, 'CARTA', $2, 'CLIENTE', $3)`,
+              [host, w.ex.empresa, ACTOR_DE_PRUEBA],
+            );
+            if (!alta.ok) {
+              await s.deshacer();
+              return alta;
+            }
+            const c = await s.confirmar();
+            return c.ok ? alta : c;
+          });
+        const primero = await pedido(clave);
+        expect(primero.ok).toBe(true);
+        // el reintento (misma clave): la reserva choca y no se registra nada más
+        const reintento = await pedido(clave);
+        expect(!reintento.ok && reintento.restriccion).toBe("idempotencia_plataforma_pkey");
+        // otro pedido (otra clave) por el mismo host: la única del host lo frena y la reserva se deshace
+        const otraClave = `alta-dominio-${randomUUID()}`;
+        const otro = await pedido(otraClave);
+        expect(!otro.ok && otro.restriccion).toBe("dominio_host_uk");
+        const { rows } = await dueno.query(
+          "select 1 from dominio where host = $1 union all select 1 from idempotencia_plataforma where clave = $2",
+          [host, otraClave],
+        );
+        expect(rows).toHaveLength(0 + 1); // el dominio único y NINGUNA reserva de la clave que se deshizo
       });
     });
 

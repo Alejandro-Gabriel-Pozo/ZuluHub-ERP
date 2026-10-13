@@ -83,7 +83,7 @@ const TABLAS_LEGIBLES = [
   "punto_de_venta", // 0006: solo 4 columnas (las prueba `fiscal-sql.test.ts`)
   "serie_comprobante", // 0006: la leen los disparadores de CUIT
   "marca", // 0007 (marcas y planes): la plataforma crea marcas, dominios, versiones, planes, asignaciones y módulos
-  "dominio_de_marca",
+  "dominio",
   "version_de_marca",
   "plan",
   "version_de_plan",
@@ -420,12 +420,12 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           "marca.marca_plataforma_admin_alta:INSERT:RESTRICTIVE",
           "marca.marca_plataforma_admin_cambiar:UPDATE:RESTRICTIVE",
           "marca.marca_plataforma_con_actor:SELECT:RESTRICTIVE",
-          "dominio_de_marca.dominio_de_marca_plataforma_alta:INSERT:PERMISSIVE",
-          "dominio_de_marca.dominio_de_marca_plataforma_cambiar:UPDATE:PERMISSIVE",
-          "dominio_de_marca.dominio_de_marca_plataforma_leer:SELECT:PERMISSIVE",
-          "dominio_de_marca.dominio_de_marca_plataforma_admin_alta:INSERT:RESTRICTIVE",
-          "dominio_de_marca.dominio_de_marca_plataforma_admin_cambiar:UPDATE:RESTRICTIVE",
-          "dominio_de_marca.dominio_de_marca_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "dominio.dominio_plataforma_alta:INSERT:PERMISSIVE",
+          "dominio.dominio_plataforma_cambiar:UPDATE:PERMISSIVE",
+          "dominio.dominio_plataforma_leer:SELECT:PERMISSIVE",
+          "dominio.dominio_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "dominio.dominio_plataforma_admin_cambiar:UPDATE:RESTRICTIVE",
+          "dominio.dominio_plataforma_con_actor:SELECT:RESTRICTIVE",
           "plan.plan_plataforma_alta:INSERT:PERMISSIVE",
           "plan.plan_plataforma_cambiar:UPDATE:PERMISSIVE",
           "plan.plan_plataforma_leer:SELECT:PERMISSIVE",

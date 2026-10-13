@@ -22,7 +22,7 @@ const PARECE_NUMERO = /^([0-9]+|0x[0-9a-f]*)$/;
 /**
  * Normaliza el host que llega en la solicitud (marcas y planes, §B.2.2). Es la ÚNICA puerta de entrada de
  * un nombre de host al sistema; un host inválido se trata igual que uno desconocido (página neutra).
- * La misma regla vive como `CHECK` en `dominio_de_marca.host` (`host_valido`): lo que acepta esta
+ * La misma regla vive como `CHECK` en `dominio.host` (`host_valido`): lo que acepta esta
  * función, ya normalizado, tiene que aceptarlo la base, y a la inversa.
  *
  * Reglas, en orden:

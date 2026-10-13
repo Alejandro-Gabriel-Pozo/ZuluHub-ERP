@@ -40,7 +40,7 @@ BEGIN
   END IF;
 
   SELECT (SELECT count(*) FROM public.marca WHERE NOT es_principal)
-       + (SELECT count(*) FROM public.dominio_de_marca)
+       + (SELECT count(*) FROM public.dominio)
        + (SELECT count(*) FROM public.version_de_marca)
        + (SELECT count(*) FROM public.plan)
        + (SELECT count(*) FROM public.version_de_plan)
@@ -67,6 +67,7 @@ ALTER TABLE tenant DROP COLUMN marca_id;
 -- antes, o `plan_de_tenant` no se podría borrar.
 DROP POLICY version_de_plan_app_leer ON version_de_plan;
 
+DROP VIEW resolucion_de_host;
 DROP TABLE nivel_de_control;
 DROP TABLE modulo_de_empresa;
 DROP TABLE ajuste_de_perilla;
@@ -74,7 +75,7 @@ DROP TABLE plan_de_tenant;
 DROP TABLE version_de_marca;
 DROP TABLE version_de_plan;
 DROP TABLE plan;
-DROP TABLE dominio_de_marca;
+DROP TABLE dominio;
 DROP TABLE marca;
 
 DROP FUNCTION tenant_validar_marca();
@@ -85,8 +86,8 @@ DROP FUNCTION version_de_marca_validar_alta();
 DROP FUNCTION version_de_plan_validar_cambio();
 DROP FUNCTION version_de_plan_validar_alta();
 DROP FUNCTION plan_validar_cambio();
-DROP FUNCTION dominio_de_marca_validar_cambio();
-DROP FUNCTION dominio_de_marca_validar_alta();
+DROP FUNCTION dominio_validar_cambio();
+DROP FUNCTION dominio_validar_alta();
 DROP FUNCTION marca_validar_cambio();
 DROP FUNCTION marca_validar_alta();
 DROP FUNCTION version_congelada_no_se_borra();
