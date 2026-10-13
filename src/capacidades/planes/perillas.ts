@@ -40,9 +40,11 @@ export type DefinicionDePerilla = ComunDeUnaPerilla &
  * `empresas_por_tenant` (base 1: el grupo de empresas es de pago) la verifica el alta de empresa de la
  * plataforma. Las demás (`cajas_por_sucursal`, `reserva_provisoria`, …) las registra cada módulo cuando
  * la verifica (§B.5.1, catálogo consolidado). Catálogo y stock (T0 y CE0) declaran las suyas por
- * adelantado, porque el plan que las incluye se publica antes de que existan los casos de uso que
- * las verifican: son los extras de recetas (mermas, sub-recetas y factor por tamaño) y los niveles
- * de elecciones del catálogo (variantes con precio y grupos de precio, combos, biblioteca). Todas son
+ * adelantado, antes de que existan los casos de uso que las verifican, para que ningún otro tramo
+ * toque este archivo (catalogo-y-stock §E.2): son los extras de recetas (mermas, sub-recetas y factor
+ * por tamaño) y los niveles de elecciones del catálogo (variantes con precio y grupos de precio,
+ * combos, biblioteca). Cada tramo que las verifica con `exigirPerilla` las cubre; hasta entonces
+ * ningún caso de uso las nombra (no existe todavía la prueba «toda perilla tiene un uso»). Todas son
  * interruptores de empresa con base apagada: si el plan no las nombra, no vienen. `carta_por_qr` y las
  * de la carta (fotos, modelos, estadísticas) se declaran cuando se construya la carta.
  */
