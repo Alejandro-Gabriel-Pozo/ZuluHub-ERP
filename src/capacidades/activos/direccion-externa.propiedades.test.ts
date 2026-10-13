@@ -24,8 +24,9 @@ const idValido = fc
   .array(texto(ALFANUMERICOS, 1, 30), { minLength: 1, maxLength: 5 })
   .map((tramos) => tramos.join("/"));
 const extensionValida = fc.constantFrom("jpg", "jpeg", "png", "webp");
+/** Un tramo de transformación; uno que parezca versión (`v123`) cambiaría cuál es la versión, así que no vale. */
 const transformacion = texto(`${ALFANUMERICOS},.:`, 1, 20).filter(
-  (t) => t !== "." && !t.includes(".."),
+  (t) => t !== "." && !t.includes("..") && !/^v[1-9][0-9]{0,11}$/.test(t),
 );
 
 const partesValidas: fc.Arbitrary<PartesDeDireccion> = fc.record({
