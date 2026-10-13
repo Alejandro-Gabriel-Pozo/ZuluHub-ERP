@@ -177,14 +177,23 @@ describe("lint de la web y la composición (R-W1, R-W3)", () => {
 
   describe("R-W3: contextos con persona solo en src/composicion/contextos.ts", () => {
     it.each([
-      ["OPERATIVO", 'export const c = { tipo: "OPERATIVO", empresaId, personaId, ahora };'],
+      [
+        "OPERATIVO",
+        'export const c = { tipo: "OPERATIVO", empresaId, personaId, marcaDeEntrada, ahora };',
+      ],
       ["INVITACION", 'export const c = { tipo: "INVITACION", tokenHash, ahora };'],
       ["SESION", 'export const c = { tipo: "SESION", usuarioAuth, ahora };'],
       ["GRUPO", 'export const c = { tipo: "GRUPO", tenantId, personaId, ahora };'],
       ["PLATAFORMA", 'export const c = { tipo: "PLATAFORMA", actor, ahora };'],
       ["clave entre comillas", 'export const c = { "tipo": "OPERATIVO", empresaId };'],
-      ["con as const", 'export const c = { tipo: "OPERATIVO" as const, empresaId };'],
-      ["tipado como Contexto", 'export const c: Contexto = { tipo: "OPERATIVO", empresaId };'],
+      [
+        "con as const",
+        'export const c = { tipo: "OPERATIVO" as const, empresaId, marcaDeEntrada };',
+      ],
+      [
+        "tipado como Contexto",
+        'export const c: Contexto = { tipo: "OPERATIVO", empresaId, marcaDeEntrada };',
+      ],
     ])("se prohíbe armar un contexto %s fuera de contextos.ts", async (_nombre, codigo) => {
       expect(await mensajesWeb("apps/web/servidor/x.ts", codigo)).not.toEqual([]);
       expect(await mensajesWeb("apps/web/app/s/app/x.tsx", codigo)).not.toEqual([]);
@@ -192,7 +201,7 @@ describe("lint de la web y la composición (R-W1, R-W3)", () => {
     });
 
     it("contextos.ts y las pruebas sí pueden armarlos", async () => {
-      const codigo = 'export const c = { tipo: "OPERATIVO", empresaId };';
+      const codigo = 'export const c = { tipo: "OPERATIVO", empresaId, marcaDeEntrada };';
       expect(await mensajesWeb("src/composicion/contextos.ts", codigo)).toEqual([]);
       expect(await mensajesWeb("src/composicion/contextos.test.ts", codigo)).toEqual([]);
       expect(await mensajesWeb("test/integracion/entorno.ts", codigo)).toEqual([]);
