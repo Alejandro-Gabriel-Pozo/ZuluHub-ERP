@@ -11,6 +11,7 @@ import type {
   RepositorioDeInvitaciones,
   RepositorioDeMembresias,
   RepositorioDePersonas,
+  RepositorioDeTraspasos,
 } from "../persistencia/repositorios";
 
 /**
@@ -24,9 +25,13 @@ export type TxDeIdentidad = Readonly<{
   membresias: RepositorioDeMembresias;
   asignaciones: RepositorioDeAsignaciones;
   invitaciones: RepositorioDeInvitaciones;
+  traspasos: RepositorioDeTraspasos;
   empresas: Pick<RepositorioDeEmpresas, "obtener" | "cambiarEstado">;
-  /** Para saber si una sucursal está activa (H6: no se invita a una desactivada). */
-  sucursales: Pick<RepositorioDeSucursales, "obtener">;
+  /**
+   * Para saber si una sucursal está activa (H6: no se invita ni se asigna a una desactivada) y cuáles
+   * tiene la empresa (`asignarSucursales`).
+   */
+  sucursales: Pick<RepositorioDeSucursales, "obtener" | "listar">;
   tenants: Pick<RepositorioDeTenants, "obtener">;
   trabajos: Trabajos;
   auditoria: Auditoria;
@@ -51,3 +56,18 @@ export const TRABAJO_ENVIAR_INVITACION = "enviar_invitacion";
 /** Clave de idempotencia del envío: una invitación, un envío. */
 export const claveDeEnvioDeInvitacion = (invitacionId: string): string =>
   `invitacion:${invitacionId}:envio`;
+
+/**
+ * Tipos de trabajo que avisan por mail cada paso del traspaso de gerencia (datos: solo el id del
+ * traspaso). Quien los envía es H5 infra: mientras tanto quedan encolados, sin perder nada. La
+ * cancelación no avisa.
+ */
+export const TRABAJO_AVISAR_TRASPASO_PROPUESTO = "avisar_traspaso_propuesto";
+export const TRABAJO_AVISAR_TRASPASO_ACEPTADO = "avisar_traspaso_aceptado";
+export const TRABAJO_AVISAR_TRASPASO_RECHAZADO = "avisar_traspaso_rechazado";
+
+/** Clave de idempotencia del aviso de un paso del traspaso: un traspaso, un aviso por paso. */
+export const claveDeAvisoDeTraspaso = (
+  traspasoId: string,
+  evento: "propuesto" | "aceptado" | "rechazado",
+): string => `traspaso:${traspasoId}:${evento}`;
