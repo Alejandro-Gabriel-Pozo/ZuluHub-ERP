@@ -26,7 +26,7 @@ describe("ErrorDeSuperficie (el 500)", () => {
     expect(reset).toHaveBeenCalledTimes(1);
   });
 
-  it("la misma falla da siempre la misma referencia, y otra distinta", async () => {
+  it("la misma falla da siempre la misma referencia, y otra distinta", () => {
     expect(referenciaDeError(bytesDeDigest("1"))).toBe(referenciaDeError(bytesDeDigest("1")));
     expect(referenciaDeError(bytesDeDigest("1"))).not.toBe(referenciaDeError(bytesDeDigest("2")));
     expect(referenciaDeError(bytesDeDigest("1"))).toMatch(/^ZH-[0-9A-F]{4}-[0-9A-F]{4}$/);
