@@ -430,7 +430,10 @@ describe.skipIf(base === null)("facturación F3: concurrencia de los repositorio
         for (let intento = 0; intento < 4000; intento++) {
           const r = await entorno.ejecutar({ contexto: comoSistemaDe(e) }, trabajo);
           if (r.ok) return;
-          if (typeof r.error !== "string") {
+          // Con muchos trabajadores sobre una misma fila, SERIALIZABLE puede agotar sus reintentos: el trabajo
+          // (que tiene su propia cola) lo vuelve a intentar.
+          const agotada = typeof r.error === "object" && r.error.tipo === "ConcurrenciaAgotada";
+          if (typeof r.error !== "string" && !agotada) {
             throw new Error(`error inesperado: ${JSON.stringify(r.error)}`);
           }
           await esperar(2 + Math.floor(Math.random() * 6));

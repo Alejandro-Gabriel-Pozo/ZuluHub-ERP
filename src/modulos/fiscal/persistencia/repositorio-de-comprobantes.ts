@@ -59,13 +59,7 @@ import {
 } from "../dominio/identificadores";
 import { importesParaArca } from "../dominio/importes-para-arca";
 import { TIPOS_DE_DOCUMENTO, type DocumentoDelReceptor, type Receptor } from "../dominio/receptor";
-import {
-  deLaLista,
-  exigir,
-  serializarAltaDeId,
-  type ErrorDeAlta,
-  type ResultadoDeAlta,
-} from "./repositorios";
+import { deLaLista, exigir, type ErrorDeAlta, type ResultadoDeAlta } from "./repositorios";
 import type { FiscalDb } from "./tablas";
 
 /**
@@ -729,15 +723,11 @@ export function crearRepositorioDeComprobantes(db: Kysely<FiscalDb>): Repositori
     async crear(alta) {
       const c = alta.contenido;
       const valores = valoresDelComprobante(alta);
-      // Dos altas del mismo origen a la vez: la segunda espera a que la primera termine y ve su fila (ver
-      // `serializarAltaDeId`). Sin esto la perdedora de la carrera chocaba con una de las otras únicas.
-      await serializarAltaDeId(
-        db,
-        "comprobante_origen",
-        `${c.empresaId}|${c.origen.tipo}|${c.origen.id}`,
-      );
       // Sin objetivo de conflicto: el `id`, la identidad vigente y la clave manual son únicas distintas y
-      // cualquiera de las tres significa «ya estaba»; abajo se busca cuál.
+      // cualquiera de las tres significa «ya estaba»; abajo se busca cuál. Por eso no hace falta serializar las
+      // altas (como en los otros repositorios, que absorben solo el conflicto del `id`): la perdedora de la carrera
+      // espera a que la ganadora confirme, no inserta y la encuentra (bajo SERIALIZABLE, además, el adaptador
+      // repite el trabajo ante el 40001). Lo comprueba `facturacion-persistencia-concurrencia.test.ts`.
       const nuevo = await db
         .insertInto("comprobante")
         .values(valores)

@@ -7,12 +7,7 @@ import {
   type ComprobanteId,
   type IntentoId,
 } from "../dominio/identificadores";
-import {
-  deLaLista,
-  serializarAltaDeId,
-  type ErrorDeAlta,
-  type ResultadoDeAlta,
-} from "./repositorios";
+import { deLaLista, type ErrorDeAlta, type ResultadoDeAlta } from "./repositorios";
 import type { FiscalDb } from "./tablas";
 
 /**
@@ -175,7 +170,6 @@ export function crearRepositorioDeIntentos(db: Kysely<FiscalDb>): RepositorioDeI
       if (intento.respuesta !== null && CREDENCIAL_EN_LA_RESPUESTA.test(intento.respuesta)) {
         throw new RangeError("la respuesta de ARCA trae una credencial: se guarda sin sanear");
       }
-      await serializarAltaDeId(db, "intento_arca", intento.id);
       const nuevo = await db
         .insertInto("intento_arca")
         .values({
