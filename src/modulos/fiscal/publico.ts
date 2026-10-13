@@ -172,3 +172,35 @@ export type {
   PuntoDeVentaParaEmision,
   SolicitudDeAutorizacion,
 } from "./casos-de-uso/emision-electronica";
+
+// H7 T4: persistencia (tablas, repositorios y traducción de las restricciones de la base). La
+// composición arma los repositorios con `db.withTables<FiscalDb>()`; los casos de uso (T5 a T7) los
+// reciben por su contrato y traducen con `traducirErroresDeFiscal`.
+export {
+  COLUMNAS_DE_FISCAL,
+  ERRORES_DE_FISCAL_POR_RESTRICCION,
+  RESTRICCIONES_DE_DISPARADORES_DE_FISCAL,
+  type ErrorDeFiscalPorRestriccion,
+} from "./persistencia/esquema";
+export type { FiscalDb } from "./persistencia/tablas";
+export {
+  crearRepositorioDeDatosFiscales,
+  crearRepositorioDeDomicilios,
+  crearRepositorioDeEmisores,
+  crearRepositorioDePuntosDeVenta,
+  crearRepositorioDeReglasDeEmisor,
+  crearRepositorioDeSeries,
+  type BorradorDeReglaDeEmisor,
+  type DomicilioGuardado,
+  type ErrorDeAlta,
+  type RepositorioDeDatosFiscales,
+  type RepositorioDeDomicilios,
+  type RepositorioDeEmisores,
+  type RepositorioDePuntosDeVenta,
+  type RepositorioDeReglasDeEmisor,
+  type RepositorioDeSeries,
+  type ResultadoDeAlta,
+  type VersionDeDatosFiscales,
+  type VersionDeRegla,
+} from "./persistencia/repositorios";
+export { errorFiscalDeRestriccion, traducirErroresDeFiscal } from "./persistencia/traducir";
