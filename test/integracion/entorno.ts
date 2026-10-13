@@ -325,6 +325,7 @@ export async function crearBaseAparte(
     plataforma: conBase(base.plataforma),
     autenticacion: conBase(base.autenticacion),
     publico: conBase(base.publico),
+    captacion: conBase(base.captacion),
     clave: base.clave,
   };
   if (opciones.migrar !== false) {

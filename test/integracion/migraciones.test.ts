@@ -31,6 +31,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0005_administracion.sql",
         "0006_fiscal.sql",
         "0007_marcas_y_planes.sql",
+        "0008_captacion.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -43,6 +44,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0005_administracion.sql",
           "0006_fiscal.sql",
           "0007_marcas_y_planes.sql",
+          "0008_captacion.sql",
         ],
       });
     } finally {
@@ -66,6 +68,7 @@ describe.skipIf(base === null)("migraciones", () => {
       expect(rows.map((r) => r.rolname)).toEqual([
         "zuluhub_app",
         "zuluhub_autenticacion",
+        "zuluhub_captacion",
         "zuluhub_grupo",
         "zuluhub_plataforma",
         "zuluhub_publico",
@@ -154,6 +157,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0005_administracion.sql",
         "0006_fiscal.sql",
         "0007_marcas_y_planes.sql",
+        "0008_captacion.sql",
       ]);
     } finally {
       await aparte.destruir();
