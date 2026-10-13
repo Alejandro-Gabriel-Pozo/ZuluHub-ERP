@@ -77,6 +77,9 @@ describe("estadoDeInactividad con límites propios", () => {
     ["el vencimiento NaN", { avisoEnMs: 1_000, vencimientoEnMs: Number.NaN }],
   ])("rechaza límites incoherentes: %s", (_nombre, malos) => {
     expect(() => estadoDeInactividad(ULTIMO_USO, ULTIMO_USO, malos)).toThrow(RangeError);
+    expect(() => estadoDeInactividad(ULTIMO_USO, ULTIMO_USO, malos)).toThrow(
+      "límites de inactividad inválidos",
+    );
   });
 
   it("con límites coherentes pero mínimos funciona (aviso de 1 ms)", () => {

@@ -1,12 +1,26 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  NOMBRES_DE_ENTORNO,
+  PREFIJO_PROHIBIDO,
+  VARIABLES_PROHIBIDAS,
+} from "../../src/composicion/entorno";
 
 /**
  * W1: `apps/web/servidor/composicion.ts` usa `server-only` de forma legítima y, al cargarse, no lee
  * ninguna variable (P-12). `server-only` lanza fuera de un servidor de React, así que acá se
- * reemplaza por un módulo vacío. Que sea la primera línea de cada archivo lo exige la prueba de convenciones de apps en
- * `test/arquitectura/reglas.test.ts`.
+ * reemplaza por un módulo vacío. Que sea la primera línea de cada archivo lo exige la prueba de
+ * convenciones de apps en `test/arquitectura/reglas.test.ts`.
  */
 vi.mock("server-only", () => ({}));
+
+/** Las variables del producto (no las que lee la propia herramienta de pruebas, como `ZULUHUB_SIN_INTEGRACION`). */
+const NOMBRES_DEL_PRODUCTO = new Set<string>([
+  ...NOMBRES_DE_ENTORNO.map((e) => e.nombre as string),
+  ...VARIABLES_PROHIBIDAS,
+]);
+const esDelProducto = (nombre: string | symbol): nombre is string =>
+  typeof nombre === "string" &&
+  (NOMBRES_DEL_PRODUCTO.has(nombre) || nombre.startsWith(PREFIJO_PROHIBIDO));
 
 describe("apps/web/servidor/composicion.ts", () => {
   const original = process.env;
@@ -22,12 +36,7 @@ describe("apps/web/servidor/composicion.ts", () => {
       { ...original },
       {
         get(destino, clave, receptor) {
-          if (
-            typeof clave === "string" &&
-            /^(ZULUHUB_|DATABASE_|POSTGRES_|BETTER_AUTH_)/.test(clave)
-          ) {
-            leidas.push(clave);
-          }
+          if (esDelProducto(clave)) leidas.push(clave);
           return Reflect.get(destino, clave, receptor) as unknown;
         },
       },

@@ -79,6 +79,17 @@ const PEDIDOS: { nombre: string; pedir: (c: Conexiones) => unknown; nombra: stri
   },
 ];
 
+/**
+ * Las variables del producto: las de la lista, las prohibidas y la familia `POSTGRES_*`. Las que lee
+ * la propia herramienta de pruebas (`ZULUHUB_SIN_INTEGRACION`, `ZULUHUB_FILTRO_PRUEBAS`) no cuentan.
+ */
+const NOMBRES_DEL_PRODUCTO = new Set<string>([
+  ...NOMBRES_DE_ENTORNO.map((e) => e.nombre as string),
+  ...VARIABLES_PROHIBIDAS,
+]);
+const esDelProducto = (clave: string | symbol): clave is string =>
+  typeof clave === "string" && (NOMBRES_DEL_PRODUCTO.has(clave) || clave.startsWith("POSTGRES_"));
+
 describe("P-12: la composición no lee variables al importarse ni al armarse", () => {
   const original = process.env;
   afterEach(() => {
@@ -87,21 +98,12 @@ describe("P-12: la composición no lee variables al importarse ni al armarse", (
   });
 
   it("importar los módulos, armar las conexiones, la web y los trabajos no toca ninguna variable", async () => {
-    const observadas = new Set([
-      ...NOMBRES_DE_ENTORNO.map((e) => e.nombre as string),
-      ...VARIABLES_PROHIBIDAS,
-    ]);
     const leidas: string[] = [];
     process.env = new Proxy(
       { ...original },
       {
         get(destino, clave, receptor) {
-          if (
-            typeof clave === "string" &&
-            (observadas.has(clave) || clave.startsWith("ZULUHUB_"))
-          ) {
-            leidas.push(clave);
-          }
+          if (esDelProducto(clave)) leidas.push(clave);
           return Reflect.get(destino, clave, receptor) as unknown;
         },
         ownKeys(destino) {
@@ -128,7 +130,7 @@ describe("P-12: la composición no lee variables al importarse ni al armarse", (
       { ...original },
       {
         get(destino, clave, receptor) {
-          if (typeof clave === "string" && clave.startsWith("ZULUHUB_")) leidas.push(clave);
+          if (esDelProducto(clave)) leidas.push(clave);
           return Reflect.get(destino, clave, receptor) as unknown;
         },
       },

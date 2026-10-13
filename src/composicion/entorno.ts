@@ -66,8 +66,8 @@ export const VARIABLES_PROHIBIDAS: readonly string[] = [
   "DATABASE_URL_UNPOOLED",
 ];
 
-/** Familias enteras prohibidas (la integración de Neon inyecta `POSTGRES_URL`, `POSTGRES_USER`, ...). */
-export const PREFIJOS_PROHIBIDOS: readonly string[] = ["POSTGRES_"];
+/** Familia entera prohibida (la integración de Neon inyecta `POSTGRES_URL`, `POSTGRES_USER`, ...). */
+export const PREFIJO_PROHIBIDO = "POSTGRES_";
 
 type Entrada = (typeof NOMBRES_DE_ENTORNO)[number];
 export type NombreDeEntorno = Entrada["nombre"];
@@ -109,9 +109,7 @@ export class ErrorDeEntorno extends ErrorDeConfiguracion {
 }
 
 function esProhibida(nombre: string): boolean {
-  return (
-    VARIABLES_PROHIBIDAS.includes(nombre) || PREFIJOS_PROHIBIDOS.some((p) => nombre.startsWith(p))
-  );
+  return VARIABLES_PROHIBIDAS.includes(nombre) || nombre.startsWith(PREFIJO_PROHIBIDO);
 }
 
 /** Los nombres prohibidos que existen en la fuente (ordenados). Una variable `undefined` no existe. */

@@ -4,7 +4,7 @@ import { ErrorDeConfiguracion } from "../adaptadores/postgres/errores";
 import {
   ErrorDeEntorno,
   NOMBRES_DE_ENTORNO,
-  PREFIJOS_PROHIBIDOS,
+  PREFIJO_PROHIBIDO,
   VARIABLES_PROHIBIDAS,
   entornoDelProceso,
   prohibidasPresentes,
@@ -81,7 +81,7 @@ describe("NOMBRES_DE_ENTORNO (P-13: la lista de nombres)", () => {
   it("ninguno es una variable prohibida", () => {
     for (const nombre of nombres) {
       expect(VARIABLES_PROHIBIDAS).not.toContain(nombre);
-      for (const prefijo of PREFIJOS_PROHIBIDOS) expect(nombre.startsWith(prefijo)).toBe(false);
+      expect(nombre.startsWith(PREFIJO_PROHIBIDO)).toBe(false);
     }
   });
 
@@ -107,7 +107,7 @@ describe("variables prohibidas (P-13)", () => {
         "DATABASE_URL_UNPOOLED",
       ].sort(),
     );
-    expect(PREFIJOS_PROHIBIDOS).toEqual(["POSTGRES_"]);
+    expect(PREFIJO_PROHIBIDO).toBe("POSTGRES_");
   });
 
   it("un entorno limpio no tiene ninguna", () => {

@@ -51,7 +51,7 @@ describe("contextoOperativo", () => {
         marcaDeEntrada: MARCA,
         ahora: new Date("no es una fecha"),
       }),
-    ).toThrow(RangeError);
+    ).toThrow("ahora debe ser una fecha válida");
   });
 });
 
