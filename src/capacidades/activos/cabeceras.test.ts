@@ -62,10 +62,10 @@ describe("detectarFormato", () => {
   });
 
   it("no reconoce GIF, HEIC, vacío ni texto cualquiera", () => {
-    expect(detectarFormato(fixture("fotos", "foto-480.gif"))).toBeNull();
-    expect(detectarFormato(fixture("fotos", "foto-480.heic"))).toBeNull();
-    expect(detectarFormato(new Uint8Array())).toBeNull();
-    expect(detectarFormato(bytesDe(ascii("<html><body>hola</body></html>")))).toBeNull();
+    expect(detectarFormato(fixture("fotos", "foto-480.gif"))).toBe("desconocido");
+    expect(detectarFormato(fixture("fotos", "foto-480.heic"))).toBe("desconocido");
+    expect(detectarFormato(new Uint8Array())).toBe("desconocido");
+    expect(detectarFormato(bytesDe(ascii("<html><body>hola</body></html>")))).toBe("desconocido");
   });
 
   it("exige la firma completa: cambiar cualquiera de los 8 bytes del PNG lo descarta", () => {
@@ -73,22 +73,22 @@ describe("detectarFormato", () => {
     for (let i = 0; i < 8; i++) {
       const mala = buena.slice();
       mala[i] = (mala[i] as number) ^ 0x01;
-      expect(detectarFormato(mala)).toBeNull();
+      expect(detectarFormato(mala)).toBe("desconocido");
     }
-    expect(detectarFormato(buena.subarray(0, 7))).toBeNull();
+    expect(detectarFormato(buena.subarray(0, 7))).toBe("desconocido");
     expect(detectarFormato(buena.subarray(0, 8))).toBe("png");
   });
 
   it("JPEG pide FF D8 FF; WebP pide RIFF y WEBP a 8 bytes; ICO pide 00 00 01 00", () => {
-    expect(detectarFormato(bytesDe(0xff, 0xd8))).toBeNull();
+    expect(detectarFormato(bytesDe(0xff, 0xd8))).toBe("desconocido");
     expect(detectarFormato(bytesDe(0xff, 0xd8, 0xff))).toBe("jpeg");
-    expect(detectarFormato(bytesDe(0xff, 0xd8, 0xfe))).toBeNull();
-    expect(detectarFormato(bytesDe(ascii("RIFF"), u32le(4), ascii("WAVE")))).toBeNull();
-    expect(detectarFormato(bytesDe(ascii("RIFX"), u32le(4), ascii("WEBP")))).toBeNull();
-    expect(detectarFormato(bytesDe(ascii("RIFF"), u32le(4), ascii("WEB")))).toBeNull();
+    expect(detectarFormato(bytesDe(0xff, 0xd8, 0xfe))).toBe("desconocido");
+    expect(detectarFormato(bytesDe(ascii("RIFF"), u32le(4), ascii("WAVE")))).toBe("desconocido");
+    expect(detectarFormato(bytesDe(ascii("RIFX"), u32le(4), ascii("WEBP")))).toBe("desconocido");
+    expect(detectarFormato(bytesDe(ascii("RIFF"), u32le(4), ascii("WEB")))).toBe("desconocido");
     expect(detectarFormato(bytesDe(ascii("RIFF"), u32le(4), ascii("WEBP")))).toBe("webp");
-    expect(detectarFormato(bytesDe(0, 0, 1))).toBeNull();
-    expect(detectarFormato(bytesDe(0, 0, 2, 0))).toBeNull(); // cursor
+    expect(detectarFormato(bytesDe(0, 0, 1))).toBe("desconocido");
+    expect(detectarFormato(bytesDe(0, 0, 2, 0))).toBe("desconocido"); // cursor
     expect(detectarFormato(bytesDe(0, 0, 1, 0))).toBe("ico");
   });
 
@@ -96,8 +96,8 @@ describe("detectarFormato", () => {
     expect(detectarFormato(bytesDe(ascii('<?xml version="1.0"?>\n<SVG xmlns="x"/>')))).toBe("svg");
     const relleno = (n: number) => new Array<number>(n).fill(0x20);
     expect(detectarFormato(bytesDe(relleno(1020), ascii("<svg")))).toBe("svg");
-    expect(detectarFormato(bytesDe(relleno(1021), ascii("<svg")))).toBeNull();
-    expect(detectarFormato(bytesDe(ascii("<sv")))).toBeNull();
+    expect(detectarFormato(bytesDe(relleno(1021), ascii("<svg")))).toBe("desconocido");
+    expect(detectarFormato(bytesDe(ascii("<sv")))).toBe("desconocido");
   });
 });
 
@@ -224,12 +224,17 @@ describe("leerPng con bytes armados", () => {
     expect(fallo(construirPng({ entrelazado: 2 }))).toBe("CABECERA_INVALIDA");
   });
 
-  it("el encabezado cortado es TRUNCADO: 32 bytes no alcanzan, 33 sin IEND tampoco", () => {
+  it("el encabezado cortado es TRUNCADO: hasta el entrelazado hacen falta 29 bytes; y después, el IEND", () => {
     const completo = construirPng({ fragmentos: [], conIend: false });
     expect(completo.length).toBe(33);
-    expect(fallo(completo.subarray(0, 32))).toBe("TRUNCADO");
+    expect(fallo(completo.subarray(0, 28))).toBe("TRUNCADO");
+    expect(fallo(completo.subarray(0, 29))).toBe("TRUNCADO"); // campos bien, falta el resto
     expect(fallo(completo)).toBe("TRUNCADO");
     expect(fallo(bytesDe(FIRMA_PNG))).toBe("TRUNCADO");
+    // Con 29 bytes ya se lee el IHDR: un campo malo se dice como tal, no como corte.
+    const malo = construirPng({ compresion: 1, fragmentos: [], conIend: false });
+    expect(fallo(malo.subarray(0, 29))).toBe("CABECERA_INVALIDA");
+    expect(fallo(malo.subarray(0, 28))).toBe("TRUNCADO");
   });
 
   it("recorre los fragmentos hasta IEND: cada uno entero y con IDAT antes", () => {
@@ -245,6 +250,14 @@ describe("leerPng con bytes armados", () => {
     expect(fallo(pasado(3))).toBe("ok"); // el fragmento entra justo
     expect(fallo(pasado(4))).toBe("TRUNCADO");
     expect(fallo(pasado(0xffffffff))).toBe("TRUNCADO");
+    // Un IEND que declara más de lo que hay también es un corte.
+    expect(
+      fallo(bytesDe(construirPng({ conIend: false }), [0, 0, 0, 5], ascii("IEND"), [0, 0, 0, 0])),
+    ).toBe("TRUNCADO");
+    // Sin IDAT no hay imagen, aunque haya otros fragmentos.
+    expect(fallo(construirPng({ fragmentos: [fragmentoPng("teXt", [1])] }))).toBe(
+      "CABECERA_INVALIDA",
+    );
     // Fragmentos desconocidos se saltean; lo que sobra después de IEND se ignora.
     const conOtros = construirPng({
       fragmentos: [
@@ -583,6 +596,13 @@ describe("leerWebp con bytes armados", () => {
       leer(construirRiff([fragmentoRiff("EXIF", [1, 2]), fragmentoRiff("VP8 ", datosVp8(10, 10))])),
     ).toBe("CABECERA_INVALIDA");
     expect(leer(construirRiff([fragmentoRiff("ALPH", [1, 2])]))).toBe("CABECERA_INVALIDA");
+    // Aunque sus datos parezcan los de un VP8L o un VP8, el tipo manda.
+    expect(leer(construirRiff([fragmentoRiff("ZZZZ", datosVp8l(10, 10))]))).toBe(
+      "CABECERA_INVALIDA",
+    );
+    expect(leer(construirRiff([fragmentoRiff("ZZZZ", datosVp8(10, 10))]))).toBe(
+      "CABECERA_INVALIDA",
+    );
   });
 
   it("los errores de contenedor pasan tal cual", () => {
@@ -797,6 +817,30 @@ describe("leerJpeg con bytes armados", () => {
     expect(r.ok && r.valor.segmentos.at(-1)?.marcador).toBe(0xd9);
   });
 
+  it("el error de contenido gana al de corte cuando el segmento termina justo en el final", () => {
+    // Largo 1 con el encabezado del segmento terminando al ras del archivo.
+    expect(leer(bytesDe(SOI, [0xff, 0xe0, 0x00, 0x01]))).toBe("CABECERA_INVALIDA");
+    // Un cuadro mal formado o no admitido, al ras del final.
+    expect(leer(bytesDe(SOI, sof(0, 6)))).toBe("CABECERA_INVALIDA");
+    expect(leer(bytesDe(SOI, sof(5, 6, { marcador: 0xc1 })))).toBe("VARIANTE_NO_ADMITIDA");
+    expect(leer(bytesDe(SOI, sof(5, 6)))).toBe("TRUNCADO");
+  });
+
+  it("un SOS con largo 0 o 1 es inválido, con o sin cuadro antes", () => {
+    for (const largo of [0, 1]) {
+      expect(leer(bytesDe(SOI, sof(5, 6), [0xff, 0xda, 0x00, largo, 0x12, 0x34], EOI))).toBe(
+        "CABECERA_INVALIDA",
+      );
+    }
+    expect(leer(bytesDe(SOI, sof(5, 6), [0xff, 0xda, 0x00, 0x02, 0x12, 0x34], EOI))).toMatchObject({
+      ancho: 5,
+    });
+  });
+
+  it("un escaneo antes del cuadro es inválido aunque después vengan un cuadro y otro escaneo", () => {
+    expect(leer(bytesDe(SOI, escaneo(), sof(5, 6), escaneo(), EOI))).toBe("CABECERA_INVALIDA");
+  });
+
   it("un marcador al final sin su largo es TRUNCADO", () => {
     expect(leer(bytesDe(SOI, [0xff, 0xe0]))).toBe("TRUNCADO");
     expect(leer(bytesDe(SOI, [0xff, 0xe0, 0x00]))).toBe("TRUNCADO");
@@ -840,6 +884,21 @@ describe("leerIco", () => {
     expect(leer(construirIco(e(0, 22), 10))).toBe("CABECERA_INVALIDA");
     expect(leer(construirIco(e(0xffffffff, 22), 10))).toBe("TRUNCADO");
     expect(leer(construirIco(e(10, 0xffffffff), 10))).toBe("TRUNCADO");
+  });
+
+  it("devuelve el formato y las imágenes", () => {
+    expect(leerIco(fixture("activos", "favicon-32.ico"))).toEqual({
+      ok: true,
+      valor: { formato: "ico", imagenes: [{ ancho: 32, alto: 32 }] },
+    });
+  });
+
+  it("un directorio que ocupa todo el archivo no tiene datos: se dice según la entrada", () => {
+    const solo = (tamano: number, desde: number) =>
+      construirIco([{ ancho: 16, alto: 16, tamano, desde }], 0);
+    expect(leer(solo(0, 22))).toBe("CABECERA_INVALIDA");
+    expect(leer(solo(10, 0))).toBe("CABECERA_INVALIDA");
+    expect(leer(solo(10, 22))).toBe("TRUNCADO");
   });
 
   it("el directorio entero tiene que estar: cantidad cero o mayor a lo que hay", () => {

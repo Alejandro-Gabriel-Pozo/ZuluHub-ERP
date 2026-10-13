@@ -57,19 +57,23 @@ export type CabeceraIco = Readonly<{
 /** Las imágenes con medidas propias y sin directorio (todas menos el ICO, que trae varias). */
 export type CabeceraPlana = CabeceraPng | CabeceraWebp | CabeceraJpeg;
 
-/** Lo que `detectarFormato` reconoce; `svg` solo para poder rechazarlo con su propio motivo. */
-export type FormatoDetectado = FormatoDeImagen | "svg";
+/**
+ * Lo que `detectarFormato` reconoce; `svg` solo para poder rechazarlo con su propio motivo y
+ * `desconocido` para todo lo demás (HEIC, GIF, HTML, vacío…).
+ */
+export type FormatoDetectado = FormatoDeImagen | "svg" | "desconocido";
 
 // --- Utilidades sobre bytes -------------------------------------------------------------------------
 
 const vistaDe = (bytes: Uint8Array): DataView =>
   new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 
-/** ¿Los bytes que empiezan en `desde` son exactamente `esperado`? Falso si no alcanzan. */
-function empiezaCon(bytes: Uint8Array, desde: number, esperado: readonly number[]): boolean {
-  if (desde + esperado.length > bytes.length) return false;
-  return esperado.every((valor, i) => bytes[desde + i] === valor);
-}
+/**
+ * ¿Los bytes que empiezan en `desde` son exactamente `esperado`? Falso si no alcanzan: leer un índice
+ * de más en un `Uint8Array` da `undefined`, que nunca es igual a un byte.
+ */
+const empiezaCon = (bytes: Uint8Array, desde: number, esperado: readonly number[]): boolean =>
+  esperado.every((valor, i) => bytes[desde + i] === valor);
 
 /** Cuatro caracteres ASCII desde `desde`; el llamador ya verificó que entran en los bytes. */
 const cuatroCaracteres = (bytes: Uint8Array, desde: number): string =>
@@ -91,15 +95,15 @@ const BYTES_PARA_SVG = 1024;
 /**
  * Reconoce el formato por la firma COMPLETA (PNG: los 8 bytes; WebP: `RIFF`…`WEBP`; JPEG: `FF D8 FF`;
  * ICO: `00 00 01 00`). Un SVG no tiene firma binaria: se lo marca si `<svg` aparece al comienzo, solo
- * para que el rechazo diga «SVG» y no «formato desconocido». Todo lo demás (HEIC, GIF, HTML…) es null.
+ * para que el rechazo diga «SVG» y no «formato desconocido».
  */
-export function detectarFormato(bytes: Uint8Array): FormatoDetectado | null {
+export function detectarFormato(bytes: Uint8Array): FormatoDetectado {
   if (empiezaCon(bytes, 0, FIRMA_PNG)) return "png";
   if (empiezaCon(bytes, 0, FIRMA_JPEG)) return "jpeg";
   if (empiezaCon(bytes, 0, RIFF) && empiezaCon(bytes, 8, WEBP)) return "webp";
   if (empiezaCon(bytes, 0, FIRMA_ICO)) return "ico";
   const inicio = String.fromCharCode(...bytes.subarray(0, BYTES_PARA_SVG)).toLowerCase();
-  return inicio.includes("<svg") ? "svg" : null;
+  return inicio.includes("<svg") ? "svg" : "desconocido";
 }
 
 // --- PNG --------------------------------------------------------------------------------------------
@@ -123,8 +127,8 @@ const MEDIDA_MAXIMA_DE_PNG = 0x7fffffff;
  */
 export function leerPng(bytes: Uint8Array): Resultado<CabeceraPng, ErrorDeCabecera> {
   if (!empiezaCon(bytes, 0, FIRMA_PNG)) return err("FORMATO_NO_RECONOCIDO");
-  // 8 de firma + IHDR completo (largo 4, tipo 4, datos 13, CRC 4).
-  if (bytes.length < 33) return err("TRUNCADO");
+  // 8 de firma + largo (4) + tipo (4) + los 13 bytes de datos del IHDR, hasta el entrelazado.
+  if (bytes.length < 29) return err("TRUNCADO");
   const v = vistaDe(bytes);
   if (v.getUint32(8) !== 13 || cuatroCaracteres(bytes, 12) !== "IHDR") {
     return err("CABECERA_INVALIDA");
@@ -370,13 +374,13 @@ export function analizarJpeg(bytes: Uint8Array): Resultado<AnalisisDeJpeg, Error
 
     if (esSof(marcador)) {
       if (marcador !== SOF0 && marcador !== SOF2) return err("VARIANTE_NO_ADMITIDA");
-      if (cuadro !== null || largo < 8) return err("CABECERA_INVALIDA");
+      // 8 bytes fijos (largo, precisión, alto, ancho y cantidad de componentes) y 3 por componente, al menos 1.
+      if (cuadro !== null || largo < 11) return err("CABECERA_INVALIDA");
       const componentes = v.getUint8(inicio + 9);
       const alto = v.getUint16(inicio + 5);
       const ancho = v.getUint16(inicio + 7);
       if (
         v.getUint8(inicio + 4) !== 8 || // precisión
-        componentes === 0 ||
         largo !== 8 + 3 * componentes ||
         ancho === 0 ||
         alto === 0
@@ -399,7 +403,7 @@ export function analizarJpeg(bytes: Uint8Array): Resultado<AnalisisDeJpeg, Error
     let desde = fin;
     for (;;) {
       const ff = bytes.indexOf(0xff, desde);
-      if (ff < 0 || ff + 1 >= bytes.length) return err("TRUNCADO");
+      if (ff === -1 || ff + 1 >= bytes.length) return err("TRUNCADO");
       const siguiente = v.getUint8(ff + 1);
       if (siguiente === 0x00 || (siguiente >= 0xd0 && siguiente <= 0xd7)) {
         desde = ff + 2;

@@ -6,6 +6,7 @@ import {
   leerIco,
   type ErrorDeCabecera,
   type FormatoDeImagen,
+  type FormatoDetectado,
 } from "./cabeceras";
 import { analizarFoto } from "./limpieza";
 
@@ -41,7 +42,6 @@ type Rango = Readonly<{ minimo: number; maximo: number }>;
 const exacta = (medida: number): Rango => ({ minimo: medida, maximo: medida });
 
 type ReglaDeImagen = Readonly<{
-  tipo: "IMAGEN";
   formatos: readonly FormatoDeImagen[];
   pesoMaximo: number;
   ancho: Rango;
@@ -51,14 +51,12 @@ type ReglaDeImagen = Readonly<{
 }>;
 
 type ReglaDeIco = Readonly<{
-  tipo: "ICO";
   pesoMaximo: number;
   /** Conjuntos de lados cuadrados admitidos (ordenados de menor a mayor). */
   ladosAdmitidos: readonly (readonly number[])[];
 }>;
 
 const logo: ReglaDeImagen = {
-  tipo: "IMAGEN",
   formatos: ["png", "webp"],
   pesoMaximo: 100 * KB,
   ancho: { minimo: 1, maximo: MEDIDA_MAXIMA_DE_LOGO },
@@ -72,7 +70,6 @@ const logo: ReglaDeImagen = {
  */
 export const REGLAS_DE_RANURA = {
   icono_192: {
-    tipo: "IMAGEN",
     formatos: ["png"],
     pesoMaximo: 100 * KB,
     ancho: exacta(192),
@@ -80,7 +77,6 @@ export const REGLAS_DE_RANURA = {
     opaca: false,
   },
   icono_apple_180: {
-    tipo: "IMAGEN",
     formatos: ["png"],
     pesoMaximo: 100 * KB,
     ancho: exacta(180),
@@ -88,7 +84,6 @@ export const REGLAS_DE_RANURA = {
     opaca: true,
   },
   icono_512: {
-    tipo: "IMAGEN",
     formatos: ["png"],
     pesoMaximo: 200 * KB,
     ancho: exacta(512),
@@ -96,14 +91,12 @@ export const REGLAS_DE_RANURA = {
     opaca: false,
   },
   favicon_ico: {
-    tipo: "ICO",
     pesoMaximo: 20 * KB,
     ladosAdmitidos: [[32], [16, 32]],
   },
   logo,
   logo_sobre_primario: logo,
   logo_correo: {
-    tipo: "IMAGEN",
     formatos: ["png"],
     pesoMaximo: 50 * KB,
     ancho: { minimo: 1, maximo: 600 },
@@ -111,7 +104,6 @@ export const REGLAS_DE_RANURA = {
     opaca: false,
   },
   imagen_social: {
-    tipo: "IMAGEN",
     formatos: ["png", "jpeg"],
     pesoMaximo: 300 * KB,
     ancho: exacta(1200),
@@ -140,8 +132,9 @@ function rechazoPorFormato(
 ): ErrorDeArchivo | null {
   const formato = detectarFormato(bytes);
   if (formato === "svg") return "SVG_NO_ADMITIDO";
-  if (formato === null || !admitidos.includes(formato)) return "FORMATO_NO_ADMITIDO";
-  return null;
+  return (admitidos as readonly FormatoDetectado[]).includes(formato)
+    ? null
+    : "FORMATO_NO_ADMITIDO";
 }
 
 function validarIco(
@@ -193,7 +186,7 @@ export function validarArchivoDeActivo(
   bytes: Uint8Array,
 ): Resultado<ArchivoDeActivo, ErrorDeArchivo> {
   const regla: ReglaDeImagen | ReglaDeIco = REGLAS_DE_RANURA[ranura];
-  return regla.tipo === "ICO" ? validarIco(regla, bytes) : validarImagen(regla, bytes);
+  return "ladosAdmitidos" in regla ? validarIco(regla, bytes) : validarImagen(regla, bytes);
 }
 
 /** Las dos variantes de cada foto de producto (carta §5.2): chica para listas, grande para la tarjeta. */
