@@ -15,13 +15,14 @@
     "test": "vitest run",
     "arquitectura": "depcruise src --config .dependency-cruiser.cjs",
     "analizar:muerto": "knip",
-    "mutacion": "stryker run",
+    "mutacion": "ZULUHUB_SIN_INTEGRACION=1 stryker run",
     "gate": "npm run typecheck && npm run lint && npm run format:check && npm run arquitectura && npm run analizar:muerto && npm test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@neon/config": "^1.8.6",
     "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "10.0.0",
     "@types/node": "^24.19.2",
     "@types/pg": "^8.23.1",
     "dependency-cruiser": "^18.5.0",
@@ -31,7 +32,7 @@
     "prettier": "^3.9.10",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.1",
-    "vitest": "^5.0.3"
+    "vitest": "^4.1.11"
   },
   "dependencies": {
     "kysely": "^0.29.6",

@@ -55,20 +55,16 @@ function cierre(archivo, dependencias) {
 /**
  * @param {{
  *   cambios: readonly string[],
- *   grupos: readonly { grupo: string, archivos: string, pruebas?: string, expandidos: readonly string[] }[],
+ *   grupos: readonly { grupo: string, archivos: string, expandidos: readonly string[] }[],
  *   dependencias: Readonly<Record<string, readonly string[]>>,
  * }} entrada
- * @returns {{ completo: boolean, motivo: string, grupos: { grupo: string, archivos: string, pruebas: string }[] }}
+ * @returns {{ completo: boolean, motivo: string, grupos: { grupo: string, archivos: string }[] }}
  */
 function planificar({ cambios, grupos, dependencias }) {
   const todos = (motivo) => ({
     completo: true,
     motivo,
-    grupos: grupos.map(({ grupo, archivos, pruebas }) => ({
-      grupo,
-      archivos,
-      pruebas: pruebas ?? "",
-    })),
+    grupos: grupos.map(({ grupo, archivos }) => ({ grupo, archivos })),
   });
 
   const enElGrafo = new Set();
@@ -94,10 +90,10 @@ function planificar({ cambios, grupos, dependencias }) {
   }
 
   const elegidos = [];
-  for (const { grupo, pruebas, expandidos } of grupos) {
+  for (const { grupo, expandidos } of grupos) {
     const archivos = expandidos.filter((archivo) => afectados.has(archivo));
     if (archivos.length > 0) {
-      elegidos.push({ grupo, archivos: archivos.join(","), pruebas: pruebas ?? "" });
+      elegidos.push({ grupo, archivos: archivos.join(",") });
     }
   }
   return {
@@ -151,10 +147,9 @@ function leerGrupos(raiz) {
   const definidos = JSON.parse(
     fs.readFileSync(path.join(raiz, "arquitectura/grupos-de-mutacion.json"), "utf8"),
   );
-  return definidos.map(({ grupo, archivos, pruebas }) => ({
+  return definidos.map(({ grupo, archivos }) => ({
     grupo,
     archivos,
-    pruebas,
     expandidos: expandir(archivos, raiz),
   }));
 }
@@ -178,11 +173,7 @@ function principal() {
       : {
           completo: true,
           motivo: `evento ${evento === "" ? "local" : evento}: se corre todo`,
-          grupos: grupos.map(({ grupo, archivos, pruebas }) => ({
-            grupo,
-            archivos,
-            pruebas: pruebas ?? "",
-          })),
+          grupos: grupos.map(({ grupo, archivos }) => ({ grupo, archivos })),
         };
 
   const resumen = [

@@ -222,9 +222,11 @@ jobs:
       - run: npx stryker run --mutate "$ARCHIVOS,!src/**/*.test.ts"
         env:
           FC_SEMILLA: "20261011"
-          # Filtro de archivos de prueba que corre cada mutante (vacío = toda la suite unitaria). Los
-          # grupos grandes lo acotan a las pruebas de su módulo para entrar en el tiempo del job.
-          ZULUHUB_FILTRO_PRUEBAS: ${{ matrix.pruebas }}
+          # La mutación corre solo las pruebas sin base de datos (test/integracion/global.ts). Qué
+          # pruebas corre cada mutante lo decide la cobertura por prueba del runner de vitest; no se
+          # filtra con `--testFiles`: en Stryker 10.0.0 deja sin activar los mutantes estáticos
+          # (los de constantes de módulo, p. ej. una regex) y todos sobreviven.
+          ZULUHUB_SIN_INTEGRACION: "1"
           ARCHIVOS: ${{ matrix.archivos }}
 
   gate:

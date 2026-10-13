@@ -21,43 +21,35 @@
   },
   {
     "grupo": "fiscal (numeración)",
-    "archivos": "src/modulos/fiscal/dominio/numeracion.ts",
-    "pruebas": "src/modulos/fiscal"
+    "archivos": "src/modulos/fiscal/dominio/numeracion.ts"
   },
   {
     "grupo": "fiscal (datos y vigencia)",
-    "archivos": "src/modulos/fiscal/dominio/datos-fiscales.ts,src/modulos/fiscal/dominio/vigencia.ts",
-    "pruebas": "src/modulos/fiscal"
+    "archivos": "src/modulos/fiscal/dominio/datos-fiscales.ts,src/modulos/fiscal/dominio/vigencia.ts"
   },
   {
     "grupo": "fiscal (puntos de venta y emisor)",
-    "archivos": "src/modulos/fiscal/dominio/punto-de-venta.ts,src/modulos/fiscal/dominio/resolucion-de-emisor.ts",
-    "pruebas": "src/modulos/fiscal"
+    "archivos": "src/modulos/fiscal/dominio/punto-de-venta.ts,src/modulos/fiscal/dominio/resolucion-de-emisor.ts"
   },
   {
     "grupo": "fiscal (resto)",
-    "archivos": "src/modulos/fiscal/dominio/**/*.ts,!src/modulos/fiscal/dominio/numeracion.ts,!src/modulos/fiscal/dominio/datos-fiscales.ts,!src/modulos/fiscal/dominio/vigencia.ts,!src/modulos/fiscal/dominio/punto-de-venta.ts,!src/modulos/fiscal/dominio/resolucion-de-emisor.ts",
-    "pruebas": "src/modulos/fiscal"
+    "archivos": "src/modulos/fiscal/dominio/**/*.ts,!src/modulos/fiscal/dominio/numeracion.ts,!src/modulos/fiscal/dominio/datos-fiscales.ts,!src/modulos/fiscal/dominio/vigencia.ts,!src/modulos/fiscal/dominio/punto-de-venta.ts,!src/modulos/fiscal/dominio/resolucion-de-emisor.ts"
   },
   {
     "grupo": "domicilio",
-    "archivos": "src/primitivas/domicilio/**/*.ts",
-    "pruebas": "src/primitivas/domicilio"
+    "archivos": "src/primitivas/domicilio/**/*.ts"
   },
   {
     "grupo": "tiempo",
-    "archivos": "src/primitivas/tiempo/**/*.ts",
-    "pruebas": "src/primitivas/tiempo"
+    "archivos": "src/primitivas/tiempo/**/*.ts"
   },
   {
     "grupo": "identidad (invitación)",
-    "archivos": "src/modulos/identidad/dominio/invitacion.ts",
-    "pruebas": "src/modulos/identidad"
+    "archivos": "src/modulos/identidad/dominio/invitacion.ts"
   },
   {
     "grupo": "identidad (resto)",
-    "archivos": "src/modulos/identidad/dominio/**/*.ts,!src/modulos/identidad/dominio/invitacion.ts",
-    "pruebas": "src/modulos/identidad"
+    "archivos": "src/modulos/identidad/dominio/**/*.ts,!src/modulos/identidad/dominio/invitacion.ts"
   },
   {
     "grupo": "permisos y módulos",
@@ -65,42 +57,34 @@
   },
   {
     "grupo": "plataforma (dominio)",
-    "archivos": "src/plataforma/dominio/**/*.ts",
-    "pruebas": "src/plataforma test/plataforma"
+    "archivos": "src/plataforma/dominio/**/*.ts"
   },
   {
     "grupo": "identificadores",
-    "archivos": "src/primitivas/identificadores/**/*.ts",
-    "pruebas": "src/primitivas/identificadores"
+    "archivos": "src/primitivas/identificadores/**/*.ts"
   },
   {
     "grupo": "vocabulario",
-    "archivos": "src/capacidades/vocabulario/**/*.ts",
-    "pruebas": "src/capacidades/vocabulario"
+    "archivos": "src/capacidades/vocabulario/**/*.ts"
   },
   {
     "grupo": "marcas (host, tema y jerarquía)",
-    "archivos": "src/modulos/marcas/dominio/host.ts,src/modulos/marcas/dominio/tema.ts,src/modulos/marcas/dominio/jerarquia.ts",
-    "pruebas": "src/modulos/marcas"
+    "archivos": "src/modulos/marcas/dominio/host.ts,src/modulos/marcas/dominio/tema.ts,src/modulos/marcas/dominio/jerarquia.ts"
   },
   {
     "grupo": "marcas (definición, versión y vigencia)",
-    "archivos": "src/modulos/marcas/dominio/**/*.ts,!src/modulos/marcas/dominio/host.ts,!src/modulos/marcas/dominio/tema.ts,!src/modulos/marcas/dominio/jerarquia.ts",
-    "pruebas": "src/modulos/marcas"
+    "archivos": "src/modulos/marcas/dominio/**/*.ts,!src/modulos/marcas/dominio/host.ts,!src/modulos/marcas/dominio/tema.ts,!src/modulos/marcas/dominio/jerarquia.ts"
   },
   {
     "grupo": "trabajos y correo (lógica pura)",
-    "archivos": "src/adaptadores/trabajos/reintentos.ts,src/adaptadores/trabajos/error-seguro.ts,src/adaptadores/correo/configuracion.ts,src/adaptadores/postgres/huella-canonica.ts",
-    "pruebas": "src/adaptadores"
+    "archivos": "src/adaptadores/trabajos/reintentos.ts,src/adaptadores/trabajos/error-seguro.ts,src/adaptadores/correo/configuracion.ts,src/adaptadores/postgres/huella-canonica.ts"
   },
   {
     "grupo": "planes (derechos de uso, vigencia y niveles)",
-    "archivos": "src/capacidades/planes/**/*.ts",
-    "pruebas": "src/capacidades/planes"
+    "archivos": "src/capacidades/planes/**/*.ts"
   },
   {
     "grupo": "planes (decisiones del módulo)",
-    "archivos": "src/modulos/planes/dominio/**/*.ts",
-    "pruebas": "src/modulos/planes"
+    "archivos": "src/modulos/planes/dominio/**/*.ts"
   }
 ]

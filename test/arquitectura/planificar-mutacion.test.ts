@@ -8,11 +8,11 @@ import { describe, expect, it } from "vitest";
  * resultado de mutación obsoleto tiene acá el cambio que la dispara: si se la quita, el caso falla.
  */
 
-type Grupo = { grupo: string; archivos: string; pruebas?: string; expandidos: string[] };
+type Grupo = { grupo: string; archivos: string; expandidos: string[] };
 type Plan = {
   completo: boolean;
   motivo: string;
-  grupos: { grupo: string; archivos: string; pruebas: string }[];
+  grupos: { grupo: string; archivos: string }[];
 };
 const require = createRequire(import.meta.url);
 const { planificar, expandir } = require("../../arquitectura/planificar-mutacion.cjs") as {
@@ -42,7 +42,6 @@ const GRUPOS: Grupo[] = [
   {
     grupo: "a",
     archivos: "src/a/dominio/*.ts",
-    pruebas: "src/a",
     expandidos: ["src/a/dominio/a.ts"],
   },
   { grupo: "b", archivos: "src/b/dominio/*.ts", expandidos: ["src/b/dominio/b.ts"] },
@@ -56,7 +55,7 @@ describe("planificador de mutación: qué grupos corren", () => {
   it("un cambio en un archivo mutado corre solo su grupo, y solo ese archivo", () => {
     const p = plan(["src/a/dominio/a.ts"]);
     expect(p.completo).toBe(false);
-    expect(p.grupos).toEqual([{ grupo: "a", archivos: "src/a/dominio/a.ts", pruebas: "src/a" }]);
+    expect(p.grupos).toEqual([{ grupo: "a", archivos: "src/a/dominio/a.ts" }]);
   });
 
   it("un cambio en lo que importa un archivo mutado corre a todos los que lo usan", () => {
@@ -90,9 +89,7 @@ describe("planificador de mutación: qué grupos corren", () => {
   ])("si cambia %s corren todos los grupos completos", (_nombre, archivo) => {
     const p = plan([archivo]);
     expect(p.completo).toBe(true);
-    expect(p.grupos).toEqual(
-      GRUPOS.map(({ grupo, archivos, pruebas }) => ({ grupo, archivos, pruebas: pruebas ?? "" })),
-    );
+    expect(p.grupos).toEqual(GRUPOS.map(({ grupo, archivos }) => ({ grupo, archivos })));
   });
 
   it("lo desconocido gana a lo ignorable: un .md junto a un archivo fuera del grafo corre todo", () => {
