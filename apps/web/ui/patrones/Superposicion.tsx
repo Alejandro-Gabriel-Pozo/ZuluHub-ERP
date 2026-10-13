@@ -2,7 +2,12 @@ import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "re
 import { BotonIcono } from "../componentes/BotonIcono";
 import estilos from "./Superposicion.module.css";
 
-export type PropositoDeSuperposicion = "elegir" | "confirmar" | "editar" | "detalle";
+/**
+ * `vistazo` (C-2): mirar un producto sin perder el lugar en la lista. Hoja inferior de hasta el 90 % del alto
+ * en el celular y diálogo en el escritorio; a diferencia de las demás, se cierra también tocando el fondo
+ * (no hay nada cargado que perder) y el foco inicial va al título para que se lea el nombre primero.
+ */
+export type PropositoDeSuperposicion = "elegir" | "confirmar" | "editar" | "detalle" | "vistazo";
 
 export type PropsDeSuperposicion = Readonly<{
   abierta: boolean;
@@ -15,6 +20,8 @@ export type PropsDeSuperposicion = Readonly<{
   cerrable: boolean;
   /** El texto accesible del botón de cerrar («Cerrar»). */
   etiquetaDeCerrar: string;
+  /** Id (dentro de los hijos) de lo que describe la superposición: pasa a `aria-describedby`. */
+  idDeLaDescripcion?: string;
   children: ReactNode;
 }>;
 
@@ -31,9 +38,10 @@ function focalizablesDe(dialogo: HTMLDialogElement): HTMLElement[] {
  * Superposición modal sobre `<dialog>` ([01] §6.1): un solo patrón con un propósito; la presentación
  * (hoja inferior, pantalla completa, diálogo, panel) la decide el CSS según el propósito y el ancho.
  *  - El fondo queda inerte (`showModal`) y el foco no sale: Tab da la vuelta dentro de la superposición.
- *  - Foco inicial: en `confirmar` va al TÍTULO (nunca al botón que mueve dinero o anula); en los
- *    demás, al primer control.
- *  - Escape cierra solo si `cerrable`. Nunca se cierra tocando el fondo: un toque de más no pierde lo cargado.
+ *  - Foco inicial: en `confirmar` va al TÍTULO (nunca al botón que mueve dinero o anula) y en `vistazo`
+ *    también (se lee el nombre antes que los botones); en los demás, al primer control.
+ *  - Escape cierra solo si `cerrable`. Tocar el fondo NO cierra (un toque de más no pierde lo cargado),
+ *    salvo en `vistazo`, que no tiene nada cargado.
  *  - Al cerrar, el foco vuelve a quien la abrió.
  * Un solo nivel apilado; dos solo para confirmar dentro de un `editar`.
  */
@@ -44,6 +52,7 @@ export function Superposicion({
   alCerrar,
   cerrable,
   etiquetaDeCerrar,
+  idDeLaDescripcion,
   children,
 }: PropsDeSuperposicion) {
   const idDelTitulo = useId();
@@ -62,7 +71,8 @@ export function Superposicion({
       const primero = focalizablesDe(el).find(
         (c) => c.closest("[data-cerrar-superposicion]") === null,
       );
-      if (proposito === "confirmar" || primero === undefined) titulado.current?.focus();
+      if (proposito === "confirmar" || proposito === "vistazo" || primero === undefined)
+        titulado.current?.focus();
       else primero.focus();
     }
     if (!abierta && el.open) {
@@ -71,6 +81,20 @@ export function Superposicion({
       quienAbrio.current = null;
     }
   }, [abierta, proposito]);
+
+  // `vistazo` también se cierra tocando el fondo, que es el propio `<dialog>` (lo de adentro lo cubre
+  // `.contenido`). Es un oyente del DOM y no un `onClick` porque el `<dialog>` no es un control.
+  useEffect(() => {
+    const el = dialogo.current;
+    if (el === null || proposito !== "vistazo" || !cerrable) return;
+    const alTocar = (evento: MouseEvent) => {
+      if (evento.target === el) alCerrar();
+    };
+    el.addEventListener("click", alTocar);
+    return () => {
+      el.removeEventListener("click", alTocar);
+    };
+  }, [proposito, cerrable, alCerrar]);
 
   // Si se desmonta abierta, el foco vuelve igual.
   useEffect(
@@ -112,6 +136,7 @@ export function Superposicion({
       className={estilos["dialogo"]}
       data-proposito={proposito}
       aria-labelledby={idDelTitulo}
+      aria-describedby={abierta ? idDeLaDescripcion : undefined}
       onKeyDown={alTeclear}
       onCancel={(evento) => {
         // El cierre lo gobierna `abierta`: el navegador no cierra por su cuenta.

@@ -1,0 +1,24 @@
+/* La caja conserva su tamaño y su color aunque la imagen no llegue: sin hueco, sin ícono roto (§3.4, C-7). */
+.caja {
+  display: block;
+  overflow: hidden;
+  background: var(--color-superficie);
+  aspect-ratio: 4 / 3;
+}
+
+.imagen {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.miniatura {
+  width: 4.5rem;
+  border-radius: var(--radio-chico);
+}
+
+.grande {
+  width: 100%;
+  border-radius: var(--radio-base);
+}

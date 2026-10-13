@@ -106,4 +106,35 @@ const bloques = [
   },
 ];
 
+/**
+ * C-2 (D10). Previene: un tamaño de letra fijo en `px` dentro de la plantilla de la carta, que no respeta el
+ * tamaño que el comensal configuró en su celular ni la perilla `letra_base` y rompe el control «Letra». Esta
+ * parte mira el JavaScript (`style={{ fontSize: "18px" }}` o `fontSize: 18`, que en React también son px); los
+ * archivos `.css` los revisa la prueba de convenciones de `reglas.test.ts`. Chequeo: las violaciones de
+ * `lint.test.ts`. El bloque repite los selectores de `web/apps` porque ESLint no suma las opciones de una misma
+ * regla entre bloques: el último reemplazaría al otro.
+ */
+const MENSAJE_DE_LETRA_EN_PX =
+  "Ningún tamaño de letra en px dentro de la plantilla de la carta (D10): se usa rem o em.";
+bloques.push({
+  name: "web/carta-sin-px-de-letra",
+  files: ["apps/web/ui/plantillas/carta/**/*.{ts,tsx}"],
+  rules: {
+    "no-restricted-syntax": [
+      "error",
+      ...SELECTORES_DE_HTML,
+      ...SELECTORES_DE_CONTEXTO,
+      ...selectoresDeImporteEnApps,
+      {
+        selector: "Property[key.name='fontSize'] > Literal[value=/px\\s*$/i]",
+        message: MENSAJE_DE_LETRA_EN_PX,
+      },
+      {
+        selector: "Property[key.name='fontSize'] > Literal[value=type(number)]",
+        message: MENSAJE_DE_LETRA_EN_PX,
+      },
+    ],
+  },
+});
+
 module.exports = { bloques };

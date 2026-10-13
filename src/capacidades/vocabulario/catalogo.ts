@@ -109,6 +109,36 @@ export const CATALOGO_DE_TEXTOS = {
     porDefecto: "Referencia: {referencia}",
     marcadores: ["referencia"],
   },
+  // Carta pública (C-2): lo que lee el comensal. La interfaz recibe estos textos ya resueltos.
+  "carta.letra.etiqueta": { porDefecto: "Letra" },
+  "carta.letra.grupo": { porDefecto: "Tamaño de la letra" },
+  "carta.letra.normal": { porDefecto: "Letra normal" },
+  "carta.letra.grande": { porDefecto: "Letra grande" },
+  "carta.letra.muy_grande": { porDefecto: "Letra muy grande" },
+  "carta.buscar.etiqueta": { porDefecto: "Buscar en la carta" },
+  "carta.buscar.un_resultado": { porDefecto: "1 resultado" },
+  "carta.buscar.resultados": { porDefecto: "{cantidad} resultados", marcadores: ["cantidad"] },
+  "carta.buscar.sin_resultados": {
+    porDefecto: "No hay nada que diga «{texto}».",
+    largoMaximo: 120,
+    marcadores: ["texto"],
+  },
+  "carta.buscar.limpiar": { porDefecto: "Limpiar búsqueda" },
+  "carta.indice.titulo": { porDefecto: "Secciones" },
+  "carta.indice.ir": { porDefecto: "Ir al índice de secciones" },
+  "carta.producto.agotado": { porDefecto: "Agotado" },
+  "carta.producto.precios": { porDefecto: "Precios" },
+  "carta.producto.cerrar": { porDefecto: "Cerrar" },
+  "carta.producto.volver": { porDefecto: "Volver a la carta" },
+  "carta.producto.ver_toda": { porDefecto: "Ver toda la carta" },
+  "carta.producto.compartir": { porDefecto: "Compartir" },
+  "carta.producto.enlace_copiado": { porDefecto: "Enlace copiado" },
+  "carta.producto.enlace_no_copiado": {
+    porDefecto: "No se pudo copiar el enlace. Probá de nuevo.",
+    largoMaximo: 120,
+  },
+  "carta.producto.no_esta": { porDefecto: "Este producto ya no está en la carta." },
+  "carta.pie.iva": { porDefecto: "Los precios incluyen IVA." },
 } as const satisfies Record<string, DefinicionDeTexto>;
 
 export type ClaveDeTexto = keyof typeof CATALOGO_DE_TEXTOS;

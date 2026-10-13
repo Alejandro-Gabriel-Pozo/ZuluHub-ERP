@@ -47,7 +47,13 @@ function Ejemplo({
   );
 }
 
-const PROPOSITOS: PropositoDeSuperposicion[] = ["elegir", "confirmar", "editar", "detalle"];
+const PROPOSITOS: PropositoDeSuperposicion[] = [
+  "elegir",
+  "confirmar",
+  "editar",
+  "detalle",
+  "vistazo",
+];
 
 async function abrir() {
   await userEvent.click(page.getByRole("button", { name: "Abrir" }));
@@ -63,6 +69,10 @@ describe("Superposicion", () => {
     async (proposito) => {
       await render(<Ejemplo proposito={proposito} />);
       await abrir();
+      // `vistazo` sube con una animación: axe mide el color pintado, así que se espera a la opacidad plena.
+      await vi.waitFor(() => {
+        expect(getComputedStyle(document.querySelector("dialog") as Element).opacity).toBe("1");
+      });
       expect(await violacionesDeAccesibilidad()).toEqual([]);
     },
   );
@@ -210,5 +220,45 @@ describe("Superposicion", () => {
       expect(caja?.width, proposito).toBe(window.innerWidth);
       await unmount();
     }
+  });
+
+  describe("vistazo (C-2)", () => {
+    it("el foco inicial va al título y el fondo (el propio diálogo) lo cierra", async () => {
+      const alCerrar = vi.fn();
+      await render(<Ejemplo proposito="vistazo" alCerrar={alCerrar} />);
+      await abrir();
+      expect(document.activeElement?.tagName).toBe("H2");
+      document.querySelector("dialog")?.click();
+      await vi.waitFor(() => {
+        expect(document.querySelector("dialog")?.open).toBe(false);
+      });
+      expect(alCerrar).toHaveBeenCalledTimes(1);
+      expect(document.activeElement).toBe(page.getByRole("button", { name: "Abrir" }).element());
+    });
+
+    it("tocar lo de adentro no la cierra, y no cerrable tampoco se cierra tocando el fondo", async () => {
+      const alCerrar = vi.fn();
+      const { unmount } = await render(<Ejemplo proposito="vistazo" alCerrar={alCerrar} />);
+      await abrir();
+      await userEvent.click(page.getByRole("heading", { name: "Medio de pago" }));
+      expect(alCerrar).not.toHaveBeenCalled();
+      await unmount();
+      await render(<Ejemplo proposito="vistazo" cerrable={false} alCerrar={alCerrar} />);
+      await abrir();
+      document.querySelector("dialog")?.click();
+      expect(alCerrar).not.toHaveBeenCalled();
+    });
+
+    it("hoja inferior de hasta el 90 % del alto, con el botón de cerrar siempre arriba", async () => {
+      await render(<Ejemplo proposito="vistazo" />);
+      await abrir();
+      await vi.waitFor(() => {
+        const caja = document.querySelector("dialog")?.getBoundingClientRect();
+        expect(caja?.bottom).toBe(window.innerHeight);
+      });
+      const caja = document.querySelector("dialog")?.getBoundingClientRect();
+      expect(caja?.width).toBe(window.innerWidth);
+      expect(caja?.height ?? 0).toBeLessThanOrEqual(window.innerHeight * 0.9);
+    });
   });
 });

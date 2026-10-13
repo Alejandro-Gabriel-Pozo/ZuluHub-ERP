@@ -2,7 +2,10 @@ import {
   CircleCheck,
   Clock,
   Info,
+  Menu,
   OctagonAlert,
+  Search,
+  Share2,
   TriangleAlert,
   WifiOff,
   X,
@@ -26,6 +29,10 @@ export const CATALOGO_DE_ICONOS = {
   "sin-conexion": WifiOff,
   cerrar: X,
   reloj: Clock,
+  // Carta pública (C-2).
+  secciones: Menu,
+  compartir: Share2,
+  buscar: Search,
 } as const satisfies Record<string, LucideIcon>;
 
 export type ClaveDeIcono = keyof typeof CATALOGO_DE_ICONOS;
