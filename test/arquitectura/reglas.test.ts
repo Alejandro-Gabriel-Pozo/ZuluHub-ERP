@@ -551,6 +551,64 @@ describe("reglas de arquitectura (ADR-001)", () => {
     });
   });
 
+  describe("captación: el dominio puro de la solicitud de alta cumple las reglas del dominio de plataforma (R-C6)", () => {
+    // Falla que previenen: un dominio de captación con Zod, con puertos, con el guard o con el plan, que
+    // deje de ser puro y de poder probarse (y mutarse al 100 %) sin base ni framework. El fallo se
+    // inyecta en la carpeta nueva: si alguien vuelve a angostar los patrones a `plataforma/dominio`,
+    // estos casos dejan de fallar.
+    const DOMINIO = "src/plataforma/captacion/dominio";
+
+    it("no puede importar Zod, React ni Next", async () => {
+      for (const paquete of ["zod", "react", "react-dom", "next"]) {
+        const v = await violacionesDe({
+          [`${DOMINIO}/d.ts`]: `import "${paquete}";\nexport const d = 1;\n`,
+        });
+        expect(v, paquete).toEqual(["plataforma-sin-framework"]);
+      }
+    });
+
+    it("no puede importar puertos ni exigirAccion", async () => {
+      const v = await violacionesDe({
+        [`${DOMINIO}/d.ts`]: [
+          importa("../../../puertos/q"),
+          importa("../../../capacidades/permisos/exigir"),
+        ].join(""),
+        "src/puertos/q.ts": exporta,
+        "src/capacidades/permisos/exigir.ts": exporta,
+      });
+      expect(v).toEqual(["plataforma-dominio-sin-puertos-ni-exigir"]);
+    });
+
+    it("no puede importar el guard, ni siquiera con la excepción de soporte/explicar", async () => {
+      const v = await violacionesDe({
+        [`${DOMINIO}/d.ts`]: importa("../../../capacidades/permisos/guard"),
+        "src/capacidades/permisos/guard.ts": exporta,
+      });
+      expect(v).toEqual(["plataforma-dominio-sin-guard"]);
+    });
+
+    it("no pregunta por el plan del tenant", async () => {
+      const v = await violacionesDe({
+        [`${DOMINIO}/d.ts`]: importa("../../../capacidades/planes/derechos"),
+        "src/capacidades/planes/derechos.ts": exporta,
+      });
+      expect(v).toEqual(["capacidades-de-planes-fuera-del-dominio"]);
+    });
+
+    it("sí puede usar las primitivas (resultado, CUIT, provincias) y sus propios archivos", async () => {
+      const v = await violacionesDe({
+        "src/primitivas/resultado/resultado.ts": exporta,
+        "src/primitivas/domicilio/provincias.ts": exporta,
+        [`${DOMINIO}/a.ts`]: importa("./b"),
+        [`${DOMINIO}/b.ts`]: [
+          importa("../../../primitivas/resultado/resultado"),
+          importa("../../../primitivas/domicilio/provincias"),
+        ].join(""),
+      });
+      expect(v).toEqual([]);
+    });
+  });
+
   describe("H6 grupo: consultas de solo lectura y catálogo de permisos propio", () => {
     it("las consultas de grupo solo pueden usar las transacciones, la autorización de grupo y su registro de acceso", async () => {
       const v = await violacionesDe({

@@ -202,16 +202,17 @@ const reglas = [
   {
     name: "plataforma-sin-framework",
     severity: "error",
-    comment: "El dominio y los casos de uso de plataforma no importan Zod, React ni Next (H5).",
-    from: { path: "^src/plataforma/(dominio|casos-de-uso)/" },
+    comment:
+      "El dominio y los casos de uso de plataforma (y el dominio de captación) no importan Zod, React ni Next (H5; alta por solicitud R-C6).",
+    from: { path: "^src/plataforma/(dominio|captacion/dominio|casos-de-uso)/" },
     to: { path: FRAMEWORK },
   },
   {
     name: "plataforma-dominio-sin-puertos-ni-exigir",
     severity: "error",
     comment:
-      "El dominio de plataforma es puro: no conoce puertos ni exigirAccion (que carga al actor de forma asíncrona). Eso es de los casos de uso.",
-    from: { path: "^src/plataforma/dominio/" },
+      "El dominio de plataforma (y el de captación) es puro: no conoce puertos ni exigirAccion (que carga al actor de forma asíncrona). Eso es de los casos de uso.",
+    from: { path: "^src/plataforma/(captacion/)?dominio/" },
     to: { path: "^src/puertos/|^src/capacidades/permisos/exigir\\.ts$" },
   },
   {
@@ -220,7 +221,7 @@ const reglas = [
     comment:
       "El dominio de plataforma no autoriza: el guard se pide en el caso de uso, dentro de la transacción (ADR-003). Única excepción: soporte/explicar, que repite la decisión del guard real a propósito, solo lectura.",
     from: {
-      path: "^src/plataforma/dominio/",
+      path: "^src/plataforma/(captacion/)?dominio/",
       pathNot: "^src/plataforma/dominio/soporte/explicar(\\.test)?\\.ts$",
     },
     to: { path: "^src/capacidades/permisos/guard\\.ts$" },
@@ -299,7 +300,7 @@ const reglas = [
     comment:
       "Los derechos de uso y los niveles (capacidades/planes) se piden en el caso de uso, dentro de la transacción (marcas y planes §B.5.8): el dominio de negocio no pregunta por el plan. Única excepción: el dominio del propio módulo de planes, que decide las asignaciones y los ajustes.",
     from: {
-      path: "^src/(modulos/[^/]+|plataforma)/dominio/",
+      path: "^src/(modulos/[^/]+|plataforma(/captacion)?)/dominio/",
       pathNot: "^src/modulos/planes/dominio/",
     },
     to: { path: "^src/capacidades/planes/" },

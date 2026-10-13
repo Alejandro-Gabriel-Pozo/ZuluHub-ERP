@@ -219,7 +219,7 @@ jobs:
             archivos: "src/capacidades/permisos/**/*.ts,src/capacidades/modulos/**/*.ts"
           - grupo: plataforma (dominio)
             archivos: "src/plataforma/dominio/**/*.ts"
-            pruebas: "src/plataforma test/plataforma"
+            pruebas: "src/plataforma/dominio src/plataforma/casos-de-uso src/plataforma/consultas src/plataforma/sin-reloj-ni-azar.test.ts test/plataforma"
           - grupo: identificadores
             archivos: "src/primitivas/identificadores/**/*.ts"
             pruebas: "src/primitivas/identificadores"
@@ -241,6 +241,12 @@ jobs:
           - grupo: planes (decisiones del módulo)
             archivos: "src/modulos/planes/dominio/**/*.ts"
             pruebas: "src/modulos/planes"
+          - grupo: captación (formulario y atribución)
+            archivos: "src/plataforma/captacion/dominio/formulario.ts,src/plataforma/captacion/dominio/atribucion.ts"
+            pruebas: "src/plataforma/captacion"
+          - grupo: captación (resto del dominio)
+            archivos: "src/plataforma/captacion/dominio/**/*.ts,!src/plataforma/captacion/dominio/formulario.ts,!src/plataforma/captacion/dominio/atribucion.ts"
+            pruebas: "src/plataforma/captacion"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
