@@ -305,10 +305,12 @@ describe.skipIf(base === null)("resolución de host por la puerta pública", () 
       });
     });
 
-    it("con un rol que no existe o una clave mala, vuelve err (nunca ok(null) ni la marca principal)", async () => {
+    it("con un rol que no existe, vuelve err (nunca ok(null) ni la marca principal)", async () => {
       if (base === null) return;
+      // Rol inexistente y no clave mala: el CI levanta Postgres con `trust` (acepta cualquier clave),
+      // así que solo el rol que no existe falla igual con autenticación por clave o sin ella.
       const url = new URL(propia.base.publico);
-      url.password = "clave-equivocada";
+      url.username = "zuluhub_rol_que_no_existe";
       const roto = crearEntornoPublico(propia.base, { url: url.toString() });
       try {
         const r = await crearResolucionDeHost(roto).porHost("cualquiera.prueba.test", "APP");
