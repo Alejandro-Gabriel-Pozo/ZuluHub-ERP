@@ -380,6 +380,14 @@ const reglas = [
     from: { path: "^src/modulos/[^/]+/formas\\.ts$" },
     to: { pathNot: "^src/primitivas/|^(node_modules/)?zod(/|$)" },
   },
+  {
+    name: "fiscal-sin-negocio-ajeno",
+    severity: "error",
+    comment:
+      "El facturador funciona solo (facturación §B.0 y §B.9): fiscal no importa ventas, caja, catálogo, clientes ni stock, ni siquiera por su publico.ts. Quien factura le da renglones, un receptor y un origen opaco. Previene que fiscal dependa de un módulo que lo usa y rompa la separación; si se elimina, falla la violación inyectada de esta regla.",
+    from: { path: "^src/modulos/fiscal/" },
+    to: { path: "^src/modulos/(ventas|caja|catalogo|clientes|stock)/" },
+  },
 ];
 
 module.exports = { reglas };

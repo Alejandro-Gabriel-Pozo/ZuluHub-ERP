@@ -1,0 +1,90 @@
+{
+  "versionDeRepresentacion": 1,
+  "marca": {
+    "nombreDeFantasia": "Café Central",
+    "logoUrl": null,
+    "colorPrincipal": null
+  },
+  "fiscal": {
+    "rotulo": "FACTURA",
+    "letra": "B",
+    "codigoDelTipo": "006",
+    "numero": "00001-00000011",
+    "fecha": "2026-10-13",
+    "cae": "70417054367476",
+    "caeVence": "2026-10-23",
+    "emisor": {
+      "cuit": "30-70853393-5",
+      "razonSocial": "Panadería Zulu SRL",
+      "condicionIva": "RESPONSABLE_INSCRIPTO",
+      "domicilioFiscal": {
+        "calle": "Av. Corrientes",
+        "numero": "1234",
+        "piso": null,
+        "departamento": null,
+        "localidad": "Ciudad Autónoma de Buenos Aires",
+        "provincia": "AR-C",
+        "codigoPostal": "C1043"
+      },
+      "domicilioDelPuntoDeVenta": {
+        "calle": "Calle Falsa",
+        "numero": "123",
+        "piso": null,
+        "departamento": null,
+        "localidad": "Ciudad Autónoma de Buenos Aires",
+        "provincia": "AR-C",
+        "codigoPostal": "C1043"
+      },
+      "iibbNumero": "901-123456-7",
+      "iibbCondicion": "LOCAL",
+      "inicioDeActividades": "2019-03-01"
+    }
+  },
+  "receptor": {
+    "nombre": null,
+    "documento": {
+      "tipo": "SIN_IDENTIFICAR"
+    },
+    "condicionIva": "CONSUMIDOR_FINAL",
+    "domicilio": null
+  },
+  "renglones": [
+    {
+      "descripcion": "Torta",
+      "cantidad": "1.0000",
+      "precioUnitario": "1210.000000",
+      "descuento": null,
+      "alicuota": "21",
+      "importe": "1210.00"
+    },
+    {
+      "descripcion": "Medialunas",
+      "cantidad": "1.0000",
+      "precioUnitario": "1050.000000",
+      "descuento": null,
+      "alicuota": "10.5",
+      "importe": "1050.00"
+    }
+  ],
+  "totales": {
+    "letra": "B",
+    "total": "2260.00",
+    "ivaContenido": [
+      {
+        "alicuota": "10.5",
+        "iva": "99.77"
+      },
+      {
+        "alicuota": "21",
+        "iva": "210.00"
+      }
+    ]
+  },
+  "asociado": null,
+  "qr": {
+    "url": "https://www.afip.gob.ar/fe/qr/?p=eyJ2ZXIiOjEsImZlY2hhIjoiMjAyNi0xMC0xMyIsImN1aXQiOjMwNzA4NTMzOTM1LCJwdG9WdGEiOjEsInRpcG9DbXAiOjYsIm5yb0NtcCI6MTEsImltcG9ydGUiOjIyNjAsIm1vbmVkYSI6IlBFUyIsImN0eiI6MSwidGlwb0RvY1JlYyI6OTksIm5yb0RvY1JlYyI6MCwidGlwb0NvZEF1dCI6IkUiLCJjb2RBdXQiOjcwNDE3MDU0MzY3NDc2fQ=="
+  },
+  "leyendas": [
+    "HOMOLOGACIÓN — SIN VALIDEZ FISCAL"
+  ]
+}

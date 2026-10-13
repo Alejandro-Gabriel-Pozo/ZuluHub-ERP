@@ -36,7 +36,7 @@
   },
   {
     "grupo": "fiscal (resto)",
-    "archivos": "src/modulos/fiscal/dominio/**/*.ts,!src/modulos/fiscal/dominio/numeracion.ts,!src/modulos/fiscal/dominio/datos-fiscales.ts,!src/modulos/fiscal/dominio/vigencia.ts,!src/modulos/fiscal/dominio/punto-de-venta.ts,!src/modulos/fiscal/dominio/resolucion-de-emisor.ts",
+    "archivos": "src/modulos/fiscal/dominio/**/*.ts,!src/modulos/fiscal/dominio/numeracion.ts,!src/modulos/fiscal/dominio/datos-fiscales.ts,!src/modulos/fiscal/dominio/vigencia.ts,!src/modulos/fiscal/dominio/punto-de-venta.ts,!src/modulos/fiscal/dominio/resolucion-de-emisor.ts,!src/modulos/fiscal/dominio/calculo-de-renglones.ts,!src/modulos/fiscal/dominio/codigos-de-arca.ts,!src/modulos/fiscal/dominio/comprobante-nuevo.ts,!src/modulos/fiscal/dominio/condicion-iva-receptor.ts,!src/modulos/fiscal/dominio/estados-de-comprobante.ts,!src/modulos/fiscal/dominio/importes-para-arca.ts,!src/modulos/fiscal/dominio/letra-de-comprobante.ts,!src/modulos/fiscal/dominio/modelo-de-impresion.ts,!src/modulos/fiscal/dominio/nota-asociada.ts,!src/modulos/fiscal/dominio/qr-de-arca.ts,!src/modulos/fiscal/dominio/receptor.ts,!src/modulos/fiscal/dominio/reconciliacion-de-comprobante.ts",
     "pruebas": "src/modulos/fiscal"
   },
   {
@@ -110,7 +110,7 @@
   },
   {
     "grupo": "web (puerta mínima)",
-    "archivos": "src/capacidades/experiencia/**/*.ts",
+    "archivos": "src/capacidades/experiencia/**/*.ts,!src/capacidades/experiencia/carta/**/*.ts",
     "pruebas": "src/capacidades/experiencia"
   },
   {
@@ -127,5 +127,20 @@
     "grupo": "captación (resto del dominio)",
     "archivos": "src/plataforma/captacion/dominio/**/*.ts,!src/plataforma/captacion/dominio/formulario.ts,!src/plataforma/captacion/dominio/atribucion.ts",
     "pruebas": "src/plataforma/captacion"
+  },
+  {
+    "grupo": "fiscal (facturación)",
+    "archivos": "src/modulos/fiscal/dominio/calculo-de-renglones.ts,src/modulos/fiscal/dominio/codigos-de-arca.ts,src/modulos/fiscal/dominio/comprobante-nuevo.ts,src/modulos/fiscal/dominio/condicion-iva-receptor.ts,src/modulos/fiscal/dominio/estados-de-comprobante.ts,src/modulos/fiscal/dominio/importes-para-arca.ts,src/modulos/fiscal/dominio/letra-de-comprobante.ts,src/modulos/fiscal/dominio/modelo-de-impresion.ts,src/modulos/fiscal/dominio/nota-asociada.ts,src/modulos/fiscal/dominio/qr-de-arca.ts,src/modulos/fiscal/dominio/receptor.ts,src/modulos/fiscal/dominio/reconciliacion-de-comprobante.ts",
+    "pruebas": "src/modulos/fiscal/dominio/calculo-de-renglones.test.ts src/modulos/fiscal/dominio/codigos-de-arca.test.ts src/modulos/fiscal/dominio/comprobante-nuevo.test.ts src/modulos/fiscal/dominio/condicion-iva-receptor.test.ts src/modulos/fiscal/dominio/estados-de-comprobante.test.ts src/modulos/fiscal/dominio/importes-para-arca.test.ts src/modulos/fiscal/dominio/letra-de-comprobante.test.ts src/modulos/fiscal/dominio/modelo-de-impresion.test.ts src/modulos/fiscal/dominio/nota-asociada.test.ts src/modulos/fiscal/dominio/qr-de-arca.test.ts src/modulos/fiscal/dominio/receptor.test.ts src/modulos/fiscal/dominio/reconciliacion-de-comprobante.test.ts src/modulos/fiscal/dominio/propiedades-de-facturacion.test.ts src/modulos/fiscal/dominio/sin-ventas.test.ts"
+  },
+  {
+    "grupo": "carta (piezas puras)",
+    "archivos": "src/capacidades/experiencia/carta/**/*.ts",
+    "pruebas": "src/capacidades/experiencia/carta"
+  },
+  {
+    "grupo": "activos y fotos",
+    "archivos": "src/capacidades/activos/**/*.ts",
+    "pruebas": "src/capacidades/activos"
   }
 ]

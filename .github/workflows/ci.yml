@@ -205,7 +205,7 @@ jobs:
     needs: mutacion-plan
     if: needs.mutacion-plan.outputs.hay == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
