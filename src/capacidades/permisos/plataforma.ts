@@ -25,10 +25,15 @@ export type RolDePlataforma = (typeof ROLES_DE_PLATAFORMA)[number];
  * `efecto` se declara igual, por uniformidad del tipo y para que ninguna acción quede sin clasificar:
  * mirar es `LECTURA`; dar de alta, y reactivar lo suspendido, es `CREA_AMPLIA`; suspender, cancelar un
  * alta y reenviar o revocar su invitación es `COMPLETA_CIERRA`. Con el mismo criterio, en marcas y
- * planes: crear, editar un borrador, confirmar o publicar una versión, agregar un dominio, asignar un
- * plan, ajustar una perilla y activar un módulo son `CREA_AMPLIA` (una asignación puede subir o bajar
- * de plan: ante la duda manda la más amplia); retirar un dominio y desactivar un módulo, que quitan
- * algo ya dado, son `COMPLETA_CIERRA`.
+ * planes: crear, editar un borrador, confirmar o publicar una versión, agregar, verificar o activar un
+ * dominio, asignar un plan, ajustar una perilla y activar un módulo son `CREA_AMPLIA` (una asignación
+ * puede subir o bajar de plan: ante la duda manda la más amplia); retirar o desactivar un dominio y
+ * desactivar un módulo, que quitan algo ya dado, son `COMPLETA_CIERRA`.
+ *
+ * Dominios (M4a): `dominios.verificar` es `CREA_AMPLIA` porque deja el host a un paso de servir su
+ * superficie (el dominio verificado ya se puede activar) y ante la duda manda la más amplia;
+ * `dominios.activar` es `CREA_AMPLIA` porque expone una superficie pública nueva; `dominios.desactivar`
+ * es `COMPLETA_CIERRA` porque deja de servir y vuelve a la página neutra, sin crear nada.
  */
 export const CATALOGO_DE_PLATAFORMA = {
   plataforma: {
@@ -65,6 +70,9 @@ export const CATALOGO_DE_PLATAFORMA = {
       "marcas.confirmar_version": { capacidad: null, efecto: "CREA_AMPLIA" },
       "dominios.agregar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "dominios.retirar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "dominios.verificar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "dominios.activar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "dominios.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "planes.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
       "planes.editar_borrador": { capacidad: null, efecto: "CREA_AMPLIA" },
       "planes.publicar_version": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -124,6 +132,9 @@ export const PERMISOS_DE_PLATAFORMA = {
   "marcas.confirmar_version": ["ADMIN"],
   "dominios.agregar": ["ADMIN"],
   "dominios.retirar": ["ADMIN"],
+  "dominios.verificar": ["ADMIN"],
+  "dominios.activar": ["ADMIN"],
+  "dominios.desactivar": ["ADMIN"],
   "planes.crear": ["ADMIN"],
   "planes.editar_borrador": ["ADMIN"],
   "planes.publicar_version": ["ADMIN"],

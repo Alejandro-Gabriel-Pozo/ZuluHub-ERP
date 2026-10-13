@@ -17,6 +17,12 @@ export const ACCIONES_DE_PLATAFORMA = [
   "PERSONA_SUSPENDIDA",
   "PERSONA_REACTIVADA",
   "SOPORTE_EXPLICAR",
+  // Gestión de dominios (M4a): una constancia por cada cambio real; lo idempotente no audita.
+  "DOMINIO_AGREGADO",
+  "DOMINIO_VERIFICADO",
+  "DOMINIO_ACTIVADO",
+  "DOMINIO_DESACTIVADO",
+  "DOMINIO_RETIRADO",
 ] as const;
 
 export type AccionDePlataforma = (typeof ACCIONES_DE_PLATAFORMA)[number];

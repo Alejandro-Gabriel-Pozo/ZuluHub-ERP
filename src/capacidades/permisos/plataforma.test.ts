@@ -37,7 +37,7 @@ const DE_SOPORTE = [
   "trabajos.ver_fallidos",
 ] as const;
 
-/** Lo que solo hace ADMIN: dar de alta, cancelar, suspender y reactivar (8, H5) y marcas y planes (12). */
+/** Lo que solo hace ADMIN: dar de alta, cancelar, suspender y reactivar (8, H5), marcas y planes (12) y los 3 pasos de dominios de M4a. */
 const SOLO_DE_ADMIN = [
   "altas.cancelar",
   "empresas.alta",
@@ -49,6 +49,9 @@ const SOLO_DE_ADMIN = [
   "tenants.suspender",
   "dominios.agregar",
   "dominios.retirar",
+  "dominios.verificar",
+  "dominios.activar",
+  "dominios.desactivar",
   "marcas.confirmar_version",
   "marcas.crear",
   "marcas.editar_borrador",
@@ -85,7 +88,7 @@ const ACCIONES_DE_H5 = [
   "personas.reactivar",
 ] as const;
 
-/** Las 14 acciones nuevas de plataforma de «marcas, productos y planes» (§C), en su orden. */
+/** Las 14 acciones nuevas de plataforma de «marcas, productos y planes» (§C), en su orden original. */
 const ACCIONES_DE_MARCAS_Y_PLANES = [
   "marcas.ver",
   "planes.ver",
@@ -101,6 +104,23 @@ const ACCIONES_DE_MARCAS_Y_PLANES = [
   "perillas.ajustar",
   "modulos_de_empresa.activar",
   "modulos_de_empresa.desactivar",
+] as const;
+
+/**
+ * Las 3 de M4a (gestión de dominios): verificar, activar y desactivar. Se declaran justo después de
+ * `dominios.retirar`, no al final: el resto del bloque de marcas y planes conserva su orden.
+ */
+const ACCIONES_DE_DOMINIOS_DE_M4A = [
+  "dominios.verificar",
+  "dominios.activar",
+  "dominios.desactivar",
+] as const;
+
+/** El orden real del catálogo desde la acción 19: las 14 de marcas y planes con las 3 de M4a tras `dominios.retirar`. */
+const ORDEN_DESDE_MARCAS_Y_PLANES = [
+  ...ACCIONES_DE_MARCAS_Y_PLANES.slice(0, 7),
+  ...ACCIONES_DE_DOMINIOS_DE_M4A,
+  ...ACCIONES_DE_MARCAS_Y_PLANES.slice(7),
 ] as const;
 
 describe("los roles de plataforma", () => {
@@ -145,6 +165,9 @@ describe("el catálogo de plataforma", () => {
           "marcas.confirmar_version": { capacidad: null, efecto: "CREA_AMPLIA" },
           "dominios.agregar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "dominios.retirar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "dominios.verificar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "dominios.activar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "dominios.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "planes.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
           "planes.editar_borrador": { capacidad: null, efecto: "CREA_AMPLIA" },
           "planes.publicar_version": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -163,16 +186,16 @@ describe("el catálogo de plataforma", () => {
     ]);
   });
 
-  it("las acciones son las 32: 12 que hacen los dos roles y 20 que solo hace ADMIN", () => {
-    expect(TODAS).toHaveLength(32);
+  it("las acciones son las 35: 12 que hacen los dos roles y 23 que solo hace ADMIN", () => {
+    expect(TODAS).toHaveLength(35);
     expect(DE_SOPORTE).toHaveLength(12);
-    expect(SOLO_DE_ADMIN).toHaveLength(20);
+    expect(SOLO_DE_ADMIN).toHaveLength(23);
   });
 
-  it("las 14 de marcas y planes se agregaron juntas, al final del bloque y sin reordenar las 18 de H5", () => {
+  it("las 14 de marcas y planes se agregaron juntas tras las 18 de H5, sin reordenarlas, y las 3 de M4a van justo después de dominios.retirar", () => {
     const orden = Object.keys(CATALOGO_DE_PLATAFORMA.plataforma.acciones);
     expect(orden.slice(0, 18)).toEqual(ACCIONES_DE_H5);
-    expect(orden.slice(18)).toEqual(ACCIONES_DE_MARCAS_Y_PLANES);
+    expect(orden.slice(18)).toEqual(ORDEN_DESDE_MARCAS_Y_PLANES);
     expect(Object.keys(PERMISOS_DE_PLATAFORMA)).toEqual(orden);
   });
 
@@ -222,9 +245,9 @@ describe("la matriz rol → acciones de plataforma (F3)", () => {
     ).toEqual([]);
   });
 
-  it("marcas y planes (§C): SOPORTE solo ve; ADMIN hace las 14; SOPORTE tiene 12 en total (las 10 de H5 más marcas.ver y planes.ver)", () => {
+  it("marcas y planes (§C) y los dominios de M4a: SOPORTE solo ve; ADMIN hace las 17; SOPORTE tiene 12 en total (las 10 de H5 más marcas.ver y planes.ver)", () => {
     const tabla = tablaDePermisosDePlataforma(PERMISOS_DE_PLATAFORMA);
-    for (const accion of ACCIONES_DE_MARCAS_Y_PLANES) {
+    for (const accion of [...ACCIONES_DE_MARCAS_Y_PLANES, ...ACCIONES_DE_DOMINIOS_DE_M4A]) {
       const soloVer = accion === "marcas.ver" || accion === "planes.ver";
       expect(PERMISOS_DE_PLATAFORMA[accion], accion).toEqual(
         soloVer ? ["ADMIN", "SOPORTE"] : ["ADMIN"],
@@ -235,13 +258,13 @@ describe("la matriz rol → acciones de plataforma (F3)", () => {
     expect(
       tabla.SOPORTE.filter((a) => (ACCIONES_DE_H5 as readonly string[]).includes(a)),
     ).toHaveLength(10);
-    expect(tabla.ADMIN).toHaveLength(32);
+    expect(tabla.ADMIN).toHaveLength(35);
   });
 
   it("piso jerárquico: lo que puede SOPORTE lo puede ADMIN", () => {
     const tabla = tablaDePermisosDePlataforma(PERMISOS_DE_PLATAFORMA);
     for (const accion of tabla.SOPORTE) expect(tabla.ADMIN).toContain(accion);
-    expect(tabla.ADMIN).toHaveLength(32);
+    expect(tabla.ADMIN).toHaveLength(35);
   });
 
   it("cada acción del catálogo tiene su fila en la matriz, y no hay filas de más", () => {
@@ -357,9 +380,9 @@ describe("el guard con las reglas de plataforma", () => {
  * (ninguna acción sin clasificar). Criterio: mirar y diagnosticar es `LECTURA`; dar de alta y
  * reactivar lo suspendido es `CREA_AMPLIA`; suspender, cancelar un alta y reenviar o revocar su
  * invitación RESTRINGEN o cierran algo iniciado: `COMPLETA_CIERRA`. Marcas y planes, igual: lo que
- * crea o amplía (crear, editar borrador, confirmar o publicar versión, agregar dominio, asignar plan,
- * ajustar perilla, activar módulo) es `CREA_AMPLIA`; retirar un dominio y desactivar un módulo
- * `COMPLETA_CIERRA`.
+ * crea o amplía (crear, editar borrador, confirmar o publicar versión, agregar, verificar o activar un
+ * dominio, asignar plan, ajustar perilla, activar módulo) es `CREA_AMPLIA`; retirar o desactivar un
+ * dominio y desactivar un módulo `COMPLETA_CIERRA`.
  */
 const EFECTOS_DE_PLATAFORMA = {
   LECTURA: [
@@ -375,7 +398,9 @@ const EFECTOS_DE_PLATAFORMA = {
     "trabajos.ver_fallidos",
   ],
   CREA_AMPLIA: [
+    "dominios.activar",
     "dominios.agregar",
+    "dominios.verificar",
     "empresas.alta",
     "empresas.reactivar",
     "marcas.confirmar_version",
@@ -394,6 +419,7 @@ const EFECTOS_DE_PLATAFORMA = {
     "altas.cancelar",
     "altas.reenviar_invitacion",
     "altas.revocar_invitacion",
+    "dominios.desactivar",
     "dominios.retirar",
     "empresas.suspender",
     "modulos_de_empresa.desactivar",
@@ -418,7 +444,7 @@ describe("el efecto de cada acción de plataforma", () => {
     }).toEqual(EFECTOS_DE_PLATAFORMA);
   });
 
-  it("las 32 acciones tienen exactamente un efecto, y ninguna queda sin clasificar", () => {
+  it("las 35 acciones tienen exactamente un efecto, y ninguna queda sin clasificar", () => {
     const clasificadas = Object.values(EFECTOS_DE_PLATAFORMA).flat().sort();
     expect(clasificadas).toEqual(TODAS.slice().sort());
   });
