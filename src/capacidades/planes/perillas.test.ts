@@ -8,7 +8,7 @@ import {
 } from "./perillas";
 
 /**
- * El catálogo de perillas (marcas y planes, §B.5.1). Hoy trae una sola real, `empresas_por_tenant`. Las
+ * El catálogo de perillas (marcas y planes, §B.5.1). Trae `empresas_por_tenant` y las seis de catálogo y stock. Las
  * reglas de forma se fijan acá y valen para las que sume cada módulo: son las mismas que la base repite
  * en `ajuste_de_perilla` (clave y valor).
  */
@@ -60,7 +60,7 @@ const entradas = Object.entries(CATALOGO_DE_PERILLAS) as [string, DefinicionDePe
 const catalogoComoTabla: Readonly<Record<string, DefinicionDePerilla>> = CATALOGO_DE_PERILLAS;
 
 describe("el catálogo de perillas real", () => {
-  it("v1 trae una sola perilla real: empresas_por_tenant, un límite de tenant con base 1 que verifica administración", () => {
+  it("trae siete perillas: empresas_por_tenant (de administración) y seis de catálogo y stock, todas interruptores de empresa apagados", () => {
     expect(CATALOGO_DE_PERILLAS).toEqual({
       empresas_por_tenant: {
         ambito: "TENANT",
@@ -68,14 +68,87 @@ describe("el catálogo de perillas real", () => {
         base: { limite: 1 },
         modulo: "administracion",
       },
+      recetas_con_merma: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "stock",
+      },
+      sub_recetas: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "stock",
+      },
+      variantes_y_grupos_de_precio: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "catalogo",
+      },
+      combos: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "catalogo",
+      },
+      elecciones_reutilizables: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "catalogo",
+      },
+      recetas_por_tamano: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "stock",
+      },
     });
   });
 
   it("la clave es un tipo cerrado: una perilla mal escrita no compila", () => {
-    expectTypeOf<ClavePerilla>().toEqualTypeOf<"empresas_por_tenant">();
+    expectTypeOf<ClavePerilla>().toEqualTypeOf<
+      | "empresas_por_tenant"
+      | "recetas_con_merma"
+      | "sub_recetas"
+      | "variantes_y_grupos_de_precio"
+      | "combos"
+      | "elecciones_reutilizables"
+      | "recetas_por_tamano"
+    >();
     // @ts-expect-error esa perilla no está declarada (la registra el módulo que la verifica)
     const inventada: ClavePerilla = "cajas_por_sucursal";
     expect(inventada in CATALOGO_DE_PERILLAS).toBe(false);
+  });
+
+  it("las de la carta no se declaran hasta construir la carta: ni carta_por_qr ni las de fotos, modelos y estadísticas", () => {
+    for (const clave of [
+      "carta_por_qr",
+      "productos_con_foto",
+      "fotos_alojadas",
+      "carta_modelo_cuadricula",
+      "carta_modelo_libro",
+      "carta_modelo_tablero",
+      "carta_estadisticas",
+    ]) {
+      expect(Object.hasOwn(CATALOGO_DE_PERILLAS, clave), clave).toBe(false);
+    }
+  });
+
+  it("cada perilla la verifica el módulo que la nombra: las de recetas, stock; las de elecciones, catálogo", () => {
+    const duenos = Object.fromEntries(
+      Object.entries(catalogoComoTabla).map(([clave, d]) => [clave, d.modulo]),
+    );
+    expect(duenos).toEqual({
+      empresas_por_tenant: "administracion",
+      recetas_con_merma: "stock",
+      sub_recetas: "stock",
+      variantes_y_grupos_de_precio: "catalogo",
+      combos: "catalogo",
+      elecciones_reutilizables: "catalogo",
+      recetas_por_tamano: "stock",
+    });
   });
 
   it.each(entradas)("%s: definición bien formada", (clave, definicion) => {

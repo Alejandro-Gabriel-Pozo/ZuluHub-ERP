@@ -30,6 +30,14 @@ import {
  *      exige al compilar; este cruce cubre lo que llega sin pasar por el tipo (un `as`, un dato).
  *  Además: una acción pertenece a un solo módulo; un módulo obligatorio está disponible y solo
  *  requiere obligatorios.
+ *
+ *  Módulos sin construir (T0 de catálogo y stock): `catalogo`, `carta` y `stock` declaran sus acciones
+ *  antes de que existan sus carpetas y sus casos de uso (los traen T2 a T10). Mientras figuren en
+ *  `SIN_CONSTRUIR` se les perdonan DOS cosas, y solo esas: que ningún caso de uso exija todavía una
+ *  acción (X1 inverso) y que su carpeta no exista (X4). Todo lo demás rige igual. Previene: tener que
+ *  inventar casos de uso falsos para pasar el gate, o aflojar X1 y X4 para todos los módulos. Lo
+ *  impone la regla «sin construir»: solo cabe un módulo `en_desarrollo`, así que el cierre (T12,
+ *  pasarlo a `disponible`) obliga a sacarlo de la lista y X1 y X4 pasan a regir completos.
  */
 
 const RAIZ = join(import.meta.dirname, "../..");
@@ -41,13 +49,27 @@ const carpetaExiste = (carpeta: string): boolean => {
 /** Las acciones que exige cada carpeta de `src/` por sus casos de uso y sus consultas. */
 type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 
+/** Los módulos declarados en el catálogo cuyas carpetas y casos de uso todavía no existen (T0). */
+const SIN_CONSTRUIR: readonly string[] = ["catalogo", "carta", "stock"];
+
 function crucesDelCatalogo(
   catalogo: CatalogoComercial,
   declaradas: AccionesPorCarpeta,
   existe: (carpeta: string) => boolean = carpetaExiste,
+  sinConstruir: readonly string[] = [],
 ): string[] {
   const problemas: string[] = [];
   const modulos = Object.entries(catalogo);
+
+  // Sin construir: la lista solo admite módulos que existen y siguen en desarrollo.
+  for (const clave of sinConstruir) {
+    const modulo = catalogo[clave];
+    if (modulo === undefined) {
+      problemas.push(`sin construir: ${clave} no existe en el catálogo`);
+    } else if (modulo.estado !== "en_desarrollo") {
+      problemas.push(`sin construir: ${clave} figura sin construir pero ya está disponible`);
+    }
+  }
 
   // Una acción pertenece a un solo módulo.
   const duenos = new Map<string, string[]>();
@@ -76,8 +98,9 @@ function crucesDelCatalogo(
     }
   }
   const exigidas = new Set(Object.values(declaradas).flat());
-  for (const accion of duenos.keys()) {
-    if (!exigidas.has(accion)) {
+  for (const [accion, claves] of duenos) {
+    const pendiente = claves.some((clave) => sinConstruir.includes(clave));
+    if (!exigidas.has(accion) && !pendiente) {
       problemas.push(`X1: la acción ${accion} no la exige ningún caso de uso`);
     }
   }
@@ -113,7 +136,7 @@ function crucesDelCatalogo(
   // X4
   for (const [clave, modulo] of modulos) {
     for (const carpeta of modulo.implementadoPor) {
-      if (!existe(carpeta))
+      if (!existe(carpeta) && !sinConstruir.includes(clave))
         problemas.push(`X4: ${clave} dice que lo implementa ${carpeta}, que no existe en src/`);
     }
     if (modulo.estado === "disponible" && modulo.implementadoPor.length === 0) {
@@ -241,7 +264,30 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
   });
 
   it("no tiene ningún problema de X1, X3, X4 ni de obligatorios", () => {
-    expect(crucesDelCatalogo(CATALOGO_DE_MODULOS, declaradas)).toEqual([]);
+    expect(
+      crucesDelCatalogo(CATALOGO_DE_MODULOS, declaradas, carpetaExiste, SIN_CONSTRUIR),
+    ).toEqual([]);
+  });
+
+  it("catálogo, carta y stock son los únicos módulos sin construir, y siguen en desarrollo (T0)", () => {
+    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "carta", "stock"]);
+    for (const clave of SIN_CONSTRUIR) {
+      expect(CATALOGO_DE_MODULOS[clave as keyof typeof CATALOGO_DE_MODULOS].estado, clave).toBe(
+        "en_desarrollo",
+      );
+    }
+  });
+
+  it("sin la lista de módulos sin construir, X1 SÍ reclama sus acciones (el perdón es solo de ellos)", () => {
+    const problemas = crucesDelCatalogo(CATALOGO_DE_MODULOS, declaradas);
+    const exigidas = new Set(Object.values(declaradas).flat());
+    const pendientes = SIN_CONSTRUIR.flatMap((clave) =>
+      Object.keys(CATALOGO_DE_MODULOS[clave as keyof typeof CATALOGO_DE_MODULOS].acciones),
+    ).filter((accion) => !exigidas.has(accion));
+    expect(pendientes.length).toBeGreaterThan(0);
+    for (const accion of pendientes) {
+      expect(problemas, accion).toContain(`X1: la acción ${accion} no la exige ningún caso de uso`);
+    }
   });
 
   it("X5: cada acción del catálogo real de empresa declara su efecto, y se usan los tres", () => {
@@ -255,23 +301,30 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       "modulos/empresas":
         declaradas["modulos/empresas"]?.filter((a) => a !== "permisos.ver_propios") ?? [],
     };
-    expect(crucesDelCatalogo(CATALOGO_DE_MODULOS, sinPermisosPropios)).toEqual([
-      "X1: la acción permisos.ver_propios no la exige ningún caso de uso",
-    ]);
+    expect(
+      crucesDelCatalogo(CATALOGO_DE_MODULOS, sinPermisosPropios, carpetaExiste, SIN_CONSTRUIR),
+    ).toEqual(["X1: la acción permisos.ver_propios no la exige ningún caso de uso"]);
   });
 
   it("X1 se dispara si fiscal deja de exigir comprobantes.emitir (violación inyectada)", () => {
-    expect(crucesDelCatalogo(CATALOGO_DE_MODULOS, { ...declaradas, "modulos/fiscal": [] })).toEqual(
-      ["X1: la acción comprobantes.emitir no la exige ningún caso de uso"],
-    );
+    expect(
+      crucesDelCatalogo(
+        CATALOGO_DE_MODULOS,
+        { ...declaradas, "modulos/fiscal": [] },
+        carpetaExiste,
+        SIN_CONSTRUIR,
+      ),
+    ).toEqual(["X1: la acción comprobantes.emitir no la exige ningún caso de uso"]);
   });
 
   it("X1 se dispara si una carpeta que el catálogo no lista exige una acción (violación inyectada)", () => {
     expect(
-      crucesDelCatalogo(CATALOGO_DE_MODULOS, {
-        ...declaradas,
-        "modulos/tenants": ["usuarios.ver"],
-      }),
+      crucesDelCatalogo(
+        CATALOGO_DE_MODULOS,
+        { ...declaradas, "modulos/tenants": ["usuarios.ver"] },
+        carpetaExiste,
+        SIN_CONSTRUIR,
+      ),
     ).toEqual([
       "X1: modulos/tenants exige usuarios.ver, pero administracion no figura implementado por esa carpeta",
     ]);
@@ -536,6 +589,96 @@ describe("P6: cada cruce se dispara con su violación inyectada", () => {
       todasExisten,
     );
     expect(p).toEqual([]);
+  });
+});
+
+describe("módulos sin construir: el perdón de X1 inverso y de X4 es solo de la lista y solo de esas dos cosas", () => {
+  const enDesarrollo = (cambios: Partial<DefinicionDeModulo> = {}) =>
+    modulo({ estado: "en_desarrollo", implementadoPor: ["modulos/catalogo"], ...cambios });
+  const conVentasEnDesarrollo = (cambios: Partial<DefinicionDeModulo> = {}): CatalogoComercial => ({
+    ...SANO,
+    ventas: enDesarrollo({
+      requiere: ["base"],
+      acciones: { "ventas.vender": accion },
+      ...cambios,
+    }),
+  });
+  const declaradas: AccionesPorCarpeta = {
+    "modulos/identidad": ["base.ver"],
+    "modulos/empresas": ["stock.mover"],
+  };
+  const soloVentasExiste = (carpeta: string) => carpeta !== "modulos/catalogo";
+
+  it("un módulo de la lista, en desarrollo, sin carpeta y sin casos de uso, no da problemas", () => {
+    expect(
+      crucesDelCatalogo(conVentasEnDesarrollo(), declaradas, soloVentasExiste, ["ventas"]),
+    ).toEqual([]);
+  });
+
+  it("sin la lista, el mismo módulo da X1 y X4: el perdón no es automático por estar en desarrollo", () => {
+    expect(crucesDelCatalogo(conVentasEnDesarrollo(), declaradas, soloVentasExiste)).toEqual([
+      "X1: la acción ventas.vender no la exige ningún caso de uso",
+      "X4: ventas dice que lo implementa modulos/catalogo, que no existe en src/",
+    ]);
+  });
+
+  it("el perdón no alcanza a los demás módulos", () => {
+    expect(
+      crucesDelCatalogo(
+        conVentasEnDesarrollo(),
+        { "modulos/identidad": ["base.ver"] },
+        soloVentasExiste,
+        ["ventas"],
+      ),
+    ).toEqual(["X1: la acción stock.mover no la exige ningún caso de uso"]);
+  });
+
+  it("un módulo de la lista que ya está disponible se reclama: el cierre obliga a sacarlo", () => {
+    expect(crucesDelCatalogo(SANO, DECLARADAS_SANAS, todasExisten, ["ventas"])).toEqual([
+      "sin construir: ventas figura sin construir pero ya está disponible",
+    ]);
+  });
+
+  it("un módulo de la lista que no existe en el catálogo se reclama", () => {
+    expect(crucesDelCatalogo(SANO, DECLARADAS_SANAS, todasExisten, ["fantasma"])).toEqual([
+      "sin construir: fantasma no existe en el catálogo",
+    ]);
+  });
+
+  it("lo que un módulo de la lista SÍ declara se sigue verificando (X1: una acción en otra carpeta)", () => {
+    expect(
+      crucesDelCatalogo(
+        conVentasEnDesarrollo(),
+        { ...declaradas, "modulos/tenants": ["ventas.vender"] },
+        soloVentasExiste,
+        ["ventas"],
+      ),
+    ).toEqual([
+      "X1: modulos/tenants exige ventas.vender, pero ventas no figura implementado por esa carpeta",
+    ]);
+  });
+
+  it("lo que un módulo de la lista SÍ declara se sigue verificando (X3: requiere un módulo inexistente)", () => {
+    expect(
+      crucesDelCatalogo(
+        conVentasEnDesarrollo({ requiere: ["fantasma"] }),
+        declaradas,
+        soloVentasExiste,
+        ["ventas"],
+      ),
+    ).toEqual(["X3: ventas requiere fantasma, que no existe"]);
+  });
+
+  it("lo que un módulo de la lista SÍ declara se sigue verificando (X5: un efecto inválido)", () => {
+    const inventado = { capacidad: null, efecto: "ESCRITURA" } as unknown as DefinicionDeAccion;
+    expect(
+      crucesDelCatalogo(
+        conVentasEnDesarrollo({ acciones: { "ventas.vender": inventado } }),
+        declaradas,
+        soloVentasExiste,
+        ["ventas"],
+      ),
+    ).toEqual(["X5: la acción ventas.vender de ventas no declara un efecto válido"]);
   });
 });
 
