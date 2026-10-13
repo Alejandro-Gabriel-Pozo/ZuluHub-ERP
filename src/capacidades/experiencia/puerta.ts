@@ -3,7 +3,7 @@
  * con un pedido, sin tocar Next: es una función pura de los encabezados, la ruta y la RESOLUCIÓN DEL
  * HOST (que entra como dato: quién la calcula, y contra qué base, no es asunto de acá). Así se prueba y
  * se muta sin levantar nada. Garantías (marcas y planes §B.2.1; armazón web §3.2):
- *  - la identidad del pedido es el `host`, nunca `X-Forwarded-Host` (un cliente lo puede inventar);
+ *  - la identidad del pedido es el `host`, nunca el reenviado por proxies (un cliente lo puede inventar);
  *  - los encabezados internos `x-zh-*` que manda el cliente se descartan siempre: solo la puerta los
  *    pone, y si pasaran, un cliente podría fingir un nonce, una marca o una superficie;
  *  - host desconocido, retirado, inválido, de una superficie que esta app no sirve o con la base caída
@@ -93,7 +93,7 @@ export type DecisionDePuerta = Readonly<{
 }>;
 
 /**
- * El host del pedido: SOLO la cabecera `host` (con la que Vercel enruta al proyecto). `X-Forwarded-Host`
+ * El host del pedido: SOLO la cabecera `host` (con la que Vercel enruta al proyecto). El reenviado
  * y compañía no se miran nunca. Vacío si no vino. Sin normalizar: eso lo hace `normalizarHost` de
  * `modulos/marcas`, la única definición de qué es un host válido.
  */
