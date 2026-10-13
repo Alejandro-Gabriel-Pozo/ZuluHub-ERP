@@ -877,8 +877,8 @@ describe("leerDireccionPegada: corpus de rechazos (SSRF y formas confusas)", () 
   });
 
   it("un valor que no es texto se rechaza sin lanzar", () => {
-    for (const x of [null, undefined, 42, {}, ["https://res.cloudinary.com"]]) {
-      expect(leerDireccionPegada(x as unknown as string)).toEqual({ ok: false, error: "VACIA" });
+    for (const x of [null, undefined, 42, {}, ["https://res.cloudinary.com"]] as unknown[]) {
+      expect(leerDireccionPegada(x as string)).toEqual({ ok: false, error: "VACIA" });
     }
   });
 

@@ -49,7 +49,7 @@ export const RANGOS_V6_FUERA_DE_UNICAST: readonly string[] = [
   "ff00::/8",
 ];
 
-export function ipv4ANumero(ip: string): number {
+function ipv4ANumero(ip: string): number {
   return ip.split(".").reduce((acc, o) => acc * 256 + Number(o), 0);
 }
 
@@ -67,7 +67,7 @@ export function limitesV4(cidr: string): { primera: number; ultima: number } {
 }
 
 /** Las 8 palabras de 16 bits de una IPv6 CANÓNICA o ya expandida (solo para armar casos). */
-export function ipv6ABigint(ip: string): bigint {
+function ipv6ABigint(ip: string): bigint {
   const [izq = "", der] = ip.split("::");
   const lado = (t: string): bigint[] => (t === "" ? [] : t.split(":").map((p) => BigInt(`0x${p}`)));
   const antes = lado(izq);

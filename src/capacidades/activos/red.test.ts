@@ -257,8 +257,8 @@ describe("direccionDeRedPermitida: formas ambiguas o mal formadas (todas false)"
   });
 
   it("un valor que no es texto se rechaza sin lanzar", () => {
-    for (const x of [null, undefined, 2130706433, {}, []]) {
-      expect(direccionDeRedPermitida(x as unknown as string)).toBe(false);
+    for (const x of [null, undefined, 2130706433, {}, []] as unknown[]) {
+      expect(direccionDeRedPermitida(x as string)).toBe(false);
     }
   });
 
