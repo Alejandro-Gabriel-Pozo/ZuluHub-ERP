@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, createHmac, pbkdf2Sync, randomBytes } from "node:crypto";
 import { join } from "node:path";
 import pg from "pg";
 import {
@@ -12,7 +12,6 @@ import {
   it,
   vi,
 } from "vitest";
-import { verificadorScram } from "../../src/adaptadores/postgres/preparar-roles";
 import type { RolPorPreparar } from "../../src/adaptadores/postgres/roles-de-la-aplicacion";
 import { ejecutarMigracion, VARIABLE_DE_LA_CADENA } from "../../scripts/ejecutar-migracion";
 import { crearBaseAparte } from "./entorno";
@@ -49,6 +48,15 @@ type Salida = {
   /** Las variables del bloque, por nombre. */
   variables: Map<string, URL>;
 };
+
+/** Verificador SCRAM-SHA-256 de Postgres con la misma sal y vueltas que el guardado: solo para comparar en la prueba. */
+function verificadorScram(clave: string, sal: Buffer, iteraciones: number): string {
+  const salada = pbkdf2Sync(clave, sal, iteraciones, 32, "sha256");
+  const claveDelCliente = createHmac("sha256", salada).update("Client Key").digest();
+  const claveGuardada = createHash("sha256").update(claveDelCliente).digest();
+  const claveDelServidor = createHmac("sha256", salada).update("Server Key").digest();
+  return `SCRAM-SHA-256$${iteraciones}:${sal.toString("base64")}$${claveGuardada.toString("base64")}:${claveDelServidor.toString("base64")}`;
+}
 
 async function preparar(
   cadena: string,
@@ -115,8 +123,12 @@ describe.skipIf(base === null)("migrar-base --preparar-roles", () => {
   /** El verificador guardado corresponde EXACTAMENTE a esa contraseña (misma sal, mismo cálculo). */
   const guardaLaClave = async (rol: string, clave: string): Promise<boolean> => {
     const guardado = await verificadorDe(rol);
-    const sal = /^SCRAM-SHA-256\$\d+:([^$]+)\$/.exec(guardado ?? "")?.[1];
-    return sal !== undefined && guardado === verificadorScram(clave, Buffer.from(sal, "base64"));
+    const partes = /^SCRAM-SHA-256\$(\d+):([^$]+)\$/.exec(guardado ?? "");
+    return (
+      partes !== null &&
+      guardado ===
+        verificadorScram(clave, Buffer.from(partes[2] as string, "base64"), Number(partes[1]))
+    );
   };
 
   const hostYBase = (cadena: string) => {
@@ -348,6 +360,32 @@ describe.skipIf(base === null)("migrar-base --preparar-roles", () => {
     );
     expect(salida.secreto).toEqual([]);
     expect(await puedeEntrar(ROLES[0]?.rol as string)).toBe(false);
+  });
+
+  it("si falla el segundo rol, el primero queda activo y su contraseña se muestra; al repetir solo se toca el que falta", async () => {
+    const url = await nuevaBase();
+    let llamadas = 0;
+    const salida = await preparar(url, [], {
+      generarClave: () => {
+        llamadas += 1;
+        if (llamadas === 2) throw new Error("falla simulada del segundo rol");
+        return "ClaveDelPrimerRolAbcdefghijklmn12";
+      },
+    });
+    expect(salida.codigo).toBe(1);
+    expect(salida.error).toContain(`no se pudo dar LOGIN al rol ${ROLES[1]?.rol}`);
+    expect(salida.error).toContain("los roles anteriores ya quedaron activos");
+    expect(salida.secreto.join("\n")).toContain(`${ROLES[0]?.variable}=`);
+    expect(salida.secreto.join("\n")).not.toContain(`${ROLES[1]?.variable}=`);
+    expect(await puedeEntrar(ROLES[0]?.rol as string)).toBe(true);
+    expect(await puedeEntrar(ROLES[1]?.rol as string)).toBe(false);
+
+    const segunda = await preparar(url, []);
+    expect(segunda.codigo).toBe(0);
+    expect(segunda.info).toContain(`${ROLES[0]?.rol}: ya tenía LOGIN`);
+    expect(segunda.secreto.join("\n")).not.toContain(`${ROLES[0]?.variable}=`);
+    expect(segunda.secreto.join("\n")).toContain(`${ROLES[1]?.variable}=`);
+    expect(await puedeEntrar(ROLES[1]?.rol as string)).toBe(true);
   });
 
   it("con --diagnostico una falla inesperada suma el paso y el mensaje, pero nunca la cadena, la contraseña ni el verificador", async () => {

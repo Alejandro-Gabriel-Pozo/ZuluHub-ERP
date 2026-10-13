@@ -7,7 +7,11 @@ import {
   type EstadoDeMigraciones,
 } from "../src/adaptadores/postgres/estado-de-migraciones.ts";
 import { aplicarMigraciones } from "../src/adaptadores/postgres/migraciones.ts";
-import { prepararRoles } from "../src/adaptadores/postgres/preparar-roles.ts";
+import {
+  ErrorDePreparacion,
+  prepararRoles,
+  type RolPreparado,
+} from "../src/adaptadores/postgres/preparar-roles.ts";
 import {
   cadenaDeRol,
   esVariableProvisoria,
@@ -205,12 +209,24 @@ async function prepararYMostrar(
   info: (linea: string) => void,
 ): Promise<void> {
   const roles = (entrada.roles ?? rolesPorPreparar)(pedido.conAutenticacion);
-  const preparados = await prepararRoles(cadena, {
-    roles,
-    rotar: pedido.rotar,
-    diagnostico: pedido.diagnostico,
-    ...(entrada.generarClave === undefined ? {} : { generarClave: entrada.generarClave }),
-  });
+  let preparados: RolPreparado[];
+  try {
+    preparados = await prepararRoles(cadena, {
+      roles,
+      rotar: pedido.rotar,
+      diagnostico: pedido.diagnostico,
+      ...(entrada.generarClave === undefined ? {} : { generarClave: entrada.generarClave }),
+    });
+  } catch (falla) {
+    // Los roles que ya quedaron activos antes de la falla tienen una contraseña que nadie vio: se muestra.
+    if (
+      falla instanceof ErrorDePreparacion &&
+      falla.preparados.some((p) => p.clave !== undefined)
+    ) {
+      mostrarBloqueDeVercel(cadena, pedido, entrada, info, falla.preparados);
+    }
+    throw falla;
+  }
   for (const p of preparados) {
     info(
       p.estado === "nuevo"
@@ -221,12 +237,23 @@ async function prepararYMostrar(
             "para generar otra, --rotar).",
     );
   }
-  const conClave = preparados.filter((p) => p.clave !== undefined);
-  if (conClave.length === 0) {
+  if (!preparados.some((p) => p.clave !== undefined)) {
     info("RESULTADO: OK, no hubo nada para cambiar; no se generó ninguna contraseña.");
     return;
   }
+  const conClave = mostrarBloqueDeVercel(cadena, pedido, entrada, info, preparados);
+  info(`RESULTADO: OK, ${conClave.length} roles con contraseña nueva.`);
+}
 
+/** El bloque con las variables para Vercel de los roles que recibieron contraseña. Devuelve esos roles. */
+function mostrarBloqueDeVercel(
+  cadena: string,
+  pedido: Pedido,
+  entrada: EntradaDeMigracion,
+  info: (linea: string) => void,
+  preparados: readonly RolPreparado[],
+): RolPreparado[] {
+  const conClave = preparados.filter((p) => p.clave !== undefined);
   const secreto = entrada.secreto;
   let sinPooler = false;
   secreto("");
@@ -255,7 +282,7 @@ async function prepararYMostrar(
       );
     }
   }
-  info(`RESULTADO: OK, ${conClave.length} roles con contraseña nueva.`);
+  return conClave;
 }
 
 /**
