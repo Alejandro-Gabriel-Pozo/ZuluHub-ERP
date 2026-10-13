@@ -31,3 +31,9 @@ export {
   type LecturaDePlanes,
 } from "./persistencia/lecturas";
 export type { PlanesDb } from "./persistencia/tablas";
+export {
+  ERRORES_DE_PLANES_POR_RESTRICCION,
+  RESTRICCIONES_DE_DISPARADORES_DE_PLANES,
+  type ErrorDePlanesPorRestriccion,
+} from "./persistencia/esquema";
+export { errorDePlanesDeRestriccion, traducirErroresDePlanes } from "./persistencia/traducir";

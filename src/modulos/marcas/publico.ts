@@ -90,8 +90,11 @@ export {
 export {
   COLUMNAS_DE_DOMINIO,
   ERRORES_DE_DOMINIO_POR_RESTRICCION,
+  ERRORES_DE_MARCAS_POR_RESTRICCION,
   RESTRICCIONES_DE_DISPARADORES_DE_DOMINIO,
+  RESTRICCIONES_DE_DISPARADORES_DE_MARCAS,
   type ErrorDeDominioPorRestriccion,
+  type ErrorDeMarcaPorRestriccion,
 } from "./persistencia/esquema";
 export {
   crearRepositorioDeDominios,
@@ -99,7 +102,12 @@ export {
   type RepositorioDeDominios,
 } from "./persistencia/repositorios";
 export type { DominiosDb, MarcasParaMailDb, PublicoDb } from "./persistencia/tablas";
-export { errorDeDominioDeRestriccion, traducirErroresDeDominio } from "./persistencia/traducir";
+export {
+  errorDeDominioDeRestriccion,
+  errorDeMarcaDeRestriccion,
+  traducirErroresDeDominio,
+  traducirErroresDeMarca,
+} from "./persistencia/traducir";
 
 // M4: resolución pública de hosts y marca de los mails (solo lecturas).
 export {
