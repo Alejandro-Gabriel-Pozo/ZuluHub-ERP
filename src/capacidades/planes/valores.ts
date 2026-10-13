@@ -62,3 +62,28 @@ export function estaEncendida(valor: ValorDePerilla): boolean {
 export function apagado<V extends ValorDePerilla>(valor: V): V {
   return valor.tipo === "INTERRUPTOR" ? { ...valor, encendida: false } : { ...valor, limite: 0 };
 }
+
+/** Un límite escrito como la base lo guarda: `0` o un entero sin ceros a la izquierda, de hasta nueve cifras. */
+const LIMITE_EN_TEXTO = /^(0|[1-9][0-9]{0,8})$/;
+
+/**
+ * El valor de un ajuste de perilla tal como la base lo guarda (`ajuste_de_perilla.valor`, texto):
+ *  - `DEL_PLAN` vuelve al valor del plan (vale para cualquier perilla);
+ *  - un interruptor: `0` apagado, `1` encendido (cualquier otro texto no es un valor de interruptor);
+ *  - un límite: `ILIMITADO` o un entero de `0` al máximo de la base (`LIMITE_MAXIMO_DE_PERILLA`).
+ * Un texto que no es un valor de ese tipo da `null`: quien lee lo trata como «vuelve al plan» (falla
+ * cerrado), igual que `derechosDeUso` con un valor de otro tipo. La base solo impone la forma del texto,
+ * no si cuadra con la perilla (no conoce el catálogo); quien escribe lo valida contra su definición.
+ */
+export function valorDeAjuste(
+  definicion: Pick<DefinicionDePerilla, "tipo">,
+  texto: string,
+): ValorDePerilla | "DEL_PLAN" | null {
+  if (texto === "DEL_PLAN") return "DEL_PLAN";
+  if (definicion.tipo === "INTERRUPTOR") {
+    if (texto === "0") return { tipo: "INTERRUPTOR", encendida: false };
+    return texto === "1" ? { tipo: "INTERRUPTOR", encendida: true } : null;
+  }
+  if (texto === "ILIMITADO") return { tipo: "LIMITE", limite: "ILIMITADO" };
+  return LIMITE_EN_TEXTO.test(texto) ? { tipo: "LIMITE", limite: Number(texto) } : null;
+}

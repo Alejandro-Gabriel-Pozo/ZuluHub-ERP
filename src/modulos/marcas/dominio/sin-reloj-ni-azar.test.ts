@@ -21,6 +21,7 @@ describe("el dominio de marcas no usa reloj ni aleatoriedad", () => {
       "definicion.ts",
       "host.ts",
       "jerarquia.ts",
+      "marca-de-mail.ts",
       "tema.ts",
       "version.ts",
       "vigencia.ts",

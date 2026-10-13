@@ -26,6 +26,7 @@ const valida = (): Record<string, string> => ({
   ZULUHUB_URL_BASE: "https://app.ejemplo.test",
   ZULUHUB_DB_APP: "postgres://usuario:relleno@127.0.0.1:1/base",
   ZULUHUB_DB_TRABAJOS: "postgres://usuario:relleno@127.0.0.1:1/base",
+  ZULUHUB_DB_PUBLICO: "postgres://usuario:relleno@127.0.0.1:1/base",
 });
 
 const conFuente = (fuente: FuenteDeEntorno) => {
@@ -44,6 +45,17 @@ const PEDIDOS: { nombre: string; pedir: (c: Conexiones) => unknown; nombra: stri
     nombre: "transaccionesDeTrabajos",
     pedir: (c) => c.transaccionesDeTrabajos(),
     nombra: "ZULUHUB_DB_TRABAJOS",
+  },
+  {
+    nombre: "transaccionesPublicas",
+    pedir: (c) => c.transaccionesPublicas(),
+    nombra: "ZULUHUB_DB_PUBLICO",
+  },
+  { nombre: "resolucionDeHost", pedir: (c) => c.resolucionDeHost(), nombra: "ZULUHUB_DB_PUBLICO" },
+  {
+    nombre: "web.resolucionDeHost",
+    pedir: (c) => armarWeb(c).resolucionDeHost(),
+    nombra: "ZULUHUB_DB_PUBLICO",
   },
   { nombre: "tokens", pedir: (c) => c.tokens(), nombra: "ZULUHUB_SECRETO_INVITACIONES" },
   { nombre: "correo", pedir: (c) => c.correo(), nombra: "ZULUHUB_RESEND_API_KEY" },
@@ -256,6 +268,23 @@ describe("con el entorno completo", () => {
   it("las transacciones de la aplicación y las de los trabajos son instancias distintas", () => {
     const { conexiones } = conFuente(valida());
     expect(conexiones.transaccionesDeApp()).not.toBe(conexiones.transaccionesDeTrabajos());
+  });
+
+  it("la puerta pública es una pieza aparte: una sola instancia, y la resolución de host se arma una sola vez", () => {
+    const { conexiones } = conFuente(valida());
+    expect(conexiones.transaccionesPublicas()).toBe(conexiones.transaccionesPublicas());
+    expect(conexiones.resolucionDeHost()).toBe(conexiones.resolucionDeHost());
+    expect(armarWeb(conexiones).resolucionDeHost()).toBe(conexiones.resolucionDeHost());
+  });
+
+  it("sin la cadena de la puerta pública, el resto de las piezas se arma igual", () => {
+    const sinPublico: Record<string, string> = valida();
+    delete sinPublico["ZULUHUB_DB_PUBLICO"];
+    const { conexiones, registrados } = conFuente(sinPublico);
+    expect(conexiones.transaccionesDeApp()).toBeDefined();
+    expect(conexiones.transaccionesDeTrabajos()).toBeDefined();
+    expect(() => conexiones.resolucionDeHost()).toThrow(ErrorDeEntorno);
+    expect(registrados).toEqual(["pieza transacciones-publicas: ZULUHUB_DB_PUBLICO falta"]);
   });
 
   it("la web ofrece los casos de uso y las consultas de empresas e identidad, una sola vez cada uno", () => {
