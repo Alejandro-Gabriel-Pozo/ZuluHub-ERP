@@ -157,7 +157,7 @@ export function cartaDePrueba(
   const propios = [CAPUCHINO, CAFE_HELADO, MILANESA, NOQUIS, SIN_NADA, CON_FOTO, LARGO];
   const relleno = Array.from({ length: Math.max(0, cantidad - propios.length) }, (_, i) =>
     productoDePrueba(`${NOMBRES[i % NOMBRES.length] ?? "Producto"} ${i + 1}`, 100 + i, {
-      precioEnLista: `$ ${(1000 + i * 100).toLocaleString("es-AR")}`,
+      precioEnLista: `$ ${String(1000 + i * 100)}`,
     }),
   );
   const todos = [...propios, ...relleno].slice(0, cantidad);

@@ -5,6 +5,7 @@ import type {
   ProductoPublicado,
 } from "../../../puertos/carta-publica";
 import { direccionesDeCarta, slugDeNombre } from "./direccion";
+import { unirConO } from "./unir-con-o";
 import type { LetraBase } from "./letra";
 import { listaDePreciosDelProducto, type GrupoDePrecios, type ListaDePrecios } from "./precios";
 
@@ -90,13 +91,13 @@ export function formatearImporte(importe: ImporteJson): string {
 }
 
 function minusculaInicial(texto: string): string {
-  return texto.charAt(0).toLocaleLowerCase("es-AR") + texto.slice(1);
+  return texto.charAt(0).toLowerCase() + texto.slice(1);
 }
 
 /** «Con papas fritas, puré o ensalada»; si no entra en 60 caracteres, «Con guarnición a elección». */
 function lineaDeGuarnicion(nombres: readonly string[]): string {
   const opciones = nombres.map(minusculaInicial);
-  const lista = new Intl.ListFormat("es-AR", { type: "disjunction" }).format(opciones);
+  const lista = unirConO(opciones);
   const linea = `Con ${lista}`;
   return linea.length <= LARGO_MAXIMO_DE_LA_GUARNICION ? linea : GUARNICION_A_ELECCION;
 }
