@@ -194,6 +194,7 @@ describe("resolverProductoPorSegmento (resolución por sufijo)", () => {
     "cafe-989B7D2C",
     "cafe-989b7d2g",
     "cafe-989b7d2c\n",
+    "otra\ncafe-989b7d2c",
   ])("%j no tiene forma de dirección", (segmento) => {
     expect(resolverProductoPorSegmento(CARTA, productos, segmento)).toEqual({
       ok: false,

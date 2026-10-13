@@ -66,7 +66,7 @@ describe("modeloEfectivo: todas las combinaciones", () => {
     fc.assert(
       fc.property(
         fc.oneof(
-          fc.constant(null),
+          fc.constant(""),
           fc.string(),
           fc.constantFrom("TABLERO", "CARRUSEL", "__proto__", "hasOwnProperty"),
         ),

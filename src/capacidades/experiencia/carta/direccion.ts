@@ -17,7 +17,7 @@ export const LARGO_DEL_SUFIJO_ALARGADO = 12;
 
 const PREFIJO_DEL_HASH = "producto-de-carta:";
 /** `<slug>-<8 o 12 hexadecimales>`: el sufijo es lo último, así que un slug con guiones no lo confunde. */
-const SEGMENTO = /^(?<slug>.*)-(?<huella>[0-9a-f]{8}|[0-9a-f]{12})$/;
+const SEGMENTO = /^.*-([0-9a-f]{8}|[0-9a-f]{12})$/;
 
 /**
  * Del nombre al slug: NFKD, sin tildes, minúsculas, lo que no sea `[a-z0-9]` pasa a guion, guiones
@@ -113,8 +113,9 @@ export function resolverProductoPorSegmento(
   productos: readonly ProductoParaDireccion[],
   segmento: string,
 ): Resultado<ProductoResuelto, ErrorDeDireccion> {
-  const huella = SEGMENTO.exec(segmento)?.groups?.["huella"];
-  if (huella === undefined) return err("SEGMENTO_INVALIDO");
+  const coincidencia = SEGMENTO.exec(segmento);
+  if (coincidencia === null) return err("SEGMENTO_INVALIDO");
+  const huella = coincidencia[1] as string;
   const direcciones = direccionesDeCarta(cartaId, productos);
   const coincidencias = productos.flatMap((p, i) =>
     huellaDeProducto(cartaId, p.productoId, LARGO_DEL_SUFIJO_ALARGADO).startsWith(huella)

@@ -33,8 +33,8 @@ export function esModeloDeCarta(valor: string): valor is ModeloDeCarta {
 
 /** Todo lo que decide el modelo efectivo, como dato: sin reloj, sin azar y sin leer el pedido. */
 export type EntradaDelModeloEfectivo = Readonly<{
-  /** Lo que eligió el gerente para esta carta; `null` si nunca eligió. Puede ser un texto viejo o desconocido. */
-  elegido: string | null;
+  /** Lo que guardó el gerente para esta carta; vacío si nunca eligió. Puede ser un texto viejo o desconocido. */
+  elegido: string;
   /** Claves de las perillas de la empresa que valen hoy (encendidas o con límite mayor que cero). */
   perillasEncendidas: readonly string[];
   /** Cuántos productos de la carta tienen una foto que se puede mostrar. */
@@ -50,13 +50,13 @@ export type EntradaDelModeloEfectivo = Readonly<{
  */
 export function modeloEfectivo(entrada: EntradaDelModeloEfectivo): ModeloDeCarta {
   const { elegido, perillasEncendidas, fotosVisibles, ahorroDeDatos } = entrada;
-  if (elegido === null || !esModeloDeCarta(elegido)) return MODELO_DE_RESERVA;
-  const definicion: DefinicionDeModelo = CATALOGO_DE_MODELOS_DE_CARTA[elegido];
-  if (definicion.perilla !== null && !perillasEncendidas.includes(definicion.perilla)) {
-    return MODELO_DE_RESERVA;
-  }
+  if (!esModeloDeCarta(elegido)) return MODELO_DE_RESERVA;
+  const { perilla, requiereFotos } = CATALOGO_DE_MODELOS_DE_CARTA[elegido];
+  // Stryker disable next-line ConditionalExpression: la Lista es la reserva; cualquier camino que le toque da Lista
+  const sinPerilla = perilla === null;
+  if (!sinPerilla && !perillasEncendidas.includes(perilla)) return MODELO_DE_RESERVA;
   // `!(x > 0)` y no `x <= 0`: un NaN llegado por error también cuenta como «ninguna foto».
-  if (definicion.requiereFotos && !(fotosVisibles > 0)) return MODELO_DE_RESERVA;
+  if (requiereFotos && !(fotosVisibles > 0)) return MODELO_DE_RESERVA;
   if (ahorroDeDatos) return MODELO_DE_RESERVA;
   return elegido;
 }

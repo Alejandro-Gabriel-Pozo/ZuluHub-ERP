@@ -179,7 +179,7 @@ describe("cartas de ejemplo: contra las piezas puras", () => {
   it("la panadería mantiene la Cuadrícula con las fotos visibles y cae a Lista si el plan baja o no hay fotos", () => {
     const visibles = productosDe(PANADERIA).filter((p) => p.foto?.estado === "VISIBLE").length;
     expect(visibles).toBeGreaterThan(0);
-    const base = { elegido: PANADERIA.modeloElegido, ahorroDeDatos: false };
+    const base = { elegido: PANADERIA.modeloElegido ?? "", ahorroDeDatos: false };
     const perillasEncendidas = PANADERIA.perillasEncendidas;
     expect(modeloEfectivo({ ...base, perillasEncendidas, fotosVisibles: visibles })).toBe(
       "CUADRICULA",
@@ -193,7 +193,7 @@ describe("cartas de ejemplo: contra las piezas puras", () => {
   it("la hostería se ve en Libro y las que no eligieron nada, en Lista", () => {
     expect(
       modeloEfectivo({
-        elegido: HOSTERIA.modeloElegido,
+        elegido: HOSTERIA.modeloElegido ?? "",
         perillasEncendidas: HOSTERIA.perillasEncendidas,
         fotosVisibles: 0,
         ahorroDeDatos: false,
@@ -202,7 +202,7 @@ describe("cartas de ejemplo: contra las piezas puras", () => {
     for (const c of [CAFETERIA, BARBERIA]) {
       expect(
         modeloEfectivo({
-          elegido: c.modeloElegido,
+          elegido: c.modeloElegido ?? "",
           perillasEncendidas: c.perillasEncendidas,
           fotosVisibles: 0,
           ahorroDeDatos: false,

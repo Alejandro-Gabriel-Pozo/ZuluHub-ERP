@@ -57,8 +57,8 @@ describe("modeloEfectivo (§4.4, servidor)", () => {
     expect(modeloEfectivo(entrada({ elegido: "LIBRO" }))).toBe("LIBRO");
   });
 
-  it("sin elección, o con una elección que no existe, es Lista", () => {
-    expect(modeloEfectivo(entrada({ elegido: null }))).toBe("LISTA");
+  it("sin elección (vacía), o con una elección que no existe, es Lista", () => {
+    expect(modeloEfectivo(entrada({ elegido: "" }))).toBe("LISTA");
     expect(modeloEfectivo(entrada({ elegido: "TABLERO" }))).toBe("LISTA");
     expect(modeloEfectivo(entrada({ elegido: "toString" }))).toBe("LISTA");
   });
