@@ -1008,18 +1008,19 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
         ["entrante_persona_id", e.otro],
         ["propuesto_en", new Date(PROPUESTO_EN.getTime() + 1000)],
         ["vence_en", new Date(VENCE_EN.getTime() + 1000)],
-        ["creado_en", new Date()],
+        // Una fecha lejana y fija (no `new Date()`): el valor nuevo tiene que ser siempre distinto del guardado.
+        ["creado_en", new Date("2000-01-01T00:00:00.000Z")],
         ["saliente_persona_id", e.admin],
       ];
       for (const [columna, valor] of cambios) {
         await sinConfirmar(async () => {
-          check(
-            await intento(`update traspaso_gerencia set ${columna} = $2 where id = $1`, [
-              id,
-              valor,
-            ]),
-            "traspaso_gerencia_inmutable",
-          );
+          const r = await intento(`update traspaso_gerencia set ${columna} = $2 where id = $1`, [
+            id,
+            valor,
+          ]);
+          // El nombre de la columna va en el mensaje: si alguna vez no se rechaza, se sabe cuál fue.
+          expect(r.ok, `el cambio de la columna ${columna} tenía que rechazarse`).toBe(false);
+          check(r, "traspaso_gerencia_inmutable");
         });
       }
       // El de un traspaso de plataforma: solo al aceptar, y tiene que ser el gerente vigente.
