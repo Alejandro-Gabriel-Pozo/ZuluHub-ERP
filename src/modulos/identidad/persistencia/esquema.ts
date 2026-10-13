@@ -4,7 +4,7 @@
  * listas tienen que cambiar con ella. Los repositorios (tramo siguiente) se apoyan en esto.
  */
 
-/** Columnas de cada tabla, en el orden de la base. `persona` es de 0001 y acá no cambia. */
+/** Columnas de cada tabla, en el orden de la base. `persona` es de 0001 y acá no cambia; `traspaso_gerencia` es de 0005. */
 export const COLUMNAS_DE_IDENTIDAD = {
   persona: ["id", "email", "activo_global", "creado_en"],
   membresia: [
@@ -56,6 +56,23 @@ export const COLUMNAS_DE_IDENTIDAD = {
     "tipo",
   ],
   invitacion_sucursal: ["invitacion_id", "empresa_id", "sucursal_id"],
+  // 0005 (H6)
+  traspaso_gerencia: [
+    "id",
+    "empresa_id",
+    "origen",
+    "propuesto_por",
+    "saliente_persona_id",
+    "entrante_persona_id",
+    "estado",
+    "propuesto_en",
+    "vence_en",
+    "resuelto_en",
+    "motivo",
+    "creado_en",
+    "actualizado_en",
+    "version",
+  ],
 } as const;
 
 /**

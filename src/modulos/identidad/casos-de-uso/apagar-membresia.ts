@@ -10,6 +10,7 @@ import { decidirApagado } from "../dominio/membresia";
 import { cargarEmpresas } from "./comun";
 import type { DependenciasDeIdentidad } from "./contrato";
 import { DECLARACIONES } from "./declaraciones";
+import { cancelarYAuditar } from "./traspaso-comun";
 
 export type EntradaDeApagarMembresia = Readonly<{ personaId: PersonaId }>;
 
@@ -22,6 +23,9 @@ export type SalidaDeApagarMembresia = Readonly<{
 export type ErrorAlApagarMembresia =
   ErrorDeMembresia | MotivoDeRechazo | EmpresaNoOpera | ErrorDePersistencia;
 
+/** Motivo con el que se cancela el traspaso cuyo entrante fue dado de baja. */
+const MOTIVO_ENTRANTE_DADO_DE_BAJA = "ENTRANTE_DADO_DE_BAJA";
+
 /**
  * Apagar la membresía de una persona en la empresa del contexto (diseño §6.3, R4). Contexto
  * OPERATIVO con persona. En una transacción serializable: el guard (`usuarios.apagar`), la empresa
@@ -30,8 +34,12 @@ export type ErrorAlApagarMembresia =
  *
  * Apagar deja `activo = false`, apaga TODAS sus asignaciones de sucursal y revoca las invitaciones
  * pendientes dirigidas a su email que incluyan la empresa (si la invitación es de varias empresas
- * se revoca entera). Lo escrito queda auditado en la misma transacción. Apagar dos veces es ok y
- * no escribe nada la segunda.
+ * se revoca entera). Si la persona es el ENTRANTE de un traspaso de gerencia en curso (H6, §B.3), esa
+ * propuesta se cancela con el motivo `ENTRANTE_DADO_DE_BAJA` y su auditoría `TRASPASO_CANCELADO`: se
+ * toca el traspaso ANTES que la membresía, el mismo orden que usa la aceptación (si no, las dos
+ * transacciones se esperarían cruzadas). Al saliente no hace falta mirarlo: es el gerente, y el
+ * dominio ya no deja apagarlo (`ES_EL_GERENTE`). Lo escrito queda auditado en la misma transacción.
+ * Apagar dos veces es ok y no escribe nada la segunda.
  *
  * Los dos últimos admins que se apagan a la vez: ambas transacciones leen a todos los admins y
  * escriben filas distintas (sesgo de escritura); la serializable aborta una y su reintento ve al
@@ -64,6 +72,15 @@ export function crearApagarMembresia({ transacciones, reglas }: DependenciasDeId
         if (!decision.ok) return decision;
         if (decision.valor === "YA_APAGADA" || objetivo === null) {
           return ok({ yaEstabaApagada: true, invitacionesRevocadas: 0 });
+        }
+
+        const traspaso = await tx.traspasos.enCurso(empresaId);
+        if (
+          traspaso !== null &&
+          traspaso.entrantePersonaId === objetivo.personaId &&
+          !(await cancelarYAuditar(tx, contexto, traspaso, MOTIVO_ENTRANTE_DADO_DE_BAJA))
+        ) {
+          return err("MEMBRESIA_NO_ENCONTRADA");
         }
 
         if (!(await tx.membresias.apagar(empresaId, objetivo.personaId, objetivo.version))) {
