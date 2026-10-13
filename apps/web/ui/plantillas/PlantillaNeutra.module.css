@@ -1,0 +1,27 @@
+.raiz {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: var(--espacio-4);
+  background: var(--color-superficie);
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  width: min(100%, 28rem);
+  padding: var(--espacio-5);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-grande);
+  background: var(--color-superficie-elevada);
+}
+
+.titulo {
+  margin: 0;
+  font-family: var(--tipo-familia-titulos);
+  font-size: var(--tipo-tamano-titulo);
+  font-weight: var(--tipo-peso-fuerte);
+  line-height: 1.25;
+}

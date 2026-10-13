@@ -77,6 +77,38 @@ export const CATALOGO_DE_TEXTOS = {
     porDefecto: "Esta invitación no se puede aceptar desde este sitio.",
     largoMaximo: 160,
   },
+  // Interfaz base (W2): lo que dicen los patrones de conexión, de envío y de sesión. La interfaz recibe
+  // estos textos ya resueltos; nacen acá para que cada pantalla no invente los suyos.
+  "conexion.sin_conexion": {
+    porDefecto: "Sin conexión. Cuando vuelva, podés seguir: no se envió nada.",
+    largoMaximo: 120,
+  },
+  "conexion.no_se_puede_enviar": {
+    porDefecto: "No se puede enviar sin conexión.",
+    largoMaximo: 80,
+  },
+  "conexion.enviando": { porDefecto: "Enviando…" },
+  "conexion.verificando": { porDefecto: "Verificando si se registró…" },
+  "sesion.aviso_titulo": { porDefecto: "¿Seguís ahí?" },
+  "sesion.aviso_detalle": {
+    porDefecto: "Por seguridad, la sesión se cierra si no se usa. Tocá «Seguir» para mantenerla.",
+    largoMaximo: 160,
+  },
+  "sesion.seguir": { porDefecto: "Seguir" },
+  "sesion.vencida_titulo": { porDefecto: "Tu sesión venció" },
+  "sesion.vencida_detalle": {
+    porDefecto: "Lo que tipeaste quedó guardado en esta pestaña. Volvé a ingresar y lo recuperás.",
+    largoMaximo: 160,
+  },
+  "sesion.ingresar_de_nuevo": { porDefecto: "Ingresar de nuevo" },
+  "error.inesperado": {
+    porDefecto: "No se pudo completar. Podés reintentar: es seguro, no se duplica.",
+    largoMaximo: 120,
+  },
+  "error.referencia": {
+    porDefecto: "Referencia: {referencia}",
+    marcadores: ["referencia"],
+  },
 } as const satisfies Record<string, DefinicionDeTexto>;
 
 export type ClaveDeTexto = keyof typeof CATALOGO_DE_TEXTOS;

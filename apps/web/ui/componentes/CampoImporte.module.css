@@ -1,0 +1,48 @@
+.fila {
+  display: flex;
+  align-items: stretch;
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+}
+
+.fila:focus-within {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-fondo);
+}
+
+.simbolo {
+  display: inline-flex;
+  align-items: center;
+  padding-left: var(--espacio-3);
+  color: var(--color-texto-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.entrada {
+  flex: 1;
+  min-width: 0;
+  min-height: calc(var(--objetivo-minimo) - 2 * var(--borde-grosor-fuerte));
+  padding: var(--espacio-2) var(--espacio-3) var(--espacio-2) var(--espacio-2);
+  border: 0;
+  border-radius: var(--radio-base);
+  background: transparent;
+  color: var(--color-texto);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.entrada:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.entrada:disabled {
+  color: var(--color-sobre-deshabilitado);
+}
+
+.fila:has(.entrada[aria-invalid="true"]) {
+  border-color: var(--color-peligro);
+}

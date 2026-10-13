@@ -1,6 +1,14 @@
 import { cruise } from "dependency-cruiser";
 import type { IForbiddenRuleType } from "dependency-cruiser";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
@@ -40,7 +48,7 @@ async function violacionesDe(archivos: Archivos): Promise<string[]> {
       ruleSet: { forbidden: reglas },
       tsPreCompilationDeps: true,
     },
-    { extensions: [".ts", ".js"] },
+    { extensions: [".ts", ".tsx", ".js"] },
   );
   if (typeof resultado.output === "string") throw new Error("salida inesperada");
   const nombres = resultado.output.summary.violations.map((v) => v.rule.name);
@@ -329,6 +337,47 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "src/modulos/marcas/publico.ts": exporta,
       },
     },
+    {
+      regla: "composicion-solo-desde-servidor-de-apps",
+      archivos: {
+        "apps/web/app/s/app/page.tsx": importa("../../../../../src/composicion/web"),
+        "src/composicion/web.ts": exporta,
+      },
+    },
+    {
+      regla: "cliente-sin-servidor",
+      archivos: {
+        "apps/web/app/s/app/boton.cliente.tsx": importa("../../../servidor/composicion"),
+        "apps/web/servidor/composicion.ts": exporta,
+      },
+    },
+    {
+      regla: "formas-sin-negocio",
+      archivos: {
+        "src/modulos/empresas/formas.ts": importa("./dominio/sucursal"),
+        "src/modulos/empresas/dominio/sucursal.ts": exporta,
+      },
+    },
+    {
+      regla: "iconos-solo-por-su-puerta",
+      archivos: {
+        "apps/web/ui/componentes/boton.ts": importa("lucide-react"),
+      },
+    },
+    {
+      regla: "ui-sin-pantallas-ni-modulos",
+      archivos: {
+        "apps/web/ui/componentes/boton.ts": importa("../../pantallas/factura"),
+        "apps/web/pantallas/factura.ts": exporta,
+      },
+    },
+    {
+      regla: "fiscal-sin-negocio-ajeno",
+      archivos: {
+        "src/modulos/fiscal/dominio/d.ts": importa("../../ventas/publico"),
+        "src/modulos/ventas/publico.ts": exporta,
+      },
+    },
   ];
 
   it("cada regla definida tiene su caso de violación", () => {
@@ -551,6 +600,64 @@ describe("reglas de arquitectura (ADR-001)", () => {
     });
   });
 
+  describe("captación: el dominio puro de la solicitud de alta cumple las reglas del dominio de plataforma (R-C6)", () => {
+    // Falla que previenen: un dominio de captación con Zod, con puertos, con el guard o con el plan, que
+    // deje de ser puro y de poder probarse (y mutarse al 100 %) sin base ni framework. El fallo se
+    // inyecta en la carpeta nueva: si alguien vuelve a angostar los patrones a `plataforma/dominio`,
+    // estos casos dejan de fallar.
+    const DOMINIO = "src/plataforma/captacion/dominio";
+
+    it("no puede importar Zod, React ni Next", async () => {
+      for (const paquete of ["zod", "react", "react-dom", "next"]) {
+        const v = await violacionesDe({
+          [`${DOMINIO}/d.ts`]: `import "${paquete}";\nexport const d = 1;\n`,
+        });
+        expect(v, paquete).toEqual(["plataforma-sin-framework"]);
+      }
+    });
+
+    it("no puede importar puertos ni exigirAccion", async () => {
+      const v = await violacionesDe({
+        [`${DOMINIO}/d.ts`]: [
+          importa("../../../puertos/q"),
+          importa("../../../capacidades/permisos/exigir"),
+        ].join(""),
+        "src/puertos/q.ts": exporta,
+        "src/capacidades/permisos/exigir.ts": exporta,
+      });
+      expect(v).toEqual(["plataforma-dominio-sin-puertos-ni-exigir"]);
+    });
+
+    it("no puede importar el guard, ni siquiera con la excepción de soporte/explicar", async () => {
+      const v = await violacionesDe({
+        [`${DOMINIO}/d.ts`]: importa("../../../capacidades/permisos/guard"),
+        "src/capacidades/permisos/guard.ts": exporta,
+      });
+      expect(v).toEqual(["plataforma-dominio-sin-guard"]);
+    });
+
+    it("no pregunta por el plan del tenant", async () => {
+      const v = await violacionesDe({
+        [`${DOMINIO}/d.ts`]: importa("../../../capacidades/planes/derechos"),
+        "src/capacidades/planes/derechos.ts": exporta,
+      });
+      expect(v).toEqual(["capacidades-de-planes-fuera-del-dominio"]);
+    });
+
+    it("sí puede usar las primitivas (resultado, CUIT, provincias) y sus propios archivos", async () => {
+      const v = await violacionesDe({
+        "src/primitivas/resultado/resultado.ts": exporta,
+        "src/primitivas/domicilio/provincias.ts": exporta,
+        [`${DOMINIO}/a.ts`]: importa("./b"),
+        [`${DOMINIO}/b.ts`]: [
+          importa("../../../primitivas/resultado/resultado"),
+          importa("../../../primitivas/domicilio/provincias"),
+        ].join(""),
+      });
+      expect(v).toEqual([]);
+    });
+  });
+
   describe("H6 grupo: consultas de solo lectura y catálogo de permisos propio", () => {
     it("las consultas de grupo solo pueden usar las transacciones, la autorización de grupo y su registro de acceso", async () => {
       const v = await violacionesDe({
@@ -663,5 +770,475 @@ describe("reglas de arquitectura (ADR-001)", () => {
       });
       expect(v).toEqual([]);
     });
+  });
+});
+
+/**
+ * R-W0: `npm run arquitectura` y `npm run typecheck` cubren `apps` y `scripts`. Previene que las reglas
+ * `apps-*` existan pero no corran sobre nada (hallazgo H4 del spec de la web). Chequeo: se lee el
+ * comando real de `package.json` y se cruza, con esas mismas carpetas, un árbol con un import prohibido
+ * bajo `apps/`; si alguien saca `apps` del comando, la violación deja de verse y la prueba falla.
+ */
+describe("R-W0: el comando de arquitectura alcanza a apps y scripts", () => {
+  const paquete = JSON.parse(readFileSync("package.json", "utf8")) as {
+    scripts: Record<string, string>;
+  };
+  const comando = paquete.scripts["arquitectura"] ?? "";
+  // Las carpetas que recibe depcruise: todo lo que no es la opción `--config` ni su valor.
+  const partes = comando.split(/\s+/).slice(1);
+  const carpetasDelComando = partes.filter(
+    (p, i) => p !== "" && p !== "--config" && partes[i - 1] !== "--config",
+  );
+
+  it("el comando cruza src, apps y scripts, y el typecheck incluye el tsconfig de la web", () => {
+    expect(comando.startsWith("depcruise ")).toBe(true);
+    expect(carpetasDelComando).toEqual(expect.arrayContaining(["src", "apps", "scripts"]));
+    expect(paquete.scripts["typecheck"]).toContain("apps/web/tsconfig.json");
+  });
+
+  it("las extensiones de la configuración incluyen .tsx (las pantallas)", () => {
+    const configuracion = require("../../.dependency-cruiser.cjs") as {
+      options: { enhancedResolveOptions: { extensions: string[] } };
+    };
+    expect(configuracion.options.enhancedResolveOptions.extensions).toContain(".tsx");
+  });
+
+  it("un import prohibido en un archivo bajo apps/ se ve con las carpetas del comando", async () => {
+    const base = mkdtempSync(join(tmpdir(), "zuluhub-arq-"));
+    directorios.push(base);
+    const archivos: Archivos = {
+      "src/adaptadores/postgres/a.ts": exporta,
+      "apps/web/prueba.ts": importa("../../src/adaptadores/postgres/a"),
+      "scripts/vacio.ts": exporta,
+    };
+    for (const [ruta, contenido] of Object.entries(archivos)) {
+      mkdirSync(dirname(join(base, ruta)), { recursive: true });
+      writeFileSync(join(base, ruta), contenido);
+    }
+    const resultado = await cruise(
+      carpetasDelComando,
+      { baseDir: base, validate: true, ruleSet: { forbidden: reglas }, tsPreCompilationDeps: true },
+      { extensions: [".ts", ".js"] },
+    );
+    if (typeof resultado.output === "string") throw new Error("salida inesperada");
+    const nombres = resultado.output.summary.violations.map((v) => v.rule.name);
+    expect(nombres).toContain("apps-sin-persistencia-ni-adaptadores");
+  });
+});
+
+/**
+ * R-W9: sin metadatos estáticos globales en `apps/<app>/app/` ni en `apps/<app>/public/`. Previene que todas
+ * las marcas compartan el mismo ícono, `robots.txt` o manifiesto (el plan de marca los resuelve por
+ * host con la API de metadatos dinámica: `icon.tsx`, `robots.ts`, `manifest.ts`, que sí se permiten).
+ * Chequeo: la función se prueba con archivos de verdad en un árbol temporal y se aplica al repo real.
+ */
+const METADATO_ESTATICO =
+  /^(favicon\.ico|icon\d*\.(ico|jpe?g|png|svg)|apple-icon\d*\.(jpe?g|png)|(opengraph|twitter)-image\d*\.(jpe?g|png|gif)|robots\.txt|sitemap\.xml|manifest\.(json|webmanifest))$/i;
+
+function metadatosEstaticosGlobales(raiz: string): string[] {
+  const encontrados: string[] = [];
+  const apps = join(raiz, "apps");
+  if (!existsSync(apps)) return encontrados;
+  for (const app of readdirSync(apps, { withFileTypes: true }).filter((e) => e.isDirectory())) {
+    for (const carpeta of ["app", "public"]) {
+      const base = join(apps, app.name, carpeta);
+      if (!existsSync(base)) continue;
+      for (const f of readdirSync(base, { recursive: true, encoding: "utf8" })) {
+        const nombre = f.split(/[\\/]/).pop() ?? "";
+        if (METADATO_ESTATICO.test(nombre)) encontrados.push(`apps/${app.name}/${carpeta}/${f}`);
+      }
+    }
+  }
+  return encontrados.sort();
+}
+
+describe("R-W9: sin metadatos estáticos globales en apps", () => {
+  const arbol = (archivos: string[]): string => {
+    const base = mkdtempSync(join(tmpdir(), "zuluhub-w9-"));
+    directorios.push(base);
+    for (const ruta of archivos) {
+      mkdirSync(dirname(join(base, ruta)), { recursive: true });
+      writeFileSync(join(base, ruta), "x");
+    }
+    return base;
+  };
+
+  it("el repositorio real no tiene ninguno", () => {
+    expect(metadatosEstaticosGlobales(".")).toEqual([]);
+  });
+
+  it.each([
+    "apps/web/app/favicon.ico",
+    "apps/web/app/icon.png",
+    "apps/web/app/icon1.svg",
+    "apps/web/app/apple-icon.png",
+    "apps/web/app/opengraph-image.jpg",
+    "apps/web/app/twitter-image.png",
+    "apps/web/app/robots.txt",
+    "apps/web/app/sitemap.xml",
+    "apps/web/app/manifest.json",
+    "apps/web/app/manifest.webmanifest",
+    "apps/web/app/s/landing/icon.ico",
+    "apps/web/public/robots.txt",
+    "apps/web/public/favicon.ico",
+    "apps/plataforma/app/Favicon.ICO",
+  ])("detecta %s", (ruta) => {
+    expect(metadatosEstaticosGlobales(arbol([ruta]))).toEqual([ruta]);
+  });
+
+  it("deja pasar las versiones dinámicas y los archivos comunes", () => {
+    const base = arbol([
+      "apps/web/app/icon.tsx",
+      "apps/web/app/robots.ts",
+      "apps/web/app/sitemap.ts",
+      "apps/web/app/manifest.ts",
+      "apps/web/app/layout.tsx",
+      "apps/web/app/s/neutra/page.tsx",
+      "apps/web/public/logo.png",
+      "apps/web/package.json",
+    ]);
+    expect(metadatosEstaticosGlobales(base)).toEqual([]);
+  });
+});
+
+/**
+ * R-W2, R-W4 y R-W5 (W1): quién puede importar la composición, qué no puede importar un archivo de
+ * cliente y qué es `formas.ts`. Cada regla de dependencias tiene su violación inyectada en `casos`
+ * (arriba); acá van los casos permitidos que no deben dispararla.
+ */
+describe("R-W2: la composición solo se importa desde apps/web/servidor", () => {
+  it("el servidor de la app sí la importa", async () => {
+    const v = await violacionesDe({
+      "src/composicion/web.ts": exporta,
+      "apps/web/servidor/composicion.ts": importa("../../../src/composicion/web"),
+    });
+    expect(v).toEqual([]);
+  });
+
+  it("también se prohíbe desde un archivo de apps que no es .tsx (el proxy, un handler)", async () => {
+    const v = await violacionesDe({
+      "src/composicion/web.ts": exporta,
+      "apps/web/proxy.ts": importa("../../src/composicion/web"),
+    });
+    expect(v).toContain("composicion-solo-desde-servidor-de-apps");
+  });
+
+  it("un .tsx de otro lado tampoco, y la composición puede importar lo suyo", async () => {
+    const v = await violacionesDe({
+      "src/composicion/web.ts": importa("./entorno"),
+      "src/composicion/entorno.ts": exporta,
+      "src/modulos/empresas/ui.tsx": importa("../../composicion/web"),
+    });
+    expect(v).toContain("composicion-solo-desde-servidor-de-apps");
+  });
+});
+
+describe("R-W4: los archivos de cliente no importan nada del servidor", () => {
+  it.each([
+    [
+      "publico.ts de un módulo",
+      "src/modulos/empresas/publico.ts",
+      "../../../../../../src/modulos/empresas/publico",
+    ],
+    ["la composición", "src/composicion/web.ts", "../../../../../../src/composicion/web"],
+    ["un adaptador", "src/adaptadores/correo/a.ts", "../../../../../../src/adaptadores/correo/a"],
+  ])("no importan %s", async (_nombre, destino, ruta) => {
+    const v = await violacionesDe({
+      [destino]: exporta,
+      "apps/web/app/s/app/x/boton.cliente.tsx": importa(ruta),
+    });
+    expect(v).toContain("cliente-sin-servidor");
+  });
+
+  it("sí importan formas.ts, primitivas, capacidades y otros archivos de cliente", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/formas.ts": exporta,
+      "src/primitivas/p.ts": exporta,
+      "src/capacidades/vocabulario/v.ts": exporta,
+      "apps/web/ui/otro.cliente.tsx": exporta,
+      "apps/web/app/s/app/boton.cliente.tsx": [
+        importa("../../../../../src/modulos/empresas/formas"),
+        importa("../../../../../src/primitivas/p").replace("y =", "y2 ="),
+        importa("../../../../../src/capacidades/vocabulario/v").replace("y =", "y3 ="),
+        importa("../../../ui/otro.cliente").replace("y =", "y4 ="),
+      ].join(""),
+    });
+    expect(v).toEqual([]);
+  });
+
+  it("un archivo de servidor sí importa lo del servidor (la regla es solo de los .cliente.tsx)", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/publico.ts": exporta,
+      "apps/web/servidor/consulta.ts": importa("../../../src/modulos/empresas/publico"),
+    });
+    expect(v).toEqual([]);
+  });
+});
+
+describe("R-W5: formas.ts es una entrada admitida y no tiene negocio", () => {
+  it("la pantalla y la composición importan formas.ts sin pasar por publico.ts", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/formas.ts": exporta,
+      "apps/web/app/s/app/page.ts": importa("../../../../../src/modulos/empresas/formas"),
+      "src/composicion/web.ts": importa("../modulos/empresas/formas"),
+    });
+    expect(v).toEqual([]);
+  });
+
+  it("el resto del módulo sigue cerrado: dominio, casos de uso y persistencia siguen prohibidos", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/dominio/d.ts": exporta,
+      "apps/web/app/s/app/page.ts": importa("../../../../../src/modulos/empresas/dominio/d"),
+    });
+    expect(v).toContain("modulos-solo-por-publico-desde-afuera");
+  });
+
+  it("otro módulo no importa las formas de este: entre módulos solo publico.ts", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/formas.ts": exporta,
+      "src/modulos/identidad/casos-de-uso/c.ts": importa("../../empresas/formas"),
+    });
+    expect(v).toContain("modulos-solo-por-publico");
+  });
+
+  it.each([
+    ["publico.ts del propio módulo", "src/modulos/empresas/publico.ts", "./publico"],
+    ["un caso de uso", "src/modulos/empresas/casos-de-uso/c.ts", "./casos-de-uso/c"],
+    ["la persistencia", "src/modulos/empresas/persistencia/r.ts", "./persistencia/r"],
+    ["una capacidad", "src/capacidades/vocabulario/v.ts", "../../capacidades/vocabulario/v"],
+    ["un puerto", "src/puertos/p.ts", "../../puertos/p"],
+  ])("formas.ts no importa %s", async (_nombre, destino, ruta) => {
+    const v = await violacionesDe({
+      [destino]: exporta,
+      "src/modulos/empresas/formas.ts": importa(ruta),
+    });
+    expect(v).toContain("formas-sin-negocio");
+  });
+
+  it("formas.ts sí importa zod y primitivas", async () => {
+    const v = await violacionesDe({
+      "src/primitivas/identificadores/marca.ts": exporta,
+      "src/modulos/empresas/formas.ts":
+        'import { z } from "zod";\n' +
+        importa("../../primitivas/identificadores/marca").replace("y =", "y2 =") +
+        "export const f = z;\n",
+    });
+    expect(v).toEqual([]);
+  });
+
+  it("formas.ts no importa módulos de node", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/formas.ts":
+        'import { join } from "node:path";\nexport const f = join;\n',
+    });
+    expect(v).toContain("formas-sin-negocio");
+  });
+});
+
+/**
+ * Convenciones de archivos de `apps/` que ninguna regla de dependencias ve (W1). Se prueban con
+ * archivos de verdad en un árbol temporal y se aplican al repositorio real.
+ *  - Todo archivo con la directiva "use client" lleva el sufijo `.cliente.tsx` (R-W4): sin él, la
+ *    regla `cliente-sin-servidor` no lo alcanzaría y un componente de cliente podría importar el servidor.
+ *  - Todo archivo de `apps/<app>/servidor/` empieza con `import "server-only";`: si un componente de
+ *    cliente lo importa, la compilación falla en vez de empaquetar secretos o persistencia.
+ */
+// Recorrido lineal (sin expresión regular con repeticiones anidadas, que CodeQL marca como ReDoS):
+// salta espacios y comentarios iniciales y mira si lo primero es la directiva.
+function tieneDirectivaDeCliente(texto: string): boolean {
+  let i = 0;
+  for (;;) {
+    while (i < texto.length && /\s/.test(texto.charAt(i))) i += 1;
+    if (texto.startsWith("//", i)) {
+      const fin = texto.indexOf("\n", i);
+      if (fin === -1) return false;
+      i = fin + 1;
+    } else if (texto.startsWith("/*", i)) {
+      const fin = texto.indexOf("*/", i + 2);
+      if (fin === -1) return false;
+      i = fin + 2;
+    } else {
+      break;
+    }
+  }
+  return texto.startsWith('"use client"', i) || texto.startsWith("'use client'", i);
+}
+
+function archivosDeApps(raiz: string): string[] {
+  const apps = join(raiz, "apps");
+  if (!existsSync(apps)) return [];
+  return readdirSync(apps, { recursive: true, encoding: "utf8" })
+    .filter((f) => /\.(ts|tsx)$/.test(f) && !/(^|[\\/])(node_modules|\.next)[\\/]/.test(f))
+    .map((f) => f.replaceAll("\\", "/"))
+    .sort();
+}
+
+function archivosDeClienteSinSufijo(raiz: string): string[] {
+  return archivosDeApps(raiz)
+    .filter(
+      (f) =>
+        !f.endsWith(".cliente.tsx") &&
+        tieneDirectivaDeCliente(readFileSync(join(raiz, "apps", f), "utf8")),
+    )
+    .map((f) => `apps/${f}`);
+}
+
+function archivosDeServidorSinServerOnly(raiz: string): string[] {
+  return archivosDeApps(raiz)
+    .filter((f) => /^[^/]+\/servidor\//.test(f))
+    .filter((f) => primeraLineaDeCodigo(join(raiz, "apps", f)) !== 'import "server-only";')
+    .map((f) => `apps/${f}`);
+}
+
+// Stryker antepone `// @ts-nocheck` a los archivos de su sandbox: esa línea no cuenta como código.
+function primeraLineaDeCodigo(ruta: string): string | undefined {
+  return readFileSync(ruta, "utf8")
+    .split("\n")
+    .find((linea) => linea !== "// @ts-nocheck");
+}
+
+describe("convenciones de apps: use client con sufijo y server-only en el servidor", () => {
+  const arbol = (archivos: Record<string, string>): string => {
+    const base = mkdtempSync(join(tmpdir(), "zuluhub-conv-"));
+    directorios.push(base);
+    for (const [ruta, contenido] of Object.entries(archivos)) {
+      mkdirSync(dirname(join(base, ruta)), { recursive: true });
+      writeFileSync(join(base, ruta), contenido);
+    }
+    return base;
+  };
+
+  it("el repositorio real las cumple", () => {
+    expect(archivosDeClienteSinSufijo(".")).toEqual([]);
+    expect(archivosDeServidorSinServerOnly(".")).toEqual([]);
+    expect(archivosDeApps(".")).toContain("web/servidor/composicion.ts");
+  });
+
+  it.each([
+    ['"use client";\nexport const a = 1;\n'],
+    ["'use client'\nexport const a = 1;\n"],
+    ['// comentario\n"use client";\nexport const a = 1;\n'],
+    ['/* bloque\n   de varias líneas */\n\n"use client";\nexport const a = 1;\n'],
+  ])("detecta un archivo con la directiva y sin el sufijo: %j", (contenido) => {
+    const base = arbol({ "apps/web/app/panel.tsx": contenido, "apps/web/app/otro.ts": contenido });
+    expect(archivosDeClienteSinSufijo(base)).toEqual([
+      "apps/web/app/otro.ts",
+      "apps/web/app/panel.tsx",
+    ]);
+  });
+
+  it("no marca los .cliente.tsx, ni los archivos sin la directiva, ni un texto que solo la menciona", () => {
+    const base = arbol({
+      "apps/web/app/panel.cliente.tsx": '"use client";\nexport const a = 1;\n',
+      "apps/web/app/servidor.tsx": "export const a = 1;\n",
+      "apps/web/app/menciona.tsx": 'export const a = 1;\nexport const t = "use client";\n',
+      "apps/web/app/node_modules/x/y.tsx": '"use client";\n',
+    });
+    expect(archivosDeClienteSinSufijo(base)).toEqual([]);
+  });
+
+  it("detecta un archivo de servidor sin server-only como primera línea", () => {
+    const base = arbol({
+      "apps/web/servidor/bien.ts": 'import "server-only";\nexport const a = 1;\n',
+      "apps/web/servidor/sub/mal.ts": 'export const a = 1;\nimport "server-only";\n',
+      "apps/web/servidor/comentario.ts": '// server-only\nimport "server-only";\n',
+      "apps/web/servidor/pantalla.tsx": "export const a = 1;\n",
+      "apps/web/otro/libre.ts": "export const a = 1;\n",
+    });
+    expect(archivosDeServidorSinServerOnly(base)).toEqual([
+      "apps/web/servidor/comentario.ts",
+      "apps/web/servidor/pantalla.tsx",
+      "apps/web/servidor/sub/mal.ts",
+    ]);
+  });
+});
+
+/**
+ * R-W6 y R-W7 (interfaz base). R-W6 previene íconos sueltos sin nombre accesible y un juego de íconos
+ * repartido por toda la web: `lucide-react` solo entra por `apps/web/ui/iconos/`. R-W7 previene un
+ * componente que sabe de un módulo o de una pantalla: la interfaz base (capas 1 a 5) no los conoce.
+ * Chequeo: los casos de arriba (`casos`) los rompen a propósito; acá, lo que SÍ está permitido y las
+ * otras formas de romperlas.
+ */
+describe("R-W6 y R-W7: la interfaz base", () => {
+  it("la puerta de íconos sí importa lucide-react; los componentes de ui, la puerta", async () => {
+    const v = await violacionesDeLaPuertaDeIconos();
+    expect(v).toEqual([]);
+  });
+
+  it("una pantalla o cualquier carpeta de src no puede importar lucide-react", async () => {
+    for (const origen of [
+      "apps/web/pantallas/inicio.ts",
+      "apps/web/app/pagina.ts",
+      "apps/web/ui/componentes/boton.ts",
+      "apps/web/ui/patrones/aviso.ts",
+      "src/capacidades/icono.ts",
+    ]) {
+      const v = await violacionesDe({ [origen]: importa("lucide-react") });
+      expect(v, origen).toContain("iconos-solo-por-su-puerta");
+    }
+  });
+
+  it("también se ve el import de un archivo interno del paquete", async () => {
+    const v = await violacionesDe({
+      "apps/web/ui/componentes/boton.ts": importa("lucide-react/dist/esm/icons/x"),
+    });
+    expect(v).toContain("iconos-solo-por-su-puerta");
+  });
+
+  it("ui no importa pantallas, servidor ni ningún módulo (ni por su publico.ts)", async () => {
+    for (const destino of [
+      ["apps/web/pantallas/p.ts", "../../pantallas/p"],
+      ["apps/web/servidor/s.ts", "../../servidor/s"],
+      ["src/modulos/fiscal/publico.ts", "../../../../src/modulos/fiscal/publico"],
+    ] as const) {
+      const v = await violacionesDe({
+        "apps/web/ui/componentes/c.ts": importa(destino[1]),
+        [destino[0]]: exporta,
+      });
+      expect(v, destino[0]).toContain("ui-sin-pantallas-ni-modulos");
+    }
+  });
+
+  it("ui sí usa las primitivas y las capacidades, y la pantalla sí usa ui", async () => {
+    const v = await violacionesDe({
+      "src/primitivas/dinero/importe.ts": exporta,
+      "src/capacidades/experiencia/importe-tipeado.ts": importa("../../primitivas/dinero/importe"),
+      "apps/web/ui/componentes/campo-importe.ts": importa(
+        "../../../../src/capacidades/experiencia/importe-tipeado",
+      ),
+      "apps/web/pantallas/venta.ts": importa("../ui/componentes/campo-importe"),
+    });
+    expect(v).toEqual([]);
+  });
+});
+
+async function violacionesDeLaPuertaDeIconos(): Promise<string[]> {
+  return violacionesDe({
+    "apps/web/ui/iconos/catalogo.ts": importa("lucide-react"),
+    "apps/web/ui/componentes/boton.ts": importa("../iconos/catalogo"),
+  });
+}
+
+describe("facturación F1: el facturador funciona solo (spec H7 facturación §B.0 y §B.9)", () => {
+  it("fiscal no importa ventas, caja, catálogo, clientes ni stock, ni por su publico.ts", async () => {
+    for (const modulo of ["ventas", "caja", "catalogo", "clientes", "stock"]) {
+      const v = await violacionesDe({
+        "src/modulos/fiscal/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+      });
+      expect(v, modulo).toContain("fiscal-sin-negocio-ajeno");
+    }
+  });
+
+  it("fiscal sí usa los módulos de base (identidad, empresas) y los demás módulos sí usan fiscal por su publico.ts", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/publico.ts": exporta,
+      "src/modulos/fiscal/dominio/d.ts": exporta,
+      "src/modulos/fiscal/casos-de-uso/c.ts": importa("../dominio/d"),
+      "src/modulos/fiscal/publico.ts": importa("./casos-de-uso/c"),
+      "src/modulos/ventas/casos-de-uso/v.ts": importa("../../fiscal/publico"),
+    });
+    expect(v).not.toContain("fiscal-sin-negocio-ajeno");
   });
 });

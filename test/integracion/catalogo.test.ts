@@ -61,6 +61,9 @@ const TABLAS_DE_NEGOCIO = [
   "ajuste_de_perilla",
   "modulo_de_empresa",
   "nivel_de_control",
+  // Alta por solicitud (migración de captación)
+  "solicitud_de_alta",
+  "limite_de_captacion",
 ] as const;
 const TABLAS_DE_AUDITORIA = ["auditoria_empresa", "auditoria_plataforma", "auditoria_acceso_grupo"];
 
@@ -309,6 +312,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "plan_de_tenant:SELECT", // 0007
           "referencia_de_error:SELECT",
           "serie_comprobante:SELECT", // 0006
+          "solicitud_de_alta:SELECT", // captación
           "tenant:SELECT",
           "trabajo:SELECT",
           "traspaso_gerencia:SELECT",
@@ -403,6 +407,23 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "zuluhub_plataforma:modulo_de_empresa.activo", // 0007
           "zuluhub_plataforma:persona.activo_global",
           "zuluhub_plataforma:plan.estado", // 0007
+          // captación: un ADMIN decide, `sistema` vence y anonimiza (los datos personales se anonimizan)
+          ...[
+            "estado",
+            "decidida_por",
+            "decidida_en",
+            "motivo_de_rechazo",
+            "nota_interna",
+            "empresa_creada_id",
+            "anonimizada_en",
+            "email",
+            "nombre_contacto",
+            "nombre_negocio",
+            "telefono",
+            "cuit",
+            "id_de_medicion",
+            "atribucion",
+          ].map((c) => `zuluhub_plataforma:solicitud_de_alta.${c}`),
           "zuluhub_plataforma:tenant.estado",
           "zuluhub_plataforma:tenant.motivo_estado",
           "zuluhub_plataforma:tenant.nombre",

@@ -1,8 +1,23 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/**/*.ts", "test/**/*.test.ts", "neon.ts"],
-  "project": ["src/**/*.ts", "test/**/*.ts", "arquitectura/**/*.cjs"],
-  "ignoreDependencies": ["@stryker-mutator/command-runner"],
+  "workspaces": {
+    ".": {
+      "entry": ["src/**/*.ts", "test/**/*.test.ts", "neon.ts"],
+      "project": ["src/**/*.ts", "test/**/*.ts", "arquitectura/**/*.cjs"],
+      // @axe-core/playwright y @playwright/test: autorizadas en el spec de la web (§2.2) para el e2e del
+      // ingreso (W5, P-10: axe sobre la página real contra `next start`); sin uso hasta ese tramo.
+      "ignoreDependencies": [
+        "@stryker-mutator/command-runner",
+        "next",
+        "@axe-core/playwright",
+        "@playwright/test"
+      ]
+    },
+    "apps/web": {
+      "entry": ["servidor/**/*.ts"],
+      "project": ["**/*.{ts,tsx}"]
+    }
+  },
   "ignoreIssues": {
     "arquitectura/lint-sql.cjs": ["exports"]
   }

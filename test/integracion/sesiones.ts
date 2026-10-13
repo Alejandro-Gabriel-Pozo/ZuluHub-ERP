@@ -18,8 +18,12 @@ const URL_POR_ROL = {
   zuluhub_grupo: "grupo",
   zuluhub_trabajos: "trabajos",
   zuluhub_plataforma: "plataforma",
+  /** Sin contexto de negocio: el rol de la librería de autenticación; se abre con `contexto: null`. */
+  zuluhub_autenticacion: "autenticacion",
   /** Sin contexto: el rol público (0007) no tiene sesión ni empresa; se abre con `contexto: null`. */
   zuluhub_publico: "publico",
+  /** La landing: su contexto lleva el claim `c` (ver `captacion-apoyo.ts`); se abre con `abrirConToken`. */
+  zuluhub_captacion: "captacion",
 } as const;
 
 export class SesionDePrueba {
@@ -38,18 +42,32 @@ export class SesionDePrueba {
     contexto: Contexto | null,
     aislamiento: "read committed" | "repeatable read" | "serializable" = "read committed",
   ): Promise<SesionDePrueba> {
+    let token: string | null = null;
+    if (contexto !== null) {
+      if (rolDeContexto(contexto.tipo) !== rol) {
+        throw new Error(`el contexto ${contexto.tipo} no es del rol ${rol}`);
+      }
+      token = firmarContexto(base.clave, contexto, Math.floor(Date.now() / 1000));
+    }
+    return SesionDePrueba.abrirConToken(base, rol, token, aislamiento);
+  }
+
+  /**
+   * Como `abrir`, pero con un token ya firmado (o ninguno): sirve para contextos que `firmarContexto` todavía
+   * no sabe armar, como el de la landing (claim `c`, ver `captacion-apoyo.ts`), o para tokens adulterados.
+   */
+  static async abrirConToken(
+    base: BaseDePruebas,
+    rol: keyof typeof URL_POR_ROL,
+    token: string | null,
+    aislamiento: "read committed" | "repeatable read" | "serializable" = "read committed",
+  ): Promise<SesionDePrueba> {
     const cliente = new pg.Client({ connectionString: base[URL_POR_ROL[rol]] });
     await cliente.connect();
     const { rows } = await cliente.query<{ pid: number }>("select pg_backend_pid() as pid");
     const sesion = new SesionDePrueba(cliente, rows[0]?.pid as number);
     await cliente.query(`begin isolation level ${aislamiento}`);
-    if (contexto !== null) {
-      if (rolDeContexto(contexto.tipo) !== rol) {
-        throw new Error(`el contexto ${contexto.tipo} no es del rol ${rol}`);
-      }
-      const token = firmarContexto(base.clave, contexto, Math.floor(Date.now() / 1000));
-      await cliente.query("select set_config('app.ctx', $1, true)", [token]);
-    }
+    if (token !== null) await cliente.query("select set_config('app.ctx', $1, true)", [token]);
     return sesion;
   }
 

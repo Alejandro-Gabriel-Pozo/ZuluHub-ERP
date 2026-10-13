@@ -1,0 +1,22 @@
+.botonIcono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--objetivo-minimo);
+  height: var(--objetivo-minimo);
+  padding: 0;
+  border: var(--borde-grosor) solid transparent;
+  border-radius: var(--radio-base);
+  background: transparent;
+  color: var(--color-texto);
+  cursor: pointer;
+}
+
+.botonIcono:hover {
+  background: var(--color-superficie);
+}
+
+.botonIcono:disabled {
+  color: var(--color-sobre-deshabilitado);
+  cursor: not-allowed;
+}

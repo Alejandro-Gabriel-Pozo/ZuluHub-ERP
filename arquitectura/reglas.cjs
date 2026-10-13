@@ -75,7 +75,12 @@ const reglas = [
     comment:
       "Quien no es un módulo (plataforma, consultas, composición, apps) entra por publico.ts.",
     from: { path: "^(src|apps)/", pathNot: "^src/modulos/" },
-    to: { path: "^src/modulos/[^/]+/", pathNot: "^src/modulos/[^/]+/publico\\.ts$" },
+    to: {
+      path: "^src/modulos/[^/]+/",
+      // R-W5: `formas.ts` (esquemas Zod de la forma de un dato) es la otra entrada admitida: la
+      // pantalla la importa sin arrastrar `publico.ts` y, con él, la persistencia.
+      pathNot: "^src/modulos/[^/]+/(publico|formas)\\.ts$",
+    },
   },
   {
     name: "adaptadores-solo-desde-composicion",
@@ -202,16 +207,17 @@ const reglas = [
   {
     name: "plataforma-sin-framework",
     severity: "error",
-    comment: "El dominio y los casos de uso de plataforma no importan Zod, React ni Next (H5).",
-    from: { path: "^src/plataforma/(dominio|casos-de-uso)/" },
+    comment:
+      "El dominio y los casos de uso de plataforma (y el dominio de captación) no importan Zod, React ni Next (H5; alta por solicitud R-C6).",
+    from: { path: "^src/plataforma/(dominio|captacion/dominio|casos-de-uso)/" },
     to: { path: FRAMEWORK },
   },
   {
     name: "plataforma-dominio-sin-puertos-ni-exigir",
     severity: "error",
     comment:
-      "El dominio de plataforma es puro: no conoce puertos ni exigirAccion (que carga al actor de forma asíncrona). Eso es de los casos de uso.",
-    from: { path: "^src/plataforma/dominio/" },
+      "El dominio de plataforma (y el de captación) es puro: no conoce puertos ni exigirAccion (que carga al actor de forma asíncrona). Eso es de los casos de uso.",
+    from: { path: "^src/plataforma/(captacion/)?dominio/" },
     to: { path: "^src/puertos/|^src/capacidades/permisos/exigir\\.ts$" },
   },
   {
@@ -220,7 +226,7 @@ const reglas = [
     comment:
       "El dominio de plataforma no autoriza: el guard se pide en el caso de uso, dentro de la transacción (ADR-003). Única excepción: soporte/explicar, que repite la decisión del guard real a propósito, solo lectura.",
     from: {
-      path: "^src/plataforma/dominio/",
+      path: "^src/plataforma/(captacion/)?dominio/",
       pathNot: "^src/plataforma/dominio/soporte/explicar(\\.test)?\\.ts$",
     },
     to: { path: "^src/capacidades/permisos/guard\\.ts$" },
@@ -299,7 +305,7 @@ const reglas = [
     comment:
       "Los derechos de uso y los niveles (capacidades/planes) se piden en el caso de uso, dentro de la transacción (marcas y planes §B.5.8): el dominio de negocio no pregunta por el plan. Única excepción: el dominio del propio módulo de planes, que decide las asignaciones y los ajustes.",
     from: {
-      path: "^src/(modulos/[^/]+|plataforma)/dominio/",
+      path: "^src/(modulos/[^/]+|plataforma(/captacion)?)/dominio/",
       pathNot: "^src/modulos/planes/dominio/",
     },
     to: { path: "^src/capacidades/planes/" },
@@ -327,6 +333,60 @@ const reglas = [
       "Ningún otro módulo de negocio importa modulos/marcas (marcas y planes, §D «Arquitectura»): la marca es presentación y puerta, no una dependencia de negocio. Lo que un módulo necesita (los textos, los derechos de uso) lo toma de capacidades y de los puertos. La puerta web, la plataforma y las consultas sí entran por su publico.ts.",
     from: { path: "^src/modulos/", pathNot: "^src/modulos/marcas/" },
     to: { path: "^src/modulos/marcas/" },
+  },
+  {
+    // R-W6. Previene: íconos sueltos sin nombre accesible ([02] §4.3) y un juego de íconos repartido por
+    // toda la web (cambiarlo tocaría cada pantalla). Chequeo: la violación inyectada de reglas.test.ts.
+    name: "iconos-solo-por-su-puerta",
+    severity: "error",
+    comment:
+      "`lucide-react` solo se importa desde apps/web/ui/iconos/ (R-W6): ahí cada ícono sale del catálogo cerrado y con su nombre accesible o declarado decorativo.",
+    from: { path: "^(src|apps)/", pathNot: "^apps/web/ui/iconos/" },
+    to: { path: "^(node_modules/)?lucide-react(/|$)" },
+  },
+  {
+    // R-W7. Previene: un componente que sabe de un módulo o de una pantalla ([01] §3.1): la interfaz base
+    // (capas 1 a 5) no conoce ningún módulo ni la composición. Chequeo: la violación inyectada de reglas.test.ts.
+    name: "ui-sin-pantallas-ni-modulos",
+    severity: "error",
+    comment:
+      "apps/web/ui/** (capas 1 a 5) no importa apps/web/pantallas/**, apps/web/servidor/** ni src/modulos/** (R-W7): la interfaz base no conoce ninguna pantalla ni módulo.",
+    from: { path: "^apps/web/ui/" },
+    to: { path: "^apps/web/(pantallas|servidor)/|^src/modulos/" },
+  },
+  {
+    name: "composicion-solo-desde-servidor-de-apps",
+    severity: "error",
+    comment:
+      "R-W2. Ningún .tsx ni archivo de apps/** importa src/composicion salvo apps/web/servidor/** (que es solo servidor). Previene que un componente arme adaptadores y, con ellos, secretos.",
+    from: { path: "\\.tsx$|^apps/", pathNot: "^apps/web/servidor/" },
+    to: { path: "^src/composicion/" },
+  },
+  {
+    name: "cliente-sin-servidor",
+    severity: "error",
+    comment:
+      'R-W4. Los archivos de cliente (*.cliente.tsx; todo archivo con "use client" lleva ese sufijo) no importan publico.ts de ningún módulo, ni la composición, ni los adaptadores, ni apps/*/servidor. Previene persistencia y pg en el paquete del navegador (hallazgo H5 del spec de la web). Las formas (formas.ts) sí se pueden importar.',
+    from: { path: "\\.cliente\\.tsx$" },
+    to: {
+      path: "^src/modulos/[^/]+/publico\\.ts$|^src/(composicion|adaptadores)/|^apps/[^/]+/servidor/",
+    },
+  },
+  {
+    name: "formas-sin-negocio",
+    severity: "error",
+    comment:
+      "R-W5. formas.ts de un módulo solo importa zod y primitivas: son esquemas de la forma de un dato, sin negocio. Previene que la pantalla tenga que importar publico.ts (con persistencia) solo para tener la forma, o que la forma decida reglas que son del dominio.",
+    from: { path: "^src/modulos/[^/]+/formas\\.ts$" },
+    to: { pathNot: "^src/primitivas/|^(node_modules/)?zod(/|$)" },
+  },
+  {
+    name: "fiscal-sin-negocio-ajeno",
+    severity: "error",
+    comment:
+      "El facturador funciona solo (facturación §B.0 y §B.9): fiscal no importa ventas, caja, catálogo, clientes ni stock, ni siquiera por su publico.ts. Quien factura le da renglones, un receptor y un origen opaco. Previene que fiscal dependa de un módulo que lo usa y rompa la separación; si se elimina, falla la violación inyectada de esta regla.",
+    from: { path: "^src/modulos/fiscal/" },
+    to: { path: "^src/modulos/(ventas|caja|catalogo|clientes|stock)/" },
   },
 ];
 

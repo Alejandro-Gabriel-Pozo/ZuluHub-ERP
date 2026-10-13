@@ -1,0 +1,161 @@
+[
+  {
+    "grupo": "dinero (cálculo exacto y redondeo)",
+    "archivos": "src/primitivas/dinero/monto-exacto.ts,src/primitivas/dinero/interno.ts,src/primitivas/dinero/redondeo.ts"
+  },
+  {
+    "grupo": "dinero (importe, prorrateo y moneda)",
+    "archivos": "src/primitivas/dinero/**/*.ts,!src/primitivas/dinero/monto-exacto.ts,!src/primitivas/dinero/interno.ts,!src/primitivas/dinero/redondeo.ts"
+  },
+  {
+    "grupo": "cantidad",
+    "archivos": "src/primitivas/cantidad/**/*.ts"
+  },
+  {
+    "grupo": "identificación fiscal, resultado y estados",
+    "archivos": "src/primitivas/identificacion-fiscal/**/*.ts,src/primitivas/resultado/**/*.ts,src/contexto/estados.ts"
+  },
+  {
+    "grupo": "tenants y empresas",
+    "archivos": "src/modulos/tenants/dominio/**/*.ts,src/modulos/empresas/dominio/**/*.ts,src/consultas-de-grupo/vista-de-grupo.ts"
+  },
+  {
+    "grupo": "fiscal (numeración)",
+    "archivos": "src/modulos/fiscal/dominio/numeracion.ts",
+    "pruebas": "src/modulos/fiscal"
+  },
+  {
+    "grupo": "fiscal (datos y vigencia)",
+    "archivos": "src/modulos/fiscal/dominio/datos-fiscales.ts,src/modulos/fiscal/dominio/vigencia.ts",
+    "pruebas": "src/modulos/fiscal"
+  },
+  {
+    "grupo": "fiscal (puntos de venta y emisor)",
+    "archivos": "src/modulos/fiscal/dominio/punto-de-venta.ts,src/modulos/fiscal/dominio/resolucion-de-emisor.ts",
+    "pruebas": "src/modulos/fiscal"
+  },
+  {
+    "grupo": "fiscal (resto)",
+    "archivos": "src/modulos/fiscal/dominio/**/*.ts,!src/modulos/fiscal/dominio/numeracion.ts,!src/modulos/fiscal/dominio/datos-fiscales.ts,!src/modulos/fiscal/dominio/vigencia.ts,!src/modulos/fiscal/dominio/punto-de-venta.ts,!src/modulos/fiscal/dominio/resolucion-de-emisor.ts,!src/modulos/fiscal/dominio/calculo-de-renglones.ts,!src/modulos/fiscal/dominio/codigos-de-arca.ts,!src/modulos/fiscal/dominio/comprobante-nuevo.ts,!src/modulos/fiscal/dominio/condicion-iva-receptor.ts,!src/modulos/fiscal/dominio/estados-de-comprobante.ts,!src/modulos/fiscal/dominio/importes-para-arca.ts,!src/modulos/fiscal/dominio/letra-de-comprobante.ts,!src/modulos/fiscal/dominio/modelo-de-impresion.ts,!src/modulos/fiscal/dominio/nota-asociada.ts,!src/modulos/fiscal/dominio/qr-de-arca.ts,!src/modulos/fiscal/dominio/receptor.ts,!src/modulos/fiscal/dominio/reconciliacion-de-comprobante.ts",
+    "pruebas": "src/modulos/fiscal"
+  },
+  {
+    "grupo": "domicilio",
+    "archivos": "src/primitivas/domicilio/**/*.ts",
+    "pruebas": "src/primitivas/domicilio"
+  },
+  {
+    "grupo": "tiempo",
+    "archivos": "src/primitivas/tiempo/**/*.ts",
+    "pruebas": "src/primitivas/tiempo"
+  },
+  {
+    "grupo": "identidad (invitación)",
+    "archivos": "src/modulos/identidad/dominio/invitacion.ts",
+    "pruebas": "src/modulos/identidad"
+  },
+  {
+    "grupo": "identidad (resto)",
+    "archivos": "src/modulos/identidad/dominio/**/*.ts,!src/modulos/identidad/dominio/invitacion.ts",
+    "pruebas": "src/modulos/identidad"
+  },
+  {
+    "grupo": "permisos y módulos",
+    "archivos": "src/capacidades/permisos/**/*.ts,src/capacidades/modulos/**/*.ts"
+  },
+  {
+    "grupo": "plataforma (dominio)",
+    "archivos": "src/plataforma/dominio/**/*.ts",
+    "pruebas": "src/plataforma/dominio src/plataforma/casos-de-uso src/plataforma/consultas src/plataforma/sin-reloj-ni-azar.test.ts test/plataforma"
+  },
+  {
+    "grupo": "identificadores",
+    "archivos": "src/primitivas/identificadores/**/*.ts",
+    "pruebas": "src/primitivas/identificadores"
+  },
+  {
+    "grupo": "vocabulario",
+    "archivos": "src/capacidades/vocabulario/**/*.ts",
+    "pruebas": "src/capacidades/vocabulario"
+  },
+  {
+    "grupo": "marcas (host, tema y jerarquía)",
+    "archivos": "src/modulos/marcas/dominio/host.ts,src/modulos/marcas/dominio/tema.ts,src/modulos/marcas/dominio/jerarquia.ts",
+    "pruebas": "src/modulos/marcas"
+  },
+  {
+    "grupo": "marcas (definición, versión y vigencia)",
+    "archivos": "src/modulos/marcas/dominio/**/*.ts,!src/modulos/marcas/dominio/host.ts,!src/modulos/marcas/dominio/tema.ts,!src/modulos/marcas/dominio/jerarquia.ts,!src/modulos/marcas/dominio/ciclo-de-dominio.ts",
+    "pruebas": "src/modulos/marcas"
+  },
+  {
+    "grupo": "trabajos y correo (lógica pura)",
+    "archivos": "src/adaptadores/trabajos/reintentos.ts,src/adaptadores/trabajos/error-seguro.ts,src/adaptadores/correo/configuracion.ts,src/adaptadores/postgres/huella-canonica.ts",
+    "pruebas": "src/adaptadores"
+  },
+  {
+    "grupo": "planes (derechos de uso, vigencia y niveles)",
+    "archivos": "src/capacidades/planes/**/*.ts",
+    "pruebas": "src/capacidades/planes"
+  },
+  {
+    "grupo": "planes (decisiones del módulo)",
+    "archivos": "src/modulos/planes/dominio/**/*.ts",
+    "pruebas": "src/modulos/planes"
+  },
+  {
+    "grupo": "marcas (ciclo de vida de los dominios)",
+    "archivos": "src/modulos/marcas/dominio/ciclo-de-dominio.ts",
+    "pruebas": "src/modulos/marcas/dominio/ciclo-de-dominio.test.ts"
+  },
+  {
+    "grupo": "web (puerta mínima)",
+    "archivos": "src/capacidades/experiencia/**/*.ts,!src/capacidades/experiencia/carta/**/*.ts",
+    "pruebas": "src/capacidades/experiencia"
+  },
+  {
+    "grupo": "web (composición, entorno y contextos)",
+    "archivos": "src/composicion/entorno.ts,src/composicion/perezoso.ts,src/composicion/contextos.ts",
+    "pruebas": "src/composicion"
+  },
+  {
+    "grupo": "captación (formulario y atribución)",
+    "archivos": "src/plataforma/captacion/dominio/formulario.ts,src/plataforma/captacion/dominio/atribucion.ts",
+    "pruebas": "src/plataforma/captacion"
+  },
+  {
+    "grupo": "captación (resto del dominio)",
+    "archivos": "src/plataforma/captacion/dominio/**/*.ts,!src/plataforma/captacion/dominio/formulario.ts,!src/plataforma/captacion/dominio/atribucion.ts",
+    "pruebas": "src/plataforma/captacion"
+  },
+  {
+    "grupo": "fiscal (facturación)",
+    "archivos": "src/modulos/fiscal/dominio/calculo-de-renglones.ts,src/modulos/fiscal/dominio/codigos-de-arca.ts,src/modulos/fiscal/dominio/comprobante-nuevo.ts,src/modulos/fiscal/dominio/condicion-iva-receptor.ts,src/modulos/fiscal/dominio/estados-de-comprobante.ts,src/modulos/fiscal/dominio/importes-para-arca.ts,src/modulos/fiscal/dominio/letra-de-comprobante.ts,src/modulos/fiscal/dominio/modelo-de-impresion.ts,src/modulos/fiscal/dominio/nota-asociada.ts,src/modulos/fiscal/dominio/qr-de-arca.ts,src/modulos/fiscal/dominio/receptor.ts,src/modulos/fiscal/dominio/reconciliacion-de-comprobante.ts",
+    "pruebas": "src/modulos/fiscal/dominio/calculo-de-renglones.test.ts src/modulos/fiscal/dominio/codigos-de-arca.test.ts src/modulos/fiscal/dominio/comprobante-nuevo.test.ts src/modulos/fiscal/dominio/condicion-iva-receptor.test.ts src/modulos/fiscal/dominio/estados-de-comprobante.test.ts src/modulos/fiscal/dominio/importes-para-arca.test.ts src/modulos/fiscal/dominio/letra-de-comprobante.test.ts src/modulos/fiscal/dominio/modelo-de-impresion.test.ts src/modulos/fiscal/dominio/nota-asociada.test.ts src/modulos/fiscal/dominio/qr-de-arca.test.ts src/modulos/fiscal/dominio/receptor.test.ts src/modulos/fiscal/dominio/reconciliacion-de-comprobante.test.ts src/modulos/fiscal/dominio/propiedades-de-facturacion.test.ts src/modulos/fiscal/dominio/sin-ventas.test.ts"
+  },
+  {
+    "grupo": "carta (piezas puras)",
+    "archivos": "src/capacidades/experiencia/carta/**/*.ts",
+    "pruebas": "src/capacidades/experiencia/carta"
+  },
+  {
+    "grupo": "activos (cabeceras)",
+    "archivos": "src/capacidades/activos/cabeceras.ts",
+    "pruebas": "src/capacidades/activos/activos.propiedades.test.ts src/capacidades/activos/cabeceras.test.ts src/capacidades/activos/limpieza.test.ts src/capacidades/activos/validacion.test.ts"
+  },
+  {
+    "grupo": "activos (validación y limpieza)",
+    "archivos": "src/capacidades/activos/validacion.ts,src/capacidades/activos/limpieza.ts",
+    "pruebas": "src/capacidades/activos/activos.propiedades.test.ts src/capacidades/activos/limpieza.test.ts src/capacidades/activos/validacion.test.ts"
+  },
+  {
+    "grupo": "activos (dirección externa)",
+    "archivos": "src/capacidades/activos/direccion-externa.ts,src/capacidades/activos/proveedores-de-imagen.ts",
+    "pruebas": "src/capacidades/activos/direccion-externa.propiedades.test.ts src/capacidades/activos/direccion-externa.test.ts src/capacidades/activos/proveedores-de-imagen.test.ts"
+  },
+  {
+    "grupo": "activos (red)",
+    "archivos": "src/capacidades/activos/red.ts",
+    "pruebas": "src/capacidades/activos/red.propiedades.test.ts src/capacidades/activos/red.test.ts"
+  }
+]

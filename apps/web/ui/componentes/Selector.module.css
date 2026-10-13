@@ -1,0 +1,19 @@
+.selector {
+  width: 100%;
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-3);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font: inherit;
+}
+
+.selector[aria-invalid="true"] {
+  border-color: var(--color-peligro);
+}
+
+.selector:disabled {
+  background: var(--color-deshabilitado);
+  color: var(--color-sobre-deshabilitado);
+}

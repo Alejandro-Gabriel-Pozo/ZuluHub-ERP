@@ -7,6 +7,8 @@ del ingeniero. Las decisiones están en el repositorio `ZuluHub-docs` (ADR 001 a
 
 - Correr `npm run gate` (tipos, lint, formato, arquitectura, código muerto, pruebas). Debe pasar completo.
 - Cambios mínimos y enfocados; no inventar librerías ni APIs; avisar antes de sumar una dependencia.
+- Si tocás `apps/web/ui`, corré también `npm run test:componentes` (Chromium real: axe, foco y envío; el CI lo corre en el job
+  `componentes`). Un entorno que ya trae su propio Chromium lo indica con `ZULUHUB_NAVEGADOR=<ruta del ejecutable>`.
 - Una regla nueva de arquitectura trae su violación inyectada en `test/arquitectura/reglas.test.ts`.
 
 ## Reglas que no se negocian
@@ -36,6 +38,7 @@ obedece igual, se acumula y compite con otras.
 
 ## Infraestructura
 
-- Vercel: proyecto `zuluhub-erp` (equipo `alepozod`), región de funciones `gru1`. Las compilaciones están
-  salteadas hasta que exista `apps/`.
+- Vercel: proyecto `zuluhub-erp` (equipo `alepozod`), región de funciones `gru1`. Ya existe `apps/web` (Next,
+  npm workspaces) y el CI la compila sin secretos, pero el despliegue sigue deshabilitado
+  (`git.deploymentEnabled: false` en `vercel.json`) hasta que el dueño apruebe el primer despliegue.
 - Neon: proyecto `flat-flower-36030007`, rama `production`, región `aws-sa-east-1`, Postgres 18.

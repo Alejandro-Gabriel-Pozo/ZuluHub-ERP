@@ -5,3 +5,6 @@ skills-lock.json
 package-lock.json
 .stryker-tmp
 reports
+.next
+next-env.d.ts
+.vitest
