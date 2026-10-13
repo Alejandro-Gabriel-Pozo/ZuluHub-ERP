@@ -15,6 +15,7 @@ import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
 import { TRABAJO_ENVIAR_INVITACION } from "../../src/modulos/identidad/publico";
 import { ok } from "../../src/primitivas/resultado/resultado";
 import { ADMIN_DE_PRUEBA, EMAIL_DE_ADMIN_DE_PRUEBA, SOPORTE_DE_PRUEBA } from "./admins-de-prueba";
+import { sembrarMarcasYPlanes } from "./marcas-apoyo";
 import {
   comoPlataforma,
   crearBaseAparte,
@@ -81,6 +82,14 @@ const TABLAS_LEGIBLES = [
   "emisor", // 0006 (H7): crea y corrige emisores
   "punto_de_venta", // 0006: solo 4 columnas (las prueba `fiscal-sql.test.ts`)
   "serie_comprobante", // 0006: la leen los disparadores de CUIT
+  "marca", // 0007 (marcas y planes): la plataforma crea marcas, dominios, versiones, planes, asignaciones y módulos
+  "dominio",
+  "version_de_marca",
+  "plan",
+  "version_de_plan",
+  "plan_de_tenant",
+  "ajuste_de_perilla",
+  "modulo_de_empresa",
 ] as const;
 
 /** Datos operativos: la plataforma no los lee, con ningún actor. */
@@ -260,6 +269,8 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
     await dueno.query(
       `insert into referencia_de_error (referencia, accion, motivo) values ('ZH-ABCD-1234', 'usuarios.invitar', 'SIN_PERMISO')`,
     );
+    // Marcas y planes (0007): una fila en cada tabla nueva que la plataforma lee.
+    await sembrarMarcasYPlanes(dueno, activa);
     // Un punto de venta (0006, H7): la plataforma lo lee por columna, así que tampoco puede estar vacío.
     await dueno.query(
       `insert into punto_de_venta (empresa_id, emisor_id, sucursal_id, numero)
@@ -402,6 +413,51 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           "punto_de_venta.punto_de_venta_plataforma_con_actor:SELECT:RESTRICTIVE",
           "serie_comprobante.serie_comprobante_plataforma_leer:SELECT:PERMISSIVE",
           "serie_comprobante.serie_comprobante_plataforma_con_actor:SELECT:RESTRICTIVE",
+          // 0007 (marcas y planes): con sus restrictivas del actor; las de solo inserción no se cambian
+          "marca.marca_plataforma_alta:INSERT:PERMISSIVE",
+          "marca.marca_plataforma_cambiar:UPDATE:PERMISSIVE",
+          "marca.marca_plataforma_leer:SELECT:PERMISSIVE",
+          "marca.marca_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "marca.marca_plataforma_admin_cambiar:UPDATE:RESTRICTIVE",
+          "marca.marca_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "dominio.dominio_plataforma_alta:INSERT:PERMISSIVE",
+          "dominio.dominio_plataforma_cambiar:UPDATE:PERMISSIVE",
+          "dominio.dominio_plataforma_leer:SELECT:PERMISSIVE",
+          "dominio.dominio_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "dominio.dominio_plataforma_admin_cambiar:UPDATE:RESTRICTIVE",
+          "dominio.dominio_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "plan.plan_plataforma_alta:INSERT:PERMISSIVE",
+          "plan.plan_plataforma_cambiar:UPDATE:PERMISSIVE",
+          "plan.plan_plataforma_leer:SELECT:PERMISSIVE",
+          "plan.plan_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "plan.plan_plataforma_admin_cambiar:UPDATE:RESTRICTIVE",
+          "plan.plan_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "version_de_plan.version_de_plan_plataforma_alta:INSERT:PERMISSIVE",
+          "version_de_plan.version_de_plan_plataforma_cambiar:UPDATE:PERMISSIVE",
+          "version_de_plan.version_de_plan_plataforma_leer:SELECT:PERMISSIVE",
+          "version_de_plan.version_de_plan_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "version_de_plan.version_de_plan_plataforma_admin_cambiar:UPDATE:RESTRICTIVE",
+          "version_de_plan.version_de_plan_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "version_de_marca.version_de_marca_plataforma_alta:INSERT:PERMISSIVE",
+          "version_de_marca.version_de_marca_plataforma_cambiar:UPDATE:PERMISSIVE",
+          "version_de_marca.version_de_marca_plataforma_leer:SELECT:PERMISSIVE",
+          "version_de_marca.version_de_marca_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "version_de_marca.version_de_marca_plataforma_admin_cambiar:UPDATE:RESTRICTIVE",
+          "version_de_marca.version_de_marca_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "modulo_de_empresa.modulo_de_empresa_plataforma_alta:INSERT:PERMISSIVE",
+          "modulo_de_empresa.modulo_de_empresa_plataforma_cambiar:UPDATE:PERMISSIVE",
+          "modulo_de_empresa.modulo_de_empresa_plataforma_leer:SELECT:PERMISSIVE",
+          "modulo_de_empresa.modulo_de_empresa_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "modulo_de_empresa.modulo_de_empresa_plataforma_admin_cambiar:UPDATE:RESTRICTIVE",
+          "modulo_de_empresa.modulo_de_empresa_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "plan_de_tenant.plan_de_tenant_plataforma_alta:INSERT:PERMISSIVE",
+          "plan_de_tenant.plan_de_tenant_plataforma_leer:SELECT:PERMISSIVE",
+          "plan_de_tenant.plan_de_tenant_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "plan_de_tenant.plan_de_tenant_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "ajuste_de_perilla.ajuste_de_perilla_plataforma_alta:INSERT:PERMISSIVE",
+          "ajuste_de_perilla.ajuste_de_perilla_plataforma_leer:SELECT:PERMISSIVE",
+          "ajuste_de_perilla.ajuste_de_perilla_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "ajuste_de_perilla.ajuste_de_perilla_plataforma_con_actor:SELECT:RESTRICTIVE",
           // 0005 (H6): el traspaso de gerencia, con sus restrictivas del actor
           "traspaso_gerencia.traspaso_gerencia_plataforma_alta:INSERT:PERMISSIVE",
           "traspaso_gerencia.traspaso_gerencia_plataforma_cancelar:UPDATE:PERMISSIVE",
@@ -2260,14 +2316,19 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       ).resolves.toBeDefined();
     });
 
-    it("la misma referencia puede repetirse (32 bits no son únicos): se busca y puede devolver más de una fila", async () => {
+    it("la misma referencia no puede repetirse desde 0007 (32 bits pueden chocar: la única lo frena y el caso de uso reintenta)", async () => {
+      await expect(
+        dueno.query(
+          "insert into referencia_de_error (referencia, accion, motivo) values ('ZH-9999-9999', 'a.b', 'X'), ('ZH-9999-9999', 'a.c', 'Y')",
+        ),
+      ).rejects.toMatchObject({ code: "23505", constraint: "referencia_de_error_referencia_uk" });
       await dueno.query(
-        "insert into referencia_de_error (referencia, accion, motivo) values ('ZH-9999-9999', 'a.b', 'X'), ('ZH-9999-9999', 'a.c', 'Y')",
+        "insert into referencia_de_error (referencia, accion, motivo) values ('ZH-9999-9999', 'a.b', 'X')",
       );
       await comoPlat(tokenDe(SOPORTE_DE_PRUEBA), async (s) => {
         esperarFilas(
           await s.intentar("select * from referencia_de_error where referencia = 'ZH-9999-9999'"),
-          2,
+          1,
         );
       });
     });

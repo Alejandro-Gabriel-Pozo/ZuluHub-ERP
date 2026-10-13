@@ -18,6 +18,8 @@ const URL_POR_ROL = {
   zuluhub_grupo: "grupo",
   zuluhub_trabajos: "trabajos",
   zuluhub_plataforma: "plataforma",
+  /** Sin contexto: el rol público (0007) no tiene sesión ni empresa; se abre con `contexto: null`. */
+  zuluhub_publico: "publico",
 } as const;
 
 export class SesionDePrueba {

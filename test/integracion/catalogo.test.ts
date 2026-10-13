@@ -51,6 +51,16 @@ const TABLAS_DE_NEGOCIO = [
   "regla_emisor",
   "punto_de_venta",
   "serie_comprobante",
+  // Marcas y planes (0007_marcas_y_planes)
+  "marca",
+  "dominio",
+  "plan",
+  "version_de_plan",
+  "version_de_marca",
+  "plan_de_tenant",
+  "ajuste_de_perilla",
+  "modulo_de_empresa",
+  "nivel_de_control",
 ] as const;
 const TABLAS_DE_AUDITORIA = ["auditoria_empresa", "auditoria_plataforma", "auditoria_acceso_grupo"];
 
@@ -62,6 +72,7 @@ const RESTRICCIONES_DE_DISPARADORES = [
   "empresa_zona_horaria_ck",
   "tenant_instalacion_single",
   "sucursal_ultima_activa", // 0005
+  "tenant_marca_inmutable", // 0007
 ];
 
 describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () => {
@@ -252,8 +263,11 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "invitacion:SELECT",
           "invitacion_empresa:SELECT",
           "invitacion_sucursal:SELECT",
+          "marca:SELECT", // 0007
           "membresia:SELECT",
           "membresia_tenant:SELECT",
+          "modulo_de_empresa:SELECT", // 0007
+          "nivel_de_control:SELECT", // 0007
           "persona:SELECT",
           "provincia:SELECT", // 0006
           "punto_de_venta:SELECT", // 0006
@@ -278,20 +292,28 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       expect(porRol("zuluhub_plataforma")).toEqual(
         [
           "admin_plataforma:SELECT",
+          "ajuste_de_perilla:SELECT", // 0007
           "auditoria_plataforma:SELECT",
+          "dominio:SELECT", // 0007
           "emisor:SELECT", // 0006
           "empresa:SELECT",
           "idempotencia_plataforma:SELECT",
           "instalacion:SELECT",
           "invitacion:SELECT",
           "invitacion_empresa:SELECT",
+          "marca:SELECT", // 0007
           "membresia_tenant:SELECT",
+          "modulo_de_empresa:SELECT", // 0007
           "persona:SELECT",
+          "plan:SELECT", // 0007
+          "plan_de_tenant:SELECT", // 0007
           "referencia_de_error:SELECT",
           "serie_comprobante:SELECT", // 0006
           "tenant:SELECT",
           "trabajo:SELECT",
           "traspaso_gerencia:SELECT",
+          "version_de_marca:SELECT", // 0007
+          "version_de_plan:SELECT", // 0007
         ].sort(),
       );
     });
@@ -353,12 +375,18 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "en_curso_hasta",
             "motivo_bloqueo",
           ].map((c) => `zuluhub_app:serie_comprobante.${c}`),
+          "zuluhub_app:nivel_de_control.nivel", // 0007
           "zuluhub_app:sucursal.activa",
+          "zuluhub_app:sucursal.hora_de_corte", // 0007
           "zuluhub_app:sucursal.nombre",
           "zuluhub_app:traspaso_gerencia.estado",
           "zuluhub_app:traspaso_gerencia.motivo",
           "zuluhub_app:traspaso_gerencia.resuelto_en",
           "zuluhub_app:traspaso_gerencia.saliente_persona_id",
+          // 0007: la plataforma (solo un ADMIN, por las restrictivas) escribe marcas, dominios, planes y módulos
+          "zuluhub_plataforma:dominio.estado",
+          "zuluhub_plataforma:dominio.motivo",
+          "zuluhub_plataforma:dominio.verificado_en",
           "zuluhub_plataforma:emisor.activo", // 0006
           "zuluhub_plataforma:emisor.cuit", // 0006
           "zuluhub_plataforma:empresa.cuit",
@@ -370,14 +398,42 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "zuluhub_plataforma:invitacion.motivo_revocacion",
           "zuluhub_plataforma:invitacion.reemplazada_por",
           "zuluhub_plataforma:invitacion.revocada_en",
+          "zuluhub_plataforma:marca.estado", // 0007
           "zuluhub_plataforma:membresia_tenant.activo",
+          "zuluhub_plataforma:modulo_de_empresa.activo", // 0007
           "zuluhub_plataforma:persona.activo_global",
+          "zuluhub_plataforma:plan.estado", // 0007
           "zuluhub_plataforma:tenant.estado",
           "zuluhub_plataforma:tenant.motivo_estado",
           "zuluhub_plataforma:tenant.nombre",
           "zuluhub_plataforma:traspaso_gerencia.estado",
           "zuluhub_plataforma:traspaso_gerencia.motivo",
           "zuluhub_plataforma:traspaso_gerencia.resuelto_en",
+          ...[
+            "nombre_comercial",
+            "modulos",
+            "perillas",
+            "estado",
+            "numero",
+            "motivo",
+            "publicada_en",
+            "publicada_por",
+          ].map((c) => `zuluhub_plataforma:version_de_plan.${c}`), // 0007
+          ...[
+            "nombre_visible",
+            "tema",
+            "logo",
+            "vocabulario",
+            "modulos_iniciales",
+            "plan_por_defecto_id",
+            "estado",
+            "numero",
+            "vigente_desde",
+            "reemplaza_programada",
+            "motivo",
+            "confirmada_en",
+            "confirmada_por",
+          ].map((c) => `zuluhub_plataforma:version_de_marca.${c}`), // 0007
           "zuluhub_trabajos:trabajo.estado",
           "zuluhub_trabajos:trabajo.intentos",
           "zuluhub_trabajos:trabajo.proximo_intento",
@@ -486,9 +542,62 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "ultimo_numero",
         ].map((c) => `serie_comprobante.${c}`),
       ];
+      // 0007: la empresa fija el nivel de sus controles; la plataforma escribe lo de marcas y planes.
+      const nivelDeControl = ["empresa_id", "sucursal_id", "control", "nivel"].map(
+        (c) => `nivel_de_control.${c}`,
+      );
+      const marcasYPlanes = [
+        ...["codigo", "marca_padre_id"].map((c) => `marca.${c}`),
+        ...[
+          "host",
+          "superficie",
+          "duenio_marca_id",
+          "duenio_empresa_id",
+          "titular",
+          "es_canonico",
+          "registrado_por",
+        ].map((c) => `dominio.${c}`),
+        "plan.codigo",
+        ...["plan_id", "nombre_comercial", "modulos", "perillas"].map(
+          (c) => `version_de_plan.${c}`,
+        ),
+        ...[
+          "marca_id",
+          "nombre_visible",
+          "tema",
+          "logo",
+          "vocabulario",
+          "modulos_iniciales",
+          "plan_por_defecto_id",
+        ].map((c) => `version_de_marca.${c}`),
+        ...[
+          "tenant_id",
+          "numero",
+          "version_de_plan_id",
+          "vigente_desde",
+          "origen",
+          "reemplaza_programada",
+          "motivo",
+          "asignado_por",
+        ].map((c) => `plan_de_tenant.${c}`),
+        ...[
+          "tenant_id",
+          "empresa_id",
+          "perilla",
+          "numero",
+          "valor",
+          "vigente_desde",
+          "reemplaza_programada",
+          "motivo",
+          "asignado_por",
+        ].map((c) => `ajuste_de_perilla.${c}`),
+        ...["empresa_id", "modulo"].map((c) => `modulo_de_empresa.${c}`),
+        "tenant.marca_id",
+      ];
       expect(porRol("zuluhub_app")).toEqual(
         [
           ...auditoriaDeEmpresa,
+          ...nivelDeControl,
           ...["empresa_id", "persona_id", "sucursal_id"].map((c) => `asignacion_sucursal.${c}`),
           ...invitacionEmitida,
           ...invitacionEmpresa,
@@ -508,7 +617,10 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       );
       expect(porRol("zuluhub_grupo")).toEqual(
         [
-          ...["tenant_id", "persona_id", "empresa_id"].map((c) => `auditoria_acceso_grupo.${c}`),
+          // `resultado` desde 0007: PERMITIDO (propietario) o DENEGADO (intento de quien no lo es)
+          ...["tenant_id", "persona_id", "empresa_id", "resultado"].map(
+            (c) => `auditoria_acceso_grupo.${c}`,
+          ),
           ...referenciaDeError,
         ].sort(),
       );
@@ -537,6 +649,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "trabajo.datos",
           "trabajo.clave_idempotencia",
           ...traspasoDePlataforma,
+          ...marcasYPlanes,
         ].sort(),
       );
     });
@@ -1091,10 +1204,23 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         )
       ).rows;
 
-    it("toda restricción única de una tabla con empresa_id la incluye (nada de detectar datos de otro cliente), salvo la excepción explícita emisor_cuit_uk", async () => {
+    it("toda restricción única de una tabla con empresa_id la incluye (nada de detectar datos de otro cliente), salvo las excepciones explícitas emisor_cuit_uk y referencia_de_error_referencia_uk", async () => {
       expect(await unicasSinEmpresa(dueno)).toEqual([
         { tabla: "emisor", indice: "emisor_cuit_uk" }, // el CUIT del secundario es único en toda la instalación
+        // La referencia de error la sortea el servidor y quien la escribe no puede leer la tabla (0007, P5).
+        { tabla: "referencia_de_error", indice: "referencia_de_error_referencia_uk" },
       ]);
+    });
+
+    it("la premisa de referencia_de_error_referencia_uk: solo la plataforma lee la tabla, así que un choque de referencias no deja ver nada de otra empresa", async () => {
+      const leen = await filas<{ grantee: string }>(
+        `select distinct grantee from information_schema.column_privileges
+         where table_schema = 'public' and table_name = 'referencia_de_error' and privilege_type = 'SELECT'
+           and (grantee = any($1) or grantee = 'PUBLIC' or grantee in ('zuluhub_autenticacion', 'zuluhub_publico'))
+         order by 1`,
+        [[...ROLES]],
+      );
+      expect(leen).toEqual([{ grantee: "zuluhub_plataforma" }]);
     });
 
     it("la premisa de emisor_cuit_uk: solo la plataforma escribe emisor.cuit (si el cliente lo escribiera, el error de duplicado le mostraría los CUIT ajenos)", async () => {
@@ -1131,6 +1257,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           { tabla: "emisor", indice: "emisor_cuit_uk" }, // la excepción explícita de 0006
           { tabla: "producto_clave_propia", indice: "producto_clave_propia_pkey" },
           { tabla: "producto_mala", indice: "producto_mala_sku_key" },
+          { tabla: "referencia_de_error", indice: "referencia_de_error_referencia_uk" }, // la de 0007
         ]);
       } finally {
         await cliente.end();

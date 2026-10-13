@@ -79,6 +79,7 @@ import type { IdempotenciaDePlataforma } from "../../src/puertos/idempotencia";
 import type { ReferenciasDeError } from "../../src/puertos/referencias-de-error";
 import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
 import { ADMIN_DE_PRUEBA, sembrarAdminsDePrueba } from "./admins-de-prueba";
+import { sembrarMarcaPrincipalDePrueba } from "./marcas-de-prueba";
 import type { BaseDePruebas } from "./global";
 import { OPCIONES_DE_BASE } from "./opciones-de-base";
 
@@ -304,7 +305,7 @@ export async function crearPropietario(
  */
 export async function crearBaseAparte(
   base: BaseDePruebas,
-  opciones: { migrar?: boolean; sinClave?: boolean } = {},
+  opciones: { migrar?: boolean; sinClave?: boolean; sinMarcaDePrueba?: boolean } = {},
 ): Promise<{ base: BaseDePruebas; destruir: () => Promise<void> }> {
   const nombre = `zuluhub_it_${randomBytes(6).toString("hex")}`;
   const admin = new pg.Client({ connectionString: base.admin });
@@ -323,12 +324,15 @@ export async function crearBaseAparte(
     trabajos: conBase(base.trabajos),
     plataforma: conBase(base.plataforma),
     autenticacion: conBase(base.autenticacion),
+    publico: conBase(base.publico),
     clave: base.clave,
   };
   if (opciones.migrar !== false) {
     await aplicarMigraciones(propia.dueno, join(import.meta.dirname, "../../migraciones"));
     if (opciones.sinClave !== true) await instalarClaveDeContexto(propia.dueno, base.clave);
     await sembrarAdminsDePrueba(propia.dueno);
+    // Con `sinMarcaDePrueba` la base queda como la deja la migración 0007 (para probarla tal cual).
+    if (opciones.sinMarcaDePrueba !== true) await sembrarMarcaPrincipalDePrueba(propia.dueno);
   }
   return {
     base: propia,
