@@ -14,9 +14,9 @@ const unicidad = (restriccion: string | null): ErrorDePersistencia => ({
 });
 
 describe("el mapa de restricciones fiscales", () => {
-  it("los 21 errores de los disparadores son 21 nombres distintos del mapa y ninguno es NO_TRADUCIDA", () => {
-    expect(RESTRICCIONES_DE_DISPARADORES_DE_FISCAL).toHaveLength(21);
-    expect(new Set(RESTRICCIONES_DE_DISPARADORES_DE_FISCAL).size).toBe(21);
+  it("los 24 errores de los disparadores son 24 nombres distintos del mapa y ninguno es NO_TRADUCIDA", () => {
+    expect(RESTRICCIONES_DE_DISPARADORES_DE_FISCAL).toHaveLength(24);
+    expect(new Set(RESTRICCIONES_DE_DISPARADORES_DE_FISCAL).size).toBe(24);
     for (const nombre of RESTRICCIONES_DE_DISPARADORES_DE_FISCAL) {
       expect(ERRORES_DE_FISCAL_POR_RESTRICCION[nombre], nombre).not.toBe("NO_TRADUCIDA");
     }

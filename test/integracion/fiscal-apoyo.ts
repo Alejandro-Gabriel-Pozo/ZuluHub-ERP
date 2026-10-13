@@ -158,6 +158,10 @@ export async function crearPuntoDeVenta(
   return id;
 }
 
+/**
+ * Una serie. Desde 0009 el ambiente es parte de la clave y se dice siempre (por defecto, el de todo
+ * punto de venta nuevo); `null` lo omite, para una base a la que todavía le falta 0009.
+ */
 export async function crearSerie(
   c: pg.Client,
   empresa: string,
@@ -165,11 +169,17 @@ export async function crearSerie(
   emisor: string,
   tipo = "FACTURA_B",
   ultimo = 0,
+  ambiente: "HOMOLOGACION" | "PRODUCCION" | null = "HOMOLOGACION",
 ): Promise<void> {
   await c.query(
-    `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
-     values ($1, $2, $3, $4, $5)`,
-    [empresa, puntoDeVenta, emisor, tipo, ultimo],
+    ambiente === null
+      ? `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
+         values ($1, $2, $3, $4, $5)`
+      : `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente)
+         values ($1, $2, $3, $4, $5, $6)`,
+    ambiente === null
+      ? [empresa, puntoDeVenta, emisor, tipo, ultimo]
+      : [empresa, puntoDeVenta, emisor, tipo, ultimo, ambiente],
   );
 }
 

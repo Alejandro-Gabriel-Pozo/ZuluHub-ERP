@@ -171,8 +171,8 @@ describe.skipIf(base === null)("fiscal: aislamiento entre empresas y entre roles
           );
           denegado(
             await s.intentar(
-              `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
-               values ($1, $2, $3, 'FACTURA_A', 0)`,
+              `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente)
+               values ($1, $2, $3, 'FACTURA_A', 0, 'HOMOLOGACION')`,
               [ajena.m.empresa, ajena.pv, ajena.m.emisor],
             ),
           );
@@ -253,8 +253,8 @@ describe.skipIf(base === null)("fiscal: aislamiento entre empresas y entre roles
           // Una serie no mezcla el emisor de una empresa con el punto de venta de otra.
           referencia(
             await s.intentar(
-              `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
-               values ($1, $2, $3, 'FACTURA_A', 0)`,
+              `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente)
+               values ($1, $2, $3, 'FACTURA_A', 0, 'HOMOLOGACION')`,
               [a.m.empresa, ajena.pv, a.m.emisor],
             ),
             "serie_punto_de_venta_fkey",
@@ -420,8 +420,8 @@ describe.skipIf(base === null)("fiscal: aislamiento entre empresas y entre roles
         );
         denegado(
           await s.intentar(
-            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
-             values ($1, $2, $3, 'FACTURA_A', 0)`,
+            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente)
+             values ($1, $2, $3, 'FACTURA_A', 0, 'HOMOLOGACION')`,
             [d.m.empresa, d.pv, d.m.emisor],
           ),
         );

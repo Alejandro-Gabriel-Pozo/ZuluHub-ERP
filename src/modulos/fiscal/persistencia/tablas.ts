@@ -98,6 +98,8 @@ export type FiscalDb = {
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
+    /** 0009: HOMOLOGACION o PRODUCCION. Lo lee la facturación (F3); T4 no lo usa. */
+    ambiente: Generated<string>;
   };
   serie_comprobante: {
     empresa_id: string;
@@ -113,6 +115,8 @@ export type FiscalDb = {
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
+    /** 0009: parte de la clave de la serie. Sin valor por defecto: se dice siempre. */
+    ambiente: string;
   };
 };
 

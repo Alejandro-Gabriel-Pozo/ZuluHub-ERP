@@ -413,7 +413,8 @@ describe.skipIf(base === null)(
           m.persona,
         ]);
         const pv = await crearPuntoDeVenta(c, m, { numero: 1, domicilio });
-        await crearSerie(c, m.empresa, pv, m.emisor, "FACTURA_B", 12);
+        // Esta base solo llega hasta 0006: la serie todavía no tiene ambiente.
+        await crearSerie(c, m.empresa, pv, m.emisor, "FACTURA_B", 12, null);
         return { m, secundario };
       };
 
