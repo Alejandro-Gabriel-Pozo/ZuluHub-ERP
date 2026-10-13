@@ -1178,6 +1178,11 @@ export function crearRepositorioDeSeries(db: Kysely<FiscalDb>): RepositorioDeSer
         (delPuntoDeVenta === undefined
           ? "HOMOLOGACION"
           : deLaLista(AMBIENTES, delPuntoDeVenta.ambiente, "ambiente de punto de venta"));
+      // Antes de insertar: el disparador de alta mira el ambiente ANTES de que `ON CONFLICT` descubra que la
+      // serie ya existe, así que repetir el alta de una serie de otro ambiente (por ejemplo, la de homologación
+      // con el punto de venta ya en producción) fallaría en vez de ser «ya estaba».
+      const yaExistia = await obtener(serie.empresaId, serie.puntoDeVentaId, serie.tipo, elegido);
+      if (yaExistia !== null) return { creado: false, valor: yaExistia };
       const nueva = await db
         .insertInto("serie_comprobante")
         .values({
