@@ -33,6 +33,7 @@
     "src/composicion/entorno.ts",
     "src/composicion/perezoso.ts",
     "src/composicion/contextos.ts",
+    "src/plataforma/captacion/dominio/**/*.ts",
     "!src/**/*.test.ts"
   ],
   "coverageAnalysis": "off",

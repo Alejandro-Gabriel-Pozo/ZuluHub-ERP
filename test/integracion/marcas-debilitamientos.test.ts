@@ -107,6 +107,7 @@ async function conMigracion<T>(sql: string, trabajo: (ctx: Ctx) => Promise<T>): 
     plataforma: conBase(b.plataforma, nombre),
     autenticacion: conBase(b.autenticacion, nombre),
     publico: conBase(b.publico, nombre),
+    captacion: conBase(b.captacion, nombre),
   };
   const dueno = new pg.Client({ connectionString: copia.dueno });
   try {

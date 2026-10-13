@@ -66,7 +66,7 @@
   {
     "grupo": "plataforma (dominio)",
     "archivos": "src/plataforma/dominio/**/*.ts",
-    "pruebas": "src/plataforma test/plataforma"
+    "pruebas": "src/plataforma/dominio src/plataforma/casos-de-uso src/plataforma/consultas src/plataforma/sin-reloj-ni-azar.test.ts test/plataforma"
   },
   {
     "grupo": "identificadores",
@@ -117,5 +117,15 @@
     "grupo": "web (composición, entorno y contextos)",
     "archivos": "src/composicion/entorno.ts,src/composicion/perezoso.ts,src/composicion/contextos.ts",
     "pruebas": "src/composicion"
+  },
+  {
+    "grupo": "captación (formulario y atribución)",
+    "archivos": "src/plataforma/captacion/dominio/formulario.ts,src/plataforma/captacion/dominio/atribucion.ts",
+    "pruebas": "src/plataforma/captacion"
+  },
+  {
+    "grupo": "captación (resto del dominio)",
+    "archivos": "src/plataforma/captacion/dominio/**/*.ts,!src/plataforma/captacion/dominio/formulario.ts,!src/plataforma/captacion/dominio/atribucion.ts",
+    "pruebas": "src/plataforma/captacion"
   }
 ]

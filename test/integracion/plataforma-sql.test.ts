@@ -15,6 +15,7 @@ import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
 import { TRABAJO_ENVIAR_INVITACION } from "../../src/modulos/identidad/publico";
 import { ok } from "../../src/primitivas/resultado/resultado";
 import { ADMIN_DE_PRUEBA, EMAIL_DE_ADMIN_DE_PRUEBA, SOPORTE_DE_PRUEBA } from "./admins-de-prueba";
+import { crearSolicitud } from "./captacion-apoyo";
 import { sembrarMarcasYPlanes } from "./marcas-apoyo";
 import {
   comoPlataforma,
@@ -90,6 +91,7 @@ const TABLAS_LEGIBLES = [
   "plan_de_tenant",
   "ajuste_de_perilla",
   "modulo_de_empresa",
+  "solicitud_de_alta", // captación: la plataforma revisa y decide las solicitudes
 ] as const;
 
 /** Datos operativos: la plataforma no los lee, con ningún actor. */
@@ -271,6 +273,8 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
     );
     // Marcas y planes (0007): una fila en cada tabla nueva que la plataforma lee.
     await sembrarMarcasYPlanes(dueno, activa);
+    // captación: una solicitud para que «0 filas» no se cumpla por vacío
+    await crearSolicitud(dueno);
     // Un punto de venta (0006, H7): la plataforma lo lee por columna, así que tampoco puede estar vacío.
     await dueno.query(
       `insert into punto_de_venta (empresa_id, emisor_id, sucursal_id, numero)
@@ -458,6 +462,11 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           "ajuste_de_perilla.ajuste_de_perilla_plataforma_leer:SELECT:PERMISSIVE",
           "ajuste_de_perilla.ajuste_de_perilla_plataforma_admin_alta:INSERT:RESTRICTIVE",
           "ajuste_de_perilla.ajuste_de_perilla_plataforma_con_actor:SELECT:RESTRICTIVE",
+          // captación: la solicitud de alta (la landing escribe con otro rol; la plataforma decide)
+          "solicitud_de_alta.solicitud_plataforma_leer:SELECT:PERMISSIVE",
+          "solicitud_de_alta.solicitud_plataforma_cambiar:UPDATE:PERMISSIVE",
+          "solicitud_de_alta.solicitud_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "solicitud_de_alta.solicitud_plataforma_quien_cambia:UPDATE:RESTRICTIVE",
           // 0005 (H6): el traspaso de gerencia, con sus restrictivas del actor
           "traspaso_gerencia.traspaso_gerencia_plataforma_alta:INSERT:PERMISSIVE",
           "traspaso_gerencia.traspaso_gerencia_plataforma_cancelar:UPDATE:PERMISSIVE",
