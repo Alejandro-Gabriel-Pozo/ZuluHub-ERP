@@ -57,6 +57,16 @@ const PEDIDOS: { nombre: string; pedir: (c: Conexiones) => unknown; nombra: stri
     pedir: (c) => armarWeb(c).resolucionDeHost(),
     nombra: "ZULUHUB_DB_PUBLICO",
   },
+  {
+    nombre: "configuracionPublicaDeHost",
+    pedir: (c) => c.configuracionPublicaDeHost(),
+    nombra: "ZULUHUB_DB_PUBLICO",
+  },
+  {
+    nombre: "web.configuracionPublicaDeHost",
+    pedir: (c) => armarWeb(c).configuracionPublicaDeHost(),
+    nombra: "ZULUHUB_DB_PUBLICO",
+  },
   { nombre: "tokens", pedir: (c) => c.tokens(), nombra: "ZULUHUB_SECRETO_INVITACIONES" },
   { nombre: "correo", pedir: (c) => c.correo(), nombra: "ZULUHUB_RESEND_API_KEY" },
   {
@@ -280,6 +290,10 @@ describe("con el entorno completo", () => {
     expect(conexiones.transaccionesPublicas()).toBe(conexiones.transaccionesPublicas());
     expect(conexiones.resolucionDeHost()).toBe(conexiones.resolucionDeHost());
     expect(armarWeb(conexiones).resolucionDeHost()).toBe(conexiones.resolucionDeHost());
+    expect(conexiones.configuracionPublicaDeHost()).toBe(conexiones.configuracionPublicaDeHost());
+    expect(armarWeb(conexiones).configuracionPublicaDeHost()).toBe(
+      conexiones.configuracionPublicaDeHost(),
+    );
   });
 
   it("sin la cadena de la puerta pública, el resto de las piezas se arma igual", () => {

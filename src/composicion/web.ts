@@ -14,8 +14,9 @@ import { perezoso } from "./perezoso";
  * grupo se arma la primera vez que se pide; hasta entonces no se lee ninguna variable.
  *
  * La resolución de un host a su dueño y su marca (`resolucionDeHost`, M4) es la puerta pública: sin
- * sesión, solo lectura, con su propia conexión. Devuelve el host servible o nada; la configuración
- * pública completa de la marca (tema, logo, vocabulario) llega con la puerta web (M9).
+ * sesión, solo lectura, con su propia conexión. Devuelve el host servible o nada. Cómo se pinta su marca
+ * (`configuracionPublicaDeHost`, M4b: nombre, tema validado y host canónico) sale por la misma puerta;
+ * el logo y el vocabulario llegan con la puerta web (M9).
  *
  * Todavía no están (no tienen contraparte en el código): la autenticación (W3b) y fiscal. Se suman en
  * sus tramos. `consultasDeSesion` (la persona del usuario y sus empresas, puerta `SESION`) ya está (W3a).
@@ -24,6 +25,7 @@ export function armarWeb(conexiones: Conexiones) {
   const reglas = REGLAS_DE_EMPRESA;
   return {
     resolucionDeHost: () => conexiones.resolucionDeHost(),
+    configuracionPublicaDeHost: () => conexiones.configuracionPublicaDeHost(),
     casosDeUsoDeEmpresas: perezoso(() =>
       crearCasosDeUsoDeEmpresas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
     ),

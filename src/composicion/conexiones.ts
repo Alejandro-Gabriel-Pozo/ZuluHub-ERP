@@ -17,6 +17,7 @@ import {
   ZULUHUB_CLAVE_CONTEXTO,
   leerClaveDeContexto,
 } from "../adaptadores/postgres/contexto-firmado";
+import { crearConfiguracionPublicaDeHost } from "../adaptadores/postgres/configuracion-publica-de-marca";
 import { crearResolucionDeHost, type TxPublica } from "../adaptadores/postgres/resolucion-de-host";
 import { crearLecturasDeSesionDePostgres, type SesionDb } from "../adaptadores/postgres/sesion";
 import { crearTrabajosDePostgres, type TrabajosDb } from "../adaptadores/postgres/trabajos";
@@ -64,7 +65,7 @@ import {
 import type { Auditoria } from "../puertos/auditoria";
 import type { CargaDeAutorizacion } from "../puertos/autorizacion";
 import type { Correo } from "../puertos/correo";
-import type { ResolucionDeHost } from "../puertos/marcas";
+import type { ConfiguracionPublicaDeHost, ResolucionDeHost } from "../puertos/marcas";
 import type { LecturasDeSesion } from "../puertos/sesion";
 import type { Tokens } from "../puertos/tokens";
 import type { Trabajos } from "../puertos/trabajos";
@@ -124,6 +125,8 @@ export type Conexiones = Readonly<{
   transaccionesPublicas: () => TransaccionesPublicasDePostgres<TxPublica>;
   /** Resolución de un host a su dueño y su marca, sobre la puerta pública. */
   resolucionDeHost: () => ResolucionDeHost;
+  /** Cómo se pinta la marca de un host (nombre, tema y host canónico), sobre la misma puerta pública. */
+  configuracionPublicaDeHost: () => ConfiguracionPublicaDeHost;
   tokens: () => Tokens;
   /** Origen y marca del mail (el respaldo hasta que exista M7) y la clave del proveedor. */
   configuracionDeCorreo: () => ConfiguracionDeCorreo;
@@ -191,6 +194,9 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
     ),
     transaccionesPublicas,
     resolucionDeHost: perezoso(() => crearResolucionDeHost(transaccionesPublicas())),
+    configuracionPublicaDeHost: perezoso(() =>
+      crearConfiguracionPublicaDeHost(transaccionesPublicas()),
+    ),
     tokens: armarPieza("tokens", (valores) =>
       crearTokensHmac(leerSecretoDeInvitaciones(valores[ZULUHUB_SECRETO_INVITACIONES])),
     ),

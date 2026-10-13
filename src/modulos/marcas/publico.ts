@@ -117,6 +117,12 @@ export {
   type RespaldoDeMail,
 } from "./dominio/marca-de-mail";
 export {
+  decidirConfiguracionPublica,
+  type ConfiguracionPublica,
+  type DatosParaLaConfiguracionPublica,
+  type VersionPublicaDeMarca,
+} from "./dominio/configuracion-publica";
+export {
   crearLecturaDeMarcaParaMail,
   crearLecturaPublicaDeMarcas,
   type HostServible,

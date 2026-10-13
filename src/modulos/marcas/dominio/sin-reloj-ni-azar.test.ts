@@ -18,6 +18,7 @@ describe("el dominio de marcas no usa reloj ni aleatoriedad", () => {
   it("encuentra los archivos de dominio a revisar", () => {
     expect(fuentes).toEqual([
       "ciclo-de-dominio.ts",
+      "configuracion-publica.ts",
       "definicion.ts",
       "host.ts",
       "jerarquia.ts",
