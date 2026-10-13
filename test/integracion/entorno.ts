@@ -10,7 +10,12 @@ import {
   type SinTablas,
   type TransaccionesDePostgres,
 } from "../../src/adaptadores/postgres/transacciones";
-import type { ActorDePlataforma, Contexto, ContextoOperativo } from "../../src/contexto/contexto";
+import type {
+  ActorDePlataforma,
+  Contexto,
+  ContextoDeSesion,
+  ContextoOperativo,
+} from "../../src/contexto/contexto";
 import {
   digitoVerificadorDeCuit,
   cuitDesdeTexto,
@@ -22,6 +27,7 @@ import {
   type MarcaComercialId,
   type PersonaId,
   type TenantId,
+  type UsuarioAuthId,
 } from "../../src/primitivas/identificadores/marca";
 import {
   crearRepositorioDeEmpresas,
@@ -76,10 +82,15 @@ import {
 } from "../../src/adaptadores/postgres/referencias-de-error";
 import { crearTrabajosDePostgres, type TrabajosDb } from "../../src/adaptadores/postgres/trabajos";
 import { crearColaDePostgres, type ColaDb } from "../../src/adaptadores/postgres/cola-de-trabajos";
+import {
+  crearLecturasDeSesionDePostgres,
+  type SesionDb,
+} from "../../src/adaptadores/postgres/sesion";
 import type { AdminsDePlataforma } from "../../src/puertos/admins-de-plataforma";
 import type { AuditoriaDePlataforma } from "../../src/puertos/auditoria-de-plataforma";
 import type { CargaDeAutorizacionDePlataforma } from "../../src/puertos/autorizacion-de-plataforma";
 import type { ColaDeTrabajos } from "../../src/puertos/cola-de-trabajos";
+import type { LecturasDeSesion } from "../../src/puertos/sesion";
 import type { IdempotenciaDePlataforma } from "../../src/puertos/idempotencia";
 import type { ReferenciasDeError } from "../../src/puertos/referencias-de-error";
 import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
@@ -113,6 +124,8 @@ export type TxDePrueba = Readonly<{
    * con cualquier texto como clave (el catálogo real de controles todavía está vacío).
    */
   niveles: NivelesDeControl<string>;
+  /** Lo que lee la puerta `SESION` (W3a): la persona del usuario y sus empresas. */
+  sesion: LecturasDeSesion;
 }> &
   TxDeIdentidad;
 
@@ -160,6 +173,7 @@ export function crearEntornoDePrueba(
         ),
         autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>()),
         niveles: crearNivelesDeControlDePostgres<string>(db.withTables<NivelesDeControlDb>()),
+        sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
       }),
     maximoDeConexiones,
     clave: base.clave,
@@ -205,10 +219,24 @@ export const comoGrupo = (tenant: TenantId, persona: PersonaId): Contexto => ({
 
 export const comoTrabajos = (): Contexto => ({ tipo: "TRABAJOS", ahora: AHORA });
 
-/** Quien llega con un enlace de invitación: sin empresa ni persona, solo el hash del token. */
-export const comoInvitacion = (tokenHash: string): Contexto => ({
+/**
+ * Quien llega con un enlace de invitación: sin empresa ni persona, solo el hash del token (y el usuario que ya
+ * ingresó, si lo hay: por defecto, ninguno).
+ */
+export const comoInvitacion = (
+  tokenHash: string,
+  usuarioAuth: UsuarioAuthId | null = null,
+): Contexto => ({
   tipo: "INVITACION",
   tokenHash,
+  usuarioAuth,
+  ahora: AHORA,
+});
+
+/** Quien ya ingresó y todavía no eligió empresa: solo lee lo suyo (claim firmado `s`). */
+export const comoSesion = (usuarioAuth: UsuarioAuthId): ContextoDeSesion => ({
+  tipo: "SESION",
+  usuarioAuth,
   ahora: AHORA,
 });
 

@@ -124,6 +124,7 @@ const carga = (cambios: Partial<CargaDeContexto> = {}): CargaDeContexto => ({
   i: null,
   x: ahoraEnS() + 300,
   a: ADMIN_DE_PRUEBA,
+  s: null,
   ...cambios,
 });
 const tokenDe = (actor: string | null, cambios: Partial<CargaDeContexto> = {}): string =>
@@ -807,12 +808,13 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
     it("el quinto rol no tiene NINGÚN privilegio sobre las tablas, columnas, funciones ni secuencias del esquema public", async () => {
       expect(
         await filas(
-          `select 1 from information_schema.table_privileges where grantee = 'zuluhub_autenticacion'`,
+          // 0010: sobre su PROPIO esquema (`autenticacion`) sí tiene; sobre `public`, nada.
+          `select 1 from information_schema.table_privileges where grantee = 'zuluhub_autenticacion' and table_schema = 'public'`,
         ),
       ).toEqual([]);
       expect(
         await filas(
-          `select 1 from information_schema.column_privileges where grantee = 'zuluhub_autenticacion'`,
+          `select 1 from information_schema.column_privileges where grantee = 'zuluhub_autenticacion' and table_schema = 'public'`,
         ),
       ).toEqual([]);
       const tablas = await filas<{ t: string }>(

@@ -49,6 +49,7 @@ describe("apps/web/servidor/composicion.ts", () => {
       "consultasDeEmpresas",
       "consultasDeIdentidad",
       "resolucionDeHost",
+      "consultasDeSesion",
     ]);
     expect(leidas).toEqual([]);
   });

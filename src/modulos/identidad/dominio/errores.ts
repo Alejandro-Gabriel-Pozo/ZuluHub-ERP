@@ -65,6 +65,9 @@ export type ErrorDeAceptacion =
   | "INVITACION_VENCIDA"
   | "INVITACION_DE_OTRO_EMAIL"
   | "PERSONA_SUSPENDIDA"
+  // La persona del email ya está vinculada con OTRO usuario autenticado (web-armazon §4.6): soporte lo
+  // resuelve a mano, el flujo no está diseñado.
+  | "PERSONA_DE_OTRO_USUARIO"
   | "YA_ES_MIEMBRO"
   | EmpresaNoOpera
   | RolDistintoAlAnterior;

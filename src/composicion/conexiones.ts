@@ -18,6 +18,7 @@ import {
   leerClaveDeContexto,
 } from "../adaptadores/postgres/contexto-firmado";
 import { crearResolucionDeHost, type TxPublica } from "../adaptadores/postgres/resolucion-de-host";
+import { crearLecturasDeSesionDePostgres, type SesionDb } from "../adaptadores/postgres/sesion";
 import { crearTrabajosDePostgres, type TrabajosDb } from "../adaptadores/postgres/trabajos";
 import {
   crearTransaccionesPublicas,
@@ -64,6 +65,7 @@ import type { Auditoria } from "../puertos/auditoria";
 import type { CargaDeAutorizacion } from "../puertos/autorizacion";
 import type { Correo } from "../puertos/correo";
 import type { ResolucionDeHost } from "../puertos/marcas";
+import type { LecturasDeSesion } from "../puertos/sesion";
 import type { Tokens } from "../puertos/tokens";
 import type { Trabajos } from "../puertos/trabajos";
 import {
@@ -84,8 +86,8 @@ import { perezoso } from "./perezoso";
  */
 
 /**
- * Lo que recibe el trabajo de una transacción de la puerta de la aplicación (operación e
- * invitación, rol `zuluhub_app`): todos los repositorios y puertos que piden los casos de uso y las
+ * Lo que recibe el trabajo de una transacción de la puerta de la aplicación (operación, invitación
+ * y sesión, rol `zuluhub_app`): todos los repositorios y puertos que piden los casos de uso y las
  * consultas de empresas e identidad. Cada caso de uso declara solo lo que usa (su `Tx` angosta), y este
  * tipo los contiene a todos.
  *
@@ -109,10 +111,12 @@ export type TxDeApp = Readonly<{
   autorizacion: CargaDeAutorizacion;
   /** El nivel vigente de cada control (permitir, avisar, bloquear), leído en la misma transacción. */
   niveles: NivelesDeControl;
+  /** Lo que lee la puerta `SESION` (la persona del usuario y sus empresas). */
+  sesion: LecturasDeSesion;
 }>;
 
 export type Conexiones = Readonly<{
-  /** Puerta `OPERATIVO` e `INVITACION` (`ZULUHUB_DB_APP`). */
+  /** Puertas `OPERATIVO`, `INVITACION` y `SESION` (`ZULUHUB_DB_APP`). */
   transaccionesDeApp: () => TransaccionesDePostgres<TxDeApp>;
   /** Puerta `TRABAJOS` (`ZULUHUB_DB_TRABAJOS`): solo la cola. */
   transaccionesDeTrabajos: () => TransaccionesDePostgres<TxDeCola>;
@@ -174,6 +178,7 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
           auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
           autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>()),
           niveles: crearNivelesDeControlDePostgres(db.withTables<NivelesDeControlDb>()),
+          sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
         }),
       }),
     ),

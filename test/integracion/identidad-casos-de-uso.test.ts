@@ -40,6 +40,7 @@ import {
   tokenAlAzar,
   type RolDePrueba,
 } from "./fixtures-identidad";
+import { usuarioDePrueba } from "../utilidades/usuarios";
 
 /**
  * H3, tramo 3: los cuatro casos de uso de identidad contra una base real, con los roles limitados
@@ -138,7 +139,12 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
   };
 
   const aceptar = (token: string, email: string | null, cuando: Date = ahora) =>
-    casos.aceptarInvitacion({ token, emailAutenticado: email, ahora: cuando });
+    casos.aceptarInvitacion({
+      token,
+      emailAutenticado: email,
+      usuarioAuth: usuarioDePrueba(email ?? "sin-sesion"),
+      ahora: cuando,
+    });
 
   /** Una invitación de USUARIO a varias empresas, armada por el dueño de la base. */
   const invitacionMultiempresa = async (
@@ -367,6 +373,7 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
       expect((await auditoria(empresa.empresa)).map((a) => a["accion"])).toEqual([
         "ALTA_ACEPTADA",
         "EMPRESA_ACTIVADA",
+        "PERSONA_VINCULADA", // W3a: la persona queda vinculada con el usuario que aceptó
       ]);
     });
 
@@ -501,7 +508,12 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
         const ok = await invitar(e, { email });
         const antesDeAceptar = await foto([e.empresa], [email]);
         await expect(
-          roto.aceptarInvitacion({ token: ok.token, emailAutenticado: email, ahora }),
+          roto.aceptarInvitacion({
+            token: ok.token,
+            emailAutenticado: email,
+            usuarioAuth: usuarioDePrueba(email),
+            ahora,
+          }),
         ).rejects.toThrow("falla forzada");
         expect(await foto([e.empresa], [email])).toBe(antesDeAceptar);
         expect(await personaPorEmail(email)).toBeUndefined();

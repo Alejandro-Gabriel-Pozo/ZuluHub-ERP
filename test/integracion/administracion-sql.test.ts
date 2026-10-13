@@ -1337,6 +1337,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
       const contexto = {
         tipo: "INVITACION",
         tokenHash: inv.tokenHash,
+        usuarioAuth: null,
         ahora: PROPUESTO_EN,
       } as const;
       await conRol("zuluhub_app", contexto, async (s) => {
@@ -2476,6 +2477,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
       const contexto = {
         tipo: "INVITACION",
         tokenHash: inv.tokenHash,
+        usuarioAuth: null,
         ahora: PROPUESTO_EN,
       } as const;
       await conRol("zuluhub_app", contexto, async (s) => {

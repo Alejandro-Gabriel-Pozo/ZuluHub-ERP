@@ -44,6 +44,7 @@ import {
   sucursalDe,
   type RolDePrueba,
 } from "./fixtures-identidad";
+import { usuarioDePrueba } from "../utilidades/usuarios";
 
 /**
  * H6, tramo T3a: revocar una invitación, listar miembros, listar invitaciones pendientes y el error
@@ -283,7 +284,14 @@ describe.skipIf(base === null)(
           await filas("select estado from invitacion_empresa where invitacion_id = $1", [id]),
         ).toEqual([{ estado: "REVOCADA" }]);
         // Quien tenga el enlace ya no entra.
-        expect(await casos.aceptarInvitacion({ token, emailAutenticado: email, ahora })).toEqual({
+        expect(
+          await casos.aceptarInvitacion({
+            token,
+            emailAutenticado: email,
+            usuarioAuth: usuarioDePrueba(email),
+            ahora,
+          }),
+        ).toEqual({
           ok: false,
           error: "INVITACION_REVOCADA",
         });
@@ -391,7 +399,12 @@ describe.skipIf(base === null)(
       it("una ya aceptada da INVITACION_ACEPTADA y no cambia nada", async () => {
         const e = await escenario();
         const { id, email, token } = await invitar(e);
-        const aceptada = await casos.aceptarInvitacion({ token, emailAutenticado: email, ahora });
+        const aceptada = await casos.aceptarInvitacion({
+          token,
+          emailAutenticado: email,
+          usuarioAuth: usuarioDePrueba(email),
+          ahora,
+        });
         expect(aceptada.ok).toBe(true);
         const antes = await foto([e.empresa], [email]);
 
@@ -671,7 +684,12 @@ describe.skipIf(base === null)(
         const norte = await sucursalExtra(e, "Sucursal norte");
         const { email, token } = await invitar(e, { sucursales: [norte] });
         await desactivarSucursalDeBase(norte);
-        const aceptada = await casos.aceptarInvitacion({ token, emailAutenticado: email, ahora });
+        const aceptada = await casos.aceptarInvitacion({
+          token,
+          emailAutenticado: email,
+          usuarioAuth: usuarioDePrueba(email),
+          ahora,
+        });
         expect(aceptada.ok).toBe(true);
       });
     });
@@ -955,6 +973,7 @@ describe.skipIf(base === null)(
         await casos.aceptarInvitacion({
           token: aceptada.token,
           emailAutenticado: aceptada.email,
+          usuarioAuth: usuarioDePrueba(aceptada.email),
           ahora,
         });
         const revocada = await invitar(e);
