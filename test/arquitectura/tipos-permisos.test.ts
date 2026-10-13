@@ -41,7 +41,9 @@ import {
 
 describe("tipos cerrados derivados del catálogo", () => {
   it("las claves salen del catálogo real", () => {
-    expectTypeOf<ClaveModulo>().toEqualTypeOf<"administracion" | "facturacion">();
+    expectTypeOf<ClaveModulo>().toEqualTypeOf<
+      "administracion" | "facturacion" | "catalogo" | "carta" | "stock"
+    >();
     expectTypeOf<ClaveAccion>().toEqualTypeOf<
       | "usuarios.invitar"
       | "usuarios.reenviar_invitacion"
@@ -62,6 +64,54 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "modulos.ver"
       | "permisos.ver_propios"
       | "comprobantes.emitir"
+      | "productos.ver"
+      | "productos.crear"
+      | "productos.editar"
+      | "productos.reactivar"
+      | "productos.cambiar_precio"
+      | "productos.desactivar"
+      | "productos.asignar_emisor"
+      | "opciones.editar"
+      | "categorias.crear"
+      | "categorias.editar"
+      | "categorias.reactivar"
+      | "categorias.desactivar"
+      | "variantes.editar"
+      | "opciones.asignar"
+      | "grupos_de_precio.crear"
+      | "grupos_de_precio.editar"
+      | "grupos_de_precio.asignar"
+      | "grupos_de_precio.reactivar"
+      | "grupos_de_precio.desactivar"
+      | "combos.editar_contenido"
+      | "cartas.ver"
+      | "cartas.marcar_disponibilidad"
+      | "cartas.crear"
+      | "cartas.editar"
+      | "cartas.publicar"
+      | "cartas.retirar"
+      | "cartas.publicar_en_linea"
+      | "cartas.renovar_enlace"
+      | "cartas.retirar_de_linea"
+      | "stock.ver"
+      | "stock.verificar_saldos"
+      | "stock.registrar_entrada"
+      | "stock.registrar_salida"
+      | "stock.transferir"
+      | "stock.ajustar"
+      | "stock.anular"
+      | "depositos.crear"
+      | "depositos.editar"
+      | "depositos.reactivar"
+      | "depositos.desactivar"
+      | "depositos.asignar_emisor"
+      | "articulos.controlar"
+      | "articulos.dejar_de_controlar"
+      | "recetas.editar"
+      | "conteos.abrir"
+      | "conteos.registrar"
+      | "conteos.aplicar"
+      | "conteos.cancelar"
     >();
     // Hoy ninguna acción exige una capacidad de sucursal.
     expectTypeOf<ClaveCapacidad>().toEqualTypeOf<never>();
@@ -115,7 +165,13 @@ describe("tipos cerrados derivados del catálogo", () => {
     // @ts-expect-error al módulo le faltan estado, obligatorio, requiere, etc.
     const incompleto: CatalogoComercial = { sin_ficha: { acciones: {} } };
     expect(incompleto).toBeDefined();
-    expect(Object.keys(CATALOGO_DE_MODULOS)).toEqual(["administracion", "facturacion"]);
+    expect(Object.keys(CATALOGO_DE_MODULOS)).toEqual([
+      "administracion",
+      "facturacion",
+      "catalogo",
+      "carta",
+      "stock",
+    ]);
   });
 });
 

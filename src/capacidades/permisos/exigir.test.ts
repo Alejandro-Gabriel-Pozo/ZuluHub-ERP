@@ -177,7 +177,7 @@ describe("exigirAccion", () => {
       // @ts-expect-error la acción no existe en el catálogo
       exigirAccion(REGLAS_DE_EMPRESA, "usuarios.borrar_todo", cargar);
     expect(noSeEjecuta).toBeTypeOf("function");
-    const claves: ClaveModulo[] = ["administracion", "facturacion"];
+    const claves: ClaveModulo[] = ["administracion", "facturacion", "catalogo", "carta", "stock"];
     expect(claves).toEqual(Object.keys(CATALOGO_DE_MODULOS));
   });
 });
