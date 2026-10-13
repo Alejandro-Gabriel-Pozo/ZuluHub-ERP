@@ -95,19 +95,13 @@ const LLAMADAS: Record<ConAccion, (casos: CasosDeUsoDeIdentidad) => Promise<unkn
 };
 
 /**
- * Un caso de uso todavía sin implementar (tramos T3a, T3b y T4 de H6) pasa el guard y devuelve
- * `NO_IMPLEMENTADO` sin tocar nada más; uno implementado toca la transacción vigilada y corta con
- * `AccesoFueraDelGuard`. Las dos cosas prueban que el guard ya pasó.
+ * El guard dejó pasar si el caso de uso tocó la transacción vigilada: corta con `AccesoFueraDelGuard`
+ * en el primer acceso que no es la autorización.
  */
 const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
   try {
-    const resultado = await llamada;
-    return (
-      typeof resultado === "object" &&
-      resultado !== null &&
-      "error" in resultado &&
-      resultado.error === "NO_IMPLEMENTADO"
-    );
+    await llamada;
+    return false;
   } catch (e) {
     if (e instanceof AccesoFueraDelGuard) return true;
     throw e;
@@ -223,6 +217,7 @@ describe("los demás motivos del guard salen tal cual por el caso de uso", () =>
     obligatorio: boolean,
   ): ReglasDeEmpresa => ({
     catalogo: {
+      ...CATALOGO_DE_MODULOS,
       administracion: {
         estado,
         obligatorio,
@@ -356,8 +351,6 @@ describe("P7: el guard va primero en cada consulta de identidad", () => {
     return crearConsultasDeIdentidad({ transacciones, reglas });
   };
 
-  /** `traspasoEnCurso` la implementa el tramo T4 de H6 y entonces suma su fila acá. */
-  type Pendientes = "traspasoEnCurso";
   type DeclaracionesDeConsultas = typeof DECLARACIONES_DE_CONSULTAS;
   type ConsultaConAccion = {
     [K in keyof DeclaracionesDeConsultas]: DeclaracionesDeConsultas[K] extends {
@@ -367,11 +360,12 @@ describe("P7: el guard va primero en cada consulta de identidad", () => {
       : never;
   }[keyof DeclaracionesDeConsultas];
   const LLAMADAS_DE_CONSULTAS: Record<
-    Exclude<ConsultaConAccion, Pendientes>,
+    ConsultaConAccion,
     (consultas: ConsultasDeIdentidad) => Promise<unknown>
   > = {
     listarMiembros: (c) => c.listarMiembros(contexto),
     listarInvitacionesPendientes: (c) => c.listarInvitacionesPendientes(contexto),
+    traspasoEnCurso: (c) => c.traspasoEnCurso(contexto),
   };
 
   const consultas = Object.entries(DECLARACIONES_DE_CONSULTAS).flatMap(([nombre, declaracion]) =>
@@ -384,6 +378,7 @@ describe("P7: el guard va primero en cada consulta de identidad", () => {
     expect(consultas.map((c) => c.nombre).sort()).toEqual([
       "listarInvitacionesPendientes",
       "listarMiembros",
+      "traspasoEnCurso",
     ]);
   });
 

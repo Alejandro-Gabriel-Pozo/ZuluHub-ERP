@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { estadoDeModulos } from "../modulos/activos";
-import { CATALOGO_DE_MODULOS, type ClaveAccion, type ClaveModulo } from "../modulos/catalogo";
+import { CATALOGO_DE_MODULOS, type ClaveModulo } from "../modulos/catalogo";
 import {
   PERMISOS_DE_EMPRESA,
   REGLAS_DE_EMPRESA,
@@ -17,6 +17,7 @@ import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "./roles";
 
 /** Las acciones que puede cada rol, escritas a mano desde la tabla de §B.4 de la especificación de H6. */
 const DEL_OPERADOR = [
+  "comprobantes.emitir",
   "gerencia.aceptar_traspaso",
   "gerencia.rechazar_traspaso",
   "gerencia.ver_traspaso",
@@ -62,9 +63,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 18 acciones: 6 de usuarios, 5 de sucursales, 5 de gerencia, modulos.ver y permisos.ver_propios", () => {
+  it("hay 19 acciones: 6 de usuarios, 5 de sucursales, 5 de gerencia, modulos.ver, permisos.ver_propios y comprobantes.emitir", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(18);
+    expect(todas).toHaveLength(19);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -72,7 +73,8 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("gerencia"),
       porPrefijo("modulos"),
       porPrefijo("permisos"),
-    ]).toEqual([6, 5, 5, 1, 1]);
+      porPrefijo("comprobantes"),
+    ]).toEqual([6, 5, 5, 1, 1, 1]);
   });
 
   it("las acciones de usuarios son seis y las tienen exactamente el gerente y el administrador", () => {
@@ -91,10 +93,18 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     }
   });
 
-  it("ver, aceptar y rechazar un traspaso, y ver los permisos propios, son de los tres roles", () => {
+  it("ver, aceptar y rechazar un traspaso, ver los permisos propios y emitir un comprobante son de los tres roles", () => {
     for (const accion of DEL_OPERADOR) {
       expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE", "ADMINISTRADOR", "OPERADOR"]);
     }
+  });
+
+  it("emitir un comprobante lo pueden los tres roles: quien cobra emite en el mismo acto (H7, §C)", () => {
+    expect(PERMISOS_DE_EMPRESA["comprobantes.emitir"]).toEqual([
+      "GERENTE",
+      "ADMINISTRADOR",
+      "OPERADOR",
+    ]);
   });
 
   it("el operador no puede ninguna acción de usuarios (decisión 2) ni de sucursales ni de módulos", () => {
@@ -150,9 +160,14 @@ describe("tablaDePermisos con otras matrices", () => {
   });
 });
 
+/** Las acciones del núcleo (`administracion`), el único módulo disponible. */
+const ACCIONES_DE_ADMINISTRACION = Object.keys(
+  CATALOGO_DE_MODULOS.administracion.acciones,
+) as (keyof typeof CATALOGO_DE_MODULOS.administracion.acciones)[];
+
 describe("el guard con las reglas reales", () => {
   const activos = estadoDeModulos(CATALOGO_DE_MODULOS, [], []).modulosActivos;
-  const acciones = Object.keys(PERMISOS_DE_EMPRESA) as ClaveAccion[];
+  const acciones = ACCIONES_DE_ADMINISTRACION;
 
   it("administracion es obligatorio: está activo aunque no se haya activado nada", () => {
     expect([...activos]).toEqual(["administracion"]);
@@ -187,6 +202,26 @@ describe("el guard con las reglas reales", () => {
     }
   });
 
+  it("emitir un comprobante da MODULO_EN_DESARROLLO a todos mientras la facturación no exista (H7, §D)", () => {
+    // También con el módulo «activado» y «habilitado» por el plan, y también sin rol: el guard mira
+    // primero el estado de construcción del módulo.
+    const { modulosActivos } = estadoDeModulos(
+      CATALOGO_DE_MODULOS,
+      ["facturacion"],
+      ["facturacion"],
+    );
+    for (const rol of [...ROLES_DE_EMPRESA, null]) {
+      expect(
+        evaluarGuard(REGLAS_DE_EMPRESA, "comprobantes.emitir", {
+          rol,
+          modulosActivos,
+          capacidadesDeSucursal: null,
+        }),
+        `${rol}`,
+      ).toEqual({ ok: false, error: "MODULO_EN_DESARROLLO" });
+    }
+  });
+
   it("si el módulo no figura entre los activos, MODULO_NO_ACTIVO (el guard no lo da por hecho)", () => {
     expect(
       evaluarGuard(REGLAS_DE_EMPRESA, "usuarios.invitar", {
@@ -199,7 +234,7 @@ describe("el guard con las reglas reales", () => {
 });
 
 describe("el guard con las reglas reales y la solo lectura (corrección 16)", () => {
-  const acciones = Object.keys(PERMISOS_DE_EMPRESA) as ClaveAccion[];
+  const acciones = ACCIONES_DE_ADMINISTRACION;
   const enSoloLectura = new Set<ClaveModulo>(["administracion"]);
   const activos = estadoDeModulos(CATALOGO_DE_MODULOS, [], []).modulosActivos;
 
@@ -221,6 +256,7 @@ describe("el guard con las reglas reales y la solo lectura (corrección 16)", ()
   it("si un día el módulo fuera activable y quedara en solo lectura, el gerente solo perdería lo que crea o amplía", () => {
     const activable: ReglasDeEmpresa = {
       catalogo: {
+        ...CATALOGO_DE_MODULOS,
         administracion: { ...CATALOGO_DE_MODULOS.administracion, obligatorio: false },
       },
       permisos: PERMISOS_DE_EMPRESA,

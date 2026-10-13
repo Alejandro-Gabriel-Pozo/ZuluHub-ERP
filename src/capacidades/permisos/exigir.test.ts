@@ -30,6 +30,7 @@ const administracionComo = (
   obligatorio: boolean,
 ): ReglasDeEmpresa => ({
   catalogo: {
+    ...CATALOGO_DE_MODULOS,
     administracion: {
       estado,
       obligatorio,
@@ -42,7 +43,9 @@ const administracionComo = (
 describe("exigirAccion", () => {
   it("deja pasar al rol que la matriz incluye, y rechaza con SIN_PERMISO al que no", async () => {
     for (const rol of ROLES_DE_EMPRESA) {
-      for (const accion of Object.keys(PERMISOS_DE_EMPRESA) as ClaveAccion[]) {
+      for (const accion of Object.keys(
+        CATALOGO_DE_MODULOS.administracion.acciones,
+      ) as ClaveAccion[]) {
         const puede = (PERMISOS_DE_EMPRESA[accion] as readonly string[]).includes(rol);
         const { cargar } = cargaDe({ rol, modulosActivados: [], modulosHabilitados: [] });
         expect(await exigirAccion(REGLAS_DE_EMPRESA, accion, cargar), `${rol} ${accion}`).toEqual(
@@ -174,7 +177,7 @@ describe("exigirAccion", () => {
       // @ts-expect-error la acción no existe en el catálogo
       exigirAccion(REGLAS_DE_EMPRESA, "usuarios.borrar_todo", cargar);
     expect(noSeEjecuta).toBeTypeOf("function");
-    const claves: ClaveModulo[] = ["administracion"];
+    const claves: ClaveModulo[] = ["administracion", "facturacion"];
     expect(claves).toEqual(Object.keys(CATALOGO_DE_MODULOS));
   });
 });

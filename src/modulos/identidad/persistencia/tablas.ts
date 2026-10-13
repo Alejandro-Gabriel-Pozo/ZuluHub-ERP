@@ -2,7 +2,7 @@ import type { Generated } from "kysely";
 import type { COLUMNAS_DE_IDENTIDAD } from "./esquema";
 
 /**
- * Tablas de identidad tal como las ve Kysely (migraciones 0001 y 0002). Las columnas son las de
+ * Tablas de identidad tal como las ve Kysely (migraciones 0001, 0002 y 0005). Las columnas son las de
  * `COLUMNAS_DE_IDENTIDAD`, que un test compara con el catálogo de la base real; los tipos de más
  * abajo hacen que el compilador exija que ambas listas digan lo mismo.
  */
@@ -65,6 +65,22 @@ export type IdentidadDb = {
     invitacion_id: string;
     empresa_id: string;
     sucursal_id: string;
+  };
+  traspaso_gerencia: {
+    id: Generated<string>;
+    empresa_id: string;
+    origen: string;
+    propuesto_por: string | null;
+    saliente_persona_id: string | null;
+    entrante_persona_id: string;
+    estado: Generated<string>;
+    propuesto_en: Date;
+    vence_en: Date;
+    resuelto_en: Date | null;
+    motivo: string | null;
+    creado_en: Generated<Date>;
+    actualizado_en: Generated<Date>;
+    version: Generated<number>;
   };
 };
 
