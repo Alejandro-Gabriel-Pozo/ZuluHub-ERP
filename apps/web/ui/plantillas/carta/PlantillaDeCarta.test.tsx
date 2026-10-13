@@ -620,8 +620,17 @@ describe("carta: «Letra» se recuerda y no depende del almacenamiento (D10)", (
     };
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(bloqueo);
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(bloqueo);
+    const errores: string[] = [];
+    const alError = (e: ErrorEvent) => {
+      e.preventDefault();
+      errores.push(e.message);
+    };
+    window.addEventListener("error", alError);
     await abrirCarta();
     await elegirLetra("Letra grande");
+    window.removeEventListener("error", alError);
+    // Si guardar lanzara, el error saldría del manejador del toque: no tiene que haber ninguno.
+    expect(errores).toEqual([]);
     expect(px(nombreYPrecio(enlaceDe("Capuchino"))[1])).toBeCloseTo(22, 1);
     await expect
       .element(page.getByRole("button", { name: "Letra grande" }))
