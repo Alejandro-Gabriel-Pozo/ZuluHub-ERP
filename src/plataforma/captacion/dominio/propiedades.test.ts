@@ -478,7 +478,10 @@ describe("propiedades del anti-bots, la retención, los estados y la auditoría"
       fc.boolean(),
       fc.constant(null),
     );
-    const permitidos = fc.dictionary(fc.constantFrom(...CLAVES_DE_AUDITORIA), seguro);
+    const permitidos = fc
+      .dictionary(fc.constantFrom(...CLAVES_DE_AUDITORIA), seguro)
+      // el número de envío tiene su rango: se lo da válido para que el resto del diccionario decida
+      .map((datos) => ("numeroDeEnvio" in datos ? { ...datos, numeroDeEnvio: 3 } : datos));
     fc.assert(
       fc.property(
         permitidos,
@@ -488,6 +491,16 @@ describe("propiedades del anti-bots, la retención, los estados y la auditoría"
           expect(clavesNoPermitidas({ ...datos, [extra]: "valor" })).toEqual([extra]);
         },
       ),
+    );
+  });
+
+  it("auditoría: el número de envío solo vale del 1 al 5", () => {
+    fc.assert(
+      fc.property(fc.integer({ min: -50, max: 50 }), (n) => {
+        expect(clavesNoPermitidas({ numeroDeEnvio: n })).toEqual(
+          n >= 1 && n <= 5 ? [] : ["numeroDeEnvio"],
+        );
+      }),
     );
   });
 });

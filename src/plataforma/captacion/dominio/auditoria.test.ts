@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { MAXIMO_DE_ENVIOS } from "./envio";
 import {
   ACCIONES_DE_CAPTACION,
   ACCIONES_DE_PLATAFORMA,
@@ -114,6 +115,29 @@ describe("lista blanca de la auditoría de solicitudes (R-C3)", () => {
       "marcaId",
       "empresaId",
     ]);
+  });
+
+  it("clavesNoPermitidas: el número de envío es un entero del 1 al 5 (el tope de envíos); cualquier otra cosa se señala", () => {
+    for (const n of [1, 2, 3, 4, 5])
+      expect(clavesNoPermitidas({ numeroDeEnvio: n }), String(n)).toEqual([]);
+    for (const mal of [
+      0,
+      6,
+      -1,
+      2.5,
+      100,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      "3",
+      null,
+      true,
+      undefined,
+      [3],
+    ]) {
+      expect(clavesNoPermitidas({ numeroDeEnvio: mal }), String(mal)).toEqual(["numeroDeEnvio"]);
+    }
+    // y el límite sale de MAXIMO_DE_ENVIOS, no de un número suelto
+    expect(MAXIMO_DE_ENVIOS).toBe(5);
   });
 
   it("clavesNoPermitidas: una clave __proto__ propia se detecta", () => {

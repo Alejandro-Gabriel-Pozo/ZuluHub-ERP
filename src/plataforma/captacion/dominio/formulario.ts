@@ -94,8 +94,8 @@ const SOLO_DIGITOS = /^[0-9]+$/;
 
 /**
  * Correo en minúsculas, o `null`. A propósito más estricto que el RFC 5322: ASCII, una sola arroba,
- * partes separadas por puntos sin vacíos, dominio con al menos dos etiquetas y que no termine en un
- * número (no se aceptan direcciones tipo IP). La dirección viaja en cabeceras de correo y se muestra
+ * partes separadas por puntos sin vacíos, dominio con al menos dos etiquetas y cuya última etiqueta no
+ * sea toda numérica (no se aceptan direcciones tipo IP). La dirección viaja en cabeceras de correo y se muestra
  * en la consola; las reales caben todas. Todo correo que sale de acá lo acepta también
  * `emailDesdeTexto` de identidad (una prueba lo comprueba): la invitación del gerente no puede fallar
  * por el correo. La verificación real de que existe es el enlace.
@@ -118,28 +118,28 @@ function correoValido(crudo: string): string | null {
 const SEPARADORES_DE_TELEFONO = /[\s().-]/g;
 const FORMA_DE_TELEFONO = /^\+?[0-9]{8,15}$/;
 
-/** Un dato opcional: no lo dio (`valor: null`), lo dio bien (`valor`), o lo dio mal (`ok: false`). */
-type Opcional = Readonly<{ ok: true; valor: string | null }> | Readonly<{ ok: false }>;
+/** Un dato opcional: `null` si lo dio mal; `{ valor: null }` si no lo dio; `{ valor }` si lo dio bien. */
+type Opcional = Readonly<{ valor: string | null }> | null;
 
 /** Teléfono sin separadores, con la forma de `solicitud_telefono_ck`. `""` = no lo dio. */
 function telefonoValido(crudo: string): Opcional {
   const recortado = crudo.trim();
-  if (recortado === "") return { ok: true, valor: null };
+  if (recortado === "") return { valor: null };
   const digitos = recortado.replace(SEPARADORES_DE_TELEFONO, "");
-  return FORMA_DE_TELEFONO.test(digitos) ? { ok: true, valor: digitos } : { ok: false };
+  return FORMA_DE_TELEFONO.test(digitos) ? { valor: digitos } : null;
 }
 
 function cuitOpcional(crudo: string): Opcional {
   const recortado = crudo.trim();
-  if (recortado === "") return { ok: true, valor: null };
+  if (recortado === "") return { valor: null };
   const cuit = cuitDesdeTexto(recortado);
-  return cuit.ok ? { ok: true, valor: cuit.valor } : { ok: false };
+  return cuit.ok ? { valor: cuit.valor } : null;
 }
 
 function provinciaOpcional(crudo: string): Opcional {
   const recortado = crudo.trim();
-  if (recortado === "") return { ok: true, valor: null };
-  return CODIGOS_DE_PROVINCIA.includes(recortado) ? { ok: true, valor: recortado } : { ok: false };
+  if (recortado === "") return { valor: null };
+  return CODIGOS_DE_PROVINCIA.includes(recortado) ? { valor: recortado } : null;
 }
 
 /** El valor de un dato opcional que ya se sabe correcto. */
@@ -187,9 +187,9 @@ export function validarFormulario(
   if (correo === null) campos.push("correo");
   if (nombreNegocio === null) campos.push("nombreNegocio");
   if (rubro === null) campos.push("rubro");
-  if (!provincia.ok) campos.push("provincia");
-  if (!telefono.ok) campos.push("telefono");
-  if (!cuit.ok) campos.push("cuit");
+  if (provincia === null) campos.push("provincia");
+  if (telefono === null) campos.push("telefono");
+  if (cuit === null) campos.push("cuit");
   if (!entrada.aceptaTerminosYPrivacidad) campos.push("aceptaTerminosYPrivacidad");
   if (campos.length > 0) return err({ tipo: "FORMA_INVALIDA", campos });
 

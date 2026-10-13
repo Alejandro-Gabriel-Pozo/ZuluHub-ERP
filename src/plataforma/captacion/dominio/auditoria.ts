@@ -1,3 +1,5 @@
+import { MAXIMO_DE_ENVIOS } from "./envio";
+
 /**
  * Qué puede llevar la auditoría de las solicitudes (alta por solicitud §2.2 y R-C3). Dominio puro.
  *
@@ -64,6 +66,22 @@ export function valorDeAuditoriaSeguro(valor: unknown): boolean {
 }
 
 /**
+ * Un valor de la lista blanca. El número de envío es el único con regla propia: del 1 al `MAXIMO_DE_ENVIOS`, un
+ * entero (la base lo repite, y con él acota las constancias de reenvío de cada solicitud).
+ */
+function valorPermitido(clave: string, valor: unknown): boolean {
+  if (clave === "numeroDeEnvio") {
+    return (
+      typeof valor === "number" &&
+      Number.isInteger(valor) &&
+      valor >= 1 &&
+      valor <= MAXIMO_DE_ENVIOS
+    );
+  }
+  return valorDeAuditoriaSeguro(valor);
+}
+
+/**
  * Las claves de `datos` que NO pueden ir a la auditoría: las que no están en la lista blanca o cuyo
  * valor no tiene la forma segura. Vacía = se puede escribir. Mantiene el orden de `datos`.
  */
@@ -71,6 +89,6 @@ export function clavesNoPermitidas(datos: Readonly<Record<string, unknown>>): st
   return Object.keys(datos).filter(
     (clave) =>
       !(CLAVES_DE_AUDITORIA as readonly string[]).includes(clave) ||
-      !valorDeAuditoriaSeguro(datos[clave]),
+      !valorPermitido(clave, datos[clave]),
   );
 }
