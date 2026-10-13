@@ -116,7 +116,8 @@ export function validarReceptor(
   if (contexto.letra === "A" && documento.tipo !== "CUIT") {
     return err({ codigo: "RECEPTOR_INVALIDO_PARA_A" });
   }
-  if (documento.tipo !== "SIN_IDENTIFICAR" && documento.numero === contexto.cuitDelEmisor) {
+  // ARCA compara el `DocNro` como número (error 10069): sin identificar es cero y nunca es un CUIT.
+  if (numeroDeDocumentoParaArca(documento) === BigInt(contexto.cuitDelEmisor)) {
     return err({ codigo: "RECEPTOR_IGUAL_AL_EMISOR" });
   }
   if (contexto.letra === "B" && entrada.condicionIva === "NO_CATEGORIZADO") {

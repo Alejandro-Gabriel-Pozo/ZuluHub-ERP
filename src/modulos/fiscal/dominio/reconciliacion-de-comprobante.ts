@@ -57,21 +57,20 @@ export type Reconciliacion =
   | Readonly<{ resolucion: "DESFASE"; serie: SerieBloqueada }>
   | Readonly<{ resolucion: "SIN_CAMBIOS" }>;
 
+/** Cada alícuota como texto comparable (código, base e IVA con su moneda), sin ambigüedad entre campos. */
+function claveDeAlicuota(a: AlicuotaParaArca): string {
+  return JSON.stringify([
+    a.alicuota,
+    a.base.moneda,
+    String(a.base.unidades),
+    a.iva.moneda,
+    String(a.iva.unidades),
+  ]);
+}
+
+/** Las mismas alícuotas con los mismos importes, sin importar el orden ni los repetidos de más. */
 function alicuotasIguales(a: readonly AlicuotaParaArca[], b: readonly AlicuotaParaArca[]): boolean {
-  if (a.length !== b.length) return false;
-  const porCodigo = (x: AlicuotaParaArca, y: AlicuotaParaArca) =>
-    x.alicuota.localeCompare(y.alicuota);
-  const ordenadasA = [...a].sort(porCodigo);
-  const ordenadasB = [...b].sort(porCodigo);
-  return ordenadasA.every((alicuota, i) => {
-    const otra = ordenadasB[i];
-    return (
-      otra !== undefined &&
-      alicuota.alicuota === otra.alicuota &&
-      importesIguales(alicuota.base, otra.base) &&
-      importesIguales(alicuota.iva, otra.iva)
-    );
-  });
+  return a.map(claveDeAlicuota).sort().join(";") === b.map(claveDeAlicuota).sort().join(";");
 }
 
 function asociadoIgual(
