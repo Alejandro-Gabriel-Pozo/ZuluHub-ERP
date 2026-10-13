@@ -880,17 +880,35 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
            and has_table_privilege('zuluhub_app', c.oid, 'SELECT') order by 1`,
       );
       expect(tablas.length).toBeGreaterThan(20);
+      // El círculo de políticas (membresía -> persona -> membresía) se corta porque la lectura de miembros filtra
+      // primero por empresa: es una dependencia del plan de ejecución. Se recorre con tres planes distintos.
+      const planes: [string, string[]][] = [
+        ["plan por defecto", []],
+        [
+          "solo barridos secuenciales",
+          [
+            "set local enable_indexscan = off",
+            "set local enable_bitmapscan = off",
+            "set local enable_indexonlyscan = off",
+          ],
+        ],
+        ["solo índices", ["set local enable_seqscan = off"]],
+      ];
       for (const [nombre, contexto] of contextos) {
-        const s = await SesionDePrueba.abrir(base!, "zuluhub_app", contexto);
-        try {
-          for (const { relname } of tablas) {
-            const r = await s.intentar(`select count(*) from ${relname}`);
-            expect(r.ok, `${nombre}: ${relname}: ${r.ok ? "" : `${r.codigo} ${r.mensaje}`}`).toBe(
-              true,
-            );
+        for (const [plan, ajustes] of planes) {
+          const s = await SesionDePrueba.abrir(base!, "zuluhub_app", contexto);
+          try {
+            for (const ajuste of ajustes) acepta(await s.intentar(ajuste));
+            for (const { relname } of tablas) {
+              const r = await s.intentar(`select count(*) from ${relname}`);
+              expect(
+                r.ok,
+                `${nombre} (${plan}): ${relname}: ${r.ok ? "" : `${r.codigo} ${r.mensaje}`}`,
+              ).toBe(true);
+            }
+          } finally {
+            await s.cerrar();
           }
-        } finally {
-          await s.cerrar();
         }
       }
       // Y el conjunto de tablas que se recorrió incluye las cuatro con política de sesión.

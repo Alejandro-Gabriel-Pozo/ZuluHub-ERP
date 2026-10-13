@@ -7,10 +7,9 @@
 --
 -- Reglas de esta migración (las mismas de 0001 a 0008):
 --  * Es ADITIVA: crea un esquema, tablas, una columna nula, funciones, un disparador y políticas. No modifica
---    ni borra ninguna fila ni privilegio existente. La ÚNICA política vieja que toca es `persona_miembros_app`
---    (decisión P4: le agrega una guarda que no cambia lo que ve ninguna otra puerta). Su reversión es un script
---    aparte, revisado y DESTRUCTIVO (borra usuarios y sesiones): `migraciones/reversiones/0010_revertir_autenticacion.sql`.
---    El ejecutor no lo aplica.
+--    ni borra ninguna fila, política ni privilegio existente. Su reversión es un script aparte, revisado y
+--    DESTRUCTIVO (borra usuarios y sesiones): `migraciones/reversiones/0010_revertir_autenticacion.sql`. El
+--    ejecutor no lo aplica.
 --  * No agrega NINGUNA función SECURITY DEFINER: la única del esquema sigue siendo `contexto_firmado()` (un
 --    meta-test lo exige) y NO cambia: el claim `s` viaja en el mismo payload firmado. Las funciones nuevas
 --    corren con los permisos de quien consulta y sujetas a RLS.
@@ -42,15 +41,19 @@
 --      política `persona_invitado_vincular` solo deja pasar el contexto de INVITACION, sobre la persona del
 --      email de su invitación, mientras la columna está nula y apuntando al usuario firmado en `s`.
 --  P4. Recursión de políticas. «Las membresías de la persona de la sesión» obliga a mirar `persona` desde
---      `membresia`, y `persona_miembros_app` (0002) ya mira `membresia` desde `persona`: Postgres rechaza el
---      ciclo («infinite recursion detected in policy») en TODA consulta de `membresia`, sea cual sea el
---      contexto. Se corta con dos piezas: (a) la persona de la sesión se resuelve en una función común
---      `app_persona_de_sesion()` (Postgres no mira dentro de las funciones al reescribir las políticas);
---      (b) `persona_miembros_app` gana una guarda `CASE WHEN app_empresa_id() IS NULL THEN false ...`, que
---      para el contexto operativo (el único con empresa) es la misma condición de antes y para los demás
---      contextos corta antes de volver a leer `membresia` (sin ella, la función y las políticas se
---      llamarían entre sí hasta agotar la pila). Una prueba recorre todas las tablas con la sesión de cada
---      contexto: sin esta guarda fallaría.
+--      `membresia`, y `persona_miembros_app` (0002) ya mira `membresia` desde `persona`: si la política de
+--      `membresia` consultara `persona` directamente, Postgres rechazaría el ciclo («infinite recursion
+--      detected in policy») en TODA consulta de `membresia`, sea cual sea el contexto (probado). Se corta
+--      resolviendo la persona de la sesión en una función común, `app_persona_de_sesion()`: Postgres no mira
+--      dentro de las funciones al reescribir las políticas. Queda un círculo en tiempo de ejecución sobre el
+--      papel (la función lee `persona`, cuya política de miembros lee `membresia`, cuya política de sesión
+--      llama a la función...) que NO se produce porque la lectura de miembros filtra primero por
+--      `empresa_id = app_empresa_id()` (un filtro barato y a prueba de fugas que el planificador evalúa antes
+--      que las políticas) y la sesión no tiene empresa. Es una dependencia del orden de evaluación del
+--      planificador, no una garantía del lenguaje: si fallara, fallaría CERRADO (error de pila, nunca filas
+--      de más) y una prueba recorre todas las tablas con todos los contextos y distintos planes para
+--      delatarlo. No se tocó `persona_miembros_app` a propósito: una guarda extra en una política vieja no
+--      se puede probar (ningún plan la hace necesaria) y rompería lo aditivo de esta migración.
 --  P5. Puerta `SESION` (rol `zuluhub_app`; contexto firmado con `s` y sin empresa ni persona): solo lectura
 --      y solo lo propio. `persona`: la del usuario (activa). `membresia`: las activas de esa persona.
 --      `empresa`: las de esas membresías. `tenant`: los de esas empresas. Ninguna política de escritura. El
@@ -242,19 +245,6 @@ GRANT EXECUTE ON FUNCTION app_usuario_auth(), app_persona_de_sesion() TO zuluhub
 
 -- Vincular (P3): una sola columna, y solo la deja pasar la política de abajo.
 GRANT UPDATE (usuario_auth_id) ON persona TO zuluhub_app;
-
--- P4 (b): la misma condición de antes (los miembros de la empresa del contexto) con la guarda que corta
--- el ciclo en tiempo de ejecución. Con `app_empresa_id()` nulo la versión vieja daba `false` igual.
-ALTER POLICY persona_miembros_app ON persona
-  USING (
-    CASE
-      WHEN (SELECT app_empresa_id()) IS NULL THEN false
-      ELSE EXISTS (
-        SELECT 1 FROM membresia m
-         WHERE m.persona_id = persona.id AND m.empresa_id = (SELECT app_empresa_id())
-      )
-    END
-  );
 
 -- Lecturas de la sesión (P5). Solo SELECT.
 CREATE POLICY persona_sesion_leer ON persona FOR SELECT TO zuluhub_app

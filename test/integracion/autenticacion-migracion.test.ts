@@ -117,7 +117,7 @@ describe.skipIf(base === null)(
     // ===========================================================================================================
     // Aditiva
     // ===========================================================================================================
-    it("sobre una base con datos no cambia NI UN dato existente; solo agrega objetos (y la guarda de una política)", async () => {
+    it("sobre una base con datos no cambia NI UN dato existente; solo agrega objetos (ni una política vieja se modifica)", async () => {
       await conPrevias(async (previa, conAutenticacion) => {
         await sembrarDatosPrevios(previa.cliente);
         const datosAntes = await huellaDeDatos(previa.cliente);
@@ -132,41 +132,29 @@ describe.skipIf(base === null)(
           await huellaDeCatalogo(previa.cliente),
         );
 
-        // Lo único que «se pierde» son líneas que cambian por una novedad de esta migración: la política
-        // `persona_miembros_app` (con su guarda), la lista de columnas de `persona` y sus privilegios por
-        // columna, el ACL de la tabla `persona`... (el catálogo escribe el ACL entero) y el del esquema.
-        const cambiaPorNovedad = (linea: string) =>
-          /^persona\.persona_miembros_app:/.test(linea) ||
-          /^persona\./.test(linea) ||
-          /^persona:/.test(linea) ||
-          /persona/.test(linea);
+        // Es ADITIVA de verdad: del catálogo anterior no se pierde ni una línea (ninguna política, función,
+        // restricción ni privilegio cambia), salvo la ACL del esquema `public` si la hubiera. Solo se suma.
         for (const [categoria, lineas] of Object.entries(perdidas)) {
-          for (const linea of lineas) {
-            expect(
-              cambiaPorNovedad(linea) || categoria === "esquema",
-              `${categoria}: ${linea}`,
-            ).toBe(true);
-          }
+          expect(lineas, `${categoria}: líneas que se perdieron`).toEqual([]);
         }
         // Todo lo nuevo es de esta migración.
         const esDeAutenticacion = (linea: string) =>
-          /usuario_auth|app_usuario_auth|app_persona_de_sesion|persona_validar_vinculo|persona_vinculo_inmutable|_sesion_leer|persona_invitado_vincular|persona_miembros_app/.test(
+          /usuario_auth|app_usuario_auth|app_persona_de_sesion|persona_validar_vinculo|persona_vinculo_inmutable|_sesion_leer|persona_invitado_vincular/.test(
             linea,
-          ) || cambiaPorNovedad(linea);
+          );
         for (const [categoria, lineas] of Object.entries(nuevas)) {
           for (const linea of lineas) {
             expect(esDeAutenticacion(linea), `${categoria}: ${linea}`).toBe(true);
           }
         }
-        // Y la política vieja sigue existiendo, solo que con la guarda.
-        const miembros = nuevas["politicas"]?.find((l) =>
-          l.startsWith("persona.persona_miembros_app:"),
-        );
-        expect(miembros).toContain("CASE");
-        const vieja = perdidas["politicas"]?.find((l) =>
-          l.startsWith("persona.persona_miembros_app:"),
-        );
-        expect(vieja).not.toContain("CASE");
+        // Las políticas de la sesión son las cuatro de lectura y la de vincular, y ninguna otra.
+        expect((nuevas["politicas"] ?? []).map((l) => l.split(":")[0]).sort()).toEqual([
+          "empresa.empresa_sesion_leer",
+          "membresia.membresia_sesion_leer",
+          "persona.persona_invitado_vincular",
+          "persona.persona_sesion_leer",
+          "tenant.tenant_sesion_leer",
+        ]);
 
         // La columna nueva nace nula en todas las personas que ya estaban.
         const { rows } = await previa.cliente.query(
@@ -325,9 +313,8 @@ describe.skipIf(base === null)(
         expect(codigo).not.toMatch(/\bDROP\b/i);
         expect(codigo).not.toMatch(/\bTRUNCATE\b/i);
         expect(codigo).not.toMatch(/\bDELETE\s+FROM\b/i);
-        // `ALTER POLICY` solo sobre la única política que se guarda (P4).
-        const alteradas = codigo.match(/\bALTER\s+POLICY\s+\w+\s+ON\s+\w+/gi) ?? [];
-        expect(alteradas).toEqual(["ALTER POLICY persona_miembros_app ON persona"]);
+        // Ninguna política existente se modifica: la migración solo suma.
+        expect(codigo).not.toMatch(/\bALTER\s+POLICY\b/i);
       });
 
       it("ninguna función SECURITY DEFINER y todas fijan el search_path (con pg_temp al final), calificando sus tablas con `public.`", async () => {

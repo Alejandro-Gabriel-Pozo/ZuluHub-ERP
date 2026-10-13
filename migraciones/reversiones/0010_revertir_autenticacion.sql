@@ -17,9 +17,8 @@
 --     \i migraciones/reversiones/0010_revertir_autenticacion.sql
 --     COMMIT;
 --
--- Deja el catálogo de 0001 a 0008 como estaba: quita las políticas y funciones de la sesión, devuelve
--- `persona_miembros_app` a su definición de 0002, quita la concesión de UPDATE sobre `persona.usuario_auth_id`, la
--- columna (con su restricción única y su disparador) y el esquema `autenticacion` con sus tablas. No usa CASCADE:
+-- Deja el catálogo de 0001 a 0008 como estaba: quita las políticas y funciones de la sesión, la concesión de
+-- UPDATE sobre `persona.usuario_auth_id`, la columna (con su restricción única y su disparador) y el esquema `autenticacion` con sus tablas. No usa CASCADE:
 -- si otro objeto depende de lo que se borra (una clave foránea o una política de una migración posterior), el
 -- DROP falla y no se pierde nada.
 --
@@ -49,19 +48,12 @@ BEGIN
 END
 $$;
 
--- Las políticas nuevas de la sesión (y la guarda de `persona_miembros_app`, que vuelve a su forma de 0002).
+-- Las políticas nuevas de la sesión.
 DROP POLICY persona_invitado_vincular ON persona;
 DROP POLICY tenant_sesion_leer ON tenant;
 DROP POLICY empresa_sesion_leer ON empresa;
 DROP POLICY membresia_sesion_leer ON membresia;
 DROP POLICY persona_sesion_leer ON persona;
-ALTER POLICY persona_miembros_app ON persona
-  USING (
-    EXISTS (
-      SELECT 1 FROM membresia m
-      WHERE m.persona_id = persona.id AND m.empresa_id = (SELECT app_empresa_id())
-    )
-  );
 
 -- El vínculo: concesión, disparador, restricción única y columna.
 REVOKE UPDATE (usuario_auth_id) ON persona FROM zuluhub_app;
