@@ -214,6 +214,7 @@ jobs:
             pruebas: "src/modulos/identidad"
           - grupo: identidad (resto)
             archivos: "src/modulos/identidad/dominio/**/*.ts,!src/modulos/identidad/dominio/invitacion.ts"
+            pruebas: "src/modulos/identidad"
           - grupo: permisos y módulos
             archivos: "src/capacidades/permisos/**/*.ts,src/capacidades/modulos/**/*.ts"
           - grupo: plataforma (dominio)
