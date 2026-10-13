@@ -14,9 +14,9 @@ const unicidad = (restriccion: string | null): ErrorDePersistencia => ({
 });
 
 describe("el mapa de restricciones fiscales", () => {
-  it("los 24 errores de los disparadores son 24 nombres distintos del mapa y ninguno es NO_TRADUCIDA", () => {
-    expect(RESTRICCIONES_DE_DISPARADORES_DE_FISCAL).toHaveLength(24);
-    expect(new Set(RESTRICCIONES_DE_DISPARADORES_DE_FISCAL).size).toBe(24);
+  it("los 35 errores de los disparadores son 35 nombres distintos del mapa y ninguno es NO_TRADUCIDA", () => {
+    expect(RESTRICCIONES_DE_DISPARADORES_DE_FISCAL).toHaveLength(35);
+    expect(new Set(RESTRICCIONES_DE_DISPARADORES_DE_FISCAL).size).toBe(35);
     for (const nombre of RESTRICCIONES_DE_DISPARADORES_DE_FISCAL) {
       expect(ERRORES_DE_FISCAL_POR_RESTRICCION[nombre], nombre).not.toBe("NO_TRADUCIDA");
     }
@@ -41,6 +41,26 @@ describe("el mapa de restricciones fiscales", () => {
     expect(m.emisor_con_pv_activos).toBe("EMISOR_CON_PUNTOS_DE_VENTA_ACTIVOS");
     expect(m.emisor_empresa_no_operable).toBe("EMPRESA_NO_OPERABLE");
     expect(m.emisor_principal_activo_ck).toBe("EMISOR_PRINCIPAL_NO_SE_DESACTIVA");
+  });
+
+  it("los errores de la facturación que coinciden con uno del dominio usan exactamente su nombre", () => {
+    const m = ERRORES_DE_FISCAL_POR_RESTRICCION;
+    expect(m.comprobante_servicio_ck).toBe("FECHAS_DE_SERVICIO_INVALIDAS");
+    expect(m.comprobante_modo_c_ck).toBe("MODO_DE_PRECIO_INVALIDO_PARA_C");
+    expect(m.comprobante_linea_posicion_ck).toBe("DEMASIADOS_RENGLONES");
+    expect(m.comprobante_motivo_ck).toBe("MOTIVO_INVALIDO");
+    expect(m.comprobante_numero_uk).toBe("NUMERO_DUPLICADO");
+    expect(m.comprobante_en_vuelo_uk).toBe("SERIE_OCUPADA");
+    expect(m.comprobante_tipo_ck).toBe("TIPO_DE_COMPROBANTE_INVALIDO");
+    expect(m.comprobante_emisor_cuit_ck).toBe("CUIT_INVALIDO");
+    expect(m.comprobante_pv_fkey).toBe("PUNTO_DE_VENTA_NO_ENCONTRADO");
+    expect(m.certificado_cuit_titular_ck).toBe("CUIT_INVALIDO");
+  });
+
+  it("las dos únicas del alta de un comprobante dicen lo mismo («ya hay uno»): el repositorio las absorbe", () => {
+    const m = ERRORES_DE_FISCAL_POR_RESTRICCION;
+    expect(m.comprobante_identidad_uk).toBe("COMPROBANTE_YA_EXISTE");
+    expect(m.comprobante_manual_uk).toBe("COMPROBANTE_YA_EXISTE");
   });
 });
 
