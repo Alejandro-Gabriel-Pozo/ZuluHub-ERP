@@ -9,7 +9,8 @@
   },
   {
     "grupo": "cantidad",
-    "archivos": "src/primitivas/cantidad/**/*.ts"
+    "archivos": "src/primitivas/cantidad/**/*.ts",
+    "pruebas": "src/primitivas/cantidad src/primitivas/dinero"
   },
   {
     "grupo": "identificación fiscal, resultado y estados",
