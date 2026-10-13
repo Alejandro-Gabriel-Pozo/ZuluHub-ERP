@@ -104,6 +104,10 @@ export function opcionesDeInstancia(p: ParametrosDeInstancia): BetterAuthOptions
       useSecureCookies: true,
       defaultCookieAttributes: { httpOnly: true, sameSite: "lax", secure: true, path: "/" },
       database: { generateId: "uuid" },
+      // Comprobación de origen y de CSRF SIEMPRE encendidas: por omisión la librería las apaga cuando
+      // `NODE_ENV` vale `test`, y un servidor que arranque con otro valor no debe cambiar la defensa.
+      disableOriginCheck: false,
+      disableCSRFCheck: false,
     },
     rateLimit: { enabled: true, storage: "database" },
     disabledPaths: [...RUTAS_BLOQUEADAS],

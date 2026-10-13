@@ -47,6 +47,8 @@ export type ProveedorLocal = Readonly<{
    * alcances, `prompt`, cliente, retorno) y devuelve la dirección de retorno con `code` y `state`.
    */
   autorizar(urlDeAutorizacion: string, perfil: PerfilDePrueba): string;
+  /** Los `access_token` y `refresh_token` que el proveedor entregó (para comprobar que no se guardan en claro). */
+  tokensEntregados(): readonly string[];
   /** Cuántos pedidos al punto del token se recibieron. */
   pedidosDeToken(): number;
   /** Hasta que lleguen `n` pedidos al token, los retiene a todos y los suelta juntos (barrera de concurrencia). */
@@ -76,6 +78,7 @@ export async function levantarProveedorLocal(): Promise<ProveedorLocal> {
   let soltar: () => void = () => undefined;
   let compuerta: Promise<void> = Promise.resolve();
   const externos: string[] = [];
+  const entregados: string[] = [];
 
   const servidor: Server = createServer((pedido, respuesta) => {
     const trozos: Buffer[] = [];
@@ -120,11 +123,14 @@ export async function levantarProveedorLocal(): Promise<ProveedorLocal> {
           iat: ahora,
           exp: ahora + 3600,
         });
+        const accessToken = randomBytes(24).toString("hex");
+        const refreshToken = randomBytes(24).toString("hex");
+        entregados.push(accessToken, refreshToken);
         respuesta.writeHead(200, { "content-type": "application/json" });
         respuesta.end(
           JSON.stringify({
-            access_token: randomBytes(24).toString("hex"),
-            refresh_token: randomBytes(24).toString("hex"),
+            access_token: accessToken,
+            refresh_token: refreshToken,
             token_type: "Bearer",
             expires_in: 3600,
             scope: "openid email profile",
@@ -178,6 +184,7 @@ export async function levantarProveedorLocal(): Promise<ProveedorLocal> {
       vuelta.searchParams.set("state", estado);
       return vuelta.toString();
     },
+    tokensEntregados: () => entregados,
     pedidosDeToken: () => pedidos,
     retenerTokenHasta(n) {
       esperar = n;
@@ -340,9 +347,12 @@ export type AutenticacionDePrueba = Readonly<{
 export function armarAutenticacionDePrueba(
   base: BaseDePruebas,
   proveedor: ProveedorLocal,
-  opciones: { reloj?: () => Date; capacidadDeLaCache?: number } = {},
+  opciones: { reloj?: () => Date; capacidadDeLaCache?: number; url?: string } = {},
 ): AutenticacionDePrueba {
-  const conexion = crearConexionDeAutenticacion({ url: base.autenticacion, maximoDeConexiones: 8 });
+  const conexion = crearConexionDeAutenticacion({
+    url: opciones.url ?? base.autenticacion,
+    maximoDeConexiones: 8,
+  });
   const secreto = randomBytes(32).toString("hex");
   const registros: string[] = [];
   const autenticacion = crearAutenticacionDeBetterAuth({

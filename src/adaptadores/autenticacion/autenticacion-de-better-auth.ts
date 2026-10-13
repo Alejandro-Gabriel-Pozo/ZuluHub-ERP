@@ -5,7 +5,11 @@ import {
   sanearUbicacionDeError,
 } from "../../capacidades/autenticacion/codigos-de-ingreso";
 import { crearCacheAcotada } from "../../capacidades/autenticacion/cache-acotada";
-import { configuracionDeHost } from "../../capacidades/autenticacion/host-de-autenticacion";
+import { cuerpoPublicoDeSesion } from "../../capacidades/autenticacion/cuerpo-de-sesion";
+import {
+  RUTA_BASE_DE_INGRESO,
+  configuracionDeHost,
+} from "../../capacidades/autenticacion/host-de-autenticacion";
 import { rutaPermitida } from "../../capacidades/autenticacion/rutas-permitidas";
 import {
   LIMITES_DE_SESION,
@@ -74,6 +78,22 @@ export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion):
     c.capacidadDeLaCache ?? CAPACIDAD_DE_LA_CACHE,
   );
 
+  /**
+   * Un fallo que no es de una sesión mala sino de la librería o de la base (la conexión, un esquema que no
+   * coincide, un 5xx): el detalle va al registro del servidor y lo que sale es un error sin detalle. Sin
+   * esto, el mensaje crudo de Postgres (con el nombre del rol, por ejemplo) viajaría hasta quien llama.
+   */
+  function falloInterno(error: unknown): ErrorInternoDeIngreso {
+    if (error instanceof ErrorInternoDeIngreso) return error;
+    const detalle = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    try {
+      registrar(`[ingreso] fallo interno: ${detalle}`);
+    } catch {
+      // Un registro que falla no puede tapar el error.
+    }
+    return new ErrorInternoDeIngreso(500);
+  }
+
   function crearInstancia(host: string) {
     const configuracion = configuracionDeHost(host);
     if (!configuracion.ok) throw new ErrorDeConfiguracion("el host de ingreso no es válido");
@@ -108,7 +128,7 @@ export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion):
         // Una sesión que no vale (otro host, vencida, borrada) llega como 401: es «no hay sesión».
         // Cualquier otra cosa (la base caída, un 5xx) es un fallo y se propaga.
         if (isAPIError(error) && error.statusCode === 401) return null;
-        throw error;
+        throw falloInterno(error);
       }
       const datos = leida.response;
       if (datos === null) return null;
@@ -155,9 +175,14 @@ export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion):
         ...(sinCuerpo ? {} : { body: await pedido.arrayBuffer() }),
         redirect: "manual",
       });
-      const respuesta = await instancia.handler(copia);
-
-      if (respuesta.status >= 500) throw new ErrorInternoDeIngreso(respuesta.status);
+      let respuesta: Response;
+      try {
+        respuesta = await instancia.handler(copia);
+      } catch (error) {
+        throw falloInterno(error);
+      }
+      if (respuesta.status >= 500)
+        throw falloInterno(new Error(`la librería respondió ${respuesta.status}`));
       const cabeceras = new Headers(respuesta.headers);
       if (!cabeceras.has("cache-control")) cabeceras.set("Cache-Control", "private, no-store");
 
@@ -175,6 +200,16 @@ export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion):
         if (!esJson) return new Response(null, { status: respuesta.status, headers: cabeceras });
         cabeceras.set("Content-Type", "application/json");
         const cuerpo = { codigo: codigoPublicoDeSolicitud(await respuesta.text()) };
+        return new Response(JSON.stringify(cuerpo), {
+          status: respuesta.status,
+          headers: cabeceras,
+        });
+      }
+      if (origen.pathname === `${RUTA_BASE_DE_INGRESO}/get-session`) {
+        // Sin el token de la sesión ni los datos del usuario en el cuerpo (ver `cuerpoPublicoDeSesion`).
+        cabeceras.delete("content-length");
+        cabeceras.set("Content-Type", "application/json");
+        const cuerpo = cuerpoPublicoDeSesion(await respuesta.text());
         return new Response(JSON.stringify(cuerpo), {
           status: respuesta.status,
           headers: cabeceras,
