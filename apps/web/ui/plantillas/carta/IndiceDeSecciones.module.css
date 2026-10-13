@@ -1,0 +1,65 @@
+.indice {
+  padding: var(--espacio-4);
+  scroll-margin-top: var(--espacio-3);
+}
+
+.titulo {
+  margin: 0 0 var(--espacio-2);
+  font-size: 1em;
+  font-weight: var(--tipo-peso-fuerte);
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-texto-suave);
+}
+
+.lista {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.enlace {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-1) var(--espacio-1);
+  border-bottom: var(--borde-grosor) solid var(--color-borde);
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+  text-decoration: none;
+}
+
+.enlace:hover {
+  background: var(--color-superficie);
+}
+
+.cantidad {
+  flex: none;
+  color: var(--color-texto-suave);
+  font-weight: var(--tipo-peso-normal);
+  font-variant-numeric: tabular-nums;
+}
+
+/* El botón flotante: se queda pegado abajo mientras se lee y lleva al índice sin necesitar JavaScript. */
+.flotante {
+  position: sticky;
+  bottom: var(--espacio-3);
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  width: max-content;
+  max-width: 100%;
+  min-height: var(--objetivo-minimo);
+  margin: var(--espacio-3) auto;
+  padding: 0 var(--espacio-5);
+  border-radius: 999px;
+  background: var(--color-texto);
+  color: var(--color-fondo);
+  font-weight: var(--tipo-peso-fuerte);
+  text-decoration: none;
+  box-shadow: var(--sombra-elevada);
+}

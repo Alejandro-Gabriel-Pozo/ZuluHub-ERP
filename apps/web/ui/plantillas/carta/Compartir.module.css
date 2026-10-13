@@ -1,0 +1,17 @@
+.raiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+/* El mensaje de estado se centra bajo el botón. */
+.raiz > div {
+  text-align: center;
+  color: var(--color-texto-suave);
+}
+
+.contenido {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
