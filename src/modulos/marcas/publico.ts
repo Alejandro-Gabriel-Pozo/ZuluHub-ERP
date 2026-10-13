@@ -98,5 +98,20 @@ export {
   type DominioGuardado,
   type RepositorioDeDominios,
 } from "./persistencia/repositorios";
-export type { DominiosDb } from "./persistencia/tablas";
+export type { DominiosDb, MarcasParaMailDb, PublicoDb } from "./persistencia/tablas";
 export { errorDeDominioDeRestriccion, traducirErroresDeDominio } from "./persistencia/traducir";
+
+// M4: resolución pública de hosts y marca de los mails (solo lecturas).
+export {
+  decidirMarcaDeMail,
+  type DatosDeMarcaParaMail,
+  type MarcaDeMailDecidida,
+  type RespaldoDeMail,
+} from "./dominio/marca-de-mail";
+export {
+  crearLecturaDeMarcaParaMail,
+  crearLecturaPublicaDeMarcas,
+  type HostServible,
+  type LecturaDeMarcaParaMail,
+  type LecturaPublicaDeMarcas,
+} from "./persistencia/lecturas";

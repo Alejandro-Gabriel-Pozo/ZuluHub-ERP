@@ -43,3 +43,36 @@ export type ColumnasCoinciden =
     ? true
     : never;
 export const COLUMNAS_COINCIDEN: ColumnasCoinciden = true;
+
+/**
+ * Lo que lee la puerta PÚBLICA (rol `zuluhub_publico`, sin contexto): la vista `resolucion_de_host` y, de
+ * `version_de_marca`, solo la columna que dice que la marca tiene una versión confirmada y vigente. Son
+ * exactamente las columnas que la migración 0007 le concede a ese rol; pedir otra falla con `42501`.
+ */
+export type PublicoDb = {
+  resolucion_de_host: {
+    host: string;
+    superficie: string;
+    duenio_marca_id: string | null;
+    duenio_empresa_id: string | null;
+    marca_id: string;
+  };
+  version_de_marca: { marca_id: string };
+};
+
+/**
+ * Lo que lee la APLICACIÓN (rol `zuluhub_app`, con contexto) para saber desde qué marca sale un mail:
+ * el tenant, su marca, las versiones vigentes de esa marca y su dominio canónico. Las políticas de
+ * 0007 muestran solo versiones confirmadas y ya vigentes, y solo dominios ACTIVOS y canónicos.
+ */
+export type MarcasParaMailDb = {
+  tenant: { id: string; marca_id: string };
+  marca: { id: string; es_principal: boolean };
+  version_de_marca: {
+    marca_id: string;
+    numero: number | null;
+    vigente_desde: Date | null;
+    nombre_visible: string | null;
+  };
+  dominio: { host: string; superficie: string; marca_id: string; es_canonico: boolean };
+};

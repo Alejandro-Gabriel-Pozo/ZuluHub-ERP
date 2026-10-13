@@ -45,6 +45,9 @@ export const NOMBRES_DE_ENTORNO = [
   },
   { nombre: "ZULUHUB_DB_APP", forma: cadenaDePostgres, piezas: ["transacciones-app"] },
   { nombre: "ZULUHUB_DB_TRABAJOS", forma: cadenaDePostgres, piezas: ["transacciones-trabajos"] },
+  // La puerta pública (rol `zuluhub_publico`, solo lectura, sin sesión): resolución de marca por host.
+  // Es una cadena de conexión propia y distinta de las demás; el valor lo carga el dueño en Vercel.
+  { nombre: "ZULUHUB_DB_PUBLICO", forma: cadenaDePostgres, piezas: ["transacciones-publicas"] },
   { nombre: ZULUHUB_SECRETO_INVITACIONES, forma: texto, piezas: ["tokens"] },
   { nombre: ZULUHUB_RESEND_API_KEY, forma: texto, piezas: ["correo"] },
   { nombre: ZULUHUB_CORREO_REMITENTE, forma: texto, piezas: ["correo"] },

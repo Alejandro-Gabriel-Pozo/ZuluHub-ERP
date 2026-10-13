@@ -13,7 +13,12 @@ import {
   ZULUHUB_CLAVE_CONTEXTO,
   leerClaveDeContexto,
 } from "../adaptadores/postgres/contexto-firmado";
+import { crearResolucionDeHost, type TxPublica } from "../adaptadores/postgres/resolucion-de-host";
 import { crearTrabajosDePostgres, type TrabajosDb } from "../adaptadores/postgres/trabajos";
+import {
+  crearTransaccionesPublicas,
+  type TransaccionesPublicasDePostgres,
+} from "../adaptadores/postgres/transacciones-publicas";
 import {
   crearTransacciones,
   type TransaccionesDePostgres,
@@ -44,6 +49,7 @@ import {
   type RepositorioDePersonas,
   type RepositorioDeTraspasos,
 } from "../modulos/identidad/publico";
+import { crearLecturaPublicaDeMarcas, type PublicoDb } from "../modulos/marcas/publico";
 import {
   crearRepositorioDeTenants,
   type RepositorioDeTenants,
@@ -52,6 +58,7 @@ import {
 import type { Auditoria } from "../puertos/auditoria";
 import type { CargaDeAutorizacion } from "../puertos/autorizacion";
 import type { Correo } from "../puertos/correo";
+import type { ResolucionDeHost } from "../puertos/marcas";
 import type { Tokens } from "../puertos/tokens";
 import type { Trabajos } from "../puertos/trabajos";
 import {
@@ -96,6 +103,10 @@ export type Conexiones = Readonly<{
   transaccionesDeApp: () => TransaccionesDePostgres<TxDeApp>;
   /** Puerta `TRABAJOS` (`ZULUHUB_DB_TRABAJOS`): solo la cola. */
   transaccionesDeTrabajos: () => TransaccionesDePostgres<TxDeCola>;
+  /** Puerta pública (`ZULUHUB_DB_PUBLICO`, rol `zuluhub_publico`): solo lectura, sin sesión ni contexto. */
+  transaccionesPublicas: () => TransaccionesPublicasDePostgres<TxPublica>;
+  /** Resolución de un host a su dueño y su marca, sobre la puerta pública. */
+  resolucionDeHost: () => ResolucionDeHost;
   tokens: () => Tokens;
   /** Origen y marca del mail (el respaldo hasta que exista M7) y la clave del proveedor. */
   configuracionDeCorreo: () => ConfiguracionDeCorreo;
@@ -125,6 +136,12 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
   const configuracionDeCorreo = armarPieza("correo", (valores) =>
     leerConfiguracionDeCorreo(valores),
   );
+  const transaccionesPublicas = armarPieza("transacciones-publicas", (valores) =>
+    crearTransaccionesPublicas<TxPublica>({
+      url: valores.ZULUHUB_DB_PUBLICO,
+      armar: (db) => ({ marcas: crearLecturaPublicaDeMarcas(db.withTables<PublicoDb>()) }),
+    }),
+  );
 
   return {
     transaccionesDeApp: armarPieza("transacciones-app", (valores) =>
@@ -153,6 +170,8 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
         armar: (db) => ({ cola: crearColaDePostgres(db.withTables<ColaDb>()) }),
       }),
     ),
+    transaccionesPublicas,
+    resolucionDeHost: perezoso(() => crearResolucionDeHost(transaccionesPublicas())),
     tokens: armarPieza("tokens", (valores) =>
       crearTokensHmac(leerSecretoDeInvitaciones(valores[ZULUHUB_SECRETO_INVITACIONES])),
     ),
