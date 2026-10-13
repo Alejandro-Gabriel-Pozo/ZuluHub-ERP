@@ -90,7 +90,8 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
       (
         await filas<{ n: string }>(
           `select count(*) as n from pg_stat_activity
-            where datname = current_database() and pid <> pg_backend_pid() and xact_start is not null`,
+            where datname = current_database() and pid <> pg_backend_pid() and xact_start is not null
+              and backend_type = 'client backend'`,
         )
       )[0]?.n,
     );
