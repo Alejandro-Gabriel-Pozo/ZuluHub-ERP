@@ -30,6 +30,9 @@
     "src/modulos/planes/dominio/**/*.ts",
     "src/modulos/marcas/dominio/**/*.ts",
     "src/capacidades/experiencia/**/*.ts",
+    "src/composicion/entorno.ts",
+    "src/composicion/perezoso.ts",
+    "src/composicion/contextos.ts",
     "!src/**/*.test.ts"
   ],
   "coverageAnalysis": "off",

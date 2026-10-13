@@ -7,6 +7,7 @@
       "ignoreDependencies": ["@stryker-mutator/command-runner", "@types/react-dom", "next"]
     },
     "apps/web": {
+      "entry": ["servidor/**/*.ts"],
       "project": ["**/*.{ts,tsx}"]
     }
   },
