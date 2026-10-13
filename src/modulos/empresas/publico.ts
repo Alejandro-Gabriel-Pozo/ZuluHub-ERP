@@ -7,6 +7,7 @@ export {
   type Empresa,
   type ErrorDeEmpresa,
 } from "./dominio/empresa";
+export { datosDeJornada } from "./datos-de-jornada";
 export { DECLARACIONES as DECLARACIONES_DE_EMPRESAS } from "./casos-de-uso/declaraciones";
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS } from "./consultas/declaraciones";
 export {
@@ -15,11 +16,14 @@ export {
   decidirDesactivacion,
   decidirEdicion,
   decidirReactivacion,
+  horaDeCorteValida,
   nombreDeSucursalValido,
+  type DatosDeJornada,
   type DecisionDeAlta,
   type DecisionDeDesactivacion,
   type DecisionDeEdicion,
   type DecisionDeReactivacion,
+  type ErrorDeHoraDeCorte,
   type ErrorDeNombreDeSucursal,
   type ErrorDeSucursal,
   type Sucursal,

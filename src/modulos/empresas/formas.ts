@@ -30,11 +30,15 @@ const versionEsperada = z
 /** `crearSucursal`: el nombre tal cual lo escribió la persona; el dominio lo valida. */
 export const formaDeCrearSucursal = z.object({ nombre: z.string() });
 
-/** `editarSucursal`: la sucursal, la versión que se vio y el nombre nuevo. */
+/**
+ * `editarSucursal`: la sucursal, la versión que se vio, el nombre y, si se cambia, la hora de corte
+ * `HH:MM` de la jornada (el dominio la valida; omitida, no se toca).
+ */
 export const formaDeEditarSucursal = z.object({
   sucursalId: idDeSucursal,
   versionEsperada,
   nombre: z.string(),
+  horaDeCorte: z.string().optional(),
 });
 
 /** `desactivarSucursal` y `reactivarSucursal`: reciben la misma entrada, solo la sucursal. */

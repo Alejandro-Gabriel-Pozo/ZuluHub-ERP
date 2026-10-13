@@ -48,6 +48,7 @@ export function armarListarSucursales({
             id: s.id,
             nombre: s.nombre,
             activa: s.activa,
+            horaDeCorte: s.horaDeCorte,
             version: s.version,
             zonaHoraria: empresa.zonaHoraria,
           })),
