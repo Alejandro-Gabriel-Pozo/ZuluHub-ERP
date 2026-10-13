@@ -14,7 +14,9 @@ import type { BarridoDeAutenticacion } from "../../puertos/autenticacion";
  *
  * Una transacción corta, tres borrados. Cada borrado toca como mucho `FILAS_POR_PASADA` filas: si hay
  * más, la próxima pasada sigue (no se retiene un bloqueo largo sobre una tabla que usa cada ingreso).
- * Idempotente: lo que ya no está no se vuelve a borrar y repetir no falla.
+ * Idempotente: lo que ya no está no se vuelve a borrar y repetir no falla. Dos barridos a la vez no se
+ * pisan: cada uno toma las filas que otro no tiene bloqueadas (`FOR UPDATE SKIP LOCKED`), así que no hay
+ * esperas ni interbloqueos y entre los dos no borran nada dos veces.
  */
 export type AutenticacionDb = {
   session: {
@@ -60,7 +62,9 @@ export function crearBarridoDeAutenticacion(
                   o("updatedAt", "<=", sinUso),
                 ]),
               )
-              .limit(filasPorPasada),
+              .limit(filasPorPasada)
+              .forUpdate()
+              .skipLocked(),
           )
           .executeTakeFirst();
         const verificaciones = await trx
@@ -72,7 +76,9 @@ export function crearBarridoDeAutenticacion(
               .selectFrom("verification")
               .select("id")
               .where("expiresAt", "<=", ahora)
-              .limit(filasPorPasada),
+              .limit(filasPorPasada)
+              .forUpdate()
+              .skipLocked(),
           )
           .executeTakeFirst();
         const limitesDePedidos = await trx
@@ -84,7 +90,9 @@ export function crearBarridoDeAutenticacion(
               .selectFrom("rateLimit")
               .select("id")
               .where("lastRequest", "<", String(limiteDeContadores))
-              .limit(filasPorPasada),
+              .limit(filasPorPasada)
+              .forUpdate()
+              .skipLocked(),
           )
           .executeTakeFirst();
         return {

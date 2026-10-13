@@ -1,3 +1,8 @@
+import { crearAutenticacionDeBetterAuth } from "../adaptadores/autenticacion/autenticacion-de-better-auth";
+import {
+  leerClienteDeGoogle,
+  leerSecretoDeAutenticacion,
+} from "../adaptadores/autenticacion/configuracion";
 import { crearCorreoResend } from "../adaptadores/correo/correo-resend";
 import {
   leerConfiguracionDeCorreo,
@@ -9,6 +14,7 @@ import {
   type AutorizacionDb,
 } from "../adaptadores/postgres/autorizacion";
 import { crearColaDePostgres, type ColaDb } from "../adaptadores/postgres/cola-de-trabajos";
+import { crearConexionDeAutenticacion } from "../adaptadores/postgres/conexion-de-autenticacion";
 import {
   crearNivelesDeControlDePostgres,
   type NivelesDeControlDb,
@@ -62,6 +68,7 @@ import {
   type TenantsDb,
 } from "../modulos/tenants/publico";
 import type { Auditoria } from "../puertos/auditoria";
+import type { Autenticacion, BarridoDeAutenticacion } from "../puertos/autenticacion";
 import type { CargaDeAutorizacion } from "../puertos/autorizacion";
 import type { Correo } from "../puertos/correo";
 import type { ResolucionDeHost } from "../puertos/marcas";
@@ -124,6 +131,10 @@ export type Conexiones = Readonly<{
   transaccionesPublicas: () => TransaccionesPublicasDePostgres<TxPublica>;
   /** Resolución de un host a su dueño y su marca, sobre la puerta pública. */
   resolucionDeHost: () => ResolucionDeHost;
+  /** Ingreso con Google y sesión por host (Better Auth, rol `zuluhub_autenticacion`): `ZULUHUB_DB_AUTENTICACION`, el secreto de la app y el cliente de Google. */
+  autenticacion: () => Autenticacion;
+  /** Barrido de sesiones y verificaciones vencidas (lo llama el cron de trabajos): solo `ZULUHUB_DB_AUTENTICACION`. */
+  barridoDeAutenticacion: () => BarridoDeAutenticacion;
   tokens: () => Tokens;
   /** Origen y marca del mail (el respaldo hasta que exista M7) y la clave del proveedor. */
   configuracionDeCorreo: () => ConfiguracionDeCorreo;
@@ -135,11 +146,14 @@ export type OpcionesDeConexiones = Readonly<{
   fuente?: () => FuenteDeEntorno;
   /** Registro del servidor: recibe el detalle (con NOMBRES, nunca valores) de un fallo de entorno. */
   registrar?: (detalle: string) => void;
+  /** Registro del servidor para lo que cuenta la librería de ingreso (con detalle: nunca sale en una respuesta). */
+  registrarDeIngreso?: (detalle: string) => void;
 }>;
 
 export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones {
   const fuente = opciones.fuente ?? entornoDelProceso;
   const registrar = opciones.registrar ?? (() => undefined);
+  const registrarDeIngreso = opciones.registrarDeIngreso ?? registrar;
 
   /** Valida las variables de la pieza y arma; cualquier fallo de entorno se registra y falla cerrado. */
   const armarPieza = <P extends Pieza, T>(
@@ -157,6 +171,14 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
     crearTransaccionesPublicas<TxPublica>({
       url: valores.ZULUHUB_DB_PUBLICO,
       armar: (db) => ({ marcas: crearLecturaPublicaDeMarcas(db.withTables<PublicoDb>()) }),
+    }),
+  );
+
+  const conexionDeAutenticacion = armarPieza("conexion-de-autenticacion", (valores) =>
+    crearConexionDeAutenticacion({
+      url: valores.ZULUHUB_DB_AUTENTICACION,
+      alCortarseUnaConexionOciosa: (error) =>
+        registrarDeIngreso(`conexión ociosa de autenticación cortada: ${error.message}`),
     }),
   );
 
@@ -191,6 +213,15 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
     ),
     transaccionesPublicas,
     resolucionDeHost: perezoso(() => crearResolucionDeHost(transaccionesPublicas())),
+    autenticacion: armarPieza("autenticacion", (valores) =>
+      crearAutenticacionDeBetterAuth({
+        db: conexionDeAutenticacion().db,
+        secreto: leerSecretoDeAutenticacion(valores.ZULUHUB_AUTH_SECRETO_EMPRESA),
+        google: leerClienteDeGoogle(valores.GOOGLE_CLIENT_ID, valores.GOOGLE_CLIENT_SECRET),
+        registrar: registrarDeIngreso,
+      }),
+    ),
+    barridoDeAutenticacion: () => conexionDeAutenticacion().barrido,
     tokens: armarPieza("tokens", (valores) =>
       crearTokensHmac(leerSecretoDeInvitaciones(valores[ZULUHUB_SECRETO_INVITACIONES])),
     ),

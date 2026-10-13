@@ -17,13 +17,17 @@ import { perezoso } from "./perezoso";
  * sesión, solo lectura, con su propia conexión. Devuelve el host servible o nada; la configuración
  * pública completa de la marca (tema, logo, vocabulario) llega con la puerta web (M9).
  *
- * Todavía no están (no tienen contraparte en el código): la autenticación (W3b) y fiscal. Se suman en
- * sus tramos. `consultasDeSesion` (la persona del usuario y sus empresas, puerta `SESION`) ya está (W3a).
+ * Todavía no está fiscal (no tiene contraparte en el código); se suma en su tramo. `consultasDeSesion` (la
+ * persona del usuario y sus empresas, puerta `SESION`) llegó con W3a. La autenticación (W3b) es otra
+ * puerta: `autenticacion()` dice QUIÉN es (usuario y email verificado, por host) y `barridoDeAutenticacion()`
+ * es lo que llama el cron; la persona y las empresas salen después, con el contexto `SESION`.
  */
 export function armarWeb(conexiones: Conexiones) {
   const reglas = REGLAS_DE_EMPRESA;
   return {
     resolucionDeHost: () => conexiones.resolucionDeHost(),
+    autenticacion: () => conexiones.autenticacion(),
+    barridoDeAutenticacion: () => conexiones.barridoDeAutenticacion(),
     casosDeUsoDeEmpresas: perezoso(() =>
       crearCasosDeUsoDeEmpresas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
     ),

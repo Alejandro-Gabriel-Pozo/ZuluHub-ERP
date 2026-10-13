@@ -5,6 +5,11 @@ import {
   ZULUHUB_RESEND_API_KEY,
   ZULUHUB_URL_BASE,
 } from "../adaptadores/correo/configuracion";
+import {
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
+  ZULUHUB_AUTH_SECRETO_EMPRESA,
+} from "../adaptadores/autenticacion/configuracion";
 import { ZULUHUB_CLAVE_CONTEXTO } from "../adaptadores/postgres/contexto-firmado";
 import { ErrorDeConfiguracion } from "../adaptadores/postgres/errores";
 import { ZULUHUB_SECRETO_INVITACIONES } from "../adaptadores/tokens/tokens-hmac";
@@ -48,6 +53,17 @@ export const NOMBRES_DE_ENTORNO = [
   // La puerta pública (rol `zuluhub_publico`, solo lectura, sin sesión): resolución de marca por host.
   // Es una cadena de conexión propia y distinta de las demás; el valor lo carga el dueño en Vercel.
   { nombre: "ZULUHUB_DB_PUBLICO", forma: cadenaDePostgres, piezas: ["transacciones-publicas"] },
+  // La autenticación (W3b): el rol `zuluhub_autenticacion` (solo su esquema, sin DDL) con su propia cadena, el
+  // secreto de Better Auth de la app de empresa y el cliente OAuth de Google. La conexión se pide sola (el
+  // barrido del cron no necesita ni el secreto ni Google).
+  {
+    nombre: "ZULUHUB_DB_AUTENTICACION",
+    forma: cadenaDePostgres,
+    piezas: ["conexion-de-autenticacion"],
+  },
+  { nombre: ZULUHUB_AUTH_SECRETO_EMPRESA, forma: texto, piezas: ["autenticacion"] },
+  { nombre: GOOGLE_CLIENT_ID, forma: texto, piezas: ["autenticacion"] },
+  { nombre: GOOGLE_CLIENT_SECRET, forma: texto, piezas: ["autenticacion"] },
   { nombre: ZULUHUB_SECRETO_INVITACIONES, forma: texto, piezas: ["tokens"] },
   { nombre: ZULUHUB_RESEND_API_KEY, forma: texto, piezas: ["correo"] },
   { nombre: ZULUHUB_CORREO_REMITENTE, forma: texto, piezas: ["correo"] },
