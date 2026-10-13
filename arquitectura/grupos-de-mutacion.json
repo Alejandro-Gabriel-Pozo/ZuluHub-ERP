@@ -85,7 +85,7 @@
   },
   {
     "grupo": "marcas (definición, versión y vigencia)",
-    "archivos": "src/modulos/marcas/dominio/**/*.ts,!src/modulos/marcas/dominio/host.ts,!src/modulos/marcas/dominio/tema.ts,!src/modulos/marcas/dominio/jerarquia.ts,!src/modulos/marcas/dominio/ciclo-de-dominio.ts",
+    "archivos": "src/modulos/marcas/dominio/**/*.ts,!src/modulos/marcas/dominio/host.ts,!src/modulos/marcas/dominio/tema.ts,!src/modulos/marcas/dominio/jerarquia.ts,!src/modulos/marcas/dominio/ciclo-de-dominio.ts,!src/modulos/marcas/dominio/marca-de-mail.ts",
     "pruebas": "src/modulos/marcas"
   },
   {
@@ -107,6 +107,11 @@
     "grupo": "marcas (ciclo de vida de los dominios)",
     "archivos": "src/modulos/marcas/dominio/ciclo-de-dominio.ts",
     "pruebas": "src/modulos/marcas/dominio/ciclo-de-dominio.test.ts"
+  },
+  {
+    "grupo": "marcas (marca de los mails)",
+    "archivos": "src/modulos/marcas/dominio/marca-de-mail.ts",
+    "pruebas": "src/modulos/marcas/dominio/marca-de-mail.test.ts"
   },
   {
     "grupo": "web (puerta mínima)",

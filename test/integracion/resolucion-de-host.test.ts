@@ -5,6 +5,11 @@ import { crearResolucionDeHost } from "../../src/adaptadores/postgres/resolucion
 import { crearTransaccionesPublicas } from "../../src/adaptadores/postgres/transacciones-publicas";
 import { empresaId, marcaComercialId } from "../../src/primitivas/identificadores/marca";
 import type { SuperficieDeHost } from "../../src/puertos/marcas";
+import {
+  comoAdminDePlataforma,
+  crearCasosDeDominios,
+  crearEntornoDeDominios,
+} from "./dominios-apoyo";
 import { crearBaseAparte } from "./entorno";
 import {
   codigoAlAzar,
@@ -17,6 +22,7 @@ import {
   hostAlAzar,
   marcaPrincipal,
 } from "./marcas-apoyo";
+import { claveAlAzar } from "./plataforma-apoyo";
 import { crearEntornoPublico } from "./resolucion-apoyo";
 
 /**
@@ -376,6 +382,63 @@ describe.skipIf(base === null)("resolución de host por la puerta pública", () 
       const respuestas = await Promise.all(Array.from({ length: 60 }, () => resolver(m.host)));
       expect(new Set(respuestas.map((r) => JSON.stringify(r))).size).toBe(1);
       expect(respuestas[0]?.ok && respuestas[0].valor?.host).toBe(m.host);
+    });
+  });
+
+  // ===============================================================================================
+  describe("de punta a punta con los casos de uso de dominios (M4a)", () => {
+    it("un dominio agregado, verificado y activado por la plataforma NO se sirve hasta que su marca confirma una versión; retirarlo lo saca", async () => {
+      const entornoDeCasos = crearEntornoDeDominios(propia.base, 4);
+      const casos = crearCasosDeDominios(entornoDeCasos);
+      try {
+        const marca = await crearMarca(dueno, { padre: principal });
+        const host = hostAlAzar();
+        const clave = () => claveAlAzar();
+        const agregado = await casos.agregarDominio(comoAdminDePlataforma(), {
+          claveDeIdempotencia: clave(),
+          host,
+          superficie: "APP",
+          titular: "OPERADOR",
+          esCanonico: false,
+          duenio: { tipo: "MARCA", marcaId: marcaComercialId(marca) },
+        });
+        if (!agregado.ok) throw new Error(`no se pudo agregar: ${JSON.stringify(agregado.error)}`);
+        const id = agregado.valor.dominioId;
+        const verificado = await casos.verificarDominio(comoAdminDePlataforma(), {
+          claveDeIdempotencia: clave(),
+          dominioId: id,
+          verificadoEn: new Date("2026-10-11T11:00:00.000Z"),
+        });
+        expect(verificado.ok).toBe(true);
+        // Agregado y verificado: nada.
+        expect(await resolver(host)).toEqual(NEUTRAL);
+        const activado = await casos.activarDominio(comoAdminDePlataforma(), {
+          claveDeIdempotencia: clave(),
+          dominioId: id,
+        });
+        expect(activado.ok && activado.valor.estado).toBe("ACTIVO");
+        // El caso de uso lo dejó ACTIVO, la vista de 0007 ya lo muestra... y la puerta sigue neutral:
+        // la marca todavía no tiene versión confirmada.
+        const enVista = await dueno.query("select 1 from resolucion_de_host where host = $1", [
+          host,
+        ]);
+        expect(enVista.rowCount).toBe(1);
+        expect(await resolver(host)).toEqual(NEUTRAL);
+        // Confirmada la versión 1 de la marca, el host se sirve.
+        await crearVersionDeMarcaConfirmada(dueno, marca, { nombreVisible: "Mi producto" });
+        const r = await resolver(host);
+        expect(r.ok && r.valor?.marcaId).toBe(marca);
+        // Retirarlo (la baja del dominio) lo saca de la puerta enseguida.
+        const retirado = await casos.retirarDominio(comoAdminDePlataforma(), {
+          claveDeIdempotencia: clave(),
+          dominioId: id,
+          motivo: "se fue el cliente",
+        });
+        expect(retirado.ok).toBe(true);
+        expect(await resolver(host)).toEqual(NEUTRAL);
+      } finally {
+        await entornoDeCasos.cerrar();
+      }
     });
   });
 });
