@@ -147,10 +147,14 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
                   creado_por: x.persona,
                 });
                 const columnas = Object.keys(datos);
+                // SIN objetivo de conflicto, como el alta real (`repositorio-de-comprobantes.crear`): con
+                // `ON CONFLICT (empresa_id, origen_id) WHERE origen_tipo = 'MANUAL'` solo esa única arbitra, y la
+                // perdedora que llega entre la comprobación y la inserción choca con `comprobante_identidad_uk`
+                // (23505) en vez de recibir el «ya estaba» (visto con la máquina cargada: 5 de 40 corridas).
                 const r = o(
                   await ej(
                     `insert into comprobante (${columnas.join(", ")}) values (${columnas.map((_, i) => `$${i + 1}`).join(", ")})
-                     on conflict (empresa_id, origen_id) where origen_tipo = 'MANUAL' do nothing returning id`,
+                     on conflict do nothing returning id`,
                     columnas.map((c) => datos[c]),
                   ),
                 );
