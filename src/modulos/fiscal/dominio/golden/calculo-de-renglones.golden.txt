@@ -1,0 +1,76 @@
+{
+  "ADR-006 ejemplo 1 (3 × $ 9,95 − 10 %, IVA incluido)": {
+    "total": "80.60",
+    "renglones": [
+      "26.87",
+      "26.87",
+      "26.86"
+    ],
+    "neto": "66.61",
+    "iva": "13.99",
+    "desglose": [
+      {
+        "alicuota": "21",
+        "total": "80.60",
+        "neto": "66.61",
+        "iva": "13.99"
+      }
+    ]
+  },
+  "redondeo-e-iva §3 (dos alícuotas, IVA incluido)": {
+    "total": "2260.00",
+    "renglones": [
+      "1210.00",
+      "1050.00"
+    ],
+    "neto": "1950.23",
+    "iva": "309.77",
+    "desglose": [
+      {
+        "alicuota": "10.5",
+        "total": "1050.00",
+        "neto": "950.23",
+        "iva": "99.77"
+      },
+      {
+        "alicuota": "21",
+        "total": "1210.00",
+        "neto": "1000.00",
+        "iva": "210.00"
+      }
+    ]
+  },
+  "los mismos netos cargados con IVA discriminado": {
+    "total": "2260.00",
+    "renglones": [
+      "1210.00",
+      "1050.00"
+    ],
+    "neto": "1950.23",
+    "iva": "309.77",
+    "desglose": [
+      {
+        "alicuota": "10.5",
+        "total": "1050.00",
+        "neto": "950.23",
+        "iva": "99.77"
+      },
+      {
+        "alicuota": "21",
+        "total": "1210.00",
+        "neto": "1000.00",
+        "iva": "210.00"
+      }
+    ]
+  },
+  "letra C (sin alícuota)": {
+    "total": "36.87",
+    "renglones": [
+      "26.87",
+      "10.00"
+    ],
+    "neto": "36.87",
+    "iva": "0.00",
+    "desglose": []
+  }
+}

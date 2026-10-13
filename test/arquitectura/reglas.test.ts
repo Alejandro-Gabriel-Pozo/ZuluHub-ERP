@@ -329,6 +329,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "src/modulos/marcas/publico.ts": exporta,
       },
     },
+    {
+      regla: "fiscal-sin-negocio-ajeno",
+      archivos: {
+        "src/modulos/fiscal/dominio/d.ts": importa("../../ventas/publico"),
+        "src/modulos/ventas/publico.ts": exporta,
+      },
+    },
   ];
 
   it("cada regla definida tiene su caso de violación", () => {
@@ -663,5 +670,28 @@ describe("reglas de arquitectura (ADR-001)", () => {
       });
       expect(v).toEqual([]);
     });
+  });
+});
+
+describe("facturación F1: el facturador funciona solo (spec H7 facturación §B.0 y §B.9)", () => {
+  it("fiscal no importa ventas, caja, catálogo, clientes ni stock, ni por su publico.ts", async () => {
+    for (const modulo of ["ventas", "caja", "catalogo", "clientes", "stock"]) {
+      const v = await violacionesDe({
+        "src/modulos/fiscal/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+      });
+      expect(v, modulo).toContain("fiscal-sin-negocio-ajeno");
+    }
+  });
+
+  it("fiscal sí usa los módulos de base (identidad, empresas) y los demás módulos sí usan fiscal por su publico.ts", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/publico.ts": exporta,
+      "src/modulos/fiscal/dominio/d.ts": exporta,
+      "src/modulos/fiscal/casos-de-uso/c.ts": importa("../dominio/d"),
+      "src/modulos/fiscal/publico.ts": importa("./casos-de-uso/c"),
+      "src/modulos/ventas/casos-de-uso/v.ts": importa("../../fiscal/publico"),
+    });
+    expect(v).not.toContain("fiscal-sin-negocio-ajeno");
   });
 });
