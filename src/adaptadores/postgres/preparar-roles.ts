@@ -1,6 +1,7 @@
 import { createHash, createHmac, pbkdf2Sync, randomBytes } from "node:crypto";
 import pg from "pg";
 // Con extensión `.ts` a propósito: lo carga `scripts/migrar-base.ts` directamente con Node.
+import { describirFallaDeBase } from "./describir-falla-de-base.ts";
 import { ErrorDeMigracion, hostConPooler } from "./migraciones.ts";
 import { claveAlAzar, type RolPorPreparar } from "./roles-de-la-aplicacion.ts";
 
@@ -45,7 +46,18 @@ export type OpcionesDePreparacion = Readonly<{
   rotar: boolean;
   /** Se inyecta en las pruebas; por defecto, `claveAlAzar` con `crypto.randomBytes`. */
   generarClave?: () => string;
+  /**
+   * Con `diagnostico`, una falla inesperada agrega el mensaje del servidor (sin cadena de conexión,
+   * sin verificadores SCRAM y sin tiras largas) para poder encontrar la causa. Por defecto no: el
+   * mensaje original puede repetir lo que se mandó.
+   */
+  diagnostico?: boolean;
 }>;
+
+/** Lo único que se muestra de una falla inesperada en modo diagnóstico, sin nada que sirva de credencial. */
+function detalleDeDiagnostico(falla: unknown, urlDirecta: string): string {
+  return describirFallaDeBase(falla, urlDirecta).replace(/SCRAM-SHA-256\$\S+/g, "***");
+}
 
 /** Verificador SCRAM-SHA-256 de Postgres (RFC 5802 / 7677) para una contraseña de solo letras y números. */
 export function verificadorScram(clave: string, sal: Buffer = randomBytes(16)): string {
@@ -73,6 +85,7 @@ export async function prepararRoles(
   cliente.on("error", () => undefined);
   await cliente.connect();
   let rolActual = "";
+  let paso = "consulta del rol";
   try {
     await cliente.query("SELECT pg_advisory_lock($1)", [CLAVE_DE_BLOQUEO]);
     await cliente.query("BEGIN");
@@ -80,6 +93,7 @@ export async function prepararRoles(
       const resultado: RolPreparado[] = [];
       for (const { rol, variable } of opciones.roles) {
         rolActual = rol;
+        paso = "consulta del rol";
         const fila = await cliente.query<{ puede: boolean }>(
           "SELECT rolcanlogin AS puede FROM pg_roles WHERE rolname = $1",
           [rol],
@@ -94,11 +108,14 @@ export async function prepararRoles(
           resultado.push({ rol, variable, estado: "intacto" });
           continue;
         }
+        paso = "generación de la contraseña";
         const clave = generar();
+        paso = "armado de la sentencia";
         const sentencia = await cliente.query<{ sentencia: string }>(
           "SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L', $1::text, $2::text) AS sentencia",
           [rol, verificadorScram(clave)],
         );
+        paso = "ALTER ROLE";
         await cliente.query(sentencia.rows[0]?.sentencia ?? "");
         resultado.push({ rol, variable, estado: existente.puede ? "rotado" : "nuevo", clave });
       }
@@ -107,8 +124,12 @@ export async function prepararRoles(
     } catch (falla) {
       await cliente.query("ROLLBACK").catch(() => undefined);
       if (falla instanceof ErrorDePreparacion) throw falla;
+      const diagnostico =
+        opciones.diagnostico === true
+          ? ` Diagnóstico (paso: ${paso}): ${detalleDeDiagnostico(falla, urlDirecta)}`
+          : "";
       throw new ErrorDePreparacion(
-        `no se pudo dar LOGIN al rol ${rolActual} (SQLSTATE ${codigoDe(falla)}); no se cambió ninguna contraseña`,
+        `no se pudo dar LOGIN al rol ${rolActual} (SQLSTATE ${codigoDe(falla)}); no se cambió ninguna contraseña.${diagnostico}`,
       );
     }
   } finally {

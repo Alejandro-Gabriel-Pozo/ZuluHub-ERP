@@ -27,7 +27,8 @@ import {
  *   Solo para correr en la terminal del dueño: se niega a correr en GitHub Actions (el registro es
  *   público para quien tenga acceso al repositorio). Con `--con-autenticacion` suma los roles de
  *   autenticación y captación; con `--rotar` también cambia la contraseña de los que ya tienen LOGIN;
- *   con `--directa` arma las cadenas con el host directo en vez del del pooler.
+ *   con `--directa` arma las cadenas con el host directo en vez del del pooler; con `--diagnostico`
+ *   una falla inesperada al dar LOGIN muestra además el mensaje del servidor (sin cadena ni verificadores).
  *
  * La cadena DIRECTA de la base se lee de `ZULUHUB_DB_MIGRACIONES`. Esta función no la escribe jamás,
  * ni entera ni en pedazos: todo lo que imprime pasa por `ocultarSecretos` y las fallas se cuentan con
@@ -52,17 +53,18 @@ export type EntradaDeMigracion = Readonly<{
 }>;
 
 const USO =
-  "uso: migrar-base --ver | --aplicar | --preparar-roles [--con-autenticacion] [--rotar] [--directa]";
+  "uso: migrar-base --ver | --aplicar | --preparar-roles [--con-autenticacion] [--rotar] [--directa] [--diagnostico]";
 
 type Pedido = Readonly<{
   modo: "--ver" | "--aplicar" | "--preparar-roles";
   conAutenticacion: boolean;
   rotar: boolean;
   directa: boolean;
+  diagnostico: boolean;
 }>;
 
 const MODOS = ["--ver", "--aplicar", "--preparar-roles"] as const;
-const EXTRAS = ["--con-autenticacion", "--rotar", "--directa"] as const;
+const EXTRAS = ["--con-autenticacion", "--rotar", "--directa", "--diagnostico"] as const;
 
 /** Un solo modo, y las banderas extra solo con `--preparar-roles`, cada una una vez. */
 function leerPedido(argumentos: readonly string[]): Pedido | null {
@@ -77,6 +79,7 @@ function leerPedido(argumentos: readonly string[]): Pedido | null {
     conAutenticacion: extras.includes("--con-autenticacion"),
     rotar: extras.includes("--rotar"),
     directa: extras.includes("--directa"),
+    diagnostico: extras.includes("--diagnostico"),
   };
 }
 
@@ -205,6 +208,7 @@ async function prepararYMostrar(
   const preparados = await prepararRoles(cadena, {
     roles,
     rotar: pedido.rotar,
+    diagnostico: pedido.diagnostico,
     ...(entrada.generarClave === undefined ? {} : { generarClave: entrada.generarClave }),
   });
   for (const p of preparados) {

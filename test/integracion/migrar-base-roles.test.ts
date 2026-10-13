@@ -350,6 +350,24 @@ describe.skipIf(base === null)("migrar-base --preparar-roles", () => {
     expect(await puedeEntrar(ROLES[0]?.rol as string)).toBe(false);
   });
 
+  it("con --diagnostico una falla inesperada suma el paso y el mensaje, pero nunca la cadena, la contraseña ni el verificador", async () => {
+    const url = await nuevaBase();
+    const clave = "ClaveQueNoDebeSalir0123456789abcdef";
+    const salida = await preparar(url, ["--diagnostico"], {
+      generarClave: () => {
+        throw new Error(`MARCA_DEL_DIAGNOSTICO ${clave} SCRAM-SHA-256$4096:abc$def:ghi ${url}`);
+      },
+    });
+    expect(salida.codigo).toBe(1);
+    expect(salida.error).toContain("Diagnóstico (paso: generación de la contraseña)");
+    expect(salida.error).toContain("MARCA_DEL_DIAGNOSTICO");
+    expect(salida.error).not.toContain("SCRAM-SHA-256$");
+    expect(salida.error).not.toContain(new URL(url).password);
+    expect(salida.error).not.toContain(url);
+    expect(salida.secreto).toEqual([]);
+    expect(await puedeEntrar(ROLES[0]?.rol as string)).toBe(false);
+  });
+
   it("se niega a correr en GitHub Actions (el registro queda guardado) y no toca la base", async () => {
     const url = await nuevaBase();
     const salida = await preparar(url, [], { entorno: { GITHUB_ACTIONS: "true" } });
