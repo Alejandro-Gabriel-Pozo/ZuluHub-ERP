@@ -29,14 +29,6 @@ export function crearNivelesDeControlDePostgres<C extends string>(
 ): NivelesDeControl<C> {
   return {
     async nivel(control, alcance, disponibleEnElPlan): Promise<NivelDeControl> {
-      // Sin el control en el plan no hay nada que consultar: rige PERMITIR.
-      if (!disponibleEnElPlan) {
-        return resolverNivel({
-          disponibleEnElPlan,
-          nivelDeLaEmpresa: null,
-          nivelDeLaSucursal: null,
-        });
-      }
       const filas = await db
         .selectFrom("nivel_de_control")
         .select(["sucursal_id", "nivel"])
