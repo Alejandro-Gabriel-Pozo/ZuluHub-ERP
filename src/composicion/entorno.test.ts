@@ -6,7 +6,9 @@ import {
   NOMBRES_DE_ENTORNO,
   PREFIJO_PROHIBIDO,
   VARIABLES_PROHIBIDAS,
+  VARIABLE_DE_TIPO_DE_DESPLIEGUE,
   entornoDelProceso,
+  esProduccion,
   prohibidasPresentes,
   registrandoFallosDeEntorno,
   valoresDeLaPieza,
@@ -412,5 +414,36 @@ describe("registrandoFallosDeEntorno", () => {
 describe("entornoDelProceso", () => {
   it("es el entorno del proceso", () => {
     expect(entornoDelProceso()).toBe(process.env);
+  });
+});
+
+describe("esProduccion (VERCEL_ENV)", () => {
+  it("la variable de sistema se llama VERCEL_ENV", () => {
+    expect(VARIABLE_DE_TIPO_DE_DESPLIEGUE).toBe("VERCEL_ENV");
+  });
+
+  it("solo `production` exacto es producción", () => {
+    expect(esProduccion({ VERCEL_ENV: "production" })).toBe(true);
+  });
+
+  it.each([
+    ["preview"],
+    ["development"],
+    [""],
+    ["Production"],
+    [" production"],
+    ["production "],
+    ["prod"],
+  ])("%j no es producción", (valor) => {
+    expect(esProduccion({ VERCEL_ENV: valor })).toBe(false);
+  });
+
+  it("sin la variable no es producción (falla cerrado)", () => {
+    expect(esProduccion({})).toBe(false);
+    expect(esProduccion({ VERCEL_ENV: undefined })).toBe(false);
+  });
+
+  it("no mira otras variables parecidas", () => {
+    expect(esProduccion({ NODE_ENV: "production", VERCEL_TARGET_ENV: "production" })).toBe(false);
   });
 });

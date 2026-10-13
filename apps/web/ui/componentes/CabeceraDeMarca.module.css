@@ -1,0 +1,15 @@
+.raiz {
+  display: flex;
+  align-items: center;
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-4);
+  background: var(--accion-primaria-fondo);
+  color: var(--accion-primaria-texto);
+}
+
+.nombre {
+  margin: 0;
+  font-family: var(--tipo-familia-titulos);
+  font-size: var(--tipo-tamano-medio);
+  font-weight: var(--tipo-peso-fuerte);
+}
