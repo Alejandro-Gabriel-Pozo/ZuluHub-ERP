@@ -24,6 +24,19 @@ export const viaSesion =
   (texto, parametros = []) =>
     s.intentar(texto, parametros);
 
+/** Una sentencia del dueño FUERA de una transacción (confirma sola): sin savepoint, que no existe afuera. */
+export const viaDuenoDirecto =
+  (c: pg.Client): Ejecutor =>
+  async (texto, parametros = []) => {
+    try {
+      const r = await c.query(texto, parametros);
+      return { ok: true, filas: r.rowCount ?? 0, rows: r.rows as Record<string, unknown>[] };
+    } catch (error) {
+      const e = error as { code?: string; constraint?: string; message?: string };
+      return { ok: false, codigo: e.code ?? "?", restriccion: e.constraint, mensaje: e.message ?? "" };
+    }
+  };
+
 /** Confirma la transacción del dueño: el resultado trae el error de una restricción diferida. */
 export async function confirmarDueno(c: pg.Client): Promise<Intento> {
   try {
