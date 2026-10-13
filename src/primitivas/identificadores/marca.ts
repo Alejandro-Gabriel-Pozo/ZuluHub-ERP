@@ -28,6 +28,9 @@ export const sucursalId = (valor: string): SucursalId => crear<SucursalId>("Sucu
 export type InvitacionId = Marca<string, "InvitacionId">;
 export const invitacionId = (valor: string): InvitacionId =>
   crear<InvitacionId>("InvitacionId", valor);
+/** Traspaso de gerencia (H6): la propuesta de pasar la gerencia a otro miembro. */
+export type TraspasoId = Marca<string, "TraspasoId">;
+export const traspasoId = (valor: string): TraspasoId => crear<TraspasoId>("TraspasoId", valor);
 /** Administrador de plataforma: identidad propia, distinta de `Persona` (diseno-inicial §5). */
 export type AdminPlataformaId = Marca<string, "AdminPlataformaId">;
 export const adminPlataformaId = (valor: string): AdminPlataformaId =>

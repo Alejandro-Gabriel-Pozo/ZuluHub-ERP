@@ -2,6 +2,7 @@ import type { DependenciasDeConsultasDeIdentidad } from "./contrato";
 import type { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 import { armarListarInvitacionesPendientes } from "./listar-invitaciones-pendientes";
 import { armarListarMiembros } from "./listar-miembros";
+import { armarTraspasoEnCurso } from "./traspaso-en-curso";
 
 /**
  * Las consultas por pantalla de identidad (ADR-005). El `satisfies` exige que cada una tenga su
@@ -13,7 +14,8 @@ export function crearConsultasDeIdentidad(dependencias: DependenciasDeConsultasD
   return {
     listarMiembros: armarListarMiembros(dependencias),
     listarInvitacionesPendientes: armarListarInvitacionesPendientes(dependencias),
-  } satisfies Partial<Record<keyof typeof DECLARACIONES_DE_CONSULTAS, unknown>>;
+    traspasoEnCurso: armarTraspasoEnCurso(dependencias),
+  } satisfies Record<keyof typeof DECLARACIONES_DE_CONSULTAS, unknown>;
 }
 
 export type ConsultasDeIdentidad = ReturnType<typeof crearConsultasDeIdentidad>;
