@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    # Corrida completa de toda la mutación cada noche (06:17 UTC): en los pull requests solo corren
+    # los grupos que el cambio alcanza (ver `mutacion-plan`), y esto es la red que lo respalda.
+    - cron: "17 6 * * *"
 
 permissions:
   contents: read
@@ -170,77 +174,42 @@ jobs:
             -c "SELECT pg_reload_conf()"
       - run: npx vitest run test/integracion
 
+  mutacion-plan:
+    # Decide qué grupos de mutación corren. En pull requests solo los que alcanza el cambio (grafo
+    # de importaciones, ver arquitectura/planificar-mutacion.cjs); en push a main y en la corrida
+    # nocturna, todos completos. Si este job falla, el Gate falla: nunca se saltea por error.
+    name: Mutación (plan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      hay: ${{ steps.plan.outputs.hay }}
+      grupos: ${{ steps.plan.outputs.grupos }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # El commit de merge del PR y sus dos padres: el primero es la base contra la que se compara.
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - id: plan
+        run: node arquitectura/planificar-mutacion.cjs
+
   mutacion:
-    # En paralelo por grupos de archivos: el tiempo total pasa a ser el del grupo más lento. Cada
-    # grupo exige 100 % (thresholds.break en stryker.config.json). Si un grupo pasa de 35 minutos,
-    # se parte o se le acota `pruebas`.
+    # En paralelo por grupos de archivos (arquitectura/grupos-de-mutacion.json): el tiempo total es
+    # el del grupo más lento. Cada grupo exige 100 % (thresholds.break en stryker.config.json).
     name: Mutación (${{ matrix.grupo }})
+    needs: mutacion-plan
+    if: needs.mutacion-plan.outputs.hay == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - grupo: dinero (cálculo exacto y redondeo)
-            archivos: "src/primitivas/dinero/monto-exacto.ts,src/primitivas/dinero/interno.ts,src/primitivas/dinero/redondeo.ts"
-          - grupo: dinero (importe, prorrateo y moneda)
-            archivos: "src/primitivas/dinero/**/*.ts,!src/primitivas/dinero/monto-exacto.ts,!src/primitivas/dinero/interno.ts,!src/primitivas/dinero/redondeo.ts"
-          - grupo: cantidad
-            archivos: "src/primitivas/cantidad/**/*.ts"
-          - grupo: identificación fiscal, resultado y estados
-            archivos: "src/primitivas/identificacion-fiscal/**/*.ts,src/primitivas/resultado/**/*.ts,src/contexto/estados.ts"
-          - grupo: tenants y empresas
-            archivos: "src/modulos/tenants/dominio/**/*.ts,src/modulos/empresas/dominio/**/*.ts,src/consultas-de-grupo/vista-de-grupo.ts"
-          - grupo: fiscal (numeración)
-            archivos: "src/modulos/fiscal/dominio/numeracion.ts"
-            pruebas: "src/modulos/fiscal"
-          - grupo: fiscal (datos y vigencia)
-            archivos: "src/modulos/fiscal/dominio/datos-fiscales.ts,src/modulos/fiscal/dominio/vigencia.ts"
-            pruebas: "src/modulos/fiscal"
-          - grupo: fiscal (puntos de venta y emisor)
-            archivos: "src/modulos/fiscal/dominio/punto-de-venta.ts,src/modulos/fiscal/dominio/resolucion-de-emisor.ts"
-            pruebas: "src/modulos/fiscal"
-          - grupo: fiscal (resto)
-            archivos: "src/modulos/fiscal/dominio/**/*.ts,!src/modulos/fiscal/dominio/numeracion.ts,!src/modulos/fiscal/dominio/datos-fiscales.ts,!src/modulos/fiscal/dominio/vigencia.ts,!src/modulos/fiscal/dominio/punto-de-venta.ts,!src/modulos/fiscal/dominio/resolucion-de-emisor.ts"
-            pruebas: "src/modulos/fiscal"
-          - grupo: domicilio
-            archivos: "src/primitivas/domicilio/**/*.ts"
-            pruebas: "src/primitivas/domicilio"
-          - grupo: tiempo
-            archivos: "src/primitivas/tiempo/**/*.ts"
-            pruebas: "src/primitivas/tiempo"
-          - grupo: identidad (invitación)
-            archivos: "src/modulos/identidad/dominio/invitacion.ts"
-            pruebas: "src/modulos/identidad"
-          - grupo: identidad (resto)
-            archivos: "src/modulos/identidad/dominio/**/*.ts,!src/modulos/identidad/dominio/invitacion.ts"
-            pruebas: "src/modulos/identidad"
-          - grupo: permisos y módulos
-            archivos: "src/capacidades/permisos/**/*.ts,src/capacidades/modulos/**/*.ts"
-          - grupo: plataforma (dominio)
-            archivos: "src/plataforma/dominio/**/*.ts"
-            pruebas: "src/plataforma test/plataforma"
-          - grupo: identificadores
-            archivos: "src/primitivas/identificadores/**/*.ts"
-            pruebas: "src/primitivas/identificadores"
-          - grupo: vocabulario
-            archivos: "src/capacidades/vocabulario/**/*.ts"
-            pruebas: "src/capacidades/vocabulario"
-          - grupo: marcas (host, tema y jerarquía)
-            archivos: "src/modulos/marcas/dominio/host.ts,src/modulos/marcas/dominio/tema.ts,src/modulos/marcas/dominio/jerarquia.ts"
-            pruebas: "src/modulos/marcas"
-          - grupo: marcas (definición, versión y vigencia)
-            archivos: "src/modulos/marcas/dominio/**/*.ts,!src/modulos/marcas/dominio/host.ts,!src/modulos/marcas/dominio/tema.ts,!src/modulos/marcas/dominio/jerarquia.ts"
-            pruebas: "src/modulos/marcas"
-          - grupo: trabajos y correo (lógica pura)
-            archivos: "src/adaptadores/trabajos/reintentos.ts,src/adaptadores/trabajos/error-seguro.ts,src/adaptadores/correo/configuracion.ts,src/adaptadores/postgres/huella-canonica.ts"
-            pruebas: "src/adaptadores"
-          - grupo: planes (derechos de uso, vigencia y niveles)
-            archivos: "src/capacidades/planes/**/*.ts"
-            pruebas: "src/capacidades/planes"
-          - grupo: planes (decisiones del módulo)
-            archivos: "src/modulos/planes/dominio/**/*.ts"
-            pruebas: "src/modulos/planes"
+        include: ${{ fromJSON(needs.mutacion-plan.outputs.grupos) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -250,27 +219,27 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx stryker run --mutate "${{ matrix.archivos }},!src/**/*.test.ts"
+      - run: npx stryker run --mutate "$ARCHIVOS,!src/**/*.test.ts"
         env:
           FC_SEMILLA: "20261011"
           # Filtro de archivos de prueba que corre cada mutante (vacío = toda la suite unitaria). Los
           # grupos grandes lo acotan a las pruebas de su módulo para entrar en el tiempo del job.
           ZULUHUB_FILTRO_PRUEBAS: ${{ matrix.pruebas }}
+          ARCHIVOS: ${{ matrix.archivos }}
 
   gate:
     name: Gate
     runs-on: ubuntu-latest
-    needs: [estatico, pruebas, seguridad, flujos, dependencias, estabilidad, mutacion]
+    needs:
+      [estatico, pruebas, seguridad, flujos, dependencias, estabilidad, mutacion-plan, mutacion]
     if: always()
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # «Saltado por filtro» (la mutación sin grupos que correr) es correcto; «fallido» o «cancelado»
+      # no. La lógica y sus casos están en arquitectura/evaluar-gate.cjs y su prueba.
       - name: Todos los jobs en verde
-        run: |
-          test "${{ needs.estatico.result }}" = "success"
-          test "${{ needs.pruebas.result }}" = "success"
-          test "${{ needs.seguridad.result }}" = "success"
-          test "${{ needs.flujos.result }}" = "success"
-          test "${{ needs.mutacion.result }}" = "success"
-          # La revisión de dependencias y la estabilidad solo corren en pull requests
-          test "${{ needs.dependencias.result }}" = "success" || test "${{ needs.dependencias.result }}" = "skipped"
-          # La estabilidad solo corre en pull requests: en push a main queda "skipped".
-          test "${{ needs.estabilidad.result }}" = "success" || test "${{ needs.estabilidad.result }}" = "skipped"
+        run: node arquitectura/evaluar-gate.cjs
+        env:
+          NEEDS: ${{ toJSON(needs) }}
