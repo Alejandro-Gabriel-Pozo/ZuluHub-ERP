@@ -1,0 +1,84 @@
+{
+  "versionDeRepresentacion": 1,
+  "marca": {
+    "nombreDeFantasia": "La Panadería de Zulu",
+    "logoUrl": "https://ejemplo.test/zulu.png",
+    "colorPrincipal": "#8b4513"
+  },
+  "fiscal": {
+    "rotulo": "NOTA DE CRÉDITO",
+    "letra": "A",
+    "codigoDelTipo": "003",
+    "numero": "00001-00000012",
+    "fecha": "2026-10-13",
+    "cae": "70417054367476",
+    "caeVence": "2026-10-23",
+    "emisor": {
+      "cuit": "30-70853393-5",
+      "razonSocial": "Panadería Zulu SRL",
+      "condicionIva": "RESPONSABLE_INSCRIPTO",
+      "domicilioFiscal": "Av. Corrientes 1234, Ciudad Autónoma de Buenos Aires, Ciudad Autónoma de Buenos Aires (CP C1043)",
+      "domicilioDelPuntoDeVenta": "Calle Falsa 123, Ciudad Autónoma de Buenos Aires, Ciudad Autónoma de Buenos Aires (CP C1043)",
+      "iibbNumero": "901-123456-7",
+      "iibbCondicion": "LOCAL",
+      "inicioDeActividades": "2019-03-01"
+    }
+  },
+  "receptor": {
+    "nombre": "Distribuidora Sur SA",
+    "documento": {
+      "tipo": "CUIT",
+      "numero": "30712345671"
+    },
+    "condicionIva": "RESPONSABLE_INSCRIPTO",
+    "domicilio": "Av. Siempreviva 742"
+  },
+  "renglones": [
+    {
+      "descripcion": "Torta",
+      "cantidad": "2.0000",
+      "precioUnitario": "1000.000000",
+      "descuento": "10.0000",
+      "alicuota": "21",
+      "importe": "2178.00"
+    },
+    {
+      "descripcion": "Pan",
+      "cantidad": "1.0000",
+      "precioUnitario": "500.000000",
+      "descuento": null,
+      "alicuota": "10.5",
+      "importe": "552.50"
+    }
+  ],
+  "totales": {
+    "letra": "A",
+    "netoPorAlicuota": [
+      {
+        "alicuota": "10.5",
+        "neto": "500.00",
+        "iva": "52.50"
+      },
+      {
+        "alicuota": "21",
+        "neto": "1800.00",
+        "iva": "378.00"
+      }
+    ],
+    "exento": "0.00",
+    "noGravado": "0.00",
+    "neto": "2300.00",
+    "iva": "430.50",
+    "total": "2730.50"
+  },
+  "asociado": {
+    "rotulo": "FACTURA",
+    "letra": "A",
+    "numero": "00007-00000094",
+    "fecha": "2026-10-01"
+  },
+  "qr": {
+    "url": "https://www.afip.gob.ar/fe/qr/?p=eyJ2ZXIiOjEsImZlY2hhIjoiMjAyNi0xMC0xMyIsImN1aXQiOjMwNzA4NTMzOTM1LCJwdG9WdGEiOjEsInRpcG9DbXAiOjMsIm5yb0NtcCI6MTIsImltcG9ydGUiOjI3MzAuNSwibW9uZWRhIjoiUEVTIiwiY3R6IjoxLCJ0aXBvRG9jUmVjIjo4MCwibnJvRG9jUmVjIjozMDcxMjM0NTY3MSwidGlwb0NvZEF1dCI6IkUiLCJjb2RBdXQiOjcwNDE3MDU0MzY3NDc2fQ=="
+  },
+  "leyendas": []
+}

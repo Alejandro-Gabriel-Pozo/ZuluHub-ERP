@@ -17,24 +17,8 @@
       "cuit": "30-70853393-5",
       "razonSocial": "Panadería Zulu SRL",
       "condicionIva": "RESPONSABLE_INSCRIPTO",
-      "domicilioFiscal": {
-        "calle": "Av. Corrientes",
-        "numero": "1234",
-        "piso": null,
-        "departamento": null,
-        "localidad": "Ciudad Autónoma de Buenos Aires",
-        "provincia": "AR-C",
-        "codigoPostal": "C1043"
-      },
-      "domicilioDelPuntoDeVenta": {
-        "calle": "Calle Falsa",
-        "numero": "123",
-        "piso": null,
-        "departamento": null,
-        "localidad": "Ciudad Autónoma de Buenos Aires",
-        "provincia": "AR-C",
-        "codigoPostal": "C1043"
-      },
+      "domicilioFiscal": "Av. Corrientes 1234, Ciudad Autónoma de Buenos Aires, Ciudad Autónoma de Buenos Aires (CP C1043)",
+      "domicilioDelPuntoDeVenta": "Calle Falsa 123, Ciudad Autónoma de Buenos Aires, Ciudad Autónoma de Buenos Aires (CP C1043)",
       "iibbNumero": "901-123456-7",
       "iibbCondicion": "LOCAL",
       "inicioDeActividades": "2019-03-01"

@@ -135,8 +135,8 @@
   },
   {
     "grupo": "fiscal (facturación)",
-    "archivos": "src/modulos/fiscal/dominio/calculo-de-renglones.ts,src/modulos/fiscal/dominio/codigos-de-arca.ts,src/modulos/fiscal/dominio/comprobante-nuevo.ts,src/modulos/fiscal/dominio/condicion-iva-receptor.ts,src/modulos/fiscal/dominio/estados-de-comprobante.ts,src/modulos/fiscal/dominio/importes-para-arca.ts,src/modulos/fiscal/dominio/letra-de-comprobante.ts,src/modulos/fiscal/dominio/modelo-de-impresion.ts,src/modulos/fiscal/dominio/nota-asociada.ts,src/modulos/fiscal/dominio/qr-de-arca.ts,src/modulos/fiscal/dominio/receptor.ts,src/modulos/fiscal/dominio/reconciliacion-de-comprobante.ts",
-    "pruebas": "src/modulos/fiscal/dominio/calculo-de-renglones.test.ts src/modulos/fiscal/dominio/codigos-de-arca.test.ts src/modulos/fiscal/dominio/comprobante-nuevo.test.ts src/modulos/fiscal/dominio/condicion-iva-receptor.test.ts src/modulos/fiscal/dominio/estados-de-comprobante.test.ts src/modulos/fiscal/dominio/importes-para-arca.test.ts src/modulos/fiscal/dominio/letra-de-comprobante.test.ts src/modulos/fiscal/dominio/modelo-de-impresion.test.ts src/modulos/fiscal/dominio/nota-asociada.test.ts src/modulos/fiscal/dominio/qr-de-arca.test.ts src/modulos/fiscal/dominio/receptor.test.ts src/modulos/fiscal/dominio/reconciliacion-de-comprobante.test.ts src/modulos/fiscal/dominio/propiedades-de-facturacion.test.ts src/modulos/fiscal/dominio/sin-ventas.test.ts"
+    "archivos": "src/modulos/fiscal/dominio/calculo-de-renglones.ts,src/modulos/fiscal/dominio/codigos-de-arca.ts,src/modulos/fiscal/dominio/comprobante-nuevo.ts,src/modulos/fiscal/dominio/condicion-iva-receptor.ts,src/modulos/fiscal/dominio/estados-de-comprobante.ts,src/modulos/fiscal/dominio/importes-para-arca.ts,src/modulos/fiscal/dominio/letra-de-comprobante.ts,src/modulos/fiscal/dominio/nota-asociada.ts,src/modulos/fiscal/dominio/qr-de-arca.ts,src/modulos/fiscal/dominio/receptor.ts,src/modulos/fiscal/dominio/reconciliacion-de-comprobante.ts",
+    "pruebas": "src/modulos/fiscal/dominio/calculo-de-renglones.test.ts src/modulos/fiscal/dominio/codigos-de-arca.test.ts src/modulos/fiscal/dominio/comprobante-nuevo.test.ts src/modulos/fiscal/dominio/condicion-iva-receptor.test.ts src/modulos/fiscal/dominio/estados-de-comprobante.test.ts src/modulos/fiscal/dominio/importes-para-arca.test.ts src/modulos/fiscal/dominio/letra-de-comprobante.test.ts src/modulos/fiscal/dominio/nota-asociada.test.ts src/modulos/fiscal/dominio/qr-de-arca.test.ts src/modulos/fiscal/dominio/receptor.test.ts src/modulos/fiscal/dominio/reconciliacion-de-comprobante.test.ts src/modulos/fiscal/dominio/propiedades-de-facturacion.test.ts src/modulos/fiscal/dominio/sin-ventas.test.ts"
   },
   {
     "grupo": "carta (piezas puras)",
@@ -172,5 +172,10 @@
     "grupo": "contacto (email)",
     "archivos": "src/primitivas/contacto/**/*.ts",
     "pruebas": "src/primitivas/contacto"
+  },
+  {
+    "grupo": "fiscal (modelo de impresión)",
+    "archivos": "src/modulos/fiscal/dominio/modelo-de-impresion.ts",
+    "pruebas": "src/modulos/fiscal/dominio/modelo-de-impresion.test.ts"
   }
 ]

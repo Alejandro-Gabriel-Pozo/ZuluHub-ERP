@@ -1,23 +1,25 @@
 import { cantidadATexto } from "../../../primitivas/cantidad/cantidad";
 import { porcentajeATexto } from "../../../primitivas/cantidad/porcentaje";
-import type { Domicilio } from "../../../primitivas/domicilio/domicilio";
-import { importeATexto } from "../../../primitivas/dinero/importe";
+import { importeATexto, type Importe } from "../../../primitivas/dinero/importe";
 import { precioUnitarioATexto } from "../../../primitivas/dinero/precio-unitario";
-import { cuitConGuiones } from "../../../primitivas/identificacion-fiscal/cuit";
+import { cuitConGuiones, type Cuit } from "../../../primitivas/identificacion-fiscal/cuit";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import { CODIGO_DE_TIPO_DE_COMPROBANTE } from "./codigos-de-arca";
+import type { DesgloseDeAlicuota } from "./comprobante";
 import {
   claseDeComprobante,
   letraDeComprobante,
   type ClaseDeComprobante,
   type LetraDeComprobante,
+  type TipoDeComprobante,
 } from "./comprobante-emitido";
-import type { ComprobanteNuevo } from "./comprobante-nuevo";
+import type { Ambiente, RenglonCalculado } from "./comprobante-nuevo";
+import type { CondicionIibb } from "./datos-fiscales";
 import { importesParaArca } from "./importes-para-arca";
 import { urlDelQr, type ErrorDeQr } from "./qr-de-arca";
 import type { CondicionIva } from "./emisor";
-import type { DocumentoDelReceptor } from "./receptor";
+import type { DocumentoDelReceptor, Receptor } from "./receptor";
 
 /**
  * Modelo de impresión de un comprobante autorizado (spec H7 facturación §B.7): un valor puro, sin
@@ -48,22 +50,50 @@ export type MarcaParaImprimir = Readonly<{
   colorPrincipal: string | null;
 }>;
 
-/** Datos fiscales del emisor que la instantánea del comprobante no trae y que se imprimen. */
-export type DatosFiscalesParaImprimir = Readonly<{
-  iibbNumero: string | null;
-  iibbCondicion: string | null;
+/**
+ * El emisor y el punto de venta tal como los congeló el comprobante al nacer. Los domicilios son el TEXTO que
+ * se guardó (`formatearDomicilio`): la base no conserva sus partes, y reimprimir tiene que dar lo que se
+ * emitió aunque el domicilio de la empresa cambie después.
+ */
+export type EmisorParaImprimir = Readonly<{
+  cuit: Cuit;
+  razonSocial: string;
+  condicionIva: CondicionIva;
+  domicilioFiscal: string;
   inicioDeActividades: FechaCivil;
+  iibbNumero: string | null;
+  iibbCondicion: CondicionIibb | null;
+  puntoDeVentaNumero: number;
+  domicilioDelPuntoDeVenta: string;
 }>;
 
+/** El comprobante que una nota corrige: lo que se imprime de él. */
+export type AsociadoParaImprimir = Readonly<{
+  tipo: TipoDeComprobante;
+  puntoDeVenta: number;
+  numero: bigint;
+  fecha: FechaCivil;
+}>;
+
+/**
+ * Un comprobante `AUTORIZADO` con todo lo que se imprime, leído de lo que se guardó (no se recalcula nada:
+ * el total y el desglose son los que se informaron a ARCA). Lo que fijó ARCA es el número, la fecha de la
+ * reserva, el CAE y su vencimiento.
+ */
 export type ComprobanteParaImprimir = Readonly<{
-  contenido: ComprobanteNuevo;
-  /** Lo que fijó ARCA: el número y la fecha de la reserva, el CAE y su vencimiento. */
+  ambiente: Ambiente;
+  tipo: TipoDeComprobante;
+  emisor: EmisorParaImprimir;
+  receptor: Receptor;
+  renglones: readonly RenglonCalculado[];
+  total: Importe;
+  desglose: readonly DesgloseDeAlicuota[];
+  asociado: AsociadoParaImprimir | null;
   numero: bigint;
   fechaEmision: FechaCivil;
   cae: string;
   caeVence: FechaCivil;
   versionDeRepresentacion: number;
-  datosFiscales: DatosFiscalesParaImprimir;
 }>;
 
 export type ErrorDeImpresion = ErrorDeQr | "VERSION_DE_REPRESENTACION_DESCONOCIDA";
@@ -103,10 +133,10 @@ export type ModeloImpreso = Readonly<{
       cuit: string;
       razonSocial: string;
       condicionIva: CondicionIva;
-      domicilioFiscal: Domicilio;
-      domicilioDelPuntoDeVenta: Domicilio;
+      domicilioFiscal: string;
+      domicilioDelPuntoDeVenta: string;
       iibbNumero: string | null;
-      iibbCondicion: string | null;
+      iibbCondicion: CondicionIibb | null;
       inicioDeActividades: FechaCivil;
     }>;
   }>;
@@ -142,12 +172,16 @@ const ROTULOS: Readonly<Record<ClaseDeComprobante, ModeloImpreso["fiscal"]["rotu
   NOTA_DEBITO: "NOTA DE DÉBITO",
 };
 
-function numeroImpreso(puntoDeVenta: number, numero: bigint): string {
+/** `PPPPP-NNNNNNNN`: punto de venta de cinco dígitos y número de ocho, con ceros a la izquierda. */
+export function numeroImpreso(puntoDeVenta: number, numero: bigint): string {
   return `${String(puntoDeVenta).padStart(5, "0")}-${String(numero).padStart(8, "0")}`;
 }
 
-function totalesImpresos(contenido: ComprobanteNuevo, letra: LetraDeComprobante): TotalesImpresos {
-  const importes = importesParaArca(contenido);
+function totalesImpresos(
+  comprobante: Pick<ComprobanteParaImprimir, "tipo" | "total" | "desglose">,
+  letra: LetraDeComprobante,
+): TotalesImpresos {
+  const importes = importesParaArca(comprobante);
   const total = importeATexto(importes.total);
   if (letra === "C") return { letra, total };
   if (letra === "B") {
@@ -186,17 +220,16 @@ export function modeloDeImpresion(
   if (comprobante.versionDeRepresentacion !== VERSION_DE_REPRESENTACION_ACTUAL) {
     return err("VERSION_DE_REPRESENTACION_DESCONOCIDA");
   }
-  const { contenido } = comprobante;
-  const { emisor, asociado } = contenido;
-  const letra = letraDeComprobante(contenido.tipo);
+  const { emisor, asociado } = comprobante;
+  const letra = letraDeComprobante(comprobante.tipo);
   const qr = urlDelQr({
     fecha: comprobante.fechaEmision,
     cuit: emisor.cuit,
     puntoDeVenta: emisor.puntoDeVentaNumero,
-    tipo: contenido.tipo,
+    tipo: comprobante.tipo,
     numero: comprobante.numero,
-    total: contenido.total,
-    documento: contenido.receptor.documento,
+    total: comprobante.total,
+    documento: comprobante.receptor.documento,
     cae: comprobante.cae,
   });
   if (!qr.ok) return qr;
@@ -204,9 +237,9 @@ export function modeloDeImpresion(
     versionDeRepresentacion: comprobante.versionDeRepresentacion,
     marca,
     fiscal: {
-      rotulo: ROTULOS[claseDeComprobante(contenido.tipo)],
+      rotulo: ROTULOS[claseDeComprobante(comprobante.tipo)],
       letra,
-      codigoDelTipo: String(CODIGO_DE_TIPO_DE_COMPROBANTE[contenido.tipo]).padStart(3, "0"),
+      codigoDelTipo: String(CODIGO_DE_TIPO_DE_COMPROBANTE[comprobante.tipo]).padStart(3, "0"),
       numero: numeroImpreso(emisor.puntoDeVentaNumero, comprobante.numero),
       fecha: comprobante.fechaEmision,
       cae: comprobante.cae,
@@ -217,18 +250,18 @@ export function modeloDeImpresion(
         condicionIva: emisor.condicionIva,
         domicilioFiscal: emisor.domicilioFiscal,
         domicilioDelPuntoDeVenta: emisor.domicilioDelPuntoDeVenta,
-        iibbNumero: comprobante.datosFiscales.iibbNumero,
-        iibbCondicion: comprobante.datosFiscales.iibbCondicion,
-        inicioDeActividades: comprobante.datosFiscales.inicioDeActividades,
+        iibbNumero: emisor.iibbNumero,
+        iibbCondicion: emisor.iibbCondicion,
+        inicioDeActividades: emisor.inicioDeActividades,
       },
     },
     receptor: {
-      nombre: contenido.receptor.nombre,
-      documento: contenido.receptor.documento,
-      condicionIva: contenido.receptor.condicionIva,
-      domicilio: contenido.receptor.domicilio,
+      nombre: comprobante.receptor.nombre,
+      documento: comprobante.receptor.documento,
+      condicionIva: comprobante.receptor.condicionIva,
+      domicilio: comprobante.receptor.domicilio,
     },
-    renglones: contenido.renglones.map((r) => ({
+    renglones: comprobante.renglones.map((r) => ({
       descripcion: r.descripcion,
       cantidad: cantidadATexto(r.cantidad),
       precioUnitario: precioUnitarioATexto(r.precioUnitario),
@@ -236,7 +269,7 @@ export function modeloDeImpresion(
       alicuota: r.alicuota,
       importe: importeATexto(r.importe),
     })),
-    totales: totalesImpresos(contenido, letra),
+    totales: totalesImpresos(comprobante, letra),
     asociado:
       asociado === null
         ? null
@@ -247,6 +280,6 @@ export function modeloDeImpresion(
             fecha: asociado.fecha,
           },
     qr: { url: qr.valor },
-    leyendas: contenido.ambiente === "HOMOLOGACION" ? [LEYENDA_DE_HOMOLOGACION] : [],
+    leyendas: comprobante.ambiente === "HOMOLOGACION" ? [LEYENDA_DE_HOMOLOGACION] : [],
   });
 }
