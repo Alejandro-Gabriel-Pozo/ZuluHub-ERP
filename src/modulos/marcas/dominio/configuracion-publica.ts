@@ -51,14 +51,12 @@ function temaValido(valor: unknown): Tema | null {
 
 /** La herencia del tema por la cadena, o el neutro si algún eslabón trae uno inválido. */
 function temaDeLaCadena(vigentes: readonly (VersionPublicaDeMarca | null)[]): Tema {
-  const temas: Tema[] = [];
-  for (const version of vigentes) {
-    if (version === null) continue;
-    const tema = temaValido(version.tema);
-    if (tema === null) return {};
-    temas.push(tema);
-  }
-  return resolverDefinicion(temas.map((tema) => ({ ...DEFINICION_VACIA, tema }))).tema;
+  const leidos = vigentes
+    .filter((version) => version !== null)
+    .map((version) => temaValido(version.tema));
+  const validos = leidos.filter((tema) => tema !== null);
+  if (validos.length < leidos.length) return {};
+  return resolverDefinicion(validos.map((tema) => ({ ...DEFINICION_VACIA, tema }))).tema;
 }
 
 /**
