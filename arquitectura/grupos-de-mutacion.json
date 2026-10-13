@@ -139,8 +139,23 @@
     "pruebas": "src/capacidades/experiencia/carta"
   },
   {
-    "grupo": "activos y fotos",
-    "archivos": "src/capacidades/activos/**/*.ts",
-    "pruebas": "src/capacidades/activos"
+    "grupo": "activos (cabeceras)",
+    "archivos": "src/capacidades/activos/cabeceras.ts",
+    "pruebas": "src/capacidades/activos/activos.propiedades.test.ts src/capacidades/activos/cabeceras.test.ts src/capacidades/activos/limpieza.test.ts src/capacidades/activos/validacion.test.ts"
+  },
+  {
+    "grupo": "activos (validación y limpieza)",
+    "archivos": "src/capacidades/activos/validacion.ts,src/capacidades/activos/limpieza.ts",
+    "pruebas": "src/capacidades/activos/activos.propiedades.test.ts src/capacidades/activos/limpieza.test.ts src/capacidades/activos/validacion.test.ts"
+  },
+  {
+    "grupo": "activos (dirección externa)",
+    "archivos": "src/capacidades/activos/direccion-externa.ts,src/capacidades/activos/proveedores-de-imagen.ts",
+    "pruebas": "src/capacidades/activos/direccion-externa.propiedades.test.ts src/capacidades/activos/direccion-externa.test.ts src/capacidades/activos/proveedores-de-imagen.test.ts"
+  },
+  {
+    "grupo": "activos (red)",
+    "archivos": "src/capacidades/activos/red.ts",
+    "pruebas": "src/capacidades/activos/red.propiedades.test.ts src/capacidades/activos/red.test.ts"
   }
 ]
