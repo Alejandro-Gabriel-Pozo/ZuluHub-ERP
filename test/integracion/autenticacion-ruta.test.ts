@@ -6,6 +6,7 @@ import type { Autenticacion } from "../../src/puertos/autenticacion";
 import { crearBaseAparte } from "./entorno";
 import {
   Navegador,
+  ipUnica,
   armarAutenticacionDePrueba,
   levantarProveedorLocal,
   perfilAlAzar,
@@ -63,7 +64,7 @@ describe.skipIf(base === null)(
         headers: {
           host,
           origin: `https://${host}`,
-          "x-forwarded-for": `198.51.100.${1 + Math.floor(Math.random() * 250)}`,
+          "x-forwarded-for": ipUnica(),
           ...(cookie === undefined ? {} : { cookie }),
           ...(metodo === "POST" ? { "content-type": "application/json" } : {}),
         },

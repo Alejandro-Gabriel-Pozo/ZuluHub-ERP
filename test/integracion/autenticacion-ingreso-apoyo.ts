@@ -222,13 +222,20 @@ type Respuesta = Readonly<{
   json: () => unknown;
 }>;
 
+let contadorDeIp = Math.floor(Math.random() * 30_000);
+/** Una IP distinta en cada llamada (rango de pruebas): la librería limita los pedidos por IP y dos navegadores no pueden compartirla por azar. */
+export function ipUnica(): string {
+  contadorDeIp += 1;
+  return `198.18.${(contadorDeIp >> 8) & 255}.${contadorDeIp & 255}`;
+}
+
 /** Un navegador mínimo: cookies por host (solo del host, como una cookie sin `Domain`). */
 export class Navegador {
   readonly #porHost = new Map<string, Map<string, CookieGuardada>>();
   readonly #ip: string;
 
   /** Cada navegador tiene su IP (la librería limita los pedidos por IP y ruta). */
-  constructor(ip: string = `203.0.113.${1 + Math.floor(Math.random() * 250)}`) {
+  constructor(ip: string = ipUnica()) {
     this.#ip = ip;
   }
 
