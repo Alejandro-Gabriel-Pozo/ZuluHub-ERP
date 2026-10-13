@@ -26,8 +26,8 @@ import type { FiscalDb } from "./tablas";
 /**
  * Repositorio de los certificados de ARCA y de la credencial de acceso (spec H7 facturación §B.6, §B.8.5).
  *
- * ESTE ARCHIVO ES EL ÚNICO que nombra las columnas cifradas (`clave_*` de `certificado_arca` y
- * `credencial_*` de `acceso_arca`). Lo que guarda y devuelve son los BYTES cifrados que le da y le pide el
+ * ESTE ARCHIVO ES EL ÚNICO REPOSITORIO que selecciona las columnas cifradas (`clave_*` de `certificado_arca` y
+ * `credencial_*` de `acceso_arca`; solo las declaran, además, `tablas.ts` y `esquema.ts`). Lo que guarda y devuelve son los BYTES cifrados que le da y le pide el
  * adaptador de ARCA: no cifra ni descifra nada (eso es de F7), y ninguna lectura común los trae.
  * `obtener` y `vigente` devuelven el certificado SIN clave; la clave cifrada sale solo por `obtenerClave` y
  * la credencial cifrada solo por `obtenerCredencial`, los dos para ese adaptador. Previene que una consulta

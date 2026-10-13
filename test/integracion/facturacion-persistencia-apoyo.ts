@@ -124,7 +124,7 @@ export const fechaCivil = (texto: string): FechaCivil => {
 export const diaDe = (instante: Date): FechaCivil =>
   fechaCivil(instante.toISOString().slice(0, 10));
 
-export const sha256 = (texto: string): string => createHash("sha256").update(texto).digest("hex");
+const sha256 = (texto: string): string => createHash("sha256").update(texto).digest("hex");
 export const huellaNueva = (): string => sha256(randomUUID());
 
 // ---- comprobantes ---------------------------------------------------------------------------------------
@@ -140,10 +140,7 @@ export type OpcionesDeAlta = Readonly<{
 }>;
 
 /** El contexto de emisión que corresponde a un escenario real (su emisor, su punto de venta, sus datos). */
-export function contextoDelEscenario(
-  e: Escenario,
-  o: Pick<OpcionesDeAlta, "origen" | "ambiente"> = {},
-) {
+function contextoDelEscenario(e: Escenario, o: Pick<OpcionesDeAlta, "origen" | "ambiente"> = {}) {
   return contextoDeEmision({
     empresaId: empresaId(e.empresa),
     emisorId: emisorId(e.emisor),
@@ -160,14 +157,14 @@ export function contextoDelEscenario(
 }
 
 /** Los datos fiscales confirmados del escenario, tal como los crea `crearEscenario`. */
-export const datosFiscalesDelEscenario = (e: Escenario) => ({
+const datosFiscalesDelEscenario = (e: Escenario) => ({
   id: versionId(e.datosFiscales),
   inicioDeActividades: fechaCivil("2020-01-01"),
   iibbNumero: "901-123456-7",
   iibbCondicion: "LOCAL" as const,
 });
 
-export function contenidoDe(e: Escenario, o: OpcionesDeAlta = {}): ComprobanteNuevo {
+function contenidoDe(e: Escenario, o: OpcionesDeAlta = {}): ComprobanteNuevo {
   return facturaArmada(
     o.receptor ?? consumidorFinal,
     o.renglones ?? [renglon("121.00", "1", e.condicionIva === "MONOTRIBUTO" ? null : "21")],
@@ -357,11 +354,11 @@ export function intentoDe(
   };
 }
 
-export const PEDIDO_PEM =
+const PEDIDO_PEM =
   "-----BEGIN CERTIFICATE REQUEST-----\nMIIBVjCBwAIBADAeMRwwGgYDVQQDDBN6dWx1aHViLXRlc3Q=\n-----END CERTIFICATE REQUEST-----\n";
 
 /** Una clave «cifrada» cualquiera con la forma que pide la base (nonce de 12, etiqueta de 16). */
-export const claveCifradaAlAzar = () => ({
+const claveCifradaAlAzar = () => ({
   cifrado: randomBytes(64),
   nonce: randomBytes(12),
   etiqueta: randomBytes(16),

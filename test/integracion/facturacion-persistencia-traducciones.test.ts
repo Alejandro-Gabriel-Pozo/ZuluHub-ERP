@@ -477,13 +477,11 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
         await dueno.query("begin");
         await asegurarSerie(
           (t, p = []) =>
-            dueno
-              .query(t, p)
-              .then((r) => ({
-                ok: true as const,
-                filas: r.rowCount ?? 0,
-                rows: r.rows as Record<string, unknown>[],
-              })),
+            dueno.query(t, p).then((r) => ({
+              ok: true as const,
+              filas: r.rowCount ?? 0,
+              rows: r.rows as Record<string, unknown>[],
+            })),
           serie,
         );
         await dueno.query(

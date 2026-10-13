@@ -430,7 +430,7 @@ describe.skipIf(base === null)("facturación F3: concurrencia de los repositorio
         for (let intento = 0; intento < 4000; intento++) {
           const r = await entorno.ejecutar({ contexto: comoSistemaDe(e) }, trabajo);
           if (r.ok) return;
-          if (!["SERIE_OCUPADA", "SERIE_CAMBIO", "COMPROBANTE_CAMBIO"].includes(String(r.error))) {
+          if (typeof r.error !== "string") {
             throw new Error(`error inesperado: ${JSON.stringify(r.error)}`);
           }
           await esperar(2 + Math.floor(Math.random() * 6));
@@ -589,6 +589,8 @@ describe.skipIf(base === null)("facturación F3: concurrencia de los repositorio
           ): Promise<Resultado<bigint | null, MotivoDeReintento>> => {
             const c = await tx.comprobantes.obtener(empresaId(e.empresa), alta.id);
             if (c === null) throw new Error("no está");
+            // Como el caso de uso: si otro ya lo resolvió, no hay nada que hacer.
+            if (c.estado !== "EN_VALIDACION") return ok(null);
             const r = await tx.comprobantes.transicionar(c.empresaId, c.id, c.version, {
               a: "INCIERTO",
             });

@@ -8,7 +8,6 @@ import {
   reservarNumero,
   solicitudId,
   traducirErroresDeFiscal,
-  type Ambiente,
   type PuntoDeVentaId,
 } from "../../src/modulos/fiscal/publico";
 import type { Contexto } from "../../src/contexto/contexto";
@@ -408,10 +407,8 @@ describe.skipIf(base === null)(
           if (produccion === null) throw new Error("tenía que existir");
           const r = exito(reservarNumero(produccion, solicitudId(randomUUID()), AHORA));
           if (r.tipo !== "RESERVADA") throw new Error("tenía que reservar");
-          const { ambiente: _omitido, ...sinAmbiente } = r.serie as typeof r.serie & {
-            ambiente?: Ambiente;
-          };
-          return tx.series.guardar(sinAmbiente);
+          // La serie que arma el dominio de T6 no trae ambiente: el repositorio usa el del punto de venta.
+          return tx.series.guardar(r.serie);
         });
         expect(deProduccion).toMatchObject({ ambiente: "PRODUCCION", numeroEnCurso: 101n });
       });

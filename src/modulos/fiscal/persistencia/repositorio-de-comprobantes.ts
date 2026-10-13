@@ -189,7 +189,10 @@ export type AltaDeComprobante = Readonly<{
   id: ComprobanteId;
   contenido: ComprobanteNuevo;
   datosFiscales: DatosFiscalesDeLaFoto;
-  /** El comprobante que la nota corrige o aumenta; `null` en una factura. */
+  /**
+   * El comprobante que la nota corrige o aumenta; `null` en una factura. De él sale lo que viaja en `CbtesAsoc`: el
+   * `asociado` del contenido NO se guarda (se lee del comprobante asociado, que es siempre uno `AUTORIZADO`).
+   */
   asociadoId: ComprobanteId | null;
   huella: string;
   /** La versión de la representación impresa que se sella al nacer. */
@@ -607,31 +610,32 @@ export function crearRepositorioDeComprobantes(db: Kysely<FiscalDb>): Repositori
   const seleccionar = () => db.selectFrom("comprobante").select(COLUMNAS_DE_COMPROBANTE);
 
   async function armar(fila: FilaDeComprobante): Promise<ComprobanteGuardado> {
-    const [renglones, desglose, asociado] = await Promise.all([
-      db
-        .selectFrom("comprobante_linea")
-        .select([
-          "posicion",
-          "descripcion",
-          "cantidad",
-          "precio_unitario",
-          "descuento",
-          "alicuota",
-          "importe",
-        ])
-        .where("empresa_id", "=", fila.empresa_id)
-        .where("comprobante_id", "=", fila.id)
-        .orderBy("posicion")
-        .execute(),
-      db
-        .selectFrom("comprobante_alicuota")
-        .select(["alicuota", "total", "neto", "iva"])
-        .where("empresa_id", "=", fila.empresa_id)
-        .where("comprobante_id", "=", fila.id)
-        .execute(),
+    // Una consulta por vez: la conexión de la transacción es una sola (`pg` ya no admite pedir otra mientras corre una).
+    const renglones = await db
+      .selectFrom("comprobante_linea")
+      .select([
+        "posicion",
+        "descripcion",
+        "cantidad",
+        "precio_unitario",
+        "descuento",
+        "alicuota",
+        "importe",
+      ])
+      .where("empresa_id", "=", fila.empresa_id)
+      .where("comprobante_id", "=", fila.id)
+      .orderBy("posicion")
+      .execute();
+    const desglose = await db
+      .selectFrom("comprobante_alicuota")
+      .select(["alicuota", "total", "neto", "iva"])
+      .where("empresa_id", "=", fila.empresa_id)
+      .where("comprobante_id", "=", fila.id)
+      .execute();
+    const asociado =
       fila.comprobante_asociado_id === null
-        ? Promise.resolve(null)
-        : db
+        ? null
+        : await db
             .selectFrom("comprobante")
             .select([
               "id",
@@ -643,8 +647,7 @@ export function crearRepositorioDeComprobantes(db: Kysely<FiscalDb>): Repositori
             ])
             .where("empresa_id", "=", fila.empresa_id)
             .where("id", "=", fila.comprobante_asociado_id)
-            .executeTakeFirst(),
-    ]);
+            .executeTakeFirst();
     let aso: AsociadoGuardado | null = null;
     if (fila.comprobante_asociado_id !== null) {
       // La base garantiza que el asociado existe y está `AUTORIZADO` (con número y fecha).
@@ -718,7 +721,9 @@ export function crearRepositorioDeComprobantes(db: Kysely<FiscalDb>): Repositori
         .orderBy("creado_en", "desc")
         .orderBy("id")
         .execute();
-      return Promise.all(filas.map(armar));
+      const armados: ComprobanteGuardado[] = [];
+      for (const fila of filas) armados.push(await armar(fila));
+      return armados;
     },
 
     async crear(alta) {
@@ -840,8 +845,12 @@ export function crearRepositorioDeComprobantes(db: Kysely<FiscalDb>): Repositori
         .orderBy("comprobante.id")
         .limit(limite)
         .execute();
-      const encontrados = await Promise.all(ids.map((f) => obtener(empresa, comprobanteId(f.id))));
-      return encontrados.filter((x): x is ComprobanteGuardado => x !== null);
+      const encontrados: ComprobanteGuardado[] = [];
+      for (const f of ids) {
+        const c = await obtener(empresa, comprobanteId(f.id));
+        if (c !== null) encontrados.push(c);
+      }
+      return encontrados;
     },
   };
 }
