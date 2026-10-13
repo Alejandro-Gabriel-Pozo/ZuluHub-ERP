@@ -71,11 +71,9 @@ export function valorDeAuditoriaSeguro(valor: unknown): boolean {
  */
 function valorPermitido(clave: string, valor: unknown): boolean {
   if (clave === "numeroDeEnvio") {
+    // `Number.isInteger` ya es falso para todo lo que no sea un número (texto «3», null, booleano).
     return (
-      typeof valor === "number" &&
-      Number.isInteger(valor) &&
-      valor >= 1 &&
-      valor <= MAXIMO_DE_ENVIOS
+      Number.isInteger(valor) && (valor as number) >= 1 && (valor as number) <= MAXIMO_DE_ENVIOS
     );
   }
   return valorDeAuditoriaSeguro(valor);
