@@ -1739,7 +1739,7 @@ describe.skipIf(base === null)("captación: los contadores del abuso (aun para e
         "global:verificaciones",
       ]) {
         expect((await alta(buena)).ok, buena).toBe(true);
-        await dueno.query("delete from limite_de_captacion");
+        await dueno.query("delete from limite_de_captacion where clave = $1", [buena]);
       }
       for (const mala of [
         "ip:203.0.113.7",
@@ -1798,7 +1798,11 @@ describe.skipIf(base === null)("captación: los contadores del abuso (aun para e
       );
       expect((await cambiar("cuenta = cuenta + 1")).ok).toBe(true);
       expect(
-        (await dueno.query<{ cuenta: number }>("select cuenta from limite_de_captacion")).rows,
+        (
+          await dueno.query<{ cuenta: number }>(
+            "select cuenta from limite_de_captacion where clave = 'global:solicitudes' and ventana = 'HORA'",
+          )
+        ).rows,
       ).toEqual([{ cuenta: 6 }]);
     });
   });
