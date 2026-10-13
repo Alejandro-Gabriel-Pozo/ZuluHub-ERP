@@ -50,6 +50,7 @@ function vigilar(actor: DatosDelActor): Vigilada {
   const accesos: string[] = [];
   const autorizacion: CargaDeAutorizacion = {
     delActor: () => Promise.resolve(actor),
+    sucursalesDelActor: () => Promise.resolve("TODAS"),
   };
   const tx = new Proxy({} as TxDeIdentidad, {
     get(_objetivo, propiedad) {

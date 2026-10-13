@@ -64,6 +64,7 @@ export const REGLAS_CON_FACTURACION: ReglasDeEmpresa = {
 /** La autorización real, más la activación y el plan de `facturacion` (hoy no hay tablas para eso). */
 function conFacturacion(real: CargaDeAutorizacion): CargaDeAutorizacion {
   return {
+    sucursalesDelActor: (contexto) => real.sucursalesDelActor(contexto),
     async delActor(contexto) {
       const datos = await real.delActor(contexto);
       return {

@@ -1,9 +1,12 @@
 import type { Kysely } from "kysely";
+import type { AlcanceDeSucursales } from "../../capacidades/permisos/alcance";
 import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "../../capacidades/permisos/roles";
+import { sucursalId } from "../../primitivas/identificadores/marca";
+import type { ContextoOperativo } from "../../contexto/contexto";
 import type { CargaDeAutorizacion, DatosDelActor } from "../../puertos/autorizacion";
 
 /**
- * Puerto `autorizacion` sobre `membresia` y `persona`. Lee con la MISMA conexión de la transacción
+ * Puerto `autorizacion` sobre `membresia`, `persona`, `asignacion_sucursal` y `sucursal`. Lee con la MISMA conexión de la transacción
  * del caso de uso (nada se guarda entre llamadas): el rol vale para esa transacción y, si se repite
  * por un conflicto de serialización, se vuelve a leer.
  *
@@ -15,6 +18,13 @@ import type { CargaDeAutorizacion, DatosDelActor } from "../../puertos/autorizac
 export type AutorizacionDb = {
   membresia: { empresa_id: string; persona_id: string; rol: string; activo: boolean };
   persona: { id: string; activo_global: boolean };
+  asignacion_sucursal: {
+    empresa_id: string;
+    persona_id: string;
+    sucursal_id: string;
+    activa: boolean;
+  };
+  sucursal: { id: string; empresa_id: string; activa: boolean };
 };
 
 const esRolDeEmpresa = (valor: string): valor is RolDeEmpresa =>
@@ -41,29 +51,55 @@ const SIN_ROL: DatosDelActor = {
 };
 
 export function crearAutorizacionDePostgres(db: Kysely<AutorizacionDb>): CargaDeAutorizacion {
+  /** El rol de la membresía ACTIVA con la persona activa globalmente; `null` si no hay (ver arriba). */
+  async function rolDelActor(contexto: ContextoOperativo): Promise<RolDeEmpresa | null> {
+    if (contexto.personaId === null) return null;
+    const fila = await db
+      .selectFrom("membresia as m")
+      .innerJoin("persona as p", "p.id", "m.persona_id")
+      .select("m.rol")
+      .where("m.empresa_id", "=", contexto.empresaId)
+      .where("m.persona_id", "=", contexto.personaId)
+      .where("m.activo", "=", true)
+      .where("p.activo_global", "=", true)
+      .executeTakeFirst();
+    if (fila === undefined) return null;
+    // Un valor que el CHECK de la base no deja pasar: si llega otro, algo se rompió.
+    if (!esRolDeEmpresa(fila.rol)) throw new RangeError(`rol desconocido en la base: ${fila.rol}`);
+    return fila.rol;
+  }
+
   return {
     async delActor(contexto): Promise<DatosDelActor> {
-      if (contexto.personaId === null) {
-        return SIN_ROL;
-      }
-      const fila = await db
-        .selectFrom("membresia as m")
-        .innerJoin("persona as p", "p.id", "m.persona_id")
-        .select("m.rol")
-        .where("m.empresa_id", "=", contexto.empresaId)
-        .where("m.persona_id", "=", contexto.personaId)
-        .where("m.activo", "=", true)
-        .where("p.activo_global", "=", true)
-        .executeTakeFirst();
-      if (fila === undefined) return SIN_ROL;
-      // Un valor que el CHECK de la base no deja pasar: si llega otro, algo se rompió.
-      if (!esRolDeEmpresa(fila.rol))
-        throw new RangeError(`rol desconocido en la base: ${fila.rol}`);
+      const rol = await rolDelActor(contexto);
+      if (rol === null) return SIN_ROL;
       return {
-        rol: fila.rol,
+        rol,
         modulosActivados: SIN_MODULOS_ACTIVADOS,
         modulosHabilitados: SIN_MODULOS_HABILITADOS,
       };
+    },
+
+    async sucursalesDelActor(contexto): Promise<AlcanceDeSucursales> {
+      const rol = await rolDelActor(contexto);
+      // Sin rol vigente no hay alcance alguno: falla cerrado, nunca «todas» por omisión.
+      if (rol === null || contexto.personaId === null) return [];
+      // Gerente y administrador operan en todas las sucursales (decisión de H6). Cualquier otro rol
+      // que se agregue algún día cae acá en la lista asignada, la opción más restrictiva.
+      if (rol === "GERENTE" || rol === "ADMINISTRADOR") return "TODAS";
+      const filas = await db
+        .selectFrom("asignacion_sucursal as a")
+        .innerJoin("sucursal as s", (unir) =>
+          unir.onRef("s.id", "=", "a.sucursal_id").onRef("s.empresa_id", "=", "a.empresa_id"),
+        )
+        .select("a.sucursal_id")
+        .where("a.empresa_id", "=", contexto.empresaId)
+        .where("a.persona_id", "=", contexto.personaId)
+        .where("a.activa", "=", true)
+        .where("s.activa", "=", true)
+        .orderBy("a.sucursal_id")
+        .execute();
+      return filas.map((fila) => sucursalId(fila.sucursal_id));
     },
   };
 }

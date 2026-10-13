@@ -111,6 +111,7 @@ function armar(
           modulosActivados: ["facturacion"],
           modulosHabilitados: ["facturacion"],
         }),
+      sucursalesDelActor: () => Promise.resolve("TODAS"),
     },
   };
   const transacciones: Transacciones<TxDeNumeracion> = {
