@@ -12,7 +12,6 @@ import {
   valorAbsolutoDe,
   type CantidadConSigno,
 } from "./con-signo";
-import { ErrorDeValor } from "./errores";
 
 const MAXIMO = "99999999999999.9999";
 const MINIMO = "-99999999999999.9999";
@@ -21,16 +20,6 @@ function cs(texto: string): CantidadConSigno {
   const r = cantidadConSignoDesdeTexto(texto);
   if (!r.ok) throw new Error(`no parsea ${texto}: ${r.error.message}`);
   return r.valor;
-}
-
-function codigoDe(accion: () => unknown): string | undefined {
-  try {
-    accion();
-  } catch (e) {
-    if (e instanceof ErrorDeValor) return e.codigo;
-    throw e;
-  }
-  return undefined;
 }
 
 const texto = (r: ReturnType<typeof sumarConSigno>): string =>
@@ -162,8 +151,13 @@ describe("cantidadConSignoDesdeCantidad", () => {
 
 describe("multiplicarCantidades", () => {
   const c = cantidadDesdeTexto;
+  const multiplicar = (...argumentos: Parameters<typeof multiplicarCantidades>) => {
+    const r = multiplicarCantidades(...argumentos);
+    if (!r.ok) throw r.error;
+    return r.valor;
+  };
   const por = (a: string, b: string, politica: "MITAD_SUBE_SIMETRICA" | "MITAD_PAR") =>
-    cantidadATexto(multiplicarCantidades(c(a), c(b), politica));
+    cantidadATexto(multiplicar(c(a), c(b), politica));
 
   it("0,5 × 0,0185 = 0,00925 → 0,0093 (la mitad sube)", () => {
     expect(por("0.5", "0.0185", "MITAD_SUBE_SIMETRICA")).toBe("0.0093");
@@ -209,15 +203,21 @@ describe("multiplicarCantidades", () => {
     expect(por("0.5", "0.0185", "MITAD_PAR")).toBe("0.0092");
   });
 
-  it("un producto fuera de rango se rechaza con FUERA_DE_RANGO, no se satura", () => {
-    expect(codigoDe(() => por("10000000", "10000000", "MITAD_SUBE_SIMETRICA"))).toBe(
-      "FUERA_DE_RANGO",
-    );
-    expect(codigoDe(() => por("99999999999999.9999", "1.0001", "MITAD_SUBE_SIMETRICA"))).toBe(
-      "FUERA_DE_RANGO",
-    );
-    expect(codigoDe(() => por("99999999999999.9999", "1.0000", "MITAD_SUBE_SIMETRICA"))).toBe(
-      undefined,
-    );
+  it("un producto fuera de rango devuelve FUERA_DE_RANGO como error, sin lanzar ni saturar", () => {
+    const desborde = (a: string, b: string) =>
+      multiplicarCantidades(c(a), c(b), "MITAD_SUBE_SIMETRICA");
+    for (const [a, b] of [
+      ["10000000", "10000000"],
+      ["99999999999999.9999", "1.0001"],
+    ] as const) {
+      const r = desborde(a, b);
+      expect(r.ok).toBe(false);
+      if (!r.ok) {
+        expect(r.error.codigo).toBe("FUERA_DE_RANGO");
+        expect(r.error.message).toBe("FUERA_DE_RANGO: cantidad: fuera del rango admitido");
+      }
+    }
+    const justo = desborde("99999999999999.9999", "1.0000");
+    expect(justo.ok && cantidadATexto(justo.valor)).toBe(MAXIMO);
   });
 });

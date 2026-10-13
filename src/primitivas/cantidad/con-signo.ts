@@ -8,6 +8,7 @@ import {
 } from "./decimal-fijo";
 import { ErrorDeValor } from "./errores";
 import { crearCantidad, ESCALA_DE_CANTIDAD, type Cantidad } from "./interno";
+import { dividirRedondeando, type PoliticaDeRedondeo } from "./redondeo-entero";
 
 /**
  * Cantidad con signo (`numeric(18,4)`, de −(10¹⁸−1) a 10¹⁸−1 unidades mínimas): la existencia de
@@ -31,7 +32,7 @@ function crearCantidadConSigno(unidades: bigint): CantidadConSigno {
  * (un `TypeError` por un argumento que no es texto, por ejemplo) es un defecto: se lanza, no se
  * traga (ADR-004).
  */
-function comoResultado(accion: () => CantidadConSigno): Resultado<CantidadConSigno, ErrorDeValor> {
+function comoResultado<T>(accion: () => T): Resultado<T, ErrorDeValor> {
   try {
     return ok(accion());
   } catch (e) {
@@ -91,32 +92,21 @@ export function valorAbsolutoDe(cantidad: CantidadConSigno): Cantidad {
   return crearCantidad(cantidad.unidades < 0n ? -cantidad.unidades : cantidad.unidades);
 }
 
-/**
- * Cómo se redondea a 4 decimales lo que no entra. Los mismos nombres que la política del dinero
- * (`dinero/redondeo.ts`) para que quien llama pase `POLITICA_VIGENTE`; no se importa de ahí porque
- * `dinero` depende de `cantidad` y no al revés. En una cantidad sin signo el «simétrica» no cambia
- * nada: la mitad sube.
- */
-export type PoliticaDeCantidad = "MITAD_SUBE_SIMETRICA" | "MITAD_PAR";
+export type PoliticaDeCantidad = PoliticaDeRedondeo;
 
 const UNIDADES_POR_ENTERO = 10n ** BigInt(ESCALA_DE_CANTIDAD);
 
 /**
  * Producto de dos cantidades (vendido × cantidad por unidad de una receta), redondeado una sola vez
  * a 4 decimales: 0,5 × 0,0185 = 0,00925 → 0,0093. Es cantidad y no dinero: el redondeo del dinero
- * sigue siendo uno por comprobante. Un producto fuera de rango lanza `ErrorDeValor` `FUERA_DE_RANGO`,
- * como el resto de las construcciones de `Cantidad`.
+ * sigue siendo uno por comprobante. Un producto fuera de rango devuelve `FUERA_DE_RANGO`.
  */
 export function multiplicarCantidades(
   a: Cantidad,
   b: Cantidad,
   politica: PoliticaDeCantidad,
-): Cantidad {
-  const producto = a.unidades * b.unidades;
-  const entero = producto / UNIDADES_POR_ENTERO;
-  const doble = (producto % UNIDADES_POR_ENTERO) * 2n;
-  const sube =
-    doble > UNIDADES_POR_ENTERO ||
-    (doble === UNIDADES_POR_ENTERO && (politica === "MITAD_SUBE_SIMETRICA" || entero % 2n === 1n));
-  return crearCantidad(sube ? entero + 1n : entero);
+): Resultado<Cantidad, ErrorDeCantidadConSigno> {
+  return comoResultado(() =>
+    crearCantidad(dividirRedondeando(a.unidades * b.unidades, UNIDADES_POR_ENTERO, politica)),
+  );
 }

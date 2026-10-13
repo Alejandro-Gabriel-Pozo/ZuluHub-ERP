@@ -2,7 +2,6 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import "../../../test/propiedades/configuracion";
 import { cantidadATexto, cantidadDesdeTexto } from "./cantidad";
-import { ErrorDeValor } from "./errores";
 import {
   cantidadConSignoATexto,
   cantidadConSignoDesdeCantidad,
@@ -211,7 +210,7 @@ describe("multiplicarCantidades", () => {
         fc.constantFrom("MITAD_SUBE_SIMETRICA", "MITAD_PAR"),
         (a, enteroB, politica) => {
           // b entero: a (4 decimales) × b es exacto en 4 decimales.
-          const r = multiplicarCantidades(cantidad(a), cantidad(enteroB * D), politica);
+          const r = multiplicar(cantidad(a), cantidad(enteroB * D), politica);
           expect(unidadesDe(cantidadATexto(r))).toBe(a * enteroB);
         },
       ),
@@ -224,7 +223,7 @@ describe("multiplicarCantidades", () => {
         fc.bigInt({ min: 0n, max: 10n ** 10n }),
         fc.bigInt({ min: 0n, max: 10n ** 10n }),
         (a, b) => {
-          const r = multiplicarCantidades(cantidad(a), cantidad(b), "MITAD_SUBE_SIMETRICA");
+          const r = multiplicar(cantidad(a), cantidad(b), "MITAD_SUBE_SIMETRICA");
           expect(unidadesDe(cantidadATexto(r))).toBe(mitadSube(a * b));
         },
       ),
@@ -236,11 +235,7 @@ describe("multiplicarCantidades", () => {
       fc.property(fc.bigInt({ min: 0n, max: 10n ** 10n }), (k) => {
         // (2k+1) × 0,5 = k + 0,5 unidades → k + 1.
         const a = 2n * k + 1n;
-        const r = multiplicarCantidades(
-          cantidad(a),
-          cantidadDesdeTexto("0.5"),
-          "MITAD_SUBE_SIMETRICA",
-        );
+        const r = multiplicar(cantidad(a), cantidadDesdeTexto("0.5"), "MITAD_SUBE_SIMETRICA");
         expect(unidadesDe(cantidadATexto(r))).toBe(k + 1n);
       }),
     );
@@ -253,10 +248,10 @@ describe("multiplicarCantidades", () => {
         fc.bigInt({ min: 0n, max: 10n ** 10n }),
         (a, b) => {
           const par = unidadesDe(
-            cantidadATexto(multiplicarCantidades(cantidad(a), cantidad(b), "MITAD_PAR")),
+            cantidadATexto(multiplicar(cantidad(a), cantidad(b), "MITAD_PAR")),
           );
           const sube = unidadesDe(
-            cantidadATexto(multiplicarCantidades(cantidad(a), cantidad(b), "MITAD_SUBE_SIMETRICA")),
+            cantidadATexto(multiplicar(cantidad(a), cantidad(b), "MITAD_SUBE_SIMETRICA")),
           );
           expect(par).toBe(mitadPar(a * b));
           const p = a * b;
@@ -274,15 +269,15 @@ describe("multiplicarCantidades", () => {
         unidadesSinSigno,
         fc.constantFrom("MITAD_SUBE_SIMETRICA", "MITAD_PAR"),
         (a, b, politica) => {
-          const ab = textoOCodigo(() => multiplicarCantidades(cantidad(a), cantidad(b), politica));
-          const ba = textoOCodigo(() => multiplicarCantidades(cantidad(b), cantidad(a), politica));
+          const ab = textoOCodigo(multiplicarCantidades(cantidad(a), cantidad(b), politica));
+          const ba = textoOCodigo(multiplicarCantidades(cantidad(b), cantidad(a), politica));
           expect(ab).toBe(ba);
-          expect(
-            cantidadATexto(multiplicarCantidades(cantidad(a), cantidadDesdeTexto("1"), politica)),
-          ).toBe(textoDe(a));
-          expect(
-            cantidadATexto(multiplicarCantidades(cantidad(a), cantidadDesdeTexto("0"), politica)),
-          ).toBe("0.0000");
+          expect(cantidadATexto(multiplicar(cantidad(a), cantidadDesdeTexto("1"), politica))).toBe(
+            textoDe(a),
+          );
+          expect(cantidadATexto(multiplicar(cantidad(a), cantidadDesdeTexto("0"), politica))).toBe(
+            "0.0000",
+          );
         },
       ),
     );
@@ -292,7 +287,7 @@ describe("multiplicarCantidades", () => {
     fc.assert(
       fc.property(unidadesSinSigno, unidadesSinSigno, (a, b) => {
         const esperadoEnRango = mitadSube(a * b) <= MAXIMO;
-        const resultado = textoOCodigo(() =>
+        const resultado = textoOCodigo(
           multiplicarCantidades(cantidad(a), cantidad(b), "MITAD_SUBE_SIMETRICA"),
         );
         expect(resultado.startsWith("FUERA_DE_RANGO")).toBe(!esperadoEnRango);
@@ -301,12 +296,14 @@ describe("multiplicarCantidades", () => {
   });
 });
 
-/** Texto del resultado, o el código del error de valor si se rechazó. */
-function textoOCodigo(accion: () => { unidades: bigint } & object): string {
-  try {
-    return textoDe(accion().unidades);
-  } catch (e) {
-    if (e instanceof ErrorDeValor) return e.codigo;
-    throw e;
-  }
+/** Texto del producto, o el código del error si se rechazó. */
+function textoOCodigo(r: ReturnType<typeof multiplicarCantidades>): string {
+  return r.ok ? textoDe(r.valor.unidades) : r.error.codigo;
+}
+
+/** El producto de un caso que no desborda: si desborda, el error se lanza y la prueba falla. */
+function multiplicar(...argumentos: Parameters<typeof multiplicarCantidades>) {
+  const r = multiplicarCantidades(...argumentos);
+  if (!r.ok) throw r.error;
+  return r.valor;
 }
