@@ -62,11 +62,11 @@ export async function crearMarca(
   ).id;
 }
 
-export type EstadoDeDominio = "PENDIENTE_VERIFICACION" | "VERIFICADO" | "ACTIVO" | "RETIRADO";
-export type SuperficieDeDominio = "APP" | "CARTA" | "LANDING" | "CONSOLA";
+type EstadoDeDominio = "PENDIENTE_VERIFICACION" | "VERIFICADO" | "ACTIVO" | "RETIRADO";
+type SuperficieDeDominio = "APP" | "CARTA" | "LANDING" | "CONSOLA";
 
 /** Lleva un dominio recién registrado hasta `estado` por el camino legal (verificar, activar o retirar). */
-export async function llevarDominioA(
+async function llevarDominioA(
   c: pg.Client,
   id: string,
   estado: EstadoDeDominio,
