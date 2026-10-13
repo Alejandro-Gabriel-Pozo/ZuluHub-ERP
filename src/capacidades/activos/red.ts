@@ -17,8 +17,8 @@
  *  - Lo que no se puede clasificar con certeza es `false`.
  */
 
-/** IPv6 más larga en texto: `0000:0000:0000:0000:0000:ffff:255.255.255.255`. */
-const LARGO_MAXIMO_DE_IP = 45;
+/** IPv6 más larga en texto hexadecimal: ocho grupos de cuatro y siete dos puntos. */
+const LARGO_MAXIMO_DE_IP = 39;
 
 const DIGITOS = "0123456789";
 const HEXADECIMALES = "0123456789abcdef";

@@ -252,15 +252,11 @@ describe("direccionDeRedPermitida: formas ambiguas o mal formadas (todas false)"
     expect(direccionDeRedPermitida(texto)).toBe(false);
   });
 
-  it("el largo máximo es el de la IPv6 más larga (45): una más no se lee, ni siquiera si es válida", () => {
-    const masLarga = "0000:0000:0000:0000:0000:ffff:255.255.255.255";
-    expect(masLarga).toHaveLength(45);
-    expect(direccionDeRedPermitida(masLarga)).toBe(false);
+  it("el largo máximo es el de la IPv6 hexadecimal más larga (39): esa se lee y se permite", () => {
+    const publica39 = "2606:4700:0000:0000:0000:0000:0000:1111";
+    expect(publica39).toHaveLength(39);
+    expect(direccionDeRedPermitida(publica39)).toBe(true);
     expect(direccionDeRedPermitida(`2606:4700:0:0:0:0:0:1:${"0".repeat(20)}`)).toBe(false);
-    // 45 caracteres de una pública con ceros a la izquierda: se lee y se permite.
-    const publica45 = "2606:4700:0000:0000:0000:0000:0000:1111";
-    expect(direccionDeRedPermitida(publica45)).toBe(true);
-    expect(direccionDeRedPermitida(`${"0".repeat(5)}${publica45}`)).toBe(false);
   });
 
   it("un valor que no es texto se rechaza sin lanzar", () => {
