@@ -4,7 +4,7 @@ import { Icono } from "../../iconos/Icono";
 import estilos from "./IndiceDeSecciones.module.css";
 
 /** El ancla del índice: un nombre propio para que ninguna sección (cuyo ancla sale de su nombre) la pise. */
-export const ANCLA_DEL_INDICE = "zh-indice";
+const ANCLA_DEL_INDICE = "zh-indice";
 
 export type PropsDeIndiceDeSecciones = Readonly<{
   secciones: readonly VistaDeSeccion[];
