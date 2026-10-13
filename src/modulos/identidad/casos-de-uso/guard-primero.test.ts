@@ -217,6 +217,7 @@ describe("los demás motivos del guard salen tal cual por el caso de uso", () =>
     obligatorio: boolean,
   ): ReglasDeEmpresa => ({
     catalogo: {
+      ...CATALOGO_DE_MODULOS,
       administracion: {
         estado,
         obligatorio,

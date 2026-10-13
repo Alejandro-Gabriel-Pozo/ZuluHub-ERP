@@ -94,6 +94,23 @@ export const CATALOGO_DE_MODULOS = {
       "permisos.ver_propios": { capacidad: null, efecto: "LECTURA" },
     },
   },
+  /**
+   * Facturación electrónica (H7, especificación §C). `en_desarrollo`: el guard rechaza sus acciones
+   * con `MODULO_EN_DESARROLLO` hasta que exista la facturación. Hoy solo declara la acción que
+   * exigen los casos de uso de numeración (reservar y cerrar el número de un comprobante). Emitir
+   * completa algo ya vendido o cobrado, así que es `COMPLETA_CIERRA` y una baja de plan no lo traba.
+   */
+  facturacion: {
+    estado: "en_desarrollo",
+    obligatorio: false,
+    requiere: ["administracion"],
+    usaSiExiste: [],
+    datosRequeridos: ["emisor_principal.datos_fiscales_confirmados", "punto_de_venta.activo"],
+    implementadoPor: ["modulos/fiscal"],
+    acciones: {
+      "comprobantes.emitir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+    },
+  },
 } as const satisfies CatalogoComercial;
 
 type Catalogo = typeof CATALOGO_DE_MODULOS;

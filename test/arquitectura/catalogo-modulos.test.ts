@@ -13,6 +13,7 @@ import {
   DECLARACIONES_DE_EMPRESAS,
   DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS,
 } from "../../src/modulos/empresas/publico";
+import { DECLARACIONES_DE_FISCAL } from "../../src/modulos/fiscal/publico";
 import {
   DECLARACIONES_DE_CONSULTAS_DE_IDENTIDAD,
   DECLARACIONES_DE_IDENTIDAD,
@@ -190,6 +191,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       DECLARACIONES_DE_EMPRESAS,
       DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS,
     ),
+    "modulos/fiscal": accionesDe(DECLARACIONES_DE_FISCAL),
   };
 
   it("identidad exige las acciones de usuarios y de gerencia (casos de uso y consultas)", () => {
@@ -220,9 +222,21 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ]);
   });
 
+  it("fiscal exige emitir comprobantes (reservar, cerrar y numerar); reconciliar es de sistema y no pasa por el guard", () => {
+    expect([...new Set(declaradas["modulos/fiscal"])]).toEqual(["comprobantes.emitir"]);
+    expect(DECLARACIONES_DE_FISCAL.reconciliarSerie).toHaveProperty("sinGuard");
+    expect(DECLARACIONES_DE_FISCAL.reconciliarSeriesVencidas).toHaveProperty("sinGuard");
+  });
+
+  it("facturacion lo implementa fiscal, y es el único módulo que fiscal exige", () => {
+    expect(CATALOGO_DE_MODULOS.facturacion.implementadoPor).toEqual(["modulos/fiscal"]);
+  });
+
   it("administracion lo implementan exactamente las carpetas que exigen sus acciones", () => {
     expect([...CATALOGO_DE_MODULOS.administracion.implementadoPor].sort()).toEqual(
-      Object.keys(declaradas).sort(),
+      Object.keys(declaradas)
+        .filter((carpeta) => carpeta !== "modulos/fiscal")
+        .sort(),
     );
   });
 
@@ -244,6 +258,12 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     expect(crucesDelCatalogo(CATALOGO_DE_MODULOS, sinPermisosPropios)).toEqual([
       "X1: la acción permisos.ver_propios no la exige ningún caso de uso",
     ]);
+  });
+
+  it("X1 se dispara si fiscal deja de exigir comprobantes.emitir (violación inyectada)", () => {
+    expect(crucesDelCatalogo(CATALOGO_DE_MODULOS, { ...declaradas, "modulos/fiscal": [] })).toEqual(
+      ["X1: la acción comprobantes.emitir no la exige ningún caso de uso"],
+    );
   });
 
   it("X1 se dispara si una carpeta que el catálogo no lista exige una acción (violación inyectada)", () => {
