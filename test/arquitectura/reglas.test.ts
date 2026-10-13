@@ -978,7 +978,26 @@ describe("R-W5: formas.ts es una entrada admitida y no tiene negocio", () => {
  *  - Todo archivo de `apps/<app>/servidor/` empieza con `import "server-only";`: si un componente de
  *    cliente lo importa, la compilación falla en vez de empaquetar secretos o persistencia.
  */
-const DIRECTIVA_DE_CLIENTE = /^(?:\s|\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*(["'])use client\1/;
+// Recorrido lineal (sin expresión regular con repeticiones anidadas, que CodeQL marca como ReDoS):
+// salta espacios y comentarios iniciales y mira si lo primero es la directiva.
+function tieneDirectivaDeCliente(texto: string): boolean {
+  let i = 0;
+  for (;;) {
+    while (i < texto.length && /\s/.test(texto.charAt(i))) i += 1;
+    if (texto.startsWith("//", i)) {
+      const fin = texto.indexOf("\n", i);
+      if (fin === -1) return false;
+      i = fin + 1;
+    } else if (texto.startsWith("/*", i)) {
+      const fin = texto.indexOf("*/", i + 2);
+      if (fin === -1) return false;
+      i = fin + 2;
+    } else {
+      break;
+    }
+  }
+  return texto.startsWith('"use client"', i) || texto.startsWith("'use client'", i);
+}
 
 function archivosDeApps(raiz: string): string[] {
   const apps = join(raiz, "apps");
@@ -994,7 +1013,7 @@ function archivosDeClienteSinSufijo(raiz: string): string[] {
     .filter(
       (f) =>
         !f.endsWith(".cliente.tsx") &&
-        DIRECTIVA_DE_CLIENTE.test(readFileSync(join(raiz, "apps", f), "utf8")),
+        tieneDirectivaDeCliente(readFileSync(join(raiz, "apps", f), "utf8")),
     )
     .map((f) => `apps/${f}`);
 }
