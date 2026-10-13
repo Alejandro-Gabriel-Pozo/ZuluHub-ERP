@@ -1,0 +1,70 @@
+.envoltura {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+}
+
+.envoltura[data-ancho="completo"] {
+  display: flex;
+  width: 100%;
+}
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--objetivo-minimo);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-5);
+  border: var(--borde-grosor-fuerte) solid transparent;
+  border-radius: var(--radio-base);
+  font: inherit;
+  font-weight: var(--tipo-peso-fuerte);
+  cursor: pointer;
+  transition: background-color var(--duracion-corta);
+}
+
+.boton[data-variante="primaria"] {
+  background: var(--accion-primaria-fondo);
+  color: var(--accion-primaria-texto);
+}
+
+.boton[data-variante="primaria"]:hover {
+  background: var(--accion-primaria-fondo-hover);
+}
+
+.boton[data-variante="primaria"]:active {
+  background: var(--accion-primaria-fondo-presionado);
+}
+
+.boton[data-variante="secundaria"] {
+  background: var(--color-fondo);
+  border-color: var(--color-borde);
+  color: var(--color-texto);
+}
+
+.boton[data-variante="peligro"] {
+  background: var(--color-peligro);
+  color: var(--color-sobre-peligro);
+}
+
+.boton:disabled {
+  background: var(--color-deshabilitado);
+  border-color: transparent;
+  color: var(--color-sobre-deshabilitado);
+  cursor: not-allowed;
+}
+
+.boton[aria-disabled="true"] {
+  cursor: progress;
+  opacity: 0.85;
+}
+
+.envoltura[data-ancho="completo"] .boton {
+  width: 100%;
+}
+
+.motivo {
+  color: var(--color-texto-suave);
+  font-size: var(--tipo-tamano-chico);
+}

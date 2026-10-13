@@ -1,0 +1,31 @@
+.texto {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.texto[data-variante="cuerpo"] {
+  font-size: var(--tipo-tamano-base);
+}
+
+.texto[data-variante="suave"] {
+  color: var(--color-texto-suave);
+  font-size: var(--tipo-tamano-base);
+}
+
+.texto[data-variante="chico"] {
+  color: var(--color-texto-suave);
+  font-size: var(--tipo-tamano-chico);
+}
+
+.texto[data-variante="subtitulo"] {
+  font-family: var(--tipo-familia-titulos);
+  font-size: var(--tipo-tamano-medio);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.texto[data-variante="titulo"] {
+  font-family: var(--tipo-familia-titulos);
+  font-size: var(--tipo-tamano-titulo);
+  font-weight: var(--tipo-peso-fuerte);
+  line-height: 1.25;
+}

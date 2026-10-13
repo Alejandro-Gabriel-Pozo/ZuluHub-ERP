@@ -7,3 +7,4 @@ package-lock.json
 reports
 .next
 next-env.d.ts
+.vitest

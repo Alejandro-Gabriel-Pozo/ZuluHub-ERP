@@ -1,0 +1,13 @@
+.franja {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding: var(--espacio-2) var(--espacio-4);
+  background: var(--color-aviso-suave);
+  border-bottom: var(--borde-grosor-fuerte) solid var(--color-aviso);
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+}

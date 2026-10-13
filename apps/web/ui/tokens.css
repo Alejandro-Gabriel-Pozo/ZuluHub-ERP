@@ -1,0 +1,122 @@
+/*
+ * Capa 1: tokens semánticos ([01] §4.1). Los componentes usan SOLO estas variables: ningún color,
+ * tamaño ni duración suelta. Hay un único puente hacia la marca: los cuatro `--brand-*`. La plataforma
+ * los pisa por host con valores validados; los de acá son neutros y legibles para cuando no hay marca.
+ *
+ * Los de estado (peligro, éxito, aviso, info) NUNCA toman un valor de marca: la marca no puede hacer
+ * que «Anular» se vea como «Cobrar». Lo verifica `tokens.test.ts`.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Puentes de marca (valores por defecto neutros). */
+  --brand-primary: #1f4e79;
+  --brand-on-primary: #ffffff;
+  --brand-accent: #0e7490;
+  --brand-secondary: #4b5563;
+
+  /* Color. */
+  --color-fondo: #ffffff;
+  --color-superficie: #f3f5f7;
+  --color-superficie-elevada: #ffffff;
+  --color-texto: #1b1f24;
+  --color-texto-suave: #4a5360;
+  --color-borde: #6b7585;
+  --color-foco: #111827;
+  --color-deshabilitado: #e5e7eb;
+  --color-sobre-deshabilitado: #5b6471;
+  --color-velo: rgb(17 24 39 / 55%);
+
+  /* Estado: cada uno con su «sobre-» (texto encima) y su tono suave (fondo de avisos). */
+  --color-peligro: #b3261e;
+  --color-sobre-peligro: #ffffff;
+  --color-peligro-suave: #fdecea;
+  --color-exito: #1e6b3a;
+  --color-sobre-exito: #ffffff;
+  --color-exito-suave: #e6f4ea;
+  --color-aviso: #8a4b00;
+  --color-sobre-aviso: #ffffff;
+  --color-aviso-suave: #fff4e0;
+  --color-info: #0b5cad;
+  --color-sobre-info: #ffffff;
+  --color-info-suave: #e8f1fb;
+
+  /* Acción y acento: lo único que sale de la marca. */
+  --accion-primaria-fondo: var(--brand-primary);
+  --accion-primaria-texto: var(--brand-on-primary);
+  --accion-primaria-fondo-hover: color-mix(in srgb, var(--accion-primaria-fondo), black 12%);
+  --accion-primaria-fondo-presionado: color-mix(in srgb, var(--accion-primaria-fondo), black 24%);
+  --acento: var(--brand-accent);
+  --secundario: var(--brand-secondary);
+
+  /* Espacio (escala fija). */
+  --espacio-1: 0.25rem;
+  --espacio-2: 0.5rem;
+  --espacio-3: 0.75rem;
+  --espacio-4: 1rem;
+  --espacio-5: 1.5rem;
+  --espacio-6: 2rem;
+  --espacio-7: 3rem;
+
+  /* Tipo: fuente del sistema (decisión del dueño: ninguna fuente que descargar). */
+  --tipo-familia-cuerpo:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --tipo-familia-titulos: var(--tipo-familia-cuerpo);
+  --tipo-tamano-chico: 0.875rem;
+  --tipo-tamano-base: 1rem;
+  --tipo-tamano-medio: 1.125rem;
+  --tipo-tamano-grande: 1.375rem;
+  --tipo-tamano-titulo: 1.625rem;
+  --tipo-peso-normal: 400;
+  --tipo-peso-fuerte: 600;
+  --tipo-interlineado: 1.5;
+
+  /* Forma. */
+  --radio-chico: 0.375rem;
+  --radio-base: 0.625rem;
+  --radio-grande: 1rem;
+  --borde-grosor: 1px;
+  --borde-grosor-fuerte: 2px;
+  --sombra-elevada: 0 -2px 16px rgb(17 24 39 / 18%);
+
+  /* Toque: el objetivo mínimo es de la superficie (operación más grande que administración). */
+  --objetivo-minimo-operacion: 3rem;
+  --objetivo-minimo-administracion: 2.75rem;
+  --objetivo-minimo: var(--objetivo-minimo-operacion);
+
+  /* Movimiento. */
+  --duracion-corta: 120ms;
+  --duracion-media: 200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duracion-corta: 0ms;
+    --duracion-media: 0ms;
+  }
+}
+
+/* Base: lo mínimo para que lo de arriba se pinte igual en toda pantalla. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-family: var(--tipo-familia-cuerpo);
+  font-size: var(--tipo-tamano-base);
+  line-height: var(--tipo-interlineado);
+}
+
+/* Foco visible con doble contorno: el anillo claro interior se ve sobre un fondo oscuro de marca y el
+   oscuro exterior sobre uno claro, así el foco no desaparece pase lo que pase con los colores. */
+:focus-visible {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-fondo);
+}

@@ -337,6 +337,19 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "src/modulos/marcas/publico.ts": exporta,
       },
     },
+    {
+      regla: "iconos-solo-por-su-puerta",
+      archivos: {
+        "apps/web/ui/componentes/boton.ts": importa("lucide-react"),
+      },
+    },
+    {
+      regla: "ui-sin-pantallas-ni-modulos",
+      archivos: {
+        "apps/web/ui/componentes/boton.ts": importa("../../pantallas/factura"),
+        "apps/web/pantallas/factura.ts": exporta,
+      },
+    },
   ];
 
   it("cada regla definida tiene su caso de violación", () => {
@@ -801,3 +814,70 @@ describe("R-W9: sin metadatos estáticos globales en apps", () => {
     expect(metadatosEstaticosGlobales(base)).toEqual([]);
   });
 });
+
+/**
+ * R-W6 y R-W7 (interfaz base). R-W6 previene íconos sueltos sin nombre accesible y un juego de íconos
+ * repartido por toda la web: `lucide-react` solo entra por `apps/web/ui/iconos/`. R-W7 previene un
+ * componente que sabe de un módulo o de una pantalla: la interfaz base (capas 1 a 5) no los conoce.
+ * Chequeo: los casos de arriba (`casos`) los rompen a propósito; acá, lo que SÍ está permitido y las
+ * otras formas de romperlas.
+ */
+describe("R-W6 y R-W7: la interfaz base", () => {
+  it("la puerta de íconos sí importa lucide-react; los componentes de ui, la puerta", async () => {
+    const v = await violacionesDeLaPuertaDeIconos();
+    expect(v).toEqual([]);
+  });
+
+  it("una pantalla o cualquier carpeta de src no puede importar lucide-react", async () => {
+    for (const origen of [
+      "apps/web/pantallas/inicio.ts",
+      "apps/web/app/pagina.ts",
+      "apps/web/ui/componentes/boton.ts",
+      "apps/web/ui/patrones/aviso.ts",
+      "src/capacidades/icono.ts",
+    ]) {
+      const v = await violacionesDe({ [origen]: importa("lucide-react") });
+      expect(v, origen).toContain("iconos-solo-por-su-puerta");
+    }
+  });
+
+  it("también se ve el import de un archivo interno del paquete", async () => {
+    const v = await violacionesDe({
+      "apps/web/ui/componentes/boton.ts": importa("lucide-react/dist/esm/icons/x"),
+    });
+    expect(v).toContain("iconos-solo-por-su-puerta");
+  });
+
+  it("ui no importa pantallas, servidor ni ningún módulo (ni por su publico.ts)", async () => {
+    for (const destino of [
+      ["apps/web/pantallas/p.ts", "../../pantallas/p"],
+      ["apps/web/servidor/s.ts", "../../servidor/s"],
+      ["src/modulos/fiscal/publico.ts", "../../../../src/modulos/fiscal/publico"],
+    ] as const) {
+      const v = await violacionesDe({
+        "apps/web/ui/componentes/c.ts": importa(destino[1]),
+        [destino[0]]: exporta,
+      });
+      expect(v, destino[0]).toContain("ui-sin-pantallas-ni-modulos");
+    }
+  });
+
+  it("ui sí usa las primitivas y las capacidades, y la pantalla sí usa ui", async () => {
+    const v = await violacionesDe({
+      "src/primitivas/dinero/importe.ts": exporta,
+      "src/capacidades/experiencia/importe-tipeado.ts": importa("../../primitivas/dinero/importe"),
+      "apps/web/ui/componentes/campo-importe.ts": importa(
+        "../../../../src/capacidades/experiencia/importe-tipeado",
+      ),
+      "apps/web/pantallas/venta.ts": importa("../ui/componentes/campo-importe"),
+    });
+    expect(v).toEqual([]);
+  });
+});
+
+async function violacionesDeLaPuertaDeIconos(): Promise<string[]> {
+  return violacionesDe({
+    "apps/web/ui/iconos/catalogo.ts": importa("lucide-react"),
+    "apps/web/ui/componentes/boton.ts": importa("../iconos/catalogo"),
+  });
+}

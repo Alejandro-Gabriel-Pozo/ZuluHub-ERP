@@ -110,14 +110,40 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     expect(claves.filter((c) => c.startsWith("error.")).sort()).toEqual([
       "error.empresa_de_otra_marca",
       "error.funcion_no_incluida",
+      "error.inesperado",
       "error.invitacion_de_otra_marca",
       "error.limite_del_plan",
+      "error.referencia",
     ]);
   });
 
   it("los textos de los errores con datos declaran su marcador", () => {
     expect(CATALOGO_DE_TEXTOS["error.limite_del_plan"].marcadores).toEqual(["limite"]);
     expect(CATALOGO_DE_TEXTOS["error.limite_del_plan"].porDefecto).toContain("{limite}");
+  });
+
+  it("los textos de la interfaz base: conexión, envío y sesión (W2), exactamente", () => {
+    expect(claves.filter((c) => /^(conexion|sesion)\./.test(c)).sort()).toEqual([
+      "conexion.enviando",
+      "conexion.no_se_puede_enviar",
+      "conexion.sin_conexion",
+      "conexion.verificando",
+      "sesion.aviso_detalle",
+      "sesion.aviso_titulo",
+      "sesion.ingresar_de_nuevo",
+      "sesion.seguir",
+      "sesion.vencida_detalle",
+      "sesion.vencida_titulo",
+    ]);
+    expect(CATALOGO_DE_TEXTOS["sesion.aviso_titulo"].porDefecto).toBe("¿Seguís ahí?");
+    expect(CATALOGO_DE_TEXTOS["conexion.verificando"].porDefecto).toBe(
+      "Verificando si se registró…",
+    );
+  });
+
+  it("la referencia del error inesperado lleva su marcador", () => {
+    expect(CATALOGO_DE_TEXTOS["error.referencia"].marcadores).toEqual(["referencia"]);
+    expect(CATALOGO_DE_TEXTOS["error.referencia"].porDefecto).toContain("{referencia}");
   });
 
   it("el motivo de solo lectura dice que lo cargado se conserva (decisión de bajas de plan)", () => {

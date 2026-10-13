@@ -1,0 +1,36 @@
+.insignia {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  padding: 0 var(--espacio-2);
+  border: var(--borde-grosor) solid currentcolor;
+  border-radius: var(--radio-grande);
+  font-size: var(--tipo-tamano-chico);
+  font-weight: var(--tipo-peso-fuerte);
+  white-space: nowrap;
+}
+
+.insignia[data-tono="neutro"] {
+  background: var(--color-superficie);
+  color: var(--color-texto);
+}
+
+.insignia[data-tono="peligro"] {
+  background: var(--color-peligro-suave);
+  color: var(--color-peligro);
+}
+
+.insignia[data-tono="exito"] {
+  background: var(--color-exito-suave);
+  color: var(--color-exito);
+}
+
+.insignia[data-tono="aviso"] {
+  background: var(--color-aviso-suave);
+  color: var(--color-aviso);
+}
+
+.insignia[data-tono="info"] {
+  background: var(--color-info-suave);
+  color: var(--color-info);
+}

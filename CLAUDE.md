@@ -7,6 +7,8 @@ del ingeniero. Las decisiones están en el repositorio `ZuluHub-docs` (ADR 001 a
 
 - Correr `npm run gate` (tipos, lint, formato, arquitectura, código muerto, pruebas). Debe pasar completo.
 - Cambios mínimos y enfocados; no inventar librerías ni APIs; avisar antes de sumar una dependencia.
+- Si tocás `apps/web/ui`, corré también `npm run test:componentes` (Chromium real: axe, foco y envío; el CI lo corre en el job
+  `componentes`). Un entorno que ya trae su propio Chromium lo indica con `ZULUHUB_NAVEGADOR=<ruta del ejecutable>`.
 - Una regla nueva de arquitectura trae su violación inyectada en `test/arquitectura/reglas.test.ts`.
 
 ## Reglas que no se negocian

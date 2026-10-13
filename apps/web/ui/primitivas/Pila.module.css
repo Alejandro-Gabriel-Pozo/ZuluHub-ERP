@@ -1,0 +1,56 @@
+.pila {
+  display: flex;
+  min-width: 0;
+}
+
+.pila[data-direccion="columna"] {
+  flex-direction: column;
+}
+
+.pila[data-direccion="fila"] {
+  flex-direction: row;
+}
+
+.pila[data-envolver="true"] {
+  flex-wrap: wrap;
+}
+
+.pila[data-separacion="1"] {
+  gap: var(--espacio-1);
+}
+
+.pila[data-separacion="2"] {
+  gap: var(--espacio-2);
+}
+
+.pila[data-separacion="3"] {
+  gap: var(--espacio-3);
+}
+
+.pila[data-separacion="4"] {
+  gap: var(--espacio-4);
+}
+
+.pila[data-separacion="5"] {
+  gap: var(--espacio-5);
+}
+
+.pila[data-separacion="6"] {
+  gap: var(--espacio-6);
+}
+
+.pila[data-alinear="inicio"] {
+  align-items: flex-start;
+}
+
+.pila[data-alinear="centro"] {
+  align-items: center;
+}
+
+.pila[data-alinear="fin"] {
+  align-items: flex-end;
+}
+
+.pila[data-alinear="estirar"] {
+  align-items: stretch;
+}

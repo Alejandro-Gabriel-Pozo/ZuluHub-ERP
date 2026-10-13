@@ -1,0 +1,94 @@
+.dialogo {
+  padding: 0;
+  border: 0;
+  background: var(--color-superficie-elevada);
+  color: var(--color-texto);
+  max-width: none;
+  max-height: none;
+}
+
+.dialogo::backdrop {
+  background: var(--color-velo);
+}
+
+.contenido {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  min-height: 0;
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-bottom: var(--borde-grosor) solid var(--color-borde);
+}
+
+.titulo {
+  margin: 0;
+  font-family: var(--tipo-familia-titulos);
+  font-size: var(--tipo-tamano-grande);
+  font-weight: var(--tipo-peso-fuerte);
+  line-height: 1.25;
+}
+
+.titulo:focus-visible {
+  outline-offset: 4px;
+}
+
+.cuerpo {
+  padding: var(--espacio-4);
+  overflow-y: auto;
+}
+
+/* Celular, `elegir` y `confirmar`: hoja inferior. */
+.dialogo[data-proposito="elegir"],
+.dialogo[data-proposito="confirmar"] {
+  inset: auto 0 0;
+  width: 100%;
+  max-height: 85dvh;
+  margin: 0;
+  border-radius: var(--radio-grande) var(--radio-grande) 0 0;
+  box-shadow: var(--sombra-elevada);
+}
+
+/* Celular, `editar` y `detalle`: pantalla completa. */
+.dialogo[data-proposito="editar"],
+.dialogo[data-proposito="detalle"] {
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  margin: 0;
+  border-radius: 0;
+}
+
+.dialogo[data-proposito="editar"] .contenido,
+.dialogo[data-proposito="detalle"] .contenido {
+  height: 100%;
+}
+
+/* Escritorio: diálogo centrado (elegir, confirmar, editar) y panel lateral (detalle). */
+@media (min-width: 48rem) {
+  .dialogo[data-proposito="elegir"],
+  .dialogo[data-proposito="confirmar"],
+  .dialogo[data-proposito="editar"] {
+    inset: 0;
+    width: min(100% - 2 * var(--espacio-5), 32rem);
+    height: auto;
+    max-height: 85dvh;
+    margin: auto;
+    border-radius: var(--radio-grande);
+  }
+
+  .dialogo[data-proposito="editar"] {
+    width: min(100% - 2 * var(--espacio-5), 44rem);
+  }
+
+  .dialogo[data-proposito="detalle"] {
+    inset: 0 0 0 auto;
+    width: min(100%, 28rem);
+  }
+}

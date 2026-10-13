@@ -328,6 +328,26 @@ const reglas = [
     from: { path: "^src/modulos/", pathNot: "^src/modulos/marcas/" },
     to: { path: "^src/modulos/marcas/" },
   },
+  {
+    // R-W6. Previene: íconos sueltos sin nombre accesible ([02] §4.3) y un juego de íconos repartido por
+    // toda la web (cambiarlo tocaría cada pantalla). Chequeo: la violación inyectada de reglas.test.ts.
+    name: "iconos-solo-por-su-puerta",
+    severity: "error",
+    comment:
+      "`lucide-react` solo se importa desde apps/web/ui/iconos/ (R-W6): ahí cada ícono sale del catálogo cerrado y con su nombre accesible o declarado decorativo.",
+    from: { path: "^(src|apps)/", pathNot: "^apps/web/ui/iconos/" },
+    to: { path: "^(node_modules/)?lucide-react(/|$)" },
+  },
+  {
+    // R-W7. Previene: un componente que sabe de un módulo o de una pantalla ([01] §3.1): la interfaz base
+    // (capas 1 a 5) no conoce ningún módulo ni la composición. Chequeo: la violación inyectada de reglas.test.ts.
+    name: "ui-sin-pantallas-ni-modulos",
+    severity: "error",
+    comment:
+      "apps/web/ui/** (capas 1 a 5) no importa apps/web/pantallas/**, apps/web/servidor/** ni src/modulos/** (R-W7): la interfaz base no conoce ninguna pantalla ni módulo.",
+    from: { path: "^apps/web/ui/" },
+    to: { path: "^apps/web/(pantallas|servidor)/|^src/modulos/" },
+  },
 ];
 
 module.exports = { reglas };
