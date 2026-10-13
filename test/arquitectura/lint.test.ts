@@ -112,6 +112,134 @@ describe("lint de la web (R-W8)", () => {
 });
 
 /**
+ * R-W1 y R-W3 (W1). Previenen, respectivamente, variables de entorno leídas sin validar y un contexto
+ * con persona armado fuera de `src/composicion/contextos.ts`. Cada una con su violación inyectada y el
+ * caso permitido que no debe dispararla. Se prueba con las reglas de la web más las del dinero, como
+ * las ve ESLint sobre un archivo de `src/composicion`: ninguna tapa a la otra.
+ */
+describe("lint de la web y la composición (R-W1, R-W3)", () => {
+  const { bloques: bloquesDeWeb } = require("../../arquitectura/lint-web.cjs") as {
+    bloques: ESLint.Options["baseConfig"] extends infer T ? Exclude<T, null> : never;
+  };
+  const eslintWeb = new ESLint({
+    overrideConfigFile: true,
+    overrideConfig: [
+      {
+        files: ["**/*.ts", "**/*.tsx"],
+        languageOptions: {
+          parser: tseslint.parser,
+          parserOptions: { ecmaFeatures: { jsx: true } },
+        },
+      },
+      ...(bloques as never[]),
+      ...(bloquesDeWeb as never[]),
+    ],
+  });
+  const mensajesWeb = async (ruta: string, codigo: string): Promise<string[]> => {
+    const [resultado] = await eslintWeb.lintText(codigo, { filePath: ruta });
+    return (resultado?.messages ?? []).map((m) => `${m.ruleId ?? "?"}: ${m.message}`);
+  };
+
+  describe("R-W1: process solo en src/composicion/entorno.ts", () => {
+    it.each([
+      ["process.env", "export const a = process.env.X;"],
+      ["process.env con corchetes", 'export const a = process.env["X"];'],
+      ["desestructurar env", "const { env } = process;\nexport const a = env.X;"],
+      ["un alias de process", "const p = process;\nexport const a = p.env.X;"],
+      ["globalThis.process", "export const a = globalThis.process.env.X;"],
+      ["importar process", 'import { env } from "node:process";\nexport const a = env.X;'],
+      ["importar process sin prefijo", 'import process from "process";\nexport const a = process;'],
+    ])("se prohíbe %s en la composición, en los módulos y en apps", async (_nombre, codigo) => {
+      expect(await mensajesWeb("src/composicion/web.ts", codigo)).not.toEqual([]);
+      expect(await mensajesWeb("src/modulos/empresas/casos-de-uso/x.ts", codigo)).not.toEqual([]);
+      expect(await mensajesWeb("src/adaptadores/correo/x.ts", codigo)).not.toEqual([]);
+      expect(await mensajesWeb("apps/web/servidor/x.ts", codigo)).not.toEqual([]);
+      expect(await mensajesWeb("apps/web/app/s/neutra/x.tsx", codigo)).not.toEqual([]);
+    });
+
+    it("en entorno.ts, en las pruebas y en scripts/ sí se permite", async () => {
+      const codigo = "export const a = process.env.X;";
+      expect(await mensajesWeb("src/composicion/entorno.ts", codigo)).toEqual([]);
+      expect(await mensajesWeb("src/composicion/entorno.test.ts", codigo)).toEqual([]);
+      expect(await mensajesWeb("test/integracion/global.ts", codigo)).toEqual([]);
+      expect(await mensajesWeb("scripts/migrar.ts", codigo)).toEqual([]);
+    });
+
+    it("un parámetro o una propiedad llamados env no se confunden con el entorno", async () => {
+      expect(
+        await mensajesWeb(
+          "src/composicion/web.ts",
+          "export const a = (entorno: { env: string }) => entorno.env;",
+        ),
+      ).toEqual([]);
+    });
+  });
+
+  describe("R-W3: contextos con persona solo en src/composicion/contextos.ts", () => {
+    it.each([
+      [
+        "OPERATIVO",
+        'export const c = { tipo: "OPERATIVO", empresaId, personaId, marcaDeEntrada, ahora };',
+      ],
+      ["INVITACION", 'export const c = { tipo: "INVITACION", tokenHash, ahora };'],
+      ["SESION", 'export const c = { tipo: "SESION", usuarioAuth, ahora };'],
+      ["GRUPO", 'export const c = { tipo: "GRUPO", tenantId, personaId, ahora };'],
+      ["PLATAFORMA", 'export const c = { tipo: "PLATAFORMA", actor, ahora };'],
+      ["clave entre comillas", 'export const c = { "tipo": "OPERATIVO", empresaId };'],
+      [
+        "con as const",
+        'export const c = { tipo: "OPERATIVO" as const, empresaId, marcaDeEntrada };',
+      ],
+      [
+        "tipado como Contexto",
+        'export const c: Contexto = { tipo: "OPERATIVO", empresaId, marcaDeEntrada };',
+      ],
+    ])("se prohíbe armar un contexto %s fuera de contextos.ts", async (_nombre, codigo) => {
+      expect(await mensajesWeb("apps/web/servidor/x.ts", codigo)).not.toEqual([]);
+      expect(await mensajesWeb("apps/web/app/s/app/x.tsx", codigo)).not.toEqual([]);
+      expect(await mensajesWeb("src/composicion/web.ts", codigo)).not.toEqual([]);
+    });
+
+    it("contextos.ts y las pruebas sí pueden armarlos", async () => {
+      const codigo = 'export const c = { tipo: "OPERATIVO", empresaId, marcaDeEntrada };';
+      expect(await mensajesWeb("src/composicion/contextos.ts", codigo)).toEqual([]);
+      expect(await mensajesWeb("src/composicion/contextos.test.ts", codigo)).toEqual([]);
+      expect(await mensajesWeb("test/integracion/entorno.ts", codigo)).toEqual([]);
+    });
+
+    it("otras propiedades tipo y otros valores no se tocan", async () => {
+      expect(
+        await mensajesWeb(
+          "apps/web/servidor/x.ts",
+          'export const a = { tipo: "ERROR_DE_PRUEBA" };',
+        ),
+      ).toEqual([]);
+      expect(
+        await mensajesWeb("apps/web/servidor/x.ts", 'export const a = { clase: "OPERATIVO" };'),
+      ).toEqual([]);
+      expect(
+        await mensajesWeb(
+          "apps/web/servidor/x.ts",
+          'export const a = { tipo: "TRABAJOS", ahora };',
+        ),
+      ).toEqual([]);
+    });
+
+    it("convive con las reglas de la web y del dinero: ninguna tapa a la otra", async () => {
+      expect(
+        await mensajesWeb(
+          "apps/web/app/s/neutra/x.tsx",
+          "export const a = <div dangerouslySetInnerHTML={x} />;",
+        ),
+      ).not.toEqual([]);
+      expect(
+        await mensajesWeb("src/composicion/web.ts", "export const a = b as Importe;"),
+      ).not.toEqual([]);
+    });
+  });
+});
+
+/**
  * R-W10: en `apps/**` un importe, total o precio no es `number`. Previene un importe como `number` en un
  * formulario o en una prop ([A006], ADR-006): pierde centavos sin avisar. Chequeo: las violaciones
  * inyectadas de acá, en `.tsx` y `.ts`; y que la configuración REAL de ESLint aplique R-W8 y R-W10 juntas

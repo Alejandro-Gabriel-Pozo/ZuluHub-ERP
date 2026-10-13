@@ -48,7 +48,7 @@ async function violacionesDe(archivos: Archivos): Promise<string[]> {
       ruleSet: { forbidden: reglas },
       tsPreCompilationDeps: true,
     },
-    { extensions: [".ts", ".js"] },
+    { extensions: [".ts", ".tsx", ".js"] },
   );
   if (typeof resultado.output === "string") throw new Error("salida inesperada");
   const nombres = resultado.output.summary.violations.map((v) => v.rule.name);
@@ -335,6 +335,27 @@ describe("reglas de arquitectura (ADR-001)", () => {
       archivos: {
         "src/modulos/empresas/casos-de-uso/c.ts": importa("../../marcas/publico"),
         "src/modulos/marcas/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "composicion-solo-desde-servidor-de-apps",
+      archivos: {
+        "apps/web/app/s/app/page.tsx": importa("../../../../../src/composicion/web"),
+        "src/composicion/web.ts": exporta,
+      },
+    },
+    {
+      regla: "cliente-sin-servidor",
+      archivos: {
+        "apps/web/app/s/app/boton.cliente.tsx": importa("../../../servidor/composicion"),
+        "apps/web/servidor/composicion.ts": exporta,
+      },
+    },
+    {
+      regla: "formas-sin-negocio",
+      archivos: {
+        "src/modulos/empresas/formas.ts": importa("./dominio/sucursal"),
+        "src/modulos/empresas/dominio/sucursal.ts": exporta,
       },
     },
     {
@@ -812,6 +833,234 @@ describe("R-W9: sin metadatos estáticos globales en apps", () => {
       "apps/web/package.json",
     ]);
     expect(metadatosEstaticosGlobales(base)).toEqual([]);
+  });
+});
+
+/**
+ * R-W2, R-W4 y R-W5 (W1): quién puede importar la composición, qué no puede importar un archivo de
+ * cliente y qué es `formas.ts`. Cada regla de dependencias tiene su violación inyectada en `casos`
+ * (arriba); acá van los casos permitidos que no deben dispararla.
+ */
+describe("R-W2: la composición solo se importa desde apps/web/servidor", () => {
+  it("el servidor de la app sí la importa", async () => {
+    const v = await violacionesDe({
+      "src/composicion/web.ts": exporta,
+      "apps/web/servidor/composicion.ts": importa("../../../src/composicion/web"),
+    });
+    expect(v).toEqual([]);
+  });
+
+  it("también se prohíbe desde un archivo de apps que no es .tsx (el proxy, un handler)", async () => {
+    const v = await violacionesDe({
+      "src/composicion/web.ts": exporta,
+      "apps/web/proxy.ts": importa("../../src/composicion/web"),
+    });
+    expect(v).toContain("composicion-solo-desde-servidor-de-apps");
+  });
+
+  it("un .tsx de otro lado tampoco, y la composición puede importar lo suyo", async () => {
+    const v = await violacionesDe({
+      "src/composicion/web.ts": importa("./entorno"),
+      "src/composicion/entorno.ts": exporta,
+      "src/modulos/empresas/ui.tsx": importa("../../composicion/web"),
+    });
+    expect(v).toContain("composicion-solo-desde-servidor-de-apps");
+  });
+});
+
+describe("R-W4: los archivos de cliente no importan nada del servidor", () => {
+  it.each([
+    [
+      "publico.ts de un módulo",
+      "src/modulos/empresas/publico.ts",
+      "../../../../../../src/modulos/empresas/publico",
+    ],
+    ["la composición", "src/composicion/web.ts", "../../../../../../src/composicion/web"],
+    ["un adaptador", "src/adaptadores/correo/a.ts", "../../../../../../src/adaptadores/correo/a"],
+  ])("no importan %s", async (_nombre, destino, ruta) => {
+    const v = await violacionesDe({
+      [destino]: exporta,
+      "apps/web/app/s/app/x/boton.cliente.tsx": importa(ruta),
+    });
+    expect(v).toContain("cliente-sin-servidor");
+  });
+
+  it("sí importan formas.ts, primitivas, capacidades y otros archivos de cliente", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/formas.ts": exporta,
+      "src/primitivas/p.ts": exporta,
+      "src/capacidades/vocabulario/v.ts": exporta,
+      "apps/web/ui/otro.cliente.tsx": exporta,
+      "apps/web/app/s/app/boton.cliente.tsx": [
+        importa("../../../../../src/modulos/empresas/formas"),
+        importa("../../../../../src/primitivas/p").replace("y =", "y2 ="),
+        importa("../../../../../src/capacidades/vocabulario/v").replace("y =", "y3 ="),
+        importa("../../../ui/otro.cliente").replace("y =", "y4 ="),
+      ].join(""),
+    });
+    expect(v).toEqual([]);
+  });
+
+  it("un archivo de servidor sí importa lo del servidor (la regla es solo de los .cliente.tsx)", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/publico.ts": exporta,
+      "apps/web/servidor/consulta.ts": importa("../../../src/modulos/empresas/publico"),
+    });
+    expect(v).toEqual([]);
+  });
+});
+
+describe("R-W5: formas.ts es una entrada admitida y no tiene negocio", () => {
+  it("la pantalla y la composición importan formas.ts sin pasar por publico.ts", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/formas.ts": exporta,
+      "apps/web/app/s/app/page.ts": importa("../../../../../src/modulos/empresas/formas"),
+      "src/composicion/web.ts": importa("../modulos/empresas/formas"),
+    });
+    expect(v).toEqual([]);
+  });
+
+  it("el resto del módulo sigue cerrado: dominio, casos de uso y persistencia siguen prohibidos", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/dominio/d.ts": exporta,
+      "apps/web/app/s/app/page.ts": importa("../../../../../src/modulos/empresas/dominio/d"),
+    });
+    expect(v).toContain("modulos-solo-por-publico-desde-afuera");
+  });
+
+  it("otro módulo no importa las formas de este: entre módulos solo publico.ts", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/formas.ts": exporta,
+      "src/modulos/identidad/casos-de-uso/c.ts": importa("../../empresas/formas"),
+    });
+    expect(v).toContain("modulos-solo-por-publico");
+  });
+
+  it.each([
+    ["publico.ts del propio módulo", "src/modulos/empresas/publico.ts", "./publico"],
+    ["un caso de uso", "src/modulos/empresas/casos-de-uso/c.ts", "./casos-de-uso/c"],
+    ["la persistencia", "src/modulos/empresas/persistencia/r.ts", "./persistencia/r"],
+    ["una capacidad", "src/capacidades/vocabulario/v.ts", "../../capacidades/vocabulario/v"],
+    ["un puerto", "src/puertos/p.ts", "../../puertos/p"],
+  ])("formas.ts no importa %s", async (_nombre, destino, ruta) => {
+    const v = await violacionesDe({
+      [destino]: exporta,
+      "src/modulos/empresas/formas.ts": importa(ruta),
+    });
+    expect(v).toContain("formas-sin-negocio");
+  });
+
+  it("formas.ts sí importa zod y primitivas", async () => {
+    const v = await violacionesDe({
+      "src/primitivas/identificadores/marca.ts": exporta,
+      "src/modulos/empresas/formas.ts":
+        'import { z } from "zod";\n' +
+        importa("../../primitivas/identificadores/marca").replace("y =", "y2 =") +
+        "export const f = z;\n",
+    });
+    expect(v).toEqual([]);
+  });
+
+  it("formas.ts no importa módulos de node", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/formas.ts":
+        'import { join } from "node:path";\nexport const f = join;\n',
+    });
+    expect(v).toContain("formas-sin-negocio");
+  });
+});
+
+/**
+ * Convenciones de archivos de `apps/` que ninguna regla de dependencias ve (W1). Se prueban con
+ * archivos de verdad en un árbol temporal y se aplican al repositorio real.
+ *  - Todo archivo con la directiva "use client" lleva el sufijo `.cliente.tsx` (R-W4): sin él, la
+ *    regla `cliente-sin-servidor` no lo alcanzaría y un componente de cliente podría importar el servidor.
+ *  - Todo archivo de `apps/<app>/servidor/` empieza con `import "server-only";`: si un componente de
+ *    cliente lo importa, la compilación falla en vez de empaquetar secretos o persistencia.
+ */
+const DIRECTIVA_DE_CLIENTE = /^(?:\s|\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*(["'])use client\1/;
+
+function archivosDeApps(raiz: string): string[] {
+  const apps = join(raiz, "apps");
+  if (!existsSync(apps)) return [];
+  return readdirSync(apps, { recursive: true, encoding: "utf8" })
+    .filter((f) => /\.(ts|tsx)$/.test(f) && !/(^|[\\/])(node_modules|\.next)[\\/]/.test(f))
+    .map((f) => f.replaceAll("\\", "/"))
+    .sort();
+}
+
+function archivosDeClienteSinSufijo(raiz: string): string[] {
+  return archivosDeApps(raiz)
+    .filter(
+      (f) =>
+        !f.endsWith(".cliente.tsx") &&
+        DIRECTIVA_DE_CLIENTE.test(readFileSync(join(raiz, "apps", f), "utf8")),
+    )
+    .map((f) => `apps/${f}`);
+}
+
+function archivosDeServidorSinServerOnly(raiz: string): string[] {
+  return archivosDeApps(raiz)
+    .filter((f) => /^[^/]+\/servidor\//.test(f))
+    .filter(
+      (f) => readFileSync(join(raiz, "apps", f), "utf8").split("\n")[0] !== 'import "server-only";',
+    )
+    .map((f) => `apps/${f}`);
+}
+
+describe("convenciones de apps: use client con sufijo y server-only en el servidor", () => {
+  const arbol = (archivos: Record<string, string>): string => {
+    const base = mkdtempSync(join(tmpdir(), "zuluhub-conv-"));
+    directorios.push(base);
+    for (const [ruta, contenido] of Object.entries(archivos)) {
+      mkdirSync(dirname(join(base, ruta)), { recursive: true });
+      writeFileSync(join(base, ruta), contenido);
+    }
+    return base;
+  };
+
+  it("el repositorio real las cumple", () => {
+    expect(archivosDeClienteSinSufijo(".")).toEqual([]);
+    expect(archivosDeServidorSinServerOnly(".")).toEqual([]);
+    expect(archivosDeApps(".")).toContain("web/servidor/composicion.ts");
+  });
+
+  it.each([
+    ['"use client";\nexport const a = 1;\n'],
+    ["'use client'\nexport const a = 1;\n"],
+    ['// comentario\n"use client";\nexport const a = 1;\n'],
+    ['/* bloque\n   de varias líneas */\n\n"use client";\nexport const a = 1;\n'],
+  ])("detecta un archivo con la directiva y sin el sufijo: %j", (contenido) => {
+    const base = arbol({ "apps/web/app/panel.tsx": contenido, "apps/web/app/otro.ts": contenido });
+    expect(archivosDeClienteSinSufijo(base)).toEqual([
+      "apps/web/app/otro.ts",
+      "apps/web/app/panel.tsx",
+    ]);
+  });
+
+  it("no marca los .cliente.tsx, ni los archivos sin la directiva, ni un texto que solo la menciona", () => {
+    const base = arbol({
+      "apps/web/app/panel.cliente.tsx": '"use client";\nexport const a = 1;\n',
+      "apps/web/app/servidor.tsx": "export const a = 1;\n",
+      "apps/web/app/menciona.tsx": 'export const a = 1;\nexport const t = "use client";\n',
+      "apps/web/app/node_modules/x/y.tsx": '"use client";\n',
+    });
+    expect(archivosDeClienteSinSufijo(base)).toEqual([]);
+  });
+
+  it("detecta un archivo de servidor sin server-only como primera línea", () => {
+    const base = arbol({
+      "apps/web/servidor/bien.ts": 'import "server-only";\nexport const a = 1;\n',
+      "apps/web/servidor/sub/mal.ts": 'export const a = 1;\nimport "server-only";\n',
+      "apps/web/servidor/comentario.ts": '// server-only\nimport "server-only";\n',
+      "apps/web/servidor/pantalla.tsx": "export const a = 1;\n",
+      "apps/web/otro/libre.ts": "export const a = 1;\n",
+    });
+    expect(archivosDeServidorSinServerOnly(base)).toEqual([
+      "apps/web/servidor/comentario.ts",
+      "apps/web/servidor/pantalla.tsx",
+      "apps/web/servidor/sub/mal.ts",
+    ]);
   });
 });
 
