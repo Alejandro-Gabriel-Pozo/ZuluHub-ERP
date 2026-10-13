@@ -42,6 +42,8 @@ export const PERMISOS_DE_EMPRESA = {
   "gerencia.rechazar_traspaso": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "modulos.ver": ["GERENTE", "ADMINISTRADOR"],
   "permisos.ver_propios": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  // H7 (especificación §C): quien cobra puede emitir el comprobante en el mismo acto, los tres roles.
+  "comprobantes.emitir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
 } as const satisfies Record<ClaveAccion, readonly RolDeEmpresa[]>;
 
 export type ReglasDeEmpresa = ReglasDelGuard<ClaveModulo, ClaveAccion, ClaveCapacidad>;
