@@ -43,8 +43,8 @@ function domicilio(calle: string, numero: string): Domicilio {
   return r.valor;
 }
 
-export const DOMICILIO_FISCAL = domicilio("Av. Corrientes", "1234");
-export const DOMICILIO_DEL_PUNTO_DE_VENTA = domicilio("Calle Falsa", "123");
+const DOMICILIO_FISCAL = domicilio("Av. Corrientes", "1234");
+const DOMICILIO_DEL_PUNTO_DE_VENTA = domicilio("Calle Falsa", "123");
 
 export const emisorInstantaneo = (
   cambios: Partial<InstantaneaDeEmisor> = {},

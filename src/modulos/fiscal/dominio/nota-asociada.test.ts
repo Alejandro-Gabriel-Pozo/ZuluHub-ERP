@@ -178,10 +178,7 @@ describe("armarNotaAsociada: errores", () => {
       const receptor: Receptor = letra === "A" ? receptorInscripto : consumidorFinal;
       const renglones =
         letra === "C" ? [renglon("10.00", "1", null)] : [renglon("10.00", "1", "21")];
-      const e = error(
-        { ...facturaB, tipo: tipo, receptor },
-        entrada({ renglones }),
-      );
+      const e = error({ ...facturaB, tipo: tipo, receptor }, entrada({ renglones }));
       expect(e === null, tipo).toBe(asociable);
       if (!asociable) expect(e).toEqual({ codigo: "ASOCIADO_NO_ASOCIABLE" });
     }
