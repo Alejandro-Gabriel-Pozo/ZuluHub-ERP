@@ -241,6 +241,9 @@ jobs:
           - grupo: planes (decisiones del módulo)
             archivos: "src/modulos/planes/dominio/**/*.ts"
             pruebas: "src/modulos/planes"
+          - grupo: web (puerta mínima)
+            archivos: "src/capacidades/experiencia/**/*.ts"
+            pruebas: "src/capacidades/experiencia"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -260,7 +263,7 @@ jobs:
   gate:
     name: Gate
     runs-on: ubuntu-latest
-    needs: [estatico, pruebas, seguridad, flujos, dependencias, estabilidad, mutacion]
+    needs: [estatico, pruebas, seguridad, flujos, dependencias, estabilidad, mutacion, web]
     if: always()
     steps:
       - name: Todos los jobs en verde
@@ -274,3 +277,29 @@ jobs:
           test "${{ needs.dependencias.result }}" = "success" || test "${{ needs.dependencias.result }}" = "skipped"
           # La estabilidad solo corre en pull requests: en push a main queda "skipped".
           test "${{ needs.estabilidad.result }}" = "success" || test "${{ needs.estabilidad.result }}" = "skipped"
+          test "${{ needs.web.result }}" = "success"
+
+  web:
+    # P-12: la web compila sin ningún secreto. Las variables viven en Vercel y se leen al primer uso,
+    # nunca al compilar; si alguien lee una al importar, este job falla.
+    name: Web (next build sin variables ZULUHUB_*)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: El entorno no trae ninguna variable ZULUHUB_*
+        run: |
+          if env | grep -q '^ZULUHUB_'; then
+            echo "El job web no debe tener variables ZULUHUB_*" >&2
+            exit 1
+          fi
+      - run: npm run build:web
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
