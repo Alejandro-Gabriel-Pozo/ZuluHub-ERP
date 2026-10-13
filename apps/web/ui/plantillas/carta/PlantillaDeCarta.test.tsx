@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
@@ -276,6 +277,24 @@ describe("carta: tamaño de la letra (D4 y D10)", () => {
     expect(html).toContain("desde $ 3.300");
     expect(html).toContain("Capuchino");
     expect(html).not.toContain("Letra normal");
+  });
+});
+
+describe("carta: hidratación", () => {
+  it("el HTML del servidor se hidrata sin diferencias, aun con un paso guardado, y aparece el control", async () => {
+    window.localStorage.setItem(CLAVE_DE_LETRA_GUARDADA, "GRANDE");
+    const errores = vi.spyOn(console, "error").mockImplementation(() => {});
+    const vista = cartaDePrueba();
+    const contenedor = document.createElement("div");
+    contenedor.innerHTML = renderToString(<PlantillaDeCarta vista={vista} textos={TEXTOS} />);
+    document.body.append(contenedor);
+    const raiz = hydrateRoot(contenedor, <PlantillaDeCarta vista={vista} textos={TEXTOS} />);
+    await expect
+      .element(page.getByRole("button", { name: "Letra grande" }))
+      .toHaveAttribute("aria-pressed", "true");
+    expect(errores).not.toHaveBeenCalled();
+    raiz.unmount();
+    contenedor.remove();
   });
 });
 
