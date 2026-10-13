@@ -1,3 +1,4 @@
+import fc from "fast-check";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -222,4 +223,43 @@ export function construirIco(entradas: readonly EntradaDeIco[], relleno: number)
     ]),
     new Array<number>(relleno).fill(0xee),
   );
+}
+
+// --- Mutaciones (propiedades) ----------------------------------------------------------------------
+
+/**
+ * Bytes de `base` con de 1 a 4 daños al azar: cambiar un byte, escribir un valor de borde (0, 1, 255,
+ * 0xFFFF, 0xFFFFFFFF) de 1, 2 o 4 bytes, cortar, borrar un tramo o insertar bytes. Lo que un archivo
+ * adulterado o roto puede hacerle a una cabecera.
+ */
+export function mutaciones(base: Uint8Array): fc.Arbitrary<Uint8Array> {
+  const posicion = fc.nat({ max: Math.max(0, base.length - 1) });
+  const valorDeBorde = fc.constantFrom(0, 1, 2, 0x7f, 0x80, 0xff, 0xffff, 0xffffffff, 0x7fffffff);
+  const dano: fc.Arbitrary<(b: number[]) => number[]> = fc.oneof(
+    fc.tuple(posicion, fc.nat({ max: 255 })).map(
+      ([i, v]) =>
+        (b: number[]) =>
+          b.map((x, j) => (j === i ? v : x)),
+    ),
+    fc
+      .tuple(posicion, valorDeBorde, fc.constantFrom(1, 2, 4), fc.boolean())
+      .map(([i, v, n, grande]) => (b: number[]) => {
+        const salida = [...b];
+        for (let k = 0; k < n; k++) {
+          const byte = grande ? (v >>> (8 * (n - 1 - k))) & 0xff : (v >>> (8 * k)) & 0xff;
+          if (i + k < salida.length) salida[i + k] = byte;
+        }
+        return salida;
+      }),
+    posicion.map((i) => (b: number[]) => b.slice(0, i)),
+    fc
+      .tuple(posicion, fc.nat({ max: 40 }))
+      .map(([i, n]) => (b: number[]) => [...b.slice(0, i), ...b.slice(i + n)]),
+    fc
+      .tuple(posicion, fc.array(fc.nat({ max: 255 }), { maxLength: 12 }))
+      .map(([i, nuevos]) => (b: number[]) => [...b.slice(0, i), ...nuevos, ...b.slice(i)]),
+  );
+  return fc
+    .array(dano, { minLength: 1, maxLength: 4 })
+    .map((danos) => Uint8Array.from(danos.reduce((b, d) => d(b), [...base])));
 }
