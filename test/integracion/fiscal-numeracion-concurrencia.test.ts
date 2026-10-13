@@ -1,8 +1,14 @@
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
-import { puntoDeVentaId, solicitudId, verificarSecuencia } from "../../src/modulos/fiscal/publico";
+import {
+  puntoDeVentaId,
+  solicitudId,
+  verificarSecuencia,
+  type ResultadoDeAutorizacionArca,
+} from "../../src/modulos/fiscal/publico";
 import { err, ok } from "../../src/primitivas/resultado/resultado";
 import { EmisionFalsa, guionAlAzar } from "../utilidades/emision-falsa";
+import { fecha } from "../utilidades/facturacion";
 import { crearBarrera, crearBaseAparte } from "./entorno";
 import {
   casosDeNumeracion,
@@ -111,7 +117,13 @@ describe.skipIf(base === null)("fiscal T6: concurrencia de la numeración", () =
     }
   }
 
-  const AUTORIZADO = { tipo: "AUTORIZADO", codigo: "CAE-1", vence: "2099-12-31" } as const;
+  const AUTORIZADO: ResultadoDeAutorizacionArca = {
+    tipo: "AUTORIZADO",
+    codigo: "CAE-1",
+    vence: fecha("2099-12-31"),
+    fecha: fecha("2026-10-13"),
+    observaciones: [],
+  };
 
   // ===============================================================================================
   describe("reservar", () => {
@@ -309,7 +321,7 @@ describe.skipIf(base === null)("fiscal T6: concurrencia de la numeración", () =
     const TRABAJADORES = 8;
     const SOLICITUDES_POR_TRABAJADOR = 50;
 
-    it("8 trabajadores × 50 solicitudes con ARCA al azar (autoriza, rechaza, incierto, autorizó y se cayó): los números autorizados son exactamente 1..n, sin huecos ni repetidos, y una auditoría por número", async () => {
+    it("8 trabajadores × 50 solicitudes con ARCA al azar (autoriza, rechaza, incierto, autorizó y se cayó, no enviado): los números autorizados son exactamente 1..n, sin huecos ni repetidos, y una auditoría por número", async () => {
       const e = await escenario();
       const arca = new EmisionFalsa({
         decidir: guionAlAzar(20261012, {
@@ -317,6 +329,7 @@ describe.skipIf(base === null)("fiscal T6: concurrencia de la numeración", () =
           RECHAZA: 2,
           INCIERTO: 1,
           AUTORIZA_Y_SE_CAE: 1,
+          NO_ENVIADO: 1,
         }),
       });
       // Plazo corto para que lo incierto se reconcilie durante la prueba.
@@ -332,6 +345,7 @@ describe.skipIf(base === null)("fiscal T6: concurrencia de la numeración", () =
         const entrada = {
           puntoDeVentaId: pv,
           tipo: "FACTURA_B",
+          ambiente: "HOMOLOGACION",
           solicitud: solicitudId(nuevoId()),
         } as const;
         for (;;) {
@@ -363,6 +377,7 @@ describe.skipIf(base === null)("fiscal T6: concurrencia de la numeración", () =
           await c.reconciliarSerie(e.sistema(new Date()), {
             puntoDeVentaId: pv,
             tipo: "FACTURA_B",
+            ambiente: "HOMOLOGACION",
           });
           await esperar(5);
         }
@@ -408,7 +423,7 @@ describe.skipIf(base === null)("fiscal T6: concurrencia de la numeración", () =
       // Lo que cada llamada vio como autorizado está en la secuencia.
       const vistos = resultados.filter((r) => r.tipo === "AUTORIZADO").map((r) => r.numero);
       for (const numero of vistos) expect(autorizados).toContain(numero);
-      // La prueba ejercitó los cuatro desenlaces y la espera por reservas ocupadas.
+      // La prueba ejercitó los cinco desenlaces y la espera por reservas ocupadas.
       expect(resultados.length).toBeGreaterThan(0);
       expect(ocupadas).toBeGreaterThanOrEqual(0);
       expect(

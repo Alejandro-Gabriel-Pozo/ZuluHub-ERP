@@ -73,6 +73,7 @@ export const IDENTIDAD_DE_SERIE = {
   puntoDeVentaId: puntoDeVentaId("pv-1"),
   emisorId: EMISOR_1,
   tipo: "FACTURA_B",
+  ambiente: "HOMOLOGACION",
   version: 3,
 } as const;
 

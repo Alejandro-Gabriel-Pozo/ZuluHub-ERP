@@ -113,6 +113,7 @@ describe.skipIf(base === null)("fiscal: concurrencia de lo que impone la 0006", 
         puntoDeVentaId: puntoDeVentaId(e.pv),
         emisorId: emisorId(e.m.emisor),
         tipo: "FACTURA_B" as const,
+        ambiente: "HOMOLOGACION" as const,
         version: 1,
       };
       if (f.estado === "LIBRE")

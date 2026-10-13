@@ -8,6 +8,7 @@ import {
   reservarNumero,
   solicitudId,
   traducirErroresDeFiscal,
+  type Ambiente,
   type PuntoDeVentaId,
 } from "../../src/modulos/fiscal/publico";
 import type { Contexto } from "../../src/contexto/contexto";
@@ -88,8 +89,8 @@ describe.skipIf(base === null)(
         ),
       );
     };
-    /** Una serie LIBRE nueva de FACTURA_B en el ambiente pedido (o el del punto de venta). */
-    const nuevaSerie = (e: Escenario, ultimo = 0n) =>
+    /** Una serie LIBRE nueva de FACTURA_B en el ambiente pedido (por defecto, homologación). */
+    const nuevaSerie = (e: Escenario, ultimo = 0n, ambiente: Ambiente = "HOMOLOGACION") =>
       exito(
         iniciarSerie(
           {
@@ -97,6 +98,7 @@ describe.skipIf(base === null)(
             puntoDeVentaId: pvDe(e),
             emisorId: emisorId(e.emisor),
             tipo: "FACTURA_B",
+            ambiente,
           },
           ultimo,
         ),
@@ -244,7 +246,7 @@ describe.skipIf(base === null)(
         const e = await escenario();
         await pasarAProduccion(e);
         // Sin series de producción usadas: se puede volver.
-        await correr(comoSistemaDe(e), (tx) => tx.series.crear(nuevaSerie(e, 0n)));
+        await correr(comoSistemaDe(e), (tx) => tx.series.crear(nuevaSerie(e, 0n, "PRODUCCION")));
         const vuelve = async () => {
           const pv = await correr(comoPersonaDe(e), (tx) =>
             tx.puntosDeVenta.obtener(empresaId(e.empresa), pvDe(e)),
@@ -297,7 +299,7 @@ describe.skipIf(base === null)(
       it("nace en el ambiente de su punto de venta, y pedir otro es SERIE_AMBIENTE_INVALIDO (nada se crea)", async () => {
         const e = await escenario();
         const r = await intentar(comoSistemaDe(e), (tx) =>
-          tx.series.crear(nuevaSerie(e), "PRODUCCION"),
+          tx.series.crear(nuevaSerie(e, 0n, "PRODUCCION")),
         );
         expect(r).toEqual(err({ tipo: "Check", restriccion: "serie_ambiente_invalido" }));
         expect(traducirErroresDeFiscal(r, ["SERIE_AMBIENTE_INVALIDO"])).toEqual(
@@ -317,7 +319,7 @@ describe.skipIf(base === null)(
         await correr(comoSistemaDe(e), (tx) => tx.series.crear(nuevaSerie(e, 7n)));
         await pasarAProduccion(e);
         const produccion = await correr(comoSistemaDe(e), (tx) =>
-          tx.series.crear(nuevaSerie(e, 100n)),
+          tx.series.crear(nuevaSerie(e, 100n, "PRODUCCION")),
         );
         expect(produccion).toMatchObject({
           creado: true,
@@ -328,8 +330,6 @@ describe.skipIf(base === null)(
           ["PRODUCCION", "100", "LIBRE"],
         ]);
         const leidas = await correr(comoSistemaDe(e), async (tx) => ({
-          // Sin ambiente: la del ambiente actual del punto de venta (producción).
-          actual: await tx.series.obtener(empresaId(e.empresa), pvDe(e), "FACTURA_B"),
           homologacion: await tx.series.obtener(
             empresaId(e.empresa),
             pvDe(e),
@@ -349,9 +349,8 @@ describe.skipIf(base === null)(
             "HOMOLOGACION",
           ),
         }));
-        expect(leidas.actual).toMatchObject({ ambiente: "PRODUCCION", ultimoNumero: 100n });
+        expect(leidas.produccion).toMatchObject({ ambiente: "PRODUCCION", ultimoNumero: 100n });
         expect(leidas.homologacion).toMatchObject({ ambiente: "HOMOLOGACION", ultimoNumero: 7n });
-        expect(leidas.produccion).toEqual(leidas.actual);
         expect(leidas.todasLasActuales.map((s) => s.ambiente)).toEqual(["PRODUCCION"]);
         expect(leidas.todasLasDeHomologacion.map((s) => s.ultimoNumero)).toEqual([7n]);
       });
@@ -361,14 +360,16 @@ describe.skipIf(base === null)(
         await correr(comoSistemaDe(e), (tx) => tx.series.crear(nuevaSerie(e, 7n)));
         await pasarAProduccion(e);
         const otraVez = await correr(comoSistemaDe(e), (tx) =>
-          tx.series.crear(nuevaSerie(e, 999n), "HOMOLOGACION"),
+          tx.series.crear(nuevaSerie(e, 999n, "HOMOLOGACION")),
         );
         expect(otraVez).toMatchObject({
           creado: false,
           valor: { ambiente: "HOMOLOGACION", ultimoNumero: 7n },
         });
-        // La de producción todavía no existe: el mismo pedido sin ambiente la crea.
-        const nueva = await correr(comoSistemaDe(e), (tx) => tx.series.crear(nuevaSerie(e, 5n)));
+        // La de producción todavía no existe: pedirla la crea.
+        const nueva = await correr(comoSistemaDe(e), (tx) =>
+          tx.series.crear(nuevaSerie(e, 5n, "PRODUCCION")),
+        );
         expect(nueva).toMatchObject({
           creado: true,
           valor: { ambiente: "PRODUCCION", ultimoNumero: 5n },
@@ -379,7 +380,7 @@ describe.skipIf(base === null)(
         const e = await escenario();
         await correr(comoSistemaDe(e), (tx) => tx.series.crear(nuevaSerie(e, 7n)));
         await pasarAProduccion(e);
-        await correr(comoSistemaDe(e), (tx) => tx.series.crear(nuevaSerie(e, 100n)));
+        await correr(comoSistemaDe(e), (tx) => tx.series.crear(nuevaSerie(e, 100n, "PRODUCCION")));
         const enCurso = await correr(comoSistemaDe(e), async (tx) => {
           const homologacion = await tx.series.obtener(
             empresaId(e.empresa),
@@ -390,7 +391,7 @@ describe.skipIf(base === null)(
           if (homologacion === null) throw new Error("tenía que existir");
           const r = exito(reservarNumero(homologacion, solicitudId(randomUUID()), AHORA));
           if (r.tipo !== "RESERVADA") throw new Error("tenía que reservar");
-          return tx.series.guardar({ ...r.serie, ambiente: "HOMOLOGACION" });
+          return tx.series.guardar(r.serie);
         });
         expect(enCurso).toMatchObject({
           ambiente: "HOMOLOGACION",
@@ -401,13 +402,16 @@ describe.skipIf(base === null)(
           ["HOMOLOGACION", "7", "EN_CURSO"],
           ["PRODUCCION", "100", "LIBRE"],
         ]);
-        // Sin ambiente, guardar es la del ambiente actual del punto de venta (producción).
         const deProduccion = await correr(comoSistemaDe(e), async (tx) => {
-          const produccion = await tx.series.obtener(empresaId(e.empresa), pvDe(e), "FACTURA_B");
+          const produccion = await tx.series.obtener(
+            empresaId(e.empresa),
+            pvDe(e),
+            "FACTURA_B",
+            "PRODUCCION",
+          );
           if (produccion === null) throw new Error("tenía que existir");
           const r = exito(reservarNumero(produccion, solicitudId(randomUUID()), AHORA));
           if (r.tipo !== "RESERVADA") throw new Error("tenía que reservar");
-          // La serie que arma el dominio de T6 no trae ambiente: el repositorio usa el del punto de venta.
           return tx.series.guardar(r.serie);
         });
         expect(deProduccion).toMatchObject({ ambiente: "PRODUCCION", numeroEnCurso: 101n });
@@ -423,7 +427,7 @@ describe.skipIf(base === null)(
         }
         // ... el punto de venta pasa a producción y su serie nace aparte.
         await pasarAProduccion(e);
-        await correr(comoSistemaDe(e), (tx) => tx.series.crear(nuevaSerie(e, 500n)));
+        await correr(comoSistemaDe(e), (tx) => tx.series.crear(nuevaSerie(e, 500n, "PRODUCCION")));
         // Una pendiente de homologación (nació antes del cambio) se valida contra SU serie de homologación.
         const rezagado = altaDe(e, { ambiente: "HOMOLOGACION" });
         await correr(comoSistemaDe(e), async (tx) => {
@@ -447,7 +451,7 @@ describe.skipIf(base === null)(
         const antes = new Date("2026-10-12T09:00:00.000Z");
         await correr(comoSistemaDe(e), (tx) => tx.series.crear(nuevaSerie(e, 3n)));
         await pasarAProduccion(e);
-        await correr(comoSistemaDe(e), (tx) => tx.series.crear(nuevaSerie(e, 40n)));
+        await correr(comoSistemaDe(e), (tx) => tx.series.crear(nuevaSerie(e, 40n, "PRODUCCION")));
         // Las dos reservan: la de producción hace un rato y la de homologación (de un comprobante que nació antes del
         // cambio) todavía antes; ninguna vence en el futuro.
         for (const [ambiente, cuando] of [
@@ -489,7 +493,9 @@ describe.skipIf(base === null)(
         // Aun si solo la de producción se usó, el punto de venta tiene números usados.
         const otro = await escenario();
         await pasarAProduccion(otro);
-        await correr(comoSistemaDe(otro), (tx) => tx.series.crear(nuevaSerie(otro, 12n)));
+        await correr(comoSistemaDe(otro), (tx) =>
+          tx.series.crear(nuevaSerie(otro, 12n, "PRODUCCION")),
+        );
         expect(
           await correr(comoSistemaDe(otro), (tx) =>
             tx.series.hayNumerosUsadosDelPuntoDeVenta(empresaId(otro.empresa), pvDe(otro)),

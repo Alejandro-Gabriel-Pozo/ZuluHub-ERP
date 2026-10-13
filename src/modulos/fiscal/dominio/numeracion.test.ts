@@ -7,7 +7,7 @@ import {
   serieEnCurso,
   serieLibre,
 } from "../../../../test/utilidades/fiscal";
-import type { DesenlaceDeAutorizacion } from "./comprobante-emitido";
+import type { DesenlaceDeAutorizacion } from "./estados-de-comprobante";
 import {
   OPCIONES_DE_NUMERACION,
   TRANSICIONES_DE_SERIE,
@@ -16,7 +16,10 @@ import {
   iniciarSerie,
   reconciliarSerie,
   reservarNumero,
+  resincronizarSerie,
+  serieBloqueadaDesde,
   serieEsConsistente,
+  serieLibreDesde,
   serieUsada,
   transicionDeSerieValida,
   verificarSecuencia,
@@ -34,14 +37,14 @@ describe("la máquina de estados de la serie", () => {
     expect(TRANSICIONES_DE_SERIE).toEqual({
       LIBRE: ["EN_CURSO"],
       EN_CURSO: ["LIBRE", "BLOQUEADA"],
-      BLOQUEADA: [],
+      BLOQUEADA: ["LIBRE"],
     });
   });
 
-  it("los valores por defecto son un plazo de 5 minutos y el máximo de un bigint de la base", () => {
+  it("los valores por defecto son un plazo de 5 minutos y el tope de ocho dígitos de ARCA (CbteDesde, error 10008)", () => {
     expect(OPCIONES_DE_NUMERACION).toEqual({
       plazoDeReservaEnMs: 300_000,
-      numeroMaximo: 9_223_372_036_854_775_807n,
+      numeroMaximo: 99_999_999n,
     });
   });
 });
@@ -52,6 +55,7 @@ describe("iniciarSerie", () => {
     puntoDeVentaId: IDENTIDAD_DE_SERIE.puntoDeVentaId,
     emisorId: IDENTIDAD_DE_SERIE.emisorId,
     tipo: IDENTIDAD_DE_SERIE.tipo,
+    ambiente: IDENTIDAD_DE_SERIE.ambiente,
   } as const;
 
   it("nace LIBRE con el último número que informa el servicio", () => {
@@ -59,6 +63,13 @@ describe("iniciarSerie", () => {
       ok: true,
       valor: { ...identidad, version: 1, estado: "LIBRE", ultimoNumero: 41n },
     });
+  });
+
+  it("nace en el ambiente que se le dice, sin cambiarlo", () => {
+    for (const ambiente of ["HOMOLOGACION", "PRODUCCION"] as const) {
+      const r = iniciarSerie({ ...identidad, ambiente }, 5n);
+      expect(r.ok && r.valor.ambiente).toBe(ambiente);
+    }
   });
 
   it("puede empezar de cero", () => {
@@ -167,6 +178,26 @@ describe("reservarNumero", () => {
     expect(r.ok).toBe(true);
   });
 
+  it("con el tope por defecto, el 99 999 999 es el último número que se reserva", () => {
+    const ultimo = reservarNumero(serieLibre(99_999_998n), SOLICITUD_1, AHORA);
+    expect(ultimo.ok && ultimo.valor.tipo === "RESERVADA" && ultimo.valor.numero).toBe(99_999_999n);
+    expect(reservarNumero(serieLibre(99_999_999n), SOLICITUD_1, AHORA)).toEqual({
+      ok: false,
+      error: "SERIE_AGOTADA",
+    });
+  });
+
+  it("la reserva conserva la identidad de la serie, con su ambiente", () => {
+    for (const ambiente of ["HOMOLOGACION", "PRODUCCION"] as const) {
+      const libre = { ...serieLibre(7n), ambiente };
+      const r = reservarNumero(libre, SOLICITUD_1, AHORA);
+      expect(r.ok && r.valor.tipo === "RESERVADA" && r.valor.serie).toMatchObject({
+        ...IDENTIDAD_DE_SERIE,
+        ambiente,
+      });
+    }
+  });
+
   it("una serie que llegó al número máximo está agotada", () => {
     const opciones = { ...OPCIONES_DE_NUMERACION, numeroMaximo: 10n };
     expect(reservarNumero(serieLibre(10n), SOLICITUD_1, AHORA, opciones)).toEqual({
@@ -205,6 +236,13 @@ describe("cerrarSerie", () => {
     });
   });
 
+  it("no enviado: el pedido seguro no salió, la serie queda libre sin avanzar y el número se reusa", () => {
+    expect(cerrarSerie(enCurso, SOLICITUD_1, "NO_ENVIADO")).toEqual({
+      ok: true,
+      valor: { serie: serieLibre(7n), numeroAutorizado: null },
+    });
+  });
+
   it("incierto: sigue en curso, sin cambios", () => {
     const r = cerrarSerie(enCurso, SOLICITUD_1, "INCIERTO");
     expect(r).toEqual({ ok: true, valor: { serie: enCurso, numeroAutorizado: null } });
@@ -218,7 +256,7 @@ describe("cerrarSerie", () => {
   });
 
   it("una serie libre o bloqueada no tiene nada que cerrar (cerrar dos veces no avanza dos veces)", () => {
-    for (const desenlace of ["AUTORIZADO", "RECHAZADO", "INCIERTO"] as const) {
+    for (const desenlace of ["AUTORIZADO", "RECHAZADO", "NO_ENVIADO", "INCIERTO"] as const) {
       expect(cerrarSerie(serieLibre(8n), SOLICITUD_1, desenlace)).toEqual({
         ok: false,
         error: "SOLICITUD_NO_VIGENTE",
@@ -238,9 +276,112 @@ describe("cerrarSerie", () => {
     });
   });
 
-  it("conserva la identidad y la versión de la serie", () => {
-    const r = cerrarSerie(enCurso, SOLICITUD_1, "AUTORIZADO");
-    expect(r.ok && r.valor.serie).toMatchObject(IDENTIDAD_DE_SERIE);
+  it("conserva la identidad y la versión de la serie, con el ambiente", () => {
+    for (const ambiente of ["HOMOLOGACION", "PRODUCCION"] as const) {
+      for (const desenlace of ["AUTORIZADO", "RECHAZADO", "NO_ENVIADO"] as const) {
+        const r = cerrarSerie({ ...enCurso, ambiente }, SOLICITUD_1, desenlace);
+        expect(r.ok && r.valor.serie, `${ambiente} ${desenlace}`).toMatchObject({
+          ...IDENTIDAD_DE_SERIE,
+          ambiente,
+        });
+      }
+    }
+  });
+});
+
+describe("serieLibreDesde y serieBloqueadaDesde", () => {
+  it("conservan la identidad entera (con el ambiente y la versión) y cambian solo lo del estado", () => {
+    const base = serieEnCurso(7n, HASTA, SOLICITUD_1);
+    if (base.estado !== "EN_CURSO") throw new Error("fixture");
+    const enCurso = { ...base, ambiente: "PRODUCCION" } as const;
+    expect(serieLibreDesde(enCurso, 8n)).toEqual({
+      ...IDENTIDAD_DE_SERIE,
+      ambiente: "PRODUCCION",
+      estado: "LIBRE",
+      ultimoNumero: 8n,
+    });
+    expect(serieBloqueadaDesde(enCurso, "por algo")).toEqual({
+      ...IDENTIDAD_DE_SERIE,
+      ambiente: "PRODUCCION",
+      estado: "BLOQUEADA",
+      ultimoNumero: 7n,
+      motivoBloqueo: "por algo",
+    });
+  });
+
+  it("una libre se arma también desde una bloqueada (la salida de resincronizar)", () => {
+    expect(serieLibreDesde(serieBloqueada(7n), 12n)).toEqual(serieLibre(12n));
+  });
+});
+
+describe("resincronizarSerie: la salida de BLOQUEADA", () => {
+  const bloqueada = serieBloqueada(7n, "desfase");
+
+  it("con lo que la persona vio igual a lo que ARCA informa, vuelve a LIBRE con el último de ARCA", () => {
+    expect(resincronizarSerie(bloqueada, 12n, 12n)).toEqual({ ok: true, valor: serieLibre(12n) });
+  });
+
+  it("puede saltar hacia adelante (los números del medio los emitió otro sistema) o quedarse donde estaba", () => {
+    expect(resincronizarSerie(bloqueada, 8n, 8n)).toEqual({ ok: true, valor: serieLibre(8n) });
+    expect(resincronizarSerie(bloqueada, 7n, 7n)).toEqual({ ok: true, valor: serieLibre(7n) });
+    expect(resincronizarSerie(bloqueada, 99_999_999n, 99_999_999n).ok).toBe(true);
+  });
+
+  it("nunca hacia atrás: si ARCA informa menos de lo que la serie ya usó, no hay salida automática", () => {
+    expect(resincronizarSerie(bloqueada, 6n, 6n)).toEqual({
+      ok: false,
+      error: "DESFASE_HACIA_ATRAS",
+    });
+    expect(resincronizarSerie(bloqueada, 0n, 0n)).toEqual({
+      ok: false,
+      error: "DESFASE_HACIA_ATRAS",
+    });
+  });
+
+  it("si ARCA cambió mientras la persona miraba, no se resincroniza con un dato viejo", () => {
+    expect(resincronizarSerie(bloqueada, 12n, 13n)).toEqual({
+      ok: false,
+      error: "ULTIMO_DISTINTO_DEL_DE_ARCA",
+    });
+    expect(resincronizarSerie(bloqueada, 13n, 12n)).toEqual({
+      ok: false,
+      error: "ULTIMO_DISTINTO_DEL_DE_ARCA",
+    });
+  });
+
+  it("el orden de los errores: primero el estado, después que sea el mismo dato, después que no baje", () => {
+    expect(resincronizarSerie(serieLibre(7n), 1n, 2n)).toEqual({
+      ok: false,
+      error: "SERIE_NO_BLOQUEADA",
+    });
+    expect(resincronizarSerie(bloqueada, 1n, 2n)).toEqual({
+      ok: false,
+      error: "ULTIMO_DISTINTO_DEL_DE_ARCA",
+    });
+  });
+
+  it("solo sale una bloqueada: una libre o en curso no se resincroniza", () => {
+    for (const serie of [serieLibre(7n), serieEnCurso(7n, HASTA)]) {
+      expect(resincronizarSerie(serie, 8n, 8n)).toEqual({ ok: false, error: "SERIE_NO_BLOQUEADA" });
+    }
+  });
+
+  it("conserva la identidad y la versión, con el ambiente, y es una transición válida y consistente", () => {
+    for (const ambiente of ["HOMOLOGACION", "PRODUCCION"] as const) {
+      const antes: Serie = { ...bloqueada, ambiente };
+      const r = resincronizarSerie(antes, 12n, 12n);
+      expect(r.ok && r.valor).toMatchObject({ ...IDENTIDAD_DE_SERIE, ambiente });
+      if (!r.ok) continue;
+      expect(serieEsConsistente(r.valor)).toBe(true);
+      expect(transicionDeSerieValida(antes, r.valor)).toBe(true);
+    }
+  });
+
+  it("después de resincronizar se vuelve a reservar desde el número de ARCA", () => {
+    const libre = resincronizarSerie(bloqueada, 12n, 12n);
+    if (!libre.ok) throw new Error("no resincronizó");
+    const reserva = reservarNumero(libre.valor, SOLICITUD_1, AHORA);
+    expect(reserva.ok && reserva.valor.tipo === "RESERVADA" && reserva.valor.numero).toBe(13n);
   });
 });
 
@@ -383,15 +524,28 @@ describe("transicionDeSerieValida", () => {
     expect(transicionDeSerieValida(libre, serieEnCurso(6n, HASTA))).toBe(false);
   });
 
-  it("la bloqueada no sale: ni a libre ni a en curso ni cambiando el motivo", () => {
-    expect(transicionDeSerieValida(bloqueada, serieLibre(7n))).toBe(false);
+  it("la bloqueada solo sale hacia libre: no a en curso, ni cambiando el motivo, ni subiendo el número sin salir", () => {
     expect(transicionDeSerieValida(bloqueada, serieEnCurso(7n, HASTA))).toBe(false);
+    expect(transicionDeSerieValida(bloqueada, serieEnCurso(8n, HASTA))).toBe(false);
     expect(transicionDeSerieValida(bloqueada, serieBloqueada(7n, "otro motivo"))).toBe(false);
     expect(transicionDeSerieValida(bloqueada, serieBloqueada(8n, "desfase"))).toBe(false);
   });
 
+  it("la salida de la bloqueada (resincronizar): a libre con el mismo último número o uno mayor, nunca menor", () => {
+    expect(transicionDeSerieValida(bloqueada, serieLibre(7n))).toBe(true);
+    expect(transicionDeSerieValida(bloqueada, serieLibre(8n))).toBe(true);
+    expect(transicionDeSerieValida(bloqueada, serieLibre(1_000n))).toBe(true);
+    expect(transicionDeSerieValida(bloqueada, serieLibre(6n))).toBe(false);
+    expect(transicionDeSerieValida(bloqueada, serieLibre(0n))).toBe(false);
+  });
+
+  it("una bloqueada no pasa a libre si el destino es inconsistente", () => {
+    const rota = { ...serieLibre(7n), ultimoNumero: -1n } as Serie;
+    expect(transicionDeSerieValida({ ...bloqueada, ultimoNumero: -5n }, rota)).toBe(false);
+  });
+
   it("una bloqueada no pasa a otro estado aunque el destino arrastre el motivo", () => {
-    const rancia = { ...serieLibre(7n), motivoBloqueo: "desfase" } as unknown as Serie;
+    const rancia = { ...serieEnCurso(7n, HASTA), motivoBloqueo: "desfase" } as unknown as Serie;
     expect(transicionDeSerieValida(bloqueada, rancia)).toBe(false);
   });
 
@@ -401,8 +555,13 @@ describe("transicionDeSerieValida", () => {
     expect(transicionDeSerieValida(enCurso, serieEnCurso(8n, HASTA, SOLICITUD_1))).toBe(false);
   });
 
-  it("la identidad no cambia", () => {
+  it("la identidad no cambia, tampoco el ambiente (en ningún estado)", () => {
     const base = serieLibre(7n);
+    expect(transicionDeSerieValida(base, { ...base, ambiente: "PRODUCCION" })).toBe(false);
+    expect(transicionDeSerieValida(enCurso, { ...enCurso, ambiente: "PRODUCCION" })).toBe(false);
+    expect(transicionDeSerieValida(bloqueada, { ...bloqueada, ambiente: "PRODUCCION" })).toBe(
+      false,
+    );
     expect(transicionDeSerieValida(base, { ...base, tipo: "FACTURA_A" })).toBe(false);
     expect(
       transicionDeSerieValida(base, { ...base, empresaId: "otra" as typeof base.empresaId }),

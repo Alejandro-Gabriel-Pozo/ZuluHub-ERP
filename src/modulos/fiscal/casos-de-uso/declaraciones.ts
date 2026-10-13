@@ -7,7 +7,6 @@ import type { DeclaracionDeCaso } from "../../../capacidades/permisos/declaracio
 export const DECLARACIONES = {
   reservarNumeroDeComprobante: { accion: "comprobantes.emitir" },
   cerrarReservaDeNumero: { accion: "comprobantes.emitir" },
-  numerarComprobante: { accion: "comprobantes.emitir" },
   reconciliarSerie: {
     sinGuard:
       "Trabajo de sistema (ADR-007): corre sin persona (contexto operativo con personaId null) y solo mira lo que dice el servicio de emisión; el permiso se exigió al reservar",

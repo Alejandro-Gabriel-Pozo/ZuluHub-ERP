@@ -1015,15 +1015,7 @@ const COLUMNAS_DE_SERIE = [
   "ambiente",
 ] as const;
 
-/**
- * Una serie tal como la guarda la base: la del dominio más su `ambiente` (0009: parte de la clave). El
- * repositorio SIEMPRE lo completa al leer. Es opcional en el tipo porque el dominio de la numeración
- * todavía no lo conoce (lo suma F4, que entonces vuelve este tipo igual a `Serie`): las series que arma el
- * dominio de T6 no lo traen, y al guardarlas el repositorio usa el ambiente actual del punto de venta.
- */
-export type SerieGuardada = Serie & Readonly<{ ambiente?: Ambiente }>;
-
-function aSerie(fila: FilaDeSerie): SerieGuardada {
+function aSerie(fila: FilaDeSerie): Serie {
   const identidad = {
     ambiente: deLaLista(AMBIENTES, fila.ambiente, "ambiente de serie"),
     empresaId: empresaId(fila.empresa_id),
@@ -1060,43 +1052,43 @@ function aSerie(fila: FilaDeSerie): SerieGuardada {
 
 export interface RepositorioDeSeries {
   /**
-   * La serie de `(punto de venta, tipo, ambiente)`. Sin `ambiente`, la del ambiente que el punto de
-   * venta tiene ahora (hasta F4, que lo vuelve obligatorio: la numeración de T6 todavía no lo dice).
+   * La serie de `(punto de venta, tipo, ambiente)`. El ambiente es obligatorio: quien numera dice en
+   * cuál, y una lectura que cayera en «el ambiente de hoy» podría mirar la serie equivocada después de
+   * un cambio de ambiente.
    */
   obtener(
     empresa: EmpresaId,
     puntoDeVenta: PuntoDeVentaId,
     tipo: TipoDeComprobante,
-    ambiente?: Ambiente,
-  ): Promise<SerieGuardada | null>;
-  /** Las series del punto de venta en ese ambiente (por defecto, el del punto de venta), por tipo. */
+    ambiente: Ambiente,
+  ): Promise<Serie | null>;
+  /** Las series del punto de venta en ese ambiente (por defecto, el que tiene ahora), por tipo. */
   delPuntoDeVenta(
     empresa: EmpresaId,
     puntoDeVenta: PuntoDeVentaId,
     ambiente?: Ambiente,
-  ): Promise<SerieGuardada[]>;
+  ): Promise<Serie[]>;
   /**
-   * Crea la serie `LIBRE` de (punto de venta, tipo, ambiente) con el último número que informó el
-   * servicio de emisión (`iniciarSerie`). Una serie nace en el ambiente de su punto de venta: pedir
+   * Crea la serie `LIBRE` de (punto de venta, tipo, `serie.ambiente`) con el último número que informó
+   * el servicio de emisión (`iniciarSerie`). Una serie nace en el ambiente de su punto de venta: pedir
    * otro es `serie_ambiente_invalido` (`SERIE_AMBIENTE_INVALIDO`), error de la base. Idempotente por
    * su clave: repetir devuelve la que existe (`creado: false`) SIN pisar su último número.
    */
-  crear(serie: SerieLibre, ambiente?: Ambiente): Promise<ResultadoDeAlta<SerieGuardada>>;
+  crear(serie: SerieLibre): Promise<ResultadoDeAlta<Serie>>;
   /**
-   * Guarda el estado que calculó el dominio (`reservarNumero`, `cerrarSerie`, `reconciliarSerie`) si
-   * la versión coincide; si no, `null`. El ambiente de la serie es el de `serie.ambiente` (lo que
-   * devuelve este repositorio); una serie armada por el dominio sin ambiente es la del ambiente actual
-   * del punto de venta. Los disparadores de la base repiten las reglas de la numeración (`ultimo_numero`
-   * solo sube de a uno cerrando su reserva; `BLOQUEADA` solo sale hacia `LIBRE`): una transición que el
-   * dominio no hubiera permitido sale como error de la base.
+   * Guarda el estado que calculó el dominio (`reservarNumero`, `cerrarSerie`, `reconciliarSerie`,
+   * `resincronizarSerie`) si la versión coincide; si no, `null`. La serie que se guarda es la de
+   * `serie.ambiente`. Los disparadores de la base repiten las reglas de la numeración (`ultimo_numero`
+   * solo sube de a uno cerrando su reserva, o saltando al salir de `BLOQUEADA`, que solo sale hacia
+   * `LIBRE`): una transición que el dominio no hubiera permitido sale como error de la base.
    */
-  guardar(serie: SerieGuardada): Promise<SerieGuardada | null>;
+  guardar(serie: Serie): Promise<Serie | null>;
   /**
    * Las series de la empresa con una reserva vencida (`EN_CURSO` y `en_curso_hasta <= ahora`), de
    * cualquier ambiente, las más viejas primero, hasta `limite`. Es lo que la reconciliación tiene que
    * resolver.
    */
-  enCursoVencidas(empresa: EmpresaId, ahora: Date, limite: number): Promise<SerieGuardada[]>;
+  enCursoVencidas(empresa: EmpresaId, ahora: Date, limite: number): Promise<Serie[]>;
   /**
    * ¿Alguna serie del emisor (de cualquier ambiente) tiene `ultimo_numero > 0` o no está `LIBRE`? Es el
    * contexto de `corregirCuit` (`tieneNumerosUsados`). Sirve a la plataforma: las series enteras son
@@ -1121,13 +1113,13 @@ export function crearRepositorioDeSeries(db: Kysely<FiscalDb>): RepositorioDeSer
     empresa: EmpresaId,
     puntoDeVenta: PuntoDeVentaId,
     tipo: TipoDeComprobante,
-    ambiente?: Ambiente,
-  ): Promise<SerieGuardada | null> {
+    ambiente: Ambiente,
+  ): Promise<Serie | null> {
     const fila = await seleccionar()
       .where("empresa_id", "=", empresa)
       .where("punto_de_venta_id", "=", puntoDeVenta)
       .where("tipo_comprobante", "=", tipo)
-      .where("ambiente", "=", ambiente ?? ambienteDelPuntoDeVenta(empresa, puntoDeVenta))
+      .where("ambiente", "=", ambiente)
       .executeTakeFirst();
     return fila === undefined ? null : aSerie(fila);
   }
@@ -1164,24 +1156,17 @@ export function crearRepositorioDeSeries(db: Kysely<FiscalDb>): RepositorioDeSer
       return filas.map(aSerie);
     },
 
-    async crear(serie, ambiente) {
-      // Sin ambiente, el del punto de venta. Si el punto de venta no existe (o no es de esta empresa) la
-      // base lo rechaza con la clave foránea sea cual sea el ambiente que se mande acá.
-      const delPuntoDeVenta = await db
-        .selectFrom("punto_de_venta")
-        .select("ambiente")
-        .where("empresa_id", "=", serie.empresaId)
-        .where("id", "=", serie.puntoDeVentaId)
-        .executeTakeFirst();
-      const elegido: Ambiente =
-        ambiente ??
-        (delPuntoDeVenta === undefined
-          ? "HOMOLOGACION"
-          : deLaLista(AMBIENTES, delPuntoDeVenta.ambiente, "ambiente de punto de venta"));
+    async crear(serie) {
+      // Si el punto de venta no existe (o no es de esta empresa) la base lo rechaza con la clave foránea.
       // Antes de insertar: el disparador de alta mira el ambiente ANTES de que `ON CONFLICT` descubra que la
       // serie ya existe, así que repetir el alta de una serie de otro ambiente (por ejemplo, la de homologación
       // con el punto de venta ya en producción) fallaría en vez de ser «ya estaba».
-      const yaExistia = await obtener(serie.empresaId, serie.puntoDeVentaId, serie.tipo, elegido);
+      const yaExistia = await obtener(
+        serie.empresaId,
+        serie.puntoDeVentaId,
+        serie.tipo,
+        serie.ambiente,
+      );
       if (yaExistia !== null) return { creado: false, valor: yaExistia };
       const nueva = await db
         .insertInto("serie_comprobante")
@@ -1191,7 +1176,7 @@ export function crearRepositorioDeSeries(db: Kysely<FiscalDb>): RepositorioDeSer
           emisor_id: serie.emisorId,
           tipo_comprobante: serie.tipo,
           ultimo_numero: serie.ultimoNumero.toString(),
-          ambiente: elegido,
+          ambiente: serie.ambiente,
         })
         .onConflict((oc) =>
           oc
@@ -1201,7 +1186,12 @@ export function crearRepositorioDeSeries(db: Kysely<FiscalDb>): RepositorioDeSer
         .returning(COLUMNAS_DE_SERIE)
         .executeTakeFirst();
       if (nueva !== undefined) return { creado: true, valor: aSerie(nueva) };
-      const existente = await obtener(serie.empresaId, serie.puntoDeVentaId, serie.tipo, elegido);
+      const existente = await obtener(
+        serie.empresaId,
+        serie.puntoDeVentaId,
+        serie.tipo,
+        serie.ambiente,
+      );
       if (existente === null) throw new Error("el alta de la serie no insertó y tampoco existe");
       return { creado: false, valor: existente };
     },
@@ -1221,11 +1211,7 @@ export function crearRepositorioDeSeries(db: Kysely<FiscalDb>): RepositorioDeSer
         .where("empresa_id", "=", serie.empresaId)
         .where("punto_de_venta_id", "=", serie.puntoDeVentaId)
         .where("tipo_comprobante", "=", serie.tipo)
-        .where(
-          "ambiente",
-          "=",
-          serie.ambiente ?? ambienteDelPuntoDeVenta(serie.empresaId, serie.puntoDeVentaId),
-        )
+        .where("ambiente", "=", serie.ambiente)
         .where("version", "=", serie.version)
         .returning(COLUMNAS_DE_SERIE)
         .executeTakeFirst();

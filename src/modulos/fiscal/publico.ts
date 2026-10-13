@@ -139,12 +139,10 @@ export {
   type ClaveDeIdempotenciaDeComprobante,
   type ComprobanteEmitido,
   type ComprobanteEmitidoJson,
-  type DesenlaceDeAutorizacion,
   type EstadoDeComprobante,
   type InstantaneaDeEmisor,
   type LetraDeComprobante,
   type OrigenDeComprobante,
-  type ResultadoDeAutorizacion,
   type TipoDeComprobante,
   type TipoDeOrigen,
 } from "./dominio/comprobante-emitido";
@@ -208,7 +206,6 @@ export {
   type RepositorioDeReglasDeEmisor,
   type RepositorioDeSeries,
   type ResultadoDeAlta,
-  type SerieGuardada,
   type VersionDeDatosFiscales,
   type VersionDeRegla,
 } from "./persistencia/repositorios";
@@ -280,13 +277,6 @@ export type {
   SalidaDeCerrarReserva,
 } from "./casos-de-uso/cerrar-reserva";
 export type {
-  CierreSinConfirmar,
-  EntradaDeNumerarComprobante,
-  ErrorAlNumerarComprobante,
-  ReservaEnCurso,
-  SalidaDeNumerarComprobante,
-} from "./casos-de-uso/numerar-comprobante";
-export type {
   EntradaDeReconciliarSerie,
   ErrorAlReconciliarSerie,
   SalidaDeReconciliarSerie,
@@ -297,3 +287,14 @@ export type {
   ResultadoPorSerie,
   SalidaDeReconciliarSeriesVencidas,
 } from "./casos-de-uso/reconciliar-series-vencidas";
+
+// H7 facturación F4: numeración con ambiente (la serie es de un punto de venta, un tipo y un ambiente), puerto de
+// emisión ampliado (consultar, no enviado) y salida de una serie bloqueada.
+export { resincronizarSerie, type ErrorDeResincronizacion } from "./dominio/numeracion";
+export type {
+  DatosConsultados,
+  DesenlaceDeAutorizacion,
+  Mensaje,
+  ResultadoDeAutorizacionArca,
+  ResultadoDeConsulta,
+} from "./dominio/estados-de-comprobante";

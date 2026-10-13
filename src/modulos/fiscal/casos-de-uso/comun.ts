@@ -2,6 +2,7 @@ import { comprobarQueOpera, type EstadosDeEmpresa } from "../../../contexto/esta
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import type { Dato } from "../../../puertos/sin-secretos";
 import type { TipoDeComprobante } from "../dominio/comprobante-emitido";
+import type { Ambiente } from "../dominio/comprobante-nuevo";
 import type { PuntoDeVentaId } from "../dominio/identificadores";
 import type { Serie } from "../dominio/numeracion";
 import type { TxDeNumeracion } from "./contrato";
@@ -23,13 +24,23 @@ export async function empresaOpera(tx: TxDeNumeracion, id: EmpresaId) {
   return comprobarQueOpera(id, estados);
 }
 
-/** La entidad auditada de una serie: su clave natural (el punto de venta y el tipo). */
-export const entidadDeSerie = (puntoDeVenta: PuntoDeVentaId, tipo: TipoDeComprobante): string =>
-  `${puntoDeVenta}:${tipo}`;
+/**
+ * La entidad auditada de una serie: su clave natural (el punto de venta, el tipo y el ambiente). Sin el
+ * ambiente, la auditoría de homologación y la de producción del mismo punto de venta se confundirían.
+ */
+export const entidadDeSerie = (
+  puntoDeVenta: PuntoDeVentaId,
+  tipo: TipoDeComprobante,
+  ambiente: Ambiente,
+): string => `${puntoDeVenta}:${tipo}:${ambiente}`;
 
 /** El estado de una serie como dato de auditoría (los `bigint` viajan como texto). */
 export function datosDeSerie(serie: Serie): Record<string, Dato> {
-  const base = { estado: serie.estado, ultimoNumero: serie.ultimoNumero.toString() };
+  const base = {
+    estado: serie.estado,
+    ambiente: serie.ambiente,
+    ultimoNumero: serie.ultimoNumero.toString(),
+  };
   switch (serie.estado) {
     case "LIBRE":
       return base;

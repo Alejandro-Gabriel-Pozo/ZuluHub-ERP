@@ -76,6 +76,9 @@ export type ResultadoDeAutorizacionArca =
   | Readonly<{ tipo: "INCIERTO"; motivo: string }>
   | Readonly<{ tipo: "NO_ENVIADO"; motivo: string }>;
 
+/** Cómo terminó el pedido, sin el detalle: es lo que la serie necesita para cerrar la reserva. */
+export type DesenlaceDeAutorizacion = ResultadoDeAutorizacionArca["tipo"];
+
 /**
  * El estado en que queda un comprobante `EN_VALIDACION` según la respuesta: cada desenlace es una
  * transición válida de la tabla. `NO_ENVIADO` lo devuelve a `PENDIENTE`.
