@@ -73,13 +73,9 @@ const PUNTO = ".";
 
 /** Agrupa de a tres cifras con punto, de derecha a izquierda: «1234567» → «1.234.567». */
 function agruparMiles(entero: string): string {
-  let agrupado = "";
-  for (let i = 0; i < entero.length; i++) {
-    const restantes = entero.length - i;
-    agrupado += entero.charAt(i);
-    if (restantes > 1 && restantes % 3 === 1) agrupado += PUNTO;
-  }
-  return agrupado;
+  return entero.length <= 3
+    ? entero
+    : `${agruparMiles(entero.slice(0, -3))}${PUNTO}${entero.slice(-3)}`;
 }
 
 /**
@@ -87,10 +83,10 @@ function agruparMiles(entero: string): string {
  * («$ 2.500,50»). Trabaja sobre el TEXTO decimal, sin pasar por `number`: ni un importe toca coma flotante.
  */
 export function formatearImporte(importe: ImporteJson): string {
-  const [entero = "0", fraccion = ""] = importe.monto.split(PUNTO);
-  const centavos = fraccion.replace(/0+$/, "");
+  const [entero, fraccion] = importe.monto.split(PUNTO) as [string, string?];
+  const centavos = fraccion ?? "";
   const simbolo = importe.moneda === "ARS" ? "$" : importe.moneda;
-  return `${simbolo} ${agruparMiles(entero)}${centavos === "" ? "" : `,${fraccion}`}`;
+  return `${simbolo} ${agruparMiles(entero)}${/^0*$/.test(centavos) ? "" : `,${centavos}`}`;
 }
 
 function minusculaInicial(texto: string): string {
@@ -100,8 +96,7 @@ function minusculaInicial(texto: string): string {
 /** «Con papas fritas, puré o ensalada»; si no entra en 60 caracteres, «Con guarnición a elección». */
 function lineaDeGuarnicion(nombres: readonly string[]): string {
   const opciones = nombres.map(minusculaInicial);
-  const ultima = opciones[opciones.length - 1] ?? "";
-  const lista = opciones.length === 1 ? ultima : `${opciones.slice(0, -1).join(", ")} o ${ultima}`;
+  const lista = new Intl.ListFormat("es-AR", { type: "disjunction" }).format(opciones);
   const linea = `Con ${lista}`;
   return linea.length <= LARGO_MAXIMO_DE_LA_GUARNICION ? linea : GUARNICION_A_ELECCION;
 }
