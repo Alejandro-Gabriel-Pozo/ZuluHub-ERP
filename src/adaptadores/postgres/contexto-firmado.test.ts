@@ -5,8 +5,10 @@ import {
   empresaId,
   personaId,
   tenantId,
+  usuarioAuthId,
   type AdminPlataformaId,
   type MarcaComercialId,
+  type UsuarioAuthId,
 } from "../../primitivas/identificadores/marca";
 import { MARCA_PRINCIPAL_DE_PRUEBA, OTRA_MARCA_DE_PRUEBA } from "../../../test/utilidades/marcas";
 import type { Contexto } from "../../contexto/contexto";
@@ -19,6 +21,7 @@ import {
   firmarContexto,
   leerClaveDeContexto,
   rolDeContexto,
+  usuarioFirmado,
   type ClaveDeContexto,
 } from "./contexto-firmado";
 import { ErrorDeConfiguracion } from "./errores";
@@ -28,6 +31,7 @@ const PERSONA = "22222222-2222-4222-8222-222222222222";
 const TENANT = "33333333-3333-4333-8333-333333333333";
 const ADMIN = "4444aaaa-4444-4444-8444-bbbbbbbbbbbb";
 const HASH = "ab".repeat(32);
+const USUARIO = "55555555-5555-4555-8555-555555555555";
 const AHORA = new Date("2026-10-11T12:00:00Z");
 
 // Secreto de prueba: los bytes 0x00..0x1f (nada de esto es una clave real).
@@ -60,9 +64,10 @@ describe("firmarCarga: formato y vector conocido", () => {
       i: null,
       x: 1_000_000_300,
       a: null,
+      s: null,
     });
     expect(token).toBe(
-      "v1.7.7b2275223a227a756c756875625f617070222c2265223a2231313131313131312d313131312d343131312d383131312d313131313131313131313131222c2274223a6e756c6c2c2270223a2232323232323232322d323232322d343232322d383232322d323232323232323232323232222c2269223a6e756c6c2c2278223a313030303030303330302c2261223a6e756c6c7d.8a5804e4d45c881f2ca83b3f09d7157bdbba06a625c5d5a3dc81054e1d2d3069",
+      "v1.7.7b2275223a227a756c756875625f617070222c2265223a2231313131313131312d313131312d343131312d383131312d313131313131313131313131222c2274223a6e756c6c2c2270223a2232323232323232322d323232322d343232322d383232322d323232323232323232323232222c2269223a6e756c6c2c2278223a313030303030303330302c2261223a6e756c6c2c2273223a6e756c6c7d.8f008c52fe3fbb926db324d47d92972b281413764e0f74453fe7358fdd764b27",
     );
   });
 
@@ -75,15 +80,41 @@ describe("firmarCarga: formato y vector conocido", () => {
       i: null,
       x: 1_000_000_300,
       a: ADMIN,
+      s: null,
     });
     expect(token).toBe(
-      "v1.7.7b2275223a227a756c756875625f706c617461666f726d61222c2265223a6e756c6c2c2274223a6e756c6c2c2270223a6e756c6c2c2269223a6e756c6c2c2278223a313030303030303330302c2261223a2234343434616161612d343434342d343434342d383434342d626262626262626262626262227d.5e4914f4eef6811ab35d9babde4e5e1bb5e8d17f6ce12f3130f63e6a45640b53",
+      "v1.7.7b2275223a227a756c756875625f706c617461666f726d61222c2265223a6e756c6c2c2274223a6e756c6c2c2270223a6e756c6c2c2269223a6e756c6c2c2278223a313030303030303330302c2261223a2234343434616161612d343434342d343434342d383434342d626262626262626262626262222c2273223a6e756c6c7d.a98d75867d139639a741cdccbd5d3613b8842eb2123556d7a10aa87c87fb7bc2",
+    );
+  });
+
+  it("el vector con usuario autenticado (claim `s`) también coincide con uno calculado aparte", () => {
+    const token = firmarCarga(CLAVE, {
+      u: "zuluhub_app",
+      e: null,
+      t: null,
+      p: null,
+      i: null,
+      x: 1_000_000_300,
+      a: null,
+      s: USUARIO,
+    });
+    expect(token).toBe(
+      "v1.7.7b2275223a227a756c756875625f617070222c2265223a6e756c6c2c2274223a6e756c6c2c2270223a6e756c6c2c2269223a6e756c6c2c2278223a313030303030303330302c2261223a6e756c6c2c2273223a2235353535353535352d353535352d343535352d383535352d353535353535353535353535227d.293eb53c8f017812f647db62b9b97e8760ed53b150d3a634673ccc10b934c0a2",
     );
   });
 
   it("el mac es el HMAC-SHA256 hex de `v1.<kid>.<payloadHex>` con el secreto de la clave", () => {
     const { kid, payloadHex, mac } = partir(
-      firmarCarga(CLAVE, { u: "zuluhub_app", e: null, t: null, p: null, i: null, x: 5, a: null }),
+      firmarCarga(CLAVE, {
+        u: "zuluhub_app",
+        e: null,
+        t: null,
+        p: null,
+        i: null,
+        x: 5,
+        a: null,
+        s: null,
+      }),
     );
     expect(kid).toBe("7");
     expect(mac).toMatch(/^[0-9a-f]{64}$/);
@@ -92,17 +123,26 @@ describe("firmarCarga: formato y vector conocido", () => {
     );
   });
 
-  it("el payload lleva exactamente u, e, t, p, i, x, a, en ese orden", () => {
+  it("el payload lleva exactamente u, e, t, p, i, x, a, s, en ese orden", () => {
     const { payloadHex } = partir(
-      firmarCarga(CLAVE, { u: "zuluhub_app", e: null, t: null, p: null, i: null, x: 5, a: null }),
+      firmarCarga(CLAVE, {
+        u: "zuluhub_app",
+        e: null,
+        t: null,
+        p: null,
+        i: null,
+        x: 5,
+        a: null,
+        s: null,
+      }),
     );
     expect(Buffer.from(payloadHex, "hex").toString("utf8")).toBe(
-      '{"u":"zuluhub_app","e":null,"t":null,"p":null,"i":null,"x":5,"a":null}',
+      '{"u":"zuluhub_app","e":null,"t":null,"p":null,"i":null,"x":5,"a":null,"s":null}',
     );
   });
 
   it("el actor cambia la firma: no se puede reutilizar el token de un actor con otro", () => {
-    const carga = { u: "zuluhub_plataforma", e: null, t: null, p: null, i: null, x: 5 };
+    const carga = { u: "zuluhub_plataforma", e: null, t: null, p: null, i: null, x: 5, s: null };
     const delAdmin = firmarCarga(CLAVE, { ...carga, a: ADMIN });
     const delSistema = firmarCarga(CLAVE, { ...carga, a: ACTOR_DE_SISTEMA });
     const sinActor = firmarCarga(CLAVE, { ...carga, a: null });
@@ -111,7 +151,16 @@ describe("firmarCarga: formato y vector conocido", () => {
   });
 
   it("otra clave (otro secreto o otro kid) da otra firma", () => {
-    const carga = { u: "zuluhub_app", e: EMPRESA, t: null, p: null, i: null, x: 5, a: null };
+    const carga = {
+      u: "zuluhub_app",
+      e: EMPRESA,
+      t: null,
+      p: null,
+      i: null,
+      x: 5,
+      a: null,
+      s: null,
+    };
     const base = firmarCarga(CLAVE, carga);
     expect(firmarCarga({ kid: 7, secreto: Buffer.alloc(32, 1) }, carga)).not.toBe(base);
     expect(firmarCarga({ kid: 8, secreto: SECRETO_DE_PRUEBA }, carga)).not.toBe(base);
@@ -133,7 +182,16 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
         marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
         ahora: AHORA,
       }),
-    ).toEqual({ u: "zuluhub_app", e: EMPRESA, t: null, p: PERSONA, i: null, x: VENCE, a: null });
+    ).toEqual({
+      u: "zuluhub_app",
+      e: EMPRESA,
+      t: null,
+      p: PERSONA,
+      i: null,
+      x: VENCE,
+      a: null,
+      s: null,
+    });
     expect(
       payloadDe({
         tipo: "OPERATIVO",
@@ -142,7 +200,16 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
         marcaDeEntrada: null,
         ahora: AHORA,
       }),
-    ).toEqual({ u: "zuluhub_app", e: EMPRESA, t: null, p: null, i: null, x: VENCE, a: null });
+    ).toEqual({
+      u: "zuluhub_app",
+      e: EMPRESA,
+      t: null,
+      p: null,
+      i: null,
+      x: VENCE,
+      a: null,
+      s: null,
+    });
   });
 
   it("OPERATIVO: la marca de entrada NO viaja en el token (no es frontera de aislamiento, §B.10)", () => {
@@ -162,6 +229,7 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
       "e",
       "i",
       "p",
+      "s",
       "t",
       "u",
       "x",
@@ -184,6 +252,7 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
       i: null,
       x: VENCE,
       a: null,
+      s: null,
     });
   });
 
@@ -202,6 +271,7 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
       i: null,
       x: VENCE,
       a: ADMIN,
+      s: null,
     });
     expect(
       payloadDe({
@@ -217,6 +287,7 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
       i: null,
       x: VENCE,
       a: "sistema",
+      s: null,
     });
     // El nombre del proceso no viaja: el actor firmado es siempre el mismo texto.
     expect(ACTOR_DE_SISTEMA).toBe("sistema");
@@ -231,6 +302,7 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
       i: null,
       x: VENCE,
       a: null,
+      s: null,
     });
   });
 
@@ -279,8 +351,14 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
     );
   });
 
-  it("INVITACION: rol app, solo el hash del token de invitación", () => {
-    expect(payloadDe({ tipo: "INVITACION", tokenHash: HASH, ahora: AHORA })).toEqual({
+  it("INVITACION: rol app, el hash del token de invitación y (si ya ingresó) el usuario autenticado", () => {
+    const sinUsuario = payloadDe({
+      tipo: "INVITACION",
+      tokenHash: HASH,
+      usuarioAuth: null,
+      ahora: AHORA,
+    });
+    expect(sinUsuario).toEqual({
       u: "zuluhub_app",
       e: null,
       t: null,
@@ -288,13 +366,105 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
       i: HASH,
       x: VENCE,
       a: null,
+      s: null,
     });
+    expect(
+      payloadDe({
+        tipo: "INVITACION",
+        tokenHash: HASH,
+        usuarioAuth: usuarioAuthId(USUARIO),
+        ahora: AHORA,
+      }),
+    ).toEqual({ ...sinUsuario, s: USUARIO });
+  });
+
+  it("SESION: rol app, solo el usuario autenticado; sin empresa, tenant, persona ni invitación", () => {
+    expect(
+      payloadDe({ tipo: "SESION", usuarioAuth: usuarioAuthId(USUARIO), ahora: AHORA }),
+    ).toEqual({
+      u: "zuluhub_app",
+      e: null,
+      t: null,
+      p: null,
+      i: null,
+      x: VENCE,
+      a: null,
+      s: USUARIO,
+    });
+  });
+
+  it("ninguna otra puerta firma `s`: sale null en operativo, grupo, plataforma y trabajos", () => {
+    const contextos: Contexto[] = [
+      {
+        tipo: "OPERATIVO",
+        empresaId: empresaId(EMPRESA),
+        personaId: personaId(PERSONA),
+        marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
+        ahora: AHORA,
+      },
+      { tipo: "GRUPO", tenantId: tenantId(TENANT), personaId: personaId(PERSONA), ahora: AHORA },
+      {
+        tipo: "PLATAFORMA",
+        actor: { tipo: "ADMIN", id: adminPlataformaId(ADMIN) },
+        ahora: AHORA,
+      },
+      { tipo: "TRABAJOS", ahora: AHORA },
+    ];
+    for (const contexto of contextos) expect(payloadDe(contexto)["s"], contexto.tipo).toBeNull();
+  });
+
+  it("el usuario cambia la firma: el token de un usuario no sirve para otro", () => {
+    const otro = usuarioAuthId("66666666-6666-4666-8666-666666666666");
+    const de = (usuarioAuth: UsuarioAuthId) =>
+      partir(firmarContexto(CLAVE, { tipo: "SESION", usuarioAuth, ahora: AHORA }, AHORA_EN_S));
+    expect(de(usuarioAuthId(USUARIO)).mac).not.toBe(de(otro).mac);
+    // Y el mismo contexto, la misma firma (determinista).
+    expect(de(otro).mac).toBe(de(otro).mac);
+  });
+
+  it("un id de usuario que no es un uuid canónico en minúsculas no se firma (ni en sesión ni en invitación)", () => {
+    const mal = [
+      "",
+      "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA",
+      ` ${USUARIO}`,
+      `${USUARIO} `,
+      `${USUARIO}0`,
+      USUARIO.slice(1),
+      USUARIO.replace("-", ""),
+      `${USUARIO}\n`,
+      "gggggggg-gggg-gggg-gggg-gggggggggggg",
+      `x${USUARIO}`,
+      `${USUARIO}\n${USUARIO}`,
+    ];
+    for (const id of mal) {
+      const usuarioAuth = id as UsuarioAuthId;
+      const mensaje = "el id del usuario debe ser un uuid canónico en minúsculas";
+      expect(() => usuarioFirmado(usuarioAuth), JSON.stringify(id)).toThrow(mensaje);
+      expect(
+        () => firmarContexto(CLAVE, { tipo: "SESION", usuarioAuth, ahora: AHORA }, 1),
+        JSON.stringify(id),
+      ).toThrow(mensaje);
+      expect(
+        () =>
+          firmarContexto(
+            CLAVE,
+            { tipo: "INVITACION", tokenHash: HASH, usuarioAuth, ahora: AHORA },
+            1,
+          ),
+        JSON.stringify(id),
+      ).toThrow(mensaje);
+    }
+    expect(usuarioFirmado(usuarioAuthId(USUARIO))).toBe(USUARIO);
   });
 
   it("un tokenHash que no es un sha256 hex de 64 caracteres se rechaza", () => {
     for (const mal of ["", "abc", "AB".repeat(32), "zz".repeat(32), `${HASH}0`]) {
       expect(() =>
-        firmarContexto(CLAVE, { tipo: "INVITACION", tokenHash: mal, ahora: AHORA }, 1),
+        firmarContexto(
+          CLAVE,
+          { tipo: "INVITACION", tokenHash: mal, usuarioAuth: null, ahora: AHORA },
+          1,
+        ),
       ).toThrow("tokenHash debe ser un sha256 en hexadecimal minúsculo (64 caracteres)");
     }
   });
@@ -302,6 +472,7 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
   it("el rol de base de cada puerta", () => {
     expect(rolDeContexto("OPERATIVO")).toBe("zuluhub_app");
     expect(rolDeContexto("INVITACION")).toBe("zuluhub_app");
+    expect(rolDeContexto("SESION")).toBe("zuluhub_app");
     expect(rolDeContexto("GRUPO")).toBe("zuluhub_grupo");
     expect(rolDeContexto("TRABAJOS")).toBe("zuluhub_trabajos");
     expect(rolDeContexto("PLATAFORMA")).toBe("zuluhub_plataforma");

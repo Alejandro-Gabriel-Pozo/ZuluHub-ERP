@@ -17,6 +17,15 @@ export type VersionId = Marca<string, "VersionId">;
 export type SolicitudId = Marca<string, "SolicitudId">;
 /** El identificador del origen de un comprobante, dentro de su tipo de origen. Lo da quien factura. */
 export type OrigenId = Marca<string, "OrigenId">;
+/**
+ * Un comprobante fiscal. Es también la `SolicitudId` con la que reserva su número en la serie; son tipos
+ * distintos para que un id de comprobante no se pase donde se espera uno de versión o de punto de venta.
+ */
+export type ComprobanteId = Marca<string, "ComprobanteId">;
+/** Un certificado de ARCA (el pedido, su clave cifrada y, después, el certificado cargado). */
+export type CertificadoId = Marca<string, "CertificadoId">;
+/** Una llamada a ARCA por un comprobante (la fila de solo inserción de `intento_arca`). */
+export type IntentoId = Marca<string, "IntentoId">;
 
 function crear<Id extends string>(nombre: string, valor: string): Id {
   if (!esTextoDeIdentificador(valor)) {
@@ -31,3 +40,8 @@ export const domicilioId = (valor: string): DomicilioId => crear<DomicilioId>("D
 export const versionId = (valor: string): VersionId => crear<VersionId>("VersionId", valor);
 export const solicitudId = (valor: string): SolicitudId => crear<SolicitudId>("SolicitudId", valor);
 export const origenId = (valor: string): OrigenId => crear<OrigenId>("OrigenId", valor);
+export const comprobanteId = (valor: string): ComprobanteId =>
+  crear<ComprobanteId>("ComprobanteId", valor);
+export const certificadoId = (valor: string): CertificadoId =>
+  crear<CertificadoId>("CertificadoId", valor);
+export const intentoId = (valor: string): IntentoId => crear<IntentoId>("IntentoId", valor);

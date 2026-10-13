@@ -42,6 +42,7 @@ import {
   sucursalDe,
   type RolDePrueba,
 } from "./fixtures-identidad";
+import { usuarioDePrueba } from "../utilidades/usuarios";
 
 /**
  * H3, tramo 3: concurrencia REAL de los casos de uso de identidad. Cada prueba lanza dos
@@ -200,7 +201,12 @@ describe.skipIf(base === null)("identidad: concurrencia de los casos de uso (K1 
   };
 
   const aceptar = (token: string, email: string) =>
-    casos.aceptarInvitacion({ token, emailAutenticado: email, ahora });
+    casos.aceptarInvitacion({
+      token,
+      emailAutenticado: email,
+      usuarioAuth: usuarioDePrueba(email),
+      ahora,
+    });
 
   // =============================================================================================
   it("K1: dos aceptaciones simultáneas de una invitación a 3 empresas dejan 3 membresías (no 6)", async () => {

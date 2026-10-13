@@ -12,6 +12,8 @@ export type IdentidadDb = {
     email: string;
     activo_global: Generated<boolean>;
     creado_en: Generated<Date>;
+    /** 0010: el usuario autenticado vinculado (nulo hasta aceptar una invitación). */
+    usuario_auth_id: Generated<string | null>;
   };
   membresia: {
     empresa_id: string;

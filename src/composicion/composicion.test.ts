@@ -85,6 +85,11 @@ const PEDIDOS: { nombre: string; pedir: (c: Conexiones) => unknown; nombra: stri
     nombra: "ZULUHUB_DB_APP",
   },
   {
+    nombre: "web.consultasDeSesion",
+    pedir: (c) => armarWeb(c).consultasDeSesion(),
+    nombra: "ZULUHUB_DB_APP",
+  },
+  {
     nombre: "trabajos.procesador",
     pedir: (c) => armarTrabajos(c).procesador(),
     nombra: "ZULUHUB_URL_BASE",

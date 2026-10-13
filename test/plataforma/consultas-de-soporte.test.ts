@@ -477,8 +477,15 @@ describe("verConfiguracion", () => {
     const r = await consultas.verConfiguracion(comoAdministrador);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.valor.modulos.map((m) => m.clave)).toEqual(["administracion", "facturacion"]);
-    const [modulo, facturacion] = r.valor.modulos;
+    expect(r.valor.modulos.map((m) => m.clave)).toEqual([
+      "administracion",
+      "carta",
+      "catalogo",
+      "facturacion",
+      "stock",
+    ]);
+    const modulo = r.valor.modulos.find((m) => m.clave === "administracion");
+    const facturacion = r.valor.modulos.find((m) => m.clave === "facturacion");
     expect(modulo).toMatchObject({
       clave: "administracion",
       estado: "disponible",

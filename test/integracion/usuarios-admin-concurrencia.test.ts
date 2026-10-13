@@ -38,6 +38,7 @@ import {
   incluirEmpresa,
   sucursalDe,
 } from "./fixtures-identidad";
+import { usuarioDePrueba } from "../utilidades/usuarios";
 
 /**
  * H6, tramo T3a: concurrencia REAL de revocar una invitación y de invitar a una sucursal que se
@@ -181,7 +182,12 @@ describe.skipIf(base === null)(
         ronda(2, trasLeer("invitaciones", "obtenerPorHash", "obtenerPorId"));
 
         const [aceptacion, revocacion] = await Promise.all([
-          casos.aceptarInvitacion({ token, emailAutenticado: email, ahora }),
+          casos.aceptarInvitacion({
+            token,
+            emailAutenticado: email,
+            usuarioAuth: usuarioDePrueba(email),
+            ahora,
+          }),
           casos.revocarInvitacion(e.ctx, { invitacionId: id }),
         ]);
 

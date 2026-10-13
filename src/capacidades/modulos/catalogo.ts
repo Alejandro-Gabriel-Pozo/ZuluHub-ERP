@@ -111,6 +111,106 @@ export const CATALOGO_DE_MODULOS = {
       "comprobantes.emitir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
     },
   },
+  /**
+   * Catálogo comercial y stock (especificación `catalogo-y-stock.md` §C, tramo T0, con la escalera de
+   * la carta CE0 de `catalogo-carta-niveles-y-elecciones.md` §7.2). Los tres módulos nacen
+   * `en_desarrollo`: declararlos NO los hace vendibles, el guard rechaza sus acciones con
+   * `MODULO_EN_DESARROLLO` y el cierre (pasarlos a `disponible`) es el tramo T12. Una acción por caso
+   * de uso o consulta; quién puede cada una, en `permisos/empresa.ts`. Ninguna exige una capacidad de
+   * sucursal: el alcance del operador por sucursal lo verifica el caso de uso con `exigirSucursal`.
+   *
+   * Criterio de los efectos (`EfectoDeAccion`): mirar es `LECTURA`; lo que cierra, apaga, anula o
+   * completa algo ya iniciado (desactivar, retirar, aplicar o cancelar un conteo, anular un
+   * movimiento, contar) es `COMPLETA_CIERRA` y una baja de plan no lo traba; todo lo demás (altas,
+   * ediciones, reactivar, cambiar un precio, publicar, mover stock) es `CREA_AMPLIA`.
+   */
+  catalogo: {
+    estado: "en_desarrollo",
+    obligatorio: false,
+    requiere: ["administracion"],
+    usaSiExiste: [],
+    datosRequeridos: [],
+    implementadoPor: ["modulos/catalogo"],
+    acciones: {
+      "productos.ver": { capacidad: null, efecto: "LECTURA" },
+      "productos.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "productos.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "productos.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "productos.cambiar_precio": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "productos.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "productos.asignar_emisor": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "opciones.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "categorias.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "categorias.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "categorias.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "categorias.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      // CE0: elecciones del producto (variantes, biblioteca de guarniciones y adicionales), grupos de
+      // precio y combos. Cambiar el precio de un grupo o de una variante es `productos.cambiar_precio`.
+      "variantes.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "opciones.asignar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "grupos_de_precio.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "grupos_de_precio.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "grupos_de_precio.asignar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "grupos_de_precio.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "grupos_de_precio.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "combos.editar_contenido": { capacidad: null, efecto: "CREA_AMPLIA" },
+    },
+  },
+  /**
+   * La carta: una vista publicada del catálogo, que es otro módulo comercial pero lo implementa el
+   * mismo código (`modulos/catalogo`). Sola, sin stock ni ventas, es la vidriera (§F8). La publicación
+   * en línea (QR) es un extra de pago: lo decide la perilla `carta_por_qr`, que se declara cuando se
+   * construya la carta; las tres acciones `*_en_linea` y `renovar_enlace` ya se clasifican acá.
+   */
+  carta: {
+    estado: "en_desarrollo",
+    obligatorio: false,
+    requiere: ["catalogo"],
+    usaSiExiste: [],
+    datosRequeridos: [],
+    implementadoPor: ["modulos/catalogo"],
+    acciones: {
+      "cartas.ver": { capacidad: null, efecto: "LECTURA" },
+      "cartas.marcar_disponibilidad": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "cartas.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "cartas.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "cartas.publicar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "cartas.retirar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "cartas.publicar_en_linea": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "cartas.renovar_enlace": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "cartas.retirar_de_linea": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+    },
+  },
+  stock: {
+    estado: "en_desarrollo",
+    obligatorio: false,
+    requiere: ["catalogo"],
+    usaSiExiste: [],
+    // El primer depósito lo crea la persona usuaria: stock no pide datos previos.
+    datosRequeridos: [],
+    implementadoPor: ["modulos/stock"],
+    acciones: {
+      "stock.ver": { capacidad: null, efecto: "LECTURA" },
+      "stock.verificar_saldos": { capacidad: null, efecto: "LECTURA" },
+      "stock.registrar_entrada": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "stock.registrar_salida": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "stock.transferir": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "stock.ajustar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "stock.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "depositos.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "depositos.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "depositos.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "depositos.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "depositos.asignar_emisor": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "articulos.controlar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "articulos.dejar_de_controlar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "recetas.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "conteos.abrir": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "conteos.registrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "conteos.aplicar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "conteos.cancelar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+    },
+  },
 } as const satisfies CatalogoComercial;
 
 type Catalogo = typeof CATALOGO_DE_MODULOS;

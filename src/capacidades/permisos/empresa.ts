@@ -44,6 +44,62 @@ export const PERMISOS_DE_EMPRESA = {
   "permisos.ver_propios": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   // H7 (especificación §C): quien cobra puede emitir el comprobante en el mismo acto, los tres roles.
   "comprobantes.emitir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  // Catálogo, carta y stock (catalogo-y-stock §C, T0; propuesta A de F6, F7 e I.4, pendientes de
+  // veto del dueño). El operador mira, marca «agotado», mueve stock y cuenta en sus sucursales (el
+  // alcance lo verifica el caso de uso con `exigirSucursal`); definir el catálogo, los precios, las
+  // opciones y la carta, corregir stock y exponer la carta a internet es del gerente y el
+  // administrador; lo que toca la estructura fiscal o la verificación de saldos es solo del gerente.
+  "productos.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "cartas.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "stock.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "cartas.marcar_disponibilidad": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "stock.registrar_entrada": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "stock.registrar_salida": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "stock.transferir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "conteos.registrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "productos.crear": ["GERENTE", "ADMINISTRADOR"],
+  "productos.editar": ["GERENTE", "ADMINISTRADOR"],
+  "productos.reactivar": ["GERENTE", "ADMINISTRADOR"],
+  "productos.cambiar_precio": ["GERENTE", "ADMINISTRADOR"],
+  "opciones.editar": ["GERENTE", "ADMINISTRADOR"],
+  "productos.desactivar": ["GERENTE", "ADMINISTRADOR"],
+  "categorias.crear": ["GERENTE", "ADMINISTRADOR"],
+  "categorias.editar": ["GERENTE", "ADMINISTRADOR"],
+  "categorias.reactivar": ["GERENTE", "ADMINISTRADOR"],
+  "cartas.crear": ["GERENTE", "ADMINISTRADOR"],
+  "cartas.editar": ["GERENTE", "ADMINISTRADOR"],
+  "cartas.publicar": ["GERENTE", "ADMINISTRADOR"],
+  "categorias.desactivar": ["GERENTE", "ADMINISTRADOR"],
+  "cartas.retirar": ["GERENTE", "ADMINISTRADOR"],
+  "depositos.crear": ["GERENTE", "ADMINISTRADOR"],
+  "depositos.editar": ["GERENTE", "ADMINISTRADOR"],
+  "depositos.reactivar": ["GERENTE", "ADMINISTRADOR"],
+  "articulos.controlar": ["GERENTE", "ADMINISTRADOR"],
+  "recetas.editar": ["GERENTE", "ADMINISTRADOR"],
+  "depositos.desactivar": ["GERENTE", "ADMINISTRADOR"],
+  "articulos.dejar_de_controlar": ["GERENTE", "ADMINISTRADOR"],
+  "stock.ajustar": ["GERENTE", "ADMINISTRADOR"],
+  "conteos.abrir": ["GERENTE", "ADMINISTRADOR"],
+  "stock.anular": ["GERENTE", "ADMINISTRADOR"],
+  "conteos.aplicar": ["GERENTE", "ADMINISTRADOR"],
+  "conteos.cancelar": ["GERENTE", "ADMINISTRADOR"],
+  "cartas.publicar_en_linea": ["GERENTE", "ADMINISTRADOR"],
+  "cartas.renovar_enlace": ["GERENTE", "ADMINISTRADOR"],
+  "cartas.retirar_de_linea": ["GERENTE", "ADMINISTRADOR"],
+  "productos.asignar_emisor": ["GERENTE"],
+  "depositos.asignar_emisor": ["GERENTE"],
+  "stock.verificar_saldos": ["GERENTE"],
+  // CE0 (catalogo-carta-niveles-y-elecciones §7.2): quien carga productos y opciones también edita las
+  // variantes, arma la biblioteca de elecciones, los grupos de precio y los combos (F6, opción A). El
+  // operador no.
+  "variantes.editar": ["GERENTE", "ADMINISTRADOR"],
+  "opciones.asignar": ["GERENTE", "ADMINISTRADOR"],
+  "grupos_de_precio.crear": ["GERENTE", "ADMINISTRADOR"],
+  "grupos_de_precio.editar": ["GERENTE", "ADMINISTRADOR"],
+  "grupos_de_precio.asignar": ["GERENTE", "ADMINISTRADOR"],
+  "grupos_de_precio.desactivar": ["GERENTE", "ADMINISTRADOR"],
+  "grupos_de_precio.reactivar": ["GERENTE", "ADMINISTRADOR"],
+  "combos.editar_contenido": ["GERENTE", "ADMINISTRADOR"],
 } as const satisfies Record<ClaveAccion, readonly RolDeEmpresa[]>;
 
 export type ReglasDeEmpresa = ReglasDelGuard<ClaveModulo, ClaveAccion, ClaveCapacidad>;

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  certificadoId,
+  comprobanteId,
   domicilioId,
   emisorId,
+  intentoId,
   origenId,
   puntoDeVentaId,
   solicitudId,
@@ -15,6 +18,9 @@ const constructores = [
   ["VersionId", versionId],
   ["SolicitudId", solicitudId],
   ["OrigenId", origenId],
+  ["ComprobanteId", comprobanteId],
+  ["CertificadoId", certificadoId],
+  ["IntentoId", intentoId],
 ] as const;
 
 describe.each(constructores)("%s", (nombre, crear) => {
