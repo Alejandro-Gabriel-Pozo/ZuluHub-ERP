@@ -5,7 +5,7 @@ import { comprobarQueOpera, type EmpresaNoOpera } from "../../../contexto/estado
 import type { InvitacionId, SucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
-import { emailDesdeTexto } from "../dominio/email";
+import { emailDesdeTexto } from "../../../primitivas/contacto/email";
 import type { ErrorDeInvitacion, ErrorDeSucursalesDeInvitacion } from "../dominio/errores";
 import {
   decidirInvitacionDeUsuario,

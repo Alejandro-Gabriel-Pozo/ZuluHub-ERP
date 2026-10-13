@@ -25,7 +25,6 @@ describe("U8: el dominio de identidad no usa reloj ni aleatoriedad", () => {
   it("encuentra los archivos de dominio a revisar", () => {
     expect(nombres).toEqual(
       expect.arrayContaining([
-        "email.ts",
         "errores.ts",
         "invitacion.ts",
         "membresia.ts",

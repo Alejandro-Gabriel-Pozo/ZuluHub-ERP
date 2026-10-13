@@ -57,6 +57,18 @@ describe("formaDeEditarSucursal", () => {
     }
   });
 
+  it("la hora de corte es opcional y viaja tal cual: validarla es del dominio", () => {
+    const base = { sucursalId: ID, versionEsperada: 1, nombre: "Sur" };
+    expect(formaDeEditarSucursal.parse({ ...base, horaDeCorte: "04:00" }).horaDeCorte).toBe(
+      "04:00",
+    );
+    expect(formaDeEditarSucursal.parse({ ...base, horaDeCorte: "25:99" }).horaDeCorte).toBe(
+      "25:99",
+    );
+    expect(formaDeEditarSucursal.parse(base).horaDeCorte).toBeUndefined();
+    expect(formaDeEditarSucursal.safeParse({ ...base, horaDeCorte: 4 }).success).toBe(false);
+  });
+
   it("acepta la versión como entero numérico o como dígitos", () => {
     const base = { sucursalId: ID, nombre: "Sur" };
     expect(formaDeEditarSucursal.parse({ ...base, versionEsperada: 7 }).versionEsperada).toBe(7);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CATALOGO_DE_MODULOS, type ClaveAccion, type ClaveModulo } from "../modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "./empresa";
-import { exigirAccion, type ActorCargado } from "./exigir";
+import { exigirAccion, exigirAcciones, type ActorCargado } from "./exigir";
 import {
   CATALOGO_DE_PLATAFORMA,
   PERMISOS_DE_PLATAFORMA,
@@ -179,6 +179,113 @@ describe("exigirAccion", () => {
     expect(noSeEjecuta).toBeTypeOf("function");
     const claves: ClaveModulo[] = ["administracion", "facturacion"];
     expect(claves).toEqual(Object.keys(CATALOGO_DE_MODULOS));
+  });
+});
+
+describe("exigirAcciones", () => {
+  it("pasa solo si el actor puede TODAS las acciones", async () => {
+    // El gerente puede ambas; el operador puede emitir comprobantes pero no invitar usuarios.
+    const gerente = cargaDe({ rol: "GERENTE", modulosActivados: [], modulosHabilitados: [] });
+    expect(
+      await exigirAcciones(
+        REGLAS_DE_EMPRESA,
+        ["usuarios.invitar", "sucursales.reactivar"],
+        gerente.cargar,
+      ),
+    ).toEqual({ ok: true, valor: null });
+    const operador = cargaDe({ rol: "OPERADOR", modulosActivados: [], modulosHabilitados: [] });
+    expect(
+      await exigirAcciones(
+        REGLAS_DE_EMPRESA,
+        ["gerencia.ver_traspaso", "usuarios.invitar"],
+        operador.cargar,
+      ),
+    ).toEqual({ ok: false, error: "SIN_PERMISO" });
+  });
+
+  it("devuelve el rechazo de la PRIMERA acción que falla, en el orden dado", async () => {
+    // Una acción que rechaza el rol (SIN_PERMISO) y otra que rechaza el módulo (facturación en desarrollo).
+    const { cargar } = cargaDe({ rol: "OPERADOR", modulosActivados: [], modulosHabilitados: [] });
+    expect(
+      await exigirAcciones(REGLAS_DE_EMPRESA, ["usuarios.invitar", "comprobantes.emitir"], cargar),
+    ).toEqual({ ok: false, error: "SIN_PERMISO" });
+    expect(
+      await exigirAcciones(REGLAS_DE_EMPRESA, ["comprobantes.emitir", "usuarios.invitar"], cargar),
+    ).toEqual({ ok: false, error: "MODULO_EN_DESARROLLO" });
+  });
+
+  it("evalúa cada acción: pasar la primera no alcanza si falla la última", async () => {
+    const { cargar } = cargaDe({ rol: "OPERADOR", modulosActivados: [], modulosHabilitados: [] });
+    expect(
+      await exigirAcciones(
+        REGLAS_DE_EMPRESA,
+        ["gerencia.ver_traspaso", "gerencia.aceptar_traspaso", "sucursales.crear"],
+        cargar,
+      ),
+    ).toEqual({ ok: false, error: "SIN_PERMISO" });
+  });
+
+  it("carga al actor exactamente una vez por llamada, sin importar cuántas acciones pida", async () => {
+    const carga = cargaDe({ rol: "GERENTE", modulosActivados: [], modulosHabilitados: [] });
+    await exigirAcciones(
+      REGLAS_DE_EMPRESA,
+      ["usuarios.invitar", "usuarios.apagar", "sucursales.crear"],
+      carga.cargar,
+    );
+    expect(carga.llamadas()).toBe(1);
+  });
+
+  it("con una sola acción se comporta como exigirAccion", async () => {
+    for (const rol of ROLES_DE_EMPRESA) {
+      const a = cargaDe({ rol, modulosActivados: [], modulosHabilitados: [] });
+      const b = cargaDe({ rol, modulosActivados: [], modulosHabilitados: [] });
+      expect(await exigirAcciones(REGLAS_DE_EMPRESA, ["sucursales.desactivar"], a.cargar)).toEqual(
+        await exigirAccion(REGLAS_DE_EMPRESA, "sucursales.desactivar", b.cargar),
+      );
+    }
+  });
+
+  it("respeta el orden de precedencia del guard (solo lectura) también entre varias acciones", async () => {
+    const reglas = administracionComo("disponible", false);
+    const { cargar } = cargaDe({
+      rol: "GERENTE",
+      modulosActivados: ["administracion"],
+      modulosHabilitados: [],
+    });
+    // LECTURA y COMPLETA_CIERRA pasan en solo lectura; CREA_AMPLIA no.
+    expect(await exigirAcciones(reglas, ["usuarios.ver", "usuarios.apagar"], cargar)).toEqual({
+      ok: true,
+      valor: null,
+    });
+    expect(await exigirAcciones(reglas, ["usuarios.ver", "usuarios.invitar"], cargar)).toEqual({
+      ok: false,
+      error: "MODULO_EN_SOLO_LECTURA",
+    });
+  });
+
+  it("una lista vacía lanza RangeError y no carga al actor (nunca se autoriza por omisión)", async () => {
+    const carga = cargaDe({ rol: "GERENTE", modulosActivados: [], modulosHabilitados: [] });
+    await expect(
+      // @ts-expect-error la lista tiene que traer al menos una acción
+      exigirAcciones(REGLAS_DE_EMPRESA, [], carga.cargar),
+    ).rejects.toThrow(new RangeError("exigirAcciones sin ninguna acción"));
+    expect(carga.llamadas()).toBe(0);
+  });
+
+  it("si la carga falla, el error se propaga", async () => {
+    await expect(
+      exigirAcciones(REGLAS_DE_EMPRESA, ["usuarios.invitar", "usuarios.ver"], () =>
+        Promise.reject(new Error("caída")),
+      ),
+    ).rejects.toThrow("caída");
+  });
+
+  it("una acción que el catálogo no declara no compila", () => {
+    const { cargar } = cargaDe({ rol: "GERENTE", modulosActivados: [], modulosHabilitados: [] });
+    const noSeEjecuta = () =>
+      // @ts-expect-error la acción no existe en el catálogo
+      exigirAcciones(REGLAS_DE_EMPRESA, ["usuarios.invitar", "usuarios.borrar_todo"], cargar);
+    expect(noSeEjecuta).toBeTypeOf("function");
   });
 });
 

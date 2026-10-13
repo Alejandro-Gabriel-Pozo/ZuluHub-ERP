@@ -53,6 +53,11 @@ import {
   type AuditoriaDb,
 } from "../../src/adaptadores/postgres/auditoria";
 import {
+  crearNivelesDeControlDePostgres,
+  type NivelesDeControlDb,
+} from "../../src/adaptadores/postgres/niveles-de-control";
+import type { NivelesDeControl } from "../../src/capacidades/controles/niveles";
+import {
   crearAuditoriaDePlataformaDePostgres,
   type AuditoriaDePlataformaDb,
 } from "../../src/adaptadores/postgres/auditoria-de-plataforma";
@@ -103,6 +108,11 @@ export type TxDePrueba = Readonly<{
   autorizacionDePlataforma: CargaDeAutorizacionDePlataforma;
   admins: AdminsDePlataforma;
   referenciasDeError: ReferenciasDeError;
+  /**
+   * El nivel vigente de cada control (tramo previo común): el mismo adaptador que la composición, pero
+   * con cualquier texto como clave (el catálogo real de controles todavía está vacío).
+   */
+  niveles: NivelesDeControl<string>;
 }> &
   TxDeIdentidad;
 
@@ -149,6 +159,7 @@ export function crearEntornoDePrueba(
           db.withTables<ReferenciasDeErrorDb>(),
         ),
         autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>()),
+        niveles: crearNivelesDeControlDePostgres<string>(db.withTables<NivelesDeControlDb>()),
       }),
     maximoDeConexiones,
     clave: base.clave,

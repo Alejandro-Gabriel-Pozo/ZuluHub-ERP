@@ -1,4 +1,4 @@
-import type { Resultado } from "../../primitivas/resultado/resultado";
+import { ok, type Resultado } from "../../primitivas/resultado/resultado";
 import { estadoDeModulos } from "../modulos/activos";
 import { evaluarGuard, type MotivoDeRechazo, type ReglasDelGuard } from "./guard";
 import type { RolDeEmpresa } from "./roles";
@@ -47,10 +47,42 @@ export async function exigirAccion<
   accion: A,
   cargar: CargaDelActor<NoInfer<R>>,
 ): Promise<Resultado<null, MotivoDeRechazo>> {
+  return exigirAcciones(reglas, [accion], cargar);
+}
+
+/**
+ * Lo mismo para una operación que cruza varias transiciones y por eso exige VARIAS acciones (cobrar
+ * un ticket exige además emitir el comprobante: conciliación §3.6). El actor se carga UNA sola vez y
+ * se evalúa el guard con cada acción, en el orden dado: el primer rechazo es el que vuelve (los
+ * demás no se evalúan), así que quien llama pone primero la acción cuyo rechazo quiere ver. Pasan
+ * solo si pasan todas. Una lista vacía es un defecto del llamador (autorizaría por omisión) y lanza
+ * `RangeError`, como una acción sin definir en el guard.
+ *
+ * Previene que cada caso orquestador repita `exigirAccion` en cadena: cada llamada vuelve a leer al
+ * actor (varias consultas por cada operación de venta) y el orden de las acciones queda disperso en
+ * llamadas sueltas en lugar de en una lista que se lee de un vistazo.
+ */
+export async function exigirAcciones<
+  M extends string,
+  A extends string,
+  C extends string,
+  R extends string = RolDeEmpresa,
+>(
+  reglas: ReglasDelGuard<M, A, C, R>,
+  acciones: readonly [A, ...A[]],
+  cargar: CargaDelActor<NoInfer<R>>,
+): Promise<Resultado<null, MotivoDeRechazo>> {
+  // El tipo ya lo impide; esto cubre una lista vacía que llegue por un `as` o por datos.
+  if (acciones.length === 0) throw new RangeError("exigirAcciones sin ninguna acción");
   const actor = await cargar();
-  return evaluarGuard(reglas, accion, {
+  const datos = {
     rol: actor.rol,
     ...estadoDeModulos(reglas.catalogo, actor.modulosActivados, actor.modulosHabilitados),
     capacidadesDeSucursal: null,
-  });
+  };
+  for (const accion of acciones) {
+    const permiso = evaluarGuard(reglas, accion, datos);
+    if (!permiso.ok) return permiso;
+  }
+  return ok(null);
 }

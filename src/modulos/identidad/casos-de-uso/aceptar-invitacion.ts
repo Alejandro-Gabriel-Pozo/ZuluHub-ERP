@@ -3,7 +3,7 @@ import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/m
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import { cambiarEstado as cambiarEstadoDeEmpresa } from "../../empresas/publico";
-import { emailDesdeTexto, type Email } from "../dominio/email";
+import { emailDesdeTexto, type Email } from "../../../primitivas/contacto/email";
 import type { ErrorDeAceptacion } from "../dominio/errores";
 import { decidirAceptacion, type Invitacion, type RolDeEmpresa } from "../dominio/invitacion";
 import type { Persona } from "../dominio/membresia";

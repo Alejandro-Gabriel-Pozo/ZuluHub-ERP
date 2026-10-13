@@ -13,7 +13,7 @@ import {
   type SucursalId,
   type TraspasoId,
 } from "../../../primitivas/identificadores/marca";
-import { emailDesdeTexto, type Email } from "../dominio/email";
+import { emailDesdeTexto, type Email } from "../../../primitivas/contacto/email";
 import type {
   EmpresaInvitada,
   EstadoGuardado,

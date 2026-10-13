@@ -1,6 +1,10 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { empresaId, sucursalId } from "../../../primitivas/identificadores/marca";
+import {
+  HORA_DE_CORTE_POR_DEFECTO,
+  horaDelDiaDesdeTexto,
+} from "../../../primitivas/tiempo/hora-del-dia";
 import "../../../../test/propiedades/configuracion";
 import {
   LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL,
@@ -8,6 +12,7 @@ import {
   decidirDesactivacion,
   decidirEdicion,
   decidirReactivacion,
+  horaDeCorteValida,
   nombreDeSucursalValido,
   type Sucursal,
 } from "./sucursal";
@@ -17,9 +22,16 @@ const sucursal = (id: string, cambios: Partial<Sucursal> = {}): Sucursal => ({
   empresaId: empresaId("e-1"),
   nombre: `Sucursal ${id}`,
   activa: true,
+  horaDeCorte: HORA_DE_CORTE_POR_DEFECTO,
   version: 1,
   ...cambios,
 });
+
+const hora = (texto: string) => {
+  const leida = horaDelDiaDesdeTexto(texto);
+  if (!leida.ok) throw new Error(`hora de prueba inválida: ${texto}`);
+  return leida.valor;
+};
 
 const INVALIDO = { ok: false, error: "NOMBRE_DE_SUCURSAL_INVALIDO" } as const;
 
@@ -196,7 +208,7 @@ describe("decidirEdicion", () => {
   });
 
   it("con la versión vigente y otro nombre se renombra", () => {
-    expect(decidirEdicion(s, 3, "Casa matriz")).toEqual({ ok: true, valor: "RENOMBRAR" });
+    expect(decidirEdicion(s, 3, "Casa matriz")).toEqual({ ok: true, valor: "EDITAR" });
   });
 
   it("con otra versión es VERSION_DESACTUALIZADA (más vieja o más nueva)", () => {
@@ -220,11 +232,82 @@ describe("decidirEdicion", () => {
   });
 
   it("cambiar solo las mayúsculas es un cambio", () => {
-    expect(decidirEdicion(s, 3, "casa central")).toEqual({ ok: true, valor: "RENOMBRAR" });
+    expect(decidirEdicion(s, 3, "casa central")).toEqual({ ok: true, valor: "EDITAR" });
   });
 
   it("se puede editar una sucursal inactiva (conserva su nombre, pero se puede corregir)", () => {
     const inactiva = sucursal("a", { nombre: "Vieja", version: 2, activa: false });
-    expect(decidirEdicion(inactiva, 2, "Nueva")).toEqual({ ok: true, valor: "RENOMBRAR" });
+    expect(decidirEdicion(inactiva, 2, "Nueva")).toEqual({ ok: true, valor: "EDITAR" });
   });
+
+  describe("con hora de corte", () => {
+    const conCorte = sucursal("a", {
+      nombre: "Casa central",
+      version: 3,
+      horaDeCorte: hora("04:00"),
+    });
+
+    it("la misma hora de corte y el mismo nombre no hay cambios, con cualquier versión", () => {
+      expect(decidirEdicion(conCorte, 3, "Casa central", hora("04:00"))).toEqual({
+        ok: true,
+        valor: "SIN_CAMBIOS",
+      });
+      expect(decidirEdicion(conCorte, 1, "Casa central", hora("04:00"))).toEqual({
+        ok: true,
+        valor: "SIN_CAMBIOS",
+      });
+    });
+
+    it("otra hora de corte con el mismo nombre es un cambio y pide la versión vigente", () => {
+      expect(decidirEdicion(conCorte, 3, "Casa central", hora("06:30"))).toEqual({
+        ok: true,
+        valor: "EDITAR",
+      });
+      expect(decidirEdicion(conCorte, 2, "Casa central", hora("06:30"))).toEqual({
+        ok: false,
+        error: "VERSION_DESACTUALIZADA",
+      });
+    });
+
+    it("una hora de corte omitida no se toca: el mismo nombre sigue sin cambios aunque la sucursal tenga corte", () => {
+      expect(decidirEdicion(conCorte, 1, "Casa central")).toEqual({
+        ok: true,
+        valor: "SIN_CAMBIOS",
+      });
+    });
+
+    it("otro nombre con la misma hora de corte es un cambio", () => {
+      expect(decidirEdicion(conCorte, 3, "Matriz", hora("04:00"))).toEqual({
+        ok: true,
+        valor: "EDITAR",
+      });
+    });
+
+    it("volver al corte por defecto (00:00) es un cambio como cualquier otro", () => {
+      expect(decidirEdicion(conCorte, 3, "Casa central", HORA_DE_CORTE_POR_DEFECTO)).toEqual({
+        ok: true,
+        valor: "EDITAR",
+      });
+    });
+
+    it("una sucursal que no existe sigue siendo SUCURSAL_NO_ENCONTRADA", () => {
+      expect(decidirEdicion(null, 3, "Casa central", hora("04:00"))).toEqual({
+        ok: false,
+        error: "SUCURSAL_NO_ENCONTRADA",
+      });
+    });
+  });
+});
+
+describe("horaDeCorteValida", () => {
+  it.each(["00:00", "04:00", "06:30", "23:59"])("acepta %s", (texto) => {
+    expect(horaDeCorteValida(texto)).toEqual({ ok: true, valor: texto });
+  });
+
+  it.each(["", "4:00", "24:00", "23:60", "04:00:00", " 04:00", "04:00 ", "04.00", "0400", "ab:cd"])(
+    "rechaza %j con HORA_DE_CORTE_INVALIDA",
+    (texto) => {
+      expect(horaDeCorteValida(texto)).toEqual({ ok: false, error: "HORA_DE_CORTE_INVALIDA" });
+    },
+  );
 });
