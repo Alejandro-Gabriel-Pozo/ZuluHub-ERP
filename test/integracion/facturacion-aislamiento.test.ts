@@ -3,7 +3,15 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { personaId, tenantId } from "../../src/primitivas/identificadores/marca";
 import { comoGrupo, comoTrabajos } from "./entorno";
-import { acepta, conAppDe, conPlataformaDe, crearMundo, denegado, filas, referencia } from "./fiscal-apoyo";
+import {
+  acepta,
+  conAppDe,
+  conPlataformaDe,
+  crearMundo,
+  denegado,
+  filas,
+  referencia,
+} from "./fiscal-apoyo";
 import {
   crearComprobante,
   crearEscenario,
@@ -54,12 +62,21 @@ describe.skipIf(base === null)("facturación: aislamiento entre empresas y entre
       `insert into certificado_arca (id, empresa_id, emisor_id, ambiente, alias, cuit_titular, pedido_pem, clave_cifrada,
                                      clave_nonce, clave_etiqueta, clave_kid, creado_por)
        values ($1, $2, $3, 'HOMOLOGACION', 'abc', $4, 'P', $5, $6, $7, 'k', $8)`,
-      [certificado, x.empresa, x.emisor, x.cuit, Buffer.alloc(8), Buffer.alloc(12), Buffer.alloc(16), x.persona],
+      [
+        certificado,
+        x.empresa,
+        x.emisor,
+        x.cuit,
+        Buffer.alloc(8),
+        Buffer.alloc(12),
+        Buffer.alloc(16),
+        x.persona,
+      ],
     );
-    await dueno.query("insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')", [
-      x.empresa,
-      certificado,
-    ]);
+    await dueno.query(
+      "insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')",
+      [x.empresa, certificado],
+    );
     const intento = randomUUID();
     await dueno.query(
       `insert into intento_arca (id, empresa_id, comprobante_id, operacion, desenlace, iniciado_en, duracion_ms)
@@ -104,7 +121,10 @@ describe.skipIf(base === null)("facturación: aislamiento entre empresas y entre
             expect(await contar(s, tabla), `${tabla}: filas visibles`).toBe(1);
             expect(await contar(s, tabla, `empresa_id = '${propia.x.empresa}'`), tabla).toBe(1);
             for (const ajena of ajenas) {
-              expect(await contar(s, tabla, `empresa_id = '${ajena.x.empresa}'`), `${tabla} de otra`).toBe(0);
+              expect(
+                await contar(s, tabla, `empresa_id = '${ajena.x.empresa}'`),
+                `${tabla} de otra`,
+              ).toBe(0);
             }
           }
           // Ni siquiera conociendo el id de lo ajeno.
@@ -139,14 +159,22 @@ describe.skipIf(base === null)("facturación: aislamiento entre empresas y entre
               `insert into certificado_arca (empresa_id, emisor_id, ambiente, alias, cuit_titular, pedido_pem, clave_cifrada,
                       clave_nonce, clave_etiqueta, clave_kid, creado_por)
                values ($1, $2, 'PRODUCCION', 'abc', $3, 'P', $4, $5, $6, 'k', $7)`,
-              [ajena.x.empresa, ajena.x.emisor, ajena.x.cuit, Buffer.alloc(8), Buffer.alloc(12), Buffer.alloc(16), a.x.persona],
+              [
+                ajena.x.empresa,
+                ajena.x.emisor,
+                ajena.x.cuit,
+                Buffer.alloc(8),
+                Buffer.alloc(12),
+                Buffer.alloc(16),
+                a.x.persona,
+              ],
             ),
           );
           denegado(
-            await s.intentar("insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')", [
-              ajena.x.empresa,
-              ajena.certificado,
-            ]),
+            await s.intentar(
+              "insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')",
+              [ajena.x.empresa, ajena.certificado],
+            ),
           );
           denegado(
             await s.intentar(
@@ -170,16 +198,29 @@ describe.skipIf(base === null)("facturación: aislamiento entre empresas y entre
       for (const ajena of [b, c]) {
         await conApp(a, async (s) => {
           filas(
-            await s.intentar("update comprobante set estado = 'DESCARTADO', motivo_descarte = 'x' where id = $1", [ajena.comprobante]),
-            0,
-          );
-          filas(await s.intentar("update comprobante set envios = envios where empresa_id = $1", [ajena.x.empresa]), 0);
-          filas(
-            await s.intentar("update certificado_arca set estado = 'DESCARTADO' where id = $1", [ajena.certificado]),
+            await s.intentar(
+              "update comprobante set estado = 'DESCARTADO', motivo_descarte = 'x' where id = $1",
+              [ajena.comprobante],
+            ),
             0,
           );
           filas(
-            await s.intentar("update acceso_arca set renovando_hasta = now() where certificado_id = $1", [ajena.certificado]),
+            await s.intentar("update comprobante set envios = envios where empresa_id = $1", [
+              ajena.x.empresa,
+            ]),
+            0,
+          );
+          filas(
+            await s.intentar("update certificado_arca set estado = 'DESCARTADO' where id = $1", [
+              ajena.certificado,
+            ]),
+            0,
+          );
+          filas(
+            await s.intentar(
+              "update acceso_arca set renovando_hasta = now() where certificado_id = $1",
+              [ajena.certificado],
+            ),
             0,
           );
         });
@@ -232,10 +273,10 @@ describe.skipIf(base === null)("facturación: aislamiento entre empresas y entre
             "intento_comprobante_fkey",
           );
           referencia(
-            await s.intentar("insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')", [
-              a.x.empresa,
-              ajena.certificado,
-            ]),
+            await s.intentar(
+              "insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')",
+              [a.x.empresa, ajena.certificado],
+            ),
             "acceso_certificado_fkey",
           );
           referencia(
@@ -243,7 +284,15 @@ describe.skipIf(base === null)("facturación: aislamiento entre empresas y entre
               `insert into certificado_arca (empresa_id, emisor_id, ambiente, alias, cuit_titular, pedido_pem, clave_cifrada,
                       clave_nonce, clave_etiqueta, clave_kid, creado_por)
                values ($1, $2, 'PRODUCCION', 'abc', $3, 'P', $4, $5, $6, 'k', $7)`,
-              [a.x.empresa, ajena.x.emisor, a.x.cuit, Buffer.alloc(8), Buffer.alloc(12), Buffer.alloc(16), a.x.persona],
+              [
+                a.x.empresa,
+                ajena.x.emisor,
+                a.x.cuit,
+                Buffer.alloc(8),
+                Buffer.alloc(12),
+                Buffer.alloc(16),
+                a.x.persona,
+              ],
             ),
             "certificado_emisor_fkey",
           );
@@ -284,7 +333,11 @@ describe.skipIf(base === null)("facturación: aislamiento entre empresas y entre
       for (const actor of ["ADMIN", "SOPORTE", "SISTEMA"] as const) {
         await conPlataformaDe(base!, actor, intentarTodo);
       }
-      const grupo = await SesionDePrueba.abrir(base!, "zuluhub_grupo", comoGrupo(tenantId(a.x.tenant), personaId(a.x.persona)));
+      const grupo = await SesionDePrueba.abrir(
+        base!,
+        "zuluhub_grupo",
+        comoGrupo(tenantId(a.x.tenant), personaId(a.x.persona)),
+      );
       const trabajos = await SesionDePrueba.abrir(base!, "zuluhub_trabajos", comoTrabajos());
       const publico = await SesionDePrueba.abrir(base!, "zuluhub_publico", null);
       const captacion = await SesionDePrueba.abrir(base!, "zuluhub_captacion", null);
@@ -325,36 +378,69 @@ describe.skipIf(base === null)("facturación: aislamiento entre empresas y entre
             `insert into certificado_arca (empresa_id, emisor_id, ambiente, alias, cuit_titular, pedido_pem, clave_cifrada,
                     clave_nonce, clave_etiqueta, clave_kid, creado_por)
              values ($1, $2, 'PRODUCCION', 'abc', $3, 'P', $4, $5, $6, 'k', $7)`,
-            [d.x.empresa, d.x.emisor, d.x.cuit, Buffer.alloc(8), Buffer.alloc(12), Buffer.alloc(16), d.x.persona],
+            [
+              d.x.empresa,
+              d.x.emisor,
+              d.x.cuit,
+              Buffer.alloc(8),
+              Buffer.alloc(12),
+              Buffer.alloc(16),
+              d.x.persona,
+            ],
           ),
         );
         // Cambios: no alcanzan ninguna fila.
-        filas(await s.intentar("update comprobante set envios = envios where id = $1", [d.comprobante]), 0);
         filas(
-          await s.intentar("update certificado_arca set estado = 'DESCARTADO' where id = $1", [d.certificado]),
+          await s.intentar("update comprobante set envios = envios where id = $1", [d.comprobante]),
           0,
         );
-        filas(await s.intentar("update acceso_arca set renovando_hasta = now() where certificado_id = $1", [d.certificado]), 0);
+        filas(
+          await s.intentar("update certificado_arca set estado = 'DESCARTADO' where id = $1", [
+            d.certificado,
+          ]),
+          0,
+        );
+        filas(
+          await s.intentar(
+            "update acceso_arca set renovando_hasta = now() where certificado_id = $1",
+            [d.certificado],
+          ),
+          0,
+        );
       });
     const operaDeNuevo = async (d: Datos) =>
       conApp(d, async (s) => {
         acepta(await insertarComprobante(viaSesion(s), datosDeComprobante(d.x)));
-        filas(await s.intentar("update comprobante set envios = envios where id = $1", [d.comprobante]), 1);
+        filas(
+          await s.intentar("update comprobante set envios = envios where id = $1", [d.comprobante]),
+          1,
+        );
       });
 
     it("con la empresa suspendida", async () => {
       const d = await sembrar();
-      await dueno.query("update empresa set estado = 'SUSPENDED', motivo_estado = 'prueba' where id = $1", [d.x.empresa]);
+      await dueno.query(
+        "update empresa set estado = 'SUSPENDED', motivo_estado = 'prueba' where id = $1",
+        [d.x.empresa],
+      );
       await intentarEscribir(d);
-      await dueno.query("update empresa set estado = 'ACTIVE', motivo_estado = null where id = $1", [d.x.empresa]);
+      await dueno.query(
+        "update empresa set estado = 'ACTIVE', motivo_estado = null where id = $1",
+        [d.x.empresa],
+      );
       await operaDeNuevo(d);
     });
 
     it("con el tenant suspendido", async () => {
       const d = await sembrar();
-      await dueno.query("update tenant set estado = 'SUSPENDED', motivo_estado = 'prueba' where id = $1", [d.x.tenant]);
+      await dueno.query(
+        "update tenant set estado = 'SUSPENDED', motivo_estado = 'prueba' where id = $1",
+        [d.x.tenant],
+      );
       await intentarEscribir(d);
-      await dueno.query("update tenant set estado = 'ACTIVE', motivo_estado = null where id = $1", [d.x.tenant]);
+      await dueno.query("update tenant set estado = 'ACTIVE', motivo_estado = null where id = $1", [
+        d.x.tenant,
+      ]);
       await operaDeNuevo(d);
     });
   });
@@ -362,8 +448,18 @@ describe.skipIf(base === null)("facturación: aislamiento entre empresas y entre
   describe("el autor", () => {
     it("un comprobante o un certificado se crean a nombre de la persona del contexto, no de otra", async () => {
       await conApp(a, async (s) => {
-        denegado(await insertarComprobante(viaSesion(s), datosDeComprobante(a.x, { creado_por: b.x.persona })));
-        denegado(await insertarComprobante(viaSesion(s), datosDeComprobante(a.x, { creado_por: randomUUID() })));
+        denegado(
+          await insertarComprobante(
+            viaSesion(s),
+            datosDeComprobante(a.x, { creado_por: b.x.persona }),
+          ),
+        );
+        denegado(
+          await insertarComprobante(
+            viaSesion(s),
+            datosDeComprobante(a.x, { creado_por: randomUUID() }),
+          ),
+        );
         acepta(await insertarComprobante(viaSesion(s), datosDeComprobante(a.x)));
       });
     });

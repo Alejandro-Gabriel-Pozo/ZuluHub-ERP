@@ -55,7 +55,10 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
   // ---- certificados ----------------------------------------------------------------------------
 
   /** Las columnas que la aplicación manda al pedir un certificado. */
-  const pedido = (x: Escenario, cambios: Record<string, unknown> = {}): Record<string, unknown> => ({
+  const pedido = (
+    x: Escenario,
+    cambios: Record<string, unknown> = {},
+  ): Record<string, unknown> => ({
     id: randomUUID(),
     empresa_id: x.empresa,
     emisor_id: x.emisor,
@@ -99,7 +102,10 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
         acepta(await s.intentar(c.texto, c.parametros));
         acepta(await s.confirmar());
       });
-      const { rows } = await dueno.query("select estado, version, vence_en > now() as vigente from certificado_arca where id = $1", [datos["id"]]);
+      const { rows } = await dueno.query(
+        "select estado, version, vence_en > now() as vigente from certificado_arca where id = $1",
+        [datos["id"]],
+      );
       expect(rows[0]).toEqual({ estado: "VIGENTE", version: 2, vigente: true });
     });
 
@@ -107,11 +113,17 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
       const x = await crearEscenario(dueno);
       await conAppDe(base!, x, async (s) => {
         const columnas = (d: Record<string, unknown>) => Object.keys(d);
-        for (const cambios of [{ estado: "VIGENTE" }, { huella_sha256: huellaAlAzar() }, { certificado_pem: PEM }]) {
+        for (const cambios of [
+          { estado: "VIGENTE" },
+          { huella_sha256: huellaAlAzar() },
+          { certificado_pem: PEM },
+        ]) {
           const d = pedido(x, cambios);
           denegado(
             await s.intentar(
-              `insert into certificado_arca (${columnas(d).join(", ")}) values (${columnas(d).map((_, i) => `$${i + 1}`).join(", ")})`,
+              `insert into certificado_arca (${columnas(d).join(", ")}) values (${columnas(d)
+                .map((_, i) => `$${i + 1}`)
+                .join(", ")})`,
               columnas(d).map((c) => d[c]),
             ),
           );
@@ -120,7 +132,9 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
         const ajeno = pedido(x, { creado_por: e.persona });
         denegado(
           await s.intentar(
-            `insert into certificado_arca (${columnas(ajeno).join(", ")}) values (${columnas(ajeno).map((_, i) => `$${i + 1}`).join(", ")})`,
+            `insert into certificado_arca (${columnas(ajeno).join(", ")}) values (${columnas(ajeno)
+              .map((_, i) => `$${i + 1}`)
+              .join(", ")})`,
             columnas(ajeno).map((c) => ajeno[c]),
           ),
         );
@@ -129,11 +143,33 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
       await dueno.query(
         `insert into certificado_arca (id, empresa_id, emisor_id, ambiente, alias, cuit_titular, pedido_pem, clave_cifrada, clave_nonce, clave_etiqueta, clave_kid, creado_por)
          values ($1, $2, $3, 'HOMOLOGACION', 'abc', $4, 'P', $5, $6, $7, 'k', $8)`,
-        [id, x.empresa, x.emisor, x.cuit, Buffer.alloc(8), Buffer.alloc(12), Buffer.alloc(16), x.persona],
+        [
+          id,
+          x.empresa,
+          x.emisor,
+          x.cuit,
+          Buffer.alloc(8),
+          Buffer.alloc(12),
+          Buffer.alloc(16),
+          x.persona,
+        ],
       );
       await conAppDe(base!, x, async (s) => {
-        for (const col of ["clave_cifrada", "clave_nonce", "clave_etiqueta", "clave_kid", "pedido_pem", "alias", "cuit_titular", "ambiente", "emisor_id", "creado_por"]) {
-          denegado(await s.intentar(`update certificado_arca set ${col} = ${col} where id = $1`, [id]));
+        for (const col of [
+          "clave_cifrada",
+          "clave_nonce",
+          "clave_etiqueta",
+          "clave_kid",
+          "pedido_pem",
+          "alias",
+          "cuit_titular",
+          "ambiente",
+          "emisor_id",
+          "creado_por",
+        ]) {
+          denegado(
+            await s.intentar(`update certificado_arca set ${col} = ${col} where id = $1`, [id]),
+          );
         }
         denegado(await s.intentar("delete from certificado_arca where id = $1", [id]));
       });
@@ -144,11 +180,19 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
       ["un alias con espacios", { alias: "mi cert" }, "certificado_alias_ck"],
       ["un alias de 31 caracteres", { alias: "a".repeat(31) }, "certificado_alias_ck"],
       ["un alias vacío", { alias: "" }, "certificado_alias_ck"],
-      ["un CUIT del titular inválido", { cuit_titular: "20123456787" }, "certificado_cuit_titular_ck"],
+      [
+        "un CUIT del titular inválido",
+        { cuit_titular: "20123456787" },
+        "certificado_cuit_titular_ck",
+      ],
       ["un nonce de 11 bytes", { clave_nonce: Buffer.alloc(11) }, "certificado_cifrado_ck"],
       ["una etiqueta de 15 bytes", { clave_etiqueta: Buffer.alloc(15) }, "certificado_cifrado_ck"],
       ["una clave cifrada vacía", { clave_cifrada: Buffer.alloc(0) }, "certificado_clave_ck"],
-      ["una clave cifrada de 8193 bytes", { clave_cifrada: Buffer.alloc(8193) }, "certificado_clave_ck"],
+      [
+        "una clave cifrada de 8193 bytes",
+        { clave_cifrada: Buffer.alloc(8193) },
+        "certificado_clave_ck",
+      ],
       ["un pedido vacío", { pedido_pem: "" }, "certificado_pedido_ck"],
       ["un identificador de clave en blanco", { clave_kid: " " }, "certificado_kid_ck"],
     ])("un pedido con %s se rechaza", async (_n, cambios, restriccion) => {
@@ -193,10 +237,20 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
             acepta(await intento(dueno)(c.texto, c.parametros));
           }
           if (de === "REEMPLAZADO") {
-            acepta(await intento(dueno)("update certificado_arca set estado = 'REEMPLAZADO' where id = $1", [id]));
+            acepta(
+              await intento(dueno)(
+                "update certificado_arca set estado = 'REEMPLAZADO' where id = $1",
+                [id],
+              ),
+            );
           }
           if (de === "DESCARTADO") {
-            acepta(await intento(dueno)("update certificado_arca set estado = 'DESCARTADO' where id = $1", [id]));
+            acepta(
+              await intento(dueno)(
+                "update certificado_arca set estado = 'DESCARTADO' where id = $1",
+                [id],
+              ),
+            );
           }
           for (const a of ESTADOS) {
             if (a === de) continue;
@@ -204,7 +258,10 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
             const c =
               a === "VIGENTE"
                 ? cargar(id)
-                : { texto: "update certificado_arca set estado = $2 where id = $1", parametros: [id, a] };
+                : {
+                    texto: "update certificado_arca set estado = $2 where id = $1",
+                    parametros: [id, a],
+                  };
             const r = await intento(dueno)(c.texto, c.parametros);
             expect(r.ok, `${de} → ${a}`).toBe(TRANSICIONES[de].includes(a));
             if (!r.ok) {
@@ -217,7 +274,11 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
           }
         });
       }
-      expect([...aceptadas].sort()).toEqual(["PEDIDO_GENERADO→DESCARTADO", "PEDIDO_GENERADO→VIGENTE", "VIGENTE→REEMPLAZADO"]);
+      expect([...aceptadas].sort()).toEqual([
+        "PEDIDO_GENERADO→DESCARTADO",
+        "PEDIDO_GENERADO→VIGENTE",
+        "VIGENTE→REEMPLAZADO",
+      ]);
     });
 
     it("lo que no se carga bien no pasa: VIGENTE sin certificado, sin huella o sin vencimiento; el pedido descartado con certificado", async () => {
@@ -233,9 +294,15 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
           const id = randomUUID();
           acepta(await insertarCertificado(intento(dueno), pedido(e, { id })));
           const parametros = set.includes("$2") ? [id, huellaAlAzar()] : [id];
-          const r = await intento(dueno)(`update certificado_arca set ${set} where id = $1`, parametros);
+          const r = await intento(dueno)(
+            `update certificado_arca set ${set} where id = $1`,
+            parametros,
+          );
           expect(r.ok, set).toBe(false);
-          if (!r.ok) expect(["certificado_cargado_ck", "certificado_huella_ck"], set).toContain(r.restriccion);
+          if (!r.ok)
+            expect(["certificado_cargado_ck", "certificado_huella_ck"], set).toContain(
+              r.restriccion,
+            );
         });
       }
     });
@@ -255,22 +322,43 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
           "creado_en = now() - interval '1 day'",
           "id = gen_random_uuid()",
         ]) {
-          check(await intento(dueno)(`update certificado_arca set ${set} where id = $1`, [id]), "certificado_inmutable");
+          check(
+            await intento(dueno)(`update certificado_arca set ${set} where id = $1`, [id]),
+            "certificado_inmutable",
+          );
         }
         const c = cargar(id);
         acepta(await intento(dueno)(c.texto, c.parametros));
         // Cargado, el certificado no se pisa (se carga otro).
-        for (const set of ["certificado_pem = 'otro'", `huella_sha256 = '${huellaAlAzar()}'`, "vence_en = vence_en + interval '1 day'"]) {
-          check(await intento(dueno)(`update certificado_arca set ${set} where id = $1`, [id]), "certificado_inmutable");
+        for (const set of [
+          "certificado_pem = 'otro'",
+          `huella_sha256 = '${huellaAlAzar()}'`,
+          "vence_en = vence_en + interval '1 day'",
+        ]) {
+          check(
+            await intento(dueno)(`update certificado_arca set ${set} where id = $1`, [id]),
+            "certificado_inmutable",
+          );
         }
         // La primera llamada exitosa se anota; no se cambia ni se borra.
-        acepta(await intento(dueno)("update certificado_arca set autorizacion_verificada_en = now() where id = $1", [id]));
+        acepta(
+          await intento(dueno)(
+            "update certificado_arca set autorizacion_verificada_en = now() where id = $1",
+            [id],
+          ),
+        );
         check(
-          await intento(dueno)("update certificado_arca set autorizacion_verificada_en = now() + interval '1 hour' where id = $1", [id]),
+          await intento(dueno)(
+            "update certificado_arca set autorizacion_verificada_en = now() + interval '1 hour' where id = $1",
+            [id],
+          ),
           "certificado_inmutable",
         );
         check(
-          await intento(dueno)("update certificado_arca set autorizacion_verificada_en = null where id = $1", [id]),
+          await intento(dueno)(
+            "update certificado_arca set autorizacion_verificada_en = null where id = $1",
+            [id],
+          ),
           "certificado_inmutable",
         );
       });
@@ -282,9 +370,18 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
         const uno = randomUUID();
         const dos = randomUUID();
         const otroAmbiente = randomUUID();
-        for (const id of [uno, dos]) acepta(await insertarCertificado(intento(dueno), pedido(x, { id })));
-        acepta(await insertarCertificado(intento(dueno), pedido(x, { id: otroAmbiente, ambiente: "PRODUCCION" })));
-        for (const [id, h] of [[uno, huellaDe("uno")], [otroAmbiente, huellaDe("prod")]] as const) {
+        for (const id of [uno, dos])
+          acepta(await insertarCertificado(intento(dueno), pedido(x, { id })));
+        acepta(
+          await insertarCertificado(
+            intento(dueno),
+            pedido(x, { id: otroAmbiente, ambiente: "PRODUCCION" }),
+          ),
+        );
+        for (const [id, h] of [
+          [uno, huellaDe("uno")],
+          [otroAmbiente, huellaDe("prod")],
+        ] as const) {
           const c = cargar(id, h);
           acepta(await intento(dueno)(c.texto, c.parametros));
         }
@@ -292,7 +389,11 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
         const choque = cargar(dos, huellaDe("dos"));
         clave(await intento(dueno)(choque.texto, choque.parametros), "certificado_vigente_uk");
         // Reemplazo: primero el viejo, después el nuevo.
-        acepta(await intento(dueno)("update certificado_arca set estado = 'REEMPLAZADO' where id = $1", [uno]));
+        acepta(
+          await intento(dueno)("update certificado_arca set estado = 'REEMPLAZADO' where id = $1", [
+            uno,
+          ]),
+        );
         acepta(await intento(dueno)(choque.texto, choque.parametros));
       });
     });
@@ -306,9 +407,15 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
         const dos = randomUUID();
         const ajeno = randomUUID();
         acepta(await insertarCertificado(intento(dueno), pedido(x, { id: uno })));
-        acepta(await insertarCertificado(intento(dueno), pedido(x, { id: dos, ambiente: "PRODUCCION" })));
+        acepta(
+          await insertarCertificado(intento(dueno), pedido(x, { id: dos, ambiente: "PRODUCCION" })),
+        );
         acepta(await insertarCertificado(intento(dueno), pedido(otra, { id: ajeno })));
-        for (const [id, esperado] of [[uno, true], [dos, false], [ajeno, true]] as const) {
+        for (const [id, esperado] of [
+          [uno, true],
+          [dos, false],
+          [ajeno, true],
+        ] as const) {
           const c = cargar(id, huella);
           const r = await intento(dueno)(c.texto, c.parametros);
           expect(r.ok, id).toBe(esperado);
@@ -321,7 +428,7 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
   // ---- ticket de acceso ------------------------------------------------------------------------
 
   describe("acceso_arca", () => {
-    const conCertificado = async <T,>(trabajo: (certificado: string) => Promise<T>) =>
+    const conCertificado = async <T>(trabajo: (certificado: string) => Promise<T>) =>
       deshacible(async () => {
         const id = randomUUID();
         acepta(await insertarCertificado(intento(dueno), pedido(e, { id })));
@@ -346,18 +453,23 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
     it("la fila nace vacía, recibe el ticket cifrado completo y se renueva; es una por certificado y servicio", async () => {
       await conCertificado(async (certificado) => {
         acepta(
-          await intento(dueno)("insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')", [
-            e.empresa,
-            certificado,
-          ]),
+          await intento(dueno)(
+            "insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')",
+            [e.empresa, certificado],
+          ),
         );
         acepta(await guardarCredencial(certificado, credencial()));
-        acepta(await guardarCredencial(certificado, credencial({ generado: "2026-10-14T10:00:00Z", expira: "2026-10-14T22:00:00Z" })));
-        clave(
-          await intento(dueno)("insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')", [
-            e.empresa,
+        acepta(
+          await guardarCredencial(
             certificado,
-          ]),
+            credencial({ generado: "2026-10-14T10:00:00Z", expira: "2026-10-14T22:00:00Z" }),
+          ),
+        );
+        clave(
+          await intento(dueno)(
+            "insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')",
+            [e.empresa, certificado],
+          ),
           "acceso_pkey",
         );
         // Vaciar el ticket (una renovación que falló) también es válido.
@@ -382,10 +494,10 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
     ])("un ticket con %s se rechaza (acceso_completo_ck)", async (_n, cambios) => {
       await conCertificado(async (certificado) => {
         acepta(
-          await intento(dueno)("insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')", [
-            e.empresa,
-            certificado,
-          ]),
+          await intento(dueno)(
+            "insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')",
+            [e.empresa, certificado],
+          ),
         );
         check(await guardarCredencial(certificado, credencial(cambios)), "acceso_completo_ck");
       });
@@ -394,17 +506,23 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
     it("un ticket a medias (con credencial pero sin vencimiento, o al revés) se rechaza", async () => {
       await conCertificado(async (certificado) => {
         acepta(
-          await intento(dueno)("insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')", [
-            e.empresa,
-            certificado,
-          ]),
+          await intento(dueno)(
+            "insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')",
+            [e.empresa, certificado],
+          ),
         );
         check(
-          await intento(dueno)("update acceso_arca set credencial_cifrada = $2 where certificado_id = $1", [certificado, Buffer.alloc(10)]),
+          await intento(dueno)(
+            "update acceso_arca set credencial_cifrada = $2 where certificado_id = $1",
+            [certificado, Buffer.alloc(10)],
+          ),
           "acceso_completo_ck",
         );
         check(
-          await intento(dueno)("update acceso_arca set expira_en = now(), generado_en = now() - interval '1 hour' where certificado_id = $1", [certificado]),
+          await intento(dueno)(
+            "update acceso_arca set expira_en = now(), generado_en = now() - interval '1 hour' where certificado_id = $1",
+            [certificado],
+          ),
           "acceso_completo_ck",
         );
       });
@@ -414,11 +532,17 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
       const otra = await crearEscenario(dueno);
       await conCertificado(async (certificado) => {
         check(
-          await intento(dueno)("insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfex')", [e.empresa, certificado]),
+          await intento(dueno)(
+            "insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfex')",
+            [e.empresa, certificado],
+          ),
           "acceso_servicio_ck",
         );
         referencia(
-          await intento(dueno)("insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')", [otra.empresa, certificado]),
+          await intento(dueno)(
+            "insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')",
+            [otra.empresa, certificado],
+          ),
           "acceso_certificado_fkey",
         );
       });
@@ -428,7 +552,10 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
   // ---- intentos --------------------------------------------------------------------------------
 
   describe("intento_arca", () => {
-    const intentoDe = (comprobante: string, cambios: Record<string, unknown> = {}): Record<string, unknown> => ({
+    const intentoDe = (
+      comprobante: string,
+      cambios: Record<string, unknown> = {},
+    ): Record<string, unknown> => ({
       id: randomUUID(),
       empresa_id: e.empresa,
       comprobante_id: comprobante,
@@ -454,11 +581,15 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
       const comprobante = await crearComprobante(dueno, e);
       await deshacible(async () => {
         const d = intentoDe(comprobante, {
-          mensajes: JSON.stringify([{ codigo: 10016, texto: "fuera de secuencia", clase: "ERROR" }]),
+          mensajes: JSON.stringify([
+            { codigo: 10016, texto: "fuera de secuencia", clase: "ERROR" },
+          ]),
           desenlace: "RECHAZADO",
         });
         acepta(await insertarIntento(intento(dueno), d));
-        denegado(await intento(dueno)("update intento_arca set duracion_ms = 1 where id = $1", [d["id"]]));
+        denegado(
+          await intento(dueno)("update intento_arca set duracion_ms = 1 where id = $1", [d["id"]]),
+        );
         denegado(await intento(dueno)("delete from intento_arca where id = $1", [d["id"]]));
         denegado(await intento(dueno)("truncate intento_arca"));
       });
@@ -467,7 +598,16 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
     it("cada operación termina de una de sus maneras: los 24 pares de operación y desenlace, 9 válidos", async () => {
       const comprobante = await crearComprobante(dueno, e);
       const operaciones = ["AUTORIZAR", "CONSULTAR", "ULTIMO_AUTORIZADO"];
-      const desenlaces = ["AUTORIZADO", "RECHAZADO", "INCIERTO", "NO_ENVIADO", "ENCONTRADO", "NO_ENCONTRADO", "CONSULTA_FALLIDA", "RESPONDIDO"];
+      const desenlaces = [
+        "AUTORIZADO",
+        "RECHAZADO",
+        "INCIERTO",
+        "NO_ENVIADO",
+        "ENCONTRADO",
+        "NO_ENCONTRADO",
+        "CONSULTA_FALLIDA",
+        "RESPONDIDO",
+      ];
       const validos = new Set([
         "AUTORIZAR/AUTORIZADO",
         "AUTORIZAR/RECHAZADO",
@@ -483,8 +623,13 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
       await deshacible(async () => {
         for (const operacion of operaciones) {
           for (const desenlace of desenlaces) {
-            const r = await insertarIntento(intento(dueno), intentoDe(comprobante, { operacion, desenlace }));
-            expect(r.ok, `${operacion}/${desenlace}`).toBe(validos.has(`${operacion}/${desenlace}`));
+            const r = await insertarIntento(
+              intento(dueno),
+              intentoDe(comprobante, { operacion, desenlace }),
+            );
+            expect(r.ok, `${operacion}/${desenlace}`).toBe(
+              validos.has(`${operacion}/${desenlace}`),
+            );
             if (!r.ok) expect(r.restriccion).toBe("intento_operacion_desenlace_ck");
             else aceptados += 1;
           }
@@ -512,7 +657,10 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
       const otra = await crearEscenario(dueno);
       const ajeno = await crearComprobante(dueno, otra);
       await deshacible(async () => {
-        referencia(await insertarIntento(intento(dueno), intentoDe(ajeno)), "intento_comprobante_fkey");
+        referencia(
+          await insertarIntento(intento(dueno), intentoDe(ajeno)),
+          "intento_comprobante_fkey",
+        );
       });
     });
 
@@ -531,9 +679,14 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
                 columnas.map((c) => d[c]),
               ),
             );
-            const r = await s.intentar("select count(*)::int as n from intento_arca where comprobante_id = $1", [comprobante]);
+            const r = await s.intentar(
+              "select count(*)::int as n from intento_arca where comprobante_id = $1",
+              [comprobante],
+            );
             expect(r.ok && Number(r.rows[0]?.["n"])).toBeGreaterThan(0);
-            denegado(await s.intentar("update intento_arca set duracion_ms = 0 where id = $1", [d["id"]]));
+            denegado(
+              await s.intentar("update intento_arca set duracion_ms = 0 where id = $1", [d["id"]]),
+            );
             denegado(await s.intentar("delete from intento_arca where id = $1", [d["id"]]));
           },
           persona,
@@ -550,16 +703,27 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
       await deshacible(async () => {
         denegado(await intento(dueno)("delete from comprobante where id = $1", [comprobante]));
         // Vaciar una tabla a la que apuntan otras exige nombrarlas todas: el disparador frena el vaciado igual.
-        denegado(await intento(dueno)("truncate comprobante, comprobante_linea, comprobante_alicuota, intento_arca"));
+        denegado(
+          await intento(dueno)(
+            "truncate comprobante, comprobante_linea, comprobante_alicuota, intento_arca",
+          ),
+        );
         const id = randomUUID();
         acepta(await insertarCertificado(intento(dueno), pedido(e, { id })));
         denegado(await intento(dueno)("delete from certificado_arca where id = $1", [id]));
         denegado(await intento(dueno)("truncate certificado_arca, acceso_arca"));
-        acepta(await intento(dueno)("insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')", [e.empresa, id]));
+        acepta(
+          await intento(dueno)(
+            "insert into acceso_arca (empresa_id, certificado_id, servicio) values ($1, $2, 'wsfe')",
+            [e.empresa, id],
+          ),
+        );
         denegado(await intento(dueno)("delete from acceso_arca where certificado_id = $1", [id]));
         denegado(await intento(dueno)("truncate acceso_arca"));
       });
-      expect((await dueno.query("select 1 from comprobante where id = $1", [comprobante])).rowCount).toBe(1);
+      expect(
+        (await dueno.query("select 1 from comprobante where id = $1", [comprobante])).rowCount,
+      ).toBe(1);
     });
 
     it("un comprobante se anula con un registro nuevo (nota de crédito), nunca desapareciendo: el original sigue y la nota lo cita", async () => {

@@ -73,7 +73,11 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
   });
 
   /** Abre la sesión de un trabajo de sistema (sin persona) o de una persona. */
-  const abrir = (x: Escenario, aislamiento: Aislamiento = "read committed", persona: string | null = null) =>
+  const abrir = (
+    x: Escenario,
+    aislamiento: Aislamiento = "read committed",
+    persona: string | null = null,
+  ) =>
     SesionDePrueba.abrir(
       base!,
       "zuluhub_app",
@@ -98,7 +102,9 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
         const confirmado = await s.confirmar();
         if (confirmado.ok) return resultado;
         if (!reintentable(confirmado) || intento >= 100) {
-          throw new Error(`no confirmó: ${confirmado.codigo} ${confirmado.restriccion ?? ""} ${confirmado.mensaje}`);
+          throw new Error(
+            `no confirmó: ${confirmado.codigo} ${confirmado.restriccion ?? ""} ${confirmado.mensaje}`,
+          );
         }
       } catch (error) {
         const e = error as { reintentar?: boolean };
@@ -136,7 +142,10 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
               aislamiento,
               async (ej) => {
                 await barrera().catch(() => undefined);
-                const datos = datosDeComprobante(x, { origen_id: clavePantalla, creado_por: x.persona });
+                const datos = datosDeComprobante(x, {
+                  origen_id: clavePantalla,
+                  creado_por: x.persona,
+                });
                 const columnas = Object.keys(datos);
                 const r = o(
                   await ej(
@@ -178,7 +187,10 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
               const s = await abrir(x, aislamiento, x.persona);
               try {
                 await barrera();
-                const r = await insertarComprobante(viaSesion(s), datosDeComprobante(x, { origen_id: clavePantalla }));
+                const r = await insertarComprobante(
+                  viaSesion(s),
+                  datosDeComprobante(x, { origen_id: clavePantalla }),
+                );
                 if (!r.ok) return r;
                 return await s.confirmar();
               } finally {
@@ -193,10 +205,15 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
             // Con READ COMMITTED espera a la ganadora y viola la única; con SERIALIZABLE puede abortar antes (40001).
             expect(["23505", "40001"], perdedor.mensaje).toContain(perdedor.codigo);
             if (perdedor.codigo === "23505") {
-              expect(["comprobante_manual_uk", "comprobante_identidad_uk"]).toContain(perdedor.restriccion);
+              expect(["comprobante_manual_uk", "comprobante_identidad_uk"]).toContain(
+                perdedor.restriccion,
+              );
             }
           }
-          const { rows } = await dueno.query("select count(*)::int as n from comprobante where empresa_id = $1", [x.empresa]);
+          const { rows } = await dueno.query(
+            "select count(*)::int as n from comprobante where empresa_id = $1",
+            [x.empresa],
+          );
           expect(rows[0]).toEqual({ n: 1 });
         }
       },
@@ -208,12 +225,28 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
     const linea = await ej(
       `insert into comprobante_linea (empresa_id, comprobante_id, posicion, descripcion, cantidad, precio_unitario, alicuota, importe)
        values ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [x.empresa, id, RENGLON_DE_121.posicion, RENGLON_DE_121.descripcion, RENGLON_DE_121.cantidad, RENGLON_DE_121.precio_unitario, RENGLON_DE_121.alicuota, RENGLON_DE_121.importe],
+      [
+        x.empresa,
+        id,
+        RENGLON_DE_121.posicion,
+        RENGLON_DE_121.descripcion,
+        RENGLON_DE_121.cantidad,
+        RENGLON_DE_121.precio_unitario,
+        RENGLON_DE_121.alicuota,
+        RENGLON_DE_121.importe,
+      ],
     );
     if (!linea.ok) return linea;
     return ej(
       `insert into comprobante_alicuota (empresa_id, comprobante_id, alicuota, total, neto, iva) values ($1, $2, $3, $4, $5, $6)`,
-      [x.empresa, id, DESGLOSE_DE_121.alicuota, DESGLOSE_DE_121.total, DESGLOSE_DE_121.neto, DESGLOSE_DE_121.iva],
+      [
+        x.empresa,
+        id,
+        DESGLOSE_DE_121.alicuota,
+        DESGLOSE_DE_121.total,
+        DESGLOSE_DE_121.neto,
+        DESGLOSE_DE_121.iva,
+      ],
     );
   };
 
@@ -227,7 +260,12 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
      * y terminar al azar en AUTORIZADO, RECHAZADO, NO_ENVIADO (vuelve a PENDIENTE y se reintenta) o INCIERTO
      * (la reconciliación lo resuelve: lo autoriza o, si ARCA no lo tiene, lo libera y se reintenta).
      */
-    async function correr(aislamiento: Aislamiento, trabajadores: number, comprobantes: number, semilla: number) {
+    async function correr(
+      aislamiento: Aislamiento,
+      trabajadores: number,
+      comprobantes: number,
+      semilla: number,
+    ) {
       const x = await crearEscenario(dueno);
       const serie = serieDe(x);
       const ids: string[] = [];
@@ -245,7 +283,8 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
           // Hasta que el comprobante llegue a un estado terminal (AUTORIZADO o RECHAZADO).
           for (;;) {
             const reservado = await transaccion(x, aislamiento, async (ej) => {
-              const estado = o(await ej("select estado from comprobante where id = $1", [id])).rows[0]?.["estado"];
+              const estado = o(await ej("select estado from comprobante where id = $1", [id]))
+                .rows[0]?.["estado"];
               if (estado !== "PENDIENTE") return "TERMINADO";
               o(await asegurarSerie(ej, serie));
               const r = o(await reservarSerie(ej, serie, id));
@@ -284,7 +323,9 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
               noEnviados++;
             } else {
               // Sin respuesta clara: INCIERTO, la serie sigue EN_CURSO; la reconciliación consulta a ARCA.
-              await transaccion(x, aislamiento, async (ej) => o(await marcarEstado(ej, id, "INCIERTO")));
+              await transaccion(x, aislamiento, async (ej) =>
+                o(await marcarEstado(ej, id, "INCIERTO")),
+              );
               await dormir(Math.floor(rnd() * 5));
               if (rnd() < 0.5) {
                 await transaccion(x, aislamiento, async (ej) => {
@@ -333,7 +374,10 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
       expect(numeros, "los números autorizados son 1..n sin repetidos ni huecos").toEqual(
         Array.from({ length: autorizados }, (_, i) => i + 1),
       );
-      expect(await leerSerie(dueno, serie)).toMatchObject({ estado: "LIBRE", ultimo: String(autorizados) });
+      expect(await leerSerie(dueno, serie)).toMatchObject({
+        estado: "LIBRE",
+        ultimo: String(autorizados),
+      });
       // Cada autorizado guarda el número que reservó, y todos pasaron por validación al menos una vez.
       const raros = await dueno.query(
         `select 1 from comprobante where empresa_id = $1 and estado = 'AUTORIZADO' and (numero <> numero_reservado or envios < 1)`,
@@ -385,7 +429,11 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
         expect(resultados.filter((r) => r.numero === "1")).toHaveLength(1);
         expect(resultados.filter((r) => r.numero === null)).toHaveLength(1);
         const ganador = resultados.find((r) => r.numero !== null)!.id;
-        expect(await leerSerie(dueno, serie)).toMatchObject({ estado: "EN_CURSO", solicitud: ganador, en_curso: "1" });
+        expect(await leerSerie(dueno, serie)).toMatchObject({
+          estado: "EN_CURSO",
+          solicitud: ganador,
+          en_curso: "1",
+        });
       }
     });
 
@@ -410,10 +458,15 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
       );
       expect(resultados.every((r) => !r.ok)).toBe(true);
       for (const r of resultados) {
-        if (!r.ok) expect(["comprobante_en_vuelo_uk", "comprobante_sin_reserva"], r.mensaje).toContain(r.restriccion);
+        if (!r.ok)
+          expect(["comprobante_en_vuelo_uk", "comprobante_sin_reserva"], r.mensaje).toContain(
+            r.restriccion,
+          );
       }
       for (const id of ids) {
-        expect((await dueno.query("select estado from comprobante where id = $1", [id])).rows[0]).toEqual({ estado: "PENDIENTE" });
+        expect(
+          (await dueno.query("select estado from comprobante where id = $1", [id])).rows[0],
+        ).toEqual({ estado: "PENDIENTE" });
       }
     });
 
@@ -436,7 +489,10 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
                 await barrera();
                 const r = await reservarSerie(viaSesion(s), serie, id);
                 pasos.push(r);
-                if (r.ok && r.filas === 1) pasos.push(await entrarEnValidacion(viaSesion(s), id, r.rows[0]?.["numero"] as string));
+                if (r.ok && r.filas === 1)
+                  pasos.push(
+                    await entrarEnValidacion(viaSesion(s), id, r.rows[0]?.["numero"] as string),
+                  );
                 const mal = pasos.find((p) => !p.ok);
                 if (mal !== undefined) return mal;
                 return await s.confirmar();
@@ -461,9 +517,19 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
           ]);
           // Lo que perdió falló por una de las razones esperadas (transición inválida o serialización), no por otra.
           for (const r of [validar, descartar]) {
-            if (!r.ok) expect(["comprobante_transicion_invalida", undefined], `${r.codigo} ${r.mensaje}`).toContain(r.restriccion);
+            if (!r.ok)
+              expect(
+                ["comprobante_transicion_invalida", undefined],
+                `${r.codigo} ${r.mensaje}`,
+              ).toContain(r.restriccion);
           }
-          const c = (await dueno.query("select estado, numero_reservado::text as numero from comprobante where id = $1", [id])).rows[0];
+          const c = (
+            await dueno.query<{ estado: string; numero: string | null }>(
+              "select estado, numero_reservado::text as numero from comprobante where id = $1",
+              [id],
+            )
+          ).rows[0];
+          if (c === undefined) throw new Error("el comprobante no existe");
           const s = await leerSerie(dueno, serie);
           if (c.estado === "DESCARTADO") {
             descartados++;
@@ -493,14 +559,23 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
         try {
           const datos = datosDeComprobante(x);
           acepta(await insertarComprobante(viaSesion(alta), datos));
-          const enEspera = cambio.directo("update punto_de_venta set ambiente = 'PRODUCCION' where id = $1", [x.pv]);
+          const enEspera = cambio.directo(
+            "update punto_de_venta set ambiente = 'PRODUCCION' where id = $1",
+            [x.pv],
+          );
           expect(await esperarBloqueo(dueno, cambio.pid)).toBe(true);
           acepta(await alta.confirmar());
           const terminado = await enEspera;
           acepta(terminado);
           acepta(await cambio.confirmar());
-          expect((await dueno.query("select ambiente from comprobante where id = $1", [datos["id"]])).rows[0]).toEqual({ ambiente: "HOMOLOGACION" });
-          expect((await dueno.query("select ambiente from punto_de_venta where id = $1", [x.pv])).rows[0]).toEqual({ ambiente: "PRODUCCION" });
+          expect(
+            (await dueno.query("select ambiente from comprobante where id = $1", [datos["id"]]))
+              .rows[0],
+          ).toEqual({ ambiente: "HOMOLOGACION" });
+          expect(
+            (await dueno.query("select ambiente from punto_de_venta where id = $1", [x.pv]))
+              .rows[0],
+          ).toEqual({ ambiente: "PRODUCCION" });
         } finally {
           await alta.cerrar();
           await cambio.cerrar();
@@ -512,10 +587,17 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
         const cambio = await abrir(x, "read committed", x.persona);
         const alta = await abrir(x, "read committed", x.persona);
         try {
-          acepta(await cambio.intentar("update punto_de_venta set ambiente = 'PRODUCCION' where id = $1", [x.pv]));
+          acepta(
+            await cambio.intentar(
+              "update punto_de_venta set ambiente = 'PRODUCCION' where id = $1",
+              [x.pv],
+            ),
+          );
           const datos = datosDeComprobante(x);
           const enEspera = alta.directo(
-            `insert into comprobante (${Object.keys(datos).join(", ")}) values (${Object.keys(datos).map((_, i) => `$${i + 1}`).join(", ")})`,
+            `insert into comprobante (${Object.keys(datos).join(", ")}) values (${Object.keys(datos)
+              .map((_, i) => `$${i + 1}`)
+              .join(", ")})`,
             Object.values(datos),
           );
           expect(await esperarBloqueo(dueno, alta.pid)).toBe(true);
@@ -533,7 +615,11 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
       const cambio = await abrir(x, "read committed", x.persona);
       const alta = await abrir(x, "read committed", x.persona);
       try {
-        acepta(await cambio.intentar("update punto_de_venta set ambiente = 'PRODUCCION' where id = $1", [x.pv]));
+        acepta(
+          await cambio.intentar("update punto_de_venta set ambiente = 'PRODUCCION' where id = $1", [
+            x.pv,
+          ]),
+        );
         const enEspera = alta.directo(
           `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente)
            values ($1, $2, $3, 'FACTURA_B', 0, 'HOMOLOGACION')`,
@@ -556,7 +642,16 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
           `insert into certificado_arca (id, empresa_id, emisor_id, ambiente, alias, cuit_titular, pedido_pem, clave_cifrada,
                                          clave_nonce, clave_etiqueta, clave_kid, creado_por)
            values ($1, $2, $3, 'HOMOLOGACION', 'abc', $4, 'P', $5, $6, $7, 'k', $8)`,
-          [id, x.empresa, x.emisor, x.cuit, Buffer.alloc(8), Buffer.alloc(12), Buffer.alloc(16), x.persona],
+          [
+            id,
+            x.empresa,
+            x.emisor,
+            x.cuit,
+            Buffer.alloc(8),
+            Buffer.alloc(12),
+            Buffer.alloc(16),
+            x.persona,
+          ],
         );
       }
       const barrera = crearBarrera(2);
@@ -580,7 +675,12 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
       const perdedor = resultados.find((r) => !r.ok);
       if (perdedor !== undefined && !perdedor.ok) clave(perdedor, "certificado_vigente_uk");
       expect(
-        (await dueno.query("select count(*)::int as n from certificado_arca where empresa_id = $1 and estado = 'VIGENTE'", [x.empresa])).rows[0],
+        (
+          await dueno.query(
+            "select count(*)::int as n from certificado_arca where empresa_id = $1 and estado = 'VIGENTE'",
+            [x.empresa],
+          )
+        ).rows[0],
       ).toEqual({ n: 1 });
     });
 
@@ -624,7 +724,10 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
       const ganadores = resultados.filter((g) => g.r.ok && g.r.filas === 1);
       expect(ganadores).toHaveLength(1);
       expect(resultados.filter((g) => g.r.ok && g.r.filas === 0)).toHaveLength(1);
-      expect(await leerSerie(dueno, serie)).toMatchObject({ estado: "LIBRE", ultimo: String(ganadores[0]!.ultimoDeArca) });
+      expect(await leerSerie(dueno, serie)).toMatchObject({
+        estado: "LIBRE",
+        ultimo: String(ganadores[0]!.ultimoDeArca),
+      });
     });
   });
 });

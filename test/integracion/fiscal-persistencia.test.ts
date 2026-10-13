@@ -1650,7 +1650,9 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
           const pv = await crearPuntoDeVenta(dueno, m);
           await crearSerie(dueno, m.empresa, pv, m.emisor);
           await usarSerie(dueno, pv, "EN_CURSO");
-          return porElDueno("update punto_de_venta set ambiente = 'PRODUCCION' where id = $1", [pv]);
+          return porElDueno("update punto_de_venta set ambiente = 'PRODUCCION' where id = $1", [
+            pv,
+          ]);
         },
       },
       {
@@ -1660,9 +1662,13 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
         provocar: async () => {
           const m = await mundo();
           const pv = await crearPuntoDeVenta(dueno, m);
-          await dueno.query("update punto_de_venta set ambiente = 'PRODUCCION' where id = $1", [pv]);
+          await dueno.query("update punto_de_venta set ambiente = 'PRODUCCION' where id = $1", [
+            pv,
+          ]);
           await crearSerie(dueno, m.empresa, pv, m.emisor, "FACTURA_B", 7, "PRODUCCION");
-          return porElDueno("update punto_de_venta set ambiente = 'HOMOLOGACION' where id = $1", [pv]);
+          return porElDueno("update punto_de_venta set ambiente = 'HOMOLOGACION' where id = $1", [
+            pv,
+          ]);
         },
       },
       {

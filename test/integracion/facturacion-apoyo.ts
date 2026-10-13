@@ -1,6 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
 import type pg from "pg";
-import { crearDomicilio, crearMundo, crearPuntoDeVenta, intentoDelDueno, type Mundo } from "./fiscal-apoyo";
+import {
+  crearDomicilio,
+  crearMundo,
+  crearPuntoDeVenta,
+  intentoDelDueno,
+  type Mundo,
+} from "./fiscal-apoyo";
 import type { Intento, SesionDePrueba } from "./sesiones";
 
 /**
@@ -33,7 +39,12 @@ export const viaDuenoDirecto =
       return { ok: true, filas: r.rowCount ?? 0, rows: r.rows as Record<string, unknown>[] };
     } catch (error) {
       const e = error as { code?: string; constraint?: string; message?: string };
-      return { ok: false, codigo: e.code ?? "?", restriccion: e.constraint, mensaje: e.message ?? "" };
+      return {
+        ok: false,
+        codigo: e.code ?? "?",
+        restriccion: e.constraint,
+        mensaje: e.message ?? "",
+      };
     }
   };
 
@@ -45,7 +56,12 @@ export async function confirmarDueno(c: pg.Client): Promise<Intento> {
   } catch (error) {
     await c.query("rollback").catch(() => undefined);
     const e = error as { code?: string; constraint?: string; message?: string };
-    return { ok: false, codigo: e.code ?? "?", restriccion: e.constraint, mensaje: e.message ?? "" };
+    return {
+      ok: false,
+      codigo: e.code ?? "?",
+      restriccion: e.constraint,
+      mensaje: e.message ?? "",
+    };
   }
 }
 
@@ -92,17 +108,6 @@ export async function crearEscenario(
   return { ...m, domicilio, datosFiscales, pv, pvNumero, razonSocial, condicionIva };
 }
 
-export type TipoDeComprobante =
-  | "FACTURA_A"
-  | "FACTURA_B"
-  | "FACTURA_C"
-  | "NOTA_DEBITO_A"
-  | "NOTA_DEBITO_B"
-  | "NOTA_DEBITO_C"
-  | "NOTA_CREDITO_A"
-  | "NOTA_CREDITO_B"
-  | "NOTA_CREDITO_C";
-
 /** Las columnas que la aplicación puede mandar al crear un comprobante (las del GRANT INSERT). */
 export type Contenido = Record<string, unknown>;
 
@@ -120,8 +125,7 @@ export type Desglose = Readonly<{ alicuota: string; total: string; neto: string;
 const CLASE_DEL_TIPO = (tipo: string): string => tipo.replace(/_[ABC]$/, "");
 
 /** Los 64 hexadecimales de una huella cualquiera. */
-export const huellaAlAzar = (): string =>
-  createHash("sha256").update(randomUUID()).digest("hex");
+export const huellaAlAzar = (): string => createHash("sha256").update(randomUUID()).digest("hex");
 
 /**
  * Un comprobante completo y coherente (letra B por defecto: una factura de $121,00 con IVA del 21 %
@@ -185,7 +189,12 @@ export const RENGLON_DE_121: Renglon = {
   alicuota: "21",
   importe: "121.00",
 };
-export const DESGLOSE_DE_121: Desglose = { alicuota: "21", total: "121.00", neto: "100.00", iva: "21.00" };
+export const DESGLOSE_DE_121: Desglose = {
+  alicuota: "21",
+  total: "121.00",
+  neto: "100.00",
+  iva: "21.00",
+};
 
 /** Un comprobante de letra C de $100,00: sin alícuota en los renglones ni desglose. */
 export function datosDeLetraC(e: Escenario, cambios: Contenido = {}): Contenido {
@@ -207,7 +216,11 @@ export const RENGLON_DE_100_SIN_ALICUOTA: Renglon = {
   importe: "100.00",
 };
 
-async function insertar(ej: Ejecutor, tabla: string, fila: Record<string, unknown>): Promise<Intento> {
+async function insertar(
+  ej: Ejecutor,
+  tabla: string,
+  fila: Record<string, unknown>,
+): Promise<Intento> {
   const columnas = Object.keys(fila);
   return ej(
     `insert into ${tabla} (${columnas.join(", ")}) values (${columnas.map((_, i) => `$${i + 1}`).join(", ")})`,
@@ -260,11 +273,15 @@ export async function crearComprobante(
   const r = await insertarComprobante(viaDueno(c), datos, renglones, desglose);
   if (!r.ok) {
     await c.query("rollback");
-    throw new Error(`no se pudo crear el comprobante de prueba: ${r.codigo} ${r.restriccion ?? ""} ${r.mensaje}`);
+    throw new Error(
+      `no se pudo crear el comprobante de prueba: ${r.codigo} ${r.restriccion ?? ""} ${r.mensaje}`,
+    );
   }
   const confirmado = await confirmarDueno(c);
   if (!confirmado.ok) {
-    throw new Error(`no se pudo confirmar el comprobante: ${confirmado.restriccion ?? ""} ${confirmado.mensaje}`);
+    throw new Error(
+      `no se pudo confirmar el comprobante: ${confirmado.restriccion ?? ""} ${confirmado.mensaje}`,
+    );
   }
   return datos["id"] as string;
 }
@@ -358,16 +375,19 @@ export async function leerComprobante(
   id: string,
 ): Promise<Record<string, unknown> | undefined> {
   return (await c.query("select * from comprobante where id = $1", [id])).rows[0] as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
 }
 
-export async function leerSerie(
-  c: pg.Client,
-  s: DatosDeSerie,
-): Promise<{ estado: string; ultimo: string; en_curso: string | null; solicitud: string | null } | undefined> {
+export type SerieLeida = {
+  estado: string;
+  ultimo: string;
+  en_curso: string | null;
+  solicitud: string | null;
+};
+
+export async function leerSerie(c: pg.Client, s: DatosDeSerie): Promise<SerieLeida | undefined> {
   return (
-    await c.query(
+    await c.query<SerieLeida>(
       `select estado, ultimo_numero::text as ultimo, numero_en_curso::text as en_curso, solicitud_en_curso as solicitud
          from serie_comprobante
         where empresa_id = $1 and punto_de_venta_id = $2 and tipo_comprobante = $3 and ambiente = $4`,
@@ -375,5 +395,3 @@ export async function leerSerie(
     )
   ).rows[0];
 }
-
-export { CLASE_DEL_TIPO };

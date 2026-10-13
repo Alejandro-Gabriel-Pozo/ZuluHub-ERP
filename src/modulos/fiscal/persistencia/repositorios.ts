@@ -1092,7 +1092,9 @@ export function crearRepositorioDeSeries(db: Kysely<FiscalDb>): RepositorioDeSer
           ambiente: "HOMOLOGACION",
         })
         .onConflict((oc) =>
-          oc.columns(["empresa_id", "punto_de_venta_id", "tipo_comprobante", "ambiente"]).doNothing(),
+          oc
+            .columns(["empresa_id", "punto_de_venta_id", "tipo_comprobante", "ambiente"])
+            .doNothing(),
         )
         .returning(COLUMNAS_DE_SERIE)
         .executeTakeFirst();

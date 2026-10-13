@@ -356,9 +356,13 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "expira_en",
             "renovando_hasta",
           ].map((c) => `zuluhub_app:acceso_arca.${c}`),
-          ...["estado", "certificado_pem", "huella_sha256", "vence_en", "autorizacion_verificada_en"].map(
-            (c) => `zuluhub_app:certificado_arca.${c}`,
-          ),
+          ...[
+            "estado",
+            "certificado_pem",
+            "huella_sha256",
+            "vence_en",
+            "autorizacion_verificada_en",
+          ].map((c) => `zuluhub_app:certificado_arca.${c}`),
           ...[
             "estado",
             "envios",

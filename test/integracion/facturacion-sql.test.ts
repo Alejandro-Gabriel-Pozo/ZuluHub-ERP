@@ -499,10 +499,17 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
       ]);
       const def = (n: string) => disparadores.find((d) => d.n === n)?.def ?? "";
       // Las dos restricciones de coherencia y de cuadre son diferidas: se evalúan al confirmar.
-      for (const n of ["comprobante.comprobante_coherente_con_serie", "comprobante.comprobante_cuadra"]) {
-        expect(def(n), n).toMatch(/CONSTRAINT TRIGGER .*DEFERRABLE INITIALLY DEFERRED FOR EACH ROW/);
+      for (const n of [
+        "comprobante.comprobante_coherente_con_serie",
+        "comprobante.comprobante_cuadra",
+      ]) {
+        expect(def(n), n).toMatch(
+          /CONSTRAINT TRIGGER .*DEFERRABLE INITIALLY DEFERRED FOR EACH ROW/,
+        );
       }
-      expect(def("comprobante.comprobante_coherente_con_serie")).toMatch(/AFTER INSERT OR UPDATE ON/);
+      expect(def("comprobante.comprobante_coherente_con_serie")).toMatch(
+        /AFTER INSERT OR UPDATE ON/,
+      );
       expect(def("comprobante.comprobante_cuadra")).toMatch(/AFTER INSERT ON/);
       // La otra mitad de la coherencia vive sobre la serie y solo mira cuando se suelta una reserva.
       const [serie] = await consultar<{ def: string }>(
@@ -564,7 +571,12 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         ].sort(),
       );
       // Toda política de alta o cambio exige empresa_operable y la empresa del contexto.
-      const escritura = await consultar<{ tablename: string; policyname: string; qual: string | null; with_check: string | null }>(
+      const escritura = await consultar<{
+        tablename: string;
+        policyname: string;
+        qual: string | null;
+        with_check: string | null;
+      }>(
         `select tablename, policyname, qual, with_check from pg_policies
           where schemaname = 'public' and tablename = any ($1) and cmd in ('INSERT', 'UPDATE')`,
         [[...TABLAS]],
@@ -690,10 +702,18 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         acepta(await insertarComprobante(viaSesion(s), a, renglones, desglose));
         acepta(await s.confirmar());
       });
-      const eC = await crearEscenario(dueno, { condicionIva: "MONOTRIBUTO", razonSocial: "Kiosco Zulú" });
+      const eC = await crearEscenario(dueno, {
+        condicionIva: "MONOTRIBUTO",
+        razonSocial: "Kiosco Zulú",
+      });
       await conAppDe(base!, eC, async (s) => {
         acepta(
-          await insertarComprobante(viaSesion(s), datosDeLetraC(eC), [RENGLON_DE_100_SIN_ALICUOTA], []),
+          await insertarComprobante(
+            viaSesion(s),
+            datosDeLetraC(eC),
+            [RENGLON_DE_100_SIN_ALICUOTA],
+            [],
+          ),
         );
         acepta(await s.confirmar());
       });
@@ -721,7 +741,12 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
                 confirmada_por = $2, motivo = 'alta' where id = $1`,
         [datos, m.persona],
       );
-      const pv = await crearPuntoDeVenta(dueno, m, { numero: 2, emisor: secundario, domicilio, activo: true });
+      const pv = await crearPuntoDeVenta(dueno, m, {
+        numero: 2,
+        emisor: secundario,
+        domicilio,
+        activo: true,
+      });
       const comunes: Contenido = {
         emisor_id: secundario,
         punto_de_venta_id: pv,
@@ -760,7 +785,11 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
       await deshacible(async () => {
         const r = await insertarComprobante(
           intento(dueno),
-          datosDeComprobante(principal, { ...comunes, emisor_cuit: cuitSecundario, datos_fiscales_id: principal.datosFiscales }),
+          datosDeComprobante(principal, {
+            ...comunes,
+            emisor_cuit: cuitSecundario,
+            datos_fiscales_id: principal.datosFiscales,
+          }),
           [RENGLON_DE_100_SIN_ALICUOTA],
           [],
         );
@@ -791,15 +820,28 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
       ],
       [
         "una clase que no existe",
-        { clase: "TICKET", tipo_comprobante: "TICKET_B", comprobante_asociado_id: randomUUID(), motivo: "x" },
+        {
+          clase: "TICKET",
+          tipo_comprobante: "TICKET_B",
+          comprobante_asociado_id: randomUUID(),
+          motivo: "x",
+        },
         "comprobante_clase_ck",
       ],
-      ["una letra que no existe", { tipo_comprobante: "FACTURA_Z", clase: "FACTURA" }, "comprobante_tipo_ck"],
+      [
+        "una letra que no existe",
+        { tipo_comprobante: "FACTURA_Z", clase: "FACTURA" },
+        "comprobante_tipo_ck",
+      ],
       ["un concepto que no existe", { concepto: "OTRO" }, "comprobante_concepto_ck"],
       ["servicios sin fechas", { concepto: "SERVICIOS" }, "comprobante_servicio_ck"],
       [
         "productos con fechas de servicio",
-        { servicio_desde: "2026-10-01", servicio_hasta: "2026-10-31", vencimiento_pago: "2026-11-10" },
+        {
+          servicio_desde: "2026-10-01",
+          servicio_hasta: "2026-10-31",
+          vencimiento_pago: "2026-11-10",
+        },
         "comprobante_servicio_ck",
       ],
       [
@@ -852,8 +894,16 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "comprobante_importes_ck",
       ],
       ["importes que no suman el total", { iva: "20.00" }, "comprobante_importes_ck"],
-      ["un neto mayor que el total", { neto_gravado: "122.00", iva: "-1.00" }, "comprobante_importes_ck"],
-      ["un exento negativo", { exento: "-1.00", neto_gravado: "101.00" }, "comprobante_importes_ck"],
+      [
+        "un neto mayor que el total",
+        { neto_gravado: "122.00", iva: "-1.00" },
+        "comprobante_importes_ck",
+      ],
+      [
+        "un exento negativo",
+        { exento: "-1.00", neto_gravado: "101.00" },
+        "comprobante_importes_ck",
+      ],
       [
         "letra C con IVA",
         {
@@ -865,20 +915,64 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "comprobante_c_sin_iva_ck",
       ],
       ["un CUIT de emisor inválido", { emisor_cuit: "20123456787" }, "comprobante_emisor_cuit_ck"],
-      ["una razón social con blancos al inicio", { emisor_razon_social: " Mi SA" }, "comprobante_emisor_razon_social_ck"],
-      ["una razón social con un carácter de control", { emisor_razon_social: "Mi\tSA" }, "comprobante_emisor_razon_social_ck"],
-      ["una razón social de 201 caracteres", { emisor_razon_social: "x".repeat(201) }, "comprobante_emisor_razon_social_ck"],
-      ["una condición del emisor que no existe", { emisor_condicion_iva: "CONSUMIDOR_FINAL" }, "comprobante_emisor_condicion_ck"],
-      ["un domicilio fiscal vacío", { emisor_domicilio_fiscal: "" }, "comprobante_emisor_domicilio_ck"],
-      ["un inicio de actividades imposible", { emisor_inicio_actividades: "0001-12-31 BC" }, "comprobante_emisor_inicio_ck"],
-      ["un número de IIBB en blanco", { emisor_iibb_numero: "  " }, "comprobante_emisor_iibb_numero_ck"],
-      ["una condición de IIBB que no existe", { emisor_iibb_condicion: "OTRA" }, "comprobante_emisor_iibb_condicion_ck"],
+      [
+        "una razón social con blancos al inicio",
+        { emisor_razon_social: " Mi SA" },
+        "comprobante_emisor_razon_social_ck",
+      ],
+      [
+        "una razón social con un carácter de control",
+        { emisor_razon_social: "Mi\tSA" },
+        "comprobante_emisor_razon_social_ck",
+      ],
+      [
+        "una razón social de 201 caracteres",
+        { emisor_razon_social: "x".repeat(201) },
+        "comprobante_emisor_razon_social_ck",
+      ],
+      [
+        "una condición del emisor que no existe",
+        { emisor_condicion_iva: "CONSUMIDOR_FINAL" },
+        "comprobante_emisor_condicion_ck",
+      ],
+      [
+        "un domicilio fiscal vacío",
+        { emisor_domicilio_fiscal: "" },
+        "comprobante_emisor_domicilio_ck",
+      ],
+      [
+        "un inicio de actividades imposible",
+        { emisor_inicio_actividades: "0001-12-31 BC" },
+        "comprobante_emisor_inicio_ck",
+      ],
+      [
+        "un número de IIBB en blanco",
+        { emisor_iibb_numero: "  " },
+        "comprobante_emisor_iibb_numero_ck",
+      ],
+      [
+        "una condición de IIBB que no existe",
+        { emisor_iibb_condicion: "OTRA" },
+        "comprobante_emisor_iibb_condicion_ck",
+      ],
       ["un punto de venta en cero", { punto_de_venta_numero: 0 }, "comprobante_pv_numero_ck"],
-      ["un punto de venta de seis dígitos", { punto_de_venta_numero: 100000 }, "comprobante_pv_numero_ck"],
-      ["un domicilio de punto de venta vacío", { punto_de_venta_domicilio: "" }, "comprobante_pv_domicilio_ck"],
+      [
+        "un punto de venta de seis dígitos",
+        { punto_de_venta_numero: 100000 },
+        "comprobante_pv_numero_ck",
+      ],
+      [
+        "un domicilio de punto de venta vacío",
+        { punto_de_venta_domicilio: "" },
+        "comprobante_pv_domicilio_ck",
+      ],
       [
         "un tipo de documento que no existe",
-        { receptor_documento_tipo: "LE", receptor_documento_numero: "30111222", receptor_nombre: "Ana" },
+        {
+          receptor_documento_tipo: "LE",
+          receptor_documento_numero: "30111222",
+          receptor_nombre: "Ana",
+        },
         "comprobante_receptor_doc_tipo_ck",
       ],
       [
@@ -898,33 +992,77 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
       ],
       [
         "un documento con letras",
-        { receptor_documento_tipo: "DNI", receptor_documento_numero: "30A11222", receptor_nombre: "Ana" },
+        {
+          receptor_documento_tipo: "DNI",
+          receptor_documento_numero: "30A11222",
+          receptor_nombre: "Ana",
+        },
         "comprobante_receptor_documento_ck",
       ],
       [
         "un documento de 12 dígitos (DocNro es un Long de 11)",
-        { receptor_documento_tipo: "PASAPORTE", receptor_documento_numero: "123456789012", receptor_nombre: "Ana" },
+        {
+          receptor_documento_tipo: "PASAPORTE",
+          receptor_documento_numero: "123456789012",
+          receptor_nombre: "Ana",
+        },
         "comprobante_receptor_documento_ck",
       ],
       [
         "un CUIT de receptor con el dígito verificador mal",
-        { receptor_documento_tipo: "CUIT", receptor_documento_numero: "20123456787", receptor_nombre: "Ana" },
+        {
+          receptor_documento_tipo: "CUIT",
+          receptor_documento_numero: "20123456787",
+          receptor_nombre: "Ana",
+        },
         "comprobante_receptor_documento_ck",
       ],
-      ["una condición del receptor que no existe", { receptor_condicion_iva: "MONO" }, "comprobante_receptor_condicion_ck"],
-      ["un nombre de receptor con blancos al final", { receptor_nombre: "Ana ", receptor_documento_tipo: "DNI", receptor_documento_numero: "30111222" }, "comprobante_receptor_nombre_ck"],
-      ["un nombre de receptor de 201 caracteres", { receptor_nombre: "x".repeat(201), receptor_documento_tipo: "DNI", receptor_documento_numero: "30111222" }, "comprobante_receptor_nombre_ck"],
-      ["un domicilio de receptor de 301 caracteres", { receptor_domicilio: "x".repeat(301) }, "comprobante_receptor_domicilio_ck"],
+      [
+        "una condición del receptor que no existe",
+        { receptor_condicion_iva: "MONO" },
+        "comprobante_receptor_condicion_ck",
+      ],
+      [
+        "un nombre de receptor con blancos al final",
+        {
+          receptor_nombre: "Ana ",
+          receptor_documento_tipo: "DNI",
+          receptor_documento_numero: "30111222",
+        },
+        "comprobante_receptor_nombre_ck",
+      ],
+      [
+        "un nombre de receptor de 201 caracteres",
+        {
+          receptor_nombre: "x".repeat(201),
+          receptor_documento_tipo: "DNI",
+          receptor_documento_numero: "30111222",
+        },
+        "comprobante_receptor_nombre_ck",
+      ],
+      [
+        "un domicilio de receptor de 301 caracteres",
+        { receptor_domicilio: "x".repeat(301) },
+        "comprobante_receptor_domicilio_ck",
+      ],
       [
         "una nota de crédito sin comprobante asociado",
         { clase: "NOTA_CREDITO", tipo_comprobante: "NOTA_CREDITO_B" },
         "comprobante_asociado_ck",
       ],
-      ["una factura con comprobante asociado", { comprobante_asociado_id: randomUUID() }, "comprobante_asociado_ck"],
+      [
+        "una factura con comprobante asociado",
+        { comprobante_asociado_id: randomUUID() },
+        "comprobante_asociado_ck",
+      ],
       ["una factura con motivo", { motivo: "porque sí" }, "comprobante_motivo_ck"],
       ["una huella que no es SHA-256", { huella: "abc" }, "comprobante_huella_ck"],
       ["una huella en mayúsculas", { huella: "A".repeat(64) }, "comprobante_huella_ck"],
-      ["una versión de representación en cero", { version_de_representacion: 0 }, "comprobante_representacion_ck"],
+      [
+        "una versión de representación en cero",
+        { version_de_representacion: 0 },
+        "comprobante_representacion_ck",
+      ],
       ["envíos negativos", { envios: -1 }, "comprobante_envios_ck"],
       [
         "un número reservado en un comprobante PENDIENTE",
@@ -933,22 +1071,34 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
       ],
     ];
 
-    it.each(CASOS_DE_CHECK.map(([nombre, cambios, restriccion]) => [nombre, cambios, restriccion] as const))(
-      "rechaza %s",
-      async (_nombre, cambios, restriccion) => {
-        await deshacible(async () => {
-          await dueno.query("alter table comprobante disable trigger comprobante_alta");
-          const r = await insertarComprobante(intento(dueno), datosDeComprobante(e, cambios));
-          check(r, restriccion);
-        });
-      },
-    );
+    it.each(
+      CASOS_DE_CHECK.map(
+        ([nombre, cambios, restriccion]) => [nombre, cambios, restriccion] as const,
+      ),
+    )("rechaza %s", async (_nombre, cambios, restriccion) => {
+      await deshacible(async () => {
+        await dueno.query("alter table comprobante disable trigger comprobante_alta");
+        const r = await insertarComprobante(intento(dueno), datosDeComprobante(e, cambios));
+        check(r, restriccion);
+      });
+    });
 
     it("los campos obligatorios no aceptan NULL (la moneda y el ambiente no tienen valor por defecto)", async () => {
-      for (const campo of ["moneda", "ambiente", "emisor_cuit", "huella", "creado_por", "total", "receptor_condicion_iva"]) {
+      for (const campo of [
+        "moneda",
+        "ambiente",
+        "emisor_cuit",
+        "huella",
+        "creado_por",
+        "total",
+        "receptor_condicion_iva",
+      ]) {
         await deshacible(async () => {
           await dueno.query("alter table comprobante disable trigger comprobante_alta");
-          const r = await insertarComprobante(intento(dueno), datosDeComprobante(e, { [campo]: null }));
+          const r = await insertarComprobante(
+            intento(dueno),
+            datosDeComprobante(e, { [campo]: null }),
+          );
           expect(r.ok, campo).toBe(false);
           if (!r.ok) expect(r.codigo, `${campo}: ${r.mensaje}`).toBe("23502");
         });
@@ -962,7 +1112,12 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         check(
           await insertarComprobante(
             intento(dueno),
-            datosDeComprobante(e, { estado: "EN_VALIDACION", envios: 1, numero_reservado: "1", fecha_emision: "2026-10-13" }),
+            datosDeComprobante(e, {
+              estado: "EN_VALIDACION",
+              envios: 1,
+              numero_reservado: "1",
+              fecha_emision: "2026-10-13",
+            }),
           ),
           "comprobante_alta_invalida",
         );
@@ -976,23 +1131,32 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
     });
 
     it.each<[string, (x: Escenario) => Contenido]>([
-      ["otra razón social que la de los datos fiscales", () => ({ emisor_razon_social: "Otra SA" })],
+      [
+        "otra razón social que la de los datos fiscales",
+        () => ({ emisor_razon_social: "Otra SA" }),
+      ],
       ["otra condición frente al IVA", () => ({ emisor_condicion_iva: "EXENTO" })],
       ["otro inicio de actividades", () => ({ emisor_inicio_actividades: "2019-01-01" })],
       ["otro número de IIBB", () => ({ emisor_iibb_numero: "999" })],
       ["otra condición de IIBB", () => ({ emisor_iibb_condicion: "EXENTO" })],
-      ["sin IIBB cuando los datos lo traen", () => ({ emisor_iibb_numero: null, emisor_iibb_condicion: null })],
+      [
+        "sin IIBB cuando los datos lo traen",
+        () => ({ emisor_iibb_numero: null, emisor_iibb_condicion: null }),
+      ],
       ["otro CUIT que el del emisor", () => ({ emisor_cuit: cuitAlAzar() })],
       ["otro número de punto de venta", (x) => ({ punto_de_venta_numero: x.pvNumero + 1 })],
       ["otro ambiente que el del punto de venta", () => ({ ambiente: "PRODUCCION" })],
-    ])("la foto del emisor y del punto de venta tiene que coincidir con su fuente: %s se rechaza", async (_n, cambios) => {
-      await deshacible(async () => {
-        check(
-          await insertarComprobante(intento(dueno), datosDeComprobante(e, cambios(e))),
-          "comprobante_alta_invalida",
-        );
-      });
-    });
+    ])(
+      "la foto del emisor y del punto de venta tiene que coincidir con su fuente: %s se rechaza",
+      async (_n, cambios) => {
+        await deshacible(async () => {
+          check(
+            await insertarComprobante(intento(dueno), datosDeComprobante(e, cambios(e))),
+            "comprobante_alta_invalida",
+          );
+        });
+      },
+    );
 
     it("unos datos fiscales en BORRADOR no sirven, y un punto de venta INACTIVO tampoco", async () => {
       await deshacible(async () => {
@@ -1004,7 +1168,10 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
           [borrador, e.empresa, e.emisor, e.razonSocial, e.domicilio, e.persona],
         );
         check(
-          await insertarComprobante(intento(dueno), datosDeComprobante(e, { datos_fiscales_id: borrador })),
+          await insertarComprobante(
+            intento(dueno),
+            datosDeComprobante(e, { datos_fiscales_id: borrador }),
+          ),
           "comprobante_alta_invalida",
         );
       });
@@ -1028,13 +1195,19 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         [{ datos_fiscales_id: otra.datosFiscales }, "comprobante_datos_fiscales_fkey"],
       ] as const) {
         await deshacible(async () => {
-          referencia(await insertarComprobante(intento(dueno), datosDeComprobante(e, cambios)), restriccion);
+          referencia(
+            await insertarComprobante(intento(dueno), datosDeComprobante(e, cambios)),
+            restriccion,
+          );
         });
       }
       // Y la empresa tampoco puede ser una inexistente.
       await deshacible(async () => {
         referencia(
-          await insertarComprobante(intento(dueno), datosDeComprobante(e, { empresa_id: randomUUID() })),
+          await insertarComprobante(
+            intento(dueno),
+            datosDeComprobante(e, { empresa_id: randomUUID() }),
+          ),
           "comprobante_empresa_id_fkey",
         );
       });
@@ -1043,7 +1216,7 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
     // ---- la nota asociada -----------------------------------------------------------------------------
 
     /** Una factura B autorizada (en la transacción del dueño que se deshace) y el contenido de una nota de crédito sobre ella. */
-    const conAsociadaAutorizada = async <T,>(
+    const conAsociadaAutorizada = async <T>(
       trabajo: (asociada: Contenido, nota: (cambios?: Contenido) => Contenido) => Promise<T>,
       cambiosDeLaAsociada: Contenido = {},
     ) =>
@@ -1070,7 +1243,11 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         acepta(
           await insertarComprobante(
             intento(dueno),
-            nota({ clase: "NOTA_DEBITO", tipo_comprobante: "NOTA_DEBITO_B", origen_id: randomUUID() }),
+            nota({
+              clase: "NOTA_DEBITO",
+              tipo_comprobante: "NOTA_DEBITO_B",
+              origen_id: randomUUID(),
+            }),
           ),
         );
       });
@@ -1089,7 +1266,10 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
       ],
     ])("una nota %s que su asociado se rechaza", async (_n, armar) => {
       await conAsociadaAutorizada(async (_a, nota) => {
-        check(await insertarComprobante(intento(dueno), armar(nota)), "comprobante_asociado_invalido");
+        check(
+          await insertarComprobante(intento(dueno), armar(nota)),
+          "comprobante_asociado_invalido",
+        );
       });
     });
 
@@ -1128,8 +1308,14 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
     it("una nota en otro ambiente que su asociado se rechaza; sobre un comprobante de otra empresa o de otro emisor, la clave foránea", async () => {
       await conAsociadaAutorizada(async (asociada) => {
         // Un segundo punto de venta ya en producción: la nota nace en ese ambiente.
-        const pvProduccion = await crearPuntoDeVenta(dueno, e, { numero: 5, domicilio: e.domicilio, activo: true });
-        await dueno.query("update punto_de_venta set ambiente = 'PRODUCCION' where id = $1", [pvProduccion]);
+        const pvProduccion = await crearPuntoDeVenta(dueno, e, {
+          numero: 5,
+          domicilio: e.domicilio,
+          activo: true,
+        });
+        await dueno.query("update punto_de_venta set ambiente = 'PRODUCCION' where id = $1", [
+          pvProduccion,
+        ]);
         check(
           await insertarComprobante(
             intento(dueno),
@@ -1187,9 +1373,24 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
 
     it.each<[string, Renglon[] | undefined, Desglose[] | undefined, Contenido]>([
       ["sin renglones", [], undefined, {}],
-      ["con renglones que no suman el total", [{ ...RENGLON_DE_121, importe: "120.00" }], undefined, {}],
-      ["con renglones que se pasan del total", [{ ...RENGLON_DE_121, importe: "121.01" }], undefined, {}],
-      ["con renglones que no empiezan en la posición 1", [{ ...RENGLON_DE_121, posicion: 2 }], undefined, {}],
+      [
+        "con renglones que no suman el total",
+        [{ ...RENGLON_DE_121, importe: "120.00" }],
+        undefined,
+        {},
+      ],
+      [
+        "con renglones que se pasan del total",
+        [{ ...RENGLON_DE_121, importe: "121.01" }],
+        undefined,
+        {},
+      ],
+      [
+        "con renglones que no empiezan en la posición 1",
+        [{ ...RENGLON_DE_121, posicion: 2 }],
+        undefined,
+        {},
+      ],
       [
         "con un hueco entre las posiciones",
         [
@@ -1199,9 +1400,19 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         [{ alicuota: "21", total: "121.00", neto: "100.00", iva: "21.00" }],
         {},
       ],
-      ["con un renglón sin alícuota en una letra B", [{ ...RENGLON_DE_121, alicuota: null }], undefined, {}],
+      [
+        "con un renglón sin alícuota en una letra B",
+        [{ ...RENGLON_DE_121, alicuota: null }],
+        undefined,
+        {},
+      ],
       ["sin desglose en una letra B", undefined, [], {}],
-      ["con un desglose que no suma el total", undefined, [{ alicuota: "21", total: "120.00", neto: "99.00", iva: "21.00" }], {}],
+      [
+        "con un desglose que no suma el total",
+        undefined,
+        [{ alicuota: "21", total: "120.00", neto: "99.00", iva: "21.00" }],
+        {},
+      ],
       [
         "con un desglose cuyo neto no es el de la columna del comprobante",
         undefined,
@@ -1238,16 +1449,25 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
     });
 
     it("una letra C no lleva alícuotas: ni en los renglones ni en el desglose", async () => {
-      const eC = await crearEscenario(dueno, { condicionIva: "MONOTRIBUTO", razonSocial: "Kiosco Zulú" });
+      const eC = await crearEscenario(dueno, {
+        condicionIva: "MONOTRIBUTO",
+        razonSocial: "Kiosco Zulú",
+      });
       acepta(await confirmando(datosDeLetraC(eC), [RENGLON_DE_100_SIN_ALICUOTA], []));
       check(
-        await confirmando(datosDeLetraC(eC), [{ ...RENGLON_DE_100_SIN_ALICUOTA, alicuota: "21" }], []),
+        await confirmando(
+          datosDeLetraC(eC),
+          [{ ...RENGLON_DE_100_SIN_ALICUOTA, alicuota: "21" }],
+          [],
+        ),
         "comprobante_descuadrado",
       );
       check(
-        await confirmando(datosDeLetraC(eC), [RENGLON_DE_100_SIN_ALICUOTA], [
-          { alicuota: "21", total: "100.00", neto: "82.64", iva: "17.36" },
-        ]),
+        await confirmando(
+          datosDeLetraC(eC),
+          [RENGLON_DE_100_SIN_ALICUOTA],
+          [{ alicuota: "21", total: "100.00", neto: "82.64", iva: "17.36" }],
+        ),
         "comprobante_descuadrado",
       );
     });
@@ -1312,7 +1532,10 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         acepta(
           await insertarComprobante(
             intento(dueno),
-            datosDeComprobante(e, { origen_tipo: "PROPINA_DE_TICKET", origen_id: origen.origen_id }),
+            datosDeComprobante(e, {
+              origen_tipo: "PROPINA_DE_TICKET",
+              origen_id: origen.origen_id,
+            }),
           ),
         );
       });
@@ -1327,7 +1550,9 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
           if (estadoFinal === "RECHAZADO") {
             acepta(await entrarEnValidacion(intento(dueno), primero["id"] as string, "1"));
             acepta(
-              await intento(dueno)("update comprobante set estado = 'RECHAZADO' where id = $1", [primero["id"]]),
+              await intento(dueno)("update comprobante set estado = 'RECHAZADO' where id = $1", [
+                primero["id"],
+              ]),
             );
           } else {
             acepta(
@@ -1351,7 +1576,9 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
           if (estadoFinal === "RECHAZADO") {
             acepta(await entrarEnValidacion(intento(dueno), primero["id"] as string, "1"));
             acepta(
-              await intento(dueno)("update comprobante set estado = 'RECHAZADO' where id = $1", [primero["id"]]),
+              await intento(dueno)("update comprobante set estado = 'RECHAZADO' where id = $1", [
+                primero["id"],
+              ]),
             );
           } else {
             acepta(
@@ -1362,7 +1589,10 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
             );
           }
           clave(
-            await insertarComprobante(intento(dueno), datosDeComprobante(e, { origen_id: clavePantalla })),
+            await insertarComprobante(
+              intento(dueno),
+              datosDeComprobante(e, { origen_id: clavePantalla }),
+            ),
             "comprobante_manual_uk",
           );
         });
@@ -1373,15 +1603,30 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
       const otra = await crearEscenario(dueno);
       const clavePantalla = randomUUID();
       await deshacible(async () => {
-        acepta(await insertarComprobante(intento(dueno), datosDeComprobante(e, { origen_id: clavePantalla })));
-        acepta(await insertarComprobante(intento(dueno), datosDeComprobante(otra, { origen_id: clavePantalla })));
+        acepta(
+          await insertarComprobante(
+            intento(dueno),
+            datosDeComprobante(e, { origen_id: clavePantalla }),
+          ),
+        );
+        acepta(
+          await insertarComprobante(
+            intento(dueno),
+            datosDeComprobante(otra, { origen_id: clavePantalla }),
+          ),
+        );
       });
     });
 
     it("repetir el alta con ON CONFLICT DO NOTHING es idempotente: no duplica ni cambia el primero", async () => {
       const clavePantalla = randomUUID();
       await conAppDe(base!, e, async (s) => {
-        acepta(await insertarComprobante(viaSesion(s), datosDeComprobante(e, { origen_id: clavePantalla })));
+        acepta(
+          await insertarComprobante(
+            viaSesion(s),
+            datosDeComprobante(e, { origen_id: clavePantalla }),
+          ),
+        );
         // Segundo envío de la misma pantalla (otro id de fila, misma clave): no inserta nada.
         const columnas = Object.keys(datosDeComprobante(e));
         const segundo = datosDeComprobante(e, { origen_id: clavePantalla });
@@ -1392,9 +1637,10 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         );
         acepta(r);
         expect(r.ok && r.filas).toBe(0);
-        const cuenta = await s.intentar("select count(*)::int as n from comprobante where origen_id = $1", [
-          clavePantalla,
-        ]);
+        const cuenta = await s.intentar(
+          "select count(*)::int as n from comprobante where origen_id = $1",
+          [clavePantalla],
+        );
         expect(cuenta.ok && cuenta.rows[0]).toEqual({ n: 1 });
       });
     });
@@ -1415,13 +1661,24 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
 
     it("el número autorizado de homologación y el de producción del MISMO punto de venta y tipo no chocan (el ambiente es parte de la clave)", async () => {
       await deshacible(async () => {
-        const pvX = await crearPuntoDeVenta(dueno, e, { numero: 9, domicilio: e.domicilio, activo: true });
-        const enHomologacion = datosDeComprobante(e, { punto_de_venta_id: pvX, punto_de_venta_numero: 9 });
+        const pvX = await crearPuntoDeVenta(dueno, e, {
+          numero: 9,
+          domicilio: e.domicilio,
+          activo: true,
+        });
+        const enHomologacion = datosDeComprobante(e, {
+          punto_de_venta_id: pvX,
+          punto_de_venta_numero: 9,
+        });
         acepta(await insertarComprobante(intento(dueno), enHomologacion));
         acepta(await entrarEnValidacion(intento(dueno), enHomologacion["id"] as string, "1"));
         acepta(await marcarAutorizado(intento(dueno), enHomologacion["id"] as string));
         // El punto de venta pasa a producción (sin series en curso: la serie de la prueba no se creó) y emite su número 1.
-        acepta(await intento(dueno)("update punto_de_venta set ambiente = 'PRODUCCION' where id = $1", [pvX]));
+        acepta(
+          await intento(dueno)("update punto_de_venta set ambiente = 'PRODUCCION' where id = $1", [
+            pvX,
+          ]),
+        );
         const enProduccion = datosDeComprobante(e, {
           punto_de_venta_id: pvX,
           punto_de_venta_numero: 9,
@@ -1438,7 +1695,10 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         });
         acepta(await insertarComprobante(intento(dueno), otro));
         acepta(await entrarEnValidacion(intento(dueno), otro["id"] as string, "1"));
-        clave(await marcarAutorizado(intento(dueno), otro["id"] as string), "comprobante_numero_uk");
+        clave(
+          await marcarAutorizado(intento(dueno), otro["id"] as string),
+          "comprobante_numero_uk",
+        );
       });
     });
   });
@@ -1470,11 +1730,27 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
       ["un importe negativo", { importe: "-1.00" }, "comprobante_linea_importe_ck"],
       ["un importe NaN", { importe: "NaN" }, "comprobante_linea_importe_ck"],
       ["una descripción vacía", { descripcion: "" }, "comprobante_linea_descripcion_ck"],
-      ["una descripción con blancos al final", { descripcion: "Café " }, "comprobante_linea_descripcion_ck"],
-      ["una descripción con un salto de línea", { descripcion: "Café\ncon leche" }, "comprobante_linea_descripcion_ck"],
-      ["una descripción de 201 caracteres", { descripcion: "x".repeat(201) }, "comprobante_linea_descripcion_ck"],
+      [
+        "una descripción con blancos al final",
+        { descripcion: "Café " },
+        "comprobante_linea_descripcion_ck",
+      ],
+      [
+        "una descripción con un salto de línea",
+        { descripcion: "Café\ncon leche" },
+        "comprobante_linea_descripcion_ck",
+      ],
+      [
+        "una descripción de 201 caracteres",
+        { descripcion: "x".repeat(201) },
+        "comprobante_linea_descripcion_ck",
+      ],
       ["la posición 0", { posicion: 0 }, "comprobante_linea_posicion_ck"],
-      ["la posición 201 (el tope son 200 renglones)", { posicion: 201 }, "comprobante_linea_posicion_ck"],
+      [
+        "la posición 201 (el tope son 200 renglones)",
+        { posicion: 201 },
+        "comprobante_linea_posicion_ck",
+      ],
     ])("un renglón con %s se rechaza", async (_n, cambios, restriccion) => {
       await deshacible(async () => {
         const datos = datosDeComprobante(e);
@@ -1485,7 +1761,17 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
              values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
             (() => {
               const l = lineaCon(cambios);
-              return [e.empresa, datos["id"], l.posicion, l.descripcion, l.cantidad, l.precio_unitario, l.descuento, l.alicuota, l.importe];
+              return [
+                e.empresa,
+                datos["id"],
+                l.posicion,
+                l.descripcion,
+                l.cantidad,
+                l.precio_unitario,
+                l.descuento,
+                l.alicuota,
+                l.importe,
+              ];
             })(),
           ),
           restriccion,
@@ -1510,8 +1796,16 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
 
     it.each<[string, Record<string, unknown>, string]>([
       ["un código de alícuota que no existe", { alicuota: "8" }, "comprobante_alicuota_codigo_ck"],
-      ["un total que no es neto más IVA", { total: "121.00", neto: "100.00", iva: "20.00" }, "comprobante_alicuota_ck"],
-      ["un IVA negativo", { total: "100.00", neto: "110.00", iva: "-10.00" }, "comprobante_alicuota_ck"],
+      [
+        "un total que no es neto más IVA",
+        { total: "121.00", neto: "100.00", iva: "20.00" },
+        "comprobante_alicuota_ck",
+      ],
+      [
+        "un IVA negativo",
+        { total: "100.00", neto: "110.00", iva: "-10.00" },
+        "comprobante_alicuota_ck",
+      ],
       ["un total NaN", { total: "NaN" }, "comprobante_alicuota_ck"],
       [
         "un exento con IVA",
@@ -1566,7 +1860,12 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
       for (const tabla of ["comprobante_linea", "comprobante_alicuota"]) {
         const col = tabla === "comprobante_linea" ? "importe" : "total";
         await deshacible(async () => {
-          denegado(await intento(dueno)(`update ${tabla} set ${col} = ${col} + 1 where comprobante_id = $1`, [id]));
+          denegado(
+            await intento(dueno)(
+              `update ${tabla} set ${col} = ${col} + 1 where comprobante_id = $1`,
+              [id],
+            ),
+          );
           denegado(await intento(dueno)(`delete from ${tabla} where comprobante_id = $1`, [id]));
           denegado(await intento(dueno)(`truncate ${tabla}`));
         });
