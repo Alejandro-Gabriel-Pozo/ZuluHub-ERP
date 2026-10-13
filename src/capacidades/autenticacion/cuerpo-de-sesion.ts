@@ -1,3 +1,5 @@
+import { esObjeto, leerJson } from "./json-seguro";
+
 /**
  * Lo que `GET /api/auth/get-session` le cuenta al navegador (el «Seguir» del aviso de inactividad y
  * poco más). La librería devuelve la sesión entera, con su `token` y los datos del usuario: aunque la
@@ -17,16 +19,11 @@ function fechaIso(valor: unknown): string | null {
 }
 
 export function cuerpoPublicoDeSesion(cuerpo: string): CuerpoPublicoDeSesion {
-  try {
-    const datos: unknown = JSON.parse(cuerpo);
-    if (typeof datos !== "object" || datos === null || !("session" in datos)) return SIN_SESION;
-    const { session } = datos;
-    if (typeof session !== "object" || session === null) return SIN_SESION;
-    const venceEn = "expiresAt" in session ? fechaIso(session.expiresAt) : null;
-    const ultimoUso = "updatedAt" in session ? fechaIso(session.updatedAt) : null;
-    if (venceEn === null || ultimoUso === null) return SIN_SESION;
-    return { vigente: true, venceEn, ultimoUso };
-  } catch {
-    return SIN_SESION;
-  }
+  const datos = leerJson(cuerpo);
+  const session = esObjeto(datos) && "session" in datos ? datos.session : null;
+  if (!esObjeto(session)) return SIN_SESION;
+  const venceEn = "expiresAt" in session ? fechaIso(session.expiresAt) : null;
+  const ultimoUso = "updatedAt" in session ? fechaIso(session.updatedAt) : null;
+  if (venceEn === null || ultimoUso === null) return SIN_SESION;
+  return { vigente: true, venceEn, ultimoUso };
 }

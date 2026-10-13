@@ -11,6 +11,7 @@ import {
   vigenciaDeSesion,
   type LimitesDeSesion,
 } from "../../capacidades/autenticacion/vigencia-de-sesion";
+import type { ConexionDeAutenticacion } from "../postgres/conexion-de-autenticacion";
 import { RUTAS_BLOQUEADAS } from "./rutas-bloqueadas";
 
 /**
@@ -19,11 +20,12 @@ import { RUTAS_BLOQUEADAS } from "./rutas-bloqueadas";
  * opción responde a un riesgo que el ADR-013 o el spike encontraron: el comentario dice cuál.
  */
 
-/** La conexión de la librería a su esquema: el Kysely del rol de autenticación (lo crea `adaptadores/postgres`). */
-export type BaseDeDatosDeLaLibreria = Extract<
-  NonNullable<BetterAuthOptions["database"]>,
-  { db: unknown }
->["db"];
+/**
+ * La conexión de la librería a su esquema: el Kysely del rol de autenticación, que arma
+ * `adaptadores/postgres/conexion-de-autenticacion.ts`. Se toma de ahí (solo el tipo) y no del tipo de la
+ * librería: ese pasa por un módulo de Bun que no existe acá y TypeScript lo vuelve irresoluble.
+ */
+export type BaseDeDatosDeLaLibreria = ConexionDeAutenticacion["db"];
 
 export type ParametrosDeInstancia = Readonly<{
   configuracion: ConfiguracionDeHost;
@@ -115,22 +117,22 @@ export function opcionesDeInstancia(p: ParametrosDeInstancia): BetterAuthOptions
       session: {
         create: {
           // G4: se guarda el host de la instancia (el que resolvió el servidor), nunca uno que mande el cliente.
-          before: async (sesion) => ({ data: { ...sesion, host } }),
+          before: (sesion) => Promise.resolve({ data: { ...sesion, host } }),
         },
         update: {
           // G5: ninguna renovación pasa de las 8 horas de creada la sesión. Sin la sesión a la vista, no se renueva.
-          before: async (cambios, contexto) => {
+          before: (cambios, contexto) => {
             const actual = contexto?.context.session?.session;
-            if (actual === undefined || actual === null) return false;
+            if (actual === undefined || actual === null) return Promise.resolve(false);
             const expiresAt = vencimientoRenovado(actual.createdAt, p.reloj(), p.limites);
-            return { data: { ...cambios, expiresAt } };
+            return Promise.resolve({ data: { ...cambios, expiresAt } });
           },
         },
       },
       account: {
         // El `idToken` de Google no se usa y se guardaría en claro: no se guarda.
-        create: { before: async (cuenta) => ({ data: { ...cuenta, idToken: null } }) },
-        update: { before: async (cuenta) => ({ data: { ...cuenta, idToken: null } }) },
+        create: { before: (cuenta) => Promise.resolve({ data: { ...cuenta, idToken: null } }) },
+        update: { before: (cuenta) => Promise.resolve({ data: { ...cuenta, idToken: null } }) },
       },
     },
     hooks: {

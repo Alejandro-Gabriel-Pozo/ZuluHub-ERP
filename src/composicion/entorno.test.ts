@@ -120,8 +120,14 @@ describe("variables prohibidas (P-13)", () => {
   it("son las de la spec", () => {
     expect([...VARIABLES_PROHIBIDAS].sort()).toEqual(
       [
+        "AUTH_SECRET",
+        "AUTH_URL",
         "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_SECRETS",
         "BETTER_AUTH_TELEMETRY",
+        "BETTER_AUTH_TELEMETRY_ENDPOINT",
+        "BETTER_AUTH_TELEMETRY_ID",
+        "BETTER_AUTH_TRUSTED_ORIGINS",
         "BETTER_AUTH_URL",
         "DATABASE_URL",
         "DATABASE_URL_UNPOOLED",
@@ -136,6 +142,12 @@ describe("variables prohibidas (P-13)", () => {
   });
 
   it.each([
+    "BETTER_AUTH_SECRETS",
+    "BETTER_AUTH_TRUSTED_ORIGINS",
+    "BETTER_AUTH_TELEMETRY_ENDPOINT",
+    "BETTER_AUTH_TELEMETRY_ID",
+    "AUTH_SECRET",
+    "AUTH_URL",
     "BETTER_AUTH_TELEMETRY",
     "BETTER_AUTH_SECRET",
     "BETTER_AUTH_URL",

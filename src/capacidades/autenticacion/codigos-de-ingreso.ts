@@ -1,3 +1,5 @@
+import { esObjeto, leerJson } from "./json-seguro";
+
 /**
  * Los códigos con que el ingreso devuelve a la persona a la pantalla de ingreso cuando algo sale mal
  * (`?error=<código>`). Lista CERRADA: la librería arma la redirección con el código que le llega del
@@ -68,14 +70,9 @@ const CODIGO_DE_LA_LIBRERIA = /^[A-Z][A-Z0-9_]{0,63}$/;
  * forma de un código (mayúsculas y guiones bajos), el genérico: nunca se reenvía texto que no se conoce.
  */
 export function codigoPublicoDeSolicitud(cuerpo: string): string {
-  try {
-    const datos: unknown = JSON.parse(cuerpo);
-    if (typeof datos === "object" && datos !== null && "code" in datos) {
-      const { code } = datos;
-      if (typeof code === "string" && CODIGO_DE_LA_LIBRERIA.test(code)) return code;
-    }
-  } catch {
-    // No es JSON: cae en el genérico.
-  }
-  return CODIGO_DE_SOLICITUD_GENERICO;
+  const datos = leerJson(cuerpo);
+  const code = esObjeto(datos) && "code" in datos ? datos.code : null;
+  return typeof code === "string" && CODIGO_DE_LA_LIBRERIA.test(code)
+    ? code
+    : CODIGO_DE_SOLICITUD_GENERICO;
 }

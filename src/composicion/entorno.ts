@@ -81,6 +81,15 @@ export const VARIABLES_PROHIBIDAS: readonly string[] = [
   "BETTER_AUTH_TELEMETRY",
   "BETTER_AUTH_SECRET",
   "BETTER_AUTH_URL",
+  // Las que la librería de ingreso 1.7.7 lee sola (verificado en su código) y pisarían lo que la
+  // composición le pasa: otros secretos que mandan sobre el nuestro, orígenes confiables de más, el destino y
+  // el identificador de la telemetría. Mismo motivo que las de arriba: ambigüedad de qué rige.
+  "BETTER_AUTH_SECRETS",
+  "BETTER_AUTH_TRUSTED_ORIGINS",
+  "BETTER_AUTH_TELEMETRY_ENDPOINT",
+  "BETTER_AUTH_TELEMETRY_ID",
+  "AUTH_SECRET",
+  "AUTH_URL",
   "DATABASE_URL",
   "DATABASE_URL_UNPOOLED",
 ];

@@ -144,7 +144,10 @@ export async function levantarProveedorLocal(): Promise<ProveedorLocal> {
   const url = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`;
 
   const fetchOriginal = globalThis.fetch;
-  globalThis.fetch = (async (entrada: Parameters<typeof fetch>[0], init?: RequestInit) => {
+  globalThis.fetch = (
+    entrada: Parameters<typeof fetch>[0],
+    init?: RequestInit,
+  ): Promise<Response> => {
     const destino = new URL(
       typeof entrada === "string" || entrada instanceof URL ? entrada : entrada.url,
     );
@@ -154,8 +157,8 @@ export async function levantarProveedorLocal(): Promise<ProveedorLocal> {
     if (destino.hostname === "127.0.0.1" && destino.origin === url)
       return fetchOriginal(entrada, init);
     externos.push(destino.origin);
-    throw new Error(`red externa bloqueada en las pruebas: ${destino.origin}`);
-  }) as typeof fetch;
+    return Promise.reject(new Error(`red externa bloqueada en las pruebas: ${destino.origin}`));
+  };
 
   return {
     url,

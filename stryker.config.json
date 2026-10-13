@@ -37,6 +37,9 @@
     "src/composicion/perezoso.ts",
     "src/composicion/contextos.ts",
     "src/plataforma/captacion/dominio/**/*.ts",
+    "src/capacidades/autenticacion/**/*.ts",
+    "src/adaptadores/autenticacion/configuracion.ts",
+    "src/composicion/ruta-de-ingreso.ts",
     "!src/**/*.test.ts"
   ],
   "coverageAnalysis": "off",

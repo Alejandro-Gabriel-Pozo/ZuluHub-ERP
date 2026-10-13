@@ -45,17 +45,6 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
       (await dueno.query<{ n: string }>(`select count(*) as n from autenticacion."${tabla}"`))
         .rows[0]?.n,
     );
-  const sesiones = async () =>
-    (
-      await dueno.query<{
-        id: string;
-        host: string;
-        userId: string;
-        createdAt: Date;
-        updatedAt: Date;
-        expiresAt: Date;
-      }>(`select * from autenticacion.session order by "createdAt"`)
-    ).rows;
 
   /** Un navegador ya ingresado en `host`. */
   async function ingresado(host = HOST_A, perfil: PerfilDePrueba = perfilAlAzar()) {
@@ -79,7 +68,6 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
     }>(`select * from autenticacion.session where token = $1`, [token]);
     return rows[0];
   }
-  const sql = (texto: string, parametros: unknown[] = []) => dueno.query(texto, parametros);
 
   beforeAll(async () => {
     if (base === null) return;
@@ -104,13 +92,20 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
       const perfil = perfilAlAzar();
       const { n } = await ingresado(HOST_A, perfil);
 
-      const { rows: usuarios } = await dueno.query(
-        `select id, email, "emailVerified" from autenticacion."user" where email = $1`,
-        [perfil.email],
-      );
+      const { rows: usuarios } = await dueno.query<{
+        id: string;
+        email: string;
+        emailVerified: boolean;
+      }>(`select id, email, "emailVerified" from autenticacion."user" where email = $1`, [
+        perfil.email,
+      ]);
       expect(usuarios).toHaveLength(1);
       expect(usuarios[0]).toMatchObject({ email: perfil.email, emailVerified: true });
-      const { rows: cuentas } = await dueno.query(
+      const { rows: cuentas } = await dueno.query<{
+        providerId: string;
+        accountId: string;
+        userId: string;
+      }>(
         `select "providerId", "accountId", "userId" from autenticacion.account where "accountId" = $1`,
         [perfil.sub],
       );
@@ -422,7 +417,7 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
   });
 
   describe("rutas: lista cerrada", () => {
-    it("las rutas permitidas más las bloqueadas son exactamente las que declara la librería (si sube una nueva, falla)", async () => {
+    it("las rutas permitidas más las bloqueadas son exactamente las que declara la librería (si sube una nueva, falla)", () => {
       const c = configuracionDeHost(HOST_A);
       if (!c.ok) throw new Error("host inválido");
       const auth = betterAuth(

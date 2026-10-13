@@ -40,9 +40,9 @@ export function configuracionDeHost(host: string): Resultado<ConfiguracionDeHost
   const puerto = partes[2];
   // Una IP (cuatro grupos de dígitos) no es un nombre: el último tramo de un dominio nunca es solo numérico.
   if (/^\d+$/.test(nombre.slice(nombre.lastIndexOf(".") + 1))) return err("HOST_INVALIDO");
-  if (puerto !== undefined && (Number(puerto) < 1 || Number(puerto) > PUERTO_MAXIMO)) {
-    return err("HOST_INVALIDO");
-  }
+  // Sin puerto vale 1 (dentro del rango); un puerto que no es número da NaN y tampoco entra.
+  const numero = Number(puerto ?? "1");
+  if (!(numero >= 1 && numero <= PUERTO_MAXIMO)) return err("HOST_INVALIDO");
   const baseURL = `https://${host}`;
   return ok({ host, baseURL, origenesConfiables: [baseURL] });
 }
