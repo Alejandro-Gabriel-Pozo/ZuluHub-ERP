@@ -31,6 +31,7 @@
     "src/modulos/marcas/dominio/**/*.ts",
     "src/capacidades/experiencia/**/*.ts",
     "src/capacidades/activos/**/*.ts",
+    "src/capacidades/controles/**/*.ts",
     "src/composicion/entorno.ts",
     "src/composicion/perezoso.ts",
     "src/composicion/contextos.ts",

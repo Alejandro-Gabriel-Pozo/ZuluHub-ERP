@@ -157,5 +157,10 @@
     "grupo": "activos (red)",
     "archivos": "src/capacidades/activos/red.ts",
     "pruebas": "src/capacidades/activos/red.propiedades.test.ts src/capacidades/activos/red.test.ts"
+  },
+  {
+    "grupo": "controles (nivel, decisión y catálogo)",
+    "archivos": "src/capacidades/controles/**/*.ts",
+    "pruebas": "src/capacidades/controles"
   }
 ]
