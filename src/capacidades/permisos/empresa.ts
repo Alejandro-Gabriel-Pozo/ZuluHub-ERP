@@ -44,6 +44,8 @@ export const PERMISOS_DE_EMPRESA = {
   "permisos.ver_propios": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   // H7 (especificación §C): quien cobra puede emitir el comprobante en el mismo acto, los tres roles.
   "comprobantes.emitir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  // H7 facturación §B.4.9 (F6): las consultas del facturador; mirar lo emitido lo pueden los tres roles.
+  "comprobantes.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   // Catálogo, carta y stock (catalogo-y-stock §C, T0; propuesta A de F6, F7 e I.4, pendientes de
   // veto del dueño). El operador mira, marca «agotado», mueve stock y cuenta en sus sucursales (el
   // alcance lo verifica el caso de uso con `exigirSucursal`); definir el catálogo, los precios, las

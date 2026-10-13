@@ -64,6 +64,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "modulos.ver"
       | "permisos.ver_propios"
       | "comprobantes.emitir"
+      | "comprobantes.ver"
       | "productos.ver"
       | "productos.crear"
       | "productos.editar"

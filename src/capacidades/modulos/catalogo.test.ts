@@ -46,6 +46,7 @@ describe("el catálogo comercial de módulos", () => {
         implementadoPor: ["modulos/fiscal"],
         acciones: {
           "comprobantes.emitir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "comprobantes.ver": { capacidad: null, efecto: "LECTURA" },
         },
       },
       catalogo: {
@@ -141,7 +142,7 @@ describe("el catálogo comercial de módulos", () => {
       Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
     expect([cuantas("catalogo"), cuantas("carta"), cuantas("stock")]).toEqual([20, 9, 19]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
-    expect(todas).toHaveLength(18 + 1 + 48);
+    expect(todas).toHaveLength(18 + 2 + 48);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -203,6 +204,7 @@ function accionesPorEfecto(
 const EFECTOS_DE_EMPRESA = {
   LECTURA: [
     "cartas.ver",
+    "comprobantes.ver",
     "gerencia.ver_traspaso",
     "modulos.ver",
     "permisos.ver_propios",

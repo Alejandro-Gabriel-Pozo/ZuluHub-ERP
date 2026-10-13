@@ -177,5 +177,10 @@
     "grupo": "fiscal (modelo de impresión)",
     "archivos": "src/modulos/fiscal/dominio/modelo-de-impresion.ts",
     "pruebas": "src/modulos/fiscal/dominio/modelo-de-impresion.test.ts"
+  },
+  {
+    "grupo": "fiscal (criterios del listado)",
+    "archivos": "src/modulos/fiscal/consultas/criterios-de-listado.ts",
+    "pruebas": "src/modulos/fiscal/consultas/criterios-de-listado.test.ts"
   }
 ]

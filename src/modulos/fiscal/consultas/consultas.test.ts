@@ -1,0 +1,675 @@
+import { describe, expect, it } from "vitest";
+import {
+  consumidorFinal,
+  facturaArmada,
+  fecha,
+  renglon,
+} from "../../../../test/utilidades/facturacion";
+import { CUIT_B, EMPRESA, OTRA_EMPRESA } from "../../../../test/utilidades/fiscal";
+import { MARCA_PRINCIPAL_DE_PRUEBA } from "../../../../test/utilidades/marcas";
+import { CATALOGO_DE_MODULOS } from "../../../capacidades/modulos/catalogo";
+import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
+import type { ContextoOperativo } from "../../../contexto/contexto";
+import { importeDesdeTexto } from "../../../primitivas/dinero/importe";
+import { ARS } from "../../../primitivas/dinero/moneda";
+import { personaId, type EmpresaId } from "../../../primitivas/identificadores/marca";
+import type { Transacciones } from "../../../puertos/transacciones";
+import { modeloDeImpresion, type MarcaParaImprimir } from "../dominio/modelo-de-impresion";
+import type {
+  FiltroDeListado,
+  NotaQueCita,
+  PaginaDeFilas,
+} from "../persistencia/lecturas-de-comprobantes";
+import type { ComprobanteGuardado } from "../persistencia/repositorio-de-comprobantes";
+import type { IntentoDeArca } from "../persistencia/repositorio-de-intentos";
+import type { SerieGuardada } from "../persistencia/repositorios";
+import { comprobanteId, intentoId, versionId } from "../publico";
+import { crearConsultasDeFacturacion } from "./consultas";
+import type { TxDeConsultasDeFacturacion } from "./contrato";
+import { claveDePagina } from "./criterios-de-listado";
+import { paraImprimir } from "./modelo-de-impresion";
+
+/**
+ * Las consultas del facturador contra repositorios en memoria: qué piden (siempre con la empresa del contexto),
+ * qué devuelven y qué no. El guard está en `guard-primero.test.ts`; la base real, en
+ * `test/integracion/facturacion-consultas.test.ts`.
+ */
+
+const contexto = (empresaId: EmpresaId = EMPRESA): ContextoOperativo => ({
+  tipo: "OPERATIVO",
+  empresaId,
+  personaId: personaId("p-1"),
+  marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
+  ahora: new Date(0),
+});
+
+const REGLAS: ReglasDeEmpresa = {
+  catalogo: {
+    ...CATALOGO_DE_MODULOS,
+    facturacion: { ...CATALOGO_DE_MODULOS.facturacion, estado: "disponible" },
+  },
+  permisos: PERMISOS_DE_EMPRESA,
+};
+
+const ID = comprobanteId("0192f3a4-5b6c-7d8e-9f01-23456789abcd");
+const MARCA: MarcaParaImprimir = {
+  nombreDeFantasia: "La Panadería de Zulu",
+  logoUrl: "/marcas/zulu/logo.png",
+  colorPrincipal: "#8b4513",
+};
+
+/** Un comprobante `AUTORIZADO` completo, como lo lee el repositorio de comprobantes. */
+function guardado(cambios: Partial<ComprobanteGuardado> = {}): ComprobanteGuardado {
+  const c = facturaArmada(consumidorFinal, [
+    renglon("1210.00", "1", "21", null, "Torta"),
+    renglon("1050.00", "1", "10.5", null, "Medialunas"),
+  ]);
+  return {
+    id: ID,
+    empresaId: EMPRESA,
+    emisorId: c.emisorId,
+    puntoDeVentaId: c.puntoDeVentaId,
+    ambiente: "HOMOLOGACION",
+    origen: c.origen,
+    clase: "FACTURA",
+    tipo: "FACTURA_B",
+    concepto: "PRODUCTOS",
+    servicio: null,
+    modoDePrecio: "IVA_INCLUIDO",
+    importes: {
+      total: c.total,
+      neto: c.neto,
+      iva: c.iva,
+      exento: importeDesdeTexto(ARS, "0.00"),
+      noGravado: importeDesdeTexto(ARS, "0.00"),
+    },
+    emisor: {
+      cuit: CUIT_B,
+      razonSocial: "Panadería Zulu SRL",
+      condicionIva: "RESPONSABLE_INSCRIPTO",
+      domicilioFiscal: "Av. Corrientes 1234, CABA",
+      inicioDeActividades: fecha("2019-03-01"),
+      iibbNumero: "901-123456-7",
+      iibbCondicion: "LOCAL",
+      puntoDeVentaNumero: 3,
+      domicilioDelPuntoDeVenta: "Calle Falsa 123, CABA",
+      datosFiscalesId: versionId("v-1"),
+    },
+    receptor: consumidorFinal,
+    asociado: null,
+    motivo: null,
+    renglones: c.renglones.map((r, i) => ({ ...r, posicion: i + 1 })),
+    desglose: c.desglose,
+    estado: "AUTORIZADO",
+    envios: 1,
+    numeroReservado: 11n,
+    fechaEmision: fecha("2026-10-13"),
+    numero: 11n,
+    cae: "70417054367476",
+    caeVence: fecha("2026-10-23"),
+    autorizadoEn: new Date("2026-10-13T15:00:00.000Z"),
+    resueltoPor: "RESPUESTA",
+    motivoDeDescarte: null,
+    huella: "huella-interna",
+    versionDeRepresentacion: 1,
+    creadoPor: personaId("p-1"),
+    creadoEn: new Date("2026-10-13T14:59:00.000Z"),
+    version: 4,
+    ...cambios,
+  };
+}
+
+const intento = (cambios: Partial<IntentoDeArca>): IntentoDeArca => ({
+  id: intentoId("i-1"),
+  empresaId: EMPRESA,
+  comprobanteId: ID,
+  operacion: "AUTORIZAR",
+  numero: 11n,
+  desenlace: "AUTORIZADO",
+  mensajes: [{ clase: "OBSERVACION", codigo: 10237, texto: "Observación" }],
+  respuesta: "<respuesta-cruda/>",
+  huellaDelPedido: "huella-del-pedido",
+  iniciadoEn: new Date("2026-10-13T15:00:00.000Z"),
+  duracionEnMs: 300,
+  ...cambios,
+});
+
+const nota = (cambios: Partial<NotaQueCita> = {}): NotaQueCita => ({
+  id: comprobanteId("n-1"),
+  tipo: "NOTA_CREDITO_B",
+  puntoDeVentaNumero: 3,
+  numero: 12n,
+  fecha: fecha("2026-10-14"),
+  total: importeDesdeTexto(ARS, "121.00"),
+  estado: "AUTORIZADO",
+  ...cambios,
+});
+
+const serie = (cambios: Record<string, unknown> = {}): SerieGuardada => ({
+  empresaId: EMPRESA,
+  puntoDeVentaId: guardado().puntoDeVentaId,
+  emisorId: guardado().emisorId,
+  tipo: "FACTURA_B",
+  estado: "LIBRE",
+  ultimoNumero: 11n,
+  version: 7,
+  ambiente: "HOMOLOGACION",
+  ...cambios,
+});
+
+type Llamadas = {
+  comprobante: unknown[][];
+  notas: unknown[][];
+  intentos: unknown[][];
+  series: unknown[][];
+};
+
+type Datos = Readonly<{
+  comprobante?: ComprobanteGuardado | null;
+  notas?: readonly NotaQueCita[];
+  intentos?: readonly IntentoDeArca[];
+  serie?: SerieGuardada | null;
+  pagina?: PaginaDeFilas;
+}>;
+
+/** Las consultas sobre una transacción en memoria; devuelve además todo lo que se pidió. */
+function armar(datos: Datos = {}) {
+  const filtros: { empresa: EmpresaId; filtro: FiltroDeListado }[] = [];
+  const llamadas: Llamadas = { comprobante: [], notas: [], intentos: [], series: [] };
+  const marcasPedidas: EmpresaId[] = [];
+  const tx: TxDeConsultasDeFacturacion = {
+    comprobantes: {
+      obtener: (...args) => {
+        llamadas.comprobante.push(args);
+        return Promise.resolve(datos.comprobante === undefined ? guardado() : datos.comprobante);
+      },
+    },
+    lecturas: {
+      listar: (empresa, filtro) => {
+        filtros.push({ empresa, filtro });
+        return Promise.resolve(datos.pagina ?? { filas: [], hayMas: false });
+      },
+      notasQueCitan: (...args) => {
+        llamadas.notas.push(args);
+        return Promise.resolve(datos.notas ?? []);
+      },
+    },
+    intentos: {
+      delComprobante: (...args) => {
+        llamadas.intentos.push(args);
+        return Promise.resolve([...(datos.intentos ?? [])]);
+      },
+    },
+    series: {
+      obtener: (...args) => {
+        llamadas.series.push(args);
+        return Promise.resolve(datos.serie === undefined ? serie() : datos.serie);
+      },
+    },
+    marca: {
+      deLaEmpresa: (empresa) => {
+        marcasPedidas.push(empresa);
+        return Promise.resolve(MARCA);
+      },
+    },
+    autorizacion: {
+      delActor: () =>
+        Promise.resolve({
+          rol: "OPERADOR",
+          modulosActivados: ["facturacion"],
+          modulosHabilitados: ["facturacion"],
+        }),
+      sucursalesDelActor: () => Promise.resolve("TODAS"),
+    },
+  };
+  const transacciones: Transacciones<TxDeConsultasDeFacturacion> = {
+    ejecutar: (opciones, trabajo) => {
+      expect(opciones.aislamiento).toBe("read committed");
+      expect(opciones.soloLectura).toBe(true);
+      return trabajo(tx);
+    },
+  };
+  return {
+    consultas: crearConsultasDeFacturacion({ transacciones, reglas: REGLAS }),
+    filtros,
+    llamadas,
+    marcasPedidas,
+  };
+}
+
+function exito<T, E>(r: { ok: true; valor: T } | { ok: false; error: E }): T {
+  if (!r.ok) throw new Error(`tenía que ser un éxito: ${JSON.stringify(r.error)}`);
+  return r.valor;
+}
+
+describe("listarComprobantes", () => {
+  const fila = (n: number) => ({
+    id: comprobanteId(`0192f3a4-5b6c-7d8e-9f01-2345678900${String(n).padStart(2, "0")}`),
+    tipo: "FACTURA_B" as const,
+    puntoDeVentaNumero: 3,
+    numero: n % 2 === 0 ? BigInt(n) : null,
+    fecha: fecha("2026-10-13"),
+    receptorNombre: n === 1 ? null : `Cliente ${n}`,
+    total: importeDesdeTexto(ARS, `${n}00.50`),
+    estado: n % 2 === 0 ? ("AUTORIZADO" as const) : ("PENDIENTE" as const),
+    ambiente: "PRODUCCION" as const,
+    creadoEn: `2026-10-13T12:00:0${n}.123456Z`,
+  });
+
+  it("pide la página de la empresa del contexto con los criterios del pedido", async () => {
+    const { consultas, filtros } = armar();
+    exito(
+      await consultas.listarComprobantes(contexto(OTRA_EMPRESA), {
+        estado: "AUTORIZADO",
+        limite: 7,
+        texto: "Ana",
+      }),
+    );
+    expect(filtros).toHaveLength(1);
+    expect(filtros[0]?.empresa).toBe(OTRA_EMPRESA);
+    expect(filtros[0]?.filtro).toMatchObject({
+      estado: "AUTORIZADO",
+      limite: 7,
+      texto: { nombre: "Ana", documento: null },
+    });
+  });
+
+  it("devuelve cada fila con su número impreso, el total como texto y solo lo del spec", async () => {
+    const { consultas } = armar({ pagina: { filas: [fila(1), fila(2)], hayMas: false } });
+    const pagina = exito(await consultas.listarComprobantes(contexto(), {}));
+    expect(pagina.items).toEqual([
+      {
+        id: fila(1).id,
+        tipo: "FACTURA_B",
+        numero: null,
+        fecha: "2026-10-13",
+        receptorNombre: null,
+        total: "100.50",
+        estado: "PENDIENTE",
+        ambiente: "PRODUCCION",
+      },
+      {
+        id: fila(2).id,
+        tipo: "FACTURA_B",
+        numero: "00003-00000002",
+        fecha: "2026-10-13",
+        receptorNombre: "Cliente 2",
+        total: "200.50",
+        estado: "AUTORIZADO",
+        ambiente: "PRODUCCION",
+      },
+    ]);
+    expect(pagina.siguiente).toBeNull();
+  });
+
+  it("`siguiente` es la clave de la última fila de la página, y solo si queda algo después", async () => {
+    const filas = [fila(1), fila(2), fila(3)];
+    const con = armar({ pagina: { filas, hayMas: true } });
+    const pagina = exito(await con.consultas.listarComprobantes(contexto(), {}));
+    expect(pagina.siguiente).toBe(claveDePagina({ creadoEn: fila(3).creadoEn, id: fila(3).id }));
+    const sin = armar({ pagina: { filas, hayMas: false } });
+    expect(exito(await sin.consultas.listarComprobantes(contexto(), {})).siguiente).toBeNull();
+    const vacia = armar({ pagina: { filas: [], hayMas: true } });
+    expect(exito(await vacia.consultas.listarComprobantes(contexto(), {})).siguiente).toBeNull();
+  });
+
+  it("un pedido inválido no llega a la base", async () => {
+    const { consultas, filtros } = armar();
+    expect(await consultas.listarComprobantes(contexto(), { limite: 51 })).toEqual({
+      ok: false,
+      error: "LIMITE_INVALIDO",
+    });
+    expect(filtros).toEqual([]);
+  });
+});
+
+describe("verComprobante", () => {
+  it("pide todo con la empresa del contexto, y la serie de su punto de venta, tipo y ambiente", async () => {
+    const c = guardado({ ambiente: "PRODUCCION" });
+    const { consultas, llamadas } = armar({ comprobante: c });
+    exito(await consultas.verComprobante(contexto(OTRA_EMPRESA), { comprobanteId: ID }));
+    expect(llamadas.comprobante).toEqual([[OTRA_EMPRESA, ID]]);
+    expect(llamadas.notas).toEqual([[OTRA_EMPRESA, ID]]);
+    expect(llamadas.intentos).toEqual([[OTRA_EMPRESA, ID]]);
+    expect(llamadas.series).toEqual([[OTRA_EMPRESA, c.puntoDeVentaId, "FACTURA_B", "PRODUCCION"]]);
+  });
+
+  it("un comprobante que no está (o es de otra empresa) es COMPROBANTE_NO_ENCONTRADO", async () => {
+    const { consultas, llamadas } = armar({ comprobante: null });
+    expect(await consultas.verComprobante(contexto(), { comprobanteId: ID })).toEqual({
+      ok: false,
+      error: "COMPROBANTE_NO_ENCONTRADO",
+    });
+    expect(llamadas.notas).toEqual([]);
+    expect(llamadas.intentos).toEqual([]);
+    expect(llamadas.series).toEqual([]);
+  });
+
+  it("el detalle de un autorizado: número, CAE, importes, renglones y alícuotas como texto", async () => {
+    const { consultas } = armar({
+      notas: [nota()],
+      intentos: [intento({ id: intentoId("i-1") })],
+    });
+    const d = exito(await consultas.verComprobante(contexto(), { comprobanteId: ID }));
+    expect(d).toMatchObject({
+      id: ID,
+      ambiente: "HOMOLOGACION",
+      clase: "FACTURA",
+      tipo: "FACTURA_B",
+      concepto: "PRODUCTOS",
+      servicio: null,
+      modoDePrecio: "IVA_INCLUIDO",
+      estado: "AUTORIZADO",
+      envios: 1,
+      numero: "00003-00000011",
+      fechaEmision: "2026-10-13",
+      cae: "70417054367476",
+      caeVence: "2026-10-23",
+      autorizadoEn: "2026-10-13T15:00:00.000Z",
+      resueltoPor: "RESPUESTA",
+      importes: {
+        total: "2260.00",
+        neto: "1950.23",
+        iva: "309.77",
+        exento: "0.00",
+        noGravado: "0.00",
+      },
+      asociado: null,
+      motivo: null,
+      motivoDeDescarte: null,
+      versionDeRepresentacion: 1,
+      creadoEn: "2026-10-13T14:59:00.000Z",
+      version: 4,
+    });
+    expect(d.renglones).toEqual([
+      {
+        posicion: 1,
+        descripcion: "Torta",
+        cantidad: "1.0000",
+        precioUnitario: "1210.000000",
+        descuento: null,
+        alicuota: "21",
+        importe: "1210.00",
+      },
+      {
+        posicion: 2,
+        descripcion: "Medialunas",
+        cantidad: "1.0000",
+        precioUnitario: "1050.000000",
+        descuento: null,
+        alicuota: "10.5",
+        importe: "1050.00",
+      },
+    ]);
+    expect(d.alicuotas).toEqual(
+      guardado().desglose.map((a) => ({
+        alicuota: a.alicuota,
+        total: expect.stringMatching(/^\d+\.\d{2}$/) as unknown,
+        neto: expect.stringMatching(/^\d+\.\d{2}$/) as unknown,
+        iva: expect.stringMatching(/^\d+\.\d{2}$/) as unknown,
+      })),
+    );
+    expect(d.emisor).toEqual({
+      cuit: "30708533935",
+      razonSocial: "Panadería Zulu SRL",
+      condicionIva: "RESPONSABLE_INSCRIPTO",
+      domicilioFiscal: "Av. Corrientes 1234, CABA",
+      inicioDeActividades: "2019-03-01",
+      iibbNumero: "901-123456-7",
+      iibbCondicion: "LOCAL",
+      puntoDeVentaNumero: 3,
+      domicilioDelPuntoDeVenta: "Calle Falsa 123, CABA",
+    });
+    expect(d.receptor).toEqual(consumidorFinal);
+  });
+
+  it("un comprobante sin autorizar no tiene número, fecha, CAE ni autorización", async () => {
+    const pendiente = guardado({
+      estado: "PENDIENTE",
+      numeroReservado: null,
+      fechaEmision: null,
+      numero: null,
+      cae: null,
+      caeVence: null,
+      autorizadoEn: null,
+      resueltoPor: null,
+    });
+    const d = exito(
+      await armar({ comprobante: pendiente }).consultas.verComprobante(contexto(), {
+        comprobanteId: ID,
+      }),
+    );
+    expect(d).toMatchObject({
+      estado: "PENDIENTE",
+      numero: null,
+      fechaEmision: null,
+      cae: null,
+      caeVence: null,
+      autorizadoEn: null,
+      resueltoPor: null,
+    });
+  });
+
+  it("una nota trae el comprobante que corrige, con su número impreso", async () => {
+    const asociado = {
+      id: comprobanteId("a-1"),
+      tipo: "FACTURA_A" as const,
+      puntoDeVenta: 7,
+      numero: 94n,
+      cuit: CUIT_B,
+      fecha: fecha("2026-10-01"),
+    };
+    const d = exito(
+      await armar({
+        comprobante: guardado({
+          clase: "NOTA_CREDITO",
+          tipo: "NOTA_CREDITO_A",
+          asociado,
+          motivo: "Devolución",
+        }),
+      }).consultas.verComprobante(contexto(), { comprobanteId: ID }),
+    );
+    expect(d.asociado).toEqual({
+      id: comprobanteId("a-1"),
+      tipo: "FACTURA_A",
+      numero: "00007-00000094",
+      fecha: "2026-10-01",
+    });
+    expect(d.motivo).toBe("Devolución");
+  });
+
+  it("las notas que lo citan, con su número y su total", async () => {
+    const d = exito(
+      await armar({
+        notas: [nota(), nota({ id: comprobanteId("n-2"), numero: null, estado: "PENDIENTE" })],
+      }).consultas.verComprobante(contexto(), { comprobanteId: ID }),
+    );
+    expect(d.notasQueLoCitan).toEqual([
+      {
+        id: "n-1",
+        tipo: "NOTA_CREDITO_B",
+        numero: "00003-00000012",
+        fecha: "2026-10-14",
+        total: "121.00",
+        estado: "AUTORIZADO",
+      },
+      {
+        id: "n-2",
+        tipo: "NOTA_CREDITO_B",
+        numero: null,
+        fecha: "2026-10-14",
+        total: "121.00",
+        estado: "PENDIENTE",
+      },
+    ]);
+  });
+
+  it("el último intento, solo con sus códigos; sin intentos, null", async () => {
+    const primero = intento({
+      id: intentoId("i-1"),
+      desenlace: "INCIERTO",
+      mensajes: [],
+      iniciadoEn: new Date("2026-10-13T14:00:00.000Z"),
+    });
+    const ultimo = intento({ id: intentoId("i-2") });
+    const d = exito(
+      await armar({ intentos: [primero, ultimo] }).consultas.verComprobante(contexto(), {
+        comprobanteId: ID,
+      }),
+    );
+    expect(d.ultimoIntento).toEqual({
+      operacion: "AUTORIZAR",
+      desenlace: "AUTORIZADO",
+      mensajes: [{ clase: "OBSERVACION", codigo: 10237, texto: "Observación" }],
+      iniciadoEn: "2026-10-13T15:00:00.000Z",
+    });
+    const sin = exito(
+      await armar({ intentos: [] }).consultas.verComprobante(contexto(), { comprobanteId: ID }),
+    );
+    expect(sin.ultimoIntento).toBeNull();
+  });
+
+  it("el estado de su serie: libre, bloqueada con su motivo, o sin serie todavía", async () => {
+    const ver = async (s: SerieGuardada | null) =>
+      exito(await armar({ serie: s }).consultas.verComprobante(contexto(), { comprobanteId: ID }))
+        .serie;
+    expect(await ver(serie())).toEqual({
+      estado: "LIBRE",
+      ultimoNumero: "11",
+      motivoDeBloqueo: null,
+    });
+    expect(
+      await ver(
+        serie({ estado: "BLOQUEADA", ultimoNumero: 5n, motivoBloqueo: "Desfase con ARCA" }),
+      ),
+    ).toEqual({ estado: "BLOQUEADA", ultimoNumero: "5", motivoDeBloqueo: "Desfase con ARCA" });
+    expect(await ver(null)).toBeNull();
+  });
+
+  it("nunca trae certificados, claves, tickets, credenciales, la huella ni la respuesta cruda de ARCA", async () => {
+    const d = exito(
+      await armar({ notas: [nota()], intentos: [intento({})] }).consultas.verComprobante(
+        contexto(),
+        { comprobanteId: ID },
+      ),
+    );
+    const claves: string[] = [];
+    const recorrer = (valor: unknown): void => {
+      if (Array.isArray(valor)) valor.forEach(recorrer);
+      else if (typeof valor === "object" && valor !== null) {
+        for (const [k, v] of Object.entries(valor)) {
+          claves.push(k);
+          recorrer(v);
+        }
+      }
+    };
+    recorrer(d);
+    expect(
+      claves.filter((k) =>
+        /certificad|clave|ticket|credencial|token|sign|pem|huella|respuesta|cifrad/i.test(k),
+      ),
+    ).toEqual([]);
+    expect(JSON.stringify(d)).not.toMatch(/huella-interna|huella-del-pedido|respuesta-cruda/);
+    expect(d).not.toHaveProperty("datosFiscalesId");
+    expect(d.emisor).not.toHaveProperty("datosFiscalesId");
+  });
+});
+
+describe("modeloDeImpresion (la consulta)", () => {
+  it("un comprobante que no está es COMPROBANTE_NO_ENCONTRADO y no lee la marca", async () => {
+    const { consultas, marcasPedidas } = armar({ comprobante: null });
+    expect(await consultas.modeloDeImpresion(contexto(), { comprobanteId: ID })).toEqual({
+      ok: false,
+      error: "COMPROBANTE_NO_ENCONTRADO",
+    });
+    expect(marcasPedidas).toEqual([]);
+  });
+
+  it("solo se imprime un AUTORIZADO: cualquier otro estado es COMPROBANTE_NO_AUTORIZADO", async () => {
+    for (const estado of [
+      "PENDIENTE",
+      "EN_VALIDACION",
+      "RECHAZADO",
+      "INCIERTO",
+      "CONFLICTO",
+      "DESCARTADO",
+    ] as const) {
+      const { consultas, marcasPedidas } = armar({ comprobante: guardado({ estado }) });
+      expect(await consultas.modeloDeImpresion(contexto(), { comprobanteId: ID }), estado).toEqual({
+        ok: false,
+        error: "COMPROBANTE_NO_AUTORIZADO",
+      });
+      expect(marcasPedidas).toEqual([]);
+    }
+  });
+
+  it("pide la comprobante y la marca de la empresa del contexto", async () => {
+    const { consultas, llamadas, marcasPedidas } = armar();
+    exito(await consultas.modeloDeImpresion(contexto(OTRA_EMPRESA), { comprobanteId: ID }));
+    expect(llamadas.comprobante).toEqual([[OTRA_EMPRESA, ID]]);
+    expect(marcasPedidas).toEqual([OTRA_EMPRESA]);
+  });
+
+  it("arma el modelo con lo guardado: sin recalcular y con los domicilios congelados", async () => {
+    const m = exito(await armar().consultas.modeloDeImpresion(contexto(), { comprobanteId: ID }));
+    expect(m).toEqual(exito(modeloDeImpresion(paraImprimir(guardado()), MARCA)));
+    expect(m.marca).toEqual(MARCA);
+    expect(m.fiscal).toMatchObject({
+      rotulo: "FACTURA",
+      letra: "B",
+      codigoDelTipo: "006",
+      numero: "00003-00000011",
+      fecha: "2026-10-13",
+      cae: "70417054367476",
+      caeVence: "2026-10-23",
+    });
+    expect(m.fiscal.emisor.domicilioFiscal).toBe("Av. Corrientes 1234, CABA");
+    expect(m.totales).toMatchObject({ letra: "B", total: "2260.00" });
+  });
+
+  it("el mismo comprobante y la misma marca dan el mismo modelo, una y otra vez", async () => {
+    const consultas = armar().consultas;
+    const a = exito(await consultas.modeloDeImpresion(contexto(), { comprobanteId: ID }));
+    const b = exito(await consultas.modeloDeImpresion(contexto(), { comprobanteId: ID }));
+    expect(JSON.stringify(b)).toBe(JSON.stringify(a));
+  });
+
+  it("una versión de representación que no se sabe dibujar sale como error del modelo", async () => {
+    const { consultas } = armar({ comprobante: guardado({ versionDeRepresentacion: 2 }) });
+    expect(await consultas.modeloDeImpresion(contexto(), { comprobanteId: ID })).toEqual({
+      ok: false,
+      error: "VERSION_DE_REPRESENTACION_DESCONOCIDA",
+    });
+  });
+
+  it("un CAE que no es de 14 dígitos sale como CAE_INVALIDO", async () => {
+    const { consultas } = armar({ comprobante: guardado({ cae: "123" }) });
+    expect(await consultas.modeloDeImpresion(contexto(), { comprobanteId: ID })).toEqual({
+      ok: false,
+      error: "CAE_INVALIDO",
+    });
+  });
+});
+
+describe("paraImprimir", () => {
+  it("un AUTORIZADO al que le falta número, fecha, CAE o vencimiento es una base rota: lanza", () => {
+    for (const cambios of [
+      { numero: null },
+      { fechaEmision: null },
+      { cae: null },
+      { caeVence: null },
+    ] satisfies Partial<ComprobanteGuardado>[]) {
+      expect(() => paraImprimir(guardado(cambios)), JSON.stringify(cambios)).toThrow(RangeError);
+    }
+  });
+
+  it("toma el total de los importes guardados y el resto tal cual", () => {
+    const c = guardado();
+    const p = paraImprimir(c);
+    expect(p.total).toBe(c.importes.total);
+    expect(p.numero).toBe(11n);
+    expect(p.emisor).toBe(c.emisor);
+    expect(p.desglose).toBe(c.desglose);
+    expect(p.renglones).toBe(c.renglones);
+  });
+});

@@ -237,7 +237,13 @@ const reglas = [
     comment:
       "Una consulta por pantalla no importa el dominio de su módulo (ADR-005): lee y devuelve objetos planos; las reglas de negocio viven en los casos de uso.",
     from: { path: "^src/modulos/[^/]+/consultas/" },
-    to: { path: "^src/modulos/[^/]+/dominio/" },
+    to: {
+      path: "^src/modulos/[^/]+/dominio/",
+      // Única excepción: el modelo de impresión del facturador (H7 facturación §B.7), un valor puro sin reglas
+      // de emisión que la consulta de impresión solo arma con lo guardado. Previene: abrir la puerta a todo el
+      // dominio de fiscal desde las consultas. Chequeo: las violaciones inyectadas de reglas.test.ts.
+      pathNot: "^src/modulos/fiscal/dominio/modelo-de-impresion\\.ts$",
+    },
   },
   {
     name: "empresas-no-conoce-identidad",
