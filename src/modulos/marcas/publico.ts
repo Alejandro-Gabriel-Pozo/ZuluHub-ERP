@@ -64,3 +64,39 @@ export {
   type PedidoDeConfirmacion,
   type PlanPorDefecto,
 } from "./dominio/version";
+
+// M4a: gestión de dominios (alta y ciclo de vida) y su persistencia.
+export {
+  ESTADOS_DE_DOMINIO,
+  LARGO_MAXIMO_DEL_MOTIVO_DE_RETIRO,
+  SUPERFICIES_DE_DOMINIO,
+  TITULARES_DE_DOMINIO,
+  decidirAltaDeDominio,
+  decidirCambioDeDominio,
+  validarPedidoDeCambioDeDominio,
+  type CambioDeEstadoDeDominio,
+  type DecisionDeCambioDeDominio,
+  type DominioActual,
+  type DominioPorAgregar,
+  type DuenioDeDominio,
+  type ErrorDeAltaDeDominio,
+  type ErrorDeCambioDeDominio,
+  type EstadoDeDominio,
+  type PedidoDeAltaDeDominio,
+  type PedidoDeCambioDeDominio,
+  type SuperficieDeDominio,
+  type TitularDeDominio,
+} from "./dominio/ciclo-de-dominio";
+export {
+  COLUMNAS_DE_DOMINIO,
+  ERRORES_DE_DOMINIO_POR_RESTRICCION,
+  RESTRICCIONES_DE_DISPARADORES_DE_DOMINIO,
+  type ErrorDeDominioPorRestriccion,
+} from "./persistencia/esquema";
+export {
+  crearRepositorioDeDominios,
+  type DominioGuardado,
+  type RepositorioDeDominios,
+} from "./persistencia/repositorios";
+export type { DominiosDb } from "./persistencia/tablas";
+export { errorDeDominioDeRestriccion, traducirErroresDeDominio } from "./persistencia/traducir";
