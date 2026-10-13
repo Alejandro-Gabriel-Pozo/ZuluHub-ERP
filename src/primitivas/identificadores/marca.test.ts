@@ -3,8 +3,10 @@ import fc from "fast-check";
 import {
   adminPlataformaId,
   dominioId,
+  emisorId,
   empresaId,
   esTextoDeIdentificador,
+  esUuidCanonico,
   invitacionId,
   marcaComercialId,
   personaId,
@@ -12,6 +14,7 @@ import {
   sucursalId,
   tenantId,
   traspasoId,
+  usuarioAuthId,
   versionDePlanId,
 } from "./marca";
 import "../../../test/propiedades/configuracion";
@@ -150,5 +153,94 @@ describe("TraspasoId (traspaso de gerencia)", () => {
     // @ts-expect-error y una invitación no es un traspaso
     const comoTraspaso: ReturnType<typeof traspasoId> = invitacionId("i1");
     expect([comoInvitacion, comoTraspaso]).toEqual(["t1", "i1"]);
+  });
+});
+
+describe("EmisorId (referencia opaca al emisor fiscal, conciliación §3.7)", () => {
+  it("acepta texto no vacío y lo devuelve tal cual", () => {
+    expect(emisorId("0b9f2c1e-7a53-4e0a-9c1d-2f6a8d3e4b51")).toBe(
+      "0b9f2c1e-7a53-4e0a-9c1d-2f6a8d3e4b51",
+    );
+  });
+
+  it("rechaza vacío y espacios en los extremos, y el error lo nombra", () => {
+    for (const malo of ["", " x", "x ", "\tx", "x\n", " "]) {
+      expect(() => emisorId(malo), JSON.stringify(malo)).toThrow(
+        new RangeError("EmisorId inválido"),
+      );
+    }
+  });
+
+  it("no se mezcla con una empresa ni con una sucursal", () => {
+    const emisor = emisorId("e1");
+    // @ts-expect-error un emisor no es una empresa
+    const comoEmpresa: ReturnType<typeof empresaId> = emisor;
+    // @ts-expect-error un emisor no es una sucursal
+    const comoSucursal: ReturnType<typeof sucursalId> = emisor;
+    // @ts-expect-error y una empresa no es un emisor
+    const comoEmisor: ReturnType<typeof emisorId> = empresaId("x1");
+    expect([comoEmpresa, comoSucursal, comoEmisor]).toEqual(["e1", "e1", "x1"]);
+  });
+});
+
+describe("UsuarioAuthId (el usuario autenticado)", () => {
+  const UUID = "0b9f2c1e-7a53-4e0a-9c1d-2f6a8d3e4b51";
+
+  it("acepta un uuid canónico en minúsculas y lo devuelve tal cual", () => {
+    expect(usuarioAuthId(UUID)).toBe(UUID);
+  });
+
+  it("rechaza todo lo que no sea un uuid canónico en minúsculas, y el error lo nombra", () => {
+    for (const malo of [
+      "",
+      "x",
+      UUID.toUpperCase(),
+      ` ${UUID}`,
+      `${UUID} `,
+      `${UUID}\n`,
+      `${UUID}0`,
+      UUID.slice(1),
+      UUID.replaceAll("-", ""),
+      `{${UUID}}`,
+      "gggggggg-gggg-gggg-gggg-gggggggggggg",
+      `${UUID}\n${UUID}`,
+      `x${UUID}`,
+    ]) {
+      expect(() => usuarioAuthId(malo), JSON.stringify(malo)).toThrow(
+        new RangeError("UsuarioAuthId inválido"),
+      );
+    }
+  });
+
+  it("esUuidCanonico: la misma regla, sin lanzar", () => {
+    expect(esUuidCanonico(UUID)).toBe(true);
+    expect(esUuidCanonico(UUID.toUpperCase())).toBe(false);
+    expect(esUuidCanonico("")).toBe(false);
+    expect(esUuidCanonico(`${UUID}\n`)).toBe(false);
+  });
+
+  it("propiedad: acepta exactamente lo que esUuidCanonico acepta", () => {
+    fc.assert(
+      fc.property(
+        fc.oneof(
+          fc.string(),
+          fc.uuid(),
+          fc.uuid().map((u) => u.toUpperCase()),
+        ),
+        (texto) => {
+          if (esUuidCanonico(texto)) expect(usuarioAuthId(texto)).toBe(texto);
+          else expect(() => usuarioAuthId(texto)).toThrow(RangeError);
+        },
+      ),
+    );
+  });
+
+  it("no se mezcla con una persona ni con otro identificador", () => {
+    const usuario = usuarioAuthId(UUID);
+    // @ts-expect-error un usuario autenticado no es una persona: el vínculo entre ambos es un dato
+    const comoPersona: ReturnType<typeof personaId> = usuario;
+    // @ts-expect-error y una persona no es un usuario autenticado
+    const comoUsuario: ReturnType<typeof usuarioAuthId> = personaId("p1");
+    expect([comoPersona, comoUsuario]).toEqual([UUID, "p1"]);
   });
 });

@@ -319,8 +319,8 @@ const SONDAS = {
       return deshacible(c, async () =>
         seRechaza(
           c,
-          `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
-           values ($1, $2, $3, 'FACTURA_A', 0)`,
+          `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente)
+           values ($1, $2, $3, 'FACTURA_A', 0, 'HOMOLOGACION')`,
           [m.empresa, pv, secundario],
         ),
       );

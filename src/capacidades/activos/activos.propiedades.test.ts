@@ -213,7 +213,8 @@ describe("ningún lector ni validador lanza, se cuelga o depende de lo que rodea
       for (let n = 0; n < f.bytes.length; n += paso) sinLanzar(f.bytes.subarray(0, n));
       sinLanzar(f.bytes.subarray(0, f.bytes.length - 1));
     }
-  });
+    // Tope propio: con la máquina cargada tarda ~5 s y el tope por defecto (5 s) la cortaba (fallo de tiempo, no del código).
+  }, 30_000);
 
   it("un archivo real cortado antes de su final nunca se acepta como entero", () => {
     // (JPEG, WebP, PNG e ICO válidos: un prefijo propio no puede ser un archivo completo.)

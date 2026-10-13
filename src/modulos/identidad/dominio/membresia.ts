@@ -1,7 +1,11 @@
 import type { RolDeEmpresa } from "../../../capacidades/permisos/roles";
-import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
+import type {
+  EmpresaId,
+  PersonaId,
+  UsuarioAuthId,
+} from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import type { Email } from "./email";
+import type { Email } from "../../../primitivas/contacto/email";
 import type { ErrorDeMembresia } from "./errores";
 
 /**
@@ -25,6 +29,12 @@ export type Persona = Readonly<{
   email: Email;
   activoGlobal: boolean;
 }>;
+
+/**
+ * Una persona tal como la lee el módulo de identidad: con el usuario autenticado al que está vinculada
+ * (`null` hasta que acepta una invitación). Es un `Persona` más, así que sirve donde se pide una `Persona`.
+ */
+export type PersonaConUsuario = Persona & Readonly<{ usuarioAuth: UsuarioAuthId | null }>;
 
 /**
  * "Admin" de una empresa es el gerente o un administrador: los roles que gestionan usuarios según la

@@ -10,7 +10,8 @@ import {
   type TenantId,
 } from "../../../primitivas/identificadores/marca";
 import type { CambioDeEstadoDeEmpresa, Empresa } from "../dominio/empresa";
-import type { Sucursal } from "../dominio/sucursal";
+import { horaDelDiaDesdeTexto, type HoraDelDia } from "../../../primitivas/tiempo/hora-del-dia";
+import type { DatosDeJornada, Sucursal } from "../dominio/sucursal";
 
 /** Tablas del módulo; un test compara estas columnas con el catálogo de la base. */
 export type EmpresasDb = {
@@ -32,6 +33,8 @@ export type EmpresasDb = {
     empresa_id: string;
     nombre: string;
     activa: Generated<boolean>;
+    /** `time` de Postgres: llega como `HH:MM:SS` (la base exige los segundos en cero). */
+    hora_de_corte: Generated<string>;
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
@@ -60,7 +63,7 @@ export const COLUMNAS_DE_EMPRESAS = {
     "creado_en",
     "actualizado_en",
     "version",
-    "hora_de_corte", // 0007: la hora de corte de la jornada; el repositorio la lee y la escribe el tramo M4
+    "hora_de_corte", // 0007: la hora de corte de la jornada (tramo previo común)
   ],
 } as const;
 
@@ -89,9 +92,9 @@ export const ERRORES_DE_EMPRESAS_POR_RESTRICCION: Readonly<Record<string, string
   sucursal_nombre_largo_ck: "NOMBRE_DE_SUCURSAL_INVALIDO",
   sucursal_nombre_control_ck: "NOMBRE_DE_SUCURSAL_INVALIDO",
   sucursal_ultima_activa: "ULTIMA_SUCURSAL_ACTIVA", // la lanza un disparador
-  // 0007: la hora de corte de la jornada (minutos enteros, de 00:00 a 23:59). Sin error de negocio
-  // todavía: el tramo M4 le pone el suyo cuando el caso de uso que la edita exista.
-  sucursal_hora_de_corte_ck: "NO_TRADUCIDA",
+  // 0007: la hora de corte de la jornada (minutos enteros, de 00:00 a 23:59); `editarSucursal` la valida
+  // antes, así que esto es la red de seguridad de la base.
+  sucursal_hora_de_corte_ck: "HORA_DE_CORTE_INVALIDA",
 };
 
 export type ErrorDeRepositorioDeEmpresas = "EMPRESA_NO_ENCONTRADA" | "VERSION_DESACTUALIZADA";
@@ -130,7 +133,21 @@ export type AltaDeSucursal = Readonly<{ creada: boolean; sucursal: Sucursal }>;
 export interface RepositorioDeSucursales {
   crear(empresa: EmpresaId, nombre: string): Promise<Sucursal>;
   listar(empresa: EmpresaId): Promise<Sucursal[]>;
-  renombrar(id: SucursalId, versionEsperada: number, nombre: string): Promise<Sucursal | null>;
+  /**
+   * Cambia el nombre y/o la hora de corte en un solo `UPDATE` (una versión nueva) si la versión
+   * coincide; `null` si no coincide o no existe. Al menos un cambio: sin ninguno lanza `RangeError`.
+   */
+  editar(
+    id: SucursalId,
+    versionEsperada: number,
+    cambios: Readonly<{ nombre?: string; horaDeCorte?: HoraDelDia }>,
+  ): Promise<Sucursal | null>;
+  /**
+   * La zona horaria de la empresa de la sucursal y la hora de corte de la sucursal, en una lectura
+   * (la fecha de negocio se calcula con las dos). `null` si no existe o es de otra empresa (la RLS
+   * oculta las ajenas, igual que a `obtener`).
+   */
+  jornadaDe(id: SucursalId): Promise<DatosDeJornada | null>;
   /**
    * Da de alta la sucursal SIN leerla de vuelta (`INSERT` sin `RETURNING`): la plataforma puede crear
    * la sucursal inicial de una empresa pero no tiene permiso de lectura sobre `sucursal` (son datos
@@ -170,12 +187,22 @@ function aEmpresa(fila: Selectable<EmpresasDb["empresa"]>): Empresa {
   };
 }
 
+/** `HH:MM:SS` de la columna `time` → `HH:MM`. Un valor que el CHECK de la base no deja pasar es una falla. */
+function aHoraDeCorte(hora: string): HoraDelDia {
+  const leida = horaDelDiaDesdeTexto(hora.slice(0, 5));
+  if (!leida.ok || hora.length !== 8 || !hora.endsWith(":00")) {
+    throw new RangeError(`hora de corte inválida en la base: ${hora}`);
+  }
+  return leida.valor;
+}
+
 function aSucursal(fila: Selectable<EmpresasDb["sucursal"]>): Sucursal {
   return {
     id: sucursalId(fila.id),
     empresaId: empresaId(fila.empresa_id),
     nombre: fila.nombre,
     activa: fila.activa,
+    horaDeCorte: aHoraDeCorte(fila.hora_de_corte),
     version: fila.version,
   };
 }
@@ -337,15 +364,34 @@ export function crearRepositorioDeSucursales(db: Kysely<EmpresasDb>): Repositori
       return filas.map(aSucursal);
     },
 
-    async renombrar(id, versionEsperada, nombre) {
+    async editar(id, versionEsperada, cambios) {
+      if (cambios.nombre === undefined && cambios.horaDeCorte === undefined) {
+        throw new RangeError("editar una sucursal exige al menos un cambio");
+      }
       const fila = await db
         .updateTable("sucursal")
-        .set({ nombre })
+        .set({
+          ...(cambios.nombre === undefined ? {} : { nombre: cambios.nombre }),
+          ...(cambios.horaDeCorte === undefined ? {} : { hora_de_corte: cambios.horaDeCorte }),
+        })
         .where("id", "=", id)
         .where("version", "=", versionEsperada)
         .returningAll()
         .executeTakeFirst();
       return fila === undefined ? null : aSucursal(fila);
+    },
+
+    async jornadaDe(id) {
+      if (!FORMA_DE_UUID.test(id)) return null;
+      const fila = await db
+        .selectFrom("sucursal as s")
+        .innerJoin("empresa as e", "e.id", "s.empresa_id")
+        .select(["e.zona_horaria", "s.hora_de_corte"])
+        .where("s.id", "=", id)
+        .executeTakeFirst();
+      return fila === undefined
+        ? null
+        : { zonaHoraria: fila.zona_horaria, horaDeCorte: aHoraDeCorte(fila.hora_de_corte) };
     },
   };
 }

@@ -1,5 +1,5 @@
 /** Entrada pública del módulo de identidad (ADR-001): dominio, persistencia y casos de uso. */
-export { emailDesdeTexto, type Email } from "./dominio/email";
+export { emailDesdeTexto, type Email } from "../../primitivas/contacto/email";
 export type { EmpresaNoOpera, EstadosDeEmpresa } from "../../contexto/estados";
 export type {
   ErrorDeAceptacion,
@@ -44,7 +44,13 @@ export {
   type RolDeEmpresa,
   type TipoDeInvitacion,
 } from "./dominio/invitacion";
-export { decidirApagado, type Membresia, type Persona } from "./dominio/membresia";
+export {
+  decidirApagado,
+  type Membresia,
+  type Persona,
+  type PersonaConUsuario,
+} from "./dominio/membresia";
+export { decidirVinculo, type DecisionDeVinculo } from "./dominio/vinculo";
 export {
   decidirAsignaciones,
   type AsignacionActual,
@@ -100,6 +106,14 @@ export type {
 } from "./casos-de-uso/apagar-membresia";
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_IDENTIDAD } from "./consultas/declaraciones";
 export { crearConsultasDeIdentidad, type ConsultasDeIdentidad } from "./consultas/consultas";
+export {
+  crearConsultasDeSesion,
+  type ConsultasDeSesion,
+  type DependenciasDeConsultasDeSesion,
+  type EmpresaDeLaLista,
+  type EntradaDeEmpresasDeLaSesion,
+  type TxDeConsultasDeSesion,
+} from "./consultas/de-la-sesion";
 export type {
   DependenciasDeConsultasDeIdentidad,
   TxDeConsultasDeIdentidad,

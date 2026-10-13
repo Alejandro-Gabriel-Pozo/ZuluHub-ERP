@@ -44,6 +44,7 @@ function carga(cambios: Partial<CargaDeContexto> = {}): CargaDeContexto {
     i: null,
     x: ahoraEnS() + 300,
     a: null,
+    s: null,
     ...cambios,
   };
 }
@@ -135,13 +136,23 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
         return { filas: r.rows, texto: JSON.stringify(r.rows) };
       });
       expect(filas).toHaveLength(1);
-      expect(Object.keys(filas[0]?.ctx ?? {}).sort()).toEqual(["a", "e", "i", "p", "t", "u", "x"]);
+      expect(Object.keys(filas[0]?.ctx ?? {}).sort()).toEqual([
+        "a",
+        "e",
+        "i",
+        "p",
+        "s",
+        "t",
+        "u",
+        "x",
+      ]);
       expect(filas[0]?.ctx).toMatchObject({
         u: "zuluhub_app",
         e: a.empresa,
         t: null,
         p: null,
         a: null,
+        s: null,
       });
       expect(texto).not.toContain(clave().secreto.toString("hex"));
     });
@@ -624,7 +635,7 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
 
     it("el adaptador firma el contexto de INVITACION: rol app, sin empresa ni persona; usa la URL operativa", async () => {
       const r = await entorno.ejecutar(
-        { contexto: { tipo: "INVITACION", tokenHash: hash, ahora: new Date() } },
+        { contexto: { tipo: "INVITACION", tokenHash: hash, usuarioAuth: null, ahora: new Date() } },
         async ({ db }) => {
           const { rows } = await sql<{
             rol: string;
@@ -653,7 +664,9 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
       });
       try {
         const r = await propio.ejecutar(
-          { contexto: { tipo: "INVITACION", tokenHash: hash, ahora: new Date() } },
+          {
+            contexto: { tipo: "INVITACION", tokenHash: hash, usuarioAuth: null, ahora: new Date() },
+          },
           async ({ db }) => {
             const { rows } = await sql<{
               i: string | null;
@@ -671,7 +684,14 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
         try {
           await expect(
             sinNinguna.ejecutar(
-              { contexto: { tipo: "INVITACION", tokenHash: hash, ahora: new Date() } },
+              {
+                contexto: {
+                  tipo: "INVITACION",
+                  tokenHash: hash,
+                  usuarioAuth: null,
+                  ahora: new Date(),
+                },
+              },
               () => Promise.resolve(ok(null)),
             ),
           ).rejects.toBeInstanceOf(ErrorDeConfiguracion);

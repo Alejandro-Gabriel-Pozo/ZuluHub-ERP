@@ -47,7 +47,10 @@ type Vigilada = Readonly<{ tx: TxDeNumeracion; accesos: string[] }>;
 
 function vigilar(actor: DatosDelActor): Vigilada {
   const accesos: string[] = [];
-  const autorizacion: CargaDeAutorizacion = { delActor: () => Promise.resolve(actor) };
+  const autorizacion: CargaDeAutorizacion = {
+    delActor: () => Promise.resolve(actor),
+    sucursalesDelActor: () => Promise.resolve("TODAS"),
+  };
   const tx = new Proxy({} as TxDeNumeracion, {
     get(_objetivo, propiedad) {
       accesos.push(String(propiedad));

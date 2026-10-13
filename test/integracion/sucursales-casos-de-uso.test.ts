@@ -907,6 +907,7 @@ describe.skipIf(base === null)(
               nombre: "Almagro",
               activa: true,
               version: 1,
+              horaDeCorte: "00:00",
               zonaHoraria: "America/Argentina/Buenos_Aires",
             },
             {
@@ -914,6 +915,7 @@ describe.skipIf(base === null)(
               nombre: "Casa central",
               activa: true,
               version: 1,
+              horaDeCorte: "00:00",
               zonaHoraria: "America/Argentina/Buenos_Aires",
             },
             {
@@ -921,6 +923,7 @@ describe.skipIf(base === null)(
               nombre: "Zona sur",
               activa: true,
               version: 1,
+              horaDeCorte: "00:00",
               zonaHoraria: "America/Argentina/Buenos_Aires",
             },
           ],
@@ -1003,6 +1006,7 @@ describe.skipIf(base === null)(
             nombre: "Casa central",
             activa: true,
             version: 1,
+            horaDeCorte: "00:00",
             zonaHoraria: "America/Argentina/Buenos_Aires",
           },
         });
@@ -1019,6 +1023,7 @@ describe.skipIf(base === null)(
             nombre: "Sucursal norte",
             activa: false,
             version: 2,
+            horaDeCorte: "00:00",
             zonaHoraria: "America/Argentina/Buenos_Aires",
           },
         });

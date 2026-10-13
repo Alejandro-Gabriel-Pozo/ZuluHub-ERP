@@ -181,11 +181,11 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       ).toEqual([]);
     });
 
-    it("los 21 errores con nombre de los disparadores son exactamente la lista, y ninguno queda sin traducir", async () => {
+    it("los 35 errores con nombre de los disparadores son exactamente la lista, y ninguno queda sin traducir", async () => {
       const { rows } = await dueno.query<{ prosrc: string }>(
         `select prosrc from pg_proc
          where pronamespace = 'public'::regnamespace and prorettype = 'trigger'::regtype
-           and proname ~ '^(empresa_(crear_emisor_principal|validar_cuit_fiscal)|emisor_|punto_de_venta_|datos_fiscales_|regla_emisor_|serie_comprobante_)'`,
+           and proname ~ '^(empresa_(crear_emisor_principal|validar_cuit_fiscal)|emisor_|punto_de_venta_|datos_fiscales_|regla_emisor_|serie_comprobante_|comprobante_|certificado_arca_)'`,
       );
       const lanzados = new Set<string>();
       for (const f of rows) {
@@ -193,7 +193,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
           lanzados.add(m[1] as string);
       }
       expect([...lanzados].sort()).toEqual([...RESTRICCIONES_DE_DISPARADORES_DE_FISCAL].sort());
-      expect(lanzados.size).toBe(21);
+      expect(lanzados.size).toBe(35);
       for (const nombre of lanzados) {
         const traduccion = (ERRORES_DE_FISCAL_POR_RESTRICCION as Record<string, string>)[nombre];
         expect(traduccion, nombre).toBeDefined();
@@ -802,13 +802,13 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
         expect(await correr(app(m), async (tx) => exito(await tx.puntosDeVenta.crear(pv)))).toEqual(
           {
             creado: true,
-            valor: pv,
+            valor: { ...pv, ambiente: "HOMOLOGACION" },
           },
         );
       }
       expect(await correr(app(m), async (tx) => exito(await tx.puntosDeVenta.crear(pv1)))).toEqual({
         creado: false,
-        valor: pv1,
+        valor: { ...pv1, ambiente: "HOMOLOGACION" },
       });
       const leidos = await correr(app(m), async (tx) => ({
         uno: await tx.puntosDeVenta.obtener(empresaDe(m), pv1.id),
@@ -820,9 +820,11 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
         ),
         todos: await tx.puntosDeVenta.listar(empresaDe(m)),
       }));
-      expect(leidos.uno).toEqual(pv1);
-      expect(leidos.delPrincipal).toEqual([pv1, pv3]);
-      expect(leidos.delSecundario).toEqual([pv2]);
+      // Desde 0009 el punto de venta trae su ambiente: nace en homologación.
+      const enHomologacion = <T extends object>(pv: T) => ({ ...pv, ambiente: "HOMOLOGACION" });
+      expect(leidos.uno).toEqual(enHomologacion(pv1));
+      expect(leidos.delPrincipal).toEqual([pv1, pv3].map(enHomologacion));
+      expect(leidos.delSecundario).toEqual([enHomologacion(pv2)]);
       expect(leidos.deLaSucursal).toHaveLength(3);
       expect(leidos.todos).toHaveLength(3);
       expect(leidos.uno).toMatchObject({
@@ -873,7 +875,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
         ),
       ).puntoDeVenta;
       const guardado = (await correr(app(m), (tx) => tx.puntosDeVenta.guardar(editado)))!;
-      expect(guardado).toEqual({ ...editado, version: 2 });
+      expect(guardado).toEqual({ ...editado, ambiente: "HOMOLOGACION", version: 2 });
 
       const activo = exito(activarPuntoDeVenta(guardado, principal)).puntoDeVenta;
       const activado = (await correr(app(m), (tx) => tx.puntosDeVenta.guardar(activo)))!;
@@ -1034,22 +1036,24 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       const m = await mundo();
       const { principal, pv } = await conPuntoDeVenta(m);
       const s = unaSerie(m, pv, principal, 41n);
+      // Desde 0009 la serie trae su ambiente: nace en el de su punto de venta (homologación).
+      const guardada = { ...s, ambiente: "HOMOLOGACION", version: 1 };
       expect(await correr(app(m), (tx) => tx.series.crear(s))).toEqual({
         creado: true,
-        valor: { ...s, version: 1 },
+        valor: guardada,
       });
       const repetida = await correr(app(m), (tx) =>
         tx.series.crear(unaSerie(m, pv, principal, 99n)),
       );
-      expect(repetida).toEqual({ creado: false, valor: { ...s, version: 1 } });
+      expect(repetida).toEqual({ creado: false, valor: guardada });
       const leidas = await correr(app(m), async (tx) => ({
         una: await tx.series.obtener(empresaDe(m), pv.id, "FACTURA_B"),
         otra: await tx.series.obtener(empresaDe(m), pv.id, "FACTURA_A"),
         todas: await tx.series.delPuntoDeVenta(empresaDe(m), pv.id),
       }));
-      expect(leidas.una).toEqual({ ...s, version: 1 });
+      expect(leidas.una).toEqual(guardada);
       expect(leidas.otra).toBeNull();
-      expect(leidas.todas).toEqual([{ ...s, version: 1 }]);
+      expect(leidas.todas).toEqual([guardada]);
     });
 
     it("los números más grandes que Number.MAX_SAFE_INTEGER viajan exactos (bigint)", async () => {
@@ -1088,7 +1092,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       const reserva = exito(reservarNumero(inicial, sol, AHORA));
       if (reserva.tipo !== "RESERVADA") throw new Error("tenía que reservar");
       const enCurso = (await correr(app(m), (tx) => tx.series.guardar(reserva.serie)))!;
-      expect(enCurso).toEqual({ ...reserva.serie, version: 2 });
+      expect(enCurso).toEqual({ ...reserva.serie, ambiente: "HOMOLOGACION", version: 2 });
       expect(enCurso.estado === "EN_CURSO" && enCurso.enCursoHasta.getTime()).toBe(
         AHORA.getTime() + 5 * 60_000,
       );
@@ -1119,7 +1123,8 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       expect(
         await correr(app(m), (tx) => tx.series.obtener(empresaDe(m), pv.id, "FACTURA_B")),
       ).toEqual(bloqueada);
-      // Desde BLOQUEADA no se sale (H7): intentar liberarla es un error de la base con su nombre.
+      // Desde 0009 (QF1) una BLOQUEADA sale solo hacia LIBRE y nunca hacia atrás; el dominio recibe esa
+      // salida en F4. Hacia atrás sigue siendo un error de la base con su nombre.
       const salir = await intentar(app(m), (tx) =>
         tx.series.guardar({
           empresaId: bloqueada.empresaId,
@@ -1128,11 +1133,11 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
           tipo: bloqueada.tipo,
           version: bloqueada.version,
           estado: "LIBRE",
-          ultimoNumero: bloqueada.ultimoNumero,
+          ultimoNumero: bloqueada.ultimoNumero - 1n,
         }),
       );
-      expect(traducirErroresDeFiscal(salir, ["SERIE_TRANSICION_INVALIDA"])).toEqual(
-        err("SERIE_TRANSICION_INVALIDA"),
+      expect(traducirErroresDeFiscal(salir, ["SERIE_NUMERO_FUERA_DE_SECUENCIA"])).toEqual(
+        err("SERIE_NUMERO_FUERA_DE_SECUENCIA"),
       );
     });
 
@@ -1233,9 +1238,10 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
   });
 
   // ===============================================================================================
-  // 3. Los 21 errores de los disparadores, provocados de verdad
+  // 3. Los 24 errores de los disparadores de las tablas de 0006, provocados de verdad (los 11 de las tablas
+  //    de la facturación, de 0009, los prueba `facturacion-persistencia.test.ts`)
   // ===============================================================================================
-  describe("los 21 errores de los disparadores se traducen a su error de negocio", () => {
+  describe("los 24 errores de los disparadores se traducen a su error de negocio", () => {
     type Caso = Readonly<{
       restriccion: (typeof RESTRICCIONES_DE_DISPARADORES_DE_FISCAL)[number];
       esperado: ErrorDeFiscalPorRestriccion;
@@ -1638,15 +1644,78 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
           return porRepositorio(app(m), (tx) => tx.series.guardar(bloqueada));
         },
       },
+      // 0009 (facturación): el ambiente del punto de venta (QF2) y de la serie. El punto de venta lo mueve
+      // `cambiarAmbiente`; la serie de otro ambiente que el de su punto de venta no tiene camino por el
+      // repositorio sin pedirlo (`crear(serie, ambiente)`), pero el dueño lo prueba igual.
+      {
+        restriccion: "punto_de_venta_ambiente_con_serie_en_curso",
+        esperado: "SERIE_EN_CURSO",
+        via: "repositorio",
+        provocar: async () => {
+          const m = await mundo();
+          const pv = await crearPuntoDeVenta(dueno, m);
+          await crearSerie(dueno, m.empresa, pv, m.emisor);
+          await usarSerie(dueno, pv, "EN_CURSO");
+          return porRepositorio(app(m), async (tx) => {
+            const actual = await tx.puntosDeVenta.obtener(empresaDe(m), puntoDeVentaId(pv));
+            return tx.puntosDeVenta.cambiarAmbiente(
+              empresaDe(m),
+              puntoDeVentaId(pv),
+              "PRODUCCION",
+              actual?.version ?? 0,
+            );
+          });
+        },
+      },
+      {
+        restriccion: "punto_de_venta_ambiente_no_vuelve",
+        esperado: "PUNTO_DE_VENTA_YA_EMITIO_EN_PRODUCCION",
+        via: "repositorio",
+        provocar: async () => {
+          const m = await mundo();
+          const pv = await crearPuntoDeVenta(dueno, m);
+          await dueno.query("update punto_de_venta set ambiente = 'PRODUCCION' where id = $1", [
+            pv,
+          ]);
+          await crearSerie(dueno, m.empresa, pv, m.emisor, "FACTURA_B", 7, "PRODUCCION");
+          return porRepositorio(app(m), async (tx) => {
+            const actual = await tx.puntosDeVenta.obtener(empresaDe(m), puntoDeVentaId(pv));
+            return tx.puntosDeVenta.cambiarAmbiente(
+              empresaDe(m),
+              puntoDeVentaId(pv),
+              "HOMOLOGACION",
+              actual?.version ?? 0,
+            );
+          });
+        },
+      },
+      {
+        restriccion: "serie_ambiente_invalido",
+        esperado: "SERIE_AMBIENTE_INVALIDO",
+        via: "dueño",
+        provocar: async () => {
+          const m = await mundo();
+          const pv = await crearPuntoDeVenta(dueno, m);
+          return porElDueno(
+            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente)
+             values ($1, $2, $3, 'FACTURA_B', 0, 'PRODUCCION')`,
+            [m.empresa, pv, m.emisor],
+          );
+        },
+      },
     ];
 
-    it("los casos cubren exactamente los 21 nombres, una vez cada uno (12 por repositorio, 9 solo del dueño)", () => {
-      expect(casos.map((c) => c.restriccion).sort()).toEqual(
-        [...RESTRICCIONES_DE_DISPARADORES_DE_FISCAL].sort(),
+    it("los casos cubren exactamente los 24 nombres de las tablas de 0006, una vez cada uno (14 por repositorio, 10 solo del dueño); los otros 11 son de la facturación", () => {
+      const deLaFacturacion = RESTRICCIONES_DE_DISPARADORES_DE_FISCAL.filter((n) =>
+        /^(comprobante|certificado)_/.test(n),
       );
-      expect(casos).toHaveLength(21);
-      expect(casos.filter((c) => c.via === "repositorio")).toHaveLength(12);
-      expect(casos.filter((c) => c.via === "dueño")).toHaveLength(9);
+      expect(deLaFacturacion).toHaveLength(11);
+      expect(casos.map((c) => c.restriccion).sort()).toEqual(
+        RESTRICCIONES_DE_DISPARADORES_DE_FISCAL.filter((n) => !deLaFacturacion.includes(n)).sort(),
+      );
+      expect(casos).toHaveLength(24);
+      expect(casos.filter((c) => c.via === "repositorio")).toHaveLength(14);
+      expect(casos.filter((c) => c.via === "dueño")).toHaveLength(10);
     });
 
     for (const caso of casos) {

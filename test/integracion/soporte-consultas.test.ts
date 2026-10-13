@@ -617,9 +617,17 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
   describe("configuración", () => {
     it("muestra el catálogo de módulos del código", async () => {
       const { modulos } = esperar(await consultas.verConfiguracion(soporte));
-      expect(modulos.map((m) => m.clave)).toEqual(["administracion", "facturacion"]);
+      expect(modulos.map((m) => m.clave)).toEqual([
+        "administracion",
+        "carta",
+        "catalogo",
+        "facturacion",
+        "stock",
+      ]);
       expect(modulos[0]).toMatchObject({ estado: "disponible", obligatorio: true });
-      expect(modulos[1]).toMatchObject({ estado: "en_desarrollo", obligatorio: false });
+      for (const modulo of modulos.slice(1)) {
+        expect(modulo, modulo.clave).toMatchObject({ estado: "en_desarrollo", obligatorio: false });
+      }
     });
   });
 

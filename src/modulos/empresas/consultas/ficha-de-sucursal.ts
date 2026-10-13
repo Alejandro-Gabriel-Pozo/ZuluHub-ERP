@@ -41,6 +41,7 @@ export function armarFichaDeSucursal({ transacciones, reglas }: DependenciasDeCo
           id: sucursal.id,
           nombre: sucursal.nombre,
           activa: sucursal.activa,
+          horaDeCorte: sucursal.horaDeCorte,
           version: sucursal.version,
           zonaHoraria: empresa.zonaHoraria,
         });

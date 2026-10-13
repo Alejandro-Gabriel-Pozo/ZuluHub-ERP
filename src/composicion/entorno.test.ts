@@ -29,11 +29,14 @@ const COMPLETO: FuenteDeEntorno = {
   ZULUHUB_URL_BASE: "https://app.ejemplo.test",
   ZULUHUB_DB_APP: "postgres://usuario:clave@host.test:5432/base",
   ZULUHUB_DB_TRABAJOS: "postgresql://usuario:clave@host.test/base",
+  ZULUHUB_DB_PUBLICO: "postgres://usuario:clave@host.test:5432/base",
 };
 
 const PIEZAS: Record<Pieza, string[]> = {
   "transacciones-app": ["ZULUHUB_CLAVE_CONTEXTO", "ZULUHUB_DB_APP"],
   "transacciones-trabajos": ["ZULUHUB_CLAVE_CONTEXTO", "ZULUHUB_DB_TRABAJOS"],
+  // La puerta pública no tiene contexto firmado: no necesita la clave, solo su propia cadena.
+  "transacciones-publicas": ["ZULUHUB_DB_PUBLICO"],
   tokens: ["ZULUHUB_SECRETO_INVITACIONES"],
   correo: [
     "ZULUHUB_RESEND_API_KEY",
@@ -52,12 +55,13 @@ const sin = (fuente: FuenteDeEntorno, nombre: string): FuenteDeEntorno => {
 describe("NOMBRES_DE_ENTORNO (P-13: la lista de nombres)", () => {
   const nombres = NOMBRES_DE_ENTORNO.map((e) => e.nombre);
 
-  it("son exactamente los de W1 (los demás llegan en sus tramos)", () => {
+  it("son exactamente los de W1 y la cadena de la puerta pública (los demás llegan en sus tramos)", () => {
     expect([...nombres].sort()).toEqual(
       [
         "ZULUHUB_CLAVE_CONTEXTO",
         "ZULUHUB_CORREO_REMITENTE",
         "ZULUHUB_DB_APP",
+        "ZULUHUB_DB_PUBLICO",
         "ZULUHUB_DB_TRABAJOS",
         "ZULUHUB_NOMBRE_DE_MARCA",
         "ZULUHUB_RESEND_API_KEY",
@@ -240,6 +244,24 @@ describe("valoresDeLaPieza", () => {
     expect(() =>
       valoresDeLaPieza({ ...COMPLETO, ZULUHUB_DB_TRABAJOS: cadena }, "transacciones-trabajos"),
     ).toThrow(ErrorDeEntorno);
+    expect(() =>
+      valoresDeLaPieza({ ...COMPLETO, ZULUHUB_DB_PUBLICO: cadena }, "transacciones-publicas"),
+    ).toThrow(ErrorDeEntorno);
+  });
+
+  it("la puerta pública valida solo su cadena: no pide la clave de contexto ni las demás conexiones", () => {
+    expect(
+      valoresDeLaPieza({ ZULUHUB_DB_PUBLICO: "postgres://u:c@h/b" }, "transacciones-publicas"),
+    ).toEqual({
+      ZULUHUB_DB_PUBLICO: "postgres://u:c@h/b",
+    });
+    // Y las demás piezas tampoco la piden.
+    expect(() =>
+      valoresDeLaPieza(sin(COMPLETO, "ZULUHUB_DB_PUBLICO"), "transacciones-app"),
+    ).not.toThrow();
+    expect(() =>
+      valoresDeLaPieza(sin(COMPLETO, "ZULUHUB_DB_PUBLICO"), "transacciones-trabajos"),
+    ).not.toThrow();
   });
 
   it("acepta los dos esquemas de Postgres y recorta los blancos", () => {

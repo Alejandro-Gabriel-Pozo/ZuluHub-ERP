@@ -1,3 +1,4 @@
+import type { AlcanceDeSucursales } from "../capacidades/permisos/alcance";
 import type { RolDeEmpresa } from "../capacidades/permisos/roles";
 import type { ContextoOperativo } from "../contexto/contexto";
 
@@ -30,4 +31,13 @@ export interface CargaDeAutorizacion {
    * permisos). La membresía de otra empresa no cuenta.
    */
   delActor(contexto: ContextoOperativo): Promise<DatosDelActor>;
+  /**
+   * Dentro de la transacción en curso: las sucursales donde el actor puede operar (K5, conciliación
+   * §3.4). `"TODAS"` para el gerente y el administrador activos; para el operador, las sucursales
+   * ACTIVAS donde tiene asignación ACTIVA (ordenadas, sin repetir; vacía si no tiene ninguna). Sin
+   * membresía activa, con la persona suspendida globalmente o sin persona: vacía (falla cerrado). Se
+   * lee en cada llamada, sin caché: una asignación apagada un instante antes ya no cuenta. El caso
+   * de uso lo usa con `exigirSucursal`; este puerto no autoriza por sí mismo.
+   */
+  sucursalesDelActor(contexto: ContextoOperativo): Promise<AlcanceDeSucursales>;
 }

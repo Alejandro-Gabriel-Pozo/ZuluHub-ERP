@@ -4,6 +4,7 @@ import type {
   MarcaComercialId,
   PersonaId,
   TenantId,
+  UsuarioAuthId,
 } from "../primitivas/identificadores/marca";
 
 /**
@@ -65,6 +66,23 @@ export type ContextoDeTrabajos = Readonly<{ tipo: "TRABAJOS"; ahora: Date }>;
 export type ContextoDeInvitacion = Readonly<{
   tipo: "INVITACION";
   tokenHash: string;
+  /**
+   * El usuario autenticado que abrió el enlace (claim firmado `s`); `null` si todavía no ingresó. Con él la
+   * base deja vincular a la persona del email de la invitación con ESE usuario (y solo con ese).
+   */
+  usuarioAuth: UsuarioAuthId | null;
+  ahora: Date;
+}>;
+
+/**
+ * Alguien que ya ingresó (tiene sesión) y todavía no eligió empresa: la base solo le muestra lo suyo,
+ * por lectura (su persona, sus membresías activas, sus empresas y los tenants de estas). Viaja firmado
+ * en el claim `s`; no lleva empresa ni persona ni marca. Entra por el rol de la aplicación; ninguna
+ * política le deja escribir (web-armazon §3.3).
+ */
+export type ContextoDeSesion = Readonly<{
+  tipo: "SESION";
+  usuarioAuth: UsuarioAuthId;
   ahora: Date;
 }>;
 
@@ -73,6 +91,7 @@ export type Contexto =
   | ContextoDeGrupo
   | ContextoDePlataforma
   | ContextoDeTrabajos
-  | ContextoDeInvitacion;
+  | ContextoDeInvitacion
+  | ContextoDeSesion;
 
 export type TipoDeContexto = Contexto["tipo"];

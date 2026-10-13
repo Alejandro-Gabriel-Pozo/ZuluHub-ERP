@@ -52,3 +52,25 @@ export const planId = (valor: string): PlanId => crear<PlanId>("PlanId", valor);
 export type VersionDePlanId = Marca<string, "VersionDePlanId">;
 export const versionDePlanId = (valor: string): VersionDePlanId =>
   crear<VersionDePlanId>("VersionDePlanId", valor);
+/**
+ * Emisor fiscal: cada CUIT con el que una empresa factura. Es un identificador, no lógica fiscal: lo
+ * guardan catálogo, stock y caja como referencia opaca sin importar `modulos/fiscal` (conciliación §3.7,
+ * C5 de catálogo y stock). Fiscal lo reexporta desde su `identificadores.ts`.
+ */
+export type EmisorId = Marca<string, "EmisorId">;
+export const emisorId = (valor: string): EmisorId => crear<EmisorId>("EmisorId", valor);
+
+/** Un uuid canónico (minúsculas): la base lo compara como `uuid` y los claims firmados lo llevan como texto. */
+const UUID_CANONICO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+export const esUuidCanonico = (valor: string): boolean => UUID_CANONICO.test(valor);
+/**
+ * Usuario autenticado: el `user.id` de la librería de autenticación (`generateId: "uuid"`). Es una
+ * identidad DISTINTA de `Persona`: la persona pertenece al negocio y el usuario al ingreso; el vínculo
+ * se fija al aceptar una invitación (web-armazon §4.6). Por eso es uuid canónico en minúsculas, la forma
+ * que firma el contexto (claim `s`) y que compara la base: otro texto no se deja crear.
+ */
+export type UsuarioAuthId = Marca<string, "UsuarioAuthId">;
+export const usuarioAuthId = (valor: string): UsuarioAuthId => {
+  if (!esUuidCanonico(valor)) throw new RangeError("UsuarioAuthId inválido");
+  return valor as UsuarioAuthId;
+};

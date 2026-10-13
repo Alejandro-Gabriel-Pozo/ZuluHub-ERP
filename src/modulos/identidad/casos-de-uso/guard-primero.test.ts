@@ -15,6 +15,7 @@ import {
   invitacionId,
   personaId,
   sucursalId,
+  usuarioAuthId,
 } from "../../../primitivas/identificadores/marca";
 import type { CargaDeAutorizacion, DatosDelActor } from "../../../puertos/autorizacion";
 import type { Tokens } from "../../../puertos/tokens";
@@ -50,6 +51,7 @@ function vigilar(actor: DatosDelActor): Vigilada {
   const accesos: string[] = [];
   const autorizacion: CargaDeAutorizacion = {
     delActor: () => Promise.resolve(actor),
+    sucursalesDelActor: () => Promise.resolve("TODAS"),
   };
   const tx = new Proxy({} as TxDeIdentidad, {
     get(_objetivo, propiedad) {
@@ -273,6 +275,7 @@ describe("las declaraciones", () => {
     const resultado = casos.aceptarInvitacion({
       token: "token",
       emailAutenticado: "nueva@prueba.test",
+      usuarioAuth: usuarioAuthId("55555555-5555-4555-8555-555555555555"),
       ahora: new Date(0),
     });
     await expect(resultado).rejects.toBeInstanceOf(AccesoFueraDelGuard);

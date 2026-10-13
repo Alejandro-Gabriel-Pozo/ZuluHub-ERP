@@ -1,4 +1,5 @@
 import type { EstadoDeEmpresa } from "../../../contexto/estados";
+import type { CondicionIva as CondicionIvaCompleta } from "../../../primitivas/identificacion-fiscal/condicion-iva";
 import type { Cuit } from "../../../primitivas/identificacion-fiscal/cuit";
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
@@ -12,10 +13,16 @@ import type { EmisorId } from "./identificadores";
  */
 
 /**
- * Condición frente al IVA del emisor. NO VERIFICADO: los códigos de ARCA de cada una no están acá;
- * la lista es el supuesto del diseño y se amplía editando este arreglo.
+ * Condición frente al IVA del emisor: un subconjunto de las del receptor (`primitivas/identificacion-fiscal/
+ * condicion-iva`; `satisfies` lo exige al compilar, así un nombre no puede divergir). NO VERIFICADO: los
+ * códigos de ARCA de cada una no están acá; la lista es el supuesto del diseño y se amplía editando este
+ * arreglo.
  */
-export const CONDICIONES_DE_IVA = ["RESPONSABLE_INSCRIPTO", "MONOTRIBUTO", "EXENTO"] as const;
+export const CONDICIONES_DE_IVA = [
+  "RESPONSABLE_INSCRIPTO",
+  "MONOTRIBUTO",
+  "EXENTO",
+] as const satisfies readonly CondicionIvaCompleta[];
 
 export type CondicionIva = (typeof CONDICIONES_DE_IVA)[number];
 

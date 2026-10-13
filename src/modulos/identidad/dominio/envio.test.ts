@@ -13,7 +13,7 @@ import {
   armarMensajeDeInvitacion,
   decidirEnvioDeInvitacion,
 } from "./envio";
-import type { Email } from "./email";
+import type { Email } from "../../../primitivas/contacto/email";
 import type { Invitacion } from "./invitacion";
 
 const AHORA = new Date("2026-10-11T12:00:00.000Z");

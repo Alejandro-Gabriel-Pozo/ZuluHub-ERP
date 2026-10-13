@@ -1,3 +1,4 @@
+import { HORA_DE_CORTE_POR_DEFECTO } from "../../../primitivas/tiempo/hora-del-dia";
 import { describe, expect, it } from "vitest";
 import type { EstadoDeEmpresa } from "../../../contexto/estados";
 import type { Cuit } from "../../../primitivas/identificacion-fiscal/cuit";
@@ -85,6 +86,7 @@ describe("empresa: transiciones de estado", () => {
       empresaId: empresaId("e-1"),
       nombre: "x",
       activa: true,
+      horaDeCorte: HORA_DE_CORTE_POR_DEFECTO,
       version: 1,
     };
     expect(s.activa).toBe(true);

@@ -1,7 +1,11 @@
-import type { Marca } from "../../../primitivas/identificadores/marca";
-import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import type { Marca } from "../identificadores/marca";
+import { err, ok, type Resultado } from "../resultado/resultado";
 
-/** Email normalizado (sin espacios en los extremos y en minúsculas). Solo nace de `emailDesdeTexto`. */
+/**
+ * Email normalizado (sin espacios en los extremos y en minúsculas). Solo nace de `emailDesdeTexto`. Es
+ * una primitiva y no del dominio de identidad porque lo usan también clientes y proveedores (conciliación
+ * §3.7): dos reglas de email serían dos CHECK distintos en la base para el mismo dato.
+ */
 export type Email = Marca<string, "Email">;
 
 const ESPACIO_BLANCO = /\s/;

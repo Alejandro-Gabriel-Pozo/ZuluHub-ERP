@@ -14,7 +14,7 @@ import type { RegistroDeAuditoria } from "../../../puertos/auditoria";
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { Empresa } from "../../empresas/publico";
 import type { Tenant } from "../../tenants/publico";
-import type { Email } from "../dominio/email";
+import type { Email } from "../../../primitivas/contacto/email";
 import type { Invitacion } from "../dominio/invitacion";
 import { crearManejadorDeEnviarInvitacion, type TxDeEnvioDeInvitacion } from "./enviar-invitacion";
 

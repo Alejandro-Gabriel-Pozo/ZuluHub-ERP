@@ -1,6 +1,11 @@
 import { err, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
-import { ERRORES_DE_DOMINIO_POR_RESTRICCION, type ErrorDeDominioPorRestriccion } from "./esquema";
+import {
+  ERRORES_DE_DOMINIO_POR_RESTRICCION,
+  ERRORES_DE_MARCAS_POR_RESTRICCION,
+  type ErrorDeDominioPorRestriccion,
+  type ErrorDeMarcaPorRestriccion,
+} from "./esquema";
 
 /**
  * Traducción de las restricciones de `dominio` a motivos tipados (ADR-004), con el mapa del módulo. Cada
@@ -14,10 +19,14 @@ function esErrorDePersistencia(error: unknown): error is ErrorDePersistencia {
   return typeof error === "object" && error !== null && "tipo" in error;
 }
 
-/** El motivo de la restricción que saltó, o `null` si no tiene (o el error no es de una restricción). */
-export function errorDeDominioDeRestriccion(
+/**
+ * El motivo de la restricción que saltó según `mapa`, o `null` si no tiene (o el error no es de una
+ * restricción). Las dos traducciones del módulo (dominios y marcas) comparten esta lectura.
+ */
+function motivoDeRestriccion(
+  mapa: Readonly<Record<string, string>>,
   error: ErrorDePersistencia,
-): ErrorDeDominioPorRestriccion | null {
+): string | null {
   if (
     error.tipo !== "Unicidad" &&
     error.tipo !== "Superposicion" &&
@@ -28,13 +37,40 @@ export function errorDeDominioDeRestriccion(
   }
   if (error.restriccion === null) return null;
   // `hasOwn`: un nombre como "constructor" no puede salir del prototipo del objeto.
-  if (!Object.hasOwn(ERRORES_DE_DOMINIO_POR_RESTRICCION, error.restriccion)) return null;
-  const codigo = (ERRORES_DE_DOMINIO_POR_RESTRICCION as Readonly<Record<string, string>>)[
-    error.restriccion
-  ];
-  return codigo === undefined || codigo === "NO_TRADUCIDA"
-    ? null
-    : (codigo as ErrorDeDominioPorRestriccion);
+  if (!Object.hasOwn(mapa, error.restriccion)) return null;
+  const codigo = mapa[error.restriccion];
+  return codigo === undefined || codigo === "NO_TRADUCIDA" ? null : codigo;
+}
+
+/** El motivo de la restricción de `dominio` que saltó, o `null` si no tiene. */
+export function errorDeDominioDeRestriccion(
+  error: ErrorDePersistencia,
+): ErrorDeDominioPorRestriccion | null {
+  return motivoDeRestriccion(
+    ERRORES_DE_DOMINIO_POR_RESTRICCION,
+    error,
+  ) as ErrorDeDominioPorRestriccion | null;
+}
+
+/** El motivo de la restricción de `marca` o `version_de_marca` que saltó, o `null` si no tiene. */
+export function errorDeMarcaDeRestriccion(
+  error: ErrorDePersistencia,
+): ErrorDeMarcaPorRestriccion | null {
+  return motivoDeRestriccion(
+    ERRORES_DE_MARCAS_POR_RESTRICCION,
+    error,
+  ) as ErrorDeMarcaPorRestriccion | null;
+}
+
+function traducir<T, E, C extends string>(
+  resultado: Resultado<T, E | ErrorDePersistencia>,
+  admitidos: readonly C[],
+  motivo: (error: ErrorDePersistencia) => string | null,
+): Resultado<T, E | C | ErrorDePersistencia> {
+  if (resultado.ok || !esErrorDePersistencia(resultado.error)) return resultado;
+  const codigo = motivo(resultado.error);
+  const admitido = admitidos.find((a) => a === codigo);
+  return admitido === undefined ? resultado : err(admitido);
 }
 
 /**
@@ -46,8 +82,13 @@ export function traducirErroresDeDominio<T, E, C extends ErrorDeDominioPorRestri
   resultado: Resultado<T, E | ErrorDePersistencia>,
   admitidos: readonly C[],
 ): Resultado<T, E | C | ErrorDePersistencia> {
-  if (resultado.ok || !esErrorDePersistencia(resultado.error)) return resultado;
-  const codigo = errorDeDominioDeRestriccion(resultado.error);
-  const admitido = admitidos.find((a) => a === codigo);
-  return admitido === undefined ? resultado : err(admitido);
+  return traducir(resultado, admitidos, errorDeDominioDeRestriccion);
+}
+
+/** Lo mismo para una restricción de `marca` o `version_de_marca`. */
+export function traducirErroresDeMarca<T, E, C extends ErrorDeMarcaPorRestriccion>(
+  resultado: Resultado<T, E | ErrorDePersistencia>,
+  admitidos: readonly C[],
+): Resultado<T, E | C | ErrorDePersistencia> {
+  return traducir(resultado, admitidos, errorDeMarcaDeRestriccion);
 }

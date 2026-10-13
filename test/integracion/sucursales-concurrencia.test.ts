@@ -71,6 +71,7 @@ describe.skipIf(base === null)("sucursales: concurrencia de los casos de uso (S1
       return {
         ...tx,
         autorizacion: {
+          ...original,
           delActor: async (contexto) => {
             const r = await original.delActor(contexto);
             if (primera) {
