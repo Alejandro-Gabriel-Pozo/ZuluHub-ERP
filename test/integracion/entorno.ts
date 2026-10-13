@@ -35,6 +35,7 @@ import {
   crearRepositorioDeInvitaciones,
   crearRepositorioDeMembresias,
   crearRepositorioDePersonas,
+  crearRepositorioDeTraspasos,
   type IdentidadDb,
   type TxDeIdentidad,
 } from "../../src/modulos/identidad/publico";
@@ -130,6 +131,7 @@ export function crearEntornoDePrueba(
         membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
         asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
         invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
+        traspasos: crearRepositorioDeTraspasos(db.withTables<IdentidadDb>()),
         trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
         auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
         cola: crearColaDePostgres(db.withTables<ColaDb>()),
