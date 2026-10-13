@@ -395,10 +395,10 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
           `insert into autenticacion."rateLimit" (key, count, "lastRequest") values ($1, 1, 1)`,
           [uuidAlAzar()],
         );
-        const leidas = await cliente.query(
+        const leidas = await cliente.query<{ n: number }>(
           `select count(*)::int as n from autenticacion."rateLimit"`,
         );
-        expect(leidas.rows[0].n).toBeGreaterThan(0);
+        expect(leidas.rows[0]?.n).toBeGreaterThan(0);
         await cliente.query("rollback");
       } finally {
         await cliente.end();

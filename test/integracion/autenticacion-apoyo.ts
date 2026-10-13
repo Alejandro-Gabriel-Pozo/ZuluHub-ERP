@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
 import type pg from "pg";
 import {
   usuarioAuthId,
@@ -8,7 +10,12 @@ import {
 import { comoInvitacion, comoSesion } from "./entorno";
 import { emailAlAzar, type RolDePrueba } from "./fixtures-identidad";
 import type { BaseDePruebas } from "./global";
-import { crearMundoDeMarca, type MundoDeMarca } from "./marcas-apoyo";
+import {
+  CARPETA_DE_MIGRACIONES,
+  carpetaCon,
+  crearMundoDeMarca,
+  type MundoDeMarca,
+} from "./marcas-apoyo";
 import { SesionDePrueba } from "./sesiones";
 
 /**
@@ -40,7 +47,7 @@ export async function vincularDeBase(
 }
 
 /** Una membresía de la persona en la empresa, armada por el dueño (con su rol y su estado). */
-export async function membresiaDeBase(
+async function membresiaDeBase(
   c: pg.Client,
   empresa: string,
   persona: string,
@@ -127,3 +134,41 @@ export async function conInvitacion<T>(
 
 /** Un uuid al azar que no es de ningún usuario ni persona. */
 export const uuidAlAzar = (): string => randomUUID();
+
+// ---- la migración y su reversión, sea cual sea su número -------------------------------------------------------
+
+/** Nombre del archivo de la migración de autenticación (el número es provisorio: se renumera al integrar). */
+export async function archivoDeAutenticacion(): Promise<string> {
+  const archivos = (await readdir(CARPETA_DE_MIGRACIONES)).filter((n) =>
+    /^\d{4}_autenticacion\.sql$/.test(n),
+  );
+  if (archivos.length !== 1) {
+    throw new Error(`tenía que haber una migración de autenticación y hay ${archivos.length}`);
+  }
+  return archivos[0] as string;
+}
+
+/** Las migraciones que van ANTES de la de autenticación (todas las de número menor), en orden. */
+export async function migracionesPrevias(): Promise<string[]> {
+  const mia = await archivoDeAutenticacion();
+  return (await readdir(CARPETA_DE_MIGRACIONES))
+    .filter((n) => /^\d{4}_[a-z0-9_]+\.sql$/.test(n) && n < mia)
+    .sort();
+}
+
+/** La reversión de la migración de autenticación (también por nombre). */
+export async function archivoDeReversionDeAutenticacion(): Promise<string> {
+  const archivos = (await readdir(join(CARPETA_DE_MIGRACIONES, "reversiones"))).filter((n) =>
+    /^\d{4}_revertir_autenticacion\.sql$/.test(n),
+  );
+  if (archivos.length !== 1) {
+    throw new Error(`tenía que haber una reversión de autenticación y hay ${archivos.length}`);
+  }
+  return join(CARPETA_DE_MIGRACIONES, "reversiones", archivos[0] as string);
+}
+
+/** Una carpeta temporal con las migraciones previas y, si se pide, la de autenticación. */
+export async function carpetaConAutenticacion(conAutenticacion: boolean): Promise<string> {
+  const previas = await migracionesPrevias();
+  return carpetaCon(conAutenticacion ? [...previas, await archivoDeAutenticacion()] : previas);
+}
