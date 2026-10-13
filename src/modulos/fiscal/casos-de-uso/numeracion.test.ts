@@ -84,7 +84,10 @@ function armar(
   const tx: TxDeNumeracion = {
     empresas: { obtener: () => Promise.resolve({ tenantId: "t" as never, estado: "ACTIVE" }) },
     tenants: { obtener: () => Promise.resolve({ estado: "ACTIVE" }) },
-    puntosDeVenta: { obtener: () => Promise.resolve(mundo.pv) },
+    puntosDeVenta: {
+      obtener: () =>
+        Promise.resolve(mundo.pv === null ? null : { ...mundo.pv, ambiente: "HOMOLOGACION" }),
+    },
     emisores: { obtener: () => Promise.resolve(mundo.emisor) },
     series: {
       obtener: (_e, pv, tipo) => Promise.resolve(mundo.series.get(`${pv}|${tipo}`) ?? null),

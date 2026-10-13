@@ -12,6 +12,7 @@ import {
 } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { TIPOS_DE_COMPROBANTE, type TipoDeComprobante } from "../dominio/comprobante-emitido";
+import { AMBIENTES, type Ambiente } from "../dominio/comprobante-nuevo";
 import {
   esCondicionDeIibb,
   type CondicionIibb,
@@ -67,13 +68,16 @@ export type ResultadoDeAlta<T> = Readonly<{ creado: boolean; valor: T }>;
 /** El `id` está tomado por algo que esta empresa no puede ver (o por otra clase de fila). */
 export type ErrorDeAlta = "ID_EN_USO";
 
-/** Un valor de la base que el CHECK correspondiente no deja pasar: si llega otro, algo se rompió. */
-function exigir<T>(valor: T | null, nombre: string): T {
+/**
+ * Un valor de la base que el CHECK correspondiente no deja pasar: si llega otro, algo se rompió.
+ * Lo comparten los repositorios de la facturación (comprobantes, intentos, certificados).
+ */
+export function exigir<T>(valor: T | null, nombre: string): T {
   if (valor === null) throw new RangeError(`${nombre} vacío en la base`);
   return valor;
 }
 
-function deLaLista<T extends string>(lista: readonly T[], valor: string, nombre: string): T {
+export function deLaLista<T extends string>(lista: readonly T[], valor: string, nombre: string): T {
   const encontrado = lista.find((v) => v === valor);
   if (encontrado === undefined) throw new RangeError(`${nombre} desconocido en la base: ${valor}`);
   return encontrado;
@@ -89,7 +93,11 @@ function deLaLista<T extends string>(lista: readonly T[], valor: string, nombre:
  * su fila y no hace nada (bajo SERIALIZABLE, además, el adaptador repite el trabajo si el motor
  * aborta con 40001).
  */
-async function serializarAltaDeId(db: Kysely<FiscalDb>, tabla: string, id: string): Promise<void> {
+export async function serializarAltaDeId(
+  db: Kysely<FiscalDb>,
+  tabla: string,
+  id: string,
+): Promise<void> {
   await sql`select pg_advisory_xact_lock(hashtextextended(${`zuluhub.fiscal.alta.${tabla}:${id}`}, 0))`.execute(
     db,
   );
@@ -778,6 +786,7 @@ type FilaDePuntoDeVenta = Readonly<{
   numero: number;
   estado: string;
   version: number;
+  ambiente: string;
 }>;
 
 const COLUMNAS_DE_PUNTO_DE_VENTA = [
@@ -789,9 +798,17 @@ const COLUMNAS_DE_PUNTO_DE_VENTA = [
   "numero",
   "estado",
   "version",
+  "ambiente",
 ] as const;
 
-function aPuntoDeVenta(fila: FilaDePuntoDeVenta): PuntoDeVenta {
+/**
+ * Un punto de venta tal como lo guarda la base: el del dominio más su `ambiente` (0009). El dominio del
+ * punto de venta no lo conoce (no decide nada con él); lo modelan el repositorio y la facturación.
+ * Un punto de venta nace en `HOMOLOGACION` y pasa a `PRODUCCION` solo con `cambiarAmbiente`.
+ */
+export type PuntoDeVentaGuardado = PuntoDeVenta & Readonly<{ ambiente: Ambiente }>;
+
+function aPuntoDeVenta(fila: FilaDePuntoDeVenta): PuntoDeVentaGuardado {
   return {
     id: puntoDeVentaId(fila.id),
     empresaId: empresaId(fila.empresa_id),
@@ -803,28 +820,45 @@ function aPuntoDeVenta(fila: FilaDePuntoDeVenta): PuntoDeVenta {
     // Único valor que la base admite en H7 (`punto_de_venta_verificacion_ck`).
     verificacionArca: "NO_VERIFICADO",
     version: fila.version,
+    ambiente: deLaLista(AMBIENTES, fila.ambiente, "ambiente de punto de venta"),
   };
 }
 
 export interface RepositorioDePuntosDeVenta {
-  obtener(empresa: EmpresaId, id: PuntoDeVentaId): Promise<PuntoDeVenta | null>;
+  obtener(empresa: EmpresaId, id: PuntoDeVentaId): Promise<PuntoDeVentaGuardado | null>;
   /** Todos los puntos de venta de la empresa, por emisor y número. */
-  listar(empresa: EmpresaId): Promise<PuntoDeVenta[]>;
+  listar(empresa: EmpresaId): Promise<PuntoDeVentaGuardado[]>;
   /** Los del emisor (para el número único), por número. */
-  listarDelEmisor(empresa: EmpresaId, emisor: EmisorId): Promise<PuntoDeVenta[]>;
+  listarDelEmisor(empresa: EmpresaId, emisor: EmisorId): Promise<PuntoDeVentaGuardado[]>;
   /** Los de la sucursal (activos o no), por emisor y número. */
-  listarDeLaSucursal(empresa: EmpresaId, sucursal: SucursalId): Promise<PuntoDeVenta[]>;
+  listarDeLaSucursal(empresa: EmpresaId, sucursal: SucursalId): Promise<PuntoDeVentaGuardado[]>;
   /**
    * Da de alta el punto de venta con el `id` de la aplicación (idempotente: repetir devuelve el que
    * ya existe, `creado: false`). Nace como lo dice el dominio (`INACTIVO`). Un número ya usado por
-   * el emisor sale como error de la base (`punto_de_venta_numero_uk`).
+   * el emisor sale como error de la base (`punto_de_venta_numero_uk`). Nace en `HOMOLOGACION`: la
+   * aplicación no tiene permiso para elegir el ambiente al insertar.
    */
-  crear(puntoDeVenta: PuntoDeVenta): Promise<Resultado<ResultadoDeAlta<PuntoDeVenta>, ErrorDeAlta>>;
+  crear(
+    puntoDeVenta: PuntoDeVenta,
+  ): Promise<Resultado<ResultadoDeAlta<PuntoDeVentaGuardado>, ErrorDeAlta>>;
   /**
-   * Guarda número, sucursal, domicilio y estado si la versión coincide; si no, `null`. El emisor no
-   * se guarda nunca (no cambia).
+   * Guarda número, sucursal, domicilio y estado si la versión coincide; si no, `null`. El emisor y el
+   * ambiente no se guardan nunca por acá (el emisor no cambia; el ambiente tiene `cambiarAmbiente`).
    */
-  guardar(puntoDeVenta: PuntoDeVenta): Promise<PuntoDeVenta | null>;
+  guardar(puntoDeVenta: PuntoDeVenta): Promise<PuntoDeVentaGuardado | null>;
+  /**
+   * Cambia el ambiente (QF2: el gerente) si la versión coincide; si no, `null`. Si ya tiene ese ambiente
+   * no escribe y devuelve el punto de venta tal cual («ya estaba», aunque la versión sea otra). La base frena el
+   * cambio con una serie `EN_CURSO` (`punto_de_venta_ambiente_con_serie_en_curso`) y la vuelta de
+   * `PRODUCCION` a `HOMOLOGACION` si ya emitió (`punto_de_venta_ambiente_no_vuelve`): salen como error
+   * de la base. Que haya un certificado de producción vigente lo exige el caso de uso.
+   */
+  cambiarAmbiente(
+    empresa: EmpresaId,
+    id: PuntoDeVentaId,
+    ambiente: Ambiente,
+    versionEsperada: number,
+  ): Promise<PuntoDeVentaGuardado | null>;
   /**
    * SOLO PLATAFORMA (la que más lo necesita): cuántos puntos de venta `ACTIVO` tiene el emisor.
    * Lee solo `id`, `empresa_id`, `emisor_id` y `estado`, las 4 columnas que la plataforma ve.
@@ -835,7 +869,10 @@ export interface RepositorioDePuntosDeVenta {
 export function crearRepositorioDePuntosDeVenta(db: Kysely<FiscalDb>): RepositorioDePuntosDeVenta {
   const seleccionar = () => db.selectFrom("punto_de_venta").select(COLUMNAS_DE_PUNTO_DE_VENTA);
 
-  async function obtener(empresa: EmpresaId, id: PuntoDeVentaId): Promise<PuntoDeVenta | null> {
+  async function obtener(
+    empresa: EmpresaId,
+    id: PuntoDeVentaId,
+  ): Promise<PuntoDeVentaGuardado | null> {
     const fila = await seleccionar()
       .where("empresa_id", "=", empresa)
       .where("id", "=", id)
@@ -915,6 +952,22 @@ export function crearRepositorioDePuntosDeVenta(db: Kysely<FiscalDb>): Repositor
       return actualizado === undefined ? null : aPuntoDeVenta(actualizado);
     },
 
+    async cambiarAmbiente(empresa, id, ambiente, versionEsperada) {
+      const actual = await obtener(empresa, id);
+      if (actual === null) return null;
+      if (actual.ambiente === ambiente) return actual;
+      if (actual.version !== versionEsperada) return null;
+      const actualizado = await db
+        .updateTable("punto_de_venta")
+        .set({ ambiente })
+        .where("empresa_id", "=", empresa)
+        .where("id", "=", id)
+        .where("version", "=", versionEsperada)
+        .returning(COLUMNAS_DE_PUNTO_DE_VENTA)
+        .executeTakeFirst();
+      return actualizado === undefined ? null : aPuntoDeVenta(actualizado);
+    },
+
     async contarActivosDelEmisor(empresa, emisor) {
       const fila = await db
         .selectFrom("punto_de_venta")
@@ -944,6 +997,7 @@ type FilaDeSerie = Readonly<{
   en_curso_hasta: Date | null;
   motivo_bloqueo: string | null;
   version: number;
+  ambiente: string;
 }>;
 
 const COLUMNAS_DE_SERIE = [
@@ -958,10 +1012,20 @@ const COLUMNAS_DE_SERIE = [
   "en_curso_hasta",
   "motivo_bloqueo",
   "version",
+  "ambiente",
 ] as const;
 
-function aSerie(fila: FilaDeSerie): Serie {
+/**
+ * Una serie tal como la guarda la base: la del dominio más su `ambiente` (0009: parte de la clave). El
+ * repositorio SIEMPRE lo completa al leer. Es opcional en el tipo porque el dominio de la numeración
+ * todavía no lo conoce (lo suma F4, que entonces vuelve este tipo igual a `Serie`): las series que arma el
+ * dominio de T6 no lo traen, y al guardarlas el repositorio usa el ambiente actual del punto de venta.
+ */
+export type SerieGuardada = Serie & Readonly<{ ambiente?: Ambiente }>;
+
+function aSerie(fila: FilaDeSerie): SerieGuardada {
   const identidad = {
+    ambiente: deLaLista(AMBIENTES, fila.ambiente, "ambiente de serie"),
     empresaId: empresaId(fila.empresa_id),
     puntoDeVentaId: puntoDeVentaId(fila.punto_de_venta_id),
     emisorId: emisorId(fila.emisor_id),
@@ -995,34 +1059,48 @@ function aSerie(fila: FilaDeSerie): Serie {
 }
 
 export interface RepositorioDeSeries {
+  /**
+   * La serie de `(punto de venta, tipo, ambiente)`. Sin `ambiente`, la del ambiente que el punto de
+   * venta tiene ahora (hasta F4, que lo vuelve obligatorio: la numeración de T6 todavía no lo dice).
+   */
   obtener(
     empresa: EmpresaId,
     puntoDeVenta: PuntoDeVentaId,
     tipo: TipoDeComprobante,
-  ): Promise<Serie | null>;
-  /** Las series del punto de venta, por tipo. */
-  delPuntoDeVenta(empresa: EmpresaId, puntoDeVenta: PuntoDeVentaId): Promise<Serie[]>;
+    ambiente?: Ambiente,
+  ): Promise<SerieGuardada | null>;
+  /** Las series del punto de venta en ese ambiente (por defecto, el del punto de venta), por tipo. */
+  delPuntoDeVenta(
+    empresa: EmpresaId,
+    puntoDeVenta: PuntoDeVentaId,
+    ambiente?: Ambiente,
+  ): Promise<SerieGuardada[]>;
   /**
-   * Crea la serie `LIBRE` de (punto de venta, tipo) con el último número que informó el servicio de
-   * emisión (`iniciarSerie`). Idempotente por su clave `(empresa, punto de venta, tipo)`: repetir
-   * devuelve la que existe (`creado: false`) SIN pisar su último número.
+   * Crea la serie `LIBRE` de (punto de venta, tipo, ambiente) con el último número que informó el
+   * servicio de emisión (`iniciarSerie`). Una serie nace en el ambiente de su punto de venta: pedir
+   * otro es `serie_ambiente_invalido` (`SERIE_AMBIENTE_INVALIDO`), error de la base. Idempotente por
+   * su clave: repetir devuelve la que existe (`creado: false`) SIN pisar su último número.
    */
-  crear(serie: SerieLibre): Promise<ResultadoDeAlta<Serie>>;
+  crear(serie: SerieLibre, ambiente?: Ambiente): Promise<ResultadoDeAlta<SerieGuardada>>;
   /**
    * Guarda el estado que calculó el dominio (`reservarNumero`, `cerrarSerie`, `reconciliarSerie`) si
-   * la versión coincide; si no, `null`. Los disparadores de la base repiten las reglas de la
-   * numeración (`ultimo_numero` solo sube de a uno cerrando su reserva, `BLOQUEADA` sin salida):
-   * una transición que el dominio no hubiera permitido sale como error de la base.
+   * la versión coincide; si no, `null`. El ambiente de la serie es el de `serie.ambiente` (lo que
+   * devuelve este repositorio); una serie armada por el dominio sin ambiente es la del ambiente actual
+   * del punto de venta. Los disparadores de la base repiten las reglas de la numeración (`ultimo_numero`
+   * solo sube de a uno cerrando su reserva; `BLOQUEADA` solo sale hacia `LIBRE`): una transición que el
+   * dominio no hubiera permitido sale como error de la base.
    */
-  guardar(serie: Serie): Promise<Serie | null>;
+  guardar(serie: SerieGuardada): Promise<SerieGuardada | null>;
   /**
-   * Las series de la empresa con una reserva vencida (`EN_CURSO` y `en_curso_hasta <= ahora`), las
-   * más viejas primero, hasta `limite`. Es lo que la reconciliación (T6) tiene que resolver.
+   * Las series de la empresa con una reserva vencida (`EN_CURSO` y `en_curso_hasta <= ahora`), de
+   * cualquier ambiente, las más viejas primero, hasta `limite`. Es lo que la reconciliación tiene que
+   * resolver.
    */
-  enCursoVencidas(empresa: EmpresaId, ahora: Date, limite: number): Promise<Serie[]>;
+  enCursoVencidas(empresa: EmpresaId, ahora: Date, limite: number): Promise<SerieGuardada[]>;
   /**
-   * ¿Alguna serie del emisor tiene `ultimo_numero > 0` o no está `LIBRE`? Es el contexto de
-   * `corregirCuit` (`tieneNumerosUsados`). Sirve a la plataforma: las series enteras son legibles.
+   * ¿Alguna serie del emisor (de cualquier ambiente) tiene `ultimo_numero > 0` o no está `LIBRE`? Es el
+   * contexto de `corregirCuit` (`tieneNumerosUsados`). Sirve a la plataforma: las series enteras son
+   * legibles.
    */
   hayNumerosUsadosDelEmisor(empresa: EmpresaId, emisor: EmisorId): Promise<boolean>;
   /** Lo mismo para las series de un punto de venta: es el contexto de `editarPuntoDeVenta`. */
@@ -1035,21 +1113,28 @@ export interface RepositorioDeSeries {
 export function crearRepositorioDeSeries(db: Kysely<FiscalDb>): RepositorioDeSeries {
   const seleccionar = () => db.selectFrom("serie_comprobante").select(COLUMNAS_DE_SERIE);
 
+  /** El ambiente que el punto de venta tiene ahora, como subconsulta (para no leerlo aparte). */
+  const ambienteDelPuntoDeVenta = (empresa: EmpresaId, puntoDeVenta: PuntoDeVentaId) =>
+    sql<string>`(select p.ambiente from punto_de_venta p where p.id = ${puntoDeVenta} and p.empresa_id = ${empresa})`;
+
   async function obtener(
     empresa: EmpresaId,
     puntoDeVenta: PuntoDeVentaId,
     tipo: TipoDeComprobante,
-  ): Promise<Serie | null> {
+    ambiente?: Ambiente,
+  ): Promise<SerieGuardada | null> {
     const fila = await seleccionar()
       .where("empresa_id", "=", empresa)
       .where("punto_de_venta_id", "=", puntoDeVenta)
       .where("tipo_comprobante", "=", tipo)
+      .where("ambiente", "=", ambiente ?? ambienteDelPuntoDeVenta(empresa, puntoDeVenta))
       .executeTakeFirst();
     return fila === undefined ? null : aSerie(fila);
   }
 
   // Una serie «usada» ya no permite cambiar el CUIT del emisor ni el número del punto de venta
-  // (`serieUsada` del dominio, repetido en SQL).
+  // (`serieUsada` del dominio, repetido en SQL). Cuenta las de todos los ambientes: lo emitido en
+  // producción no se olvida porque el punto de venta esté en homologación.
   const hayUsadas = async (
     cual: { empresa: EmpresaId } & ({ emisor: EmisorId } | { puntoDeVenta: PuntoDeVentaId }),
   ) => {
@@ -1069,16 +1154,30 @@ export function crearRepositorioDeSeries(db: Kysely<FiscalDb>): RepositorioDeSer
   return {
     obtener,
 
-    async delPuntoDeVenta(empresa, puntoDeVenta) {
+    async delPuntoDeVenta(empresa, puntoDeVenta, ambiente) {
       const filas = await seleccionar()
         .where("empresa_id", "=", empresa)
         .where("punto_de_venta_id", "=", puntoDeVenta)
+        .where("ambiente", "=", ambiente ?? ambienteDelPuntoDeVenta(empresa, puntoDeVenta))
         .orderBy("tipo_comprobante")
         .execute();
       return filas.map(aSerie);
     },
 
-    async crear(serie) {
+    async crear(serie, ambiente) {
+      // Sin ambiente, el del punto de venta. Si el punto de venta no existe (o no es de esta empresa) la
+      // base lo rechaza con la clave foránea sea cual sea el ambiente que se mande acá.
+      const delPuntoDeVenta = await db
+        .selectFrom("punto_de_venta")
+        .select("ambiente")
+        .where("empresa_id", "=", serie.empresaId)
+        .where("id", "=", serie.puntoDeVentaId)
+        .executeTakeFirst();
+      const elegido: Ambiente =
+        ambiente ??
+        (delPuntoDeVenta === undefined
+          ? "HOMOLOGACION"
+          : deLaLista(AMBIENTES, delPuntoDeVenta.ambiente, "ambiente de punto de venta"));
       const nueva = await db
         .insertInto("serie_comprobante")
         .values({
@@ -1087,9 +1186,7 @@ export function crearRepositorioDeSeries(db: Kysely<FiscalDb>): RepositorioDeSer
           emisor_id: serie.emisorId,
           tipo_comprobante: serie.tipo,
           ultimo_numero: serie.ultimoNumero.toString(),
-          // Puente hasta F3/F4 (0009 puso el ambiente en la clave de la serie): el dominio de la serie todavía
-          // no lo conoce y todo punto de venta nace en homologación, así que acá es siempre ese.
-          ambiente: "HOMOLOGACION",
+          ambiente: elegido,
         })
         .onConflict((oc) =>
           oc
@@ -1099,7 +1196,7 @@ export function crearRepositorioDeSeries(db: Kysely<FiscalDb>): RepositorioDeSer
         .returning(COLUMNAS_DE_SERIE)
         .executeTakeFirst();
       if (nueva !== undefined) return { creado: true, valor: aSerie(nueva) };
-      const existente = await obtener(serie.empresaId, serie.puntoDeVentaId, serie.tipo);
+      const existente = await obtener(serie.empresaId, serie.puntoDeVentaId, serie.tipo, elegido);
       if (existente === null) throw new Error("el alta de la serie no insertó y tampoco existe");
       return { creado: false, valor: existente };
     },
@@ -1119,6 +1216,11 @@ export function crearRepositorioDeSeries(db: Kysely<FiscalDb>): RepositorioDeSer
         .where("empresa_id", "=", serie.empresaId)
         .where("punto_de_venta_id", "=", serie.puntoDeVentaId)
         .where("tipo_comprobante", "=", serie.tipo)
+        .where(
+          "ambiente",
+          "=",
+          serie.ambiente ?? ambienteDelPuntoDeVenta(serie.empresaId, serie.puntoDeVentaId),
+        )
         .where("version", "=", serie.version)
         .returning(COLUMNAS_DE_SERIE)
         .executeTakeFirst();
@@ -1133,6 +1235,7 @@ export function crearRepositorioDeSeries(db: Kysely<FiscalDb>): RepositorioDeSer
         .orderBy("en_curso_hasta")
         .orderBy("punto_de_venta_id")
         .orderBy("tipo_comprobante")
+        .orderBy("ambiente")
         .limit(limite)
         .execute();
       return filas.map(aSerie);
