@@ -1,6 +1,5 @@
 import js from "@eslint/js";
 import { defineConfig } from "eslint/config";
-import nextPlugin from "@next/eslint-plugin-next";
 import reactHooks from "eslint-plugin-react-hooks";
 import jsxA11y from "eslint-plugin-jsx-a11y-x";
 import tseslint from "typescript-eslint";
@@ -51,11 +50,9 @@ export default defineConfig(
       "@typescript-eslint/consistent-type-imports": "error",
     },
   },
-  {
-    files: ["apps/**/*.{ts,tsx}"],
-    settings: { next: { rootDir: "apps/web" } },
-  },
-  { ...nextPlugin.configs["core-web-vitals"], files: ["apps/**/*.{ts,tsx}"] },
+  // Sin @next/eslint-plugin-next: arrastra fast-glob → micromatch → braces (aviso de severidad alta
+  // sin versión corregida) y `npm audit --audit-level=high` del CI lo rechaza. Se reevalúa cuando
+  // el plugin actualice esa cadena.
   { ...reactHooks.configs.flat.recommended, files: ["apps/**/*.{ts,tsx}"] },
   { ...jsxA11y.configs.recommended, files: ["apps/**/*.{ts,tsx}"] },
   ...bloquesDeWeb,
