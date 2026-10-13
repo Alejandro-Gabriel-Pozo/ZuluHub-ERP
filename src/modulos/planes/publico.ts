@@ -1,4 +1,4 @@
-/** Entrada pública del módulo de planes (ADR-001): por ahora, su dominio puro (M2). */
+/** Entrada pública del módulo de planes (ADR-001): su dominio puro (M2) y sus lecturas (M4). */
 export {
   decidirActivacion,
   decidirDesactivacion,
@@ -22,3 +22,12 @@ export {
   type PedidoDeAsignacion,
   type VersionDeDestino,
 } from "./dominio/asignacion";
+
+// M4: lecturas de planes para los derechos de uso (solo lectura).
+export {
+  crearLecturaDePlanes,
+  type AjusteGuardado,
+  type AsignacionConVersion,
+  type LecturaDePlanes,
+} from "./persistencia/lecturas";
+export type { PlanesDb } from "./persistencia/tablas";

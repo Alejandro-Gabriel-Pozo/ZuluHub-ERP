@@ -6,6 +6,7 @@ import {
   esValorDeLaPerilla,
   estaEncendida,
   valorBaseDe,
+  valorDeAjuste,
 } from "./valores";
 
 const interruptor: DefinicionDePerilla = {
@@ -122,5 +123,65 @@ describe("estaEncendida y apagado", () => {
     const original = Object.freeze({ tipo: "INTERRUPTOR", encendida: true } as const);
     expect(apagado(original)).not.toBe(original);
     expect(original.encendida).toBe(true);
+  });
+});
+
+describe("valorDeAjuste: el texto que guarda la base, como valor de su perilla", () => {
+  it("DEL_PLAN vale para cualquier perilla", () => {
+    expect(valorDeAjuste(interruptor, "DEL_PLAN")).toBe("DEL_PLAN");
+    expect(valorDeAjuste(tope, "DEL_PLAN")).toBe("DEL_PLAN");
+  });
+
+  it("un interruptor: 0 apagado, 1 encendido; todo lo demás no es un valor de interruptor", () => {
+    expect(valorDeAjuste(interruptor, "0")).toEqual({ tipo: "INTERRUPTOR", encendida: false });
+    expect(valorDeAjuste(interruptor, "1")).toEqual({ tipo: "INTERRUPTOR", encendida: true });
+    for (const texto of ["2", "10", "01", "-1", "", " 1", "1 ", "true", "ILIMITADO", "dEL_PLAN"]) {
+      expect(valorDeAjuste(interruptor, texto), texto).toBeNull();
+    }
+  });
+
+  it("un límite: ILIMITADO, o un entero de 0 a 999999999 sin ceros a la izquierda", () => {
+    expect(valorDeAjuste(tope, "ILIMITADO")).toEqual({ tipo: "LIMITE", limite: "ILIMITADO" });
+    expect(valorDeAjuste(tope, "0")).toEqual({ tipo: "LIMITE", limite: 0 });
+    expect(valorDeAjuste(tope, "1")).toEqual({ tipo: "LIMITE", limite: 1 });
+    expect(valorDeAjuste(tope, "25")).toEqual({ tipo: "LIMITE", limite: 25 });
+    expect(valorDeAjuste(tope, "999999999")).toEqual({
+      tipo: "LIMITE",
+      limite: LIMITE_MAXIMO_DE_PERILLA,
+    });
+  });
+
+  it("un límite rechaza lo que no es un entero canónico o se pasa del máximo", () => {
+    for (const texto of [
+      "1000000000",
+      "00",
+      "01",
+      "-1",
+      "1.5",
+      "1e3",
+      "+1",
+      "",
+      " 1",
+      "1 ",
+      "1\n",
+      "\n1",
+      "ilimitado",
+      "Ilimitado",
+      "x1",
+      "1x",
+    ]) {
+      expect(valorDeAjuste(tope, texto), JSON.stringify(texto)).toBeNull();
+    }
+  });
+
+  it("lo que devuelve siempre es un valor bien formado de la perilla (o DEL_PLAN)", () => {
+    for (const definicion of [interruptor, tope]) {
+      for (const texto of ["0", "1", "7", "ILIMITADO", "DEL_PLAN", "999999999", "2"]) {
+        const valor = valorDeAjuste(definicion, texto);
+        if (valor !== null && valor !== "DEL_PLAN") {
+          expect(esValorDeLaPerilla(definicion, valor), `${definicion.tipo} ${texto}`).toBe(true);
+        }
+      }
+    }
   });
 });
