@@ -1,8 +1,15 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/**/*.ts", "test/**/*.test.ts", "neon.ts"],
-  "project": ["src/**/*.ts", "test/**/*.ts", "arquitectura/**/*.cjs"],
-  "ignoreDependencies": ["@stryker-mutator/command-runner"],
+  "workspaces": {
+    ".": {
+      "entry": ["src/**/*.ts", "test/**/*.test.ts", "neon.ts"],
+      "project": ["src/**/*.ts", "test/**/*.ts", "arquitectura/**/*.cjs"],
+      "ignoreDependencies": ["@stryker-mutator/command-runner", "@types/react-dom", "next"]
+    },
+    "apps/web": {
+      "project": ["**/*.{ts,tsx}"]
+    }
+  },
   "ignoreIssues": {
     "arquitectura/lint-sql.cjs": ["exports"]
   }

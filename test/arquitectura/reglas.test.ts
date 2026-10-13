@@ -1,6 +1,14 @@
 import { cruise } from "dependency-cruiser";
 import type { IForbiddenRuleType } from "dependency-cruiser";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
@@ -663,5 +671,133 @@ describe("reglas de arquitectura (ADR-001)", () => {
       });
       expect(v).toEqual([]);
     });
+  });
+});
+
+/**
+ * R-W0: `npm run arquitectura` y `npm run typecheck` cubren `apps` y `scripts`. Previene que las reglas
+ * `apps-*` existan pero no corran sobre nada (hallazgo H4 del spec de la web). Chequeo: se lee el
+ * comando real de `package.json` y se cruza, con esas mismas carpetas, un árbol con un import prohibido
+ * bajo `apps/`; si alguien saca `apps` del comando, la violación deja de verse y la prueba falla.
+ */
+describe("R-W0: el comando de arquitectura alcanza a apps y scripts", () => {
+  const paquete = JSON.parse(readFileSync("package.json", "utf8")) as {
+    scripts: Record<string, string>;
+  };
+  const comando = paquete.scripts["arquitectura"] ?? "";
+  // Las carpetas que recibe depcruise: todo lo que no es la opción `--config` ni su valor.
+  const partes = comando.split(/\s+/).slice(1);
+  const carpetasDelComando = partes.filter(
+    (p, i) => p !== "" && p !== "--config" && partes[i - 1] !== "--config",
+  );
+
+  it("el comando cruza src, apps y scripts, y el typecheck incluye el tsconfig de la web", () => {
+    expect(comando.startsWith("depcruise ")).toBe(true);
+    expect(carpetasDelComando).toEqual(expect.arrayContaining(["src", "apps", "scripts"]));
+    expect(paquete.scripts["typecheck"]).toContain("apps/web/tsconfig.json");
+  });
+
+  it("las extensiones de la configuración incluyen .tsx (las pantallas)", () => {
+    const configuracion = require("../../.dependency-cruiser.cjs") as {
+      options: { enhancedResolveOptions: { extensions: string[] } };
+    };
+    expect(configuracion.options.enhancedResolveOptions.extensions).toContain(".tsx");
+  });
+
+  it("un import prohibido en un archivo bajo apps/ se ve con las carpetas del comando", async () => {
+    const base = mkdtempSync(join(tmpdir(), "zuluhub-arq-"));
+    directorios.push(base);
+    const archivos: Archivos = {
+      "src/adaptadores/postgres/a.ts": exporta,
+      "apps/web/prueba.ts": importa("../../src/adaptadores/postgres/a"),
+      "scripts/vacio.ts": exporta,
+    };
+    for (const [ruta, contenido] of Object.entries(archivos)) {
+      mkdirSync(dirname(join(base, ruta)), { recursive: true });
+      writeFileSync(join(base, ruta), contenido);
+    }
+    const resultado = await cruise(
+      carpetasDelComando,
+      { baseDir: base, validate: true, ruleSet: { forbidden: reglas }, tsPreCompilationDeps: true },
+      { extensions: [".ts", ".js"] },
+    );
+    if (typeof resultado.output === "string") throw new Error("salida inesperada");
+    const nombres = resultado.output.summary.violations.map((v) => v.rule.name);
+    expect(nombres).toContain("apps-sin-persistencia-ni-adaptadores");
+  });
+});
+
+/**
+ * R-W9: sin metadatos estáticos globales en `apps/<app>/app/` ni en `apps/<app>/public/`. Previene que todas
+ * las marcas compartan el mismo ícono, `robots.txt` o manifiesto (el plan de marca los resuelve por
+ * host con la API de metadatos dinámica: `icon.tsx`, `robots.ts`, `manifest.ts`, que sí se permiten).
+ * Chequeo: la función se prueba con archivos de verdad en un árbol temporal y se aplica al repo real.
+ */
+const METADATO_ESTATICO =
+  /^(favicon\.ico|icon\d*\.(ico|jpe?g|png|svg)|apple-icon\d*\.(jpe?g|png)|(opengraph|twitter)-image\d*\.(jpe?g|png|gif)|robots\.txt|sitemap\.xml|manifest\.(json|webmanifest))$/i;
+
+function metadatosEstaticosGlobales(raiz: string): string[] {
+  const encontrados: string[] = [];
+  const apps = join(raiz, "apps");
+  if (!existsSync(apps)) return encontrados;
+  for (const app of readdirSync(apps, { withFileTypes: true }).filter((e) => e.isDirectory())) {
+    for (const carpeta of ["app", "public"]) {
+      const base = join(apps, app.name, carpeta);
+      if (!existsSync(base)) continue;
+      for (const f of readdirSync(base, { recursive: true, encoding: "utf8" })) {
+        const nombre = f.split(/[\\/]/).pop() ?? "";
+        if (METADATO_ESTATICO.test(nombre)) encontrados.push(`apps/${app.name}/${carpeta}/${f}`);
+      }
+    }
+  }
+  return encontrados.sort();
+}
+
+describe("R-W9: sin metadatos estáticos globales en apps", () => {
+  const arbol = (archivos: string[]): string => {
+    const base = mkdtempSync(join(tmpdir(), "zuluhub-w9-"));
+    directorios.push(base);
+    for (const ruta of archivos) {
+      mkdirSync(dirname(join(base, ruta)), { recursive: true });
+      writeFileSync(join(base, ruta), "x");
+    }
+    return base;
+  };
+
+  it("el repositorio real no tiene ninguno", () => {
+    expect(metadatosEstaticosGlobales(".")).toEqual([]);
+  });
+
+  it.each([
+    "apps/web/app/favicon.ico",
+    "apps/web/app/icon.png",
+    "apps/web/app/icon1.svg",
+    "apps/web/app/apple-icon.png",
+    "apps/web/app/opengraph-image.jpg",
+    "apps/web/app/twitter-image.png",
+    "apps/web/app/robots.txt",
+    "apps/web/app/sitemap.xml",
+    "apps/web/app/manifest.json",
+    "apps/web/app/manifest.webmanifest",
+    "apps/web/app/s/landing/icon.ico",
+    "apps/web/public/robots.txt",
+    "apps/web/public/favicon.ico",
+    "apps/plataforma/app/Favicon.ICO",
+  ])("detecta %s", (ruta) => {
+    expect(metadatosEstaticosGlobales(arbol([ruta]))).toEqual([ruta]);
+  });
+
+  it("deja pasar las versiones dinámicas y los archivos comunes", () => {
+    const base = arbol([
+      "apps/web/app/icon.tsx",
+      "apps/web/app/robots.ts",
+      "apps/web/app/sitemap.ts",
+      "apps/web/app/manifest.ts",
+      "apps/web/app/layout.tsx",
+      "apps/web/app/s/neutra/page.tsx",
+      "apps/web/public/logo.png",
+      "apps/web/package.json",
+    ]);
+    expect(metadatosEstaticosGlobales(base)).toEqual([]);
   });
 });

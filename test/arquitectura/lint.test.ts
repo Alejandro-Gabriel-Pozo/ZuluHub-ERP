@@ -68,3 +68,45 @@ describe("lint del dinero", () => {
     expect(await mensajes(dentroDeDinero, "const a = BigInt(x) + 1n;")).toEqual([]);
   });
 });
+
+/**
+ * R-W8: sin `dangerouslySetInnerHTML` en `apps/**`. Previene que el texto de una marca (nombre,
+ * vocabulario) se pinte como HTML. Sin `eslint-plugin-react` la regla es un selector sobre el atributo.
+ */
+describe("lint de la web (R-W8)", () => {
+  const { bloques: bloquesDeWeb } = require("../../arquitectura/lint-web.cjs") as {
+    bloques: ESLint.Options["baseConfig"] extends infer T ? Exclude<T, null> : never;
+  };
+  const eslintWeb = new ESLint({
+    overrideConfigFile: true,
+    overrideConfig: [
+      {
+        files: ["**/*.ts", "**/*.tsx"],
+        languageOptions: {
+          parser: tseslint.parser,
+          parserOptions: { ecmaFeatures: { jsx: true } },
+        },
+      },
+      ...(bloquesDeWeb as never[]),
+    ],
+  });
+  const mensajesWeb = async (ruta: string, codigo: string): Promise<string[]> => {
+    const [resultado] = await eslintWeb.lintText(codigo, { filePath: ruta });
+    return (resultado?.messages ?? []).map((m) => `${m.ruleId ?? "?"}: ${m.message}`);
+  };
+  const pantalla = "apps/web/app/s/neutra/x.tsx";
+
+  it.each([
+    ["como atributo", "export const a = <div dangerouslySetInnerHTML={{ __html: marca }} />;"],
+    ["en un componente propio", "export const a = <Texto dangerouslySetInnerHTML={x} />;"],
+    ["por un objeto expandido", "export const a = <div {...{ dangerouslySetInnerHTML: x }} />;"],
+  ])("se prohíbe %s", async (_nombre, codigo) => {
+    expect(await mensajesWeb(pantalla, codigo)).not.toEqual([]);
+  });
+
+  it("el texto normal y otros atributos pasan", async () => {
+    expect(await mensajesWeb(pantalla, "export const a = <div title={t}>{texto}</div>;")).toEqual(
+      [],
+    );
+  });
+});
