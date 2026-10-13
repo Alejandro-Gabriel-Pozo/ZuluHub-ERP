@@ -38,7 +38,9 @@ function armar(opciones: { vidaEnMs?: number; tamano?: number } = {}) {
     if (control.marcaFalla) return Promise.reject(new Error("boom"));
     return Promise.resolve(MARCAS[id] ?? null);
   };
+  const fallos: string[] = [];
   const resolver = crearResolutorDePuerta({
+    alFallar: (motivo) => fallos.push(motivo),
     consultarHost,
     leerMarca,
     normalizarHost: (crudo) => {
@@ -48,7 +50,7 @@ function armar(opciones: { vidaEnMs?: number; tamano?: number } = {}) {
     ahora: () => reloj.ms,
     ...opciones,
   });
-  return { resolver, reloj, consultas, lecturas, control };
+  return { resolver, reloj, consultas, lecturas, control, fallos };
 }
 
 describe("crearResolutorDePuerta: resolución", () => {
@@ -115,6 +117,29 @@ describe("crearResolutorDePuerta: fallos", () => {
     control.falla = null;
     control.marcaFalla = true;
     expect(await resolver("app.a.test")).toEqual({ tipo: "NO_DISPONIBLE" });
+  });
+
+  it("avisa el motivo del fallo, y solo el motivo", async () => {
+    const { resolver, control, fallos } = armar();
+    await resolver("app.a.test");
+    expect(fallos).toEqual([]);
+    control.falla = "err";
+    await resolver("app.b.test");
+    expect(fallos).toEqual(["BASE"]);
+    control.falla = "lanza";
+    await resolver("a.test");
+    expect(fallos).toEqual(["BASE", "EXCEPCION"]);
+    control.falla = null;
+    control.marcaFalla = true;
+    await resolver("carta.a.test");
+    expect(fallos).toEqual(["BASE", "EXCEPCION", "EXCEPCION"]);
+  });
+
+  it("un host inválido o desconocido no es un fallo", async () => {
+    const { resolver, fallos } = armar();
+    await resolver("");
+    await resolver("otro.test");
+    expect(fallos).toEqual([]);
   });
 
   it("un fallo no se guarda: al volver la base, resuelve", async () => {
@@ -219,6 +244,20 @@ describe("crearResolutorDePuerta: caché", () => {
     // `app.b.test` venció: se vuelve a consultar, y con ello `app.a.test` (refrescado) sigue vigente.
     await resolver("app.b.test");
     expect(consultas.length).toBeGreaterThan(antes);
+  });
+
+  it("refrescar una entrada la pasa al final: no queda expuesta a salir primero", async () => {
+    const { resolver, consultas, reloj } = armar({ tamano: 3 });
+    await resolver("app.a.test"); // Z
+    await resolver("app.b.test"); // B
+    await resolver("a.test"); // C
+    reloj.ms += 60_000; // las tres vencieron
+    await resolver("app.b.test"); // refresca B: el orden pasa a Z, C, B
+    await resolver("carta.a.test"); // llena: sale Z
+    await resolver("sinmarca.test"); // llena: sale C (si B hubiera quedado primero, saldría B, recién refrescada)
+    const antes = consultas.length;
+    await resolver("app.b.test");
+    expect(consultas).toHaveLength(antes);
   });
 
   it("un tamaño de 1 guarda solo el último", async () => {

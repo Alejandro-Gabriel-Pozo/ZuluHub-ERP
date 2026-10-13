@@ -25,6 +25,10 @@ export function armarResolverDePuerta(
       return normalizado.ok ? normalizado.valor : null;
     },
     ahora,
+    // Solo el motivo, sin el detalle de la base ni el host: el detalle ya está en el registro de la conexión.
+    alFallar: (motivo) => {
+      console.error(`[puerta] no se pudo resolver el host (${motivo})`);
+    },
   });
 }
 

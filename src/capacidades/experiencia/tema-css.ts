@@ -12,9 +12,8 @@ const COLOR = /^#[0-9a-f]{6}$/;
 
 /** `:root{--brand-primary:#…;…}` con los tokens válidos presentes, o vacío si no hay ninguno. */
 export function cssDeTema(tema: Readonly<Record<string, string>>): string {
-  const declaraciones = VARIABLES_DE_MARCA.flatMap((token) => {
-    const valor = Object.hasOwn(tema, token) ? tema[token] : undefined;
-    return valor !== undefined && COLOR.test(valor) ? [`--brand-${token}:${valor}`] : [];
-  });
+  const declaraciones = VARIABLES_DE_MARCA.filter(
+    (token) => Object.hasOwn(tema, token) && COLOR.test(tema[token] as string),
+  ).map((token) => `--brand-${token}:${tema[token]}`);
   return declaraciones.length === 0 ? "" : `:root{${declaraciones.join(";")}}`;
 }

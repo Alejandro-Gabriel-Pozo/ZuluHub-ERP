@@ -13,6 +13,7 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "noEmit": true,
+    "jsx": "react-jsx",
     "types": ["node"]
   },
   "include": ["src", "test", "*.ts"]

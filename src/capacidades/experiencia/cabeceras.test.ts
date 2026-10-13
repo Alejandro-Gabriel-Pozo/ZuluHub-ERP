@@ -98,6 +98,7 @@ describe("politicaDeContenido", () => {
     "rechaza el nonce %j antes de ponerlo en una cabecera",
     (nonce) => {
       expect(() => politicaDeContenido(nonce)).toThrow(RangeError);
+      expect(() => politicaDeContenido(nonce)).toThrow(/nonce inválido/);
       expect(() => cabecerasDe("APP", nonce, { produccion: true })).toThrow(RangeError);
     },
   );

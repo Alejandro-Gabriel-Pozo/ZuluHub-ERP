@@ -38,6 +38,11 @@ export type OpcionesDelResolutor = Readonly<{
   normalizarHost: (crudo: string) => string | null;
   /** Milisegundos desde cualquier origen fijo: solo se restan. */
   ahora: () => number;
+  /**
+   * Avisa que la resolución falló, sin ningún dato del pedido ni de la base: `BASE` si la base devolvió
+   * un error y `EXCEPCION` si algo lanzó. Es para el registro del servidor; quien llama decide cómo.
+   */
+  alFallar: (motivo: "BASE" | "EXCEPCION") => void;
   vidaEnMs?: number;
   tamano?: number;
 }>;
@@ -57,7 +62,10 @@ export function crearResolutorDePuerta(
   async function consultar(host: string): Promise<EstadoDeLaResolucion> {
     for (const superficie of SUPERFICIES_SERVIBLES) {
       const respuesta = await opciones.consultarHost(host, superficie);
-      if (!respuesta.ok) return HOST_NO_DISPONIBLE;
+      if (!respuesta.ok) {
+        opciones.alFallar("BASE");
+        return HOST_NO_DISPONIBLE;
+      }
       if (respuesta.valor === null) continue;
       const marca = await opciones.leerMarca(respuesta.valor.marcaId);
       if (marca === null) return HOST_DESCONOCIDO;
@@ -73,8 +81,10 @@ export function crearResolutorDePuerta(
     // Se reinserta al final: el que más tiempo lleva sin refrescarse es el primero en salir.
     cache.delete(host);
     if (cache.size >= tamano) {
-      const masViejo = cache.keys().next();
-      if (masViejo.done !== true) cache.delete(masViejo.value);
+      for (const masViejo of cache.keys()) {
+        cache.delete(masViejo);
+        break;
+      }
     }
     cache.set(host, { estado, vence: opciones.ahora() + vida });
   }
@@ -88,6 +98,7 @@ export function crearResolutorDePuerta(
     try {
       estado = await consultar(host);
     } catch {
+      opciones.alFallar("EXCEPCION");
       return HOST_NO_DISPONIBLE;
     }
     if (estado.tipo !== "NO_DISPONIBLE") guardar(host, estado);
