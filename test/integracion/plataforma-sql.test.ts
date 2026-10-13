@@ -102,6 +102,13 @@ const TABLAS_OPERATIVAS = [
   "auditoria_empresa",
   "auditoria_acceso_grupo",
   "contexto_clave",
+  // 0009 (facturación): fallan cerrados hasta que fiscal publique una consulta propia para la plataforma.
+  "comprobante",
+  "comprobante_linea",
+  "comprobante_alicuota",
+  "intento_arca",
+  "certificado_arca",
+  "acceso_arca",
 ] as const;
 
 const ahoraEnS = () => Math.floor(Date.now() / 1000);
@@ -283,8 +290,8 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       [activa.empresa],
     );
     await dueno.query(
-      `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
-       select empresa_id, id, emisor_id, 'FACTURA_B', 0 from punto_de_venta where empresa_id = $1`,
+      `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente)
+       select empresa_id, id, emisor_id, 'FACTURA_B', 0, 'HOMOLOGACION' from punto_de_venta where empresa_id = $1`,
       [activa.empresa],
     );
   });

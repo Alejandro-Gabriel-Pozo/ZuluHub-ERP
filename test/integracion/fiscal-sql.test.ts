@@ -212,6 +212,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         "creado_en",
         "actualizado_en",
         "version",
+        "ambiente", // 0009
       ]);
       expect(await columnasDe("serie_comprobante")).toEqual([
         "empresa_id",
@@ -227,6 +228,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         "creado_en",
         "actualizado_en",
         "version",
+        "ambiente", // 0009
       ]);
     });
 
@@ -317,6 +319,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         "datos_fiscales_emisor_fkey:f",
         "datos_fiscales_empresa_id_fkey:f",
         "datos_fiscales_estado_ck:c",
+        "datos_fiscales_id_empresa_emisor_uk:u", // 0009: para la clave foránea del comprobante
         "datos_fiscales_iibb_condicion_ck:c",
         "datos_fiscales_iibb_numero_ck:c",
         "datos_fiscales_inicio_actividades_ck:c",
@@ -336,6 +339,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         "regla_emisor_pkey:p",
       ]);
       expect(de("punto_de_venta")).toEqual([
+        "punto_de_venta_ambiente_ck:c", // 0009
         "punto_de_venta_domicilio_ck:c",
         "punto_de_venta_domicilio_fkey:f",
         "punto_de_venta_emisor_fkey:f",
@@ -349,7 +353,9 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         "punto_de_venta_verificacion_ck:c",
       ]);
       expect(de("serie_comprobante")).toEqual([
+        "serie_ambiente_ck:c", // 0009
         "serie_bloqueo_ck:c",
+        "serie_comprobante_con_reserva:t", // 0009: disparador de restricción diferido (D3)
         "serie_comprobante_empresa_id_fkey:f",
         "serie_en_curso_ck:c",
         "serie_estado_ck:c",
@@ -393,6 +399,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       );
       expect(indices.map((i) => `${i.t}.${i.i}`)).toEqual([
         "datos_fiscales.datos_fiscales_borrador_uk",
+        "datos_fiscales.datos_fiscales_id_empresa_emisor_uk", // 0009
         "datos_fiscales.datos_fiscales_numero_uk",
         "datos_fiscales.datos_fiscales_pkey",
         "domicilio.domicilio_id_empresa_uk",
@@ -538,12 +545,15 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         "emisor.emisor_version",
         "empresa.empresa_crear_emisor_principal",
         "empresa.empresa_validar_cuit_fiscal",
+        "punto_de_venta.punto_de_venta_ambiente", // 0009
         "punto_de_venta.punto_de_venta_cambio",
         "punto_de_venta.punto_de_venta_version",
         "regla_emisor.regla_emisor_alta",
         "regla_emisor.regla_emisor_cambio",
         "regla_emisor.regla_emisor_version",
+        "serie_comprobante.serie_comprobante_alta", // 0009
         "serie_comprobante.serie_comprobante_cambio",
+        "serie_comprobante.serie_comprobante_con_reserva", // 0009
         "serie_comprobante.serie_comprobante_version",
       ]);
       const def = (n: string) => disparadores.find((d) => d.n === n)?.def ?? "";
@@ -2320,8 +2330,8 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       await conApp(m, async (s) => {
         for (const [i, tipo] of TIPOS_DE_COMPROBANTE.entries()) {
           const r = await s.intentar(
-            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
-             values ($1, $2, $3, $4, $5) returning estado, ultimo_numero::text as ultimo, version`,
+            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente)
+             values ($1, $2, $3, $4, $5, 'HOMOLOGACION') returning estado, ultimo_numero::text as ultimo, version`,
             [m.empresa, pv, m.emisor, tipo, i * 1000],
           );
           acepta(r);
@@ -2334,8 +2344,8 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         // Una serie por (punto de venta, tipo).
         clave(
           await s.intentar(
-            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
-             values ($1, $2, $3, 'FACTURA_A', 0)`,
+            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente)
+             values ($1, $2, $3, 'FACTURA_A', 0, 'HOMOLOGACION')`,
             [m.empresa, pv, m.emisor],
           ),
           "serie_pkey",
@@ -2343,16 +2353,16 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         // Ni un tipo que no existe, ni un último número negativo, ni elegir el estado.
         check(
           await s.intentar(
-            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
-             values ($1, $2, $3, 'TICKET', 0)`,
+            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente)
+             values ($1, $2, $3, 'TICKET', 0, 'HOMOLOGACION')`,
             [m.empresa, pv, m.emisor],
           ),
           "serie_tipo_ck",
         );
         denegado(
           await s.intentar(
-            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, estado)
-             values ($1, $2, $3, 'FACTURA_C', 0, 'LIBRE')`,
+            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente, estado)
+             values ($1, $2, $3, 'FACTURA_C', 0, 'HOMOLOGACION', 'LIBRE')`,
             [m.empresa, pv, m.emisor],
           ),
         );
@@ -2360,8 +2370,8 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       await deshacible(async () => {
         check(
           await intento(
-            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
-             values ($1, $2, $3, 'NOTA_DEBITO_A', -1)`,
+            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente)
+             values ($1, $2, $3, 'NOTA_DEBITO_A', -1, 'HOMOLOGACION')`,
             [m.empresa, pv, m.emisor],
           ),
           "serie_ultimo_ck",
@@ -2382,16 +2392,16 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       await deshacible(async () => {
         referencia(
           await intento(
-            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
-             values ($1, $2, $3, 'FACTURA_A', 0)`,
+            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente)
+             values ($1, $2, $3, 'FACTURA_A', 0, 'HOMOLOGACION')`,
             [m.empresa, pv, secundario],
           ),
           "serie_punto_de_venta_fkey",
         );
         referencia(
           await intento(
-            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
-             values ($1, $2, $3, 'FACTURA_A', 0)`,
+            `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente)
+             values ($1, $2, $3, 'FACTURA_A', 0, 'HOMOLOGACION')`,
             [m.empresa, pvAjeno, otra.emisor],
           ),
           "serie_punto_de_venta_fkey",
@@ -2532,7 +2542,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
           ),
           "serie_numero_invalido",
         );
-        // Bloquear sin avanzar sí; BLOQUEADA no sale ni cambia su motivo.
+        // Bloquear sin avanzar sí; BLOQUEADA no cambia su motivo ni va a EN_CURSO (a LIBRE sí, desde 0009).
         acepta(
           await intento(
             parcial(
@@ -2541,10 +2551,9 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
             [pv],
           ),
         );
-        check(
-          await intento(parcial("estado = 'LIBRE', motivo_bloqueo = null"), [pv]),
-          "serie_transicion_invalida",
-        );
+        // Desde 0009 BLOQUEADA sale hacia LIBRE (QF1): eso se prueba en facturacion-sql.test.ts. Acá, que
+        // el último número no salta si no sale, y que a EN_CURSO no se va.
+        check(await intento(parcial("ultimo_numero = 100"), [pv]), "serie_numero_invalido");
         check(await intento(parcial("estado = 'EN_CURSO'"), [pv]), "serie_transicion_invalida");
         check(
           await intento(parcial("motivo_bloqueo = 'otro motivo'"), [pv]),
@@ -2645,8 +2654,8 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         await deshacible(async () => {
           await dueno.query(
             `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero,
-                    estado, numero_en_curso, solicitud_en_curso, en_curso_hasta, motivo_bloqueo)
-             values ($1, $2, $3, 'FACTURA_B', $4, $5, $6, $7, $8, $9)`,
+                    ambiente, estado, numero_en_curso, solicitud_en_curso, en_curso_hasta, motivo_bloqueo)
+             values ($1, $2, $3, 'FACTURA_B', $4, 'HOMOLOGACION', $5, $6, $7, $8, $9)`,
             [
               m.empresa,
               pv,
@@ -2677,10 +2686,18 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
             );
             if (!r.ok) expect(r.codigo, `${JSON.stringify(despues)}: ${r.mensaje}`).toBe("23514");
             const serieDespues = aSerie(despues);
-            const esperada =
-              serieAntes !== null &&
+            // EXCEPCIÓN de 0009 (QF1): la base deja salir de BLOQUEADA hacia LIBRE, sin bajar el último
+            // número; el dominio (`TRANSICIONES_DE_SERIE`) la recibe en F4 y entonces esta cláusula se borra.
+            const salidaDeBloqueada =
+              antes.estado === "BLOQUEADA" &&
+              despues.estado === "LIBRE" &&
               serieDespues !== null &&
-              transicionDeSerieValida(serieAntes, serieDespues);
+              despues.ultimo >= antes.ultimo;
+            const esperada =
+              (serieAntes !== null &&
+                serieDespues !== null &&
+                transicionDeSerieValida(serieAntes, serieDespues)) ||
+              salidaDeBloqueada;
             expect(r.ok, `${antes.estado} → ${JSON.stringify(despues)}`).toBe(esperada);
             // Cada candidato se prueba desde el mismo estado de partida.
             await dueno.query("rollback to savepoint candidato");
@@ -2694,8 +2711,9 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         });
       }
       expect(rechazadas).toBeGreaterThan(2000);
-      // Las transiciones que existen son exactamente las del dominio (más quedarse en el mismo estado).
-      const esperadas = new Set<string>();
+      // Las transiciones que existen son exactamente las del dominio (más quedarse en el mismo estado y,
+      // desde 0009, la salida de BLOQUEADA hacia LIBRE que el dominio recibe en F4).
+      const esperadas = new Set<string>(["BLOQUEADA→LIBRE"]);
       for (const [desde, hacia] of Object.entries(TRANSICIONES_DE_SERIE)) {
         esperadas.add(`${desde}→${desde}`);
         for (const h of hacia) esperadas.add(`${desde}→${h}`);

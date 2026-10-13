@@ -64,6 +64,13 @@ const TABLAS_DE_NEGOCIO = [
   // Alta por solicitud (migración de captación)
   "solicitud_de_alta",
   "limite_de_captacion",
+  // Facturación (0009_facturacion)
+  "comprobante",
+  "comprobante_linea",
+  "comprobante_alicuota",
+  "certificado_arca",
+  "acceso_arca",
+  "intento_arca",
 ] as const;
 const TABLAS_DE_AUDITORIA = ["auditoria_empresa", "auditoria_plataforma", "auditoria_acceso_grupo"];
 
@@ -257,12 +264,18 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           .map((p) => `${p.table_name}:${p.privilege_type}`);
       expect(porRol("zuluhub_app")).toEqual(
         [
+          "acceso_arca:SELECT", // 0009
           "asignacion_sucursal:SELECT",
           "auditoria_empresa:SELECT",
+          "certificado_arca:SELECT", // 0009
+          "comprobante:SELECT", // 0009
+          "comprobante_alicuota:SELECT", // 0009
+          "comprobante_linea:SELECT", // 0009
           "datos_fiscales:SELECT", // 0006
           "domicilio:SELECT", // 0006
           "emisor:SELECT", // 0006
           "empresa:SELECT",
+          "intento_arca:SELECT", // 0009
           "invitacion:SELECT",
           "invitacion_empresa:SELECT",
           "invitacion_sucursal:SELECT",
@@ -332,6 +345,33 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       const permitidas = columnas.map((c) => `${c.grantee}:${c.table_name}.${c.column_name}`);
       expect(permitidas).toEqual(
         [
+          // 0009: el acceso a ARCA guarda el ticket cifrado; el certificado se carga, se reemplaza y se descarta;
+          // el comprobante solo mueve su estado; el ambiente del punto de venta (QF2).
+          ...[
+            "credencial_cifrada",
+            "credencial_nonce",
+            "credencial_etiqueta",
+            "credencial_kid",
+            "generado_en",
+            "expira_en",
+            "renovando_hasta",
+          ].map((c) => `zuluhub_app:acceso_arca.${c}`),
+          ...["estado", "certificado_pem", "huella_sha256", "vence_en", "autorizacion_verificada_en"].map(
+            (c) => `zuluhub_app:certificado_arca.${c}`,
+          ),
+          ...[
+            "estado",
+            "envios",
+            "numero_reservado",
+            "fecha_emision",
+            "numero",
+            "cae",
+            "cae_vence",
+            "autorizado_en",
+            "resuelto_por",
+            "motivo_descarte",
+          ].map((c) => `zuluhub_app:comprobante.${c}`),
+          "zuluhub_app:punto_de_venta.ambiente",
           "zuluhub_app:asignacion_sucursal.activa",
           // 0006: los datos fiscales y la regla del emisor se editan en borrador y se confirman
           ...[
@@ -563,6 +603,96 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "ultimo_numero",
         ].map((c) => `serie_comprobante.${c}`),
       ];
+      // 0009 (facturación): el comprobante nace completo (sin estado, envíos, número ni CAE); los renglones, el
+      // desglose y los intentos son de solo inserción; el certificado y el ticket de acceso.
+      const facturacion = [
+        ...[
+          "id",
+          "empresa_id",
+          "emisor_id",
+          "punto_de_venta_id",
+          "ambiente",
+          "origen_tipo",
+          "origen_id",
+          "clase",
+          "tipo_comprobante",
+          "concepto",
+          "servicio_desde",
+          "servicio_hasta",
+          "vencimiento_pago",
+          "moneda",
+          "modo_de_precio",
+          "total",
+          "neto_gravado",
+          "iva",
+          "exento",
+          "no_gravado",
+          "datos_fiscales_id",
+          "emisor_cuit",
+          "emisor_razon_social",
+          "emisor_condicion_iva",
+          "emisor_domicilio_fiscal",
+          "emisor_inicio_actividades",
+          "emisor_iibb_numero",
+          "emisor_iibb_condicion",
+          "punto_de_venta_numero",
+          "punto_de_venta_domicilio",
+          "receptor_parte_id",
+          "receptor_nombre",
+          "receptor_documento_tipo",
+          "receptor_documento_numero",
+          "receptor_condicion_iva",
+          "receptor_domicilio",
+          "comprobante_asociado_id",
+          "motivo",
+          "huella",
+          "version_de_representacion",
+          "creado_por",
+        ].map((c) => `comprobante.${c}`),
+        ...[
+          "empresa_id",
+          "comprobante_id",
+          "posicion",
+          "descripcion",
+          "cantidad",
+          "precio_unitario",
+          "descuento",
+          "alicuota",
+          "importe",
+        ].map((c) => `comprobante_linea.${c}`),
+        ...["empresa_id", "comprobante_id", "alicuota", "total", "neto", "iva"].map(
+          (c) => `comprobante_alicuota.${c}`,
+        ),
+        ...[
+          "id",
+          "empresa_id",
+          "comprobante_id",
+          "operacion",
+          "numero",
+          "desenlace",
+          "mensajes",
+          "respuesta",
+          "huella_pedido",
+          "iniciado_en",
+          "duracion_ms",
+        ].map((c) => `intento_arca.${c}`),
+        ...[
+          "id",
+          "empresa_id",
+          "emisor_id",
+          "ambiente",
+          "alias",
+          "cuit_titular",
+          "pedido_pem",
+          "clave_cifrada",
+          "clave_nonce",
+          "clave_etiqueta",
+          "clave_kid",
+          "creado_por",
+        ].map((c) => `certificado_arca.${c}`),
+        ...["empresa_id", "certificado_id", "servicio"].map((c) => `acceso_arca.${c}`),
+        "serie_comprobante.ambiente",
+      ];
       // 0007: la empresa fija el nivel de sus controles; la plataforma escribe lo de marcas y planes.
       const nivelDeControl = ["empresa_id", "sucursal_id", "control", "nivel"].map(
         (c) => `nivel_de_control.${c}`,
@@ -634,6 +764,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "trabajo.clave_idempotencia",
           ...traspasoDeLaEmpresa,
           ...fiscalDeLaEmpresa,
+          ...facturacion,
         ].sort(),
       );
       expect(porRol("zuluhub_grupo")).toEqual(

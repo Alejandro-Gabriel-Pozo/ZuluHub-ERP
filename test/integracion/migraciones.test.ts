@@ -32,6 +32,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0006_fiscal.sql",
         "0007_marcas_y_planes.sql",
         "0008_captacion.sql",
+        "0009_facturacion.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -45,6 +46,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0006_fiscal.sql",
           "0007_marcas_y_planes.sql",
           "0008_captacion.sql",
+          "0009_facturacion.sql",
         ],
       });
     } finally {
@@ -158,6 +160,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0006_fiscal.sql",
         "0007_marcas_y_planes.sql",
         "0008_captacion.sql",
+        "0009_facturacion.sql",
       ]);
     } finally {
       await aparte.destruir();
@@ -402,6 +405,8 @@ describe.skipIf(base === null)("migraciones", () => {
     "0005_administracion.sql",
     "0006_fiscal.sql",
     "0007_marcas_y_planes.sql",
+    "0008_captacion.sql",
+    "0009_facturacion.sql",
   ])("la migración %s no contiene contraseñas ni cadenas de conexión", async (archivo) => {
     const sql = await readFile(join(CARPETA_REAL, archivo), "utf8");
     expect(sql).not.toMatch(/PASSWORD\s+'/i);
