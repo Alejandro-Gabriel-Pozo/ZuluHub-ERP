@@ -41,7 +41,9 @@ async function violacionesDe(archivos: Archivos): Promise<string[]> {
     writeFileSync(destino, contenido);
   }
   const resultado = await cruise(
-    ["src", "apps"].filter((c) => Object.keys(archivos).some((r) => r.startsWith(`${c}/`))),
+    ["src", "apps", "scripts"].filter((c) =>
+      Object.keys(archivos).some((r) => r.startsWith(`${c}/`)),
+    ),
     {
       baseDir: base,
       validate: true,
@@ -478,6 +480,23 @@ describe("reglas de arquitectura (ADR-001)", () => {
       "src/adaptadores/postgres/a.ts": 'import "kysely";\nexport const a = 1;\n',
     });
     expect(v).not.toContain("orm-solo-en-persistencia");
+  });
+
+  it("un comando de scripts/ no abre su propia conexión: importar pg o kysely directo viola orm-solo-en-persistencia", async () => {
+    for (const herramienta of ["pg", "kysely"]) {
+      const v = await violacionesDe({
+        "scripts/migrar.ts": `import "${herramienta}";\nexport const m = 1;\n`,
+      });
+      expect(v).toContain("orm-solo-en-persistencia");
+    }
+  });
+
+  it("un comando de scripts/ sí puede usar el adaptador de Postgres (pero no el ORM directo)", async () => {
+    const v = await violacionesDe({
+      "src/adaptadores/postgres/a.ts": 'import "pg";\nexport const a = 1;\n',
+      "scripts/migrar.ts": importa("../src/adaptadores/postgres/a"),
+    });
+    expect(v).toEqual([]);
   });
 
   it("marcas: la plataforma, las consultas y la puerta web sí entran por su publico.ts; el dominio usa capacidades y primitivas", async () => {

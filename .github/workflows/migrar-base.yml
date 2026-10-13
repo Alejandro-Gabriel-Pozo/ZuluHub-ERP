@@ -1,0 +1,113 @@
+name: Migrar base
+
+# Migra la base de datos real (Neon) con un clic: Actions → «Migrar base» → Run workflow.
+# Solo se dispara a mano. La cadena de conexión DIRECTA vive como secreto ZULUHUB_DB_MIGRACIONES de un
+# GitHub Environment (neon-preview o neon-production); nunca pasa por el chat ni por el repositorio.
+# El paso a paso para el dueño (crear los Environments, cargar el secreto, correr «ver» y «aplicar»)
+# se documenta en el repositorio de documentos (ZuluHub-docs).
+
+on:
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: "Qué base"
+        type: choice
+        required: true
+        options:
+          - preview
+          - production
+      accion:
+        description: "ver = solo mirar (no cambia nada) · aplicar = aplicar las migraciones pendientes"
+        type: choice
+        required: true
+        default: ver
+        options:
+          - ver
+          - aplicar
+      confirmacion:
+        description: "Solo para «aplicar»: escribir MIGRAR PREVIEW (preview) o MIGRAR PRODUCCION (production)"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  # Una migración por base a la vez. Una que ya está corriendo nunca se cancela: la nueva espera.
+  group: migrar-base-${{ inputs.ambiente }}
+  cancel-in-progress: false
+
+jobs:
+  validar:
+    # Todo lo que se puede rechazar sin la base se rechaza ACÁ, antes del Environment: así el secreto no
+    # se entrega a una corrida que iba a fallar y nadie aprueba una corrida inválida.
+    name: Validar la corrida
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      ambiente: ${{ steps.validar.outputs.ambiente }}
+      accion: ${{ steps.validar.outputs.accion }}
+    steps:
+      - id: validar
+        run: |
+          set -eu
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Solo se migra desde la rama main (esta corrida es de $REF). Volvé a correrlo eligiendo main en «Use workflow from»."
+            exit 1
+          fi
+          if [ "$ES_FORK" != "false" ]; then
+            echo "::error::Este workflow no corre desde un fork."
+            exit 1
+          fi
+          case "$AMBIENTE" in
+            preview) esperado="MIGRAR PREVIEW" ;;
+            production) esperado="MIGRAR PRODUCCION" ;;
+            *) echo "::error::Ambiente no permitido (preview o production)."; exit 1 ;;
+          esac
+          case "$ACCION" in
+            ver) ;;
+            aplicar)
+              if [ "$CONFIRMACION" != "$esperado" ]; then
+                echo "::error::Para aplicar en $AMBIENTE hay que escribir exactamente «$esperado» en el campo de confirmación."
+                exit 1
+              fi
+              ;;
+            *) echo "::error::Acción no permitida (ver o aplicar)."; exit 1 ;;
+          esac
+          echo "ambiente=$AMBIENTE" >> "$GITHUB_OUTPUT"
+          echo "accion=$ACCION" >> "$GITHUB_OUTPUT"
+        env:
+          REF: ${{ github.ref }}
+          ES_FORK: ${{ github.event.repository.fork }}
+          AMBIENTE: ${{ inputs.ambiente }}
+          ACCION: ${{ inputs.accion }}
+          CONFIRMACION: ${{ inputs.confirmacion }}
+
+  migrar:
+    name: Migrar (${{ needs.validar.outputs.ambiente }}, ${{ needs.validar.outputs.accion }})
+    needs: validar
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Los revisores requeridos y la restricción a la rama main se configuran en el Environment: es lo
+    # que protege el secreto de verdad (el chequeo de rama de arriba solo evita corridas equivocadas).
+    environment: neon-${{ needs.validar.outputs.ambiente }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # Sin caché de npm: este job tiene el secreto de la base y no restaura nada que no sea el lockfile.
+      - name: Dependencias (solo las de producción, sin scripts de instalación)
+        run: npm ci --omit=dev --ignore-scripts
+      - name: Migraciones (${{ needs.validar.outputs.accion }})
+        # El secreto está solo en este paso. El script no imprime la cadena ni pedazos de ella.
+        run: npm run migrar -- "--$ACCION"
+        env:
+          ZULUHUB_DB_MIGRACIONES: ${{ secrets.ZULUHUB_DB_MIGRACIONES }}
+          ACCION: ${{ needs.validar.outputs.accion }}

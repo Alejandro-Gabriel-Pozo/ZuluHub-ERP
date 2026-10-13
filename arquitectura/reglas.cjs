@@ -93,9 +93,9 @@ const reglas = [
     name: "orm-solo-en-persistencia",
     severity: "error",
     comment:
-      "La herramienta de acceso a datos solo se importa en adaptadores/postgres y en modulos/*/persistencia (ADR-004).",
+      "La herramienta de acceso a datos solo se importa en adaptadores/postgres y en modulos/*/persistencia (ADR-004). Vale también para scripts/: un comando de operación (migrar la base) pasa por el adaptador, que es donde está probado que no filtra la cadena de conexión.",
     from: {
-      path: "^(src|apps)/",
+      path: "^(src|apps|scripts)/",
       pathNot: "^src/(adaptadores/postgres|modulos/[^/]+/persistencia)/",
     },
     to: { path: ORM },

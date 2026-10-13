@@ -19,6 +19,8 @@
     "src/plataforma/dominio/**/*.ts",
     "src/consultas-de-grupo/vista-de-grupo.ts",
     "src/adaptadores/postgres/huella-canonica.ts",
+    "src/adaptadores/postgres/describir-falla-de-base.ts",
+    "src/adaptadores/postgres/roles-de-la-aplicacion.ts",
     "src/adaptadores/trabajos/reintentos.ts",
     "src/adaptadores/trabajos/error-seguro.ts",
     "src/adaptadores/correo/configuracion.ts",
