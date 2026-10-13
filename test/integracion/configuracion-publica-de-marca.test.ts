@@ -508,7 +508,6 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
       const espiado = crearEntornoPublico(propia.base, {
         ajustar: (tx) => {
           transacciones += 1;
-          const real = tx.marcas.configuracionDeHost;
           return {
             ...tx,
             marcas: {
@@ -524,7 +523,7 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
                          current_setting('transaction_isolation') as aislamiento,
                          nullif(current_setting('app.ctx', true), '') as contexto`.execute(tx.db);
                 vistas.push(rows[0] as (typeof vistas)[number]);
-                return real(host, superficie);
+                return tx.marcas.configuracionDeHost(host, superficie);
               },
             },
           };
@@ -808,7 +807,7 @@ describe.skipIf(base === null)(
       const padre = await crearMarca(dueno, { padre: principal });
       await crearVersionDeMarcaConfirmada(dueno, padre, {
         nombreVisible: "Padre",
-        tema: { secondary: "rojo" } as Record<string, string>,
+        tema: { secondary: "rojo" },
       });
       const hijo = await crearMarca(dueno, { padre });
       const host = (await crearDominio(dueno, hijo, { canonico: true })).host;
