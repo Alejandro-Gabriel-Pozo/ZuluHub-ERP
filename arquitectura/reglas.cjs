@@ -75,7 +75,12 @@ const reglas = [
     comment:
       "Quien no es un módulo (plataforma, consultas, composición, apps) entra por publico.ts.",
     from: { path: "^(src|apps)/", pathNot: "^src/modulos/" },
-    to: { path: "^src/modulos/[^/]+/", pathNot: "^src/modulos/[^/]+/publico\\.ts$" },
+    to: {
+      path: "^src/modulos/[^/]+/",
+      // R-W5: `formas.ts` (esquemas Zod de la forma de un dato) es la otra entrada admitida: la
+      // pantalla la importa sin arrastrar `publico.ts` y, con él, la persistencia.
+      pathNot: "^src/modulos/[^/]+/(publico|formas)\\.ts$",
+    },
   },
   {
     name: "adaptadores-solo-desde-composicion",
@@ -327,6 +332,52 @@ const reglas = [
       "Ningún otro módulo de negocio importa modulos/marcas (marcas y planes, §D «Arquitectura»): la marca es presentación y puerta, no una dependencia de negocio. Lo que un módulo necesita (los textos, los derechos de uso) lo toma de capacidades y de los puertos. La puerta web, la plataforma y las consultas sí entran por su publico.ts.",
     from: { path: "^src/modulos/", pathNot: "^src/modulos/marcas/" },
     to: { path: "^src/modulos/marcas/" },
+  },
+  {
+    // R-W6. Previene: íconos sueltos sin nombre accesible ([02] §4.3) y un juego de íconos repartido por
+    // toda la web (cambiarlo tocaría cada pantalla). Chequeo: la violación inyectada de reglas.test.ts.
+    name: "iconos-solo-por-su-puerta",
+    severity: "error",
+    comment:
+      "`lucide-react` solo se importa desde apps/web/ui/iconos/ (R-W6): ahí cada ícono sale del catálogo cerrado y con su nombre accesible o declarado decorativo.",
+    from: { path: "^(src|apps)/", pathNot: "^apps/web/ui/iconos/" },
+    to: { path: "^(node_modules/)?lucide-react(/|$)" },
+  },
+  {
+    // R-W7. Previene: un componente que sabe de un módulo o de una pantalla ([01] §3.1): la interfaz base
+    // (capas 1 a 5) no conoce ningún módulo ni la composición. Chequeo: la violación inyectada de reglas.test.ts.
+    name: "ui-sin-pantallas-ni-modulos",
+    severity: "error",
+    comment:
+      "apps/web/ui/** (capas 1 a 5) no importa apps/web/pantallas/**, apps/web/servidor/** ni src/modulos/** (R-W7): la interfaz base no conoce ninguna pantalla ni módulo.",
+    from: { path: "^apps/web/ui/" },
+    to: { path: "^apps/web/(pantallas|servidor)/|^src/modulos/" },
+  },
+  {
+    name: "composicion-solo-desde-servidor-de-apps",
+    severity: "error",
+    comment:
+      "R-W2. Ningún .tsx ni archivo de apps/** importa src/composicion salvo apps/web/servidor/** (que es solo servidor). Previene que un componente arme adaptadores y, con ellos, secretos.",
+    from: { path: "\\.tsx$|^apps/", pathNot: "^apps/web/servidor/" },
+    to: { path: "^src/composicion/" },
+  },
+  {
+    name: "cliente-sin-servidor",
+    severity: "error",
+    comment:
+      'R-W4. Los archivos de cliente (*.cliente.tsx; todo archivo con "use client" lleva ese sufijo) no importan publico.ts de ningún módulo, ni la composición, ni los adaptadores, ni apps/*/servidor. Previene persistencia y pg en el paquete del navegador (hallazgo H5 del spec de la web). Las formas (formas.ts) sí se pueden importar.',
+    from: { path: "\\.cliente\\.tsx$" },
+    to: {
+      path: "^src/modulos/[^/]+/publico\\.ts$|^src/(composicion|adaptadores)/|^apps/[^/]+/servidor/",
+    },
+  },
+  {
+    name: "formas-sin-negocio",
+    severity: "error",
+    comment:
+      "R-W5. formas.ts de un módulo solo importa zod y primitivas: son esquemas de la forma de un dato, sin negocio. Previene que la pantalla tenga que importar publico.ts (con persistencia) solo para tener la forma, o que la forma decida reglas que son del dominio.",
+    from: { path: "^src/modulos/[^/]+/formas\\.ts$" },
+    to: { pathNot: "^src/primitivas/|^(node_modules/)?zod(/|$)" },
   },
 ];
 

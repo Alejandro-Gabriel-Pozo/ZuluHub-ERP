@@ -1,0 +1,68 @@
+.aviso {
+  display: flex;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde-grosor-fuerte) solid currentcolor;
+  border-radius: var(--radio-base);
+  color: var(--color-texto);
+}
+
+.aviso[data-tono="peligro"] {
+  background: var(--color-peligro-suave);
+  border-color: var(--color-peligro);
+}
+
+.aviso[data-tono="exito"] {
+  background: var(--color-exito-suave);
+  border-color: var(--color-exito);
+}
+
+.aviso[data-tono="aviso"] {
+  background: var(--color-aviso-suave);
+  border-color: var(--color-aviso);
+}
+
+.aviso[data-tono="info"] {
+  background: var(--color-info-suave);
+  border-color: var(--color-info);
+}
+
+.icono {
+  display: inline-flex;
+  flex: none;
+  padding-top: 0.1em;
+}
+
+.aviso[data-tono="peligro"] .icono {
+  color: var(--color-peligro);
+}
+
+.aviso[data-tono="exito"] .icono {
+  color: var(--color-exito);
+}
+
+.aviso[data-tono="aviso"] .icono {
+  color: var(--color-aviso);
+}
+
+.aviso[data-tono="info"] .icono {
+  color: var(--color-info);
+}
+
+.cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  min-width: 0;
+}
+
+.titulo {
+  margin: 0;
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.accion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+}

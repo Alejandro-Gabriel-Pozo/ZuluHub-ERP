@@ -10,7 +10,7 @@ module.exports = {
     enhancedResolveOptions: {
       exportsFields: ["exports"],
       conditionNames: ["import", "require", "node", "default", "types"],
-      extensions: [".ts", ".js", ".cjs", ".mjs"],
+      extensions: [".ts", ".tsx", ".js", ".cjs", ".mjs"],
     },
   },
 };

@@ -2,7 +2,7 @@
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "testRunner": "command",
   "commandRunner": {
-    "command": "ZULUHUB_SIN_INTEGRACION=1 npx vitest run --reporter=dot $ZULUHUB_FILTRO_PRUEBAS"
+    "command": "ZULUHUB_SIN_INTEGRACION=1 npx vitest run --project node --reporter=dot $ZULUHUB_FILTRO_PRUEBAS"
   },
   "mutate": [
     "src/primitivas/dinero/**/*.ts",
@@ -29,6 +29,10 @@
     "src/capacidades/vocabulario/**/*.ts",
     "src/modulos/planes/dominio/**/*.ts",
     "src/modulos/marcas/dominio/**/*.ts",
+    "src/capacidades/experiencia/**/*.ts",
+    "src/composicion/entorno.ts",
+    "src/composicion/perezoso.ts",
+    "src/composicion/contextos.ts",
     "!src/**/*.test.ts"
   ],
   "coverageAnalysis": "off",
