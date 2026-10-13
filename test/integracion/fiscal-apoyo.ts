@@ -167,8 +167,8 @@ export async function crearSerie(
   ultimo = 0,
 ): Promise<void> {
   await c.query(
-    `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
-     values ($1, $2, $3, $4, $5)`,
+    `insert into serie_comprobante (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero, ambiente)
+     values ($1, $2, $3, $4, $5, 'HOMOLOGACION')`,
     [empresa, puntoDeVenta, emisor, tipo, ultimo],
   );
 }

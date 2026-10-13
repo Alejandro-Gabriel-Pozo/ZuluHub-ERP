@@ -1,8 +1,9 @@
 /**
- * Esquema de base del módulo fiscal (migración `0006_fiscal.sql`). Lo comparan las pruebas de
- * integración contra la base real: si una columna o una restricción cambia en el SQL, estas listas
- * tienen que cambiar con ella. No hay tabla de comprobantes ni de certificados: son de la
- * facturación (spec H7 §A.2 y §B.9).
+ * Esquema de base del módulo fiscal (migración `0006_fiscal.sql` y, de `0009_facturacion.sql`, solo lo
+ * que cambió en estas siete tablas: el `ambiente` del punto de venta y de la serie). Lo comparan las
+ * pruebas de integración contra la base real: si una columna o una restricción cambia en el SQL,
+ * estas listas tienen que cambiar con ella. Las tablas de la facturación (comprobante, renglones,
+ * certificados, intentos) las suma F3 (spec H7 facturación §B.1).
  */
 
 /** Columnas de cada tabla, en el orden de la base. */
@@ -78,6 +79,7 @@ export const COLUMNAS_DE_FISCAL = {
     "creado_en",
     "actualizado_en",
     "version",
+    "ambiente",
   ],
   serie_comprobante: [
     "empresa_id",
@@ -93,6 +95,7 @@ export const COLUMNAS_DE_FISCAL = {
     "creado_en",
     "actualizado_en",
     "version",
+    "ambiente",
   ],
 } as const;
 
@@ -102,7 +105,7 @@ export const COLUMNAS_DE_FISCAL = {
  * salta, es un defecto). Los nombres que coinciden con un error del dominio fiscal (por ejemplo
  * `PUNTO_DE_VENTA_DUPLICADO`) son ese mismo error: el caso de uso lo declara una sola vez.
  *
- * Los 21 nombres que lanzan los disparadores (`CONSTRAINT = '...'` en 0006) están al final de cada
+ * Los 24 nombres que lanzan los disparadores (`CONSTRAINT = '...'` en 0006 y 0009) están al final de cada
  * tabla, marcados «lo lanza un disparador», y NINGUNO es `NO_TRADUCIDA`. Dos de ellos viven en
  * `empresa` (`empresa_cuit_es_emisor`, `empresa_cuit_inmutable`): los lanza el alta o la corrección
  * del CUIT de una empresa y el caso de uso de plataforma que los hace los traduce con este mapa.
@@ -160,6 +163,7 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   datos_fiscales_iibb_condicion_ck: "IIBB_CONDICION_INVALIDA",
   datos_fiscales_motivo_ck: "MOTIVO_OBLIGATORIO",
   datos_fiscales_confirmada_ck: "NO_TRADUCIDA", // el dominio decide antes (incompleta, vigencia retroactiva)
+  datos_fiscales_id_empresa_emisor_uk: "NO_TRADUCIDA", // 0009: para la clave foránea compuesta del comprobante
   datos_fiscales_borrador_uk: "YA_HAY_BORRADOR",
   datos_fiscales_transicion_invalida: "VERSION_TRANSICION_INVALIDA", // lo lanza un disparador
   datos_fiscales_inmutable: "VERSION_INMUTABLE", // lo lanza un disparador
@@ -196,6 +200,10 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   punto_de_venta_inmutable: "PUNTO_DE_VENTA_EMISOR_INMUTABLE", // lo lanza un disparador
   punto_de_venta_numero_inmutable: "PUNTO_DE_VENTA_NUMERO_INMUTABLE", // lo lanza un disparador
   punto_de_venta_emisor_inactivo: "EMISOR_INACTIVO", // lo lanza un disparador
+  // 0009: el ambiente del punto de venta (QF2). El CHECK lo decide el dominio; los dos disparadores son errores de negocio.
+  punto_de_venta_ambiente_ck: "NO_TRADUCIDA",
+  punto_de_venta_ambiente_con_serie_en_curso: "SERIE_EN_CURSO", // lo lanza un disparador
+  punto_de_venta_ambiente_no_vuelve: "PUNTO_DE_VENTA_YA_EMITIO_EN_PRODUCCION", // lo lanza un disparador
 
   // serie_comprobante
   serie_pkey: "SERIE_YA_EXISTE",
@@ -209,9 +217,17 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   serie_inmutable: "SERIE_INMUTABLE", // lo lanza un disparador
   serie_numero_invalido: "SERIE_NUMERO_FUERA_DE_SECUENCIA", // lo lanza un disparador
   serie_transicion_invalida: "SERIE_TRANSICION_INVALIDA", // lo lanza un disparador
+  // 0009: el ambiente es parte de la clave de la serie; una serie nace en el ambiente de su punto de venta.
+  serie_ambiente_ck: "NO_TRADUCIDA",
+  serie_ambiente_invalido: "SERIE_AMBIENTE_INVALIDO", // lo lanza un disparador
 } as const satisfies Readonly<Record<string, string>>;
 
-/** Los 21 nombres que lanzan los disparadores de 0006 con `ERRCODE '23514'` (spec H7 §B.10). */
+/**
+ * Los 24 nombres que lanzan los disparadores de `serie_comprobante`, `punto_de_venta`, `emisor`, `empresa`,
+ * `datos_fiscales` y `regla_emisor` con `ERRCODE '23514'`: 21 de 0006 (spec H7 §B.10) y 3 de 0009
+ * (`punto_de_venta_ambiente_con_serie_en_curso`, `punto_de_venta_ambiente_no_vuelve`,
+ * `serie_ambiente_invalido`).
+ */
 export const RESTRICCIONES_DE_DISPARADORES_DE_FISCAL = [
   "empresa_cuit_es_emisor",
   "empresa_cuit_inmutable",
@@ -234,6 +250,9 @@ export const RESTRICCIONES_DE_DISPARADORES_DE_FISCAL = [
   "serie_inmutable",
   "serie_numero_invalido",
   "serie_transicion_invalida",
+  "punto_de_venta_ambiente_con_serie_en_curso",
+  "punto_de_venta_ambiente_no_vuelve",
+  "serie_ambiente_invalido",
 ] as const satisfies readonly (keyof typeof ERRORES_DE_FISCAL_POR_RESTRICCION)[];
 
 type Mapa = typeof ERRORES_DE_FISCAL_POR_RESTRICCION;

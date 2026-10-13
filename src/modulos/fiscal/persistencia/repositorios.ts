@@ -1087,9 +1087,12 @@ export function crearRepositorioDeSeries(db: Kysely<FiscalDb>): RepositorioDeSer
           emisor_id: serie.emisorId,
           tipo_comprobante: serie.tipo,
           ultimo_numero: serie.ultimoNumero.toString(),
+          // Puente hasta F3/F4 (0009 puso el ambiente en la clave de la serie): el dominio de la serie todavía
+          // no lo conoce y todo punto de venta nace en homologación, así que acá es siempre ese.
+          ambiente: "HOMOLOGACION",
         })
         .onConflict((oc) =>
-          oc.columns(["empresa_id", "punto_de_venta_id", "tipo_comprobante"]).doNothing(),
+          oc.columns(["empresa_id", "punto_de_venta_id", "tipo_comprobante", "ambiente"]).doNothing(),
         )
         .returning(COLUMNAS_DE_SERIE)
         .executeTakeFirst();
