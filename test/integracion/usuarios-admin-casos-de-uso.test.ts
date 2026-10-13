@@ -284,12 +284,14 @@ describe.skipIf(base === null)(
           await filas("select estado from invitacion_empresa where invitacion_id = $1", [id]),
         ).toEqual([{ estado: "REVOCADA" }]);
         // Quien tenga el enlace ya no entra.
-        expect(await casos.aceptarInvitacion({
-          token,
-          emailAutenticado: email,
-          usuarioAuth: usuarioDePrueba(email),
-          ahora,
-        })).toEqual({
+        expect(
+          await casos.aceptarInvitacion({
+            token,
+            emailAutenticado: email,
+            usuarioAuth: usuarioDePrueba(email),
+            ahora,
+          }),
+        ).toEqual({
           ok: false,
           error: "INVITACION_REVOCADA",
         });

@@ -153,10 +153,11 @@ CREATE TABLE autenticacion.verification (
 CREATE INDEX verification_identifier_ix ON autenticacion.verification (identifier);
 
 CREATE TABLE autenticacion."rateLimit" (
-  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  id             uuid DEFAULT gen_random_uuid(),
   key            text NOT NULL,
   count          integer NOT NULL,
   "lastRequest"  bigint NOT NULL,
+  CONSTRAINT rate_limit_pkey PRIMARY KEY (id),
   CONSTRAINT rate_limit_key_uk UNIQUE (key)
 );
 

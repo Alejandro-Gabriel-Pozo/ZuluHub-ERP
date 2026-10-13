@@ -373,6 +373,7 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
       expect((await auditoria(empresa.empresa)).map((a) => a["accion"])).toEqual([
         "ALTA_ACEPTADA",
         "EMPRESA_ACTIVADA",
+        "PERSONA_VINCULADA", // W3a: la persona queda vinculada con el usuario que aceptó
       ]);
     });
 

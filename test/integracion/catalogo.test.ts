@@ -380,6 +380,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "motivo_bloqueo",
           ].map((c) => `zuluhub_app:serie_comprobante.${c}`),
           "zuluhub_app:nivel_de_control.nivel", // 0007
+          "zuluhub_app:persona.usuario_auth_id", // 0010: solo el vínculo con el usuario, y solo en INVITACION
           "zuluhub_app:sucursal.activa",
           "zuluhub_app:sucursal.hora_de_corte", // 0007
           "zuluhub_app:sucursal.nombre",

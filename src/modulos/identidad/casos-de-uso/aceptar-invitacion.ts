@@ -36,7 +36,12 @@ export type SalidaDeAceptacion = Readonly<{
   empresas: readonly Readonly<{ empresaId: EmpresaId; rol: RolDeEmpresa }>[];
 }>;
 
-export type ErrorAlAceptarInvitacion = ErrorDeAceptacion | ErrorDePersistencia;
+/**
+ * `USUARIO_DE_OTRA_PERSONA` no sale del dominio sino de la base (`persona_usuario_auth_id_uk`): el usuario ya
+ * está vinculado con otra persona, y el caso de uso lo traduce.
+ */
+export type ErrorAlAceptarInvitacion =
+  ErrorDeAceptacion | "USUARIO_DE_OTRA_PERSONA" | ErrorDePersistencia;
 
 /** Errores de restricciones que forman parte del contrato de este caso de uso. */
 const RESTRICCIONES_ADMITIDAS = [
@@ -44,6 +49,9 @@ const RESTRICCIONES_ADMITIDAS = [
   "INVITACION_DE_OTRO_EMAIL",
   "INVITACION_VENCIDA",
   "INVITACION_NO_PENDIENTE",
+  // Un usuario es de UNA sola persona (`persona_usuario_auth_id_uk`) y el vínculo no se cambia (disparador).
+  "USUARIO_DE_OTRA_PERSONA",
+  "PERSONA_DE_OTRO_USUARIO",
 ] as const;
 
 const resumen = (i: Invitacion): SalidaDeAceptacion["empresas"] =>

@@ -88,6 +88,7 @@ const DISPARADORES_DE_IDENTIDAD: Readonly<Record<string, readonly string[]>> = {
     "invitacion_resuelta_inmutable",
   ],
   membresia_validar_cambio: ["membresia_gerente_no_se_apaga", "membresia_rol_sin_traspaso"],
+  persona_validar_vinculo: ["persona_usuario_auth_inmutable"], // 0010
   traspaso_gerencia_validar_alta: [
     "traspaso_entrante_inactivo",
     "traspaso_entrante_es_el_gerente",
@@ -348,8 +349,10 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
           "membresia.membresia_invitado_reactivar:UPDATE:zuluhub_app",
           "membresia.membresia_plataforma_con_actor:SELECT:zuluhub_plataforma",
           "membresia.membresia_plataforma_leer:SELECT:zuluhub_plataforma",
+          "membresia.membresia_sesion_leer:SELECT:zuluhub_app", // 0010
           "persona.persona_invitado_alta:INSERT:zuluhub_app",
           "persona.persona_invitado_leer:SELECT:zuluhub_app",
+          "persona.persona_invitado_vincular:UPDATE:zuluhub_app", // 0010
           "persona.persona_miembros_app:SELECT:zuluhub_app",
           "referencia_de_error.referencia_de_error_invitado_alta:INSERT:zuluhub_app",
           "tenant.tenant_invitado_leer:SELECT:zuluhub_app",
