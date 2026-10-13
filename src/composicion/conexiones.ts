@@ -13,6 +13,7 @@ import {
   ZULUHUB_CLAVE_CONTEXTO,
   leerClaveDeContexto,
 } from "../adaptadores/postgres/contexto-firmado";
+import { crearLecturasDeSesionDePostgres, type SesionDb } from "../adaptadores/postgres/sesion";
 import { crearTrabajosDePostgres, type TrabajosDb } from "../adaptadores/postgres/trabajos";
 import {
   crearTransacciones,
@@ -52,6 +53,7 @@ import {
 import type { Auditoria } from "../puertos/auditoria";
 import type { CargaDeAutorizacion } from "../puertos/autorizacion";
 import type { Correo } from "../puertos/correo";
+import type { LecturasDeSesion } from "../puertos/sesion";
 import type { Tokens } from "../puertos/tokens";
 import type { Trabajos } from "../puertos/trabajos";
 import {
@@ -72,8 +74,8 @@ import { perezoso } from "./perezoso";
  */
 
 /**
- * Lo que recibe el trabajo de una transacción de la puerta de la aplicación (operación e
- * invitación, rol `zuluhub_app`): todos los repositorios y puertos que piden los casos de uso y las
+ * Lo que recibe el trabajo de una transacción de la puerta de la aplicación (operación, invitación y
+ * sesión, rol `zuluhub_app`): todos los repositorios y puertos que piden los casos de uso y las
  * consultas de empresas e identidad. Cada caso de uso declara solo lo que usa (su `Tx`), y este tipo
  * los contiene a todos.
  */
@@ -89,10 +91,12 @@ export type TxDeApp = Readonly<{
   trabajos: Trabajos;
   auditoria: Auditoria;
   autorizacion: CargaDeAutorizacion;
+  /** Lo que lee la puerta `SESION` (la persona del usuario y sus empresas). */
+  sesion: LecturasDeSesion;
 }>;
 
 export type Conexiones = Readonly<{
-  /** Puerta `OPERATIVO` e `INVITACION` (`ZULUHUB_DB_APP`). */
+  /** Puertas `OPERATIVO`, `INVITACION` y `SESION` (`ZULUHUB_DB_APP`). */
   transaccionesDeApp: () => TransaccionesDePostgres<TxDeApp>;
   /** Puerta `TRABAJOS` (`ZULUHUB_DB_TRABAJOS`): solo la cola. */
   transaccionesDeTrabajos: () => TransaccionesDePostgres<TxDeCola>;
@@ -143,6 +147,7 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
           trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
           auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
           autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>()),
+          sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
         }),
       }),
     ),

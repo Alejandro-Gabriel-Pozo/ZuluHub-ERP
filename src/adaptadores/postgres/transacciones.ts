@@ -27,8 +27,8 @@ export { ErrorDeConfiguracion };
 export type ConfiguracionDeTransacciones<Tx> = Readonly<{
   /**
    * Cadena de conexión por puerta. Los valores los carga el dueño en el entorno; acá solo se usan.
-   * La puerta `INVITACION` es opcional: si falta, usa la de `OPERATIVO` (ambas entran con el rol de
-   * base de la aplicación, `zuluhub_app`; lo que las distingue es el contexto firmado).
+   * Las puertas `INVITACION` y `SESION` son opcionales: si falta, usan la de `OPERATIVO` (las tres entran con
+   * el rol de base de la aplicación, `zuluhub_app`; lo que las distingue es el contexto firmado).
    */
   urls: Readonly<Partial<Record<TipoDeContexto, string>>>;
   /**
@@ -91,10 +91,10 @@ export function crearTransacciones<Tx>(
   function conexionPara(tipo: TipoDeContexto): Kysely<SinTablas> {
     const existente = conexiones.get(tipo);
     if (existente !== undefined) return existente;
-    // La invitación comparte el rol de base de la aplicación: sin cadena propia, usa la operativa.
+    // La invitación y la sesión comparten el rol de base de la aplicación: sin cadena propia, usan la operativa.
     const url =
       configuracion.urls[tipo] ??
-      (tipo === "INVITACION" ? configuracion.urls.OPERATIVO : undefined);
+      (tipo === "INVITACION" || tipo === "SESION" ? configuracion.urls.OPERATIVO : undefined);
     if (url === undefined || url === "") {
       throw new ErrorDeConfiguracion(`falta la cadena de conexión de la puerta ${tipo}`);
     }

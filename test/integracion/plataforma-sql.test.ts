@@ -117,6 +117,7 @@ const carga = (cambios: Partial<CargaDeContexto> = {}): CargaDeContexto => ({
   i: null,
   x: ahoraEnS() + 300,
   a: ADMIN_DE_PRUEBA,
+  s: null,
   ...cambios,
 });
 const tokenDe = (actor: string | null, cambios: Partial<CargaDeContexto> = {}): string =>

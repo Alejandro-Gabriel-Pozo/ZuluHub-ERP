@@ -52,3 +52,17 @@ export const planId = (valor: string): PlanId => crear<PlanId>("PlanId", valor);
 export type VersionDePlanId = Marca<string, "VersionDePlanId">;
 export const versionDePlanId = (valor: string): VersionDePlanId =>
   crear<VersionDePlanId>("VersionDePlanId", valor);
+/** Un uuid canónico (minúsculas): la base lo compara como `uuid` y los claims firmados lo llevan como texto. */
+const UUID_CANONICO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+export const esUuidCanonico = (valor: string): boolean => UUID_CANONICO.test(valor);
+/**
+ * Usuario autenticado: el `user.id` de la librería de autenticación (`generateId: "uuid"`). Es una
+ * identidad DISTINTA de `Persona`: la persona pertenece al negocio y el usuario al ingreso; el vínculo
+ * se fija al aceptar una invitación (web-armazon §4.6). Por eso es uuid canónico en minúsculas, la forma
+ * que firma el contexto (claim `s`) y que compara la base: otro texto no se deja crear.
+ */
+export type UsuarioAuthId = Marca<string, "UsuarioAuthId">;
+export const usuarioAuthId = (valor: string): UsuarioAuthId => {
+  if (!esUuidCanonico(valor)) throw new RangeError("UsuarioAuthId inválido");
+  return valor as UsuarioAuthId;
+};

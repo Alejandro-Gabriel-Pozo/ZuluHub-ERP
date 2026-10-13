@@ -2535,6 +2535,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
             i: invA.tokenHash,
             x: ahora - 5,
             a: null,
+            s: null,
           });
           await cliente.query("select set_config('app.ctx', $1, true)", [token]);
           const r = await cliente.query("select count(*)::int as n from invitacion");
@@ -2548,6 +2549,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
             i: invA.tokenHash,
             x: ahora + 60,
             a: null,
+            s: null,
           });
           await cliente.query("select set_config('app.ctx', $1, true)", [vigente]);
           const v = await cliente.query("select count(*)::int as n from invitacion");

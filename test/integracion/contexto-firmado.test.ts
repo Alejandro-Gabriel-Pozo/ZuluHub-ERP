@@ -44,6 +44,7 @@ function carga(cambios: Partial<CargaDeContexto> = {}): CargaDeContexto {
     i: null,
     x: ahoraEnS() + 300,
     a: null,
+    s: null,
     ...cambios,
   };
 }
@@ -624,7 +625,7 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
 
     it("el adaptador firma el contexto de INVITACION: rol app, sin empresa ni persona; usa la URL operativa", async () => {
       const r = await entorno.ejecutar(
-        { contexto: { tipo: "INVITACION", tokenHash: hash, ahora: new Date() } },
+        { contexto: { tipo: "INVITACION", tokenHash: hash, usuarioAuth: null, ahora: new Date() } },
         async ({ db }) => {
           const { rows } = await sql<{
             rol: string;
@@ -653,7 +654,7 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
       });
       try {
         const r = await propio.ejecutar(
-          { contexto: { tipo: "INVITACION", tokenHash: hash, ahora: new Date() } },
+          { contexto: { tipo: "INVITACION", tokenHash: hash, usuarioAuth: null, ahora: new Date() } },
           async ({ db }) => {
             const { rows } = await sql<{
               i: string | null;
@@ -671,7 +672,7 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
         try {
           await expect(
             sinNinguna.ejecutar(
-              { contexto: { tipo: "INVITACION", tokenHash: hash, ahora: new Date() } },
+              { contexto: { tipo: "INVITACION", tokenHash: hash, usuarioAuth: null, ahora: new Date() } },
               () => Promise.resolve(ok(null)),
             ),
           ).rejects.toBeInstanceOf(ErrorDeConfiguracion);

@@ -3,6 +3,7 @@ import { crearCasosDeUsoDeEmpresas, crearConsultasDeEmpresas } from "../modulos/
 import {
   crearCasosDeUsoDeIdentidad,
   crearConsultasDeIdentidad,
+  crearConsultasDeSesion,
 } from "../modulos/identidad/publico";
 import type { Conexiones } from "./conexiones";
 import { perezoso } from "./perezoso";
@@ -13,8 +14,7 @@ import { perezoso } from "./perezoso";
  * grupo se arma la primera vez que se pide; hasta entonces no se lee ninguna variable.
  *
  * Todavía no están (no tienen contraparte en el código): la resolución de marca por host
- * (`ResolucionDeMarca.porHost`, M4), `empresasDeLaSesion` y `personaDeLaSesion` con la puerta
- * `SESION` (W3a), la autenticación (W3b) y fiscal. Se suman en sus tramos.
+ * (`ResolucionDeMarca.porHost`, M4), la autenticación (W3b) y fiscal. Se suman en sus tramos.
  */
 export function armarWeb(conexiones: Conexiones) {
   const reglas = REGLAS_DE_EMPRESA;
@@ -34,6 +34,10 @@ export function armarWeb(conexiones: Conexiones) {
     ),
     consultasDeIdentidad: perezoso(() =>
       crearConsultasDeIdentidad({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /** `personaDeLaSesion` y `empresasDeLaSesion`: contexto `SESION`, sin empresa ni guard (W3a). */
+    consultasDeSesion: perezoso(() =>
+      crearConsultasDeSesion({ transacciones: conexiones.transaccionesDeApp() }),
     ),
   };
 }

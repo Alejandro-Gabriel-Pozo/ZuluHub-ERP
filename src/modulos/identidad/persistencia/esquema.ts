@@ -4,9 +4,9 @@
  * listas tienen que cambiar con ella. Los repositorios (tramo siguiente) se apoyan en esto.
  */
 
-/** Columnas de cada tabla, en el orden de la base. `persona` es de 0001 y acá no cambia; `traspaso_gerencia` es de 0005. */
+/** Columnas de cada tabla, en el orden de la base. `persona` es de 0001 (más `usuario_auth_id`, de 0010); `traspaso_gerencia` es de 0005. */
 export const COLUMNAS_DE_IDENTIDAD = {
-  persona: ["id", "email", "activo_global", "creado_en"],
+  persona: ["id", "email", "activo_global", "creado_en", "usuario_auth_id"],
   membresia: [
     "empresa_id",
     "persona_id",
@@ -86,6 +86,10 @@ export const ERRORES_DE_IDENTIDAD_POR_RESTRICCION: Readonly<Record<string, strin
   persona_email_ck: "EMAIL_INVALIDO",
   persona_email_uk: "EMAIL_YA_REGISTRADO",
   persona_id_email_uk: "NO_TRADUCIDA",
+  // 0010: el vínculo con el usuario autenticado. Un usuario es de UNA persona; y una vez fijado, no cambia
+  // (el repositorio solo escribe con `usuario_auth_id IS NULL`: el disparador es la red de seguridad).
+  persona_usuario_auth_id_uk: "USUARIO_DE_OTRA_PERSONA",
+  persona_usuario_auth_inmutable: "PERSONA_DE_OTRO_USUARIO",
 
   // membresia
   membresia_pkey: "YA_ES_MIEMBRO",

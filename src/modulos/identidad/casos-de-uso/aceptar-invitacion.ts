@@ -1,12 +1,17 @@
 import type { ContextoDeInvitacion } from "../../../contexto/contexto";
-import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
+import type {
+  EmpresaId,
+  PersonaId,
+  UsuarioAuthId,
+} from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import { cambiarEstado as cambiarEstadoDeEmpresa } from "../../empresas/publico";
 import { emailDesdeTexto, type Email } from "../dominio/email";
 import type { ErrorDeAceptacion } from "../dominio/errores";
 import { decidirAceptacion, type Invitacion, type RolDeEmpresa } from "../dominio/invitacion";
-import type { Persona } from "../dominio/membresia";
+import type { PersonaConUsuario } from "../dominio/membresia";
+import { decidirVinculo } from "../dominio/vinculo";
 import { cargarEmpresas } from "./comun";
 import type { DependenciasDeIdentidad, TxDeIdentidad } from "./contrato";
 import { traducirErrores } from "./traducir";
@@ -16,6 +21,11 @@ export type EntradaDeAceptacion = Readonly<{
   token: string;
   /** El email con el que la persona se autenticó; `null` si no hay sesión verificada. */
   emailAutenticado: string | null;
+  /**
+   * El usuario autenticado que acepta (el `user.id` de la sesión). La persona del email de la invitación
+   * queda vinculada con él, y con ningún otro: si ya lo está con otro usuario, `PERSONA_DE_OTRO_USUARIO`.
+   */
+  usuarioAuth: UsuarioAuthId;
   ahora: Date;
 }>;
 
@@ -51,23 +61,26 @@ function emailAutenticadoNormalizado(texto: string | null): Email | null {
  *
  *  1. Lee la invitación por el hash del token, las empresas y los estados, y la persona del email.
  *  2. Decide con el dominio (`decidirAceptacion`). Una invitación ya aceptada por esta persona vuelve
- *     `ok { yaEstabaAceptada: true }` sin escribir, siempre que el email autenticado coincida.
- *  3. Crea la persona si falta (el invitado solo puede crear la de SU email).
- *  4. `PENDIENTE → ACEPTADA` (condicionada por estado y versión).
+ *     `ok { yaEstabaAceptada: true }` sin escribir, siempre que el email autenticado coincida y la
+ *     persona esté vinculada con ESTE usuario (si lo está con otro: `PERSONA_DE_OTRO_USUARIO`; si
+ *     todavía no lo estaba, se vincula en esa repetición, con su constancia).
+ *  3. Crea la persona si falta (el invitado solo puede crear la de SU email). Antes de escribir decide el
+ *     vínculo con el usuario autenticado (`decidirVinculo`): si ya es de otro usuario, nada se escribe.
+ *  4. `PENDIENTE → ACEPTADA` (condicionada por estado y versión) y, si faltaba, el vínculo.
  *  5. Recién ahora el invitado ve sus membresías: vuelve a decidir con ellas (`YA_ES_MIEMBRO`,
  *     `ROL_DISTINTO_AL_ANTERIOR`). Si falla, la transacción se revierte entera, aceptación incluida.
  *  6. Crea o reactiva la membresía y las asignaciones de TODAS las empresas.
  *  7. Si es el alta del gerente, activa la empresa (`PROVISIONING → ACTIVE`).
- *  8. Auditoría por empresa, a nombre de la persona, sin token ni hash.
+ *  8. Auditoría por empresa, a nombre de la persona, sin token ni hash (y la del vínculo, si se fijó).
  */
 export function crearAceptarInvitacion({ transacciones, tokens }: DependenciasDeIdentidad) {
   return async function aceptarInvitacion(
     entrada: EntradaDeAceptacion,
   ): Promise<Resultado<SalidaDeAceptacion, ErrorAlAceptarInvitacion>> {
-    const { ahora } = entrada;
+    const { ahora, usuarioAuth } = entrada;
     const tokenHash = tokens.hash(entrada.token);
     const emailAutenticado = emailAutenticadoNormalizado(entrada.emailAutenticado);
-    const contexto: ContextoDeInvitacion = { tipo: "INVITACION", tokenHash, ahora };
+    const contexto: ContextoDeInvitacion = { tipo: "INVITACION", tokenHash, usuarioAuth, ahora };
 
     const resultado = await transacciones.ejecutar(
       { contexto },
@@ -97,6 +110,15 @@ export function crearAceptarInvitacion({ transacciones, tokens }: DependenciasDe
           if (personaExistente === null) {
             throw new Error("invariante rota: invitación aceptada por una persona que no existe");
           }
+          const vinculo = decidirVinculo(personaExistente, usuarioAuth);
+          if (!vinculo.ok) return vinculo;
+          if (vinculo.valor === "VINCULAR") {
+            // Aceptada antes de que existiera el vínculo: la repetición lo completa (una sola vez).
+            if (!(await tx.personas.vincularUsuario(personaExistente.id, usuarioAuth))) {
+              return err("PERSONA_DE_OTRO_USUARIO");
+            }
+            await auditarVinculo(tx, invitacion, personaExistente.id, usuarioAuth);
+          }
           return ok({
             yaEstabaAceptada: true,
             personaId: personaExistente.id,
@@ -104,7 +126,11 @@ export function crearAceptarInvitacion({ transacciones, tokens }: DependenciasDe
           });
         }
 
-        const persona: Persona = personaExistente ?? (await tx.personas.crear(invitacion.email));
+        // El vínculo se decide antes de escribir nada: otro usuario ya vinculado no se pisa.
+        const vinculo = decidirVinculo(personaExistente, usuarioAuth);
+        if (!vinculo.ok) return vinculo;
+        const persona: PersonaConUsuario =
+          personaExistente ?? (await tx.personas.crear(invitacion.email));
         if (
           !(await tx.invitaciones.marcarAceptada(
             invitacion.id,
@@ -114,6 +140,14 @@ export function crearAceptarInvitacion({ transacciones, tokens }: DependenciasDe
           ))
         ) {
           return err("INVITACION_NO_PENDIENTE");
+        }
+        // `false`: ya tenía usuario. Entre la lectura y la escritura otra transacción lo fijó (la base,
+        // serializable, no deja pisarlo) y esta se revierte entera, aceptación incluida.
+        if (
+          vinculo.valor === "VINCULAR" &&
+          !(await tx.personas.vincularUsuario(persona.id, usuarioAuth))
+        ) {
+          return err("PERSONA_DE_OTRO_USUARIO");
         }
 
         // Desde acá el invitado ve sus membresías y asignaciones (política D10 de la migración 0002).
@@ -191,6 +225,8 @@ export function crearAceptarInvitacion({ transacciones, tokens }: DependenciasDe
             });
           }
         }
+        if (vinculo.valor === "VINCULAR")
+          await auditarVinculo(tx, invitacion, persona.id, usuarioAuth);
         return ok({
           yaEstabaAceptada: false,
           personaId: persona.id,
@@ -200,6 +236,30 @@ export function crearAceptarInvitacion({ transacciones, tokens }: DependenciasDe
     );
     return traducirErrores(resultado, RESTRICCIONES_ADMITIDAS);
   };
+}
+
+/**
+ * Deja constancia, en cada empresa de la invitación y en la misma transacción, de que la persona quedó
+ * vinculada con el usuario. Va DESPUÉS de aceptar: la base solo deja auditar a nombre de la persona que ya
+ * figura como quien aceptó.
+ */
+async function auditarVinculo(
+  tx: TxDeIdentidad,
+  invitacion: Invitacion,
+  persona: PersonaId,
+  usuario: UsuarioAuthId,
+): Promise<void> {
+  for (const { empresaId } of invitacion.empresas) {
+    await tx.auditoria.registrar({
+      empresaId,
+      actorPersonaId: persona,
+      accion: "PERSONA_VINCULADA",
+      entidad: "persona",
+      entidadId: persona,
+      antes: { usuarioAuth: null },
+      despues: { usuarioAuth: usuario },
+    });
+  }
 }
 
 /** Crea las asignaciones que faltan y reactiva las apagadas; las que ya están activas no se tocan. */

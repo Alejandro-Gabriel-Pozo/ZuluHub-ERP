@@ -7,11 +7,13 @@ import {
   sucursalId,
   tenantId,
   traspasoId,
+  usuarioAuthId,
   type EmpresaId,
   type InvitacionId,
   type PersonaId,
   type SucursalId,
   type TraspasoId,
+  type UsuarioAuthId,
 } from "../../../primitivas/identificadores/marca";
 import { emailDesdeTexto, type Email } from "../dominio/email";
 import type {
@@ -22,7 +24,7 @@ import type {
   RolDeEmpresa,
   TipoDeInvitacion,
 } from "../dominio/invitacion";
-import type { Membresia, Persona } from "../dominio/membresia";
+import type { Membresia, PersonaConUsuario } from "../dominio/membresia";
 import type { EstadoGuardadoDeTraspaso, OrigenDeTraspaso, Traspaso } from "../dominio/traspaso";
 import type { IdentidadDb } from "./tablas";
 
@@ -99,10 +101,17 @@ export type TraspasoGuardado = Readonly<
 >;
 
 export interface RepositorioDePersonas {
-  buscarPorEmail(email: Email): Promise<Persona | null>;
-  obtener(id: PersonaId): Promise<Persona | null>;
-  /** Da de alta a una persona (solo con su email; el resto lo fija la base). */
-  crear(email: Email): Promise<Persona>;
+  buscarPorEmail(email: Email): Promise<PersonaConUsuario | null>;
+  obtener(id: PersonaId): Promise<PersonaConUsuario | null>;
+  /** Da de alta a una persona (solo con su email; el resto lo fija la base). Nace sin usuario vinculado. */
+  crear(email: Email): Promise<PersonaConUsuario>;
+  /**
+   * Vincula a la persona con el usuario autenticado: `UPDATE ... SET usuario_auth_id = <usuario> WHERE id =
+   * <id> AND usuario_auth_id IS NULL`. Solo lo deja pasar la base en el contexto de INVITACION, sobre la
+   * persona del email del enlace y hacia el usuario firmado en el contexto. `true`: lo fijó. `false`: ya
+   * tenía usuario (o la base no se lo permitió a ese contexto: 0 filas); el caso de uso lee antes y decide.
+   */
+  vincularUsuario(id: PersonaId, usuario: UsuarioAuthId): Promise<boolean>;
   /**
    * Suspende (`false`) o reactiva (`true`) a la persona en todas las empresas: `UPDATE ... SET
    * activo_global = <nuevo> WHERE id = <id> AND activo_global <> <nuevo>`. La tabla no tiene versión; el
@@ -246,11 +255,17 @@ export interface RepositorioDeInvitaciones {
 }
 
 export function crearRepositorioDePersonas(db: Kysely<IdentidadDb>): RepositorioDePersonas {
-  const columnas = ["id", "email", "activo_global"] as const;
-  const aPersona = (fila: { id: string; email: string; activo_global: boolean }): Persona => ({
+  const columnas = ["id", "email", "activo_global", "usuario_auth_id"] as const;
+  const aPersona = (fila: {
+    id: string;
+    email: string;
+    activo_global: boolean;
+    usuario_auth_id: string | null;
+  }): PersonaConUsuario => ({
     id: personaId(fila.id),
     email: aEmail(fila.email),
     activoGlobal: fila.activo_global,
+    usuarioAuth: fila.usuario_auth_id === null ? null : usuarioAuthId(fila.usuario_auth_id),
   });
   return {
     async buscarPorEmail(email) {
@@ -278,6 +293,16 @@ export function crearRepositorioDePersonas(db: Kysely<IdentidadDb>): Repositorio
         .returning(columnas)
         .executeTakeFirstOrThrow();
       return aPersona(fila);
+    },
+
+    async vincularUsuario(id, usuario) {
+      const r = await db
+        .updateTable("persona")
+        .set({ usuario_auth_id: usuario })
+        .where("id", "=", id)
+        .where("usuario_auth_id", "is", null)
+        .executeTakeFirst();
+      return r.numUpdatedRows === 1n;
     },
 
     async cambiarActivoGlobal(id, activo) {

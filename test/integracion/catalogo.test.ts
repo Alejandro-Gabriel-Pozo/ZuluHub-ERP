@@ -1018,6 +1018,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           i: null,
           x: Math.floor(Date.now() / 1000) + 300,
           a: null,
+          s: null,
         });
         await dueno.query("select set_config('app.ctx', $1, true)", [token]);
         return { tenant, empresa, otraEmpresa, persona };

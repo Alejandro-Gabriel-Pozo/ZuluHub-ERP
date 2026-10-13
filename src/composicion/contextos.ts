@@ -1,5 +1,14 @@
-import type { ContextoDeInvitacion, ContextoOperativo } from "../contexto/contexto";
-import type { EmpresaId, MarcaComercialId, PersonaId } from "../primitivas/identificadores/marca";
+import type {
+  ContextoDeInvitacion,
+  ContextoDeSesion,
+  ContextoOperativo,
+} from "../contexto/contexto";
+import type {
+  EmpresaId,
+  MarcaComercialId,
+  PersonaId,
+  UsuarioAuthId,
+} from "../primitivas/identificadores/marca";
 
 /**
  * El ÚNICO lugar que arma contextos con persona o con invitación (regla R-W3; web-armazon §3.2).
@@ -39,11 +48,30 @@ export function contextoOperativo(datos: DatosDeContextoOperativo): ContextoOper
 export type DatosDeContextoDeInvitacion = Readonly<{
   /** sha256 en hexadecimal del token del enlace (`Tokens.hash`); el token en sí no viaja. */
   tokenHash: string;
+  /** El usuario que ya ingresó con ese enlace (la sesión); `null` si todavía no. */
+  usuarioAuth: UsuarioAuthId | null;
   ahora: Date;
 }>;
 
-/** Alguien sin cuenta llega con un enlace de invitación. */
+/** Alguien llega con un enlace de invitación (con su cuenta, si ya ingresó). */
 export function contextoDeInvitacion(datos: DatosDeContextoDeInvitacion): ContextoDeInvitacion {
   exigirFechaValida(datos.ahora);
-  return { tipo: "INVITACION", tokenHash: datos.tokenHash, ahora: datos.ahora };
+  return {
+    tipo: "INVITACION",
+    tokenHash: datos.tokenHash,
+    usuarioAuth: datos.usuarioAuth,
+    ahora: datos.ahora,
+  };
+}
+
+export type DatosDeContextoDeSesion = Readonly<{
+  /** El usuario de la sesión de este pedido (la que resolvió el servidor, atada al host). */
+  usuarioAuth: UsuarioAuthId;
+  ahora: Date;
+}>;
+
+/** Alguien con sesión que todavía no eligió empresa: solo puede leer lo suyo. */
+export function contextoDeSesion(datos: DatosDeContextoDeSesion): ContextoDeSesion {
+  exigirFechaValida(datos.ahora);
+  return { tipo: "SESION", usuarioAuth: datos.usuarioAuth, ahora: datos.ahora };
 }

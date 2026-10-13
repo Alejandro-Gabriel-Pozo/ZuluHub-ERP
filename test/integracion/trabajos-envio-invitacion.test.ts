@@ -46,6 +46,7 @@ import {
   revocarDeBase,
   sucursalDe,
 } from "./fixtures-identidad";
+import { usuarioDePrueba } from "../utilidades/usuarios";
 
 /**
  * H5: el trabajo `enviar_invitacion` de punta a punta contra una base real: la invitación se crea con
@@ -251,6 +252,7 @@ describe.skipIf(base === null)("enviar_invitacion: el trabajo contra una base re
     const aceptada = await casos.aceptarInvitacion({
       token: enlace![1]!,
       emailAutenticado: email,
+      usuarioAuth: usuarioDePrueba(email),
       ahora: T0,
     });
     expect(aceptada.ok).toBe(true);

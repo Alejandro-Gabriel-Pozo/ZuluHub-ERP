@@ -32,6 +32,7 @@ import {
 import { adminInexistente, claveAlAzar, crearAdminDeBase } from "./plataforma-apoyo";
 import { crearCasosDeSoporte, crearEntornoDeSoporte } from "./soporte-apoyo";
 import { plataformaEn } from "./soporte-datos";
+import { usuarioDePrueba } from "../utilidades/usuarios";
 
 /**
  * «Explicar por qué» (H5 §B.5.9) contra una base real: qué deja asentado (y que es lo ÚNICO que escribe),
@@ -616,6 +617,7 @@ describe.skipIf(base === null)(
         const real = await identidad.aceptarInvitacion({
           token,
           emailAutenticado: email,
+          usuarioAuth: usuarioDePrueba(email),
           ahora: AHORA,
         });
         if (explicada.decision.ok) {

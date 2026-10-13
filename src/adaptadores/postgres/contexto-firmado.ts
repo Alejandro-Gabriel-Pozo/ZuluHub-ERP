@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import pg from "pg";
 import type { ActorDePlataforma, Contexto, TipoDeContexto } from "../../contexto/contexto";
+import { esUuidCanonico, type UsuarioAuthId } from "../../primitivas/identificadores/marca";
 import { ErrorDeConfiguracion } from "./errores";
 
 /**
@@ -13,8 +14,9 @@ import { ErrorDeConfiguracion } from "./errores";
  *
  *     v1.<kid>.<payloadHex>.<macHex>
  *
- * - `payloadHex`: hex del JSON UTF-8 `{u, e, t, p, i, x, a}` (claves cortas, siempre en ese orden).
+ * - `payloadHex`: hex del JSON UTF-8 `{u, e, t, p, i, x, a, s}` (claves cortas, siempre en ese orden).
  *   `a` es el actor de plataforma (id del administrador o `sistema`); vale `null` en las demás puertas.
+ *   `s` es el usuario autenticado (uuid canónico): lo llevan la sesión y la invitación; `null` en las demás.
  * - `macHex`: HMAC-SHA256 hex del texto `v1.<kid>.<payloadHex>` con el secreto de la clave `kid`.
  */
 
@@ -30,9 +32,6 @@ const HEX_MINIMO = 64; // 32 bytes
 /** El actor `a` del barrido y de los procesos de plataforma que no son una persona. */
 export const ACTOR_DE_SISTEMA = "sistema";
 
-/** Un uuid canónico (minúsculas): la base compara el actor como TEXTO con `admin_plataforma.id::text`. */
-const UUID_CANONICO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-
 /**
  * El actor de plataforma tal como se FIRMA en el claim `a` y tal como la base lo compara: el id del
  * administrador (uuid canónico en minúsculas) o `sistema`. Es la única definición: lo que firma el
@@ -41,10 +40,23 @@ const UUID_CANONICO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]
  */
 export function actorFirmado(actor: ActorDePlataforma): string {
   if (actor.tipo === "SISTEMA") return ACTOR_DE_SISTEMA;
-  if (!UUID_CANONICO.test(actor.id)) {
+  // La base compara el actor como TEXTO con `admin_plataforma.id::text`: tiene que ser canónico.
+  if (!esUuidCanonico(actor.id)) {
     throw new RangeError("el id del administrador debe ser un uuid canónico en minúsculas");
   }
   return actor.id;
+}
+
+/**
+ * El usuario tal como se FIRMA en el claim `s` (uuid canónico en minúsculas): la base lo convierte a `uuid`
+ * y lo compara con `persona.usuario_auth_id`. Lo que no es un uuid canónico lanza `RangeError` y no se
+ * firma: un `s` raro no se convierte en silencio en «ningún usuario». Es la única definición.
+ */
+export function usuarioFirmado(usuario: UsuarioAuthId): string {
+  if (!esUuidCanonico(usuario)) {
+    throw new RangeError("el id del usuario debe ser un uuid canónico en minúsculas");
+  }
+  return usuario;
 }
 
 export type ClaveDeContexto = Readonly<{ kid: number; secreto: Buffer }>;
@@ -62,13 +74,16 @@ export type CargaDeContexto = Readonly<{
   x: number;
   /** Actor de plataforma: id del administrador, `sistema` o `null` (todas las demás puertas). */
   a: string | null;
+  /** Usuario autenticado: lo llevan solo la sesión y la invitación; `null` en las demás puertas. */
+  s: string | null;
 }>;
 
-/** Rol de base de cada puerta. La invitación entra por el rol de la aplicación. */
+/** Rol de base de cada puerta. La invitación y la sesión entran por el rol de la aplicación. */
 export function rolDeContexto(tipo: TipoDeContexto): RolDeContexto {
   switch (tipo) {
     case "OPERATIVO":
     case "INVITACION":
+    case "SESION":
       return "zuluhub_app";
     case "GRUPO":
       return "zuluhub_grupo";
@@ -114,6 +129,7 @@ export function firmarCarga(clave: ClaveDeContexto, carga: CargaDeContexto): str
     i: carga.i,
     x: carga.x,
     a: carga.a,
+    s: carga.s,
   });
   const cuerpo = `v1.${clave.kid}.${Buffer.from(json, "utf8").toString("hex")}`;
   const mac = createHmac("sha256", clave.secreto).update(cuerpo, "utf8").digest("hex");
@@ -133,6 +149,7 @@ function cargaDe(contexto: Contexto, vence: number): CargaDeContexto {
         i: null,
         x: vence,
         a: null,
+        s: null,
       };
     case "GRUPO":
       return {
@@ -143,9 +160,30 @@ function cargaDe(contexto: Contexto, vence: number): CargaDeContexto {
         i: null,
         x: vence,
         a: null,
+        s: null,
       };
     case "INVITACION":
-      return { u, e: null, t: null, p: null, i: contexto.tokenHash, x: vence, a: null };
+      return {
+        u,
+        e: null,
+        t: null,
+        p: null,
+        i: contexto.tokenHash,
+        x: vence,
+        a: null,
+        s: contexto.usuarioAuth === null ? null : usuarioFirmado(contexto.usuarioAuth),
+      };
+    case "SESION":
+      return {
+        u,
+        e: null,
+        t: null,
+        p: null,
+        i: null,
+        x: vence,
+        a: null,
+        s: usuarioFirmado(contexto.usuarioAuth),
+      };
     case "PLATAFORMA":
       return {
         u,
@@ -155,9 +193,10 @@ function cargaDe(contexto: Contexto, vence: number): CargaDeContexto {
         i: null,
         x: vence,
         a: actorFirmado(contexto.actor),
+        s: null,
       };
     case "TRABAJOS":
-      return { u, e: null, t: null, p: null, i: null, x: vence, a: null };
+      return { u, e: null, t: null, p: null, i: null, x: vence, a: null, s: null };
   }
 }
 
