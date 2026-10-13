@@ -1,5 +1,5 @@
 import type { Kysely } from "kysely";
-import pg from "pg";
+import type pg from "pg";
 import {
   crearAuditoriaDePlataformaDePostgres,
   type AuditoriaDePlataformaDb,

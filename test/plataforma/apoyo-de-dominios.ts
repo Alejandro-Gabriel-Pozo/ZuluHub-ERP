@@ -54,7 +54,7 @@ export type RepositorioFalso = RepositorioDeDominios & {
   perderLaVersion: boolean;
 };
 
-export function repositorioFalso(iniciales: readonly DominioGuardado[] = []): RepositorioFalso {
+function repositorioFalso(iniciales: readonly DominioGuardado[] = []): RepositorioFalso {
   const filas = new Map(iniciales.map((d) => [d.id as string, d]));
   const llamadas: string[] = [];
   const repo: RepositorioFalso = {
