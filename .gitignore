@@ -8,3 +8,6 @@ coverage/
 *.log
 reports/
 .stryker-tmp/
+.next/
+next-env.d.ts
+*.tsbuildinfo

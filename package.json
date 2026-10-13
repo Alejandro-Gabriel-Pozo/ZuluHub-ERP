@@ -7,25 +7,34 @@
   "engines": {
     "node": ">=22"
   },
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p apps/web/tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "arquitectura": "depcruise src --config .dependency-cruiser.cjs",
+    "arquitectura": "depcruise src apps scripts --config .dependency-cruiser.cjs",
     "analizar:muerto": "knip",
     "mutacion": "stryker run",
+    "build:web": "npm run build --workspace @zuluhub/web",
     "gate": "npm run typecheck && npm run lint && npm run format:check && npm run arquitectura && npm run analizar:muerto && npm test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@neon/config": "^1.8.6",
+    "@next/eslint-plugin-next": "16.3.8",
     "@stryker-mutator/core": "^10.0.0",
     "@types/node": "^24.19.2",
     "@types/pg": "^8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "dependency-cruiser": "^18.5.0",
     "eslint": "^10.12.0",
+    "eslint-plugin-jsx-a11y-x": "0.2.0",
+    "eslint-plugin-react-hooks": "7.1.1",
     "fast-check": "^4.10.2",
     "knip": "^6.41.0",
     "prettier": "^3.9.10",
