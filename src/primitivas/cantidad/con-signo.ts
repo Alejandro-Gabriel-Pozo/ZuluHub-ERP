@@ -87,6 +87,7 @@ export function negarConSigno(cantidad: CantidadConSigno): CantidadConSigno {
 
 /** Módulo como `Cantidad` (no negativa): es el «positiva + sentido» que guardan los renglones. */
 export function valorAbsolutoDe(cantidad: CantidadConSigno): Cantidad {
+  // Stryker disable next-line EqualityOperator: con cero, `-0n` y `0n` son el mismo valor
   return crearCantidad(cantidad.unidades < 0n ? -cantidad.unidades : cantidad.unidades);
 }
 
