@@ -477,8 +477,8 @@ describe("verConfiguracion", () => {
     const r = await consultas.verConfiguracion(comoAdministrador);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.valor.modulos).toHaveLength(1);
-    const [modulo] = r.valor.modulos;
+    expect(r.valor.modulos.map((m) => m.clave)).toEqual(["administracion", "facturacion"]);
+    const [modulo, facturacion] = r.valor.modulos;
     expect(modulo).toMatchObject({
       clave: "administracion",
       estado: "disponible",
@@ -489,6 +489,13 @@ describe("verConfiguracion", () => {
     expect(modulo?.acciones).toEqual(
       Object.keys(CATALOGO_DE_MODULOS.administracion.acciones).sort(),
     );
+    expect(facturacion).toMatchObject({
+      clave: "facturacion",
+      estado: "en_desarrollo",
+      obligatorio: false,
+      requiere: ["administracion"],
+      acciones: ["comprobantes.emitir"],
+    });
     expect(soporte.pedidos).toEqual([]);
   });
 

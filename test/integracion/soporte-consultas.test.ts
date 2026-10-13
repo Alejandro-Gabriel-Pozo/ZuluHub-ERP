@@ -617,8 +617,9 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
   describe("configuración", () => {
     it("muestra el catálogo de módulos del código", async () => {
       const { modulos } = esperar(await consultas.verConfiguracion(soporte));
-      expect(modulos.map((m) => m.clave)).toEqual(["administracion"]);
+      expect(modulos.map((m) => m.clave)).toEqual(["administracion", "facturacion"]);
       expect(modulos[0]).toMatchObject({ estado: "disponible", obligatorio: true });
+      expect(modulos[1]).toMatchObject({ estado: "en_desarrollo", obligatorio: false });
     });
   });
 
