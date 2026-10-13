@@ -2,7 +2,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { empresaId, personaId, type PersonaId } from "../../../primitivas/identificadores/marca";
 import "../../../../test/propiedades/configuracion";
-import type { Email } from "./email";
+import type { Email } from "../../../primitivas/contacto/email";
 import type { Membresia, Persona, RolDeEmpresa } from "./membresia";
 import {
   PLAZO_DEL_TRASPASO_EN_MS,

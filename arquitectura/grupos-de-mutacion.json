@@ -162,5 +162,10 @@
     "grupo": "controles (nivel, decisión y catálogo)",
     "archivos": "src/capacidades/controles/**/*.ts",
     "pruebas": "src/capacidades/controles"
+  },
+  {
+    "grupo": "contacto (email)",
+    "archivos": "src/primitivas/contacto/**/*.ts",
+    "pruebas": "src/primitivas/contacto"
   }
 ]

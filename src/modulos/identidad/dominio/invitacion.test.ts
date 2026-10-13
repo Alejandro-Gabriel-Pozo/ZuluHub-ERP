@@ -8,7 +8,7 @@ import {
   tenantId,
   type EmpresaId,
 } from "../../../primitivas/identificadores/marca";
-import type { Email } from "./email";
+import type { Email } from "../../../primitivas/contacto/email";
 import {
   PLAZOS_EN_MS,
   TRANSICIONES_DE_INVITACION,

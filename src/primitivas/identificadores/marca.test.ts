@@ -3,6 +3,7 @@ import fc from "fast-check";
 import {
   adminPlataformaId,
   dominioId,
+  emisorId,
   empresaId,
   esTextoDeIdentificador,
   invitacionId,
@@ -150,5 +151,32 @@ describe("TraspasoId (traspaso de gerencia)", () => {
     // @ts-expect-error y una invitación no es un traspaso
     const comoTraspaso: ReturnType<typeof traspasoId> = invitacionId("i1");
     expect([comoInvitacion, comoTraspaso]).toEqual(["t1", "i1"]);
+  });
+});
+
+describe("EmisorId (referencia opaca al emisor fiscal, conciliación §3.7)", () => {
+  it("acepta texto no vacío y lo devuelve tal cual", () => {
+    expect(emisorId("0b9f2c1e-7a53-4e0a-9c1d-2f6a8d3e4b51")).toBe(
+      "0b9f2c1e-7a53-4e0a-9c1d-2f6a8d3e4b51",
+    );
+  });
+
+  it("rechaza vacío y espacios en los extremos, y el error lo nombra", () => {
+    for (const malo of ["", " x", "x ", "\tx", "x\n", " "]) {
+      expect(() => emisorId(malo), JSON.stringify(malo)).toThrow(
+        new RangeError("EmisorId inválido"),
+      );
+    }
+  });
+
+  it("no se mezcla con una empresa ni con una sucursal", () => {
+    const emisor = emisorId("e1");
+    // @ts-expect-error un emisor no es una empresa
+    const comoEmpresa: ReturnType<typeof empresaId> = emisor;
+    // @ts-expect-error un emisor no es una sucursal
+    const comoSucursal: ReturnType<typeof sucursalId> = emisor;
+    // @ts-expect-error y una empresa no es un emisor
+    const comoEmisor: ReturnType<typeof emisorId> = empresaId("x1");
+    expect([comoEmpresa, comoSucursal, comoEmisor]).toEqual(["e1", "e1", "x1"]);
   });
 });

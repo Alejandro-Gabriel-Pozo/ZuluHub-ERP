@@ -11,7 +11,7 @@ import type {
   TenantId,
 } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import type { Email } from "./email";
+import type { Email } from "../../../primitivas/contacto/email";
 import type {
   ErrorDeAceptacion,
   ErrorDeInvitacion,

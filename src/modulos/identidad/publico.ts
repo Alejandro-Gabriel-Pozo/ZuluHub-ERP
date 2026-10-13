@@ -1,5 +1,5 @@
 /** Entrada pública del módulo de identidad (ADR-001): dominio, persistencia y casos de uso. */
-export { emailDesdeTexto, type Email } from "./dominio/email";
+export { emailDesdeTexto, type Email } from "../../primitivas/contacto/email";
 export type { EmpresaNoOpera, EstadosDeEmpresa } from "../../contexto/estados";
 export type {
   ErrorDeAceptacion,

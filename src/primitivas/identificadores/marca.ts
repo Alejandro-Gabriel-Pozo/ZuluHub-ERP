@@ -52,3 +52,10 @@ export const planId = (valor: string): PlanId => crear<PlanId>("PlanId", valor);
 export type VersionDePlanId = Marca<string, "VersionDePlanId">;
 export const versionDePlanId = (valor: string): VersionDePlanId =>
   crear<VersionDePlanId>("VersionDePlanId", valor);
+/**
+ * Emisor fiscal: cada CUIT con el que una empresa factura. Es un identificador, no lógica fiscal: lo
+ * guardan catálogo, stock y caja como referencia opaca sin importar `modulos/fiscal` (conciliación §3.7,
+ * C5 de catálogo y stock). Fiscal lo reexporta desde su `identificadores.ts`.
+ */
+export type EmisorId = Marca<string, "EmisorId">;
+export const emisorId = (valor: string): EmisorId => crear<EmisorId>("EmisorId", valor);

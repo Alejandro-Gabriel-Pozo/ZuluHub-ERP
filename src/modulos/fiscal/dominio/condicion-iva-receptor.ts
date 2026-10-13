@@ -1,33 +1,18 @@
+import type { CondicionIva as CondicionIvaReceptor } from "../../../primitivas/identificacion-fiscal/condicion-iva";
 import type { LetraDeComprobante } from "./comprobante-emitido";
 
 /**
- * Condición frente al IVA del RECEPTOR (spec H7 facturación §B.3.2). Son once valores: los que
- * lista la tabla «Condición Frente al IVA del receptor» de WSFE v4.8 (l. 5712-5727). Se guardan los
- * NOMBRES; los códigos de ARCA (1, 4, 5, 6, 7, 8, 9, 10, 13, 15, 16) viven en el adaptador, con su
- * prueba contra lo que devuelva `FEParamGetCondicionIvaReceptor`.
- *
- * Es distinta de `CondicionIva` (la del EMISOR, tres valores en `emisor.ts`): un emisor es
- * responsable inscripto, monotributo o exento; un receptor puede ser cualquiera de estos once.
+ * Condición frente al IVA del RECEPTOR (spec H7 facturación §B.3.2). Los once valores y su guarda
+ * viven en `primitivas/identificacion-fiscal/condicion-iva` (los usa también el directorio de clientes,
+ * que no puede importar fiscal); acá se reexportan con los nombres de fiscal. Es distinta de
+ * `CondicionIva` de `emisor.ts` (la del EMISOR, tres valores): un emisor es responsable inscripto,
+ * monotributo o exento; un receptor puede ser cualquiera de las once.
  */
-export const CONDICIONES_DE_IVA_DEL_RECEPTOR = [
-  "RESPONSABLE_INSCRIPTO",
-  "EXENTO",
-  "CONSUMIDOR_FINAL",
-  "MONOTRIBUTO",
-  "NO_CATEGORIZADO",
-  "PROVEEDOR_DEL_EXTERIOR",
-  "CLIENTE_DEL_EXTERIOR",
-  "IVA_LIBERADO_LEY_19640",
-  "MONOTRIBUTISTA_SOCIAL",
-  "IVA_NO_ALCANZADO",
-  "MONOTRIBUTO_TRABAJADOR_INDEPENDIENTE_PROMOVIDO",
-] as const;
-
-export type CondicionIvaReceptor = (typeof CONDICIONES_DE_IVA_DEL_RECEPTOR)[number];
-
-export function esCondicionIvaReceptor(texto: string): texto is CondicionIvaReceptor {
-  return (CONDICIONES_DE_IVA_DEL_RECEPTOR as readonly string[]).includes(texto);
-}
+export {
+  CONDICIONES_DE_IVA as CONDICIONES_DE_IVA_DEL_RECEPTOR,
+  esCondicionIva as esCondicionIvaReceptor,
+  type CondicionIva as CondicionIvaReceptor,
+} from "../../../primitivas/identificacion-fiscal/condicion-iva";
 
 /**
  * Qué clases de comprobante admite cada condición, columna por columna de la tabla de WSFE v4.8
