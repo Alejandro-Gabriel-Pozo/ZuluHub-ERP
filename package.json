@@ -49,6 +49,7 @@
     "vitest-browser-react": "2.3.0"
   },
   "dependencies": {
+    "better-auth": "1.7.7",
     "kysely": "^0.29.6",
     "pg": "^8.23.1",
     "zod": "4.6.5"
