@@ -3,7 +3,13 @@ import { importeDesdeTexto, type Importe } from "../../../primitivas/dinero/impo
 import { moneda } from "../../../primitivas/dinero/moneda";
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
-import { TIPOS_DE_COMPROBANTE, type TipoDeComprobante } from "../dominio/comprobante-emitido";
+import {
+  TIPOS_DE_COMPROBANTE,
+  letraDeComprobante,
+  type LetraDeComprobante,
+  type TipoDeComprobante,
+  type TipoDeOrigen,
+} from "../dominio/comprobante-emitido";
 import { AMBIENTES, type Ambiente } from "../dominio/comprobante-nuevo";
 import {
   ESTADOS_DE_COMPROBANTE_ARCA,
@@ -47,6 +53,13 @@ export type FiltroDeListado = Readonly<{
    * puede ser un documento, su prefijo de solo dígitos. Basta que coincida uno de los dos.
    */
   texto: Readonly<{ nombre: string; documento: string | null }> | null;
+  /** La letra del tipo (`A`, `B`, `C`): se lee como «el tipo es uno de los de esa letra», sin columna nueva. */
+  letra: LetraDeComprobante | null;
+  /** El número de punto de venta congelado en el comprobante (`punto_de_venta_numero`), no el id. */
+  puntoDeVentaNumero: number | null;
+  /** `origen_tipo` y, dentro de él, `origen_id` exacto (su índice es `comprobante_origen_ix`). */
+  origenTipo: TipoDeOrigen | null;
+  origenId: string | null;
   despuesDe: ClaveDeListado | null;
   limite: number;
 }>;
@@ -160,6 +173,20 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
           : consulta.where("estado", "=", filtro.estado);
       if (filtro.tipo !== null) consulta = consulta.where("tipo_comprobante", "=", filtro.tipo);
       if (filtro.ambiente !== null) consulta = consulta.where("ambiente", "=", filtro.ambiente);
+      if (filtro.letra !== null) {
+        const letra = filtro.letra;
+        consulta = consulta.where(
+          "tipo_comprobante",
+          "in",
+          TIPOS_DE_COMPROBANTE.filter((t) => letraDeComprobante(t) === letra),
+        );
+      }
+      if (filtro.puntoDeVentaNumero !== null) {
+        consulta = consulta.where("punto_de_venta_numero", "=", filtro.puntoDeVentaNumero);
+      }
+      if (filtro.origenTipo !== null)
+        consulta = consulta.where("origen_tipo", "=", filtro.origenTipo);
+      if (filtro.origenId !== null) consulta = consulta.where("origen_id", "=", filtro.origenId);
       if (filtro.desde !== null) {
         consulta = consulta.where(sql<boolean>`${FECHA_DEL_LISTADO} >= ${filtro.desde}::date`);
       }
