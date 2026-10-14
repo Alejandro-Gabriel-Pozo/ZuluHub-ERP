@@ -1,10 +1,11 @@
 import "server-only";
 
 import { type EstadoDeLaResolucion } from "../../../src/capacidades/experiencia/puerta";
+import type { FuenteDePuertas } from "../../../src/capacidades/experiencia/fuente-de-puertas";
 import { crearResolutorDePuerta } from "../../../src/capacidades/experiencia/resolutor";
 import { entornoDelProceso, esProduccion } from "../../../src/composicion/entorno";
 import { normalizarHost } from "../../../src/modulos/marcas/publico";
-import { fuenteDePuertas, type FuenteDePuertas } from "./fuente-de-puertas";
+import { fuenteDePuertas } from "./fuente-de-puertas";
 
 /**
  * La puerta del servidor (armazón web §3.2, pasos 3 y 6): de un host a su marca y su superficie. La
