@@ -64,9 +64,10 @@ async function pedidoDeLaAccion(): Promise<Respuesta<PedidoDeAccion>> {
 const LARGO_MAXIMO_DEL_TOKEN = 512;
 
 async function empezarIngreso(datos: FormData): Promise<Respuesta<Readonly<{ destino: string }>>> {
+  // Fuera del `try`: en un host que no es de la aplicación la puerta responde «no existe» (404), no un fallo.
+  const pedido = await pedidoDeLaAccion();
+  if (!pedido.ok) return pedido;
   try {
-    const pedido = await pedidoDeLaAccion();
-    if (!pedido.ok) return pedido;
     const { puerta, encabezados } = pedido.dato;
     const invitacion = textoDe(datos, "invitacion");
     const conInvitacion = invitacion !== "" && invitacion.length <= LARGO_MAXIMO_DEL_TOKEN;
@@ -96,9 +97,9 @@ export async function ingresarConGoogle(datos: FormData): Promise<ResultadoDeAcc
 }
 
 async function fijarEmpresa(datos: FormData): Promise<Respuesta<null>> {
+  const pedido = await pedidoDeLaAccion();
+  if (!pedido.ok) return pedido;
   try {
-    const pedido = await pedidoDeLaAccion();
-    if (!pedido.ok) return pedido;
     const { sesion, puerta } = await sesionDelPedido();
     if (sesion === null) return { ok: false, error: errorDeCodigo("SESION_VENCIDA") };
     const elegida = await elegirEmpresa(dependenciasDeSesion, {
@@ -125,9 +126,9 @@ export async function entrarALaEmpresa(datos: FormData): Promise<ResultadoDeAcci
 }
 
 async function terminarSesion(): Promise<Respuesta<null>> {
+  const pedido = await pedidoDeLaAccion();
+  if (!pedido.ok) return pedido;
   try {
-    const pedido = await pedidoDeLaAccion();
-    if (!pedido.ok) return pedido;
     const { puerta, encabezados } = pedido.dato;
     const cierre = await cerrarSesion(dependenciasDeSesion, { host: puerta.host, encabezados });
     if (!cierre.ok) return cierre;
@@ -163,9 +164,9 @@ export type EntradaDeAceptar = Readonly<{
 export async function aceptarLaInvitacion(
   entrada: EntradaDeAceptar,
 ): Promise<Respuesta<Readonly<{ yaEstabaAceptada: boolean }>>> {
+  const pedido = await pedidoDeLaAccion();
+  if (!pedido.ok) return pedido;
   try {
-    const pedido = await pedidoDeLaAccion();
-    if (!pedido.ok) return pedido;
     const { sesion } = await sesionDelPedido();
     if (sesion === null) return { ok: false, error: errorDeCodigo("SESION_VENCIDA") };
     const resultado = await aceptarInvitacionDeLaSesion(dependenciasDeSesion, {

@@ -42,6 +42,11 @@ class Redireccion extends Error {
     super(`redirect:${destino}`);
   }
 }
+const esNoEncontrada = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "digest" in error &&
+  String(error.digest).includes("404");
 const noEncontrada = () =>
   Object.assign(new Error("NEXT_NOT_FOUND"), { digest: "NEXT_HTTP_ERROR_FALLBACK;404" });
 
@@ -242,6 +247,21 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
         ).toEqual({ estado: "PENDIENTE" });
       },
     );
+
+    it("en un host que no es de la aplicación, la acción es un «no existe» (404), no un fallo con referencia", async () => {
+      comoNavegador("desconocido.test");
+      const f = new FormData();
+      f.set("empresaId", "x");
+      for (const intento of [
+        () => acciones.ingresarConGoogle(new FormData()),
+        () => acciones.entrarALaEmpresa(f),
+        () => acciones.cerrarLaSesion(),
+        () => acciones.aceptarLaInvitacion({ token: "t", clave: "k" }),
+      ]) {
+        await expect(intento()).rejects.toSatisfy(esNoEncontrada);
+      }
+      expect(mundo.registros).toEqual([]);
+    });
 
     it("sin Origin (un cliente que no es un navegador) se deja pasar: lo cubre SameSite=Lax", async () => {
       const yo = await ingresarEn(mundo, HOST_A);
