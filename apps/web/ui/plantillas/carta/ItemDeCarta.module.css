@@ -1,0 +1,82 @@
+.item {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--espacio-2) var(--espacio-3);
+  min-height: 3.5rem;
+  padding: var(--espacio-3) var(--espacio-4);
+  border-bottom: var(--borde-grosor) solid var(--color-borde);
+}
+
+.item:hover {
+  background: var(--color-superficie);
+}
+
+/* El foco se ve en todo el ítem, que es lo que se toca. */
+.item:has(.enlace:focus-visible) {
+  outline: 3px solid var(--color-foco);
+  outline-offset: -3px;
+}
+
+.texto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  min-width: 0;
+}
+
+/* El precio va en la misma fila que el nombre si entra y, si no, debajo: nunca cortado ni encima. */
+.enlace {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--espacio-3);
+  color: var(--color-texto);
+  text-decoration: none;
+}
+
+.enlace:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.enlace::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.nombre {
+  flex: 1 1 10em;
+  min-width: 0;
+  font-size: 1.1em;
+  font-weight: var(--tipo-peso-fuerte);
+  line-height: 1.4;
+}
+
+.precio {
+  margin-inline-start: auto;
+  font-size: 1em;
+  font-weight: var(--tipo-peso-fuerte);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.linea {
+  color: var(--color-texto-suave);
+  font-size: 0.9em;
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
+.agotado {
+  flex: 0 0 100%;
+  color: var(--color-agotado);
+  font-size: 0.9em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.45;
+}

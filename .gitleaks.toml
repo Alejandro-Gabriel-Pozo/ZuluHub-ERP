@@ -33,10 +33,10 @@ regexes = [
   '''(?s)^-----BEGIN PRIVATE KEY-----.*$''',
 ]
 
-# La palabra secreta inventada de la prueba por propiedades de «un error inesperado no filtra su detalle»
-# (ADR-016). Solo este archivo y solo este valor.
+# ADR-016 (W5): la prueba de propiedades de `aRespuesta` mete una palabra inventada en fallas de todo tipo
+# para comprobar que nunca sale hacia la pantalla. No es un secreto: un solo archivo y un solo valor.
 [[allowlists]]
-description = "Palabra secreta de juguete de la prueba de respuestas públicas"
+description = "Palabra de juguete de la prueba de no-filtración de aRespuesta"
 condition = "AND"
 paths = [
   '''^src/capacidades/experiencia/respuesta\.propiedades\.test\.ts$''',

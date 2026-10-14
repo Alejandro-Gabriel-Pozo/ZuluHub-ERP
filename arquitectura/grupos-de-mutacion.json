@@ -9,7 +9,8 @@
   },
   {
     "grupo": "cantidad",
-    "archivos": "src/primitivas/cantidad/**/*.ts"
+    "archivos": "src/primitivas/cantidad/**/*.ts",
+    "pruebas": "src/primitivas/cantidad src/primitivas/dinero"
   },
   {
     "grupo": "identificación fiscal, resultado y estados",
@@ -212,5 +213,15 @@
     "grupo": "arca (códigos y traducción)",
     "archivos": "src/adaptadores/arca/codigos.ts,src/adaptadores/arca/traducir.ts",
     "pruebas": "src/adaptadores/arca/codigos.test.ts src/adaptadores/arca/traducir.test.ts"
+  },
+  {
+    "grupo": "autenticación (piezas puras)",
+    "archivos": "src/capacidades/autenticacion/**/*.ts,src/adaptadores/autenticacion/configuracion.ts",
+    "pruebas": "src/capacidades/autenticacion src/adaptadores/autenticacion"
+  },
+  {
+    "grupo": "autenticación (ruta de ingreso, G8)",
+    "archivos": "src/composicion/ruta-de-ingreso.ts",
+    "pruebas": "src/composicion/ruta-de-ingreso.test.ts"
   }
 ]

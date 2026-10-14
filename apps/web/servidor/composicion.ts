@@ -17,6 +17,10 @@ const conexiones = armarConexiones({
   registrar: (detalle) => {
     console.error(`[entorno] ${detalle}`);
   },
+  // Lo que cuenta la librería de ingreso de un fallo (ya viene con su prefijo): solo al registro, nunca a una respuesta.
+  registrarDeIngreso: (detalle) => {
+    console.error(detalle);
+  },
 });
 
 /** Casos de uso y consultas de la web. Cada grupo se arma al pedirlo: `web.consultasDeEmpresas()`. */

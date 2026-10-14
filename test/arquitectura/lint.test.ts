@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from "node:fs";
 import { ESLint } from "eslint";
 import { createRequire } from "node:module";
 import tseslint from "typescript-eslint";
@@ -338,3 +339,109 @@ describe("lint del dinero en la web (R-W10)", () => {
     }
   });
 });
+
+/**
+ * C-2 (D10): la plantilla de la carta no fija la letra en `px`. Previene que un tamaño fijo ignore el que el
+ * comensal configuró y el control «Letra». Chequeo: las violaciones inyectadas de acá (JavaScript; los `.css`
+ * se prueban en `reglas.test.ts`) y que el bloque conserve las demás reglas de la web.
+ */
+describe("lint de la letra de la carta (D10)", () => {
+  const { bloques: bloquesDeWeb } = require("../../arquitectura/lint-web.cjs") as {
+    bloques: ESLint.Options["baseConfig"] extends infer T ? Exclude<T, null> : never;
+  };
+  const eslintCarta = new ESLint({
+    overrideConfigFile: true,
+    overrideConfig: [
+      {
+        files: ["**/*.ts", "**/*.tsx"],
+        languageOptions: {
+          parser: tseslint.parser,
+          parserOptions: { ecmaFeatures: { jsx: true } },
+        },
+      },
+      ...(bloquesDeWeb as never[]),
+    ],
+  });
+  const mensajesCarta = async (ruta: string, codigo: string): Promise<string[]> => {
+    const [resultado] = await eslintCarta.lintText(codigo, { filePath: ruta });
+    return (resultado?.messages ?? []).map((m) => `${m.ruleId ?? "?"}: ${m.message}`);
+  };
+  const carta = "apps/web/ui/plantillas/carta/X.tsx";
+
+  it.each([
+    ["en px como texto", 'export const a = <p style={{ fontSize: "18px" }} />;'],
+    ["en px con espacio", 'export const a = <p style={{ fontSize: "18 px" }} />;'],
+    ["con un número (React lo toma como px)", "export const a = <p style={{ fontSize: 18 }} />;"],
+  ])("se prohíbe fontSize %s", async (_nombre, codigo) => {
+    expect((await mensajesCarta(carta, codigo)).join("\n")).toContain("D10");
+  });
+
+  it("rem y em pasan, y fuera de la carta no aplica", async () => {
+    expect(
+      await mensajesCarta(carta, 'export const a = <p style={{ fontSize: "1.125rem" }} />;'),
+    ).toEqual([]);
+    expect(
+      await mensajesCarta(carta, 'export const a = <p style={{ fontSize: "1em" }} />;'),
+    ).toEqual([]);
+    expect(
+      await mensajesCarta(
+        "apps/web/ui/componentes/X.tsx",
+        'export const a = <p style={{ fontSize: "18px" }} />;',
+      ),
+    ).toEqual([]);
+  });
+
+  it("conserva las otras reglas de la web dentro de la carta (R-W8 y R-W10)", async () => {
+    const mensajes = (
+      await mensajesCarta(
+        carta,
+        "export const a = <div dangerouslySetInnerHTML={x} {...{ importe: 1 }} />;",
+      )
+    ).join("\n");
+    expect(mensajes).toContain("R-W8");
+    expect(mensajes).toContain("R-W10");
+  });
+});
+
+/**
+ * Regla `sin-host-reenviado`. Previene: que un cliente falsifique la identidad del host (y con ella la
+ * marca) mandando el encabezado reenviado de host; la identidad es SOLO la cabecera `host`. Se busca la
+ * cadena (cualquier capitalización) en todo `apps/**` y `src/**`, como literal, clave o argumento. Solo
+ * quedan afuera las pruebas (`*.test.ts*`), que verifican justamente que NO se lee. Chequeo: el caso
+ * inyectado de acá. Agregarla después costaría una marca ajena en producción antes de enterarse.
+ */
+describe("sin-host-reenviado", () => {
+  const CADENA = /x-forwarded-host/i;
+  const esPrueba = (f: string) => /\.test\.tsx?$/.test(f);
+  function infractores(raiz: string, leer: (f: string) => string, archivos: string[]): string[] {
+    void raiz;
+    return archivos.filter((f) => !esPrueba(f) && CADENA.test(leer(f)));
+  }
+
+  it("detecta la cadena en cualquier forma, y no en las pruebas", () => {
+    const fuentes: Record<string, string> = {
+      "apps/web/a.ts": 'h.get("X-Forwarded-Host")',
+      "src/b.ts": "const x = { 'x-forwarded-host': 1 };",
+      "src/c.ts": "// X-FORWARDED-HOST",
+      "src/d.test.ts": '"x-forwarded-host"',
+      "apps/web/e.tsx": 'const ok = h.get("host");',
+    };
+    expect(infractores("", (f) => fuentes[f] as string, Object.keys(fuentes))).toEqual([
+      "apps/web/a.ts",
+      "src/b.ts",
+      "src/c.ts",
+    ]);
+  });
+
+  it("el repositorio real no la usa fuera de las pruebas", () => {
+    const archivos = [...glob("apps"), ...glob("src")];
+    expect(archivos.length).toBeGreaterThan(100);
+    expect(infractores("", (f) => readFileSync(f, "utf8"), archivos)).toEqual([]);
+  });
+});
+
+function glob(dir: string): string[] {
+  return readdirSync(dir, { recursive: true, encoding: "utf8" })
+    .filter((f) => /\.tsx?$/.test(f) && !/(^|[\\/])(node_modules|\.next)[\\/]/.test(f))
+    .map((f) => `${dir}/${f}`.replaceAll("\\", "/"));
+}

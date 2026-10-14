@@ -6,7 +6,9 @@ import {
   NOMBRES_DE_ENTORNO,
   PREFIJO_PROHIBIDO,
   VARIABLES_PROHIBIDAS,
+  VARIABLE_DE_TIPO_DE_DESPLIEGUE,
   entornoDelProceso,
+  esProduccion,
   prohibidasPresentes,
   registrandoFallosDeEntorno,
   valoresDeLaPieza,
@@ -30,6 +32,10 @@ const COMPLETO: FuenteDeEntorno = {
   ZULUHUB_DB_APP: "postgres://usuario:clave@host.test:5432/base",
   ZULUHUB_DB_TRABAJOS: "postgresql://usuario:clave@host.test/base",
   ZULUHUB_DB_PUBLICO: "postgres://usuario:clave@host.test:5432/base",
+  ZULUHUB_DB_AUTENTICACION: "postgres://usuario:clave@host.test:5432/base",
+  ZULUHUB_AUTH_SECRETO_EMPRESA: "secreto-de-prueba-que-no-es-real-0123456789",
+  GOOGLE_CLIENT_ID: "cliente-de-prueba",
+  GOOGLE_CLIENT_SECRET: "secreto-de-cliente-de-prueba",
 };
 
 const PIEZAS: Record<Pieza, string[]> = {
@@ -37,6 +43,10 @@ const PIEZAS: Record<Pieza, string[]> = {
   "transacciones-trabajos": ["ZULUHUB_CLAVE_CONTEXTO", "ZULUHUB_DB_TRABAJOS"],
   // La puerta pública no tiene contexto firmado: no necesita la clave, solo su propia cadena.
   "transacciones-publicas": ["ZULUHUB_DB_PUBLICO"],
+  // La autenticación (W3b): la conexión del rol de autenticación se pide sola (el barrido del cron no necesita
+  // ni el secreto ni el cliente de Google); el ingreso necesita el secreto y el cliente.
+  "conexion-de-autenticacion": ["ZULUHUB_DB_AUTENTICACION"],
+  autenticacion: ["ZULUHUB_AUTH_SECRETO_EMPRESA", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
   tokens: ["ZULUHUB_SECRETO_INVITACIONES"],
   correo: [
     "ZULUHUB_RESEND_API_KEY",
@@ -55,12 +65,16 @@ const sin = (fuente: FuenteDeEntorno, nombre: string): FuenteDeEntorno => {
 describe("NOMBRES_DE_ENTORNO (P-13: la lista de nombres)", () => {
   const nombres = NOMBRES_DE_ENTORNO.map((e) => e.nombre);
 
-  it("son exactamente los de W1 y la cadena de la puerta pública (los demás llegan en sus tramos)", () => {
+  it("son exactamente los de W1, la cadena de la puerta pública y los de la autenticación (los demás llegan en sus tramos)", () => {
     expect([...nombres].sort()).toEqual(
       [
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "ZULUHUB_AUTH_SECRETO_EMPRESA",
         "ZULUHUB_CLAVE_CONTEXTO",
         "ZULUHUB_CORREO_REMITENTE",
         "ZULUHUB_DB_APP",
+        "ZULUHUB_DB_AUTENTICACION",
         "ZULUHUB_DB_PUBLICO",
         "ZULUHUB_DB_TRABAJOS",
         "ZULUHUB_NOMBRE_DE_MARCA",
@@ -71,9 +85,13 @@ describe("NOMBRES_DE_ENTORNO (P-13: la lista de nombres)", () => {
     );
   });
 
-  it("no se repiten y todos llevan el prefijo del producto", () => {
+  it("no se repiten y todos llevan el prefijo del producto, salvo el cliente de Google (nombres que el dueño ya conoce)", () => {
     expect(new Set(nombres).size).toBe(nombres.length);
-    for (const nombre of nombres) expect(nombre).toMatch(/^ZULUHUB_[A-Z0-9_]+$/);
+    const deGoogle = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"];
+    for (const nombre of nombres) {
+      if (!deGoogle.includes(nombre)) expect(nombre).toMatch(/^ZULUHUB_[A-Z0-9_]+$/);
+    }
+    expect(nombres.filter((x) => !x.startsWith("ZULUHUB_")).sort()).toEqual(deGoogle);
   });
 
   it("no contiene la conexión de plataforma ni la de grupo: la web no las recibe (R10)", () => {
@@ -104,8 +122,14 @@ describe("variables prohibidas (P-13)", () => {
   it("son las de la spec", () => {
     expect([...VARIABLES_PROHIBIDAS].sort()).toEqual(
       [
+        "AUTH_SECRET",
+        "AUTH_URL",
         "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_SECRETS",
         "BETTER_AUTH_TELEMETRY",
+        "BETTER_AUTH_TELEMETRY_ENDPOINT",
+        "BETTER_AUTH_TELEMETRY_ID",
+        "BETTER_AUTH_TRUSTED_ORIGINS",
         "BETTER_AUTH_URL",
         "DATABASE_URL",
         "DATABASE_URL_UNPOOLED",
@@ -120,6 +144,12 @@ describe("variables prohibidas (P-13)", () => {
   });
 
   it.each([
+    "BETTER_AUTH_SECRETS",
+    "BETTER_AUTH_TRUSTED_ORIGINS",
+    "BETTER_AUTH_TELEMETRY_ENDPOINT",
+    "BETTER_AUTH_TELEMETRY_ID",
+    "AUTH_SECRET",
+    "AUTH_URL",
     "BETTER_AUTH_TELEMETRY",
     "BETTER_AUTH_SECRET",
     "BETTER_AUTH_URL",
@@ -132,6 +162,20 @@ describe("variables prohibidas (P-13)", () => {
     "POSTGRES_X",
   ])("detecta %s", (nombre) => {
     expect(prohibidasPresentes({ ...COMPLETO, [nombre]: CENTINELA })).toEqual([nombre]);
+  });
+
+  it("G7: con la telemetría de la librería de ingreso presente, la autenticación no se arma (ni su conexión)", () => {
+    const fuente = { ...COMPLETO, BETTER_AUTH_TELEMETRY: "false" };
+    for (const pieza of ["autenticacion", "conexion-de-autenticacion"] as const) {
+      expect(() => valoresDeLaPieza(fuente, pieza)).toThrow(ErrorDeEntorno);
+      try {
+        valoresDeLaPieza(fuente, pieza);
+      } catch (e) {
+        expect((e as ErrorDeEntorno).detalleParaElRegistro()).toBe(
+          "variables prohibidas presentes: BETTER_AUTH_TELEMETRY",
+        );
+      }
+    }
   });
 
   it("una variable presente pero vacía también existe", () => {
@@ -412,5 +456,36 @@ describe("registrandoFallosDeEntorno", () => {
 describe("entornoDelProceso", () => {
   it("es el entorno del proceso", () => {
     expect(entornoDelProceso()).toBe(process.env);
+  });
+});
+
+describe("esProduccion (VERCEL_ENV)", () => {
+  it("la variable de sistema se llama VERCEL_ENV", () => {
+    expect(VARIABLE_DE_TIPO_DE_DESPLIEGUE).toBe("VERCEL_ENV");
+  });
+
+  it("solo `production` exacto es producción", () => {
+    expect(esProduccion({ VERCEL_ENV: "production" })).toBe(true);
+  });
+
+  it.each([
+    ["preview"],
+    ["development"],
+    [""],
+    ["Production"],
+    [" production"],
+    ["production "],
+    ["prod"],
+  ])("%j no es producción", (valor) => {
+    expect(esProduccion({ VERCEL_ENV: valor })).toBe(false);
+  });
+
+  it("sin la variable no es producción (falla cerrado)", () => {
+    expect(esProduccion({})).toBe(false);
+    expect(esProduccion({ VERCEL_ENV: undefined })).toBe(false);
+  });
+
+  it("no mira otras variables parecidas", () => {
+    expect(esProduccion({ NODE_ENV: "production", VERCEL_TARGET_ENV: "production" })).toBe(false);
   });
 });

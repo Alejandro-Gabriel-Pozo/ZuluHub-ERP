@@ -27,6 +27,10 @@ const valida = (): Record<string, string> => ({
   ZULUHUB_DB_APP: "postgres://usuario:relleno@127.0.0.1:1/base",
   ZULUHUB_DB_TRABAJOS: "postgres://usuario:relleno@127.0.0.1:1/base",
   ZULUHUB_DB_PUBLICO: "postgres://usuario:relleno@127.0.0.1:1/base",
+  ZULUHUB_DB_AUTENTICACION: "postgres://usuario:relleno@127.0.0.1:1/base",
+  ZULUHUB_AUTH_SECRETO_EMPRESA: randomBytes(32).toString("hex"),
+  GOOGLE_CLIENT_ID: "cliente-de-relleno",
+  GOOGLE_CLIENT_SECRET: "secreto-de-relleno",
 });
 
 const conFuente = (fuente: FuenteDeEntorno) => {
@@ -66,6 +70,21 @@ const PEDIDOS: { nombre: string; pedir: (c: Conexiones) => unknown; nombra: stri
     nombre: "web.configuracionPublicaDeHost",
     pedir: (c) => armarWeb(c).configuracionPublicaDeHost(),
     nombra: "ZULUHUB_DB_PUBLICO",
+  },
+  {
+    nombre: "autenticacion",
+    pedir: (c) => c.autenticacion(),
+    nombra: "ZULUHUB_AUTH_SECRETO_EMPRESA",
+  },
+  {
+    nombre: "barridoDeAutenticacion",
+    pedir: (c) => c.barridoDeAutenticacion(),
+    nombra: "ZULUHUB_DB_AUTENTICACION",
+  },
+  {
+    nombre: "web.autenticacion",
+    pedir: (c) => armarWeb(c).autenticacion(),
+    nombra: "GOOGLE_CLIENT_SECRET",
   },
   { nombre: "tokens", pedir: (c) => c.tokens(), nombra: "ZULUHUB_SECRETO_INVITACIONES" },
   { nombre: "correo", pedir: (c) => c.correo(), nombra: "ZULUHUB_RESEND_API_KEY" },
@@ -223,6 +242,7 @@ describe("P-12: en ejecución, una variable faltante falla cerrado y el nombre v
       "http://publico.ejemplo.test",
       (c: Conexiones) => c.configuracionDeCorreo(),
     ],
+    ["ZULUHUB_AUTH_SECRETO_EMPRESA", "corto", (c: Conexiones) => c.autenticacion()],
   ])(
     "el formato fino lo valida el adaptador, y su error también sale genérico (%s)",
     (nombre, malo, pedir) => {
@@ -333,6 +353,31 @@ describe("con el entorno completo", () => {
     const procesador = trabajos.procesador();
     expect(typeof procesador.procesarPendientes).toBe("function");
     expect(trabajos.procesador()).toBe(procesador);
+  });
+
+  it("la autenticación es una sola instancia, el barrido es el de la misma conexión, y el barrido no pide ni el secreto ni Google", () => {
+    const { conexiones, registrados } = conFuente(valida());
+    expect(conexiones.autenticacion()).toBe(conexiones.autenticacion());
+    expect(armarWeb(conexiones).autenticacion()).toBe(conexiones.autenticacion());
+    expect(typeof conexiones.autenticacion().sesionDe).toBe("function");
+    expect(typeof conexiones.autenticacion().manejar).toBe("function");
+    expect(conexiones.barridoDeAutenticacion()).toBe(conexiones.barridoDeAutenticacion());
+    expect(registrados).toEqual([]);
+
+    const soloLaBase: Record<string, string> = valida();
+    for (const nombre of [
+      "ZULUHUB_AUTH_SECRETO_EMPRESA",
+      "GOOGLE_CLIENT_ID",
+      "GOOGLE_CLIENT_SECRET",
+    ]) {
+      delete soloLaBase[nombre];
+    }
+    const otra = conFuente(soloLaBase);
+    expect(otra.conexiones.barridoDeAutenticacion()).toBeDefined();
+    expect(() => otra.conexiones.autenticacion()).toThrow(ErrorDeEntorno);
+    expect(otra.registrados).toEqual([
+      "pieza autenticacion: ZULUHUB_AUTH_SECRETO_EMPRESA falta; GOOGLE_CLIENT_ID falta; GOOGLE_CLIENT_SECRET falta",
+    ]);
   });
 
   it("la composición no abrió ninguna conexión: cerrar no tiene nada que cerrar", async () => {

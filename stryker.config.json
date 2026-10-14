@@ -52,6 +52,9 @@
     "src/adaptadores/arca/constantes.ts",
     "src/adaptadores/arca/codigos.ts",
     "src/adaptadores/arca/traducir.ts",
+    "src/capacidades/autenticacion/**/*.ts",
+    "src/adaptadores/autenticacion/configuracion.ts",
+    "src/composicion/ruta-de-ingreso.ts",
     "!src/**/*.test.ts"
   ],
   "coverageAnalysis": "off",

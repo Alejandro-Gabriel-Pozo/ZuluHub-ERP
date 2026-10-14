@@ -30,7 +30,12 @@ type Salida = { codigo: number; texto: string; stdout: string; stderr: string };
 
 /** Corre el script como lo hace `npm run migrar` y junta lo que escribió. Solo recibe PATH y la cadena. */
 function correrScript(argumento: string, cadena: string | undefined): Promise<Salida> {
-  const entorno: Record<string, string> = { PATH: process.env["PATH"] ?? "" };
+  // Los tipos de Next (que entran al `tsc` raíz por las pruebas de la web) exigen `NODE_ENV` en
+  // `ProcessEnv`; este entorno mínimo es a propósito solo PATH y la cadena.
+  const entorno = { PATH: process.env["PATH"] ?? "" } as Record<
+    string,
+    string
+  > as NodeJS.ProcessEnv;
   if (cadena !== undefined) entorno[VARIABLE_DE_LA_CADENA] = cadena;
   return new Promise((resolver, rechazar) => {
     const hijo = spawn(

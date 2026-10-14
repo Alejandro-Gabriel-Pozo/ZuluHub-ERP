@@ -1,0 +1,69 @@
+.raiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+.agotado {
+  margin: 0 0 var(--espacio-2);
+  color: var(--color-agotado);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+.precioUnico {
+  margin: 0;
+  font-size: 1.25em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.titulo {
+  margin: 0 0 var(--espacio-1);
+  color: var(--color-texto-suave);
+  font-size: 1em;
+  font-weight: var(--tipo-peso-fuerte);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+.lista {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Nombre a la izquierda y precio a la derecha; si no entran juntos, el precio baja y no se corta. */
+.renglon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--espacio-3);
+  padding: var(--espacio-2) 0;
+  border-bottom: var(--borde-grosor) solid var(--color-borde);
+  line-height: 1.4;
+}
+
+.nombreDelRenglon {
+  flex: 1 1 8em;
+  min-width: 0;
+}
+
+.importe {
+  margin-inline-start: auto;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.descripcion {
+  margin: 0;
+  white-space: pre-line;
+  line-height: 1.45;
+}

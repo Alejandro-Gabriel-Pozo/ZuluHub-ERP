@@ -1,0 +1,20 @@
+.seccion {
+  padding-top: var(--espacio-4);
+}
+
+.titulo {
+  margin: 0;
+  padding: var(--espacio-2) var(--espacio-4);
+  border-bottom: 0.25rem solid var(--acento);
+  font-family: var(--tipo-familia-titulos);
+  font-size: 1.35em;
+  font-weight: 700;
+  line-height: 1.4;
+  scroll-margin-top: var(--espacio-3);
+}
+
+.items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
