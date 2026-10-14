@@ -1,0 +1,66 @@
+.raiz {
+  max-width: 40rem;
+  min-height: 100dvh;
+  margin-inline: auto;
+  background: var(--color-fondo);
+}
+
+/* La marca pone su color acá (el fondo de la cabecera) y nada más: el texto de la carta es de los tokens. */
+.cabecera {
+  padding: var(--espacio-5) var(--espacio-4);
+  background: var(--accion-primaria-fondo);
+  color: var(--accion-primaria-texto);
+}
+
+.rubro {
+  margin: 0;
+  font-size: 0.9em;
+  font-weight: var(--tipo-peso-fuerte);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.45;
+}
+
+.nombre {
+  margin: var(--espacio-1) 0;
+  font-family: var(--tipo-familia-titulos);
+  font-size: 2em;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.lugar {
+  margin: 0;
+  font-size: 0.95em;
+  line-height: 1.45;
+}
+
+/* Letra y buscar. Antes de hidratar hay un hueco del mismo alto: no se mueve nada cuando llegan. */
+.herramientas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  min-height: 4.5rem;
+  padding: var(--espacio-3) var(--espacio-4);
+  border-bottom: var(--borde-grosor) solid var(--color-borde);
+  background: var(--color-fondo);
+}
+
+.herramientas[data-busqueda="si"] {
+  min-height: 11rem;
+}
+
+.vacio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  padding: var(--espacio-5) var(--espacio-4);
+}
+
+.pie {
+  margin: 0;
+  padding: var(--espacio-4) var(--espacio-4) var(--espacio-5);
+  border-top: var(--borde-grosor) solid var(--color-borde);
+  color: var(--color-texto-suave);
+  font-size: 0.9em;
+}

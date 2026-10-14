@@ -1284,3 +1284,77 @@ describe("facturación F6: las consultas del facturador (spec H7 facturación §
     expect(v).toContain("consultas-sin-dominio");
   });
 });
+
+/**
+ * C-2 (D10): ningún `font-size` en `px` dentro de `apps/web/ui/plantillas/carta`. Previene que un CSS de la
+ * carta fije la letra e ignore el tamaño del celular del comensal y el control «Letra» (ESLint no mira CSS:
+ * la parte de JavaScript es el bloque `web/carta-sin-px-de-letra`). Chequeo: las violaciones inyectadas de acá
+ * y la aplicación al repositorio real. Se prohíbe también `font:` abreviado y `calc()` con px.
+ */
+function tamanosDeLetraEnPx(css: string): string[] {
+  const sinComentarios = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  return [...sinComentarios.matchAll(/(?:^|[;{\s])(font(?:-size)?\s*:\s*[^;}]*)/gi)]
+    .map((m) => (m[1] ?? "").trim())
+    .filter((declaracion) => /\d\s*px\b/i.test(declaracion));
+}
+
+function archivosCssDeLaCarta(raiz: string): string[] {
+  const carpeta = join(raiz, "apps/web/ui/plantillas/carta");
+  if (!existsSync(carpeta)) return [];
+  return readdirSync(carpeta, { recursive: true, encoding: "utf8" })
+    .filter((f) => f.endsWith(".css"))
+    .map((f) => f.replaceAll("\\", "/"))
+    .sort();
+}
+
+function cssDeLaCartaConPx(raiz: string): string[] {
+  return archivosCssDeLaCarta(raiz).filter(
+    (f) =>
+      tamanosDeLetraEnPx(readFileSync(join(raiz, "apps/web/ui/plantillas/carta", f), "utf8"))
+        .length > 0,
+  );
+}
+
+describe("C-2: la plantilla de la carta no fija la letra en px (D10)", () => {
+  it.each([
+    ["font-size", ".a { font-size: 18px; }"],
+    ["font-size con decimales y mayúsculas", ".a { FONT-SIZE: 17.5PX; }"],
+    ["font-size con espacio", ".a{font-size:18 px}"],
+    ["font abreviado", ".a { font: 600 18px/1.4 system-ui; }"],
+    ["calc con px", ".a { font-size: calc(1rem + 2px); }"],
+    [
+      "en una regla anidada o dentro de un @media",
+      "@media (min-width: 48rem) {\n  .a { font-size: 20px; }\n}",
+    ],
+  ])("detecta %s", (_nombre, css) => {
+    expect(tamanosDeLetraEnPx(css)).toHaveLength(1);
+  });
+
+  it.each([
+    ["rem", ".a { font-size: 1.125rem; }"],
+    ["em", ".a { font-size: 0.9em; }"],
+    ["un token", ".a { font-size: var(--tipo-tamano-base); }"],
+    ["otras propiedades en px", ".a { border: 1px solid; width: 72px; line-height: 20px; }"],
+    ["font-family y font-weight", ".a { font-family: system-ui; font-weight: 600; }"],
+    ["un comentario que lo nombra", "/* antes era font-size: 18px */ .a { color: red; }"],
+  ])("deja pasar %s", (_nombre, css) => {
+    expect(tamanosDeLetraEnPx(css)).toEqual([]);
+  });
+
+  it("encuentra el CSS de la carta en el árbol y marca el que tiene px", () => {
+    const base = mkdtempSync(join(tmpdir(), "zuluhub-letra-"));
+    directorios.push(base);
+    const carpeta = join(base, "apps/web/ui/plantillas/carta");
+    mkdirSync(carpeta, { recursive: true });
+    writeFileSync(join(carpeta, "bien.module.css"), ".a { font-size: 1em; }");
+    writeFileSync(join(carpeta, "mal.module.css"), ".a { font-size: 18px; }");
+    mkdirSync(join(base, "apps/web/ui/componentes"), { recursive: true });
+    writeFileSync(join(base, "apps/web/ui/componentes/otro.module.css"), ".a { font-size: 14px; }");
+    expect(cssDeLaCartaConPx(base)).toEqual(["mal.module.css"]);
+  });
+
+  it("el repositorio real la cumple y tiene CSS de la carta que revisar", () => {
+    expect(archivosCssDeLaCarta(".").length).toBeGreaterThanOrEqual(8);
+    expect(cssDeLaCartaConPx(".")).toEqual([]);
+  });
+});
