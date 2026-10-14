@@ -76,11 +76,10 @@ Actions → **Migrar (preview y producción)** → Run workflow (siempre desde `
 3. Lo mismo en `produccion`: acción `ver`; después `aplicar` con la confirmación `MIGRAR PRODUCCION`. Te llega el pedido de
    aprobación; antes de aprobar, mirá en el registro del paso «Ver qué falta aplicar» qué se va a aplicar.
 
-**Bloqueante hoy:** la guarda de migración lee la tabla `migracion` con el rol `zuluhub_app`, y ese rol **todavía no tiene
-permiso** para leerla (ninguna migración se lo da). Mientras falte, la aplicación queda «En mantenimiento» aunque todo
-esté bien. Hace falta una migración nueva con `GRANT SELECT ON migracion TO zuluhub_app` (la propone el informe de W6; no se
-tocó `migraciones/`). Cuando esa migración exista, se sube `MIGRACION_REQUERIDA` (una prueba lo exige) y se aplica en este
-paso.
+**Permiso de la guarda:** la guarda de migración lee de la tabla `migracion` solo la columna `nombre`, con el rol
+`zuluhub_app`. Ese permiso lo da la migración **0013** (permisos mínimos): hasta que se aplique en una base, esa base
+muestra «En mantenimiento» aunque todo esté bien. Por eso aplicá 0013 en `preview` y en `produccion` **antes** de encender
+el despliegue. `MIGRACION_REQUERIDA` del código vale `"0013"`.
 
 ### B.4 Roles de la base y variables de Vercel
 
