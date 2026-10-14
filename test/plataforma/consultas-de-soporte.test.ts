@@ -501,7 +501,16 @@ describe("verConfiguracion", () => {
       estado: "en_desarrollo",
       obligatorio: false,
       requiere: ["administracion"],
-      acciones: ["comprobantes.emitir", "comprobantes.ver"],
+      acciones: [
+        "comprobantes.descartar",
+        "comprobantes.emitir",
+        "comprobantes.emitir_manual",
+        "comprobantes.reintentar",
+        "comprobantes.ver",
+        "notas_de_credito.emitir",
+        "puntos_de_venta.cambiar_ambiente",
+        "series.resincronizar",
+      ],
     });
     expect(soporte.pedidos).toEqual([]);
   });

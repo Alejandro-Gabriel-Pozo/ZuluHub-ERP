@@ -47,6 +47,12 @@ describe("el catálogo comercial de módulos", () => {
         acciones: {
           "comprobantes.emitir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "comprobantes.ver": { capacidad: null, efecto: "LECTURA" },
+          "comprobantes.emitir_manual": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "notas_de_credito.emitir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "comprobantes.descartar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "comprobantes.reintentar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "series.resincronizar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "puntos_de_venta.cambiar_ambiente": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
       catalogo: {
@@ -142,7 +148,8 @@ describe("el catálogo comercial de módulos", () => {
       Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
     expect([cuantas("catalogo"), cuantas("carta"), cuantas("stock")]).toEqual([20, 9, 19]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
-    expect(todas).toHaveLength(18 + 2 + 48);
+    // 18 de administración, 8 de facturación (2 de H7 y 6 de F5) y 48 de catálogo, carta y stock.
+    expect(todas).toHaveLength(18 + 8 + 48);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -195,6 +202,9 @@ function accionesPorEfecto(
  *  - Reactivar una sucursal vuelve a consumir capacidad del plan: CREA_AMPLIA.
  *  - Editar una sucursal y asignar sucursales a una persona cambian o amplían lo que hay: CREA_AMPLIA.
  *  - Emitir un comprobante completa algo ya vendido o cobrado (§C de H7): COMPLETA_CIERRA.
+ *  - Facturación F5 (§C de la facturación): emitir a mano crea un cargo nuevo (CREA_AMPLIA, no en solo lectura);
+ *    la nota de crédito, descartar, reintentar y resincronizar cierran lo existente; cambiar el ambiente de un
+ *    punto de venta habilita a emitir con valor fiscal: CREA_AMPLIA.
  *  - Catálogo, carta y stock (§C de catalogo-y-stock): desactivar, retirar, anular, aplicar o cancelar
  *    un conteo CIERRAN algo iniciado; registrar un conteo completa uno ya abierto, así que también.
  *    Cambiar un precio, publicar, mover stock, controlar un artículo o asignar un emisor AMPLÍAN.
@@ -226,6 +236,7 @@ const EFECTOS_DE_EMPRESA = {
     "categorias.editar",
     "categorias.reactivar",
     "combos.editar_contenido",
+    "comprobantes.emitir_manual",
     "conteos.abrir",
     "depositos.asignar_emisor",
     "depositos.crear",
@@ -243,6 +254,7 @@ const EFECTOS_DE_EMPRESA = {
     "productos.crear",
     "productos.editar",
     "productos.reactivar",
+    "puntos_de_venta.cambiar_ambiente",
     "recetas.editar",
     "stock.ajustar",
     "stock.registrar_entrada",
@@ -260,7 +272,9 @@ const EFECTOS_DE_EMPRESA = {
     "cartas.retirar",
     "cartas.retirar_de_linea",
     "categorias.desactivar",
+    "comprobantes.descartar",
     "comprobantes.emitir",
+    "comprobantes.reintentar",
     "conteos.aplicar",
     "conteos.cancelar",
     "conteos.registrar",
@@ -269,7 +283,9 @@ const EFECTOS_DE_EMPRESA = {
     "gerencia.cancelar_traspaso",
     "gerencia.rechazar_traspaso",
     "grupos_de_precio.desactivar",
+    "notas_de_credito.emitir",
     "productos.desactivar",
+    "series.resincronizar",
     "stock.anular",
     "sucursales.desactivar",
     "usuarios.apagar",

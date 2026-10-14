@@ -1,6 +1,10 @@
-import type { Generated, Kysely } from "kysely";
+import { sql, type Generated, type Kysely } from "kysely";
 import { exigirSinSecretos } from "../../puertos/sin-secretos";
-import type { ResultadoDeEncolar, Trabajos } from "../../puertos/trabajos";
+import type {
+  ResultadoDeEncolar,
+  TrabajoEncolado,
+  TrabajosReencolables,
+} from "../../puertos/trabajos";
 
 /**
  * Puerto `trabajos` sobre la tabla `trabajo` (ADR-007). Encolar es parte de la transacción del caso
@@ -15,10 +19,13 @@ export type TrabajosDb = {
     tipo: string;
     datos: Generated<string>;
     clave_idempotencia: string;
+    estado: Generated<string>;
   };
 };
 
-export function crearTrabajosDePostgres(db: Kysely<TrabajosDb>): Trabajos {
+const ESTADOS: readonly TrabajoEncolado["estado"][] = ["PENDIENTE", "EN_CURSO", "HECHO", "FALLIDO"];
+
+export function crearTrabajosDePostgres(db: Kysely<TrabajosDb>): TrabajosReencolables {
   return {
     async encolar(trabajo): Promise<ResultadoDeEncolar> {
       if (trabajo.claveDeIdempotencia.trim() === "") {
@@ -37,6 +44,23 @@ export function crearTrabajosDePostgres(db: Kysely<TrabajosDb>): Trabajos {
         .returning("id")
         .executeTakeFirst();
       return fila === undefined ? "YA_ENCOLADO" : "ENCOLADO";
+    },
+
+    async conPrefijo(empresaId, prefijo) {
+      if (prefijo === "") throw new RangeError("conPrefijo: el prefijo no puede estar vacío");
+      // `starts_with` y no `LIKE`: un `_` o un `%` del prefijo no son comodines.
+      const filas = await db
+        .selectFrom("trabajo")
+        .select(["clave_idempotencia", "estado"])
+        .where("empresa_id", "=", empresaId)
+        .where(sql<boolean>`starts_with(clave_idempotencia, ${prefijo})`)
+        .execute();
+      return filas.map((f) => {
+        const estado = ESTADOS.find((e) => e === f.estado);
+        if (estado === undefined)
+          throw new RangeError(`estado de trabajo desconocido: ${f.estado}`);
+        return { claveDeIdempotencia: f.clave_idempotencia, estado };
+      });
     },
   };
 }
