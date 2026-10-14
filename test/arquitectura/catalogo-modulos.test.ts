@@ -13,7 +13,10 @@ import {
   DECLARACIONES_DE_EMPRESAS,
   DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS,
 } from "../../src/modulos/empresas/publico";
-import { DECLARACIONES_DE_FISCAL } from "../../src/modulos/fiscal/publico";
+import {
+  DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
+  DECLARACIONES_DE_FISCAL,
+} from "../../src/modulos/fiscal/publico";
 import {
   DECLARACIONES_DE_CONSULTAS_DE_IDENTIDAD,
   DECLARACIONES_DE_IDENTIDAD,
@@ -214,7 +217,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       DECLARACIONES_DE_EMPRESAS,
       DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS,
     ),
-    "modulos/fiscal": accionesDe(DECLARACIONES_DE_FISCAL),
+    "modulos/fiscal": accionesDe(DECLARACIONES_DE_FISCAL, DECLARACIONES_DE_CONSULTAS_DE_FISCAL),
   };
 
   it("identidad exige las acciones de usuarios y de gerencia (casos de uso y consultas)", () => {
@@ -245,8 +248,11 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ]);
   });
 
-  it("fiscal exige emitir comprobantes (reservar, cerrar y numerar); reconciliar es de sistema y no pasa por el guard", () => {
-    expect([...new Set(declaradas["modulos/fiscal"])]).toEqual(["comprobantes.emitir"]);
+  it("fiscal exige emitir comprobantes (reservar, cerrar y numerar) y verlos (consultas); reconciliar es de sistema y no pasa por el guard", () => {
+    expect([...new Set(declaradas["modulos/fiscal"])]).toEqual([
+      "comprobantes.emitir",
+      "comprobantes.ver",
+    ]);
     expect(DECLARACIONES_DE_FISCAL.reconciliarSerie).toHaveProperty("sinGuard");
     expect(DECLARACIONES_DE_FISCAL.reconciliarSeriesVencidas).toHaveProperty("sinGuard");
   });
@@ -306,7 +312,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ).toEqual(["X1: la acción permisos.ver_propios no la exige ningún caso de uso"]);
   });
 
-  it("X1 se dispara si fiscal deja de exigir comprobantes.emitir (violación inyectada)", () => {
+  it("X1 se dispara si fiscal deja de exigir todo lo que exige (violación inyectada)", () => {
     expect(
       crucesDelCatalogo(
         CATALOGO_DE_MODULOS,
@@ -314,7 +320,25 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
         carpetaExiste,
         SIN_CONSTRUIR,
       ),
-    ).toEqual(["X1: la acción comprobantes.emitir no la exige ningún caso de uso"]);
+    ).toEqual([
+      "X1: la acción comprobantes.emitir no la exige ningún caso de uso",
+      "X1: la acción comprobantes.ver no la exige ningún caso de uso",
+    ]);
+  });
+
+  it("X1 se dispara si fiscal deja de exigir comprobantes.ver, la de sus consultas (violación inyectada)", () => {
+    expect(
+      crucesDelCatalogo(
+        CATALOGO_DE_MODULOS,
+        {
+          ...declaradas,
+          "modulos/fiscal":
+            declaradas["modulos/fiscal"]?.filter((a) => a !== "comprobantes.ver") ?? [],
+        },
+        carpetaExiste,
+        SIN_CONSTRUIR,
+      ),
+    ).toEqual(["X1: la acción comprobantes.ver no la exige ningún caso de uso"]);
   });
 
   it("X1 se dispara si una carpeta que el catálogo no lista exige una acción (violación inyectada)", () => {

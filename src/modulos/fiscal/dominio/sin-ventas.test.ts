@@ -20,7 +20,7 @@ export function nombraAVentas(fuente: string): boolean {
   return PROHIBIDAS.test(fuente);
 }
 
-const carpetas = ["../dominio/", "../casos-de-uso/", "../persistencia/"].map((c) =>
+const carpetas = ["../dominio/", "../casos-de-uso/", "../persistencia/", "../consultas/"].map((c) =>
   fileURLToPath(new URL(c, import.meta.url)),
 );
 const fuentes = carpetas.flatMap((carpeta) =>

@@ -1242,3 +1242,26 @@ describe("facturación F1: el facturador funciona solo (spec H7 facturación §B
     expect(v).not.toContain("fiscal-sin-negocio-ajeno");
   });
 });
+
+describe("facturación F6: las consultas del facturador (spec H7 facturación §B.4.9 y §B.7)", () => {
+  it("una consulta de fiscal importa el modelo de impresión, pero ningún otro archivo del dominio", async () => {
+    const permitido = await violacionesDe({
+      "src/modulos/fiscal/dominio/modelo-de-impresion.ts": exporta,
+      "src/modulos/fiscal/consultas/c.ts": importa("../dominio/modelo-de-impresion"),
+    });
+    expect(permitido).not.toContain("consultas-sin-dominio");
+    const prohibido = await violacionesDe({
+      "src/modulos/fiscal/dominio/comprobante-nuevo.ts": exporta,
+      "src/modulos/fiscal/consultas/c.ts": importa("../dominio/comprobante-nuevo"),
+    });
+    expect(prohibido).toContain("consultas-sin-dominio");
+  });
+
+  it("la excepción es solo de fiscal: el modelo de impresión de otro módulo sigue prohibido", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/dominio/modelo-de-impresion.ts": exporta,
+      "src/modulos/empresas/consultas/c.ts": importa("../dominio/modelo-de-impresion"),
+    });
+    expect(v).toContain("consultas-sin-dominio");
+  });
+});

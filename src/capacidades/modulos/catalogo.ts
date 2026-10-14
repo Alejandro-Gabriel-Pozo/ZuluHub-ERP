@@ -96,9 +96,10 @@ export const CATALOGO_DE_MODULOS = {
   },
   /**
    * Facturación electrónica (H7, especificación §C). `en_desarrollo`: el guard rechaza sus acciones
-   * con `MODULO_EN_DESARROLLO` hasta que exista la facturación. Hoy solo declara la acción que
-   * exigen los casos de uso de numeración (reservar y cerrar el número de un comprobante). Emitir
-   * completa algo ya vendido o cobrado, así que es `COMPLETA_CIERRA` y una baja de plan no lo traba.
+   * con `MODULO_EN_DESARROLLO` hasta que exista la facturación. Hoy declara la acción que exigen los
+   * casos de uso de numeración (reservar y cerrar el número de un comprobante) y la de las consultas
+   * del facturador (F6). Emitir completa algo ya vendido o cobrado, así que es `COMPLETA_CIERRA` y
+   * una baja de plan no lo traba; mirar lo emitido es `LECTURA` y se puede siempre.
    */
   facturacion: {
     estado: "en_desarrollo",
@@ -109,6 +110,7 @@ export const CATALOGO_DE_MODULOS = {
     implementadoPor: ["modulos/fiscal"],
     acciones: {
       "comprobantes.emitir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "comprobantes.ver": { capacidad: null, efecto: "LECTURA" },
     },
   },
   /**

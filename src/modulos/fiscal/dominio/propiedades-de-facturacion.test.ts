@@ -7,6 +7,7 @@ import {
   emisorInstantaneo,
   facturaOSinTotal,
   fecha,
+  imprimibleDe,
   receptorInscripto,
   renglonArbitrario,
 } from "../../../../test/utilidades/facturacion";
@@ -21,7 +22,7 @@ import type { RenglonAFacturar } from "./comprobante-nuevo";
 import { CONDICIONES_DE_IVA } from "./emisor";
 import { solicitudId } from "./identificadores";
 import { importesParaArca } from "./importes-para-arca";
-import { modeloDeImpresion, VERSION_DE_REPRESENTACION_ACTUAL } from "./modelo-de-impresion";
+import { modeloDeImpresion } from "./modelo-de-impresion";
 import { armarNotaAsociada, type ComprobanteAAsociar } from "./nota-asociada";
 import { numeroDeDocumentoParaArca } from "./receptor";
 import { coincideConLoRegistrado } from "./reconciliacion-de-comprobante";
@@ -188,22 +189,11 @@ describe("lo que se arma, se envía y se imprime es coherente", () => {
       fc.property(renglones, (rs) => {
         const contenido = facturaOSinTotal(consumidorFinal, rs);
         if (contenido === null) return;
-        const m = modeloDeImpresion(
-          {
-            contenido,
-            numero: 1n,
-            fechaEmision: fecha("2026-10-13"),
-            cae: "70417054367476",
-            caeVence: fecha("2026-10-23"),
-            versionDeRepresentacion: VERSION_DE_REPRESENTACION_ACTUAL,
-            datosFiscales: {
-              iibbNumero: null,
-              iibbCondicion: null,
-              inicioDeActividades: fecha("2019-03-01"),
-            },
-          },
-          { nombreDeFantasia: null, logoUrl: null, colorPrincipal: null },
-        );
+        const m = modeloDeImpresion(imprimibleDe(contenido, { numero: 1n }), {
+          nombreDeFantasia: null,
+          logoUrl: null,
+          colorPrincipal: null,
+        });
         expect(m.ok).toBe(true);
         if (!m.ok) return;
         const json = atob(m.valor.qr.url.slice(m.valor.qr.url.indexOf("?p=") + 3));

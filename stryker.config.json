@@ -37,6 +37,7 @@
     "src/composicion/perezoso.ts",
     "src/composicion/contextos.ts",
     "src/plataforma/captacion/dominio/**/*.ts",
+    "src/modulos/fiscal/consultas/criterios-de-listado.ts",
     "!src/**/*.test.ts"
   ],
   "coverageAnalysis": "off",
