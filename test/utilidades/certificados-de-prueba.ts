@@ -46,7 +46,8 @@ function nombreDe(atributos: readonly AttributeTypeAndValue[]): RelativeDistingu
 
 const numeroDeSerieAlAzar = (): ArrayBuffer => {
   const bytes = randomBytes(16);
-  bytes[0] = (bytes[0] ?? 0) & 0x7f; // positivo
+  // Positivo y sin ceros a la izquierda (un INTEGER no mínimo lo rechaza X.509): primer byte entre 0x01 y 0x7f.
+  bytes[0] = ((bytes[0] ?? 0) % 0x7f) + 1;
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
 };
 
