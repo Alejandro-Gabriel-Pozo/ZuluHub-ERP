@@ -6,6 +6,7 @@ import {
   leerEstadoDeMigraciones,
   type EstadoDeMigraciones,
 } from "../src/adaptadores/postgres/estado-de-migraciones.ts";
+import { conBloqueoDeCarga } from "../src/adaptadores/postgres/bloqueo-de-carga.ts";
 import { aplicarMigraciones } from "../src/adaptadores/postgres/migraciones.ts";
 import {
   ErrorDePreparacion,
@@ -18,6 +19,24 @@ import {
   rolesPorPreparar,
   type RolPorPreparar,
 } from "../src/adaptadores/postgres/roles-de-la-aplicacion.ts";
+import {
+  cargarEnVercel,
+  type ResultadoDeCarga,
+} from "../src/adaptadores/vercel/cargar-en-vercel.ts";
+import {
+  crearClienteVercel,
+  type ClienteDeVariables,
+} from "../src/adaptadores/vercel/cliente-vercel.ts";
+import {
+  EQUIPO_DE_VERCEL,
+  NOMBRE_DE_LA_CADENA_DE_DUENO,
+  VARIABLE_DEL_TOKEN,
+  generarSecretos,
+  leerDestino,
+  planificar,
+  type Destino,
+  type ValorACargar,
+} from "../src/adaptadores/vercel/plan-de-variables.ts";
 
 /**
  * Lo que hace `scripts/migrar-base.ts`, separado de su arranque para poder probarlo con una carpeta
@@ -33,15 +52,24 @@ import {
  *   autenticación y captación; con `--rotar` también cambia la contraseña de los que ya tienen LOGIN;
  *   con `--directa` arma las cadenas con el host directo en vez del del pooler; con `--diagnostico`
  *   una falla inesperada al dar LOGIN muestra además el mensaje del servidor (sin cadena ni verificadores).
+ * - `--preparar-roles --vercel <preview|production>`: lo mismo, pero en vez de imprimir las contraseñas
+ *   las ESCRIBE en las variables de Vercel del destino pedido (tipo sensible, nunca en el otro destino),
+ *   borra de ese destino lo que la aplicación prohíbe y la cadena de dueño de la base, y termina con una
+ *   lista corta de «hecho / no hecho». `production` exige además `--confirmo production`. Con `--secretos`
+ *   genera y carga también `ZULUHUB_CLAVE_CONTEXTO` y `ZULUHUB_SECRETO_INVITACIONES` (reemplaza los
+ *   anteriores: las sesiones y las invitaciones emitidas antes dejan de valer). El token de la API de
+ *   Vercel sale de `ZULUHUB_VERCEL_TOKEN`. Si escribir en Vercel falla después de que los roles ya
+ *   recibieron contraseña, el bloque con las contraseñas se imprime igual (nunca se pierde una).
  *
  * La cadena DIRECTA de la base se lee de `ZULUHUB_DB_MIGRACIONES`. Esta función no la escribe jamás,
- * ni entera ni en pedazos: todo lo que imprime pasa por `ocultarSecretos` y las fallas se cuentan con
- * `describirFallaDeBase`. La ÚNICA salida que lleva credenciales es el bloque de `--preparar-roles`,
- * que va por `secreto` (nunca por `info` ni `error`). Devuelve el código de salida: 0 todo bien,
+ * ni entera ni en pedazos: todo lo que imprime pasa por `ocultarSecretos` (con la cadena, el token de
+ * Vercel y cada contraseña o secreto generado) y las fallas se cuentan con `describirFallaDeBase`. La
+ * ÚNICA salida que lleva credenciales es el bloque de `--preparar-roles` (solo sin `--vercel`, o con
+ * `--vercel` cuando la escritura en Vercel falló), que va por `secreto` (nunca por `info` ni `error`). Devuelve el código de salida: 0 todo bien,
  * 1 falla o problema en la base, 2 uso incorrecto.
  */
 
-export const VARIABLE_DE_LA_CADENA = "ZULUHUB_DB_MIGRACIONES";
+export const VARIABLE_DE_LA_CADENA = NOMBRE_DE_LA_CADENA_DE_DUENO;
 
 export type EntradaDeMigracion = Readonly<{
   argumentos: readonly string[];
@@ -54,10 +82,25 @@ export type EntradaDeMigracion = Readonly<{
   /** Se inyectan en las pruebas (roles propios, contraseñas conocidas); por defecto, los reales. */
   roles?: (conAutenticacion: boolean) => readonly RolPorPreparar[];
   generarClave?: () => string;
+  /** Solo con `--vercel`. Por defecto, el `fetch` global; las pruebas inyectan uno falso (nunca hay red). */
+  fetch?: typeof fetch;
+  /** Tiempo límite de cada pedido a Vercel. */
+  plazoDeVercelEnMs?: number;
+  /** Espera entre reintentos de una lectura de Vercel. */
+  esperarEntreLecturas?: (milisegundos: number) => Promise<void>;
+  /** Bytes para los secretos de `--secretos`. */
+  bytesAlAzar?: (cuantos: number) => Uint8Array;
 }>;
 
+const SIN_TOKEN =
+  `falta la variable ${VARIABLE_DEL_TOKEN}: es el token con el que este comando escribe en Vercel. ` +
+  `Para crearlo: entrá a vercel.com, abrí Settings de tu cuenta > Tokens, creá uno con alcance limitado ` +
+  `al equipo «${EQUIPO_DE_VERCEL}» y vencimiento corto, y ponelo en esa variable de entorno de la terminal ` +
+  "(no lo pegues en ningún archivo ni en un chat).";
+
 const USO =
-  "uso: migrar-base --ver | --aplicar | --preparar-roles [--con-autenticacion] [--rotar] [--directa] [--diagnostico]";
+  "uso: migrar-base --ver | --aplicar | --preparar-roles [--con-autenticacion] [--rotar] [--directa] [--diagnostico] " +
+  "[--vercel <preview|production> [--confirmo production] [--secretos]]";
 
 type Pedido = Readonly<{
   modo: "--ver" | "--aplicar" | "--preparar-roles";
@@ -65,25 +108,72 @@ type Pedido = Readonly<{
   rotar: boolean;
   directa: boolean;
   diagnostico: boolean;
+  /** El destino de Vercel pedido, o `null` si no se pidió cargar en Vercel. */
+  vercel: Destino | null;
+  secretos: boolean;
 }>;
 
 const MODOS = ["--ver", "--aplicar", "--preparar-roles"] as const;
-const EXTRAS = ["--con-autenticacion", "--rotar", "--directa", "--diagnostico"] as const;
+const EXTRAS = [
+  "--con-autenticacion",
+  "--rotar",
+  "--directa",
+  "--diagnostico",
+  "--secretos",
+  "--vercel",
+  "--confirmo",
+] as const;
+/** Banderas que llevan el valor en el argumento siguiente. */
+const CON_VALOR = ["--vercel", "--confirmo"] as const;
 
-/** Un solo modo, y las banderas extra solo con `--preparar-roles`, cada una una vez. */
-function leerPedido(argumentos: readonly string[]): Pedido | null {
-  if (new Set(argumentos).size !== argumentos.length) return null;
-  const modos = argumentos.filter((a) => (MODOS as readonly string[]).includes(a));
-  const extras = argumentos.filter((a) => (EXTRAS as readonly string[]).includes(a));
-  if (modos.length !== 1 || modos.length + extras.length !== argumentos.length) return null;
+const SIN_CONFIRMACION =
+  "cargar en PRODUCTION se confirma escribiendo también --confirmo production (así un comando de " +
+  "preview copiado con una sola palabra cambiada no llega a producción sin querer)";
+
+/**
+ * Un solo modo, y las banderas extra solo con `--preparar-roles`, cada una una vez. Devuelve el pedido o
+ * el texto del problema (sin el prefijo `ERROR:`).
+ */
+function leerPedido(argumentos: readonly string[]): Pedido | string {
+  const banderas: string[] = [];
+  const valores = new Map<string, string>();
+  for (let i = 0; i < argumentos.length; i++) {
+    const argumento = argumentos[i] as string;
+    banderas.push(argumento);
+    if ((CON_VALOR as readonly string[]).includes(argumento)) {
+      const valor = argumentos[i + 1];
+      if (valor === undefined || valor.startsWith("--")) return USO;
+      valores.set(argumento, valor);
+      i += 1;
+    }
+  }
+  if (new Set(banderas).size !== banderas.length) return USO;
+  const modos = banderas.filter((a) => (MODOS as readonly string[]).includes(a));
+  const extras = banderas.filter((a) => (EXTRAS as readonly string[]).includes(a));
+  if (modos.length !== 1 || modos.length + extras.length !== banderas.length) return USO;
   const modo = modos[0] as Pedido["modo"];
-  if (modo !== "--preparar-roles" && extras.length > 0) return null;
+  if (modo !== "--preparar-roles" && extras.length > 0) return USO;
+
+  const vercel = leerDestino(valores.get("--vercel"));
+  const confirmo = valores.get("--confirmo");
+  if (extras.includes("--vercel") && vercel === null) {
+    return "--vercel acepta solo preview o production (en minúscula).";
+  }
+  if (vercel === null && (extras.includes("--secretos") || confirmo !== undefined)) {
+    return "--secretos y --confirmo se usan solo junto con --vercel.";
+  }
+  if (vercel === "production" && confirmo !== "production") return SIN_CONFIRMACION;
+  if (vercel === "preview" && confirmo !== undefined) {
+    return "--confirmo se usa solo con --vercel production.";
+  }
   return {
     modo,
     conAutenticacion: extras.includes("--con-autenticacion"),
     rotar: extras.includes("--rotar"),
     directa: extras.includes("--directa"),
     diagnostico: extras.includes("--diagnostico"),
+    vercel,
+    secretos: extras.includes("--secretos"),
   };
 }
 
@@ -116,12 +206,19 @@ function describirEstado(estado: EstadoDeMigraciones): string[] {
 export async function ejecutarMigracion(entrada: EntradaDeMigracion): Promise<number> {
   const { argumentos, entorno, carpeta } = entrada;
   const cadena = entorno[VARIABLE_DE_LA_CADENA]?.trim();
-  const info = (linea: string) => entrada.info(ocultarSecretos(linea, cadena));
-  const error = (linea: string) => entrada.error(ocultarSecretos(linea, cadena));
+  // Además de la cadena, se tapan el token de Vercel y cada contraseña o secreto generado.
+  const tapados: string[] = [];
+  const tapar = (linea: string) =>
+    tapados.reduce(
+      (texto, secreto) => ocultarSecretos(texto, secreto),
+      ocultarSecretos(linea, cadena),
+    );
+  const info = (linea: string) => entrada.info(tapar(linea));
+  const error = (linea: string) => entrada.error(tapar(linea));
 
   const pedido = leerPedido(argumentos);
-  if (pedido === null) {
-    error(`ERROR: ${USO}`);
+  if (typeof pedido === "string") {
+    error(`ERROR: ${pedido}`);
     return 2;
   }
   if (pedido.modo === "--preparar-roles" && entorno["GITHUB_ACTIONS"] === "true") {
@@ -148,6 +245,42 @@ export async function ejecutarMigracion(entrada: EntradaDeMigracion): Promise<nu
       `ERROR: ${VARIABLE_DE_LA_CADENA} no tiene forma de cadena de conexión (postgresql://usuario:clave@host/base).`,
     );
     return 1;
+  }
+
+  // Con `--vercel`, antes de tocar nada se comprueba que el token sirve y se puede leer el proyecto: si
+  // no, se corta acá y no se cambia ninguna contraseña.
+  let vercel: Readonly<{ cliente: ClienteDeVariables; destino: Destino }> | null = null;
+  if (pedido.vercel !== null) {
+    const token = entorno[VARIABLE_DEL_TOKEN]?.trim();
+    if (token === undefined || token === "") {
+      error(`ERROR: ${SIN_TOKEN}`);
+      return 1;
+    }
+    if (!/^[\x21-\x7e]+$/.test(token)) {
+      error(
+        `ERROR: ${VARIABLE_DEL_TOKEN} tiene espacios, saltos de línea o letras raras: copialo de nuevo.`,
+      );
+      return 1;
+    }
+    tapados.push(token);
+    const cliente = crearClienteVercel({
+      token,
+      fetch: entrada.fetch ?? fetch,
+      ...(entrada.plazoDeVercelEnMs === undefined ? {} : { plazoEnMs: entrada.plazoDeVercelEnMs }),
+      ...(entrada.esperarEntreLecturas === undefined
+        ? {}
+        : { esperar: entrada.esperarEntreLecturas }),
+    });
+    info(
+      `Se cargará en Vercel: ${pedido.vercel.toUpperCase()} (proyecto zuluhub-erp, equipo ${EQUIPO_DE_VERCEL}).`,
+    );
+    const lectura = await cliente.listar();
+    if (!lectura.ok) {
+      error(`ERROR: no se pudo leer el proyecto de Vercel: ${lectura.error.motivo}.`);
+      error("RESULTADO: FALLA (no se cambió nada).");
+      return 1;
+    }
+    vercel = { cliente, destino: pedido.vercel };
   }
 
   const verSolo = pedido.modo === "--ver";
@@ -192,6 +325,15 @@ export async function ejecutarMigracion(entrada: EntradaDeMigracion): Promise<nu
     }
 
     fase = "roles";
+    if (vercel !== null) {
+      return await prepararYCargar(cadena, pedido, entrada, {
+        info,
+        error,
+        tapar: (secreto) => tapados.push(secreto),
+        ...vercel,
+        migracionesAplicadas: resultado.aplicadas.length,
+      });
+    }
     await prepararYMostrar(cadena, pedido, entrada, info);
     return 0;
   } catch (falla) {
@@ -243,6 +385,221 @@ async function prepararYMostrar(
   }
   const conClave = mostrarBloqueDeVercel(cadena, pedido, entrada, info, preparados);
   info(`RESULTADO: OK, ${conClave.length} roles con contraseña nueva.`);
+}
+
+type ContextoDeVercel = Readonly<{
+  info: (linea: string) => void;
+  error: (linea: string) => void;
+  /** Suma un secreto a lo que se tapa en toda salida posterior. */
+  tapar: (secreto: string) => void;
+  cliente: ClienteDeVariables;
+  destino: Destino;
+  migracionesAplicadas: number;
+}>;
+
+/**
+ * `--preparar-roles --vercel`: prepara los roles y escribe sus contraseñas en Vercel, sin imprimirlas.
+ * Todo corre dentro de un bloqueo de sesión propio (ver `bloqueo-de-carga.ts`), y la lista de variables
+ * de Vercel se lee de nuevo ya con el bloqueo tomado, antes de tocar ninguna contraseña. Si cargar en
+ * Vercel falla o se corta con una excepción, las contraseñas que no llegaron se imprimen igual.
+ */
+async function prepararYCargar(
+  cadena: string,
+  pedido: Pedido,
+  entrada: EntradaDeMigracion,
+  contexto: ContextoDeVercel,
+): Promise<number> {
+  return conBloqueoDeCarga(cadena, async () => {
+    const { cliente, error } = contexto;
+    const lectura = await cliente.listar();
+    if (!lectura.ok) {
+      throw new ErrorDePreparacion(
+        `no se pudo leer el proyecto de Vercel: ${lectura.error.motivo} (no se cambió ninguna contraseña)`,
+      );
+    }
+    const roles = (entrada.roles ?? rolesPorPreparar)(pedido.conAutenticacion);
+    let preparados: RolPreparado[];
+    let fallaDeRoles: ErrorDePreparacion | null = null;
+    try {
+      preparados = await prepararRoles(cadena, {
+        roles,
+        rotar: pedido.rotar,
+        diagnostico: pedido.diagnostico,
+        ...(entrada.generarClave === undefined ? {} : { generarClave: entrada.generarClave }),
+      });
+    } catch (falla) {
+      // Los roles que ya quedaron activos antes de la falla tienen una contraseña que nadie vio: se cargan igual.
+      if (
+        !(falla instanceof ErrorDePreparacion) ||
+        !falla.preparados.some((p) => p.clave !== undefined)
+      ) {
+        throw falla;
+      }
+      preparados = falla.preparados.filter((p) => p.clave !== undefined);
+      fallaDeRoles = falla;
+    }
+    const conClave = preparados.filter((p) => p.clave !== undefined);
+    for (const p of conClave) contexto.tapar(p.clave ?? "");
+    let sinCargar: readonly RolPreparado[] = conClave;
+    let sinPooler = false;
+    try {
+      const valores: ValorACargar[] = conClave.map((p) => {
+        const { cadena: deRol, pooler } = cadenaDeRol(
+          cadena,
+          p.rol,
+          p.clave ?? "",
+          !pedido.directa,
+        );
+        if (!pedido.directa && !pooler) sinPooler = true;
+        return { key: p.variable, value: deRol };
+      });
+      const secretos =
+        pedido.secretos && fallaDeRoles === null ? generarSecretos(entrada.bytesAlAzar) : [];
+      for (const secreto of secretos) contexto.tapar(secreto.value);
+      const intactas =
+        fallaDeRoles === null
+          ? preparados.filter((p) => p.clave === undefined).map((p) => p.variable)
+          : [];
+      const plan = planificar({
+        destino: contexto.destino,
+        existentes: lectura.valor,
+        paraEscribir: [...valores, ...secretos],
+        intactas,
+      });
+      const carga = await cargarEnVercel(cliente, contexto.destino, plan.pasos);
+      sinCargar = conClave.filter((p) => carga.noEscritas.includes(p.variable));
+      const hechos = resumirCarga(contexto, {
+        pedido,
+        preparados,
+        carga,
+        yaCargadas: plan.yaCargadas,
+        faltaRotar: plan.faltaRotar,
+        secretos: secretos.map((s) => s.key),
+        sinPooler,
+      });
+      if (sinCargar.length > 0) {
+        error(
+          `Las contraseñas de abajo YA están cambiadas en la base y NO quedaron cargadas en Vercel (${contexto.destino.toUpperCase()}). ` +
+            "Pegalas a mano (Settings > Environment Variables, tipo Sensitive) o repetí este comando con --rotar " +
+            "para que genere otras y las cargue.",
+        );
+        mostrarBloqueDeVercel(cadena, pedido, entrada, contexto.info, sinCargar);
+      }
+      if (fallaDeRoles !== null) throw fallaDeRoles;
+      if (!hechos) {
+        error("RESULTADO: FALLA, ver «No hecho» más arriba.");
+        return 1;
+      }
+      contexto.info(
+        `RESULTADO: OK, la base y Vercel (${contexto.destino.toUpperCase()}) quedaron listos.`,
+      );
+      return 0;
+    } catch (falla) {
+      // Una excepción inesperada no puede perder las contraseñas que ya se cambiaron (y no se mostraron).
+      if (falla !== fallaDeRoles && sinCargar.length > 0) {
+        error(
+          "Se cortó la carga en Vercel antes de terminar: las contraseñas de abajo YA están cambiadas en la base. " +
+            "Pegalas a mano en Vercel o repetí el comando con --rotar.",
+        );
+        mostrarBloqueDeVercel(cadena, pedido, entrada, contexto.info, sinCargar);
+      }
+      throw falla;
+    }
+  });
+}
+
+/** Escribe la lista corta de «hecho / no hecho». Devuelve `true` si no quedó nada sin hacer. */
+function resumirCarga(
+  contexto: ContextoDeVercel,
+  datos: Readonly<{
+    pedido: Pedido;
+    preparados: readonly RolPreparado[];
+    carga: ResultadoDeCarga;
+    yaCargadas: readonly string[];
+    faltaRotar: readonly string[];
+    secretos: readonly string[];
+    sinPooler: boolean;
+  }>,
+): boolean {
+  const { info, error } = contexto;
+  const { preparados, carga } = datos;
+  const destino = contexto.destino.toUpperCase();
+  const confirmadas = carga.escritas.filter((n) => !carga.noEscritas.includes(n));
+  const deContrasenas = confirmadas.filter((n) => !datos.secretos.includes(n));
+  const deSecretos = confirmadas.filter((n) => datos.secretos.includes(n));
+  const nuevos = preparados.filter((p) => p.clave !== undefined).map((p) => p.rol);
+
+  const hecho: string[] = [
+    contexto.migracionesAplicadas === 0
+      ? "La base ya estaba al día (sin migraciones nuevas)."
+      : `Base: ${contexto.migracionesAplicadas} migraciones aplicadas.`,
+  ];
+  if (nuevos.length > 0) hecho.push(`Roles con contraseña nueva: ${nuevos.join(", ")}.`);
+  if (deContrasenas.length > 0) {
+    hecho.push(`Cargadas en Vercel (${destino}, tipo sensible): ${deContrasenas.join(", ")}.`);
+    hecho.push(
+      datos.pedido.directa
+        ? "Las cadenas usan el host DIRECTO (pedido con --directa)."
+        : datos.sinPooler
+          ? "Las cadenas usan el host directo: el host no es de Neon y no se pudo deducir el del pooler."
+          : "Las cadenas usan el host del POOLER de Neon (la aplicación solo usa transacciones).",
+    );
+  }
+  if (datos.yaCargadas.length > 0) {
+    hecho.push(`Ya estaban cargadas en Vercel (${destino}): ${datos.yaCargadas.join(", ")}.`);
+  }
+  if (deSecretos.length > 0) {
+    hecho.push(
+      `Secretos nuevos generados y cargados en Vercel (${destino}): ${deSecretos.join(", ")}. ` +
+        "Reemplazan a los anteriores: las sesiones y las invitaciones emitidas antes dejan de valer.",
+    );
+  }
+  if (carga.borradas.length > 0) {
+    hecho.push(
+      `Borradas de Vercel (${destino}) por estar prohibidas: ${carga.borradas.join(", ")}.`,
+    );
+  }
+  if (carga.recortadas.length > 0) {
+    hecho.push(
+      `Prohibidas que valían también para otros destinos: se les quitó ${destino} y se conservan en los demás: ${carga.recortadas.join(", ")}.`,
+    );
+  }
+  for (const nombre of confirmadas) {
+    if (esVariableProvisoria(nombre)) {
+      hecho.push(`Aviso: ${nombre} es un nombre provisorio: la aplicación todavía no lo declara.`);
+    }
+  }
+
+  const noHecho: string[] = [];
+  for (const nombre of datos.faltaRotar) {
+    noHecho.push(
+      `${nombre}: el rol ya tenía contraseña (no se puede volver a ver) y la variable no está en Vercel (${destino}). ` +
+        "Repetí el comando con --rotar para generar otra y cargarla.",
+    );
+  }
+  if (carga.falla !== null) {
+    noHecho.push(
+      `No se pudo ${carga.falla.paso} en Vercel: ${carga.falla.motivo}. Lo que seguía no se intentó.` +
+        (carga.falla.incierta
+          ? " No se sabe si Vercel llegó a aplicar ese paso: repetir es seguro."
+          : ""),
+    );
+  }
+  for (const problema of carga.problemas) noHecho.push(`${problema.nombre}: ${problema.texto}.`);
+  if (carga.sinVerificar) {
+    noHecho.push("No se pudo volver a leer el proyecto de Vercel para verificar lo cargado.");
+  }
+  if (carga.noEscritas.length > 0)
+    noHecho.push(`Sin cargar en Vercel: ${carga.noEscritas.join(", ")}.`);
+
+  info("");
+  info(`Hecho (Vercel: ${destino}):`);
+  for (const linea of hecho) info(`  - ${linea}`);
+  if (noHecho.length > 0) {
+    error("No hecho:");
+    for (const linea of noHecho) error(`  - ${linea}`);
+  }
+  return noHecho.length === 0;
 }
 
 /** El bloque con las variables para Vercel de los roles que recibieron contraseña. Devuelve esos roles. */

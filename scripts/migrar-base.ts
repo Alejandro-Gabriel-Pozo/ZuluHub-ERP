@@ -1,10 +1,15 @@
 import { join } from "node:path";
-import { describirFallaDeBase } from "../src/adaptadores/postgres/describir-falla-de-base.ts";
+import {
+  describirFallaDeBase,
+  ocultarSecretos,
+} from "../src/adaptadores/postgres/describir-falla-de-base.ts";
+import { VARIABLE_DEL_TOKEN } from "../src/adaptadores/vercel/plan-de-variables.ts";
 import { VARIABLE_DE_LA_CADENA, ejecutarMigracion } from "./ejecutar-migracion.ts";
 
 /**
  * Migra la base de datos real. Lo corre el workflow `.github/workflows/migrar-base.yml` con
- * `npm run migrar -- --ver` o `-- --aplicar`, y el dueño en su terminal con `-- --preparar-roles`. La
+ * `npm run migrar -- --ver` o `-- --aplicar`, y el dueño en su terminal con `-- --preparar-roles`
+ * (con `--vercel <destino>` carga además las variables en Vercel, ver `ejecutar-migracion.ts`). La
  * cadena de conexión viene de la variable de entorno ZULUHUB_DB_MIGRACIONES (en GitHub, el secreto de
  * un Environment), nunca de un archivo del repositorio.
  *
@@ -14,8 +19,9 @@ import { VARIABLE_DE_LA_CADENA, ejecutarMigracion } from "./ejecutar-migracion.t
 
 // Una falla que se escape no puede volcar la pila (ni el texto crudo de la red) al registro.
 function fallaInesperada(falla: unknown): void {
+  const descripcion = describirFallaDeBase(falla, process.env[VARIABLE_DE_LA_CADENA]);
   console.error(
-    `ERROR inesperado: ${describirFallaDeBase(falla, process.env[VARIABLE_DE_LA_CADENA])}`,
+    `ERROR inesperado: ${ocultarSecretos(descripcion, process.env[VARIABLE_DEL_TOKEN])}`,
   );
   process.exit(1);
 }
