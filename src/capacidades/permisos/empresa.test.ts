@@ -34,6 +34,7 @@ const DEL_OPERADOR_DE_EMPRESA = [
  * (QF2) son solo del gerente (DECIDIDO, dueño 2026-10-13).
  */
 const SOLO_DEL_GERENTE_DE_FACTURACION = [
+  "certificados.gestionar",
   "puntos_de_venta.cambiar_ambiente",
   "series.resincronizar",
 ] as const;
@@ -150,9 +151,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 74 acciones: 26 de empresa y facturación, 48 de catálogo, carta y stock (40 de T0 y 8 de CE0)", () => {
+  it("hay 75 acciones: 27 de empresa y facturación, 48 de catálogo, carta y stock (40 de T0 y 8 de CE0)", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(74);
+    expect(todas).toHaveLength(75);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -164,7 +165,8 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("notas_de_credito"),
       porPrefijo("series"),
       porPrefijo("puntos_de_venta"),
-    ]).toEqual([6, 5, 5, 1, 1, 5, 1, 1, 1]);
+      porPrefijo("certificados"),
+    ]).toEqual([6, 5, 5, 1, 1, 5, 1, 1, 1, 1]);
     expect([
       porPrefijo("productos"),
       porPrefijo("categorias"),

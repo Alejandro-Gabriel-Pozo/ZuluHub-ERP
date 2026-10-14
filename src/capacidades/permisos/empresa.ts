@@ -111,6 +111,8 @@ export const PERMISOS_DE_EMPRESA = {
   "comprobantes.reintentar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "series.resincronizar": ["GERENTE"],
   "puntos_de_venta.cambiar_ambiente": ["GERENTE"],
+  // H7 facturación §C (F7), DECIDIDO: solo el gerente genera el pedido y carga el certificado de ARCA.
+  "certificados.gestionar": ["GERENTE"],
 } as const satisfies Record<ClaveAccion, readonly RolDeEmpresa[]>;
 
 export type ReglasDeEmpresa = ReglasDelGuard<ClaveModulo, ClaveAccion, ClaveCapacidad>;

@@ -502,6 +502,7 @@ describe("verConfiguracion", () => {
       obligatorio: false,
       requiere: ["administracion"],
       acciones: [
+        "certificados.gestionar",
         "comprobantes.descartar",
         "comprobantes.emitir",
         "comprobantes.emitir_manual",

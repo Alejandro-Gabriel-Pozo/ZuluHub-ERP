@@ -71,6 +71,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "comprobantes.reintentar"
       | "series.resincronizar"
       | "puntos_de_venta.cambiar_ambiente"
+      | "certificados.gestionar"
       | "productos.ver"
       | "productos.crear"
       | "productos.editar"
