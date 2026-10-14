@@ -23,11 +23,11 @@ export function ErrorDeSuperficie({ error, reset }: PropsDeErrorDeSuperficie) {
   const digest = error.digest;
   const referencia = digest === undefined ? null : referenciaDeError(bytesDeDigest(digest));
   return (
-    <PlantillaNeutra titulo="Algo salió mal">
+    <PlantillaNeutra titulo={texto({}, "estado.error_titulo")}>
       <ErrorConReferencia
         texto={texto({}, "error.inesperado")}
         textoDeReferencia={referencia === null ? "" : texto({}, "error.referencia", { referencia })}
-        accion={<Boton alTocar={reset}>Reintentar</Boton>}
+        accion={<Boton alTocar={reset}>{texto({}, "estado.reintentar")}</Boton>}
       />
     </PlantillaNeutra>
   );

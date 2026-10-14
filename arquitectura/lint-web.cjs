@@ -137,4 +137,40 @@ bloques.push({
   },
 });
 
+/**
+ * ADR-016, punto 4. Previene: una acción del servidor o un componente que arma un repositorio con el
+ * `publico.ts` de un módulo y se salta el control de permisos y la auditoría que sí hacen los casos de uso y
+ * las consultas (caso real: `publico.ts` reexporta también su persistencia, ADR-012). Las pantallas y acciones
+ * entran por `crearCasosDeUso*`, `crearConsultas*` y la composición (`apps/web/servidor/composicion.ts`),
+ * nunca por `crearRepositorio*` ni `crearLectura*` (el armado de las lecturas de persistencia). Chequeo: las
+ * violaciones inyectadas de `lint.test.ts`. Alcance: `apps/**` (la composición sí los arma: es su trabajo).
+ * Este bloque va DESPUÉS del de `process` y repite sus `paths`: ESLint no suma las opciones de una misma regla
+ * entre bloques que comparten archivos, el último reemplaza al anterior.
+ */
+const MENSAJE_DE_ARMADOR =
+  "Una acción del servidor o un componente no arma repositorios ni lecturas de persistencia (ADR-016): entra por los casos de uso y las consultas de publico.ts, que pasan por el guard y la auditoría.";
+bloques.push({
+  name: "web/sin-armadores-de-repositorios",
+  files: ["apps/**/*.{ts,tsx}"],
+  ignores: ["**/*.test.{ts,tsx}"],
+  rules: {
+    "no-restricted-imports": [
+      "error",
+      {
+        paths: [
+          { name: "process", message: MENSAJE_DE_ENTORNO },
+          { name: "node:process", message: MENSAJE_DE_ENTORNO },
+        ],
+        patterns: [
+          {
+            group: ["**/modulos/*/publico", "**/modulos/*/publico.ts"],
+            importNamePattern: "^crear(Repositorio|Lectura)",
+            message: MENSAJE_DE_ARMADOR,
+          },
+        ],
+      },
+    ],
+  },
+});
+
 module.exports = { bloques };

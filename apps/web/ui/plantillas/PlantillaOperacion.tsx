@@ -34,6 +34,8 @@ export type PropsDePlantillaOperacion = Readonly<{
   destinos: DestinosDeOperacion;
   /** Franja de arriba (conexión, módulo en solo lectura, acceso asistido). */
   franjas?: ReactNode;
+  /** Marca, empresa y estado de la sesión: va dentro del encabezado, arriba del título (un solo `banner`). */
+  barraSuperior?: ReactNode;
   /** Barra fija sobre la navegación, por ejemplo el total y «Cobrar» del mostrador. */
   barraDeAccion?: ReactNode;
   children: ReactNode;
@@ -49,6 +51,7 @@ export function PlantillaOperacion({
   textoDeSalto,
   destinos,
   franjas,
+  barraSuperior,
   barraDeAccion,
   children,
 }: PropsDePlantillaOperacion) {
@@ -58,8 +61,11 @@ export function PlantillaOperacion({
         {textoDeSalto}
       </a>
       {franjas}
-      <header className={estilos["cabecera"]}>
-        <h1 className={estilos["titulo"]}>{titulo}</h1>
+      <header className={estilos["encabezado"]}>
+        {barraSuperior}
+        <div className={estilos["cabecera"]}>
+          <h1 className={estilos["titulo"]}>{titulo}</h1>
+        </div>
       </header>
       <main id="contenido" className={estilos["principal"]} tabIndex={-1}>
         {children}
