@@ -5,7 +5,10 @@ import { REINTENTO_DE_MANTENIMIENTO_EN_S, respuestaDeMantenimiento } from "./man
 const NONCE = nonceDe(new Uint8Array(16).fill(3));
 const REFERENCIA = "ZH-1A2B-3C4D";
 const armar = (produccion = false) =>
-  respuestaDeMantenimiento({ referencia: REFERENCIA, nonce: NONCE, produccion });
+  respuestaDeMantenimiento({
+    referencia: REFERENCIA,
+    cabeceras: cabecerasDe("NEUTRA", NONCE, { produccion }),
+  });
 
 describe("respuestaDeMantenimiento", () => {
   it("es un 503 (falla del servicio, no una página que no existe) con Retry-After", () => {
@@ -88,17 +91,29 @@ describe("respuestaDeMantenimiento", () => {
     "ZH-1A2B-3C4D\n",
     "XZH-1A2B-3C4D",
   ])("rechaza la referencia %j antes de ponerla en el HTML", (referencia) => {
-    expect(() => respuestaDeMantenimiento({ referencia, nonce: NONCE, produccion: false })).toThrow(
-      RangeError,
-    );
-    expect(() => respuestaDeMantenimiento({ referencia, nonce: NONCE, produccion: false })).toThrow(
-      /ZH-XXXX-XXXX/,
-    );
+    expect(() =>
+      respuestaDeMantenimiento({
+        referencia,
+        cabeceras: cabecerasDe("NEUTRA", NONCE, { produccion: false }),
+      }),
+    ).toThrow(RangeError);
+    expect(() =>
+      respuestaDeMantenimiento({
+        referencia,
+        cabeceras: cabecerasDe("NEUTRA", NONCE, { produccion: false }),
+      }),
+    ).toThrow(/ZH-XXXX-XXXX/);
   });
 
-  it("rechaza un nonce que no sirve (no se arma una cabecera rota)", () => {
-    expect(() =>
-      respuestaDeMantenimiento({ referencia: REFERENCIA, nonce: "x", produccion: false }),
-    ).toThrow(RangeError);
+  it("las cabeceras que recibe pasan tal cual, y las suyas (tipo y reintento) pisan a las que coincidan", () => {
+    const r = respuestaDeMantenimiento({
+      referencia: REFERENCIA,
+      cabeceras: { "X-Uno": "1", "Content-Type": "otro", "Retry-After": "0" },
+    });
+    expect(r.encabezados).toEqual({
+      "X-Uno": "1",
+      "Content-Type": "text/html; charset=utf-8",
+      "Retry-After": "60",
+    });
   });
 });

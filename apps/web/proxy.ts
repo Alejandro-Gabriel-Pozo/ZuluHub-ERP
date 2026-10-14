@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { nonceDe } from "../../src/capacidades/experiencia/cabeceras";
+import { cabecerasDe, nonceDe } from "../../src/capacidades/experiencia/cabeceras";
 import { respuestaDeMantenimiento } from "../../src/capacidades/experiencia/mantenimiento";
 import {
   HOST_DESCONOCIDO,
@@ -36,7 +36,10 @@ export async function proxy(pedido: NextRequest): Promise<NextResponse> {
     // La referencia de la pantalla queda en el registro, junto al motivo que dejó la guarda: así soporte la busca.
     const referencia = referenciaDeError(crypto.getRandomValues(new Uint8Array(4)));
     console.error(`${referencia} [mantenimiento] pedido atendido sin la migración requerida`);
-    const mantenimiento = respuestaDeMantenimiento({ referencia, nonce, produccion });
+    const mantenimiento = respuestaDeMantenimiento({
+      referencia,
+      cabeceras: cabecerasDe("NEUTRA", nonce, { produccion }),
+    });
     return new NextResponse(mantenimiento.cuerpo, {
       status: mantenimiento.estado,
       headers: mantenimiento.encabezados,

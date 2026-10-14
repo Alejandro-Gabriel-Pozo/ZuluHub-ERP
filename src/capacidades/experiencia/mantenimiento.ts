@@ -1,13 +1,11 @@
-import { cabecerasDe } from "./cabeceras";
-
 /**
  * La respuesta de «En mantenimiento» (armazón web §5.7, guarda `MIGRACION_REQUERIDA`): lo que ve quien pide
  * cualquier cosa mientras la base no tiene la migración que el código necesita. Función pura: la referencia
  * y el nonce entran como dato, así se prueba y se muta sin Next.
  *
  *  - 503 (no 404): es una falla del servicio, no una página que no existe; con `Retry-After`.
- *  - Las mismas cabeceras que la página neutra (nunca se indexa, sin caché, sin cookies): no muestra marca
- *    ni dice cuál es la causa. La causa va al registro del servidor; acá solo la referencia `ZH-…` (ADR-016).
+ *  - Las mismas cabeceras que la página neutra (nunca se indexa, sin caché, sin cookies): quien llama las arma
+ *    con `cabecerasDe("NEUTRA", …)` y entran como dato. No muestra marca ni dice cuál es la causa. La causa va al registro del servidor; acá solo la referencia `ZH-…` (ADR-016).
  *  - Sin estilos en línea ni scripts: se pinta aunque la política de contenido sea estricta y no depende de
  *    ninguna hoja de estilos que tampoco se pueda servir.
  */
@@ -25,9 +23,13 @@ export type RespuestaDeMantenimiento = Readonly<{
 }>;
 
 export function respuestaDeMantenimiento(
-  entrada: Readonly<{ referencia: string; nonce: string; produccion: boolean }>,
+  entrada: Readonly<{
+    referencia: string;
+    /** Las cabeceras de seguridad y de indexación de la página neutra (`cabecerasDe`). */
+    cabeceras: Readonly<Record<string, string>>;
+  }>,
 ): RespuestaDeMantenimiento {
-  const { referencia, nonce, produccion } = entrada;
+  const { referencia, cabeceras } = entrada;
   // Una referencia con otra forma podría traer marcas HTML: es un defecto de quien llama, no se escapa.
   if (!FORMA_DE_REFERENCIA.test(referencia)) {
     throw new RangeError("la referencia no tiene la forma ZH-XXXX-XXXX");
@@ -54,7 +56,7 @@ export function respuestaDeMantenimiento(
     estado: 503,
     cuerpo,
     encabezados: {
-      ...cabecerasDe("NEUTRA", nonce, { produccion }),
+      ...cabeceras,
       "Content-Type": "text/html; charset=utf-8",
       "Retry-After": String(REINTENTO_DE_MANTENIMIENTO_EN_S),
     },
