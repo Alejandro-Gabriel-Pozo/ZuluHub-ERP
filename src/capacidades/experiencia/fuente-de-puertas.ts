@@ -36,9 +36,10 @@ export function armarFuenteDePuertas(puertos: PuertosDeLaPuerta): FuenteDePuerta
     },
     leerMarca: async (_marcaId, host, superficie) => {
       const respuesta = await puertos.configuracion().porHost(host, superficie);
-      if (!respuesta.ok)
+      if (!respuesta.ok) {
         // El mensaje no dice nada de la base ni del host: el detalle ya quedó en el registro de la conexión.
         throw new Error("no se pudo leer la configuración pública de la marca");
+      }
       return respuesta.valor === null ? null : marcaPublicaDe(respuesta.valor);
     },
   };
