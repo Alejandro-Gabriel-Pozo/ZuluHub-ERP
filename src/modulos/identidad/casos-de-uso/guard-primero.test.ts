@@ -276,6 +276,7 @@ describe("las declaraciones", () => {
       token: "token",
       emailAutenticado: "nueva@prueba.test",
       usuarioAuth: usuarioAuthId("55555555-5555-4555-8555-555555555555"),
+      marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
       ahora: new Date(0),
     });
     await expect(resultado).rejects.toBeInstanceOf(AccesoFueraDelGuard);

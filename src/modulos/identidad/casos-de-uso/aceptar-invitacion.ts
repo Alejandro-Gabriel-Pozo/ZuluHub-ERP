@@ -1,6 +1,7 @@
 import type { ContextoDeInvitacion } from "../../../contexto/contexto";
 import type {
   EmpresaId,
+  MarcaComercialId,
   PersonaId,
   UsuarioAuthId,
 } from "../../../primitivas/identificadores/marca";
@@ -26,6 +27,14 @@ export type EntradaDeAceptacion = Readonly<{
    * queda vinculada con él, y con ningún otro: si ya lo está con otro usuario, `PERSONA_DE_OTRO_USUARIO`.
    */
   usuarioAuth: UsuarioAuthId;
+  /**
+   * Por la puerta de qué marca se abrió el enlace: la que resolvió el servidor a partir del host de la
+   * solicitud, nunca un dato que mande el navegador (marcas y planes, §B.2.4). Tiene que ser la marca del
+   * tenant de la invitación; si no, se responde como si la invitación no existiera. Es obligatoria a
+   * propósito: una llamada que no decide la marca no compila. Va acá y no en el contexto firmado porque la
+   * marca no viaja en el token (§B.10).
+   */
+  marcaDeEntrada: MarcaComercialId;
   ahora: Date;
 }>;
 
@@ -67,7 +76,10 @@ function emailAutenticadoNormalizado(texto: string | null): Email | null {
  * Aceptar una invitación (diseño §6.3). Contexto de INVITACION (rol de la aplicación, solo el hash
  * del token). Todo o nada, en UNA transacción serializable:
  *
- *  1. Lee la invitación por el hash del token, las empresas y los estados, y la persona del email.
+ *  1. Lee la invitación por el hash del token. Si la marca del tenant de la invitación no es la de la
+ *     puerta por la que se abrió el enlace, responde `INVITACION_NO_ENCONTRADA` (lo mismo que para un
+ *     token inexistente: no se revela que existe) y no escribe nada. Lee además las empresas y los
+ *     estados, y la persona del email.
  *  2. Decide con el dominio (`decidirAceptacion`). Una invitación ya aceptada por esta persona vuelve
  *     `ok { yaEstabaAceptada: true }` sin escribir, siempre que el email autenticado coincida y la
  *     persona esté vinculada con ESTE usuario (si lo está con otro: `PERSONA_DE_OTRO_USUARIO`; si
@@ -95,6 +107,10 @@ export function crearAceptarInvitacion({ transacciones, tokens }: DependenciasDe
       async (tx): Promise<Resultado<SalidaDeAceptacion, ErrorDeAceptacion>> => {
         const invitacion = await tx.invitaciones.obtenerPorHash(tokenHash);
         if (invitacion === null) return err("INVITACION_NO_ENCONTRADA");
+        // La marca del tenant se lee en esta misma transacción (el tenant no cambia de marca). Otra marca,
+        // o un tenant que no se ve, se responde igual que una invitación inexistente: sin oráculo.
+        const marcaDelTenant = await tx.invitaciones.marcaDelTenantDeLaInvitacion(tokenHash);
+        if (marcaDelTenant !== entrada.marcaDeEntrada) return err("INVITACION_NO_ENCONTRADA");
 
         const empresaIds = invitacion.empresas.map((e) => e.empresaId);
         const { empresas, estados } = await cargarEmpresas(tx, empresaIds);

@@ -41,6 +41,7 @@ import {
   type RolDePrueba,
 } from "./fixtures-identidad";
 import { usuarioDePrueba } from "../utilidades/usuarios";
+import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
 
 /**
  * H3, tramo 3: los cuatro casos de uso de identidad contra una base real, con los roles limitados
@@ -143,6 +144,7 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
       token,
       emailAutenticado: email,
       usuarioAuth: usuarioDePrueba(email ?? "sin-sesion"),
+      marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
       ahora: cuando,
     });
 
@@ -512,6 +514,7 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
             token: ok.token,
             emailAutenticado: email,
             usuarioAuth: usuarioDePrueba(email),
+            marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
             ahora,
           }),
         ).rejects.toThrow("falla forzada");
