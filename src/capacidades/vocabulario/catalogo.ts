@@ -194,6 +194,7 @@ export const CATALOGO_DE_TEXTOS = {
     largoMaximo: 160,
     marcadores: ["marca"],
   },
+  "empresa.sin_empresas_titulo": { porDefecto: "Sin empresas" },
   "empresa.cambiar": { porDefecto: "Cambiar de empresa" },
   "empresa.etiqueta": { porDefecto: "Empresa" },
   "empresa.rol_etiqueta": { porDefecto: "Tu rol" },

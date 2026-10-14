@@ -1,5 +1,7 @@
 import { decidirEmpresa } from "../capacidades/experiencia/empresa-elegida";
-import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
+import { origenEsPropio } from "../capacidades/experiencia/origen";
+import { hostDelPedido } from "../capacidades/experiencia/puerta";
+import { errorDeCodigo, estadoHttpDe, type Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
 import type { ConsultasDeEmpresas } from "../modulos/empresas/publico";
 import type {
@@ -195,6 +197,30 @@ export async function elegirEmpresa(
     : { ok: true, dato: { empresaId: elegida.empresaId } };
 }
 
+/** Una sucursal activa de la empresa, para el selector de este dispositivo. */
+export type SucursalParaLaPantalla = Readonly<{ id: string; nombre: string }>;
+
+/**
+ * Las sucursales activas de la empresa del contexto, para el selector de sucursal. Pasa por la consulta de
+ * empresas (que pide `sucursales.ver` al guard y limita a la empresa y a la marca de la puerta): una persona
+ * sin ese permiso recibe el motivo, y la pantalla simplemente no ofrece el selector.
+ */
+export async function sucursalesDeLaEmpresa(
+  d: DependenciasDeSesion,
+  contexto: ContextoOperativo,
+): Promise<Respuesta<readonly SucursalParaLaPantalla[]>> {
+  try {
+    const resultado = await d.consultasDeEmpresas().listarSucursales(contexto, {
+      incluirInactivas: false,
+    });
+    return aRespuesta(resultado, d.respuesta, (lista) =>
+      lista.map((sucursal) => ({ id: sucursal.id, nombre: sucursal.nombre })),
+    );
+  } catch (excepcion) {
+    return aRespuestaDeExcepcion(excepcion, d.respuesta);
+  }
+}
+
 export type InvitacionAceptada = Readonly<{
   yaEstabaAceptada: boolean;
   empresas: readonly Readonly<{ empresaId: EmpresaId; rol: RolDeEmpresa }>[];
@@ -332,8 +358,8 @@ export async function iniciarIngresoConGoogle(
  * Atiende el «Seguir» del aviso de sesión (y la renovación silenciosa mientras se usa la pantalla): lee la
  * sesión del pedido, que con el uso se renueva en la base, y devuelve en la RESPUESTA los `Set-Cookie` que
  * la renuevan en el navegador. Un componente de servidor no puede fijar cookies, así que sin esto la cookie
- * moriría a los 15 minutos del ingreso aunque la persona use la aplicación (requisito de W3b). Solo `POST`
- * desde el propio origen. Sin sesión: 401 con el código `SESION_VENCIDA` y nada más.
+ * moriría a los 15 minutos del ingreso aunque la persona use la aplicación (requisito de W3b). Solo desde el
+ * propio origen (el `POST` lo garantiza la ruta). Sin sesión: 401 con el código `SESION_VENCIDA` y nada más.
  */
 export async function renovarSesion(
   d: DependenciasDeSesion,
@@ -344,14 +370,15 @@ export async function renovarSesion(
     "X-Robots-Tag": "noindex",
     "Content-Type": "application/json",
   });
+  const sinPermiso = (codigo: "SIN_PERMISO" | "SESION_VENCIDA") =>
+    new Response(JSON.stringify({ codigo }), { status: estadoHttpDe(codigo), headers: cabeceras });
+  // Una página de otro sitio no puede mantener viva una sesión que no es suya (P-7).
+  if (!origenEsPropio(pedido.encabezados.get("origin"), hostDelPedido(pedido.encabezados))) {
+    return sinPermiso("SIN_PERMISO");
+  }
   try {
     const sesion = await d.autenticacion().sesionDe({ headers: pedido.encabezados }, pedido.host);
-    if (sesion === null) {
-      return new Response(JSON.stringify({ codigo: "SESION_VENCIDA" }), {
-        status: 401,
-        headers: cabeceras,
-      });
-    }
+    if (sesion === null) return sinPermiso("SESION_VENCIDA");
     for (const cookie of sesion.cookiesDeRespuesta) cabeceras.append("Set-Cookie", cookie);
     return new Response(JSON.stringify({ venceEn: sesion.venceEn.toISOString() }), {
       status: 200,

@@ -18,6 +18,11 @@
   top: var(--espacio-2);
 }
 
+.encabezado {
+  display: flex;
+  flex-direction: column;
+}
+
 .cabecera {
   padding: var(--espacio-3) var(--espacio-4);
   border-bottom: var(--borde-grosor) solid var(--color-borde);
