@@ -72,7 +72,7 @@ describe("marcaPublicaDe", () => {
         for (const [k, v] of Object.entries(salida)) {
           expect(VARIABLES_DE_MARCA as readonly string[]).toContain(k);
           expect(v).toMatch(/^#[0-9a-f]{6}$/);
-          expect(tema[k as keyof typeof tema]).toBe(v);
+          expect(tema[k]).toBe(v);
         }
         // Todo token válido de la entrada sale (nada válido se pierde).
         for (const k of VARIABLES_DE_MARCA) {
