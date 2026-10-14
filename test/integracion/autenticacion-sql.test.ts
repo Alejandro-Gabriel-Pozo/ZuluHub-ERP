@@ -531,12 +531,14 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
       );
       expect(columnas).toEqual(
         [
-          // SELECT por el SELECT de la tabla entera (0001); UPDATE solo para la aplicación (0010).
-          ...["zuluhub_app", "zuluhub_grupo", "zuluhub_plataforma"].map((grantee) => ({
-            grantee,
-            column_name: "usuario_auth_id",
-            privilege_type: "SELECT",
-          })),
+          // SELECT por el SELECT de la tabla entera (0001, y el rol de respaldo); UPDATE solo para la aplicación (0010).
+          ...["zuluhub_app", "zuluhub_grupo", "zuluhub_plataforma", "zuluhub_respaldo"].map(
+            (grantee) => ({
+              grantee,
+              column_name: "usuario_auth_id",
+              privilege_type: "SELECT",
+            }),
+          ),
           { grantee: "zuluhub_app", column_name: "usuario_auth_id", privilege_type: "UPDATE" },
         ].sort((x, y) =>
           x.grantee === y.grantee
