@@ -94,10 +94,8 @@ export function crearClienteVercel(opciones: OpcionesDelCliente): ClienteDeVaria
     opciones.esperar ?? ((ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms)));
 
   /** Tapa el token y el valor del pedido, y saca enlaces y tiras largas. */
-  const limpiar = (texto: string, valor: string | undefined): string => {
-    const sinToken = ocultarSecretos(texto, token);
-    return textoDeErrorSeguro(valor === undefined ? sinToken : ocultarSecretos(sinToken, valor));
-  };
+  const limpiar = (texto: string, valor: string | undefined): string =>
+    textoDeErrorSeguro(ocultarSecretos(ocultarSecretos(texto, token), valor));
 
   const fallar = (motivo: string, incierta: boolean): RespuestaDeVercel<never> =>
     err({ motivo, incierta });

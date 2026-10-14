@@ -19,7 +19,7 @@ export type VariableFalsa = {
   customEnvironmentIds?: string[];
 };
 
-export type PedidoAnotado = {
+type PedidoAnotado = {
   metodo: string;
   ruta: string;
   consulta: Record<string, string>;
