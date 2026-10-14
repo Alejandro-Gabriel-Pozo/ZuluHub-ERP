@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { campoConPosibleSecreto, type Dato } from "../../puertos/sin-secretos";
+import type { EstadoEfectivo } from "../../contexto/estados";
 import type { MotivoDeRechazo } from "../permisos/guard";
 import type { RolDeEmpresa } from "../permisos/roles";
 import {
@@ -99,22 +100,44 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     expectTypeOf<
       Extract<ClaveDeTexto, `rol.${string}`>
     >().toEqualTypeOf<`rol.${Lowercase<RolDeEmpresa>}.nombre`>();
-    expectTypeOf<
-      Extract<ClaveDeTexto, `motivo.${string}`>
-    >().toEqualTypeOf<`motivo.${Lowercase<MotivoDeRechazo>}`>();
-    expect(claves.filter((c) => c.startsWith("motivo."))).toHaveLength(5);
+    expectTypeOf<Extract<ClaveDeTexto, `motivo.${string}`>>().toEqualTypeOf<
+      | `motivo.${Lowercase<MotivoDeRechazo>}`
+      // W5: el estado de una empresa que no opera (`motivo.empresa.<estado>`, [01] §6.3), uno por estado.
+      | `motivo.empresa.${Lowercase<Exclude<EstadoEfectivo, "OPERA">>}`
+    >();
+    expect(
+      claves.filter((c) => c.startsWith("motivo.") && !c.startsWith("motivo.empresa.")),
+    ).toHaveLength(5);
+    expect(claves.filter((c) => c.startsWith("motivo.empresa."))).toHaveLength(5);
     expect(claves.filter((c) => c.startsWith("rol."))).toHaveLength(3);
   });
 
   it("los errores nuevos que ve una empresa o la puerta de entrada", () => {
-    expect(claves.filter((c) => c.startsWith("error.")).sort()).toEqual([
-      "error.empresa_de_otra_marca",
-      "error.funcion_no_incluida",
-      "error.inesperado",
-      "error.invitacion_de_otra_marca",
-      "error.limite_del_plan",
-      "error.referencia",
-    ]);
+    expect(claves.filter((c) => c.startsWith("error.")).sort()).toEqual(
+      [
+        "error.empresa_de_otra_marca",
+        "error.funcion_no_incluida",
+        "error.inesperado",
+        "error.invitacion_de_otra_marca",
+        "error.limite_del_plan",
+        "error.referencia",
+        // W5: uno por código público de `experiencia/respuesta.ts` (lo comprueba su prueba de contrato).
+        "error.sesion_vencida",
+        "error.no_disponible",
+        "error.invitacion_no_encontrada",
+        "error.invitacion_revocada",
+        "error.invitacion_no_pendiente",
+        "error.invitacion_vencida",
+        "error.invitacion_de_otro_email",
+        "error.alta_no_pendiente",
+        "error.persona_suspendida",
+        "error.persona_de_otro_usuario",
+        "error.usuario_de_otra_persona",
+        "error.ya_es_miembro",
+        "error.rol_distinto_al_anterior",
+        "error.empresa_no_opera",
+      ].sort(),
+    );
   });
 
   it("los textos de los errores con datos declaran su marcador", () => {
@@ -130,6 +153,9 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "conexion.verificando",
       "sesion.aviso_detalle",
       "sesion.aviso_titulo",
+      "sesion.estado_activa",
+      "sesion.estado_por_vencer",
+      "sesion.estado_vencida",
       "sesion.ingresar_de_nuevo",
       "sesion.seguir",
       "sesion.vencida_detalle",
