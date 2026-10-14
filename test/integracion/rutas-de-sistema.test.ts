@@ -353,6 +353,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
 
   describe("P-15: la guarda de migración", () => {
     let carpetaSinLaUltima: string;
+    let anteultima: string;
     const conGuarda = (url: string, reloj: { valor: number }, registrados: string[]) => {
       const conexiones = armarConexiones({
         fuente: () => ({ ZULUHUB_DB_APP: url }),
@@ -371,6 +372,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
         .filter((n) => /^\d{4}_.+\.sql$/.test(n))
         .sort();
       expect(archivos.at(-1)?.slice(0, 4)).toBe(MIGRACION_REQUERIDA);
+      anteultima = archivos.at(-2) ?? "";
       for (const archivo of archivos.slice(0, -1)) {
         await copyFile(join(CARPETA_REAL, archivo), join(carpetaSinLaUltima, archivo));
       }
@@ -380,8 +382,8 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
     });
 
     it("base al día: sigue (y no vuelve a preguntar)", async () => {
-      // La base de esta prueba está migrada por completo; el permiso de lectura lo da el informe (hoy ninguna migración).
-      await dueno.query("GRANT SELECT ON migracion TO zuluhub_app");
+      // La base de esta prueba está migrada por completo: el permiso de lectura de `migracion.nombre` lo da la 0013,
+      // sin ninguna concesión extra acá (así la prueba mide lo que la migración entrega de verdad).
       const registrados: string[] = [];
       expect(await conGuarda(propia.base.app, { valor: 0 }, registrados)).toBe(true);
       expect(registrados).toEqual([]);
@@ -390,6 +392,14 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
     it("sin permiso de lectura sobre la tabla de migraciones: falla cerrado (mantenimiento) y lo dice en el registro", async () => {
       const aparte = await crearBaseAparte(base!);
       try {
+        // La 0013 le da la lectura de `nombre`: se la quitamos para simular una base sin ese permiso.
+        const cliente = new pg.Client({ connectionString: aparte.base.dueno });
+        await cliente.connect();
+        try {
+          await cliente.query("REVOKE SELECT (nombre) ON migracion FROM zuluhub_app");
+        } finally {
+          await cliente.end();
+        }
         const registrados: string[] = [];
         const ok = await conGuarda(aparte.base.app, { valor: 0 }, registrados);
         expect(ok).toBe(false);
@@ -425,7 +435,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
           expect(registrados).toHaveLength(1);
           expect(registrados[0]).toMatch(
             new RegExp(
-              `^\\[migración\\] la base está en 0011_\\w+\\.sql y el código necesita la ${MIGRACION_REQUERIDA}$`,
+              `^\\[migración\\] la base está en ${anteultima.replace(".", "\\.")} y el código necesita la ${MIGRACION_REQUERIDA}$`,
             ),
           );
           // Dentro de la espera no se vuelve a preguntar a la base.
