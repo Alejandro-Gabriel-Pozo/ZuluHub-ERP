@@ -394,6 +394,18 @@ const reglas = [
     from: { path: "^src/modulos/fiscal/" },
     to: { path: "^src/modulos/(ventas|caja|catalogo|clientes|stock)/" },
   },
+  {
+    // W3b (web-armazon §3.1 y §4.1). Previene: la librería de ingreso importada desde una acción, una
+    // pantalla o un módulo, que ataría el resto del código a su versión (1.7.7 exacta, con ganchos propios
+    // acoplados a sus rutas internas) y a su forma de leer la sesión y el host. Todo el resto usa el puerto
+    // `Autenticacion`. Chequeo: la violación inyectada de reglas.test.ts.
+    name: "better-auth-solo-en-su-adaptador",
+    severity: "error",
+    comment:
+      "`better-auth` (y @better-auth/*) solo se importa en src/adaptadores/autenticacion/: el resto de la aplicación usa el puerto Autenticacion (src/puertos/autenticacion.ts).",
+    from: { path: "^(src|apps)/", pathNot: "^src/adaptadores/autenticacion/" },
+    to: { path: "^(node_modules/)?(better-auth(/|$)|@better-auth/)" },
+  },
 ];
 
 module.exports = { reglas };

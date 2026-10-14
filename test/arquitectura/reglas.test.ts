@@ -380,6 +380,12 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "src/modulos/ventas/publico.ts": exporta,
       },
     },
+    {
+      regla: "better-auth-solo-en-su-adaptador",
+      archivos: {
+        "apps/web/servidor/ingreso.ts": importa("better-auth"),
+      },
+    },
   ];
 
   it("cada regla definida tiene su caso de violación", () => {
@@ -1356,5 +1362,69 @@ describe("C-2: la plantilla de la carta no fija la letra en px (D10)", () => {
   it("el repositorio real la cumple y tiene CSS de la carta que revisar", () => {
     expect(archivosCssDeLaCarta(".").length).toBeGreaterThanOrEqual(8);
     expect(cssDeLaCartaConPx(".")).toEqual([]);
+  });
+});
+
+/**
+ * W3b (autenticación). `better-auth` solo entra por su adaptador: el resto usa el puerto. Y el adaptador de
+ * autenticación no importa la herramienta de datos (`kysely`, `pg`): el Kysely del rol de autenticación lo
+ * crea solo `adaptadores/postgres/conexion-de-autenticacion.ts` y llega armado desde la composición. La
+ * segunda ya la da `orm-solo-en-persistencia`; acá se fija que cubre también a esta carpeta.
+ */
+describe("W3b: la librería de ingreso y la herramienta de datos", () => {
+  it("better-auth lo importa el adaptador de autenticación, y nadie más", async () => {
+    const v = await violacionesDe({
+      "src/adaptadores/autenticacion/instancia.ts": importa("better-auth"),
+      "src/adaptadores/autenticacion/opciones.ts": importa("better-auth/api"),
+      "src/adaptadores/autenticacion/migracion.ts": importa("@better-auth/core/db"),
+    });
+    expect(v).toEqual([]);
+  });
+
+  it.each([
+    ["una acción o ruta de la web", "apps/web/servidor/ingreso.ts", "better-auth"],
+    ["una ruta de la web", "apps/web/app/api/auth/ruta.ts", "better-auth/api"],
+    ["la composición", "src/composicion/web.ts", "better-auth"],
+    ["un módulo de negocio", "src/modulos/identidad/casos-de-uso/ingresar.ts", "better-auth"],
+    ["otro adaptador", "src/adaptadores/postgres/sesion.ts", "better-auth/db/migration"],
+    ["un puerto", "src/puertos/autenticacion.ts", "better-auth"],
+    ["una capacidad", "src/capacidades/autenticacion/vigencia.ts", "better-auth"],
+    ["un paquete de la librería", "src/composicion/ingreso.ts", "@better-auth/core"],
+  ])("%s no puede importarlo (%s -> %s)", async (_nombre, origen, paquete) => {
+    const v = await violacionesDe({ [origen]: importa(paquete) });
+    expect(v).toContain("better-auth-solo-en-su-adaptador");
+  });
+
+  it("las pruebas y los scripts no entran en la regla (los usa quien genera o revisa el SQL de la librería)", async () => {
+    const v = await violacionesDe({ "src/x.ts": exporta });
+    expect(v).toEqual([]);
+  });
+
+  it.each(["kysely", "pg", "kysely/helpers/postgres"])(
+    "el adaptador de autenticación no puede importar la herramienta de datos (%s)",
+    async (paquete) => {
+      const v = await violacionesDe({
+        "src/adaptadores/autenticacion/instancia.ts": importa(paquete),
+      });
+      expect(v).toContain("orm-solo-en-persistencia");
+    },
+  );
+
+  it("la conexión del rol de autenticación, en adaptadores/postgres, sí puede crear el Kysely", async () => {
+    const v = await violacionesDe({
+      "src/adaptadores/postgres/conexion-de-autenticacion.ts": importa("kysely"),
+      "src/adaptadores/postgres/barrido-de-autenticacion.ts": importa("kysely"),
+    });
+    expect(v).not.toContain("orm-solo-en-persistencia");
+  });
+
+  it("un módulo de negocio no puede importar el adaptador de autenticación (solo la composición)", async () => {
+    const v = await violacionesDe({
+      "src/modulos/identidad/casos-de-uso/c.ts": importa(
+        "../../../adaptadores/autenticacion/instancia",
+      ),
+      "src/adaptadores/autenticacion/instancia.ts": exporta,
+    });
+    expect(v).toContain("adaptadores-solo-desde-composicion");
   });
 });

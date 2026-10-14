@@ -193,5 +193,15 @@
     "grupo": "vercel (carga de variables)",
     "archivos": "src/adaptadores/vercel/**/*.ts",
     "pruebas": "src/adaptadores/vercel"
+  },
+  {
+    "grupo": "autenticación (piezas puras)",
+    "archivos": "src/capacidades/autenticacion/**/*.ts,src/adaptadores/autenticacion/configuracion.ts",
+    "pruebas": "src/capacidades/autenticacion src/adaptadores/autenticacion"
+  },
+  {
+    "grupo": "autenticación (ruta de ingreso, G8)",
+    "archivos": "src/composicion/ruta-de-ingreso.ts",
+    "pruebas": "src/composicion/ruta-de-ingreso.test.ts"
   }
 ]

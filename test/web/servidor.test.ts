@@ -44,6 +44,8 @@ describe("apps/web/servidor/composicion.ts", () => {
     vi.resetModules();
     const { web } = await import("../../apps/web/servidor/composicion");
     expect(Object.keys(web).sort()).toEqual([
+      "autenticacion",
+      "barridoDeAutenticacion",
       "casosDeUsoDeEmpresas",
       "casosDeUsoDeIdentidad",
       "configuracionPublicaDeHost",
@@ -58,7 +60,7 @@ describe("apps/web/servidor/composicion.ts", () => {
   it("con el entorno vacío, el pedido falla cerrado: el nombre va al registro y no al error", async () => {
     const entornoVacio = Object.fromEntries(
       Object.entries(original).filter(
-        ([nombre]) => !/^(ZULUHUB_|DATABASE_|POSTGRES_|BETTER_AUTH_)/.test(nombre),
+        ([nombre]) => !/^(ZULUHUB_|DATABASE_|POSTGRES_|BETTER_AUTH_|AUTH_|GOOGLE_)/.test(nombre),
       ),
     );
     process.env = entornoVacio;
