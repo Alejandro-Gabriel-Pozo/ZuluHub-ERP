@@ -552,10 +552,11 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
       expect(r.ok).toBe(false);
     });
 
-    it("con una clave mala vuelve err (nunca ok(null) ni la marca principal)", async () => {
+    it("con un rol que no existe vuelve err (nunca ok(null) ni la marca principal)", async () => {
       if (base === null) return;
+      // Rol inexistente y no clave mala: el CI levanta Postgres con `trust` (acepta cualquier clave).
       const url = new URL(propia.base.publico);
-      url.password = "clave-equivocada";
+      url.username = "zuluhub_rol_que_no_existe";
       const roto = crearEntornoPublico(propia.base, { url: url.toString() });
       try {
         const r = await crearConfiguracionPublicaDeHost(roto).porHost(

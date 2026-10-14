@@ -403,7 +403,9 @@ describe.skipIf(base === null)("migrar-base --preparar-roles", () => {
     expect(salida.error).toContain("Diagnóstico (paso: generación de la contraseña)");
     expect(salida.error).toContain("MARCA_DEL_DIAGNOSTICO");
     expect(salida.error).not.toContain("SCRAM-SHA-256$");
-    expect(salida.error).not.toContain(new URL(url).password);
+    // Con `trust` (el CI) la cadena puede no traer contraseña: no hay nada que comprobar en ese caso.
+    const claveDeLaCadena = new URL(url).password;
+    if (claveDeLaCadena !== "") expect(salida.error).not.toContain(claveDeLaCadena);
     expect(salida.error).not.toContain(url);
     expect(salida.secreto).toEqual([]);
     expect(await puedeEntrar(ROLES[0]?.rol as string)).toBe(false);
