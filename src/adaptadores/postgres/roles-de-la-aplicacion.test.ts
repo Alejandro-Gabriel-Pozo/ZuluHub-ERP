@@ -3,6 +3,7 @@ import {
   LARGO_DE_CLAVE,
   cadenaDeRol,
   claveAlAzar,
+  esVariableDeRespaldo,
   esVariableProvisoria,
   rolesPorPreparar,
 } from "./roles-de-la-aplicacion";
@@ -27,6 +28,27 @@ describe("rolesPorPreparar", () => {
     ]);
     expect(roles).not.toContain("zuluhub_grupo");
     expect(roles).not.toContain("zuluhub_plataforma");
+  });
+
+  it("el rol de respaldo solo con su bandera, al final, y nunca por defecto", () => {
+    expect(rolesPorPreparar(false, false)).toEqual(rolesPorPreparar(false));
+    expect(rolesPorPreparar(true, false)).toEqual(rolesPorPreparar(true));
+    expect(rolesPorPreparar(false, true)).toEqual([
+      ...rolesPorPreparar(false),
+      { rol: "zuluhub_respaldo", variable: "ZULUHUB_DB_RESPALDO" },
+    ]);
+    expect(rolesPorPreparar(true, true).map((r) => r.rol)).toEqual([
+      ...rolesPorPreparar(true).map((r) => r.rol),
+      "zuluhub_respaldo",
+    ]);
+    expect(rolesPorPreparar(true).map((r) => r.rol)).not.toContain("zuluhub_respaldo");
+  });
+
+  it("solo la variable del rol de respaldo es de respaldo", () => {
+    expect(esVariableDeRespaldo("ZULUHUB_DB_RESPALDO")).toBe(true);
+    for (const { variable } of rolesPorPreparar(true)) {
+      expect(esVariableDeRespaldo(variable), variable).toBe(false);
+    }
   });
 
   it("solo son provisorias las variables que la aplicación todavía no declara", () => {

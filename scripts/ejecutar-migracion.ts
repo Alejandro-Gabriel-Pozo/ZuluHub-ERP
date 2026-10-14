@@ -15,6 +15,7 @@ import {
 } from "../src/adaptadores/postgres/preparar-roles.ts";
 import {
   cadenaDeRol,
+  esVariableDeRespaldo,
   esVariableProvisoria,
   rolesPorPreparar,
   type RolPorPreparar,
@@ -49,7 +50,9 @@ import {
  *   LOGIN, se lo da con una contraseña al azar; imprime UNA vez las variables para pegar en Vercel.
  *   Solo para correr en la terminal del dueño: se niega a correr en GitHub Actions (el registro es
  *   público para quien tenga acceso al repositorio). Con `--con-autenticacion` suma los roles de
- *   autenticación y captación; con `--rotar` también cambia la contraseña de los que ya tienen LOGIN;
+ *   autenticación y captación; con `--con-respaldo` suma el rol de respaldo (solo lectura, el único que
+ *   salta el aislamiento: su cadena se imprime en un bloque aparte, con el host directo, para el secreto del
+ *   Environment «respaldo» de GitHub; nunca por defecto y nunca con `--vercel`); con `--rotar` también cambia la contraseña de los que ya tienen LOGIN;
  *   con `--directa` arma las cadenas con el host directo en vez del del pooler; con `--diagnostico`
  *   una falla inesperada al dar LOGIN muestra además el mensaje del servidor (sin cadena ni verificadores).
  * - `--preparar-roles --vercel <preview|production>`: lo mismo, pero en vez de imprimir las contraseñas
@@ -80,7 +83,7 @@ export type EntradaDeMigracion = Readonly<{
   /** Donde va el bloque con credenciales de `--preparar-roles`. */
   secreto: (linea: string) => void;
   /** Se inyectan en las pruebas (roles propios, contraseñas conocidas); por defecto, los reales. */
-  roles?: (conAutenticacion: boolean) => readonly RolPorPreparar[];
+  roles?: (conAutenticacion: boolean, conRespaldo: boolean) => readonly RolPorPreparar[];
   generarClave?: () => string;
   /** Solo con `--vercel`. Por defecto, el `fetch` global; las pruebas inyectan uno falso (nunca hay red). */
   fetch?: typeof fetch;
@@ -99,12 +102,14 @@ const SIN_TOKEN =
   "(no lo pegues en ningún archivo ni en un chat).";
 
 const USO =
-  "uso: migrar-base --ver | --aplicar | --preparar-roles [--con-autenticacion] [--rotar] [--directa] [--diagnostico] " +
+  "uso: migrar-base --ver | --aplicar | --preparar-roles [--con-autenticacion] [--con-respaldo] [--rotar] [--directa] [--diagnostico] " +
   "[--vercel <preview|production> [--confirmo production] [--secretos]]";
 
 type Pedido = Readonly<{
   modo: "--ver" | "--aplicar" | "--preparar-roles";
   conAutenticacion: boolean;
+  /** Suma el rol de respaldo (nunca por defecto, nunca con `--vercel`). */
+  conRespaldo: boolean;
   rotar: boolean;
   directa: boolean;
   diagnostico: boolean;
@@ -116,6 +121,7 @@ type Pedido = Readonly<{
 const MODOS = ["--ver", "--aplicar", "--preparar-roles"] as const;
 const EXTRAS = [
   "--con-autenticacion",
+  "--con-respaldo",
   "--rotar",
   "--directa",
   "--diagnostico",
@@ -162,6 +168,12 @@ function leerPedido(argumentos: readonly string[]): Pedido | string {
   if (vercel === null && (extras.includes("--secretos") || confirmo !== undefined)) {
     return "--secretos y --confirmo se usan solo junto con --vercel.";
   }
+  if (vercel !== null && extras.includes("--con-respaldo")) {
+    return (
+      "--con-respaldo no se usa con --vercel: la credencial del rol de respaldo salta el aislamiento y nunca va " +
+      "a Vercel (va al secreto del Environment «respaldo» de GitHub). Corré el comando sin --vercel."
+    );
+  }
   if (vercel === "production" && confirmo !== "production") return SIN_CONFIRMACION;
   if (vercel === "preview" && confirmo !== undefined) {
     return "--confirmo se usa solo con --vercel production.";
@@ -169,6 +181,7 @@ function leerPedido(argumentos: readonly string[]): Pedido | string {
   return {
     modo,
     conAutenticacion: extras.includes("--con-autenticacion"),
+    conRespaldo: extras.includes("--con-respaldo"),
     rotar: extras.includes("--rotar"),
     directa: extras.includes("--directa"),
     diagnostico: extras.includes("--diagnostico"),
@@ -350,7 +363,7 @@ async function prepararYMostrar(
   entrada: EntradaDeMigracion,
   info: (linea: string) => void,
 ): Promise<void> {
-  const roles = (entrada.roles ?? rolesPorPreparar)(pedido.conAutenticacion);
+  const roles = (entrada.roles ?? rolesPorPreparar)(pedido.conAutenticacion, pedido.conRespaldo);
   let preparados: RolPreparado[];
   try {
     preparados = await prepararRoles(cadena, {
@@ -417,7 +430,7 @@ async function prepararYCargar(
         `no se pudo leer el proyecto de Vercel: ${lectura.error.motivo} (no se cambió ninguna contraseña)`,
       );
     }
-    const roles = (entrada.roles ?? rolesPorPreparar)(pedido.conAutenticacion);
+    const roles = (entrada.roles ?? rolesPorPreparar)(pedido.conAutenticacion, pedido.conRespaldo);
     let preparados: RolPreparado[];
     let fallaDeRoles: ErrorDePreparacion | null = null;
     try {
@@ -612,12 +625,29 @@ function mostrarBloqueDeVercel(
 ): RolPreparado[] {
   const conClave = preparados.filter((p) => p.clave !== undefined);
   const secreto = entrada.secreto;
+  const deRespaldo = conClave.filter((p) => esVariableDeRespaldo(p.variable));
+  const paraVercel = conClave.filter((p) => !esVariableDeRespaldo(p.variable));
   let sinPooler = false;
+  if (deRespaldo.length > 0) {
+    // El rol de respaldo salta el aislamiento: su cadena va aparte, con el host directo, y NUNCA a Vercel.
+    secreto("");
+    secreto(
+      "=========== PEGAR EN GITHUB: Environment «respaldo» > Secrets (NUNCA EN VERCEL) ===========",
+    );
+    secreto("Se muestra UNA sola vez y no se guarda en ningún lado. Copialo ahora.");
+    secreto("");
+    for (const p of deRespaldo) {
+      secreto(`${p.variable}=${cadenaDeRol(cadena, p.rol, p.clave ?? "", false).cadena}`);
+    }
+    secreto("");
+    secreto("=============== FIN ===============");
+  }
+  if (paraVercel.length === 0) return conClave;
   secreto("");
   secreto("=============== PEGAR EN VERCEL (Settings > Environment Variables) ===============");
   secreto("Se muestra UNA sola vez y no se guarda en ningún lado. Copialo ahora.");
   secreto("");
-  for (const p of conClave) {
+  for (const p of paraVercel) {
     const { cadena: deRol, pooler } = cadenaDeRol(cadena, p.rol, p.clave ?? "", !pedido.directa);
     if (!pedido.directa && !pooler) sinPooler = true;
     secreto(`${p.variable}=${deRol}`);
@@ -632,7 +662,7 @@ function mostrarBloqueDeVercel(
         ? "Las cadenas usan el host directo: el host no es de Neon y no se pudo deducir el del pooler."
         : "Las cadenas usan el host del POOLER de Neon (la aplicación solo usa transacciones y no depende de la sesión).",
   );
-  for (const p of conClave) {
+  for (const p of paraVercel) {
     if (esVariableProvisoria(p.variable)) {
       info(
         `Aviso: ${p.variable} es un nombre provisorio: la aplicación todavía no declara una variable para ${p.rol}.`,

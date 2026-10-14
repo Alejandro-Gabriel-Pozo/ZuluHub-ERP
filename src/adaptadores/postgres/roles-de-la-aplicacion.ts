@@ -24,11 +24,33 @@ const ROLES_DE_AUTENTICACION: readonly RolPorPreparar[] = [
   { rol: "zuluhub_captacion", variable: "ZULUHUB_DB_CAPTACION" },
 ];
 
-/** Exactamente estos roles y ningún otro: `zuluhub_grupo` y `zuluhub_plataforma` no se tocan nunca. */
-export function rolesPorPreparar(conAutenticacion: boolean): readonly RolPorPreparar[] {
-  return conAutenticacion
+/**
+ * El rol exclusivo de respaldo (`respaldo-y-recuperacion.md` §B.3): solo lectura y el único que salta el
+ * aislamiento. Su cadena NUNCA va a Vercel (la aplicación no puede tener una credencial que saltea la RLS): va al
+ * secreto del Environment `respaldo` de GitHub, con el host directo (`pg_dump` necesita una sesión propia).
+ */
+export const ROL_DE_RESPALDO: RolPorPreparar = {
+  rol: "zuluhub_respaldo",
+  variable: "ZULUHUB_DB_RESPALDO",
+};
+
+/**
+ * Exactamente estos roles y ningún otro: `zuluhub_grupo` y `zuluhub_plataforma` no se tocan nunca, y el de
+ * respaldo solo si se pide (`conRespaldo`), nunca por defecto.
+ */
+export function rolesPorPreparar(
+  conAutenticacion: boolean,
+  conRespaldo = false,
+): readonly RolPorPreparar[] {
+  const base = conAutenticacion
     ? [...ROLES_DE_LA_APLICACION, ...ROLES_DE_AUTENTICACION]
     : ROLES_DE_LA_APLICACION;
+  return conRespaldo ? [...base, ROL_DE_RESPALDO] : base;
+}
+
+/** ¿Es la variable del rol de respaldo? Su cadena se muestra aparte y nunca se carga en Vercel. */
+export function esVariableDeRespaldo(variable: string): boolean {
+  return variable === ROL_DE_RESPALDO.variable;
 }
 
 /** Los nombres de variable que todavía no existen en la aplicación. */
