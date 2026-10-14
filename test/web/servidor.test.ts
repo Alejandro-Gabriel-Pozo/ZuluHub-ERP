@@ -63,7 +63,7 @@ describe("apps/web/servidor/composicion.ts", () => {
         ([nombre]) => !/^(ZULUHUB_|DATABASE_|POSTGRES_|BETTER_AUTH_|AUTH_|GOOGLE_)/.test(nombre),
       ),
     );
-    process.env = entornoVacio;
+    process.env = entornoVacio as NodeJS.ProcessEnv;
     const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.resetModules();
     const { web } = await import("../../apps/web/servidor/composicion");

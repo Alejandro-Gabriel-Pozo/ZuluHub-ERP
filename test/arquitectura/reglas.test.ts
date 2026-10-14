@@ -386,6 +386,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "apps/web/servidor/ingreso.ts": importa("better-auth"),
       },
     },
+    {
+      regla: "error-de-next-sin-servidor",
+      archivos: {
+        "apps/web/app/s/app/error.tsx": importa("../../../servidor/composicion"),
+        "apps/web/servidor/composicion.ts": exporta,
+      },
+    },
   ];
 
   it("cada regla definida tiene su caso de violación", () => {
@@ -1098,13 +1105,31 @@ function archivosDeApps(raiz: string): string[] {
     .sort();
 }
 
+/**
+ * Next obliga a que el límite de errores se llame `error.tsx` / `global-error.tsx` y lleve la directiva:
+ * no puede terminar en `.cliente.tsx`. Se admite solo si es la directiva y UNA reexportación de un
+ * componente `.cliente` (sin lógica, sin importar nada más): la regla `error-de-next-sin-servidor` lo
+ * trata como cliente. Previene que la excepción se use para esconder un componente de cliente sin sufijo.
+ */
+const REEXPORTACION_DE_CLIENTE =
+  /^\s*"use client";\s*export \{ \w+ as default \} from "[^"]+\.cliente";\s*$/;
+function esErrorDeNextMinimo(f: string, contenido: string): boolean {
+  const tramos = f.split("/");
+  const nombre = tramos[tramos.length - 1];
+  const esDeNext = tramos[1] === "app" && (nombre === "error.tsx" || nombre === "global-error.tsx");
+  return esDeNext && REEXPORTACION_DE_CLIENTE.test(contenido);
+}
+
 function archivosDeClienteSinSufijo(raiz: string): string[] {
   return archivosDeApps(raiz)
-    .filter(
-      (f) =>
+    .filter((f) => {
+      const contenido = readFileSync(join(raiz, "apps", f), "utf8");
+      return (
         !f.endsWith(".cliente.tsx") &&
-        tieneDirectivaDeCliente(readFileSync(join(raiz, "apps", f), "utf8")),
-    )
+        !esErrorDeNextMinimo(f, contenido) &&
+        tieneDirectivaDeCliente(contenido)
+      );
+    })
     .map((f) => `apps/${f}`);
 }
 
@@ -1426,5 +1451,80 @@ describe("W3b: la librería de ingreso y la herramienta de datos", () => {
       "src/adaptadores/autenticacion/instancia.ts": exporta,
     });
     expect(v).toContain("adaptadores-solo-desde-composicion");
+  });
+});
+
+describe("R-W4b: el error.tsx de Next es cliente por obligación, pero mínimo", () => {
+  const arbol = (archivos: Record<string, string>): string => {
+    const base = mkdtempSync(join(tmpdir(), "zuluhub-conv-"));
+    directorios.push(base);
+    for (const [ruta, contenido] of Object.entries(archivos)) {
+      mkdirSync(dirname(join(base, ruta)), { recursive: true });
+      writeFileSync(join(base, ruta), contenido);
+    }
+    return base;
+  };
+  const MINIMO = '"use client";\n\nexport { Error as default } from "../../ui/Error.cliente";\n';
+
+  it("admite la directiva más una reexportación de un componente .cliente", () => {
+    const base = arbol({
+      "apps/web/app/error.tsx": MINIMO,
+      "apps/web/app/s/app/error.tsx": MINIMO,
+      "apps/web/app/global-error.tsx": MINIMO,
+    });
+    expect(archivosDeClienteSinSufijo(base)).toEqual([]);
+  });
+
+  it.each([
+    ["con lógica", '"use client";\nexport default function E() { return null; }\n'],
+    [
+      "que reexporta algo que no es .cliente",
+      '"use client";\nexport { E as default } from "../x";\n',
+    ],
+    ["con otra importación", `${MINIMO}import "../../servidor/composicion";\n`],
+    ["sin la directiva pero reexporta", 'export { E as default } from "../x.cliente";\n'],
+  ])("marca un error.tsx %s", (_nombre, contenido) => {
+    const base = arbol({ "apps/web/app/s/app/error.tsx": contenido });
+    expect(archivosDeClienteSinSufijo(base).length).toBe(
+      contenido.startsWith('"use client"') ? 1 : 0,
+    );
+  });
+
+  it("la excepción es solo para error.tsx / global-error.tsx dentro de app/", () => {
+    const base = arbol({
+      "apps/web/app/s/app/pagina.tsx": MINIMO,
+      "apps/web/ui/error.tsx": MINIMO,
+      "apps/web/app/s/app/otro-error.tsx": MINIMO,
+    });
+    expect(archivosDeClienteSinSufijo(base)).toEqual([
+      "apps/web/app/s/app/otro-error.tsx",
+      "apps/web/app/s/app/pagina.tsx",
+      "apps/web/ui/error.tsx",
+    ]);
+  });
+
+  it("el error.tsx real del repositorio cumple la forma mínima", () => {
+    for (const f of ["web/app/s/app/error.tsx", "web/app/s/landing/error.tsx"]) {
+      expect(esErrorDeNextMinimo(f, readFileSync(join("apps", f), "utf8")), f).toBe(true);
+    }
+  });
+
+  it("también el de la raíz de app/ y el global no pueden importar el servidor", async () => {
+    for (const ruta of ["apps/web/app/error.tsx", "apps/web/app/global-error.tsx"]) {
+      const v = await violacionesDe({
+        [ruta]: importa("../servidor/composicion"),
+        "apps/web/servidor/composicion.ts": exporta,
+      });
+      expect(v, ruta).toContain("error-de-next-sin-servidor");
+    }
+  });
+
+  it("un error.tsx puede importar ui y primitivas, pero no el servidor", async () => {
+    const v = await violacionesDe({
+      "src/primitivas/p.ts": exporta,
+      "apps/web/ui/patrones/e.cliente.tsx": importa("../../../../../src/primitivas/p"),
+      "apps/web/app/s/app/error.tsx": importa("../../../ui/patrones/e.cliente"),
+    });
+    expect(v).toEqual([]);
   });
 });

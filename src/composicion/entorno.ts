@@ -210,6 +210,21 @@ export function registrandoFallosDeEntorno<T>(
   }
 }
 
+/**
+ * Variable de SISTEMA que pone Vercel con el tipo de despliegue (`production`, `preview`, `development`).
+ * No la carga el dueño ni es un secreto, y ninguna pieza la exige: solo decide si se deja indexar algo
+ * (marca, metadatos y SEO §5.1). Vive acá porque este archivo es el único que mira el entorno (R-W1).
+ */
+export const VARIABLE_DE_TIPO_DE_DESPLIEGUE = "VERCEL_ENV";
+
+/**
+ * ¿Es el despliegue de producción? Solo si la variable vale exactamente `production`: ausente, vacía o
+ * con cualquier otro texto es «no», así que ante la duda nada se indexa (falla cerrado).
+ */
+export function esProduccion(fuente: FuenteDeEntorno): boolean {
+  return fuente[VARIABLE_DE_TIPO_DE_DESPLIEGUE] === "production";
+}
+
 /** La fuente real. Es lo único de este archivo que toca `process.env`; las pruebas pasan la suya. */
 export function entornoDelProceso(): FuenteDeEntorno {
   return process.env;

@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from "node:fs";
 import { ESLint } from "eslint";
 import { createRequire } from "node:module";
 import tseslint from "typescript-eslint";
@@ -401,3 +402,46 @@ describe("lint de la letra de la carta (D10)", () => {
     expect(mensajes).toContain("R-W10");
   });
 });
+
+/**
+ * Regla `sin-host-reenviado`. Previene: que un cliente falsifique la identidad del host (y con ella la
+ * marca) mandando el encabezado reenviado de host; la identidad es SOLO la cabecera `host`. Se busca la
+ * cadena (cualquier capitalización) en todo `apps/**` y `src/**`, como literal, clave o argumento. Solo
+ * quedan afuera las pruebas (`*.test.ts*`), que verifican justamente que NO se lee. Chequeo: el caso
+ * inyectado de acá. Agregarla después costaría una marca ajena en producción antes de enterarse.
+ */
+describe("sin-host-reenviado", () => {
+  const CADENA = /x-forwarded-host/i;
+  const esPrueba = (f: string) => /\.test\.tsx?$/.test(f);
+  function infractores(raiz: string, leer: (f: string) => string, archivos: string[]): string[] {
+    void raiz;
+    return archivos.filter((f) => !esPrueba(f) && CADENA.test(leer(f)));
+  }
+
+  it("detecta la cadena en cualquier forma, y no en las pruebas", () => {
+    const fuentes: Record<string, string> = {
+      "apps/web/a.ts": 'h.get("X-Forwarded-Host")',
+      "src/b.ts": "const x = { 'x-forwarded-host': 1 };",
+      "src/c.ts": "// X-FORWARDED-HOST",
+      "src/d.test.ts": '"x-forwarded-host"',
+      "apps/web/e.tsx": 'const ok = h.get("host");',
+    };
+    expect(infractores("", (f) => fuentes[f] as string, Object.keys(fuentes))).toEqual([
+      "apps/web/a.ts",
+      "src/b.ts",
+      "src/c.ts",
+    ]);
+  });
+
+  it("el repositorio real no la usa fuera de las pruebas", () => {
+    const archivos = [...glob("apps"), ...glob("src")];
+    expect(archivos.length).toBeGreaterThan(100);
+    expect(infractores("", (f) => readFileSync(f, "utf8"), archivos)).toEqual([]);
+  });
+});
+
+function glob(dir: string): string[] {
+  return readdirSync(dir, { recursive: true, encoding: "utf8" })
+    .filter((f) => /\.tsx?$/.test(f) && !/(^|[\\/])(node_modules|\.next)[\\/]/.test(f))
+    .map((f) => `${dir}/${f}`.replaceAll("\\", "/"));
+}
