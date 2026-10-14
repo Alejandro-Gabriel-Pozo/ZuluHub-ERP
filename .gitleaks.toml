@@ -18,3 +18,29 @@ regexes = [
   '''^Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MGFiY2RlZmdoaWo$''',
   '''^foobarbazqux1234567890abcdefghij$''',
 ]
+
+# Valores inventados de las pruebas de saneamiento del adaptador de ARCA (F8): comprueban que un texto con
+# <token>, <sign> o un bloque PEM sale tapado. Solo en este archivo y solo estos valores (el PEM de juguete es
+# la prueba misma: «MIIEvQ» + el texto inventado, no una clave).
+[[allowlists]]
+description = "Valores de juguete de las pruebas de saneamiento de ARCA"
+condition = "AND"
+paths = [
+  '''^src/adaptadores/arca/saneamiento\.test\.ts$''',
+]
+regexes = [
+  '''^SECRETO-0123456789$''',
+  '''(?s)^-----BEGIN PRIVATE KEY-----.*$''',
+]
+
+# La palabra secreta inventada de la prueba por propiedades de «un error inesperado no filtra su detalle»
+# (ADR-016). Solo este archivo y solo este valor.
+[[allowlists]]
+description = "Palabra secreta de juguete de la prueba de respuestas públicas"
+condition = "AND"
+paths = [
+  '''^src/capacidades/experiencia/respuesta\.propiedades\.test\.ts$''',
+]
+regexes = [
+  '''^SECRETO-ZH-9f3a$''',
+]
