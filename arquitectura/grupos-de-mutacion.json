@@ -202,5 +202,15 @@
     "grupo": "secreto",
     "archivos": "src/primitivas/secreto/**/*.ts",
     "pruebas": "src/primitivas/secreto"
+  },
+  {
+    "grupo": "arca (XML, lectura y clasificación)",
+    "archivos": "src/adaptadores/arca/xml.ts,src/adaptadores/arca/saneamiento.ts,src/adaptadores/arca/errores-de-arca.ts,src/adaptadores/arca/pedidos-de-wsaa.ts,src/adaptadores/arca/pedidos-de-wsfe.ts,src/adaptadores/arca/leer-respuestas.ts,src/adaptadores/arca/clasificar.ts,src/adaptadores/arca/constantes.ts",
+    "pruebas": "src/adaptadores/arca/xml.test.ts src/adaptadores/arca/saneamiento.test.ts src/adaptadores/arca/errores-de-arca.test.ts src/adaptadores/arca/pedidos.test.ts src/adaptadores/arca/leer-respuestas.test.ts src/adaptadores/arca/clasificar.test.ts src/adaptadores/arca/constantes.test.ts"
+  },
+  {
+    "grupo": "arca (códigos y traducción)",
+    "archivos": "src/adaptadores/arca/codigos.ts,src/adaptadores/arca/traducir.ts",
+    "pruebas": "src/adaptadores/arca/codigos.test.ts src/adaptadores/arca/traducir.test.ts"
   }
 ]

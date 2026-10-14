@@ -51,6 +51,7 @@
   },
   "dependencies": {
     "asn1js": "3.0.10",
+    "fast-xml-parser": "5.11.2",
     "kysely": "^0.29.6",
     "pg": "^8.23.1",
     "pkijs": "3.4.1",
