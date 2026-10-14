@@ -53,6 +53,7 @@ describe("el catálogo comercial de módulos", () => {
           "comprobantes.reintentar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "series.resincronizar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "puntos_de_venta.cambiar_ambiente": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "certificados.gestionar": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
       catalogo: {
@@ -148,8 +149,8 @@ describe("el catálogo comercial de módulos", () => {
       Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
     expect([cuantas("catalogo"), cuantas("carta"), cuantas("stock")]).toEqual([20, 9, 19]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
-    // 18 de administración, 8 de facturación (2 de H7 y 6 de F5) y 48 de catálogo, carta y stock.
-    expect(todas).toHaveLength(18 + 8 + 48);
+    // 18 de administración, 9 de facturación (2 de H7, 6 de F5 y 1 de F7) y 48 de catálogo, carta y stock.
+    expect(todas).toHaveLength(18 + 9 + 48);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -235,6 +236,7 @@ const EFECTOS_DE_EMPRESA = {
     "categorias.crear",
     "categorias.editar",
     "categorias.reactivar",
+    "certificados.gestionar",
     "combos.editar_contenido",
     "comprobantes.emitir_manual",
     "conteos.abrir",

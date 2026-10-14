@@ -13,7 +13,10 @@ import type { PuntoDeVentaParaEmision } from "./emision-electronica";
  * lectura dejan ver siempre la empresa del contexto y su tenant: que falte es una configuración
  * rota, no un error de negocio.
  */
-export async function empresaOpera(tx: TxDeNumeracion, id: EmpresaId) {
+export async function empresaOpera(
+  tx: Pick<TxDeNumeracion, "empresas" | "tenants">,
+  id: EmpresaId,
+) {
   const empresa = await tx.empresas.obtener(id);
   if (empresa === null) throw new Error(`la empresa ${id} no es visible para el contexto`);
   const tenant = await tx.tenants.obtener(empresa.tenantId);

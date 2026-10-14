@@ -41,6 +41,7 @@
     "src/composicion/contextos.ts",
     "src/plataforma/captacion/dominio/**/*.ts",
     "src/modulos/fiscal/consultas/criterios-de-listado.ts",
+    "src/primitivas/secreto/**/*.ts",
     "!src/**/*.test.ts"
   ],
   "coverageAnalysis": "off",

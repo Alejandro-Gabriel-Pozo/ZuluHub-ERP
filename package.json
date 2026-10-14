@@ -50,8 +50,10 @@
     "vitest-browser-react": "2.3.0"
   },
   "dependencies": {
+    "asn1js": "3.0.10",
     "kysely": "^0.29.6",
     "pg": "^8.23.1",
+    "pkijs": "3.4.1",
     "zod": "4.6.5"
   },
   "overrides": {

@@ -396,3 +396,41 @@ export {
   type ResultadoPorComprobante,
   type SalidaDeReconciliarComprobantes,
 } from "./casos-de-uso/reconciliar-comprobantes";
+
+// H7 facturación F7: certificados de ARCA. Generar el pedido (la clave privada se genera y se guarda CIFRADA dentro
+// del servidor: nunca sale ni se muestra) y cargar el certificado que devolvió ARCA (validado contra la clave, el
+// CUIT del emisor, la cadena y el vencimiento), con el guard primero. La composición los arma con
+// `crearCasosDeUsoDeCertificados`. `dondeSeGuardaLaClave` y `dondeSeGuardaLaCredencial` dicen a qué fila y columna
+// se ata cada texto cifrado (lo piden quien cifra y quien descifra, para que no diverjan).
+export { DECLARACIONES_DE_CERTIFICADOS } from "./casos-de-uso/declaraciones-de-certificados";
+export {
+  crearCasosDeUsoDeCertificados,
+  type CasosDeUsoDeCertificados,
+} from "./casos-de-uso/casos-de-uso-de-certificados";
+export type {
+  DependenciasDeCertificados,
+  TxDeCertificados,
+} from "./casos-de-uso/contrato-de-certificados";
+export type {
+  EntradaDeGenerarPedido,
+  ErrorAlGenerarPedido,
+  SalidaDeGenerarPedido,
+} from "./casos-de-uso/generar-pedido-de-certificado";
+export type {
+  EntradaDeCargarCertificado,
+  ErrorAlCargarCertificadoDeUso,
+  SalidaDeCargarCertificado,
+} from "./casos-de-uso/cargar-certificado";
+export {
+  dondeSeGuardaLaClave,
+  dondeSeGuardaLaCredencial,
+} from "./persistencia/repositorio-de-certificados";
+export {
+  DIAS_DE_AVISO_POR_DEFECTO,
+  certificadosPorVencer,
+  type AvisoDeVencimiento,
+  type CertificadoParaAvisar,
+} from "./dominio/vencimiento-de-certificados";
+// El contexto de un trabajo de sistema (operativo, de una empresa, SIN persona): lo arma quien corre fuera de un
+// pedido (la cola, o el adaptador de ARCA al pedir las credenciales de un emisor).
+export { contextoDeSistema } from "./casos-de-uso/contrato-de-facturacion";
