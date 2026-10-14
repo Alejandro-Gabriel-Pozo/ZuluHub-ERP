@@ -13,6 +13,16 @@ export const GOOGLE_CLIENT_SECRET = "GOOGLE_CLIENT_SECRET";
 /** El secreto firma las cookies y cifra los tokens guardados: uno corto se adivina. */
 export const LARGO_MINIMO_DEL_SECRETO = 32;
 
+/**
+ * Además del largo, la variedad (M3): un secreto de 32 caracteres que repite uno o dos (`aaaa…`, `abab…`)
+ * mide 32 pero se adivina en minutos. El criterio es simple y puro: cuántos caracteres DISTINTOS tiene. Diez
+ * dejan pasar cualquier secreto sorteado (un hexadecimal de 32 caracteres tiene casi siempre 13 o más) y
+ * rechazan lo repetido a mano. No pretende medir la entropía real: es un piso contra el descuido.
+ */
+export const CARACTERES_DISTINTOS_MINIMOS = 10;
+
+export const caracteresDistintos = (texto: string): number => new Set(texto).size;
+
 /** El secreto de Better Auth de la aplicación de empresa (la consola, después, usará otro). */
 export function leerSecretoDeAutenticacion(valor: string | undefined): string {
   const texto = valor?.trim() ?? "";
@@ -22,6 +32,11 @@ export function leerSecretoDeAutenticacion(valor: string | undefined): string {
   if (texto.length < LARGO_MINIMO_DEL_SECRETO) {
     throw new ErrorDeConfiguracion(
       `${ZULUHUB_AUTH_SECRETO_EMPRESA} inválido: necesita al menos ${LARGO_MINIMO_DEL_SECRETO} caracteres`,
+    );
+  }
+  if (caracteresDistintos(texto) < CARACTERES_DISTINTOS_MINIMOS) {
+    throw new ErrorDeConfiguracion(
+      `${ZULUHUB_AUTH_SECRETO_EMPRESA} inválido: necesita al menos ${CARACTERES_DISTINTOS_MINIMOS} caracteres distintos`,
     );
   }
   return texto;

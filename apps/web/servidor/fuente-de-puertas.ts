@@ -1,31 +1,21 @@
 import "server-only";
 
-import type {
-  ConsultaDeHost,
-  LecturaDeMarca,
-} from "../../../src/capacidades/experiencia/resolutor";
-import { ok } from "../../../src/primitivas/resultado/resultado";
+import {
+  armarFuenteDePuertas,
+  type FuenteDePuertas,
+} from "../../../src/capacidades/experiencia/fuente-de-puertas";
+import { web } from "./composicion";
 
 /**
- * De dónde sale la resolución de un host y la marca que lo atiende. ES EL ÚNICO LUGAR QUE HAY QUE
- * CAMBIAR PARA ENCHUFAR EL PUERTO REAL, y hoy NO está enchufado: todo host es desconocido, así que la
- * producción responde la página neutra en cada host (falla cerrado) hasta que se cumplan las dos cosas
- * que faltan:
- *  1. el rol `zuluhub_publico` con LOGIN y su cadena (`ZULUHUB_DB_PUBLICO`, ya declarada en
- *     `src/composicion/entorno.ts`) cargada por el dueño en Vercel;
- *  2. una lectura pública de la marca (`nombre`, tema resuelto con herencia y host canónico de la app
- *     de la versión vigente) que `modulos/marcas` todavía no ofrece: M4 resuelve el host y la marca, no
- *     su configuración.
- * Entonces: `consultarHost = (h, s) => web.resolucionDeHost().porHost(h, s)` (con `web` de
- * `./composicion`) y `leerMarca = (id) => <esa lectura>`. Las pruebas reemplazan este módulo por un falso
- * con dos marcas sembradas (`test/utilidades/puertas-falsas.ts`).
+ * De dónde sale la resolución de un host y la marca que lo atiende: la puerta pública REAL (rol
+ * `zuluhub_publico`, `ZULUHUB_DB_PUBLICO`), enchufada acá y en ningún otro lugar. No lee ninguna variable:
+ * `web.resolucionDeHost()` y `web.configuracionPublicaDeHost()` la validan la primera vez que se usan, y si
+ * falta, el pedido falla cerrado (la puerta responde la neutra 503; el NOMBRE de la variable solo va al
+ * registro, desde la composición). Mientras el dueño no cargue la cadena, producción muestra la neutra. La
+ * lógica (y sus pruebas) está en `src/capacidades/experiencia/fuente-de-puertas.ts`; las pruebas de la web
+ * reemplazan este módulo por un falso (`test/utilidades/puertas-falsas.ts`) o lo arman con la base real.
  */
-export type FuenteDePuertas = Readonly<{
-  consultarHost: ConsultaDeHost;
-  leerMarca: LecturaDeMarca;
-}>;
-
-export const fuenteDePuertas: FuenteDePuertas = {
-  consultarHost: () => Promise.resolve(ok(null)),
-  leerMarca: () => Promise.resolve(null),
-};
+export const fuenteDePuertas: FuenteDePuertas = armarFuenteDePuertas({
+  resolucion: () => web.resolucionDeHost(),
+  configuracion: () => web.configuracionPublicaDeHost(),
+});

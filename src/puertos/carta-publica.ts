@@ -2,10 +2,12 @@ import type { LetraBase } from "../capacidades/experiencia/carta/letra";
 import type { ProductoParaPrecios } from "../capacidades/experiencia/carta/precios";
 
 /**
- * Puerto `CartaPublica` (experiencia de la carta, C-2): la lectura PÚBLICA de una carta por su código.
- * Es de solo lectura y sin sesión: el comensal no define nada ([01] §5). Devuelve `null` si el código no
- * existe o la carta no está disponible, sin distinguir los dos casos (la respuesta neutra no es un
- * oráculo, [CAT] §B.4 bis).
+ * Puerto `CartaPublica` (experiencia de la carta, C-2): la lectura PÚBLICA de una carta por su código
+ * DENTRO DE UNA MARCA. Es de solo lectura y sin sesión: el comensal no define nada ([01] §5). La marca es la
+ * de la puerta resuelta para el host del pedido (S2): el código solo no alcanza, porque un mismo código leído
+ * desde el dominio de otra marca devolvería la carta ajena. Devuelve `null` si el código no existe en esa
+ * marca o la carta no está disponible, sin distinguir los casos (la respuesta neutra no es un oráculo,
+ * [CAT] §B.4 bis).
  *
  * En C-2 solo existe el modelo Lista (§4.5): el modelo elegido y las perillas de plan entran al puerto con
  * la Cuadrícula (C-5), que es quien las necesita para `modeloEfectivo`.
@@ -60,5 +62,5 @@ export type CartaPublicada = Readonly<{
 }>;
 
 export interface CartaPublica {
-  porCodigo(codigo: string): Promise<CartaPublicada | null>;
+  porCodigo(marcaId: string, codigo: string): Promise<CartaPublicada | null>;
 }

@@ -10,7 +10,13 @@ import {
 } from "./cabeceras";
 
 const NONCE = nonceDe(new Uint8Array(16).fill(1));
-const SUPERFICIES: readonly SuperficieDeRespuesta[] = ["APP", "LANDING", "CARTA", "NEUTRA"];
+const SUPERFICIES: readonly SuperficieDeRespuesta[] = [
+  "APP",
+  "LANDING",
+  "CARTA",
+  "NEUTRA",
+  "SISTEMA",
+];
 
 describe("nonceDe", () => {
   it("es el base64 de los bytes", () => {
@@ -120,7 +126,9 @@ describe("cabecerasDe", () => {
   it.each(SUPERFICIES)("%s: las cabeceras de seguridad, con sus valores exactos", (s) => {
     const c = cabecerasDe(s, NONCE, { produccion: true });
     expect(c["Content-Security-Policy"]).toBe(politicaDeContenido(NONCE));
-    expect(c["Strict-Transport-Security"]).toBe("max-age=31536000; includeSubDomains");
+    expect(c["Strict-Transport-Security"]).toBe("max-age=31536000");
+    // Los hosts son dominios de clientes: sus subdominios no son nuestros.
+    expect(c["Strict-Transport-Security"]).not.toMatch(/includeSubDomains|preload/i);
     expect(c["X-Content-Type-Options"]).toBe("nosniff");
     expect(c["Referrer-Policy"]).toBe("same-origin");
     expect(c["Permissions-Policy"]).toBe("camera=(), microphone=(), geolocation=()");

@@ -26,6 +26,8 @@ const EVENTOS_DE_USO = ["pointerdown", "keydown", "touchstart"] as const;
 export function useActividad({ calcularEstado, revisarCadaMs }: OpcionesDeActividad): Readonly<{
   estado: EstadoDeSesion;
   registrarActividad: () => void;
+  /** El servidor dijo que la sesión ya no vale (401): vence ahora, sin esperar al reloj de la pestaña. */
+  marcarVencida: () => void;
 }> {
   const [estado, setEstado] = useState<EstadoDeSesion>("activa");
   const estadoActual = useRef<EstadoDeSesion>("activa");
@@ -41,6 +43,11 @@ export function useActividad({ calcularEstado, revisarCadaMs }: OpcionesDeActivi
     if (estadoActual.current === "vencida") return;
     estadoActual.current = calcular.current(Date.now() - ultimoUso.current);
     setEstado(estadoActual.current);
+  }, []);
+
+  const marcarVencida = useCallback(() => {
+    estadoActual.current = "vencida";
+    setEstado("vencida");
   }, []);
 
   const registrarActividad = useCallback(() => {
@@ -66,5 +73,5 @@ export function useActividad({ calcularEstado, revisarCadaMs }: OpcionesDeActivi
     };
   }, [revisar, revisarCadaMs]);
 
-  return { estado, registrarActividad };
+  return { estado, registrarActividad, marcarVencida };
 }

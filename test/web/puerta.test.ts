@@ -107,15 +107,9 @@ describe("armarResolverDePuerta", () => {
   });
 });
 
-describe("la fuente por defecto (puerto real sin enchufar)", () => {
-  it("todo host es desconocido, aun uno que existe en las pruebas: la producción muestra la neutra", async () => {
-    vi.resetModules();
-    const { resolverPuerta } = await import("../../apps/web/servidor/puerta");
-    for (const host of [HOST_APP_A, HOST_LANDING_A, "zuluhub.com.ar", "app.zuluhub.com.ar", ""]) {
-      expect(await resolverPuerta(host), host).toEqual({ tipo: "DESCONOCIDO" });
-    }
-  });
-
+// La fuente real (sin falso) y su falla cerrado sin variables: `test/web/fuente-real.test.ts` y
+// `test/integracion/puerta-real.test.ts`.
+describe("la puerta del servidor", () => {
   it("despliegueEsProduccion lee VERCEL_ENV por la composición", async () => {
     const { despliegueEsProduccion } = await import("../../apps/web/servidor/puerta");
     vi.stubEnv("VERCEL_ENV", "production");

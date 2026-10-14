@@ -241,3 +241,72 @@ describe("atenderRutaDeIngreso: ningún fallo sale con detalle (ADR-016)", () =>
     expect(referencias.size).toBeGreaterThan(1);
   });
 });
+
+describe("atenderRutaDeIngreso: S1, el ingreso social solo acepta provider y callbackURL", () => {
+  const aplicacion = () =>
+    armar({
+      resolucion: () => Promise.resolve(ok(resuelto("app.marca-a.test"))),
+      manejar: async (p) => new Response(await p.text(), { status: 200 }),
+    });
+  const social = (cuerpo: string, metodo = "POST", ruta = "/api/auth/sign-in/social") =>
+    new Request(`https://interno.test${ruta}`, {
+      method: metodo,
+      headers: { host: "app.marca-a.test", "content-type": "application/json" },
+      ...(metodo === "GET" ? {} : { body: cuerpo }),
+    });
+  const VALIDO = JSON.stringify({ provider: "google", callbackURL: "/inicio" });
+
+  it("un idToken mandado directo: 400 sin tocar la autenticación, sin cookies y sin eco del cuerpo", async () => {
+    const { dependencias, atendidos } = aplicacion();
+    const ataque = JSON.stringify({
+      provider: "google",
+      idToken: { token: "TOKEN-AJENO", nonce: "n" },
+    });
+    const r = await atenderRutaDeIngreso(social(ataque), dependencias);
+    expect(r.status).toBe(400);
+    expect(r.headers.get("content-type")).toBe("application/json");
+    expect(r.headers.get("cache-control")).toBe("private, no-store");
+    expect(r.headers.get("x-robots-tag")).toBe("noindex");
+    expect(r.headers.getSetCookie()).toEqual([]);
+    const cuerpo = await r.text();
+    expect(JSON.parse(cuerpo)).toEqual({ codigo: "SOLICITUD_INVALIDA" });
+    expect(cuerpo).not.toContain("TOKEN-AJENO");
+    expect(atendidos).toEqual([]);
+  });
+
+  it("un accessToken, o un cuerpo que no es JSON, también se rechazan", async () => {
+    const { dependencias, atendidos } = aplicacion();
+    for (const cuerpo of [
+      JSON.stringify({ provider: "google", accessToken: { accessToken: "x" } }),
+      "no es json",
+      "",
+    ]) {
+      const r = await atenderRutaDeIngreso(social(cuerpo), dependencias);
+      expect(r.status, cuerpo).toBe(400);
+    }
+    expect(atendidos).toEqual([]);
+  });
+
+  it("el pedido válido pasa y la librería todavía puede leer su cuerpo", async () => {
+    const { dependencias, atendidos } = aplicacion();
+    const r = await atenderRutaDeIngreso(social(VALIDO), dependencias);
+    expect(r.status).toBe(200);
+    expect(await r.text()).toBe(VALIDO);
+    expect(atendidos).toHaveLength(1);
+  });
+
+  it("solo mira el ingreso social: otro POST o un GET con otro cuerpo siguen su camino", async () => {
+    const { dependencias, atendidos } = aplicacion();
+    const raro = JSON.stringify({ idToken: "x" });
+    await atenderRutaDeIngreso(social(raro, "POST", "/api/auth/sign-out"), dependencias);
+    await atenderRutaDeIngreso(social(raro, "GET"), dependencias);
+    await atenderRutaDeIngreso(social(raro, "POST", "/api/auth/sign-in/social/otra"), dependencias);
+    expect(atendidos).toHaveLength(3);
+  });
+
+  it("en un host que no es de aplicación sigue siendo el 404 neutro, no el 400", async () => {
+    const { dependencias } = armar({ resolucion: () => Promise.resolve(ok(null)) });
+    const r = await atenderRutaDeIngreso(social("{}"), dependencias);
+    expect(r.status).toBe(404);
+  });
+});

@@ -63,7 +63,8 @@
   --tipo-familia-cuerpo:
     system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --tipo-familia-titulos: var(--tipo-familia-cuerpo);
-  --tipo-tamano-chico: 0.875rem;
+  /* D4/D10 (decisión del dueño): nada de letra por debajo de 16 px. «Chico» sigue siendo un nombre de la escala, pero vale lo mismo que la base. */
+  --tipo-tamano-chico: 1rem;
   --tipo-tamano-base: 1rem;
   --tipo-tamano-medio: 1.125rem;
   --tipo-tamano-grande: 1.375rem;

@@ -3,5 +3,6 @@
   "regions": ["gru1"],
   "git": {
     "deploymentEnabled": false
-  }
+  },
+  "crons": [{ "path": "/api/trabajos/cron", "schedule": "17 6 * * *" }]
 }

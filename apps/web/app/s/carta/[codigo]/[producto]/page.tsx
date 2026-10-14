@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ContenedorDeLetra } from "../../../../../ui/plantillas/carta/ContenedorDeLetra.cliente";
 import { PaginaDeProducto } from "../../../../../ui/plantillas/carta/PaginaDeProducto";
 import { productoParaLaPantalla } from "../../../../../servidor/carta";
+import { exigirPuerta } from "../../../../../servidor/pedido";
 
 type Props = Readonly<{ params: Promise<{ codigo: string; producto: string }> }>;
 
@@ -10,7 +11,9 @@ type Props = Readonly<{ params: Promise<{ codigo: string; producto: string }> }>
 // La descripción y la imagen social las trae C-3 con `metadatosDePagina`; acá no se inventa ninguna.
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { codigo, producto } = await params;
-  const datos = await productoParaLaPantalla(codigo, producto);
+  // S2: la carta se busca en la marca de ESTE host; en un host que no es de carta, la neutra.
+  const puerta = await exigirPuerta("CARTA");
+  const datos = await productoParaLaPantalla(puerta.marcaId, codigo, producto);
   return datos === null
     ? { robots: { index: false, follow: false } }
     : {
@@ -21,7 +24,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PaginaDelProducto({ params }: Props) {
   const { codigo, producto } = await params;
-  const datos = await productoParaLaPantalla(codigo, producto);
+  const puerta = await exigirPuerta("CARTA");
+  const datos = await productoParaLaPantalla(puerta.marcaId, codigo, producto);
   if (datos === null) notFound();
   const { vista, textos } = datos;
   return (

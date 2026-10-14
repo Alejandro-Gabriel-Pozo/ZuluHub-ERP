@@ -1,0 +1,27 @@
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pendiente {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  text-decoration: none;
+}
+
+/* D4: lo que se decide mirando va a 18 px o más. */
+.titulo {
+  font-size: var(--tipo-tamano-medio);
+  font-weight: var(--tipo-peso-fuerte);
+}

@@ -1,7 +1,9 @@
 import type { BetterAuthOptions } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import {
+  ENCABEZADO_DE_IP,
   PREFIJO_DE_COOKIE,
+  PREFIJO_DE_NAVEGADOR,
   RUTA_BASE_DE_INGRESO,
   type ConfiguracionDeHost,
 } from "../../capacidades/autenticacion/host-de-autenticacion";
@@ -34,6 +36,8 @@ export type ParametrosDeInstancia = Readonly<{
   google: Readonly<{ clientId: string; clientSecret: string }>;
   limites: LimitesDeSesion;
   reloj: () => Date;
+  /** Encabezado del que sale la IP del cliente para el límite de intentos; por omisión `ENCABEZADO_DE_IP` (S3). */
+  encabezadoDeIp?: string;
   /** A dónde vuelve la persona si el ingreso falla (`?error=<código>`): la pantalla de ingreso (W5). */
   rutaDeError: string;
   /** Registro del servidor: lo que la librería cuenta de un fallo. Nunca sale en una respuesta. */
@@ -79,6 +83,9 @@ export function opcionesDeInstancia(p: ParametrosDeInstancia): BetterAuthOptions
         prompt: "select_account",
         // Cada ingreso refresca el email y el estado verificado (si no, el email del usuario queda viejo).
         overrideUserInfoOnSignIn: true,
+        // S1: sin ingreso con un `idToken` mandado por el cliente. El único camino es la pantalla de Google y
+        // el retorno con su estado: con el atajo, un token ajeno abriría sesión sin pasar por ninguno de los dos.
+        disableIdTokenSignIn: true,
       },
     },
     account: {
@@ -101,10 +108,16 @@ export function opcionesDeInstancia(p: ParametrosDeInstancia): BetterAuthOptions
       additionalFields: { host: { type: "string", required: true, input: false } },
     },
     advanced: {
-      cookiePrefix: PREFIJO_DE_COOKIE,
-      // https siempre: prefijo `__Secure-` y atributo `Secure`. Sin `crossSubDomainCookies`: sin `Domain`.
-      useSecureCookies: true,
+      // M1: `__Host-zh_emp.<cookie>`. La librería solo antepone `__Secure-` por su cuenta, así que se apaga
+      // eso (`useSecureCookies: false`) y el prefijo `__Host-` va en el nombre; el atributo `Secure` no depende
+      // de esa opción y lo fija `defaultCookieAttributes` (una prueba lo comprueba). Sin `crossSubDomainCookies`: sin `Domain`.
+      cookiePrefix: `${PREFIJO_DE_NAVEGADOR}${PREFIJO_DE_COOKIE}`,
+      useSecureCookies: false,
       defaultCookieAttributes: { httpOnly: true, sameSite: "lax", secure: true, path: "/" },
+      // S3: la IP del límite de intentos sale de UN encabezado de confianza, nunca de `x-forwarded-for` (que
+      // un cliente puede falsear para repartir los intentos en infinitas «IP»). `disableIpTracking` queda
+      // apagado: sin IP el límite cae a un balde compartido, que es más estricto y no se puede esquivar.
+      ipAddress: { ipAddressHeaders: [p.encabezadoDeIp ?? ENCABEZADO_DE_IP] },
       database: { generateId: "uuid" },
       // Comprobación de origen y de CSRF SIEMPRE encendidas: por omisión la librería las apaga cuando
       // `NODE_ENV` vale `test`, y un servidor que arranque con otro valor no debe cambiar la defensa.

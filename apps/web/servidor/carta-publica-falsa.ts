@@ -76,9 +76,34 @@ function comoCartaPublicada(carta: CartaDeEjemplo): CartaPublicada {
   };
 }
 
-export const cartaPublicaFalsa: CartaPublica = {
-  porCodigo(codigo) {
-    const carta = CARTAS_DE_EJEMPLO.find((c) => c.codigo === codigo);
-    return Promise.resolve(carta === undefined ? null : comoCartaPublicada(carta));
-  },
-};
+/**
+ * De qué marca es cada carta de ejemplo (S2). Ids INVENTADOS, de forma de UUID: ninguna marca real los tiene,
+ * así que mientras este falso esté puesto la carta no sale en ningún dominio real (falla cerrado). Las
+ * pruebas arman el suyo con `crearCartaPublicaFalsa` y las marcas que necesiten.
+ */
+const MARCA_DE_EJEMPLO_DE_LA_CAFETERIA = "00000e01-0000-4000-8000-000000000001";
+const MARCA_DE_EJEMPLO_DE_LA_PANADERIA = "00000e01-0000-4000-8000-000000000002";
+
+type MarcaPorCodigo = Readonly<Record<string, string>>;
+
+/** El falso: una carta de ejemplo solo se devuelve a la marca a la que se la asocia; a cualquier otra, `null`. */
+export function crearCartaPublicaFalsa(marcaPorCodigo: MarcaPorCodigo): CartaPublica {
+  return {
+    porCodigo(marcaId, codigo) {
+      const carta = CARTAS_DE_EJEMPLO.find((c) => c.codigo === codigo);
+      const duenia = carta === undefined ? undefined : marcaPorCodigo[carta.codigo];
+      return Promise.resolve(
+        carta === undefined || duenia === undefined || duenia !== marcaId
+          ? null
+          : comoCartaPublicada(carta),
+      );
+    },
+  };
+}
+
+export const cartaPublicaFalsa: CartaPublica = crearCartaPublicaFalsa({
+  "ejemplo-cafeteria": MARCA_DE_EJEMPLO_DE_LA_CAFETERIA,
+  "ejemplo-hosteria": MARCA_DE_EJEMPLO_DE_LA_CAFETERIA,
+  "ejemplo-panaderia": MARCA_DE_EJEMPLO_DE_LA_PANADERIA,
+  "ejemplo-barberia": MARCA_DE_EJEMPLO_DE_LA_PANADERIA,
+});
