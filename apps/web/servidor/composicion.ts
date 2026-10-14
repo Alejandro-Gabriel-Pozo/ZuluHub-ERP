@@ -1,6 +1,8 @@
 import "server-only";
 
 import { armarConexiones } from "../../../src/composicion/conexiones";
+import { armarSistema } from "../../../src/composicion/sistema";
+import { armarTrabajos } from "../../../src/composicion/trabajos";
 import { armarWeb } from "../../../src/composicion/web";
 
 /**
@@ -25,3 +27,23 @@ const conexiones = armarConexiones({
 
 /** Casos de uso y consultas de la web. Cada grupo se arma al pedirlo: `web.consultasDeEmpresas()`. */
 export const web = armarWeb(conexiones);
+
+/**
+ * La cola de trabajos (ADR-007): `trabajos.procesador()` lo usan el cron y el despacho inmediato. Un problema
+ * que el procesador no pudo guardar en la cola va al registro del servidor, con el id del trabajo y un texto
+ * ya filtrado de secretos (nunca datos del trabajo).
+ */
+export const trabajos = armarTrabajos(conexiones, {
+  alRegistrarProblema: (problema) => {
+    console.error(
+      `[trabajos] fase=${problema.fase} trabajo=${problema.trabajoId ?? "-"} ${problema.mensaje}`,
+    );
+  },
+});
+
+/** La guarda de migración, la salud y el secreto del cron (W6). */
+export const sistema = armarSistema(conexiones, {
+  registrar: (detalle) => {
+    console.error(detalle);
+  },
+});

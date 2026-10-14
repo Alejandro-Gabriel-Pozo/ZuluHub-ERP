@@ -1,6 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { nonceDe } from "../../src/capacidades/experiencia/cabeceras";
-import { decidirPuerta, hostDelPedido } from "../../src/capacidades/experiencia/puerta";
+import { respuestaDeMantenimiento } from "../../src/capacidades/experiencia/mantenimiento";
+import {
+  HOST_DESCONOCIDO,
+  decidirPuerta,
+  esRutaDeSistema,
+  hostDelPedido,
+} from "../../src/capacidades/experiencia/puerta";
+import { referenciaDeError } from "../../src/plataforma/dominio/referencia";
+import { baseAlDia } from "./servidor/guarda";
 import { despliegueEsProduccion, resolverPuerta } from "./servidor/puerta";
 
 /**
@@ -10,14 +18,36 @@ import { despliegueEsProduccion, resolverPuerta } from "./servidor/puerta";
  * nuevo por pedido y si el despliegue es el de producción.
  *
  * Esta es una barrera, no la única: cada página, acción y ruta vuelve a resolver el host por su cuenta.
+ *
+ * Dos cosas más, ambas de la puesta en marcha (W6):
+ *  - Las rutas de sistema (`/api/trabajos/cron` y `/api/salud`, lista cerrada) siguen su camino en cualquier
+ *    host SIN resolver la marca: no consultan la base de marcas ni dependen de ella, y cada una se autoriza o
+ *    se limita por su cuenta.
+ *  - La guarda de migración: con cualquier otra ruta, si la base no tiene la migración que el código necesita,
+ *    la respuesta es «En mantenimiento» (503 con referencia) antes de tocar nada más. Las de sistema quedan
+ *    afuera a propósito: la salud tiene que poder decir «no ok» y el cron no depende de las páginas.
  */
 export async function proxy(pedido: NextRequest): Promise<NextResponse> {
+  const ruta = pedido.nextUrl.pathname;
+  const nonce = nonceDe(crypto.getRandomValues(new Uint8Array(16)));
+  const produccion = despliegueEsProduccion();
+  const deSistema = esRutaDeSistema(ruta);
+  if (!deSistema && !(await baseAlDia())) {
+    // La referencia de la pantalla queda en el registro, junto al motivo que dejó la guarda: así soporte la busca.
+    const referencia = referenciaDeError(crypto.getRandomValues(new Uint8Array(4)));
+    console.error(`${referencia} [mantenimiento] pedido atendido sin la migración requerida`);
+    const mantenimiento = respuestaDeMantenimiento({ referencia, nonce, produccion });
+    return new NextResponse(mantenimiento.cuerpo, {
+      status: mantenimiento.estado,
+      headers: mantenimiento.encabezados,
+    });
+  }
   const decision = decidirPuerta({
     encabezados: pedido.headers,
-    ruta: pedido.nextUrl.pathname,
-    resolucion: await resolverPuerta(hostDelPedido(pedido.headers)),
-    produccion: despliegueEsProduccion(),
-    nonce: nonceDe(crypto.getRandomValues(new Uint8Array(16))),
+    ruta,
+    resolucion: deSistema ? HOST_DESCONOCIDO : await resolverPuerta(hostDelPedido(pedido.headers)),
+    produccion,
+    nonce,
   });
   const opciones = { request: { headers: decision.encabezadosDePedido } };
   let respuesta: NextResponse;

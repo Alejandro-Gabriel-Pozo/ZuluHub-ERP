@@ -10,7 +10,13 @@ import {
 } from "./cabeceras";
 
 const NONCE = nonceDe(new Uint8Array(16).fill(1));
-const SUPERFICIES: readonly SuperficieDeRespuesta[] = ["APP", "LANDING", "CARTA", "NEUTRA"];
+const SUPERFICIES: readonly SuperficieDeRespuesta[] = [
+  "APP",
+  "LANDING",
+  "CARTA",
+  "NEUTRA",
+  "SISTEMA",
+];
 
 describe("nonceDe", () => {
   it("es el base64 de los bytes", () => {

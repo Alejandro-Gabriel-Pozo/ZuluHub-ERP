@@ -28,6 +28,9 @@ vi.mock("../../apps/web/servidor/fuente-de-puertas", async () => {
   return { fuenteDePuertas: { consultarHost: puerta.consultarHost, leerMarca: puerta.leerMarca } };
 });
 
+// La guarda de migración (W6) tiene sus propias pruebas (`sistema.test.ts`): acá la base está al día.
+vi.mock("../../apps/web/servidor/guarda", () => ({ baseAlDia: () => Promise.resolve(true) }));
+
 const falsa = (): PuertaFalsa => compartido.puerta as PuertaFalsa;
 
 const pedido = (host: string, ruta = "/", encabezados: Record<string, string> = {}) =>
@@ -150,7 +153,7 @@ describe("P-2: host desconocido, retirado o inválido = la neutra", () => {
 
   it("/api/** en un host que no es APP también es la neutra; en APP sigue su camino", async () => {
     for (const host of [HOST_LANDING_A, HOST_CARTA_A, HOST_LANDING_B]) {
-      for (const ruta of ["/api/auth/signin", "/api/auth/callback/google", "/api/salud", "/api"]) {
+      for (const ruta of ["/api/auth/signin", "/api/auth/callback/google", "/api/otra", "/api"]) {
         const r = await proxy(pedido(host, ruta));
         expect(reescritura(r), `${host} ${ruta}`).toBe("/s/neutra");
         expect(r.status).toBe(404);

@@ -16,6 +16,10 @@ import {
 import { crearColaDePostgres, type ColaDb } from "../adaptadores/postgres/cola-de-trabajos";
 import { crearConexionDeAutenticacion } from "../adaptadores/postgres/conexion-de-autenticacion";
 import {
+  crearLecturasDeSistema,
+  type LecturasDeSistema,
+} from "../adaptadores/postgres/lecturas-de-sistema";
+import {
   crearNivelesDeControlDePostgres,
   type NivelesDeControlDb,
 } from "../adaptadores/postgres/niveles-de-control";
@@ -142,6 +146,10 @@ export type Conexiones = Readonly<{
   /** Origen y marca del mail (el respaldo hasta que exista M7) y la clave del proveedor. */
   configuracionDeCorreo: () => ConfiguracionDeCorreo;
   correo: () => Correo;
+  /** `SELECT 1` y la última migración aplicada, con el rol de la aplicación (`ZULUHUB_DB_APP`), sin contexto firmado (W6). */
+  lecturasDeSistema: () => LecturasDeSistema;
+  /** El valor de `CRON_SECRET` (W6): lanza `ErrorDeEntorno` si falta o es demasiado corto. */
+  secretoDeCron: () => string;
 }>;
 
 export type OpcionesDeConexiones = Readonly<{
@@ -233,5 +241,14 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
     ),
     configuracionDeCorreo,
     correo: perezoso(() => crearCorreoResend({ configuracion: configuracionDeCorreo() })),
+    lecturasDeSistema: armarPieza("esquema", (valores) =>
+      crearLecturasDeSistema({
+        url: valores.ZULUHUB_DB_APP,
+        alCortarseUnaConexionOciosa: (error) =>
+          registrar(`conexión ociosa de la aplicación cortada: ${error.message}`),
+      }),
+    ),
+    secretoDeCron: () =>
+      registrandoFallosDeEntorno(registrar, () => valoresDeLaPieza(fuente(), "cron").CRON_SECRET),
   };
 }
