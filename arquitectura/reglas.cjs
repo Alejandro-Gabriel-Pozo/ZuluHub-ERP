@@ -416,6 +416,8 @@ const reglas = [
       "src/adaptadores/arca no importa ningún módulo salvo fiscal/publico.ts (facturación §B.9): el adaptador traduce lo de fiscal a ARCA y no conoce ningún otro módulo de negocio ni sus datos.",
     from: { path: "^src/adaptadores/arca/" },
     to: { path: "^src/modulos/", pathNot: "^src/modulos/fiscal/publico\\.ts$" },
+  },
+  {
     // W3b (web-armazon §3.1 y §4.1). Previene: la librería de ingreso importada desde una acción, una
     // pantalla o un módulo, que ataría el resto del código a su versión (1.7.7 exacta, con ganchos propios
     // acoplados a sus rutas internas) y a su forma de leer la sesión y el host. Todo el resto usa el puerto
