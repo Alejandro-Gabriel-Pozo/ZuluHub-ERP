@@ -7,6 +7,7 @@ import {
   type PersonaId,
 } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import type { DondeSeGuarda, TextoCifrado } from "../../../puertos/cifrado-de-secretos";
 import { AMBIENTES, type Ambiente } from "../dominio/comprobante-nuevo";
 import {
   certificadoId,
@@ -46,13 +47,36 @@ export const ESTADOS_DE_CERTIFICADO = [
 ] as const;
 export type EstadoDeCertificado = (typeof ESTADOS_DE_CERTIFICADO)[number];
 
-/** Un texto cifrado con AES-256-GCM: los bytes, el nonce de 12, la etiqueta de 16 y qué clave lo cifró. */
-export type TextoCifrado = Readonly<{
-  cifrado: Uint8Array;
-  nonce: Uint8Array;
-  etiqueta: Uint8Array;
-  kid: string;
-}>;
+/** Un texto cifrado con AES-256-GCM (el puerto de cifrado lo define; acá se guarda tal cual). */
+export type { TextoCifrado };
+
+/**
+ * Dónde vive cada texto cifrado: la fila y la columna que lo atan al cifrarlo (dato asociado, AAD; spec §B.6.3).
+ * Viven acá porque este archivo es el único que nombra las columnas cifradas: quien cifra (F7) y quien descifra
+ * (el adaptador de ARCA, F8) piden el lugar a este archivo y no lo escriben por su cuenta, así no pueden divergir.
+ * Previene que un texto cifrado se escriba con un lugar y se lea con otro (no descifraría nunca). Chequeo:
+ * `credenciales-de-emisor.test.ts` y las pruebas de integración de F7 (cifrar al pedir, descifrar al leer).
+ */
+export const dondeSeGuardaLaClave = (
+  empresa: EmpresaId,
+  certificado: CertificadoId,
+): DondeSeGuarda => ({
+  empresaId: empresa,
+  tabla: "certificado_arca",
+  filaId: certificado,
+  columna: "clave_cifrada",
+});
+
+export const dondeSeGuardaLaCredencial = (
+  empresa: EmpresaId,
+  certificado: CertificadoId,
+  servicio: ServicioDeArca,
+): DondeSeGuarda => ({
+  empresaId: empresa,
+  tabla: "acceso_arca",
+  filaId: `${certificado}:${servicio}`,
+  columna: "credencial_cifrada",
+});
 
 /** El servicio de ARCA al que sirve la credencial. Hoy solo la factura electrónica. */
 export type ServicioDeArca = "wsfe";

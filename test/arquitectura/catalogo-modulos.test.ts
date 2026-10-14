@@ -15,6 +15,7 @@ import {
 } from "../../src/modulos/empresas/publico";
 import {
   DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
+  DECLARACIONES_DE_CERTIFICADOS,
   DECLARACIONES_DE_FACTURACION,
   DECLARACIONES_DE_FISCAL,
 } from "../../src/modulos/fiscal/publico";
@@ -222,6 +223,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       DECLARACIONES_DE_FISCAL,
       DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
       DECLARACIONES_DE_FACTURACION,
+      DECLARACIONES_DE_CERTIFICADOS,
     ),
   };
 
@@ -263,6 +265,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       "comprobantes.reintentar",
       "series.resincronizar",
       "puntos_de_venta.cambiar_ambiente",
+      "certificados.gestionar",
     ]);
     expect(DECLARACIONES_DE_FISCAL.reconciliarSerie).toHaveProperty("sinGuard");
     expect(DECLARACIONES_DE_FISCAL.reconciliarSeriesVencidas).toHaveProperty("sinGuard");
@@ -343,6 +346,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       "X1: la acción comprobantes.reintentar no la exige ningún caso de uso",
       "X1: la acción series.resincronizar no la exige ningún caso de uso",
       "X1: la acción puntos_de_venta.cambiar_ambiente no la exige ningún caso de uso",
+      "X1: la acción certificados.gestionar no la exige ningún caso de uso",
     ]);
   });
 

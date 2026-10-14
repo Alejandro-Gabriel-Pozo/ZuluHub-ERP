@@ -381,6 +381,19 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "arca-solo-en-su-adaptador",
+      archivos: {
+        "src/modulos/fiscal/dominio/d.ts": importa("pkijs"),
+      },
+    },
+    {
+      regla: "adaptador-arca-solo-con-fiscal",
+      archivos: {
+        "src/adaptadores/arca/a.ts": importa("../../modulos/identidad/publico"),
+        "src/modulos/identidad/publico.ts": exporta,
+      },
+    },
+    {
       regla: "better-auth-solo-en-su-adaptador",
       archivos: {
         "apps/web/servidor/ingreso.ts": importa("better-auth"),
@@ -1318,6 +1331,85 @@ describe("facturación F6: las consultas del facturador (spec H7 facturación §
       "src/modulos/empresas/consultas/c.ts": importa("../dominio/modelo-de-impresion"),
     });
     expect(v).toContain("consultas-sin-dominio");
+  });
+});
+
+describe("facturación F8: el adaptador real de ARCA (spec H7 facturación §B.5.7 y §B.9)", () => {
+  const PAQUETES = ["pkijs", "asn1js", "fast-xml-parser"];
+
+  it("solo los adaptadores de ARCA y de certificados importan pkijs, asn1js y fast-xml-parser", async () => {
+    for (const paquete of PAQUETES) {
+      for (const ruta of [
+        "src/adaptadores/arca/firma.ts",
+        "src/adaptadores/certificados/lector.ts",
+      ]) {
+        const permitido = await violacionesDe({ [ruta]: importa(paquete) });
+        expect(permitido, `${paquete} desde ${ruta}`).not.toContain("arca-solo-en-su-adaptador");
+      }
+    }
+  });
+
+  it("el dominio, los casos de uso, otro adaptador, las apps y los scripts no los importan", async () => {
+    for (const paquete of PAQUETES) {
+      for (const ruta of [
+        "src/modulos/fiscal/dominio/d.ts",
+        "src/modulos/fiscal/casos-de-uso/c.ts",
+        "src/modulos/fiscal/persistencia/p.ts",
+        "src/adaptadores/correo/a.ts",
+        "src/composicion/c.ts",
+        "src/primitivas/p.ts",
+        "apps/web/servidor/s.ts",
+        "scripts/s.ts",
+      ]) {
+        const v = await violacionesDe({ [ruta]: importa(paquete) });
+        expect(v, `${paquete} desde ${ruta}`).toContain("arca-solo-en-su-adaptador");
+      }
+    }
+  });
+
+  it("también se ve el import de un archivo interno del paquete", async () => {
+    const v = await violacionesDe({
+      "src/modulos/fiscal/dominio/d.ts": importa("fast-xml-parser/src/fxp"),
+    });
+    expect(v).toContain("arca-solo-en-su-adaptador");
+  });
+
+  it("el adaptador de ARCA solo importa fiscal por su publico.ts", async () => {
+    const permitido = await violacionesDe({
+      "src/modulos/fiscal/publico.ts": exporta,
+      "src/adaptadores/arca/a.ts": importa("../../modulos/fiscal/publico"),
+    });
+    expect(permitido).not.toContain("adaptador-arca-solo-con-fiscal");
+    expect(permitido).not.toContain("modulos-solo-por-publico-desde-afuera");
+  });
+
+  it("no importa los archivos internos de fiscal ni ningún otro módulo, ni siquiera por su publico.ts", async () => {
+    const internos = await violacionesDe({
+      "src/modulos/fiscal/dominio/d.ts": exporta,
+      "src/adaptadores/arca/a.ts": importa("../../modulos/fiscal/dominio/d"),
+    });
+    expect(internos).toContain("adaptador-arca-solo-con-fiscal");
+    for (const modulo of ["identidad", "empresas", "tenants", "ventas"]) {
+      const v = await violacionesDe({
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+        "src/adaptadores/arca/a.ts": importa(`../../modulos/${modulo}/publico`),
+      });
+      expect(v, modulo).toContain("adaptador-arca-solo-con-fiscal");
+    }
+  });
+
+  it("tampoco lee la base por su cuenta: la herramienta de datos sigue prohibida ahí", async () => {
+    const v = await violacionesDe({ "src/adaptadores/arca/a.ts": importa("kysely") });
+    expect(v).toContain("orm-solo-en-persistencia");
+  });
+
+  it("otro adaptador sí puede importar fiscal por publico.ts: la regla es solo del adaptador de ARCA", async () => {
+    const v = await violacionesDe({
+      "src/modulos/fiscal/publico.ts": exporta,
+      "src/modulos/identidad/publico.ts": exporta,
+      "src/adaptadores/correo/a.ts": importa("../../modulos/identidad/publico"),
+    });
+    expect(v).not.toContain("adaptador-arca-solo-con-fiscal");
   });
 });
 

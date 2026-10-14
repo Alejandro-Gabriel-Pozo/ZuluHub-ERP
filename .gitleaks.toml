@@ -19,6 +19,20 @@ regexes = [
   '''^foobarbazqux1234567890abcdefghij$''',
 ]
 
+# Valores inventados de las pruebas de saneamiento del adaptador de ARCA (F8): comprueban que un texto con
+# <token>, <sign> o un bloque PEM sale tapado. Solo en este archivo y solo estos valores (el PEM de juguete es
+# la prueba misma: «MIIEvQ» + el texto inventado, no una clave).
+[[allowlists]]
+description = "Valores de juguete de las pruebas de saneamiento de ARCA"
+condition = "AND"
+paths = [
+  '''^src/adaptadores/arca/saneamiento\.test\.ts$''',
+]
+regexes = [
+  '''^SECRETO-0123456789$''',
+  '''(?s)^-----BEGIN PRIVATE KEY-----.*$''',
+]
+
 # ADR-016 (W5): la prueba de propiedades de `aRespuesta` mete una palabra inventada en fallas de todo tipo
 # para comprobar que nunca sale hacia la pantalla. No es un secreto: un solo archivo y un solo valor.
 [[allowlists]]

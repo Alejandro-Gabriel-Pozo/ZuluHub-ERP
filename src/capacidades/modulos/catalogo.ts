@@ -120,6 +120,9 @@ export const CATALOGO_DE_MODULOS = {
       "comprobantes.reintentar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "series.resincronizar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "puntos_de_venta.cambiar_ambiente": { capacidad: null, efecto: "CREA_AMPLIA" },
+      // H7 facturación §C (F7): generar el pedido de un certificado y cargar el que devolvió ARCA son altas que
+      // habilitan a emitir con valor fiscal: crean y amplían, y no se permiten en solo lectura.
+      "certificados.gestionar": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
   /**
