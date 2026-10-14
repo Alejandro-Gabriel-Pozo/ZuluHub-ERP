@@ -1050,6 +1050,12 @@ function aSerie(fila: FilaDeSerie): Serie {
   }
 }
 
+/**
+ * Una serie tal como la guarda y la lee el repositorio: la del dominio, con su ambiente. Las consultas
+ * (que no importan el dominio, ADR-005) la leen con este nombre.
+ */
+export type SerieGuardada = Serie;
+
 export interface RepositorioDeSeries {
   /**
    * La serie de `(punto de venta, tipo, ambiente)`. El ambiente es obligatorio: quien numera dice en
