@@ -63,9 +63,39 @@ describe("cookieParaNext", () => {
   });
 
   it("sin nombre válido no es una cookie", () => {
-    for (const crudo of ["", "sin igual", "=valor", " =x", "a b=c", "a;b=c", "(a)=c"]) {
+    for (const crudo of [
+      "",
+      "sin igual",
+      "solonombre",
+      "=valor",
+      " =x",
+      "a b=c",
+      "a;b=c",
+      "(a)=c",
+    ]) {
       expect(cookieParaNext(crudo), crudo).toBeNull();
     }
+  });
+
+  it("un atributo suelto o con un valor que no corresponde no cambia otro: cada atributo vale solo para lo suyo", () => {
+    // Un número o «lax» bajo otro nombre no es ni Max-Age ni SameSite.
+    expect(cookieParaNext("a=b; Priority=5; Foo=lax; Bar=strict; Baz=none")).toStrictEqual({
+      nombre: "a",
+      valor: "b",
+    });
+    // Max-Age tiene que ser un entero entero (con signo opcional), sin letras antes ni después.
+    for (const maxAge of ["x5", "5x", "5.5", "", "--5", "+5"]) {
+      expect(cookieParaNext(`a=b; Max-Age=${maxAge}`)?.maxAge, maxAge).toBeUndefined();
+    }
+    expect(cookieParaNext("a=b; Max-Age=  7 ")?.maxAge).toBe(7);
+    // Un atributo que empieza con «=» no es nada.
+    expect(cookieParaNext("a=b; =lax; =5")).toStrictEqual({ nombre: "a", valor: "b" });
+    // Los atributos sin valor que no conocemos, tampoco.
+    expect(cookieParaNext("a=b; Partitioned; Secure")).toStrictEqual({
+      nombre: "a",
+      valor: "b",
+      secure: true,
+    });
   });
 
   it("los espacios alrededor del nombre y del valor se recortan", () => {

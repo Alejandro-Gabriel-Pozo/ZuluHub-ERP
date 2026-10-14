@@ -1,7 +1,7 @@
 "use client";
 
-import { useFormStatus } from "react-dom";
 import { Boton, type PropsDeBoton } from "../componentes/Boton";
+import { useEnvioDeFormulario } from "./EnvioDeFormulario.cliente";
 
 export type PropsDeBotonDeEnvio = Readonly<
   Pick<PropsDeBoton, "children" | "variante" | "ancho"> & {
@@ -16,11 +16,11 @@ export type PropsDeBotonDeEnvio = Readonly<
  * evita el duplicado de verdad es la regla de repetición de cada acción (ADR-015): este botón es la ayuda.
  */
 export function BotonDeEnvio({ children, textoEnviando, variante, ancho }: PropsDeBotonDeEnvio) {
-  const { pending } = useFormStatus();
+  const enviando = useEnvioDeFormulario();
   return (
     <Boton
       tipo="submit"
-      enviando={pending}
+      enviando={enviando}
       textoEnviando={textoEnviando}
       {...(variante === undefined ? {} : { variante })}
       {...(ancho === undefined ? {} : { ancho })}

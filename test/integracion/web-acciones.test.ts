@@ -20,6 +20,9 @@ import {
 
 /// <reference path="../../apps/web/ui/css-modules.d.ts" />
 
+import type * as ModuloDeAcciones from "../../apps/web/servidor/acciones";
+import type * as ModuloDeRenovacion from "../../apps/web/servidor/renovar-sesion";
+
 /**
  * W5, lo que HACEN las acciones del servidor y las rutas, y lo que PINTAN las páginas, con la base real y
  * sesiones de verdad. Next se reemplaza por lo mínimo (los encabezados, las cookies y las redirecciones del
@@ -91,8 +94,8 @@ vi.mock("../../apps/web/servidor/fuente-de-puertas", () => ({
       const m = estado.mundo;
       if (m === null) return Promise.resolve(ok(null));
       if (superficie !== "APP") return Promise.resolve(ok(null));
-      if (host === HOST_A) return Promise.resolve(ok({ marcaId: m.marcaA as string }));
-      if (host === HOST_B) return Promise.resolve(ok({ marcaId: m.marcaB as string }));
+      if (host === HOST_A) return Promise.resolve(ok({ marcaId: m.marcaA }));
+      if (host === HOST_B) return Promise.resolve(ok({ marcaId: m.marcaB }));
       return Promise.resolve(ok(null));
     },
     leerMarca: (marcaId: string) => {
@@ -151,8 +154,8 @@ async function redirigeA(trabajo: () => unknown): Promise<string | null> {
 
 describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y empresa", () => {
   let mundo: MundoWeb;
-  let acciones: typeof import("../../apps/web/servidor/acciones");
-  let renovar: typeof import("../../apps/web/servidor/renovar-sesion");
+  let acciones: typeof ModuloDeAcciones;
+  let renovar: typeof ModuloDeRenovacion;
 
   beforeAll(async () => {
     if (base === null) return;
@@ -667,7 +670,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       const e1 = await empresaDeLaMarca(mundo, mundo.marcaA, persona, "GERENTE");
       conSesionDe(yo, HOST_A);
       comoNavegador(HOST_A);
-      const directo = html((await Inicio()) as ReactNode);
+      const directo = html(await Inicio());
       expect(directo).toContain("Estás en");
       expect(directo).toContain("Hotel del Lago");
       expect(directo).toContain("No hay nada pendiente por ahora.");
@@ -680,7 +683,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       // Con una segunda empresa y sin cookie: a elegir.
       await empresaDeLaMarca(mundo, mundo.marcaA, persona, "OPERADOR");
       comoNavegador(HOST_A);
-      expect(await redirigeA(async () => Inicio())).toBe("/empresa");
+      expect(await redirigeA(() => Inicio())).toBe("/empresa");
       // Con la cookie de la primera: entra a esa.
       estado.jar.set("zh_empresa", e1.empresa);
       comoNavegador(HOST_A);
@@ -690,7 +693,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       const deB = await empresaDeLaMarca(mundo, mundo.marcaB, persona, "GERENTE");
       estado.jar.set("zh_empresa", deB.empresa);
       comoNavegador(HOST_A);
-      const sinPermiso = html((await Inicio()) as ReactNode);
+      const sinPermiso = html(await Inicio());
       expect(sinPermiso).toContain("Sin permiso");
       expect(sinPermiso).toContain("No tiene permiso para hacer esto.");
       expect(sinPermiso).toContain("Cambiar de empresa");
@@ -698,14 +701,29 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       expect(sinPermiso).not.toContain(NOMBRE_B);
     });
 
+    it("el layout del mostrador sin sesión, o con la cookie de otro host (P-6), manda a /ingreso; con sesión vigente, envuelve", async () => {
+      const { default: Pagina } = await cargar("../../apps/web/app/s/app/(operacion)/layout");
+      const Layout = Pagina as unknown as (props: { children: ReactNode }) => unknown;
+      const hijos = "contenido del mostrador";
+      comoNavegador(HOST_A);
+      expect(await redirigeA(() => Layout({ children: hijos }))).toBe("/ingreso");
+      const yo = await ingresarEn(mundo, HOST_A);
+      // La cookie de A viaja al host B (lo que haría quien la copia): no vale.
+      conSesionDe(yo, HOST_A);
+      comoNavegador(HOST_B);
+      expect(await redirigeA(() => Layout({ children: hijos }))).toBe("/ingreso");
+      comoNavegador(HOST_A);
+      expect(html(await Layout({ children: hijos }))).toContain(hijos);
+    });
+
     it("/ sin sesión: a ingresar; con una persona sin empresas: a elegir (donde está el vacío)", async () => {
       const { default: Inicio } = await cargar("../../apps/web/app/s/app/(operacion)/page");
       comoNavegador(HOST_A);
-      expect(await redirigeA(async () => Inicio())).toBe("/ingreso");
+      expect(await redirigeA(() => Inicio())).toBe("/ingreso");
       const yo = await ingresarEn(mundo, HOST_A);
       conSesionDe(yo, HOST_A);
       comoNavegador(HOST_A);
-      expect(await redirigeA(async () => Inicio())).toBe("/empresa");
+      expect(await redirigeA(() => Inicio())).toBe("/empresa");
     });
 
     it("una empresa suspendida entra, pero el inicio dice por qué no opera", async () => {
@@ -729,7 +747,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       );
       conSesionDe(gerente, HOST_A);
       comoNavegador(HOST_A);
-      const paginaG = html((await Cuenta()) as ReactNode);
+      const paginaG = html(await Cuenta());
       expect(paginaG).toContain("Casa central");
       expect(paginaG).toContain("Sucursal Norte");
       expect(paginaG).toContain("Cerrar sesión");
@@ -740,7 +758,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       await empresaDeLaMarca(mundo, mundo.marcaA, personaO, "OPERADOR");
       conSesionDe(operador, HOST_A);
       comoNavegador(HOST_A);
-      const paginaO = html((await Cuenta()) as ReactNode);
+      const paginaO = html(await Cuenta());
       expect(paginaO).not.toContain("Casa central");
       expect(paginaO).toContain("Operador");
     });
@@ -764,7 +782,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
         },
       };
       try {
-        const cuerpo = html((await Inicio()) as ReactNode);
+        const cuerpo = html(await Inicio());
         expect(cuerpo).toContain("No se pudo completar. Podés reintentar");
         expect(cuerpo).toMatch(/Referencia: ZH-[0-9A-F]{4}-[0-9A-F]{4}/);
         expect(cuerpo).not.toMatch(/password|zuluhub_app/);

@@ -5,9 +5,10 @@ import type { ErrorPublico } from "../../../../src/capacidades/experiencia/respu
 import type { DiccionarioResuelto } from "../../../../src/capacidades/vocabulario/vocabulario";
 import { Pila } from "../primitivas/Pila";
 import { ErrorDeRespuesta } from "./ErrorDeRespuesta";
+import { ProveedorDeEnvioDeFormulario } from "./EnvioDeFormulario.cliente";
 
 /** Lo que devuelve una acción de formulario: nada si salió bien (redirige) o el error ya traducido. */
-export type ResultadoDeFormulario = Readonly<{ error: ErrorPublico | null }>;
+type ResultadoDeFormulario = Readonly<{ error: ErrorPublico | null }>;
 
 export type AccionDeFormulario = (
   previo: ResultadoDeFormulario,
@@ -29,18 +30,20 @@ const SIN_ERROR: ResultadoDeFormulario = { error: null };
  * respuesta del servidor.
  */
 export function FormularioDeAccion({ accion, children, diccionario }: PropsDeFormularioDeAccion) {
-  const [resultado, enviar] = useActionState(accion, SIN_ERROR);
+  const [resultado, enviar, enviando] = useActionState(accion, SIN_ERROR);
   return (
     <form action={enviar}>
-      <Pila separacion={3}>
-        {children}
-        {resultado.error === null ? null : (
-          <ErrorDeRespuesta
-            error={resultado.error}
-            {...(diccionario === undefined ? {} : { diccionario })}
-          />
-        )}
-      </Pila>
+      <ProveedorDeEnvioDeFormulario value={enviando}>
+        <Pila separacion={3}>
+          {children}
+          {resultado.error === null ? null : (
+            <ErrorDeRespuesta
+              error={resultado.error}
+              {...(diccionario === undefined ? {} : { diccionario })}
+            />
+          )}
+        </Pila>
+      </ProveedorDeEnvioDeFormulario>
     </form>
   );
 }

@@ -194,7 +194,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const sucursales = await sucursalesDeLaEmpresa(mundo.dependencias, entrada.dato.contexto);
       expect(sucursales).toEqual({
         ok: true,
-        dato: [{ id: expect.any(String), nombre: "Casa central" }],
+        dato: [{ id: expect.any(String) as string, nombre: "Casa central" }],
       });
     });
 

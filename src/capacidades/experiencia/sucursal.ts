@@ -15,7 +15,7 @@ export function sucursalElegida(
   guardada: string | null,
   disponibles: readonly SucursalElegible[],
 ): string | null {
-  if (guardada !== null && disponibles.some((s) => s.id === guardada)) return guardada;
+  if (disponibles.some((s) => s.id === guardada)) return guardada;
   const [unica, ...resto] = disponibles;
   return unica !== undefined && resto.length === 0 ? unica.id : null;
 }

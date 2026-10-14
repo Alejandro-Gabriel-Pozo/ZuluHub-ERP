@@ -9,6 +9,7 @@ import {
   type AccionDeFormulario,
 } from "../../patrones/FormularioDeAccion.cliente";
 import { Pila } from "../../primitivas/Pila";
+import { SoloLector } from "../../primitivas/SoloLector";
 import { Texto } from "../../primitivas/Texto";
 import { PlantillaNeutra } from "../PlantillaNeutra";
 import estilos from "./PantallaDeEleccionDeEmpresa.module.css";
@@ -48,6 +49,8 @@ export function PantallaDeEleccionDeEmpresa({
                     textoEnviando={texto(diccionario, "empresa.entrando")}
                   >
                     {texto(diccionario, "empresa.entrar")}
+                    {/* Con varias empresas, cada botón dice a cuál entra (el lector de pantalla no ve la tarjeta). */}
+                    <SoloLector>{` ${empresa.nombre}`}</SoloLector>
                   </BotonDeEnvio>
                 </Pila>
               </FormularioDeAccion>

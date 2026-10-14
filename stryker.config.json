@@ -44,6 +44,7 @@
     "src/capacidades/autenticacion/**/*.ts",
     "src/adaptadores/autenticacion/configuracion.ts",
     "src/composicion/ruta-de-ingreso.ts",
+    "src/composicion/a-respuesta.ts",
     "!src/**/*.test.ts"
   ],
   "coverageAnalysis": "off",

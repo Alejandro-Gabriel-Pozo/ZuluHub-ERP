@@ -19,6 +19,6 @@ export function origenEsPropio(origen: string | null, host: string): boolean {
   } catch {
     return false;
   }
-  if (url.protocol !== "https:" || host === "") return false;
+  if (url.protocol !== "https:") return false;
   return url.host === host.toLowerCase();
 }

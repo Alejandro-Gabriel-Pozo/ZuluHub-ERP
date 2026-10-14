@@ -46,6 +46,37 @@ describe("rutaDeRetorno: solo rutas propias", () => {
     expect(rutaDeRetorno(candidata)).toBe("/");
   });
 
+  it("lo prohibido es solo al principio de la ruta, y los puntos dentro de un nombre no son «subir de nivel»", () => {
+    for (const ruta of [
+      "/ventas/api",
+      "/ventas/s/1",
+      "/mi/ingreso",
+      "/informes/2026.10",
+      "/v1.2/x",
+      "/archivo.pdf",
+      "/a/.oculto/b",
+      "/a/b../c",
+    ]) {
+      expect(rutaDeRetorno(ruta)).toBe(ruta);
+    }
+  });
+
+  it("solo se revisa la ruta: lo que viene después de ? o # es dato, no camino", () => {
+    // El camino malo seguido de una consulta o un fragmento sigue siendo malo (y completo, no solo hasta el primer carácter).
+    for (const ruta of ["/a/..?x=1", "/a/..?xyz=123456", "/a/.#fragmento-largo", "/a/..#f"]) {
+      expect(rutaDeRetorno(ruta), ruta).toBe("/");
+    }
+    // Y lo que parece malo pero está en la consulta no hace mala a la ruta.
+    for (const ruta of [
+      "/ventas?volver=/../x",
+      "/ventas?x=//ajeno",
+      "/ventas?x=%E0%A4%A",
+      "/ventas#/../",
+    ]) {
+      expect(rutaDeRetorno(ruta), ruta).toBe(ruta);
+    }
+  });
+
   it("los prefijos parecidos a los prohibidos sí pasan", () => {
     for (const ruta of ["/s", "/sucursales", "/apis", "/ingresos", "/ingreso-x"]) {
       expect(rutaDeRetorno(ruta)).toBe(ruta === "/s" ? "/" : ruta);

@@ -445,3 +445,121 @@ function glob(dir: string): string[] {
     .filter((f) => /\.tsx?$/.test(f) && !/(^|[\\/])(node_modules|\.next)[\\/]/.test(f))
     .map((f) => `${dir}/${f}`.replaceAll("\\", "/"));
 }
+
+/**
+ * ADR-016, punto 4: una acción del servidor o un componente no puede importar de `publico.ts` las funciones que
+ * arman repositorios o lecturas de persistencia; sí los casos de uso y las consultas. Cada una con su violación
+ * inyectada y el caso permitido que no la dispara; y la configuración REAL de ESLint la aplica junto con la
+ * regla del entorno (R-W1), que comparte la opción `no-restricted-imports`.
+ */
+describe("ADR-016: las acciones y los componentes no arman repositorios", () => {
+  const { bloques: bloquesDeWeb } = require("../../arquitectura/lint-web.cjs") as {
+    bloques: ESLint.Options["baseConfig"] extends infer T ? Exclude<T, null> : never;
+  };
+  const eslintWeb = new ESLint({
+    overrideConfigFile: true,
+    overrideConfig: [
+      {
+        files: ["**/*.ts", "**/*.tsx"],
+        languageOptions: {
+          parser: tseslint.parser,
+          parserOptions: { ecmaFeatures: { jsx: true } },
+        },
+      },
+      ...(bloquesDeWeb as never[]),
+    ],
+  });
+  const mensajesWeb = async (ruta: string, codigo: string): Promise<string[]> => {
+    const [resultado] = await eslintWeb.lintText(codigo, { filePath: ruta });
+    return (resultado?.messages ?? []).map((m) => `${m.ruleId ?? "?"}: ${m.message}`);
+  };
+
+  it.each([
+    [
+      "crearRepositorioDePersonas",
+      'import { crearRepositorioDePersonas } from "../../../src/modulos/identidad/publico";',
+    ],
+    [
+      "con otro nombre local",
+      'import { crearRepositorioDeEmpresas as repo } from "../../src/modulos/empresas/publico";',
+    ],
+    [
+      "junto con un caso de uso permitido",
+      'import { crearCasosDeUsoDeIdentidad, crearRepositorioDeMembresias } from "../../src/modulos/identidad/publico";',
+    ],
+    [
+      "una lectura de persistencia",
+      'import { crearLecturaPublicaDeMarcas } from "../../../src/modulos/marcas/publico";',
+    ],
+    [
+      "el publico.ts con extensión",
+      'import { crearRepositorioDeDominios } from "../../src/modulos/marcas/publico.ts";',
+    ],
+  ])("se prohíbe en una acción del servidor o un componente: %s", async (_nombre, codigo) => {
+    for (const ruta of [
+      "apps/web/servidor/acciones.ts",
+      "apps/web/app/s/app/acciones.ts",
+      "apps/web/pantallas/operacion.tsx",
+      "apps/web/ui/patrones/x.cliente.tsx",
+    ]) {
+      const mensajes = await mensajesWeb(ruta, `${codigo}\nexport const a = 1;`);
+      expect(mensajes.join("\n"), ruta).toContain("no-restricted-imports");
+    }
+  });
+
+  it("los casos de uso, las consultas y los tipos sí se importan; la composición y las pruebas pueden armar repositorios", async () => {
+    const permitido = [
+      'import { crearCasosDeUsoDeIdentidad, crearConsultasDeSesion } from "../../src/modulos/identidad/publico";',
+      'import type { RepositorioDePersonas, IdentidadDb } from "../../src/modulos/identidad/publico";',
+      'import { crearConsultasDeEmpresas } from "../../src/modulos/empresas/publico";',
+    ].join("\n");
+    expect(
+      await mensajesWeb("apps/web/servidor/sesion.ts", `${permitido}\nexport const a = 1;`),
+    ).toEqual([]);
+    const armador =
+      'import { crearRepositorioDePersonas } from "../modulos/identidad/publico";\nexport const a = 1;';
+    expect(await mensajesWeb("src/composicion/conexiones.ts", armador)).toEqual([]);
+    expect(await mensajesWeb("apps/web/servidor/prueba.test.ts", armador)).toEqual([]);
+  });
+
+  it("otros módulos con nombres parecidos no se confunden", async () => {
+    expect(
+      await mensajesWeb(
+        "apps/web/servidor/x.ts",
+        'import { crearRepositorio } from "./otro";\nexport const a = crearRepositorio;',
+      ),
+    ).toEqual([]);
+  });
+
+  it("sigue prohibido leer el entorno en apps: la regla del armador no tapa a la de process", async () => {
+    expect(
+      await mensajesWeb(
+        "apps/web/servidor/x.ts",
+        'import { env } from "node:process";\nexport const a = env;',
+      ),
+    ).not.toEqual([]);
+  });
+
+  it("la configuración real de ESLint aplica el armador y el entorno juntos en apps/**", async () => {
+    const real = new ESLint();
+    for (const ruta of [
+      "apps/web/servidor/x.ts",
+      "apps/web/app/x.tsx",
+      "apps/web/ui/patrones/x.tsx",
+    ]) {
+      const configuracion = (await real.calculateConfigForFile(ruta)) as {
+        rules: Record<string, unknown[]>;
+      };
+      const opciones = JSON.stringify(configuracion.rules["no-restricted-imports"]);
+      expect(opciones, ruta).toContain("(ADR-016)");
+      expect(opciones, ruta).toContain("^crear(Repositorio|Lectura)");
+      // La opción de `process` (R-W1) sigue en el mismo bloque: ESLint no suma las opciones de una regla.
+      expect(opciones, ruta).toContain("node:process");
+    }
+    // En src/ (la composición) no rige el armador.
+    const composicion = (await real.calculateConfigForFile("src/composicion/web.ts")) as {
+      rules: Record<string, unknown[]>;
+    };
+    expect(JSON.stringify(composicion.rules["no-restricted-imports"])).not.toContain("(ADR-016)");
+  });
+});

@@ -33,7 +33,8 @@ function decodificar(valor: string): string {
 
 /** La cookie del texto crudo, o `null` si no es un `Set-Cookie` con nombre válido. */
 export function cookieParaNext(crudo: string): CookieParaNext | null {
-  const [par = "", ...atributos] = crudo.split(";");
+  // `split` siempre devuelve al menos un elemento.
+  const [par, ...atributos] = crudo.split(";") as [string, ...string[]];
   const igual = par.indexOf("=");
   if (igual < 1) return null;
   const nombre = par.slice(0, igual).trim();
@@ -42,9 +43,10 @@ export function cookieParaNext(crudo: string): CookieParaNext | null {
     -readonly [K in keyof CookieParaNext]: CookieParaNext[K];
   } = { nombre, valor: decodificar(par.slice(igual + 1).trim()) };
   for (const atributo of atributos) {
-    const separador = atributo.indexOf("=");
-    const clave = (separador < 0 ? atributo : atributo.slice(0, separador)).trim().toLowerCase();
-    const valor = separador < 0 ? "" : atributo.slice(separador + 1).trim();
+    // «nombre=valor» o solo «nombre»: el patrón siempre coincide (todo es opcional).
+    const partes = /([^=]*)=?([\s\S]*)/.exec(atributo) as RegExpExecArray;
+    const clave = (partes[1] as string).trim().toLowerCase();
+    const valor = (partes[2] as string).trim();
     if (clave === "path" && valor !== "") cookie = { ...cookie, path: valor };
     else if (clave === "domain" && valor !== "") cookie = { ...cookie, domain: valor };
     else if (clave === "max-age" && /^-?\d+$/.test(valor)) {

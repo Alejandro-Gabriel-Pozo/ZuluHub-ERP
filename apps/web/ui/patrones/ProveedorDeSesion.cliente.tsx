@@ -49,6 +49,8 @@ export type PropsDeProveedorDeSesion = Readonly<{
   /** La pantalla de ingreso (`/ingreso`): se le agrega `?volver=<la página actual>`. */
   rutaDeIngreso: string;
   diccionario?: DiccionarioResuelto;
+  /** Cómo se navega a otra dirección. Solo para las pruebas: por omisión, `window.location.assign`. */
+  navegar?: (direccion: string) => void;
   children: ReactNode;
 }>;
 
@@ -61,6 +63,9 @@ export function ProveedorDeSesion({
   rutaDeRenovacion,
   rutaDeIngreso,
   diccionario = {},
+  navegar = (direccion) => {
+    window.location.assign(direccion);
+  },
   children,
 }: PropsDeProveedorDeSesion) {
   const { estado, registrarActividad, marcarVencida } = useActividad({
@@ -129,8 +134,8 @@ export function ProveedorDeSesion({
 
   const alIngresar = useCallback(() => {
     const volver = `${window.location.pathname}${window.location.search}`;
-    window.location.assign(`${rutaDeIngreso}?volver=${encodeURIComponent(volver)}`);
-  }, [rutaDeIngreso]);
+    navegar(`${rutaDeIngreso}?volver=${encodeURIComponent(volver)}`);
+  }, [navegar, rutaDeIngreso]);
 
   return (
     <EstadoDeSesionContexto value={estado}>

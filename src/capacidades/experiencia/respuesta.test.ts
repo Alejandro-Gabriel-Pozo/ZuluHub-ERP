@@ -117,7 +117,7 @@ describe("clasificarError", () => {
       42,
       null,
     ]) {
-      expect(clasificarError({ codigo: "YA_ES_MIEMBRO", campo })).toEqual({
+      expect(clasificarError({ codigo: "YA_ES_MIEMBRO", campo })).toStrictEqual({
         tipo: "PUBLICO",
         codigo: "YA_ES_MIEMBRO",
       });
@@ -148,18 +148,31 @@ describe("clasificarError", () => {
     }
   });
 
-  it("EMPRESA_NO_OPERA con un motivo desconocido o sin motivo usa el texto genérico", () => {
-    for (const extra of [{ motivo: "INVENTADO" }, { motivo: 3 }, {}]) {
-      expect(clasificarError({ codigo: "EMPRESA_NO_OPERA", ...extra })).toEqual({
+  it("EMPRESA_NO_OPERA con un motivo desconocido o sin motivo usa el texto genérico (y no trae una clave vacía)", () => {
+    // Un arreglo con el nombre de un motivo se convertiría en ese texto al buscarlo: tampoco vale.
+    for (const extra of [
+      { motivo: "INVENTADO" },
+      { motivo: 3 },
+      { motivo: ["EMPRESA_EN_ALTA"] },
+      { motivo: { toString: () => "EMPRESA_EN_ALTA" } },
+      {},
+    ]) {
+      expect(clasificarError({ codigo: "EMPRESA_NO_OPERA", ...extra })).toStrictEqual({
         tipo: "PUBLICO",
         codigo: "EMPRESA_NO_OPERA",
       });
     }
     // El motivo de empresa solo vale para EMPRESA_NO_OPERA.
-    expect(clasificarError({ codigo: "YA_ES_MIEMBRO", motivo: "EMPRESA_EN_ALTA" })).toEqual({
+    expect(clasificarError({ codigo: "YA_ES_MIEMBRO", motivo: "EMPRESA_EN_ALTA" })).toStrictEqual({
       tipo: "PUBLICO",
       codigo: "YA_ES_MIEMBRO",
     });
+  });
+
+  it("lo que solo se convierte en un código al pasarlo a texto (un arreglo, un objeto con toString) no es un código", () => {
+    expect(clasificarError(["SIN_PERMISO"]).tipo).toBe("INESPERADO");
+    expect(clasificarError({ toString: () => "SIN_PERMISO" }).tipo).toBe("INESPERADO");
+    expect(clasificarError({ codigo: ["SIN_PERMISO"] }).tipo).toBe("INESPERADO");
   });
 
   it("un motivo con nombre de propiedad heredada no cuenta como conocido", () => {
@@ -228,7 +241,7 @@ describe("detalleDeFalla", () => {
 
 describe("errorPublicoDe, errorInesperado y errorDeCodigo", () => {
   it("un código conocido sale con su clave y su presentación, sin referencia", () => {
-    expect(errorPublicoDe({ tipo: "PUBLICO", codigo: "INVITACION_VENCIDA" })).toEqual({
+    expect(errorPublicoDe({ tipo: "PUBLICO", codigo: "INVITACION_VENCIDA" })).toStrictEqual({
       codigo: "INVITACION_VENCIDA",
       clave: "error.invitacion_vencida",
       presentacion: "AVISO",

@@ -14,12 +14,13 @@ const CONTROL_O_ESPACIO = /[\u0000- \u007f]/;
 const NO_ES_DESTINO = /^\/(s|api|ingreso)(\/|\?|#|$)/i;
 
 export function rutaDeRetorno(candidata: string | null | undefined): string {
-  if (typeof candidata !== "string" || candidata === "" || candidata.length > LARGO_MAXIMO) {
+  if (typeof candidata !== "string" || candidata.length > LARGO_MAXIMO) {
     return RUTA_DE_INICIO;
   }
-  if (!candidata.startsWith("/") || candidata.startsWith("//")) return RUTA_DE_INICIO;
+  if (!candidata.startsWith("/")) return RUTA_DE_INICIO;
   if (candidata.includes("\\") || CONTROL_O_ESPACIO.test(candidata)) return RUTA_DE_INICIO;
-  const ruta = candidata.split(/[?#]/, 1)[0] ?? "";
+  // La ruta es lo que queda antes de la consulta o el fragmento (sin saltos de línea: ya se rechazaron).
+  const ruta = candidata.replace(/[?#].*/, "");
   let decodificada: string;
   try {
     decodificada = decodeURIComponent(ruta);
