@@ -394,6 +394,29 @@ const reglas = [
     from: { path: "^src/modulos/fiscal/" },
     to: { path: "^src/modulos/(ventas|caja|catalogo|clientes|stock)/" },
   },
+  {
+    // F8. Previene: que la firma CMS (que maneja la clave privada del cliente) y la lectura de XML que viene de un
+    // servicio externo (entidades, DOCTYPE) se repartan por el producto: cada uso afuera del adaptador sería otra
+    // superficie por donde una clave o una entidad maliciosa entra o sale. Chequeo: las violaciones inyectadas de
+    // reglas.test.ts.
+    name: "arca-solo-en-su-adaptador",
+    severity: "error",
+    comment:
+      "pkijs, asn1js y fast-xml-parser (la firma CMS del pedido de acceso y la lectura de las respuestas de ARCA) solo se importan en src/adaptadores/arca (decisión 13 y D5; facturación §B.5.7). Ni el dominio, ni los casos de uso, ni las apps, ni otro adaptador.",
+    from: { path: "^(src|apps|scripts)/", pathNot: "^src/adaptadores/arca/" },
+    to: { path: "^(node_modules/)?(pkijs|asn1js|fast-xml-parser)(/|$)" },
+  },
+  {
+    // F8. Previene: un adaptador que lee la base por su cuenta o que depende de un módulo de negocio que no es el
+    // que sirve. Kysely ya está prohibido afuera de la persistencia (`orm-solo-en-persistencia`); esto cierra el
+    // otro camino. Chequeo: las violaciones inyectadas de reglas.test.ts.
+    name: "adaptador-arca-solo-con-fiscal",
+    severity: "error",
+    comment:
+      "src/adaptadores/arca no importa ningún módulo salvo fiscal/publico.ts (facturación §B.9): el adaptador traduce lo de fiscal a ARCA y no conoce ningún otro módulo de negocio ni sus datos.",
+    from: { path: "^src/adaptadores/arca/" },
+    to: { path: "^src/modulos/", pathNot: "^src/modulos/fiscal/publico\\.ts$" },
+  },
 ];
 
 module.exports = { reglas };

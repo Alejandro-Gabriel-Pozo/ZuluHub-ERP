@@ -396,3 +396,13 @@ export {
   type ResultadoPorComprobante,
   type SalidaDeReconciliarComprobantes,
 } from "./casos-de-uso/reconciliar-comprobantes";
+
+// H7 facturación F8: lo que el adaptador real de ARCA (`adaptadores/arca`) necesita de fiscal para traducir un
+// pedido a los valores de WSFE: las tablas de códigos y el número de documento como lo manda ARCA. Los tipos del
+// pedido (`SolicitudDeAutorizacion`) y del resultado ya salen más arriba.
+export {
+  CODIGO_DE_MONEDA,
+  CODIGO_DE_TIPO_DE_COMPROBANTE,
+  CODIGO_DE_TIPO_DE_DOCUMENTO,
+} from "./dominio/codigos-de-arca";
+export { numeroDeDocumentoParaArca } from "./dominio/receptor";
