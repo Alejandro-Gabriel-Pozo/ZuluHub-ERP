@@ -8,7 +8,7 @@ import type { ResolucionDeHost } from "../puertos/marcas";
  * Qué hace `app/api/auth/[...todo]` con un pedido (web-armazon §3.1, G8 y ADR-016). Vive acá, y no en la
  * carpeta de la ruta, para probarse sin levantar Next: la ruta solo le pasa el pedido.
  *
- *  1. El host sale de la cabecera `host` (nunca de `X-Forwarded-Host`, que el cliente puede inventar) y se
+ *  1. El host sale de la cabecera `host` (nunca del encabezado de host reenviado, que el cliente puede inventar) y se
  *     resuelve contra la puerta pública para la superficie APP (G8): en un host que no es de una aplicación
  *     (landing, carta, desconocido, retirado) la respuesta es el 404 NEUTRO de siempre, sin cuerpo ni
  *     cookies. Es la misma respuesta para todo lo que no se sirve (sin oráculo).
