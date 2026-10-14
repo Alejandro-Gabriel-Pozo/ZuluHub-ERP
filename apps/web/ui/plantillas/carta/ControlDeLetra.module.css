@@ -1,0 +1,53 @@
+.raiz {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2) var(--espacio-3);
+}
+
+.etiqueta {
+  font-weight: var(--tipo-peso-fuerte);
+  color: var(--color-texto-suave);
+}
+
+.pasos {
+  display: flex;
+  gap: var(--espacio-2);
+}
+
+.paso {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--objetivo-minimo);
+  min-height: var(--objetivo-minimo);
+  padding: 0 var(--espacio-2);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font: inherit;
+  font-weight: var(--tipo-peso-fuerte);
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+/* Cada «A» es del tamaño del paso que representa, para que se vea qué hace. */
+.paso[data-paso="NORMAL"] {
+  font-size: 1em;
+}
+
+.paso[data-paso="GRANDE"] {
+  font-size: 1.2em;
+}
+
+.paso[data-paso="MUY_GRANDE"] {
+  font-size: 1.4em;
+}
+
+/* El elegido se invierte (texto sobre fondo y al revés): no depende solo de un matiz de color. */
+.paso[aria-pressed="true"] {
+  border-color: var(--color-texto);
+  background: var(--color-texto);
+  color: var(--color-fondo);
+}

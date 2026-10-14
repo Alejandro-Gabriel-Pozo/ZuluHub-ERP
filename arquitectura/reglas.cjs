@@ -394,6 +394,35 @@ const reglas = [
     from: { path: "^src/modulos/fiscal/" },
     to: { path: "^src/modulos/(ventas|caja|catalogo|clientes|stock)/" },
   },
+  {
+    // W3b (web-armazon §3.1 y §4.1). Previene: la librería de ingreso importada desde una acción, una
+    // pantalla o un módulo, que ataría el resto del código a su versión (1.7.7 exacta, con ganchos propios
+    // acoplados a sus rutas internas) y a su forma de leer la sesión y el host. Todo el resto usa el puerto
+    // `Autenticacion`. Chequeo: la violación inyectada de reglas.test.ts.
+    name: "better-auth-solo-en-su-adaptador",
+    severity: "error",
+    comment:
+      "`better-auth` (y @better-auth/*) solo se importa en src/adaptadores/autenticacion/: el resto de la aplicación usa el puerto Autenticacion (src/puertos/autenticacion.ts).",
+    from: { path: "^(src|apps)/", pathNot: "^src/adaptadores/autenticacion/" },
+    to: { path: "^(node_modules/)?(better-auth(/|$)|@better-auth/)" },
+  },
+  {
+    // R-W4b. Next obliga a que el límite de errores se llame `error.tsx` (y `global-error.tsx`) y lleve la
+    // directiva de cliente, así que no puede llevar el sufijo `.cliente.tsx` de R-W4. Estos archivos solo
+    // reexportan el componente (lo exige la prueba de convenciones) y valen lo mismo que uno de cliente.
+    // Previene: persistencia, composición o `pg` en el paquete del navegador por la puerta de los errores.
+    // Chequeo: la violación inyectada de reglas.test.ts.
+    name: "error-de-next-sin-servidor",
+    severity: "error",
+    comment:
+      "R-W4b. Los error.tsx / global-error.tsx de apps/*/app (clientes por obligación de Next) no importan publico.ts de ningún módulo, ni la composición, ni los adaptadores, ni apps/*/servidor.",
+    from: {
+      path: "^apps/[^/]+/app/(global-)?error\\.tsx$|^apps/[^/]+/app/.+/(global-)?error\\.tsx$",
+    },
+    to: {
+      path: "^src/modulos/[^/]+/publico\\.ts$|^src/(composicion|adaptadores)/|^apps/[^/]+/servidor/",
+    },
+  },
 ];
 
 module.exports = { reglas };
