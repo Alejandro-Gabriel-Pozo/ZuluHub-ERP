@@ -1,7 +1,8 @@
 import { generateKeyPairSync, webcrypto, type KeyObject } from "node:crypto";
 import * as asn1js from "asn1js";
 import * as pkijs from "pkijs";
-import type { CredencialDeEmisor } from "../../src/puertos/credenciales-de-emisor";
+import { Secreto } from "../../src/primitivas/secreto/secreto";
+import type { CredencialesDescifradas } from "../../src/puertos/credenciales-de-emisor";
 
 /**
  * Una credencial de prueba para el adaptador de ARCA: clave RSA y certificado autofirmado generados al vuelo
@@ -9,7 +10,7 @@ import type { CredencialDeEmisor } from "../../src/puertos/credenciales-de-emiso
  */
 
 export type CredencialGenerada = Readonly<{
-  credencial: CredencialDeEmisor;
+  credencial: CredencialesDescifradas;
   clavePrivada: KeyObject;
   certificadoDer: Uint8Array;
 }>;
@@ -78,8 +79,10 @@ export function credencialDePrueba(): Promise<CredencialGenerada> {
     const certificadoDer = new Uint8Array(certificado.toSchema().toBER(false));
     return {
       credencial: {
+        certificadoId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         certificadoPem: PEM("CERTIFICATE", certificadoDer),
-        clavePrivadaPem: privateKey.export({ format: "pem", type: "pkcs8" }).toString(),
+        clavePrivada: new Secreto(privateKey.export({ format: "pem", type: "pkcs8" }).toString()),
+        venceEn: new Date(Date.UTC(2036, 0, 1)),
       },
       clavePrivada: privateKey,
       certificadoDer,

@@ -233,7 +233,7 @@ describe("lo que seguro no salió: la conexión no se abrió", () => {
   it("un certificado que no es de confianza: NO_SALIO, sin aflojar la verificación", async () => {
     const { credencial } = await credencialDePrueba();
     const servidor = crearServidorHttps(
-      { key: credencial.clavePrivadaPem, cert: credencial.certificadoPem },
+      { key: credencial.clavePrivada.revelar(), cert: credencial.certificadoPem },
       (_p, r) => r.end("<ok/>"),
     );
     await new Promise<void>((r) => servidor.listen(0, "127.0.0.1", r));

@@ -1301,12 +1301,15 @@ describe("facturación F6: las consultas del facturador (spec H7 facturación §
 describe("facturación F8: el adaptador real de ARCA (spec H7 facturación §B.5.7 y §B.9)", () => {
   const PAQUETES = ["pkijs", "asn1js", "fast-xml-parser"];
 
-  it("solo el adaptador de ARCA importa pkijs, asn1js y fast-xml-parser", async () => {
+  it("solo los adaptadores de ARCA y de certificados importan pkijs, asn1js y fast-xml-parser", async () => {
     for (const paquete of PAQUETES) {
-      const permitido = await violacionesDe({
-        "src/adaptadores/arca/firma.ts": importa(paquete),
-      });
-      expect(permitido, paquete).not.toContain("arca-solo-en-su-adaptador");
+      for (const ruta of [
+        "src/adaptadores/arca/firma.ts",
+        "src/adaptadores/certificados/lector.ts",
+      ]) {
+        const permitido = await violacionesDe({ [ruta]: importa(paquete) });
+        expect(permitido, `${paquete} desde ${ruta}`).not.toContain("arca-solo-en-su-adaptador");
+      }
     }
   });
 

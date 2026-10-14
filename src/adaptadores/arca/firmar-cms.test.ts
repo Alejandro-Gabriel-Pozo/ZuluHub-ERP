@@ -3,6 +3,7 @@ import type * as asn1js from "asn1js";
 import * as pkijs from "pkijs";
 import { describe, expect, it } from "vitest";
 import { credencialDePrueba } from "../../../test/utilidades/arca-credencial";
+import { Secreto } from "../../primitivas/secreto/secreto";
 import { ErrorDeFirma, firmarTra } from "./firmar-cms";
 import { armarTra } from "./pedidos-de-wsaa";
 
@@ -108,7 +109,7 @@ describe("firmarTra", () => {
     const { credencial, clavePrivada } = await credencialDePrueba();
     const pkcs1 = clavePrivada.export({ format: "pem", type: "pkcs1" }).toString();
     expect(pkcs1).toContain("BEGIN RSA PRIVATE KEY");
-    expect(await firmarTra(tra, { ...credencial, clavePrivadaPem: pkcs1 }, ahora)).toBe(
+    expect(await firmarTra(tra, { ...credencial, clavePrivada: new Secreto(pkcs1) }, ahora)).toBe(
       await firmarTra(tra, credencial, ahora),
     );
   });
@@ -127,7 +128,16 @@ describe("firmarTra: lo que no sirve falla con un texto fijo", () => {
 
   async function falla(cambios: Partial<{ certificadoPem: string; clavePrivadaPem: string }>) {
     const { credencial } = await credencialDePrueba();
-    return firmarTra(tra, { ...credencial, ...cambios }, ahora).then(
+    const { clavePrivadaPem, ...resto } = cambios;
+    return firmarTra(
+      tra,
+      {
+        ...credencial,
+        ...resto,
+        ...(clavePrivadaPem === undefined ? {} : { clavePrivada: new Secreto(clavePrivadaPem) }),
+      },
+      ahora,
+    ).then(
       () => null,
       (error: unknown) => error as ErrorDeFirma,
     );
@@ -166,14 +176,16 @@ describe("firmarTra: lo que no sirve falla con un texto fijo", () => {
 
   it("el error no repite la clave ni el certificado, y no guarda la causa", async () => {
     const { credencial } = await credencialDePrueba();
-    const error = await falla({ clavePrivadaPem: `${credencial.clavePrivadaPem.slice(0, 200)}ñ` });
+    const error = await falla({
+      clavePrivadaPem: `${credencial.clavePrivada.revelar().slice(0, 200)}ñ`,
+    });
     const texto = JSON.stringify({
       m: error?.message,
       s: error?.stack,
       c: (error as { cause?: unknown }).cause,
     });
     expect(texto).not.toContain("BEGIN");
-    expect(texto).not.toContain(credencial.clavePrivadaPem.split("\n")[1] ?? "x");
+    expect(texto).not.toContain(credencial.clavePrivada.revelar().split("\n")[1] ?? "x");
     expect((error as { cause?: unknown }).cause).toBeUndefined();
   });
 });

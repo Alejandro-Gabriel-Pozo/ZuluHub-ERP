@@ -402,8 +402,8 @@ const reglas = [
     name: "arca-solo-en-su-adaptador",
     severity: "error",
     comment:
-      "pkijs, asn1js y fast-xml-parser (la firma CMS del pedido de acceso y la lectura de las respuestas de ARCA) solo se importan en src/adaptadores/arca (decisión 13 y D5; facturación §B.5.7). Ni el dominio, ni los casos de uso, ni las apps, ni otro adaptador.",
-    from: { path: "^(src|apps|scripts)/", pathNot: "^src/adaptadores/arca/" },
+      "pkijs, asn1js y fast-xml-parser (la firma CMS del pedido de acceso, el pedido y la lectura de certificados, y la lectura de las respuestas de ARCA) solo se importan en los adaptadores de ARCA y de certificados, src/adaptadores/arca y src/adaptadores/certificados (decisión 13 y D5; facturación §B.5.7). Ni el dominio, ni los casos de uso, ni las apps, ni otro adaptador.",
+    from: { path: "^(src|apps|scripts)/", pathNot: "^src/adaptadores/(arca|certificados)/" },
     to: { path: "^(node_modules/)?(pkijs|asn1js|fast-xml-parser)(/|$)" },
   },
   {

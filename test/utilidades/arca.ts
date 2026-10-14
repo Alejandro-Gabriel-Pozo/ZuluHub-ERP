@@ -6,11 +6,18 @@ import type {
   Transporte,
 } from "../../src/adaptadores/arca/tipos";
 import type { EmisorId, EmpresaId } from "../../src/primitivas/identificadores/marca";
-import type { AlmacenDeTickets, TicketDeAcceso } from "../../src/puertos/almacen-de-tickets";
+import { err, ok, type Resultado } from "../../src/primitivas/resultado/resultado";
+import type {
+  AlmacenDeTickets,
+  ErrorDeAlmacenDeTickets,
+  ServicioDeArca,
+  TicketDeAcceso,
+} from "../../src/puertos/almacen-de-tickets";
 import type {
   AmbienteDeArca,
-  CredencialDeEmisor,
   CredencialesDeEmisor,
+  CredencialesDescifradas,
+  ErrorDeCredenciales,
 } from "../../src/puertos/credenciales-de-emisor";
 
 /**
@@ -121,24 +128,37 @@ export class TransporteFalso {
 // Los puertos de F7 en memoria
 // ---------------------------------------------------------------------------------------------------------------
 
-/** Credenciales en memoria: una sola (o ninguna) para todos los (emisor, ambiente). Cuenta las veces que se pidieron. */
+/**
+ * Credenciales en memoria (puerto de F7): una sola para todos los (emisor, ambiente), `null` para «sin
+ * certificado vigente» o un error de credenciales. Cuenta las veces que se pidieron.
+ */
 export class CredencialesEnMemoria implements CredencialesDeEmisor {
   pedidas = 0;
-  constructor(private credencial: CredencialDeEmisor | null) {}
-  /** Devuelve la misma credencial para cualquier (empresa, emisor, ambiente); solo cuenta las veces. */
-  obtener(): Promise<CredencialDeEmisor | null> {
+  constructor(private credencial: CredencialesDescifradas | ErrorDeCredenciales | null) {}
+  /** Devuelve lo mismo para cualquier (empresa, emisor, ambiente); solo cuenta las veces. */
+  obtener(): Promise<Resultado<CredencialesDescifradas, ErrorDeCredenciales>> {
     this.pedidas += 1;
-    return Promise.resolve(this.credencial);
+    if (this.credencial === null) return Promise.resolve(err("SIN_CERTIFICADO_VIGENTE"));
+    if (typeof this.credencial === "string" || "tipo" in this.credencial) {
+      return Promise.resolve(err(this.credencial));
+    }
+    return Promise.resolve(ok(this.credencial));
   }
 }
 
-/** El almacén de tickets en memoria, con el orden de lo que se leyó y se guardó. */
+/** Una lectura programada: un ticket, ninguno (`null`) o un error del almacén. */
+type Lectura = TicketDeAcceso | null | Readonly<{ error: ErrorDeAlmacenDeTickets }>;
+
+/** El almacén de tickets en memoria (puerto de F7), con el orden de lo que se leyó y se guardó. */
 export class AlmacenDeTicketsEnMemoria implements AlmacenDeTickets {
   guardados: TicketDeAcceso[] = [];
   lecturas = 0;
   /** Qué devuelve `leer` en cada lectura, en orden (el último se repite); por defecto lo último guardado. */
-  private guion: (TicketDeAcceso | null)[] | null = null;
+  private guion: Lectura[] | null = null;
+  /** `guardar` lanza una excepción (con una cadena de conexión adentro). */
   fallarAlGuardar = false;
+  /** `guardar` devuelve este error. */
+  errorAlGuardar: ErrorDeAlmacenDeTickets | null = null;
   private actual: TicketDeAcceso | null;
 
   constructor(inicial: TicketDeAcceso | null = null) {
@@ -146,25 +166,30 @@ export class AlmacenDeTicketsEnMemoria implements AlmacenDeTickets {
   }
 
   /** Las próximas lecturas devuelven esto, en orden (la última se repite). */
-  programarLecturas(...lecturas: (TicketDeAcceso | null)[]): void {
+  programarLecturas(...lecturas: Lectura[]): void {
     this.guion = lecturas;
   }
 
-  leer(): Promise<TicketDeAcceso | null> {
+  leer(): Promise<Resultado<TicketDeAcceso | null, ErrorDeAlmacenDeTickets>> {
     this.lecturas += 1;
-    if (this.guion === null) return Promise.resolve(this.actual);
-    const siguiente = this.guion.length > 1 ? this.guion.shift() : this.guion[0];
-    return Promise.resolve(siguiente ?? null);
+    const lectura: Lectura =
+      this.guion === null
+        ? this.actual
+        : ((this.guion.length > 1 ? this.guion.shift() : this.guion[0]) ?? null);
+    if (lectura !== null && "error" in lectura) return Promise.resolve(err(lectura.error));
+    return Promise.resolve(ok(lectura));
   }
 
   guardar(
-    ...argumentos: [EmpresaId, EmisorId, AmbienteDeArca, "wsfe", TicketDeAcceso]
-  ): Promise<void> {
+    ...argumentos: [EmpresaId, EmisorId, AmbienteDeArca, ServicioDeArca, TicketDeAcceso]
+  ): Promise<Resultado<null, ErrorDeAlmacenDeTickets>> {
     const ticket = argumentos[4];
-    if (this.fallarAlGuardar)
+    if (this.fallarAlGuardar) {
       return Promise.reject(new Error("falla de la base con postgres://secreto"));
+    }
+    if (this.errorAlGuardar !== null) return Promise.resolve(err(this.errorAlGuardar));
     this.guardados.push(ticket);
     this.actual = ticket;
-    return Promise.resolve();
+    return Promise.resolve(ok(null));
   }
 }

@@ -22,11 +22,16 @@ import {
 } from "../../modulos/fiscal/publico";
 import { importeDesdeTexto } from "../../primitivas/dinero/importe";
 import { ARS } from "../../primitivas/dinero/moneda";
+import { ok } from "../../primitivas/resultado/resultado";
 import { cuitDesdeTexto } from "../../primitivas/identificacion-fiscal/cuit";
 import { empresaId } from "../../primitivas/identificadores/marca";
 import { fechaCivilDesdeTexto } from "../../primitivas/tiempo/fecha-civil";
 import type { TicketDeAcceso } from "../../puertos/almacen-de-tickets";
-import type { CredencialDeEmisor } from "../../puertos/credenciales-de-emisor";
+import { Secreto } from "../../primitivas/secreto/secreto";
+import type {
+  CredencialesDescifradas,
+  ErrorDeCredenciales,
+} from "../../puertos/credenciales-de-emisor";
 import {
   crearEmisionArca,
   crearProveedorDeEmisionArca,
@@ -100,11 +105,14 @@ function conSecretos(pedido: string, token = TOKEN_DE_PRUEBA, sign = FIRMA_DE_PR
 }
 
 const horas = (n: number) => new Date(AHORA.getTime() + n * 3_600_000);
-const ticketVigente: TicketDeAcceso = {
-  token: TOKEN_DE_PRUEBA,
-  sign: FIRMA_DE_PRUEBA,
-  venceEn: horas(10),
-};
+const unTicket = (token: string, firma: string, venceEn: Date): TicketDeAcceso => ({
+  certificadoId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  token: new Secreto(token),
+  firma: new Secreto(firma),
+  generadoEn: AHORA,
+  venceEn,
+});
+const ticketVigente = unTicket(TOKEN_DE_PRUEBA, FIRMA_DE_PRUEBA, horas(10));
 
 /** Que nada secreto aparezca en lo que el adaptador devuelve: la guarda que falla si aparece. */
 const PROHIBIDOS = [
@@ -136,16 +144,19 @@ type Mundo = Readonly<{
   bitacora: string[];
 }>;
 
-const CREDENCIAL_FALSA: CredencialDeEmisor = {
+const CLAVE_FALSA = "-----BEGIN PRIVATE KEY-----\nBBBB\n-----END PRIVATE KEY-----";
+const CREDENCIAL_FALSA: CredencialesDescifradas = {
+  certificadoId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   certificadoPem: "-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----",
-  clavePrivadaPem: "-----BEGIN PRIVATE KEY-----\nBBBB\n-----END PRIVATE KEY-----",
+  clavePrivada: new Secreto(CLAVE_FALSA),
+  venceEn: new Date("2036-01-01T00:00:00Z"),
 };
 
 /** El adaptador con todo en memoria; sus resultados pasan por la guarda de secretos. */
 function armar(
   opciones: Readonly<{
     ticket?: TicketDeAcceso | null;
-    credencial?: CredencialDeEmisor | null;
+    credencial?: CredencialesDescifradas | ErrorDeCredenciales | null;
     ambiente?: "HOMOLOGACION" | "PRODUCCION";
     firmar?: NonNullable<DependenciasDeArca["firmar"]>;
     /** Con `true` se usa la firma real (la de `firmar-cms.ts`) en lugar de una firma de mentira. */
@@ -405,7 +416,7 @@ describe("el ticket de acceso: se reutiliza, se renueva, no se insiste", () => {
 
   it("el ticket guardado va en el pedido: token y firma", async () => {
     const m = armar({
-      ticket: { token: "tok-guardado", sign: "firma-guardada", venceEn: horas(10) },
+      ticket: unTicket("tok-guardado", "firma-guardada", horas(10)),
       transporte: wsfe(["FECompUltimoAutorizado", grabada(1, "024")]),
     });
     await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B");
@@ -421,11 +432,11 @@ describe("el ticket de acceso: se reutiliza, se renueva, no se insiste", () => {
       [5 * 60_000 + 1, false],
     ] as const) {
       const m = armar({
-        ticket: {
-          token: TOKEN_DE_PRUEBA,
-          sign: FIRMA_DE_PRUEBA,
-          venceEn: new Date(AHORA.getTime() + milisegundos),
-        },
+        ticket: unTicket(
+          TOKEN_DE_PRUEBA,
+          FIRMA_DE_PRUEBA,
+          new Date(AHORA.getTime() + milisegundos),
+        ),
         transporte: wsfe(
           ["loginCms", respuestaHttp(respuestaDeLoginCms())],
           ["FECompUltimoAutorizado", grabada(1, "024")],
@@ -438,7 +449,7 @@ describe("el ticket de acceso: se reutiliza, se renueva, no se insiste", () => {
 
   it("un ticket ya vencido se renueva", async () => {
     const m = armar({
-      ticket: { token: TOKEN_DE_PRUEBA, sign: FIRMA_DE_PRUEBA, venceEn: horas(-1) },
+      ticket: unTicket(TOKEN_DE_PRUEBA, FIRMA_DE_PRUEBA, horas(-1)),
       transporte: wsfe(
         ["loginCms", respuestaHttp(respuestaDeLoginCms())],
         ["FECompUltimoAutorizado", grabada(1, "024")],
@@ -471,20 +482,20 @@ describe("el ticket de acceso: se reutiliza, se renueva, no se insiste", () => {
       limiteEnMs: 20_000,
     });
     // El ticket se guardó con su vencimiento, y se guardó antes del pedido a WSFE.
-    expect(m.tickets.guardados).toEqual([
-      {
-        token: TOKEN_DE_PRUEBA,
-        sign: FIRMA_DE_PRUEBA,
-        venceEn: new Date("2026-10-14T22:18:05.993-03:00"),
-      },
-    ]);
+    expect(
+      m.tickets.guardados.map((t) => [t.token.revelar(), t.firma.revelar(), t.venceEn]),
+    ).toEqual([[TOKEN_DE_PRUEBA, FIRMA_DE_PRUEBA, new Date("2026-10-14T22:18:05.993-03:00")]]);
     expect(m.bitacora).toEqual(["leer", "pedido:loginCms", "guardar", "pedido:FECAESolicitar"]);
     // El ticket recién emitido es el que se usa.
     expect(m.transporte.pedidos[1]?.cuerpo).toBe(conSecretos(grabacion(1, "031", "pedido")));
   });
 
   it("el TRA firmado es el de ahora (generación −2 min, expiración +10 min) para el servicio wsfe", async () => {
-    const firmados: { tra: string; ahora: Date; credencial: CredencialDeEmisor }[] = [];
+    const firmados: {
+      tra: string;
+      ahora: Date;
+      credencial: Pick<CredencialesDescifradas, "certificadoPem" | "clavePrivada">;
+    }[] = [];
     const m = armar({
       ticket: null,
       firmar: (tra, credencial, ahora) => {
@@ -629,7 +640,7 @@ describe("el ticket de acceso: se reutiliza, se renueva, no se insiste", () => {
   it("si firmar lanza cualquier otra cosa (con una clave adentro), tampoco sale ni se repite", async () => {
     const m = armar({
       ticket: null,
-      firmar: () => Promise.reject(new Error(CREDENCIAL_FALSA.clavePrivadaPem)),
+      firmar: () => Promise.reject(new Error(CLAVE_FALSA)),
     });
     const r = await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B");
     expect(r).toMatchObject({ ok: false, error: { codigo: "SIN_CREDENCIAL" } });
@@ -708,6 +719,138 @@ describe("el ticket de acceso: se reutiliza, se renueva, no se insiste", () => {
 });
 
 // ---------------------------------------------------------------------------------------------------------------
+
+describe("los puertos de F7: resultados con error, nunca excepciones", () => {
+  it("un ticket recién emitido se guarda atado al certificado que lo pidió, envuelto como secreto", async () => {
+    const m = armar({
+      ticket: null,
+      transporte: wsfe(
+        [
+          "loginCms",
+          respuestaHttp(respuestaDeLoginCms({ vence: "2026-10-14T22:18:05.993-03:00" })),
+        ],
+        ["FECompUltimoAutorizado", grabada(1, "024")],
+      ),
+    });
+    await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B");
+    const [guardado] = m.tickets.guardados;
+    expect(m.tickets.guardados).toHaveLength(1);
+    expect(guardado?.certificadoId).toBe(CREDENCIAL_FALSA.certificadoId);
+    expect(guardado?.token).toBeInstanceOf(Secreto);
+    expect(guardado?.token.revelar()).toBe(TOKEN_DE_PRUEBA);
+    expect(guardado?.firma.revelar()).toBe(FIRMA_DE_PRUEBA);
+    expect(guardado?.generadoEn).toEqual(AHORA);
+    expect(guardado?.venceEn).toEqual(new Date("2026-10-14T22:18:05.993-03:00"));
+    // Envueltos, no salen por accidente.
+    expect(JSON.stringify(guardado)).not.toContain(TOKEN_DE_PRUEBA);
+    expect(`${String(guardado?.token)}`).not.toContain(TOKEN_DE_PRUEBA);
+  });
+
+  it("si el almacén falla al LEER no se pide otro ticket (podría haber uno vigente): servicio no disponible", async () => {
+    for (const error of [
+      "TICKET_ILEGIBLE",
+      "CERTIFICADO_NO_ENCONTRADO",
+      { tipo: "Inesperado", sqlstate: "08006", mensaje: "postgres://usuario:clave@host" },
+      { tipo: "ConcurrenciaAgotada" },
+    ] as const) {
+      const m = armar({
+        transporte: wsfe(
+          ["loginCms", respuestaHttp(respuestaDeLoginCms())],
+          ["FECAESolicitar", grabada(1, "032")],
+        ),
+      });
+      m.tickets.programarLecturas({ error });
+      const detalle = "no se pudo leer el ticket de acceso guardado";
+      expect(await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B")).toEqual({
+        ok: false,
+        error: { codigo: "SERVICIO_NO_DISPONIBLE", detalle },
+      });
+      expect(await m.adaptador.autorizar(solicitudDeLaGrabacion())).toEqual({
+        tipo: "NO_ENVIADO",
+        motivo: `sin ticket de acceso (SERVICIO_NO_DISPONIBLE: ${detalle})`,
+      });
+      expect(await m.adaptador.consultar(PUNTO_DE_VENTA, "FACTURA_B", 14n)).toEqual({
+        tipo: "CONSULTA_FALLIDA",
+        detalle: `sin ticket de acceso (SERVICIO_NO_DISPONIBLE: ${detalle})`,
+      });
+      // Ni credenciales, ni WSAA, ni WSFE: no se hizo nada.
+      expect(m.credenciales.pedidas).toBe(0);
+      expect(m.transporte.pedidos).toEqual([]);
+      expect(m.tickets.guardados).toEqual([]);
+    }
+  });
+
+  it.each([
+    [
+      "SIN_CERTIFICADO_VIGENTE",
+      "SIN_CREDENCIAL",
+      "el emisor no tiene un certificado vigente en este ambiente",
+    ],
+    ["CERTIFICADO_VENCIDO", "SIN_CREDENCIAL", "el certificado del emisor está vencido"],
+    ["CLAVE_ILEGIBLE", "SIN_CREDENCIAL", "la clave del certificado del emisor no se pudo leer"],
+  ] as const)(
+    "credenciales: %s es %s con un texto fijo y no sale nada a la red",
+    async (causa, codigo, detalle) => {
+      const m = armar({ ticket: null, credencial: causa });
+      expect(await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B")).toEqual({
+        ok: false,
+        error: { codigo, detalle },
+      });
+      expect(await m.adaptador.autorizar(solicitudDeLaGrabacion())).toEqual({
+        tipo: "NO_ENVIADO",
+        motivo: `sin ticket de acceso (${codigo}: ${detalle})`,
+      });
+      expect(m.transporte.pedidos).toEqual([]);
+    },
+  );
+
+  it("credenciales: un error de persistencia es servicio no disponible, sin su mensaje", async () => {
+    const m = armar({
+      ticket: null,
+      credencial: {
+        tipo: "Inesperado",
+        sqlstate: "08006",
+        mensaje: "postgres://usuario:clave@host",
+      },
+    });
+    expect(await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B")).toEqual({
+      ok: false,
+      error: {
+        codigo: "SERVICIO_NO_DISPONIBLE",
+        detalle: "no se pudieron obtener las credenciales del emisor",
+      },
+    });
+    expect(m.transporte.pedidos).toEqual([]);
+  });
+
+  it("si guardar devuelve un error, el ticket igual se usa", async () => {
+    const m = armar({
+      ticket: null,
+      transporte: wsfe(
+        ["loginCms", respuestaHttp(respuestaDeLoginCms())],
+        ["FECAESolicitar", grabada(1, "032")],
+      ),
+    });
+    m.tickets.errorAlGuardar = "CERTIFICADO_NO_ENCONTRADO";
+    expect(await m.adaptador.autorizar(solicitudDeLaGrabacion())).toMatchObject({
+      tipo: "AUTORIZADO",
+    });
+    expect(m.transporte.veces("FECAESolicitar")).toBe(1);
+  });
+
+  it("alreadyAuthenticated y la relectura falla con un error: no hay ticket, ACCESO_YA_EMITIDO, sin pedir otro", async () => {
+    const m = armar({
+      ticket: null,
+      transporte: wsfe(["loginCms", respuestaHttp(grabacion(1, "004", "respuesta"), 500)]),
+    });
+    m.tickets.programarLecturas(null, { error: "TICKET_ILEGIBLE" });
+    expect(await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B")).toMatchObject({
+      ok: false,
+      error: { codigo: "ACCESO_YA_EMITIDO" },
+    });
+    expect(m.transporte.veces("loginCms")).toBe(1);
+  });
+});
 
 describe("UNA ESCRITURA NUNCA SE REENVÍA", () => {
   /** Cada una de las maneras de que un FECAESolicitar termine mal, con lo que debe devolver el adaptador. */
@@ -920,7 +1063,7 @@ describe("nada secreto sale: la guarda y los casos adversarios", () => {
       transporte: wsfe([
         "FECAESolicitar",
         () => {
-          throw new Error(`${TOKEN_DE_PRUEBA} ${CREDENCIAL_FALSA.clavePrivadaPem}`);
+          throw new Error(`${TOKEN_DE_PRUEBA} ${CLAVE_FALSA}`);
         },
       ]),
     });
@@ -952,7 +1095,7 @@ describe("el proveedor: un adaptador por (empresa, emisor, ambiente)", () => {
     const tickets = new AlmacenDeTicketsEnMemoria(ticketVigente);
     tickets.leer = (...argumentos: unknown[]) => {
       pedidosDelAlmacen.push(argumentos);
-      return Promise.resolve(ticketVigente);
+      return Promise.resolve(ok(ticketVigente));
     };
     const proveedor = crearProveedorDeEmisionArca({
       credenciales: new CredencialesEnMemoria(CREDENCIAL_FALSA),

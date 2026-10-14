@@ -1,7 +1,7 @@
 import { createPrivateKey, webcrypto } from "node:crypto";
 import * as asn1js from "asn1js";
 import * as pkijs from "pkijs";
-import type { CredencialDeEmisor } from "../../puertos/credenciales-de-emisor";
+import type { CredencialesDescifradas } from "../../puertos/credenciales-de-emisor";
 
 /**
  * Firma del TRA en CMS (spec H7 facturación §B.5.3) con **pkijs + asn1js**, las librerías aprobadas por el
@@ -62,12 +62,13 @@ async function claveDeFirma(pem: string): Promise<webcrypto.CryptoKey> {
  */
 export async function firmarTra(
   tra: string,
-  credencial: CredencialDeEmisor,
+  credencial: Pick<CredencialesDescifradas, "certificadoPem" | "clavePrivada">,
   ahora: Date,
 ): Promise<string> {
   try {
     const certificado = certificadoDesdePem(credencial.certificadoPem);
-    const clave = await claveDeFirma(credencial.clavePrivadaPem);
+    // La clave se revela acá, en el último punto posible, y no sale de esta función.
+    const clave = await claveDeFirma(credencial.clavePrivada.revelar());
     const contenido = new TextEncoder().encode(tra);
     const resumen = await webcrypto.subtle.digest("SHA-256", contenido);
     const firmado = new pkijs.SignedData({

@@ -13,11 +13,13 @@ import {
 } from "../../modulos/fiscal/publico";
 import type { EmpresaId } from "../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
+import { Secreto } from "../../primitivas/secreto/secreto";
 import type { AlmacenDeTickets, TicketDeAcceso } from "../../puertos/almacen-de-tickets";
 import type {
   AmbienteDeArca,
-  CredencialDeEmisor,
   CredencialesDeEmisor,
+  CredencialesDescifradas,
+  ErrorDeCredenciales,
 } from "../../puertos/credenciales-de-emisor";
 import {
   clasificarAutorizacion,
@@ -98,6 +100,33 @@ export interface AdaptadorDeArca extends EmisionElectronica {
   ): Promise<Resultado<readonly FilaDeParametro[], ErrorDeEmision>>;
 }
 
+/**
+ * Por qué no hay credencial, con un texto fijo (nunca el de una excepción): las tres causas de la credencial
+ * misma son `SIN_CREDENCIAL` (hay que cargar o corregir el certificado); un error de persistencia es que el
+ * servicio no está disponible (se reintenta).
+ */
+function errorDeCredenciales(error: ErrorDeCredenciales): ErrorDeEmision {
+  switch (error) {
+    case "SIN_CERTIFICADO_VIGENTE":
+      return {
+        codigo: "SIN_CREDENCIAL",
+        detalle: "el emisor no tiene un certificado vigente en este ambiente",
+      };
+    case "CERTIFICADO_VENCIDO":
+      return { codigo: "SIN_CREDENCIAL", detalle: "el certificado del emisor está vencido" };
+    case "CLAVE_ILEGIBLE":
+      return {
+        codigo: "SIN_CREDENCIAL",
+        detalle: "la clave del certificado del emisor no se pudo leer",
+      };
+    default:
+      return {
+        codigo: "SERVICIO_NO_DISPONIBLE",
+        detalle: "no se pudieron obtener las credenciales del emisor",
+      };
+  }
+}
+
 const textoDeError = (e: ErrorDeEmision): string => `${e.codigo}: ${e.detalle}`;
 
 export function crearEmisionArca(
@@ -127,9 +156,9 @@ export function crearEmisionArca(
   const vigente = (ticket: TicketDeAcceso): boolean =>
     ticket.venceEn.getTime() - MARGEN_DEL_TICKET_EN_MS > reloj.ahora().getTime();
 
-  /** Pide un ticket nuevo a WSAA con la credencial del emisor. */
+  /** Pide un ticket nuevo a WSAA con la credencial del emisor, y lo envuelve como lo guarda el almacén. */
   async function pedirTicket(
-    credencial: CredencialDeEmisor,
+    credencial: CredencialesDescifradas,
   ): Promise<Resultado<TicketDeAcceso, ErrorDeEmision>> {
     const ahora = reloj.ahora();
     let cms: string;
@@ -141,28 +170,40 @@ export function crearEmisionArca(
         detalle: "la credencial del emisor no sirve para firmar el pedido de acceso",
       });
     }
-    return clasificarLoginCms(
+    const ticket = clasificarLoginCms(
       await enviar(destinos.wsaa, "", pedidoLoginCms(cms), TIEMPO_LIMITE_DE_LOGIN_EN_MS),
     );
+    if (!ticket.ok) return ticket;
+    return ok({
+      certificadoId: credencial.certificadoId,
+      token: new Secreto(ticket.valor.token),
+      firma: new Secreto(ticket.valor.sign),
+      generadoEn: ahora,
+      venceEn: ticket.valor.venceEn,
+    });
   }
 
   /**
    * El ticket para operar: el guardado si está vigente; si no, uno nuevo, que se guarda enseguida. Ante
    * `coe.alreadyAuthenticated` (otro proceso lo acaba de pedir) se espera y se relee el guardado, sin insistir.
+   * Si el almacén falla al LEER no se sabe si hay un ticket vigente: pedir otro dejaría al certificado bloqueado
+   * por horas (`coe.alreadyAuthenticated`), así que no se pide: el servicio no está disponible.
    */
   async function obtenerTicket(): Promise<Resultado<TicketDeAcceso, ErrorDeEmision>> {
     const guardado = await tickets.leer(empresa, emisor, ambiente, SERVICIO_DE_ARCA);
-    if (guardado !== null && vigente(guardado)) return ok(guardado);
-    const credencial = await credenciales.obtener(empresa, emisor, ambiente);
-    if (credencial === null) {
+    if (!guardado.ok) {
       return err({
-        codigo: "SIN_CREDENCIAL",
-        detalle: "el emisor no tiene un certificado vigente en este ambiente",
+        codigo: "SERVICIO_NO_DISPONIBLE",
+        detalle: "no se pudo leer el ticket de acceso guardado",
       });
     }
-    const nuevo = await pedirTicket(credencial);
+    if (guardado.valor !== null && vigente(guardado.valor)) return ok(guardado.valor);
+    const credencial = await credenciales.obtener(empresa, emisor, ambiente);
+    if (!credencial.ok) return err(errorDeCredenciales(credencial.error));
+    const nuevo = await pedirTicket(credencial.valor);
     if (nuevo.ok) {
-      // Si no se pudiera guardar, igual se usa: tirarlo dejaría al certificado sin poder pedir otro por horas.
+      // Si no se pudiera guardar (falla o error del almacén), igual se usa: tirarlo dejaría al certificado sin
+      // poder pedir otro por horas.
       try {
         await tickets.guardar(empresa, emisor, ambiente, SERVICIO_DE_ARCA, nuevo.valor);
       } catch {
@@ -173,7 +214,9 @@ export function crearEmisionArca(
     if (nuevo.error.codigo !== "ACCESO_YA_EMITIDO") return nuevo;
     await esperar(ESPERA_TRAS_ACCESO_YA_EMITIDO_EN_MS);
     const releido = await tickets.leer(empresa, emisor, ambiente, SERVICIO_DE_ARCA);
-    return releido !== null && vigente(releido) ? ok(releido) : nuevo;
+    return releido.ok && releido.valor !== null && vigente(releido.valor)
+      ? ok(releido.valor)
+      : nuevo;
   }
 
   /**
@@ -186,7 +229,12 @@ export function crearEmisionArca(
     try {
       const ticket = await obtenerTicket();
       if (!ticket.ok) return ticket;
-      return ok({ token: ticket.valor.token, sign: ticket.valor.sign, cuit });
+      // Los secretos se revelan acá, en el último punto posible: solo para armar el pedido a WSFE.
+      return ok({
+        token: ticket.valor.token.revelar(),
+        sign: ticket.valor.firma.revelar(),
+        cuit,
+      });
     } catch {
       return err({
         codigo: "SERVICIO_NO_DISPONIBLE",
