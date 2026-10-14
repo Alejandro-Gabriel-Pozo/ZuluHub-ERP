@@ -174,7 +174,8 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
       const deB = await certificadoDeArca(servicios, "HOMOLOGACION", pb);
       expect(await cargar(e, b.id, deA)).toEqual({ ok: false, error: "NO_CORRESPONDE_A_LA_CLAVE" });
       expect(await cargar(e, a.id, deB)).toEqual({ ok: false, error: "NO_CORRESPONDE_A_LA_CLAVE" });
-      expect(await cargar(e, a.id, deA)).toMatchObject({ ok: true });
+      const carga1 = await cargar(e, a.id, deA);
+      expect(carga1.ok, JSON.stringify(carga1)).toBe(true);
       expect(await cargar(e, b.id, deB)).toMatchObject({ ok: true, valor: { reemplazoA: a.id } });
     }
   });
@@ -230,7 +231,8 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const e = await escenarioDeCertificados(dueno, propia.base);
       const primero = await pedirYEmitir(e);
-      expect(await cargar(e, primero.id, primero.pem)).toMatchObject({ ok: true });
+      const carga2 = await cargar(e, primero.id, primero.pem);
+      expect(carga2.ok, JSON.stringify(carga2)).toBe(true);
       const segundo = await pedirYEmitir(e);
       const reloj = new RelojDeCertificados(new Date());
       const credenciales = credencialesDe(entorno, servicios, reloj);
@@ -263,7 +265,8 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const e = await escenarioDeCertificados(dueno, propia.base);
       const cert = await pedirYEmitir(e);
-      expect(await cargar(e, cert.id, cert.pem)).toMatchObject({ ok: true });
+      const carga3 = await cargar(e, cert.id, cert.pem);
+      expect(carga3.ok, JSON.stringify(carga3)).toBe(true);
       const reloj = new RelojDeCertificados(new Date());
       const almacen = almacenDe(entorno, servicios, reloj);
       const empresa = empresaId(e.empresa);
@@ -327,7 +330,8 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
         ok: false,
         error: "CERTIFICADO_NO_ENCONTRADO",
       });
-      expect(await cargar(a, ida, certDeA)).toMatchObject({ ok: true });
+      const carga4 = await cargar(a, ida, certDeA);
+      expect(carga4.ok, JSON.stringify(carga4)).toBe(true);
     }
   });
 });
