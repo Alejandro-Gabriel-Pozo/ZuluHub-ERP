@@ -137,7 +137,7 @@ describe("landing", () => {
   it("todo style y script del cuerpo tiene un nonce válido, y no hay scripts en línea sin él", async () => {
     comoPedido(HOST_LANDING_A);
     const texto = (await landing()) as string;
-    for (const etiqueta of texto.matchAll(/<(style|script)\b([^>]*)>/g)) {
+    for (const etiqueta of texto.matchAll(/<(style|script)\b([^>]*)>/gi)) {
       const nonce = /nonce="([^"]+)"/.exec(etiqueta[2] ?? "")?.[1];
       expect(nonce, etiqueta[0]).toMatch(NONCE_VALIDO);
       expect(nonce).toBe(NONCE);
@@ -286,7 +286,7 @@ describe("la neutra", () => {
       expect(texto).toContain("No encontrado");
       for (const sena of [...MARCA_A.senas, ...MARCA_B.senas]) expect(texto).not.toContain(sena);
       expect(texto).not.toContain("<style");
-      expect(texto).not.toContain("<script");
+      expect(texto.toLowerCase()).not.toContain("<script");
     }
   });
 });

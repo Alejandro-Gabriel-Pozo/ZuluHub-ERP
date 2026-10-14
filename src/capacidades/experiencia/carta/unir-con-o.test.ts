@@ -24,7 +24,9 @@ describe("unirConO", () => {
   const textos = fc.array(
     fc
       .string({ unit: "grapheme-ascii", minLength: 1, maxLength: 8 })
-      .filter((t) => !/[, ]/.test(t)),
+      // Sin coma ni espacio, y sin el elemento «o» a secas: con él, separar el resultado por « o » (que es
+      // como estas propiedades recuperan los elementos) es ambiguo. No es un caso de la función.
+      .filter((t) => !/[, ]/.test(t) && t !== "o"),
     { maxLength: 8 },
   );
 
