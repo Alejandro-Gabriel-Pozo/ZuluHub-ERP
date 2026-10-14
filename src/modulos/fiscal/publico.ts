@@ -139,12 +139,10 @@ export {
   type ClaveDeIdempotenciaDeComprobante,
   type ComprobanteEmitido,
   type ComprobanteEmitidoJson,
-  type DesenlaceDeAutorizacion,
   type EstadoDeComprobante,
   type InstantaneaDeEmisor,
   type LetraDeComprobante,
   type OrigenDeComprobante,
-  type ResultadoDeAutorizacion,
   type TipoDeComprobante,
   type TipoDeOrigen,
 } from "./dominio/comprobante-emitido";
@@ -208,7 +206,6 @@ export {
   type RepositorioDeReglasDeEmisor,
   type RepositorioDeSeries,
   type ResultadoDeAlta,
-  type SerieGuardada,
   type VersionDeDatosFiscales,
   type VersionDeRegla,
 } from "./persistencia/repositorios";
@@ -280,13 +277,6 @@ export type {
   SalidaDeCerrarReserva,
 } from "./casos-de-uso/cerrar-reserva";
 export type {
-  CierreSinConfirmar,
-  EntradaDeNumerarComprobante,
-  ErrorAlNumerarComprobante,
-  ReservaEnCurso,
-  SalidaDeNumerarComprobante,
-} from "./casos-de-uso/numerar-comprobante";
-export type {
   EntradaDeReconciliarSerie,
   ErrorAlReconciliarSerie,
   SalidaDeReconciliarSerie,
@@ -297,3 +287,57 @@ export type {
   ResultadoPorSerie,
   SalidaDeReconciliarSeriesVencidas,
 } from "./casos-de-uso/reconciliar-series-vencidas";
+
+// H7 facturación F4: numeración con ambiente (la serie es de un punto de venta, un tipo y un ambiente), puerto de
+// emisión ampliado (consultar, no enviado) y salida de una serie bloqueada.
+export { resincronizarSerie, type ErrorDeResincronizacion } from "./dominio/numeracion";
+export type {
+  DatosConsultados,
+  DesenlaceDeAutorizacion,
+  Mensaje,
+  ResultadoDeAutorizacionArca,
+  ResultadoDeConsulta,
+} from "./dominio/estados-de-comprobante";
+
+// H7 facturación F6: las consultas del facturador (listado, detalle y modelo de impresión) y el modelo de impresión.
+export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_FISCAL } from "./consultas/declaraciones";
+export { crearConsultasDeFacturacion, type ConsultasDeFacturacion } from "./consultas/consultas";
+export type {
+  DependenciasDeConsultasDeFacturacion,
+  TxDeConsultasDeFacturacion,
+} from "./consultas/contrato";
+export type {
+  EntradaDeListarComprobantes,
+  ErrorAlListarComprobantes,
+} from "./consultas/listar-comprobantes";
+export type { EntradaDeVerComprobante, ErrorAlVerComprobante } from "./consultas/ver-comprobante";
+export type {
+  EntradaDeModeloDeImpresion,
+  ErrorAlPedirElModeloDeImpresion,
+} from "./consultas/modelo-de-impresion";
+export type {
+  DetalleDeComprobante,
+  NotaQueCitaVista,
+  PaginaDeComprobantes,
+  ResumenDeComprobante,
+  SerieVista,
+  UltimoIntentoVisto,
+} from "./consultas/vistas";
+export {
+  LARGO_MAXIMO_DEL_TEXTO,
+  LIMITE_MAXIMO,
+  LIMITE_POR_DEFECTO,
+  type ErrorDeCriterios,
+  type PedidoDeListado,
+} from "./consultas/criterios-de-listado";
+export {
+  crearLecturasDeComprobantes,
+  type LecturasDeComprobantes,
+} from "./persistencia/lecturas-de-comprobantes";
+export {
+  VERSION_DE_REPRESENTACION_ACTUAL,
+  type ErrorDeImpresion,
+  type MarcaParaImprimir,
+  type ModeloImpreso,
+  type TotalesImpresos,
+} from "./dominio/modelo-de-impresion";

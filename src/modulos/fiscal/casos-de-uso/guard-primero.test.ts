@@ -14,6 +14,7 @@ import { empresaId, personaId } from "../../../primitivas/identificadores/marca"
 import type { CargaDeAutorizacion, DatosDelActor } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
 import { puntoDeVentaId, solicitudId } from "../dominio/identificadores";
+import * as publico from "../publico";
 import { crearCasosDeUsoDeNumeracion, type CasosDeUsoDeNumeracion } from "./casos-de-uso";
 import type { ContextoDeSistema, TxDeNumeracion } from "./contrato";
 import { DECLARACIONES } from "./declaraciones";
@@ -37,6 +38,7 @@ const contextoDeSistema: ContextoDeSistema = { ...contexto, personaId: null, mar
 const entrada = {
   puntoDeVentaId: puntoDeVentaId("pv-1"),
   tipo: "FACTURA_B",
+  ambiente: "HOMOLOGACION",
   solicitud: solicitudId("sol-1"),
 } as const;
 
@@ -99,9 +101,8 @@ const LLAMADAS: Record<ConAccion, (casos: CasosDeUsoDeNumeracion) => Promise<unk
     c.cerrarReservaDeNumero(contexto, {
       ...entrada,
       numero: 1n,
-      resultado: { tipo: "INCIERTO" },
+      resultado: { tipo: "INCIERTO", motivo: "sin respuesta" },
     }),
-  numerarComprobante: (c) => c.numerarComprobante(contexto, entrada),
 };
 
 const NOMBRES = clavesDe(LLAMADAS);
@@ -118,15 +119,10 @@ const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
 };
 
 describe("P7: el guard va primero en cada caso de uso de numeración", () => {
-  it("hay tres casos de uso con acción, y los dos de sistema no pasan por el guard", () => {
-    expect([...NOMBRES].sort()).toEqual([
-      "cerrarReservaDeNumero",
-      "numerarComprobante",
-      "reservarNumeroDeComprobante",
-    ]);
+  it("hay dos casos de uso con acción, y los dos de sistema no pasan por el guard", () => {
+    expect([...NOMBRES].sort()).toEqual(["cerrarReservaDeNumero", "reservarNumeroDeComprobante"]);
     expect(Object.keys(DECLARACIONES).sort()).toEqual([
       "cerrarReservaDeNumero",
-      "numerarComprobante",
       "reconciliarSerie",
       "reconciliarSeriesVencidas",
       "reservarNumeroDeComprobante",
@@ -198,6 +194,12 @@ describe("P7: el guard va primero en cada caso de uso de numeración", () => {
   );
 });
 
+describe("el cuerpo sin guard de la numeración no sale del módulo", () => {
+  it("publico.ts no exporta reservarEnTx, cerrarEnTx ni resincronizarEnTx (exponerlos sería numerar sin permiso)", () => {
+    expect(Object.keys(publico).filter((nombre) => /EnTx$/.test(nombre))).toEqual([]);
+  });
+});
+
 describe("los trabajos de sistema (reconciliar) no pasan por el guard y no admiten persona", () => {
   it("reconciliarSerie con persona lanza RangeError sin tocar nada", async () => {
     const vigilada = vigilar(actor("GERENTE"));
@@ -206,6 +208,7 @@ describe("los trabajos de sistema (reconciliar) no pasan por el guard y no admit
       casos.reconciliarSerie(contexto as ContextoDeSistema, {
         puntoDeVentaId: entrada.puntoDeVentaId,
         tipo: "FACTURA_B",
+        ambiente: "HOMOLOGACION",
       }),
     ).rejects.toThrow(RangeError);
     expect(vigilada.accesos).toEqual([]);
@@ -234,6 +237,7 @@ describe("los trabajos de sistema (reconciliar) no pasan por el guard y no admit
     const llamada = casosCon(vigilada).reconciliarSerie(contextoDeSistema, {
       puntoDeVentaId: entrada.puntoDeVentaId,
       tipo: "FACTURA_B",
+      ambiente: "HOMOLOGACION",
     });
     expect(await pasoElGuard(llamada)).toBe(true);
     expect(vigilada.accesos).toEqual(["empresas"]);

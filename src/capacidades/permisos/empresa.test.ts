@@ -18,6 +18,7 @@ import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "./roles";
 /** Las acciones que puede cada rol, escritas a mano desde la tabla de §B.4 de la especificación de H6. */
 const DEL_OPERADOR_DE_EMPRESA = [
   "comprobantes.emitir",
+  "comprobantes.ver",
   "gerencia.aceptar_traspaso",
   "gerencia.rechazar_traspaso",
   "gerencia.ver_traspaso",
@@ -135,9 +136,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 67 acciones: 19 de empresa y comprobantes, 48 de catálogo, carta y stock (40 de T0 y 8 de CE0)", () => {
+  it("hay 68 acciones: 20 de empresa y comprobantes, 48 de catálogo, carta y stock (40 de T0 y 8 de CE0)", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(67);
+    expect(todas).toHaveLength(68);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -146,7 +147,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("modulos"),
       porPrefijo("permisos"),
       porPrefijo("comprobantes"),
-    ]).toEqual([6, 5, 5, 1, 1, 1]);
+    ]).toEqual([6, 5, 5, 1, 1, 2]);
     expect([
       porPrefijo("productos"),
       porPrefijo("categorias"),

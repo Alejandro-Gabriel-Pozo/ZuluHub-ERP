@@ -85,12 +85,12 @@
   },
   {
     "grupo": "marcas (definición, versión y vigencia)",
-    "archivos": "src/modulos/marcas/dominio/**/*.ts,!src/modulos/marcas/dominio/host.ts,!src/modulos/marcas/dominio/tema.ts,!src/modulos/marcas/dominio/jerarquia.ts,!src/modulos/marcas/dominio/ciclo-de-dominio.ts,!src/modulos/marcas/dominio/marca-de-mail.ts",
+    "archivos": "src/modulos/marcas/dominio/**/*.ts,!src/modulos/marcas/dominio/host.ts,!src/modulos/marcas/dominio/tema.ts,!src/modulos/marcas/dominio/jerarquia.ts,!src/modulos/marcas/dominio/ciclo-de-dominio.ts,!src/modulos/marcas/dominio/marca-de-mail.ts,!src/modulos/marcas/dominio/configuracion-publica.ts",
     "pruebas": "src/modulos/marcas"
   },
   {
     "grupo": "trabajos y correo (lógica pura)",
-    "archivos": "src/adaptadores/trabajos/reintentos.ts,src/adaptadores/trabajos/error-seguro.ts,src/adaptadores/correo/configuracion.ts,src/adaptadores/postgres/huella-canonica.ts",
+    "archivos": "src/adaptadores/trabajos/reintentos.ts,src/adaptadores/trabajos/error-seguro.ts,src/adaptadores/correo/configuracion.ts,src/adaptadores/postgres/huella-canonica.ts,src/adaptadores/postgres/describir-falla-de-base.ts,src/adaptadores/postgres/roles-de-la-aplicacion.ts",
     "pruebas": "src/adaptadores"
   },
   {
@@ -114,6 +114,11 @@
     "pruebas": "src/modulos/marcas/dominio/marca-de-mail.test.ts"
   },
   {
+    "grupo": "marcas (configuración pública)",
+    "archivos": "src/modulos/marcas/dominio/configuracion-publica.ts",
+    "pruebas": "src/modulos/marcas/dominio/configuracion-publica.test.ts"
+  },
+  {
     "grupo": "web (puerta mínima)",
     "archivos": "src/capacidades/experiencia/**/*.ts,!src/capacidades/experiencia/carta/**/*.ts",
     "pruebas": "src/capacidades/experiencia"
@@ -135,8 +140,8 @@
   },
   {
     "grupo": "fiscal (facturación)",
-    "archivos": "src/modulos/fiscal/dominio/calculo-de-renglones.ts,src/modulos/fiscal/dominio/codigos-de-arca.ts,src/modulos/fiscal/dominio/comprobante-nuevo.ts,src/modulos/fiscal/dominio/condicion-iva-receptor.ts,src/modulos/fiscal/dominio/estados-de-comprobante.ts,src/modulos/fiscal/dominio/importes-para-arca.ts,src/modulos/fiscal/dominio/letra-de-comprobante.ts,src/modulos/fiscal/dominio/modelo-de-impresion.ts,src/modulos/fiscal/dominio/nota-asociada.ts,src/modulos/fiscal/dominio/qr-de-arca.ts,src/modulos/fiscal/dominio/receptor.ts,src/modulos/fiscal/dominio/reconciliacion-de-comprobante.ts",
-    "pruebas": "src/modulos/fiscal/dominio/calculo-de-renglones.test.ts src/modulos/fiscal/dominio/codigos-de-arca.test.ts src/modulos/fiscal/dominio/comprobante-nuevo.test.ts src/modulos/fiscal/dominio/condicion-iva-receptor.test.ts src/modulos/fiscal/dominio/estados-de-comprobante.test.ts src/modulos/fiscal/dominio/importes-para-arca.test.ts src/modulos/fiscal/dominio/letra-de-comprobante.test.ts src/modulos/fiscal/dominio/modelo-de-impresion.test.ts src/modulos/fiscal/dominio/nota-asociada.test.ts src/modulos/fiscal/dominio/qr-de-arca.test.ts src/modulos/fiscal/dominio/receptor.test.ts src/modulos/fiscal/dominio/reconciliacion-de-comprobante.test.ts src/modulos/fiscal/dominio/propiedades-de-facturacion.test.ts src/modulos/fiscal/dominio/sin-ventas.test.ts"
+    "archivos": "src/modulos/fiscal/dominio/calculo-de-renglones.ts,src/modulos/fiscal/dominio/codigos-de-arca.ts,src/modulos/fiscal/dominio/comprobante-nuevo.ts,src/modulos/fiscal/dominio/condicion-iva-receptor.ts,src/modulos/fiscal/dominio/estados-de-comprobante.ts,src/modulos/fiscal/dominio/importes-para-arca.ts,src/modulos/fiscal/dominio/letra-de-comprobante.ts,src/modulos/fiscal/dominio/nota-asociada.ts,src/modulos/fiscal/dominio/qr-de-arca.ts,src/modulos/fiscal/dominio/receptor.ts,src/modulos/fiscal/dominio/reconciliacion-de-comprobante.ts",
+    "pruebas": "src/modulos/fiscal/dominio/calculo-de-renglones.test.ts src/modulos/fiscal/dominio/codigos-de-arca.test.ts src/modulos/fiscal/dominio/comprobante-nuevo.test.ts src/modulos/fiscal/dominio/condicion-iva-receptor.test.ts src/modulos/fiscal/dominio/estados-de-comprobante.test.ts src/modulos/fiscal/dominio/importes-para-arca.test.ts src/modulos/fiscal/dominio/letra-de-comprobante.test.ts src/modulos/fiscal/dominio/nota-asociada.test.ts src/modulos/fiscal/dominio/qr-de-arca.test.ts src/modulos/fiscal/dominio/receptor.test.ts src/modulos/fiscal/dominio/reconciliacion-de-comprobante.test.ts src/modulos/fiscal/dominio/propiedades-de-facturacion.test.ts src/modulos/fiscal/dominio/sin-ventas.test.ts"
   },
   {
     "grupo": "carta (piezas puras)",
@@ -172,5 +177,20 @@
     "grupo": "contacto (email)",
     "archivos": "src/primitivas/contacto/**/*.ts",
     "pruebas": "src/primitivas/contacto"
+  },
+  {
+    "grupo": "fiscal (modelo de impresión)",
+    "archivos": "src/modulos/fiscal/dominio/modelo-de-impresion.ts",
+    "pruebas": "src/modulos/fiscal/dominio/modelo-de-impresion.test.ts"
+  },
+  {
+    "grupo": "fiscal (criterios del listado)",
+    "archivos": "src/modulos/fiscal/consultas/criterios-de-listado.ts",
+    "pruebas": "src/modulos/fiscal/consultas/criterios-de-listado.test.ts"
+  },
+  {
+    "grupo": "vercel (carga de variables)",
+    "archivos": "src/adaptadores/vercel/**/*.ts",
+    "pruebas": "src/adaptadores/vercel"
   }
 ]

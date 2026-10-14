@@ -26,6 +26,7 @@ function conLectura(respuesta: HostServible | null) {
       pedidos.push([host, superficie]);
       return Promise.resolve(respuesta);
     },
+    configuracionDeHost: () => Promise.resolve(null),
   };
   const tx: TransaccionesPublicas<TxPublica> = {
     leer(trabajo) {

@@ -1,16 +1,18 @@
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import type { DesenlaceDeAutorizacion, TipoDeComprobante } from "./comprobante-emitido";
+import type { TipoDeComprobante } from "./comprobante-emitido";
+import type { Ambiente } from "./comprobante-nuevo";
+import type { DesenlaceDeAutorizacion } from "./estados-de-comprobante";
 import type { EmisorId, PuntoDeVentaId, SolicitudId } from "./identificadores";
 
 /**
  * Numeración de comprobantes sin huecos ni duplicados (spec H7 §B.8). Una serie por (punto de
- * venta, tipo) con tres estados:
+ * venta, tipo, ambiente) con tres estados:
  *
  * - `LIBRE`: nadie tiene un número reservado.
  * - `EN_CURSO`: una solicitud reservó `ultimoNumero + 1` y está pidiendo la autorización.
- * - `BLOQUEADA`: la reconciliación encontró un desfase con el servicio. En H7 no tiene salida (la
- *   diseña la facturación).
+ * - `BLOQUEADA`: la reconciliación encontró un desfase con el servicio. Su única salida es
+ *   `resincronizarSerie`: vuelve a `LIBRE` con el último número que informa ARCA, nunca hacia atrás.
  *
  * Todo es puro: sin reloj ni azar (la hora y el último número del servicio entran como datos) y sin
  * I/O. La transacción serializable y el disparador de la base imponen lo mismo (un test compara
@@ -25,7 +27,7 @@ export type EstadoDeSerie = "LIBRE" | "EN_CURSO" | "BLOQUEADA";
 export const TRANSICIONES_DE_SERIE: Readonly<Record<EstadoDeSerie, readonly EstadoDeSerie[]>> = {
   LIBRE: ["EN_CURSO"],
   EN_CURSO: ["LIBRE", "BLOQUEADA"],
-  BLOQUEADA: [],
+  BLOQUEADA: ["LIBRE"],
 };
 
 type IdentidadDeSerie = Readonly<{
@@ -34,6 +36,12 @@ type IdentidadDeSerie = Readonly<{
   /** Atado al punto de venta por clave compuesta: una serie no mezcla emisor y punto de venta. */
   emisorId: EmisorId;
   tipo: TipoDeComprobante;
+  /**
+   * Parte de la clave (0009): homologación y producción son otro ARCA y numeran por separado. Sin esto,
+   * los números de prueba avanzarían la serie real y ARCA rechazaría el siguiente número verdadero por
+   * fuera de secuencia (error 10016).
+   */
+  ambiente: Ambiente;
   version: number;
 }>;
 
@@ -64,19 +72,35 @@ export type ErrorDeNumeracion =
   | "RESERVA_NO_VENCIDA"
   | "NUMERO_INVALIDO";
 
+/** Por qué no se puede sacar a una serie de `BLOQUEADA` (`resincronizarSerie`). */
+export type ErrorDeResincronizacion =
+  "SERIE_NO_BLOQUEADA" | "ULTIMO_DISTINTO_DEL_DE_ARCA" | "DESFASE_HACIA_ATRAS";
+
 /**
  * Valores configurables.
  * - `plazoDeReservaEnMs`: cuánto dura una reserva antes de poder reconciliarse. SUPUESTO (5 minutos);
  *   el diseño no lo fija.
- * - `numeroMaximo`: tope del número de comprobante. El tamaño máximo en ARCA es NO VERIFICADO; el
- *   valor por defecto es el máximo de la columna `bigint` de la base (2^63 − 1).
+ * - `numeroMaximo`: tope del número de comprobante. WSFE v4.8 fija `CbteDesde` en el rango 1 a
+ *   99 999 999 (error 10008) y el QR admite hasta 8 dígitos: pasado ese número ARCA rechaza todo.
  */
 export type OpcionesDeNumeracion = Readonly<{ plazoDeReservaEnMs: number; numeroMaximo: bigint }>;
 
 export const OPCIONES_DE_NUMERACION: OpcionesDeNumeracion = {
   plazoDeReservaEnMs: 5 * 60_000,
-  numeroMaximo: 9_223_372_036_854_775_807n,
+  numeroMaximo: 99_999_999n,
 };
+
+/** La identidad de una serie (todo salvo su estado): lo que cualquier serie nueva hereda de la anterior. */
+function identidadDe(serie: Serie): IdentidadDeSerie {
+  return {
+    empresaId: serie.empresaId,
+    puntoDeVentaId: serie.puntoDeVentaId,
+    emisorId: serie.emisorId,
+    ambiente: serie.ambiente,
+    tipo: serie.tipo,
+    version: serie.version,
+  };
+}
 
 /** Una serie `LIBRE` nueva con el último número que informa el servicio de emisión (o cero). */
 export function iniciarSerie(
@@ -129,11 +153,7 @@ export function reservarNumero(
     tipo: "RESERVADA",
     numero,
     serie: {
-      empresaId: serie.empresaId,
-      puntoDeVentaId: serie.puntoDeVentaId,
-      emisorId: serie.emisorId,
-      tipo: serie.tipo,
-      version: serie.version,
+      ...identidadDe(serie),
       estado: "EN_CURSO",
       ultimoNumero: serie.ultimoNumero,
       numeroEnCurso: numero,
@@ -154,6 +174,7 @@ export type CierreDeSerie = Readonly<{
  * Cierra la reserva de `solicitud` según cómo terminó la autorización:
  * - autorizado: `ultimoNumero` pasa a ser el número reservado y la serie queda `LIBRE`;
  * - rechazado: `LIBRE` sin avanzar (no hay hueco: ese número nunca se usó);
+ * - no enviado (el pedido seguro no salió): igual que rechazado, el número se libera y se reintenta;
  * - incierto: sigue `EN_CURSO` (se reconcilia después contra el servicio).
  * Si la serie no está `EN_CURSO` por esta solicitud, `SOLICITUD_NO_VIGENTE`.
  */
@@ -168,20 +189,23 @@ export function cerrarSerie(
   if (desenlace === "INCIERTO") return ok({ serie, numeroAutorizado: null });
   const autorizado = desenlace === "AUTORIZADO";
   return ok({
-    serie: libreDesde(serie, autorizado ? serie.numeroEnCurso : serie.ultimoNumero),
+    serie: serieLibreDesde(serie, autorizado ? serie.numeroEnCurso : serie.ultimoNumero),
     numeroAutorizado: autorizado ? serie.numeroEnCurso : null,
   });
 }
 
-function libreDesde(serie: SerieEnCurso, ultimoNumero: bigint): SerieLibre {
+/** La serie `LIBRE` que resulta de soltar `serie` con ese último número (la identidad y la versión no cambian). */
+export function serieLibreDesde(serie: Serie, ultimoNumero: bigint): SerieLibre {
+  return { ...identidadDe(serie), estado: "LIBRE", ultimoNumero };
+}
+
+/** La serie `BLOQUEADA` que resulta de bloquear una `EN_CURSO` sin avanzar el último número. */
+export function serieBloqueadaDesde(serie: SerieEnCurso, motivoBloqueo: string): SerieBloqueada {
   return {
-    empresaId: serie.empresaId,
-    puntoDeVentaId: serie.puntoDeVentaId,
-    emisorId: serie.emisorId,
-    tipo: serie.tipo,
-    version: serie.version,
-    estado: "LIBRE",
-    ultimoNumero,
+    ...identidadDe(serie),
+    estado: "BLOQUEADA",
+    ultimoNumero: serie.ultimoNumero,
+    motivoBloqueo,
   };
 }
 
@@ -210,26 +234,39 @@ export function reconciliarSerie(
   if (ahora.getTime() < serie.enCursoHasta.getTime()) return err("RESERVA_NO_VENCIDA");
   if (ultimoAutorizado === serie.numeroEnCurso) {
     return ok({
-      serie: libreDesde(serie, serie.numeroEnCurso),
+      serie: serieLibreDesde(serie, serie.numeroEnCurso),
       resolucion: "CERRADA_COMO_AUTORIZADA",
     });
   }
   if (ultimoAutorizado === serie.ultimoNumero) {
-    return ok({ serie: libreDesde(serie, serie.ultimoNumero), resolucion: "LIBERADA" });
+    return ok({ serie: serieLibreDesde(serie, serie.ultimoNumero), resolucion: "LIBERADA" });
   }
   return ok({
     resolucion: "BLOQUEADA",
-    serie: {
-      empresaId: serie.empresaId,
-      puntoDeVentaId: serie.puntoDeVentaId,
-      emisorId: serie.emisorId,
-      tipo: serie.tipo,
-      version: serie.version,
-      estado: "BLOQUEADA",
-      ultimoNumero: serie.ultimoNumero,
-      motivoBloqueo: `desfase con el servicio de emisión: informa ${ultimoAutorizado}, se esperaba ${serie.ultimoNumero} o ${serie.numeroEnCurso}`,
-    },
+    serie: serieBloqueadaDesde(
+      serie,
+      `desfase con el servicio de emisión: informa ${ultimoAutorizado}, se esperaba ${serie.ultimoNumero} o ${serie.numeroEnCurso}`,
+    ),
   });
+}
+
+/**
+ * Saca a una serie de `BLOQUEADA` (QF1): vuelve a `LIBRE` con el último número que informa ARCA, que
+ * puede saltar hacia adelante (los números del medio los emitió otro sistema) y NUNCA bajar. La
+ * persona confirmó `ultimoVistoEnArca` mirando la pantalla y `ultimoDeArca` es lo que ARCA informa
+ * ahora: si son distintos, algo cambió mientras miraba y no se resincroniza con un dato viejo.
+ * Errores: `SERIE_NO_BLOQUEADA`; `ULTIMO_DISTINTO_DEL_DE_ARCA`; `DESFASE_HACIA_ATRAS` (ARCA informa
+ * menos de lo que la serie ya usó: no hay salida automática, lo ve soporte).
+ */
+export function resincronizarSerie(
+  serie: Serie,
+  ultimoVistoEnArca: bigint,
+  ultimoDeArca: bigint,
+): Resultado<SerieLibre, ErrorDeResincronizacion> {
+  if (serie.estado !== "BLOQUEADA") return err("SERIE_NO_BLOQUEADA");
+  if (ultimoDeArca !== ultimoVistoEnArca) return err("ULTIMO_DISTINTO_DEL_DE_ARCA");
+  if (ultimoDeArca < serie.ultimoNumero) return err("DESFASE_HACIA_ATRAS");
+  return ok(serieLibreDesde(serie, ultimoDeArca));
 }
 
 /**
@@ -250,16 +287,19 @@ export function serieEsConsistente(serie: Serie): boolean {
 
 /**
  * ¿Es válido pasar de `antes` a `despues`? Es la regla del disparador de la base, escrita como
- * función (coincide con `TRANSICIONES_DE_SERIE`, más quedarse en el mismo estado sin cambios): la identidad no cambia; `ultimoNumero` nunca baja y solo sube de a uno, cerrando una
- * `EN_CURSO` con su número; `LIBRE` solo pasa a `EN_CURSO` (con el siguiente número); `EN_CURSO` a
- * `LIBRE` (liberada o autorizada) o a `BLOQUEADA` (sin avanzar), o se queda igual; `BLOQUEADA` no
- * sale. Un cambio de `version` no cuenta (lo fija la base).
+ * función (coincide con `TRANSICIONES_DE_SERIE`, más quedarse en el mismo estado sin cambios): la
+ * identidad (con el ambiente) no cambia; `ultimoNumero` nunca baja y solo sube de a uno, cerrando una
+ * `EN_CURSO` con su número, o saltando al resincronizar una `BLOQUEADA`; `LIBRE` solo pasa a `EN_CURSO`
+ * (con el siguiente número); `EN_CURSO` a `LIBRE` (liberada o autorizada) o a `BLOQUEADA` (sin
+ * avanzar), o se queda igual; `BLOQUEADA` solo sale hacia `LIBRE` (sin bajar el último número) o se
+ * queda igual. Un cambio de `version` no cuenta (lo fija la base).
  */
 export function transicionDeSerieValida(antes: Serie, despues: Serie): boolean {
   if (
     antes.empresaId !== despues.empresaId ||
     antes.puntoDeVentaId !== despues.puntoDeVentaId ||
     antes.emisorId !== despues.emisorId ||
+    antes.ambiente !== despues.ambiente ||
     antes.tipo !== despues.tipo
   ) {
     return false;
@@ -286,6 +326,7 @@ export function transicionDeSerieValida(antes: Serie, despues: Serie): boolean {
       }
       return despues.ultimoNumero === antes.ultimoNumero; // bloqueada: no avanza
     case "BLOQUEADA":
+      if (despues.estado === "LIBRE") return despues.ultimoNumero >= antes.ultimoNumero;
       return (
         despues.estado === "BLOQUEADA" &&
         despues.ultimoNumero === antes.ultimoNumero &&

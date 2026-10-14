@@ -1,4 +1,4 @@
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import {
   empresaId,
   marcaComercialId,
@@ -10,6 +10,11 @@ import {
   type DuenioDeDominio,
   type SuperficieDeDominio,
 } from "../dominio/ciclo-de-dominio";
+import {
+  decidirConfiguracionPublica,
+  type ConfiguracionPublica,
+  type VersionPublicaDeMarca,
+} from "../dominio/configuracion-publica";
 import type { Host } from "../dominio/host";
 import type { DatosDeMarcaParaMail } from "../dominio/marca-de-mail";
 import { versionVigente } from "../dominio/vigencia";
@@ -43,7 +48,22 @@ export interface LecturaPublicaDeMarcas {
    * camino que se pueda notar.
    */
   resolverHost(host: Host, superficie: SuperficieDeDominio): Promise<HostServible | null>;
+
+  /**
+   * La configuración pública de la marca de un host: su nombre, su tema validado (con la herencia de la
+   * cadena de marcas) y el host canónico de su aplicación. Se sirve bajo EXACTAMENTE el mismo criterio
+   * que `resolverHost` (es la misma consulta, no una copia) y devuelve `null` en todo lo demás, sin
+   * distinguir por qué. Nada de ids, empresa ni tenant. Una sola foto de la base (la de la transacción):
+   * una versión nueva que se confirma mientras tanto se ve entera o no se ve, nunca a medias.
+   */
+  configuracionDeHost(
+    host: Host,
+    superficie: SuperficieDeDominio,
+  ): Promise<ConfiguracionPublica | null>;
 }
+
+/** La cadena de herencia llega a tres marcas (la base limita el nivel a 2): se corta ahí por si acaso. */
+const ESLABONES_MAXIMOS_DE_LA_CADENA = 3;
 
 /** Un valor de la base que el CHECK correspondiente no deja pasar: si llega otro, algo se rompió. */
 function superficieDeLaBase(valor: string): SuperficieDeDominio {
@@ -52,43 +72,107 @@ function superficieDeLaBase(valor: string): SuperficieDeDominio {
   return encontrada;
 }
 
+/**
+ * El host servible y nada más: la vista de 0007 (dominio ACTIVO de marca ACTIVA) y, además, que la marca
+ * tenga al menos una versión confirmada y ya empezada (la política pública de `version_de_marca`). Es el
+ * ÚNICO lugar donde vive el criterio «se puede servir»: la resolución y la configuración lo comparten.
+ */
+async function buscarHostServible(
+  db: Kysely<PublicoDb>,
+  host: Host,
+  superficie: SuperficieDeDominio,
+): Promise<HostServible | null> {
+  const fila = await db
+    .selectFrom("resolucion_de_host as r")
+    .select(["r.host", "r.superficie", "r.duenio_marca_id", "r.duenio_empresa_id", "r.marca_id"])
+    .where("r.host", "=", host)
+    .where("r.superficie", "=", superficie)
+    .where((eb) =>
+      eb.exists(
+        eb
+          .selectFrom("version_de_marca as v")
+          .select("v.marca_id")
+          .whereRef("v.marca_id", "=", "r.marca_id"),
+      ),
+    )
+    .limit(1)
+    .executeTakeFirst();
+  if (fila === undefined) return null;
+  // El CHECK `dominio_duenio_ck` garantiza que exactamente uno de los dos dueños está definido.
+  const duenio: DuenioDeDominio =
+    fila.duenio_marca_id !== null
+      ? { tipo: "MARCA", marcaId: marcaComercialId(fila.duenio_marca_id) }
+      : { tipo: "EMPRESA", empresaId: empresaId(fila.duenio_empresa_id as string) };
+  return {
+    // El CHECK `dominio_host_ck` (host_valido) garantiza la misma forma que `normalizarHost`.
+    host: fila.host as Host,
+    superficie: superficieDeLaBase(fila.superficie),
+    duenio,
+    marcaId: marcaComercialId(fila.marca_id),
+  };
+}
+
 export function crearLecturaPublicaDeMarcas(db: Kysely<PublicoDb>): LecturaPublicaDeMarcas {
   return {
-    async resolverHost(host, superficie) {
-      const fila = await db
-        .selectFrom("resolucion_de_host as r")
-        .select([
-          "r.host",
-          "r.superficie",
-          "r.duenio_marca_id",
-          "r.duenio_empresa_id",
-          "r.marca_id",
-        ])
-        .where("r.host", "=", host)
-        .where("r.superficie", "=", superficie)
-        .where((eb) =>
-          eb.exists(
-            eb
-              .selectFrom("version_de_marca as v")
-              .select("v.marca_id")
-              .whereRef("v.marca_id", "=", "r.marca_id"),
-          ),
+    resolverHost: (host, superficie) => buscarHostServible(db, host, superficie),
+
+    async configuracionDeHost(host, superficie) {
+      const servible = await buscarHostServible(db, host, superficie);
+      if (servible === null) return null;
+
+      // La marca y sus ancestros, de la marca hacia arriba. La política pública de `marca` deja ver solo
+      // las ACTIVAS: un ancestro retirado corta la cadena y sus colores dejan de heredarse. `ahora` es la
+      // hora de la base en esta transacción: la misma contra la que la política de `version_de_marca`
+      // decide qué versiones ya empezaron (no se mezcla con el reloj de la aplicación).
+      const cadena = await sql<{ id: string; ahora: Date }>`
+        with recursive cadena (id, marca_padre_id, profundidad) as (
+          select m.id, m.marca_padre_id, 0 from marca m where m.id = ${servible.marcaId}
+          union all
+          select p.id, p.marca_padre_id, c.profundidad + 1
+            from marca p join cadena c on p.id = c.marca_padre_id
+           where c.profundidad + 1 < ${ESLABONES_MAXIMOS_DE_LA_CADENA}
         )
+        select id, now() as ahora from cadena order by profundidad`.execute(db);
+      const ahora = cadena.rows[0]?.ahora;
+      if (ahora === undefined) return null;
+      const ids = cadena.rows.map((r) => r.id);
+
+      const versiones = await db
+        .selectFrom("version_de_marca")
+        .select(["marca_id", "numero", "vigente_desde", "nombre_visible", "tema"])
+        .where("marca_id", "in", ids)
+        .execute();
+      // Las políticas dejan pasar solo versiones confirmadas (con número y vigencia).
+      const deLaMarca = (id: string): readonly VersionPublicaDeMarca[] =>
+        versiones.flatMap((v) =>
+          v.marca_id !== id || v.numero === null || v.vigente_desde === null
+            ? []
+            : [
+                {
+                  numero: v.numero,
+                  vigenteDesde: v.vigente_desde,
+                  nombreVisible: v.nombre_visible,
+                  tema: v.tema,
+                },
+              ],
+        );
+
+      // El host canónico de la aplicación de la PROPIA marca (no se hereda): ACTIVO por la política.
+      const canonico = await db
+        .selectFrom("dominio")
+        .select("host")
+        .where("duenio_marca_id", "=", servible.marcaId)
+        .where("superficie", "=", "APP")
+        .where("es_canonico", "=", true)
         .limit(1)
         .executeTakeFirst();
-      if (fila === undefined) return null;
-      // El CHECK `dominio_duenio_ck` garantiza que exactamente uno de los dos dueños está definido.
-      const duenio: DuenioDeDominio =
-        fila.duenio_marca_id !== null
-          ? { tipo: "MARCA", marcaId: marcaComercialId(fila.duenio_marca_id) }
-          : { tipo: "EMPRESA", empresaId: empresaId(fila.duenio_empresa_id as string) };
-      return {
-        // El CHECK `dominio_host_ck` (host_valido) garantiza la misma forma que `normalizarHost`.
-        host: fila.host as Host,
-        superficie: superficieDeLaBase(fila.superficie),
-        duenio,
-        marcaId: marcaComercialId(fila.marca_id),
-      };
+
+      return decidirConfiguracionPublica({
+        cadena: ids.map(deLaMarca),
+        // El CHECK `dominio_host_ck` garantiza la forma de un host normalizado.
+        hostCanonico: canonico === undefined ? null : (canonico.host as Host),
+        ahora,
+      });
     },
   };
 }

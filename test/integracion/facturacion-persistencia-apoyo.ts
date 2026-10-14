@@ -270,15 +270,16 @@ export async function entrarEnValidacion(
         puntoDeVentaId: c.puntoDeVentaId,
         emisorId: c.emisorId,
         tipo: c.tipo,
+        ambiente: c.ambiente,
       },
       ultimoDeArca,
     );
     if (!nueva.ok) throw new Error("serie de prueba inválida");
-    serie = (await tx.series.crear(nueva.valor, c.ambiente)).valor;
+    serie = (await tx.series.crear(nueva.valor)).valor;
   }
   const reserva = reservarNumero(serie, solicitudId(c.id), ahora);
   if (!reserva.ok || reserva.valor.tipo !== "RESERVADA") throw new Error("no se pudo reservar");
-  const enCurso = await tx.series.guardar({ ...reserva.valor.serie, ambiente: c.ambiente });
+  const enCurso = await tx.series.guardar(reserva.valor.serie);
   if (enCurso === null) throw new Error("la serie cambió");
   const movido = await tx.comprobantes.transicionar(c.empresaId, c.id, c.version, {
     a: "EN_VALIDACION",

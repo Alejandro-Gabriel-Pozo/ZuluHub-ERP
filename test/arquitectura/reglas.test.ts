@@ -41,7 +41,9 @@ async function violacionesDe(archivos: Archivos): Promise<string[]> {
     writeFileSync(destino, contenido);
   }
   const resultado = await cruise(
-    ["src", "apps"].filter((c) => Object.keys(archivos).some((r) => r.startsWith(`${c}/`))),
+    ["src", "apps", "scripts"].filter((c) =>
+      Object.keys(archivos).some((r) => r.startsWith(`${c}/`)),
+    ),
     {
       baseDir: base,
       validate: true,
@@ -478,6 +480,23 @@ describe("reglas de arquitectura (ADR-001)", () => {
       "src/adaptadores/postgres/a.ts": 'import "kysely";\nexport const a = 1;\n',
     });
     expect(v).not.toContain("orm-solo-en-persistencia");
+  });
+
+  it("un comando de scripts/ no abre su propia conexión: importar pg o kysely directo viola orm-solo-en-persistencia", async () => {
+    for (const herramienta of ["pg", "kysely"]) {
+      const v = await violacionesDe({
+        "scripts/migrar.ts": `import "${herramienta}";\nexport const m = 1;\n`,
+      });
+      expect(v).toContain("orm-solo-en-persistencia");
+    }
+  });
+
+  it("un comando de scripts/ sí puede usar el adaptador de Postgres (pero no el ORM directo)", async () => {
+    const v = await violacionesDe({
+      "src/adaptadores/postgres/a.ts": 'import "pg";\nexport const a = 1;\n',
+      "scripts/migrar.ts": importa("../src/adaptadores/postgres/a"),
+    });
+    expect(v).toEqual([]);
   });
 
   it("marcas: la plataforma, las consultas y la puerta web sí entran por su publico.ts; el dominio usa capacidades y primitivas", async () => {
@@ -1240,5 +1259,28 @@ describe("facturación F1: el facturador funciona solo (spec H7 facturación §B
       "src/modulos/ventas/casos-de-uso/v.ts": importa("../../fiscal/publico"),
     });
     expect(v).not.toContain("fiscal-sin-negocio-ajeno");
+  });
+});
+
+describe("facturación F6: las consultas del facturador (spec H7 facturación §B.4.9 y §B.7)", () => {
+  it("una consulta de fiscal importa el modelo de impresión, pero ningún otro archivo del dominio", async () => {
+    const permitido = await violacionesDe({
+      "src/modulos/fiscal/dominio/modelo-de-impresion.ts": exporta,
+      "src/modulos/fiscal/consultas/c.ts": importa("../dominio/modelo-de-impresion"),
+    });
+    expect(permitido).not.toContain("consultas-sin-dominio");
+    const prohibido = await violacionesDe({
+      "src/modulos/fiscal/dominio/comprobante-nuevo.ts": exporta,
+      "src/modulos/fiscal/consultas/c.ts": importa("../dominio/comprobante-nuevo"),
+    });
+    expect(prohibido).toContain("consultas-sin-dominio");
+  });
+
+  it("la excepción es solo de fiscal: el modelo de impresión de otro módulo sigue prohibido", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/dominio/modelo-de-impresion.ts": exporta,
+      "src/modulos/empresas/consultas/c.ts": importa("../dominio/modelo-de-impresion"),
+    });
+    expect(v).toContain("consultas-sin-dominio");
   });
 });

@@ -2,7 +2,11 @@ import fc from "fast-check";
 import { cantidadDesdeTexto } from "../../src/primitivas/cantidad/cantidad";
 import { formatearDecimalFijo } from "../../src/primitivas/cantidad/decimal-fijo";
 import { porcentajeDesdeTexto } from "../../src/primitivas/cantidad/porcentaje";
-import { domicilioDesdeDatos, type Domicilio } from "../../src/primitivas/domicilio/domicilio";
+import {
+  domicilioDesdeDatos,
+  formatearDomicilio,
+  type Domicilio,
+} from "../../src/primitivas/domicilio/domicilio";
 import { precioUnitarioDesdeTexto } from "../../src/primitivas/dinero/precio-unitario";
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../src/primitivas/tiempo/fecha-civil";
 import {
@@ -18,6 +22,10 @@ import {
   type RenglonAFacturar,
 } from "../../src/modulos/fiscal/dominio/comprobante-nuevo";
 import { origenId, puntoDeVentaId } from "../../src/modulos/fiscal/dominio/identificadores";
+import {
+  VERSION_DE_REPRESENTACION_ACTUAL,
+  type ComprobanteParaImprimir,
+} from "../../src/modulos/fiscal/dominio/modelo-de-impresion";
 import type { Receptor } from "../../src/modulos/fiscal/dominio/receptor";
 import { CUIT_A, CUIT_B, CUIT_C, EMISOR_1, EMPRESA } from "./fiscal";
 
@@ -170,3 +178,37 @@ export function facturaOSinTotal(
   if (r.error.codigo === "TOTAL_FUERA_DE_RANGO") return null;
   throw new Error(`factura de prueba inválida: ${JSON.stringify(r.error)}`);
 }
+
+/**
+ * Lo que se imprime de un comprobante autorizado, armado desde el contenido de prueba: el número, la fecha y el
+ * CAE los fijó ARCA, y el emisor se congela con los domicilios como TEXTO (como los guarda la base).
+ */
+export const imprimibleDe = (
+  contenido: ComprobanteNuevo,
+  cambios: Partial<ComprobanteParaImprimir> = {},
+): ComprobanteParaImprimir => ({
+  ambiente: contenido.ambiente,
+  tipo: contenido.tipo,
+  emisor: {
+    cuit: contenido.emisor.cuit,
+    razonSocial: contenido.emisor.razonSocial,
+    condicionIva: contenido.emisor.condicionIva,
+    domicilioFiscal: formatearDomicilio(contenido.emisor.domicilioFiscal),
+    inicioDeActividades: fecha("2019-03-01"),
+    iibbNumero: "901-123456-7",
+    iibbCondicion: "LOCAL",
+    puntoDeVentaNumero: contenido.emisor.puntoDeVentaNumero,
+    domicilioDelPuntoDeVenta: formatearDomicilio(contenido.emisor.domicilioDelPuntoDeVenta),
+  },
+  receptor: contenido.receptor,
+  renglones: contenido.renglones,
+  total: contenido.total,
+  desglose: contenido.desglose,
+  asociado: contenido.asociado,
+  numero: 11n,
+  fechaEmision: fecha("2026-10-13"),
+  cae: "70417054367476",
+  caeVence: fecha("2026-10-23"),
+  versionDeRepresentacion: VERSION_DE_REPRESENTACION_ACTUAL,
+  ...cambios,
+});

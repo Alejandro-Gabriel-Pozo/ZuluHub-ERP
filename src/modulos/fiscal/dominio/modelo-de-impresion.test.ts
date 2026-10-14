@@ -5,16 +5,16 @@ import {
   emisorInstantaneo,
   facturaArmada,
   fecha,
+  imprimibleDe as imprimible,
   receptorInscripto,
   renglon,
 } from "../../../../test/utilidades/facturacion";
 import { EMPRESA } from "../../../../test/utilidades/fiscal";
 import { TIPOS_DE_COMPROBANTE } from "./comprobante-emitido";
-import type { ComprobanteNuevo } from "./comprobante-nuevo";
 import {
   LEYENDA_DE_HOMOLOGACION,
-  VERSION_DE_REPRESENTACION_ACTUAL,
   modeloDeImpresion,
+  numeroImpreso,
   type ComprobanteParaImprimir,
   type MarcaParaImprimir,
   type ModeloImpreso,
@@ -31,24 +31,6 @@ const MARCA_DOS: MarcaParaImprimir = {
   logoUrl: null,
   colorPrincipal: null,
 };
-
-const imprimible = (
-  contenido: ComprobanteNuevo,
-  cambios: Partial<ComprobanteParaImprimir> = {},
-): ComprobanteParaImprimir => ({
-  contenido,
-  numero: 11n,
-  fechaEmision: fecha("2026-10-13"),
-  cae: "70417054367476",
-  caeVence: fecha("2026-10-23"),
-  versionDeRepresentacion: VERSION_DE_REPRESENTACION_ACTUAL,
-  datosFiscales: {
-    iibbNumero: "901-123456-7",
-    iibbCondicion: "LOCAL",
-    inicioDeActividades: fecha("2019-03-01"),
-  },
-  ...cambios,
-});
 
 const modelo = (c: ComprobanteParaImprimir, marca = MARCA_UNO): ModeloImpreso => {
   const r = modeloDeImpresion(c, marca);
@@ -81,6 +63,61 @@ describe("modeloDeImpresion: golden", () => {
   });
 });
 
+describe("modeloDeImpresion: golden de una nota de crédito A en producción", () => {
+  it("totales discriminados, comprobante asociado y sin leyenda de homologación", async () => {
+    const nota = armarNotaAsociada(
+      {
+        empresaId: EMPRESA,
+        emisorId: contextoDeEmision().emisorId,
+        ambiente: "PRODUCCION",
+        tipo: "FACTURA_A",
+        estado: "AUTORIZADO",
+        numero: 94n,
+        fechaEmision: fecha("2026-10-01"),
+        emisor: emisorInstantaneo({ puntoDeVentaNumero: 7 }),
+        receptor: receptorInscripto,
+      },
+      {
+        clase: "NOTA_CREDITO",
+        motivo: "Devolución parcial",
+        modoDePrecio: "IVA_DISCRIMINADO",
+        concepto: "PRODUCTOS",
+        servicio: null,
+        renglones: [renglon("1000.00", "2", "21", "10", "Torta"), renglon("500.00", "1", "10.5")],
+      },
+      contextoDeEmision({ ambiente: "PRODUCCION" }),
+    );
+    if (!nota.ok) throw new Error("nota de prueba inválida");
+    const m = modelo(imprimible(nota.valor, { numero: 12n }));
+    expect(m.leyendas).toEqual([]);
+    expect(m.fiscal.rotulo).toBe("NOTA DE CRÉDITO");
+    await expect(JSON.stringify(m, null, 2)).toMatchFileSnapshot(
+      "./golden/modelo-nota-de-credito-a-produccion.golden.txt",
+    );
+  });
+});
+
+describe("modeloDeImpresion: la marca no cambia los rótulos fiscales", () => {
+  it("en los nueve tipos, con y sin comprobante asociado, el bloque fiscal es el mismo con cualquier marca", () => {
+    const marcas: MarcaParaImprimir[] = [
+      MARCA_UNO,
+      MARCA_DOS,
+      { nombreDeFantasia: "FACTURA A", logoUrl: null, colorPrincipal: null },
+      { nombreDeFantasia: "CAE 00000000000000", logoUrl: "/x.png", colorPrincipal: "#000000" },
+    ];
+    for (const tipo of TIPOS_DE_COMPROBANTE) {
+      const comprobante = imprimible({ ...facturaB, tipo, asociado: null });
+      const base = modelo(comprobante, MARCA_UNO);
+      for (const marca of marcas) {
+        const otro = modelo(comprobante, marca);
+        expect(otro.marca, tipo).toEqual(marca);
+        expect(otro.fiscal, tipo).toEqual(base.fiscal);
+        expect({ ...otro, marca: base.marca }, tipo).toEqual(base);
+      }
+    }
+  });
+});
+
 describe("modeloDeImpresion: bloque fiscal", () => {
   it("rótulo, letra, código de tipo, número y fechas", () => {
     const m = modelo(imprimible(facturaB));
@@ -102,8 +139,10 @@ describe("modeloDeImpresion: bloque fiscal", () => {
       cuit: "30-70853393-5",
       razonSocial: "Panadería Zulu SRL",
       condicionIva: "RESPONSABLE_INSCRIPTO",
-      domicilioFiscal: facturaB.emisor.domicilioFiscal,
-      domicilioDelPuntoDeVenta: facturaB.emisor.domicilioDelPuntoDeVenta,
+      domicilioFiscal:
+        "Av. Corrientes 1234, Ciudad Autónoma de Buenos Aires, Ciudad Autónoma de Buenos Aires (CP C1043)",
+      domicilioDelPuntoDeVenta:
+        "Calle Falsa 123, Ciudad Autónoma de Buenos Aires, Ciudad Autónoma de Buenos Aires (CP C1043)",
       iibbNumero: "901-123456-7",
       iibbCondicion: "LOCAL",
       inicioDeActividades: "2019-03-01",
@@ -128,6 +167,12 @@ describe("modeloDeImpresion: bloque fiscal", () => {
         esperados[tipo],
       );
     }
+  });
+
+  it("numeroImpreso rellena con ceros: cinco dígitos de punto de venta y ocho de número", () => {
+    expect(numeroImpreso(1, 1n)).toBe("00001-00000001");
+    expect(numeroImpreso(99999, 99999999n)).toBe("99999-99999999");
+    expect(numeroImpreso(12, 3456n)).toBe("00012-00003456");
   });
 
   it("el número se rellena con ceros a cinco y ocho dígitos", () => {

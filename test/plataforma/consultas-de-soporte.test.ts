@@ -501,7 +501,7 @@ describe("verConfiguracion", () => {
       estado: "en_desarrollo",
       obligatorio: false,
       requiere: ["administracion"],
-      acciones: ["comprobantes.emitir"],
+      acciones: ["comprobantes.emitir", "comprobantes.ver"],
     });
     expect(soporte.pedidos).toEqual([]);
   });

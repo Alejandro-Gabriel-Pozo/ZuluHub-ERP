@@ -150,14 +150,3 @@ export type ComprobanteEmitidoJson = Readonly<{
   neto: ImporteJson;
   iva: ImporteJson;
 }>;
-
-/**
- * Cómo termina un pedido de autorización al servicio de emisión. `vence` es una fecha civil
- * `YYYY-MM-DD` (texto en la frontera). El código de autorización es NO VERIFICADO contra el manual.
- */
-export type ResultadoDeAutorizacion =
-  | Readonly<{ tipo: "AUTORIZADO"; codigo: string; vence: string }>
-  | Readonly<{ tipo: "RECHAZADO"; observaciones: readonly string[] }>
-  | Readonly<{ tipo: "INCIERTO" }>;
-
-export type DesenlaceDeAutorizacion = ResultadoDeAutorizacion["tipo"];

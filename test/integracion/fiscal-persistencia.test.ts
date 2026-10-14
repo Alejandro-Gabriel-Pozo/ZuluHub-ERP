@@ -22,6 +22,7 @@ import {
   editarPuntoDeVenta,
   emisorId,
   errorFiscalDeRestriccion,
+  OPCIONES_DE_NUMERACION,
   iniciarSerie,
   puntoDeVentaId,
   reconciliarSerie,
@@ -1020,6 +1021,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
             puntoDeVentaId: puntoDeVentaId(pv.id),
             emisorId: emisorId(emisor.id),
             tipo,
+            ambiente: "HOMOLOGACION",
           },
           ultimo,
         ),
@@ -1036,8 +1038,8 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       const m = await mundo();
       const { principal, pv } = await conPuntoDeVenta(m);
       const s = unaSerie(m, pv, principal, 41n);
-      // Desde 0009 la serie trae su ambiente: nace en el de su punto de venta (homologación).
-      const guardada = { ...s, ambiente: "HOMOLOGACION", version: 1 };
+      // La serie trae su ambiente (0009): nace en el de su punto de venta (homologación).
+      const guardada = { ...s, version: 1 };
       expect(await correr(app(m), (tx) => tx.series.crear(s))).toEqual({
         creado: true,
         valor: guardada,
@@ -1047,8 +1049,8 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       );
       expect(repetida).toEqual({ creado: false, valor: guardada });
       const leidas = await correr(app(m), async (tx) => ({
-        una: await tx.series.obtener(empresaDe(m), pv.id, "FACTURA_B"),
-        otra: await tx.series.obtener(empresaDe(m), pv.id, "FACTURA_A"),
+        una: await tx.series.obtener(empresaDe(m), pv.id, "FACTURA_B", "HOMOLOGACION"),
+        otra: await tx.series.obtener(empresaDe(m), pv.id, "FACTURA_A", "HOMOLOGACION"),
         todas: await tx.series.delPuntoDeVenta(empresaDe(m), pv.id),
       }));
       expect(leidas.una).toEqual(guardada);
@@ -1062,7 +1064,11 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       const grande = 9_223_372_036_854_775_805n;
       const s = unaSerie(m, pv, principal, grande);
       await correr(app(m), (tx) => tx.series.crear(s));
-      const reservada = exito(reservarNumero({ ...s, version: 1 }, solicitudId(nuevoId()), AHORA));
+      // El tope de la base es el del bigint (2^63 − 1), no el de ARCA (99 999 999) que fija el dominio.
+      const tope = { ...OPCIONES_DE_NUMERACION, numeroMaximo: 9_223_372_036_854_775_807n };
+      const reservada = exito(
+        reservarNumero({ ...s, version: 1 }, solicitudId(nuevoId()), AHORA, tope),
+      );
       expect(reservada.tipo).toBe("RESERVADA");
       if (reservada.tipo !== "RESERVADA") return;
       const guardada = (await correr(app(m), (tx) => tx.series.guardar(reservada.serie)))!;
@@ -1121,16 +1127,19 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       const bloqueada = (await correr(app(m), (tx) => tx.series.guardar(bloqueo.serie)))!;
       expect(bloqueada.estado).toBe("BLOQUEADA");
       expect(
-        await correr(app(m), (tx) => tx.series.obtener(empresaDe(m), pv.id, "FACTURA_B")),
+        await correr(app(m), (tx) =>
+          tx.series.obtener(empresaDe(m), pv.id, "FACTURA_B", "HOMOLOGACION"),
+        ),
       ).toEqual(bloqueada);
-      // Desde 0009 (QF1) una BLOQUEADA sale solo hacia LIBRE y nunca hacia atrás; el dominio recibe esa
-      // salida en F4. Hacia atrás sigue siendo un error de la base con su nombre.
+      // Una BLOQUEADA sale solo hacia LIBRE (`resincronizarSerie`) y nunca hacia atrás. Hacia atrás es un
+      // error de la base con su nombre.
       const salir = await intentar(app(m), (tx) =>
         tx.series.guardar({
           empresaId: bloqueada.empresaId,
           puntoDeVentaId: bloqueada.puntoDeVentaId,
           emisorId: bloqueada.emisorId,
           tipo: bloqueada.tipo,
+          ambiente: bloqueada.ambiente,
           version: bloqueada.version,
           estado: "LIBRE",
           ultimoNumero: bloqueada.ultimoNumero - 1n,
@@ -1152,7 +1161,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       expect(await correr(app(m), (tx) => tx.series.guardar(r1.serie))).not.toBeNull();
       expect(await correr(app(m), (tx) => tx.series.guardar(r2.serie))).toBeNull();
       const guardada = await correr(app(m), (tx) =>
-        tx.series.obtener(empresaDe(m), pv.id, "FACTURA_B"),
+        tx.series.obtener(empresaDe(m), pv.id, "FACTURA_B", "HOMOLOGACION"),
       );
       expect(guardada?.estado === "EN_CURSO" && guardada.solicitud).toBe(r1.serie.solicitud);
     });
@@ -1215,7 +1224,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       const reserva = exito(reservarNumero(serie, solicitudId(nuevoId()), AHORA));
       if (reserva.tipo !== "RESERVADA") throw new Error("tenía que reservar");
       const desdeB = await correr(app(b), async (tx) => ({
-        una: await tx.series.obtener(empresaDe(a), pv.id, "FACTURA_B"),
+        una: await tx.series.obtener(empresaDe(a), pv.id, "FACTURA_B", "HOMOLOGACION"),
         todas: await tx.series.delPuntoDeVenta(empresaDe(a), pv.id),
         usadas: await tx.series.hayNumerosUsadosDelEmisor(empresaDe(a), principal.id),
         guardar: await tx.series.guardar(reserva.serie),
@@ -1612,7 +1621,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
           const pv = await crearPuntoDeVenta(dueno, m);
           await crearSerie(dueno, m.empresa, pv, m.emisor);
           const serie = (await correr(app(m), (tx) =>
-            tx.series.obtener(empresaDe(m), puntoDeVentaId(pv), "FACTURA_B"),
+            tx.series.obtener(empresaDe(m), puntoDeVentaId(pv), "FACTURA_B", "HOMOLOGACION"),
           ))!;
           if (serie.estado !== "LIBRE") throw new Error("tenía que estar libre");
           // Saltear números: de 0 a 5 sin pasar por una reserva.
@@ -1628,7 +1637,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
           const pv = await crearPuntoDeVenta(dueno, m);
           await crearSerie(dueno, m.empresa, pv, m.emisor);
           const serie = (await correr(app(m), (tx) =>
-            tx.series.obtener(empresaDe(m), puntoDeVentaId(pv), "FACTURA_B"),
+            tx.series.obtener(empresaDe(m), puntoDeVentaId(pv), "FACTURA_B", "HOMOLOGACION"),
           ))!;
           // LIBRE -> BLOQUEADA no existe: se pasa por EN_CURSO.
           const bloqueada: Serie = {
@@ -1636,6 +1645,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
             puntoDeVentaId: serie.puntoDeVentaId,
             emisorId: serie.emisorId,
             tipo: serie.tipo,
+            ambiente: serie.ambiente,
             version: serie.version,
             estado: "BLOQUEADA",
             ultimoNumero: serie.ultimoNumero,
@@ -1777,6 +1787,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
             puntoDeVentaId: pv.id,
             emisorId: principalA.id,
             tipo: "FACTURA_B",
+            ambiente: "HOMOLOGACION",
           },
           3n,
         ),
@@ -1827,7 +1838,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       expect(await puntos.listarDeLaSucursal(eB, sucursalId(a.sucursal))).toEqual([]);
       expect(await puntos.guardar({ ...pv, empresaId: eB, numero: 77 })).toBeNull();
       expect(await puntos.contarActivosDelEmisor(eB, principalA.id)).toBe(0);
-      expect(await series.obtener(eB, pv.id, "FACTURA_B")).toBeNull();
+      expect(await series.obtener(eB, pv.id, "FACTURA_B", "HOMOLOGACION")).toBeNull();
       expect(await series.delPuntoDeVenta(eB, pv.id)).toEqual([]);
       expect(await series.guardar({ ...serie, empresaId: eB })).toBeNull();
       expect(await series.hayNumerosUsadosDelEmisor(eB, principalA.id)).toBe(false);

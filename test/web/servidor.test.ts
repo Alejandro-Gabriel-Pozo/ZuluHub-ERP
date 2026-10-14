@@ -46,6 +46,7 @@ describe("apps/web/servidor/composicion.ts", () => {
     expect(Object.keys(web).sort()).toEqual([
       "casosDeUsoDeEmpresas",
       "casosDeUsoDeIdentidad",
+      "configuracionPublicaDeHost",
       "consultasDeEmpresas",
       "consultasDeIdentidad",
       "consultasDeSesion",
