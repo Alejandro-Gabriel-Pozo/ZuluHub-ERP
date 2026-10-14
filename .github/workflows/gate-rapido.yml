@@ -1,0 +1,129 @@
+name: Gate rápido
+
+# Aviso temprano para las ramas de trabajo (las de los agentes y las del dueño): cada vez que se empuja una
+# rama, corre lo MÁS RÁPIDO del CI sobre el mismo entorno que el CI final (Postgres 18 en modo `trust`):
+# verificación estática y todas las pruebas (con la integración). No incluye la mutación, las 12 copias de
+# estabilidad ni la seguridad: eso corre en el pull request de integración de cada tanda (ci.yml). Las ramas
+# `integracion/**` y `main` ya tienen su CI completo y no se repiten acá.
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - "integracion/**"
+      - "dependabot/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gate-rapido-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  estatico:
+    name: Estático (tipos, lint, formato, arquitectura, código muerto)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run arquitectura
+      - run: npm run analizar:muerto
+
+  pruebas:
+    name: Pruebas (con Postgres real)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        # Misma versión mayor que Neon. Sin contraseña: es una base descartable del CI.
+        image: postgres:18
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PRUEBAS_DATABASE_URL: postgres://postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Registro de Postgres solo para fallos graves
+        run: |
+          psql "$PRUEBAS_DATABASE_URL" \
+            -c "ALTER SYSTEM SET log_min_messages = 'fatal'" \
+            -c "ALTER SYSTEM SET log_min_error_statement = 'panic'" \
+            -c "SELECT pg_reload_conf()"
+      - run: npm test
+
+  web:
+    name: Web (next build sin variables ZULUHUB_*)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: El entorno no trae ninguna variable ZULUHUB_*
+        run: |
+          if env | grep -q '^ZULUHUB_'; then
+            echo "El job web no debe tener variables ZULUHUB_*" >&2
+            exit 1
+          fi
+      - run: npm run build:web
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+
+  componentes:
+    name: Componentes (axe, foco y envío en Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Versión de Playwright (clave del caché del navegador)
+        id: playwright
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: navegador
+        with:
+          path: ~/.cache/ms-playwright
+          key: chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: Chromium de Playwright
+        if: steps.navegador.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Dependencias del sistema de Chromium (el navegador ya estaba en el caché)
+        if: steps.navegador.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - run: npm run test:componentes
