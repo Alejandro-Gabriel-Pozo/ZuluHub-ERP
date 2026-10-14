@@ -119,12 +119,13 @@ export async function levantarServidorFalso(
     const token = textoDe(xml, "Token") ?? "";
     if (!tokens.has(token))
       return responder(errores([[600, "ValidacionDeToken: No validaron las credenciales"]]));
-    const tabla = (items: readonly [string, string][]) =>
-      `<ResultGet>${items.map(([id, desc]) => `<Item><Id>${id}</Id><Desc>${desc}</Desc></Item>`).join("")}</ResultGet>`;
+    // Como ARCA de verdad (manual WSFE v4.8): cada tabla usa su propio nombre de elemento.
+    const tabla = (elemento: string, items: readonly [string, string][]) =>
+      `<ResultGet>${items.map(([id, desc]) => `<${elemento}><Id>${id}</Id><Desc>${desc}</Desc><FchDesde>20100917</FchDesde><FchHasta>NULL</FchHasta></${elemento}>`).join("")}</ResultGet>`;
     switch (operacion) {
       case "FEParamGetTiposCbte":
         return responder(
-          tabla([
+          tabla("CbteTipo", [
             ["1", "Factura A"],
             ["6", "Factura B"],
             ["8", "Nota de Crédito B"],
@@ -133,7 +134,7 @@ export async function levantarServidorFalso(
         );
       case "FEParamGetTiposDoc":
         return responder(
-          tabla([
+          tabla("DocTipo", [
             ["80", "CUIT"],
             ["96", "DNI"],
             ["99", "Doc. (Otro)"],
@@ -141,7 +142,7 @@ export async function levantarServidorFalso(
         );
       case "FEParamGetTiposIva":
         return responder(
-          tabla([
+          tabla("IvaTipo", [
             ["3", "0%"],
             ["4", "10.5%"],
             ["5", "21%"],
@@ -157,14 +158,14 @@ export async function levantarServidorFalso(
         );
       case "FEParamGetTiposConcepto":
         return responder(
-          tabla([
+          tabla("ConceptoTipo", [
             ["1", "Producto"],
             ["2", "Servicios"],
             ["3", "Productos y Servicios"],
           ]),
         );
       case "FEParamGetTiposMonedas":
-        return responder(tabla([["PES", "Pesos Argentinos"]]));
+        return responder(tabla("Moneda", [["PES", "Pesos Argentinos"]]));
       case "FECompUltimoAutorizado": {
         const clave = `${textoDe(xml, "PtoVta")}|${textoDe(xml, "CbteTipo")}`;
         return responder(

@@ -16,7 +16,7 @@ import {
 } from "./arca.ts";
 import { armarTra, desdePem, firmarTra, generarPedido, leerCertificado, type Hash } from "./cms.ts";
 import { enviar } from "./transporte.ts";
-import { buscar, buscarTodos, textoDe } from "./xml.ts";
+import { buscar, hijosDe, textoDe } from "./xml.ts";
 
 /**
  * Las verificaciones E1-E14 del espía (h7 facturación §B.5.6), en el orden en que se pueden hacer. Cada una devuelve
@@ -289,13 +289,17 @@ async function e5(c: Configuracion, g: Grabadora, s: Estado_): Promise<Verificac
     const l = await llamarWsfe(g, c.extremos, op, s.credencial, "", TIEMPOS.consultaMs);
     s.llamadas.push(l);
     if (l.falla !== null || l.faltaSoap !== null || l.errores.length > 0) bien = false;
-    const items = [
-      ...buscarTodos(buscar(l.xml ?? undefined, "ResultGet"), "Item"),
-      ...buscarTodos(buscar(l.xml ?? undefined, "ResultGet"), "CondicionIvaReceptor"),
-      ...buscarTodos(buscar(l.xml ?? undefined, "ResultGet"), "Moneda"),
-    ];
+    // Cada tabla trae sus filas con un nombre propio (CbteTipo, DocTipo, IvaTipo, ConceptoTipo, Moneda,
+    // CondicionIvaReceptor): se toman TODOS los hijos de ResultGet, sea cual sea su nombre.
+    const items = hijosDe(buscar(l.xml ?? undefined, "ResultGet"));
     tablas[op] = items.map((i) =>
-      [textoDe(i, "Id"), textoDe(i, "Desc"), textoDe(i, "Cmp_Clase")]
+      [
+        textoDe(i, "Id"),
+        textoDe(i, "Desc"),
+        textoDe(i, "Cmp_Clase"),
+        textoDe(i, "FchDesde"),
+        textoDe(i, "FchHasta"),
+      ]
         .filter((x) => x !== null)
         .join(" | "),
     );

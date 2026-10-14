@@ -25,7 +25,14 @@ import { SecretoEnLaSalida, exigirSinSecretos, sanear } from "../../scripts/espi
 import { levantarServidorFalso, type ServidorFalso } from "../../scripts/espia/servidor-falso";
 import { enviar } from "../../scripts/espia/transporte";
 import { correrVerificaciones } from "../../scripts/espia/verificaciones";
-import { XmlInseguro, desescapar, leerXml, textoDe } from "../../scripts/espia/xml";
+import {
+  XmlInseguro,
+  buscar,
+  desescapar,
+  hijosDe,
+  leerXml,
+  textoDe,
+} from "../../scripts/espia/xml";
 
 /**
  * Pruebas del espía (F0, rama descartable) contra el ARCA FALSO local: la firma CMS y el CSR con pkijs, el lector de
@@ -119,6 +126,23 @@ describe("XML: sin entidades y todo como texto", () => {
       "0.00",
       "-1.50",
     ]);
+  });
+});
+
+describe("tablas de ARCA: las filas se leen con cualquier nombre de elemento", () => {
+  it("hijosDe toma todas las filas bajo ResultGet, con un solo elemento o con varios", () => {
+    const iva = leerXml(
+      "<r><ResultGet><IvaTipo><Id>5</Id><Desc>21%</Desc><FchDesde>20090220</FchDesde><FchHasta>NULL</FchHasta></IvaTipo>" +
+        "<IvaTipo><Id>8</Id><Desc>5%</Desc></IvaTipo></ResultGet></r>",
+    );
+    const filas = hijosDe(buscar(iva, "ResultGet"));
+    expect(filas.map((f) => textoDe(f, "Id"))).toEqual(["5", "8"]);
+    const una = leerXml(
+      "<r><ResultGet><DocTipo><Id>80</Id><Desc>CUIT</Desc></DocTipo></ResultGet></r>",
+    );
+    expect(hijosDe(buscar(una, "ResultGet")).map((f) => textoDe(f, "Desc"))).toEqual(["CUIT"]);
+    expect(hijosDe(undefined)).toEqual([]);
+    expect(hijosDe("texto")).toEqual([]);
   });
 });
 
@@ -233,6 +257,22 @@ describe("una corrida entera en modo seco", () => {
       ["E13", "PENDIENTE"],
       ["E14", "INFORMATIVA"],
     ]);
+    // Las seis tablas de ARCA traen filas (cada una con su propio nombre de elemento: antes se leían vacías).
+    const tablas = JSON.parse(readFileSync(join(salida, "tablas-de-arca.json"), "utf8")) as Record<
+      string,
+      string[]
+    >;
+    for (const op of [
+      "FEParamGetTiposCbte",
+      "FEParamGetTiposDoc",
+      "FEParamGetTiposIva",
+      "FEParamGetCondicionIvaReceptor",
+      "FEParamGetTiposConcepto",
+      "FEParamGetTiposMonedas",
+    ]) {
+      expect(tablas[op]?.length ?? 0, op).toBeGreaterThan(0);
+    }
+    expect(tablas["FEParamGetTiposIva"]?.some((f) => f.includes("5%"))).toBe(true);
     // Hubo credenciales (dos tickets: alias 1 y alias 2, más los CMS) y ninguna quedó escrita.
     expect(g.secretos.length).toBeGreaterThanOrEqual(6);
     const archivos = readdirSync(join(salida, "grabaciones")).map((a) =>

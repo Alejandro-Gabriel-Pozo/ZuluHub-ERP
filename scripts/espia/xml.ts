@@ -59,6 +59,12 @@ export function buscarTodos(nodo: Nodo | undefined, nombre: string): Nodo[] {
   return Array.isArray(r) ? r : [r];
 }
 
+/** Todos los elementos hijos de un nodo, cualquiera sea su nombre (los repetidos vienen como lista). */
+export function hijosDe(nodo: Nodo | undefined): Nodo[] {
+  if (nodo === undefined || typeof nodo === "string" || Array.isArray(nodo)) return [];
+  return Object.values(nodo).flatMap((hijo) => (Array.isArray(hijo) ? hijo : [hijo]));
+}
+
 /** El texto de un nodo hoja, o `null`. */
 function texto(nodo: Nodo | undefined): string | null {
   if (typeof nodo === "string") return nodo;
