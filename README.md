@@ -10,16 +10,18 @@ Hito **H0**: esqueleto, CI y reglas de arquitectura activas. Todavía no hay apl
 
 ## Comandos
 
-| Comando                   | Qué hace                                                                     |
-| ------------------------- | ---------------------------------------------------------------------------- |
-| `npm run gate`            | Todo lo que corre el CI, en una sola pasada                                  |
-| `npm run typecheck`       | TypeScript estricto                                                          |
-| `npm run lint`            | ESLint (con reglas de promesas)                                              |
-| `npm run format:check`    | Prettier (`npm run format` corrige)                                          |
-| `npm run arquitectura`    | Reglas de dependencias entre carpetas (ADR-001)                              |
-| `npm run analizar:muerto` | Código y dependencias sin uso (knip)                                         |
-| `npm test`                | Pruebas, incluidas las que rompen cada regla de arquitectura a propósito     |
-| `npm run migrar -- --ver` | Migra la base real (`--ver`, `--aplicar`, `--preparar-roles`); ver el script |
+| Comando                   | Qué hace                                                                                    |
+| ------------------------- | ------------------------------------------------------------------------------------------- |
+| `npm run gate`            | Todo lo que corre el CI, en una sola pasada                                                 |
+| `npm run typecheck`       | TypeScript estricto                                                                         |
+| `npm run lint`            | ESLint (con reglas de promesas)                                                             |
+| `npm run format:check`    | Prettier (`npm run format` corrige)                                                         |
+| `npm run arquitectura`    | Reglas de dependencias entre carpetas (ADR-001)                                             |
+| `npm run analizar:muerto` | Código y dependencias sin uso (knip)                                                        |
+| `npm test`                | Pruebas, incluidas las que rompen cada regla de arquitectura a propósito                    |
+| `npm run migrar -- --ver` | Migra la base real (`--ver`, `--aplicar`, `--preparar-roles`); ver el script                |
+| `npm run instalar-clave`  | Instala en la base la clave de firma del contexto (`ZULUHUB_CLAVE_CONTEXTO`)                |
+| `npm run build:web`       | Compila `apps/web` sin variables de entorno; el despliegue: `apps/web/PRIMER-DESPLIEGUE.md` |
 
 ## Estructura
 

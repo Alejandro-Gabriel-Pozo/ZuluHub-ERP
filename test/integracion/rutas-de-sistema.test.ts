@@ -38,7 +38,7 @@ import {
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
-const SECRETO = "secreto-del-cron-de-prueba-0123456789";
+const SECRETO = "el-secreto-largo-del-cron-de-prueba";
 const AHORA = new Date("2026-10-14T06:17:00.000Z");
 const CARPETA_REAL = join(import.meta.dirname, "../../migraciones");
 const pausa = (ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms));
@@ -311,9 +311,10 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
       expect(registrados).toEqual([]);
     });
 
-    it("con la clave mal puesta: 503 {ok:false} sin ningún detalle; el tipo de la falla va solo al registro", async () => {
+    it("con un rol que no existe: 503 {ok:false} sin ningún detalle; el tipo de la falla va solo al registro", async () => {
+      // Un rol inexistente (y no una clave equivocada): el CI acepta cualquier clave (autenticación `trust`).
       const mala = new URL(propia.base.app);
-      mala.password = "clave-que-no-es";
+      mala.username = "zuluhub_rol_que_no_existe";
       const registrados: string[] = [];
       const sistema = sistemaCon(mala.toString(), (d) => registrados.push(d));
       const r = await atenderSalud({ baseResponde: () => sistema.baseResponde()() });
@@ -321,7 +322,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
       expect(await r.text()).toBe('{"ok":false}');
       expect(registrados).toHaveLength(1);
       expect(registrados[0]).toMatch(/^\[salud\] la base no respondió: \w+( [0-9A-Z]{5})?$/);
-      expect(registrados[0]).not.toContain("clave-que-no-es");
+      expect(registrados[0]).not.toContain("zuluhub_rol_que_no_existe");
       expect(registrados[0]).not.toContain(new URL(propia.base.app).hostname);
     });
 

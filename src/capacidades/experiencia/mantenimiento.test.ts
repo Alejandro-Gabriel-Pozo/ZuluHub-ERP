@@ -15,6 +15,29 @@ describe("respuestaDeMantenimiento", () => {
     expect(r.encabezados["Retry-After"]).toBe("60");
   });
 
+  it("el HTML es exactamente este (sin nada de más)", () => {
+    expect(armar().cuerpo).toBe(
+      [
+        "<!doctype html>",
+        '<html lang="es-AR">',
+        "<head>",
+        '<meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width, initial-scale=1">',
+        '<meta name="robots" content="noindex">',
+        "<title>En mantenimiento</title>",
+        "</head>",
+        "<body>",
+        "<main>",
+        "<h1>En mantenimiento</h1>",
+        "<p>Estamos actualizando el sistema. Volvé a intentar en unos minutos.</p>",
+        "<p>Si sigue igual, avisale a soporte esta referencia: <strong>ZH-1A2B-3C4D</strong></p>",
+        "</main>",
+        "</body>",
+        "</html>",
+      ].join("\n"),
+    );
+  });
+
   it("dice «En mantenimiento» y la referencia, en castellano rioplatense, y nada más del sistema", () => {
     const { cuerpo } = armar();
     expect(cuerpo).toContain("<title>En mantenimiento</title>");
@@ -67,6 +90,9 @@ describe("respuestaDeMantenimiento", () => {
   ])("rechaza la referencia %j antes de ponerla en el HTML", (referencia) => {
     expect(() => respuestaDeMantenimiento({ referencia, nonce: NONCE, produccion: false })).toThrow(
       RangeError,
+    );
+    expect(() => respuestaDeMantenimiento({ referencia, nonce: NONCE, produccion: false })).toThrow(
+      /ZH-XXXX-XXXX/,
     );
   });
 

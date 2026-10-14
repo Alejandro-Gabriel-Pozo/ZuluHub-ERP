@@ -15,7 +15,8 @@ import { createHash, timingSafeEqual } from "node:crypto";
  */
 const ESQUEMA = "Bearer ";
 
-const huella = (texto: string): Buffer => createHash("sha256").update(texto, "utf8").digest();
+// Sin codificación explícita: el valor por defecto de un texto ya es UTF-8.
+const huella = (texto: string): Buffer => createHash("sha256").update(texto).digest();
 
 export function autorizadoPorElCron(autorizacion: string | null, secreto: string): boolean {
   if (autorizacion === null || secreto === "") return false;

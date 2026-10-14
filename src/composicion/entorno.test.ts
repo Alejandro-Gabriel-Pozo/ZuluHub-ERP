@@ -37,7 +37,7 @@ const COMPLETO: FuenteDeEntorno = {
   ZULUHUB_AUTH_SECRETO_EMPRESA: "secreto-de-prueba-que-no-es-real-0123456789",
   GOOGLE_CLIENT_ID: "cliente-de-prueba",
   GOOGLE_CLIENT_SECRET: "secreto-de-cliente-de-prueba",
-  CRON_SECRET: "secreto-del-cron-de-prueba-0123456789",
+  CRON_SECRET: "el-secreto-largo-del-cron-de-prueba",
 };
 
 const PIEZAS: Record<Pieza, string[]> = {

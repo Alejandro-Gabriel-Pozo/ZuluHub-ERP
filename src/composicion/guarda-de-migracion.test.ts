@@ -63,6 +63,7 @@ describe("migracionAlDia", () => {
     "una requerida mal formada (%j) es un defecto y lanza",
     (requerida) => {
       expect(() => migracionAlDia("0012_respaldo.sql", requerida)).toThrow(RangeError);
+      expect(() => migracionAlDia(null, requerida)).toThrow(/número de cuatro cifras/);
     },
   );
 });

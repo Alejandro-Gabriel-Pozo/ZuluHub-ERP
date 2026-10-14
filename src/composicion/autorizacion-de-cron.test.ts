@@ -19,7 +19,7 @@ vi.mock("node:crypto", async (original) => {
 
 import { autorizadoPorElCron } from "./autorizacion-de-cron";
 
-const SECRETO = "secreto-del-cron-de-prueba-0123456789";
+const SECRETO = "el-secreto-largo-del-cron-de-prueba";
 
 beforeEach(() => {
   espia.llamadas.length = 0;

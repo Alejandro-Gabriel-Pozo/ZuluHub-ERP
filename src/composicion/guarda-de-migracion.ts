@@ -33,10 +33,11 @@ export function migracionAlDia(ultimaAplicada: string | null, requerida: string)
   if (!FORMA_DE_NUMERO.test(requerida)) {
     throw new RangeError("la migración requerida es un número de cuatro cifras");
   }
-  if (ultimaAplicada === null) return false;
-  const numero = NUMERO_DE_MIGRACION.exec(ultimaAplicada)?.[1];
+  // `null` se lee como el texto «null», que no tiene la forma de una migración. Sin número, el texto vacío queda
+  // por debajo de cualquier requerida (que tiene cuatro cifras), así que «no al día».
+  const numero = NUMERO_DE_MIGRACION.exec(String(ultimaAplicada))?.[1] ?? "";
   // Cuatro cifras en los dos lados: el orden de los textos es el orden de los números.
-  return numero !== undefined && numero >= requerida;
+  return numero >= requerida;
 }
 
 export type ConfiguracionDeLaGuarda = Readonly<{

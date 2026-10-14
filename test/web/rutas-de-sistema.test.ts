@@ -10,7 +10,7 @@ import type { ResumenDelBarrido } from "../../src/puertos/autenticacion";
  */
 vi.mock("server-only", () => ({}));
 const mundo = vi.hoisted(() => {
-  const secreto: { valor: string | Error } = { valor: "secreto-del-cron-de-prueba-0123456789" };
+  const secreto: { valor: string | Error } = { valor: "el-secreto-largo-del-cron-de-prueba" };
   return {
     secreto,
     procesar: undefined as unknown as Mock<
@@ -52,7 +52,7 @@ vi.mock("../../apps/web/servidor/composicion", () => {
 import * as rutaDelCron from "../../apps/web/app/api/trabajos/cron/route";
 import * as rutaDeLaSalud from "../../apps/web/app/api/salud/route";
 
-const SECRETO = "secreto-del-cron-de-prueba-0123456789";
+const SECRETO = "el-secreto-largo-del-cron-de-prueba";
 const pedido = (url: string, autorizacion?: string) =>
   new Request(url, autorizacion === undefined ? {} : { headers: { authorization: autorizacion } });
 

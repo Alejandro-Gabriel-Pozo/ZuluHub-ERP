@@ -11,7 +11,7 @@ import {
   type DependenciasDelCron,
 } from "./rutas-de-sistema";
 
-const SECRETO = "secreto-del-cron-de-prueba-0123456789";
+const SECRETO = "el-secreto-largo-del-cron-de-prueba";
 const AHORA = new Date("2026-10-14T06:17:00.000Z");
 const AZAR = () => new Uint8Array([0x1a, 0x2b, 0x3c, 0x4d]);
 const REFERENCIA = "ZH-1A2B-3C4D";

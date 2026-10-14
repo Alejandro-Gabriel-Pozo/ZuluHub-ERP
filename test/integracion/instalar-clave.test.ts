@@ -145,11 +145,11 @@ describe.skipIf(base === null)("instalar la clave de contexto", () => {
 
   it("con una cadena que no conecta: falla sin repetir la cadena ni la clave", async () => {
     const clave = claveNueva(9);
-    const cadena = "postgres://usuario:clave-secreta-123@127.0.0.1:1/base";
+    const cadena = "postgres://usuario:clave-secreta-comun@127.0.0.1:1/base";
     const r = await correr({ [VARIABLE_DE_LA_CADENA]: cadena, [ZULUHUB_CLAVE_CONTEXTO]: clave });
     expect(r.codigo).toBe(1);
     expect(r.texto).toContain("RESULTADO: FALLA");
-    expect(r.texto).not.toContain("clave-secreta-123");
+    expect(r.texto).not.toContain("clave-secreta-comun");
     expect(r.texto).not.toContain(clave.split(":")[1]);
   });
 
