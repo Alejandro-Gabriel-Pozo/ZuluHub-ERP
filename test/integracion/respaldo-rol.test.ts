@@ -355,6 +355,21 @@ describe.skipIf(base === null)("el rol de respaldo y las reglas de aislamiento (
     expect(problemas).toEqual([`RS4: ${ROL} no puede leer public.sucursal`]);
   });
 
+  it.each(["RESET ALL", "NOBYPASSRLS", "INHERIT", "CONNECTION LIMIT -1", "CREATEDB"])(
+    "la migración repone lo que el rol perdió (ALTER ROLE %s, en una transacción que se revierte)",
+    async (cambio) => {
+      const sql = await readFile(join(CARPETA_REAL, "0012_respaldo.sql"), "utf8");
+      const problemas = await revertido(dueno, async () => {
+        // Topes y atributos son del servidor: un rol ya creado los conserva. Se le saca uno y la migración lo repone.
+        await dueno.query(`ALTER ROLE ${ROL} ${cambio}`);
+        expect((await problemasDelRol(dueno)).length).toBeGreaterThan(0);
+        await dueno.query(sql);
+        return problemasDelRol(dueno);
+      });
+      expect(problemas).toEqual([]);
+    },
+  );
+
   it("la migración es repetible: aplicarla otra vez no cambia nada ni falla", async () => {
     const sql = await readFile(join(CARPETA_REAL, "0012_respaldo.sql"), "utf8");
     await revertido(dueno, async () => {
