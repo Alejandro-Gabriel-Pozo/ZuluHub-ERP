@@ -17,6 +17,7 @@ import {
   type ComprobanteId,
 } from "../dominio/identificadores";
 import { importesParaArca } from "../dominio/importes-para-arca";
+import { esFueraDeSecuencia } from "../dominio/numeracion";
 import type {
   CambioDeComprobante,
   ComprobanteGuardado,
@@ -41,6 +42,7 @@ import {
 } from "./llamadas-a-arca";
 import {
   cerrarEnTx,
+  cerrarFueraDeSecuenciaEnTx,
   reservarEnTx,
   type ErrorPropioAlCerrar,
   type ErrorPropioAlReservar,
@@ -57,8 +59,15 @@ import {
  *     del día civil de la empresa, y su auditoría.
  *  2. Afuera: `autorizar` con tiempo límite propio (un pedido que no vuelve es `INCIERTO`, nunca se reenvía).
  *  3. TXi: el intento (lo que respondió ARCA, sin secretos), ANTES de cerrar: si el cierre falla, el CAE queda.
+ *  3b. Solo ante un rechazo 10016 (numeración fuera de secuencia; tabla de §B.5.4): afuera, `ultimoAutorizado`
+ *     con tiempo límite. Nunca adentro de una transacción (ADR-007).
  *  4. TXb: si el comprobante sigue `EN_VALIDACION` con ese número, cierra la serie (`cerrarEnTx`) y lo mueve
  *     según el desenlace (§B.2.2), con su auditoría. Si ya no (lo resolvió la reconciliación), no toca nada.
+ *     Un 10016 queda `RECHAZADO` (terminal, sin CAE: el número nunca se usó) y la serie se decide en ESA misma
+ *     transacción con lo que ARCA informó (`cerrarFueraDeSecuenciaEnTx`): en el último número de la serie,
+ *     `LIBRE` como cualquier rechazo; en otro, o sin respuesta, `BLOQUEADA` por desfase hasta que el gerente la
+ *     resincronice (QF1). Sin eso, con otro sistema usando el punto de venta cada comprobante nuevo sería un
+ *     10016 más, uno por uno y para siempre. El intento de la consulta (`ULTIMO_AUTORIZADO`) va en la misma TXb.
  *
  * Si el proceso muere entre 1 y 4, o TXb falla, queda `EN_VALIDACION` con la serie `EN_CURSO`: al vencer la
  * reserva lo levanta la reconciliación consultando. Un reintento del trabajo encuentra el comprobante fuera de
@@ -82,6 +91,8 @@ export type SalidaDeValidarComprobante =
       numero: bigint;
       desenlace: DesenlaceDeAutorizacion;
       cerrado: boolean;
+      /** Solo presente (`true`) si un rechazo 10016 dejó la serie `BLOQUEADA` por desfase con ARCA. */
+      serieBloqueada?: true;
     }>;
 
 export type ErrorAlValidarComprobante =
@@ -182,6 +193,39 @@ function cierreDelComprobante(
     case "NO_ENVIADO":
       return { cambio: { a: "PENDIENTE" }, accion: "COMPROBANTE_NO_ENVIADO", datos: {} };
   }
+}
+
+/** Lo que respondió ARCA al último autorizado tras un 10016, y cuándo empezó y terminó la llamada. */
+type ConsultaDelUltimo = Readonly<{
+  ultimo: Resultado<bigint, ErrorDeEmision>;
+  iniciadoEn: Date;
+  terminadoEn: Date;
+}>;
+
+/**
+ * El intento que deja la consulta del último autorizado (`ULTIMO_AUTORIZADO`): `RESPONDIDO` con el número que
+ * informó ARCA en `numero`, o `CONSULTA_FALLIDA` sin él. Su id sale de lo que lo identifica, así que repetir la
+ * transacción no lo duplica.
+ */
+function intentoDelUltimo(
+  empresaId: ContextoDeSistema["empresaId"],
+  comprobante: ComprobanteId,
+  reservado: bigint,
+  { ultimo, iniciadoEn, terminadoEn }: ConsultaDelUltimo,
+) {
+  return {
+    id: intentoId(idDeIntento(comprobante, "ULTIMO_AUTORIZADO", reservado, iniciadoEn)),
+    empresaId,
+    comprobanteId: comprobante,
+    operacion: "ULTIMO_AUTORIZADO" as const,
+    numero: ultimo.ok ? ultimo.valor : null,
+    desenlace: ultimo.ok ? ("RESPONDIDO" as const) : ("CONSULTA_FALLIDA" as const),
+    mensajes: [],
+    respuesta: null,
+    huellaDelPedido: null,
+    iniciadoEn,
+    duracionEnMs: Math.max(0, terminadoEn.getTime() - iniciadoEn.getTime()),
+  };
 }
 
 export function armarValidarComprobante(dependencias: DependenciasDeFacturacion) {
@@ -333,27 +377,73 @@ export function armarValidarComprobante(dependencias: DependenciasDeFacturacion)
       ),
     );
 
+    // 3b. Un 10016 (numeración fuera de secuencia): afuera, el último autorizado de ARCA, para decidir si es un
+    //     rechazo suelto o un desfase (otro sistema usó el punto de venta). Si no responde, `ultimo` es un error
+    //     y la serie NO se libera (queda bloqueada hasta resincronizarla): liberarla sería apostar a que no hay desfase.
+    const fueraDeSecuencia = esFueraDeSecuencia(resultado);
+    let consultaDelUltimo: ConsultaDelUltimo | null = null;
+    if (fueraDeSecuencia) {
+      const desde = reloj.ahora();
+      const ultimo = await ultimoAutorizadoConLimite(
+        servicio,
+        puntoDeVenta,
+        comprobante.tipo,
+        opciones.tiempos,
+      );
+      consultaDelUltimo = { ultimo, iniciadoEn: desde, terminadoEn: reloj.ahora() };
+    }
+
     // 4. TXb: cerrar la serie y mover el comprobante, si sigue siendo el que se envió.
     const cierre = await transacciones.ejecutar(
       { contexto: contextoDelCierre },
-      async (tx): Promise<Resultado<boolean, ErrorPropioAlCerrar | EmpresaNoOpera>> => {
+      async (
+        tx,
+      ): Promise<
+        Resultado<
+          Readonly<{ cerrado: boolean; serieBloqueada: boolean }>,
+          ErrorPropioAlCerrar | EmpresaNoOpera
+        >
+      > => {
+        // La evidencia de la consulta va primero (es idempotente): queda aunque otro haya resuelto el comprobante.
+        if (consultaDelUltimo !== null) {
+          await tx.intentos.registrar(
+            intentoDelUltimo(empresaId, comprobante.id, numero, consultaDelUltimo),
+          );
+        }
         const actual = await tx.comprobantes.obtener(empresaId, comprobante.id);
         if (
           actual === null ||
           actual.estado !== "EN_VALIDACION" ||
           actual.numeroReservado !== numero
         ) {
-          return ok(false);
+          return ok({ cerrado: false, serieBloqueada: false });
         }
-        const serie = await cerrarEnTx(tx, contextoDelCierre, {
+        const entradaDeSerie = {
           puntoDeVentaId: actual.puntoDeVentaId,
           tipo: actual.tipo,
           ambiente: actual.ambiente,
           solicitud: solicitud.solicitud,
           numero,
           resultado,
-        });
-        if (!serie.ok) return serie;
+        };
+        let serieBloqueada = false;
+        let datosDelUltimo: Record<string, Dato> = {};
+        if (consultaDelUltimo !== null) {
+          const ultimoDeArca = consultaDelUltimo.ultimo.ok ? consultaDelUltimo.ultimo.valor : null;
+          const serie = await cerrarFueraDeSecuenciaEnTx(tx, contextoDelCierre, {
+            ...entradaDeSerie,
+            ultimoDeArca,
+          });
+          if (!serie.ok) return serie;
+          serieBloqueada = serie.valor.resolucion === "BLOQUEADA";
+          datosDelUltimo = {
+            ultimoAutorizadoPorElServicio: ultimoDeArca?.toString() ?? null,
+            serie: serie.valor.resolucion,
+          };
+        } else {
+          const serie = await cerrarEnTx(tx, contextoDelCierre, entradaDeSerie);
+          if (!serie.ok) return serie;
+        }
         const { cambio, accion, datos } = cierreDelComprobante(resultado, terminadoEn);
         const movido = await tx.comprobantes.transicionar(
           empresaId,
@@ -369,20 +459,27 @@ export function armarValidarComprobante(dependencias: DependenciasDeFacturacion)
           entidad: "comprobante",
           entidadId: actual.id,
           antes: { estado: actual.estado, numero: numero.toString() },
-          despues: { estado: movido.estado, ...datos },
+          despues: { estado: movido.estado, ...datos, ...datosDelUltimo },
         });
-        return ok(true);
+        return ok({ cerrado: true, serieBloqueada });
       },
     );
     if (!cierre.ok) return cierre;
-    return ok({ tipo: "ENVIADO", numero, desenlace: resultado.tipo, cerrado: cierre.valor });
+    return ok({
+      tipo: "ENVIADO",
+      numero,
+      desenlace: resultado.tipo,
+      cerrado: cierre.valor.cerrado,
+      ...(cierre.valor.serieBloqueada ? { serieBloqueada: true as const } : {}),
+    });
   };
 }
 
 /**
  * El manejador del trabajo `fiscal.validar_comprobante` (datos `{ comprobanteId }`). Corre con el contexto de
  * sistema de la empresa DEL TRABAJO: un trabajo que apunta a un comprobante ajeno no lo encuentra (RLS).
- *  - Terminó (se envió, ya no estaba pendiente, la serie está bloqueada): `HECHO`, con una nota si no envió.
+ *  - Terminó (se envió, ya no estaba pendiente, la serie está bloqueada): `HECHO`, con una nota si no envió o si
+ *    el envío dejó la serie bloqueada (rechazo 10016 con ARCA en otro número).
  *  - Serie ocupada, el pedido no salió, el servicio o la base no respondieron: error que se reintenta.
  *  - Lo que reintentar no arregla (no existe, el punto de venta o el emisor ya no están activos, la empresa
  *    no opera, falta la credencial): error definitivo; el comprobante queda `PENDIENTE` y se puede descartar o
@@ -418,8 +515,11 @@ export function crearManejadorDeValidarComprobante(
         case "SERIE_OCUPADA":
           return { tipo: "ERROR", error: "SERIE_OCUPADA", definitivo: false };
         case "ENVIADO":
-          return r.valor.desenlace === "NO_ENVIADO"
-            ? { tipo: "ERROR", error: "NO_ENVIADO: el pedido no salió", definitivo: false }
+          if (r.valor.desenlace === "NO_ENVIADO") {
+            return { tipo: "ERROR", error: "NO_ENVIADO: el pedido no salió", definitivo: false };
+          }
+          return r.valor.serieBloqueada === true
+            ? { tipo: "HECHO", nota: "SERIE_BLOQUEADA: rechazo 10016, espera la resincronización" }
             : { tipo: "HECHO" };
       }
     }

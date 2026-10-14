@@ -20,12 +20,18 @@ import type { Auditoria, RegistroDeAuditoria } from "../../../puertos/auditoria"
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { Ambiente } from "../dominio/comprobante-nuevo";
 import type { ResultadoDeAutorizacionArca } from "../dominio/estados-de-comprobante";
+import type { SolicitudId } from "../dominio/identificadores";
 import type { PuntoDeVenta } from "../dominio/punto-de-venta";
 import type { Emisor } from "../dominio/emisor";
 import type { Serie } from "../dominio/numeracion";
 import { crearCasosDeUsoDeNumeracion } from "./casos-de-uso";
 import type { ContextoDeSistema, TxDeNumeracion } from "./contrato";
-import { cerrarEnTx, reservarEnTx, resincronizarEnTx } from "./numeracion-en-tx";
+import {
+  cerrarEnTx,
+  cerrarFueraDeSecuenciaEnTx,
+  reservarEnTx,
+  resincronizarEnTx,
+} from "./numeracion-en-tx";
 
 /**
  * Los casos de uso de numeración contra repositorios EN MEMORIA: lo que la base real no deja armar
@@ -752,5 +758,123 @@ describe("resincronizarEnTx: la salida de BLOQUEADA", () => {
   it("si la serie cambió dentro de la transacción (no pasa en SERIALIZABLE) es un defecto, no un éxito", async () => {
     const { tx } = armar({ serie: serieBloqueada(7n), perderVersion: true });
     await expect(resincronizar(tx)).rejects.toThrow("la serie cambió dentro de la transacción");
+  });
+});
+
+describe("cerrarFueraDeSecuenciaEnTx: el rechazo 10016 con lo que informa ARCA", () => {
+  const FUERA_DE_SECUENCIA: ResultadoDeAutorizacionArca = {
+    tipo: "RECHAZADO",
+    errores: [{ codigo: 10016, texto: "fuera de secuencia, con un dato personal" }],
+    observaciones: [{ codigo: 10237, texto: "otra" }],
+  };
+  const cerrarFuera = (
+    tx: TxDeNumeracion,
+    cambios: Partial<{ numero: bigint; ultimoDeArca: bigint | null; solicitud: SolicitudId }> = {},
+  ) =>
+    cerrarFueraDeSecuenciaEnTx(tx, sistema(AHORA), {
+      ...entrada(cambios.solicitud ?? SOLICITUD_1),
+      numero: cambios.numero ?? 8n,
+      resultado: FUERA_DE_SECUENCIA,
+      ultimoDeArca: cambios.ultimoDeArca === undefined ? 8n : cambios.ultimoDeArca,
+    });
+
+  it("ARCA va adelante: la serie queda BLOQUEADA sin avanzar y la auditoría dice qué informó ARCA, sin los textos", async () => {
+    const { mundo, tx } = armar({ serie: serieEnCurso(7n, VENCE) });
+    expect(await cerrarFuera(tx, { ultimoDeArca: 9n })).toEqual(ok({ resolucion: "BLOQUEADA" }));
+    expect([...mundo.series.values()][0]).toMatchObject({
+      estado: "BLOQUEADA",
+      ultimoNumero: 7n,
+      motivoBloqueo: expect.stringContaining("desfase con ARCA: informa 9") as unknown,
+    });
+    expect(mundo.auditoria).toHaveLength(1);
+    expect(mundo.auditoria[0]).toMatchObject({
+      empresaId: EMPRESA,
+      actorPersonaId: null,
+      accion: "SERIE_BLOQUEADA",
+      entidad: "serie_comprobante",
+      entidadId: "pv-1:FACTURA_B:HOMOLOGACION",
+      antes: { estado: "EN_CURSO", ultimoNumero: "7", numeroEnCurso: "8" },
+      despues: {
+        estado: "BLOQUEADA",
+        ultimoNumero: "7",
+        numero: "8",
+        solicitud: SOLICITUD_1,
+        errores: [10016],
+        observaciones: [10237],
+        resolucion: "BLOQUEADA",
+        ultimoAutorizadoPorElServicio: "9",
+      },
+    });
+    expect(JSON.stringify(mundo.auditoria[0])).not.toContain("dato personal");
+  });
+
+  it("ARCA no respondió (null): NO la libera, la bloquea, y la auditoría deja ese dato como nulo", async () => {
+    const { mundo, tx } = armar({ serie: serieEnCurso(7n, VENCE) });
+    expect(await cerrarFuera(tx, { ultimoDeArca: null })).toEqual(ok({ resolucion: "BLOQUEADA" }));
+    expect([...mundo.series.values()][0]).toMatchObject({ estado: "BLOQUEADA", ultimoNumero: 7n });
+    expect(mundo.auditoria[0]).toMatchObject({
+      accion: "SERIE_BLOQUEADA",
+      despues: { resolucion: "BLOQUEADA", ultimoAutorizadoPorElServicio: null },
+    });
+  });
+
+  it("ARCA en el último número (sin desfase): se libera sin avanzar como cualquier rechazo, con su auditoría de siempre", async () => {
+    const { mundo, tx } = armar({ serie: serieEnCurso(7n, VENCE) });
+    expect(await cerrarFuera(tx, { ultimoDeArca: 7n })).toEqual(ok({ resolucion: "LIBERADA" }));
+    expect([...mundo.series.values()][0]).toMatchObject({ estado: "LIBRE", ultimoNumero: 7n });
+    expect(mundo.auditoria).toHaveLength(1);
+    expect(mundo.auditoria[0]).toMatchObject({
+      accion: "NUMERO_DE_COMPROBANTE_RECHAZADO",
+      despues: {
+        estado: "LIBRE",
+        errores: [10016],
+        resolucion: "LIBERADA",
+        ultimoAutorizadoPorElServicio: "7",
+      },
+    });
+  });
+
+  it("corre en contexto de sistema: la auditoría no lleva persona", async () => {
+    const { mundo, tx } = armar({ serie: serieEnCurso(7n, VENCE) });
+    await cerrarFuera(tx, { ultimoDeArca: 9n });
+    expect(mundo.auditoria[0]?.actorPersonaId).toBeNull();
+  });
+
+  it("no cierra lo que no es suyo: serie inexistente, otra solicitud, otro número, o ya no en curso; no escribe ni audita", async () => {
+    const sinSerie = armar();
+    expect(await cerrarFuera(sinSerie.tx)).toEqual(err("SERIE_NO_ENCONTRADA"));
+    const otra = armar({ serie: serieEnCurso(7n, VENCE, SOLICITUD_2) });
+    expect(await cerrarFuera(otra.tx)).toEqual(err("SOLICITUD_NO_VIGENTE"));
+    const otroNumero = armar({ serie: serieEnCurso(7n, VENCE) });
+    expect(await cerrarFuera(otroNumero.tx, { numero: 9n })).toEqual(err("NUMERO_INVALIDO"));
+    for (const serie of [serieLibre(7n), serieBloqueada(7n)]) {
+      const m = armar({ serie });
+      expect(await cerrarFuera(m.tx)).toEqual(err("SOLICITUD_NO_VIGENTE"));
+      expect(m.mundo.guardados).toEqual([]);
+      expect(m.mundo.auditoria).toEqual([]);
+    }
+    for (const m of [sinSerie, otra, otroNumero]) {
+      expect(m.mundo.guardados).toEqual([]);
+      expect(m.mundo.auditoria).toEqual([]);
+    }
+  });
+
+  it("si la serie cambió dentro de la transacción (no pasa en SERIALIZABLE) es un defecto, no un éxito", async () => {
+    const { tx } = armar({ serie: serieEnCurso(7n, VENCE), perderVersion: true });
+    await expect(cerrarFuera(tx)).rejects.toThrow("la serie cambió dentro de la transacción");
+  });
+
+  it("si la empresa no opera no toca nada", async () => {
+    const { mundo, tx } = armar({ serie: serieEnCurso(7n, VENCE) });
+    const suspendida: TxDeNumeracion = {
+      ...tx,
+      empresas: { obtener: () => Promise.resolve({ tenantId: "t" as never, estado: "SUSPENDED" }) },
+    };
+    expect(await cerrarFuera(suspendida)).toMatchObject({
+      ok: false,
+      error: { codigo: "EMPRESA_NO_OPERA" },
+    });
+    expect(mundo.guardados).toEqual([]);
+    expect(mundo.auditoria).toEqual([]);
   });
 });
