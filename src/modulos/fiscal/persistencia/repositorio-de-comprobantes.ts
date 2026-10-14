@@ -257,6 +257,23 @@ export interface RepositorioDeComprobantes {
    * los de reserva más vieja primero, hasta `limite`. Es lo que la reconciliación tiene que resolver.
    */
   enVueloVencidos(empresa: EmpresaId, ahora: Date, limite: number): Promise<ComprobanteGuardado[]>;
+  /**
+   * Los ids de los comprobantes `PENDIENTE` de la empresa, los más viejos primero, hasta `limite`: los de una
+   * serie (`serie`, para reencolarlos al resincronizarla) y/o los creados antes de un instante (`creadosAntesDe`,
+   * los que la reconciliación reencola si quedaron sin trabajo).
+   */
+  pendientes(
+    empresa: EmpresaId,
+    filtro: Readonly<{
+      serie?: Readonly<{
+        puntoDeVentaId: PuntoDeVentaId;
+        tipo: TipoDeComprobante;
+        ambiente: Ambiente;
+      }>;
+      creadosAntesDe?: Date;
+    }>,
+    limite: number,
+  ): Promise<ComprobanteId[]>;
 }
 
 // =================================================================================================
@@ -841,6 +858,25 @@ export function crearRepositorioDeComprobantes(db: Kysely<FiscalDb>): Repositori
         if (c !== null) encontrados.push(c);
       }
       return encontrados;
+    },
+
+    async pendientes(empresa, filtro, limite) {
+      let consulta = db
+        .selectFrom("comprobante")
+        .select("id")
+        .where("empresa_id", "=", empresa)
+        .where("estado", "=", "PENDIENTE");
+      if (filtro.serie !== undefined) {
+        consulta = consulta
+          .where("punto_de_venta_id", "=", filtro.serie.puntoDeVentaId)
+          .where("tipo_comprobante", "=", filtro.serie.tipo)
+          .where("ambiente", "=", filtro.serie.ambiente);
+      }
+      if (filtro.creadosAntesDe !== undefined) {
+        consulta = consulta.where("creado_en", "<", filtro.creadosAntesDe);
+      }
+      const filas = await consulta.orderBy("creado_en").orderBy("id").limit(limite).execute();
+      return filas.map((f) => comprobanteId(f.id));
     },
   };
 }

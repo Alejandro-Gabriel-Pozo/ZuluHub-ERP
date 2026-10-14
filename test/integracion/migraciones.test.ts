@@ -35,6 +35,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0009_facturacion.sql",
         "0010_autenticacion.sql",
         "0011_lectura_publica_de_marca.sql",
+        "0012_respaldo.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -51,6 +52,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0009_facturacion.sql",
           "0010_autenticacion.sql",
           "0011_lectura_publica_de_marca.sql",
+          "0012_respaldo.sql",
         ],
       });
     } finally {
@@ -78,9 +80,14 @@ describe.skipIf(base === null)("migraciones", () => {
         "zuluhub_grupo",
         "zuluhub_plataforma",
         "zuluhub_publico",
+        "zuluhub_respaldo",
         "zuluhub_trabajos",
       ]);
-      expect(rows.every((r) => !r.rolbypassrls && !r.rolsuper)).toBe(true);
+      // Ninguno es superusuario, y el único que salta el aislamiento es el de respaldo (respaldo-y-recuperacion §B.3).
+      expect(rows.every((r) => !r.rolsuper)).toBe(true);
+      expect(rows.filter((r) => r.rolbypassrls).map((r) => r.rolname)).toEqual([
+        "zuluhub_respaldo",
+      ]);
       const { rows: puede } = await cliente.query<{ ok: boolean }>(
         "select has_any_column_privilege('zuluhub_app', 'public.sucursal', 'INSERT') as ok",
       );
@@ -167,6 +174,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0009_facturacion.sql",
         "0010_autenticacion.sql",
         "0011_lectura_publica_de_marca.sql",
+        "0012_respaldo.sql",
       ]);
     } finally {
       await aparte.destruir();

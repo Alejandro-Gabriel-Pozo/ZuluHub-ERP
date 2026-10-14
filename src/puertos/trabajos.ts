@@ -18,6 +18,23 @@ export type TrabajoNuevo = Readonly<{
 
 export type ResultadoDeEncolar = "ENCOLADO" | "YA_ENCOLADO";
 
+/** Un trabajo ya encolado, visto por quien encola: su clave y en qué estado está. */
+export type TrabajoEncolado = Readonly<{
+  claveDeIdempotencia: string;
+  estado: "PENDIENTE" | "EN_CURSO" | "HECHO" | "FALLIDO";
+}>;
+
 export interface Trabajos {
   encolar(trabajo: TrabajoNuevo): Promise<ResultadoDeEncolar>;
+}
+
+/** Los trabajos de quien reencola el mismo efecto más de una vez: además de encolar, mira lo encolado. */
+export interface TrabajosReencolables extends Trabajos {
+  /**
+   * Los trabajos de la empresa cuya clave de idempotencia empieza con `prefijo` (en cualquier orden).
+   * Sirve a quien reencola el mismo efecto más de una vez (la validación de un comprobante): saber si
+   * ya hay uno vivo y qué número de intento sigue. Previene: un reencolado que choque con la clave de
+   * un trabajo `FALLIDO` (queda `YA_ENCOLADO` y nunca corre) o que duplique uno vivo.
+   */
+  conPrefijo(empresaId: EmpresaId, prefijo: string): Promise<readonly TrabajoEncolado[]>;
 }

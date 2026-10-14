@@ -41,7 +41,7 @@ type BaseDelComprobanteAAsociar = Readonly<{
   ambiente: Ambiente;
   tipo: TipoDeComprobante;
   /** El punto de venta y el CUIT salen de la instantánea del emisor, tal como se emitió. */
-  emisor: InstantaneaDeEmisor;
+  emisor: Pick<InstantaneaDeEmisor, "cuit" | "puntoDeVentaNumero">;
   receptor: Receptor;
 }>;
 

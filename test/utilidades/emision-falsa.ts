@@ -78,6 +78,13 @@ const clave = (pv: PuntoDeVentaParaEmision, tipo: TipoDeComprobante) =>
 const claveDeNumero = (pv: PuntoDeVentaParaEmision, tipo: TipoDeComprobante, numero: bigint) =>
   `${clave(pv, tipo)}|${numero}`;
 
+/**
+ * El CAE que da el falso: 14 dígitos como el real (`comprobante_autorizado_ck`), el punto de venta (5) y el número
+ * (9). Distinto para cada número de cada punto de venta; repetible.
+ */
+export const caeDelFalso = (pv: PuntoDeVentaParaEmision, numero: bigint): string =>
+  `${String(pv.numero).padStart(5, "0")}${numero.toString().padStart(9, "0")}`;
+
 const comoDetalle = (g: Guion | GuionConDetalle): GuionConDetalle =>
   typeof g === "string" ? { guion: g } : g;
 
@@ -257,7 +264,7 @@ export class EmisionFalsa implements EmisionElectronica {
       return Promise.resolve({ tipo: "INCIERTO", motivo: "sin respuesta (falso)" });
     }
     this.ultimos.set(id, solicitud.numero);
-    const codigo = `CAE-${solicitud.puntoDeVenta.cuit}-${solicitud.puntoDeVenta.numero}-${solicitud.numero}`;
+    const codigo = caeDelFalso(solicitud.puntoDeVenta, solicitud.numero);
     const vence = fecha("2099-12-31");
     const datos =
       guion === "AUTORIZA_CON_OTROS_DATOS"
@@ -309,7 +316,8 @@ export class EmisionFalsa implements EmisionElectronica {
       return Promise.resolve({
         tipo: "ENCONTRADO",
         datos: datosDeUnNumeroAjeno(pv, tipo, numero),
-        codigo: `CAE-AJENO-${numero}`,
+        // Otro CAE de 14 dígitos (empieza con 9): el del comprobante ajeno.
+        codigo: `9${numero.toString().padStart(13, "0")}`,
         vence: fecha("2099-12-31"),
       });
     }

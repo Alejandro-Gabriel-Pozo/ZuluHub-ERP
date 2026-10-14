@@ -102,6 +102,15 @@ export const PERMISOS_DE_EMPRESA = {
   "grupos_de_precio.desactivar": ["GERENTE", "ADMINISTRADOR"],
   "grupos_de_precio.reactivar": ["GERENTE", "ADMINISTRADOR"],
   "combos.editar_contenido": ["GERENTE", "ADMINISTRADOR"],
+  // H7 facturación §C (F5). Emitir a mano (P10, DECIDIDO), la nota de crédito (P9, recomendada A), descartar y
+  // reintentar (ASUMIDO): los tres roles. Resincronizar una serie (QF1) y cambiar el ambiente de un punto de venta
+  // (QF2): solo el gerente (DECIDIDO, dueño 2026-10-13).
+  "comprobantes.emitir_manual": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "notas_de_credito.emitir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "comprobantes.descartar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "comprobantes.reintentar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "series.resincronizar": ["GERENTE"],
+  "puntos_de_venta.cambiar_ambiente": ["GERENTE"],
 } as const satisfies Record<ClaveAccion, readonly RolDeEmpresa[]>;
 
 export type ReglasDeEmpresa = ReglasDelGuard<ClaveModulo, ClaveAccion, ClaveCapacidad>;

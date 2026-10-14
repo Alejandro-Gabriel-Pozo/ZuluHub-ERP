@@ -6,7 +6,7 @@ import {
   CODIGO_DE_TIPO_DE_COMPROBANTE,
   CODIGO_DE_TIPO_DE_DOCUMENTO,
 } from "./codigos-de-arca";
-import { letraDeComprobante } from "./comprobante-emitido";
+import { letraDeComprobante, type InstantaneaDeEmisor } from "./comprobante-emitido";
 import type { ComprobanteNuevo } from "./comprobante-nuevo";
 import type { DatosConsultados, ResultadoDeConsulta } from "./estados-de-comprobante";
 import type { SolicitudId } from "./identificadores";
@@ -19,7 +19,7 @@ import {
   type SerieBloqueada,
   type SerieLibre,
 } from "./numeracion";
-import { numeroDeDocumentoParaArca } from "./receptor";
+import { numeroDeDocumentoParaArca, type Receptor } from "./receptor";
 
 /**
  * Reconciliación de un comprobante que quedó en vuelo (spec H7 facturación §B.3.7): decide con LO
@@ -42,8 +42,28 @@ export type ComprobanteEnVuelo = Readonly<{
   numero: bigint;
   /** La fecha que se le informó a ARCA al reservar. */
   fecha: FechaCivil;
-  contenido: ComprobanteNuevo;
+  contenido: ContenidoEnVuelo;
 }>;
+
+/**
+ * Lo del contenido que la reconciliación compara: un `ComprobanteNuevo` lo cumple, y también lo que se lee
+ * de un comprobante guardado (que conserva los domicilios como texto y no como `Domicilio`).
+ */
+export type ContenidoEnVuelo = Pick<
+  ComprobanteNuevo,
+  | "empresaId"
+  | "emisorId"
+  | "puntoDeVentaId"
+  | "ambiente"
+  | "tipo"
+  | "total"
+  | "desglose"
+  | "asociado"
+> &
+  Readonly<{
+    receptor: Pick<Receptor, "documento">;
+    emisor: Pick<InstantaneaDeEmisor, "puntoDeVentaNumero">;
+  }>;
 
 export type Reconciliacion =
   | Readonly<{
