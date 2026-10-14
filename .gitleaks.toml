@@ -18,3 +18,15 @@ regexes = [
   '''^Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MGFiY2RlZmdoaWo$''',
   '''^foobarbazqux1234567890abcdefghij$''',
 ]
+
+# ADR-016 (W5): la prueba de propiedades de `aRespuesta` mete una palabra inventada en fallas de todo tipo
+# para comprobar que nunca sale hacia la pantalla. No es un secreto: un solo archivo y un solo valor.
+[[allowlists]]
+description = "Palabra de juguete de la prueba de no-filtración de aRespuesta"
+condition = "AND"
+paths = [
+  '''^src/capacidades/experiencia/respuesta\.propiedades\.test\.ts$''',
+]
+regexes = [
+  '''^SECRETO-ZH-9f3a$''',
+]

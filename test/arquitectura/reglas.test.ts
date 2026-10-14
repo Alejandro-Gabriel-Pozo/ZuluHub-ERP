@@ -1113,11 +1113,16 @@ function archivosDeApps(raiz: string): string[] {
  */
 const REEXPORTACION_DE_CLIENTE =
   /^\s*"use client";\s*export \{ \w+ as default \} from "[^"]+\.cliente";\s*$/;
+// Stryker antepone `// @ts-nocheck` a los archivos de su sandbox: esa línea no cuenta como código.
+const ENCABEZADO_DE_STRYKER = "// @ts-nocheck\n";
 function esErrorDeNextMinimo(f: string, contenido: string): boolean {
   const tramos = f.split("/");
   const nombre = tramos[tramos.length - 1];
   const esDeNext = tramos[1] === "app" && (nombre === "error.tsx" || nombre === "global-error.tsx");
-  return esDeNext && REEXPORTACION_DE_CLIENTE.test(contenido);
+  const codigo = contenido.startsWith(ENCABEZADO_DE_STRYKER)
+    ? contenido.slice(ENCABEZADO_DE_STRYKER.length)
+    : contenido;
+  return esDeNext && REEXPORTACION_DE_CLIENTE.test(codigo);
 }
 
 function archivosDeClienteSinSufijo(raiz: string): string[] {
@@ -1505,7 +1510,13 @@ describe("R-W4b: el error.tsx de Next es cliente por obligación, pero mínimo",
 
   it("el error.tsx real del repositorio cumple la forma mínima", () => {
     for (const f of ["web/app/s/app/error.tsx", "web/app/s/landing/error.tsx"]) {
-      expect(esErrorDeNextMinimo(f, readFileSync(join("apps", f), "utf8")), f).toBe(true);
+      const leido = readFileSync(join("apps", f), "utf8");
+      const contenido = leido.startsWith(ENCABEZADO_DE_STRYKER)
+        ? leido.slice(ENCABEZADO_DE_STRYKER.length)
+        : leido;
+      expect(esErrorDeNextMinimo(f, contenido), f).toBe(true);
+      // El sandbox de Stryker le antepone una línea: la forma mínima se sigue reconociendo.
+      expect(esErrorDeNextMinimo(f, `${ENCABEZADO_DE_STRYKER}${contenido}`), f).toBe(true);
     }
   });
 

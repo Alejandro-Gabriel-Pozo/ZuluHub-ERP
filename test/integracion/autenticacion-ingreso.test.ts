@@ -580,7 +580,7 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
 
     it("un fallo interno (la base no responde) no sale con detalle: el error es genérico y el detalle queda en el registro", async () => {
       const url = new URL(propia.base.autenticacion);
-      url.password = "clave-equivocada";
+      url.username = "zuluhub_rol_que_no_existe"; // falla con cualquier método de autenticación (el CI usa trust: una clave equivocada no falla)
       const rota = armarAutenticacionDePrueba(propia.base, proveedor, { url: url.toString() });
       try {
         const pedidos: Promise<unknown>[] = [

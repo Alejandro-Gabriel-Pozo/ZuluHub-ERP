@@ -221,7 +221,7 @@ describe.skipIf(base === null)(
 
     it("si la base no responde al resolver el host: 503 con referencia, nunca el 404 neutro ni otra marca", async () => {
       const url = new URL(propia.base.publico);
-      url.password = "clave-equivocada";
+      url.username = "zuluhub_rol_que_no_existe"; // falla con cualquier método de autenticación (el CI usa trust: una clave equivocada no falla)
       const rota = crearEntornoPublico(propia.base, { url: url.toString() });
       registros.length = 0;
       try {
@@ -241,7 +241,7 @@ describe.skipIf(base === null)(
 
     it("un fallo interno sale con una referencia y SIN detalle; el detalle queda en el registro del servidor", async () => {
       const url = new URL(propia.base.autenticacion);
-      url.password = "clave-equivocada";
+      url.username = "zuluhub_rol_que_no_existe"; // falla con cualquier método de autenticación (el CI usa trust: una clave equivocada no falla)
       const rota = armarAutenticacionDePrueba(propia.base, proveedor, { url: url.toString() });
       registros.length = 0;
       try {
