@@ -164,6 +164,7 @@ describe.skipIf(base === null)("instalar la clave de contexto", () => {
       ],
       {
         env: {
+          NODE_ENV: "test",
           PATH: process.env["PATH"] ?? "",
           [VARIABLE_DE_LA_CADENA]: propia.base.dueno,
           [ZULUHUB_CLAVE_CONTEXTO]: clave,
