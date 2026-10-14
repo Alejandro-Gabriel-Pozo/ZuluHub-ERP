@@ -11,10 +11,11 @@ import { VARIABLES_DE_MARCA, esColorDeMarca } from "./tema-css";
  */
 export function marcaPublicaDe(configuracion: ConfiguracionPublicaDeMarca): MarcaPublica | null {
   if (configuracion.nombre.trim() === "") return null;
+  const permitidos: readonly string[] = VARIABLES_DE_MARCA;
   const tema: Record<string, string> = {};
-  for (const token of VARIABLES_DE_MARCA) {
-    const valor = Object.hasOwn(configuracion.tema, token) ? configuracion.tema[token] : undefined;
-    if (valor !== undefined && esColorDeMarca(valor)) tema[token] = valor;
+  // `Object.entries` solo recorre las claves PROPIAS: nada heredado del prototipo llega al tema.
+  for (const [token, valor] of Object.entries(configuracion.tema)) {
+    if (permitidos.includes(token) && esColorDeMarca(valor)) tema[token] = valor;
   }
   return { nombre: configuracion.nombre, tema, hostDeApp: configuracion.hostCanonico };
 }

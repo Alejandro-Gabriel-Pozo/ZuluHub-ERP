@@ -15,9 +15,6 @@ export type PuertosDeLaPuerta = Readonly<{
   configuracion: () => ConfiguracionPublicaDeHost;
 }>;
 
-/** Lo que dice un fallo de la lectura de la marca: nada de la base ni del host (el detalle va al registro de la conexión). */
-export const FALLO_DE_LA_LECTURA_DE_MARCA = "no se pudo leer la configuración pública de la marca";
-
 /**
  * La fuente REAL de la puerta (armazón web §3.2; marcas y planes §B.2.3): el host se resuelve con
  * `ResolucionDeHost.porHost` y la marca se pinta con `ConfiguracionPublicaDeHost.porHost`, las dos por el
@@ -39,7 +36,9 @@ export function armarFuenteDePuertas(puertos: PuertosDeLaPuerta): FuenteDePuerta
     },
     leerMarca: async (_marcaId, host, superficie) => {
       const respuesta = await puertos.configuracion().porHost(host, superficie);
-      if (!respuesta.ok) throw new Error(FALLO_DE_LA_LECTURA_DE_MARCA);
+      if (!respuesta.ok)
+        // El mensaje no dice nada de la base ni del host: el detalle ya quedó en el registro de la conexión.
+        throw new Error("no se pudo leer la configuración pública de la marca");
       return respuesta.valor === null ? null : marcaPublicaDe(respuesta.valor);
     },
   };

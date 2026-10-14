@@ -6,7 +6,7 @@ import type {
   HostResuelto,
   ResolucionDeHost,
 } from "../../puertos/marcas";
-import { FALLO_DE_LA_LECTURA_DE_MARCA, armarFuenteDePuertas } from "./fuente-de-puertas";
+import { armarFuenteDePuertas } from "./fuente-de-puertas";
 
 const ERROR_DE_BASE = {
   tipo: "Inesperado",
@@ -128,7 +128,7 @@ describe("armarFuenteDePuertas.leerMarca", () => {
     );
     const error = await fuente.leerMarca("marca-a", "app.a.test", "APP").catch((e: unknown) => e);
     expect(error).toBeInstanceOf(Error);
-    expect((error as Error).message).toBe(FALLO_DE_LA_LECTURA_DE_MARCA);
+    expect((error as Error).message).toBe("no se pudo leer la configuración pública de la marca");
     expect((error as Error).message).not.toContain("secreto");
   });
 });
