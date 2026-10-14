@@ -46,8 +46,9 @@ function nombreDe(atributos: readonly AttributeTypeAndValue[]): RelativeDistingu
 
 const numeroDeSerieAlAzar = (): ArrayBuffer => {
   const bytes = randomBytes(16);
-  // Positivo y sin ceros a la izquierda (un INTEGER no mínimo lo rechaza X.509): primer byte entre 0x01 y 0x7f.
-  bytes[0] = ((bytes[0] ?? 0) % 0x7f) + 1;
+  // Positivo y sin ceros a la izquierda (un INTEGER no mínimo lo rechaza X.509): primer byte entre 0x40 y 0x7f
+  // (con máscara y no con módulo: el módulo sobre bytes al azar es la alerta de CodeQL de sesgo).
+  bytes[0] = 0x40 | ((bytes[0] ?? 0) & 0x3f);
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
 };
 
