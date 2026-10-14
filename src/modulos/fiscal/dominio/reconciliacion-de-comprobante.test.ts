@@ -9,6 +9,7 @@ import {
   renglon,
 } from "../../../../test/utilidades/facturacion";
 import {
+  IDENTIDAD_DE_SERIE,
   EMISOR_2,
   EMPRESA,
   OTRA_EMPRESA,
@@ -288,6 +289,28 @@ describe("reconciliarComprobante: la tabla de la spec (§B.3.7)", () => {
     });
   });
 
+  it("la serie que produce conserva la identidad de la reservada, con su ambiente y su versión", () => {
+    const produccion = { ...enCurso(), ambiente: "PRODUCCION" } as Serie;
+    const deProduccion = facturaArmada(
+      consumidorFinal,
+      [renglon("1210.00", "1", "21")],
+      {},
+      contextoDeEmision({ ambiente: "PRODUCCION" }),
+    );
+    const enVueloDeProduccion = enVueloDe(deProduccion);
+    const casos: [ResultadoDeConsulta, bigint][] = [
+      [encontrado(registradoDe(enVueloDeProduccion)), 11n],
+      [encontrado({ ...registradoDe(enVueloDeProduccion), numero: 12n }), 11n],
+      [{ tipo: "NO_ENCONTRADO" }, 10n],
+      [{ tipo: "NO_ENCONTRADO" }, 12n],
+    ];
+    for (const [consulta, ultimo] of casos) {
+      const r = reconciliarComprobante(produccion, enVueloDeProduccion, consulta, ultimo, DESPUES);
+      if (!r.ok || r.valor.resolucion === "SIN_CAMBIOS") throw new Error("se esperaba una serie");
+      expect(r.valor.serie).toMatchObject({ ...IDENTIDAD_DE_SERIE, ambiente: "PRODUCCION" });
+    }
+  });
+
   it("cada serie que produce es una transición válida y consistente desde la serie en curso", () => {
     const antes = enCurso();
     const consultas: [ResultadoDeConsulta, bigint][] = [
@@ -337,6 +360,7 @@ describe("reconciliarComprobante: errores", () => {
       { empresaId: OTRA_EMPRESA },
       { puntoDeVentaId: puntoDeVentaId("pv-9") },
       { emisorId: EMISOR_2 },
+      { ambiente: "PRODUCCION" },
       { tipo: "FACTURA_A" },
     ]) {
       expect(con(otra(cambio)), JSON.stringify(cambio)).toEqual({
@@ -344,6 +368,25 @@ describe("reconciliarComprobante: errores", () => {
         error: "SOLICITUD_NO_VIGENTE",
       });
     }
+  });
+
+  it("un comprobante de homologación no reconcilia la serie de producción (ni al revés)", () => {
+    const deProduccion = facturaArmada(
+      consumidorFinal,
+      [renglon("1210.00", "1", "21")],
+      {},
+      contextoDeEmision({ ambiente: "PRODUCCION" }),
+    );
+    const enVueloDeProduccion = enVueloDe(deProduccion);
+    const registrado = encontrado(registradoDe(enVueloDeProduccion));
+    expect(
+      reconciliarComprobante(enCurso(), enVueloDeProduccion, registrado, 11n, DESPUES),
+    ).toEqual({ ok: false, error: "SOLICITUD_NO_VIGENTE" });
+    const produccion = { ...enCurso(), ambiente: "PRODUCCION" } as Serie;
+    expect(
+      reconciliarComprobante(produccion, enVueloDeProduccion, registrado, 11n, DESPUES).ok,
+    ).toBe(true);
+    expect(con(produccion)).toEqual({ ok: false, error: "SOLICITUD_NO_VIGENTE" });
   });
 
   it("el número del comprobante es el de la reserva", () => {

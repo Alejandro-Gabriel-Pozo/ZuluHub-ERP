@@ -11,12 +11,13 @@ import type { ComprobanteNuevo } from "./comprobante-nuevo";
 import type { DatosConsultados, ResultadoDeConsulta } from "./estados-de-comprobante";
 import type { SolicitudId } from "./identificadores";
 import { importesParaArca, type AlicuotaParaArca } from "./importes-para-arca";
-import type {
-  ErrorDeNumeracion,
-  Serie,
-  SerieBloqueada,
-  SerieEnCurso,
-  SerieLibre,
+import {
+  serieBloqueadaDesde,
+  serieLibreDesde,
+  type ErrorDeNumeracion,
+  type Serie,
+  type SerieBloqueada,
+  type SerieLibre,
 } from "./numeracion";
 import { numeroDeDocumentoParaArca } from "./receptor";
 
@@ -119,35 +120,6 @@ export function coincideConLoRegistrado(
 }
 
 /**
- * Las dos series que produce la reconciliación. Repiten lo que `numeracion.ts` hace en privado
- * (`libreDesde` y el bloqueo de `reconciliarSerie`); pendiente de exportarlo desde ahí al integrar.
- */
-function libre(serie: SerieEnCurso, ultimoNumero: bigint): SerieLibre {
-  return {
-    empresaId: serie.empresaId,
-    puntoDeVentaId: serie.puntoDeVentaId,
-    emisorId: serie.emisorId,
-    tipo: serie.tipo,
-    version: serie.version,
-    estado: "LIBRE",
-    ultimoNumero,
-  };
-}
-
-function bloqueada(serie: SerieEnCurso, motivoBloqueo: string): SerieBloqueada {
-  return {
-    empresaId: serie.empresaId,
-    puntoDeVentaId: serie.puntoDeVentaId,
-    emisorId: serie.emisorId,
-    tipo: serie.tipo,
-    version: serie.version,
-    estado: "BLOQUEADA",
-    ultimoNumero: serie.ultimoNumero,
-    motivoBloqueo,
-  };
-}
-
-/**
  * Reconcilia `enVuelo` (un comprobante `EN_VALIDACION` o `INCIERTO`) contra la consulta de su número
  * y el último autorizado que informa ARCA. Errores: `SERIE_NO_EN_CURSO`; `SOLICITUD_NO_VIGENTE`
  * (la serie no la reservó este comprobante); `NUMERO_INVALIDO` (el número no es el de la reserva);
@@ -166,6 +138,7 @@ export function reconciliarComprobante(
     serie.empresaId !== enVuelo.contenido.empresaId ||
     serie.puntoDeVentaId !== enVuelo.contenido.puntoDeVentaId ||
     serie.emisorId !== enVuelo.contenido.emisorId ||
+    serie.ambiente !== enVuelo.contenido.ambiente ||
     serie.tipo !== enVuelo.contenido.tipo
   ) {
     return err("SOLICITUD_NO_VIGENTE");
@@ -179,12 +152,15 @@ export function reconciliarComprobante(
     if (!coincideConLoRegistrado(enVuelo, consulta.datos)) {
       return ok({
         resolucion: "CONFLICTO",
-        serie: bloqueada(serie, `el número ${serie.numeroEnCurso} lo usó otro comprobante en ARCA`),
+        serie: serieBloqueadaDesde(
+          serie,
+          `el número ${serie.numeroEnCurso} lo usó otro comprobante en ARCA`,
+        ),
       });
     }
     return ok({
       resolucion: "AUTORIZADO_POR_CONSULTA",
-      serie: libre(serie, serie.numeroEnCurso),
+      serie: serieLibreDesde(serie, serie.numeroEnCurso),
       numero: serie.numeroEnCurso,
       codigo: consulta.codigo,
       vence: consulta.vence,
@@ -194,11 +170,14 @@ export function reconciliarComprobante(
   if (ultimoAutorizado !== serie.ultimoNumero) {
     return ok({
       resolucion: "DESFASE",
-      serie: bloqueada(
+      serie: serieBloqueadaDesde(
         serie,
         `desfase con ARCA: informa ${ultimoAutorizado} como último autorizado y el número ${serie.numeroEnCurso} no existe; se esperaba ${serie.ultimoNumero}`,
       ),
     });
   }
-  return ok({ resolucion: "LIBERADO_POR_CONSULTA", serie: libre(serie, serie.ultimoNumero) });
+  return ok({
+    resolucion: "LIBERADO_POR_CONSULTA",
+    serie: serieLibreDesde(serie, serie.ultimoNumero),
+  });
 }

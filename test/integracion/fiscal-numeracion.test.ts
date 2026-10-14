@@ -9,11 +9,19 @@ import {
   type EmisionElectronica,
   type SolicitudDeAutorizacion,
 } from "../../src/modulos/fiscal/publico";
-import type { ResultadoDeAutorizacion, TipoDeComprobante } from "../../src/modulos/fiscal/publico";
+import type {
+  ResultadoDeAutorizacionArca,
+  TipoDeComprobante,
+} from "../../src/modulos/fiscal/publico";
 import { empresaId } from "../../src/primitivas/identificadores/marca";
 import { cuitDesdeTexto } from "../../src/primitivas/identificacion-fiscal/cuit";
 import { err, ok } from "../../src/primitivas/resultado/resultado";
-import { EmisionFalsa } from "../utilidades/emision-falsa";
+import {
+  CODIGO_DE_RECHAZO_DEL_FALSO,
+  EmisionFalsa,
+  solicitudDeAutorizacion,
+} from "../utilidades/emision-falsa";
+import { fecha } from "../utilidades/facturacion";
 import { crearBaseAparte } from "./entorno";
 import {
   REGLAS_CON_FACTURACION,
@@ -39,6 +47,7 @@ const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 60_000 });
 
 const T0 = new Date("2026-10-12T12:00:00Z");
+const INCIERTO: ResultadoDeAutorizacionArca = { tipo: "INCIERTO", motivo: "sin respuesta" };
 const despues = (minutos: number) => new Date(T0.getTime() + minutos * 60_000);
 
 type Fila = Record<string, unknown>;
@@ -109,9 +118,13 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
       this.transaccionesDuranteLosPedidos.push(await transaccionesAbiertas());
       return this.falsa.ultimoAutorizado(...args);
     }
-    async autorizar(solicitud: SolicitudDeAutorizacion): Promise<ResultadoDeAutorizacion> {
+    async autorizar(solicitud: SolicitudDeAutorizacion): Promise<ResultadoDeAutorizacionArca> {
       this.transaccionesDuranteLosPedidos.push(await transaccionesAbiertas());
       return this.falsa.autorizar(solicitud);
+    }
+    async consultar(...args: Parameters<EmisionFalsa["consultar"]>) {
+      this.transaccionesDuranteLosPedidos.push(await transaccionesAbiertas());
+      return this.falsa.consultar(...args);
     }
   }
   const cuitDe = (e: Escenario) => {
@@ -133,7 +146,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
         const e = await escenario({ rol });
         const arca = new EmisionVigilada();
         const real = casos(arca, REGLAS_DE_EMPRESA);
-        const en = { ...entradaDe(e), numero: 1n, resultado: { tipo: "INCIERTO" } as const };
+        const en = { ...entradaDe(e), numero: 1n, resultado: INCIERTO };
         const motivo = err("MODULO_EN_DESARROLLO");
         expect(await real.reservarNumeroDeComprobante(e.como(T0), entradaDe(e)), rol).toEqual(
           motivo,
@@ -187,7 +200,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
         await c.cerrarReservaDeNumero(e.como(T0), {
           ...entradaDe(e),
           numero: 1n,
-          resultado: { tipo: "INCIERTO" },
+          resultado: INCIERTO,
         }),
       ).toEqual(noOpera);
       expect(await c.reconciliarSerie(e.sistema(T0), entradaDe(e))).toEqual(noOpera);
@@ -220,10 +233,11 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
           accion: "NUMERO_DE_COMPROBANTE_RESERVADO",
           actor_persona_id: e.persona,
           entidad: "serie_comprobante",
-          entidad_id: `${e.puntoDeVenta}:FACTURA_B`,
-          antes: { estado: "LIBRE", ultimoNumero: "41" },
+          entidad_id: `${e.puntoDeVenta}:FACTURA_B:HOMOLOGACION`,
+          antes: { estado: "LIBRE", ambiente: "HOMOLOGACION", ultimoNumero: "41" },
           despues: {
             estado: "EN_CURSO",
+            ambiente: "HOMOLOGACION",
             ultimoNumero: "41",
             numeroEnCurso: "42",
             solicitud: entrada.solicitud,
@@ -287,7 +301,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
         "NUMERO_DE_COMPROBANTE_RESERVADO",
       ]);
       expect((await auditoria(e, "SERIE_DE_COMPROBANTES_CREADA"))[0]).toMatchObject({
-        despues: { estado: "LIBRE", ultimoNumero: "57" },
+        despues: { estado: "LIBRE", ambiente: "HOMOLOGACION", ultimoNumero: "57" },
       });
       // Repetir ya no le pregunta nada al servicio.
       const otra = await c.reservarNumeroDeComprobante(e.como(T0), entrada);
@@ -360,7 +374,13 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
 
   // ===============================================================================================
   describe("cerrar", () => {
-    const AUTORIZADO = { tipo: "AUTORIZADO", codigo: "CAE-123", vence: "2099-12-31" } as const;
+    const AUTORIZADO: ResultadoDeAutorizacionArca = {
+      tipo: "AUTORIZADO",
+      codigo: "CAE-123",
+      vence: fecha("2099-12-31"),
+      fecha: fecha("2026-10-13"),
+      observaciones: [{ codigo: 10237, texto: "una observación" }],
+    };
 
     /** Una reserva hecha por el caso de uso: el escenario, su entrada y el número. */
     async function conReserva(ultimo = 0) {
@@ -385,9 +405,10 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
         accion: "NUMERO_DE_COMPROBANTE_AUTORIZADO",
         actor_persona_id: e.persona,
         entidad: "serie_comprobante",
-        entidad_id: `${e.puntoDeVenta}:FACTURA_B`,
+        entidad_id: `${e.puntoDeVenta}:FACTURA_B:HOMOLOGACION`,
         antes: {
           estado: "EN_CURSO",
+          ambiente: "HOMOLOGACION",
           ultimoNumero: "10",
           numeroEnCurso: "11",
           solicitud: entrada.solicitud,
@@ -395,11 +416,14 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
         },
         despues: {
           estado: "LIBRE",
+          ambiente: "HOMOLOGACION",
           ultimoNumero: "11",
           numero: "11",
           solicitud: entrada.solicitud,
           codigoDeAutorizacion: "CAE-123",
           vence: "2099-12-31",
+          fecha: "2026-10-13",
+          observaciones: [10237],
         },
       });
     });
@@ -420,7 +444,11 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
       const cierre = {
         ...entrada,
         numero,
-        resultado: { tipo: "RECHAZADO", observaciones: ["CUIT inválido"] },
+        resultado: {
+          tipo: "RECHAZADO",
+          errores: [{ codigo: 10015, texto: "CUIT inválido de Juan Pérez" }],
+          observaciones: [],
+        } satisfies ResultadoDeAutorizacionArca,
       } as const;
       expect(await c.cerrarReservaDeNumero(e.como(T0), cierre)).toEqual(
         ok({ desenlace: "RECHAZADO", numero: 6n, yaCerrada: false }),
@@ -433,13 +461,17 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
         [
           {
             estado: "LIBRE",
+            ambiente: "HOMOLOGACION",
             ultimoNumero: "5",
             numero: "6",
             solicitud: entrada.solicitud,
-            observaciones: ["CUIT inválido"],
+            errores: [10015],
+            observaciones: [],
           },
         ],
       );
+      // La auditoría guarda los códigos de ARCA, no sus textos (que pueden llevar datos de la persona).
+      expect(JSON.stringify(await auditoria(e))).not.toContain("Juan");
       const siguiente = await c.reservarNumeroDeComprobante(e.como(T0), entradaDe(e));
       expect(siguiente.ok && siguiente.valor.numero).toBe(6n);
     });
@@ -447,7 +479,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
     it("incierto: la serie sigue EN_CURSO, no se escribe ni se audita nada, y repetirlo da lo mismo", async () => {
       const { e, entrada, c, numero } = await conReserva();
       const antes = await serie(e);
-      const cierre = { ...entrada, numero, resultado: { tipo: "INCIERTO" } } as const;
+      const cierre = { ...entrada, numero, resultado: INCIERTO } as const;
       for (let i = 0; i < 2; i++) {
         expect(await c.cerrarReservaDeNumero(e.como(T0), cierre)).toEqual(
           ok({ desenlace: "INCIERTO", numero: 1n, yaCerrada: false }),
@@ -564,16 +596,22 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
       expect(r).toEqual(
         ok({
           numero: 1n,
-          resultado: { tipo: "AUTORIZADO", codigo: `CAE-${e.mundo.cuit}-1-1`, vence: "2099-12-31" },
+          resultado: {
+            tipo: "AUTORIZADO",
+            codigo: `CAE-${e.mundo.cuit}-1-1`,
+            vence: "2099-12-31",
+            fecha: "2026-10-13",
+            observaciones: [],
+          },
         }),
       );
       expect(arca.falsa.pedidos).toEqual([
-        {
-          puntoDeVenta: { cuit: e.mundo.cuit, numero: 1 },
+        solicitudDeAutorizacion({
+          puntoDeVenta: { cuit: cuitDe(e), numero: 1 },
           tipo: "FACTURA_B",
           numero: 1n,
           solicitud: entrada.solicitud,
-        },
+        }),
       ]);
       expect(arca.transaccionesDuranteLosPedidos).toEqual([0]);
       expect(await serie(e)).toMatchObject({ estado: "LIBRE", ultimo: "1" });
@@ -590,7 +628,14 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
       const c = casos(falsa);
       const primera = await c.numerarComprobante(e.como(T0), entradaDe(e));
       expect(primera).toEqual(
-        ok({ numero: 1n, resultado: { tipo: "RECHAZADO", observaciones: ["rechazado (falso)"] } }),
+        ok({
+          numero: 1n,
+          resultado: {
+            tipo: "RECHAZADO",
+            errores: [{ codigo: CODIGO_DE_RECHAZO_DEL_FALSO, texto: "rechazado (falso)" }],
+            observaciones: [],
+          },
+        }),
       );
       expect(await serie(e)).toMatchObject({ estado: "LIBRE", ultimo: "0" });
       const segunda = await c.numerarComprobante(e.como(T0), entradaDe(e));
@@ -615,7 +660,9 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
       const c = casos(arca);
       const entrada = entradaDe(e);
       const r = await c.numerarComprobante(e.como(T0), entrada);
-      expect(r).toEqual(ok({ numero: 1n, resultado: { tipo: "INCIERTO" } }));
+      expect(r).toEqual(
+        ok({ numero: 1n, resultado: { tipo: "INCIERTO", motivo: "sin respuesta (falso)" } }),
+      );
       expect(await serie(e)).toMatchObject({ estado: "EN_CURSO", ultimo: "0", en_curso: "1" });
 
       // Todavía vigente: la reconciliación no toca nada ni le pregunta a ARCA.
@@ -641,7 +688,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
       const c = casos(arca);
       const entrada = entradaDe(e);
       expect(await c.numerarComprobante(e.como(T0), entrada)).toEqual(
-        ok({ numero: 1n, resultado: { tipo: "INCIERTO" } }),
+        ok({ numero: 1n, resultado: { tipo: "INCIERTO", motivo: "autorizó y se cayó (falso)" } }),
       );
       expect(await serie(e)).toMatchObject({ estado: "EN_CURSO", ultimo: "0", en_curso: "1" });
 
@@ -691,7 +738,13 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
         err({
           codigo: "CIERRE_SIN_CONFIRMAR",
           numero: 1n,
-          resultado: { tipo: "AUTORIZADO", codigo: `CAE-${e.mundo.cuit}-1-1`, vence: "2099-12-31" },
+          resultado: {
+            tipo: "AUTORIZADO",
+            codigo: `CAE-${e.mundo.cuit}-1-1`,
+            vence: "2099-12-31",
+            fecha: "2026-10-13",
+            observaciones: [],
+          },
           causa: expect.objectContaining({ tipo: "Inesperado" }) as unknown,
         }),
       );
@@ -711,6 +764,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
       const caido: EmisionElectronica = {
         ultimoAutorizado: (...a) => falsa.ultimoAutorizado(...a),
         autorizar: () => Promise.reject(new Error("se cortó la conexión")),
+        consultar: (...a) => falsa.consultar(...a),
       };
       const c = casos(caido);
       await expect(c.numerarComprobante(e.como(T0), entradaDe(e))).rejects.toThrow(
@@ -773,9 +827,10 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
         accion: "SERIE_DE_COMPROBANTES_RECONCILIADA",
         actor_persona_id: null,
         entidad: "serie_comprobante",
-        entidad_id: `${e.puntoDeVenta}:FACTURA_B`,
+        entidad_id: `${e.puntoDeVenta}:FACTURA_B:HOMOLOGACION`,
         antes: {
           estado: "EN_CURSO",
+          ambiente: "HOMOLOGACION",
           ultimoNumero: "4",
           numeroEnCurso: "5",
           solicitud: entrada.solicitud,
@@ -783,6 +838,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
         },
         despues: {
           estado: "LIBRE",
+          ambiente: "HOMOLOGACION",
           ultimoNumero: "5",
           resolucion: "CERRADA_COMO_AUTORIZADA",
           solicitud: entrada.solicitud,
@@ -819,6 +875,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
         [
           {
             estado: "BLOQUEADA",
+            ambiente: "HOMOLOGACION",
             ultimoNumero: "4",
             motivoBloqueo: "desfase con el servicio de emisión: informa 9, se esperaba 4 o 5",
             resolucion: "BLOQUEADA",
@@ -830,7 +887,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
       expect(await c.reservarNumeroDeComprobante(e.como(despues(6)), entradaDe(e))).toEqual(
         err("SERIE_BLOQUEADA"),
       );
-      // Una reconciliación más no la toca: no hay salida de BLOQUEADA en H7.
+      // Una reconciliación más no la toca: la única salida de BLOQUEADA es resincronizarla (QF1).
       expect(await c.reconciliarSerie(e.sistema(despues(7)), entrada)).toEqual(
         ok({ tipo: "NADA_QUE_RECONCILIAR" }),
       );
@@ -876,7 +933,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
         await c.cerrarReservaDeNumero(e.como(despues(5)), {
           ...entrada,
           numero: 1n,
-          resultado: { tipo: "RECHAZADO", observaciones: [] },
+          resultado: { tipo: "RECHAZADO", errores: [], observaciones: [] },
         });
         await c.reservarNumeroDeComprobante(e.como(despues(5)), otra);
         return respuesta;
@@ -937,6 +994,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
           {
             puntoDeVentaId: puntoDeVentaId(e.puntoDeVenta),
             tipo: "FACTURA_B",
+            ambiente: "HOMOLOGACION",
             resultado: ok({
               tipo: "RECONCILIADA",
               resolucion: "LIBERADA",
@@ -982,6 +1040,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
         {
           puntoDeVentaId: puntoDeVentaId(e.puntoDeVenta),
           tipo: "FACTURA_B",
+          ambiente: "HOMOLOGACION",
           resultado: err({ codigo: "SERVICIO_NO_DISPONIBLE", detalle: "servicio caído (falso)" }),
         },
       ]);
@@ -1032,11 +1091,13 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
       const r1 = await c.numerarComprobante(contexto, {
         puntoDeVentaId: puntoDeVentaId(pv1),
         tipo: "FACTURA_B",
+        ambiente: "HOMOLOGACION",
         solicitud: solicitudId(nuevoId()),
       });
       const r2 = await c.numerarComprobante(contexto, {
         puntoDeVentaId: puntoDeVentaId(pv2),
         tipo: "FACTURA_B",
+        ambiente: "HOMOLOGACION",
         solicitud: solicitudId(nuevoId()),
       });
       expect(r1.ok && r1.valor.numero).toBe(1n);

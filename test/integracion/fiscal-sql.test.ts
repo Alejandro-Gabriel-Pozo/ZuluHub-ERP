@@ -2574,6 +2574,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         puntoDeVentaId: puntoDeVentaId(pv),
         emisorId: emisorId(m.emisor),
         tipo: "FACTURA_B" as const,
+        ambiente: "HOMOLOGACION" as const,
         version: 1,
       };
       type Fila = {
@@ -2686,18 +2687,10 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
             );
             if (!r.ok) expect(r.codigo, `${JSON.stringify(despues)}: ${r.mensaje}`).toBe("23514");
             const serieDespues = aSerie(despues);
-            // EXCEPCIÓN de 0009 (QF1): la base deja salir de BLOQUEADA hacia LIBRE, sin bajar el último
-            // número; el dominio (`TRANSICIONES_DE_SERIE`) la recibe en F4 y entonces esta cláusula se borra.
-            const salidaDeBloqueada =
-              antes.estado === "BLOQUEADA" &&
-              despues.estado === "LIBRE" &&
-              serieDespues !== null &&
-              despues.ultimo >= antes.ultimo;
             const esperada =
-              (serieAntes !== null &&
-                serieDespues !== null &&
-                transicionDeSerieValida(serieAntes, serieDespues)) ||
-              salidaDeBloqueada;
+              serieAntes !== null &&
+              serieDespues !== null &&
+              transicionDeSerieValida(serieAntes, serieDespues);
             expect(r.ok, `${antes.estado} → ${JSON.stringify(despues)}`).toBe(esperada);
             // Cada candidato se prueba desde el mismo estado de partida.
             await dueno.query("rollback to savepoint candidato");
@@ -2711,9 +2704,9 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         });
       }
       expect(rechazadas).toBeGreaterThan(2000);
-      // Las transiciones que existen son exactamente las del dominio (más quedarse en el mismo estado y,
-      // desde 0009, la salida de BLOQUEADA hacia LIBRE que el dominio recibe en F4).
-      const esperadas = new Set<string>(["BLOQUEADA→LIBRE"]);
+      // Las transiciones que existen son exactamente las del dominio (más quedarse en el mismo estado),
+      // con la salida de BLOQUEADA hacia LIBRE (QF1) incluida.
+      const esperadas = new Set<string>();
       for (const [desde, hacia] of Object.entries(TRANSICIONES_DE_SERIE)) {
         esperadas.add(`${desde}→${desde}`);
         for (const h of hacia) esperadas.add(`${desde}→${h}`);

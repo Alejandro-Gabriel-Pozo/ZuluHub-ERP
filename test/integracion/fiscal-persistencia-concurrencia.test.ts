@@ -237,6 +237,7 @@ describe.skipIf(base === null)("fiscal T4: concurrencia de los repositorios", ()
               puntoDeVentaId: puntoDeVentaId(pv),
               emisorId: emisorId(m.emisor),
               tipo: "FACTURA_B",
+              ambiente: "HOMOLOGACION",
             },
             ultimo,
           );
@@ -543,7 +544,12 @@ describe.skipIf(base === null)("fiscal T4: concurrencia de los repositorios", ()
       solicitud: SolicitudId,
     ): Promise<Resultado<bigint, ErrorDeNumeracion>> {
       for (let intento = 0; intento < 3; intento++) {
-        const serie = await tx.series.obtener(empresaDe(m), puntoDeVentaId(pv), "FACTURA_B");
+        const serie = await tx.series.obtener(
+          empresaDe(m),
+          puntoDeVentaId(pv),
+          "FACTURA_B",
+          "HOMOLOGACION",
+        );
         if (serie === null) throw new Error("la serie no existe");
         const r = reservarNumero(serie, solicitud, AHORA);
         if (!r.ok) return r;
@@ -623,7 +629,12 @@ describe.skipIf(base === null)("fiscal T4: concurrencia de los repositorios", ()
           ),
         );
         const cerrar = async (tx: TxFiscalDePrueba) => {
-          const serie = await tx.series.obtener(empresaDe(m), puntoDeVentaId(pv), "FACTURA_B");
+          const serie = await tx.series.obtener(
+            empresaDe(m),
+            puntoDeVentaId(pv),
+            "FACTURA_B",
+            "HOMOLOGACION",
+          );
           if (serie === null) throw new Error("la serie no existe");
           const c = cerrarSerie(serie, solicitud, "AUTORIZADO");
           // Si la otra ya la cerró, la solicitud ya no está vigente: es un «ya estaba».

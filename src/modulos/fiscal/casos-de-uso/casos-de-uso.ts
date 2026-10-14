@@ -1,7 +1,6 @@
 import { armarCerrarReservaDeNumero } from "./cerrar-reserva";
 import type { DependenciasDeNumeracion } from "./contrato";
 import type { DECLARACIONES } from "./declaraciones";
-import { armarNumerarComprobante } from "./numerar-comprobante";
 import { armarReconciliarSerie } from "./reconciliar-serie";
 import { armarReconciliarSeriesVencidas } from "./reconciliar-series-vencidas";
 import { armarReservarNumeroDeComprobante } from "./reservar-numero";
@@ -18,11 +17,6 @@ export function crearCasosDeUsoDeNumeracion(dependencias: DependenciasDeNumeraci
   return {
     reservarNumeroDeComprobante,
     cerrarReservaDeNumero,
-    numerarComprobante: armarNumerarComprobante(
-      dependencias,
-      reservarNumeroDeComprobante,
-      cerrarReservaDeNumero,
-    ),
     reconciliarSerie,
     reconciliarSeriesVencidas: armarReconciliarSeriesVencidas(dependencias, reconciliarSerie),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;

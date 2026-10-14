@@ -2,6 +2,7 @@ import type { EmpresaNoOpera } from "../../../contexto/estados";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { TipoDeComprobante } from "../dominio/comprobante-emitido";
+import type { Ambiente } from "../dominio/comprobante-nuevo";
 import type { PuntoDeVentaId } from "../dominio/identificadores";
 import {
   reconciliarSerie as reconciliarSerieDelDominio,
@@ -15,6 +16,7 @@ import type { ErrorDeEmision, PuntoDeVentaParaEmision } from "./emision-electron
 export type EntradaDeReconciliarSerie = Readonly<{
   puntoDeVentaId: PuntoDeVentaId;
   tipo: TipoDeComprobante;
+  ambiente: Ambiente;
 }>;
 
 export type SalidaDeReconciliarSerie =
@@ -47,6 +49,12 @@ type Preparacion =
  * el trabajo de sistema que recupera lo que quedó colgado (autorizó y se cayó, incierto, el proceso
  * murió antes de cerrar). Contexto OPERATIVO sin persona (`ContextoDeSistema`): `sinGuard`.
  *
+ * Decide solo con `ultimoAutorizado`: no sabe de quién es el comprobante que ARCA tiene en ese número
+ * ni cuál es su CAE. Por eso, con la facturación, queda solo para una serie `EN_CURSO` SIN comprobante
+ * (el recorrido de T6); la de un comprobante en vuelo se reconcilia consultando su número
+ * (`reconciliarComprobante`, H7 facturación §B.3.7), y la base impide soltar una reserva a la que un
+ * comprobante `EN_VALIDACION` o `INCIERTO` todavía se apoya (`comprobante_serie_sin_reserva`).
+ *
  * Tres pasos, porque preguntarle al servicio es un efecto externo y NO puede ir adentro de una
  * transacción (ADR-007):
  *   1. Transacción: lee la serie. Si no está `EN_CURSO`, `NADA_QUE_RECONCILIAR` (repetir es un éxito);
@@ -77,7 +85,12 @@ export function armarReconciliarSerie({ transacciones, emision }: DependenciasDe
       async (tx): Promise<Resultado<Preparacion, ErrorPropioAlReconciliar | EmpresaNoOpera>> => {
         const opera = await empresaOpera(tx, empresaId);
         if (!opera.ok) return opera;
-        const serie = await tx.series.obtener(empresaId, entrada.puntoDeVentaId, entrada.tipo);
+        const serie = await tx.series.obtener(
+          empresaId,
+          entrada.puntoDeVentaId,
+          entrada.tipo,
+          entrada.ambiente,
+        );
         if (serie === null) return err("SERIE_NO_ENCONTRADA");
         if (serie.estado !== "EN_CURSO") return ok({ tipo: "NADA" });
         // Sondeo: con el último número ya guardado el dominio siempre acepta, salvo que la reserva
@@ -111,7 +124,12 @@ export function armarReconciliarSerie({ transacciones, emision }: DependenciasDe
       > => {
         const opera = await empresaOpera(tx, empresaId);
         if (!opera.ok) return opera;
-        const serie = await tx.series.obtener(empresaId, entrada.puntoDeVentaId, entrada.tipo);
+        const serie = await tx.series.obtener(
+          empresaId,
+          entrada.puntoDeVentaId,
+          entrada.tipo,
+          entrada.ambiente,
+        );
         if (serie === null) return err("SERIE_NO_ENCONTRADA");
         if (
           serie.estado !== "EN_CURSO" ||
@@ -133,7 +151,7 @@ export function armarReconciliarSerie({ transacciones, emision }: DependenciasDe
               ? "SERIE_DE_COMPROBANTES_BLOQUEADA"
               : "SERIE_DE_COMPROBANTES_RECONCILIADA",
           entidad: "serie_comprobante",
-          entidadId: entidadDeSerie(entrada.puntoDeVentaId, entrada.tipo),
+          entidadId: entidadDeSerie(entrada.puntoDeVentaId, entrada.tipo, entrada.ambiente),
           antes: datosDeSerie(serie),
           despues: {
             ...datosDeSerie(guardada),

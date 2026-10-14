@@ -19,12 +19,13 @@ import {
 } from "../../../primitivas/dinero/importe";
 import { ARS } from "../../../primitivas/dinero/moneda";
 import { POLITICA_VIGENTE } from "../../../primitivas/dinero/redondeo";
-import type { DesenlaceDeAutorizacion } from "./comprobante-emitido";
+import type { DesenlaceDeAutorizacion } from "./estados-de-comprobante";
 import type { EmisorId, SolicitudId } from "./identificadores";
 import {
   cerrarSerie,
   reconciliarSerie,
   reservarNumero,
+  resincronizarSerie,
   transicionDeSerieValida,
   verificarSecuencia,
   type Serie,
@@ -319,7 +320,9 @@ describe("venta mixta: propiedades de dinero", () => {
 type Evento =
   | { tipo: "RESERVAR"; solicitud: 1 | 2 }
   | { tipo: "CERRAR"; solicitud: 1 | 2; desenlace: DesenlaceDeAutorizacion }
-  | { tipo: "RECONCILIAR"; informa: -1 | 0 | 1 | 2 | 3; vencida: boolean };
+  | { tipo: "RECONCILIAR"; informa: -1 | 0 | 1 | 2 | 3; vencida: boolean }
+  /** `desfase`: cuánto se aleja el último de ARCA del que la serie tiene, hacia atrás o hacia adelante. */
+  | { tipo: "RESINCRONIZAR"; desfase: -2 | -1 | 0 | 1 | 7; viejo: boolean };
 
 const evento: fc.Arbitrary<Evento> = fc.oneof(
   fc.record({
@@ -329,25 +332,37 @@ const evento: fc.Arbitrary<Evento> = fc.oneof(
   fc.record({
     tipo: fc.constant("CERRAR" as const),
     solicitud: fc.constantFrom(1 as const, 2 as const),
-    desenlace: fc.constantFrom<DesenlaceDeAutorizacion>("AUTORIZADO", "RECHAZADO", "INCIERTO"),
+    desenlace: fc.constantFrom<DesenlaceDeAutorizacion>(
+      "AUTORIZADO",
+      "RECHAZADO",
+      "NO_ENVIADO",
+      "INCIERTO",
+    ),
   }),
   fc.record({
     tipo: fc.constant("RECONCILIAR" as const),
     informa: fc.constantFrom(-1 as const, 0 as const, 1 as const, 2 as const, 3 as const),
     vencida: fc.boolean(),
   }),
+  fc.record({
+    tipo: fc.constant("RESINCRONIZAR" as const),
+    desfase: fc.constantFrom(-2 as const, -1 as const, 0 as const, 1 as const, 7 as const),
+    viejo: fc.boolean(),
+  }),
 );
 
 const solicitudes: Record<1 | 2, SolicitudId> = { 1: SOLICITUD_1, 2: SOLICITUD_2 };
 
 describe("numeración: propiedades", () => {
-  it("toda secuencia de eventos deja el último número igual a las autorizaciones, sin bajar, sin huecos y con cada paso válido", () => {
+  it("toda secuencia de eventos deja el último número igual a las autorizaciones desde la última resincronización, sin bajar, sin huecos y con cada paso válido", () => {
     fc.assert(
       fc.property(fc.array(evento, { maxLength: 60 }), (eventos) => {
         const ahora = new Date(1_000_000);
         let serie: Serie = serieLibre(0n);
-        let autorizadas = 0n;
-        const numeros: bigint[] = [];
+        // El tramo actual de la serie: arranca en el último número de la última resincronización (los
+        // números de antes de ese salto los emitió otro sistema y no son huecos de ZuluHub).
+        let desde = 0n;
+        let numeros: bigint[] = [];
         for (const e of eventos) {
           const antes = serie;
           if (e.tipo === "RESERVAR") {
@@ -357,29 +372,36 @@ describe("numeración: propiedades", () => {
             const r = cerrarSerie(serie, solicitudes[e.solicitud], e.desenlace);
             if (r.ok) {
               serie = r.valor.serie;
-              if (r.valor.numeroAutorizado !== null) {
-                autorizadas += 1n;
-                numeros.push(r.valor.numeroAutorizado);
-              }
+              if (r.valor.numeroAutorizado !== null) numeros.push(r.valor.numeroAutorizado);
             }
-          } else {
+          } else if (e.tipo === "RECONCILIAR") {
             const base = antes.estado === "EN_CURSO" ? antes.ultimoNumero : 0n;
             const momento = e.vencida ? new Date(ahora.getTime() + 10 * 60_000) : ahora;
             const r = reconciliarSerie(serie, base + BigInt(e.informa), momento);
             if (r.ok) {
               serie = r.valor.serie;
               if (r.valor.resolucion === "CERRADA_COMO_AUTORIZADA") {
-                autorizadas += 1n;
                 numeros.push(r.valor.serie.ultimoNumero);
               }
+            }
+          } else {
+            const deArca = antes.ultimoNumero + BigInt(e.desfase);
+            const r = resincronizarSerie(antes, e.viejo ? deArca - 1n : deArca, deArca);
+            // Solo sale una bloqueada, con el dato fresco, y nunca hacia atrás.
+            expect(r.ok).toBe(antes.estado === "BLOQUEADA" && !e.viejo && e.desfase >= 0);
+            if (r.ok) {
+              serie = r.valor;
+              expect(verificarSecuencia(desde, numeros).ok).toBe(true);
+              desde = serie.ultimoNumero;
+              numeros = [];
             }
           }
           expect(transicionDeSerieValida(antes, serie)).toBe(true);
           expect(serie.ultimoNumero >= antes.ultimoNumero).toBe(true);
-          // El último número es exactamente la cantidad de autorizaciones (bloquear no avanza).
-          expect(serie.ultimoNumero).toBe(autorizadas);
+          // El último número es exactamente el del tramo más sus autorizaciones (bloquear no avanza).
+          expect(serie.ultimoNumero).toBe(desde + BigInt(numeros.length));
         }
-        expect(verificarSecuencia(0n, numeros).ok).toBe(true);
+        expect(verificarSecuencia(desde, numeros).ok).toBe(true);
       }),
     );
   });

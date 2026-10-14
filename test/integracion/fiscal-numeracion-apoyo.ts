@@ -24,6 +24,7 @@ import {
   crearRepositorioDeSeries,
   puntoDeVentaId,
   solicitudId,
+  type Ambiente,
   type CasosDeUsoDeNumeracion,
   type FiscalDb,
   type OpcionesDeNumeracion,
@@ -39,6 +40,7 @@ import { crearMundo, crearPuntoDeVenta, crearSerie, type Mundo } from "./fiscal-
 import type { BaseDePruebas } from "./global";
 import { crearMembresiaDeBase, crearPersonaDeBase, type RolDePrueba } from "./fixtures-identidad";
 import { nuevoId } from "./fiscal-persistencia-apoyo";
+import { armarNumerarParaPruebas } from "../utilidades/numerar-para-pruebas";
 
 /**
  * Apoyo de las pruebas de numeración (H7 T6). Lo que recibe el caso de uso es lo que armaría la
@@ -102,18 +104,27 @@ export function crearEntornoDeNumeracion(
   });
 }
 
+/**
+ * Los casos de uso de numeración más `numerarComprobante`, que ya no es un caso de uso (se retiró con
+ * la facturación) sino el recorrido de reservar, pedir a ARCA y cerrar que las pruebas ejercitan
+ * (`test/utilidades/numerar-para-pruebas.ts`).
+ */
+export type CasosDeNumeracionDePrueba = CasosDeUsoDeNumeracion &
+  Readonly<{ numerarComprobante: ReturnType<typeof armarNumerarParaPruebas> }>;
+
 export function casosDeNumeracion(
   transacciones: TransaccionesDePostgres<TxDeNumeracionDePrueba>,
   emision: EmisionElectronica,
   opciones?: OpcionesDeNumeracion,
   reglas: ReglasDeEmpresa = REGLAS_CON_FACTURACION,
-): CasosDeUsoDeNumeracion {
-  return crearCasosDeUsoDeNumeracion({
+): CasosDeNumeracionDePrueba {
+  const casos = crearCasosDeUsoDeNumeracion({
     transacciones,
     reglas,
     emision,
     ...(opciones === undefined ? {} : { opciones }),
   });
+  return { ...casos, numerarComprobante: armarNumerarParaPruebas(casos, emision) };
 }
 
 /** Una empresa con su emisor principal, un punto de venta ACTIVO y un miembro con el rol dado. */
@@ -161,9 +172,10 @@ export async function crearEscenario(
   };
 }
 
-/** La entrada de una solicitud nueva (o la que se pase) de FACTURA_B en el punto de venta. */
+/** La entrada de una solicitud nueva (o la que se pase) de FACTURA_B en el punto de venta (en homologación). */
 export const entradaDe = (
   e: Pick<Escenario, "puntoDeVenta">,
   solicitud: SolicitudId = solicitudId(nuevoId()),
   tipo: "FACTURA_A" | "FACTURA_B" | "FACTURA_C" = "FACTURA_B",
-) => ({ puntoDeVentaId: puntoDeVentaId(e.puntoDeVenta), tipo, solicitud });
+  ambiente: Ambiente = "HOMOLOGACION",
+) => ({ puntoDeVentaId: puntoDeVentaId(e.puntoDeVenta), tipo, ambiente, solicitud });

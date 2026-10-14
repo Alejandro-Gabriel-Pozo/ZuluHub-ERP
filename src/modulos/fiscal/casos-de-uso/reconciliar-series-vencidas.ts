@@ -2,6 +2,7 @@ import type { EmpresaNoOpera } from "../../../contexto/estados";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { TipoDeComprobante } from "../dominio/comprobante-emitido";
+import type { Ambiente } from "../dominio/comprobante-nuevo";
 import type { PuntoDeVentaId } from "../dominio/identificadores";
 import { empresaOpera } from "./comun";
 import type { ContextoDeSistema, DependenciasDeNumeracion } from "./contrato";
@@ -19,6 +20,7 @@ export type EntradaDeReconciliarSeriesVencidas = Readonly<{ limite?: number }>;
 export type ResultadoPorSerie = Readonly<{
   puntoDeVentaId: PuntoDeVentaId;
   tipo: TipoDeComprobante;
+  ambiente: Ambiente;
   resultado: Resultado<SalidaDeReconciliarSerie, ErrorAlReconciliarSerie>;
 }>;
 
@@ -68,9 +70,11 @@ export function armarReconciliarSeriesVencidas(
       series.push({
         puntoDeVentaId: serie.puntoDeVentaId,
         tipo: serie.tipo,
+        ambiente: serie.ambiente,
         resultado: await reconciliarSerie(contexto, {
           puntoDeVentaId: serie.puntoDeVentaId,
           tipo: serie.tipo,
+          ambiente: serie.ambiente,
         }),
       });
     }

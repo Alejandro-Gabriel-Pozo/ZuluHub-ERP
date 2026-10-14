@@ -267,16 +267,17 @@ describe.skipIf(base === null)("facturación F3: concurrencia de los repositorio
             puntoDeVentaId: c.puntoDeVentaId,
             emisorId: c.emisorId,
             tipo: c.tipo,
+            ambiente: c.ambiente,
           },
           0n,
         );
         if (!nueva.ok) throw new Error("serie inválida");
-        serie = (await tx.series.crear(nueva.valor, c.ambiente)).valor;
+        serie = (await tx.series.crear(nueva.valor)).valor;
       }
       const r = reservarNumero(serie, solicitudId(c.id), ahora);
       if (!r.ok) return err("SERIE_OCUPADA");
       if (r.valor.tipo !== "RESERVADA") return ok(r.valor.numero);
-      const guardada = await tx.series.guardar({ ...r.valor.serie, ambiente: c.ambiente });
+      const guardada = await tx.series.guardar(r.valor.serie);
       if (guardada === null) return err("SERIE_CAMBIO");
       const movido = await tx.comprobantes.transicionar(c.empresaId, c.id, c.version, {
         a: "EN_VALIDACION",
