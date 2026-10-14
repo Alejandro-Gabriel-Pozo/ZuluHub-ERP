@@ -64,12 +64,11 @@ jobs:
       - id: validar
         run: |
           set -eu
+          # La protección de fondo de los secretos es «Deployment branches: solo main» en los dos Environments
+          # (PRIMER-DESPLIEGUE.md, B.1). Acá se repite para fallar claro y temprano. No se mira si el
+          # repositorio es un fork: ese dato describe a ESTE repositorio, no a quien corre el workflow.
           if [ "$REF" != "refs/heads/main" ]; then
             echo "::error::Solo se migra desde la rama main (esta corrida es de $REF). Volvé a correrlo eligiendo main en «Use workflow from»."
-            exit 1
-          fi
-          if [ "$ES_FORK" != "false" ]; then
-            echo "::error::Este workflow no corre desde un fork."
             exit 1
           fi
           case "$AMBIENTE" in
@@ -91,7 +90,6 @@ jobs:
           echo "accion=$ACCION" >> "$GITHUB_OUTPUT"
         env:
           REF: ${{ github.ref }}
-          ES_FORK: ${{ github.event.repository.fork }}
           AMBIENTE: ${{ inputs.ambiente }}
           ACCION: ${{ inputs.accion }}
           CONFIRMACION: ${{ inputs.confirmacion }}

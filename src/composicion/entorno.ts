@@ -6,9 +6,11 @@ import {
   ZULUHUB_URL_BASE,
 } from "../adaptadores/correo/configuracion";
 import {
+  CARACTERES_DISTINTOS_MINIMOS,
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
   ZULUHUB_AUTH_SECRETO_EMPRESA,
+  caracteresDistintos,
 } from "../adaptadores/autenticacion/configuracion";
 import { ZULUHUB_CLAVE_CONTEXTO } from "../adaptadores/postgres/contexto-firmado";
 import { ErrorDeConfiguracion } from "../adaptadores/postgres/errores";
@@ -41,9 +43,15 @@ const cadenaDePostgres = z
 /**
  * Largo mínimo del secreto del cron. Un secreto corto se adivina a pedidos (la ruta del cron es pública en
  * Internet): lo que no llega a este largo no sirve y el cron falla cerrado. Es nuestra regla, no la de Vercel.
+ * Además del largo, la variedad: el MISMO piso de caracteres distintos que el secreto de autenticación
+ * (`CARACTERES_DISTINTOS_MINIMOS`), para que `aaaa…` de 16 no pase.
  */
 export const LARGO_MINIMO_DEL_SECRETO_DEL_CRON = 16;
-const secretoDelCron = z.string().trim().min(LARGO_MINIMO_DEL_SECRETO_DEL_CRON);
+const secretoDelCron = z
+  .string()
+  .trim()
+  .min(LARGO_MINIMO_DEL_SECRETO_DEL_CRON)
+  .refine((valor) => caracteresDistintos(valor) >= CARACTERES_DISTINTOS_MINIMOS);
 
 /**
  * Cada variable con su forma y las piezas de la composición que la usan. Una pieza valida solo las

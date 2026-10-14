@@ -50,11 +50,13 @@ describe("workflow migrar.yml", () => {
     ]);
   });
 
-  it("solo corre desde main y no desde un fork, y lo verifica ANTES de entregar los secretos", () => {
+  it("solo corre desde main, y lo verifica ANTES de entregar los secretos", () => {
     expect(TEXTO).toContain('[ "$REF" != "refs/heads/main" ]');
     expect(TEXTO).toContain("REF: ${{ github.ref }}");
-    expect(TEXTO).toContain('[ "$ES_FORK" != "false" ]');
-    expect(TEXTO).toContain("ES_FORK: ${{ github.event.repository.fork }}");
+    // `github.event.repository.fork` dice si ESTE repositorio es un fork, no quién corre: no protege nada.
+    // La protección de fondo es «Deployment branches: solo main» en los Environments (PRIMER-DESPLIEGUE.md, B.1).
+    expect(TEXTO).not.toContain("repository.fork");
+    expect(TEXTO).not.toContain("ES_FORK");
     // El job con los secretos espera al que valida, y no hay otro job.
     expect(TEXTO).toMatch(/\n {2}migrar:\n(?:.*\n)*? {4}needs: validar\n/);
     expect(TEXTO.match(/^ {2}[a-z]+:$/gm)).toEqual(["  validar:", "  migrar:"]);

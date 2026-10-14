@@ -326,11 +326,11 @@ describe("valoresDeLaPieza", () => {
 
   it("el secreto del cron exige el largo mínimo (borde exacto), recorta los blancos y no repite el valor", () => {
     expect(LARGO_MINIMO_DEL_SECRETO_DEL_CRON).toBe(16);
-    const justo = "a".repeat(LARGO_MINIMO_DEL_SECRETO_DEL_CRON);
+    const justo = "abcdefghijklmnop".slice(0, LARGO_MINIMO_DEL_SECRETO_DEL_CRON);
     expect(valoresDeLaPieza({ CRON_SECRET: `  ${justo}\n` }, "cron")).toEqual({
       CRON_SECRET: justo,
     });
-    const corto = "b".repeat(LARGO_MINIMO_DEL_SECRETO_DEL_CRON - 1);
+    const corto = "bcdefghijklmnop".slice(0, LARGO_MINIMO_DEL_SECRETO_DEL_CRON - 1);
     let error: unknown;
     try {
       valoresDeLaPieza({ CRON_SECRET: corto }, "cron");
@@ -343,6 +343,21 @@ describe("valoresDeLaPieza", () => {
     );
     // Con blancos que lo dejan corto después de recortar, también.
     expect(() => valoresDeLaPieza({ CRON_SECRET: `  ${corto}  ` }, "cron")).toThrow(ErrorDeEntorno);
+  });
+
+  it("el secreto del cron exige también variedad: 10 caracteres distintos pasa y 9 no, aunque el largo alcance", () => {
+    // 16 caracteres con exactamente 10 distintos (borde que pasa) y con 9 (borde que no).
+    const diez = "abcdefghij" + "abcdef";
+    const nueve = "abcdefghi" + "abcdefg";
+    expect(diez).toHaveLength(LARGO_MINIMO_DEL_SECRETO_DEL_CRON);
+    expect(nueve).toHaveLength(LARGO_MINIMO_DEL_SECRETO_DEL_CRON);
+    expect(valoresDeLaPieza({ CRON_SECRET: diez }, "cron")).toEqual({ CRON_SECRET: diez });
+    expect(() => valoresDeLaPieza({ CRON_SECRET: nueve }, "cron")).toThrow(ErrorDeEntorno);
+    // Lo repetido a mano, aunque sea largo.
+    expect(() => valoresDeLaPieza({ CRON_SECRET: "a".repeat(64) }, "cron")).toThrow(ErrorDeEntorno);
+    expect(() => valoresDeLaPieza({ CRON_SECRET: "ab".repeat(32) }, "cron")).toThrow(
+      ErrorDeEntorno,
+    );
   });
 
   it("acepta los dos esquemas de Postgres y recorta los blancos", () => {
