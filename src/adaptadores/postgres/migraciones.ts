@@ -23,7 +23,8 @@ import pg from "pg";
  *   archivo del historial es reescribirlo.
  */
 
-const PATRON_DE_ARCHIVO = /^(\d{4})_[a-z0-9_]+\.sql$/;
+/** Compartido con `estado-de-migraciones.ts` (solo lectura): una sola definición de qué es una migración. */
+export const PATRON_DE_ARCHIVO = /^(\d{4})_[a-z0-9_]+\.sql$/;
 const CLAVE_DE_BLOQUEO = 7_340_001;
 const ESPERA_DE_BLOQUEO_POR_DEFECTO_EN_MS = 10_000;
 const DURACION_MAXIMA_POR_DEFECTO_EN_MS = 5 * 60_000;
@@ -44,7 +45,8 @@ export type OpcionesDeMigraciones = Readonly<{
   duracionMaximaEnMs?: number;
 }>;
 
-function hostConPooler(url: string): boolean {
+/** Compartido con `estado-de-migraciones.ts`: una sola definición de qué cadena es del pooler. */
+export function hostConPooler(url: string): boolean {
   let host: string;
   try {
     host = new URL(url).hostname;
