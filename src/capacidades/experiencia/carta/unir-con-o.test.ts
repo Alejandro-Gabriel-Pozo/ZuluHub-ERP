@@ -24,7 +24,9 @@ describe("unirConO", () => {
   const textos = fc.array(
     fc
       .string({ unit: "grapheme-ascii", minLength: 1, maxLength: 8 })
-      .filter((t) => !/[, ]/.test(t)),
+      // Sin comas ni espacios, y sin el elemento «o» suelto: «A, o o B» contiene «, o » por el propio elemento,
+      // no por el separador, y la propiedad fallaba al azar (según la semilla) en cualquier gate.
+      .filter((t) => !/[, ]/.test(t) && t !== "o"),
     { maxLength: 8 },
   );
 

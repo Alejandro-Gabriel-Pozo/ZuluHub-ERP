@@ -33,7 +33,7 @@ const empresa = (
 ): EmpresaParaMostrar => ({ empresaId: `id-${nombre}`, nombre, rol, estadoEfectivo });
 
 /** Cada texto visible llega a 16 px, cada control a 48 px de alto y la página no se corre hacia el costado. */
-async function legibleYTocable(): Promise<void> {
+function legibleYTocable(): void {
   const chicos: string[] = [];
   for (const el of document.body.querySelectorAll<HTMLElement>("*")) {
     const tieneTexto = [...el.childNodes].some(
@@ -62,7 +62,7 @@ async function legibleYTocable(): Promise<void> {
 async function verificar(pantalla: ReactNode): Promise<void> {
   await render(pantalla);
   expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
-  await legibleYTocable();
+  legibleYTocable();
 }
 
 describe("ingreso", () => {
@@ -78,7 +78,7 @@ describe("ingreso", () => {
   it("sin error: sin violaciones, legible y tocable; aria snapshot", async () => {
     const { container } = await render(ingreso());
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
-    await legibleYTocable();
+    legibleYTocable();
     await expect.element(page.elementLocator(container)).toMatchAriaInlineSnapshot(`
       - main:
         - heading "Ingresá a Hotel del Lago" [level=1]
@@ -157,7 +157,7 @@ describe("elegir empresa", () => {
       <PantallaDeEleccionDeEmpresa empresas={dos} accion={accionVacia} />,
     );
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
-    await legibleYTocable();
+    legibleYTocable();
     await expect.element(page.getByText("La empresa está suspendida.")).toBeVisible();
     expect(page.getByRole("button", { name: /^Entrar a la empresa/ }).elements()).toHaveLength(2);
     await expect.element(page.elementLocator(container)).toMatchAriaInlineSnapshot(`
@@ -198,7 +198,7 @@ describe("elegir empresa", () => {
       <PantallaSinEmpresas marca="Hotel del Lago" accionDeCerrarSesion={accionVacia} />,
     );
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
-    await legibleYTocable();
+    legibleYTocable();
     await expect
       .element(
         page.getByText(
@@ -227,7 +227,7 @@ describe("estados", () => {
       </PantallaDeEstado>,
     );
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
-    await legibleYTocable();
+    legibleYTocable();
     await expect.element(page.elementLocator(container)).toMatchAriaInlineSnapshot(`
       - main:
         - heading "No encontrado" [level=1]
@@ -261,7 +261,7 @@ describe("estados", () => {
       </PantallaDeEstado>,
     );
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
-    await legibleYTocable();
+    legibleYTocable();
     await expect.element(page.elementLocator(container)).toMatchAriaInlineSnapshot(`
       - main:
         - heading "Sin permiso" [level=1]
@@ -284,7 +284,7 @@ describe("estados", () => {
       </PantallaDeEstado>,
     );
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
-    await legibleYTocable();
+    legibleYTocable();
     await expect.element(page.elementLocator(container)).toMatchAriaInlineSnapshot(`
       - main:
         - heading "Algo salió mal" [level=1]
@@ -324,7 +324,7 @@ describe("armazón de operación", () => {
       armazon(<PantallaDeInicio empresa={empresa("Café del Puerto")} pendientes={[]} />),
     );
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
-    await legibleYTocable();
+    legibleYTocable();
     await expect.element(page.getByText("No hay nada pendiente por ahora.")).toBeVisible();
     await expect.element(page.elementLocator(container)).toMatchAriaInlineSnapshot(`
       - link "Saltar al contenido":
@@ -414,7 +414,7 @@ describe("armazón de operación", () => {
     ] as const) {
       const r = await render(armazon(<p>Contenido</p>, modulos));
       expect(nav().getByRole("link").elements()).toHaveLength(esperados);
-      await legibleYTocable();
+      legibleYTocable();
       await r.unmount();
     }
   });

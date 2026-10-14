@@ -4,6 +4,7 @@ import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import { violacionesDeAccesibilidad, tocar } from "../pruebas/ayudas";
 import { leerBorrador } from "./borrador";
+import { restaurarCamposDeLaPagina } from "./borrador-de-pagina";
 import { IndicadorDeSesion } from "./IndicadorDeSesion.cliente";
 import { ProveedorDeSesion } from "./ProveedorDeSesion.cliente";
 
@@ -147,11 +148,10 @@ describe("ProveedorDeSesion", () => {
 
   it("a los 15 minutos vence sola, y lo tipeado queda a salvo en esta pestaña (sin claves, sin contraseñas, sin campos ocultos)", async () => {
     const { container } = await render(<Pantalla />);
-    const nota = container.querySelector<HTMLInputElement>("input[name=nota]");
-    const natural = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    // La persona tipea en el campo (el mismo camino que usa la restauración: un `input` que React ve).
     await act(async () => {
-      natural?.call(nota, "dos medialunas para la mesa 4");
-      nota?.dispatchEvent(new Event("input", { bubbles: true }));
+      restaurarCamposDeLaPagina({ nota: "dos medialunas para la mesa 4" }, container);
+      await Promise.resolve();
     });
     await pasar(15 * MINUTO);
     await expect.element(page.getByRole("dialog", { name: "Tu sesión venció" })).toBeVisible();
