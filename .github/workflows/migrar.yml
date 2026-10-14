@@ -1,0 +1,183 @@
+name: Migrar (preview y producción)
+
+# Aplica las migraciones a la base real (Neon) con un clic: Actions → «Migrar (preview y producción)» → Run workflow.
+# Es la ÚNICA forma en que las migraciones llegan a una base real: la compilación de Vercel nunca migra y Vercel
+# nunca tiene la cadena del dueño de la base (web-armazon §5.7). Solo se dispara a mano.
+#
+#  - El Environment `produccion` exige la APROBACIÓN DEL DUEÑO (revisores obligatorios, configurados en GitHub:
+#    Settings → Environments → produccion → Required reviewers → el dueño; y «Deployment branches» solo `main`).
+#    El Environment `preview` no pide aprobación. Los secretos viven en cada Environment, nunca en el repositorio:
+#      ZULUHUB_DB_DUENO_DIRECTA  (obligatorio) cadena DIRECTA (nunca la del pooler) del dueño de la base de ese entorno
+#      ZULUHUB_CLAVE_CONTEXTO    (opcional)    la clave de firma del contexto de esa rama, la MISMA que está en Vercel
+#      NEON_API_KEY, NEON_PROJECT_ID (opcionales, solo `produccion`) para la rama de respaldo `antes-de-<NNNN>`
+#  - Antes de «aplicar» en producción, si hay migraciones pendientes y existen NEON_API_KEY y NEON_PROJECT_ID, se
+#    crea una rama de respaldo de la rama `production` de Neon. Si el respaldo se pide y falla, NO se migra.
+#  - Después de aplicar, si el Environment tiene ZULUHUB_CLAVE_CONTEXTO, se instala esa clave en la base (idempotente).
+#
+# El script que migra (`npm run migrar`) lee la cadena de la variable ZULUHUB_DB_MIGRACIONES; acá se la alimenta con el
+# secreto ZULUHUB_DB_DUENO_DIRECTA. Ningún paso imprime la cadena ni la clave.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: "Qué base"
+        type: choice
+        required: true
+        options:
+          - preview
+          - produccion
+      accion:
+        description: "ver = solo mirar (no cambia nada) · aplicar = aplicar las migraciones pendientes"
+        type: choice
+        required: true
+        default: ver
+        options:
+          - ver
+          - aplicar
+      confirmacion:
+        description: "Solo para «aplicar»: escribir MIGRAR PREVIEW (preview) o MIGRAR PRODUCCION (produccion)"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  # Una migración por base a la vez. Una que ya está corriendo nunca se cancela: la nueva espera.
+  group: migrar-${{ inputs.ambiente }}
+  cancel-in-progress: false
+
+jobs:
+  validar:
+    # Todo lo que se puede rechazar sin la base se rechaza ACÁ, antes del Environment: así los secretos no se
+    # entregan a una corrida que iba a fallar y nadie aprueba una corrida inválida.
+    name: Validar la corrida
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      ambiente: ${{ steps.validar.outputs.ambiente }}
+      accion: ${{ steps.validar.outputs.accion }}
+    steps:
+      - id: validar
+        run: |
+          set -eu
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Solo se migra desde la rama main (esta corrida es de $REF). Volvé a correrlo eligiendo main en «Use workflow from»."
+            exit 1
+          fi
+          if [ "$ES_FORK" != "false" ]; then
+            echo "::error::Este workflow no corre desde un fork."
+            exit 1
+          fi
+          case "$AMBIENTE" in
+            preview) esperado="MIGRAR PREVIEW" ;;
+            produccion) esperado="MIGRAR PRODUCCION" ;;
+            *) echo "::error::Ambiente no permitido (preview o produccion)."; exit 1 ;;
+          esac
+          case "$ACCION" in
+            ver) ;;
+            aplicar)
+              if [ "$CONFIRMACION" != "$esperado" ]; then
+                echo "::error::Para aplicar en $AMBIENTE hay que escribir exactamente «$esperado» en el campo de confirmación."
+                exit 1
+              fi
+              ;;
+            *) echo "::error::Acción no permitida (ver o aplicar)."; exit 1 ;;
+          esac
+          echo "ambiente=$AMBIENTE" >> "$GITHUB_OUTPUT"
+          echo "accion=$ACCION" >> "$GITHUB_OUTPUT"
+        env:
+          REF: ${{ github.ref }}
+          ES_FORK: ${{ github.event.repository.fork }}
+          AMBIENTE: ${{ inputs.ambiente }}
+          ACCION: ${{ inputs.accion }}
+          CONFIRMACION: ${{ inputs.confirmacion }}
+
+  migrar:
+    name: Migrar (${{ needs.validar.outputs.ambiente }}, ${{ needs.validar.outputs.accion }})
+    needs: validar
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # En `produccion` los revisores obligatorios (el dueño) aprueban ANTES de que arranque cualquier paso de este job.
+    environment: ${{ needs.validar.outputs.ambiente }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # Sin caché de npm: este job tiene los secretos de la base y no restaura nada que no sea el lockfile.
+      - name: Dependencias (solo las de producción, sin scripts de instalación)
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: Ver qué falta aplicar
+        # El secreto de la base está solo en los pasos que migran. Este es de solo lectura.
+        # `shell: bash` activa `pipefail`: si `--ver` falla, el paso falla aunque `tee` termine bien.
+        shell: bash
+        run: npm run migrar -- --ver | tee "$RUNNER_TEMP/estado.txt"
+        env:
+          ZULUHUB_DB_MIGRACIONES: ${{ secrets.ZULUHUB_DB_DUENO_DIRECTA }}
+
+      - name: Rama de respaldo en Neon (solo producción, solo si hay algo para aplicar y hay NEON_API_KEY)
+        if: needs.validar.outputs.accion == 'aplicar' && needs.validar.outputs.ambiente == 'produccion'
+        shell: bash
+        run: |
+          set -eu
+          if ! grep -q "faltan aplicar" "$RUNNER_TEMP/estado.txt"; then
+            echo "No hay migraciones pendientes: no hace falta respaldo."
+            exit 0
+          fi
+          if [ -z "${NEON_API_KEY:-}" ] || [ -z "${NEON_PROJECT_ID:-}" ]; then
+            echo "::warning::Sin NEON_API_KEY y NEON_PROJECT_ID en el Environment: se migra SIN rama de respaldo."
+            exit 0
+          fi
+          case "$NEON_PROJECT_ID" in
+            *[!a-z0-9-]*|"") echo "::error::NEON_PROJECT_ID no tiene la forma de un identificador de proyecto."; exit 1 ;;
+          esac
+          ultima=$(ls migraciones | grep -E '^[0-9]{4}_[a-z0-9_]+\.sql$' | sort | tail -n 1 | cut -c1-4)
+          nombre="antes-de-$ultima"
+          api="https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches"
+          # La rama de producción por su NOMBRE (no se confía en cuál es la predeterminada).
+          codigo=$(curl -sS -o "$RUNNER_TEMP/ramas.json" -w '%{http_code}' -H "Authorization: Bearer $NEON_API_KEY" "$api")
+          if [ "$codigo" != "200" ]; then
+            echo "::error::No se pudieron listar las ramas de Neon (HTTP $codigo). No se migra."
+            exit 1
+          fi
+          padre=$(jq -r '[.branches[] | select(.name == "production")] | if length == 1 then .[0].id else empty end' "$RUNNER_TEMP/ramas.json")
+          if [ -z "$padre" ]; then
+            echo "::error::No se encontró una única rama «production» en Neon. No se migra."
+            exit 1
+          fi
+          cuerpo=$(jq -n --arg nombre "$nombre" --arg padre "$padre" '{branch: {name: $nombre, parent_id: $padre}}')
+          codigo=$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $NEON_API_KEY" -H "Content-Type: application/json" -d "$cuerpo" "$api")
+          case "$codigo" in
+            200|201) echo "Rama de respaldo «$nombre» creada en Neon." ;;
+            *) echo "::error::No se pudo crear la rama de respaldo «$nombre» (HTTP $codigo; si ya existe, borrala en Neon o elegí otra). No se migra."; exit 1 ;;
+          esac
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+
+      - name: Aplicar las migraciones
+        if: needs.validar.outputs.accion == 'aplicar'
+        run: npm run migrar -- --aplicar
+        env:
+          ZULUHUB_DB_MIGRACIONES: ${{ secrets.ZULUHUB_DB_DUENO_DIRECTA }}
+
+      - name: Instalar la clave de contexto (si el Environment la tiene)
+        if: needs.validar.outputs.accion == 'aplicar'
+        run: |
+          if [ -z "${ZULUHUB_CLAVE_CONTEXTO:-}" ]; then
+            echo "::notice::El Environment no tiene ZULUHUB_CLAVE_CONTEXTO: no se instala ninguna clave."
+            exit 0
+          fi
+          npm run instalar-clave
+        env:
+          ZULUHUB_DB_MIGRACIONES: ${{ secrets.ZULUHUB_DB_DUENO_DIRECTA }}
+          ZULUHUB_CLAVE_CONTEXTO: ${{ secrets.ZULUHUB_CLAVE_CONTEXTO }}

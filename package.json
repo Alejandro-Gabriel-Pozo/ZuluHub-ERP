@@ -21,6 +21,7 @@
     "analizar:muerto": "knip",
     "mutacion": "stryker run",
     "migrar": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/migrar-base.ts",
+    "instalar-clave": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/instalar-clave-de-contexto.ts",
     "build:web": "npm run build --workspace @zuluhub/web",
     "gate": "npm run typecheck && npm run lint && npm run format:check && npm run arquitectura && npm run analizar:muerto && npm test"
   },
