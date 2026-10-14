@@ -2,14 +2,10 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import { esTextoDeIdentificador } from "../../../primitivas/identificadores/marca";
 import {
-  TIPOS_DE_COMPROBANTE,
-  esTipoDeOrigen,
-  letraDeComprobante,
-  type LetraDeComprobante,
-  type TipoDeOrigen,
-} from "../dominio/comprobante-emitido";
-import { RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA } from "../dominio/punto-de-venta";
-import type { ClaveDeListado, FiltroDeListado } from "../persistencia/lecturas-de-comprobantes";
+  VALORES_DEL_FILTRO,
+  type ClaveDeListado,
+  type FiltroDeListado,
+} from "../persistencia/lecturas-de-comprobantes";
 
 /**
  * Los criterios del listado de comprobantes (spec H7 facturación §B.4.9) llevados de lo que manda la pantalla a
@@ -30,9 +26,6 @@ export const LARGO_MAXIMO_DEL_TEXTO = 80;
 /** Largo máximo del identificador de origen: el del CHECK `comprobante_origen_id_ck` de la base (en caracteres). */
 export const LARGO_MAXIMO_DEL_ORIGEN_ID = 100;
 
-/** Las letras que existen: las de los tipos de comprobante del dominio (no se repite la lista a mano). */
-const LETRAS = new Set<string>(TIPOS_DE_COMPROBANTE.map(letraDeComprobante));
-
 export type PedidoDeListado = Readonly<{
   /** Sin estado: todos menos los `DESCARTADO`. Con `DESCARTADO`: solo esos. */
   estado?: NonNullable<FiltroDeListado["estado"]>;
@@ -43,7 +36,7 @@ export type PedidoDeListado = Readonly<{
   /** Busca por nombre o documento del receptor. */
   texto?: string;
   /** La letra del tipo de comprobante: `A`, `B` o `C` (en mayúscula). Con `tipo`, deben coincidir. */
-  letra?: LetraDeComprobante;
+  letra?: NonNullable<FiltroDeListado["letra"]>;
   /**
    * El NÚMERO del punto de venta que imprime el comprobante (el de `PPPPP-NNNNNNNN`, entero de 1 a 99999), no su
    * id: es lo que la lista muestra. Es único por emisor: si la empresa tiene dos emisores con el mismo número,
@@ -51,7 +44,7 @@ export type PedidoDeListado = Readonly<{
    */
   puntoDeVenta?: number;
   /** De dónde nace el comprobante (la lista cerrada `TIPOS_DE_ORIGEN`). */
-  origenTipo?: TipoDeOrigen;
+  origenTipo?: NonNullable<FiltroDeListado["origenTipo"]>;
   /** El identificador exacto del origen. Solo tiene sentido dentro de un `origenTipo`: sin él, es un error. */
   origenId?: string;
   limite?: number;
@@ -122,7 +115,7 @@ function puntoDeVentaDelPedido(
   numero: number | undefined,
 ): Resultado<number | null, "PUNTO_DE_VENTA_INVALIDO"> {
   if (numero === undefined) return ok(null);
-  const { minimo, maximo } = RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA;
+  const { minimo, maximo } = VALORES_DEL_FILTRO.numeroDePuntoDeVenta;
   if (!Number.isInteger(numero) || numero < minimo || numero > maximo) {
     return err("PUNTO_DE_VENTA_INVALIDO");
   }
@@ -132,7 +125,7 @@ function puntoDeVentaDelPedido(
 /** El identificador de origen: como lo guarda la base (sin blancos en los extremos, de 1 a 100 caracteres). */
 function origenIdDelPedido(
   origenId: string | undefined,
-  origenTipo: TipoDeOrigen | null,
+  origenTipo: FiltroDeListado["origenTipo"],
 ): Resultado<string | null, "ORIGEN_ID_INVALIDO" | "ORIGEN_ID_SIN_TIPO"> {
   if (origenId === undefined) return ok(null);
   // Un id de origen se lee dentro de su tipo: el mismo id con otro tipo es otro origen.
@@ -162,11 +155,19 @@ export function criteriosDeListado(
   if (desde !== null && hasta !== null && desde > hasta) return err("FECHAS_INVERTIDAS");
   const texto = textoDeBusqueda(pedido.texto);
   if (!texto.ok) return texto;
-  const letra = deLaLista(pedido.letra, (t) => LETRAS.has(t), "LETRA_INVALIDA");
+  const letra = deLaLista(
+    pedido.letra,
+    (t) => (VALORES_DEL_FILTRO.letras as readonly string[]).includes(t),
+    "LETRA_INVALIDA",
+  );
   if (!letra.ok) return letra;
   const puntoDeVenta = puntoDeVentaDelPedido(pedido.puntoDeVenta);
   if (!puntoDeVenta.ok) return puntoDeVenta;
-  const origenTipo = deLaLista(pedido.origenTipo, esTipoDeOrigen, "ORIGEN_TIPO_INVALIDO");
+  const origenTipo = deLaLista(
+    pedido.origenTipo,
+    (t) => (VALORES_DEL_FILTRO.tiposDeOrigen as readonly string[]).includes(t),
+    "ORIGEN_TIPO_INVALIDO",
+  );
   if (!origenTipo.ok) return origenTipo;
   const origenId = origenIdDelPedido(pedido.origenId, origenTipo.valor);
   if (!origenId.ok) return origenId;

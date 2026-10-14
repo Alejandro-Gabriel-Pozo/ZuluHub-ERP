@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { fecha } from "../../../../test/utilidades/facturacion";
-import { TIPOS_DE_ORIGEN } from "../dominio/comprobante-emitido";
 import {
   LARGO_MAXIMO_DEL_ORIGEN_ID,
   LARGO_MAXIMO_DEL_TEXTO,
@@ -12,7 +11,11 @@ import {
   type ErrorDeCriterios,
   type PedidoDeListado,
 } from "./criterios-de-listado";
-import type { ClaveDeListado, FiltroDeListado } from "../persistencia/lecturas-de-comprobantes";
+import {
+  VALORES_DEL_FILTRO,
+  type ClaveDeListado,
+  type FiltroDeListado,
+} from "../persistencia/lecturas-de-comprobantes";
 
 const ID = "0192f3a4-5b6c-7d8e-9f01-23456789abcd";
 const CREADO_EN = "2026-10-12T15:30:45.123456Z";
@@ -141,6 +144,7 @@ describe("criteriosDeListado: el texto de búsqueda", () => {
 
 describe("criteriosDeListado: letra", () => {
   it("A, B y C pasan tal cual; sin letra no se filtra", () => {
+    expect([...VALORES_DEL_FILTRO.letras].sort()).toEqual(["A", "B", "C"]);
     for (const letra of ["A", "B", "C"] as const) {
       expect(criterios({ letra })).toEqual({ ...VACIO, letra });
     }
@@ -214,8 +218,8 @@ describe("criteriosDeListado: punto de venta", () => {
 
 describe("criteriosDeListado: origen", () => {
   it("cada tipo de la lista cerrada pasa tal cual, solo o con su id", () => {
-    expect(TIPOS_DE_ORIGEN.length).toBeGreaterThan(0);
-    for (const origenTipo of TIPOS_DE_ORIGEN) {
+    expect(VALORES_DEL_FILTRO.tiposDeOrigen.length).toBeGreaterThan(0);
+    for (const origenTipo of VALORES_DEL_FILTRO.tiposDeOrigen) {
       expect(criterios({ origenTipo })).toEqual({ ...VACIO, origenTipo });
       expect(criterios({ origenTipo, origenId: "ticket-9" })).toEqual({
         ...VACIO,

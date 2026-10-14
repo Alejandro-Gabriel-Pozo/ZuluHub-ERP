@@ -5,6 +5,7 @@ import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import {
   TIPOS_DE_COMPROBANTE,
+  TIPOS_DE_ORIGEN,
   letraDeComprobante,
   type LetraDeComprobante,
   type TipoDeComprobante,
@@ -16,6 +17,7 @@ import {
   type EstadoDeComprobanteArca,
 } from "../dominio/estados-de-comprobante";
 import { comprobanteId, type ComprobanteId } from "../dominio/identificadores";
+import { RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA } from "../dominio/punto-de-venta";
 import { deLaLista } from "./repositorios";
 import type { FiscalDb } from "./tablas";
 
@@ -36,6 +38,20 @@ import type { FiscalDb } from "./tablas";
 
 /** La zona con la que se pasa un instante a día civil cuando el comprobante todavía no tiene fecha de emisión. */
 export const ZONA_DE_ARGENTINA = "America/Argentina/Buenos_Aires";
+
+/**
+ * Lo que admiten los criterios de lista cerrada del filtro, tomado del dominio y no repetido a mano: las letras
+ * son las de los tipos de comprobante, los orígenes los de `TIPOS_DE_ORIGEN` (la misma lista que el CHECK de la
+ * base) y el punto de venta el rango de su número. Viven acá, junto al tipo del filtro, porque la consulta por
+ * pantalla no importa el dominio (regla `consultas-sin-dominio`) y valida el pedido contra ESTO.
+ */
+export const VALORES_DEL_FILTRO = {
+  letras: [
+    ...new Set(TIPOS_DE_COMPROBANTE.map(letraDeComprobante)),
+  ] as readonly LetraDeComprobante[],
+  tiposDeOrigen: TIPOS_DE_ORIGEN as readonly TipoDeOrigen[],
+  numeroDePuntoDeVenta: RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA,
+} as const;
 
 /** La clave de paginación: el `creado_en` de la última fila vista (con microsegundos) y su `id`. */
 export type ClaveDeListado = Readonly<{ creadoEn: string; id: ComprobanteId }>;
