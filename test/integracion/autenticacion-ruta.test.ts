@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { crearResolucionDeHost } from "../../src/adaptadores/postgres/resolucion-de-host";
 import { atenderRutaDeIngreso } from "../../src/composicion/ruta-de-ingreso";
 import type { Autenticacion } from "../../src/puertos/autenticacion";
+import { ENCABEZADO_DE_IP } from "../../src/capacidades/autenticacion/host-de-autenticacion";
 import { crearBaseAparte } from "./entorno";
 import {
   Navegador,
@@ -64,7 +65,7 @@ describe.skipIf(base === null)(
         headers: {
           host,
           origin: `https://${host}`,
-          "x-forwarded-for": ipUnica(),
+          [ENCABEZADO_DE_IP]: ipUnica(),
           ...(cookie === undefined ? {} : { cookie }),
           ...(metodo === "POST" ? { "content-type": "application/json" } : {}),
         },
@@ -138,6 +139,36 @@ describe.skipIf(base === null)(
         'select host from autenticacion.session order by "createdAt" desc limit 1',
       );
       expect(rows[0]?.host).toBe(hostApp);
+    });
+
+    it("S1: un idToken mandado directo a la ruta es 400 y no abre ninguna sesión", async () => {
+      const antes = Number(
+        (await dueno.query<{ n: string }>("select count(*) as n from autenticacion.session"))
+          .rows[0]?.n,
+      );
+      const ataque = new Request(`https://servidor.interno.test/api/auth/sign-in/social`, {
+        method: "POST",
+        headers: {
+          host: hostApp,
+          origin: `https://${hostApp}`,
+          [ENCABEZADO_DE_IP]: ipUnica(),
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          provider: "google",
+          callbackURL: "/",
+          idToken: { token: "a".repeat(20) },
+        }),
+      });
+      const r = await atenderRutaDeIngreso(ataque, dependencias());
+      expect(r.status).toBe(400);
+      expect(await r.json()).toEqual({ codigo: "SOLICITUD_INVALIDA" });
+      expect(r.headers.getSetCookie()).toEqual([]);
+      const despues = Number(
+        (await dueno.query<{ n: string }>("select count(*) as n from autenticacion.session"))
+          .rows[0]?.n,
+      );
+      expect(despues).toBe(antes);
     });
 
     it("el host se lee de la cabecera host, nunca de X-Forwarded-Host: un host ajeno no se hace pasar por uno de aplicación", async () => {
@@ -246,7 +277,7 @@ describe.skipIf(base === null)(
       registros.length = 0;
       try {
         const r = await atenderRutaDeIngreso(
-          pedido(hostApp, "/api/auth/get-session", "GET", "__Secure-zh_emp.session_token=x.y"),
+          pedido(hostApp, "/api/auth/get-session", "GET", "__Host-zh_emp.session_token=x.y"),
           {
             ...dependencias(rota.autenticacion),
             azar: () => new Uint8Array([0x01, 0x02, 0x03, 0x04]),

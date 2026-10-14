@@ -57,6 +57,15 @@ export function politicaDeContenido(nonce: string): string {
 export const esIndexable = (superficie: SuperficieDeRespuesta, produccion: boolean): boolean =>
   produccion && superficie === "LANDING";
 
+/**
+ * HSTS: solo el host que responde, SIN `includeSubDomains`. Los hosts son dominios de CLIENTES (APP, CARTA,
+ * LANDING y las rutas de sistema en cualquiera de ellos): un cliente puede tener subdominios que no
+ * controlamos (su correo, un sitio viejo sin https), y obligarlos a https desde acá los rompería sin
+ * aviso. Si se quita esta decisión, un navegador que visitó un host nuestro deja de aceptar http en
+ * TODOS los subdominios del cliente.
+ */
+const HSTS = "max-age=31536000";
+
 /** Las cabeceras de toda respuesta de la puerta, de cualquier superficie. */
 export function cabecerasDe(
   superficie: SuperficieDeRespuesta,
@@ -65,7 +74,7 @@ export function cabecerasDe(
 ): Readonly<Record<string, string>> {
   return Object.freeze({
     "Content-Security-Policy": politicaDeContenido(nonce),
-    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "Strict-Transport-Security": HSTS,
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "same-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",

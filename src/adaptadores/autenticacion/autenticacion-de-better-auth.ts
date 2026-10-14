@@ -10,6 +10,7 @@ import {
   RUTA_BASE_DE_INGRESO,
   configuracionDeHost,
 } from "../../capacidades/autenticacion/host-de-autenticacion";
+import { cuerpoPublicoDeIngresoSocial } from "../../capacidades/autenticacion/ingreso-social";
 import { rutaPermitida } from "../../capacidades/autenticacion/rutas-permitidas";
 import {
   LIMITES_DE_SESION,
@@ -40,6 +41,8 @@ export type ConfiguracionDeAutenticacion = Readonly<{
   /** Solo para las pruebas: el reloj. */
   reloj?: () => Date;
   limites?: LimitesDeSesion;
+  /** Encabezado de confianza para la IP del límite de intentos (S3); por omisión `ENCABEZADO_DE_IP`. Un nombre, no un secreto. */
+  encabezadoDeIp?: string;
   /** A dónde vuelve la persona si el ingreso falla. La pantalla de ingreso es de W5. */
   rutaDeError?: string;
   /** Registro del servidor (con detalle). Nada de esto sale en una respuesta. */
@@ -105,6 +108,7 @@ export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion):
         google: c.google,
         limites,
         reloj,
+        ...(c.encabezadoDeIp === undefined ? {} : { encabezadoDeIp: c.encabezadoDeIp }),
         rutaDeError,
         registrar,
       }),
@@ -210,6 +214,20 @@ export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion):
         cabeceras.delete("content-length");
         cabeceras.set("Content-Type", "application/json");
         const cuerpo = cuerpoPublicoDeSesion(await respuesta.text());
+        return new Response(JSON.stringify(cuerpo), {
+          status: respuesta.status,
+          headers: cabeceras,
+        });
+      }
+      if (origen.pathname === `${RUTA_BASE_DE_INGRESO}/sign-in/social`) {
+        // S1: lo único que sale es la dirección de Google. Si la librería devolviera una sesión (con su
+        // `token` y el usuario) en el cuerpo, no llega al navegador: se corta con un error sin detalle.
+        const cuerpo = cuerpoPublicoDeIngresoSocial(await respuesta.text());
+        if (cuerpo === null) {
+          throw falloInterno(new Error("el inicio del ingreso no devolvió una dirección https"));
+        }
+        cabeceras.delete("content-length");
+        cabeceras.set("Content-Type", "application/json");
         return new Response(JSON.stringify(cuerpo), {
           status: respuesta.status,
           headers: cabeceras,

@@ -1,3 +1,6 @@
+import { CODIGO_DE_SOLICITUD_GENERICO } from "../capacidades/autenticacion/codigos-de-ingreso";
+import { RUTA_BASE_DE_INGRESO } from "../capacidades/autenticacion/host-de-autenticacion";
+import { cuerpoDeIngresoSocialValido } from "../capacidades/autenticacion/ingreso-social";
 import { estadoHttpDe } from "../capacidades/experiencia/respuesta";
 import { respuestaDeFalla as falloSinDetalle } from "./a-respuesta";
 import { ErrorDeEntorno } from "./entorno";
@@ -13,7 +16,11 @@ import type { ResolucionDeHost } from "../puertos/marcas";
  *     (landing, carta, desconocido, retirado) la respuesta es el 404 NEUTRO de siempre, sin cuerpo ni
  *     cookies. Es la misma respuesta para todo lo que no se sirve (sin oráculo).
  *  2. Si el host es de una aplicación, atiende la autenticación DE ESE HOST (`host` normalizado).
- *  3. Un fallo no sale con detalle (ADR-016): el traductor único (`a-respuesta.ts`) manda el detalle al
+ *  3. `POST sign-in/social` (empezar el ingreso con Google) solo acepta `provider` y `callbackURL` (S1): un
+ *     `idToken` o `accessToken` mandado directo se rechaza con 400 antes de llegar a la librería, que con
+ *     ellos abriría una sesión sin pasar por Google. Es la segunda barrera: la primera es
+ *     `disableIdTokenSignIn` en la configuración de la librería.
+ *  4. Un fallo no sale con detalle (ADR-016): el traductor único (`a-respuesta.ts`) manda el detalle al
  *     registro del servidor y el pedido recibe un error genérico con una referencia `ZH-…` para que soporte
  *     la busque. Una base que no responde al
  *     resolver el host es 503, nunca el 404 neutro ni la marca principal.
@@ -51,6 +58,15 @@ function respuestaDeFalla(
   });
 }
 
+const RUTA_DE_INGRESO_SOCIAL = `${RUTA_BASE_DE_INGRESO}/sign-in/social`;
+
+function solicitudInvalida(): Response {
+  return new Response(JSON.stringify({ codigo: CODIGO_DE_SOLICITUD_GENERICO }), {
+    status: 400,
+    headers: { ...SIN_CACHE, "Content-Type": "application/json" },
+  });
+}
+
 export async function atenderRutaDeIngreso(
   pedido: Request,
   dependencias: DependenciasDeLaRuta,
@@ -67,6 +83,10 @@ export async function atenderRutaDeIngreso(
       );
     }
     if (resolucion.valor === null) return respuestaNeutra();
+    if (pedido.method === "POST" && new URL(pedido.url).pathname === RUTA_DE_INGRESO_SOCIAL) {
+      // `clone`: la librería lee el cuerpo después, y un cuerpo solo se lee una vez.
+      if (!cuerpoDeIngresoSocialValido(await pedido.clone().text())) return solicitudInvalida();
+    }
     return await dependencias.autenticacion().manejar(pedido, resolucion.valor.host);
   } catch (error) {
     // El detalle de un fallo de entorno ya lo registró la composición (con los NOMBRES, nunca los valores).

@@ -1,3 +1,4 @@
+import { ENCABEZADO_DE_IP } from "../capacidades/autenticacion/host-de-autenticacion";
 import { decidirEmpresa } from "../capacidades/experiencia/empresa-elegida";
 import { origenEsPropio } from "../capacidades/experiencia/origen";
 import { hostDelPedido } from "../capacidades/experiencia/puerta";
@@ -265,13 +266,18 @@ export type PedidoDeAutenticacion = Readonly<{
   encabezados: Headers;
 }>;
 
-/** Los encabezados que la librería necesita de verdad: la cookie y, para su límite de pedidos, la IP y el agente. */
+/**
+ * Los encabezados que la librería necesita de verdad: la cookie y, para su límite de pedidos, la IP y el agente.
+ * La IP es SOLO la del encabezado de confianza (`ENCABEZADO_DE_IP`, S3): `x-forwarded-for` ya no se copia. La
+ * librería no lo lee (su configuración lista un único encabezado), y copiarlo dejaría a un cambio futuro de
+ * configuración confiar sin querer en un valor que el cliente puede mandar.
+ */
 function encabezadosParaLaLibreria(p: PedidoDeAutenticacion): Headers {
   const salida = new Headers({
     origin: `https://${p.host}`,
     "content-type": "application/json",
   });
-  for (const nombre of ["cookie", "x-forwarded-for", "user-agent"]) {
+  for (const nombre of ["cookie", ENCABEZADO_DE_IP, "user-agent"]) {
     const valor = p.encabezados.get(nombre);
     if (valor !== null) salida.set(nombre, valor);
   }

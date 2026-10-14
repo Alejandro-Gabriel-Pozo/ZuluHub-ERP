@@ -36,19 +36,26 @@ function rutaPublicaDe(codigo: string): string {
   return `/${encodeURIComponent(codigo)}`;
 }
 
-/** La carta lista para pintar, o `null` si no existe (misma respuesta para cualquier código malo). */
-export async function cartaParaLaPantalla(codigo: string): Promise<CartaParaLaPantalla | null> {
-  const carta = await cartas.porCodigo(codigo);
+/**
+ * La carta lista para pintar, o `null` si no existe en ESA marca (misma respuesta para cualquier código malo).
+ * `marcaId` es el de la puerta resuelta para el host del pedido (`exigirPuerta("CARTA")`), nunca un dato del cliente (S2).
+ */
+export async function cartaParaLaPantalla(
+  marcaId: string,
+  codigo: string,
+): Promise<CartaParaLaPantalla | null> {
+  const carta = await cartas.porCodigo(marcaId, codigo);
   if (carta === null) return null;
   return { vista: armarVistaDeCarta(carta, rutaPublicaDe(codigo)), textos: textosDeCarta({}) };
 }
 
 /** Un producto de la carta por el último tramo de su dirección (`<slug>-<h8>`), o `null` si ya no está. */
 export async function productoParaLaPantalla(
+  marcaId: string,
   codigo: string,
   segmento: string,
 ): Promise<(CartaParaLaPantalla & Readonly<{ producto: VistaDeProducto }>) | null> {
-  const carta = await cartas.porCodigo(codigo);
+  const carta = await cartas.porCodigo(marcaId, codigo);
   if (carta === null) return null;
   const vista = armarVistaDeCarta(carta, rutaPublicaDe(codigo));
   const resuelto = resolverProductoPorSegmento(

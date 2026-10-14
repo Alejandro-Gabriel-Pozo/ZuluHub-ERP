@@ -3,7 +3,10 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { opcionesDeInstancia } from "../../src/adaptadores/autenticacion/opciones";
 import { ErrorInternoDeIngreso } from "../../src/adaptadores/autenticacion/autenticacion-de-better-auth";
-import { configuracionDeHost } from "../../src/capacidades/autenticacion/host-de-autenticacion";
+import {
+  ENCABEZADO_DE_IP,
+  configuracionDeHost,
+} from "../../src/capacidades/autenticacion/host-de-autenticacion";
 import { RUTAS_PERMITIDAS } from "../../src/capacidades/autenticacion/rutas-permitidas";
 import { LIMITES_DE_SESION } from "../../src/capacidades/autenticacion/vigencia-de-sesion";
 import { RUTAS_BLOQUEADAS } from "../../src/adaptadores/autenticacion/rutas-bloqueadas";
@@ -149,11 +152,11 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
       expect(rows[0]?.idToken).toBeNull();
     });
 
-    it("la cookie: solo del host (sin Domain), HttpOnly, Secure, SameSite=Lax, prefijo __Secure-, 15 minutos", async () => {
+    it("la cookie: solo del host (sin Domain), HttpOnly, Secure, SameSite=Lax, prefijo __Host-, 15 minutos", async () => {
       const { n } = await ingresado();
       const cookies = n.cookiesDe(HOST_A);
       // Una sola: la de sesión. Sin caché de sesión en cookie (`session_data`).
-      expect(cookies.map((c) => c.nombre)).toEqual(["__Secure-zh_emp.session_token"]);
+      expect(cookies.map((c) => c.nombre)).toEqual(["__Host-zh_emp.session_token"]);
       const crudo = cookies[0]?.crudo ?? "";
       expect(crudo).toMatch(/;\s*HttpOnly/i);
       expect(crudo).toMatch(/;\s*Secure/i);
@@ -589,7 +592,7 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
           }),
           new Navegador().pedir(rota.autenticacion, HOST_A, "GET", "/api/auth/get-session"),
           rota.autenticacion.sesionDe(
-            { headers: new Headers({ cookie: "__Secure-zh_emp.session_token=x.y" }) },
+            { headers: new Headers({ cookie: "__Host-zh_emp.session_token=x.y" }) },
             HOST_A,
           ),
         ];
@@ -610,6 +613,123 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
       } finally {
         await rota.cerrar();
       }
+    });
+  });
+
+  describe("S1: sin ingreso con un idToken mandado directo", () => {
+    const ataque = {
+      provider: "google",
+      callbackURL: "/",
+      idToken: { token: "a".repeat(20), nonce: "b".repeat(8) },
+    };
+
+    it("la librería lo rechaza (404 ID_TOKEN_NOT_SUPPORTED): sin sesión, sin usuario, sin cookie y sin token en el cuerpo", async () => {
+      const antes = [await cuenta("user"), await cuenta("account"), await cuenta("session")];
+      const n = new Navegador();
+      const r = await n.pedir(a.autenticacion, HOST_A, "POST", "/api/auth/sign-in/social", {
+        cuerpo: ataque,
+      });
+      expect(r.estado).toBe(404);
+      expect(r.json()).toEqual({ codigo: "ID_TOKEN_NOT_SUPPORTED" });
+      expect(r.texto).not.toMatch(/token"\s*:\s*"[^"]/i);
+      expect(n.cookiesDe(HOST_A)).toEqual([]);
+      expect([await cuenta("user"), await cuenta("account"), await cuenta("session")]).toEqual(
+        antes,
+      );
+    });
+
+    it("el inicio normal devuelve solo la dirección de Google: sin token de sesión ni usuario en el cuerpo", async () => {
+      const r = await new Navegador().pedir(
+        a.autenticacion,
+        HOST_A,
+        "POST",
+        "/api/auth/sign-in/social",
+        {
+          cuerpo: { provider: "google", callbackURL: "/" },
+        },
+      );
+      expect(r.estado).toBe(200);
+      expect(Object.keys(r.json() as object).sort()).toEqual(["redirect", "url"]);
+    });
+
+    it("DEBILITAMIENTO propio: sin `disableIdTokenSignIn` el mismo pedido abre sesión y devuelve su token; la sonda de arriba lo detecta", async () => {
+      const c = configuracionDeHost(HOST_A);
+      if (!c.ok) throw new Error("host inválido");
+      const opciones = opcionesDeInstancia({
+        configuracion: c.valor,
+        db: a.conexion.db,
+        secreto: "s".repeat(40),
+        google: { clientId: proveedor.clientId, clientSecret: proveedor.clientSecret },
+        limites: LIMITES_DE_SESION,
+        reloj: () => new Date(),
+        rutaDeError: "/ingreso",
+        registrar: () => undefined,
+      });
+      const google = (opciones.socialProviders ?? {})["google"];
+      expect((google as { disableIdTokenSignIn?: boolean }).disableIdTokenSignIn).toBe(true);
+      const perfil = perfilAlAzar();
+      const debil = betterAuth({
+        ...opciones,
+        socialProviders: {
+          google: {
+            ...(google as object),
+            clientId: proveedor.clientId,
+            clientSecret: proveedor.clientSecret,
+            disableIdTokenSignIn: false,
+            // El proveedor «verifica» cualquier token: lo que haría Google con uno válido pero ajeno.
+            verifyIdToken: () => Promise.resolve(true),
+            getUserInfo: (() =>
+              Promise.resolve({
+                user: { id: perfil.sub, email: perfil.email, emailVerified: true, name: "x" },
+                data: { sub: perfil.sub },
+              })) as never,
+          },
+        },
+      });
+      const r = await debil.handler(
+        new Request(`https://${HOST_A}/api/auth/sign-in/social`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            origin: `https://${HOST_A}`,
+            [ENCABEZADO_DE_IP]: "198.51.100.230",
+          },
+          body: JSON.stringify(ataque),
+        }),
+      );
+      const cuerpo = (await r.json()) as { token?: string };
+      // El ataque FUNCIONA sin la opción: 200, token de sesión en el cuerpo y cookie de sesión.
+      expect(r.status).toBe(200);
+      expect(typeof cuerpo.token).toBe("string");
+      expect(r.headers.getSetCookie().join(";")).toContain("session_token");
+      // Y por lo tanto la sonda de la prueba 1 (404 + código) no se cumpliría: la prueba muerde.
+      expect(r.status).not.toBe(404);
+    });
+  });
+
+  describe("M1: todas las cookies de ingreso llevan __Host-", () => {
+    it("las del inicio del ingreso (estado, PKCE): prefijo __Host-, Secure, Path=/ y sin Domain", async () => {
+      const n = new Navegador();
+      await n.pedir(a.autenticacion, HOST_A, "POST", "/api/auth/sign-in/social", {
+        cuerpo: { provider: "google", callbackURL: "/" },
+      });
+      const cookies = n.cookiesDe(HOST_A);
+      expect(cookies.length).toBeGreaterThan(0);
+      for (const c of cookies) {
+        expect(c.nombre.startsWith("__Host-zh_emp."), c.nombre).toBe(true);
+        expect(c.crudo, c.nombre).toMatch(/;\s*Secure/i);
+        expect(c.crudo, c.nombre).toMatch(/;\s*Path=\/(;|$)/i);
+        expect(c.crudo, c.nombre).not.toMatch(/Domain=/i);
+      }
+    });
+
+    it("la cookie vieja con __Secure- ya no se toma por la sesión", async () => {
+      const { n } = await ingresado();
+      const cookie = n.cookiesDe(HOST_A)[0];
+      const vieja = {
+        headers: new Headers({ cookie: `__Secure-zh_emp.session_token=${cookie?.valor}` }),
+      };
+      expect(await a.autenticacion.sesionDe(vieja, HOST_A)).toBeNull();
     });
   });
 
@@ -638,6 +758,47 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
         { cuerpo: { provider: "google", callbackURL: "/" } },
       );
       expect(otro.estado).toBe(200);
+    });
+
+    it("S3: un x-forwarded-for falseado NO cambia la clave del límite: se cuenta por el encabezado de confianza", async () => {
+      const ipReal = "198.51.100.211";
+      const n = new Navegador(ipReal);
+      const estados: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        const r = await n.pedir(a.autenticacion, HOST_A, "POST", "/api/auth/sign-in/social", {
+          cuerpo: { provider: "google", callbackURL: "/" },
+          // Cada pedido jura venir de una IP distinta: si la librería le creyera, nunca se frenaría.
+          encabezados: { "x-forwarded-for": `203.0.113.${100 + i}` },
+        });
+        estados.push(r.estado);
+      }
+      expect(estados).toEqual([200, 200, 200, 429, 429]);
+      const { rows } = await dueno.query<{ key: string }>(
+        `select key from autenticacion."rateLimit" where key like '203.0.113.%' or key like '${ipReal}%'`,
+      );
+      expect(rows.length).toBeGreaterThan(0);
+      for (const { key } of rows) expect(key.startsWith(`${ipReal}|`), key).toBe(true);
+    });
+
+    it("S3: sin el encabezado de confianza, un x-forwarded-for falseado tampoco da una IP: balde compartido, que frena igual", async () => {
+      const n = new Navegador(null);
+      const estados: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        const r = await n.pedir(a.autenticacion, HOST_A, "POST", "/api/auth/sign-in/social", {
+          cuerpo: { provider: "google", callbackURL: "/" },
+          encabezados: { "x-forwarded-for": `203.0.113.${150 + i}` },
+        });
+        estados.push(r.estado);
+      }
+      expect(estados.slice(3)).toEqual([429, 429]);
+      const { rows } = await dueno.query<{ key: string }>(
+        `select key from autenticacion."rateLimit" where key like '203.0.113.%'`,
+      );
+      expect(rows).toEqual([]);
+    });
+
+    it("S3: el encabezado de confianza es el fijado (y x-forwarded-for no está entre los que lee la librería)", () => {
+      expect(ENCABEZADO_DE_IP).toBe("x-vercel-forwarded-for");
     });
   });
 

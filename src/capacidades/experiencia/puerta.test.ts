@@ -315,7 +315,7 @@ describe("rutas de sistema: el cron y la salud responden en cualquier host", () 
         const c = decidir(ruta, resolucion, {}, true).encabezadosDeRespuesta;
         expect(c["X-Robots-Tag"], cual).toBe("noindex");
         expect(c["Cache-Control"], cual).toBe("private, no-store");
-        expect(c["Strict-Transport-Security"], cual).toBe("max-age=31536000; includeSubDomains");
+        expect(c["Strict-Transport-Security"], cual).toBe("max-age=31536000");
         expect(
           Object.keys(c).map((n) => n.toLowerCase()),
           cual,

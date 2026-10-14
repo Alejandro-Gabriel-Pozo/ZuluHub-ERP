@@ -206,6 +206,32 @@ describe("crearGuardaDeMigracion", () => {
     expect(c.informes).toEqual(["no se pudo leer la última migración aplicada: Error"]);
   });
 
+  it("falla cerrado aunque la lectura LANCE de inmediato (sin devolver una promesa) o venga vacía", async () => {
+    const informes: string[] = [];
+    const lanza = crearGuardaDeMigracion({
+      leerUltima: () => {
+        throw Object.assign(new Error("permission denied for table migracion"), { code: "42501" });
+      },
+      ahora: () => 0,
+      alNoEstarAlDia: (d) => informes.push(d),
+    });
+    expect(await lanza()).toBe(false);
+    expect(informes).toEqual(["no se pudo leer la última migración aplicada: Error 42501"]);
+    // Sin ninguna fila de migración (tabla vacía) tampoco es «al día».
+    expect(await armar([null]).guarda()).toBe(false);
+  });
+
+  it("sin permiso de lectura no se memoriza ningún «sí»: apenas se otorga, la próxima mirada lo nota", async () => {
+    const sinPermiso = Object.assign(new Error("permission denied"), { code: "42501" });
+    const g = armar([sinPermiso, sinPermiso, "0012_respaldo.sql"]);
+    expect(await g.guarda()).toBe(false);
+    expect(await g.guarda()).toBe(false);
+    g.avanzar(ESPERA_ENTRE_VERIFICACIONES_EN_MS);
+    expect(await g.guarda()).toBe(false);
+    g.avanzar(ESPERA_ENTRE_VERIFICACIONES_EN_MS);
+    expect(await g.guarda()).toBe(true);
+  });
+
   it("después de una falla de lectura, vuelve a intentar pasada la espera", async () => {
     const g = armar([new Error("caída"), "0012_respaldo.sql"]);
     expect(await g.guarda()).toBe(false);

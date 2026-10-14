@@ -205,7 +205,11 @@ describe.skipIf(base === null)("la puerta real contra la base con el rol públic
   }
   async function layoutDeApp(): Promise<string | null> {
     const { default: Layout } = await import("../../apps/web/app/s/app/layout");
-    return conNoEncontrada(async () => renderToStaticMarkup(await Layout({ children: null })));
+    // Desde W5 el layout solo pone el tema; la cabecera de la marca la trae cada pantalla (aquí, el 404 de la app).
+    const { default: NoEncontrada } = await import("../../apps/web/app/s/app/not-found");
+    return conNoEncontrada(async () =>
+      renderToStaticMarkup(await Layout({ children: await NoEncontrada() })),
+    );
   }
   const pedido = (host: string, ruta = "/") =>
     new NextRequest(`https://puerta.test${ruta}`, { headers: host === "" ? {} : { host } });

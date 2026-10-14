@@ -4,10 +4,10 @@ import { cookieParaNext } from "./set-cookie";
 describe("cookieParaNext", () => {
   it("la cookie de sesión de la librería: nombre, valor decodificado una vez y todos sus atributos", () => {
     const c = cookieParaNext(
-      "__Secure-zh_emp.session_token=abc.def%2Bghi%3D; Max-Age=900; Path=/; HttpOnly; Secure; SameSite=Lax",
+      "__Host-zh_emp.session_token=abc.def%2Bghi%3D; Max-Age=900; Path=/; HttpOnly; Secure; SameSite=Lax",
     );
     expect(c).toEqual({
-      nombre: "__Secure-zh_emp.session_token",
+      nombre: "__Host-zh_emp.session_token",
       valor: "abc.def+ghi=",
       maxAge: 900,
       path: "/",

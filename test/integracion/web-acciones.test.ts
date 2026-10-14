@@ -1,3 +1,4 @@
+import { ENCABEZADO_DE_IP } from "../../src/capacidades/autenticacion/host-de-autenticacion";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactNode } from "react";
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it, vi } from "vitest";
@@ -131,7 +132,7 @@ function comoNavegador(host: string, origen: string | null = `https://${host}`):
   const cookies = [...estado.jar].map(([n, v]) => `${n}=${encodeURIComponent(v)}`).join("; ");
   estado.encabezados = new Headers({
     host,
-    "x-forwarded-for": ipUnica(),
+    [ENCABEZADO_DE_IP]: ipUnica(),
     ...(cookies === "" ? {} : { cookie: cookies }),
     ...(origen === null ? {} : { origin: origen }),
   });
@@ -296,7 +297,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       expect(await redirigeA(() => acciones.entrarALaEmpresa(f))).toBe("/");
       expect(estado.escrituras).toEqual([
         {
-          nombre: "zh_empresa",
+          nombre: "__Host-zh_empresa",
           valor: e.empresa,
           opciones: { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 2_592_000 },
         },
@@ -352,7 +353,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       );
       expect(destinos).toEqual(["/", "/"]);
       expect(new Set(estado.escrituras.map((x) => `${x.nombre}=${x.valor}`))).toEqual(
-        new Set([`zh_empresa=${e.empresa}`]),
+        new Set([`__Host-zh_empresa=${e.empresa}`]),
       );
       expect(
         JSON.stringify(
@@ -369,13 +370,13 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       const persona = await personaVinculada(mundo, yo.sesion);
       await empresaDeLaMarca(mundo, mundo.marcaA, persona, "GERENTE");
       conSesionDe(yo, HOST_A);
-      estado.jar.set("zh_empresa", "una-empresa");
-      estado.jar.set("zh_invitacion", "un-token");
+      estado.jar.set("__Host-zh_empresa", "una-empresa");
+      estado.jar.set("__Host-zh_invitacion", "un-token");
       comoNavegador(HOST_A);
       expect(await filasDeSesion(yo)).toBe(1);
       expect(await redirigeA(() => acciones.cerrarLaSesion())).toBe("/ingreso");
       expect(await filasDeSesion(yo)).toBe(0);
-      expect(estado.borrados.sort()).toEqual(["zh_empresa", "zh_invitacion"]);
+      expect(estado.borrados.sort()).toEqual(["__Host-zh_empresa", "__Host-zh_invitacion"]);
       // La cookie de sesión se escribió vacía y vencida (el navegador la borra).
       const sesion = estado.escrituras.find((x) => x.nombre.endsWith("session_token"));
       expect(sesion?.valor).toBe("");
@@ -427,9 +428,9 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       const f = new FormData();
       f.set("invitacion", "token-de-la-invitacion");
       await redirigeA(() => acciones.ingresarConGoogle(f));
-      const cookie = estado.escrituras.find((x) => x.nombre === "zh_invitacion");
+      const cookie = estado.escrituras.find((x) => x.nombre === "__Host-zh_invitacion");
       expect(cookie).toEqual({
-        nombre: "zh_invitacion",
+        nombre: "__Host-zh_invitacion",
         valor: "token-de-la-invitacion",
         opciones: { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 900 },
       });
@@ -457,11 +458,11 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       );
       const yo = await ingresarEn(mundo, HOST_A, perfilAlAzar({ email }));
       conSesionDe(yo, HOST_A);
-      estado.jar.set("zh_invitacion", token);
+      estado.jar.set("__Host-zh_invitacion", token);
       comoNavegador(HOST_A);
       const primera = await acciones.aceptarLaInvitacion({ token, clave: "intento-1" });
       expect(primera).toEqual({ ok: true, dato: { yaEstabaAceptada: false } });
-      expect(estado.borrados).toEqual(["zh_invitacion"]);
+      expect(estado.borrados).toEqual(["__Host-zh_invitacion"]);
       // Repetida (reintento con la MISMA clave, o con otra): el mismo resultado exitoso y una sola membresía.
       comoNavegador(HOST_A);
       const segunda = await acciones.aceptarLaInvitacion({ token, clave: "intento-1" });
@@ -617,7 +618,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       expect(sinSesion).toContain("primero ingresá con la cuenta de Google");
       expect(sinSesion).toContain('name="invitacion" value="tok-123"');
       // El token también puede venir de la cookie del servidor (después de pasar por Google).
-      estado.jar.set("zh_invitacion", "tok-cookie");
+      estado.jar.set("__Host-zh_invitacion", "tok-cookie");
       comoNavegador(HOST_A);
       expect(html(await Invitacion({ searchParams: consulta() }))).toContain('value="tok-cookie"');
       const yo = await ingresarEn(mundo, HOST_A);
@@ -705,13 +706,13 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       comoNavegador(HOST_A);
       expect(await redirigeA(() => Inicio())).toBe("/empresa");
       // Con la cookie de la primera: entra a esa.
-      estado.jar.set("zh_empresa", e1.empresa);
+      estado.jar.set("__Host-zh_empresa", e1.empresa);
       comoNavegador(HOST_A);
       expect(html((await Inicio()) as ReactNode)).toContain("Estás en");
 
       // La cookie de una empresa de la otra marca: «sin permiso», nada de la otra marca.
       const deB = await empresaDeLaMarca(mundo, mundo.marcaB, persona, "GERENTE");
-      estado.jar.set("zh_empresa", deB.empresa);
+      estado.jar.set("__Host-zh_empresa", deB.empresa);
       comoNavegador(HOST_A);
       const sinPermiso = html(await Inicio());
       expect(sinPermiso).toContain("Sin permiso");
