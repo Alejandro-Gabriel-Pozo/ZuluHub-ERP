@@ -13,12 +13,14 @@ import type { PuntoDeVentaId, SolicitudId } from "../dominio/identificadores";
 import {
   OPCIONES_DE_NUMERACION,
   cerrarSerie,
+  cerrarSerieFueraDeSecuencia,
   iniciarSerie,
   reservarNumero,
   resincronizarSerie,
   type ErrorDeNumeracion,
   type ErrorDeResincronizacion,
   type OpcionesDeNumeracion,
+  type ResolucionFueraDeSecuencia,
 } from "../dominio/numeracion";
 import { datosDeSerie, empresaOpera, entidadDeSerie, puntoDeVentaParaEmision } from "./comun";
 import type { TxDeNumeracion } from "./contrato";
@@ -304,6 +306,84 @@ export async function cerrarEnTx(
     },
   });
   return ok({ desenlace, numero: entrada.numero, yaCerrada: false });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Cerrar un rechazo fuera de secuencia (10016)
+// ---------------------------------------------------------------------------------------------
+
+export type EntradaDeCerrarFueraDeSecuencia = Readonly<{
+  puntoDeVentaId: PuntoDeVentaId;
+  tipo: TipoDeComprobante;
+  ambiente: Ambiente;
+  solicitud: SolicitudId;
+  /** El número que ARCA rechazó por fuera de secuencia: el de la reserva. */
+  numero: bigint;
+  /** El rechazo tal como lo dio ARCA (con el 10016): se audita por sus códigos. */
+  resultado: ResultadoDeAutorizacionArca;
+  /** El último autorizado que informó ARCA (consultado FUERA de la transacción); `null` si no respondió. */
+  ultimoDeArca: bigint | null;
+}>;
+
+export type SalidaDeCerrarFueraDeSecuencia = Readonly<{ resolucion: ResolucionFueraDeSecuencia }>;
+
+/**
+ * Cerrar la reserva de un número que ARCA rechazó por fuera de secuencia (spec H7 facturación §B.5.4, tabla
+ * de la respuesta 10016). Dentro de la transacción de quien llama, que ya movió (o va a mover) el comprobante a
+ * `RECHAZADO` en ESTA misma transacción: la empresa opera y el dominio decide (`cerrarSerieFueraDeSecuencia`):
+ *
+ *  - ARCA en el último número de la serie → `LIBRE` sin avanzar, auditoría `NUMERO_DE_COMPROBANTE_RECHAZADO`
+ *    (igual que cualquier rechazo);
+ *  - ARCA en otro número, o sin respuesta → `BLOQUEADA` sin avanzar con el motivo de desfase, auditoría
+ *    `SERIE_BLOQUEADA` con lo que informó ARCA (como la reconciliación). La destraba el gerente.
+ *
+ * La serie tiene que seguir `EN_CURSO` con esta solicitud y este número: lo garantiza el comprobante
+ * `EN_VALIDACION` que la usa (la base no deja soltar esa reserva sin resolverlo), así que otra cosa es un
+ * defecto de quien llama (`SOLICITUD_NO_VIGENTE`, `NUMERO_INVALIDO`) y no se escribe nada. Repetirla no existe:
+ * quien llama solo la invoca desde `EN_VALIDACION`, y después el comprobante ya no lo está.
+ */
+export async function cerrarFueraDeSecuenciaEnTx(
+  tx: TxDeNumeracion,
+  contexto: ContextoOperativo,
+  entrada: EntradaDeCerrarFueraDeSecuencia,
+): Promise<Resultado<SalidaDeCerrarFueraDeSecuencia, ErrorPropioAlCerrar | EmpresaNoOpera>> {
+  const { empresaId } = contexto;
+  const opera = await empresaOpera(tx, empresaId);
+  if (!opera.ok) return opera;
+
+  const serie = await tx.series.obtener(
+    empresaId,
+    entrada.puntoDeVentaId,
+    entrada.tipo,
+    entrada.ambiente,
+  );
+  if (serie === null) return err("SERIE_NO_ENCONTRADA");
+  const cierre = cerrarSerieFueraDeSecuencia(serie, entrada.solicitud, entrada.ultimoDeArca);
+  if (!cierre.ok) return cierre;
+  // El dominio ya comprobó que la serie es `EN_CURSO` por esta solicitud: falta que sea por este número.
+  if (serie.estado === "EN_CURSO" && serie.numeroEnCurso !== entrada.numero) {
+    return err("NUMERO_INVALIDO");
+  }
+  const guardada = await tx.series.guardar(cierre.valor.serie);
+  if (guardada === null) throw new Error("la serie cambió dentro de la transacción");
+  await tx.auditoria.registrar({
+    empresaId,
+    actorPersonaId: contexto.personaId,
+    accion:
+      cierre.valor.resolucion === "BLOQUEADA" ? "SERIE_BLOQUEADA" : ACCION_DE_CIERRE.RECHAZADO,
+    entidad: "serie_comprobante",
+    entidadId: entidadDeSerie(entrada.puntoDeVentaId, entrada.tipo, entrada.ambiente),
+    antes: datosDeSerie(serie),
+    despues: {
+      ...datosDeSerie(guardada),
+      numero: entrada.numero.toString(),
+      solicitud: entrada.solicitud,
+      ...datosDelResultado(entrada.resultado),
+      resolucion: cierre.valor.resolucion,
+      ultimoAutorizadoPorElServicio: entrada.ultimoDeArca?.toString() ?? null,
+    },
+  });
+  return ok({ resolucion: cierre.valor.resolucion });
 }
 
 // ---------------------------------------------------------------------------------------------

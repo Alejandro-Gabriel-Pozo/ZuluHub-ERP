@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { fecha } from "../../../../test/utilidades/facturacion";
 import {
   IDENTIDAD_DE_SERIE,
   SOLICITUD_1,
@@ -7,11 +8,16 @@ import {
   serieEnCurso,
   serieLibre,
 } from "../../../../test/utilidades/fiscal";
-import type { DesenlaceDeAutorizacion } from "./estados-de-comprobante";
+import type {
+  DesenlaceDeAutorizacion,
+  ResultadoDeAutorizacionArca,
+} from "./estados-de-comprobante";
 import {
   OPCIONES_DE_NUMERACION,
   TRANSICIONES_DE_SERIE,
   cerrarSerie,
+  cerrarSerieFueraDeSecuencia,
+  esFueraDeSecuencia,
   hayNumerosUsados,
   iniciarSerie,
   reconciliarSerie,
@@ -448,6 +454,129 @@ describe("reconciliarSerie", () => {
     expect(reservarNumero(bloqueada, SOLICITUD_1, AHORA).ok).toBe(false);
     expect(cerrarSerie(bloqueada, SOLICITUD_1, "AUTORIZADO").ok).toBe(false);
     expect(reconciliarSerie(bloqueada, 7n, vencida).ok).toBe(false);
+  });
+});
+
+describe("esFueraDeSecuencia: el rechazo 10016 de ARCA", () => {
+  const rechazo = (
+    errores: readonly number[],
+    observaciones: readonly number[] = [],
+  ): ResultadoDeAutorizacionArca => ({
+    tipo: "RECHAZADO",
+    errores: errores.map((codigo) => ({ codigo, texto: "x" })),
+    observaciones: observaciones.map((codigo) => ({ codigo, texto: "y" })),
+  });
+
+  it("un rechazo con el error 10016 lo es, solo o entre otros errores", () => {
+    expect(esFueraDeSecuencia(rechazo([10016]))).toBe(true);
+    expect(esFueraDeSecuencia(rechazo([10048, 10016, 600]))).toBe(true);
+  });
+
+  it("un rechazo sin ese error no, aunque traiga otros o lo tenga como observación", () => {
+    expect(esFueraDeSecuencia(rechazo([]))).toBe(false);
+    expect(esFueraDeSecuencia(rechazo([10015, 10017]))).toBe(false);
+    expect(esFueraDeSecuencia(rechazo([10015], [10016]))).toBe(false);
+  });
+
+  it("lo que no es un rechazo no lo es, ni con un 10016 en las observaciones", () => {
+    const autorizado: ResultadoDeAutorizacionArca = {
+      tipo: "AUTORIZADO",
+      codigo: "CAE-1",
+      vence: fecha("2099-12-31"),
+      fecha: fecha("2026-10-13"),
+      observaciones: [{ codigo: 10016, texto: "z" }],
+    };
+    expect(esFueraDeSecuencia(autorizado)).toBe(false);
+    expect(esFueraDeSecuencia({ tipo: "INCIERTO", motivo: "sin respuesta" })).toBe(false);
+    expect(esFueraDeSecuencia({ tipo: "NO_ENVIADO", motivo: "sin conexión" })).toBe(false);
+  });
+});
+
+describe("cerrarSerieFueraDeSecuencia: el 10016 y lo que ARCA informa", () => {
+  const enCurso = serieEnCurso(7n, HASTA, SOLICITUD_1);
+
+  it("ARCA en el último número de la serie: el rechazo fue del comprobante, la serie queda LIBRE sin avanzar", () => {
+    expect(cerrarSerieFueraDeSecuencia(enCurso, SOLICITUD_1, 7n)).toEqual({
+      ok: true,
+      valor: { serie: serieLibre(7n), resolucion: "LIBERADA" },
+    });
+  });
+
+  it("ARCA en otro número es un desfase y la serie queda BLOQUEADA sin avanzar, con el motivo", () => {
+    const motivo = (informa: number) =>
+      `desfase con ARCA: informa ${informa} como último autorizado y el número 8 se rechazó por fuera de secuencia (10016); se esperaba 7`;
+    // Adelante (otro sistema usó el punto de venta), justo el número reservado, y atrás de la serie.
+    for (const informa of [9n, 8n, 1000n, 6n, 0n]) {
+      expect(cerrarSerieFueraDeSecuencia(enCurso, SOLICITUD_1, informa)).toEqual({
+        ok: true,
+        valor: {
+          resolucion: "BLOQUEADA",
+          serie: {
+            ...IDENTIDAD_DE_SERIE,
+            estado: "BLOQUEADA",
+            ultimoNumero: 7n,
+            motivoBloqueo: motivo(Number(informa)),
+          },
+        },
+      });
+    }
+  });
+
+  it("sin respuesta de ARCA (null) NO libera en silencio: BLOQUEADA con el motivo de desfase posible", () => {
+    expect(cerrarSerieFueraDeSecuencia(enCurso, SOLICITUD_1, null)).toEqual({
+      ok: true,
+      valor: {
+        resolucion: "BLOQUEADA",
+        serie: {
+          ...IDENTIDAD_DE_SERIE,
+          estado: "BLOQUEADA",
+          ultimoNumero: 7n,
+          motivoBloqueo:
+            "desfase posible con ARCA: el número 8 se rechazó por fuera de secuencia (10016) y no se pudo consultar el último autorizado; se esperaba 7",
+        },
+      },
+    });
+  });
+
+  it("en cualquier caso es una transición válida y consistente, y la bloqueada solo sale con resincronizar", () => {
+    for (const informa of [7n, 8n, 9n, 6n, null]) {
+      const r = cerrarSerieFueraDeSecuencia(enCurso, SOLICITUD_1, informa);
+      if (!r.ok) throw new Error("no cerró");
+      expect(serieEsConsistente(r.valor.serie)).toBe(true);
+      expect(transicionDeSerieValida(enCurso, r.valor.serie)).toBe(true);
+      expect(r.valor.serie.ultimoNumero).toBe(7n);
+      expect(r.valor.serie).toMatchObject(IDENTIDAD_DE_SERIE);
+      if (r.valor.serie.estado === "BLOQUEADA") {
+        expect(reservarNumero(r.valor.serie, SOLICITUD_2, AHORA)).toEqual({
+          ok: false,
+          error: "SERIE_BLOQUEADA",
+        });
+      }
+    }
+  });
+
+  it("tras bloquear por un 10016, la resincronización la lleva al último de ARCA y se reserva el siguiente", () => {
+    const r = cerrarSerieFueraDeSecuencia(enCurso, SOLICITUD_1, 12n);
+    if (!r.ok) throw new Error("no cerró");
+    const libre = resincronizarSerie(r.valor.serie, 12n, 12n);
+    if (!libre.ok) throw new Error("no resincronizó");
+    const reserva = reservarNumero(libre.valor, SOLICITUD_2, AHORA);
+    expect(reserva.ok && reserva.valor.tipo === "RESERVADA" && reserva.valor.numero).toBe(13n);
+  });
+
+  it("solo cierra la reserva de esa solicitud: otra, o una serie que no está en curso, es SOLICITUD_NO_VIGENTE", () => {
+    const noVigente = { ok: false, error: "SOLICITUD_NO_VIGENTE" };
+    expect(cerrarSerieFueraDeSecuencia(enCurso, SOLICITUD_2, 7n)).toEqual(noVigente);
+    expect(cerrarSerieFueraDeSecuencia(serieLibre(7n), SOLICITUD_1, 7n)).toEqual(noVigente);
+    expect(cerrarSerieFueraDeSecuencia(serieBloqueada(7n), SOLICITUD_1, 7n)).toEqual(noVigente);
+  });
+
+  it("una fila que no está en curso pero conserva la solicitud (dato viejo) tampoco se cierra", () => {
+    const rancia = { ...enCurso, estado: "LIBRE" } as unknown as Serie;
+    expect(cerrarSerieFueraDeSecuencia(rancia, SOLICITUD_1, 7n)).toEqual({
+      ok: false,
+      error: "SOLICITUD_NO_VIGENTE",
+    });
   });
 });
 
