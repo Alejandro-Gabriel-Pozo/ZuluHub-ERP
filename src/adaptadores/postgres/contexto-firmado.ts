@@ -1,8 +1,10 @@
 import { createHmac } from "node:crypto";
 import pg from "pg";
 import type { ActorDePlataforma, Contexto, TipoDeContexto } from "../../contexto/contexto";
-import { esUuidCanonico, type UsuarioAuthId } from "../../primitivas/identificadores/marca";
-import { ErrorDeConfiguracion } from "./errores";
+// Con extensión `.ts` a propósito (como `estado-de-migraciones.ts`): `scripts/instalar-clave-de-contexto.ts` lo
+// carga directamente con Node, que borra los tipos pero no resuelve imports sin extensión.
+import { esUuidCanonico, type UsuarioAuthId } from "../../primitivas/identificadores/marca.ts";
+import { ErrorDeConfiguracion } from "./errores.ts";
 
 /**
  * Contexto firmado (ADR-011, endurecido en H2).

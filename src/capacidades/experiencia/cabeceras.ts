@@ -6,8 +6,11 @@
  * categoría de falla «una página se olvidó del noindex».
  */
 
-/** Con qué cara responde la puerta. `NEUTRA` es la de todo host que no se sirve. */
-export type SuperficieDeRespuesta = "APP" | "LANDING" | "CARTA" | "NEUTRA";
+/**
+ * Con qué cara responde la puerta. `NEUTRA` es la de todo host que no se sirve; `SISTEMA` la de las rutas de
+ * sistema (el cron y la salud), que responden en cualquier host y nunca se indexan.
+ */
+export type SuperficieDeRespuesta = "APP" | "LANDING" | "CARTA" | "NEUTRA" | "SISTEMA";
 
 /** Un nonce en base64 de al menos 16 bytes (22 caracteres): nada que pueda cortar la política con `;`. */
 const NONCE_VALIDO = /^[A-Za-z0-9+/]{22,}={0,2}$/;

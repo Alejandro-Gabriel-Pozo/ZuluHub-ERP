@@ -5,6 +5,7 @@ import { nonceDe } from "./cabeceras";
 import {
   HOST_DESCONOCIDO,
   HOST_NO_DISPONIBLE,
+  RUTAS_DE_SISTEMA,
   SUPERFICIES_SERVIBLES,
   decidirPuerta,
   type EstadoDeLaResolucion,
@@ -149,6 +150,24 @@ describe("decidirPuerta (propiedades)", () => {
         if (d.superficie === "NEUTRA") expect(d.rutaInterna).toBe("/s/neutra");
         else expect(d.rutaInterna.startsWith(`/s/${d.superficie.toLowerCase()}`)).toBe(true);
       }),
+    );
+  });
+
+  it("las rutas de sistema siguen su camino con cualquier encabezado, host y resolución", () => {
+    fc.assert(
+      fc.property(
+        encabezados,
+        fc.constantFrom(...RUTAS_DE_SISTEMA),
+        resolucion,
+        fc.boolean(),
+        (pares, r, res, prod) => {
+          const d = decidir(pares, r, res, prod);
+          expect(d.accion).toBe("SEGUIR");
+          expect(d.rutaInterna).toBeNull();
+          expect(d.superficie).toBe("SISTEMA");
+          expect(d.encabezadosDeRespuesta["X-Robots-Tag"]).toBe("noindex");
+        },
+      ),
     );
   });
 

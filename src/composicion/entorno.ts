@@ -39,6 +39,13 @@ const cadenaDePostgres = z
   .regex(/^postgres(?:ql)?:\/\/\S+$/);
 
 /**
+ * Largo mínimo del secreto del cron. Un secreto corto se adivina a pedidos (la ruta del cron es pública en
+ * Internet): lo que no llega a este largo no sirve y el cron falla cerrado. Es nuestra regla, no la de Vercel.
+ */
+export const LARGO_MINIMO_DEL_SECRETO_DEL_CRON = 16;
+const secretoDelCron = z.string().trim().min(LARGO_MINIMO_DEL_SECRETO_DEL_CRON);
+
+/**
  * Cada variable con su forma y las piezas de la composición que la usan. Una pieza valida solo las
  * suyas: pedir las transacciones de la aplicación no exige la clave de Resend.
  */
@@ -48,7 +55,12 @@ export const NOMBRES_DE_ENTORNO = [
     forma: texto,
     piezas: ["transacciones-app", "transacciones-trabajos"],
   },
-  { nombre: "ZULUHUB_DB_APP", forma: cadenaDePostgres, piezas: ["transacciones-app"] },
+  // `esquema`: lo que mira la guarda de migración y la salud (W6) con el mismo rol de la aplicación.
+  {
+    nombre: "ZULUHUB_DB_APP",
+    forma: cadenaDePostgres,
+    piezas: ["transacciones-app", "esquema"],
+  },
   { nombre: "ZULUHUB_DB_TRABAJOS", forma: cadenaDePostgres, piezas: ["transacciones-trabajos"] },
   // La puerta pública (rol `zuluhub_publico`, solo lectura, sin sesión): resolución de marca por host.
   // Es una cadena de conexión propia y distinta de las demás; el valor lo carga el dueño en Vercel.
@@ -69,6 +81,9 @@ export const NOMBRES_DE_ENTORNO = [
   { nombre: ZULUHUB_CORREO_REMITENTE, forma: texto, piezas: ["correo"] },
   { nombre: ZULUHUB_URL_BASE, forma: texto, piezas: ["correo"] },
   { nombre: ZULUHUB_NOMBRE_DE_MARCA, forma: texto, piezas: ["correo"] },
+  // El cron de trabajos (W6): Vercel manda `Authorization: Bearer <valor>` si la variable existe en el proyecto
+  // (NO VERIFICADO: se mira en el primer despliegue). Nombre fijo de Vercel, por eso sin el prefijo del producto.
+  { nombre: "CRON_SECRET", forma: secretoDelCron, piezas: ["cron"] },
 ] as const;
 
 /**

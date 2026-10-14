@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { ErrorDeConfiguracion } from "../adaptadores/postgres/errores";
 import {
   ErrorDeEntorno,
+  LARGO_MINIMO_DEL_SECRETO_DEL_CRON,
   NOMBRES_DE_ENTORNO,
   PREFIJO_PROHIBIDO,
   VARIABLES_PROHIBIDAS,
@@ -36,6 +37,7 @@ const COMPLETO: FuenteDeEntorno = {
   ZULUHUB_AUTH_SECRETO_EMPRESA: "secreto-de-prueba-que-no-es-real-0123456789",
   GOOGLE_CLIENT_ID: "cliente-de-prueba",
   GOOGLE_CLIENT_SECRET: "secreto-de-cliente-de-prueba",
+  CRON_SECRET: "el-secreto-largo-del-cron-de-prueba",
 };
 
 const PIEZAS: Record<Pieza, string[]> = {
@@ -48,6 +50,9 @@ const PIEZAS: Record<Pieza, string[]> = {
   "conexion-de-autenticacion": ["ZULUHUB_DB_AUTENTICACION"],
   autenticacion: ["ZULUHUB_AUTH_SECRETO_EMPRESA", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
   tokens: ["ZULUHUB_SECRETO_INVITACIONES"],
+  // W6: la guarda de migración y la salud miran la base con el rol de la aplicación, sin firmar contexto.
+  esquema: ["ZULUHUB_DB_APP"],
+  cron: ["CRON_SECRET"],
   correo: [
     "ZULUHUB_RESEND_API_KEY",
     "ZULUHUB_CORREO_REMITENTE",
@@ -65,9 +70,10 @@ const sin = (fuente: FuenteDeEntorno, nombre: string): FuenteDeEntorno => {
 describe("NOMBRES_DE_ENTORNO (P-13: la lista de nombres)", () => {
   const nombres = NOMBRES_DE_ENTORNO.map((e) => e.nombre);
 
-  it("son exactamente los de W1, la cadena de la puerta pública y los de la autenticación (los demás llegan en sus tramos)", () => {
+  it("son exactamente los de W1, la cadena de la puerta pública, los de la autenticación y el secreto del cron (los demás llegan en sus tramos)", () => {
     expect([...nombres].sort()).toEqual(
       [
+        "CRON_SECRET",
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",
         "ZULUHUB_AUTH_SECRETO_EMPRESA",
@@ -87,11 +93,12 @@ describe("NOMBRES_DE_ENTORNO (P-13: la lista de nombres)", () => {
 
   it("no se repiten y todos llevan el prefijo del producto, salvo el cliente de Google (nombres que el dueño ya conoce)", () => {
     expect(new Set(nombres).size).toBe(nombres.length);
-    const deGoogle = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"];
+    // `CRON_SECRET` es el nombre que Vercel busca para autorizar su cron: no se puede renombrar.
+    const conNombreAjeno = ["CRON_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"];
     for (const nombre of nombres) {
-      if (!deGoogle.includes(nombre)) expect(nombre).toMatch(/^ZULUHUB_[A-Z0-9_]+$/);
+      if (!conNombreAjeno.includes(nombre)) expect(nombre).toMatch(/^ZULUHUB_[A-Z0-9_]+$/);
     }
-    expect(nombres.filter((x) => !x.startsWith("ZULUHUB_")).sort()).toEqual(deGoogle);
+    expect(nombres.filter((x) => !x.startsWith("ZULUHUB_")).sort()).toEqual(conNombreAjeno);
   });
 
   it("no contiene la conexión de plataforma ni la de grupo: la web no las recibe (R10)", () => {
@@ -306,6 +313,36 @@ describe("valoresDeLaPieza", () => {
     expect(() =>
       valoresDeLaPieza(sin(COMPLETO, "ZULUHUB_DB_PUBLICO"), "transacciones-trabajos"),
     ).not.toThrow();
+  });
+
+  it("la guarda de migración y la salud piden solo la cadena de la aplicación: ni la clave ni las demás conexiones", () => {
+    expect(valoresDeLaPieza({ ZULUHUB_DB_APP: "postgres://u:c@h/b" }, "esquema")).toEqual({
+      ZULUHUB_DB_APP: "postgres://u:c@h/b",
+    });
+    expect(() =>
+      valoresDeLaPieza({ ...COMPLETO, ZULUHUB_DB_APP: "mysql://u:c@h/b" }, "esquema"),
+    ).toThrow(ErrorDeEntorno);
+  });
+
+  it("el secreto del cron exige el largo mínimo (borde exacto), recorta los blancos y no repite el valor", () => {
+    expect(LARGO_MINIMO_DEL_SECRETO_DEL_CRON).toBe(16);
+    const justo = "a".repeat(LARGO_MINIMO_DEL_SECRETO_DEL_CRON);
+    expect(valoresDeLaPieza({ CRON_SECRET: `  ${justo}\n` }, "cron")).toEqual({
+      CRON_SECRET: justo,
+    });
+    const corto = "b".repeat(LARGO_MINIMO_DEL_SECRETO_DEL_CRON - 1);
+    let error: unknown;
+    try {
+      valoresDeLaPieza({ CRON_SECRET: corto }, "cron");
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(ErrorDeEntorno);
+    expect((error as ErrorDeEntorno).detalleParaElRegistro()).toBe(
+      "pieza cron: CRON_SECRET inválida",
+    );
+    // Con blancos que lo dejan corto después de recortar, también.
+    expect(() => valoresDeLaPieza({ CRON_SECRET: `  ${corto}  ` }, "cron")).toThrow(ErrorDeEntorno);
   });
 
   it("acepta los dos esquemas de Postgres y recorta los blancos", () => {

@@ -7,8 +7,10 @@ import {
   PREFIJO_DE_ENCABEZADO_INTERNO,
   RUTA_INTERNA_DE,
   RUTA_NEUTRA,
+  RUTAS_DE_SISTEMA,
   SUPERFICIES_SERVIBLES,
   decidirPuerta,
+  esRutaDeSistema,
   hostDelPedido,
   sinEncabezadosInternos,
   type EstadoDeLaResolucion,
@@ -220,7 +222,7 @@ describe("decidirPuerta: rutas raras no se anteponen a un prefijo", () => {
 });
 
 describe("decidirPuerta: /api solo en un host APP", () => {
-  it.each(["/api", "/api/auth/signin", "/api/auth/callback/google", "/api/salud"])(
+  it.each(["/api", "/api/auth/signin", "/api/auth/callback/google", "/api/salud/detalle"])(
     "%s en APP sigue su camino, con noindex",
     (ruta) => {
       const d = decidir(ruta, resuelta("APP"));
@@ -233,7 +235,7 @@ describe("decidirPuerta: /api solo en un host APP", () => {
   );
 
   it.each(["LANDING", "CARTA"] as const)("/api/auth en %s es la neutra", (s) => {
-    for (const ruta of ["/api", "/api/auth/signin", "/api/trabajos/cron"]) {
+    for (const ruta of ["/api", "/api/auth/signin", "/api/trabajos", "/api/trabajos/cron/x"]) {
       const d = decidir(ruta, resuelta(s));
       expect(d.accion).toBe("REESCRIBIR");
       expect(d.rutaInterna).toBe("/s/neutra");
@@ -253,6 +255,96 @@ describe("decidirPuerta: /api solo en un host APP", () => {
       expect(d.rutaInterna).toBe(`/s/app${ruta}`);
     },
   );
+});
+
+describe("rutas de sistema: el cron y la salud responden en cualquier host", () => {
+  const DE_SISTEMA = ["/api/trabajos/cron", "/api/salud"];
+
+  it("la lista es cerrada y exacta: exactamente estas dos, congelada", () => {
+    expect([...RUTAS_DE_SISTEMA]).toEqual(DE_SISTEMA);
+    expect(Object.isFrozen(RUTAS_DE_SISTEMA)).toBe(true);
+  });
+
+  it.each([
+    ...DE_SISTEMA,
+    "/api/trabajos",
+    "/api/trabajos/cron/",
+    "/api/trabajos/cron/x",
+    "/api/trabajos/cronx",
+    "/api/salud/",
+    "/api/salud/x",
+    "/api/saludx",
+    "/API/salud",
+    "/Api/Trabajos/Cron",
+    "/api/%73alud",
+    "/api//salud",
+    "/api/../api/salud",
+    "/api/salud%2f",
+    "/api/salud ",
+    " /api/salud",
+    "/",
+    "",
+  ])("esRutaDeSistema(%j)", (ruta) => {
+    expect(esRutaDeSistema(ruta)).toBe(DE_SISTEMA.includes(ruta));
+  });
+
+  const TODAS: readonly [string, EstadoDeLaResolucion][] = [
+    ["host desconocido", HOST_DESCONOCIDO],
+    ["base de marcas caída", HOST_NO_DISPONIBLE],
+    ["APP", resuelta("APP")],
+    ["LANDING", resuelta("LANDING")],
+    ["CARTA", resuelta("CARTA")],
+  ];
+
+  it.each(DE_SISTEMA)("%s sigue su camino sin importar el host ni la marca", (ruta) => {
+    for (const [cual, resolucion] of TODAS) {
+      for (const produccion of [true, false]) {
+        const d = decidir(ruta, resolucion, {}, produccion);
+        expect(d.accion, cual).toBe("SEGUIR");
+        expect(d.rutaInterna, cual).toBeNull();
+        expect(d.estado, cual).toBeNull();
+        expect(d.superficie, cual).toBe("SISTEMA");
+      }
+    }
+  });
+
+  it.each(DE_SISTEMA)(
+    "%s: sin cookies, noindex siempre (aun en producción) y sin caché",
+    (ruta) => {
+      for (const [cual, resolucion] of TODAS) {
+        const c = decidir(ruta, resolucion, {}, true).encabezadosDeRespuesta;
+        expect(c["X-Robots-Tag"], cual).toBe("noindex");
+        expect(c["Cache-Control"], cual).toBe("private, no-store");
+        expect(c["Strict-Transport-Security"], cual).toBe("max-age=31536000; includeSubDomains");
+        expect(
+          Object.keys(c).map((n) => n.toLowerCase()),
+          cual,
+        ).not.toContain("set-cookie");
+      }
+    },
+  );
+
+  it.each(DE_SISTEMA)("%s: tampoco deja pasar un x-zh-* del cliente", (ruta) => {
+    const d = decidir(ruta, HOST_DESCONOCIDO, [
+      ["x-zh-marca", "otra"],
+      ["authorization", "Bearer x"],
+    ]);
+    expect(d.encabezadosDePedido.get("x-zh-marca")).toBeNull();
+    expect(d.encabezadosDePedido.get("x-zh-nonce")).toBe(NONCE);
+    expect(d.encabezadosDePedido.get("authorization")).toBe("Bearer x");
+  });
+
+  it("lo parecido, en un host que no es APP, sigue siendo la neutra (no se abre otro /api)", () => {
+    for (const ruta of ["/api/trabajos/cron/", "/api/salud/x", "/api/saludx", "/api/otra"]) {
+      for (const [cual, resolucion] of TODAS.filter(
+        ([, r]) => r.tipo !== "RESUELTA" || r.puerta.superficie !== "APP",
+      )) {
+        const d = decidir(ruta, resolucion);
+        expect(d.rutaInterna, `${cual} ${ruta}`).toBe("/s/neutra");
+        expect(d.superficie).toBe("NEUTRA");
+      }
+    }
+  });
 });
 
 describe("decidirPuerta: encabezados del pedido que sigue", () => {
