@@ -107,6 +107,7 @@ describe("XML: sin entidades y todo como texto", () => {
   it("rechaza un DOCTYPE o una declaración de entidades, y no expande entidades", () => {
     expect(() => leerXml('<!DOCTYPE a [<!ENTITY x "y">]><a>&x;</a>')).toThrow(XmlInseguro);
     expect(() => leerXml('<a><!ENTITY x "y"></a>')).toThrow(XmlInseguro);
+    expect(() => leerXml('<!DOCTYPE a SYSTEM "file:///etc/passwd"><a/>')).toThrow(XmlInseguro);
     expect(textoDe(leerXml("<a><b>&amp;lt;</b></a>"), "b")).toBe("&amp;lt;");
     expect(desescapar("&lt;t&gt;&amp;&quot;&apos;&#65;&#x42;")).toBe(`<t>&"'AB`);
   });
