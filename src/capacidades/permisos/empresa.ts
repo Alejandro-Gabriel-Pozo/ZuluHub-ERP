@@ -104,8 +104,7 @@ export const PERMISOS_DE_EMPRESA = {
   "combos.editar_contenido": ["GERENTE", "ADMINISTRADOR"],
   // H7 facturación §C (F5). Emitir a mano (P10, DECIDIDO), la nota de crédito (P9, recomendada A), descartar y
   // reintentar (ASUMIDO): los tres roles. Resincronizar una serie (QF1) y cambiar el ambiente de un punto de venta
-  // (QF2): solo el gerente, la opción recomendada y la más restrictiva, hasta que el dueño decida (ampliar es
-  // sumar roles acá; restringir después dejaría hechos ya autorizados).
+  // (QF2): solo el gerente (DECIDIDO, dueño 2026-10-13).
   "comprobantes.emitir_manual": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "notas_de_credito.emitir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "comprobantes.descartar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],

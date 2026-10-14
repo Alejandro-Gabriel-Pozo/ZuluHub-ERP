@@ -170,6 +170,7 @@ export type ErrorPropioAlCambiarAmbiente =
   | "VERSION_DESACTUALIZADA"
   | "SERIE_EN_CURSO"
   | "SIN_CERTIFICADO_VIGENTE"
+  | "AMBIENTE_NO_VUELVE"
   | "PUNTO_DE_VENTA_YA_EMITIO_EN_PRODUCCION";
 
 export type ErrorAlCambiarAmbiente =
@@ -180,7 +181,7 @@ export type ErrorAlCambiarAmbiente =
  * guard primero: ya en ese ambiente → «ya estaba» (sin escribir); una serie del punto de venta `EN_CURSO` en el
  * ambiente actual → `SERIE_EN_CURSO` (un comprobante en vuelo terminaría en otra serie); pasar a PRODUCCIÓN exige
  * un certificado de producción vigente del emisor (sin él no se podría emitir: el error queda a la vista ahora y
- * no después); volver de producción a homologación con números usados lo rechaza la base. Audita
+ * no después); de producción no se vuelve (QF2, `AMBIENTE_NO_VUELVE`; con números usados también lo rechaza la base). Audita
  * `PUNTO_DE_VENTA_AMBIENTE_CAMBIADO` en la misma transacción.
  */
 export function armarCambiarAmbienteDePuntoDeVenta({
@@ -213,6 +214,9 @@ export function armarCambiarAmbienteDePuntoDeVenta({
         const pv = await tx.puntosDeVenta.obtener(empresaId, entrada.puntoDeVentaId);
         if (pv === null) return err("PUNTO_DE_VENTA_NO_ENCONTRADO");
         if (pv.ambiente === entrada.ambiente) return ok({ yaEstaba: true });
+        // QF2 (DECIDIDO, dueño 2026-10-13): de producción no se vuelve a homologación, haya emitido o no. La base
+        // además lo impide si ya emitió (`punto_de_venta_ambiente_no_vuelve`).
+        if (pv.ambiente === "PRODUCCION") return err("AMBIENTE_NO_VUELVE");
         if (pv.version !== entrada.versionEsperada) return err("VERSION_DESACTUALIZADA");
         const series = await tx.series.delPuntoDeVenta(empresaId, pv.id, pv.ambiente);
         if (series.some((s) => s.estado === "EN_CURSO")) return err("SERIE_EN_CURSO");

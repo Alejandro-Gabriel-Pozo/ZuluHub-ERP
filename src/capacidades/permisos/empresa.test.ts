@@ -31,7 +31,7 @@ const DEL_OPERADOR_DE_EMPRESA = [
 
 /**
  * Facturación (H7 facturación §C, F5): resincronizar una serie (QF1) y cambiar el ambiente de un punto de venta
- * (QF2) son solo del gerente, la opción recomendada, hasta que el dueño decida.
+ * (QF2) son solo del gerente (DECIDIDO, dueño 2026-10-13).
  */
 const SOLO_DEL_GERENTE_DE_FACTURACION = [
   "puntos_de_venta.cambiar_ambiente",

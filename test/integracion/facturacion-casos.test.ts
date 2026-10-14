@@ -848,7 +848,7 @@ describe.skipIf(base === null)("facturación F5: casos de uso contra una base re
       expect(await serie(p.e, "FACTURA_B", "HOMOLOGACION")).toMatchObject({ ultimo: "1" });
     });
 
-    it("cambiar a producción exige un certificado de producción, no con una serie en curso; «ya estaba»; y la vuelta no", async () => {
+    it("cambiar a producción exige un certificado de producción, no con una serie en curso; «ya estaba»; y no se vuelve (QF2)", async () => {
       const p = await preparar({ rol: "GERENTE" });
       const version = async () =>
         Number(
@@ -918,7 +918,7 @@ describe.skipIf(base === null)("facturación F5: casos de uso contra una base re
           ambiente: "HOMOLOGACION",
           versionEsperada: await version(),
         }),
-      ).toEqual({ ok: false, error: "PUNTO_DE_VENTA_YA_EMITIO_EN_PRODUCCION" });
+      ).toEqual({ ok: false, error: "AMBIENTE_NO_VUELVE" });
     });
   });
 
