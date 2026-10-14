@@ -1,0 +1,1 @@
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ar="http://ar.gov.afip.dif.FEV1/"><soap:Header/><soap:Body><ar:FEParamGetTiposIva><ar:Auth><ar:Token>[OCULTO]</ar:Token><ar:Sign>[OCULTO]</ar:Sign><ar:Cuit>20111111112</ar:Cuit></ar:Auth></ar:FEParamGetTiposIva></soap:Body></soap:Envelope>
