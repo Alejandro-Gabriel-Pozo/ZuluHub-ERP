@@ -474,7 +474,16 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
       expect(await entraComo(valorDe(falso, variable), rol)).toBe(true);
     }
     expect(valorDe(falso, "ZULUHUB_DB_APP")).not.toBe(vieja);
-    await expect(entraComo(vieja, ROLES[0]?.rol as string)).rejects.toThrow();
+    // La contraseña anterior deja de servir. Se comprueba solo si el servidor exige contraseña: el CI levanta
+    // Postgres con `trust` (acepta cualquiera) y ahí no se puede distinguir una clave buena de una mala.
+    const exigeClave = await entraComo(
+      valorDe(falso, "ZULUHUB_DB_APP").replace(/:[^:@]*@/, ":clave-equivocada@"),
+      ROLES[0]?.rol as string,
+    ).then(
+      () => false,
+      () => true,
+    );
+    if (exigeClave) await expect(entraComo(vieja, ROLES[0]?.rol as string)).rejects.toThrow();
   });
 
   it("un rol que ya tenía LOGIN y cuya variable no está en Vercel pide --rotar y no inventa nada", async () => {
