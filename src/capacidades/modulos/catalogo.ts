@@ -111,6 +111,15 @@ export const CATALOGO_DE_MODULOS = {
     acciones: {
       "comprobantes.emitir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "comprobantes.ver": { capacidad: null, efecto: "LECTURA" },
+      // H7 facturación §C (F5): emitir a mano CREA un cargo (la factura y la nota de débito) y no se permite en
+      // solo lectura; la nota de crédito, descartar, reintentar y resincronizar cierran lo que ya existe.
+      // Cambiar el ambiente habilita a emitir con valor fiscal: amplía.
+      "comprobantes.emitir_manual": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "notas_de_credito.emitir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "comprobantes.descartar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "comprobantes.reintentar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "series.resincronizar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "puntos_de_venta.cambiar_ambiente": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
   /**

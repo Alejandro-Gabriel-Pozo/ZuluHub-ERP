@@ -17,12 +17,25 @@ import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "./roles";
 
 /** Las acciones que puede cada rol, escritas a mano desde la tabla de §B.4 de la especificación de H6. */
 const DEL_OPERADOR_DE_EMPRESA = [
+  "comprobantes.descartar",
   "comprobantes.emitir",
+  "comprobantes.emitir_manual",
+  "comprobantes.reintentar",
   "comprobantes.ver",
   "gerencia.aceptar_traspaso",
   "gerencia.rechazar_traspaso",
   "gerencia.ver_traspaso",
+  "notas_de_credito.emitir",
   "permisos.ver_propios",
+] as const;
+
+/**
+ * Facturación (H7 facturación §C, F5): resincronizar una serie (QF1) y cambiar el ambiente de un punto de venta
+ * (QF2) son solo del gerente, la opción recomendada, hasta que el dueño decida.
+ */
+const SOLO_DEL_GERENTE_DE_FACTURACION = [
+  "puntos_de_venta.cambiar_ambiente",
+  "series.resincronizar",
 ] as const;
 
 /**
@@ -100,6 +113,7 @@ const SOLO_DEL_GERENTE = [
   "sucursales.desactivar",
   "sucursales.reactivar",
   ...SOLO_DEL_GERENTE_DE_CATALOGO_Y_STOCK,
+  ...SOLO_DEL_GERENTE_DE_FACTURACION,
 ] as const;
 
 const DEL_ADMINISTRADOR = [
@@ -136,9 +150,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 68 acciones: 20 de empresa y comprobantes, 48 de catálogo, carta y stock (40 de T0 y 8 de CE0)", () => {
+  it("hay 74 acciones: 26 de empresa y facturación, 48 de catálogo, carta y stock (40 de T0 y 8 de CE0)", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(68);
+    expect(todas).toHaveLength(74);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -147,7 +161,10 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("modulos"),
       porPrefijo("permisos"),
       porPrefijo("comprobantes"),
-    ]).toEqual([6, 5, 5, 1, 1, 2]);
+      porPrefijo("notas_de_credito"),
+      porPrefijo("series"),
+      porPrefijo("puntos_de_venta"),
+    ]).toEqual([6, 5, 5, 1, 1, 5, 1, 1, 1]);
     expect([
       porPrefijo("productos"),
       porPrefijo("categorias"),
@@ -176,6 +193,12 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
 
   it("desactivar y reactivar una sucursal, y proponer o cancelar el traspaso, son solo del gerente (F4)", () => {
     for (const accion of SOLO_DEL_GERENTE.slice(0, 4)) {
+      expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE"]);
+    }
+  });
+
+  it("resincronizar una serie (QF1) y cambiar el ambiente de un punto de venta (QF2) son solo del gerente", () => {
+    for (const accion of SOLO_DEL_GERENTE_DE_FACTURACION) {
       expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE"]);
     }
   });

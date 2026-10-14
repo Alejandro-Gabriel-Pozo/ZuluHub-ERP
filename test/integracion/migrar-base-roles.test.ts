@@ -1,4 +1,5 @@
 import { createHash, createHmac, pbkdf2Sync, randomBytes } from "node:crypto";
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import pg from "pg";
 import {
@@ -185,7 +186,9 @@ describe.skipIf(base === null)("migrar-base --preparar-roles", () => {
     expect(salida.codigo).toBe(0);
     expect(salida.error).toBe("");
     // Migraciones aplicadas primero.
-    expect(salida.info).toContain("Aplicadas ahora (10)");
+    // Todas las migraciones del repositorio (contarlas evita que una migración nueva rompa esta prueba).
+    const migraciones = readdirSync(CARPETA_REAL).filter((f) => f.endsWith(".sql")).length;
+    expect(salida.info).toContain(`Aplicadas ahora (${migraciones})`);
     // Exactamente las variables esperadas, en orden, y nada más con forma de variable.
     expect([...salida.variables.keys()]).toEqual([
       "ZULUHUB_DB_APP",

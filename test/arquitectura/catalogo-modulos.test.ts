@@ -15,6 +15,7 @@ import {
 } from "../../src/modulos/empresas/publico";
 import {
   DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
+  DECLARACIONES_DE_FACTURACION,
   DECLARACIONES_DE_FISCAL,
 } from "../../src/modulos/fiscal/publico";
 import {
@@ -217,7 +218,11 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       DECLARACIONES_DE_EMPRESAS,
       DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS,
     ),
-    "modulos/fiscal": accionesDe(DECLARACIONES_DE_FISCAL, DECLARACIONES_DE_CONSULTAS_DE_FISCAL),
+    "modulos/fiscal": accionesDe(
+      DECLARACIONES_DE_FISCAL,
+      DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
+      DECLARACIONES_DE_FACTURACION,
+    ),
   };
 
   it("identidad exige las acciones de usuarios y de gerencia (casos de uso y consultas)", () => {
@@ -252,9 +257,18 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     expect([...new Set(declaradas["modulos/fiscal"])]).toEqual([
       "comprobantes.emitir",
       "comprobantes.ver",
+      "comprobantes.emitir_manual",
+      "notas_de_credito.emitir",
+      "comprobantes.descartar",
+      "comprobantes.reintentar",
+      "series.resincronizar",
+      "puntos_de_venta.cambiar_ambiente",
     ]);
     expect(DECLARACIONES_DE_FISCAL.reconciliarSerie).toHaveProperty("sinGuard");
     expect(DECLARACIONES_DE_FISCAL.reconciliarSeriesVencidas).toHaveProperty("sinGuard");
+    // F5: los dos trabajos de la facturación corren sin persona (ADR-007).
+    expect(DECLARACIONES_DE_FACTURACION.validarComprobante).toHaveProperty("sinGuard");
+    expect(DECLARACIONES_DE_FACTURACION.reconciliarComprobantes).toHaveProperty("sinGuard");
   });
 
   it("facturacion lo implementa fiscal, y es el único módulo que fiscal exige", () => {
@@ -323,6 +337,12 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ).toEqual([
       "X1: la acción comprobantes.emitir no la exige ningún caso de uso",
       "X1: la acción comprobantes.ver no la exige ningún caso de uso",
+      "X1: la acción comprobantes.emitir_manual no la exige ningún caso de uso",
+      "X1: la acción notas_de_credito.emitir no la exige ningún caso de uso",
+      "X1: la acción comprobantes.descartar no la exige ningún caso de uso",
+      "X1: la acción comprobantes.reintentar no la exige ningún caso de uso",
+      "X1: la acción series.resincronizar no la exige ningún caso de uso",
+      "X1: la acción puntos_de_venta.cambiar_ambiente no la exige ningún caso de uso",
     ]);
   });
 

@@ -598,7 +598,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
           numero: 1n,
           resultado: {
             tipo: "AUTORIZADO",
-            codigo: `CAE-${e.mundo.cuit}-1-1`,
+            codigo: "00001000000001",
             vence: "2099-12-31",
             fecha: "2026-10-13",
             observaciones: [],
@@ -740,7 +740,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
           numero: 1n,
           resultado: {
             tipo: "AUTORIZADO",
-            codigo: `CAE-${e.mundo.cuit}-1-1`,
+            codigo: "00001000000001",
             vence: "2099-12-31",
             fecha: "2026-10-13",
             observaciones: [],

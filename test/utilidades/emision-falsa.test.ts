@@ -32,7 +32,7 @@ describe("EmisionFalsa", () => {
     expect(await falsa.ultimoAutorizado(pv, "FACTURA_B")).toEqual({ ok: true, valor: 0n });
     expect(await falsa.autorizar(pedido(1n))).toEqual({
       tipo: "AUTORIZADO",
-      codigo: `CAE-${CUIT_A}-1-1`,
+      codigo: "00001000000001",
       vence: "2099-12-31",
       fecha: "2026-10-13",
       observaciones: [],
@@ -112,7 +112,7 @@ describe("EmisionFalsa", () => {
     const consulta = await falsa.consultar(pv, "FACTURA_B", 1n);
     expect(consulta.tipo).toBe("ENCONTRADO");
     if (consulta.tipo !== "ENCONTRADO") return;
-    expect(consulta.codigo).toBe(`CAE-${CUIT_A}-1-1`);
+    expect(consulta.codigo).toBe("00001000000001");
     expect(consulta.vence).toBe("2099-12-31");
   });
 
