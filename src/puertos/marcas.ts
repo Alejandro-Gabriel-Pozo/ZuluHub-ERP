@@ -3,9 +3,11 @@ import type { Resultado } from "../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "./transacciones";
 
 /**
- * Puertos de marcas (marcas y planes, §B.2 y §B.8). Dos, con dos conexiones distintas:
+ * Puertos de marcas (marcas y planes, §B.2 y §B.8). Tres, con dos conexiones distintas:
  *  - `ResolucionDeHost`: la puerta PÚBLICA (rol `zuluhub_publico`, sin sesión): a qué dueño y a qué marca
  *    pertenece un nombre de host.
+ *  - `ConfiguracionPublicaDeHost`: la misma puerta pública: cómo se pinta la marca de un host (nombre,
+ *    tema y host canónico), sin ningún identificador interno.
  *  - `MarcasDeMail`: desde qué marca sale un mail; lo lee la aplicación (rol `zuluhub_app`), dentro de la
  *    transacción de su caso de uso.
  */
@@ -42,6 +44,38 @@ export interface ResolucionDeHost {
     host: string,
     superficie: SuperficieDeHost,
   ): Promise<Resultado<HostResuelto | null, ErrorDePersistencia>>;
+}
+
+/** Los cuatro colores permitidos (`TOKENS_DE_TEMA` de `modulos/marcas`; una prueba de tipos los iguala). */
+export type TokenDeTemaPublico = "primary" | "on-primary" | "secondary" | "accent";
+
+/**
+ * Lo único que la puerta pública pinta de una marca ANTES de que alguien inicie sesión (§B.2.3):
+ *  - `nombre`: el nombre visible de la versión vigente de la propia marca;
+ *  - `tema`: SOLO los tokens definidos, cada uno `#rrggbb` en minúsculas, ya validados y con la herencia
+ *    de las marcas ancestras aplicada; los que falten los pone la puerta con sus colores neutros;
+ *  - `hostCanonico`: el host canónico ACTIVO de la aplicación de la marca (normalizado, sin esquema ni
+ *    puerto), o `null` si todavía no tiene.
+ * Nada de ids (marca, empresa ni tenant), ni estados, ni versiones, ni quién lo cargó.
+ */
+export type ConfiguracionPublicaDeMarca = Readonly<{
+  nombre: string;
+  tema: Readonly<Partial<Record<TokenDeTemaPublico, string>>>;
+  hostCanonico: string | null;
+}>;
+
+export interface ConfiguracionPublicaDeHost {
+  /**
+   * La configuración pública de la marca de `host` en esa `superficie`, bajo EXACTAMENTE el mismo
+   * criterio de `ResolucionDeHost.porHost` (dominio ACTIVO, marca ACTIVA con versión confirmada y
+   * vigente). `ok(null)` es la respuesta NEUTRA y es la MISMA para todo lo que no se puede servir, sin
+   * distinguir por qué (sin oráculo). Un error de la base vuelve como `err`, nunca disfrazado de neutral.
+   * El host llega crudo y se normaliza acá. Sin caché: eso es de la puerta web (≤ 60 s, también el `null`).
+   */
+  porHost(
+    host: string,
+    superficie: SuperficieDeHost,
+  ): Promise<Resultado<ConfiguracionPublicaDeMarca | null, ErrorDePersistencia>>;
 }
 
 /** Desde qué marca sale un mail: el nombre que aparece en él y el origen (sin barra final) de sus enlaces. */
