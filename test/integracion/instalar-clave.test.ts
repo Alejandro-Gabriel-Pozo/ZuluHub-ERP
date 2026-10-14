@@ -71,7 +71,9 @@ describe.skipIf(base === null)("instalar la clave de contexto", () => {
     expect(await kids()).toEqual([7]);
     for (const { texto } of [primera, segunda]) {
       expect(texto).not.toContain(clave.split(":")[1]);
-      expect(texto).not.toContain(new URL(propia.base.dueno).password);
+      // Con `trust` (el CI) la cadena no trae contraseña: comparar contra "" fallaría siempre.
+      const contrasena = new URL(propia.base.dueno).password;
+      if (contrasena !== "") expect(texto).not.toContain(contrasena);
       expect(texto).not.toContain(propia.base.dueno);
     }
   });
