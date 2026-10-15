@@ -6,7 +6,7 @@ import type { ContextoOperativo } from "../../contexto/contexto";
 import type { CargaDeAutorizacion, DatosDelActor } from "../../puertos/autorizacion";
 
 /**
- * Puerto `autorizacion` sobre `membresia`, `persona`, `asignacion_sucursal` y `sucursal`. Lee con la MISMA conexión de la transacción
+ * Puerto `autorizacion` sobre `membresia`, `persona`, `asignacion_sucursal`, `sucursal`, `empresa` y `tenant`. Lee con la MISMA conexión de la transacción
  * del caso de uso (nada se guarda entre llamadas): el rol vale para esa transacción y, si se repite
  * por un conflicto de serialización, se vuelve a leer.
  *
@@ -14,6 +14,14 @@ import type { CargaDeAutorizacion, DatosDelActor } from "../../puertos/autorizac
  * globalmente (una suspensión de plataforma quita todos los permisos, aunque su membresía siga
  * activa). Con el contexto operativo la RLS ya limita a la empresa del contexto; el filtro por
  * empresa se repite a propósito (defensa en profundidad).
+ *
+ * Además, la persona tiene que haber entrado por la puerta de la MARCA de su tenant (marcas y planes,
+ * §B.2.4): `marcaDeEntrada` del contexto debe ser igual a `tenant.marca_id` de la empresa. Si no
+ * coincide, o es `null` con una persona, no hay rol y todo da `SIN_PERMISO`, sin ningún detalle. La
+ * marca se lee en la MISMA consulta que la membresía (misma transacción: el tenant no cambia de marca,
+ * `tenant_marca_inmutable`) y con lo que el rol de la aplicación ya ve bajo la RLS (su empresa y el
+ * tenant de esta). Previene: que una persona de un tenant de la marca A opere entrando por el host de la
+ * marca B (la marca no viaja en el token firmado: no es frontera de aislamiento por sí sola, §B.10).
  */
 export type AutorizacionDb = {
   membresia: { empresa_id: string; persona_id: string; rol: string; activo: boolean };
@@ -25,6 +33,8 @@ export type AutorizacionDb = {
     activa: boolean;
   };
   sucursal: { id: string; empresa_id: string; activa: boolean };
+  empresa: { id: string; tenant_id: string };
+  tenant: { id: string; marca_id: string };
 };
 
 const esRolDeEmpresa = (valor: string): valor is RolDeEmpresa =>
@@ -51,14 +61,21 @@ const SIN_ROL: DatosDelActor = {
 };
 
 export function crearAutorizacionDePostgres(db: Kysely<AutorizacionDb>): CargaDeAutorizacion {
-  /** El rol de la membresía ACTIVA con la persona activa globalmente; `null` si no hay (ver arriba). */
+  /**
+   * El rol de la membresía ACTIVA con la persona activa globalmente que entró por la marca del tenant de
+   * la empresa; `null` si no hay (ver arriba). Una marca de entrada `null` con persona no autoriza: ni
+   * siquiera se consulta.
+   */
   async function rolDelActor(contexto: ContextoOperativo): Promise<RolDeEmpresa | null> {
-    if (contexto.personaId === null) return null;
+    if (contexto.personaId === null || contexto.marcaDeEntrada === null) return null;
     const fila = await db
       .selectFrom("membresia as m")
       .innerJoin("persona as p", "p.id", "m.persona_id")
+      .innerJoin("empresa as e", "e.id", "m.empresa_id")
+      .innerJoin("tenant as t", "t.id", "e.tenant_id")
       .select("m.rol")
       .where("m.empresa_id", "=", contexto.empresaId)
+      .where("t.marca_id", "=", contexto.marcaDeEntrada)
       .where("m.persona_id", "=", contexto.personaId)
       .where("m.activo", "=", true)
       .where("p.activo_global", "=", true)

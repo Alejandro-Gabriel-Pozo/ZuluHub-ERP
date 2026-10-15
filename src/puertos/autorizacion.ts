@@ -28,7 +28,9 @@ export interface CargaDeAutorizacion {
   /**
    * Dentro de la transacción en curso: el rol de la membresía ACTIVA del actor en la empresa del
    * contexto, con la persona activa globalmente (una suspensión de plataforma quita todos los
-   * permisos). La membresía de otra empresa no cuenta.
+   * permisos). La membresía de otra empresa no cuenta. Tampoco cuenta si la persona entró por la
+   * puerta de otra marca: `marcaDeEntrada` tiene que ser la marca del tenant de la empresa (una
+   * marca de entrada `null` con persona tampoco autoriza); si no, `rol: null` y todo da `SIN_PERMISO`.
    */
   delActor(contexto: ContextoOperativo): Promise<DatosDelActor>;
   /**
@@ -36,7 +38,8 @@ export interface CargaDeAutorizacion {
    * §3.4). `"TODAS"` para el gerente y el administrador activos; para el operador, las sucursales
    * ACTIVAS donde tiene asignación ACTIVA (ordenadas, sin repetir; vacía si no tiene ninguna). Sin
    * membresía activa, con la persona suspendida globalmente o sin persona: vacía (falla cerrado). Se
-   * lee en cada llamada, sin caché: una asignación apagada un instante antes ya no cuenta. El caso
+   * lee en cada llamada, sin caché: una asignación apagada un instante antes ya no cuenta. Con la
+   * puerta de otra marca (o sin ella, con persona): vacía, como si no tuviera rol. El caso
    * de uso lo usa con `exigirSucursal`; este puerto no autoriza por sí mismo.
    */
   sucursalesDelActor(contexto: ContextoOperativo): Promise<AlcanceDeSucursales>;

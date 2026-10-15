@@ -45,6 +45,7 @@ import {
   type RolDePrueba,
 } from "./fixtures-identidad";
 import { usuarioDePrueba } from "../utilidades/usuarios";
+import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
 
 /**
  * H6, tramo T3a: revocar una invitación, listar miembros, listar invitaciones pendientes y el error
@@ -289,6 +290,7 @@ describe.skipIf(base === null)(
             token,
             emailAutenticado: email,
             usuarioAuth: usuarioDePrueba(email),
+            marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
             ahora,
           }),
         ).toEqual({
@@ -403,6 +405,7 @@ describe.skipIf(base === null)(
           token,
           emailAutenticado: email,
           usuarioAuth: usuarioDePrueba(email),
+          marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
           ahora,
         });
         expect(aceptada.ok).toBe(true);
@@ -688,6 +691,7 @@ describe.skipIf(base === null)(
           token,
           emailAutenticado: email,
           usuarioAuth: usuarioDePrueba(email),
+          marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
           ahora,
         });
         expect(aceptada.ok).toBe(true);
@@ -974,6 +978,7 @@ describe.skipIf(base === null)(
           token: aceptada.token,
           emailAutenticado: aceptada.email,
           usuarioAuth: usuarioDePrueba(aceptada.email),
+          marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
           ahora,
         });
         const revocada = await invitar(e);

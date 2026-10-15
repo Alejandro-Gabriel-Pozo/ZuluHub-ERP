@@ -43,6 +43,7 @@ import {
   type RolDePrueba,
 } from "./fixtures-identidad";
 import { usuarioDePrueba } from "../utilidades/usuarios";
+import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
 
 /**
  * H3, tramo 3: concurrencia REAL de los casos de uso de identidad. Cada prueba lanza dos
@@ -205,6 +206,7 @@ describe.skipIf(base === null)("identidad: concurrencia de los casos de uso (K1 
       token,
       emailAutenticado: email,
       usuarioAuth: usuarioDePrueba(email),
+      marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
       ahora,
     });
 
