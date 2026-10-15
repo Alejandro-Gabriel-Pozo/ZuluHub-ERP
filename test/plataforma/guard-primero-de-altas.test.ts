@@ -72,6 +72,10 @@ const casosCon = (vigilada: Vigilada): CasosDeUsoDeAltas =>
       transacciones: { ejecutar: (_opciones, trabajo) => trabajo(vigilada.tx) },
       reglas: REGLAS_DE_PLATAFORMA,
     },
+    cicloDeVida: {
+      transacciones: { ejecutar: (_opciones, trabajo) => trabajo(vigilada.tx) },
+      reglas: REGLAS_DE_PLATAFORMA,
+    },
   });
 
 const CLAVE = "clave-de-guard-0001";
@@ -91,6 +95,22 @@ const LLAMADAS: Record<
       claveDeIdempotencia: CLAVE,
       empresaId: uuid(5),
     }),
+  suspenderTenant: (c) =>
+    c.suspenderTenant(comoAdministrador, {
+      claveDeIdempotencia: CLAVE,
+      tenantId: uuid(6),
+      motivo: "mora",
+    }),
+  reactivarTenant: (c) =>
+    c.reactivarTenant(comoAdministrador, { claveDeIdempotencia: CLAVE, tenantId: uuid(6) }),
+  suspenderEmpresa: (c) =>
+    c.suspenderEmpresa(comoAdministrador, {
+      claveDeIdempotencia: CLAVE,
+      empresaId: uuid(7),
+      motivo: "mora",
+    }),
+  reactivarEmpresa: (c) =>
+    c.reactivarEmpresa(comoAdministrador, { claveDeIdempotencia: CLAVE, empresaId: uuid(7) }),
   cancelarAlta: (c) =>
     c.cancelarAlta(comoAdministrador, {
       claveDeIdempotencia: CLAVE,
@@ -192,6 +212,10 @@ describe("el guard es lo primero de cada caso de uso del alta", () => {
       "altas.reenviar_invitacion",
       "altas.revocar_invitacion",
       "empresas.alta",
+      "empresas.reactivar",
+      "empresas.suspender",
+      "tenants.reactivar",
+      "tenants.suspender",
     ]);
   });
 });

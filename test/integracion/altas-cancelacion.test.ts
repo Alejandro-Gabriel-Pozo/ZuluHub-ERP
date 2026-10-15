@@ -3,7 +3,6 @@ import { sql } from "kysely";
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from "vitest";
 import type { TransaccionesDePostgres } from "../../src/adaptadores/postgres/transacciones";
 import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
-import { REGLAS_DE_PLATAFORMA } from "../../src/capacidades/permisos/plataforma";
 import type { ContextoDePlataforma } from "../../src/contexto/contexto";
 import {
   crearCasosDeUsoDeIdentidad,
@@ -22,7 +21,6 @@ import type { Resultado } from "../../src/primitivas/resultado/resultado";
 import type { TrabajoTomado } from "../../src/puertos/cola-de-trabajos";
 import type { Correo, MensajeDeCorreo } from "../../src/puertos/correo";
 import type { Tokens } from "../../src/puertos/tokens";
-import { MODULOS_DE_PRUEBA } from "../utilidades/planes";
 import { usuarioDePrueba } from "../utilidades/usuarios";
 import { ADMIN_DE_PRUEBA } from "./admins-de-prueba";
 import {
@@ -32,6 +30,7 @@ import {
   crearCasosDeAlta,
   crearEntornoDeAlta,
   crearMarcaLista,
+  dependenciasDeAltas,
   crearTenantConPlan,
   tokensDePrueba,
   type TxDeAltaDePrueba,
@@ -740,19 +739,7 @@ function crearCasosDeUsoDeAltasConTope(
   limite: number,
 ): CasosDeUsoDeAltas {
   return crearCasosDeUsoDeAltas({
-    altaDeEmpresa: {
-      transacciones: entorno,
-      reglas: REGLAS_DE_PLATAFORMA,
-      tokens: tokensDePrueba(),
-      catalogoDeModulos: MODULOS_DE_PRUEBA,
-    },
-    cancelarAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA },
+    ...dependenciasDeAltas(entorno),
     cancelarAltasVencidas: { transacciones: entorno, limite },
-    reenviarInvitacionDelAlta: {
-      transacciones: entorno,
-      reglas: REGLAS_DE_PLATAFORMA,
-      tokens: tokensDePrueba(),
-    },
-    revocarInvitacionDelAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA },
   });
 }

@@ -16,6 +16,14 @@ import {
 } from "./cancelar-altas-vencidas";
 import type { DependenciasDeCasoDePlataforma } from "./caso-de-plataforma";
 import {
+  DECLARACIONES_DE_CICLO_DE_VIDA,
+  armarReactivarEmpresa,
+  armarReactivarTenant,
+  armarSuspenderEmpresa,
+  armarSuspenderTenant,
+  type DependenciasDeCicloDeVida,
+} from "./ciclo-de-vida";
+import {
   DECLARACION_DE_REENVIAR_INVITACION_DEL_ALTA,
   DECLARACION_DE_REVOCAR_INVITACION_DEL_ALTA,
   armarReenviarInvitacionDelAlta,
@@ -25,7 +33,7 @@ import {
 } from "./invitacion-del-alta";
 
 /**
- * Los casos de uso del alta de empresas de plataforma (H5 §B.5.1, §B.5.3, §B.5.4 y marcas y planes §B.10) y qué
+ * Los casos de uso del alta de empresas de plataforma (H5 §B.5.1, §B.5.3, §B.5.2, §B.5.4 y marcas y planes §B.10) y qué
  * exige cada uno al guard (cruce X1 de ADR-003). El barrido de altas vencidas no pasa por el guard: lo corre
  * el sistema, y lo declara con su motivo.
  */
@@ -35,6 +43,7 @@ export const DECLARACIONES_DE_ALTAS = {
   cancelarAltasVencidas: DECLARACION_DEL_BARRIDO_DE_ALTAS,
   reenviarInvitacionDelAlta: DECLARACION_DE_REENVIAR_INVITACION_DEL_ALTA,
   revocarInvitacionDelAlta: DECLARACION_DE_REVOCAR_INVITACION_DEL_ALTA,
+  ...DECLARACIONES_DE_CICLO_DE_VIDA,
 } as const satisfies Record<
   string,
   DeclaracionDeAccionDePlataforma | Readonly<{ sinGuard: string }>
@@ -46,6 +55,7 @@ export type DependenciasDeAltas = Readonly<{
   cancelarAltasVencidas: DependenciasDelBarrido;
   reenviarInvitacionDelAlta: DependenciasDeReenvioDelAlta;
   revocarInvitacionDelAlta: DependenciasDeCasoDePlataforma<TxDeRevocacionDelAlta>;
+  cicloDeVida: DependenciasDeCicloDeVida;
 }>;
 
 /**
@@ -61,6 +71,10 @@ export function crearCasosDeUsoDeAltas(dependencias: DependenciasDeAltas) {
       dependencias.reenviarInvitacionDelAlta,
     ),
     revocarInvitacionDelAlta: armarRevocarInvitacionDelAlta(dependencias.revocarInvitacionDelAlta),
+    suspenderTenant: armarSuspenderTenant(dependencias.cicloDeVida),
+    reactivarTenant: armarReactivarTenant(dependencias.cicloDeVida),
+    suspenderEmpresa: armarSuspenderEmpresa(dependencias.cicloDeVida),
+    reactivarEmpresa: armarReactivarEmpresa(dependencias.cicloDeVida),
   } satisfies Record<keyof typeof DECLARACIONES_DE_ALTAS, unknown>;
 }
 

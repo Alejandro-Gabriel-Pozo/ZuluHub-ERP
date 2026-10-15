@@ -54,6 +54,7 @@ import { crearRepositorioDeTenants, type TenantsDb } from "../../src/modulos/ten
 import {
   crearCasosDeUsoDeAltas,
   type CasosDeUsoDeAltas,
+  type DependenciasDeAltas,
 } from "../../src/plataforma/casos-de-uso/altas";
 import type { TxDeAlta } from "../../src/plataforma/casos-de-uso/alta-nucleo";
 import type { EntradaDeAltaDeEmpresa } from "../../src/plataforma/casos-de-uso/alta-de-empresa";
@@ -235,22 +236,28 @@ export const SECRETO_DE_PRUEBA: Buffer = randomBytes(32);
 /** Una fábrica de invitaciones con secreto de prueba: la misma que usa la composición, sin entorno. */
 export const tokensDePrueba = (): Tokens => crearTokensHmac(SECRETO_DE_PRUEBA);
 
+/** Las dependencias de todos los casos del alta, sobre un mismo entorno de transacciones. */
+export const dependenciasDeAltas = (
+  entorno: TransaccionesDePostgres<TxDeAltaDePrueba>,
+  tokens: Pick<Tokens, "emitir"> = tokensDePrueba(),
+): DependenciasDeAltas => ({
+  altaDeEmpresa: {
+    transacciones: entorno,
+    reglas: REGLAS_DE_PLATAFORMA,
+    tokens,
+    catalogoDeModulos: MODULOS_DE_PRUEBA,
+  },
+  cancelarAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA },
+  cancelarAltasVencidas: { transacciones: entorno },
+  reenviarInvitacionDelAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA, tokens },
+  revocarInvitacionDelAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA },
+  cicloDeVida: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA },
+});
+
 export const crearCasosDeAlta = (
   entorno: TransaccionesDePostgres<TxDeAltaDePrueba>,
   tokens: Pick<Tokens, "emitir"> = tokensDePrueba(),
-): CasosDeUsoDeAltas =>
-  crearCasosDeUsoDeAltas({
-    altaDeEmpresa: {
-      transacciones: entorno,
-      reglas: REGLAS_DE_PLATAFORMA,
-      tokens,
-      catalogoDeModulos: MODULOS_DE_PRUEBA,
-    },
-    cancelarAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA },
-    cancelarAltasVencidas: { transacciones: entorno },
-    reenviarInvitacionDelAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA, tokens },
-    revocarInvitacionDelAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA },
-  });
+): CasosDeUsoDeAltas => crearCasosDeUsoDeAltas(dependenciasDeAltas(entorno, tokens));
 
 // ---- el escenario: una marca lista para dar de alta, preparada con el cliente del dueño ----------------
 
