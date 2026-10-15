@@ -254,3 +254,34 @@ export function invitacionARevocarAlCancelar(
   if (ultima === null || ultima.estado !== "PENDIENTE") return null;
   return { id: ultima.id, version: ultima.version };
 }
+
+export type ErrorDeRevocacionDelAlta = "ALTA_NO_PENDIENTE" | "ALTA_SIN_INVITACION";
+
+export type DecisionDeRevocacionDelAlta<I> =
+  Readonly<{ tipo: "REVOCAR"; invitacion: I }> | Readonly<{ tipo: "YA_REVOCADA"; invitacion: I }>;
+
+/**
+ * Decide si la plataforma revoca la invitación del alta SIN reenviarla (H5 §B.5.4): la empresa sigue en
+ * `PROVISIONING` hasta que se reenvíe, se cancele o venza. `ultima` es la última invitación del alta de esa
+ * empresa, sea cual sea su estado. Orden de los errores: la empresa ya no está en `PROVISIONING`
+ * (`ALTA_NO_PENDIENTE`, el mismo código que la aceptación); no hay ninguna invitación del alta
+ * (`ALTA_SIN_INVITACION`); la última ya se aceptó (`ALTA_NO_PENDIENTE`). Una ya revocada es `YA_REVOCADA`
+ * (repetir no es un error). La pendiente, vigente o vencida, se revoca. Devuelve la misma invitación que
+ * recibió, para que quien escribe use su versión (control optimista) sin volver a leerla.
+ */
+export function decidirRevocacionDelAlta<I extends Pick<Invitacion, "estado">>(
+  empresa: Readonly<{ estado: Empresa["estado"] }>,
+  ultima: I | null,
+): Resultado<DecisionDeRevocacionDelAlta<I>, ErrorDeRevocacionDelAlta> {
+  if (empresa.estado !== "PROVISIONING") return err("ALTA_NO_PENDIENTE");
+  if (ultima === null) return err("ALTA_SIN_INVITACION");
+  if (ultima.estado === "ACEPTADA") return err("ALTA_NO_PENDIENTE");
+  if (ultima.estado === "REVOCADA") return ok({ tipo: "YA_REVOCADA", invitacion: ultima });
+  return ok({ tipo: "REVOCAR", invitacion: ultima });
+}
+
+/** El motivo con el que la plataforma revoca la invitación del alta sin reenviarla. */
+export const MOTIVO_DE_REVOCACION_POR_PLATAFORMA = "REVOCADA_POR_PLATAFORMA";
+
+/** El motivo con el que se revoca la invitación anterior al reenviar el alta. */
+export const MOTIVO_DE_REVOCACION_POR_REENVIO = "REENVIADA";

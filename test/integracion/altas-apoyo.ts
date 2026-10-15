@@ -248,6 +248,8 @@ export const crearCasosDeAlta = (
     },
     cancelarAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA },
     cancelarAltasVencidas: { transacciones: entorno },
+    reenviarInvitacionDelAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA, tokens },
+    revocarInvitacionDelAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA },
   });
 
 // ---- el escenario: una marca lista para dar de alta, preparada con el cliente del dueño ----------------

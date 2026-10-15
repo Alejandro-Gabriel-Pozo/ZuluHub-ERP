@@ -748,5 +748,11 @@ function crearCasosDeUsoDeAltasConTope(
     },
     cancelarAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA },
     cancelarAltasVencidas: { transacciones: entorno, limite },
+    reenviarInvitacionDelAlta: {
+      transacciones: entorno,
+      reglas: REGLAS_DE_PLATAFORMA,
+      tokens: tokensDePrueba(),
+    },
+    revocarInvitacionDelAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA },
   });
 }

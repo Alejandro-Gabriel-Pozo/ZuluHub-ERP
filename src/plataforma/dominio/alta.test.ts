@@ -13,10 +13,13 @@ import {
 import {
   MOTIVO_DE_ALTA_VENCIDA,
   MOTIVO_DE_REVOCACION_POR_CANCELACION,
+  MOTIVO_DE_REVOCACION_POR_PLATAFORMA,
+  MOTIVO_DE_REVOCACION_POR_REENVIO,
   PLAZO_DE_ALTA_EN_MS,
   altaVencida,
   comprobarAlta,
   decidirCancelacionDeAlta,
+  decidirRevocacionDelAlta,
   invitacionARevocarAlCancelar,
   msRestantesDeAlta,
   validarAlta,
@@ -411,5 +414,59 @@ describe("invitacionARevocarAlCancelar", () => {
     expect(invitacionARevocarAlCancelar(invitacion("ACEPTADA"))).toBeNull();
     expect(invitacionARevocarAlCancelar(invitacion("REVOCADA"))).toBeNull();
     expect(invitacionARevocarAlCancelar(null)).toBeNull();
+  });
+});
+
+describe("decidirRevocacionDelAlta", () => {
+  const ultima = (estado: "PENDIENTE" | "ACEPTADA" | "REVOCADA") => ({
+    id: invitacionId("i-9"),
+    estado,
+    version: 4,
+  });
+
+  it("los motivos de revocación son REVOCADA_POR_PLATAFORMA y REENVIADA", () => {
+    expect(MOTIVO_DE_REVOCACION_POR_PLATAFORMA).toBe("REVOCADA_POR_PLATAFORMA");
+    expect(MOTIVO_DE_REVOCACION_POR_REENVIO).toBe("REENVIADA");
+  });
+
+  it("una pendiente de una empresa en alta se revoca, y se devuelve la misma invitación leída", () => {
+    expect(decidirRevocacionDelAlta({ estado: "PROVISIONING" }, ultima("PENDIENTE"))).toEqual({
+      ok: true,
+      valor: { tipo: "REVOCAR", invitacion: ultima("PENDIENTE") },
+    });
+  });
+
+  it("una ya revocada es YA_REVOCADA: repetir no es un error y no hay nada que escribir", () => {
+    expect(decidirRevocacionDelAlta({ estado: "PROVISIONING" }, ultima("REVOCADA"))).toEqual({
+      ok: true,
+      valor: { tipo: "YA_REVOCADA", invitacion: ultima("REVOCADA") },
+    });
+  });
+
+  it("una empresa que ya no está en alta (en cualquier otro estado) es ALTA_NO_PENDIENTE", () => {
+    const otros: EstadoDeEmpresa[] = ["ACTIVE", "SUSPENDED", "CANCELLED", "DELETING"];
+    for (const estado of otros) {
+      expect(decidirRevocacionDelAlta({ estado }, ultima("PENDIENTE")), estado).toEqual(
+        error("ALTA_NO_PENDIENTE"),
+      );
+    }
+  });
+
+  it("sin invitación del alta es ALTA_SIN_INVITACION; con la última aceptada, ALTA_NO_PENDIENTE", () => {
+    expect(decidirRevocacionDelAlta({ estado: "PROVISIONING" }, null)).toEqual(
+      error("ALTA_SIN_INVITACION"),
+    );
+    expect(decidirRevocacionDelAlta({ estado: "PROVISIONING" }, ultima("ACEPTADA"))).toEqual(
+      error("ALTA_NO_PENDIENTE"),
+    );
+  });
+
+  it("precedencia: la empresa fuera de alta gana sobre la falta de invitación y sobre el estado de la última", () => {
+    expect(decidirRevocacionDelAlta({ estado: "ACTIVE" }, null)).toEqual(
+      error("ALTA_NO_PENDIENTE"),
+    );
+    expect(decidirRevocacionDelAlta({ estado: "CANCELLED" }, ultima("REVOCADA"))).toEqual(
+      error("ALTA_NO_PENDIENTE"),
+    );
   });
 });
