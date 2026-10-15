@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ASPECTO_POR_DEFECTO } from "./aspecto";
 import {
   decidirConfiguracionPublica,
   type DatosParaLaConfiguracionPublica,
@@ -28,6 +29,7 @@ const version = (parcial: Partial<VersionPublicaDeMarca> = {}): VersionPublicaDe
   vigenteDesde: ANTES,
   nombreVisible: "Mi Calendario",
   tema: TEMA,
+  aspecto: {},
   ...parcial,
 });
 
@@ -42,19 +44,25 @@ const datos = (
 });
 
 describe("decidirConfiguracionPublica", () => {
-  it("devuelve el nombre, el tema y el host canónico de la versión vigente, y nada más", () => {
+  it("devuelve el nombre, el tema, el aspecto y el host canónico de la versión vigente, y nada más", () => {
     const r = decidirConfiguracionPublica(datos([[version()]]));
     expect(r).toEqual({
       nombre: "Mi Calendario",
       tema: TEMA,
+      aspecto: ASPECTO_POR_DEFECTO,
       hostCanonico: "app.micalendario.test",
     });
-    expect(Object.keys(r ?? {}).sort()).toEqual(["hostCanonico", "nombre", "tema"]);
+    expect(Object.keys(r ?? {}).sort()).toEqual(["aspecto", "hostCanonico", "nombre", "tema"]);
   });
 
   it("sin host canónico, hostCanonico es null (el resto se sirve igual)", () => {
     const r = decidirConfiguracionPublica(datos([[version()]], { hostCanonico: null }));
-    expect(r).toEqual({ nombre: "Mi Calendario", tema: TEMA, hostCanonico: null });
+    expect(r).toEqual({
+      nombre: "Mi Calendario",
+      tema: TEMA,
+      aspecto: ASPECTO_POR_DEFECTO,
+      hostCanonico: null,
+    });
   });
 
   it("el tema devuelto es un objeto nuevo: no comparte referencia con el dato de la base", () => {
@@ -261,6 +269,7 @@ describe("decidirConfiguracionPublica", () => {
       expect(r).toEqual({
         nombre: "Mi Calendario",
         tema: {},
+        aspecto: ASPECTO_POR_DEFECTO,
         hostCanonico: "app.micalendario.test",
       });
     });
@@ -275,6 +284,196 @@ describe("decidirConfiguracionPublica", () => {
         datos([[version({ tema: {} })], [version({ tema: { primary: "x" } })]]),
       );
       expect(r?.tema).toEqual({});
+    });
+  });
+
+  describe("el aspecto: herencia token por token y defectos", () => {
+    const aspectoDe = (cadena: DatosParaLaConfiguracionPublica["cadena"]) =>
+      decidirConfiguracionPublica(datos(cadena))?.aspecto;
+
+    it("sin nada definido en la cadena son los defectos, siempre completos y en un objeto nuevo", () => {
+      const a = aspectoDe([[version()], [version()], [version()]]);
+      expect(a).toStrictEqual(ASPECTO_POR_DEFECTO);
+      expect(a).not.toBe(ASPECTO_POR_DEFECTO);
+      expect(aspectoDe([[version()]])).not.toBe(a);
+    });
+
+    it("una versión sin nada de aspecto (`{}`, lo que quedó al migrar) da los defectos", () => {
+      expect(aspectoDe([[version({ aspecto: {} })]])).toStrictEqual(ASPECTO_POR_DEFECTO);
+    });
+
+    it("la marca define lo suyo y el resto toma el defecto", () => {
+      expect(
+        aspectoDe([[version({ aspecto: { estilo: "LUDICO", titulos: "SERIF" } })]]),
+      ).toStrictEqual({
+        estilo: "LUDICO",
+        superficie: "NEUTRA",
+        esquinas: "SUAVE",
+        titulos: "SERIF",
+        ingreso: "CENTRADO",
+      });
+    });
+
+    it("el padre define el estilo y la hija solo las esquinas: la hija lleva ambos", () => {
+      const r = aspectoDe([
+        [version({ aspecto: { esquinas: "REDONDEADA" } })],
+        [version({ aspecto: { estilo: "MODERNO", esquinas: "RECTA" } })],
+      ]);
+      expect(r).toStrictEqual({
+        estilo: "MODERNO",
+        superficie: "NEUTRA",
+        esquinas: "REDONDEADA",
+        titulos: "SANS",
+        ingreso: "CENTRADO",
+      });
+    });
+
+    it("marca, padre y abuelo: gana el primero que define cada token", () => {
+      const r = aspectoDe([
+        [version({ aspecto: { estilo: "LUDICO" } })],
+        [version({ aspecto: { estilo: "MODERNO", superficie: "CALIDA" } })],
+        [version({ aspecto: { estilo: "CLASICO", superficie: "FRIA", ingreso: "CON_IMAGEN" } })],
+      ]);
+      expect(r).toStrictEqual({
+        estilo: "LUDICO",
+        superficie: "CALIDA",
+        esquinas: "SUAVE",
+        titulos: "SANS",
+        ingreso: "CON_IMAGEN",
+      });
+    });
+
+    it("sale con los tokens en el orden de la lista cerrada", () => {
+      const r = aspectoDe([[version({ aspecto: { ingreso: "DIVIDIDO", estilo: "MODERNO" } })]]);
+      expect(Object.keys(r ?? {})).toEqual([
+        "estilo",
+        "superficie",
+        "esquinas",
+        "titulos",
+        "ingreso",
+      ]);
+    });
+
+    it("rige el aspecto de la versión vigente, no el de una vieja ni el de una programada", () => {
+      const r = aspectoDe([
+        [
+          version({ numero: 1, aspecto: { estilo: "CLASICO" } }),
+          version({ numero: 2, aspecto: { estilo: "MODERNO" } }),
+          version({ numero: 3, aspecto: { estilo: "LUDICO" }, vigenteDesde: DESPUES }),
+        ],
+      ]);
+      expect(r?.estilo).toBe("MODERNO");
+    });
+
+    it("el aspecto de un ancestro sin versión vigente (solo programada) no se hereda", () => {
+      const padre = [version({ aspecto: { estilo: "LUDICO" }, vigenteDesde: DESPUES })];
+      expect(aspectoDe([[version()], padre])).toStrictEqual(ASPECTO_POR_DEFECTO);
+    });
+
+    it("un eslabón sin versión vigente no aporta nada, pero no corta la herencia", () => {
+      const abuelo = [version({ aspecto: { titulos: "SERIF" } })];
+      expect(aspectoDe([[version()], [], abuelo])?.titulos).toBe("SERIF");
+    });
+
+    it("el aspecto devuelto es un objeto nuevo: no comparte referencia con el dato de la base", () => {
+      const original = { estilo: "MODERNO" };
+      const r = aspectoDe([[version({ aspecto: original })]]);
+      expect(r).toStrictEqual({ ...ASPECTO_POR_DEFECTO, estilo: "MODERNO" });
+      expect(original).toEqual({ estilo: "MODERNO" });
+    });
+
+    it("el aspecto de una versión que ya no rige, o que no rige todavía, no se mira (aunque sea inválido)", () => {
+      const r = aspectoDe([
+        [
+          version({ numero: 1, aspecto: { estilo: "x" } }),
+          version({ numero: 2, aspecto: { estilo: "CLASICO" } }),
+          version({ numero: 3, aspecto: { estilo: "x" }, vigenteDesde: DESPUES }),
+        ],
+      ]);
+      expect(r?.estilo).toBe("CLASICO");
+    });
+  });
+
+  describe("un aspecto inválido en cualquier eslabón deja el aspecto POR DEFECTO (nunca un valor sin validar)", () => {
+    const validos = [version({ aspecto: { estilo: "MODERNO", ingreso: "DIVIDIDO" } })];
+    const invalidos: [string, unknown][] = [
+      ["un valor en minúsculas", { estilo: "moderno" }],
+      ["un valor de otra lista", { estilo: "NEUTRA" }],
+      ["un valor que no es texto", { esquinas: 3 }],
+      ["un valor nulo", { titulos: null }],
+      ["una clave fuera de la lista cerrada", { fondo: "NEUTRA" }],
+      ["CSS libre", { estilo: "red; background: url(x)" }],
+      ["un valor válido y otro inválido", { estilo: "MODERNO", superficie: "VERDE" }],
+      ["null", null],
+      ["una lista", ["MODERNO"]],
+      ["una lista vacía", []],
+      ["un texto", "MODERNO"],
+      ["un número", 7],
+      ["un booleano", true],
+      ["undefined", undefined],
+    ];
+
+    it.each(invalidos)("propio con %s: defectos aunque el padre sea válido", (_m, aspecto) => {
+      const r = decidirConfiguracionPublica(datos([[version({ aspecto })], validos]));
+      expect(r?.aspecto).toStrictEqual(ASPECTO_POR_DEFECTO);
+      expect(r?.nombre).toBe("Mi Calendario");
+    });
+
+    it.each(invalidos)(
+      "de un ancestro con %s: defectos aunque el propio sea válido",
+      (_m, aspecto) => {
+        const r = decidirConfiguracionPublica(
+          datos([[version({ aspecto: { estilo: "LUDICO" } })], [version({ aspecto })]]),
+        );
+        expect(r?.aspecto).toStrictEqual(ASPECTO_POR_DEFECTO);
+      },
+    );
+
+    it("del abuelo (tercer eslabón): también deja los defectos", () => {
+      const r = decidirConfiguracionPublica(
+        datos([
+          [version({ aspecto: { estilo: "LUDICO" } })],
+          [version()],
+          [version({ aspecto: { estilo: "x" } })],
+        ]),
+      );
+      expect(r?.aspecto).toStrictEqual(ASPECTO_POR_DEFECTO);
+    });
+
+    it("el defecto es un objeto nuevo en cada llamada", () => {
+      const datosMalos = datos([[version({ aspecto: { estilo: "x" } })]]);
+      const a = decidirConfiguracionPublica(datosMalos)?.aspecto;
+      expect(a).not.toBe(ASPECTO_POR_DEFECTO);
+      expect(decidirConfiguracionPublica(datosMalos)?.aspecto).not.toBe(a);
+    });
+
+    it("un aspecto inválido NO impide servir y NO toca el tema (y al revés)", () => {
+      const r = decidirConfiguracionPublica(datos([[version({ aspecto: { estilo: "x" } })]]));
+      expect(r).toEqual({
+        nombre: "Mi Calendario",
+        tema: TEMA,
+        aspecto: ASPECTO_POR_DEFECTO,
+        hostCanonico: "app.micalendario.test",
+      });
+      const t = decidirConfiguracionPublica(
+        datos([[version({ tema: { primary: "x" }, aspecto: { estilo: "LUDICO" } })]]),
+      );
+      expect(t?.tema).toEqual({});
+      expect(t?.aspecto.estilo).toBe("LUDICO");
+    });
+
+    it("la clave `__proto__` no pasa por la lista cerrada", () => {
+      const aspecto: unknown = JSON.parse('{"__proto__": {"estilo": "MODERNO"}}');
+      expect(decidirConfiguracionPublica(datos([[version({ aspecto })]]))?.aspecto).toStrictEqual(
+        ASPECTO_POR_DEFECTO,
+      );
+    });
+
+    it("un aspecto vacío de un eslabón y uno inválido de otro: el inválido manda", () => {
+      const r = decidirConfiguracionPublica(
+        datos([[version({ aspecto: {} })], [version({ aspecto: { estilo: "x" } })]]),
+      );
+      expect(r?.aspecto).toStrictEqual(ASPECTO_POR_DEFECTO);
     });
   });
 });

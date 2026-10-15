@@ -7,6 +7,7 @@ import {
 import { validarTextoVisible } from "../../../capacidades/vocabulario/texto-visible";
 import type { PlanId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { TOKENS_DE_ASPECTO, completarAspecto, type Aspecto, type AspectoCompleto } from "./aspecto";
 import { TOKENS_DE_TEMA, type Tema, type TemaCompleto } from "./tema";
 
 /**
@@ -17,6 +18,8 @@ import { TOKENS_DE_TEMA, type Tema, type TemaCompleto } from "./tema";
 export type DefinicionDeMarca = Readonly<{
   nombreVisible: string | null;
   tema: Tema;
+  /** Cinco datos de lista cerrada (`aspecto.ts`); `{}` = sin definir, hereda token por token. */
+  aspecto: Aspecto;
   logo: string | null;
   vocabulario: Vocabulario;
   modulosIniciales: readonly string[] | null;
@@ -27,6 +30,7 @@ export type DefinicionDeMarca = Readonly<{
 export const DEFINICION_VACIA: DefinicionDeMarca = {
   nombreVisible: null,
   tema: {},
+  aspecto: {},
   logo: null,
   vocabulario: {},
   modulosIniciales: null,
@@ -37,6 +41,8 @@ export const DEFINICION_VACIA: DefinicionDeMarca = {
 export type DefinicionResuelta = Readonly<{
   nombreVisible: string | null;
   tema: Tema;
+  /** Solo los tokens que algún eslabón define: los defectos se aplican al completar. */
+  aspecto: Aspecto;
   logo: string | null;
   vocabulario: DiccionarioResuelto;
   modulosIniciales: readonly string[] | null;
@@ -47,6 +53,8 @@ export type DefinicionResuelta = Readonly<{
 export type DefinicionCompleta = Readonly<{
   nombreVisible: string;
   tema: TemaCompleto;
+  /** Con los defectos aplicados: un aspecto siempre está completo. */
+  aspecto: AspectoCompleto;
   logo: string;
   vocabulario: DiccionarioResuelto;
   modulosIniciales: readonly string[];
@@ -59,8 +67,8 @@ const primero = <T>(valores: readonly (T | null | undefined)[]): T | null =>
 /**
  * La herencia (§B.3) como función pura sobre la cadena `[marca, padre, abuelo]` (a lo sumo tres
  * eslabones; la marca siempre primero). Un eslabón `null` es una marca sin versión vigente: no aporta
- * nada. Cada campo sale del primer eslabón que lo define; el tema, token por token; el vocabulario,
- * clave por clave (con el respaldo del catálogo al pintar). No inventa ni pierde: lo que ningún
+ * nada. Cada campo sale del primer eslabón que lo define; el tema y el aspecto, token por token; el
+ * vocabulario, clave por clave (con el respaldo del catálogo al pintar). No inventa ni pierde: lo que ningún
  * eslabón define queda sin definir.
  */
 export function resolverDefinicion(
@@ -72,9 +80,15 @@ export function resolverDefinicion(
     const color = primero(eslabones.map((e) => e.tema[token]));
     if (color !== null) tema[token] = color;
   }
+  const aspecto: Partial<Record<(typeof TOKENS_DE_ASPECTO)[number], string>> = {};
+  for (const token of TOKENS_DE_ASPECTO) {
+    const valor = primero(eslabones.map((e) => e.aspecto[token]));
+    if (valor !== null) aspecto[token] = valor;
+  }
   return {
     nombreVisible: primero(eslabones.map((e) => e.nombreVisible)),
     tema,
+    aspecto: aspecto as Aspecto,
     logo: primero(eslabones.map((e) => e.logo)),
     vocabulario: resolverVocabulario(eslabones.map((e) => e.vocabulario)),
     modulosIniciales: primero(eslabones.map((e) => e.modulosIniciales)),
@@ -93,8 +107,8 @@ export type CampoFaltante =
 /**
  * Los huecos de una definición al confirmar (§B.3): la RESUELTA tiene que estar completa, pero el
  * nombre visible lo define cada marca por sí misma (un producto que hereda el nombre se vería igual a
- * su padre). Para la principal, sin ancestros, «resuelta» y «propia» coinciden: define todo. Sin
- * huecos, devuelve la definición completa.
+ * su padre). Para la principal, sin ancestros, «resuelta» y «propia» coinciden: define todo. El aspecto no
+ * tiene huecos (lo que nadie define toma el defecto). Sin huecos, devuelve la definición completa.
  */
 export function completarDefinicion(
   propia: DefinicionDeMarca,
@@ -112,6 +126,7 @@ export function completarDefinicion(
   return ok({
     nombreVisible: propia.nombreVisible as string,
     tema: resuelta.tema as TemaCompleto,
+    aspecto: completarAspecto(resuelta.aspecto),
     logo: resuelta.logo as string,
     vocabulario: resuelta.vocabulario,
     modulosIniciales: resuelta.modulosIniciales as readonly string[],
