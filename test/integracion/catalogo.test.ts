@@ -488,6 +488,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...[
             "nombre_visible",
             "tema",
+            "aspecto", // 0014
             "logo",
             "vocabulario",
             "modulos_iniciales",
@@ -721,6 +722,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "marca_id",
           "nombre_visible",
           "tema",
+          "aspecto", // 0014
           "logo",
           "vocabulario",
           "modulos_iniciales",
