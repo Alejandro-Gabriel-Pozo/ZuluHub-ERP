@@ -309,6 +309,12 @@ describe.skipIf(base === null)("asignaciones y ajustes: casos de uso contra Post
       const antes = await huellaDeEscrituras(dueno);
       const malos: Array<[string, Parameters<typeof asignar>, unknown]> = [
         ["tenant inexistente", [INEXISTENTE, v1], "TENANT_NO_ENCONTRADO"],
+        // La existencia se mira ANTES de decidir: no depende de que la clave foránea lo traduzca al insertar.
+        [
+          "tenant inexistente con un número esperado que de otro modo sería desactualizado",
+          [INEXISTENTE, v1, { numeroEsperado: 3 }],
+          "TENANT_NO_ENCONTRADO",
+        ],
         [
           "versión inexistente",
           [tenant, INEXISTENTE, { numeroEsperado: 1 }],
@@ -878,6 +884,16 @@ describe.skipIf(base === null)("asignaciones y ajustes: casos de uso contra Post
         [
           "tenant inexistente",
           [INEXISTENTE, "carta_por_qr", { tipo: "INTERRUPTOR", encendida: true }],
+          "TENANT_NO_ENCONTRADO",
+        ],
+        [
+          "tenant inexistente con un número esperado que de otro modo sería desactualizado",
+          [
+            INEXISTENTE,
+            "carta_por_qr",
+            { tipo: "INTERRUPTOR", encendida: true },
+            { numeroEsperado: 3 },
+          ],
           "TENANT_NO_ENCONTRADO",
         ],
         [
