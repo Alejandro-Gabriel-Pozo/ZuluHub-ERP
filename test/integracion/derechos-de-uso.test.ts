@@ -6,6 +6,7 @@ import { adminPlataformaId, tenantId } from "../../src/primitivas/identificadore
 import { ok } from "../../src/primitivas/resultado/resultado";
 import type { TransaccionesDePostgres } from "../../src/adaptadores/postgres/transacciones";
 import { MODULOS_DE_PRUEBA, PERILLAS_DE_PRUEBA } from "../utilidades/planes";
+import { MARCA_PRINCIPAL_DE_PRUEBA, OTRA_MARCA_DE_PRUEBA } from "../utilidades/marcas";
 import { crearBaseAparte, crearBarrera } from "./entorno";
 import {
   contextoDeEmpresa,
@@ -408,10 +409,13 @@ describe.skipIf(base === null)("derechos de uso: lectura del plan y de los ajust
     it("devuelve null para cualquier código, esté o no bien formado", async () => {
       const r = await entorno.ejecutar({ contexto: contextoDePlataforma(ahora()) }, async (tx) => {
         const codigos = ["", "x", "a".repeat(64), "0123456789abcdef".repeat(4)];
-        const respuestas = await Promise.all(codigos.map((c) => tx.derechos.deLaCartaPublica(c)));
+        const marcas = [MARCA_PRINCIPAL_DE_PRUEBA, OTRA_MARCA_DE_PRUEBA];
+        const respuestas = await Promise.all(
+          marcas.flatMap((m) => codigos.map((c) => tx.derechos.deLaCartaPublica(m, c))),
+        );
         return ok(respuestas);
       });
-      expect(r).toEqual({ ok: true, valor: [null, null, null, null] });
+      expect(r).toEqual({ ok: true, valor: Array.from({ length: 8 }, () => null) });
     });
   });
 

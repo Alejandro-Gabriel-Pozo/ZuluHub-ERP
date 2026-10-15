@@ -3,6 +3,7 @@ import { ROLES_DE_EMPRESA } from "../../../capacidades/permisos/roles";
 import {
   empresaId,
   invitacionId,
+  marcaComercialId,
   personaId,
   sucursalId,
   tenantId,
@@ -10,6 +11,7 @@ import {
   usuarioAuthId,
   type EmpresaId,
   type InvitacionId,
+  type MarcaComercialId,
   type PersonaId,
   type SucursalId,
   type TraspasoId,
@@ -223,6 +225,12 @@ export interface RepositorioDeInvitaciones {
   /** Por el hash del token (contexto de INVITACION). */
   obtenerPorHash(tokenHash: string): Promise<Invitacion | null>;
   obtenerPorId(id: InvitacionId): Promise<Invitacion | null>;
+  /**
+   * La marca comercial del tenant de la invitación con ese hash (`tenant.marca_id`), leída en la misma
+   * transacción y con lo que el contexto de INVITACION ya ve (la invitación y su tenant). `null`: no se
+   * ve ninguna invitación con ese hash (o no se ve su tenant); quien llama lo trata como «no existe».
+   */
+  marcaDelTenantDeLaInvitacion(tokenHash: string): Promise<MarcaComercialId | null>;
   /**
    * La ÚLTIMA invitación del alta del gerente de esa empresa (tipo `ALTA_GERENTE`, la de `emitida_en`
    * más reciente, desempate por id), sea cual sea su estado: pendiente (vigente o vencida), aceptada o
@@ -606,6 +614,17 @@ export function crearRepositorioDeInvitaciones(db: Kysely<IdentidadDb>): Reposit
         .where("token_hash", "=", tokenHash)
         .executeTakeFirst();
       return fila === undefined ? null : ((await armar([fila]))[0] ?? null);
+    },
+
+    async marcaDelTenantDeLaInvitacion(tokenHash) {
+      const fila = await db
+        .withTables<{ tenant: { id: string; marca_id: string } }>()
+        .selectFrom("invitacion as i")
+        .innerJoin("tenant as t", "t.id", "i.tenant_id")
+        .select("t.marca_id")
+        .where("i.token_hash", "=", tokenHash)
+        .executeTakeFirst();
+      return fila === undefined ? null : marcaComercialId(fila.marca_id);
     },
 
     async obtenerPorId(id) {

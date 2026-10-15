@@ -235,7 +235,9 @@ describe("deLaCartaPublica: falla cerrado hasta que exista el módulo de catálo
       asignaciones: [{ numero: 1, vigenteDesde: antes, version: version(1, ["caja"], 3) }],
     });
     for (const codigo of ["", "x", "a".repeat(43), "0123456789abcdef".repeat(4)]) {
-      expect(await derechos.deLaCartaPublica(codigo), codigo).toBeNull();
+      for (const marca of [marcaComercialId("m1"), marcaComercialId("m2")]) {
+        expect(await derechos.deLaCartaPublica(marca, codigo), `${marca}/${codigo}`).toBeNull();
+      }
     }
     expect(llamadas).toEqual([]);
   });
