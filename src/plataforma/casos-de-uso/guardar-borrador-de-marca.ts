@@ -50,6 +50,11 @@ export type EntradaDeGuardarBorradorDeMarca = Readonly<{
   nombreVisible?: string | null | undefined;
   /** Colores `#rrggbb` por token (`primary`, `on-primary`, `secondary`, `accent`). */
   tema?: Readonly<Record<string, unknown>> | undefined;
+  /**
+   * Cinco datos de lista cerrada: `estilo`, `superficie`, `esquinas`, `titulos` e `ingreso` (ver
+   * `modulos/marcas/dominio/aspecto.ts`). Lo que no se define hereda de la marca padre o toma el defecto.
+   */
+  aspecto?: Readonly<Record<string, unknown>> | undefined;
   /** Ruta a un PNG o WebP propio del despliegue (`/marcas/<marca>/<archivo>.png`). */
   logo?: string | null | undefined;
   /** Reemplazos de texto por clave del catálogo de textos. */
@@ -103,6 +108,7 @@ function cambiosDeLaEntrada(
   return {
     ...(entrada.nombreVisible !== undefined && { nombreVisible: entrada.nombreVisible }),
     ...(entrada.tema !== undefined && { tema: entrada.tema }),
+    ...(entrada.aspecto !== undefined && { aspecto: entrada.aspecto }),
     ...(entrada.logo !== undefined && { logo: entrada.logo }),
     ...(entrada.vocabulario !== undefined && { vocabulario: entrada.vocabulario }),
     ...(entrada.modulosIniciales !== undefined && { modulosIniciales: entrada.modulosIniciales }),
@@ -159,6 +165,7 @@ export function armarGuardarBorradorDeMarca(dependencias: DependenciasDeMarcasYP
                 nombreVisible: cambios.valor.nombreVisible,
               }),
               ...(cambios.valor.tema !== undefined && { tema: { ...cambios.valor.tema } }),
+              ...(cambios.valor.aspecto !== undefined && { aspecto: { ...cambios.valor.aspecto } }),
               ...(cambios.valor.logo !== undefined && { logo: cambios.valor.logo }),
               ...(cambios.valor.vocabulario !== undefined && {
                 vocabulario: { ...cambios.valor.vocabulario },

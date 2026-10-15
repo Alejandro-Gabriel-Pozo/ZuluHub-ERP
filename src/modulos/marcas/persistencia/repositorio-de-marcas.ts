@@ -5,6 +5,7 @@ import {
   type MarcaComercialId,
 } from "../../../primitivas/identificadores/marca";
 import { DEFINICION_VACIA, type DefinicionDeMarca } from "../dominio/definicion";
+import type { Aspecto } from "../dominio/aspecto";
 import type { Tema } from "../dominio/tema";
 import { aDominio, type DominioGuardado } from "./repositorios";
 import type { DominiosDb, MarcasDb } from "./tablas";
@@ -153,6 +154,7 @@ function aDefinicion(fila: FilaDeVersion): DefinicionDeMarca {
     ...DEFINICION_VACIA,
     nombreVisible: fila.nombre_visible,
     tema: objetoDe<Tema>(fila.tema),
+    aspecto: objetoDe<Aspecto>(fila.aspecto),
     logo: fila.logo,
     vocabulario: objetoDe<Readonly<Record<string, string>>>(fila.vocabulario),
     modulosIniciales: fila.modulos_iniciales,
@@ -203,6 +205,7 @@ function columnasDeLaDefinicion(definicion: DefinicionDeMarca) {
   return {
     nombre_visible: definicion.nombreVisible,
     tema: JSON.stringify(definicion.tema),
+    aspecto: JSON.stringify(definicion.aspecto),
     logo: definicion.logo,
     vocabulario: JSON.stringify(definicion.vocabulario),
     modulos_iniciales:

@@ -116,6 +116,7 @@ export const COLUMNAS_DE_VERSION_DE_MARCA = [
   "creado_en",
   "actualizado_en",
   "version",
+  "aspecto", // 0014: la columna se agrega al final
 ] as const;
 
 /**

@@ -179,16 +179,18 @@ describe("la auditoría de una marca", () => {
     ...DEFINICION_VACIA,
     nombreVisible: "Mi marca",
     tema: { primary: "#1d4ed8", "on-primary": "#ffffff" },
+    aspecto: { estilo: "MODERNO", esquinas: "SUAVE" },
     logo: "/marcas/mc/logo.png",
     vocabulario: { "rol.gerente.nombre": "Jefe", "rol.operador.nombre": "Mozo" },
     modulosIniciales: ["caja"],
     planPorDefectoId: planId("p1"),
   };
 
-  it("los datos de la definición no llevan el vocabulario, y el tema va como objeto de sus tokens", () => {
+  it("los datos de la definición no llevan el vocabulario, y el tema y el aspecto van como objetos de sus tokens", () => {
     expect(datosDeLaDefinicion(definicion)).toEqual({
       nombreVisible: "Mi marca",
       tema: { primary: "#1d4ed8", "on-primary": "#ffffff" },
+      aspecto: { estilo: "MODERNO", esquinas: "SUAVE" },
       logo: "/marcas/mc/logo.png",
       modulosIniciales: ["caja"],
       planPorDefectoId: "p1",
@@ -196,6 +198,7 @@ describe("la auditoría de una marca", () => {
     expect(datosDeLaDefinicion(DEFINICION_VACIA)).toEqual({
       nombreVisible: null,
       tema: {},
+      aspecto: {},
       logo: null,
       modulosIniciales: null,
       planPorDefectoId: null,
@@ -229,11 +232,14 @@ describe("la auditoría de una marca", () => {
       ...definicion,
       vocabulario: { "rol.operador.nombre": "Mozo", "rol.gerente.nombre": "Jefe" },
       tema: { "on-primary": "#ffffff", primary: "#1d4ed8" },
+      aspecto: { esquinas: "SUAVE", estilo: "MODERNO" },
     };
     expect(definicionesIguales(definicion, otro)).toBe(true);
     for (const cambio of [
       { nombreVisible: "Otra" },
       { tema: { primary: "#000000" } },
+      { aspecto: { estilo: "CLASICO", esquinas: "SUAVE" } },
+      { aspecto: {} },
       { logo: null },
       { vocabulario: {} },
       { modulosIniciales: [] },

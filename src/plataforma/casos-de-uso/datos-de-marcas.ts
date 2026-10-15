@@ -24,6 +24,7 @@ export function datosDeLaDefinicion(definicion: DefinicionDeMarca): Record<strin
   return {
     nombreVisible: definicion.nombreVisible,
     tema: comoObjeto(definicion.tema),
+    aspecto: comoObjeto(definicion.aspecto),
     logo: definicion.logo,
     modulosIniciales:
       definicion.modulosIniciales === null ? null : [...definicion.modulosIniciales],

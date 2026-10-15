@@ -252,6 +252,52 @@ describe.skipIf(base === null)("marcas de plataforma: casos de uso contra Postgr
       });
     });
 
+    it("guarda el aspecto (cinco datos de lista cerrada), lo reemplaza entero, lo audita y mandarlo igual no escribe", async () => {
+      const marca = await unaMarca();
+      const primero = exito(
+        await guardar(marca, null, {
+          nombreVisible: "Con aspecto",
+          aspecto: { esquinas: "SUAVE", estilo: "MODERNO" },
+        }),
+      );
+      expect(await filaDeVersion(primero.borradorId)).toMatchObject({
+        aspecto: { estilo: "MODERNO", esquinas: "SUAVE" },
+      });
+      const [alta] = await auditoriaDePlataformaDe(dueno, "version_de_marca", primero.borradorId);
+      expect(alta).toMatchObject({
+        antes: null,
+        despues: { aspecto: { estilo: "MODERNO", esquinas: "SUAVE" } },
+      });
+
+      // Mandar el mismo aspecto (en otro orden) no cambia nada: éxito sin escribir ni auditar.
+      const igual = exito(
+        await guardar(marca, 1, { aspecto: { estilo: "MODERNO", esquinas: "SUAVE" } }),
+      );
+      expect(igual).toEqual({ borradorId: primero.borradorId, version: 1 });
+      expect(
+        await auditoriaDePlataformaDe(dueno, "version_de_marca", primero.borradorId),
+      ).toHaveLength(1);
+
+      // Un aspecto nuevo REEMPLAZA al anterior entero (no se mezclan).
+      const segundo = exito(await guardar(marca, 1, { aspecto: { titulos: "SERIF" } }));
+      expect(segundo.version).toBe(2);
+      expect(await filaDeVersion(segundo.borradorId)).toMatchObject({
+        aspecto: { titulos: "SERIF" },
+      });
+      const constancias = await auditoriaDePlataformaDe(
+        dueno,
+        "version_de_marca",
+        segundo.borradorId,
+      );
+      expect(constancias[1]).toMatchObject({
+        antes: { aspecto: { estilo: "MODERNO", esquinas: "SUAVE" } },
+        despues: { aspecto: { titulos: "SERIF" } },
+      });
+      // `{}` lo vacía: vuelve a heredar.
+      exito(await guardar(marca, 2, { aspecto: {} }));
+      expect(await filaDeVersion(segundo.borradorId)).toMatchObject({ aspecto: {} });
+    });
+
     it("edita el borrador: reemplaza ENTERO lo que se manda, conserva lo que no, y audita antes y después", async () => {
       const marca = await unaMarca();
       const primero = exito(
@@ -384,6 +430,16 @@ describe.skipIf(base === null)("marcas de plataforma: casos de uso contra Postgr
           { tema: { primary: "#fff" } },
           { codigo: "TEMA_INVALIDO", token: "primary" },
         ],
+        [
+          "aspecto con un token ajeno",
+          { aspecto: { fuente: "SANS" } },
+          { codigo: "ASPECTO_INVALIDO", token: "fuente" },
+        ],
+        [
+          "aspecto con un valor fuera de la lista",
+          { aspecto: { estilo: "BARROCO" } },
+          { codigo: "ASPECTO_INVALIDO", token: "estilo" },
+        ],
         ["logo svg", { logo: "/marcas/mc/logo.svg" }, "LOGO_INVALIDO"],
         [
           "texto de una clave que no existe",
@@ -514,6 +570,19 @@ describe.skipIf(base === null)("marcas de plataforma: casos de uso contra Postgr
         },
       });
       expect(confirmacion?.despues?.["vigenteDesde"]).toBe(vigenteDesde.toISOString());
+    });
+
+    it("la versión confirmada lleva el aspecto del borrador y la constancia lo registra", async () => {
+      const aspecto = { estilo: "LUDICO", superficie: "CALIDA", ingreso: "CENTRADO" };
+      const { marca, borrador } = await marcaConBorrador({ aspecto });
+      exito(await confirmar(marca));
+      expect(await filaDeVersion(borrador.borradorId)).toMatchObject({
+        estado: "CONFIRMADA",
+        aspecto,
+      });
+      const constancias = await auditoriaDePlataformaDe(dueno, "marca", marca);
+      const confirmacion = constancias.find((c) => c.accion === "MARCA_VERSION_CONFIRMADA");
+      expect(confirmacion?.despues).toMatchObject({ aspecto });
     });
 
     it("una segunda versión audita la diferencia contra la que regía, y la congelada no se puede tocar ni con el dueño", async () => {

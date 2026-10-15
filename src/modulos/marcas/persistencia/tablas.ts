@@ -138,6 +138,8 @@ export type MarcasDb = {
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
+    /** `jsonb` (0014): se escribe como texto JSON. */
+    aspecto: string;
   };
 };
 
