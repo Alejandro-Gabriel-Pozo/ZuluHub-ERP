@@ -184,6 +184,50 @@ describe("modeloDeImpresion: bloque fiscal", () => {
   });
 });
 
+describe("modeloDeImpresion: referencias de los renglones (reservadas para F12)", () => {
+  it("cada renglón lleva `referencias` y hoy siempre vacío, sea cual sea el tipo, la marca o la nota", () => {
+    for (const tipo of TIPOS_DE_COMPROBANTE) {
+      const m = modelo(imprimible({ ...facturaB, tipo, asociado: null }));
+      expect(m.renglones).toHaveLength(2);
+      for (const r of m.renglones) expect(r.referencias, tipo).toEqual([]);
+    }
+    for (const marca of [MARCA_UNO, MARCA_DOS]) {
+      for (const r of modelo(imprimible(facturaB), marca).renglones) {
+        expect(r.referencias).toEqual([]);
+      }
+    }
+  });
+
+  it("agregarlas no mueve nada de lo que ya se imprimía: sin ellas el modelo es el de siempre y reimprimir da lo mismo", () => {
+    const una = modelo(imprimible(facturaB));
+    const otra = modelo(imprimible(facturaB));
+    expect(otra).toEqual(una);
+    expect(JSON.stringify(otra)).toBe(JSON.stringify(una));
+    // lo de siempre del renglón no cambió; solo se suma la línea reservada
+    expect(una.renglones[0]).toEqual({
+      descripcion: "Torta",
+      cantidad: "1.0000",
+      precioUnitario: "1210.000000",
+      descuento: null,
+      alicuota: "21",
+      importe: "1210.00",
+      referencias: [],
+    });
+    expect(Object.keys(una.renglones[0] ?? {})).toEqual([
+      "descripcion",
+      "cantidad",
+      "precioUnitario",
+      "descuento",
+      "alicuota",
+      "importe",
+      "referencias",
+    ]);
+    // el QR, los totales y el bloque fiscal no dependen de las referencias
+    expect(una.qr.url).toBe(modelo(imprimible(facturaB), MARCA_DOS).qr.url);
+    expect(una.totales).toEqual(modelo(imprimible(facturaB), MARCA_DOS).totales);
+  });
+});
+
 describe("modeloDeImpresion: receptor, renglones y totales", () => {
   it("receptor y renglones como texto decimal", () => {
     const m = modelo(imprimible(facturaB));
@@ -201,6 +245,7 @@ describe("modeloDeImpresion: receptor, renglones y totales", () => {
         descuento: null,
         alicuota: "21",
         importe: "1210.00",
+        referencias: [],
       },
       {
         descripcion: "Medialunas",
@@ -209,6 +254,7 @@ describe("modeloDeImpresion: receptor, renglones y totales", () => {
         descuento: null,
         alicuota: "10.5",
         importe: "1050.00",
+        referencias: [],
       },
     ]);
     const conDescuento = facturaArmada(consumidorFinal, [renglon("9.95", "3", "21", "10")]);

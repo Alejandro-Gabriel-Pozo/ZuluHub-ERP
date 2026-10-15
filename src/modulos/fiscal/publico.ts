@@ -324,6 +324,7 @@ export type {
   UltimoIntentoVisto,
 } from "./consultas/vistas";
 export {
+  LARGO_MAXIMO_DEL_ORIGEN_ID,
   LARGO_MAXIMO_DEL_TEXTO,
   LIMITE_MAXIMO,
   LIMITE_POR_DEFECTO,
@@ -339,6 +340,7 @@ export {
   type ErrorDeImpresion,
   type MarcaParaImprimir,
   type ModeloImpreso,
+  type ReferenciaImpresa,
   type TotalesImpresos,
 } from "./dominio/modelo-de-impresion";
 

@@ -313,12 +313,44 @@ describe("listarComprobantes", () => {
     expect(exito(await vacia.consultas.listarComprobantes(contexto(), {})).siguiente).toBeNull();
   });
 
+  it("la letra, el punto de venta y el origen llegan a la lectura de la empresa del contexto", async () => {
+    const { consultas, filtros } = armar();
+    exito(
+      await consultas.listarComprobantes(contexto(OTRA_EMPRESA), {
+        letra: "B",
+        puntoDeVenta: 3,
+        origenTipo: "EJEMPLAR_DE_TICKET",
+        origenId: "ticket-9",
+      }),
+    );
+    expect(filtros).toHaveLength(1);
+    expect(filtros[0]?.empresa).toBe(OTRA_EMPRESA);
+    expect(filtros[0]?.filtro).toMatchObject({
+      letra: "B",
+      puntoDeVentaNumero: 3,
+      origenTipo: "EJEMPLAR_DE_TICKET",
+      origenId: "ticket-9",
+    });
+  });
+
   it("un pedido inválido no llega a la base", async () => {
     const { consultas, filtros } = armar();
     expect(await consultas.listarComprobantes(contexto(), { limite: 51 })).toEqual({
       ok: false,
       error: "LIMITE_INVALIDO",
     });
+    for (const [pedido, error] of [
+      [{ letra: "Z" }, "LETRA_INVALIDA"],
+      [{ puntoDeVenta: 0 }, "PUNTO_DE_VENTA_INVALIDO"],
+      [{ origenTipo: "VENTA" }, "ORIGEN_TIPO_INVALIDO"],
+      [{ origenTipo: "MANUAL", origenId: " " }, "ORIGEN_ID_INVALIDO"],
+      [{ origenId: "x" }, "ORIGEN_ID_SIN_TIPO"],
+    ] as const) {
+      expect(await consultas.listarComprobantes(contexto(), pedido as never)).toEqual({
+        ok: false,
+        error,
+      });
+    }
     expect(filtros).toEqual([]);
   });
 });
