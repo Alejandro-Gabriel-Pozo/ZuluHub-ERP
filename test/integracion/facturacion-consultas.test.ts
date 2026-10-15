@@ -7,9 +7,11 @@ import type { ContextoOperativo } from "../../src/contexto/contexto";
 import {
   comprobanteId,
   crearLecturasDeComprobantes,
+  origenId,
   type ComprobanteGuardado,
   type FiscalDb,
   type PedidoDeListado,
+  type TipoDeOrigen,
 } from "../../src/modulos/fiscal/publico";
 import { criteriosDeListado } from "../../src/modulos/fiscal/consultas/criterios-de-listado";
 import { modeloDeImpresion } from "../../src/modulos/fiscal/dominio/modelo-de-impresion";
@@ -17,7 +19,12 @@ import { formatearDomicilio } from "../../src/primitivas/domicilio/domicilio";
 import { empresaId, personaId } from "../../src/primitivas/identificadores/marca";
 import { ok, type Resultado } from "../../src/primitivas/resultado/resultado";
 import { receptorInscripto } from "../utilidades/facturacion";
-import { crearComprobante, crearEscenario, type Escenario } from "./facturacion-apoyo";
+import {
+  RENGLON_DE_100_SIN_ALICUOTA,
+  crearComprobante,
+  crearEscenario,
+  type Escenario,
+} from "./facturacion-apoyo";
 import {
   MARCA_DOS,
   MARCA_UNO,
@@ -41,7 +48,7 @@ import {
   type TxFacturacionDePrueba,
 } from "./facturacion-persistencia-apoyo";
 import { comoEmpresa } from "./entorno";
-import { crearMundo } from "./fiscal-apoyo";
+import { crearMundo, crearPuntoDeVenta } from "./fiscal-apoyo";
 import { crearMembresiaDeBase, crearPersonaDeBase, type RolDePrueba } from "./fixtures-identidad";
 
 /**
@@ -557,6 +564,348 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
       expect(await idsDe(a, { despuesDe: clave })).toEqual([a10, a09]);
       expect(await idsDe(b, { despuesDe: clave })).toEqual([b10]);
     });
+  });
+
+  // ===============================================================================================
+  // 4 bis. El listado por letra, punto de venta y origen (F6b)
+  // ===============================================================================================
+  describe("listado: letra, punto de venta y origen", () => {
+    const deOrigen = (tipo: TipoDeOrigen, id: string) => ({ tipo, id: origenId(id) });
+    /** Un segundo punto de venta ACTIVO del mismo emisor, con el número que se pida. */
+    const conPuntoDeVenta = async (e: Escenario, numero: number): Promise<Escenario> => ({
+      ...e,
+      pv: await crearPuntoDeVenta(dueno, e, { numero, activo: true }),
+      pvNumero: numero,
+    });
+    /** Una factura de letra C: el emisor de prueba es inscripto, pero la base no ata la letra al emisor. */
+    const crearFacturaC = (e: Escenario, cambios: Record<string, unknown> = {}) =>
+      crearComprobante(
+        dueno,
+        e,
+        {
+          tipo_comprobante: "FACTURA_C",
+          total: "100.00",
+          neto_gravado: "100.00",
+          iva: "0.00",
+          ...cambios,
+        },
+        [RENGLON_DE_100_SIN_ALICUOTA],
+        [],
+      );
+
+    it("la letra es la del tipo: A, B (con las notas B) y C, y se combina en AND con tipo, estado, ambiente y texto", async () => {
+      const a = await crearEmpresa();
+      const facturaB = await crearAutorizado(a.x);
+      const notaB = await crearNotaAutorizada(a.x, facturaB);
+      const facturaA = await crearAutorizado(a.x, { receptor: receptorInscripto });
+      const pendienteB = await crearPendiente(a.x);
+      const facturaC = await crearFacturaC(a.x);
+      expect(await idsDe(a, { letra: "A" })).toEqual([facturaA.id]);
+      expect(ordenados(await idsDe(a, { letra: "B" }))).toEqual(
+        ordenados([facturaB.id, notaB.id, pendienteB.id]),
+      );
+      expect(await idsDe(a, { letra: "C" })).toEqual([facturaC]);
+      // sin letra: todos, como siempre
+      expect(await idsDe(a)).toHaveLength(5);
+      // AND con los criterios de siempre
+      expect(await idsDe(a, { letra: "B", tipo: "NOTA_CREDITO_B" })).toEqual([notaB.id]);
+      expect(await idsDe(a, { letra: "B", estado: "PENDIENTE" })).toEqual([pendienteB.id]);
+      expect(ordenados(await idsDe(a, { letra: "B", estado: "AUTORIZADO" }))).toEqual(
+        ordenados([facturaB.id, notaB.id]),
+      );
+      expect(await idsDe(a, { letra: "A", texto: "distribuidora" })).toEqual([facturaA.id]);
+      expect(await idsDe(a, { letra: "B", texto: "distribuidora" })).toEqual([]);
+      expect(await idsDe(a, { letra: "A", ambiente: "PRODUCCION" })).toEqual([]);
+      // contradictorios: el AND vacío, sin error
+      expect(await idsDe(a, { letra: "A", tipo: "FACTURA_B" })).toEqual([]);
+      expect(await idsDe(a, { letra: "C", tipo: "FACTURA_C" })).toEqual([facturaC]);
+    });
+
+    it("el punto de venta es el NÚMERO que se imprime; se combina con la letra y no sale de otra empresa", async () => {
+      const a = await crearEmpresa();
+      const b = await crearEmpresa(a.x.tenant);
+      const pv7 = await conPuntoDeVenta(a.x, 7);
+      const enElUno = await crearAutorizado(a.x);
+      const enElSiete = await crearAutorizado(pv7);
+      const enElSieteA = await crearAutorizado(pv7, { receptor: receptorInscripto });
+      // otra empresa con el MISMO número de punto de venta (el 1) y el mismo origen de otra
+      const deB = await crearAutorizado(b.x);
+      expect(b.x.pvNumero).toBe(a.x.pvNumero);
+      expect(await idsDe(a, { puntoDeVenta: a.x.pvNumero })).toEqual([enElUno.id]);
+      expect(ordenados(await idsDe(a, { puntoDeVenta: 7 }))).toEqual(
+        ordenados([enElSiete.id, enElSieteA.id]),
+      );
+      expect(await idsDe(a, { puntoDeVenta: 7, letra: "A" })).toEqual([enElSieteA.id]);
+      expect(await idsDe(a, { puntoDeVenta: 1, letra: "A" })).toEqual([]);
+      expect(await idsDe(a, { puntoDeVenta: 99999 })).toEqual([]);
+      expect(await idsDe(b, { puntoDeVenta: b.x.pvNumero })).toEqual([deB.id]);
+      expect(await idsDe(b, { puntoDeVenta: 7 })).toEqual([]);
+      // el número impreso de la fila es el que se filtra
+      const fila = (await listar(a, { puntoDeVenta: 7, letra: "A" })).items[0];
+      expect(fila?.numero?.startsWith("00007-")).toBe(true);
+    });
+
+    it("el origen: por tipo, y por tipo e id exacto (el mismo id con otro tipo es otro origen)", async () => {
+      const a = await crearEmpresa();
+      const ticket9 = await crearPendiente(a.x, {
+        origen: deOrigen("EJEMPLAR_DE_TICKET", "ticket-9"),
+      });
+      const ticket10 = await crearPendiente(a.x, {
+        origen: deOrigen("EJEMPLAR_DE_TICKET", "ticket-10"),
+      });
+      const propina9 = await crearPendiente(a.x, {
+        origen: deOrigen("PROPINA_DE_TICKET", "ticket-9"),
+      });
+      const manual = await crearPendiente(a.x, { origen: deOrigen("MANUAL", "Ticket-9") });
+      const suscripcion = await crearPendiente(a.x, { origen: deOrigen("SUSCRIPCION", "50%_x") });
+      expect(ordenados(await idsDe(a, { origenTipo: "EJEMPLAR_DE_TICKET" }))).toEqual(
+        ordenados([ticket9.id, ticket10.id]),
+      );
+      expect(await idsDe(a, { origenTipo: "PROPINA_DE_TICKET" })).toEqual([propina9.id]);
+      expect(await idsDe(a, { origenTipo: "CORRECCION_DE_TICKET" })).toEqual([]);
+      expect(await idsDe(a, { origenTipo: "EJEMPLAR_DE_TICKET", origenId: "ticket-9" })).toEqual([
+        ticket9.id,
+      ]);
+      expect(await idsDe(a, { origenTipo: "PROPINA_DE_TICKET", origenId: "ticket-9" })).toEqual([
+        propina9.id,
+      ]);
+      // exacto: ni prefijo, ni otra mayúscula, ni de otro tipo
+      expect(await idsDe(a, { origenTipo: "EJEMPLAR_DE_TICKET", origenId: "ticket-1" })).toEqual(
+        [],
+      );
+      expect(await idsDe(a, { origenTipo: "MANUAL", origenId: "ticket-9" })).toEqual([]);
+      expect(await idsDe(a, { origenTipo: "MANUAL", origenId: "Ticket-9" })).toEqual([manual.id]);
+      // `%` y `_` son letras comunes
+      expect(await idsDe(a, { origenTipo: "SUSCRIPCION", origenId: "50%_x" })).toEqual([
+        suscripcion.id,
+      ]);
+      expect(await idsDe(a, { origenTipo: "SUSCRIPCION", origenId: "50%" })).toEqual([]);
+      expect(await idsDe(a, { origenTipo: "SUSCRIPCION", origenId: "%" })).toEqual([]);
+      // se combina con la letra, el punto de venta y el estado
+      expect(await idsDe(a, { origenTipo: "EJEMPLAR_DE_TICKET", letra: "A" })).toEqual([]);
+      expect(
+        await idsDe(a, {
+          origenTipo: "EJEMPLAR_DE_TICKET",
+          letra: "B",
+          puntoDeVenta: a.x.pvNumero,
+        }),
+      ).toHaveLength(2);
+      expect(
+        await idsDe(a, {
+          origenTipo: "EJEMPLAR_DE_TICKET",
+          origenId: "ticket-9",
+          estado: "AUTORIZADO",
+        }),
+      ).toEqual([]);
+    });
+
+    it("el origen de un comprobante descartado sigue su estado: oculto por defecto, visible con DESCARTADO", async () => {
+      const a = await crearEmpresa();
+      const origen = deOrigen("EJEMPLAR_DE_TICKET", "ticket-7");
+      const descartado = await descartar(a.x, await crearPendiente(a.x, { origen }));
+      const vigente = await crearPendiente(a.x, { origen });
+      expect(await idsDe(a, { origenTipo: "EJEMPLAR_DE_TICKET", origenId: "ticket-7" })).toEqual([
+        vigente.id,
+      ]);
+      expect(
+        await idsDe(a, {
+          origenTipo: "EJEMPLAR_DE_TICKET",
+          origenId: "ticket-7",
+          estado: "DESCARTADO",
+        }),
+      ).toEqual([descartado.id]);
+    });
+
+    it("de otra empresa nada: el mismo origen, letra y punto de venta en dos empresas dan a cada una lo suyo", async () => {
+      const a = await crearEmpresa();
+      const b = await crearEmpresa(a.x.tenant);
+      const c = await crearEmpresa();
+      const origen = deOrigen("EJEMPLAR_DE_TICKET", "ticket-1");
+      const deA = await crearAutorizado(a.x, { origen, receptor: receptorInscripto });
+      const otroDeA = await crearAutorizado(a.x, {
+        origen: deOrigen("EJEMPLAR_DE_TICKET", "ticket-2"),
+        receptor: receptorInscripto,
+      });
+      const deB = await crearAutorizado(b.x, { origen, receptor: receptorInscripto });
+      const todos = {
+        letra: "A",
+        puntoDeVenta: a.x.pvNumero,
+        origenTipo: "EJEMPLAR_DE_TICKET",
+        origenId: "ticket-1",
+      } as const;
+      expect(await idsDe(a, todos)).toEqual([deA.id]);
+      expect(await idsDe(b, todos)).toEqual([deB.id]);
+      expect(await idsDe(c, todos)).toEqual([]);
+      for (const criterio of [
+        { letra: "A" },
+        { puntoDeVenta: a.x.pvNumero },
+        { origenTipo: "EJEMPLAR_DE_TICKET" },
+        { origenTipo: "EJEMPLAR_DE_TICKET", origenId: "ticket-1" },
+      ] as const) {
+        expect(await idsDe(c, criterio), JSON.stringify(criterio)).toEqual([]);
+      }
+      // la clave de una página de A, usada por B, solo trae lo de B
+      const paginaDeA = await listar(a, { letra: "A", limite: 1 });
+      expect(paginaDeA.siguiente).not.toBeNull();
+      const deBConLaClaveDeA = await idsDe(b, { letra: "A", despuesDe: paginaDeA.siguiente ?? "" });
+      for (const id of deBConLaClaveDeA) expect([deB.id]).toContain(id);
+      expect([deA.id, otroDeA.id]).not.toContain(deBConLaClaveDeA[0]);
+    });
+
+    it("pagina lo filtrado: sin repetir ni saltear, con límite chico, y una página vacía no tiene siguiente", async () => {
+      const a = await crearEmpresa();
+      const origen = (n: number) => deOrigen("EJEMPLAR_DE_TICKET", `mesa-${n}`);
+      const pv3 = await conPuntoDeVenta(a.x, 3);
+      const buscados: string[] = [];
+      // siete que cumplen todo (letra B, punto de venta 3, ejemplar) con instantes que empatan de a dos...
+      for (let n = 0; n < 7; n++) {
+        buscados.push((await crearPendiente(pv3, { origen: origen(n) })).id);
+      }
+      // ...y ruido que cumple todo menos una cosa
+      await crearPendiente(a.x, { origen: origen(100) }); // otro punto de venta
+      await crearPendiente(pv3, { origen: deOrigen("PROPINA_DE_TICKET", "mesa-101") }); // otro origen
+      await crearAutorizado(pv3, { origen: origen(102), receptor: receptorInscripto }); // otra letra
+      const criterio = { letra: "B", puntoDeVenta: 3, origenTipo: "EJEMPLAR_DE_TICKET" } as const;
+      const completo = await idsDe(a, criterio);
+      expect(ordenados(completo)).toEqual(ordenados(buscados));
+      for (const limite of [1, 2, 3, 7, 50]) {
+        const vistos: string[] = [];
+        let despuesDe: string | undefined;
+        let paginas = 0;
+        do {
+          const pagina = await listar(a, {
+            ...criterio,
+            limite,
+            ...(despuesDe === undefined ? {} : { despuesDe }),
+          });
+          paginas += 1;
+          vistos.push(...pagina.items.map((i) => i.id));
+          despuesDe = pagina.siguiente ?? undefined;
+          if (despuesDe !== undefined) expect(pagina.items).toHaveLength(limite);
+        } while (despuesDe !== undefined);
+        expect(vistos, `limite ${limite}`).toEqual(completo);
+        expect(paginas).toBe(Math.ceil(buscados.length / limite));
+      }
+      // vacío: sin items ni siguiente, y la clave de una página no hace aparecer lo que no cumple
+      expect(await listar(a, { ...criterio, puntoDeVenta: 4 })).toEqual({
+        items: [],
+        siguiente: null,
+      });
+      const primera = await listar(a, { ...criterio, limite: 2 });
+      const vacia = await listar(a, {
+        ...criterio,
+        letra: "A",
+        despuesDe: primera.siguiente ?? "",
+      });
+      expect(vacia).toEqual({ items: [], siguiente: null });
+    });
+
+    it("repetir la consulta devuelve lo mismo, y los criterios inválidos son errores de negocio sin tocar la base", async () => {
+      const a = await crearEmpresa();
+      await crearPendiente(a.x, { origen: deOrigen("EJEMPLAR_DE_TICKET", "ticket-1") });
+      await crearAutorizado(a.x, { receptor: receptorInscripto });
+      const pedido = {
+        letra: "B",
+        puntoDeVenta: a.x.pvNumero,
+        origenTipo: "EJEMPLAR_DE_TICKET",
+        origenId: "ticket-1",
+      } as const;
+      const primera = await consultas.listarComprobantes(mira(a), pedido);
+      const segunda = await consultas.listarComprobantes(mira(a), pedido);
+      expect(segunda).toEqual(primera);
+      expect(exito(primera).items).toHaveLength(1);
+      const errores = async (pedido: Record<string, unknown>) =>
+        (await consultas.listarComprobantes(mira(a), pedido)) as {
+          error?: string;
+        };
+      expect((await errores({ letra: "Z" })).error).toBe("LETRA_INVALIDA");
+      expect((await errores({ letra: "b" })).error).toBe("LETRA_INVALIDA");
+      expect((await errores({ puntoDeVenta: 0 })).error).toBe("PUNTO_DE_VENTA_INVALIDO");
+      expect((await errores({ puntoDeVenta: 100000 })).error).toBe("PUNTO_DE_VENTA_INVALIDO");
+      expect((await errores({ origenTipo: "' or 1=1 --" })).error).toBe("ORIGEN_TIPO_INVALIDO");
+      expect((await errores({ origenTipo: "MANUAL", origenId: "" })).error).toBe(
+        "ORIGEN_ID_INVALIDO",
+      );
+      expect((await errores({ origenId: "ticket-1" })).error).toBe("ORIGEN_ID_SIN_TIPO");
+    });
+
+    it("sin permiso no hay listado filtrado: el guard va antes que los criterios", async () => {
+      const a = await crearEmpresa();
+      const sinPermiso = comoEmpresa(empresaId(a.x.empresa), personaId(a.persona.SIN_MEMBRESIA));
+      const esperado = await consultas.listarComprobantes(sinPermiso, {});
+      expect(esperado.ok).toBe(false);
+      // un criterio inválido de quien no puede mirar es SIN_PERMISO, no LETRA_INVALIDA
+      expect(
+        await consultas.listarComprobantes(sinPermiso, { letra: "Z" as never, puntoDeVenta: 0 }),
+      ).toEqual(esperado);
+      expect(
+        await consultas.listarComprobantes(sinPermiso, { letra: "A", origenTipo: "MANUAL" }),
+      ).toEqual(esperado);
+    });
+
+    it("mientras se emiten comprobantes nuevos, recorrer lo filtrado no repite ni saltea lo que ya estaba", async () => {
+      const a = await crearEmpresa();
+      const origen = (n: number) => deOrigen("EJEMPLAR_DE_TICKET", `mesa-${n}`);
+      const previos: string[] = [];
+      for (let n = 0; n < 8; n++) {
+        previos.push(await crearComprobanteCreadoEnConOrigen(a.x, n));
+      }
+      const criterio = { letra: "B", origenTipo: "EJEMPLAR_DE_TICKET" } as const;
+      const esperadoPrevio = await idsDe(a, criterio);
+      expect(ordenados(esperadoPrevio)).toEqual(ordenados(previos));
+
+      // Una barrera: el recorrido y las emisiones arrancan juntos; las emisiones cumplen el criterio (tickets
+      // nuevos, que se autorizan) y también hay ruido que no (otro origen). El recorrido pide de a dos.
+      let salida!: () => void;
+      const barrera = new Promise<void>((resolver) => {
+        salida = resolver;
+      });
+      const emitir = async () => {
+        await barrera;
+        const nuevos: string[] = [];
+        for (let n = 100; n < 106; n++) {
+          nuevos.push((await crearAutorizado(a.x, { origen: origen(n) })).id);
+          await crearPendiente(a.x, { origen: deOrigen("PROPINA_DE_TICKET", `mesa-${n}`) });
+        }
+        return nuevos;
+      };
+      const recorrer = async () => {
+        await barrera;
+        const vistos: string[] = [];
+        let despuesDe: string | undefined;
+        do {
+          const pagina = await listar(a, {
+            ...criterio,
+            limite: 2,
+            ...(despuesDe === undefined ? {} : { despuesDe }),
+          });
+          vistos.push(...pagina.items.map((i) => i.id));
+          despuesDe = pagina.siguiente ?? undefined;
+        } while (despuesDe !== undefined);
+        return vistos;
+      };
+      const resultado = Promise.all([emitir(), recorrer()]);
+      salida();
+      const [nuevos, vistos] = await resultado;
+      // sin duplicados
+      expect(new Set(vistos).size).toBe(vistos.length);
+      // todo lo que estaba, una sola vez y en el mismo orden relativo (sin huecos)
+      expect(vistos.filter((id) => previos.includes(id))).toEqual(esperadoPrevio);
+      // lo que se agregó en el medio es, a lo sumo, de los nuevos que cumplen (nunca el ruido)
+      for (const id of vistos.filter((id) => !previos.includes(id))) expect(nuevos).toContain(id);
+      // terminada la emisión, la consulta ve todo, una sola vez
+      const final = await idsDe(a, { ...criterio, limite: 50 });
+      expect(ordenados(final)).toEqual(ordenados([...previos, ...nuevos]));
+    });
+
+    /** Un comprobante de origen EJEMPLAR_DE_TICKET `mesa-n`, creado con un instante viejo y distinto. */
+    async function crearComprobanteCreadoEnConOrigen(e: Escenario, n: number): Promise<string> {
+      const id = await crearComprobante(dueno, e, {
+        origen_tipo: "EJEMPLAR_DE_TICKET",
+        origen_id: `mesa-${n}`,
+      });
+      return id;
+    }
   });
 
   // ===============================================================================================

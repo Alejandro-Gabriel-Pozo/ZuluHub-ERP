@@ -39,7 +39,8 @@
       "precioUnitario": "1210.000000",
       "descuento": null,
       "alicuota": "21",
-      "importe": "1210.00"
+      "importe": "1210.00",
+      "referencias": []
     },
     {
       "descripcion": "Medialunas",
@@ -47,7 +48,8 @@
       "precioUnitario": "1050.000000",
       "descuento": null,
       "alicuota": "10.5",
-      "importe": "1050.00"
+      "importe": "1050.00",
+      "referencias": []
     }
   ],
   "totales": {
