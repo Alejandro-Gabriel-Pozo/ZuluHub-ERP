@@ -11,6 +11,7 @@ import { CATALOGO_DE_PERILLAS } from "./perillas";
 import {
   LARGO_MAXIMO_DEL_NOMBRE_DE_PLAN,
   nombreDePlanValido,
+  validarCodigoDePlan,
   validarVersionDePlan,
   type ContenidoDeVersionDePlan,
 } from "./version-de-plan";
@@ -23,6 +24,30 @@ const valida = (extra: Partial<ContenidoDeVersionDePlan> = {}): ContenidoDeVersi
 });
 const validar = (contenido: ContenidoDeVersionDePlan) =>
   validarVersionDePlan(MODULOS_DE_PRUEBA, PERILLAS_DE_PRUEBA, contenido);
+
+describe("validarCodigoDePlan", () => {
+  it.each(["basico", "plan-pro", "ab", "a1", "a-1-b", "a".repeat(40), "z9"])("acepta %s", (c) => {
+    expect(validarCodigoDePlan(c)).toEqual({ ok: true, valor: c });
+  });
+
+  it.each([
+    ["vacío", ""],
+    ["una sola letra", "a"],
+    ["41 caracteres", "a".repeat(41)],
+    ["empieza con número", "1abc"],
+    ["empieza con guion", "-abc"],
+    ["mayúsculas", "Basico"],
+    ["guion bajo", "plan_pro"],
+    ["punto", "plan.pro"],
+    ["espacio", "plan pro"],
+    ["eñe", "ñandu"],
+    ["con salto de línea al final", "abc\n"],
+    ["con salto de línea al principio", "\nabc"],
+    ["barra", "a/b"],
+  ])("rechaza %s", (_nombre, codigo) => {
+    expect(validarCodigoDePlan(codigo)).toEqual({ ok: false, error: "CODIGO_DE_PLAN_INVALIDO" });
+  });
+});
 
 describe("nombreDePlanValido", () => {
   it("recorta y acepta de 1 a 60 caracteres", () => {

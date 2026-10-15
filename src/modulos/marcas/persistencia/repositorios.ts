@@ -78,7 +78,8 @@ function deLaLista<T extends string>(lista: readonly T[], valor: string, nombre:
   return encontrado;
 }
 
-function aDominio(fila: Selectable<DominiosDb["dominio"]>): DominioGuardado {
+/** Una fila de `dominio` como lo guardado (también la usa el repositorio de marcas, que lista los de una marca). */
+export function aDominio(fila: Selectable<DominiosDb["dominio"]>): DominioGuardado {
   const duenio: DuenioDeDominio =
     fila.duenio_marca_id !== null
       ? { tipo: "MARCA", marcaId: marcaComercialId(fila.duenio_marca_id) }

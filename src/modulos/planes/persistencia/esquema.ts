@@ -6,6 +6,72 @@
  * solo viven sus traducciones.
  */
 
+/** Columnas de `plan`, en el orden de la base. */
+export const COLUMNAS_DE_PLAN = [
+  "id",
+  "codigo",
+  "estado",
+  "creado_en",
+  "actualizado_en",
+  "version",
+] as const;
+
+/** Columnas de `version_de_plan`, en el orden de la base. */
+export const COLUMNAS_DE_VERSION_DE_PLAN = [
+  "id",
+  "plan_id",
+  "numero",
+  "estado",
+  "nombre_comercial",
+  "modulos",
+  "perillas",
+  "motivo",
+  "publicada_en",
+  "publicada_por",
+  "creado_en",
+  "actualizado_en",
+  "version",
+] as const;
+
+/** Columnas de `plan_de_tenant`, en el orden de la base. */
+export const COLUMNAS_DE_PLAN_DE_TENANT = [
+  "id",
+  "tenant_id",
+  "numero",
+  "version_de_plan_id",
+  "vigente_desde",
+  "origen",
+  "reemplaza_programada",
+  "motivo",
+  "asignado_por",
+  "creado_en",
+] as const;
+
+/** Columnas de `ajuste_de_perilla`, en el orden de la base. */
+export const COLUMNAS_DE_AJUSTE_DE_PERILLA = [
+  "id",
+  "tenant_id",
+  "empresa_id",
+  "perilla",
+  "numero",
+  "valor",
+  "vigente_desde",
+  "reemplaza_programada",
+  "motivo",
+  "asignado_por",
+  "creado_en",
+] as const;
+
+/** Columnas de `modulo_de_empresa`, en el orden de la base. */
+export const COLUMNAS_DE_MODULO_DE_EMPRESA = [
+  "empresa_id",
+  "modulo",
+  "activo",
+  "creado_en",
+  "actualizado_en",
+  "version",
+] as const;
+
 /**
  * Restricción de las tablas de planes → motivo tipado (ADR-004). Un test exige que no falte ninguna y que
  * no sobre ninguna. Regla de qué se traduce: un motivo solo si el motivo del dominio puro (§B.11) NO lleva

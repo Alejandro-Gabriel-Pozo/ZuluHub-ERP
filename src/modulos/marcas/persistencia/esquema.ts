@@ -83,6 +83,41 @@ export type ErrorDeDominioPorRestriccion = Exclude<Mapa[keyof Mapa], "NO_TRADUCI
 // Marcas y versiones de marca
 // ---------------------------------------------------------------------------------------------------
 
+/** Columnas de `marca`, en el orden de la base. */
+export const COLUMNAS_DE_MARCA = [
+  "id",
+  "codigo",
+  "es_principal",
+  "marca_padre_id",
+  "nivel",
+  "estado",
+  "creado_en",
+  "actualizado_en",
+  "version",
+] as const;
+
+/** Columnas de `version_de_marca`, en el orden de la base. */
+export const COLUMNAS_DE_VERSION_DE_MARCA = [
+  "id",
+  "marca_id",
+  "numero",
+  "estado",
+  "vigente_desde",
+  "nombre_visible",
+  "tema",
+  "logo",
+  "vocabulario",
+  "modulos_iniciales",
+  "plan_por_defecto_id",
+  "reemplaza_programada",
+  "motivo",
+  "confirmada_en",
+  "confirmada_por",
+  "creado_en",
+  "actualizado_en",
+  "version",
+] as const;
+
 /**
  * Restricción de `marca` y de `version_de_marca` → motivo tipado (ADR-004). Un test exige que no falte
  * ninguna y que no sobre ninguna. Regla de qué se traduce: un motivo solo si el motivo del dominio puro

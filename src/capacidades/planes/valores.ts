@@ -87,3 +87,16 @@ export function valorDeAjuste(
   if (texto === "ILIMITADO") return { tipo: "LIMITE", limite: "ILIMITADO" };
   return LIMITE_EN_TEXTO.test(texto) ? { tipo: "LIMITE", limite: Number(texto) } : null;
 }
+
+/**
+ * Lo inverso de `valorDeAjuste`: el texto con el que la base guarda el valor de un ajuste de perilla
+ * (`ajuste_de_perilla.valor`). `DEL_PLAN` vuelve al plan; un interruptor es `0` o `1`; un límite es su
+ * entero (sin ceros a la izquierda ni notación científica: el máximo de la base tiene nueve cifras) o
+ * `ILIMITADO`. Para todo valor bien formado de la perilla, `valorDeAjuste(def, textoDeAjuste(v))` vuelve
+ * a `v`: quien escribe y quien lee usan las dos mitades de la misma regla.
+ */
+export function textoDeAjuste(valor: ValorDePerilla | "DEL_PLAN"): string {
+  if (valor === "DEL_PLAN") return "DEL_PLAN";
+  if (valor.tipo === "INTERRUPTOR") return valor.encendida ? "1" : "0";
+  return String(valor.limite);
+}

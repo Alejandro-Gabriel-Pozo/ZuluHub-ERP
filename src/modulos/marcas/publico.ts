@@ -129,3 +129,16 @@ export {
   type LecturaDeMarcaParaMail,
   type LecturaPublicaDeMarcas,
 } from "./persistencia/lecturas";
+
+// M5: escritura de marcas y de sus versiones por los casos de uso de plataforma.
+export { COLUMNAS_DE_MARCA, COLUMNAS_DE_VERSION_DE_MARCA } from "./persistencia/esquema";
+export {
+  crearRepositorioDeMarcas,
+  type ConfirmacionPorEscribir,
+  type EstadoDeMarca,
+  type MarcaGuardada,
+  type RepositorioDeMarcas,
+  type VersionConfirmadaDeMarca,
+  type VersionDeMarcaGuardada,
+} from "./persistencia/repositorio-de-marcas";
+export type { MarcasDb } from "./persistencia/tablas";

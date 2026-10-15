@@ -2,7 +2,13 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import "../../../test/propiedades/configuracion";
 import type { DefinicionDePerilla } from "./perillas";
-import { esValorDeLaPerilla, valorDeAjuste } from "./valores";
+import {
+  LIMITE_MAXIMO_DE_PERILLA,
+  esValorDeLaPerilla,
+  textoDeAjuste,
+  valorDeAjuste,
+  type ValorDePerilla,
+} from "./valores";
 
 /**
  * `valorDeAjuste` contra la forma que impone la base (`ajuste_de_perilla_valor_ck`):
@@ -61,6 +67,26 @@ describe("valorDeAjuste (propiedades)", () => {
             expect(String(valor.limite)).toBe(texto);
           }
         }
+      }),
+    );
+  });
+});
+
+describe("textoDeAjuste (propiedades)", () => {
+  const valoresDeLimite = fc.oneof(
+    fc.integer({ min: 0, max: LIMITE_MAXIMO_DE_PERILLA }),
+    fc.constant("ILIMITADO" as const),
+  );
+
+  it("ida y vuelta: lo que se escribe se lee igual, y la base lo acepta", () => {
+    fc.assert(
+      fc.property(valoresDeLimite, fc.boolean(), (limite, encendida) => {
+        const deLimite: ValorDePerilla = { tipo: "LIMITE", limite };
+        const deInterruptor: ValorDePerilla = { tipo: "INTERRUPTOR", encendida };
+        expect(valorDeAjuste(tope, textoDeAjuste(deLimite))).toEqual(deLimite);
+        expect(valorDeAjuste(interruptor, textoDeAjuste(deInterruptor))).toEqual(deInterruptor);
+        expect(FORMA_DE_LA_BASE.test(textoDeAjuste(deLimite))).toBe(true);
+        expect(FORMA_DE_LA_BASE.test(textoDeAjuste(deInterruptor))).toBe(true);
       }),
     );
   });

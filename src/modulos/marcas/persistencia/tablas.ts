@@ -1,5 +1,9 @@
 import type { Generated } from "kysely";
-import type { COLUMNAS_DE_DOMINIO } from "./esquema";
+import type {
+  COLUMNAS_DE_DOMINIO,
+  COLUMNAS_DE_MARCA,
+  COLUMNAS_DE_VERSION_DE_MARCA,
+} from "./esquema";
 
 /**
  * La tabla `dominio` tal como la ve Kysely (migración 0007). Las columnas son las de
@@ -92,3 +96,60 @@ export type MarcasParaMailDb = {
   };
   dominio: { host: string; superficie: string; marca_id: string; es_canonico: boolean };
 };
+
+/**
+ * Las tablas `marca` y `version_de_marca` tal como las ve Kysely para ESCRIBIRLAS y leerlas completas
+ * (M5, casos de uso de plataforma). Las columnas son las de `COLUMNAS_DE_MARCA` y
+ * `COLUMNAS_DE_VERSION_DE_MARCA`, que un test compara con el catálogo de la base real. Lo que la
+ * plataforma puede escribir lo fijan los privilegios por columna de 0007; lo demás lo fija la base:
+ * `nivel` (desde el padre), `creado_en`, `actualizado_en` y `version`.
+ */
+export type MarcasDb = {
+  marca: {
+    id: Generated<string>;
+    codigo: string;
+    es_principal: Generated<boolean>;
+    marca_padre_id: string | null;
+    nivel: Generated<number>;
+    estado: Generated<string>;
+    creado_en: Generated<Date>;
+    actualizado_en: Generated<Date>;
+    version: Generated<number>;
+  };
+  version_de_marca: {
+    id: Generated<string>;
+    marca_id: string;
+    numero: Generated<number | null>;
+    estado: Generated<string>;
+    vigente_desde: Generated<Date | null>;
+    nombre_visible: string | null;
+    /** `jsonb`: se escribe como texto JSON. */
+    tema: string;
+    logo: string | null;
+    /** `jsonb`: se escribe como texto JSON. */
+    vocabulario: string;
+    modulos_iniciales: string[] | null;
+    plan_por_defecto_id: string | null;
+    reemplaza_programada: Generated<boolean>;
+    motivo: Generated<string | null>;
+    confirmada_en: Generated<Date | null>;
+    confirmada_por: Generated<string | null>;
+    creado_en: Generated<Date>;
+    actualizado_en: Generated<Date>;
+    version: Generated<number>;
+  };
+};
+
+type TablaDeMarcas<T extends keyof MarcasDb> = keyof MarcasDb[T];
+
+/** Verificación en tiempo de compilación: las columnas de `MarcasDb` son exactamente las de las listas de `esquema.ts`. */
+export type ColumnasDeMarcasCoinciden =
+  Iguales<TablaDeMarcas<"marca">, (typeof COLUMNAS_DE_MARCA)[number]> extends true
+    ? Iguales<
+        TablaDeMarcas<"version_de_marca">,
+        (typeof COLUMNAS_DE_VERSION_DE_MARCA)[number]
+      > extends true
+      ? true
+      : never
+    : never;
+export const COLUMNAS_DE_MARCAS_COINCIDEN: ColumnasDeMarcasCoinciden = true;
