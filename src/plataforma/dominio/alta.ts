@@ -7,9 +7,12 @@ import {
   type ErrorDeCuit,
 } from "../../primitivas/identificacion-fiscal/cuit";
 import {
-  esTextoDeIdentificador,
+  marcaComercialId,
   tenantId,
+  versionDePlanId,
+  type MarcaComercialId,
   type TenantId,
+  type VersionDePlanId,
 } from "../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
 import {
@@ -20,6 +23,7 @@ import {
 } from "../../modulos/empresas/publico";
 import { emailDesdeTexto, type Email } from "../../modulos/identidad/publico";
 import { nombreDeTenantValido } from "../../modulos/tenants/publico";
+import { uuidDesdeTexto } from "./soporte/consulta";
 
 /**
  * El alta de una empresa desde plataforma (caso 0, H5 §B.5.1 y §B.5.3). Dominio puro: sin reloj ni
@@ -46,10 +50,18 @@ export function msRestantesDeAlta(creadaEn: Date, ahora: Date): number {
   return Math.max(0, PLAZO_DE_ALTA_EN_MS - (ahora.getTime() - creadaEn.getTime()));
 }
 
-/** La entrada del formulario de alta tal como llega: todo texto. Va `tenantId` o `nombreDeTenant`. */
+/**
+ * La entrada del formulario de alta tal como llega: todo texto. Va `tenantId` (la empresa se suma a un
+ * tenant que ya existe, con SU marca y SU plan) o `nombreDeTenant` (un tenant nuevo: ahí van también la
+ * `marcaId` por la que va a entrar, obligatoria, y la `versionDePlanId` a asignarle, opcional: sin ella
+ * rige el plan por defecto de la marca). La marca y el plan son del tenant nuevo; a uno existente no se
+ * le cambian (el cliente no cambia de marca y el plan se cambia con `asignarPlan`).
+ */
 export type EntradaDeAlta = Readonly<{
   tenantId?: string | undefined;
   nombreDeTenant?: string | undefined;
+  marcaId?: string | undefined;
+  versionDePlanId?: string | undefined;
   cuit: string;
   razonSocial: string;
   zonaHoraria: string;
@@ -58,7 +70,15 @@ export type EntradaDeAlta = Readonly<{
 }>;
 
 export type DestinoDeTenant =
-  Readonly<{ tipo: "EXISTENTE"; tenantId: TenantId }> | Readonly<{ tipo: "NUEVO"; nombre: string }>;
+  | Readonly<{ tipo: "EXISTENTE"; tenantId: TenantId }>
+  | Readonly<{
+      tipo: "NUEVO";
+      nombre: string;
+      /** La marca por cuya puerta entra el tenant: la elige quien da de alta (el servidor no la supone). */
+      marcaId: MarcaComercialId;
+      /** La versión de plan elegida, o `null`: rige la última publicada del plan por defecto de la marca. */
+      versionDePlanId: VersionDePlanId | null;
+    }>;
 
 /** La entrada ya validada, con sus tipos de dominio. */
 export type AltaValidada = Readonly<{
@@ -77,6 +97,11 @@ export type ErrorDeValidacionDeAlta =
   | "TENANT_AMBIGUO"
   | "TENANT_ID_INVALIDO"
   | "NOMBRE_INVALIDO"
+  | "MARCA_INDEFINIDA"
+  | "MARCA_ID_INVALIDA"
+  | "MARCA_SOLO_CON_TENANT_NUEVO"
+  | "VERSION_DE_PLAN_ID_INVALIDA"
+  | "PLAN_SOLO_CON_TENANT_NUEVO"
   | "RAZON_SOCIAL_INVALIDA"
   | "MONEDA_NO_SOPORTADA"
   | "EMAIL_INVALIDO";
@@ -84,16 +109,43 @@ export type ErrorDeValidacionDeAlta =
 function destinoDeTenant(
   entrada: EntradaDeAlta,
 ): Resultado<DestinoDeTenant, ErrorDeValidacionDeAlta> {
-  const { tenantId: id, nombreDeTenant: nombre } = entrada;
+  const {
+    tenantId: id,
+    nombreDeTenant: nombre,
+    marcaId: marca,
+    versionDePlanId: version,
+  } = entrada;
   if (id !== undefined && nombre !== undefined) return err("TENANT_AMBIGUO");
   if (id !== undefined) {
-    return esTextoDeIdentificador(id)
-      ? ok({ tipo: "EXISTENTE", tenantId: tenantId(id) })
-      : err("TENANT_ID_INVALIDO");
+    const uuid = uuidDesdeTexto(id);
+    if (!uuid.ok) return err("TENANT_ID_INVALIDO");
+    // Un tenant que ya existe trae SU marca y SU plan: pasar otros no se corrige en silencio, se rechaza.
+    if (marca !== undefined) return err("MARCA_SOLO_CON_TENANT_NUEVO");
+    if (version !== undefined) return err("PLAN_SOLO_CON_TENANT_NUEVO");
+    return ok({ tipo: "EXISTENTE", tenantId: tenantId(uuid.valor) });
   }
   if (nombre === undefined) return err("TENANT_INDEFINIDO");
   const valido = nombreDeTenantValido(nombre);
-  return valido.ok ? ok({ tipo: "NUEVO", nombre: valido.valor }) : err("NOMBRE_INVALIDO");
+  if (!valido.ok) return err("NOMBRE_INVALIDO");
+  if (marca === undefined) return err("MARCA_INDEFINIDA");
+  const marcaUuid = uuidDesdeTexto(marca);
+  if (!marcaUuid.ok) return err("MARCA_ID_INVALIDA");
+  if (version === undefined) {
+    return ok({
+      tipo: "NUEVO",
+      nombre: valido.valor,
+      marcaId: marcaComercialId(marcaUuid.valor),
+      versionDePlanId: null,
+    });
+  }
+  const versionUuid = uuidDesdeTexto(version);
+  if (!versionUuid.ok) return err("VERSION_DE_PLAN_ID_INVALIDA");
+  return ok({
+    tipo: "NUEVO",
+    nombre: valido.valor,
+    marcaId: marcaComercialId(marcaUuid.valor),
+    versionDePlanId: versionDePlanId(versionUuid.valor),
+  });
 }
 
 function monedaDeTexto(texto: string): Resultado<Moneda, "MONEDA_NO_SOPORTADA"> {
@@ -109,7 +161,8 @@ function monedaDeTexto(texto: string): Resultado<Moneda, "MONEDA_NO_SOPORTADA"> 
 
 /**
  * Valida la forma de la entrada del alta, FUERA de la transacción. Orden de los errores, el del
- * formulario: tenant (indefinido, ambiguo, id inválido, nombre inválido), CUIT (formato, dígito
+ * formulario: tenant (ambiguo, id inválido, marca o plan con un tenant existente, indefinido, nombre
+ * inválido, marca indefinida o inválida, versión de plan inválida), CUIT (formato, dígito
  * verificador), razón social, moneda y email del gerente. La zona horaria no se valida acá (A.4 #6).
  * Nada se corrige en silencio salvo el recorte de espacios del nombre, la razón social y el email.
  */

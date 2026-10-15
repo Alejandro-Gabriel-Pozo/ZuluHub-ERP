@@ -37,3 +37,16 @@ export {
   type ErrorDePlanesPorRestriccion,
 } from "./persistencia/esquema";
 export { errorDePlanesDeRestriccion, traducirErroresDePlanes } from "./persistencia/traducir";
+
+// M6: lo que el alta de una empresa lee y escribe de planes y módulos (conexión de plataforma).
+export {
+  crearAsignacionesDePlanDelAlta,
+  crearLecturaDeVersionesDePlanParaElAlta,
+  crearModulosDeEmpresaDelAlta,
+  type AsignacionDeAlta,
+  type AsignacionesDePlanDelAlta,
+  type LecturaDeVersionesDePlanParaElAlta,
+  type ModulosDeEmpresaDelAlta,
+  type PlanesDelAltaDb,
+  type VersionDePlanAsignable,
+} from "./persistencia/del-alta";
