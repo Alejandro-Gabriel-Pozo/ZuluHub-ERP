@@ -44,7 +44,10 @@ export type IntentoDeArca = Readonly<{
   empresaId: EmpresaId;
   comprobanteId: ComprobanteId;
   operacion: OperacionDeIntento;
-  /** El número que se autorizó o consultó; `null` si la operación no es sobre uno. */
+  /**
+   * El número que se autorizó o consultó; en `ULTIMO_AUTORIZADO`, el que ARCA informó (`null` si no respondió).
+   * `null` si la operación no es sobre uno.
+   */
   numero: bigint | null;
   desenlace: DesenlaceDeIntento;
   mensajes: readonly MensajeDeIntento[];

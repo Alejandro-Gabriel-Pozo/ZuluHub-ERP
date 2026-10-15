@@ -237,6 +237,7 @@ describe.skipIf(base === null)("facturación F5: concurrencia de los casos de us
       // devuelve al final. Cuando todos ven solo series ocupadas (un incierto la retiene), se reconcilia.
       const cola = [...pendientes];
       let ocupadasSeguidas = 0;
+      let reintentosPorCarga = 0;
       await Promise.all(
         Array.from({ length: trabajadores }, async () => {
           for (;;) {
@@ -245,6 +246,19 @@ describe.skipIf(base === null)("facturación F5: concurrencia de los casos de us
             const r = await casos.validarComprobante(e.sistema(reloj.ahora()), {
               comprobanteId: id,
             });
+            // `ConcurrenciaAgotada` es una respuesta legítima bajo carga (SERIALIZABLE agotó sus reintentos): un
+            // trabajador real devuelve el trabajo a la cola y lo repite, y validar es idempotente. Se acota para que
+            // un error persistente no quede disfrazado de «carga»; cualquier otro error sigue siendo un fallo.
+            if (
+              !r.ok &&
+              typeof r.error === "object" &&
+              "tipo" in r.error &&
+              r.error.tipo === "ConcurrenciaAgotada" &&
+              ++reintentosPorCarga <= 200
+            ) {
+              cola.push(id);
+              continue;
+            }
             if (!r.ok) throw new Error(`validar falló: ${JSON.stringify(r.error)}`);
             if (r.valor.tipo === "SERIE_OCUPADA") {
               ocupadasSeguidas += 1;
