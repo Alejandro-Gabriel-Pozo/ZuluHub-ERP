@@ -48,7 +48,9 @@ import {
 import { crearBaseAparte, crearEntornoDePrueba, cuitAlAzar } from "./entorno";
 import { emailAlAzar } from "./fixtures-identidad";
 import {
+  ajustarPerilla,
   crearBorradorDePlan,
+  crearMundoDeMarca,
   crearDominio,
   crearMarca,
   crearPlanPublicado,
@@ -125,6 +127,8 @@ describe.skipIf(base === null)("alta de empresa: casos de uso contra Postgres", 
 
   const una = <T extends Record<string, unknown>>(texto: string, parametros: unknown[] = []) =>
     dueno.query<T>(texto, parametros).then((r) => r.rows[0] as T);
+  const cuenta = async (texto: string, parametros: unknown[] = []) =>
+    Number(((await dueno.query(texto, parametros)).rows[0] as { n: string }).n);
   const todas = <T extends Record<string, unknown>>(texto: string, parametros: unknown[] = []) =>
     dueno.query<T>(texto, parametros).then((r) => r.rows);
 
@@ -1146,6 +1150,60 @@ describe.skipIf(base === null)("alta de empresa: casos de uso contra Postgres", 
         nombre: "Otra Marca",
         urlBase: `https://${b.host}`,
       });
+    });
+  });
+
+  describe("una empresa más en un tenant que ya existe: los módulos iniciales de SU marca, dentro del plan que ya tiene", () => {
+    it("recibe los módulos iniciales de la marca del tenant que el plan vigente del tenant incluye; los demás se omiten", async () => {
+      const m = await crearMarcaLista(dueno, {
+        modulosIniciales: ["caja", "reservas"],
+        modulosDelPlan: ["caja", "reservas"],
+      });
+      // El tenant tiene asignado OTRO plan, que incluye solo `caja`: manda el plan que tiene, no el de la marca.
+      const chico = await crearPlanPublicado(dueno, { modulos: ["caja"] });
+      const mundo = await crearTenantConPlan(dueno, m, {
+        version: chico.version,
+        empresasPorTenant: "3",
+      });
+      const alta = exito(await casos.altaDeEmpresa(comoAdminAhora(), altaEnTenant(mundo.tenant)));
+      expect(
+        await todas("select modulo from modulo_de_empresa where empresa_id = $1", [alta.empresaId]),
+      ).toEqual([{ modulo: "caja" }]);
+      const constancia = await una<{ despues: Record<string, unknown> }>(
+        "select despues from auditoria_plataforma where accion = 'EMPRESA_ALTA' and entidad_id = $1",
+        [alta.empresaId],
+      );
+      expect(constancia.despues["modulosOmitidos"]).toEqual([
+        { modulo: "reservas", motivo: "MODULO_FUERA_DEL_PLAN" },
+      ]);
+    });
+
+    it("un tenant sin plan asignado recibe una empresa sin módulos (solo los obligatorios) y no se le asigna uno", async () => {
+      const m = await crearMarcaLista(dueno, {
+        modulosIniciales: ["caja"],
+        modulosDelPlan: ["caja"],
+      });
+      const mundo = await crearMundoDeMarca(dueno, { marca: m.marca });
+      // Sin plan rige la base del catálogo (1 empresa por tenant): se sube el tope con un ajuste.
+      await ajustarPerilla(dueno, mundo.tenant, "empresas_por_tenant", "3");
+      const alta = exito(await casos.altaDeEmpresa(comoAdminAhora(), altaEnTenant(mundo.tenant)));
+      expect(
+        await todas("select modulo from modulo_de_empresa where empresa_id = $1", [alta.empresaId]),
+      ).toEqual([]);
+      expect(
+        await cuenta("select count(*)::int as n from plan_de_tenant where tenant_id = $1", [
+          mundo.tenant,
+        ]),
+      ).toBe(0);
+    });
+
+    it("si la marca del tenant se retiró, no se le dan altas nuevas (MARCA_RETIRADA)", async () => {
+      const m = await crearMarcaLista(dueno);
+      const mundo = await crearTenantConPlan(dueno, m, { empresasPorTenant: "5" });
+      await dueno.query("update marca set estado = 'RETIRADA' where id = $1", [m.marca]);
+      expect(falla(await casos.altaDeEmpresa(comoAdminAhora(), altaEnTenant(mundo.tenant)))).toBe(
+        "MARCA_RETIRADA",
+      );
     });
   });
 });
