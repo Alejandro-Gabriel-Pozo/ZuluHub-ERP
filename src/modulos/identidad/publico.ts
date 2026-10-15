@@ -201,3 +201,10 @@ export {
   type TraspasoGuardado,
 } from "./persistencia/repositorios";
 export type { IdentidadDb } from "./persistencia/tablas";
+
+// M6 / H5 P5: lo que la plataforma lee de las membresías (solo identidad, decisión F1).
+export {
+  crearMembresiasParaPlataforma,
+  type MembresiasParaPlataforma,
+  type MembresiasParaPlataformaDb,
+} from "./persistencia/membresias-para-plataforma";

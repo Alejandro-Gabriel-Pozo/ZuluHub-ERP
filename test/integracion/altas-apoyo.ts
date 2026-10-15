@@ -35,8 +35,13 @@ import {
   type EmpresasDb,
 } from "../../src/modulos/empresas/publico";
 import {
+  crearMembresiasParaPlataforma,
   crearRepositorioDeInvitaciones,
+  crearRepositorioDePersonas,
   type IdentidadDb,
+  type MembresiasParaPlataforma,
+  type MembresiasParaPlataformaDb,
+  type RepositorioDePersonas,
 } from "../../src/modulos/identidad/publico";
 import {
   crearLecturaDeMarcaParaElAlta,
@@ -89,6 +94,8 @@ export type TxDeAltaDePrueba = TxDeAlta &
   Readonly<{
     /** Consultas de verificación y fallas provocadas, sin tipar. */
     db: Kysely<SinTablas>;
+    personas: RepositorioDePersonas;
+    membresias: MembresiasParaPlataforma;
   }>;
 
 /** Los pasos del alta tras los cuales las pruebas de atomicidad provocan una falla. */
@@ -210,6 +217,8 @@ export function crearEntornoDeAlta(
         empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
         sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
         invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
+        personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
+        membresias: crearMembresiasParaPlataforma(db.withTables<MembresiasParaPlataformaDb>()),
         trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
         auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
         marcas: crearLecturaDeMarcaParaElAlta(db.withTables<LecturaParaElAltaDb>()),
@@ -252,6 +261,7 @@ export const dependenciasDeAltas = (
   reenviarInvitacionDelAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA, tokens },
   revocarInvitacionDelAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA },
   cicloDeVida: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA },
+  personas: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA },
 });
 
 export const crearCasosDeAlta = (

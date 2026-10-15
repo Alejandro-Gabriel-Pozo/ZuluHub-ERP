@@ -24,6 +24,12 @@ import {
   type DependenciasDeCicloDeVida,
 } from "./ciclo-de-vida";
 import {
+  DECLARACIONES_DE_PERSONAS,
+  armarReactivarPersona,
+  armarSuspenderPersona,
+  type DependenciasDePersonas,
+} from "./personas";
+import {
   DECLARACION_DE_REENVIAR_INVITACION_DEL_ALTA,
   DECLARACION_DE_REVOCAR_INVITACION_DEL_ALTA,
   armarReenviarInvitacionDelAlta,
@@ -44,6 +50,7 @@ export const DECLARACIONES_DE_ALTAS = {
   reenviarInvitacionDelAlta: DECLARACION_DE_REENVIAR_INVITACION_DEL_ALTA,
   revocarInvitacionDelAlta: DECLARACION_DE_REVOCAR_INVITACION_DEL_ALTA,
   ...DECLARACIONES_DE_CICLO_DE_VIDA,
+  ...DECLARACIONES_DE_PERSONAS,
 } as const satisfies Record<
   string,
   DeclaracionDeAccionDePlataforma | Readonly<{ sinGuard: string }>
@@ -56,6 +63,7 @@ export type DependenciasDeAltas = Readonly<{
   reenviarInvitacionDelAlta: DependenciasDeReenvioDelAlta;
   revocarInvitacionDelAlta: DependenciasDeCasoDePlataforma<TxDeRevocacionDelAlta>;
   cicloDeVida: DependenciasDeCicloDeVida;
+  personas: DependenciasDePersonas;
 }>;
 
 /**
@@ -75,6 +83,8 @@ export function crearCasosDeUsoDeAltas(dependencias: DependenciasDeAltas) {
     reactivarTenant: armarReactivarTenant(dependencias.cicloDeVida),
     suspenderEmpresa: armarSuspenderEmpresa(dependencias.cicloDeVida),
     reactivarEmpresa: armarReactivarEmpresa(dependencias.cicloDeVida),
+    suspenderPersona: armarSuspenderPersona(dependencias.personas),
+    reactivarPersona: armarReactivarPersona(dependencias.personas),
   } satisfies Record<keyof typeof DECLARACIONES_DE_ALTAS, unknown>;
 }
 

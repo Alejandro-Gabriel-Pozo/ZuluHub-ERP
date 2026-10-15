@@ -4,6 +4,7 @@ import {
   tablaDePermisosDePlataforma,
 } from "../../src/capacidades/permisos/plataforma";
 import type { TxDeAlta } from "../../src/plataforma/casos-de-uso/alta-nucleo";
+import type { TxDePersonas } from "../../src/plataforma/casos-de-uso/personas";
 import {
   DECLARACIONES_DE_ALTAS,
   crearCasosDeUsoDeAltas,
@@ -21,12 +22,14 @@ import { comoAdministrador, conRol, uuid } from "./apoyo-de-soporte";
 
 class AccesoFueraDelGuard extends Error {}
 
-type Vigilada = Readonly<{ tx: TxDeAlta; accesos: string[] }>;
+/** La transacción vigilada sirve a todos los casos: tiene todo lo que cualquiera de ellos pida. */
+type TxVigilada = TxDeAlta & TxDePersonas;
+type Vigilada = Readonly<{ tx: TxVigilada; accesos: string[] }>;
 
 function vigilar(rol: "ADMIN" | "SOPORTE" | null): Vigilada {
   const accesos: string[] = [];
   const autorizacion = conRol(rol);
-  const tx = new Proxy({} as TxDeAlta, {
+  const tx = new Proxy({} as TxVigilada, {
     get(_objetivo, propiedad) {
       accesos.push(String(propiedad));
       if (propiedad === "autorizacionDePlataforma") return autorizacion;
@@ -76,6 +79,10 @@ const casosCon = (vigilada: Vigilada): CasosDeUsoDeAltas =>
       transacciones: { ejecutar: (_opciones, trabajo) => trabajo(vigilada.tx) },
       reglas: REGLAS_DE_PLATAFORMA,
     },
+    personas: {
+      transacciones: { ejecutar: (_opciones, trabajo) => trabajo(vigilada.tx) },
+      reglas: REGLAS_DE_PLATAFORMA,
+    },
   });
 
 const CLAVE = "clave-de-guard-0001";
@@ -111,6 +118,14 @@ const LLAMADAS: Record<
     }),
   reactivarEmpresa: (c) =>
     c.reactivarEmpresa(comoAdministrador, { claveDeIdempotencia: CLAVE, empresaId: uuid(7) }),
+  suspenderPersona: (c) =>
+    c.suspenderPersona(comoAdministrador, {
+      claveDeIdempotencia: CLAVE,
+      personaId: uuid(8),
+      motivo: "fraude",
+    }),
+  reactivarPersona: (c) =>
+    c.reactivarPersona(comoAdministrador, { claveDeIdempotencia: CLAVE, personaId: uuid(8) }),
   cancelarAlta: (c) =>
     c.cancelarAlta(comoAdministrador, {
       claveDeIdempotencia: CLAVE,
@@ -214,6 +229,8 @@ describe("el guard es lo primero de cada caso de uso del alta", () => {
       "empresas.alta",
       "empresas.reactivar",
       "empresas.suspender",
+      "personas.reactivar",
+      "personas.suspender",
       "tenants.reactivar",
       "tenants.suspender",
     ]);
