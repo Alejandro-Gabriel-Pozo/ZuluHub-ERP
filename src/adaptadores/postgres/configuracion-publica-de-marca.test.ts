@@ -18,6 +18,13 @@ import type { TxPublica } from "./resolucion-de-host";
 const configuracion: ConfiguracionPublica = {
   nombre: "Mi Calendario",
   tema: { primary: "#112233" },
+  aspecto: {
+    estilo: "MODERNO",
+    superficie: "CALIDA",
+    esquinas: "REDONDEADA",
+    titulos: "SERIF",
+    ingreso: "CON_IMAGEN",
+  },
   hostCanonico: "app.micalendario.test" as ConfiguracionPublica["hostCanonico"],
 };
 
@@ -45,23 +52,31 @@ function conLectura(respuesta: ConfiguracionPublica | null) {
 }
 
 describe("crearConfiguracionPublicaDeHost", () => {
-  it("pide a la lectura el host NORMALIZADO y la superficie, y devuelve nombre, tema y host canónico", async () => {
+  it("pide a la lectura el host NORMALIZADO y la superficie, y devuelve nombre, tema, aspecto y host canónico", async () => {
     const { puerto, pedidos } = conLectura(configuracion);
     expect(await puerto.porHost("APP.Marca.TEST:443", "LANDING")).toEqual(
       ok({
         nombre: "Mi Calendario",
         tema: { primary: "#112233" },
+        aspecto: {
+          estilo: "MODERNO",
+          superficie: "CALIDA",
+          esquinas: "REDONDEADA",
+          titulos: "SERIF",
+          ingreso: "CON_IMAGEN",
+        },
         hostCanonico: "app.micalendario.test",
       }),
     );
     expect(pedidos).toEqual([["app.marca.test", "LANDING"]]);
   });
 
-  it("solo deja salir nombre, tema y hostCanonico: un campo de más de la lectura no sale por la puerta", async () => {
+  it("solo deja salir nombre, tema, aspecto y hostCanonico: un campo de más de la lectura no sale por la puerta", async () => {
     const conDeMas = { ...configuracion, marcaId: "m1", empresaId: "e1" } as ConfiguracionPublica;
     const { puerto } = conLectura(conDeMas);
     const r = await puerto.porHost("app.marca.test", "APP");
     expect(r.ok && r.valor !== null && Object.keys(r.valor).sort()).toEqual([
+      "aspecto",
       "hostCanonico",
       "nombre",
       "tema",
