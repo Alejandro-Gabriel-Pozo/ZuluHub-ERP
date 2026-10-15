@@ -50,8 +50,9 @@ export interface LecturaPublicaDeMarcas {
   resolverHost(host: Host, superficie: SuperficieDeDominio): Promise<HostServible | null>;
 
   /**
-   * La configuración pública de la marca de un host: su nombre, su tema validado (con la herencia de la
-   * cadena de marcas) y el host canónico de su aplicación. Se sirve bajo EXACTAMENTE el mismo criterio
+   * La configuración pública de la marca de un host: su nombre, su tema y su aspecto validados (con la
+   * herencia de la cadena de marcas) y el host canónico de su aplicación. Se sirve bajo EXACTAMENTE el
+   * mismo criterio
    * que `resolverHost` (es la misma consulta, no una copia) y devuelve `null` en todo lo demás, sin
    * distinguir por qué. Nada de ids, empresa ni tenant. Una sola foto de la base (la de la transacción):
    * una versión nueva que se confirma mientras tanto se ve entera o no se ve, nunca a medias.
@@ -139,7 +140,7 @@ export function crearLecturaPublicaDeMarcas(db: Kysely<PublicoDb>): LecturaPubli
 
       const versiones = await db
         .selectFrom("version_de_marca")
-        .select(["marca_id", "numero", "vigente_desde", "nombre_visible", "tema"])
+        .select(["marca_id", "numero", "vigente_desde", "nombre_visible", "tema", "aspecto"])
         .where("marca_id", "in", ids)
         .execute();
       // Las políticas dejan pasar solo versiones confirmadas (con número y vigencia).
@@ -153,6 +154,7 @@ export function crearLecturaPublicaDeMarcas(db: Kysely<PublicoDb>): LecturaPubli
                   vigenteDesde: v.vigente_desde,
                   nombreVisible: v.nombre_visible,
                   tema: v.tema,
+                  aspecto: v.aspecto,
                 },
               ],
         );

@@ -67,6 +67,9 @@ const logo: ReglaDeImagen = {
 /**
  * Las ranuras de `activos.*` y lo que exige cada una ([02] §2.1). Pesos que el spec no fija
  * (ASUMIDO): íconos 192 y 180, 100 KB; ícono 512, 200 KB; `logo_sobre_primario`, como el `logo`.
+ * `imagen_de_ingreso` (M7a, la variante de ingreso `CON_IMAGEN` del aspecto de la marca): JPEG o WebP, hasta
+ * 500 KB, de 800 a 1600 de ancho y de 600 a 1200 de alto (ASUMIDO; el dueño corrige). Un rango y no una
+ * medida exacta: se recorta por la pantalla y no hay un tamaño único que la web pueda exigirle al diseño.
  */
 export const REGLAS_DE_RANURA = {
   icono_192: {
@@ -108,6 +111,13 @@ export const REGLAS_DE_RANURA = {
     pesoMaximo: 300 * KB,
     ancho: exacta(1200),
     alto: exacta(630),
+    opaca: false,
+  },
+  imagen_de_ingreso: {
+    formatos: ["jpeg", "webp"],
+    pesoMaximo: 500 * KB,
+    ancho: { minimo: 800, maximo: 1600 },
+    alto: { minimo: 600, maximo: 1200 },
     opaca: false,
   },
 } as const satisfies Record<string, ReglaDeImagen | ReglaDeIco>;

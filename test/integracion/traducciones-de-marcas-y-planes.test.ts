@@ -333,7 +333,7 @@ describe.skipIf(base === null)("traducciones de marcas y de planes", () => {
       });
     }
 
-    it("lo que la base rechaza y no tiene motivo propio (tema, vocabulario, inmutables) sale como el error de persistencia tipado", async () => {
+    it("lo que la base rechaza y no tiene motivo propio (tema, aspecto, vocabulario, inmutables) sale como el error de persistencia tipado", async () => {
       const marca = await crearMarca(dueno, { padre: principal });
       const confirmada = await crearVersionDeMarcaConfirmada(dueno, marca, {
         nombreVisible: "Fija",
@@ -344,6 +344,14 @@ describe.skipIf(base === null)("traducciones de marcas y de planes", () => {
           async () =>
             provocar(
               `insert into version_de_marca (marca_id, tema) values ($1, '{"primary":"rojo"}'::jsonb)`,
+              [await crearMarca(dueno, { padre: principal })],
+            ),
+        ],
+        [
+          "version_de_marca_aspecto_ck",
+          async () =>
+            provocar(
+              `insert into version_de_marca (marca_id, aspecto) values ($1, '{"estilo":"moderno"}'::jsonb)`,
               [await crearMarca(dueno, { padre: principal })],
             ),
         ],

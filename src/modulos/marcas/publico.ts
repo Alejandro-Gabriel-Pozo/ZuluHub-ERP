@@ -1,6 +1,28 @@
 /** Entrada pública del módulo de marcas (ADR-001): dominio puro de la marca comercial y sus versiones. */
 export { normalizarHost, type ErrorDeHost, type Host } from "./dominio/host";
 export {
+  ASPECTO_POR_DEFECTO,
+  ESQUINAS_DE_ASPECTO,
+  ESTILOS_DE_ASPECTO,
+  INGRESOS_DE_ASPECTO,
+  LISTAS_DE_ASPECTO,
+  SUPERFICIES_DE_ASPECTO,
+  TITULOS_DE_ASPECTO,
+  TOKENS_DE_ASPECTO,
+  completarAspecto,
+  esTokenDeAspecto,
+  validarAspecto,
+  type Aspecto,
+  type AspectoCompleto,
+  type ErrorDeAspecto,
+  type EsquinasDeAspecto,
+  type EstiloDeAspecto,
+  type IngresoDeAspecto,
+  type SuperficieDeAspecto,
+  type TitulosDeAspecto,
+  type TokenDeAspecto,
+} from "./dominio/aspecto";
+export {
   CONTRASTE_MINIMO_DEL_ACENTO,
   CONTRASTE_MINIMO_DEL_TEXTO,
   TOKENS_DE_TEMA,

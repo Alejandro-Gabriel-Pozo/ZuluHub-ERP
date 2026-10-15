@@ -51,8 +51,8 @@ export const COLUMNAS_COINCIDEN: ColumnasCoinciden = true;
 /**
  * Lo que lee la puerta PÚBLICA (rol `zuluhub_publico`, sin contexto): la vista `resolucion_de_host`; de
  * `marca`, el identificador y el padre (la cadena de la herencia); de `dominio`, el host canónico de la
- * aplicación (`es_canonico`, que concede 0011); y de `version_de_marca`, lo que se pinta (nombre y tema).
- * Son exactamente las columnas que las migraciones 0007 y 0011 le conceden a ese rol; pedir otra falla
+ * aplicación (`es_canonico`, que concede 0011); y de `version_de_marca`, lo que se pinta (nombre, tema y
+ * aspecto). Son exactamente las columnas que las migraciones 0007, 0011 y 0014 le conceden a ese rol; pedir otra falla
  * con `42501`. Las políticas del rol dejan ver solo marcas ACTIVAS, dominios ACTIVOS y versiones
  * confirmadas y ya empezadas.
  */
@@ -77,6 +77,7 @@ export type PublicoDb = {
     vigente_desde: Date | null;
     nombre_visible: string | null;
     tema: unknown;
+    aspecto: unknown;
   };
 };
 

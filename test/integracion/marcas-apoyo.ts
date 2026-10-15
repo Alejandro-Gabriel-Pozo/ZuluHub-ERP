@@ -148,6 +148,8 @@ export type DatosDeVersionDeMarca = Partial<
   Readonly<{
     nombreVisible: string | null;
     tema: Record<string, string>;
+    /** Solo si la base ya tiene la columna `aspecto` (0014): no se manda si no se da. */
+    aspecto: Record<string, unknown>;
     logo: string | null;
     vocabulario: Record<string, string>;
     modulosIniciales: string[] | null;
@@ -161,11 +163,12 @@ export async function crearBorradorDeMarca(
   marca: string,
   datos: DatosDeVersionDeMarca = {},
 ): Promise<string> {
+  const conAspecto = datos.aspecto !== undefined;
   return (
     await un<{ id: string }>(
       c,
-      `insert into version_de_marca (marca_id, nombre_visible, tema, logo, vocabulario, modulos_iniciales, plan_por_defecto_id)
-       values ($1, $2, $3::jsonb, $4, $5::jsonb, $6, $7) returning id`,
+      `insert into version_de_marca (marca_id, nombre_visible, tema, logo, vocabulario, modulos_iniciales, plan_por_defecto_id${conAspecto ? ", aspecto" : ""})
+       values ($1, $2, $3::jsonb, $4, $5::jsonb, $6, $7${conAspecto ? ", $8::jsonb" : ""}) returning id`,
       [
         marca,
         datos.nombreVisible ?? null,
@@ -174,6 +177,7 @@ export async function crearBorradorDeMarca(
         JSON.stringify(datos.vocabulario ?? {}),
         datos.modulosIniciales ?? null,
         datos.planPorDefecto ?? null,
+        ...(conAspecto ? [JSON.stringify(datos.aspecto)] : []),
       ],
     )
   ).id;

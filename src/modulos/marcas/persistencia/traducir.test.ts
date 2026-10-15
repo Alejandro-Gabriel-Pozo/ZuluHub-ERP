@@ -139,6 +139,7 @@ describe("el mapa de restricciones de marca y de versión de marca", () => {
   it("los motivos con datos que la base no tiene no se traducen (el dominio puro los decide antes)", () => {
     const m = ERRORES_DE_MARCAS_POR_RESTRICCION;
     expect(m.version_de_marca_tema_ck).toBe("NO_TRADUCIDA"); // TEMA_INVALIDO { token }
+    expect(m.version_de_marca_aspecto_ck).toBe("NO_TRADUCIDA"); // ASPECTO_INVALIDO { token }
     expect(m.version_de_marca_vocabulario_ck).toBe("NO_TRADUCIDA"); // TEXTO_INVALIDO { texto, motivo }
     expect(m.version_de_marca_modulos_ck).toBe("NO_TRADUCIDA"); // MODULO_DESCONOCIDO { modulo }
   });
