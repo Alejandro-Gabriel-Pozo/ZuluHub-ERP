@@ -291,7 +291,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
   });
 
   describe("catálogo: privilegios", () => {
-    it("el rol de la librería tiene USAGE (sin CREATE) en su esquema y SELECT/INSERT/UPDATE/DELETE en sus cinco tablas, y NADA más", async () => {
+    it("el rol de la librería tiene USAGE (sin CREATE) en su esquema, SELECT/INSERT/UPDATE en sus cinco tablas y DELETE solo donde se usa (0013: no en `user` ni `account`), y NADA más", async () => {
       const esquema = await consulta<{ usage: boolean; create: boolean }>(
         `select has_schema_privilege('zuluhub_autenticacion', 'autenticacion', 'USAGE') as usage,
                 has_schema_privilege('zuluhub_autenticacion', 'autenticacion', 'CREATE') as "create"`,
@@ -301,9 +301,14 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
         `select table_name as t, privilege_type as p from information_schema.table_privileges
          where table_schema = 'autenticacion' and grantee = 'zuluhub_autenticacion' order by 1, 2`,
       );
+      // 0013 le quitó DELETE sobre `user` y `account` (no hay camino que borre un usuario o una cuenta).
+      const CON_DELETE = ["rateLimit", "session", "verification"];
       expect(privilegios).toEqual(
         TABLAS_DE_AUTENTICACION.flatMap((t) =>
-          ["DELETE", "INSERT", "SELECT", "UPDATE"].map((p) => ({ t, p })),
+          (CON_DELETE.includes(t)
+            ? ["DELETE", "INSERT", "SELECT", "UPDATE"]
+            : ["INSERT", "SELECT", "UPDATE"]
+          ).map((p) => ({ t, p })),
         ).sort((a, b) => (a.t === b.t ? a.p.localeCompare(b.p) : a.t < b.t ? -1 : 1)),
       );
       // Ningún TRUNCATE/REFERENCES/TRIGGER en ningún esquema (lo de `public` lo cubre `plataforma-sql`).
