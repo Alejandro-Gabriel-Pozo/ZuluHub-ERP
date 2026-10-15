@@ -10,6 +10,7 @@ import {
   marcaComercialId,
   tenantId,
   versionDePlanId,
+  type InvitacionId,
   type MarcaComercialId,
   type TenantId,
   type VersionDePlanId,
@@ -21,7 +22,7 @@ import {
   type CambioDeEstadoDeEmpresa,
   type Empresa,
 } from "../../modulos/empresas/publico";
-import { emailDesdeTexto, type Email } from "../../modulos/identidad/publico";
+import { emailDesdeTexto, type Email, type Invitacion } from "../../modulos/identidad/publico";
 import { nombreDeTenantValido } from "../../modulos/tenants/publico";
 import { uuidDesdeTexto } from "./soporte/consulta";
 
@@ -233,4 +234,23 @@ export function decidirCancelacionDeAlta(
   return err(
     cambio.error === "TRANSICION_NO_PERMITIDA" ? "ALTA_NO_PENDIENTE" : "MOTIVO_OBLIGATORIO",
   );
+}
+
+/** El motivo con el que se revoca la invitación del alta cuando se cancela el alta. */
+export const MOTIVO_DE_REVOCACION_POR_CANCELACION = "ALTA_CANCELADA";
+
+/** La invitación que hay que revocar y la versión con la que se la leyó (control optimista). */
+export type InvitacionARevocar = Readonly<{ id: InvitacionId; version: number }>;
+
+/**
+ * La invitación del alta que se revoca al cancelar el alta: la ÚLTIMA, si sigue guardada como `PENDIENTE`
+ * (vigente o vencida: el vencimiento no se guarda). Una aceptada no se toca (la empresa ya no estaría en
+ * alta) y una ya revocada no necesita nada. Sin invitación, nada que revocar. Como mucho una invitación
+ * del alta está pendiente por empresa (`invitacion_empresa_gerente_uk`), así que la última es la única.
+ */
+export function invitacionARevocarAlCancelar(
+  ultima: Pick<Invitacion, "id" | "estado" | "version"> | null,
+): InvitacionARevocar | null {
+  if (ultima === null || ultima.estado !== "PENDIENTE") return null;
+  return { id: ultima.id, version: ultima.version };
 }

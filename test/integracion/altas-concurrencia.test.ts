@@ -336,4 +336,58 @@ describe.skipIf(base === null)("alta de empresa: concurrencia", () => {
       }
     });
   });
+
+  describe("instalación SINGLE: a lo sumo un tenant", () => {
+    it("dos altas de tenant nuevo a la vez: entra una y la otra es INSTALACION_SINGLE_YA_TIENE_TENANT; una empresa más en ese tenant sí entra", async () => {
+      if (base === null) return;
+      // Cada vuelta en una base nueva: la auditoría es de solo inserción, no hay cómo vaciar una instalación.
+      for (let vuelta = 0; vuelta < 5; vuelta++) {
+        const aparte = await crearBaseAparte(base);
+        const unico = new pg.Client({ connectionString: aparte.base.dueno });
+        await unico.connect();
+        const barrera = crearBarrera(2);
+        const entorno = crearEntornoDeAlta(aparte.base, 4, (tx) => ({
+          ...tx,
+          idempotencia: {
+            ...tx.idempotencia,
+            consultar: async (...a) => {
+              const r = await tx.idempotencia.consultar(...a);
+              await barrera();
+              return r;
+            },
+          },
+        }));
+        try {
+          await unico.query("update instalacion set modo = 'SINGLE'");
+          const m = await crearMarcaLista(unico, {
+            perillasDelPlan: { empresas_por_tenant: { tipo: "LIMITE", limite: 3 } },
+          });
+          const casos = crearCasosDeAlta(entorno);
+          const rs = await Promise.all([
+            casos.altaDeEmpresa(comoAdminAhora(), altaNueva(m.marca)),
+            casos.altaDeEmpresa(comoAdminAhora(), altaNueva(m.marca)),
+          ]);
+          expect(valores(rs), `vuelta ${vuelta}`).toHaveLength(1);
+          expect(errores(rs)).toEqual(["INSTALACION_SINGLE_YA_TIENE_TENANT"]);
+          expect(
+            Number(
+              (
+                (await unico.query("select count(*)::int as n from tenant")).rows[0] as {
+                  n: string;
+                }
+              ).n,
+            ),
+          ).toBe(1);
+          // Sumar una empresa al tenant que ya está es otra cosa: no crea un tenant.
+          const tenant = valores(rs)[0]?.tenantId ?? "";
+          const mas = await casos.altaDeEmpresa(comoAdminAhora(), altaEnTenant(tenant));
+          expect(mas.ok).toBe(true);
+        } finally {
+          await entorno.cerrar();
+          await unico.end();
+          await aparte.destruir();
+        }
+      }
+    });
+  });
 });

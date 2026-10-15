@@ -50,15 +50,28 @@ const casosCon = (vigilada: Vigilada): CasosDeUsoDeAltas =>
       },
       catalogoDeModulos: {},
     },
+    cancelarAlta: {
+      transacciones: { ejecutar: (_opciones, trabajo) => trabajo(vigilada.tx) },
+      reglas: REGLAS_DE_PLATAFORMA,
+    },
+    cancelarAltasVencidas: {
+      transacciones: { ejecutar: (_opciones, trabajo) => trabajo(vigilada.tx) },
+    },
   });
 
 const CLAVE = "clave-de-guard-0001";
 
 /** Cómo se llama a cada caso de uso, con una entrada VÁLIDA. Un caso nuevo obliga a sumar su fila. */
 const LLAMADAS: Record<
-  keyof typeof DECLARACIONES_DE_ALTAS,
+  Exclude<keyof typeof DECLARACIONES_DE_ALTAS, "cancelarAltasVencidas">,
   (c: CasosDeUsoDeAltas) => Promise<unknown>
 > = {
+  cancelarAlta: (c) =>
+    c.cancelarAlta(comoAdministrador, {
+      claveDeIdempotencia: CLAVE,
+      empresaId: uuid(3),
+      motivo: "se arrepintió",
+    }),
   altaDeEmpresa: (c) =>
     c.altaDeEmpresa(comoAdministrador, {
       claveDeIdempotencia: CLAVE,
@@ -126,7 +139,10 @@ describe("el guard es lo primero de cada caso de uso del alta", () => {
   });
 
   it("cada acción declarada existe, es solo de ADMIN y no se repite entre casos", () => {
-    const acciones = Object.values(DECLARACIONES_DE_ALTAS).map((d) => d.accion);
+    // El barrido corre como el sistema y declara por qué no pasa por el guard.
+    const { cancelarAltasVencidas, ...conGuard } = DECLARACIONES_DE_ALTAS;
+    expect(cancelarAltasVencidas.sinGuard.length).toBeGreaterThan(20);
+    const acciones = Object.values(conGuard).map((d) => d.accion);
     expect(new Set(acciones).size).toBe(acciones.length);
     const tabla = tablaDePermisosDePlataforma(REGLAS_DE_PLATAFORMA.permisos);
     for (const accion of acciones) {
@@ -134,6 +150,6 @@ describe("el guard es lo primero de cada caso de uso del alta", () => {
       expect(tabla.ADMIN).toContain(accion);
       expect(tabla.SOPORTE).not.toContain(accion);
     }
-    expect([...acciones].sort()).toEqual(["empresas.alta"]);
+    expect([...acciones].sort()).toEqual(["altas.cancelar", "empresas.alta"]);
   });
 });

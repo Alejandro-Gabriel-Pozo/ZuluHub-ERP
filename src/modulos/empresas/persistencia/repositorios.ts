@@ -109,9 +109,14 @@ export type NuevaEmpresa = Readonly<{
 /** Un alta que sigue en `PROVISIONING` y ya cumplió el plazo, con el instante en que se creó la empresa. */
 export type AltaVencida = Readonly<{ empresa: Empresa; creadoEn: Date }>;
 
+/** La empresa con el instante en que se creó: el plazo del alta cuenta desde ahí. */
+export type EmpresaConCreadoEn = Readonly<{ empresa: Empresa; creadoEn: Date }>;
+
 export interface RepositorioDeEmpresas {
   crear(datos: NuevaEmpresa): Promise<Empresa>;
   obtener(id: EmpresaId): Promise<Empresa | null>;
+  /** Lo mismo con el instante de creación (el plazo del alta de 72 h cuenta desde ahí); `null` si no existe o no se ve. */
+  obtenerConCreadoEn(id: EmpresaId): Promise<EmpresaConCreadoEn | null>;
   listarDelTenant(tenant: TenantId): Promise<Empresa[]>;
   cambiarEstado(
     id: EmpresaId,
@@ -215,6 +220,15 @@ export function crearRepositorioDeEmpresas(db: Kysely<EmpresasDb>): RepositorioD
 
   return {
     obtener,
+
+    async obtenerConCreadoEn(id) {
+      const fila = await db
+        .selectFrom("empresa")
+        .selectAll()
+        .where("id", "=", id)
+        .executeTakeFirst();
+      return fila === undefined ? null : { empresa: aEmpresa(fila), creadoEn: fila.creado_en };
+    },
 
     async crear(datos) {
       const fila = await db

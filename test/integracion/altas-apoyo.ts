@@ -246,6 +246,8 @@ export const crearCasosDeAlta = (
       tokens,
       catalogoDeModulos: MODULOS_DE_PRUEBA,
     },
+    cancelarAlta: { transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA },
+    cancelarAltasVencidas: { transacciones: entorno },
   });
 
 // ---- el escenario: una marca lista para dar de alta, preparada con el cliente del dueño ----------------
@@ -267,6 +269,8 @@ export type OpcionesDeMarcaLista = Readonly<{
   modulosDelPlan?: string[];
   /** Los valores de perillas del plan por defecto (p. ej. `empresas_por_tenant`). */
   perillasDelPlan?: Record<string, unknown>;
+  /** El nombre visible de la versión confirmada (por defecto, el mismo para todas). */
+  nombreVisible?: string;
   /** Sin versión confirmada. */
   sinVersion?: boolean;
   /** Sin host canónico activo. */
@@ -288,7 +292,7 @@ export async function crearMarcaLista(
   });
   if (opciones.sinVersion !== true) {
     await crearVersionDeMarcaConfirmada(dueno, marca, {
-      nombreVisible: "Marca de prueba",
+      nombreVisible: opciones.nombreVisible ?? "Marca de prueba",
       modulosIniciales: opciones.modulosIniciales === undefined ? [] : opciones.modulosIniciales,
       planPorDefecto: plan,
     });

@@ -1,15 +1,29 @@
 import { createHash } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import type { TransaccionesDePostgres } from "../../src/adaptadores/postgres/transacciones";
+import { crearMarcasDeMail } from "../../src/adaptadores/postgres/marcas-de-mail";
+import {
+  crearTransacciones,
+  type TransaccionesDePostgres,
+} from "../../src/adaptadores/postgres/transacciones";
 import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
-import type { ContextoDePlataforma } from "../../src/contexto/contexto";
+import type { ContextoDePlataforma, ContextoOperativo } from "../../src/contexto/contexto";
 import { crearCasosDeUsoDeIdentidad } from "../../src/modulos/identidad/publico";
+import {
+  crearLecturaDeMarcaParaMail,
+  type MarcasParaMailDb,
+} from "../../src/modulos/marcas/publico";
 import { crearAltaEnTransaccion } from "../../src/plataforma/casos-de-uso/alta-nucleo";
 import type { CasosDeUsoDeAltas } from "../../src/plataforma/casos-de-uso/altas";
 import { validarAlta } from "../../src/plataforma/dominio/alta";
-import { invitacionId, marcaComercialId } from "../../src/primitivas/identificadores/marca";
+import {
+  empresaId,
+  invitacionId,
+  marcaComercialId,
+  tenantId,
+} from "../../src/primitivas/identificadores/marca";
 import type { Resultado } from "../../src/primitivas/resultado/resultado";
+import type { MarcasDeMail } from "../../src/puertos/marcas";
 import type { Tokens } from "../../src/puertos/tokens";
 import { MODULOS_DE_PRUEBA } from "../utilidades/planes";
 import { usuarioDePrueba } from "../utilidades/usuarios";
@@ -53,6 +67,15 @@ import { plataformaEn } from "./soporte-datos";
 
 const base = inject("baseDePruebas");
 
+/** El contexto con el que corre el manejador del trabajo del mail: la empresa del trabajo, sin persona ni puerta. */
+const contextoDelSistemaDe = (empresa: string): ContextoOperativo => ({
+  tipo: "OPERATIVO",
+  empresaId: empresaId(empresa),
+  personaId: null,
+  marcaDeEntrada: null,
+  ahora: new Date(),
+});
+
 function exito<T>(r: Resultado<T, unknown>): T {
   if (!r.ok) throw new Error(`tenía que salir bien: ${JSON.stringify(r.error)}`);
   return r.valor;
@@ -69,6 +92,7 @@ describe.skipIf(base === null)("alta de empresa: casos de uso contra Postgres", 
   let entornoGeneral: ReturnType<typeof crearEntornoDePrueba>;
   let tokens: Tokens;
   let casos: CasosDeUsoDeAltas;
+  let entornoDeMail: TransaccionesDePostgres<Readonly<{ mails: MarcasDeMail }>>;
 
   beforeAll(async () => {
     if (base === null) return;
@@ -77,6 +101,17 @@ describe.skipIf(base === null)("alta de empresa: casos de uso contra Postgres", 
     await dueno.connect();
     entorno = crearEntornoDeAlta(propia.base, 6);
     entornoGeneral = crearEntornoDePrueba(propia.base, 3);
+    entornoDeMail = crearTransacciones<Readonly<{ mails: MarcasDeMail }>>({
+      urls: { OPERATIVO: propia.base.app },
+      clave: propia.base.clave,
+      armar: (db) => ({
+        mails: crearMarcasDeMail(crearLecturaDeMarcaParaMail(db.withTables<MarcasParaMailDb>()), {
+          nombre: "Respaldo del entorno",
+          urlBase: "https://respaldo.ejemplo.test",
+        }),
+      }),
+      maximoDeConexiones: 2,
+    });
     tokens = tokensDePrueba();
     casos = crearCasosDeAlta(entorno, tokens);
   });
@@ -84,6 +119,7 @@ describe.skipIf(base === null)("alta de empresa: casos de uso contra Postgres", 
     await dueno.end();
     await entorno.cerrar();
     await entornoGeneral.cerrar();
+    await entornoDeMail.cerrar();
     await propia.destruir();
   });
 
@@ -1037,6 +1073,79 @@ describe.skipIf(base === null)("alta de empresa: casos de uso contra Postgres", 
           [alta.empresaId, email],
         ),
       ).toEqual([{ rol: "GERENTE", activo: true }]);
+    });
+  });
+
+  describe("dos marcas conviven sin mezclarse", () => {
+    it("cada alta nace con SU marca, SU plan y SUS módulos; el mail se resuelve con la marca del tenant y nunca con la de la otra", async () => {
+      const a = await crearMarcaLista(dueno, {
+        nombreVisible: "Mi Calendario",
+        modulosIniciales: ["caja"],
+        modulosDelPlan: ["caja"],
+      });
+      const b = await crearMarcaLista(dueno, {
+        nombreVisible: "Otra Marca",
+        modulosIniciales: ["reservas"],
+        modulosDelPlan: ["reservas"],
+      });
+      const altaA = exito(await casos.altaDeEmpresa(comoAdminAhora(), altaNueva(a.marca)));
+      const altaB = exito(await casos.altaDeEmpresa(comoAdminAhora(), altaNueva(b.marca)));
+
+      expect(
+        (
+          await una<{ marca_id: string }>("select marca_id from tenant where id = $1", [
+            altaA.tenantId,
+          ])
+        ).marca_id,
+      ).toBe(a.marca);
+      expect(
+        (
+          await una<{ marca_id: string }>("select marca_id from tenant where id = $1", [
+            altaB.tenantId,
+          ])
+        ).marca_id,
+      ).toBe(b.marca);
+      expect(
+        await todas("select version_de_plan_id from plan_de_tenant where tenant_id = $1", [
+          altaA.tenantId,
+        ]),
+      ).toEqual([{ version_de_plan_id: a.version }]);
+      expect(
+        await todas("select version_de_plan_id from plan_de_tenant where tenant_id = $1", [
+          altaB.tenantId,
+        ]),
+      ).toEqual([{ version_de_plan_id: b.version }]);
+      expect(
+        await todas("select modulo from modulo_de_empresa where empresa_id = $1", [
+          altaA.empresaId,
+        ]),
+      ).toEqual([{ modulo: "caja" }]);
+      expect(
+        await todas("select modulo from modulo_de_empresa where empresa_id = $1", [
+          altaB.empresaId,
+        ]),
+      ).toEqual([{ modulo: "reservas" }]);
+
+      // El mail del gerente sale de la marca del TENANT de la empresa (lo que lee el manejador del trabajo,
+      // con el contexto de la empresa, aún en alta): el nombre y el dominio de A para A, los de B para B.
+      const mailDe = async (empresa: string, tenant: string) => {
+        const r = await entornoDeMail.ejecutar(
+          { contexto: contextoDelSistemaDe(empresa) },
+          async (tx) => ({
+            ok: true as const,
+            valor: await tx.mails.delTenant(tenantId(tenant), new Date()),
+          }),
+        );
+        return exito(r);
+      };
+      expect(await mailDe(altaA.empresaId, altaA.tenantId)).toEqual({
+        nombre: "Mi Calendario",
+        urlBase: `https://${a.host}`,
+      });
+      expect(await mailDe(altaB.empresaId, altaB.tenantId)).toEqual({
+        nombre: "Otra Marca",
+        urlBase: `https://${b.host}`,
+      });
     });
   });
 });

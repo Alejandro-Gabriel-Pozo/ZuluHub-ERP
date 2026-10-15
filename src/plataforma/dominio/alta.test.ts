@@ -5,16 +5,19 @@ import type { Email } from "../../modulos/identidad/publico";
 import type { Cuit } from "../../primitivas/identificacion-fiscal/cuit";
 import {
   empresaId,
+  invitacionId,
   marcaComercialId,
   tenantId,
   versionDePlanId,
 } from "../../primitivas/identificadores/marca";
 import {
   MOTIVO_DE_ALTA_VENCIDA,
+  MOTIVO_DE_REVOCACION_POR_CANCELACION,
   PLAZO_DE_ALTA_EN_MS,
   altaVencida,
   comprobarAlta,
   decidirCancelacionDeAlta,
+  invitacionARevocarAlCancelar,
   msRestantesDeAlta,
   validarAlta,
   type AltaValidada,
@@ -383,5 +386,30 @@ describe("decidirCancelacionDeAlta", () => {
   it("precedencia: ALTA_NO_PENDIENTE gana sobre el motivo vacío", () => {
     expect(decidirCancelacionDeAlta(empresa("ACTIVE"), "")).toEqual(error("ALTA_NO_PENDIENTE"));
     expect(decidirCancelacionDeAlta(empresa("CANCELLED"), " ")).toEqual(error("ALTA_NO_PENDIENTE"));
+  });
+});
+
+describe("invitacionARevocarAlCancelar", () => {
+  const invitacion = (estado: "PENDIENTE" | "ACEPTADA" | "REVOCADA") => ({
+    id: invitacionId("i-1"),
+    estado,
+    version: 3,
+  });
+
+  it("el motivo de la revocación es ALTA_CANCELADA", () => {
+    expect(MOTIVO_DE_REVOCACION_POR_CANCELACION).toBe("ALTA_CANCELADA");
+  });
+
+  it("la pendiente se revoca, con la versión con la que se la leyó", () => {
+    expect(invitacionARevocarAlCancelar(invitacion("PENDIENTE"))).toEqual({
+      id: invitacionId("i-1"),
+      version: 3,
+    });
+  });
+
+  it("una aceptada, una ya revocada o ninguna: nada que revocar", () => {
+    expect(invitacionARevocarAlCancelar(invitacion("ACEPTADA"))).toBeNull();
+    expect(invitacionARevocarAlCancelar(invitacion("REVOCADA"))).toBeNull();
+    expect(invitacionARevocarAlCancelar(null)).toBeNull();
   });
 });

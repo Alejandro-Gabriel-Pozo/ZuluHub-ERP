@@ -4,17 +4,36 @@ import {
   armarAltaDeEmpresa,
   type DependenciasDeAltaDeEmpresa,
 } from "./alta-de-empresa";
+import {
+  DECLARACION_DE_CANCELAR_ALTA,
+  armarCancelarAlta,
+  type TxDeCancelacionDeAlta,
+} from "./cancelar-alta";
+import {
+  DECLARACION_DEL_BARRIDO_DE_ALTAS,
+  armarCancelarAltasVencidas,
+  type DependenciasDelBarrido,
+} from "./cancelar-altas-vencidas";
+import type { DependenciasDeCasoDePlataforma } from "./caso-de-plataforma";
 
 /**
- * Los casos de uso del alta de empresas de plataforma (H5 §B.5.1 y marcas y planes §B.10) y qué exige cada
- * uno al guard (cruce X1 de ADR-003). Todos pasan por el guard: ninguno es `sinGuard`.
+ * Los casos de uso del alta de empresas de plataforma (H5 §B.5.1, §B.5.3 y marcas y planes §B.10) y qué
+ * exige cada uno al guard (cruce X1 de ADR-003). El barrido de altas vencidas no pasa por el guard: lo corre
+ * el sistema, y lo declara con su motivo.
  */
 export const DECLARACIONES_DE_ALTAS = {
   altaDeEmpresa: DECLARACION_DE_ALTA_DE_EMPRESA,
-} as const satisfies Record<string, DeclaracionDeAccionDePlataforma>;
+  cancelarAlta: DECLARACION_DE_CANCELAR_ALTA,
+  cancelarAltasVencidas: DECLARACION_DEL_BARRIDO_DE_ALTAS,
+} as const satisfies Record<
+  string,
+  DeclaracionDeAccionDePlataforma | Readonly<{ sinGuard: string }>
+>;
 
 export type DependenciasDeAltas = Readonly<{
   altaDeEmpresa: DependenciasDeAltaDeEmpresa;
+  cancelarAlta: DependenciasDeCasoDePlataforma<TxDeCancelacionDeAlta>;
+  cancelarAltasVencidas: DependenciasDelBarrido;
 }>;
 
 /**
@@ -24,6 +43,8 @@ export type DependenciasDeAltas = Readonly<{
 export function crearCasosDeUsoDeAltas(dependencias: DependenciasDeAltas) {
   return {
     altaDeEmpresa: armarAltaDeEmpresa(dependencias.altaDeEmpresa),
+    cancelarAlta: armarCancelarAlta(dependencias.cancelarAlta),
+    cancelarAltasVencidas: armarCancelarAltasVencidas(dependencias.cancelarAltasVencidas),
   } satisfies Record<keyof typeof DECLARACIONES_DE_ALTAS, unknown>;
 }
 

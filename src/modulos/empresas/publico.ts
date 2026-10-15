@@ -71,6 +71,7 @@ export {
   crearRepositorioDeSucursales,
   type AltaDeSucursal,
   type AltaVencida,
+  type EmpresaConCreadoEn,
   type EmpresasDb,
   type ErrorDeRepositorioDeEmpresas,
   type NuevaEmpresa,
