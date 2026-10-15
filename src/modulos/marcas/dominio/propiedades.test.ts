@@ -2,6 +2,17 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { planId } from "../../../primitivas/identificadores/marca";
 import "../../../../test/propiedades/configuracion";
+import {
+  ASPECTO_POR_DEFECTO,
+  ESQUINAS_DE_ASPECTO,
+  ESTILOS_DE_ASPECTO,
+  INGRESOS_DE_ASPECTO,
+  LISTAS_DE_ASPECTO,
+  SUPERFICIES_DE_ASPECTO,
+  TITULOS_DE_ASPECTO,
+  TOKENS_DE_ASPECTO,
+  completarAspecto,
+} from "./aspecto";
 import { completarDefinicion, resolverDefinicion, type DefinicionDeMarca } from "./definicion";
 import { decidirAltaDeMarca } from "./jerarquia";
 import {
@@ -118,6 +129,16 @@ const PLANES = [planId("plan-a"), planId("plan-b")];
 const definicion: fc.Arbitrary<DefinicionDeMarca> = fc.record({
   nombreVisible: fc.option(fc.constantFrom("Uno", "Dos", "Tres"), { nil: null }),
   tema: fc.dictionary(fc.constantFrom(...TOKENS_DE_TEMA), color, { maxKeys: 4 }),
+  aspecto: fc.record(
+    {
+      estilo: fc.constantFrom(...ESTILOS_DE_ASPECTO),
+      superficie: fc.constantFrom(...SUPERFICIES_DE_ASPECTO),
+      esquinas: fc.constantFrom(...ESQUINAS_DE_ASPECTO),
+      titulos: fc.constantFrom(...TITULOS_DE_ASPECTO),
+      ingreso: fc.constantFrom(...INGRESOS_DE_ASPECTO),
+    },
+    { requiredKeys: [] },
+  ),
   logo: fc.option(fc.constantFrom("/marcas/a/uno.png", "/marcas/b/dos.webp"), { nil: null }),
   vocabulario: fc.dictionary(
     fc.constantFrom(
@@ -174,6 +195,28 @@ describe("herencia entre marcas: propiedades", () => {
     );
   });
 
+  it("el aspecto no pierde ni inventa tokens: sale token por token del primer eslabón que lo trae, y completo nunca queda sin valor", () => {
+    fc.assert(
+      fc.property(cadena, (c) => {
+        const r = resolverDefinicion(c).aspecto;
+        const e = presentes(c);
+        for (const token of TOKENS_DE_ASPECTO) {
+          expect(r[token]).toBe(e.find((x) => x.aspecto[token] !== undefined)?.aspecto[token]);
+        }
+        expect(
+          Object.keys(r).every((k) => (TOKENS_DE_ASPECTO as readonly string[]).includes(k)),
+        ).toBe(true);
+        const completo = completarAspecto(r);
+        for (const token of TOKENS_DE_ASPECTO) {
+          expect(completo[token]).toBe(r[token] ?? ASPECTO_POR_DEFECTO[token]);
+          expect((LISTAS_DE_ASPECTO[token] as readonly string[]).includes(completo[token])).toBe(
+            true,
+          );
+        }
+      }),
+    );
+  });
+
   it("el vocabulario resuelto solo trae claves que algún eslabón tenía", () => {
     fc.assert(
       fc.property(cadena, (c) => {
@@ -195,6 +238,7 @@ describe("herencia entre marcas: propiedades", () => {
             {
               nombreVisible: null,
               tema: {},
+              aspecto: {},
               logo: null,
               vocabulario: {},
               modulosIniciales: null,
@@ -318,6 +362,7 @@ describe("confirmar una versión: propiedades", () => {
       { primary: color, "on-primary": color, secondary: color, accent: color },
       { requiredKeys: [] },
     ),
+    aspecto: fc.constant({}),
     logo: fc.option(fc.constant("/marcas/a/logo.png"), { nil: null }),
     vocabulario: fc.constant({}),
     modulosIniciales: fc.option(fc.subarray(MODULOS), { nil: null }),
@@ -373,6 +418,7 @@ describe("confirmar una versión: propiedades", () => {
         const b: DefinicionDeMarca = {
           nombreVisible: "Marca",
           tema: { ...colores, "on-primary": "#ffffff", secondary: secundario },
+          aspecto: {},
           logo: "/marcas/a/logo.png",
           vocabulario: {},
           modulosIniciales: modulos,
