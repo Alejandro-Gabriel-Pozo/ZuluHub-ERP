@@ -1,4 +1,5 @@
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import type { SuperficieDeAspecto } from "./aspecto";
 
 /**
  * Los únicos tokens de color de una marca (marcas y planes, §B.3): una lista CERRADA, sin CSS libre. Cada
@@ -79,26 +80,44 @@ export function razonDeContraste(a: string, b: string): number {
 export const contrasteSuficiente = (a: string, b: string, minimo: number): boolean =>
   razonDeContraste(a, b) >= minimo;
 
-const BLANCO = "#ffffff";
+/**
+ * Los dos colores de fondo de cada superficie del aspecto (valores de los prototipos aprobados, los mismos
+ * de `tokens.css` de la web): `fondo` es el de la página y `superficie` el de las tarjetas y paneles.
+ */
+export const COLORES_DE_SUPERFICIE: Readonly<
+  Record<SuperficieDeAspecto, Readonly<{ fondo: string; superficie: string }>>
+> = {
+  NEUTRA: { fondo: "#ffffff", superficie: "#f3f5f7" },
+  CALIDA: { fondo: "#fbf7f1", superficie: "#f3eadc" },
+  FRIA: { fondo: "#f5f8fc", superficie: "#e6edf6" },
+};
 
 /** Texto normal (WCAG 1.4.3, nivel AA): `on-primary` sobre `primary`. */
 export const CONTRASTE_MINIMO_DEL_TEXTO = 4.5;
-/** Componentes gráficos y texto grande (WCAG 1.4.11): `accent` sobre blanco. */
+/** Componentes gráficos y texto grande (WCAG 1.4.11): `accent` sobre el fondo y sobre la superficie. */
 export const CONTRASTE_MINIMO_DEL_ACENTO = 3;
 
-export type ParDeContraste = "on-primary/primary" | "accent/blanco";
+export type ParDeContraste = "on-primary/primary" | "accent/fondo" | "accent/superficie";
 
 /**
- * Al confirmar (§B.3): `on-primary` sobre `primary` a 4,5:1 como mínimo y `accent` sobre blanco a 3:1.
- * Devuelve el primer par que no llega, o `null` si el tema deja todo legible. `secondary` no se mide:
- * no lleva texto ni se usa como único comunicador de un estado.
+ * Al confirmar (§B.3): `on-primary` sobre `primary` a 4,5:1 como mínimo y `accent` a 3:1 sobre el fondo y
+ * sobre la superficie de la SUPERFICIE elegida en el aspecto (con la neutra, el fondo es blanco: el mismo
+ * par de antes). Devuelve el primer par que no llega, o `null` si el tema deja todo legible. `secondary`
+ * no se mide: no lleva texto ni se usa como único comunicador de un estado.
  */
-export function parDeContrasteInsuficiente(tema: TemaCompleto): ParDeContraste | null {
+export function parDeContrasteInsuficiente(
+  tema: TemaCompleto,
+  superficie: SuperficieDeAspecto,
+): ParDeContraste | null {
   if (!contrasteSuficiente(tema["on-primary"], tema.primary, CONTRASTE_MINIMO_DEL_TEXTO)) {
     return "on-primary/primary";
   }
-  if (!contrasteSuficiente(tema.accent, BLANCO, CONTRASTE_MINIMO_DEL_ACENTO)) {
-    return "accent/blanco";
+  const colores = COLORES_DE_SUPERFICIE[superficie];
+  if (!contrasteSuficiente(tema.accent, colores.fondo, CONTRASTE_MINIMO_DEL_ACENTO)) {
+    return "accent/fondo";
+  }
+  if (!contrasteSuficiente(tema.accent, colores.superficie, CONTRASTE_MINIMO_DEL_ACENTO)) {
+    return "accent/superficie";
   }
   return null;
 }
