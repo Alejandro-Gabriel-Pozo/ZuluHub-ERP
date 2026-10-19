@@ -7,11 +7,10 @@ import type { Resultado } from "../../primitivas/resultado/resultado";
 import type { Dato } from "../../puertos/sin-secretos";
 import {
   ejecutarCasoDePlataforma,
-  repetirSiHuboChoqueDeUnicidad,
   type DependenciasDeCasoDePlataforma,
   type ErrorComunDeCasoDePlataforma,
   type PlantillaDeCasoDePlataforma,
-  type TxBaseDePlataforma,
+  type TxDeCasoDePlataforma,
 } from "./caso-de-plataforma";
 
 /**
@@ -20,7 +19,7 @@ import {
  */
 
 /** Lo que recibe el trabajo de cada caso de dominios: el repositorio, el administrador, la auditoría y la idempotencia. */
-export type TxDeDominios = TxBaseDePlataforma &
+export type TxDeDominios = TxDeCasoDePlataforma &
   Readonly<{
     dominios: RepositorioDeDominios;
   }>;
@@ -50,8 +49,6 @@ export function ejecutarCasoDeDominios<S extends Dato, V, E extends string>(
 ): Promise<Resultado<S, E | ErrorComunDeDominios>> {
   return ejecutarCasoDePlataforma(dependencias, plantilla);
 }
-
-export { repetirSiHuboChoqueDeUnicidad };
 
 /** Los datos del dominio que quedan en la constancia: lo necesario para saber a qué host se refiere y en qué estado quedó. */
 export function datosDeAuditoriaDeDominio(dominio: DominioGuardado): Record<string, Dato> {

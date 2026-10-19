@@ -209,7 +209,7 @@ export function armarGuardarBorradorDeMarca(dependencias: DependenciasDeMarcasYP
         if (existente !== null && definicionesIguales(existente.definicion, definicion)) {
           return ok({
             salida: { borradorId: existente.id, version: existente.version },
-            constancia: null,
+            constancias: [],
           });
         }
         const guardado =
@@ -222,19 +222,21 @@ export function armarGuardarBorradorDeMarca(dependencias: DependenciasDeMarcasYP
         const antes = existente === null ? null : existente.definicion;
         return ok({
           salida: { borradorId: guardado.id, version: guardado.version },
-          constancia: {
-            accion: "MARCA_BORRADOR_GUARDADO",
-            entidad: "version_de_marca",
-            entidadId: guardado.id,
-            antes: antes === null ? null : datosDeLaDefinicion(antes),
-            despues: {
-              marcaId: pedido.marcaId,
-              esNuevo,
-              version: guardado.version,
-              ...datosDeLaDefinicion(guardado.definicion),
-              vocabulario: paresDeVocabulario(antes, guardado.definicion),
+          constancias: [
+            {
+              accion: "MARCA_BORRADOR_GUARDADO",
+              entidad: "version_de_marca",
+              entidadId: guardado.id,
+              antes: antes === null ? null : datosDeLaDefinicion(antes),
+              despues: {
+                marcaId: pedido.marcaId,
+                esNuevo,
+                version: guardado.version,
+                ...datosDeLaDefinicion(guardado.definicion),
+                vocabulario: paresDeVocabulario(antes, guardado.definicion),
+              },
             },
-          },
+          ],
         });
       },
       comoRepeticion: (guardado) => guardado,

@@ -198,7 +198,7 @@ export async function asignarAUnTenant(
       if (decision.valor.resultado === "YA_ESTABA") {
         return ok({
           salida: { numero: decision.valor.numero, resultado: "YA_ESTABA", repetida: false },
-          constancia: null,
+          constancias: [],
         });
       }
 
@@ -250,7 +250,7 @@ export async function asignarAUnTenant(
       );
       return ok({
         salida: { numero: asignada.numero, resultado: "ASIGNADO", repetida: false },
-        constancia,
+        constancias: [constancia],
       });
     },
     comoRepeticion: (guardado) => ({ ...guardado, repetida: true }),

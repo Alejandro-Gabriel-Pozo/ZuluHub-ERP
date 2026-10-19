@@ -98,7 +98,7 @@ export function armarCrearMarca(dependencias: DependenciasDeMarcasYPlanes) {
           if (existente !== null) {
             if (existente.marcaPadreId !== pedido.marcaPadreId)
               return err("CODIGO_DE_MARCA_OCUPADO");
-            return ok({ salida: { marcaId: existente.id, yaExistia: true }, constancia: null });
+            return ok({ salida: { marcaId: existente.id, yaExistia: true }, constancias: [] });
           }
           const padre =
             pedido.marcaPadreId === null ? null : await tx.marcas.obtener(pedido.marcaPadreId);
@@ -122,18 +122,20 @@ export function armarCrearMarca(dependencias: DependenciasDeMarcasYPlanes) {
           });
           return ok({
             salida: { marcaId: creada.id, yaExistia: false },
-            constancia: {
-              accion: "MARCA_CREADA",
-              entidad: "marca",
-              entidadId: creada.id,
-              antes: null,
-              despues: {
-                codigo: creada.codigo,
-                marcaPadreId: creada.marcaPadreId,
-                nivel: creada.nivel,
-                estado: creada.estado,
+            constancias: [
+              {
+                accion: "MARCA_CREADA",
+                entidad: "marca",
+                entidadId: creada.id,
+                antes: null,
+                despues: {
+                  codigo: creada.codigo,
+                  marcaPadreId: creada.marcaPadreId,
+                  nivel: creada.nivel,
+                  estado: creada.estado,
+                },
               },
-            },
+            ],
           });
         },
         comoRepeticion: (guardado) => ({ ...guardado, yaExistia: true }),

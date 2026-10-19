@@ -69,18 +69,20 @@ export function armarCrearPlan(dependencias: DependenciasDeMarcasYPlanes) {
       trabajar: async (tx, codigo) => {
         const existente = await tx.planes.obtenerPlanPorCodigo(codigo);
         if (existente !== null) {
-          return ok({ salida: { planId: existente.id, yaExistia: true }, constancia: null });
+          return ok({ salida: { planId: existente.id, yaExistia: true }, constancias: [] });
         }
         const creado = await tx.planes.crearPlan(codigo);
         return ok({
           salida: { planId: creado.id, yaExistia: false },
-          constancia: {
-            accion: "PLAN_CREADO",
-            entidad: "plan",
-            entidadId: creado.id,
-            antes: null,
-            despues: { codigo: creado.codigo, estado: creado.estado },
-          },
+          constancias: [
+            {
+              accion: "PLAN_CREADO",
+              entidad: "plan",
+              entidadId: creado.id,
+              antes: null,
+              despues: { codigo: creado.codigo, estado: creado.estado },
+            },
+          ],
         });
       },
       comoRepeticion: (guardado) => ({ ...guardado, yaExistia: true }),

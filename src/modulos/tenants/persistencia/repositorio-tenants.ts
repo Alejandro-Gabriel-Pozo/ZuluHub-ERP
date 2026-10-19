@@ -1,6 +1,11 @@
 import type { Generated, Kysely, Selectable } from "kysely";
 import type { EstadoDeTenant } from "../../../contexto/estados";
-import { tenantId, type TenantId } from "../../../primitivas/identificadores/marca";
+import {
+  marcaComercialId,
+  tenantId,
+  type MarcaComercialId,
+  type TenantId,
+} from "../../../primitivas/identificadores/marca";
 import type { CambioDeEstadoDeTenant, Tenant } from "../dominio/tenant";
 
 /** Tablas del módulo (la base es la fuente de verdad; un test compara estas columnas con el catálogo). */
@@ -10,6 +15,12 @@ export type TenantsDb = {
     nombre: string;
     estado: Generated<EstadoDeTenant>;
     motivo_estado: Generated<string | null>;
+    /**
+     * La marca del tenant (0007): la elige quien da de alta y no cambia. Se escribe con `crear(nombre,
+     * marca)`; en producción la columna NO tiene valor por defecto (un alta sin marca falla), por eso solo
+     * las bases de prueba, que sí lo tienen, pueden omitirla.
+     */
+    marca_id: Generated<string>;
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
@@ -43,8 +54,15 @@ export const ERRORES_DE_TENANT_POR_RESTRICCION: Readonly<Record<string, string>>
 export type ErrorDeRepositorioDeTenants = "TENANT_NO_ENCONTRADO" | "VERSION_DESACTUALIZADA";
 
 export interface RepositorioDeTenants {
-  crear(nombre: string): Promise<Tenant>;
+  /**
+   * Da de alta el tenant con su marca (la puerta por la que sus empresas van a entrar; no cambia nunca). Sin
+   * `marca`, la base decide: en producción rechaza el alta (`marca_id` es obligatoria y no tiene valor por
+   * defecto), así que todo código de negocio la pasa. La base impone también que la marca exista.
+   */
+  crear(nombre: string, marca?: MarcaComercialId): Promise<Tenant>;
   obtener(id: TenantId): Promise<Tenant | null>;
+  /** La marca del tenant; `null` si no existe o no se ve. */
+  marcaDe(id: TenantId): Promise<MarcaComercialId | null>;
   /** Cambia el estado solo si la versión coincide (control optimista). */
   cambiarEstado(
     id: TenantId,
@@ -72,10 +90,19 @@ export function crearRepositorioDeTenants(db: Kysely<TenantsDb>): RepositorioDeT
   return {
     obtener,
 
-    async crear(nombre) {
+    async marcaDe(id) {
+      const fila = await db
+        .selectFrom("tenant")
+        .select("marca_id")
+        .where("id", "=", id)
+        .executeTakeFirst();
+      return fila === undefined ? null : marcaComercialId(fila.marca_id);
+    },
+
+    async crear(nombre, marca) {
       const fila = await db
         .insertInto("tenant")
-        .values({ nombre })
+        .values({ nombre, ...(marca === undefined ? {} : { marca_id: marca }) })
         .returningAll()
         .executeTakeFirstOrThrow();
       return aTenant(fila);

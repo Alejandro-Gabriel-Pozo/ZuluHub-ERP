@@ -17,31 +17,33 @@ import { exigirAccionDePlataforma } from "../consultas/comun";
 import { claveDeIdempotenciaValida } from "../dominio/soporte/consulta";
 
 /**
- * La plantilla común de TODO caso de uso de plataforma que escribe (H5 plataforma §B.4): «guard, forma de
- * la clave, idempotencia, trabajo, auditoría y registro de la clave». La usan los dominios (M4a) y las
- * marcas, los planes y los módulos de empresa (M5). Existe una sola porque la parte que importa (que el
- * guard sea lo primero, que la repetición no escriba ni audite de nuevo y que una falla a mitad de camino
- * no deje nada) no puede escribirse dos veces sin que se desvíe.
+ * LA plantilla de todo caso de uso de plataforma que escribe (H5 plataforma §B.4), con la transacción que
+ * el caso necesite: el guard, la clave de idempotencia, el trabajo del caso, la auditoría de plataforma y
+ * el registro de la clave, todo en UNA transacción SERIALIZABLE. La usan la gestión de dominios (M4a), el
+ * alta de empresas y su ciclo de vida (M6) y las marcas, los planes y los módulos de empresa (M5), sin
+ * atarla a un conjunto fijo de repositorios y admitiendo más de una constancia y errores con datos (un tope
+ * con su límite y su uso). Existe una sola porque el orden de los pasos es lo que garantiza que un rechazo
+ * no deje nada y que repetir la clave no duplique: escrita dos veces se desvía.
  */
 
-/** Lo que TODO caso de plataforma que escribe necesita de su transacción. */
-export type TxBaseDePlataforma = Readonly<{
+/** Lo mínimo que la plantilla pide a la transacción; el caso suma sus repositorios. */
+export type TxDeCasoDePlataforma = Readonly<{
   autorizacionDePlataforma: CargaDeAutorizacionDePlataforma;
   auditoriaDePlataforma: AuditoriaDePlataforma;
   idempotencia: IdempotenciaDePlataforma;
 }>;
 
-export type DependenciasDeCasoDePlataforma<Tx extends TxBaseDePlataforma> = Readonly<{
+export type DependenciasDeCasoDePlataforma<Tx extends TxDeCasoDePlataforma> = Readonly<{
   transacciones: Transacciones<Tx>;
   /** El catálogo y la matriz de PLATAFORMA con los que se autoriza a quien actúa. */
   reglas: ReglasDePlataforma;
 }>;
 
-/** Lo que todo caso de plataforma puede devolver además de lo propio. */
+/** Lo que todo caso de plataforma que escribe puede devolver además de lo propio. */
 export type ErrorComunDeCasoDePlataforma =
   MotivoDeRechazo | "CLAVE_DE_IDEMPOTENCIA_INVALIDA" | "CLAVE_REUTILIZADA" | ErrorDePersistencia;
 
-/** Una constancia de auditoría de plataforma: qué pasó, sobre qué y cómo era antes y cómo quedó. */
+/** Una constancia de la auditoría de plataforma (el actor lo pone el adaptador desde el contexto). */
 export type ConstanciaDePlataforma = Readonly<{
   accion: AccionDePlataforma;
   entidad: string;
@@ -50,15 +52,15 @@ export type ConstanciaDePlataforma = Readonly<{
   despues: Readonly<Record<string, Dato>> | null;
 }>;
 
-/** Lo que el trabajo de un caso decidió escribir: la constancia (si cambió algo) y el resultado a repetir. */
-export type ResultadoDelTrabajo<S> = Readonly<{
+/** Lo que el trabajo de un caso decidió: lo que se devuelve y las constancias a dejar. */
+export type ResultadoDelTrabajoDePlataforma<S> = Readonly<{
   salida: S;
-  /** `null`: no cambió nada (ya estaba), y lo idempotente no audita. */
-  constancia: ConstanciaDePlataforma | null;
+  /** Vacío: no cambió nada (ya estaba), y lo idempotente no audita. En el orden en que se registran. */
+  constancias: readonly ConstanciaDePlataforma[];
 }>;
 
 export type PlantillaDeCasoDePlataforma<
-  Tx extends TxBaseDePlataforma,
+  Tx extends TxDeCasoDePlataforma,
   S extends Dato,
   V,
   E,
@@ -71,45 +73,39 @@ export type PlantillaDeCasoDePlataforma<
   claveDeIdempotencia: string;
   /** Forma de la entrada, DESPUÉS del guard: lo validado y la entrada canónica que alimenta la huella. */
   validar: () => Resultado<Readonly<{ entrada: Dato; valor: V }>, E>;
-  /** El trabajo, dentro de la transacción y después de la clave. */
+  /** El trabajo, dentro de la transacción y después de la clave. Puede devolver también un error de persistencia. */
   trabajar: (
     tx: Tx,
     valor: V,
-  ) => Promise<Resultado<ResultadoDelTrabajo<S>, E | ErrorDePersistencia>>;
+  ) => Promise<Resultado<ResultadoDelTrabajoDePlataforma<S>, E | ErrorDePersistencia>>;
   /** Lo que se devuelve ante una repetición de la clave: lo guardado, marcado como «ya estaba». */
   comoRepeticion: (guardado: S) => S;
 }>;
 
 /**
- * La plantilla de todo caso de plataforma que escribe, en una transacción SERIALIZABLE y en este orden:
+ * Los pasos, en este orden y dentro de una sola transacción SERIALIZABLE:
  *
  *  1. El guard de plataforma, leído dentro de la transacción (nada en caché).
  *  2. La forma de la clave de idempotencia y de la entrada.
- *  3. La clave: si ya se usó con la MISMA entrada se devuelve lo que dio (marcado como repetición), sin
+ *  3. La clave: si ya se usó con la MISMA entrada se devuelve lo que dio (marcado como repetición) sin
  *     escribir nada más; con OTRA entrada es `CLAVE_REUTILIZADA`.
  *  4. El trabajo del caso (lee, decide, escribe).
- *  5. La constancia de auditoría de plataforma, en la misma transacción, solo si algo cambió; el actor lo
- *     pone el adaptador desde el contexto firmado.
+ *  5. Las constancias de auditoría de plataforma, en la misma transacción.
  *  6. El registro de la clave con el resultado.
  *
- * Un error de negocio revierte todo: no queda constancia ni clave de algo que no ocurrió. Un contexto que no
- * es de plataforma (un actor de empresa que se coló sin tipar) lanza `RangeError` sin abrir transacción.
+ * Un error de negocio revierte todo: no queda constancia ni clave de algo que no ocurrió. Una repetición
+ * simultánea de la misma clave puede chocar con lo que el original acaba de confirmar antes de mirar la
+ * clave: `repetirSiHuboChoqueDeUnicidad` la repite UNA vez y la segunda pasada ve la clave del ganador. Un
+ * contexto que no es de plataforma (una llamada sin tipar) lanza `RangeError` sin abrir transacción.
  */
-export function ejecutarCasoDePlataforma<
-  Tx extends TxBaseDePlataforma,
-  S extends Dato,
-  V,
-  E extends string | Readonly<{ codigo: string }>,
->(
+export function ejecutarCasoDePlataforma<Tx extends TxDeCasoDePlataforma, S extends Dato, V, E>(
   dependencias: DependenciasDeCasoDePlataforma<Tx>,
   plantilla: PlantillaDeCasoDePlataforma<Tx, S, V, E>,
 ): Promise<Resultado<S, E | ErrorComunDeCasoDePlataforma>> {
   const { transacciones, reglas } = dependencias;
   const { contexto, accion, operacion, claveDeIdempotencia } = plantilla;
-  // El tipo ya impide pasar el contexto de una empresa; esto cubre a quien lo salte (una llamada sin tipar):
-  // falla fuerte y ANTES de abrir ninguna transacción, igual que los adaptadores de plataforma.
   if ((contexto as Readonly<{ tipo: string }>).tipo !== "PLATAFORMA") {
-    throw new RangeError("plataforma: el contexto no es de plataforma");
+    throw new RangeError("caso de plataforma: el contexto no es de plataforma");
   }
   return repetirSiHuboChoqueDeUnicidad(() =>
     transacciones.ejecutar(
@@ -136,8 +132,8 @@ export function ejecutarCasoDePlataforma<
 
         const hecho = await plantilla.trabajar(tx, valor);
         if (!hecho.ok) return hecho;
-        if (hecho.valor.constancia !== null) {
-          await tx.auditoriaDePlataforma.registrar(hecho.valor.constancia);
+        for (const constancia of hecho.valor.constancias) {
+          await tx.auditoriaDePlataforma.registrar(constancia);
         }
         await tx.idempotencia.registrar(
           operacion,

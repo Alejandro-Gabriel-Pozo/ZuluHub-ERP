@@ -13,7 +13,7 @@ import {
   type DependenciasDeCasoDePlataforma,
   type ErrorComunDeCasoDePlataforma,
   type PlantillaDeCasoDePlataforma,
-  type TxBaseDePlataforma,
+  type TxDeCasoDePlataforma,
 } from "./caso-de-plataforma";
 
 /**
@@ -28,7 +28,7 @@ import {
  * constancia en cada empresa afectada, con actor nulo: es la plataforma, no una persona de la empresa) y
  * lo común de plataforma.
  */
-export type TxDeMarcasYPlanes = TxBaseDePlataforma &
+export type TxDeMarcasYPlanes = TxDeCasoDePlataforma &
   Readonly<{
     marcas: RepositorioDeMarcas;
     planes: RepositorioDePlanes;

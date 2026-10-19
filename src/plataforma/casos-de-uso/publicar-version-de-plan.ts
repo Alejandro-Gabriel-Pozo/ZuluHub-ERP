@@ -120,20 +120,22 @@ export function armarPublicarVersionDePlan(dependencias: DependenciasDeMarcasYPl
         if (publicada === null) return err({ tipo: "ConcurrenciaAgotada" });
         return ok({
           salida: { numero: publicada.numero },
-          constancia: {
-            accion: "PLAN_VERSION_PUBLICADA",
-            entidad: "version_de_plan",
-            entidadId: publicada.id,
-            antes: null,
-            despues: {
-              planId: pedido.planId,
-              planCodigo: plan.codigo,
-              numero: publicada.numero,
-              motivo: publicada.motivo,
-              publicadaEn: instanteISO(publicada.publicadaEn),
-              ...datosDelContenidoDeLaVersion(publicada),
+          constancias: [
+            {
+              accion: "PLAN_VERSION_PUBLICADA",
+              entidad: "version_de_plan",
+              entidadId: publicada.id,
+              antes: null,
+              despues: {
+                planId: pedido.planId,
+                planCodigo: plan.codigo,
+                numero: publicada.numero,
+                motivo: publicada.motivo,
+                publicadaEn: instanteISO(publicada.publicadaEn),
+                ...datosDelContenidoDeLaVersion(publicada),
+              },
             },
-          },
+          ],
         });
       },
       comoRepeticion: (guardado) => guardado,

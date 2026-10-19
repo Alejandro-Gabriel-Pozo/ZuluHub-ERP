@@ -164,3 +164,11 @@ export {
   type VersionDeMarcaGuardada,
 } from "./persistencia/repositorio-de-marcas";
 export type { MarcasDb } from "./persistencia/tablas";
+
+// M6: lo que el alta de una empresa lee de la marca (solo lectura, con la conexión de plataforma).
+export {
+  crearLecturaDeMarcaParaElAlta,
+  type DatosDeMarcaParaElAlta,
+  type LecturaDeMarcaParaElAlta,
+  type LecturaParaElAltaDb,
+} from "./persistencia/lectura-para-el-alta";

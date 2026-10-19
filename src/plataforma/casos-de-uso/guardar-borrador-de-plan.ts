@@ -152,7 +152,7 @@ export function armarGuardarBorradorDePlan(dependencias: DependenciasDeMarcasYPl
         if (existente !== null && datosIguales(comoDato(existente), comoDato(pedido.contenido))) {
           return ok({
             salida: { borradorId: existente.id, version: existente.version },
-            constancia: null,
+            constancias: [],
           });
         }
         const guardado =
@@ -164,19 +164,21 @@ export function armarGuardarBorradorDePlan(dependencias: DependenciasDeMarcasYPl
         if (guardado === null) return err({ tipo: "ConcurrenciaAgotada" });
         return ok({
           salida: { borradorId: guardado.id, version: guardado.version },
-          constancia: {
-            accion: "PLAN_BORRADOR_GUARDADO",
-            entidad: "version_de_plan",
-            entidadId: guardado.id,
-            antes: existente === null ? null : datosDelContenidoDeLaVersion(existente),
-            despues: {
-              planId: pedido.planId,
-              planCodigo: plan.codigo,
-              esNuevo: existente === null,
-              version: guardado.version,
-              ...datosDelContenidoDeLaVersion(guardado),
+          constancias: [
+            {
+              accion: "PLAN_BORRADOR_GUARDADO",
+              entidad: "version_de_plan",
+              entidadId: guardado.id,
+              antes: existente === null ? null : datosDelContenidoDeLaVersion(existente),
+              despues: {
+                planId: pedido.planId,
+                planCodigo: plan.codigo,
+                esNuevo: existente === null,
+                version: guardado.version,
+                ...datosDelContenidoDeLaVersion(guardado),
+              },
             },
-          },
+          ],
         });
       },
       comoRepeticion: (guardado) => guardado,

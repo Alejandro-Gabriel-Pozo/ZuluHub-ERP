@@ -247,7 +247,7 @@ export function armarAjustarPerilla(dependencias: DependenciasDeMarcasYPlanes) {
             ? await tx.planes.empresasDelTenant(pedido.tenantId)
             : [pedido.empresaId];
         await auditarEnLasEmpresas(tx, afectadas, constancia);
-        return ok({ salida: { numero: ajuste.numero }, constancia });
+        return ok({ salida: { numero: ajuste.numero }, constancias: [constancia] });
       },
       comoRepeticion: (guardado) => guardado,
     });

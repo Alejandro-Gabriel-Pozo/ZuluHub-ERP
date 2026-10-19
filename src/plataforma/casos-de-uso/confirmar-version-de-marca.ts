@@ -211,26 +211,28 @@ export function armarConfirmarVersionDeMarca(dependencias: DependenciasDeMarcasY
         const regia = versionVigente(confirmadas, contexto.ahora);
         return ok({
           salida: { numero: confirmada.numero },
-          constancia: {
-            accion: "MARCA_VERSION_CONFIRMADA",
-            entidad: "marca",
-            entidadId: marca.id,
-            antes:
-              regia === null
-                ? null
-                : { numero: regia.numero, ...datosDeLaDefinicion(regia.definicion) },
-            despues: {
-              numero: confirmada.numero,
-              vigenteDesde: instanteISO(confirmada.vigenteDesde),
-              motivo: confirmada.motivo,
-              reemplazaProgramada: confirmada.reemplazaProgramada,
-              ...datosDeLaDefinicion(confirmada.definicion),
-              vocabulario: paresDeVocabulario(
-                regia === null ? null : regia.definicion,
-                confirmada.definicion,
-              ),
+          constancias: [
+            {
+              accion: "MARCA_VERSION_CONFIRMADA",
+              entidad: "marca",
+              entidadId: marca.id,
+              antes:
+                regia === null
+                  ? null
+                  : { numero: regia.numero, ...datosDeLaDefinicion(regia.definicion) },
+              despues: {
+                numero: confirmada.numero,
+                vigenteDesde: instanteISO(confirmada.vigenteDesde),
+                motivo: confirmada.motivo,
+                reemplazaProgramada: confirmada.reemplazaProgramada,
+                ...datosDeLaDefinicion(confirmada.definicion),
+                vocabulario: paresDeVocabulario(
+                  regia === null ? null : regia.definicion,
+                  confirmada.definicion,
+                ),
+              },
             },
-          },
+          ],
         });
       },
       comoRepeticion: (guardado) => guardado,

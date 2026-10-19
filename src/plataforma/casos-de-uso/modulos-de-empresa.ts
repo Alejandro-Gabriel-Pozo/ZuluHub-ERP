@@ -130,7 +130,7 @@ export function armarActivarModuloDeEmpresa(dependencias: DependenciasDeMarcasYP
         });
         if (!decision.ok) return decision;
         if (decision.valor.yaEstabaActivo) {
-          return ok({ salida: { yaEstabaActivo: true }, constancia: null });
+          return ok({ salida: { yaEstabaActivo: true }, constancias: [] });
         }
         const activado = await tx.planes.activarModulo(pedido.empresaId, pedido.modulo, existente);
         // Con SERIALIZABLE otra transacción que cambiara el módulo antes ya habría abortado ésta (40001, que el
@@ -149,7 +149,7 @@ export function armarActivarModuloDeEmpresa(dependencias: DependenciasDeMarcasYP
           },
         } as const;
         await auditarEnLasEmpresas(tx, [pedido.empresaId], constancia);
-        return ok({ salida: { yaEstabaActivo: false }, constancia });
+        return ok({ salida: { yaEstabaActivo: false }, constancias: [constancia] });
       },
       comoRepeticion: () => ({ yaEstabaActivo: true }),
     });
@@ -195,7 +195,7 @@ export function armarDesactivarModuloDeEmpresa(dependencias: DependenciasDeMarca
         });
         if (!decision.ok) return decision;
         if (decision.valor.yaEstabaInactivo || existente === null) {
-          return ok({ salida: { yaEstabaInactivo: true }, constancia: null });
+          return ok({ salida: { yaEstabaInactivo: true }, constancias: [] });
         }
         const desactivado = await tx.planes.desactivarModulo(existente);
         // Con SERIALIZABLE otra transacción que cambiara el módulo antes ya habría abortado ésta (40001, que el
@@ -214,7 +214,7 @@ export function armarDesactivarModuloDeEmpresa(dependencias: DependenciasDeMarca
           },
         } as const;
         await auditarEnLasEmpresas(tx, [pedido.empresaId], constancia);
-        return ok({ salida: { yaEstabaInactivo: false }, constancia });
+        return ok({ salida: { yaEstabaInactivo: false }, constancias: [constancia] });
       },
       comoRepeticion: () => ({ yaEstabaInactivo: true }),
     });
