@@ -13,6 +13,7 @@ const COMPLETO = {
 const config = (
   parcial: Partial<ConfiguracionPublicaDeMarca> = {},
 ): ConfiguracionPublicaDeMarca => ({
+  marcaId: "marca-hotel" as ConfiguracionPublicaDeMarca["marcaId"],
   nombre: "Hotel del Lago",
   tema: COMPLETO,
   aspecto: {

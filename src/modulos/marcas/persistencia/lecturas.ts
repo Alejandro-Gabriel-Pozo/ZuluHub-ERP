@@ -51,10 +51,10 @@ export interface LecturaPublicaDeMarcas {
 
   /**
    * La configuración pública de la marca de un host: su nombre, su tema y su aspecto validados (con la
-   * herencia de la cadena de marcas) y el host canónico de su aplicación. Se sirve bajo EXACTAMENTE el
-   * mismo criterio
+   * herencia de la cadena de marcas), el host canónico de su aplicación y el id de la marca que resolvió
+   * el host. Se sirve bajo EXACTAMENTE el mismo criterio
    * que `resolverHost` (es la misma consulta, no una copia) y devuelve `null` en todo lo demás, sin
-   * distinguir por qué. Nada de ids, empresa ni tenant. Una sola foto de la base (la de la transacción):
+   * distinguir por qué. Del resto, nada de ids, empresa ni tenant. Una sola foto de la base (la de la transacción):
    * una versión nueva que se confirma mientras tanto se ve entera o no se ve, nunca a medias.
    */
   configuracionDeHost(
@@ -170,6 +170,7 @@ export function crearLecturaPublicaDeMarcas(db: Kysely<PublicoDb>): LecturaPubli
         .executeTakeFirst();
 
       return decidirConfiguracionPublica({
+        marcaId: servible.marcaId,
         cadena: ids.map(deLaMarca),
         // El CHECK `dominio_host_ck` garantiza la forma de un host normalizado.
         hostCanonico: canonico === undefined ? null : (canonico.host as Host),

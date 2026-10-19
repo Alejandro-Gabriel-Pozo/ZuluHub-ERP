@@ -51,6 +51,9 @@ const TEMA_PRINCIPAL = {
   accent: "#303030",
 } as const;
 
+/** El mismo resultado sin el `marcaId` (el único id que sale por la puerta): para probar que no hay otros. */
+const sinMarcaId = (r: object | null) => JSON.stringify({ ...r, marcaId: undefined });
+
 describe.skipIf(base === null)("configuración pública de la marca de un host", () => {
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let dueno: pg.Client;
@@ -112,18 +115,66 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
   }
 
   // ===============================================================================================
-  describe("un host servible devuelve nombre, tema, aspecto y host canónico, y nada más", () => {
-    it("la forma exacta, sin ningún identificador interno", async () => {
+  describe("un host servible devuelve marcaId, nombre, tema, aspecto y host canónico, y nada más", () => {
+    it("la forma exacta, sin ningún otro identificador interno", async () => {
       const m = await marca({ datos: { nombreVisible: "Mi Calendario", tema: TEMA_PRINCIPAL } });
       const r = await leer(m.canonico as string);
       expect(r).toEqual({
+        marcaId: m.id,
         nombre: "Mi Calendario",
         tema: TEMA_PRINCIPAL,
         aspecto: ASPECTO_POR_DEFECTO,
         hostCanonico: m.canonico,
       });
-      expect(Object.keys(r ?? {}).sort()).toEqual(["aspecto", "hostCanonico", "nombre", "tema"]);
-      expect(JSON.stringify(r)).not.toMatch(UUID);
+      expect(Object.keys(r ?? {}).sort()).toEqual([
+        "aspecto",
+        "hostCanonico",
+        "marcaId",
+        "nombre",
+        "tema",
+      ]);
+      expect(sinMarcaId(r)).not.toMatch(UUID);
+    });
+
+    it("con DOS marcas, cada host devuelve el id de SU marca, el mismo que da la resolución del host", async () => {
+      const a = await marca({ datos: { nombreVisible: "Marca A" } });
+      const b = await marca({ datos: { nombreVisible: "Marca B" } });
+      expect(a.id).not.toBe(b.id);
+      const deA = await leer(a.canonico as string);
+      const deB = await leer(b.canonico as string);
+      expect(deA?.marcaId).toBe(a.id);
+      expect(deB?.marcaId).toBe(b.id);
+      // La resolución y la configuración del mismo host coinciden (es lo que la web compara).
+      for (const [m, config] of [
+        [a, deA],
+        [b, deB],
+      ] as const) {
+        const resuelta = await resolucion.porHost(m.canonico as string, "APP");
+        expect(resuelta.ok && resuelta.valor?.marcaId).toBe(m.id);
+        expect(config?.marcaId).toBe(m.id);
+      }
+    });
+
+    it("una marca con padre devuelve su propio id, no el del padre ni el de la principal (aunque herede el tema)", async () => {
+      const padre = await marca({
+        padre: null,
+        datos: { nombreVisible: "Padre", tema: { primary: "#0a0a0a" } },
+      });
+      const hija = await marca({ padre: padre.id, datos: { nombreVisible: "Hija", tema: {} } });
+      const r = await leer(hija.canonico as string);
+      expect(r?.nombre).toBe("Hija");
+      expect(r?.tema).toEqual({ primary: "#0a0a0a" });
+      expect(r?.marcaId).toBe(hija.id);
+      expect(r?.marcaId).not.toBe(padre.id);
+      expect(r?.marcaId).not.toBe(principal);
+      expect((await leer(padre.canonico as string))?.marcaId).toBe(padre.id);
+    });
+
+    it("la superficie y el host dedicado no cambian el id: sale el de la marca que resolvió el host", async () => {
+      const m = await marca({ datos: { nombreVisible: "Misma" }, alias: true });
+      const landing = await crearDominio(dueno, m.id, { superficie: "LANDING" });
+      expect((await leer(m.alias as string, "APP"))?.marcaId).toBe(m.id);
+      expect((await leer(landing.host, "LANDING"))?.marcaId).toBe(m.id);
     });
 
     it("el host se normaliza antes de buscar: mayúsculas, puerto y punto final dan lo mismo", async () => {
@@ -147,12 +198,13 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
       const dedicado = await crearDominioDeEmpresa(dueno, mundo.empresa, { superficie: "APP" });
       const r = await leer(dedicado.host);
       expect(r).toEqual({
+        marcaId: m.id,
         nombre: "Producto",
         tema: TEMA_PRINCIPAL,
         aspecto: ASPECTO_POR_DEFECTO,
         hostCanonico: m.canonico,
       });
-      const texto = JSON.stringify(r);
+      const texto = sinMarcaId(r);
       expect(texto).not.toContain(mundo.empresa);
       expect(texto).not.toContain(mundo.tenant);
       expect(texto).not.toMatch(UUID);
@@ -266,12 +318,14 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
 
       // A hereda de la principal lo que no define; jamás nada de B.
       expect(deA).toEqual({
+        marcaId: a.id,
         nombre: "Marca A",
         tema: { ...TEMA_PRINCIPAL, primary: "#aa0000", accent: "#aa0001" },
         aspecto: { ...ASPECTO_POR_DEFECTO, estilo: "MODERNO", titulos: "SERIF" },
         hostCanonico: a.canonico,
       });
       expect(deB).toEqual({
+        marcaId: b.id,
         nombre: "Marca B",
         tema: {
           primary: "#00bb00",
@@ -290,6 +344,7 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
       });
       // La hija de A hereda de A (y por A, de la principal), nunca de B.
       expect(deLaHija).toEqual({
+        marcaId: hijaDeA.id,
         nombre: "Hija de A",
         tema: { ...TEMA_PRINCIPAL, primary: "#aa0000", accent: "#aa0001", secondary: "#cc0000" },
         // El estilo y los títulos del padre, las esquinas propias: token por token.
@@ -430,6 +485,7 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
       await dueno.query("update marca set estado = 'RETIRADA' where id = $1", [padre.id]);
       // Sin el padre ni la principal: queda solo lo que el hijo define.
       expect(await leer(hijo.canonico as string)).toEqual({
+        marcaId: hijo.id,
         nombre: "Hijo",
         tema: { primary: "#000001" },
         aspecto: ASPECTO_POR_DEFECTO,
@@ -700,6 +756,7 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
           expect(durante).toEqual({
             ok: true,
             valor: {
+              marcaId: m.id,
               nombre: "Viejo",
               tema: { ...TEMA_PRINCIPAL, primary: "#000001" },
               aspecto: { ...ASPECTO_POR_DEFECTO, estilo: "CLASICO" },
@@ -708,6 +765,7 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
           });
           // Y la lectura siguiente ve la nueva, entera.
           expect(await leer(alias.host)).toEqual({
+            marcaId: m.id,
             nombre: "Nuevo",
             tema: { ...TEMA_PRINCIPAL, primary: "#000002" },
             aspecto: { ...ASPECTO_POR_DEFECTO, estilo: "LUDICO", ingreso: "DIVIDIDO" },
@@ -763,6 +821,7 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
       // El estado esperado de cada versión k (1 a 6): el canónico aparece con la versión 3.
       const estado = (k: number) =>
         JSON.stringify({
+          marcaId: m.id,
           nombre: `N${k}`,
           tema: { ...TEMA_PRINCIPAL, primary: colores[k - 1] },
           aspecto: { ...ASPECTO_POR_DEFECTO, estilo: estilos[k - 1] },
@@ -883,6 +942,7 @@ describe.skipIf(base === null)(
           tema: temaMalo as unknown as Record<string, string>,
         });
         expect(await leer(host)).toEqual({
+          marcaId: id,
           nombre: "Con tema roto",
           tema: {},
           aspecto: ASPECTO_POR_DEFECTO,
@@ -904,6 +964,7 @@ describe.skipIf(base === null)(
         tema: { primary: "#000001" },
       });
       expect(await leer(host)).toEqual({
+        marcaId: hijo,
         nombre: "Hijo",
         tema: {},
         aspecto: ASPECTO_POR_DEFECTO,
@@ -919,6 +980,7 @@ describe.skipIf(base === null)(
         tema: { primary: "#000001" },
       });
       expect(await leer(host)).toEqual({
+        marcaId: id,
         nombre: "Sano",
         tema: { ...TEMA_PRINCIPAL, primary: "#000001" },
         aspecto: ASPECTO_POR_DEFECTO,
@@ -949,6 +1011,7 @@ describe.skipIf(base === null)(
           aspecto: aspectoMalo,
         });
         expect(await leer(host)).toEqual({
+          marcaId: id,
           nombre: "Con aspecto roto",
           tema: { ...TEMA_PRINCIPAL, primary: "#000001" },
           aspecto: ASPECTO_POR_DEFECTO,

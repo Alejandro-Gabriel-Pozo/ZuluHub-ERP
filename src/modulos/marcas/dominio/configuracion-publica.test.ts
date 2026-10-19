@@ -5,6 +5,7 @@ import {
   type DatosParaLaConfiguracionPublica,
   type VersionPublicaDeMarca,
 } from "./configuracion-publica";
+import { marcaComercialId } from "../../../primitivas/identificadores/marca";
 import { normalizarHost, type Host } from "./host";
 
 const host = (texto: string): Host => {
@@ -12,6 +13,9 @@ const host = (texto: string): Host => {
   if (!r.ok) throw new Error("host de prueba inválido");
   return r.valor;
 };
+
+const MARCA = marcaComercialId("marca-pedida");
+const MARCA_PADRE = marcaComercialId("marca-padre");
 
 const AHORA = new Date("2026-10-13T12:00:00.000Z");
 const ANTES = new Date("2026-10-01T00:00:00.000Z");
@@ -37,6 +41,7 @@ const datos = (
   cadena: DatosParaLaConfiguracionPublica["cadena"],
   parcial: Partial<DatosParaLaConfiguracionPublica> = {},
 ): DatosParaLaConfiguracionPublica => ({
+  marcaId: MARCA,
   cadena,
   hostCanonico: host("app.micalendario.test"),
   ahora: AHORA,
@@ -47,17 +52,39 @@ describe("decidirConfiguracionPublica", () => {
   it("devuelve el nombre, el tema, el aspecto y el host canónico de la versión vigente, y nada más", () => {
     const r = decidirConfiguracionPublica(datos([[version()]]));
     expect(r).toEqual({
+      marcaId: MARCA,
       nombre: "Mi Calendario",
       tema: TEMA,
       aspecto: ASPECTO_POR_DEFECTO,
       hostCanonico: "app.micalendario.test",
     });
-    expect(Object.keys(r ?? {}).sort()).toEqual(["aspecto", "hostCanonico", "nombre", "tema"]);
+    expect(Object.keys(r ?? {}).sort()).toEqual([
+      "aspecto",
+      "hostCanonico",
+      "marcaId",
+      "nombre",
+      "tema",
+    ]);
+  });
+
+  it("el marcaId es el de la marca pedida, no el de un padre de la cadena (que hereda el tema pero no la identidad)", () => {
+    const padre = [version({ nombreVisible: "Padre", tema: { primary: "#999999" } })];
+    const propia = [version({ nombreVisible: "Hija", tema: {} })];
+    const r = decidirConfiguracionPublica(datos([propia, padre]));
+    expect(r?.nombre).toBe("Hija");
+    expect(r?.tema).toEqual({ primary: "#999999" });
+    expect(r?.marcaId).toBe(MARCA);
+    expect(r?.marcaId).not.toBe(MARCA_PADRE);
+    // Es dato del llamador: con otra marca pedida, sale esa (no un valor fijo ni el de la cadena).
+    expect(
+      decidirConfiguracionPublica(datos([propia, padre], { marcaId: MARCA_PADRE }))?.marcaId,
+    ).toBe(MARCA_PADRE);
   });
 
   it("sin host canónico, hostCanonico es null (el resto se sirve igual)", () => {
     const r = decidirConfiguracionPublica(datos([[version()]], { hostCanonico: null }));
     expect(r).toEqual({
+      marcaId: MARCA,
       nombre: "Mi Calendario",
       tema: TEMA,
       aspecto: ASPECTO_POR_DEFECTO,
@@ -267,6 +294,7 @@ describe("decidirConfiguracionPublica", () => {
     it("un tema inválido NO impide servir: sigue el nombre y el host canónico", () => {
       const r = decidirConfiguracionPublica(datos([[version({ tema: { primary: "x" } })]]));
       expect(r).toEqual({
+        marcaId: MARCA,
         nombre: "Mi Calendario",
         tema: {},
         aspecto: ASPECTO_POR_DEFECTO,
@@ -450,6 +478,7 @@ describe("decidirConfiguracionPublica", () => {
     it("un aspecto inválido NO impide servir y NO toca el tema (y al revés)", () => {
       const r = decidirConfiguracionPublica(datos([[version({ aspecto: { estilo: "x" } })]]));
       expect(r).toEqual({
+        marcaId: MARCA,
         nombre: "Mi Calendario",
         tema: TEMA,
         aspecto: ASPECTO_POR_DEFECTO,

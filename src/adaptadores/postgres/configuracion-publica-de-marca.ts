@@ -34,7 +34,7 @@ void CONFIGURACION_ES_LA_DEL_PUERTO;
  *    superficie fuera de la lista responden `ok(null)` SIN tocar la base.
  *  - Todo lo demás es UNA transacción de solo lectura con una sola foto (`LecturaPublicaDeMarcas`): la
  *    resolución del host y la lectura de la marca no pueden verse a medias.
- *  - Devuelve exactamente `nombre`, `tema`, `aspecto` y `hostCanonico`: se arma el objeto campo por campo, así que
+ *  - Devuelve exactamente `marcaId`, `nombre`, `tema`, `aspecto` y `hostCanonico`: se arma el objeto campo por campo, así que
  *    un campo nuevo de la lectura no sale por la puerta sin que alguien lo decida acá.
  *  - No guarda nada entre llamadas. Un fallo de la base vuelve como `err`, nunca como `ok(null)`.
  */
@@ -50,8 +50,8 @@ export function crearConfiguracionPublicaDeHost(
       );
       if (!leida.ok) return leida;
       if (leida.valor === null) return ok(null);
-      const { nombre, tema, aspecto, hostCanonico } = leida.valor;
-      return ok({ nombre, tema, aspecto, hostCanonico });
+      const { marcaId, nombre, tema, aspecto, hostCanonico } = leida.valor;
+      return ok({ marcaId, nombre, tema, aspecto, hostCanonico });
     },
   };
 }
