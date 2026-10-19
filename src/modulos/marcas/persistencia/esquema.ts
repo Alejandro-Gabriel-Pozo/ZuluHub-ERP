@@ -87,7 +87,8 @@ export type ErrorDeDominioPorRestriccion = Exclude<Mapa[keyof Mapa], "NO_TRADUCI
  * Restricción de `marca` y de `version_de_marca` → motivo tipado (ADR-004). Un test exige que no falte
  * ninguna y que no sobre ninguna. Regla de qué se traduce: un motivo solo si el motivo del dominio puro
  * (§B.11) NO lleva datos que la base no tiene; los que llevan (`TEMA_INVALIDO { token }`,
- * `TEXTO_INVALIDO { texto }`, `MODULO_DESCONOCIDO { modulo }`) los decide el dominio ANTES de escribir, y
+ * `ASPECTO_INVALIDO { token }`, `TEXTO_INVALIDO { texto }`, `MODULO_DESCONOCIDO { modulo }`) los decide el
+ * dominio ANTES de escribir, y
  * si la base igual los rechaza es un defecto: sale como el error de persistencia tipado
  * (`NO_TRADUCIDA`), nunca disfrazado con un motivo al que le faltan los datos.
  *
@@ -115,6 +116,7 @@ export const ERRORES_DE_MARCAS_POR_RESTRICCION = {
   version_de_marca_estado_ck: "NO_TRADUCIDA",
   version_de_marca_nombre_ck: "NOMBRE_DE_MARCA_INVALIDO",
   version_de_marca_tema_ck: "NO_TRADUCIDA",
+  version_de_marca_aspecto_ck: "NO_TRADUCIDA",
   version_de_marca_logo_ck: "LOGO_INVALIDO",
   version_de_marca_vocabulario_ck: "NO_TRADUCIDA",
   version_de_marca_modulos_ck: "NO_TRADUCIDA",

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { planId } from "../../../primitivas/identificadores/marca";
+import { ASPECTO_POR_DEFECTO, type AspectoCompleto } from "./aspecto";
 import {
   DEFINICION_VACIA,
   completarDefinicion,
@@ -26,10 +27,18 @@ const PRINCIPAL: DefinicionDeMarca = {
     secondary: "#5f6368",
     accent: "#d93025",
   },
+  aspecto: { estilo: "CLASICO", esquinas: "RECTA" },
   logo: "/marcas/zuluhub/logo.png",
   vocabulario: { "rol.gerente.nombre": "Gerente general" },
   modulosIniciales: ["reservas"],
   planPorDefectoId: PLAN_A,
+};
+
+/** El aspecto de la principal con los defectos aplicados donde no define. */
+const PRINCIPAL_COMPLETA: AspectoCompleto = {
+  ...ASPECTO_POR_DEFECTO,
+  estilo: "CLASICO",
+  esquinas: "RECTA",
 };
 
 describe("DEFINICION_VACIA", () => {
@@ -37,6 +46,7 @@ describe("DEFINICION_VACIA", () => {
     expect(DEFINICION_VACIA).toEqual({
       nombreVisible: null,
       tema: {},
+      aspecto: {},
       logo: null,
       vocabulario: {},
       modulosIniciales: null,
@@ -50,6 +60,7 @@ describe("resolverDefinicion (herencia)", () => {
     const nada = {
       nombreVisible: null,
       tema: {},
+      aspecto: {},
       logo: null,
       vocabulario: {},
       modulosIniciales: null,
@@ -82,6 +93,45 @@ describe("resolverDefinicion (herencia)", () => {
       secondary: "#5f6368",
       accent: "#00aa00",
     });
+  });
+
+  it("el aspecto se hereda token por token: el padre define el estilo y la hija solo las esquinas", () => {
+    const padre = definicion({ aspecto: { estilo: "MODERNO", titulos: "SERIF" } });
+    const hija = definicion({ aspecto: { esquinas: "REDONDEADA" } });
+    expect(resolverDefinicion([hija, padre]).aspecto).toEqual({
+      estilo: "MODERNO",
+      esquinas: "REDONDEADA",
+      titulos: "SERIF",
+    });
+    // Y el valor de la hija gana al del padre cuando ambos definen el mismo token.
+    const pisa = definicion({ aspecto: { estilo: "LUDICO" } });
+    expect(resolverDefinicion([pisa, padre]).aspecto.estilo).toBe("LUDICO");
+  });
+
+  it("el aspecto sobre tres eslabones: marca, padre y abuelo, token por token, sin completar los defectos", () => {
+    const abuelo = definicion({
+      aspecto: { estilo: "CLASICO", superficie: "FRIA", ingreso: "DIVIDIDO" },
+    });
+    const padre = definicion({ aspecto: { superficie: "CALIDA", titulos: "SERIF" } });
+    const hijo = definicion({ aspecto: { estilo: "MODERNO" } });
+    expect(resolverDefinicion([hijo, padre, abuelo]).aspecto).toEqual({
+      estilo: "MODERNO",
+      superficie: "CALIDA",
+      titulos: "SERIF",
+      ingreso: "DIVIDIDO",
+    });
+    // Un token que nadie define no aparece (el defecto se aplica al completar, no al resolver).
+    expect(Object.keys(resolverDefinicion([hijo, padre, abuelo]).aspecto)).not.toContain(
+      "esquinas",
+    );
+  });
+
+  it("el aspecto no se mezcla con el tema ni con otros campos al resolver", () => {
+    const hija = definicion({ tema: { primary: "#336699" }, aspecto: { estilo: "LUDICO" } });
+    const r = resolverDefinicion([hija, PRINCIPAL]);
+    expect(r.tema.primary).toBe("#336699");
+    expect(Object.keys(r.tema).sort()).toEqual(["accent", "on-primary", "primary", "secondary"]);
+    expect(r.aspecto).toEqual({ estilo: "LUDICO", esquinas: "RECTA" });
   });
 
   it("la cadena de tres eslabones: gana la marca, luego el padre, luego el abuelo", () => {
@@ -150,7 +200,10 @@ describe("resolverDefinicion (herencia)", () => {
 describe("completarDefinicion", () => {
   it("una definición completa devuelve todo, con el nombre de la propia marca", () => {
     const resuelta = resolverDefinicion([PRINCIPAL]);
-    expect(completarDefinicion(PRINCIPAL, resuelta)).toEqual({ ok: true, valor: PRINCIPAL });
+    expect(completarDefinicion(PRINCIPAL, resuelta)).toEqual({
+      ok: true,
+      valor: { ...PRINCIPAL, aspecto: PRINCIPAL_COMPLETA },
+    });
   });
 
   it("un producto que define solo el nombre se completa con la herencia", () => {
@@ -158,7 +211,7 @@ describe("completarDefinicion", () => {
     const resuelta = resolverDefinicion([producto, PRINCIPAL]);
     expect(completarDefinicion(producto, resuelta)).toEqual({
       ok: true,
-      valor: { ...PRINCIPAL, nombreVisible: "Mi Calendario" },
+      valor: { ...PRINCIPAL, nombreVisible: "Mi Calendario", aspecto: PRINCIPAL_COMPLETA },
     });
   });
 
@@ -166,8 +219,15 @@ describe("completarDefinicion", () => {
     const propia = { ...PRINCIPAL, modulosIniciales: [] };
     expect(completarDefinicion(propia, resolverDefinicion([propia]))).toEqual({
       ok: true,
-      valor: propia,
+      valor: { ...propia, aspecto: PRINCIPAL_COMPLETA },
     });
+  });
+
+  it("el aspecto nunca es un hueco: sin ningún eslabón que lo defina toma los defectos y la definición se completa igual", () => {
+    const propia = { ...PRINCIPAL, aspecto: {} };
+    const r = completarDefinicion(propia, resolverDefinicion([propia]));
+    expect(r.ok && r.valor.aspecto).toEqual(ASPECTO_POR_DEFECTO);
+    expect(r.ok && r.valor.aspecto).not.toBe(ASPECTO_POR_DEFECTO);
   });
 
   it("la principal sin nada define nada: faltan todos los campos, en orden", () => {

@@ -2,7 +2,7 @@ import { sql } from "kysely";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
-import type { Contexto } from "../../src/contexto/contexto";
+import type { Contexto, ContextoOperativo } from "../../src/contexto/contexto";
 import {
   puntoDeVentaId,
   solicitudId,
@@ -13,7 +13,11 @@ import type {
   ResultadoDeAutorizacionArca,
   TipoDeComprobante,
 } from "../../src/modulos/fiscal/publico";
-import { empresaId } from "../../src/primitivas/identificadores/marca";
+import {
+  empresaId,
+  marcaComercialId,
+  type MarcaComercialId,
+} from "../../src/primitivas/identificadores/marca";
 import { cuitDesdeTexto } from "../../src/primitivas/identificacion-fiscal/cuit";
 import { err, ok } from "../../src/primitivas/resultado/resultado";
 import {
@@ -34,6 +38,8 @@ import {
 } from "./fiscal-numeracion-apoyo";
 import { crearMundo, crearPuntoDeVenta, crearSerie } from "./fiscal-apoyo";
 import { nuevoId } from "./fiscal-persistencia-apoyo";
+import { crearMarca } from "./marcas-apoyo";
+import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
 
 /**
  * H7 (fiscal base), tramo T6: los casos de uso de numeración contra una base real, con el rol limitado
@@ -181,6 +187,34 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
         err("SIN_PERMISO"),
       );
       expect(await serie(e)).toMatchObject({ estado: "LIBRE", ultimo: "0" });
+    });
+
+    it("la persona que entra por la puerta de OTRA marca (o sin puerta) da SIN_PERMISO en reservar, cerrar y numerar, y la serie no se toca (Q1)", async () => {
+      const e = await escenario();
+      const otraMarca = marcaComercialId(await crearMarca(dueno));
+      const c = casos(new EmisionFalsa());
+      const por = (marcaDeEntrada: MarcaComercialId | null): ContextoOperativo => ({
+        ...e.como(T0),
+        marcaDeEntrada,
+      });
+      for (const marca of [otraMarca, null]) {
+        expect(await c.reservarNumeroDeComprobante(por(marca), entradaDe(e))).toEqual(
+          err("SIN_PERMISO"),
+        );
+        expect(await c.numerarComprobante(por(marca), entradaDe(e))).toEqual(err("SIN_PERMISO"));
+        expect(
+          await c.cerrarReservaDeNumero(por(marca), {
+            ...entradaDe(e),
+            numero: 1n,
+            resultado: { tipo: "INCIERTO", motivo: "sin respuesta" },
+          }),
+        ).toEqual(err("SIN_PERMISO"));
+      }
+      expect(await serie(e)).toMatchObject({ estado: "LIBRE", ultimo: "0" });
+      expect(await auditoria(e)).toEqual([]);
+      // Por su puerta, la misma persona reserva (el filtro de marca no le quita nada a quien entra bien).
+      const r = await c.reservarNumeroDeComprobante(e.como(T0), entradaDe(e));
+      expect(r.ok && r.valor.numero).toBe(1n);
     });
 
     it("una empresa suspendida no opera (EMPRESA_NO_OPERA): ni reserva ni cierra ni reconcilia", async () => {
@@ -1084,7 +1118,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
         tipo: "OPERATIVO",
         empresaId: empresaId(m.empresa),
         personaId: persona as never,
-        marcaDeEntrada: null,
+        marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
         ahora: T0,
       } as const;
       const c = casos(new EmisionFalsa());

@@ -39,6 +39,7 @@ import {
   sucursalDe,
 } from "./fixtures-identidad";
 import { usuarioDePrueba } from "../utilidades/usuarios";
+import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
 
 /**
  * H6, tramo T3a: concurrencia REAL de revocar una invitación y de invitar a una sucursal que se
@@ -186,6 +187,7 @@ describe.skipIf(base === null)(
             token,
             emailAutenticado: email,
             usuarioAuth: usuarioDePrueba(email),
+            marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
             ahora,
           }),
           casos.revocarInvitacion(e.ctx, { invitacionId: id }),

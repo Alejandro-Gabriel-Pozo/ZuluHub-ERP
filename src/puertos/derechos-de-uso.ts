@@ -3,7 +3,7 @@ import type { ClaveModulo } from "../capacidades/modulos/catalogo";
 import type { DerechosDeUso } from "../capacidades/planes/derechos";
 import type { ClavePerilla } from "../capacidades/planes/perillas";
 import type { ValorEfectivo } from "../capacidades/planes/valores";
-import type { TenantId } from "../primitivas/identificadores/marca";
+import type { MarcaComercialId, TenantId } from "../primitivas/identificadores/marca";
 
 /**
  * Lo que la puerta pública de la carta por QR puede saber de una carta (marcas y planes, §B.2.5): solo
@@ -47,6 +47,14 @@ export interface LecturaDeDerechosDeUso<
    * enlace `EN_LINEA` con ese código exacto» (§B.2.5) y ese enlace es de catálogo (migración 0009). Sin
    * él no hay forma de acotar la lectura a una sola empresa, así que no se lee nada. Queda por construir y
    * probar: aislamiento entre empresas, enumeración de códigos y baja de plan.
+   *
+   * Recibe la MARCA por cuya puerta (host) llega el enlace, además del código: cuando se implemente, un
+   * código de una empresa cuyo tenant es de otra marca responde lo mismo que un código inexistente
+   * (`null`, sin distinguir), como en el resto de las puertas (marcas y planes, §B.2.4). Está en la
+   * firma desde ahora para que nadie tenga que cambiarla (y a todos sus llamadores) después.
    */
-  deLaCartaPublica(codigo: string): Promise<DerechosDeCartaPublica | null>;
+  deLaCartaPublica(
+    marcaId: MarcaComercialId,
+    codigo: string,
+  ): Promise<DerechosDeCartaPublica | null>;
 }

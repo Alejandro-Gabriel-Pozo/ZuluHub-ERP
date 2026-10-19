@@ -22,7 +22,7 @@ import { crearEntornoPublico } from "./resolucion-apoyo";
 
 /**
  * Configuración pública de la marca de un host (M4b, marcas y planes §B.2.3) contra el rol REAL
- * `zuluhub_publico`: nombre, tema validado con herencia y host canónico, y NADA más. Lo central:
+ * `zuluhub_publico`: nombre, tema y aspecto validados con herencia y host canónico, y NADA más. Lo central:
  *  (1) el mismo criterio que la resolución del host (lo no servible responde igual que «no existe»);
  *  (2) aislamiento entre marcas (el tema de B nunca sale en un host de A);
  *  (3) cada lectura es UNA foto de la base: una versión nueva que se confirma en medio se ve entera o no
@@ -34,6 +34,15 @@ vi.setConfig({ testTimeout: 120_000 });
 
 const NEUTRAL = { ok: true, valor: null } as const;
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+/** Lo que vale cuando ninguna versión de la cadena define el aspecto (literal: no depende del código). */
+const ASPECTO_POR_DEFECTO = {
+  estilo: "CLARO_CON_BORDES",
+  superficie: "NEUTRA",
+  esquinas: "SUAVE",
+  titulos: "SANS",
+  ingreso: "CENTRADO",
+} as const;
 
 const TEMA_PRINCIPAL = {
   primary: "#101010",
@@ -103,16 +112,17 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
   }
 
   // ===============================================================================================
-  describe("un host servible devuelve nombre, tema y host canónico, y nada más", () => {
+  describe("un host servible devuelve nombre, tema, aspecto y host canónico, y nada más", () => {
     it("la forma exacta, sin ningún identificador interno", async () => {
       const m = await marca({ datos: { nombreVisible: "Mi Calendario", tema: TEMA_PRINCIPAL } });
       const r = await leer(m.canonico as string);
       expect(r).toEqual({
         nombre: "Mi Calendario",
         tema: TEMA_PRINCIPAL,
+        aspecto: ASPECTO_POR_DEFECTO,
         hostCanonico: m.canonico,
       });
-      expect(Object.keys(r ?? {}).sort()).toEqual(["hostCanonico", "nombre", "tema"]);
+      expect(Object.keys(r ?? {}).sort()).toEqual(["aspecto", "hostCanonico", "nombre", "tema"]);
       expect(JSON.stringify(r)).not.toMatch(UUID);
     });
 
@@ -139,6 +149,7 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
       expect(r).toEqual({
         nombre: "Producto",
         tema: TEMA_PRINCIPAL,
+        aspecto: ASPECTO_POR_DEFECTO,
         hostCanonico: m.canonico,
       });
       const texto = JSON.stringify(r);
@@ -214,7 +225,11 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
   describe("aislamiento: el host de una marca NUNCA devuelve la configuración de otra", () => {
     it("tres marcas, una hija de otra: cada host da lo suyo y solo lo suyo", async () => {
       const a = await marca({
-        datos: { nombreVisible: "Marca A", tema: { primary: "#aa0000", accent: "#aa0001" } },
+        datos: {
+          nombreVisible: "Marca A",
+          tema: { primary: "#aa0000", accent: "#aa0001" },
+          aspecto: { estilo: "MODERNO", titulos: "SERIF" },
+        },
         alias: true,
       });
       const b = await marca({
@@ -226,12 +241,23 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
             secondary: "#00bb02",
             accent: "#00bb03",
           },
+          aspecto: {
+            estilo: "LUDICO",
+            superficie: "FRIA",
+            esquinas: "REDONDEADA",
+            titulos: "SERIF",
+            ingreso: "CON_IMAGEN",
+          },
         },
         alias: true,
       });
       const hijaDeA = await marca({
         padre: a.id,
-        datos: { nombreVisible: "Hija de A", tema: { secondary: "#cc0000" } },
+        datos: {
+          nombreVisible: "Hija de A",
+          tema: { secondary: "#cc0000" },
+          aspecto: { esquinas: "RECTA" },
+        },
       });
 
       const deA = await leer(a.canonico as string);
@@ -242,6 +268,7 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
       expect(deA).toEqual({
         nombre: "Marca A",
         tema: { ...TEMA_PRINCIPAL, primary: "#aa0000", accent: "#aa0001" },
+        aspecto: { ...ASPECTO_POR_DEFECTO, estilo: "MODERNO", titulos: "SERIF" },
         hostCanonico: a.canonico,
       });
       expect(deB).toEqual({
@@ -252,12 +279,21 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
           secondary: "#00bb02",
           accent: "#00bb03",
         },
+        aspecto: {
+          estilo: "LUDICO",
+          superficie: "FRIA",
+          esquinas: "REDONDEADA",
+          titulos: "SERIF",
+          ingreso: "CON_IMAGEN",
+        },
         hostCanonico: b.canonico,
       });
       // La hija de A hereda de A (y por A, de la principal), nunca de B.
       expect(deLaHija).toEqual({
         nombre: "Hija de A",
         tema: { ...TEMA_PRINCIPAL, primary: "#aa0000", accent: "#aa0001", secondary: "#cc0000" },
+        // El estilo y los títulos del padre, las esquinas propias: token por token.
+        aspecto: { ...ASPECTO_POR_DEFECTO, estilo: "MODERNO", titulos: "SERIF", esquinas: "RECTA" },
         hostCanonico: hijaDeA.canonico,
       });
       // Los alias dan lo mismo que su canónico.
@@ -271,6 +307,11 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
         expect(respuesta?.hostCanonico).not.toBe(b.canonico);
       }
       expect(JSON.stringify(deB)).not.toMatch(/#aa000|#cc0000/);
+      // Ni el aspecto de B sale en A ni en su hija, ni el de A en B.
+      for (const respuesta of [deA, deLaHija]) {
+        expect(JSON.stringify(respuesta)).not.toMatch(/LUDICO|FRIA|REDONDEADA|CON_IMAGEN/);
+      }
+      expect(JSON.stringify(deB?.aspecto)).not.toMatch(/MODERNO|RECTA/);
       expect(JSON.stringify(deB)).not.toContain("Marca A");
     });
 
@@ -341,7 +382,11 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
 
     it("rige la versión de mayor número que ya empezó; una programada o un borrador no cuentan", async () => {
       const m = await marca({
-        datos: { nombreVisible: "Uno", tema: { primary: "#000001", accent: "#0000a1" } },
+        datos: {
+          nombreVisible: "Uno",
+          tema: { primary: "#000001", accent: "#0000a1" },
+          aspecto: { estilo: "CLASICO", superficie: "CALIDA" },
+        },
       });
       expect((await leer(m.canonico as string))?.nombre).toBe("Uno");
       await crearVersionDeMarcaConfirmada(dueno, m.id, {
@@ -351,29 +396,43 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
       const borrador = await crearBorradorDeMarca(dueno, m.id, {
         nombreVisible: "Dos",
         tema: { primary: "#000002" },
+        aspecto: { estilo: "MODERNO" },
       });
       expect((await leer(m.canonico as string))?.nombre).toBe("Uno");
+      expect((await leer(m.canonico as string))?.aspecto).toEqual({
+        ...ASPECTO_POR_DEFECTO,
+        estilo: "CLASICO",
+        superficie: "CALIDA",
+      });
       await confirmarVersionDeMarca(dueno, borrador);
       const r = await leer(m.canonico as string);
       expect(r?.nombre).toBe("Dos");
       // Las versiones no se mezclan: el accent de la versión 1 no pasa a la 2 (lo hereda de la principal).
       expect(r?.tema).toEqual({ ...TEMA_PRINCIPAL, primary: "#000002" });
+      // Y lo mismo el aspecto: la superficie de la versión 1 no pasa a la 2 (toma el defecto).
+      expect(r?.aspecto).toEqual({ ...ASPECTO_POR_DEFECTO, estilo: "MODERNO" });
     });
 
     it("un ancestro RETIRADO corta la herencia (la política pública solo ve marcas activas): lo propio se sirve igual", async () => {
       const padre = await marca({
-        datos: { nombreVisible: "Padre", tema: { secondary: "#000004" } },
+        datos: {
+          nombreVisible: "Padre",
+          tema: { secondary: "#000004" },
+          aspecto: { estilo: "MODERNO" },
+        },
       });
       const hijo = await marca({
         padre: padre.id,
         datos: { nombreVisible: "Hijo", tema: { primary: "#000001" } },
       });
       expect((await leer(hijo.canonico as string))?.tema).toMatchObject({ secondary: "#000004" });
+      expect((await leer(hijo.canonico as string))?.aspecto.estilo).toBe("MODERNO");
       await dueno.query("update marca set estado = 'RETIRADA' where id = $1", [padre.id]);
       // Sin el padre ni la principal: queda solo lo que el hijo define.
       expect(await leer(hijo.canonico as string)).toEqual({
         nombre: "Hijo",
         tema: { primary: "#000001" },
+        aspecto: ASPECTO_POR_DEFECTO,
         hostCanonico: hijo.canonico,
       });
     });
@@ -579,13 +638,19 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
      */
     async function confirmarEntera(
       marcaId: string,
-      datos: { nombre: string; tema: Record<string, string>; canonico?: string },
+      datos: {
+        nombre: string;
+        tema: Record<string, string>;
+        aspecto?: Record<string, string>;
+        canonico?: string;
+      },
     ): Promise<void> {
       await dueno.query("begin");
       try {
         const borrador = await crearBorradorDeMarca(dueno, marcaId, {
           nombreVisible: datos.nombre,
           tema: datos.tema,
+          ...(datos.aspecto === undefined ? {} : { aspecto: datos.aspecto }),
         });
         await confirmarVersionDeMarca(dueno, borrador);
         if (datos.canonico !== undefined) {
@@ -603,7 +668,11 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
       async (corte) => {
         const m = await marca({
           canonico: false,
-          datos: { nombreVisible: "Viejo", tema: { primary: "#000001" } },
+          datos: {
+            nombreVisible: "Viejo",
+            tema: { primary: "#000001" },
+            aspecto: { estilo: "CLASICO" },
+          },
         });
         const alias = await crearDominio(dueno, m.id);
         const nuevoCanonico = hostAlAzar();
@@ -615,6 +684,7 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
               await confirmarEntera(m.id, {
                 nombre: "Nuevo",
                 tema: { primary: "#000002" },
+                aspecto: { estilo: "LUDICO", ingreso: "DIVIDIDO" },
                 canonico: nuevoCanonico,
               });
             }
@@ -632,6 +702,7 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
             valor: {
               nombre: "Viejo",
               tema: { ...TEMA_PRINCIPAL, primary: "#000001" },
+              aspecto: { ...ASPECTO_POR_DEFECTO, estilo: "CLASICO" },
               hostCanonico: null,
             },
           });
@@ -639,6 +710,7 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
           expect(await leer(alias.host)).toEqual({
             nombre: "Nuevo",
             tema: { ...TEMA_PRINCIPAL, primary: "#000002" },
+            aspecto: { ...ASPECTO_POR_DEFECTO, estilo: "LUDICO", ingreso: "DIVIDIDO" },
             hostCanonico: nuevoCanonico,
           });
         } finally {
@@ -677,16 +749,23 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
     it("lectores en bucle contra una secuencia de versiones: cada lectura es alguna de las versiones, entera, y nunca se vuelve atrás", async () => {
       const m = await marca({
         canonico: false,
-        datos: { nombreVisible: "N1", tema: { primary: "#000001" } },
+        datos: {
+          nombreVisible: "N1",
+          tema: { primary: "#000001" },
+          aspecto: { estilo: "CLARO_CON_BORDES" },
+        },
       });
       const alias = await crearDominio(dueno, m.id);
       const canonico = hostAlAzar();
       const colores = ["#000001", "#000002", "#000003", "#000004", "#000005", "#000006"];
+      // Cada versión k también lleva su estilo: la lectura no puede mezclar el color de una con el estilo de otra.
+      const estilos = ["CLARO_CON_BORDES", "MODERNO", "CLASICO", "LUDICO", "MODERNO", "CLASICO"];
       // El estado esperado de cada versión k (1 a 6): el canónico aparece con la versión 3.
       const estado = (k: number) =>
         JSON.stringify({
           nombre: `N${k}`,
           tema: { ...TEMA_PRINCIPAL, primary: colores[k - 1] },
+          aspecto: { ...ASPECTO_POR_DEFECTO, estilo: estilos[k - 1] },
           hostCanonico: k >= 3 ? canonico : null,
         });
       const conocidos = [1, 2, 3, 4, 5, 6].map(estado);
@@ -708,6 +787,7 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
         await confirmarEntera(m.id, {
           nombre: `N${k}`,
           tema: { primary: colores[k - 1] as string },
+          aspecto: { estilo: estilos[k - 1] as string },
           ...(k === 3 ? { canonico } : {}),
         });
       }
@@ -752,10 +832,11 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
 
 // =================================================================================================
 describe.skipIf(base === null)(
-  "un tema inválido en la base cae al neutro (segunda barrera)",
+  "un tema o un aspecto inválido en la base cae al neutro (segunda barrera)",
   () => {
-    // La base ya impide guardar un tema inválido (`tema_valido`). Para probar la segunda barrera del dominio
-    // se saca ese CHECK en una base propia, y recién ahí se inserta lo que la base nunca dejaría pasar.
+    // La base ya impide guardar un tema o un aspecto inválido (`tema_valido`, `aspecto_valido`). Para probar la
+    // segunda barrera del dominio se sacan esos CHECK en una base propia, y recién ahí se inserta lo que la base
+    // nunca dejaría pasar.
     let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
     let dueno: pg.Client;
     let entorno: ReturnType<typeof crearEntornoPublico>;
@@ -773,6 +854,7 @@ describe.skipIf(base === null)(
         tema: TEMA_PRINCIPAL,
       });
       await dueno.query("alter table version_de_marca drop constraint version_de_marca_tema_ck");
+      await dueno.query("alter table version_de_marca drop constraint version_de_marca_aspecto_ck");
     });
     afterAll(async () => {
       await dueno.end();
@@ -800,7 +882,12 @@ describe.skipIf(base === null)(
           nombreVisible: "Con tema roto",
           tema: temaMalo as unknown as Record<string, string>,
         });
-        expect(await leer(host)).toEqual({ nombre: "Con tema roto", tema: {}, hostCanonico: host });
+        expect(await leer(host)).toEqual({
+          nombre: "Con tema roto",
+          tema: {},
+          aspecto: ASPECTO_POR_DEFECTO,
+          hostCanonico: host,
+        });
       },
     );
 
@@ -816,7 +903,12 @@ describe.skipIf(base === null)(
         nombreVisible: "Hijo",
         tema: { primary: "#000001" },
       });
-      expect(await leer(host)).toEqual({ nombre: "Hijo", tema: {}, hostCanonico: host });
+      expect(await leer(host)).toEqual({
+        nombre: "Hijo",
+        tema: {},
+        aspecto: ASPECTO_POR_DEFECTO,
+        hostCanonico: host,
+      });
     });
 
     it("un tema válido sigue pasando intacto en la misma base", async () => {
@@ -829,7 +921,68 @@ describe.skipIf(base === null)(
       expect(await leer(host)).toEqual({
         nombre: "Sano",
         tema: { ...TEMA_PRINCIPAL, primary: "#000001" },
+        aspecto: ASPECTO_POR_DEFECTO,
         hostCanonico: host,
+      });
+    });
+
+    it.each([
+      ["un valor en minúsculas", { estilo: "moderno" }],
+      ["un valor de otra lista", { estilo: "NEUTRA" }],
+      ["una clave fuera de la lista", { fondo: "NEUTRA" }],
+      ["un valor que no es texto", { esquinas: 3 }],
+      ["CSS libre", { estilo: "red; background: url(x)" }],
+      ["un valor válido y otro inválido", { estilo: "MODERNO", titulos: "GRANDE" }],
+    ])(
+      "el aspecto propio con %s deja el aspecto por defecto, aunque el padre defina uno, y no toca el tema ni el nombre",
+      async (_m, aspectoMalo) => {
+        const padre = await crearMarca(dueno, { padre: principal });
+        await crearVersionDeMarcaConfirmada(dueno, padre, {
+          nombreVisible: "Padre",
+          aspecto: { estilo: "LUDICO", ingreso: "DIVIDIDO" },
+        });
+        const id = await crearMarca(dueno, { padre });
+        const host = (await crearDominio(dueno, id, { canonico: true })).host;
+        await crearVersionDeMarcaConfirmada(dueno, id, {
+          nombreVisible: "Con aspecto roto",
+          tema: { primary: "#000001" },
+          aspecto: aspectoMalo,
+        });
+        expect(await leer(host)).toEqual({
+          nombre: "Con aspecto roto",
+          tema: { ...TEMA_PRINCIPAL, primary: "#000001" },
+          aspecto: ASPECTO_POR_DEFECTO,
+          hostCanonico: host,
+        });
+      },
+    );
+
+    it("el aspecto inválido de un ANCESTRO también deja el aspecto por defecto (nunca el de otra marca)", async () => {
+      const padre = await crearMarca(dueno, { padre: principal });
+      await crearVersionDeMarcaConfirmada(dueno, padre, {
+        nombreVisible: "Padre",
+        aspecto: { titulos: "GRANDES" },
+      });
+      const hijo = await crearMarca(dueno, { padre });
+      const host = (await crearDominio(dueno, hijo, { canonico: true })).host;
+      await crearVersionDeMarcaConfirmada(dueno, hijo, {
+        nombreVisible: "Hijo",
+        aspecto: { estilo: "MODERNO" },
+      });
+      expect((await leer(host))?.aspecto).toEqual(ASPECTO_POR_DEFECTO);
+    });
+
+    it("un aspecto válido sigue pasando intacto en la misma base", async () => {
+      const id = await crearMarca(dueno, { padre: principal });
+      const host = (await crearDominio(dueno, id, { canonico: true })).host;
+      await crearVersionDeMarcaConfirmada(dueno, id, {
+        nombreVisible: "Sano",
+        aspecto: { estilo: "MODERNO", ingreso: "CON_IMAGEN" },
+      });
+      expect((await leer(host))?.aspecto).toEqual({
+        ...ASPECTO_POR_DEFECTO,
+        estilo: "MODERNO",
+        ingreso: "CON_IMAGEN",
       });
     });
   },

@@ -3,13 +3,21 @@ import { importeDesdeTexto, type Importe } from "../../../primitivas/dinero/impo
 import { moneda } from "../../../primitivas/dinero/moneda";
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
-import { TIPOS_DE_COMPROBANTE, type TipoDeComprobante } from "../dominio/comprobante-emitido";
+import {
+  TIPOS_DE_COMPROBANTE,
+  TIPOS_DE_ORIGEN,
+  letraDeComprobante,
+  type LetraDeComprobante,
+  type TipoDeComprobante,
+  type TipoDeOrigen,
+} from "../dominio/comprobante-emitido";
 import { AMBIENTES, type Ambiente } from "../dominio/comprobante-nuevo";
 import {
   ESTADOS_DE_COMPROBANTE_ARCA,
   type EstadoDeComprobanteArca,
 } from "../dominio/estados-de-comprobante";
 import { comprobanteId, type ComprobanteId } from "../dominio/identificadores";
+import { RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA } from "../dominio/punto-de-venta";
 import { deLaLista } from "./repositorios";
 import type { FiscalDb } from "./tablas";
 
@@ -31,6 +39,20 @@ import type { FiscalDb } from "./tablas";
 /** La zona con la que se pasa un instante a día civil cuando el comprobante todavía no tiene fecha de emisión. */
 export const ZONA_DE_ARGENTINA = "America/Argentina/Buenos_Aires";
 
+/**
+ * Lo que admiten los criterios de lista cerrada del filtro, tomado del dominio y no repetido a mano: las letras
+ * son las de los tipos de comprobante, los orígenes los de `TIPOS_DE_ORIGEN` (la misma lista que el CHECK de la
+ * base) y el punto de venta el rango de su número. Viven acá, junto al tipo del filtro, porque la consulta por
+ * pantalla no importa el dominio (regla `consultas-sin-dominio`) y valida el pedido contra ESTO.
+ */
+export const VALORES_DEL_FILTRO = {
+  letras: [
+    ...new Set(TIPOS_DE_COMPROBANTE.map(letraDeComprobante)),
+  ] as readonly LetraDeComprobante[],
+  tiposDeOrigen: TIPOS_DE_ORIGEN as readonly TipoDeOrigen[],
+  numeroDePuntoDeVenta: RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA,
+} as const;
+
 /** La clave de paginación: el `creado_en` de la última fila vista (con microsegundos) y su `id`. */
 export type ClaveDeListado = Readonly<{ creadoEn: string; id: ComprobanteId }>;
 
@@ -47,6 +69,13 @@ export type FiltroDeListado = Readonly<{
    * puede ser un documento, su prefijo de solo dígitos. Basta que coincida uno de los dos.
    */
   texto: Readonly<{ nombre: string; documento: string | null }> | null;
+  /** La letra del tipo (`A`, `B`, `C`): se lee como «el tipo es uno de los de esa letra», sin columna nueva. */
+  letra: LetraDeComprobante | null;
+  /** El número de punto de venta congelado en el comprobante (`punto_de_venta_numero`), no el id. */
+  puntoDeVentaNumero: number | null;
+  /** `origen_tipo` y, dentro de él, `origen_id` exacto (su índice es `comprobante_origen_ix`). */
+  origenTipo: TipoDeOrigen | null;
+  origenId: string | null;
   despuesDe: ClaveDeListado | null;
   limite: number;
 }>;
@@ -160,6 +189,20 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
           : consulta.where("estado", "=", filtro.estado);
       if (filtro.tipo !== null) consulta = consulta.where("tipo_comprobante", "=", filtro.tipo);
       if (filtro.ambiente !== null) consulta = consulta.where("ambiente", "=", filtro.ambiente);
+      if (filtro.letra !== null) {
+        const letra = filtro.letra;
+        consulta = consulta.where(
+          "tipo_comprobante",
+          "in",
+          TIPOS_DE_COMPROBANTE.filter((t) => letraDeComprobante(t) === letra),
+        );
+      }
+      if (filtro.puntoDeVentaNumero !== null) {
+        consulta = consulta.where("punto_de_venta_numero", "=", filtro.puntoDeVentaNumero);
+      }
+      if (filtro.origenTipo !== null)
+        consulta = consulta.where("origen_tipo", "=", filtro.origenTipo);
+      if (filtro.origenId !== null) consulta = consulta.where("origen_id", "=", filtro.origenId);
       if (filtro.desde !== null) {
         consulta = consulta.where(sql<boolean>`${FECHA_DEL_LISTADO} >= ${filtro.desde}::date`);
       }

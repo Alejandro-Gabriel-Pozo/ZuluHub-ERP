@@ -2,7 +2,10 @@ import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { TipoDeComprobante } from "./comprobante-emitido";
 import type { Ambiente } from "./comprobante-nuevo";
-import type { DesenlaceDeAutorizacion } from "./estados-de-comprobante";
+import type {
+  DesenlaceDeAutorizacion,
+  ResultadoDeAutorizacionArca,
+} from "./estados-de-comprobante";
 import type { EmisorId, PuntoDeVentaId, SolicitudId } from "./identificadores";
 
 /**
@@ -11,7 +14,8 @@ import type { EmisorId, PuntoDeVentaId, SolicitudId } from "./identificadores";
  *
  * - `LIBRE`: nadie tiene un número reservado.
  * - `EN_CURSO`: una solicitud reservó `ultimoNumero + 1` y está pidiendo la autorización.
- * - `BLOQUEADA`: la reconciliación encontró un desfase con el servicio. Su única salida es
+ * - `BLOQUEADA`: se encontró un desfase con el servicio (la reconciliación, o un rechazo 10016 con ARCA en otro
+ *   número). Su única salida es
  *   `resincronizarSerie`: vuelve a `LIBRE` con el último número que informa ARCA, nunca hacia atrás.
  *
  * Todo es puro: sin reloj ni azar (la hora y el último número del servicio entran como datos) y sin
@@ -191,6 +195,71 @@ export function cerrarSerie(
   return ok({
     serie: serieLibreDesde(serie, autorizado ? serie.numeroEnCurso : serie.ultimoNumero),
     numeroAutorizado: autorizado ? serie.numeroEnCurso : null,
+  });
+}
+
+/**
+ * El error 10016 de WSFE v4.8 (l. 983): «el número o la fecha del comprobante no se corresponde con el próximo a
+ * autorizar». ARCA lo devuelve con `Resultado R` y sin CAE, también al reenviar un número ya autorizado (medido en
+ * homologación, E11 del espía F0).
+ */
+const CODIGO_FUERA_DE_SECUENCIA = 10016;
+
+/**
+ * ¿ARCA rechazó la autorización por numeración fuera de secuencia (error 10016)? Solo un rechazo lo es: un
+ * incierto o un no enviado no traen errores de ARCA. Es lo que dispara la comparación con el último autorizado
+ * (`cerrarSerieFueraDeSecuencia`): sin ella, si otro sistema usó el punto de venta, cada comprobante nuevo se
+ * rechazaría uno por uno, para siempre.
+ */
+export function esFueraDeSecuencia(resultado: ResultadoDeAutorizacionArca): boolean {
+  return (
+    resultado.tipo === "RECHAZADO" &&
+    resultado.errores.some((e) => e.codigo === CODIGO_FUERA_DE_SECUENCIA)
+  );
+}
+
+export type ResolucionFueraDeSecuencia = "LIBERADA" | "BLOQUEADA";
+
+export type CierreFueraDeSecuencia = Readonly<{
+  serie: SerieLibre | SerieBloqueada;
+  resolucion: ResolucionFueraDeSecuencia;
+}>;
+
+/**
+ * Cierra la reserva de `solicitud` cuando ARCA la rechazó por fuera de secuencia (10016; spec H7 facturación
+ * §B.5.4, tabla de la respuesta 10016, y §B.3.7). El comprobante queda `RECHAZADO` (eso no se decide acá) y la
+ * serie se decide comparando con `ultimoAutorizado`, lo que ARCA informa ahora (consultado FUERA de la
+ * transacción, ADR-007):
+ *  - igual al último número de la serie: ARCA está donde la serie esperaba y el rechazo fue del comprobante
+ *    (por ejemplo su fecha: el error dice «número o fecha»): `LIBRE` sin avanzar, como cualquier rechazo;
+ *  - cualquier otro valor: desfase, `BLOQUEADA` sin avanzar (otro sistema usó el punto de venta, o ARCA quedó
+ *    atrás de la serie). Se compara por DISTINTO, como `reconciliarComprobante` (§B.3.7): una serie libre con
+ *    ARCA en otro número rechazaría cada comprobante siguiente. La destraba el gerente con `resincronizarSerie`;
+ *  - `null` (la consulta no respondió): no se sabe si hay desfase y liberar sería apostar a que no lo hay:
+ *    `BLOQUEADA` con el motivo, y `resincronizarSerie` la libera consultando de nuevo (idéntica a la actual si
+ *    ARCA resulta estar en el último número).
+ * Si la serie no está `EN_CURSO` por esta solicitud, `SOLICITUD_NO_VIGENTE`.
+ */
+export function cerrarSerieFueraDeSecuencia(
+  serie: Serie,
+  solicitud: SolicitudId,
+  ultimoAutorizado: bigint | null,
+): Resultado<CierreFueraDeSecuencia, ErrorDeNumeracion> {
+  if (serie.estado !== "EN_CURSO" || serie.solicitud !== solicitud) {
+    return err("SOLICITUD_NO_VIGENTE");
+  }
+  if (ultimoAutorizado === serie.ultimoNumero) {
+    return ok({ serie: serieLibreDesde(serie, serie.ultimoNumero), resolucion: "LIBERADA" });
+  }
+  const rechazo = `el número ${serie.numeroEnCurso} se rechazó por fuera de secuencia (10016)`;
+  return ok({
+    resolucion: "BLOQUEADA",
+    serie: serieBloqueadaDesde(
+      serie,
+      ultimoAutorizado === null
+        ? `desfase posible con ARCA: ${rechazo} y no se pudo consultar el último autorizado; se esperaba ${serie.ultimoNumero}`
+        : `desfase con ARCA: informa ${ultimoAutorizado} como último autorizado y ${rechazo}; se esperaba ${serie.ultimoNumero}`,
+    ),
   });
 }
 

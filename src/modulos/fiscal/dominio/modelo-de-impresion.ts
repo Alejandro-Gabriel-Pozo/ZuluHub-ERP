@@ -96,6 +96,13 @@ export type ComprobanteParaImprimir = Readonly<{
   versionDeRepresentacion: number;
 }>;
 
+/**
+ * Una referencia de contexto de un renglón: un código del vocabulario del módulo que facturó (`tipo`, por
+ * ejemplo `RESERVA_FOLIO`) y su texto copiado (`valor`), spec H7 facturación §B.10. Fiscal solo las lleva, no
+ * las interpreta. Las plantillas reservan la línea con ella.
+ */
+export type ReferenciaImpresa = Readonly<{ tipo: string; valor: string }>;
+
 export type ErrorDeImpresion = ErrorDeQr | "VERSION_DE_REPRESENTACION_DESCONOCIDA";
 
 export type TotalesImpresos =
@@ -153,6 +160,12 @@ export type ModeloImpreso = Readonly<{
     descuento: string | null;
     alicuota: string | null;
     importe: string;
+    /**
+     * SIEMPRE vacío hoy: la fuente real (las referencias que el módulo de origen copia al emitir) llega con el
+     * tramo F12 (§B.10). Existe desde ya para que las plantillas reserven la línea sin que el formato cambie
+     * después; no entra en ningún cálculo ni en el QR.
+     */
+    referencias: readonly ReferenciaImpresa[];
   }>[];
   totales: TotalesImpresos;
   /** Solo en notas: el comprobante que corrigen. */
@@ -268,6 +281,7 @@ export function modeloDeImpresion(
       descuento: r.descuento === null ? null : porcentajeATexto(r.descuento),
       alicuota: r.alicuota,
       importe: importeATexto(r.importe),
+      referencias: [],
     })),
     totales: totalesImpresos(comprobante, letra),
     asociado:

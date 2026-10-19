@@ -26,6 +26,7 @@ import {
   incluirEmpresa,
   type RolDePrueba,
 } from "./fixtures-identidad";
+import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
 
 /**
  * Autenticación (W3a), concurrencia REAL de `aceptarInvitacion` con usuario: cada prueba lanza varias
@@ -126,7 +127,13 @@ describe.skipIf(base === null)(
     };
 
     const aceptar = (token: string, email: string, usuarioAuth: UsuarioAuthId) =>
-      casos.aceptarInvitacion({ token, emailAutenticado: email, usuarioAuth, ahora });
+      casos.aceptarInvitacion({
+        token,
+        emailAutenticado: email,
+        usuarioAuth,
+        marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
+        ahora,
+      });
 
     const personasDe = (email: string) =>
       filas<{ id: string; usuario_auth_id: string | null }>(

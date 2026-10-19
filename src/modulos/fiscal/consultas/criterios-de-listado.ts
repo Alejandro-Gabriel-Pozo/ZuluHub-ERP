@@ -1,6 +1,11 @@
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
-import type { ClaveDeListado, FiltroDeListado } from "../persistencia/lecturas-de-comprobantes";
+import { esTextoDeIdentificador } from "../../../primitivas/identificadores/marca";
+import {
+  VALORES_DEL_FILTRO,
+  type ClaveDeListado,
+  type FiltroDeListado,
+} from "../persistencia/lecturas-de-comprobantes";
 
 /**
  * Los criterios del listado de comprobantes (spec H7 facturación §B.4.9) llevados de lo que manda la pantalla a
@@ -18,6 +23,9 @@ export const LIMITE_MAXIMO = 50;
 /** Largo máximo del texto de búsqueda (ASUMIDO): el nombre de un receptor y un CUIT con guiones entran de sobra. */
 export const LARGO_MAXIMO_DEL_TEXTO = 80;
 
+/** Largo máximo del identificador de origen: el del CHECK `comprobante_origen_id_ck` de la base (en caracteres). */
+export const LARGO_MAXIMO_DEL_ORIGEN_ID = 100;
+
 export type PedidoDeListado = Readonly<{
   /** Sin estado: todos menos los `DESCARTADO`. Con `DESCARTADO`: solo esos. */
   estado?: NonNullable<FiltroDeListado["estado"]>;
@@ -27,13 +35,33 @@ export type PedidoDeListado = Readonly<{
   hasta?: FechaCivil;
   /** Busca por nombre o documento del receptor. */
   texto?: string;
+  /** La letra del tipo de comprobante: `A`, `B` o `C` (en mayúscula). Con `tipo`, deben coincidir. */
+  letra?: NonNullable<FiltroDeListado["letra"]>;
+  /**
+   * El NÚMERO del punto de venta que imprime el comprobante (el de `PPPPP-NNNNNNNN`, entero de 1 a 99999), no su
+   * id: es lo que la lista muestra. Es único por emisor: si la empresa tiene dos emisores con el mismo número,
+   * salen los de los dos.
+   */
+  puntoDeVenta?: number;
+  /** De dónde nace el comprobante (la lista cerrada `TIPOS_DE_ORIGEN`). */
+  origenTipo?: NonNullable<FiltroDeListado["origenTipo"]>;
+  /** El identificador exacto del origen. Solo tiene sentido dentro de un `origenTipo`: sin él, es un error. */
+  origenId?: string;
   limite?: number;
   /** La clave que devolvió la página anterior (`siguiente`). */
   despuesDe?: string;
 }>;
 
 export type ErrorDeCriterios =
-  "LIMITE_INVALIDO" | "TEXTO_DEMASIADO_LARGO" | "FECHAS_INVERTIDAS" | "CLAVE_DE_PAGINA_INVALIDA";
+  | "LIMITE_INVALIDO"
+  | "TEXTO_DEMASIADO_LARGO"
+  | "FECHAS_INVERTIDAS"
+  | "LETRA_INVALIDA"
+  | "PUNTO_DE_VENTA_INVALIDO"
+  | "ORIGEN_TIPO_INVALIDO"
+  | "ORIGEN_ID_INVALIDO"
+  | "ORIGEN_ID_SIN_TIPO"
+  | "CLAVE_DE_PAGINA_INVALIDA";
 
 /**
  * `creado_en` en UTC con seis decimales y el `id` (un uuid en minúsculas), separados por `|`. La clave es opaca
@@ -70,6 +98,49 @@ function textoDeBusqueda(
   return ok({ nombre: limpio, documento: /^[0-9]+$/.test(digitos) ? digitos : null });
 }
 
+/**
+ * `undefined` es «sin criterio» (`null` en el filtro); cualquier otro valor tiene que ser uno de la lista: el
+ * pedido llega de una pantalla y un valor ajeno no se calla como «no hay resultados».
+ */
+function deLaLista<T extends string>(
+  valor: T | undefined,
+  esDeLaLista: (texto: string) => boolean,
+  error: ErrorDeCriterios,
+): Resultado<T | null, ErrorDeCriterios> {
+  if (valor === undefined) return ok(null);
+  return esDeLaLista(valor) ? ok(valor) : err(error);
+}
+
+function puntoDeVentaDelPedido(
+  numero: number | undefined,
+): Resultado<number | null, "PUNTO_DE_VENTA_INVALIDO"> {
+  if (numero === undefined) return ok(null);
+  const { minimo, maximo } = VALORES_DEL_FILTRO.numeroDePuntoDeVenta;
+  if (!Number.isInteger(numero) || numero < minimo || numero > maximo) {
+    return err("PUNTO_DE_VENTA_INVALIDO");
+  }
+  return ok(numero);
+}
+
+/** El identificador de origen: como lo guarda la base (sin blancos en los extremos, de 1 a 100 caracteres). */
+function origenIdDelPedido(
+  origenId: string | undefined,
+  origenTipo: FiltroDeListado["origenTipo"],
+): Resultado<string | null, "ORIGEN_ID_INVALIDO" | "ORIGEN_ID_SIN_TIPO"> {
+  if (origenId === undefined) return ok(null);
+  // Un id de origen se lee dentro de su tipo: el mismo id con otro tipo es otro origen.
+  if (origenTipo === null) return err("ORIGEN_ID_SIN_TIPO");
+  // `Array.from`: la base cuenta caracteres, no unidades UTF-16.
+  if (
+    typeof origenId !== "string" ||
+    !esTextoDeIdentificador(origenId) ||
+    Array.from(origenId).length > LARGO_MAXIMO_DEL_ORIGEN_ID
+  ) {
+    return err("ORIGEN_ID_INVALIDO");
+  }
+  return ok(origenId);
+}
+
 export function criteriosDeListado(
   pedido: PedidoDeListado,
 ): Resultado<FiltroDeListado, ErrorDeCriterios> {
@@ -84,6 +155,22 @@ export function criteriosDeListado(
   if (desde !== null && hasta !== null && desde > hasta) return err("FECHAS_INVERTIDAS");
   const texto = textoDeBusqueda(pedido.texto);
   if (!texto.ok) return texto;
+  const letra = deLaLista(
+    pedido.letra,
+    (t) => (VALORES_DEL_FILTRO.letras as readonly string[]).includes(t),
+    "LETRA_INVALIDA",
+  );
+  if (!letra.ok) return letra;
+  const puntoDeVenta = puntoDeVentaDelPedido(pedido.puntoDeVenta);
+  if (!puntoDeVenta.ok) return puntoDeVenta;
+  const origenTipo = deLaLista(
+    pedido.origenTipo,
+    (t) => (VALORES_DEL_FILTRO.tiposDeOrigen as readonly string[]).includes(t),
+    "ORIGEN_TIPO_INVALIDO",
+  );
+  if (!origenTipo.ok) return origenTipo;
+  const origenId = origenIdDelPedido(pedido.origenId, origenTipo.valor);
+  if (!origenId.ok) return origenId;
   let despuesDe: ClaveDeListado | null = null;
   if (pedido.despuesDe !== undefined) {
     despuesDe = leerClaveDePagina(pedido.despuesDe);
@@ -96,6 +183,10 @@ export function criteriosDeListado(
     desde,
     hasta,
     texto: texto.valor,
+    letra: letra.valor,
+    puntoDeVentaNumero: puntoDeVenta.valor,
+    origenTipo: origenTipo.valor,
+    origenId: origenId.valor,
     despuesDe,
     limite,
   });

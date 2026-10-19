@@ -35,6 +35,7 @@ import {
   type RolDePrueba,
 } from "./fixtures-identidad";
 import { crearMarca, crearMundoDeMarca, marcaPrincipal } from "./marcas-apoyo";
+import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
 
 /**
  * Autenticación (W3a): `aceptarInvitacion` con el usuario autenticado y las lecturas de la sesión, contra una
@@ -118,7 +119,13 @@ describe.skipIf(base === null)("autenticación: aceptar con usuario y leer la se
   };
 
   const aceptar = (token: string, email: string | null, usuarioAuth: UsuarioAuthId) =>
-    casos.aceptarInvitacion({ token, emailAutenticado: email, usuarioAuth, ahora });
+    casos.aceptarInvitacion({
+      token,
+      emailAutenticado: email,
+      usuarioAuth,
+      marcaDeEntrada: MARCA_PRINCIPAL_DE_PRUEBA,
+      ahora,
+    });
 
   const vinculoDe = async (email: string) =>
     (

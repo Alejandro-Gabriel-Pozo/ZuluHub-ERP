@@ -40,7 +40,8 @@
       "precioUnitario": "1000.000000",
       "descuento": "10.0000",
       "alicuota": "21",
-      "importe": "2178.00"
+      "importe": "2178.00",
+      "referencias": []
     },
     {
       "descripcion": "Pan",
@@ -48,7 +49,8 @@
       "precioUnitario": "500.000000",
       "descuento": null,
       "alicuota": "10.5",
-      "importe": "552.50"
+      "importe": "552.50",
+      "referencias": []
     }
   ],
   "totales": {
