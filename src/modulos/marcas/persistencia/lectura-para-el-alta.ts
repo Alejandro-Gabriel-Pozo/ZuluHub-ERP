@@ -4,6 +4,7 @@ import {
   planId,
   type MarcaComercialId,
 } from "../../../primitivas/identificadores/marca";
+import type { Aspecto } from "../dominio/aspecto";
 import type { DefinicionDeMarca } from "../dominio/definicion";
 import type { Host } from "../dominio/host";
 import type { Tema } from "../dominio/tema";
@@ -27,6 +28,7 @@ export type LecturaParaElAltaDb = {
     estado: string;
     nombre_visible: string | null;
     tema: unknown;
+    aspecto: unknown;
     logo: string | null;
     vocabulario: unknown;
     modulos_iniciales: string[] | null;
@@ -105,6 +107,7 @@ export function crearLecturaDeMarcaParaElAlta(
           "vigente_desde",
           "nombre_visible",
           "tema",
+          "aspecto",
           "logo",
           "vocabulario",
           "modulos_iniciales",
@@ -128,6 +131,8 @@ export function crearLecturaDeMarcaParaElAlta(
           nombreVisible: v.nombre_visible,
           // La base impone la forma (`tema_valido`, `vocabulario_valido`, la ruta del logo): por eso el cast.
           tema: v.tema as Tema,
+          // M7a: la base impone la forma (CHECK de `aspecto`), como con el tema.
+          aspecto: v.aspecto as Aspecto,
           logo: v.logo,
           vocabulario: v.vocabulario as Vocabulario,
           modulosIniciales: v.modulos_iniciales,

@@ -17,6 +17,7 @@ const PLAN_B = planId("plan-b");
 const definicion = (cambios: Partial<DefinicionDeMarca> = {}): DefinicionDeMarca => ({
   nombreVisible: "Mi Calendario",
   tema: {},
+  aspecto: {},
   logo: null,
   vocabulario: {},
   modulosIniciales: ["turnos"],
