@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cssDeTema, VARIABLES_DE_MARCA } from "./tema-css";
+import { cssDeTema, esColorDeMarca, VARIABLES_DE_MARCA } from "./tema-css";
 
 const COMPLETO = {
   primary: "#112233",
@@ -68,5 +68,24 @@ describe("cssDeTema", () => {
   it("nunca escribe nada fuera de variables --brand-* con colores", () => {
     const css = cssDeTema(COMPLETO);
     expect(css).toMatch(/^:root\{(--brand-[a-z-]+:#[0-9a-f]{6};)*--brand-[a-z-]+:#[0-9a-f]{6}\}$/);
+  });
+});
+
+describe("esColorDeMarca", () => {
+  it.each(["#000000", "#ffffff", "#0a1b2c"])("%s es un color de marca", (c) => {
+    expect(esColorDeMarca(c)).toBe(true);
+  });
+  it.each([
+    "",
+    "#fff",
+    "#FFFFFF",
+    "#12345g",
+    "#1234567",
+    "red",
+    " #112233",
+    "#112233 ",
+    "#112233\n",
+  ])("%j no lo es", (c) => {
+    expect(esColorDeMarca(c)).toBe(false);
   });
 });

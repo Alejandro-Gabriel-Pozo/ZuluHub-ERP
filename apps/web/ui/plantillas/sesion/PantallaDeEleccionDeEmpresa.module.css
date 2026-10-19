@@ -1,0 +1,23 @@
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.empresa {
+  padding: var(--espacio-4);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie);
+}
+
+/* D4: el nombre se decide mirando, así que va a 18 px o más (1,125 rem). */
+.nombre {
+  margin: 0;
+  font-size: var(--tipo-tamano-medio);
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}

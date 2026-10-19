@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import type { SuperficieDeAspecto } from "./aspecto";
 import {
+  COLORES_DE_SUPERFICIE,
   CONTRASTE_MINIMO_DEL_ACENTO,
   CONTRASTE_MINIMO_DEL_TEXTO,
   TOKENS_DE_TEMA,
@@ -225,58 +227,88 @@ const tema = (cambios: Partial<TemaCompleto> = {}): TemaCompleto => ({
 });
 
 describe("parDeContrasteInsuficiente (al confirmar)", () => {
+  const par = (t: TemaCompleto, superficie: SuperficieDeAspecto = "NEUTRA") =>
+    parDeContrasteInsuficiente(t, superficie);
+
   it("los mínimos son los de la norma", () => {
     expect(CONTRASTE_MINIMO_DEL_TEXTO).toBe(4.5);
     expect(CONTRASTE_MINIMO_DEL_ACENTO).toBe(3);
   });
 
   it("un tema legible no tiene problema", () => {
-    expect(parDeContrasteInsuficiente(tema())).toBeNull();
+    expect(par(tema())).toBeNull();
   });
 
   it("on-primary sobre primary pide 4,5:1: justo arriba pasa, justo abajo no", () => {
     // #1a73e8 con blanco da 4,505; con #1a73e9 (un poco más claro) baja de 4,5.
     expect(razonDeContraste("#1a73e8", "#ffffff")).toBeGreaterThanOrEqual(4.5);
     expect(razonDeContraste("#2574ea", "#ffffff")).toBeLessThan(4.5);
-    expect(parDeContrasteInsuficiente(tema({ primary: "#1a73e8" }))).toBeNull();
-    expect(parDeContrasteInsuficiente(tema({ primary: "#2574ea" }))).toBe("on-primary/primary");
+    expect(par(tema({ primary: "#1a73e8" }))).toBeNull();
+    expect(par(tema({ primary: "#2574ea" }))).toBe("on-primary/primary");
   });
 
   it("el texto puede ser claro sobre oscuro o al revés", () => {
-    expect(
-      parDeContrasteInsuficiente(tema({ primary: "#ffffff", "on-primary": "#000000" })),
-    ).toBeNull();
-    expect(
-      parDeContrasteInsuficiente(tema({ primary: "#000000", "on-primary": "#ffffff" })),
-    ).toBeNull();
-    expect(parDeContrasteInsuficiente(tema({ primary: "#ffffff", "on-primary": "#fefefe" }))).toBe(
-      "on-primary/primary",
-    );
+    expect(par(tema({ primary: "#ffffff", "on-primary": "#000000" }))).toBeNull();
+    expect(par(tema({ primary: "#000000", "on-primary": "#ffffff" }))).toBeNull();
+    expect(par(tema({ primary: "#ffffff", "on-primary": "#fefefe" }))).toBe("on-primary/primary");
   });
 
-  it("accent sobre blanco pide 3:1: #949494 pasa (3,03) y #959595 no (2,995)", () => {
-    expect(parDeContrasteInsuficiente(tema({ accent: "#949494" }))).toBeNull();
-    expect(parDeContrasteInsuficiente(tema({ accent: "#959595" }))).toBe("accent/blanco");
-    expect(parDeContrasteInsuficiente(tema({ accent: "#ffffff" }))).toBe("accent/blanco");
+  it("accent sobre el fondo de la neutra (blanco) pide 3:1: #949494 llega (3,03) y #959595 no (2,995)", () => {
+    expect(razonDeContraste("#949494", "#ffffff")).toBeGreaterThanOrEqual(3);
+    // Sobre blanco #949494 alcanza, pero la superficie de la neutra pide un gris más oscuro.
+    expect(par(tema({ accent: "#949494" }))).toBe("accent/superficie");
+    expect(par(tema({ accent: "#8d8d8d" }))).toBeNull();
+    expect(par(tema({ accent: "#959595" }))).toBe("accent/fondo");
+    expect(par(tema({ accent: "#ffffff" }))).toBe("accent/fondo");
   });
 
-  it("el acento se mide contra blanco y no contra primary", () => {
+  it("el acento se mide contra el fondo y no contra primary", () => {
     // Un acento igual al primary contrasta 1 con él, pero sobre blanco es legible.
-    expect(parDeContrasteInsuficiente(tema({ accent: "#1a73e8" }))).toBeNull();
+    expect(par(tema({ accent: "#1a73e8" }))).toBeNull();
     // Un acento claro sobre un primary oscuro no se salva por contrastar con él.
-    expect(parDeContrasteInsuficiente(tema({ primary: "#000000", accent: "#fafafa" }))).toBe(
-      "accent/blanco",
-    );
+    expect(par(tema({ primary: "#000000", accent: "#fafafa" }))).toBe("accent/fondo");
   });
 
   it("si fallan los dos pares, se informa primero el del texto", () => {
-    expect(parDeContrasteInsuficiente(tema({ "on-primary": "#1a73e8", accent: "#ffffff" }))).toBe(
-      "on-primary/primary",
-    );
+    expect(par(tema({ "on-primary": "#1a73e8", accent: "#ffffff" }))).toBe("on-primary/primary");
   });
 
   it("secondary no se mide", () => {
-    expect(parDeContrasteInsuficiente(tema({ secondary: "#ffffff" }))).toBeNull();
-    expect(parDeContrasteInsuficiente(tema({ secondary: "#000000" }))).toBeNull();
+    expect(par(tema({ secondary: "#ffffff" }))).toBeNull();
+    expect(par(tema({ secondary: "#000000" }))).toBeNull();
+  });
+
+  it("las tres superficies tienen los colores de los prototipos aprobados", () => {
+    expect(COLORES_DE_SUPERFICIE).toEqual({
+      NEUTRA: { fondo: "#ffffff", superficie: "#f3f5f7" },
+      CALIDA: { fondo: "#fbf7f1", superficie: "#f3eadc" },
+      FRIA: { fondo: "#f5f8fc", superficie: "#e6edf6" },
+    });
+  });
+
+  // Por superficie: el gris más oscuro que NO pasa sobre el fondo, el más claro que pasa sobre la
+  // superficie y el primero que no pasa sobre ella (cada uno medido con `razonDeContraste`).
+  const LIMITES = [
+    { s: "NEUTRA", falla: "#959595", pasaSup: "#8d8d8d", fallaSup: "#8e8e8e" },
+    { s: "CALIDA", falla: "#909090", pasaSup: "#878787", fallaSup: "#888888" },
+    { s: "FRIA", falla: "#909090", pasaSup: "#888888", fallaSup: "#898989" },
+  ] as const;
+
+  it.each(LIMITES)("$s: el acento se mide sobre el fondo y sobre la superficie", (caso) => {
+    const colores = COLORES_DE_SUPERFICIE[caso.s];
+    expect(razonDeContraste(caso.falla, colores.fondo)).toBeLessThan(3);
+    expect(razonDeContraste(caso.pasaSup, colores.superficie)).toBeGreaterThanOrEqual(3);
+    expect(razonDeContraste(caso.fallaSup, colores.superficie)).toBeLessThan(3);
+    expect(razonDeContraste(caso.fallaSup, colores.fondo)).toBeGreaterThanOrEqual(3);
+    expect(par(tema({ accent: caso.pasaSup }), caso.s)).toBeNull();
+    expect(par(tema({ accent: caso.fallaSup }), caso.s)).toBe("accent/superficie");
+    expect(par(tema({ accent: caso.falla }), caso.s)).toBe("accent/fondo");
+  });
+
+  it("un acento que pasa en una superficie puede no pasar en otra", () => {
+    // #8d8d8d llega a 3:1 sobre la superficie neutra y no sobre la de la cálida.
+    expect(par(tema({ accent: "#8d8d8d" }), "NEUTRA")).toBeNull();
+    expect(par(tema({ accent: "#8d8d8d" }), "CALIDA")).toBe("accent/superficie");
+    expect(par(tema({ accent: "#8d8d8d" }), "FRIA")).toBe("accent/superficie");
   });
 });

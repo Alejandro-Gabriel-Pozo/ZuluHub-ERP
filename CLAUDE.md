@@ -38,7 +38,10 @@ obedece igual, se acumula y compite con otras.
 
 ## Infraestructura
 
-- Vercel: proyecto `zuluhub-erp` (equipo `alepozod`), región de funciones `gru1`. Ya existe `apps/web` (Next,
-  npm workspaces) y el CI la compila sin secretos, pero el despliegue sigue deshabilitado
-  (`git.deploymentEnabled: false` en `vercel.json`) hasta que el dueño apruebe el primer despliegue.
+- Vercel: proyecto `zuluhub-erp` (equipo `alepozod`), región de funciones `gru1`, carpeta raíz del proyecto `apps/web`
+  (Next, npm workspaces; el CI la compila sin secretos). Vercel lee `apps/web/vercel.json`. El despliegue sigue
+  deshabilitado (`git.deploymentEnabled: false`) hasta que el dueño apruebe el primer despliegue: una prueba
+  (`test/arquitectura/vercel-json.test.ts`) falla si se enciende sin cambiar a propósito su constante. La compilación
+  nunca migra: las migraciones las aplica el workflow manual `migrar.yml`, con la aprobación del dueño. La guía de
+  puesta en marcha es `apps/web/PRIMER-DESPLIEGUE.md`.
 - Neon: proyecto `flat-flower-36030007`, rama `production`, región `aws-sa-east-1`, Postgres 18.

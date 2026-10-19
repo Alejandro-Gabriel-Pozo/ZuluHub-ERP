@@ -72,12 +72,13 @@ async function landing(): Promise<string | null> {
 
 async function app(): Promise<string | null> {
   const { default: Layout } = await import("../../apps/web/app/s/app/layout");
-  const { default: Pagina } = await import("../../apps/web/app/s/app/[[...ruta]]/page");
+  const { default: Pagina } = await import("../../apps/web/app/s/app/[...ruta]/page");
   return conNoEncontrada(async () => {
     const pagina = await conNoEncontrada(() => Pagina());
     if (pagina === null) {
       const { default: NoEncontrada } = await import("../../apps/web/app/s/app/not-found");
-      return html(await Layout({ children: createElement(NoEncontrada) }));
+      // El 404 de la app es asíncrono: lleva la cabecera de la marca de ESTE host.
+      return html(await Layout({ children: await NoEncontrada() }));
     }
     return html(await Layout({ children: pagina }));
   });

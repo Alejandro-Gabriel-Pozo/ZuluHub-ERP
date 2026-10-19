@@ -6,7 +6,7 @@ import {
 } from "../../../capacidades/vocabulario/vocabulario";
 import type { PlanId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import { validarAspecto, type Aspecto, type ErrorDeAspecto } from "./aspecto";
+import { completarAspecto, validarAspecto, type Aspecto, type ErrorDeAspecto } from "./aspecto";
 import {
   DEFINICION_VACIA,
   completarDefinicion,
@@ -246,7 +246,10 @@ export function decidirConfirmacionDeMarca(entrada: {
   if (!aspecto.ok) return aspecto;
   const definicion = completa.valor;
 
-  const par = parDeContrasteInsuficiente(definicion.tema);
+  const par = parDeContrasteInsuficiente(
+    definicion.tema,
+    completarAspecto(aspecto.valor).superficie,
+  );
   if (par !== null) return err({ codigo: "CONTRASTE_INSUFICIENTE", par });
 
   if (planPorDefecto === null || planPorDefecto.id !== definicion.planPorDefectoId) {

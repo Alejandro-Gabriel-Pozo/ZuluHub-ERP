@@ -23,6 +23,7 @@ export {
   type TokenDeAspecto,
 } from "./dominio/aspecto";
 export {
+  COLORES_DE_SUPERFICIE,
   CONTRASTE_MINIMO_DEL_ACENTO,
   CONTRASTE_MINIMO_DEL_TEXTO,
   TOKENS_DE_TEMA,

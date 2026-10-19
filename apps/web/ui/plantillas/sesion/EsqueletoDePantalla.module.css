@@ -1,0 +1,28 @@
+.raiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  padding: var(--espacio-4);
+}
+
+.bloque {
+  height: 4rem;
+  border-radius: var(--radio-base);
+  background: var(--color-deshabilitado);
+  animation: latido calc(var(--duracion-media) * 6) ease-in-out infinite alternate;
+}
+
+.bloque[data-ancho="medio"] {
+  width: 60%;
+  height: 2rem;
+}
+
+@keyframes latido {
+  from {
+    opacity: 0.6;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

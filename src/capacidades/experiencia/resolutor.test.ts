@@ -23,6 +23,7 @@ function armar(opciones: { vidaEnMs?: number; tamano?: number } = {}) {
   const reloj = { ms: 1_000 };
   const consultas: string[] = [];
   const lecturas: string[] = [];
+  const contextos: string[] = [];
   const control = { falla: null as null | "err" | "lanza", marcaFalla: false };
   const consultarHost: ConsultaDeHost = (host, superficie) => {
     consultas.push(`${host}|${superficie}`);
@@ -33,8 +34,9 @@ function armar(opciones: { vidaEnMs?: number; tamano?: number } = {}) {
       ok(fila !== undefined && fila[0] === superficie ? { marcaId: fila[1] } : null),
     );
   };
-  const leerMarca: LecturaDeMarca = (id) => {
+  const leerMarca: LecturaDeMarca = (id, host, superficie) => {
     lecturas.push(id);
+    contextos.push(`${host}|${superficie}`);
     if (control.marcaFalla) return Promise.reject(new Error("boom"));
     return Promise.resolve(MARCAS[id] ?? null);
   };
@@ -50,7 +52,7 @@ function armar(opciones: { vidaEnMs?: number; tamano?: number } = {}) {
     ahora: () => reloj.ms,
     ...opciones,
   });
-  return { resolver, reloj, consultas, lecturas, control, fallos };
+  return { resolver, reloj, consultas, lecturas, contextos, control, fallos };
 }
 
 describe("crearResolutorDePuerta: resolución", () => {
@@ -68,6 +70,13 @@ describe("crearResolutorDePuerta: resolución", () => {
         puerta: { host, superficie, marcaId: id, marca: MARCAS[id] },
       });
     }
+  });
+
+  it("la lectura de la marca recibe el host normalizado y la superficie que lo sirve", async () => {
+    const { resolver, contextos } = armar();
+    await resolver("CARTA.A.TEST:443");
+    await resolver("app.b.test");
+    expect(contextos).toEqual(["carta.a.test|CARTA", "app.b.test|APP"]);
   });
 
   it("normaliza antes de resolver: mayúsculas y puerto dan el mismo host", async () => {

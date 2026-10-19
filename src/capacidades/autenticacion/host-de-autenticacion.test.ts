@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  ENCABEZADO_DE_IP,
   PREFIJO_DE_COOKIE,
+  PREFIJO_DE_NAVEGADOR,
   RUTA_BASE_DE_INGRESO,
   configuracionDeHost,
 } from "./host-de-autenticacion";
@@ -9,6 +11,16 @@ describe("constantes", () => {
   it("el prefijo de cookie de la app de empresa y la ruta base de la librería", () => {
     expect(PREFIJO_DE_COOKIE).toBe("zh_emp");
     expect(RUTA_BASE_DE_INGRESO).toBe("/api/auth");
+  });
+
+  it("M1: las cookies de ingreso llevan __Host- (Secure, Path=/ y sin Domain)", () => {
+    expect(PREFIJO_DE_NAVEGADOR).toBe("__Host-");
+  });
+
+  it("S3: el encabezado de IP de confianza es el fijado (NO VERIFICADO contra Vercel) y nunca x-forwarded-for", () => {
+    expect(ENCABEZADO_DE_IP).toBe("x-vercel-forwarded-for");
+    expect(ENCABEZADO_DE_IP).not.toBe("x-forwarded-for");
+    expect(ENCABEZADO_DE_IP).toBe(ENCABEZADO_DE_IP.toLowerCase());
   });
 });
 

@@ -10,7 +10,7 @@ const calcular = (ms: number): EstadoDeSesion =>
   ms >= VENCE_MS ? "vencida" : ms >= AVISO_MS ? "por-vencer" : "activa";
 
 function Sonda() {
-  const { estado, registrarActividad } = useActividad({
+  const { estado, registrarActividad, marcarVencida } = useActividad({
     calcularEstado: calcular,
     revisarCadaMs: 20,
   });
@@ -19,6 +19,9 @@ function Sonda() {
       <output data-testid="estado">{estado}</output>
       <button type="button" onClick={registrarActividad}>
         Seguir
+      </button>
+      <button type="button" onClick={marcarVencida}>
+        Vencer ya
       </button>
       <button type="button">Otro</button>
     </>
@@ -60,6 +63,15 @@ describe("useActividad", () => {
     await vi.waitFor(() => expect(estadoActual()).toBe("vencida"), { timeout: 5000 });
     await userEvent.click(page.getByRole("button", { name: "Seguir" }));
     await new Promise((r) => setTimeout(r, 60));
+    expect(estadoActual()).toBe("vencida");
+  });
+
+  it("marcarVencida vence la sesión ya (el servidor dijo 401) y «Seguir» no la revive", async () => {
+    await render(<Sonda />);
+    expect(estadoActual()).toBe("activa");
+    await userEvent.click(page.getByRole("button", { name: "Vencer ya" }));
+    expect(estadoActual()).toBe("vencida");
+    await userEvent.click(page.getByRole("button", { name: "Seguir" }));
     expect(estadoActual()).toBe("vencida");
   });
 });

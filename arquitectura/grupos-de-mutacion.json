@@ -121,7 +121,7 @@
   },
   {
     "grupo": "web (puerta mínima)",
-    "archivos": "src/capacidades/experiencia/**/*.ts,!src/capacidades/experiencia/carta/**/*.ts",
+    "archivos": "src/capacidades/experiencia/**/*.ts,!src/capacidades/experiencia/carta/**/*.ts,!src/capacidades/experiencia/respuesta.ts,!src/capacidades/experiencia/origen.ts,!src/capacidades/experiencia/ruta-de-retorno.ts,!src/capacidades/experiencia/estado-de-sesion.ts,!src/capacidades/experiencia/empresa-elegida.ts,!src/capacidades/experiencia/destinos.ts,!src/capacidades/experiencia/sucursal.ts,!src/capacidades/experiencia/errores-de-ingreso.ts,!src/capacidades/experiencia/set-cookie.ts",
     "pruebas": "src/capacidades/experiencia"
   },
   {
@@ -223,5 +223,50 @@
     "grupo": "autenticación (ruta de ingreso, G8)",
     "archivos": "src/composicion/ruta-de-ingreso.ts",
     "pruebas": "src/composicion/ruta-de-ingreso.test.ts"
+  },
+  {
+    "grupo": "web (autorización del cron)",
+    "archivos": "src/composicion/autorizacion-de-cron.ts",
+    "pruebas": "src/composicion/autorizacion-de-cron.test.ts"
+  },
+  {
+    "grupo": "web (verificación memorizada)",
+    "archivos": "src/composicion/verificacion-memorizada.ts",
+    "pruebas": "src/composicion/verificacion-memorizada.test.ts"
+  },
+  {
+    "grupo": "web (guarda de migración)",
+    "archivos": "src/composicion/guarda-de-migracion.ts",
+    "pruebas": "src/composicion/guarda-de-migracion.test.ts"
+  },
+  {
+    "grupo": "web (tipo de falla)",
+    "archivos": "src/composicion/tipo-de-falla.ts",
+    "pruebas": "src/composicion/tipo-de-falla.test.ts"
+  },
+  {
+    "grupo": "web (rutas de sistema: cron y salud)",
+    "archivos": "src/composicion/rutas-de-sistema.ts",
+    "pruebas": "src/composicion/rutas-de-sistema.test.ts"
+  },
+  {
+    "grupo": "web (traductor único de respuestas, ADR-016)",
+    "archivos": "src/capacidades/experiencia/respuesta.ts,src/composicion/a-respuesta.ts",
+    "pruebas": "src/capacidades/experiencia/respuesta.test.ts src/capacidades/experiencia/respuesta.propiedades.test.ts src/composicion/a-respuesta.test.ts"
+  },
+  {
+    "grupo": "web (sesión: origen, retorno y estado de la pantalla)",
+    "archivos": "src/capacidades/experiencia/origen.ts,src/capacidades/experiencia/ruta-de-retorno.ts,src/capacidades/experiencia/estado-de-sesion.ts",
+    "pruebas": "src/capacidades/experiencia/origen.test.ts src/capacidades/experiencia/ruta-de-retorno.test.ts src/capacidades/experiencia/estado-de-sesion.test.ts"
+  },
+  {
+    "grupo": "web (empresa elegida, destinos, sucursal y errores de ingreso)",
+    "archivos": "src/capacidades/experiencia/empresa-elegida.ts,src/capacidades/experiencia/destinos.ts,src/capacidades/experiencia/sucursal.ts,src/capacidades/experiencia/errores-de-ingreso.ts",
+    "pruebas": "src/capacidades/experiencia/empresa-elegida.test.ts src/capacidades/experiencia/destinos.test.ts src/capacidades/experiencia/sucursal.test.ts src/capacidades/experiencia/errores-de-ingreso.test.ts"
+  },
+  {
+    "grupo": "web (Set-Cookie de la librería de ingreso)",
+    "archivos": "src/capacidades/experiencia/set-cookie.ts",
+    "pruebas": "src/capacidades/experiencia/set-cookie.test.ts"
   }
 ]
