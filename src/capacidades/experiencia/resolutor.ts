@@ -29,7 +29,16 @@ export type ConsultaDeHost = (
   superficie: SuperficieServible,
 ) => Promise<Resultado<Readonly<{ marcaId: string }> | null, unknown>>;
 
-export type LecturaDeMarca = (marcaId: string) => Promise<MarcaPublica | null>;
+/**
+ * La marca que se pinta en `host`. Recibe el host y la superficie ya resueltos además del id: la lectura
+ * pública de la configuración se pide POR HOST (no devuelve ids), así que sin ellos no podría leerla.
+ * Si la lectura falla, LANZA: el resolutor lo trata como `NO_DISPONIBLE`, nunca como «desconocido».
+ */
+export type LecturaDeMarca = (
+  marcaId: string,
+  host: string,
+  superficie: SuperficieServible,
+) => Promise<MarcaPublica | null>;
 
 export type OpcionesDelResolutor = Readonly<{
   consultarHost: ConsultaDeHost;
@@ -67,7 +76,7 @@ export function crearResolutorDePuerta(
         return HOST_NO_DISPONIBLE;
       }
       if (respuesta.valor === null) continue;
-      const marca = await opciones.leerMarca(respuesta.valor.marcaId);
+      const marca = await opciones.leerMarca(respuesta.valor.marcaId, host, superficie);
       if (marca === null) return HOST_DESCONOCIDO;
       return {
         tipo: "RESUELTA",

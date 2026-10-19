@@ -1,0 +1,40 @@
+.raiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  padding: var(--espacio-2) var(--espacio-4);
+  background: var(--accion-primaria-fondo);
+  color: var(--accion-primaria-texto);
+}
+
+.marca {
+  margin: 0;
+  font-family: var(--tipo-familia-titulos);
+  font-size: var(--tipo-tamano-medio);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.empresa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2) var(--espacio-4);
+}
+
+.nombre {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0;
+  font-size: var(--tipo-tamano-base);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.cambiar {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--objetivo-minimo);
+  color: inherit;
+  font-size: var(--tipo-tamano-base);
+  text-decoration: underline;
+}

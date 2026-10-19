@@ -5,6 +5,9 @@
 }
 
 .salto {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--objetivo-minimo);
   position: absolute;
   left: var(--espacio-2);
   top: -4rem;
@@ -16,6 +19,11 @@
 
 .salto:focus {
   top: var(--espacio-2);
+}
+
+.encabezado {
+  display: flex;
+  flex-direction: column;
 }
 
 .cabecera {

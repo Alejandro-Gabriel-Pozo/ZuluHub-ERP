@@ -55,6 +55,12 @@
     "src/capacidades/autenticacion/**/*.ts",
     "src/adaptadores/autenticacion/configuracion.ts",
     "src/composicion/ruta-de-ingreso.ts",
+    "src/composicion/autorizacion-de-cron.ts",
+    "src/composicion/verificacion-memorizada.ts",
+    "src/composicion/guarda-de-migracion.ts",
+    "src/composicion/tipo-de-falla.ts",
+    "src/composicion/rutas-de-sistema.ts",
+    "src/composicion/a-respuesta.ts",
     "!src/**/*.test.ts"
   ],
   "coverageAnalysis": "off",

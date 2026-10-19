@@ -9,7 +9,10 @@
  *  - host desconocido, retirado, inválido, de una superficie que esta app no sirve o con la base caída
  *    = la página neutra (nunca la marca principal): 404, y 503 si la causa fue un fallo de la base;
  *  - nadie entra por una URL interna (`/s/…`): pedida desde afuera es la neutra, aunque el host sea bueno;
- *  - `/api/**` solo en un host APP; en cualquier otro (landing, carta, neutra) es la neutra;
+ *  - `/api/**` solo en un host APP; en cualquier otro (landing, carta, neutra) es la neutra. La ÚNICA excepción es
+ *    la lista cerrada `RUTAS_DE_SISTEMA` (el cron de trabajos y la salud): Vercel las pide con un host técnico
+ *    que no es de ninguna marca, así que responden en cualquier host, sin mirar la marca, y cada una se
+ *    autoriza o se limita por su cuenta;
  *  - toda respuesta de la puerta lleva las cabeceras de `cabeceras.ts`.
  * Cada página, acción y ruta vuelve a resolver la puerta por su cuenta: nada de esto es la única barrera.
  */
@@ -17,6 +20,19 @@ import { cabecerasDe, politicaDeContenido, type SuperficieDeRespuesta } from "./
 
 /** Prefijo de los encabezados que solo pone la puerta. En minúsculas: `Headers` normaliza los nombres. */
 export const PREFIJO_DE_ENCABEZADO_INTERNO = "x-zh-";
+
+/**
+ * Las rutas de sistema: lista CERRADA y exacta (sin prefijos, sin mayúsculas, sin barra final). El cron de
+ * Vercel y quien vigila la salud las piden con un host que no es de ninguna marca (`*.vercel.app`), y el
+ * resto de `/api/**` fuera de un host APP es la neutra. Agregar una ruta acá es abrir una puerta a cualquier
+ * host: se hace a propósito y con su propia garantía (la del cron, el secreto; la de la salud, no decir nada).
+ */
+export const RUTAS_DE_SISTEMA: readonly string[] = Object.freeze([
+  "/api/trabajos/cron",
+  "/api/salud",
+]);
+
+export const esRutaDeSistema = (ruta: string): boolean => RUTAS_DE_SISTEMA.includes(ruta);
 
 /** El encabezado interno con el nonce del pedido: lo lee el servidor para marcar sus `<style>`. */
 export const ENCABEZADO_DE_NONCE = "x-zh-nonce";
@@ -169,6 +185,8 @@ export function decidirPuerta(entrada: EntradaDePuerta): DecisionDePuerta {
   const aLaNeutra = (): DecisionDePuerta =>
     armar("REESCRIBIR", RUTA_NEUTRA, resolucion.tipo === "NO_DISPONIBLE" ? 503 : 404, "NEUTRA");
 
+  // Antes que todo lo demás y sin mirar la resolución: ni la marca ni la base de marcas intervienen.
+  if (esRutaDeSistema(ruta)) return armar("SEGUIR", null, null, "SISTEMA");
   if (puerta === null || !esRutaSegura(ruta) || esRutaInterna(ruta)) return aLaNeutra();
   if (esRutaDeApi(ruta)) {
     return puerta.superficie === "APP" ? armar("SEGUIR", null, null, "APP") : aLaNeutra();

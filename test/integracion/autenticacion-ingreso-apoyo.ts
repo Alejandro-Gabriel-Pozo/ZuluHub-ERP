@@ -1,3 +1,4 @@
+import { ENCABEZADO_DE_IP } from "../../src/capacidades/autenticacion/host-de-autenticacion";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -232,10 +233,11 @@ export function ipUnica(): string {
 /** Un navegador mínimo: cookies por host (solo del host, como una cookie sin `Domain`). */
 export class Navegador {
   readonly #porHost = new Map<string, Map<string, CookieGuardada>>();
-  readonly #ip: string;
+  readonly #ip: string | null;
 
   /** Cada navegador tiene su IP (la librería limita los pedidos por IP y ruta). */
-  constructor(ip: string = ipUnica()) {
+  /** `null`: ni el encabezado de IP de confianza (lo que pasa si la plataforma no lo manda). */
+  constructor(ip: string | null = ipUnica()) {
     this.#ip = ip;
   }
 
@@ -272,7 +274,10 @@ export class Navegador {
       encabezados?: Record<string, string>;
     } = {},
   ): Promise<Respuesta> {
-    const cabeceras = new Headers({ "x-forwarded-for": this.#ip, ...opciones.encabezados });
+    const cabeceras = new Headers({
+      ...(this.#ip === null ? {} : { [ENCABEZADO_DE_IP]: this.#ip }),
+      ...opciones.encabezados,
+    });
     const cookies = this.cookiesDe(host)
       .map((c) => `${c.nombre}=${c.valor}`)
       .join("; ");

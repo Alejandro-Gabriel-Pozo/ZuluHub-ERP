@@ -359,7 +359,7 @@ describe.skipIf(base === null)(
         const { n } = await ingresado();
         const cookie = n.cookiesDe(HOST_A)[0];
         const renombrada = {
-          headers: new Headers({ cookie: `__Secure-zh_plat.session_token=${cookie?.valor}` }),
+          headers: new Headers({ cookie: `__Host-zh_plat.session_token=${cookie?.valor}` }),
         };
         expect(await a.autenticacion.sesionDe(renombrada, HOST_A)).toBeNull();
       });

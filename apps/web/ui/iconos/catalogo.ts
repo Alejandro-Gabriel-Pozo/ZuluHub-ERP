@@ -1,12 +1,16 @@
 import {
+  Building2,
   CircleCheck,
   Clock,
+  House,
   Info,
+  LogOut,
   Menu,
   OctagonAlert,
   Search,
   Share2,
   TriangleAlert,
+  UserRound,
   WifiOff,
   X,
   type LucideIcon,
@@ -29,6 +33,11 @@ export const CATALOGO_DE_ICONOS = {
   "sin-conexion": WifiOff,
   cerrar: X,
   reloj: Clock,
+  // Navegación del mostrador y sesión (W5).
+  inicio: House,
+  empresa: Building2,
+  cuenta: UserRound,
+  salir: LogOut,
   // Carta pública (C-2).
   secciones: Menu,
   compartir: Share2,
