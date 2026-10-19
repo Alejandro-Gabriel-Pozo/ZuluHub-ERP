@@ -586,7 +586,7 @@ describe("decidirConfirmacionDeMarca", () => {
       const acentoClaro = { ...PRINCIPAL, tema: { ...PRINCIPAL.tema, accent: "#cccccc" } };
       expect(error({ borrador: acentoClaro })).toEqual({
         codigo: "CONTRASTE_INSUFICIENTE",
-        par: "accent/blanco",
+        par: "accent/fondo",
       });
       expect(
         error({

@@ -16,6 +16,7 @@ import {
 import { completarDefinicion, resolverDefinicion, type DefinicionDeMarca } from "./definicion";
 import { decidirAltaDeMarca } from "./jerarquia";
 import {
+  COLORES_DE_SUPERFICIE,
   TOKENS_DE_TEMA,
   luminanciaRelativa,
   razonDeContraste,
@@ -398,7 +399,9 @@ describe("confirmar una versión: propiedades", () => {
         expect(r.valor.motivo).not.toBe("");
         expect(ped.vigenteDesde.getTime()).toBeGreaterThanOrEqual(AHORA.getTime() - 60_000);
         expect(razonDeContraste(d.tema["on-primary"], d.tema.primary)).toBeGreaterThanOrEqual(4.5);
-        expect(razonDeContraste(d.tema.accent, "#ffffff")).toBeGreaterThanOrEqual(3);
+        const colores = COLORES_DE_SUPERFICIE[d.aspecto.superficie];
+        expect(razonDeContraste(d.tema.accent, colores.fondo)).toBeGreaterThanOrEqual(3);
+        expect(razonDeContraste(d.tema.accent, colores.superficie)).toBeGreaterThanOrEqual(3);
         expect(d.modulosIniciales.every((m) => p.modulos.includes(m))).toBe(true);
         expect(p.retirado).toBe(false);
         expect(d.nombreVisible).toBe(b.nombreVisible);
@@ -408,17 +411,28 @@ describe("confirmar una versión: propiedades", () => {
 
   it("un borrador completo, legible y dentro del plan, con un pedido válido y sin programadas, siempre se confirma", () => {
     const legible = fc
-      .record({ primary: color, accent: color })
+      .record({
+        primary: color,
+        accent: color,
+        superficie: fc.constantFrom(...SUPERFICIES_DE_ASPECTO),
+      })
       .filter(
-        ({ primary, accent }) =>
-          razonDeContraste("#ffffff", primary) >= 4.5 && razonDeContraste(accent, "#ffffff") >= 3,
+        ({ primary, accent, superficie }) =>
+          razonDeContraste("#ffffff", primary) >= 4.5 &&
+          razonDeContraste(accent, COLORES_DE_SUPERFICIE[superficie].fondo) >= 3 &&
+          razonDeContraste(accent, COLORES_DE_SUPERFICIE[superficie].superficie) >= 3,
       );
     fc.assert(
       fc.property(legible, fc.subarray(MODULOS), color, (colores, modulos, secundario) => {
         const b: DefinicionDeMarca = {
           nombreVisible: "Marca",
-          tema: { ...colores, "on-primary": "#ffffff", secondary: secundario },
-          aspecto: {},
+          tema: {
+            primary: colores.primary,
+            accent: colores.accent,
+            "on-primary": "#ffffff",
+            secondary: secundario,
+          },
+          aspecto: { superficie: colores.superficie },
           logo: "/marcas/a/logo.png",
           vocabulario: {},
           modulosIniciales: modulos,
