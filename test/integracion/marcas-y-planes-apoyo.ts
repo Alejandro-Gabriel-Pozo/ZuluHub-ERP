@@ -72,7 +72,7 @@ export type TxDeMarcasYPlanesDePrueba = TxDeMarcasYPlanes &
   }>;
 
 /** Los catálogos de prueba (los reales traen un solo módulo disponible y casi ninguna perilla). */
-export const CATALOGOS_DE_PRUEBA = {
+const CATALOGOS_DE_PRUEBA = {
   catalogoDeModulos: MODULOS_DE_PRUEBA,
   catalogoDePerillas: PERILLAS_DE_PRUEBA,
 } as const;
