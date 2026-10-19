@@ -406,6 +406,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "apps/web/servidor/composicion.ts": exporta,
       },
     },
+    {
+      regla: "plataforma-sin-correo",
+      archivos: {
+        "src/plataforma/casos-de-uso/c.ts": importa("../../puertos/correo"),
+        "src/puertos/correo.ts": exporta,
+      },
+    },
   ];
 
   it("cada regla definida tiene su caso de violación", () => {
@@ -1629,5 +1636,45 @@ describe("R-W4b: el error.tsx de Next es cliente por obligación, pero mínimo",
       "apps/web/app/s/app/error.tsx": importa("../../../ui/patrones/e.cliente"),
     });
     expect(v).toEqual([]);
+  });
+});
+
+describe("M6: los casos de uso de plataforma no envían correo (ADR-007)", () => {
+  it("ni por el puerto ni por el adaptador, desde ninguna carpeta de plataforma", async () => {
+    for (const origen of [
+      "src/plataforma/casos-de-uso/c.ts",
+      "src/plataforma/consultas/c.ts",
+      "src/plataforma/dominio/c.ts",
+    ]) {
+      expect(
+        await violacionesDe({
+          [origen]: importa("../../puertos/correo"),
+          "src/puertos/correo.ts": exporta,
+        }),
+        origen,
+      ).toContain("plataforma-sin-correo");
+    }
+    expect(
+      await violacionesDe({
+        "src/plataforma/casos-de-uso/c.ts": importa("../../adaptadores/correo/resend"),
+        "src/adaptadores/correo/resend.ts": exporta,
+      }),
+    ).toContain("plataforma-sin-correo");
+  });
+
+  it("encolar el trabajo sí se puede: el puerto de trabajos no es el de correo", async () => {
+    const v = await violacionesDe({
+      "src/plataforma/casos-de-uso/c.ts": importa("../../puertos/trabajos"),
+      "src/puertos/trabajos.ts": exporta,
+    });
+    expect(v).not.toContain("plataforma-sin-correo");
+  });
+
+  it("el procesador de trabajos y los módulos (cuyos manejadores sí envían) quedan fuera de la regla", async () => {
+    const v = await violacionesDe({
+      "src/modulos/identidad/casos-de-uso/enviar.ts": importa("../../../puertos/correo"),
+      "src/puertos/correo.ts": exporta,
+    });
+    expect(v).not.toContain("plataforma-sin-correo");
   });
 });

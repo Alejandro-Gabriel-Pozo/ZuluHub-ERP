@@ -446,6 +446,19 @@ const reglas = [
       path: "^src/modulos/[^/]+/publico\\.ts$|^src/(composicion|adaptadores)/|^apps/[^/]+/servidor/",
     },
   },
+  {
+    // M6 / H5 P5 (ADR-007). Previene: un caso de plataforma que manda el mail (el de la invitación del
+    // gerente, por ejemplo) desde adentro de su transacción SERIALIZABLE, que el adaptador repite entera
+    // ante un conflicto: el mail saldría dos veces, o saldría de un alta que después se revierte. Los
+    // efectos externos se piden encolando un trabajo (`Trabajos.encolar`) en la misma transacción y los
+    // envía el procesador de la cola cuando ya confirmó. Chequeo: la violación inyectada de reglas.test.ts.
+    name: "plataforma-sin-correo",
+    severity: "error",
+    comment:
+      "Los casos de uso de plataforma no envían correo: encolan un trabajo (ADR-007) y lo envía el procesador de la cola fuera de la transacción.",
+    from: { path: "^src/plataforma/" },
+    to: { path: "^src/puertos/correo\\.ts$|^src/adaptadores/correo/" },
+  },
 ];
 
 module.exports = { reglas };
