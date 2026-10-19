@@ -476,11 +476,15 @@ describe.skipIf(base === null)("suspender y reactivar personas", () => {
           });
           const invitada = exito(
             await identidadGerente.invitarUsuario(
-              comoEmpresa(
-                empresaId(destino.empresa),
-                personaId(gerente.id),
-                marcaComercialId(MARCA_PRINCIPAL_DE_PRUEBA),
-              ),
+              {
+                // La invitación vence a los 7 días del `ahora` del contexto: con la hora real no vence nunca en la prueba.
+                ...comoEmpresa(
+                  empresaId(destino.empresa),
+                  personaId(gerente.id),
+                  marcaComercialId(MARCA_PRINCIPAL_DE_PRUEBA),
+                ),
+                ahora: new Date(),
+              },
               {
                 email,
                 rol: "OPERADOR",

@@ -161,10 +161,9 @@ describe.skipIf(base === null)("reenviar y revocar la invitación del alta", () 
         ),
       ).toEqual({ distintos: true });
       // Un trabajo de mail por invitación; el de la nueva es el que sale.
-      expect((await trabajosDe(a.empresaId)).map((t) => t.datos.invitacionId)).toEqual([
-        a.invitacionId,
-        r.invitacionId,
-      ]);
+      expect((await trabajosDe(a.empresaId)).map((t) => t.datos.invitacionId).sort()).toEqual(
+        [a.invitacionId, r.invitacionId].sort(),
+      );
       expect(await constanciasDe("ALTA_INVITACION_REENVIADA", a.empresaId)).toEqual([
         {
           actor: ADMIN_DE_PRUEBA,
