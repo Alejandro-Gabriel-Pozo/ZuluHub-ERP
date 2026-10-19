@@ -319,6 +319,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const aceptada = await aceptarInvitacionDeLaSesion(mundo.dependencias, {
         token,
         sesion: yo.sesion,
+        marcaId: mundo.marcaA,
       });
       expect(aceptada).toEqual({
         ok: true,
@@ -357,6 +358,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       await aceptarInvitacionDeLaSesion(mundo.dependencias, {
         token: primera.token,
         sesion: yo.sesion,
+        marcaId: mundo.marcaA,
       });
       const m2 = await empresaSinMiembros();
       const segunda = await invitar(
@@ -368,6 +370,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const aceptada = await aceptarInvitacionDeLaSesion(mundo.dependencias, {
         token: segunda.token,
         sesion: yo.sesion,
+        marcaId: mundo.marcaA,
       });
       expect(aceptada.ok).toBe(true);
       const entrada = await resolverEmpresa(mundo.dependencias, {
@@ -378,6 +381,32 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       expect(entrada.ok && entrada.dato.tipo).toBe("ELEGIR");
     });
 
+    it("una invitación de la marca A aceptada por la puerta de la marca B es «no encontrada» y no deja membresía", async () => {
+      const m = await empresaSinMiembros();
+      const email = emailAlAzar("invitado");
+      const { token } = await invitar(mundo, m.tenant, [{ empresa: m.empresa }], email);
+      const porB = await ingresarEn(mundo, HOST_B, perfilAlAzar({ email }));
+      const rechazada = await aceptarInvitacionDeLaSesion(mundo.dependencias, {
+        token,
+        sesion: porB.sesion,
+        marcaId: mundo.marcaB,
+      });
+      expect(rechazada).toMatchObject({
+        ok: false,
+        error: { codigo: "INVITACION_NO_ENCONTRADA" },
+      });
+      const sinMembresia = await empresasDeLaPersona(mundo.dependencias, porB.sesion, mundo.marcaB);
+      expect(sinMembresia).toEqual({ ok: true, dato: { personaId: null, empresas: [] } });
+      // Por la puerta de su propia marca, la misma invitación sí se acepta.
+      const porA = await ingresarEn(mundo, HOST_A, porB.perfil);
+      const aceptada = await aceptarInvitacionDeLaSesion(mundo.dependencias, {
+        token,
+        sesion: porA.sesion,
+        marcaId: mundo.marcaA,
+      });
+      expect(aceptada).toMatchObject({ ok: true, dato: { yaEstabaAceptada: false } });
+    });
+
     it("errores tipados de la aceptación, traducidos por el traductor único", async () => {
       const m = await empresaSinMiembros();
       const email = emailAlAzar("invitado");
@@ -386,6 +415,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const deOtroEmail = await aceptarInvitacionDeLaSesion(mundo.dependencias, {
         token,
         sesion: otroEmail.sesion,
+        marcaId: mundo.marcaA,
       });
       expect(deOtroEmail).toEqual({
         ok: false,
@@ -398,6 +428,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const inexistente = await aceptarInvitacionDeLaSesion(mundo.dependencias, {
         token: "un-token-que-no-existe",
         sesion: otroEmail.sesion,
+        marcaId: mundo.marcaA,
       });
       expect(inexistente).toMatchObject({
         ok: false,
@@ -407,6 +438,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
         const r = await aceptarInvitacionDeLaSesion(mundo.dependencias, {
           token,
           sesion: otroEmail.sesion,
+          marcaId: mundo.marcaA,
         });
         expect(r).toMatchObject({ ok: false, error: { codigo: "INVITACION_NO_ENCONTRADA" } });
       }
@@ -429,7 +461,11 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const resultados = await Promise.all(
         [0, 1].map(async () => {
           await barrera();
-          return aceptarInvitacionDeLaSesion(mundo.dependencias, { token, sesion: yo.sesion });
+          return aceptarInvitacionDeLaSesion(mundo.dependencias, {
+            token,
+            sesion: yo.sesion,
+            marcaId: mundo.marcaA,
+          });
         }),
       );
       // Cada una devuelve el éxito (la segunda, `yaEstabaAceptada`) o el error genérico de concurrencia con su referencia.
@@ -453,6 +489,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const repetida = await aceptarInvitacionDeLaSesion(mundo.dependencias, {
         token,
         sesion: yo.sesion,
+        marcaId: mundo.marcaA,
       });
       expect(repetida).toMatchObject({ ok: true, dato: { yaEstabaAceptada: true } });
       expect(

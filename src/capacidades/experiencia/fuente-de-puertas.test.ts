@@ -22,6 +22,13 @@ const resuelto = {
 const configuracion: ConfiguracionPublicaDeMarca = {
   nombre: "Marca A",
   tema: { primary: "#112233", fondo: "#000000" } as ConfiguracionPublicaDeMarca["tema"],
+  aspecto: {
+    estilo: "CLARO_CON_BORDES",
+    superficie: "NEUTRA",
+    esquinas: "SUAVE",
+    titulos: "SANS",
+    ingreso: "CENTRADO",
+  },
   hostCanonico: "app.a.test",
 };
 

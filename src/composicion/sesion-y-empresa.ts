@@ -233,13 +233,14 @@ const LARGO_MAXIMO_DEL_TOKEN = 512;
  * Aceptar la invitación con la cuenta que ingresó (armazón web §4.6). El email que se compara con el de la
  * invitación es el VERIFICADO de la sesión, nunca uno que mande el navegador. Repetirla devuelve el mismo
  * resultado exitoso (`yaEstabaAceptada`) sin escribir nada, y dos a la vez dejan una sola membresía: lo
- * resuelve el caso de uso. No sale el id de la persona: la pantalla no lo necesita.
+ * resuelve el caso de uso. No sale el id de la persona: la pantalla no lo necesita. Una invitación de OTRA
+ * marca que la de la puerta es «no encontrada», igual que una que no existe (sin oráculo).
  */
 export async function aceptarInvitacionDeLaSesion(
   d: DependenciasDeSesion,
-  entrada: Readonly<{ token: string; sesion: SesionAutenticada }>,
+  entrada: Readonly<{ token: string; sesion: SesionAutenticada; marcaId: MarcaComercialId }>,
 ): Promise<Respuesta<InvitacionAceptada>> {
-  const { token, sesion } = entrada;
+  const { token, sesion, marcaId } = entrada;
   if (token === "" || token.length > LARGO_MAXIMO_DEL_TOKEN) {
     return { ok: false, error: errorDeCodigo("INVITACION_NO_ENCONTRADA") };
   }
@@ -248,6 +249,8 @@ export async function aceptarInvitacionDeLaSesion(
       token,
       emailAutenticado: sesion.email,
       usuarioAuth: sesion.usuarioAuth,
+      // La puerta por la que entró la persona: el caso de uso rechaza una invitación de otra marca.
+      marcaDeEntrada: marcaId,
       ahora: d.ahora(),
     });
     return aRespuesta(resultado, d.respuesta, (salida) => ({

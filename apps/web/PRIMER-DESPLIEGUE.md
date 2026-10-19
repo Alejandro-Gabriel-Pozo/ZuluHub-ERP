@@ -78,8 +78,8 @@ Actions → **Migrar (preview y producción)** → Run workflow (siempre desde `
 
 **Permiso de la guarda:** la guarda de migración lee de la tabla `migracion` solo la columna `nombre`, con el rol
 `zuluhub_app`. Ese permiso lo da la migración **0013** (permisos mínimos): hasta que se aplique en una base, esa base
-muestra «En mantenimiento» aunque todo esté bien. Por eso aplicá 0013 en `preview` y en `produccion` **antes** de encender
-el despliegue. `MIGRACION_REQUERIDA` del código vale `"0013"`.
+muestra «En mantenimiento» aunque todo esté bien. Por eso aplicá 0013 y 0014 en `preview` y en `produccion` **antes** de encender
+el despliegue. `MIGRACION_REQUERIDA` del código vale `"0014"`.
 
 ### B.4 Roles de la base y variables de Vercel
 

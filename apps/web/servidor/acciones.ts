@@ -167,11 +167,12 @@ export async function aceptarLaInvitacion(
   const pedido = await pedidoDeLaAccion();
   if (!pedido.ok) return pedido;
   try {
-    const { sesion } = await sesionDelPedido();
+    const { sesion, puerta } = await sesionDelPedido();
     if (sesion === null) return { ok: false, error: errorDeCodigo("SESION_VENCIDA") };
     const resultado = await aceptarInvitacionDeLaSesion(dependenciasDeSesion, {
       token: typeof entrada.token === "string" ? entrada.token : "",
       sesion,
+      marcaId: marcaComercialId(puerta.marcaId),
     });
     if (!resultado.ok) return resultado;
     (await cookies()).delete(COOKIE_DE_INVITACION);

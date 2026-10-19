@@ -15,6 +15,13 @@ const config = (
 ): ConfiguracionPublicaDeMarca => ({
   nombre: "Hotel del Lago",
   tema: COMPLETO,
+  aspecto: {
+    estilo: "CLARO_CON_BORDES",
+    superficie: "NEUTRA",
+    esquinas: "SUAVE",
+    titulos: "SANS",
+    ingreso: "CENTRADO",
+  },
   hostCanonico: "app.hoteldellago.test",
   ...parcial,
 });

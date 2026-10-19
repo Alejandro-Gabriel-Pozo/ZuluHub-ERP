@@ -163,12 +163,17 @@ export async function invitar(
   tipo: "ALTA_GERENTE" | "USUARIO" = "USUARIO",
 ): Promise<{ token: string; invitacion: InvitacionDePrueba }> {
   const emitido = mundo.tokens.emitir();
+  // Las dependencias de la web usan el reloj real (`ahora: () => new Date()`): la invitación se emite y vence
+  // respecto de ese reloj, no de la fecha fija de las demás pruebas (que la dejaría vencida con el paso de los días).
+  const ahora = Date.now();
   const invitacion = await crearInvitacionDeBase(mundo.dueno, {
     tenant,
     id: emitido.invitacionId,
     tokenHash: emitido.tokenHash,
     email,
     tipo,
+    emitidaEn: new Date(ahora - 60_000),
+    venceEn: new Date(ahora + 7 * 24 * 60 * 60 * 1000),
   });
   for (const e of empresas)
     await incluirEmpresa(mundo.dueno, invitacion, e.empresa, e.rol ?? "OPERADOR");
