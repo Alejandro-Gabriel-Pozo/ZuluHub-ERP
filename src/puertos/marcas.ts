@@ -7,7 +7,7 @@ import type { ErrorDePersistencia } from "./transacciones";
  *  - `ResolucionDeHost`: la puerta PÚBLICA (rol `zuluhub_publico`, sin sesión): a qué dueño y a qué marca
  *    pertenece un nombre de host.
  *  - `ConfiguracionPublicaDeHost`: la misma puerta pública: cómo se pinta la marca de un host (nombre,
- *    tema y host canónico), sin ningún identificador interno.
+ *    tema, aspecto y host canónico), sin ningún identificador interno.
  *  - `MarcasDeMail`: desde qué marca sale un mail; lo lee la aplicación (rol `zuluhub_app`), dentro de la
  *    transacción de su caso de uso.
  */
@@ -49,11 +49,22 @@ export interface ResolucionDeHost {
 /** Los cuatro colores permitidos (`TOKENS_DE_TEMA` de `modulos/marcas`; una prueba de tipos los iguala). */
 export type TokenDeTemaPublico = "primary" | "on-primary" | "secondary" | "accent";
 
+/** Los cinco tokens del aspecto con sus valores (`LISTAS_DE_ASPECTO` de `modulos/marcas`; una prueba de tipos los iguala). */
+export type AspectoPublico = Readonly<{
+  estilo: "CLARO_CON_BORDES" | "MODERNO" | "CLASICO" | "LUDICO";
+  superficie: "NEUTRA" | "CALIDA" | "FRIA";
+  esquinas: "RECTA" | "SUAVE" | "REDONDEADA";
+  titulos: "SANS" | "SERIF";
+  ingreso: "DIVIDIDO" | "CENTRADO" | "CON_IMAGEN";
+}>;
+
 /**
  * Lo único que la puerta pública pinta de una marca ANTES de que alguien inicie sesión (§B.2.3):
  *  - `nombre`: el nombre visible de la versión vigente de la propia marca;
  *  - `tema`: SOLO los tokens definidos, cada uno `#rrggbb` en minúsculas, ya validados y con la herencia
  *    de las marcas ancestras aplicada; los que falten los pone la puerta con sus colores neutros;
+ *  - `aspecto`: los cinco datos de lista cerrada (estilo, superficie, esquinas, títulos, ingreso), SIEMPRE
+ *    completos: la herencia de las ancestras ya aplicada y, donde nadie define, el defecto;
  *  - `hostCanonico`: el host canónico ACTIVO de la aplicación de la marca (normalizado, sin esquema ni
  *    puerto), o `null` si todavía no tiene.
  * Nada de ids (marca, empresa ni tenant), ni estados, ni versiones, ni quién lo cargó.
@@ -61,6 +72,7 @@ export type TokenDeTemaPublico = "primary" | "on-primary" | "secondary" | "accen
 export type ConfiguracionPublicaDeMarca = Readonly<{
   nombre: string;
   tema: Readonly<Partial<Record<TokenDeTemaPublico, string>>>;
+  aspecto: AspectoPublico;
   hostCanonico: string | null;
 }>;
 

@@ -6,6 +6,7 @@ import {
 } from "../../../capacidades/vocabulario/vocabulario";
 import type { PlanId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { validarAspecto, type Aspecto, type ErrorDeAspecto } from "./aspecto";
 import {
   DEFINICION_VACIA,
   completarDefinicion,
@@ -42,12 +43,13 @@ import {
 
 /**
  * Lo que el pedido de guardar trae, tal cual llega. Un campo AUSENTE (`undefined`) no se toca; un campo
- * `null` se vacía (vuelve a heredar); uno con valor reemplaza al anterior ENTERO (el tema y el vocabulario
- * se reemplazan completos, no se mezclan).
+ * `null` se vacía (vuelve a heredar); uno con valor reemplaza al anterior ENTERO (el tema, el aspecto y el
+ * vocabulario se reemplazan completos, no se mezclan).
  */
 export type CambiosDeBorrador = Readonly<{
   nombreVisible?: string | null;
   tema?: Readonly<Record<string, unknown>>;
+  aspecto?: Readonly<Record<string, unknown>>;
   logo?: string | null;
   vocabulario?: Vocabulario;
   modulosIniciales?: readonly string[] | null;
@@ -58,6 +60,7 @@ export type CambiosDeBorrador = Readonly<{
 export type CambiosValidadosDeBorrador = Readonly<{
   nombreVisible?: string | null;
   tema?: Tema;
+  aspecto?: Aspecto;
   logo?: string | null;
   vocabulario?: Vocabulario;
   modulosIniciales?: readonly string[] | null;
@@ -68,12 +71,13 @@ export type ErrorDeFormaDeBorrador =
   | "NOMBRE_DE_MARCA_INVALIDO"
   | "LOGO_INVALIDO"
   | ErrorDeTema
+  | ErrorDeAspecto
   | ErrorDeVocabulario
   | ErrorDeModuloInicial;
 
 /**
  * La validación de FORMA del borrador, que se hace antes de abrir la transacción (§B.11). El primer
- * problema, en este orden: nombre, tema, logo, vocabulario, módulos iniciales. Que el plan exista lo ve
+ * problema, en este orden: nombre, tema, aspecto, logo, vocabulario, módulos iniciales. Que el plan exista lo ve
  * el caso de uso contra la base. `catalogoDeModulos` es el de módulos del sistema.
  */
 export function validarCambiosDeBorrador(
@@ -96,6 +100,11 @@ export function validarCambiosDeBorrador(
     const tema = validarTema(cambios.tema);
     if (!tema.ok) return tema;
     validados.tema = tema.valor;
+  }
+  if (cambios.aspecto !== undefined) {
+    const aspecto = validarAspecto(cambios.aspecto);
+    if (!aspecto.ok) return aspecto;
+    validados.aspecto = aspecto.valor;
   }
   if (cambios.logo !== undefined) {
     if (cambios.logo === null) validados.logo = null;
@@ -151,6 +160,7 @@ export function decidirGuardadoDeBorrador(
       nombreVisible:
         cambios.nombreVisible === undefined ? base.nombreVisible : cambios.nombreVisible,
       tema: cambios.tema === undefined ? base.tema : cambios.tema,
+      aspecto: cambios.aspecto === undefined ? base.aspecto : cambios.aspecto,
       logo: cambios.logo === undefined ? base.logo : cambios.logo,
       vocabulario: cambios.vocabulario === undefined ? base.vocabulario : cambios.vocabulario,
       modulosIniciales:
@@ -183,6 +193,7 @@ export type ErrorDeConfirmacion =
   | Readonly<{ codigo: "VIGENCIA_RETROACTIVA" }>
   | Readonly<{ codigo: "CAMBIO_PROGRAMADO_PENDIENTE" }>
   | Readonly<{ codigo: "DEFINICION_INCOMPLETA"; faltan: readonly CampoFaltante[] }>
+  | ErrorDeAspecto
   | Readonly<{ codigo: "CONTRASTE_INSUFICIENTE"; par: ParDeContraste }>
   | Readonly<{ codigo: "MODULO_INICIAL_FUERA_DEL_PLAN"; modulo: string }>
   | Readonly<{ codigo: "PLAN_POR_DEFECTO_RETIRADO" }>;
@@ -200,8 +211,10 @@ export type ConfirmacionDeMarca = Readonly<{
  *  1. hay borrador; 2. motivo no vacío; 3. la vigencia no es retroactiva (con un minuto de tolerancia
  *  de reloj, como la base; una fecha inválida cuenta como retroactiva); 4. si hay una versión
  *  programada pendiente, hay que pedir reemplazarla; 5. la definición RESUELTA con la herencia está
- *  completa (el nombre lo define la propia marca); 6. el contraste del tema; 7. los módulos iniciales
- *  resueltos entran en los del plan por defecto resuelto; 8. ese plan no está retirado.
+ *  completa (el nombre lo define la propia marca); 6. el aspecto resuelto es válido (segunda barrera: la
+ *  base y el guardado del borrador ya lo exigen; error `ASPECTO_INVALIDO { token }`); 7. el contraste del
+ *  tema; 8. los módulos iniciales resueltos entran en los del plan por defecto resuelto; 9. ese plan no
+ *  está retirado.
  *
  * `ancestros` son las definiciones VIGENTES del padre y del abuelo (en ese orden; `null` si no tienen
  * versión vigente). `versiones` son las ya confirmadas de ESTA marca. `planPorDefecto` es el plan al que
@@ -226,8 +239,11 @@ export function decidirConfirmacionDeMarca(entrada: {
   if (!pedido.reemplazaProgramada && hayProgramadaPendiente(versiones, ahora)) {
     return err({ codigo: "CAMBIO_PROGRAMADO_PENDIENTE" });
   }
-  const completa = completarDefinicion(borrador, resolverDefinicion([borrador, ...ancestros]));
+  const resuelta = resolverDefinicion([borrador, ...ancestros]);
+  const completa = completarDefinicion(borrador, resuelta);
   if (!completa.ok) return err({ codigo: "DEFINICION_INCOMPLETA", faltan: completa.error });
+  const aspecto = validarAspecto(resuelta.aspecto);
+  if (!aspecto.ok) return aspecto;
   const definicion = completa.valor;
 
   const par = parDeContrasteInsuficiente(definicion.tema);

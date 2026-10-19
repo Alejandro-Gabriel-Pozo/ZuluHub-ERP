@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { planId } from "../../../primitivas/identificadores/marca";
+import { ASPECTO_POR_DEFECTO } from "./aspecto";
 import { DEFINICION_VACIA, type DefinicionDeMarca } from "./definicion";
 import {
   decidirConfirmacionDeMarca,
@@ -33,6 +34,7 @@ describe("validarCambiosDeBorrador", () => {
       validar({
         nombreVisible: "  Mi Calendario ",
         tema: { accent: "#00ff7f" },
+        aspecto: { titulos: "SERIF", estilo: "LUDICO" },
         logo: "/marcas/mc/logo.png",
         vocabulario: { "rol.gerente.nombre": " Encargado " },
         modulosIniciales: ["stock", "reservas", "stock"],
@@ -43,6 +45,7 @@ describe("validarCambiosDeBorrador", () => {
       valor: {
         nombreVisible: "Mi Calendario",
         tema: { accent: "#00ff7f" },
+        aspecto: { estilo: "LUDICO", titulos: "SERIF" },
         logo: "/marcas/mc/logo.png",
         vocabulario: { "rol.gerente.nombre": "Encargado" },
         modulosIniciales: ["stock", "reservas"],
@@ -64,10 +67,25 @@ describe("validarCambiosDeBorrador", () => {
     });
   });
 
-  it("un tema y un vocabulario vacíos son cambios válidos (borran todo lo propio)", () => {
-    expect(validar({ tema: {}, vocabulario: {}, modulosIniciales: [] })).toEqual({
+  it("un tema, un aspecto y un vocabulario vacíos son cambios válidos (borran todo lo propio)", () => {
+    expect(validar({ tema: {}, aspecto: {}, vocabulario: {}, modulosIniciales: [] })).toEqual({
       ok: true,
-      valor: { tema: {}, vocabulario: {}, modulosIniciales: [] },
+      valor: { tema: {}, aspecto: {}, vocabulario: {}, modulosIniciales: [] },
+    });
+  });
+
+  it("el aspecto con una clave o un valor fuera de la lista cerrada se rechaza con la clave que lo trae", () => {
+    expect(validar({ aspecto: { estilo: "moderno" } })).toEqual({
+      ok: false,
+      error: { codigo: "ASPECTO_INVALIDO", token: "estilo" },
+    });
+    expect(validar({ aspecto: { fondo: "NEUTRA" } })).toEqual({
+      ok: false,
+      error: { codigo: "ASPECTO_INVALIDO", token: "fondo" },
+    });
+    expect(validar({ aspecto: { ingreso: "MODERNO" } })).toEqual({
+      ok: false,
+      error: { codigo: "ASPECTO_INVALIDO", token: "ingreso" },
     });
   });
 
@@ -107,10 +125,11 @@ describe("validarCambiosDeBorrador", () => {
     });
   });
 
-  it("informa el primer problema en el orden: nombre, tema, logo, vocabulario, módulos", () => {
+  it("informa el primer problema en el orden: nombre, tema, aspecto, logo, vocabulario, módulos", () => {
     const todoMal = {
       nombreVisible: "<",
       tema: { primary: "x" },
+      aspecto: { estilo: "x" },
       logo: "x",
       vocabulario: { "no.existe": "x" },
       modulosIniciales: ["x"],
@@ -123,12 +142,19 @@ describe("validarCambiosDeBorrador", () => {
       ok: false,
       error: { codigo: "TEMA_INVALIDO", token: "primary" },
     });
-    expect(validar(sin("nombreVisible", "tema"))).toEqual({ ok: false, error: "LOGO_INVALIDO" });
-    expect(validar(sin("nombreVisible", "tema", "logo"))).toEqual({
+    expect(validar(sin("nombreVisible", "tema"))).toEqual({
+      ok: false,
+      error: { codigo: "ASPECTO_INVALIDO", token: "estilo" },
+    });
+    expect(validar(sin("nombreVisible", "tema", "aspecto"))).toEqual({
+      ok: false,
+      error: "LOGO_INVALIDO",
+    });
+    expect(validar(sin("nombreVisible", "tema", "aspecto", "logo"))).toEqual({
       ok: false,
       error: { codigo: "CLAVE_DE_TEXTO_DESCONOCIDA", texto: "no.existe" },
     });
-    expect(validar(sin("nombreVisible", "tema", "logo", "vocabulario"))).toEqual({
+    expect(validar(sin("nombreVisible", "tema", "aspecto", "logo", "vocabulario"))).toEqual({
       ok: false,
       error: { codigo: "MODULO_DESCONOCIDO", modulo: "x" },
     });
@@ -145,6 +171,7 @@ describe("decidirGuardadoDeBorrador", () => {
   const existente: DefinicionDeMarca = {
     nombreVisible: "Viejo",
     tema: { primary: "#111111", accent: "#222222" },
+    aspecto: { estilo: "MODERNO", ingreso: "DIVIDIDO" },
     logo: "/marcas/mc/viejo.png",
     vocabulario: { "rol.gerente.nombre": "Jefe" },
     modulosIniciales: ["stock"],
@@ -203,6 +230,10 @@ describe("decidirGuardadoDeBorrador", () => {
       ...existente,
       vocabulario: { "rol.operador.nombre": "Mozo" },
     });
+    expect(cambiado({ aspecto: { esquinas: "RECTA" } })).toEqual({
+      ...existente,
+      aspecto: { esquinas: "RECTA" },
+    });
   });
 
   it("null vacía el campo, [] y {} también (pero no es lo mismo que ausente)", () => {
@@ -217,14 +248,29 @@ describe("decidirGuardadoDeBorrador", () => {
     expect(cambiado({ modulosIniciales: [] })?.modulosIniciales).toEqual([]);
     expect(cambiado({ planPorDefectoId: null })?.planPorDefectoId).toBeNull();
     expect(cambiado({ tema: {} })?.tema).toEqual({});
+    expect(cambiado({ aspecto: {} })?.aspecto).toEqual({});
     expect(cambiado({ vocabulario: {} })?.vocabulario).toEqual({});
   });
 
-  it("el tema y el vocabulario se reemplazan enteros, no se mezclan", () => {
+  it("el tema, el aspecto y el vocabulario se reemplazan enteros, no se mezclan", () => {
     const r = decidirGuardadoDeBorrador({ definicion: existente, version: 1 }, 1, {
       tema: { secondary: "#444444" },
+      aspecto: { titulos: "SERIF" },
     });
     expect(r.ok && r.valor.definicion.tema).toEqual({ secondary: "#444444" });
+    expect(r.ok && r.valor.definicion.aspecto).toEqual({ titulos: "SERIF" });
+  });
+
+  it("un borrador nuevo parte con el aspecto vacío (hereda) y guardar otro campo no lo toca", () => {
+    const nuevo = decidirGuardadoDeBorrador(null, null, { nombreVisible: "Nuevo" });
+    expect(nuevo.ok && nuevo.valor.definicion.aspecto).toEqual({});
+    const otro = decidirGuardadoDeBorrador({ definicion: existente, version: 1 }, 1, {
+      logo: "/marcas/mc/otro.png",
+    });
+    expect(otro.ok && otro.valor.definicion.aspecto).toEqual({
+      estilo: "MODERNO",
+      ingreso: "DIVIDIDO",
+    });
   });
 
   it("si lo que el cliente vio no es lo que hay, VERSION_DESACTUALIZADA", () => {
@@ -276,6 +322,7 @@ describe("decidirConfirmacionDeMarca", () => {
       secondary: "#5f6368",
       accent: "#d93025",
     },
+    aspecto: {},
     logo: "/marcas/zuluhub/logo.png",
     vocabulario: { "rol.gerente.nombre": "Gerente general" },
     modulosIniciales: ["reservas"],
@@ -313,7 +360,7 @@ describe("decidirConfirmacionDeMarca", () => {
       valor: {
         motivo: "Primera versión",
         vigenteDesde: pedido.vigenteDesde,
-        definicion: PRINCIPAL,
+        definicion: { ...PRINCIPAL, aspecto: ASPECTO_POR_DEFECTO },
       },
     });
   });
@@ -326,9 +373,33 @@ describe("decidirConfirmacionDeMarca", () => {
       valor: {
         motivo: "Primera versión",
         vigenteDesde: pedido.vigenteDesde,
-        definicion: { ...PRINCIPAL, nombreVisible: "Mi Calendario" },
+        definicion: {
+          ...PRINCIPAL,
+          nombreVisible: "Mi Calendario",
+          aspecto: ASPECTO_POR_DEFECTO,
+        },
       },
     });
+  });
+
+  it("el aspecto confirmado es el resuelto con la herencia y los defectos: el padre define el estilo, la hija solo las esquinas", () => {
+    const padre = { ...PRINCIPAL, aspecto: { estilo: "MODERNO", superficie: "FRIA" } } as const;
+    const hija = {
+      ...DEFINICION_VACIA,
+      nombreVisible: "Mi Calendario",
+      aspecto: { esquinas: "REDONDEADA" },
+    } as const;
+    const r = decidirConfirmacionDeMarca(entrada({ borrador: hija, ancestros: [padre] }));
+    expect(r.ok && r.valor.definicion.aspecto).toStrictEqual({
+      estilo: "MODERNO",
+      superficie: "FRIA",
+      esquinas: "REDONDEADA",
+      titulos: "SANS",
+      ingreso: "CENTRADO",
+    });
+    // Sin ningún aspecto definido en la cadena, el aspecto confirmado son los defectos.
+    const sola = decidirConfirmacionDeMarca(entrada({ borrador: PRINCIPAL }));
+    expect(sola.ok && sola.valor.definicion.aspecto).toStrictEqual(ASPECTO_POR_DEFECTO);
   });
 
   it("la cadena puede tener padre y abuelo, y un ancestro sin versión vigente se saltea", () => {
@@ -455,6 +526,55 @@ describe("decidirConfirmacionDeMarca", () => {
       expect(error({ borrador: DEFINICION_VACIA, planPorDefecto: null })).toMatchObject({
         codigo: "DEFINICION_INCOMPLETA",
       });
+    });
+
+    it("ASPECTO_INVALIDO: segunda barrera sobre el aspecto RESUELTO, con la clave que lo trae", () => {
+      const malo = (aspecto: unknown): DefinicionDeMarca =>
+        ({ ...PRINCIPAL, aspecto }) as unknown as DefinicionDeMarca;
+      expect(error({ borrador: malo({ estilo: "moderno" }) })).toEqual({
+        codigo: "ASPECTO_INVALIDO",
+        token: "estilo",
+      });
+      // Una clave ajena no es de la lista: la herencia no la lleva a lo resuelto y no puede salir publicada.
+      expect(error({ borrador: malo({ fondo: "NEUTRA" }) })).toBeNull();
+      expect(error({ borrador: malo({ estilo: 7 }) })).toEqual({
+        codigo: "ASPECTO_INVALIDO",
+        token: "estilo",
+      });
+      // Un ancestro con un valor inválido que la hija hereda también frena la confirmación.
+      const hija = { ...DEFINICION_VACIA, nombreVisible: "Mi Calendario" };
+      expect(error({ borrador: hija, ancestros: [malo({ ingreso: "OVAL" })] })).toEqual({
+        codigo: "ASPECTO_INVALIDO",
+        token: "ingreso",
+      });
+      // Un valor inválido que la hija pisa con uno válido no llega a lo resuelto.
+      expect(
+        error({
+          borrador: { ...hija, aspecto: { ingreso: "DIVIDIDO" } },
+          ancestros: [malo({ ingreso: "OVAL" }), PRINCIPAL],
+        }),
+      ).toBeNull();
+    });
+
+    it("ASPECTO_INVALIDO se informa después de DEFINICION_INCOMPLETA y antes del contraste, los módulos y el plan", () => {
+      const aspecto = { estilo: "x" } as unknown as DefinicionDeMarca["aspecto"];
+      expect(error({ borrador: { ...DEFINICION_VACIA, aspecto } })).toMatchObject({
+        codigo: "DEFINICION_INCOMPLETA",
+      });
+      const pocoContraste = { ...PRINCIPAL, tema: { ...PRINCIPAL.tema, "on-primary": "#1a73e9" } };
+      expect(
+        error({
+          borrador: { ...pocoContraste, aspecto, modulosIniciales: ["comandas"] },
+          planPorDefecto: { ...PLAN, retirado: true },
+        }),
+      ).toEqual({ codigo: "ASPECTO_INVALIDO", token: "estilo" });
+    });
+
+    it("un aspecto vacío o válido no impide confirmar: no es un hueco de la definición", () => {
+      expect(error({ borrador: { ...PRINCIPAL, aspecto: {} } })).toBeNull();
+      expect(
+        error({ borrador: { ...PRINCIPAL, aspecto: { estilo: "LUDICO", ingreso: "CON_IMAGEN" } } }),
+      ).toBeNull();
     });
 
     it("CONTRASTE_INSUFICIENTE nombra el par, y se informa antes que los módulos y el plan", () => {

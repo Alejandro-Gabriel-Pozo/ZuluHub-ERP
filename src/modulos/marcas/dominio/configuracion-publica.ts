@@ -1,3 +1,4 @@
+import { completarAspecto, validarAspecto, type Aspecto, type AspectoCompleto } from "./aspecto";
 import { DEFINICION_VACIA, resolverDefinicion, validarNombreVisible } from "./definicion";
 import type { Host } from "./host";
 import { validarTema, type Tema } from "./tema";
@@ -16,6 +17,11 @@ import { versionVigente } from "./vigencia";
  *    es válido (clave fuera de la lista cerrada, valor que no es `#rrggbb`, o algo que no es un objeto),
  *    el tema es el NEUTRO (vacío, un objeto nuevo en cada llamada): lo que falta lo pintan los colores neutros de la puerta, nunca los de
  *    otra marca ni un valor sin validar. La base ya lo impide (`tema_valido`); esto es la segunda barrera.
+ *  - El aspecto (cinco datos de lista cerrada, `aspecto.ts`) hereda igual, token por token y por la misma
+ *    `resolverDefinicion`, y sale SIEMPRE completo: lo que ningún eslabón define toma el defecto. Si ALGÚN
+ *    eslabón trae un aspecto inválido, es el aspecto por defecto entero (el neutro): nunca un valor sin
+ *    validar. La base ya lo impide (`aspecto_valido`); esto es la segunda barrera. Es independiente del
+ *    tema: un aspecto inválido no toca los colores ni al revés.
  *  - El host canónico lo lee el adaptador (el host canónico ACTIVO de la aplicación de la propia marca) y
  *    pasa tal cual: sin él, `null`.
  */
@@ -27,11 +33,15 @@ export type VersionPublicaDeMarca = Readonly<{
   nombreVisible: string | null;
   /** El `jsonb` tal como salió de la base: no se confía en su forma hasta validarlo. */
   tema: unknown;
+  /** Ídem: el `jsonb` del aspecto, sin confiar en su forma. */
+  aspecto: unknown;
 }>;
 
 export type ConfiguracionPublica = Readonly<{
   nombre: string;
   tema: Tema;
+  /** Los cinco tokens, con la herencia y los defectos aplicados. */
+  aspecto: AspectoCompleto;
   hostCanonico: Host | null;
 }>;
 
@@ -59,6 +69,25 @@ function temaDeLaCadena(vigentes: readonly (VersionPublicaDeMarca | null)[]): Te
   return resolverDefinicion(validos.map((tema) => ({ ...DEFINICION_VACIA, tema }))).tema;
 }
 
+/** El aspecto de la base si es un objeto con solo claves y valores de las listas cerradas; si no, `null`. */
+function aspectoValido(valor: unknown): Aspecto | null {
+  if (typeof valor !== "object" || valor === null || Array.isArray(valor)) return null;
+  const aspecto = validarAspecto(valor as Readonly<Record<string, unknown>>);
+  return aspecto.ok ? aspecto.valor : null;
+}
+
+/** La herencia del aspecto por la cadena, o el defecto si algún eslabón trae uno inválido. */
+function aspectoDeLaCadena(vigentes: readonly (VersionPublicaDeMarca | null)[]): AspectoCompleto {
+  const leidos = vigentes
+    .filter((version) => version !== null)
+    .map((version) => aspectoValido(version.aspecto));
+  const validos = leidos.filter((aspecto) => aspecto !== null);
+  if (validos.length < leidos.length) return completarAspecto({});
+  return completarAspecto(
+    resolverDefinicion(validos.map((aspecto) => ({ ...DEFINICION_VACIA, aspecto }))).aspecto,
+  );
+}
+
 /**
  * La configuración pública de la marca a `ahora`, o `null` si no se puede servir: la propia marca no
  * tiene versión vigente, o su vigente no trae un nombre que se pueda mostrar (la puerta responde la
@@ -72,5 +101,10 @@ export function decidirConfiguracionPublica(
   if (propia === null || propia.nombreVisible === null) return null;
   const nombre = validarNombreVisible(propia.nombreVisible);
   if (!nombre.ok) return null;
-  return { nombre: nombre.valor, tema: temaDeLaCadena(vigentes), hostCanonico: datos.hostCanonico };
+  return {
+    nombre: nombre.valor,
+    tema: temaDeLaCadena(vigentes),
+    aspecto: aspectoDeLaCadena(vigentes),
+    hostCanonico: datos.hostCanonico,
+  };
 }

@@ -41,7 +41,7 @@ const veredicto = (ranura: RanuraDeActivo, bytes: Uint8Array) => {
 const png = (ancho: number, alto: number) => ({ formato: "png", ancho, alto });
 
 describe("validarArchivoDeActivo: la lista cerrada de ranuras", () => {
-  it("son estas ocho, en este orden", () => {
+  it("son estas nueve, en este orden", () => {
     expect(RANURAS_DE_ACTIVO).toEqual([
       "icono_192",
       "icono_apple_180",
@@ -51,6 +51,7 @@ describe("validarArchivoDeActivo: la lista cerrada de ranuras", () => {
       "logo_sobre_primario",
       "logo_correo",
       "imagen_social",
+      "imagen_de_ingreso",
     ]);
   });
 
@@ -409,6 +410,87 @@ describe("validarArchivoDeActivo: imagen_social (PNG o JPEG de 1200 x 630)", () 
       expect(veredicto("imagen_social", conPeso(base, 300_000))).toMatchObject({ ancho: 1200 });
       expect(veredicto("imagen_social", conPeso(base, 300_001))).toBe("PESO_EXCEDIDO");
     }
+  });
+});
+
+describe("validarArchivoDeActivo: imagen_de_ingreso (JPEG o WebP, de 800 x 600 a 1600 x 1200, hasta 500 KB)", () => {
+  const jpeg = (ancho: number, alto: number) => ({ formato: "jpeg", ancho, alto });
+  const webp = (ancho: number, alto: number) => ({ formato: "webp", ancho, alto });
+
+  it("acepta un JPEG y un WebP dentro del rango", () => {
+    expect(veredicto("imagen_de_ingreso", construirJpeg({ ancho: 1200, alto: 900 }))).toEqual(
+      jpeg(1200, 900),
+    );
+    expect(veredicto("imagen_de_ingreso", webpVp8(1200, 900))).toEqual(webp(1200, 900));
+  });
+
+  it("las medidas de los cuatro bordes del rango pasan, y también las esquinas opuestas", () => {
+    for (const [ancho, alto] of [
+      [800, 600],
+      [1600, 1200],
+      [800, 1200],
+      [1600, 600],
+    ] as const) {
+      expect(veredicto("imagen_de_ingreso", construirJpeg({ ancho, alto }))).toEqual(
+        jpeg(ancho, alto),
+      );
+      expect(veredicto("imagen_de_ingreso", webpVp8(ancho, alto))).toEqual(webp(ancho, alto));
+    }
+  });
+
+  it("un píxel fuera del rango, en cualquiera de los dos ejes y de los dos lados, se rechaza", () => {
+    for (const [ancho, alto] of [
+      [799, 600],
+      [1601, 600],
+      [800, 599],
+      [800, 1201],
+      [799, 1200],
+      [1601, 1200],
+      [1600, 599],
+      [1600, 1201],
+    ] as const) {
+      expect(
+        veredicto("imagen_de_ingreso", construirJpeg({ ancho, alto })),
+        `${ancho}x${alto}`,
+      ).toBe("DIMENSIONES_INCORRECTAS");
+      expect(veredicto("imagen_de_ingreso", webpVp8(ancho, alto)), `${ancho}x${alto}`).toBe(
+        "DIMENSIONES_INCORRECTAS",
+      );
+    }
+  });
+
+  it("rechaza PNG, ICO, GIF y HEIC: solo JPEG o WebP", () => {
+    expect(veredicto("imagen_de_ingreso", construirPng({ ancho: 1200, alto: 900 }))).toBe(
+      "FORMATO_NO_ADMITIDO",
+    );
+    expect(veredicto("imagen_de_ingreso", fixture("activos", "imagen-social.png"))).toBe(
+      "FORMATO_NO_ADMITIDO",
+    );
+    expect(veredicto("imagen_de_ingreso", fixture("activos", "favicon-32.ico"))).toBe(
+      "FORMATO_NO_ADMITIDO",
+    );
+    expect(veredicto("imagen_de_ingreso", fixture("fotos", "foto-480.gif"))).toBe(
+      "FORMATO_NO_ADMITIDO",
+    );
+    expect(veredicto("imagen_de_ingreso", fixture("fotos", "foto-480.heic"))).toBe(
+      "FORMATO_NO_ADMITIDO",
+    );
+  });
+
+  it("pesa hasta 500 KB: 500 000 bytes pasa, uno más no", () => {
+    for (const base of [construirJpeg({ ancho: 1200, alto: 900 }), webpVp8(1200, 900)]) {
+      expect(veredicto("imagen_de_ingreso", conPeso(base, 500_000))).toMatchObject({ ancho: 1200 });
+      expect(veredicto("imagen_de_ingreso", conPeso(base, 500_001))).toBe("PESO_EXCEDIDO");
+    }
+  });
+
+  it("un WebP animado se rechaza antes de mirar las medidas", () => {
+    const animada = construirRiff([fragmentoRiff("VP8X", datosVp8x(0x02, 1200, 900))]);
+    expect(veredicto("imagen_de_ingreso", animada)).toBe("ANIMADO");
+  });
+
+  it("un JPEG con la cabecera rota da el error del lector", () => {
+    expect(veredicto("imagen_de_ingreso", construirJpeg({ ancho: 0 }))).toBe("CABECERA_INVALIDA");
   });
 });
 
