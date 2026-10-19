@@ -388,7 +388,8 @@ export function cargaDe(cambios: Partial<CargaDeCertificado> = {}): CargaDeCerti
   return {
     certificadoPem: `-----BEGIN CERTIFICATE-----\n${randomBytes(24).toString("base64")}\n-----END CERTIFICATE-----\n`,
     huellaSha256: huellaNueva(),
-    venceEn: new Date("2027-10-12T12:00:00.000Z"),
+    // Relativo a la ejecución: una fecha fija quedaría vencida frente al reloj real con el paso del tiempo.
+    venceEn: new Date(Date.now() + 365 * 86_400_000),
     ...cambios,
   };
 }

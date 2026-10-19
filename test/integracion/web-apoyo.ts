@@ -32,6 +32,7 @@ import {
   incluirEmpresa,
   type InvitacionDePrueba,
   type RolDePrueba,
+  ventanaDeInvitacion,
 } from "./fixtures-identidad";
 import type { BaseDePruebas } from "./global";
 import { crearMarca, crearMundoDeMarca, marcaPrincipal } from "./marcas-apoyo";
@@ -165,15 +166,13 @@ export async function invitar(
   const emitido = mundo.tokens.emitir();
   // Las dependencias de la web usan el reloj real (`ahora: () => new Date()`): la invitación se emite y vence
   // respecto de ese reloj, no de la fecha fija de las demás pruebas (que la dejaría vencida con el paso de los días).
-  const ahora = Date.now();
   const invitacion = await crearInvitacionDeBase(mundo.dueno, {
     tenant,
     id: emitido.invitacionId,
     tokenHash: emitido.tokenHash,
     email,
     tipo,
-    emitidaEn: new Date(ahora - 60_000),
-    venceEn: new Date(ahora + 7 * 24 * 60 * 60 * 1000),
+    ...ventanaDeInvitacion(Date.now()),
   });
   for (const e of empresas)
     await incluirEmpresa(mundo.dueno, invitacion, e.empresa, e.rol ?? "OPERADOR");

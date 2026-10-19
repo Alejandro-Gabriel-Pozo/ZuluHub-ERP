@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type pg from "pg";
+import { AHORA_DE_PRUEBA } from "./entorno";
 
 /**
  * Datos de identidad para las pruebas de integración (H3). Todo se arma con el cliente del DUEÑO de
@@ -31,9 +32,27 @@ export type InvitacionDePrueba = Readonly<{
   tokenHash: string;
 }>;
 
-/** Cuándo se emite y cuándo vence una invitación de prueba (el `ahora` de las pruebas es el 11/10). */
-export const EMITIDA_EN = new Date("2026-10-10T12:00:00Z");
-export const VENCE_EN = new Date("2026-10-17T12:00:00Z");
+const DIA_EN_MS = 86_400_000;
+
+/**
+ * Cuándo se emite y cuándo vence una invitación de prueba que se evalúa con el reloj INYECTADO
+ * (`AHORA_DE_PRUEBA`, el `ahora` de todos los contextos de `entorno.ts`): un día antes y seis días después.
+ * Salen de ese `ahora`, no de una fecha escrita a mano, así que la ventana siempre lo rodea.
+ *
+ * NUNCA para una prueba que corre contra el reloj REAL (`ahora: () => new Date()`, como las de la web):
+ * ahí la fecha fija queda vencida con el paso de los días y la aceptación falla con `INVITACION_VENCIDA`.
+ * Esas usan `ventanaDeInvitacion(Date.now())`.
+ */
+export const EMITIDA_EN = new Date(AHORA_DE_PRUEBA.getTime() - DIA_EN_MS);
+export const VENCE_EN = new Date(AHORA_DE_PRUEBA.getTime() + 6 * DIA_EN_MS);
+
+/**
+ * La ventana de una invitación vigente respecto de `ahoraMs` (emitida hace un minuto, vence en siete días):
+ * para las pruebas que usan el reloj real. Relativa al momento de ejecución, nunca a una fecha fija.
+ */
+export function ventanaDeInvitacion(ahoraMs: number): { emitidaEn: Date; venceEn: Date } {
+  return { emitidaEn: new Date(ahoraMs - 60_000), venceEn: new Date(ahoraMs + 7 * DIA_EN_MS) };
+}
 
 export async function crearPersonaDeBase(
   c: pg.Client,
@@ -139,7 +158,7 @@ export async function aceptarDeBase(
   c: pg.Client,
   invitacion: InvitacionDePrueba,
   persona: string,
-  aceptadaEn: Date = new Date("2026-10-11T12:00:00Z"),
+  aceptadaEn: Date = AHORA_DE_PRUEBA,
 ): Promise<void> {
   await c.query(
     "update invitacion set estado = 'ACEPTADA', aceptada_por = $2, aceptada_en = $3 where id = $1",
@@ -154,7 +173,7 @@ export async function revocarDeBase(
 ): Promise<void> {
   await c.query(
     "update invitacion set estado = 'REVOCADA', revocada_en = $2, motivo_revocacion = $3 where id = $1",
-    [invitacion.id, new Date("2026-10-11T12:00:00Z"), motivo],
+    [invitacion.id, AHORA_DE_PRUEBA, motivo],
   );
 }
 
