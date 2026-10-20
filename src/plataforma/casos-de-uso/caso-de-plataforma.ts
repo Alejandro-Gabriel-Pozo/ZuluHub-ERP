@@ -15,16 +15,15 @@ import type { Dato } from "../../puertos/sin-secretos";
 import type { ErrorDePersistencia, Transacciones } from "../../puertos/transacciones";
 import { exigirAccionDePlataforma } from "../consultas/comun";
 import { claveDeIdempotenciaValida } from "../dominio/soporte/consulta";
-import { repetirSiHuboChoqueDeUnicidad } from "./dominios-comun";
 
 /**
- * La plantilla de un caso de uso de plataforma que escribe (H5 plataforma §B.4), con la transacción que
+ * LA plantilla de todo caso de uso de plataforma que escribe (H5 plataforma §B.4), con la transacción que
  * el caso necesite: el guard, la clave de idempotencia, el trabajo del caso, la auditoría de plataforma y
- * el registro de la clave, todo en UNA transacción SERIALIZABLE. Es la misma que usa la gestión de
- * dominios (`ejecutarCasoDeDominios`), sin atarla a un conjunto fijo de repositorios y admitiendo más de
- * una constancia y errores con datos (un tope con su límite y su uso). Un caso nuevo de plataforma la usa
- * en vez de copiar el esqueleto: el orden de los pasos es lo que garantiza que un rechazo no deje nada y
- * que repetir la clave no duplique.
+ * el registro de la clave, todo en UNA transacción SERIALIZABLE. La usan la gestión de dominios (M4a), el
+ * alta de empresas y su ciclo de vida (M6) y las marcas, los planes y los módulos de empresa (M5), sin
+ * atarla a un conjunto fijo de repositorios y admitiendo más de una constancia y errores con datos (un tope
+ * con su límite y su uso). Existe una sola porque el orden de los pasos es lo que garantiza que un rechazo
+ * no deje nada y que repetir la clave no duplique: escrita dos veces se desvía.
  */
 
 /** Lo mínimo que la plantilla pide a la transacción; el caso suma sus repositorios. */
@@ -74,8 +73,11 @@ export type PlantillaDeCasoDePlataforma<
   claveDeIdempotencia: string;
   /** Forma de la entrada, DESPUÉS del guard: lo validado y la entrada canónica que alimenta la huella. */
   validar: () => Resultado<Readonly<{ entrada: Dato; valor: V }>, E>;
-  /** El trabajo, dentro de la transacción y después de la clave. */
-  trabajar: (tx: Tx, valor: V) => Promise<Resultado<ResultadoDelTrabajoDePlataforma<S>, E>>;
+  /** El trabajo, dentro de la transacción y después de la clave. Puede devolver también un error de persistencia. */
+  trabajar: (
+    tx: Tx,
+    valor: V,
+  ) => Promise<Resultado<ResultadoDelTrabajoDePlataforma<S>, E | ErrorDePersistencia>>;
   /** Lo que se devuelve ante una repetición de la clave: lo guardado, marcado como «ya estaba». */
   comoRepeticion: (guardado: S) => S;
 }>;
@@ -143,4 +145,26 @@ export function ejecutarCasoDePlataforma<Tx extends TxDeCasoDePlataforma, S exte
       },
     ),
   );
+}
+
+const esChoqueDeUnicidad = (resultado: Resultado<unknown, unknown>): boolean =>
+  !resultado.ok &&
+  typeof resultado.error === "object" &&
+  resultado.error !== null &&
+  "tipo" in resultado.error &&
+  resultado.error.tipo === "Unicidad";
+
+/**
+ * Repite UNA vez, en una transacción nueva, lo que terminó en un choque de unicidad. Una repetición con la
+ * misma clave que corre a la vez que su original puede chocar con lo que el original acaba de confirmar (el
+ * host, el número o la clave misma) ANTES de llegar a mirar la clave; Postgres no lo convierte siempre en un
+ * conflicto de serialización que el adaptador reintente. La segunda pasada empieza con una foto nueva: ve la
+ * clave del ganador y devuelve su resultado (`REPETIDA`). Si el choque era real (otro pedido, otra clave), la
+ * segunda pasada vuelve a chocar y el motivo sale tal cual.
+ */
+export async function repetirSiHuboChoqueDeUnicidad<T, E>(
+  intento: () => Promise<Resultado<T, E>>,
+): Promise<Resultado<T, E>> {
+  const primero = await intento();
+  return esChoqueDeUnicidad(primero) ? intento() : primero;
 }

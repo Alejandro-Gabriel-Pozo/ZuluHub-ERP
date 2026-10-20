@@ -26,6 +26,7 @@ export {
 // M4: lecturas de planes para los derechos de uso (solo lectura).
 export {
   crearLecturaDePlanes,
+  interpretarAjustes,
   type AjusteGuardado,
   type AsignacionConVersion,
   type LecturaDePlanes,
@@ -37,6 +38,32 @@ export {
   type ErrorDePlanesPorRestriccion,
 } from "./persistencia/esquema";
 export { errorDePlanesDeRestriccion, traducirErroresDePlanes } from "./persistencia/traducir";
+
+// M5: escritura de planes, asignaciones, ajustes y módulos de empresa por los casos de uso de plataforma.
+export {
+  COLUMNAS_DE_AJUSTE_DE_PERILLA,
+  COLUMNAS_DE_MODULO_DE_EMPRESA,
+  COLUMNAS_DE_PLAN,
+  COLUMNAS_DE_PLAN_DE_TENANT,
+  COLUMNAS_DE_VERSION_DE_PLAN,
+} from "./persistencia/esquema";
+export {
+  crearRepositorioDePlanes,
+  type AjusteCompleto,
+  type AjustePorEscribir,
+  type AsignacionBasica,
+  type AsignacionGuardada,
+  type AsignacionPorEscribir,
+  type ContenidoDeVersionDePlanGuardable,
+  type EstadoDePlan,
+  type ModuloDeEmpresaGuardado,
+  type PlanGuardado,
+  type PublicacionPorEscribir,
+  type RepositorioDePlanes,
+  type VersionDePlanGuardada,
+  type VersionPublicadaDePlan,
+} from "./persistencia/repositorio-de-planes";
+export type { PlanesDePlataformaDb } from "./persistencia/tablas";
 
 // M6: lo que el alta de una empresa lee y escribe de planes y módulos (conexión de plataforma).
 export {

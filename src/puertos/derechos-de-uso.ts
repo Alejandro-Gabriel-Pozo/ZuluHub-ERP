@@ -3,7 +3,7 @@ import type { ClaveModulo } from "../capacidades/modulos/catalogo";
 import type { DerechosDeUso } from "../capacidades/planes/derechos";
 import type { ClavePerilla } from "../capacidades/planes/perillas";
 import type { ValorEfectivo } from "../capacidades/planes/valores";
-import type { MarcaComercialId, TenantId } from "../primitivas/identificadores/marca";
+import type { EmpresaId, MarcaComercialId, TenantId } from "../primitivas/identificadores/marca";
 
 /**
  * Lo que la puerta pública de la carta por QR puede saber de una carta (marcas y planes, §B.2.5): solo
@@ -40,6 +40,16 @@ export interface LecturaDeDerechosDeUso<
    * `null` si la plataforma no ve el tenant (no existe): no se inventan derechos de un tenant inexistente.
    */
   delTenant(contexto: ContextoDePlataforma, tenant: TenantId): Promise<DerechosDeUso<M, P> | null>;
+  /**
+   * Los derechos de UNA empresa vistos desde la plataforma (M5): los del tenant más los ajustes de esa
+   * empresa. Es lo que ve la consulta `derechosDeUsoDeEmpresa` y lo que mira `ajustarPerilla` antes de
+   * ajustar una perilla de empresa; el mismo cálculo (`derechosDeUso`) que ve la propia empresa. `null` si
+   * la plataforma no ve la empresa (no existe).
+   */
+  deLaEmpresaParaLaPlataforma(
+    contexto: ContextoDePlataforma,
+    empresa: EmpresaId,
+  ): Promise<DerechosDeUso<M, P> | null>;
   /**
    * Derechos SIN sesión, para la carta por QR pública. FALLA CERRADO: devuelve siempre `null` («carta no
    * disponible», la misma respuesta que para un código inexistente) hasta que exista el módulo de

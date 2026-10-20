@@ -6,6 +6,7 @@ import {
   esValorDeLaPerilla,
   estaEncendida,
   valorBaseDe,
+  textoDeAjuste,
   valorDeAjuste,
 } from "./valores";
 
@@ -183,5 +184,20 @@ describe("valorDeAjuste: el texto que guarda la base, como valor de su perilla",
         }
       }
     }
+  });
+});
+
+describe("textoDeAjuste: el texto que la base guarda para un valor", () => {
+  it("DEL_PLAN vuelve al plan; un interruptor es 0 o 1", () => {
+    expect(textoDeAjuste("DEL_PLAN")).toBe("DEL_PLAN");
+    expect(textoDeAjuste({ tipo: "INTERRUPTOR", encendida: true })).toBe("1");
+    expect(textoDeAjuste({ tipo: "INTERRUPTOR", encendida: false })).toBe("0");
+  });
+
+  it("un límite es su entero o ILIMITADO", () => {
+    expect(textoDeAjuste({ tipo: "LIMITE", limite: 0 })).toBe("0");
+    expect(textoDeAjuste({ tipo: "LIMITE", limite: 25 })).toBe("25");
+    expect(textoDeAjuste({ tipo: "LIMITE", limite: LIMITE_MAXIMO_DE_PERILLA })).toBe("999999999");
+    expect(textoDeAjuste({ tipo: "LIMITE", limite: "ILIMITADO" })).toBe("ILIMITADO");
   });
 });

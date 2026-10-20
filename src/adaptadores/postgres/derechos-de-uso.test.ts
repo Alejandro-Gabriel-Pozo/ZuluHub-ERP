@@ -229,6 +229,42 @@ describe("delTenant", () => {
   });
 });
 
+describe("deLaEmpresaParaLaPlataforma", () => {
+  it("una empresa que no se ve da null y no lee nada más", async () => {
+    const { derechos, llamadas } = planesCon({ tenant: null });
+    expect(await derechos.deLaEmpresaParaLaPlataforma(plataforma, E)).toBeNull();
+    expect(llamadas).toEqual(["tenantDeLaEmpresa:e1"]);
+  });
+
+  it("lee el tenant de la empresa, sus asignaciones y los ajustes del tenant y de ESA empresa", async () => {
+    const { derechos, llamadas } = planesCon({
+      asignaciones: [{ numero: 1, vigenteDesde: antes, version: version(1, ["caja"], 3) }],
+    });
+    const d = await derechos.deLaEmpresaParaLaPlataforma(plataforma, E);
+    expect(llamadas).toEqual(["tenantDeLaEmpresa:e1", "asignaciones:t1", "ajustes:t1:e1"]);
+    expect(d?.empresaId).toBe(E);
+    expect(d?.tenantId).toBe(T);
+    expect(d?.leidoEn).toBe(hoy);
+    expect(d?.versionDePlan?.versionDePlanId).toBe("v1");
+    expect([...(d?.modulosHabilitados ?? [])].sort()).toEqual(["caja", "nucleo"]);
+  });
+
+  it("el ajuste de la empresa gana al del tenant y se ve con su origen", async () => {
+    const { derechos } = planesCon({
+      ajustes: [
+        ajuste("cajas_por_sucursal", "2"),
+        ajuste("cajas_por_sucursal", "7", { empresaId: E }),
+      ],
+    });
+    const d = await derechos.deLaEmpresaParaLaPlataforma(plataforma, E);
+    expect(d?.perillas.get("cajas_por_sucursal")).toEqual({
+      tipo: "LIMITE",
+      limite: 7,
+      origen: "AJUSTE",
+    });
+  });
+});
+
 describe("deLaCartaPublica: falla cerrado hasta que exista el módulo de catálogo", () => {
   it("devuelve null para cualquier código y NO lee nada de la base", async () => {
     const { derechos, llamadas } = planesCon({

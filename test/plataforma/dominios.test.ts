@@ -12,7 +12,7 @@ import {
   OPERACION_VERIFICAR_DOMINIO,
 } from "../../src/plataforma/casos-de-uso/cambiar-estado-de-dominio";
 import { crearCasosDeUsoDeDominios } from "../../src/plataforma/casos-de-uso/dominios";
-import { repetirSiHuboChoqueDeUnicidad } from "../../src/plataforma/casos-de-uso/dominios-comun";
+import { repetirSiHuboChoqueDeUnicidad } from "../../src/plataforma/casos-de-uso/caso-de-plataforma";
 import { err, ok, type Resultado } from "../../src/primitivas/resultado/resultado";
 import { comoAdministrador, uuid } from "./apoyo-de-soporte";
 import {
