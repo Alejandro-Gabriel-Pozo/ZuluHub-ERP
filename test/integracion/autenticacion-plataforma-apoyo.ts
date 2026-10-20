@@ -118,6 +118,18 @@ export function armarPlataformaDePrueba(
 
 export type AdminDePrueba = PerfilDePrueba & Readonly<{ adminId: string }>;
 
+/**
+ * Los scripts del dueño tapan en lo que imprimen la primera etiqueta del host de su cadena (`ocultarSecretos`): con la base
+ * de pruebas es «127», y un identificador de administrador que la contenga (cerca del 1 % de los UUID al azar) saldría con
+ * «***» en medio y rompería la comparación exacta de la salida. Las pruebas reparten identificadores que no la contienen.
+ */
+function identificadorQueElTapadoNoToca(): string {
+  for (;;) {
+    const id = randomUUID();
+    if (!id.includes("127")) return id;
+  }
+}
+
 /** Da de alta a un administrador de plataforma (lo hace el dueño con su conexión: ningún rol limitado puede). */
 export async function altaDeAdmin(
   dueno: pg.Client,
@@ -125,8 +137,8 @@ export async function altaDeAdmin(
 ): Promise<AdminDePrueba> {
   const email = `admin-${randomUUID().slice(0, 8)}@ejemplo.test`;
   const { rows } = await dueno.query<{ id: string }>(
-    `insert into admin_plataforma (email, rol, activo) values ($1, $2, $3) returning id`,
-    [email, opciones.rol ?? "ADMIN", opciones.activo ?? true],
+    `insert into admin_plataforma (id, email, rol, activo) values ($1, $2, $3, $4) returning id`,
+    [identificadorQueElTapadoNoToca(), email, opciones.rol ?? "ADMIN", opciones.activo ?? true],
   );
   return {
     sub: `sub-${randomUUID()}`,
