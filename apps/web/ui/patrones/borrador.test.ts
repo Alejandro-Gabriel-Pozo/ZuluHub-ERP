@@ -25,7 +25,7 @@ describe("borrador de la sesión (sessionStorage de la pestaña)", () => {
       importe: "10.00",
     });
     expect(leerBorrador("ingreso")).toEqual({ email: "ana@ejemplo.com", importe: "10.00" });
-    const crudo = sessionStorage.getItem("zh:borrador:ingreso") ?? "";
+    const crudo = sessionStorage.getItem("pd:borrador:ingreso") ?? "";
     for (const secreto of ["secreta", "password", "contrasena", "token", "codigoSecreto"]) {
       expect(crudo).not.toContain(secreto);
     }
@@ -39,8 +39,8 @@ describe("borrador de la sesión (sessionStorage de la pestaña)", () => {
 
   it("es de la pestaña: usa sessionStorage y no localStorage", () => {
     guardarBorrador("venta", { a: "1" });
-    expect(sessionStorage.getItem("zh:borrador:venta")).not.toBeNull();
-    expect(localStorage.getItem("zh:borrador:venta")).toBeNull();
+    expect(sessionStorage.getItem("pd:borrador:venta")).not.toBeNull();
+    expect(localStorage.getItem("pd:borrador:venta")).toBeNull();
   });
 
   it.each([
@@ -50,7 +50,7 @@ describe("borrador de la sesión (sessionStorage de la pestaña)", () => {
     ["no es un objeto de textos", '{"a":1}'],
     ["es null", "null"],
   ])("un contenido que %s se ignora", (_caso, crudo) => {
-    sessionStorage.setItem("zh:borrador:venta", crudo);
+    sessionStorage.setItem("pd:borrador:venta", crudo);
     expect(leerBorrador("venta")).toBeNull();
   });
 

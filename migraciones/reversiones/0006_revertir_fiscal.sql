@@ -9,7 +9,7 @@
 -- dueño de la base:
 --
 --     BEGIN;
---     SET LOCAL zuluhub.confirmar_reversion = 'SI';   -- solo si hay datos fiscales cargados
+--     SET LOCAL pedernal.confirmar_reversion = 'SI';   -- solo si hay datos fiscales cargados
 --     \i migraciones/reversiones/0006_revertir_fiscal.sql
 --     COMMIT;
 --
@@ -29,8 +29,8 @@ BEGIN
        + (SELECT count(*) FROM public.serie_comprobante)
        + (SELECT count(*) FROM public.emisor WHERE NOT es_principal)
     INTO v_datos;
-  IF v_datos > 0 AND coalesce(current_setting('zuluhub.confirmar_reversion', true), '') <> 'SI' THEN
-    RAISE EXCEPTION 'hay % filas de datos fiscales que esta reversión borraría: avisar al dueño y repetir con SET LOCAL zuluhub.confirmar_reversion = ''SI''', v_datos
+  IF v_datos > 0 AND coalesce(current_setting('pedernal.confirmar_reversion', true), '') <> 'SI' THEN
+    RAISE EXCEPTION 'hay % filas de datos fiscales que esta reversión borraría: avisar al dueño y repetir con SET LOCAL pedernal.confirmar_reversion = ''SI''', v_datos
       USING ERRCODE = '55000';
   END IF;
 END

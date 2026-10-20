@@ -25,7 +25,7 @@ import { crearEntornoPublico } from "./resolucion-apoyo";
 
 /**
  * Autenticación (W3b), G8: las rutas de ingreso (`/api/auth/*`) se sirven SOLO en un host de aplicación. La
- * resolución del host es la real (puerta pública sobre el rol `zuluhub_publico`, con dominios de verdad en la
+ * resolución del host es la real (puerta pública sobre el rol `pedernal_publico`, con dominios de verdad en la
  * base); la autenticación es la real (Better Auth y el proveedor local). En un host de landing, de carta,
  * desconocido o retirado la respuesta es el 404 neutro, igual para todos y sin cookies. Una base que no
  * responde al resolver es 503 con referencia, nunca el 404 ni otra marca. Un fallo no sale con detalle.
@@ -184,7 +184,7 @@ describe.skipIf(base === null)(
       ["un dominio retirado", () => hostRetirado],
       ["un host de una marca sin versión vigente", () => hostSinVersion],
       ["un host desconocido", () => hostAlAzar()],
-      ["un host de Vercel", () => "zuluhub-erp-git-rama.vercel.app"],
+      ["un host de Vercel", () => "pedernal-erp-git-rama.vercel.app"],
       ["una IP", () => "203.0.113.5"],
       ["un host con sufijo engañoso", () => `${hostApp}.malo.test`],
       ["un host con otro puerto que no existe", () => `${hostApp}:99999`],
@@ -252,7 +252,7 @@ describe.skipIf(base === null)(
 
     it("si la base no responde al resolver el host: 503 con referencia, nunca el 404 neutro ni otra marca", async () => {
       const url = new URL(propia.base.publico);
-      url.username = "zuluhub_rol_que_no_existe"; // falla con cualquier método de autenticación (el CI usa trust: una clave equivocada no falla)
+      url.username = "pedernal_rol_que_no_existe"; // falla con cualquier método de autenticación (el CI usa trust: una clave equivocada no falla)
       const rota = crearEntornoPublico(propia.base, { url: url.toString() });
       registros.length = 0;
       try {
@@ -262,9 +262,9 @@ describe.skipIf(base === null)(
           azar: () => new Uint8Array([0xde, 0xad, 0xbe, 0xef]),
         });
         expect(r.status).toBe(503);
-        expect(await r.json()).toEqual({ codigo: "NO_DISPONIBLE", referencia: "ZH-DEAD-BEEF" });
+        expect(await r.json()).toEqual({ codigo: "NO_DISPONIBLE", referencia: "PD-DEAD-BEEF" });
         expect(r.headers.getSetCookie()).toEqual([]);
-        expect(registros.join("\n")).toContain("ZH-DEAD-BEEF");
+        expect(registros.join("\n")).toContain("PD-DEAD-BEEF");
       } finally {
         await rota.cerrar();
       }
@@ -272,12 +272,12 @@ describe.skipIf(base === null)(
 
     it("un fallo interno sale con una referencia y SIN detalle; el detalle queda en el registro del servidor", async () => {
       const url = new URL(propia.base.autenticacion);
-      url.username = "zuluhub_rol_que_no_existe"; // falla con cualquier método de autenticación (el CI usa trust: una clave equivocada no falla)
+      url.username = "pedernal_rol_que_no_existe"; // falla con cualquier método de autenticación (el CI usa trust: una clave equivocada no falla)
       const rota = armarAutenticacionDePrueba(propia.base, proveedor, { url: url.toString() });
       registros.length = 0;
       try {
         const r = await atenderRutaDeIngreso(
-          pedido(hostApp, "/api/auth/get-session", "GET", "__Host-zh_emp.session_token=x.y"),
+          pedido(hostApp, "/api/auth/get-session", "GET", "__Host-pd_emp.session_token=x.y"),
           {
             ...dependencias(rota.autenticacion),
             azar: () => new Uint8Array([0x01, 0x02, 0x03, 0x04]),
@@ -285,12 +285,12 @@ describe.skipIf(base === null)(
         );
         expect(r.status).toBe(500);
         const cuerpo = await r.text();
-        expect(JSON.parse(cuerpo)).toEqual({ codigo: "ERROR_INTERNO", referencia: "ZH-0102-0304" });
+        expect(JSON.parse(cuerpo)).toEqual({ codigo: "ERROR_INTERNO", referencia: "PD-0102-0304" });
         expect(cuerpo).not.toMatch(
-          /password|authentication|zuluhub_|postgres|clave-equivocada|autenticacion/i,
+          /password|authentication|pedernal_|postgres|clave-equivocada|autenticacion/i,
         );
         expect(r.headers.getSetCookie()).toEqual([]);
-        expect(registros.join("\n")).toContain("ZH-0102-0304");
+        expect(registros.join("\n")).toContain("PD-0102-0304");
       } finally {
         await rota.cerrar();
       }

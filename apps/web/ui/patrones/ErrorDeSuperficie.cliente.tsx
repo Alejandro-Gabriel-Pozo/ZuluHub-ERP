@@ -15,7 +15,7 @@ type PropsDeErrorDeSuperficie = Readonly<{
 }>;
 
 /**
- * El 500 de una superficie (ADR-016): un texto genérico, la referencia `ZH-…` derivada del `digest` que
+ * El 500 de una superficie (ADR-016): un texto genérico, la referencia `PD-…` derivada del `digest` que
  * Next ya dejó en el registro del servidor, y «Reintentar». Nunca el mensaje, el nombre ni la pila del
  * error. Sin `digest` (un fallo solo del navegador) no hay referencia que mostrar.
  */

@@ -65,7 +65,7 @@ beforeEach(() => {
 });
 
 describe("app/api/trabajos/cron", () => {
-  const URL_DEL_CRON = "https://zuluhub-erp.vercel.app/api/trabajos/cron";
+  const URL_DEL_CRON = "https://pedernal-erp.vercel.app/api/trabajos/cron";
 
   it("expone solo GET, en Node, sin generarse al compilar, con tope de duración", () => {
     expect(Object.keys(rutaDelCron).sort()).toEqual(["GET", "dynamic", "maxDuration", "runtime"]);
@@ -110,7 +110,7 @@ describe("app/api/trabajos/cron", () => {
     const r = await rutaDelCron.GET(pedido(URL_DEL_CRON, `Bearer ${SECRETO}`));
     expect(r.status).toBe(500);
     const { referencia } = (await r.json()) as { referencia: string };
-    expect(referencia).toMatch(/^ZH-[0-9A-F]{4}-[0-9A-F]{4}$/);
+    expect(referencia).toMatch(/^PD-[0-9A-F]{4}-[0-9A-F]{4}$/);
     expect(String(registro.mock.calls[0]?.[0])).toContain(`${referencia} [cron] barrido: Error`);
   });
 });

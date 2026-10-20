@@ -1,14 +1,14 @@
-# ZuluHub ERP: instrucciones para trabajar en este repositorio
+# Pedernal ERP: instrucciones para trabajar en este repositorio
 
 Idioma: español rioplatense. El dueño define el negocio y no programa; la calidad técnica es responsabilidad
-del ingeniero. Las decisiones están en el repositorio `ZuluHub-docs` (ADR 001 a 008 y casos de uso).
+del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 a 008 y casos de uso).
 
 ## Antes de entregar
 
 - Correr `npm run gate` (tipos, lint, formato, arquitectura, código muerto, pruebas). Debe pasar completo.
 - Cambios mínimos y enfocados; no inventar librerías ni APIs; avisar antes de sumar una dependencia.
 - Si tocás `apps/web/ui`, corré también `npm run test:componentes` (Chromium real: axe, foco y envío; el CI lo corre en el job
-  `componentes`). Un entorno que ya trae su propio Chromium lo indica con `ZULUHUB_NAVEGADOR=<ruta del ejecutable>`.
+  `componentes`). Un entorno que ya trae su propio Chromium lo indica con `PEDERNAL_NAVEGADOR=<ruta del ejecutable>`.
 - Una regla nueva de arquitectura trae su violación inyectada en `test/arquitectura/reglas.test.ts`.
 
 ## Reglas que no se negocian
@@ -24,7 +24,7 @@ del ingeniero. Las decisiones están en el repositorio `ZuluHub-docs` (ADR 001 a
 
 ## Justificar cada regla, abstracción y convención
 
-Fuente: `ZuluHub-docs/01-vision/reglas-transversales.md` §8. El sistema lo construye y mantiene una IA: una regla sin motivo se
+Fuente: `Pedernal-docs/01-vision/reglas-transversales.md` §8. El sistema lo construye y mantiene una IA: una regla sin motivo se
 obedece igual, se acumula y compite con otras.
 
 - Toda regla, abstracción o convención nueva se justifica por **la ambigüedad que elimina**, **la categoría concreta de fallos que
@@ -38,7 +38,7 @@ obedece igual, se acumula y compite con otras.
 
 ## Infraestructura
 
-- Vercel: proyecto `zuluhub-erp` (equipo `alepozod`), región de funciones `gru1`, carpeta raíz del proyecto `apps/web`
+- Vercel: proyecto `pedernal-erp` (equipo `alepozod`), región de funciones `gru1`, carpeta raíz del proyecto `apps/web`
   (Next, npm workspaces; el CI la compila sin secretos). Vercel lee `apps/web/vercel.json`. El despliegue sigue
   deshabilitado (`git.deploymentEnabled: false`) hasta que el dueño apruebe el primer despliegue: una prueba
   (`test/arquitectura/vercel-json.test.ts`) falla si se enciende sin cambiar a propósito su constante. La compilación

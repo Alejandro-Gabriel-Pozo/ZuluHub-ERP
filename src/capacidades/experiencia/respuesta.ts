@@ -5,7 +5,7 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
 /**
  * El núcleo PURO del traductor único de respuestas (ADR-016): de cualquier resultado de un caso de uso, una
  * consulta o una excepción, lo ÚNICO que sale hacia la pantalla. Decide solo el QUÉ (qué código público es,
- * con qué texto y con qué presentación); la referencia `ZH-…` y el registro del servidor son del borde
+ * con qué texto y con qué presentación); la referencia `PD-…` y el registro del servidor son del borde
  * (`src/composicion/a-respuesta.ts`), que le pasa el azar y el registro como datos.
  *
  * Garantías (cada una con su prueba):
@@ -99,7 +99,7 @@ export type ErrorPublico = Readonly<{
   presentacion: Presentacion;
   /** El campo del formulario al que se asocia el error, si el error lo trae y tiene la forma de un campo. */
   campo?: string;
-  /** `ZH-…`: solo en los errores inesperados. Con ella soporte encuentra el registro del servidor. */
+  /** `PD-…`: solo en los errores inesperados. Con ella soporte encuentra el registro del servidor. */
   referencia?: string;
 }>;
 

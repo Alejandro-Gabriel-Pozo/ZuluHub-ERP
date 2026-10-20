@@ -18,7 +18,7 @@ export type LetraBase = (typeof LETRAS_BASE)[number];
 export const LETRA_BASE_POR_DEFECTO: LetraBase = "NORMAL";
 
 /** La única clave que la carta escribe en el navegador, y solo cuando el comensal toca «Letra». */
-export const CLAVE_DE_LETRA_GUARDADA = "zh-carta-letra";
+export const CLAVE_DE_LETRA_GUARDADA = "pd-carta-letra";
 
 /** Estrecha un texto de la base a la perilla; lo desconocido es el valor por defecto, nunca un error. */
 export function leerLetraBase(valor: string | null | undefined): LetraBase {

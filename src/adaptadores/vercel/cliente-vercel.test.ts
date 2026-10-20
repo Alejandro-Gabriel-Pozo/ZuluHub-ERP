@@ -81,7 +81,7 @@ describe("pedidos exactos", () => {
     async (destino) => {
       const f = fetchFalso({ cuerpo: { created: {}, failed: [] } });
       const { api } = cliente(f);
-      expect(await api.escribir("ZULUHUB_DB_APP", "valor-secreto", destino)).toEqual({
+      expect(await api.escribir("PEDERNAL_DB_APP", "valor-secreto", destino)).toEqual({
         ok: true,
         valor: null,
       });
@@ -93,7 +93,7 @@ describe("pedidos exactos", () => {
         "Content-Type": "application/json",
       });
       expect(JSON.parse(init.body as string)).toEqual({
-        key: "ZULUHUB_DB_APP",
+        key: "PEDERNAL_DB_APP",
         value: "valor-secreto",
         type: "sensitive",
         target: [destino],

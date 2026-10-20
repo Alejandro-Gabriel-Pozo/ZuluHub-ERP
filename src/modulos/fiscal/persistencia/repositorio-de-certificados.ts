@@ -81,7 +81,7 @@ export const dondeSeGuardaLaCredencial = (
 /** El servicio de ARCA al que sirve la credencial. Hoy solo la factura electrónica. */
 export type ServicioDeArca = "wsfe";
 
-/** El pedido de certificado que ZuluHub genera: la clave queda cifrada y el pedido (CSR) es público. */
+/** El pedido de certificado que Pedernal genera: la clave queda cifrada y el pedido (CSR) es público. */
 export type PedidoDeCertificado = Readonly<{
   id: CertificadoId;
   empresaId: EmpresaId;

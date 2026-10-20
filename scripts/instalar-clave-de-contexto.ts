@@ -1,4 +1,4 @@
-import { ZULUHUB_CLAVE_CONTEXTO } from "../src/adaptadores/postgres/contexto-firmado.ts";
+import { PEDERNAL_CLAVE_CONTEXTO } from "../src/adaptadores/postgres/contexto-firmado.ts";
 import {
   describirFallaDeBase,
   ocultarSecretos,
@@ -6,8 +6,8 @@ import {
 import { VARIABLE_DE_LA_CADENA, ejecutarInstalacionDeClave } from "./ejecutar-instalar-clave.ts";
 
 /**
- * Instala la clave de firma del contexto (`ZULUHUB_CLAVE_CONTEXTO`) en la base real, con la cadena DIRECTA del
- * dueño (`ZULUHUB_DB_MIGRACIONES`). Lo corre el workflow `.github/workflows/migrar.yml` con
+ * Instala la clave de firma del contexto (`PEDERNAL_CLAVE_CONTEXTO`) en la base real, con la cadena DIRECTA del
+ * dueño (`PEDERNAL_DB_MIGRACIONES`). Lo corre el workflow `.github/workflows/migrar.yml` con
  * `npm run instalar-clave`, y el dueño en su terminal. Se ejecuta directo con Node (borra los tipos al cargar),
  * sin dependencias nuevas; el detalle de lo que hace está en `ejecutar-instalar-clave.ts`.
  */
@@ -16,7 +16,7 @@ import { VARIABLE_DE_LA_CADENA, ejecutarInstalacionDeClave } from "./ejecutar-in
 function fallaInesperada(falla: unknown): void {
   const descripcion = describirFallaDeBase(falla, process.env[VARIABLE_DE_LA_CADENA]);
   console.error(
-    `ERROR inesperado: ${ocultarSecretos(descripcion, process.env[ZULUHUB_CLAVE_CONTEXTO])}`,
+    `ERROR inesperado: ${ocultarSecretos(descripcion, process.env[PEDERNAL_CLAVE_CONTEXTO])}`,
   );
   process.exit(1);
 }

@@ -50,7 +50,7 @@
 --      `traspaso_gerencia` NO miran `membresia`. Lo que necesita mirar membresías lo hacen los
 --      disparadores, que no participan del chequeo de ciclos.
 --  A5. «La empresa nunca queda sin sucursal activa» lo impone la base con dos disparadores y un
---      bloqueo consultivo, NO con el bloqueo de la fila de `empresa`: `zuluhub_app` no puede
+--      bloqueo consultivo, NO con el bloqueo de la fila de `empresa`: `pedernal_app` no puede
 --      bloquear esa fila sin ensanchar permisos (SELECT FOR UPDATE exige además pasar la política
 --      de UPDATE de empresa, y no hay ninguna para el contexto operativo). El bloqueo consultivo no
 --      necesita ningún privilegio, y bloquear en modo compartido a las otras sucursales activas hace
@@ -148,7 +148,7 @@ CREATE FUNCTION sucursal_serializar_bajas() RETURNS trigger LANGUAGE plpgsql
   SET search_path = pg_catalog, public, pg_temp AS
 $$
 BEGIN
-  PERFORM pg_advisory_xact_lock(hashtextextended('zuluhub.sucursal.baja', 0));
+  PERFORM pg_advisory_xact_lock(hashtextextended('pedernal.sucursal.baja', 0));
   RETURN NULL;
 END
 $$;
@@ -451,17 +451,17 @@ CREATE TRIGGER membresia_cambio BEFORE UPDATE ON membresia
 REVOKE ALL ON traspaso_gerencia FROM PUBLIC;
 
 -- app: propone (el gerente), responde (el entrante) y cancela; ve los traspasos de su empresa.
-GRANT SELECT ON traspaso_gerencia TO zuluhub_app, zuluhub_plataforma;
+GRANT SELECT ON traspaso_gerencia TO pedernal_app, pedernal_plataforma;
 GRANT INSERT (empresa_id, origen, propuesto_por, saliente_persona_id, entrante_persona_id, propuesto_en, vence_en)
-  ON traspaso_gerencia TO zuluhub_app;
-GRANT UPDATE (estado, resuelto_en, motivo, saliente_persona_id) ON traspaso_gerencia TO zuluhub_app;
+  ON traspaso_gerencia TO pedernal_app;
+GRANT UPDATE (estado, resuelto_en, motivo, saliente_persona_id) ON traspaso_gerencia TO pedernal_app;
 -- El rol cambia solo por traspaso: lo acotan la política `membresia_app_traspasar` y el disparador.
-GRANT UPDATE (rol) ON membresia TO zuluhub_app;
+GRANT UPDATE (rol) ON membresia TO pedernal_app;
 
 -- plataforma: propone (origen PLATAFORMA, sin conocer al gerente) y cancela; no acepta ni rechaza.
 GRANT INSERT (empresa_id, origen, entrante_persona_id, propuesto_en, vence_en)
-  ON traspaso_gerencia TO zuluhub_plataforma;
-GRANT UPDATE (estado, resuelto_en, motivo) ON traspaso_gerencia TO zuluhub_plataforma;
+  ON traspaso_gerencia TO pedernal_plataforma;
+GRANT UPDATE (estado, resuelto_en, motivo) ON traspaso_gerencia TO pedernal_plataforma;
 
 -- ---------------------------------------------------------------------------------------------
 -- RLS: activa y forzada en la tabla nueva; sin política no hay acceso
@@ -472,11 +472,11 @@ ALTER TABLE traspaso_gerencia FORCE ROW LEVEL SECURITY;
 -- ---------------------------------------------------------------------------------------------
 -- Políticas de traspaso_gerencia (ninguna mira `membresia`: A4)
 -- ---------------------------------------------------------------------------------------------
-CREATE POLICY traspaso_gerencia_app_leer ON traspaso_gerencia FOR SELECT TO zuluhub_app
+CREATE POLICY traspaso_gerencia_app_leer ON traspaso_gerencia FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
 -- Propone la persona del contexto, con origen GERENTE. Que sea el gerente vigente lo impone el
 -- disparador de alta.
-CREATE POLICY traspaso_gerencia_app_alta ON traspaso_gerencia FOR INSERT TO zuluhub_app
+CREATE POLICY traspaso_gerencia_app_alta ON traspaso_gerencia FOR INSERT TO pedernal_app
   WITH CHECK (
     empresa_id = (SELECT app_empresa_id())
     AND empresa_operable(empresa_id)
@@ -485,7 +485,7 @@ CREATE POLICY traspaso_gerencia_app_alta ON traspaso_gerencia FOR INSERT TO zulu
   );
 -- Cada WITH CHECK nombra su propio actor (D8 de 0002): las permisivas se suman (OR). Responde solo
 -- el entrante, y solo para aceptar o rechazar.
-CREATE POLICY traspaso_gerencia_app_responder ON traspaso_gerencia FOR UPDATE TO zuluhub_app
+CREATE POLICY traspaso_gerencia_app_responder ON traspaso_gerencia FOR UPDATE TO pedernal_app
   USING (
     empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND estado = 'PROPUESTO'
     AND entrante_persona_id = (SELECT app_persona_id())
@@ -496,25 +496,25 @@ CREATE POLICY traspaso_gerencia_app_responder ON traspaso_gerencia FOR UPDATE TO
     AND entrante_persona_id = (SELECT app_persona_id())
   );
 -- Cancelar: la empresa, mientras esté en curso. Quién (gerente o administrador) lo impone el disparador.
-CREATE POLICY traspaso_gerencia_app_cancelar ON traspaso_gerencia FOR UPDATE TO zuluhub_app
+CREATE POLICY traspaso_gerencia_app_cancelar ON traspaso_gerencia FOR UPDATE TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND estado = 'PROPUESTO')
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND estado = 'CANCELADO');
 
-CREATE POLICY traspaso_gerencia_plataforma_leer ON traspaso_gerencia FOR SELECT TO zuluhub_plataforma
+CREATE POLICY traspaso_gerencia_plataforma_leer ON traspaso_gerencia FOR SELECT TO pedernal_plataforma
   USING (true);
-CREATE POLICY traspaso_gerencia_plataforma_alta ON traspaso_gerencia FOR INSERT TO zuluhub_plataforma
+CREATE POLICY traspaso_gerencia_plataforma_alta ON traspaso_gerencia FOR INSERT TO pedernal_plataforma
   WITH CHECK (origen = 'PLATAFORMA');
-CREATE POLICY traspaso_gerencia_plataforma_cancelar ON traspaso_gerencia FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY traspaso_gerencia_plataforma_cancelar ON traspaso_gerencia FOR UPDATE TO pedernal_plataforma
   USING (estado = 'PROPUESTO') WITH CHECK (estado = 'CANCELADO');
 
 -- Políticas RESTRICTIVAS de la plataforma (como las de 0004 sobre las demás tablas): sin un actor
 -- vigente no ve nada, y solo un ADMIN propone o cancela (un SOPORTE no cambia a un gerente).
 CREATE POLICY traspaso_gerencia_plataforma_con_actor ON traspaso_gerencia AS RESTRICTIVE FOR SELECT
-  TO zuluhub_plataforma USING ((SELECT plataforma_actor_vigente()));
+  TO pedernal_plataforma USING ((SELECT plataforma_actor_vigente()));
 CREATE POLICY traspaso_gerencia_plataforma_admin_alta ON traspaso_gerencia AS RESTRICTIVE FOR INSERT
-  TO zuluhub_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
+  TO pedernal_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 CREATE POLICY traspaso_gerencia_plataforma_admin_cambiar ON traspaso_gerencia AS RESTRICTIVE FOR UPDATE
-  TO zuluhub_plataforma
+  TO pedernal_plataforma
   USING ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])))
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 
@@ -524,7 +524,7 @@ CREATE POLICY traspaso_gerencia_plataforma_admin_cambiar ON traspaso_gerencia AS
 -- El WITH CHECK repite el traspaso: las políticas permisivas se suman (OR), y sin él la fila de
 -- cualquier miembro activo pasaría el USING de `membresia_app_apagar` (rol <> 'GERENTE') y el
 -- WITH CHECK (activo) de esta política.
-CREATE POLICY membresia_app_traspasar ON membresia FOR UPDATE TO zuluhub_app
+CREATE POLICY membresia_app_traspasar ON membresia FOR UPDATE TO pedernal_app
   USING (
     empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND activo
     AND EXISTS (
@@ -547,7 +547,7 @@ CREATE POLICY membresia_app_traspasar ON membresia FOR UPDATE TO zuluhub_app
 -- ---------------------------------------------------------------------------------------------
 -- asignacion_sucursal: la empresa asigna y reasigna (A7)
 -- ---------------------------------------------------------------------------------------------
-CREATE POLICY asignacion_sucursal_app_alta ON asignacion_sucursal FOR INSERT TO zuluhub_app
+CREATE POLICY asignacion_sucursal_app_alta ON asignacion_sucursal FOR INSERT TO pedernal_app
   WITH CHECK (
     empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id)
     AND EXISTS (
@@ -561,7 +561,7 @@ CREATE POLICY asignacion_sucursal_app_alta ON asignacion_sucursal FOR INSERT TO 
          AND s.empresa_id = asignacion_sucursal.empresa_id AND s.activa
     )
   );
-CREATE POLICY asignacion_sucursal_app_reactivar ON asignacion_sucursal FOR UPDATE TO zuluhub_app
+CREATE POLICY asignacion_sucursal_app_reactivar ON asignacion_sucursal FOR UPDATE TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND NOT activa)
   WITH CHECK (
     empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND activa

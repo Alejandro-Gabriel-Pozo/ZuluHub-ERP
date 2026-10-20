@@ -71,7 +71,7 @@ function conUsuario(url: string, usuario: string, clave: string): string {
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
   const urlAdmin = process.env["PRUEBAS_DATABASE_URL"];
   // La mutación corre solo las pruebas sin base: lo indica con esta variable.
-  if (process.env["ZULUHUB_SIN_INTEGRACION"] === "1") {
+  if (process.env["PEDERNAL_SIN_INTEGRACION"] === "1") {
     project.provide("baseDePruebas", null);
     return () => Promise.resolve();
   }
@@ -85,7 +85,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
     return () => Promise.resolve();
   }
 
-  const nombre = `zuluhub_it_${randomBytes(6).toString("hex")}`;
+  const nombre = `pedernal_it_${randomBytes(6).toString("hex")}`;
   const admin = new pg.Client({ connectionString: urlAdmin });
   await admin.connect();
   await admin.query(`CREATE DATABASE ${nombre} ${OPCIONES_DE_BASE}`);
@@ -101,10 +101,10 @@ export default async function setup(project: TestProject): Promise<() => Promise
 
   const claves = Object.fromEntries(ROLES.map((r) => [r, randomBytes(18).toString("hex")]));
   for (const rol of ROLES) {
-    await admin.query(`ALTER ROLE zuluhub_${rol} LOGIN PASSWORD '${claves[rol]}'`);
+    await admin.query(`ALTER ROLE pedernal_${rol} LOGIN PASSWORD '${claves[rol]}'`);
   }
   const url = (rol: (typeof ROLES)[number]) =>
-    conUsuario(urlDueno, `zuluhub_${rol}`, claves[rol] as string);
+    conUsuario(urlDueno, `pedernal_${rol}`, claves[rol] as string);
 
   project.provide("baseDePruebas", {
     admin: urlAdmin,
@@ -120,7 +120,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
   });
 
   return async () => {
-    for (const rol of ROLES) await admin.query(`ALTER ROLE zuluhub_${rol} NOLOGIN`);
+    for (const rol of ROLES) await admin.query(`ALTER ROLE pedernal_${rol} NOLOGIN`);
     await admin.query(`DROP DATABASE ${nombre} WITH (FORCE)`);
     await admin.end();
   };

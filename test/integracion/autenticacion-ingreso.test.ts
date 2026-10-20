@@ -156,7 +156,7 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
       const { n } = await ingresado();
       const cookies = n.cookiesDe(HOST_A);
       // Una sola: la de sesión. Sin caché de sesión en cookie (`session_data`).
-      expect(cookies.map((c) => c.nombre)).toEqual(["__Host-zh_emp.session_token"]);
+      expect(cookies.map((c) => c.nombre)).toEqual(["__Host-pd_emp.session_token"]);
       const crudo = cookies[0]?.crudo ?? "";
       expect(crudo).toMatch(/;\s*HttpOnly/i);
       expect(crudo).toMatch(/;\s*Secure/i);
@@ -591,7 +591,7 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
 
     it("un fallo interno (la base no responde) no sale con detalle: el error es genérico y el detalle queda en el registro", async () => {
       const url = new URL(propia.base.autenticacion);
-      url.username = "zuluhub_rol_que_no_existe"; // falla con cualquier método de autenticación (el CI usa trust: una clave equivocada no falla)
+      url.username = "pedernal_rol_que_no_existe"; // falla con cualquier método de autenticación (el CI usa trust: una clave equivocada no falla)
       const rota = armarAutenticacionDePrueba(propia.base, proveedor, { url: url.toString() });
       try {
         const pedidos: Promise<unknown>[] = [
@@ -600,7 +600,7 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
           }),
           new Navegador().pedir(rota.autenticacion, HOST_A, "GET", "/api/auth/get-session"),
           rota.autenticacion.sesionDe(
-            { headers: new Headers({ cookie: "__Host-zh_emp.session_token=x.y" }) },
+            { headers: new Headers({ cookie: "__Host-pd_emp.session_token=x.y" }) },
             HOST_A,
           ),
         ];
@@ -612,7 +612,7 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
           expect(falla).toBeInstanceOf(ErrorInternoDeIngreso);
           const visible = `${(falla as Error).message} ${JSON.stringify(falla)} ${String(falla)}`;
           expect(visible).not.toMatch(
-            /password|authentication|zuluhub_|postgres|clave-equivocada/i,
+            /password|authentication|pedernal_|postgres|clave-equivocada/i,
           );
           expect((falla as Error).cause).toBeUndefined();
         }
@@ -724,7 +724,7 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
       const cookies = n.cookiesDe(HOST_A);
       expect(cookies.length).toBeGreaterThan(0);
       for (const c of cookies) {
-        expect(c.nombre.startsWith("__Host-zh_emp."), c.nombre).toBe(true);
+        expect(c.nombre.startsWith("__Host-pd_emp."), c.nombre).toBe(true);
         expect(c.crudo, c.nombre).toMatch(/;\s*Secure/i);
         expect(c.crudo, c.nombre).toMatch(/;\s*Path=\/(;|$)/i);
         expect(c.crudo, c.nombre).not.toMatch(/Domain=/i);
@@ -735,7 +735,7 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
       const { n } = await ingresado();
       const cookie = n.cookiesDe(HOST_A)[0];
       const vieja = {
-        headers: new Headers({ cookie: `__Secure-zh_emp.session_token=${cookie?.valor}` }),
+        headers: new Headers({ cookie: `__Secure-pd_emp.session_token=${cookie?.valor}` }),
       };
       expect(await a.autenticacion.sesionDe(vieja, HOST_A)).toBeNull();
     });

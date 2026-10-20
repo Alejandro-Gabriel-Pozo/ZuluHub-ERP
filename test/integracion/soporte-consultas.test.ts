@@ -231,7 +231,7 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
         ["verConfiguracion", () => consultas.verConfiguracion(contexto)],
         [
           "buscarReferencia",
-          () => consultas.buscarReferencia(contexto, { referencia: "ZH-0000-0000" }),
+          () => consultas.buscarReferencia(contexto, { referencia: "PD-0000-0000" }),
         ],
       ] as const;
 

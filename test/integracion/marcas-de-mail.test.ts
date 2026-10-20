@@ -104,7 +104,7 @@ describe.skipIf(base === null)("marcas de mail: desde qué marca sale el mail de
     });
 
     it("nunca el nombre ni el dominio de OTRA marca, aunque la principal esté completa", async () => {
-      await crearVersionDeMarcaConfirmada(dueno, principal, { nombreVisible: "ZuluHub" });
+      await crearVersionDeMarcaConfirmada(dueno, principal, { nombreVisible: "Pedernal" });
       const hostPrincipal = hostAlAzar();
       await crearDominio(dueno, principal, { host: hostPrincipal, canonico: true });
       const p = await producto();
@@ -120,7 +120,7 @@ describe.skipIf(base === null)("marcas de mail: desde qué marca sale el mail de
         mundoPrincipal.tenant,
         principal,
       );
-      expect(delaPrincipal).toEqual({ nombre: "ZuluHub", urlBase: `https://${hostPrincipal}` });
+      expect(delaPrincipal).toEqual({ nombre: "Pedernal", urlBase: `https://${hostPrincipal}` });
     });
 
     it("la última versión vigente manda: el nombre es el de la de mayor número", async () => {
@@ -160,7 +160,7 @@ describe.skipIf(base === null)("marcas de mail: desde qué marca sale el mail de
       ["con versión pero sin host canónico", true, false],
       ["con host canónico pero sin versión", false, true],
     ])("un producto %s: null (ni el respaldo ni la principal)", async (_c, conVersion, conHost) => {
-      await crearVersionDeMarcaConfirmada(dueno, principal, { nombreVisible: "ZuluHub" });
+      await crearVersionDeMarcaConfirmada(dueno, principal, { nombreVisible: "Pedernal" });
       const p = await producto();
       if (conVersion) {
         await crearVersionDeMarcaConfirmada(dueno, p.marca, { nombreVisible: "Mi Calendario" });
@@ -170,7 +170,7 @@ describe.skipIf(base === null)("marcas de mail: desde qué marca sale el mail de
     });
 
     it("una versión del producto SIN nombre no hereda el de la principal", async () => {
-      await crearVersionDeMarcaConfirmada(dueno, principal, { nombreVisible: "ZuluHub" });
+      await crearVersionDeMarcaConfirmada(dueno, principal, { nombreVisible: "Pedernal" });
       const p = await producto();
       await crearVersionDeMarcaConfirmada(dueno, p.marca, { tema: { primary: "#112233" } });
       await crearDominio(dueno, p.marca, { canonico: true });
@@ -242,7 +242,7 @@ describe.skipIf(base === null)("marcas de mail: desde qué marca sale el mail de
     it("la principal con versión pero sin host canónico también usa el respaldo (nunca mezcla)", async () => {
       expect(
         await conPrincipalDe(async (c, principalAparte) => {
-          await crearVersionDeMarcaConfirmada(c, principalAparte, { nombreVisible: "ZuluHub" });
+          await crearVersionDeMarcaConfirmada(c, principalAparte, { nombreVisible: "Pedernal" });
         }),
       ).toEqual(RESPALDO);
     });

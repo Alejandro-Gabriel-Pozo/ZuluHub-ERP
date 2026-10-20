@@ -3,8 +3,8 @@ import { defineConfig } from "vitest/config";
 
 // Dónde está el Chromium. En el CI se instala con `npx playwright install chromium` y Playwright lo
 // encuentra solo (la variable no se define). Un entorno que ya trae uno propio apunta acá a su
-// ejecutable con `ZULUHUB_NAVEGADOR`. No es un secreto: es una ruta.
-const ejecutable = process.env["ZULUHUB_NAVEGADOR"] ?? "";
+// ejecutable con `PEDERNAL_NAVEGADOR`. No es un secreto: es una ruta.
+const ejecutable = process.env["PEDERNAL_NAVEGADOR"] ?? "";
 
 export default defineConfig({
   test: {

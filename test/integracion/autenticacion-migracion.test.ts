@@ -201,15 +201,18 @@ describe.skipIf(base === null)(
       try {
         await c.query("begin");
         const { rows } = await c.query<{ existe: boolean }>(
-          "select exists (select 1 from pg_roles where rolname = 'zuluhub_autenticacion') as existe",
+          "select exists (select 1 from pg_roles where rolname = 'pedernal_autenticacion') as existe",
         );
         expect(rows[0]?.existe).toBe(true);
         // La guarda es el primer bloque: se corre contra una copia del texto que busca otro nombre de rol.
         const guarda = sql.match(/^DO \$\$[\s\S]*?^\$\$;/m)?.[0] ?? "";
-        expect(guarda).toContain("zuluhub_autenticacion");
+        expect(guarda).toContain("pedernal_autenticacion");
         await expect(
           c.query(
-            guarda.replace("rolname = 'zuluhub_autenticacion'", "rolname = 'zuluhub_inexistente'"),
+            guarda.replace(
+              "rolname = 'pedernal_autenticacion'",
+              "rolname = 'pedernal_inexistente'",
+            ),
           ),
         ).rejects.toThrow(/autenticación requiere 0004_plataforma aplicada antes/);
       } finally {
@@ -339,20 +342,20 @@ describe.skipIf(base === null)(
           expect(concesion).not.toMatch(/\bTO\s+PUBLIC\b/i);
           if (/\bDELETE\b/i.test(concesion)) {
             expect(concesion).toMatch(/autenticacion\./);
-            expect(concesion).toMatch(/TO\s+zuluhub_autenticacion;$/);
+            expect(concesion).toMatch(/TO\s+pedernal_autenticacion;$/);
           }
           if (/\bEXECUTE\b/i.test(concesion)) {
-            expect(concesion).toMatch(/TO\s+zuluhub_app;$/);
+            expect(concesion).toMatch(/TO\s+pedernal_app;$/);
           }
           if (/\bON\s+persona\b/i.test(concesion)) {
             expect(concesion).toMatch(
-              /UPDATE\s*\(usuario_auth_id\)\s+ON\s+persona\s+TO\s+zuluhub_app;$/,
+              /UPDATE\s*\(usuario_auth_id\)\s+ON\s+persona\s+TO\s+pedernal_app;$/,
             );
           }
         }
         // Nada se concede sobre `public` al rol de la librería.
         for (const concesion of concesiones) {
-          if (/zuluhub_autenticacion/i.test(concesion)) {
+          if (/pedernal_autenticacion/i.test(concesion)) {
             expect(concesion).toMatch(/autenticacion/);
             expect(concesion).not.toMatch(/\bpublic\b/);
           }
@@ -364,7 +367,7 @@ describe.skipIf(base === null)(
         expect(codigo).not.toMatch(/CREATE\s+POLICY[^;]*\bFOR\s+ALL\b/i);
         expect(codigo).not.toMatch(/AS\s+RESTRICTIVE/i);
         for (const politica of codigo.match(/CREATE\s+POLICY\s+\w*_sesion_leer[^;]*;/gi) ?? []) {
-          expect(politica).toMatch(/FOR\s+SELECT\s+TO\s+zuluhub_app\b/);
+          expect(politica).toMatch(/FOR\s+SELECT\s+TO\s+pedernal_app\b/);
         }
         expect(codigo.match(/CREATE\s+POLICY\s+\w*_sesion_leer/gi)).toHaveLength(4);
       });
@@ -378,7 +381,7 @@ describe.skipIf(base === null)(
         const sql = await readFile(await archivoDeReversionDeAutenticacion(), "utf8");
         await c.query("begin");
         try {
-          if (confirmar) await c.query("set local zuluhub.confirmar_reversion = 'SI'");
+          if (confirmar) await c.query("set local pedernal.confirmar_reversion = 'SI'");
           await c.query(sql);
           await c.query("commit");
         } catch (error) {
@@ -447,11 +450,11 @@ describe.skipIf(base === null)(
           });
           await previa.cliente.query(
             `insert into autenticacion.session ("expiresAt", token, "userId", host)
-             values (now() + interval '1 hour', 't', $1, 'app.zuluhub.test')`,
+             values (now() + interval '1 hour', 't', $1, 'app.pedernal.test')`,
             [p.usuario],
           );
           await expect(revertir(previa.cliente, false)).rejects.toThrow(
-            /zuluhub\.confirmar_reversion/,
+            /pedernal\.confirmar_reversion/,
           );
           // el rechazo no deshizo ni tocó nada (la reversión es una sola transacción)
           expect(
@@ -492,7 +495,7 @@ describe.skipIf(base === null)(
           await aplicarMigraciones(previa.aparte.base.dueno, conAutenticacion);
           await crearUsuarioDeBase(previa.cliente);
           await expect(revertir(previa.cliente, false)).rejects.toThrow(
-            /zuluhub\.confirmar_reversion/,
+            /pedernal\.confirmar_reversion/,
           );
           await revertir(previa.cliente, true);
         });
@@ -512,7 +515,7 @@ describe.skipIf(base === null)(
         });
       });
 
-      it("no borra el rol zuluhub_autenticacion (es del clúster): lo deja como nació en 0004, sin acceso a nada", async () => {
+      it("no borra el rol pedernal_autenticacion (es del clúster): lo deja como nació en 0004, sin acceso a nada", async () => {
         await conPrevias(async (previa, conAutenticacion) => {
           await aplicarMigraciones(previa.aparte.base.dueno, conAutenticacion);
           await revertir(previa.cliente, false);
@@ -521,9 +524,9 @@ describe.skipIf(base === null)(
             tablas: number;
             columnas: number;
           }>(
-            `select exists (select 1 from pg_roles where rolname = 'zuluhub_autenticacion') as existe,
-                    (select count(*)::int from information_schema.table_privileges where grantee = 'zuluhub_autenticacion') as tablas,
-                    (select count(*)::int from information_schema.column_privileges where grantee = 'zuluhub_autenticacion') as columnas`,
+            `select exists (select 1 from pg_roles where rolname = 'pedernal_autenticacion') as existe,
+                    (select count(*)::int from information_schema.table_privileges where grantee = 'pedernal_autenticacion') as tablas,
+                    (select count(*)::int from information_schema.column_privileges where grantee = 'pedernal_autenticacion') as columnas`,
           );
           expect(rows).toEqual([{ existe: true, tablas: 0, columnas: 0 }]);
         });

@@ -15,18 +15,18 @@ import { randomBytes } from "node:crypto";
  *   no se confía en cómo resuelve Vercel un `upsert` sobre una variable de otra forma.
  */
 
-/** No son secretos: identifican el proyecto `zuluhub-erp` y el equipo donde vive. */
+/** No son secretos: identifican el proyecto `pedernal-erp` y el equipo donde vive. */
 export const PROYECTO_DE_VERCEL = "prj_BZ5e86RcBcfYCAzSW2vVbPpkj7jG";
 export const EQUIPO_DE_VERCEL = "alepozod";
 
 /** El NOMBRE de la variable de entorno de la terminal con el token de la API de Vercel. */
-export const VARIABLE_DEL_TOKEN = "ZULUHUB_VERCEL_TOKEN";
+export const VARIABLE_DEL_TOKEN = "PEDERNAL_VERCEL_TOKEN";
 
 /**
  * El nombre de la variable con la cadena DIRECTA (de dueño) de la base. Vive en la terminal del dueño
  * y NUNCA debe existir en Vercel: se borra del destino si el dueño la dejó ahí.
  */
-export const NOMBRE_DE_LA_CADENA_DE_DUENO = "ZULUHUB_DB_MIGRACIONES";
+export const NOMBRE_DE_LA_CADENA_DE_DUENO = "PEDERNAL_DB_MIGRACIONES";
 
 export const DESTINOS = ["preview", "production"] as const;
 export type Destino = (typeof DESTINOS)[number];
@@ -119,12 +119,12 @@ export function leerVariablesRemotas(cuerpo: unknown): VariableRemota[] | null {
 }
 
 /**
- * Los dos secretos de la aplicación, al azar: `ZULUHUB_CLAVE_CONTEXTO` (`1:` + 64 dígitos hexadecimales,
- * la forma `<kid>:<hex>` de `contexto-firmado.ts`) y `ZULUHUB_SECRETO_INVITACIONES` (64 dígitos
+ * Los dos secretos de la aplicación, al azar: `PEDERNAL_CLAVE_CONTEXTO` (`1:` + 64 dígitos hexadecimales,
+ * la forma `<kid>:<hex>` de `contexto-firmado.ts`) y `PEDERNAL_SECRETO_INVITACIONES` (64 dígitos
  * hexadecimales, `tokens-hmac.ts`). 32 bytes cada uno; `bytesAlAzar` se inyecta para probar.
  */
-export const VARIABLE_CLAVE_CONTEXTO = "ZULUHUB_CLAVE_CONTEXTO";
-export const VARIABLE_SECRETO_INVITACIONES = "ZULUHUB_SECRETO_INVITACIONES";
+export const VARIABLE_CLAVE_CONTEXTO = "PEDERNAL_CLAVE_CONTEXTO";
+export const VARIABLE_SECRETO_INVITACIONES = "PEDERNAL_SECRETO_INVITACIONES";
 const BYTES_DE_SECRETO = 32;
 
 export function generarSecretos(

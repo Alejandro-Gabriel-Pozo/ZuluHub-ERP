@@ -118,7 +118,7 @@ describe("aRespuesta", () => {
     const crudo = {
       tipo: "Inesperado",
       sqlstate: "08006",
-      mensaje: 'password authentication failed for user "zuluhub_app"',
+      mensaje: 'password authentication failed for user "pedernal_app"',
     } as const;
     const r = aRespuesta(err(crudo), dependencias, () => 1);
     expect(r).toEqual({
@@ -127,12 +127,12 @@ describe("aRespuesta", () => {
         codigo: "ERROR_INTERNO",
         clave: "error.inesperado",
         presentacion: "INESPERADO",
-        referencia: "ZH-ABCD-0123",
+        referencia: "PD-ABCD-0123",
       },
     });
-    expect(JSON.stringify(r)).not.toMatch(/password|zuluhub_app|08006/);
+    expect(JSON.stringify(r)).not.toMatch(/password|pedernal_app|08006/);
     expect(registros).toEqual([
-      'ZH-ABCD-0123 Inesperado 08006 password authentication failed for user "zuluhub_app"',
+      'PD-ABCD-0123 Inesperado 08006 password authentication failed for user "pedernal_app"',
     ]);
   });
 
@@ -141,9 +141,9 @@ describe("aRespuesta", () => {
     const r = aRespuesta(err({ tipo: "ConcurrenciaAgotada" } as const), dependencias, () => 1);
     expect(r).toMatchObject({
       ok: false,
-      error: { codigo: "ERROR_INTERNO", referencia: "ZH-ABCD-0123" },
+      error: { codigo: "ERROR_INTERNO", referencia: "PD-ABCD-0123" },
     });
-    expect(registros).toEqual(["ZH-ABCD-0123 ConcurrenciaAgotada"]);
+    expect(registros).toEqual(["PD-ABCD-0123 ConcurrenciaAgotada"]);
   });
 
   it("un texto desconocido en el lado de error no sale: es inesperado", () => {
@@ -151,7 +151,7 @@ describe("aRespuesta", () => {
     const r = aRespuesta(err("CODIGO_NUEVO_SIN_TEXTO"), dependencias, () => 1);
     expect(r).toMatchObject({ ok: false, error: { codigo: "ERROR_INTERNO" } });
     expect(JSON.stringify(r)).not.toContain("CODIGO_NUEVO");
-    expect(registros).toEqual(["ZH-ABCD-0123 CODIGO_NUEVO_SIN_TEXTO"]);
+    expect(registros).toEqual(["PD-ABCD-0123 CODIGO_NUEVO_SIN_TEXTO"]);
   });
 });
 
@@ -161,10 +161,10 @@ describe("aRespuestaDeExcepcion y respuestaDeFalla", () => {
     const r = aRespuestaDeExcepcion(new Error("connect ECONNREFUSED 10.0.0.5:5432"), dependencias);
     expect(r).toMatchObject({
       ok: false,
-      error: { codigo: "ERROR_INTERNO", referencia: "ZH-ABCD-0123" },
+      error: { codigo: "ERROR_INTERNO", referencia: "PD-ABCD-0123" },
     });
     expect(JSON.stringify(r)).not.toMatch(/ECONNREFUSED|10\.0\.0\.5/);
-    expect(registros).toEqual(["ZH-ABCD-0123 Error: connect ECONNREFUSED 10.0.0.5:5432"]);
+    expect(registros).toEqual(["PD-ABCD-0123 Error: connect ECONNREFUSED 10.0.0.5:5432"]);
   });
 
   it("indisponible: NO_DISPONIBLE (la base no responde)", () => {
@@ -183,14 +183,14 @@ describe("aRespuestaDeExcepcion y respuestaDeFalla", () => {
       },
       azar: () => AZAR,
     });
-    expect(r.referencia).toBe("ZH-ABCD-0123");
+    expect(r.referencia).toBe("PD-ABCD-0123");
   });
 
-  it("sin azar inyectado, la referencia es una ZH-XXXX-XXXX distinta cada vez", () => {
+  it("sin azar inyectado, la referencia es una PD-XXXX-XXXX distinta cada vez", () => {
     const referencias = new Set<string>();
     for (let i = 0; i < 6; i++) {
       const r = respuestaDeFalla("x", { registrar: () => undefined });
-      expect(r.referencia).toMatch(/^ZH-[0-9A-F]{4}-[0-9A-F]{4}$/);
+      expect(r.referencia).toMatch(/^PD-[0-9A-F]{4}-[0-9A-F]{4}$/);
       referencias.add(r.referencia as string);
     }
     expect(referencias.size).toBeGreaterThan(1);
@@ -199,14 +199,14 @@ describe("aRespuestaDeExcepcion y respuestaDeFalla", () => {
   it("errorAPublico: lo conocido sin referencia, lo demás con ella", () => {
     const { dependencias, registros } = armar();
     expect(errorAPublico("YA_ES_MIEMBRO", dependencias).referencia).toBeUndefined();
-    expect(errorAPublico(new Error("x"), dependencias).referencia).toBe("ZH-ABCD-0123");
+    expect(errorAPublico(new Error("x"), dependencias).referencia).toBe("PD-ABCD-0123");
     expect(registros).toHaveLength(1);
   });
 });
 
 describe("propiedad: ninguna forma de falla expone su detalle por aRespuesta", () => {
   it("con una palabra secreta en cualquier lugar, la respuesta serializada no la contiene", () => {
-    const SECRETO = "SECRETO-ZH-77";
+    const SECRETO = "SECRETO-PD-77";
     fc.assert(
       fc.property(
         fc.oneof(

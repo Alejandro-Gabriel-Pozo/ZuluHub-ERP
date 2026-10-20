@@ -169,10 +169,10 @@ describe.skipIf(base === null)(
         const [despues] = nuevas["privilegiosPorColumna"] as string[];
         expect(antes).toMatch(/^dominio\.es_canonico:/);
         expect(despues).toMatch(/^dominio\.es_canonico:/);
-        expect(antes).not.toContain("zuluhub_publico");
-        expect(despues).toMatch(/zuluhub_publico=r\//);
+        expect(antes).not.toContain("pedernal_publico");
+        expect(despues).toMatch(/pedernal_publico=r\//);
         // Y lo que tenía antes (la aplicación y la plataforma, cada una con lo suyo) sigue igual.
-        const sinPublico = (despues as string).replace(/zuluhub_publico=r\/[^,}]+,?/, "");
+        const sinPublico = (despues as string).replace(/pedernal_publico=r\/[^,}]+,?/, "");
         expect(sinPublico.replace(/,\}/, "}")).toBe(antes);
       });
     });
@@ -223,7 +223,7 @@ describe.skipIf(base === null)(
         }>(
           `select table_name as t, column_name as c, privilege_type as p
            from information_schema.column_privileges
-           where grantee = 'zuluhub_publico' and table_schema = 'public' order by 1, 2, 3`,
+           where grantee = 'pedernal_publico' and table_schema = 'public' order by 1, 2, 3`,
         );
         expect([...new Set(rows.map((f) => f.p))]).toEqual(["SELECT"]);
         expect(rows.map((f) => `${f.t}.${f.c}`)).toEqual(COLUMNAS_DEL_ROL_PUBLICO);
@@ -254,7 +254,7 @@ describe.skipIf(base === null)(
         // Nadie más gana nada: ni el público sobre otras tablas, ni otro privilegio.
         const { rows: otros } = await previa.cliente.query(
           `select 1 from information_schema.table_privileges
-           where grantee = 'zuluhub_publico' and table_schema = 'public' and privilege_type <> 'SELECT'`,
+           where grantee = 'pedernal_publico' and table_schema = 'public' and privilege_type <> 'SELECT'`,
         );
         expect(otros).toEqual([]);
       });
@@ -336,7 +336,7 @@ describe.skipIf(base === null)(
       it("ejecuta UNA sola concesión: nada se crea, se modifica ni se borra, ni se da LOGIN o contraseña", async () => {
         const { codigo } = await leer();
         expect(codigo.match(/\bGRANT\b/gi)).toHaveLength(1);
-        expect(codigo).toMatch(/GRANT SELECT \(es_canonico\) ON dominio TO zuluhub_publico;/);
+        expect(codigo).toMatch(/GRANT SELECT \(es_canonico\) ON dominio TO pedernal_publico;/);
         expect(codigo).not.toMatch(/\b(REVOKE|CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|TRUNCATE)\b/i);
         expect(codigo).not.toMatch(/\bSECURITY\s+DEFINER\b/i);
         expect(codigo).not.toMatch(/\bLOGIN\b/i);

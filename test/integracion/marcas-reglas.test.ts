@@ -65,13 +65,13 @@ describe.skipIf(base === null)("marcas y planes: las reglas de la base", () => {
   // marca
   // ===========================================================================================
   describe("marca", () => {
-    it("la migración deja UNA marca: la principal, `zuluhub`, de nivel 0, activa y sin padre", async () => {
+    it("la migración deja UNA marca: la principal, `pedernal`, de nivel 0, activa y sin padre", async () => {
       const { rows } = await dueno.query<{ es_principal: boolean }>(
         "select codigo, es_principal, marca_padre_id, nivel, estado, version from marca order by codigo",
       );
       expect(rows.filter((r) => r.es_principal)).toEqual([
         {
-          codigo: "zuluhub",
+          codigo: "pedernal",
           es_principal: true,
           marca_padre_id: null,
           nivel: 0,
@@ -188,7 +188,7 @@ describe.skipIf(base === null)("marcas y planes: las reglas de la base", () => {
         for (const codigo of ["A", "a", "Ab", "1ab", "ab_c", "a".repeat(41), "", "ab\n"]) {
           check(await q("insert into marca (codigo) values ($1)", [codigo]), "marca_codigo_ck");
         }
-        clave(await q("insert into marca (codigo) values ('zuluhub')"), "marca_codigo_uk");
+        clave(await q("insert into marca (codigo) values ('pedernal')"), "marca_codigo_uk");
         acepta(await q("insert into marca (codigo) values ('a-1')"));
         acepta(await q("insert into marca (codigo) values ($1)", ["a".repeat(40)]));
       });
@@ -1502,7 +1502,7 @@ describe.skipIf(base === null)("marcas y planes: las reglas de la base", () => {
   describe("referencia_de_error_referencia_uk", () => {
     it("la referencia no se repite: la segunda igual choca con la única", async () => {
       await deshacer(async () => {
-        const referenciaNueva = `ZH-${randomUUID().slice(0, 4).toUpperCase()}-${randomUUID().slice(0, 4).toUpperCase()}`;
+        const referenciaNueva = `PD-${randomUUID().slice(0, 4).toUpperCase()}-${randomUUID().slice(0, 4).toUpperCase()}`;
         const insertar = () =>
           q(
             "insert into referencia_de_error (referencia, accion, motivo) values ($1, 'a.b', 'X')",

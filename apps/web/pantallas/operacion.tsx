@@ -16,7 +16,7 @@ export type DatosDeLaEmpresaActiva = Readonly<{
 }>;
 
 /**
- * Una pantalla del mostrador: resuelve sesión, marca del host y empresa (con la cookie `zh_empresa` validada),
+ * Una pantalla del mostrador: resuelve sesión, marca del host y empresa (con la cookie `pd_empresa` validada),
  * y si todo está bien la pinta dentro del armazón de operación. Si no hay empresa elegida, manda a elegirla; si
  * la cookie es de otra marca (o de una empresa que ya no es de la persona), «sin permiso». CADA página lo llama
  * (no solo el layout): al navegar de una página a otra Next no vuelve a correr el layout.

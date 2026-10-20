@@ -1,9 +1,9 @@
 {
-  "name": "@zuluhub/web",
+  "name": "@pedernal/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Aplicación web de ZuluHub (Next). Se compila desde la raíz del repositorio con `npm run build:web`.",
+  "description": "Aplicación web de Pedernal (Next). Se compila desde la raíz del repositorio con `npm run build:web`.",
   "scripts": {
     "build": "next build"
   },

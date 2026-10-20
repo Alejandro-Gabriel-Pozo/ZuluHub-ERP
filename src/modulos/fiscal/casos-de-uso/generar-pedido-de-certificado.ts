@@ -22,7 +22,7 @@ import type { DependenciasDeCertificados } from "./contrato-de-certificados";
 import { DECLARACIONES_DE_CERTIFICADOS } from "./declaraciones-de-certificados";
 
 /**
- * `generarPedidoDeCertificado` (spec H7 facturación §B.4 y §B.6, tramo F7): ZuluHub genera la clave privada y el
+ * `generarPedidoDeCertificado` (spec H7 facturación §B.4 y §B.6, tramo F7): Pedernal genera la clave privada y el
  * pedido (CSR) dentro del servidor; la clave se guarda CIFRADA, atada a su fila, y nunca sale ni se muestra: lo único
  * que vuelve es el pedido en PEM, que el gerente sube a ARCA con su clave fiscal. Cada cliente es dueño de su propio
  * certificado (decisión del dueño 2026-10-14): el titular tiene que ser el CUIT del emisor.

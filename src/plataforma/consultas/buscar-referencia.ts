@@ -8,7 +8,7 @@ import type { DependenciasDeConsultasDePlataforma, FilaDeReferencia } from "./co
 import { DECLARACIONES_DE_CONSULTAS_DE_PLATAFORMA as D } from "./declaraciones";
 
 export type EntradaDeBuscarReferencia = Readonly<{
-  /** El código `ZH-XXXX-XXXX` como lo dictó o copió la persona: se recortan espacios y se pasa a mayúsculas. */
+  /** El código `PD-XXXX-XXXX` como lo dictó o copió la persona: se recortan espacios y se pasa a mayúsculas. */
   referencia: string;
 }>;
 

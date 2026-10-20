@@ -115,7 +115,7 @@ describe("AceptarInvitacion", () => {
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 
-  it("un fallo inesperado del servidor muestra la referencia ZH-… y «Reintentar»; no hay ningún detalle", async () => {
+  it("un fallo inesperado del servidor muestra la referencia PD-… y «Reintentar»; no hay ningún detalle", async () => {
     const aceptar = vi
       .fn<(clave: string) => Promise<Respuesta<Dato>>>()
       .mockResolvedValueOnce({
@@ -124,13 +124,13 @@ describe("AceptarInvitacion", () => {
           codigo: "ERROR_INTERNO",
           clave: "error.inesperado",
           presentacion: "INESPERADO",
-          referencia: "ZH-ABCD-0123",
+          referencia: "PD-ABCD-0123",
         },
       })
       .mockResolvedValue({ ok: true, dato: { yaEstabaAceptada: false } });
     await render(<AceptarInvitacion aceptar={aceptar} rutaDeContinuar="/" />);
     tocar(aceptarBoton());
-    await expect.element(page.getByText("Referencia: ZH-ABCD-0123")).toBeVisible();
+    await expect.element(page.getByText("Referencia: PD-ABCD-0123")).toBeVisible();
     expect(await violacionesDeAccesibilidad()).toEqual([]);
     tocar(page.getByRole("button", { name: "Reintentar" }));
     await expect.element(page.getByText("Listo, ya sos parte de la empresa.")).toBeVisible();

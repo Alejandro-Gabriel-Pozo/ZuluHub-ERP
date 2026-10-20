@@ -113,13 +113,13 @@ describe("decidirAltaDeAdmin: un administrador de plataforma no puede tener ning
   const limpio = { tieneMembresia: false, tieneInvitacionPendiente: false };
 
   it("sin membresías ni invitaciones, nace con el email normalizado y el rol pedido", () => {
-    expect(decidirAltaDeAdmin("  Dueno@ZuluHub.com ", "ADMIN", limpio)).toEqual({
+    expect(decidirAltaDeAdmin("  Dueno@Pedernal.com ", "ADMIN", limpio)).toEqual({
       ok: true,
-      valor: { email: "dueno@zuluhub.com" as Email, rol: "ADMIN" },
+      valor: { email: "dueno@pedernal.com" as Email, rol: "ADMIN" },
     });
-    expect(decidirAltaDeAdmin("soporte@zuluhub.com", "SOPORTE", limpio)).toEqual({
+    expect(decidirAltaDeAdmin("soporte@pedernal.com", "SOPORTE", limpio)).toEqual({
       ok: true,
-      valor: { email: "soporte@zuluhub.com" as Email, rol: "SOPORTE" },
+      valor: { email: "soporte@pedernal.com" as Email, rol: "SOPORTE" },
     });
   });
 

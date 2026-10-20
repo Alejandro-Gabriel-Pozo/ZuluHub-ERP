@@ -41,23 +41,23 @@ describe("SelectorDeSucursal", () => {
       .toBeInTheDocument();
     await userEvent.selectOptions(selector, "s2");
     await expect.element(selector).toHaveValue("s2");
-    expect(localStorage.getItem("zh:sucursal:e1")).toBe("s2");
-    expect(localStorage.getItem("zh:sucursal:e2")).toBeNull();
+    expect(localStorage.getItem("pd:sucursal:e1")).toBe("s2");
+    expect(localStorage.getItem("pd:sucursal:e2")).toBeNull();
     await expect.element(page.getByText("Elegí una sucursal")).not.toBeInTheDocument();
   });
 
   it("lo recordado se usa al volver; si esa sucursal ya no está, no se usa", async () => {
-    localStorage.setItem("zh:sucursal:e1", "s2");
+    localStorage.setItem("pd:sucursal:e1", "s2");
     const { unmount } = await render(<SelectorDeSucursal empresaId="e1" sucursales={dos} />);
     await expect.element(page.getByRole("combobox", { name: "Sucursal" })).toHaveValue("s2");
     await unmount();
-    localStorage.setItem("zh:sucursal:e1", "s-desactivada");
+    localStorage.setItem("pd:sucursal:e1", "s-desactivada");
     await render(<SelectorDeSucursal empresaId="e1" sucursales={dos} />);
     await expect.element(page.getByRole("combobox", { name: "Sucursal" })).toHaveValue("");
   });
 
   it("otra empresa en el mismo dispositivo no arrastra la sucursal de la primera", async () => {
-    localStorage.setItem("zh:sucursal:e1", "s2");
+    localStorage.setItem("pd:sucursal:e1", "s2");
     await render(<SelectorDeSucursal empresaId="e2" sucursales={dos} />);
     await expect.element(page.getByRole("combobox", { name: "Sucursal" })).toHaveValue("");
   });

@@ -36,7 +36,7 @@ async function emitirPara(
   numeroDeSerie: string | null = CUIT,
 ): Promise<Emitido> {
   const { clavePrivada, pedidoPem } = await generador.generar({
-    alias: "zuluhub1",
+    alias: "pedernal1",
     organizacion: "Coop Pampa SA",
     numeroDeSerie: CUIT,
   });

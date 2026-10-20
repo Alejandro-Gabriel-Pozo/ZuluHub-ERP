@@ -70,7 +70,7 @@ const conBase = (url: string, nombre: string): string => {
 /** Una copia de la plantilla (las migraciones anteriores) con ese texto de 0010 aplicado; se destruye al terminar. */
 async function conMigracion<T>(sql: string, trabajo: (ctx: Ctx) => Promise<T>): Promise<T> {
   const b = base as BaseDePruebas;
-  const nombre = `zuluhub_deb_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  const nombre = `pedernal_deb_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   await admin.query(`CREATE DATABASE ${nombre} TEMPLATE ${plantillaNombre}`);
   const carpeta = await carpetaCon(await migracionesPrevias());
   const copia: BaseDePruebas = {
@@ -276,7 +276,7 @@ const sondas = {
     // Con filas en las tablas (una consulta sobre una tabla vacía ni evalúa la política).
     await escenario(ctx);
     const token = firmarCarga(ctx.base.clave, {
-      u: "zuluhub_app",
+      u: "pedernal_app",
       e: null,
       t: null,
       p: null,
@@ -285,7 +285,7 @@ const sondas = {
       a: null,
       s: "no-es-un-uuid",
     });
-    const s = await SesionDePrueba.abrirConToken(ctx.base, "zuluhub_app", token);
+    const s = await SesionDePrueba.abrirConToken(ctx.base, "pedernal_app", token);
     try {
       for (const tabla of ["persona", "membresia", "empresa", "tenant"]) {
         const r = await s.intentar(`select count(*)::int as n from ${tabla}`);
@@ -308,7 +308,7 @@ const sondas = {
   politicasSoloDelRol: async (ctx: Ctx) => {
     const { rows } = await ctx.dueno.query<{ n: number }>(
       `select count(*)::int as n from pg_policies
-       where schemaname = 'autenticacion' and roles <> array['zuluhub_autenticacion']::name[]`,
+       where schemaname = 'autenticacion' and roles <> array['pedernal_autenticacion']::name[]`,
     );
     return rows[0]?.n === 0;
   },
@@ -335,7 +335,7 @@ const sondas = {
   /** Ningún otro rol (la aplicación) ve el esquema de la librería. */
   esquemaCerrado: async (ctx: Ctx) => {
     const { rows } = await ctx.dueno.query<{ puede: boolean }>(
-      `select has_schema_privilege('zuluhub_app', 'autenticacion', 'USAGE') as puede`,
+      `select has_schema_privilege('pedernal_app', 'autenticacion', 'USAGE') as puede`,
     );
     return rows[0]?.puede === false;
   },
@@ -356,7 +356,7 @@ const sondas = {
   /** La aplicación solo puede actualizar la columna del vínculo de `persona` (y no `activo_global`). */
   soloLaColumnaDelVinculo: async (ctx: Ctx) => {
     const { rows } = await ctx.dueno.query<{ puede: boolean }>(
-      `select has_column_privilege('zuluhub_app', 'public.persona', 'activo_global', 'UPDATE') as puede`,
+      `select has_column_privilege('pedernal_app', 'public.persona', 'activo_global', 'UPDATE') as puede`,
     );
     return rows[0]?.puede === false;
   },
@@ -452,7 +452,7 @@ CREATE POLICY tenant_sesion_leer`,
     nombre:
       "se agrega una política que deja a la sesión actualizar membresías (ya no es solo lectura)",
     romper: (s) =>
-      `${s}\nCREATE POLICY membresia_sesion_cambiar ON membresia FOR UPDATE TO zuluhub_app USING (true) WITH CHECK (true);\n`,
+      `${s}\nCREATE POLICY membresia_sesion_cambiar ON membresia FOR UPDATE TO pedernal_app USING (true) WITH CHECK (true);\n`,
     detectan: ["sesionNoEscribe"],
   },
   {
@@ -469,7 +469,7 @@ CREATE POLICY tenant_sesion_leer`,
         r,
         "    usuario_auth_id = (SELECT app_usuario_auth())\n    AND email = (SELECT i.email FROM invitacion i WHERE i.token_hash = (SELECT app_token_invitacion()))",
         "    usuario_auth_id = (SELECT app_usuario_auth())",
-      )}\nCREATE POLICY persona_abierta ON persona FOR SELECT TO zuluhub_app USING (true);\n`;
+      )}\nCREATE POLICY persona_abierta ON persona FOR SELECT TO pedernal_app USING (true);\n`;
     },
     detectan: ["noVinculaAOtraPersona"],
   },
@@ -558,7 +558,7 @@ CREATE POLICY tenant_sesion_leer`,
     romper: (s) =>
       cambiar(
         s,
-        "FOR SELECT TO zuluhub_autenticacion USING (true)', t);",
+        "FOR SELECT TO pedernal_autenticacion USING (true)', t);",
         "FOR SELECT TO PUBLIC USING (true)', t);",
       ),
     detectan: ["politicasSoloDelRol"],
@@ -585,8 +585,8 @@ CREATE POLICY tenant_sesion_leer`,
     romper: (s) =>
       cambiar(
         s,
-        "GRANT USAGE ON SCHEMA autenticacion TO zuluhub_autenticacion;",
-        "GRANT USAGE ON SCHEMA autenticacion TO zuluhub_autenticacion, PUBLIC;",
+        "GRANT USAGE ON SCHEMA autenticacion TO pedernal_autenticacion;",
+        "GRANT USAGE ON SCHEMA autenticacion TO pedernal_autenticacion, PUBLIC;",
       ),
     detectan: ["esquemaCerrado"],
   },
@@ -595,8 +595,8 @@ CREATE POLICY tenant_sesion_leer`,
     romper: (s) =>
       cambiar(
         s,
-        "GRANT USAGE ON SCHEMA autenticacion TO zuluhub_autenticacion;",
-        "GRANT USAGE ON SCHEMA autenticacion TO zuluhub_autenticacion;\nGRANT USAGE ON SCHEMA public TO zuluhub_autenticacion;\nGRANT SELECT ON persona TO zuluhub_autenticacion;",
+        "GRANT USAGE ON SCHEMA autenticacion TO pedernal_autenticacion;",
+        "GRANT USAGE ON SCHEMA autenticacion TO pedernal_autenticacion;\nGRANT USAGE ON SCHEMA public TO pedernal_autenticacion;\nGRANT SELECT ON persona TO pedernal_autenticacion;",
       ),
     detectan: ["autenticacionNoTocaNegocio"],
   },
@@ -605,8 +605,8 @@ CREATE POLICY tenant_sesion_leer`,
     romper: (s) =>
       cambiar(
         s,
-        "GRANT UPDATE (usuario_auth_id) ON persona TO zuluhub_app;",
-        "GRANT UPDATE ON persona TO zuluhub_app;",
+        "GRANT UPDATE (usuario_auth_id) ON persona TO pedernal_app;",
+        "GRANT UPDATE ON persona TO pedernal_app;",
       ),
     detectan: ["soloLaColumnaDelVinculo"],
   },

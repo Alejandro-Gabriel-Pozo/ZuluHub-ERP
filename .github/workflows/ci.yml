@@ -224,7 +224,7 @@ jobs:
           FC_SEMILLA: "20261011"
           # Filtro de archivos de prueba que corre cada mutante (vacío = toda la suite unitaria). Los
           # grupos grandes lo acotan a las pruebas de su módulo para entrar en el tiempo del job.
-          ZULUHUB_FILTRO_PRUEBAS: ${{ matrix.pruebas }}
+          PEDERNAL_FILTRO_PRUEBAS: ${{ matrix.pruebas }}
           ARCHIVOS: ${{ matrix.archivos }}
 
   gate:
@@ -258,7 +258,7 @@ jobs:
   web:
     # P-12: la web compila sin ningún secreto. Las variables viven en Vercel y se leen al primer uso,
     # nunca al compilar; si alguien lee una al importar, este job falla.
-    name: Web (next build sin variables ZULUHUB_*)
+    name: Web (next build sin variables PEDERNAL_*)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -270,10 +270,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: El entorno no trae ninguna variable ZULUHUB_*
+      - name: El entorno no trae ninguna variable PEDERNAL_*
         run: |
-          if env | grep -q '^ZULUHUB_'; then
-            echo "El job web no debe tener variables ZULUHUB_*" >&2
+          if env | grep -q '^PEDERNAL_'; then
+            echo "El job web no debe tener variables PEDERNAL_*" >&2
             exit 1
           fi
       - run: npm run build:web

@@ -45,8 +45,8 @@ const decidir = (
 
 describe("constantes de la puerta", () => {
   it("son las esperadas", () => {
-    expect(PREFIJO_DE_ENCABEZADO_INTERNO).toBe("x-zh-");
-    expect(ENCABEZADO_DE_NONCE).toBe("x-zh-nonce");
+    expect(PREFIJO_DE_ENCABEZADO_INTERNO).toBe("x-pd-");
+    expect(ENCABEZADO_DE_NONCE).toBe("x-pd-nonce");
     expect(RUTA_NEUTRA).toBe("/s/neutra");
     expect(SUPERFICIES_SERVIBLES).toEqual(["APP", "LANDING", "CARTA"]);
     expect(RUTA_INTERNA_DE).toEqual({ APP: "/s/app", LANDING: "/s/landing", CARTA: "/s/carta" });
@@ -75,7 +75,7 @@ describe("hostDelPedido", () => {
       ["x-forwarded-host", "b.com"],
       ["forwarded", "host=c.com"],
       ["x-original-host", "d.com"],
-      ["x-zh-host", "e.com"],
+      ["x-pd-host", "e.com"],
     ] as [string, string][]);
     expect(hostDelPedido(encabezados)).toBe("a.com");
   });
@@ -86,15 +86,15 @@ describe("hostDelPedido", () => {
 });
 
 describe("sinEncabezadosInternos", () => {
-  it("descarta todo x-zh-*, sin importar mayúsculas, y conserva el resto", () => {
+  it("descarta todo x-pd-*, sin importar mayúsculas, y conserva el resto", () => {
     const entrantes = new Headers([
-      ["X-ZH-Marca", "otra"],
-      ["x-zh-superficie", "app"],
-      ["x-zh-", "vacio"],
+      ["X-PD-Marca", "otra"],
+      ["x-pd-superficie", "app"],
+      ["x-pd-", "vacio"],
       ["host", "ejemplo.com"],
       ["accept", "text/html"],
       ["x-zhx", "no es interno"],
-      ["x-otro-zh-marca", "tampoco"],
+      ["x-otro-pd-marca", "tampoco"],
       ["cookie", "a=1"],
       ["cookie", "b=2"],
     ]);
@@ -103,18 +103,18 @@ describe("sinEncabezadosInternos", () => {
       "accept",
       "cookie",
       "host",
-      "x-otro-zh-marca",
+      "x-otro-pd-marca",
       "x-zhx",
     ]);
     expect(limpios.get("host")).toBe("ejemplo.com");
   });
 
   it("no modifica el original ni devuelve la misma instancia", () => {
-    const entrantes = new Headers([["x-zh-marca", "otra"]]);
+    const entrantes = new Headers([["x-pd-marca", "otra"]]);
     const limpios = sinEncabezadosInternos(entrantes);
     expect(limpios).not.toBe(entrantes);
-    expect(entrantes.get("x-zh-marca")).toBe("otra");
-    expect(limpios.has("x-zh-marca")).toBe(false);
+    expect(entrantes.get("x-pd-marca")).toBe("otra");
+    expect(limpios.has("x-pd-marca")).toBe(false);
   });
 });
 
@@ -324,13 +324,13 @@ describe("rutas de sistema: el cron y la salud responden en cualquier host", () 
     },
   );
 
-  it.each(DE_SISTEMA)("%s: tampoco deja pasar un x-zh-* del cliente", (ruta) => {
+  it.each(DE_SISTEMA)("%s: tampoco deja pasar un x-pd-* del cliente", (ruta) => {
     const d = decidir(ruta, HOST_DESCONOCIDO, [
-      ["x-zh-marca", "otra"],
+      ["x-pd-marca", "otra"],
       ["authorization", "Bearer x"],
     ]);
-    expect(d.encabezadosDePedido.get("x-zh-marca")).toBeNull();
-    expect(d.encabezadosDePedido.get("x-zh-nonce")).toBe(NONCE);
+    expect(d.encabezadosDePedido.get("x-pd-marca")).toBeNull();
+    expect(d.encabezadosDePedido.get("x-pd-nonce")).toBe(NONCE);
     expect(d.encabezadosDePedido.get("authorization")).toBe("Bearer x");
   });
 
@@ -348,12 +348,12 @@ describe("rutas de sistema: el cron y la salud responden en cualquier host", () 
 });
 
 describe("decidirPuerta: encabezados del pedido que sigue", () => {
-  it("borra todo x-zh-* del cliente y conserva el resto, en cualquier camino", () => {
+  it("borra todo x-pd-* del cliente y conserva el resto, en cualquier camino", () => {
     const entrantes = [
       ["host", "a.test"],
-      ["x-zh-marca", "otra"],
-      ["X-ZH-Superficie", "APP"],
-      ["x-zh-nonce", "inventado"],
+      ["x-pd-marca", "otra"],
+      ["X-PD-Superficie", "APP"],
+      ["x-pd-nonce", "inventado"],
       ["accept", "text/html"],
       ["cookie", "a=1"],
     ] as [string, string][];
@@ -364,9 +364,9 @@ describe("decidirPuerta: encabezados del pedido que sigue", () => {
       ["/s/app", resuelta("APP")],
     ] as const) {
       const d = decidir(ruta, resolucion, entrantes);
-      expect(d.encabezadosDePedido.get("x-zh-marca")).toBeNull();
-      expect(d.encabezadosDePedido.get("x-zh-superficie")).toBeNull();
-      expect(d.encabezadosDePedido.get("x-zh-nonce")).toBe(NONCE);
+      expect(d.encabezadosDePedido.get("x-pd-marca")).toBeNull();
+      expect(d.encabezadosDePedido.get("x-pd-superficie")).toBeNull();
+      expect(d.encabezadosDePedido.get("x-pd-nonce")).toBe(NONCE);
       expect(d.encabezadosDePedido.get("accept")).toBe("text/html");
       expect(d.encabezadosDePedido.get("cookie")).toBe("a=1");
       expect(d.encabezadosDePedido.get("host")).toBe("a.test");
@@ -375,7 +375,7 @@ describe("decidirPuerta: encabezados del pedido que sigue", () => {
 
   it("pone el nonce y la CSP de este pedido (Next marca sus scripts con ella)", () => {
     const d = decidir("/", resuelta("APP"), { "content-security-policy": "default-src *" });
-    expect(d.encabezadosDePedido.get("x-zh-nonce")).toBe(NONCE);
+    expect(d.encabezadosDePedido.get("x-pd-nonce")).toBe(NONCE);
     const csp = d.encabezadosDePedido.get("content-security-policy");
     expect(csp).toContain(`'nonce-${NONCE}'`);
     expect(csp).not.toContain("*");
@@ -383,7 +383,7 @@ describe("decidirPuerta: encabezados del pedido que sigue", () => {
   });
 
   it("no modifica los encabezados que recibe", () => {
-    const entrantes = new Headers([["x-zh-marca", "otra"]]);
+    const entrantes = new Headers([["x-pd-marca", "otra"]]);
     decidirPuerta({
       encabezados: entrantes,
       ruta: "/",
@@ -391,8 +391,8 @@ describe("decidirPuerta: encabezados del pedido que sigue", () => {
       produccion: true,
       nonce: NONCE,
     });
-    expect(entrantes.get("x-zh-marca")).toBe("otra");
-    expect(entrantes.has("x-zh-nonce")).toBe(false);
+    expect(entrantes.get("x-pd-marca")).toBe("otra");
+    expect(entrantes.has("x-pd-nonce")).toBe(false);
   });
 });
 

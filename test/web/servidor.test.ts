@@ -13,7 +13,7 @@ import {
  */
 vi.mock("server-only", () => ({}));
 
-/** Las variables del producto (no las que lee la propia herramienta de pruebas, como `ZULUHUB_SIN_INTEGRACION`). */
+/** Las variables del producto (no las que lee la propia herramienta de pruebas, como `PEDERNAL_SIN_INTEGRACION`). */
 const NOMBRES_DEL_PRODUCTO = new Set<string>([
   ...NOMBRES_DE_ENTORNO.map((e) => e.nombre as string),
   ...VARIABLES_PROHIBIDAS,
@@ -60,7 +60,7 @@ describe("apps/web/servidor/composicion.ts", () => {
   it("con el entorno vacío, el pedido falla cerrado: el nombre va al registro y no al error", async () => {
     const entornoVacio = Object.fromEntries(
       Object.entries(original).filter(
-        ([nombre]) => !/^(ZULUHUB_|DATABASE_|POSTGRES_|BETTER_AUTH_|AUTH_|GOOGLE_)/.test(nombre),
+        ([nombre]) => !/^(PEDERNAL_|DATABASE_|POSTGRES_|BETTER_AUTH_|AUTH_|GOOGLE_)/.test(nombre),
       ),
     );
     process.env = entornoVacio as NodeJS.ProcessEnv;
@@ -74,8 +74,8 @@ describe("apps/web/servidor/composicion.ts", () => {
       error = e;
     }
     expect((error as Error).name).toBe("ErrorDeEntorno");
-    expect((error as Error).message).not.toContain("ZULUHUB");
+    expect((error as Error).message).not.toContain("PEDERNAL");
     expect(registro).toHaveBeenCalledTimes(1);
-    expect(String(registro.mock.calls[0]?.[0])).toContain("ZULUHUB_DB_APP");
+    expect(String(registro.mock.calls[0]?.[0])).toContain("PEDERNAL_DB_APP");
   });
 });

@@ -356,7 +356,7 @@ export function intentoDe(
 }
 
 const PEDIDO_PEM =
-  "-----BEGIN CERTIFICATE REQUEST-----\nMIIBVjCBwAIBADAeMRwwGgYDVQQDDBN6dWx1aHViLXRlc3Q=\n-----END CERTIFICATE REQUEST-----\n";
+  "-----BEGIN CERTIFICATE REQUEST-----\nMIIBVjCBwAIBADAeMRwwGgYDVQQDDBNwZWRlcm5hbC10ZXN0\n-----END CERTIFICATE REQUEST-----\n";
 
 /** Una clave «cifrada» cualquiera con la forma que pide la base (nonce de 12, etiqueta de 16). */
 const claveCifradaAlAzar = () => ({
@@ -375,7 +375,7 @@ export function pedidoDe(
     empresaId: empresaId(e.empresa),
     emisorId: emisorId(e.emisor),
     ambiente: "HOMOLOGACION",
-    alias: `zuluhub${randomBytes(4).toString("hex")}`,
+    alias: `pedernal${randomBytes(4).toString("hex")}`,
     cuitTitular: e.cuit as Cuit,
     pedidoPem: PEDIDO_PEM,
     clave: claveCifradaAlAzar(),

@@ -2,7 +2,7 @@ import type { Resultado } from "../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "./transacciones";
 
 /**
- * Lectura SIN sesión (marcas y planes, §B.2.5): la puerta pública `zuluhub_publico`. No tiene
+ * Lectura SIN sesión (marcas y planes, §B.2.5): la puerta pública `pedernal_publico`. No tiene
  * contexto firmado, ni empresa, ni persona, y nunca escribe: la transacción es de solo lectura y el
  * rol de base solo ve las columnas públicas declaradas en la migración 0007.
  *

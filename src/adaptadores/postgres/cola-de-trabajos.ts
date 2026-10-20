@@ -5,7 +5,7 @@ import { empresaId as aEmpresaId } from "../../primitivas/identificadores/marca"
 
 /**
  * Cola de trabajos sobre la tabla `trabajo`, lado del procesador (ADR-007). Se usa SIEMPRE con el
- * contexto `TRABAJOS` (rol `zuluhub_trabajos`: ve y avanza la cola, no lee ninguna otra tabla).
+ * contexto `TRABAJOS` (rol `pedernal_trabajos`: ve y avanza la cola, no lee ninguna otra tabla).
  *
  *  - Tomar es un único `UPDATE` condicionado (`PENDIENTE` vencido, o `EN_CURSO` con el plazo
  *    vencido) que cuenta el intento: el que llega segundo no encuentra la fila disponible. Sin

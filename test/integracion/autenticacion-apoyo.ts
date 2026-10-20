@@ -109,7 +109,7 @@ export async function conSesion<T>(
   usuario: UsuarioAuthId,
   trabajo: (s: SesionDePrueba) => Promise<T>,
 ): Promise<T> {
-  const s = await SesionDePrueba.abrir(base, "zuluhub_app", comoSesion(usuario));
+  const s = await SesionDePrueba.abrir(base, "pedernal_app", comoSesion(usuario));
   try {
     return await trabajo(s);
   } finally {
@@ -124,7 +124,7 @@ export async function conInvitacion<T>(
   usuario: UsuarioAuthId | null,
   trabajo: (s: SesionDePrueba) => Promise<T>,
 ): Promise<T> {
-  const s = await SesionDePrueba.abrir(base, "zuluhub_app", comoInvitacion(tokenHash, usuario));
+  const s = await SesionDePrueba.abrir(base, "pedernal_app", comoInvitacion(tokenHash, usuario));
   try {
     return await trabajo(s);
   } finally {

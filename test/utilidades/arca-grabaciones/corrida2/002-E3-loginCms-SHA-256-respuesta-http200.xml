@@ -2,7 +2,7 @@
 &lt;loginTicketResponse version=&quot;1.0&quot;&gt;
     &lt;header&gt;
         &lt;source&gt;CN=wsaahomo, O=AFIP, C=AR, SERIALNUMBER=CUIT 33693450239&lt;/source&gt;
-        &lt;destination&gt;SERIALNUMBER=CUIT 20111111112, CN=zuluhub&lt;/destination&gt;
+        &lt;destination&gt;SERIALNUMBER=CUIT 20111111112, CN=pedernal&lt;/destination&gt;
         &lt;uniqueId&gt;2910077775&lt;/uniqueId&gt;
         &lt;generationTime&gt;2026-10-14T10:27:40.720-03:00&lt;/generationTime&gt;
         &lt;expirationTime&gt;2026-10-14T22:27:40.720-03:00&lt;/expirationTime&gt;

@@ -19,11 +19,11 @@ import type { Resultado } from "../primitivas/resultado/resultado";
  * `test/web/` y de `src/capacidades/experiencia/respuesta.test.ts`.
  *
  * La decisión es pura (`capacidades/experiencia/respuesta.ts`); acá solo se agregan los dos efectos: el azar
- * de la referencia `ZH-…` y el registro del servidor, que entran como dato para poder probarlos.
+ * de la referencia `PD-…` y el registro del servidor, que entran como dato para poder probarlos.
  */
 
 export type DependenciasDeRespuesta = Readonly<{
-  /** Registro del servidor: recibe `ZH-… <detalle>`. Nunca sale en una respuesta. */
+  /** Registro del servidor: recibe `PD-… <detalle>`. Nunca sale en una respuesta. */
   registrar: (detalle: string) => void;
   /** Solo para las pruebas: el azar de la referencia. */
   azar?: () => Uint8Array;

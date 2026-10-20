@@ -6,10 +6,10 @@ import { ErrorDeConfiguracion } from "../postgres/errores";
  * cualquiera de las cuatro, no se arma el adaptador. Los mensajes de error nombran la variable y el
  * motivo, nunca el valor recibido.
  */
-export const ZULUHUB_RESEND_API_KEY = "ZULUHUB_RESEND_API_KEY";
-export const ZULUHUB_CORREO_REMITENTE = "ZULUHUB_CORREO_REMITENTE";
-export const ZULUHUB_URL_BASE = "ZULUHUB_URL_BASE";
-export const ZULUHUB_NOMBRE_DE_MARCA = "ZULUHUB_NOMBRE_DE_MARCA";
+export const PEDERNAL_RESEND_API_KEY = "PEDERNAL_RESEND_API_KEY";
+export const PEDERNAL_CORREO_REMITENTE = "PEDERNAL_CORREO_REMITENTE";
+export const PEDERNAL_URL_BASE = "PEDERNAL_URL_BASE";
+export const PEDERNAL_NOMBRE_DE_MARCA = "PEDERNAL_NOMBRE_DE_MARCA";
 
 export type ConfiguracionDeCorreo = Readonly<{
   /** Credencial del proveedor. Es un secreto: no se registra ni se guarda. */
@@ -74,18 +74,18 @@ export function leerConfiguracionDeCorreo(entorno: Entorno): ConfiguracionDeCorr
     return "";
   };
 
-  const claveDeApi = leer(ZULUHUB_RESEND_API_KEY, (t) =>
+  const claveDeApi = leer(PEDERNAL_RESEND_API_KEY, (t) =>
     /\s/.test(t) ? { motivo: "no puede tener espacios" } : t,
   );
-  const remitente = leer(ZULUHUB_CORREO_REMITENTE, (t) =>
+  const remitente = leer(PEDERNAL_CORREO_REMITENTE, (t) =>
     remitenteValido(t) ? t : { motivo: "se espera direccion@dominio o Nombre <direccion@dominio>" },
   );
-  const urlBase = leer(ZULUHUB_URL_BASE, (t) => {
+  const urlBase = leer(PEDERNAL_URL_BASE, (t) => {
     const origen = origenValido(t);
     return "motivo" in origen ? origen : origen.origen;
   });
 
-  const nombreDeMarca = leer(ZULUHUB_NOMBRE_DE_MARCA, (t) =>
+  const nombreDeMarca = leer(PEDERNAL_NOMBRE_DE_MARCA, (t) =>
     t.length > LARGO_MAXIMO_DE_MARCA
       ? { motivo: `no puede pasar de ${LARGO_MAXIMO_DE_MARCA} caracteres` }
       : /[\p{Cc}<>]/u.test(t)

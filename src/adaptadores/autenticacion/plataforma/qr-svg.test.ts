@@ -35,7 +35,7 @@ const comoTexto = (m: readonly (readonly boolean[])[]) =>
   m.map((f) => f.map((x) => (x ? "#" : ".")).join(""));
 
 const DIRECCION =
-  "otpauth://totp/ZuluHub%20Plataforma:admin%40example.test?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXPJBSW&issuer=ZuluHub%20Plataforma&digits=6&period=30";
+  "otpauth://totp/Pedernal%20Plataforma:admin%40example.test?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXPJBSW&issuer=Pedernal%20Plataforma&digits=6&period=30";
 
 describe("matrizDelQr", () => {
   it("el vector conocido: «A» da la matriz de la versión 1, y un lector independiente la decodifica como «A»", () => {
@@ -150,7 +150,7 @@ describe("svgDeLaMatriz", () => {
       "JBSWY3DP",
       "admin",
       "example.test",
-      "ZuluHub",
+      "Pedernal",
       "secret",
       "issuer",
       "http",

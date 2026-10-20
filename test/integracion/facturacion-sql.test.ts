@@ -553,21 +553,21 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
       );
       expect(politicas.map((f) => f.p)).toEqual(
         [
-          "acceso_arca.acceso_arca_app_alta:INSERT:PERMISSIVE:zuluhub_app",
-          "acceso_arca.acceso_arca_app_cambiar:UPDATE:PERMISSIVE:zuluhub_app",
-          "acceso_arca.acceso_arca_app_leer:SELECT:PERMISSIVE:zuluhub_app",
-          "certificado_arca.certificado_arca_app_alta:INSERT:PERMISSIVE:zuluhub_app",
-          "certificado_arca.certificado_arca_app_cambiar:UPDATE:PERMISSIVE:zuluhub_app",
-          "certificado_arca.certificado_arca_app_leer:SELECT:PERMISSIVE:zuluhub_app",
-          "comprobante.comprobante_app_alta:INSERT:PERMISSIVE:zuluhub_app",
-          "comprobante.comprobante_app_cambiar:UPDATE:PERMISSIVE:zuluhub_app",
-          "comprobante.comprobante_app_leer:SELECT:PERMISSIVE:zuluhub_app",
-          "comprobante_alicuota.comprobante_alicuota_app_alta:INSERT:PERMISSIVE:zuluhub_app",
-          "comprobante_alicuota.comprobante_alicuota_app_leer:SELECT:PERMISSIVE:zuluhub_app",
-          "comprobante_linea.comprobante_linea_app_alta:INSERT:PERMISSIVE:zuluhub_app",
-          "comprobante_linea.comprobante_linea_app_leer:SELECT:PERMISSIVE:zuluhub_app",
-          "intento_arca.intento_arca_app_alta:INSERT:PERMISSIVE:zuluhub_app",
-          "intento_arca.intento_arca_app_leer:SELECT:PERMISSIVE:zuluhub_app",
+          "acceso_arca.acceso_arca_app_alta:INSERT:PERMISSIVE:pedernal_app",
+          "acceso_arca.acceso_arca_app_cambiar:UPDATE:PERMISSIVE:pedernal_app",
+          "acceso_arca.acceso_arca_app_leer:SELECT:PERMISSIVE:pedernal_app",
+          "certificado_arca.certificado_arca_app_alta:INSERT:PERMISSIVE:pedernal_app",
+          "certificado_arca.certificado_arca_app_cambiar:UPDATE:PERMISSIVE:pedernal_app",
+          "certificado_arca.certificado_arca_app_leer:SELECT:PERMISSIVE:pedernal_app",
+          "comprobante.comprobante_app_alta:INSERT:PERMISSIVE:pedernal_app",
+          "comprobante.comprobante_app_cambiar:UPDATE:PERMISSIVE:pedernal_app",
+          "comprobante.comprobante_app_leer:SELECT:PERMISSIVE:pedernal_app",
+          "comprobante_alicuota.comprobante_alicuota_app_alta:INSERT:PERMISSIVE:pedernal_app",
+          "comprobante_alicuota.comprobante_alicuota_app_leer:SELECT:PERMISSIVE:pedernal_app",
+          "comprobante_linea.comprobante_linea_app_alta:INSERT:PERMISSIVE:pedernal_app",
+          "comprobante_linea.comprobante_linea_app_leer:SELECT:PERMISSIVE:pedernal_app",
+          "intento_arca.intento_arca_app_alta:INSERT:PERMISSIVE:pedernal_app",
+          "intento_arca.intento_arca_app_leer:SELECT:PERMISSIVE:pedernal_app",
         ].sort(),
       );
       // Toda política de alta o cambio exige empresa_operable y la empresa del contexto.
@@ -606,8 +606,8 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         `select p.proname, p.prosecdef, p.proconfig,
                 coalesce((select bool_or(a.grantee = 0 and a.privilege_type = 'EXECUTE')
                             from aclexplode(p.proacl) a), false) or p.proacl is null as publico,
-                has_function_privilege('zuluhub_app', p.oid, 'EXECUTE') as app,
-                has_function_privilege('zuluhub_plataforma', p.oid, 'EXECUTE') as plataforma
+                has_function_privilege('pedernal_app', p.oid, 'EXECUTE') as app,
+                has_function_privilege('pedernal_plataforma', p.oid, 'EXECUTE') as plataforma
            from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = any ($1) order by 1`,
         [[...FUNCIONES_NUEVAS]],
       );
@@ -624,12 +624,12 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
 
     it("los demás roles no tienen ningún privilegio sobre las tablas nuevas (ni por tabla ni por columna), y PUBLIC tampoco", async () => {
       const otros = [
-        "zuluhub_grupo",
-        "zuluhub_trabajos",
-        "zuluhub_plataforma",
-        "zuluhub_autenticacion",
-        "zuluhub_publico",
-        "zuluhub_captacion",
+        "pedernal_grupo",
+        "pedernal_trabajos",
+        "pedernal_plataforma",
+        "pedernal_autenticacion",
+        "pedernal_publico",
+        "pedernal_captacion",
       ];
       expect(
         await consultar(

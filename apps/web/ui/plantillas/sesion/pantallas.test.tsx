@@ -244,7 +244,7 @@ describe("estados", () => {
         detalle={texto({}, "estado.mantenimiento_detalle")}
       >
         <ErrorDeRespuesta
-          error={{ ...errorDeCodigo("NO_DISPONIBLE"), referencia: "ZH-ABCD-0123" }}
+          error={{ ...errorDeCodigo("NO_DISPONIBLE"), referencia: "PD-ABCD-0123" }}
           accion={<EnlaceDeAccion href="/">{texto({}, "estado.reintentar")}</EnlaceDeAccion>}
         />
       </PantallaDeEstado>,
@@ -278,7 +278,7 @@ describe("estados", () => {
     const { container } = await render(
       <PantallaDeEstado titulo={texto({}, "estado.error_titulo")}>
         <ErrorDeRespuesta
-          error={{ ...errorDeCodigo("ERROR_INTERNO"), referencia: "ZH-ABCD-0123" }}
+          error={{ ...errorDeCodigo("ERROR_INTERNO"), referencia: "PD-ABCD-0123" }}
           accion={<EnlaceDeAccion href="/">{texto({}, "estado.reintentar")}</EnlaceDeAccion>}
         />
       </PantallaDeEstado>,
@@ -290,7 +290,7 @@ describe("estados", () => {
         - heading "Algo salió mal" [level=1]
         - alert:
           - paragraph: "No se pudo completar. Podés reintentar: es seguro, no se duplica."
-          - paragraph: "Referencia: ZH-ABCD-0123"
+          - paragraph: "Referencia: PD-ABCD-0123"
           - link "Reintentar":
             - /url: /
     `);

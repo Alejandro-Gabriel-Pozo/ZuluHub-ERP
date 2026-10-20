@@ -21,7 +21,7 @@ import type { EstadoDeSolicitud } from "../../src/plataforma/captacion/dominio/e
 /**
  * Apoyo de las pruebas de la migración de captación (alta por solicitud, L1). Todo el armado de escenarios
  * lo hace el cliente del DUEÑO de la base (evade RLS); lo que se prueba después se hace con el rol real
- * (`zuluhub_captacion`, `zuluhub_plataforma`...) y su contexto firmado.
+ * (`pedernal_captacion`, `pedernal_plataforma`...) y su contexto firmado.
  *
  * El número de la migración es PROVISORIO (se renumera al integrar): nada acá lo escribe. El archivo se
  * encuentra por su nombre (`*_captacion.sql`).
@@ -96,7 +96,7 @@ export function firmarCargaDeCaptacion(
   opciones: { secreto?: Buffer } = {},
 ): string {
   const completa: CargaConClaim = {
-    u: "zuluhub_captacion",
+    u: "pedernal_captacion",
     e: null,
     t: null,
     p: null,
@@ -133,7 +133,7 @@ export async function sesionDeCaptacion(
 ): Promise<SesionDePrueba> {
   return SesionDePrueba.abrirConToken(
     base,
-    "zuluhub_captacion",
+    "pedernal_captacion",
     claim === null ? null : firmarCaptacion(base, claim),
     aislamiento,
   );

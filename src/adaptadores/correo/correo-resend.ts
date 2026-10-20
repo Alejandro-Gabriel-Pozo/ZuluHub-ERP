@@ -52,7 +52,7 @@ export function crearCorreoResend(opciones: OpcionesDeCorreoResend): Correo {
             Authorization: `Bearer ${claveDeApi}`,
             "Content-Type": "application/json",
             "Idempotency-Key": claveDeIdempotencia,
-            "User-Agent": "zuluhub-erp",
+            "User-Agent": "pedernal-erp",
           },
           body: JSON.stringify({
             from: remitente,

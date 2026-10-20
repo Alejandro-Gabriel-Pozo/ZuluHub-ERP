@@ -49,7 +49,7 @@ export type ColumnasCoinciden =
 export const COLUMNAS_COINCIDEN: ColumnasCoinciden = true;
 
 /**
- * Lo que lee la puerta PÚBLICA (rol `zuluhub_publico`, sin contexto): la vista `resolucion_de_host`; de
+ * Lo que lee la puerta PÚBLICA (rol `pedernal_publico`, sin contexto): la vista `resolucion_de_host`; de
  * `marca`, el identificador y el padre (la cadena de la herencia); de `dominio`, el host canónico de la
  * aplicación (`es_canonico`, que concede 0011); y de `version_de_marca`, lo que se pinta (nombre, tema y
  * aspecto). Son exactamente las columnas que las migraciones 0007, 0011 y 0014 le conceden a ese rol; pedir otra falla
@@ -82,7 +82,7 @@ export type PublicoDb = {
 };
 
 /**
- * Lo que lee la APLICACIÓN (rol `zuluhub_app`, con contexto) para saber desde qué marca sale un mail:
+ * Lo que lee la APLICACIÓN (rol `pedernal_app`, con contexto) para saber desde qué marca sale un mail:
  * el tenant, su marca, las versiones vigentes de esa marca y su dominio canónico. Las políticas de
  * 0007 muestran solo versiones confirmadas y ya vigentes, y solo dominios ACTIVOS y canónicos.
  */

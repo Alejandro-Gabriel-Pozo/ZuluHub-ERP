@@ -21,7 +21,7 @@ import type { ResolucionDeHost } from "../puertos/marcas";
  *     ellos abriría una sesión sin pasar por Google. Es la segunda barrera: la primera es
  *     `disableIdTokenSignIn` en la configuración de la librería.
  *  4. Un fallo no sale con detalle (ADR-016): el traductor único (`a-respuesta.ts`) manda el detalle al
- *     registro del servidor y el pedido recibe un error genérico con una referencia `ZH-…` para que soporte
+ *     registro del servidor y el pedido recibe un error genérico con una referencia `PD-…` para que soporte
  *     la busque. Una base que no responde al
  *     resolver el host es 503, nunca el 404 neutro ni la marca principal.
  *

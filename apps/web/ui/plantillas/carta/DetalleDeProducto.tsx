@@ -8,7 +8,7 @@ import { FotoDeProducto } from "./FotoDeProducto.cliente";
 
 /** El id de lo que describe la hoja o la página: el precio y el estado (`aria-describedby`, §3.2). */
 export function idDelPrecioDe(producto: VistaDeProducto): string {
-  return `zh-precio-${producto.segmento}`;
+  return `pd-precio-${producto.segmento}`;
 }
 
 export type PropsDeDetalleDeProducto = Readonly<{

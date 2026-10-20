@@ -34,7 +34,7 @@ describe.skipIf(base === null)("ejecutar un caso de plataforma desde un archivo"
   let entorno: Record<string, string>;
   let marca: MarcaLista;
   let admin: { id: string; email: string };
-  const carpeta = mkdtempSync(join(tmpdir(), "zuluhub-caso-"));
+  const carpeta = mkdtempSync(join(tmpdir(), "pedernal-caso-"));
 
   beforeAll(async () => {
     if (base === null) return;
@@ -42,9 +42,9 @@ describe.skipIf(base === null)("ejecutar un caso de plataforma desde un archivo"
     dueno = new pg.Client({ connectionString: propia.base.dueno });
     await dueno.connect();
     entorno = {
-      ZULUHUB_DB_PLATAFORMA: propia.base.plataforma,
-      ZULUHUB_CLAVE_CONTEXTO: `${base.clave.kid}:${base.clave.secreto.toString("hex")}`,
-      ZULUHUB_SECRETO_INVITACIONES: randomBytes(32).toString("hex"),
+      PEDERNAL_DB_PLATAFORMA: propia.base.plataforma,
+      PEDERNAL_CLAVE_CONTEXTO: `${base.clave.kid}:${base.clave.secreto.toString("hex")}`,
+      PEDERNAL_SECRETO_INVITACIONES: randomBytes(32).toString("hex"),
     };
     plataforma = armarPlataforma({ fuente: () => entorno });
     marca = await crearMarcaLista(dueno);
@@ -465,22 +465,22 @@ describe.skipIf(base === null)("ejecutar un caso de plataforma desde un archivo"
       expect(segunda.codigo).toBe(0);
       expect(segunda.stdout).toContain("Nada cambió");
       expect((await huella()).planes).toBe(antes.planes + 1);
-      const claveSecreta = entorno["ZULUHUB_CLAVE_CONTEXTO"]?.split(":")[1] as string;
+      const claveSecreta = entorno["PEDERNAL_CLAVE_CONTEXTO"]?.split(":")[1] as string;
       for (const texto of [primera.stdout, primera.stderr, segunda.stdout, segunda.stderr]) {
-        expect(texto).not.toContain(entorno["ZULUHUB_DB_PLATAFORMA"] as string);
+        expect(texto).not.toContain(entorno["PEDERNAL_DB_PLATAFORMA"] as string);
         expect(texto).not.toContain(new URL(propia.base.plataforma).password);
         expect(texto).not.toContain(claveSecreta);
-        expect(texto).not.toContain(entorno["ZULUHUB_SECRETO_INVITACIONES"] as string);
+        expect(texto).not.toContain(entorno["PEDERNAL_SECRETO_INVITACIONES"] as string);
         expect(texto).not.toContain(admin.email);
       }
     });
 
     it("con un valor centinela en cada variable, ni un éxito, ni un archivo roto, ni una base caída lo imprimen", async () => {
       const centinelas = {
-        ZULUHUB_DB_PLATAFORMA:
+        PEDERNAL_DB_PLATAFORMA:
           "postgres://usuario-centinela:contrasena-centinela@127.0.0.1:1/base-centinela",
-        ZULUHUB_CLAVE_CONTEXTO: `1:${"ce".repeat(32)}`,
-        ZULUHUB_SECRETO_INVITACIONES: "5e".repeat(32),
+        PEDERNAL_CLAVE_CONTEXTO: `1:${"ce".repeat(32)}`,
+        PEDERNAL_SECRETO_INVITACIONES: "5e".repeat(32),
       };
       const prohibidos = [
         "usuario-centinela",
@@ -524,7 +524,7 @@ describe.skipIf(base === null)("ejecutar un caso de plataforma desde un archivo"
       );
       expect(r.codigo).toBe(1);
       expect(r.stderr).toContain("RESULTADO: FALLA");
-      expect(r.stderr).toContain("ZULUHUB_DB_PLATAFORMA falta");
+      expect(r.stderr).toContain("PEDERNAL_DB_PLATAFORMA falta");
     });
   });
 });

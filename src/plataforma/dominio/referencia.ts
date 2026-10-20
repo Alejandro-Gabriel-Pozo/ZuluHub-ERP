@@ -2,7 +2,7 @@ import type { Marca } from "../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
 
 /**
- * Referencia de error (soporte, paso 1, H5 §B.5.9): un código corto, `ZH-XXXX-XXXX` (8 dígitos
+ * Referencia de error (soporte, paso 1, H5 §B.5.9): un código corto, `PD-XXXX-XXXX` (8 dígitos
  * hexadecimales en mayúsculas), que se le muestra a quien recibió un rechazo para que se lo dicte a
  * soporte. No dice nada del negocio: solo permite encontrar el registro. Dominio puro: el azar entra
  * como dato (los bytes los sortea el llamador, fuera de la transacción).
@@ -12,7 +12,7 @@ export type ReferenciaDeError = Marca<string, "ReferenciaDeError">;
 /** Cuántos bytes de azar hacen falta: 4 bytes son 8 dígitos hexadecimales. */
 export const BYTES_DE_UNA_REFERENCIA = 4;
 
-const FORMA = /^ZH-[0-9A-F]{4}-[0-9A-F]{4}$/;
+const FORMA = /^PD-[0-9A-F]{4}-[0-9A-F]{4}$/;
 
 /**
  * Arma la referencia con exactamente `BYTES_DE_UNA_REFERENCIA` bytes de azar. Cualquier otra
@@ -25,7 +25,7 @@ export function referenciaDeError(aleatorio: Uint8Array): ReferenciaDeError {
   const hexadecimal = Array.from(aleatorio, (byte) => byte.toString(16).padStart(2, "0"))
     .join("")
     .toUpperCase();
-  return `ZH-${hexadecimal.slice(0, 4)}-${hexadecimal.slice(4)}` as ReferenciaDeError;
+  return `PD-${hexadecimal.slice(0, 4)}-${hexadecimal.slice(4)}` as ReferenciaDeError;
 }
 
 /**

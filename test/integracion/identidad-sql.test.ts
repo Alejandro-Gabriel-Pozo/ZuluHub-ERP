@@ -66,7 +66,12 @@ const TABLAS_NUEVAS = [
   "invitacion_empresa",
   "invitacion_sucursal",
 ] as const;
-const ROLES = ["zuluhub_app", "zuluhub_grupo", "zuluhub_trabajos", "zuluhub_plataforma"] as const;
+const ROLES = [
+  "pedernal_app",
+  "pedernal_grupo",
+  "pedernal_trabajos",
+  "pedernal_plataforma",
+] as const;
 
 /** Una columna cualquiera de cada tabla, para probar que un rol sin permiso no puede actualizarla. */
 const COLUMNA_CUALQUIERA: Readonly<Record<(typeof TABLAS_NUEVAS)[number], string>> = {
@@ -310,52 +315,52 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
       );
       expect(politicas.map((f) => f.p)).toEqual(
         [
-          "asignacion_sucursal.asignacion_sucursal_app_alta:INSERT:zuluhub_app", // 0005
-          "asignacion_sucursal.asignacion_sucursal_app_apagar:UPDATE:zuluhub_app",
-          "asignacion_sucursal.asignacion_sucursal_app_leer:SELECT:zuluhub_app",
-          "asignacion_sucursal.asignacion_sucursal_app_reactivar:UPDATE:zuluhub_app", // 0005
-          "asignacion_sucursal.asignacion_sucursal_invitado_alta:INSERT:zuluhub_app",
-          "asignacion_sucursal.asignacion_sucursal_invitado_leer:SELECT:zuluhub_app",
-          "asignacion_sucursal.asignacion_sucursal_invitado_reactivar:UPDATE:zuluhub_app",
-          "auditoria_empresa.auditoria_empresa_invitado_alta:INSERT:zuluhub_app",
-          "empresa.empresa_invitado_activar:UPDATE:zuluhub_app",
-          "empresa.empresa_invitado_leer:SELECT:zuluhub_app",
-          "invitacion.invitacion_app_alta:INSERT:zuluhub_app",
-          "invitacion.invitacion_app_leer:SELECT:zuluhub_app",
-          "invitacion.invitacion_app_revocar:UPDATE:zuluhub_app",
-          "invitacion.invitacion_invitado_aceptar:UPDATE:zuluhub_app",
-          "invitacion.invitacion_invitado_leer:SELECT:zuluhub_app",
-          "invitacion.invitacion_plataforma_alta:INSERT:zuluhub_plataforma",
-          "invitacion.invitacion_plataforma_cambiar:UPDATE:zuluhub_plataforma",
-          "invitacion.invitacion_plataforma_con_actor:SELECT:zuluhub_plataforma",
-          "invitacion.invitacion_plataforma_leer:SELECT:zuluhub_plataforma",
-          "invitacion.invitacion_plataforma_quien_cambia:UPDATE:zuluhub_plataforma",
-          "invitacion.invitacion_plataforma_quien_emite:INSERT:zuluhub_plataforma",
-          "invitacion_empresa.invitacion_empresa_app_alta:INSERT:zuluhub_app",
-          "invitacion_empresa.invitacion_empresa_app_leer:SELECT:zuluhub_app",
-          "invitacion_empresa.invitacion_empresa_invitado_leer:SELECT:zuluhub_app",
-          "invitacion_empresa.invitacion_empresa_plataforma_alta:INSERT:zuluhub_plataforma",
-          "invitacion_empresa.invitacion_empresa_plataforma_con_actor:SELECT:zuluhub_plataforma",
-          "invitacion_empresa.invitacion_empresa_plataforma_leer:SELECT:zuluhub_plataforma",
-          "invitacion_empresa.invitacion_empresa_plataforma_quien_emite:INSERT:zuluhub_plataforma",
-          "invitacion_sucursal.invitacion_sucursal_app_alta:INSERT:zuluhub_app",
-          "invitacion_sucursal.invitacion_sucursal_app_leer:SELECT:zuluhub_app",
-          "invitacion_sucursal.invitacion_sucursal_invitado_leer:SELECT:zuluhub_app",
-          "membresia.membresia_app_apagar:UPDATE:zuluhub_app",
-          "membresia.membresia_app_leer:SELECT:zuluhub_app",
-          "membresia.membresia_app_traspasar:UPDATE:zuluhub_app", // 0005
-          "membresia.membresia_invitado_alta:INSERT:zuluhub_app",
-          "membresia.membresia_invitado_leer:SELECT:zuluhub_app",
-          "membresia.membresia_invitado_reactivar:UPDATE:zuluhub_app",
-          "membresia.membresia_plataforma_con_actor:SELECT:zuluhub_plataforma",
-          "membresia.membresia_plataforma_leer:SELECT:zuluhub_plataforma",
-          "membresia.membresia_sesion_leer:SELECT:zuluhub_app", // 0010
-          "persona.persona_invitado_alta:INSERT:zuluhub_app",
-          "persona.persona_invitado_leer:SELECT:zuluhub_app",
-          "persona.persona_invitado_vincular:UPDATE:zuluhub_app", // 0010
-          "persona.persona_miembros_app:SELECT:zuluhub_app",
-          "referencia_de_error.referencia_de_error_invitado_alta:INSERT:zuluhub_app",
-          "tenant.tenant_invitado_leer:SELECT:zuluhub_app",
+          "asignacion_sucursal.asignacion_sucursal_app_alta:INSERT:pedernal_app", // 0005
+          "asignacion_sucursal.asignacion_sucursal_app_apagar:UPDATE:pedernal_app",
+          "asignacion_sucursal.asignacion_sucursal_app_leer:SELECT:pedernal_app",
+          "asignacion_sucursal.asignacion_sucursal_app_reactivar:UPDATE:pedernal_app", // 0005
+          "asignacion_sucursal.asignacion_sucursal_invitado_alta:INSERT:pedernal_app",
+          "asignacion_sucursal.asignacion_sucursal_invitado_leer:SELECT:pedernal_app",
+          "asignacion_sucursal.asignacion_sucursal_invitado_reactivar:UPDATE:pedernal_app",
+          "auditoria_empresa.auditoria_empresa_invitado_alta:INSERT:pedernal_app",
+          "empresa.empresa_invitado_activar:UPDATE:pedernal_app",
+          "empresa.empresa_invitado_leer:SELECT:pedernal_app",
+          "invitacion.invitacion_app_alta:INSERT:pedernal_app",
+          "invitacion.invitacion_app_leer:SELECT:pedernal_app",
+          "invitacion.invitacion_app_revocar:UPDATE:pedernal_app",
+          "invitacion.invitacion_invitado_aceptar:UPDATE:pedernal_app",
+          "invitacion.invitacion_invitado_leer:SELECT:pedernal_app",
+          "invitacion.invitacion_plataforma_alta:INSERT:pedernal_plataforma",
+          "invitacion.invitacion_plataforma_cambiar:UPDATE:pedernal_plataforma",
+          "invitacion.invitacion_plataforma_con_actor:SELECT:pedernal_plataforma",
+          "invitacion.invitacion_plataforma_leer:SELECT:pedernal_plataforma",
+          "invitacion.invitacion_plataforma_quien_cambia:UPDATE:pedernal_plataforma",
+          "invitacion.invitacion_plataforma_quien_emite:INSERT:pedernal_plataforma",
+          "invitacion_empresa.invitacion_empresa_app_alta:INSERT:pedernal_app",
+          "invitacion_empresa.invitacion_empresa_app_leer:SELECT:pedernal_app",
+          "invitacion_empresa.invitacion_empresa_invitado_leer:SELECT:pedernal_app",
+          "invitacion_empresa.invitacion_empresa_plataforma_alta:INSERT:pedernal_plataforma",
+          "invitacion_empresa.invitacion_empresa_plataforma_con_actor:SELECT:pedernal_plataforma",
+          "invitacion_empresa.invitacion_empresa_plataforma_leer:SELECT:pedernal_plataforma",
+          "invitacion_empresa.invitacion_empresa_plataforma_quien_emite:INSERT:pedernal_plataforma",
+          "invitacion_sucursal.invitacion_sucursal_app_alta:INSERT:pedernal_app",
+          "invitacion_sucursal.invitacion_sucursal_app_leer:SELECT:pedernal_app",
+          "invitacion_sucursal.invitacion_sucursal_invitado_leer:SELECT:pedernal_app",
+          "membresia.membresia_app_apagar:UPDATE:pedernal_app",
+          "membresia.membresia_app_leer:SELECT:pedernal_app",
+          "membresia.membresia_app_traspasar:UPDATE:pedernal_app", // 0005
+          "membresia.membresia_invitado_alta:INSERT:pedernal_app",
+          "membresia.membresia_invitado_leer:SELECT:pedernal_app",
+          "membresia.membresia_invitado_reactivar:UPDATE:pedernal_app",
+          "membresia.membresia_plataforma_con_actor:SELECT:pedernal_plataforma",
+          "membresia.membresia_plataforma_leer:SELECT:pedernal_plataforma",
+          "membresia.membresia_sesion_leer:SELECT:pedernal_app", // 0010
+          "persona.persona_invitado_alta:INSERT:pedernal_app",
+          "persona.persona_invitado_leer:SELECT:pedernal_app",
+          "persona.persona_invitado_vincular:UPDATE:pedernal_app", // 0010
+          "persona.persona_miembros_app:SELECT:pedernal_app",
+          "referencia_de_error.referencia_de_error_invitado_alta:INSERT:pedernal_app",
+          "tenant.tenant_invitado_leer:SELECT:pedernal_app",
         ].sort(),
       );
     });
@@ -368,7 +373,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
         with_check: string | null;
       }>(
         `select tablename, policyname, qual, with_check from pg_policies
-         where schemaname = 'public' and tablename = any($1) and 'zuluhub_app' = any(roles)
+         where schemaname = 'public' and tablename = any($1) and 'pedernal_app' = any(roles)
            and cmd in ('INSERT', 'UPDATE', 'ALL') and policyname not like '%\\_invitado\\_%'
          order by 1, 2`,
         [[...TABLAS_NUEVAS]],
@@ -460,7 +465,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
             [rol, `public.${firma}`],
           );
           expect(rows[0]?.puede, `${rol} ejecuta ${firma}`).toBe(
-            rol === "zuluhub_app" ? esperado.app : esperado.otros,
+            rol === "pedernal_app" ? esperado.app : esperado.otros,
           );
         }
       }
@@ -2531,7 +2536,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
           await cliente.query("begin");
           const ahora = Math.floor(Date.now() / 1000);
           const token = firmarCarga(base.clave, {
-            u: "zuluhub_app",
+            u: "pedernal_app",
             e: null,
             t: null,
             p: null,
@@ -2545,7 +2550,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
           expect(r.rows[0]).toEqual({ n: 0 });
           // Y el mismo token, vigente, sí ve la invitación (control positivo).
           const vigente = firmarCarga(base.clave, {
-            u: "zuluhub_app",
+            u: "pedernal_app",
             e: null,
             t: null,
             p: null,

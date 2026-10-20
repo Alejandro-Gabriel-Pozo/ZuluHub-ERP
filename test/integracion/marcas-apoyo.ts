@@ -424,7 +424,7 @@ export async function sembrarMarcasYPlanes(
 
 /** Los archivos de migración dados, copiados a una carpeta temporal. */
 export async function carpetaCon(archivos: readonly string[]): Promise<string> {
-  const carpeta = await mkdtemp(join(tmpdir(), "zuluhub-mig-0007-"));
+  const carpeta = await mkdtemp(join(tmpdir(), "pedernal-mig-0007-"));
   for (const archivo of archivos) {
     await copyFile(join(CARPETA_DE_MIGRACIONES, archivo), join(carpeta, archivo));
   }

@@ -59,12 +59,12 @@ import {
  *   las ESCRIBE en las variables de Vercel del destino pedido (tipo sensible, nunca en el otro destino),
  *   borra de ese destino lo que la aplicación prohíbe y la cadena de dueño de la base, y termina con una
  *   lista corta de «hecho / no hecho». `production` exige además `--confirmo production`. Con `--secretos`
- *   genera y carga también `ZULUHUB_CLAVE_CONTEXTO` y `ZULUHUB_SECRETO_INVITACIONES` (reemplaza los
+ *   genera y carga también `PEDERNAL_CLAVE_CONTEXTO` y `PEDERNAL_SECRETO_INVITACIONES` (reemplaza los
  *   anteriores: las sesiones y las invitaciones emitidas antes dejan de valer). El token de la API de
- *   Vercel sale de `ZULUHUB_VERCEL_TOKEN`. Si escribir en Vercel falla después de que los roles ya
+ *   Vercel sale de `PEDERNAL_VERCEL_TOKEN`. Si escribir en Vercel falla después de que los roles ya
  *   recibieron contraseña, el bloque con las contraseñas se imprime igual (nunca se pierde una).
  *
- * La cadena DIRECTA de la base se lee de `ZULUHUB_DB_MIGRACIONES`. Esta función no la escribe jamás,
+ * La cadena DIRECTA de la base se lee de `PEDERNAL_DB_MIGRACIONES`. Esta función no la escribe jamás,
  * ni entera ni en pedazos: todo lo que imprime pasa por `ocultarSecretos` (con la cadena, el token de
  * Vercel y cada contraseña o secreto generado) y las fallas se cuentan con `describirFallaDeBase`. La
  * ÚNICA salida que lleva credenciales es el bloque de `--preparar-roles` (solo sin `--vercel`, o con
@@ -285,7 +285,7 @@ export async function ejecutarMigracion(entrada: EntradaDeMigracion): Promise<nu
         : { esperar: entrada.esperarEntreLecturas }),
     });
     info(
-      `Se cargará en Vercel: ${pedido.vercel.toUpperCase()} (proyecto zuluhub-erp, equipo ${EQUIPO_DE_VERCEL}).`,
+      `Se cargará en Vercel: ${pedido.vercel.toUpperCase()} (proyecto pedernal-erp, equipo ${EQUIPO_DE_VERCEL}).`,
     );
     const lectura = await cliente.listar();
     if (!lectura.ok) {

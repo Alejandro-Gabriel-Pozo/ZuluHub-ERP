@@ -10,7 +10,7 @@ const base = inject("baseDePruebas");
 const CARPETA_REAL = join(import.meta.dirname, "../../migraciones");
 
 async function carpetaTemporal(archivos: Record<string, string>): Promise<string> {
-  const carpeta = await mkdtemp(join(tmpdir(), "zuluhub-mig-"));
+  const carpeta = await mkdtemp(join(tmpdir(), "pedernal-mig-"));
   for (const [nombre, contenido] of Object.entries(archivos)) {
     await writeFile(join(carpeta, nombre), contenido);
   }
@@ -77,25 +77,25 @@ describe.skipIf(base === null)("migraciones", () => {
         rolbypassrls: boolean;
         rolsuper: boolean;
       }>(
-        `select rolname, rolbypassrls, rolsuper from pg_roles where rolname like 'zuluhub\\_%' escape '\\' order by rolname`,
+        `select rolname, rolbypassrls, rolsuper from pg_roles where rolname like 'pedernal\\_%' escape '\\' order by rolname`,
       );
       expect(rows.map((r) => r.rolname)).toEqual([
-        "zuluhub_app",
-        "zuluhub_autenticacion",
-        "zuluhub_captacion",
-        "zuluhub_grupo",
-        "zuluhub_plataforma",
-        "zuluhub_publico",
-        "zuluhub_respaldo",
-        "zuluhub_trabajos",
+        "pedernal_app",
+        "pedernal_autenticacion",
+        "pedernal_captacion",
+        "pedernal_grupo",
+        "pedernal_plataforma",
+        "pedernal_publico",
+        "pedernal_respaldo",
+        "pedernal_trabajos",
       ]);
       // Ninguno es superusuario, y el único que salta el aislamiento es el de respaldo (respaldo-y-recuperacion §B.3).
       expect(rows.every((r) => !r.rolsuper)).toBe(true);
       expect(rows.filter((r) => r.rolbypassrls).map((r) => r.rolname)).toEqual([
-        "zuluhub_respaldo",
+        "pedernal_respaldo",
       ]);
       const { rows: puede } = await cliente.query<{ ok: boolean }>(
-        "select has_any_column_privilege('zuluhub_app', 'public.sucursal', 'INSERT') as ok",
+        "select has_any_column_privilege('pedernal_app', 'public.sucursal', 'INSERT') as ok",
       );
       expect(puede[0]?.ok).toBe(true);
     } finally {
@@ -479,8 +479,8 @@ describe.skipIf(base === null)("migraciones", () => {
     }
     // Las restrictivas apuntan solo al rol de plataforma: no cambian nada para los demás.
     for (const restrictiva of codigo.match(/AS\s+RESTRICTIVE[^;]*;/gi) ?? []) {
-      expect(restrictiva).toMatch(/TO\s+zuluhub_plataforma\b/);
-      expect(restrictiva).not.toMatch(/zuluhub_(app|grupo|trabajos|autenticacion)/);
+      expect(restrictiva).toMatch(/TO\s+pedernal_plataforma\b/);
+      expect(restrictiva).not.toMatch(/pedernal_(app|grupo|trabajos|autenticacion)/);
     }
     // No referencia nada de 0003 (ni de migraciones posteriores).
     expect(codigo).not.toMatch(/trabajo_validar_cambio|trabajo_ultimo_error_ck|trabajo_cambio/);
@@ -533,12 +533,12 @@ describe.skipIf(base === null)("migraciones", () => {
     expect(politicas.length).toBe(13);
     for (const [, nombre, tabla, , , rol] of politicas) {
       if (tabla === "traspaso_gerencia") continue;
-      expect(rol, `${nombre} sobre ${tabla}`).toBe("zuluhub_app");
+      expect(rol, `${nombre} sobre ${tabla}`).toBe("pedernal_app");
     }
     // Las restrictivas son solo de la plataforma.
     for (const restrictiva of codigo.match(/AS\s+RESTRICTIVE[^;]*;/gi) ?? []) {
-      expect(restrictiva).toMatch(/TO\s+zuluhub_plataforma\b/);
-      expect(restrictiva).not.toMatch(/zuluhub_(app|grupo|trabajos|autenticacion)/);
+      expect(restrictiva).toMatch(/TO\s+pedernal_plataforma\b/);
+      expect(restrictiva).not.toMatch(/pedernal_(app|grupo|trabajos|autenticacion)/);
     }
     // Depende de 0004 (lo dice) y no referencia nada de 0003 ni de las migraciones siguientes.
     expect(sql).toMatch(/necesita 0004_plataforma/);
@@ -591,8 +591,8 @@ describe.skipIf(base === null)("migraciones", () => {
     }
     // Las restrictivas son solo de la plataforma.
     for (const restrictiva of codigo.match(/AS\s+RESTRICTIVE[^;]*;/gi) ?? []) {
-      expect(restrictiva).toMatch(/TO\s+zuluhub_plataforma\b/);
-      expect(restrictiva).not.toMatch(/zuluhub_(app|grupo|trabajos|autenticacion)/);
+      expect(restrictiva).toMatch(/TO\s+pedernal_plataforma\b/);
+      expect(restrictiva).not.toMatch(/pedernal_(app|grupo|trabajos|autenticacion)/);
     }
     // Ninguna política `FOR ALL`: cada comando tiene la suya.
     expect(codigo).not.toMatch(/CREATE\s+POLICY[^;]*\bFOR\s+ALL\b/i);
@@ -674,7 +674,7 @@ describe.skipIf(base === null)("migraciones", () => {
     for (const concesion of codigo.match(/\bGRANT\b[^;]*;/gi) ?? []) {
       expect(concesion).not.toMatch(/\b(DELETE|TRUNCATE|ALL)\b/i);
       // EXECUTE: solo las funciones de validación y solo para la plataforma.
-      if (/\bEXECUTE\b/i.test(concesion)) expect(concesion).toMatch(/TO\s+zuluhub_plataforma;$/);
+      if (/\bEXECUTE\b/i.test(concesion)) expect(concesion).toMatch(/TO\s+pedernal_plataforma;$/);
     }
     // El único rol que crea es el público, sin login ni contraseña.
     expect(codigo.match(/CREATE\s+ROLE/gi)).toHaveLength(1);
@@ -692,16 +692,16 @@ describe.skipIf(base === null)("migraciones", () => {
     }
     // Las restrictivas son solo de la plataforma. Ninguna política `FOR ALL`.
     for (const restrictiva of codigo.match(/AS\s+RESTRICTIVE[^;]*;/gi) ?? []) {
-      expect(restrictiva).toMatch(/TO\s+zuluhub_plataforma\b/);
-      expect(restrictiva).not.toMatch(/zuluhub_(app|grupo|trabajos|autenticacion|publico)/);
+      expect(restrictiva).toMatch(/TO\s+pedernal_plataforma\b/);
+      expect(restrictiva).not.toMatch(/pedernal_(app|grupo|trabajos|autenticacion|publico)/);
     }
     expect(codigo).not.toMatch(/CREATE\s+POLICY[^;]*\bFOR\s+ALL\b/i);
     // El rol público solo lee: ningún INSERT, UPDATE ni EXECUTE para él (salvo USAGE del esquema).
     for (const concesion of codigo.match(/\bGRANT\b[^;]*;/gi) ?? []) {
-      if (/zuluhub_publico/.test(concesion)) {
+      if (/pedernal_publico/.test(concesion)) {
         // Columnas públicas de las tablas, el esquema y la vista de resolución del host (nada más).
         expect(concesion).toMatch(
-          /^GRANT\s+(SELECT\s*\(|USAGE\s+ON\s+SCHEMA|SELECT\s+ON\s+resolucion_de_host\s+TO\s+zuluhub_publico\s*;$)/i,
+          /^GRANT\s+(SELECT\s*\(|USAGE\s+ON\s+SCHEMA|SELECT\s+ON\s+resolucion_de_host\s+TO\s+pedernal_publico\s*;$)/i,
         );
       }
     }

@@ -1,5 +1,5 @@
 -- 0010_autenticacion: las tablas de la librería de autenticación (esquema `autenticacion`, solo para el rol
--- `zuluhub_autenticacion`), el vínculo persona <-> usuario (`persona.usuario_auth_id`) y la puerta `SESION`
+-- `pedernal_autenticacion`), el vínculo persona <-> usuario (`persona.usuario_auth_id`) y la puerta `SESION`
 -- (claim firmado `s`): la aplicación lee, con solo la sesión, su persona y sus empresas, y nada más.
 -- Armazón web y despliegue, §3.3, §4.2 y §4.6 (tramo W3a); ADR-011, ADR-013.
 -- EL NÚMERO 0010 ES PROVISORIO: se renumera al integrar si otra migración entra antes (0009 es facturación,
@@ -15,17 +15,17 @@
 --    corren con los permisos de quien consulta y sujetas a RLS.
 --  * Toda función nueva fija `search_path = pg_catalog, public, pg_temp`, califica sus tablas con `public.` y
 --    nace sin EXECUTE para PUBLIC; solo se otorga a quien la necesita.
---  * Nadie recibe TRUNCATE ni REFERENCES. DELETE solo lo recibe `zuluhub_autenticacion`, y solo sobre sus
+--  * Nadie recibe TRUNCATE ni REFERENCES. DELETE solo lo recibe `pedernal_autenticacion`, y solo sobre sus
 --    propias tablas (cerrar sesión y el barrido de lo vencido). INSERT y UPDATE van por columna en `public`.
 --  * RLS activa y FORZADA en toda tabla nueva. Ninguna política `FOR ALL`: cada comando tiene la suya.
---  * DEPENDE de 0004 (el rol `zuluhub_autenticacion` nació ahí, sin tablas) y de 0007 (`tenant.marca_id`);
+--  * DEPENDE de 0004 (el rol `pedernal_autenticacion` nació ahí, sin tablas) y de 0007 (`tenant.marca_id`);
 --    se comprueba al empezar.
 --  * NO da LOGIN ni contraseña al rol: lo hace quien administra la base (en las pruebas, `global.ts`; en Neon,
 --    el dueño en cada rama, B4 del plan). Sin contraseñas, claves ni cadenas de conexión en este archivo.
 --
 -- Decisiones de diseño (todas probadas por tests; los números son de esta migración):
 --
---  P1. La librería de autenticación vive en su propio esquema y su propio rol. `zuluhub_autenticacion` tiene
+--  P1. La librería de autenticación vive en su propio esquema y su propio rol. `pedernal_autenticacion` tiene
 --      USAGE sobre `autenticacion` (sin CREATE) y SELECT/INSERT/UPDATE/DELETE sobre sus cinco tablas; sobre el
 --      esquema `public` sigue sin nada (ni USAGE). Los demás roles no tocan el esquema `autenticacion`. Las
 --      tablas llevan RLS forzada con una política por comando solo para ese rol: aunque alguien diera un
@@ -37,7 +37,7 @@
 --      usuario conviven) e INMUTABLE una vez fijado (disparador `persona_vinculo_inmutable`, que frena
 --      también al dueño). NO es una clave foránea: `public` no depende del esquema `autenticacion` (otro rol,
 --      otra conexión) y borrar un usuario no debe arrastrar a la persona. Lo fija la aceptación de una
---      invitación, nunca una búsqueda por email (ADR-013): `zuluhub_app` recibe UPDATE de ESA columna, y la
+--      invitación, nunca una búsqueda por email (ADR-013): `pedernal_app` recibe UPDATE de ESA columna, y la
 --      política `persona_invitado_vincular` solo deja pasar el contexto de INVITACION, sobre la persona del
 --      email de su invitación, mientras la columna está nula y apuntando al usuario firmado en `s`.
 --  P4. Recursión de políticas. «Las membresías de la persona de la sesión» obliga a mirar `persona` desde
@@ -54,7 +54,7 @@
 --      de más) y una prueba recorre todas las tablas con todos los contextos y distintos planes para
 --      delatarlo. No se tocó `persona_miembros_app` a propósito: una guarda extra en una política vieja no
 --      se puede probar (ningún plan la hace necesaria) y rompería lo aditivo de esta migración.
---  P5. Puerta `SESION` (rol `zuluhub_app`; contexto firmado con `s` y sin empresa ni persona): solo lectura
+--  P5. Puerta `SESION` (rol `pedernal_app`; contexto firmado con `s` y sin empresa ni persona): solo lectura
 --      y solo lo propio. `persona`: la del usuario (activa). `membresia`: las activas de esa persona.
 --      `empresa`: las de esas membresías. `tenant`: los de esas empresas. Ninguna política de escritura. El
 --      contexto de INVITACION también lleva `s` (el invitado ya ingresó), así que estas lecturas también le
@@ -71,8 +71,8 @@
 -- ---------------------------------------------------------------------------------------------
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'zuluhub_autenticacion') THEN
-    RAISE EXCEPTION 'autenticación requiere 0004_plataforma aplicada antes (falta el rol zuluhub_autenticacion)'
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pedernal_autenticacion') THEN
+    RAISE EXCEPTION 'autenticación requiere 0004_plataforma aplicada antes (falta el rol pedernal_autenticacion)'
       USING ERRCODE = '55000';
   END IF;
   IF NOT EXISTS (
@@ -164,12 +164,12 @@ CREATE TABLE autenticacion."rateLimit" (
   CONSTRAINT rate_limit_key_uk UNIQUE (key)
 );
 
-GRANT USAGE ON SCHEMA autenticacion TO zuluhub_autenticacion;
+GRANT USAGE ON SCHEMA autenticacion TO pedernal_autenticacion;
 REVOKE ALL ON ALL TABLES IN SCHEMA autenticacion FROM PUBLIC;
 GRANT SELECT, INSERT, UPDATE, DELETE ON
   autenticacion."user", autenticacion.session, autenticacion.account,
   autenticacion.verification, autenticacion."rateLimit"
-TO zuluhub_autenticacion;
+TO pedernal_autenticacion;
 
 -- RLS forzada, una política por comando y solo para ese rol (P1).
 DO $$
@@ -181,13 +181,13 @@ BEGIN
     EXECUTE format('ALTER TABLE autenticacion.%I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE autenticacion.%I FORCE ROW LEVEL SECURITY', t);
     EXECUTE format(
-      'CREATE POLICY rol_autenticacion_leer ON autenticacion.%I FOR SELECT TO zuluhub_autenticacion USING (true)', t);
+      'CREATE POLICY rol_autenticacion_leer ON autenticacion.%I FOR SELECT TO pedernal_autenticacion USING (true)', t);
     EXECUTE format(
-      'CREATE POLICY rol_autenticacion_alta ON autenticacion.%I FOR INSERT TO zuluhub_autenticacion WITH CHECK (true)', t);
+      'CREATE POLICY rol_autenticacion_alta ON autenticacion.%I FOR INSERT TO pedernal_autenticacion WITH CHECK (true)', t);
     EXECUTE format(
-      'CREATE POLICY rol_autenticacion_cambiar ON autenticacion.%I FOR UPDATE TO zuluhub_autenticacion USING (true) WITH CHECK (true)', t);
+      'CREATE POLICY rol_autenticacion_cambiar ON autenticacion.%I FOR UPDATE TO pedernal_autenticacion USING (true) WITH CHECK (true)', t);
     EXECUTE format(
-      'CREATE POLICY rol_autenticacion_borrar ON autenticacion.%I FOR DELETE TO zuluhub_autenticacion USING (true)', t);
+      'CREATE POLICY rol_autenticacion_borrar ON autenticacion.%I FOR DELETE TO pedernal_autenticacion USING (true)', t);
   END LOOP;
 END
 $$;
@@ -237,20 +237,20 @@ $$
    WHERE p.usuario_auth_id = public.app_usuario_auth() AND p.activo_global
 $$;
 
-GRANT EXECUTE ON FUNCTION app_usuario_auth(), app_persona_de_sesion() TO zuluhub_app;
+GRANT EXECUTE ON FUNCTION app_usuario_auth(), app_persona_de_sesion() TO pedernal_app;
 
 -- ---------------------------------------------------------------------------------------------
--- Privilegios y políticas de `zuluhub_app`
+-- Privilegios y políticas de `pedernal_app`
 -- ---------------------------------------------------------------------------------------------
 
 -- Vincular (P3): una sola columna, y solo la deja pasar la política de abajo.
-GRANT UPDATE (usuario_auth_id) ON persona TO zuluhub_app;
+GRANT UPDATE (usuario_auth_id) ON persona TO pedernal_app;
 
 -- Lecturas de la sesión (P5). Solo SELECT.
-CREATE POLICY persona_sesion_leer ON persona FOR SELECT TO zuluhub_app
+CREATE POLICY persona_sesion_leer ON persona FOR SELECT TO pedernal_app
   USING (usuario_auth_id = (SELECT app_usuario_auth()) AND activo_global);
 
-CREATE POLICY membresia_sesion_leer ON membresia FOR SELECT TO zuluhub_app
+CREATE POLICY membresia_sesion_leer ON membresia FOR SELECT TO pedernal_app
   USING (
     CASE
       WHEN (SELECT app_usuario_auth()) IS NULL THEN false
@@ -258,7 +258,7 @@ CREATE POLICY membresia_sesion_leer ON membresia FOR SELECT TO zuluhub_app
     END
   );
 
-CREATE POLICY empresa_sesion_leer ON empresa FOR SELECT TO zuluhub_app
+CREATE POLICY empresa_sesion_leer ON empresa FOR SELECT TO pedernal_app
   USING (
     CASE
       WHEN (SELECT app_usuario_auth()) IS NULL THEN false
@@ -269,7 +269,7 @@ CREATE POLICY empresa_sesion_leer ON empresa FOR SELECT TO zuluhub_app
     END
   );
 
-CREATE POLICY tenant_sesion_leer ON tenant FOR SELECT TO zuluhub_app
+CREATE POLICY tenant_sesion_leer ON tenant FOR SELECT TO pedernal_app
   USING (
     CASE
       WHEN (SELECT app_usuario_auth()) IS NULL THEN false
@@ -286,7 +286,7 @@ CREATE POLICY tenant_sesion_leer ON tenant FOR SELECT TO zuluhub_app
 -- Vincular la persona con el usuario (P3): solo el contexto de INVITACION (token firmado), solo la persona
 -- del email de esa invitación, solo si está activa y sin vínculo, y solo hacia el usuario firmado en `s`. El
 -- WITH CHECK repite el contexto (D8 de 0002: las políticas permisivas se suman con OR).
-CREATE POLICY persona_invitado_vincular ON persona FOR UPDATE TO zuluhub_app
+CREATE POLICY persona_invitado_vincular ON persona FOR UPDATE TO pedernal_app
   USING (
     usuario_auth_id IS NULL
     AND activo_global

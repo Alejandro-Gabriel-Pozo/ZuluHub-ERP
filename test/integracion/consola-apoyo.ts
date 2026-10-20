@@ -62,9 +62,9 @@ export async function armarMundo(base: BaseDePruebas): Promise<Mundo> {
   const web = armarAutenticacionDePrueba(propia.base, proveedor);
   const registros: string[] = [];
   const entorno = {
-    ZULUHUB_DB_PLATAFORMA: propia.base.plataforma,
-    ZULUHUB_CLAVE_CONTEXTO: `${base.clave.kid}:${base.clave.secreto.toString("hex")}`,
-    ZULUHUB_SECRETO_INVITACIONES: randomBytes(32).toString("hex"),
+    PEDERNAL_DB_PLATAFORMA: propia.base.plataforma,
+    PEDERNAL_CLAVE_CONTEXTO: `${base.clave.kid}:${base.clave.secreto.toString("hex")}`,
+    PEDERNAL_SECRETO_INVITACIONES: randomBytes(32).toString("hex"),
   };
   const puerta = armarPuertaDeConsola({
     fuente: () => entorno,

@@ -14,7 +14,7 @@ import {
  * falla que lleve una palabra secreta, lo que sale hacia la pantalla no la contiene. Y lo que sale de un
  * error conocido es siempre uno de los códigos de la tabla: nada que el error haya traído de más.
  */
-const SECRETO = "SECRETO-ZH-9f3a";
+const SECRETO = "SECRETO-PD-9f3a";
 const codigos = Object.keys(CODIGOS_PUBLICOS) as CodigoPublico[];
 
 /** Fallas con el secreto en cualquier lugar donde un adaptador o una librería lo podría poner. */
@@ -40,7 +40,7 @@ describe("propiedades del traductor de respuestas", () => {
         const publico =
           clasificado.tipo === "PUBLICO"
             ? errorPublicoDe(clasificado)
-            : errorInesperado("ZH-0000-0000", indisponible);
+            : errorInesperado("PD-0000-0000", indisponible);
         expect(JSON.stringify(publico)).not.toContain(SECRETO);
         if (clasificado.tipo === "INESPERADO") {
           expect(Object.keys(publico).sort()).toEqual([

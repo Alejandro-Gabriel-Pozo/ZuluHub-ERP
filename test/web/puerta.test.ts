@@ -71,7 +71,7 @@ describe("armarResolverDePuerta", () => {
     "xn--hotel-1ra.test",
     "app.hoteldellago.test/",
     "app.hoteldellago.test evil",
-    "zuluhub-erp.vercel.app",
+    "pedernal-erp.vercel.app",
     "viejo.hoteldellago.test",
     "consola.hoteldellago.test",
   ])("%j es desconocido", async (crudo) => {

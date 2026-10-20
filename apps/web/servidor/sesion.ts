@@ -70,7 +70,7 @@ export type EmpresaDelPedido = Readonly<{
 }>;
 
 /**
- * A qué empresa entra la persona en este pedido: sesión + marca del host + cookie `zh_empresa` validada.
+ * A qué empresa entra la persona en este pedido: sesión + marca del host + cookie `pd_empresa` validada.
  * Una cookie de otra marca o de una empresa que ya no es suya da `SIN_PERMISO`.
  */
 export const empresaDelPedido = cache(async (): Promise<EmpresaDelPedido> => {

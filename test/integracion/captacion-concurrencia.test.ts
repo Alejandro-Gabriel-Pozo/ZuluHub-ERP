@@ -60,14 +60,14 @@ describe.skipIf(base === null)("captación: concurrencia e idempotencia", () => 
   const abrirAdmin = (aislamiento: Aislamiento) =>
     SesionDePrueba.abrir(
       b,
-      "zuluhub_plataforma",
+      "pedernal_plataforma",
       comoPlataforma({ tipo: "ADMIN", id: adminPlataformaId(ADMIN) }),
       aislamiento,
     );
   const abrirSistema = (aislamiento: Aislamiento) =>
     SesionDePrueba.abrir(
       b,
-      "zuluhub_plataforma",
+      "pedernal_plataforma",
       comoPlataforma({ tipo: "SISTEMA", proceso: "barrido-de-solicitudes" }),
       aislamiento,
     );

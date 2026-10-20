@@ -32,7 +32,7 @@ const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 600_000 });
 
 /** Rondas de las pruebas largas; el CI y la estabilidad local pueden subirlas con la variable. */
-const RONDAS = Number(process.env["ZULUHUB_RONDAS_FACTURACION"] ?? "2");
+const RONDAS = Number(process.env["PEDERNAL_RONDAS_FACTURACION"] ?? "2");
 
 /** El último número que ARCA ya tiene (otro sistema lo usó) cuando empieza cada prueba. */
 const ARCA_ADELANTE = 5n;

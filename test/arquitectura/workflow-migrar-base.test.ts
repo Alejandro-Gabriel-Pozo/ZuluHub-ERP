@@ -61,7 +61,7 @@ describe("workflow migrar-base.yml", () => {
 
   it("el secreto sale de un Environment, está en un solo paso y no hay otro lugar donde se lea", () => {
     expect(TEXTO.match(/secrets\./g)).toHaveLength(1);
-    expect(TEXTO).toContain("ZULUHUB_DB_MIGRACIONES: ${{ secrets.ZULUHUB_DB_MIGRACIONES }}");
+    expect(TEXTO).toContain("PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_MIGRACIONES }}");
     expect(TEXTO).toContain("environment: neon-${{ needs.validar.outputs.ambiente }}");
     expect(TEXTO).not.toContain("secrets: inherit");
   });

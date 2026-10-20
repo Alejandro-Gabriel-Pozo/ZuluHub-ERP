@@ -1,4 +1,4 @@
--- 0012_respaldo: el rol exclusivo de respaldo, `zuluhub_respaldo` (especificación `respaldo-y-recuperacion.md`
+-- 0012_respaldo: el rol exclusivo de respaldo, `pedernal_respaldo` (especificación `respaldo-y-recuperacion.md`
 -- §B.3 del repositorio de documentos; DECIDIDO por el dueño 2026-10-14: un rol de solo lectura, con credenciales
 -- propias, ÚNICO con permiso de saltar el aislamiento).
 -- EL NÚMERO ES PROVISORIO: lo asigna quien integra (si otra migración toma el 0012, se renumera este archivo y su
@@ -12,14 +12,14 @@
 --  * Frena si el rol es miembro de otro rol, o si otro rol es miembro de él (heredaría sus lecturas).
 --  * Topes por rol: un volcado lee tablas enteras (más que los 30 s de los roles de la aplicación) pero no puede
 --    quedar colgado ni bloquear una migración; y cada sesión arranca de SOLO LECTURA.
---  * USAGE en los esquemas de ZuluHub y SELECT en todas sus tablas y secuencias, también las que creen las
+--  * USAGE en los esquemas de Pedernal y SELECT en todas sus tablas y secuencias, también las que creen las
 --    migraciones siguientes (privilegios por defecto del rol que migra). Nada más: ni escritura, ni TEMPORARY.
 --
 -- No es destructiva y no toca datos. Su reversión está en `reversiones/0012_revertir_respaldo.sql`.
 
 DO $$
 DECLARE
-  r constant text := 'zuluhub_respaldo';
+  r constant text := 'pedernal_respaldo';
   ajenas text;
   topes constant text[] := ARRAY[
     'statement_timeout=15min', 'idle_in_transaction_session_timeout=10min', 'lock_timeout=30s',
@@ -74,10 +74,10 @@ BEGIN
 END
 $$;
 
-GRANT USAGE ON SCHEMA public, autenticacion TO zuluhub_respaldo;
-GRANT SELECT ON ALL TABLES IN SCHEMA public, autenticacion TO zuluhub_respaldo;
-GRANT SELECT ON ALL SEQUENCES IN SCHEMA public, autenticacion TO zuluhub_respaldo;
+GRANT USAGE ON SCHEMA public, autenticacion TO pedernal_respaldo;
+GRANT SELECT ON ALL TABLES IN SCHEMA public, autenticacion TO pedernal_respaldo;
+GRANT SELECT ON ALL SEQUENCES IN SCHEMA public, autenticacion TO pedernal_respaldo;
 -- Lo que creen las migraciones siguientes (las corre el mismo rol dueño) también lo lee: una tabla nueva no deja
 -- la copia incompleta (lo comprueba `respaldo-rol.test.ts`, regla RS4).
-ALTER DEFAULT PRIVILEGES IN SCHEMA public, autenticacion GRANT SELECT ON TABLES TO zuluhub_respaldo;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public, autenticacion GRANT SELECT ON SEQUENCES TO zuluhub_respaldo;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public, autenticacion GRANT SELECT ON TABLES TO pedernal_respaldo;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public, autenticacion GRANT SELECT ON SEQUENCES TO pedernal_respaldo;

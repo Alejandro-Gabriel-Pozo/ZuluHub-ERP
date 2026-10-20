@@ -48,7 +48,7 @@ export function extraerCertificadoPem(texto: string): Resultado<string, "CERTIFI
 
 /** Lo que el adaptador midió del certificado leído. */
 export type HallazgosDelCertificado = Readonly<{
-  /** La clave pública del certificado es la derivada de la clave que generó ZuluHub. */
+  /** La clave pública del certificado es la derivada de la clave que generó Pedernal. */
   correspondeALaClave: boolean;
   /** El `serialNumber` del sujeto; `null` si no tiene. */
   numeroDeSerieDelSujeto: string | null;

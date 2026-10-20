@@ -6,7 +6,7 @@ import { EstiloDeMarca } from "../../../ui/componentes/EstiloDeMarca";
 import "../../../ui/tokens.css";
 import { exigirPuerta, nonceDelPedido, robotsDe } from "../../../servidor/pedido";
 
-// Superficie LANDING (`zuluhub.com.ar`): pública, sin sesión y sin cookies. Vuelve a resolver el host:
+// Superficie LANDING (`pedernal.com.ar`): pública, sin sesión y sin cookies. Vuelve a resolver el host:
 // si ya no es una landing, esto es la neutra.
 export async function generateMetadata(): Promise<Metadata> {
   const puerta = await exigirPuerta("LANDING");

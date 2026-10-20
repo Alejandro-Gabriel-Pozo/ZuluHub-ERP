@@ -301,7 +301,7 @@ describe.skipIf(base === null)("facturación: aislamiento entre empresas y entre
     });
 
     it("sin empresa en el contexto la aplicación no ve nada, y un contexto de otra empresa no deja leer lo de A", async () => {
-      const s = await SesionDePrueba.abrir(base!, "zuluhub_app", null);
+      const s = await SesionDePrueba.abrir(base!, "pedernal_app", null);
       try {
         for (const tabla of TABLAS) expect(await contar(s, tabla), tabla).toBe(0);
       } finally {
@@ -335,13 +335,13 @@ describe.skipIf(base === null)("facturación: aislamiento entre empresas y entre
       }
       const grupo = await SesionDePrueba.abrir(
         base!,
-        "zuluhub_grupo",
+        "pedernal_grupo",
         comoGrupo(tenantId(a.x.tenant), personaId(a.x.persona)),
       );
-      const trabajos = await SesionDePrueba.abrir(base!, "zuluhub_trabajos", comoTrabajos());
-      const publico = await SesionDePrueba.abrir(base!, "zuluhub_publico", null);
-      const captacion = await SesionDePrueba.abrir(base!, "zuluhub_captacion", null);
-      const autenticacion = await SesionDePrueba.abrir(base!, "zuluhub_autenticacion", null);
+      const trabajos = await SesionDePrueba.abrir(base!, "pedernal_trabajos", comoTrabajos());
+      const publico = await SesionDePrueba.abrir(base!, "pedernal_publico", null);
+      const captacion = await SesionDePrueba.abrir(base!, "pedernal_captacion", null);
+      const autenticacion = await SesionDePrueba.abrir(base!, "pedernal_autenticacion", null);
       try {
         for (const s of [grupo, trabajos, publico, captacion, autenticacion]) await intentarTodo(s);
       } finally {
@@ -350,7 +350,7 @@ describe.skipIf(base === null)("facturación: aislamiento entre empresas y entre
     });
 
     it("sin un actor vigente la plataforma tampoco: el rol ni siquiera tiene permiso sobre las tablas", async () => {
-      const sinContexto = await SesionDePrueba.abrir(base!, "zuluhub_plataforma", null);
+      const sinContexto = await SesionDePrueba.abrir(base!, "pedernal_plataforma", null);
       try {
         for (const tabla of TABLAS) denegado(await sinContexto.intentar(`select 1 from ${tabla}`));
       } finally {

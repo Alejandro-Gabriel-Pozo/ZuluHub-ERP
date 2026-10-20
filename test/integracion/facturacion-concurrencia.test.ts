@@ -80,7 +80,7 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
   ) =>
     SesionDePrueba.abrir(
       base!,
-      "zuluhub_app",
+      "pedernal_app",
       comoEmpresa(empresaId(x.empresa), persona === null ? null : personaId(persona)),
       aislamiento,
     );

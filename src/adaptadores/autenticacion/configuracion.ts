@@ -6,9 +6,9 @@ import { ErrorDeConfiguracion } from "../postgres/errores";
  * valor que no sirve, no se arma la autenticación. Los mensajes nombran la variable y el motivo, nunca
  * el valor recibido.
  */
-export const ZULUHUB_AUTH_SECRETO_EMPRESA = "ZULUHUB_AUTH_SECRETO_EMPRESA";
+export const PEDERNAL_AUTH_SECRETO_EMPRESA = "PEDERNAL_AUTH_SECRETO_EMPRESA";
 /** El de la consola de plataforma: se declara en `composicion/entorno-de-plataforma.ts` (la web no lo recibe). */
-export const ZULUHUB_AUTH_SECRETO_PLATAFORMA = "ZULUHUB_AUTH_SECRETO_PLATAFORMA";
+export const PEDERNAL_AUTH_SECRETO_PLATAFORMA = "PEDERNAL_AUTH_SECRETO_PLATAFORMA";
 export const GOOGLE_CLIENT_ID = "GOOGLE_CLIENT_ID";
 export const GOOGLE_CLIENT_SECRET = "GOOGLE_CLIENT_SECRET";
 
@@ -46,7 +46,7 @@ function leerSecreto(nombre: string, valor: string | undefined): string {
 
 /** El secreto de Better Auth de la aplicación de empresa. */
 export function leerSecretoDeAutenticacion(valor: string | undefined): string {
-  return leerSecreto(ZULUHUB_AUTH_SECRETO_EMPRESA, valor);
+  return leerSecreto(PEDERNAL_AUTH_SECRETO_EMPRESA, valor);
 }
 
 /**
@@ -60,10 +60,10 @@ export function leerSecretoDeAutenticacionDePlataforma(
   valor: string | undefined,
   secretoDeEmpresa?: string,
 ): string {
-  const secreto = leerSecreto(ZULUHUB_AUTH_SECRETO_PLATAFORMA, valor);
+  const secreto = leerSecreto(PEDERNAL_AUTH_SECRETO_PLATAFORMA, valor);
   if (secretoDeEmpresa !== undefined && secretoDeEmpresa.trim() === secreto) {
     throw new ErrorDeConfiguracion(
-      `${ZULUHUB_AUTH_SECRETO_PLATAFORMA} inválido: no puede ser igual a ${ZULUHUB_AUTH_SECRETO_EMPRESA}`,
+      `${PEDERNAL_AUTH_SECRETO_PLATAFORMA} inválido: no puede ser igual a ${PEDERNAL_AUTH_SECRETO_EMPRESA}`,
     );
   }
   return secreto;

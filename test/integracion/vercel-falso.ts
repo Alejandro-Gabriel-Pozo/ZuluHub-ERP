@@ -1,7 +1,7 @@
 /**
  * Un Vercel falso para probar `migrar-base --vercel` sin red: un `fetch` con estado propio que
  * entiende solo las cuatro rutas que usa el comando (listar, crear con `upsert`, borrar y modificar
- * una variable del proyecto `zuluhub-erp`) y anota cada pedido. Es MÁS ESTRICTO que lo que se sabe de
+ * una variable del proyecto `pedernal-erp`) y anota cada pedido. Es MÁS ESTRICTO que lo que se sabe de
  * Vercel a propósito: una variable con el mismo nombre y un destino que se pisa sin ser idéntico es un
  * conflicto (409) aunque haya `upsert`, así que el comando tiene que liberarla antes de escribir.
  */

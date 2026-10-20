@@ -6,7 +6,7 @@ import { hostConPooler } from "../src/adaptadores/postgres/migraciones";
 import { NOMBRE_DE_LA_CADENA_DE_DUENO } from "../src/adaptadores/vercel/plan-de-variables";
 
 /**
- * Lo que comparten los scripts del dueño que reciben UN email y operan con su conexión DIRECTA (`ZULUHUB_DB_MIGRACIONES`):
+ * Lo que comparten los scripts del dueño que reciben UN email y operan con su conexión DIRECTA (`PEDERNAL_DB_MIGRACIONES`):
  * la baja de un administrador y el reseteo de su segundo factor (h5-p8 §2.4 y §2.5). Mismas reglas que
  * `ejecutar-crear-primer-admin.ts`: el email viene por argumento y NUNCA se imprime (ni entero ni en pedazos), tampoco
  * la cadena ni ninguna variable (todo pasa por `ocultarSecretos`), y las fallas de la base se cuentan con

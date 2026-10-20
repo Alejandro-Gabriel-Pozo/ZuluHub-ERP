@@ -11,9 +11,9 @@ import { cookieParaNext } from "../../../src/capacidades/experiencia/set-cookie"
  */
 
 /** La empresa elegida en este host. No es de confianza: se valida contra las empresas de la persona en CADA pedido. */
-export const COOKIE_DE_EMPRESA = `${PREFIJO_DE_NAVEGADOR}zh_empresa`;
+export const COOKIE_DE_EMPRESA = `${PREFIJO_DE_NAVEGADOR}pd_empresa`;
 /** El enlace de la invitación mientras la persona pasa por Google (el token no viaja en la dirección de retorno). */
-export const COOKIE_DE_INVITACION = `${PREFIJO_DE_NAVEGADOR}zh_invitacion`;
+export const COOKIE_DE_INVITACION = `${PREFIJO_DE_NAVEGADOR}pd_invitacion`;
 
 const TREINTA_DIAS_EN_SEGUNDOS = 30 * 24 * 60 * 60;
 const QUINCE_MINUTOS_EN_SEGUNDOS = 15 * 60;

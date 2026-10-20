@@ -501,12 +501,12 @@ describe.skipIf(base === null)("fiscal: concurrencia de lo que impone la 0006", 
     const appDe = (m: Mundo, aislamiento: Aislamiento | "repeatable read" = "read committed") =>
       SesionDePrueba.abrir(
         propia.base,
-        "zuluhub_app",
+        "pedernal_app",
         comoEmpresa(empresaId(m.empresa), personaId(m.persona)),
         aislamiento,
       );
     const plataforma = (aislamiento: Aislamiento | "repeatable read" = "read committed") =>
-      SesionDePrueba.abrir(propia.base, "zuluhub_plataforma", comoPlataforma(), aislamiento);
+      SesionDePrueba.abrir(propia.base, "pedernal_plataforma", comoPlataforma(), aislamiento);
 
     it.each(AISLAMIENTOS)(
       "(%s) dos altas de punto de venta con el mismo número a la vez: gana una; la otra recibe PUNTO_DE_VENTA_DUPLICADO",
@@ -761,12 +761,12 @@ describe.skipIf(base === null)("fiscal: concurrencia de lo que impone la 0006", 
     ) =>
       SesionDePrueba.abrir(
         propia.base,
-        "zuluhub_app",
+        "pedernal_app",
         comoEmpresa(empresaId(e.m.empresa), personaId(e.m.persona)),
         aislamiento,
       );
     const plataforma = () =>
-      SesionDePrueba.abrir(propia.base, "zuluhub_plataforma", comoPlataforma());
+      SesionDePrueba.abrir(propia.base, "pedernal_plataforma", comoPlataforma());
     const reservar = (s: SesionDePrueba, pv: string, tipo = "FACTURA_B") =>
       s.directo(
         `update serie_comprobante set estado = 'EN_CURSO', numero_en_curso = ultimo_numero + 1,
@@ -1015,7 +1015,7 @@ describe.skipIf(base === null)("fiscal: concurrencia de lo que impone la 0006", 
         const e = await armar();
         const baja = await SesionDePrueba.abrir(
           propia.base,
-          "zuluhub_plataforma",
+          "pedernal_plataforma",
           comoPlataforma(),
           "serializable",
         );

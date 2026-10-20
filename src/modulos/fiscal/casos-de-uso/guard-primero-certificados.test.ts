@@ -107,7 +107,7 @@ const LLAMADAS: Record<Nombre, (casos: CasosDeUsoDeCertificados) => Promise<unkn
       id: ID,
       emisorId: emisorId("emisor-1"),
       ambiente: "HOMOLOGACION",
-      alias: "zuluhub",
+      alias: "pedernal",
       cuitTitular: "20123456786",
       organizacion: "Coop Pampa SA",
     }),
@@ -209,7 +209,7 @@ describe("generar y cargar exigen una persona", () => {
               id: ID,
               emisorId: emisorId("emisor-1"),
               ambiente: "HOMOLOGACION",
-              alias: "zuluhub",
+              alias: "pedernal",
               cuitTitular: "20123456786",
               organizacion: "Coop",
             })

@@ -46,7 +46,7 @@ describe("las tablas del adaptador contra la homologación real", () => {
     for (const [codigo, id] of Object.entries(ID_DE_ALICUOTA)) {
       expect(descripcionDe(filas, id), codigo).toBe(`${codigo}%`);
     }
-    // Todo lo que ARCA tiene en la tabla de IVA, ZuluHub lo conoce: ni una alícuota de más ni de menos.
+    // Todo lo que ARCA tiene en la tabla de IVA, Pedernal lo conoce: ni una alícuota de más ni de menos.
     expect(filas.map((f) => f["Id"]).sort()).toEqual(
       Object.values(ID_DE_ALICUOTA).map(String).sort(),
     );

@@ -62,7 +62,7 @@ describe.skipIf(base === null)("marcas y planes: concurrencia", () => {
   const abrirAdmin = (aislamiento: Aislamiento) =>
     SesionDePrueba.abrir(
       b,
-      "zuluhub_plataforma",
+      "pedernal_plataforma",
       comoPlataforma({ tipo: "ADMIN", id: adminPlataformaId(ADMIN_DE_PRUEBA) }),
       aislamiento,
     );
@@ -662,7 +662,7 @@ describe.skipIf(base === null)("marcas y planes: concurrencia", () => {
     it("dos cambios del nivel de un control a la vez: ambos lo dejan escrito sin perder la fila; dos altas del mismo control: una", async () => {
       const mundo = await crearMundoDeMarca(dueno);
       const abrirApp = () =>
-        SesionDePrueba.abrir(b, "zuluhub_app", comoEmpresa(empresaId(mundo.empresa), null));
+        SesionDePrueba.abrir(b, "pedernal_app", comoEmpresa(empresaId(mundo.empresa), null));
       const altas = await Promise.all([abrirApp(), abrirApp()]);
       const rs = await carrera(
         altas,
@@ -691,7 +691,7 @@ describe.skipIf(base === null)("marcas y planes: concurrencia", () => {
     });
 
     it("ocho referencias de error iguales a la vez: se guarda una; las otras siete chocan con la única", async () => {
-      const referencia = `ZH-${randomUUID().slice(0, 4).toUpperCase()}-${randomUUID().slice(0, 4).toUpperCase()}`;
+      const referencia = `PD-${randomUUID().slice(0, 4).toUpperCase()}-${randomUUID().slice(0, 4).toUpperCase()}`;
       const sesiones = await Promise.all(
         Array.from({ length: 8 }, () => abrirAdmin("read committed")),
       );

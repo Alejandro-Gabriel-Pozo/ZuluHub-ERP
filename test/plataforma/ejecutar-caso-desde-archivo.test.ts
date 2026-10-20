@@ -31,10 +31,10 @@ const EMAIL = "dueno@ejemplo.test";
 
 // Valores inventados y reconocibles: ninguno puede aparecer en lo que se imprime. Los secretos son CORTOS a propósito: los largos los taparía además `textoDeErrorSeguro` por su forma y la prueba no distinguiría quién los tapó.
 const SECRETOS = {
-  ZULUHUB_DB_PLATAFORMA:
+  PEDERNAL_DB_PLATAFORMA:
     "postgres://usuario-centinela:contrasena-centinela@host-centinela.test/base",
-  ZULUHUB_CLAVE_CONTEXTO: "1:clave-centinela-corta",
-  ZULUHUB_SECRETO_INVITACIONES: "invitaciones-centinela",
+  PEDERNAL_CLAVE_CONTEXTO: "1:clave-centinela-corta",
+  PEDERNAL_SECRETO_INVITACIONES: "invitaciones-centinela",
 };
 const PROHIBIDOS = [
   "usuario-centinela",
@@ -42,7 +42,7 @@ const PROHIBIDOS = [
   "host-centinela",
   "clave-centinela-corta",
   "invitaciones-centinela",
-  SECRETOS.ZULUHUB_DB_PLATAFORMA,
+  SECRETOS.PEDERNAL_DB_PLATAFORMA,
 ];
 
 const JSON_DE_CREAR_PLAN = JSON.stringify({ claveDeIdempotencia: CLAVE, codigo: "base" });
@@ -226,7 +226,7 @@ describe("ejecutarCasoDePlataforma: la lista cerrada y la línea de comandos", (
 describe("ejecutarCasoDePlataforma: el archivo se revisa ANTES de buscar al administrador", () => {
   it("un archivo que no se puede leer sale con 2 y nombra la ruta", async () => {
     const t = armar({
-      leerArchivo: () => Promise.reject(new Error(`ENOENT ${SECRETOS.ZULUHUB_DB_PLATAFORMA}`)),
+      leerArchivo: () => Promise.reject(new Error(`ENOENT ${SECRETOS.PEDERNAL_DB_PLATAFORMA}`)),
     });
     expect(await ejecutarCasoDePlataforma(t.entrada)).toBe(2);
     expect(t.errores.join("\n")).toContain("no se pudo leer el archivo «plan.json»");
@@ -335,7 +335,7 @@ describe("ejecutarCasoDePlataforma: rechazos y fallas", () => {
     const t = armar({
       buscarAdmin: () =>
         Promise.reject(
-          Object.assign(new Error(`connect ECONNREFUSED ${SECRETOS.ZULUHUB_DB_PLATAFORMA}`), {
+          Object.assign(new Error(`connect ECONNREFUSED ${SECRETOS.PEDERNAL_DB_PLATAFORMA}`), {
             code: "ECONNREFUSED",
           }),
         ),
@@ -360,7 +360,7 @@ describe("ejecutarCasoDePlataforma: rechazos y fallas", () => {
 
   it("aun si el rechazo del caso trae un texto con secretos, no llegan a la salida", async () => {
     const { casos } = casosFalsos(
-      err({ tipo: "Inesperado", sqlstate: null, mensaje: `x ${SECRETOS.ZULUHUB_DB_PLATAFORMA}` }),
+      err({ tipo: "Inesperado", sqlstate: null, mensaje: `x ${SECRETOS.PEDERNAL_DB_PLATAFORMA}` }),
     );
     const t = armar({ casos });
     expect(await ejecutarCasoDePlataforma(t.entrada)).toBe(1);
@@ -373,7 +373,7 @@ describe("ejecutarCasoDePlataforma: rechazos y fallas", () => {
   });
 
   it("una clave de contexto sin dos puntos no rompe el tapado", async () => {
-    const t = armar({ entorno: { ZULUHUB_CLAVE_CONTEXTO: "sin-formato" } });
+    const t = armar({ entorno: { PEDERNAL_CLAVE_CONTEXTO: "sin-formato" } });
     expect(await ejecutarCasoDePlataforma(t.entrada)).toBe(0);
   });
 });

@@ -8,7 +8,7 @@ import type { SinTablas } from "./transacciones";
 
 /**
  * `TransaccionesPublicas` sobre Postgres (marcas y planes, §B.2.5): la puerta pública, con su propio rol
- * de base (`zuluhub_publico`) y su propia cadena de conexión.
+ * de base (`pedernal_publico`) y su propia cadena de conexión.
  *
  *  - SIN contexto firmado: no hay `set_config('app.ctx', ...)`. Es la única puerta así, y por eso no
  *    comparte código con `crearTransacciones` (que firma el contexto en cada transacción): el aislamiento

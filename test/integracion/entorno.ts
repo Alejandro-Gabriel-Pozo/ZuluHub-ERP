@@ -346,7 +346,7 @@ export async function crearBaseAparte(
   base: BaseDePruebas,
   opciones: { migrar?: boolean; sinClave?: boolean; sinMarcaDePrueba?: boolean } = {},
 ): Promise<{ base: BaseDePruebas; destruir: () => Promise<void> }> {
-  const nombre = `zuluhub_it_${randomBytes(6).toString("hex")}`;
+  const nombre = `pedernal_it_${randomBytes(6).toString("hex")}`;
   const admin = new pg.Client({ connectionString: base.admin });
   await admin.connect();
   await admin.query(`CREATE DATABASE ${nombre} ${OPCIONES_DE_BASE}`);

@@ -9,9 +9,9 @@ import { armarPlataforma } from "./plataforma";
  */
 
 const VALIDA: FuenteDeEntorno = {
-  ZULUHUB_DB_PLATAFORMA: "postgres://usuario:contrasena@127.0.0.1:1/base",
-  ZULUHUB_CLAVE_CONTEXTO: `1:${"ab".repeat(32)}`,
-  ZULUHUB_SECRETO_INVITACIONES: "cd".repeat(32),
+  PEDERNAL_DB_PLATAFORMA: "postgres://usuario:contrasena@127.0.0.1:1/base",
+  PEDERNAL_CLAVE_CONTEXTO: `1:${"ab".repeat(32)}`,
+  PEDERNAL_SECRETO_INVITACIONES: "cd".repeat(32),
 };
 
 const AHORA = new Date("2026-10-20T12:00:00Z");
@@ -69,14 +69,14 @@ describe("armarPlataforma", () => {
     expect(falla).toBeInstanceOf(ErrorDeEntorno);
     expect((falla as Error).message).toBe("el entorno del servidor no está bien configurado");
     expect(registrar).toHaveBeenCalledWith(
-      "pieza transacciones-de-plataforma: ZULUHUB_DB_PLATAFORMA falta; ZULUHUB_CLAVE_CONTEXTO falta",
+      "pieza transacciones-de-plataforma: PEDERNAL_DB_PLATAFORMA falta; PEDERNAL_CLAVE_CONTEXTO falta",
     );
   });
 
   it("una clave de contexto mal formada falla cerrado sin repetirla", async () => {
     const registrar = vi.fn();
     const plataforma = armarPlataforma({
-      fuente: () => ({ ...VALIDA, ZULUHUB_CLAVE_CONTEXTO: "sin-forma-valida" }),
+      fuente: () => ({ ...VALIDA, PEDERNAL_CLAVE_CONTEXTO: "sin-forma-valida" }),
       registrar,
     });
     const falla = await plataforma.buscarAdmin("a@b.test", AHORA).catch((e: unknown) => e);
@@ -86,15 +86,15 @@ describe("armarPlataforma", () => {
 
   it("el alta pide además el secreto de invitaciones; los demás grupos no lo necesitan", () => {
     const sinSecreto = () => ({
-      ZULUHUB_DB_PLATAFORMA: VALIDA["ZULUHUB_DB_PLATAFORMA"],
-      ZULUHUB_CLAVE_CONTEXTO: VALIDA["ZULUHUB_CLAVE_CONTEXTO"],
+      PEDERNAL_DB_PLATAFORMA: VALIDA["PEDERNAL_DB_PLATAFORMA"],
+      PEDERNAL_CLAVE_CONTEXTO: VALIDA["PEDERNAL_CLAVE_CONTEXTO"],
     });
     const registrar = vi.fn();
     expect(() => armarPlataforma({ fuente: sinSecreto, registrar }).casosDeUsoDeAltas()).toThrow(
       ErrorDeEntorno,
     );
     expect(registrar).toHaveBeenCalledWith(
-      "pieza tokens-de-plataforma: ZULUHUB_SECRETO_INVITACIONES falta",
+      "pieza tokens-de-plataforma: PEDERNAL_SECRETO_INVITACIONES falta",
     );
     const plataforma = armarPlataforma({ fuente: sinSecreto });
     expect(() => plataforma.casosDeUsoDeMarcasYPlanes()).not.toThrow();

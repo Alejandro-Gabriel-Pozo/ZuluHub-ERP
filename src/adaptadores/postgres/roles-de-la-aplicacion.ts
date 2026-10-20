@@ -10,9 +10,9 @@ export type RolPorPreparar = Readonly<{ rol: string; variable: string }>;
 
 /** Los roles con los que entra la aplicación web (las variables son las que declara `composicion/entorno.ts`). */
 const ROLES_DE_LA_APLICACION: readonly RolPorPreparar[] = [
-  { rol: "zuluhub_app", variable: "ZULUHUB_DB_APP" },
-  { rol: "zuluhub_trabajos", variable: "ZULUHUB_DB_TRABAJOS" },
-  { rol: "zuluhub_publico", variable: "ZULUHUB_DB_PUBLICO" },
+  { rol: "pedernal_app", variable: "PEDERNAL_DB_APP" },
+  { rol: "pedernal_trabajos", variable: "PEDERNAL_DB_TRABAJOS" },
+  { rol: "pedernal_publico", variable: "PEDERNAL_DB_PUBLICO" },
 ];
 
 /**
@@ -20,8 +20,8 @@ const ROLES_DE_LA_APLICACION: readonly RolPorPreparar[] = [
  * variable para ellos: los nombres son provisorios y el comando lo avisa.
  */
 const ROLES_DE_AUTENTICACION: readonly RolPorPreparar[] = [
-  { rol: "zuluhub_autenticacion", variable: "ZULUHUB_DB_AUTENTICACION" },
-  { rol: "zuluhub_captacion", variable: "ZULUHUB_DB_CAPTACION" },
+  { rol: "pedernal_autenticacion", variable: "PEDERNAL_DB_AUTENTICACION" },
+  { rol: "pedernal_captacion", variable: "PEDERNAL_DB_CAPTACION" },
 ];
 
 /**
@@ -30,12 +30,12 @@ const ROLES_DE_AUTENTICACION: readonly RolPorPreparar[] = [
  * secreto del Environment `respaldo` de GitHub, con el host directo (`pg_dump` necesita una sesión propia).
  */
 export const ROL_DE_RESPALDO: RolPorPreparar = {
-  rol: "zuluhub_respaldo",
-  variable: "ZULUHUB_DB_RESPALDO",
+  rol: "pedernal_respaldo",
+  variable: "PEDERNAL_DB_RESPALDO",
 };
 
 /**
- * Exactamente estos roles y ningún otro: `zuluhub_grupo` y `zuluhub_plataforma` no se tocan nunca, y el de
+ * Exactamente estos roles y ningún otro: `pedernal_grupo` y `pedernal_plataforma` no se tocan nunca, y el de
  * respaldo solo si se pide (`conRespaldo`), nunca por defecto.
  */
 export function rolesPorPreparar(

@@ -20,7 +20,7 @@ import {
 /// <reference path="../../apps/web/ui/css-modules.d.ts" />
 
 /**
- * La puerta REAL (W4b): la fuente enchufada a la puerta pública con el rol `zuluhub_publico` de las
+ * La puerta REAL (W4b): la fuente enchufada a la puerta pública con el rol `pedernal_publico` de las
  * pruebas, sobre una base propia con dos marcas sembradas (A y B) y sus dominios ACTIVO, RETIRADO y
  * PENDIENTE en las superficies APP, LANDING, CARTA y CONSOLA, más una marca sin versión confirmada. Se
  * arma EXACTAMENTE como lo hace `apps/web/servidor/fuente-de-puertas.ts` (`armarWeb` sobre `armarConexiones`
@@ -90,7 +90,7 @@ describe.skipIf(base === null)("la puerta real contra la base con el rol públic
   /** Una fuente armada igual que la de `apps/web`, con la cadena que se pida (o sin ninguna variable). */
   function fuenteCon(url: string | null, registro: string[] = []): FuenteDePuertas {
     const conexiones = armarConexiones({
-      fuente: () => (url === null ? {} : { ZULUHUB_DB_PUBLICO: url }),
+      fuente: () => (url === null ? {} : { PEDERNAL_DB_PUBLICO: url }),
       registrar: (detalle) => registro.push(detalle),
     });
     cierres.push(async () => {
@@ -108,7 +108,7 @@ describe.skipIf(base === null)("la puerta real contra la base con el rol públic
   }
   const urlDeRolInexistente = (): string => {
     const url = new URL(urlDeLaPublica);
-    url.username = "zuluhub_rol_que_no_existe";
+    url.username = "pedernal_rol_que_no_existe";
     return url.toString();
   };
 
@@ -181,7 +181,7 @@ describe.skipIf(base === null)("la puerta real contra la base con el rol públic
 
   // ---- apoyo para recorrer el servidor --------------------------------------------------------------
   const comoPedido = (host: string): void => {
-    pedidoActual.encabezados = new Headers({ host, "x-zh-nonce": NONCE });
+    pedidoActual.encabezados = new Headers({ host, "x-pd-nonce": NONCE });
   };
   const esNoEncontrada = (error: unknown): boolean =>
     typeof error === "object" &&
@@ -314,8 +314,8 @@ describe.skipIf(base === null)("la puerta real contra la base con el rol públic
       ["dominio de CONSOLA (otra app)", () => A.consola],
       ["marca activa sin versión confirmada", () => sinVersion],
       ["host desconocido", () => "otro.ejemplo.com"],
-      ["el despliegue técnico", () => "zuluhub-erp.vercel.app"],
-      ["una vista previa", () => "zuluhub-erp-git-rama-alepozod.vercel.app"],
+      ["el despliegue técnico", () => "pedernal-erp.vercel.app"],
+      ["una vista previa", () => "pedernal-erp-git-rama-alepozod.vercel.app"],
       ["una IPv4", () => "10.0.0.1"],
       ["una IPv6", () => "[::1]"],
       ["sufijo engañoso", () => `${A.app}.evil.net`],
@@ -376,8 +376,8 @@ describe.skipIf(base === null)("la puerta real contra la base con el rol públic
           expect(r.headers.get("set-cookie")).toBeNull();
           const todo = textoDeCabeceras(r);
           for (const prohibido of [
-            "zuluhub_rol_que_no_existe",
-            "ZULUHUB_DB_PUBLICO",
+            "pedernal_rol_que_no_existe",
+            "PEDERNAL_DB_PUBLICO",
             ...A.senas,
             ...B.senas,
           ]) {
@@ -389,7 +389,7 @@ describe.skipIf(base === null)("la puerta real contra la base con el rol públic
         expect(await landing()).toBeNull();
         // Lo que sí se registra no lleva el host ni la cadena.
         const registrado = errores.mock.calls.map((c) => String(c[0])).join("\n");
-        expect(registrado).not.toContain("zuluhub_rol_que_no_existe");
+        expect(registrado).not.toContain("pedernal_rol_que_no_existe");
       } finally {
         errores.mockRestore();
         pedidoActual.fuente = fuenteCon(urlDeLaPublica);
@@ -397,7 +397,7 @@ describe.skipIf(base === null)("la puerta real contra la base con el rol públic
       }
     });
 
-    it("sin ZULUHUB_DB_PUBLICO: neutra 503; el NOMBRE de la variable solo en el registro", async () => {
+    it("sin PEDERNAL_DB_PUBLICO: neutra 503; el NOMBRE de la variable solo en el registro", async () => {
       const registro: string[] = [];
       pedidoActual.fuente = fuenteCon(null, registro);
       vi.resetModules();
@@ -407,8 +407,8 @@ describe.skipIf(base === null)("la puerta real contra la base con el rol públic
         const r = await proxy(pedido(A.app));
         expect(reescritura(r)).toBe("/s/neutra");
         expect(r.status).toBe(503);
-        expect([...r.headers.entries()].join("\n")).not.toContain("ZULUHUB");
-        expect(registro.join("\n")).toContain("ZULUHUB_DB_PUBLICO");
+        expect([...r.headers.entries()].join("\n")).not.toContain("PEDERNAL");
+        expect(registro.join("\n")).toContain("PEDERNAL_DB_PUBLICO");
       } finally {
         errores.mockRestore();
         pedidoActual.fuente = fuenteCon(urlDeLaPublica);

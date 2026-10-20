@@ -51,7 +51,7 @@ describe("opcionesDeInstancia", () => {
 
   it("M1: las cookies llevan __Host-: prefijo en el nombre, Secure, Path=/ y sin Domain", () => {
     const avanzado = opciones().advanced;
-    expect(avanzado?.cookiePrefix).toBe("__Host-zh_emp");
+    expect(avanzado?.cookiePrefix).toBe("__Host-pd_emp");
     // La librería no antepone `__Secure-` (el nombre ya empieza con `__Host-`); `Secure` lo fija el atributo.
     expect(avanzado?.useSecureCookies).toBe(false);
     expect(avanzado?.defaultCookieAttributes).toMatchObject({ secure: true, path: "/" });
@@ -93,10 +93,10 @@ describe("opcionesDeInstancia: audiencia de plataforma", () => {
     });
   }
 
-  it("cookies propias: __Host-zh_plat (la web de empresa sigue con __Host-zh_emp), Secure, sin Domain", () => {
+  it("cookies propias: __Host-pd_plat (la web de empresa sigue con __Host-pd_emp), Secure, sin Domain", () => {
     const avanzado = consola().advanced;
-    expect(avanzado?.cookiePrefix).toBe("__Host-zh_plat");
-    expect(opciones().advanced?.cookiePrefix).toBe("__Host-zh_emp");
+    expect(avanzado?.cookiePrefix).toBe("__Host-pd_plat");
+    expect(opciones().advanced?.cookiePrefix).toBe("__Host-pd_emp");
     expect(avanzado?.useSecureCookies).toBe(false);
     expect(avanzado?.defaultCookieAttributes).toEqual({
       httpOnly: true,
@@ -140,7 +140,7 @@ describe("opcionesDeInstancia: audiencia de plataforma", () => {
       };
     };
     const o = plugin.options;
-    expect(o.issuer).toBe("ZuluHub Plataforma");
+    expect(o.issuer).toBe("Pedernal Plataforma");
     expect(o.allowPasswordless).toBe(true);
     expect(o.backupCodeOptions.amount).toBe(10);
     expect(o.backupCodeOptions.length).toBe(10);

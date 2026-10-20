@@ -6,14 +6,14 @@ describe("referenciaDeError", () => {
     expect(BYTES_DE_UNA_REFERENCIA).toBe(4);
   });
 
-  it("arma ZH-XXXX-XXXX con 8 dígitos hexadecimales en mayúsculas, en el orden de los bytes", () => {
-    expect(referenciaDeError(Uint8Array.of(0x12, 0x34, 0xab, 0xcd))).toBe("ZH-1234-ABCD");
-    expect(referenciaDeError(Uint8Array.of(0xff, 0xff, 0xff, 0xff))).toBe("ZH-FFFF-FFFF");
+  it("arma PD-XXXX-XXXX con 8 dígitos hexadecimales en mayúsculas, en el orden de los bytes", () => {
+    expect(referenciaDeError(Uint8Array.of(0x12, 0x34, 0xab, 0xcd))).toBe("PD-1234-ABCD");
+    expect(referenciaDeError(Uint8Array.of(0xff, 0xff, 0xff, 0xff))).toBe("PD-FFFF-FFFF");
   });
 
   it("completa con ceros cada byte de un solo dígito", () => {
-    expect(referenciaDeError(Uint8Array.of(0, 0, 0, 0))).toBe("ZH-0000-0000");
-    expect(referenciaDeError(Uint8Array.of(0, 1, 15, 16))).toBe("ZH-0001-0F10");
+    expect(referenciaDeError(Uint8Array.of(0, 0, 0, 0))).toBe("PD-0000-0000");
+    expect(referenciaDeError(Uint8Array.of(0, 1, 15, 16))).toBe("PD-0001-0F10");
   });
 
   it("el mismo azar da siempre la misma referencia (no sortea nada por su cuenta)", () => {
@@ -51,29 +51,29 @@ describe("referenciaDeError", () => {
 
 describe("referenciaDesdeTexto", () => {
   it("acepta la forma exacta y la devuelve igual", () => {
-    expect(referenciaDesdeTexto("ZH-1234-ABCD")).toEqual({ ok: true, valor: "ZH-1234-ABCD" });
+    expect(referenciaDesdeTexto("PD-1234-ABCD")).toEqual({ ok: true, valor: "PD-1234-ABCD" });
   });
 
   it("recorta los espacios y pasa a mayúsculas lo que alguien dictó o copió", () => {
-    expect(referenciaDesdeTexto("  zh-12ab-cd34 \n")).toEqual({ ok: true, valor: "ZH-12AB-CD34" });
+    expect(referenciaDesdeTexto("  pd-12ab-cd34 \n")).toEqual({ ok: true, valor: "PD-12AB-CD34" });
   });
 
   it("rechaza todo lo que no tenga la forma exacta", () => {
     const malas = [
       "",
-      "ZH-1234-ABC",
-      "ZH-1234-ABCDE",
-      "ZH-123-ABCD",
-      "ZH1234ABCD",
-      "ZH-1234ABCD",
-      "ZH-1234-ABCG",
+      "PD-1234-ABC",
+      "PD-1234-ABCDE",
+      "PD-123-ABCD",
+      "PD1234ABCD",
+      "PD-1234ABCD",
+      "PD-1234-ABCG",
       "XX-1234-ABCD",
-      "ZH-1234-ABCD-EFGH",
-      "ZH-1234- ABCD",
-      "ZH-12 34-ABCD",
-      "AZH-1234-ABCD",
-      "ZH-1234-ABCDZ",
-      "ZH-1234-ABCD\nZH-1234-ABCD",
+      "PD-1234-ABCD-EFGH",
+      "PD-1234- ABCD",
+      "PD-12 34-ABCD",
+      "APD-1234-ABCD",
+      "PD-1234-ABCDZ",
+      "PD-1234-ABCD\nPD-1234-ABCD",
     ];
     for (const texto of malas) {
       expect(referenciaDesdeTexto(texto), JSON.stringify(texto)).toEqual({

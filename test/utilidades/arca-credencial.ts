@@ -44,7 +44,7 @@ export function credencialDePrueba(): Promise<CredencialGenerada> {
       n.typesAndValues.push(
         new pkijs.AttributeTypeAndValue({
           type: "2.5.4.3",
-          value: new asn1js.Utf8String({ value: "zuluhub-prueba" }),
+          value: new asn1js.Utf8String({ value: "pedernal-prueba" }),
         }),
         new pkijs.AttributeTypeAndValue({
           type: "2.5.4.5",

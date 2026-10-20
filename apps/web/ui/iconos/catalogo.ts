@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 /**
- * Catálogo cerrado de íconos de la interfaz ([02] §4.2). La clave nombra el SIGNIFICADO en ZuluHub,
+ * Catálogo cerrado de íconos de la interfaz ([02] §4.2). La clave nombra el SIGNIFICADO en Pedernal,
  * no el dibujo ni la librería: cambiar de juego de íconos toca solo este archivo. Es la ÚNICA puerta a
  * `lucide-react` (R-W6); una clave que no está acá no compila. La marca no elige íconos en v1.
  * Solo hay las claves que algún componente usa: cada pantalla suma las suyas (`cobrar`, `ticket`, `caja`…)

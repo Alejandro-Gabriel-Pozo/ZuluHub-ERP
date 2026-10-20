@@ -98,7 +98,7 @@ export async function serializarAltaDeId(
   tabla: string,
   id: string,
 ): Promise<void> {
-  await sql`select pg_advisory_xact_lock(hashtextextended(${`zuluhub.fiscal.alta.${tabla}:${id}`}, 0))`.execute(
+  await sql`select pg_advisory_xact_lock(hashtextextended(${`pedernal.fiscal.alta.${tabla}:${id}`}, 0))`.execute(
     db,
   );
 }

@@ -15,7 +15,7 @@ import {
  *    con las garantías de siempre (noindex, sin caché, sin cookies); ninguna otra ruta de `/api/**` fuera de
  *    un host APP se abre.
  *  - Con la base atrasada (la guarda dice que no), todo lo demás responde «En mantenimiento» (503, con
- *    referencia ZH-), en cualquier host y sin consultar la base de marcas; lo de sistema no.
+ *    referencia PD-), en cualquier host y sin consultar la base de marcas; lo de sistema no.
  */
 vi.mock("server-only", () => ({}));
 const compartido = vi.hoisted(() => ({
@@ -47,8 +47,8 @@ const reescritura = (r: Response): string | null => {
 };
 
 const HOSTS = [
-  "zuluhub-erp.vercel.app",
-  "zuluhub-erp-git-rama-alepozod.vercel.app",
+  "pedernal-erp.vercel.app",
+  "pedernal-erp-git-rama-alepozod.vercel.app",
   "otro.ejemplo.com",
   "10.0.0.1",
   "",
@@ -92,7 +92,7 @@ describe("rutas de sistema en el proxy", () => {
     falsa().baseCaida.valor = true;
     compartido.alDia.valor = false;
     for (const ruta of SISTEMA) {
-      const r = await proxy(pedido("zuluhub-erp.vercel.app", ruta));
+      const r = await proxy(pedido("pedernal-erp.vercel.app", ruta));
       expect(r.headers.get("x-middleware-next")).toBe("1");
       expect(r.status).toBe(200);
     }
@@ -100,20 +100,20 @@ describe("rutas de sistema en el proxy", () => {
     expect(compartido.preguntas.cantidad).toBe(0);
   });
 
-  it("los encabezados x-zh-* del cliente no pasan, y el de autorización sí (lo necesita el cron)", async () => {
+  it("los encabezados x-pd-* del cliente no pasan, y el de autorización sí (lo necesita el cron)", async () => {
     const r = await proxy(
-      pedido("zuluhub-erp.vercel.app", "/api/trabajos/cron", {
+      pedido("pedernal-erp.vercel.app", "/api/trabajos/cron", {
         authorization: "Bearer x",
-        "x-zh-nonce": "inventado",
-        "x-zh-marca": "otra",
+        "x-pd-nonce": "inventado",
+        "x-pd-marca": "otra",
         "x-forwarded-host": "app.hoteldellago.test",
       }),
     );
     const siguen = (r.headers.get("x-middleware-override-headers") ?? "").split(",");
     expect(siguen).toContain("authorization");
     expect(r.headers.get("x-middleware-request-authorization")).toBe("Bearer x");
-    expect(r.headers.get("x-middleware-request-x-zh-nonce")).not.toBe("inventado");
-    expect(r.headers.get("x-middleware-request-x-zh-marca")).toBeNull();
+    expect(r.headers.get("x-middleware-request-x-pd-nonce")).not.toBe("inventado");
+    expect(r.headers.get("x-middleware-request-x-pd-marca")).toBeNull();
     // El host sigue siendo el técnico: lo reenviado no cambia nada.
     expect(r.headers.get("x-middleware-next")).toBe("1");
   });
@@ -132,7 +132,7 @@ describe("rutas de sistema en el proxy", () => {
       "/api/auth/signin",
       "/api",
     ];
-    for (const host of ["zuluhub-erp.vercel.app", "otro.ejemplo.com", HOST_LANDING_A]) {
+    for (const host of ["pedernal-erp.vercel.app", "otro.ejemplo.com", HOST_LANDING_A]) {
       for (const ruta of PARECIDAS) {
         const r = await proxy(pedido(host, ruta));
         // Next conserva la barra final del pedido en la reescritura.
@@ -145,7 +145,7 @@ describe("rutas de sistema en el proxy", () => {
 });
 
 describe("P-15: la guarda de migración en el proxy", () => {
-  const REFERENCIA = /<strong>(ZH-[0-9A-F]{4}-[0-9A-F]{4})<\/strong>/;
+  const REFERENCIA = /<strong>(PD-[0-9A-F]{4}-[0-9A-F]{4})<\/strong>/;
 
   it.each(HOSTS)("base atrasada, host %j: «En mantenimiento» 503 con referencia", async (host) => {
     compartido.alDia.valor = false;

@@ -18,7 +18,7 @@ const SIN_MODULOS_HABILITADOS: readonly string[] = [];
 
 /**
  * Las empresas del grupo del tenant del contexto (pantalla «Vista de grupo», H6 §B.5). Contexto de
- * GRUPO: entra con el rol de base `zuluhub_grupo` (solo lectura), nunca con el de la aplicación. En una
+ * GRUPO: entra con el rol de base `pedernal_grupo` (solo lectura), nunca con el de la aplicación. En una
  * sola transacción (`read committed`):
  *
  *  1. el guard (`grupo.ver_empresas`) con el rol leído dentro de la transacción, antes de leer nada;

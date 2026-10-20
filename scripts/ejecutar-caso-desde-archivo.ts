@@ -2,10 +2,10 @@ import {
   describirFallaDeBase,
   ocultarSecretos,
 } from "../src/adaptadores/postgres/describir-falla-de-base";
-import { ZULUHUB_CLAVE_CONTEXTO } from "../src/adaptadores/postgres/contexto-firmado";
-import { ZULUHUB_SECRETO_INVITACIONES } from "../src/adaptadores/tokens/tokens-hmac";
+import { PEDERNAL_CLAVE_CONTEXTO } from "../src/adaptadores/postgres/contexto-firmado";
+import { PEDERNAL_SECRETO_INVITACIONES } from "../src/adaptadores/tokens/tokens-hmac";
 import { contextoDePlataforma } from "../src/composicion/contextos";
-import { ZULUHUB_DB_PLATAFORMA } from "../src/composicion/entorno-de-plataforma";
+import { PEDERNAL_DB_PLATAFORMA } from "../src/composicion/entorno-de-plataforma";
 import type { Plataforma } from "../src/composicion/plataforma";
 import type { ContextoDePlataforma } from "../src/contexto/contexto";
 import {
@@ -105,10 +105,10 @@ export type EntradaDeEjecucion = Readonly<{
 
 export async function ejecutarCasoDePlataforma(entrada: EntradaDeEjecucion): Promise<number> {
   const { entorno } = entrada;
-  const cadena = entorno[ZULUHUB_DB_PLATAFORMA]?.trim();
+  const cadena = entorno[PEDERNAL_DB_PLATAFORMA]?.trim();
   // La parte secreta de la clave de contexto es la que sigue al kid.
-  const secretoDeLaClave = entorno[ZULUHUB_CLAVE_CONTEXTO]?.trim().split(":")[1];
-  const secretos = [cadena, secretoDeLaClave, entorno[ZULUHUB_SECRETO_INVITACIONES]?.trim()];
+  const secretoDeLaClave = entorno[PEDERNAL_CLAVE_CONTEXTO]?.trim().split(":")[1];
+  const secretos = [cadena, secretoDeLaClave, entorno[PEDERNAL_SECRETO_INVITACIONES]?.trim()];
   const tapar = (linea: string) =>
     secretos.reduce<string>((texto, secreto) => ocultarSecretos(texto, secreto), linea);
   const info = (linea: string) => entrada.info(tapar(linea));

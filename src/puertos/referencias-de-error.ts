@@ -1,7 +1,7 @@
 import type { EmpresaId, PersonaId } from "../primitivas/identificadores/marca";
 
 /**
- * Una referencia de error (H5 plataforma, §B.5.9 y decisión F4): el código `ZH-XXXX-XXXX` que ve quien
+ * Una referencia de error (H5 plataforma, §B.5.9 y decisión F4): el código `PD-XXXX-XXXX` que ve quien
  * recibe un rechazo y que soporte busca después. Solo el MOTIVO tipado, ningún dato de negocio: la base
  * lo impone con CHECK estrictos sobre la forma de cada campo. Sin unicidad (32 bits pueden colisionar).
  */

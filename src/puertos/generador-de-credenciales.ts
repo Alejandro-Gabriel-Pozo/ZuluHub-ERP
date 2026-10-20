@@ -2,7 +2,7 @@ import type { Secreto } from "../primitivas/secreto/secreto";
 
 /**
  * Genera el par de claves de un certificado de ARCA y su pedido (CSR) dentro del servidor (spec H7 facturación
- * §B.6, decisión del dueño 2026-10-14): la clave privada NUNCA sale de ZuluHub; ARCA solo recibe el pedido, que es
+ * §B.6, decisión del dueño 2026-10-14): la clave privada NUNCA sale de Pedernal; ARCA solo recibe el pedido, que es
  * público.
  */
 export type DatosDelPedido = Readonly<{

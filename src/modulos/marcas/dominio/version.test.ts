@@ -315,7 +315,7 @@ describe("decidirConfirmacionDeMarca", () => {
   const DIA = 86_400_000;
 
   const PRINCIPAL: DefinicionDeMarca = {
-    nombreVisible: "ZuluHub",
+    nombreVisible: "Pedernal",
     tema: {
       primary: "#1a73e8",
       "on-primary": "#ffffff",
@@ -323,7 +323,7 @@ describe("decidirConfirmacionDeMarca", () => {
       accent: "#d93025",
     },
     aspecto: {},
-    logo: "/marcas/zuluhub/logo.png",
+    logo: "/marcas/pedernal/logo.png",
     vocabulario: { "rol.gerente.nombre": "Gerente general" },
     modulosIniciales: ["reservas"],
     planPorDefectoId: PLAN_A,
@@ -409,7 +409,7 @@ describe("decidirConfirmacionDeMarca", () => {
       entrada({ borrador: hijo, ancestros: [padre, PRINCIPAL] }),
     );
     expect(r.ok && r.valor.definicion.tema.primary).toBe("#336699");
-    expect(r.ok && r.valor.definicion.logo).toBe("/marcas/zuluhub/logo.png");
+    expect(r.ok && r.valor.definicion.logo).toBe("/marcas/pedernal/logo.png");
     const s = decidirConfirmacionDeMarca(entrada({ borrador: hijo, ancestros: [null, PRINCIPAL] }));
     expect(s.ok && s.valor.definicion.tema.primary).toBe("#1a73e8");
   });

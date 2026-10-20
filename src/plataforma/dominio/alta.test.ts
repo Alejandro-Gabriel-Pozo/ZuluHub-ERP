@@ -132,7 +132,7 @@ describe("validarAlta", () => {
 
   it("un tenant nuevo sin marca es MARCA_INDEFINIDA; la marca tiene que ser un uuid", () => {
     expect(validarAlta(entrada({ marcaId: undefined }))).toEqual(error("MARCA_INDEFINIDA"));
-    for (const marca of ["", " ", "zuluhub", "m-1", `${UNA_MARCA} `, UNA_MARCA.slice(1)]) {
+    for (const marca of ["", " ", "pedernal", "m-1", `${UNA_MARCA} `, UNA_MARCA.slice(1)]) {
       expect(validarAlta(entrada({ marcaId: marca })), marca).toEqual(error("MARCA_ID_INVALIDA"));
     }
   });

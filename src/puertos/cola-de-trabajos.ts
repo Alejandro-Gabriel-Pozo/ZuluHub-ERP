@@ -4,7 +4,7 @@ import type { Dato } from "./sin-secretos";
 /**
  * Puerto de la cola de trabajos, lado del procesador (ADR-007). Encolar es otro puerto (`trabajos`);
  * este es el que usa quien TOMA y MARCA trabajos, siempre con el contexto `TRABAJOS` (rol de base
- * `zuluhub_trabajos`, que ve y avanza la cola y nada más: ADR-011, A7).
+ * `pedernal_trabajos`, que ve y avanza la cola y nada más: ADR-011, A7).
  *
  * Todas las operaciones son un `UPDATE` condicionado (nada de `FOR UPDATE`): tomar un trabajo es
  * ganar una carrera en la base. Los `marcar*` están "cercados" por `intentos`: solo cierra el trabajo

@@ -95,7 +95,7 @@ const conBase = (url: string, nombre: string): string => {
 /** Una copia de la plantilla (0001 a 0006) con ese texto de 0007 aplicado; se destruye al terminar. */
 async function conMigracion<T>(sql: string, trabajo: (ctx: Ctx) => Promise<T>): Promise<T> {
   const b = base as BaseDePruebas;
-  const nombre = `zuluhub_deb_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  const nombre = `pedernal_deb_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   await admin.query(`CREATE DATABASE ${nombre} TEMPLATE ${plantillaNombre}`);
   const carpeta = await carpetaCon([...HASTA_0006]);
   const copia: BaseDePruebas = {
@@ -135,7 +135,7 @@ async function conAdmin<T>(
 ): Promise<T> {
   const s = await SesionDePrueba.abrir(
     ctx.base,
-    "zuluhub_plataforma",
+    "pedernal_plataforma",
     comoPlataforma({ tipo: "ADMIN", id: adminPlataformaId(id) }),
   );
   try {
@@ -145,7 +145,7 @@ async function conAdmin<T>(
   }
 }
 async function conPublico<T>(ctx: Ctx, trabajo: (s: SesionDePrueba) => Promise<T>): Promise<T> {
-  const s = await SesionDePrueba.abrir(ctx.base, "zuluhub_publico", null);
+  const s = await SesionDePrueba.abrir(ctx.base, "pedernal_publico", null);
   try {
     return await trabajo(s);
   } finally {
@@ -159,7 +159,7 @@ async function conApp<T>(
 ): Promise<T> {
   const s = await SesionDePrueba.abrir(
     ctx.base,
-    "zuluhub_app",
+    "pedernal_app",
     empresa === null ? null : comoEmpresa(empresaId(empresa), null),
   );
   try {
@@ -451,12 +451,12 @@ const SONDAS = {
     ] as const) {
       const alta = await SesionDePrueba.abrir(
         ctx.base,
-        "zuluhub_plataforma",
+        "pedernal_plataforma",
         comoPlataforma({ tipo: "ADMIN", id: adminPlataformaId(ADMIN_DE_PRUEBA) }),
       );
       const retiro = await SesionDePrueba.abrir(
         ctx.base,
-        "zuluhub_plataforma",
+        "pedernal_plataforma",
         comoPlataforma({ tipo: "ADMIN", id: adminPlataformaId(ADMIN_DE_PRUEBA) }),
       );
       try {
@@ -721,12 +721,12 @@ const SONDAS = {
     const padre = await crearMarca(ctx.dueno);
     const alta = await SesionDePrueba.abrir(
       ctx.base,
-      "zuluhub_plataforma",
+      "pedernal_plataforma",
       comoPlataforma({ tipo: "ADMIN", id: adminPlataformaId(ADMIN_DE_PRUEBA) }),
     );
     const retiro = await SesionDePrueba.abrir(
       ctx.base,
-      "zuluhub_plataforma",
+      "pedernal_plataforma",
       comoPlataforma({ tipo: "ADMIN", id: adminPlataformaId(ADMIN_DE_PRUEBA) }),
     );
     try {
@@ -761,7 +761,7 @@ const SONDAS = {
     const abrir = (persona: string) =>
       SesionDePrueba.abrir(
         ctx.base,
-        "zuluhub_grupo",
+        "pedernal_grupo",
         comoGrupo(tenantId(m.tenant), personaId(persona)),
       );
     const propietario = await abrir(m.persona);
@@ -808,7 +808,7 @@ const SONDAS = {
   /** La referencia de error no se repite. */
   referenciaUnica: async ({ dueno }: Ctx) =>
     sinConfirmar(dueno, async () => {
-      const r = `ZH-${randomUUID().slice(0, 4).toUpperCase()}-${randomUUID().slice(0, 4).toUpperCase()}`;
+      const r = `PD-${randomUUID().slice(0, 4).toUpperCase()}-${randomUUID().slice(0, 4).toUpperCase()}`;
       const insertar = () =>
         intentoDelDueno(
           dueno,
@@ -934,7 +934,7 @@ type Debilitamiento = Readonly<{
 }>;
 
 const SELECT_PUBLICO_DE_VERSION =
-  "GRANT SELECT (marca_id, numero, vigente_desde, nombre_visible, tema, logo, vocabulario)\n  ON version_de_marca TO zuluhub_publico;";
+  "GRANT SELECT (marca_id, numero, vigente_desde, nombre_visible, tema, logo, vocabulario)\n  ON version_de_marca TO pedernal_publico;";
 
 const DEBILITAMIENTOS: readonly Debilitamiento[] = [
   // --- RLS y políticas del rol público
@@ -953,8 +953,8 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
     romper: (sql) =>
       cambiar(
         sql,
-        "version_de_marca_publico_leer ON version_de_marca FOR SELECT TO zuluhub_publico\n  USING (estado = 'CONFIRMADA' AND vigente_desde <= now());",
-        "version_de_marca_publico_leer ON version_de_marca FOR SELECT TO zuluhub_publico\n  USING (estado = 'CONFIRMADA');",
+        "version_de_marca_publico_leer ON version_de_marca FOR SELECT TO pedernal_publico\n  USING (estado = 'CONFIRMADA' AND vigente_desde <= now());",
+        "version_de_marca_publico_leer ON version_de_marca FOR SELECT TO pedernal_publico\n  USING (estado = 'CONFIRMADA');",
       ),
     sonda: SONDAS.publicoSoloVersionesVigentes,
   },
@@ -963,8 +963,8 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
     romper: (sql) =>
       cambiar(
         sql,
-        "version_de_marca_publico_leer ON version_de_marca FOR SELECT TO zuluhub_publico\n  USING (estado = 'CONFIRMADA' AND vigente_desde <= now());",
-        "version_de_marca_publico_leer ON version_de_marca FOR SELECT TO zuluhub_publico\n  USING (vigente_desde <= now() OR vigente_desde IS NULL);",
+        "version_de_marca_publico_leer ON version_de_marca FOR SELECT TO pedernal_publico\n  USING (estado = 'CONFIRMADA' AND vigente_desde <= now());",
+        "version_de_marca_publico_leer ON version_de_marca FOR SELECT TO pedernal_publico\n  USING (vigente_desde <= now() OR vigente_desde IS NULL);",
       ),
     sonda: SONDAS.publicoNoVeBorradores,
   },
@@ -973,8 +973,8 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
     romper: (sql) =>
       cambiar(
         sql,
-        "dominio_publico_leer ON dominio FOR SELECT TO zuluhub_publico\n  USING (estado = 'ACTIVO');",
-        "dominio_publico_leer ON dominio FOR SELECT TO zuluhub_publico\n  USING (true);",
+        "dominio_publico_leer ON dominio FOR SELECT TO pedernal_publico\n  USING (estado = 'ACTIVO');",
+        "dominio_publico_leer ON dominio FOR SELECT TO pedernal_publico\n  USING (true);",
       ),
     sonda: SONDAS.publicoSoloDominiosActivos,
   },
@@ -984,7 +984,7 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
       cambiar(
         sql,
         SELECT_PUBLICO_DE_VERSION,
-        "GRANT SELECT (marca_id, numero, vigente_desde, nombre_visible, tema, logo, vocabulario, modulos_iniciales)\n  ON version_de_marca TO zuluhub_publico;",
+        "GRANT SELECT (marca_id, numero, vigente_desde, nombre_visible, tema, logo, vocabulario, modulos_iniciales)\n  ON version_de_marca TO pedernal_publico;",
       ),
     sonda: SONDAS.publicoNoLeeLoPrivado,
   },
@@ -993,8 +993,8 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
     romper: (sql) =>
       cambiar(
         sql,
-        "GRANT SELECT (id, codigo, marca_padre_id, nivel, es_principal) ON marca TO zuluhub_publico;",
-        "GRANT SELECT (id, codigo, marca_padre_id, nivel, es_principal, estado) ON marca TO zuluhub_publico;",
+        "GRANT SELECT (id, codigo, marca_padre_id, nivel, es_principal) ON marca TO pedernal_publico;",
+        "GRANT SELECT (id, codigo, marca_padre_id, nivel, es_principal, estado) ON marca TO pedernal_publico;",
       ),
     sonda: SONDAS.publicoNoLeeLoPrivado,
   },
@@ -1003,8 +1003,8 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
     romper: (sql) =>
       cambiar(
         sql,
-        "GRANT USAGE ON SCHEMA public TO zuluhub_publico;",
-        "GRANT USAGE ON SCHEMA public TO zuluhub_publico;\nGRANT UPDATE (codigo) ON marca TO zuluhub_publico;",
+        "GRANT USAGE ON SCHEMA public TO pedernal_publico;",
+        "GRANT USAGE ON SCHEMA public TO pedernal_publico;\nGRANT UPDATE (codigo) ON marca TO pedernal_publico;",
       ),
     sonda: SONDAS.publicoNoEscribe,
   },
@@ -1013,8 +1013,8 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
     romper: (sql) =>
       cambiar(
         sql,
-        "GRANT USAGE ON SCHEMA public TO zuluhub_publico;",
-        "GRANT USAGE ON SCHEMA public TO zuluhub_publico;\nGRANT EXECUTE ON FUNCTION host_valido(text) TO zuluhub_publico;",
+        "GRANT USAGE ON SCHEMA public TO pedernal_publico;",
+        "GRANT USAGE ON SCHEMA public TO pedernal_publico;\nGRANT EXECUTE ON FUNCTION host_valido(text) TO pedernal_publico;",
       ),
     sonda: SONDAS.publicoNoEjecutaFunciones,
   },
@@ -1044,8 +1044,8 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
     romper: (sql) =>
       cambiar(
         sql,
-        "CREATE POLICY marca_app_leer ON marca FOR SELECT TO zuluhub_app\n  USING ((SELECT contexto_firmado()) IS NOT NULL);",
-        "CREATE POLICY marca_app_leer ON marca FOR SELECT TO zuluhub_app\n  USING (true);",
+        "CREATE POLICY marca_app_leer ON marca FOR SELECT TO pedernal_app\n  USING ((SELECT contexto_firmado()) IS NOT NULL);",
+        "CREATE POLICY marca_app_leer ON marca FOR SELECT TO pedernal_app\n  USING (true);",
       ),
     sonda: SONDAS.appSinContextoNoVeMarcas,
   },
@@ -1054,8 +1054,8 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
     romper: (sql) =>
       cambiar(
         sql,
-        "CREATE POLICY nivel_de_control_app_alta ON nivel_de_control FOR INSERT TO zuluhub_app\n  WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));",
-        "CREATE POLICY nivel_de_control_app_alta ON nivel_de_control FOR INSERT TO zuluhub_app\n  WITH CHECK (empresa_id = (SELECT app_empresa_id()));",
+        "CREATE POLICY nivel_de_control_app_alta ON nivel_de_control FOR INSERT TO pedernal_app\n  WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));",
+        "CREATE POLICY nivel_de_control_app_alta ON nivel_de_control FOR INSERT TO pedernal_app\n  WITH CHECK (empresa_id = (SELECT app_empresa_id()));",
       ),
     sonda: SONDAS.nivelDeControlSoloSiOpera,
   },
@@ -1094,8 +1094,8 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
     romper: (sql) =>
       cambiar(
         sql,
-        "GRANT INSERT (codigo, marca_padre_id) ON marca TO zuluhub_plataforma;",
-        "GRANT INSERT (codigo, marca_padre_id, es_principal) ON marca TO zuluhub_plataforma;",
+        "GRANT INSERT (codigo, marca_padre_id) ON marca TO pedernal_plataforma;",
+        "GRANT INSERT (codigo, marca_padre_id, es_principal) ON marca TO pedernal_plataforma;",
       ),
     sonda: SONDAS.plataformaSinPrivilegiosDeIdentidad,
   },
@@ -1104,8 +1104,8 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
     romper: (sql) =>
       cambiar(
         sql,
-        "GRANT INSERT (marca_id) ON tenant TO zuluhub_plataforma;",
-        "GRANT INSERT (marca_id) ON tenant TO zuluhub_plataforma;\nGRANT UPDATE (marca_id) ON tenant TO zuluhub_plataforma;",
+        "GRANT INSERT (marca_id) ON tenant TO pedernal_plataforma;",
+        "GRANT INSERT (marca_id) ON tenant TO pedernal_plataforma;\nGRANT UPDATE (marca_id) ON tenant TO pedernal_plataforma;",
       ),
     sonda: SONDAS.plataformaSinPrivilegiosDeIdentidad,
   },
@@ -1159,8 +1159,8 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
     romper: (sql) =>
       cambiar(
         sql,
-        "GRANT SELECT ON resolucion_de_host TO zuluhub_publico;",
-        "GRANT SELECT ON resolucion_de_host TO zuluhub_publico;\nGRANT SELECT ON empresa TO zuluhub_publico;",
+        "GRANT SELECT ON resolucion_de_host TO pedernal_publico;",
+        "GRANT SELECT ON resolucion_de_host TO pedernal_publico;\nGRANT SELECT ON empresa TO pedernal_publico;",
       ),
     sonda: SONDAS.publicoNoVeDatosDeEmpresas,
   },
@@ -1169,8 +1169,8 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
     romper: (sql) =>
       cambiar(
         sql,
-        "GRANT SELECT (host, superficie, estado, duenio_marca_id, duenio_empresa_id, marca_id) ON dominio TO zuluhub_publico;",
-        "GRANT SELECT (host, superficie, estado, duenio_marca_id, duenio_empresa_id, marca_id, titular) ON dominio TO zuluhub_publico;",
+        "GRANT SELECT (host, superficie, estado, duenio_marca_id, duenio_empresa_id, marca_id) ON dominio TO pedernal_publico;",
+        "GRANT SELECT (host, superficie, estado, duenio_marca_id, duenio_empresa_id, marca_id, titular) ON dominio TO pedernal_publico;",
       ),
     sonda: SONDAS.publicoNoLeeLoPrivado,
   },
