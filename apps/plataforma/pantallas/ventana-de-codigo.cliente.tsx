@@ -153,7 +153,12 @@ export function useVentanaDeCodigo(): { pedirCodigo: () => Promise<boolean>; ven
           >
             Confirmar
           </Boton>
-          <Boton variante="secundaria" ancho="completo" alTocar={cambiarModo} deshabilitado={enviando}>
+          <Boton
+            variante="secundaria"
+            ancho="completo"
+            alTocar={cambiarModo}
+            deshabilitado={enviando}
+          >
             {modo === "aplicacion" ? "Usar un código de recuperación" : "Usar la aplicación"}
           </Boton>
           <Boton

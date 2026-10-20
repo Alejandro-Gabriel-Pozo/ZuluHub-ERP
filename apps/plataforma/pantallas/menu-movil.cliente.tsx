@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Icono } from "../../web/ui/iconos/Icono";
 import estilos from "./armazon-de-consola.module.css";
 
@@ -17,14 +17,15 @@ export type PropsDeMenuMovil = Readonly<{
  * visible (el CSS solo lo esconde cuando la página ya está lista).
  */
 export function MenuMovil({ nombre, children }: PropsDeMenuMovil) {
-  const [listo, setListo] = useState(false);
+  // Falso en el servidor y en la primera pintura; verdadero ya hidratada (recién ahí el CSS puede esconder el menú).
+  const listo = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
   const [abierto, setAbierto] = useState(false);
   const boton = useRef<HTMLButtonElement>(null);
   const cajon = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    setListo(true);
-  }, []);
 
   useEffect(() => {
     if (!abierto) return;
