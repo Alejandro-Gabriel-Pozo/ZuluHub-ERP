@@ -364,8 +364,8 @@ const reglas = [
     name: "composicion-solo-desde-servidor-de-apps",
     severity: "error",
     comment:
-      "R-W2. Ningún .tsx ni archivo de apps/** importa src/composicion salvo apps/web/servidor/** (que es solo servidor). Previene que un componente arme adaptadores y, con ellos, secretos.",
-    from: { path: "\\.tsx$|^apps/", pathNot: "^apps/web/servidor/" },
+      "R-W2. Ningún .tsx ni archivo de apps/** importa src/composicion salvo apps/web/servidor/** y apps/plataforma/servidor/** (que es solo servidor). Previene que un componente arme adaptadores y, con ellos, secretos.",
+    from: { path: "\\.tsx$|^apps/", pathNot: "^apps/(web|plataforma)/servidor/" },
     to: { path: "^src/composicion/" },
   },
   {
@@ -458,6 +458,24 @@ const reglas = [
       "Los casos de uso de plataforma no envían correo: encolan un trabajo (ADR-007) y lo envía el procesador de la cola fuera de la transacción.",
     from: { path: "^src/plataforma/" },
     to: { path: "^src/puertos/correo\\.ts$|^src/adaptadores/correo/" },
+  },
+  {
+    // P7. Previene: que `apps/web` (o cualquier parte de `src/`) obtenga la puerta de plataforma y con ella la
+    // credencial del rol `zuluhub_plataforma`: un error de la web podría actuar como plataforma (R10). La puerta
+    // son los scripts que corre el dueño y, más adelante, la consola `apps/plataforma` (proyecto de Vercel
+    // propio, todavía sin crear: la regla se escribe por patrón de ruta). Alcance: `plataforma.ts` y
+    // `entorno-de-plataforma.ts` solo los importan `scripts/`, las pruebas (`test/` y los `*.test.ts`),
+    // `apps/plataforma/servidor/` y ellos mismos. Chequeo: las violaciones inyectadas de reglas.test.ts.
+    name: "plataforma-solo-desde-scripts",
+    severity: "error",
+    comment:
+      "src/composicion/plataforma.ts y entorno-de-plataforma.ts (la puerta de plataforma y su credencial) solo los importan scripts/, las pruebas y apps/plataforma/servidor/: ni apps/web ni el resto de src/ (R10).",
+    from: {
+      path: "^(src|apps)/",
+      pathNot:
+        "^src/composicion/(plataforma|entorno-de-plataforma)\\.ts$|\\.test\\.(ts|tsx)$|^apps/plataforma/servidor/",
+    },
+    to: { path: "^src/composicion/(plataforma|entorno-de-plataforma)\\.ts$" },
   },
 ];
 
