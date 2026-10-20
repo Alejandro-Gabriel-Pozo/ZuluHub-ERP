@@ -23,6 +23,18 @@ export const ACCIONES_DE_PLATAFORMA = [
   "DOMINIO_ACTIVADO",
   "DOMINIO_DESACTIVADO",
   "DOMINIO_RETIRADO",
+  // Marcas, planes, ajustes y módulos de empresa (M5): una constancia por cada cambio real; lo idempotente no audita.
+  "MARCA_CREADA",
+  "MARCA_BORRADOR_GUARDADO",
+  "MARCA_VERSION_CONFIRMADA",
+  "PLAN_CREADO",
+  "PLAN_BORRADOR_GUARDADO",
+  "PLAN_VERSION_PUBLICADA",
+  "PLAN_ASIGNADO",
+  "PLAN_MIGRADO_POR_LOTE",
+  "PERILLA_AJUSTADA",
+  "MODULO_ACTIVADO",
+  "MODULO_DESACTIVADO",
 ] as const;
 
 export type AccionDePlataforma = (typeof ACCIONES_DE_PLATAFORMA)[number];

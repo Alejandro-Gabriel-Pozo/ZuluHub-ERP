@@ -111,7 +111,7 @@ async function cambiarEstado(
       if (decision.valor.tipo === "YA_ESTABA") {
         return ok({
           salida: { dominioId: id, estado: dominio.estado, yaEstaba: true },
-          constancia: null,
+          constancias: [],
         });
       }
       const nuevo = await tx.dominios.cambiarEstado(id, dominio.version, decision.valor.cambio);
@@ -120,13 +120,15 @@ async function cambiarEstado(
       if (nuevo === null) return err({ tipo: "ConcurrenciaAgotada" });
       return ok({
         salida: { dominioId: id, estado: nuevo.estado, yaEstaba: false },
-        constancia: {
-          accion: variante.constancia,
-          entidad: "dominio",
-          entidadId: id,
-          antes: datosDeAuditoriaDeDominio(dominio),
-          despues: datosDeAuditoriaDeDominio(nuevo),
-        },
+        constancias: [
+          {
+            accion: variante.constancia,
+            entidad: "dominio",
+            entidadId: id,
+            antes: datosDeAuditoriaDeDominio(dominio),
+            despues: datosDeAuditoriaDeDominio(nuevo),
+          },
+        ],
       });
     },
     comoRepeticion: (guardado) => ({ ...guardado, yaEstaba: true }),

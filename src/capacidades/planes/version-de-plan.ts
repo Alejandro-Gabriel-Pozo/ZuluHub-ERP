@@ -49,6 +49,18 @@ export function nombreDePlanValido(nombre: string): string | null {
   return CARACTER_NO_IMPRIMIBLE.test(limpio) ? null : limpio;
 }
 
+/** El código técnico de un plan: minúsculas, dígitos y guion; de 2 a 40 caracteres, empieza con letra (`plan_codigo_ck`). */
+const CODIGO_DE_PLAN = /^[a-z][a-z0-9-]{1,39}$/;
+
+/**
+ * El código con el que se identifica un plan (lo único que se declara al crearlo; el nombre comercial
+ * es de cada versión). La misma regla que el CHECK `plan_codigo_ck` de la base y que el código de una
+ * marca: una prueba de integración compara ambas.
+ */
+export function validarCodigoDePlan(codigo: string): Resultado<string, "CODIGO_DE_PLAN_INVALIDO"> {
+  return CODIGO_DE_PLAN.test(codigo) ? ok(codigo) : err("CODIGO_DE_PLAN_INVALIDO");
+}
+
 /**
  * Valida el contenido de una versión de plan. Orden de los errores: nombre, módulos desconocidos (en
  * el orden dado), clausura de `requiere` de módulos (por módulo, ordenados), perillas por clave

@@ -1,13 +1,12 @@
 import type { DefinicionDeModulo } from "../../capacidades/modulos/catalogo";
-import { esClaveDe } from "../../capacidades/modulos/activos";
-import { derechosDeUso, type AjusteDePerilla } from "../../capacidades/planes/derechos";
+import { derechosDeUso } from "../../capacidades/planes/derechos";
 import type { DefinicionDePerilla } from "../../capacidades/planes/perillas";
 import { vigenteEn } from "../../capacidades/planes/vigencia";
-import { valorDeAjuste } from "../../capacidades/planes/valores";
-import type {
-  AjusteGuardado,
-  AsignacionConVersion,
-  LecturaDePlanes,
+import {
+  interpretarAjustes,
+  type AjusteGuardado,
+  type AsignacionConVersion,
+  type LecturaDePlanes,
 } from "../../modulos/planes/publico";
 import type { LecturaDeDerechosDeUso } from "../../puertos/derechos-de-uso";
 
@@ -33,21 +32,8 @@ export function crearLecturaDeDerechosDeUso<M extends string, P extends string>(
 ): LecturaDeDerechosDeUso<M, P> {
   const { catalogoDeModulos, catalogoDePerillas } = catalogos;
 
-  /** Los ajustes guardados, como los entiende `derechosDeUso`. */
-  function interpretar(guardados: readonly AjusteGuardado[]): AjusteDePerilla[] {
-    const ajustes: AjusteDePerilla[] = [];
-    for (const g of guardados) {
-      if (!esClaveDe(catalogoDePerillas, g.perilla)) continue;
-      ajustes.push({
-        perilla: g.perilla,
-        empresaId: g.empresaId,
-        numero: g.numero,
-        vigenteDesde: g.vigenteDesde,
-        valor: valorDeAjuste(catalogoDePerillas[g.perilla], g.valor) ?? "DEL_PLAN",
-      });
-    }
-    return ajustes;
-  }
+  const interpretar = (guardados: readonly AjusteGuardado[]) =>
+    interpretarAjustes(catalogoDePerillas, guardados);
 
   const versionVigente = (asignaciones: readonly AsignacionConVersion[], ahora: Date) =>
     vigenteEn(asignaciones, ahora)?.version ?? null;
@@ -82,6 +68,22 @@ export function crearLecturaDeDerechosDeUso<M extends string, P extends string>(
         catalogoDePerillas,
         tenantId: tenant,
         empresaId: null,
+        versionDePlan: versionVigente(asignaciones, contexto.ahora),
+        ajustes: interpretar(ajustes),
+        ahora: contexto.ahora,
+      });
+    },
+
+    async deLaEmpresaParaLaPlataforma(contexto, empresa) {
+      const tenant = await planes.tenantDeLaEmpresa(empresa);
+      if (tenant === null) return null;
+      const asignaciones = await planes.asignacionesDelTenant(tenant);
+      const ajustes = await planes.ajustesDelTenant(tenant, empresa);
+      return derechosDeUso({
+        catalogoDeModulos,
+        catalogoDePerillas,
+        tenantId: tenant,
+        empresaId: empresa,
         versionDePlan: versionVigente(asignaciones, contexto.ahora),
         ajustes: interpretar(ajustes),
         ahora: contexto.ahora,

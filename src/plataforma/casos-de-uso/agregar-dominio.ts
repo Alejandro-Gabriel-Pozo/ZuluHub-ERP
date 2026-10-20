@@ -129,21 +129,23 @@ export function armarAgregarDominio(dependencias: DependenciasDeDominios) {
         const creado = await tx.dominios.crear(alta);
         return ok({
           salida: { dominioId: creado.id, yaExistia: false },
-          constancia: {
-            accion: "DOMINIO_AGREGADO",
-            entidad: "dominio",
-            entidadId: creado.id,
-            antes: null,
-            despues: {
-              ...datosDeAuditoriaDeDominio(creado),
-              titular: creado.titular,
-              esCanonico: creado.esCanonico,
-              duenioTipo: creado.duenio.tipo,
-              duenioId:
-                creado.duenio.tipo === "MARCA" ? creado.duenio.marcaId : creado.duenio.empresaId,
-              marcaId: creado.marcaId,
+          constancias: [
+            {
+              accion: "DOMINIO_AGREGADO",
+              entidad: "dominio",
+              entidadId: creado.id,
+              antes: null,
+              despues: {
+                ...datosDeAuditoriaDeDominio(creado),
+                titular: creado.titular,
+                esCanonico: creado.esCanonico,
+                duenioTipo: creado.duenio.tipo,
+                duenioId:
+                  creado.duenio.tipo === "MARCA" ? creado.duenio.marcaId : creado.duenio.empresaId,
+                marcaId: creado.marcaId,
+              },
             },
-          },
+          ],
         });
       },
       comoRepeticion: (guardado) => ({ ...guardado, yaExistia: true }),

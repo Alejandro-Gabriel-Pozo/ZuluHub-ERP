@@ -1,6 +1,7 @@
 import { sql, type Kysely } from "kysely";
-import type { VersionDePlanVigente } from "../../../capacidades/planes/derechos";
-import type { ValorDePerilla } from "../../../capacidades/planes/valores";
+import type { AjusteDePerilla, VersionDePlanVigente } from "../../../capacidades/planes/derechos";
+import type { DefinicionDePerilla } from "../../../capacidades/planes/perillas";
+import { valorDeAjuste, type ValorDePerilla } from "../../../capacidades/planes/valores";
 import {
   empresaId,
   planId,
@@ -41,6 +42,33 @@ export type AjusteGuardado = Readonly<{
   vigenteDesde: Date;
   valor: string;
 }>;
+
+/**
+ * Los ajustes guardados, como los entiende `derechosDeUso`: cada valor se interpreta contra SU perilla
+ * (`valorDeAjuste`). Una perilla que el catálogo ya no tiene se ignora; un valor que no es de su tipo cuenta
+ * como `DEL_PLAN` (vuelve al plan: falla cerrado). La usan la lectura de derechos y la consulta de
+ * diferencia entre versiones: una sola interpretación de lo que dice la base.
+ */
+export function interpretarAjustes(
+  catalogoDePerillas: Readonly<Record<string, DefinicionDePerilla>>,
+  guardados: readonly AjusteGuardado[],
+): AjusteDePerilla[] {
+  const ajustes: AjusteDePerilla[] = [];
+  for (const g of guardados) {
+    const definicion = Object.hasOwn(catalogoDePerillas, g.perilla)
+      ? catalogoDePerillas[g.perilla]
+      : undefined;
+    if (definicion === undefined) continue;
+    ajustes.push({
+      perilla: g.perilla,
+      empresaId: g.empresaId,
+      numero: g.numero,
+      vigenteDesde: g.vigenteDesde,
+      valor: valorDeAjuste(definicion, g.valor) ?? "DEL_PLAN",
+    });
+  }
+  return ajustes;
+}
 
 export interface LecturaDePlanes {
   /**
