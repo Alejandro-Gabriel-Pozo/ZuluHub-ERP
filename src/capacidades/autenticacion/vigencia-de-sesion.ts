@@ -15,6 +15,7 @@ import {
  * 8 horas de creada como máximo.
  */
 
+const MINUTO_EN_MS = 60_000;
 const HORA_EN_MS = 3_600_000;
 
 export type LimitesDeSesion = Readonly<{
@@ -27,6 +28,38 @@ export const LIMITES_DE_SESION: LimitesDeSesion = Object.freeze({
   inactividad: LIMITES_DE_INACTIVIDAD,
   absolutoEnMs: 8 * HORA_EN_MS,
 });
+
+/**
+ * Los límites de la consola de plataforma (h5-p8 §1; DECIDIDO por el dueño): 8 horas absolutas y 30 minutos de
+ * inactividad, con el aviso a los 25 (quedan 5). Los de empresa (`LIMITES_DE_SESION`) no cambian.
+ */
+export const LIMITES_DE_SESION_DE_PLATAFORMA: LimitesDeSesion = Object.freeze({
+  inactividad: Object.freeze({ avisoEnMs: 25 * MINUTO_EN_MS, vencimientoEnMs: 30 * MINUTO_EN_MS }),
+  absolutoEnMs: 8 * HORA_EN_MS,
+});
+
+/**
+ * Los límites con que el barrido da una sesión por vencida. Las dos audiencias (empresa y consola) comparten la tabla
+ * `session`: si el barrido usara los 15 minutos de inactividad de la web, borraría las sesiones de la consola (30
+ * minutos) a medio uso. Se toma el PLAZO MÁS LARGO de cada límite: lo que sobra de una audiencia lo corta su propio
+ * `expiresAt` (el primer criterio del barrido, exacto para cada sesión), así que el barrido sigue limpiando y nunca
+ * borra una sesión que todavía vale.
+ */
+export function limitesDelBarrido(...audiencias: readonly LimitesDeSesion[]): LimitesDeSesion {
+  const mayor = (valores: readonly number[]) => Math.max(...valores);
+  return Object.freeze({
+    inactividad: Object.freeze({
+      avisoEnMs: mayor(audiencias.map((l) => l.inactividad.avisoEnMs)),
+      vencimientoEnMs: mayor(audiencias.map((l) => l.inactividad.vencimientoEnMs)),
+    }),
+    absolutoEnMs: mayor(audiencias.map((l) => l.absolutoEnMs)),
+  });
+}
+
+export const LIMITES_DEL_BARRIDO: LimitesDeSesion = limitesDelBarrido(
+  LIMITES_DE_SESION,
+  LIMITES_DE_SESION_DE_PLATAFORMA,
+);
 
 /** Lo que la librería de ingreso pide como `expiresIn`: segundos de inactividad hasta el vencimiento. */
 export function segundosDeInactividad(limites: LimitesDeSesion = LIMITES_DE_SESION): number {

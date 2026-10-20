@@ -1,3 +1,4 @@
+import type { EstadoDeSesionDePlataforma } from "../capacidades/autenticacion/estado-de-sesion-de-plataforma";
 import type { UsuarioAuthId } from "../primitivas/identificadores/marca";
 
 /**
@@ -25,6 +26,11 @@ export type SesionAutenticada = Readonly<{
   /** Cuándo vence si no se usa más. */
   venceEn: Date;
   /**
+   * Cuándo se verificó el segundo factor EN ESTA SESIÓN (solo la consola de plataforma; en la de empresa no hay
+   * segundo factor y el campo falta). `null`: todavía no se verificó. Lo exige `contextoDePlataformaDeLaSesion` (P8b).
+   */
+  segundoFactorEn?: Date | null;
+  /**
    * `Set-Cookie` que dejó la renovación de la sesión (el navegador solo se entera de la renovación si
    * la respuesta los lleva). Vacío si no hubo. Un componente de servidor no puede fijar cookies: lo
    * aplican la acción del servidor o el manejador de ruta que sí pueden.
@@ -47,6 +53,27 @@ export interface Autenticacion {
    * redirecciones de error salen con un código público de la lista cerrada y sin descripción.
    */
   manejar(pedido: Request, host: string): Promise<Response>;
+}
+
+/**
+ * La consola de plataforma (h5-p8). Lo mismo que la web de empresa más el estado de la sesión, que la pantalla usa
+ * para avisar antes de que venza y para pedir el código cuando el segundo factor ya es viejo.
+ */
+export interface AutenticacionDePlataforma extends Autenticacion {
+  /**
+   * El estado de la sesión del pedido en `host`, SIN renovarla (mirarla no cuenta como uso; renovar es
+   * `GET /api/auth/get-session`). Nunca lanza por una sesión mala: devuelve `vigente: false`.
+   */
+  estadoDeSesion(pedido: PedidoDeSesion, host: string): Promise<EstadoDeSesionDePlataforma>;
+}
+
+/**
+ * ¿Ese email es el de personal de la plataforma habilitado (administrador activo)? Lo implementa un adaptador sobre
+ * la conexión de plataforma: la librería de ingreso corre con un rol que no ve `admin_plataforma`. `false` ante
+ * cualquier duda (email que no es de un administrador, administrador dado de baja).
+ */
+export interface PersonalHabilitado {
+  esHabilitado(email: string): Promise<boolean>;
 }
 
 export type ResumenDelBarrido = Readonly<{

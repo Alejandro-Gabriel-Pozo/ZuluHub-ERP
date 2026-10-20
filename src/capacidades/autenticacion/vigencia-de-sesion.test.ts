@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { LIMITES_DE_INACTIVIDAD } from "../experiencia/inactividad";
 import {
   LIMITES_DE_SESION,
+  LIMITES_DE_SESION_DE_PLATAFORMA,
+  LIMITES_DEL_BARRIDO,
+  limitesDelBarrido,
   segundosDeInactividad,
   vencimientoRenovado,
   vigenciaDeSesion,
@@ -186,5 +189,112 @@ describe("vigenciaDeSesion", () => {
     expect(veredicto({ venceEn: mas(AHORA, -1) })).toBe("VENCIDA");
     expect(veredicto({ ultimoUso: mas(AHORA, -20 * MINUTO) })).toBe("VENCIDA");
     expect(veredicto({ creadaEn: mas(AHORA, -9 * HORA) })).toBe("VENCIDA");
+  });
+});
+
+describe("LIMITES_DE_SESION_DE_PLATAFORMA (h5-p8 §1: 8 horas absolutas y 30 minutos de inactividad)", () => {
+  it("vence a los 30 minutos sin uso, avisa a los 25 y el tope absoluto es de 8 horas", () => {
+    expect(LIMITES_DE_SESION_DE_PLATAFORMA.inactividad).toEqual({
+      avisoEnMs: 25 * MINUTO,
+      vencimientoEnMs: 30 * MINUTO,
+    });
+    expect(LIMITES_DE_SESION_DE_PLATAFORMA.absolutoEnMs).toBe(8 * HORA);
+  });
+
+  it("no cambian los de empresa (15 minutos) y ninguno se puede modificar por accidente", () => {
+    expect(LIMITES_DE_SESION.inactividad.vencimientoEnMs).toBe(15 * MINUTO);
+    expect(Object.isFrozen(LIMITES_DE_SESION_DE_PLATAFORMA)).toBe(true);
+    expect(Object.isFrozen(LIMITES_DE_SESION_DE_PLATAFORMA.inactividad)).toBe(true);
+  });
+
+  it("segundosDeInactividad es 1800 con los de la consola (lo que se le da a la librería como expiresIn)", () => {
+    expect(segundosDeInactividad(LIMITES_DE_SESION_DE_PLATAFORMA)).toBe(1800);
+  });
+
+  it("con ellos una sesión usada hace 20 minutos vale y con los de empresa no; a los 30 justos vence", () => {
+    const base = {
+      host: "h",
+      creadaEn: CREADA,
+      ultimoUso: mas(CREADA, HORA),
+      venceEn: mas(CREADA, 2 * HORA),
+    };
+    const ahora = mas(base.ultimoUso, 20 * MINUTO);
+    expect(vigenciaDeSesion(base, "h", ahora, LIMITES_DE_SESION_DE_PLATAFORMA)).toBe("VIGENTE");
+    expect(vigenciaDeSesion(base, "h", ahora, LIMITES_DE_SESION)).toBe("VENCIDA");
+    expect(
+      vigenciaDeSesion(
+        base,
+        "h",
+        mas(base.ultimoUso, 30 * MINUTO - 1),
+        LIMITES_DE_SESION_DE_PLATAFORMA,
+      ),
+    ).toBe("VIGENTE");
+    expect(
+      vigenciaDeSesion(
+        base,
+        "h",
+        mas(base.ultimoUso, 30 * MINUTO),
+        LIMITES_DE_SESION_DE_PLATAFORMA,
+      ),
+    ).toBe("VENCIDA");
+  });
+
+  it("vencimientoRenovado con ellos: a los 7 h 50 el tope de 8 horas manda sobre los 30 minutos", () => {
+    const ahora = mas(CREADA, 7 * HORA + 50 * MINUTO);
+    expect(vencimientoRenovado(CREADA, ahora, LIMITES_DE_SESION_DE_PLATAFORMA)).toEqual(
+      mas(CREADA, 8 * HORA),
+    );
+    const joven = mas(CREADA, HORA);
+    expect(vencimientoRenovado(CREADA, joven, LIMITES_DE_SESION_DE_PLATAFORMA)).toEqual(
+      mas(joven, 30 * MINUTO),
+    );
+  });
+});
+
+describe("LIMITES_DEL_BARRIDO (la tabla de sesiones es de las dos audiencias)", () => {
+  it("toma el plazo más largo de cada límite: 30 minutos de inactividad, 25 de aviso y 8 horas", () => {
+    expect(LIMITES_DEL_BARRIDO.inactividad.vencimientoEnMs).toBe(30 * MINUTO);
+    expect(LIMITES_DEL_BARRIDO.inactividad.avisoEnMs).toBe(25 * MINUTO);
+    expect(LIMITES_DEL_BARRIDO.absolutoEnMs).toBe(8 * HORA);
+    expect(Object.isFrozen(LIMITES_DEL_BARRIDO)).toBe(true);
+    expect(Object.isFrozen(LIMITES_DEL_BARRIDO.inactividad)).toBe(true);
+  });
+
+  it("es al menos tan largo como los de cada audiencia: el barrido nunca borra una sesión que todavía vale", () => {
+    for (const l of [LIMITES_DE_SESION, LIMITES_DE_SESION_DE_PLATAFORMA]) {
+      expect(LIMITES_DEL_BARRIDO.inactividad.vencimientoEnMs).toBeGreaterThanOrEqual(
+        l.inactividad.vencimientoEnMs,
+      );
+      expect(LIMITES_DEL_BARRIDO.inactividad.avisoEnMs).toBeGreaterThanOrEqual(
+        l.inactividad.avisoEnMs,
+      );
+      expect(LIMITES_DEL_BARRIDO.absolutoEnMs).toBeGreaterThanOrEqual(l.absolutoEnMs);
+    }
+  });
+});
+
+describe("limitesDelBarrido", () => {
+  const a: LimitesDeSesion = {
+    inactividad: { avisoEnMs: 10, vencimientoEnMs: 50 },
+    absolutoEnMs: 700,
+  };
+  const b: LimitesDeSesion = {
+    inactividad: { avisoEnMs: 20, vencimientoEnMs: 40 },
+    absolutoEnMs: 900,
+  };
+
+  it("toma el MAYOR de cada límite, venga de la audiencia que venga", () => {
+    expect(limitesDelBarrido(a, b)).toEqual({
+      inactividad: { avisoEnMs: 20, vencimientoEnMs: 50 },
+      absolutoEnMs: 900,
+    });
+    expect(limitesDelBarrido(b, a)).toEqual(limitesDelBarrido(a, b));
+    expect(limitesDelBarrido(a)).toEqual(a);
+  });
+
+  it("el resultado es inmutable", () => {
+    const l = limitesDelBarrido(a, b);
+    expect(Object.isFrozen(l)).toBe(true);
+    expect(Object.isFrozen(l.inactividad)).toBe(true);
   });
 });

@@ -430,6 +430,22 @@ const reglas = [
     to: { path: "^(node_modules/)?(better-auth(/|$)|@better-auth/)" },
   },
   {
+    // P8a (h5-p8 §2.4 ter; dependencia aprobada por el dueño: `qrcode-generator` 2.0.4 exacta). Previene: que el generador del
+    // QR, que recibe la dirección `otpauth://` con el SECRETO del segundo factor, se importe desde cualquier otro lugar y
+    // el secreto termine dibujado, registrado o mandado donde nadie lo revisó. Solo lo importa el adaptador de la
+    // autenticación de plataforma (`src/adaptadores/autenticacion/plataforma/`): el resto pide el alta del segundo factor
+    // por el puerto `AutenticacionDePlataforma`. Chequeo: la violación inyectada de reglas.test.ts.
+    name: "qr-solo-en-la-autenticacion-de-plataforma",
+    severity: "error",
+    comment:
+      "`qrcode-generator` solo se importa en src/adaptadores/autenticacion/plataforma/: dibuja el QR de la dirección otpauth (que lleva el secreto TOTP) y esa dirección no sale de ahí (h5-p8 §2.4 ter).",
+    from: {
+      path: "^(src|apps|scripts)/",
+      pathNot: "^src/adaptadores/autenticacion/plataforma/",
+    },
+    to: { path: "^(node_modules/)?qrcode-generator(/|$)" },
+  },
+  {
     // R-W4b. Next obliga a que el límite de errores se llame `error.tsx` (y `global-error.tsx`) y lleve la
     // directiva de cliente, así que no puede llevar el sufijo `.cliente.tsx` de R-W4. Estos archivos solo
     // reexportan el componente (lo exige la prueba de convenciones) y valen lo mismo que uno de cliente.

@@ -8,8 +8,10 @@ import {
   LARGO_MINIMO_DEL_SECRETO,
   caracteresDistintos,
   ZULUHUB_AUTH_SECRETO_EMPRESA,
+  ZULUHUB_AUTH_SECRETO_PLATAFORMA,
   leerClienteDeGoogle,
   leerSecretoDeAutenticacion,
+  leerSecretoDeAutenticacionDePlataforma,
 } from "./configuracion";
 
 /** Valores inventados: lo que se comprueba es la forma de la validación y que ningún error repite el valor. */
@@ -20,6 +22,73 @@ describe("nombres de las variables", () => {
     expect(ZULUHUB_AUTH_SECRETO_EMPRESA).toBe("ZULUHUB_AUTH_SECRETO_EMPRESA");
     expect(GOOGLE_CLIENT_ID).toBe("GOOGLE_CLIENT_ID");
     expect(GOOGLE_CLIENT_SECRET).toBe("GOOGLE_CLIENT_SECRET");
+  });
+
+  it("el secreto de la consola de plataforma tiene su propio nombre, distinto del de empresa", () => {
+    expect(ZULUHUB_AUTH_SECRETO_PLATAFORMA).toBe("ZULUHUB_AUTH_SECRETO_PLATAFORMA");
+    expect(ZULUHUB_AUTH_SECRETO_PLATAFORMA).not.toBe(ZULUHUB_AUTH_SECRETO_EMPRESA);
+  });
+});
+
+describe("leerSecretoDeAutenticacionDePlataforma", () => {
+  const de = (largo: number) => "0123456789abcdef".repeat(3).slice(0, largo);
+  const con = (n: number, largo = 64) =>
+    Array.from({ length: largo }, (_, i) => String.fromCharCode(97 + (i % n))).join("");
+  const NOMBRE = "ZULUHUB_AUTH_SECRETO_PLATAFORMA";
+
+  it("acepta lo mismo que el de empresa (32 caracteres, diez distintos) y lo devuelve sin blancos en los extremos", () => {
+    expect(leerSecretoDeAutenticacionDePlataforma(de(32))).toBe(de(32));
+    expect(leerSecretoDeAutenticacionDePlataforma(`  ${de(40)}\n`)).toBe(de(40));
+    expect(leerSecretoDeAutenticacionDePlataforma(con(10))).toBe(con(10));
+  });
+
+  it.each([undefined, "", "   ", "\n"])(
+    "falta (%j): el mensaje nombra la variable de la consola",
+    (valor) => {
+      expect(() => leerSecretoDeAutenticacionDePlataforma(valor)).toThrow(
+        new ErrorDeConfiguracion(`${NOMBRE} inválido: falta`),
+      );
+    },
+  );
+
+  it("uno de 31 caracteres es corto y uno de 9 distintos es repetitivo, sin repetir el valor", () => {
+    expect(() => leerSecretoDeAutenticacionDePlataforma(de(31))).toThrow(
+      new ErrorDeConfiguracion(`${NOMBRE} inválido: necesita al menos 32 caracteres`),
+    );
+    expect(() => leerSecretoDeAutenticacionDePlataforma(con(9))).toThrow(
+      new ErrorDeConfiguracion(`${NOMBRE} inválido: necesita al menos 10 caracteres distintos`),
+    );
+    try {
+      leerSecretoDeAutenticacionDePlataforma(CENTINELA);
+    } catch (e) {
+      expect((e as Error).message).not.toContain(CENTINELA);
+    }
+  });
+
+  it("nunca igual al de empresa: con el de empresa a la vista, el mismo valor (aun con blancos) no se arma", () => {
+    const mensaje = new ErrorDeConfiguracion(
+      `${NOMBRE} inválido: no puede ser igual a ZULUHUB_AUTH_SECRETO_EMPRESA`,
+    );
+    expect(() => leerSecretoDeAutenticacionDePlataforma(de(40), de(40))).toThrow(mensaje);
+    expect(() => leerSecretoDeAutenticacionDePlataforma(de(40), `\n ${de(40)} `)).toThrow(mensaje);
+    // Distinto, o sin el de empresa a la vista: pasa.
+    expect(leerSecretoDeAutenticacionDePlataforma(de(40), de(41))).toBe(de(40));
+    expect(leerSecretoDeAutenticacionDePlataforma(de(40), undefined)).toBe(de(40));
+    expect(leerSecretoDeAutenticacionDePlataforma(de(40), "")).toBe(de(40));
+  });
+
+  it("el mensaje de «igual» no repite el valor", () => {
+    try {
+      leerSecretoDeAutenticacionDePlataforma(de(40), de(40));
+    } catch (e) {
+      expect((e as Error).message).not.toContain(de(40));
+    }
+  });
+
+  it("la validación de largo y variedad corre antes de comparar con el de empresa", () => {
+    expect(() => leerSecretoDeAutenticacionDePlataforma(de(10), de(10))).toThrow(
+      `${NOMBRE} inválido: necesita al menos 32 caracteres`,
+    );
   });
 });
 

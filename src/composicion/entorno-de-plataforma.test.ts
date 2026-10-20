@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ErrorDeEntorno, NOMBRES_DE_ENTORNO, type FuenteDeEntorno } from "./entorno";
 import {
+  ZULUHUB_AUTH_SECRETO_EMPRESA,
+  ZULUHUB_AUTH_SECRETO_PLATAFORMA,
+  leerSecretoDeAutenticacionDePlataforma,
+} from "../adaptadores/autenticacion/configuracion";
+import {
   NOMBRES_DE_ENTORNO_DE_PLATAFORMA,
   ZULUHUB_DB_PLATAFORMA,
   valoresDeLaPiezaDePlataforma,
@@ -13,6 +18,7 @@ const COMPLETO: FuenteDeEntorno = {
   ZULUHUB_DB_PLATAFORMA: "  postgres://usuario:contrasena-de-prueba@host.test:5432/base  ",
   ZULUHUB_CLAVE_CONTEXTO: "  1:abcdef  ",
   ZULUHUB_SECRETO_INVITACIONES: "  secreto-de-prueba  ",
+  ZULUHUB_AUTH_SECRETO_PLATAFORMA: "  0123456789abcdef0123456789abcdef-plat  ",
 };
 
 const detalleDe = (accion: () => unknown): string => {
@@ -26,17 +32,23 @@ const detalleDe = (accion: () => unknown): string => {
 };
 
 describe("NOMBRES_DE_ENTORNO_DE_PLATAFORMA", () => {
-  it("son exactamente la cadena de plataforma, la clave de contexto y el secreto de invitaciones", () => {
+  it("son exactamente la cadena de plataforma, la clave de contexto, el secreto de invitaciones y el secreto de ingreso de la consola", () => {
     expect(NOMBRES_DE_ENTORNO_DE_PLATAFORMA.map((e) => [e.nombre, e.piezas])).toEqual([
       ["ZULUHUB_DB_PLATAFORMA", ["transacciones-de-plataforma"]],
       ["ZULUHUB_CLAVE_CONTEXTO", ["transacciones-de-plataforma"]],
       ["ZULUHUB_SECRETO_INVITACIONES", ["tokens-de-plataforma"]],
+      ["ZULUHUB_AUTH_SECRETO_PLATAFORMA", ["autenticacion-de-plataforma"]],
     ]);
     expect(ZULUHUB_DB_PLATAFORMA).toBe("ZULUHUB_DB_PLATAFORMA");
   });
 
-  it("la lista de la web sigue sin nombrar la cadena de plataforma (R10: la web no la recibe)", () => {
-    expect(NOMBRES_DE_ENTORNO.map((e) => e.nombre)).not.toContain(ZULUHUB_DB_PLATAFORMA);
+  it("la lista de la web sigue sin nombrar la cadena de plataforma ni el secreto de la consola (R10: la web no los recibe)", () => {
+    const nombres = NOMBRES_DE_ENTORNO.map((e) => e.nombre) as string[];
+    expect(nombres).not.toContain(ZULUHUB_DB_PLATAFORMA);
+    expect(nombres).not.toContain(ZULUHUB_AUTH_SECRETO_PLATAFORMA);
+    // El de empresa sí es de la web: y es OTRO nombre.
+    expect(nombres).toContain(ZULUHUB_AUTH_SECRETO_EMPRESA);
+    expect(ZULUHUB_AUTH_SECRETO_PLATAFORMA).not.toBe(ZULUHUB_AUTH_SECRETO_EMPRESA);
   });
 });
 
@@ -57,6 +69,39 @@ describe("valoresDeLaPiezaDePlataforma", () => {
       "transacciones-de-plataforma",
     );
     expect(v.ZULUHUB_DB_PLATAFORMA).toBe("postgresql://u:c@host.test/base");
+  });
+
+  it("el secreto de la consola es de su propia pieza, sin blancos en los extremos, y falta se nombra sin valor", () => {
+    expect(valoresDeLaPiezaDePlataforma(COMPLETO, "autenticacion-de-plataforma")).toEqual({
+      ZULUHUB_AUTH_SECRETO_PLATAFORMA: "0123456789abcdef0123456789abcdef-plat",
+    });
+    expect(detalleDe(() => valoresDeLaPiezaDePlataforma({}, "autenticacion-de-plataforma"))).toBe(
+      "pieza autenticacion-de-plataforma: ZULUHUB_AUTH_SECRETO_PLATAFORMA falta",
+    );
+    expect(
+      detalleDe(() =>
+        valoresDeLaPiezaDePlataforma(
+          { ZULUHUB_AUTH_SECRETO_PLATAFORMA: "   " },
+          "autenticacion-de-plataforma",
+        ),
+      ),
+    ).toBe("pieza autenticacion-de-plataforma: ZULUHUB_AUTH_SECRETO_PLATAFORMA inválida");
+  });
+
+  it("el secreto de la consola, validado con la misma exigencia que el de empresa y nunca igual a él", () => {
+    const valores = valoresDeLaPiezaDePlataforma(COMPLETO, "autenticacion-de-plataforma");
+    const secreto = valores.ZULUHUB_AUTH_SECRETO_PLATAFORMA;
+    expect(leerSecretoDeAutenticacionDePlataforma(secreto)).toBe(secreto);
+    expect(
+      leerSecretoDeAutenticacionDePlataforma(
+        secreto,
+        "otro-secreto-de-empresa-distinto-1234567890",
+      ),
+    ).toBe(secreto);
+    // Si el entorno tiene a la vista el de empresa y es el mismo, no se arma.
+    expect(() => leerSecretoDeAutenticacionDePlataforma(secreto, `  ${secreto}  `)).toThrow(
+      "ZULUHUB_AUTH_SECRETO_PLATAFORMA inválido: no puede ser igual a ZULUHUB_AUTH_SECRETO_EMPRESA",
+    );
   });
 
   it("una pieza no exige las variables de la otra", () => {

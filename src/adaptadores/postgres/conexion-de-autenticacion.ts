@@ -1,8 +1,14 @@
 import { Kysely, PostgresDialect } from "kysely";
 import pg from "pg";
+import { LIMITES_DEL_BARRIDO } from "../../capacidades/autenticacion/vigencia-de-sesion";
 import type { BarridoDeAutenticacion } from "../../puertos/autenticacion";
+import type { SegundoFactorDeAutenticacion } from "../../puertos/segundo-factor-de-autenticacion";
 import { crearBarridoDeAutenticacion, type AutenticacionDb } from "./barrido-de-autenticacion";
 import { ErrorDeConfiguracion } from "./errores";
+import {
+  crearSegundoFactorDePostgres,
+  type SegundoFactorDb,
+} from "./segundo-factor-de-autenticacion";
 import type { SinTablas } from "./transacciones";
 
 /**
@@ -28,6 +34,8 @@ export type ConexionDeAutenticacion = Readonly<{
   /** El Kysely para la librería de ingreso (`database.db`). Nadie más lo usa. */
   db: Kysely<SinTablas>;
   barrido: BarridoDeAutenticacion;
+  /** Los intentos, los pasos de TOTP usados y la marca de segundo factor de la sesión (consola de plataforma). */
+  segundoFactor: SegundoFactorDeAutenticacion;
   /** Cierra todas las conexiones abiertas. */
   cerrar(): Promise<void>;
 }>;
@@ -47,7 +55,8 @@ export function crearConexionDeAutenticacion(
   const db = new Kysely<SinTablas>({ dialect: new PostgresDialect({ pool }) });
   return {
     db,
-    barrido: crearBarridoDeAutenticacion(db.withTables<AutenticacionDb>()),
+    barrido: crearBarridoDeAutenticacion(db.withTables<AutenticacionDb>(), LIMITES_DEL_BARRIDO),
+    segundoFactor: crearSegundoFactorDePostgres(db.withTables<SegundoFactorDb>()),
     cerrar: () => db.destroy(),
   };
 }

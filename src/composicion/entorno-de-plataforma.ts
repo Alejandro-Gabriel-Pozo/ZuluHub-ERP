@@ -1,3 +1,4 @@
+import { ZULUHUB_AUTH_SECRETO_PLATAFORMA } from "../adaptadores/autenticacion/configuracion";
 import { ZULUHUB_CLAVE_CONTEXTO } from "../adaptadores/postgres/contexto-firmado";
 import { ZULUHUB_SECRETO_INVITACIONES } from "../adaptadores/tokens/tokens-hmac";
 import {
@@ -39,6 +40,14 @@ export const NOMBRES_DE_ENTORNO_DE_PLATAFORMA = [
     nombre: ZULUHUB_SECRETO_INVITACIONES,
     forma: FORMA_DE_TEXTO,
     piezas: ["tokens-de-plataforma"],
+  },
+  // El secreto de Better Auth de la consola (P8a): firma sus cookies y cifra el secreto TOTP. Propio de la consola y
+  // distinto del de empresa; se valida con `leerSecretoDeAutenticacionDePlataforma` (largo, variedad, nunca igual al de
+  // empresa). Vive acá y no en `entorno.ts` porque ese lo importa la web, y la web no recibe credenciales de plataforma.
+  {
+    nombre: ZULUHUB_AUTH_SECRETO_PLATAFORMA,
+    forma: FORMA_DE_TEXTO,
+    piezas: ["autenticacion-de-plataforma"],
   },
 ] as const;
 

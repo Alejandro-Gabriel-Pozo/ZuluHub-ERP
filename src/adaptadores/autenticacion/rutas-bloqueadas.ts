@@ -33,3 +33,18 @@ export const RUTAS_BLOQUEADAS: readonly string[] = [
   "/ok",
   "/error",
 ];
+
+/**
+ * Las rutas del plugin `twoFactor` que la consola NO usa (h5-p8 §3): ver el secreto, dar de baja el TOTP y el
+ * código por mail o SMS (que ni está configurado). Se suman a las de empresa. Las que sí se usan (enrolar, verificar
+ * el código de la aplicación, verificar uno de recuperación y regenerar los códigos) están en
+ * `RUTAS_PERMITIDAS_DE_PLATAFORMA`. Igual que arriba, el cierre real es esa lista cerrada; una prueba compara esta con
+ * lo que declara la librería.
+ */
+export const RUTAS_BLOQUEADAS_DE_PLATAFORMA: readonly string[] = [
+  ...RUTAS_BLOQUEADAS,
+  "/two-factor/get-totp-uri",
+  "/two-factor/disable",
+  "/two-factor/send-otp",
+  "/two-factor/verify-otp",
+];

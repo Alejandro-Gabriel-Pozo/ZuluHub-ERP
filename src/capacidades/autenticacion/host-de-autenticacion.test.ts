@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ENCABEZADO_DE_IP,
   PREFIJO_DE_COOKIE,
+  PREFIJO_DE_COOKIE_DE_PLATAFORMA,
   PREFIJO_DE_NAVEGADOR,
   RUTA_BASE_DE_INGRESO,
   configuracionDeHost,
@@ -10,6 +11,9 @@ import {
 describe("constantes", () => {
   it("el prefijo de cookie de la app de empresa y la ruta base de la librería", () => {
     expect(PREFIJO_DE_COOKIE).toBe("zh_emp");
+    // La consola tiene el suyo: una cookie de una audiencia no es la de la otra.
+    expect(PREFIJO_DE_COOKIE_DE_PLATAFORMA).toBe("zh_plat");
+    expect(PREFIJO_DE_COOKIE_DE_PLATAFORMA).not.toBe(PREFIJO_DE_COOKIE);
     expect(RUTA_BASE_DE_INGRESO).toBe("/api/auth");
   });
 
