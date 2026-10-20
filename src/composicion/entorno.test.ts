@@ -107,6 +107,38 @@ describe("NOMBRES_DE_ENTORNO (P-13: la lista de nombres)", () => {
     for (const nombre of nombres) expect(nombre).not.toMatch(/PLATAFORMA|GRUPO/);
   });
 
+  it("no contiene nada de la consola de plataforma: ni su secreto de ingreso, ni su cliente de Google, ni su host (R10)", () => {
+    // Nombres exactos, aunque el patrón de arriba ya los alcance en parte: «CONSOLA» no está en ese patrón.
+    for (const deLaConsola of [
+      "PEDERNAL_AUTH_SECRETO_PLATAFORMA",
+      "GOOGLE_CLIENT_ID_PLATAFORMA",
+      "GOOGLE_CLIENT_SECRET_PLATAFORMA",
+      "PEDERNAL_HOST_DE_LA_CONSOLA",
+    ]) {
+      expect(nombres).not.toContain(deLaConsola);
+    }
+    for (const nombre of nombres) expect(nombre).not.toMatch(/CONSOLA/);
+    // La web sigue con SU cliente de Google y SU secreto: son otros nombres.
+    expect(nombres).toContain("GOOGLE_CLIENT_ID");
+    expect(nombres).toContain("GOOGLE_CLIENT_SECRET");
+    expect(nombres).toContain("PEDERNAL_AUTH_SECRETO_EMPRESA");
+  });
+
+  it("ninguna pieza de la web entrega las variables de la consola, aunque estén en el entorno", () => {
+    const conLaConsola: FuenteDeEntorno = {
+      ...COMPLETO,
+      PEDERNAL_AUTH_SECRETO_PLATAFORMA: "secreto-de-la-consola-de-prueba",
+      GOOGLE_CLIENT_ID_PLATAFORMA: "cliente-de-la-consola-de-prueba",
+      GOOGLE_CLIENT_SECRET_PLATAFORMA: "clave-de-la-consola-de-prueba",
+      PEDERNAL_HOST_DE_LA_CONSOLA: "consola.pedernal.test",
+      PEDERNAL_DB_PLATAFORMA: "postgres://usuario:clave@host.test:5432/base",
+    };
+    for (const pieza of Object.keys(PIEZAS) as Pieza[]) {
+      const valores = valoresDeLaPieza(conLaConsola, pieza);
+      expect(Object.keys(valores).sort(), pieza).toEqual([...PIEZAS[pieza]].sort());
+    }
+  });
+
   it("ninguno es una variable prohibida", () => {
     for (const nombre of nombres) {
       expect(VARIABLES_PROHIBIDAS).not.toContain(nombre);

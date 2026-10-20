@@ -480,17 +480,18 @@ const reglas = [
     // credencial del rol `pedernal_plataforma`: un error de la web podría actuar como plataforma (R10). Y, desde P8b,
     // que la consola `apps/plataforma` ejecute un caso SIN pasar por la sesión: `plataforma.ts` (que corre casos con
     // un contexto armado por quien llama, sin la comprobación del segundo factor reciente) es solo de los scripts del
-    // dueño y de las pruebas; la consola entra por `puerta-de-consola.ts` (regla siguiente). Alcance: `plataforma.ts`
-    // y `entorno-de-plataforma.ts` solo los importan `scripts/`, las pruebas (`test/` y los `*.test.ts`), la propia
-    // puerta de la consola y ellos mismos. Chequeo: las violaciones inyectadas de reglas.test.ts.
+    // dueño y de las pruebas; la consola entra por `puerta-de-consola.ts` y `ingreso-de-consola.ts` (reglas siguientes).
+    // Alcance: `plataforma.ts` y `entorno-de-plataforma.ts` solo los importan `scripts/`, las pruebas (`test/` y los
+    // `*.test.ts`), la puerta de la consola, el ingreso de la consola (que lee de acá sus variables) y ellos mismos.
+    // Chequeo: las violaciones inyectadas de reglas.test.ts.
     name: "plataforma-solo-desde-scripts",
     severity: "error",
     comment:
-      "src/composicion/plataforma.ts y entorno-de-plataforma.ts (la puerta de plataforma sin sesión y su credencial) solo los importan scripts/, las pruebas y la puerta de la consola (puerta-de-consola.ts): ni apps/web, ni apps/plataforma (que entra por la sesión), ni el resto de src/ (R10).",
+      "src/composicion/plataforma.ts y entorno-de-plataforma.ts (la puerta de plataforma sin sesión y su credencial) solo los importan scripts/, las pruebas y la composición de la consola (puerta-de-consola.ts, ingreso-de-consola.ts): ni apps/web, ni apps/plataforma (que entra por esas dos), ni el resto de src/ (R10).",
     from: {
       path: "^(src|apps)/",
       pathNot:
-        "^src/composicion/(plataforma|entorno-de-plataforma|puerta-de-consola)\\.ts$|\\.test\\.(ts|tsx)$",
+        "^src/composicion/(plataforma|entorno-de-plataforma|puerta-de-consola|ingreso-de-consola)\\.ts$|\\.test\\.(ts|tsx)$",
     },
     to: { path: "^src/composicion/(plataforma|entorno-de-plataforma)\\.ts$" },
   },
@@ -506,9 +507,25 @@ const reglas = [
     from: {
       path: "^(src|apps)/",
       pathNot:
-        "^apps/plataforma/servidor/|^src/composicion/puerta-de-consola\\.ts$|\\.test\\.(ts|tsx)$",
+        "^apps/plataforma/servidor/|^src/composicion/(puerta-de-consola|ingreso-de-consola)\\.ts$|\\.test\\.(ts|tsx)$",
     },
     to: { path: "^src/composicion/puerta-de-consola\\.ts$" },
+  },
+  {
+    // P8c (h5-p8 §7). Previene: que `apps/web` o cualquier parte de `src/` arme el ingreso de la consola y con él obtenga
+    // el secreto de ingreso y el cliente de Google de la consola, las cadenas del rol de plataforma y del de
+    // autenticación y la puerta que ejecuta casos de plataforma (R10). Solo lo importa el servidor de la consola.
+    // Chequeo: las violaciones inyectadas de reglas.test.ts.
+    name: "ingreso-de-consola-solo-desde-la-consola",
+    severity: "error",
+    comment:
+      "src/composicion/ingreso-de-consola.ts (el ingreso de la consola armado: Google de la consola, secreto, personal habilitado y puerta) solo lo importan apps/plataforma/servidor/ y las pruebas: ni apps/web ni el resto de src/ (R10).",
+    from: {
+      path: "^(src|apps)/",
+      pathNot:
+        "^apps/plataforma/servidor/|^src/composicion/ingreso-de-consola\\.ts$|\\.test\\.(ts|tsx)$",
+    },
+    to: { path: "^src/composicion/ingreso-de-consola\\.ts$" },
   },
 ];
 

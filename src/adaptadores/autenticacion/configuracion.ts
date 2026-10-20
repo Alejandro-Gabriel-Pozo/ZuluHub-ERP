@@ -1,3 +1,4 @@
+import { configuracionDeHost } from "../../capacidades/autenticacion/host-de-autenticacion";
 import { ErrorDeConfiguracion } from "../postgres/errores";
 
 /**
@@ -11,6 +12,11 @@ export const PEDERNAL_AUTH_SECRETO_EMPRESA = "PEDERNAL_AUTH_SECRETO_EMPRESA";
 export const PEDERNAL_AUTH_SECRETO_PLATAFORMA = "PEDERNAL_AUTH_SECRETO_PLATAFORMA";
 export const GOOGLE_CLIENT_ID = "GOOGLE_CLIENT_ID";
 export const GOOGLE_CLIENT_SECRET = "GOOGLE_CLIENT_SECRET";
+/** El cliente de Google de la consola: APARTE del de la web (revocar uno no corta al otro). Se declaran en `composicion/entorno-de-plataforma.ts`. */
+export const GOOGLE_CLIENT_ID_PLATAFORMA = "GOOGLE_CLIENT_ID_PLATAFORMA";
+export const GOOGLE_CLIENT_SECRET_PLATAFORMA = "GOOGLE_CLIENT_SECRET_PLATAFORMA";
+/** El host (sin esquema) donde atiende la consola; la instancia de ingreso de plataforma es de ESE host y de ningún otro. */
+export const PEDERNAL_HOST_DE_LA_CONSOLA = "PEDERNAL_HOST_DE_LA_CONSOLA";
 
 /** El secreto firma las cookies y cifra los tokens guardados: uno corto se adivina. */
 export const LARGO_MINIMO_DEL_SECRETO = 32;
@@ -71,19 +77,78 @@ export function leerSecretoDeAutenticacionDePlataforma(
 
 export type ClienteDeGoogle = Readonly<{ clientId: string; clientSecret: string }>;
 
-/** El cliente OAuth de Google. Es un secreto: no se registra ni se guarda. */
-export function leerClienteDeGoogle(
+/** La misma exigencia para el cliente de cualquier audiencia: que no falte ninguno de los dos. El mensaje nombra la variable, nunca el valor. */
+function leerCliente(
+  nombreDelId: string,
+  nombreDelSecreto: string,
   clientId: string | undefined,
   clientSecret: string | undefined,
 ): ClienteDeGoogle {
   const id = clientId?.trim() ?? "";
   const secreto = clientSecret?.trim() ?? "";
   const faltan = [
-    ...(id === "" ? [GOOGLE_CLIENT_ID] : []),
-    ...(secreto === "" ? [GOOGLE_CLIENT_SECRET] : []),
+    ...(id === "" ? [nombreDelId] : []),
+    ...(secreto === "" ? [nombreDelSecreto] : []),
   ];
   if (faltan.length > 0) {
     throw new ErrorDeConfiguracion(`${faltan.join(", ")} inválido: falta`);
   }
   return { clientId: id, clientSecret: secreto };
+}
+
+/** El cliente OAuth de Google. Es un secreto: no se registra ni se guarda. */
+export function leerClienteDeGoogle(
+  clientId: string | undefined,
+  clientSecret: string | undefined,
+): ClienteDeGoogle {
+  return leerCliente(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, clientId, clientSecret);
+}
+
+/**
+ * El cliente OAuth de Google de la consola: la misma exigencia que el de la web y, además, NUNCA el mismo que el de la
+ * web (ni el id ni el secreto). Falla que previene: con un solo cliente para las dos audiencias, revocar o rotar uno
+ * corta a la otra y una pantalla de consentimiento y una lista de URIs de retorno sirven a las dos. `clienteDeLaWeb` es el
+ * de la otra audiencia SI el entorno lo tiene a la vista (la consola, en su proyecto de Vercel, normalmente no lo tiene:
+ * ahí no hay con qué comparar); sin él no se compara. Falla cerrado; el mensaje nombra las variables, nunca los valores.
+ */
+export function leerClienteDeGoogleDePlataforma(
+  clientId: string | undefined,
+  clientSecret: string | undefined,
+  clienteDeLaWeb?: Readonly<{ clientId: string | undefined; clientSecret: string | undefined }>,
+): ClienteDeGoogle {
+  const cliente = leerCliente(
+    GOOGLE_CLIENT_ID_PLATAFORMA,
+    GOOGLE_CLIENT_SECRET_PLATAFORMA,
+    clientId,
+    clientSecret,
+  );
+  const iguales = [
+    ...(clienteDeLaWeb?.clientId?.trim() === cliente.clientId
+      ? [`${GOOGLE_CLIENT_ID_PLATAFORMA} inválido: no puede ser igual a ${GOOGLE_CLIENT_ID}`]
+      : []),
+    ...(clienteDeLaWeb?.clientSecret?.trim() === cliente.clientSecret
+      ? [
+          `${GOOGLE_CLIENT_SECRET_PLATAFORMA} inválido: no puede ser igual a ${GOOGLE_CLIENT_SECRET}`,
+        ]
+      : []),
+  ];
+  if (iguales.length > 0) throw new ErrorDeConfiguracion(iguales.join("; "));
+  return cliente;
+}
+
+/**
+ * El host de la consola: un nombre de host (etiquetas DNS en minúsculas, puerto opcional), sin esquema, ruta ni
+ * credenciales (`configuracionDeHost`). Falla que previene: un valor con `https://`, mayúsculas o una barra armaría una
+ * instancia de ingreso con un origen que nunca coincide con el de las cookies y la dejaría inservible (o peor, ambigua).
+ * Una sola instancia por host fijo: no hay lista de hosts. Falla cerrado; el mensaje nombra la variable, nunca el valor.
+ */
+export function leerHostDeLaConsola(valor: string | undefined): string {
+  const host = valor?.trim() ?? "";
+  if (host === "") throw new ErrorDeConfiguracion(`${PEDERNAL_HOST_DE_LA_CONSOLA} inválido: falta`);
+  if (!configuracionDeHost(host).ok) {
+    throw new ErrorDeConfiguracion(
+      `${PEDERNAL_HOST_DE_LA_CONSOLA} inválido: tiene que ser un nombre de host en minúsculas, sin esquema ni ruta`,
+    );
+  }
+  return host;
 }
