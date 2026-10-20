@@ -44,3 +44,20 @@ paths = [
 regexes = [
   '''^SECRETO-ZH-9f3a$''',
 ]
+
+# P8a (autenticación de plataforma): secretos de juguete de las pruebas del segundo factor y del entorno de
+# plataforma (comprueban largo, variedad de caracteres y que ningún valor sale en una respuesta). No son
+# secretos: tres archivos de prueba y solo estos valores exactos.
+[[allowlists]]
+description = "Secretos de juguete de las pruebas de autenticación de plataforma"
+condition = "AND"
+paths = [
+  '''^src/capacidades/autenticacion/codigos-de-recuperacion\.test\.ts$''',
+  '''^src/capacidades/autenticacion/totp\.test\.ts$''',
+  '''^src/composicion/entorno-de-plataforma\.test\.ts$''',
+]
+regexes = [
+  '''^secreto-de-prueba-0123456789abcdef$''',
+  '''^\s*0123456789abcdef0123456789abcdef-plat\s*$''',
+  '''^choque-vecinos-2882103$''',
+]
