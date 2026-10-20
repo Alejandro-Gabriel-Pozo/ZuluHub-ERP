@@ -164,6 +164,7 @@ describe.skipIf(base === null)("listas ampliadas de tenants y empresas: contra P
     // El extra del cliente 1: su tope sube a 5 (vigente). Un ajuste de UNA empresa no mueve el del tenant.
     await ajustarPerilla(dueno, s.t1, "empresas_por_tenant", "5");
     await ajustarPerilla(dueno, s.t1, "empresas_por_tenant", "9", { empresa: s.e1 });
+    await ajustarPerilla(dueno, s.t1, "empresas_por_tenant", "8", { empresa: s.e1 });
   });
 
   afterAll(async () => {
