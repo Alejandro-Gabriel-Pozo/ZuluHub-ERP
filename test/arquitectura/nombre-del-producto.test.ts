@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
  * El producto se llama Pedernal: el nombre anterior no vuelve a aparecer en el código, los scripts, las migraciones,
  * los workflows ni las pruebas. Falla que previene: una variable de entorno, un rol de base, una cookie o una
  * referencia de error con el nombre viejo que se cuela de un borrador o de una copia, y deja dos nombres para lo
- * mismo (una variable `ZULUHUB_*` que nadie configura, un rol `zuluhub_*` que la migración no crea). Se
+ * mismo (una variable con el prefijo viejo que nadie configura, un rol con el prefijo viejo que la migración no crea). Se
  * cuida también la sigla vieja de dos letras (cookies, encabezados internos, referencia `XX-XXXX-XXXX`), que
  * es parte del contrato visible.
  *
