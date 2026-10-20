@@ -11,7 +11,7 @@
   position: absolute;
   left: var(--espacio-2);
   top: -4rem;
-  z-index: 30;
+  z-index: var(--capa-salto-de-teclado);
   padding: var(--espacio-2) var(--espacio-4);
   background: var(--color-fondo);
   color: var(--color-texto);

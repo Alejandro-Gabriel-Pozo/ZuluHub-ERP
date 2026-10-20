@@ -2,10 +2,15 @@ import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { violacionesDeAccesibilidad } from "../pruebas/ayudas";
+import { matrizDeEstados, verificarFoco, violacionesDeAccesibilidad } from "../pruebas/ayudas";
 import { Campo } from "./Campo";
 
-function Controlado(props: { error?: string; ayuda?: string; obligatorio?: string }) {
+function Controlado(props: {
+  error?: string;
+  ayuda?: string;
+  obligatorio?: string;
+  deshabilitado?: boolean;
+}) {
   const [valor, setValor] = useState("");
   return <Campo etiqueta="Nombre" valor={valor} alCambiar={setValor} {...props} />;
 }
@@ -51,4 +56,34 @@ describe("Campo", () => {
       page.getByLabelText("Nombre").element().getBoundingClientRect().height,
     ).toBeGreaterThanOrEqual(48);
   });
+});
+
+matrizDeEstados("Campo", {
+  normal: async () => {
+    await render(<Controlado />);
+    const campo = page.getByLabelText("Nombre");
+    await expect.element(campo).toBeEnabled();
+    await expect.element(campo).not.toHaveAttribute("aria-invalid");
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  },
+  foco: async () => {
+    await render(<Controlado />);
+    await verificarFoco(page.getByLabelText("Nombre").element() as HTMLElement);
+  },
+  cargando: {
+    noAplica:
+      "un campo no carga por sí mismo: mientras se envía lo bloquea el formulario que lo contiene",
+  },
+  error: async () => {
+    await render(<Controlado error="Falta el nombre." />);
+    const campo = page.getByRole("textbox", { name: "Nombre" });
+    await expect.element(campo).toBeInvalid();
+    await expect.element(campo).toHaveAccessibleDescription("Falta el nombre.");
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  },
+  deshabilitado: async () => {
+    await render(<Controlado deshabilitado />);
+    await expect.element(page.getByLabelText("Nombre")).toBeDisabled();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  },
 });

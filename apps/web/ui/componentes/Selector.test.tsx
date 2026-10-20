@@ -2,7 +2,7 @@ import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { violacionesDeAccesibilidad } from "../pruebas/ayudas";
+import { matrizDeEstados, verificarFoco, violacionesDeAccesibilidad } from "../pruebas/ayudas";
 import { Selector } from "./Selector";
 
 const opciones = [
@@ -10,7 +10,7 @@ const opciones = [
   { valor: "tarjeta", etiqueta: "Tarjeta" },
 ] as const;
 
-function Probado({ error }: { error?: string }) {
+function Probado({ error, deshabilitado }: { error?: string; deshabilitado?: boolean }) {
   const [valor, setValor] = useState("");
   return (
     <Selector
@@ -20,6 +20,7 @@ function Probado({ error }: { error?: string }) {
       opciones={opciones}
       textoDeElegir="Elegí un medio"
       error={error}
+      deshabilitado={deshabilitado ?? false}
     />
   );
 }
@@ -54,4 +55,36 @@ describe("Selector", () => {
     );
     expect(page.getByRole("combobox").element().querySelectorAll("option")).toHaveLength(2);
   });
+});
+
+matrizDeEstados("Selector", {
+  normal: async () => {
+    await render(<Probado />);
+    const selector = page.getByRole("combobox", { name: "Medio de pago" });
+    await expect.element(selector).toBeEnabled();
+    await expect.element(selector).not.toHaveAttribute("aria-invalid");
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  },
+  foco: async () => {
+    await render(<Probado />);
+    await verificarFoco(
+      page.getByRole("combobox", { name: "Medio de pago" }).element() as HTMLElement,
+    );
+  },
+  cargando: {
+    noAplica:
+      "un selector nativo no carga por sí mismo: si sus opciones tardan, lo resuelve la pantalla que lo arma",
+  },
+  error: async () => {
+    await render(<Probado error="Elegí un medio de pago." />);
+    const selector = page.getByRole("combobox", { name: "Medio de pago" });
+    await expect.element(selector).toBeInvalid();
+    await expect.element(selector).toHaveAccessibleDescription("Elegí un medio de pago.");
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  },
+  deshabilitado: async () => {
+    await render(<Probado deshabilitado />);
+    await expect.element(page.getByRole("combobox", { name: "Medio de pago" })).toBeDisabled();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  },
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { violacionesDeAccesibilidad } from "../pruebas/ayudas";
+import { matrizDeEstados, verificarFoco, violacionesDeAccesibilidad } from "../pruebas/ayudas";
 import { BotonIcono } from "./BotonIcono";
 
 describe("BotonIcono", () => {
@@ -40,4 +40,28 @@ describe("BotonIcono", () => {
     await expect.element(page.getByRole("button", { name: "Cerrar" })).toBeDisabled();
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
+});
+
+matrizDeEstados("BotonIcono", {
+  normal: async () => {
+    await render(<BotonIcono etiqueta="Cerrar" icono="cerrar" />);
+    await expect.element(page.getByRole("button", { name: "Cerrar" })).toBeEnabled();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  },
+  foco: async () => {
+    await render(<BotonIcono etiqueta="Cerrar" icono="cerrar" />);
+    await verificarFoco(page.getByRole("button", { name: "Cerrar" }).element() as HTMLElement);
+  },
+  cargando: {
+    noAplica:
+      "un botón de solo ícono no envía nada: quien envía usa Boton, que sí tiene estado de carga",
+  },
+  error: {
+    noAplica: "un botón de solo ícono no tiene error propio: el error lo muestra quien lo contiene",
+  },
+  deshabilitado: async () => {
+    await render(<BotonIcono etiqueta="Cerrar" icono="cerrar" deshabilitado />);
+    await expect.element(page.getByRole("button", { name: "Cerrar" })).toBeDisabled();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  },
 });
