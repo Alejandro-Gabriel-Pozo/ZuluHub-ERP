@@ -9,19 +9,19 @@ import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
  */
 
 /** Prefijo de las cookies de ingreso de la aplicación de empresa. */
-export const PREFIJO_DE_COOKIE = "zh_emp";
+export const PREFIJO_DE_COOKIE = "pd_emp";
 
 /**
  * Prefijo de las cookies de ingreso de la consola de plataforma (P8a). Distinto del de empresa a propósito: una
  * cookie de una audiencia no es la de la otra, así que una sesión de empresa no abre la consola ni al revés (el
- * secreto con que se firman también es distinto). La cookie de sesión queda `__Host-zh_plat.session_token`.
+ * secreto con que se firman también es distinto). La cookie de sesión queda `__Host-pd_plat.session_token`.
  */
-export const PREFIJO_DE_COOKIE_DE_PLATAFORMA = "zh_plat";
+export const PREFIJO_DE_COOKIE_DE_PLATAFORMA = "pd_plat";
 
 /**
  * Prefijo de navegador de TODAS las cookies de ingreso (M1). `__Host-` exige `Secure`, `Path=/` y NINGÚN
  * `Domain`: el navegador rechaza la cookie si alguien (un subdominio del cliente, un proxy) intenta fijarla
- * con alcance de dominio, cosa que `__Secure-` no impide. La cookie de sesión de empresa queda `__Host-zh_emp.session_token`.
+ * con alcance de dominio, cosa que `__Secure-` no impide. La cookie de sesión de empresa queda `__Host-pd_emp.session_token`.
  */
 export const PREFIJO_DE_NAVEGADOR = "__Host-";
 

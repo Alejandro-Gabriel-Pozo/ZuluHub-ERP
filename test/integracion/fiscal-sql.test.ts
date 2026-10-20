@@ -63,11 +63,11 @@ const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 60_000 });
 
 const ROLES = [
-  "zuluhub_app",
-  "zuluhub_grupo",
-  "zuluhub_trabajos",
-  "zuluhub_plataforma",
-  "zuluhub_autenticacion",
+  "pedernal_app",
+  "pedernal_grupo",
+  "pedernal_trabajos",
+  "pedernal_plataforma",
+  "pedernal_autenticacion",
 ] as const;
 const SEARCH_PATH_FIJO = "search_path=pg_catalog, public, pg_temp";
 const TABLAS_FISCALES = [
@@ -443,32 +443,32 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       );
       expect(politicas.map((f) => f.p)).toEqual(
         [
-          "datos_fiscales.datos_fiscales_app_alta:INSERT:PERMISSIVE:zuluhub_app",
-          "datos_fiscales.datos_fiscales_app_cambiar:UPDATE:PERMISSIVE:zuluhub_app",
-          "datos_fiscales.datos_fiscales_app_leer:SELECT:PERMISSIVE:zuluhub_app",
-          "domicilio.domicilio_app_alta:INSERT:PERMISSIVE:zuluhub_app",
-          "domicilio.domicilio_app_leer:SELECT:PERMISSIVE:zuluhub_app",
-          "emisor.emisor_app_leer:SELECT:PERMISSIVE:zuluhub_app",
-          "emisor.emisor_plataforma_admin_alta:INSERT:RESTRICTIVE:zuluhub_plataforma",
-          "emisor.emisor_plataforma_admin_cambiar:UPDATE:RESTRICTIVE:zuluhub_plataforma",
-          "emisor.emisor_plataforma_alta:INSERT:PERMISSIVE:zuluhub_plataforma",
-          "emisor.emisor_plataforma_cambiar:UPDATE:PERMISSIVE:zuluhub_plataforma",
-          "emisor.emisor_plataforma_con_actor:SELECT:RESTRICTIVE:zuluhub_plataforma",
-          "emisor.emisor_plataforma_leer:SELECT:PERMISSIVE:zuluhub_plataforma",
-          "provincia.provincia_app_leer:SELECT:PERMISSIVE:zuluhub_app",
-          "punto_de_venta.punto_de_venta_app_alta:INSERT:PERMISSIVE:zuluhub_app",
-          "punto_de_venta.punto_de_venta_app_cambiar:UPDATE:PERMISSIVE:zuluhub_app",
-          "punto_de_venta.punto_de_venta_app_leer:SELECT:PERMISSIVE:zuluhub_app",
-          "punto_de_venta.punto_de_venta_plataforma_con_actor:SELECT:RESTRICTIVE:zuluhub_plataforma",
-          "punto_de_venta.punto_de_venta_plataforma_leer:SELECT:PERMISSIVE:zuluhub_plataforma",
-          "regla_emisor.regla_emisor_app_alta:INSERT:PERMISSIVE:zuluhub_app",
-          "regla_emisor.regla_emisor_app_cambiar:UPDATE:PERMISSIVE:zuluhub_app",
-          "regla_emisor.regla_emisor_app_leer:SELECT:PERMISSIVE:zuluhub_app",
-          "serie_comprobante.serie_comprobante_app_alta:INSERT:PERMISSIVE:zuluhub_app",
-          "serie_comprobante.serie_comprobante_app_cambiar:UPDATE:PERMISSIVE:zuluhub_app",
-          "serie_comprobante.serie_comprobante_app_leer:SELECT:PERMISSIVE:zuluhub_app",
-          "serie_comprobante.serie_comprobante_plataforma_con_actor:SELECT:RESTRICTIVE:zuluhub_plataforma",
-          "serie_comprobante.serie_comprobante_plataforma_leer:SELECT:PERMISSIVE:zuluhub_plataforma",
+          "datos_fiscales.datos_fiscales_app_alta:INSERT:PERMISSIVE:pedernal_app",
+          "datos_fiscales.datos_fiscales_app_cambiar:UPDATE:PERMISSIVE:pedernal_app",
+          "datos_fiscales.datos_fiscales_app_leer:SELECT:PERMISSIVE:pedernal_app",
+          "domicilio.domicilio_app_alta:INSERT:PERMISSIVE:pedernal_app",
+          "domicilio.domicilio_app_leer:SELECT:PERMISSIVE:pedernal_app",
+          "emisor.emisor_app_leer:SELECT:PERMISSIVE:pedernal_app",
+          "emisor.emisor_plataforma_admin_alta:INSERT:RESTRICTIVE:pedernal_plataforma",
+          "emisor.emisor_plataforma_admin_cambiar:UPDATE:RESTRICTIVE:pedernal_plataforma",
+          "emisor.emisor_plataforma_alta:INSERT:PERMISSIVE:pedernal_plataforma",
+          "emisor.emisor_plataforma_cambiar:UPDATE:PERMISSIVE:pedernal_plataforma",
+          "emisor.emisor_plataforma_con_actor:SELECT:RESTRICTIVE:pedernal_plataforma",
+          "emisor.emisor_plataforma_leer:SELECT:PERMISSIVE:pedernal_plataforma",
+          "provincia.provincia_app_leer:SELECT:PERMISSIVE:pedernal_app",
+          "punto_de_venta.punto_de_venta_app_alta:INSERT:PERMISSIVE:pedernal_app",
+          "punto_de_venta.punto_de_venta_app_cambiar:UPDATE:PERMISSIVE:pedernal_app",
+          "punto_de_venta.punto_de_venta_app_leer:SELECT:PERMISSIVE:pedernal_app",
+          "punto_de_venta.punto_de_venta_plataforma_con_actor:SELECT:RESTRICTIVE:pedernal_plataforma",
+          "punto_de_venta.punto_de_venta_plataforma_leer:SELECT:PERMISSIVE:pedernal_plataforma",
+          "regla_emisor.regla_emisor_app_alta:INSERT:PERMISSIVE:pedernal_app",
+          "regla_emisor.regla_emisor_app_cambiar:UPDATE:PERMISSIVE:pedernal_app",
+          "regla_emisor.regla_emisor_app_leer:SELECT:PERMISSIVE:pedernal_app",
+          "serie_comprobante.serie_comprobante_app_alta:INSERT:PERMISSIVE:pedernal_app",
+          "serie_comprobante.serie_comprobante_app_cambiar:UPDATE:PERMISSIVE:pedernal_app",
+          "serie_comprobante.serie_comprobante_app_leer:SELECT:PERMISSIVE:pedernal_app",
+          "serie_comprobante.serie_comprobante_plataforma_con_actor:SELECT:RESTRICTIVE:pedernal_plataforma",
+          "serie_comprobante.serie_comprobante_plataforma_leer:SELECT:PERMISSIVE:pedernal_plataforma",
         ].sort(),
       );
     });
@@ -482,7 +482,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       }>(
         `select tablename, policyname, cmd, coalesce(with_check, '') || ' ' || coalesce(qual, '') as texto
          from pg_policies
-         where schemaname = 'public' and 'zuluhub_app' = any (roles) and tablename = any ($1)
+         where schemaname = 'public' and 'pedernal_app' = any (roles) and tablename = any ($1)
            and cmd in ('INSERT', 'UPDATE', 'ALL') order by 1, 2`,
         [[...TABLAS_FISCALES]],
       );
@@ -507,7 +507,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       const todas = await consultar<{ policyname: string; texto: string }>(
         `select policyname, coalesce(qual, '') || ' ' || coalesce(with_check, '') as texto
          from pg_policies
-         where schemaname = 'public' and tablename = any ($1) and 'zuluhub_plataforma' = any (roles)
+         where schemaname = 'public' and tablename = any ($1) and 'pedernal_plataforma' = any (roles)
            and (coalesce(qual, '') || coalesce(with_check, '')) ~ '(app_actor_plataforma|admin_plataforma_con_rol|plataforma_actor_vigente)'`,
         [[...TABLAS_FISCALES]],
       );
@@ -615,7 +615,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
     it("los privilegios por columna: la plataforma lee 4 columnas del punto de venta y ninguna de domicilio, datos fiscales, regla ni provincia; grupo, trabajos y autenticación no reciben nada", async () => {
       const lecturaDeLaPlataforma = await consultar<{ t: string; c: string }>(
         `select table_name as t, column_name as c from information_schema.column_privileges
-         where table_schema = 'public' and grantee = 'zuluhub_plataforma' and privilege_type = 'SELECT'
+         where table_schema = 'public' and grantee = 'pedernal_plataforma' and privilege_type = 'SELECT'
            and table_name = any ($1) order by 1, 2`,
         [[...TABLAS_FISCALES]],
       );
@@ -628,7 +628,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       expect(porTabla.get("serie_comprobante")).toEqual(
         (await columnasDe("serie_comprobante")).sort(),
       );
-      for (const rol of ["zuluhub_grupo", "zuluhub_trabajos", "zuluhub_autenticacion"]) {
+      for (const rol of ["pedernal_grupo", "pedernal_trabajos", "pedernal_autenticacion"]) {
         expect(
           await consultar(
             `select table_name, column_name, privilege_type from information_schema.column_privileges
@@ -651,7 +651,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       expect(
         await consultar<{ t: string }>(
           `select distinct table_name as t from information_schema.column_privileges
-           where table_schema = 'public' and grantee = 'zuluhub_plataforma' and table_name = any ($1)
+           where table_schema = 'public' and grantee = 'pedernal_plataforma' and table_name = any ($1)
              and privilege_type in ('INSERT', 'UPDATE')`,
           [[...TABLAS_FISCALES]],
         ),
@@ -1053,7 +1053,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         });
       }
       // Sin contexto firmado no ve ninguna fila.
-      const sinContexto = await SesionDePrueba.abrir(base!, "zuluhub_plataforma", null);
+      const sinContexto = await SesionDePrueba.abrir(base!, "pedernal_plataforma", null);
       try {
         const r = await sinContexto.intentar("select count(*)::int as n from emisor");
         expect(r.ok && r.rows[0]?.["n"]).toBe(0);

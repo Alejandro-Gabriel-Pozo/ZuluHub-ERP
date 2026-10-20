@@ -90,7 +90,7 @@ export function estadoTrasAutorizacion(
 }
 
 /**
- * Lo que ARCA tiene registrado de un número (`FECompConsultar`), en los términos de ZuluHub salvo
+ * Lo que ARCA tiene registrado de un número (`FECompConsultar`), en los términos de Pedernal salvo
  * lo que ARCA devuelve como código (tipo de comprobante, tipo de documento, moneda), que el adaptador
  * no interpreta y la reconciliación compara con la tabla de `codigos-de-arca.ts`.
  */

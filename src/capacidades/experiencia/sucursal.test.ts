@@ -27,7 +27,7 @@ describe("sucursalElegida: la preferencia local solo vale si sigue disponible", 
 
 describe("claveDeSucursalLocal", () => {
   it("es una por empresa", () => {
-    expect(claveDeSucursalLocal("e1")).toBe("zh:sucursal:e1");
+    expect(claveDeSucursalLocal("e1")).toBe("pd:sucursal:e1");
     expect(claveDeSucursalLocal("e1")).not.toBe(claveDeSucursalLocal("e2"));
   });
 });

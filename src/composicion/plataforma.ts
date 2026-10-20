@@ -9,7 +9,7 @@ import {
   type AutorizacionDePlataformaDb,
 } from "../adaptadores/postgres/autorizacion-de-plataforma";
 import {
-  ZULUHUB_CLAVE_CONTEXTO,
+  PEDERNAL_CLAVE_CONTEXTO,
   leerClaveDeContexto,
 } from "../adaptadores/postgres/contexto-firmado";
 import { crearLecturaDeDerechosDeUso } from "../adaptadores/postgres/derechos-de-uso";
@@ -32,7 +32,7 @@ import {
   type TransaccionesDePostgres,
 } from "../adaptadores/postgres/transacciones";
 import {
-  ZULUHUB_SECRETO_INVITACIONES,
+  PEDERNAL_SECRETO_INVITACIONES,
   crearTokensHmac,
   leerSecretoDeInvitaciones,
 } from "../adaptadores/tokens/tokens-hmac";
@@ -93,7 +93,7 @@ import { ok } from "../primitivas/resultado/resultado";
 import type { AdminEncontrado } from "../puertos/admins-de-plataforma";
 import type { Tokens } from "../puertos/tokens";
 import { registrandoFallosDeEntorno, entornoDelProceso, type FuenteDeEntorno } from "./entorno";
-import { ZULUHUB_DB_PLATAFORMA, valoresDeLaPiezaDePlataforma } from "./entorno-de-plataforma";
+import { PEDERNAL_DB_PLATAFORMA, valoresDeLaPiezaDePlataforma } from "./entorno-de-plataforma";
 import { contextoDePlataforma } from "./contextos";
 import { perezoso } from "./perezoso";
 
@@ -101,7 +101,7 @@ import { perezoso } from "./perezoso";
  * La puerta de PLATAFORMA (web-armazon-y-despliegue §6.2): la usan los scripts del dueño y, más adelante, la
  * consola `apps/plataforma/servidor` (proyecto de Vercel propio, todavía sin crear). Arma, a mano y perezoso como
  * `web.ts`, los casos de uso y las consultas de plataforma que ya existen, sobre las conexiones del rol
- * `zuluhub_plataforma`. Importar este archivo o llamar a `armarPlataforma` no lee ni valida nada; cada pieza
+ * `pedernal_plataforma`. Importar este archivo o llamar a `armarPlataforma` no lee ni valida nada; cada pieza
  * se arma la primera vez que se la pide, y entonces valida SUS variables (`entorno-de-plataforma.ts`).
  *
  * SOLO la importan `scripts/`, las pruebas y la puerta de la consola (`puerta-de-consola.ts`) (regla de arquitectura
@@ -163,8 +163,8 @@ export function armarPlataforma(opciones: OpcionesDePlataforma = {}) {
     registrandoFallosDeEntorno(registrar, () => {
       const valores = valoresDeLaPiezaDePlataforma(fuente(), "transacciones-de-plataforma");
       return {
-        urls: { PLATAFORMA: valores[ZULUHUB_DB_PLATAFORMA] },
-        clave: leerClaveDeContexto(valores[ZULUHUB_CLAVE_CONTEXTO]),
+        urls: { PLATAFORMA: valores[PEDERNAL_DB_PLATAFORMA] },
+        clave: leerClaveDeContexto(valores[PEDERNAL_CLAVE_CONTEXTO]),
         maximoDeConexiones: CONEXIONES_POR_POOL,
       } as const;
     }),
@@ -175,7 +175,7 @@ export function armarPlataforma(opciones: OpcionesDePlataforma = {}) {
       crearTokensHmac(
         leerSecretoDeInvitaciones(
           valoresDeLaPiezaDePlataforma(fuente(), "tokens-de-plataforma")[
-            ZULUHUB_SECRETO_INVITACIONES
+            PEDERNAL_SECRETO_INVITACIONES
           ],
         ),
       ),

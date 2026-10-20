@@ -54,14 +54,14 @@ const trozo = fc.constantFrom(
 );
 const ruta = fc.array(trozo, { maxLength: 8 }).map((t) => t.join(""));
 const nombreDeEncabezado = fc.constantFrom(
-  "x-zh-marca",
-  "X-ZH-Nonce",
-  "x-zh-superficie",
+  "x-pd-marca",
+  "X-PD-Nonce",
+  "x-pd-superficie",
   "x-forwarded-host",
   "host",
   "accept",
   "cookie",
-  "x-zh-",
+  "x-pd-",
   "x-zhx",
 );
 const encabezados = fc.array(fc.tuple(nombreDeEncabezado, fc.string({ maxLength: 12 })), {
@@ -98,13 +98,13 @@ describe("decidirPuerta (propiedades)", () => {
     );
   });
 
-  it("al pedido que sigue no llega ningún x-zh-* del cliente: solo el nonce propio", () => {
+  it("al pedido que sigue no llega ningún x-pd-* del cliente: solo el nonce propio", () => {
     fc.assert(
       fc.property(encabezados, ruta, resolucion, (pares, r, res) => {
         const d = decidir(pares, r, res, false);
-        const internos = [...d.encabezadosDePedido.keys()].filter((n) => n.startsWith("x-zh-"));
-        expect(internos).toEqual(["x-zh-nonce"]);
-        expect(d.encabezadosDePedido.get("x-zh-nonce")).toBe(NONCE);
+        const internos = [...d.encabezadosDePedido.keys()].filter((n) => n.startsWith("x-pd-"));
+        expect(internos).toEqual(["x-pd-nonce"]);
+        expect(d.encabezadosDePedido.get("x-pd-nonce")).toBe(NONCE);
       }),
     );
   });

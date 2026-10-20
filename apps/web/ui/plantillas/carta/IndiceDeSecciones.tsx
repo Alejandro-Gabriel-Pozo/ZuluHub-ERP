@@ -4,7 +4,7 @@ import { Icono } from "../../iconos/Icono";
 import estilos from "./IndiceDeSecciones.module.css";
 
 /** El ancla del índice: un nombre propio para que ninguna sección (cuyo ancla sale de su nombre) la pise. */
-const ANCLA_DEL_INDICE = "zh-indice";
+const ANCLA_DEL_INDICE = "pd-indice";
 
 export type PropsDeIndiceDeSecciones = Readonly<{
   secciones: readonly VistaDeSeccion[];
@@ -17,8 +17,8 @@ export type PropsDeIndiceDeSecciones = Readonly<{
  */
 export function IndiceDeSecciones({ secciones, textos }: PropsDeIndiceDeSecciones) {
   return (
-    <nav id={ANCLA_DEL_INDICE} className={estilos["indice"]} aria-labelledby="zh-indice-titulo">
-      <h2 id="zh-indice-titulo" className={estilos["titulo"]}>
+    <nav id={ANCLA_DEL_INDICE} className={estilos["indice"]} aria-labelledby="pd-indice-titulo">
+      <h2 id="pd-indice-titulo" className={estilos["titulo"]}>
         {textos.indiceTitulo}
       </h2>
       <ol className={estilos["lista"]}>

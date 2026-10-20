@@ -332,7 +332,7 @@ describe.skipIf(base === null)("reenviar y revocar la invitación del alta", () 
         tokens,
         correo,
         urlBase: "https://app.ejemplo.test",
-        marca: { nombre: "ZuluHub" },
+        marca: { nombre: "Pedernal" },
       });
       const trabajo = (invitacion: string): TrabajoTomado => ({
         id: "t",

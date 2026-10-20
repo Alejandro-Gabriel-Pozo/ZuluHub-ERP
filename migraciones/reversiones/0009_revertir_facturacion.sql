@@ -13,7 +13,7 @@
 -- o el conteo de abajo no vería nada):
 --
 --     BEGIN;
---     SET LOCAL zuluhub.confirmar_reversion = 'SI';   -- solo si hay datos de facturación o series de producción
+--     SET LOCAL pedernal.confirmar_reversion = 'SI';   -- solo si hay datos de facturación o series de producción
 --     \i migraciones/reversiones/0009_revertir_facturacion.sql
 --     COMMIT;
 --
@@ -56,8 +56,8 @@ BEGIN
        + (SELECT count(*) FROM public.serie_comprobante WHERE ambiente = 'PRODUCCION')
        + (SELECT count(*) FROM public.punto_de_venta WHERE ambiente = 'PRODUCCION')
     INTO v_datos;
-  IF v_datos > 0 AND coalesce(current_setting('zuluhub.confirmar_reversion', true), '') <> 'SI' THEN
-    RAISE EXCEPTION 'hay % filas de facturación o de producción que esta reversión borraría (comprobantes autorizados, certificados, intentos): avisar al dueño, tener un respaldo y repetir con SET LOCAL zuluhub.confirmar_reversion = ''SI''', v_datos
+  IF v_datos > 0 AND coalesce(current_setting('pedernal.confirmar_reversion', true), '') <> 'SI' THEN
+    RAISE EXCEPTION 'hay % filas de facturación o de producción que esta reversión borraría (comprobantes autorizados, certificados, intentos): avisar al dueño, tener un respaldo y repetir con SET LOCAL pedernal.confirmar_reversion = ''SI''', v_datos
       USING ERRCODE = '55000';
   END IF;
 END
@@ -118,7 +118,7 @@ BEGIN
         USING ERRCODE = '23514', CONSTRAINT = 'serie_transicion_invalida';
     END IF;
     IF OLD.estado = 'LIBRE' THEN
-      PERFORM pg_advisory_xact_lock_shared(hashtextextended('zuluhub.fiscal.emisor:' || OLD.emisor_id::text, 0));
+      PERFORM pg_advisory_xact_lock_shared(hashtextextended('pedernal.fiscal.emisor:' || OLD.emisor_id::text, 0));
     END IF;
   ELSIF OLD.estado = 'EN_CURSO' THEN
     -- Una reserva incierta sigue EN_CURSO sin cambios.

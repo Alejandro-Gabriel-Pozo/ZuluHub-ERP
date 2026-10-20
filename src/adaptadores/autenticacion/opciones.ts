@@ -115,7 +115,7 @@ export function opcionesDeInstancia(p: ParametrosDeInstancia): BetterAuthOptions
     }
   };
   return {
-    appName: "ZuluHub",
+    appName: "Pedernal",
     // Origen FIJO de la instancia (nunca `allowedHosts` con `fallback`: un fallback haría caer un host en otra marca).
     baseURL,
     basePath: RUTA_BASE_DE_INGRESO,
@@ -182,7 +182,7 @@ export function opcionesDeInstancia(p: ParametrosDeInstancia): BetterAuthOptions
       },
     },
     advanced: {
-      // M1: `__Host-zh_emp.<cookie>` en la web y `__Host-zh_plat.<cookie>` en la consola. La librería solo antepone
+      // M1: `__Host-pd_emp.<cookie>` en la web y `__Host-pd_plat.<cookie>` en la consola. La librería solo antepone
       // `__Secure-` por su cuenta, así que se apaga eso (`useSecureCookies: false`) y el prefijo `__Host-` va en el
       // nombre; el atributo `Secure` no depende de esa opción y lo fija `defaultCookieAttributes` (una prueba lo
       // comprueba). Sin `crossSubDomainCookies`: sin `Domain`. Prefijos distintos: una cookie de una audiencia no es la de la otra.

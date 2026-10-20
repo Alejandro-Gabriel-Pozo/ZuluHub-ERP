@@ -11,23 +11,23 @@ import {
 describe("rolesPorPreparar", () => {
   it("sin la bandera, exactamente los tres roles de la aplicación web con las variables que declara el entorno", () => {
     expect(rolesPorPreparar(false)).toEqual([
-      { rol: "zuluhub_app", variable: "ZULUHUB_DB_APP" },
-      { rol: "zuluhub_trabajos", variable: "ZULUHUB_DB_TRABAJOS" },
-      { rol: "zuluhub_publico", variable: "ZULUHUB_DB_PUBLICO" },
+      { rol: "pedernal_app", variable: "PEDERNAL_DB_APP" },
+      { rol: "pedernal_trabajos", variable: "PEDERNAL_DB_TRABAJOS" },
+      { rol: "pedernal_publico", variable: "PEDERNAL_DB_PUBLICO" },
     ]);
   });
 
   it("con la bandera suma autenticación y captación, y nunca grupo ni plataforma", () => {
     const roles = rolesPorPreparar(true).map((r) => r.rol);
     expect(roles).toEqual([
-      "zuluhub_app",
-      "zuluhub_trabajos",
-      "zuluhub_publico",
-      "zuluhub_autenticacion",
-      "zuluhub_captacion",
+      "pedernal_app",
+      "pedernal_trabajos",
+      "pedernal_publico",
+      "pedernal_autenticacion",
+      "pedernal_captacion",
     ]);
-    expect(roles).not.toContain("zuluhub_grupo");
-    expect(roles).not.toContain("zuluhub_plataforma");
+    expect(roles).not.toContain("pedernal_grupo");
+    expect(roles).not.toContain("pedernal_plataforma");
   });
 
   it("el rol de respaldo solo con su bandera, al final, y nunca por defecto", () => {
@@ -35,28 +35,28 @@ describe("rolesPorPreparar", () => {
     expect(rolesPorPreparar(true, false)).toEqual(rolesPorPreparar(true));
     expect(rolesPorPreparar(false, true)).toEqual([
       ...rolesPorPreparar(false),
-      { rol: "zuluhub_respaldo", variable: "ZULUHUB_DB_RESPALDO" },
+      { rol: "pedernal_respaldo", variable: "PEDERNAL_DB_RESPALDO" },
     ]);
     expect(rolesPorPreparar(true, true).map((r) => r.rol)).toEqual([
       ...rolesPorPreparar(true).map((r) => r.rol),
-      "zuluhub_respaldo",
+      "pedernal_respaldo",
     ]);
-    expect(rolesPorPreparar(true).map((r) => r.rol)).not.toContain("zuluhub_respaldo");
+    expect(rolesPorPreparar(true).map((r) => r.rol)).not.toContain("pedernal_respaldo");
   });
 
   it("solo la variable del rol de respaldo es de respaldo", () => {
-    expect(esVariableDeRespaldo("ZULUHUB_DB_RESPALDO")).toBe(true);
+    expect(esVariableDeRespaldo("PEDERNAL_DB_RESPALDO")).toBe(true);
     for (const { variable } of rolesPorPreparar(true)) {
       expect(esVariableDeRespaldo(variable), variable).toBe(false);
     }
   });
 
   it("solo son provisorias las variables que la aplicación todavía no declara", () => {
-    expect(esVariableProvisoria("ZULUHUB_DB_AUTENTICACION")).toBe(true);
-    expect(esVariableProvisoria("ZULUHUB_DB_CAPTACION")).toBe(true);
-    expect(esVariableProvisoria("ZULUHUB_DB_APP")).toBe(false);
-    expect(esVariableProvisoria("ZULUHUB_DB_TRABAJOS")).toBe(false);
-    expect(esVariableProvisoria("ZULUHUB_DB_PUBLICO")).toBe(false);
+    expect(esVariableProvisoria("PEDERNAL_DB_AUTENTICACION")).toBe(true);
+    expect(esVariableProvisoria("PEDERNAL_DB_CAPTACION")).toBe(true);
+    expect(esVariableProvisoria("PEDERNAL_DB_APP")).toBe(false);
+    expect(esVariableProvisoria("PEDERNAL_DB_TRABAJOS")).toBe(false);
+    expect(esVariableProvisoria("PEDERNAL_DB_PUBLICO")).toBe(false);
   });
 });
 
@@ -108,9 +108,9 @@ describe("cadenaDeRol", () => {
     "postgresql://dueno:secreto@ep-fria-luna-123456.sa-east-1.aws.neon.tech/neondb?sslmode=require";
 
   it("pone el usuario y la contraseña del rol y conserva host y base", () => {
-    const { cadena, pooler } = cadenaDeRol(NEON, "zuluhub_app", "Clave123", false);
+    const { cadena, pooler } = cadenaDeRol(NEON, "pedernal_app", "Clave123", false);
     const url = new URL(cadena);
-    expect(url.username).toBe("zuluhub_app");
+    expect(url.username).toBe("pedernal_app");
     expect(url.password).toBe("Clave123");
     expect(url.hostname).toBe("ep-fria-luna-123456.sa-east-1.aws.neon.tech");
     expect(url.pathname).toBe("/neondb");
@@ -121,7 +121,7 @@ describe("cadenaDeRol", () => {
   });
 
   it("con pooler, agrega «-pooler» a la primera etiqueta del host de Neon", () => {
-    const { cadena, pooler } = cadenaDeRol(NEON, "zuluhub_app", "Clave123", true);
+    const { cadena, pooler } = cadenaDeRol(NEON, "pedernal_app", "Clave123", true);
     expect(new URL(cadena).hostname).toBe("ep-fria-luna-123456-pooler.sa-east-1.aws.neon.tech");
     expect(pooler).toBe(true);
   });
@@ -129,7 +129,7 @@ describe("cadenaDeRol", () => {
   it("quita channel_binding (el pooler no lo soporta) y deja el resto de los parámetros", () => {
     const { cadena } = cadenaDeRol(
       `${NEON}&channel_binding=require`,
-      "zuluhub_app",
+      "pedernal_app",
       "Clave123",
       true,
     );
@@ -151,7 +151,7 @@ describe("cadenaDeRol", () => {
     ]) {
       const { cadena, pooler } = cadenaDeRol(
         `postgresql://d:c@${host}/b`,
-        "zuluhub_app",
+        "pedernal_app",
         "K12",
         true,
       );

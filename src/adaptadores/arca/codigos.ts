@@ -48,7 +48,7 @@ export const ID_DE_ALICUOTA: Readonly<Partial<Record<CodigoDeAlicuota, number>>>
   "2.5": 9,
 };
 
-/** La alícuota de un `Id` de IVA que informa ARCA, o `null` si no es una de las que ZuluHub conoce. */
+/** La alícuota de un `Id` de IVA que informa ARCA, o `null` si no es una de las que Pedernal conoce. */
 export function alicuotaDeId(id: string): CodigoDeAlicuota | null {
   const hallada = (Object.entries(ID_DE_ALICUOTA) as [CodigoDeAlicuota, number][]).find(
     ([, numero]) => String(numero) === id,

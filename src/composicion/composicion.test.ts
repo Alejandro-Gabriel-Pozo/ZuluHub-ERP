@@ -18,17 +18,17 @@ import { armarWeb } from "./web";
  */
 
 const valida = (): Record<string, string> => ({
-  ZULUHUB_CLAVE_CONTEXTO: `1:${randomBytes(32).toString("hex")}`,
-  ZULUHUB_SECRETO_INVITACIONES: randomBytes(32).toString("hex"),
-  ZULUHUB_RESEND_API_KEY: "clave-de-relleno",
-  ZULUHUB_CORREO_REMITENTE: "Prueba <prueba@ejemplo.test>",
-  ZULUHUB_NOMBRE_DE_MARCA: "Marca de relleno",
-  ZULUHUB_URL_BASE: "https://app.ejemplo.test",
-  ZULUHUB_DB_APP: "postgres://usuario:relleno@127.0.0.1:1/base",
-  ZULUHUB_DB_TRABAJOS: "postgres://usuario:relleno@127.0.0.1:1/base",
-  ZULUHUB_DB_PUBLICO: "postgres://usuario:relleno@127.0.0.1:1/base",
-  ZULUHUB_DB_AUTENTICACION: "postgres://usuario:relleno@127.0.0.1:1/base",
-  ZULUHUB_AUTH_SECRETO_EMPRESA: randomBytes(32).toString("hex"),
+  PEDERNAL_CLAVE_CONTEXTO: `1:${randomBytes(32).toString("hex")}`,
+  PEDERNAL_SECRETO_INVITACIONES: randomBytes(32).toString("hex"),
+  PEDERNAL_RESEND_API_KEY: "clave-de-relleno",
+  PEDERNAL_CORREO_REMITENTE: "Prueba <prueba@ejemplo.test>",
+  PEDERNAL_NOMBRE_DE_MARCA: "Marca de relleno",
+  PEDERNAL_URL_BASE: "https://app.ejemplo.test",
+  PEDERNAL_DB_APP: "postgres://usuario:relleno@127.0.0.1:1/base",
+  PEDERNAL_DB_TRABAJOS: "postgres://usuario:relleno@127.0.0.1:1/base",
+  PEDERNAL_DB_PUBLICO: "postgres://usuario:relleno@127.0.0.1:1/base",
+  PEDERNAL_DB_AUTENTICACION: "postgres://usuario:relleno@127.0.0.1:1/base",
+  PEDERNAL_AUTH_SECRETO_EMPRESA: randomBytes(32).toString("hex"),
   GOOGLE_CLIENT_ID: "cliente-de-relleno",
   GOOGLE_CLIENT_SECRET: "secreto-de-relleno",
 });
@@ -44,95 +44,95 @@ const conFuente = (fuente: FuenteDeEntorno) => {
 
 /** Cada forma de pedir una pieza a la composición, con las variables que tiene que nombrar. */
 const PEDIDOS: { nombre: string; pedir: (c: Conexiones) => unknown; nombra: string }[] = [
-  { nombre: "transaccionesDeApp", pedir: (c) => c.transaccionesDeApp(), nombra: "ZULUHUB_DB_APP" },
+  { nombre: "transaccionesDeApp", pedir: (c) => c.transaccionesDeApp(), nombra: "PEDERNAL_DB_APP" },
   {
     nombre: "transaccionesDeTrabajos",
     pedir: (c) => c.transaccionesDeTrabajos(),
-    nombra: "ZULUHUB_DB_TRABAJOS",
+    nombra: "PEDERNAL_DB_TRABAJOS",
   },
   {
     nombre: "transaccionesPublicas",
     pedir: (c) => c.transaccionesPublicas(),
-    nombra: "ZULUHUB_DB_PUBLICO",
+    nombra: "PEDERNAL_DB_PUBLICO",
   },
-  { nombre: "resolucionDeHost", pedir: (c) => c.resolucionDeHost(), nombra: "ZULUHUB_DB_PUBLICO" },
+  { nombre: "resolucionDeHost", pedir: (c) => c.resolucionDeHost(), nombra: "PEDERNAL_DB_PUBLICO" },
   {
     nombre: "web.resolucionDeHost",
     pedir: (c) => armarWeb(c).resolucionDeHost(),
-    nombra: "ZULUHUB_DB_PUBLICO",
+    nombra: "PEDERNAL_DB_PUBLICO",
   },
   {
     nombre: "configuracionPublicaDeHost",
     pedir: (c) => c.configuracionPublicaDeHost(),
-    nombra: "ZULUHUB_DB_PUBLICO",
+    nombra: "PEDERNAL_DB_PUBLICO",
   },
   {
     nombre: "web.configuracionPublicaDeHost",
     pedir: (c) => armarWeb(c).configuracionPublicaDeHost(),
-    nombra: "ZULUHUB_DB_PUBLICO",
+    nombra: "PEDERNAL_DB_PUBLICO",
   },
   {
     nombre: "autenticacion",
     pedir: (c) => c.autenticacion(),
-    nombra: "ZULUHUB_AUTH_SECRETO_EMPRESA",
+    nombra: "PEDERNAL_AUTH_SECRETO_EMPRESA",
   },
   {
     nombre: "barridoDeAutenticacion",
     pedir: (c) => c.barridoDeAutenticacion(),
-    nombra: "ZULUHUB_DB_AUTENTICACION",
+    nombra: "PEDERNAL_DB_AUTENTICACION",
   },
   {
     nombre: "revocacionDeSesiones",
     pedir: (c) => c.revocacionDeSesiones(),
-    nombra: "ZULUHUB_DB_AUTENTICACION",
+    nombra: "PEDERNAL_DB_AUTENTICACION",
   },
   {
     nombre: "web.autenticacion",
     pedir: (c) => armarWeb(c).autenticacion(),
     nombra: "GOOGLE_CLIENT_SECRET",
   },
-  { nombre: "tokens", pedir: (c) => c.tokens(), nombra: "ZULUHUB_SECRETO_INVITACIONES" },
-  { nombre: "correo", pedir: (c) => c.correo(), nombra: "ZULUHUB_RESEND_API_KEY" },
+  { nombre: "tokens", pedir: (c) => c.tokens(), nombra: "PEDERNAL_SECRETO_INVITACIONES" },
+  { nombre: "correo", pedir: (c) => c.correo(), nombra: "PEDERNAL_RESEND_API_KEY" },
   {
     nombre: "configuracionDeCorreo",
     pedir: (c) => c.configuracionDeCorreo(),
-    nombra: "ZULUHUB_URL_BASE",
+    nombra: "PEDERNAL_URL_BASE",
   },
   {
     nombre: "web.casosDeUsoDeEmpresas",
     pedir: (c) => armarWeb(c).casosDeUsoDeEmpresas(),
-    nombra: "ZULUHUB_DB_APP",
+    nombra: "PEDERNAL_DB_APP",
   },
   {
     nombre: "web.consultasDeEmpresas",
     pedir: (c) => armarWeb(c).consultasDeEmpresas(),
-    nombra: "ZULUHUB_DB_APP",
+    nombra: "PEDERNAL_DB_APP",
   },
   {
     nombre: "web.casosDeUsoDeIdentidad",
     pedir: (c) => armarWeb(c).casosDeUsoDeIdentidad(),
-    nombra: "ZULUHUB_DB_APP",
+    nombra: "PEDERNAL_DB_APP",
   },
   {
     nombre: "web.consultasDeIdentidad",
     pedir: (c) => armarWeb(c).consultasDeIdentidad(),
-    nombra: "ZULUHUB_DB_APP",
+    nombra: "PEDERNAL_DB_APP",
   },
   {
     nombre: "web.consultasDeSesion",
     pedir: (c) => armarWeb(c).consultasDeSesion(),
-    nombra: "ZULUHUB_DB_APP",
+    nombra: "PEDERNAL_DB_APP",
   },
   {
     nombre: "trabajos.procesador",
     pedir: (c) => armarTrabajos(c).procesador(),
-    nombra: "ZULUHUB_URL_BASE",
+    nombra: "PEDERNAL_URL_BASE",
   },
 ];
 
 /**
  * Las variables del producto: las de la lista, las prohibidas y la familia `POSTGRES_*`. Las que lee
- * la propia herramienta de pruebas (`ZULUHUB_SIN_INTEGRACION`, `ZULUHUB_FILTRO_PRUEBAS`) no cuentan.
+ * la propia herramienta de pruebas (`PEDERNAL_SIN_INTEGRACION`, `PEDERNAL_FILTRO_PRUEBAS`) no cuentan.
  */
 const NOMBRES_DEL_PRODUCTO = new Set<string>([
   ...NOMBRES_DE_ENTORNO.map((e) => e.nombre as string),
@@ -189,7 +189,7 @@ describe("P-12: la composición no lee variables al importarse ni al armarse", (
     const conexiones = armarConexiones();
     expect(leidas).toEqual([]);
     expect(() => conexiones.tokens()).toThrow(ErrorDeEntorno);
-    expect(leidas).toEqual(["ZULUHUB_SECRETO_INVITACIONES"]);
+    expect(leidas).toEqual(["PEDERNAL_SECRETO_INVITACIONES"]);
   });
 });
 
@@ -206,7 +206,7 @@ describe("P-12: en ejecución, una variable faltante falla cerrado y el nombre v
     const e = error as ErrorDeEntorno;
     // A la respuesta no puede llegar ningún nombre: el mensaje es genérico.
     for (const texto of [e.message, String(e.stack).split("\n")[0] ?? "", JSON.stringify(e)]) {
-      expect(texto).not.toMatch(/ZULUHUB|DATABASE|POSTGRES|BETTER_AUTH/);
+      expect(texto).not.toMatch(/PEDERNAL|DATABASE|POSTGRES|BETTER_AUTH/);
     }
     // Al registro del servidor sí va, y es lo mismo que guarda el error.
     expect(registrados).toEqual([e.detalleParaElRegistro()]);
@@ -230,24 +230,24 @@ describe("P-12: en ejecución, una variable faltante falla cerrado y el nombre v
 
   it("una variable que falta en un solo lugar solo rompe a las piezas que la usan", () => {
     const sinTrabajos: Record<string, string> = valida();
-    delete sinTrabajos["ZULUHUB_DB_TRABAJOS"];
+    delete sinTrabajos["PEDERNAL_DB_TRABAJOS"];
     const { conexiones, registrados } = conFuente(sinTrabajos);
     expect(conexiones.transaccionesDeApp()).toBeDefined();
     expect(conexiones.tokens()).toBeDefined();
     expect(conexiones.correo()).toBeDefined();
     expect(() => conexiones.transaccionesDeTrabajos()).toThrow(ErrorDeEntorno);
-    expect(registrados).toEqual(["pieza transacciones-trabajos: ZULUHUB_DB_TRABAJOS falta"]);
+    expect(registrados).toEqual(["pieza transacciones-trabajos: PEDERNAL_DB_TRABAJOS falta"]);
   });
 
   it.each([
-    ["ZULUHUB_CLAVE_CONTEXTO", "1:no-es-hexadecimal", (c: Conexiones) => c.transaccionesDeApp()],
-    ["ZULUHUB_SECRETO_INVITACIONES", "corto", (c: Conexiones) => c.tokens()],
+    ["PEDERNAL_CLAVE_CONTEXTO", "1:no-es-hexadecimal", (c: Conexiones) => c.transaccionesDeApp()],
+    ["PEDERNAL_SECRETO_INVITACIONES", "corto", (c: Conexiones) => c.tokens()],
     [
-      "ZULUHUB_URL_BASE",
+      "PEDERNAL_URL_BASE",
       "http://publico.ejemplo.test",
       (c: Conexiones) => c.configuracionDeCorreo(),
     ],
-    ["ZULUHUB_AUTH_SECRETO_EMPRESA", "corto", (c: Conexiones) => c.autenticacion()],
+    ["PEDERNAL_AUTH_SECRETO_EMPRESA", "corto", (c: Conexiones) => c.autenticacion()],
   ])(
     "el formato fino lo valida el adaptador, y su error también sale genérico (%s)",
     (nombre, malo, pedir) => {
@@ -259,7 +259,7 @@ describe("P-12: en ejecución, una variable faltante falla cerrado y el nombre v
         error = e;
       }
       expect(error).toBeInstanceOf(ErrorDeEntorno);
-      expect((error as ErrorDeEntorno).message).not.toContain("ZULUHUB");
+      expect((error as ErrorDeEntorno).message).not.toContain("PEDERNAL");
       expect(registrados).toHaveLength(1);
       expect(registrados[0]).toContain(nombre);
       expect(registrados[0]).not.toContain(malo);
@@ -323,12 +323,12 @@ describe("con el entorno completo", () => {
 
   it("sin la cadena de la puerta pública, el resto de las piezas se arma igual", () => {
     const sinPublico: Record<string, string> = valida();
-    delete sinPublico["ZULUHUB_DB_PUBLICO"];
+    delete sinPublico["PEDERNAL_DB_PUBLICO"];
     const { conexiones, registrados } = conFuente(sinPublico);
     expect(conexiones.transaccionesDeApp()).toBeDefined();
     expect(conexiones.transaccionesDeTrabajos()).toBeDefined();
     expect(() => conexiones.resolucionDeHost()).toThrow(ErrorDeEntorno);
-    expect(registrados).toEqual(["pieza transacciones-publicas: ZULUHUB_DB_PUBLICO falta"]);
+    expect(registrados).toEqual(["pieza transacciones-publicas: PEDERNAL_DB_PUBLICO falta"]);
   });
 
   it("la web ofrece los casos de uso y las consultas de empresas e identidad, una sola vez cada uno", () => {
@@ -374,7 +374,7 @@ describe("con el entorno completo", () => {
 
     const soloLaBase: Record<string, string> = valida();
     for (const nombre of [
-      "ZULUHUB_AUTH_SECRETO_EMPRESA",
+      "PEDERNAL_AUTH_SECRETO_EMPRESA",
       "GOOGLE_CLIENT_ID",
       "GOOGLE_CLIENT_SECRET",
     ]) {
@@ -385,7 +385,7 @@ describe("con el entorno completo", () => {
     expect(otra.conexiones.revocacionDeSesiones()).toBeDefined();
     expect(() => otra.conexiones.autenticacion()).toThrow(ErrorDeEntorno);
     expect(otra.registrados).toEqual([
-      "pieza autenticacion: ZULUHUB_AUTH_SECRETO_EMPRESA falta; GOOGLE_CLIENT_ID falta; GOOGLE_CLIENT_SECRET falta",
+      "pieza autenticacion: PEDERNAL_AUTH_SECRETO_EMPRESA falta; GOOGLE_CLIENT_ID falta; GOOGLE_CLIENT_SECRET falta",
     ]);
   });
 

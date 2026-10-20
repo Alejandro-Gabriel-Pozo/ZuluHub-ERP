@@ -11,7 +11,7 @@ import { crearGeneradorDeCredenciales } from "./generador-pkijs";
 
 const generador = crearGeneradorDeCredenciales();
 const DATOS = {
-  alias: "zuluhub2026",
+  alias: "pedernal2026",
   organizacion: "Pañalera Ñandú S.R.L.",
   numeroDeSerie: "CUIT 20123456786",
 };

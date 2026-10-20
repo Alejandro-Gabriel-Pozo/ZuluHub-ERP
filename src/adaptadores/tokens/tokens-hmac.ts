@@ -9,24 +9,24 @@ import { ErrorDeConfiguracion } from "../postgres/errores";
  * - El token es `base64url(HMAC-SHA256(secreto, "invitacion/v1/" + id))`: se deriva del id de la
  *   invitación, así que el mail se puede armar de nuevo sin guardarlo (la base guarda solo el hash).
  * - El hash que se guarda es el sha256 del token en hexadecimal minúscula (64 caracteres).
- * - El secreto lo carga el dueño en el entorno (`ZULUHUB_SECRETO_INVITACIONES`); acá solo se lee el
+ * - El secreto lo carga el dueño en el entorno (`PEDERNAL_SECRETO_INVITACIONES`); acá solo se lee el
  *   NOMBRE. Falla cerrado: sin secreto, o con uno corto, no se construye el adaptador.
  */
 
 /** NOMBRE de la variable de entorno con el secreto (hexadecimal de 64 o más dígitos). */
-export const ZULUHUB_SECRETO_INVITACIONES = "ZULUHUB_SECRETO_INVITACIONES";
+export const PEDERNAL_SECRETO_INVITACIONES = "PEDERNAL_SECRETO_INVITACIONES";
 
 const BYTES_MINIMOS = 32;
 
 /**
- * Parsea el valor de `ZULUHUB_SECRETO_INVITACIONES`: hexadecimal de al menos 64 dígitos (32 bytes) y
+ * Parsea el valor de `PEDERNAL_SECRETO_INVITACIONES`: hexadecimal de al menos 64 dígitos (32 bytes) y
  * cantidad par. No lee `process.env`. Si falta o es inválido lanza `ErrorDeConfiguracion` con un
  * mensaje que NUNCA incluye el valor recibido.
  */
 export function leerSecretoDeInvitaciones(valor: string | undefined): Buffer {
   const invalido = (motivo: string) =>
     new ErrorDeConfiguracion(
-      `${ZULUHUB_SECRETO_INVITACIONES} inválido: ${motivo} (formato esperado: hexadecimal de ${BYTES_MINIMOS * 2} o más dígitos)`,
+      `${PEDERNAL_SECRETO_INVITACIONES} inválido: ${motivo} (formato esperado: hexadecimal de ${BYTES_MINIMOS * 2} o más dígitos)`,
     );
   const texto = valor?.trim() ?? "";
   if (texto === "") throw invalido("falta");

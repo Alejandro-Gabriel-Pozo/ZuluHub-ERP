@@ -10,7 +10,7 @@ import {
 } from "./cuerpos-de-segundo-factor";
 
 const SECRETO = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
-const DIRECCION = `otpauth://totp/ZuluHub%20Plataforma:ana%40ejemplo.test?secret=${SECRETO}&issuer=ZuluHub%20Plataforma&digits=6&period=30`;
+const DIRECCION = `otpauth://totp/Pedernal%20Plataforma:ana%40ejemplo.test?secret=${SECRETO}&issuer=Pedernal%20Plataforma&digits=6&period=30`;
 const CODIGOS = Array.from({ length: 10 }, (_, i) => `abcd${i}-EFGH${i}`);
 
 describe("cuerpoDeCodigoDeTotpValido", () => {

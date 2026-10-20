@@ -332,7 +332,7 @@ export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion):
 
 /**
  * La autenticación de la consola de plataforma (h5-p8): el mismo núcleo con `twoFactor`, los límites de plataforma
- * (8 horas / 30 minutos), cookies `__Host-zh_plat.*`, la lista cerrada de rutas de plataforma y respuestas propias.
+ * (8 horas / 30 minutos), cookies `__Host-pd_plat.*`, la lista cerrada de rutas de plataforma y respuestas propias.
  */
 export function crearAutenticacionDePlataformaDeBetterAuth(
   c: ConfiguracionDeAutenticacionDePlataforma,

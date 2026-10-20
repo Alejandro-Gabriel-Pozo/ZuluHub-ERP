@@ -13,18 +13,18 @@ describe("PorQueNoPuedo", () => {
         id="porque"
         texto="Esta función no está activada para la empresa."
         codigo="MODULO_NO_ACTIVO"
-        textoDeReferencia="Referencia: ZH-8F3K2"
+        textoDeReferencia="Referencia: PD-8F3K2"
         accion={<Boton variante="secundaria">Pedirlo al gerente</Boton>}
       />,
     );
     await expect.element(page.getByText("MODULO_NO_ACTIVO")).toBeVisible();
-    await expect.element(page.getByText(/Referencia: ZH-8F3K2/)).toBeVisible();
+    await expect.element(page.getByText(/Referencia: PD-8F3K2/)).toBeVisible();
     await expect.element(page.getByRole("status")).toMatchAriaInlineSnapshot(`
       - status:
         - paragraph: Esta función no está activada para la empresa.
         - paragraph:
           - code: MODULO_NO_ACTIVO
-          - text: "· Referencia: ZH-8F3K2"
+          - text: "· Referencia: PD-8F3K2"
         - button "Pedirlo al gerente"
     `);
     expect(document.getElementById("porque")).not.toBeNull();
@@ -55,12 +55,12 @@ describe("PorQueNoPuedo", () => {
 });
 
 describe("ErrorConReferencia", () => {
-  it("alerta con el texto, el código y la referencia ZH; sin violaciones y con su snapshot", async () => {
+  it("alerta con el texto, el código y la referencia PD; sin violaciones y con su snapshot", async () => {
     await render(
       <ErrorConReferencia
         texto="No se pudo completar. Podés reintentar: es seguro, no se duplica."
         codigo="INESPERADO"
-        textoDeReferencia="Referencia: ZH-A1B2C3"
+        textoDeReferencia="Referencia: PD-A1B2C3"
         accion={<Boton>Reintentar</Boton>}
       />,
     );
@@ -69,17 +69,17 @@ describe("ErrorConReferencia", () => {
         - paragraph: "No se pudo completar. Podés reintentar: es seguro, no se duplica."
         - paragraph:
           - code: INESPERADO
-          - text: "· Referencia: ZH-A1B2C3"
+          - text: "· Referencia: PD-A1B2C3"
         - button "Reintentar"
     `);
-    await expect.element(page.getByText(/ZH-A1B2C3/)).toBeVisible();
+    await expect.element(page.getByText(/PD-A1B2C3/)).toBeVisible();
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 
   it("sin código muestra solo el texto y la referencia", async () => {
     const { container } = await render(
-      <ErrorConReferencia texto="No se pudo completar." textoDeReferencia="Referencia: ZH-1" />,
+      <ErrorConReferencia texto="No se pudo completar." textoDeReferencia="Referencia: PD-1" />,
     );
-    expect(container.textContent).toBe("No se pudo completar.Referencia: ZH-1");
+    expect(container.textContent).toBe("No se pudo completar.Referencia: PD-1");
   });
 });

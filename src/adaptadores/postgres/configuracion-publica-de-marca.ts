@@ -28,7 +28,7 @@ void CONFIGURACION_ES_LA_DEL_PUERTO;
 
 /**
  * `ConfiguracionPublicaDeHost` sobre la puerta pública (marcas y planes, §B.2.3): lo que la página pinta
- * de la marca de un host, leído con el rol `zuluhub_publico`.
+ * de la marca de un host, leído con el rol `pedernal_publico`.
  *
  *  - Los mismos filtros previos que `ResolucionDeHost` (`pedidoServible`): un host que no normaliza o una
  *    superficie fuera de la lista responden `ok(null)` SIN tocar la base.

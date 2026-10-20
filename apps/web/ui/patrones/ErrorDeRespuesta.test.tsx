@@ -17,7 +17,7 @@ describe("ErrorDeRespuesta", () => {
   it.each(codigos)("%s: su texto, su código a la vista y accesible", async (codigo) => {
     const error =
       codigo === "ERROR_INTERNO" || codigo === "NO_DISPONIBLE"
-        ? { ...errorDeCodigo(codigo), referencia: "ZH-ABCD-0123" }
+        ? { ...errorDeCodigo(codigo), referencia: "PD-ABCD-0123" }
         : errorDeCodigo(codigo);
     await render(<ErrorDeRespuesta error={error} />);
     await expect.element(page.getByText(texto({}, error.clave))).toBeVisible();
@@ -27,10 +27,10 @@ describe("ErrorDeRespuesta", () => {
   it("lo inesperado muestra la referencia; sin referencia (un fallo solo del navegador) no inventa una", async () => {
     const { rerender, container } = await render(
       <ErrorDeRespuesta
-        error={{ ...errorDeCodigo("ERROR_INTERNO"), referencia: "ZH-ABCD-0123" }}
+        error={{ ...errorDeCodigo("ERROR_INTERNO"), referencia: "PD-ABCD-0123" }}
       />,
     );
-    await expect.element(page.getByText("Referencia: ZH-ABCD-0123")).toBeVisible();
+    await expect.element(page.getByText("Referencia: PD-ABCD-0123")).toBeVisible();
     await rerender(<ErrorDeRespuesta error={errorDeCodigo("ERROR_INTERNO")} />);
     expect(container.textContent).not.toContain("Referencia");
   });

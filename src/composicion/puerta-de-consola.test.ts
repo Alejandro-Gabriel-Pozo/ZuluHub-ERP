@@ -355,7 +355,7 @@ describe("armar y crear la puerta", () => {
     });
     expect(await puerta.conSesion(sesion(hace(0)))).toEqual({ ok: false, error: "no_habilitado" });
     expect(registrar).toHaveBeenCalledWith(
-      "pieza transacciones-de-plataforma: ZULUHUB_DB_PLATAFORMA falta; ZULUHUB_CLAVE_CONTEXTO falta",
+      "pieza transacciones-de-plataforma: PEDERNAL_DB_PLATAFORMA falta; PEDERNAL_CLAVE_CONTEXTO falta",
     );
   });
 });

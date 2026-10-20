@@ -8,7 +8,7 @@ import { web } from "./composicion";
 
 /**
  * De dónde sale la resolución de un host y la marca que lo atiende: la puerta pública REAL (rol
- * `zuluhub_publico`, `ZULUHUB_DB_PUBLICO`), enchufada acá y en ningún otro lugar. No lee ninguna variable:
+ * `pedernal_publico`, `PEDERNAL_DB_PUBLICO`), enchufada acá y en ningún otro lugar. No lee ninguna variable:
  * `web.resolucionDeHost()` y `web.configuracionPublicaDeHost()` la validan la primera vez que se usan, y si
  * falta, el pedido falla cerrado (la puerta responde la neutra 503; el NOMBRE de la variable solo va al
  * registro, desde la composición). Mientras el dueño no cargue la cadena, producción muestra la neutra. La

@@ -19,7 +19,7 @@ export type PropsDeErrorDeRespuesta = Readonly<{
 
 /**
  * Muestra un error ya traducido con el patrón que le toca ([01] §6.3): lo inesperado, con su referencia
- * `ZH-…`; el motivo del guard, como «por qué no puedo»; la sesión vencida, como aviso; el resto, un aviso
+ * `PD-…`; el motivo del guard, como «por qué no puedo»; la sesión vencida, como aviso; el resto, un aviso
  * con el texto y el código al lado. La interfaz no inventa mensajes: busca la clave que trae el error.
  */
 export function ErrorDeRespuesta({ error, diccionario = {}, accion }: PropsDeErrorDeRespuesta) {

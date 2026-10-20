@@ -64,7 +64,7 @@ describe("despacharDespuesDeConfirmar", () => {
   it("si despachar falla o el procesador no se puede armar, no lanza y deja registro por tipo, sin mensaje", async () => {
     const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
     mundo.procesador.mockImplementationOnce(() => {
-      throw Object.assign(new Error("falta ZULUHUB_RESEND_API_KEY clave=zzz"), {
+      throw Object.assign(new Error("falta PEDERNAL_RESEND_API_KEY clave=zzz"), {
         name: "ErrorDeEntorno",
       });
     });

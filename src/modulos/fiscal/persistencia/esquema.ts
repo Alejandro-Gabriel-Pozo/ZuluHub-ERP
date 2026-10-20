@@ -438,7 +438,7 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   certificado_alias_ck: "ALIAS_INVALIDO",
   certificado_cuit_titular_ck: "CUIT_INVALIDO",
   certificado_estado_ck: "NO_TRADUCIDA",
-  certificado_pedido_ck: "NO_TRADUCIDA", // el pedido lo genera ZuluHub, no lo escribe una persona
+  certificado_pedido_ck: "NO_TRADUCIDA", // el pedido lo genera Pedernal, no lo escribe una persona
   certificado_pem_ck: "CERTIFICADO_ILEGIBLE", // el texto que pega el gerente: vacío o desmesurado
   certificado_huella_ck: "NO_TRADUCIDA",
   certificado_clave_ck: "NO_TRADUCIDA",

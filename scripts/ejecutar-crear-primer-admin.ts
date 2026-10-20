@@ -9,7 +9,7 @@ import { NOMBRE_DE_LA_CADENA_DE_DUENO } from "../src/adaptadores/vercel/plan-de-
 /**
  * Lo que hace `scripts/crear-primer-admin.ts`, separado de su arranque para poder probarlo y capturar lo
  * que escribe. Siembra al primer administrador de plataforma (rol ADMIN) con la cadena DIRECTA del dueño de
- * la base (`ZULUHUB_DB_MIGRACIONES`): sin un administrador sembrado nadie puede actuar como plataforma.
+ * la base (`PEDERNAL_DB_MIGRACIONES`): sin un administrador sembrado nadie puede actuar como plataforma.
  *
  * Uso: `npm run plataforma:primer-admin -- <email>`. El email viene por argumento y NUNCA se imprime (ni
  * entero ni en pedazos): lo que sale es el identificador del administrador. Tampoco se imprimen la cadena ni

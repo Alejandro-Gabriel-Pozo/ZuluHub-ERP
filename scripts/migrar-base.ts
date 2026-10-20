@@ -10,7 +10,7 @@ import { VARIABLE_DE_LA_CADENA, ejecutarMigracion } from "./ejecutar-migracion.t
  * Migra la base de datos real. Lo corre el workflow `.github/workflows/migrar-base.yml` con
  * `npm run migrar -- --ver` o `-- --aplicar`, y el dueño en su terminal con `-- --preparar-roles`
  * (con `--vercel <destino>` carga además las variables en Vercel, ver `ejecutar-migracion.ts`). La
- * cadena de conexión viene de la variable de entorno ZULUHUB_DB_MIGRACIONES (en GitHub, el secreto de
+ * cadena de conexión viene de la variable de entorno PEDERNAL_DB_MIGRACIONES (en GitHub, el secreto de
  * un Environment), nunca de un archivo del repositorio.
  *
  * Se ejecuta directo con Node (borra los tipos al cargar), sin dependencias nuevas. El detalle de lo

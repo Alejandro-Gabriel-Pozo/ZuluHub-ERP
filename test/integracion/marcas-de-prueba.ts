@@ -2,7 +2,7 @@ import pg from "pg";
 import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
 
 /**
- * La marca principal de las bases de PRUEBA. La migración 0007 crea la fila `zuluhub` con un id al azar;
+ * La marca principal de las bases de PRUEBA. La migración 0007 crea la fila `pedernal` con un id al azar;
  * las pruebas arman todo contexto operativo con `MARCA_PRINCIPAL_DE_PRUEBA` (`comoEmpresa`), así que cada
  * base de prueba lleva la principal con ese id. Se cambia con la conexión del dueño y antes de que exista
  * ningún tenant (el id de una marca es inmutable en la base: el disparador se apaga solo acá).

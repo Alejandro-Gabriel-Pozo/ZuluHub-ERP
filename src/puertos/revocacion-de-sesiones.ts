@@ -2,7 +2,7 @@ import type { UsuarioAuthId } from "../primitivas/identificadores/marca";
 
 /**
  * Revocar las sesiones de un usuario de la librería de ingreso (h5-p8 §2.5). Lo cumple el adaptador de Postgres con el
- * rol `zuluhub_autenticacion`, el único con `DELETE` sobre `session`. Tipo puro: ni la librería ni la herramienta de
+ * rol `pedernal_autenticacion`, el único con `DELETE` sobre `session`. Tipo puro: ni la librería ni la herramienta de
  * datos aparecen acá.
  *
  * La revocación es INMEDIATA para quien presente la cookie: la librería lee la sesión de la base en cada pedido (la

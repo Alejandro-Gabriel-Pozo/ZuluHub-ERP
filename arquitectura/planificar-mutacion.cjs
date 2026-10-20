@@ -22,7 +22,7 @@ const path = require("node:path");
 /** Cambios que ninguna prueba unitaria lee: no alteran ningún resultado de mutación. */
 const IGNORABLES = [
   /\.md$/,
-  /^migraciones\//, // solo las lee la integración, que la mutación no corre (ZULUHUB_SIN_INTEGRACION=1)
+  /^migraciones\//, // solo las lee la integración, que la mutación no corre (PEDERNAL_SIN_INTEGRACION=1)
   /^\.github\/dependabot\.yml$/,
   /^\.gitleaks\.toml$/,
   /^skills-lock\.json$/,

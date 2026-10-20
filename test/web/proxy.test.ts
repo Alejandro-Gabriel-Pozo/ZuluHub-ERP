@@ -71,8 +71,8 @@ describe("P-2: host desconocido, retirado o inválido = la neutra", () => {
     ["retirado de A", "viejo.hoteldellago.test"],
     ["retirado de B", "vieja.panaderialospinos.test"],
     ["superficie que esta app no sirve (consola)", "consola.hoteldellago.test"],
-    ["el despliegue técnico", "zuluhub-erp.vercel.app"],
-    ["una vista previa", "zuluhub-erp-git-rama-alepozod.vercel.app"],
+    ["el despliegue técnico", "pedernal-erp.vercel.app"],
+    ["una vista previa", "pedernal-erp-git-rama-alepozod.vercel.app"],
     ["una IPv4", "10.0.0.1"],
     ["una IPv4 con puerto", "127.0.0.1:3000"],
     ["una IPv4 corta", "127.1"],
@@ -288,7 +288,7 @@ describe("P-4: cabeceras de seguridad", () => {
     expect(r.headers.get("x-powered-by")).toBeNull();
     // El mismo nonce llega a la página: por la CSP del pedido (Next marca sus scripts) y por el interno.
     const siguen = encabezadosDePedidoQueSiguen(r);
-    expect(siguen["x-zh-nonce"]).toBe(nonce);
+    expect(siguen["x-pd-nonce"]).toBe(nonce);
     expect(siguen["content-security-policy"]).toBe(csp);
   });
 
@@ -313,19 +313,19 @@ describe("P-4: cabeceras de seguridad", () => {
 });
 
 describe("P-5: encabezados que no se falsifican", () => {
-  it("borra todo x-zh-* que mande el cliente y conserva el resto", async () => {
+  it("borra todo x-pd-* que mande el cliente y conserva el resto", async () => {
     const r = await proxy(
       pedido(HOST_APP_A, "/", {
-        "x-zh-marca": "otra",
-        "X-ZH-Superficie": "app",
-        "x-zh-host": "otra.com",
-        "x-zh-nonce": "inventado",
+        "x-pd-marca": "otra",
+        "X-PD-Superficie": "app",
+        "x-pd-host": "otra.com",
+        "x-pd-nonce": "inventado",
         accept: "text/html",
       }),
     );
     const siguen = encabezadosDePedidoQueSiguen(r);
-    expect(Object.keys(siguen).filter((n) => n.startsWith("x-zh-"))).toEqual(["x-zh-nonce"]);
-    expect(siguen["x-zh-nonce"]).not.toBe("inventado");
+    expect(Object.keys(siguen).filter((n) => n.startsWith("x-pd-"))).toEqual(["x-pd-nonce"]);
+    expect(siguen["x-pd-nonce"]).not.toBe("inventado");
     expect(siguen["accept"]).toBe("text/html");
   });
 
@@ -334,10 +334,10 @@ describe("P-5: encabezados que no se falsifican", () => {
       [HOST_APP_A, "/api/auth/signin"],
       ["otro.test", "/"],
     ] as const) {
-      const r = await proxy(pedido(host, ruta, { "x-zh-marca": "otra", "x-zh-nonce": "x" }));
+      const r = await proxy(pedido(host, ruta, { "x-pd-marca": "otra", "x-pd-nonce": "x" }));
       const siguen = encabezadosDePedidoQueSiguen(r);
-      expect(siguen["x-zh-marca"]).toBeUndefined();
-      expect(siguen["x-zh-nonce"]).not.toBe("x");
+      expect(siguen["x-pd-marca"]).toBeUndefined();
+      expect(siguen["x-pd-nonce"]).not.toBe("x");
     }
   });
 
@@ -352,7 +352,7 @@ describe("P-5: encabezados que no se falsifican", () => {
         "x-forwarded-host": falso,
         forwarded: `host=${falso}`,
         "x-original-host": falso,
-        "x-zh-host": falso,
+        "x-pd-host": falso,
       }),
     );
     const sin = await proxy(pedido(host, "/panel"));

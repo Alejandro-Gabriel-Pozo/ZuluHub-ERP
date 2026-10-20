@@ -26,7 +26,7 @@ import {
 /**
  * `--preparar-roles --vercel <destino>`: el mismo recorrido que `--preparar-roles`, pero las contraseñas
  * se ESCRIBEN en Vercel (un Vercel falso con estado, sin red) en vez de imprimirse. Los roles son
- * propios de cada prueba, como en `migrar-base-roles.test.ts` (los `zuluhub_*` reales son del servidor).
+ * propios de cada prueba, como en `migrar-base-roles.test.ts` (los `pedernal_*` reales son del servidor).
  */
 
 const base = inject("baseDePruebas");
@@ -34,7 +34,7 @@ vi.setConfig({ testTimeout: 120_000, hookTimeout: 120_000 });
 
 const CARPETA_REAL = join(import.meta.dirname, "../../migraciones");
 const entreComillas = (rol: string) => `"${rol.replaceAll('"', '""')}"`;
-const VARIABLES = ["ZULUHUB_DB_APP", "ZULUHUB_DB_TRABAJOS", "ZULUHUB_DB_PUBLICO"];
+const VARIABLES = ["PEDERNAL_DB_APP", "PEDERNAL_DB_TRABAJOS", "PEDERNAL_DB_PUBLICO"];
 
 type Salida = { codigo: number; info: string; error: string; secreto: string; todo: string };
 
@@ -69,7 +69,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
       argumentos: ["--preparar-roles", ...argumentos],
       entorno: {
         [VARIABLE_DE_LA_CADENA]: cadena,
-        ZULUHUB_VERCEL_TOKEN: TOKEN_FALSO,
+        PEDERNAL_VERCEL_TOKEN: TOKEN_FALSO,
         ...o.entorno,
       },
       carpeta: CARPETA_REAL,
@@ -124,11 +124,11 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     if (base === null) return;
     const sufijo = randomBytes(4).toString("hex");
     ROLES = [
-      { rol: `zz_${sufijo}_app`, variable: "ZULUHUB_DB_APP" },
-      { rol: `zz_${sufijo}_trabajos`, variable: "ZULUHUB_DB_TRABAJOS" },
-      { rol: `zz_${sufijo}_publico`, variable: "ZULUHUB_DB_PUBLICO" },
+      { rol: `zz_${sufijo}_app`, variable: "PEDERNAL_DB_APP" },
+      { rol: `zz_${sufijo}_trabajos`, variable: "PEDERNAL_DB_TRABAJOS" },
+      { rol: `zz_${sufijo}_publico`, variable: "PEDERNAL_DB_PUBLICO" },
     ];
-    AUTENTICACION = [{ rol: `zz_${sufijo}_autenticacion`, variable: "ZULUHUB_DB_AUTENTICACION" }];
+    AUTENTICACION = [{ rol: `zz_${sufijo}_autenticacion`, variable: "PEDERNAL_DB_AUTENTICACION" }];
     for (const { rol } of [...ROLES, ...AUTENTICACION]) {
       await admin.query(`CREATE ROLE ${entreComillas(rol)} NOLOGIN`);
     }
@@ -150,7 +150,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
   it("preview: escribe las tres variables sensibles solo en preview, no imprime ninguna contraseña, y con cada una se entra como su rol", async () => {
     const url = await nuevaBase();
     const enProduccion = {
-      key: "ZULUHUB_DB_APP",
+      key: "PEDERNAL_DB_APP",
       type: "sensitive",
       target: ["production"],
       valor: "valor-de-produccion",
@@ -161,11 +161,11 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     expect(salida.codigo).toBe(0);
     expect(salida.secreto).toBe("");
     expect(salida.info).toContain(
-      "Se cargará en Vercel: PREVIEW (proyecto zuluhub-erp, equipo alepozod).",
+      "Se cargará en Vercel: PREVIEW (proyecto pedernal-erp, equipo alepozod).",
     );
     expect(salida.info).toContain("Hecho (Vercel: PREVIEW):");
     expect(salida.info).toContain(
-      "Cargadas en Vercel (PREVIEW, tipo sensible): ZULUHUB_DB_APP, ZULUHUB_DB_TRABAJOS, ZULUHUB_DB_PUBLICO.",
+      "Cargadas en Vercel (PREVIEW, tipo sensible): PEDERNAL_DB_APP, PEDERNAL_DB_TRABAJOS, PEDERNAL_DB_PUBLICO.",
     );
     expect(salida.info).toContain("RESULTADO: OK, la base y Vercel (PREVIEW) quedaron listos.");
 
@@ -203,7 +203,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
       expect(JSON.stringify(p.consulta)).not.toContain(TOKEN_FALSO);
     }
     // Producción no se tocó.
-    const prod = falso.de("ZULUHUB_DB_APP").find((v) => v.target.includes("production"));
+    const prod = falso.de("PEDERNAL_DB_APP").find((v) => v.target.includes("production"));
     expect(prod).toMatchObject({ valor: "valor-de-produccion", target: ["production"] });
   });
 
@@ -265,7 +265,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
       argumentos: ["--aplicar", "--vercel", "preview"],
       entorno: {
         [VARIABLE_DE_LA_CADENA]: "postgresql://u:c@h/b",
-        ZULUHUB_VERCEL_TOKEN: TOKEN_FALSO,
+        PEDERNAL_VERCEL_TOKEN: TOKEN_FALSO,
       },
       carpeta: CARPETA_REAL,
       info: () => undefined,
@@ -295,10 +295,10 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     const falso = crearVercelFalso();
     const salida = await correr(url, ["--vercel", "preview"], {
       falso,
-      entorno: { ZULUHUB_VERCEL_TOKEN: undefined },
+      entorno: { PEDERNAL_VERCEL_TOKEN: undefined },
     });
     expect(salida.codigo).toBe(1);
-    expect(salida.error).toContain("falta la variable ZULUHUB_VERCEL_TOKEN");
+    expect(salida.error).toContain("falta la variable PEDERNAL_VERCEL_TOKEN");
     expect(salida.error).toContain("vercel.com");
     expect(salida.error).toContain("Settings");
     expect(salida.error).toContain("Tokens");
@@ -308,7 +308,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     expect(await puedeEntrar(ROLES[0]?.rol as string)).toBe(false);
     const vacio = await correr(url, ["--vercel", "preview"], {
       falso,
-      entorno: { ZULUHUB_VERCEL_TOKEN: "  " },
+      entorno: { PEDERNAL_VERCEL_TOKEN: "  " },
     });
     expect(vacio.codigo).toBe(1);
     expect(falso.pedidos).toEqual([]);
@@ -319,10 +319,10 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     const falso = crearVercelFalso();
     const salida = await correr(url, ["--vercel", "preview"], {
       falso,
-      entorno: { ZULUHUB_VERCEL_TOKEN: "vcp_parte1 parte2" },
+      entorno: { PEDERNAL_VERCEL_TOKEN: "vcp_parte1 parte2" },
     });
     expect(salida.codigo).toBe(1);
-    expect(salida.error).toContain("ZULUHUB_VERCEL_TOKEN tiene espacios");
+    expect(salida.error).toContain("PEDERNAL_VERCEL_TOKEN tiene espacios");
     expect(salida.todo).not.toContain("parte1");
     expect(falso.pedidos).toEqual([]);
   });
@@ -332,7 +332,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     const falso = crearVercelFalso();
     const salida = await correr(url, ["--vercel", "preview"], {
       falso,
-      entorno: { ZULUHUB_VERCEL_TOKEN: "vcp_TokenQueNoSirve999" },
+      entorno: { PEDERNAL_VERCEL_TOKEN: "vcp_TokenQueNoSirve999" },
     });
     expect(salida.codigo).toBe(1);
     expect(salida.error).toContain("no se pudo leer el proyecto de Vercel");
@@ -366,15 +366,15 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
       plena("POSTGRES_URL", ["preview"]),
       plena("POSTGRES_PRISMA_URL", ["preview"]),
       plena("POSTGRES_USER", ["preview", "production"]),
-      plena("ZULUHUB_DB_MIGRACIONES", ["preview"], "plain"),
-      plena("ZULUHUB_DB_MIGRACIONES", ["production"], "plain"),
+      plena("PEDERNAL_DB_MIGRACIONES", ["preview"], "plain"),
+      plena("PEDERNAL_DB_MIGRACIONES", ["production"], "plain"),
       plena("OTRA_QUE_SE_QUEDA", ["preview"], "plain"),
     ]);
     const salida = await correr(url, ["--vercel", "preview"], { falso });
     expect(salida.error).toBe("");
     expect(salida.codigo).toBe(0);
     expect(salida.info).toContain(
-      "Borradas de Vercel (PREVIEW) por estar prohibidas: DATABASE_URL, DATABASE_URL_UNPOOLED, BETTER_AUTH_SECRET, BETTER_AUTH_URL, BETTER_AUTH_TELEMETRY, POSTGRES_URL, POSTGRES_PRISMA_URL, ZULUHUB_DB_MIGRACIONES.",
+      "Borradas de Vercel (PREVIEW) por estar prohibidas: DATABASE_URL, DATABASE_URL_UNPOOLED, BETTER_AUTH_SECRET, BETTER_AUTH_URL, BETTER_AUTH_TELEMETRY, POSTGRES_URL, POSTGRES_PRISMA_URL, PEDERNAL_DB_MIGRACIONES.",
     );
     expect(salida.info).toContain("se les quitó PREVIEW");
     expect(salida.info).toContain("POSTGRES_USER");
@@ -383,22 +383,22 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     expect(enPreview.map((v) => v.key).sort()).toEqual([...VARIABLES, "OTRA_QUE_SE_QUEDA"].sort());
     // Production, intacta: las prohibidas de production siguen ahí (otro comando las limpia).
     expect(falso.de("DATABASE_URL").map((v) => v.target)).toEqual([["production"]]);
-    expect(falso.de("ZULUHUB_DB_MIGRACIONES").map((v) => v.target)).toEqual([["production"]]);
+    expect(falso.de("PEDERNAL_DB_MIGRACIONES").map((v) => v.target)).toEqual([["production"]]);
     expect(falso.de("POSTGRES_USER").map((v) => v.target)).toEqual([["production"]]);
     expect(falso.de("OTRA_QUE_SE_QUEDA")).toHaveLength(1);
   });
 
-  it("production: borra lo prohibido (incluida ZULUHUB_DB_MIGRACIONES) de production y deja preview como estaba", async () => {
+  it("production: borra lo prohibido (incluida PEDERNAL_DB_MIGRACIONES) de production y deja preview como estaba", async () => {
     const url = await nuevaBase();
     const falso = crearVercelFalso([
       {
-        key: "ZULUHUB_DB_MIGRACIONES",
+        key: "PEDERNAL_DB_MIGRACIONES",
         type: "encrypted",
         target: ["production"],
         valor: "dueno-prod",
       },
       {
-        key: "ZULUHUB_DB_MIGRACIONES",
+        key: "PEDERNAL_DB_MIGRACIONES",
         type: "encrypted",
         target: ["preview"],
         valor: "dueno-prev",
@@ -410,9 +410,9 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     });
     expect(salida.codigo).toBe(0);
     expect(salida.info).toContain(
-      "Borradas de Vercel (PRODUCTION) por estar prohibidas: ZULUHUB_DB_MIGRACIONES.",
+      "Borradas de Vercel (PRODUCTION) por estar prohibidas: PEDERNAL_DB_MIGRACIONES.",
     );
-    expect(falso.de("ZULUHUB_DB_MIGRACIONES").map((v) => v.valor)).toEqual(["dueno-prev"]);
+    expect(falso.de("PEDERNAL_DB_MIGRACIONES").map((v) => v.valor)).toEqual(["dueno-prev"]);
     expect(falso.de("DATABASE_URL")).toHaveLength(1);
   });
 
@@ -420,23 +420,23 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     const url = await nuevaBase();
     const falso = crearVercelFalso([
       {
-        key: "ZULUHUB_DB_APP",
+        key: "PEDERNAL_DB_APP",
         type: "encrypted",
         target: ["production", "preview"],
         valor: "vieja",
       },
-      { key: "ZULUHUB_DB_TRABAJOS", type: "plain", target: ["preview"], valor: "vieja" },
+      { key: "PEDERNAL_DB_TRABAJOS", type: "plain", target: ["preview"], valor: "vieja" },
     ]);
     const salida = await correr(url, ["--vercel", "preview"], { falso });
     expect(salida.error).toBe("");
     expect(salida.codigo).toBe(0);
-    const app = falso.de("ZULUHUB_DB_APP");
+    const app = falso.de("PEDERNAL_DB_APP");
     expect(app.map((v) => [v.type, v.target])).toEqual([
       ["encrypted", ["production"]],
       ["sensitive", ["preview"]],
     ]);
     expect(app[0]?.valor).toBe("vieja");
-    expect(falso.de("ZULUHUB_DB_TRABAJOS").map((v) => [v.type, v.target])).toEqual([
+    expect(falso.de("PEDERNAL_DB_TRABAJOS").map((v) => [v.type, v.target])).toEqual([
       ["sensitive", ["preview"]],
     ]);
   });
@@ -452,7 +452,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     expect(segunda.codigo).toBe(0);
     expect(segunda.secreto).toBe("");
     expect(segunda.info).toContain(
-      "Ya estaban cargadas en Vercel (PREVIEW): ZULUHUB_DB_APP, ZULUHUB_DB_TRABAJOS, ZULUHUB_DB_PUBLICO.",
+      "Ya estaban cargadas en Vercel (PREVIEW): PEDERNAL_DB_APP, PEDERNAL_DB_TRABAJOS, PEDERNAL_DB_PUBLICO.",
     );
     expect(falso.escrituras()).toHaveLength(escriturasAntes);
     expect(falso.foto()).toBe(antes);
@@ -463,7 +463,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     const url = await nuevaBase();
     const falso = crearVercelFalso();
     await correr(url, ["--vercel", "preview"], { falso });
-    const vieja = valorDe(falso, "ZULUHUB_DB_APP");
+    const vieja = valorDe(falso, "PEDERNAL_DB_APP");
     for (let i = 0; i < 2; i++) {
       const r = await correr(url, ["--vercel", "preview", "--rotar"], { falso });
       expect(r.codigo).toBe(0);
@@ -473,11 +473,11 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
       expect(falso.de(variable)).toHaveLength(1);
       expect(await entraComo(valorDe(falso, variable), rol)).toBe(true);
     }
-    expect(valorDe(falso, "ZULUHUB_DB_APP")).not.toBe(vieja);
+    expect(valorDe(falso, "PEDERNAL_DB_APP")).not.toBe(vieja);
     // La contraseña anterior deja de servir. Se comprueba solo si el servidor exige contraseña: el CI levanta
     // Postgres con `trust` (acepta cualquiera) y ahí no se puede distinguir una clave buena de una mala.
     const exigeClave = await entraComo(
-      valorDe(falso, "ZULUHUB_DB_APP").replace(/:[^:@]*@/, ":clave-equivocada@"),
+      valorDe(falso, "PEDERNAL_DB_APP").replace(/:[^:@]*@/, ":clave-equivocada@"),
       ROLES[0]?.rol as string,
     ).then(
       () => false,
@@ -493,7 +493,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     const salida = await correr(url, ["--vercel", "preview"], { falso: vacio });
     expect(salida.codigo).toBe(1);
     expect(salida.error).toContain("No hecho:");
-    expect(salida.error).toContain("ZULUHUB_DB_APP: el rol ya tenía contraseña");
+    expect(salida.error).toContain("PEDERNAL_DB_APP: el rol ya tenía contraseña");
     expect(salida.error).toContain("--rotar");
     expect(salida.error).toContain("RESULTADO: FALLA");
     expect(salida.secreto).toBe("");
@@ -510,8 +510,8 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     const salida = await correr(url, ["--vercel", "preview", "--secretos"], { falso });
     expect(salida.error).toBe("");
     expect(salida.codigo).toBe(0);
-    const clave = falso.de("ZULUHUB_CLAVE_CONTEXTO").map((v) => ({ ...v }));
-    const secreto = falso.de("ZULUHUB_SECRETO_INVITACIONES").map((v) => ({ ...v }));
+    const clave = falso.de("PEDERNAL_CLAVE_CONTEXTO").map((v) => ({ ...v }));
+    const secreto = falso.de("PEDERNAL_SECRETO_INVITACIONES").map((v) => ({ ...v }));
     expect(clave).toHaveLength(1);
     expect(secreto).toHaveLength(1);
     expect(clave[0]?.valor).toMatch(/^1:[0-9a-f]{64}$/);
@@ -519,7 +519,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     expect(clave[0]).toMatchObject({ type: "sensitive", target: ["preview"] });
     expect(secreto[0]).toMatchObject({ type: "sensitive", target: ["preview"] });
     expect(salida.info).toContain(
-      "Secretos nuevos generados y cargados en Vercel (PREVIEW): ZULUHUB_CLAVE_CONTEXTO, ZULUHUB_SECRETO_INVITACIONES.",
+      "Secretos nuevos generados y cargados en Vercel (PREVIEW): PEDERNAL_CLAVE_CONTEXTO, PEDERNAL_SECRETO_INVITACIONES.",
     );
     expect(salida.info).toContain("las sesiones y las invitaciones emitidas antes dejan de valer");
     expect(salida.todo).not.toContain(clave[0]?.valor.slice(2));
@@ -527,12 +527,12 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     // Sin la bandera, los secretos no se tocan; con ella otra vez, se reemplazan (siguen siendo uno solo).
     const sinBandera = await correr(url, ["--vercel", "preview"], { falso });
     expect(sinBandera.codigo).toBe(0);
-    expect(falso.de("ZULUHUB_CLAVE_CONTEXTO")[0]?.valor).toBe(clave[0]?.valor);
+    expect(falso.de("PEDERNAL_CLAVE_CONTEXTO")[0]?.valor).toBe(clave[0]?.valor);
     const otra = await correr(url, ["--vercel", "preview", "--secretos"], { falso });
     expect(otra.codigo).toBe(0);
-    expect(falso.de("ZULUHUB_CLAVE_CONTEXTO")).toHaveLength(1);
-    expect(falso.de("ZULUHUB_CLAVE_CONTEXTO")[0]?.valor).not.toBe(clave[0]?.valor);
-    expect(falso.de("ZULUHUB_SECRETO_INVITACIONES")[0]?.valor).not.toBe(secreto[0]?.valor);
+    expect(falso.de("PEDERNAL_CLAVE_CONTEXTO")).toHaveLength(1);
+    expect(falso.de("PEDERNAL_CLAVE_CONTEXTO")[0]?.valor).not.toBe(clave[0]?.valor);
+    expect(falso.de("PEDERNAL_SECRETO_INVITACIONES")[0]?.valor).not.toBe(secreto[0]?.valor);
   });
 
   it("--secretos usa los bytes que se le den (32 por secreto)", async () => {
@@ -547,7 +547,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
       },
     });
     expect(pedidos).toEqual([32, 32]);
-    expect(valorDe(falso, "ZULUHUB_CLAVE_CONTEXTO")).toBe(`1:${"5a".repeat(32)}`);
+    expect(valorDe(falso, "PEDERNAL_CLAVE_CONTEXTO")).toBe(`1:${"5a".repeat(32)}`);
   });
 
   it("--con-autenticacion también carga esos roles y avisa que el nombre es provisorio", async () => {
@@ -555,9 +555,9 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     const falso = crearVercelFalso();
     const salida = await correr(url, ["--vercel", "preview", "--con-autenticacion"], { falso });
     expect(salida.codigo).toBe(0);
-    expect(falso.de("ZULUHUB_DB_AUTENTICACION")).toHaveLength(1);
-    expect(salida.info).toContain("Aviso: ZULUHUB_DB_AUTENTICACION es un nombre provisorio");
-    expect(salida.info).not.toContain("Aviso: ZULUHUB_DB_APP");
+    expect(falso.de("PEDERNAL_DB_AUTENTICACION")).toHaveLength(1);
+    expect(salida.info).toContain("Aviso: PEDERNAL_DB_AUTENTICACION es un nombre provisorio");
+    expect(salida.info).not.toContain("Aviso: PEDERNAL_DB_APP");
   });
 
   it("si Vercel falla a la mitad, las contraseñas que no llegaron se imprimen igual, las que sí llegaron no, y el token no aparece", async () => {
@@ -568,7 +568,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
       if (
         caido &&
         p.metodo === "POST" &&
-        (p.cuerpo as { key: string }).key === "ZULUHUB_DB_TRABAJOS"
+        (p.cuerpo as { key: string }).key === "PEDERNAL_DB_TRABAJOS"
       ) {
         enviado = (p.cuerpo as { value: string }).value;
         return new Response(
@@ -583,15 +583,15 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     const falso = crearVercelFalso([], interceptor);
     const salida = await correr(url, ["--vercel", "preview"], { falso });
     expect(salida.codigo).toBe(1);
-    expect(falso.de("ZULUHUB_DB_APP")).toHaveLength(1);
-    expect(falso.de("ZULUHUB_DB_TRABAJOS")).toHaveLength(0);
+    expect(falso.de("PEDERNAL_DB_APP")).toHaveLength(1);
+    expect(falso.de("PEDERNAL_DB_TRABAJOS")).toHaveLength(0);
     // El bloque trae exactamente las dos que no se cargaron; con esas contraseñas se entra.
-    const lineas = salida.secreto.split("\n").filter((l) => /^ZULUHUB_DB_[A-Z]+=/.test(l));
+    const lineas = salida.secreto.split("\n").filter((l) => /^PEDERNAL_DB_[A-Z]+=/.test(l));
     expect(lineas.map((l) => l.split("=")[0])).toEqual([
-      "ZULUHUB_DB_TRABAJOS",
-      "ZULUHUB_DB_PUBLICO",
+      "PEDERNAL_DB_TRABAJOS",
+      "PEDERNAL_DB_PUBLICO",
     ]);
-    expect(lineas[0]?.slice("ZULUHUB_DB_TRABAJOS=".length)).toBe(enviado);
+    expect(lineas[0]?.slice("PEDERNAL_DB_TRABAJOS=".length)).toBe(enviado);
     for (const [linea, { rol }] of [
       [lineas[0], ROLES[1] as RolPorPreparar],
       [lineas[1], ROLES[2] as RolPorPreparar],
@@ -599,13 +599,13 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
       expect(await entraComo((linea as string).split("=").slice(1).join("="), rol)).toBe(true);
     }
     expect(salida.error).toContain("No hecho:");
-    expect(salida.error).toContain("No se pudo escribir ZULUHUB_DB_TRABAJOS en Vercel");
+    expect(salida.error).toContain("No se pudo escribir PEDERNAL_DB_TRABAJOS en Vercel");
     expect(salida.error).toContain("Vercel respondió 500");
     expect(salida.error).toContain("Lo que seguía no se intentó");
     expect(salida.error).toContain("YA están cambiadas en la base");
     expect(salida.error).toContain("--rotar");
     expect(salida.error).toContain(
-      "Sin cargar en Vercel: ZULUHUB_DB_TRABAJOS, ZULUHUB_DB_PUBLICO.",
+      "Sin cargar en Vercel: PEDERNAL_DB_TRABAJOS, PEDERNAL_DB_PUBLICO.",
     );
     expect(salida.error).toContain("RESULTADO: FALLA");
     // Ni el token ni las contraseñas, fuera del bloque.
@@ -616,7 +616,9 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     expect(salida.secreto).not.toContain(TOKEN_FALSO);
     // Se hizo un solo intento por escritura (no se reintenta sola).
     expect(
-      falso.escrituras().filter((p) => (p.cuerpo as { key: string }).key === "ZULUHUB_DB_TRABAJOS"),
+      falso
+        .escrituras()
+        .filter((p) => (p.cuerpo as { key: string }).key === "PEDERNAL_DB_TRABAJOS"),
     ).toHaveLength(1);
     // Repetir con --rotar, ya sin la caída, completa lo que faltó sin duplicar nada.
     caido = false;
@@ -636,7 +638,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     );
     const salida = await correr(url, ["--vercel", "preview"], { falso });
     expect(salida.codigo).toBe(1);
-    const lineas = salida.secreto.split("\n").filter((l) => /^ZULUHUB_DB_[A-Z]+=/.test(l));
+    const lineas = salida.secreto.split("\n").filter((l) => /^PEDERNAL_DB_[A-Z]+=/.test(l));
     expect(lineas.map((l) => l.split("=")[0])).toEqual(VARIABLES);
     expect(salida.error).toContain("el token no sirve o no tiene permiso");
     expect(salida.error).not.toContain("No se sabe si Vercel llegó a aplicar");
@@ -654,7 +656,9 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     expect(salida.error).toContain(
       "No se sabe si Vercel llegó a aplicar ese paso: repetir es seguro.",
     );
-    expect(salida.secreto.split("\n").filter((l) => /^ZULUHUB_DB_[A-Z]+=/.test(l))).toHaveLength(3);
+    expect(salida.secreto.split("\n").filter((l) => /^PEDERNAL_DB_[A-Z]+=/.test(l))).toHaveLength(
+      3,
+    );
     expect(salida.info + salida.error).not.toContain(TOKEN_FALSO);
     expect(falso.escrituras()).toHaveLength(1);
   });
@@ -673,9 +677,11 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     expect(salida.codigo).toBe(1);
     expect(salida.error).toContain("Se cortó la carga en Vercel antes de terminar");
     expect(salida.error).toContain("RESULTADO: FALLA");
-    expect(salida.secreto.split("\n").filter((l) => /^ZULUHUB_DB_[A-Z]+=/.test(l))).toHaveLength(3);
+    expect(salida.secreto.split("\n").filter((l) => /^PEDERNAL_DB_[A-Z]+=/.test(l))).toHaveLength(
+      3,
+    );
     for (const [i, { rol }] of ROLES.entries()) {
-      const linea = salida.secreto.split("\n").filter((l) => /^ZULUHUB_DB_[A-Z]+=/.test(l))[i];
+      const linea = salida.secreto.split("\n").filter((l) => /^PEDERNAL_DB_[A-Z]+=/.test(l))[i];
       expect(await entraComo((linea as string).split("=").slice(1).join("="), rol)).toBe(true);
     }
     expect(salida.info + salida.error).not.toContain(TOKEN_FALSO);
@@ -709,8 +715,10 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     });
     const salida = await correr(url, ["--vercel", "preview"], { falso });
     expect(salida.codigo).toBe(1);
-    expect(salida.error).toContain("ZULUHUB_DB_APP: no figura en preview.");
-    expect(salida.secreto.split("\n").filter((l) => /^ZULUHUB_DB_[A-Z]+=/.test(l))).toHaveLength(3);
+    expect(salida.error).toContain("PEDERNAL_DB_APP: no figura en preview.");
+    expect(salida.secreto.split("\n").filter((l) => /^PEDERNAL_DB_[A-Z]+=/.test(l))).toHaveLength(
+      3,
+    );
   });
 
   it("si un rol falla después de que otro ya quedó activo, el que quedó activo se carga en Vercel igual", async () => {
@@ -728,7 +736,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     expect(salida.codigo).toBe(1);
     expect(salida.error).toContain(`no se pudo dar LOGIN al rol ${ROLES[1]?.rol}`);
     expect(salida.error).toContain("RESULTADO: FALLA");
-    expect(falso.de("ZULUHUB_DB_APP")).toHaveLength(1);
+    expect(falso.de("PEDERNAL_DB_APP")).toHaveLength(1);
     expect(salida.secreto).toBe("");
     expect(await puedeEntrar(ROLES[0]?.rol as string)).toBe(true);
     expect(await puedeEntrar(ROLES[1]?.rol as string)).toBe(false);
@@ -736,7 +744,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     // Repetir completa el resto sin tocar el primero.
     const segunda = await correr(url, ["--vercel", "preview"], { falso });
     expect(segunda.codigo).toBe(0);
-    expect(segunda.info).toContain("Ya estaban cargadas en Vercel (PREVIEW): ZULUHUB_DB_APP.");
+    expect(segunda.info).toContain("Ya estaban cargadas en Vercel (PREVIEW): PEDERNAL_DB_APP.");
     expect(falso.variables.size).toBe(3);
   });
 
@@ -769,7 +777,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     const [ra, rb] = await Promise.all([a, b]);
     expect([ra.codigo, rb.codigo]).toEqual([0, 0]);
     expect(rb.info).toContain(
-      "Ya estaban cargadas en Vercel (PREVIEW): ZULUHUB_DB_APP, ZULUHUB_DB_TRABAJOS, ZULUHUB_DB_PUBLICO.",
+      "Ya estaban cargadas en Vercel (PREVIEW): PEDERNAL_DB_APP, PEDERNAL_DB_TRABAJOS, PEDERNAL_DB_PUBLICO.",
     );
     expect(ra.secreto + rb.secreto).toBe("");
     expect(falso.variables.size).toBe(3);

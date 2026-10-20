@@ -15,7 +15,7 @@ import { plataformaEn } from "./soporte-datos";
 
 /**
  * Las consultas de la consola llamadas POR LA PUERTA REAL (`armarPlataforma`, con el entorno de plataforma y el
- * rol `zuluhub_plataforma`), no por los apoyos de las pruebas: lo que cablea `src/composicion/plataforma.ts`.
+ * rol `pedernal_plataforma`), no por los apoyos de las pruebas: lo que cablea `src/composicion/plataforma.ts`.
  * Con el guard real: ADMIN y SOPORTE pasan lo que su matriz permite; un administrador de baja o inexistente no
  * pasa nada; y SOPORTE no puede lo que es solo de ADMIN. Base propia.
  */
@@ -42,9 +42,9 @@ describe.skipIf(base === null)("consultas de plataforma por la puerta real", () 
     dueno = new pg.Client({ connectionString: propia.base.dueno });
     await dueno.connect();
     const entorno = {
-      ZULUHUB_DB_PLATAFORMA: propia.base.plataforma,
-      ZULUHUB_CLAVE_CONTEXTO: `${base.clave.kid}:${base.clave.secreto.toString("hex")}`,
-      ZULUHUB_SECRETO_INVITACIONES: randomBytes(32).toString("hex"),
+      PEDERNAL_DB_PLATAFORMA: propia.base.plataforma,
+      PEDERNAL_CLAVE_CONTEXTO: `${base.clave.kid}:${base.clave.secreto.toString("hex")}`,
+      PEDERNAL_SECRETO_INVITACIONES: randomBytes(32).toString("hex"),
     };
     plataforma = armarPlataforma({ fuente: () => entorno });
     // Dos marcas con su plan y un tenant cada una.

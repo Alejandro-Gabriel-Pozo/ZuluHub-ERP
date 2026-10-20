@@ -63,7 +63,7 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
     empresa_id: x.empresa,
     emisor_id: x.emisor,
     ambiente: "HOMOLOGACION",
-    alias: "zuluhub1",
+    alias: "pedernal1",
     cuit_titular: x.cuit,
     pedido_pem: "-----BEGIN CERTIFICATE REQUEST-----\nMIIB\n-----END CERTIFICATE REQUEST-----",
     clave_cifrada: Buffer.alloc(64, 7),

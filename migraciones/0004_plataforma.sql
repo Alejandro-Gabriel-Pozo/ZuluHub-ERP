@@ -48,7 +48,7 @@
 --      aplicación no ven `admin_plataforma`. Ver la advertencia en `admin_plataforma_validar`.
 --  P7. `referencia_de_error`: tabla mínima de solo inserción (decisión F4). El formato lo imponen
 --      CHECK estrictos, así no se puede colar texto libre ni datos de negocio.
---  P8. `zuluhub_autenticacion`: quinto rol de base para las tablas de la librería de autenticación
+--  P8. `pedernal_autenticacion`: quinto rol de base para las tablas de la librería de autenticación
 --      (decisión F6). Nace SIN NINGÚN privilegio sobre las tablas de negocio; sus tablas y sus
 --      permisos llegan en la migración de la autenticación (P8 del tramo).
 
@@ -57,7 +57,7 @@
 -- ---------------------------------------------------------------------------------------------
 DO $$
 DECLARE
-  r constant text := 'zuluhub_autenticacion';
+  r constant text := 'pedernal_autenticacion';
   ajenas text;
   topes constant text[] := ARRAY[
     'statement_timeout=30s', 'idle_in_transaction_session_timeout=60s', 'lock_timeout=15s'
@@ -79,7 +79,7 @@ BEGIN
     JOIN pg_roles g ON g.oid = am.roleid
    WHERE m.rolname = r;
   IF ajenas IS NOT NULL THEN
-    RAISE EXCEPTION 'los roles de ZuluHub no pueden ser miembros de otros roles (%): revocar la pertenencia y repetir', ajenas
+    RAISE EXCEPTION 'los roles de Pedernal no pueden ser miembros de otros roles (%): revocar la pertenencia y repetir', ajenas
       USING ERRCODE = '55000';
   END IF;
 
@@ -148,7 +148,7 @@ CREATE TABLE idempotencia_plataforma (
 CREATE TABLE referencia_de_error (
   id         bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   referencia text NOT NULL
-             CONSTRAINT referencia_de_error_referencia_ck CHECK (referencia ~ '^ZH-[0-9A-F]{4}-[0-9A-F]{4}$'),
+             CONSTRAINT referencia_de_error_referencia_ck CHECK (referencia ~ '^PD-[0-9A-F]{4}-[0-9A-F]{4}$'),
   accion     text NOT NULL
              CONSTRAINT referencia_de_error_accion_ck
              CHECK (accion ~ '^[a-z_]+(\.[a-z_]+)*$' AND char_length(accion) <= 80),
@@ -264,21 +264,21 @@ REVOKE ALL ON admin_plataforma, idempotencia_plataforma, referencia_de_error FRO
 
 -- Solo la plataforma ejecuta las funciones del actor: ningún otro rol tiene políticas que las usen.
 GRANT EXECUTE ON FUNCTION app_actor_plataforma(), admin_plataforma_con_rol(text[]), plataforma_actor_vigente()
-  TO zuluhub_plataforma;
+  TO pedernal_plataforma;
 
 -- plataforma: lee a los administradores (para decidir permisos y chequear emails), y deja constancia
 -- de lo que hizo con una clave de idempotencia. No escribe en `admin_plataforma`.
-GRANT SELECT ON admin_plataforma, idempotencia_plataforma TO zuluhub_plataforma;
-GRANT INSERT (admin_id, clave, operacion, huella, resultado) ON idempotencia_plataforma TO zuluhub_plataforma;
+GRANT SELECT ON admin_plataforma, idempotencia_plataforma TO pedernal_plataforma;
+GRANT INSERT (admin_id, clave, operacion, huella, resultado) ON idempotencia_plataforma TO pedernal_plataforma;
 
 -- Membresías: identidad, no operación (F1). Sin `invitacion_id` ni fechas.
-GRANT SELECT (empresa_id, persona_id, rol, activo) ON membresia TO zuluhub_plataforma;
+GRANT SELECT (empresa_id, persona_id, rol, activo) ON membresia TO pedernal_plataforma;
 
 -- Referencia de error: la plataforma las busca y las registra; la aplicación y el grupo solo las
 -- registran (con el contexto de quien recibe el rechazo). Nadie las lee salvo la plataforma.
-GRANT SELECT ON referencia_de_error TO zuluhub_plataforma;
+GRANT SELECT ON referencia_de_error TO pedernal_plataforma;
 GRANT INSERT (referencia, accion, motivo, empresa_id, persona_id)
-  ON referencia_de_error TO zuluhub_plataforma, zuluhub_app, zuluhub_grupo;
+  ON referencia_de_error TO pedernal_plataforma, pedernal_app, pedernal_grupo;
 
 -- ---------------------------------------------------------------------------------------------
 -- RLS: activa y forzada en toda tabla nueva; sin política no hay acceso
@@ -295,13 +295,13 @@ ALTER TABLE referencia_de_error FORCE ROW LEVEL SECURITY;
 -- ---------------------------------------------------------------------------------------------
 
 -- Sin recursión: esta política no llama a admin_plataforma_con_rol (que lee esta misma tabla).
-CREATE POLICY admin_plataforma_plataforma_leer ON admin_plataforma FOR SELECT TO zuluhub_plataforma
+CREATE POLICY admin_plataforma_plataforma_leer ON admin_plataforma FOR SELECT TO pedernal_plataforma
   USING ((SELECT app_actor_plataforma()) IS NOT NULL);
 
 -- Cada administrador ve y registra solo sus propias claves, y solo mientras está activo.
-CREATE POLICY idempotencia_plataforma_leer ON idempotencia_plataforma FOR SELECT TO zuluhub_plataforma
+CREATE POLICY idempotencia_plataforma_leer ON idempotencia_plataforma FOR SELECT TO pedernal_plataforma
   USING (admin_id::text = (SELECT app_actor_plataforma()));
-CREATE POLICY idempotencia_plataforma_alta ON idempotencia_plataforma FOR INSERT TO zuluhub_plataforma
+CREATE POLICY idempotencia_plataforma_alta ON idempotencia_plataforma FOR INSERT TO pedernal_plataforma
   WITH CHECK (
     admin_id::text = (SELECT app_actor_plataforma())
     AND (SELECT admin_plataforma_con_rol(ARRAY['ADMIN', 'SOPORTE']))
@@ -314,31 +314,31 @@ CREATE POLICY idempotencia_plataforma_alta ON idempotencia_plataforma FOR INSERT
 --  * INVITACION: sin empresa ni persona; solo con el hash del token de invitación en el contexto.
 --  * GRUPO: sin empresa; de la persona del contexto.
 --  * PLATAFORMA: de cualquier actor vigente (el motivo de un rechazo de plataforma).
-CREATE POLICY referencia_de_error_app_alta ON referencia_de_error FOR INSERT TO zuluhub_app
+CREATE POLICY referencia_de_error_app_alta ON referencia_de_error FOR INSERT TO pedernal_app
   WITH CHECK (
     empresa_id = (SELECT app_empresa_id())
     AND persona_id IS NOT DISTINCT FROM (SELECT app_persona_id())
   );
-CREATE POLICY referencia_de_error_invitado_alta ON referencia_de_error FOR INSERT TO zuluhub_app
+CREATE POLICY referencia_de_error_invitado_alta ON referencia_de_error FOR INSERT TO pedernal_app
   WITH CHECK (
     (SELECT app_token_invitacion()) IS NOT NULL
     AND (SELECT app_empresa_id()) IS NULL
     AND empresa_id IS NULL
     AND persona_id IS NULL
   );
-CREATE POLICY referencia_de_error_grupo_alta ON referencia_de_error FOR INSERT TO zuluhub_grupo
+CREATE POLICY referencia_de_error_grupo_alta ON referencia_de_error FOR INSERT TO pedernal_grupo
   WITH CHECK (
     (SELECT app_tenant_id()) IS NOT NULL
     AND empresa_id IS NULL
     AND persona_id IS NOT DISTINCT FROM (SELECT app_persona_id())
   );
-CREATE POLICY referencia_de_error_plataforma_leer ON referencia_de_error FOR SELECT TO zuluhub_plataforma
+CREATE POLICY referencia_de_error_plataforma_leer ON referencia_de_error FOR SELECT TO pedernal_plataforma
   USING ((SELECT plataforma_actor_vigente()));
-CREATE POLICY referencia_de_error_plataforma_alta ON referencia_de_error FOR INSERT TO zuluhub_plataforma
+CREATE POLICY referencia_de_error_plataforma_alta ON referencia_de_error FOR INSERT TO pedernal_plataforma
   WITH CHECK ((SELECT plataforma_actor_vigente()));
 
 -- Membresías: la plataforma las lee (solo las 4 columnas del GRANT), como identidad.
-CREATE POLICY membresia_plataforma_leer ON membresia FOR SELECT TO zuluhub_plataforma USING (true);
+CREATE POLICY membresia_plataforma_leer ON membresia FOR SELECT TO pedernal_plataforma USING (true);
 
 -- ---------------------------------------------------------------------------------------------
 -- Políticas RESTRICTIVAS sobre las tablas de 0001 y 0002 (se suman con AND a las permisivas).
@@ -347,40 +347,40 @@ CREATE POLICY membresia_plataforma_leer ON membresia FOR SELECT TO zuluhub_plata
 
 -- Lectura: sin un actor vigente firmado, 0 filas. Una por tabla que la plataforma puede leer, con el
 -- mismo texto (un meta-test las exige).
-CREATE POLICY instalacion_plataforma_con_actor ON instalacion AS RESTRICTIVE FOR SELECT TO zuluhub_plataforma
+CREATE POLICY instalacion_plataforma_con_actor ON instalacion AS RESTRICTIVE FOR SELECT TO pedernal_plataforma
   USING ((SELECT plataforma_actor_vigente()));
-CREATE POLICY tenant_plataforma_con_actor ON tenant AS RESTRICTIVE FOR SELECT TO zuluhub_plataforma
+CREATE POLICY tenant_plataforma_con_actor ON tenant AS RESTRICTIVE FOR SELECT TO pedernal_plataforma
   USING ((SELECT plataforma_actor_vigente()));
-CREATE POLICY empresa_plataforma_con_actor ON empresa AS RESTRICTIVE FOR SELECT TO zuluhub_plataforma
+CREATE POLICY empresa_plataforma_con_actor ON empresa AS RESTRICTIVE FOR SELECT TO pedernal_plataforma
   USING ((SELECT plataforma_actor_vigente()));
-CREATE POLICY persona_plataforma_con_actor ON persona AS RESTRICTIVE FOR SELECT TO zuluhub_plataforma
+CREATE POLICY persona_plataforma_con_actor ON persona AS RESTRICTIVE FOR SELECT TO pedernal_plataforma
   USING ((SELECT plataforma_actor_vigente()));
 CREATE POLICY membresia_tenant_plataforma_con_actor ON membresia_tenant AS RESTRICTIVE FOR SELECT
-  TO zuluhub_plataforma USING ((SELECT plataforma_actor_vigente()));
-CREATE POLICY membresia_plataforma_con_actor ON membresia AS RESTRICTIVE FOR SELECT TO zuluhub_plataforma
+  TO pedernal_plataforma USING ((SELECT plataforma_actor_vigente()));
+CREATE POLICY membresia_plataforma_con_actor ON membresia AS RESTRICTIVE FOR SELECT TO pedernal_plataforma
   USING ((SELECT plataforma_actor_vigente()));
-CREATE POLICY invitacion_plataforma_con_actor ON invitacion AS RESTRICTIVE FOR SELECT TO zuluhub_plataforma
+CREATE POLICY invitacion_plataforma_con_actor ON invitacion AS RESTRICTIVE FOR SELECT TO pedernal_plataforma
   USING ((SELECT plataforma_actor_vigente()));
 CREATE POLICY invitacion_empresa_plataforma_con_actor ON invitacion_empresa AS RESTRICTIVE FOR SELECT
-  TO zuluhub_plataforma USING ((SELECT plataforma_actor_vigente()));
-CREATE POLICY trabajo_plataforma_con_actor ON trabajo AS RESTRICTIVE FOR SELECT TO zuluhub_plataforma
+  TO pedernal_plataforma USING ((SELECT plataforma_actor_vigente()));
+CREATE POLICY trabajo_plataforma_con_actor ON trabajo AS RESTRICTIVE FOR SELECT TO pedernal_plataforma
   USING ((SELECT plataforma_actor_vigente()));
 CREATE POLICY auditoria_plataforma_con_actor ON auditoria_plataforma AS RESTRICTIVE FOR SELECT
-  TO zuluhub_plataforma USING ((SELECT plataforma_actor_vigente()));
+  TO pedernal_plataforma USING ((SELECT plataforma_actor_vigente()));
 
 -- Escritura de estructura: solo ADMIN. Una restrictiva FOR UPDATE filtra también la lectura previa
 -- del UPDATE: un SOPORTE que intenta cambiar algo afecta 0 filas (el caso de uso lo frena antes con
 -- SIN_PERMISO; esta es la segunda barrera).
-CREATE POLICY tenant_plataforma_admin_alta ON tenant AS RESTRICTIVE FOR INSERT TO zuluhub_plataforma
+CREATE POLICY tenant_plataforma_admin_alta ON tenant AS RESTRICTIVE FOR INSERT TO pedernal_plataforma
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
-CREATE POLICY tenant_plataforma_admin_cambiar ON tenant AS RESTRICTIVE FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY tenant_plataforma_admin_cambiar ON tenant AS RESTRICTIVE FOR UPDATE TO pedernal_plataforma
   USING ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])))
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 
-CREATE POLICY empresa_plataforma_admin_alta ON empresa AS RESTRICTIVE FOR INSERT TO zuluhub_plataforma
+CREATE POLICY empresa_plataforma_admin_alta ON empresa AS RESTRICTIVE FOR INSERT TO pedernal_plataforma
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 -- El barrido (actor `sistema`) solo puede cancelar el alta que sigue en PROVISIONING.
-CREATE POLICY empresa_plataforma_quien_cambia ON empresa AS RESTRICTIVE FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY empresa_plataforma_quien_cambia ON empresa AS RESTRICTIVE FOR UPDATE TO pedernal_plataforma
   USING (
     (SELECT admin_plataforma_con_rol(ARRAY['ADMIN']))
     OR ((SELECT app_actor_plataforma()) = 'sistema' AND estado = 'PROVISIONING')
@@ -390,30 +390,30 @@ CREATE POLICY empresa_plataforma_quien_cambia ON empresa AS RESTRICTIVE FOR UPDA
     OR ((SELECT app_actor_plataforma()) = 'sistema' AND estado = 'CANCELLED')
   );
 
-CREATE POLICY persona_plataforma_admin_alta ON persona AS RESTRICTIVE FOR INSERT TO zuluhub_plataforma
+CREATE POLICY persona_plataforma_admin_alta ON persona AS RESTRICTIVE FOR INSERT TO pedernal_plataforma
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
-CREATE POLICY persona_plataforma_admin_cambiar ON persona AS RESTRICTIVE FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY persona_plataforma_admin_cambiar ON persona AS RESTRICTIVE FOR UPDATE TO pedernal_plataforma
   USING ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])))
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 
 CREATE POLICY membresia_tenant_plataforma_admin_alta ON membresia_tenant AS RESTRICTIVE FOR INSERT
-  TO zuluhub_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
+  TO pedernal_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 CREATE POLICY membresia_tenant_plataforma_admin_cambiar ON membresia_tenant AS RESTRICTIVE FOR UPDATE
-  TO zuluhub_plataforma
+  TO pedernal_plataforma
   USING ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])))
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 
-CREATE POLICY sucursal_plataforma_admin_alta ON sucursal AS RESTRICTIVE FOR INSERT TO zuluhub_plataforma
+CREATE POLICY sucursal_plataforma_admin_alta ON sucursal AS RESTRICTIVE FOR INSERT TO pedernal_plataforma
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 
 -- Invitaciones. ADMIN: lo de 0002. SOPORTE: solo el alta del gerente (P5). `sistema`: solo revocar
 -- las altas pendientes (el barrido de altas vencidas).
-CREATE POLICY invitacion_plataforma_quien_emite ON invitacion AS RESTRICTIVE FOR INSERT TO zuluhub_plataforma
+CREATE POLICY invitacion_plataforma_quien_emite ON invitacion AS RESTRICTIVE FOR INSERT TO pedernal_plataforma
   WITH CHECK (
     (SELECT admin_plataforma_con_rol(ARRAY['ADMIN']))
     OR ((SELECT admin_plataforma_con_rol(ARRAY['SOPORTE'])) AND tipo = 'ALTA_GERENTE')
   );
-CREATE POLICY invitacion_plataforma_quien_cambia ON invitacion AS RESTRICTIVE FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY invitacion_plataforma_quien_cambia ON invitacion AS RESTRICTIVE FOR UPDATE TO pedernal_plataforma
   USING (
     (SELECT admin_plataforma_con_rol(ARRAY['ADMIN']))
     OR ((SELECT admin_plataforma_con_rol(ARRAY['SOPORTE'])) AND tipo = 'ALTA_GERENTE')
@@ -425,7 +425,7 @@ CREATE POLICY invitacion_plataforma_quien_cambia ON invitacion AS RESTRICTIVE FO
     OR ((SELECT app_actor_plataforma()) = 'sistema' AND tipo = 'ALTA_GERENTE' AND estado = 'REVOCADA')
   );
 CREATE POLICY invitacion_empresa_plataforma_quien_emite ON invitacion_empresa AS RESTRICTIVE FOR INSERT
-  TO zuluhub_plataforma
+  TO pedernal_plataforma
   WITH CHECK (
     (SELECT admin_plataforma_con_rol(ARRAY['ADMIN']))
     OR ((SELECT admin_plataforma_con_rol(ARRAY['SOPORTE'])) AND tipo = 'ALTA_GERENTE')
@@ -433,7 +433,7 @@ CREATE POLICY invitacion_empresa_plataforma_quien_emite ON invitacion_empresa AS
 
 -- Trabajos. ADMIN: lo de 0001. SOPORTE: solo el envío de invitaciones (el valor es
 -- TRABAJO_ENVIAR_INVITACION, src/modulos/identidad/casos-de-uso/contrato.ts; un test lo compara).
-CREATE POLICY trabajo_plataforma_quien_encola ON trabajo AS RESTRICTIVE FOR INSERT TO zuluhub_plataforma
+CREATE POLICY trabajo_plataforma_quien_encola ON trabajo AS RESTRICTIVE FOR INSERT TO pedernal_plataforma
   WITH CHECK (
     (SELECT admin_plataforma_con_rol(ARRAY['ADMIN']))
     OR ((SELECT admin_plataforma_con_rol(ARRAY['SOPORTE'])) AND tipo = 'enviar_invitacion')
@@ -443,8 +443,8 @@ CREATE POLICY trabajo_plataforma_quien_encola ON trabajo AS RESTRICTIVE FOR INSE
 -- escribe a nombre de otro. La de empresa (constancia en cada empresa afectada) es de ADMIN y sin
 -- persona: es la plataforma, no un usuario de la empresa.
 CREATE POLICY auditoria_plataforma_actor_firmado ON auditoria_plataforma AS RESTRICTIVE FOR INSERT
-  TO zuluhub_plataforma
+  TO pedernal_plataforma
   WITH CHECK (actor = (SELECT app_actor_plataforma()) AND (SELECT plataforma_actor_vigente()));
 CREATE POLICY auditoria_empresa_plataforma_admin ON auditoria_empresa AS RESTRICTIVE FOR INSERT
-  TO zuluhub_plataforma
+  TO pedernal_plataforma
   WITH CHECK (actor_persona_id IS NULL AND (SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));

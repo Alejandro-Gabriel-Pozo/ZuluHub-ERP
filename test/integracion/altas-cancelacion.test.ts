@@ -361,7 +361,7 @@ describe.skipIf(base === null)("cancelar el alta y el barrido de altas vencidas"
         tokens,
         correo,
         urlBase: "https://app.ejemplo.test",
-        marca: { nombre: "ZuluHub" },
+        marca: { nombre: "Pedernal" },
       });
     };
     const trabajoDe = (empresa: string, invitacion: string): TrabajoTomado => ({

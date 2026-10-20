@@ -10,7 +10,7 @@ import type { BaseDePruebas } from "./global";
 
 /**
  * Apoyo de las pruebas de la puerta pública (M4 y M4b): arma la transacción pública con lo que armaría la
- * composición real sobre el rol REAL `zuluhub_publico`. El escenario se prepara con el cliente del
+ * composición real sobre el rol REAL `pedernal_publico`. El escenario se prepara con el cliente del
  * dueño (`marcas-apoyo.ts`); lo que se prueba pasa por este rol, sin contexto firmado.
  */
 

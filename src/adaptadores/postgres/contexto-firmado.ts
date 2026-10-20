@@ -23,7 +23,7 @@ import { ErrorDeConfiguracion } from "./errores.ts";
  */
 
 /** NOMBRE de la variable de entorno con la clave (`<kid>:<hex>`). El valor lo carga el dueño. */
-export const ZULUHUB_CLAVE_CONTEXTO = "ZULUHUB_CLAVE_CONTEXTO";
+export const PEDERNAL_CLAVE_CONTEXTO = "PEDERNAL_CLAVE_CONTEXTO";
 
 /** Cuánto vale un token desde que se firma. Se firma de nuevo en cada intento de una transacción. */
 export const VIGENCIA_DEL_CONTEXTO_EN_S = 300;
@@ -64,7 +64,7 @@ export function usuarioFirmado(usuario: UsuarioAuthId): string {
 export type ClaveDeContexto = Readonly<{ kid: number; secreto: Buffer }>;
 
 export type RolDeContexto =
-  "zuluhub_app" | "zuluhub_grupo" | "zuluhub_trabajos" | "zuluhub_plataforma";
+  "pedernal_app" | "pedernal_grupo" | "pedernal_trabajos" | "pedernal_plataforma";
 
 /** Lo que lleva el token firmado. `u` es el rol con el que el cliente abre la sesión de base. */
 export type CargaDeContexto = Readonly<{
@@ -86,25 +86,25 @@ export function rolDeContexto(tipo: TipoDeContexto): RolDeContexto {
     case "OPERATIVO":
     case "INVITACION":
     case "SESION":
-      return "zuluhub_app";
+      return "pedernal_app";
     case "GRUPO":
-      return "zuluhub_grupo";
+      return "pedernal_grupo";
     case "TRABAJOS":
-      return "zuluhub_trabajos";
+      return "pedernal_trabajos";
     case "PLATAFORMA":
-      return "zuluhub_plataforma";
+      return "pedernal_plataforma";
   }
 }
 
 /**
  * Parsea `<kid>:<hex>` (hex de al menos 64 caracteres = 32 bytes, cantidad par). Recibe el valor de
- * la variable `ZULUHUB_CLAVE_CONTEXTO`; no lee `process.env`. Si falta o es inválido lanza
+ * la variable `PEDERNAL_CLAVE_CONTEXTO`; no lee `process.env`. Si falta o es inválido lanza
  * `ErrorDeConfiguracion` con un mensaje que NUNCA incluye el valor recibido.
  */
 export function leerClaveDeContexto(valor: string | undefined): ClaveDeContexto {
   const invalida = (motivo: string) =>
     new ErrorDeConfiguracion(
-      `${ZULUHUB_CLAVE_CONTEXTO} inválida: ${motivo} (formato esperado: <kid>:<hex de 64 o más dígitos>)`,
+      `${PEDERNAL_CLAVE_CONTEXTO} inválida: ${motivo} (formato esperado: <kid>:<hex de 64 o más dígitos>)`,
     );
   const texto = valor?.trim() ?? "";
   if (texto === "") throw invalida("falta");

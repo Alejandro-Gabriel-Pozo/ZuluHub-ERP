@@ -253,11 +253,11 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
   // =============================================================================================
   // Cookies: nombres, atributos y el conjunto completo
   // =============================================================================================
-  describe("cookies (__Host-zh_plat)", () => {
-    it("la de sesión se llama __Host-zh_plat.session_token: solo del host, HttpOnly, Secure, SameSite=Lax, Path=/ y 30 minutos", async () => {
+  describe("cookies (__Host-pd_plat)", () => {
+    it("la de sesión se llama __Host-pd_plat.session_token: solo del host, HttpOnly, Secure, SameSite=Lax, Path=/ y 30 minutos", async () => {
       const { n } = await ingresar(await altaDeAdmin(dueno));
       const cookies = n.cookiesDe(HOST);
-      expect(cookies.map((c) => c.nombre)).toEqual(["__Host-zh_plat.session_token"]);
+      expect(cookies.map((c) => c.nombre)).toEqual(["__Host-pd_plat.session_token"]);
       const crudo = cookies[0]?.crudo ?? "";
       expect(crudo).toMatch(/;\s*HttpOnly/i);
       expect(crudo).toMatch(/;\s*Secure/i);
@@ -267,7 +267,7 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
       expect(crudo).not.toMatch(/Domain=/i);
     });
 
-    it("TODAS las que la librería puede poner (con sus auxiliares) llevan el prefijo __Host-zh_plat. y ninguna es de empresa", async () => {
+    it("TODAS las que la librería puede poner (con sus auxiliares) llevan el prefijo __Host-pd_plat. y ninguna es de empresa", async () => {
       const c = configuracionDeHost(HOST);
       if (!c.ok) throw new Error("host inválido");
       const auth = betterAuth(
@@ -295,17 +295,17 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
       );
       expect([...propias, ...auxiliares].sort()).toEqual(
         [
-          "__Host-zh_plat.session_token",
-          "__Host-zh_plat.session_data",
-          "__Host-zh_plat.dont_remember",
-          "__Host-zh_plat.account_data",
-          "__Host-zh_plat.state",
-          "__Host-zh_plat.oauth_state",
-          "__Host-zh_plat.two_factor",
-          "__Host-zh_plat.trust_device",
+          "__Host-pd_plat.session_token",
+          "__Host-pd_plat.session_data",
+          "__Host-pd_plat.dont_remember",
+          "__Host-pd_plat.account_data",
+          "__Host-pd_plat.state",
+          "__Host-pd_plat.oauth_state",
+          "__Host-pd_plat.two_factor",
+          "__Host-pd_plat.trust_device",
         ].sort(),
       );
-      for (const nombre of [...propias, ...auxiliares]) expect(nombre).not.toContain("zh_emp");
+      for (const nombre of [...propias, ...auxiliares]) expect(nombre).not.toContain("pd_emp");
     });
 
     it("durante el ingreso completo, el enrolamiento y la verificación, todo `Set-Cookie` es de la consola, Secure y sin Domain", async () => {
@@ -339,13 +339,13 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
       // El conjunto EXACTO que se vio en un ingreso real: la cookie del estado de Google, la de sesión y las que la
       // librería vacía al abrir, rotar y cerrar la sesión (`session_data` y `dont_remember`, ambas expiradas).
       expect([...nombres].sort()).toEqual([
-        "__Host-zh_plat.dont_remember",
-        "__Host-zh_plat.session_data",
-        "__Host-zh_plat.session_token",
-        "__Host-zh_plat.state",
+        "__Host-pd_plat.dont_remember",
+        "__Host-pd_plat.session_data",
+        "__Host-pd_plat.session_token",
+        "__Host-pd_plat.state",
       ]);
       for (const crudo of vistos) {
-        expect(crudo.startsWith("__Host-zh_plat.")).toBe(true);
+        expect(crudo.startsWith("__Host-pd_plat.")).toBe(true);
         expect(crudo).toMatch(/;\s*Secure/i);
         expect(crudo).toMatch(/;\s*Path=\//i);
         expect(crudo).not.toMatch(/Domain=/i);
@@ -389,7 +389,7 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
       expect(alta.qrSvg).not.toMatch(/otpauth/i);
       expect(alta.qrSvg).not.toContain(alta.secreto);
       expect(alta.qrSvg).not.toContain(admin.email);
-      expect(alta.qrSvg).not.toContain("ZuluHub");
+      expect(alta.qrSvg).not.toContain("Pedernal");
       expect(alta.qrSvg).not.toMatch(/<script|<foreignObject|href=|onload=|<image|<text/i);
       // Solo estos elementos y estos atributos.
       const elementos = [...alta.qrSvg.matchAll(/<([a-zA-Z]+)/g)].map((m) => m[1]);
@@ -552,7 +552,7 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
       n.copiarCookiesA(n, HOST, HOST);
       const falso = await n.pedir(p.autenticacion, HOST, "POST", "/api/auth/two-factor/enable", {
         cuerpo: {},
-        encabezados: { cookie: "__Host-zh_plat.session_token=inventada.firmaFalsa" },
+        encabezados: { cookie: "__Host-pd_plat.session_token=inventada.firmaFalsa" },
       });
       expect(falso.estado).toBe(401);
     });
@@ -808,7 +808,7 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
       expect(estado.segundoFactorRecienteHastaMs).toBeGreaterThan(0);
       expect(r.texto).not.toContain(antes?.token ?? "sin-token");
       expect(r.texto).not.toContain(admin.email);
-      expect(r.cabeceras.getSetCookie().join("\n")).toContain("__Host-zh_plat.session_token=");
+      expect(r.cabeceras.getSetCookie().join("\n")).toContain("__Host-pd_plat.session_token=");
       const [despues] = await filaDeSesion(admin);
       expect(despues?.updatedAt.getTime()).toBeGreaterThan(Date.now() - 5_000);
     });
@@ -1128,7 +1128,7 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
       const r = await pedir(n, "POST", "/api/auth/sign-out", {});
       expect(r.estado).toBe(200);
       expect(r.cabeceras.getSetCookie().join("\n")).toMatch(
-        /__Host-zh_plat\.session_token=;|Max-Age=0/i,
+        /__Host-pd_plat\.session_token=;|Max-Age=0/i,
       );
       expect(await filaDeSesion(admin)).toEqual([]);
       // La cookie «robada» (la misma sesión) ya no abre nada.

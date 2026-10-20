@@ -19,7 +19,12 @@ import {
 
 const base = inject("baseDePruebas");
 
-const ROLES = ["zuluhub_app", "zuluhub_grupo", "zuluhub_trabajos", "zuluhub_plataforma"] as const;
+const ROLES = [
+  "pedernal_app",
+  "pedernal_grupo",
+  "pedernal_trabajos",
+  "pedernal_plataforma",
+] as const;
 const TABLAS_DE_NEGOCIO = [
   "instalacion",
   "tenant",
@@ -262,7 +267,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         privilegios
           .filter((p) => p.grantee === rol)
           .map((p) => `${p.table_name}:${p.privilege_type}`);
-      expect(porRol("zuluhub_app")).toEqual(
+      expect(porRol("pedernal_app")).toEqual(
         [
           "acceso_arca:SELECT", // 0009
           "asignacion_sucursal:SELECT",
@@ -295,7 +300,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "traspaso_gerencia:SELECT",
         ].sort(),
       );
-      expect(porRol("zuluhub_grupo")).toEqual(
+      expect(porRol("pedernal_grupo")).toEqual(
         [
           "empresa:SELECT",
           "membresia_tenant:SELECT",
@@ -304,8 +309,8 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "tenant:SELECT",
         ].sort(),
       );
-      expect(porRol("zuluhub_trabajos")).toEqual(["trabajo:SELECT"]);
-      expect(porRol("zuluhub_plataforma")).toEqual(
+      expect(porRol("pedernal_trabajos")).toEqual(["trabajo:SELECT"]);
+      expect(porRol("pedernal_plataforma")).toEqual(
         [
           "admin_plataforma:SELECT",
           "ajuste_de_perilla:SELECT", // 0007
@@ -355,14 +360,14 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "generado_en",
             "expira_en",
             "renovando_hasta",
-          ].map((c) => `zuluhub_app:acceso_arca.${c}`),
+          ].map((c) => `pedernal_app:acceso_arca.${c}`),
           ...[
             "estado",
             "certificado_pem",
             "huella_sha256",
             "vence_en",
             "autorizacion_verificada_en",
-          ].map((c) => `zuluhub_app:certificado_arca.${c}`),
+          ].map((c) => `pedernal_app:certificado_arca.${c}`),
           ...[
             "estado",
             "envios",
@@ -374,9 +379,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "autorizado_en",
             "resuelto_por",
             "motivo_descarte",
-          ].map((c) => `zuluhub_app:comprobante.${c}`),
-          "zuluhub_app:punto_de_venta.ambiente",
-          "zuluhub_app:asignacion_sucursal.activa",
+          ].map((c) => `pedernal_app:comprobante.${c}`),
+          "pedernal_app:punto_de_venta.ambiente",
+          "pedernal_app:asignacion_sucursal.activa",
           // 0006: los datos fiscales y la regla del emisor se editan en borrador y se confirman
           ...[
             "razon_social",
@@ -391,20 +396,20 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "confirmada_en",
             "confirmada_por",
             "motivo",
-          ].map((c) => `zuluhub_app:datos_fiscales.${c}`),
-          "zuluhub_app:empresa.estado", // solo para activar el alta del gerente (política acotada)
-          "zuluhub_app:empresa.motivo_estado",
-          "zuluhub_app:invitacion.aceptada_en",
-          "zuluhub_app:invitacion.aceptada_por",
-          "zuluhub_app:invitacion.estado",
-          "zuluhub_app:invitacion.motivo_revocacion",
-          "zuluhub_app:invitacion.reemplazada_por",
-          "zuluhub_app:invitacion.revocada_en",
-          "zuluhub_app:membresia.activo",
+          ].map((c) => `pedernal_app:datos_fiscales.${c}`),
+          "pedernal_app:empresa.estado", // solo para activar el alta del gerente (política acotada)
+          "pedernal_app:empresa.motivo_estado",
+          "pedernal_app:invitacion.aceptada_en",
+          "pedernal_app:invitacion.aceptada_por",
+          "pedernal_app:invitacion.estado",
+          "pedernal_app:invitacion.motivo_revocacion",
+          "pedernal_app:invitacion.reemplazada_por",
+          "pedernal_app:invitacion.revocada_en",
+          "pedernal_app:membresia.activo",
           // `rol` desde 0005: solo cambia al aceptar un traspaso (política + disparador `membresia_cambio`)
-          "zuluhub_app:membresia.rol",
+          "pedernal_app:membresia.rol",
           ...["numero", "sucursal_id", "domicilio_id", "estado"].map(
-            (c) => `zuluhub_app:punto_de_venta.${c}`,
+            (c) => `pedernal_app:punto_de_venta.${c}`,
           ),
           ...[
             "permitir_eleccion_manual",
@@ -414,7 +419,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "confirmada_en",
             "confirmada_por",
             "motivo",
-          ].map((c) => `zuluhub_app:regla_emisor.${c}`),
+          ].map((c) => `pedernal_app:regla_emisor.${c}`),
           ...[
             "ultimo_numero",
             "estado",
@@ -422,36 +427,36 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "solicitud_en_curso",
             "en_curso_hasta",
             "motivo_bloqueo",
-          ].map((c) => `zuluhub_app:serie_comprobante.${c}`),
-          "zuluhub_app:nivel_de_control.nivel", // 0007
-          "zuluhub_app:persona.usuario_auth_id", // 0010: solo el vínculo con el usuario, y solo en INVITACION
-          "zuluhub_app:sucursal.activa",
-          "zuluhub_app:sucursal.hora_de_corte", // 0007
-          "zuluhub_app:sucursal.nombre",
-          "zuluhub_app:traspaso_gerencia.estado",
-          "zuluhub_app:traspaso_gerencia.motivo",
-          "zuluhub_app:traspaso_gerencia.resuelto_en",
-          "zuluhub_app:traspaso_gerencia.saliente_persona_id",
+          ].map((c) => `pedernal_app:serie_comprobante.${c}`),
+          "pedernal_app:nivel_de_control.nivel", // 0007
+          "pedernal_app:persona.usuario_auth_id", // 0010: solo el vínculo con el usuario, y solo en INVITACION
+          "pedernal_app:sucursal.activa",
+          "pedernal_app:sucursal.hora_de_corte", // 0007
+          "pedernal_app:sucursal.nombre",
+          "pedernal_app:traspaso_gerencia.estado",
+          "pedernal_app:traspaso_gerencia.motivo",
+          "pedernal_app:traspaso_gerencia.resuelto_en",
+          "pedernal_app:traspaso_gerencia.saliente_persona_id",
           // 0007: la plataforma (solo un ADMIN, por las restrictivas) escribe marcas, dominios, planes y módulos
-          "zuluhub_plataforma:dominio.estado",
-          "zuluhub_plataforma:dominio.motivo",
-          "zuluhub_plataforma:dominio.verificado_en",
-          "zuluhub_plataforma:emisor.activo", // 0006
-          "zuluhub_plataforma:emisor.cuit", // 0006
-          "zuluhub_plataforma:empresa.cuit",
-          "zuluhub_plataforma:empresa.estado",
-          "zuluhub_plataforma:empresa.motivo_estado",
-          "zuluhub_plataforma:empresa.razon_social",
-          "zuluhub_plataforma:empresa.zona_horaria",
-          "zuluhub_plataforma:invitacion.estado",
-          "zuluhub_plataforma:invitacion.motivo_revocacion",
-          "zuluhub_plataforma:invitacion.reemplazada_por",
-          "zuluhub_plataforma:invitacion.revocada_en",
-          "zuluhub_plataforma:marca.estado", // 0007
-          "zuluhub_plataforma:membresia_tenant.activo",
-          "zuluhub_plataforma:modulo_de_empresa.activo", // 0007
-          "zuluhub_plataforma:persona.activo_global",
-          "zuluhub_plataforma:plan.estado", // 0007
+          "pedernal_plataforma:dominio.estado",
+          "pedernal_plataforma:dominio.motivo",
+          "pedernal_plataforma:dominio.verificado_en",
+          "pedernal_plataforma:emisor.activo", // 0006
+          "pedernal_plataforma:emisor.cuit", // 0006
+          "pedernal_plataforma:empresa.cuit",
+          "pedernal_plataforma:empresa.estado",
+          "pedernal_plataforma:empresa.motivo_estado",
+          "pedernal_plataforma:empresa.razon_social",
+          "pedernal_plataforma:empresa.zona_horaria",
+          "pedernal_plataforma:invitacion.estado",
+          "pedernal_plataforma:invitacion.motivo_revocacion",
+          "pedernal_plataforma:invitacion.reemplazada_por",
+          "pedernal_plataforma:invitacion.revocada_en",
+          "pedernal_plataforma:marca.estado", // 0007
+          "pedernal_plataforma:membresia_tenant.activo",
+          "pedernal_plataforma:modulo_de_empresa.activo", // 0007
+          "pedernal_plataforma:persona.activo_global",
+          "pedernal_plataforma:plan.estado", // 0007
           // captación: un ADMIN decide, `sistema` vence y anonimiza (los datos personales se anonimizan)
           ...[
             "estado",
@@ -468,13 +473,13 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "cuit",
             "id_de_medicion",
             "atribucion",
-          ].map((c) => `zuluhub_plataforma:solicitud_de_alta.${c}`),
-          "zuluhub_plataforma:tenant.estado",
-          "zuluhub_plataforma:tenant.motivo_estado",
-          "zuluhub_plataforma:tenant.nombre",
-          "zuluhub_plataforma:traspaso_gerencia.estado",
-          "zuluhub_plataforma:traspaso_gerencia.motivo",
-          "zuluhub_plataforma:traspaso_gerencia.resuelto_en",
+          ].map((c) => `pedernal_plataforma:solicitud_de_alta.${c}`),
+          "pedernal_plataforma:tenant.estado",
+          "pedernal_plataforma:tenant.motivo_estado",
+          "pedernal_plataforma:tenant.nombre",
+          "pedernal_plataforma:traspaso_gerencia.estado",
+          "pedernal_plataforma:traspaso_gerencia.motivo",
+          "pedernal_plataforma:traspaso_gerencia.resuelto_en",
           ...[
             "nombre_comercial",
             "modulos",
@@ -484,7 +489,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "motivo",
             "publicada_en",
             "publicada_por",
-          ].map((c) => `zuluhub_plataforma:version_de_plan.${c}`), // 0007
+          ].map((c) => `pedernal_plataforma:version_de_plan.${c}`), // 0007
           ...[
             "nombre_visible",
             "tema",
@@ -500,12 +505,12 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "motivo",
             "confirmada_en",
             "confirmada_por",
-          ].map((c) => `zuluhub_plataforma:version_de_marca.${c}`), // 0007
-          "zuluhub_trabajos:trabajo.estado",
-          "zuluhub_trabajos:trabajo.intentos",
-          "zuluhub_trabajos:trabajo.proximo_intento",
-          "zuluhub_trabajos:trabajo.tomado_hasta",
-          "zuluhub_trabajos:trabajo.ultimo_error",
+          ].map((c) => `pedernal_plataforma:version_de_marca.${c}`), // 0007
+          "pedernal_trabajos:trabajo.estado",
+          "pedernal_trabajos:trabajo.intentos",
+          "pedernal_trabajos:trabajo.proximo_intento",
+          "pedernal_trabajos:trabajo.tomado_hasta",
+          "pedernal_trabajos:trabajo.ultimo_error",
         ].sort(),
       );
     });
@@ -752,7 +757,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         ...["empresa_id", "modulo"].map((c) => `modulo_de_empresa.${c}`),
         "tenant.marca_id",
       ];
-      expect(porRol("zuluhub_app")).toEqual(
+      expect(porRol("pedernal_app")).toEqual(
         [
           ...auditoriaDeEmpresa,
           ...nivelDeControl,
@@ -774,7 +779,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...facturacion,
         ].sort(),
       );
-      expect(porRol("zuluhub_grupo")).toEqual(
+      expect(porRol("pedernal_grupo")).toEqual(
         [
           // `resultado` desde 0007: PERMITIDO (propietario) o DENEGADO (intento de quien no lo es)
           ...["tenant_id", "persona_id", "empresa_id", "resultado"].map(
@@ -783,8 +788,8 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...referenciaDeError,
         ].sort(),
       );
-      expect(porRol("zuluhub_trabajos")).toEqual([]);
-      expect(porRol("zuluhub_plataforma")).toEqual(
+      expect(porRol("pedernal_trabajos")).toEqual([]);
+      expect(porRol("pedernal_plataforma")).toEqual(
         [
           ...auditoriaDeEmpresa,
           ...["actor", "accion", "entidad", "entidad_id", "antes", "despues"].map(
@@ -987,7 +992,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
     it("toda política de alta o cambio de la aplicación sobre sucursal, trabajo y auditoria_empresa exige empresa_operable", async () => {
       const sinEmpresaOperable = await filas<{ tablename: string; policyname: string }>(
         `select tablename, policyname from pg_policies
-         where schemaname = 'public' and 'zuluhub_app' = any (roles)
+         where schemaname = 'public' and 'pedernal_app' = any (roles)
            and tablename in ('sucursal', 'trabajo', 'auditoria_empresa')
            and cmd in ('INSERT', 'UPDATE', 'ALL')
            and coalesce(with_check, qual, '') not like '%empresa_operable(%'
@@ -997,7 +1002,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       // Y existen todas las que tienen que existir (el test anterior no pasa por vacío).
       const existentes = await filas<{ tablename: string; cmd: string }>(
         `select tablename, cmd from pg_policies
-         where schemaname = 'public' and 'zuluhub_app' = any (roles)
+         where schemaname = 'public' and 'pedernal_app' = any (roles)
            and tablename in ('sucursal', 'trabajo', 'auditoria_empresa')
            and cmd in ('INSERT', 'UPDATE', 'ALL')
          order by 1, 2`,
@@ -1078,9 +1083,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       it("falla con un mensaje claro si uno de los cuatro roles es miembro de otro rol", async () => {
         await dueno.query("begin");
         try {
-          await dueno.query("grant pg_monitor to zuluhub_app");
+          await dueno.query("grant pg_monitor to pedernal_app");
           await expect(dueno.query(bloqueDeRoles)).rejects.toThrow(
-            /zuluhub_app es miembro de pg_monitor/,
+            /pedernal_app es miembro de pg_monitor/,
           );
         } finally {
           await dueno.query("rollback");
@@ -1376,11 +1381,11 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       const leen = await filas<{ grantee: string }>(
         `select distinct grantee from information_schema.column_privileges
          where table_schema = 'public' and table_name = 'referencia_de_error' and privilege_type = 'SELECT'
-           and (grantee = any($1) or grantee = 'PUBLIC' or grantee in ('zuluhub_autenticacion', 'zuluhub_publico'))
+           and (grantee = any($1) or grantee = 'PUBLIC' or grantee in ('pedernal_autenticacion', 'pedernal_publico'))
          order by 1`,
         [[...ROLES]],
       );
-      expect(leen).toEqual([{ grantee: "zuluhub_plataforma" }]);
+      expect(leen).toEqual([{ grantee: "pedernal_plataforma" }]);
     });
 
     it("la premisa de emisor_cuit_uk: solo la plataforma escribe emisor.cuit (si el cliente lo escribiera, el error de duplicado le mostraría los CUIT ajenos)", async () => {
@@ -1388,13 +1393,13 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         `select grantee, privilege_type from information_schema.column_privileges
          where table_schema = 'public' and table_name = 'emisor' and column_name = 'cuit'
            and privilege_type in ('INSERT', 'UPDATE')
-           and (grantee = any($1) or grantee = 'PUBLIC' or grantee = 'zuluhub_autenticacion')
+           and (grantee = any($1) or grantee = 'PUBLIC' or grantee = 'pedernal_autenticacion')
          order by 1, 2`,
         [[...ROLES]],
       );
       expect(escriben).toEqual([
-        { grantee: "zuluhub_plataforma", privilege_type: "INSERT" },
-        { grantee: "zuluhub_plataforma", privilege_type: "UPDATE" },
+        { grantee: "pedernal_plataforma", privilege_type: "INSERT" },
+        { grantee: "pedernal_plataforma", privilege_type: "UPDATE" },
       ]);
     });
 

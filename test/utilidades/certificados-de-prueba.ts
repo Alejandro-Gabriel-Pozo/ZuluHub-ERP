@@ -11,7 +11,7 @@ import {
 
 /**
  * Certificados de PRUEBA (nunca claves reales): una autoridad raíz, una intermedia y la emisión de un certificado a
- * partir del pedido (CSR) que genera ZuluHub, como haría ARCA. Las claves de las autoridades son de curva elíptica
+ * partir del pedido (CSR) que genera Pedernal, como haría ARCA. Las claves de las autoridades son de curva elíptica
  * solo por velocidad; lo que importa del certificado emitido es el sujeto, la clave pública del pedido, el emisor
  * y las fechas. Todo se genera en la propia prueba con `pkijs` y el WebCrypto de Node.
  */

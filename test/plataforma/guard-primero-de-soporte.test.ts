@@ -91,7 +91,7 @@ const LLAMADAS_DE_CONSULTAS: Record<
   consultarAuditoria: (c) => c.consultarAuditoria(comoAdministrador, {}),
   verConfiguracion: (c) => c.verConfiguracion(comoAdministrador),
   catalogoDePerillas: (c) => c.catalogoDePerillas(comoAdministrador),
-  buscarReferencia: (c) => c.buscarReferencia(comoAdministrador, { referencia: "ZH-0000-0000" }),
+  buscarReferencia: (c) => c.buscarReferencia(comoAdministrador, { referencia: "PD-0000-0000" }),
 };
 
 /** Lo mismo para los casos de uso que pasan por el guard (los `sinGuard` se declaran y se explican aparte). */

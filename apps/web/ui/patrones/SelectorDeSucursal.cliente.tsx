@@ -21,7 +21,7 @@ import { Texto } from "../primitivas/Texto";
  */
 export type SucursalParaElegir = SucursalElegible & Readonly<{ nombre: string }>;
 
-const AVISO_LOCAL = "zh:sucursal-cambiada";
+const AVISO_LOCAL = "pd:sucursal-cambiada";
 
 function leer(clave: string): string | null {
   try {

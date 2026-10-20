@@ -4,20 +4,20 @@ import {
   ocultarSecretos,
 } from "../src/adaptadores/postgres/describir-falla-de-base";
 import { armarPlataforma } from "../src/composicion/plataforma";
-import { ZULUHUB_DB_PLATAFORMA } from "../src/composicion/entorno-de-plataforma";
+import { PEDERNAL_DB_PLATAFORMA } from "../src/composicion/entorno-de-plataforma";
 import { armarCasosDeLaLista, ejecutarCasoDePlataforma } from "./ejecutar-caso-desde-archivo";
 
 /**
  * Ejecuta UN caso de plataforma de la lista cerrada, con los datos de un archivo .json, como el administrador
  * que se indica: `npm run plataforma:caso -- <caso> <archivo.json> --admin-email <email>`. Lo corre el dueño en
- * su terminal, con las variables ZULUHUB_DB_PLATAFORMA, ZULUHUB_CLAVE_CONTEXTO y ZULUHUB_SECRETO_INVITACIONES
+ * su terminal, con las variables PEDERNAL_DB_PLATAFORMA, PEDERNAL_CLAVE_CONTEXTO y PEDERNAL_SECRETO_INVITACIONES
  * cargadas ahí (nunca en un archivo del repositorio). El detalle está en `ejecutar-caso-desde-archivo.ts`.
  */
 
 // Una falla que se escape no puede volcar la pila (ni el texto crudo de la red) a la terminal.
 function fallaInesperada(falla: unknown): void {
   console.error(
-    `ERROR inesperado: ${ocultarSecretos(describirFallaDeBase(falla, process.env[ZULUHUB_DB_PLATAFORMA]), process.env["ZULUHUB_CLAVE_CONTEXTO"]?.split(":")[1])}`,
+    `ERROR inesperado: ${ocultarSecretos(describirFallaDeBase(falla, process.env[PEDERNAL_DB_PLATAFORMA]), process.env["PEDERNAL_CLAVE_CONTEXTO"]?.split(":")[1])}`,
   );
   process.exit(1);
 }

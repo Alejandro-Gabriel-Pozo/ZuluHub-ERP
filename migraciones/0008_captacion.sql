@@ -1,5 +1,5 @@
 -- 0008_captacion: la solicitud de alta (nivel 2 de la escalera de alta), sus contadores contra el abuso,
--- y el séptimo rol de base, `zuluhub_captacion`, con el que la landing —la superficie más expuesta, sin
+-- y el séptimo rol de base, `pedernal_captacion`, con el que la landing —la superficie más expuesta, sin
 -- sesión— escribe una solicitud, la verifica y encola sus correos. Alta por solicitud y landing, §2
 -- (L1); ADR-004, ADR-007, ADR-011; decisión del dueño del 2026-10-13 (el producto se ofrece «en frío»).
 -- EL NÚMERO 0008 ES PROVISORIO: se renumera al integrar si otra migración entra antes (el nombre
@@ -8,7 +8,7 @@
 -- Reglas de esta migración (las mismas de 0001 a 0007):
 --  * Es ADITIVA: crea tablas, funciones, disparadores, políticas y un rol. No modifica ni borra ninguna
 --    fila, política, privilegio ni objeto existente. Lo único que toca de lo ya creado son concesiones
---    nuevas a `zuluhub_captacion` y a `zuluhub_plataforma` (ejecutar las funciones de validación que usan
+--    nuevas a `pedernal_captacion` y a `pedernal_plataforma` (ejecutar las funciones de validación que usan
 --    los CHECK de las tablas nuevas, y escribir en `trabajo` y `auditoria_plataforma` el primero). Su
 --    reversión es un script aparte, revisado y DESTRUCTIVO (borra solicitudes: datos personales de
 --    interesados): `migraciones/reversiones/0008_revertir_captacion.sql`. El ejecutor no lo aplica.
@@ -86,7 +86,7 @@ $$;
 -- ---------------------------------------------------------------------------------------------
 DO $$
 DECLARE
-  r constant text := 'zuluhub_captacion';
+  r constant text := 'pedernal_captacion';
   ajenas text;
   topes constant text[] := ARRAY[
     'statement_timeout=30s', 'idle_in_transaction_session_timeout=60s', 'lock_timeout=15s'
@@ -108,7 +108,7 @@ BEGIN
     JOIN pg_roles g ON g.oid = am.roleid
    WHERE m.rolname = r;
   IF ajenas IS NOT NULL THEN
-    RAISE EXCEPTION 'los roles de ZuluHub no pueden ser miembros de otros roles (%): revocar la pertenencia y repetir', ajenas
+    RAISE EXCEPTION 'los roles de Pedernal no pueden ser miembros de otros roles (%): revocar la pertenencia y repetir', ajenas
       USING ERRCODE = '55000';
   END IF;
 
@@ -446,37 +446,37 @@ REVOKE ALL ON solicitud_de_alta, limite_de_captacion FROM PUBLIC;
 
 -- Las funciones de validación las ejecuta quien escribe las columnas que validan (un CHECK corre con los
 -- permisos de quien escribe, en cada INSERT y UPDATE de la fila).
-GRANT EXECUTE ON FUNCTION atribucion_valida(jsonb) TO zuluhub_captacion, zuluhub_plataforma;
-GRANT EXECUTE ON FUNCTION datos_de_auditoria_de_captacion_validos(jsonb) TO zuluhub_captacion;
-GRANT EXECUTE ON FUNCTION app_captacion() TO zuluhub_captacion;
+GRANT EXECUTE ON FUNCTION atribucion_valida(jsonb) TO pedernal_captacion, pedernal_plataforma;
+GRANT EXECUTE ON FUNCTION datos_de_auditoria_de_captacion_validos(jsonb) TO pedernal_captacion;
+GRANT EXECUTE ON FUNCTION app_captacion() TO pedernal_captacion;
 -- Ya las tenían los otros cuatro roles desde 0001: la landing necesita el contexto firmado y el CUIT.
-GRANT EXECUTE ON FUNCTION contexto_firmado(), cuit_valido(text) TO zuluhub_captacion;
-GRANT USAGE ON SCHEMA public TO zuluhub_captacion;
+GRANT EXECUTE ON FUNCTION contexto_firmado(), cuit_valido(text) TO pedernal_captacion;
+GRANT USAGE ON SCHEMA public TO pedernal_captacion;
 
 -- Captación: crear, leer la propia, verificar; encolar sus correos; dejar su constancia; contar.
 -- Sin nombre, negocio, teléfono, CUIT ni nota: no los necesita (el correo de verificación va a la dirección).
 GRANT INSERT (marca_id, email, nombre_contacto, nombre_negocio, telefono, cuit, id_de_medicion, rubro,
               provincia, atribucion, version_de_terminos, version_de_privacidad, medicion_consentida,
               version_de_aviso_de_medicion, ultimo_envio_en, creada_en)
-  ON solicitud_de_alta TO zuluhub_captacion;
+  ON solicitud_de_alta TO pedernal_captacion;
 GRANT SELECT (id, marca_id, estado, email, numero_de_envios, ultimo_envio_en, verificada_en, decidida_en,
               motivo_de_rechazo, medicion_consentida, id_de_medicion, atribucion, rubro, provincia,
               anonimizada_en, version, creada_en)
-  ON solicitud_de_alta TO zuluhub_captacion;
+  ON solicitud_de_alta TO pedernal_captacion;
 GRANT UPDATE (estado, verificada_en, numero_de_envios, ultimo_envio_en)
-  ON solicitud_de_alta TO zuluhub_captacion;
-GRANT INSERT (empresa_id, tipo, datos, clave_idempotencia) ON trabajo TO zuluhub_captacion;
-GRANT INSERT (actor, accion, entidad, entidad_id, antes, despues) ON auditoria_plataforma TO zuluhub_captacion;
-GRANT SELECT, DELETE ON limite_de_captacion TO zuluhub_captacion;
-GRANT INSERT (clave, ventana, ventana_inicio, cuenta) ON limite_de_captacion TO zuluhub_captacion;
-GRANT UPDATE (cuenta) ON limite_de_captacion TO zuluhub_captacion;
+  ON solicitud_de_alta TO pedernal_captacion;
+GRANT INSERT (empresa_id, tipo, datos, clave_idempotencia) ON trabajo TO pedernal_captacion;
+GRANT INSERT (actor, accion, entidad, entidad_id, antes, despues) ON auditoria_plataforma TO pedernal_captacion;
+GRANT SELECT, DELETE ON limite_de_captacion TO pedernal_captacion;
+GRANT INSERT (clave, ventana, ventana_inicio, cuenta) ON limite_de_captacion TO pedernal_captacion;
+GRANT UPDATE (cuenta) ON limite_de_captacion TO pedernal_captacion;
 
 -- Plataforma: leer todo; decidir (solo un ADMIN, con su id); vencer y anonimizar (el actor `sistema`).
-GRANT SELECT ON solicitud_de_alta TO zuluhub_plataforma;
+GRANT SELECT ON solicitud_de_alta TO pedernal_plataforma;
 GRANT UPDATE (estado, decidida_por, decidida_en, motivo_de_rechazo, nota_interna, empresa_creada_id,
               anonimizada_en, email, nombre_contacto, nombre_negocio, telefono, cuit, id_de_medicion,
               atribucion)
-  ON solicitud_de_alta TO zuluhub_plataforma;
+  ON solicitud_de_alta TO pedernal_plataforma;
 
 -- ---------------------------------------------------------------------------------------------
 -- RLS: activa y forzada en toda tabla nueva; sin política no hay acceso
@@ -489,7 +489,7 @@ ALTER TABLE limite_de_captacion FORCE ROW LEVEL SECURITY;
 -- ---------------------------------------------------------------------------------------------
 -- Políticas de la landing: solo la fila que el contexto firmado nombra
 -- ---------------------------------------------------------------------------------------------
-CREATE POLICY solicitud_captacion_leer ON solicitud_de_alta FOR SELECT TO zuluhub_captacion
+CREATE POLICY solicitud_captacion_leer ON solicitud_de_alta FOR SELECT TO pedernal_captacion
   USING (
     anonimizada_en IS NULL
     AND (
@@ -498,12 +498,12 @@ CREATE POLICY solicitud_captacion_leer ON solicitud_de_alta FOR SELECT TO zuluhu
     )
   );
 -- No repite `estado = 'NUEVA'`: la columna no está en el GRANT INSERT y toma el valor por defecto.
-CREATE POLICY solicitud_captacion_alta ON solicitud_de_alta FOR INSERT TO zuluhub_captacion
+CREATE POLICY solicitud_captacion_alta ON solicitud_de_alta FOR INSERT TO pedernal_captacion
   WITH CHECK (
     marca_id::text = (SELECT app_captacion()->>'m') AND email = (SELECT app_captacion()->>'e')
   );
 -- Solo una NUEVA de su contexto, y solo para dejarla NUEVA (reenvío) o pasarla a VERIFICADA.
-CREATE POLICY solicitud_captacion_verificar ON solicitud_de_alta FOR UPDATE TO zuluhub_captacion
+CREATE POLICY solicitud_captacion_verificar ON solicitud_de_alta FOR UPDATE TO pedernal_captacion
   USING (
     estado = 'NUEVA'
     AND anonimizada_en IS NULL
@@ -520,7 +520,7 @@ CREATE POLICY solicitud_captacion_verificar ON solicitud_de_alta FOR UPDATE TO z
 --    cada correo sale de un envío que subió el contador, que el CHECK y el disparador acotan a 5.
 --  * Aviso al dueño: la solicitud ya está VERIFICADA (nadie avisa de lo no verificado).
 --  * Evento a terceros: la solicitud dio su consentimiento de medición, y el nombre del evento va en la clave.
-CREATE POLICY trabajo_captacion_verificacion ON trabajo FOR INSERT TO zuluhub_captacion
+CREATE POLICY trabajo_captacion_verificacion ON trabajo FOR INSERT TO pedernal_captacion
   WITH CHECK (
     empresa_id IS NULL
     AND tipo = 'enviar_verificacion_de_solicitud'
@@ -539,7 +539,7 @@ CREATE POLICY trabajo_captacion_verificacion ON trabajo FOR INSERT TO zuluhub_ca
         AND (regexp_match(clave_idempotencia, ':verificacion:([1-5])$'))[1]::int <= s.numero_de_envios
     )
   );
-CREATE POLICY trabajo_captacion_aviso ON trabajo FOR INSERT TO zuluhub_captacion
+CREATE POLICY trabajo_captacion_aviso ON trabajo FOR INSERT TO pedernal_captacion
   WITH CHECK (
     empresa_id IS NULL
     AND tipo = 'avisar_solicitud_verificada'
@@ -551,7 +551,7 @@ CREATE POLICY trabajo_captacion_aviso ON trabajo FOR INSERT TO zuluhub_captacion
       WHERE s.id::text = datos->>'solicitudId' AND s.estado = 'VERIFICADA'
     )
   );
-CREATE POLICY trabajo_captacion_evento ON trabajo FOR INSERT TO zuluhub_captacion
+CREATE POLICY trabajo_captacion_evento ON trabajo FOR INSERT TO pedernal_captacion
   WITH CHECK (
     empresa_id IS NULL
     AND tipo = 'evento_de_captacion'
@@ -568,7 +568,7 @@ CREATE POLICY trabajo_captacion_evento ON trabajo FOR INSERT TO zuluhub_captacio
 -- Auditoría (P5): la constancia de lo que hizo la landing, como actor `captacion`, solo de las tres acciones
 -- que le corresponden, con claves y valores de la lista blanca, y solo sobre una solicitud visible para su
 -- contexto cuyo estado corresponde a la acción (nadie fabrica una verificación que no ocurrió).
-CREATE POLICY auditoria_plataforma_captacion ON auditoria_plataforma FOR INSERT TO zuluhub_captacion
+CREATE POLICY auditoria_plataforma_captacion ON auditoria_plataforma FOR INSERT TO pedernal_captacion
   WITH CHECK (
     actor = 'captacion'
     AND entidad = 'solicitud_de_alta'
@@ -595,31 +595,31 @@ CREATE UNIQUE INDEX auditoria_plataforma_captacion_uk ON auditoria_plataforma
   WHERE actor = 'captacion';
 
 -- Contadores: con un contexto de captación firmado, usar los suyos; borrar solo los de más de 8 días (P7).
-CREATE POLICY limite_captacion_leer ON limite_de_captacion FOR SELECT TO zuluhub_captacion
+CREATE POLICY limite_captacion_leer ON limite_de_captacion FOR SELECT TO pedernal_captacion
   USING ((SELECT app_captacion()) IS NOT NULL);
-CREATE POLICY limite_captacion_alta ON limite_de_captacion FOR INSERT TO zuluhub_captacion
+CREATE POLICY limite_captacion_alta ON limite_de_captacion FOR INSERT TO pedernal_captacion
   WITH CHECK ((SELECT app_captacion()) IS NOT NULL);
-CREATE POLICY limite_captacion_contar ON limite_de_captacion FOR UPDATE TO zuluhub_captacion
+CREATE POLICY limite_captacion_contar ON limite_de_captacion FOR UPDATE TO pedernal_captacion
   USING ((SELECT app_captacion()) IS NOT NULL)
   WITH CHECK ((SELECT app_captacion()) IS NOT NULL);
-CREATE POLICY limite_captacion_purgar ON limite_de_captacion FOR DELETE TO zuluhub_captacion
+CREATE POLICY limite_captacion_purgar ON limite_de_captacion FOR DELETE TO pedernal_captacion
   USING ((SELECT app_captacion()) IS NOT NULL AND ventana_inicio < now() - interval '8 days');
 
 -- ---------------------------------------------------------------------------------------------
 -- Políticas de la plataforma: leer con un actor vigente; decidir solo un ADMIN; vencer y anonimizar solo
 -- `sistema`. Mismo esquema que 0007: una permisiva simple y la restrictiva del actor (se suman con AND).
 -- ---------------------------------------------------------------------------------------------
-CREATE POLICY solicitud_plataforma_leer ON solicitud_de_alta FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY solicitud_plataforma_cambiar ON solicitud_de_alta FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY solicitud_plataforma_leer ON solicitud_de_alta FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY solicitud_plataforma_cambiar ON solicitud_de_alta FOR UPDATE TO pedernal_plataforma
   USING (true) WITH CHECK (true);
 
 CREATE POLICY solicitud_plataforma_con_actor ON solicitud_de_alta AS RESTRICTIVE FOR SELECT
-  TO zuluhub_plataforma USING ((SELECT plataforma_actor_vigente()));
+  TO pedernal_plataforma USING ((SELECT plataforma_actor_vigente()));
 -- Un SOPORTE no decide: su UPDATE afecta 0 filas (el caso de uso lo frena antes con SIN_PERMISO). Un ADMIN
 -- decide a su nombre (`decidida_por` es el actor firmado: nadie decide a nombre de otro). `sistema` solo
 -- puede rechazar por `NO_VERIFICADA` o anonimizar; nunca aprobar ni rechazar con otro motivo.
 CREATE POLICY solicitud_plataforma_quien_cambia ON solicitud_de_alta AS RESTRICTIVE FOR UPDATE
-  TO zuluhub_plataforma
+  TO pedernal_plataforma
   USING (
     (SELECT admin_plataforma_con_rol(ARRAY['ADMIN']))
     OR (SELECT app_actor_plataforma()) = 'sistema'

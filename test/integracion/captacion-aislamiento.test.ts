@@ -219,11 +219,11 @@ describe.skipIf(base === null)("captación: el aislamiento por rol de base", () 
           "drop table limite_de_captacion",
           "drop function app_captacion()",
           "create trigger prueba_ajena before update on solicitud_de_alta execute function sin_borrado()",
-          "alter role zuluhub_captacion bypassrls",
-          "alter role zuluhub_captacion superuser",
+          "alter role pedernal_captacion bypassrls",
+          "alter role pedernal_captacion superuser",
           "create role prueba_ajena",
-          "set role zuluhub_plataforma",
-          "set session authorization zuluhub_plataforma",
+          "set role pedernal_plataforma",
+          "set session authorization pedernal_plataforma",
         ]) {
           rechazado(await s.intentar(sentencia), ["42501"]);
         }
@@ -294,16 +294,16 @@ describe.skipIf(base === null)("captación: el aislamiento por rol de base", () 
     it("con el contexto de OTRO rol (plataforma, aplicación) o de otro tipo: tampoco hay filas", async () => {
       const tokens = {
         plataforma: firmarCargaDeCaptacion(b(), {
-          u: "zuluhub_plataforma",
+          u: "pedernal_plataforma",
           a: ADMIN,
           c: { s: a1.id },
         }),
-        aplicacion: firmarCargaDeCaptacion(b(), { u: "zuluhub_app", c: { s: a1.id } }),
+        aplicacion: firmarCargaDeCaptacion(b(), { u: "pedernal_app", c: { s: a1.id } }),
         // el rol de la sesión es captación pero el token dice que es de otro
-        publico: firmarCargaDeCaptacion(b(), { u: "zuluhub_publico", c: { s: a1.id } }),
+        publico: firmarCargaDeCaptacion(b(), { u: "pedernal_publico", c: { s: a1.id } }),
       };
       for (const [nombre, token] of Object.entries(tokens)) {
-        const s = await SesionDePrueba.abrirConToken(b(), "zuluhub_captacion", token);
+        const s = await SesionDePrueba.abrirConToken(b(), "pedernal_captacion", token);
         try {
           expect(await ids(s), nombre).toEqual([]);
         } finally {
@@ -336,7 +336,7 @@ describe.skipIf(base === null)("captación: el aislamiento por rol de base", () 
         vacío: "",
       };
       for (const [nombre, token] of Object.entries(tokens)) {
-        const s = await SesionDePrueba.abrirConToken(b(), "zuluhub_captacion", token);
+        const s = await SesionDePrueba.abrirConToken(b(), "pedernal_captacion", token);
         try {
           expect(await ids(s), nombre).toEqual([]);
         } finally {
@@ -344,7 +344,7 @@ describe.skipIf(base === null)("captación: el aislamiento por rol de base", () 
         }
       }
       // y el bueno sí
-      const s = await SesionDePrueba.abrirConToken(b(), "zuluhub_captacion", bueno);
+      const s = await SesionDePrueba.abrirConToken(b(), "pedernal_captacion", bueno);
       try {
         expect(await ids(s)).toEqual([a1.id]);
       } finally {
@@ -356,7 +356,7 @@ describe.skipIf(base === null)("captación: el aislamiento por rol de base", () 
       for (const c of [null, "x", 5, ["s"], true]) {
         const s = await SesionDePrueba.abrirConToken(
           b(),
-          "zuluhub_captacion",
+          "pedernal_captacion",
           firmarCargaDeCaptacion(b(), { c }),
         );
         try {
@@ -1282,21 +1282,21 @@ describe.skipIf(base === null)("captación: el aislamiento por rol de base", () 
         case "app":
           return SesionDePrueba.abrir(
             b(),
-            "zuluhub_app",
+            "pedernal_app",
             comoEmpresa(empresaId(mundo.empresa), personaId(mundo.persona)),
           );
         case "grupo":
           return SesionDePrueba.abrir(
             b(),
-            "zuluhub_grupo",
+            "pedernal_grupo",
             comoGrupo(tenantId(mundo.tenant), personaId(mundo.persona)),
           );
         case "trabajos":
-          return SesionDePrueba.abrir(b(), "zuluhub_trabajos", comoTrabajos());
+          return SesionDePrueba.abrir(b(), "pedernal_trabajos", comoTrabajos());
         case "autenticacion":
-          return SesionDePrueba.abrir(b(), "zuluhub_autenticacion", null);
+          return SesionDePrueba.abrir(b(), "pedernal_autenticacion", null);
         default:
-          return SesionDePrueba.abrir(b(), "zuluhub_publico", null);
+          return SesionDePrueba.abrir(b(), "pedernal_publico", null);
       }
     };
 
@@ -1314,7 +1314,7 @@ describe.skipIf(base === null)("captación: el aislamiento por rol de base", () 
             rechazado(await s.intentar(`truncate ${tabla}`));
           }
           // ni siquiera con un contexto de captación firmado a mano: el rol no tiene privilegios
-          const token = firmarCargaDeCaptacion(b(), { u: `zuluhub_${rol}`, c: { s: a1.id } });
+          const token = firmarCargaDeCaptacion(b(), { u: `pedernal_${rol}`, c: { s: a1.id } });
           await s.intentar("select set_config('app.ctx', $1, true)", [token]);
           rechazado(await s.intentar("select id from solicitud_de_alta"));
         } finally {
@@ -1334,7 +1334,7 @@ describe.skipIf(base === null)("captación: el aislamiento por rol de base", () 
         );
         expect((await s.confirmar()).ok).toBe(true);
       });
-      const t = await SesionDePrueba.abrir(b(), "zuluhub_trabajos", comoTrabajos());
+      const t = await SesionDePrueba.abrir(b(), "pedernal_trabajos", comoTrabajos());
       try {
         const r = await t.intentar("select datos from trabajo where clave_idempotencia = $1", [
           `solicitud:${s1.id}:verificacion:1`,
@@ -1357,7 +1357,7 @@ describe.skipIf(base === null)("captación: el aislamiento por rol de base", () 
     ) =>
       SesionDePrueba.abrir(
         b(),
-        "zuluhub_plataforma",
+        "pedernal_plataforma",
         comoPlataforma(
           actor === "SISTEMA"
             ? { tipo: "SISTEMA", proceso: "barrido-de-solicitudes" }
@@ -1393,7 +1393,7 @@ describe.skipIf(base === null)("captación: el aislamiento por rol de base", () 
         randomUUID(),
       );
       // sin contexto de plataforma
-      const sinCtx = await SesionDePrueba.abrirConToken(b(), "zuluhub_plataforma", null);
+      const sinCtx = await SesionDePrueba.abrirConToken(b(), "pedernal_plataforma", null);
       try {
         sinFilas(await sinCtx.intentar("select 1 from solicitud_de_alta"));
         sinFilas(await sinCtx.intentar("update solicitud_de_alta set estado = estado"));
@@ -1660,7 +1660,7 @@ describe.skipIf(base === null)("captación: el aislamiento por rol de base", () 
             ? null
             : await SesionDePrueba.abrir(
                 b(),
-                "zuluhub_plataforma",
+                "pedernal_plataforma",
                 comoPlataforma(
                   actor === "SISTEMA"
                     ? { tipo: "SISTEMA", proceso: "barrido-de-solicitudes" }

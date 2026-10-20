@@ -445,7 +445,7 @@ describe.skipIf(base === null)(
         expect(concesiones.length).toBeGreaterThan(10);
         for (const concesion of concesiones) {
           expect(concesion, concesion).not.toMatch(/\b(DELETE|TRUNCATE|REFERENCES|TRIGGER|ALL)\b/i);
-          expect(concesion, concesion).toMatch(/\bTO\s+zuluhub_app;$/);
+          expect(concesion, concesion).toMatch(/\bTO\s+pedernal_app;$/);
           if (/\bEXECUTE\b/i.test(concesion))
             expect(concesion).toMatch(/texto_fiscal_valido\(text, integer\)/);
         }
@@ -460,7 +460,7 @@ describe.skipIf(base === null)(
         const sql = await readFile(await archivoDeReversion(), "utf8");
         await c.query("begin");
         try {
-          if (confirmar) await c.query("set local zuluhub.confirmar_reversion = 'SI'");
+          if (confirmar) await c.query("set local pedernal.confirmar_reversion = 'SI'");
           await c.query(sql);
           await c.query("commit");
         } catch (error) {
@@ -528,7 +528,7 @@ describe.skipIf(base === null)(
           await crearComprobante(previa.cliente, e);
           const datosConFacturacion = await huellaDeDatos(previa.cliente);
           await expect(revertir(previa.cliente, false)).rejects.toThrow(
-            /zuluhub\.confirmar_reversion/,
+            /pedernal\.confirmar_reversion/,
           );
           // El rechazo no deshizo ni tocó nada.
           expect(
@@ -560,7 +560,7 @@ describe.skipIf(base === null)(
             [e.pv],
           );
           await expect(revertir(previa.cliente, false)).rejects.toThrow(
-            /zuluhub\.confirmar_reversion/,
+            /pedernal\.confirmar_reversion/,
           );
           await revertir(previa.cliente, true);
         });

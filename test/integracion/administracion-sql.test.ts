@@ -59,11 +59,11 @@ const VENCE_EN = new Date("2026-10-18T12:00:00Z");
 const DESPUES_DEL_VENCIMIENTO = new Date("2026-10-19T12:00:00Z");
 
 const ROLES = [
-  "zuluhub_app",
-  "zuluhub_grupo",
-  "zuluhub_trabajos",
-  "zuluhub_plataforma",
-  "zuluhub_autenticacion",
+  "pedernal_app",
+  "pedernal_grupo",
+  "pedernal_trabajos",
+  "pedernal_plataforma",
+  "pedernal_autenticacion",
 ] as const;
 const SEARCH_PATH_FIJO = "search_path=pg_catalog, public, pg_temp";
 
@@ -175,7 +175,12 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
     aislamiento: "read committed" | "repeatable read" | "serializable" = "read committed",
   ): Promise<T> => {
     if (base === null) throw new Error("sin base");
-    const s = await SesionDePrueba.abrir(base, "zuluhub_app", comoPersona(e, persona), aislamiento);
+    const s = await SesionDePrueba.abrir(
+      base,
+      "pedernal_app",
+      comoPersona(e, persona),
+      aislamiento,
+    );
     try {
       return await trabajo(s);
     } finally {
@@ -184,7 +189,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
   };
 
   const conRol = async <T>(
-    rol: "zuluhub_app" | "zuluhub_grupo" | "zuluhub_trabajos" | "zuluhub_plataforma",
+    rol: "pedernal_app" | "pedernal_grupo" | "pedernal_trabajos" | "pedernal_plataforma",
     contexto: Contexto | null,
     trabajo: (s: SesionDePrueba) => Promise<T>,
   ): Promise<T> => {
@@ -408,16 +413,16 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
       );
       expect(politicas.map((f) => f.p)).toEqual(
         [
-          "traspaso_gerencia_app_alta:INSERT:PERMISSIVE:zuluhub_app",
-          "traspaso_gerencia_app_cancelar:UPDATE:PERMISSIVE:zuluhub_app",
-          "traspaso_gerencia_app_leer:SELECT:PERMISSIVE:zuluhub_app",
-          "traspaso_gerencia_app_responder:UPDATE:PERMISSIVE:zuluhub_app",
-          "traspaso_gerencia_plataforma_admin_alta:INSERT:RESTRICTIVE:zuluhub_plataforma",
-          "traspaso_gerencia_plataforma_admin_cambiar:UPDATE:RESTRICTIVE:zuluhub_plataforma",
-          "traspaso_gerencia_plataforma_alta:INSERT:PERMISSIVE:zuluhub_plataforma",
-          "traspaso_gerencia_plataforma_cancelar:UPDATE:PERMISSIVE:zuluhub_plataforma",
-          "traspaso_gerencia_plataforma_con_actor:SELECT:RESTRICTIVE:zuluhub_plataforma",
-          "traspaso_gerencia_plataforma_leer:SELECT:PERMISSIVE:zuluhub_plataforma",
+          "traspaso_gerencia_app_alta:INSERT:PERMISSIVE:pedernal_app",
+          "traspaso_gerencia_app_cancelar:UPDATE:PERMISSIVE:pedernal_app",
+          "traspaso_gerencia_app_leer:SELECT:PERMISSIVE:pedernal_app",
+          "traspaso_gerencia_app_responder:UPDATE:PERMISSIVE:pedernal_app",
+          "traspaso_gerencia_plataforma_admin_alta:INSERT:RESTRICTIVE:pedernal_plataforma",
+          "traspaso_gerencia_plataforma_admin_cambiar:UPDATE:RESTRICTIVE:pedernal_plataforma",
+          "traspaso_gerencia_plataforma_alta:INSERT:PERMISSIVE:pedernal_plataforma",
+          "traspaso_gerencia_plataforma_cancelar:UPDATE:PERMISSIVE:pedernal_plataforma",
+          "traspaso_gerencia_plataforma_con_actor:SELECT:RESTRICTIVE:pedernal_plataforma",
+          "traspaso_gerencia_plataforma_leer:SELECT:PERMISSIVE:pedernal_plataforma",
         ].sort(),
       );
     });
@@ -430,7 +435,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
         with_check: string | null;
       }>(
         `select policyname, cmd, qual, with_check from pg_policies
-         where schemaname = 'public' and 'zuluhub_app' = any (roles)
+         where schemaname = 'public' and 'pedernal_app' = any (roles)
            and (tablename = 'traspaso_gerencia' or policyname in
                 ('membresia_app_traspasar', 'asignacion_sucursal_app_alta', 'asignacion_sucursal_app_reactivar'))
          order by 1`,
@@ -498,10 +503,10 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
            select empresa_id, 'PLATAFORMA', entrante_persona_id, propuesto_en, vence_en
            from traspaso_gerencia where false`,
       ];
-      const contextos: ["zuluhub_app" | "zuluhub_plataforma", Contexto][] = [
-        ["zuluhub_app", comoPersona(e, e.gerente)],
-        ["zuluhub_app", comoPersona(e, null)],
-        ["zuluhub_plataforma", comoPlataforma()],
+      const contextos: ["pedernal_app" | "pedernal_plataforma", Contexto][] = [
+        ["pedernal_app", comoPersona(e, e.gerente)],
+        ["pedernal_app", comoPersona(e, null)],
+        ["pedernal_plataforma", comoPlataforma()],
       ];
       for (const [rol, contexto] of contextos) {
         await conRol(rol, contexto, async (s) => {
@@ -1341,7 +1346,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
         usuarioAuth: null,
         ahora: PROPUESTO_EN,
       } as const;
-      await conRol("zuluhub_app", contexto, async (s) => {
+      await conRol("pedernal_app", contexto, async (s) => {
         // Solo `activo`: el WITH CHECK exige el rol de la invitación y la membresía tiene otro.
         denegado(
           await s.intentar("update membresia set activo = true where persona_id = $1", [
@@ -1453,7 +1458,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
               )
             ).rows[0]?.rol;
           // Sin traspaso: la política (el WITH CHECK pide el traspaso) lo rechaza.
-          const s1 = await SesionDePrueba.abrir(aparte.base, "zuluhub_app", contexto);
+          const s1 = await SesionDePrueba.abrir(aparte.base, "pedernal_app", contexto);
           try {
             denegado(
               await s1.intentar("update membresia set rol = 'GERENTE' where persona_id = $1", [
@@ -1476,7 +1481,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
              values ($1, 'GERENTE', $2, $2, $3, $4, $5) returning id`,
             [empresa.empresa, gerente, admin, PROPUESTO_EN, VENCE_EN],
           );
-          const s2 = await SesionDePrueba.abrir(aparte.base, "zuluhub_app", contexto);
+          const s2 = await SesionDePrueba.abrir(aparte.base, "pedernal_app", contexto);
           try {
             filas(
               await s2.directo(
@@ -2005,7 +2010,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
 
       it("un ADMIN propone sin conocer al gerente, lee los traspasos y cancela los suyos; no acepta ni rechaza ni nombra al saliente", async () => {
         const e = await armar();
-        await conRol("zuluhub_plataforma", comoPlataforma(), async (s) => {
+        await conRol("pedernal_plataforma", comoPlataforma(), async (s) => {
           filas(
             await s.intentar(proponerPlat, [e.empresa.empresa, e.operador, PROPUESTO_EN, VENCE_EN]),
             1,
@@ -2071,7 +2076,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
         const soporte = comoPlataforma({ tipo: "ADMIN", id: SOPORTE_DE_PRUEBA });
         const sistema = comoPlataforma({ tipo: "SISTEMA", proceso: "barrido" });
         for (const contexto of [soporte, sistema]) {
-          await conRol("zuluhub_plataforma", contexto, async (s) => {
+          await conRol("pedernal_plataforma", contexto, async (s) => {
             const { rows } = (await s.intentar(
               "select id from traspaso_gerencia where empresa_id = $1",
               [e.empresa.empresa],
@@ -2090,7 +2095,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
           });
         }
         // Sin contexto firmado (un rol de plataforma sin actor): 0 filas y nada se escribe.
-        await conRol("zuluhub_plataforma", null, async (s) => {
+        await conRol("pedernal_plataforma", null, async (s) => {
           filas(await s.intentar("select id from traspaso_gerencia"), 0);
           denegado(
             await s.intentar(proponerPlat, [e.empresa.empresa, e.otro, PROPUESTO_EN, VENCE_EN]),
@@ -2103,7 +2108,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
           [baja],
         );
         await conRol(
-          "zuluhub_plataforma",
+          "pedernal_plataforma",
           comoPlataforma({ tipo: "ADMIN", id: adminPlataformaId(baja) }),
           async (s) => {
             filas(await s.intentar("select id from traspaso_gerencia"), 0);
@@ -2118,7 +2123,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
         const e = await armar();
         const apagado = await crearPersonaDeBase(dueno);
         await crearMembresiaDeBase(dueno, e.empresa.empresa, apagado.id, "OPERADOR", false);
-        await conRol("zuluhub_plataforma", comoPlataforma(), async (s) => {
+        await conRol("pedernal_plataforma", comoPlataforma(), async (s) => {
           check(
             await s.intentar(proponerPlat, [e.empresa.empresa, e.gerente, PROPUESTO_EN, VENCE_EN]),
             "traspaso_entrante_es_el_gerente",
@@ -2136,7 +2141,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
 
       it("el recorrido de plataforma completo: propone, el entrante acepta nombrando al gerente vigente como saliente, y queda un solo gerente", async () => {
         const e = await armar();
-        await conRol("zuluhub_plataforma", comoPlataforma(), async (s) => {
+        await conRol("pedernal_plataforma", comoPlataforma(), async (s) => {
           filas(
             await s.intentar(proponerPlat, [e.empresa.empresa, e.admin, PROPUESTO_EN, VENCE_EN]),
             1,
@@ -2286,8 +2291,8 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
            values ('${e.empresa.empresa}', 'PLATAFORMA', '${e.otro}', now(), now() + interval '1 day')`,
         ];
         for (const [rol, contexto] of [
-          ["zuluhub_grupo", comoGrupo(e.empresa.tenant, propietario)],
-          ["zuluhub_trabajos", comoTrabajos()],
+          ["pedernal_grupo", comoGrupo(e.empresa.tenant, propietario)],
+          ["pedernal_trabajos", comoTrabajos()],
         ] as const) {
           await conRol(rol, contexto, async (s) => {
             for (const texto of intentos) denegado(await s.intentar(texto));
@@ -2307,7 +2312,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
         await conApp(e, e.gerente, async (s) => {
           denegado(await s.intentar("delete from traspaso_gerencia"));
         });
-        await conRol("zuluhub_plataforma", comoPlataforma(), async (s) => {
+        await conRol("pedernal_plataforma", comoPlataforma(), async (s) => {
           denegado(await s.intentar("delete from traspaso_gerencia"));
           denegado(await s.intentar("truncate traspaso_gerencia"));
         });
@@ -2316,7 +2321,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
       it("sin contexto firmado, la aplicación ve 0 filas de traspaso_gerencia y no escribe", async () => {
         const e = await armar();
         await traspasoDeBase(e, e.operador);
-        await conRol("zuluhub_app", null, async (s) => {
+        await conRol("pedernal_app", null, async (s) => {
           filas(await s.intentar("select * from traspaso_gerencia"), 0);
           noEntra(
             await s.intentar(proponerSql, [
@@ -2481,7 +2486,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
         usuarioAuth: null,
         ahora: PROPUESTO_EN,
       } as const;
-      await conRol("zuluhub_app", contexto, async (s) => {
+      await conRol("pedernal_app", contexto, async (s) => {
         // La sucursal que la invitación no lista: denegada, aunque la empresa sí la podría asignar.
         denegado(await asignar(s, e, persona.id, segunda));
         filas(await asignar(s, e, persona.id, e.sucursal), 1);
@@ -2493,9 +2498,9 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
       await crearAsignacionDeBase(dueno, e.empresa.empresa, e.operador, e.sucursal);
       const propietario = await crearPropietario(entorno, e.empresa.tenant);
       for (const [rol, contexto] of [
-        ["zuluhub_grupo", comoGrupo(e.empresa.tenant, propietario)],
-        ["zuluhub_trabajos", comoTrabajos()],
-        ["zuluhub_plataforma", comoPlataforma()],
+        ["pedernal_grupo", comoGrupo(e.empresa.tenant, propietario)],
+        ["pedernal_trabajos", comoTrabajos()],
+        ["pedernal_plataforma", comoPlataforma()],
       ] as const) {
         await conRol(rol, contexto, async (s) => {
           denegado(await s.intentar("select * from asignacion_sucursal"));
@@ -2741,7 +2746,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
 
     /** Una carpeta con solo estas migraciones (copiadas de la real). */
     const carpetaCon = async (archivos: readonly string[]): Promise<string> => {
-      const carpeta = await mkdtemp(join(tmpdir(), "zuluhub-mig-0005-"));
+      const carpeta = await mkdtemp(join(tmpdir(), "pedernal-mig-0005-"));
       for (const archivo of archivos) await copyFile(join(REAL, archivo), join(carpeta, archivo));
       return carpeta;
     };
@@ -2867,7 +2872,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
           ];
           const contexto = comoEmpresa(datos.empresa as never, personaId(gerente));
           // La aplicación sigue leyendo y escribiendo lo suyo.
-          const app = await SesionDePrueba.abrir(previa.aparte.base, "zuluhub_app", contexto);
+          const app = await SesionDePrueba.abrir(previa.aparte.base, "pedernal_app", contexto);
           try {
             filas(await app.intentar("select * from membresia"), 4);
             filas(await app.intentar("select * from sucursal"), 4);
@@ -2899,7 +2904,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
           const prop = await crearPropietarioEnBase(previa.cliente, datos.tenant);
           await conRolEn(
             previa.aparte.base,
-            "zuluhub_grupo",
+            "pedernal_grupo",
             comoGrupo(datos.tenant as never, personaId(prop)),
             async (s) => {
               filas(await s.intentar("select * from sucursal"), 4);
@@ -2907,14 +2912,18 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
               denegado(await s.intentar("select * from traspaso_gerencia"));
             },
           );
-          await conRolEn(previa.aparte.base, "zuluhub_plataforma", comoPlataforma(), async (s) => {
+          await conRolEn(previa.aparte.base, "pedernal_plataforma", comoPlataforma(), async (s) => {
             filas(await s.intentar("select * from empresa"), 1);
             denegado(await s.intentar("select * from sucursal"));
             filas(await s.intentar("select * from traspaso_gerencia"), 0);
           });
 
           // Y lo nuevo anda sobre esos datos: un traspaso de punta a punta.
-          const propuesta = await SesionDePrueba.abrir(previa.aparte.base, "zuluhub_app", contexto);
+          const propuesta = await SesionDePrueba.abrir(
+            previa.aparte.base,
+            "pedernal_app",
+            contexto,
+          );
           try {
             filas(
               await propuesta.intentar(
@@ -2931,7 +2940,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
           }
           const acepta = await SesionDePrueba.abrir(
             previa.aparte.base,
-            "zuluhub_app",
+            "pedernal_app",
             comoEmpresa(datos.empresa as never, personaId(admin)),
           );
           try {
@@ -3065,7 +3074,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
         // Una base SQL_ASCII (la codificación por defecto de algunos servidores locales).
         const admin = new pg.Client({ connectionString: base.admin });
         await admin.connect();
-        const nombre = `zuluhub_it_ascii_${Date.now().toString(36)}`;
+        const nombre = `pedernal_it_ascii_${Date.now().toString(36)}`;
         try {
           await admin.query(
             `CREATE DATABASE ${nombre} TEMPLATE template0 ENCODING 'SQL_ASCII' LC_COLLATE 'C' LC_CTYPE 'C'`,
@@ -3101,7 +3110,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
   };
   const conRolEn = async <T>(
     b: NonNullable<typeof base>,
-    rol: "zuluhub_app" | "zuluhub_grupo" | "zuluhub_trabajos" | "zuluhub_plataforma",
+    rol: "pedernal_app" | "pedernal_grupo" | "pedernal_trabajos" | "pedernal_plataforma",
     contexto: Contexto | null,
     trabajo: (s: SesionDePrueba) => Promise<T>,
   ): Promise<T> => {

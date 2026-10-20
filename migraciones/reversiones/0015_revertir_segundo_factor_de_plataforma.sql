@@ -14,7 +14,7 @@
 -- conteo de abajo no vería nada):
 --
 --     BEGIN;
---     SET LOCAL zuluhub.confirmar_reversion = 'SI';   -- solo si hay datos de segundo factor
+--     SET LOCAL pedernal.confirmar_reversion = 'SI';   -- solo si hay datos de segundo factor
 --     \i migraciones/reversiones/0015_revertir_segundo_factor_de_plataforma.sql
 --     COMMIT;
 --
@@ -61,8 +61,8 @@ BEGIN
   END IF;
 
   IF v_secretos + v_usuarios + v_sesiones + v_pasos + v_intentos > 0
-     AND coalesce(current_setting('zuluhub.confirmar_reversion', true), '') <> 'SI' THEN
-    RAISE EXCEPTION 'hay datos de segundo factor que esta reversión borraría (% secretos, % usuarios con segundo factor, % sesiones marcadas, % pasos usados, % intentos): avisar al dueño y repetir con SET LOCAL zuluhub.confirmar_reversion = ''SI''',
+     AND coalesce(current_setting('pedernal.confirmar_reversion', true), '') <> 'SI' THEN
+    RAISE EXCEPTION 'hay datos de segundo factor que esta reversión borraría (% secretos, % usuarios con segundo factor, % sesiones marcadas, % pasos usados, % intentos): avisar al dueño y repetir con SET LOCAL pedernal.confirmar_reversion = ''SI''',
       v_secretos, v_usuarios, v_sesiones, v_pasos, v_intentos
       USING ERRCODE = '55000';
   END IF;

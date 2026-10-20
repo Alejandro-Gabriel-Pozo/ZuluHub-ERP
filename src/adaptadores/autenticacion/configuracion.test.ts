@@ -7,8 +7,8 @@ import {
   CARACTERES_DISTINTOS_MINIMOS,
   LARGO_MINIMO_DEL_SECRETO,
   caracteresDistintos,
-  ZULUHUB_AUTH_SECRETO_EMPRESA,
-  ZULUHUB_AUTH_SECRETO_PLATAFORMA,
+  PEDERNAL_AUTH_SECRETO_EMPRESA,
+  PEDERNAL_AUTH_SECRETO_PLATAFORMA,
   leerClienteDeGoogle,
   leerSecretoDeAutenticacion,
   leerSecretoDeAutenticacionDePlataforma,
@@ -19,14 +19,14 @@ const CENTINELA = "valor-secreto-inventado-xyz";
 
 describe("nombres de las variables", () => {
   it("son los que el spec (§5.2) le dio al dueño", () => {
-    expect(ZULUHUB_AUTH_SECRETO_EMPRESA).toBe("ZULUHUB_AUTH_SECRETO_EMPRESA");
+    expect(PEDERNAL_AUTH_SECRETO_EMPRESA).toBe("PEDERNAL_AUTH_SECRETO_EMPRESA");
     expect(GOOGLE_CLIENT_ID).toBe("GOOGLE_CLIENT_ID");
     expect(GOOGLE_CLIENT_SECRET).toBe("GOOGLE_CLIENT_SECRET");
   });
 
   it("el secreto de la consola de plataforma tiene su propio nombre, distinto del de empresa", () => {
-    expect(ZULUHUB_AUTH_SECRETO_PLATAFORMA).toBe("ZULUHUB_AUTH_SECRETO_PLATAFORMA");
-    expect(ZULUHUB_AUTH_SECRETO_PLATAFORMA).not.toBe(ZULUHUB_AUTH_SECRETO_EMPRESA);
+    expect(PEDERNAL_AUTH_SECRETO_PLATAFORMA).toBe("PEDERNAL_AUTH_SECRETO_PLATAFORMA");
+    expect(PEDERNAL_AUTH_SECRETO_PLATAFORMA).not.toBe(PEDERNAL_AUTH_SECRETO_EMPRESA);
   });
 });
 
@@ -34,7 +34,7 @@ describe("leerSecretoDeAutenticacionDePlataforma", () => {
   const de = (largo: number) => "0123456789abcdef".repeat(3).slice(0, largo);
   const con = (n: number, largo = 64) =>
     Array.from({ length: largo }, (_, i) => String.fromCharCode(97 + (i % n))).join("");
-  const NOMBRE = "ZULUHUB_AUTH_SECRETO_PLATAFORMA";
+  const NOMBRE = "PEDERNAL_AUTH_SECRETO_PLATAFORMA";
 
   it("acepta lo mismo que el de empresa (32 caracteres, diez distintos) y lo devuelve sin blancos en los extremos", () => {
     expect(leerSecretoDeAutenticacionDePlataforma(de(32))).toBe(de(32));
@@ -67,7 +67,7 @@ describe("leerSecretoDeAutenticacionDePlataforma", () => {
 
   it("nunca igual al de empresa: con el de empresa a la vista, el mismo valor (aun con blancos) no se arma", () => {
     const mensaje = new ErrorDeConfiguracion(
-      `${NOMBRE} inválido: no puede ser igual a ZULUHUB_AUTH_SECRETO_EMPRESA`,
+      `${NOMBRE} inválido: no puede ser igual a PEDERNAL_AUTH_SECRETO_EMPRESA`,
     );
     expect(() => leerSecretoDeAutenticacionDePlataforma(de(40), de(40))).toThrow(mensaje);
     expect(() => leerSecretoDeAutenticacionDePlataforma(de(40), `\n ${de(40)} `)).toThrow(mensaje);
@@ -109,7 +109,7 @@ describe("leerSecretoDeAutenticacion", () => {
 
   it.each([undefined, "", "   ", "\n"])("falta (%j)", (valor) => {
     expect(() => leerSecretoDeAutenticacion(valor)).toThrow(
-      new ErrorDeConfiguracion("ZULUHUB_AUTH_SECRETO_EMPRESA inválido: falta"),
+      new ErrorDeConfiguracion("PEDERNAL_AUTH_SECRETO_EMPRESA inválido: falta"),
     );
   });
 
@@ -122,7 +122,7 @@ describe("leerSecretoDeAutenticacion", () => {
     }
     expect(error).toBeInstanceOf(ErrorDeConfiguracion);
     expect((error as Error).message).toBe(
-      "ZULUHUB_AUTH_SECRETO_EMPRESA inválido: necesita al menos 32 caracteres",
+      "PEDERNAL_AUTH_SECRETO_EMPRESA inválido: necesita al menos 32 caracteres",
     );
     expect((error as Error).message).not.toContain(CENTINELA);
   });
@@ -130,7 +130,7 @@ describe("leerSecretoDeAutenticacion", () => {
 
 describe("leerSecretoDeAutenticacion: variedad (M3)", () => {
   const MENSAJE =
-    "ZULUHUB_AUTH_SECRETO_EMPRESA inválido: necesita al menos 10 caracteres distintos";
+    "PEDERNAL_AUTH_SECRETO_EMPRESA inválido: necesita al menos 10 caracteres distintos";
   /** `n` caracteres distintos repetidos hasta `largo`. */
   const con = (n: number, largo = 64) =>
     Array.from({ length: largo }, (_, i) => String.fromCharCode(97 + (i % n))).join("");

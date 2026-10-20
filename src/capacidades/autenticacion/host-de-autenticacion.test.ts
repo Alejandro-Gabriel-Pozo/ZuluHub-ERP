@@ -10,9 +10,9 @@ import {
 
 describe("constantes", () => {
   it("el prefijo de cookie de la app de empresa y la ruta base de la librería", () => {
-    expect(PREFIJO_DE_COOKIE).toBe("zh_emp");
+    expect(PREFIJO_DE_COOKIE).toBe("pd_emp");
     // La consola tiene el suyo: una cookie de una audiencia no es la de la otra.
-    expect(PREFIJO_DE_COOKIE_DE_PLATAFORMA).toBe("zh_plat");
+    expect(PREFIJO_DE_COOKIE_DE_PLATAFORMA).toBe("pd_plat");
     expect(PREFIJO_DE_COOKIE_DE_PLATAFORMA).not.toBe(PREFIJO_DE_COOKIE);
     expect(RUTA_BASE_DE_INGRESO).toBe("/api/auth");
   });
@@ -45,7 +45,7 @@ describe("configuracionDeHost", () => {
     "localhost",
     "a",
     "a.b",
-    "app.zuluhub.com.ar",
+    "app.pedernal.com.ar",
     "xn--caf-dma.example.com",
     "1a.test",
     "123.example.com",

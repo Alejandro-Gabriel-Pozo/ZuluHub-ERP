@@ -472,8 +472,8 @@ describe("carta: índice y botón «Secciones» (D2)", () => {
     expect(r.height).toBeGreaterThanOrEqual(48);
     expect(r.bottom).toBeLessThanOrEqual(window.innerHeight);
     await userEvent.click(flotante);
-    const indice = document.getElementById("zh-indice") as HTMLElement;
-    expect(window.location.hash).toBe("#zh-indice");
+    const indice = document.getElementById("pd-indice") as HTMLElement;
+    expect(window.location.hash).toBe("#pd-indice");
     expect(indice.getBoundingClientRect().top).toBeGreaterThanOrEqual(-1);
     expect(indice.getBoundingClientRect().top).toBeLessThan(window.innerHeight);
     await userEvent.click(page.getByRole("link", { name: /^Salados/ }));
@@ -597,7 +597,7 @@ describe("carta: buscar (D8)", () => {
       .element(page.getByRole("search").getByRole("status"))
       .toHaveTextContent("No hay nada que diga «zzzz».");
     expect(document.querySelectorAll("a[data-segmento]")).toHaveLength(0);
-    expect(document.getElementById("zh-indice")).toBeNull();
+    expect(document.getElementById("pd-indice")).toBeNull();
     await userEvent.click(page.getByRole("button", { name: "Limpiar búsqueda" }).first());
     expect(document.querySelectorAll("a[data-segmento]")).toHaveLength(60);
     expect(document.activeElement).toBe(page.getByRole("searchbox").element());

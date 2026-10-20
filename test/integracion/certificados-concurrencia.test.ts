@@ -30,7 +30,7 @@ const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 600_000 });
 
 /** Rondas de cada prueba; la estabilidad local y el CI pueden subirlas con la variable. */
-const RONDAS = Number(process.env["ZULUHUB_RONDAS_CERTIFICADOS"] ?? "3");
+const RONDAS = Number(process.env["PEDERNAL_RONDAS_CERTIFICADOS"] ?? "3");
 const HORA = 3_600_000;
 
 describe.skipIf(base === null)("certificados F7: concurrencia", () => {

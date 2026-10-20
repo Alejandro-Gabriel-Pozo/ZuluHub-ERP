@@ -7,7 +7,7 @@ export type PropsDePorQueNoPuedo = Readonly<{
   texto: string;
   /** El código estable del motivo (`MODULO_NO_ACTIVO`): la marca cambia la redacción, nunca el código. */
   codigo: string;
-  /** La referencia `ZH-…` ya resuelta («Referencia: ZH-…»), si el motivo la lleva. */
+  /** La referencia `PD-…` ya resuelta («Referencia: PD-…»), si el motivo la lleva. */
   textoDeReferencia?: string | undefined;
   /** Qué se puede hacer (por ejemplo, pedirlo al gerente). */
   accion?: ReactNode;

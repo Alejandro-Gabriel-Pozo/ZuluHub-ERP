@@ -112,10 +112,10 @@ async function sembrarDatosViejos(c: pg.Client) {
     t.tenant,
   ]);
   await c.query(
-    "insert into referencia_de_error (referencia, accion, motivo) values ('ZH-AAAA-0001', 'a.b', 'X')",
+    "insert into referencia_de_error (referencia, accion, motivo) values ('PD-AAAA-0001', 'a.b', 'X')",
   );
   await c.query(
-    "insert into referencia_de_error (referencia, accion, motivo) values ('ZH-AAAA-0002', 'a.b', 'X')",
+    "insert into referencia_de_error (referencia, accion, motivo) values ('PD-AAAA-0002', 'a.b', 'X')",
   );
   await c.query(
     "insert into membresia_tenant (persona_id, tenant_id, rol) values ($1, $2, 'PROPIETARIO')",
@@ -165,7 +165,7 @@ describe.skipIf(base === null)(
           es_principal: boolean;
         }>("select id, codigo, es_principal from marca");
         expect(marcas).toHaveLength(1);
-        expect(marcas[0]).toMatchObject({ codigo: "zuluhub", es_principal: true });
+        expect(marcas[0]).toMatchObject({ codigo: "pedernal", es_principal: true });
         const { rows: tenants } = await previa.cliente.query<{ n: number; marcas: number }>(
           "select count(*)::int as n, count(*) filter (where marca_id = $1)::int as marcas from tenant",
           [marcas[0]?.id],
@@ -290,7 +290,7 @@ describe.skipIf(base === null)(
       await conMigracionesAplicadas(async (previa, con0007) => {
         for (const motivo of ["UNO", "DOS"]) {
           await previa.cliente.query(
-            "insert into referencia_de_error (referencia, accion, motivo) values ('ZH-BBBB-0001', 'a.b', $1)",
+            "insert into referencia_de_error (referencia, accion, motivo) values ('PD-BBBB-0001', 'a.b', $1)",
             [motivo],
           );
         }
@@ -355,7 +355,7 @@ describe.skipIf(base === null)(
             "select m.codigo from tenant t join marca m on m.id = t.marca_id where t.id = $1",
             [rows[0]?.id],
           );
-          expect(t).toEqual([{ codigo: "zuluhub" }]);
+          expect(t).toEqual([{ codigo: "pedernal" }]);
         } finally {
           await alta.query("rollback").catch(() => undefined);
           await alta.end();
@@ -366,11 +366,11 @@ describe.skipIf(base === null)(
     // ===========================================================================================
     // El bloque que crea y endurece el rol público
     // ===========================================================================================
-    describe("el bloque del rol zuluhub_publico", () => {
+    describe("el bloque del rol pedernal_publico", () => {
       const bloque = async () => {
         const sql = await readFile(join(CARPETA_DE_MIGRACIONES, ARCHIVO_0007), "utf8");
         const bloques = sql.match(/^DO \$\$[\s\S]*?^\$\$;/gm) ?? [];
-        return bloques.find((x) => x.includes("zuluhub_publico")) ?? "";
+        return bloques.find((x) => x.includes("pedernal_publico")) ?? "";
       };
       /** Todo lo que haga `trabajo` se deshace: los roles son del clúster y las demás pruebas los usan. */
       const deshacible = async (trabajo: (c: pg.Client) => Promise<void>): Promise<void> => {
@@ -397,25 +397,25 @@ describe.skipIf(base === null)(
       it("falla con un mensaje claro si el rol es miembro de otro rol", async () => {
         const sql = await bloque();
         await deshacible(async (c) => {
-          await c.query("grant pg_monitor to zuluhub_publico");
-          await expect(c.query(sql)).rejects.toThrow(/zuluhub_publico es miembro de pg_monitor/);
+          await c.query("grant pg_monitor to pedernal_publico");
+          await expect(c.query(sql)).rejects.toThrow(/pedernal_publico es miembro de pg_monitor/);
         });
       });
 
       it("repone los atributos peligrosos y los topes de tiempo si alguien los cambió", async () => {
         const sql = await bloque();
         await deshacible(async (c) => {
-          await c.query("alter role zuluhub_publico createdb inherit");
-          await c.query("alter role zuluhub_publico reset statement_timeout");
-          await c.query("alter role zuluhub_publico reset lock_timeout");
+          await c.query("alter role pedernal_publico createdb inherit");
+          await c.query("alter role pedernal_publico reset statement_timeout");
+          await c.query("alter role pedernal_publico reset lock_timeout");
           await c.query(sql);
           const { rows } = await c.query<{ rolcreatedb: boolean; rolinherit: boolean }>(
-            "select rolcreatedb, rolinherit from pg_roles where rolname = 'zuluhub_publico'",
+            "select rolcreatedb, rolinherit from pg_roles where rolname = 'pedernal_publico'",
           );
           expect(rows).toEqual([{ rolcreatedb: false, rolinherit: false }]);
           const { rows: topes } = await c.query<{ setconfig: string[] }>(
             `select s.setconfig from pg_db_role_setting s join pg_roles r on r.oid = s.setrole
-           where s.setdatabase = 0 and r.rolname = 'zuluhub_publico'`,
+           where s.setdatabase = 0 and r.rolname = 'pedernal_publico'`,
           );
           expect([...(topes[0]?.setconfig ?? [])].sort()).toEqual([
             "idle_in_transaction_session_timeout=60s",
@@ -424,7 +424,7 @@ describe.skipIf(base === null)(
           ]);
           // sin objetos temporales para él
           const { rows: temp } = await c.query<{ t: boolean }>(
-            "select has_database_privilege('zuluhub_publico', current_database(), 'TEMP') as t",
+            "select has_database_privilege('pedernal_publico', current_database(), 'TEMP') as t",
           );
           expect(temp).toEqual([{ t: false }]);
         });
@@ -439,7 +439,7 @@ describe.skipIf(base === null)(
         const sql = await readFile(REVERSION, "utf8");
         await c.query("begin");
         try {
-          if (confirmar) await c.query("set local zuluhub.confirmar_reversion = 'SI'");
+          if (confirmar) await c.query("set local pedernal.confirmar_reversion = 'SI'");
           await c.query(sql);
           await c.query("commit");
         } catch (error) {
@@ -542,7 +542,7 @@ describe.skipIf(base === null)(
             await aplicarMigraciones(previa.aparte.base.dueno, con0007);
             await crear(previa.cliente, mundos[1] as Mundo);
             await expect(revertir(previa.cliente, false)).rejects.toThrow(
-              /zuluhub\.confirmar_reversion/,
+              /pedernal\.confirmar_reversion/,
             );
             // el rechazo no deshizo ni tocó nada (la reversión es una sola transacción)
             expect(
@@ -587,7 +587,7 @@ describe.skipIf(base === null)(
             [m.empresa],
           );
           await c.query("update sucursal set hora_de_corte = '05:30' where id = $1", [m.sucursal]);
-          await expect(revertir(c, false)).rejects.toThrow(/zuluhub\.confirmar_reversion/);
+          await expect(revertir(c, false)).rejects.toThrow(/pedernal\.confirmar_reversion/);
           await revertir(c, true);
           expect(await huellaDeCatalogo(c)).toEqual(catalogoAntes);
           expect(await huellaDeDatos(c, tambienSacar)).toEqual(datosAntes);
@@ -609,16 +609,16 @@ describe.skipIf(base === null)(
         });
       });
 
-      it("no borra el rol zuluhub_publico (es del clúster): lo deja sin acceso al esquema", async () => {
+      it("no borra el rol pedernal_publico (es del clúster): lo deja sin acceso al esquema", async () => {
         await conMigracionesAplicadas(async (previa, con0007) => {
           await aplicarMigraciones(previa.aparte.base.dueno, con0007);
           await revertir(previa.cliente, false);
           // El USAGE que le dio 0007 sobre el esquema se quita (el que tiene todo rol viene de PUBLIC, como en 0001).
           const { rows } = await previa.cliente.query<{ existe: boolean; explicito: boolean }>(
-            `select exists (select 1 from pg_roles where rolname = 'zuluhub_publico') as existe,
+            `select exists (select 1 from pg_roles where rolname = 'pedernal_publico') as existe,
                   exists (select 1 from pg_namespace n, aclexplode(n.nspacl) a
                            join pg_roles r on r.oid = a.grantee
-                          where n.nspname = 'public' and r.rolname = 'zuluhub_publico') as explicito`,
+                          where n.nspname = 'public' and r.rolname = 'pedernal_publico') as explicito`,
           );
           expect(rows).toEqual([{ existe: true, explicito: false }]);
         });

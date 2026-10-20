@@ -104,7 +104,7 @@ describe.skipIf(base === null)(
         const inventada = new Navegador();
         expect(await accesoDe(m, inventada)).toEqual({ ok: false, error: "sesion_vencida" });
         const falsa = {
-          headers: new Headers({ cookie: "__Host-zh_plat.session_token=inventada.firma-falsa" }),
+          headers: new Headers({ cookie: "__Host-pd_plat.session_token=inventada.firma-falsa" }),
         };
         const sesion = await m.consola.autenticacion.sesionDe(falsa, HOST_DE_LA_CONSOLA);
         expect(await m.puerta.conSesion(sesion)).toEqual({ ok: false, error: "sesion_vencida" });
@@ -453,7 +453,7 @@ describe.skipIf(base === null)(
         const rota = armarPuertaDeConsola({
           fuente: () => ({
             ...m.entorno,
-            ZULUHUB_DB_PLATAFORMA: `postgres://usuario-juguete:${clave}@127.0.0.1:1/base-juguete`,
+            PEDERNAL_DB_PLATAFORMA: `postgres://usuario-juguete:${clave}@127.0.0.1:1/base-juguete`,
           }),
           registrar: (d) => registros.push(d),
           hostDeLaConsola: HOST_DE_LA_CONSOLA,
@@ -481,7 +481,7 @@ describe.skipIf(base === null)(
         const { n: nav } = await adminConSesionCompleta(m);
         const registros: string[] = [];
         const sinClave = armarPuertaDeConsola({
-          fuente: () => ({ ZULUHUB_DB_PLATAFORMA: m.base.plataforma }),
+          fuente: () => ({ PEDERNAL_DB_PLATAFORMA: m.base.plataforma }),
           registrar: (d) => registros.push(d),
           hostDeLaConsola: HOST_DE_LA_CONSOLA,
         });
@@ -493,7 +493,7 @@ describe.skipIf(base === null)(
         } finally {
           await sinClave.cerrar();
         }
-        expect(registros.join("\n")).toContain("ZULUHUB_CLAVE_CONTEXTO falta");
+        expect(registros.join("\n")).toContain("PEDERNAL_CLAVE_CONTEXTO falta");
         expect(registros.join("\n")).not.toContain(new URL(m.base.plataforma).password);
       });
     });

@@ -53,9 +53,9 @@ export type DependenciasDeEnvioDeInvitacion = Readonly<{
   transacciones: Transacciones<TxDeEnvioDeInvitacion>;
   tokens: Pick<Tokens, "derivar">;
   correo: Correo;
-  /** Origen público de la aplicación, ya validado (`ZULUHUB_URL_BASE`). */
+  /** Origen público de la aplicación, ya validado (`PEDERNAL_URL_BASE`). */
   urlBase: string;
-  /** La marca del mail: la arma la composición desde la configuración (`ZULUHUB_NOMBRE_DE_MARCA`). */
+  /** La marca del mail: la arma la composición desde la configuración (`PEDERNAL_NOMBRE_DE_MARCA`). */
   marca: MarcaDeMail;
 }>;
 

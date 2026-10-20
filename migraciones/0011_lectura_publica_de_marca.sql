@@ -1,4 +1,4 @@
--- 0011_lectura_publica_de_marca: le concede a la puerta pública (`zuluhub_publico`) la lectura de UNA
+-- 0011_lectura_publica_de_marca: le concede a la puerta pública (`pedernal_publico`) la lectura de UNA
 -- columna más, `dominio.es_canonico`, para que la página por host sepa cuál es el host canónico de la
 -- aplicación de la marca (marcas y planes, §B.2.3 y §B.2.5; tramo M4b).
 -- EL NÚMERO 0011 ES PROVISORIO: se renumera al integrar si otra migración entra antes (0009 es facturación
@@ -18,7 +18,7 @@
 --  * No agrega NINGUNA función SECURITY DEFINER ni política: lo que el rol público ve de `dominio` lo sigue
 --    decidiendo `dominio_publico_leer` (solo dominios ACTIVOS), que no cambia.
 --  * Nadie recibe INSERT, UPDATE, DELETE ni TRUNCATE. El rol sigue siendo de solo lectura.
---  * DEPENDE de 0007 (`dominio`, el rol `zuluhub_publico` y su política); se comprueba al empezar.
+--  * DEPENDE de 0007 (`dominio`, el rol `pedernal_publico` y su política); se comprueba al empezar.
 --  * No crea roles ni da LOGIN ni contraseñas. Sin claves ni cadenas de conexión en este archivo.
 --
 -- Decisión de diseño (probada por tests):
@@ -30,7 +30,7 @@
 DO $$
 BEGIN
   IF to_regclass('public.dominio') IS NULL
-     OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'zuluhub_publico')
+     OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pedernal_publico')
      OR NOT EXISTS (
        SELECT 1 FROM pg_policies
         WHERE schemaname = 'public' AND tablename = 'dominio' AND policyname = 'dominio_publico_leer'
@@ -41,4 +41,4 @@ BEGIN
 END
 $$;
 
-GRANT SELECT (es_canonico) ON dominio TO zuluhub_publico;
+GRANT SELECT (es_canonico) ON dominio TO pedernal_publico;

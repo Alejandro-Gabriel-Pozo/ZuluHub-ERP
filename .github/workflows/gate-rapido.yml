@@ -77,7 +77,7 @@ jobs:
       - run: npm test
 
   web:
-    name: Web (next build sin variables ZULUHUB_*)
+    name: Web (next build sin variables PEDERNAL_*)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -89,10 +89,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: El entorno no trae ninguna variable ZULUHUB_*
+      - name: El entorno no trae ninguna variable PEDERNAL_*
         run: |
-          if env | grep -q '^ZULUHUB_'; then
-            echo "El job web no debe tener variables ZULUHUB_*" >&2
+          if env | grep -q '^PEDERNAL_'; then
+            echo "El job web no debe tener variables PEDERNAL_*" >&2
             exit 1
           fi
       - run: npm run build:web

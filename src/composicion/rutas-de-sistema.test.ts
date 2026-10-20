@@ -14,7 +14,7 @@ import {
 const SECRETO = "el-secreto-largo-del-cron-de-prueba";
 const AHORA = new Date("2026-10-14T06:17:00.000Z");
 const AZAR = () => new Uint8Array([0x1a, 0x2b, 0x3c, 0x4d]);
-const REFERENCIA = "ZH-1A2B-3C4D";
+const REFERENCIA = "PD-1A2B-3C4D";
 
 const RESUMEN: ResumenDeProcesamiento = {
   candidatos: 3,
@@ -72,7 +72,7 @@ function armar(
 }
 
 const pedido = (autorizacion?: string) =>
-  new Request("https://zuluhub-erp.vercel.app/api/trabajos/cron", {
+  new Request("https://pedernal-erp.vercel.app/api/trabajos/cron", {
     headers: autorizacion === undefined ? {} : { authorization: autorizacion },
   });
 
@@ -278,13 +278,13 @@ describe("atenderCron: qué hace", () => {
     expect(await r.json()).toEqual({ codigo: "ERROR_INTERNO", referencia: REFERENCIA });
   });
 
-  it("sin azar inyectado la referencia sale con la forma ZH-XXXX-XXXX", async () => {
+  it("sin azar inyectado la referencia sale con la forma PD-XXXX-XXXX", async () => {
     const { dependencias } = armar({ barrer: () => Promise.reject(new Error("x")) });
     const { secreto, procesador, barrido, ahora, registrar } = dependencias;
     const sinAzar: DependenciasDelCron = { secreto, procesador, barrido, ahora, registrar };
     const r = await atenderCron(pedido(`Bearer ${SECRETO}`), sinAzar);
     expect(((await r.json()) as { referencia: string }).referencia).toMatch(
-      /^ZH-[0-9A-F]{4}-[0-9A-F]{4}$/,
+      /^PD-[0-9A-F]{4}-[0-9A-F]{4}$/,
     );
   });
 

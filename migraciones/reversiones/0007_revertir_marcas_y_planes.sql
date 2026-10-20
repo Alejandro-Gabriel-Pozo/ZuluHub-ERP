@@ -11,7 +11,7 @@
 -- (que evade RLS, o el conteo de abajo no vería nada):
 --
 --     BEGIN;
---     SET LOCAL zuluhub.confirmar_reversion = 'SI';   -- solo si hay datos de marcas, planes o niveles
+--     SET LOCAL pedernal.confirmar_reversion = 'SI';   -- solo si hay datos de marcas, planes o niveles
 --     \i migraciones/reversiones/0007_revertir_marcas_y_planes.sql
 --     COMMIT;
 --
@@ -24,9 +24,9 @@
 -- Los intentos fallidos de la vista de grupo ('DENEGADO') NO se borran (la auditoría es de solo inserción):
 -- quedan como filas de acceso sin su marca de resultado.
 --
--- NO borra el rol `zuluhub_publico`: los roles son del clúster y otras bases pueden usarlo. Le quita el
+-- NO borra el rol `pedernal_publico`: los roles son del clúster y otras bases pueden usarlo. Le quita el
 -- acceso al esquema de esta base; si hace falta eliminarlo, se hace a mano cuando ninguna otra base lo use
--- (`DROP OWNED BY zuluhub_publico; DROP ROLE zuluhub_publico;`).
+-- (`DROP OWNED BY pedernal_publico; DROP ROLE pedernal_publico;`).
 
 DO $$
 DECLARE
@@ -52,8 +52,8 @@ BEGIN
        + (SELECT count(*) FROM public.tenant t JOIN public.marca m ON m.id = t.marca_id WHERE NOT m.es_principal)
        + (SELECT count(*) FROM public.auditoria_acceso_grupo WHERE resultado = 'DENEGADO')
     INTO v_datos;
-  IF v_datos > 0 AND coalesce(current_setting('zuluhub.confirmar_reversion', true), '') <> 'SI' THEN
-    RAISE EXCEPTION 'hay % filas de marcas, planes, módulos, niveles de control, horas de corte o intentos fallidos que esta reversión borraría: avisar al dueño y repetir con SET LOCAL zuluhub.confirmar_reversion = ''SI''', v_datos
+  IF v_datos > 0 AND coalesce(current_setting('pedernal.confirmar_reversion', true), '') <> 'SI' THEN
+    RAISE EXCEPTION 'hay % filas de marcas, planes, módulos, niveles de control, horas de corte o intentos fallidos que esta reversión borraría: avisar al dueño y repetir con SET LOCAL pedernal.confirmar_reversion = ''SI''', v_datos
       USING ERRCODE = '55000';
   END IF;
 END
@@ -111,7 +111,7 @@ ALTER TABLE referencia_de_error DROP CONSTRAINT referencia_de_error_referencia_u
 ALTER TABLE sucursal DROP COLUMN hora_de_corte;
 
 -- El rol público queda sin acceso al esquema de esta base (el rol es del clúster y no se borra).
-REVOKE USAGE ON SCHEMA public FROM zuluhub_publico;
+REVOKE USAGE ON SCHEMA public FROM pedernal_publico;
 
 -- Sin esta fila, la migración figuraría aplicada y el ejecutor no volvería a correrla.
 DO $$

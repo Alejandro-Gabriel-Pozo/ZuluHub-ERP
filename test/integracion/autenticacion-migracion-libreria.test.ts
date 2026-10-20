@@ -21,7 +21,7 @@ import {
 
 /**
  * Autenticación (W3b): la migración 0010 (que W3a escribió a mano) contra la librería REAL, la 1.7.7, con el
- * rol limitado `zuluhub_autenticacion` (sin CREATE). La librería no puede tener nada por crear, agregar ni
+ * rol limitado `pedernal_autenticacion` (sin CREATE). La librería no puede tener nada por crear, agregar ni
  * indexar; sus propias columnas coinciden con las de la migración; la columna propia `session.host` (NOT
  * NULL) convive con lo que la librería inserta porque el gancho G4 la llena antes del insert; y el rol no
  * puede hacer DDL ni ver una tabla de negocio. Es la verificación que W3a dejó pedida (hallazgo del spec §4.2).
@@ -367,7 +367,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra Better
       expect(await codigo(sql`select 1 from ${sql.table(tabla)}`), tabla).toBe("42501");
     }
     const { rows } = await sql<{ yo: string }>`select current_user as yo`.execute(conexion.db);
-    expect(rows[0]?.yo).toBe("zuluhub_autenticacion");
+    expect(rows[0]?.yo).toBe("pedernal_autenticacion");
   });
 
   describe("la columna propia session.host (NOT NULL) y lo que inserta la librería", () => {

@@ -2,7 +2,7 @@
 --
 -- Reglas de esta migración:
 --  * NO ensancha ningún privilegio: ni un GRANT, ni una política, ni una función SECURITY DEFINER. El
---    procesador usa los permisos que ya tiene `zuluhub_trabajos` (leer la cola y avanzar `estado`,
+--    procesador usa los permisos que ya tiene `pedernal_trabajos` (leer la cola y avanzar `estado`,
 --    `intentos`, `proximo_intento`, `tomado_hasta`, `ultimo_error`).
 --  * Es compatible hacia atrás y no destructiva: agrega un disparador y una restricción. Las filas que
 --    ya existen cumplen ambos (los estados nuevos de las filas viejas no se tocan).

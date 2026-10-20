@@ -1,7 +1,7 @@
 /**
  * Qué hace la web cuando una persona con sesión entra: ¿a cuál empresa? (armazón web §3.2 paso 9, §1.1
  * «Elegir empresa»). Decide solo con dos datos que ya resolvió el servidor: las empresas de la persona EN LA
- * MARCA DEL HOST y el valor de la cookie `zh_empresa` de este host. Previene: entrar a una empresa que la
+ * MARCA DEL HOST y el valor de la cookie `pd_empresa` de este host. Previene: entrar a una empresa que la
  * persona no tiene en esta marca (la cookie la puede inventar el navegador: se valida siempre contra la
  * lista) y elegir de más cuando hay una sola. Chequeo: `empresa-elegida.test.ts` y las pruebas de aislamiento
  * entre marcas de `test/integracion/web-*.test.ts`.

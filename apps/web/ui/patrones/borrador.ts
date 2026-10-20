@@ -8,7 +8,7 @@ import { campoConPosibleSecreto } from "../../../../src/puertos/sin-secretos";
  * `sessionStorage` puede faltar o fallar (ventana privada, sitio bloqueado): entonces no se guarda y listo.
  */
 
-const PREFIJO = "zh:borrador:";
+const PREFIJO = "pd:borrador:";
 
 export type Borrador = Readonly<Record<string, string>>;
 

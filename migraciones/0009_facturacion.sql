@@ -472,7 +472,7 @@ BEGIN
         USING ERRCODE = '23514', CONSTRAINT = 'serie_transicion_invalida';
     END IF;
     IF OLD.estado = 'LIBRE' THEN
-      PERFORM pg_advisory_xact_lock_shared(hashtextextended('zuluhub.fiscal.emisor:' || OLD.emisor_id::text, 0));
+      PERFORM pg_advisory_xact_lock_shared(hashtextextended('pedernal.fiscal.emisor:' || OLD.emisor_id::text, 0));
     END IF;
   ELSIF OLD.estado = 'EN_CURSO' THEN
     -- Una reserva incierta sigue EN_CURSO sin cambios.
@@ -955,13 +955,13 @@ REVOKE ALL ON comprobante, comprobante_linea, comprobante_alicuota, certificado_
   FROM PUBLIC;
 
 -- La función de validación la ejecuta quien escribe las columnas que valida (la aplicación).
-GRANT EXECUTE ON FUNCTION texto_fiscal_valido(text, integer) TO zuluhub_app;
+GRANT EXECUTE ON FUNCTION texto_fiscal_valido(text, integer) TO pedernal_app;
 
 -- app: opera dentro de su empresa. Los demás roles no reciben nada (fallan cerrados).
 GRANT SELECT ON comprobante, comprobante_linea, comprobante_alicuota, certificado_arca, acceso_arca, intento_arca
-  TO zuluhub_app;
-GRANT UPDATE (ambiente) ON punto_de_venta TO zuluhub_app;
-GRANT INSERT (ambiente) ON serie_comprobante TO zuluhub_app;
+  TO pedernal_app;
+GRANT UPDATE (ambiente) ON punto_de_venta TO pedernal_app;
+GRANT INSERT (ambiente) ON serie_comprobante TO pedernal_app;
 -- El contenido nace de una vez; el estado, los envíos, el número y el CAE no se eligen al crear.
 GRANT INSERT (id, empresa_id, emisor_id, punto_de_venta_id, ambiente, origen_tipo, origen_id, clase, tipo_comprobante,
               concepto, servicio_desde, servicio_hasta, vencimiento_pago, moneda, modo_de_precio,
@@ -970,25 +970,25 @@ GRANT INSERT (id, empresa_id, emisor_id, punto_de_venta_id, ambiente, origen_tip
               emisor_iibb_condicion, punto_de_venta_numero, punto_de_venta_domicilio, receptor_parte_id,
               receptor_nombre, receptor_documento_tipo, receptor_documento_numero, receptor_condicion_iva,
               receptor_domicilio, comprobante_asociado_id, motivo, huella, version_de_representacion, creado_por)
-  ON comprobante TO zuluhub_app;
+  ON comprobante TO pedernal_app;
 GRANT UPDATE (estado, envios, numero_reservado, fecha_emision, numero, cae, cae_vence, autorizado_en, resuelto_por,
               motivo_descarte)
-  ON comprobante TO zuluhub_app;
+  ON comprobante TO pedernal_app;
 GRANT INSERT (empresa_id, comprobante_id, posicion, descripcion, cantidad, precio_unitario, descuento, alicuota, importe)
-  ON comprobante_linea TO zuluhub_app;
-GRANT INSERT (empresa_id, comprobante_id, alicuota, total, neto, iva) ON comprobante_alicuota TO zuluhub_app;
+  ON comprobante_linea TO pedernal_app;
+GRANT INSERT (empresa_id, comprobante_id, alicuota, total, neto, iva) ON comprobante_alicuota TO pedernal_app;
 GRANT INSERT (id, empresa_id, comprobante_id, operacion, numero, desenlace, mensajes, respuesta, huella_pedido,
               iniciado_en, duracion_ms)
-  ON intento_arca TO zuluhub_app;
+  ON intento_arca TO pedernal_app;
 GRANT INSERT (id, empresa_id, emisor_id, ambiente, alias, cuit_titular, pedido_pem, clave_cifrada, clave_nonce,
               clave_etiqueta, clave_kid, creado_por)
-  ON certificado_arca TO zuluhub_app;
+  ON certificado_arca TO pedernal_app;
 GRANT UPDATE (estado, certificado_pem, huella_sha256, vence_en, autorizacion_verificada_en)
-  ON certificado_arca TO zuluhub_app;
-GRANT INSERT (empresa_id, certificado_id, servicio) ON acceso_arca TO zuluhub_app;
+  ON certificado_arca TO pedernal_app;
+GRANT INSERT (empresa_id, certificado_id, servicio) ON acceso_arca TO pedernal_app;
 GRANT UPDATE (credencial_cifrada, credencial_nonce, credencial_etiqueta, credencial_kid, generado_en, expira_en,
               renovando_hasta)
-  ON acceso_arca TO zuluhub_app;
+  ON acceso_arca TO pedernal_app;
 
 -- ---------------------------------------------------------------------------------------------
 -- RLS: activa y forzada en toda tabla nueva; sin política no hay acceso
@@ -1011,47 +1011,47 @@ ALTER TABLE intento_arca FORCE ROW LEVEL SECURITY;
 -- `empresa_operable(empresa_id)`; los autores con `IS NOT DISTINCT FROM` la persona del contexto (el trabajo
 -- de sistema escribe estados e intentos, no autores). Sin `FOR ALL`: cada comando tiene su política.
 -- ---------------------------------------------------------------------------------------------
-CREATE POLICY comprobante_app_leer ON comprobante FOR SELECT TO zuluhub_app
+CREATE POLICY comprobante_app_leer ON comprobante FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY comprobante_app_alta ON comprobante FOR INSERT TO zuluhub_app
+CREATE POLICY comprobante_app_alta ON comprobante FOR INSERT TO pedernal_app
   WITH CHECK (
     empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id)
     AND creado_por IS NOT DISTINCT FROM (SELECT app_persona_id())
   );
-CREATE POLICY comprobante_app_cambiar ON comprobante FOR UPDATE TO zuluhub_app
+CREATE POLICY comprobante_app_cambiar ON comprobante FOR UPDATE TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id))
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
 
-CREATE POLICY comprobante_linea_app_leer ON comprobante_linea FOR SELECT TO zuluhub_app
+CREATE POLICY comprobante_linea_app_leer ON comprobante_linea FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY comprobante_linea_app_alta ON comprobante_linea FOR INSERT TO zuluhub_app
+CREATE POLICY comprobante_linea_app_alta ON comprobante_linea FOR INSERT TO pedernal_app
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
 
-CREATE POLICY comprobante_alicuota_app_leer ON comprobante_alicuota FOR SELECT TO zuluhub_app
+CREATE POLICY comprobante_alicuota_app_leer ON comprobante_alicuota FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY comprobante_alicuota_app_alta ON comprobante_alicuota FOR INSERT TO zuluhub_app
+CREATE POLICY comprobante_alicuota_app_alta ON comprobante_alicuota FOR INSERT TO pedernal_app
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
 
-CREATE POLICY intento_arca_app_leer ON intento_arca FOR SELECT TO zuluhub_app
+CREATE POLICY intento_arca_app_leer ON intento_arca FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY intento_arca_app_alta ON intento_arca FOR INSERT TO zuluhub_app
+CREATE POLICY intento_arca_app_alta ON intento_arca FOR INSERT TO pedernal_app
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
 
-CREATE POLICY certificado_arca_app_leer ON certificado_arca FOR SELECT TO zuluhub_app
+CREATE POLICY certificado_arca_app_leer ON certificado_arca FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY certificado_arca_app_alta ON certificado_arca FOR INSERT TO zuluhub_app
+CREATE POLICY certificado_arca_app_alta ON certificado_arca FOR INSERT TO pedernal_app
   WITH CHECK (
     empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id)
     AND creado_por IS NOT DISTINCT FROM (SELECT app_persona_id())
   );
-CREATE POLICY certificado_arca_app_cambiar ON certificado_arca FOR UPDATE TO zuluhub_app
+CREATE POLICY certificado_arca_app_cambiar ON certificado_arca FOR UPDATE TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id))
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
 
-CREATE POLICY acceso_arca_app_leer ON acceso_arca FOR SELECT TO zuluhub_app
+CREATE POLICY acceso_arca_app_leer ON acceso_arca FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY acceso_arca_app_alta ON acceso_arca FOR INSERT TO zuluhub_app
+CREATE POLICY acceso_arca_app_alta ON acceso_arca FOR INSERT TO pedernal_app
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
-CREATE POLICY acceso_arca_app_cambiar ON acceso_arca FOR UPDATE TO zuluhub_app
+CREATE POLICY acceso_arca_app_cambiar ON acceso_arca FOR UPDATE TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id))
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));

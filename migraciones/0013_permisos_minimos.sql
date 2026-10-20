@@ -1,12 +1,12 @@
 -- 0013_permisos_minimos: cierra dos hallazgos de la revisión de seguridad, los dos SOLO de permisos (quitar de más y
 -- dar lo mínimo):
 --
---  1. La aplicación (`zuluhub_app`) no podía leer la tabla de control `migracion` (la que lleva el ejecutor con las
+--  1. La aplicación (`pedernal_app`) no podía leer la tabla de control `migracion` (la que lleva el ejecutor con las
 --     migraciones aplicadas), y la guarda de la web (`MIGRACION_REQUERIDA`, «En mantenimiento») necesita saber cuál
 --     es la última. La lectura es `SELECT nombre FROM migracion ORDER BY nombre DESC LIMIT 1`: se le concede
 --     `SELECT` sobre UNA columna, `nombre`. No `checksum` (el hash de cada archivo: no se usa y no es de la web) ni
 --     `aplicada_en`, y ni una escritura. Ningún otro rol cambia.
---  2. La librería de autenticación (`zuluhub_autenticacion`) tenía `DELETE` sobre las CINCO tablas de su esquema
+--  2. La librería de autenticación (`pedernal_autenticacion`) tenía `DELETE` sobre las CINCO tablas de su esquema
 --     (0010). Sobre `autenticacion."user"` y `autenticacion.account` no hace falta: las rutas `/delete-user`,
 --     `/delete-user/callback` y `/unlink-account` están cerradas (`rutas-bloqueadas.ts`, sin plugins de
 --     administración ni anónimos) y borrar un usuario arrastra en cascada sus sesiones y cuentas. Se le quita ahí.
@@ -30,7 +30,7 @@
 --
 -- Decisión de diseño (probada por tests):
 --
---  P1. Primero se retira todo privilegio de TABLA de `zuluhub_app` sobre `migracion` y después se concede la
+--  P1. Primero se retira todo privilegio de TABLA de `pedernal_app` sobre `migracion` y después se concede la
 --      columna. Hoy no tiene ninguno (ninguna migración se lo da), así que el retiro no cambia nada; sirve para que
 --      el resultado sea EXACTAMENTE `SELECT (nombre)` aunque alguien le haya concedido de más a mano en una base
 --      (un `GRANT SELECT ON migracion` de urgencia dejaría leer el `checksum` y el retiro lo corrige).
@@ -43,8 +43,8 @@ BEGIN
   END IF;
   IF to_regclass('autenticacion."user"') IS NULL
      OR to_regclass('autenticacion.account') IS NULL
-     OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'zuluhub_app')
-     OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'zuluhub_autenticacion') THEN
+     OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pedernal_app')
+     OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pedernal_autenticacion') THEN
     RAISE EXCEPTION '0013 requiere 0010_autenticacion aplicada antes (falta el esquema de la librería o alguno de sus roles)'
       USING ERRCODE = '55000';
   END IF;
@@ -52,8 +52,8 @@ END
 $$;
 
 -- 1. La guarda de migración de la web: solo el nombre de cada migración aplicada.
-REVOKE ALL ON migracion FROM zuluhub_app;
-GRANT SELECT (nombre) ON migracion TO zuluhub_app;
+REVOKE ALL ON migracion FROM pedernal_app;
+GRANT SELECT (nombre) ON migracion TO pedernal_app;
 
 -- 2. La librería de autenticación ya no borra usuarios ni cuentas.
-REVOKE DELETE ON autenticacion."user", autenticacion.account FROM zuluhub_autenticacion;
+REVOKE DELETE ON autenticacion."user", autenticacion.account FROM pedernal_autenticacion;

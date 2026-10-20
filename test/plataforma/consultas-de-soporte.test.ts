@@ -92,7 +92,7 @@ describe("toda consulta es de solo lectura y se pide `read committed`", () => {
     await consultas.consultarAuditoria(comoAdministrador, {});
     await consultas.verConfiguracion(comoAdministrador);
     await consultas.catalogoDePerillas(comoAdministrador);
-    await consultas.buscarReferencia(comoAdministrador, { referencia: "ZH-0000-0000" });
+    await consultas.buscarReferencia(comoAdministrador, { referencia: "PD-0000-0000" });
     expect(transacciones.pedidas).toHaveLength(9);
     for (const pedida of transacciones.pedidas) {
       expect(pedida).toEqual({
@@ -776,7 +776,7 @@ describe("verConfiguracion", () => {
 
 describe("buscarReferencia", () => {
   const referencia = {
-    referencia: "ZH-AB12-CD34",
+    referencia: "PD-AB12-CD34",
     accion: "usuarios.invitar",
     motivo: "SIN_PERMISO",
     empresaId: empresaId(uuid(1)),
@@ -787,25 +787,25 @@ describe("buscarReferencia", () => {
   it("normaliza lo que dictó la persona y devuelve lo registrado, tal cual", async () => {
     const { consultas, soporte } = armar({ referencias: [referencia] });
     const r = await consultas.buscarReferencia(comoAdministrador, {
-      referencia: "  zh-ab12-cd34 ",
+      referencia: "  pd-ab12-cd34 ",
     });
     expect(r).toEqual({ ok: true, valor: [referencia] });
     expect(soporte.pedidos).toEqual([
-      { metodo: "buscarReferencias", argumentos: ["ZH-AB12-CD34"] },
+      { metodo: "buscarReferencias", argumentos: ["PD-AB12-CD34"] },
     ]);
   });
 
   it("devuelve todas las coincidencias (dos errores pueden haber sorteado el mismo código)", async () => {
     const otra = { ...referencia, accion: "sucursales.crear", empresaId: null, personaId: null };
     const { consultas } = armar({ referencias: [referencia, otra] });
-    const r = await consultas.buscarReferencia(comoAdministrador, { referencia: "ZH-AB12-CD34" });
+    const r = await consultas.buscarReferencia(comoAdministrador, { referencia: "PD-AB12-CD34" });
     expect(r).toEqual({ ok: true, valor: [referencia, otra] });
   });
 
   it("una referencia que no existe es una lista vacía, no un error", async () => {
     const { consultas } = armar();
     expect(
-      await consultas.buscarReferencia(comoAdministrador, { referencia: "ZH-0000-0000" }),
+      await consultas.buscarReferencia(comoAdministrador, { referencia: "PD-0000-0000" }),
     ).toEqual({
       ok: true,
       valor: [],
@@ -814,7 +814,7 @@ describe("buscarReferencia", () => {
 
   it("una referencia mal formada es REFERENCIA_INVALIDA y no lee nada", async () => {
     const { consultas, soporte } = armar();
-    for (const mala of ["", "ZH-12-34", "ZH-GGGG-0000", "AB12-CD34", "ZH-AB12-CD34-0000"]) {
+    for (const mala of ["", "PD-12-34", "PD-GGGG-0000", "AB12-CD34", "PD-AB12-CD34-0000"]) {
       expect(
         await consultas.buscarReferencia(comoAdministrador, { referencia: mala }),
         mala,

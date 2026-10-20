@@ -156,14 +156,14 @@ describe("ProveedorDeSesion", () => {
     await pasar(15 * MINUTO);
     await expect.element(page.getByRole("dialog", { name: "Tu sesión venció" })).toBeVisible();
     expect(leerBorrador(nombreDelBorrador())).toEqual({ nota: "dos medialunas para la mesa 4" });
-    expect(sessionStorage.getItem(`zh:borrador:${nombreDelBorrador()}`)).not.toMatch(
+    expect(sessionStorage.getItem(`pd:borrador:${nombreDelBorrador()}`)).not.toMatch(
       /no-se-guarda|tampoco|ni-esto/,
     );
   });
 
   it("al volver de ingresar, lo guardado vuelve al campo y se descarta (se usa una sola vez)", async () => {
     sessionStorage.setItem(
-      `zh:borrador:${nombreDelBorrador()}`,
+      `pd:borrador:${nombreDelBorrador()}`,
       JSON.stringify({ nota: "dos medialunas para la mesa 4" }),
     );
     const { container } = await render(<Pantalla />);

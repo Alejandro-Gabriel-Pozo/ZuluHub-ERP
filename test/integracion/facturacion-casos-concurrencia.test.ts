@@ -27,7 +27,7 @@ const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 600_000 });
 
 /** Rondas de las pruebas largas; el CI y la estabilidad local pueden subirlas con la variable. */
-const RONDAS = Number(process.env["ZULUHUB_RONDAS_FACTURACION"] ?? "2");
+const RONDAS = Number(process.env["PEDERNAL_RONDAS_FACTURACION"] ?? "2");
 
 describe.skipIf(base === null)("facturación F5: concurrencia de los casos de uso", () => {
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;

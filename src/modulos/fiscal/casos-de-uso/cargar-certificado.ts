@@ -18,13 +18,13 @@ import { DECLARACIONES_DE_CERTIFICADOS } from "./declaraciones-de-certificados";
 
 /**
  * `cargarCertificado` (spec H7 facturación §B.4 y §B.6.2, tramo F7): el gerente pega el certificado que ARCA le
- * devolvió contra el pedido que generó ZuluHub, y pasa de `PEDIDO_GENERADO` a `VIGENTE`.
+ * devolvió contra el pedido que generó Pedernal, y pasa de `PEDIDO_GENERADO` a `VIGENTE`.
  *
  * Una transacción SERIALIZABLE con el guard primero: 1. guard `certificados.gestionar`. 2. La empresa opera.
  * 3. El texto es UN certificado legible (una clave privada pegada por error es ilegible y nunca se guarda ni se
  * repite). 4. El pedido existe. 5. Repetición: el mismo certificado (por su huella) en un pedido ya cargado
  * devuelve lo mismo (`yaEstaba`) sin escribir; otro certificado, o un pedido descartado, `PEDIDO_NO_PENDIENTE`.
- * 6. Las validaciones (§B.6.2), en este orden: corresponde a la clave que generó ZuluHub (se descifra SOLO en
+ * 6. Las validaciones (§B.6.2), en este orden: corresponde a la clave que generó Pedernal (se descifra SOLO en
  * memoria y atada a su fila), el `serialNumber` del sujeto es el CUIT del emisor (`TITULAR_DISTINTO`: cada cliente
  * es dueño de su certificado), la cadena cierra contra la del mismo ambiente, no está vencido. 7. Si el emisor ya
  * tenía uno `VIGENTE` en ese ambiente, queda `REEMPLAZADO` en la misma transacción (`reemplazoA`). 8. Auditoría

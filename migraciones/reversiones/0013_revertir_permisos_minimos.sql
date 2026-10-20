@@ -1,5 +1,5 @@
 -- 0013_revertir_permisos_minimos: deshace la migración 0013_permisos_minimos y deja los privilegios como estaban
--- después de 0012: `zuluhub_autenticacion` vuelve a poder borrar usuarios y cuentas, y `zuluhub_app` deja de poder
+-- después de 0012: `pedernal_autenticacion` vuelve a poder borrar usuarios y cuentas, y `pedernal_app` deja de poder
 -- leer la tabla de control `migracion`.
 --
 -- NO es destructiva: no toca ninguna fila ni ningún objeto, solo privilegios. Ojo con los dos efectos:
@@ -14,11 +14,11 @@
 --     \i migraciones/reversiones/0013_revertir_permisos_minimos.sql
 --     COMMIT;
 --
--- Antes de 0013 `zuluhub_app` no tenía NINGÚN privilegio sobre `migracion` (ninguna migración se lo daba): por eso
+-- Antes de 0013 `pedernal_app` no tenía NINGÚN privilegio sobre `migracion` (ninguna migración se lo daba): por eso
 -- revertir es solo quitarle la columna. Se puede repetir sin que cambie nada.
 
-REVOKE SELECT (nombre) ON migracion FROM zuluhub_app;
-GRANT DELETE ON autenticacion."user", autenticacion.account TO zuluhub_autenticacion;
+REVOKE SELECT (nombre) ON migracion FROM pedernal_app;
+GRANT DELETE ON autenticacion."user", autenticacion.account TO pedernal_autenticacion;
 
 -- Sin esta fila, la migración figuraría aplicada y el ejecutor no volvería a correrla.
 DO $$

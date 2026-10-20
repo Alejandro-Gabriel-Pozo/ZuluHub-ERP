@@ -32,7 +32,7 @@ import {
  *  - La salud: `SELECT 1` con el rol de la aplicación; con la clave mal puesta, falla cerrado y sin detalle.
  *  - P-15, la guarda de migración: base al día → sigue; con una migración menos → «no al día»; apenas se
  *    migra, vuelve sola; sin permiso de lectura sobre `migracion` → falla cerrado (ver el informe: hace falta
- *    un `GRANT SELECT ON migracion TO zuluhub_app` que hoy ninguna migración da).
+ *    un `GRANT SELECT ON migracion TO pedernal_app` que hoy ninguna migración da).
  */
 
 const base = inject("baseDePruebas");
@@ -44,7 +44,7 @@ const CARPETA_REAL = join(import.meta.dirname, "../../migraciones");
 const pausa = (ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms));
 
 const pedidoDeCron = (autorizacion?: string) =>
-  new Request("https://zuluhub-erp.vercel.app/api/trabajos/cron", {
+  new Request("https://pedernal-erp.vercel.app/api/trabajos/cron", {
     headers: autorizacion === undefined ? {} : { authorization: autorizacion },
   });
 
@@ -295,7 +295,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
   describe("la salud", () => {
     const sistemaCon = (url: string, registrar: (d: string) => void) => {
       const conexiones = armarConexiones({
-        fuente: () => ({ ZULUHUB_DB_APP: url }),
+        fuente: () => ({ PEDERNAL_DB_APP: url }),
         registrar,
       });
       aCerrar.push({ cerrar: () => conexiones.lecturasDeSistema().cerrar() });
@@ -314,7 +314,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
     it("con un rol que no existe: 503 {ok:false} sin ningún detalle; el tipo de la falla va solo al registro", async () => {
       // Un rol inexistente (y no una clave equivocada): el CI acepta cualquier clave (autenticación `trust`).
       const mala = new URL(propia.base.app);
-      mala.username = "zuluhub_rol_que_no_existe";
+      mala.username = "pedernal_rol_que_no_existe";
       const registrados: string[] = [];
       const sistema = sistemaCon(mala.toString(), (d) => registrados.push(d));
       const r = await atenderSalud({ baseResponde: () => sistema.baseResponde()() });
@@ -322,7 +322,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
       expect(await r.text()).toBe('{"ok":false}');
       expect(registrados).toHaveLength(1);
       expect(registrados[0]).toMatch(/^\[salud\] la base no respondió: \w+( [0-9A-Z]{5})?$/);
-      expect(registrados[0]).not.toContain("zuluhub_rol_que_no_existe");
+      expect(registrados[0]).not.toContain("pedernal_rol_que_no_existe");
       expect(registrados[0]).not.toContain(new URL(propia.base.app).hostname);
     });
 
@@ -356,7 +356,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
     let anteultima: string;
     const conGuarda = (url: string, reloj: { valor: number }, registrados: string[]) => {
       const conexiones = armarConexiones({
-        fuente: () => ({ ZULUHUB_DB_APP: url }),
+        fuente: () => ({ PEDERNAL_DB_APP: url }),
         registrar: (d) => registrados.push(d),
       });
       aCerrar.push({ cerrar: () => conexiones.lecturasDeSistema().cerrar() });
@@ -367,7 +367,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
     };
 
     beforeAll(async () => {
-      carpetaSinLaUltima = await mkdtemp(join(tmpdir(), "zuluhub-migraciones-"));
+      carpetaSinLaUltima = await mkdtemp(join(tmpdir(), "pedernal-migraciones-"));
       const archivos = (await readdir(CARPETA_REAL))
         .filter((n) => /^\d{4}_.+\.sql$/.test(n))
         .sort();
@@ -396,7 +396,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
         const cliente = new pg.Client({ connectionString: aparte.base.dueno });
         await cliente.connect();
         try {
-          await cliente.query("REVOKE SELECT (nombre) ON migracion FROM zuluhub_app");
+          await cliente.query("REVOKE SELECT (nombre) ON migracion FROM pedernal_app");
         } finally {
           await cliente.end();
         }
@@ -418,11 +418,11 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
         const cliente = new pg.Client({ connectionString: aparte.base.dueno });
         await cliente.connect();
         try {
-          await cliente.query("GRANT SELECT ON migracion TO zuluhub_app");
+          await cliente.query("GRANT SELECT ON migracion TO pedernal_app");
           const registrados: string[] = [];
           const reloj = { valor: 0 };
           const conexiones = armarConexiones({
-            fuente: () => ({ ZULUHUB_DB_APP: aparte.base.app }),
+            fuente: () => ({ PEDERNAL_DB_APP: aparte.base.app }),
             registrar: (d) => registrados.push(d),
           });
           aCerrar.push({ cerrar: () => conexiones.lecturasDeSistema().cerrar() });

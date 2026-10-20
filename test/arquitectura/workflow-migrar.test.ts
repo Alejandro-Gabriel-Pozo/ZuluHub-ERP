@@ -111,8 +111,8 @@ describe("workflow migrar.yml", () => {
     expect([...new Set(usados)].sort()).toEqual([
       "NEON_API_KEY",
       "NEON_PROJECT_ID",
-      "ZULUHUB_CLAVE_CONTEXTO",
-      "ZULUHUB_DB_DUENO_DIRECTA",
+      "PEDERNAL_CLAVE_CONTEXTO",
+      "PEDERNAL_DB_DUENO_DIRECTA",
     ]);
     for (const linea of LINEAS.filter((l) => l.includes("secrets.") && !l.trim().startsWith("#"))) {
       expect(linea.trim(), linea).toMatch(/^[A-Z_]+: \$\{\{ secrets\.[A-Z_]+ \}\}$/);
@@ -127,28 +127,30 @@ describe("workflow migrar.yml", () => {
   });
 
   it("la base se alimenta con el secreto de la cadena DIRECTA del dueño, solo en los pasos que migran", () => {
-    const conLaBase = pasos().filter((p) => p.texto.includes("secrets.ZULUHUB_DB_DUENO_DIRECTA"));
+    const conLaBase = pasos().filter((p) => p.texto.includes("secrets.PEDERNAL_DB_DUENO_DIRECTA"));
     expect(conLaBase.map((p) => p.nombre)).toEqual([
       "Ver qué falta aplicar",
       "Aplicar las migraciones",
       "Instalar la clave de contexto (si el Environment la tiene)",
     ]);
     for (const p of conLaBase) {
-      expect(p.texto).toContain("ZULUHUB_DB_MIGRACIONES: ${{ secrets.ZULUHUB_DB_DUENO_DIRECTA }}");
+      expect(p.texto).toContain(
+        "PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}",
+      );
     }
     // Nunca la cadena del pooler ni la de la aplicación, y nada de Vercel.
-    expect(SIN_COMENTARIOS).not.toMatch(/pooler|ZULUHUB_DB_APP|ZULUHUB_DB_TRABAJOS|VERCEL/i);
+    expect(SIN_COMENTARIOS).not.toMatch(/pooler|PEDERNAL_DB_APP|PEDERNAL_DB_TRABAJOS|VERCEL/i);
   });
 
   it("los pasos que ven la base no tienen los secretos de Neon, y el de Neon no ve la base", () => {
     const respaldo = paso("Rama de respaldo");
-    expect(respaldo.texto).not.toContain("ZULUHUB_DB_DUENO_DIRECTA");
-    expect(respaldo.texto).not.toContain("ZULUHUB_CLAVE_CONTEXTO");
+    expect(respaldo.texto).not.toContain("PEDERNAL_DB_DUENO_DIRECTA");
+    expect(respaldo.texto).not.toContain("PEDERNAL_CLAVE_CONTEXTO");
     for (const nombre of ["Ver qué falta", "Aplicar las migraciones", "Instalar la clave"]) {
       expect(paso(nombre).texto).not.toContain("NEON_");
     }
-    expect(paso("Aplicar las migraciones").texto).not.toContain("ZULUHUB_CLAVE_CONTEXTO");
-    expect(paso("Ver qué falta").texto).not.toContain("ZULUHUB_CLAVE_CONTEXTO");
+    expect(paso("Aplicar las migraciones").texto).not.toContain("PEDERNAL_CLAVE_CONTEXTO");
+    expect(paso("Ver qué falta").texto).not.toContain("PEDERNAL_CLAVE_CONTEXTO");
   });
 
   it("el orden es: ver, respaldo, aplicar, clave de contexto", () => {
@@ -190,9 +192,9 @@ describe("workflow migrar.yml", () => {
 
   it("la clave de contexto se instala solo si el Environment la tiene, con el mismo script del dueño", () => {
     const { texto } = paso("Instalar la clave");
-    expect(texto).toContain('[ -z "${ZULUHUB_CLAVE_CONTEXTO:-}" ]');
+    expect(texto).toContain('[ -z "${PEDERNAL_CLAVE_CONTEXTO:-}" ]');
     expect(texto).toContain("npm run instalar-clave");
-    expect(texto).toContain("ZULUHUB_CLAVE_CONTEXTO: ${{ secrets.ZULUHUB_CLAVE_CONTEXTO }}");
+    expect(texto).toContain("PEDERNAL_CLAVE_CONTEXTO: ${{ secrets.PEDERNAL_CLAVE_CONTEXTO }}");
   });
 
   it("`--ver` falla el paso si el script falla (pipefail) y los pasos con tuberías usan bash", () => {

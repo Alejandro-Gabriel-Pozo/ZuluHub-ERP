@@ -177,7 +177,7 @@ describe("cargarEnVercel", () => {
       remota("A"),
       remota("DATABASE_URL", { target: ["preview", "production"] }),
       remota("POSTGRES_URL", { target: ["production"] }),
-      remota("ZULUHUB_DB_MIGRACIONES", { target: ["preview"] }),
+      remota("PEDERNAL_DB_MIGRACIONES", { target: ["preview"] }),
       remota("OTRA", { type: "plain", target: ["preview"] }),
     ]);
     const r = await cargarEnVercel(cliente, "preview", [
@@ -185,7 +185,7 @@ describe("cargarEnVercel", () => {
     ]);
     expect(r.problemas).toEqual([
       { nombre: "DATABASE_URL", texto: "sigue en preview" },
-      { nombre: "ZULUHUB_DB_MIGRACIONES", texto: "sigue en preview" },
+      { nombre: "PEDERNAL_DB_MIGRACIONES", texto: "sigue en preview" },
     ]);
     expect(r.noEscritas).toEqual([]);
   });

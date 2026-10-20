@@ -92,7 +92,7 @@ const conBase = (url: string, nombre: string): string => {
 /** Una copia de la plantilla (0001 a 0007) con ese texto de la migración de captación aplicado; se destruye al terminar. */
 async function conMigracion<T2>(sql: string, trabajo: (ctx: Ctx) => Promise<T2>): Promise<T2> {
   const b = base as BaseDePruebas;
-  const nombre = `zuluhub_deb_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  const nombre = `pedernal_deb_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   await admin.query(`CREATE DATABASE ${nombre} TEMPLATE ${plantillaNombre}`);
   const carpeta = await carpetaCon([...HASTA_0007]);
   const copia: BaseDePruebas = {
@@ -151,7 +151,7 @@ async function conActor<R>(
 ): Promise<R> {
   const s = await SesionDePrueba.abrir(
     ctx.base,
-    "zuluhub_plataforma",
+    "pedernal_plataforma",
     comoPlataforma(
       actor === "SISTEMA"
         ? { tipo: "SISTEMA", proceso: "barrido-de-solicitudes" }
@@ -230,7 +230,7 @@ const SONDAS = {
     const mundo = await crearMundoDeMarca(ctx.dueno, {});
     const s = await SesionDePrueba.abrir(
       ctx.base,
-      "zuluhub_app",
+      "pedernal_app",
       comoEmpresa(empresaId(mundo.empresa), personaId(mundo.persona)),
     );
     try {
@@ -512,7 +512,7 @@ const SONDAS = {
   unContextoQueNoEsUnObjetoNoVale: async (ctx: Ctx) => {
     const s = await SesionDePrueba.abrirConToken(
       ctx.base,
-      "zuluhub_captacion",
+      "pedernal_captacion",
       firmarCargaDeCaptacion(ctx.base, { c: "x" }),
     );
     try {
@@ -571,7 +571,7 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
       cambiarPolitica(
         sql,
         "solicitud_captacion_leer",
-        "CREATE POLICY solicitud_captacion_leer ON solicitud_de_alta FOR SELECT TO zuluhub_captacion USING (true);",
+        "CREATE POLICY solicitud_captacion_leer ON solicitud_de_alta FOR SELECT TO pedernal_captacion USING (true);",
       ),
     sonda: SONDAS.landingVeSoloLaSuya,
   },
@@ -592,20 +592,20 @@ const DEBILITAMIENTOS: readonly Debilitamiento[] = [
     sonda: SONDAS.landingSoloActuaSobreNuevas,
   },
   {
-    nombre: "dar SELECT de solicitud_de_alta a zuluhub_app",
-    romper: (sql) => `${sql}\nGRANT SELECT ON solicitud_de_alta TO zuluhub_app;\n`,
+    nombre: "dar SELECT de solicitud_de_alta a pedernal_app",
+    romper: (sql) => `${sql}\nGRANT SELECT ON solicitud_de_alta TO pedernal_app;\n`,
     sonda: SONDAS.laAplicacionNoLeeSolicitudes,
   },
   {
     nombre: "dar SELECT del nombre del contacto a la landing",
     romper: (sql) =>
-      `${sql}\nGRANT SELECT (nombre_contacto) ON solicitud_de_alta TO zuluhub_captacion;\n`,
+      `${sql}\nGRANT SELECT (nombre_contacto) ON solicitud_de_alta TO pedernal_captacion;\n`,
     sonda: SONDAS.laLandingNoLeeElNombre,
   },
   {
     nombre: "dar UPDATE de la decisión a la landing",
     romper: (sql) =>
-      `${sql}\nGRANT UPDATE (decidida_por) ON solicitud_de_alta TO zuluhub_captacion;\n`,
+      `${sql}\nGRANT UPDATE (decidida_por) ON solicitud_de_alta TO pedernal_captacion;\n`,
     sonda: SONDAS.laLandingNoTocaLaDecision,
   },
   {

@@ -25,14 +25,14 @@
 --    salvo `referencia_de_error_referencia_uk` (excepción explícita, ver P5).
 --  * DEPENDE de 0004: la plataforma solo toca las tablas nuevas bajo las políticas RESTRICTIVAS del
 --    actor firmado. Se comprueba al empezar.
---  * Crea el sexto rol, `zuluhub_publico` (NOLOGIN, solo lectura, SIN contexto): quien administra la
+--  * Crea el sexto rol, `pedernal_publico` (NOLOGIN, solo lectura, SIN contexto): quien administra la
 --    base le da LOGIN y contraseña fuera del repositorio. Sin contraseñas, claves ni cadenas de
 --    conexión en este archivo.
 --
 -- Decisiones de diseño (todas probadas por tests; los números son de esta migración):
 --
 --  P1. La marca es presentación y puerta, no frontera de aislamiento: el aislamiento sigue siendo por
---      empresa. `zuluhub_publico` lee solo columnas públicas de marcas ACTIVAS, dominios ACTIVOS (por la
+--      empresa. `pedernal_publico` lee solo columnas públicas de marcas ACTIVAS, dominios ACTIVOS (por la
 --      vista `resolucion_de_host`) y versiones de marca confirmadas y ya vigentes (jamás módulos
 --      iniciales, plan por defecto, motivo ni quién). Ni `empresa` ni `tenant` se le abren: la marca de
 --      un host de empresa viaja DENTRO de la fila del dominio. Las únicas relaciones que ese rol puede
@@ -100,7 +100,7 @@ $$;
 -- ---------------------------------------------------------------------------------------------
 DO $$
 DECLARE
-  r constant text := 'zuluhub_publico';
+  r constant text := 'pedernal_publico';
   ajenas text;
   topes constant text[] := ARRAY[
     'statement_timeout=30s', 'idle_in_transaction_session_timeout=60s', 'lock_timeout=15s'
@@ -122,7 +122,7 @@ BEGIN
     JOIN pg_roles g ON g.oid = am.roleid
    WHERE m.rolname = r;
   IF ajenas IS NOT NULL THEN
-    RAISE EXCEPTION 'los roles de ZuluHub no pueden ser miembros de otros roles (%): revocar la pertenencia y repetir', ajenas
+    RAISE EXCEPTION 'los roles de Pedernal no pueden ser miembros de otros roles (%): revocar la pertenencia y repetir', ajenas
       USING ERRCODE = '55000';
   END IF;
 
@@ -165,7 +165,7 @@ ALTER TABLE sucursal ADD COLUMN hora_de_corte time NOT NULL DEFAULT '00:00'
   CONSTRAINT sucursal_hora_de_corte_ck
   CHECK (hora_de_corte < time '24:00' AND extract(second FROM hora_de_corte) = 0);
 -- La política `sucursal_app_cambiar` ya acota quién puede cambiarla (la empresa operable).
-GRANT UPDATE (hora_de_corte) ON sucursal TO zuluhub_app;
+GRANT UPDATE (hora_de_corte) ON sucursal TO pedernal_app;
 
 -- Nivel de cada control de ADR-008 dentro de la empresa (P7). Sin fila = PERMITIR.
 CREATE TABLE nivel_de_control (
@@ -190,7 +190,7 @@ ALTER TABLE referencia_de_error
 -- filas existentes: todas son de un propietario activo.
 ALTER TABLE auditoria_acceso_grupo ADD COLUMN resultado text NOT NULL DEFAULT 'PERMITIDO'
   CONSTRAINT auditoria_acceso_grupo_resultado_ck CHECK (resultado IN ('PERMITIDO', 'DENEGADO'));
-GRANT INSERT (resultado) ON auditoria_acceso_grupo TO zuluhub_grupo;
+GRANT INSERT (resultado) ON auditoria_acceso_grupo TO pedernal_grupo;
 -- Un propietario activo registra su acceso ('PERMITIDO'), como hasta ahora.
 ALTER POLICY auditoria_acceso_grupo_alta ON auditoria_acceso_grupo
   WITH CHECK (
@@ -199,7 +199,7 @@ ALTER POLICY auditoria_acceso_grupo_alta ON auditoria_acceso_grupo
   );
 -- Quien NO es propietario activo del tenant del contexto deja constancia del intento ('DENEGADO'):
 -- el tenant y la persona salen del contexto firmado, no los elige quien escribe.
-CREATE POLICY auditoria_acceso_grupo_denegado ON auditoria_acceso_grupo FOR INSERT TO zuluhub_grupo
+CREATE POLICY auditoria_acceso_grupo_denegado ON auditoria_acceso_grupo FOR INSERT TO pedernal_grupo
   WITH CHECK (
     tenant_id = (SELECT app_tenant_id()) AND persona_id = (SELECT app_persona_id())
     AND resultado = 'DENEGADO' AND NOT es_propietario_activo(tenant_id)
@@ -341,7 +341,7 @@ $$;
 -- PARTE 1: marcas, planes y módulos activados
 -- ---------------------------------------------------------------------------------------------
 
--- La marca comercial. La principal (`zuluhub`, nombre técnico fijo) nace acá; las demás las crea la
+-- La marca comercial. La principal (`pedernal`, nombre técnico fijo) nace acá; las demás las crea la
 -- plataforma. Sin versión confirmada, la principal todavía no se resuelve (página neutra).
 CREATE TABLE marca (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -370,7 +370,7 @@ CREATE UNIQUE INDEX marca_principal_uk ON marca ((true)) WHERE es_principal;
 --     empresa la fija el disparador desde el tenant de la empresa (el tenant no cambia de marca). Está
 --     acá para que el rol público resuelva el host sin leer `empresa` ni `tenant`.
 --   * `titular`: quién es el titular del dominio en el registrador (el cliente, o el operador cuando es
---     del dueño de ZuluHub). ZuluHub no guarda credenciales del registrador ni del DNS.
+--     del dueño de Pedernal). Pedernal no guarda credenciales del registrador ni del DNS.
 --   * Estados: PENDIENTE_VERIFICACION (registrado; sirve la página neutra) -> VERIFICADO (la
 --     comprobación dio bien) -> ACTIVO (sirve su superficie). Si la comprobación falla después, vuelve a
 --     PENDIENTE_VERIFICACION (página neutra, sin tocar datos). RETIRADO es terminal y se puede ir ahí
@@ -492,7 +492,7 @@ CREATE TABLE version_de_marca (
 CREATE UNIQUE INDEX version_de_marca_borrador_uk ON version_de_marca (marca_id) WHERE estado = 'BORRADOR';
 
 -- La marca principal (P4). Se inserta antes de activar RLS: el dueño que migra no necesita evadirla.
-INSERT INTO marca (codigo, es_principal) VALUES ('zuluhub', true);
+INSERT INTO marca (codigo, es_principal) VALUES ('pedernal', true);
 
 -- tenant.marca_id (P4): columna nueva, NOT NULL, rellenada con la principal SIN reescribir filas.
 DO $$
@@ -1035,58 +1035,58 @@ REVOKE ALL ON marca, dominio, resolucion_de_host, plan, version_de_plan, version
 GRANT EXECUTE ON FUNCTION
   host_valido(text), texto_visible_valido(text, integer), tema_valido(jsonb), vocabulario_valido(jsonb),
   perillas_validas(jsonb, boolean), claves_de_modulo_validas(text[])
-TO zuluhub_plataforma;
+TO pedernal_plataforma;
 
 -- público (sin contexto): solo las columnas que la puerta necesita para resolver la marca (P1).
-GRANT USAGE ON SCHEMA public TO zuluhub_publico;
-GRANT SELECT (id, codigo, marca_padre_id, nivel, es_principal) ON marca TO zuluhub_publico;
-GRANT SELECT (host, superficie, estado, duenio_marca_id, duenio_empresa_id, marca_id) ON dominio TO zuluhub_publico;
-GRANT SELECT ON resolucion_de_host TO zuluhub_publico;
+GRANT USAGE ON SCHEMA public TO pedernal_publico;
+GRANT SELECT (id, codigo, marca_padre_id, nivel, es_principal) ON marca TO pedernal_publico;
+GRANT SELECT (host, superficie, estado, duenio_marca_id, duenio_empresa_id, marca_id) ON dominio TO pedernal_publico;
+GRANT SELECT ON resolucion_de_host TO pedernal_publico;
 GRANT SELECT (marca_id, numero, vigente_desde, nombre_visible, tema, logo, vocabulario)
-  ON version_de_marca TO zuluhub_publico;
+  ON version_de_marca TO pedernal_publico;
 
 -- app (contexto de empresa): la marca y su cadena (para heredar y para los mails), el dominio canónico,
 -- lo asignado a su tenant (sin el motivo ni quién lo decidió) y los módulos y niveles de su empresa.
-GRANT SELECT ON marca, modulo_de_empresa, nivel_de_control TO zuluhub_app;
-GRANT SELECT (host, superficie, marca_id, es_canonico) ON dominio TO zuluhub_app;
+GRANT SELECT ON marca, modulo_de_empresa, nivel_de_control TO pedernal_app;
+GRANT SELECT (host, superficie, marca_id, es_canonico) ON dominio TO pedernal_app;
 GRANT SELECT (marca_id, numero, vigente_desde, nombre_visible, tema, logo, vocabulario)
-  ON version_de_marca TO zuluhub_app;
-GRANT SELECT (id, plan_id, numero, nombre_comercial, modulos, perillas) ON version_de_plan TO zuluhub_app;
+  ON version_de_marca TO pedernal_app;
+GRANT SELECT (id, plan_id, numero, nombre_comercial, modulos, perillas) ON version_de_plan TO pedernal_app;
 GRANT SELECT (id, tenant_id, numero, version_de_plan_id, vigente_desde, origen, creado_en)
-  ON plan_de_tenant TO zuluhub_app;
+  ON plan_de_tenant TO pedernal_app;
 GRANT SELECT (id, tenant_id, empresa_id, perilla, numero, valor, vigente_desde, creado_en)
-  ON ajuste_de_perilla TO zuluhub_app;
-GRANT INSERT (empresa_id, sucursal_id, control, nivel) ON nivel_de_control TO zuluhub_app;
-GRANT UPDATE (nivel) ON nivel_de_control TO zuluhub_app;
+  ON ajuste_de_perilla TO pedernal_app;
+GRANT INSERT (empresa_id, sucursal_id, control, nivel) ON nivel_de_control TO pedernal_app;
+GRANT UPDATE (nivel) ON nivel_de_control TO pedernal_app;
 
 -- plataforma (actor firmado): lee todo lo nuevo (salvo los niveles de control, que son de la empresa) y
 -- escribe marcas, dominios, planes, asignaciones, ajustes y módulos; solo un ADMIN, por las restrictivas.
 GRANT SELECT ON marca, dominio, plan, version_de_plan, version_de_marca, plan_de_tenant,
                 ajuste_de_perilla, modulo_de_empresa
-  TO zuluhub_plataforma;
-GRANT INSERT (codigo, marca_padre_id) ON marca TO zuluhub_plataforma;
-GRANT UPDATE (estado) ON marca TO zuluhub_plataforma;
+  TO pedernal_plataforma;
+GRANT INSERT (codigo, marca_padre_id) ON marca TO pedernal_plataforma;
+GRANT UPDATE (estado) ON marca TO pedernal_plataforma;
 GRANT INSERT (host, superficie, duenio_marca_id, duenio_empresa_id, titular, es_canonico, registrado_por)
-  ON dominio TO zuluhub_plataforma;
-GRANT UPDATE (estado, verificado_en, motivo) ON dominio TO zuluhub_plataforma;
-GRANT INSERT (codigo) ON plan TO zuluhub_plataforma;
-GRANT UPDATE (estado) ON plan TO zuluhub_plataforma;
-GRANT INSERT (plan_id, nombre_comercial, modulos, perillas) ON version_de_plan TO zuluhub_plataforma;
+  ON dominio TO pedernal_plataforma;
+GRANT UPDATE (estado, verificado_en, motivo) ON dominio TO pedernal_plataforma;
+GRANT INSERT (codigo) ON plan TO pedernal_plataforma;
+GRANT UPDATE (estado) ON plan TO pedernal_plataforma;
+GRANT INSERT (plan_id, nombre_comercial, modulos, perillas) ON version_de_plan TO pedernal_plataforma;
 GRANT UPDATE (nombre_comercial, modulos, perillas, estado, numero, motivo, publicada_en, publicada_por)
-  ON version_de_plan TO zuluhub_plataforma;
+  ON version_de_plan TO pedernal_plataforma;
 GRANT INSERT (marca_id, nombre_visible, tema, logo, vocabulario, modulos_iniciales, plan_por_defecto_id)
-  ON version_de_marca TO zuluhub_plataforma;
+  ON version_de_marca TO pedernal_plataforma;
 GRANT UPDATE (nombre_visible, tema, logo, vocabulario, modulos_iniciales, plan_por_defecto_id,
               estado, numero, vigente_desde, reemplaza_programada, motivo, confirmada_en, confirmada_por)
-  ON version_de_marca TO zuluhub_plataforma;
+  ON version_de_marca TO pedernal_plataforma;
 GRANT INSERT (tenant_id, numero, version_de_plan_id, vigente_desde, origen, reemplaza_programada, motivo, asignado_por)
-  ON plan_de_tenant TO zuluhub_plataforma;
+  ON plan_de_tenant TO pedernal_plataforma;
 GRANT INSERT (tenant_id, empresa_id, perilla, numero, valor, vigente_desde, reemplaza_programada, motivo, asignado_por)
-  ON ajuste_de_perilla TO zuluhub_plataforma;
-GRANT INSERT (empresa_id, modulo) ON modulo_de_empresa TO zuluhub_plataforma;
-GRANT UPDATE (activo) ON modulo_de_empresa TO zuluhub_plataforma;
+  ON ajuste_de_perilla TO pedernal_plataforma;
+GRANT INSERT (empresa_id, modulo) ON modulo_de_empresa TO pedernal_plataforma;
+GRANT UPDATE (activo) ON modulo_de_empresa TO pedernal_plataforma;
 -- El tenant nuevo nace con su marca (P4); después no se cambia: no hay UPDATE (marca_id).
-GRANT INSERT (marca_id) ON tenant TO zuluhub_plataforma;
+GRANT INSERT (marca_id) ON tenant TO pedernal_plataforma;
 
 -- ---------------------------------------------------------------------------------------------
 -- RLS: activa y forzada en toda tabla nueva; sin política no hay acceso
@@ -1117,142 +1117,142 @@ ALTER TABLE nivel_de_control FORCE ROW LEVEL SECURITY;
 -- ---------------------------------------------------------------------------------------------
 
 -- público: sin contexto, solo lo declarado (P1).
-CREATE POLICY marca_publico_leer ON marca FOR SELECT TO zuluhub_publico
+CREATE POLICY marca_publico_leer ON marca FOR SELECT TO pedernal_publico
   USING (estado = 'ACTIVA');
-CREATE POLICY dominio_publico_leer ON dominio FOR SELECT TO zuluhub_publico
+CREATE POLICY dominio_publico_leer ON dominio FOR SELECT TO pedernal_publico
   USING (estado = 'ACTIVO');
-CREATE POLICY version_de_marca_publico_leer ON version_de_marca FOR SELECT TO zuluhub_publico
+CREATE POLICY version_de_marca_publico_leer ON version_de_marca FOR SELECT TO pedernal_publico
   USING (estado = 'CONFIRMADA' AND vigente_desde <= now());
 
 -- app: con un contexto firmado válido (no hay filas sin contexto, como en el resto del esquema).
-CREATE POLICY marca_app_leer ON marca FOR SELECT TO zuluhub_app
+CREATE POLICY marca_app_leer ON marca FOR SELECT TO pedernal_app
   USING ((SELECT contexto_firmado()) IS NOT NULL);
-CREATE POLICY dominio_app_leer ON dominio FOR SELECT TO zuluhub_app
+CREATE POLICY dominio_app_leer ON dominio FOR SELECT TO pedernal_app
   USING (estado = 'ACTIVO' AND es_canonico AND (SELECT contexto_firmado()) IS NOT NULL);
-CREATE POLICY version_de_marca_app_leer ON version_de_marca FOR SELECT TO zuluhub_app
+CREATE POLICY version_de_marca_app_leer ON version_de_marca FOR SELECT TO pedernal_app
   USING (estado = 'CONFIRMADA' AND vigente_desde <= now() AND (SELECT contexto_firmado()) IS NOT NULL);
 -- Solo las versiones que el tenant de la empresa tiene asignadas.
-CREATE POLICY version_de_plan_app_leer ON version_de_plan FOR SELECT TO zuluhub_app
+CREATE POLICY version_de_plan_app_leer ON version_de_plan FOR SELECT TO pedernal_app
   USING (
     estado = 'PUBLICADA'
     AND EXISTS (SELECT 1 FROM plan_de_tenant p WHERE p.version_de_plan_id = version_de_plan.id)
   );
-CREATE POLICY plan_de_tenant_app_leer ON plan_de_tenant FOR SELECT TO zuluhub_app
+CREATE POLICY plan_de_tenant_app_leer ON plan_de_tenant FOR SELECT TO pedernal_app
   USING (tenant_id = (SELECT tenant_de_empresa((SELECT app_empresa_id()))));
 -- Los del tenant y, de los de una empresa, solo los de la propia.
-CREATE POLICY ajuste_de_perilla_app_leer ON ajuste_de_perilla FOR SELECT TO zuluhub_app
+CREATE POLICY ajuste_de_perilla_app_leer ON ajuste_de_perilla FOR SELECT TO pedernal_app
   USING (
     tenant_id = (SELECT tenant_de_empresa((SELECT app_empresa_id())))
     AND (empresa_id IS NULL OR empresa_id = (SELECT app_empresa_id()))
   );
 -- Los módulos no los escribe la empresa (solo la plataforma los activa): no hay política de escritura.
-CREATE POLICY modulo_de_empresa_app_leer ON modulo_de_empresa FOR SELECT TO zuluhub_app
+CREATE POLICY modulo_de_empresa_app_leer ON modulo_de_empresa FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY nivel_de_control_app_leer ON nivel_de_control FOR SELECT TO zuluhub_app
+CREATE POLICY nivel_de_control_app_leer ON nivel_de_control FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY nivel_de_control_app_alta ON nivel_de_control FOR INSERT TO zuluhub_app
+CREATE POLICY nivel_de_control_app_alta ON nivel_de_control FOR INSERT TO pedernal_app
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
-CREATE POLICY nivel_de_control_app_cambiar ON nivel_de_control FOR UPDATE TO zuluhub_app
+CREATE POLICY nivel_de_control_app_cambiar ON nivel_de_control FOR UPDATE TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id))
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
 
 -- plataforma: permisivas abiertas, acotadas por las restrictivas de más abajo (actor vigente para leer;
 -- ADMIN para escribir). Quien crea o confirma es el actor del contexto firmado, nunca otro.
-CREATE POLICY marca_plataforma_leer ON marca FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY marca_plataforma_alta ON marca FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
-CREATE POLICY marca_plataforma_cambiar ON marca FOR UPDATE TO zuluhub_plataforma USING (true) WITH CHECK (true);
+CREATE POLICY marca_plataforma_leer ON marca FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY marca_plataforma_alta ON marca FOR INSERT TO pedernal_plataforma WITH CHECK (true);
+CREATE POLICY marca_plataforma_cambiar ON marca FOR UPDATE TO pedernal_plataforma USING (true) WITH CHECK (true);
 
-CREATE POLICY dominio_plataforma_leer ON dominio FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY dominio_plataforma_alta ON dominio FOR INSERT TO zuluhub_plataforma
+CREATE POLICY dominio_plataforma_leer ON dominio FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY dominio_plataforma_alta ON dominio FOR INSERT TO pedernal_plataforma
   WITH CHECK (registrado_por = (SELECT app_actor_plataforma()));
-CREATE POLICY dominio_plataforma_cambiar ON dominio FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY dominio_plataforma_cambiar ON dominio FOR UPDATE TO pedernal_plataforma
   USING (true) WITH CHECK (true);
 
-CREATE POLICY plan_plataforma_leer ON plan FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY plan_plataforma_alta ON plan FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
-CREATE POLICY plan_plataforma_cambiar ON plan FOR UPDATE TO zuluhub_plataforma USING (true) WITH CHECK (true);
+CREATE POLICY plan_plataforma_leer ON plan FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY plan_plataforma_alta ON plan FOR INSERT TO pedernal_plataforma WITH CHECK (true);
+CREATE POLICY plan_plataforma_cambiar ON plan FOR UPDATE TO pedernal_plataforma USING (true) WITH CHECK (true);
 
 -- Se edita solo el borrador; al publicar, quien publica es el actor del contexto.
-CREATE POLICY version_de_plan_plataforma_leer ON version_de_plan FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY version_de_plan_plataforma_alta ON version_de_plan FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
-CREATE POLICY version_de_plan_plataforma_cambiar ON version_de_plan FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY version_de_plan_plataforma_leer ON version_de_plan FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY version_de_plan_plataforma_alta ON version_de_plan FOR INSERT TO pedernal_plataforma WITH CHECK (true);
+CREATE POLICY version_de_plan_plataforma_cambiar ON version_de_plan FOR UPDATE TO pedernal_plataforma
   USING (estado = 'BORRADOR')
   WITH CHECK (estado = 'BORRADOR' OR publicada_por = (SELECT app_actor_plataforma()));
 
-CREATE POLICY version_de_marca_plataforma_leer ON version_de_marca FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY version_de_marca_plataforma_alta ON version_de_marca FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
-CREATE POLICY version_de_marca_plataforma_cambiar ON version_de_marca FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY version_de_marca_plataforma_leer ON version_de_marca FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY version_de_marca_plataforma_alta ON version_de_marca FOR INSERT TO pedernal_plataforma WITH CHECK (true);
+CREATE POLICY version_de_marca_plataforma_cambiar ON version_de_marca FOR UPDATE TO pedernal_plataforma
   USING (estado = 'BORRADOR')
   WITH CHECK (estado = 'BORRADOR' OR confirmada_por = (SELECT app_actor_plataforma()));
 
-CREATE POLICY plan_de_tenant_plataforma_leer ON plan_de_tenant FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY plan_de_tenant_plataforma_alta ON plan_de_tenant FOR INSERT TO zuluhub_plataforma
+CREATE POLICY plan_de_tenant_plataforma_leer ON plan_de_tenant FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY plan_de_tenant_plataforma_alta ON plan_de_tenant FOR INSERT TO pedernal_plataforma
   WITH CHECK (asignado_por = (SELECT app_actor_plataforma()));
 
-CREATE POLICY ajuste_de_perilla_plataforma_leer ON ajuste_de_perilla FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY ajuste_de_perilla_plataforma_alta ON ajuste_de_perilla FOR INSERT TO zuluhub_plataforma
+CREATE POLICY ajuste_de_perilla_plataforma_leer ON ajuste_de_perilla FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY ajuste_de_perilla_plataforma_alta ON ajuste_de_perilla FOR INSERT TO pedernal_plataforma
   WITH CHECK (asignado_por = (SELECT app_actor_plataforma()));
 
-CREATE POLICY modulo_de_empresa_plataforma_leer ON modulo_de_empresa FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY modulo_de_empresa_plataforma_alta ON modulo_de_empresa FOR INSERT TO zuluhub_plataforma
+CREATE POLICY modulo_de_empresa_plataforma_leer ON modulo_de_empresa FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY modulo_de_empresa_plataforma_alta ON modulo_de_empresa FOR INSERT TO pedernal_plataforma
   WITH CHECK (true);
-CREATE POLICY modulo_de_empresa_plataforma_cambiar ON modulo_de_empresa FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY modulo_de_empresa_plataforma_cambiar ON modulo_de_empresa FOR UPDATE TO pedernal_plataforma
   USING (true) WITH CHECK (true);
 
 -- Políticas RESTRICTIVAS de la plataforma (como las de 0004 a 0006): sin un actor vigente no ve nada,
 -- y solo un ADMIN escribe (un SOPORTE ve, no cambia estructura).
-CREATE POLICY marca_plataforma_con_actor ON marca AS RESTRICTIVE FOR SELECT TO zuluhub_plataforma
+CREATE POLICY marca_plataforma_con_actor ON marca AS RESTRICTIVE FOR SELECT TO pedernal_plataforma
   USING ((SELECT plataforma_actor_vigente()));
 CREATE POLICY dominio_plataforma_con_actor ON dominio AS RESTRICTIVE FOR SELECT
-  TO zuluhub_plataforma USING ((SELECT plataforma_actor_vigente()));
-CREATE POLICY plan_plataforma_con_actor ON plan AS RESTRICTIVE FOR SELECT TO zuluhub_plataforma
+  TO pedernal_plataforma USING ((SELECT plataforma_actor_vigente()));
+CREATE POLICY plan_plataforma_con_actor ON plan AS RESTRICTIVE FOR SELECT TO pedernal_plataforma
   USING ((SELECT plataforma_actor_vigente()));
 CREATE POLICY version_de_plan_plataforma_con_actor ON version_de_plan AS RESTRICTIVE FOR SELECT
-  TO zuluhub_plataforma USING ((SELECT plataforma_actor_vigente()));
+  TO pedernal_plataforma USING ((SELECT plataforma_actor_vigente()));
 CREATE POLICY version_de_marca_plataforma_con_actor ON version_de_marca AS RESTRICTIVE FOR SELECT
-  TO zuluhub_plataforma USING ((SELECT plataforma_actor_vigente()));
+  TO pedernal_plataforma USING ((SELECT plataforma_actor_vigente()));
 CREATE POLICY plan_de_tenant_plataforma_con_actor ON plan_de_tenant AS RESTRICTIVE FOR SELECT
-  TO zuluhub_plataforma USING ((SELECT plataforma_actor_vigente()));
+  TO pedernal_plataforma USING ((SELECT plataforma_actor_vigente()));
 CREATE POLICY ajuste_de_perilla_plataforma_con_actor ON ajuste_de_perilla AS RESTRICTIVE FOR SELECT
-  TO zuluhub_plataforma USING ((SELECT plataforma_actor_vigente()));
+  TO pedernal_plataforma USING ((SELECT plataforma_actor_vigente()));
 CREATE POLICY modulo_de_empresa_plataforma_con_actor ON modulo_de_empresa AS RESTRICTIVE FOR SELECT
-  TO zuluhub_plataforma USING ((SELECT plataforma_actor_vigente()));
+  TO pedernal_plataforma USING ((SELECT plataforma_actor_vigente()));
 
-CREATE POLICY marca_plataforma_admin_alta ON marca AS RESTRICTIVE FOR INSERT TO zuluhub_plataforma
+CREATE POLICY marca_plataforma_admin_alta ON marca AS RESTRICTIVE FOR INSERT TO pedernal_plataforma
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
-CREATE POLICY marca_plataforma_admin_cambiar ON marca AS RESTRICTIVE FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY marca_plataforma_admin_cambiar ON marca AS RESTRICTIVE FOR UPDATE TO pedernal_plataforma
   USING ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])))
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 CREATE POLICY dominio_plataforma_admin_alta ON dominio AS RESTRICTIVE FOR INSERT
-  TO zuluhub_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
+  TO pedernal_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 CREATE POLICY dominio_plataforma_admin_cambiar ON dominio AS RESTRICTIVE FOR UPDATE
-  TO zuluhub_plataforma
+  TO pedernal_plataforma
   USING ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])))
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
-CREATE POLICY plan_plataforma_admin_alta ON plan AS RESTRICTIVE FOR INSERT TO zuluhub_plataforma
+CREATE POLICY plan_plataforma_admin_alta ON plan AS RESTRICTIVE FOR INSERT TO pedernal_plataforma
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
-CREATE POLICY plan_plataforma_admin_cambiar ON plan AS RESTRICTIVE FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY plan_plataforma_admin_cambiar ON plan AS RESTRICTIVE FOR UPDATE TO pedernal_plataforma
   USING ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])))
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 CREATE POLICY version_de_plan_plataforma_admin_alta ON version_de_plan AS RESTRICTIVE FOR INSERT
-  TO zuluhub_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
+  TO pedernal_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 CREATE POLICY version_de_plan_plataforma_admin_cambiar ON version_de_plan AS RESTRICTIVE FOR UPDATE
-  TO zuluhub_plataforma
+  TO pedernal_plataforma
   USING ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])))
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 CREATE POLICY version_de_marca_plataforma_admin_alta ON version_de_marca AS RESTRICTIVE FOR INSERT
-  TO zuluhub_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
+  TO pedernal_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 CREATE POLICY version_de_marca_plataforma_admin_cambiar ON version_de_marca AS RESTRICTIVE FOR UPDATE
-  TO zuluhub_plataforma
+  TO pedernal_plataforma
   USING ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])))
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 CREATE POLICY plan_de_tenant_plataforma_admin_alta ON plan_de_tenant AS RESTRICTIVE FOR INSERT
-  TO zuluhub_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
+  TO pedernal_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 CREATE POLICY ajuste_de_perilla_plataforma_admin_alta ON ajuste_de_perilla AS RESTRICTIVE FOR INSERT
-  TO zuluhub_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
+  TO pedernal_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 CREATE POLICY modulo_de_empresa_plataforma_admin_alta ON modulo_de_empresa AS RESTRICTIVE FOR INSERT
-  TO zuluhub_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
+  TO pedernal_plataforma WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
 CREATE POLICY modulo_de_empresa_plataforma_admin_cambiar ON modulo_de_empresa AS RESTRICTIVE FOR UPDATE
-  TO zuluhub_plataforma
+  TO pedernal_plataforma
   USING ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])))
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));

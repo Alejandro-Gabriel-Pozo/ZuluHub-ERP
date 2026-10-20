@@ -354,8 +354,8 @@ describe.skipIf(base === null)("administración: concurrencia de las reglas de 0
     if (base === null) return;
     const e = await armar();
     const id = await proponer(e, e.operador);
-    const s1 = await SesionDePrueba.abrir(propia.base, "zuluhub_app", ctx(e, e.operador));
-    const s2 = await SesionDePrueba.abrir(propia.base, "zuluhub_app", ctx(e, e.operador));
+    const s1 = await SesionDePrueba.abrir(propia.base, "pedernal_app", ctx(e, e.operador));
+    const s2 = await SesionDePrueba.abrir(propia.base, "pedernal_app", ctx(e, e.operador));
     try {
       const sentencia =
         "update traspaso_gerencia set estado = 'ACEPTADO', resuelto_en = $2 where id = $1 and estado = 'PROPUESTO'";
@@ -411,8 +411,8 @@ describe.skipIf(base === null)("administración: concurrencia de las reglas de 0
   it("S1 (READ COMMITTED, sesiones): la segunda baja de las dos últimas espera a la primera y, al confirmarse esta, se rechaza", async () => {
     if (base === null) return;
     const { e, ids } = await conSucursales(2);
-    const s1 = await SesionDePrueba.abrir(propia.base, "zuluhub_app", ctx(e, e.gerente));
-    const s2 = await SesionDePrueba.abrir(propia.base, "zuluhub_app", ctx(e, e.gerente));
+    const s1 = await SesionDePrueba.abrir(propia.base, "pedernal_app", ctx(e, e.gerente));
+    const s2 = await SesionDePrueba.abrir(propia.base, "pedernal_app", ctx(e, e.gerente));
     try {
       expect(
         await s1.directo("update sucursal set activa = false where id = $1", [ids[0]]),
@@ -439,13 +439,13 @@ describe.skipIf(base === null)("administración: concurrencia de las reglas de 0
     const { e, ids } = await conSucursales(2);
     const s1 = await SesionDePrueba.abrir(
       propia.base,
-      "zuluhub_app",
+      "pedernal_app",
       ctx(e, e.gerente),
       "repeatable read",
     );
     const s2 = await SesionDePrueba.abrir(
       propia.base,
-      "zuluhub_app",
+      "pedernal_app",
       ctx(e, e.gerente),
       "repeatable read",
     );
@@ -531,8 +531,8 @@ describe.skipIf(base === null)("administración: concurrencia de las reglas de 0
   it("S5 (sesiones): renombrar una sucursal a la vez que se desactiva otra no se traba (sin deadlock) y las dos confirman", async () => {
     if (base === null) return;
     const { e, ids } = await conSucursales(3);
-    const s1 = await SesionDePrueba.abrir(propia.base, "zuluhub_app", ctx(e, e.gerente));
-    const s2 = await SesionDePrueba.abrir(propia.base, "zuluhub_app", ctx(e, e.gerente));
+    const s1 = await SesionDePrueba.abrir(propia.base, "pedernal_app", ctx(e, e.gerente));
+    const s2 = await SesionDePrueba.abrir(propia.base, "pedernal_app", ctx(e, e.gerente));
     try {
       // s2 renombra la segunda (queda su fila bloqueada); s1 desactiva la primera: necesita bloquear
       // en modo compartido a las otras activas, así que espera a que s2 confirme. s2 no espera a nadie.
@@ -560,8 +560,8 @@ describe.skipIf(base === null)("administración: concurrencia de las reglas de 0
     const alta =
       "insert into asignacion_sucursal (empresa_id, persona_id, sucursal_id) values ($1, $2, $3)";
     const parametros = [e.empresa.empresa, e.operador, e.sucursal];
-    const s1 = await SesionDePrueba.abrir(propia.base, "zuluhub_app", ctx(e, e.gerente));
-    const s2 = await SesionDePrueba.abrir(propia.base, "zuluhub_app", ctx(e, e.admin));
+    const s1 = await SesionDePrueba.abrir(propia.base, "pedernal_app", ctx(e, e.gerente));
+    const s2 = await SesionDePrueba.abrir(propia.base, "pedernal_app", ctx(e, e.admin));
     try {
       expect(await s1.directo(alta, parametros)).toMatchObject({ ok: true, filas: 1 });
       const segunda = s2.directo(alta, parametros);

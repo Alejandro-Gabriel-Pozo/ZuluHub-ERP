@@ -55,7 +55,7 @@ const conBase = (url: string, nombre: string): string => {
 /** Una copia de la plantilla (las migraciones anteriores) con ese texto de 0015 aplicado; se destruye al terminar. */
 async function conMigracion<T>(sql: string, trabajo: (ctx: Ctx) => Promise<T>): Promise<T> {
   const b = base as BaseDePruebas;
-  const nombre = `zuluhub_deb_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  const nombre = `pedernal_deb_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   await admin.query(`CREATE DATABASE ${nombre} TEMPLATE ${plantillaNombre}`);
   const carpeta = await carpetaCon(await migracionesPrevias());
   const copia: BaseDePruebas = {
@@ -134,7 +134,7 @@ const sondas = {
     const { rows } = await ctx.dueno.query<{ n: number }>(
       `select count(*)::int as n from pg_policies
         where schemaname = 'autenticacion' and tablename in ('twoFactor', 'codigo_totp_usado', 'intento_segundo_factor')
-          and roles = array['zuluhub_autenticacion']::name[]`,
+          and roles = array['pedernal_autenticacion']::name[]`,
     );
     return rows[0]?.n === 9;
   },
@@ -261,12 +261,12 @@ const sondas = {
   /** Ningún otro rol (la aplicación, la plataforma) ni PUBLIC toca las tablas nuevas. */
   nadieMasTocaLasTablas: async (ctx: Ctx) => {
     for (const rol of [
-      "zuluhub_app",
-      "zuluhub_plataforma",
-      "zuluhub_trabajos",
-      "zuluhub_grupo",
-      "zuluhub_publico",
-      "zuluhub_captacion",
+      "pedernal_app",
+      "pedernal_plataforma",
+      "pedernal_trabajos",
+      "pedernal_grupo",
+      "pedernal_publico",
+      "pedernal_captacion",
     ]) {
       for (const tabla of ["twoFactor", "codigo_totp_usado", "intento_segundo_factor"]) {
         const { rows } = await ctx.dueno.query<{ puede: boolean }>(
@@ -374,7 +374,7 @@ describe.skipIf(base === null)(
       ],
       [
         "políticas para PUBLIC en lugar del rol de la librería",
-        (s) => cambiar(s, "FOR %s TO zuluhub_autenticacion %s", "FOR %s TO public %s"),
+        (s) => cambiar(s, "FOR %s TO pedernal_autenticacion %s", "FOR %s TO public %s"),
         "politicasSoloDelRol",
       ],
       [
@@ -438,8 +438,8 @@ describe.skipIf(base === null)(
         (s) =>
           cambiar(
             s,
-            'GRANT SELECT, INSERT ON autenticacion."twoFactor" TO zuluhub_autenticacion;',
-            'GRANT SELECT, INSERT, DELETE ON autenticacion."twoFactor" TO zuluhub_autenticacion;',
+            'GRANT SELECT, INSERT ON autenticacion."twoFactor" TO pedernal_autenticacion;',
+            'GRANT SELECT, INSERT, DELETE ON autenticacion."twoFactor" TO pedernal_autenticacion;',
           ),
         "sinDeleteEnTwoFactor",
       ],
@@ -448,8 +448,8 @@ describe.skipIf(base === null)(
         (s) =>
           cambiar(
             s,
-            'GRANT UPDATE (secret, "backupCodes", verified) ON autenticacion."twoFactor" TO zuluhub_autenticacion;',
-            'GRANT UPDATE ON autenticacion."twoFactor" TO zuluhub_autenticacion;',
+            'GRANT UPDATE (secret, "backupCodes", verified) ON autenticacion."twoFactor" TO pedernal_autenticacion;',
+            'GRANT UPDATE ON autenticacion."twoFactor" TO pedernal_autenticacion;',
           ),
         "updateSoloTresColumnas",
       ],
@@ -475,7 +475,7 @@ describe.skipIf(base === null)(
       ],
       [
         "la aplicación recibe SELECT sobre el segundo factor",
-        (s) => `${s}\nGRANT SELECT ON autenticacion."twoFactor" TO zuluhub_app;\n`,
+        (s) => `${s}\nGRANT SELECT ON autenticacion."twoFactor" TO pedernal_app;\n`,
         "nadieMasTocaLasTablas",
       ],
       [
@@ -503,7 +503,7 @@ describe.skipIf(base === null)(
     it("la reversión sin su guarda de confirmación borraría los secretos sin pedir nada: la sonda lo detecta", async () => {
       const sinGuarda = cambiar(
         reversionReal,
-        "IF v_secretos + v_usuarios + v_sesiones + v_pasos + v_intentos > 0\n     AND coalesce(current_setting('zuluhub.confirmar_reversion', true), '') <> 'SI' THEN",
+        "IF v_secretos + v_usuarios + v_sesiones + v_pasos + v_intentos > 0\n     AND coalesce(current_setting('pedernal.confirmar_reversion', true), '') <> 'SI' THEN",
         "IF false THEN",
       );
       await conMigracion(sqlReal, async (ctx) => {

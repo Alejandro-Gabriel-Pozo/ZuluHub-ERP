@@ -7,15 +7,15 @@ name: Migrar (preview y producción)
 #  - El Environment `produccion` exige la APROBACIÓN DEL DUEÑO (revisores obligatorios, configurados en GitHub:
 #    Settings → Environments → produccion → Required reviewers → el dueño; y «Deployment branches» solo `main`).
 #    El Environment `preview` no pide aprobación. Los secretos viven en cada Environment, nunca en el repositorio:
-#      ZULUHUB_DB_DUENO_DIRECTA  (obligatorio) cadena DIRECTA (nunca la del pooler) del dueño de la base de ese entorno
-#      ZULUHUB_CLAVE_CONTEXTO    (opcional)    la clave de firma del contexto de esa rama, la MISMA que está en Vercel
+#      PEDERNAL_DB_DUENO_DIRECTA  (obligatorio) cadena DIRECTA (nunca la del pooler) del dueño de la base de ese entorno
+#      PEDERNAL_CLAVE_CONTEXTO    (opcional)    la clave de firma del contexto de esa rama, la MISMA que está en Vercel
 #      NEON_API_KEY, NEON_PROJECT_ID (opcionales, solo `produccion`) para la rama de respaldo `antes-de-<NNNN>`
 #  - Antes de «aplicar» en producción, si hay migraciones pendientes y existen NEON_API_KEY y NEON_PROJECT_ID, se
 #    crea una rama de respaldo de la rama `production` de Neon. Si el respaldo se pide y falla, NO se migra.
-#  - Después de aplicar, si el Environment tiene ZULUHUB_CLAVE_CONTEXTO, se instala esa clave en la base (idempotente).
+#  - Después de aplicar, si el Environment tiene PEDERNAL_CLAVE_CONTEXTO, se instala esa clave en la base (idempotente).
 #
-# El script que migra (`npm run migrar`) lee la cadena de la variable ZULUHUB_DB_MIGRACIONES; acá se la alimenta con el
-# secreto ZULUHUB_DB_DUENO_DIRECTA. Ningún paso imprime la cadena ni la clave.
+# El script que migra (`npm run migrar`) lee la cadena de la variable PEDERNAL_DB_MIGRACIONES; acá se la alimenta con el
+# secreto PEDERNAL_DB_DUENO_DIRECTA. Ningún paso imprime la cadena ni la clave.
 
 on:
   workflow_dispatch:
@@ -120,7 +120,7 @@ jobs:
         shell: bash
         run: npm run migrar -- --ver | tee "$RUNNER_TEMP/estado.txt"
         env:
-          ZULUHUB_DB_MIGRACIONES: ${{ secrets.ZULUHUB_DB_DUENO_DIRECTA }}
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
 
       - name: Rama de respaldo en Neon (solo producción, solo si hay algo para aplicar y hay NEON_API_KEY)
         if: needs.validar.outputs.accion == 'aplicar' && needs.validar.outputs.ambiente == 'produccion'
@@ -166,16 +166,16 @@ jobs:
         if: needs.validar.outputs.accion == 'aplicar'
         run: npm run migrar -- --aplicar
         env:
-          ZULUHUB_DB_MIGRACIONES: ${{ secrets.ZULUHUB_DB_DUENO_DIRECTA }}
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
 
       - name: Instalar la clave de contexto (si el Environment la tiene)
         if: needs.validar.outputs.accion == 'aplicar'
         run: |
-          if [ -z "${ZULUHUB_CLAVE_CONTEXTO:-}" ]; then
-            echo "::notice::El Environment no tiene ZULUHUB_CLAVE_CONTEXTO: no se instala ninguna clave."
+          if [ -z "${PEDERNAL_CLAVE_CONTEXTO:-}" ]; then
+            echo "::notice::El Environment no tiene PEDERNAL_CLAVE_CONTEXTO: no se instala ninguna clave."
             exit 0
           fi
           npm run instalar-clave
         env:
-          ZULUHUB_DB_MIGRACIONES: ${{ secrets.ZULUHUB_DB_DUENO_DIRECTA }}
-          ZULUHUB_CLAVE_CONTEXTO: ${{ secrets.ZULUHUB_CLAVE_CONTEXTO }}
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_CLAVE_CONTEXTO: ${{ secrets.PEDERNAL_CLAVE_CONTEXTO }}

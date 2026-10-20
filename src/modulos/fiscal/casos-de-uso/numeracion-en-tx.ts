@@ -409,7 +409,7 @@ export type ErrorPropioAlResincronizar = "SERIE_NO_ENCONTRADA" | ErrorDeResincro
 /**
  * Sacar una serie de `BLOQUEADA` (spec H7 facturación §B.4.6, QF1): `BLOQUEADA → LIBRE` con el último
  * número de ARCA, nunca hacia atrás (`resincronizarSerie` del dominio decide). Los números entre el
- * viejo y el nuevo los emitió otro sistema: no son huecos de ZuluHub y la auditoría
+ * viejo y el nuevo los emitió otro sistema: no son huecos de Pedernal y la auditoría
  * `SERIE_RESINCRONIZADA` los explica (antes, después y motivo), en la misma transacción.
  *
  * Es solo el cuerpo transaccional: el permiso (`series.resincronizar`), la consulta a ARCA fuera de

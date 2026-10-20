@@ -59,7 +59,7 @@ export type DependenciasDeSegundoFactor = Readonly<{
 }>;
 
 /** El nombre con el que la aplicación autenticadora muestra la cuenta. */
-export const EMISOR_DEL_TOTP = "ZuluHub Plataforma";
+export const EMISOR_DEL_TOTP = "Pedernal Plataforma";
 export const CANTIDAD_DE_CODIGOS_DE_RECUPERACION = 10;
 
 /** Las opciones del plugin `twoFactor`: TOTP + 10 códigos de recuperación hasheados; sin OTP por mail, sin dispositivo de confianza. */

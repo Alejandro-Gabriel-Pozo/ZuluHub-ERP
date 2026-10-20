@@ -5,7 +5,7 @@ import { Texto } from "../primitivas/Texto";
 export type PropsDeErrorConReferencia = Readonly<{
   /** El texto del error, ya resuelto (`error.<CODIGO>`, `error.inesperado`). */
   texto: string;
-  /** La referencia ya resuelta («Referencia: ZH-…»): es lo que se le da a soporte para encontrar el registro. */
+  /** La referencia ya resuelta («Referencia: PD-…»): es lo que se le da a soporte para encontrar el registro. */
   textoDeReferencia: string;
   /** El código estable del error, si lo hay. */
   codigo?: string | undefined;
@@ -13,7 +13,7 @@ export type PropsDeErrorConReferencia = Readonly<{
   accion?: ReactNode;
 }>;
 
-/** Error del servidor mostrado en contexto: qué pasó, qué se puede hacer y la referencia `ZH-…`. */
+/** Error del servidor mostrado en contexto: qué pasó, qué se puede hacer y la referencia `PD-…`. */
 export function ErrorConReferencia({
   texto,
   textoDeReferencia,

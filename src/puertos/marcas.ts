@@ -4,11 +4,11 @@ import type { ErrorDePersistencia } from "./transacciones";
 
 /**
  * Puertos de marcas (marcas y planes, §B.2 y §B.8). Tres, con dos conexiones distintas:
- *  - `ResolucionDeHost`: la puerta PÚBLICA (rol `zuluhub_publico`, sin sesión): a qué dueño y a qué marca
+ *  - `ResolucionDeHost`: la puerta PÚBLICA (rol `pedernal_publico`, sin sesión): a qué dueño y a qué marca
  *    pertenece un nombre de host.
  *  - `ConfiguracionPublicaDeHost`: la misma puerta pública: cómo se pinta la marca de un host (nombre,
  *    tema, aspecto y host canónico) y qué marca es, sin ningún otro identificador interno.
- *  - `MarcasDeMail`: desde qué marca sale un mail; lo lee la aplicación (rol `zuluhub_app`), dentro de la
+ *  - `MarcasDeMail`: desde qué marca sale un mail; lo lee la aplicación (rol `pedernal_app`), dentro de la
  *    transacción de su caso de uso.
  */
 

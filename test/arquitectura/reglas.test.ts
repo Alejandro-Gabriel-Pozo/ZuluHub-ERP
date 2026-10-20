@@ -33,7 +33,7 @@ afterEach(() => {
 });
 
 async function violacionesDe(archivos: Archivos): Promise<string[]> {
-  const base = mkdtempSync(join(tmpdir(), "zuluhub-arq-"));
+  const base = mkdtempSync(join(tmpdir(), "pedernal-arq-"));
   directorios.push(base);
   for (const [ruta, contenido] of Object.entries(archivos)) {
     const destino = join(base, ruta);
@@ -876,7 +876,7 @@ describe("R-W0: el comando de arquitectura alcanza a apps y scripts", () => {
   });
 
   it("un import prohibido en un archivo bajo apps/ se ve con las carpetas del comando", async () => {
-    const base = mkdtempSync(join(tmpdir(), "zuluhub-arq-"));
+    const base = mkdtempSync(join(tmpdir(), "pedernal-arq-"));
     directorios.push(base);
     const archivos: Archivos = {
       "src/adaptadores/postgres/a.ts": exporta,
@@ -926,7 +926,7 @@ function metadatosEstaticosGlobales(raiz: string): string[] {
 
 describe("R-W9: sin metadatos estáticos globales en apps", () => {
   const arbol = (archivos: string[]): string => {
-    const base = mkdtempSync(join(tmpdir(), "zuluhub-w9-"));
+    const base = mkdtempSync(join(tmpdir(), "pedernal-w9-"));
     directorios.push(base);
     for (const ruta of archivos) {
       mkdirSync(dirname(join(base, ruta)), { recursive: true });
@@ -1194,7 +1194,7 @@ function primeraLineaDeCodigo(ruta: string): string | undefined {
 
 describe("convenciones de apps: use client con sufijo y server-only en el servidor", () => {
   const arbol = (archivos: Record<string, string>): string => {
-    const base = mkdtempSync(join(tmpdir(), "zuluhub-conv-"));
+    const base = mkdtempSync(join(tmpdir(), "pedernal-conv-"));
     directorios.push(base);
     for (const [ruta, contenido] of Object.entries(archivos)) {
       mkdirSync(dirname(join(base, ruta)), { recursive: true });
@@ -1497,7 +1497,7 @@ describe("C-2: la plantilla de la carta no fija la letra en px (D10)", () => {
   });
 
   it("encuentra el CSS de la carta en el árbol y marca el que tiene px", () => {
-    const base = mkdtempSync(join(tmpdir(), "zuluhub-letra-"));
+    const base = mkdtempSync(join(tmpdir(), "pedernal-letra-"));
     directorios.push(base);
     const carpeta = join(base, "apps/web/ui/plantillas/carta");
     mkdirSync(carpeta, { recursive: true });
@@ -1580,7 +1580,7 @@ describe("W3b: la librería de ingreso y la herramienta de datos", () => {
 
 describe("R-W4b: el error.tsx de Next es cliente por obligación, pero mínimo", () => {
   const arbol = (archivos: Record<string, string>): string => {
-    const base = mkdtempSync(join(tmpdir(), "zuluhub-conv-"));
+    const base = mkdtempSync(join(tmpdir(), "pedernal-conv-"));
     directorios.push(base);
     for (const [ruta, contenido] of Object.entries(archivos)) {
       mkdirSync(dirname(join(base, ruta)), { recursive: true });

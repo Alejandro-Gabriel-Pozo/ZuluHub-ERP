@@ -21,7 +21,7 @@ describe("letra de la carta (D10)", () => {
   });
 
   it("la única clave que se guarda en el navegador tiene el prefijo de la carta", () => {
-    expect(CLAVE_DE_LETRA_GUARDADA).toBe("zh-carta-letra");
+    expect(CLAVE_DE_LETRA_GUARDADA).toBe("pd-carta-letra");
   });
 
   describe("leerPasoDeLetra", () => {

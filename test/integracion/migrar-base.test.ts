@@ -200,7 +200,7 @@ describe.skipIf(base === null)("migrar-base: el comando que migra la base real",
       const aparte = await crearBaseAparte(base, { migrar: false });
       url = aparte.base.dueno;
       destruir = aparte.destruir;
-      carpeta = await mkdtemp(join(tmpdir(), "zuluhub-migrar-"));
+      carpeta = await mkdtemp(join(tmpdir(), "pedernal-migrar-"));
       for (const archivo of archivosReales) {
         await cp(join(CARPETA_REAL, archivo), join(carpeta, archivo));
       }
@@ -288,14 +288,14 @@ describe.skipIf(base === null)("migrar-base: el comando que migra la base real",
           mala,
           `CREATE TABLE prueba_mala (id int);
 DO $$ BEGIN
-  RAISE EXCEPTION 'los roles de ZuluHub no pueden ser miembros de otros roles (zuluhub_app es miembro de neon_superuser): revocar la pertenencia y repetir'
+  RAISE EXCEPTION 'los roles de Pedernal no pueden ser miembros de otros roles (pedernal_app es miembro de neon_superuser): revocar la pertenencia y repetir'
     USING ERRCODE = '55000';
 END $$;\n`,
         );
         const salida = await correrAca("--aplicar", url, carpeta);
         expect(salida.codigo).toBe(1);
         expect(salida.error).toContain(
-          "los roles de ZuluHub no pueden ser miembros de otros roles (zuluhub_app es miembro de neon_superuser): revocar la pertenencia y repetir",
+          "los roles de Pedernal no pueden ser miembros de otros roles (pedernal_app es miembro de neon_superuser): revocar la pertenencia y repetir",
         );
         expect(salida.error).toContain("[55000]");
         expect(salida.error).toContain("es la primera pendiente (9002_mala.sql)");

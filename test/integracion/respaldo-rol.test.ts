@@ -13,8 +13,8 @@ import { crearBaseAparte } from "./entorno";
  * cada una tiene su violación inyectada: se rompe a propósito (dentro de una transacción que después se revierte, o
  * en una base aparte) y la regla tiene que nombrar lo roto.
  *
- *  RS1  Ningún rol tiene BYPASSRLS salvo `zuluhub_respaldo` (y los del proveedor, que ZuluHub no crea).
- *  RS2  TODA tabla de los esquemas de ZuluHub tiene RLS habilitado y forzado, salvo la lista de excepciones.
+ *  RS1  Ningún rol tiene BYPASSRLS salvo `pedernal_respaldo` (y los del proveedor, que Pedernal no crea).
+ *  RS2  TODA tabla de los esquemas de Pedernal tiene RLS habilitado y forzado, salvo la lista de excepciones.
  *  RS3  El rol de respaldo: sus atributos, sus topes, sin pertenencias, y ningún privilegio que no sea SELECT.
  *  RS4  El rol de respaldo lee todas las tablas y secuencias (también las que se creen después).
  *  RS5  El comando de migración no lo activa sin `--con-respaldo` y nunca lo manda a Vercel.
@@ -27,10 +27,10 @@ const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 120_000, hookTimeout: 120_000 });
 
 const CARPETA_REAL = join(import.meta.dirname, "../../migraciones");
-const ROL = "zuluhub_respaldo";
+const ROL = "pedernal_respaldo";
 const ESQUEMAS = ["public", "autenticacion"] as const;
 
-/** Roles del proveedor con BYPASSRLS que ZuluHub no crea (ADR-011, A3). NO VERIFICADA la lista completa de Neon. */
+/** Roles del proveedor con BYPASSRLS que Pedernal no crea (ADR-011, A3). NO VERIFICADA la lista completa de Neon. */
 const ROLES_DEL_PROVEEDOR = ["neondb_owner", "neon_superuser", "cloud_admin"] as const;
 
 type Excepcion = Readonly<{ rls: boolean; forzado: boolean; motivo: string }>;
@@ -192,7 +192,7 @@ async function problemasDelRol(c: pg.ClientBase, rol: string = ROL): Promise<str
   return problemas;
 }
 
-/** RS4: las tablas y secuencias de los esquemas de ZuluHub que el rol de respaldo no puede leer. */
+/** RS4: las tablas y secuencias de los esquemas de Pedernal que el rol de respaldo no puede leer. */
 async function problemasDeLectura(c: pg.ClientBase): Promise<string[]> {
   const sinLeer = await filas<{ objeto: string }>(
     c,
@@ -258,7 +258,7 @@ describe.skipIf(base === null)("el rol de respaldo y las reglas de aislamiento (
         `t-${sufijo()}`,
         `t-${sufijo()}`,
       ]);
-      await dueno.query("SET LOCAL ROLE zuluhub_respaldo");
+      await dueno.query("SET LOCAL ROLE pedernal_respaldo");
       // Sin contexto firmado un rol de la aplicación no ve ninguna fila de `tenant` (RLS forzado); el de respaldo, todas.
       const [n] = await filas<{ n: string }>(dueno, "select count(*) as n from tenant");
       expect(Number(n?.n)).toBeGreaterThanOrEqual(2);
@@ -430,7 +430,7 @@ describe.skipIf(base === null)("RS5: --preparar-roles --con-respaldo", () => {
       // Roles propios (los del servidor los usan las demás pruebas): el de respaldo solo si se pidió.
       roles: (_conAutenticacion, conRespaldo) => {
         pedidos.push(conRespaldo);
-        return conRespaldo ? roles : roles.filter((r) => r.variable !== "ZULUHUB_DB_RESPALDO");
+        return conRespaldo ? roles : roles.filter((r) => r.variable !== "PEDERNAL_DB_RESPALDO");
       },
     });
     return { codigo, info: info.join("\n"), error: error.join("\n"), secreto, pedidos };
@@ -457,14 +457,14 @@ describe.skipIf(base === null)("RS5: --preparar-roles --con-respaldo", () => {
     const nueva = await crearBaseAparte(base, { migrar: false });
     destruir = nueva.destruir;
     const roles = [
-      { rol: app, variable: "ZULUHUB_DB_APP" },
-      { rol: respaldo, variable: "ZULUHUB_DB_RESPALDO" },
+      { rol: app, variable: "PEDERNAL_DB_APP" },
+      { rol: respaldo, variable: "PEDERNAL_DB_RESPALDO" },
     ];
 
     const sin = await correr(nueva.base.dueno, [], roles);
     expect(sin.codigo).toBe(0);
     expect(sin.pedidos).toEqual([false]);
-    expect(sin.secreto.join("\n")).not.toContain("ZULUHUB_DB_RESPALDO");
+    expect(sin.secreto.join("\n")).not.toContain("PEDERNAL_DB_RESPALDO");
     const login = async (rol: string) =>
       (
         await filas<{ l: boolean }>(
@@ -482,9 +482,9 @@ describe.skipIf(base === null)("RS5: --preparar-roles --con-respaldo", () => {
     const texto = con.secreto.join("\n");
     const bloqueDeGithub = texto.slice(texto.indexOf("PEGAR EN GITHUB"), texto.indexOf("FIN"));
     expect(bloqueDeGithub).toContain("NUNCA EN VERCEL");
-    const linea = con.secreto.find((l) => l.startsWith("ZULUHUB_DB_RESPALDO="));
+    const linea = con.secreto.find((l) => l.startsWith("PEDERNAL_DB_RESPALDO="));
     expect(linea).toBeDefined();
-    const url = new URL((linea ?? "").slice("ZULUHUB_DB_RESPALDO=".length));
+    const url = new URL((linea ?? "").slice("PEDERNAL_DB_RESPALDO=".length));
     expect(url.username).toBe(respaldo);
     expect(url.hostname).toBe(new URL(nueva.base.dueno).hostname);
     // El de la aplicación ya tenía LOGIN: no hay bloque de Vercel con el de respaldo adentro.

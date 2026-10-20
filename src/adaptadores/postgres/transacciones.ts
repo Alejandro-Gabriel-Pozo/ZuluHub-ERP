@@ -28,7 +28,7 @@ export type ConfiguracionDeTransacciones<Tx> = Readonly<{
   /**
    * Cadena de conexión por puerta. Los valores los carga el dueño en el entorno; acá solo se usan.
    * Las puertas `INVITACION` y `SESION` son opcionales: si falta, usan la de `OPERATIVO` (las tres entran con
-   * el rol de base de la aplicación, `zuluhub_app`; lo que las distingue es el contexto firmado).
+   * el rol de base de la aplicación, `pedernal_app`; lo que las distingue es el contexto firmado).
    */
   urls: Readonly<Partial<Record<TipoDeContexto, string>>>;
   /**

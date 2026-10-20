@@ -291,7 +291,7 @@ export async function conAppDe<T>(
 ): Promise<T> {
   const s = await SesionDePrueba.abrir(
     base,
-    "zuluhub_app",
+    "pedernal_app",
     comoEmpresa(empresaId(m.empresa), persona === null ? null : personaId(persona)),
     aislamiento,
   );
@@ -316,7 +316,7 @@ export async function conPlataformaDe<T>(
       : actor === "SOPORTE"
         ? comoPlataforma({ tipo: "ADMIN", id: SOPORTE_DE_PRUEBA })
         : comoPlataforma({ tipo: "SISTEMA", proceso: "prueba" });
-  const s = await SesionDePrueba.abrir(base, "zuluhub_plataforma", contexto);
+  const s = await SesionDePrueba.abrir(base, "pedernal_plataforma", contexto);
   try {
     return await trabajo(s);
   } finally {

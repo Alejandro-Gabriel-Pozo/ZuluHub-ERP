@@ -29,7 +29,7 @@ const definicion = (cambios: Partial<DefinicionDeMarca> = {}): DefinicionDeMarca
 });
 
 const PRINCIPAL: DefinicionDeMarca = {
-  nombreVisible: "ZuluHub",
+  nombreVisible: "Pedernal",
   tema: {
     primary: "#1a73e8",
     "on-primary": "#ffffff",
@@ -37,7 +37,7 @@ const PRINCIPAL: DefinicionDeMarca = {
     accent: "#d93025",
   },
   aspecto: { estilo: "CLASICO", esquinas: "RECTA" },
-  logo: "/marcas/zuluhub/logo.png",
+  logo: "/marcas/pedernal/logo.png",
   vocabulario: { "rol.gerente.nombre": "Gerente general" },
   modulosIniciales: ["reservas"],
   planPorDefectoId: PLAN_A,

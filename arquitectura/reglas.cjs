@@ -1,5 +1,5 @@
 /**
- * Reglas de dependencias de ZuluHub (ADR-001). Se escriben a mano en H0; cuando exista la primera
+ * Reglas de dependencias de Pedernal (ADR-001). Se escriben a mano en H0; cuando exista la primera
  * ficha `modulo.ts` se generan de las fichas (ADR-003). Todas con severidad `error`.
  *
  * Las rutas son relativas a la raíz del repositorio.
@@ -477,7 +477,7 @@ const reglas = [
   },
   {
     // P7 y P8b. Previene: que `apps/web` (o cualquier parte de `src/`) obtenga la puerta de plataforma y con ella la
-    // credencial del rol `zuluhub_plataforma`: un error de la web podría actuar como plataforma (R10). Y, desde P8b,
+    // credencial del rol `pedernal_plataforma`: un error de la web podría actuar como plataforma (R10). Y, desde P8b,
     // que la consola `apps/plataforma` ejecute un caso SIN pasar por la sesión: `plataforma.ts` (que corre casos con
     // un contexto armado por quien llama, sin la comprobación del segundo factor reciente) es solo de los scripts del
     // dueño y de las pruebas; la consola entra por `puerta-de-consola.ts` (regla siguiente). Alcance: `plataforma.ts`

@@ -50,13 +50,13 @@ import {
 
 const base = inject("baseDePruebas");
 
-const PLATAFORMA = "zuluhub_plataforma";
+const PLATAFORMA = "pedernal_plataforma";
 const ROLES = [
-  "zuluhub_app",
-  "zuluhub_grupo",
-  "zuluhub_trabajos",
-  "zuluhub_plataforma",
-  "zuluhub_autenticacion",
+  "pedernal_app",
+  "pedernal_grupo",
+  "pedernal_trabajos",
+  "pedernal_plataforma",
+  "pedernal_autenticacion",
 ] as const;
 const TABLAS_NUEVAS = [
   "admin_plataforma",
@@ -277,7 +277,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       [ADMIN_DE_PRUEBA, randomBytes(12).toString("hex"), "ab".repeat(32)],
     );
     await dueno.query(
-      `insert into referencia_de_error (referencia, accion, motivo) values ('ZH-ABCD-1234', 'usuarios.invitar', 'SIN_PERMISO')`,
+      `insert into referencia_de_error (referencia, accion, motivo) values ('PD-ABCD-1234', 'usuarios.invitar', 'SIN_PERMISO')`,
     );
     // Marcas y planes (0007): una fila en cada tabla nueva que la plataforma lee.
     await sembrarMarcasYPlanes(dueno, activa);
@@ -377,7 +377,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
     it("las políticas del rol de plataforma son exactamente estas (una abierta de más sumaría acceso)", async () => {
       const politicas = await filas<{ p: string }>(
         `select format('%s.%s:%s:%s', tablename, policyname, cmd, permissive) as p
-         from pg_policies where schemaname = 'public' and 'zuluhub_plataforma' = any (roles)
+         from pg_policies where schemaname = 'public' and 'pedernal_plataforma' = any (roles)
          order by 1`,
       );
       expect(politicas.map((f) => f.p).sort()).toEqual(
@@ -516,15 +516,15 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       const politicas = await filas<{ p: string }>(
         `select format('%s.%s:%s:%s:%s', tablename, policyname, cmd, permissive, array_to_string(roles, '+')) as p
          from pg_policies
-         where schemaname = 'public' and tablename = any($1) and not ('zuluhub_plataforma' = any (roles))
+         where schemaname = 'public' and tablename = any($1) and not ('pedernal_plataforma' = any (roles))
          order by 1`,
         [[...TABLAS_NUEVAS]],
       );
       expect(politicas.map((f) => f.p).sort()).toEqual(
         [
-          "referencia_de_error.referencia_de_error_app_alta:INSERT:PERMISSIVE:zuluhub_app",
-          "referencia_de_error.referencia_de_error_grupo_alta:INSERT:PERMISSIVE:zuluhub_grupo",
-          "referencia_de_error.referencia_de_error_invitado_alta:INSERT:PERMISSIVE:zuluhub_app",
+          "referencia_de_error.referencia_de_error_app_alta:INSERT:PERMISSIVE:pedernal_app",
+          "referencia_de_error.referencia_de_error_grupo_alta:INSERT:PERMISSIVE:pedernal_grupo",
+          "referencia_de_error.referencia_de_error_invitado_alta:INSERT:PERMISSIVE:pedernal_app",
         ].sort(),
       );
     });
@@ -541,12 +541,12 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       // Tablas que la plataforma puede LEER (de la tabla entera o de alguna columna).
       const lee = await consultar<{ t: string }>(
         `select distinct table_name as t from information_schema.column_privileges
-         where table_schema = 'public' and grantee = 'zuluhub_plataforma' and privilege_type = 'SELECT'`,
+         where table_schema = 'public' and grantee = 'pedernal_plataforma' and privilege_type = 'SELECT'`,
       );
       // Tablas y comandos que puede ESCRIBIR (INSERT o UPDATE de alguna columna).
       const escribe = await consultar<{ t: string; c: string }>(
         `select distinct table_name as t, privilege_type as c from information_schema.column_privileges
-         where table_schema = 'public' and grantee = 'zuluhub_plataforma' and privilege_type in ('INSERT', 'UPDATE')`,
+         where table_schema = 'public' and grantee = 'pedernal_plataforma' and privilege_type in ('INSERT', 'UPDATE')`,
       );
       const politicas = await consultar<{
         t: string;
@@ -556,7 +556,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       }>(
         `select tablename as t, cmd as c, permissive = 'RESTRICTIVE' as restrictiva,
                 coalesce(qual, '') || ' ' || coalesce(with_check, '') as texto
-         from pg_policies where schemaname = 'public' and 'zuluhub_plataforma' = any (roles)`,
+         from pg_policies where schemaname = 'public' and 'pedernal_plataforma' = any (roles)`,
       );
       const menciona = (texto: string) =>
         /app_actor_plataforma|plataforma_actor_vigente|admin_plataforma_con_rol/.test(texto);
@@ -623,7 +623,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       const todas = await filas<{ policyname: string; texto: string }>(
         `select policyname, coalesce(qual, '') || ' ' || coalesce(with_check, '') as texto
          from pg_policies
-         where schemaname = 'public' and 'zuluhub_plataforma' = any (roles)
+         where schemaname = 'public' and 'pedernal_plataforma' = any (roles)
            and (coalesce(qual, '') || coalesce(with_check, '')) ~ '(app_actor_plataforma|admin_plataforma_con_rol|plataforma_actor_vigente)'`,
       );
       expect(todas.length).toBeGreaterThanOrEqual(25);
@@ -711,13 +711,13 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       // La aplicación sigue leyendo toda la tabla; nadie más.
       expect([
         ...new Set(columnas.filter((c) => c.grantee !== PLATAFORMA).map((c) => c.grantee)),
-      ]).toEqual(["zuluhub_app"]);
+      ]).toEqual(["pedernal_app"]);
     });
 
     it("lo que la plataforma puede leer, columna por columna, es exactamente esto (las tablas enteras más 4 de membresia)", async () => {
       const reales = await filas<{ t: string; c: string }>(
         `select table_name as t, column_name as c from information_schema.column_privileges
-         where table_schema = 'public' and grantee = 'zuluhub_plataforma' and privilege_type = 'SELECT'
+         where table_schema = 'public' and grantee = 'pedernal_plataforma' and privilege_type = 'SELECT'
          order by 1, 2`,
       );
       const porTabla = new Map<string, string[]>();
@@ -746,10 +746,10 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       expect(permisos.map((p) => `${p.grantee}:${p.t}.${p.c}:${p.p}`).sort()).toEqual(
         [
           ...["admin_id", "clave", "operacion", "huella", "resultado"].map(
-            (c) => `zuluhub_plataforma:idempotencia_plataforma.${c}:INSERT`,
+            (c) => `pedernal_plataforma:idempotencia_plataforma.${c}:INSERT`,
           ),
           ...["referencia", "accion", "motivo", "empresa_id", "persona_id"].flatMap((c) =>
-            ["zuluhub_app", "zuluhub_grupo", "zuluhub_plataforma"].map(
+            ["pedernal_app", "pedernal_grupo", "pedernal_plataforma"].map(
               (rol) => `${rol}:referencia_de_error.${c}:INSERT`,
             ),
           ),
@@ -766,10 +766,10 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       expect(rows[0]?.with_check).toContain(`'${TRABAJO_ENVIAR_INVITACION}'`);
     });
 
-    it("el quinto rol, zuluhub_autenticacion: sin superusuario, sin BYPASSRLS, sin pertenencias y con topes de tiempo", async () => {
+    it("el quinto rol, pedernal_autenticacion: sin superusuario, sin BYPASSRLS, sin pertenencias y con topes de tiempo", async () => {
       const [rol] = await filas<Record<string, unknown>>(
         `select rolname, rolsuper, rolbypassrls, rolcreaterole, rolcreatedb, rolreplication, rolinherit
-         from pg_roles where rolname = 'zuluhub_autenticacion'`,
+         from pg_roles where rolname = 'pedernal_autenticacion'`,
       );
       expect(rol).toMatchObject({
         rolsuper: false,
@@ -781,12 +781,12 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       });
       expect(
         await filas(
-          `select 1 from pg_auth_members m join pg_roles r on r.oid = m.member where r.rolname = 'zuluhub_autenticacion'`,
+          `select 1 from pg_auth_members m join pg_roles r on r.oid = m.member where r.rolname = 'pedernal_autenticacion'`,
         ),
       ).toEqual([]);
       const [topes] = await filas<{ setconfig: string[] }>(
         `select s.setconfig from pg_db_role_setting s join pg_roles r on r.oid = s.setrole
-         where s.setdatabase = 0 and r.rolname = 'zuluhub_autenticacion'`,
+         where s.setdatabase = 0 and r.rolname = 'pedernal_autenticacion'`,
       );
       expect([...(topes?.setconfig ?? [])].sort()).toEqual([
         "idle_in_transaction_session_timeout=60s",
@@ -794,13 +794,13 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
         "statement_timeout=30s",
       ]);
       const { rows: temp } = await dueno.query<{ temp: boolean }>(
-        `select has_database_privilege('zuluhub_autenticacion', current_database(), 'TEMP') as temp`,
+        `select has_database_privilege('pedernal_autenticacion', current_database(), 'TEMP') as temp`,
       );
       expect(temp[0]?.temp).toBe(false);
       // No es dueño de nada.
       expect(
         await filas(
-          `select 1 from pg_class c join pg_roles r on r.oid = c.relowner where r.rolname = 'zuluhub_autenticacion'`,
+          `select 1 from pg_class c join pg_roles r on r.oid = c.relowner where r.rolname = 'pedernal_autenticacion'`,
         ),
       ).toEqual([]);
     });
@@ -809,12 +809,12 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       expect(
         await filas(
           // 0010: sobre su PROPIO esquema (`autenticacion`) sí tiene; sobre `public`, nada.
-          `select 1 from information_schema.table_privileges where grantee = 'zuluhub_autenticacion' and table_schema = 'public'`,
+          `select 1 from information_schema.table_privileges where grantee = 'pedernal_autenticacion' and table_schema = 'public'`,
         ),
       ).toEqual([]);
       expect(
         await filas(
-          `select 1 from information_schema.column_privileges where grantee = 'zuluhub_autenticacion' and table_schema = 'public'`,
+          `select 1 from information_schema.column_privileges where grantee = 'pedernal_autenticacion' and table_schema = 'public'`,
         ),
       ).toEqual([]);
       const tablas = await filas<{ t: string }>(
@@ -825,8 +825,8 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       for (const { t } of tablas) {
         const { rows } = await dueno.query<{ puede: boolean }>(
           `select (
-             has_table_privilege('zuluhub_autenticacion', format('public.%I', $1::text), 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
-             or has_any_column_privilege('zuluhub_autenticacion', format('public.%I', $1::text), 'SELECT,INSERT,UPDATE,REFERENCES')
+             has_table_privilege('pedernal_autenticacion', format('public.%I', $1::text), 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+             or has_any_column_privilege('pedernal_autenticacion', format('public.%I', $1::text), 'SELECT,INSERT,UPDATE,REFERENCES')
            ) as puede`,
           [t],
         );
@@ -838,7 +838,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       expect(secuencias.length).toBeGreaterThan(0);
       for (const { s } of secuencias) {
         const { rows } = await dueno.query<{ puede: boolean }>(
-          `select has_sequence_privilege('zuluhub_autenticacion', format('public.%I', $1::text), 'USAGE,SELECT,UPDATE') as puede`,
+          `select has_sequence_privilege('pedernal_autenticacion', format('public.%I', $1::text), 'USAGE,SELECT,UPDATE') as puede`,
           [s],
         );
         expect(rows[0]?.puede, `autenticacion sobre la secuencia ${s}`).toBe(false);
@@ -851,17 +851,17 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       expect(funciones.length).toBeGreaterThan(15);
       for (const { firma } of funciones) {
         const { rows } = await dueno.query<{ puede: boolean }>(
-          `select has_function_privilege('zuluhub_autenticacion', $1::regprocedure, 'EXECUTE') as puede`,
+          `select has_function_privilege('pedernal_autenticacion', $1::regprocedure, 'EXECUTE') as puede`,
           [firma],
         );
         expect(rows[0]?.puede, `autenticacion ejecuta ${firma}`).toBe(false);
       }
       const { rows: esquema } = await dueno.query<{ puede: boolean }>(
-        `select has_schema_privilege('zuluhub_autenticacion', 'public', 'CREATE') as puede`,
+        `select has_schema_privilege('pedernal_autenticacion', 'public', 'CREATE') as puede`,
       );
       expect(esquema[0]?.puede).toBe(false);
       const { rows: bd } = await dueno.query<{ puede: boolean }>(
-        `select has_database_privilege('zuluhub_autenticacion', current_database(), 'CREATE') as puede`,
+        `select has_database_privilege('pedernal_autenticacion', current_database(), 'CREATE') as puede`,
       );
       expect(bd[0]?.puede).toBe(false);
     });
@@ -872,36 +872,36 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
         "utf8",
       );
       const bloque = /^DO \$\$[\s\S]*?^\$\$;/m.exec(migracion)?.[0] ?? "";
-      expect(bloque).toContain("zuluhub_autenticacion");
+      expect(bloque).toContain("pedernal_autenticacion");
       await dueno.query("begin");
       try {
         await expect(dueno.query(bloque)).resolves.toBeDefined();
         await expect(dueno.query(bloque)).resolves.toBeDefined();
         // Si alguien le dio atributos de más, la migración se los quita.
-        await dueno.query("alter role zuluhub_autenticacion createdb inherit");
+        await dueno.query("alter role pedernal_autenticacion createdb inherit");
         await dueno.query(bloque);
         const [rol] = (
           await dueno.query<{ rolcreatedb: boolean; rolinherit: boolean }>(
-            "select rolcreatedb, rolinherit from pg_roles where rolname = 'zuluhub_autenticacion'",
+            "select rolcreatedb, rolinherit from pg_roles where rolname = 'pedernal_autenticacion'",
           )
         ).rows;
         expect(rol).toEqual({ rolcreatedb: false, rolinherit: false });
         // Y si alguien le dio objetos temporales (cierran la suplantación por pg_temp), también se los quita.
         await dueno.query(
-          `do $$ begin execute format('grant temporary on database %I to zuluhub_autenticacion', current_database()); end $$`,
+          `do $$ begin execute format('grant temporary on database %I to pedernal_autenticacion', current_database()); end $$`,
         );
         const { rows: conTemp } = await dueno.query<{ temp: boolean }>(
-          `select has_database_privilege('zuluhub_autenticacion', current_database(), 'TEMP') as temp`,
+          `select has_database_privilege('pedernal_autenticacion', current_database(), 'TEMP') as temp`,
         );
         expect(conTemp[0]?.temp).toBe(true);
         await dueno.query(bloque);
         const { rows: sinTemp } = await dueno.query<{ temp: boolean }>(
-          `select has_database_privilege('zuluhub_autenticacion', current_database(), 'TEMP') as temp`,
+          `select has_database_privilege('pedernal_autenticacion', current_database(), 'TEMP') as temp`,
         );
         expect(sinTemp[0]?.temp).toBe(false);
-        await dueno.query("grant pg_monitor to zuluhub_autenticacion");
+        await dueno.query("grant pg_monitor to pedernal_autenticacion");
         await expect(dueno.query(bloque)).rejects.toThrow(
-          /zuluhub_autenticacion es miembro de pg_monitor/,
+          /pedernal_autenticacion es miembro de pg_monitor/,
         );
       } finally {
         await dueno.query("rollback");
@@ -914,13 +914,14 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
   // ===========================================================================================
   describe("aislamiento entre roles de base", () => {
     const tokenApp = () =>
-      firmarCarga(base!.clave, carga({ u: "zuluhub_app", e: activa.empresa, a: null }));
+      firmarCarga(base!.clave, carga({ u: "pedernal_app", e: activa.empresa, a: null }));
     const tokenGrupo = () =>
       firmarCarga(
         base!.clave,
-        carga({ u: "zuluhub_grupo", t: activa.tenant, p: propietario, a: null }),
+        carga({ u: "pedernal_grupo", t: activa.tenant, p: propietario, a: null }),
       );
-    const tokenTrabajos = () => firmarCarga(base!.clave, carga({ u: "zuluhub_trabajos", a: null }));
+    const tokenTrabajos = () =>
+      firmarCarga(base!.clave, carga({ u: "pedernal_trabajos", a: null }));
 
     it("la aplicación, el grupo, los trabajos y la autenticación no leen admin_plataforma, idempotencia_plataforma ni auditoria_plataforma (42501)", async () => {
       const sesiones: ReadonlyArray<readonly [string, string, string | null]> = [
@@ -1064,15 +1065,15 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           ["token vencido", tokenDe(ADMIN_DE_PRUEBA, { x: ahora - 5 })],
           [
             "token de otro rol (la aplicación)",
-            firmarCarga(base!.clave, carga({ u: "zuluhub_app", a: ADMIN_DE_PRUEBA })),
+            firmarCarga(base!.clave, carga({ u: "pedernal_app", a: ADMIN_DE_PRUEBA })),
           ],
           [
             "token del grupo con el actor",
-            firmarCarga(base!.clave, carga({ u: "zuluhub_grupo", a: ADMIN_DE_PRUEBA })),
+            firmarCarga(base!.clave, carga({ u: "pedernal_grupo", a: ADMIN_DE_PRUEBA })),
           ],
           [
             "token de trabajos con el actor",
-            firmarCarga(base!.clave, carga({ u: "zuluhub_trabajos", a: ADMIN_DE_PRUEBA })),
+            firmarCarga(base!.clave, carga({ u: "pedernal_trabajos", a: ADMIN_DE_PRUEBA })),
           ],
           [
             "token firmado con otra clave",
@@ -1158,7 +1159,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
               [],
             ],
             [
-              "insert into referencia_de_error (referencia, accion, motivo) values ('ZH-0000-0000', 'a.b', 'X')",
+              "insert into referencia_de_error (referencia, accion, motivo) values ('PD-0000-0000', 'a.b', 'X')",
               [],
             ],
           ];
@@ -1291,7 +1292,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       // Un token de la aplicación que llevara un actor tampoco abre la plataforma.
       const deApp = firmarCarga(
         base!.clave,
-        carga({ u: "zuluhub_app", e: activa.empresa, a: ADMIN_DE_PRUEBA }),
+        carga({ u: "pedernal_app", e: activa.empresa, a: ADMIN_DE_PRUEBA }),
       );
       expect(await comoPlat(deApp, (s) => s.actor())).toBeNull();
     });
@@ -1731,7 +1732,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
               [ADMIN_DE_BAJA, randomBytes(12).toString("hex"), "ab".repeat(32)],
             ],
             [
-              "insert into referencia_de_error (referencia, accion, motivo) values ('ZH-0000-0000', 'a.b', 'X')",
+              "insert into referencia_de_error (referencia, accion, motivo) values ('PD-0000-0000', 'a.b', 'X')",
               [],
             ],
           ] as const) {
@@ -2168,10 +2169,10 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       s.intentar(
         `insert into referencia_de_error (referencia, accion, motivo, empresa_id, persona_id)
          values ($1, 'usuarios.invitar', 'SIN_PERMISO', $2, $3)`,
-        [valores.referencia ?? "ZH-A1B2-C3D4", valores.empresa ?? null, valores.persona ?? null],
+        [valores.referencia ?? "PD-A1B2-C3D4", valores.empresa ?? null, valores.persona ?? null],
       );
     const tokenApp = (cambios: Partial<CargaDeContexto> = {}) =>
-      firmarCarga(base!.clave, carga({ u: "zuluhub_app", a: null, ...cambios }));
+      firmarCarga(base!.clave, carga({ u: "pedernal_app", a: null, ...cambios }));
 
     it("el contexto operativo registra solo de su empresa y de su persona (o del sistema)", async () => {
       await conSesion(base!.app, tokenApp({ e: activa.empresa, p: personaMiembro }), async (s) => {
@@ -2224,7 +2225,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
     it("el grupo registra sin empresa y de la persona del contexto", async () => {
       const token = firmarCarga(
         base!.clave,
-        carga({ u: "zuluhub_grupo", t: activa.tenant, p: propietario, a: null }),
+        carga({ u: "pedernal_grupo", t: activa.tenant, p: propietario, a: null }),
       );
       await conSesion(base!.grupo, token, async (s) => {
         esperarFilas(await insertar(s, { persona: propietario }), 1);
@@ -2235,7 +2236,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
     });
 
     it("los trabajos y la autenticación no registran ni leen (42501); la aplicación y el grupo registran pero no leen", async () => {
-      const token = firmarCarga(base!.clave, carga({ u: "zuluhub_trabajos", a: null }));
+      const token = firmarCarga(base!.clave, carga({ u: "pedernal_trabajos", a: null }));
       await conSesion(base!.trabajos, token, async (s) => {
         esperarRechazo(await insertar(s));
         esperarRechazo(await s.intentar("select * from referencia_de_error"));
@@ -2250,7 +2251,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
         // INSERT ... RETURNING exige poder leer la fila: no está permitido.
         esperarRechazo(
           await s.intentar(
-            `insert into referencia_de_error (referencia, accion, motivo, empresa_id) values ('ZH-0000-0001', 'a.b', 'X', $1) returning id`,
+            `insert into referencia_de_error (referencia, accion, motivo, empresa_id) values ('PD-0000-0001', 'a.b', 'X', $1) returning id`,
             [activa.empresa],
           ),
         );
@@ -2261,14 +2262,14 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       for (const actor of [ADMIN_DE_PRUEBA, SOPORTE_DE_PRUEBA, "sistema"]) {
         await comoPlat(tokenDe(actor), async (s) => {
           const r = await s.intentar(
-            "select referencia from referencia_de_error where referencia = 'ZH-ABCD-1234'",
+            "select referencia from referencia_de_error where referencia = 'PD-ABCD-1234'",
           );
           esperarFilas(r, 1);
           esperarFilas(
-            await insertar(s, { empresa: activa.empresa, referencia: "ZH-0000-0002" }),
+            await insertar(s, { empresa: activa.empresa, referencia: "PD-0000-0002" }),
             1,
           );
-          esperarFilas(await insertar(s, { referencia: "ZH-0000-0003" }), 1);
+          esperarFilas(await insertar(s, { referencia: "PD-0000-0003" }), 1);
         });
       }
       for (const actor of [ADMIN_DE_BAJA, DESCONOCIDO, null]) {
@@ -2278,46 +2279,46 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       }
     });
 
-    it("el formato lo imponen los CHECK: referencia ZH-XXXX-XXXX en hexadecimal mayúscula; acción y motivo tipados, sin texto libre", async () => {
+    it("el formato lo imponen los CHECK: referencia PD-XXXX-XXXX en hexadecimal mayúscula; acción y motivo tipados, sin texto libre", async () => {
       const intentarComoDueno = (referencia: string, accion: string, motivo: string) =>
         dueno.query(
           "insert into referencia_de_error (referencia, accion, motivo) values ($1, $2, $3)",
           [referencia, accion, motivo],
         );
       const mal: ReadonlyArray<readonly [string, string, string, string]> = [
-        ["referencia en minúsculas", "zh-abcd-1234", "usuarios.invitar", "SIN_PERMISO"],
+        ["referencia en minúsculas", "pd-abcd-1234", "usuarios.invitar", "SIN_PERMISO"],
         [
           "referencia con hexadecimal en minúsculas",
-          "ZH-abcd-1234",
+          "PD-abcd-1234",
           "usuarios.invitar",
           "SIN_PERMISO",
         ],
         ["referencia sin prefijo", "AB-ABCD-1234", "usuarios.invitar", "SIN_PERMISO"],
-        ["referencia larga", "ZH-ABCDE-1234", "usuarios.invitar", "SIN_PERMISO"],
-        ["referencia no hexadecimal", "ZH-ABCG-1234", "usuarios.invitar", "SIN_PERMISO"],
-        ["referencia con salto de línea", "ZH-ABCD-1234\n", "usuarios.invitar", "SIN_PERMISO"],
-        ["acción con mayúsculas", "ZH-ABCD-1234", "Usuarios.invitar", "SIN_PERMISO"],
-        ["acción con espacio", "ZH-ABCD-1234", "usuarios invitar", "SIN_PERMISO"],
-        ["acción vacía", "ZH-ABCD-1234", "", "SIN_PERMISO"],
-        ["acción con punto al final", "ZH-ABCD-1234", "usuarios.", "SIN_PERMISO"],
+        ["referencia larga", "PD-ABCDE-1234", "usuarios.invitar", "SIN_PERMISO"],
+        ["referencia no hexadecimal", "PD-ABCG-1234", "usuarios.invitar", "SIN_PERMISO"],
+        ["referencia con salto de línea", "PD-ABCD-1234\n", "usuarios.invitar", "SIN_PERMISO"],
+        ["acción con mayúsculas", "PD-ABCD-1234", "Usuarios.invitar", "SIN_PERMISO"],
+        ["acción con espacio", "PD-ABCD-1234", "usuarios invitar", "SIN_PERMISO"],
+        ["acción vacía", "PD-ABCD-1234", "", "SIN_PERMISO"],
+        ["acción con punto al final", "PD-ABCD-1234", "usuarios.", "SIN_PERMISO"],
         [
           "acción con un dato adentro",
-          "ZH-ABCD-1234",
+          "PD-ABCD-1234",
           "usuarios.invitar:juan@x.com",
           "SIN_PERMISO",
         ],
-        ["acción larguísima", "ZH-ABCD-1234", `${"a".repeat(80)}.b`, "SIN_PERMISO"],
-        ["motivo en minúsculas", "ZH-ABCD-1234", "usuarios.invitar", "sin_permiso"],
-        ["motivo con espacio", "ZH-ABCD-1234", "usuarios.invitar", "SIN PERMISO"],
+        ["acción larguísima", "PD-ABCD-1234", `${"a".repeat(80)}.b`, "SIN_PERMISO"],
+        ["motivo en minúsculas", "PD-ABCD-1234", "usuarios.invitar", "sin_permiso"],
+        ["motivo con espacio", "PD-ABCD-1234", "usuarios.invitar", "SIN PERMISO"],
         [
           "motivo con texto libre",
-          "ZH-ABCD-1234",
+          "PD-ABCD-1234",
           "usuarios.invitar",
           "No tiene permiso para ver la venta 123",
         ],
-        ["motivo vacío", "ZH-ABCD-1234", "usuarios.invitar", ""],
-        ["motivo que empieza con número", "ZH-ABCD-1234", "usuarios.invitar", "1SIN"],
-        ["motivo larguísimo", "ZH-ABCD-1234", "usuarios.invitar", "A".repeat(81)],
+        ["motivo vacío", "PD-ABCD-1234", "usuarios.invitar", ""],
+        ["motivo que empieza con número", "PD-ABCD-1234", "usuarios.invitar", "1SIN"],
+        ["motivo larguísimo", "PD-ABCD-1234", "usuarios.invitar", "A".repeat(81)],
       ];
       for (const [nombre, referencia, accion, motivo] of mal) {
         await expect(intentarComoDueno(referencia, accion, motivo), nombre).rejects.toMatchObject({
@@ -2325,27 +2326,27 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
         });
       }
       await expect(
-        intentarComoDueno("ZH-0123-ABCD", "sucursales.crear", "MODULO_NO_ACTIVO"),
+        intentarComoDueno("PD-0123-ABCD", "sucursales.crear", "MODULO_NO_ACTIVO"),
       ).resolves.toBeDefined();
-      await expect(intentarComoDueno("ZH-FFFF-0000", "a", "A")).resolves.toBeDefined();
-      await expect(intentarComoDueno("ZH-FFFF-0001", "a_b.c_d.e", "A1_B2")).resolves.toBeDefined();
+      await expect(intentarComoDueno("PD-FFFF-0000", "a", "A")).resolves.toBeDefined();
+      await expect(intentarComoDueno("PD-FFFF-0001", "a_b.c_d.e", "A1_B2")).resolves.toBeDefined();
       await expect(
-        intentarComoDueno("ZH-FFFF-0002", "a".repeat(80), "A".repeat(80)),
+        intentarComoDueno("PD-FFFF-0002", "a".repeat(80), "A".repeat(80)),
       ).resolves.toBeDefined();
     });
 
     it("la misma referencia no puede repetirse desde 0007 (32 bits pueden chocar: la única lo frena y el caso de uso reintenta)", async () => {
       await expect(
         dueno.query(
-          "insert into referencia_de_error (referencia, accion, motivo) values ('ZH-9999-9999', 'a.b', 'X'), ('ZH-9999-9999', 'a.c', 'Y')",
+          "insert into referencia_de_error (referencia, accion, motivo) values ('PD-9999-9999', 'a.b', 'X'), ('PD-9999-9999', 'a.c', 'Y')",
         ),
       ).rejects.toMatchObject({ code: "23505", constraint: "referencia_de_error_referencia_uk" });
       await dueno.query(
-        "insert into referencia_de_error (referencia, accion, motivo) values ('ZH-9999-9999', 'a.b', 'X')",
+        "insert into referencia_de_error (referencia, accion, motivo) values ('PD-9999-9999', 'a.b', 'X')",
       );
       await comoPlat(tokenDe(SOPORTE_DE_PRUEBA), async (s) => {
         esperarFilas(
-          await s.intentar("select * from referencia_de_error where referencia = 'ZH-9999-9999'"),
+          await s.intentar("select * from referencia_de_error where referencia = 'PD-9999-9999'"),
           1,
         );
       });
@@ -2368,13 +2369,13 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
     it("la empresa y la persona referidas tienen que existir (clave foránea)", async () => {
       await expect(
         dueno.query(
-          "insert into referencia_de_error (referencia, accion, motivo, empresa_id) values ('ZH-1111-1111', 'a.b', 'X', $1)",
+          "insert into referencia_de_error (referencia, accion, motivo, empresa_id) values ('PD-1111-1111', 'a.b', 'X', $1)",
           [randomUUID()],
         ),
       ).rejects.toMatchObject({ code: "23503" });
       await expect(
         dueno.query(
-          "insert into referencia_de_error (referencia, accion, motivo, persona_id) values ('ZH-1111-1111', 'a.b', 'X', $1)",
+          "insert into referencia_de_error (referencia, accion, motivo, persona_id) values ('PD-1111-1111', 'a.b', 'X', $1)",
           [randomUUID()],
         ),
       ).rejects.toMatchObject({ code: "23503" });
@@ -2384,7 +2385,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
   // ===========================================================================================
   // 5. El quinto rol, con conexión real
   // ===========================================================================================
-  describe("zuluhub_autenticacion con una conexión real", () => {
+  describe("pedernal_autenticacion con una conexión real", () => {
     it("se conecta pero no lee ninguna tabla de negocio: 42501 en todas (tampoco contexto_clave ni migracion)", async () => {
       const tablas = await filas<{ t: string }>(
         `select c.relname as t from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p')`,
@@ -2413,7 +2414,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
     it("no llega a los datos ni con un token de contexto de otro rol", async () => {
       const token = firmarCarga(
         base!.clave,
-        carga({ u: "zuluhub_autenticacion", a: ADMIN_DE_PRUEBA }),
+        carga({ u: "pedernal_autenticacion", a: ADMIN_DE_PRUEBA }),
       );
       await conSesion(base!.autenticacion, token, async (s) => {
         esperarRechazo(await s.intentar("select * from tenant"));
@@ -2621,8 +2622,8 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
         if (base === null) return;
         // Solo hasta 0004: lo que se prueba acá es 0004 sobre 0001 a 0003 (0005 tiene su propia prueba).
         const carpetaReal = join(import.meta.dirname, "../../migraciones");
-        const previas = await mkdtemp(join(tmpdir(), "zuluhub-mig-previas-"));
-        const real = await mkdtemp(join(tmpdir(), "zuluhub-mig-hasta-0004-"));
+        const previas = await mkdtemp(join(tmpdir(), "pedernal-mig-previas-"));
+        const real = await mkdtemp(join(tmpdir(), "pedernal-mig-hasta-0004-"));
         for (const archivo of ["0001_base.sql", "0002_identidad.sql", "0003_trabajos.sql"]) {
           await copyFile(join(carpetaReal, archivo), join(previas, archivo));
           await copyFile(join(carpetaReal, archivo), join(real, archivo));
@@ -2663,7 +2664,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           try {
             await app.query("begin");
             await app.query("select set_config('app.ctx', $1, true)", [
-              firmarCarga(base.clave, carga({ u: "zuluhub_app", e: empresa, a: null })),
+              firmarCarga(base.clave, carga({ u: "pedernal_app", e: empresa, a: null })),
             ]);
             expect((await app.query("select count(*)::int as n from sucursal")).rows[0]).toEqual({
               n: 1,

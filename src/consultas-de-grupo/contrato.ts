@@ -20,7 +20,7 @@ export type TxDeConsultasDeGrupo = Readonly<{
 }>;
 
 export type DependenciasDeConsultasDeGrupo = Readonly<{
-  /** Transacciones con el contexto de GRUPO: entran con el rol de base `zuluhub_grupo`, nunca el de la aplicación. */
+  /** Transacciones con el contexto de GRUPO: entran con el rol de base `pedernal_grupo`, nunca el de la aplicación. */
   transacciones: Transacciones<TxDeConsultasDeGrupo>;
   /** El catálogo y la matriz de grupo con los que el guard autoriza (los pasa la composición). */
   reglas: ReglasDeGrupo;

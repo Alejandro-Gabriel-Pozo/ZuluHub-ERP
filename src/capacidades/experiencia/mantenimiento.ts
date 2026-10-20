@@ -5,7 +5,7 @@
  *
  *  - 503 (no 404): es una falla del servicio, no una página que no existe; con `Retry-After`.
  *  - Las mismas cabeceras que la página neutra (nunca se indexa, sin caché, sin cookies): quien llama las arma
- *    con `cabecerasDe("NEUTRA", …)` y entran como dato. No muestra marca ni dice cuál es la causa. La causa va al registro del servidor; acá solo la referencia `ZH-…` (ADR-016).
+ *    con `cabecerasDe("NEUTRA", …)` y entran como dato. No muestra marca ni dice cuál es la causa. La causa va al registro del servidor; acá solo la referencia `PD-…` (ADR-016).
  *  - Sin estilos en línea ni scripts: se pinta aunque la política de contenido sea estricta y no depende de
  *    ninguna hoja de estilos que tampoco se pueda servir.
  */
@@ -14,7 +14,7 @@
 export const REINTENTO_DE_MANTENIMIENTO_EN_S = 60;
 
 /** La forma de una referencia (`referenciaDeError`): lo único que se permite escribir dentro del HTML. */
-const FORMA_DE_REFERENCIA = /^ZH-[0-9A-F]{4}-[0-9A-F]{4}$/;
+const FORMA_DE_REFERENCIA = /^PD-[0-9A-F]{4}-[0-9A-F]{4}$/;
 
 export type RespuestaDeMantenimiento = Readonly<{
   estado: 503;
@@ -32,7 +32,7 @@ export function respuestaDeMantenimiento(
   const { referencia, cabeceras } = entrada;
   // Una referencia con otra forma podría traer marcas HTML: es un defecto de quien llama, no se escapa.
   if (!FORMA_DE_REFERENCIA.test(referencia)) {
-    throw new RangeError("la referencia no tiene la forma ZH-XXXX-XXXX");
+    throw new RangeError("la referencia no tiene la forma PD-XXXX-XXXX");
   }
   const cuerpo = [
     "<!doctype html>",

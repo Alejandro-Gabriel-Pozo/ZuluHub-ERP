@@ -293,7 +293,7 @@ describe.skipIf(base === null)("facturación: debilitamientos propios de la migr
       const { rows } = await c.query(
         `select 1 from information_schema.column_privileges
           where table_schema = 'public' and table_name = 'comprobante' and privilege_type = 'UPDATE'
-            and grantee in ('zuluhub_app', 'zuluhub_plataforma', 'zuluhub_grupo', 'zuluhub_trabajos', 'zuluhub_autenticacion', 'zuluhub_publico', 'zuluhub_captacion', 'PUBLIC')
+            and grantee in ('pedernal_app', 'pedernal_plataforma', 'pedernal_grupo', 'pedernal_trabajos', 'pedernal_autenticacion', 'pedernal_publico', 'pedernal_captacion', 'PUBLIC')
             and column_name = any ($1)`,
         [COLUMNAS_DE_CONTENIDO],
       );
@@ -664,11 +664,11 @@ describe.skipIf(base === null)("facturación: debilitamientos propios de la migr
       const { rows } = await c.query(
         `select 1 from information_schema.table_privileges
           where table_schema = 'public' and table_name = any ($1)
-            and grantee in ('zuluhub_plataforma', 'zuluhub_grupo', 'zuluhub_trabajos', 'zuluhub_autenticacion', 'zuluhub_publico', 'zuluhub_captacion', 'PUBLIC')`,
+            and grantee in ('pedernal_plataforma', 'pedernal_grupo', 'pedernal_trabajos', 'pedernal_autenticacion', 'pedernal_publico', 'pedernal_captacion', 'PUBLIC')`,
         [TABLAS_NUEVAS],
       );
       const { rows: politicas } = await c.query(
-        `select 1 from pg_policies where schemaname = 'public' and tablename = any ($1) and roles <> array['zuluhub_app']::name[]`,
+        `select 1 from pg_policies where schemaname = 'public' and tablename = any ($1) and roles <> array['pedernal_app']::name[]`,
         [TABLAS_NUEVAS],
       );
       return rows.length === 0 && politicas.length === 0;
@@ -930,14 +930,14 @@ describe.skipIf(base === null)("facturación: debilitamientos propios de la migr
       regla: "estados",
       nombre: "darle a la aplicación UPDATE sobre el total",
       sonda: "appNoCambiaElContenido",
-      debilitar: sql("grant update (total) on comprobante to zuluhub_app"),
+      debilitar: sql("grant update (total) on comprobante to pedernal_app"),
     },
     {
       regla: "estados",
       nombre: "darle a la aplicación UPDATE sobre el receptor",
       sonda: "appNoCambiaElContenido",
       debilitar: sql(
-        "grant update (receptor_nombre, receptor_documento_numero) on comprobante to zuluhub_app",
+        "grant update (receptor_nombre, receptor_documento_numero) on comprobante to pedernal_app",
       ),
     },
     {
@@ -1313,14 +1313,14 @@ describe.skipIf(base === null)("facturación: debilitamientos propios de la migr
       nombre: "darle a la plataforma lectura del comprobante",
       sonda: "otrosRolesSinAcceso",
       debilitar: sql(
-        "grant select on comprobante to zuluhub_plataforma; create policy comprobante_plataforma_leer on comprobante for select to zuluhub_plataforma using (true)",
+        "grant select on comprobante to pedernal_plataforma; create policy comprobante_plataforma_leer on comprobante for select to pedernal_plataforma using (true)",
       ),
     },
     {
       regla: "aislamiento",
       nombre: "darle al rol de trabajos lectura de los intentos",
       sonda: "otrosRolesSinAcceso",
-      debilitar: sql("grant select on intento_arca to zuluhub_trabajos"),
+      debilitar: sql("grant select on intento_arca to pedernal_trabajos"),
     },
     {
       regla: "aislamiento",
