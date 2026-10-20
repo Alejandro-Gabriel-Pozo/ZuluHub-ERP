@@ -1,4 +1,4 @@
-import type { Kysely } from "kysely";
+import type { Kysely, KyselyPlugin } from "kysely";
 import {
   crearAuditoriaDePlataformaDePostgres,
   type AuditoriaDePlataformaDb,
@@ -27,6 +27,7 @@ import {
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import { REGLAS_DE_PLATAFORMA } from "../../src/capacidades/permisos/plataforma";
+import { CATALOGO_DE_PERILLAS } from "../../src/capacidades/planes/perillas";
 import {
   crearCasosDeUsoDeSoporte,
   type CasosDeUsoDeSoporte,
@@ -59,6 +60,8 @@ export function crearEntornoDeSoporte(
   base: BaseDePruebas,
   maximoDeConexiones = 5,
   ajustar: (tx: TxDeSoporte) => TxDeSoporte = (tx) => tx,
+  /** Un plugin de Kysely que ve cada sentencia que ejecuta la LECTURA de soporte (para contarlas). */
+  observarLecturas?: KyselyPlugin,
 ): TransaccionesDePostgres<TxDeSoporte> {
   return crearTransacciones<TxDeSoporte>({
     urls: {
@@ -70,7 +73,12 @@ export function crearEntornoDeSoporte(
     armar: (db, contexto) =>
       ajustar({
         db,
-        soporte: crearLecturaDeSoporteDePostgres(db.withTables<SoporteDb>()),
+        soporte: crearLecturaDeSoporteDePostgres(
+          (observarLecturas === undefined
+            ? db
+            : db.withPlugin(observarLecturas)
+          ).withTables<SoporteDb>(),
+        ),
         autorizacionDePlataforma: crearAutorizacionDePlataformaDePostgres(
           db.withTables<AutorizacionDePlataformaDb>(),
         ),
@@ -95,6 +103,7 @@ export function crearConsultasDeSoporte(
     transacciones: entorno,
     reglas: REGLAS_DE_PLATAFORMA,
     catalogoDeEmpresa: CATALOGO_DE_MODULOS,
+    catalogoDePerillas: CATALOGO_DE_PERILLAS,
   });
 }
 

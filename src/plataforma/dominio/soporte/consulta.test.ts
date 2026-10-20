@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { estadoEfectivo } from "../../../contexto/estados";
 import {
+  ESTADOS_EFECTIVOS,
   LARGO_MAXIMO_DE_FILTRO,
   LIMITE_MAXIMO_DE_PAGINA,
   LIMITE_POR_DEFECTO_DE_PAGINA,
   claveDeIdempotenciaValida,
+  combinacionesDeEstadoEfectivo,
+  criterioDeBusqueda,
+  esEstadoEfectivo,
   filtroDeTexto,
   paginaValida,
+  patronDeContiene,
   rangoDeFechas,
   resultadoDePagina,
   uuidDesdeTexto,
@@ -263,5 +269,119 @@ describe("rangoDeFechas", () => {
     expect(rangoDeFechas(invalida, b)).toEqual({ ok: false, error: "RANGO_INVALIDO" });
     expect(rangoDeFechas(a, invalida)).toEqual({ ok: false, error: "RANGO_INVALIDO" });
     expect(rangoDeFechas(invalida, invalida)).toEqual({ ok: false, error: "RANGO_INVALIDO" });
+  });
+});
+
+describe("esEstadoEfectivo y ESTADOS_EFECTIVOS", () => {
+  it("son los seis estados de la empresa, en el orden de estadoEfectivo", () => {
+    expect(ESTADOS_EFECTIVOS).toEqual([
+      "OPERA",
+      "EMPRESA_EN_ALTA",
+      "EMPRESA_SUSPENDIDA",
+      "EMPRESA_CANCELADA",
+      "EMPRESA_EN_BAJA",
+      "TENANT_SUSPENDIDO",
+    ]);
+    for (const estado of ESTADOS_EFECTIVOS) expect(esEstadoEfectivo(estado), estado).toBe(true);
+  });
+
+  it("lo demás no lo es, tampoco lo que hereda un objeto", () => {
+    for (const texto of [
+      "",
+      "opera",
+      "ACTIVE",
+      "constructor",
+      "__proto__",
+      "toString",
+      "hasOwnProperty",
+    ]) {
+      expect(esEstadoEfectivo(texto), texto).toBe(false);
+    }
+  });
+});
+
+describe("combinacionesDeEstadoEfectivo", () => {
+  it("cada estado efectivo tiene los pares exactos que lo producen", () => {
+    expect(combinacionesDeEstadoEfectivo("OPERA")).toEqual([
+      { tenant: "ACTIVE", empresa: "ACTIVE" },
+    ]);
+    expect(combinacionesDeEstadoEfectivo("EMPRESA_EN_ALTA")).toEqual([
+      { tenant: "ACTIVE", empresa: "PROVISIONING" },
+    ]);
+    expect(combinacionesDeEstadoEfectivo("EMPRESA_SUSPENDIDA")).toEqual([
+      { tenant: "ACTIVE", empresa: "SUSPENDED" },
+    ]);
+    // Los estados finales de la empresa no cambian por suspender al tenant.
+    expect(combinacionesDeEstadoEfectivo("EMPRESA_CANCELADA")).toEqual([
+      { tenant: "ACTIVE", empresa: "CANCELLED" },
+      { tenant: "SUSPENDED", empresa: "CANCELLED" },
+    ]);
+    expect(combinacionesDeEstadoEfectivo("EMPRESA_EN_BAJA")).toEqual([
+      { tenant: "ACTIVE", empresa: "DELETING" },
+      { tenant: "SUSPENDED", empresa: "DELETING" },
+    ]);
+    expect(combinacionesDeEstadoEfectivo("TENANT_SUSPENDIDO")).toEqual([
+      { tenant: "SUSPENDED", empresa: "PROVISIONING" },
+      { tenant: "SUSPENDED", empresa: "ACTIVE" },
+      { tenant: "SUSPENDED", empresa: "SUSPENDED" },
+    ]);
+  });
+
+  it("los seis estados reparten los diez pares sin repetir ni dejar ninguno afuera, y cada par da su estado", () => {
+    const todos = ESTADOS_EFECTIVOS.flatMap((estado) =>
+      combinacionesDeEstadoEfectivo(estado).map((par) => ({ estado, ...par })),
+    );
+    expect(todos).toHaveLength(10);
+    expect(new Set(todos.map((p) => `${p.tenant}/${p.empresa}`)).size).toBe(10);
+    for (const p of todos) expect(estadoEfectivo(p.tenant, p.empresa)).toBe(p.estado);
+  });
+});
+
+describe("criterioDeBusqueda", () => {
+  it("sin texto no busca; con texto lo recorta", () => {
+    expect(criterioDeBusqueda(undefined)).toEqual({ ok: true, valor: null });
+    expect(criterioDeBusqueda("  Pérez SRL  ")).toEqual({
+      ok: true,
+      valor: { texto: "Pérez SRL", cuit: "Pérez SRL" },
+    });
+  });
+
+  it("el CUIT se busca sin guiones y el texto, tal cual", () => {
+    expect(criterioDeBusqueda("20-12345678-6")).toEqual({
+      ok: true,
+      valor: { texto: "20-12345678-6", cuit: "2012345678" + "6" },
+    });
+    expect(criterioDeBusqueda("30-71")).toEqual({
+      ok: true,
+      valor: { texto: "30-71", cuit: "3071" },
+    });
+  });
+
+  it("si eran solo guiones no se busca por CUIT: el patrón vacío coincidiría con todo", () => {
+    expect(criterioDeBusqueda("---")).toEqual({ ok: true, valor: { texto: "---", cuit: null } });
+  });
+
+  it("vacío, en blanco o de más de 200 caracteres es FILTRO_INVALIDO; 200 justos pasa", () => {
+    for (const texto of ["", "   ", "x".repeat(LARGO_MAXIMO_DE_FILTRO + 1)]) {
+      expect(criterioDeBusqueda(texto), texto).toEqual({ ok: false, error: "FILTRO_INVALIDO" });
+    }
+    expect(criterioDeBusqueda("x".repeat(LARGO_MAXIMO_DE_FILTRO)).ok).toBe(true);
+  });
+});
+
+describe("patronDeContiene", () => {
+  it("busca el texto en cualquier parte", () => {
+    expect(patronDeContiene("sur")).toBe("%sur%");
+  });
+
+  it("escapa los comodines de LIKE y la barra, en ese orden, para que valgan por sí mismos", () => {
+    expect(patronDeContiene("100%")).toBe("%100\\%%");
+    expect(patronDeContiene("a_b")).toBe("%a\\_b%");
+    expect(patronDeContiene("%")).toBe("%\\%%");
+    expect(patronDeContiene("_")).toBe("%\\_%");
+    expect(patronDeContiene("a\\b")).toBe("%a\\\\b%");
+    // La barra se escapa primero: el escape de un comodín no se vuelve a escapar.
+    expect(patronDeContiene("\\%")).toBe("%\\\\\\%%");
+    expect(patronDeContiene("a%b_c\\d%")).toBe("%a\\%b\\_c\\\\d\\%%");
   });
 });

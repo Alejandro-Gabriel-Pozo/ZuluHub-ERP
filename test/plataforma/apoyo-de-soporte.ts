@@ -8,8 +8,10 @@ import {
   type Persona,
 } from "../../src/modulos/identidad/publico";
 import type {
+  AjusteDeUnTenant,
   FilaDeAuditoria,
   FilaDeEmpresa,
+  FilaDeEmpresaAmpliada,
   FilaDeReferencia,
   FilaDeTenant,
   FilaDeTrabajoFallido,
@@ -19,8 +21,11 @@ import type {
 import {
   adminPlataformaId,
   empresaId,
+  marcaComercialId,
   personaId,
+  planId,
   tenantId,
+  versionDePlanId,
   type EmpresaId,
 } from "../../src/primitivas/identificadores/marca";
 import type {
@@ -102,13 +107,53 @@ export const filaDeEmpresa = (
   creadoEn: new Date("2026-10-10T00:00:00Z"),
 });
 
+/** La marca de los tenants de prueba. */
+export const MARCA_DE_PRUEBA = {
+  marcaId: marcaComercialId(uuid(7001)),
+  marcaCodigo: "marca-de-prueba",
+  marcaNombreVisible: "Marca de Prueba" as string | null,
+};
+
+/** Un plan vigente de prueba (versión 3 de `plan-pro`, con una asignación programada). */
+export const PLAN_DE_PRUEBA = {
+  planId: planId(uuid(7002)),
+  versionDePlanId: versionDePlanId(uuid(7003)),
+  planCodigo: "plan-pro",
+  planNombreComercial: "Plan Pro",
+  planVersionNumero: 3,
+  planProgramado: true,
+};
+
+/** Un tenant sin ninguna asignación que haya empezado: todo lo del plan en nulo. */
+export const SIN_PLAN_VIGENTE = {
+  planId: null,
+  versionDePlanId: null,
+  planCodigo: null,
+  planNombreComercial: null,
+  planVersionNumero: null,
+  planProgramado: false,
+};
+
+export const filaDeEmpresaAmpliada = (
+  n: number,
+  estado: EstadoDeEmpresa = "ACTIVE",
+  estadoDelTenant: EstadoDeTenant = "ACTIVE",
+): FilaDeEmpresaAmpliada => ({
+  ...filaDeEmpresa(n, estado, estadoDelTenant),
+  tenantNombre: `Tenant de la empresa ${n}`,
+  ...MARCA_DE_PRUEBA,
+  ...PLAN_DE_PRUEBA,
+});
+
 /** Cada pedido que recibió la lectura, con sus argumentos. */
 export type PedidoALaLectura = Readonly<{ metodo: string; argumentos: readonly unknown[] }>;
 
 export type DatosDeLecturaFalsa = Partial<{
   tenants: FilaDeTenant[];
-  empresas: FilaDeEmpresa[];
+  empresas: FilaDeEmpresaAmpliada[];
+  /** Las empresas de las altas pendientes (sin marca ni plan: esa lista no los pide). */
   altas: Array<{ empresa: FilaDeEmpresa; invitacion: Invitacion | null }>;
+  ajustes: AjusteDeUnTenant[];
   invitaciones: Invitacion[];
   trabajos: FilaDeTrabajoFallido[];
   auditoria: FilaDeAuditoria[];
@@ -131,6 +176,7 @@ export function lecturaFalsa(datos: DatosDeLecturaFalsa = {}): LecturaDeSoporte 
   return {
     pedidos,
     listarTenants: (...a) => pedir("listarTenants", a, datos.tenants ?? []),
+    ajustesDeTenants: (...a) => pedir("ajustesDeTenants", a, datos.ajustes ?? []),
     listarEmpresas: (...a) => pedir("listarEmpresas", a, datos.empresas ?? []),
     listarAltasPendientes: (...a) => pedir("listarAltasPendientes", a, datos.altas ?? []),
     listarInvitaciones: (...a) => pedir("listarInvitaciones", a, datos.invitaciones ?? []),

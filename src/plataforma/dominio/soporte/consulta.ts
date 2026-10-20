@@ -1,3 +1,9 @@
+import {
+  estadoEfectivo,
+  type EstadoDeEmpresa,
+  type EstadoDeTenant,
+  type EstadoEfectivo,
+} from "../../../contexto/estados";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 
 /**
@@ -126,4 +132,89 @@ export function rangoDeFechas(
     return err("RANGO_INVALIDO");
   }
   return ok({ desde: desde ?? null, hasta: hasta ?? null });
+}
+
+// --- Estado efectivo de una empresa como filtro ------------------------------------------------------------
+
+/** Cada estado efectivo, en el orden en que lo informa `estadoEfectivo`. `Record` hace que sumar un estado sin listarlo no compile; el valor (`null`) no importa, solo las claves. */
+const ESTADOS_EFECTIVOS_POR_CLAVE: Readonly<Record<EstadoEfectivo, null>> = {
+  OPERA: null,
+  EMPRESA_EN_ALTA: null,
+  EMPRESA_SUSPENDIDA: null,
+  EMPRESA_CANCELADA: null,
+  EMPRESA_EN_BAJA: null,
+  TENANT_SUSPENDIDO: null,
+};
+
+export const ESTADOS_EFECTIVOS = Object.keys(
+  ESTADOS_EFECTIVOS_POR_CLAVE,
+) as readonly EstadoEfectivo[];
+
+/** ¿Es `texto` uno de los estados efectivos? (`constructor` y compañía no lo son). */
+export const esEstadoEfectivo = (texto: string): texto is EstadoEfectivo =>
+  Object.hasOwn(ESTADOS_EFECTIVOS_POR_CLAVE, texto);
+
+const ESTADOS_DE_TENANT: Readonly<Record<EstadoDeTenant, null>> = { ACTIVE: null, SUSPENDED: null };
+const ESTADOS_DE_EMPRESA: Readonly<Record<EstadoDeEmpresa, null>> = {
+  PROVISIONING: null,
+  ACTIVE: null,
+  SUSPENDED: null,
+  CANCELLED: null,
+  DELETING: null,
+};
+
+/** Un par (estado del tenant, estado de la empresa) tal como los guarda la base. */
+export type CombinacionDeEstados = Readonly<{ tenant: EstadoDeTenant; empresa: EstadoDeEmpresa }>;
+
+/**
+ * Los pares (estado del tenant, estado de la empresa) cuyo estado efectivo es `estado`. La base no guarda el
+ * estado efectivo: para filtrar por él la lectura pide estos pares. Salen de ENUMERAR todos los pares con
+ * `estadoEfectivo`, la misma función que calcula el estado de cada fila: el filtro y la columna no pueden
+ * discrepar, y sumar un estado nuevo no obliga a tocar una segunda tabla de equivalencias.
+ */
+export function combinacionesDeEstadoEfectivo(
+  estado: EstadoEfectivo,
+): readonly CombinacionDeEstados[] {
+  const pares: CombinacionDeEstados[] = [];
+  for (const tenant of Object.keys(ESTADOS_DE_TENANT) as EstadoDeTenant[]) {
+    for (const empresa of Object.keys(ESTADOS_DE_EMPRESA) as EstadoDeEmpresa[]) {
+      if (estadoEfectivo(tenant, empresa) === estado) pares.push({ tenant, empresa });
+    }
+  }
+  return pares;
+}
+
+// --- Búsqueda de texto -------------------------------------------------------------------------------------
+
+/** Lo que se busca en una lista, ya validado: el texto tal cual y, aparte, su versión para comparar con un CUIT. */
+export type CriterioDeBusqueda = Readonly<{
+  /** El texto recortado, para razón social y nombre del tenant. */
+  texto: string;
+  /** El texto sin guiones, para el CUIT (que se guarda sin ellos); `null` si sin guiones no queda nada. */
+  cuit: string | null;
+}>;
+
+/**
+ * El texto de una búsqueda: recortado, de 1 a `LARGO_MAXIMO_DE_FILTRO` caracteres (`FILTRO_INVALIDO` si no).
+ * Un CUIT se escribe con o sin guiones (`20-12345678-3`) y la base lo guarda sin ellos, así que se busca
+ * también el texto sin guiones; si el texto eran solo guiones, no se busca por CUIT (un patrón vacío
+ * coincidiría con todo).
+ */
+export function criterioDeBusqueda(
+  texto: string | undefined,
+): Resultado<CriterioDeBusqueda | null, "FILTRO_INVALIDO"> {
+  const filtro = filtroDeTexto(texto);
+  if (!filtro.ok) return filtro;
+  if (filtro.valor === null) return ok(null);
+  const sinGuiones = filtro.valor.replaceAll("-", "");
+  return ok({ texto: filtro.valor, cuit: sinGuiones === "" ? null : sinGuiones });
+}
+
+/**
+ * El patrón de `LIKE` que busca `texto` TAL CUAL en cualquier parte: `%`, `_` y la barra invertida (el
+ * escape por defecto de Postgres) se escapan para que valgan por sí mismos. Sin esto, buscar «100%» o
+ * «a_b» traería filas que no lo contienen, y un `%` solo traería todo.
+ */
+export function patronDeContiene(texto: string): string {
+  return `%${texto.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
 }

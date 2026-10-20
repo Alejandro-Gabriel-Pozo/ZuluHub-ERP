@@ -115,8 +115,8 @@ export type PlanesDePlataformaDb = {
     actualizado_en: Generated<Date>;
     version: Generated<number>;
   };
-  empresa: { id: string; tenant_id: string };
-  tenant: { id: string; nombre: string };
+  empresa: { id: string; tenant_id: string; estado: string };
+  tenant: { id: string; nombre: string; estado: string; marca_id: string };
 };
 
 type Iguales<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;

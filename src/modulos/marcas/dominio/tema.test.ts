@@ -6,6 +6,7 @@ import {
   CONTRASTE_MINIMO_DEL_TEXTO,
   TOKENS_DE_TEMA,
   contrasteSuficiente,
+  contrastesDelTema,
   esTokenDeTema,
   luminanciaRelativa,
   parDeContrasteInsuficiente,
@@ -310,5 +311,88 @@ describe("parDeContrasteInsuficiente (al confirmar)", () => {
     expect(par(tema({ accent: "#8d8d8d" }), "NEUTRA")).toBeNull();
     expect(par(tema({ accent: "#8d8d8d" }), "CALIDA")).toBe("accent/superficie");
     expect(par(tema({ accent: "#8d8d8d" }), "FRIA")).toBe("accent/superficie");
+  });
+});
+
+describe("contrastesDelTema (la vista previa de la confirmación)", () => {
+  it("mide los tres pares, en el orden de la confirmación, con su razón sin redondear, su mínimo y si cumple", () => {
+    const t = tema();
+    expect(contrastesDelTema(t, "NEUTRA")).toEqual([
+      {
+        par: "on-primary/primary",
+        razon: razonDeContraste("#ffffff", "#1a73e8"),
+        minimo: 4.5,
+        cumple: true,
+      },
+      {
+        par: "accent/fondo",
+        razon: razonDeContraste("#d93025", "#ffffff"),
+        minimo: 3,
+        cumple: true,
+      },
+      {
+        par: "accent/superficie",
+        razon: razonDeContraste("#d93025", "#f3f5f7"),
+        minimo: 3,
+        cumple: true,
+      },
+    ]);
+  });
+
+  it("el fondo y la superficie salen de la superficie elegida", () => {
+    for (const superficie of ["NEUTRA", "CALIDA", "FRIA"] as const) {
+      const colores = COLORES_DE_SUPERFICIE[superficie];
+      const [, fondo, enSuperficie] = contrastesDelTema(tema({ accent: "#949494" }), superficie);
+      expect(fondo?.razon, superficie).toBe(razonDeContraste("#949494", colores.fondo));
+      expect(enSuperficie?.razon, superficie).toBe(razonDeContraste("#949494", colores.superficie));
+    }
+  });
+
+  it("cumple dice lo mismo que la confirmación: justo abajo del mínimo no cumple y justo en él sí", () => {
+    const [texto] = contrastesDelTema(tema({ primary: "#2574ea" }), "NEUTRA");
+    expect(texto?.razon).toBeLessThan(4.5);
+    expect(texto?.cumple).toBe(false);
+    const [justo] = contrastesDelTema(tema({ primary: "#1a73e8" }), "NEUTRA");
+    expect(justo?.razon).toBeGreaterThanOrEqual(4.5);
+    expect(justo?.cumple).toBe(true);
+    // Sobre blanco #949494 llega (3,03) y #959595 no (2,995): cada par con su mínimo.
+    const [, fondo] = contrastesDelTema(tema({ accent: "#959595" }), "NEUTRA");
+    expect(fondo?.cumple).toBe(false);
+    const [, fondoOk] = contrastesDelTema(tema({ accent: "#949494" }), "NEUTRA");
+    expect(fondoOk?.cumple).toBe(true);
+  });
+
+  it("el primero que no cumple es el que informa la confirmación", () => {
+    const casos: Array<[Partial<TemaCompleto>, SuperficieDeAspecto]> = [
+      [{}, "NEUTRA"],
+      [{ primary: "#2574ea" }, "NEUTRA"],
+      [{ accent: "#949494" }, "NEUTRA"],
+      [{ accent: "#959595" }, "FRIA"],
+      [{ "on-primary": "#1a73e8", accent: "#ffffff" }, "CALIDA"],
+    ];
+    for (const [cambios, superficie] of casos) {
+      const t = tema(cambios);
+      expect(contrastesDelTema(t, superficie).find((c) => c.cumple === false)?.par ?? null).toBe(
+        parDeContrasteInsuficiente(t, superficie),
+      );
+    }
+  });
+
+  it("un tema incompleto (un borrador) deja sin medir solo los pares a los que les falta un color", () => {
+    const sinNada = contrastesDelTema({}, "NEUTRA");
+    expect(sinNada).toEqual([
+      { par: "on-primary/primary", razon: null, minimo: 4.5, cumple: null },
+      { par: "accent/fondo", razon: null, minimo: 3, cumple: null },
+      { par: "accent/superficie", razon: null, minimo: 3, cumple: null },
+    ]);
+    // Solo el texto: el par del texto necesita el primary también.
+    expect(contrastesDelTema({ "on-primary": "#ffffff" }, "NEUTRA")[0]?.razon).toBeNull();
+    expect(contrastesDelTema({ primary: "#1a73e8" }, "NEUTRA")[0]?.razon).toBeNull();
+    expect(
+      contrastesDelTema({ primary: "#1a73e8", "on-primary": "#ffffff" }, "NEUTRA")[0]?.cumple,
+    ).toBe(true);
+    // Solo el acento: se miden los dos pares del acento y el del texto no.
+    const soloAcento = contrastesDelTema({ accent: "#d93025" }, "NEUTRA");
+    expect(soloAcento.map((c) => c.cumple)).toEqual([null, true, true]);
   });
 });

@@ -26,14 +26,18 @@ import {
 import { REGLAS_DE_PLATAFORMA } from "../../src/capacidades/permisos/plataforma";
 import type { ContextoDePlataforma } from "../../src/contexto/contexto";
 import {
+  crearLecturaDeMarcaParaElAlta,
   crearRepositorioDeMarcas,
   type DominiosDb,
+  type LecturaParaElAltaDb,
   type MarcasDb,
 } from "../../src/modulos/marcas/publico";
 import {
   crearLecturaDePlanes,
+  crearLecturaDeVersionesDePlanParaElAlta,
   crearRepositorioDePlanes,
   type PlanesDb,
+  type PlanesDelAltaDb,
   type PlanesDePlataformaDb,
 } from "../../src/modulos/planes/publico";
 import {
@@ -45,6 +49,7 @@ import {
   crearConsultasDeMarcasYPlanes,
   type ConsultasDeMarcasYPlanes,
 } from "../../src/plataforma/consultas/consultas-de-marcas-y-planes";
+import type { TxDeConsultasDeMarcasYPlanes } from "../../src/plataforma/consultas/contrato-de-marcas-y-planes";
 import type { AdminPlataformaId } from "../../src/primitivas/identificadores/marca";
 import type { Resultado } from "../../src/primitivas/resultado/resultado";
 import { MODULOS_DE_PRUEBA, PERILLAS_DE_PRUEBA } from "../utilidades/planes";
@@ -66,6 +71,7 @@ import { plataformaEn } from "./soporte-datos";
  */
 
 export type TxDeMarcasYPlanesDePrueba = TxDeMarcasYPlanes &
+  Pick<TxDeConsultasDeMarcasYPlanes, "marcaParaElAlta" | "versionesDePlan"> &
   Readonly<{
     /** Consultas de verificación y fallas provocadas, sin tipar. */
     db: Kysely<SinTablas>;
@@ -98,6 +104,9 @@ export function crearEntornoDeMarcasYPlanes(
         db,
         marcas: crearRepositorioDeMarcas(db.withTables<MarcasDb & DominiosDb>()),
         planes: crearRepositorioDePlanes(db.withTables<PlanesDePlataformaDb>()),
+        // Lo que el alta lee de la marca y de las versiones de plan: `marcasParaElAlta` decide con ESTO.
+        marcaParaElAlta: crearLecturaDeMarcaParaElAlta(db.withTables<LecturaParaElAltaDb>()),
+        versionesDePlan: crearLecturaDeVersionesDePlanParaElAlta(db.withTables<PlanesDelAltaDb>()),
         derechos: crearLecturaDeDerechosDeUso(
           crearLecturaDePlanes(db.withTables<PlanesDb>()),
           CATALOGOS_DE_PRUEBA,

@@ -2,21 +2,40 @@ import type { MotivoDeRechazo } from "../../capacidades/permisos/guard";
 import { clavesHuerfanas } from "../../capacidades/vocabulario/vocabulario";
 import type { ContextoDePlataforma } from "../../contexto/contexto";
 import {
+  contrastesDelTema,
+  decidirConfirmacionDeMarca,
   estadosDeVigencia,
   hayProgramadaPendiente,
+  resolverConOrigen,
   versionVigente,
-  type DefinicionDeMarca,
-  type DominioGuardado,
+  type DefinicionConOrigen,
   type EstadoDeVigencia,
   type MarcaGuardada,
+  type OrigenEnLaCadena,
   type VersionConfirmadaDeMarca,
 } from "../../modulos/marcas/publico";
-import { marcaComercialId } from "../../primitivas/identificadores/marca";
+import { marcaComercialId, type PlanId } from "../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../puertos/transacciones";
+import {
+  ancestrosConDefinicion,
+  comoPlanPorDefecto,
+  planConSuUltimaVersion,
+  type AncestroConDefinicion,
+  type PlanConSuUltimaVersion,
+} from "../casos-de-uso/cadena-de-marca";
+import { aplanarError } from "../casos-de-uso/marcas-y-planes-comun";
 import { uuidDesdeTexto } from "../dominio/soporte/consulta";
 import { exigirAccionDePlataforma } from "./comun";
-import type { DependenciasDeConsultasDeMarcasYPlanes } from "./contrato-de-marcas-y-planes";
+import type {
+  DefinicionEfectivaDeMarca,
+  DependenciasDeConsultasDeMarcasYPlanes,
+  EntradaDeFichaDeMarca,
+  FichaDeMarca,
+  OrigenDeCampo,
+  PuedeConfirmarse,
+  VersionDeMarcaEnFicha,
+} from "./contrato-de-marcas-y-planes";
 import { DECLARACIONES_DE_CONSULTAS_DE_MARCAS_Y_PLANES as D } from "./declaraciones-de-marcas-y-planes";
 
 const LECTURA = { aislamiento: "read committed", soloLectura: true } as const;
@@ -77,43 +96,6 @@ export function armarListarMarcas({
   };
 }
 
-/** Una versión confirmada de la marca, con su estado calculado a hoy. */
-export type VersionDeMarcaEnFicha = Readonly<{
-  numero: number;
-  estado: EstadoDeVigencia;
-  vigenteDesde: Date;
-  motivo: string;
-  reemplazaProgramada: boolean;
-  confirmadaEn: Date;
-  confirmadaPor: string;
-  /** Lo que la versión dice POR SÍ MISMA (un campo vacío hereda de la marca padre). */
-  definicion: DefinicionDeMarca;
-}>;
-
-export type DominioEnFicha = Readonly<
-  Pick<
-    DominioGuardado,
-    "id" | "host" | "superficie" | "titular" | "estado" | "esCanonico" | "verificadoEn" | "motivo"
-  >
->;
-
-export type FichaDeMarca = Readonly<{
-  marca: MarcaGuardada;
-  /** El padre y el abuelo, en ese orden (vacía si no tiene padre). */
-  cadena: readonly MarcaGuardada[];
-  /** Las versiones confirmadas, por número ascendente. */
-  versiones: readonly VersionDeMarcaEnFicha[];
-  /** El borrador, con la `version` que va en `versionEsperada` de la próxima edición; `null` si no hay. */
-  borrador: Readonly<{
-    id: string;
-    version: number;
-    definicion: DefinicionDeMarca;
-  }> | null;
-  dominios: readonly DominioEnFicha[];
-  /** Los textos del vocabulario (del borrador y de las versiones) que el catálogo del código ya no tiene: se ignoran al pintar. */
-  clavesDeTextoHuerfanas: readonly string[];
-}>;
-
 export type ErrorAlVerFichaDeMarca =
   MotivoDeRechazo | "ID_INVALIDO" | "MARCA_NO_ENCONTRADA" | ErrorDePersistencia;
 
@@ -132,9 +114,93 @@ const enFicha = (
 });
 
 /**
+ * Lo que se pasa a `decidirConfirmacionDeMarca` para PREVER la confirmación: un pedido que no puede fallar
+ * por lo que el formulario va a escribir (motivo no vacío, vigencia desde ahora, reemplazando lo programado),
+ * de modo que el resultado dependa solo de la definición. Ver `PuedeConfirmarse`.
+ */
+const MOTIVO_DE_LA_PREVISION = "previsión de la confirmación";
+
+/** La definición efectiva en la forma del contrato: los eslabones de la herencia pasan a ser la marca de la que sale cada campo. */
+function comoEfectiva(
+  conOrigen: DefinicionConOrigen,
+  ancestros: readonly AncestroConDefinicion[],
+  planes: ReadonlyMap<PlanId, PlanConSuUltimaVersion>,
+): DefinicionEfectivaDeMarca {
+  const { resuelta, aspecto, origenes } = conOrigen;
+  const origen = (o: OrigenEnLaCadena): OrigenDeCampo => {
+    if (o.tipo !== "heredado") return o;
+    // El eslabón 0 es la propia definición; el 1, el padre; el 2, el abuelo.
+    const ancestro = ancestros[o.eslabon - 1];
+    if (ancestro === undefined) throw new RangeError(`el eslabón ${o.eslabon} no tiene ancestro`);
+    return { tipo: "heredado", marcaId: ancestro.marca.id, marcaCodigo: ancestro.marca.codigo };
+  };
+  const plan =
+    resuelta.planPorDefectoId === null ? undefined : planes.get(resuelta.planPorDefectoId);
+  return {
+    nombreVisible: { valor: resuelta.nombreVisible, origen: origen(origenes.nombreVisible) },
+    tema: {
+      primary: { valor: resuelta.tema.primary ?? null, origen: origen(origenes.tema.primary) },
+      "on-primary": {
+        valor: resuelta.tema["on-primary"] ?? null,
+        origen: origen(origenes.tema["on-primary"]),
+      },
+      secondary: {
+        valor: resuelta.tema.secondary ?? null,
+        origen: origen(origenes.tema.secondary),
+      },
+      accent: { valor: resuelta.tema.accent ?? null, origen: origen(origenes.tema.accent) },
+    },
+    aspecto: {
+      estilo: { valor: aspecto.estilo, origen: origen(origenes.aspecto.estilo) },
+      superficie: { valor: aspecto.superficie, origen: origen(origenes.aspecto.superficie) },
+      esquinas: { valor: aspecto.esquinas, origen: origen(origenes.aspecto.esquinas) },
+      titulos: { valor: aspecto.titulos, origen: origen(origenes.aspecto.titulos) },
+      ingreso: { valor: aspecto.ingreso, origen: origen(origenes.aspecto.ingreso) },
+    },
+    logo: { valor: resuelta.logo, origen: origen(origenes.logo) },
+    vocabulario: (Object.keys(resuelta.vocabulario) as (keyof typeof resuelta.vocabulario)[])
+      .sort()
+      .map((texto) => ({
+        texto,
+        valor: resuelta.vocabulario[texto] as string,
+        origen: origen(origenes.vocabulario[texto] as OrigenEnLaCadena),
+      })),
+    modulosIniciales: {
+      valor: resuelta.modulosIniciales,
+      origen: origen(origenes.modulosIniciales),
+    },
+    planPorDefecto: {
+      valor:
+        plan === undefined
+          ? null
+          : {
+              planId: plan.plan.id,
+              codigo: plan.plan.codigo,
+              estado: plan.plan.estado,
+              ultimaVersion:
+                plan.ultimaPublicada === null
+                  ? null
+                  : {
+                      versionDePlanId: plan.ultimaPublicada.id,
+                      numero: plan.ultimaPublicada.numero,
+                      nombreComercial: plan.ultimaPublicada.nombreComercial,
+                    },
+            },
+      origen: origen(origenes.planPorDefecto),
+    },
+  };
+}
+
+/**
  * La ficha de una marca (§B.11): la marca, su cadena de padres, sus versiones con el estado calculado
  * (`VIGENTE`, `PROGRAMADA`, `SIN_EFECTO`, `ANTERIOR`), su borrador, sus dominios y las claves de texto
- * huérfanas. `marcas.ver`, solo lectura.
+ * huérfanas, y lo que la consola necesita para decidir: la definición EFECTIVA de lo que rige y la del
+ * borrador (con el origen de cada campo), si el borrador se puede confirmar y cómo quedan los contrastes de
+ * color. `marcas.ver`, solo lectura.
+ *
+ * La herencia sale de `resolverDefinicion` (vía `resolverConOrigen`) sobre LA MISMA cadena que valida
+ * `confirmarVersionDeMarca` (`ancestrosConDefinicion`): lo que se ve es lo que se valida. Esa cadena no se
+ * corta ante un ancestro retirado y la del alta sí (ver `cadena-de-marca.ts`).
  */
 export function armarFichaDeMarca({
   transacciones,
@@ -142,7 +208,7 @@ export function armarFichaDeMarca({
 }: DependenciasDeConsultasDeMarcasYPlanes) {
   return async function fichaDeMarca(
     contexto: ContextoDePlataforma,
-    entrada: Readonly<{ marcaId: string }>,
+    entrada: EntradaDeFichaDeMarca,
   ): Promise<Resultado<FichaDeMarca, ErrorAlVerFichaDeMarca>> {
     return transacciones.ejecutar(
       { contexto, ...LECTURA },
@@ -159,15 +225,8 @@ export function armarFichaDeMarca({
         const marca = await tx.marcas.obtener(marcaComercialId(id.valor));
         if (marca === null) return err("MARCA_NO_ENCONTRADA");
 
-        const cadena: MarcaGuardada[] = [];
-        let actual: MarcaGuardada = marca;
-        while (actual.marcaPadreId !== null) {
-          const padre: MarcaGuardada | null = await tx.marcas.obtener(actual.marcaPadreId);
-          if (padre === null) break;
-          cadena.push(padre);
-          actual = padre;
-        }
-
+        const ancestros = await ancestrosConDefinicion(tx, marca, contexto.ahora);
+        const definicionesDeLosAncestros = ancestros.map((a) => a.definicion);
         const confirmadas = await tx.marcas.confirmadasDe(marca.id);
         const borrador = await tx.marcas.borradorDe(marca.id);
         const dominios = await tx.marcas.dominiosDeLaMarca(marca.id);
@@ -181,9 +240,52 @@ export function armarFichaDeMarca({
           ...confirmadas.map((v) => v.definicion.vocabulario),
           ...(borrador === null ? [] : [borrador.definicion.vocabulario]),
         ];
+
+        // Lo que rige hoy y lo que regiría el borrador, cada uno con su origen por campo.
+        const vigente = versionVigente(confirmadas, contexto.ahora);
+        const deLaVigente =
+          vigente === null
+            ? null
+            : resolverConOrigen([vigente.definicion, ...definicionesDeLosAncestros]);
+        const delBorrador =
+          borrador === null
+            ? null
+            : resolverConOrigen([borrador.definicion, ...definicionesDeLosAncestros]);
+
+        // Los planes por defecto que esas dos definiciones nombran (a lo sumo dos, a menudo el mismo), leídos una vez.
+        const planes = new Map<PlanId, PlanConSuUltimaVersion>();
+        for (const conOrigen of [deLaVigente, delBorrador]) {
+          const planId = conOrigen?.resuelta.planPorDefectoId ?? null;
+          if (planId === null || planes.has(planId)) continue;
+          const leido = await planConSuUltimaVersion(tx, planId);
+          if (leido !== null) planes.set(planId, leido);
+        }
+
+        // ¿Se podría confirmar el borrador? Es la MISMA decisión que la confirmación, sin escribir.
+        let puedeConfirmarse: PuedeConfirmarse = { ok: false, error: "SIN_BORRADOR" };
+        if (borrador !== null && delBorrador !== null) {
+          const idDelPlan = delBorrador.resuelta.planPorDefectoId;
+          const leido = idDelPlan === null ? undefined : planes.get(idDelPlan);
+          const decision = aplanarError(
+            decidirConfirmacionDeMarca({
+              borrador: borrador.definicion,
+              ancestros: definicionesDeLosAncestros,
+              versiones: confirmadas,
+              planPorDefecto: leido === undefined ? null : comoPlanPorDefecto(leido),
+              pedido: {
+                vigenteDesde: contexto.ahora,
+                motivo: MOTIVO_DE_LA_PREVISION,
+                reemplazaProgramada: true,
+              },
+              ahora: contexto.ahora,
+            }),
+          );
+          puedeConfirmarse = decision.ok ? { ok: true } : decision;
+        }
+
         return ok({
           marca,
-          cadena,
+          cadena: ancestros.map((a) => a.marca),
           versiones: confirmadas.map((v) => enFicha(v, estados.get(v.numero) ?? "ANTERIOR")),
           borrador:
             borrador === null
@@ -200,6 +302,14 @@ export function armarFichaDeMarca({
             motivo: d.motivo,
           })),
           clavesDeTextoHuerfanas: [...new Set(vocabularios.flatMap(clavesHuerfanas))].sort(),
+          efectiva: deLaVigente === null ? null : comoEfectiva(deLaVigente, ancestros, planes),
+          borradorEfectivo:
+            delBorrador === null ? null : comoEfectiva(delBorrador, ancestros, planes),
+          puedeConfirmarse,
+          contraste:
+            delBorrador === null
+              ? null
+              : contrastesDelTema(delBorrador.resuelta.tema, delBorrador.aspecto.superficie),
         });
       },
     );

@@ -60,6 +60,7 @@ export {
   type PlanGuardado,
   type PublicacionPorEscribir,
   type RepositorioDePlanes,
+  type TenantConLaVersionVigente,
   type VersionDePlanGuardada,
   type VersionPublicadaDePlan,
 } from "./persistencia/repositorio-de-planes";

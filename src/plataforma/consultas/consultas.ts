@@ -1,6 +1,6 @@
 import { armarConsultarAuditoria } from "./auditoria";
 import { armarBuscarReferencia } from "./buscar-referencia";
-import { armarVerConfiguracion } from "./configuracion";
+import { armarCatalogoDePerillas, armarVerConfiguracion } from "./configuracion";
 import type { DependenciasDeConsultasDePlataforma } from "./contrato";
 import type { DECLARACIONES_DE_CONSULTAS_DE_PLATAFORMA } from "./declaraciones";
 import { armarListarInvitaciones } from "./invitaciones";
@@ -26,6 +26,7 @@ export function crearConsultasDePlataforma(dependencias: DependenciasDeConsultas
     listarTrabajosFallidos: armarListarTrabajosFallidos(dependencias),
     consultarAuditoria: armarConsultarAuditoria(dependencias),
     verConfiguracion: armarVerConfiguracion(dependencias),
+    catalogoDePerillas: armarCatalogoDePerillas(dependencias),
     buscarReferencia: armarBuscarReferencia(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES_DE_CONSULTAS_DE_PLATAFORMA, unknown>;
 }
