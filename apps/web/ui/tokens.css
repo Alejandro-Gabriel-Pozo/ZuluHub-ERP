@@ -28,18 +28,16 @@
   --color-sobre-deshabilitado: #5b6471;
   --color-velo: rgb(17 24 39 / 55%);
 
-  /* Estado: cada uno con su «sobre-» (texto encima) y su tono suave (fondo de avisos). */
+  /* Estado: cada uno con su tono suave (fondo de avisos). El «sobre-» (texto encima de un fondo sólido) existe solo
+     donde hay un fondo sólido: hoy el de peligro. Un token sin consumidores se elimina (`tokens.test.ts`). */
   --color-peligro: #b3261e;
   --color-sobre-peligro: #ffffff;
   --color-peligro-suave: #fdecea;
   --color-exito: #1e6b3a;
-  --color-sobre-exito: #ffffff;
   --color-exito-suave: #e6f4ea;
   --color-aviso: #8a4b00;
-  --color-sobre-aviso: #ffffff;
   --color-aviso-suave: #fff4e0;
   --color-info: #0b5cad;
-  --color-sobre-info: #ffffff;
   --color-info-suave: #e8f1fb;
 
   /* Acción y acento: lo único que sale de la marca. */
@@ -57,7 +55,6 @@
   --espacio-4: 1rem;
   --espacio-5: 1.5rem;
   --espacio-6: 2rem;
-  --espacio-7: 3rem;
 
   /* Tipo: fuente del sistema (decisión del dueño: ninguna fuente que descargar). */
   --tipo-familia-cuerpo:
@@ -90,9 +87,30 @@
      (nunca toma la marca). Lo verifica `plantillas/carta/contraste.test.ts`. */
   --color-agotado: #8f1d16;
 
+  /* Capas (z-index): una escala corta con nombre por función; ningún `z-index` suelto en los componentes. */
+  --capa-sobre-contenido: 1;
+  --capa-franja-de-aviso: 10;
+  --capa-salto-de-teclado: 30;
+
   /* Movimiento. */
   --duracion-corta: 120ms;
   --duracion-media: 200ms;
+}
+
+/*
+ * Superficies del aspecto de la marca (M7a): NEUTRA es la base de arriba. CALIDA y FRIA pisan SOLO el fondo de
+ * la página y el de paneles; nada más cambia de color. Son los mismos valores de `COLORES_DE_SUPERFICIE`
+ * (`modulos/marcas`): `test/web/contraste-de-superficies.test.ts` los iguala y `tokens.test.ts` mide el
+ * contraste de cada combinación.
+ */
+:root[data-superficie="calida"] {
+  --color-fondo: #fbf7f1;
+  --color-superficie: #f3eadc;
+}
+
+:root[data-superficie="fria"] {
+  --color-fondo: #f5f8fc;
+  --color-superficie: #e6edf6;
 }
 
 @media (prefers-reduced-motion: reduce) {

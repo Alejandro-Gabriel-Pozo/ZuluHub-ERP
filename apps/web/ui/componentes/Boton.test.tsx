@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { tocar, violacionesDeAccesibilidad } from "../pruebas/ayudas";
+import {
+  matrizDeEstados,
+  tocar,
+  verificarFoco,
+  violacionesDeAccesibilidad,
+} from "../pruebas/ayudas";
 import { Boton } from "./Boton";
 
 describe("Boton", () => {
@@ -77,4 +82,43 @@ describe("Boton", () => {
     await render(<Boton motivo="Porque sí">Cobrar</Boton>);
     await expect.element(page.getByRole("button")).toMatchAriaInlineSnapshot(`- button "Cobrar"`);
   });
+});
+
+matrizDeEstados("Boton", {
+  normal: async () => {
+    await render(<Boton>Cobrar</Boton>);
+    const boton = page.getByRole("button", { name: "Cobrar" });
+    await expect.element(boton).toBeEnabled();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  },
+  foco: async () => {
+    await render(<Boton>Cobrar</Boton>);
+    await verificarFoco(page.getByRole("button", { name: "Cobrar" }).element() as HTMLElement);
+  },
+  cargando: async () => {
+    await render(
+      <Boton enviando textoEnviando="Enviando…">
+        Cobrar
+      </Boton>,
+    );
+    const boton = page.getByRole("button", { name: "Enviando…" });
+    await expect.element(boton).toHaveAttribute("aria-busy", "true");
+    await expect.element(boton).toHaveAttribute("aria-disabled", "true");
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  },
+  error: {
+    noAplica:
+      "un botón no tiene error propio: lo muestra el aviso o el campo del formulario que lo contiene",
+  },
+  deshabilitado: async () => {
+    await render(
+      <Boton deshabilitado motivo="Falta elegir el medio de pago.">
+        Cobrar
+      </Boton>,
+    );
+    const boton = page.getByRole("button", { name: "Cobrar" });
+    await expect.element(boton).toBeDisabled();
+    await expect.element(page.getByText("Falta elegir el medio de pago.")).toBeVisible();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  },
 });

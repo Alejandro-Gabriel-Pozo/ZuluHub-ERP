@@ -75,7 +75,7 @@
 .dialogo[data-proposito="vistazo"] .cabecera {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: var(--capa-sobre-contenido);
   background: var(--color-superficie-elevada);
 }
 

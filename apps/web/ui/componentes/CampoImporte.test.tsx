@@ -2,7 +2,7 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { violacionesDeAccesibilidad } from "../pruebas/ayudas";
+import { matrizDeEstados, verificarFoco, violacionesDeAccesibilidad } from "../pruebas/ayudas";
 import { CampoImporte } from "./CampoImporte";
 
 /** Registra todo lo que el campo entrega a quien lo usa: el contrato es que SIEMPRE es texto. */
@@ -113,4 +113,45 @@ describe("CampoImporte", () => {
     await render(<Probado />);
     await expect.element(page.getByRole("textbox", { name: "Importe" })).toBeVisible();
   });
+});
+
+matrizDeEstados("CampoImporte", {
+  normal: async () => {
+    await render(<Probado />);
+    const campo = page.getByLabelText("Importe");
+    await expect.element(campo).toBeEnabled();
+    await expect.element(campo).not.toHaveAttribute("aria-invalid");
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  },
+  foco: async () => {
+    await render(<Probado />);
+    const campo = page.getByLabelText("Importe").element() as HTMLElement;
+    // El anillo lo dibuja la fila que envuelve al campo (el símbolo y el importe se ven como una sola caja).
+    await verificarFoco(campo, campo.parentElement ?? campo);
+  },
+  cargando: {
+    noAplica:
+      "un campo de importe no carga por sí mismo: mientras se envía lo bloquea el formulario que lo contiene",
+  },
+  error: async () => {
+    await render(
+      <CampoImporte
+        etiqueta="Importe"
+        valor=""
+        alCambiar={() => undefined}
+        error="Ingresá un importe."
+      />,
+    );
+    const campo = page.getByLabelText("Importe");
+    await expect.element(campo).toBeInvalid();
+    await expect.element(campo).toHaveAccessibleDescription("Ingresá un importe.");
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  },
+  deshabilitado: async () => {
+    await render(
+      <CampoImporte etiqueta="Importe" valor="" alCambiar={() => undefined} deshabilitado />,
+    );
+    await expect.element(page.getByLabelText("Importe")).toBeDisabled();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  },
 });

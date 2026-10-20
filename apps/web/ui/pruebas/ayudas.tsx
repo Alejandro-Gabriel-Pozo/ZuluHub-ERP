@@ -1,5 +1,6 @@
 import axe from "axe-core";
-import type { Locator } from "vitest/browser";
+import { describe, expect, it } from "vitest";
+import { userEvent, type Locator } from "vitest/browser";
 import "../tokens.css";
 
 /**
@@ -55,4 +56,50 @@ export function restaurarConexion(): void {
 export function tocar(locator: Locator): void {
   const elemento = locator.element();
   if (elemento instanceof HTMLElement) elemento.click();
+}
+
+/** Los cinco estados de un componente interactivo ([01] §4.1): la lista de verificación de cada uno. */
+const ESTADOS_DE_COMPONENTE = ["normal", "foco", "cargando", "error", "deshabilitado"] as const;
+export type EstadoDeComponente = (typeof ESTADOS_DE_COMPONENTE)[number];
+
+/** Una casilla de la lista: la prueba de ese estado, o por qué no aplica (con motivo, no un «n/a»). */
+export type CasillaDeEstado = (() => Promise<void>) | Readonly<{ noAplica: string }>;
+
+/**
+ * La matriz de estados de un componente interactivo, como lista de verificación DENTRO de sus pruebas: no se
+ * puede omitir un estado (el tipo exige los cinco) y «no aplica» pide una razón de al menos 15 caracteres, que
+ * queda a la vista en el nombre de la prueba. Un componente nuevo que no la declare no pasa la revisión.
+ */
+export function matrizDeEstados(
+  componente: string,
+  casillas: Readonly<Record<EstadoDeComponente, CasillaDeEstado>>,
+): void {
+  describe(`${componente}: matriz de estados`, () => {
+    for (const estado of ESTADOS_DE_COMPONENTE) {
+      const casilla = casillas[estado];
+      if (typeof casilla === "function") {
+        it(estado, casilla);
+      } else {
+        it(`${estado}: no aplica (${casilla.noAplica})`, () => {
+          expect(casilla.noAplica.trim().length).toBeGreaterThanOrEqual(15);
+        });
+      }
+    }
+  });
+}
+
+/**
+ * El foco por teclado se ve: un Tab lleva el foco al elemento y el anillo (contorno sólido de 3 px o más, el de
+ * `:focus-visible` de los tokens) se pinta. `anillo` es el elemento que lo dibuja si no es el mismo que recibe el
+ * foco (el campo de importe lo dibuja en su fila).
+ */
+export async function verificarFoco(
+  elemento: HTMLElement,
+  anillo: Element = elemento,
+): Promise<void> {
+  await userEvent.tab();
+  expect(document.activeElement).toBe(elemento);
+  const estilo = getComputedStyle(anillo);
+  expect(estilo.outlineStyle).toBe("solid");
+  expect(parseFloat(estilo.outlineWidth)).toBeGreaterThanOrEqual(3);
 }
