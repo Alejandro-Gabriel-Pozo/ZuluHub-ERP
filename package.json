@@ -33,7 +33,7 @@
     "@axe-core/playwright": "4.13.0",
     "@eslint/js": "^10.0.1",
     "@neon/config": "^1.8.6",
-    "@playwright/test": "1.63.0",
+    "@playwright/test": "1.64.0",
     "@stryker-mutator/core": "^10.0.0",
     "@types/node": "^24.19.2",
     "@types/pg": "^8.23.1",
