@@ -21,6 +21,8 @@ export type EntradaDeBajaDeAdmin = EntradaDeScriptDelDueno &
 const MENSAJES = {
   EMAIL_INVALIDO: "El email no tiene forma de email (algo@dominio).",
   ADMIN_NO_ENCONTRADO: "No existe ningún administrador de plataforma con ese email.",
+  ES_EL_ULTIMO_ADMIN:
+    "Es el único ADMIN activo: si lo das de baja, la plataforma queda sin nadie que pueda administrarla (un SOPORTE no alcanza). Sembrá antes otro ADMIN con `npm run plataforma:primer-admin -- <email>` y repetí la baja.",
 } as const;
 
 export async function ejecutarBajaDeAdmin(entrada: EntradaDeBajaDeAdmin): Promise<number> {

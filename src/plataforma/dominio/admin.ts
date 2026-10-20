@@ -81,7 +81,7 @@ export function decidirAltaDeAdmin(
   return ok({ email: normalizado.valor, rol });
 }
 
-export type ErrorDeBajaDeAdmin = "ADMIN_NO_ENCONTRADO";
+export type ErrorDeBajaDeAdmin = "ADMIN_NO_ENCONTRADO" | "ES_EL_ULTIMO_ADMIN";
 
 /** Lo que el script de baja decide a partir de lo que leyó del administrador. */
 export type DecisionDeBajaDeAdmin = Readonly<{
@@ -89,16 +89,29 @@ export type DecisionDeBajaDeAdmin = Readonly<{
   darDeBaja: boolean;
 }>;
 
+/** Lo que el script de baja averigua de la base, en la misma transacción que la baja. */
+export type HechosParaBajaDeAdmin = Readonly<{
+  /** Cuántos OTROS administradores con rol ADMIN siguen activos (un SOPORTE no cuenta). */
+  otrosAdminsActivos: number;
+}>;
+
 /**
- * La baja de un administrador (h5-p8 §2.5), a partir de lo que el script leyó de `admin_plataforma`. Un email que no es
- * de ningún administrador es un error (no se inventa una baja). Que ya esté de baja NO lo es: el script es idempotente,
- * repetirlo no falla ni cambia nada (igual vuelve a cerrar las sesiones que le queden).
+ * La baja de un administrador (h5-p8 §2.5), a partir de lo que el script leyó de `admin_plataforma`. Previene: dejar la
+ * plataforma sin ningún ADMIN activo (nadie podría administrarla y no hay script para reactivar a nadie).
+ *  - Un email que no es de ningún administrador es un error (no se inventa una baja).
+ *  - Que ya esté de baja NO es un error, ni siquiera si es el último: el script es idempotente, repetirlo no falla ni
+ *    cambia nada (igual vuelve a cerrar las sesiones que le queden).
+ *  - Dar de baja a un SOPORTE no pide nada más.
+ *  - Dar de baja a un ADMIN activo exige que quede al menos OTRO ADMIN activo; si no, `ES_EL_ULTIMO_ADMIN` y no se cambia nada.
  */
 export function decidirBajaDeAdmin(
-  admin: Readonly<{ activo: boolean }> | null,
+  admin: Readonly<{ activo: boolean; rol: RolDePlataforma }> | null,
+  hechos: HechosParaBajaDeAdmin,
 ): Resultado<DecisionDeBajaDeAdmin, ErrorDeBajaDeAdmin> {
   if (admin === null) return err("ADMIN_NO_ENCONTRADO");
-  return ok({ darDeBaja: admin.activo });
+  if (!admin.activo) return ok({ darDeBaja: false });
+  if (admin.rol === "ADMIN" && hechos.otrosAdminsActivos < 1) return err("ES_EL_ULTIMO_ADMIN");
+  return ok({ darDeBaja: true });
 }
 
 export type ErrorDeReseteoDeSegundoFactor = "ADMIN_NO_ENCONTRADO" | "ADMIN_DADO_DE_BAJA";

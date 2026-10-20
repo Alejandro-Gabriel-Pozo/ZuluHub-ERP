@@ -2,7 +2,13 @@ import { decidirBajaDeAdmin, type ErrorDeBajaDeAdmin } from "../../plataforma/do
 import { emailDesdeTexto } from "../../modulos/identidad/publico";
 import type { AdminPlataformaId } from "../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
-import { auditar, leerAdmin, revocarSesiones, usuariosDeLaLibreria } from "./admin-del-dueno";
+import {
+  auditar,
+  leerAdmin,
+  otrosAdminsActivos,
+  revocarSesiones,
+  usuariosDeLaLibreria,
+} from "./admin-del-dueno";
 import { enTransaccionDelDueno } from "./transaccion-del-dueno";
 
 /**
@@ -12,6 +18,11 @@ import { enTransaccionDelDueno } from "./transaccion-del-dueno";
  * a la consola, y aunque alguna sobreviviera (un ingreso que ya estaba en curso), la puerta de la consola vuelve a leer
  * al administrador en cada pedido y cada caso lee su `activo` dentro de su transacción: la baja corta en la operación
  * siguiente.
+ *
+ * Guarda del último ADMIN: no se da de baja a un ADMIN activo si con eso no quedaría ningún otro ADMIN activo (un SOPORTE
+ * no cuenta), y no hay forma de saltearla. La lectura de cuántos quedan y la baja van en la MISMA transacción
+ * serializable: dos bajas simultáneas de los dos únicos ADMIN no pueden ganar las dos (una se repite, ve que ya no queda
+ * otro y se rechaza). Dar de baja a un SOPORTE no pide nada, y repetir la baja de uno ya dado de baja sigue siendo «ya estaba».
  *
  * Idempotente: repetirla con un administrador que ya está de baja no cambia su estado; si le quedaba alguna sesión
  * (un ingreso concurrente), la cierra. Deja UNA constancia por cambio real (`ADMIN_PLATAFORMA_BAJA`, con actor `sistema`,
@@ -40,7 +51,9 @@ export async function darDeBajaAlAdmin(
 
   return enTransaccionDelDueno(urlDueno, async (cliente) => {
     const admin = await leerAdmin(cliente, normalizado.valor);
-    const decision = decidirBajaDeAdmin(admin);
+    const otros = admin === null ? 0 : await otrosAdminsActivos(cliente, admin.id);
+    const decision = decidirBajaDeAdmin(admin, { otrosAdminsActivos: otros });
+    // Rechazada (no existe, o es el último ADMIN): no se escribe ni se revoca nada.
     if (!decision.ok) return decision;
     const { id } = admin as NonNullable<typeof admin>;
 

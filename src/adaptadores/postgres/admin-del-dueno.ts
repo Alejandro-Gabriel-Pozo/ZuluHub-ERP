@@ -1,4 +1,5 @@
 import type pg from "pg";
+import type { RolDePlataforma } from "../../capacidades/permisos/plataforma";
 import { adminPlataformaId, type AdminPlataformaId } from "../../primitivas/identificadores/marca";
 import type { AccionDePlataforma } from "../../puertos/auditoria-de-plataforma";
 import { exigirSinSecretos, type Dato } from "../../puertos/sin-secretos";
@@ -13,17 +14,19 @@ import { ACTOR_DE_SISTEMA } from "./contexto-firmado";
  * El email entra YA normalizado (`emailDesdeTexto`) y solo se usa para buscar: nunca va a una constancia ni a un mensaje.
  */
 
-export type AdminLeido = Readonly<{ id: AdminPlataformaId; activo: boolean }>;
+export type AdminLeido = Readonly<{ id: AdminPlataformaId; activo: boolean; rol: RolDePlataforma }>;
 
 /** El administrador con ese email (activo o no), o `null`. */
 export async function leerAdmin(cliente: pg.Client, email: string): Promise<AdminLeido | null> {
   const fila = (
-    await cliente.query<{ id: string; activo: boolean }>(
-      "SELECT id, activo FROM admin_plataforma WHERE email = $1",
+    await cliente.query<{ id: string; activo: boolean; rol: RolDePlataforma }>(
+      "SELECT id, activo, rol FROM admin_plataforma WHERE email = $1",
       [email],
     )
   ).rows[0];
-  return fila === undefined ? null : { id: adminPlataformaId(fila.id), activo: fila.activo };
+  return fila === undefined
+    ? null
+    : { id: adminPlataformaId(fila.id), activo: fila.activo, rol: fila.rol };
 }
 
 /**
@@ -71,4 +74,22 @@ export async function auditar(
      VALUES ($1, $2, 'admin_plataforma', $3, $4::jsonb, $5::jsonb)`,
     [ACTOR_DE_SISTEMA, accion, adminId, JSON.stringify(antes), JSON.stringify(despues)],
   );
+}
+
+/**
+ * Cuántos administradores con rol ADMIN, activos y distintos de ese, hay (un SOPORTE no cuenta). Se lee en la misma
+ * transacción SERIALIZABLE que la baja: dos bajas simultáneas de los dos únicos ADMIN se ven entre sí, una gana y la otra
+ * se repite y ve que ya no queda otro.
+ */
+export async function otrosAdminsActivos(
+  cliente: pg.Client,
+  id: AdminPlataformaId,
+): Promise<number> {
+  const fila = (
+    await cliente.query<{ n: string }>(
+      "SELECT count(*) AS n FROM admin_plataforma WHERE rol = 'ADMIN' AND activo AND id <> $1",
+      [id],
+    )
+  ).rows[0];
+  return Number(fila?.n ?? 0);
 }

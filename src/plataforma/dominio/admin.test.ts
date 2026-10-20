@@ -159,19 +159,53 @@ describe("decidirAltaDeAdmin: un administrador de plataforma no puede tener ning
 });
 
 describe("decidirBajaDeAdmin (h5-p8 §2.5)", () => {
-  it("un administrador activo se da de baja", () => {
-    expect(decidirBajaDeAdmin({ activo: true })).toEqual({ ok: true, valor: { darDeBaja: true } });
+  const ADMIN_ACTIVO = { activo: true, rol: "ADMIN" } as const;
+  const SOPORTE_ACTIVO = { activo: true, rol: "SOPORTE" } as const;
+  const DE_BAJA = (rol: "ADMIN" | "SOPORTE") => ({ activo: false, rol }) as const;
+
+  it("un ADMIN activo se da de baja si queda al menos otro ADMIN activo", () => {
+    for (const otros of [1, 2, 10]) {
+      expect(decidirBajaDeAdmin(ADMIN_ACTIVO, { otrosAdminsActivos: otros })).toEqual({
+        ok: true,
+        valor: { darDeBaja: true },
+      });
+    }
   });
 
-  it("uno que ya está de baja NO es un error (idempotente): no cambia su estado", () => {
-    expect(decidirBajaDeAdmin({ activo: false })).toEqual({
-      ok: true,
-      valor: { darDeBaja: false },
+  it("el ÚLTIMO ADMIN activo no se da de baja: ES_EL_ULTIMO_ADMIN", () => {
+    expect(decidirBajaDeAdmin(ADMIN_ACTIVO, { otrosAdminsActivos: 0 })).toEqual({
+      ok: false,
+      error: "ES_EL_ULTIMO_ADMIN",
     });
   });
 
+  it("un SOPORTE activo se da de baja siempre, aunque no haya ningún ADMIN", () => {
+    for (const otros of [0, 1, 5]) {
+      expect(decidirBajaDeAdmin(SOPORTE_ACTIVO, { otrosAdminsActivos: otros })).toEqual({
+        ok: true,
+        valor: { darDeBaja: true },
+      });
+    }
+  });
+
+  it("uno que ya está de baja NO es un error (idempotente), aunque no quede ningún ADMIN activo", () => {
+    for (const rol of ["ADMIN", "SOPORTE"] as const) {
+      for (const otros of [0, 1]) {
+        expect(decidirBajaDeAdmin(DE_BAJA(rol), { otrosAdminsActivos: otros })).toEqual({
+          ok: true,
+          valor: { darDeBaja: false },
+        });
+      }
+    }
+  });
+
   it("un email que no es de ningún administrador es un error: no se inventa una baja", () => {
-    expect(decidirBajaDeAdmin(null)).toEqual({ ok: false, error: "ADMIN_NO_ENCONTRADO" });
+    for (const otros of [0, 1]) {
+      expect(decidirBajaDeAdmin(null, { otrosAdminsActivos: otros })).toEqual({
+        ok: false,
+        error: "ADMIN_NO_ENCONTRADO",
+      });
+    }
   });
 });
 
