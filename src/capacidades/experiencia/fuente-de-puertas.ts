@@ -18,8 +18,8 @@ export type PuertosDeLaPuerta = Readonly<{
 /**
  * La fuente REAL de la puerta (armazón web §3.2; marcas y planes §B.2.3): el host se resuelve con
  * `ResolucionDeHost.porHost` y la marca se pinta con `ConfiguracionPublicaDeHost.porHost`, las dos por el
- * rol `zuluhub_publico`. Decisión: son dos lecturas (el puerto de configuración, por diseño, no devuelve
- * ids, y la puerta necesita el `marcaId`), pero la segunda solo se hace si la primera encontró un host
+ * rol `zuluhub_publico`. Decisión: son dos lecturas (el puerto de resolución es el que da el `marcaId`
+ * de la puerta; la configuración trae el suyo para poder contrastarlos), pero la segunda solo se hace si la primera encontró un host
  * servible y las dos pasan por la caché del resolutor (≤ 60 s por host).
  *  - Del resolutor sale solo el `marcaId`: nada del dueño ni de la empresa llega más arriba.
  *  - Falla cerrado: una variable sin configurar (pedir el puerto lanza) o un error de la base ES una

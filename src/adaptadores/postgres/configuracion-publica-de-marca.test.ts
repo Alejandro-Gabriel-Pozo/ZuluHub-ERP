@@ -5,6 +5,7 @@ import type {
   LecturaPublicaDeMarcas,
 } from "../../modulos/marcas/publico";
 import { err, ok } from "../../primitivas/resultado/resultado";
+import { marcaComercialId } from "../../primitivas/identificadores/marca";
 import type { TransaccionesPublicas } from "../../puertos/transacciones-publicas";
 import { crearConfiguracionPublicaDeHost } from "./configuracion-publica-de-marca";
 import type { TxPublica } from "./resolucion-de-host";
@@ -16,6 +17,7 @@ import type { TxPublica } from "./resolucion-de-host";
  */
 
 const configuracion: ConfiguracionPublica = {
+  marcaId: marcaComercialId("marca-del-host"),
   nombre: "Mi Calendario",
   tema: { primary: "#112233" },
   aspecto: {
@@ -52,10 +54,11 @@ function conLectura(respuesta: ConfiguracionPublica | null) {
 }
 
 describe("crearConfiguracionPublicaDeHost", () => {
-  it("pide a la lectura el host NORMALIZADO y la superficie, y devuelve nombre, tema, aspecto y host canónico", async () => {
+  it("pide a la lectura el host NORMALIZADO y la superficie, y devuelve marcaId, nombre, tema, aspecto y host canónico", async () => {
     const { puerto, pedidos } = conLectura(configuracion);
     expect(await puerto.porHost("APP.Marca.TEST:443", "LANDING")).toEqual(
       ok({
+        marcaId: "marca-del-host",
         nombre: "Mi Calendario",
         tema: { primary: "#112233" },
         aspecto: {
@@ -71,13 +74,18 @@ describe("crearConfiguracionPublicaDeHost", () => {
     expect(pedidos).toEqual([["app.marca.test", "LANDING"]]);
   });
 
-  it("solo deja salir nombre, tema, aspecto y hostCanonico: un campo de más de la lectura no sale por la puerta", async () => {
-    const conDeMas = { ...configuracion, marcaId: "m1", empresaId: "e1" } as ConfiguracionPublica;
+  it("solo deja salir marcaId, nombre, tema, aspecto y hostCanonico: un campo de más de la lectura no sale por la puerta", async () => {
+    const conDeMas = {
+      ...configuracion,
+      empresaId: "e1",
+      tenantId: "t1",
+    } as unknown as ConfiguracionPublica;
     const { puerto } = conLectura(conDeMas);
     const r = await puerto.porHost("app.marca.test", "APP");
     expect(r.ok && r.valor !== null && Object.keys(r.valor).sort()).toEqual([
       "aspecto",
       "hostCanonico",
+      "marcaId",
       "nombre",
       "tema",
     ]);

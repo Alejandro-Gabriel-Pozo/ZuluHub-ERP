@@ -1,5 +1,6 @@
 import { completarAspecto, validarAspecto, type Aspecto, type AspectoCompleto } from "./aspecto";
 import { DEFINICION_VACIA, resolverDefinicion, validarNombreVisible } from "./definicion";
+import type { MarcaComercialId } from "../../../primitivas/identificadores/marca";
 import type { Host } from "./host";
 import { validarTema, type Tema } from "./tema";
 import { versionVigente } from "./vigencia";
@@ -24,6 +25,10 @@ import { versionVigente } from "./vigencia";
  *    tema: un aspecto inválido no toca los colores ni al revés.
  *  - El host canónico lo lee el adaptador (el host canónico ACTIVO de la aplicación de la propia marca) y
  *    pasa tal cual: sin él, `null`.
+ *  - El `marcaId` es el de la marca que resolvió el host (la PRIMERA de la cadena), nunca el de un padre
+ *    ni el de un abuelo: el adaptador lo lee con el host y pasa tal cual. Lo usa la puerta web para
+ *    descartar la configuración si no coincide con la marca que resolvió el host en la lectura anterior
+ *    (el dominio pudo reasignarse entre las dos lecturas).
  */
 
 /** Lo que el rol público lee de una versión de marca (la base solo le muestra las confirmadas y empezadas). */
@@ -38,6 +43,8 @@ export type VersionPublicaDeMarca = Readonly<{
 }>;
 
 export type ConfiguracionPublica = Readonly<{
+  /** La marca de este host (no la de un ancestro de la cadena). */
+  marcaId: MarcaComercialId;
   nombre: string;
   tema: Tema;
   /** Los cinco tokens, con la herencia y los defectos aplicados. */
@@ -46,6 +53,8 @@ export type ConfiguracionPublica = Readonly<{
 }>;
 
 export type DatosParaLaConfiguracionPublica = Readonly<{
+  /** La marca que resolvió el host: la dueña de la primera posición de `cadena`. */
+  marcaId: MarcaComercialId;
   /** Las versiones visibles de cada marca de la cadena: la marca primero, después su padre y su abuelo. */
   cadena: readonly (readonly VersionPublicaDeMarca[])[];
   hostCanonico: Host | null;
@@ -102,6 +111,7 @@ export function decidirConfiguracionPublica(
   const nombre = validarNombreVisible(propia.nombreVisible);
   if (!nombre.ok) return null;
   return {
+    marcaId: datos.marcaId,
     nombre: nombre.valor,
     tema: temaDeLaCadena(vigentes),
     aspecto: aspectoDeLaCadena(vigentes),

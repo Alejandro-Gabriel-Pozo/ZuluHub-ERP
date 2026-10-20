@@ -7,7 +7,7 @@ import type { ErrorDePersistencia } from "./transacciones";
  *  - `ResolucionDeHost`: la puerta PÚBLICA (rol `zuluhub_publico`, sin sesión): a qué dueño y a qué marca
  *    pertenece un nombre de host.
  *  - `ConfiguracionPublicaDeHost`: la misma puerta pública: cómo se pinta la marca de un host (nombre,
- *    tema, aspecto y host canónico), sin ningún identificador interno.
+ *    tema, aspecto y host canónico) y qué marca es, sin ningún otro identificador interno.
  *  - `MarcasDeMail`: desde qué marca sale un mail; lo lee la aplicación (rol `zuluhub_app`), dentro de la
  *    transacción de su caso de uso.
  */
@@ -66,10 +66,14 @@ export type AspectoPublico = Readonly<{
  *  - `aspecto`: los cinco datos de lista cerrada (estilo, superficie, esquinas, títulos, ingreso), SIEMPRE
  *    completos: la herencia de las ancestras ya aplicada y, donde nadie define, el defecto;
  *  - `hostCanonico`: el host canónico ACTIVO de la aplicación de la marca (normalizado, sin esquema ni
- *    puerto), o `null` si todavía no tiene.
- * Nada de ids (marca, empresa ni tenant), ni estados, ni versiones, ni quién lo cargó.
+ *    puerto), o `null` si todavía no tiene;
+ *  - `marcaId`: la marca que resolvió el host (la propia, nunca la de un ancestro). Es el mismo id que
+ *    ya devuelve `ResolucionDeHost`: sirve para que quien hace las dos lecturas descarte la segunda si
+ *    no coincide con la primera (el dominio pudo reasignarse en el medio).
+ * Fuera de eso, nada de ids (empresa ni tenant), ni estados, ni versiones, ni quién lo cargó.
  */
 export type ConfiguracionPublicaDeMarca = Readonly<{
+  marcaId: MarcaComercialId;
   nombre: string;
   tema: Readonly<Partial<Record<TokenDeTemaPublico, string>>>;
   aspecto: AspectoPublico;

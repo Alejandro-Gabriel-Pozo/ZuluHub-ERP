@@ -20,6 +20,7 @@ const resuelto = {
   marcaId: "marca-a",
 } as unknown as HostResuelto;
 const configuracion: ConfiguracionPublicaDeMarca = {
+  marcaId: "marca-a" as ConfiguracionPublicaDeMarca["marcaId"],
   nombre: "Marca A",
   tema: { primary: "#112233", fondo: "#000000" } as ConfiguracionPublicaDeMarca["tema"],
   aspecto: {
