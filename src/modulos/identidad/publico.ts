@@ -91,6 +91,10 @@ export {
   type TxDeEnvioDeInvitacion,
 } from "./casos-de-uso/enviar-invitacion";
 export {
+  crearManejadorDeRevocarSesiones,
+  type DependenciasDeRevocarSesiones,
+} from "./casos-de-uso/revocar-sesiones";
+export {
   crearCasosDeUsoDeIdentidad,
   type CasosDeUsoDeIdentidad,
 } from "./casos-de-uso/casos-de-uso";
@@ -135,8 +139,10 @@ export {
   TRABAJO_AVISAR_TRASPASO_PROPUESTO,
   TRABAJO_AVISAR_TRASPASO_RECHAZADO,
   TRABAJO_ENVIAR_INVITACION,
+  TRABAJO_REVOCAR_SESIONES,
   claveDeAvisoDeTraspaso,
   claveDeEnvioDeInvitacion,
+  claveDeRevocacionDeSesiones,
   type DependenciasDeIdentidad,
   type TxDeIdentidad,
 } from "./casos-de-uso/contrato";

@@ -82,6 +82,11 @@ const PEDIDOS: { nombre: string; pedir: (c: Conexiones) => unknown; nombra: stri
     nombra: "ZULUHUB_DB_AUTENTICACION",
   },
   {
+    nombre: "revocacionDeSesiones",
+    pedir: (c) => c.revocacionDeSesiones(),
+    nombra: "ZULUHUB_DB_AUTENTICACION",
+  },
+  {
     nombre: "web.autenticacion",
     pedir: (c) => armarWeb(c).autenticacion(),
     nombra: "GOOGLE_CLIENT_SECRET",
@@ -362,6 +367,9 @@ describe("con el entorno completo", () => {
     expect(typeof conexiones.autenticacion().sesionDe).toBe("function");
     expect(typeof conexiones.autenticacion().manejar).toBe("function");
     expect(conexiones.barridoDeAutenticacion()).toBe(conexiones.barridoDeAutenticacion());
+    // La revocación de sesiones (trabajo `revocar_sesiones`) es de la misma conexión y tampoco pide el secreto ni Google.
+    expect(conexiones.revocacionDeSesiones()).toBe(conexiones.revocacionDeSesiones());
+    expect(typeof conexiones.revocacionDeSesiones().revocarDelUsuario).toBe("function");
     expect(registrados).toEqual([]);
 
     const soloLaBase: Record<string, string> = valida();
@@ -374,6 +382,7 @@ describe("con el entorno completo", () => {
     }
     const otra = conFuente(soloLaBase);
     expect(otra.conexiones.barridoDeAutenticacion()).toBeDefined();
+    expect(otra.conexiones.revocacionDeSesiones()).toBeDefined();
     expect(() => otra.conexiones.autenticacion()).toThrow(ErrorDeEntorno);
     expect(otra.registrados).toEqual([
       "pieza autenticacion: ZULUHUB_AUTH_SECRETO_EMPRESA falta; GOOGLE_CLIENT_ID falta; GOOGLE_CLIENT_SECRET falta",

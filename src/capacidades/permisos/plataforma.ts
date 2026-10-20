@@ -1,5 +1,5 @@
 import { clavesDe } from "../modulos/activos";
-import type { CatalogoComercial } from "../modulos/catalogo";
+import type { DefinicionDeAccion, DefinicionDeModulo } from "../modulos/catalogo";
 import type { ReglasDelGuard } from "./guard";
 
 /**
@@ -15,6 +15,19 @@ import type { ReglasDelGuard } from "./guard";
 export const ROLES_DE_PLATAFORMA = ["ADMIN", "SOPORTE"] as const;
 
 export type RolDePlataforma = (typeof ROLES_DE_PLATAFORMA)[number];
+
+/** Una acción de plataforma: lo de toda acción más si exige el segundo factor reciente (h5-p8 §2.4 bis). */
+export type DefinicionDeAccionDePlataforma = DefinicionDeAccion<never> &
+  Readonly<{ segundoFactorReciente: boolean }>;
+
+/** La forma del catálogo de plataforma: el catálogo comercial con la acción ampliada (el guard solo lee lo común). */
+type CatalogoDePlataforma = Readonly<
+  Record<
+    string,
+    Omit<DefinicionDeModulo, "acciones"> &
+      Readonly<{ acciones: Readonly<Record<string, DefinicionDeAccionDePlataforma>> }>
+  >
+>;
 
 /**
  * Un único "módulo" `plataforma`, obligatorio y disponible, sin capacidades de sucursal: así el guard
@@ -34,6 +47,18 @@ export type RolDePlataforma = (typeof ROLES_DE_PLATAFORMA)[number];
  * superficie (el dominio verificado ya se puede activar) y ante la duda manda la más amplia;
  * `dominios.activar` es `CREA_AMPLIA` porque expone una superficie pública nueva; `dominios.desactivar`
  * es `COMPLETA_CIERRA` porque deja de servir y vuelve a la página neutra, sin crear nada.
+ *
+ * `segundoFactorReciente` (h5-p8 §2.4 bis, DECIDIDO por el dueño el 2026-10-20): obligatorio en TODA acción (una sin
+ * declarar no compila). `true`: la acción tiene efecto sobre clientes o es de alto alcance y la puerta de la consola
+ * la rechaza con `segundo_factor_reciente_requerido` si el segundo factor de la sesión tiene más de 5 minutos. Lo
+ * decide el servidor por acción, nunca la pantalla. Exigen: confirmar versión de marca; publicar versión de plan;
+ * asignar plan y migrar tenants de versión (`planes.asignar`); ajustar perilla; alta de empresa; cancelar alta;
+ * suspender y reactivar tenant, empresa y persona; agregar, verificar, activar, desactivar y retirar dominio; activar y
+ * desactivar módulo de empresa. NO exigen: toda lectura y consulta; guardar borrador de marca y de plan (no tienen
+ * efecto hasta confirmar o publicar, y pedir el código en cada guardado volvería inusable la edición); reenviar y
+ * revocar la invitación del alta; `soporte.explicar`; y, por decisión de criterio del ingeniero (no están en la lista del
+ * dueño), `marcas.crear` y `planes.crear`: crean un borrador vacío sin efecto sobre ningún cliente hasta que se
+ * confirme la versión o se publique el plan, que sí lo exigen. Una prueba fija la lista exacta.
  */
 export const CATALOGO_DE_PLATAFORMA = {
   plataforma: {
@@ -44,45 +69,101 @@ export const CATALOGO_DE_PLATAFORMA = {
     datosRequeridos: [],
     implementadoPor: ["plataforma"],
     acciones: {
-      "tenants.ver": { capacidad: null, efecto: "LECTURA" },
-      "empresas.ver": { capacidad: null, efecto: "LECTURA" },
-      "invitaciones.ver": { capacidad: null, efecto: "LECTURA" },
-      "trabajos.ver_fallidos": { capacidad: null, efecto: "LECTURA" },
-      "auditoria.ver": { capacidad: null, efecto: "LECTURA" },
-      "configuracion.ver": { capacidad: null, efecto: "LECTURA" },
-      "soporte.buscar_referencia": { capacidad: null, efecto: "LECTURA" },
-      "soporte.explicar": { capacidad: null, efecto: "LECTURA" },
-      "altas.reenviar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "altas.revocar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "empresas.alta": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "altas.cancelar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "tenants.suspender": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "tenants.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "empresas.suspender": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "empresas.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "personas.suspender": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "personas.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "tenants.ver": { capacidad: null, efecto: "LECTURA", segundoFactorReciente: false },
+      "empresas.ver": { capacidad: null, efecto: "LECTURA", segundoFactorReciente: false },
+      "invitaciones.ver": { capacidad: null, efecto: "LECTURA", segundoFactorReciente: false },
+      "trabajos.ver_fallidos": { capacidad: null, efecto: "LECTURA", segundoFactorReciente: false },
+      "auditoria.ver": { capacidad: null, efecto: "LECTURA", segundoFactorReciente: false },
+      "configuracion.ver": { capacidad: null, efecto: "LECTURA", segundoFactorReciente: false },
+      "soporte.buscar_referencia": {
+        capacidad: null,
+        efecto: "LECTURA",
+        segundoFactorReciente: false,
+      },
+      "soporte.explicar": { capacidad: null, efecto: "LECTURA", segundoFactorReciente: false },
+      "altas.reenviar_invitacion": {
+        capacidad: null,
+        efecto: "COMPLETA_CIERRA",
+        segundoFactorReciente: false,
+      },
+      "altas.revocar_invitacion": {
+        capacidad: null,
+        efecto: "COMPLETA_CIERRA",
+        segundoFactorReciente: false,
+      },
+      "empresas.alta": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
+      "altas.cancelar": { capacidad: null, efecto: "COMPLETA_CIERRA", segundoFactorReciente: true },
+      "tenants.suspender": {
+        capacidad: null,
+        efecto: "COMPLETA_CIERRA",
+        segundoFactorReciente: true,
+      },
+      "tenants.reactivar": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
+      "empresas.suspender": {
+        capacidad: null,
+        efecto: "COMPLETA_CIERRA",
+        segundoFactorReciente: true,
+      },
+      "empresas.reactivar": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
+      "personas.suspender": {
+        capacidad: null,
+        efecto: "COMPLETA_CIERRA",
+        segundoFactorReciente: true,
+      },
+      "personas.reactivar": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
       // Marcas y planes (especificación «marcas, productos y planes», §C): las 14 de una vez.
-      "marcas.ver": { capacidad: null, efecto: "LECTURA" },
-      "planes.ver": { capacidad: null, efecto: "LECTURA" },
-      "marcas.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "marcas.editar_borrador": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "marcas.confirmar_version": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "dominios.agregar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "dominios.retirar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "dominios.verificar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "dominios.activar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "dominios.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "planes.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "planes.editar_borrador": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "planes.publicar_version": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "planes.asignar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "perillas.ajustar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "modulos_de_empresa.activar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "modulos_de_empresa.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "marcas.ver": { capacidad: null, efecto: "LECTURA", segundoFactorReciente: false },
+      "planes.ver": { capacidad: null, efecto: "LECTURA", segundoFactorReciente: false },
+      "marcas.crear": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: false },
+      "marcas.editar_borrador": {
+        capacidad: null,
+        efecto: "CREA_AMPLIA",
+        segundoFactorReciente: false,
+      },
+      "marcas.confirmar_version": {
+        capacidad: null,
+        efecto: "CREA_AMPLIA",
+        segundoFactorReciente: true,
+      },
+      "dominios.agregar": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
+      "dominios.retirar": {
+        capacidad: null,
+        efecto: "COMPLETA_CIERRA",
+        segundoFactorReciente: true,
+      },
+      "dominios.verificar": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
+      "dominios.activar": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
+      "dominios.desactivar": {
+        capacidad: null,
+        efecto: "COMPLETA_CIERRA",
+        segundoFactorReciente: true,
+      },
+      "planes.crear": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: false },
+      "planes.editar_borrador": {
+        capacidad: null,
+        efecto: "CREA_AMPLIA",
+        segundoFactorReciente: false,
+      },
+      "planes.publicar_version": {
+        capacidad: null,
+        efecto: "CREA_AMPLIA",
+        segundoFactorReciente: true,
+      },
+      "planes.asignar": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
+      "perillas.ajustar": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
+      "modulos_de_empresa.activar": {
+        capacidad: null,
+        efecto: "CREA_AMPLIA",
+        segundoFactorReciente: true,
+      },
+      "modulos_de_empresa.desactivar": {
+        capacidad: null,
+        efecto: "COMPLETA_CIERRA",
+        segundoFactorReciente: true,
+      },
     },
   },
-} as const satisfies CatalogoComercial;
+} as const satisfies CatalogoDePlataforma;
 
 type Catalogo = typeof CATALOGO_DE_PLATAFORMA;
 

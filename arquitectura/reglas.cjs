@@ -476,22 +476,39 @@ const reglas = [
     to: { path: "^src/puertos/correo\\.ts$|^src/adaptadores/correo/" },
   },
   {
-    // P7. Previene: que `apps/web` (o cualquier parte de `src/`) obtenga la puerta de plataforma y con ella la
-    // credencial del rol `zuluhub_plataforma`: un error de la web podría actuar como plataforma (R10). La puerta
-    // son los scripts que corre el dueño y, más adelante, la consola `apps/plataforma` (proyecto de Vercel
-    // propio, todavía sin crear: la regla se escribe por patrón de ruta). Alcance: `plataforma.ts` y
-    // `entorno-de-plataforma.ts` solo los importan `scripts/`, las pruebas (`test/` y los `*.test.ts`),
-    // `apps/plataforma/servidor/` y ellos mismos. Chequeo: las violaciones inyectadas de reglas.test.ts.
+    // P7 y P8b. Previene: que `apps/web` (o cualquier parte de `src/`) obtenga la puerta de plataforma y con ella la
+    // credencial del rol `zuluhub_plataforma`: un error de la web podría actuar como plataforma (R10). Y, desde P8b,
+    // que la consola `apps/plataforma` ejecute un caso SIN pasar por la sesión: `plataforma.ts` (que corre casos con
+    // un contexto armado por quien llama, sin la comprobación del segundo factor reciente) es solo de los scripts del
+    // dueño y de las pruebas; la consola entra por `puerta-de-consola.ts` (regla siguiente). Alcance: `plataforma.ts`
+    // y `entorno-de-plataforma.ts` solo los importan `scripts/`, las pruebas (`test/` y los `*.test.ts`), la propia
+    // puerta de la consola y ellos mismos. Chequeo: las violaciones inyectadas de reglas.test.ts.
     name: "plataforma-solo-desde-scripts",
     severity: "error",
     comment:
-      "src/composicion/plataforma.ts y entorno-de-plataforma.ts (la puerta de plataforma y su credencial) solo los importan scripts/, las pruebas y apps/plataforma/servidor/: ni apps/web ni el resto de src/ (R10).",
+      "src/composicion/plataforma.ts y entorno-de-plataforma.ts (la puerta de plataforma sin sesión y su credencial) solo los importan scripts/, las pruebas y la puerta de la consola (puerta-de-consola.ts): ni apps/web, ni apps/plataforma (que entra por la sesión), ni el resto de src/ (R10).",
     from: {
       path: "^(src|apps)/",
       pathNot:
-        "^src/composicion/(plataforma|entorno-de-plataforma)\\.ts$|\\.test\\.(ts|tsx)$|^apps/plataforma/servidor/",
+        "^src/composicion/(plataforma|entorno-de-plataforma|puerta-de-consola)\\.ts$|\\.test\\.(ts|tsx)$",
     },
     to: { path: "^src/composicion/(plataforma|entorno-de-plataforma)\\.ts$" },
+  },
+  {
+    // P8b (h5-p8 §2.4 bis). Previene: que cualquier parte de `src/` o de `apps/web` obtenga la puerta de la consola
+    // (la que ejecuta casos de plataforma a partir de una sesión) y con ella la credencial de plataforma. Solo la
+    // importa el servidor de la consola, que es quien tiene sesión de plataforma. Chequeo: las violaciones inyectadas
+    // de reglas.test.ts.
+    name: "puerta-de-consola-solo-desde-la-consola",
+    severity: "error",
+    comment:
+      "src/composicion/puerta-de-consola.ts (ejecutar casos de plataforma desde una sesión) solo la importan apps/plataforma/servidor/ y las pruebas: ni apps/web ni el resto de src/ (R10).",
+    from: {
+      path: "^(src|apps)/",
+      pathNot:
+        "^apps/plataforma/servidor/|^src/composicion/puerta-de-consola\\.ts$|\\.test\\.(ts|tsx)$",
+    },
+    to: { path: "^src/composicion/puerta-de-consola\\.ts$" },
   },
 ];
 

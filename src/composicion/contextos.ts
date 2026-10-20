@@ -85,8 +85,9 @@ export type DatosDeContextoDePlataforma = Readonly<{
 }>;
 
 /**
- * Un administrador de plataforma (o un proceso del sistema) actúa. Solo lo arma la puerta de scripts de
- * plataforma, con el administrador que ella misma encontró en la base: nunca un id que mandó el navegador.
+ * Un administrador de plataforma (o un proceso del sistema) actúa. Solo lo arman la puerta de scripts de plataforma y
+ * `contextoDePlataformaDeLaSesion` (`sesion-de-plataforma.ts`, la consola), con el administrador que ellos mismos
+ * encontraron en la base: nunca un id que mandó el navegador.
  */
 export function contextoDePlataforma(datos: DatosDeContextoDePlataforma): ContextoDePlataforma {
   exigirFechaValida(datos.ahora);

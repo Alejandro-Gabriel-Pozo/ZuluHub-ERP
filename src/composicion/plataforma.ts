@@ -104,9 +104,15 @@ import { perezoso } from "./perezoso";
  * `zuluhub_plataforma`. Importar este archivo o llamar a `armarPlataforma` no lee ni valida nada; cada pieza
  * se arma la primera vez que se la pide, y entonces valida SUS variables (`entorno-de-plataforma.ts`).
  *
- * SOLO la importan `scripts/`, las pruebas y `apps/plataforma/servidor/` (regla de arquitectura
+ * SOLO la importan `scripts/`, las pruebas y la puerta de la consola (`puerta-de-consola.ts`) (regla de arquitectura
  * `plataforma-solo-desde-scripts`). Falla que previene: que `apps/web` (o cualquier parte de `src/`) pueda
  * obtener la credencial de plataforma, y con ella actuar como plataforma desde un error de la web (R10).
+ *
+ * Esta puerta corre los casos con el contexto que arma quien llama y NO exige el segundo factor reciente (h5-p8 §2.4 bis):
+ * es la de los scripts del dueño (P7), que no tienen sesión web (el administrador se identifica por su email y el dueño
+ * tiene la credencial), y por eso quedan FUERA de esa exigencia, a propósito. La consola `apps/plataforma` NO entra por
+ * acá: entra por `puerta-de-consola.ts`, que arma el contexto desde la sesión y comprueba el segundo factor reciente de
+ * cada acción marcada antes de correr el caso (regla `plataforma-solo-desde-scripts`: la consola no puede importar este archivo).
  *
  * Tres conexiones (cada una con su pool, de hasta 2 conexiones, que se abre recién al primer uso): los
  * repositorios de las altas, los de marcas y planes, y los de dominios y soporte. No se pueden juntar en una

@@ -40,6 +40,10 @@ export const ACCIONES_DE_PLATAFORMA = [
   // El segundo factor de un administrador quedó bloqueado por intentos fallidos (P8a): la deja el sistema, sin
   // códigos ni secretos (solo hasta cuándo y cuántos fallos).
   "SEGUNDO_FACTOR_BLOQUEADO",
+  // El dueño dio de baja a un administrador o le reseteó el segundo factor (P8b): los dejan los scripts con la conexión
+  // del dueño, con el actor `sistema` y SIN el email ni ningún secreto (solo qué cambió y cuántas sesiones se cerraron).
+  "ADMIN_PLATAFORMA_BAJA",
+  "SEGUNDO_FACTOR_RESETEADO",
 ] as const;
 
 export type AccionDePlataforma = (typeof ACCIONES_DE_PLATAFORMA)[number];

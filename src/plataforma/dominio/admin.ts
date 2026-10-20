@@ -80,3 +80,38 @@ export function decidirAltaDeAdmin(
   if (hechos.tieneInvitacionPendiente) return err("ADMIN_CON_INVITACION_PENDIENTE");
   return ok({ email: normalizado.valor, rol });
 }
+
+export type ErrorDeBajaDeAdmin = "ADMIN_NO_ENCONTRADO";
+
+/** Lo que el script de baja decide a partir de lo que leyó del administrador. */
+export type DecisionDeBajaDeAdmin = Readonly<{
+  /** `true`: estaba activo y hay que ponerlo en `activo = false`. `false`: ya estaba de baja, no hay cambio de estado. */
+  darDeBaja: boolean;
+}>;
+
+/**
+ * La baja de un administrador (h5-p8 §2.5), a partir de lo que el script leyó de `admin_plataforma`. Un email que no es
+ * de ningún administrador es un error (no se inventa una baja). Que ya esté de baja NO lo es: el script es idempotente,
+ * repetirlo no falla ni cambia nada (igual vuelve a cerrar las sesiones que le queden).
+ */
+export function decidirBajaDeAdmin(
+  admin: Readonly<{ activo: boolean }> | null,
+): Resultado<DecisionDeBajaDeAdmin, ErrorDeBajaDeAdmin> {
+  if (admin === null) return err("ADMIN_NO_ENCONTRADO");
+  return ok({ darDeBaja: admin.activo });
+}
+
+export type ErrorDeReseteoDeSegundoFactor = "ADMIN_NO_ENCONTRADO" | "ADMIN_DADO_DE_BAJA";
+
+/**
+ * El reseteo del segundo factor de un administrador que perdió su dispositivo (h5-p8 §2.4). Solo tiene sentido para
+ * personal habilitado: un email que no es de ningún administrador, o de uno dado de baja, se rechaza sin tocar nada (no
+ * se borran secretos de quien ya no puede entrar).
+ */
+export function decidirReseteoDeSegundoFactor(
+  admin: Readonly<{ activo: boolean }> | null,
+): Resultado<null, ErrorDeReseteoDeSegundoFactor> {
+  if (admin === null) return err("ADMIN_NO_ENCONTRADO");
+  if (!admin.activo) return err("ADMIN_DADO_DE_BAJA");
+  return ok(null);
+}

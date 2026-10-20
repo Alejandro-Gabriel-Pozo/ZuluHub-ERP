@@ -6,6 +6,8 @@ import {
   LIMITE_DE_INACTIVIDAD_EN_MS,
   TOLERANCIA_DE_RELOJ_EN_MS,
   decidirAltaDeAdmin,
+  decidirBajaDeAdmin,
+  decidirReseteoDeSegundoFactor,
   rolVigenteDeAdmin,
   sesionVigente,
 } from "./admin";
@@ -152,6 +154,40 @@ describe("decidirAltaDeAdmin: un administrador de plataforma no puede tener ning
     expect(decidirAltaDeAdmin("ana@x.com", "ADMIN", todo)).toEqual({
       ok: false,
       error: "ADMIN_CON_MEMBRESIA",
+    });
+  });
+});
+
+describe("decidirBajaDeAdmin (h5-p8 §2.5)", () => {
+  it("un administrador activo se da de baja", () => {
+    expect(decidirBajaDeAdmin({ activo: true })).toEqual({ ok: true, valor: { darDeBaja: true } });
+  });
+
+  it("uno que ya está de baja NO es un error (idempotente): no cambia su estado", () => {
+    expect(decidirBajaDeAdmin({ activo: false })).toEqual({
+      ok: true,
+      valor: { darDeBaja: false },
+    });
+  });
+
+  it("un email que no es de ningún administrador es un error: no se inventa una baja", () => {
+    expect(decidirBajaDeAdmin(null)).toEqual({ ok: false, error: "ADMIN_NO_ENCONTRADO" });
+  });
+});
+
+describe("decidirReseteoDeSegundoFactor (h5-p8 §2.4)", () => {
+  it("un administrador activo puede resetear su segundo factor", () => {
+    expect(decidirReseteoDeSegundoFactor({ activo: true })).toEqual({ ok: true, valor: null });
+  });
+
+  it("uno dado de baja o inexistente se rechaza, cada uno con su motivo", () => {
+    expect(decidirReseteoDeSegundoFactor({ activo: false })).toEqual({
+      ok: false,
+      error: "ADMIN_DADO_DE_BAJA",
+    });
+    expect(decidirReseteoDeSegundoFactor(null)).toEqual({
+      ok: false,
+      error: "ADMIN_NO_ENCONTRADO",
     });
   });
 });

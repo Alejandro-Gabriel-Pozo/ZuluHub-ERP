@@ -31,6 +31,16 @@ export type SesionAutenticada = Readonly<{
    */
   segundoFactorEn?: Date | null;
   /**
+   * Solo la consola de plataforma: el host en el que nació la sesión (el mismo con el que se pidió; vacío si no se
+   * sabe). La puerta de la consola lo vuelve a comparar con el suyo: una sesión de otro host no entra.
+   */
+  host?: string;
+  /**
+   * Solo la consola: si el usuario ya tiene el segundo factor enrolado y verificado. Con `segundoFactorEn` nulo decide
+   * si se informa «verificar» o «enrolar»; nunca deja entrar.
+   */
+  segundoFactorEnrolado?: boolean;
+  /**
    * `Set-Cookie` que dejó la renovación de la sesión (el navegador solo se entera de la renovación si
    * la respuesta los lleva). Vacío si no hubo. Un componente de servidor no puede fijar cookies: lo
    * aplican la acción del servidor o el manejador de ruta que sí pueden.
