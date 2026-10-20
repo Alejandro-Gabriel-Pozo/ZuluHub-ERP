@@ -35,6 +35,8 @@ export const ACCIONES_DE_PLATAFORMA = [
   "PERILLA_AJUSTADA",
   "MODULO_ACTIVADO",
   "MODULO_DESACTIVADO",
+  // Un administrador de plataforma nuevo: lo siembra el script del primer administrador con la conexión del dueño.
+  "ADMIN_PLATAFORMA_ALTA",
 ] as const;
 
 export type AccionDePlataforma = (typeof ACCIONES_DE_PLATAFORMA)[number];

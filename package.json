@@ -23,7 +23,9 @@
     "migrar": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/migrar-base.ts",
     "instalar-clave": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/instalar-clave-de-contexto.ts",
     "build:web": "npm run build --workspace @zuluhub/web",
-    "gate": "npm run typecheck && npm run lint && npm run format:check && npm run arquitectura && npm run analizar:muerto && npm test"
+    "gate": "npm run typecheck && npm run lint && npm run format:check && npm run arquitectura && npm run analizar:muerto && npm test",
+    "plataforma:primer-admin": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/crear-primer-admin.ts",
+    "plataforma:caso": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/ejecutar-caso-de-plataforma.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

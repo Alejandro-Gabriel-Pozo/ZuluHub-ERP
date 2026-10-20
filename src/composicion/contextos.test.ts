@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  adminPlataformaId,
   empresaId,
   marcaComercialId,
   personaId,
   usuarioAuthId,
 } from "../primitivas/identificadores/marca";
-import { contextoDeInvitacion, contextoDeSesion, contextoOperativo } from "./contextos";
+import {
+  contextoDeInvitacion,
+  contextoDePlataforma,
+  contextoDeSesion,
+  contextoOperativo,
+} from "./contextos";
 
 const AHORA = new Date("2026-10-13T12:00:00.000Z");
 const EMPRESA = empresaId("11111111-1111-4111-8111-111111111111");
@@ -123,5 +129,40 @@ describe("contextoDeSesion", () => {
     expect(() => contextoDeSesion({ usuarioAuth: USUARIO, ahora: new Date(Number.NaN) })).toThrow(
       "ahora debe ser una fecha válida",
     );
+  });
+});
+
+describe("contextoDePlataforma", () => {
+  const ADMIN = adminPlataformaId("55555555-5555-4555-8555-555555555555");
+
+  it("arma el contexto con el administrador y la hora que recibe", () => {
+    expect(contextoDePlataforma({ actor: { tipo: "ADMIN", id: ADMIN }, ahora: AHORA })).toEqual({
+      tipo: "PLATAFORMA",
+      actor: { tipo: "ADMIN", id: ADMIN },
+      ahora: AHORA,
+    });
+  });
+
+  it("también arma el del sistema", () => {
+    const actor = { tipo: "SISTEMA", proceso: "barrido-de-altas" } as const;
+    expect(contextoDePlataforma({ actor, ahora: AHORA })).toEqual({
+      tipo: "PLATAFORMA",
+      actor,
+      ahora: AHORA,
+    });
+  });
+
+  it("solo copia los campos del contexto: un dato de más no se cuela", () => {
+    const datos = { actor: { tipo: "ADMIN", id: ADMIN }, ahora: AHORA, rol: "ADMIN" } as const;
+    expect(Object.keys(contextoDePlataforma(datos)).sort()).toEqual(["actor", "ahora", "tipo"]);
+  });
+
+  it("rechaza una hora inválida", () => {
+    expect(() =>
+      contextoDePlataforma({
+        actor: { tipo: "ADMIN", id: ADMIN },
+        ahora: new Date("no es una fecha"),
+      }),
+    ).toThrow("ahora debe ser una fecha válida");
   });
 });
