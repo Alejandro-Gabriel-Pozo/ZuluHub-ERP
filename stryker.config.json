@@ -67,6 +67,7 @@
     "src/composicion/rutas-de-sistema.ts",
     "src/composicion/sesion-de-plataforma.ts",
     "src/composicion/puerta-de-consola.ts",
+    "src/composicion/autenticacion-de-host-fijo.ts",
     "src/composicion/a-respuesta.ts",
     "!src/**/*.test.ts"
   ],

@@ -245,9 +245,9 @@
     "pruebas": "src/composicion/tipo-de-falla.test.ts"
   },
   {
-    "grupo": "consola de plataforma (contexto de la sesión y puerta, P8b)",
-    "archivos": "src/composicion/sesion-de-plataforma.ts,src/composicion/puerta-de-consola.ts",
-    "pruebas": "src/composicion/sesion-de-plataforma.test.ts src/composicion/puerta-de-consola.test.ts"
+    "grupo": "consola de plataforma (contexto de la sesión, puerta y host fijo, P8b y P8c)",
+    "archivos": "src/composicion/sesion-de-plataforma.ts,src/composicion/puerta-de-consola.ts,src/composicion/autenticacion-de-host-fijo.ts",
+    "pruebas": "src/composicion/sesion-de-plataforma.test.ts src/composicion/puerta-de-consola.test.ts src/composicion/autenticacion-de-host-fijo.test.ts"
   },
   {
     "grupo": "web (rutas de sistema: cron y salud)",

@@ -433,6 +433,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "src/composicion/puerta-de-consola.ts": exporta,
       },
     },
+    {
+      regla: "ingreso-de-consola-solo-desde-la-consola",
+      archivos: {
+        "apps/web/servidor/composicion.ts": importa("../../../src/composicion/ingreso-de-consola"),
+        "src/composicion/ingreso-de-consola.ts": exporta,
+      },
+    },
   ];
 
   it("cada regla definida tiene su caso de violación", () => {
@@ -1804,6 +1811,92 @@ describe("P7: la puerta de plataforma solo la importan los scripts y las pruebas
       "src/composicion/web.ts": exporta,
     });
     expect(v).not.toContain("plataforma-solo-desde-scripts");
+  });
+});
+
+/**
+ * P8c (h5-p8 §7). El ingreso de la consola armado (`ingreso-de-consola.ts`) junta el secreto de ingreso y el cliente de
+ * Google de la consola, las cadenas del rol de plataforma y del de autenticación y la puerta que ejecuta casos: solo lo
+ * importa el servidor de la consola (y las pruebas). Para leer sus variables importa `entorno-de-plataforma.ts` y arma la
+ * puerta con `puerta-de-consola.ts`: se les abre la puerta a ESE archivo y a ningún vecino.
+ */
+describe("P8c: el ingreso de la consola solo lo importa el servidor de la consola (R10)", () => {
+  const INGRESO = "src/composicion/ingreso-de-consola.ts";
+  const ENTORNO = "src/composicion/entorno-de-plataforma.ts";
+  const PUERTA_DE_CONSOLA = "src/composicion/puerta-de-consola.ts";
+  const ENTORNO_Y_PUERTA = [
+    'import { x } from "./entorno-de-plataforma";',
+    'import { x as z } from "./puerta-de-consola";',
+    "export const y = x + z;",
+    "",
+  ].join("\n");
+
+  it("lo importan el servidor de la consola y las pruebas, sin violar ni la regla del ingreso ni la de la composición", async () => {
+    const v = await violacionesDe({
+      "apps/plataforma/servidor/composicion.ts": importa(
+        "../../../src/composicion/ingreso-de-consola",
+      ),
+      "src/composicion/ingreso-de-consola.test.ts": importa("./ingreso-de-consola"),
+      [INGRESO]: exporta,
+    });
+    expect(v).not.toContain("ingreso-de-consola-solo-desde-la-consola");
+    expect(v).not.toContain("composicion-solo-desde-servidor-de-apps");
+    expect(v).not.toContain("plataforma-solo-desde-scripts");
+  });
+
+  it.each([
+    ["una página de la consola", "apps/plataforma/app/page.tsx"],
+    ["la interfaz de la consola", "apps/plataforma/ui/boton.ts"],
+    ["la acción del servidor de la web", "apps/web/servidor/composicion.ts"],
+    ["una página de la web", "apps/web/app/s/app/page.tsx"],
+    ["el proxy de la web", "apps/web/proxy.ts"],
+    ["la composición de la web", "src/composicion/web.ts"],
+    ["la composición de conexiones", "src/composicion/conexiones.ts"],
+    ["la puerta de la consola", PUERTA_DE_CONSOLA],
+    ["la puerta de plataforma sin sesión", "src/composicion/plataforma.ts"],
+    ["un módulo", "src/modulos/empresas/casos-de-uso/c.ts"],
+    ["un caso de uso de plataforma", "src/plataforma/casos-de-uso/c.ts"],
+    ["un adaptador", "src/adaptadores/postgres/a.ts"],
+  ])("no lo importa %s", async (_quien, origen) => {
+    const profundidad = "../".repeat(origen.split("/").length - 1);
+    const v = await violacionesDe({
+      [origen]: importa(`${profundidad}src/composicion/ingreso-de-consola`),
+      [INGRESO]: exporta,
+    });
+    expect(v, origen).toContain("ingreso-de-consola-solo-desde-la-consola");
+  });
+
+  it("el ingreso sí lee el entorno de plataforma y arma la puerta de la consola; un vecino con nombre parecido, no", async () => {
+    const propio = await violacionesDe({
+      [INGRESO]: ENTORNO_Y_PUERTA,
+      [ENTORNO]: exporta,
+      [PUERTA_DE_CONSOLA]: exporta,
+    });
+    expect(propio).not.toContain("plataforma-solo-desde-scripts");
+    expect(propio).not.toContain("puerta-de-consola-solo-desde-la-consola");
+    for (const vecino of [
+      "src/composicion/ingreso-de-consola-otro.ts",
+      "src/composicion/otro-ingreso-de-consola.ts",
+      "src/composicion/ingreso-de-consola.tsx",
+    ]) {
+      const v = await violacionesDe({
+        [vecino]: ENTORNO_Y_PUERTA,
+        [ENTORNO]: exporta,
+        [PUERTA_DE_CONSOLA]: exporta,
+      });
+      expect(v, vecino).toContain("plataforma-solo-desde-scripts");
+      expect(v, vecino).toContain("puerta-de-consola-solo-desde-la-consola");
+    }
+  });
+
+  it("la consola de plataforma sigue sin poder importar el entorno de plataforma ni la puerta sin sesión: entra por el ingreso y la puerta de la consola", async () => {
+    for (const destino of ["plataforma", "entorno-de-plataforma"]) {
+      const v = await violacionesDe({
+        "apps/plataforma/servidor/composicion.ts": importa(`../../../src/composicion/${destino}`),
+        [`src/composicion/${destino}.ts`]: exporta,
+      });
+      expect(v, destino).toContain("plataforma-solo-desde-scripts");
+    }
   });
 });
 

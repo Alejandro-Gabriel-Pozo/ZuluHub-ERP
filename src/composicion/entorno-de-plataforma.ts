@@ -1,4 +1,9 @@
-import { PEDERNAL_AUTH_SECRETO_PLATAFORMA } from "../adaptadores/autenticacion/configuracion";
+import {
+  GOOGLE_CLIENT_ID_PLATAFORMA,
+  GOOGLE_CLIENT_SECRET_PLATAFORMA,
+  PEDERNAL_AUTH_SECRETO_PLATAFORMA,
+  PEDERNAL_HOST_DE_LA_CONSOLA,
+} from "../adaptadores/autenticacion/configuracion";
 import { PEDERNAL_CLAVE_CONTEXTO } from "../adaptadores/postgres/contexto-firmado";
 import { PEDERNAL_SECRETO_INVITACIONES } from "../adaptadores/tokens/tokens-hmac";
 import {
@@ -15,13 +20,21 @@ import {
  * Viven en un archivo APARTE de `entorno.ts` a propósito: ese lo importa la web, y la web no recibe
  * credenciales de plataforma (R10; `entorno.test.ts` fija que `NOMBRES_DE_ENTORNO` no las nombra). Acá
  * pueden vivir porque la regla de arquitectura `plataforma-solo-desde-scripts` solo deja importar este archivo
- * y `plataforma.ts` a `scripts/`, las pruebas y `apps/plataforma/servidor/` (no a `apps/web` ni al resto de `src/`). Falla que previene: que un error
- * de la web pueda actuar como plataforma. La validación es la misma que la de la web (`validarPieza`):
+ * y `plataforma.ts` a `scripts/`, las pruebas y las piezas de composición de la consola (`puerta-de-consola.ts` e
+ * `ingreso-de-consola.ts`; `apps/plataforma/servidor` entra solo por esas dos), nunca a `apps/web` ni al resto de `src/`.
+ * Falla que previene: que un error de la web pueda actuar como plataforma. La validación es la misma que la de la web (`validarPieza`):
  * perezosa, con las variables prohibidas, y su error nombra la variable, nunca el valor.
  */
 
 /** La cadena del rol `pedernal_plataforma`. Sin pooler o con él: las transacciones SERIALIZABLE funcionan en ambos. */
 export const PEDERNAL_DB_PLATAFORMA = "PEDERNAL_DB_PLATAFORMA";
+
+/**
+ * La cadena del rol `pedernal_autenticacion` (las tablas de la librería de ingreso). Es el MISMO nombre que usa la web
+ * (`entorno.ts`): la consola es otro proyecto de Vercel y la carga por su cuenta; se declara acá porque la consola no
+ * puede leer la lista de la web.
+ */
+export const PEDERNAL_DB_AUTENTICACION = "PEDERNAL_DB_AUTENTICACION";
 
 export const NOMBRES_DE_ENTORNO_DE_PLATAFORMA = [
   {
@@ -48,6 +61,33 @@ export const NOMBRES_DE_ENTORNO_DE_PLATAFORMA = [
     nombre: PEDERNAL_AUTH_SECRETO_PLATAFORMA,
     forma: FORMA_DE_TEXTO,
     piezas: ["autenticacion-de-plataforma"],
+  },
+  // El cliente de Google de la consola (P8c), APARTE del de la web (aísla revocaciones). Sin el prefijo del producto, igual
+  // que `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` (nombres que el dueño ya conoce de la consola de Google). Misma pieza que
+  // el secreto: un solo intento muestra todo lo que falta del ingreso. Se validan con `leerClienteDeGoogleDePlataforma`
+  // (que además exige que no sean los de la web).
+  {
+    nombre: GOOGLE_CLIENT_ID_PLATAFORMA,
+    forma: FORMA_DE_TEXTO,
+    piezas: ["autenticacion-de-plataforma"],
+  },
+  {
+    nombre: GOOGLE_CLIENT_SECRET_PLATAFORMA,
+    forma: FORMA_DE_TEXTO,
+    piezas: ["autenticacion-de-plataforma"],
+  },
+  // Las tablas de la librería de ingreso (rol `pedernal_autenticacion`). Pieza propia, como en la web: el barrido de
+  // sesiones no necesita ni el secreto ni Google.
+  {
+    nombre: PEDERNAL_DB_AUTENTICACION,
+    forma: FORMA_DE_CADENA_DE_POSTGRES,
+    piezas: ["conexion-de-autenticacion-de-plataforma"],
+  },
+  // El host donde atiende la consola (sin esquema). Se valida con `leerHostDeLaConsola` (`configuracionDeHost`).
+  {
+    nombre: PEDERNAL_HOST_DE_LA_CONSOLA,
+    forma: FORMA_DE_TEXTO,
+    piezas: ["host-de-la-consola"],
   },
 ] as const;
 
