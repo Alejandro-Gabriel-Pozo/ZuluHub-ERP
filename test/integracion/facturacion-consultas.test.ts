@@ -119,16 +119,26 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
   const mira = (e: Empresa): ContextoOperativo =>
     comoEmpresa(empresaId(e.x.empresa), personaId(e.persona.GERENTE));
 
-  /** Corre una escritura de prueba con el contexto de la persona que creó la empresa. */
+  /**
+   * Corre una escritura de prueba con el contexto de la persona que creó la empresa. `ConcurrenciaAgotada` es una
+   * respuesta legítima bajo carga (la transacción SERIALIZABLE agotó sus reintentos cuando otras pruebas escriben en
+   * la misma base): se repite la escritura, acotada; cualquier otro error corta la prueba como siempre.
+   */
   async function escribir<T>(
     e: Escenario,
     trabajo: (tx: TxFacturacionDePrueba) => Promise<T>,
   ): Promise<T> {
-    const r = await escritura.ejecutar({ contexto: comoPersonaDe(e) }, async (tx) =>
-      ok(await trabajo(tx)),
-    );
-    if (!r.ok) throw new Error(`falló la escritura: ${JSON.stringify(r.error)}`);
-    return r.valor;
+    for (let intento = 1; ; intento++) {
+      const r = await escritura.ejecutar({ contexto: comoPersonaDe(e) }, async (tx) =>
+        ok(await trabajo(tx)),
+      );
+      if (r.ok) return r.valor;
+      const agotada =
+        typeof r.error === "object" && "tipo" in r.error && r.error.tipo === "ConcurrenciaAgotada";
+      if (!agotada || intento >= 50) {
+        throw new Error(`falló la escritura: ${JSON.stringify(r.error)}`);
+      }
+    }
   }
   const crearPendiente = (e: Escenario, opciones: Parameters<typeof altaDe>[1] = {}) =>
     escribir(e, async (tx) => exito(await tx.comprobantes.crear(altaDe(e, opciones))).valor);
