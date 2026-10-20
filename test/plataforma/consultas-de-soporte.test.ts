@@ -76,13 +76,13 @@ const tenant = (n: number, estado: "ACTIVE" | "SUSPENDED" = "ACTIVE"): FilaDeTen
   perillasDelPlan: null,
 });
 /** Lo que la consulta devuelve de ese tenant: sin las perillas crudas y con el límite resuelto. */
-const vistaDe = (fila: FilaDeTenant, limiteDeEmpresas: number | "ILIMITADO" | null) => {
-  const { perillasDelPlan: _crudas, ...resto } = fila;
-  return { ...resto, limiteDeEmpresas };
-};
+const vistaDe = (fila: FilaDeTenant, limiteDeEmpresas: number | "ILIMITADO" | null) => ({
+  ...Object.fromEntries(Object.entries(fila).filter(([campo]) => campo !== "perillasDelPlan")),
+  limiteDeEmpresas,
+});
 
 describe("toda consulta es de solo lectura y se pide `read committed`", () => {
-  it("las ocho piden la transacción con ese nivel y en solo lectura", async () => {
+  it("las nueve piden la transacción con ese nivel y en solo lectura", async () => {
     const { consultas, transacciones } = armar();
     await consultas.listarTenants(comoAdministrador, {});
     await consultas.listarEmpresas(comoAdministrador, {});
@@ -91,8 +91,9 @@ describe("toda consulta es de solo lectura y se pide `read committed`", () => {
     await consultas.listarTrabajosFallidos(comoAdministrador, {});
     await consultas.consultarAuditoria(comoAdministrador, {});
     await consultas.verConfiguracion(comoAdministrador);
+    await consultas.catalogoDePerillas(comoAdministrador);
     await consultas.buscarReferencia(comoAdministrador, { referencia: "ZH-0000-0000" });
-    expect(transacciones.pedidas).toHaveLength(8);
+    expect(transacciones.pedidas).toHaveLength(9);
     for (const pedida of transacciones.pedidas) {
       expect(pedida).toEqual({
         contexto: comoAdministrador,

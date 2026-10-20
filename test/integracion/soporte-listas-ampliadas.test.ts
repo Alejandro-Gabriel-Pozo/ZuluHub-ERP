@@ -5,7 +5,7 @@ import { estadoDeDecision, vigenteEn } from "../../src/capacidades/planes/vigenc
 import { estadoEfectivo } from "../../src/contexto/estados";
 import { ESTADOS_EFECTIVOS } from "../../src/plataforma/dominio/soporte/consulta";
 import type { Resultado } from "../../src/primitivas/resultado/resultado";
-import { crearBaseAparte, cuitAlAzar } from "./entorno";
+import { crearBaseAparte } from "./entorno";
 import {
   asignarPlan,
   ajustarPerilla,
@@ -210,7 +210,7 @@ describe.skipIf(base === null)("listas ampliadas de tenants y empresas: contra P
       // Tenant 3: sin ninguna asignación.
       expect(e(s.e5)).toMatchObject({
         tenantNombre: "Tenant Tres",
-        marcaCodigo: expect.any(String),
+        marcaCodigo: expect.any(String) as string,
         marcaNombreVisible: "Principal",
         planId: null,
         versionDePlanId: null,
@@ -479,9 +479,9 @@ describe.skipIf(base === null)("listas ampliadas de tenants y empresas: contra P
       for (const [nombre, asignaciones] of Object.entries(patrones)) {
         const marca = nombre.length % 2 === 0 ? s.marcaA : s.marcaB;
         tenants[nombre] = await tenantDe(marca, `Vigencia ${nombre}`);
-        await empresaDe(tenants[nombre] as string, `Empresa de ${nombre}`);
+        await empresaDe(tenants[nombre], `Empresa de ${nombre}`);
         for (const a of asignaciones) {
-          await asignarPlan(dueno, tenants[nombre] as string, versiones[a.version], {
+          await asignarPlan(dueno, tenants[nombre], versiones[a.version], {
             desdeSegundos: a.desdeSegundos,
           });
         }

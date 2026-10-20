@@ -1,19 +1,27 @@
 import type { ReglasDePlataforma } from "../../capacidades/permisos/plataforma";
 import type { ClaveDeTexto } from "../../capacidades/vocabulario/catalogo";
+import type { EstadoDeTenant } from "../../contexto/estados";
 import type {
   ContrasteDeUnPar,
   DefinicionDeMarca,
   DominioGuardado,
-  EstadoDeVigencia,
   ErrorDeConfirmacion,
+  EstadoDeVigencia,
+  LecturaDeMarcaParaElAlta,
   MarcaGuardada,
+  ParDeContraste,
+  SuperficieDeAspecto,
   TokenDeAspecto,
   TokenDeTema,
 } from "../../modulos/marcas/publico";
-import type { EstadoDePlan } from "../../modulos/planes/publico";
+import type {
+  EstadoDePlan,
+  LecturaDeVersionesDePlanParaElAlta,
+} from "../../modulos/planes/publico";
 import type {
   MarcaComercialId,
   PlanId,
+  TenantId,
   VersionDePlanId,
 } from "../../primitivas/identificadores/marca";
 import type { Transacciones } from "../../puertos/transacciones";
@@ -23,6 +31,8 @@ import type {
   ErrorPlano,
   TxDeMarcasYPlanes,
 } from "../casos-de-uso/marcas-y-planes-comun";
+import type { ErrorDeMarcaDelAlta } from "../dominio/alta-con-marca";
+import type { EntradaDePagina } from "../dominio/soporte/consulta";
 
 /**
  * Lo que una consulta de plataforma sobre marcas y planes recibe de su transacción (M5): el guard y los
@@ -33,7 +43,16 @@ import type {
 export type TxDeConsultasDeMarcasYPlanes = Pick<
   TxDeMarcasYPlanes,
   "autorizacionDePlataforma" | "marcas" | "planes" | "derechos"
->;
+> &
+  Readonly<{
+    /**
+     * Lo que el alta de una empresa lee de una marca (M6), para que `marcasParaElAlta` decida con LA MISMA
+     * lectura que el alta. Se llama `marcaParaElAlta` y no `marcas` porque `marcas` ya es el repositorio.
+     */
+    marcaParaElAlta: LecturaDeMarcaParaElAlta;
+    /** Las versiones de plan que el alta resuelve (la elegida o la última publicada del plan por defecto). */
+    versionesDePlan: LecturaDeVersionesDePlanParaElAlta;
+  }>;
 
 export type DependenciasDeConsultasDeMarcasYPlanes = Readonly<{
   transacciones: Transacciones<TxDeConsultasDeMarcasYPlanes>;
@@ -161,3 +180,117 @@ export type FichaDeMarca = Readonly<{
 }>;
 
 export type EntradaDeFichaDeMarca = Readonly<{ marcaId: string }>;
+
+// --- marcasParaElAlta -----------------------------------------------------------------------------------
+
+/** Por qué una marca no sirve para dar de alta una empresa con tenant nuevo: los errores de marca del alta y la falta de plan por defecto. */
+export type MotivoDeMarcaNoElegible = ErrorDeMarcaDelAlta | "MARCA_SIN_PLAN_POR_DEFECTO";
+
+/** El plan por defecto de una marca que el alta asignaría a un tenant nuevo: la última versión publicada de su plan por defecto. */
+export type PlanPorDefectoDelAlta = Readonly<{
+  planId: PlanId;
+  codigo: string;
+  versionDePlanId: VersionDePlanId;
+  numero: number;
+  nombreComercial: string;
+}>;
+
+export type MarcaParaElAlta = Readonly<{
+  marcaId: MarcaComercialId;
+  codigo: string;
+  /** El nombre visible de la PROPIA marca (su versión vigente); `null` si todavía no tiene. */
+  nombre: string | null;
+  /**
+   * `true`: el alta de una empresa con TENANT NUEVO por esta marca y SIN elegir versión de plan sería aceptada
+   * en lo que toca a la marca y al plan (los demás errores del alta dependen de los datos de la empresa: CUIT,
+   * email, etc.). Es la decisión del propio alta, no una copia.
+   */
+  elegible: boolean;
+  /** El primer motivo por el que no es elegible, en el orden en que el alta los decide; `null` si lo es. */
+  motivoSiNo: MotivoDeMarcaNoElegible | null;
+  /** `null` si la marca no tiene un plan por defecto utilizable (sin plan, sin versión publicada o plan retirado). */
+  planPorDefecto: PlanPorDefectoDelAlta | null;
+  /** Los módulos que la marca propone al nacer una empresa, con la herencia aplicada (`[]`: solo administración; también si la marca no es elegible). */
+  modulosIniciales: readonly string[];
+}>;
+
+export type VistaDeMarcasParaElAlta = Readonly<{
+  /** Todas las marcas (también las retiradas, para mostrarlas deshabilitadas), por código. */
+  marcas: readonly MarcaParaElAlta[];
+}>;
+
+// --- catalogosDeMarca --------------------------------------------------------------
+
+/** Una lista cerrada del aspecto: el token, sus valores posibles y el que rige si nadie define el token. */
+export type ListaDeAspecto = Readonly<{
+  token: TokenDeAspecto;
+  valores: readonly string[];
+  porDefecto: string;
+}>;
+
+/** Los colores de una superficie del aspecto: `fondo` es el de la página y `superficie` el de las tarjetas y paneles. */
+export type ColoresDeSuperficie = Readonly<{
+  valor: SuperficieDeAspecto;
+  fondo: string;
+  superficie: string;
+}>;
+
+/** Un texto del vocabulario que la marca puede reemplazar. */
+export type TextoDelCatalogo = Readonly<{
+  texto: ClaveDeTexto;
+  porDefecto: string;
+  /** Hasta cuántos caracteres puede tener un reemplazo. */
+  largoMaximo: number;
+  /** Los marcadores (sin llaves) que el reemplazo debe traer, ni más ni menos. */
+  marcadores: readonly string[];
+}>;
+
+/**
+ * Con qué se arma el editor de una marca, tal como lo valida el guardado del borrador: los tokens del
+ * tema y su formato, las listas cerradas del aspecto, las superficies con sus colores y el catálogo de textos
+ * del vocabulario. Son constantes del código: no se lee ninguna tabla.
+ */
+export type VistaDeCatalogosDeMarca = Readonly<{
+  tema: Readonly<{
+    tokens: readonly TokenDeTema[];
+    /** Cómo se escribe un color: seis dígitos hexadecimales en minúsculas con numeral. */
+    formato: "#rrggbb";
+    /** El mismo formato como expresión regular (`RegExp.source`). */
+    patron: string;
+    /** Los pares de colores que se miden al confirmar y lo mínimo que se les exige. */
+    pares: readonly Readonly<{ par: ParDeContraste; minimo: number }>[];
+  }>;
+  aspecto: readonly ListaDeAspecto[];
+  superficies: readonly ColoresDeSuperficie[];
+  vocabulario: readonly TextoDelCatalogo[];
+}>;
+
+// --- tenantsConLaVersion --------------------------------------------------------------------------------
+
+export type EntradaDeTenantsConLaVersion = EntradaDePagina &
+  Readonly<{
+    /** La versión de plan (su id) cuyos tenants se piden. */
+    versionDePlanId: string;
+  }>;
+
+/**
+ * Un tenant cuya asignación VIGENTE es la versión pedida. Es una fila lista para armar el lote de
+ * `migrarTenantsDeVersion`: `{ tenantId, numeroEsperado: ultimoNumeroDeAsignacion }`.
+ */
+export type TenantConLaVersion = Readonly<{
+  tenantId: TenantId;
+  nombre: string;
+  estado: EstadoDeTenant;
+  marcaId: MarcaComercialId;
+  marcaCodigo: string;
+  /**
+   * El MAYOR número de asignación del tenant, el de la última decisión que se tomó sobre su plan (aunque esté
+   * programada): es lo que `asignarPlan` y `migrarTenantsDeVersion` piden como `numeroEsperado` (la última
+   * asignación que viste).
+   */
+  ultimoNumeroDeAsignacion: number;
+  /** Hay una asignación que va a regir más adelante y que nada deja sin efecto: migrar exige decir `reemplazaProgramada`. */
+  hayProgramada: boolean;
+  /** Las empresas del tenant que no están canceladas. */
+  empresas: number;
+}>;

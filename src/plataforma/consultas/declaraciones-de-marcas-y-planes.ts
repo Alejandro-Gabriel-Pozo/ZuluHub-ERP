@@ -8,8 +8,11 @@ import type { DeclaracionDeAccionDePlataforma } from "./declaraciones";
 export const DECLARACIONES_DE_CONSULTAS_DE_MARCAS_Y_PLANES = {
   listarMarcas: { accion: "marcas.ver" },
   fichaDeMarca: { accion: "marcas.ver" },
+  marcasParaElAlta: { accion: "marcas.ver" },
+  catalogosDeMarca: { accion: "marcas.ver" },
   listarPlanes: { accion: "planes.ver" },
   fichaDePlan: { accion: "planes.ver" },
+  tenantsConLaVersion: { accion: "planes.ver" },
   planDelTenant: { accion: "planes.ver" },
   derechosDeUsoDeEmpresa: { accion: "planes.ver" },
   diferenciaEntreVersiones: { accion: "planes.ver" },

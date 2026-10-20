@@ -16,5 +16,6 @@ export const DECLARACIONES_DE_CONSULTAS_DE_PLATAFORMA = {
   listarTrabajosFallidos: { accion: "trabajos.ver_fallidos" },
   consultarAuditoria: { accion: "auditoria.ver" },
   verConfiguracion: { accion: "configuracion.ver" },
+  catalogoDePerillas: { accion: "configuracion.ver" },
   buscarReferencia: { accion: "soporte.buscar_referencia" },
 } as const satisfies Record<string, DeclaracionDeAccionDePlataforma>;

@@ -142,7 +142,7 @@ describe.skipIf(base === null)("fichaDeMarca efectiva: contra Postgres", () => {
       const dePrincipal = {
         tipo: "heredado",
         marcaId: f.principal,
-        marcaCodigo: expect.any(String),
+        marcaCodigo: expect.any(String) as string,
       };
       expect(efectiva?.nombreVisible).toEqual({ valor: "Nieta", origen: { tipo: "propio" } });
       expect(efectiva?.tema).toEqual({
@@ -179,7 +179,11 @@ describe.skipIf(base === null)("fichaDeMarca efectiva: contra Postgres", () => {
             nombreComercial: "Plan Base",
           },
         },
-        origen: { tipo: "heredado", marcaId: f.principal, marcaCodigo: expect.any(String) },
+        origen: {
+          tipo: "heredado",
+          marcaId: f.principal,
+          marcaCodigo: expect.any(String) as string,
+        },
       });
     });
 
@@ -213,7 +217,7 @@ describe.skipIf(base === null)("fichaDeMarca efectiva: contra Postgres", () => {
       const hoy = exito(await consultas.fichaDeMarca(comoAdminAhora(), { marcaId: hija }));
       expect(hoy.efectiva?.logo).toEqual({
         valor: "/marcas/padre/uno.png",
-        origen: { tipo: "heredado", marcaId: padre, marcaCodigo: expect.any(String) },
+        origen: { tipo: "heredado", marcaId: padre, marcaCodigo: expect.any(String) as string },
       });
       // Dentro de dos horas la versión programada del padre ya rige, y la hija la hereda.
       const despues = enLaHora(new Date(Date.now() + 2 * 3_600_000));
@@ -276,7 +280,7 @@ describe.skipIf(base === null)("fichaDeMarca efectiva: contra Postgres", () => {
       expect(r.borradorEfectivo?.logo.origen).toEqual({
         tipo: "heredado",
         marcaId: f.principal,
-        marcaCodigo: expect.any(String),
+        marcaCodigo: expect.any(String) as string,
       });
     });
 

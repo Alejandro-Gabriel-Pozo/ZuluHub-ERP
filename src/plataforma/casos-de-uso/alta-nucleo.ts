@@ -128,10 +128,21 @@ type Destino =
 
 /**
  * El plan de un tenant nuevo: la versión elegida o, si no se eligió, la última publicada del plan por
- * defecto de la marca.
+ * defecto de la marca. Lo usa también `marcasParaElAlta` (sin elegir plan) para decir, sin escribir, si la
+ * marca sirve: la consola y el alta deciden con ESTA misma función.
  */
-async function versionDePlanDelTenantNuevo(
-  tx: TxDeAlta,
+export function versionDePlanDelTenantNuevo(
+  tx: Pick<TxDeAlta, "versionesDePlan">,
+  elegida: null,
+  marca: MarcaDelAlta,
+): Promise<Resultado<VersionDePlanId, "MARCA_SIN_PLAN_POR_DEFECTO">>;
+export function versionDePlanDelTenantNuevo(
+  tx: Pick<TxDeAlta, "versionesDePlan">,
+  elegida: VersionDePlanId | null,
+  marca: MarcaDelAlta,
+): Promise<Resultado<VersionDePlanId, ErrorDePlanElegido | "MARCA_SIN_PLAN_POR_DEFECTO">>;
+export async function versionDePlanDelTenantNuevo(
+  tx: Pick<TxDeAlta, "versionesDePlan">,
   elegida: VersionDePlanId | null,
   marca: MarcaDelAlta,
 ): Promise<Resultado<VersionDePlanId, ErrorDePlanElegido | "MARCA_SIN_PLAN_POR_DEFECTO">> {

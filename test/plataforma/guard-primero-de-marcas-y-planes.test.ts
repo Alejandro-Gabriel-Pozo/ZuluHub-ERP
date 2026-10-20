@@ -12,6 +12,7 @@ import {
   type CasosDeUsoDeMarcasYPlanes,
 } from "../../src/plataforma/casos-de-uso/marcas-y-planes";
 import type { TxDeMarcasYPlanes } from "../../src/plataforma/casos-de-uso/marcas-y-planes-comun";
+import type { TxDeConsultasDeMarcasYPlanes } from "../../src/plataforma/consultas/contrato-de-marcas-y-planes";
 import { DECLARACIONES_DE_CONSULTAS_DE_PLATAFORMA } from "../../src/plataforma/consultas/declaraciones";
 import { DECLARACIONES_DE_CONSULTAS_DE_MARCAS_Y_PLANES } from "../../src/plataforma/consultas/declaraciones-de-marcas-y-planes";
 import {
@@ -30,12 +31,14 @@ import { comoAdministrador, conRol, uuid } from "./apoyo-de-soporte";
 
 class AccesoFueraDelGuard extends Error {}
 
-type Vigilada = Readonly<{ tx: TxDeMarcasYPlanes; accesos: string[] }>;
+/** Lo que recibe una consulta o un caso: la transacción de los casos más lo que las consultas suman. */
+type TxVigilada = TxDeMarcasYPlanes & TxDeConsultasDeMarcasYPlanes;
+type Vigilada = Readonly<{ tx: TxVigilada; accesos: string[] }>;
 
 function vigilar(rol: "ADMIN" | "SOPORTE" | null): Vigilada {
   const accesos: string[] = [];
   const autorizacion = conRol(rol);
-  const tx = new Proxy({} as TxDeMarcasYPlanes, {
+  const tx = new Proxy({} as TxVigilada, {
     get(_objetivo, propiedad) {
       accesos.push(String(propiedad));
       if (propiedad === "autorizacionDePlataforma") return autorizacion;
@@ -46,7 +49,7 @@ function vigilar(rol: "ADMIN" | "SOPORTE" | null): Vigilada {
 }
 
 const transaccionesDe = (vigilada: Vigilada) => ({
-  ejecutar: <T, E>(_opciones: unknown, trabajo: (tx: TxDeMarcasYPlanes) => Promise<T | E>) =>
+  ejecutar: <T, E>(_opciones: unknown, trabajo: (tx: TxVigilada) => Promise<T | E>) =>
     trabajo(vigilada.tx),
 });
 
@@ -160,8 +163,12 @@ const CONSULTAS: Record<
 > = {
   listarMarcas: (c) => c.listarMarcas(comoAdministrador),
   fichaDeMarca: (c) => c.fichaDeMarca(comoAdministrador, { marcaId: uuid(1) }),
+  marcasParaElAlta: (c) => c.marcasParaElAlta(comoAdministrador),
+  catalogosDeMarca: (c) => c.catalogosDeMarca(comoAdministrador),
   listarPlanes: (c) => c.listarPlanes(comoAdministrador),
   fichaDePlan: (c) => c.fichaDePlan(comoAdministrador, { planId: uuid(1) }),
+  tenantsConLaVersion: (c) =>
+    c.tenantsConLaVersion(comoAdministrador, { versionDePlanId: uuid(1) }),
   planDelTenant: (c) => c.planDelTenant(comoAdministrador, { tenantId: uuid(1) }),
   derechosDeUsoDeEmpresa: (c) =>
     c.derechosDeUsoDeEmpresa(comoAdministrador, { empresaId: uuid(1) }),
@@ -181,7 +188,11 @@ const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
 };
 
 const casos = Object.entries(LLAMADAS);
+/** Los catálogos salen del código: pasado el guard no leen nada (por eso no se les pide tocar la transacción). */
+const CATALOGOS_DEL_CODIGO = ["catalogosDeMarca"];
 const consultas = Object.entries(CONSULTAS);
+const consultasQueLeen = consultas.filter(([nombre]) => !CATALOGOS_DEL_CODIGO.includes(nombre));
+const consultasDeCatalogo = consultas.filter(([nombre]) => CATALOGOS_DEL_CODIGO.includes(nombre));
 
 describe("el guard es lo primero de cada caso de uso de marcas y planes", () => {
   it.each(casos)(
@@ -237,7 +248,7 @@ describe("el guard es lo primero de cada consulta de marcas y planes", () => {
     },
   );
 
-  it.each(consultas)(
+  it.each(consultasQueLeen)(
     "%s: SOPORTE y ADMIN pasan el guard y recién entonces leen",
     async (_n, llamar) => {
       for (const rol of ["SOPORTE", "ADMIN"] as const) {
@@ -245,6 +256,18 @@ describe("el guard es lo primero de cada consulta de marcas y planes", () => {
         expect(await pasoElGuard(llamar(consultasCon(vigilada))), rol).toBe(true);
         expect(vigilada.accesos[0]).toBe("autorizacionDePlataforma");
         expect(vigilada.accesos.length).toBeGreaterThan(1);
+      }
+    },
+  );
+
+  it.each(consultasDeCatalogo)(
+    "%s: SOPORTE y ADMIN pasan el guard y responden sin tocar nada más de la transacción",
+    async (_n, llamar) => {
+      for (const rol of ["SOPORTE", "ADMIN"] as const) {
+        const vigilada = vigilar(rol);
+        const r = (await llamar(consultasCon(vigilada))) as { ok: boolean };
+        expect(r.ok, rol).toBe(true);
+        expect(vigilada.accesos, rol).toEqual(["autorizacionDePlataforma"]);
       }
     },
   );

@@ -143,6 +143,24 @@ export type ModuloDeEmpresaGuardado = Readonly<{
   version: number;
 }>;
 
+/**
+ * Un tenant que tiene hoy una versión de plan como asignación VIGENTE, con lo que el lote de migración y la
+ * consola necesitan de él: el último número de su serie de asignaciones (lo que `asignarPlan` y
+ * `migrarTenantsDeVersion` llaman `numeroEsperado`), si hay algo programado y cuántas empresas ocupan lugar.
+ */
+export type TenantConLaVersionVigente = Readonly<{
+  tenantId: TenantId;
+  nombre: string;
+  estado: "ACTIVE" | "SUSPENDED";
+  marcaId: string;
+  /** El MAYOR número de asignación del tenant (no el de la vigente): el próximo cambio tiene que decir que vio ése. */
+  ultimoNumeroDeAsignacion: number;
+  /** Hay una asignación que va a regir más adelante y que nada deja sin efecto. */
+  hayProgramada: boolean;
+  /** Las empresas del tenant que no están canceladas. */
+  empresas: number;
+}>;
+
 export interface RepositorioDePlanes {
   // --- planes ---------------------------------------------------------------------------------------
   obtenerPlan(id: PlanId): Promise<PlanGuardado | null>;
@@ -198,6 +216,17 @@ export interface RepositorioDePlanes {
   asignacionesDeLosTenantsQueTuvieron(
     versiones: readonly VersionDePlanId[],
   ): Promise<readonly AsignacionBasica[]>;
+
+  /**
+   * Los tenants cuya asignación VIGENTE a `ahora` (la de mayor número entre las que ya empezaron) es esa
+   * versión, ordenados por id, de a `limite` desde `despuesDeId` (exclusivo). UNA sentencia, con la misma
+   * regla de vigencia que `vigenteEn` y `estadoDeDecision` escrita en SQL (una prueba las compara).
+   */
+  tenantsConLaVersionVigente(
+    version: VersionDePlanId,
+    ahora: Date,
+    pagina: Readonly<{ limite: number; despuesDeId: TenantId | null }>,
+  ): Promise<readonly TenantConLaVersionVigente[]>;
 
   // --- ajustes de perilla ---------------------------------------------------------------------------
   /** Todos los ajustes del tenant (de él y de sus empresas), por perilla, alcance y número. */
@@ -557,6 +586,83 @@ export function crearRepositorioDePlanes(db: Kysely<PlanesDePlataformaDb>): Repo
         vigenteDesde: f.vigente_desde,
         versionDePlanId: versionDePlanId(f.version_de_plan_id),
       }));
+    },
+
+    async tenantsConLaVersionVigente(version, ahora, pagina) {
+      let consulta = db
+        .selectFrom("tenant as t")
+        .innerJoinLateral(
+          (eb) =>
+            eb
+              .selectFrom("plan_de_tenant as a")
+              .select("a.version_de_plan_id")
+              .whereRef("a.tenant_id", "=", "t.id")
+              .where("a.vigente_desde", "<=", ahora)
+              .orderBy("a.numero", "desc")
+              .limit(1)
+              .as("av"),
+          (unir) => unir.onTrue(),
+        )
+        .where("av.version_de_plan_id", "=", version)
+        .select((eb) => [
+          "t.id as id",
+          "t.nombre as nombre",
+          "t.estado as estado",
+          "t.marca_id as marca_id",
+          eb
+            .selectFrom("plan_de_tenant as u")
+            .select((eb2) => eb2.fn.max("u.numero").as("ultimo"))
+            .whereRef("u.tenant_id", "=", "t.id")
+            .as("ultimo_numero"),
+          // `estadoDeDecision` = PROGRAMADA: todavía no empezó y ninguna de mayor número, que empiece a su
+          // hora o antes, la deja sin efecto.
+          eb
+            .exists(
+              eb
+                .selectFrom("plan_de_tenant as pr")
+                .select("pr.tenant_id")
+                .whereRef("pr.tenant_id", "=", "t.id")
+                .where("pr.vigente_desde", ">", ahora)
+                .where((eb2) =>
+                  eb2.not(
+                    eb2.exists(
+                      eb2
+                        .selectFrom("plan_de_tenant as po")
+                        .select("po.tenant_id")
+                        .whereRef("po.tenant_id", "=", "pr.tenant_id")
+                        .whereRef("po.numero", ">", "pr.numero")
+                        .whereRef("po.vigente_desde", "<=", "pr.vigente_desde"),
+                    ),
+                  ),
+                ),
+            )
+            .as("hay_programada"),
+          eb
+            .selectFrom("empresa as ec")
+            .select(eb.fn.countAll<string>().as("n"))
+            .whereRef("ec.tenant_id", "=", "t.id")
+            .where("ec.estado", "<>", "CANCELLED")
+            .as("empresas"),
+        ])
+        .orderBy("t.id")
+        .limit(pagina.limite);
+      if (pagina.despuesDeId !== null) consulta = consulta.where("t.id", ">", pagina.despuesDeId);
+      const filas = await consulta.execute();
+      return filas.map((f) => {
+        // Si el tenant sale por tener una asignación vigente, tiene al menos una: el máximo existe.
+        if (f.ultimo_numero === null) {
+          throw new RangeError(`el tenant ${f.id} con plan vigente no tiene asignaciones`);
+        }
+        return {
+          tenantId: tenantId(f.id),
+          nombre: f.nombre,
+          estado: deLaLista(["ACTIVE", "SUSPENDED"], f.estado, "estado de tenant"),
+          marcaId: f.marca_id,
+          ultimoNumeroDeAsignacion: f.ultimo_numero,
+          hayProgramada: Boolean(f.hay_programada),
+          empresas: Number(f.empresas),
+        };
+      });
     },
 
     async ajustesDelTenant(tenant) {

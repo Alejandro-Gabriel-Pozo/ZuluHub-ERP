@@ -1,4 +1,7 @@
+import { armarCatalogosDeMarca } from "./catalogos";
 import { armarFichaDeMarca, armarListarMarcas } from "./consultas-de-marcas";
+import { armarMarcasParaElAlta } from "./marcas-para-el-alta";
+import { armarTenantsConLaVersion } from "./tenants-con-la-version";
 import {
   armarDerechosDeUsoDeEmpresa,
   armarDiferenciaEntreVersiones,
@@ -21,8 +24,11 @@ export function crearConsultasDeMarcasYPlanes(
   return {
     listarMarcas: armarListarMarcas(dependencias),
     fichaDeMarca: armarFichaDeMarca(dependencias),
+    marcasParaElAlta: armarMarcasParaElAlta(dependencias),
+    catalogosDeMarca: armarCatalogosDeMarca(dependencias),
     listarPlanes: armarListarPlanes(dependencias),
     fichaDePlan: armarFichaDePlan(dependencias),
+    tenantsConLaVersion: armarTenantsConLaVersion(dependencias),
     planDelTenant: armarPlanDelTenant(dependencias),
     derechosDeUsoDeEmpresa: armarDerechosDeUsoDeEmpresa(dependencias),
     diferenciaEntreVersiones: armarDiferenciaEntreVersiones(dependencias),

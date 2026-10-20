@@ -1,5 +1,7 @@
 import type { CatalogoComercial } from "../../capacidades/modulos/catalogo";
 import type { ReglasDePlataforma } from "../../capacidades/permisos/plataforma";
+import type { AmbitoDePerilla } from "../../capacidades/planes/perillas";
+import type { ValorDePerilla } from "../../capacidades/planes/valores";
 import type { RolDeEmpresa } from "../../capacidades/permisos/roles";
 import type {
   EstadoDeEmpresa,
@@ -236,6 +238,25 @@ export type EntradaDeListarEmpresas = EntradaDePagina &
 
 /** Una empresa con su estado efectivo (el que combina el suyo con el de su tenant). */
 export type VistaDeEmpresa = FilaDeEmpresaAmpliada & Readonly<{ estadoEfectivo: EstadoEfectivo }>;
+
+// --- catalogoDePerillas -------------------------------------------------------------------------------
+
+/** Una perilla del catálogo: una función configurable por venta. */
+export type PerillaDelCatalogo = Readonly<{
+  perilla: string;
+  tipo: "INTERRUPTOR" | "LIMITE";
+  /** Dónde se CUENTA el uso. */
+  ambito: AmbitoDePerilla;
+  /** El estándar: lo que rige si ni el plan ni un ajuste dicen otra cosa. */
+  valorBase: ValorDePerilla;
+  /** Otra perilla que tiene que estar encendida para que ésta valga; `null` si no depende de ninguna. */
+  requiere: string | null;
+  /** El módulo que la verifica. */
+  modulo: string;
+}>;
+
+/** El catálogo de perillas del código, por clave. */
+export type VistaDeCatalogoDePerillas = Readonly<{ perillas: readonly PerillaDelCatalogo[] }>;
 
 /** Las listas de nivel 1 y la búsqueda de referencias. */
 export interface LecturaDeNivel1 {

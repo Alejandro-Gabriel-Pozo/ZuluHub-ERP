@@ -90,6 +90,7 @@ const LLAMADAS_DE_CONSULTAS: Record<
   listarTrabajosFallidos: (c) => c.listarTrabajosFallidos(comoAdministrador, {}),
   consultarAuditoria: (c) => c.consultarAuditoria(comoAdministrador, {}),
   verConfiguracion: (c) => c.verConfiguracion(comoAdministrador),
+  catalogoDePerillas: (c) => c.catalogoDePerillas(comoAdministrador),
   buscarReferencia: (c) => c.buscarReferencia(comoAdministrador, { referencia: "ZH-0000-0000" }),
 };
 

@@ -4,7 +4,8 @@ import type { ContextoDePlataforma } from "../../contexto/contexto";
 import { ok, type Resultado } from "../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../puertos/transacciones";
 import { exigirAccionDePlataforma } from "./comun";
-import type { DependenciasDeConsultasDePlataforma } from "./contrato";
+import { valorBaseDe } from "../../capacidades/planes/valores";
+import type { DependenciasDeConsultasDePlataforma, VistaDeCatalogoDePerillas } from "./contrato";
 import { DECLARACIONES_DE_CONSULTAS_DE_PLATAFORMA as D } from "./declaraciones";
 
 /** Un módulo del catálogo comercial, tal como lo ve soporte: qué es y qué acciones tiene. */
@@ -56,6 +57,47 @@ export function armarVerConfiguracion({
           }))
           .sort((a, b) => (a.clave < b.clave ? -1 : 1));
         return ok({ modulos });
+      },
+    );
+  };
+}
+
+/**
+ * El catálogo de perillas (funciones configurables por venta) con el que se arman los planes y los ajustes:
+ * clave, tipo, ámbito, valor base, la perilla que requiere y el módulo que la verifica. `configuracion.ver`.
+ * Sale del catálogo inyectado (el real, `CATALOGO_DE_PERILLAS`, en producción), ordenado por clave; no lee
+ * ninguna tabla: la transacción es solo la que lee al administrador para el guard.
+ */
+export function armarCatalogoDePerillas({
+  transacciones,
+  reglas,
+  catalogoDePerillas,
+}: DependenciasDeConsultasDePlataforma) {
+  return async function catalogoDePerillasDelSistema(
+    contexto: ContextoDePlataforma,
+  ): Promise<Resultado<VistaDeCatalogoDePerillas, ErrorAlVerConfiguracion>> {
+    return transacciones.ejecutar(
+      { contexto, aislamiento: "read committed", soloLectura: true },
+      async (tx): Promise<Resultado<VistaDeCatalogoDePerillas, MotivoDeRechazo>> => {
+        const permiso = await exigirAccionDePlataforma(
+          reglas,
+          D.catalogoDePerillas.accion,
+          tx.autorizacionDePlataforma,
+          contexto,
+        );
+        if (!permiso.ok) return permiso;
+        return ok({
+          perillas: Object.entries(catalogoDePerillas)
+            .sort(([a], [b]) => (a < b ? -1 : 1))
+            .map(([perilla, definicion]) => ({
+              perilla,
+              tipo: definicion.tipo,
+              ambito: definicion.ambito,
+              valorBase: valorBaseDe(definicion),
+              requiere: definicion.requiere ?? null,
+              modulo: definicion.modulo,
+            })),
+        });
       },
     );
   };

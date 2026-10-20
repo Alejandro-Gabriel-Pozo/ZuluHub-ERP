@@ -9,7 +9,6 @@ import {
   resolverConOrigen,
   versionVigente,
   type DefinicionConOrigen,
-  type DefinicionDeMarca,
   type EstadoDeVigencia,
   type MarcaGuardada,
   type OrigenEnLaCadena,

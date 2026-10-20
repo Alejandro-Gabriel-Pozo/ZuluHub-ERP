@@ -136,14 +136,14 @@ export function rangoDeFechas(
 
 // --- Estado efectivo de una empresa como filtro ------------------------------------------------------------
 
-/** Cada estado efectivo, en el orden en que lo informa `estadoEfectivo`. `Record` hace que sumar un estado sin listarlo no compile. */
-const ESTADOS_EFECTIVOS_POR_CLAVE: Readonly<Record<EstadoEfectivo, true>> = {
-  OPERA: true,
-  EMPRESA_EN_ALTA: true,
-  EMPRESA_SUSPENDIDA: true,
-  EMPRESA_CANCELADA: true,
-  EMPRESA_EN_BAJA: true,
-  TENANT_SUSPENDIDO: true,
+/** Cada estado efectivo, en el orden en que lo informa `estadoEfectivo`. `Record` hace que sumar un estado sin listarlo no compile; el valor (`null`) no importa, solo las claves. */
+const ESTADOS_EFECTIVOS_POR_CLAVE: Readonly<Record<EstadoEfectivo, null>> = {
+  OPERA: null,
+  EMPRESA_EN_ALTA: null,
+  EMPRESA_SUSPENDIDA: null,
+  EMPRESA_CANCELADA: null,
+  EMPRESA_EN_BAJA: null,
+  TENANT_SUSPENDIDO: null,
 };
 
 export const ESTADOS_EFECTIVOS = Object.keys(
@@ -154,13 +154,13 @@ export const ESTADOS_EFECTIVOS = Object.keys(
 export const esEstadoEfectivo = (texto: string): texto is EstadoEfectivo =>
   Object.hasOwn(ESTADOS_EFECTIVOS_POR_CLAVE, texto);
 
-const ESTADOS_DE_TENANT: Readonly<Record<EstadoDeTenant, true>> = { ACTIVE: true, SUSPENDED: true };
-const ESTADOS_DE_EMPRESA: Readonly<Record<EstadoDeEmpresa, true>> = {
-  PROVISIONING: true,
-  ACTIVE: true,
-  SUSPENDED: true,
-  CANCELLED: true,
-  DELETING: true,
+const ESTADOS_DE_TENANT: Readonly<Record<EstadoDeTenant, null>> = { ACTIVE: null, SUSPENDED: null };
+const ESTADOS_DE_EMPRESA: Readonly<Record<EstadoDeEmpresa, null>> = {
+  PROVISIONING: null,
+  ACTIVE: null,
+  SUSPENDED: null,
+  CANCELLED: null,
+  DELETING: null,
 };
 
 /** Un par (estado del tenant, estado de la empresa) tal como los guarda la base. */
