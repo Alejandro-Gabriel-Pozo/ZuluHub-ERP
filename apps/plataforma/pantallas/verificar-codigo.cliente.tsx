@@ -103,6 +103,7 @@ export function VerificarCodigo({ destino }: PropsDeVerificarCodigo) {
             valor={codigo}
             alCambiar={setCodigo}
             autoComplete="off"
+            autoCapitalize="off"
             deshabilitado={enviando}
           />
         )}

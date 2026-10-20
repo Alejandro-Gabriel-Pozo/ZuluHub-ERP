@@ -38,6 +38,12 @@ describe("datosDelAlta", () => {
     expect(datos?.dibujo).not.toBeNull();
   });
 
+  it("acepta los códigos reales (mayúsculas y minúsculas mezcladas) y los devuelve sin modificar", () => {
+    const reales = Array.from({ length: 10 }, (_, i) => `aB3d${i}-Fg7H${i}`);
+    const datos = datosDelAlta({ ...cuerpo, codigosDeRecuperacion: reales });
+    expect(datos?.codigosDeRecuperacion).toEqual(reales);
+  });
+
   it("si el dibujo no es de fiar, queda la clave en texto", () => {
     const datos = datosDelAlta({ ...cuerpo, qrSvg: "<svg onload='x()'/>" });
     expect(datos?.dibujo).toBeNull();
@@ -53,6 +59,10 @@ describe("datosDelAlta", () => {
     [
       "un código con forma rara",
       { ...cuerpo, codigosDeRecuperacion: [...CODIGOS.slice(1), "<b>x</b>"] },
+    ],
+    [
+      "un código con guion bajo",
+      { ...cuerpo, codigosDeRecuperacion: [...CODIGOS.slice(1), "abcd_-12345"] },
     ],
     ["códigos que no son texto", { ...cuerpo, codigosDeRecuperacion: Array(10).fill(1) }],
   ])("rechaza %s", (_nombre, entrada) => {

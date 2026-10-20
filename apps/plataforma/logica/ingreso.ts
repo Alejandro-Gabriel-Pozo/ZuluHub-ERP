@@ -66,11 +66,14 @@ export function destinoSinAcceso(codigo: CodigoDePlataforma): string {
 
 /** Seis dígitos (la aplicación de autenticación) o diez caracteres con guion (código de recuperación). */
 const CODIGO_DE_APLICACION = /^\d{6}$/;
-const CODIGO_DE_RECUPERACION = /^[a-z0-9]{5}-[a-z0-9]{5}$/;
+const CODIGO_DE_RECUPERACION = /^[A-Za-z0-9]{5}-[A-Za-z0-9]{5}$/;
 
-/** Saca espacios y pasa a minúsculas: lo que alguien pega desde el celular suele traer un espacio en el medio. */
+/**
+ * Saca todos los espacios (lo que alguien pega desde el celular suele traer uno en el medio) y NO toca
+ * mayúsculas ni minúsculas: los códigos de recuperación mezclan ambas y el servidor los compara tal cual.
+ */
 export function normalizarCodigo(crudo: string): string {
-  return crudo.replace(/\s+/g, "").toLowerCase();
+  return crudo.replace(/\s+/g, "");
 }
 
 export const esCodigoDeAplicacion = (codigo: string): boolean => CODIGO_DE_APLICACION.test(codigo);

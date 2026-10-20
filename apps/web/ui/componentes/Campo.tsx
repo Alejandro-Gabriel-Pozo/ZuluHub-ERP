@@ -8,6 +8,8 @@ export type PropsDeCampo = Readonly<{
   nombre?: string | undefined;
   tipo?: "text" | "email" | "search" | "tel" | "url";
   autoComplete?: string | undefined;
+  /** `"off"` para códigos que distinguen mayúsculas: el teclado del celular no debe corregirlos ni capitalizarlos. */
+  autoCapitalize?: "off" | undefined;
   inputMode?: "text" | "numeric" | "decimal" | "tel" | "email" | "search" | "url";
   obligatorio?: string | undefined;
   ayuda?: string | undefined;
@@ -23,6 +25,7 @@ export function Campo({
   nombre,
   tipo = "text",
   autoComplete,
+  autoCapitalize,
   inputMode,
   obligatorio,
   ayuda,
@@ -43,6 +46,9 @@ export function Campo({
           name={nombre}
           value={valor}
           autoComplete={autoComplete}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={autoCapitalize === "off" ? "off" : undefined}
+          spellCheck={autoCapitalize === "off" ? false : undefined}
           inputMode={inputMode}
           disabled={deshabilitado}
           onChange={(evento) => {

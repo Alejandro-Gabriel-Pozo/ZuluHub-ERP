@@ -60,9 +60,15 @@ describe("destinoSinAcceso", () => {
 });
 
 describe("códigos", () => {
-  it("normaliza espacios y mayúsculas", () => {
+  it("normaliza los espacios pero conserva mayúsculas y minúsculas", () => {
     expect(normalizarCodigo(" 123 456\n")).toBe("123456");
-    expect(normalizarCodigo("ABCDE-12345")).toBe("abcde-12345");
+    expect(normalizarCodigo(" AbCdE-1a2B3\n")).toBe("AbCdE-1a2B3");
+  });
+
+  it("un código real mixto pasa por normalizarCodigo sin cambiar y sigue siendo válido", () => {
+    const real = "aB3dE-Fg7Hi";
+    expect(normalizarCodigo(real)).toBe(real);
+    expect(esCodigoDeRecuperacion(normalizarCodigo(real))).toBe(true);
   });
 
   it("el código de la aplicación son seis dígitos exactos", () => {
@@ -75,10 +81,12 @@ describe("códigos", () => {
 
   it("el de recuperación son diez caracteres con guion", () => {
     expect(esCodigoDeRecuperacion("abcde-12345")).toBe(true);
+    expect(esCodigoDeRecuperacion("ABCDE-12345")).toBe(true);
+    expect(esCodigoDeRecuperacion("AbCdE-1a2B3")).toBe(true);
     expect(esCodigoDeRecuperacion("abcde12345")).toBe(false);
     expect(esCodigoDeRecuperacion("abcd-12345")).toBe(false);
     expect(esCodigoDeRecuperacion("abcde-12345x")).toBe(false);
-    expect(esCodigoDeRecuperacion("ABCDE-12345")).toBe(false);
+    expect(esCodigoDeRecuperacion("abcd_-12345")).toBe(false);
   });
 });
 

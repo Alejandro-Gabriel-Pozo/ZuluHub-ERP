@@ -13,7 +13,7 @@ export type DatosDelAlta = Readonly<{
 }>;
 
 const SECRETO = /^[A-Z2-7]{16,128}$/;
-const CODIGO_DE_RECUPERACION = /^[a-z0-9]{5}-[a-z0-9]{5}$/;
+const CODIGO_DE_RECUPERACION = /^[A-Za-z0-9]{5}-[A-Za-z0-9]{5}$/;
 const CANTIDAD_DE_CODIGOS = 10;
 
 export function datosDelAlta(cuerpo: unknown): DatosDelAlta | null {
