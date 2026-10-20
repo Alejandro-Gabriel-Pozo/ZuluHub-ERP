@@ -24,15 +24,18 @@ export {
 } from "./dominio/aspecto";
 export {
   COLORES_DE_SUPERFICIE,
+  COLOR_DEL_TEMA,
   CONTRASTE_MINIMO_DEL_ACENTO,
   CONTRASTE_MINIMO_DEL_TEXTO,
   TOKENS_DE_TEMA,
   contrasteSuficiente,
+  contrastesDelTema,
   esTokenDeTema,
   luminanciaRelativa,
   parDeContrasteInsuficiente,
   razonDeContraste,
   validarTema,
+  type ContrasteDeUnPar,
   type ErrorDeTema,
   type ParDeContraste,
   type Tema,
@@ -52,6 +55,12 @@ export {
   type DefinicionResuelta,
   type ErrorDeModuloInicial,
 } from "./dominio/definicion";
+export {
+  resolverConOrigen,
+  type DefinicionConOrigen,
+  type OrigenEnLaCadena,
+  type OrigenesDeLaDefinicion,
+} from "./dominio/efectiva";
 export {
   NIVEL_MAXIMO_DE_LA_BASE,
   campoInmutableModificado,

@@ -12,13 +12,21 @@ import {
 import {
   empresaId,
   invitacionId,
+  marcaComercialId,
   personaId,
+  planId,
   tenantId,
+  versionDePlanId,
   type EmpresaId,
   type InvitacionId,
 } from "../../primitivas/identificadores/marca";
+import { patronDeContiene } from "../../plataforma/dominio/soporte/consulta";
 import type {
   FilaDeEmpresa,
+  FilaDeEmpresaAmpliada,
+  FilaDeTenant,
+  FiltroDeEmpresas,
+  FiltroDeTenants,
   LecturaDeSoporte,
   MembresiaVisible,
 } from "../../plataforma/consultas/contrato";
@@ -27,7 +35,10 @@ import type { Dato } from "../../puertos/sin-secretos";
 /**
  * Lectura de soporte de plataforma (H5 §B.5.9) sobre las tablas que el rol de plataforma PUEDE leer:
  * `tenant`, `empresa`, `persona`, `membresia` (solo `empresa_id`, `persona_id`, `rol`, `activo`: decisión
- * F1), `invitacion`, `invitacion_empresa`, `trabajo`, `auditoria_plataforma` y `referencia_de_error`.
+ * F1), `invitacion`, `invitacion_empresa`, `trabajo`, `auditoria_plataforma` y `referencia_de_error`; y, para
+ * mostrar la marca y el plan vigente de cada tenant en las listas de la consola, `marca`, `version_de_marca`,
+ * `plan`, `version_de_plan`, `plan_de_tenant` y `ajuste_de_perilla` (la migración 0007 le da `SELECT` a
+ * plataforma sobre todas ellas; solo las columnas que se piden acá).
  *
  * Reglas de este archivo, que una prueba comprueba leyendo su propio texto:
  *  - NUNCA toca las tablas operativas (`sucursal`, `asignacion_sucursal`, `invitacion_sucursal`,
@@ -45,6 +56,37 @@ export type SoporteDb = {
     estado: string;
     motivo_estado: string | null;
     creado_en: Date;
+    marca_id: string;
+  };
+  marca: { id: string; codigo: string };
+  version_de_marca: {
+    marca_id: string;
+    numero: number | null;
+    estado: string;
+    vigente_desde: Date | null;
+    nombre_visible: string | null;
+  };
+  plan: { id: string; codigo: string };
+  version_de_plan: {
+    id: string;
+    plan_id: string;
+    numero: number | null;
+    nombre_comercial: string;
+    perillas: unknown;
+  };
+  plan_de_tenant: {
+    tenant_id: string;
+    numero: number;
+    version_de_plan_id: string;
+    vigente_desde: Date;
+  };
+  ajuste_de_perilla: {
+    tenant_id: string;
+    empresa_id: string | null;
+    perilla: string;
+    numero: number;
+    valor: string;
+    vigente_desde: Date;
   };
   empresa: {
     id: Generated<string>;
@@ -128,8 +170,27 @@ function aEmail(texto: string) {
   return r.valor;
 }
 
+/** Un `jsonb` que es un objeto (el driver ya lo trae parseado); `null` si no hay o no es un objeto. */
+const objetoODeNulo = (valor: unknown): Readonly<Record<string, unknown>> | null =>
+  typeof valor === "object" && valor !== null && !Array.isArray(valor)
+    ? (valor as Readonly<Record<string, unknown>>)
+    : null;
+
 /** El contenido de una columna `jsonb` (el driver ya lo trae parseado) como dato; `null` si no hay. */
 const aDato = (valor: unknown): Dato => (valor ?? null) as Dato;
+
+/** Las columnas de marca y plan vigente que trae `tenantsConMarcaYPlan` (el plan es todo nulo si ninguna asignación empezó). */
+type ColumnasDeMarcaYPlan = {
+  marca_id: string;
+  marca_codigo: string;
+  marca_nombre_visible: string | null;
+  version_de_plan_id: string | null;
+  plan_id: string | null;
+  plan_codigo: string | null;
+  plan_nombre_comercial: string | null;
+  plan_version_numero: number | null;
+  plan_programado: unknown;
+};
 
 export function crearLecturaDeSoporteDePostgres(db: Kysely<SoporteDb>): LecturaDeSoporte {
   async function empresasConTenant(
@@ -168,6 +229,227 @@ export function crearLecturaDeSoporteDePostgres(db: Kysely<SoporteDb>): LecturaD
       zonaHoraria: f.zona_horaria,
       moneda: f.moneda,
       creadoEn: f.creado_en,
+    }));
+  }
+
+  /**
+   * Cada tenant con su marca y su plan VIGENTE a `ahora`, en una sola sentencia (sin lecturas por fila).
+   * Las dos reglas de vigencia son las de siempre, escritas en SQL y comprobadas contra las funciones puras
+   * por una prueba de integración:
+   *  - plan vigente (`vigenteEn`): la asignación de mayor número entre las que ya empezaron;
+   *  - plan programado (`estadoDeDecision`): una asignación que todavía no empezó y a la que ninguna de mayor
+   *    número, que empiece a su hora o antes, deja sin efecto;
+   *  - nombre visible de la marca (`versionVigente`): el de la versión confirmada de mayor número que ya empezó.
+   */
+  const tenantsConMarcaYPlan = (ahora: Date) =>
+    db
+      .selectFrom("tenant as t")
+      .innerJoin("marca as m", "m.id", "t.marca_id")
+      .leftJoinLateral(
+        (eb) =>
+          eb
+            .selectFrom("version_de_marca as vm")
+            .select("vm.nombre_visible")
+            .whereRef("vm.marca_id", "=", "t.marca_id")
+            .where("vm.estado", "=", "CONFIRMADA")
+            .where("vm.vigente_desde", "<=", ahora)
+            .orderBy("vm.numero", "desc")
+            .limit(1)
+            .as("mv"),
+        (unir) => unir.onTrue(),
+      )
+      .leftJoinLateral(
+        (eb) =>
+          eb
+            .selectFrom("plan_de_tenant as a")
+            .select("a.version_de_plan_id")
+            .whereRef("a.tenant_id", "=", "t.id")
+            .where("a.vigente_desde", "<=", ahora)
+            .orderBy("a.numero", "desc")
+            .limit(1)
+            .as("av"),
+        (unir) => unir.onTrue(),
+      )
+      .leftJoin("version_de_plan as v", "v.id", "av.version_de_plan_id")
+      .leftJoin("plan as p", "p.id", "v.plan_id")
+      .select((eb) => [
+        "t.id as id",
+        "t.nombre as nombre",
+        "t.estado as estado",
+        "t.motivo_estado as motivo_estado",
+        "t.creado_en as creado_en",
+        "t.marca_id as marca_id",
+        "m.codigo as marca_codigo",
+        "mv.nombre_visible as marca_nombre_visible",
+        "v.id as version_de_plan_id",
+        "v.plan_id as plan_id",
+        "p.codigo as plan_codigo",
+        "v.nombre_comercial as plan_nombre_comercial",
+        "v.numero as plan_version_numero",
+        "v.perillas as perillas_del_plan",
+        eb
+          .exists(
+            eb
+              .selectFrom("plan_de_tenant as pr")
+              .select("pr.tenant_id")
+              .whereRef("pr.tenant_id", "=", "t.id")
+              .where("pr.vigente_desde", ">", ahora)
+              .where((eb2) =>
+                eb2.not(
+                  eb2.exists(
+                    eb2
+                      .selectFrom("plan_de_tenant as po")
+                      .select("po.tenant_id")
+                      .whereRef("po.tenant_id", "=", "pr.tenant_id")
+                      .whereRef("po.numero", ">", "pr.numero")
+                      .whereRef("po.vigente_desde", "<=", "pr.vigente_desde"),
+                  ),
+                ),
+              ),
+          )
+          .as("plan_programado"),
+      ]);
+
+  /** La marca y el plan vigente de una fila de `tenantsConMarcaYPlan`; el plan es todo nulo si ninguna asignación empezó. */
+  function marcaYPlanDe(f: ColumnasDeMarcaYPlan) {
+    return {
+      marcaId: marcaComercialId(f.marca_id),
+      marcaCodigo: f.marca_codigo,
+      marcaNombreVisible: f.marca_nombre_visible,
+      planId: f.plan_id === null ? null : planId(f.plan_id),
+      versionDePlanId: f.version_de_plan_id === null ? null : versionDePlanId(f.version_de_plan_id),
+      planCodigo: f.plan_codigo,
+      planNombreComercial: f.plan_nombre_comercial,
+      planVersionNumero: f.plan_version_numero,
+      planProgramado: Boolean(f.plan_programado),
+    };
+  }
+
+  async function empresasAmpliadas(
+    filtro: FiltroDeEmpresas,
+    pagina: { limite: number; despuesDeId: string | null },
+    ahora: Date,
+  ): Promise<FilaDeEmpresaAmpliada[]> {
+    let consulta = db
+      .selectFrom("empresa as e")
+      .innerJoin(tenantsConMarcaYPlan(ahora).as("ta"), "ta.id", "e.tenant_id")
+      .select([
+        "e.id",
+        "e.tenant_id",
+        "e.cuit",
+        "e.razon_social",
+        "e.estado",
+        "e.motivo_estado",
+        "ta.estado as estado_del_tenant",
+        "e.zona_horaria",
+        "e.moneda",
+        "e.creado_en",
+        "ta.nombre as tenant_nombre",
+        "ta.marca_id",
+        "ta.marca_codigo",
+        "ta.marca_nombre_visible",
+        "ta.version_de_plan_id",
+        "ta.plan_id",
+        "ta.plan_codigo",
+        "ta.plan_nombre_comercial",
+        "ta.plan_version_numero",
+        "ta.plan_programado",
+      ])
+      .orderBy("e.id")
+      .limit(pagina.limite);
+    if (filtro.tenantId !== null) consulta = consulta.where("e.tenant_id", "=", filtro.tenantId);
+    if (filtro.estado !== null) consulta = consulta.where("e.estado", "=", filtro.estado);
+    if (filtro.marcaId !== null) consulta = consulta.where("ta.marca_id", "=", filtro.marcaId);
+    if (filtro.planId !== null) consulta = consulta.where("ta.plan_id", "=", filtro.planId);
+    const efectivos = filtro.estadosEfectivos;
+    if (efectivos !== null) {
+      consulta = consulta.where((eb) =>
+        eb.or(
+          efectivos.map((par) =>
+            eb.and([eb("ta.estado", "=", par.tenant), eb("e.estado", "=", par.empresa)]),
+          ),
+        ),
+      );
+    }
+    const buscar = filtro.buscar;
+    if (buscar !== null) {
+      const texto = patronDeContiene(buscar.texto);
+      const cuit = buscar.cuit === null ? null : patronDeContiene(buscar.cuit);
+      consulta = consulta.where((eb) =>
+        eb.or([
+          eb("e.razon_social", "ilike", texto),
+          eb("ta.nombre", "ilike", texto),
+          ...(cuit === null ? [] : [eb("e.cuit", "like", cuit)]),
+        ]),
+      );
+    }
+    if (pagina.despuesDeId !== null) consulta = consulta.where("e.id", ">", pagina.despuesDeId);
+    const filas = await consulta.execute();
+    return filas.map((f) => ({
+      id: empresaId(f.id),
+      tenantId: tenantId(f.tenant_id),
+      cuit: f.cuit,
+      razonSocial: f.razon_social,
+      estado: deLaLista(ESTADOS_DE_EMPRESA, f.estado, "estado de empresa"),
+      motivoEstado: f.motivo_estado,
+      estadoDelTenant: deLaLista(ESTADOS_DE_TENANT, f.estado_del_tenant, "estado de tenant"),
+      zonaHoraria: f.zona_horaria,
+      moneda: f.moneda,
+      creadoEn: f.creado_en,
+      tenantNombre: f.tenant_nombre,
+      ...marcaYPlanDe(f),
+    }));
+  }
+
+  async function tenantsAmpliados(
+    filtro: FiltroDeTenants,
+    pagina: { limite: number; despuesDeId: string | null },
+    ahora: Date,
+  ): Promise<FilaDeTenant[]> {
+    let consulta = db
+      .selectFrom(tenantsConMarcaYPlan(ahora).as("ta"))
+      .select((eb) => [
+        "ta.id",
+        "ta.nombre",
+        "ta.estado",
+        "ta.motivo_estado",
+        "ta.creado_en",
+        "ta.marca_id",
+        "ta.marca_codigo",
+        "ta.marca_nombre_visible",
+        "ta.version_de_plan_id",
+        "ta.plan_id",
+        "ta.plan_codigo",
+        "ta.plan_nombre_comercial",
+        "ta.plan_version_numero",
+        "ta.plan_programado",
+        "ta.perillas_del_plan",
+        // Las empresas que ocupan lugar contra el tope: todas menos las canceladas (como cuenta el alta).
+        eb
+          .selectFrom("empresa as ec")
+          .select(eb.fn.countAll<string>().as("n"))
+          .whereRef("ec.tenant_id", "=", "ta.id")
+          .where("ec.estado", "<>", "CANCELLED")
+          .as("empresas_en_uso"),
+      ])
+      .orderBy("ta.id")
+      .limit(pagina.limite);
+    if (filtro.marcaId !== null) consulta = consulta.where("ta.marca_id", "=", filtro.marcaId);
+    if (filtro.planId !== null) consulta = consulta.where("ta.plan_id", "=", filtro.planId);
+    if (filtro.buscar !== null) {
+      consulta = consulta.where("ta.nombre", "ilike", patronDeContiene(filtro.buscar.texto));
+    }
+    if (pagina.despuesDeId !== null) consulta = consulta.where("ta.id", ">", pagina.despuesDeId);
+    const filas = await consulta.execute();
+    return filas.map((f) => ({
+      id: tenantId(f.id),
+      nombre: f.nombre,
+      estado: deLaLista(ESTADOS_DE_TENANT, f.estado, "estado de tenant"),
+      motivoEstado: f.motivo_estado,
+      creadoEn: f.creado_en,
+      ...marcaYPlanDe(f),
+      empresasEnUso: Number(f.empresas_en_uso),
+      perillasDelPlan: objetoODeNulo(f.perillas_del_plan),
     }));
   }
 
@@ -234,25 +516,33 @@ export function crearLecturaDeSoporteDePostgres(db: Kysely<SoporteDb>): LecturaD
   });
 
   return {
-    async listarTenants(pagina) {
-      let consulta = db
-        .selectFrom("tenant")
-        .select(["id", "nombre", "estado", "motivo_estado", "creado_en"])
-        .orderBy("id")
-        .limit(pagina.limite);
-      if (pagina.despuesDeId !== null) consulta = consulta.where("id", ">", pagina.despuesDeId);
-      const filas = await consulta.execute();
+    listarTenants(filtro, pagina, ahora) {
+      return tenantsAmpliados(filtro, pagina, ahora);
+    },
+
+    async ajustesDeTenants(tenants, perilla) {
+      if (tenants.length === 0) return [];
+      const filas = await db
+        .selectFrom("ajuste_de_perilla")
+        .select(["tenant_id", "perilla", "empresa_id", "numero", "vigente_desde", "valor"])
+        .where("tenant_id", "in", [...tenants])
+        .where("perilla", "=", perilla)
+        .where("empresa_id", "is", null)
+        .orderBy("tenant_id")
+        .orderBy("numero")
+        .execute();
       return filas.map((f) => ({
-        id: tenantId(f.id),
-        nombre: f.nombre,
-        estado: deLaLista(ESTADOS_DE_TENANT, f.estado, "estado de tenant"),
-        motivoEstado: f.motivo_estado,
-        creadoEn: f.creado_en,
+        tenantId: tenantId(f.tenant_id),
+        perilla: f.perilla,
+        empresaId: null,
+        numero: f.numero,
+        vigenteDesde: f.vigente_desde,
+        valor: f.valor,
       }));
     },
 
-    listarEmpresas(filtro, pagina) {
-      return empresasConTenant(filtro, pagina);
+    listarEmpresas(filtro, pagina, ahora) {
+      return empresasAmpliadas(filtro, pagina, ahora);
     },
 
     async listarAltasPendientes(pagina) {

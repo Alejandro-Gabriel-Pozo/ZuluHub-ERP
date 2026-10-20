@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import { REGLAS_DE_PLATAFORMA } from "../../src/capacidades/permisos/plataforma";
+import { CATALOGO_DE_PERILLAS } from "../../src/capacidades/planes/perillas";
 import {
   crearConsultasDePlataforma,
   type ConsultasDePlataforma,
 } from "../../src/plataforma/consultas/consultas";
 import type {
+  AjusteDeUnTenant,
   FilaDeAuditoria,
+  FilaDeTenant,
   FilaDeTrabajoFallido,
   TxDeConsultasDePlataforma,
 } from "../../src/plataforma/consultas/contrato";
@@ -24,9 +27,13 @@ import {
 } from "../../src/primitivas/identificadores/marca";
 import {
   AHORA,
+  MARCA_DE_PRUEBA,
+  PLAN_DE_PRUEBA,
+  SIN_PLAN_VIGENTE,
   comoAdministrador,
   conRol,
   filaDeEmpresa,
+  filaDeEmpresaAmpliada,
   lecturaFalsa,
   transaccionesDe,
   uuid,
@@ -50,18 +57,29 @@ function armar(datos: DatosDeLecturaFalsa = {}) {
     transacciones,
     reglas: REGLAS_DE_PLATAFORMA,
     catalogoDeEmpresa: CATALOGO_DE_MODULOS,
+    catalogoDePerillas: CATALOGO_DE_PERILLAS,
   });
   return { consultas, soporte, transacciones };
 }
 
 const fecha = new Date("2026-10-10T00:00:00Z");
-const tenant = (n: number, estado: "ACTIVE" | "SUSPENDED" = "ACTIVE") => ({
+/** Lo que lee la base de un tenant: con su marca, su plan vigente y cuántas empresas ocupan lugar. */
+const tenant = (n: number, estado: "ACTIVE" | "SUSPENDED" = "ACTIVE"): FilaDeTenant => ({
   id: tenantId(uuid(n)),
   nombre: `Tenant ${n}`,
   estado,
   motivoEstado: estado === "SUSPENDED" ? "falta de pago" : null,
   creadoEn: fecha,
+  ...MARCA_DE_PRUEBA,
+  ...PLAN_DE_PRUEBA,
+  empresasEnUso: 1,
+  perillasDelPlan: null,
 });
+/** Lo que la consulta devuelve de ese tenant: sin las perillas crudas y con el límite resuelto. */
+const vistaDe = (fila: FilaDeTenant, limiteDeEmpresas: number | "ILIMITADO" | null) => {
+  const { perillasDelPlan: _crudas, ...resto } = fila;
+  return { ...resto, limiteDeEmpresas };
+};
 
 describe("toda consulta es de solo lectura y se pide `read committed`", () => {
   it("las ocho piden la transacción con ese nivel y en solo lectura", async () => {
@@ -92,14 +110,25 @@ describe("toda consulta es de solo lectura y se pide `read committed`", () => {
 });
 
 describe("listarTenants", () => {
-  it("devuelve los tenants con su estado, y la página sigue si llegó llena", async () => {
+  it("devuelve los tenants con su estado, su marca y su plan, y la página sigue si llegó llena", async () => {
     const filas = [tenant(1), tenant(2, "SUSPENDED")];
     const { consultas, soporte } = armar({ tenants: filas });
     const r = await consultas.listarTenants(comoAdministrador, { limite: 2 });
-    expect(r).toEqual({ ok: true, valor: { filas, siguienteDespuesDeId: uuid(2) } });
-    expect(soporte.pedidos).toEqual([
-      { metodo: "listarTenants", argumentos: [{ limite: 2, despuesDeId: null }] },
-    ]);
+    expect(r).toEqual({
+      ok: true,
+      valor: {
+        filas: [vistaDe(tenant(1), 1), vistaDe(tenant(2, "SUSPENDED"), 1)],
+        siguienteDespuesDeId: uuid(2),
+      },
+    });
+    expect(soporte.pedidos[0]).toEqual({
+      metodo: "listarTenants",
+      argumentos: [
+        { marcaId: null, planId: null, buscar: null },
+        { limite: 2, despuesDeId: null },
+        AHORA,
+      ],
+    });
   });
 
   it("pasa el cursor normalizado y una página corta no tiene siguiente", async () => {
@@ -108,8 +137,11 @@ describe("listarTenants", () => {
       limite: 5,
       despuesDeId: uuid(1).toUpperCase(),
     });
-    expect(r).toEqual({ ok: true, valor: { filas: [tenant(1)], siguienteDespuesDeId: null } });
-    expect(soporte.pedidos[0]?.argumentos).toEqual([{ limite: 5, despuesDeId: uuid(1) }]);
+    expect(r).toEqual({
+      ok: true,
+      valor: { filas: [vistaDe(tenant(1), 1)], siguienteDespuesDeId: null },
+    });
+    expect(soporte.pedidos[0]?.argumentos[1]).toEqual({ limite: 5, despuesDeId: uuid(1) });
   });
 
   it("un límite o un cursor inválidos son errores con nombre y no leen nada", async () => {
@@ -124,16 +156,142 @@ describe("listarTenants", () => {
     });
     expect(soporte.pedidos).toEqual([]);
   });
+
+  it("filtra por marca, por plan y por texto del nombre, normalizando los ids y recortando el texto", async () => {
+    const { consultas, soporte } = armar();
+    await consultas.listarTenants(comoAdministrador, {
+      marcaId: uuid(11).toUpperCase(),
+      planId: uuid(12).toUpperCase(),
+      buscar: "  Bar-1 ",
+    });
+    expect(soporte.pedidos[0]?.argumentos[0]).toEqual({
+      marcaId: uuid(11),
+      planId: uuid(12),
+      buscar: { texto: "Bar-1", cuit: "Bar1" },
+    });
+  });
+
+  it("un id o un texto inválidos son errores con nombre y no leen nada; el rechazo de la página va primero", async () => {
+    const { consultas, soporte } = armar();
+    const pedir = (entrada: Parameters<typeof consultas.listarTenants>[1]) =>
+      consultas.listarTenants(comoAdministrador, entrada);
+    expect(await pedir({ marcaId: "x" })).toEqual({ ok: false, error: "ID_INVALIDO" });
+    expect(await pedir({ planId: "x" })).toEqual({ ok: false, error: "ID_INVALIDO" });
+    expect(await pedir({ buscar: "" })).toEqual({ ok: false, error: "FILTRO_INVALIDO" });
+    expect(await pedir({ buscar: "x".repeat(201) })).toEqual({
+      ok: false,
+      error: "FILTRO_INVALIDO",
+    });
+    expect(await pedir({ limite: 0, marcaId: "x" })).toEqual({
+      ok: false,
+      error: "LIMITE_INVALIDO",
+    });
+    expect(soporte.pedidos).toEqual([]);
+  });
+
+  describe("el límite de empresas efectivo, con UNA lectura de ajustes para toda la página", () => {
+    const ajuste = (
+      n: number,
+      numero: number,
+      valor: string,
+      desdeHoras = -1,
+    ): AjusteDeUnTenant => ({
+      tenantId: tenantId(uuid(n)),
+      perilla: "empresas_por_tenant",
+      empresaId: null,
+      numero,
+      vigenteDesde: new Date(AHORA.getTime() + desdeHoras * 3_600_000),
+      valor,
+    });
+    const conPlan = (n: number, limite: number | "ILIMITADO"): FilaDeTenant => ({
+      ...tenant(n),
+      perillasDelPlan: { empresas_por_tenant: { tipo: "LIMITE", limite } },
+    });
+    const limiteDe = async (fila: FilaDeTenant, ajustes: AjusteDeUnTenant[] = []) => {
+      const { consultas } = armar({ tenants: [fila], ajustes });
+      const r = await consultas.listarTenants(comoAdministrador, {});
+      return r.ok ? r.valor.filas[0]?.limiteDeEmpresas : r.error;
+    };
+
+    it("sin plan ni ajuste rige la base del catálogo; con plan, el del plan", async () => {
+      expect(await limiteDe({ ...tenant(1), ...SIN_PLAN_VIGENTE, perillasDelPlan: null })).toBe(1);
+      expect(await limiteDe(tenant(1))).toBe(1);
+      expect(await limiteDe(conPlan(1, 5))).toBe(5);
+      expect(await limiteDe(conPlan(1, "ILIMITADO"))).toBe("ILIMITADO");
+    });
+
+    it("un ajuste vigente del tenant manda sobre el plan; uno programado todavía no; DEL_PLAN vuelve al plan", async () => {
+      expect(await limiteDe(conPlan(1, 5), [ajuste(1, 1, "9")])).toBe(9);
+      expect(await limiteDe(conPlan(1, 5), [ajuste(1, 1, "9", 24)])).toBe(5);
+      expect(await limiteDe(conPlan(1, 5), [ajuste(1, 1, "9"), ajuste(1, 2, "DEL_PLAN")])).toBe(5);
+      expect(await limiteDe(conPlan(1, 5), [ajuste(1, 1, "ILIMITADO")])).toBe("ILIMITADO");
+    });
+
+    it("el ajuste de otro tenant no cuenta", async () => {
+      expect(await limiteDe(conPlan(1, 5), [ajuste(2, 1, "9")])).toBe(5);
+    });
+
+    it("lee los ajustes de TODOS los tenants de la página en una sola lectura, de la perilla del tope", async () => {
+      const { consultas, soporte } = armar({
+        tenants: [conPlan(1, 5), conPlan(2, 3), conPlan(3, 2)],
+        ajustes: [ajuste(2, 1, "7")],
+      });
+      const r = await consultas.listarTenants(comoAdministrador, {});
+      expect(r.ok && r.valor.filas.map((f) => f.limiteDeEmpresas)).toEqual([5, 7, 2]);
+      expect(soporte.pedidos.map((p) => p.metodo)).toEqual(["listarTenants", "ajustesDeTenants"]);
+      expect(soporte.pedidos[1]?.argumentos).toEqual([
+        [tenantId(uuid(1)), tenantId(uuid(2)), tenantId(uuid(3))],
+        "empresas_por_tenant",
+      ]);
+    });
+
+    it("una página vacía no pide ajustes", async () => {
+      const { consultas, soporte } = armar({ tenants: [] });
+      await consultas.listarTenants(comoAdministrador, {});
+      expect(soporte.pedidos.map((p) => p.metodo)).toEqual(["listarTenants"]);
+    });
+
+    it("el valor de plan que no es un límite se ignora y rige la base (falla cerrado)", async () => {
+      const raro: FilaDeTenant = {
+        ...tenant(1),
+        perillasDelPlan: { empresas_por_tenant: { tipo: "INTERRUPTOR", encendida: true } },
+      };
+      expect(await limiteDe(raro)).toBe(1);
+    });
+
+    it("si el catálogo no conoce la perilla no hay límite que mostrar y no se piden ajustes", async () => {
+      const soporte = lecturaFalsa({ tenants: [tenant(1)] });
+      const consultas = crearConsultasDePlataforma({
+        transacciones: transaccionesDe({ soporte, autorizacionDePlataforma: conRol("ADMIN") }),
+        reglas: REGLAS_DE_PLATAFORMA,
+        catalogoDeEmpresa: CATALOGO_DE_MODULOS,
+        catalogoDePerillas: {},
+      });
+      const r = await consultas.listarTenants(comoAdministrador, {});
+      expect(r.ok && r.valor.filas[0]?.limiteDeEmpresas).toBeNull();
+      expect(soporte.pedidos.map((p) => p.metodo)).toEqual(["listarTenants"]);
+    });
+  });
 });
+
+/** Sin ningún criterio: la lista de siempre. */
+const SIN_CRITERIOS = {
+  tenantId: null,
+  estado: null,
+  marcaId: null,
+  planId: null,
+  estadosEfectivos: null,
+  buscar: null,
+};
 
 describe("listarEmpresas", () => {
   it("agrega el estado efectivo, que combina el de la empresa con el del tenant", async () => {
     const empresas = [
-      filaDeEmpresa(1, "ACTIVE", "ACTIVE"),
-      filaDeEmpresa(2, "ACTIVE", "SUSPENDED"),
-      filaDeEmpresa(3, "PROVISIONING", "ACTIVE"),
-      filaDeEmpresa(4, "SUSPENDED", "ACTIVE"),
-      filaDeEmpresa(5, "CANCELLED", "SUSPENDED"),
+      filaDeEmpresaAmpliada(1, "ACTIVE", "ACTIVE"),
+      filaDeEmpresaAmpliada(2, "ACTIVE", "SUSPENDED"),
+      filaDeEmpresaAmpliada(3, "PROVISIONING", "ACTIVE"),
+      filaDeEmpresaAmpliada(4, "SUSPENDED", "ACTIVE"),
+      filaDeEmpresaAmpliada(5, "CANCELLED", "SUSPENDED"),
     ];
     const { consultas } = armar({ empresas });
     const r = await consultas.listarEmpresas(comoAdministrador, {});
@@ -150,6 +308,19 @@ describe("listarEmpresas", () => {
     expect(r.valor.siguienteDespuesDeId).toBeNull();
   });
 
+  it("trae el nombre del tenant, su marca y su plan vigente tal como los lee la base", async () => {
+    const sinPlan = { ...filaDeEmpresaAmpliada(2), ...SIN_PLAN_VIGENTE };
+    const { consultas } = armar({ empresas: [filaDeEmpresaAmpliada(1), sinPlan] });
+    const r = await consultas.listarEmpresas(comoAdministrador, {});
+    expect(r.ok && r.valor.filas[0]).toMatchObject({
+      tenantNombre: "Tenant de la empresa 1",
+      ...MARCA_DE_PRUEBA,
+      ...PLAN_DE_PRUEBA,
+      estadoEfectivo: "OPERA",
+    });
+    expect(r.ok && r.valor.filas[1]).toMatchObject({ ...MARCA_DE_PRUEBA, ...SIN_PLAN_VIGENTE });
+  });
+
   it("filtra por tenant y por estado, validándolos", async () => {
     const { consultas, soporte } = armar();
     await consultas.listarEmpresas(comoAdministrador, {
@@ -158,11 +329,12 @@ describe("listarEmpresas", () => {
       limite: 3,
     });
     expect(soporte.pedidos[0]?.argumentos).toEqual([
-      { tenantId: uuid(7), estado: "PROVISIONING" },
+      { ...SIN_CRITERIOS, tenantId: uuid(7), estado: "PROVISIONING" },
       { limite: 3, despuesDeId: null },
+      AHORA,
     ]);
     await consultas.listarEmpresas(comoAdministrador, {});
-    expect(soporte.pedidos[1]?.argumentos[0]).toEqual({ tenantId: null, estado: null });
+    expect(soporte.pedidos[1]?.argumentos[0]).toEqual(SIN_CRITERIOS);
 
     expect(await consultas.listarEmpresas(comoAdministrador, { tenantId: "x" })).toEqual({
       ok: false,
@@ -175,6 +347,58 @@ describe("listarEmpresas", () => {
       });
     }
     expect(soporte.pedidos).toHaveLength(2);
+  });
+
+  it("filtra por marca, plan, estado efectivo y texto; normaliza los ids y arma los pares de estado", async () => {
+    const { consultas, soporte } = armar();
+    await consultas.listarEmpresas(comoAdministrador, {
+      marcaId: uuid(11).toUpperCase(),
+      planId: uuid(12).toUpperCase(),
+      estadoEfectivo: "TENANT_SUSPENDIDO",
+      buscar: " 20-1234 ",
+    });
+    expect(soporte.pedidos[0]?.argumentos[0]).toEqual({
+      ...SIN_CRITERIOS,
+      marcaId: uuid(11),
+      planId: uuid(12),
+      estadosEfectivos: [
+        { tenant: "SUSPENDED", empresa: "PROVISIONING" },
+        { tenant: "SUSPENDED", empresa: "ACTIVE" },
+        { tenant: "SUSPENDED", empresa: "SUSPENDED" },
+      ],
+      buscar: { texto: "20-1234", cuit: "201234" },
+    });
+  });
+
+  it("los criterios nuevos inválidos son errores con nombre y no leen nada", async () => {
+    const { consultas, soporte } = armar();
+    const pedir = (entrada: Parameters<typeof consultas.listarEmpresas>[1]) =>
+      consultas.listarEmpresas(comoAdministrador, entrada);
+    expect(await pedir({ marcaId: "x" })).toEqual({ ok: false, error: "ID_INVALIDO" });
+    expect(await pedir({ planId: "x" })).toEqual({ ok: false, error: "ID_INVALIDO" });
+    for (const estadoEfectivo of ["opera", "", "ACTIVE", "constructor", "__proto__"]) {
+      expect(await pedir({ estadoEfectivo }), estadoEfectivo).toEqual({
+        ok: false,
+        error: "ESTADO_EFECTIVO_INVALIDO",
+      });
+    }
+    expect(await pedir({ buscar: "   " })).toEqual({ ok: false, error: "FILTRO_INVALIDO" });
+    expect(soporte.pedidos).toEqual([]);
+  });
+
+  it("acepta cada estado efectivo", async () => {
+    const { consultas } = armar();
+    for (const estadoEfectivo of [
+      "OPERA",
+      "EMPRESA_EN_ALTA",
+      "EMPRESA_SUSPENDIDA",
+      "EMPRESA_CANCELADA",
+      "EMPRESA_EN_BAJA",
+      "TENANT_SUSPENDIDO",
+    ]) {
+      const r = await consultas.listarEmpresas(comoAdministrador, { estadoEfectivo });
+      expect(r.ok, estadoEfectivo).toBe(true);
+    }
   });
 
   it("acepta cada estado de empresa", async () => {
@@ -534,6 +758,7 @@ describe("verConfiguracion", () => {
       transacciones: transaccionesDe({ soporte, autorizacionDePlataforma: conRol("ADMIN") }),
       reglas: REGLAS_DE_PLATAFORMA,
       catalogoDeEmpresa: { zeta: definicion, alfa: definicion, mu: definicion },
+      catalogoDePerillas: CATALOGO_DE_PERILLAS,
     });
     const r = await consultas.verConfiguracion(comoAdministrador);
     expect(r.ok && r.valor.modulos.map((m) => m.clave)).toEqual(["alfa", "mu", "zeta"]);

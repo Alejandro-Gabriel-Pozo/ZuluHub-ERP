@@ -17,7 +17,7 @@ export type TemaCompleto = Readonly<Record<TokenDeTema, string>>;
 export type ErrorDeTema = Readonly<{ codigo: "TEMA_INVALIDO"; token: string }>;
 
 /** Un color es `#rrggbb` con letras minúsculas: nada de `#fff`, `rgb()`, `url()` ni nombres. */
-const COLOR = /^#[0-9a-f]{6}$/;
+export const COLOR_DEL_TEMA = /^#[0-9a-f]{6}$/;
 
 export const esTokenDeTema = (token: string): token is TokenDeTema =>
   (TOKENS_DE_TEMA as readonly string[]).includes(token);
@@ -31,7 +31,7 @@ export function validarTema(
   entrada: Readonly<Record<string, unknown>>,
 ): Resultado<Tema, ErrorDeTema> {
   for (const [token, valor] of Object.entries(entrada)) {
-    if (!esTokenDeTema(token) || typeof valor !== "string" || !COLOR.test(valor)) {
+    if (!esTokenDeTema(token) || typeof valor !== "string" || !COLOR_DEL_TEMA.test(valor)) {
       return err({ codigo: "TEMA_INVALIDO", token });
     }
   }
@@ -99,25 +99,53 @@ export const CONTRASTE_MINIMO_DEL_ACENTO = 3;
 
 export type ParDeContraste = "on-primary/primary" | "accent/fondo" | "accent/superficie";
 
+/** La medición de UN par de colores: lo que se pide, lo que da y si alcanza. */
+export type ContrasteDeUnPar = Readonly<{
+  par: ParDeContraste;
+  /** La razón WCAG entre los dos colores, SIN redondear (4,499 no pasa por 4,5); `null` si falta alguno de los dos. */
+  razon: number | null;
+  /** Lo mínimo que se exige a este par. */
+  minimo: number;
+  /** `razon >= minimo`; `null` si el par no se puede medir porque el tema no define alguno de sus colores. */
+  cumple: boolean | null;
+}>;
+
 /**
- * Al confirmar (§B.3): `on-primary` sobre `primary` a 4,5:1 como mínimo y `accent` a 3:1 sobre el fondo y
- * sobre la superficie de la SUPERFICIE elegida en el aspecto (con la neutra, el fondo es blanco: el mismo
- * par de antes). Devuelve el primer par que no llega, o `null` si el tema deja todo legible. `secondary`
- * no se mide: no lleva texto ni se usa como único comunicador de un estado.
+ * La medición de los tres pares del tema contra la SUPERFICIE elegida en el aspecto (marcas y planes §B.3):
+ * `on-primary` sobre `primary` a 4,5:1 y `accent` a 3:1 sobre el fondo y sobre la superficie de esa superficie.
+ * Es la única definición de los pares y de sus mínimos: la confirmación (`parDeContrasteInsuficiente`) y la
+ * vista previa de la consola leen de acá. A diferencia de la confirmación, acepta un tema INCOMPLETO (un
+ * borrador): el par que necesita un color que falta sale sin medir (`razon` y `cumple` nulos). `secondary` no
+ * se mide: no lleva texto ni se usa como único comunicador de un estado.
+ */
+export function contrastesDelTema(
+  tema: Tema,
+  superficie: SuperficieDeAspecto,
+): readonly ContrasteDeUnPar[] {
+  const colores = COLORES_DE_SUPERFICIE[superficie];
+  const medir = (
+    par: ParDeContraste,
+    a: string | undefined,
+    b: string | undefined,
+    minimo: number,
+  ): ContrasteDeUnPar =>
+    a === undefined || b === undefined
+      ? { par, razon: null, minimo, cumple: null }
+      : { par, razon: razonDeContraste(a, b), minimo, cumple: contrasteSuficiente(a, b, minimo) };
+  return [
+    medir("on-primary/primary", tema["on-primary"], tema.primary, CONTRASTE_MINIMO_DEL_TEXTO),
+    medir("accent/fondo", tema.accent, colores.fondo, CONTRASTE_MINIMO_DEL_ACENTO),
+    medir("accent/superficie", tema.accent, colores.superficie, CONTRASTE_MINIMO_DEL_ACENTO),
+  ];
+}
+
+/**
+ * Al confirmar (§B.3): devuelve el primer par que no llega, o `null` si el tema deja todo legible. Es el
+ * primero de `contrastesDelTema` cuyo `cumple` es `false`.
  */
 export function parDeContrasteInsuficiente(
   tema: TemaCompleto,
   superficie: SuperficieDeAspecto,
 ): ParDeContraste | null {
-  if (!contrasteSuficiente(tema["on-primary"], tema.primary, CONTRASTE_MINIMO_DEL_TEXTO)) {
-    return "on-primary/primary";
-  }
-  const colores = COLORES_DE_SUPERFICIE[superficie];
-  if (!contrasteSuficiente(tema.accent, colores.fondo, CONTRASTE_MINIMO_DEL_ACENTO)) {
-    return "accent/fondo";
-  }
-  if (!contrasteSuficiente(tema.accent, colores.superficie, CONTRASTE_MINIMO_DEL_ACENTO)) {
-    return "accent/superficie";
-  }
-  return null;
+  return contrastesDelTema(tema, superficie).find((c) => c.cumple === false)?.par ?? null;
 }

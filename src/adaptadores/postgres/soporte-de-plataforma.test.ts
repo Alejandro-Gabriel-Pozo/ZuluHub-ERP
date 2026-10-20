@@ -24,6 +24,13 @@ const PERMITIDAS = [
   "trabajo",
   "auditoria_plataforma",
   "referencia_de_error",
+  // La marca y el plan vigente de cada tenant en las listas de la consola (0007: `SELECT` de plataforma).
+  "marca",
+  "version_de_marca",
+  "plan",
+  "version_de_plan",
+  "plan_de_tenant",
+  "ajuste_de_perilla",
 ];
 const OPERATIVAS = [
   "sucursal",

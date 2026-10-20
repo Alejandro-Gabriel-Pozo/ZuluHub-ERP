@@ -14,6 +14,7 @@ import {
   crearConsultasDePlataforma,
   type ConsultasDePlataforma,
 } from "../../src/plataforma/consultas/consultas";
+import { CATALOGO_DE_PERILLAS } from "../../src/capacidades/planes/perillas";
 import type { TxDeConsultasDePlataforma } from "../../src/plataforma/consultas/contrato";
 import { DECLARACIONES_DE_CONSULTAS_DE_PLATAFORMA } from "../../src/plataforma/consultas/declaraciones";
 import type { TxDeExplicar } from "../../src/plataforma/casos-de-uso/explicar-por-que";
@@ -57,6 +58,7 @@ const consultasCon = (vigilada: Vigilada): ConsultasDePlataforma =>
     transacciones: { ejecutar: (_opciones, trabajo) => trabajo(vigilada.tx) },
     reglas: REGLAS_DE_PLATAFORMA,
     catalogoDeEmpresa: CATALOGO_DE_MODULOS,
+    catalogoDePerillas: CATALOGO_DE_PERILLAS,
   });
 
 const casosCon = (vigilada: Vigilada): CasosDeUsoDeSoporte =>

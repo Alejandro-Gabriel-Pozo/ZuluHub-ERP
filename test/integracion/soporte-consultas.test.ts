@@ -677,7 +677,11 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
         async ({ soporte: lecturas }) => {
           return {
             ok: true as const,
-            valor: await lecturas.listarTenants({ limite: 100, despuesDeId: null }),
+            valor: await lecturas.listarTenants(
+              { marcaId: null, planId: null, buscar: null },
+              { limite: 100, despuesDeId: null },
+              AHORA,
+            ),
           };
         },
       );
