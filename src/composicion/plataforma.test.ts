@@ -48,8 +48,18 @@ describe("armarPlataforma", () => {
     expect(Object.keys(plataforma.casosDeUsoDeSoporte())).toEqual(
       expect.arrayContaining(["explicarPorQue", "registrarReferenciaDeError"]),
     );
-    expect(Object.keys(plataforma.consultasDePlataforma())).toContain("listarTenants");
-    expect(Object.keys(plataforma.consultasDeMarcasYPlanes())).toContain("listarPlanes");
+    expect(Object.keys(plataforma.consultasDePlataforma())).toEqual(
+      expect.arrayContaining(["listarTenants", "listarEmpresas", "catalogoDePerillas"]),
+    );
+    expect(Object.keys(plataforma.consultasDeMarcasYPlanes())).toEqual(
+      expect.arrayContaining([
+        "listarPlanes",
+        "fichaDeMarca",
+        "marcasParaElAlta",
+        "catalogosDeMarca",
+        "tenantsConLaVersion",
+      ]),
+    );
   });
 
   it("sin la cadena ni la clave, falla cerrado con un error de entorno genérico y registra solo los nombres", async () => {

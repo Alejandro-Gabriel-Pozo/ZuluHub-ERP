@@ -87,6 +87,7 @@ import type { TxDeRevocacionDelAlta } from "../plataforma/casos-de-uso/invitacio
 import { crearCasosDeUsoDeSoporte } from "../plataforma/casos-de-uso/soporte";
 import { crearConsultasDePlataforma } from "../plataforma/consultas/consultas";
 import type { TxDeConsultasDePlataforma } from "../plataforma/consultas/contrato";
+import type { TxDeConsultasDeMarcasYPlanes } from "../plataforma/consultas/contrato-de-marcas-y-planes";
 import { crearConsultasDeMarcasYPlanes } from "../plataforma/consultas/consultas-de-marcas-y-planes";
 import { ok } from "../primitivas/resultado/resultado";
 import type { AdminEncontrado } from "../puertos/admins-de-plataforma";
@@ -126,6 +127,13 @@ export type TxDeDominiosYSoporte = TxDeDominios &
   TxDeReferencias &
   TxDeExplicar &
   TxDeConsultasDePlataforma;
+
+/**
+ * Lo que recibe el trabajo de una transacción de marcas y planes: lo de sus casos de uso más lo que suman sus
+ * consultas (`marcasParaElAlta` decide con la misma lectura de la marca y de las versiones de plan que el alta).
+ */
+export type TxDeMarcasYPlanesDePlataforma = TxDeMarcasYPlanes &
+  Pick<TxDeConsultasDeMarcasYPlanes, "marcaParaElAlta" | "versionesDePlan">;
 
 export type OpcionesDePlataforma = Readonly<{
   /** De dónde se leen las variables; por defecto, el entorno del proceso. Se evalúa en cada armado. */
@@ -208,23 +216,27 @@ export function armarPlataforma(opciones: OpcionesDePlataforma = {}) {
     };
   });
 
-  const transaccionesDeMarcasYPlanes = transaccionesDe<TxDeMarcasYPlanes>((db, contexto) => ({
-    marcas: crearRepositorioDeMarcas(db.withTables<MarcasDb & DominiosDb>()),
-    planes: crearRepositorioDePlanes(db.withTables<PlanesDePlataformaDb>()),
-    derechos: crearLecturaDeDerechosDeUso(crearLecturaDePlanes(db.withTables<PlanesDb>()), {
-      catalogoDeModulos: CATALOGO_DE_MODULOS,
-      catalogoDePerillas: CATALOGO_DE_PERILLAS,
+  const transaccionesDeMarcasYPlanes = transaccionesDe<TxDeMarcasYPlanesDePlataforma>(
+    (db, contexto) => ({
+      marcaParaElAlta: crearLecturaDeMarcaParaElAlta(db.withTables<LecturaParaElAltaDb>()),
+      versionesDePlan: crearLecturaDeVersionesDePlanParaElAlta(db.withTables<PlanesDelAltaDb>()),
+      marcas: crearRepositorioDeMarcas(db.withTables<MarcasDb & DominiosDb>()),
+      planes: crearRepositorioDePlanes(db.withTables<PlanesDePlataformaDb>()),
+      derechos: crearLecturaDeDerechosDeUso(crearLecturaDePlanes(db.withTables<PlanesDb>()), {
+        catalogoDeModulos: CATALOGO_DE_MODULOS,
+        catalogoDePerillas: CATALOGO_DE_PERILLAS,
+      }),
+      auditoriaDeEmpresa: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
+      autorizacionDePlataforma: crearAutorizacionDePlataformaDePostgres(
+        db.withTables<AutorizacionDePlataformaDb>(),
+      ),
+      auditoriaDePlataforma: crearAuditoriaDePlataformaDePostgres(
+        db.withTables<AuditoriaDePlataformaDb>(),
+        contexto,
+      ),
+      idempotencia: crearIdempotenciaDePostgres(db.withTables<IdempotenciaDb>(), contexto),
     }),
-    auditoriaDeEmpresa: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
-    autorizacionDePlataforma: crearAutorizacionDePlataformaDePostgres(
-      db.withTables<AutorizacionDePlataformaDb>(),
-    ),
-    auditoriaDePlataforma: crearAuditoriaDePlataformaDePostgres(
-      db.withTables<AuditoriaDePlataformaDb>(),
-      contexto,
-    ),
-    idempotencia: crearIdempotenciaDePostgres(db.withTables<IdempotenciaDb>(), contexto),
-  }));
+  );
 
   const transaccionesDeDominiosYSoporte = transaccionesDe<TxDeDominiosYSoporte>((db, contexto) => ({
     dominios: crearRepositorioDeDominios(db.withTables<DominiosDb>()),
@@ -309,6 +321,7 @@ export function armarPlataforma(opciones: OpcionesDePlataforma = {}) {
         transacciones: transaccionesDeDominiosYSoporte(),
         reglas,
         catalogoDeEmpresa: CATALOGO_DE_MODULOS,
+        catalogoDePerillas: CATALOGO_DE_PERILLAS,
       }),
     ),
     consultasDeMarcasYPlanes: perezoso(() =>
