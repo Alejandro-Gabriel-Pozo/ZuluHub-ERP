@@ -162,10 +162,10 @@ const COLUMNAS_DEL_ROL_PUBLICO = [
 ].sort();
 
 const ROLES_SIN_VERSION_DE_MARCA = [
-  "zuluhub_trabajos",
-  "zuluhub_grupo",
-  "zuluhub_autenticacion",
-  "zuluhub_captacion",
+  "pedernal_trabajos",
+  "pedernal_grupo",
+  "pedernal_autenticacion",
+  "pedernal_captacion",
 ] as const;
 
 const codigoDe = (consulta: Promise<unknown>): Promise<string | null> =>
@@ -267,7 +267,7 @@ describe.skipIf(base === null)(
         ]);
         expect(nuevas["funciones"]).toHaveLength(1);
         expect(nuevas["funciones"]?.[0]).toMatch(
-          /^aspecto_valido\(a jsonb\):f:i:search_path=pg_catalog, public, pg_temp:[0-9a-f]{32}:\{.*zuluhub_plataforma=X\//,
+          /^aspecto_valido\(a jsonb\):f:i:search_path=pg_catalog, public, pg_temp:[0-9a-f]{32}:\{.*pedernal_plataforma=X\//,
         );
         expect(nuevas["privilegiosPorColumna"]).toHaveLength(1);
         for (const categoria of ["indices", "disparadores", "politicas", "esquema", "tablas"]) {
@@ -291,9 +291,9 @@ describe.skipIf(base === null)(
         // Y es lo que se quiere: público y aplicación leen; la plataforma inserta y actualiza; nadie más.
         const items = ((aspecto as string).match(/\{(.*)\}/)?.[1] ?? "").split(",").sort();
         expect(items.map((i) => i.replace(/\/.*$/, ""))).toEqual([
-          "zuluhub_app=r",
-          "zuluhub_plataforma=aw",
-          "zuluhub_publico=r",
+          "pedernal_app=r",
+          "pedernal_plataforma=aw",
+          "pedernal_publico=r",
         ]);
       });
     });
@@ -301,17 +301,17 @@ describe.skipIf(base === null)(
     it("para CADA rol, SELECT, INSERT, UPDATE y REFERENCES sobre `aspecto` valen lo mismo que sobre `tema` (quien no edita el tema no escribe el aspecto)", async () => {
       await conTodas(async (previa) => {
         const { rows: roles } = await previa.cliente.query<{ rolname: string }>(
-          "select rolname from pg_roles where rolname like 'zuluhub\\_%' order by 1",
+          "select rolname from pg_roles where rolname like 'pedernal\\_%' order by 1",
         );
         expect(roles.map((r) => r.rolname)).toEqual(
           expect.arrayContaining([
-            "zuluhub_app",
-            "zuluhub_autenticacion",
-            "zuluhub_captacion",
-            "zuluhub_grupo",
-            "zuluhub_plataforma",
-            "zuluhub_publico",
-            "zuluhub_trabajos",
+            "pedernal_app",
+            "pedernal_autenticacion",
+            "pedernal_captacion",
+            "pedernal_grupo",
+            "pedernal_plataforma",
+            "pedernal_publico",
+            "pedernal_trabajos",
           ]),
         );
         const quienes = [...roles.map((r) => r.rolname), "public"];
@@ -333,14 +333,14 @@ describe.skipIf(base === null)(
               [rol, privilegio],
             )
           ).rows[0]?.p;
-        expect(await puede("zuluhub_plataforma", "INSERT")).toBe(true);
-        expect(await puede("zuluhub_plataforma", "UPDATE")).toBe(true);
-        for (const rol of ["zuluhub_app", "zuluhub_publico", ...ROLES_SIN_VERSION_DE_MARCA]) {
+        expect(await puede("pedernal_plataforma", "INSERT")).toBe(true);
+        expect(await puede("pedernal_plataforma", "UPDATE")).toBe(true);
+        for (const rol of ["pedernal_app", "pedernal_publico", ...ROLES_SIN_VERSION_DE_MARCA]) {
           expect(await puede(rol, "INSERT"), `${rol} INSERT`).toBe(false);
           expect(await puede(rol, "UPDATE"), `${rol} UPDATE`).toBe(false);
         }
-        expect(await puede("zuluhub_publico", "SELECT")).toBe(true);
-        expect(await puede("zuluhub_app", "SELECT")).toBe(true);
+        expect(await puede("pedernal_publico", "SELECT")).toBe(true);
+        expect(await puede("pedernal_app", "SELECT")).toBe(true);
         for (const rol of ROLES_SIN_VERSION_DE_MARCA) {
           expect(await puede(rol, "SELECT"), `${rol} SELECT`).toBe(false);
         }
@@ -367,19 +367,19 @@ describe.skipIf(base === null)(
           publica: false,
         });
         for (const rol of [
-          "zuluhub_app",
-          "zuluhub_publico",
-          "zuluhub_plataforma",
-          "zuluhub_grupo",
-          "zuluhub_trabajos",
-          "zuluhub_autenticacion",
-          "zuluhub_captacion",
+          "pedernal_app",
+          "pedernal_publico",
+          "pedernal_plataforma",
+          "pedernal_grupo",
+          "pedernal_trabajos",
+          "pedernal_autenticacion",
+          "pedernal_captacion",
         ]) {
           const { rows: puede } = await previa.cliente.query<{ p: boolean }>(
             "select has_function_privilege($1, 'public.aspecto_valido(jsonb)', 'EXECUTE') as p",
             [rol],
           );
-          expect(puede[0]?.p, rol).toBe(rol === "zuluhub_plataforma");
+          expect(puede[0]?.p, rol).toBe(rol === "pedernal_plataforma");
         }
       });
     });
@@ -715,7 +715,7 @@ describe.skipIf(base === null)(
           const { rows } = await previa.cliente.query<{ t: string; c: string; p: string }>(
             `select table_name as t, column_name as c, privilege_type as p
                from information_schema.column_privileges
-              where grantee = 'zuluhub_publico' and table_schema = 'public' order by 1, 2, 3`,
+              where grantee = 'pedernal_publico' and table_schema = 'public' order by 1, 2, 3`,
           );
           expect([...new Set(rows.map((f) => f.p))]).toEqual(["SELECT"]);
           expect(rows.map((f) => `${f.t}.${f.c}`)).toEqual(COLUMNAS_DEL_ROL_PUBLICO);
@@ -725,7 +725,7 @@ describe.skipIf(base === null)(
           }
           const { rows: otros } = await previa.cliente.query(
             `select 1 from information_schema.table_privileges
-              where grantee = 'zuluhub_publico' and table_schema = 'public' and privilege_type <> 'SELECT'`,
+              where grantee = 'pedernal_publico' and table_schema = 'public' and privilege_type <> 'SELECT'`,
           );
           expect(otros).toEqual([]);
         });
@@ -762,7 +762,7 @@ describe.skipIf(base === null)(
             expect(!i.ok && i.codigo).toBe("42501");
           });
           // Sin contexto firmado la aplicación no ve ninguna fila (falla cerrado), pero no recibe un error.
-          const sinContexto = await SesionDePrueba.abrir(previa.aparte.base, "zuluhub_app", null);
+          const sinContexto = await SesionDePrueba.abrir(previa.aparte.base, "pedernal_app", null);
           try {
             const r = await sinContexto.intentar("select aspecto from version_de_marca");
             expect(r.ok && r.rows).toEqual([]);
@@ -799,7 +799,7 @@ describe.skipIf(base === null)(
           // El ADMIN confirma su transacción: lo escrito queda en la base y se ve desde afuera.
           const admin = await SesionDePrueba.abrir(
             previa.aparte.base,
-            "zuluhub_plataforma",
+            "pedernal_plataforma",
             comoPlataforma(),
           );
           try {
@@ -903,13 +903,13 @@ describe.skipIf(base === null)(
         expect(codigo).toMatch(/CHECK \(aspecto_valido\(aspecto\)\)/);
         expect(codigo.match(/\bGRANT\b/gi)).toHaveLength(3);
         expect(codigo).toMatch(
-          /GRANT EXECUTE ON FUNCTION aspecto_valido\(jsonb\) TO zuluhub_plataforma;/,
+          /GRANT EXECUTE ON FUNCTION aspecto_valido\(jsonb\) TO pedernal_plataforma;/,
         );
         expect(codigo).toMatch(
-          /GRANT SELECT \(aspecto\) ON version_de_marca TO zuluhub_publico, zuluhub_app;/,
+          /GRANT SELECT \(aspecto\) ON version_de_marca TO pedernal_publico, pedernal_app;/,
         );
         expect(codigo).toMatch(
-          /GRANT INSERT \(aspecto\), UPDATE \(aspecto\) ON version_de_marca TO zuluhub_plataforma;/,
+          /GRANT INSERT \(aspecto\), UPDATE \(aspecto\) ON version_de_marca TO pedernal_plataforma;/,
         );
         // El único REVOKE cierra la función nueva a PUBLIC.
         expect(codigo.match(/\bREVOKE\b/gi)).toHaveLength(1);
@@ -939,7 +939,7 @@ describe.skipIf(base === null)(
     // ===========================================================================================================
     describe("la reversión (script aparte, borra solo la columna que agregó)", () => {
       const conConfirmacion = (texto: string) =>
-        `begin; set local zuluhub.confirmar_reversion = 'SI'; ${texto}; commit;`;
+        `begin; set local pedernal.confirmar_reversion = 'SI'; ${texto}; commit;`;
 
       it("sin aspectos cargados deja el catálogo EXACTAMENTE como estaba, no toca los datos, borra la fila del ejecutor, se puede repetir y la migración se vuelve a aplicar", async () => {
         await conPrevias(async (previa, conMia) => {
@@ -1018,7 +1018,7 @@ describe.skipIf(base === null)(
         expect(plano).toMatch(/AVISAR AL DUEÑO/);
         expect(texto).toMatch(/NO lo aplica el ejecutor de migraciones/);
         expect(texto).toMatch(/BEGIN;/);
-        expect(texto).toMatch(/zuluhub\.confirmar_reversion/);
+        expect(texto).toMatch(/pedernal\.confirmar_reversion/);
         const codigo = texto.replace(/--.*$/gm, "");
         expect(codigo).not.toMatch(/\b(TRUNCATE|CASCADE)\b/i);
         expect(codigo).not.toMatch(/DELETE FROM public\.(?!migracion)/i);

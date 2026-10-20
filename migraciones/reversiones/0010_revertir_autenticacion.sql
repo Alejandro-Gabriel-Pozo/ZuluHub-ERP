@@ -13,7 +13,7 @@
 -- (que evade RLS, o el conteo de abajo no vería nada):
 --
 --     BEGIN;
---     SET LOCAL zuluhub.confirmar_reversion = 'SI';   -- solo si hay usuarios, sesiones o vínculos
+--     SET LOCAL pedernal.confirmar_reversion = 'SI';   -- solo si hay usuarios, sesiones o vínculos
 --     \i migraciones/reversiones/0010_revertir_autenticacion.sql
 --     COMMIT;
 --
@@ -22,7 +22,7 @@
 -- si otro objeto depende de lo que se borra (una clave foránea o una política de una migración posterior), el
 -- DROP falla y no se pierde nada.
 --
--- NO borra el rol `zuluhub_autenticacion`: los roles son del clúster y otras bases pueden usarlo. Le quita todo
+-- NO borra el rol `pedernal_autenticacion`: los roles son del clúster y otras bases pueden usarlo. Le quita todo
 -- acceso a esta base (queda como nació en 0004: sin tablas ni esquemas).
 
 DO $$
@@ -41,8 +41,8 @@ BEGIN
        + (SELECT count(*) FROM autenticacion.account)
        + (SELECT count(*) FROM public.persona WHERE usuario_auth_id IS NOT NULL)
     INTO v_datos;
-  IF v_datos > 0 AND coalesce(current_setting('zuluhub.confirmar_reversion', true), '') <> 'SI' THEN
-    RAISE EXCEPTION 'hay % filas de usuarios, cuentas, sesiones o vínculos que esta reversión borraría: avisar al dueño, tener un respaldo y repetir con SET LOCAL zuluhub.confirmar_reversion = ''SI''', v_datos
+  IF v_datos > 0 AND coalesce(current_setting('pedernal.confirmar_reversion', true), '') <> 'SI' THEN
+    RAISE EXCEPTION 'hay % filas de usuarios, cuentas, sesiones o vínculos que esta reversión borraría: avisar al dueño, tener un respaldo y repetir con SET LOCAL pedernal.confirmar_reversion = ''SI''', v_datos
       USING ERRCODE = '55000';
   END IF;
 END
@@ -56,7 +56,7 @@ DROP POLICY membresia_sesion_leer ON membresia;
 DROP POLICY persona_sesion_leer ON persona;
 
 -- El vínculo: concesión, disparador, restricción única y columna.
-REVOKE UPDATE (usuario_auth_id) ON persona FROM zuluhub_app;
+REVOKE UPDATE (usuario_auth_id) ON persona FROM pedernal_app;
 DROP TRIGGER persona_vinculo_inmutable ON persona;
 DROP FUNCTION persona_validar_vinculo();
 ALTER TABLE persona DROP CONSTRAINT persona_usuario_auth_id_uk;
@@ -67,8 +67,8 @@ DROP FUNCTION app_persona_de_sesion();
 DROP FUNCTION app_usuario_auth();
 
 -- El esquema de la librería, con sus tablas, índices, políticas y privilegios.
-REVOKE ALL ON ALL TABLES IN SCHEMA autenticacion FROM zuluhub_autenticacion;
-REVOKE ALL ON SCHEMA autenticacion FROM zuluhub_autenticacion;
+REVOKE ALL ON ALL TABLES IN SCHEMA autenticacion FROM pedernal_autenticacion;
+REVOKE ALL ON SCHEMA autenticacion FROM pedernal_autenticacion;
 DROP TABLE autenticacion."rateLimit";
 DROP TABLE autenticacion.verification;
 DROP TABLE autenticacion.account;

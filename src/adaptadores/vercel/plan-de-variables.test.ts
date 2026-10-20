@@ -26,13 +26,13 @@ function variable(parcial: Partial<VariableRemota> & { key: string }): VariableR
 }
 
 describe("constantes", () => {
-  it("el proyecto, el equipo y los nombres de variable son los de ZuluHub", () => {
+  it("el proyecto, el equipo y los nombres de variable son los de Pedernal", () => {
     expect(PROYECTO_DE_VERCEL).toBe("prj_BZ5e86RcBcfYCAzSW2vVbPpkj7jG");
     expect(EQUIPO_DE_VERCEL).toBe("alepozod");
-    expect(VARIABLE_DEL_TOKEN).toBe("ZULUHUB_VERCEL_TOKEN");
-    expect(NOMBRE_DE_LA_CADENA_DE_DUENO).toBe("ZULUHUB_DB_MIGRACIONES");
-    expect(VARIABLE_CLAVE_CONTEXTO).toBe("ZULUHUB_CLAVE_CONTEXTO");
-    expect(VARIABLE_SECRETO_INVITACIONES).toBe("ZULUHUB_SECRETO_INVITACIONES");
+    expect(VARIABLE_DEL_TOKEN).toBe("PEDERNAL_VERCEL_TOKEN");
+    expect(NOMBRE_DE_LA_CADENA_DE_DUENO).toBe("PEDERNAL_DB_MIGRACIONES");
+    expect(VARIABLE_CLAVE_CONTEXTO).toBe("PEDERNAL_CLAVE_CONTEXTO");
+    expect(VARIABLE_SECRETO_INVITACIONES).toBe("PEDERNAL_SECRETO_INVITACIONES");
   });
 });
 
@@ -70,17 +70,17 @@ describe("sobraEnVercel", () => {
     "POSTGRES_URL",
     "POSTGRES_USER",
     "POSTGRES_",
-    "ZULUHUB_DB_MIGRACIONES",
+    "PEDERNAL_DB_MIGRACIONES",
   ])("sobra %s", (nombre) => {
     expect(sobraEnVercel(nombre)).toBe(true);
   });
 
   it.each([
-    "ZULUHUB_DB_APP",
-    "ZULUHUB_DB_TRABAJOS",
-    "ZULUHUB_DB_PUBLICO",
-    "ZULUHUB_CLAVE_CONTEXTO",
-    "ZULUHUB_SECRETO_INVITACIONES",
+    "PEDERNAL_DB_APP",
+    "PEDERNAL_DB_TRABAJOS",
+    "PEDERNAL_DB_PUBLICO",
+    "PEDERNAL_CLAVE_CONTEXTO",
+    "PEDERNAL_SECRETO_INVITACIONES",
     "MI_POSTGRES_URL",
     "postgres_url",
     "DATABASE_URL_OTRA",
@@ -97,7 +97,7 @@ describe("leerVariablesRemotas", () => {
         envs: [
           {
             id: "a1",
-            key: "ZULUHUB_DB_APP",
+            key: "PEDERNAL_DB_APP",
             type: "sensitive",
             target: ["preview", "production"],
             gitBranch: "feature-x",
@@ -109,7 +109,7 @@ describe("leerVariablesRemotas", () => {
     ).toEqual([
       {
         id: "a1",
-        key: "ZULUHUB_DB_APP",
+        key: "PEDERNAL_DB_APP",
         type: "sensitive",
         target: ["preview", "production"],
         gitBranch: "feature-x",
@@ -175,8 +175,8 @@ describe("generarSecretos", () => {
   it("la clave de contexto es `1:` + 64 dígitos hexadecimales y el secreto de invitaciones, 64", () => {
     const secretos = generarSecretos();
     expect(secretos.map((s) => s.key)).toEqual([
-      "ZULUHUB_CLAVE_CONTEXTO",
-      "ZULUHUB_SECRETO_INVITACIONES",
+      "PEDERNAL_CLAVE_CONTEXTO",
+      "PEDERNAL_SECRETO_INVITACIONES",
     ]);
     expect(secretos[0]?.value).toMatch(/^1:[0-9a-f]{64}$/);
     expect(secretos[1]?.value).toMatch(/^[0-9a-f]{64}$/);
@@ -206,8 +206,8 @@ describe("generarSecretos", () => {
 
 describe("planificar", () => {
   const escribir = [
-    { key: "ZULUHUB_DB_APP", value: "v1" },
-    { key: "ZULUHUB_DB_TRABAJOS", value: "v2" },
+    { key: "PEDERNAL_DB_APP", value: "v1" },
+    { key: "PEDERNAL_DB_TRABAJOS", value: "v2" },
   ];
 
   it("sin nada en Vercel solo escribe, en el orden pedido", () => {
@@ -218,8 +218,8 @@ describe("planificar", () => {
       intactas: [],
     });
     expect(plan.pasos).toEqual([
-      { tipo: "escribir", key: "ZULUHUB_DB_APP", value: "v1" },
-      { tipo: "escribir", key: "ZULUHUB_DB_TRABAJOS", value: "v2" },
+      { tipo: "escribir", key: "PEDERNAL_DB_APP", value: "v1" },
+      { tipo: "escribir", key: "PEDERNAL_DB_TRABAJOS", value: "v2" },
     ]);
     expect(plan.yaCargadas).toEqual([]);
     expect(plan.faltaRotar).toEqual([]);
@@ -228,7 +228,7 @@ describe("planificar", () => {
   it("una variable que ya es sensible y solo del destino se sobrescribe sin liberarla antes", () => {
     const plan = planificar({
       destino: "preview",
-      existentes: [variable({ key: "ZULUHUB_DB_APP" })],
+      existentes: [variable({ key: "PEDERNAL_DB_APP" })],
       paraEscribir: escribir,
       intactas: [],
     });
@@ -239,14 +239,14 @@ describe("planificar", () => {
     const plan = planificar({
       destino: "preview",
       existentes: [
-        variable({ key: "ZULUHUB_DB_APP", id: "x1", target: ["production", "preview"] }),
+        variable({ key: "PEDERNAL_DB_APP", id: "x1", target: ["production", "preview"] }),
       ],
       paraEscribir: [escribir[0] as { key: string; value: string }],
       intactas: [],
     });
     expect(plan.pasos).toEqual([
-      { tipo: "recortar", id: "x1", key: "ZULUHUB_DB_APP", target: ["production"] },
-      { tipo: "escribir", key: "ZULUHUB_DB_APP", value: "v1" },
+      { tipo: "recortar", id: "x1", key: "PEDERNAL_DB_APP", target: ["production"] },
+      { tipo: "escribir", key: "PEDERNAL_DB_APP", value: "v1" },
     ]);
   });
 
@@ -254,38 +254,38 @@ describe("planificar", () => {
     const plan = planificar({
       destino: "production",
       existentes: [
-        variable({ key: "ZULUHUB_DB_APP", id: "x2", type: "plain", target: ["production"] }),
+        variable({ key: "PEDERNAL_DB_APP", id: "x2", type: "plain", target: ["production"] }),
       ],
       paraEscribir: [escribir[0] as { key: string; value: string }],
       intactas: [],
     });
     expect(plan.pasos).toEqual([
-      { tipo: "borrar", id: "x2", key: "ZULUHUB_DB_APP" },
-      { tipo: "escribir", key: "ZULUHUB_DB_APP", value: "v1" },
+      { tipo: "borrar", id: "x2", key: "PEDERNAL_DB_APP" },
+      { tipo: "escribir", key: "PEDERNAL_DB_APP", value: "v1" },
     ]);
   });
 
   it("una variable atada a una rama se borra antes de escribir (pisaría a la general)", () => {
     const plan = planificar({
       destino: "preview",
-      existentes: [variable({ key: "ZULUHUB_DB_APP", id: "x3", gitBranch: "main" })],
+      existentes: [variable({ key: "PEDERNAL_DB_APP", id: "x3", gitBranch: "main" })],
       paraEscribir: [escribir[0] as { key: string; value: string }],
       intactas: [],
     });
-    expect(plan.pasos[0]).toEqual({ tipo: "borrar", id: "x3", key: "ZULUHUB_DB_APP" });
+    expect(plan.pasos[0]).toEqual({ tipo: "borrar", id: "x3", key: "PEDERNAL_DB_APP" });
   });
 
   it("una variable con entornos propios no se borra entera: se le quita el destino", () => {
     const plan = planificar({
       destino: "preview",
-      existentes: [variable({ key: "ZULUHUB_DB_APP", id: "x4", customEnvironmentIds: ["env_1"] })],
+      existentes: [variable({ key: "PEDERNAL_DB_APP", id: "x4", customEnvironmentIds: ["env_1"] })],
       paraEscribir: [escribir[0] as { key: string; value: string }],
       intactas: [],
     });
     expect(plan.pasos[0]).toEqual({
       tipo: "recortar",
       id: "x4",
-      key: "ZULUHUB_DB_APP",
+      key: "PEDERNAL_DB_APP",
       target: [],
     });
   });
@@ -294,13 +294,13 @@ describe("planificar", () => {
     const plan = planificar({
       destino: "preview",
       existentes: [
-        variable({ key: "ZULUHUB_DB_APP", target: ["production"], type: "plain" }),
+        variable({ key: "PEDERNAL_DB_APP", target: ["production"], type: "plain" }),
         variable({ key: "OTRA", type: "plain", target: ["preview", "production"], gitBranch: "x" }),
       ],
       paraEscribir: [escribir[0] as { key: string; value: string }],
       intactas: [],
     });
-    expect(plan.pasos).toEqual([{ tipo: "escribir", key: "ZULUHUB_DB_APP", value: "v1" }]);
+    expect(plan.pasos).toEqual([{ tipo: "escribir", key: "PEDERNAL_DB_APP", value: "v1" }]);
   });
 
   it("borra del destino lo prohibido y la cadena de dueño, después de las escrituras", () => {
@@ -310,7 +310,7 @@ describe("planificar", () => {
         variable({ key: "DATABASE_URL", id: "p1", target: ["production"] }),
         variable({ key: "POSTGRES_URL", id: "p2", target: ["production"], type: "encrypted" }),
         variable({
-          key: "ZULUHUB_DB_MIGRACIONES",
+          key: "PEDERNAL_DB_MIGRACIONES",
           id: "p3",
           target: ["production"],
           type: "plain",
@@ -321,11 +321,11 @@ describe("planificar", () => {
       intactas: [],
     });
     expect(plan.pasos).toEqual([
-      { tipo: "escribir", key: "ZULUHUB_DB_APP", value: "v1" },
-      { tipo: "escribir", key: "ZULUHUB_DB_TRABAJOS", value: "v2" },
+      { tipo: "escribir", key: "PEDERNAL_DB_APP", value: "v1" },
+      { tipo: "escribir", key: "PEDERNAL_DB_TRABAJOS", value: "v2" },
       { tipo: "borrar", id: "p1", key: "DATABASE_URL" },
       { tipo: "borrar", id: "p2", key: "POSTGRES_URL" },
-      { tipo: "borrar", id: "p3", key: "ZULUHUB_DB_MIGRACIONES" },
+      { tipo: "borrar", id: "p3", key: "PEDERNAL_DB_MIGRACIONES" },
       { tipo: "borrar", id: "p4", key: "BETTER_AUTH_SECRET" },
     ]);
   });
@@ -355,14 +355,14 @@ describe("planificar", () => {
     const plan = planificar({
       destino: "preview",
       existentes: [
-        variable({ key: "ZULUHUB_DB_APP", target: ["preview"] }),
-        variable({ key: "ZULUHUB_DB_TRABAJOS", target: ["production"] }),
+        variable({ key: "PEDERNAL_DB_APP", target: ["preview"] }),
+        variable({ key: "PEDERNAL_DB_TRABAJOS", target: ["production"] }),
       ],
       paraEscribir: [],
-      intactas: ["ZULUHUB_DB_APP", "ZULUHUB_DB_TRABAJOS", "ZULUHUB_DB_PUBLICO"],
+      intactas: ["PEDERNAL_DB_APP", "PEDERNAL_DB_TRABAJOS", "PEDERNAL_DB_PUBLICO"],
     });
-    expect(plan.yaCargadas).toEqual(["ZULUHUB_DB_APP"]);
-    expect(plan.faltaRotar).toEqual(["ZULUHUB_DB_TRABAJOS", "ZULUHUB_DB_PUBLICO"]);
+    expect(plan.yaCargadas).toEqual(["PEDERNAL_DB_APP"]);
+    expect(plan.faltaRotar).toEqual(["PEDERNAL_DB_TRABAJOS", "PEDERNAL_DB_PUBLICO"]);
     expect(plan.pasos).toEqual([]);
   });
 });

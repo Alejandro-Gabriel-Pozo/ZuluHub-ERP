@@ -31,7 +31,7 @@ import { contextoOperativo, contextoDeSesion } from "./contextos";
  * Reglas que cumple (cada una con su prueba en `test/integracion/web-sesion-y-empresa.test.ts`):
  *  - Las empresas salen SIEMPRE filtradas por la marca de la puerta (la del host), nunca por email ni por lo
  *    que mande el navegador (P-1).
- *  - La cookie `zh_empresa` se valida contra esa lista en cada pedido; una empresa que no está (la de otra
+ *  - La cookie `pd_empresa` se valida contra esa lista en cada pedido; una empresa que no está (la de otra
  *    marca, una a la que ya no se pertenece) es `SIN_PERMISO`.
  *  - El contexto operativo se arma SOLO con `contextoOperativo` de `contextos.ts` (R-W3), con la empresa ya
  *    validada, la persona de la sesión y la marca del host.
@@ -121,7 +121,7 @@ export type EntradaDeResolverEmpresa = Readonly<{
   sesion: SesionAutenticada;
   /** La marca de la puerta: la que resolvió el servidor desde el host. */
   marcaId: MarcaComercialId;
-  /** El valor de la cookie `zh_empresa` DE ESTE HOST, tal como llegó (no es de confianza). */
+  /** El valor de la cookie `pd_empresa` DE ESTE HOST, tal como llegó (no es de confianza). */
   cookieDeEmpresa: string | null;
 }>;
 

@@ -611,7 +611,7 @@ describe.skipIf(base === null)("dominios de plataforma: casos de uso contra Post
             personaId: null,
           }),
         );
-        expect(referencia).toMatch(/^ZH-[0-9A-F]{4}-[0-9A-F]{4}$/);
+        expect(referencia).toMatch(/^PD-[0-9A-F]{4}-[0-9A-F]{4}$/);
         const { rows } = await dueno.query<{ accion: string; motivo: string }>(
           "select accion, motivo from referencia_de_error where referencia = $1",
           [referencia],

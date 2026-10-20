@@ -3,7 +3,7 @@ import { cabecerasDe, nonceDe } from "./cabeceras";
 import { REINTENTO_DE_MANTENIMIENTO_EN_S, respuestaDeMantenimiento } from "./mantenimiento";
 
 const NONCE = nonceDe(new Uint8Array(16).fill(3));
-const REFERENCIA = "ZH-1A2B-3C4D";
+const REFERENCIA = "PD-1A2B-3C4D";
 const armar = (produccion = false) =>
   respuestaDeMantenimiento({
     referencia: REFERENCIA,
@@ -33,7 +33,7 @@ describe("respuestaDeMantenimiento", () => {
         "<main>",
         "<h1>En mantenimiento</h1>",
         "<p>Estamos actualizando el sistema. Volvé a intentar en unos minutos.</p>",
-        "<p>Si sigue igual, avisale a soporte esta referencia: <strong>ZH-1A2B-3C4D</strong></p>",
+        "<p>Si sigue igual, avisale a soporte esta referencia: <strong>PD-1A2B-3C4D</strong></p>",
         "</main>",
         "</body>",
         "</html>",
@@ -80,16 +80,16 @@ describe("respuestaDeMantenimiento", () => {
 
   it.each([
     "",
-    "ZH-1A2B-3C4D<script>",
-    "<b>ZH-1A2B-3C4D</b>",
-    "zh-1a2b-3c4d",
-    "ZH-1A2B-3C4",
-    "ZH-1A2B-3C4D5",
-    "ZH-1A2B3C4D",
-    "ZH-1A2G-3C4D",
-    " ZH-1A2B-3C4D",
-    "ZH-1A2B-3C4D\n",
-    "XZH-1A2B-3C4D",
+    "PD-1A2B-3C4D<script>",
+    "<b>PD-1A2B-3C4D</b>",
+    "pd-1a2b-3c4d",
+    "PD-1A2B-3C4",
+    "PD-1A2B-3C4D5",
+    "PD-1A2B3C4D",
+    "PD-1A2G-3C4D",
+    " PD-1A2B-3C4D",
+    "PD-1A2B-3C4D\n",
+    "XPD-1A2B-3C4D",
   ])("rechaza la referencia %j antes de ponerla en el HTML", (referencia) => {
     expect(() =>
       respuestaDeMantenimiento({
@@ -102,7 +102,7 @@ describe("respuestaDeMantenimiento", () => {
         referencia,
         cabeceras: cabecerasDe("NEUTRA", NONCE, { produccion: false }),
       }),
-    ).toThrow(/ZH-XXXX-XXXX/);
+    ).toThrow(/PD-XXXX-XXXX/);
   });
 
   it("las cabeceras que recibe pasan tal cual, y las suyas (tipo y reintento) pisan a las que coincidan", () => {

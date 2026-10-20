@@ -29,7 +29,7 @@ import {
  * W5, la lógica de sesión y empresa contra la base real, con sesiones de verdad (ingreso por el proveedor
  * local de Google). Lo crítico, por orden:
  *  - P-1: nada de la marca B en una respuesta de A; una persona con membresía solo en A que entra por B no
- *    ve empresas; la cookie `zh_empresa` de A forzada en B es `SIN_PERMISO`;
+ *    ve empresas; la cookie `pd_empresa` de A forzada en B es `SIN_PERMISO`;
  *  - P-6: la cookie de sesión de A no vale en B (renovar responde 401);
  *  - P-10: invitación -> aceptar -> panel; segundo ingreso entra directo con una empresa y elige con dos;
  *  - el contexto operativo lo arma el servidor (empresa validada, marca del host) y la base lo acepta;
@@ -97,7 +97,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       expect(entrada).toEqual({ ok: true, dato: { tipo: "SIN_EMPRESAS" } });
     });
 
-    it("la cookie zh_empresa de A forzada en B es SIN_PERMISO; elegir esa empresa en B también", async () => {
+    it("la cookie pd_empresa de A forzada en B es SIN_PERMISO; elegir esa empresa en B también", async () => {
       const enB = await ingresarEn(mundo, HOST_B);
       const persona = await personaVinculada(mundo, enB.sesion);
       const deA = await empresaDeLaMarca(mundo, mundo.marcaA, persona, "GERENTE");
@@ -472,7 +472,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       for (const r of resultados) {
         if (!r.ok) {
           expect(r.error.codigo).toBe("ERROR_INTERNO");
-          expect(r.error.referencia).toMatch(/^ZH-[0-9A-F]{4}-[0-9A-F]{4}$/);
+          expect(r.error.referencia).toMatch(/^PD-[0-9A-F]{4}-[0-9A-F]{4}$/);
         }
       }
       expect(resultados.some((r) => r.ok)).toBe(true);

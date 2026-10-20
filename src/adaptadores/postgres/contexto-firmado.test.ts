@@ -15,7 +15,7 @@ import type { Contexto } from "../../contexto/contexto";
 import {
   ACTOR_DE_SISTEMA,
   VIGENCIA_DEL_CONTEXTO_EN_S,
-  ZULUHUB_CLAVE_CONTEXTO,
+  PEDERNAL_CLAVE_CONTEXTO,
   actorFirmado,
   firmarCarga,
   firmarContexto,
@@ -57,7 +57,7 @@ function partir(token: string) {
 describe("firmarCarga: formato y vector conocido", () => {
   it("coincide con un vector fijo calculado aparte con node:crypto", () => {
     const token = firmarCarga(CLAVE, {
-      u: "zuluhub_app",
+      u: "pedernal_app",
       e: EMPRESA,
       t: null,
       p: PERSONA,
@@ -67,13 +67,13 @@ describe("firmarCarga: formato y vector conocido", () => {
       s: null,
     });
     expect(token).toBe(
-      "v1.7.7b2275223a227a756c756875625f617070222c2265223a2231313131313131312d313131312d343131312d383131312d313131313131313131313131222c2274223a6e756c6c2c2270223a2232323232323232322d323232322d343232322d383232322d323232323232323232323232222c2269223a6e756c6c2c2278223a313030303030303330302c2261223a6e756c6c2c2273223a6e756c6c7d.8f008c52fe3fbb926db324d47d92972b281413764e0f74453fe7358fdd764b27",
+      "v1.7.7b2275223a2270656465726e616c5f617070222c2265223a2231313131313131312d313131312d343131312d383131312d313131313131313131313131222c2274223a6e756c6c2c2270223a2232323232323232322d323232322d343232322d383232322d323232323232323232323232222c2269223a6e756c6c2c2278223a313030303030303330302c2261223a6e756c6c2c2273223a6e756c6c7d.32ddf01a3137f4b05c7db319eb25ef0bfa1db7fb386a8a70caa7535ee7fdca7f",
     );
   });
 
   it("el vector con actor de plataforma también coincide con uno calculado aparte", () => {
     const token = firmarCarga(CLAVE, {
-      u: "zuluhub_plataforma",
+      u: "pedernal_plataforma",
       e: null,
       t: null,
       p: null,
@@ -83,13 +83,13 @@ describe("firmarCarga: formato y vector conocido", () => {
       s: null,
     });
     expect(token).toBe(
-      "v1.7.7b2275223a227a756c756875625f706c617461666f726d61222c2265223a6e756c6c2c2274223a6e756c6c2c2270223a6e756c6c2c2269223a6e756c6c2c2278223a313030303030303330302c2261223a2234343434616161612d343434342d343434342d383434342d626262626262626262626262222c2273223a6e756c6c7d.a98d75867d139639a741cdccbd5d3613b8842eb2123556d7a10aa87c87fb7bc2",
+      "v1.7.7b2275223a2270656465726e616c5f706c617461666f726d61222c2265223a6e756c6c2c2274223a6e756c6c2c2270223a6e756c6c2c2269223a6e756c6c2c2278223a313030303030303330302c2261223a2234343434616161612d343434342d343434342d383434342d626262626262626262626262222c2273223a6e756c6c7d.6d691cc7691962b189af1625c56c092bf9c749210bb39b0c0e93921a3d9cc864",
     );
   });
 
   it("el vector con usuario autenticado (claim `s`) también coincide con uno calculado aparte", () => {
     const token = firmarCarga(CLAVE, {
-      u: "zuluhub_app",
+      u: "pedernal_app",
       e: null,
       t: null,
       p: null,
@@ -99,14 +99,14 @@ describe("firmarCarga: formato y vector conocido", () => {
       s: USUARIO,
     });
     expect(token).toBe(
-      "v1.7.7b2275223a227a756c756875625f617070222c2265223a6e756c6c2c2274223a6e756c6c2c2270223a6e756c6c2c2269223a6e756c6c2c2278223a313030303030303330302c2261223a6e756c6c2c2273223a2235353535353535352d353535352d343535352d383535352d353535353535353535353535227d.293eb53c8f017812f647db62b9b97e8760ed53b150d3a634673ccc10b934c0a2",
+      "v1.7.7b2275223a2270656465726e616c5f617070222c2265223a6e756c6c2c2274223a6e756c6c2c2270223a6e756c6c2c2269223a6e756c6c2c2278223a313030303030303330302c2261223a6e756c6c2c2273223a2235353535353535352d353535352d343535352d383535352d353535353535353535353535227d.d5a322bdb9c94dfcaa8b971f283f3ba6d76edaae9500fc1071e12bc9e6a4d880",
     );
   });
 
   it("el mac es el HMAC-SHA256 hex de `v1.<kid>.<payloadHex>` con el secreto de la clave", () => {
     const { kid, payloadHex, mac } = partir(
       firmarCarga(CLAVE, {
-        u: "zuluhub_app",
+        u: "pedernal_app",
         e: null,
         t: null,
         p: null,
@@ -126,7 +126,7 @@ describe("firmarCarga: formato y vector conocido", () => {
   it("el payload lleva exactamente u, e, t, p, i, x, a, s, en ese orden", () => {
     const { payloadHex } = partir(
       firmarCarga(CLAVE, {
-        u: "zuluhub_app",
+        u: "pedernal_app",
         e: null,
         t: null,
         p: null,
@@ -137,12 +137,12 @@ describe("firmarCarga: formato y vector conocido", () => {
       }),
     );
     expect(Buffer.from(payloadHex, "hex").toString("utf8")).toBe(
-      '{"u":"zuluhub_app","e":null,"t":null,"p":null,"i":null,"x":5,"a":null,"s":null}',
+      '{"u":"pedernal_app","e":null,"t":null,"p":null,"i":null,"x":5,"a":null,"s":null}',
     );
   });
 
   it("el actor cambia la firma: no se puede reutilizar el token de un actor con otro", () => {
-    const carga = { u: "zuluhub_plataforma", e: null, t: null, p: null, i: null, x: 5, s: null };
+    const carga = { u: "pedernal_plataforma", e: null, t: null, p: null, i: null, x: 5, s: null };
     const delAdmin = firmarCarga(CLAVE, { ...carga, a: ADMIN });
     const delSistema = firmarCarga(CLAVE, { ...carga, a: ACTOR_DE_SISTEMA });
     const sinActor = firmarCarga(CLAVE, { ...carga, a: null });
@@ -152,7 +152,7 @@ describe("firmarCarga: formato y vector conocido", () => {
 
   it("otra clave (otro secreto o otro kid) da otra firma", () => {
     const carga = {
-      u: "zuluhub_app",
+      u: "pedernal_app",
       e: EMPRESA,
       t: null,
       p: null,
@@ -183,7 +183,7 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
         ahora: AHORA,
       }),
     ).toEqual({
-      u: "zuluhub_app",
+      u: "pedernal_app",
       e: EMPRESA,
       t: null,
       p: PERSONA,
@@ -201,7 +201,7 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
         ahora: AHORA,
       }),
     ).toEqual({
-      u: "zuluhub_app",
+      u: "pedernal_app",
       e: EMPRESA,
       t: null,
       p: null,
@@ -245,7 +245,7 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
         ahora: AHORA,
       }),
     ).toEqual({
-      u: "zuluhub_grupo",
+      u: "pedernal_grupo",
       e: null,
       t: TENANT,
       p: PERSONA,
@@ -264,7 +264,7 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
         ahora: AHORA,
       }),
     ).toEqual({
-      u: "zuluhub_plataforma",
+      u: "pedernal_plataforma",
       e: null,
       t: null,
       p: null,
@@ -280,7 +280,7 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
         ahora: AHORA,
       }),
     ).toEqual({
-      u: "zuluhub_plataforma",
+      u: "pedernal_plataforma",
       e: null,
       t: null,
       p: null,
@@ -295,7 +295,7 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
 
   it("TRABAJOS: solo el rol, sin actor", () => {
     expect(payloadDe({ tipo: "TRABAJOS", ahora: AHORA })).toEqual({
-      u: "zuluhub_trabajos",
+      u: "pedernal_trabajos",
       e: null,
       t: null,
       p: null,
@@ -359,7 +359,7 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
       ahora: AHORA,
     });
     expect(sinUsuario).toEqual({
-      u: "zuluhub_app",
+      u: "pedernal_app",
       e: null,
       t: null,
       p: null,
@@ -382,7 +382,7 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
     expect(
       payloadDe({ tipo: "SESION", usuarioAuth: usuarioAuthId(USUARIO), ahora: AHORA }),
     ).toEqual({
-      u: "zuluhub_app",
+      u: "pedernal_app",
       e: null,
       t: null,
       p: null,
@@ -470,12 +470,12 @@ describe("firmarContexto: qué campos lleva cada puerta", () => {
   });
 
   it("el rol de base de cada puerta", () => {
-    expect(rolDeContexto("OPERATIVO")).toBe("zuluhub_app");
-    expect(rolDeContexto("INVITACION")).toBe("zuluhub_app");
-    expect(rolDeContexto("SESION")).toBe("zuluhub_app");
-    expect(rolDeContexto("GRUPO")).toBe("zuluhub_grupo");
-    expect(rolDeContexto("TRABAJOS")).toBe("zuluhub_trabajos");
-    expect(rolDeContexto("PLATAFORMA")).toBe("zuluhub_plataforma");
+    expect(rolDeContexto("OPERATIVO")).toBe("pedernal_app");
+    expect(rolDeContexto("INVITACION")).toBe("pedernal_app");
+    expect(rolDeContexto("SESION")).toBe("pedernal_app");
+    expect(rolDeContexto("GRUPO")).toBe("pedernal_grupo");
+    expect(rolDeContexto("TRABAJOS")).toBe("pedernal_trabajos");
+    expect(rolDeContexto("PLATAFORMA")).toBe("pedernal_plataforma");
   });
 });
 
@@ -507,8 +507,8 @@ describe("leerClaveDeContexto", () => {
     expect(leerClaveDeContexto(`32767:${HEX_64}\n`).kid).toBe(32767);
   });
 
-  it("el nombre de la variable es ZULUHUB_CLAVE_CONTEXTO", () => {
-    expect(ZULUHUB_CLAVE_CONTEXTO).toBe("ZULUHUB_CLAVE_CONTEXTO");
+  it("el nombre de la variable es PEDERNAL_CLAVE_CONTEXTO", () => {
+    expect(PEDERNAL_CLAVE_CONTEXTO).toBe("PEDERNAL_CLAVE_CONTEXTO");
   });
 
   // Valores inválidos con un "secreto" reconocible: el mensaje de error jamás debe contenerlo.
@@ -540,7 +540,7 @@ describe("leerClaveDeContexto", () => {
     }
     expect(error).toBeInstanceOf(ErrorDeConfiguracion);
     const mensaje = (error as Error).message;
-    expect(mensaje).toContain(ZULUHUB_CLAVE_CONTEXTO);
+    expect(mensaje).toContain(PEDERNAL_CLAVE_CONTEXTO);
     expect(mensaje).not.toContain(MARCA);
     if (valor !== undefined && valor.trim() !== "") expect(mensaje).not.toContain(valor.trim());
   });

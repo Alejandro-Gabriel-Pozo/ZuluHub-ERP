@@ -14,7 +14,7 @@ const CODIGOS = ["abcde-12345", "FGHIJ-67890", "kLmNo-pQrSt"];
 describe("huellaDeCodigoDeRecuperacion", () => {
   it("es h1: y el HMAC-SHA256 hexadecimal (con el secreto como clave) del código con su separador de dominio", () => {
     const esperado = createHmac("sha256", Buffer.from(SECRETO, "utf8"))
-      .update("zuluhub/codigo-de-recuperacion/v1:abcde-12345", "utf8")
+      .update("pedernal/codigo-de-recuperacion/v1:abcde-12345", "utf8")
       .digest("hex");
     expect(huellaDeCodigoDeRecuperacion(SECRETO, "abcde-12345")).toBe(`h1:${esperado}`);
   });

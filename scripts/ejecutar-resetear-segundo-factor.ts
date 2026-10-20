@@ -5,7 +5,7 @@ import { prepararScriptDelDueno, type EntradaDeScriptDelDueno } from "./entrada-
  * Lo que hace `scripts/resetear-segundo-factor.ts`, separado de su arranque para poder probarlo y capturar lo que
  * escribe. Para un administrador que perdió su dispositivo (h5-p8 §2.4): borra su segundo factor (TOTP y códigos de
  * recuperación), limpia sus intentos fallidos y cierra TODAS sus sesiones, en una sola operación y con la cadena DIRECTA
- * del dueño (`ZULUHUB_DB_MIGRACIONES`). El siguiente ingreso vuelve a enrolar, dentro de los 10 minutos de la sesión.
+ * del dueño (`PEDERNAL_DB_MIGRACIONES`). El siguiente ingreso vuelve a enrolar, dentro de los 10 minutos de la sesión.
  * Idempotente y auditado, sin el email.
  *
  * Uso: `npm run plataforma:resetear-segundo-factor -- <email>`. Detalle de lo que imprime y los códigos de salida:

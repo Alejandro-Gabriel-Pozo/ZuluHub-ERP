@@ -9,7 +9,7 @@ import { referenciaDeError, type ReferenciaDeError } from "../dominio/referencia
  * Registro de la referencia de error con reintento ante una colisión (soporte, paso 1, H5 §B.5.9).
  *
  * DECISIÓN (la que dejaba abierta la especificación para P4/P5): la referencia sigue siendo
- * `ZH-XXXX-XXXX` (32 bits, fácil de dictar por teléfono) y lo que garantiza que no haya dos iguales es
+ * `PD-XXXX-XXXX` (32 bits, fácil de dictar por teléfono) y lo que garantiza que no haya dos iguales es
  * una restricción de UNICIDAD en la base con REINTENTO acá, no alargar el código. Alargarlo a 64 bits
  * reduciría la chance de colisión pero no la eliminaría, y haría el código más difícil de dictar; la
  * unicidad la elimina. Con unas decenas de miles de rechazos una colisión deja de ser rara (cumpleaños

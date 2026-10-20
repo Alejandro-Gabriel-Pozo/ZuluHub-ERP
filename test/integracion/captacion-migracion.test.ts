@@ -91,7 +91,7 @@ async function sembrarDatosPrevios(c: pg.Client): Promise<void> {
     "insert into trabajo (tipo, clave_idempotencia) values ('mantenimiento', 'sin-empresa')",
   );
   await c.query(
-    "insert into referencia_de_error (referencia, accion, motivo) values ('ZH-AAAA-0001', 'a.b', 'X')",
+    "insert into referencia_de_error (referencia, accion, motivo) values ('PD-AAAA-0001', 'a.b', 'X')",
   );
 }
 
@@ -167,7 +167,7 @@ describe.skipIf(base === null)(
         // Todo lo nuevo es de captación (tablas, funciones, políticas, disparadores, privilegios), o una de esas
         // líneas modificadas por una concesión.
         const esDeCaptacion = (linea: string) =>
-          /solicitud|limite_|captacion|atribucion_valida|datos_de_auditoria|zuluhub_captacion|app_captacion/.test(
+          /solicitud|limite_|captacion|atribucion_valida|datos_de_auditoria|pedernal_captacion|app_captacion/.test(
             linea,
           ) || esConcesionNueva(linea);
         for (const [categoria, lineas] of Object.entries(nuevas)) {
@@ -276,14 +276,14 @@ describe.skipIf(base === null)(
     // ===========================================================================================================
     // El bloque que crea y endurece el rol de la landing
     // ===========================================================================================================
-    describe("el bloque del rol zuluhub_captacion", () => {
+    describe("el bloque del rol pedernal_captacion", () => {
       const bloque = async () => {
         const sql = await readFile(
           join(CARPETA_DE_MIGRACIONES, await archivoDeCaptacion()),
           "utf8",
         );
         const bloques = sql.match(/^DO \$\$[\s\S]*?^\$\$;/gm) ?? [];
-        return bloques.find((x) => x.includes("zuluhub_captacion")) ?? "";
+        return bloques.find((x) => x.includes("pedernal_captacion")) ?? "";
       };
       /** Todo lo que haga `trabajo` se deshace: los roles son del clúster y las demás pruebas los usan. */
       const deshacible = async (trabajo: (c: pg.Client) => Promise<void>): Promise<void> => {
@@ -312,27 +312,27 @@ describe.skipIf(base === null)(
       it("falla con un mensaje claro si el rol es miembro de otro rol", async () => {
         const sql = await bloque();
         await deshacible(async (c) => {
-          await c.query("grant pg_monitor to zuluhub_captacion");
-          await expect(c.query(sql)).rejects.toThrow(/zuluhub_captacion es miembro de pg_monitor/);
+          await c.query("grant pg_monitor to pedernal_captacion");
+          await expect(c.query(sql)).rejects.toThrow(/pedernal_captacion es miembro de pg_monitor/);
         });
       });
 
       it("repone los atributos peligrosos y los topes de tiempo si alguien los cambió, y le quita los objetos temporales", async () => {
         const sql = await bloque();
         await deshacible(async (c) => {
-          await c.query("alter role zuluhub_captacion createdb inherit");
-          await c.query("alter role zuluhub_captacion reset statement_timeout");
-          await c.query("alter role zuluhub_captacion reset lock_timeout");
+          await c.query("alter role pedernal_captacion createdb inherit");
+          await c.query("alter role pedernal_captacion reset statement_timeout");
+          await c.query("alter role pedernal_captacion reset lock_timeout");
           const { rows: bd } = await c.query<{ d: string }>("select current_database() as d");
-          await c.query(`grant temporary on database ${bd[0]?.d as string} to zuluhub_captacion`);
+          await c.query(`grant temporary on database ${bd[0]?.d as string} to pedernal_captacion`);
           await c.query(sql);
           const { rows } = await c.query<{ rolcreatedb: boolean; rolinherit: boolean }>(
-            "select rolcreatedb, rolinherit from pg_roles where rolname = 'zuluhub_captacion'",
+            "select rolcreatedb, rolinherit from pg_roles where rolname = 'pedernal_captacion'",
           );
           expect(rows).toEqual([{ rolcreatedb: false, rolinherit: false }]);
           const { rows: topes } = await c.query<{ setconfig: string[] }>(
             `select s.setconfig from pg_db_role_setting s join pg_roles r on r.oid = s.setrole
-           where s.setdatabase = 0 and r.rolname = 'zuluhub_captacion'`,
+           where s.setdatabase = 0 and r.rolname = 'pedernal_captacion'`,
           );
           expect([...(topes[0]?.setconfig ?? [])].sort()).toEqual([
             "idle_in_transaction_session_timeout=60s",
@@ -340,7 +340,7 @@ describe.skipIf(base === null)(
             "statement_timeout=30s",
           ]);
           const { rows: temp } = await c.query<{ t: boolean }>(
-            "select has_database_privilege('zuluhub_captacion', current_database(), 'TEMP') as t",
+            "select has_database_privilege('pedernal_captacion', current_database(), 'TEMP') as t",
           );
           expect(temp).toEqual([{ t: false }]);
         });
@@ -420,14 +420,14 @@ describe.skipIf(base === null)(
         for (const concesion of concesiones) {
           expect(concesion, concesion).not.toMatch(/\b(TRUNCATE|REFERENCES|TRIGGER|ALL)\b/i);
           if (/\bDELETE\b/i.test(concesion)) {
-            expect(concesion).toMatch(/limite_de_captacion\s+TO\s+zuluhub_captacion;$/);
+            expect(concesion).toMatch(/limite_de_captacion\s+TO\s+pedernal_captacion;$/);
           }
           if (/\bEXECUTE\b/i.test(concesion)) {
-            expect(concesion).toMatch(/TO\s+zuluhub_captacion(,\s*zuluhub_plataforma)?;$/);
+            expect(concesion).toMatch(/TO\s+pedernal_captacion(,\s*pedernal_plataforma)?;$/);
           }
           // nunca a PUBLIC ni a los demás roles de la aplicación
           expect(concesion).not.toMatch(
-            /\bTO\s+(PUBLIC|zuluhub_(app|grupo|trabajos|autenticacion|publico))\b/i,
+            /\bTO\s+(PUBLIC|pedernal_(app|grupo|trabajos|autenticacion|publico))\b/i,
           );
         }
         // el DELETE existe, una vez
@@ -437,9 +437,9 @@ describe.skipIf(base === null)(
       it("las políticas restrictivas son solo de la plataforma, y no hay ninguna `FOR ALL`", async () => {
         const { codigo } = await leer();
         for (const restrictiva of codigo.match(/AS\s+RESTRICTIVE[^;]*;/gi) ?? []) {
-          expect(restrictiva).toMatch(/TO\s+zuluhub_plataforma\b/);
+          expect(restrictiva).toMatch(/TO\s+pedernal_plataforma\b/);
           expect(restrictiva).not.toMatch(
-            /zuluhub_(app|grupo|trabajos|autenticacion|publico|captacion)/,
+            /pedernal_(app|grupo|trabajos|autenticacion|publico|captacion)/,
           );
         }
         expect(codigo).not.toMatch(/CREATE\s+POLICY[^;]*\bFOR\s+ALL\b/i);
@@ -454,7 +454,7 @@ describe.skipIf(base === null)(
         const sql = await readFile(await archivoDeReversionDeCaptacion(), "utf8");
         await c.query("begin");
         try {
-          if (confirmar) await c.query("set local zuluhub.confirmar_reversion = 'SI'");
+          if (confirmar) await c.query("set local pedernal.confirmar_reversion = 'SI'");
           await c.query(sql);
           await c.query("commit");
         } catch (error) {
@@ -520,7 +520,7 @@ describe.skipIf(base === null)(
             [JSON.stringify({ solicitudId: s.id }), `solicitud:${s.id}:verificacion:1`],
           );
           await expect(revertir(previa.cliente, false)).rejects.toThrow(
-            /zuluhub\.confirmar_reversion/,
+            /pedernal\.confirmar_reversion/,
           );
           // el rechazo no deshizo ni tocó nada (la reversión es una sola transacción)
           expect(
@@ -557,7 +557,7 @@ describe.skipIf(base === null)(
             "insert into limite_de_captacion (clave, ventana, ventana_inicio, cuenta) values ('global:solicitudes', 'HORA', now(), 1)",
           );
           await expect(revertir(previa.cliente, false)).rejects.toThrow(
-            /zuluhub\.confirmar_reversion/,
+            /pedernal\.confirmar_reversion/,
           );
           await revertir(previa.cliente, true);
         });
@@ -577,7 +577,7 @@ describe.skipIf(base === null)(
         });
       });
 
-      it("no borra el rol zuluhub_captacion (es del clúster): lo deja sin acceso al esquema ni a nada", async () => {
+      it("no borra el rol pedernal_captacion (es del clúster): lo deja sin acceso al esquema ni a nada", async () => {
         await conPrevias(async (previa, conCaptacion) => {
           await aplicarMigraciones(previa.aparte.base.dueno, conCaptacion);
           await revertir(previa.cliente, false);
@@ -586,16 +586,16 @@ describe.skipIf(base === null)(
             explicito: boolean;
             columnas: number;
           }>(
-            `select exists (select 1 from pg_roles where rolname = 'zuluhub_captacion') as existe,
+            `select exists (select 1 from pg_roles where rolname = 'pedernal_captacion') as existe,
                   exists (select 1 from pg_namespace n, aclexplode(n.nspacl) a
                             join pg_roles r on r.oid = a.grantee
-                           where n.nspname = 'public' and r.rolname = 'zuluhub_captacion') as explicito,
+                           where n.nspname = 'public' and r.rolname = 'pedernal_captacion') as explicito,
                   (select count(*)::int from information_schema.column_privileges
-                    where grantee = 'zuluhub_captacion' and table_schema = 'public') as columnas`,
+                    where grantee = 'pedernal_captacion' and table_schema = 'public') as columnas`,
           );
           expect(rows).toEqual([{ existe: true, explicito: false, columnas: 0 }]);
           const { rows: funciones } = await previa.cliente.query<{ puede: boolean }>(
-            `select has_function_privilege('zuluhub_captacion', 'public.contexto_firmado()'::regprocedure, 'EXECUTE')
+            `select has_function_privilege('pedernal_captacion', 'public.contexto_firmado()'::regprocedure, 'EXECUTE')
                   as puede`,
           );
           expect(funciones).toEqual([{ puede: false }]);

@@ -22,8 +22,8 @@ import { crearBaseAparte } from "./entorno";
 
 /**
  * Dos audiencias SEPARADAS contra la MISMA base (h5-p8 §4): una sesión de la web de empresa no abre la consola ni al
- * revés. Se separan por tres capas independientes, y cada una se prueba sola: el nombre de la cookie (`zh_emp` /
- * `zh_plat`), el secreto con que se firma (una cookie firmada por una audiencia no es válida en la otra) y el host al
+ * revés. Se separan por tres capas independientes, y cada una se prueba sola: el nombre de la cookie (`pd_emp` /
+ * `pd_plat`), el secreto con que se firma (una cookie firmada por una audiencia no es válida en la otra) y el host al
  * que está atada la sesión (G4). Las dos instancias comparten el esquema `autenticacion`, el usuario y la cuenta de
  * Google: lo único que las separa es esto.
  */
@@ -32,8 +32,8 @@ const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 120_000, hookTimeout: 120_000 });
 
 type Alta = Readonly<{ qrSvg: string; secreto: string; codigosDeRecuperacion: string[] }>;
-const COOKIE_EMPRESA = "__Host-zh_emp.session_token";
-const COOKIE_CONSOLA = "__Host-zh_plat.session_token";
+const COOKIE_EMPRESA = "__Host-pd_emp.session_token";
+const COOKIE_CONSOLA = "__Host-pd_plat.session_token";
 
 describe.skipIf(base === null)("dos audiencias contra la misma base: empresa y consola", () => {
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
@@ -138,7 +138,7 @@ describe.skipIf(base === null)("dos audiencias contra la misma base: empresa y c
     const { enLaWeb } = await conDosSesiones();
     const valor = valorDe(enLaWeb, HOST_DE_LA_WEB, COOKIE_EMPRESA);
     expect(valor).not.toBe("");
-    // 1. Tal cual: la consola no mira `zh_emp`.
+    // 1. Tal cual: la consola no mira `pd_emp`.
     expect(
       await consola.autenticacion.sesionDe(conCookie(COOKIE_EMPRESA, valor), HOST_DE_LA_CONSOLA),
     ).toBeNull();

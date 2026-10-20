@@ -24,7 +24,7 @@ import {
   type NivelesDeControlDb,
 } from "../adaptadores/postgres/niveles-de-control";
 import {
-  ZULUHUB_CLAVE_CONTEXTO,
+  PEDERNAL_CLAVE_CONTEXTO,
   leerClaveDeContexto,
 } from "../adaptadores/postgres/contexto-firmado";
 import { crearConfiguracionPublicaDeHost } from "../adaptadores/postgres/configuracion-publica-de-marca";
@@ -40,7 +40,7 @@ import {
   type TransaccionesDePostgres,
 } from "../adaptadores/postgres/transacciones";
 import {
-  ZULUHUB_SECRETO_INVITACIONES,
+  PEDERNAL_SECRETO_INVITACIONES,
   crearTokensHmac,
   leerSecretoDeInvitaciones,
 } from "../adaptadores/tokens/tokens-hmac";
@@ -100,7 +100,7 @@ import { perezoso } from "./perezoso";
 
 /**
  * Lo que recibe el trabajo de una transacción de la puerta de la aplicación (operación, invitación
- * y sesión, rol `zuluhub_app`): todos los repositorios y puertos que piden los casos de uso y las
+ * y sesión, rol `pedernal_app`): todos los repositorios y puertos que piden los casos de uso y las
  * consultas de empresas e identidad. Cada caso de uso declara solo lo que usa (su `Tx` angosta), y este
  * tipo los contiene a todos.
  *
@@ -129,27 +129,27 @@ export type TxDeApp = Readonly<{
 }>;
 
 export type Conexiones = Readonly<{
-  /** Puertas `OPERATIVO`, `INVITACION` y `SESION` (`ZULUHUB_DB_APP`). */
+  /** Puertas `OPERATIVO`, `INVITACION` y `SESION` (`PEDERNAL_DB_APP`). */
   transaccionesDeApp: () => TransaccionesDePostgres<TxDeApp>;
-  /** Puerta `TRABAJOS` (`ZULUHUB_DB_TRABAJOS`): solo la cola. */
+  /** Puerta `TRABAJOS` (`PEDERNAL_DB_TRABAJOS`): solo la cola. */
   transaccionesDeTrabajos: () => TransaccionesDePostgres<TxDeCola>;
-  /** Puerta pública (`ZULUHUB_DB_PUBLICO`, rol `zuluhub_publico`): solo lectura, sin sesión ni contexto. */
+  /** Puerta pública (`PEDERNAL_DB_PUBLICO`, rol `pedernal_publico`): solo lectura, sin sesión ni contexto. */
   transaccionesPublicas: () => TransaccionesPublicasDePostgres<TxPublica>;
   /** Resolución de un host a su dueño y su marca, sobre la puerta pública. */
   resolucionDeHost: () => ResolucionDeHost;
   /** Cómo se pinta la marca de un host (nombre, tema y host canónico), sobre la misma puerta pública. */
   configuracionPublicaDeHost: () => ConfiguracionPublicaDeHost;
-  /** Ingreso con Google y sesión por host (Better Auth, rol `zuluhub_autenticacion`): `ZULUHUB_DB_AUTENTICACION`, el secreto de la app y el cliente de Google. */
+  /** Ingreso con Google y sesión por host (Better Auth, rol `pedernal_autenticacion`): `PEDERNAL_DB_AUTENTICACION`, el secreto de la app y el cliente de Google. */
   autenticacion: () => Autenticacion;
-  /** Barrido de sesiones y verificaciones vencidas (lo llama el cron de trabajos): solo `ZULUHUB_DB_AUTENTICACION`. */
+  /** Barrido de sesiones y verificaciones vencidas (lo llama el cron de trabajos): solo `PEDERNAL_DB_AUTENTICACION`. */
   barridoDeAutenticacion: () => BarridoDeAutenticacion;
-  /** Revocar las sesiones de un usuario (el trabajo `revocar_sesiones`): solo `ZULUHUB_DB_AUTENTICACION`. */
+  /** Revocar las sesiones de un usuario (el trabajo `revocar_sesiones`): solo `PEDERNAL_DB_AUTENTICACION`. */
   revocacionDeSesiones: () => RevocacionDeSesiones;
   tokens: () => Tokens;
   /** Origen y marca del mail (el respaldo hasta que exista M7) y la clave del proveedor. */
   configuracionDeCorreo: () => ConfiguracionDeCorreo;
   correo: () => Correo;
-  /** `SELECT 1` y la última migración aplicada, con el rol de la aplicación (`ZULUHUB_DB_APP`), sin contexto firmado (W6). */
+  /** `SELECT 1` y la última migración aplicada, con el rol de la aplicación (`PEDERNAL_DB_APP`), sin contexto firmado (W6). */
   lecturasDeSistema: () => LecturasDeSistema;
   /** El valor de `CRON_SECRET` (W6): lanza `ErrorDeEntorno` si falta o es demasiado corto. */
   secretoDeCron: () => string;
@@ -183,14 +183,14 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
   );
   const transaccionesPublicas = armarPieza("transacciones-publicas", (valores) =>
     crearTransaccionesPublicas<TxPublica>({
-      url: valores.ZULUHUB_DB_PUBLICO,
+      url: valores.PEDERNAL_DB_PUBLICO,
       armar: (db) => ({ marcas: crearLecturaPublicaDeMarcas(db.withTables<PublicoDb>()) }),
     }),
   );
 
   const conexionDeAutenticacion = armarPieza("conexion-de-autenticacion", (valores) =>
     crearConexionDeAutenticacion({
-      url: valores.ZULUHUB_DB_AUTENTICACION,
+      url: valores.PEDERNAL_DB_AUTENTICACION,
       alCortarseUnaConexionOciosa: (error) =>
         registrarDeIngreso(`conexión ociosa de autenticación cortada: ${error.message}`),
     }),
@@ -199,8 +199,8 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
   return {
     transaccionesDeApp: armarPieza("transacciones-app", (valores) =>
       crearTransacciones<TxDeApp>({
-        urls: { OPERATIVO: valores.ZULUHUB_DB_APP },
-        clave: leerClaveDeContexto(valores[ZULUHUB_CLAVE_CONTEXTO]),
+        urls: { OPERATIVO: valores.PEDERNAL_DB_APP },
+        clave: leerClaveDeContexto(valores[PEDERNAL_CLAVE_CONTEXTO]),
         armar: (db) => ({
           tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
           empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
@@ -220,8 +220,8 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
     ),
     transaccionesDeTrabajos: armarPieza("transacciones-trabajos", (valores) =>
       crearTransacciones<TxDeCola>({
-        urls: { TRABAJOS: valores.ZULUHUB_DB_TRABAJOS },
-        clave: leerClaveDeContexto(valores[ZULUHUB_CLAVE_CONTEXTO]),
+        urls: { TRABAJOS: valores.PEDERNAL_DB_TRABAJOS },
+        clave: leerClaveDeContexto(valores[PEDERNAL_CLAVE_CONTEXTO]),
         armar: (db) => ({ cola: crearColaDePostgres(db.withTables<ColaDb>()) }),
       }),
     ),
@@ -233,7 +233,7 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
     autenticacion: armarPieza("autenticacion", (valores) =>
       crearAutenticacionDeBetterAuth({
         db: conexionDeAutenticacion().db,
-        secreto: leerSecretoDeAutenticacion(valores.ZULUHUB_AUTH_SECRETO_EMPRESA),
+        secreto: leerSecretoDeAutenticacion(valores.PEDERNAL_AUTH_SECRETO_EMPRESA),
         google: leerClienteDeGoogle(valores.GOOGLE_CLIENT_ID, valores.GOOGLE_CLIENT_SECRET),
         registrar: registrarDeIngreso,
       }),
@@ -241,13 +241,13 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
     barridoDeAutenticacion: () => conexionDeAutenticacion().barrido,
     revocacionDeSesiones: () => conexionDeAutenticacion().revocacion,
     tokens: armarPieza("tokens", (valores) =>
-      crearTokensHmac(leerSecretoDeInvitaciones(valores[ZULUHUB_SECRETO_INVITACIONES])),
+      crearTokensHmac(leerSecretoDeInvitaciones(valores[PEDERNAL_SECRETO_INVITACIONES])),
     ),
     configuracionDeCorreo,
     correo: perezoso(() => crearCorreoResend({ configuracion: configuracionDeCorreo() })),
     lecturasDeSistema: armarPieza("esquema", (valores) =>
       crearLecturasDeSistema({
-        url: valores.ZULUHUB_DB_APP,
+        url: valores.PEDERNAL_DB_APP,
         alCortarseUnaConexionOciosa: (error) =>
           registrar(`conexión ociosa de la aplicación cortada: ${error.message}`),
       }),

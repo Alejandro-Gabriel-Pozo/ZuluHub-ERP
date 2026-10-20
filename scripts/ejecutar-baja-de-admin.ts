@@ -4,7 +4,7 @@ import { prepararScriptDelDueno, type EntradaDeScriptDelDueno } from "./entrada-
 /**
  * Lo que hace `scripts/baja-de-admin.ts`, separado de su arranque para poder probarlo y capturar lo que escribe. Da de
  * baja a un administrador de plataforma (`activo = false`) y cierra TODAS sus sesiones en la misma operación (h5-p8 §2.5),
- * con la cadena DIRECTA del dueño de la base (`ZULUHUB_DB_MIGRACIONES`). Es idempotente y deja la constancia en la
+ * con la cadena DIRECTA del dueño de la base (`PEDERNAL_DB_MIGRACIONES`). Es idempotente y deja la constancia en la
  * auditoría de plataforma, sin el email.
  *
  * Uso: `npm run plataforma:baja-admin -- <email>`. Detalle de lo que imprime y los códigos de salida:

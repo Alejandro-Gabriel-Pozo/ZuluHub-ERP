@@ -14,16 +14,16 @@ export type Intento =
   | { ok: false; codigo: string; restriccion: string | undefined; mensaje: string };
 
 const URL_POR_ROL = {
-  zuluhub_app: "app",
-  zuluhub_grupo: "grupo",
-  zuluhub_trabajos: "trabajos",
-  zuluhub_plataforma: "plataforma",
+  pedernal_app: "app",
+  pedernal_grupo: "grupo",
+  pedernal_trabajos: "trabajos",
+  pedernal_plataforma: "plataforma",
   /** Sin contexto de negocio: el rol de la librería de autenticación; se abre con `contexto: null`. */
-  zuluhub_autenticacion: "autenticacion",
+  pedernal_autenticacion: "autenticacion",
   /** Sin contexto: el rol público (0007) no tiene sesión ni empresa; se abre con `contexto: null`. */
-  zuluhub_publico: "publico",
+  pedernal_publico: "publico",
   /** La landing: su contexto lleva el claim `c` (ver `captacion-apoyo.ts`); se abre con `abrirConToken`. */
-  zuluhub_captacion: "captacion",
+  pedernal_captacion: "captacion",
 } as const;
 
 export class SesionDePrueba {

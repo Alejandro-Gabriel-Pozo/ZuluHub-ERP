@@ -31,7 +31,7 @@ export const URL_BASE_DEL_QR = "https://www.afip.gob.ar/fe/qr/";
 /** Versión del JSON del QR. */
 const VERSION_DEL_QR = 1;
 
-/** `tipoCodAut`: «E» es CAE (el único que ZuluHub pide; «A» sería CAEA). */
+/** `tipoCodAut`: «E» es CAE (el único que Pedernal pide; «A» sería CAEA). */
 const TIPO_DE_CODIGO_DE_AUTORIZACION = "E";
 
 /** El CAE tiene 14 dígitos (campo `codAut` de la especificación del QR). */

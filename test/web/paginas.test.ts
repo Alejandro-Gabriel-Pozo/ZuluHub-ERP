@@ -39,7 +39,7 @@ const NONCE = "bm9uY2UtZGUtcHJ1ZWJhLTE2Ynl0ZXM=";
 const NONCE_VALIDO = /^[A-Za-z0-9+/]{22,}={0,2}$/;
 
 const comoPedido = (host: string, extra: Record<string, string> = {}): void => {
-  pedidoActual.encabezados = new Headers({ host, "x-zh-nonce": NONCE, ...extra });
+  pedidoActual.encabezados = new Headers({ host, "x-pd-nonce": NONCE, ...extra });
 };
 
 function esNoEncontrada(error: unknown): boolean {
@@ -126,7 +126,7 @@ describe("landing", () => {
 
   it("sin nonce (o con uno raro) no se pinta ningún style, pero la página sigue", async () => {
     for (const nonce of ["", "a;b", "x"]) {
-      comoPedido(HOST_LANDING_A, { "x-zh-nonce": nonce });
+      comoPedido(HOST_LANDING_A, { "x-pd-nonce": nonce });
       const texto = (await landing()) as string;
       expect(texto).not.toContain("<style");
       expect(texto).toContain(MARCA_A.publica.nombre);
@@ -184,7 +184,7 @@ describe("cada página vuelve a resolver el host (no confía en el proxy)", () =
     ["landing", HOST_CARTA_A],
     ["landing", "otro.ejemplo.com"],
     ["landing", "viejo.hoteldellago.test"],
-    ["landing", "zuluhub-erp.vercel.app"],
+    ["landing", "pedernal-erp.vercel.app"],
     ["landing", ""],
   ])(
     "la %s pedida con el host %j es la neutra, aunque el proxy la hubiera dejado pasar",
@@ -271,7 +271,7 @@ describe("servidor/pedido", () => {
     const { nonceDelPedido } = await import("../../apps/web/servidor/pedido");
     comoPedido(HOST_APP_A);
     expect(await nonceDelPedido()).toBe(NONCE);
-    comoPedido(HOST_APP_A, { "x-zh-nonce": "no es un nonce;" });
+    comoPedido(HOST_APP_A, { "x-pd-nonce": "no es un nonce;" });
     expect(await nonceDelPedido()).toBeNull();
     pedidoActual.encabezados = new Headers({ host: HOST_APP_A });
     expect(await nonceDelPedido()).toBeNull();

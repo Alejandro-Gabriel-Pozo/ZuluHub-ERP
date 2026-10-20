@@ -12,7 +12,7 @@
 -- (que evade RLS, o el conteo de abajo no vería nada):
 --
 --     BEGIN;
---     SET LOCAL zuluhub.confirmar_reversion = 'SI';   -- solo si hay solicitudes o contadores
+--     SET LOCAL pedernal.confirmar_reversion = 'SI';   -- solo si hay solicitudes o contadores
 --     \i migraciones/reversiones/0008_revertir_captacion.sql
 --     COMMIT;
 --
@@ -23,9 +23,9 @@
 --
 -- NO borra lo que la auditoría y la cola ya registraron (son de solo inserción o no son de esta migración):
 -- las constancias `SOLICITUD_*` quedan en `auditoria_plataforma` y los trabajos `*_de_solicitud` en `trabajo`
--- (un trabajo pendiente fallará al no encontrar su solicitud). NO borra el rol `zuluhub_captacion`: los roles
+-- (un trabajo pendiente fallará al no encontrar su solicitud). NO borra el rol `pedernal_captacion`: los roles
 -- son del clúster y otras bases pueden usarlo. Le quita todo acceso a esta base; si hace falta eliminarlo, se
--- hace a mano cuando ninguna otra base lo use (`DROP OWNED BY zuluhub_captacion; DROP ROLE zuluhub_captacion;`).
+-- hace a mano cuando ninguna otra base lo use (`DROP OWNED BY pedernal_captacion; DROP ROLE pedernal_captacion;`).
 
 DO $$
 DECLARE
@@ -41,8 +41,8 @@ BEGIN
   SELECT (SELECT count(*) FROM public.solicitud_de_alta)
        + (SELECT count(*) FROM public.limite_de_captacion)
     INTO v_datos;
-  IF v_datos > 0 AND coalesce(current_setting('zuluhub.confirmar_reversion', true), '') <> 'SI' THEN
-    RAISE EXCEPTION 'hay % filas de solicitudes o de contadores que esta reversión borraría (datos personales de interesados): avisar al dueño, tener un respaldo y repetir con SET LOCAL zuluhub.confirmar_reversion = ''SI''', v_datos
+  IF v_datos > 0 AND coalesce(current_setting('pedernal.confirmar_reversion', true), '') <> 'SI' THEN
+    RAISE EXCEPTION 'hay % filas de solicitudes o de contadores que esta reversión borraría (datos personales de interesados): avisar al dueño, tener un respaldo y repetir con SET LOCAL pedernal.confirmar_reversion = ''SI''', v_datos
       USING ERRCODE = '55000';
   END IF;
 END
@@ -56,9 +56,9 @@ DROP POLICY auditoria_plataforma_captacion ON auditoria_plataforma;
 DROP INDEX auditoria_plataforma_captacion_uk;
 
 -- Lo que 0008 le concedió a la landing sobre objetos de antes.
-REVOKE INSERT (empresa_id, tipo, datos, clave_idempotencia) ON trabajo FROM zuluhub_captacion;
-REVOKE INSERT (actor, accion, entidad, entidad_id, antes, despues) ON auditoria_plataforma FROM zuluhub_captacion;
-REVOKE EXECUTE ON FUNCTION contexto_firmado(), cuit_valido(text) FROM zuluhub_captacion;
+REVOKE INSERT (empresa_id, tipo, datos, clave_idempotencia) ON trabajo FROM pedernal_captacion;
+REVOKE INSERT (actor, accion, entidad, entidad_id, antes, despues) ON auditoria_plataforma FROM pedernal_captacion;
+REVOKE EXECUTE ON FUNCTION contexto_firmado(), cuit_valido(text) FROM pedernal_captacion;
 
 -- Las dos tablas nuevas, con sus disparadores, índices, políticas y privilegios.
 DROP TABLE limite_de_captacion;
@@ -71,7 +71,7 @@ DROP FUNCTION atribucion_valida(jsonb);
 DROP FUNCTION app_captacion();
 
 -- El rol de la landing queda sin acceso al esquema de esta base (el rol es del clúster y no se borra).
-REVOKE USAGE ON SCHEMA public FROM zuluhub_captacion;
+REVOKE USAGE ON SCHEMA public FROM pedernal_captacion;
 
 -- Sin esta fila, la migración figuraría aplicada y el ejecutor no volvería a correrla.
 DO $$

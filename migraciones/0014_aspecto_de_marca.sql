@@ -1,6 +1,6 @@
 -- 0014_aspecto_de_marca: el aspecto de una marca, además de sus cuatro colores (marcas y planes, §B.3; tramo
 -- M7a): cinco datos de LISTA CERRADA en la definición versionada de la marca (`version_de_marca.aspecto`) y
--- su lectura por la puerta pública (`zuluhub_publico`) y por la aplicación.
+-- su lectura por la puerta pública (`pedernal_publico`) y por la aplicación.
 -- EL NÚMERO 0014 ES PROVISORIO: se renumera al integrar si otra migración entra antes. El nombre
 -- `*_aspecto_de_marca.sql` y las pruebas no dependen del número.
 --
@@ -43,9 +43,9 @@ DO $$
 BEGIN
   IF to_regclass('public.version_de_marca') IS NULL
      OR to_regprocedure('public.tema_valido(jsonb)') IS NULL
-     OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'zuluhub_publico')
-     OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'zuluhub_app')
-     OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'zuluhub_plataforma') THEN
+     OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pedernal_publico')
+     OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pedernal_app')
+     OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pedernal_plataforma') THEN
     RAISE EXCEPTION '0014 requiere 0007_marcas_y_planes aplicada antes (falta la tabla version_de_marca, tema_valido o alguno de los roles)'
       USING ERRCODE = '55000';
   END IF;
@@ -77,12 +77,12 @@ $$
 $$;
 
 REVOKE ALL ON FUNCTION aspecto_valido(jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION aspecto_valido(jsonb) TO zuluhub_plataforma;
+GRANT EXECUTE ON FUNCTION aspecto_valido(jsonb) TO pedernal_plataforma;
 
 ALTER TABLE version_de_marca
   ADD COLUMN IF NOT EXISTS aspecto jsonb NOT NULL DEFAULT '{}'
   CONSTRAINT version_de_marca_aspecto_ck CHECK (aspecto_valido(aspecto));
 
 -- Lo mismo que `tema` (0007): lo leen la puerta pública y la aplicación; lo escribe solo la plataforma.
-GRANT SELECT (aspecto) ON version_de_marca TO zuluhub_publico, zuluhub_app;
-GRANT INSERT (aspecto), UPDATE (aspecto) ON version_de_marca TO zuluhub_plataforma;
+GRANT SELECT (aspecto) ON version_de_marca TO pedernal_publico, pedernal_app;
+GRANT INSERT (aspecto), UPDATE (aspecto) ON version_de_marca TO pedernal_plataforma;

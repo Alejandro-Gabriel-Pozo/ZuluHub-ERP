@@ -7,7 +7,7 @@ import { crearCorreoResend } from "./correo-resend";
 const CLAVE_DE_API = "re_clave_inventada_para_pruebas";
 const CONFIGURACION = {
   claveDeApi: CLAVE_DE_API,
-  remitente: "ZuluHub <no-responder@ejemplo.test>",
+  remitente: "Pedernal <no-responder@ejemplo.test>",
 };
 const MENSAJE: MensajeDeCorreo = {
   para: "ana@ejemplo.test",
@@ -49,10 +49,10 @@ describe("correo de Resend", () => {
       Authorization: `Bearer ${CLAVE_DE_API}`,
       "Content-Type": "application/json",
       "Idempotency-Key": "invitacion:x:envio",
-      "User-Agent": "zuluhub-erp",
+      "User-Agent": "pedernal-erp",
     });
     expect(JSON.parse(init.body as string)).toEqual({
-      from: "ZuluHub <no-responder@ejemplo.test>",
+      from: "Pedernal <no-responder@ejemplo.test>",
       to: ["ana@ejemplo.test"],
       subject: "Te invitaron",
       text: MENSAJE.texto,

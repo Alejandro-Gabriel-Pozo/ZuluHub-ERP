@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { invitacionId } from "../../primitivas/identificadores/marca";
 import { ErrorDeConfiguracion } from "../postgres/errores";
 import {
-  ZULUHUB_SECRETO_INVITACIONES,
+  PEDERNAL_SECRETO_INVITACIONES,
   crearTokensHmac,
   leerSecretoDeInvitaciones,
 } from "./tokens-hmac";
@@ -17,7 +17,7 @@ describe("leerSecretoDeInvitaciones", () => {
   const HEX_64 = "ab".repeat(32);
 
   it("el nombre de la variable de entorno es el acordado", () => {
-    expect(ZULUHUB_SECRETO_INVITACIONES).toBe("ZULUHUB_SECRETO_INVITACIONES");
+    expect(PEDERNAL_SECRETO_INVITACIONES).toBe("PEDERNAL_SECRETO_INVITACIONES");
   });
 
   it("acepta hexadecimal de 64 dígitos o más (mayúsculas y espacios en los extremos incluidos)", () => {
@@ -59,7 +59,7 @@ describe("leerSecretoDeInvitaciones", () => {
       }
       expect(mensaje).not.toBe("");
       expect(mensaje).not.toContain(valor);
-      expect(mensaje).toContain(ZULUHUB_SECRETO_INVITACIONES);
+      expect(mensaje).toContain(PEDERNAL_SECRETO_INVITACIONES);
     }
   });
 });

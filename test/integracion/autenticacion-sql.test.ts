@@ -65,12 +65,12 @@ const TABLAS_DEL_SEGUNDO_FACTOR = [
 ] as const;
 const TODAS_LAS_TABLAS = [...TABLAS_DE_AUTENTICACION, ...TABLAS_DEL_SEGUNDO_FACTOR].sort();
 const OTROS_ROLES = [
-  "zuluhub_app",
-  "zuluhub_grupo",
-  "zuluhub_trabajos",
-  "zuluhub_plataforma",
-  "zuluhub_publico",
-  "zuluhub_captacion",
+  "pedernal_app",
+  "pedernal_grupo",
+  "pedernal_trabajos",
+  "pedernal_plataforma",
+  "pedernal_publico",
+  "pedernal_captacion",
 ] as const;
 
 describe.skipIf(base === null)("autenticación: la migración 0010 contra una base real", () => {
@@ -253,7 +253,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
       const esperadas = TODAS_LAS_TABLAS.flatMap((t) =>
         POR_COMANDO.filter(([, cmd]) =>
           (COMANDOS_DE[t] ?? ["INSERT", "DELETE", "UPDATE", "SELECT"]).includes(cmd),
-        ).map(([nombre, cmd]) => `${t}:${nombre}:${cmd}:PERMISSIVE:zuluhub_autenticacion`),
+        ).map(([nombre, cmd]) => `${t}:${nombre}:${cmd}:PERMISSIVE:pedernal_autenticacion`),
       );
       expect(politicas.map((p) => p.p)).toEqual(esperadas.sort());
     });
@@ -271,10 +271,10 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
         const sinHost = await insertar(null);
         expect(sinHost.ok).toBe(false);
         if (!sinHost.ok) expect(sinHost.codigo).toBe("23502");
-        for (const mal of ["", " app.zuluhub.test", "App.ZuluHub.test", "app.zuluhub.test "]) {
+        for (const mal of ["", " app.pedernal.test", "App.Pedernal.test", "app.pedernal.test "]) {
           check(await insertar(mal), "session_host_ck");
         }
-        acepta(await insertar("app.zuluhub.test"));
+        acepta(await insertar("app.pedernal.test"));
       });
     });
 
@@ -315,7 +315,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
         );
         await dueno.query(
           `insert into autenticacion.session ("expiresAt", token, "userId", host)
-           values (now() + interval '1 hour', $1, $2, 'app.zuluhub.test')`,
+           values (now() + interval '1 hour', $1, $2, 'app.pedernal.test')`,
           [uuidAlAzar(), u.id],
         );
         await dueno.query(
@@ -336,13 +336,13 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
   describe("catálogo: privilegios", () => {
     it("el rol de la librería tiene USAGE (sin CREATE) en su esquema, SELECT/INSERT/UPDATE en sus cinco tablas y DELETE solo donde se usa (0013: no en `user` ni `account`), y NADA más", async () => {
       const esquema = await consulta<{ usage: boolean; create: boolean }>(
-        `select has_schema_privilege('zuluhub_autenticacion', 'autenticacion', 'USAGE') as usage,
-                has_schema_privilege('zuluhub_autenticacion', 'autenticacion', 'CREATE') as "create"`,
+        `select has_schema_privilege('pedernal_autenticacion', 'autenticacion', 'USAGE') as usage,
+                has_schema_privilege('pedernal_autenticacion', 'autenticacion', 'CREATE') as "create"`,
       );
       expect(esquema).toEqual([{ usage: true, create: false }]);
       const privilegios = await consulta<{ t: string; p: string }>(
         `select table_name as t, privilege_type as p from information_schema.table_privileges
-         where table_schema = 'autenticacion' and grantee = 'zuluhub_autenticacion' order by 1, 2`,
+         where table_schema = 'autenticacion' and grantee = 'pedernal_autenticacion' order by 1, 2`,
       );
       // 0013 le quitó DELETE sobre `user` y `account` (no hay camino que borre un usuario o una cuenta).
       const CON_DELETE = ["rateLimit", "session", "verification"];
@@ -367,7 +367,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
       expect(
         await consulta(
           `select 1 from information_schema.table_privileges
-           where grantee = 'zuluhub_autenticacion' and privilege_type in ('TRUNCATE', 'REFERENCES', 'TRIGGER')`,
+           where grantee = 'pedernal_autenticacion' and privilege_type in ('TRUNCATE', 'REFERENCES', 'TRIGGER')`,
         ),
       ).toEqual([]);
     });
@@ -483,12 +483,12 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
         expect(f.config, f.nombre).toContain("search_path=pg_catalog, public, pg_temp");
       }
       for (const funcion of ["app_usuario_auth()", "app_persona_de_sesion()"]) {
-        for (const rol of [...OTROS_ROLES, "zuluhub_autenticacion"]) {
+        for (const rol of [...OTROS_ROLES, "pedernal_autenticacion"]) {
           const { rows } = await dueno.query<{ puede: boolean }>(
             `select has_function_privilege($1, $2::regprocedure, 'EXECUTE') as puede`,
             [rol, `public.${funcion}`],
           );
-          expect(rows[0]?.puede, `${rol} ejecuta ${funcion}`).toBe(rol === "zuluhub_app");
+          expect(rows[0]?.puede, `${rol} ejecuta ${funcion}`).toBe(rol === "pedernal_app");
         }
       }
     });
@@ -584,19 +584,19 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
       }>(
         `select grantee, column_name, privilege_type from information_schema.column_privileges
          where table_schema = 'public' and table_name = 'persona' and column_name = 'usuario_auth_id'
-           and grantee like 'zuluhub\\_%' escape '\\' order by 1, 3`,
+           and grantee like 'pedernal\\_%' escape '\\' order by 1, 3`,
       );
       expect(columnas).toEqual(
         [
           // SELECT por el SELECT de la tabla entera (0001, y el rol de respaldo); UPDATE solo para la aplicación (0010).
-          ...["zuluhub_app", "zuluhub_grupo", "zuluhub_plataforma", "zuluhub_respaldo"].map(
+          ...["pedernal_app", "pedernal_grupo", "pedernal_plataforma", "pedernal_respaldo"].map(
             (grantee) => ({
               grantee,
               column_name: "usuario_auth_id",
               privilege_type: "SELECT",
             }),
           ),
-          { grantee: "zuluhub_app", column_name: "usuario_auth_id", privilege_type: "UPDATE" },
+          { grantee: "pedernal_app", column_name: "usuario_auth_id", privilege_type: "UPDATE" },
         ].sort((x, y) =>
           x.grantee === y.grantee
             ? x.privilege_type.localeCompare(y.privilege_type)
@@ -740,7 +740,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
       const tablas = await consulta<{ relname: string }>(
         `select c.relname from pg_class c
          where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p')
-           and has_table_privilege('zuluhub_app', c.oid, 'SELECT') order by 1`,
+           and has_table_privilege('pedernal_app', c.oid, 'SELECT') order by 1`,
       );
       expect(tablas.length).toBeGreaterThan(20);
       const vacio = await crearUsuarioDeBase(dueno);
@@ -818,7 +818,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
       const otra = await empresaConMiembro(dueno, e.colega);
       const s = await SesionDePrueba.abrir(
         base!,
-        "zuluhub_app",
+        "pedernal_app",
         comoEmpresa(empresaId(e.a1.empresa), personaId(e.a.persona)),
       );
       try {
@@ -847,7 +847,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
       ];
       for (const [nombre, s] of firmados) {
         const token = firmarCarga(base!.clave, {
-          u: "zuluhub_app",
+          u: "pedernal_app",
           e: null,
           t: null,
           p: null,
@@ -856,7 +856,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
           a: null,
           s,
         });
-        const sesion = await SesionDePrueba.abrirConToken(base!, "zuluhub_app", token);
+        const sesion = await SesionDePrueba.abrirConToken(base!, "pedernal_app", token);
         try {
           for (const tabla of ["persona", "membresia", "empresa", "tenant"]) {
             filas(await sesion.intentar(`select 1 from ${tabla}`), 0);
@@ -884,7 +884,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
       // Con el contexto OPERATIVO no hay usuario: el claim `s` nunca se hereda de otra puerta.
       const s = await SesionDePrueba.abrir(
         base!,
-        "zuluhub_app",
+        "pedernal_app",
         comoEmpresa(empresaId(e.a1.empresa), personaId(e.a.persona)),
       );
       try {
@@ -898,7 +898,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
 
     it("un token de SESION firmado para otro rol no sirve: el de la aplicación no abre una sesión del rol de grupo", async () => {
       const token = firmarCarga(base!.clave, {
-        u: "zuluhub_app",
+        u: "pedernal_app",
         e: null,
         t: null,
         p: null,
@@ -907,7 +907,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
         a: null,
         s: e.a.usuario,
       });
-      const sesion = await SesionDePrueba.abrirConToken(base!, "zuluhub_grupo", token);
+      const sesion = await SesionDePrueba.abrirConToken(base!, "pedernal_grupo", token);
       try {
         filas(await sesion.intentar("select 1 from persona"), 0);
         filas(await sesion.intentar("select 1 from empresa"), 0);
@@ -936,7 +936,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
       const tablas = await consulta<{ relname: string }>(
         `select c.relname from pg_class c
          where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p')
-           and has_table_privilege('zuluhub_app', c.oid, 'SELECT') order by 1`,
+           and has_table_privilege('pedernal_app', c.oid, 'SELECT') order by 1`,
       );
       expect(tablas.length).toBeGreaterThan(20);
       // El círculo de políticas (membresía -> persona -> membresía) se corta porque la lectura de miembros filtra
@@ -955,7 +955,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
       ];
       for (const [nombre, contexto] of contextos) {
         for (const [plan, ajustes] of planes) {
-          const s = await SesionDePrueba.abrir(base!, "zuluhub_app", contexto);
+          const s = await SesionDePrueba.abrir(base!, "pedernal_app", contexto);
           try {
             for (const ajuste of ajustes) acepta(await s.intentar(ajuste));
             for (const { relname } of tablas) {
@@ -1070,7 +1070,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
       });
       const operativo = await SesionDePrueba.abrir(
         base!,
-        "zuluhub_app",
+        "pedernal_app",
         comoEmpresa(empresaId(p.mundo.empresa), personaId(p.invitada.id)),
       );
       try {
@@ -1080,17 +1080,17 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
       }
       // Los demás roles ni siquiera tienen el privilegio de columna.
       for (const rol of [
-        "zuluhub_grupo",
-        "zuluhub_trabajos",
-        "zuluhub_plataforma",
-        "zuluhub_autenticacion",
+        "pedernal_grupo",
+        "pedernal_trabajos",
+        "pedernal_plataforma",
+        "pedernal_autenticacion",
       ] as const) {
         const cliente = new pg.Client({
           connectionString: {
-            zuluhub_grupo: base!.grupo,
-            zuluhub_trabajos: base!.trabajos,
-            zuluhub_plataforma: base!.plataforma,
-            zuluhub_autenticacion: base!.autenticacion,
+            pedernal_grupo: base!.grupo,
+            pedernal_trabajos: base!.trabajos,
+            pedernal_plataforma: base!.plataforma,
+            pedernal_autenticacion: base!.autenticacion,
           }[rol],
         });
         await cliente.connect();

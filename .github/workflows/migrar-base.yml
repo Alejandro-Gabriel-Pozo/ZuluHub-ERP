@@ -1,10 +1,10 @@
 name: Migrar base
 
 # Migra la base de datos real (Neon) con un clic: Actions → «Migrar base» → Run workflow.
-# Solo se dispara a mano. La cadena de conexión DIRECTA vive como secreto ZULUHUB_DB_MIGRACIONES de un
+# Solo se dispara a mano. La cadena de conexión DIRECTA vive como secreto PEDERNAL_DB_MIGRACIONES de un
 # GitHub Environment (neon-preview o neon-production); nunca pasa por el chat ni por el repositorio.
 # El paso a paso para el dueño (crear los Environments, cargar el secreto, correr «ver» y «aplicar»)
-# se documenta en el repositorio de documentos (ZuluHub-docs).
+# se documenta en el repositorio de documentos (Pedernal-docs).
 
 on:
   workflow_dispatch:
@@ -109,5 +109,5 @@ jobs:
         # El secreto está solo en este paso. El script no imprime la cadena ni pedazos de ella.
         run: npm run migrar -- "--$ACCION"
         env:
-          ZULUHUB_DB_MIGRACIONES: ${{ secrets.ZULUHUB_DB_MIGRACIONES }}
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_MIGRACIONES }}
           ACCION: ${{ needs.validar.outputs.accion }}

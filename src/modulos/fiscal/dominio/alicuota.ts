@@ -1,7 +1,7 @@
 import { porcentajeDesdeTexto, type Porcentaje } from "../../../primitivas/cantidad/porcentaje";
 
 /**
- * Alícuotas de IVA que reconoce ZuluHub (sembradas desde ARCA, ADR-006). "0" es gravada al 0 %;
+ * Alícuotas de IVA que reconoce Pedernal (sembradas desde ARCA, ADR-006). "0" es gravada al 0 %;
  * "EXENTO" y "NO_GRAVADO" no llevan IVA: neto = total.
  */
 export const CODIGOS_DE_ALICUOTA = [

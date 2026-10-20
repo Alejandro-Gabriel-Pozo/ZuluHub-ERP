@@ -116,7 +116,7 @@ async function fijarEmpresa(datos: FormData): Promise<Respuesta<null>> {
 }
 
 /**
- * «Entrar a la empresa»: valida contra las empresas de la persona EN ESTA MARCA y fija `zh_empresa`.
+ * «Entrar a la empresa»: valida contra las empresas de la persona EN ESTA MARCA y fija `pd_empresa`.
  * Un `empresaId` que no es de la persona en esta marca es `SIN_PERMISO`.
  */
 export async function entrarALaEmpresa(datos: FormData): Promise<ResultadoDeAccion> {

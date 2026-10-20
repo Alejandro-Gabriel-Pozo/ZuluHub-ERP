@@ -413,7 +413,7 @@ describe.skipIf(base === null)("consultas de grupo: listarEmpresasDelGrupo", () 
           return { ok: true as const, valor: rows[0]?.actual };
         },
       );
-      expect(rol).toEqual({ ok: true, valor: "zuluhub_grupo" });
+      expect(rol).toEqual({ ok: true, valor: "pedernal_grupo" });
       // Con un contexto de la aplicación el adaptador de grupo no tiene a dónde conectarse: no cae en
       // otra puerta (R10).
       await expect(

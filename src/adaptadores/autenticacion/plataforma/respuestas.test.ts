@@ -6,7 +6,7 @@ const AHORA = new Date("2026-10-20T12:00:00.000Z");
 const MINUTO = 60_000;
 const politica = politicaDePlataforma({ reloj: () => AHORA });
 const SECRETO = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
-const DIRECCION = `otpauth://totp/ZuluHub%20Plataforma:ana%40ejemplo.test?secret=${SECRETO}&issuer=ZuluHub%20Plataforma&digits=6&period=30`;
+const DIRECCION = `otpauth://totp/Pedernal%20Plataforma:ana%40ejemplo.test?secret=${SECRETO}&issuer=Pedernal%20Plataforma&digits=6&period=30`;
 const CODIGOS = Array.from({ length: 10 }, (_, i) => `abcd${i}-EFGH${i}`);
 
 const respuesta = (cuerpo: unknown, estado = 200) =>
@@ -339,12 +339,12 @@ describe("moldearExito", () => {
       status: 200,
       headers: {
         "content-type": "application/json",
-        "set-cookie": "__Host-zh_plat.session_token=abc; Path=/; Secure; HttpOnly",
+        "set-cookie": "__Host-pd_plat.session_token=abc; Path=/; Secure; HttpOnly",
       },
     });
     const m = await moldear(RUTA.totp, r);
     expect(m?.headers.getSetCookie()).toEqual([
-      "__Host-zh_plat.session_token=abc; Path=/; Secure; HttpOnly",
+      "__Host-pd_plat.session_token=abc; Path=/; Secure; HttpOnly",
     ]);
     expect(m?.headers.has("content-length")).toBe(false);
   });

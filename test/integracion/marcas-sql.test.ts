@@ -24,12 +24,12 @@ const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 120_000 });
 
 const ROLES = [
-  "zuluhub_app",
-  "zuluhub_grupo",
-  "zuluhub_trabajos",
-  "zuluhub_plataforma",
-  "zuluhub_autenticacion",
-  "zuluhub_publico",
+  "pedernal_app",
+  "pedernal_grupo",
+  "pedernal_trabajos",
+  "pedernal_plataforma",
+  "pedernal_autenticacion",
+  "pedernal_publico",
 ] as const;
 
 const COLUMNAS: Readonly<Record<string, readonly string[]>> = {
@@ -168,14 +168,14 @@ function privilegiosEsperados(): string[] {
     "vocabulario",
   ] as const;
   // público (sin contexto): solo lo que la puerta necesita para resolver la marca
-  dar("zuluhub_publico", "SELECT", "marca", [
+  dar("pedernal_publico", "SELECT", "marca", [
     "id",
     "codigo",
     "marca_padre_id",
     "nivel",
     "es_principal",
   ]);
-  dar("zuluhub_publico", "SELECT", "dominio", [
+  dar("pedernal_publico", "SELECT", "dominio", [
     "host",
     "superficie",
     "estado",
@@ -183,12 +183,12 @@ function privilegiosEsperados(): string[] {
     "duenio_empresa_id",
     "marca_id",
   ]);
-  dar("zuluhub_publico", "SELECT", "version_de_marca", columnasPublicasDeVersionDeMarca);
+  dar("pedernal_publico", "SELECT", "version_de_marca", columnasPublicasDeVersionDeMarca);
   // app (contexto de empresa)
-  dar("zuluhub_app", "SELECT", "marca", "todas");
-  dar("zuluhub_app", "SELECT", "dominio", ["host", "superficie", "marca_id", "es_canonico"]);
-  dar("zuluhub_app", "SELECT", "version_de_marca", columnasPublicasDeVersionDeMarca);
-  dar("zuluhub_app", "SELECT", "version_de_plan", [
+  dar("pedernal_app", "SELECT", "marca", "todas");
+  dar("pedernal_app", "SELECT", "dominio", ["host", "superficie", "marca_id", "es_canonico"]);
+  dar("pedernal_app", "SELECT", "version_de_marca", columnasPublicasDeVersionDeMarca);
+  dar("pedernal_app", "SELECT", "version_de_plan", [
     "id",
     "plan_id",
     "numero",
@@ -196,7 +196,7 @@ function privilegiosEsperados(): string[] {
     "modulos",
     "perillas",
   ]);
-  dar("zuluhub_app", "SELECT", "plan_de_tenant", [
+  dar("pedernal_app", "SELECT", "plan_de_tenant", [
     "id",
     "tenant_id",
     "numero",
@@ -205,7 +205,7 @@ function privilegiosEsperados(): string[] {
     "origen",
     "creado_en",
   ]);
-  dar("zuluhub_app", "SELECT", "ajuste_de_perilla", [
+  dar("pedernal_app", "SELECT", "ajuste_de_perilla", [
     "id",
     "tenant_id",
     "empresa_id",
@@ -215,22 +215,22 @@ function privilegiosEsperados(): string[] {
     "vigente_desde",
     "creado_en",
   ]);
-  dar("zuluhub_app", "SELECT", "modulo_de_empresa", "todas");
-  dar("zuluhub_app", "SELECT", "nivel_de_control", "todas");
-  dar("zuluhub_app", "INSERT", "nivel_de_control", [
+  dar("pedernal_app", "SELECT", "modulo_de_empresa", "todas");
+  dar("pedernal_app", "SELECT", "nivel_de_control", "todas");
+  dar("pedernal_app", "INSERT", "nivel_de_control", [
     "empresa_id",
     "sucursal_id",
     "control",
     "nivel",
   ]);
-  dar("zuluhub_app", "UPDATE", "nivel_de_control", ["nivel"]);
+  dar("pedernal_app", "UPDATE", "nivel_de_control", ["nivel"]);
   // plataforma (actor firmado): lee todo menos los niveles de control; escribe lo suyo
   for (const tabla of TABLAS_NUEVAS.filter((t) => t !== "nivel_de_control")) {
-    dar("zuluhub_plataforma", "SELECT", tabla, "todas");
+    dar("pedernal_plataforma", "SELECT", tabla, "todas");
   }
-  dar("zuluhub_plataforma", "INSERT", "marca", ["codigo", "marca_padre_id"]);
-  dar("zuluhub_plataforma", "UPDATE", "marca", ["estado"]);
-  dar("zuluhub_plataforma", "INSERT", "dominio", [
+  dar("pedernal_plataforma", "INSERT", "marca", ["codigo", "marca_padre_id"]);
+  dar("pedernal_plataforma", "UPDATE", "marca", ["estado"]);
+  dar("pedernal_plataforma", "INSERT", "dominio", [
     "host",
     "superficie",
     "duenio_marca_id",
@@ -239,16 +239,16 @@ function privilegiosEsperados(): string[] {
     "es_canonico",
     "registrado_por",
   ]);
-  dar("zuluhub_plataforma", "UPDATE", "dominio", ["estado", "verificado_en", "motivo"]);
-  dar("zuluhub_plataforma", "INSERT", "plan", ["codigo"]);
-  dar("zuluhub_plataforma", "UPDATE", "plan", ["estado"]);
-  dar("zuluhub_plataforma", "INSERT", "version_de_plan", [
+  dar("pedernal_plataforma", "UPDATE", "dominio", ["estado", "verificado_en", "motivo"]);
+  dar("pedernal_plataforma", "INSERT", "plan", ["codigo"]);
+  dar("pedernal_plataforma", "UPDATE", "plan", ["estado"]);
+  dar("pedernal_plataforma", "INSERT", "version_de_plan", [
     "plan_id",
     "nombre_comercial",
     "modulos",
     "perillas",
   ]);
-  dar("zuluhub_plataforma", "UPDATE", "version_de_plan", [
+  dar("pedernal_plataforma", "UPDATE", "version_de_plan", [
     "nombre_comercial",
     "modulos",
     "perillas",
@@ -258,7 +258,7 @@ function privilegiosEsperados(): string[] {
     "publicada_en",
     "publicada_por",
   ]);
-  dar("zuluhub_plataforma", "INSERT", "version_de_marca", [
+  dar("pedernal_plataforma", "INSERT", "version_de_marca", [
     "marca_id",
     "nombre_visible",
     "tema",
@@ -267,7 +267,7 @@ function privilegiosEsperados(): string[] {
     "modulos_iniciales",
     "plan_por_defecto_id",
   ]);
-  dar("zuluhub_plataforma", "UPDATE", "version_de_marca", [
+  dar("pedernal_plataforma", "UPDATE", "version_de_marca", [
     "nombre_visible",
     "tema",
     "logo",
@@ -282,7 +282,7 @@ function privilegiosEsperados(): string[] {
     "confirmada_en",
     "confirmada_por",
   ]);
-  dar("zuluhub_plataforma", "INSERT", "plan_de_tenant", [
+  dar("pedernal_plataforma", "INSERT", "plan_de_tenant", [
     "tenant_id",
     "numero",
     "version_de_plan_id",
@@ -292,7 +292,7 @@ function privilegiosEsperados(): string[] {
     "motivo",
     "asignado_por",
   ]);
-  dar("zuluhub_plataforma", "INSERT", "ajuste_de_perilla", [
+  dar("pedernal_plataforma", "INSERT", "ajuste_de_perilla", [
     "tenant_id",
     "empresa_id",
     "perilla",
@@ -303,8 +303,8 @@ function privilegiosEsperados(): string[] {
     "motivo",
     "asignado_por",
   ]);
-  dar("zuluhub_plataforma", "INSERT", "modulo_de_empresa", ["empresa_id", "modulo"]);
-  dar("zuluhub_plataforma", "UPDATE", "modulo_de_empresa", ["activo"]);
+  dar("pedernal_plataforma", "INSERT", "modulo_de_empresa", ["empresa_id", "modulo"]);
+  dar("pedernal_plataforma", "UPDATE", "modulo_de_empresa", ["activo"]);
   return lista.sort();
 }
 
@@ -443,16 +443,16 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
       ).toEqual(
         [
           // tenant.marca_id: se lee como el resto del tenant y solo el alta de la plataforma la escribe
-          "zuluhub_app:tenant.marca_id:SELECT",
-          "zuluhub_grupo:tenant.marca_id:SELECT",
-          "zuluhub_plataforma:tenant.marca_id:SELECT",
-          "zuluhub_plataforma:tenant.marca_id:INSERT",
+          "pedernal_app:tenant.marca_id:SELECT",
+          "pedernal_grupo:tenant.marca_id:SELECT",
+          "pedernal_plataforma:tenant.marca_id:SELECT",
+          "pedernal_plataforma:tenant.marca_id:INSERT",
           // sucursal.hora_de_corte: la edita la empresa; la ve el grupo
-          "zuluhub_app:sucursal.hora_de_corte:SELECT",
-          "zuluhub_app:sucursal.hora_de_corte:UPDATE",
-          "zuluhub_grupo:sucursal.hora_de_corte:SELECT",
+          "pedernal_app:sucursal.hora_de_corte:SELECT",
+          "pedernal_app:sucursal.hora_de_corte:UPDATE",
+          "pedernal_grupo:sucursal.hora_de_corte:SELECT",
           // auditoria_acceso_grupo.resultado: el grupo la escribe y no la lee
-          "zuluhub_grupo:auditoria_acceso_grupo.resultado:INSERT",
+          "pedernal_grupo:auditoria_acceso_grupo.resultado:INSERT",
         ].sort(),
       );
     });
@@ -614,7 +614,7 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
             `select has_function_privilege($1, $2::regprocedure, 'EXECUTE') as puede`,
             [rol, `public.${firma}`],
           );
-          expect(rows[0]?.puede, `${rol} ejecuta ${firma}`).toBe(rol === "zuluhub_plataforma");
+          expect(rows[0]?.puede, `${rol} ejecuta ${firma}`).toBe(rol === "pedernal_plataforma");
         }
       }
     });
@@ -647,11 +647,11 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
   // ===========================================================================================
   // 2. El rol público
   // ===========================================================================================
-  describe("el sexto rol, zuluhub_publico", () => {
+  describe("el sexto rol, pedernal_publico", () => {
     it("sin superusuario, sin BYPASSRLS, sin pertenencias, sin LOGIN en la migración y con los topes de tiempo", async () => {
       const [rol] = await filas<Record<string, unknown>>(
         `select rolname, rolsuper, rolbypassrls, rolcreaterole, rolcreatedb, rolreplication, rolinherit
-         from pg_roles where rolname = 'zuluhub_publico'`,
+         from pg_roles where rolname = 'pedernal_publico'`,
       );
       expect(rol).toMatchObject({
         rolsuper: false,
@@ -663,12 +663,12 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
       });
       expect(
         await filas(
-          `select 1 from pg_auth_members m join pg_roles r on r.oid = m.member where r.rolname = 'zuluhub_publico'`,
+          `select 1 from pg_auth_members m join pg_roles r on r.oid = m.member where r.rolname = 'pedernal_publico'`,
         ),
       ).toEqual([]);
       const [topes] = await filas<{ setconfig: string[] }>(
         `select s.setconfig from pg_db_role_setting s join pg_roles r on r.oid = s.setrole
-         where s.setdatabase = 0 and r.rolname = 'zuluhub_publico'`,
+         where s.setdatabase = 0 and r.rolname = 'pedernal_publico'`,
       );
       expect([...(topes?.setconfig ?? [])].sort()).toEqual([
         "idle_in_transaction_session_timeout=60s",
@@ -676,7 +676,7 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
         "statement_timeout=30s",
       ]);
       const { rows: temp } = await dueno.query<{ temp: boolean }>(
-        `select has_database_privilege('zuluhub_publico', current_database(), 'TEMP') as temp`,
+        `select has_database_privilege('pedernal_publico', current_database(), 'TEMP') as temp`,
       );
       expect(temp).toEqual([{ temp: false }]);
     });
@@ -685,13 +685,13 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
       expect(
         await filas(
           `select table_name, privilege_type from information_schema.table_privileges
-           where grantee = 'zuluhub_publico' and privilege_type <> 'SELECT'`,
+           where grantee = 'pedernal_publico' and privilege_type <> 'SELECT'`,
         ),
       ).toEqual([]);
       expect(
         await filas(
           `select table_name, column_name, privilege_type from information_schema.column_privileges
-           where grantee = 'zuluhub_publico' and privilege_type not in ('SELECT')
+           where grantee = 'pedernal_publico' and privilege_type not in ('SELECT')
              and table_schema = 'public'`,
         ),
       ).toEqual([]);
@@ -699,22 +699,22 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
         `select p.oid::regprocedure::text as firma from pg_proc p
          where p.pronamespace = 'public'::regnamespace
            and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')
-           and has_function_privilege('zuluhub_publico', p.oid, 'EXECUTE')`,
+           and has_function_privilege('pedernal_publico', p.oid, 'EXECUTE')`,
       );
       // Ninguna función propia (las nuevas nacen cerradas); las que nacieron en otras migraciones tampoco.
       expect(ejecutables.map((f) => f.firma)).toEqual([]);
       const { rows: esquema } = await dueno.query<{ crear: boolean; usar: boolean }>(
-        `select has_schema_privilege('zuluhub_publico', 'public', 'CREATE') as crear,
-                has_schema_privilege('zuluhub_publico', 'public', 'USAGE') as usar`,
+        `select has_schema_privilege('pedernal_publico', 'public', 'CREATE') as crear,
+                has_schema_privilege('pedernal_publico', 'public', 'USAGE') as usar`,
       );
       expect(esquema).toEqual([{ crear: false, usar: true }]);
       const { rows: bd } = await dueno.query<{ crear: boolean }>(
-        `select has_database_privilege('zuluhub_publico', current_database(), 'CREATE') as crear`,
+        `select has_database_privilege('pedernal_publico', current_database(), 'CREATE') as crear`,
       );
       expect(bd).toEqual([{ crear: false }]);
       expect(
         await filas(
-          `select 1 from pg_class c join pg_roles r on r.oid = c.relowner where r.rolname = 'zuluhub_publico'`,
+          `select 1 from pg_class c join pg_roles r on r.oid = c.relowner where r.rolname = 'pedernal_publico'`,
         ),
       ).toEqual([]);
     });
@@ -722,7 +722,7 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
     it("lee exactamente las columnas públicas de tres tablas y de la vista de resolución, y ninguna tiene nombre de secreto (NOMBRE_DE_SECRETO)", async () => {
       const columnas = await filas<{ table_name: string; column_name: string }>(
         `select table_name, column_name from information_schema.column_privileges
-         where grantee = 'zuluhub_publico' and privilege_type = 'SELECT' and table_schema = 'public'
+         where grantee = 'pedernal_publico' and privilege_type = 'SELECT' and table_schema = 'public'
          order by 1, 2`,
       );
       expect([...new Set(columnas.map((c) => c.table_name))]).toEqual([
@@ -763,7 +763,7 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
     it("sus políticas son exactamente tres, y filtran por estado y vigencia", async () => {
       const politicas = await filas<{ p: string; qual: string }>(
         `select format('%s.%s:%s:%s', tablename, policyname, cmd, permissive) as p, qual
-         from pg_policies where schemaname = 'public' and 'zuluhub_publico' = any (roles) order by 1`,
+         from pg_policies where schemaname = 'public' and 'pedernal_publico' = any (roles) order by 1`,
       );
       expect(politicas.map((f) => f.p)).toEqual([
         "dominio.dominio_publico_leer:SELECT:PERMISSIVE",
@@ -1385,7 +1385,7 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
   describe("los códigos y las rutas con restricción propia coinciden con el dominio", () => {
     it("marca_codigo_ck es validarCodigoDeMarca; plan_codigo_ck tiene la misma forma", async () => {
       const codigos = [
-        "zuluhub",
+        "pedernal",
         "micalendario",
         "ab",
         "a",

@@ -26,7 +26,7 @@ import { claveAlAzar } from "./plataforma-apoyo";
 import { crearEntornoPublico } from "./resolucion-apoyo";
 
 /**
- * Resolución de un host por la puerta pública contra el rol REAL `zuluhub_publico` (M4, marcas y planes
+ * Resolución de un host por la puerta pública contra el rol REAL `pedernal_publico` (M4, marcas y planes
  * §B.2). Lo central: (1) un host solo se sirve si su marca tiene una versión confirmada y vigente (el
  * hueco que dejó M4a: la vista `resolucion_de_host` no lo exige y `activarDominio` tampoco) y (2) todo lo
  * que no se puede servir responde EXACTAMENTE lo mismo, sin pistas de por qué. Base propia.
@@ -301,7 +301,7 @@ describe.skipIf(base === null)("resolución de host por la puerta pública", () 
       });
       expect(r).toEqual({
         ok: true,
-        valor: { rol: "zuluhub_publico", contexto: null, solo_lectura: "on" },
+        valor: { rol: "pedernal_publico", contexto: null, solo_lectura: "on" },
       });
     });
 
@@ -310,7 +310,7 @@ describe.skipIf(base === null)("resolución de host por la puerta pública", () 
       // Rol inexistente y no clave mala: el CI levanta Postgres con `trust` (acepta cualquier clave),
       // así que solo el rol que no existe falla igual con autenticación por clave o sin ella.
       const url = new URL(propia.base.publico);
-      url.username = "zuluhub_rol_que_no_existe";
+      url.username = "pedernal_rol_que_no_existe";
       const roto = crearEntornoPublico(propia.base, { url: url.toString() });
       try {
         const r = await crearResolucionDeHost(roto).porHost("cualquiera.prueba.test", "APP");

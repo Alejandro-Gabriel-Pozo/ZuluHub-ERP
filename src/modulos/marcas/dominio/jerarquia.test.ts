@@ -17,7 +17,7 @@ const principal: PadreDeMarca = { id: PRINCIPAL, nivel: 0, esPrincipal: true, es
 const hija: PadreDeMarca = { id: HIJA, nivel: 1, esPrincipal: false, estado: "ACTIVA" };
 
 describe("validarCodigoDeMarca", () => {
-  it.each(["zuluhub", "mi-calendario", "ab", "a1", "a-1-b", "a".repeat(40), "z9"])(
+  it.each(["pedernal", "mi-calendario", "ab", "a1", "a-1-b", "a".repeat(40), "z9"])(
     "acepta %s",
     (c) => {
       expect(validarCodigoDeMarca(c)).toEqual({ ok: true, valor: c });
@@ -122,7 +122,7 @@ describe("decidirAltaDeMarca", () => {
 });
 
 describe("campoInmutableModificado", () => {
-  const base = { codigo: "zuluhub", marcaPadreId: null, esPrincipal: true };
+  const base = { codigo: "pedernal", marcaPadreId: null, esPrincipal: true };
 
   it("sin cambios no toca nada", () => {
     expect(campoInmutableModificado(base, { ...base })).toBeNull();

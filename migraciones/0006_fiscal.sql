@@ -48,7 +48,7 @@
 --      siempre antes que el bloqueo consultivo). El cambio de número de un punto de venta, en
 --      cambio, bloquea con FOR SHARE las series del punto de venta: así vale también bajo
 --      REPEATABLE READ y SERIALIZABLE (Postgres aborta con 40001 si la serie cambió después de la
---      lectura). `zuluhub_plataforma` no puede bloquear filas (no tiene UPDATE sobre las series),
+--      lectura). `pedernal_plataforma` no puede bloquear filas (no tiene UPDATE sobre las series),
 --      por eso el CUIT usa el bloqueo consultivo.
 --  E4. Los datos fiscales y la regla del emisor se versionan: BORRADOR (uno por emisor, editable) ->
 --      CONFIRMADA (inmutable). La base impone además lo que el dominio hace: la versión confirmada
@@ -388,7 +388,7 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  PERFORM pg_advisory_xact_lock(hashtextextended('zuluhub.fiscal.cuit:' || coalesce(NEW.cuit, ''), 0));
+  PERFORM pg_advisory_xact_lock(hashtextextended('pedernal.fiscal.cuit:' || coalesce(NEW.cuit, ''), 0));
   IF EXISTS (SELECT 1 FROM public.emisor x WHERE x.cuit = NEW.cuit) THEN
     RAISE EXCEPTION 'el CUIT ya es el de un emisor secundario'
       USING ERRCODE = '23514', CONSTRAINT = 'empresa_cuit_es_emisor';
@@ -398,7 +398,7 @@ BEGIN
     SELECT x.id INTO v_principal
       FROM public.emisor x WHERE x.empresa_id = OLD.id AND x.es_principal;
     IF FOUND THEN
-      PERFORM pg_advisory_xact_lock(hashtextextended('zuluhub.fiscal.emisor:' || v_principal::text, 0));
+      PERFORM pg_advisory_xact_lock(hashtextextended('pedernal.fiscal.emisor:' || v_principal::text, 0));
       IF EXISTS (
         SELECT 1 FROM public.serie_comprobante s
          WHERE s.empresa_id = OLD.id AND s.emisor_id = v_principal
@@ -432,7 +432,7 @@ BEGIN
 
   -- CUIT propio (secundario) al crearlo o al corregirlo.
   IF NOT NEW.es_principal AND (TG_OP = 'INSERT' OR NEW.cuit IS DISTINCT FROM OLD.cuit) THEN
-    PERFORM pg_advisory_xact_lock(hashtextextended('zuluhub.fiscal.cuit:' || coalesce(NEW.cuit, ''), 0));
+    PERFORM pg_advisory_xact_lock(hashtextextended('pedernal.fiscal.cuit:' || coalesce(NEW.cuit, ''), 0));
     IF TG_OP = 'INSERT' THEN
       SELECT e.estado INTO v_estado FROM public.empresa e WHERE e.id = NEW.empresa_id;
       -- Una empresa inexistente la rechaza la clave foránea (emisor_empresa_id_fkey), no esta función.
@@ -446,7 +446,7 @@ BEGIN
         USING ERRCODE = '23514', CONSTRAINT = 'emisor_cuit_es_empresa';
     END IF;
     IF TG_OP = 'UPDATE' AND OLD.cuit IS NOT NULL THEN
-      PERFORM pg_advisory_xact_lock(hashtextextended('zuluhub.fiscal.emisor:' || OLD.id::text, 0));
+      PERFORM pg_advisory_xact_lock(hashtextextended('pedernal.fiscal.emisor:' || OLD.id::text, 0));
       IF EXISTS (
         SELECT 1 FROM public.serie_comprobante s
          WHERE s.empresa_id = OLD.empresa_id AND s.emisor_id = OLD.id
@@ -461,7 +461,7 @@ BEGIN
   -- Desactivar un secundario: sin puntos de venta activos. (El principal nunca se desactiva: lo
   -- dice el CHECK `emisor_principal_activo_ck`.)
   IF TG_OP = 'UPDATE' AND NOT OLD.es_principal AND OLD.activo AND NOT NEW.activo THEN
-    PERFORM pg_advisory_xact_lock(hashtextextended('zuluhub.fiscal.emisor:' || OLD.id::text, 0));
+    PERFORM pg_advisory_xact_lock(hashtextextended('pedernal.fiscal.emisor:' || OLD.id::text, 0));
     IF EXISTS (
       SELECT 1 FROM public.punto_de_venta p
        WHERE p.empresa_id = OLD.empresa_id AND p.emisor_id = OLD.id AND p.estado = 'ACTIVO'
@@ -509,7 +509,7 @@ BEGIN
 
   -- Activar exige un emisor activo. El bloqueo compartido del emisor lo cruza con su desactivación.
   IF NEW.estado = 'ACTIVO' AND (TG_OP = 'INSERT' OR OLD.estado <> 'ACTIVO') THEN
-    PERFORM pg_advisory_xact_lock_shared(hashtextextended('zuluhub.fiscal.emisor:' || NEW.emisor_id::text, 0));
+    PERFORM pg_advisory_xact_lock_shared(hashtextextended('pedernal.fiscal.emisor:' || NEW.emisor_id::text, 0));
     SELECT x.activo INTO v_activo FROM public.emisor x WHERE x.id = NEW.emisor_id AND x.empresa_id = NEW.empresa_id;
     -- Un emisor inexistente lo rechaza la clave foránea (punto_de_venta_emisor_fkey).
     IF FOUND AND NOT v_activo THEN
@@ -656,7 +656,7 @@ BEGIN
         USING ERRCODE = '23514', CONSTRAINT = 'serie_transicion_invalida';
     END IF;
     IF OLD.estado = 'LIBRE' THEN
-      PERFORM pg_advisory_xact_lock_shared(hashtextextended('zuluhub.fiscal.emisor:' || OLD.emisor_id::text, 0));
+      PERFORM pg_advisory_xact_lock_shared(hashtextextended('pedernal.fiscal.emisor:' || OLD.emisor_id::text, 0));
     END IF;
   ELSIF OLD.estado = 'EN_CURSO' THEN
     -- Una reserva incierta sigue EN_CURSO sin cambios.
@@ -725,31 +725,31 @@ REVOKE ALL ON provincia, emisor, domicilio, datos_fiscales, regla_emisor, punto_
 
 -- app: opera dentro de su empresa
 GRANT SELECT ON provincia, emisor, domicilio, datos_fiscales, regla_emisor, punto_de_venta, serie_comprobante
-  TO zuluhub_app;
+  TO pedernal_app;
 GRANT INSERT (id, empresa_id, calle, numero, piso, departamento, localidad, provincia, codigo_postal)
-  ON domicilio TO zuluhub_app;
+  ON domicilio TO pedernal_app;
 GRANT INSERT (id, empresa_id, emisor_id, razon_social, condicion_iva, domicilio_fiscal_id, inicio_actividades,
               iibb_numero, iibb_condicion, creado_por)
-  ON datos_fiscales TO zuluhub_app;
+  ON datos_fiscales TO pedernal_app;
 GRANT UPDATE (razon_social, condicion_iva, domicilio_fiscal_id, inicio_actividades, iibb_numero, iibb_condicion,
               estado, numero, vigente_desde, confirmada_en, confirmada_por, motivo)
-  ON datos_fiscales TO zuluhub_app;
-GRANT INSERT (id, empresa_id, permitir_eleccion_manual, creado_por) ON regla_emisor TO zuluhub_app;
+  ON datos_fiscales TO pedernal_app;
+GRANT INSERT (id, empresa_id, permitir_eleccion_manual, creado_por) ON regla_emisor TO pedernal_app;
 GRANT UPDATE (permitir_eleccion_manual, estado, numero, vigente_desde, confirmada_en, confirmada_por, motivo)
-  ON regla_emisor TO zuluhub_app;
-GRANT INSERT (id, empresa_id, emisor_id, sucursal_id, numero, domicilio_id) ON punto_de_venta TO zuluhub_app;
-GRANT UPDATE (numero, sucursal_id, domicilio_id, estado) ON punto_de_venta TO zuluhub_app;
+  ON regla_emisor TO pedernal_app;
+GRANT INSERT (id, empresa_id, emisor_id, sucursal_id, numero, domicilio_id) ON punto_de_venta TO pedernal_app;
+GRANT UPDATE (numero, sucursal_id, domicilio_id, estado) ON punto_de_venta TO pedernal_app;
 GRANT INSERT (empresa_id, punto_de_venta_id, emisor_id, tipo_comprobante, ultimo_numero)
-  ON serie_comprobante TO zuluhub_app;
+  ON serie_comprobante TO pedernal_app;
 GRANT UPDATE (ultimo_numero, estado, numero_en_curso, solicitud_en_curso, en_curso_hasta, motivo_bloqueo)
-  ON serie_comprobante TO zuluhub_app;
+  ON serie_comprobante TO pedernal_app;
 
 -- plataforma: crea y corrige emisores; ve las series (los disparadores de CUIT las leen) y, de los
 -- puntos de venta, solo lo que el disparador de desactivación necesita. Nunca domicilios ni datos.
-GRANT SELECT ON emisor, serie_comprobante TO zuluhub_plataforma;
-GRANT SELECT (id, empresa_id, emisor_id, estado) ON punto_de_venta TO zuluhub_plataforma;
-GRANT INSERT (empresa_id, es_principal, cuit) ON emisor TO zuluhub_plataforma;
-GRANT UPDATE (cuit, activo) ON emisor TO zuluhub_plataforma;
+GRANT SELECT ON emisor, serie_comprobante TO pedernal_plataforma;
+GRANT SELECT (id, empresa_id, emisor_id, estado) ON punto_de_venta TO pedernal_plataforma;
+GRANT INSERT (empresa_id, es_principal, cuit) ON emisor TO pedernal_plataforma;
+GRANT UPDATE (cuit, activo) ON emisor TO pedernal_plataforma;
 
 -- ---------------------------------------------------------------------------------------------
 -- RLS: activa y forzada en toda tabla nueva; sin política no hay acceso
@@ -774,77 +774,77 @@ ALTER TABLE serie_comprobante FORCE ROW LEVEL SECURITY;
 -- cambios, `empresa_operable(empresa_id)`; los autores con `IS NOT DISTINCT FROM` la persona del
 -- contexto. Sin `FOR ALL`: cada comando tiene su política.
 -- ---------------------------------------------------------------------------------------------
-CREATE POLICY provincia_app_leer ON provincia FOR SELECT TO zuluhub_app USING (true);
+CREATE POLICY provincia_app_leer ON provincia FOR SELECT TO pedernal_app USING (true);
 
 -- emisor: la empresa lo ve; solo la plataforma (y solo un ADMIN, por las restrictivas) lo escribe.
-CREATE POLICY emisor_app_leer ON emisor FOR SELECT TO zuluhub_app USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY emisor_plataforma_leer ON emisor FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY emisor_plataforma_alta ON emisor FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
-CREATE POLICY emisor_plataforma_cambiar ON emisor FOR UPDATE TO zuluhub_plataforma USING (true) WITH CHECK (true);
+CREATE POLICY emisor_app_leer ON emisor FOR SELECT TO pedernal_app USING (empresa_id = (SELECT app_empresa_id()));
+CREATE POLICY emisor_plataforma_leer ON emisor FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY emisor_plataforma_alta ON emisor FOR INSERT TO pedernal_plataforma WITH CHECK (true);
+CREATE POLICY emisor_plataforma_cambiar ON emisor FOR UPDATE TO pedernal_plataforma USING (true) WITH CHECK (true);
 
-CREATE POLICY domicilio_app_leer ON domicilio FOR SELECT TO zuluhub_app USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY domicilio_app_alta ON domicilio FOR INSERT TO zuluhub_app
+CREATE POLICY domicilio_app_leer ON domicilio FOR SELECT TO pedernal_app USING (empresa_id = (SELECT app_empresa_id()));
+CREATE POLICY domicilio_app_alta ON domicilio FOR INSERT TO pedernal_app
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
 
 -- datos_fiscales y regla_emisor: se edita solo el borrador; al confirmar, el autor es la persona del contexto.
-CREATE POLICY datos_fiscales_app_leer ON datos_fiscales FOR SELECT TO zuluhub_app
+CREATE POLICY datos_fiscales_app_leer ON datos_fiscales FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY datos_fiscales_app_alta ON datos_fiscales FOR INSERT TO zuluhub_app
+CREATE POLICY datos_fiscales_app_alta ON datos_fiscales FOR INSERT TO pedernal_app
   WITH CHECK (
     empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id)
     AND creado_por IS NOT DISTINCT FROM (SELECT app_persona_id())
   );
-CREATE POLICY datos_fiscales_app_cambiar ON datos_fiscales FOR UPDATE TO zuluhub_app
+CREATE POLICY datos_fiscales_app_cambiar ON datos_fiscales FOR UPDATE TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND estado = 'BORRADOR')
   WITH CHECK (
     empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id)
     AND (estado = 'BORRADOR' OR confirmada_por IS NOT DISTINCT FROM (SELECT app_persona_id()))
   );
 
-CREATE POLICY regla_emisor_app_leer ON regla_emisor FOR SELECT TO zuluhub_app
+CREATE POLICY regla_emisor_app_leer ON regla_emisor FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY regla_emisor_app_alta ON regla_emisor FOR INSERT TO zuluhub_app
+CREATE POLICY regla_emisor_app_alta ON regla_emisor FOR INSERT TO pedernal_app
   WITH CHECK (
     empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id)
     AND creado_por IS NOT DISTINCT FROM (SELECT app_persona_id())
   );
-CREATE POLICY regla_emisor_app_cambiar ON regla_emisor FOR UPDATE TO zuluhub_app
+CREATE POLICY regla_emisor_app_cambiar ON regla_emisor FOR UPDATE TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND estado = 'BORRADOR')
   WITH CHECK (
     empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id)
     AND (estado = 'BORRADOR' OR confirmada_por IS NOT DISTINCT FROM (SELECT app_persona_id()))
   );
 
-CREATE POLICY punto_de_venta_app_leer ON punto_de_venta FOR SELECT TO zuluhub_app
+CREATE POLICY punto_de_venta_app_leer ON punto_de_venta FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY punto_de_venta_app_alta ON punto_de_venta FOR INSERT TO zuluhub_app
+CREATE POLICY punto_de_venta_app_alta ON punto_de_venta FOR INSERT TO pedernal_app
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
-CREATE POLICY punto_de_venta_app_cambiar ON punto_de_venta FOR UPDATE TO zuluhub_app
+CREATE POLICY punto_de_venta_app_cambiar ON punto_de_venta FOR UPDATE TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id))
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
 -- La plataforma ve los puntos de venta de todas las empresas, pero el GRANT por columna solo le
 -- deja `id`, `empresa_id`, `emisor_id` y `estado`.
-CREATE POLICY punto_de_venta_plataforma_leer ON punto_de_venta FOR SELECT TO zuluhub_plataforma USING (true);
+CREATE POLICY punto_de_venta_plataforma_leer ON punto_de_venta FOR SELECT TO pedernal_plataforma USING (true);
 
-CREATE POLICY serie_comprobante_app_leer ON serie_comprobante FOR SELECT TO zuluhub_app
+CREATE POLICY serie_comprobante_app_leer ON serie_comprobante FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY serie_comprobante_app_alta ON serie_comprobante FOR INSERT TO zuluhub_app
+CREATE POLICY serie_comprobante_app_alta ON serie_comprobante FOR INSERT TO pedernal_app
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
-CREATE POLICY serie_comprobante_app_cambiar ON serie_comprobante FOR UPDATE TO zuluhub_app
+CREATE POLICY serie_comprobante_app_cambiar ON serie_comprobante FOR UPDATE TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id))
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
-CREATE POLICY serie_comprobante_plataforma_leer ON serie_comprobante FOR SELECT TO zuluhub_plataforma USING (true);
+CREATE POLICY serie_comprobante_plataforma_leer ON serie_comprobante FOR SELECT TO pedernal_plataforma USING (true);
 
 -- Políticas RESTRICTIVAS de la plataforma (como las de 0004 y 0005): sin un actor vigente no ve
 -- nada, y solo un ADMIN crea o corrige un emisor (un SOPORTE no toca los CUIT de una empresa).
-CREATE POLICY emisor_plataforma_con_actor ON emisor AS RESTRICTIVE FOR SELECT TO zuluhub_plataforma
+CREATE POLICY emisor_plataforma_con_actor ON emisor AS RESTRICTIVE FOR SELECT TO pedernal_plataforma
   USING ((SELECT plataforma_actor_vigente()));
 CREATE POLICY punto_de_venta_plataforma_con_actor ON punto_de_venta AS RESTRICTIVE FOR SELECT
-  TO zuluhub_plataforma USING ((SELECT plataforma_actor_vigente()));
+  TO pedernal_plataforma USING ((SELECT plataforma_actor_vigente()));
 CREATE POLICY serie_comprobante_plataforma_con_actor ON serie_comprobante AS RESTRICTIVE FOR SELECT
-  TO zuluhub_plataforma USING ((SELECT plataforma_actor_vigente()));
-CREATE POLICY emisor_plataforma_admin_alta ON emisor AS RESTRICTIVE FOR INSERT TO zuluhub_plataforma
+  TO pedernal_plataforma USING ((SELECT plataforma_actor_vigente()));
+CREATE POLICY emisor_plataforma_admin_alta ON emisor AS RESTRICTIVE FOR INSERT TO pedernal_plataforma
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));
-CREATE POLICY emisor_plataforma_admin_cambiar ON emisor AS RESTRICTIVE FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY emisor_plataforma_admin_cambiar ON emisor AS RESTRICTIVE FOR UPDATE TO pedernal_plataforma
   USING ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])))
   WITH CHECK ((SELECT admin_plataforma_con_rol(ARRAY['ADMIN'])));

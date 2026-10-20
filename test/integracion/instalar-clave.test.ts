@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
-import { ZULUHUB_CLAVE_CONTEXTO } from "../../src/adaptadores/postgres/contexto-firmado";
+import { PEDERNAL_CLAVE_CONTEXTO } from "../../src/adaptadores/postgres/contexto-firmado";
 import {
   VARIABLE_DE_LA_CADENA,
   ejecutarInstalacionDeClave,
@@ -58,7 +58,7 @@ describe.skipIf(base === null)("instalar la clave de contexto", () => {
     const clave = claveNueva(7);
     const entorno = {
       [VARIABLE_DE_LA_CADENA]: propia.base.dueno,
-      [ZULUHUB_CLAVE_CONTEXTO]: clave,
+      [PEDERNAL_CLAVE_CONTEXTO]: clave,
     };
     const primera = await correr(entorno);
     expect(primera.codigo).toBe(0);
@@ -82,7 +82,7 @@ describe.skipIf(base === null)("instalar la clave de contexto", () => {
     const otra = claveNueva(7);
     const r = await correr({
       [VARIABLE_DE_LA_CADENA]: propia.base.dueno,
-      [ZULUHUB_CLAVE_CONTEXTO]: otra,
+      [PEDERNAL_CLAVE_CONTEXTO]: otra,
     });
     expect(r.codigo).toBe(1);
     expect(r.texto).toContain("ya existe la clave de contexto kid 7 con otro secreto");
@@ -94,29 +94,29 @@ describe.skipIf(base === null)("instalar la clave de contexto", () => {
   it("otro kid suma una clave (la rotación)", async () => {
     const r = await correr({
       [VARIABLE_DE_LA_CADENA]: propia.base.dueno,
-      [ZULUHUB_CLAVE_CONTEXTO]: claveNueva(8),
+      [PEDERNAL_CLAVE_CONTEXTO]: claveNueva(8),
     });
     expect(r.codigo).toBe(0);
     expect(await kids()).toEqual([7, 8]);
   });
 
   it.each([
-    ["sin la cadena", { [ZULUHUB_CLAVE_CONTEXTO]: claveNueva(9) }, "falta la variable"],
+    ["sin la cadena", { [PEDERNAL_CLAVE_CONTEXTO]: claveNueva(9) }, "falta la variable"],
     [
       "con la cadena vacía",
-      { [VARIABLE_DE_LA_CADENA]: "  ", [ZULUHUB_CLAVE_CONTEXTO]: claveNueva(9) },
+      { [VARIABLE_DE_LA_CADENA]: "  ", [PEDERNAL_CLAVE_CONTEXTO]: claveNueva(9) },
       "falta la variable",
     ],
     [
       "con una cadena que no es de Postgres",
-      { [VARIABLE_DE_LA_CADENA]: "https://ejemplo.test", [ZULUHUB_CLAVE_CONTEXTO]: claveNueva(9) },
+      { [VARIABLE_DE_LA_CADENA]: "https://ejemplo.test", [PEDERNAL_CLAVE_CONTEXTO]: claveNueva(9) },
       "no tiene forma de cadena de conexión",
     ],
     [
       "con la cadena del pooler",
       {
         [VARIABLE_DE_LA_CADENA]: "postgres://u:c@ep-algo-pooler.region.aws.neon.tech/base",
-        [ZULUHUB_CLAVE_CONTEXTO]: claveNueva(9),
+        [PEDERNAL_CLAVE_CONTEXTO]: claveNueva(9),
       },
       "apunta al pooler",
     ],
@@ -137,10 +137,10 @@ describe.skipIf(base === null)("instalar la clave de contexto", () => {
   ])("la clave %s se rechaza sin repetir su valor", async (_cual, clave) => {
     const r = await correr({
       [VARIABLE_DE_LA_CADENA]: propia.base.dueno,
-      [ZULUHUB_CLAVE_CONTEXTO]: clave,
+      [PEDERNAL_CLAVE_CONTEXTO]: clave,
     });
     expect(r.codigo).toBe(1);
-    expect(r.errores.join("\n")).toContain(`${ZULUHUB_CLAVE_CONTEXTO} inválida`);
+    expect(r.errores.join("\n")).toContain(`${PEDERNAL_CLAVE_CONTEXTO} inválida`);
     if (clave !== undefined && clave.trim() !== "") expect(r.texto).not.toContain(clave.trim());
     expect(await kids()).toEqual([7, 8]);
   });
@@ -148,7 +148,7 @@ describe.skipIf(base === null)("instalar la clave de contexto", () => {
   it("con una cadena que no conecta: falla sin repetir la cadena ni la clave", async () => {
     const clave = claveNueva(9);
     const cadena = "postgres://usuario:clave-secreta-comun@127.0.0.1:1/base";
-    const r = await correr({ [VARIABLE_DE_LA_CADENA]: cadena, [ZULUHUB_CLAVE_CONTEXTO]: clave });
+    const r = await correr({ [VARIABLE_DE_LA_CADENA]: cadena, [PEDERNAL_CLAVE_CONTEXTO]: clave });
     expect(r.codigo).toBe(1);
     expect(r.texto).toContain("RESULTADO: FALLA");
     expect(r.texto).not.toContain("clave-secreta-comun");
@@ -169,7 +169,7 @@ describe.skipIf(base === null)("instalar la clave de contexto", () => {
           NODE_ENV: "test",
           PATH: process.env["PATH"] ?? "",
           [VARIABLE_DE_LA_CADENA]: propia.base.dueno,
-          [ZULUHUB_CLAVE_CONTEXTO]: clave,
+          [PEDERNAL_CLAVE_CONTEXTO]: clave,
         },
       },
     );

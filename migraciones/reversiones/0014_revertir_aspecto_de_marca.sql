@@ -13,7 +13,7 @@
 -- (que evade RLS, o el conteo de abajo no vería nada):
 --
 --     BEGIN;
---     SET LOCAL zuluhub.confirmar_reversion = 'SI';   -- solo si hay versiones con un aspecto cargado
+--     SET LOCAL pedernal.confirmar_reversion = 'SI';   -- solo si hay versiones con un aspecto cargado
 --     \i migraciones/reversiones/0014_revertir_aspecto_de_marca.sql
 --     COMMIT;
 --
@@ -38,8 +38,8 @@ BEGIN
      WHERE attrelid = 'public.version_de_marca'::regclass AND attname = 'aspecto' AND NOT attisdropped
   ) THEN
     EXECUTE 'SELECT count(*) FROM public.version_de_marca WHERE aspecto <> ''{}''::jsonb' INTO v_datos;
-    IF v_datos > 0 AND coalesce(current_setting('zuluhub.confirmar_reversion', true), '') <> 'SI' THEN
-      RAISE EXCEPTION 'hay % versiones de marca con un aspecto cargado que esta reversión borraría: avisar al dueño y repetir con SET LOCAL zuluhub.confirmar_reversion = ''SI''', v_datos
+    IF v_datos > 0 AND coalesce(current_setting('pedernal.confirmar_reversion', true), '') <> 'SI' THEN
+      RAISE EXCEPTION 'hay % versiones de marca con un aspecto cargado que esta reversión borraría: avisar al dueño y repetir con SET LOCAL pedernal.confirmar_reversion = ''SI''', v_datos
         USING ERRCODE = '55000';
     END IF;
   END IF;

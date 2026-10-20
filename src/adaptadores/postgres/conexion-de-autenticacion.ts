@@ -14,7 +14,7 @@ import {
 import type { SinTablas } from "./transacciones";
 
 /**
- * La conexión del rol `zuluhub_autenticacion` (web-armazon §3.1, §4.1 y §4.2): el ÚNICO lugar donde se crea
+ * La conexión del rol `pedernal_autenticacion` (web-armazon §3.1, §4.1 y §4.2): el ÚNICO lugar donde se crea
  * el Kysely con el que la librería de ingreso lee y escribe su esquema. Así la regla de arquitectura
  * («la herramienta de datos solo en adaptadores/postgres») se respeta y el adaptador de autenticación no
  * importa `kysely` ni `pg`: recibe esto armado por la composición.

@@ -21,7 +21,7 @@ import { crearBaseAparte } from "./entorno";
  * `--preparar-roles`: aplica las migraciones y da LOGIN con contraseña al azar a los roles de la
  * aplicación que todavía no lo tienen, imprimiendo UNA vez las variables para Vercel.
  *
- * Los roles de Postgres son del servidor entero, no de la base: las pruebas NO tocan los `zuluhub_*`
+ * Los roles de Postgres son del servidor entero, no de la base: las pruebas NO tocan los `pedernal_*`
  * reales (los usan las demás pruebas en paralelo) sino roles propios con el mismo recorrido, que el
  * comando recibe por inyección. Que la lista REAL sea la correcta lo prueba su prueba unitaria.
  */
@@ -84,7 +84,7 @@ async function preparar(
   });
   const variables = new Map<string, URL>();
   for (const linea of secreto) {
-    const m = /^(ZULUHUB_DB_[A-Z]+)=(.+)$/.exec(linea);
+    const m = /^(PEDERNAL_DB_[A-Z]+)=(.+)$/.exec(linea);
     if (m !== null) variables.set(m[1] as string, new URL(m[2] as string));
   }
   return { codigo, info: info.join("\n"), error: error.join("\n"), secreto, variables };
@@ -150,13 +150,13 @@ describe.skipIf(base === null)("migrar-base --preparar-roles", () => {
     if (base === null) return;
     sufijo = randomBytes(4).toString("hex");
     ROLES = [
-      { rol: `zz_${sufijo}_app`, variable: "ZULUHUB_DB_APP" },
-      { rol: `zz_${sufijo}_trabajos`, variable: "ZULUHUB_DB_TRABAJOS" },
-      { rol: `zz_${sufijo}_publico`, variable: "ZULUHUB_DB_PUBLICO" },
+      { rol: `zz_${sufijo}_app`, variable: "PEDERNAL_DB_APP" },
+      { rol: `zz_${sufijo}_trabajos`, variable: "PEDERNAL_DB_TRABAJOS" },
+      { rol: `zz_${sufijo}_publico`, variable: "PEDERNAL_DB_PUBLICO" },
     ];
     ROLES_DE_AUTENTICACION = [
-      { rol: `zz_${sufijo}_autenticacion`, variable: "ZULUHUB_DB_AUTENTICACION" },
-      { rol: `zz_${sufijo}_captacion`, variable: "ZULUHUB_DB_CAPTACION" },
+      { rol: `zz_${sufijo}_autenticacion`, variable: "PEDERNAL_DB_AUTENTICACION" },
+      { rol: `zz_${sufijo}_captacion`, variable: "PEDERNAL_DB_CAPTACION" },
     ];
     AJENO = `zz_${sufijo}_ajeno`;
     ROL_RARO = `zz ${sufijo} "raro" ñ`;
@@ -179,7 +179,7 @@ describe.skipIf(base === null)("migrar-base --preparar-roles", () => {
   it("da LOGIN a los roles sin LOGIN, imprime exactamente las tres variables, y cada contraseña impresa es la guardada y permite conectarse", async () => {
     const url = await nuevaBase();
     const antesDeLosAjenos: (readonly [string, boolean])[] = [];
-    for (const r of ["zuluhub_grupo", "zuluhub_plataforma"]) {
+    for (const r of ["pedernal_grupo", "pedernal_plataforma"]) {
       antesDeLosAjenos.push([r, await puedeEntrar(r)]);
     }
     const salida = await preparar(url, []);
@@ -191,9 +191,9 @@ describe.skipIf(base === null)("migrar-base --preparar-roles", () => {
     );
     // Exactamente las variables esperadas, en orden, y nada más con forma de variable.
     expect([...salida.variables.keys()]).toEqual([
-      "ZULUHUB_DB_APP",
-      "ZULUHUB_DB_TRABAJOS",
-      "ZULUHUB_DB_PUBLICO",
+      "PEDERNAL_DB_APP",
+      "PEDERNAL_DB_TRABAJOS",
+      "PEDERNAL_DB_PUBLICO",
     ]);
     expect(salida.secreto.filter((l) => /^[A-Z_]+=/.test(l))).toHaveLength(3);
     const { host, puerto, base: nombreDeBase } = hostYBase(url);
@@ -250,12 +250,12 @@ describe.skipIf(base === null)("migrar-base --preparar-roles", () => {
   it("con --rotar cambia la contraseña de los que ya tienen LOGIN y la anterior deja de valer; sin la bandera no", async () => {
     const url = await nuevaBase();
     const primera = await preparar(url, []);
-    const vieja = (primera.variables.get("ZULUHUB_DB_APP") as URL).password;
+    const vieja = (primera.variables.get("PEDERNAL_DB_APP") as URL).password;
     const rotada = await preparar(url, ["--rotar"]);
     expect(rotada.codigo).toBe(0);
     expect(rotada.info).toContain("contraseña ROTADA");
     expect([...rotada.variables.keys()]).toHaveLength(3);
-    const nueva = (rotada.variables.get("ZULUHUB_DB_APP") as URL).password;
+    const nueva = (rotada.variables.get("PEDERNAL_DB_APP") as URL).password;
     expect(nueva).not.toBe(vieja);
     expect(await guardaLaClave(ROLES[0]?.rol as string, nueva)).toBe(true);
     expect(await guardaLaClave(ROLES[0]?.rol as string, vieja)).toBe(false);
@@ -266,15 +266,15 @@ describe.skipIf(base === null)("migrar-base --preparar-roles", () => {
     const salida = await preparar(url, ["--con-autenticacion"]);
     expect(salida.codigo).toBe(0);
     expect([...salida.variables.keys()]).toEqual([
-      "ZULUHUB_DB_APP",
-      "ZULUHUB_DB_TRABAJOS",
-      "ZULUHUB_DB_PUBLICO",
-      "ZULUHUB_DB_AUTENTICACION",
-      "ZULUHUB_DB_CAPTACION",
+      "PEDERNAL_DB_APP",
+      "PEDERNAL_DB_TRABAJOS",
+      "PEDERNAL_DB_PUBLICO",
+      "PEDERNAL_DB_AUTENTICACION",
+      "PEDERNAL_DB_CAPTACION",
     ]);
     for (const { rol } of ROLES_DE_AUTENTICACION) expect(await puedeEntrar(rol)).toBe(true);
-    expect(salida.info).toContain("ZULUHUB_DB_AUTENTICACION es un nombre provisorio");
-    expect(salida.info).not.toContain("ZULUHUB_DB_APP es un nombre provisorio");
+    expect(salida.info).toContain("PEDERNAL_DB_AUTENTICACION es un nombre provisorio");
+    expect(salida.info).not.toContain("PEDERNAL_DB_APP es un nombre provisorio");
   });
 
   it("dos corridas simultáneas: solo una genera contraseñas y la impresa es la que quedó guardada", async () => {
@@ -297,7 +297,7 @@ describe.skipIf(base === null)("migrar-base --preparar-roles", () => {
     const url = await nuevaBase();
     const roles = [
       ROLES[0] as RolPorPreparar,
-      { rol: `zz_${sufijo}_no_existe`, variable: "ZULUHUB_DB_X" },
+      { rol: `zz_${sufijo}_no_existe`, variable: "PEDERNAL_DB_X" },
     ];
     const salida = await preparar(url, [], { roles });
     expect(salida.codigo).toBe(1);
@@ -316,13 +316,13 @@ describe.skipIf(base === null)("migrar-base --preparar-roles", () => {
     const url = await nuevaBase();
     const clave = `ab'cd\\ef"gh$$`;
     const salida = await preparar(url, [], {
-      roles: [{ rol: ROL_RARO, variable: "ZULUHUB_DB_APP" }],
+      roles: [{ rol: ROL_RARO, variable: "PEDERNAL_DB_APP" }],
       generarClave: () => clave,
     });
     expect(salida.codigo).toBe(0);
     expect(await puedeEntrar(ROL_RARO)).toBe(true);
     expect(await guardaLaClave(ROL_RARO, clave)).toBe(true);
-    const cadena = salida.variables.get("ZULUHUB_DB_APP") as URL;
+    const cadena = salida.variables.get("PEDERNAL_DB_APP") as URL;
     const cliente = new pg.Client({ connectionString: cadena.toString() });
     await cliente.connect();
     try {
@@ -340,7 +340,7 @@ describe.skipIf(base === null)("migrar-base --preparar-roles", () => {
     // Dos veces el mismo rol: el segundo ALTER ve el rol como ya existente, pero fallamos a propósito
     // con un rol inexistente al final, después de haber generado la contraseña del primero.
     const salida = await preparar(url, [], {
-      roles: [ROLES[0] as RolPorPreparar, { rol: `zz_${sufijo}_falta`, variable: "ZULUHUB_DB_X" }],
+      roles: [ROLES[0] as RolPorPreparar, { rol: `zz_${sufijo}_falta`, variable: "PEDERNAL_DB_X" }],
       generarClave: () => clave,
     });
     expect(salida.codigo).toBe(1);

@@ -41,7 +41,7 @@ const base = inject("baseDePruebas");
 const admin = plataformaEn(AHORA_DE_PRUEBA);
 
 const bytes = (n: number) => new Uint8Array([0xab, 0x12, 0xcd, n]);
-const codigo = (n: number) => `ZH-AB12-CD${n.toString(16).toUpperCase().padStart(2, "0")}`;
+const codigo = (n: number) => `PD-AB12-CD${n.toString(16).toUpperCase().padStart(2, "0")}`;
 
 type Entorno = {
   propia: Awaited<ReturnType<typeof crearBaseAparte>>;
@@ -175,21 +175,21 @@ describe.skipIf(base === null)("soporte de plataforma: referencias de error", ()
     });
 
     it("una referencia que no existe no es un error: no hay coincidencias", async () => {
-      expect(await buscar("ZH-0000-0000")).toEqual({ ok: true, valor: [] });
+      expect(await buscar("PD-0000-0000")).toEqual({ ok: true, valor: [] });
     });
 
     it("dos errores que sortearon el mismo código se devuelven AMBOS, de la más vieja a la más nueva", async () => {
       await e.dueno.query(
         `insert into referencia_de_error (referencia, accion, motivo, creado_en) values
-          ('ZH-DEAD-BEEF', 'usuarios.ver', 'SIN_PERMISO', '2026-10-01T10:00:00Z'),
-          ('ZH-DEAD-BEEF', 'sucursales.crear', 'EMPRESA_NO_OPERA', '2026-10-01T09:00:00Z')`,
+          ('PD-DEAD-BEEF', 'usuarios.ver', 'SIN_PERMISO', '2026-10-01T10:00:00Z'),
+          ('PD-DEAD-BEEF', 'sucursales.crear', 'EMPRESA_NO_OPERA', '2026-10-01T09:00:00Z')`,
       );
-      const r = await buscar("ZH-DEAD-BEEF");
+      const r = await buscar("PD-DEAD-BEEF");
       expect(r.ok && r.valor.map((f) => f.accion)).toEqual(["sucursales.crear", "usuarios.ver"]);
     });
 
     it("una referencia con mala forma es REFERENCIA_INVALIDA", async () => {
-      expect(await buscar("ZH-12")).toEqual({ ok: false, error: "REFERENCIA_INVALIDA" });
+      expect(await buscar("PD-12")).toEqual({ ok: false, error: "REFERENCIA_INVALIDA" });
     });
   });
 
@@ -220,13 +220,13 @@ describe.skipIf(base === null)("soporte de plataforma: referencias de error", ()
 
     it("la base rechaza una referencia repetida con la restricción que el reintento espera", async () => {
       await conRestriccion.dueno.query(
-        "insert into referencia_de_error (referencia, accion, motivo) values ('ZH-1111-2222', 'a.b', 'X')",
+        "insert into referencia_de_error (referencia, accion, motivo) values ('PD-1111-2222', 'a.b', 'X')",
       );
       const r = await conRestriccion.soporte.ejecutar(
         { contexto: contexto() },
         async ({ referenciasDeError }) => {
           await referenciasDeError.registrar({
-            referencia: "ZH-1111-2222",
+            referencia: "PD-1111-2222",
             accion: "a.b",
             motivo: "X",
             empresaId: conRestriccion.empresa,

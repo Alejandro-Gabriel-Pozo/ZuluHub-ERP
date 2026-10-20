@@ -20,7 +20,7 @@ import { esObjeto, leerJson } from "./json-seguro";
 
 const PREFIJO_DE_HUELLA = "h1:";
 const FORMA_DE_HUELLA = /^h1:[0-9a-f]{64}$/;
-const SEPARADOR_DE_DOMINIO = "zuluhub/codigo-de-recuperacion/v1:";
+const SEPARADOR_DE_DOMINIO = "pedernal/codigo-de-recuperacion/v1:";
 
 export const esHuellaDeCodigoDeRecuperacion = (texto: string): boolean =>
   FORMA_DE_HUELLA.test(texto);

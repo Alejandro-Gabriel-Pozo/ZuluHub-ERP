@@ -13,7 +13,7 @@
 --
 -- Decisiones de diseño (las que no estaban cerradas en el encargo; todas probadas por tests):
 --
---  D1. Contextos que comparten un rol. El rol `zuluhub_app` sirve a dos contextos firmados: el
+--  D1. Contextos que comparten un rol. El rol `pedernal_app` sirve a dos contextos firmados: el
 --      OPERATIVO (con empresa) y el de INVITACION (con el hash del token y nada más). Cada política
 --      nombra el contexto en su nombre (`*_app_*` operativo, `*_invitado_*` invitación) y ambas se
 --      suman (OR) como en cualquier política permisiva: con el contexto equivocado, la otra mira un
@@ -325,32 +325,32 @@ $$;
 -- Privilegios: por columna, y nadie recibe DELETE
 -- ---------------------------------------------------------------------------------------------
 GRANT EXECUTE ON FUNCTION invitacion_aceptada_en(text, uuid, uuid, text), invitacion_opera_en(text, uuid)
-  TO zuluhub_app;
+  TO pedernal_app;
 
 -- app (contextos OPERATIVO e INVITACION)
 GRANT SELECT ON membresia, asignacion_sucursal, invitacion, invitacion_empresa, invitacion_sucursal
-  TO zuluhub_app;
-GRANT INSERT (empresa_id, persona_id, rol, invitacion_id) ON membresia TO zuluhub_app;
-GRANT UPDATE (activo) ON membresia TO zuluhub_app;  -- `rol` no es actualizable: nadie asciende
-GRANT INSERT (empresa_id, persona_id, sucursal_id) ON asignacion_sucursal TO zuluhub_app;
-GRANT UPDATE (activa) ON asignacion_sucursal TO zuluhub_app;
+  TO pedernal_app;
+GRANT INSERT (empresa_id, persona_id, rol, invitacion_id) ON membresia TO pedernal_app;
+GRANT UPDATE (activo) ON membresia TO pedernal_app;  -- `rol` no es actualizable: nadie asciende
+GRANT INSERT (empresa_id, persona_id, sucursal_id) ON asignacion_sucursal TO pedernal_app;
+GRANT UPDATE (activa) ON asignacion_sucursal TO pedernal_app;
 GRANT INSERT (id, tenant_id, tipo, email, token_hash, emitida_en, vence_en, emitida_por)
-  ON invitacion TO zuluhub_app;
+  ON invitacion TO pedernal_app;
 GRANT UPDATE (estado, aceptada_por, aceptada_en, revocada_en, motivo_revocacion, reemplazada_por)
-  ON invitacion TO zuluhub_app;
+  ON invitacion TO pedernal_app;
 GRANT INSERT (invitacion_id, empresa_id, tenant_id, rol, email, token_hash, estado, tipo)
-  ON invitacion_empresa TO zuluhub_app;
-GRANT INSERT (invitacion_id, empresa_id, sucursal_id) ON invitacion_sucursal TO zuluhub_app;
-GRANT INSERT (email) ON persona TO zuluhub_app;  -- solo el invitado, para su propio email
-GRANT UPDATE (estado, motivo_estado) ON empresa TO zuluhub_app;  -- solo para activar el alta
+  ON invitacion_empresa TO pedernal_app;
+GRANT INSERT (invitacion_id, empresa_id, sucursal_id) ON invitacion_sucursal TO pedernal_app;
+GRANT INSERT (email) ON persona TO pedernal_app;  -- solo el invitado, para su propio email
+GRANT UPDATE (estado, motivo_estado) ON empresa TO pedernal_app;  -- solo para activar el alta
 
 -- plataforma: emite y revoca altas; no lee membresías, asignaciones ni sucursales invitadas
-GRANT SELECT ON invitacion, invitacion_empresa TO zuluhub_plataforma;
+GRANT SELECT ON invitacion, invitacion_empresa TO pedernal_plataforma;
 GRANT INSERT (id, tenant_id, tipo, email, token_hash, emitida_en, vence_en, emitida_por)
-  ON invitacion TO zuluhub_plataforma;
-GRANT UPDATE (estado, revocada_en, motivo_revocacion, reemplazada_por) ON invitacion TO zuluhub_plataforma;
+  ON invitacion TO pedernal_plataforma;
+GRANT UPDATE (estado, revocada_en, motivo_revocacion, reemplazada_por) ON invitacion TO pedernal_plataforma;
 GRANT INSERT (invitacion_id, empresa_id, tenant_id, rol, email, token_hash, estado, tipo)
-  ON invitacion_empresa TO zuluhub_plataforma;
+  ON invitacion_empresa TO pedernal_plataforma;
 
 -- ---------------------------------------------------------------------------------------------
 -- RLS: activa y forzada en toda tabla nueva; sin política no hay acceso
@@ -372,24 +372,24 @@ ALTER TABLE asignacion_sucursal FORCE ROW LEVEL SECURITY;
 
 -- invitacion_empresa: copia de email/token/tipo/estado. Sus políticas miran solo columnas propias,
 -- para que `invitacion` pueda mirarla sin ciclos (D2).
-CREATE POLICY invitacion_empresa_app_leer ON invitacion_empresa FOR SELECT TO zuluhub_app
+CREATE POLICY invitacion_empresa_app_leer ON invitacion_empresa FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY invitacion_empresa_app_alta ON invitacion_empresa FOR INSERT TO zuluhub_app
+CREATE POLICY invitacion_empresa_app_alta ON invitacion_empresa FOR INSERT TO pedernal_app
   WITH CHECK (
     empresa_id = (SELECT app_empresa_id())
     AND empresa_operable(empresa_id)
     AND tipo = 'USUARIO'
     AND estado = 'PENDIENTE'
   );
-CREATE POLICY invitacion_empresa_invitado_leer ON invitacion_empresa FOR SELECT TO zuluhub_app
+CREATE POLICY invitacion_empresa_invitado_leer ON invitacion_empresa FOR SELECT TO pedernal_app
   USING (token_hash = (SELECT app_token_invitacion()));
-CREATE POLICY invitacion_empresa_plataforma_leer ON invitacion_empresa FOR SELECT TO zuluhub_plataforma
+CREATE POLICY invitacion_empresa_plataforma_leer ON invitacion_empresa FOR SELECT TO pedernal_plataforma
   USING (true);
-CREATE POLICY invitacion_empresa_plataforma_alta ON invitacion_empresa FOR INSERT TO zuluhub_plataforma
+CREATE POLICY invitacion_empresa_plataforma_alta ON invitacion_empresa FOR INSERT TO pedernal_plataforma
   WITH CHECK (true);
 
 -- invitacion
-CREATE POLICY invitacion_app_leer ON invitacion FOR SELECT TO zuluhub_app
+CREATE POLICY invitacion_app_leer ON invitacion FOR SELECT TO pedernal_app
   USING (
     EXISTS (
       SELECT 1 FROM invitacion_empresa ie
@@ -397,7 +397,7 @@ CREATE POLICY invitacion_app_leer ON invitacion FOR SELECT TO zuluhub_app
     )
   );
 -- Una empresa solo invita usuarios, de su propio tenant, a nombre de la persona del contexto.
-CREATE POLICY invitacion_app_alta ON invitacion FOR INSERT TO zuluhub_app
+CREATE POLICY invitacion_app_alta ON invitacion FOR INSERT TO pedernal_app
   WITH CHECK (
     tipo = 'USUARIO'
     AND tenant_id = (SELECT tenant_de_empresa((SELECT app_empresa_id())))
@@ -406,7 +406,7 @@ CREATE POLICY invitacion_app_alta ON invitacion FOR INSERT TO zuluhub_app
   );
 -- Revocar (también completar el reemplazo de una ya revocada): la invitación tiene que incluir la
 -- empresa. Aceptar no está al alcance de la empresa: el CHECK de aceptación lo exige completo.
-CREATE POLICY invitacion_app_revocar ON invitacion FOR UPDATE TO zuluhub_app
+CREATE POLICY invitacion_app_revocar ON invitacion FOR UPDATE TO pedernal_app
   USING (
     empresa_operable((SELECT app_empresa_id()))
     AND EXISTS (
@@ -425,24 +425,24 @@ CREATE POLICY invitacion_app_revocar ON invitacion FOR UPDATE TO zuluhub_app
       WHERE ie.invitacion_id = invitacion.id AND ie.empresa_id = (SELECT app_empresa_id())
     )
   );
-CREATE POLICY invitacion_invitado_leer ON invitacion FOR SELECT TO zuluhub_app
+CREATE POLICY invitacion_invitado_leer ON invitacion FOR SELECT TO pedernal_app
   USING (token_hash = (SELECT app_token_invitacion()));
 -- Aceptar: solo la propia invitación, y solo desde PENDIENTE. Que `aceptada_por` sea la persona del
 -- email de la invitación lo impone la FK compuesta (D2); que sea a tiempo, el CHECK (D5).
-CREATE POLICY invitacion_invitado_aceptar ON invitacion FOR UPDATE TO zuluhub_app
+CREATE POLICY invitacion_invitado_aceptar ON invitacion FOR UPDATE TO pedernal_app
   USING (token_hash = (SELECT app_token_invitacion()) AND estado = 'PENDIENTE')
   WITH CHECK (token_hash = (SELECT app_token_invitacion()) AND estado = 'ACEPTADA');
-CREATE POLICY invitacion_plataforma_leer ON invitacion FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY invitacion_plataforma_alta ON invitacion FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
-CREATE POLICY invitacion_plataforma_cambiar ON invitacion FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY invitacion_plataforma_leer ON invitacion FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY invitacion_plataforma_alta ON invitacion FOR INSERT TO pedernal_plataforma WITH CHECK (true);
+CREATE POLICY invitacion_plataforma_cambiar ON invitacion FOR UPDATE TO pedernal_plataforma
   USING (true) WITH CHECK (true);
 
 -- invitacion_sucursal
-CREATE POLICY invitacion_sucursal_app_leer ON invitacion_sucursal FOR SELECT TO zuluhub_app
+CREATE POLICY invitacion_sucursal_app_leer ON invitacion_sucursal FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY invitacion_sucursal_app_alta ON invitacion_sucursal FOR INSERT TO zuluhub_app
+CREATE POLICY invitacion_sucursal_app_alta ON invitacion_sucursal FOR INSERT TO pedernal_app
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
-CREATE POLICY invitacion_sucursal_invitado_leer ON invitacion_sucursal FOR SELECT TO zuluhub_app
+CREATE POLICY invitacion_sucursal_invitado_leer ON invitacion_sucursal FOR SELECT TO pedernal_app
   USING (
     EXISTS (
       SELECT 1 FROM invitacion_empresa ie
@@ -453,17 +453,17 @@ CREATE POLICY invitacion_sucursal_invitado_leer ON invitacion_sucursal FOR SELEC
   );
 
 -- membresia
-CREATE POLICY membresia_app_leer ON membresia FOR SELECT TO zuluhub_app
+CREATE POLICY membresia_app_leer ON membresia FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
 -- Apagar, nunca al gerente (D6). Reactivar queda para el flujo de invitación.
-CREATE POLICY membresia_app_apagar ON membresia FOR UPDATE TO zuluhub_app
+CREATE POLICY membresia_app_apagar ON membresia FOR UPDATE TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND rol <> 'GERENTE')
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND NOT activo);
-CREATE POLICY membresia_invitado_leer ON membresia FOR SELECT TO zuluhub_app
+CREATE POLICY membresia_invitado_leer ON membresia FOR SELECT TO pedernal_app
   USING (invitacion_aceptada_en((SELECT app_token_invitacion()), empresa_id, persona_id, NULL));
 -- Crear la membresía: la invitación del token está aceptada por esa persona, incluye la empresa con
 -- ese mismo rol, es la que queda registrada, y la empresa admite la aceptación.
-CREATE POLICY membresia_invitado_alta ON membresia FOR INSERT TO zuluhub_app
+CREATE POLICY membresia_invitado_alta ON membresia FOR INSERT TO pedernal_app
   WITH CHECK (
     invitacion_id = (SELECT i.id FROM invitacion i WHERE i.token_hash = (SELECT app_token_invitacion()))
     AND invitacion_aceptada_en((SELECT app_token_invitacion()), empresa_id, persona_id, rol)
@@ -471,7 +471,7 @@ CREATE POLICY membresia_invitado_alta ON membresia FOR INSERT TO zuluhub_app
   );
 -- Reactivar una membresía apagada. `rol` no cambia: si la invitación trae otro rol, el WITH CHECK
 -- lo rechaza (error, no "0 filas").
-CREATE POLICY membresia_invitado_reactivar ON membresia FOR UPDATE TO zuluhub_app
+CREATE POLICY membresia_invitado_reactivar ON membresia FOR UPDATE TO pedernal_app
   USING (NOT activo AND invitacion_aceptada_en((SELECT app_token_invitacion()), empresa_id, persona_id, NULL))
   WITH CHECK (
     activo
@@ -480,15 +480,15 @@ CREATE POLICY membresia_invitado_reactivar ON membresia FOR UPDATE TO zuluhub_ap
   );
 
 -- asignacion_sucursal
-CREATE POLICY asignacion_sucursal_app_leer ON asignacion_sucursal FOR SELECT TO zuluhub_app
+CREATE POLICY asignacion_sucursal_app_leer ON asignacion_sucursal FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY asignacion_sucursal_app_apagar ON asignacion_sucursal FOR UPDATE TO zuluhub_app
+CREATE POLICY asignacion_sucursal_app_apagar ON asignacion_sucursal FOR UPDATE TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id))
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND NOT activa);
-CREATE POLICY asignacion_sucursal_invitado_leer ON asignacion_sucursal FOR SELECT TO zuluhub_app
+CREATE POLICY asignacion_sucursal_invitado_leer ON asignacion_sucursal FOR SELECT TO pedernal_app
   USING (invitacion_aceptada_en((SELECT app_token_invitacion()), empresa_id, persona_id, NULL));
 -- Solo las sucursales que la invitación del token lista para esa empresa.
-CREATE POLICY asignacion_sucursal_invitado_alta ON asignacion_sucursal FOR INSERT TO zuluhub_app
+CREATE POLICY asignacion_sucursal_invitado_alta ON asignacion_sucursal FOR INSERT TO pedernal_app
   WITH CHECK (
     invitacion_aceptada_en((SELECT app_token_invitacion()), empresa_id, persona_id, NULL)
     AND invitacion_opera_en((SELECT app_token_invitacion()), empresa_id)
@@ -501,7 +501,7 @@ CREATE POLICY asignacion_sucursal_invitado_alta ON asignacion_sucursal FOR INSER
         AND s.sucursal_id = asignacion_sucursal.sucursal_id
     )
   );
-CREATE POLICY asignacion_sucursal_invitado_reactivar ON asignacion_sucursal FOR UPDATE TO zuluhub_app
+CREATE POLICY asignacion_sucursal_invitado_reactivar ON asignacion_sucursal FOR UPDATE TO pedernal_app
   USING (NOT activa AND invitacion_aceptada_en((SELECT app_token_invitacion()), empresa_id, persona_id, NULL))
   WITH CHECK (
     activa
@@ -520,32 +520,32 @@ CREATE POLICY asignacion_sucursal_invitado_reactivar ON asignacion_sucursal FOR 
 -- Tablas de 0001 que el contexto de INVITACION también necesita ------------------------------
 
 -- persona: las de la empresa (los miembros) y, para el invitado, solo la del email de su invitación.
-CREATE POLICY persona_miembros_app ON persona FOR SELECT TO zuluhub_app
+CREATE POLICY persona_miembros_app ON persona FOR SELECT TO pedernal_app
   USING (
     EXISTS (
       SELECT 1 FROM membresia m
       WHERE m.persona_id = persona.id AND m.empresa_id = (SELECT app_empresa_id())
     )
   );
-CREATE POLICY persona_invitado_leer ON persona FOR SELECT TO zuluhub_app
+CREATE POLICY persona_invitado_leer ON persona FOR SELECT TO pedernal_app
   USING (
     email = (SELECT i.email FROM invitacion i WHERE i.token_hash = (SELECT app_token_invitacion()))
   );
-CREATE POLICY persona_invitado_alta ON persona FOR INSERT TO zuluhub_app
+CREATE POLICY persona_invitado_alta ON persona FOR INSERT TO pedernal_app
   WITH CHECK (
     email = (SELECT i.email FROM invitacion i WHERE i.token_hash = (SELECT app_token_invitacion()))
   );
 
 -- empresa y tenant: el invitado ve las de su invitación (las necesita para que `empresa_operable`
 -- funcione con sus permisos).
-CREATE POLICY empresa_invitado_leer ON empresa FOR SELECT TO zuluhub_app
+CREATE POLICY empresa_invitado_leer ON empresa FOR SELECT TO pedernal_app
   USING (
     EXISTS (
       SELECT 1 FROM invitacion_empresa ie
       WHERE ie.empresa_id = empresa.id AND ie.token_hash = (SELECT app_token_invitacion())
     )
   );
-CREATE POLICY tenant_invitado_leer ON tenant FOR SELECT TO zuluhub_app
+CREATE POLICY tenant_invitado_leer ON tenant FOR SELECT TO pedernal_app
   USING (
     EXISTS (
       SELECT 1 FROM invitacion i
@@ -555,7 +555,7 @@ CREATE POLICY tenant_invitado_leer ON tenant FOR SELECT TO zuluhub_app
 -- Activar el alta: PROVISIONING -> ACTIVE de una empresa cuyo alta de gerente fue aceptada y cuyo
 -- gerente ya tiene su membresía activa. El disparador de 0001 valida la transición; esta política
 -- cierra el resto. Ningún contexto OPERATIVO pasa por acá: su token de invitación es NULL.
-CREATE POLICY empresa_invitado_activar ON empresa FOR UPDATE TO zuluhub_app
+CREATE POLICY empresa_invitado_activar ON empresa FOR UPDATE TO pedernal_app
   USING (
     estado = 'PROVISIONING'
     AND tenant_activo(tenant_id)
@@ -588,7 +588,7 @@ CREATE POLICY empresa_invitado_activar ON empresa FOR UPDATE TO zuluhub_app
 
 -- auditoria_empresa: quien acepta deja constancia, a su nombre, en las empresas de su invitación
 -- (operables o, en el alta del gerente, todavía en PROVISIONING).
-CREATE POLICY auditoria_empresa_invitado_alta ON auditoria_empresa FOR INSERT TO zuluhub_app
+CREATE POLICY auditoria_empresa_invitado_alta ON auditoria_empresa FOR INSERT TO pedernal_app
   WITH CHECK (
     invitacion_aceptada_en((SELECT app_token_invitacion()), empresa_id, actor_persona_id, NULL)
     AND (

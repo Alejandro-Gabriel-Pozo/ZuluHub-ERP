@@ -14,7 +14,7 @@
 --     \i migraciones/reversiones/0011_revertir_lectura_publica_de_marca.sql
 --     COMMIT;
 
-REVOKE SELECT (es_canonico) ON dominio FROM zuluhub_publico;
+REVOKE SELECT (es_canonico) ON dominio FROM pedernal_publico;
 
 -- Sin esta fila, la migración figuraría aplicada y el ejecutor no volvería a correrla.
 DO $$

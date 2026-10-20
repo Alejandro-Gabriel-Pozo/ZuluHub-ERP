@@ -42,13 +42,13 @@ import { crearMarca, crearMundoDeMarca, marcaPrincipal } from "./marcas-apoyo";
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 60_000 });
 
-const ROL = "zuluhub_captacion";
+const ROL = "pedernal_captacion";
 const OTROS_ROLES = [
-  "zuluhub_app",
-  "zuluhub_grupo",
-  "zuluhub_trabajos",
-  "zuluhub_autenticacion",
-  "zuluhub_publico",
+  "pedernal_app",
+  "pedernal_grupo",
+  "pedernal_trabajos",
+  "pedernal_autenticacion",
+  "pedernal_publico",
 ] as const;
 const TABLAS = ["solicitud_de_alta", "limite_de_captacion"] as const;
 
@@ -160,7 +160,7 @@ describe.skipIf(base === null)("captación: lo que la migración declara", () =>
     parametros: unknown[] = [],
   ) => (await dueno.query<T>(texto, parametros)).rows;
 
-  describe("el séptimo rol, zuluhub_captacion", () => {
+  describe("el séptimo rol, pedernal_captacion", () => {
     it("existe, sin superusuario, sin BYPASSRLS, sin pertenencias, sin objetos propios y con topes de tiempo", async () => {
       const r = await filas(
         `select rolsuper, rolbypassrls, rolcreaterole, rolcreatedb, rolreplication, rolinherit, rolcanlogin
@@ -303,7 +303,7 @@ describe.skipIf(base === null)("captación: lo que la migración declara", () =>
       const r = await filas(
         `select grantee, table_name, privilege_type from information_schema.table_privileges
          where table_schema = 'public' and table_name = any($1)
-           and (grantee like 'zuluhub\\_%' escape '\\' or grantee = 'PUBLIC')
+           and (grantee like 'pedernal\\_%' escape '\\' or grantee = 'PUBLIC')
            and privilege_type in ('DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER')`,
         [[...TABLAS]],
       );
@@ -313,22 +313,22 @@ describe.skipIf(base === null)("captación: lo que la migración declara", () =>
     });
 
     it("la plataforma lee toda la solicitud y cambia solo 14 columnas (decisión, anonimización y los datos que se anonimizan); no inserta ni borra", async () => {
-      const suyas = (await columnasDe("zuluhub_plataforma", "UPDATE")).filter((c) =>
+      const suyas = (await columnasDe("pedernal_plataforma", "UPDATE")).filter((c) =>
         c.startsWith("solicitud_de_alta."),
       );
       expect(suyas).toEqual(todas("solicitud_de_alta", DECIDE_LA_PLATAFORMA).sort());
       expect(
-        (await columnasDe("zuluhub_plataforma", "SELECT")).filter((c) =>
+        (await columnasDe("pedernal_plataforma", "SELECT")).filter((c) =>
           c.startsWith("solicitud_de_alta."),
         ),
       ).toEqual(todas("solicitud_de_alta", COLUMNAS_DE_SOLICITUD).sort());
       expect(
-        (await columnasDe("zuluhub_plataforma", "INSERT")).filter((c) =>
+        (await columnasDe("pedernal_plataforma", "INSERT")).filter((c) =>
           /^(solicitud_de_alta|limite_de_captacion)\./.test(c),
         ),
       ).toEqual([]);
       expect(
-        (await columnasDe("zuluhub_plataforma", "SELECT")).filter((c) =>
+        (await columnasDe("pedernal_plataforma", "SELECT")).filter((c) =>
           c.startsWith("limite_de_captacion."),
         ),
       ).toEqual([]);
@@ -420,17 +420,17 @@ describe.skipIf(base === null)("captación: lo que la migración declara", () =>
       );
       expect(r.map((f) => f.p).sort()).toEqual(
         [
-          "limite_de_captacion.limite_captacion_alta:INSERT:PERMISSIVE:zuluhub_captacion",
-          "limite_de_captacion.limite_captacion_contar:UPDATE:PERMISSIVE:zuluhub_captacion",
-          "limite_de_captacion.limite_captacion_leer:SELECT:PERMISSIVE:zuluhub_captacion",
-          "limite_de_captacion.limite_captacion_purgar:DELETE:PERMISSIVE:zuluhub_captacion",
-          "solicitud_de_alta.solicitud_captacion_alta:INSERT:PERMISSIVE:zuluhub_captacion",
-          "solicitud_de_alta.solicitud_captacion_leer:SELECT:PERMISSIVE:zuluhub_captacion",
-          "solicitud_de_alta.solicitud_captacion_verificar:UPDATE:PERMISSIVE:zuluhub_captacion",
-          "solicitud_de_alta.solicitud_plataforma_cambiar:UPDATE:PERMISSIVE:zuluhub_plataforma",
-          "solicitud_de_alta.solicitud_plataforma_con_actor:SELECT:RESTRICTIVE:zuluhub_plataforma",
-          "solicitud_de_alta.solicitud_plataforma_leer:SELECT:PERMISSIVE:zuluhub_plataforma",
-          "solicitud_de_alta.solicitud_plataforma_quien_cambia:UPDATE:RESTRICTIVE:zuluhub_plataforma",
+          "limite_de_captacion.limite_captacion_alta:INSERT:PERMISSIVE:pedernal_captacion",
+          "limite_de_captacion.limite_captacion_contar:UPDATE:PERMISSIVE:pedernal_captacion",
+          "limite_de_captacion.limite_captacion_leer:SELECT:PERMISSIVE:pedernal_captacion",
+          "limite_de_captacion.limite_captacion_purgar:DELETE:PERMISSIVE:pedernal_captacion",
+          "solicitud_de_alta.solicitud_captacion_alta:INSERT:PERMISSIVE:pedernal_captacion",
+          "solicitud_de_alta.solicitud_captacion_leer:SELECT:PERMISSIVE:pedernal_captacion",
+          "solicitud_de_alta.solicitud_captacion_verificar:UPDATE:PERMISSIVE:pedernal_captacion",
+          "solicitud_de_alta.solicitud_plataforma_cambiar:UPDATE:PERMISSIVE:pedernal_plataforma",
+          "solicitud_de_alta.solicitud_plataforma_con_actor:SELECT:RESTRICTIVE:pedernal_plataforma",
+          "solicitud_de_alta.solicitud_plataforma_leer:SELECT:PERMISSIVE:pedernal_plataforma",
+          "solicitud_de_alta.solicitud_plataforma_quien_cambia:UPDATE:RESTRICTIVE:pedernal_plataforma",
         ].sort(),
       );
     });
@@ -599,7 +599,7 @@ describe.skipIf(base === null)("captación: lo que la migración declara", () =>
       }>(
         `select p.proname, p.prosecdef, p.proconfig,
                 array(select r.rolname::text from pg_roles r
-                       where r.rolname like 'zuluhub\\_%' escape '\\' and has_function_privilege(r.rolname, p.oid, 'EXECUTE')
+                       where r.rolname like 'pedernal\\_%' escape '\\' and has_function_privilege(r.rolname, p.oid, 'EXECUTE')
                        order by 1) as ejecutan
          from pg_proc p
          where p.pronamespace = 'public'::regnamespace
@@ -620,7 +620,7 @@ describe.skipIf(base === null)("captación: lo que la migración declara", () =>
       }
       const ejecutan = (nombre: string) => r.find((f) => f.proname === nombre)?.ejecutan;
       expect(ejecutan("app_captacion")).toEqual([ROL]);
-      expect(ejecutan("atribucion_valida")).toEqual([ROL, "zuluhub_plataforma"]);
+      expect(ejecutan("atribucion_valida")).toEqual([ROL, "pedernal_plataforma"]);
       expect(ejecutan("datos_de_auditoria_de_captacion_validos")).toEqual([ROL]);
       // las de disparador no las ejecuta nadie directamente
       expect(ejecutan("solicitud_validar_cambio")).toEqual([]);

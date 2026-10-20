@@ -17,7 +17,7 @@ export type ErrorDeCabecera =
   | "TRUNCADO"
   /** Los campos son incoherentes entre sí (medida cero, orden de bloques imposible, etc.). */
   | "CABECERA_INVALIDA"
-  /** Formato válido, pero una variante que ZuluHub no admite (p. ej. JPEG aritmético o sin pérdida). */
+  /** Formato válido, pero una variante que Pedernal no admite (p. ej. JPEG aritmético o sin pérdida). */
   | "VARIANTE_NO_ADMITIDA";
 
 export type FormatoDeImagen = "png" | "webp" | "jpeg" | "ico";

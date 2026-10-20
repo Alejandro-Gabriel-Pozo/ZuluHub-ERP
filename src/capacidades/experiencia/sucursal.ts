@@ -22,5 +22,5 @@ export function sucursalElegida(
 
 /** La clave con la que se recuerda en el dispositivo: una por empresa, así cambiar de empresa no arrastra la sucursal. */
 export function claveDeSucursalLocal(empresaId: string): string {
-  return `zh:sucursal:${empresaId}`;
+  return `pd:sucursal:${empresaId}`;
 }

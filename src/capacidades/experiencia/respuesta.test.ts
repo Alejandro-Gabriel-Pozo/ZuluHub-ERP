@@ -190,11 +190,11 @@ describe("clasificarError", () => {
     const base = clasificarError({
       tipo: "Inesperado",
       sqlstate: "08006",
-      mensaje: "password failed for zuluhub_app",
+      mensaje: "password failed for pedernal_app",
     });
     expect(base).toEqual({
       tipo: "INESPERADO",
-      detalle: "Inesperado 08006 password failed for zuluhub_app",
+      detalle: "Inesperado 08006 password failed for pedernal_app",
     });
     expect(clasificarError({ tipo: "ConcurrenciaAgotada" })).toEqual({
       tipo: "INESPERADO",
@@ -265,17 +265,17 @@ describe("errorPublicoDe, errorInesperado y errorDeCodigo", () => {
   });
 
   it("lo inesperado sale con el código genérico y la referencia, y nada más", () => {
-    expect(errorInesperado("ZH-ABCD-0123", false)).toEqual({
+    expect(errorInesperado("PD-ABCD-0123", false)).toEqual({
       codigo: "ERROR_INTERNO",
       clave: "error.inesperado",
       presentacion: "INESPERADO",
-      referencia: "ZH-ABCD-0123",
+      referencia: "PD-ABCD-0123",
     });
-    expect(errorInesperado("ZH-ABCD-0123", true)).toEqual({
+    expect(errorInesperado("PD-ABCD-0123", true)).toEqual({
       codigo: "NO_DISPONIBLE",
       clave: "error.no_disponible",
       presentacion: "INESPERADO",
-      referencia: "ZH-ABCD-0123",
+      referencia: "PD-ABCD-0123",
     });
   });
 

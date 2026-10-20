@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 /**
  * La guarda de migración FALLA CERRADO también en su costura con la web: si armar la guarda o preguntarle lanza
- * (entorno sin armar, conexión caída, el rol `zuluhub_app` sin permiso de lectura sobre `migracion` porque la
+ * (entorno sin armar, conexión caída, el rol `pedernal_app` sin permiso de lectura sobre `migracion` porque la
  * migración que se lo da todavía no se aplicó), la respuesta es «no al día» (→ «En mantenimiento», 503) y nunca
  * «sí». La parte de la lógica y la base real están en `guarda-de-migracion.test.ts` y `rutas-de-sistema.test.ts`.
  */

@@ -1,7 +1,7 @@
-# ZuluHub ERP
+# Pedernal ERP
 
-Código de ZuluHub. Las decisiones, el diseño y las reglas viven en el repositorio
-[ZuluHub-docs](https://github.com/Alejandro-Gabriel-Pozo/ZuluHub-docs): empezar por sus ADR (`08-adr/`)
+Código de Pedernal. Las decisiones, el diseño y las reglas viven en el repositorio
+[Pedernal-docs](https://github.com/Alejandro-Gabriel-Pozo/ZuluHub-docs): empezar por sus ADR (`08-adr/`)
 y por los casos de uso (`09-casos-de-uso/`).
 
 ## Estado
@@ -20,7 +20,7 @@ Hito **H0**: esqueleto, CI y reglas de arquitectura activas. Todavía no hay apl
 | `npm run analizar:muerto` | Código y dependencias sin uso (knip)                                                        |
 | `npm test`                | Pruebas, incluidas las que rompen cada regla de arquitectura a propósito                    |
 | `npm run migrar -- --ver` | Migra la base real (`--ver`, `--aplicar`, `--preparar-roles`); ver el script                |
-| `npm run instalar-clave`  | Instala en la base la clave de firma del contexto (`ZULUHUB_CLAVE_CONTEXTO`)                |
+| `npm run instalar-clave`  | Instala en la base la clave de firma del contexto (`PEDERNAL_CLAVE_CONTEXTO`)               |
 | `npm run build:web`       | Compila `apps/web` sin variables de entorno; el despliegue: `apps/web/PRIMER-DESPLIEGUE.md` |
 
 ## Estructura

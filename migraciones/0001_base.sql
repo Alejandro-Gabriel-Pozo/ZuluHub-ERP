@@ -23,7 +23,7 @@ DECLARE
   ];
   tope text;
 BEGIN
-  FOREACH r IN ARRAY ARRAY['zuluhub_app', 'zuluhub_grupo', 'zuluhub_trabajos', 'zuluhub_plataforma']
+  FOREACH r IN ARRAY ARRAY['pedernal_app', 'pedernal_grupo', 'pedernal_trabajos', 'pedernal_plataforma']
   LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
       EXECUTE format(
@@ -40,13 +40,13 @@ BEGIN
     FROM pg_auth_members am
     JOIN pg_roles m ON m.oid = am.member
     JOIN pg_roles g ON g.oid = am.roleid
-   WHERE m.rolname = ANY (ARRAY['zuluhub_app', 'zuluhub_grupo', 'zuluhub_trabajos', 'zuluhub_plataforma']);
+   WHERE m.rolname = ANY (ARRAY['pedernal_app', 'pedernal_grupo', 'pedernal_trabajos', 'pedernal_plataforma']);
   IF ajenas IS NOT NULL THEN
-    RAISE EXCEPTION 'los roles de ZuluHub no pueden ser miembros de otros roles (%): revocar la pertenencia y repetir', ajenas
+    RAISE EXCEPTION 'los roles de Pedernal no pueden ser miembros de otros roles (%): revocar la pertenencia y repetir', ajenas
       USING ERRCODE = '55000';
   END IF;
 
-  FOREACH r IN ARRAY ARRAY['zuluhub_app', 'zuluhub_grupo', 'zuluhub_trabajos', 'zuluhub_plataforma']
+  FOREACH r IN ARRAY ARRAY['pedernal_app', 'pedernal_grupo', 'pedernal_trabajos', 'pedernal_plataforma']
   LOOP
     -- Si el rol ya existía (por ejemplo, creado a mano), se le fuerzan los atributos seguros. Solo
     -- se escribe el catálogo si algo difiere: así repetir la migración no compite con otras sesiones.
@@ -85,7 +85,7 @@ DO $$
 BEGIN
   EXECUTE format('REVOKE TEMPORARY ON DATABASE %I FROM PUBLIC', current_database());
   EXECUTE format(
-    'REVOKE TEMPORARY ON DATABASE %I FROM zuluhub_app, zuluhub_grupo, zuluhub_trabajos, zuluhub_plataforma',
+    'REVOKE TEMPORARY ON DATABASE %I FROM pedernal_app, pedernal_grupo, pedernal_trabajos, pedernal_plataforma',
     current_database()
   );
 END
@@ -114,7 +114,7 @@ ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 --     v1.<kid>.<payloadHex>.<macHex>
 --
 --   payloadHex  hex del JSON UTF-8 {u, e, t, p, i, x}:
---                 u  rol de base con el que se conecta (zuluhub_app, zuluhub_grupo, ...)
+--                 u  rol de base con el que se conecta (pedernal_app, pedernal_grupo, ...)
 --                 e  empresa (uuid o null)      t  tenant (uuid o null)
 --                 p  persona (uuid o null)      i  hash sha256 hex del token de invitación (o null)
 --                 x  vencimiento, epoch en segundos
@@ -493,7 +493,7 @@ BEGIN
       USING ERRCODE = '55000';
   END IF;
   IF v_modo = 'SINGLE' THEN
-    PERFORM pg_advisory_xact_lock(hashtextextended('zuluhub.tenant.alta', 0));
+    PERFORM pg_advisory_xact_lock(hashtextextended('pedernal.tenant.alta', 0));
     IF EXISTS (SELECT 1 FROM public.tenant) THEN
       RAISE EXCEPTION 'la instalación es SINGLE y ya tiene un tenant'
         USING ERRCODE = '23514', CONSTRAINT = 'tenant_instalacion_single';
@@ -596,44 +596,44 @@ GRANT EXECUTE ON FUNCTION
   cuit_valido(text),
   zona_horaria_valida(text), empresa_operable(uuid), es_propietario_activo(uuid), tenant_de_empresa(uuid),
   tenant_activo(uuid)
-TO zuluhub_app, zuluhub_grupo, zuluhub_trabajos, zuluhub_plataforma;
-GRANT USAGE ON SCHEMA public TO zuluhub_app, zuluhub_grupo, zuluhub_trabajos, zuluhub_plataforma;
+TO pedernal_app, pedernal_grupo, pedernal_trabajos, pedernal_plataforma;
+GRANT USAGE ON SCHEMA public TO pedernal_app, pedernal_grupo, pedernal_trabajos, pedernal_plataforma;
 -- Los secretos de firma no se tocan: ningún privilegio sobre `contexto_clave` (ya cerrado para
 -- PUBLIC arriba; explícito acá por si alguien lo hubiera otorgado a mano antes).
-REVOKE ALL ON contexto_clave FROM zuluhub_app, zuluhub_grupo, zuluhub_trabajos, zuluhub_plataforma;
+REVOKE ALL ON contexto_clave FROM pedernal_app, pedernal_grupo, pedernal_trabajos, pedernal_plataforma;
 
 -- app: opera dentro de una empresa
-GRANT SELECT ON empresa, tenant, persona, membresia_tenant TO zuluhub_app;
-GRANT SELECT ON sucursal, auditoria_empresa, trabajo TO zuluhub_app;
-GRANT INSERT (empresa_id, nombre) ON sucursal TO zuluhub_app;
+GRANT SELECT ON empresa, tenant, persona, membresia_tenant TO pedernal_app;
+GRANT SELECT ON sucursal, auditoria_empresa, trabajo TO pedernal_app;
+GRANT INSERT (empresa_id, nombre) ON sucursal TO pedernal_app;
 GRANT INSERT (empresa_id, actor_persona_id, accion, entidad, entidad_id, antes, despues)
-  ON auditoria_empresa TO zuluhub_app;
-GRANT INSERT (empresa_id, tipo, datos, clave_idempotencia) ON trabajo TO zuluhub_app;
-GRANT UPDATE (nombre, activa) ON sucursal TO zuluhub_app;
+  ON auditoria_empresa TO pedernal_app;
+GRANT INSERT (empresa_id, tipo, datos, clave_idempotencia) ON trabajo TO pedernal_app;
+GRANT UPDATE (nombre, activa) ON sucursal TO pedernal_app;
 
 -- grupo: solo lectura para el dueño del grupo, más el registro de su acceso
-GRANT SELECT ON empresa, tenant, sucursal, persona, membresia_tenant TO zuluhub_grupo;
-GRANT INSERT (tenant_id, persona_id, empresa_id) ON auditoria_acceso_grupo TO zuluhub_grupo;
+GRANT SELECT ON empresa, tenant, sucursal, persona, membresia_tenant TO pedernal_grupo;
+GRANT INSERT (tenant_id, persona_id, empresa_id) ON auditoria_acceso_grupo TO pedernal_grupo;
 
 -- trabajos: ve y avanza la cola; nada más
-GRANT SELECT ON trabajo TO zuluhub_trabajos;
-GRANT UPDATE (estado, intentos, proximo_intento, tomado_hasta, ultimo_error) ON trabajo TO zuluhub_trabajos;
+GRANT SELECT ON trabajo TO pedernal_trabajos;
+GRANT UPDATE (estado, intentos, proximo_intento, tomado_hasta, ultimo_error) ON trabajo TO pedernal_trabajos;
 
 -- plataforma: administra tenants y empresas; no lee datos operativos
-GRANT SELECT ON instalacion, tenant, empresa, persona, membresia_tenant, trabajo, auditoria_plataforma TO zuluhub_plataforma;
-GRANT INSERT (nombre) ON tenant TO zuluhub_plataforma;
-GRANT INSERT (tenant_id, cuit, razon_social, zona_horaria) ON empresa TO zuluhub_plataforma;
-GRANT INSERT (email) ON persona TO zuluhub_plataforma;
-GRANT INSERT (persona_id, tenant_id, rol, activo) ON membresia_tenant TO zuluhub_plataforma;
-GRANT INSERT (empresa_id, nombre) ON sucursal TO zuluhub_plataforma;
+GRANT SELECT ON instalacion, tenant, empresa, persona, membresia_tenant, trabajo, auditoria_plataforma TO pedernal_plataforma;
+GRANT INSERT (nombre) ON tenant TO pedernal_plataforma;
+GRANT INSERT (tenant_id, cuit, razon_social, zona_horaria) ON empresa TO pedernal_plataforma;
+GRANT INSERT (email) ON persona TO pedernal_plataforma;
+GRANT INSERT (persona_id, tenant_id, rol, activo) ON membresia_tenant TO pedernal_plataforma;
+GRANT INSERT (empresa_id, nombre) ON sucursal TO pedernal_plataforma;
 GRANT INSERT (empresa_id, actor_persona_id, accion, entidad, entidad_id, antes, despues)
-  ON auditoria_empresa TO zuluhub_plataforma;
-GRANT INSERT (actor, accion, entidad, entidad_id, antes, despues) ON auditoria_plataforma TO zuluhub_plataforma;
-GRANT INSERT (empresa_id, tipo, datos, clave_idempotencia) ON trabajo TO zuluhub_plataforma;
-GRANT UPDATE (nombre, estado, motivo_estado) ON tenant TO zuluhub_plataforma;
-GRANT UPDATE (cuit, razon_social, estado, motivo_estado, zona_horaria) ON empresa TO zuluhub_plataforma;
-GRANT UPDATE (activo_global) ON persona TO zuluhub_plataforma;
-GRANT UPDATE (activo) ON membresia_tenant TO zuluhub_plataforma;
+  ON auditoria_empresa TO pedernal_plataforma;
+GRANT INSERT (actor, accion, entidad, entidad_id, antes, despues) ON auditoria_plataforma TO pedernal_plataforma;
+GRANT INSERT (empresa_id, tipo, datos, clave_idempotencia) ON trabajo TO pedernal_plataforma;
+GRANT UPDATE (nombre, estado, motivo_estado) ON tenant TO pedernal_plataforma;
+GRANT UPDATE (cuit, razon_social, estado, motivo_estado, zona_horaria) ON empresa TO pedernal_plataforma;
+GRANT UPDATE (activo_global) ON persona TO pedernal_plataforma;
+GRANT UPDATE (activo) ON membresia_tenant TO pedernal_plataforma;
 
 -- ---------------------------------------------------------------------------------------------
 -- RLS: activa y forzada en toda tabla; sin política no hay acceso
@@ -660,79 +660,79 @@ ALTER TABLE instalacion ENABLE ROW LEVEL SECURITY;
 ALTER TABLE instalacion FORCE ROW LEVEL SECURITY;
 
 -- instalacion: solo la lee la plataforma
-CREATE POLICY instalacion_plataforma ON instalacion FOR SELECT TO zuluhub_plataforma USING (true);
+CREATE POLICY instalacion_plataforma ON instalacion FOR SELECT TO pedernal_plataforma USING (true);
 
 -- tenant
-CREATE POLICY tenant_app_leer ON tenant FOR SELECT TO zuluhub_app
+CREATE POLICY tenant_app_leer ON tenant FOR SELECT TO pedernal_app
   USING (id = (SELECT e.tenant_id FROM empresa e WHERE e.id = (SELECT app_empresa_id())));
-CREATE POLICY tenant_grupo_leer ON tenant FOR SELECT TO zuluhub_grupo
+CREATE POLICY tenant_grupo_leer ON tenant FOR SELECT TO pedernal_grupo
   USING (id = (SELECT app_tenant_id()) AND es_propietario_activo(id));
-CREATE POLICY tenant_plataforma_leer ON tenant FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY tenant_plataforma_alta ON tenant FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
-CREATE POLICY tenant_plataforma_cambiar ON tenant FOR UPDATE TO zuluhub_plataforma USING (true) WITH CHECK (true);
+CREATE POLICY tenant_plataforma_leer ON tenant FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY tenant_plataforma_alta ON tenant FOR INSERT TO pedernal_plataforma WITH CHECK (true);
+CREATE POLICY tenant_plataforma_cambiar ON tenant FOR UPDATE TO pedernal_plataforma USING (true) WITH CHECK (true);
 
 -- empresa
-CREATE POLICY empresa_app_leer ON empresa FOR SELECT TO zuluhub_app USING (id = (SELECT app_empresa_id()));
-CREATE POLICY empresa_grupo_leer ON empresa FOR SELECT TO zuluhub_grupo
+CREATE POLICY empresa_app_leer ON empresa FOR SELECT TO pedernal_app USING (id = (SELECT app_empresa_id()));
+CREATE POLICY empresa_grupo_leer ON empresa FOR SELECT TO pedernal_grupo
   USING (tenant_id = (SELECT app_tenant_id()) AND es_propietario_activo(tenant_id));
-CREATE POLICY empresa_plataforma_leer ON empresa FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY empresa_plataforma_alta ON empresa FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
-CREATE POLICY empresa_plataforma_cambiar ON empresa FOR UPDATE TO zuluhub_plataforma USING (true) WITH CHECK (true);
+CREATE POLICY empresa_plataforma_leer ON empresa FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY empresa_plataforma_alta ON empresa FOR INSERT TO pedernal_plataforma WITH CHECK (true);
+CREATE POLICY empresa_plataforma_cambiar ON empresa FOR UPDATE TO pedernal_plataforma USING (true) WITH CHECK (true);
 
 -- sucursal: la plataforma solo puede sembrarla (INSERT sin SELECT: no lee datos operativos)
-CREATE POLICY sucursal_app_leer ON sucursal FOR SELECT TO zuluhub_app USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY sucursal_app_alta ON sucursal FOR INSERT TO zuluhub_app
+CREATE POLICY sucursal_app_leer ON sucursal FOR SELECT TO pedernal_app USING (empresa_id = (SELECT app_empresa_id()));
+CREATE POLICY sucursal_app_alta ON sucursal FOR INSERT TO pedernal_app
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
-CREATE POLICY sucursal_app_cambiar ON sucursal FOR UPDATE TO zuluhub_app
+CREATE POLICY sucursal_app_cambiar ON sucursal FOR UPDATE TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id))
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
 -- El dueño del grupo ve las sucursales mientras el TENANT esté activo (diseno-inicial §4.1 y R3);
 -- que una empresa puntual esté suspendida no se las oculta: ese estado lo ve en su lista.
-CREATE POLICY sucursal_grupo_leer ON sucursal FOR SELECT TO zuluhub_grupo
+CREATE POLICY sucursal_grupo_leer ON sucursal FOR SELECT TO pedernal_grupo
   USING (
     tenant_de_empresa(empresa_id) = (SELECT app_tenant_id())
     AND es_propietario_activo((SELECT app_tenant_id()))
     AND tenant_activo((SELECT app_tenant_id()))
   );
-CREATE POLICY sucursal_plataforma_sembrar ON sucursal FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
+CREATE POLICY sucursal_plataforma_sembrar ON sucursal FOR INSERT TO pedernal_plataforma WITH CHECK (true);
 
 -- persona y membresia_tenant: cada rol ve su propia fila
-CREATE POLICY persona_propia_app ON persona FOR SELECT TO zuluhub_app USING (id = (SELECT app_persona_id()));
-CREATE POLICY persona_propia_grupo ON persona FOR SELECT TO zuluhub_grupo USING (id = (SELECT app_persona_id()));
-CREATE POLICY persona_plataforma_leer ON persona FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY persona_plataforma_alta ON persona FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
-CREATE POLICY persona_plataforma_cambiar ON persona FOR UPDATE TO zuluhub_plataforma USING (true) WITH CHECK (true);
+CREATE POLICY persona_propia_app ON persona FOR SELECT TO pedernal_app USING (id = (SELECT app_persona_id()));
+CREATE POLICY persona_propia_grupo ON persona FOR SELECT TO pedernal_grupo USING (id = (SELECT app_persona_id()));
+CREATE POLICY persona_plataforma_leer ON persona FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY persona_plataforma_alta ON persona FOR INSERT TO pedernal_plataforma WITH CHECK (true);
+CREATE POLICY persona_plataforma_cambiar ON persona FOR UPDATE TO pedernal_plataforma USING (true) WITH CHECK (true);
 
-CREATE POLICY membresia_tenant_propia_app ON membresia_tenant FOR SELECT TO zuluhub_app
+CREATE POLICY membresia_tenant_propia_app ON membresia_tenant FOR SELECT TO pedernal_app
   USING (persona_id = (SELECT app_persona_id()));
-CREATE POLICY membresia_tenant_propia_grupo ON membresia_tenant FOR SELECT TO zuluhub_grupo
+CREATE POLICY membresia_tenant_propia_grupo ON membresia_tenant FOR SELECT TO pedernal_grupo
   USING (persona_id = (SELECT app_persona_id()));
-CREATE POLICY membresia_tenant_plataforma_leer ON membresia_tenant FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY membresia_tenant_plataforma_alta ON membresia_tenant FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
-CREATE POLICY membresia_tenant_plataforma_cambiar ON membresia_tenant FOR UPDATE TO zuluhub_plataforma
+CREATE POLICY membresia_tenant_plataforma_leer ON membresia_tenant FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY membresia_tenant_plataforma_alta ON membresia_tenant FOR INSERT TO pedernal_plataforma WITH CHECK (true);
+CREATE POLICY membresia_tenant_plataforma_cambiar ON membresia_tenant FOR UPDATE TO pedernal_plataforma
   USING (true) WITH CHECK (true);
 
 -- auditorías
-CREATE POLICY auditoria_empresa_app_leer ON auditoria_empresa FOR SELECT TO zuluhub_app
+CREATE POLICY auditoria_empresa_app_leer ON auditoria_empresa FOR SELECT TO pedernal_app
   USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY auditoria_empresa_app_alta ON auditoria_empresa FOR INSERT TO zuluhub_app
+CREATE POLICY auditoria_empresa_app_alta ON auditoria_empresa FOR INSERT TO pedernal_app
   WITH CHECK (
     empresa_id = (SELECT app_empresa_id())
     AND empresa_operable(empresa_id)
     AND actor_persona_id IS NOT DISTINCT FROM (SELECT app_persona_id())
   );
-CREATE POLICY auditoria_empresa_plataforma_alta ON auditoria_empresa FOR INSERT TO zuluhub_plataforma
+CREATE POLICY auditoria_empresa_plataforma_alta ON auditoria_empresa FOR INSERT TO pedernal_plataforma
   WITH CHECK (true);
-CREATE POLICY auditoria_plataforma_leer ON auditoria_plataforma FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY auditoria_plataforma_alta ON auditoria_plataforma FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
-CREATE POLICY auditoria_acceso_grupo_alta ON auditoria_acceso_grupo FOR INSERT TO zuluhub_grupo
+CREATE POLICY auditoria_plataforma_leer ON auditoria_plataforma FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY auditoria_plataforma_alta ON auditoria_plataforma FOR INSERT TO pedernal_plataforma WITH CHECK (true);
+CREATE POLICY auditoria_acceso_grupo_alta ON auditoria_acceso_grupo FOR INSERT TO pedernal_grupo
   WITH CHECK (tenant_id = (SELECT app_tenant_id()) AND persona_id = (SELECT app_persona_id()) AND es_propietario_activo(tenant_id));
 
 -- trabajo
-CREATE POLICY trabajo_app_leer ON trabajo FOR SELECT TO zuluhub_app USING (empresa_id = (SELECT app_empresa_id()));
-CREATE POLICY trabajo_app_alta ON trabajo FOR INSERT TO zuluhub_app
+CREATE POLICY trabajo_app_leer ON trabajo FOR SELECT TO pedernal_app USING (empresa_id = (SELECT app_empresa_id()));
+CREATE POLICY trabajo_app_alta ON trabajo FOR INSERT TO pedernal_app
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
-CREATE POLICY trabajo_trabajos_leer ON trabajo FOR SELECT TO zuluhub_trabajos USING (true);
-CREATE POLICY trabajo_trabajos_avanzar ON trabajo FOR UPDATE TO zuluhub_trabajos USING (true) WITH CHECK (true);
-CREATE POLICY trabajo_plataforma_leer ON trabajo FOR SELECT TO zuluhub_plataforma USING (true);
-CREATE POLICY trabajo_plataforma_alta ON trabajo FOR INSERT TO zuluhub_plataforma WITH CHECK (true);
+CREATE POLICY trabajo_trabajos_leer ON trabajo FOR SELECT TO pedernal_trabajos USING (true);
+CREATE POLICY trabajo_trabajos_avanzar ON trabajo FOR UPDATE TO pedernal_trabajos USING (true) WITH CHECK (true);
+CREATE POLICY trabajo_plataforma_leer ON trabajo FOR SELECT TO pedernal_plataforma USING (true);
+CREATE POLICY trabajo_plataforma_alta ON trabajo FOR INSERT TO pedernal_plataforma WITH CHECK (true);

@@ -22,7 +22,7 @@ import { crearEntornoPublico } from "./resolucion-apoyo";
 
 /**
  * Configuración pública de la marca de un host (M4b, marcas y planes §B.2.3) contra el rol REAL
- * `zuluhub_publico`: nombre, tema y aspecto validados con herencia y host canónico, y NADA más. Lo central:
+ * `pedernal_publico`: nombre, tema y aspecto validados con herencia y host canónico, y NADA más. Lo central:
  *  (1) el mismo criterio que la resolución del host (lo no servible responde igual que «no existe»);
  *  (2) aislamiento entre marcas (el tema de B nunca sale en un host de A);
  *  (3) cada lectura es UNA foto de la base: una versión nueva que se confirma en medio se ve entera o no
@@ -655,7 +655,7 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
       }
       expect(transacciones).toBe(1);
       expect(vistas).toEqual([
-        { rol: "zuluhub_publico", lectura: "on", aislamiento: "repeatable read", contexto: null },
+        { rol: "pedernal_publico", lectura: "on", aislamiento: "repeatable read", contexto: null },
       ]);
     });
 
@@ -671,7 +671,7 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
       if (base === null) return;
       // Rol inexistente y no clave mala: el CI levanta Postgres con `trust` (acepta cualquier clave).
       const url = new URL(propia.base.publico);
-      url.username = "zuluhub_rol_que_no_existe";
+      url.username = "pedernal_rol_que_no_existe";
       const roto = crearEntornoPublico(propia.base, { url: url.toString() });
       try {
         const r = await crearConfiguracionPublicaDeHost(roto).porHost(

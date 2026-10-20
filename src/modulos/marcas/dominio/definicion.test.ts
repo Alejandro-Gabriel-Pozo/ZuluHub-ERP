@@ -20,7 +20,7 @@ const definicion = (cambios: Partial<DefinicionDeMarca> = {}): DefinicionDeMarca
 });
 
 const PRINCIPAL: DefinicionDeMarca = {
-  nombreVisible: "ZuluHub",
+  nombreVisible: "Pedernal",
   tema: {
     primary: "#1a73e8",
     "on-primary": "#ffffff",
@@ -28,7 +28,7 @@ const PRINCIPAL: DefinicionDeMarca = {
     accent: "#d93025",
   },
   aspecto: { estilo: "CLASICO", esquinas: "RECTA" },
-  logo: "/marcas/zuluhub/logo.png",
+  logo: "/marcas/pedernal/logo.png",
   vocabulario: { "rol.gerente.nombre": "Gerente general" },
   modulosIniciales: ["reservas"],
   planPorDefectoId: PLAN_A,
@@ -150,7 +150,7 @@ describe("resolverDefinicion (herencia)", () => {
       secondary: "#222222",
       accent: "#d93025",
     });
-    expect(resuelta.logo).toBe("/marcas/zuluhub/logo.png");
+    expect(resuelta.logo).toBe("/marcas/pedernal/logo.png");
     expect(resuelta.modulosIniciales).toEqual(["reservas"]);
     expect(resuelta.planPorDefectoId).toBe(PLAN_B);
   });
@@ -249,7 +249,7 @@ describe("completarDefinicion", () => {
   it("el nombre lo define la propia marca: heredarlo de la principal no alcanza", () => {
     const producto = definicion();
     const resuelta = resolverDefinicion([producto, PRINCIPAL]);
-    expect(resuelta.nombreVisible).toBe("ZuluHub");
+    expect(resuelta.nombreVisible).toBe("Pedernal");
     expect(completarDefinicion(producto, resuelta)).toEqual({
       ok: false,
       error: ["nombre_visible"],
@@ -300,7 +300,7 @@ describe("validarNombreVisible", () => {
 
 describe("validarLogo", () => {
   it.each([
-    "/marcas/zuluhub/logo.png",
+    "/marcas/pedernal/logo.png",
     "/marcas/mi-calendario/logo-2.webp",
     "/marcas/a/b.png",
     "/marcas/0/9.webp",
@@ -310,30 +310,30 @@ describe("validarLogo", () => {
   });
 
   it.each([
-    ["SVG, que puede llevar scripts", "/marcas/zuluhub/logo.svg"],
-    ["JPEG", "/marcas/zuluhub/logo.jpg"],
-    ["GIF", "/marcas/zuluhub/logo.gif"],
-    ["sin extensión", "/marcas/zuluhub/logo"],
-    ["extensión en mayúsculas", "/marcas/zuluhub/logo.PNG"],
-    ["doble extensión", "/marcas/zuluhub/logo.png.svg"],
-    ["URL externa", "https://otro.test/marcas/zuluhub/logo.png"],
-    ["URL sin protocolo", "//otro.test/marcas/zuluhub/logo.png"],
+    ["SVG, que puede llevar scripts", "/marcas/pedernal/logo.svg"],
+    ["JPEG", "/marcas/pedernal/logo.jpg"],
+    ["GIF", "/marcas/pedernal/logo.gif"],
+    ["sin extensión", "/marcas/pedernal/logo"],
+    ["extensión en mayúsculas", "/marcas/pedernal/logo.PNG"],
+    ["doble extensión", "/marcas/pedernal/logo.png.svg"],
+    ["URL externa", "https://otro.test/marcas/pedernal/logo.png"],
+    ["URL sin protocolo", "//otro.test/marcas/pedernal/logo.png"],
     ["data URI", "data:image/png;base64,AAAA"],
     ["subida de carpeta", "/marcas/../secreto/logo.png"],
-    ["subida en el archivo", "/marcas/zuluhub/../logo.png"],
-    ["una carpeta de más", "/marcas/zuluhub/otra/logo.png"],
+    ["subida en el archivo", "/marcas/pedernal/../logo.png"],
+    ["una carpeta de más", "/marcas/pedernal/otra/logo.png"],
     ["una carpeta de menos", "/marcas/logo.png"],
-    ["otra raíz", "/imagenes/zuluhub/logo.png"],
-    ["sin barra inicial", "marcas/zuluhub/logo.png"],
-    ["mayúsculas en la carpeta", "/marcas/ZuluHub/logo.png"],
+    ["otra raíz", "/imagenes/pedernal/logo.png"],
+    ["sin barra inicial", "marcas/pedernal/logo.png"],
+    ["mayúsculas en la carpeta", "/marcas/Pedernal/logo.png"],
     ["guion bajo", "/marcas/zulu_hub/logo.png"],
     ["carpeta vacía", "/marcas//logo.png"],
-    ["archivo vacío", "/marcas/zuluhub/.png"],
-    ["con consulta", "/marcas/zuluhub/logo.png?x=1"],
-    ["con fragmento", "/marcas/zuluhub/logo.png#x"],
-    ["con espacio", "/marcas/zuluhub/lo go.png"],
-    ["con salto de línea al final", "/marcas/zuluhub/logo.png\n"],
-    ["con barra invertida", "/marcas\\zuluhub/logo.png"],
+    ["archivo vacío", "/marcas/pedernal/.png"],
+    ["con consulta", "/marcas/pedernal/logo.png?x=1"],
+    ["con fragmento", "/marcas/pedernal/logo.png#x"],
+    ["con espacio", "/marcas/pedernal/lo go.png"],
+    ["con salto de línea al final", "/marcas/pedernal/logo.png\n"],
+    ["con barra invertida", "/marcas\\pedernal/logo.png"],
     ["vacío", ""],
   ])("rechaza %s", (_nombre, ruta) => {
     expect(validarLogo(ruta)).toEqual({ ok: false, error: "LOGO_INVALIDO" });

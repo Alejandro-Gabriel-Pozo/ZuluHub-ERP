@@ -49,13 +49,13 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
       });
       expect(r).toEqual({
         ok: true,
-        valor: { rol: "zuluhub_app", empresa: a.empresa, tenant: "", persona: "" },
+        valor: { rol: "pedernal_app", empresa: a.empresa, tenant: "", persona: "" },
       });
       const p = await entorno.ejecutar({ contexto: comoPlataforma() }, async ({ db }) => {
         const { rows } = await sql<{ rol: string }>`select current_user as rol`.execute(db);
         return ok(rows[0]?.rol);
       });
-      expect(p).toEqual({ ok: true, valor: "zuluhub_plataforma" });
+      expect(p).toEqual({ ok: true, valor: "pedernal_plataforma" });
     });
 
     it("sin la cadena de conexión de la puerta, falla; no cae en otra", async () => {

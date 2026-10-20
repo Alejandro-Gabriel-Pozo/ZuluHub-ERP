@@ -62,7 +62,7 @@ const TABLAS_VIEJAS = [
 ] as const;
 
 const carpetaCon = async (archivos: readonly string[]): Promise<string> => {
-  const carpeta = await mkdtemp(join(tmpdir(), "zuluhub-mig-0006-"));
+  const carpeta = await mkdtemp(join(tmpdir(), "pedernal-mig-0006-"));
   for (const archivo of archivos)
     await copyFile(join(MIGRACIONES, archivo), join(carpeta, archivo));
   return carpeta;
@@ -343,7 +343,7 @@ describe.skipIf(base === null)(
         }
         await dueno.query("begin");
         try {
-          await dueno.query("set local role zuluhub_app");
+          await dueno.query("set local role pedernal_app");
           await expect(dueno.query(verificacion)).rejects.toThrow(/evada RLS/);
         } finally {
           await dueno.query("rollback");
@@ -422,7 +422,7 @@ describe.skipIf(base === null)(
         const sql = await readFile(REVERSION, "utf8");
         await c.query("begin");
         try {
-          if (confirmar) await c.query("set local zuluhub.confirmar_reversion = 'SI'");
+          if (confirmar) await c.query("set local pedernal.confirmar_reversion = 'SI'");
           await c.query(sql);
           await c.query("commit");
         } catch (error) {

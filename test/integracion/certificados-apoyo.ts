@@ -195,7 +195,7 @@ export function pedidoDeCertificado(
     id: randomUUID(),
     emisorId: emisorId(e.emisor),
     ambiente: "HOMOLOGACION",
-    alias: `zuluhub${randomBytes(3).toString("hex")}`,
+    alias: `pedernal${randomBytes(3).toString("hex")}`,
     cuitTitular: e.cuit,
     organizacion: "Panadería Zulú SA",
     ...cambios,

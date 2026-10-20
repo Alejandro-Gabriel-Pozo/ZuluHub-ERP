@@ -98,7 +98,7 @@ describe.skipIf(base === null)("aspecto de la marca: concurrencia", () => {
   const abrirAdmin = (aislamiento: Aislamiento) =>
     SesionDePrueba.abrir(
       b,
-      "zuluhub_plataforma",
+      "pedernal_plataforma",
       comoPlataforma({ tipo: "ADMIN", id: adminPlataformaId(ADMIN_DE_PRUEBA) }),
       aislamiento,
     );

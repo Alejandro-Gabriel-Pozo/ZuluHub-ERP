@@ -30,12 +30,12 @@ describe("decidirMarcaDeMail", () => {
       decidirMarcaDeMail(
         datos({
           esPrincipal: true,
-          nombreVisible: "ZuluHub",
-          hostCanonico: host("app.zuluhub.test"),
+          nombreVisible: "Pedernal",
+          hostCanonico: host("app.pedernal.test"),
         }),
         RESPALDO,
       ),
-    ).toEqual({ nombre: "ZuluHub", urlBase: "https://app.zuluhub.test" });
+    ).toEqual({ nombre: "Pedernal", urlBase: "https://app.pedernal.test" });
   });
 
   it.each([

@@ -35,6 +35,9 @@ regexes = [
 
 # ADR-016 (W5): la prueba de propiedades de `aRespuesta` mete una palabra inventada en fallas de todo tipo
 # para comprobar que nunca sale hacia la pantalla. No es un secreto: un solo archivo y un solo valor.
+# El valor se escribe con la sigla del producto de dos letras como comodín (`[A-Z]{2}`) a propósito: el historial
+# conserva la forma anterior (`SECRETO-` + sigla vieja) en el mismo archivo, y el escaneo del historial completo
+# tiene que seguir en verde con las dos.
 [[allowlists]]
 description = "Palabra de juguete de la prueba de no-filtración de aRespuesta"
 condition = "AND"
@@ -42,7 +45,7 @@ paths = [
   '''^src/capacidades/experiencia/respuesta\.propiedades\.test\.ts$''',
 ]
 regexes = [
-  '''^SECRETO-ZH-9f3a$''',
+  '''^SECRETO-[A-Z]{2}-9f3a$''',
 ]
 
 # P8a (autenticación de plataforma): secretos de juguete de las pruebas del segundo factor y del entorno de

@@ -1,20 +1,20 @@
 import { z } from "zod";
 import {
-  ZULUHUB_CORREO_REMITENTE,
-  ZULUHUB_NOMBRE_DE_MARCA,
-  ZULUHUB_RESEND_API_KEY,
-  ZULUHUB_URL_BASE,
+  PEDERNAL_CORREO_REMITENTE,
+  PEDERNAL_NOMBRE_DE_MARCA,
+  PEDERNAL_RESEND_API_KEY,
+  PEDERNAL_URL_BASE,
 } from "../adaptadores/correo/configuracion";
 import {
   CARACTERES_DISTINTOS_MINIMOS,
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
-  ZULUHUB_AUTH_SECRETO_EMPRESA,
+  PEDERNAL_AUTH_SECRETO_EMPRESA,
   caracteresDistintos,
 } from "../adaptadores/autenticacion/configuracion";
-import { ZULUHUB_CLAVE_CONTEXTO } from "../adaptadores/postgres/contexto-firmado";
+import { PEDERNAL_CLAVE_CONTEXTO } from "../adaptadores/postgres/contexto-firmado";
 import { ErrorDeConfiguracion } from "../adaptadores/postgres/errores";
-import { ZULUHUB_SECRETO_INVITACIONES } from "../adaptadores/tokens/tokens-hmac";
+import { PEDERNAL_SECRETO_INVITACIONES } from "../adaptadores/tokens/tokens-hmac";
 
 /**
  * Variables de entorno de la aplicación web (web-armazon-y-despliegue §3.4 y §5.2). Acá viven los
@@ -63,36 +63,36 @@ const secretoDelCron = z
  */
 export const NOMBRES_DE_ENTORNO = [
   {
-    nombre: ZULUHUB_CLAVE_CONTEXTO,
+    nombre: PEDERNAL_CLAVE_CONTEXTO,
     forma: texto,
     piezas: ["transacciones-app", "transacciones-trabajos"],
   },
   // `esquema`: lo que mira la guarda de migración y la salud (W6) con el mismo rol de la aplicación.
   {
-    nombre: "ZULUHUB_DB_APP",
+    nombre: "PEDERNAL_DB_APP",
     forma: cadenaDePostgres,
     piezas: ["transacciones-app", "esquema"],
   },
-  { nombre: "ZULUHUB_DB_TRABAJOS", forma: cadenaDePostgres, piezas: ["transacciones-trabajos"] },
-  // La puerta pública (rol `zuluhub_publico`, solo lectura, sin sesión): resolución de marca por host.
+  { nombre: "PEDERNAL_DB_TRABAJOS", forma: cadenaDePostgres, piezas: ["transacciones-trabajos"] },
+  // La puerta pública (rol `pedernal_publico`, solo lectura, sin sesión): resolución de marca por host.
   // Es una cadena de conexión propia y distinta de las demás; el valor lo carga el dueño en Vercel.
-  { nombre: "ZULUHUB_DB_PUBLICO", forma: cadenaDePostgres, piezas: ["transacciones-publicas"] },
-  // La autenticación (W3b): el rol `zuluhub_autenticacion` (solo su esquema, sin DDL) con su propia cadena, el
+  { nombre: "PEDERNAL_DB_PUBLICO", forma: cadenaDePostgres, piezas: ["transacciones-publicas"] },
+  // La autenticación (W3b): el rol `pedernal_autenticacion` (solo su esquema, sin DDL) con su propia cadena, el
   // secreto de Better Auth de la app de empresa y el cliente OAuth de Google. La conexión se pide sola (el
   // barrido del cron no necesita ni el secreto ni Google).
   {
-    nombre: "ZULUHUB_DB_AUTENTICACION",
+    nombre: "PEDERNAL_DB_AUTENTICACION",
     forma: cadenaDePostgres,
     piezas: ["conexion-de-autenticacion"],
   },
-  { nombre: ZULUHUB_AUTH_SECRETO_EMPRESA, forma: texto, piezas: ["autenticacion"] },
+  { nombre: PEDERNAL_AUTH_SECRETO_EMPRESA, forma: texto, piezas: ["autenticacion"] },
   { nombre: GOOGLE_CLIENT_ID, forma: texto, piezas: ["autenticacion"] },
   { nombre: GOOGLE_CLIENT_SECRET, forma: texto, piezas: ["autenticacion"] },
-  { nombre: ZULUHUB_SECRETO_INVITACIONES, forma: texto, piezas: ["tokens"] },
-  { nombre: ZULUHUB_RESEND_API_KEY, forma: texto, piezas: ["correo"] },
-  { nombre: ZULUHUB_CORREO_REMITENTE, forma: texto, piezas: ["correo"] },
-  { nombre: ZULUHUB_URL_BASE, forma: texto, piezas: ["correo"] },
-  { nombre: ZULUHUB_NOMBRE_DE_MARCA, forma: texto, piezas: ["correo"] },
+  { nombre: PEDERNAL_SECRETO_INVITACIONES, forma: texto, piezas: ["tokens"] },
+  { nombre: PEDERNAL_RESEND_API_KEY, forma: texto, piezas: ["correo"] },
+  { nombre: PEDERNAL_CORREO_REMITENTE, forma: texto, piezas: ["correo"] },
+  { nombre: PEDERNAL_URL_BASE, forma: texto, piezas: ["correo"] },
+  { nombre: PEDERNAL_NOMBRE_DE_MARCA, forma: texto, piezas: ["correo"] },
   // El cron de trabajos (W6): Vercel manda `Authorization: Bearer <valor>` si la variable existe en el proyecto
   // (NO VERIFICADO: se mira en el primer despliegue). Nombre fijo de Vercel, por eso sin el prefijo del producto.
   { nombre: "CRON_SECRET", forma: secretoDelCron, piezas: ["cron"] },

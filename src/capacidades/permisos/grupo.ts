@@ -8,7 +8,7 @@ import type { ReglasDelGuard } from "./guard";
  * propio tipo de rol.
  *
  * El grupo es la vista de solo lectura del dueño del tenant (R3). Su único rol es `PROPIETARIO`, que
- * ya impone la base (`es_propietario_activo` en las políticas del rol `zuluhub_grupo`); el guard lo
+ * ya impone la base (`es_propietario_activo` en las políticas del rol `pedernal_grupo`); el guard lo
  * repite en el servidor con el dato leído dentro de la transacción. Es un dato del código: una prueba
  * de integración lo compara con el CHECK `membresia_tenant_rol_ck`.
  *

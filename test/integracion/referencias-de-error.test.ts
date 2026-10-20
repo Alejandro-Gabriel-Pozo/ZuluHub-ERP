@@ -37,7 +37,7 @@ import {
 const base = inject("baseDePruebas");
 
 const nuevaReferencia = (): string =>
-  `ZH-${randomBytes(2).toString("hex").toUpperCase()}-${randomBytes(2).toString("hex").toUpperCase()}`;
+  `PD-${randomBytes(2).toString("hex").toUpperCase()}-${randomBytes(2).toString("hex").toUpperCase()}`;
 
 describe.skipIf(base === null)("referencias de error: escritura por puerta", () => {
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
@@ -208,7 +208,7 @@ describe.skipIf(base === null)("referencias de error: escritura por puerta", () 
       try {
         await expect(
           c.query(
-            "insert into referencia_de_error (referencia, accion, motivo) values ('ZH-AAAA-BBBB', 'a.b', 'X')",
+            "insert into referencia_de_error (referencia, accion, motivo) values ('PD-AAAA-BBBB', 'a.b', 'X')",
           ),
         ).rejects.toMatchObject({ code: "42501" });
         await expect(c.query("select 1 from referencia_de_error")).rejects.toMatchObject({
@@ -242,12 +242,12 @@ describe.skipIf(base === null)("referencias de error: escritura por puerta", () 
 
   describe("la forma de cada campo la impone la base", () => {
     const rechazos: [string, Partial<NuevaReferenciaDeError>][] = [
-      ["referencia en minúsculas", { referencia: "ZH-abcd-1234" }],
-      ["referencia corta", { referencia: "ZH-ABC-1234" }],
-      ["referencia larga", { referencia: "ZH-ABCDE-1234" }],
+      ["referencia en minúsculas", { referencia: "PD-abcd-1234" }],
+      ["referencia corta", { referencia: "PD-ABC-1234" }],
+      ["referencia larga", { referencia: "PD-ABCDE-1234" }],
       ["referencia sin prefijo", { referencia: "AB-ABCD-1234" }],
-      ["referencia con espacio", { referencia: "ZH-ABCD-1234 " }],
-      ["referencia con un salto de línea", { referencia: "ZH-ABCD-1234\n" }],
+      ["referencia con espacio", { referencia: "PD-ABCD-1234 " }],
+      ["referencia con un salto de línea", { referencia: "PD-ABCD-1234\n" }],
       ["acción con mayúsculas", { accion: "Usuarios.invitar" }],
       ["acción vacía", { accion: "" }],
       ["acción con espacios", { accion: "usuarios invitar" }],

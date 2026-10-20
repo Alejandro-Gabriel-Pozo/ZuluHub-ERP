@@ -127,7 +127,7 @@ describe("atenderRutaDeIngreso: ningún fallo sale con detalle (ADR-016)", () =>
           err({
             tipo: "Inesperado",
             sqlstate: "08006",
-            mensaje: "password failed for zuluhub_publico",
+            mensaje: "password failed for pedernal_publico",
           }),
         ),
     });
@@ -138,10 +138,10 @@ describe("atenderRutaDeIngreso: ningún fallo sale con detalle (ADR-016)", () =>
     expect(r.headers.get("x-robots-tag")).toBe("noindex");
     expect(r.headers.getSetCookie()).toEqual([]);
     const cuerpo = await r.text();
-    expect(JSON.parse(cuerpo)).toEqual({ codigo: "NO_DISPONIBLE", referencia: "ZH-ABCD-0123" });
-    expect(cuerpo).not.toMatch(/password|zuluhub_publico|08006/);
+    expect(JSON.parse(cuerpo)).toEqual({ codigo: "NO_DISPONIBLE", referencia: "PD-ABCD-0123" });
+    expect(cuerpo).not.toMatch(/password|pedernal_publico|08006/);
     // Al registro va la referencia y el tipo del fallo (con eso se encuentra), no el mensaje de la base.
-    expect(registros).toEqual(["ZH-ABCD-0123 no se pudo resolver el host: Inesperado"]);
+    expect(registros).toEqual(["PD-ABCD-0123 no se pudo resolver el host: Inesperado"]);
   });
 
   it("si la autenticación lanza: 500 con referencia, y el detalle solo al registro", async () => {
@@ -153,9 +153,9 @@ describe("atenderRutaDeIngreso: ningún fallo sale con detalle (ADR-016)", () =>
     expect(r.status).toBe(500);
     expect(r.headers.get("content-type")).toBe("application/json");
     const cuerpo = await r.text();
-    expect(JSON.parse(cuerpo)).toEqual({ codigo: "ERROR_INTERNO", referencia: "ZH-ABCD-0123" });
+    expect(JSON.parse(cuerpo)).toEqual({ codigo: "ERROR_INTERNO", referencia: "PD-ABCD-0123" });
     expect(cuerpo).not.toMatch(/ECONNREFUSED|10\.0\.0\.5/);
-    expect(registros).toEqual(["ZH-ABCD-0123 Error: connect ECONNREFUSED 10.0.0.5:5432"]);
+    expect(registros).toEqual(["PD-ABCD-0123 Error: connect ECONNREFUSED 10.0.0.5:5432"]);
   });
 
   it("un fallo de entorno (falta una variable) sale igual, y el nombre de la variable no pasa por acá", async () => {
@@ -168,7 +168,7 @@ describe("atenderRutaDeIngreso: ningún fallo sale con detalle (ADR-016)", () =>
     expect(r.status).toBe(500);
     const cuerpo = await r.text();
     expect(cuerpo).not.toMatch(/GOOGLE|autenticacion|pieza/);
-    expect(registros).toEqual(["ZH-ABCD-0123 el entorno no está bien configurado"]);
+    expect(registros).toEqual(["PD-ABCD-0123 el entorno no está bien configurado"]);
   });
 
   it("un error de configuración del adaptador no es un fallo de entorno de la composición: igual sin detalle", async () => {
@@ -180,7 +180,7 @@ describe("atenderRutaDeIngreso: ningún fallo sale con detalle (ADR-016)", () =>
     expect(r.status).toBe(500);
     expect(await r.text()).not.toMatch(/host de ingreso/);
     expect(registros).toEqual([
-      "ZH-ABCD-0123 ErrorDeConfiguracion: el host de ingreso no es válido",
+      "PD-ABCD-0123 ErrorDeConfiguracion: el host de ingreso no es válido",
     ]);
   });
 
@@ -193,7 +193,7 @@ describe("atenderRutaDeIngreso: ningún fallo sale con detalle (ADR-016)", () =>
     const r = await atenderRutaDeIngreso(pedido("app.marca-a.test"), dependencias);
     expect(r.status).toBe(500);
     expect(await r.text()).not.toContain("texto suelto");
-    expect(registros).toEqual(["ZH-ABCD-0123 texto suelto"]);
+    expect(registros).toEqual(["PD-ABCD-0123 texto suelto"]);
   });
 
   it("si el propio registro falla, la respuesta sale igual", async () => {
@@ -210,7 +210,7 @@ describe("atenderRutaDeIngreso: ningún fallo sale con detalle (ADR-016)", () =>
     expect(r.status).toBe(500);
     expect(JSON.parse(await r.text())).toEqual({
       codigo: "ERROR_INTERNO",
-      referencia: "ZH-ABCD-0123",
+      referencia: "PD-ABCD-0123",
     });
   });
 
@@ -221,7 +221,7 @@ describe("atenderRutaDeIngreso: ningún fallo sale con detalle (ADR-016)", () =>
     expect(await r.text()).not.toContain("boom");
   });
 
-  it("sin azar inyectado, la referencia es una ZH-XXXX-XXXX distinta cada vez", async () => {
+  it("sin azar inyectado, la referencia es una PD-XXXX-XXXX distinta cada vez", async () => {
     const { dependencias } = armar({
       manejar: () => Promise.reject(new Error("x")),
       resolucion: () => Promise.resolve(ok(resuelto("a.test"))),
@@ -235,7 +235,7 @@ describe("atenderRutaDeIngreso: ningún fallo sale con detalle (ADR-016)", () =>
       ) as {
         referencia: string;
       };
-      expect(cuerpo.referencia).toMatch(/^ZH-[0-9A-F]{4}-[0-9A-F]{4}$/);
+      expect(cuerpo.referencia).toMatch(/^PD-[0-9A-F]{4}-[0-9A-F]{4}$/);
       referencias.add(cuerpo.referencia);
     }
     expect(referencias.size).toBeGreaterThan(1);

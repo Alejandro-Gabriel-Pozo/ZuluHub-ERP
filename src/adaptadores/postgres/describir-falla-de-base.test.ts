@@ -154,14 +154,14 @@ describe("describirFallaDeBase", () => {
   it("el error de una migración (RAISE EXCEPTION) se muestra completo, con su código, detalle y pista", () => {
     const texto = describirFallaDeBase(
       conCodigo(
-        "los roles de ZuluHub no pueden ser miembros de otros roles (zuluhub_app es miembro de neon_superuser): revocar la pertenencia y repetir",
+        "los roles de Pedernal no pueden ser miembros de otros roles (pedernal_app es miembro de neon_superuser): revocar la pertenencia y repetir",
         "55000",
         { detail: "lo que pasó", hint: "lo que hay que hacer" },
       ),
       CADENA,
     );
     expect(texto).toBe(
-      "Error: los roles de ZuluHub no pueden ser miembros de otros roles (zuluhub_app es miembro de neon_superuser): revocar la pertenencia y repetir detalle: lo que pasó pista: lo que hay que hacer [55000]",
+      "Error: los roles de Pedernal no pueden ser miembros de otros roles (pedernal_app es miembro de neon_superuser): revocar la pertenencia y repetir detalle: lo que pasó pista: lo que hay que hacer [55000]",
     );
   });
 

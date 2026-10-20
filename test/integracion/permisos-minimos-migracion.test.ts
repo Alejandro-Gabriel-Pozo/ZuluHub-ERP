@@ -63,12 +63,12 @@ const TABLAS_DE_AUTENTICACION = [
   "verification",
 ] as const;
 const ROLES_SIN_ACCESO_A_MIGRACION = [
-  "zuluhub_autenticacion",
-  "zuluhub_captacion",
-  "zuluhub_grupo",
-  "zuluhub_plataforma",
-  "zuluhub_publico",
-  "zuluhub_trabajos",
+  "pedernal_autenticacion",
+  "pedernal_captacion",
+  "pedernal_grupo",
+  "pedernal_plataforma",
+  "pedernal_publico",
+  "pedernal_trabajos",
 ] as const;
 
 /** El código de error de una consulta que se espera denegada (`null` si salió bien). */
@@ -128,7 +128,7 @@ async function sembrarAutenticacion(c: pg.Client): Promise<{ usuario: string; cu
   );
   await c.query(
     `insert into autenticacion.session ("expiresAt", token, "userId", host)
-     values (now() + interval '1 hour', $1, $2, 'app.zuluhub.test')`,
+     values (now() + interval '1 hour', $1, $2, 'app.pedernal.test')`,
     [randomUUID(), usuario.id],
   );
   await c.query(
@@ -205,7 +205,7 @@ describe.skipIf(base === null)(
         expect(perdidas["privilegiosPorColumna"]).toEqual([]);
         expect(nuevas["privilegiosPorColumna"]).toHaveLength(1);
         expect((nuevas["privilegiosPorColumna"] as string[])[0]).toMatch(
-          /^migracion\.nombre:\{zuluhub_app=r\/[^,}]+\}$/,
+          /^migracion\.nombre:\{pedernal_app=r\/[^,}]+\}$/,
         );
 
         // `autenticacion`: cambian user y account (pierden la `d` del rol de la librería) y nada más.
@@ -213,8 +213,8 @@ describe.skipIf(base === null)(
         for (const tabla of TABLAS_DE_AUTENTICACION) {
           if (tabla === "user" || tabla === "account") {
             expect(autenticacionDespues[tabla], tabla).not.toEqual(autenticacionAntes[tabla]);
-            expect(autenticacionAntes[tabla], tabla).toMatch(/zuluhub_autenticacion=arwd\//);
-            expect(autenticacionDespues[tabla], tabla).toMatch(/zuluhub_autenticacion=arw\//);
+            expect(autenticacionAntes[tabla], tabla).toMatch(/pedernal_autenticacion=arwd\//);
+            expect(autenticacionDespues[tabla], tabla).toMatch(/pedernal_autenticacion=arw\//);
             expect(autenticacionDespues[tabla]?.replace("=arw/", "=arwd/"), tabla).toBe(
               autenticacionAntes[tabla],
             );
@@ -254,7 +254,7 @@ describe.skipIf(base === null)(
     it("aunque alguien le haya concedido de más a mano (SELECT de toda la tabla), el resultado es EXACTAMENTE `SELECT (nombre)`", async () => {
       await conPrevias(async (previa, conMia) => {
         await previa.cliente.query(
-          "grant select, insert, update, delete on migracion to zuluhub_app",
+          "grant select, insert, update, delete on migracion to pedernal_app",
         );
         await aplicarMigraciones(previa.aparte.base.dueno, conMia);
         await comoRol(previa.aparte.base.app, async (app) => {
@@ -328,13 +328,13 @@ describe.skipIf(base === null)(
       it("la aplicación lee de `migracion` EXACTAMENTE la columna `nombre`, solo con SELECT; ningún otro rol ni PUBLIC la toca", async () => {
         const { rows } = await dueno.query<{ c: string; p: string }>(
           `select column_name as c, privilege_type as p from information_schema.column_privileges
-            where grantee = 'zuluhub_app' and table_schema = 'public' and table_name = 'migracion' order by 1, 2`,
+            where grantee = 'pedernal_app' and table_schema = 'public' and table_name = 'migracion' order by 1, 2`,
         );
         expect(rows).toEqual([{ c: "nombre", p: "SELECT" }]);
         // Ni un privilegio de TABLA (un SELECT de tabla entera daría también `checksum`).
         const { rows: deTabla } = await dueno.query(
           `select 1 from information_schema.table_privileges
-            where grantee = 'zuluhub_app' and table_schema = 'public' and table_name = 'migracion'`,
+            where grantee = 'pedernal_app' and table_schema = 'public' and table_name = 'migracion'`,
         );
         expect(deTabla).toEqual([]);
         for (const rol of ROLES_SIN_ACCESO_A_MIGRACION) {
@@ -393,12 +393,12 @@ describe.skipIf(base === null)(
 
       it("ningún otro rol puede leer `migracion` (42501)", async () => {
         const url: Record<(typeof ROLES_SIN_ACCESO_A_MIGRACION)[number], string> = {
-          zuluhub_autenticacion: completa.base.autenticacion,
-          zuluhub_captacion: completa.base.captacion,
-          zuluhub_grupo: completa.base.grupo,
-          zuluhub_plataforma: completa.base.plataforma,
-          zuluhub_publico: completa.base.publico,
-          zuluhub_trabajos: completa.base.trabajos,
+          pedernal_autenticacion: completa.base.autenticacion,
+          pedernal_captacion: completa.base.captacion,
+          pedernal_grupo: completa.base.grupo,
+          pedernal_plataforma: completa.base.plataforma,
+          pedernal_publico: completa.base.publico,
+          pedernal_trabajos: completa.base.trabajos,
         };
         for (const rol of ROLES_SIN_ACCESO_A_MIGRACION) {
           await comoRol(url[rol], async (c) => {
@@ -432,7 +432,7 @@ describe.skipIf(base === null)(
           ]);
           const { rows: alta } = await auth.query<{ id: string }>(
             `insert into autenticacion."user" (name, email, "emailVerified") values ('N', $1, true) returning id`,
-            [`${randomUUID()}@zuluhub.test`],
+            [`${randomUUID()}@pedernal.test`],
           );
           expect(alta).toHaveLength(1);
 
@@ -488,9 +488,9 @@ describe.skipIf(base === null)(
       it("ejecuta EXACTAMENTE tres sentencias, todas de privilegios: nada se crea, se modifica ni se borra, ni se da LOGIN o contraseña", async () => {
         const completo = await textoDeLaMigracion();
         expect(sentencias(completo)).toEqual([
-          "REVOKE ALL ON migracion FROM zuluhub_app",
-          "GRANT SELECT (nombre) ON migracion TO zuluhub_app",
-          'REVOKE DELETE ON autenticacion."user", autenticacion.account FROM zuluhub_autenticacion',
+          "REVOKE ALL ON migracion FROM pedernal_app",
+          "GRANT SELECT (nombre) ON migracion TO pedernal_app",
+          'REVOKE DELETE ON autenticacion."user", autenticacion.account FROM pedernal_autenticacion',
         ]);
         const codigo = completo.replace(/--.*$/gm, "");
         expect(codigo).not.toMatch(/\b(CREATE|DROP|TRUNCATE|INSERT|UPDATE|CASCADE)\b/i);
@@ -506,8 +506,8 @@ describe.skipIf(base === null)(
         expect(texto).toMatch(/NO lo aplica el ejecutor de migraciones/);
         expect(texto).toMatch(/BEGIN;/);
         expect(sentencias(texto)).toEqual([
-          "REVOKE SELECT (nombre) ON migracion FROM zuluhub_app",
-          'GRANT DELETE ON autenticacion."user", autenticacion.account TO zuluhub_autenticacion',
+          "REVOKE SELECT (nombre) ON migracion FROM pedernal_app",
+          'GRANT DELETE ON autenticacion."user", autenticacion.account TO pedernal_autenticacion',
         ]);
         const codigo = texto.replace(/--.*$/gm, "");
         expect(codigo).not.toMatch(/\b(DROP|TRUNCATE|CASCADE|CREATE)\b/i);

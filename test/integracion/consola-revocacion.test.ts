@@ -514,15 +514,15 @@ describe.skipIf(base === null)("la revocación de sesiones", () => {
     function procesadorReal() {
       const conexiones = armarConexiones({
         fuente: () => ({
-          ZULUHUB_DB_APP: m.base.app,
-          ZULUHUB_DB_TRABAJOS: m.base.trabajos,
-          ZULUHUB_DB_AUTENTICACION: m.base.autenticacion,
-          ZULUHUB_CLAVE_CONTEXTO: m.entorno["ZULUHUB_CLAVE_CONTEXTO"],
-          ZULUHUB_SECRETO_INVITACIONES: m.entorno["ZULUHUB_SECRETO_INVITACIONES"],
-          ZULUHUB_RESEND_API_KEY: "clave-de-relleno",
-          ZULUHUB_CORREO_REMITENTE: "Prueba <prueba@ejemplo.test>",
-          ZULUHUB_NOMBRE_DE_MARCA: "Marca de relleno",
-          ZULUHUB_URL_BASE: "https://app.ejemplo.test",
+          PEDERNAL_DB_APP: m.base.app,
+          PEDERNAL_DB_TRABAJOS: m.base.trabajos,
+          PEDERNAL_DB_AUTENTICACION: m.base.autenticacion,
+          PEDERNAL_CLAVE_CONTEXTO: m.entorno["PEDERNAL_CLAVE_CONTEXTO"],
+          PEDERNAL_SECRETO_INVITACIONES: m.entorno["PEDERNAL_SECRETO_INVITACIONES"],
+          PEDERNAL_RESEND_API_KEY: "clave-de-relleno",
+          PEDERNAL_CORREO_REMITENTE: "Prueba <prueba@ejemplo.test>",
+          PEDERNAL_NOMBRE_DE_MARCA: "Marca de relleno",
+          PEDERNAL_URL_BASE: "https://app.ejemplo.test",
         }),
         registrar: (d) => m.registros.push(d),
       });

@@ -9,7 +9,7 @@ const entrada = (cambios: Partial<Parameters<typeof armarPedidoDeCertificado>[0]
   id: ID,
   emisorId: EMISOR,
   ambiente: "HOMOLOGACION" as const,
-  alias: "zuluhub2026",
+  alias: "pedernal2026",
   cuitTitular: "20123456786",
   organizacion: "Cooperativa Pampa SA",
   ...cambios,
@@ -26,7 +26,7 @@ describe("armarPedidoDeCertificado", () => {
         id: ID,
         emisorId: EMISOR,
         ambiente: "HOMOLOGACION",
-        alias: "zuluhub2026",
+        alias: "pedernal2026",
         cuitTitular: "20123456786",
         organizacion: "Cooperativa Pampa SA",
       },
@@ -55,7 +55,7 @@ describe("armarPedidoDeCertificado", () => {
     it.each([
       ["una letra", "a"],
       ["30 caracteres", "a".repeat(30)],
-      ["mayúsculas y dígitos", "ZuluHub2026"],
+      ["mayúsculas y dígitos", "Pedernal2026"],
     ])("acepta %s", (_nombre, alias) => {
       expect(armarPedidoDeCertificado(entrada({ alias })).ok).toBe(true);
     });
@@ -66,8 +66,8 @@ describe("armarPedidoDeCertificado", () => {
       ["con espacio", "zulu hub"],
       ["con guion", "zulu-hub"],
       ["con ñ", "año"],
-      ["con salto de línea al final", "zuluhub\n"],
-      ["con espacio al principio", " zuluhub"],
+      ["con salto de línea al final", "pedernal\n"],
+      ["con espacio al principio", " pedernal"],
     ])("rechaza %s", (_nombre, alias) => {
       expect(armarPedidoDeCertificado(entrada({ alias }))).toEqual({
         ok: false,

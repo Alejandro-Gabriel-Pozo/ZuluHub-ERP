@@ -26,7 +26,7 @@
 --  * Es REPETIBLE: `IF NOT EXISTS` y concesiones, que repetidas no cambian nada; las políticas se crean solo si faltan.
 --    Corre dentro de la transacción del ejecutor, que ya serializa con el bloqueo asesor.
 --  * No agrega NINGUNA función SECURITY DEFINER ni función alguna. Sin LOGIN ni contraseñas ni cadenas de conexión.
---  * RLS activa y FORZADA en toda tabla nueva, con una política por comando y solo para `zuluhub_autenticacion` (como 0010).
+--  * RLS activa y FORZADA en toda tabla nueva, con una política por comando y solo para `pedernal_autenticacion` (como 0010).
 --  * DEPENDE de 0010 (el esquema `autenticacion`, `user` y `session`) y de 0013 (que quitó el `DELETE` sobre `user`);
 --    se comprueba al empezar.
 --
@@ -37,7 +37,7 @@
 --      nunca los códigos (`capacidades/autenticacion/codigos-de-recuperacion.ts`). `codigo_totp_usado` guarda el NÚMERO
 --      DE PASO del reloj, nunca el código. Una prueba busca el secreto, la dirección `otpauth` y los códigos en claro en
 --      todas las tablas: no aparecen.
---  P2. Privilegios mínimos de `zuluhub_autenticacion`. `"twoFactor"`: SELECT, INSERT y UPDATE de SOLO tres columnas
+--  P2. Privilegios mínimos de `pedernal_autenticacion`. `"twoFactor"`: SELECT, INSERT y UPDATE de SOLO tres columnas
 --      (secreto, códigos y `verified`: lo que escriben enrolar, verificar el primer código y gastar un código de
 --      recuperación). NADA de DELETE: no hay ruta que dé de baja el TOTP (la baja y el reseteo los hace el dueño con su
 --      conexión, y el borrado de un usuario arrastra su fila). `codigo_totp_usado` e `intento_segundo_factor`: SELECT,
@@ -55,8 +55,8 @@
 
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'zuluhub_autenticacion') THEN
-    RAISE EXCEPTION 'el segundo factor requiere 0004_plataforma y 0010_autenticacion aplicadas antes (falta el rol zuluhub_autenticacion)'
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pedernal_autenticacion') THEN
+    RAISE EXCEPTION 'el segundo factor requiere 0004_plataforma y 0010_autenticacion aplicadas antes (falta el rol pedernal_autenticacion)'
       USING ERRCODE = '55000';
   END IF;
   IF to_regclass('autenticacion."user"') IS NULL OR to_regclass('autenticacion.session') IS NULL THEN
@@ -105,16 +105,16 @@ CREATE INDEX IF NOT EXISTS intento_segundo_factor_usuario_ix
   ON autenticacion.intento_segundo_factor (usuario_id, fallo_en);
 
 -- ---------------------------------------------------------------------------------------------
--- Privilegios (P2). Nadie más que `zuluhub_autenticacion` toca estas tablas, salvo el rol de respaldo (0012), que recibe
+-- Privilegios (P2). Nadie más que `pedernal_autenticacion` toca estas tablas, salvo el rol de respaldo (0012), que recibe
 -- SELECT por los privilegios por defecto del rol que migra, como en toda tabla nueva (es de solo lectura y el único que salta la RLS).
 -- ---------------------------------------------------------------------------------------------
 REVOKE ALL ON autenticacion."twoFactor", autenticacion.codigo_totp_usado, autenticacion.intento_segundo_factor
   FROM PUBLIC;
 
-GRANT SELECT, INSERT ON autenticacion."twoFactor" TO zuluhub_autenticacion;
-GRANT UPDATE (secret, "backupCodes", verified) ON autenticacion."twoFactor" TO zuluhub_autenticacion;
+GRANT SELECT, INSERT ON autenticacion."twoFactor" TO pedernal_autenticacion;
+GRANT UPDATE (secret, "backupCodes", verified) ON autenticacion."twoFactor" TO pedernal_autenticacion;
 GRANT SELECT, INSERT, DELETE ON autenticacion.codigo_totp_usado, autenticacion.intento_segundo_factor
-  TO zuluhub_autenticacion;
+  TO pedernal_autenticacion;
 
 -- RLS forzada, una política por comando concedido y solo para ese rol (como 0010).
 DO $$
@@ -142,7 +142,7 @@ BEGIN
          WHERE schemaname = 'autenticacion' AND tablename = t AND policyname = nombres ->> c
       ) THEN
         EXECUTE format(
-          'CREATE POLICY %I ON autenticacion.%I FOR %s TO zuluhub_autenticacion %s',
+          'CREATE POLICY %I ON autenticacion.%I FOR %s TO pedernal_autenticacion %s',
           nombres ->> c, t, c,
           CASE c
             WHEN 'INSERT' THEN 'WITH CHECK (true)'

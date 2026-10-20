@@ -19,7 +19,7 @@ import {
  * El segundo factor de la consola (0015): la migración sobre una base CON DATOS (aditiva: no cambia ni un dato), el
  * catálogo EXACTO de lo que agrega (columnas, tablas, índices, restricciones, RLS, políticas y privilegios), sus guardas,
  * que se puede repetir y que dos ejecutores a la vez la aplican una sola vez, lo que promete el texto del archivo y su
- * reversión (destructiva y protegida: sin `zuluhub.confirmar_reversion = 'SI'` no borra secretos).
+ * reversión (destructiva y protegida: sin `pedernal.confirmar_reversion = 'SI'` no borra secretos).
  */
 
 const base = inject("baseDePruebas");
@@ -276,7 +276,7 @@ describe.skipIf(base === null)("segundo factor de la consola: la migración 0015
       );
       // Una política por comando concedido, solo para el rol de la librería, sin condición (el aislamiento es del rol).
       const politica = (tabla: string, nombre: string, cmd: string, cond: string) =>
-        `${tabla}.${nombre}:${cmd}:PERMISSIVE:zuluhub_autenticacion:${cmd === "INSERT" ? "-" : cond}:${cmd === "INSERT" || cmd === "UPDATE" ? "true" : "-"}`;
+        `${tabla}.${nombre}:${cmd}:PERMISSIVE:pedernal_autenticacion:${cmd === "INSERT" ? "-" : cond}:${cmd === "INSERT" || cmd === "UPDATE" ? "true" : "-"}`;
       expect(nuevas["politicas"]).toEqual(
         [
           ...["twoFactor"].flatMap((t) => [
@@ -295,20 +295,20 @@ describe.skipIf(base === null)("segundo factor de la consola: la migración 0015
       // ÚNICO que salta la RLS para el volcado); NADIE más (ni PUBLIC).
       expect(nuevas["privilegiosDeTabla"]).toEqual(
         [
-          "twoFactor:zuluhub_autenticacion:INSERT",
-          "twoFactor:zuluhub_autenticacion:SELECT",
+          "twoFactor:pedernal_autenticacion:INSERT",
+          "twoFactor:pedernal_autenticacion:SELECT",
           ...["codigo_totp_usado", "intento_segundo_factor"].flatMap((t) =>
-            ["DELETE", "INSERT", "SELECT"].map((p) => `${t}:zuluhub_autenticacion:${p}`),
+            ["DELETE", "INSERT", "SELECT"].map((p) => `${t}:pedernal_autenticacion:${p}`),
           ),
-          ...TABLAS_NUEVAS.map((t) => `${t}:zuluhub_respaldo:SELECT`),
+          ...TABLAS_NUEVAS.map((t) => `${t}:pedernal_respaldo:SELECT`),
         ].sort(),
       );
       // Por columna: UPDATE de SOLO tres columnas del segundo factor (secreto, códigos y `verified`).
       expect(nuevas["privilegiosPorColumna"]).toEqual(
         [
-          "twoFactor.backupCodes:zuluhub_autenticacion:UPDATE",
-          "twoFactor.secret:zuluhub_autenticacion:UPDATE",
-          "twoFactor.verified:zuluhub_autenticacion:UPDATE",
+          "twoFactor.backupCodes:pedernal_autenticacion:UPDATE",
+          "twoFactor.secret:pedernal_autenticacion:UPDATE",
+          "twoFactor.verified:pedernal_autenticacion:UPDATE",
         ].sort(),
       );
     });
@@ -397,12 +397,12 @@ describe.skipIf(base === null)("segundo factor de la consola: la migración 0015
     try {
       // Una base de otra instalación donde el rol no existe: se simula quitándolo para esta sentencia.
       const sql = (await textoDeLaMigracion()).replace(
-        "SELECT 1 FROM pg_roles WHERE rolname = 'zuluhub_autenticacion'",
-        "SELECT 1 FROM pg_roles WHERE rolname = 'zuluhub_autenticacion_inexistente'",
+        "SELECT 1 FROM pg_roles WHERE rolname = 'pedernal_autenticacion'",
+        "SELECT 1 FROM pg_roles WHERE rolname = 'pedernal_autenticacion_inexistente'",
       );
       await expect(cliente.query(sql)).rejects.toMatchObject({
         code: "55000",
-        message: expect.stringMatching(/falta el rol zuluhub_autenticacion/) as string,
+        message: expect.stringMatching(/falta el rol pedernal_autenticacion/) as string,
       });
     } finally {
       await cliente.end();
@@ -429,12 +429,12 @@ describe.skipIf(base === null)("segundo factor de la consola: la migración 0015
 
     it("ningún otro rol ni PUBLIC toca las tablas nuevas, y el de la librería no puede crear nada en su esquema", async () => {
       for (const rol of [
-        "zuluhub_app",
-        "zuluhub_grupo",
-        "zuluhub_trabajos",
-        "zuluhub_plataforma",
-        "zuluhub_publico",
-        "zuluhub_captacion",
+        "pedernal_app",
+        "pedernal_grupo",
+        "pedernal_trabajos",
+        "pedernal_plataforma",
+        "pedernal_publico",
+        "pedernal_captacion",
       ]) {
         for (const tabla of TABLAS_NUEVAS) {
           const { rows } = await dueno.query<{ puede: boolean }>(
@@ -452,9 +452,9 @@ describe.skipIf(base === null)("segundo factor de la consola: la migración 0015
       expect(publico).toEqual([]);
       for (const tabla of TABLAS_NUEVAS) {
         const { rows } = await dueno.query<{ truncate: boolean; refs: boolean; trigger: boolean }>(
-          `select has_table_privilege('zuluhub_autenticacion', format('autenticacion.%I', $1::text), 'TRUNCATE') as truncate,
-                  has_table_privilege('zuluhub_autenticacion', format('autenticacion.%I', $1::text), 'REFERENCES') as refs,
-                  has_table_privilege('zuluhub_autenticacion', format('autenticacion.%I', $1::text), 'TRIGGER') as trigger`,
+          `select has_table_privilege('pedernal_autenticacion', format('autenticacion.%I', $1::text), 'TRUNCATE') as truncate,
+                  has_table_privilege('pedernal_autenticacion', format('autenticacion.%I', $1::text), 'REFERENCES') as refs,
+                  has_table_privilege('pedernal_autenticacion', format('autenticacion.%I', $1::text), 'TRIGGER') as trigger`,
           [tabla],
         );
         expect(rows[0], tabla).toEqual({ truncate: false, refs: false, trigger: false });
@@ -638,8 +638,9 @@ describe.skipIf(base === null)("segundo factor de la consola: la migración 0015
       // Nada para PUBLIC y ningún privilegio a otro rol que el de la librería.
       expect(
         codigo.match(/\bTO\s+(\w+)/gi)?.map((x) => x.replace(/\s+/g, " ").toLowerCase()),
-      ).toEqual(expect.arrayContaining(["to zuluhub_autenticacion"]));
-      for (const m of codigo.matchAll(/\bTO\s+(\w+)/gi)) expect(m[1]).toBe("zuluhub_autenticacion");
+      ).toEqual(expect.arrayContaining(["to pedernal_autenticacion"]));
+      for (const m of codigo.matchAll(/\bTO\s+(\w+)/gi))
+        expect(m[1]).toBe("pedernal_autenticacion");
       // Las columnas de la librería con datos no se tocan salvo para agregar las dos nuevas.
       expect(
         [...codigo.matchAll(/\bALTER\s+TABLE\s+(\S+)\s+ADD\s+COLUMN/gi)].map((m) => m[1]),
@@ -651,11 +652,11 @@ describe.skipIf(base === null)("segundo factor de la consola: la migración 0015
       expect(texto).toMatch(/DESTRUCTIVA/);
       expect(texto).toMatch(/NO lo aplica el ejecutor de migraciones/);
       expect(texto).toMatch(/BEGIN;/);
-      expect(texto).toMatch(/SET LOCAL zuluhub\.confirmar_reversion = 'SI'/);
+      expect(texto).toMatch(/SET LOCAL pedernal\.confirmar_reversion = 'SI'/);
       expect(texto).toMatch(/AVISAR AL DUEÑO/);
       const codigo = texto.replace(/--.*$/gm, "");
       expect(codigo).not.toMatch(/\bCASCADE\b/i);
-      expect(codigo).toMatch(/current_setting\('zuluhub\.confirmar_reversion', true\)/);
+      expect(codigo).toMatch(/current_setting\('pedernal\.confirmar_reversion', true\)/);
     });
   });
 
@@ -666,7 +667,7 @@ describe.skipIf(base === null)("segundo factor de la consola: la migración 0015
     const revertir = async (c: pg.Client, confirmar: boolean) => {
       await c.query("begin");
       try {
-        if (confirmar) await c.query("SET LOCAL zuluhub.confirmar_reversion = 'SI'");
+        if (confirmar) await c.query("SET LOCAL pedernal.confirmar_reversion = 'SI'");
         await c.query(await textoDeLaReversion());
         await c.query("commit");
       } catch (e) {
@@ -738,7 +739,7 @@ describe.skipIf(base === null)("segundo factor de la consola: la migración 0015
         await expect(revertir(previa.cliente, false)).rejects.toMatchObject({
           code: "55000",
           message: expect.stringMatching(
-            /1 secretos, 1 usuarios con segundo factor, 1 sesiones marcadas, 1 pasos usados, 1 intentos.*zuluhub\.confirmar_reversion/,
+            /1 secretos, 1 usuarios con segundo factor, 1 sesiones marcadas, 1 pasos usados, 1 intentos.*pedernal\.confirmar_reversion/,
           ) as string,
         });
         expect(await catalogoDeAutenticacion(previa.cliente)).toEqual(antes);
@@ -747,7 +748,7 @@ describe.skipIf(base === null)("segundo factor de la consola: la migración 0015
         expect(rows).toHaveLength(1);
         // Una confirmación con otro valor tampoco alcanza.
         await previa.cliente.query("begin");
-        await previa.cliente.query("SET LOCAL zuluhub.confirmar_reversion = 'si'");
+        await previa.cliente.query("SET LOCAL pedernal.confirmar_reversion = 'si'");
         await expect(previa.cliente.query(await textoDeLaReversion())).rejects.toMatchObject({
           code: "55000",
         });

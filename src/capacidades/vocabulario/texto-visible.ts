@@ -19,7 +19,7 @@ const PROHIBIDO = /[\p{Cc}\p{Cf}\p{Cs}<>]/u;
  * del vocabulario): sin caracteres prohibidos, recortado, en NFC y de 1 a `largoMaximo` caracteres
  * (puntos de código, como cuenta la base). Devuelve el texto canónico: el largo se mide DESPUÉS de
  * normalizar, que puede acortarlo. Es la misma regla que la base repite como defensa en profundidad y
- * que hoy valida `ZULUHUB_NOMBRE_DE_MARCA`.
+ * que hoy valida `PEDERNAL_NOMBRE_DE_MARCA`.
  */
 export function validarTextoVisible(
   texto: string,

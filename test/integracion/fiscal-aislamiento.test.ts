@@ -269,7 +269,7 @@ describe.skipIf(base === null)("fiscal: aislamiento entre empresas y entre roles
         expect(await contar(s, "emisor", `empresa_id = '${a.m.empresa}'`)).toBe(0);
       });
       // Sin contexto firmado: falla cerrado en toda tabla fiscal (salvo el catálogo global).
-      const s = await SesionDePrueba.abrir(base!, "zuluhub_app", null);
+      const s = await SesionDePrueba.abrir(base!, "pedernal_app", null);
       try {
         for (const tabla of TABLAS_DE_LA_EMPRESA) expect(await contar(s, tabla), tabla).toBe(0);
         denegado(
@@ -288,10 +288,10 @@ describe.skipIf(base === null)("fiscal: aislamiento entre empresas y entre roles
     it("el grupo, los trabajos y la autenticación no leen ni escriben nada fiscal (42501)", async () => {
       const grupo = await SesionDePrueba.abrir(
         base!,
-        "zuluhub_grupo",
+        "pedernal_grupo",
         comoGrupo(tenantId(a.m.tenant), personaId(a.m.persona)),
       );
-      const trabajos = await SesionDePrueba.abrir(base!, "zuluhub_trabajos", comoTrabajos());
+      const trabajos = await SesionDePrueba.abrir(base!, "pedernal_trabajos", comoTrabajos());
       const autenticacion = new pg.Client({ connectionString: base!.autenticacion });
       await autenticacion.connect();
       try {
@@ -368,7 +368,7 @@ describe.skipIf(base === null)("fiscal: aislamiento entre empresas y entre roles
     });
 
     it("sin un actor vigente la plataforma no ve ninguna fila fiscal (ni con el contexto de otro rol)", async () => {
-      const sinContexto = await SesionDePrueba.abrir(base!, "zuluhub_plataforma", null);
+      const sinContexto = await SesionDePrueba.abrir(base!, "pedernal_plataforma", null);
       try {
         for (const tabla of ["emisor", "serie_comprobante"])
           expect(await contar(sinContexto, tabla), tabla).toBe(0);
@@ -526,7 +526,7 @@ describe.skipIf(base === null)("fiscal: aislamiento entre empresas y entre roles
       // La auditoría falla (actor que no es el del contexto): se revierte también el cierre de la serie.
       const fallida = await SesionDePrueba.abrir(
         base!,
-        "zuluhub_app",
+        "pedernal_app",
         comoEmpresa(empresaId(m.empresa), personaId(m.persona)),
       );
       try {

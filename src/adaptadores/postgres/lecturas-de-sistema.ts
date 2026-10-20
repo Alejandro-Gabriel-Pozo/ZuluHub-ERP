@@ -3,11 +3,11 @@ import { ErrorDeConfiguracion } from "./errores";
 
 /**
  * Las dos preguntas que la web le hace a la base SIN contexto firmado y SIN tocar datos de nadie (web-armazon
- * §5.7 y §8.1 W6), con el rol limitado de la aplicación (`zuluhub_app`, `ZULUHUB_DB_APP`):
+ * §5.7 y §8.1 W6), con el rol limitado de la aplicación (`pedernal_app`, `PEDERNAL_DB_APP`):
  *
  *  - `ping`: `SELECT 1`, la salud. No lee ninguna tabla.
  *  - `ultimaMigracion`: el nombre de la última fila de la tabla de control `migracion`, para la guarda
- *    `MIGRACION_REQUERIDA`. Necesita que `zuluhub_app` pueda leer esa tabla (`GRANT SELECT`); sin ese permiso
+ *    `MIGRACION_REQUERIDA`. Necesita que `pedernal_app` pueda leer esa tabla (`GRANT SELECT`); sin ese permiso
  *    la base responde `42501` y la guarda falla cerrado (la app queda «En mantenimiento»).
  *
  * Ni una escritura ni una transacción: consultas sueltas y de solo lectura. Tiempos acotados del lado del

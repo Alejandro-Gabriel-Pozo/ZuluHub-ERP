@@ -169,7 +169,7 @@ describe.skipIf(base === null)("consola de plataforma: ningún secreto fuera de 
     ).rows.map((x) => x.token);
     const delProveedor = proveedor.tokensEntregados();
     const crudo = decodificarBase32(alta.secreto);
-    const direccion = `otpauth://totp/ZuluHub%20Plataforma:${encodeURIComponent(admin.email)}?secret=${alta.secreto}`;
+    const direccion = `otpauth://totp/Pedernal%20Plataforma:${encodeURIComponent(admin.email)}?secret=${alta.secreto}`;
     const secretos: Record<string, string> = {
       "secreto de la librería": p.secreto,
       "secreto de Google": proveedor.clientSecret,

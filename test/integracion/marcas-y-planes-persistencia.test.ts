@@ -109,7 +109,7 @@ describe.skipIf(base === null)(
         "ab\n",
         "a/b",
         "plan-pro",
-        "zuluhub2",
+        "pedernal2",
         "mi-calendario",
       ];
 

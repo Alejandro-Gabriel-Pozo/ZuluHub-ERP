@@ -58,12 +58,12 @@ describe("FormularioDeAccion y BotonDeEnvio", () => {
           codigo: "ERROR_INTERNO",
           clave: "error.inesperado",
           presentacion: "INESPERADO",
-          referencia: "ZH-1234-ABCD",
+          referencia: "PD-1234-ABCD",
         },
       });
     await render(formulario(accion));
     tocar(page.getByRole("button", { name: "Entrar a la empresa" }));
-    await expect.element(page.getByText("Referencia: ZH-1234-ABCD")).toBeVisible();
+    await expect.element(page.getByText("Referencia: PD-1234-ABCD")).toBeVisible();
     await expect.element(page.getByRole("alert")).toBeVisible();
   });
 });

@@ -13,7 +13,7 @@ import { autorizadoPorElCron } from "./autorizacion-de-cron";
  *
  * Toda respuesta: `Cache-Control: private, no-store`, `X-Robots-Tag: noindex` y ninguna cookie. Ningún error
  * interno sale con detalle (ADR-016): el detalle va al registro del servidor; quien llamó recibe un código y
- * una referencia `ZH-…`.
+ * una referencia `PD-…`.
  *
  * COSTURA CON W5: el traductor de errores común (`aRespuesta`, ADR-016) lo crea W5 en paralelo. Hasta que
  * aterrice, `respuestaDeFallaInterna` hace de traductor mínimo (el mismo contrato que `ruta-de-ingreso.ts`:

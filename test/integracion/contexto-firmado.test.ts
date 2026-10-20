@@ -37,7 +37,7 @@ const ahoraEnS = () => Math.floor(Date.now() / 1000);
 /** Una carga para el rol app, vigente 5 minutos, con lo que se le pase por encima. */
 function carga(cambios: Partial<CargaDeContexto> = {}): CargaDeContexto {
   return {
-    u: "zuluhub_app",
+    u: "pedernal_app",
     e: null,
     t: null,
     p: null,
@@ -147,7 +147,7 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
         "x",
       ]);
       expect(filas[0]?.ctx).toMatchObject({
-        u: "zuluhub_app",
+        u: "pedernal_app",
         e: a.empresa,
         t: null,
         p: null,
@@ -248,7 +248,7 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
       const original = JSON.parse(
         Buffer.from(payloadHex, "hex").toString("utf8"),
       ) as CargaDeContexto;
-      for (const cambio of [{ x: ahoraEnS() + 3600 }, { u: "zuluhub_grupo" }, { t: b.tenant }]) {
+      for (const cambio of [{ x: ahoraEnS() + 3600 }, { u: "pedernal_grupo" }, { t: b.tenant }]) {
         const alterado = Buffer.from(JSON.stringify({ ...original, ...cambio })).toString("hex");
         expect(await veComoApp(base!.app, [version, kid, alterado, mac].join("."))).toEqual(CERO);
       }
@@ -327,7 +327,7 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
   describe("(e) un token de otro rol no sirve en esta sesión", () => {
     it("un token válido de GRUPO usado desde una sesión del rol app: 0 filas", async () => {
       const dueno = await crearPropietario(entorno, a.tenant);
-      const token = firmarCarga(clave(), carga({ u: "zuluhub_grupo", t: a.tenant, p: dueno }));
+      const token = firmarCarga(clave(), carga({ u: "pedernal_grupo", t: a.tenant, p: dueno }));
       // Control: en la sesión del rol grupo, ese mismo token sí funciona.
       const enGrupo = await enSesion(base!.grupo, token, (c) => contar(c, "empresa"));
       expect(enGrupo).toBe(1);
@@ -358,7 +358,7 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
       // Un rol limitado no puede cambiar a otro; el intento falla y no abre nada.
       const codigo = await enSesion(base!.app, tokenDeA(), async (c) => {
         try {
-          await c.query("set role zuluhub_grupo");
+          await c.query("set role pedernal_grupo");
           return null;
         } catch (e) {
           return (e as pg.DatabaseError).code;
@@ -407,7 +407,7 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
       ["mac vacío", () => [partes()[0], partes()[1], partes()[2], ""].join(".")],
       [
         "JSON roto, con firma válida",
-        () => firmarBytes(clave(), Buffer.from('{"u":"zuluhub_app","e":')),
+        () => firmarBytes(clave(), Buffer.from('{"u":"pedernal_app","e":')),
       ],
       [
         "bytes que no son UTF-8, con firma válida",
@@ -423,14 +423,15 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
       ],
       [
         "vencimiento ausente, con firma válida",
-        () => firmarBytes(clave(), Buffer.from(JSON.stringify({ u: "zuluhub_app", e: a.empresa }))),
+        () =>
+          firmarBytes(clave(), Buffer.from(JSON.stringify({ u: "pedernal_app", e: a.empresa }))),
       ],
       [
         "vencimiento no numérico, con firma válida",
         () =>
           firmarBytes(
             clave(),
-            Buffer.from(JSON.stringify({ u: "zuluhub_app", e: a.empresa, x: "pronto" })),
+            Buffer.from(JSON.stringify({ u: "pedernal_app", e: a.empresa, x: "pronto" })),
           ),
       ],
       [
@@ -438,7 +439,7 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
         () =>
           firmarBytes(
             clave(),
-            Buffer.from('{"u":"zuluhub_app","e":null,"x":99999999999999999999999}'),
+            Buffer.from('{"u":"pedernal_app","e":null,"x":99999999999999999999999}'),
           ),
       ],
       [
@@ -486,10 +487,10 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
   describe("(j) los roles limitados no llegan a los secretos", () => {
     const ROLES_URL = () =>
       [
-        ["zuluhub_app", base!.app],
-        ["zuluhub_grupo", base!.grupo],
-        ["zuluhub_trabajos", base!.trabajos],
-        ["zuluhub_plataforma", base!.plataforma],
+        ["pedernal_app", base!.app],
+        ["pedernal_grupo", base!.grupo],
+        ["pedernal_trabajos", base!.trabajos],
+        ["pedernal_plataforma", base!.plataforma],
       ] as const;
 
     const codigoDe = async (url: string, consulta: string) =>
@@ -615,7 +616,7 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
         await invitacion(firmarCarga(clave(), carga({ i: hash, x: ahoraEnS() - 1 }))),
       ).toBeNull();
       expect(
-        await invitacion(firmarCarga(clave(), carga({ i: hash, u: "zuluhub_grupo" }))),
+        await invitacion(firmarCarga(clave(), carga({ i: hash, u: "pedernal_grupo" }))),
       ).toBeNull();
       const [version, kid, payloadHex, mac] = firmarCarga(clave(), carga({ i: hash })).split(
         ".",
@@ -651,7 +652,7 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
       );
       expect(r).toEqual({
         ok: true,
-        valor: { rol: "zuluhub_app", invitacion: hash, empresa: null, persona: null },
+        valor: { rol: "pedernal_app", invitacion: hash, empresa: null, persona: null },
       });
     });
 
@@ -728,7 +729,7 @@ describe.skipIf(base === null)("contexto firmado: falsificación", () => {
       });
       expect(r).toEqual({ ok: true, valor: [a.empresa] });
       // Un token firmado con el tenant de B pero con la persona dueña de A: no es propietaria de B.
-      const token = firmarCarga(clave(), carga({ u: "zuluhub_grupo", t: b.tenant, p: dueno }));
+      const token = firmarCarga(clave(), carga({ u: "pedernal_grupo", t: b.tenant, p: dueno }));
       expect(await enSesion(base!.grupo, token, (c) => contar(c, "empresa"))).toBe(0);
     });
   });

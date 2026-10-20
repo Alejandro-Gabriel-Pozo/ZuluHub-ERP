@@ -286,7 +286,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
   });
 
   describe("entrar a la empresa", () => {
-    it("fija zh_empresa (HttpOnly, Secure, Lax, sin Domain) y vuelve al inicio", async () => {
+    it("fija pd_empresa (HttpOnly, Secure, Lax, sin Domain) y vuelve al inicio", async () => {
       const yo = await ingresarEn(mundo, HOST_A);
       const persona = await personaVinculada(mundo, yo.sesion);
       const e = await empresaDeLaMarca(mundo, mundo.marcaA, persona, "GERENTE");
@@ -297,7 +297,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       expect(await redirigeA(() => acciones.entrarALaEmpresa(f))).toBe("/");
       expect(estado.escrituras).toEqual([
         {
-          nombre: "__Host-zh_empresa",
+          nombre: "__Host-pd_empresa",
           valor: e.empresa,
           opciones: { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 2_592_000 },
         },
@@ -353,7 +353,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       );
       expect(destinos).toEqual(["/", "/"]);
       expect(new Set(estado.escrituras.map((x) => `${x.nombre}=${x.valor}`))).toEqual(
-        new Set([`__Host-zh_empresa=${e.empresa}`]),
+        new Set([`__Host-pd_empresa=${e.empresa}`]),
       );
       expect(
         JSON.stringify(
@@ -370,13 +370,13 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       const persona = await personaVinculada(mundo, yo.sesion);
       await empresaDeLaMarca(mundo, mundo.marcaA, persona, "GERENTE");
       conSesionDe(yo, HOST_A);
-      estado.jar.set("__Host-zh_empresa", "una-empresa");
-      estado.jar.set("__Host-zh_invitacion", "un-token");
+      estado.jar.set("__Host-pd_empresa", "una-empresa");
+      estado.jar.set("__Host-pd_invitacion", "un-token");
       comoNavegador(HOST_A);
       expect(await filasDeSesion(yo)).toBe(1);
       expect(await redirigeA(() => acciones.cerrarLaSesion())).toBe("/ingreso");
       expect(await filasDeSesion(yo)).toBe(0);
-      expect(estado.borrados.sort()).toEqual(["__Host-zh_empresa", "__Host-zh_invitacion"]);
+      expect(estado.borrados.sort()).toEqual(["__Host-pd_empresa", "__Host-pd_invitacion"]);
       // La cookie de sesión se escribió vacía y vencida (el navegador la borra).
       const sesion = estado.escrituras.find((x) => x.nombre.endsWith("session_token"));
       expect(sesion?.valor).toBe("");
@@ -428,9 +428,9 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       const f = new FormData();
       f.set("invitacion", "token-de-la-invitacion");
       await redirigeA(() => acciones.ingresarConGoogle(f));
-      const cookie = estado.escrituras.find((x) => x.nombre === "__Host-zh_invitacion");
+      const cookie = estado.escrituras.find((x) => x.nombre === "__Host-pd_invitacion");
       expect(cookie).toEqual({
-        nombre: "__Host-zh_invitacion",
+        nombre: "__Host-pd_invitacion",
         valor: "token-de-la-invitacion",
         opciones: { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 900 },
       });
@@ -458,11 +458,11 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       );
       const yo = await ingresarEn(mundo, HOST_A, perfilAlAzar({ email }));
       conSesionDe(yo, HOST_A);
-      estado.jar.set("__Host-zh_invitacion", token);
+      estado.jar.set("__Host-pd_invitacion", token);
       comoNavegador(HOST_A);
       const primera = await acciones.aceptarLaInvitacion({ token, clave: "intento-1" });
       expect(primera).toEqual({ ok: true, dato: { yaEstabaAceptada: false } });
-      expect(estado.borrados).toEqual(["__Host-zh_invitacion"]);
+      expect(estado.borrados).toEqual(["__Host-pd_invitacion"]);
       // Repetida (reintento con la MISMA clave, o con otra): el mismo resultado exitoso y una sola membresía.
       comoNavegador(HOST_A);
       const segunda = await acciones.aceptarLaInvitacion({ token, clave: "intento-1" });
@@ -618,7 +618,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       expect(sinSesion).toContain("primero ingresá con la cuenta de Google");
       expect(sinSesion).toContain('name="invitacion" value="tok-123"');
       // El token también puede venir de la cookie del servidor (después de pasar por Google).
-      estado.jar.set("__Host-zh_invitacion", "tok-cookie");
+      estado.jar.set("__Host-pd_invitacion", "tok-cookie");
       comoNavegador(HOST_A);
       expect(html(await Invitacion({ searchParams: consulta() }))).toContain('value="tok-cookie"');
       const yo = await ingresarEn(mundo, HOST_A);
@@ -706,13 +706,13 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       comoNavegador(HOST_A);
       expect(await redirigeA(() => Inicio())).toBe("/empresa");
       // Con la cookie de la primera: entra a esa.
-      estado.jar.set("__Host-zh_empresa", e1.empresa);
+      estado.jar.set("__Host-pd_empresa", e1.empresa);
       comoNavegador(HOST_A);
       expect(html((await Inicio()) as ReactNode)).toContain("Estás en");
 
       // La cookie de una empresa de la otra marca: «sin permiso», nada de la otra marca.
       const deB = await empresaDeLaMarca(mundo, mundo.marcaB, persona, "GERENTE");
-      estado.jar.set("__Host-zh_empresa", deB.empresa);
+      estado.jar.set("__Host-pd_empresa", deB.empresa);
       comoNavegador(HOST_A);
       const sinPermiso = html(await Inicio());
       expect(sinPermiso).toContain("Sin permiso");
@@ -798,18 +798,18 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
         dependencias: {
           ...mundo.dependencias,
           consultasDeSesion: () => {
-            throw new Error("password authentication failed for user zuluhub_app");
+            throw new Error("password authentication failed for user pedernal_app");
           },
         },
       };
       try {
         const cuerpo = html(await Inicio());
         expect(cuerpo).toContain("No se pudo completar. Podés reintentar");
-        expect(cuerpo).toMatch(/Referencia: ZH-[0-9A-F]{4}-[0-9A-F]{4}/);
-        expect(cuerpo).not.toMatch(/password|zuluhub_app/);
+        expect(cuerpo).toMatch(/Referencia: PD-[0-9A-F]{4}-[0-9A-F]{4}/);
+        expect(cuerpo).not.toMatch(/password|pedernal_app/);
         // El detalle fue al registro del servidor (la salida de errores de la función), con la misma referencia.
         const registrado = registro.mock.calls.map((c) => String(c[0]));
-        const referencia = /ZH-[0-9A-F]{4}-[0-9A-F]{4}/.exec(cuerpo)?.[0] as string;
+        const referencia = /PD-[0-9A-F]{4}-[0-9A-F]{4}/.exec(cuerpo)?.[0] as string;
         expect(
           registrado.some(
             (r) => r.includes(referencia) && r.includes("password authentication failed"),

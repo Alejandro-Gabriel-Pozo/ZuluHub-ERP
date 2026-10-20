@@ -72,8 +72,8 @@ describe("registrarReferenciaDeError", () => {
     const { registrar, opciones, registradas } = armar([null]);
     const r = await registrar(comoAdministrador, RECHAZO);
     expect(r).toEqual({ ok: true, valor: referenciaDelIntento(1) });
-    expect(r.ok && r.valor).toBe("ZH-AB12-CD01");
-    expect(registradas).toEqual([{ referencia: "ZH-AB12-CD01", ...RECHAZO }]);
+    expect(r.ok && r.valor).toBe("PD-AB12-CD01");
+    expect(registradas).toEqual([{ referencia: "PD-AB12-CD01", ...RECHAZO }]);
     expect(opciones).toEqual([{ contexto: comoAdministrador, aislamiento: "read committed" }]);
   });
 
@@ -90,7 +90,7 @@ describe("registrarReferenciaDeError", () => {
     expect(llamadasAlAzar()).toBe(3);
     expect(opciones).toHaveLength(3);
     // Solo el intento que anduvo llegó a registrar; las colisiones fallaron antes de correr el trabajo.
-    expect(registradas).toEqual([{ referencia: "ZH-AB12-CD03", ...RECHAZO }]);
+    expect(registradas).toEqual([{ referencia: "PD-AB12-CD03", ...RECHAZO }]);
   });
 
   it(`prueba hasta ${INTENTOS_PARA_REGISTRAR_UNA_REFERENCIA} referencias: la última todavía cuenta`, async () => {

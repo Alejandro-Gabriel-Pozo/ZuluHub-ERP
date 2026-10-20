@@ -121,7 +121,7 @@ const SONDAS = {
       const { rows } = await c.query(
         `select 1 from information_schema.column_privileges
           where table_schema = 'public' and table_name = any ($1) and privilege_type = 'UPDATE'
-            and grantee in ('zuluhub_app', 'zuluhub_grupo', 'zuluhub_trabajos', 'zuluhub_plataforma', 'zuluhub_autenticacion', 'PUBLIC')
+            and grantee in ('pedernal_app', 'pedernal_grupo', 'pedernal_trabajos', 'pedernal_plataforma', 'pedernal_autenticacion', 'PUBLIC')
             and column_name in ('id', 'empresa_id', 'emisor_id', 'punto_de_venta_id', 'tipo_comprobante', 'es_principal',
                                 'creado_en', 'creado_por', 'actualizado_en', 'version', 'verificacion_arca')`,
         [TABLAS],
@@ -333,8 +333,8 @@ const SONDAS = {
       const pv = await crearPuntoDeVenta(c, m, { numero: 1 });
       await crearSerie(c, m.empresa, pv, m.emisor, "FACTURA_B", 0);
       const ctx = comoEmpresa(empresaId(m.empresa), personaId(m.persona));
-      const cambio = await SesionDePrueba.abrir(b, "zuluhub_app", ctx, "repeatable read");
-      const reserva = await SesionDePrueba.abrir(b, "zuluhub_app", ctx);
+      const cambio = await SesionDePrueba.abrir(b, "pedernal_app", ctx, "repeatable read");
+      const reserva = await SesionDePrueba.abrir(b, "pedernal_app", ctx);
       try {
         await cambio.intentar("select numero from punto_de_venta where id = $1", [pv]);
         await reserva.directo(
@@ -366,10 +366,10 @@ const SONDAS = {
       await crearSerie(c, m.empresa, pv, secundario);
       const reserva = await SesionDePrueba.abrir(
         b,
-        "zuluhub_app",
+        "pedernal_app",
         comoEmpresa(empresaId(m.empresa), personaId(m.persona)),
       );
-      const cambio = await SesionDePrueba.abrir(b, "zuluhub_plataforma", comoPlataforma());
+      const cambio = await SesionDePrueba.abrir(b, "pedernal_plataforma", comoPlataforma());
       try {
         await reserva.directo(
           `update serie_comprobante set estado = 'EN_CURSO', numero_en_curso = ultimo_numero + 1,
@@ -438,19 +438,19 @@ const CASOS: readonly Caso[] = [
     nombre: "un UPDATE de más: la aplicación puede cambiar el emisor de un punto de venta",
     sonda: "columnasIntocables",
     debilitar: async (c) =>
-      void (await c.query("grant update (emisor_id) on punto_de_venta to zuluhub_app")),
+      void (await c.query("grant update (emisor_id) on punto_de_venta to pedernal_app")),
   },
   {
     nombre: "un UPDATE de más: la plataforma puede cambiar si un emisor es principal",
     sonda: "columnasIntocables",
     debilitar: async (c) =>
-      void (await c.query("grant update (es_principal) on emisor to zuluhub_plataforma")),
+      void (await c.query("grant update (es_principal) on emisor to pedernal_plataforma")),
   },
   {
     nombre: "un UPDATE de más: la aplicación puede cambiar la verificación de ARCA",
     sonda: "columnasIntocables",
     debilitar: async (c) =>
-      void (await c.query("grant update (verificacion_arca) on punto_de_venta to zuluhub_app")),
+      void (await c.query("grant update (verificacion_arca) on punto_de_venta to pedernal_app")),
   },
   {
     nombre: "quitar el CHECK del número del domicilio",
@@ -545,9 +545,9 @@ const CASOS: readonly Caso[] = [
     nombre: "darle a la plataforma lectura de los domicilios",
     sonda: "plataformaNoLeeDomicilios",
     debilitar: async (c) => {
-      await c.query("grant select on domicilio to zuluhub_plataforma");
+      await c.query("grant select on domicilio to pedernal_plataforma");
       await c.query(
-        "create policy domicilio_plataforma_leer on domicilio for select to zuluhub_plataforma using (true)",
+        "create policy domicilio_plataforma_leer on domicilio for select to pedernal_plataforma using (true)",
       );
     },
   },
@@ -576,7 +576,7 @@ const CASOS: readonly Caso[] = [
       reescribirFuncion(
         c,
         "serie_comprobante_validar_cambio",
-        "PERFORM pg_advisory_xact_lock_shared(hashtextextended('zuluhub.fiscal.emisor:' || OLD.emisor_id::text, 0));",
+        "PERFORM pg_advisory_xact_lock_shared(hashtextextended('pedernal.fiscal.emisor:' || OLD.emisor_id::text, 0));",
         "NULL;",
       ),
   },

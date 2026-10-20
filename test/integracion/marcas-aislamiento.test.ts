@@ -201,7 +201,7 @@ describe.skipIf(base === null)(
     });
 
     const publico = async <T>(trabajo: (s: SesionDePrueba) => Promise<T>): Promise<T> => {
-      const s = await SesionDePrueba.abrir(b, "zuluhub_publico", null);
+      const s = await SesionDePrueba.abrir(b, "pedernal_publico", null);
       try {
         return await trabajo(s);
       } finally {
@@ -215,7 +215,7 @@ describe.skipIf(base === null)(
     ): Promise<T> => {
       const s = await SesionDePrueba.abrir(
         b,
-        "zuluhub_grupo",
+        "pedernal_grupo",
         comoGrupo(tenantId(tenant), personaId(persona)),
       );
       try {
@@ -225,7 +225,7 @@ describe.skipIf(base === null)(
       }
     };
     const trabajos = async <T>(trabajo: (s: SesionDePrueba) => Promise<T>): Promise<T> => {
-      const s = await SesionDePrueba.abrir(b, "zuluhub_trabajos", comoTrabajos());
+      const s = await SesionDePrueba.abrir(b, "pedernal_trabajos", comoTrabajos());
       try {
         return await trabajo(s);
       } finally {
@@ -247,7 +247,7 @@ describe.skipIf(base === null)(
               tipo: "ADMIN",
               id: adminPlataformaId(actor === "BAJA" ? adminDeBaja : randomUUID()),
             });
-      const s = await SesionDePrueba.abrir(b, "zuluhub_plataforma", contexto);
+      const s = await SesionDePrueba.abrir(b, "pedernal_plataforma", contexto);
       try {
         return await trabajo(s);
       } finally {
@@ -258,7 +258,7 @@ describe.skipIf(base === null)(
     // ===========================================================================================
     // El rol público: sin contexto, solo las columnas públicas, solo lo vigente
     // ===========================================================================================
-    describe("zuluhub_publico", () => {
+    describe("pedernal_publico", () => {
       it("lee las marcas ACTIVAS, con sus columnas públicas y ninguna otra", async () => {
         await publico(async (s) => {
           const r = await s.intentar(
@@ -404,7 +404,7 @@ describe.skipIf(base === null)(
           sinPermiso(await s.intentar("insert into plan (codigo) values ('intruso')"));
           sinPermiso(
             await s.intentar(
-              "insert into referencia_de_error (referencia, accion, motivo) values ('ZH-0000-0000', 'a.b', 'X')",
+              "insert into referencia_de_error (referencia, accion, motivo) values ('PD-0000-0000', 'a.b', 'X')",
             ),
           );
         });
@@ -424,13 +424,13 @@ describe.skipIf(base === null)(
           }
           sinPermiso(await s.intentar("create table trampa (x int)"));
           sinPermiso(await s.intentar("create temp table trampa (x int)"));
-          expect((await s.intentar("set role zuluhub_plataforma")).ok).toBe(false);
-          expect((await s.intentar("set role zuluhub_app")).ok).toBe(false);
+          expect((await s.intentar("set role pedernal_plataforma")).ok).toBe(false);
+          expect((await s.intentar("set role pedernal_app")).ok).toBe(false);
         });
       });
 
       it("un contexto firmado ajeno no le suma nada: sigue viendo lo mismo", async () => {
-        const s = await SesionDePrueba.abrir(b, "zuluhub_publico", null);
+        const s = await SesionDePrueba.abrir(b, "pedernal_publico", null);
         try {
           // un token de otro rol puesto a mano en la sesión pública: no cambia lo que ve ni lo que puede
           const token = firmarContexto(b.clave, comoPlataforma(), Math.floor(Date.now() / 1000));
@@ -447,9 +447,9 @@ describe.skipIf(base === null)(
     // ===========================================================================================
     // La aplicación: por empresa, por tenant, y sin escribir nada de marcas ni planes
     // ===========================================================================================
-    describe("zuluhub_app", () => {
+    describe("pedernal_app", () => {
       it("sin contexto firmado no ve ninguna fila de lo nuevo (falla cerrado), pero tampoco recibe un error", async () => {
-        const s = await SesionDePrueba.abrir(b, "zuluhub_app", null);
+        const s = await SesionDePrueba.abrir(b, "pedernal_app", null);
         try {
           for (const [tabla, columnas] of [
             ["marca", "id"],
@@ -764,7 +764,7 @@ describe.skipIf(base === null)(
     // ===========================================================================================
     // El grupo, los trabajos y la autenticación: nada de lo nuevo (salvo lo que ya leían)
     // ===========================================================================================
-    describe("zuluhub_grupo, zuluhub_trabajos y zuluhub_autenticacion", () => {
+    describe("pedernal_grupo, pedernal_trabajos y pedernal_autenticacion", () => {
       it("el grupo y los trabajos fallan cerrado en las nueve tablas y en la vista de resolución (42501), también con contexto válido", async () => {
         await grupo(e1a.tenant, propietario1, async (s) => {
           for (const tabla of RELACIONES_NUEVAS) {
@@ -914,7 +914,7 @@ describe.skipIf(base === null)(
     // ===========================================================================================
     // La plataforma: según el actor firmado
     // ===========================================================================================
-    describe("zuluhub_plataforma", () => {
+    describe("pedernal_plataforma", () => {
       it("sin actor firmado, de baja o desconocido no ve ninguna fila de lo nuevo", async () => {
         for (const actor of [null, "BAJA", "INEXISTENTE"] as const) {
           await plataforma(actor, async (s) => {

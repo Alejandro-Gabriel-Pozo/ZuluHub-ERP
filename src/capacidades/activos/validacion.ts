@@ -23,7 +23,7 @@ export type ErrorDeArchivo =
   | ErrorDeCabecera
   /** Es otro formato que el que pide la ranura (PNG donde va ICO, HEIC, GIF, HTML…). */
   | "FORMATO_NO_ADMITIDO"
-  /** SVG: podría ejecutar código y ZuluHub no lo acepta en ninguna ranura. */
+  /** SVG: podría ejecutar código y Pedernal no lo acepta en ninguna ranura. */
   | "SVG_NO_ADMITIDO"
   | "PESO_EXCEDIDO"
   | "DIMENSIONES_INCORRECTAS"

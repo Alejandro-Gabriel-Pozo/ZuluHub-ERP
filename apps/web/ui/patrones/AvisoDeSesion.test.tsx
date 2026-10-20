@@ -114,7 +114,7 @@ describe("AvisoDeSesion", () => {
       />,
     );
     expect(leerBorrador("venta")).toEqual({ busqueda: "medialunas" });
-    expect(sessionStorage.getItem("zh:borrador:venta")).not.toContain('no"');
+    expect(sessionStorage.getItem("pd:borrador:venta")).not.toContain('no"');
   });
 
   it("sin borrador no guarda nada", async () => {

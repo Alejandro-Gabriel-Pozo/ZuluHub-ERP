@@ -55,7 +55,7 @@ describe("página del producto (entrada directa, §3.2)", () => {
   });
 
   it("respeta el paso de «Letra» recordado: 25 px con «muy grande»", async () => {
-    window.localStorage.setItem("zh-carta-letra", "MUY_GRANDE");
+    window.localStorage.setItem("pd-carta-letra", "MUY_GRANDE");
     await render(pagina());
     await vi.waitFor(() => {
       const h2 = document.querySelector("h2") as Element;

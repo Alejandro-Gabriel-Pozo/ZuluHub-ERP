@@ -11,7 +11,7 @@ import {
 } from "./plan-de-variables.ts";
 
 /**
- * El cliente mínimo de la API REST de Vercel para las variables del proyecto `zuluhub-erp`: listar,
+ * El cliente mínimo de la API REST de Vercel para las variables del proyecto `pedernal-erp`: listar,
  * escribir (siempre `sensitive`, para UN destino, con `upsert`), borrar y quitarle un destino a una
  * variable compartida. Recibe el `fetch` (en las pruebas, uno falso: no hace red por su cuenta).
  *

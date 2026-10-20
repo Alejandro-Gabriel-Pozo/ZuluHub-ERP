@@ -360,7 +360,7 @@ describe("numeración: propiedades", () => {
         const ahora = new Date(1_000_000);
         let serie: Serie = serieLibre(0n);
         // El tramo actual de la serie: arranca en el último número de la última resincronización (los
-        // números de antes de ese salto los emitió otro sistema y no son huecos de ZuluHub).
+        // números de antes de ese salto los emitió otro sistema y no son huecos de Pedernal).
         let desde = 0n;
         let numeros: bigint[] = [];
         for (const e of eventos) {
