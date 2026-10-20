@@ -413,6 +413,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "src/puertos/correo.ts": exporta,
       },
     },
+    {
+      regla: "plataforma-solo-desde-scripts",
+      archivos: {
+        "apps/web/servidor/composicion.ts": importa("../../../src/composicion/plataforma"),
+        "src/composicion/plataforma.ts": exporta,
+      },
+    },
   ];
 
   it("cada regla definida tiene su caso de violación", () => {
@@ -1676,5 +1683,70 @@ describe("M6: los casos de uso de plataforma no envían correo (ADR-007)", () =>
       "src/puertos/correo.ts": exporta,
     });
     expect(v).not.toContain("plataforma-sin-correo");
+  });
+});
+
+describe("P7: la puerta de plataforma solo la importan los scripts y las pruebas (R10)", () => {
+  const PUERTA = "src/composicion/plataforma.ts";
+  const ENTORNO = "src/composicion/entorno-de-plataforma.ts";
+
+  it.each([
+    ["la acción del servidor de la web", "apps/web/servidor/accion.ts", "../../../src/composicion"],
+    ["una página de la web", "apps/web/app/s/app/page.tsx", "../../../../../src/composicion"],
+    ["el proxy de la web", "apps/web/proxy.ts", "../../src/composicion"],
+    ["la composición de la web", "src/composicion/web.ts", "."],
+    ["la composición de conexiones", "src/composicion/conexiones.ts", "."],
+    ["un módulo", "src/modulos/empresas/casos-de-uso/c.ts", "../../../composicion"],
+    ["un caso de uso de plataforma", "src/plataforma/casos-de-uso/c.ts", "../../composicion"],
+    ["un adaptador", "src/adaptadores/postgres/a.ts", "../../composicion"],
+  ])("no la importa %s, ni la puerta ni su entorno", async (_quien, origen, carpeta) => {
+    for (const destino of [PUERTA, ENTORNO]) {
+      const nombre = destino.slice(destino.lastIndexOf("/") + 1, -3);
+      const ruta = carpeta === "." ? `./${nombre}` : `${carpeta}/${nombre}`;
+      const v = await violacionesDe({ [origen]: importa(ruta), [destino]: exporta });
+      expect(v, `${origen} → ${destino}`).toContain("plataforma-solo-desde-scripts");
+    }
+  });
+
+  it("la consola de plataforma (apps/plataforma/servidor, futura) sí puede; sus páginas y la web no", async () => {
+    const servidor = await violacionesDe({
+      "apps/plataforma/servidor/composicion.ts": importa("../../../src/composicion/plataforma"),
+      [PUERTA]: exporta,
+    });
+    expect(servidor).not.toContain("plataforma-solo-desde-scripts");
+    expect(servidor).not.toContain("composicion-solo-desde-servidor-de-apps");
+    for (const origen of [
+      "apps/plataforma/app/page.tsx",
+      "apps/plataforma/ui/boton.ts",
+      "apps/web/servidor/composicion.ts",
+      "apps/web/servidor/web/otro.ts",
+    ]) {
+      const profundidad = "../".repeat(origen.split("/").length - 1);
+      const v = await violacionesDe({
+        [origen]: importa(`${profundidad}src/composicion/plataforma`),
+        [PUERTA]: exporta,
+      });
+      expect(v, origen).toContain("plataforma-solo-desde-scripts");
+    }
+  });
+
+  it("sí la importan los scripts, las pruebas y los archivos de la propia puerta", async () => {
+    const v = await violacionesDe({
+      [PUERTA]: importa("./entorno-de-plataforma"),
+      [ENTORNO]: exporta,
+      "scripts/ejecutar.ts": importa("../src/composicion/plataforma"),
+      "scripts/otro.ts": importa("../src/composicion/entorno-de-plataforma").replace("y =", "z ="),
+      "src/composicion/plataforma.test.ts": importa("./plataforma"),
+      "src/composicion/entorno-de-plataforma.test.ts": importa("./entorno-de-plataforma"),
+    });
+    expect(v).not.toContain("plataforma-solo-desde-scripts");
+  });
+
+  it("los demás archivos de la composición siguen siendo importables por la web", async () => {
+    const v = await violacionesDe({
+      "apps/web/servidor/composicion.ts": importa("../../../src/composicion/web"),
+      "src/composicion/web.ts": exporta,
+    });
+    expect(v).not.toContain("plataforma-solo-desde-scripts");
   });
 });

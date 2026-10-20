@@ -40,6 +40,10 @@ const cadenaDePostgres = z
   .trim()
   .regex(/^postgres(?:ql)?:\/\/\S+$/);
 
+/** Las dos formas gruesas, para la lista de la puerta de plataforma (`entorno-de-plataforma.ts`). */
+export const FORMA_DE_TEXTO = texto;
+export const FORMA_DE_CADENA_DE_POSTGRES = cadenaDePostgres;
+
 /**
  * Largo mínimo del secreto del cron. Un secreto corto se adivina a pedidos (la ruta del cron es pública en
  * Internet): lo que no llega a este largo no sirve y el cron falla cerrado. Es nuestra regla, no la de Vercel.
@@ -170,24 +174,33 @@ export function prohibidasPresentes(fuente: FuenteDeEntorno): string[] {
     .sort();
 }
 
+/** Lo que una lista de variables declara de cada una: su nombre, su forma y las piezas que la usan. */
+export type EntradaDeEntorno = Readonly<{
+  nombre: string;
+  forma: z.ZodType<string>;
+  piezas: readonly string[];
+}>;
+
 /**
- * Valida las variables de una pieza y devuelve sus valores. Pura: recibe la fuente, no lee
+ * Valida las variables de una pieza de una lista y devuelve sus valores. Pura: recibe la fuente, no lee
  * `process.env`. Orden: primero las prohibidas (si hay una, no se mira nada más); después las
  * variables de la pieza, todas juntas, para que un solo intento muestre todo lo que falta. Los
- * mensajes de Zod no se usan: podrían repetir el valor.
+ * mensajes de Zod no se usan: podrían repetir el valor. Es la misma lógica para la web (`NOMBRES_DE_ENTORNO`)
+ * y para la puerta de scripts de plataforma (`entorno-de-plataforma.ts`): una sola definición de «válida».
  */
-export function valoresDeLaPieza<P extends Pieza>(
+export function validarPieza(
+  entradas: readonly EntradaDeEntorno[],
   fuente: FuenteDeEntorno,
-  pieza: P,
-): ValoresDeLaPieza<P> {
+  pieza: string,
+): Record<string, string> {
   const prohibidas = prohibidasPresentes(fuente);
   if (prohibidas.length > 0) {
     throw new ErrorDeEntorno(`variables prohibidas presentes: ${prohibidas.join(", ")}`);
   }
   const problemas: string[] = [];
   const valores: Record<string, string> = {};
-  for (const entrada of NOMBRES_DE_ENTORNO) {
-    if (!(entrada.piezas as readonly string[]).includes(pieza)) continue;
+  for (const entrada of entradas) {
+    if (!entrada.piezas.includes(pieza)) continue;
     const crudo = fuente[entrada.nombre];
     if (crudo === undefined) {
       problemas.push(`${entrada.nombre} falta`);
@@ -200,7 +213,15 @@ export function valoresDeLaPieza<P extends Pieza>(
   if (problemas.length > 0) {
     throw new ErrorDeEntorno(`pieza ${pieza}: ${problemas.join("; ")}`);
   }
-  return valores as ValoresDeLaPieza<P>;
+  return valores;
+}
+
+/** Las variables ya validadas (y sin blancos en los extremos) de una pieza de la web. */
+export function valoresDeLaPieza<P extends Pieza>(
+  fuente: FuenteDeEntorno,
+  pieza: P,
+): ValoresDeLaPieza<P> {
+  return validarPieza(NOMBRES_DE_ENTORNO, fuente, pieza) as ValoresDeLaPieza<P>;
 }
 
 /**

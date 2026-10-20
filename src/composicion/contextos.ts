@@ -1,5 +1,7 @@
 import type {
+  ActorDePlataforma,
   ContextoDeInvitacion,
+  ContextoDePlataforma,
   ContextoDeSesion,
   ContextoOperativo,
 } from "../contexto/contexto";
@@ -74,4 +76,19 @@ export type DatosDeContextoDeSesion = Readonly<{
 export function contextoDeSesion(datos: DatosDeContextoDeSesion): ContextoDeSesion {
   exigirFechaValida(datos.ahora);
   return { tipo: "SESION", usuarioAuth: datos.usuarioAuth, ahora: datos.ahora };
+}
+
+export type DatosDeContextoDePlataforma = Readonly<{
+  /** Quién actúa: el administrador que identificó el script, o un proceso del sistema (el barrido). */
+  actor: ActorDePlataforma;
+  ahora: Date;
+}>;
+
+/**
+ * Un administrador de plataforma (o un proceso del sistema) actúa. Solo lo arma la puerta de scripts de
+ * plataforma, con el administrador que ella misma encontró en la base: nunca un id que mandó el navegador.
+ */
+export function contextoDePlataforma(datos: DatosDeContextoDePlataforma): ContextoDePlataforma {
+  exigirFechaValida(datos.ahora);
+  return { tipo: "PLATAFORMA", actor: datos.actor, ahora: datos.ahora };
 }

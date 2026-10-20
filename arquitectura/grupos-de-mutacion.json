@@ -126,7 +126,7 @@
   },
   {
     "grupo": "web (composición, entorno y contextos)",
-    "archivos": "src/composicion/entorno.ts,src/composicion/perezoso.ts,src/composicion/contextos.ts",
+    "archivos": "src/composicion/entorno.ts,src/composicion/entorno-de-plataforma.ts,src/composicion/perezoso.ts,src/composicion/contextos.ts",
     "pruebas": "src/composicion"
   },
   {
