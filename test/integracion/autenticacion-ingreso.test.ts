@@ -529,7 +529,7 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
       }
     });
 
-    it("el plugin twoFactor NO está montado: sin ruta, sin tabla, sin API", async () => {
+    it("el plugin twoFactor NO está montado en la web de empresa: sin ruta, sin API y sin tabla ni columna declaradas", async () => {
       const c = configuracionDeHost(HOST_A);
       if (!c.ok) throw new Error("host inválido");
       const opciones = opcionesDeInstancia({
@@ -543,16 +543,24 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
         registrar: () => undefined,
       });
       expect(opciones.plugins).toEqual([]);
-      const api = Object.keys(betterAuth(opciones).api);
-      expect(api.filter((k) => /two.?factor|totp|backup/i.test(k))).toEqual([]);
-      const { rows } = await dueno.query(
-        `select 1 from information_schema.tables where table_schema = 'autenticacion' and table_name = 'twoFactor'`,
+      const auth = betterAuth(opciones);
+      expect(
+        Object.keys(auth.api).filter((k) => /two.?factor|totp|backup|estado/i.test(k)),
+      ).toEqual([]);
+      // La migración 0015 es aditiva y deja en la base las tablas y columnas del segundo factor (las usa la consola);
+      // la instancia de EMPRESA no declara ninguna: no las lee ni las escribe.
+      const contexto = await auth.$context;
+      expect(Object.keys(contexto.tables).sort()).toEqual([
+        "account",
+        "rateLimit",
+        "session",
+        "user",
+        "verification",
+      ]);
+      expect(Object.keys(contexto.tables["user"]?.fields ?? {})).not.toContain("twoFactorEnabled");
+      expect(Object.keys(contexto.tables["session"]?.fields ?? {})).not.toContain(
+        "segundoFactorEn",
       );
-      expect(rows).toEqual([]);
-      const { rows: columna } = await dueno.query(
-        `select 1 from information_schema.columns where table_schema = 'autenticacion' and column_name = 'twoFactorEnabled'`,
-      );
-      expect(columna).toEqual([]);
     });
   });
 

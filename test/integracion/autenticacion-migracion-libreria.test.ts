@@ -6,7 +6,10 @@ import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { opcionesDeInstancia } from "../../src/adaptadores/autenticacion/opciones";
 import { crearConexionDeAutenticacion } from "../../src/adaptadores/postgres/conexion-de-autenticacion";
 import { configuracionDeHost } from "../../src/capacidades/autenticacion/host-de-autenticacion";
-import { LIMITES_DE_SESION } from "../../src/capacidades/autenticacion/vigencia-de-sesion";
+import {
+  LIMITES_DE_SESION,
+  LIMITES_DE_SESION_DE_PLATAFORMA,
+} from "../../src/capacidades/autenticacion/vigencia-de-sesion";
 import { crearBaseAparte } from "./entorno";
 import {
   Navegador,
@@ -46,6 +49,28 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra Better
     });
   };
 
+  /** Las opciones de la consola de plataforma (sus dependencias no se usan para leer el esquema). */
+  const opcionesDePlataforma = (db: unknown = conexion.db) => {
+    const c = configuracionDeHost("consola.example.test");
+    if (!c.ok) throw new Error("host de prueba inválido");
+    return opcionesDeInstancia({
+      audiencia: "PLATAFORMA",
+      consola: {
+        personal: { esHabilitado: () => Promise.resolve(true) },
+        segundoFactor: {} as never,
+        auditoria: {} as never,
+      },
+      configuracion: c.valor,
+      db: db as never,
+      secreto: "s".repeat(40),
+      google: { clientId: "cliente", clientSecret: "secreto" },
+      limites: LIMITES_DE_SESION_DE_PLATAFORMA,
+      reloj: () => new Date(),
+      rutaDeError: "/ingreso",
+      registrar: () => undefined,
+    });
+  };
+
   beforeAll(async () => {
     if (base === null) return;
     propia = await crearBaseAparte(base);
@@ -67,6 +92,16 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra Better
     expect(m.unsafeChanges).toEqual([]);
     expect(m.schemaProblems).toEqual([]);
     // El SQL que compilaría la librería está vacío: no hay un solo CREATE/ALTER que aplicar.
+    expect((await m.compileMigrations()).replace(/[;\s]/g, "")).toBe("");
+  });
+
+  it("lo mismo para la consola de plataforma (con el plugin twoFactor): la migración 0015 deja la base al día, sin nada por crear, agregar ni indexar", async () => {
+    const m = await getMigrations(opcionesDePlataforma(), { throwOnUnsafe: false });
+    expect(m.toBeCreated).toEqual([]);
+    expect(m.toBeAdded).toEqual([]);
+    expect(m.toBeAddedIndexes).toEqual([]);
+    expect(m.unsafeChanges).toEqual([]);
+    expect(m.schemaProblems).toEqual([]);
     expect((await m.compileMigrations()).replace(/[;\s]/g, "")).toBe("");
   });
 
@@ -105,83 +140,148 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra Better
     }
   });
 
-  it("lo que la librería crearía en un esquema vacío coincide con la migración: columnas, tipos, claves, índices y claves foráneas", async () => {
-    // Se deja que la librería cree TODO su esquema en una base vacía (con un rol que sí puede crear) y se
-    // compara columna por columna con lo que 0010 creó a mano.
-    const vacia = await crearBaseAparte(base as NonNullable<typeof base>, { migrar: false });
-    const admin = new pg.Client({ connectionString: vacia.base.dueno });
-    await admin.connect();
-    const conAdmin = crearConexionDeAutenticacion({ url: vacia.base.dueno });
-    try {
-      const c = configuracionDeHost("app.marca-a.test");
-      if (!c.ok) throw new Error("host de prueba inválido");
-      const generado = await getMigrations(
-        opcionesDeInstancia({
-          configuracion: c.valor,
-          db: conAdmin.db,
-          secreto: "s".repeat(40),
-          google: { clientId: "cliente", clientSecret: "secreto" },
-          limites: LIMITES_DE_SESION,
-          reloj: () => new Date(),
-          rutaDeError: "/ingreso",
-          registrar: () => undefined,
-        }),
-        { throwOnUnsafe: false },
-      );
-      await admin.query(await generado.compileMigrations());
-      const catalogo = async (cliente: pg.Client) => {
-        const { rows } = await cliente.query<{ clave: string; tipo: string; obligatoria: string }>(
-          `select table_name || '.' || column_name as clave, udt_name as tipo, is_nullable as obligatoria
-             from information_schema.columns where table_schema = 'autenticacion' order by 1`,
-        );
-        return new Map(rows.map((f) => [f.clave, `${f.tipo}/${f.obligatoria}`]));
-      };
-      const deLaLibreria = await catalogo(admin);
-      const deLaMigracion = await catalogo(dueno);
-      // La columna propia `session.host` también la declara la librería (campo adicional de la sesión).
-      const soloMigracion = [...deLaMigracion.keys()].filter((k) => !deLaLibreria.has(k));
-      const soloLibreria = [...deLaLibreria.keys()].filter((k) => !deLaMigracion.has(k));
-      expect(soloLibreria).toEqual([]);
-      expect(soloMigracion).toEqual([]);
-      const distintas = [...deLaLibreria]
-        .filter(([k, v]) => deLaMigracion.get(k) !== v)
-        .map(([k, v]) => `${k}: librería ${v}, migración ${deLaMigracion.get(k)}`);
-      expect(distintas).toEqual([]);
-      // Claves, unicidades, índices y claves foráneas (columnas y borrado en cascada), sin importar los nombres.
-      const estructura = async (cliente: pg.Client) => {
-        const { rows } = await cliente.query<{ t: string; fila: string }>(
-          `select c.relname as t,
-                  case when i.indisprimary then 'pk' when i.indisunique then 'unico' else 'indice' end
-                  || ':' || (select string_agg(a.attname, ',' order by k.ord)
-                               from unnest(i.indkey) with ordinality k(n, ord)
-                               join pg_attribute a on a.attrelid = c.oid and a.attnum = k.n) as fila
-             from pg_index i join pg_class c on c.oid = i.indrelid
-            where c.relnamespace = 'autenticacion'::regnamespace
-           union all
-           select c.relname, 'fk:' || (select string_agg(a.attname, ',') from pg_attribute a
-                    where a.attrelid = c.oid and a.attnum = any(o.conkey)) || '->' || o.confrelid::regclass::text
-                    || ':' || o.confdeltype::text
-             from pg_constraint o join pg_class c on c.oid = o.conrelid
-            where o.contype = 'f' and c.relnamespace = 'autenticacion'::regnamespace`,
-        );
-        return new Set(rows.map((f) => `${f.t} ${f.fila}`));
-      };
-      const e1 = await estructura(admin);
-      const e2 = await estructura(dueno);
-      expect([...e1].filter((x) => !e2.has(x))).toEqual([]);
-      // Lo único que 0010 agrega: la unicidad de la cuenta de un proveedor, que la librería no impone sola.
-      expect([...e2].filter((x) => !e1.has(x))).toEqual(["account unico:providerId,accountId"]);
-    } finally {
-      await conAdmin.cerrar();
-      await admin.end();
-      await vacia.destruir();
-    }
-  });
+  // Lo que 0015 agrega y la librería de EMPRESA no declara (la consola sí): el plugin `twoFactor` y las dos tablas propias.
+  const COLUMNAS_PROPIAS_DE_0015 = [
+    "codigo_totp_usado.paso",
+    "codigo_totp_usado.usado_en",
+    "codigo_totp_usado.usuario_id",
+    "intento_segundo_factor.fallo_en",
+    "intento_segundo_factor.id",
+    "intento_segundo_factor.usuario_id",
+  ];
+  const COLUMNAS_DEL_PLUGIN_TWOFACTOR = [
+    "session.segundo_factor_en",
+    "twoFactor.backupCodes",
+    "twoFactor.failedVerificationCount",
+    "twoFactor.id",
+    "twoFactor.lockedUntil",
+    "twoFactor.secret",
+    "twoFactor.userId",
+    "twoFactor.verified",
+    "user.twoFactorEnabled",
+  ];
+  const ESTRUCTURA_PROPIA_DE_0015 = [
+    'codigo_totp_usado fk:usuario_id->autenticacion."user":c',
+    "codigo_totp_usado pk:usuario_id,paso",
+    'intento_segundo_factor fk:usuario_id->autenticacion."user":c',
+    "intento_segundo_factor indice:usuario_id,fallo_en",
+    "intento_segundo_factor pk:id",
+  ];
+  const ESTRUCTURA_DEL_PLUGIN_TWOFACTOR = [
+    'twoFactor fk:userId->autenticacion."user":c',
+    "twoFactor indice:secret",
+    "twoFactor pk:id",
+    "twoFactor unico:userId",
+  ];
 
-  it("las tablas y columnas de la librería son exactamente las de la migración (ni una de más, ni una de menos)", async () => {
-    const auth = betterAuth(opciones());
-    const contexto = await auth.$context;
-    // El esquema que la librería declara (con las columnas propias) contra el catálogo real.
+  it.each(["EMPRESA", "PLATAFORMA"] as const)(
+    "lo que la librería crearía en un esquema vacío para %s coincide con la migración: columnas, tipos, claves, índices y claves foráneas",
+    async (audiencia) => {
+      // Se deja que la librería cree TODO su esquema en una base vacía (con un rol que sí puede crear) y se
+      // compara columna por columna con lo que las migraciones crearon a mano.
+      const vacia = await crearBaseAparte(base as NonNullable<typeof base>, { migrar: false });
+      const admin = new pg.Client({ connectionString: vacia.base.dueno });
+      await admin.connect();
+      const conAdmin = crearConexionDeAutenticacion({ url: vacia.base.dueno });
+      try {
+        const c = configuracionDeHost("app.marca-a.test");
+        if (!c.ok) throw new Error("host de prueba inválido");
+        const generado = await getMigrations(
+          audiencia === "PLATAFORMA"
+            ? opcionesDePlataforma(conAdmin.db)
+            : opcionesDeInstancia({
+                configuracion: c.valor,
+                db: conAdmin.db,
+                secreto: "s".repeat(40),
+                google: { clientId: "cliente", clientSecret: "secreto" },
+                limites: LIMITES_DE_SESION,
+                reloj: () => new Date(),
+                rutaDeError: "/ingreso",
+                registrar: () => undefined,
+              }),
+          { throwOnUnsafe: false },
+        );
+        await admin.query(await generado.compileMigrations());
+        const catalogo = async (cliente: pg.Client) => {
+          const { rows } = await cliente.query<{
+            clave: string;
+            tipo: string;
+            obligatoria: string;
+          }>(
+            `select table_name || '.' || column_name as clave, udt_name as tipo, is_nullable as obligatoria
+               from information_schema.columns where table_schema = 'autenticacion' order by 1`,
+          );
+          return new Map(rows.map((f) => [f.clave, `${f.tipo}/${f.obligatoria}`]));
+        };
+        const deLaLibreria = await catalogo(admin);
+        const deLaMigracion = await catalogo(dueno);
+        // La columna propia `session.host` también la declara la librería (campo adicional de la sesión).
+        const soloMigracion = [...deLaMigracion.keys()].filter((k) => !deLaLibreria.has(k)).sort();
+        const soloLibreria = [...deLaLibreria.keys()].filter((k) => !deLaMigracion.has(k));
+        expect(soloLibreria).toEqual([]);
+        // Para la web de empresa la base tiene de más todo el segundo factor; para la consola, solo las dos tablas propias.
+        expect(soloMigracion).toEqual(
+          audiencia === "PLATAFORMA"
+            ? COLUMNAS_PROPIAS_DE_0015
+            : [...COLUMNAS_PROPIAS_DE_0015, ...COLUMNAS_DEL_PLUGIN_TWOFACTOR].sort(),
+        );
+        const distintas = [...deLaLibreria]
+          .filter(([k, v]) => deLaMigracion.get(k) !== v)
+          .map(([k, v]) => `${k}: librería ${v}, migración ${deLaMigracion.get(k)}`);
+        // Las dos únicas diferencias de 0015 con lo que exporta la librería: `NOT NULL` (un estado dudoso es «no verificado»).
+        expect(distintas).toEqual(
+          audiencia === "PLATAFORMA"
+            ? [
+                "twoFactor.verified: librería bool/YES, migración bool/NO",
+                "user.twoFactorEnabled: librería bool/YES, migración bool/NO",
+              ]
+            : [],
+        );
+        // Claves, unicidades, índices y claves foráneas (columnas y borrado en cascada), sin importar los nombres.
+        const estructura = async (cliente: pg.Client) => {
+          const { rows } = await cliente.query<{ t: string; fila: string }>(
+            `select c.relname as t,
+                    case when i.indisprimary then 'pk' when i.indisunique then 'unico' else 'indice' end
+                    || ':' || (select string_agg(a.attname, ',' order by k.ord)
+                                 from unnest(i.indkey) with ordinality k(n, ord)
+                                 join pg_attribute a on a.attrelid = c.oid and a.attnum = k.n) as fila
+               from pg_index i join pg_class c on c.oid = i.indrelid
+              where c.relnamespace = 'autenticacion'::regnamespace
+             union all
+             select c.relname, 'fk:' || (select string_agg(a.attname, ',') from pg_attribute a
+                      where a.attrelid = c.oid and a.attnum = any(o.conkey)) || '->' || o.confrelid::regclass::text
+                      || ':' || o.confdeltype::text
+               from pg_constraint o join pg_class c on c.oid = o.conrelid
+              where o.contype = 'f' and c.relnamespace = 'autenticacion'::regnamespace`,
+          );
+          return new Set(rows.map((f) => `${f.t} ${f.fila}`));
+        };
+        const e1 = await estructura(admin);
+        const e2 = await estructura(dueno);
+        // Lo único que la librería crea y la migración cambia: el índice de `userId` del segundo factor es ÚNICO.
+        expect([...e1].filter((x) => !e2.has(x))).toEqual(
+          audiencia === "PLATAFORMA" ? ["twoFactor indice:userId"] : [],
+        );
+        expect([...e2].filter((x) => !e1.has(x)).sort()).toEqual(
+          [
+            // 0010: la unicidad de la cuenta de un proveedor, que la librería no impone sola.
+            "account unico:providerId,accountId",
+            // 0015: las dos tablas propias y, para la web, también el plugin que su instancia no declara.
+            ...ESTRUCTURA_PROPIA_DE_0015,
+            ...(audiencia === "PLATAFORMA"
+              ? ["twoFactor unico:userId"]
+              : ESTRUCTURA_DEL_PLUGIN_TWOFACTOR),
+          ].sort(),
+        );
+      } finally {
+        await conAdmin.cerrar();
+        await admin.end();
+        await vacia.destruir();
+      }
+    },
+  );
+
+  it("las tablas y columnas que declara la consola son las de la base; la web de empresa declara un subconjunto (el segundo factor no es suyo)", async () => {
     const { rows } = await dueno.query<{ tabla: string; columna: string }>(
       `select table_name as tabla, column_name as columna from information_schema.columns
         where table_schema = 'autenticacion' order by 1, 2`,
@@ -190,24 +290,62 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra Better
     for (const { tabla, columna } of rows) {
       enBase.set(tabla, [...(enBase.get(tabla) ?? []), columna]);
     }
-    const declarado = new Map<string, string[]>();
-    for (const [modelo, tabla] of Object.entries(contexto.tables)) {
-      declarado.set(
-        tabla.modelName ?? modelo,
-        ["id", ...Object.entries(tabla.fields).map(([campo, f]) => f.fieldName ?? campo)].sort(),
-      );
+    const declaradoPor = async (opcionesElegidas: ReturnType<typeof opciones>) => {
+      const contexto = await betterAuth(opcionesElegidas).$context;
+      const declarado = new Map<string, string[]>();
+      for (const [modelo, tabla] of Object.entries(contexto.tables)) {
+        declarado.set(
+          tabla.modelName ?? modelo,
+          ["id", ...Object.entries(tabla.fields).map(([campo, f]) => f.fieldName ?? campo)].sort(),
+        );
+      }
+      return declarado;
+    };
+    // Consola: las cinco tablas de la librería y `twoFactor`; cada una con TODAS las columnas de la base (ni una de más ni de menos).
+    const consola = await declaradoPor(opcionesDePlataforma());
+    expect([...consola.keys()].sort()).toEqual([
+      "account",
+      "rateLimit",
+      "session",
+      "twoFactor",
+      "user",
+      "verification",
+    ]);
+    for (const [tabla, columnas] of consola) {
+      expect(enBase.get(tabla)?.sort(), tabla).toEqual(columnas);
     }
-    // Las cinco tablas, y solo ellas (no hay `twoFactor`: el plugin no está).
+    // Las dos tablas propias no las declara la librería: las lee y escribe el adaptador de datos del segundo factor.
     expect([...enBase.keys()].sort()).toEqual([
+      "account",
+      "codigo_totp_usado",
+      "intento_segundo_factor",
+      "rateLimit",
+      "session",
+      "twoFactor",
+      "user",
+      "verification",
+    ]);
+    // Web de empresa: las cinco, y de `user` y `session` solo las columnas de siempre.
+    const empresa = await declaradoPor(opciones());
+    expect([...empresa.keys()].sort()).toEqual([
       "account",
       "rateLimit",
       "session",
       "user",
       "verification",
     ]);
-    expect([...declarado.keys()].sort()).toEqual([...enBase.keys()].sort());
-    for (const [tabla, columnas] of declarado) {
-      expect(enBase.get(tabla)?.sort(), tabla).toEqual(columnas);
+    for (const [tabla, columnas] of empresa) {
+      const deLaBase = enBase.get(tabla) ?? [];
+      expect(
+        columnas.every((x) => deLaBase.includes(x)),
+        tabla,
+      ).toBe(true);
+      expect(
+        deLaBase.filter((x) => !columnas.includes(x)),
+        tabla,
+      ).toEqual(
+        tabla === "user" ? ["twoFactorEnabled"] : tabla === "session" ? ["segundo_factor_en"] : [],
+      );
     }
   });
 

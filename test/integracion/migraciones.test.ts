@@ -38,6 +38,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0012_respaldo.sql",
         "0013_permisos_minimos.sql",
         "0014_aspecto_de_marca.sql",
+        "0015_segundo_factor_de_plataforma.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -57,6 +58,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0012_respaldo.sql",
           "0013_permisos_minimos.sql",
           "0014_aspecto_de_marca.sql",
+          "0015_segundo_factor_de_plataforma.sql",
         ],
       });
     } finally {
@@ -181,6 +183,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0012_respaldo.sql",
         "0013_permisos_minimos.sql",
         "0014_aspecto_de_marca.sql",
+        "0015_segundo_factor_de_plataforma.sql",
       ]);
     } finally {
       await aparte.destruir();

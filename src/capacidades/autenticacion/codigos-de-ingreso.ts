@@ -47,13 +47,18 @@ export function codigoPublicoDeIngreso(codigo: string | null): string {
  * Si `ubicacion` (el `Location` de una redirección de la librería) lleva un `error`, la devuelve
  * reducida a ese código público: misma ruta, solo `?error=`, sin descripción ni otros parámetros ni
  * fragmento. Si no lleva `error`, la devuelve igual. Una ubicación que no se puede interpretar se
- * vuelve la raíz del origen: nunca se deja pasar un texto que no se entiende.
+ * vuelve la raíz del origen: nunca se deja pasar un texto que no se entiende. `codigoPublico` decide qué código sale
+ * (por omisión, el de empresa; la consola usa el suyo, `codigoPublicoDeIngresoDePlataforma`).
  */
-export function sanearUbicacionDeError(ubicacion: string, origen: string): string {
+export function sanearUbicacionDeError(
+  ubicacion: string,
+  origen: string,
+  codigoPublico: (codigo: string | null) => string = codigoPublicoDeIngreso,
+): string {
   try {
     const url = new URL(ubicacion, origen);
     if (!url.searchParams.has("error")) return ubicacion;
-    const reducida = `${url.pathname}?error=${codigoPublicoDeIngreso(url.searchParams.get("error"))}`;
+    const reducida = `${url.pathname}?error=${codigoPublico(url.searchParams.get("error"))}`;
     return ubicacion.startsWith("/") ? reducida : `${url.origin}${reducida}`;
   } catch {
     return origen;

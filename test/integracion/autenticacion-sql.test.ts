@@ -57,6 +57,13 @@ const TABLAS_DE_AUTENTICACION = [
   "user",
   "verification",
 ] as const;
+/** Las tres que suma 0015 para el segundo factor de la consola (`twoFactor` es de la librería; las otras dos, propias). */
+const TABLAS_DEL_SEGUNDO_FACTOR = [
+  "codigo_totp_usado",
+  "intento_segundo_factor",
+  "twoFactor",
+] as const;
+const TODAS_LAS_TABLAS = [...TABLAS_DE_AUTENTICACION, ...TABLAS_DEL_SEGUNDO_FACTOR].sort();
 const OTROS_ROLES = [
   "zuluhub_app",
   "zuluhub_grupo",
@@ -87,15 +94,13 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
   // 1. Catálogo
   // =============================================================================================
   describe("catálogo: el esquema de la librería", () => {
-    it("el esquema `autenticacion` tiene exactamente las cinco tablas de la librería, y nada más", async () => {
+    it("el esquema `autenticacion` tiene exactamente las cinco tablas de la librería y las tres del segundo factor (0015), y nada más", async () => {
       const objetos = await consulta<{ relname: string; relkind: string }>(
         `select c.relname, c.relkind from pg_class c
          where c.relnamespace = 'autenticacion'::regnamespace and c.relkind not in ('i', 'S', 'c')
          order by 1`,
       );
-      expect(objetos).toEqual(
-        TABLAS_DE_AUTENTICACION.map((relname) => ({ relname, relkind: "r" })),
-      );
+      expect(objetos).toEqual(TODAS_LAS_TABLAS.map((relname) => ({ relname, relkind: "r" })));
       // Las claves son uuid: ninguna secuencia ni identity (`generateId: "uuid"`).
       expect(
         await consulta(
@@ -104,7 +109,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
       ).toEqual([]);
     });
 
-    it("las columnas y sus tipos son los que declara Better Auth 1.7.7 (más `session.host`)", async () => {
+    it("las columnas y sus tipos son los que declara Better Auth 1.7.7 (más `session.host` y lo de 0015)", async () => {
       const filasDeColumnas = await consulta<{ t: string; c: string; tipo: string; nulo: string }>(
         `select table_name as t, column_name as c, data_type as tipo, is_nullable as nulo
          from information_schema.columns where table_schema = 'autenticacion'
@@ -120,6 +125,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
         "image:text:YES",
         "createdAt:timestamp with time zone:NO",
         "updatedAt:timestamp with time zone:NO",
+        "twoFactorEnabled:boolean:NO",
       ]);
       expect(porTabla("session")).toEqual([
         "id:uuid:NO",
@@ -131,6 +137,26 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
         "userAgent:text:YES",
         "userId:uuid:NO",
         "host:text:NO",
+        "segundo_factor_en:timestamp with time zone:YES",
+      ]);
+      expect(porTabla("twoFactor")).toEqual([
+        "id:uuid:NO",
+        "secret:text:NO",
+        "backupCodes:text:NO",
+        "userId:uuid:NO",
+        "verified:boolean:NO",
+        "failedVerificationCount:integer:YES",
+        "lockedUntil:timestamp with time zone:YES",
+      ]);
+      expect(porTabla("codigo_totp_usado")).toEqual([
+        "usuario_id:uuid:NO",
+        "paso:bigint:NO",
+        "usado_en:timestamp with time zone:NO",
+      ]);
+      expect(porTabla("intento_segundo_factor")).toEqual([
+        "id:uuid:NO",
+        "usuario_id:uuid:NO",
+        "fallo_en:timestamp with time zone:NO",
       ]);
       expect(porTabla("account")).toEqual([
         "id:uuid:NO",
@@ -182,11 +208,19 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
           "autenticacion.session.session_token_uk:u",
           "autenticacion.session.session_user_id_fkey:f",
           "autenticacion.verification.verification_pkey:p",
+          // 0015: el segundo factor.
+          'autenticacion."twoFactor".twoFactor_pkey:p',
+          'autenticacion."twoFactor".twoFactor_userId_fkey:f',
+          "autenticacion.codigo_totp_usado.codigo_totp_usado_paso_ck:c",
+          "autenticacion.codigo_totp_usado.codigo_totp_usado_pk:p",
+          "autenticacion.codigo_totp_usado.codigo_totp_usado_usuario_id_fkey:f",
+          "autenticacion.intento_segundo_factor.intento_segundo_factor_pkey:p",
+          "autenticacion.intento_segundo_factor.intento_segundo_factor_usuario_id_fkey:f",
         ].sort(),
       );
     });
 
-    it("RLS activa y forzada en las cinco tablas, con una política por comando solo para el rol de la librería", async () => {
+    it("RLS activa y forzada en las ocho tablas, con una política por comando (el que tiene concedido) solo para el rol de la librería", async () => {
       const tablas = await consulta<{
         relname: string;
         relrowsecurity: boolean;
@@ -195,7 +229,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
         `select relname, relrowsecurity, relforcerowsecurity from pg_class
          where relnamespace = 'autenticacion'::regnamespace and relkind = 'r' order by 1`,
       );
-      expect(tablas).toHaveLength(5);
+      expect(tablas).toHaveLength(TODAS_LAS_TABLAS.length);
       for (const t of tablas) {
         expect(t.relrowsecurity, `${t.relname}: RLS activo`).toBe(true);
         expect(t.relforcerowsecurity, `${t.relname}: RLS forzado`).toBe(true);
@@ -204,13 +238,22 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
         `select format('%s:%s:%s:%s:%s', tablename, policyname, cmd, permissive, array_to_string(roles, '+')) as p
          from pg_policies where schemaname = 'autenticacion' order by 1`,
       );
-      const esperadas = TABLAS_DE_AUTENTICACION.flatMap((t) =>
-        [
-          ["rol_autenticacion_alta", "INSERT"],
-          ["rol_autenticacion_borrar", "DELETE"],
-          ["rol_autenticacion_cambiar", "UPDATE"],
-          ["rol_autenticacion_leer", "SELECT"],
-        ].map(([nombre, cmd]) => `${t}:${nombre}:${cmd}:PERMISSIVE:zuluhub_autenticacion`),
+      const POR_COMANDO = [
+        ["rol_autenticacion_alta", "INSERT"],
+        ["rol_autenticacion_borrar", "DELETE"],
+        ["rol_autenticacion_cambiar", "UPDATE"],
+        ["rol_autenticacion_leer", "SELECT"],
+      ] as const;
+      // 0015: cada tabla nueva tiene política solo por los comandos que se le concedieron.
+      const COMANDOS_DE: Record<string, readonly string[]> = {
+        twoFactor: ["INSERT", "UPDATE", "SELECT"],
+        codigo_totp_usado: ["INSERT", "DELETE", "SELECT"],
+        intento_segundo_factor: ["INSERT", "DELETE", "SELECT"],
+      };
+      const esperadas = TODAS_LAS_TABLAS.flatMap((t) =>
+        POR_COMANDO.filter(([, cmd]) =>
+          (COMANDOS_DE[t] ?? ["INSERT", "DELETE", "UPDATE", "SELECT"]).includes(cmd),
+        ).map(([nombre, cmd]) => `${t}:${nombre}:${cmd}:PERMISSIVE:zuluhub_autenticacion`),
       );
       expect(politicas.map((p) => p.p)).toEqual(esperadas.sort());
     });
@@ -303,11 +346,20 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
       );
       // 0013 le quitó DELETE sobre `user` y `account` (no hay camino que borre un usuario o una cuenta).
       const CON_DELETE = ["rateLimit", "session", "verification"];
+      // 0015: `twoFactor` solo lee y da de alta (cambiar, por tres columnas: lo mira el test de la migración); las dos
+      // tablas propias leen, dan de alta y borran lo viejo de cada usuario, sin UPDATE.
+      const PRIVILEGIOS_DE_0015: Record<string, string[]> = {
+        twoFactor: ["INSERT", "SELECT"],
+        codigo_totp_usado: ["DELETE", "INSERT", "SELECT"],
+        intento_segundo_factor: ["DELETE", "INSERT", "SELECT"],
+      };
       expect(privilegios).toEqual(
-        TABLAS_DE_AUTENTICACION.flatMap((t) =>
-          (CON_DELETE.includes(t)
-            ? ["DELETE", "INSERT", "SELECT", "UPDATE"]
-            : ["INSERT", "SELECT", "UPDATE"]
+        TODAS_LAS_TABLAS.flatMap((t) =>
+          (
+            PRIVILEGIOS_DE_0015[t] ??
+            (CON_DELETE.includes(t)
+              ? ["DELETE", "INSERT", "SELECT", "UPDATE"]
+              : ["INSERT", "SELECT", "UPDATE"])
           ).map((p) => ({ t, p })),
         ).sort((a, b) => (a.t === b.t ? a.p.localeCompare(b.p) : a.t < b.t ? -1 : 1)),
       );
@@ -328,7 +380,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
           [rol],
         );
         expect(rows[0], rol).toEqual({ usage: false, create: false });
-        for (const tabla of TABLAS_DE_AUTENTICACION) {
+        for (const tabla of TODAS_LAS_TABLAS) {
           const { rows: t } = await dueno.query<{ puede: boolean }>(
             `select (has_table_privilege($1, format('autenticacion.%I', $2::text), 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
                      or has_any_column_privilege($1, format('autenticacion.%I', $2::text), 'SELECT,INSERT,UPDATE,REFERENCES')) as puede`,

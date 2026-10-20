@@ -37,6 +37,9 @@ export const ACCIONES_DE_PLATAFORMA = [
   "MODULO_DESACTIVADO",
   // Un administrador de plataforma nuevo: lo siembra el script del primer administrador con la conexión del dueño.
   "ADMIN_PLATAFORMA_ALTA",
+  // El segundo factor de un administrador quedó bloqueado por intentos fallidos (P8a): la deja el sistema, sin
+  // códigos ni secretos (solo hasta cuándo y cuántos fallos).
+  "SEGUNDO_FACTOR_BLOQUEADO",
 ] as const;
 
 export type AccionDePlataforma = (typeof ACCIONES_DE_PLATAFORMA)[number];

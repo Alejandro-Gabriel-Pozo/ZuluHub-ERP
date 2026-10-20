@@ -19,7 +19,40 @@ export const RUTAS_PERMITIDAS: readonly Readonly<{ metodo: string; ruta: string 
     { metodo: "POST", ruta: `${RUTA_BASE_DE_INGRESO}/sign-out` },
   ]);
 
+/**
+ * El estado de la sesión de la consola (P8a): lo sirve el adaptador mismo (no es una ruta de la librería) y NO
+ * renueva la sesión: la pantalla puede mirarlo sin que mirar cuente como uso. `get-session` sí renueva («Seguir»).
+ */
+export const RUTA_DE_ESTADO_DE_SESION = `${RUTA_BASE_DE_INGRESO}/estado-de-sesion`;
+
+/**
+ * Las únicas rutas que deja pasar la consola de PLATAFORMA (h5-p8 §3). Lista CERRADA como la de empresa y con las
+ * mismas cuatro del ingreso, más el estado de sesión y las del segundo factor: enrolar, verificar el código de la
+ * aplicación, verificar un código de recuperación y regenerar los códigos. NO están «ver el secreto» ni «dar de baja
+ * el TOTP»: la pérdida del dispositivo la resuelve el dueño por script, no una pantalla (la guarda de «segundo factor
+ * reciente» (G3) las cubre igual si alguna vez se las abre).
+ */
+export const RUTAS_PERMITIDAS_DE_PLATAFORMA: readonly Readonly<{ metodo: string; ruta: string }>[] =
+  Object.freeze([
+    ...RUTAS_PERMITIDAS,
+    { metodo: "GET", ruta: RUTA_DE_ESTADO_DE_SESION },
+    { metodo: "POST", ruta: `${RUTA_BASE_DE_INGRESO}/two-factor/enable` },
+    { metodo: "POST", ruta: `${RUTA_BASE_DE_INGRESO}/two-factor/verify-totp` },
+    { metodo: "POST", ruta: `${RUTA_BASE_DE_INGRESO}/two-factor/verify-backup-code` },
+    { metodo: "POST", ruta: `${RUTA_BASE_DE_INGRESO}/two-factor/generate-backup-codes` },
+  ]);
+
+type ListaDeRutas = readonly Readonly<{ metodo: string; ruta: string }>[];
+
+const estaEn = (lista: ListaDeRutas, metodo: string, ruta: string): boolean =>
+  lista.some((p) => p.metodo === metodo && p.ruta === ruta);
+
 /** Comparación exacta (método y ruta, sin barra final ni cambio de mayúsculas): la misma que verá la librería. */
 export function rutaPermitida(metodo: string, ruta: string): boolean {
-  return RUTAS_PERMITIDAS.some((p) => p.metodo === metodo && p.ruta === ruta);
+  return estaEn(RUTAS_PERMITIDAS, metodo, ruta);
+}
+
+/** Lo mismo para la consola de plataforma. */
+export function rutaPermitidaDePlataforma(metodo: string, ruta: string): boolean {
+  return estaEn(RUTAS_PERMITIDAS_DE_PLATAFORMA, metodo, ruta);
 }

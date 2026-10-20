@@ -216,7 +216,7 @@
   },
   {
     "grupo": "autenticación (piezas puras)",
-    "archivos": "src/capacidades/autenticacion/**/*.ts,src/adaptadores/autenticacion/configuracion.ts",
+    "archivos": "src/capacidades/autenticacion/**/*.ts,src/adaptadores/autenticacion/configuracion.ts,src/adaptadores/autenticacion/sesion-leida.ts,src/adaptadores/autenticacion/rutas-bloqueadas.ts,src/adaptadores/autenticacion/plataforma/qr-svg.ts,src/adaptadores/autenticacion/plataforma/respuestas.ts",
     "pruebas": "src/capacidades/autenticacion src/adaptadores/autenticacion"
   },
   {

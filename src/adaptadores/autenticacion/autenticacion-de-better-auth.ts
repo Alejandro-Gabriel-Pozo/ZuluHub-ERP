@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { isAPIError } from "better-auth/api";
 import {
+  codigoPublicoDeIngreso,
   codigoPublicoDeSolicitud,
   sanearUbicacionDeError,
 } from "../../capacidades/autenticacion/codigos-de-ingreso";
@@ -14,14 +15,25 @@ import { cuerpoPublicoDeIngresoSocial } from "../../capacidades/autenticacion/in
 import { rutaPermitida } from "../../capacidades/autenticacion/rutas-permitidas";
 import {
   LIMITES_DE_SESION,
+  LIMITES_DE_SESION_DE_PLATAFORMA,
   vigenciaDeSesion,
   type LimitesDeSesion,
 } from "../../capacidades/autenticacion/vigencia-de-sesion";
+import {
+  SIN_SESION_DE_PLATAFORMA,
+  type EstadoDeSesionDePlataforma,
+} from "../../capacidades/autenticacion/estado-de-sesion-de-plataforma";
 import { usuarioAuthId } from "../../primitivas/identificadores/marca";
-import type { Autenticacion } from "../../puertos/autenticacion";
+import type { Autenticacion, AutenticacionDePlataforma } from "../../puertos/autenticacion";
 import { ErrorDeConfiguracion } from "../postgres/errores";
 import type { ClienteDeGoogle } from "./configuracion";
-import { hostGuardado, opcionesDeInstancia, type BaseDeDatosDeLaLibreria } from "./opciones";
+import {
+  opcionesDeInstancia,
+  type BaseDeDatosDeLaLibreria,
+  type DatosDeLaConsola,
+} from "./opciones";
+import { politicaDePlataforma, type PoliticaDeAudiencia } from "./plataforma/respuestas";
+import { hostGuardado, segundoFactorEnDe } from "./sesion-leida";
 
 /**
  * `Autenticacion` sobre Better Auth 1.7.7 (web-armazon §4). Una INSTANCIA de la librería por host de
@@ -49,6 +61,13 @@ export type ConfiguracionDeAutenticacion = Readonly<{
   registrar?: (detalle: string) => void;
 }>;
 
+/** Lo mismo para la consola de plataforma, más lo que le inyecta su composición. Sin `limites`: son los de plataforma. */
+export type ConfiguracionDeAutenticacionDePlataforma = Omit<
+  ConfiguracionDeAutenticacion,
+  "limites"
+> &
+  Readonly<{ consola: DatosDeLaConsola; limites?: LimitesDeSesion }>;
+
 export const CAPACIDAD_DE_LA_CACHE = 32;
 export const RUTA_DE_ERROR_POR_OMISION = "/ingreso";
 
@@ -72,12 +91,65 @@ function respuestaNeutra(): Response {
   });
 }
 
-export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion): Autenticacion {
-  const limites = c.limites ?? LIMITES_DE_SESION;
+/** Lo de la web de empresa (sin cambios): la lista cerrada de cuatro rutas, sin comprobar cuerpos acá (lo hace la ruta). */
+const POLITICA_DE_EMPRESA: PoliticaDeAudiencia = {
+  rutaPermitida,
+  rechazarCuerpo: () => null,
+  codigoDeRedireccion: codigoPublicoDeIngreso,
+  estadoDeError: (estado) => estado,
+  cuerpoDeError: (_estado, texto) => ({ codigo: codigoPublicoDeSolicitud(texto) }),
+  async moldearExito(ruta, respuesta, cabeceras) {
+    if (ruta === `${RUTA_BASE_DE_INGRESO}/get-session`) {
+      // Sin el token de la sesión ni los datos del usuario en el cuerpo (ver `cuerpoPublicoDeSesion`).
+      cabeceras.delete("content-length");
+      cabeceras.set("Content-Type", "application/json");
+      const cuerpo = cuerpoPublicoDeSesion(await respuesta.text());
+      return new Response(JSON.stringify(cuerpo), { status: respuesta.status, headers: cabeceras });
+    }
+    if (ruta === `${RUTA_BASE_DE_INGRESO}/sign-in/social`) {
+      // S1: lo único que sale es la dirección de Google. Si la librería devolviera una sesión (con su
+      // `token` y el usuario) en el cuerpo, no llega al navegador: se corta con un error sin detalle.
+      const cuerpo = cuerpoPublicoDeIngresoSocial(await respuesta.text());
+      if (cuerpo === null) {
+        throw new Error("el inicio del ingreso no devolvió una dirección https");
+      }
+      cabeceras.delete("content-length");
+      cabeceras.set("Content-Type", "application/json");
+      return new Response(JSON.stringify(cuerpo), { status: respuesta.status, headers: cabeceras });
+    }
+    return null;
+  },
+};
+
+type NucleoDeAutenticacion = Readonly<{
+  autenticacion: Autenticacion;
+  instanciaDe: (host: string) => ReturnType<typeof betterAuth> | null;
+  falloInterno: (error: unknown) => ErrorInternoDeIngreso;
+  reloj: () => Date;
+}>;
+
+/**
+ * La parte común de las dos audiencias: una INSTANCIA de la librería por host, en una caché acotada, y los dos
+ * métodos del puerto. Lo que cambia entre audiencias entra por `politica` (qué rutas, qué cuerpos, qué sale) y por
+ * `opcionesDeAudiencia` (las opciones de la librería).
+ */
+function crearNucleo(
+  c: ConfiguracionDeAutenticacion,
+  limites: LimitesDeSesion,
+  politica: PoliticaDeAudiencia,
+  opcionesDeAudiencia: (
+    host: string,
+    base: ReturnType<typeof configuracionDeHost> & { ok: true },
+    reloj: () => Date,
+    registrar: (detalle: string) => void,
+    rutaDeError: string,
+  ) => Parameters<typeof betterAuth>[0],
+  conSegundoFactor: boolean,
+): NucleoDeAutenticacion {
   const reloj = c.reloj ?? (() => new Date());
   const registrar = c.registrar ?? (() => undefined);
   const rutaDeError = c.rutaDeError ?? RUTA_DE_ERROR_POR_OMISION;
-  const cache = crearCacheAcotada<ReturnType<typeof crearInstancia>>(
+  const cache = crearCacheAcotada<ReturnType<typeof betterAuth>>(
     c.capacidadDeLaCache ?? CAPACIDAD_DE_LA_CACHE,
   );
 
@@ -100,19 +172,7 @@ export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion):
   function crearInstancia(host: string) {
     const configuracion = configuracionDeHost(host);
     if (!configuracion.ok) throw new ErrorDeConfiguracion("el host de ingreso no es válido");
-    return betterAuth(
-      opcionesDeInstancia({
-        configuracion: configuracion.valor,
-        db: c.db,
-        secreto: c.secreto,
-        google: c.google,
-        limites,
-        reloj,
-        ...(c.encabezadoDeIp === undefined ? {} : { encabezadoDeIp: c.encabezadoDeIp }),
-        rutaDeError,
-        registrar,
-      }),
-    );
+    return betterAuth(opcionesDeAudiencia(host, configuracion, reloj, registrar, rutaDeError));
   }
 
   /** La instancia del host, o `null` si el host no es un nombre de host válido. */
@@ -121,7 +181,7 @@ export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion):
     return cache.obtenerOCrear(host, () => crearInstancia(host));
   }
 
-  return {
+  const autenticacion: Autenticacion = {
     async sesionDe(pedido, host) {
       const instancia = instanciaDe(host);
       if (instancia === null) return null;
@@ -158,13 +218,14 @@ export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion):
         creadaEn: session.createdAt,
         ultimoUso: session.updatedAt,
         venceEn: session.expiresAt,
+        ...(conSegundoFactor ? { segundoFactorEn: segundoFactorEnDe(session) } : {}),
         cookiesDeRespuesta: leida.headers.getSetCookie(),
       };
     },
 
     async manejar(pedido, host) {
       const origen = new URL(pedido.url);
-      if (!rutaPermitida(pedido.method, origen.pathname)) return respuestaNeutra();
+      if (!politica.rutaPermitida(pedido.method, origen.pathname)) return respuestaNeutra();
       const configuracion = configuracionDeHost(host);
       const instancia = instanciaDe(host);
       if (!configuracion.ok || instancia === null) return respuestaNeutra();
@@ -173,10 +234,19 @@ export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion):
       // cómo el servidor haya armado `pedido.url` (de eso no hay garantía; del `host` de la puerta, sí).
       const baseURL = configuracion.valor.baseURL;
       const sinCuerpo = pedido.method === "GET" || pedido.method === "HEAD";
+      const cuerpo = sinCuerpo ? null : await pedido.arrayBuffer();
+      if (cuerpo !== null) {
+        const rechazo = politica.rechazarCuerpo(
+          pedido.method,
+          origen.pathname,
+          new TextDecoder().decode(cuerpo),
+        );
+        if (rechazo !== null) return rechazo;
+      }
       const copia = new Request(`${baseURL}${origen.pathname}${origen.search}`, {
         method: pedido.method,
         headers: pedido.headers,
-        ...(sinCuerpo ? {} : { body: await pedido.arrayBuffer() }),
+        ...(cuerpo === null ? {} : { body: cuerpo }),
         redirect: "manual",
       });
       let respuesta: Response;
@@ -193,7 +263,10 @@ export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion):
       if (respuesta.status >= 300 && respuesta.status < 400) {
         const ubicacion = cabeceras.get("location");
         if (ubicacion !== null)
-          cabeceras.set("location", sanearUbicacionDeError(ubicacion, baseURL));
+          cabeceras.set(
+            "location",
+            sanearUbicacionDeError(ubicacion, baseURL, politica.codigoDeRedireccion),
+          );
         return new Response(null, { status: respuesta.status, headers: cabeceras });
       }
       if (respuesta.status >= 400) {
@@ -203,37 +276,98 @@ export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion):
         cabeceras.delete("content-type");
         if (!esJson) return new Response(null, { status: respuesta.status, headers: cabeceras });
         cabeceras.set("Content-Type", "application/json");
-        const cuerpo = { codigo: codigoPublicoDeSolicitud(await respuesta.text()) };
-        return new Response(JSON.stringify(cuerpo), {
-          status: respuesta.status,
+        const cuerpoDeError = politica.cuerpoDeError(
+          respuesta.status,
+          await respuesta.text(),
+          cabeceras,
+        );
+        return new Response(JSON.stringify(cuerpoDeError), {
+          status: politica.estadoDeError(respuesta.status),
           headers: cabeceras,
         });
       }
-      if (origen.pathname === `${RUTA_BASE_DE_INGRESO}/get-session`) {
-        // Sin el token de la sesión ni los datos del usuario en el cuerpo (ver `cuerpoPublicoDeSesion`).
-        cabeceras.delete("content-length");
-        cabeceras.set("Content-Type", "application/json");
-        const cuerpo = cuerpoPublicoDeSesion(await respuesta.text());
-        return new Response(JSON.stringify(cuerpo), {
-          status: respuesta.status,
-          headers: cabeceras,
-        });
+      let moldeada: Response | null;
+      try {
+        moldeada = await politica.moldearExito(origen.pathname, respuesta, cabeceras);
+      } catch (error) {
+        throw falloInterno(error);
       }
-      if (origen.pathname === `${RUTA_BASE_DE_INGRESO}/sign-in/social`) {
-        // S1: lo único que sale es la dirección de Google. Si la librería devolviera una sesión (con su
-        // `token` y el usuario) en el cuerpo, no llega al navegador: se corta con un error sin detalle.
-        const cuerpo = cuerpoPublicoDeIngresoSocial(await respuesta.text());
-        if (cuerpo === null) {
-          throw falloInterno(new Error("el inicio del ingreso no devolvió una dirección https"));
-        }
-        cabeceras.delete("content-length");
-        cabeceras.set("Content-Type", "application/json");
-        return new Response(JSON.stringify(cuerpo), {
-          status: respuesta.status,
-          headers: cabeceras,
+      return (
+        moldeada ?? new Response(respuesta.body, { status: respuesta.status, headers: cabeceras })
+      );
+    },
+  };
+
+  return { autenticacion, instanciaDe, falloInterno, reloj };
+}
+
+export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion): Autenticacion {
+  const limites = c.limites ?? LIMITES_DE_SESION;
+  return crearNucleo(
+    c,
+    limites,
+    POLITICA_DE_EMPRESA,
+    (_host, configuracion, reloj, registrar, rutaDeError) =>
+      opcionesDeInstancia({
+        configuracion: configuracion.valor,
+        db: c.db,
+        secreto: c.secreto,
+        google: c.google,
+        limites,
+        reloj,
+        ...(c.encabezadoDeIp === undefined ? {} : { encabezadoDeIp: c.encabezadoDeIp }),
+        rutaDeError,
+        registrar,
+      }),
+    false,
+  ).autenticacion;
+}
+
+/**
+ * La autenticación de la consola de plataforma (h5-p8): el mismo núcleo con `twoFactor`, los límites de plataforma
+ * (8 horas / 30 minutos), cookies `__Host-zh_plat.*`, la lista cerrada de rutas de plataforma y respuestas propias.
+ */
+export function crearAutenticacionDePlataformaDeBetterAuth(
+  c: ConfiguracionDeAutenticacionDePlataforma,
+): AutenticacionDePlataforma {
+  const limites = c.limites ?? LIMITES_DE_SESION_DE_PLATAFORMA;
+  const reloj = c.reloj ?? (() => new Date());
+  const nucleo = crearNucleo(
+    c,
+    limites,
+    politicaDePlataforma({ reloj, limites }),
+    (_host, configuracion, relojDeLaInstancia, registrar, rutaDeError) =>
+      opcionesDeInstancia({
+        audiencia: "PLATAFORMA",
+        consola: c.consola,
+        configuracion: configuracion.valor,
+        db: c.db,
+        secreto: c.secreto,
+        google: c.google,
+        limites,
+        reloj: relojDeLaInstancia,
+        ...(c.encabezadoDeIp === undefined ? {} : { encabezadoDeIp: c.encabezadoDeIp }),
+        rutaDeError,
+        registrar,
+      }),
+    true,
+  );
+  return {
+    ...nucleo.autenticacion,
+    async estadoDeSesion(pedido, host) {
+      const instancia = nucleo.instanciaDe(host);
+      if (instancia === null) return SIN_SESION_DE_PLATAFORMA;
+      const api = instancia.api as unknown as Record<
+        string,
+        (entrada: { headers: Headers }) => Promise<EstadoDeSesionDePlataforma>
+      >;
+      try {
+        return await (api["estadoDeSesionDePlataforma"] as NonNullable<(typeof api)[string]>)({
+          headers: pedido.headers,
         });
+      } catch (error) {
+        throw nucleo.falloInterno(error);
       }
-      return new Response(respuesta.body, { status: respuesta.status, headers: cabeceras });
     },
   };
 }

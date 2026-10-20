@@ -8,6 +8,8 @@ import {
 import { crearConexionDeAutenticacion } from "../../src/adaptadores/postgres/conexion-de-autenticacion";
 import {
   LIMITES_DE_SESION,
+  LIMITES_DE_SESION_DE_PLATAFORMA,
+  LIMITES_DEL_BARRIDO,
   vigenciaDeSesion,
 } from "../../src/capacidades/autenticacion/vigencia-de-sesion";
 import { crearBaseAparte } from "./entorno";
@@ -26,6 +28,8 @@ const AHORA = new Date("2026-10-13T12:00:00.000Z");
 const MINUTO = 60_000;
 const HORA = 60 * MINUTO;
 const HOST = "app.marca-a.test";
+/** El barrido comparte la tabla entre la web y la consola: usa el plazo más largo de inactividad (30 minutos). */
+const INACTIVIDAD = LIMITES_DEL_BARRIDO.inactividad.vencimientoEnMs;
 
 describe.skipIf(base === null)("autenticación: barrido de lo vencido", () => {
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
@@ -80,8 +84,8 @@ describe.skipIf(base === null)("autenticación: barrido de lo vencido", () => {
     const vigente = await sesion(en(-HORA), en(-MINUTO), en(10 * MINUTO));
     const venceJusto = await sesion(en(-HORA), en(-MINUTO), en(0));
     const venceUnMsDespues = await sesion(en(-HORA), en(-MINUTO), en(1));
-    const sinUsoJusto = await sesion(en(-HORA), en(-15 * MINUTO), en(10 * MINUTO));
-    const sinUsoUnMsAntes = await sesion(en(-HORA), en(-15 * MINUTO + 1), en(10 * MINUTO));
+    const sinUsoJusto = await sesion(en(-HORA), en(-INACTIVIDAD), en(10 * MINUTO));
+    const sinUsoUnMsAntes = await sesion(en(-HORA), en(-INACTIVIDAD + 1), en(10 * MINUTO));
     const toperJusto = await sesion(en(-8 * HORA), en(-MINUTO), en(10 * MINUTO));
     const toperUnMsAntes = await sesion(en(-8 * HORA + 1), en(-MINUTO), en(10 * MINUTO));
     const resumen = await conexion.barrido.barrerVencidos(AHORA);
@@ -95,10 +99,37 @@ describe.skipIf(base === null)("autenticación: barrido de lo vencido", () => {
     expect(await existe(toperJusto)).toBe(false);
   });
 
+  it("no borra la sesión de la consola con 20 minutos sin uso (vale 30), y sí la de la web que ya venció por su propio vencimiento", async () => {
+    await vaciar();
+    // Consola: usada hace 20 minutos, vence en 10 (30 de inactividad). Con el límite de la web (15) estaría «vencida».
+    const consola = await sesion(en(-HORA), en(-20 * MINUTO), en(10 * MINUTO));
+    // Web: usada hace 20 minutos y vencida hace 5 (15 de inactividad): su `expiresAt` la corta.
+    const web = await sesion(en(-HORA), en(-20 * MINUTO), en(-5 * MINUTO));
+    expect(
+      vigenciaDeSesion(
+        { host: HOST, creadaEn: en(-HORA), ultimoUso: en(-20 * MINUTO), venceEn: en(10 * MINUTO) },
+        HOST,
+        AHORA,
+        LIMITES_DE_SESION,
+      ),
+    ).toBe("VENCIDA");
+    expect(
+      vigenciaDeSesion(
+        { host: HOST, creadaEn: en(-HORA), ultimoUso: en(-20 * MINUTO), venceEn: en(10 * MINUTO) },
+        HOST,
+        AHORA,
+        LIMITES_DE_SESION_DE_PLATAFORMA,
+      ),
+    ).toBe("VIGENTE");
+    expect((await conexion.barrido.barrerVencidos(AHORA)).sesiones).toBe(1);
+    expect(await existe(consola)).toBe(true);
+    expect(await existe(web)).toBe(false);
+  });
+
   it("borra EXACTAMENTE las que la lógica pura da por vencidas (rejilla de combinaciones)", async () => {
     await vaciar();
     const creadas = [-30 * MINUTO, -2 * HORA, -7 * HORA - 50 * MINUTO, -8 * HORA - MINUTO];
-    const usadas = [-MINUTO, -14 * MINUTO, -15 * MINUTO, -16 * MINUTO];
+    const usadas = [-MINUTO, -INACTIVIDAD + MINUTO, -INACTIVIDAD, -INACTIVIDAD - MINUTO];
     const vencen = [-MINUTO, 0, 1, 5 * MINUTO];
     const casos: { id: string; veredicto: string }[] = [];
     for (const c of creadas) {
@@ -111,7 +142,7 @@ describe.skipIf(base === null)("autenticación: barrido de lo vencido", () => {
               { host: HOST, creadaEn: en(c), ultimoUso: en(u), venceEn: en(v) },
               HOST,
               AHORA,
-              LIMITES_DE_SESION,
+              LIMITES_DEL_BARRIDO,
             ),
           });
         }
