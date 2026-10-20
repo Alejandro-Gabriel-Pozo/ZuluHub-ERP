@@ -84,7 +84,8 @@ export function vencimientoRenovado(
 
 /** Lo de una sesión que decide si vale: sus fechas y el host en el que nació. */
 export type DatosDeSesion = Readonly<{
-  host: string;
+  /** `undefined`: no se sabe en qué host nació (una sesión sin ese dato no vale en ninguno: `OTRO_HOST`). */
+  host: string | undefined;
   creadaEn: Date;
   ultimoUso: Date;
   venceEn: Date;

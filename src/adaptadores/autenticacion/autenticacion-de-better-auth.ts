@@ -33,7 +33,7 @@ import {
   type DatosDeLaConsola,
 } from "./opciones";
 import { politicaDePlataforma, type PoliticaDeAudiencia } from "./plataforma/respuestas";
-import { hostGuardado, segundoFactorEnDe } from "./sesion-leida";
+import { hostGuardado, segundoFactorEnDe, segundoFactorEnroladoDe } from "./sesion-leida";
 
 /**
  * `Autenticacion` sobre Better Auth 1.7.7 (web-armazon §4). Una INSTANCIA de la librería por host de
@@ -218,7 +218,14 @@ function crearNucleo(
         creadaEn: session.createdAt,
         ultimoUso: session.updatedAt,
         venceEn: session.expiresAt,
-        ...(conSegundoFactor ? { segundoFactorEn: segundoFactorEnDe(session) } : {}),
+        // Solo la consola: el host de la sesión (la puerta lo vuelve a comparar con el suyo) y lo del segundo factor.
+        ...(conSegundoFactor
+          ? {
+              host: hostGuardado(session),
+              segundoFactorEn: segundoFactorEnDe(session),
+              segundoFactorEnrolado: segundoFactorEnroladoDe(user),
+            }
+          : {}),
         cookiesDeRespuesta: leida.headers.getSetCookie(),
       };
     },

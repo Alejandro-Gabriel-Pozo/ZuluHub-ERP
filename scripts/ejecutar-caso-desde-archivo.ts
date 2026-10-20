@@ -39,6 +39,10 @@ import {
  * (los pone el caso). La clave de idempotencia va EN el archivo: repetir el comando con el mismo archivo no
  * duplica nada.
  *
+ * Este script NO exige el segundo factor reciente (h5-p8 §2.4 bis): no hay sesión web ni segundo factor que pedirle; el
+ * administrador se identifica por su email y quien lo corre es el dueño, con la credencial de plataforma. Eso es a
+ * propósito. La exigencia es de la consola, que entra por `puerta-de-consola.ts`.
+ *
  * Todo lo que sale pasa por `tapar`: la cadena, la clave de contexto y el secreto de invitaciones nunca se
  * imprimen, ni enteros ni en pedazos, y las fallas de la base se cuentan con `describirFallaDeBase`. El
  * email del administrador y los datos del archivo tampoco se repiten. Código de salida: 0 todo bien (también

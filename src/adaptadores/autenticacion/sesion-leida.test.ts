@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hostGuardado, segundoFactorEnDe } from "./sesion-leida";
+import { hostGuardado, segundoFactorEnDe, segundoFactorEnroladoDe } from "./sesion-leida";
 
 describe("hostGuardado", () => {
   it("lee el host de la sesión y, si no se puede leer, devuelve vacío (no coincide con ningún host)", () => {
@@ -32,6 +32,23 @@ describe("segundoFactorEnDe", () => {
       { segundoFactorEn: {} },
     ]) {
       expect(segundoFactorEnDe(x), JSON.stringify(x)).toBeNull();
+    }
+  });
+});
+
+describe("segundoFactorEnroladoDe", () => {
+  it("solo un true de verdad es «enrolado»", () => {
+    expect(segundoFactorEnroladoDe({ twoFactorEnabled: true })).toBe(true);
+    for (const x of [
+      {},
+      { twoFactorEnabled: false },
+      { twoFactorEnabled: null },
+      { twoFactorEnabled: undefined },
+      { twoFactorEnabled: "true" },
+      { twoFactorEnabled: 1 },
+      { twoFactorEnabled: {} },
+    ]) {
+      expect(segundoFactorEnroladoDe(x), JSON.stringify(x)).toBe(false);
     }
   });
 });

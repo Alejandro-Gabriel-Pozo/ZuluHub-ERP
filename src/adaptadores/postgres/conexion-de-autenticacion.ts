@@ -2,9 +2,11 @@ import { Kysely, PostgresDialect } from "kysely";
 import pg from "pg";
 import { LIMITES_DEL_BARRIDO } from "../../capacidades/autenticacion/vigencia-de-sesion";
 import type { BarridoDeAutenticacion } from "../../puertos/autenticacion";
+import type { RevocacionDeSesiones } from "../../puertos/revocacion-de-sesiones";
 import type { SegundoFactorDeAutenticacion } from "../../puertos/segundo-factor-de-autenticacion";
 import { crearBarridoDeAutenticacion, type AutenticacionDb } from "./barrido-de-autenticacion";
 import { ErrorDeConfiguracion } from "./errores";
+import { crearRevocacionDeSesionesDePostgres, type RevocacionDb } from "./revocacion-de-sesiones";
 import {
   crearSegundoFactorDePostgres,
   type SegundoFactorDb,
@@ -36,6 +38,8 @@ export type ConexionDeAutenticacion = Readonly<{
   barrido: BarridoDeAutenticacion;
   /** Los intentos, los pasos de TOTP usados y la marca de segundo factor de la sesión (consola de plataforma). */
   segundoFactor: SegundoFactorDeAutenticacion;
+  /** Borra las sesiones de un usuario (la revocación del trabajo `revocar_sesiones`, h5-p8 §2.5). */
+  revocacion: RevocacionDeSesiones;
   /** Cierra todas las conexiones abiertas. */
   cerrar(): Promise<void>;
 }>;
@@ -57,6 +61,7 @@ export function crearConexionDeAutenticacion(
     db,
     barrido: crearBarridoDeAutenticacion(db.withTables<AutenticacionDb>(), LIMITES_DEL_BARRIDO),
     segundoFactor: crearSegundoFactorDePostgres(db.withTables<SegundoFactorDb>()),
+    revocacion: crearRevocacionDeSesionesDePostgres(db.withTables<RevocacionDb>()),
     cerrar: () => db.destroy(),
   };
 }

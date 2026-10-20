@@ -71,3 +71,20 @@ export const claveDeAvisoDeTraspaso = (
   traspasoId: string,
   evento: "propuesto" | "aceptado" | "rechazado",
 ): string => `traspaso:${traspasoId}:${evento}`;
+
+/**
+ * Tipo de trabajo que revoca las sesiones de un usuario de la librería de ingreso (h5-p8 §2.5; H5 §B.5.6). Ámbito
+ * plataforma (`empresa_id` nulo). Datos: solo `usuarioAuthId` (un uuid, nunca un token ni una cookie). Lo encola la
+ * suspensión de una persona en la MISMA transacción que la suspende; lo ejecuta el procesador con el rol de
+ * autenticación, que es el único que puede borrar sesiones.
+ */
+export const TRABAJO_REVOCAR_SESIONES = "revocar_sesiones";
+
+/**
+ * Clave de idempotencia de la revocación: una suspensión (identificada por la clave de idempotencia del pedido del
+ * administrador), una revocación. Encolar dos veces lo mismo deja una sola fila.
+ */
+export const claveDeRevocacionDeSesiones = (
+  personaId: string,
+  claveDeLaSuspension: string,
+): string => `persona:${personaId}:suspension:${claveDeLaSuspension}`;

@@ -19,3 +19,12 @@ export function segundoFactorEnDe(sesion: object): Date | null {
   }
   return null;
 }
+
+/**
+ * Si el usuario ya tiene el segundo factor enrolado Y verificado (`twoFactorEnabled`, que la librería pone en `true`
+ * recién al verificar el primer código). Solo cambia qué código público se informa a quien entra sin segundo factor en
+ * la sesión (verificar o enrolar); nunca deja entrar. Lo que no se lee como `true` es `false`.
+ */
+export function segundoFactorEnroladoDe(usuario: object): boolean {
+  return (usuario as Record<string, unknown>)["twoFactorEnabled"] === true;
+}

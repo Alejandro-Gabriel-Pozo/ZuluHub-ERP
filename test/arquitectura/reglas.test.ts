@@ -426,6 +426,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "src/composicion/plataforma.ts": exporta,
       },
     },
+    {
+      regla: "puerta-de-consola-solo-desde-la-consola",
+      archivos: {
+        "apps/web/servidor/composicion.ts": importa("../../../src/composicion/puerta-de-consola"),
+        "src/composicion/puerta-de-consola.ts": exporta,
+      },
+    },
   ];
 
   it("cada regla definida tiene su caso de violación", () => {
@@ -1714,18 +1721,29 @@ describe("P7: la puerta de plataforma solo la importan los scripts y las pruebas
     }
   });
 
-  it("la consola de plataforma (apps/plataforma/servidor, futura) sí puede; sus páginas y la web no", async () => {
-    const servidor = await violacionesDe({
-      "apps/plataforma/servidor/composicion.ts": importa("../../../src/composicion/plataforma"),
-      [PUERTA]: exporta,
-    });
-    expect(servidor).not.toContain("plataforma-solo-desde-scripts");
-    expect(servidor).not.toContain("composicion-solo-desde-servidor-de-apps");
+  it("la consola de plataforma (apps/plataforma) NO puede importar la puerta sin sesión: entra por la puerta de la consola", async () => {
+    // P8b: `plataforma.ts` corre casos con un contexto armado por quien llama, sin el chequeo del segundo factor reciente.
     for (const origen of [
+      "apps/plataforma/servidor/composicion.ts",
       "apps/plataforma/app/page.tsx",
       "apps/plataforma/ui/boton.ts",
+    ]) {
+      const profundidad = "../".repeat(origen.split("/").length - 1);
+      for (const destino of ["plataforma", "entorno-de-plataforma"]) {
+        const v = await violacionesDe({
+          [origen]: importa(`${profundidad}src/composicion/${destino}`),
+          [`src/composicion/${destino}.ts`]: exporta,
+        });
+        expect(v, `${origen} → ${destino}`).toContain("plataforma-solo-desde-scripts");
+      }
+    }
+  });
+
+  it("la web no puede importar la puerta de plataforma, de ninguna de las dos formas", async () => {
+    for (const origen of [
       "apps/web/servidor/composicion.ts",
       "apps/web/servidor/web/otro.ts",
+      "src/composicion/web.ts",
     ]) {
       const profundidad = "../".repeat(origen.split("/").length - 1);
       const v = await violacionesDe({
@@ -1736,10 +1754,42 @@ describe("P7: la puerta de plataforma solo la importan los scripts y las pruebas
     }
   });
 
+  it("la puerta de la consola solo la importa el servidor de la consola (y las pruebas): ni la web ni el resto de src/ ni las páginas de la consola", async () => {
+    const PUERTA_DE_CONSOLA = "src/composicion/puerta-de-consola.ts";
+    const servidor = await violacionesDe({
+      "apps/plataforma/servidor/composicion.ts": importa(
+        "../../../src/composicion/puerta-de-consola",
+      ),
+      "src/composicion/puerta-de-consola.test.ts": importa("./puerta-de-consola"),
+      [PUERTA_DE_CONSOLA]: exporta,
+    });
+    expect(servidor).not.toContain("puerta-de-consola-solo-desde-la-consola");
+    expect(servidor).not.toContain("composicion-solo-desde-servidor-de-apps");
+    for (const origen of [
+      "apps/plataforma/app/page.tsx",
+      "apps/plataforma/ui/boton.ts",
+      "apps/web/servidor/composicion.ts",
+      "apps/web/app/s/app/page.tsx",
+      "src/composicion/web.ts",
+      "src/composicion/conexiones.ts",
+      "src/modulos/empresas/casos-de-uso/c.ts",
+      "src/plataforma/casos-de-uso/c.ts",
+      "src/adaptadores/postgres/a.ts",
+    ]) {
+      const profundidad = "../".repeat(origen.split("/").length - 1);
+      const v = await violacionesDe({
+        [origen]: importa(`${profundidad}src/composicion/puerta-de-consola`),
+        [PUERTA_DE_CONSOLA]: exporta,
+      });
+      expect(v, origen).toContain("puerta-de-consola-solo-desde-la-consola");
+    }
+  });
+
   it("sí la importan los scripts, las pruebas y los archivos de la propia puerta", async () => {
     const v = await violacionesDe({
       [PUERTA]: importa("./entorno-de-plataforma"),
       [ENTORNO]: exporta,
+      "src/composicion/puerta-de-consola.ts": importa("./plataforma"),
       "scripts/ejecutar.ts": importa("../src/composicion/plataforma"),
       "scripts/otro.ts": importa("../src/composicion/entorno-de-plataforma").replace("y =", "z ="),
       "src/composicion/plataforma.test.ts": importa("./plataforma"),

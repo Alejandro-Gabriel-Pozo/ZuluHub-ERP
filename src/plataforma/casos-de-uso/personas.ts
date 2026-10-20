@@ -1,7 +1,9 @@
 import type { ContextoDePlataforma } from "../../contexto/contexto";
-import type {
-  MembresiasParaPlataforma,
-  RepositorioDePersonas,
+import {
+  TRABAJO_REVOCAR_SESIONES,
+  claveDeRevocacionDeSesiones,
+  type MembresiasParaPlataforma,
+  type RepositorioDePersonas,
 } from "../../modulos/identidad/publico";
 import {
   personaId as aPersonaId,
@@ -11,6 +13,7 @@ import {
 import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
 import type { Auditoria } from "../../puertos/auditoria";
 import type { AccionDePlataforma } from "../../puertos/auditoria-de-plataforma";
+import type { Trabajos } from "../../puertos/trabajos";
 import type { DeclaracionDeAccionDePlataforma } from "../consultas/declaraciones";
 import {
   decidirReactivacionDePersona,
@@ -34,8 +37,13 @@ import {
  * persona tiene una membresía activa (así el gerente ve por qué dejó de entrar). Sin el email de la persona
  * en ninguna constancia.
  *
- * No revoca sesiones: eso es del adaptador de autenticación de plataforma (P8, trabajo `revocar_sesiones`),
- * que todavía no existe. Mientras tanto la sesión puede seguir viva, pero sin ningún permiso.
+ * Revocación de sesiones (h5-p8 §2.5): al SUSPENDER, el caso encola el trabajo `revocar_sesiones` en la MISMA transacción
+ * (si el caso se revierte, no queda el trabajo; si se confirma, queda), con el usuario de la librería de ingreso que la
+ * persona tiene vinculado (`persona.usuario_auth_id`, leído acá: el rol de trabajos no ve las personas y el de
+ * autenticación no ve nada de negocio). Una persona que nunca ingresó (sin usuario vinculado) no tiene sesiones y no
+ * encola nada. La clave `persona:<id>:suspension:<clave del pedido>` hace que repetir el pedido no duplique el
+ * trabajo. Reactivar no encola nada: las sesiones revocadas no vuelven, se ingresa de nuevo. Entre confirmar y que el
+ * procesador corra la sesión puede seguir viva, pero sin ningún permiso (cada caso lee `activo_global`).
  */
 
 export type TxDePersonas = TxDeCasoDePlataforma &
@@ -44,6 +52,8 @@ export type TxDePersonas = TxDeCasoDePlataforma &
     membresias: MembresiasParaPlataforma;
     /** La auditoría de cada empresa afectada (`auditoria_empresa`). */
     auditoria: Auditoria;
+    /** Para encolar `revocar_sesiones` en la misma transacción. */
+    trabajos: Trabajos;
   }>;
 
 export type DependenciasDePersonas = DependenciasDeCasoDePlataforma<TxDePersonas>;
@@ -93,6 +103,8 @@ type Definicion = Readonly<{
   constancia: AccionDePlataforma;
   /** El valor de `activo_global` al que pasa. */
   activa: boolean;
+  /** Si el cambio corta las sesiones de la persona (la suspensión sí; la reactivación no). */
+  revocaSesiones: boolean;
 }>;
 
 function armarCambioDePersona<Entrada extends { claveDeIdempotencia: string; personaId: string }>(
@@ -144,6 +156,15 @@ function armarCambioDePersona<Entrada extends { claveDeIdempotencia: string; per
         const empresas: readonly EmpresaId[] = await tx.membresias.empresasConMembresiaActiva(id);
         const { motivo } = decision.valor;
         const despues = { activa: definicion.activa, ...(motivo === null ? {} : { motivo }) };
+        // El corte de sesiones se encola en esta transacción; una persona sin usuario vinculado no tiene sesiones.
+        if (definicion.revocaSesiones && persona.usuarioAuth !== null) {
+          await tx.trabajos.encolar({
+            empresaId: null,
+            tipo: TRABAJO_REVOCAR_SESIONES,
+            datos: { usuarioAuthId: persona.usuarioAuth },
+            claveDeIdempotencia: claveDeRevocacionDeSesiones(id, entrada.claveDeIdempotencia),
+          });
+        }
         for (const empresa of empresas) {
           await tx.auditoria.registrar({
             empresaId: empresa,
@@ -186,6 +207,7 @@ export const armarSuspenderPersona = (d: DependenciasDePersonas) =>
       operacion: OPERACIONES_DE_PERSONAS.suspenderPersona,
       constancia: "PERSONA_SUSPENDIDA",
       activa: false,
+      revocaSesiones: true,
     },
     (persona, entrada) => decidirSuspensionDePersona(persona, entrada.motivo),
     (entrada) => entrada.motivo.trim(),
@@ -199,6 +221,7 @@ export const armarReactivarPersona = (d: DependenciasDePersonas) =>
       operacion: OPERACIONES_DE_PERSONAS.reactivarPersona,
       constancia: "PERSONA_REACTIVADA",
       activa: true,
+      revocaSesiones: false,
     },
     (persona) => {
       const r = decidirReactivacionDePersona(persona);

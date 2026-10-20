@@ -25,7 +25,9 @@
     "build:web": "npm run build --workspace @zuluhub/web",
     "gate": "npm run typecheck && npm run lint && npm run format:check && npm run arquitectura && npm run analizar:muerto && npm test",
     "plataforma:primer-admin": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/crear-primer-admin.ts",
-    "plataforma:caso": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/ejecutar-caso-de-plataforma.ts"
+    "plataforma:caso": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/ejecutar-caso-de-plataforma.ts",
+    "plataforma:baja-admin": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/baja-de-admin.ts",
+    "plataforma:resetear-segundo-factor": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/resetear-segundo-factor.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

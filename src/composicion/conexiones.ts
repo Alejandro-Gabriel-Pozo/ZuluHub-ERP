@@ -76,6 +76,7 @@ import type { Auditoria } from "../puertos/auditoria";
 import type { Autenticacion, BarridoDeAutenticacion } from "../puertos/autenticacion";
 import type { CargaDeAutorizacion } from "../puertos/autorizacion";
 import type { Correo } from "../puertos/correo";
+import type { RevocacionDeSesiones } from "../puertos/revocacion-de-sesiones";
 import type { ConfiguracionPublicaDeHost, ResolucionDeHost } from "../puertos/marcas";
 import type { LecturasDeSesion } from "../puertos/sesion";
 import type { Tokens } from "../puertos/tokens";
@@ -142,6 +143,8 @@ export type Conexiones = Readonly<{
   autenticacion: () => Autenticacion;
   /** Barrido de sesiones y verificaciones vencidas (lo llama el cron de trabajos): solo `ZULUHUB_DB_AUTENTICACION`. */
   barridoDeAutenticacion: () => BarridoDeAutenticacion;
+  /** Revocar las sesiones de un usuario (el trabajo `revocar_sesiones`): solo `ZULUHUB_DB_AUTENTICACION`. */
+  revocacionDeSesiones: () => RevocacionDeSesiones;
   tokens: () => Tokens;
   /** Origen y marca del mail (el respaldo hasta que exista M7) y la clave del proveedor. */
   configuracionDeCorreo: () => ConfiguracionDeCorreo;
@@ -236,6 +239,7 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
       }),
     ),
     barridoDeAutenticacion: () => conexionDeAutenticacion().barrido,
+    revocacionDeSesiones: () => conexionDeAutenticacion().revocacion,
     tokens: armarPieza("tokens", (valores) =>
       crearTokensHmac(leerSecretoDeInvitaciones(valores[ZULUHUB_SECRETO_INVITACIONES])),
     ),

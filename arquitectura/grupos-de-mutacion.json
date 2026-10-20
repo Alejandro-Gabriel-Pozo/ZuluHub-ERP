@@ -245,6 +245,11 @@
     "pruebas": "src/composicion/tipo-de-falla.test.ts"
   },
   {
+    "grupo": "consola de plataforma (contexto de la sesión y puerta, P8b)",
+    "archivos": "src/composicion/sesion-de-plataforma.ts,src/composicion/puerta-de-consola.ts",
+    "pruebas": "src/composicion/sesion-de-plataforma.test.ts src/composicion/puerta-de-consola.test.ts"
+  },
+  {
     "grupo": "web (rutas de sistema: cron y salud)",
     "archivos": "src/composicion/rutas-de-sistema.ts",
     "pruebas": "src/composicion/rutas-de-sistema.test.ts"

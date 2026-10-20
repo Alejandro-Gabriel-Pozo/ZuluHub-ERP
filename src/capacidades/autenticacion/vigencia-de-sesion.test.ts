@@ -118,6 +118,8 @@ describe("vigenciaDeSesion", () => {
     });
     it("una sesión sin host guardado no vale en ningún host", () => {
       expect(veredicto({ host: "" })).toBe("OTRO_HOST");
+      expect(veredicto({ host: undefined })).toBe("OTRO_HOST");
+      expect(veredicto({ host: undefined }, "")).toBe("OTRO_HOST");
     });
   });
 
