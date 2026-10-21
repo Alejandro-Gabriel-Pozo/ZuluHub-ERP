@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, sep } from "node:path";
 
 /**
  * Apoyo de las pruebas del guardián de contratos: tipos de lo que devuelve, un repositorio sintético
@@ -92,6 +92,19 @@ export const RAIZ = join(import.meta.dirname, "../..");
  * analizar» (guardian-nucleo.test.ts) impide que esto se use para saltear fuera de ese sandbox.
  */
 export const HAY_GIT = existsSync(join(RAIZ, ".git"));
+/**
+ * La raíz del proyecto REAL. Dentro del sandbox de Stryker (`<proyecto>/.stryker-tmp/sandbox-*`) los
+ * `.cjs` del guardián están instrumentados: su texto ya no es el del repositorio, y las pruebas que lo
+ * leen para anclar una alteración o para contar lo que escribe (`codigo: "…"`, `if (!decidida) {`) lo
+ * necesitan tal cual. Stryker no toca el proyecto de afuera, así que ahí está el original. Fuera del
+ * sandbox es la misma `RAIZ`. Se usa SOLO para leer texto de anclaje, nunca para cargar el código que se
+ * prueba: ese tiene que ser el instrumentado, que es el que muta.
+ */
+export const RAIZ_ORIGINAL = ((): string => {
+  const partes = RAIZ.split(sep);
+  const sandbox = partes.indexOf(".stryker-tmp");
+  return sandbox < 0 ? RAIZ : partes.slice(0, sandbox).join(sep);
+})();
 export const { ejecutar, cargarDelRepo, formatearFalla } =
   require("../../arquitectura/contratos/guardian.cjs") as {
     ejecutar: (entradas: Entradas) => Resultado;
@@ -340,16 +353,20 @@ export function lineaEn(
 /**
  * Una copia de lo que lee la vigilancia de la versión anterior (`no-debilitar.cjs`): `arquitectura/`, el
  * workflow de CI y `package.json` del repositorio real. Es la base y el pull request de las pruebas.
+ * Son árboles que se ANALIZAN como texto (no se ejecutan): salen del original, sin instrumentar.
  */
 export function arbolDesdeElRepo(): string {
   const destino = carpetaTemporal("arbol-");
-  cpSync(join(RAIZ, "arquitectura"), join(destino, "arquitectura"), {
+  cpSync(join(RAIZ_ORIGINAL, "arquitectura"), join(destino, "arquitectura"), {
     recursive: true,
     filter: (origen) => !origen.endsWith("informe.json"),
   });
   mkdirSync(join(destino, ".github/workflows"), { recursive: true });
-  cpSync(join(RAIZ, ".github/workflows/ci.yml"), join(destino, ".github/workflows/ci.yml"));
-  cpSync(join(RAIZ, "package.json"), join(destino, "package.json"));
+  cpSync(
+    join(RAIZ_ORIGINAL, ".github/workflows/ci.yml"),
+    join(destino, ".github/workflows/ci.yml"),
+  );
+  cpSync(join(RAIZ_ORIGINAL, "package.json"), join(destino, "package.json"));
   return destino;
 }
 

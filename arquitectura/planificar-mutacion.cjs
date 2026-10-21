@@ -13,6 +13,8 @@
  *
  * Cualquier cosa que el grafo no explica (un archivo que no es TypeScript de `src/` o `test/`, uno
  * borrado, la configuración) hace correr TODOS los grupos completos: ante la duda, no se saltea.
+ * La única excepción explícita es el guardián de contratos: sus pruebas copian, lanzan y leen archivos que
+ * el grafo no ve, y un mapa fijo lo declara (ver `PRUEBAS_DEL_GUARDIAN`).
  * El chequeo que falla si se quita una de estas decisiones es `test/arquitectura/planificar-mutacion.test.ts`.
  */
 const { execFileSync } = require("node:child_process");
@@ -36,6 +38,21 @@ const RAICES_GLOBALES = ["test/integracion/global.ts"];
 
 const esPrueba = (archivo) => archivo.endsWith(".test.ts");
 
+/**
+ * Lo que el grafo de importaciones NO ve del guardián. El grafo sí sigue los `require()` de sus pruebas
+ * (`test/arquitectura/guardian-*.ts` cargan `arquitectura/contratos/*.cjs`), pero no lo que esas pruebas
+ * copian a carpetas temporales, lanzan con `node` o leen como texto: los datos de la carpeta (`*.json`), los
+ * `.cjs` que solo corren como proceso aparte (`no-debilitar.cjs` como CLI) y los archivos de `arquitectura/`
+ * que el verificador carga del árbol (`evaluar-gate.cjs`, `reglas.cjs`). Como el código del guardián también
+ * se muta (`stryker.config.json`), el mapa es EXPLÍCITO: toda prueba o auxiliar del guardián depende de TODOS
+ * esos archivos. Es grueso a propósito: un mutante de `clasificacion.cjs` lo puede matar una prueba que
+ * ejercita `guardian.cjs`, así que un cambio en cualquiera alcanza a los grupos de todos. Solo AGREGA
+ * dependencias: lo que el grafo ya sabía sigue igual, y el resto de `arquitectura/` sigue sin estar en el mapa.
+ */
+const PRUEBAS_DEL_GUARDIAN = /^test\/arquitectura\/guardian-[^/]+\.ts$/;
+const CARPETA_DEL_GUARDIAN = "arquitectura/contratos";
+const OTROS_ARCHIVOS_DEL_GUARDIAN = ["arquitectura/evaluar-gate.cjs", "arquitectura/reglas.cjs"];
+
 /** Cierre de importaciones de `archivo` (incluido él mismo). */
 function cierre(archivo, dependencias) {
   const visto = new Set([archivo]);
@@ -50,6 +67,45 @@ function cierre(archivo, dependencias) {
     }
   }
   return visto;
+}
+
+/**
+ * Agrega al grafo los archivos que lee el guardián (para que un cambio en ellos no sea «desconocido») y la
+ * dependencia de cada prueba o auxiliar del guardián sobre todos ellos.
+ *
+ * @param {Readonly<Record<string, readonly string[]>>} dependencias
+ * @param {readonly string[]} archivosDelGuardian
+ * @returns {Record<string, string[]>}
+ */
+function conEnlacesDelGuardian(dependencias, archivosDelGuardian) {
+  const grafo = Object.fromEntries(
+    Object.entries(dependencias).map(([archivo, importados]) => [archivo, [...importados]]),
+  );
+  for (const archivo of archivosDelGuardian) grafo[archivo] ??= [];
+  for (const archivo of Object.keys(grafo)) {
+    if (PRUEBAS_DEL_GUARDIAN.test(archivo)) {
+      grafo[archivo] = [...new Set([...grafo[archivo], ...archivosDelGuardian])];
+    }
+  }
+  return grafo;
+}
+
+/**
+ * Los archivos que el guardián lee: `arquitectura/contratos/**` (el informe que genera no cuenta) y los
+ * otros archivos de `arquitectura/` que su verificador carga. Un archivo que falta en disco no se inventa.
+ */
+function leerArchivosDelGuardian(raiz) {
+  const presentes = (archivo) =>
+    fs.statSync(path.join(raiz, archivo), { throwIfNoEntry: false })?.isFile() === true;
+  return [
+    ...fs
+      .globSync(`${CARPETA_DEL_GUARDIAN}/**/*`, { cwd: raiz })
+      .map((archivo) => archivo.split(path.sep).join("/"))
+      .filter((archivo) => !archivo.endsWith("/informe.json")),
+    ...OTROS_ARCHIVOS_DEL_GUARDIAN,
+  ]
+    .filter(presentes)
+    .sort();
 }
 
 /**
@@ -95,7 +151,7 @@ function planificar({ cambios, grupos, dependencias }) {
 
   const elegidos = [];
   for (const { grupo, pruebas, expandidos } of grupos) {
-    const archivos = expandidos.filter((archivo) => afectados.has(archivo));
+    const archivos = expandidos.filter((entrada) => afectados.has(archivoDe(entrada)));
     if (archivos.length > 0) {
       elegidos.push({ grupo, archivos: archivos.join(","), pruebas: pruebas ?? "" });
     }
@@ -107,20 +163,39 @@ function planificar({ cambios, grupos, dependencias }) {
   };
 }
 
-/** Expande los patrones `a,b,!c` de un grupo a archivos reales (mismo criterio que `--mutate`). */
+/**
+ * Un patrón puede llevar un rango de líneas (`archivo.cjs:10-80`, el mismo formato de `--mutate`): el
+ * archivo grande se reparte entre varios grupos para que ningún job pase del tiempo previsto. Un rango
+ * tiene que cortar ENTRE sentencias de primer nivel (si no, un mutante que lo cruza no entra en ninguno);
+ * `test/arquitectura/planificar-mutacion.test.ts` exige que los rangos de un archivo lo cubran entero.
+ */
+const RANGO_DE_LINEAS = /^(.+):(\d+)-(\d+)$/;
+
+/** El archivo de una entrada expandida, sin su rango de líneas (si lo tiene). */
+const archivoDe = (entrada) => RANGO_DE_LINEAS.exec(entrada)?.[1] ?? entrada;
+
+/**
+ * Expande los patrones `a,b:1-9,!c` de un grupo a archivos reales (mismo criterio que `--mutate`). Una
+ * entrada con rango conserva su sufijo (`a.cjs:1-9`): es lo que el job le pasa a Stryker.
+ */
 function expandir(patrones, raiz) {
   const lista = patrones.split(",");
   const positivos = lista.filter((p) => !p.startsWith("!"));
   const negativos = lista.filter((p) => p.startsWith("!")).map((p) => p.slice(1));
   const encontrados = new Set();
   for (const patron of positivos) {
-    for (const archivo of fs.globSync(patron, { cwd: raiz })) {
-      encontrados.add(archivo.split(path.sep).join("/"));
+    const [, glob, desde, hasta] = RANGO_DE_LINEAS.exec(patron) ?? [undefined, patron];
+    const sufijo = desde === undefined ? "" : `:${desde}-${hasta}`;
+    for (const archivo of fs.globSync(glob, { cwd: raiz })) {
+      encontrados.add(`${archivo.split(path.sep).join("/")}${sufijo}`);
     }
   }
   return [...encontrados]
-    .filter((archivo) => !esPrueba(archivo))
-    .filter((archivo) => !negativos.some((negativo) => path.posix.matchesGlob(archivo, negativo)))
+    .filter((entrada) => !esPrueba(archivoDe(entrada)))
+    .filter(
+      (entrada) =>
+        !negativos.some((negativo) => path.posix.matchesGlob(archivoDe(entrada), negativo)),
+    )
     .sort();
 }
 
@@ -144,7 +219,7 @@ function leerDependencias(raiz) {
       .filter((d) => !d.couldNotResolve && !d.coreModule)
       .map((d) => d.resolved);
   }
-  return dependencias;
+  return conEnlacesDelGuardian(dependencias, leerArchivosDelGuardian(raiz));
 }
 
 function leerGrupos(raiz) {
@@ -199,6 +274,12 @@ function principal() {
   }
 }
 
-module.exports = { planificar, expandir };
+module.exports = {
+  planificar,
+  expandir,
+  archivoDe,
+  conEnlacesDelGuardian,
+  leerArchivosDelGuardian,
+};
 
 if (require.main === module) principal();
