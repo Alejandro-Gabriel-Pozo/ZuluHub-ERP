@@ -27,7 +27,7 @@ export function fallaInesperada(etiqueta: string, detalle: string): Falla {
 
 /** El error de un resultado, listo para la pantalla; si es inesperado, con su referencia. */
 export function fallaDe(etiqueta: string, error: unknown): Falla {
-  const paraLaPantalla = errorParaLaPantalla(error);
+  const paraLaPantalla = errorParaLaPantalla(error, "SUBMARCA");
   if (paraLaPantalla.tipo === "INESPERADO") return fallaInesperada(etiqueta, detalleDeFalla(error));
   return { ok: false, error: paraLaPantalla };
 }

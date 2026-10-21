@@ -18,7 +18,7 @@ const datosNoValidos = (): RespuestaDeConsola<never> => ({
 
 /** El error de un caso de uso para el navegador; lo inesperado va al registro con su referencia y sin datos del pedido. */
 function falla(error: unknown): Falla {
-  const paraLaPantalla = errorParaLaPantalla(error);
+  const paraLaPantalla = errorParaLaPantalla(error, "SUBMARCA");
   if (paraLaPantalla.tipo === "INESPERADO") {
     return fallaInesperada(ETIQUETA, detalleDeFalla(error));
   }

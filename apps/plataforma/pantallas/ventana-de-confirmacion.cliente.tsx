@@ -95,6 +95,7 @@ export function VentanaDeConfirmacion({
   const hecho = estado.tipo === "hecho";
   const rechazo = estado.tipo === "rechazado" ? estado.rechazo : null;
   const errorDeServidor = rechazo?.tipo === "ERROR" ? rechazo.error : null;
+  const textoGeneral = errorDeServidor === null ? null : textoDelError(errorDeServidor);
 
   // Al confirmarse, la pantalla de atrás se vuelve a pedir al servidor para mostrar la versión nueva.
   useEffect(() => {
@@ -198,11 +199,9 @@ export function VentanaDeConfirmacion({
             }}
           >
             <Pila separacion={4}>
-              {errorDeServidor === null ? null : (
+              {errorDeServidor === null || textoGeneral === null ? null : (
                 <Aviso tono={errorDeServidor.tipo === "OCULTAR_ACCION" ? "aviso" : "peligro"}>
-                  {textoDelError(errorDeServidor) === null ? null : (
-                    <Texto>{textoDelError(errorDeServidor)}</Texto>
-                  )}
+                  <Texto>{textoGeneral}</Texto>
                   {errorDeServidor.tipo === "INESPERADO" &&
                   rechazo?.tipo === "ERROR" &&
                   rechazo.referencia !== undefined ? (

@@ -71,7 +71,7 @@ export function armarFichaDeSubmarca(
     formularioDeLaVigente: vigente,
     puedeConfirmarse: ficha.puedeConfirmarse.ok
       ? { ok: true }
-      : { ok: false, error: errorParaLaPantalla(ficha.puedeConfirmarse.error) },
+      : { ok: false, error: errorParaLaPantalla(ficha.puedeConfirmarse.error, "SUBMARCA") },
     contrasteDelBorrador:
       ficha.contraste === null
         ? null
