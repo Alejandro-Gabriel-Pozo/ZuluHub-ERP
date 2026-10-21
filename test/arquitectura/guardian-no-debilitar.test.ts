@@ -49,6 +49,8 @@ const nd = require("../../arquitectura/contratos/no-debilitar.cjs") as {
   CODIGOS_DE_AVISO: readonly string[];
   DESCRIPCION_DE_CODIGOS: Record<string, string>;
   CHEQUEOS: readonly unknown[];
+  ejecutaElGuardian: (linea: string) => boolean;
+  chequearPaquete: (base: Instantanea, pr: Instantanea) => Array<{ codigo: string }>;
   leerCi: (texto: string) => Seccion;
   leerConstante: (texto: string | null, nombre: string) => Seccion;
   leerPaquete: (texto: string | null) => Seccion;
@@ -1391,6 +1393,90 @@ describe("formato y límites", () => {
     const clave = fallas.map((h) => `${h.archivo}:${String(h.linea).padStart(4, "0")}`);
     expect(clave).toEqual([...clave].sort());
     expect(fallas.length).toBeGreaterThan(4);
+  });
+});
+
+describe("ejecutaElGuardian: análisis lineal de la línea que corre el guardián", () => {
+  const COMANDO = "node arquitectura/contratos/guardian.cjs";
+
+  it.each([
+    COMANDO,
+    `${COMANDO} --base=x`,
+    `${COMANDO} --base=origin/main -v`,
+    `- ${COMANDO}`,
+    `- run: ${COMANDO}`,
+    `run: ${COMANDO}`,
+    `run:${COMANDO}`,
+    `      - run: ${COMANDO} --base=origin/main  `,
+    `        ${COMANDO} --formato=json`,
+    `node  arquitectura/contratos/guardian.cjs\t--base=x`,
+  ])("acepta %j", (linea) => {
+    expect(nd.ejecutaElGuardian(linea)).toBe(true);
+  });
+
+  it.each([
+    "",
+    "   ",
+    "- run:",
+    `${COMANDO} || true`,
+    `${COMANDO} --base x || true`,
+    `${COMANDO} && otro`,
+    `${COMANDO}; otro`,
+    `${COMANDO} ;otro`,
+    `${COMANDO} > /dev/null`,
+    `${COMANDO} 2>&1`,
+    `${COMANDO} | tee salida`,
+    `${COMANDO} $(otro)`,
+    `${COMANDO} base`,
+    // Comportamiento de siempre: una opción con el valor suelto (`--base x`) no es una opción sola.
+    `${COMANDO} --base x`,
+    `${COMANDO} -`,
+    `${COMANDO}x`,
+    `-${COMANDO}`,
+    `- run: node otro.cjs --base x`,
+    "- run: npm run guardian",
+    "node arquitectura/contratos/otro.cjs",
+    `echo ${COMANDO}`,
+    `# ${COMANDO}`,
+    "--base x",
+  ])("rechaza %j", (linea) => {
+    expect(nd.ejecutaElGuardian(linea)).toBe(false);
+  });
+
+  // La expresión anterior, `(?:\s+--?[\w=./-]+)*`, era ambigua: `-` está en la clase, así que `-- -- -` se
+  // parte de muchas maneras. El texto lo controla quien abre el PR; esto es el tope de rendimiento.
+  const adversariales: ReadonlyArray<[string, string, boolean]> = [
+    // `-` suelto no es una opción: la línea es inválida, pero tiene que decirlo enseguida.
+    ["50.000 repeticiones de « -- -»", " -- -".repeat(50_000), false],
+    ["50.000 repeticiones de « -- -» y un cierre inválido", `${" -- -".repeat(50_000)} !`, false],
+    ["50.000 repeticiones de « --a»", " --a".repeat(50_000), true],
+    ["50.000 repeticiones de « --a» y un cierre inválido", `${" --a".repeat(50_000)} ;`, false],
+    ["50.000 repeticiones de « --» (todo opciones)", " --".repeat(50_000), true],
+    ["50.000 espacios entre opciones", ` --a${" ".repeat(50_000)}--b`, true],
+  ];
+
+  it.each(adversariales)("se resuelve rápido con %s", (_nombre, cola, esperado) => {
+    const linea = `- run: ${COMANDO}${cola}`;
+    const inicio = performance.now();
+    const resultado = nd.ejecutaElGuardian(linea);
+    const duracion = performance.now() - inicio;
+    expect(duracion).toBeLessThan(200);
+    expect(resultado).toBe(esperado);
+  });
+
+  it("el script «guardian» de package.json usa el mismo análisis (y sigue exigiendo espacios simples)", () => {
+    const cola = " -- -".repeat(50_000);
+    const inicio = performance.now();
+    const hallazgos = nd.chequearPaquete(
+      {},
+      {
+        paquete: {
+          valor: { arquitectura: "x && npm run guardian", guardian: `${COMANDO}${cola} ;` },
+        },
+      },
+    );
+    expect(performance.now() - inicio).toBeLessThan(200);
+    expect(hallazgos.map((h) => h.codigo)).toEqual(["script-guardian-desviado"]);
   });
 });
 

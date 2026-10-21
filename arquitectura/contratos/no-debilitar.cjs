@@ -145,9 +145,34 @@ const sinComentario = (valor) => valor.replace(/\s+#.*$/, "").trim();
 const sinComillas = (valor) => (/^(["'])[^"']*\1$/.test(valor) ? valor.slice(1, -1) : valor);
 const escalar = (valor) => sinComillas(sinComentario(valor));
 
+const COMANDO_DEL_GUARDIAN = ["node", "arquitectura/contratos/guardian.cjs"];
+/** Una opción suelta (`--base`, `-v`, `--base=x`): un solo cuantificador y sin repetición externa. */
+const OPCION_DEL_GUARDIAN = /^--?[\w=./-]+$/;
+
+/**
+ * ¿Estos tokens son `node arquitectura/contratos/guardian.cjs` seguido solo de opciones? Análisis LINEAL:
+ * compara el comando token por token y valida cada opción con una regex simple. No usa una regex con un
+ * grupo repetido (`(?:\s+--?[\w=./-]+)*`) porque `-` está en la clase y el grupo queda ambiguo: con el texto
+ * de `ci.yml` que escribe quien abre el PR, eso podía hacer backtracking exponencial (CodeQL js/redos).
+ */
+function esComandoDelGuardian(tokens) {
+  if (tokens.length < COMANDO_DEL_GUARDIAN.length) return false;
+  for (let i = 0; i < COMANDO_DEL_GUARDIAN.length; i += 1) {
+    if (tokens[i] !== COMANDO_DEL_GUARDIAN[i]) return false;
+  }
+  for (let i = COMANDO_DEL_GUARDIAN.length; i < tokens.length; i += 1) {
+    if (!OPCION_DEL_GUARDIAN.test(tokens[i])) return false;
+  }
+  return true;
+}
+
 /** La línea de un paso que corre el guardián tal cual: sin `|| true` ni otro operador (opciones sí). */
-const EJECUTA_EL_GUARDIAN =
-  /^\s*(?:-\s+)?(?:run:\s*)?node\s+arquitectura\/contratos\/guardian\.cjs(?:\s+--?[\w=./-]+)*\s*$/;
+function ejecutaElGuardian(linea) {
+  let resto = linea.trim();
+  if (/^-\s/.test(resto)) resto = resto.slice(1).trimStart();
+  if (resto.startsWith("run:")) resto = resto.slice("run:".length).trimStart();
+  return esComandoDelGuardian(resto.split(/\s+/));
+}
 
 /**
  * Lee los jobs de un `ci.yml` con la línea de cada cosa que interesa. Es un análisis de TEXTO que entiende
@@ -239,7 +264,7 @@ function leerPasos(cuerpo) {
     }
     if (paso === null) continue;
     paso.hasta = l.n;
-    if (EJECUTA_EL_GUARDIAN.test(l.t)) paso.ejecutaGuardian = true;
+    if (ejecutaElGuardian(l.t)) paso.ejecutaGuardian = true;
     const si = /^ {6}-\s+if:\s*(.*)$|^ {8}if:\s*(.*)$/.exec(l.t);
     if (si !== null && paso.si === undefined) {
       paso.si = { valor: escalar(si[1] ?? si[2] ?? ""), linea: l.n };
@@ -983,9 +1008,7 @@ function chequearPaquete(base, pr) {
       ),
     );
   }
-  const apunta =
-    typeof guardian === "string" &&
-    /^node arquitectura\/contratos\/guardian\.cjs(?: --?[\w=./-]+)*$/.test(guardian.trim());
+  const apunta = typeof guardian === "string" && esComandoDelGuardian(guardian.trim().split(" "));
   if (!apunta) {
     hallazgos.push(
       hallazgo(
@@ -1214,6 +1237,7 @@ module.exports = {
   chequearPaquete,
   chequearInvariantes,
   chequearLectura,
+  ejecutaElGuardian,
   extraerInvariantes,
   formatear,
   leerCi,

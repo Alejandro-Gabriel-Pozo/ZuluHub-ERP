@@ -736,7 +736,7 @@ function casos(): Caso[] {
       codigo: "excepcion-huella-cambiada",
       armar: () =>
         conExcepciones([excepcion()], {
-          archivos: { [RUTA]: `${LINEA_DE_USO.replace("}", "margin: 1px; }")}\n` },
+          archivos: { [RUTA]: `${LINEA_DE_USO.replaceAll("}", "margin: 1px; }")}\n` },
         }),
       esperado: [[EXCEPCIONES, 6]],
     },
