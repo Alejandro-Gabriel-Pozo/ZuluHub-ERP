@@ -243,3 +243,145 @@ describe("errorParaLaPantalla: lo que nunca se muestra", () => {
     }
   });
 });
+
+describe("errorParaLaPantalla: submarca", () => {
+  const SCRIPT = "<script>alert(1)</script>";
+  const campo = (c: string, texto: string): ErrorParaLaPantalla =>
+    ({ tipo: "CAMPO", campo: c, texto }) as ErrorParaLaPantalla;
+  const general = (texto: string): ErrorParaLaPantalla => ({ tipo: "GENERAL", texto });
+
+  it("nombre, motivo y vigencia van a su campo", () => {
+    expect(errorParaLaPantalla("NOMBRE_DE_MARCA_INVALIDO")).toEqual(
+      campo("nombreVisible", "El nombre tiene que tener entre 1 y 60 letras, sin símbolos raros."),
+    );
+    expect(errorParaLaPantalla("MOTIVO_OBLIGATORIO")).toEqual(
+      campo("motivo", "Escribí el motivo del cambio."),
+    );
+    expect(errorParaLaPantalla("MOTIVO_DEMASIADO_LARGO")).toEqual(
+      campo("motivo", "El motivo es demasiado largo."),
+    );
+    expect(errorParaLaPantalla("VIGENCIA_INVALIDA")).toEqual(
+      campo("vigenteDesde", "Elegí una fecha válida."),
+    );
+    expect(errorParaLaPantalla("VIGENCIA_RETROACTIVA")).toEqual(
+      campo("vigenteDesde", "La fecha tiene que ser posterior a hoy."),
+    );
+  });
+
+  it.each([
+    ["primary", "primary"],
+    ["on-primary", "onPrimary"],
+    ["secondary", "secondary"],
+    ["accent", "accent"],
+  ])("TEMA_INVALIDO con token %s va al campo %s", (token, c) => {
+    expect(errorParaLaPantalla({ codigo: "TEMA_INVALIDO", token })).toEqual(
+      campo(c, "Ese color no es válido. Usá el formato #rrggbb."),
+    );
+  });
+
+  it("TEMA_INVALIDO y ASPECTO_INVALIDO con token desconocido no interpolan nada", () => {
+    for (const codigo of ["TEMA_INVALIDO", "ASPECTO_INVALIDO"]) {
+      for (const token of [SCRIPT, "constructor", 7]) {
+        const e = errorParaLaPantalla({ codigo, token });
+        expect(e.tipo).toBe("GENERAL");
+        expect(textoDe(e)).not.toContain("<");
+        expect(textoDe(e)).not.toContain("constructor");
+      }
+    }
+  });
+
+  it.each(["estilo", "superficie", "esquinas", "titulos", "ingreso"])(
+    "ASPECTO_INVALIDO %s",
+    (token) => {
+      expect(errorParaLaPantalla({ codigo: "ASPECTO_INVALIDO", token })).toEqual(
+        campo(token, "Esa opción no es válida."),
+      );
+    },
+  );
+
+  it.each([
+    ["on-primary/primary", "onPrimary"],
+    ["accent/fondo", "accent"],
+    ["accent/superficie", "accent"],
+  ])("CONTRASTE_INSUFICIENTE %s va a %s", (par, c) => {
+    expect(errorParaLaPantalla({ codigo: "CONTRASTE_INSUFICIENTE", par })).toEqual(
+      campo(c, "No se lee: elegí un color con más contraste sobre esa superficie."),
+    );
+  });
+
+  it("DEFINICION_INCOMPLETA lista lo que falta y omite lo desconocido", () => {
+    const e = errorParaLaPantalla({
+      codigo: "DEFINICION_INCOMPLETA",
+      faltan: ["nombre_visible", "tema.on-primary", SCRIPT, "logo", "plan_por_defecto"],
+    });
+    expect(e).toEqual(
+      general(
+        "Todavía falta completar: el nombre visible, el texto sobre el principal, el logo (todavía no se puede cargar desde la consola), el plan por defecto.",
+      ),
+    );
+    for (const faltan of [undefined, "logo", [SCRIPT], [1, null]]) {
+      const t = textoDe(errorParaLaPantalla({ codigo: "DEFINICION_INCOMPLETA", faltan }));
+      expect(t).not.toContain("<");
+      expect(t.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("los módulos no se interpolan", () => {
+    const esperado = general("Hay un módulo inicial que el plan por defecto no incluye.");
+    expect(
+      errorParaLaPantalla({ codigo: "MODULO_INICIAL_FUERA_DEL_PLAN", modulo: SCRIPT }),
+    ).toEqual(esperado);
+    expect(errorParaLaPantalla({ codigo: "MODULO_DESCONOCIDO", modulo: SCRIPT })).toEqual(esperado);
+  });
+
+  it("los códigos con texto del cliente no lo interpolan", () => {
+    for (const codigo of ["MARCADORES_DISTINTOS", "TEXTO_INVALIDO", "CLAVE_DE_TEXTO_DESCONOCIDA"]) {
+      const e = errorParaLaPantalla({ codigo, texto: SCRIPT, clave: SCRIPT });
+      expect(e.tipo).toBe("GENERAL");
+      expect(textoDe(e)).not.toContain("<");
+    }
+  });
+
+  it("textos generales fijos", () => {
+    expect(errorParaLaPantalla("SIN_BORRADOR")).toEqual(
+      general("No hay un borrador para confirmar. Guardá primero los cambios."),
+    );
+    expect(errorParaLaPantalla("CAMBIO_PROGRAMADO_PENDIENTE")).toEqual(
+      general(
+        "Ya hay un cambio programado. Tildá «Reemplazar el cambio programado» para confirmar este.",
+      ),
+    );
+    for (const c of [
+      "LOGO_INVALIDO",
+      "PLAN_NO_ENCONTRADO",
+      "PLAN_POR_DEFECTO_RETIRADO",
+      "VERSION_ESPERADA_INVALIDA",
+    ]) {
+      expect(errorParaLaPantalla(c).tipo).toBe("GENERAL");
+    }
+  });
+
+  it("ConcurrenciaAgotada, como texto o como objeto", () => {
+    const esperado = general("Se estaba guardando otro cambio a la vez. Probá de nuevo.");
+    expect(errorParaLaPantalla({ tipo: "ConcurrenciaAgotada" })).toEqual(esperado);
+    expect(errorParaLaPantalla("ConcurrenciaAgotada")).toEqual(esperado);
+  });
+
+  it("en el contexto de submarca, los códigos compartidos son pantalla vieja", () => {
+    for (const c of ["MARCA_NO_ENCONTRADA", "MARCA_RETIRADA", "ID_INVALIDO"]) {
+      expect(errorParaLaPantalla(c, "SUBMARCA")).toEqual({
+        tipo: "PANTALLA_VIEJA",
+        texto: "La pantalla quedó vieja. Volvé a abrirla.",
+      });
+    }
+    const v = errorParaLaPantalla("VERSION_DESACTUALIZADA", "SUBMARCA");
+    expect(v.tipo).toBe("PANTALLA_VIEJA");
+    expect(textoDe(v)).toContain("Alguien más cambió el borrador");
+    expect(textoDe(v)).toContain("Recargá la pantalla");
+  });
+
+  it("sin contexto, el alta conserva su traducción", () => {
+    expect(errorParaLaPantalla("MARCA_NO_ENCONTRADA").tipo).toBe("CAMPO");
+    expect(errorParaLaPantalla("ID_INVALIDO").tipo).toBe("GENERAL");
+  });
+});

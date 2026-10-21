@@ -5,8 +5,11 @@ import { MenuMovil } from "./menu-movil.cliente";
 import { VigilanteDeSesion } from "./vigilante-de-sesion.cliente";
 import estilos from "./armazon-de-consola.module.css";
 
-/** Las secciones de la consola. Hoy solo Empresas: las demás se suman cuando existan sus pantallas. */
-const SECCIONES = [{ clave: "empresas", etiqueta: "Empresas", href: "/empresas" }] as const;
+/** Las secciones de la consola, en el orden del menú. Las demás se suman cuando existan sus pantallas. */
+const SECCIONES = [
+  { clave: "empresas", etiqueta: "Empresas", href: "/empresas" },
+  { clave: "submarcas", etiqueta: "Submarcas", href: "/submarcas" },
+] as const;
 
 export type PropsDeArmazonDeConsola = Readonly<{
   activo: (typeof SECCIONES)[number]["clave"];
