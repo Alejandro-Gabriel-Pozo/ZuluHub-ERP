@@ -16,6 +16,10 @@
     "apps/web": {
       "entry": ["servidor/**/*.ts"],
       "project": ["**/*.{ts,tsx}"]
+    },
+    "apps/plataforma": {
+      "entry": ["servidor/**/*.ts"],
+      "project": ["**/*.{ts,tsx}"]
     }
   },
   "ignoreIssues": {

@@ -1,0 +1,23 @@
+.entrada {
+  width: 100%;
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-3);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: var(--tipo-tamano-titulo);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5em;
+  text-align: center;
+}
+
+.entrada[aria-invalid="true"] {
+  border-color: var(--color-peligro);
+}
+
+.entrada:disabled {
+  background: var(--color-deshabilitado);
+  color: var(--color-sobre-deshabilitado);
+}

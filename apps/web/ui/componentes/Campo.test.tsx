@@ -87,3 +87,22 @@ matrizDeEstados("Campo", {
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   },
 });
+
+describe("Campo: códigos que distinguen mayúsculas", () => {
+  it("con autoCapitalize apagado el teclado no capitaliza ni corrige", async () => {
+    await render(
+      <Campo etiqueta="Código" valor="" alCambiar={() => undefined} autoCapitalize="off" />,
+    );
+    const campo = page.getByLabelText("Código");
+    await expect.element(campo).toHaveAttribute("autocapitalize", "off");
+    await expect.element(campo).toHaveAttribute("autocorrect", "off");
+    await expect.element(campo).toHaveAttribute("spellcheck", "false");
+  });
+
+  it("sin la opción no se toca el comportamiento del teclado", async () => {
+    await render(<Campo etiqueta="Nombre" valor="" alCambiar={() => undefined} />);
+    const campo = page.getByLabelText("Nombre");
+    await expect.element(campo).not.toHaveAttribute("autocorrect");
+    await expect.element(campo).not.toHaveAttribute("spellcheck");
+  });
+});
