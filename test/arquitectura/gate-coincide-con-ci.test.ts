@@ -87,6 +87,12 @@ const SI_DE_JOB_ESPERADO: Readonly<Record<string, { si: string; motivo: string }
 
 /** Los `if:` de paso (dentro de `steps`) que hoy existen, por job. Un paso con `if` puede saltearse. */
 const SI_DE_PASOS_ESPERADOS: Readonly<Record<string, readonly string[]>> = {
+  // El guardián extrae la rama base y corre la vigilancia de la versión anterior SOLO en pull requests:
+  // en push a main y en la corrida nocturna no hay base contra la que comparar.
+  guardian: [
+    "github.event_name == 'pull_request'", // checkout de la rama base
+    "github.event_name == 'pull_request'", // no-debilitar.cjs de la base contra el árbol del PR
+  ],
   componentes: [
     "steps.navegador.outputs.cache-hit != 'true'", // instalar el navegador si no estaba en el caché
     "steps.navegador.outputs.cache-hit == 'true'", // instalar solo las dependencias del sistema si estaba
@@ -442,6 +448,42 @@ const CASOS: Caso[] = [
     esperado: ["«mutacion»", "debe ser"],
   },
   {
+    nombre: "el job «guardian» pierde el if de su paso de vigilancia (correría siempre y sin base)",
+    alterar: (t) =>
+      enJob(t, "guardian", (b) =>
+        reemplazarUnico(
+          b,
+          "      - name: Vigilancia de la versión anterior (no se debilita lo que la base exigía)\n        if: github.event_name == 'pull_request'\n",
+          "      - name: Vigilancia de la versión anterior (no se debilita lo que la base exigía)\n",
+        ),
+      ),
+    esperado: ["«guardian»", "los `if` de sus pasos"],
+  },
+  {
+    nombre: "el job «guardian» saltea el guardián del cambio con un if de paso",
+    alterar: (t) =>
+      enJob(t, "guardian", (b) =>
+        reemplazarUnico(
+          b,
+          "      - name: Guardián del cambio (la versión nueva)\n",
+          "      - name: Guardián del cambio (la versión nueva)\n        if: false\n",
+        ),
+      ),
+    esperado: ["«guardian»", "los `if` de sus pasos"],
+  },
+  {
+    nombre: "continue-on-error en el paso que corre el guardián",
+    alterar: (t) =>
+      enJob(t, "guardian", (b) =>
+        reemplazarUnico(
+          b,
+          "        run: node arquitectura/contratos/guardian.cjs\n",
+          "        run: node arquitectura/contratos/guardian.cjs\n        continue-on-error: true\n",
+        ),
+      ),
+    esperado: ["«guardian»", "continue-on-error"],
+  },
+  {
     nombre: "cambiar el if: always() del gate por success()",
     alterar: (t) => enJob(t, "gate", (b) => reemplazarUnico(b, "if: always()", "if: success()")),
     esperado: ["«gate»", "always()"],
@@ -533,6 +575,37 @@ describe("ci.yml y el Gate", () => {
     expect(jobs.get("estabilidad")?.si).toBe("github.event_name == 'pull_request'");
     expect(jobs.get("componentes")?.siDePasos).toHaveLength(2);
     expect(jobs.get("mutacion")?.timeout).toBe("90");
+    expect(jobs.get("guardian")?.nombre).toBe("Guardián de contratos");
+    expect(jobs.get("guardian")?.timeout).toBe("10");
+    expect(jobs.get("guardian")?.siDePasos).toEqual([
+      "github.event_name == 'pull_request'",
+      "github.event_name == 'pull_request'",
+    ]);
+  });
+
+  it("el guardián es obligatorio para el Gate y corre el del cambio y la vigilancia de la base", () => {
+    expect(gate.OBLIGATORIOS).toContain("guardian");
+    const cuerpo = leerJobs(CI).get("guardian")?.texto ?? "";
+    expect(cuerpo).toContain("run: node arquitectura/contratos/guardian.cjs");
+    expect(cuerpo).toContain("ref: ${{ github.event.pull_request.base.sha }}");
+    expect(cuerpo).toContain("path: base");
+    expect(cuerpo).toContain("node base/arquitectura/contratos/no-debilitar.cjs --arbol .");
+    // Sin secretos ni credenciales persistidas en ningún checkout del job.
+    expect(cuerpo).not.toContain("secrets.");
+    expect((cuerpo.match(/persist-credentials: false/g) ?? []).length).toBe(2);
+  });
+
+  it("la rama base se extrae DESPUÉS de correr el guardián (su `base/` anidado sería una ruta sin clase)", () => {
+    const cuerpo = leerJobs(CI).get("guardian")?.texto ?? "";
+    const corre = cuerpo.indexOf("run: node arquitectura/contratos/guardian.cjs");
+    const extrae = cuerpo.indexOf("path: base");
+    expect(corre).toBeGreaterThan(-1);
+    expect(extrae).toBeGreaterThan(corre);
+  });
+
+  it("el workflow no usa pull_request_target ni secretos (la base y el PR corren sin credenciales)", () => {
+    expect(CI).not.toContain("pull_request_target");
+    expect(CI).not.toMatch(/secrets\./);
   });
 
   it("evaluarGate pide de verdad cada job de las listas y el de mutación", () => {

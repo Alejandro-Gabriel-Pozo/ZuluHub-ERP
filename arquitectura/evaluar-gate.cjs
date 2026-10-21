@@ -11,6 +11,7 @@
 /** Jobs que siempre tienen que terminar en `success`. */
 const OBLIGATORIOS = [
   "estatico",
+  "guardian",
   "pruebas",
   "seguridad",
   "flujos",

@@ -20,7 +20,7 @@
  * Distingue «pasó» de «no encontró nada que analizar»: falla si una clase que el repo debe tener
  * quedó con cero rutas, o si un detector declara una clase de la que no analizó ni un archivo.
  */
-const { execFileSync } = require("node:child_process");
+const { execFileSync, spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const {
@@ -470,8 +470,41 @@ function cargarDelRepo(raiz) {
   };
 }
 
-function principal(argumentos) {
-  const raiz = path.resolve(__dirname, "../..");
+/** El valor de una opción `--nombre <valor>` o `--nombre=<valor>` (`undefined` si no está). */
+function valorDeOpcion(argumentos, nombre) {
+  const posicion = argumentos.indexOf(nombre);
+  if (posicion >= 0) return argumentos[posicion + 1] ?? "";
+  const conIgual = argumentos.find((argumento) => argumento.startsWith(`${nombre}=`));
+  return conIgual === undefined ? undefined : conIgual.slice(nombre.length + 1);
+}
+
+/**
+ * Vigilancia de la versión anterior: corre el `no-debilitar.cjs` DE LA CARPETA DE LA BASE contra el árbol
+ * `raiz` (ver `no-debilitar.cjs`). Devuelve 0 si no hay debilitamientos, ≠ 0 si los hay o si la carpeta no
+ * existe. Si la base todavía no trae ese verificador (la primera vez que se incorpora) avisa y devuelve 0:
+ * no hay versión anterior que vigile.
+ */
+function vigilarConLaBase(carpetaDeLaBase, raiz) {
+  const base = path.resolve(carpetaDeLaBase);
+  if (carpetaDeLaBase === "" || !fs.existsSync(base) || !fs.statSync(base).isDirectory()) {
+    process.stderr.write(`--base: «${carpetaDeLaBase}» no es una carpeta.\n`);
+    return 2;
+  }
+  const verificador = path.join(base, "arquitectura/contratos/no-debilitar.cjs");
+  if (!fs.existsSync(verificador)) {
+    process.stdout.write(
+      `AVISO ${base} no trae arquitectura/contratos/no-debilitar.cjs: no hay versión anterior que vigile.\n`,
+    );
+    return 0;
+  }
+  const resultado = spawnSync(process.execPath, [verificador, "--arbol", raiz], {
+    stdio: "inherit",
+  });
+  return resultado.status ?? 1;
+}
+
+/** Corre el guardián sobre el repositorio de `raiz`, imprime y devuelve `true` si pasa. */
+function correrGuardian(argumentos, raiz) {
   const sinInforme = argumentos.includes("--sin-informe");
   const indicado = argumentos.find((argumento) => argumento.startsWith("--informe="));
   const destino = path.resolve(
@@ -493,16 +526,30 @@ function principal(argumentos) {
     process.stderr.write(
       `Guardián de contratos: ${fallas.length} fallas, ${avisos.length} avisos (${donde}).\n`,
     );
-    process.exitCode = 1;
-    return;
+    return false;
   }
   process.stdout.write(
     `Guardián de contratos: OK · ${informe.totales.rutasClasificadas} rutas clasificadas (${porClase}) · ` +
       `${informe.totales.unidadesDeclaradas} unidades declaradas · ${informe.totales.contratos} contratos · ` +
       `${avisos.length} avisos (${donde}).\n`,
   );
+  return true;
 }
 
-module.exports = { ejecutar, cargarDelRepo, formatearFalla };
+/**
+ * CLI. Opción `--base <carpeta>` (opcional): además de la corrida normal, corre la vigilancia de la versión
+ * anterior (`vigilarConLaBase`) y sale ≠ 0 si cualquiera de las dos falla. Sin `--base` no cambia nada.
+ * La CI llama a las dos cosas por separado (dos pasos del job `guardian`, para ver cada una en su registro);
+ * esta opción es la forma de hacer lo mismo a mano en un solo comando.
+ */
+function principal(argumentos) {
+  const raiz = path.resolve(__dirname, "../..");
+  const base = valorDeOpcion(argumentos, "--base");
+  const pasa = correrGuardian(argumentos, raiz);
+  const salidaDeLaBase = base === undefined ? 0 : vigilarConLaBase(base, raiz);
+  if (!pasa || salidaDeLaBase !== 0) process.exitCode = pasa ? salidaDeLaBase : 1;
+}
+
+module.exports = { ejecutar, cargarDelRepo, formatearFalla, vigilarConLaBase, valorDeOpcion };
 
 if (require.main === module) principal(process.argv.slice(2));
