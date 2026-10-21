@@ -1,6 +1,7 @@
 import { Insignia } from "../../web/ui/componentes/Insignia";
 import { SoloLector } from "../../web/ui/primitivas/SoloLector";
 import { rotuloDeEstado } from "../logica/filtros-de-empresas";
+import { cuitConGuiones } from "../logica/formato-de-cuit";
 import type { FilaDeEmpresa } from "../servidor/empresas";
 import estilos from "./empresas.module.css";
 
@@ -37,7 +38,7 @@ export function TablaDeEmpresas({ filas }: PropsDeTablaDeEmpresas) {
               </th>
               <td>
                 <span className={estilos["rotulo"]}>CUIT</span>
-                <span>{fila.cuit}</span>
+                <span>{cuitConGuiones(fila.cuit)}</span>
               </td>
               <td>
                 <span className={estilos["rotulo"]}>Submarca</span>

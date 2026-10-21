@@ -181,169 +181,172 @@ export function FormularioDeAlta({ submarcas, planes }: PropsDeFormularioDeAlta)
       : `El de la submarca (${nombreDelPlanPorDefecto})`;
 
   return (
-    <form
-      className={estilos["formulario"]}
-      noValidate
-      onSubmit={(evento) => {
-        evento.preventDefault();
-        tocarDarDeAlta();
-      }}
-    >
-      <Pila separacion={4}>
-        {errorDeServidor === null || errorDeServidor.tipo === "CAMPO" ? null : (
-          <Aviso tono={errorDeServidor.tipo === "OCULTAR_ACCION" ? "aviso" : "peligro"}>
-            <Texto>{textoGeneral(errorDeServidor)}</Texto>
-            {errorDeServidor.tipo === "INESPERADO" &&
-            rechazo?.tipo === "ERROR" &&
-            rechazo.referencia !== undefined ? (
-              <Texto>Código de referencia: {rechazo.referencia}</Texto>
-            ) : null}
-          </Aviso>
-        )}
-        {rechazo?.tipo === "CANCELADO" ? (
-          <Aviso tono="info">
-            <Texto>Cancelaste la confirmación. La empresa no se dio de alta.</Texto>
-          </Aviso>
-        ) : null}
-        {incierto ? (
-          <Aviso
-            tono="aviso"
-            accion={
-              envio.enCurso ? null : (
-                <Boton variante="secundaria" alTocar={envio.enviar}>
-                  Reintentar
-                </Boton>
-              )
-            }
-          >
+    <>
+      <form
+        className={estilos["formulario"]}
+        noValidate
+        onSubmit={(evento) => {
+          evento.preventDefault();
+          tocarDarDeAlta();
+        }}
+      >
+        <Pila separacion={4}>
+          {errorDeServidor === null || errorDeServidor.tipo === "CAMPO" ? null : (
+            <Aviso tono={errorDeServidor.tipo === "OCULTAR_ACCION" ? "aviso" : "peligro"}>
+              <Texto>{textoGeneral(errorDeServidor)}</Texto>
+              {errorDeServidor.tipo === "INESPERADO" &&
+              rechazo?.tipo === "ERROR" &&
+              rechazo.referencia !== undefined ? (
+                <Texto>Código de referencia: {rechazo.referencia}</Texto>
+              ) : null}
+            </Aviso>
+          )}
+          {rechazo?.tipo === "CANCELADO" ? (
+            <Aviso tono="info">
+              <Texto>Cancelaste la confirmación. La empresa no se dio de alta.</Texto>
+            </Aviso>
+          ) : null}
+          {incierto ? (
+            <Aviso
+              tono="aviso"
+              accion={
+                envio.enCurso ? null : (
+                  <Boton variante="secundaria" alTocar={envio.enviar}>
+                    Reintentar
+                  </Boton>
+                )
+              }
+            >
+              <Texto>
+                {envio.motivoQueNoPuede ??
+                  "No supimos si el alta quedó registrada. Reintentá: no se va a duplicar."}
+              </Texto>
+            </Aviso>
+          ) : null}
+          <Campo
+            etiqueta="Nombre de la empresa"
+            nombre="razonSocial"
+            obligatorio={OBLIGATORIO}
+            autoComplete="off"
+            valor={razonSocial}
+            alCambiar={(v) => {
+              editar("razonSocial", () => {
+                setRazonSocial(v);
+              });
+            }}
+            error={errorDe("razonSocial")}
+            deshabilitado={bloqueadaLaEdicion}
+          />
+          <Campo
+            etiqueta="CUIT"
+            nombre="cuit"
+            obligatorio={OBLIGATORIO}
+            autoComplete="off"
+            inputMode="numeric"
+            ayuda="Once números, con o sin guiones."
+            valor={cuit}
+            alCambiar={(v) => {
+              editar("cuit", () => {
+                setCuit(v);
+              });
+            }}
+            error={errorDe("cuit")}
+            deshabilitado={bloqueadaLaEdicion}
+          />
+          <Selector
+            etiqueta="Submarca"
+            nombre="marcaId"
+            obligatorio={OBLIGATORIO}
+            textoDeElegir="Elegí una submarca"
+            opciones={submarcas.map((s) => ({
+              valor: s.id,
+              etiqueta: s.elegible
+                ? s.nombre
+                : `${s.nombre} (no disponible: ${s.motivoSiNo ?? "no admite empresas nuevas"})`,
+            }))}
+            valor={marcaId}
+            alCambiar={(v) => {
+              editar("marcaId", () => {
+                setMarcaId(v);
+              });
+            }}
+            error={errorDe("marcaId")}
+            deshabilitado={bloqueadaLaEdicion}
+          />
+          <Selector
+            etiqueta="Plan"
+            nombre="versionDePlanId"
+            textoDeElegir={textoDelPlanPorDefecto}
+            opciones={planes.map((p) => ({ valor: p.versionDePlanId, etiqueta: p.nombre }))}
+            valor={versionDePlanId}
+            alCambiar={(v) => {
+              editar("versionDePlanId", () => {
+                setVersionDePlanId(v);
+              });
+            }}
+            error={errorDe("versionDePlanId")}
+            deshabilitado={bloqueadaLaEdicion}
+          />
+          <Campo
+            etiqueta="Email del primer gerente"
+            nombre="emailGerente"
+            tipo="email"
+            inputMode="email"
+            autoComplete="off"
+            obligatorio={OBLIGATORIO}
+            ayuda="Se le envía una invitación; no se muestra su clave ni se la elegís vos."
+            valor={emailGerente}
+            alCambiar={(v) => {
+              editar("emailGerente", () => {
+                setEmailGerente(v);
+              });
+            }}
+            error={errorDe("emailGerente")}
+            deshabilitado={bloqueadaLaEdicion}
+          />
+          <Selector
+            etiqueta="Zona horaria"
+            nombre="zonaHoraria"
+            obligatorio={OBLIGATORIO}
+            opciones={ZONAS_HORARIAS}
+            valor={zonaHoraria}
+            alCambiar={(v) => {
+              editar("zonaHoraria", () => {
+                setZonaHoraria(v);
+              });
+            }}
+            error={errorDe("zonaHoraria")}
+            deshabilitado={bloqueadaLaEdicion}
+          />
+          <div className={estilos["modulos"]}>
+            <p className={estilos["modulosTitulo"]}>Módulos iniciales</p>
             <Texto>
-              {envio.motivoQueNoPuede ??
-                "No supimos si el alta quedó registrada. Reintentá: no se va a duplicar."}
+              {submarca === undefined
+                ? "Elegí una submarca para ver sus módulos iniciales."
+                : submarca.modulosIniciales.length === 0
+                  ? "Esta submarca no trae módulos iniciales."
+                  : submarca.modulosIniciales.join(", ")}
             </Texto>
-          </Aviso>
-        ) : null}
-        <Campo
-          etiqueta="Nombre de la empresa"
-          nombre="razonSocial"
-          obligatorio={OBLIGATORIO}
-          autoComplete="off"
-          valor={razonSocial}
-          alCambiar={(v) => {
-            editar("razonSocial", () => {
-              setRazonSocial(v);
-            });
-          }}
-          error={errorDe("razonSocial")}
-          deshabilitado={bloqueadaLaEdicion}
-        />
-        <Campo
-          etiqueta="CUIT"
-          nombre="cuit"
-          obligatorio={OBLIGATORIO}
-          autoComplete="off"
-          inputMode="numeric"
-          ayuda="Once números, con o sin guiones."
-          valor={cuit}
-          alCambiar={(v) => {
-            editar("cuit", () => {
-              setCuit(v);
-            });
-          }}
-          error={errorDe("cuit")}
-          deshabilitado={bloqueadaLaEdicion}
-        />
-        <Selector
-          etiqueta="Submarca"
-          nombre="marcaId"
-          obligatorio={OBLIGATORIO}
-          textoDeElegir="Elegí una submarca"
-          opciones={submarcas.map((s) => ({
-            valor: s.id,
-            etiqueta: s.elegible
-              ? s.nombre
-              : `${s.nombre} (no disponible: ${s.motivoSiNo ?? "no admite empresas nuevas"})`,
-          }))}
-          valor={marcaId}
-          alCambiar={(v) => {
-            editar("marcaId", () => {
-              setMarcaId(v);
-            });
-          }}
-          error={errorDe("marcaId")}
-          deshabilitado={bloqueadaLaEdicion}
-        />
-        <Selector
-          etiqueta="Plan"
-          nombre="versionDePlanId"
-          textoDeElegir={textoDelPlanPorDefecto}
-          opciones={planes.map((p) => ({ valor: p.versionDePlanId, etiqueta: p.nombre }))}
-          valor={versionDePlanId}
-          alCambiar={(v) => {
-            editar("versionDePlanId", () => {
-              setVersionDePlanId(v);
-            });
-          }}
-          error={errorDe("versionDePlanId")}
-          deshabilitado={bloqueadaLaEdicion}
-        />
-        <Campo
-          etiqueta="Email del primer gerente"
-          nombre="emailGerente"
-          tipo="email"
-          inputMode="email"
-          autoComplete="off"
-          obligatorio={OBLIGATORIO}
-          ayuda="Se le envía una invitación; no se muestra su clave ni se la elegís vos."
-          valor={emailGerente}
-          alCambiar={(v) => {
-            editar("emailGerente", () => {
-              setEmailGerente(v);
-            });
-          }}
-          error={errorDe("emailGerente")}
-          deshabilitado={bloqueadaLaEdicion}
-        />
-        <Selector
-          etiqueta="Zona horaria"
-          nombre="zonaHoraria"
-          obligatorio={OBLIGATORIO}
-          opciones={ZONAS_HORARIAS}
-          valor={zonaHoraria}
-          alCambiar={(v) => {
-            editar("zonaHoraria", () => {
-              setZonaHoraria(v);
-            });
-          }}
-          error={errorDe("zonaHoraria")}
-          deshabilitado={bloqueadaLaEdicion}
-        />
-        <div className={estilos["modulos"]}>
-          <p className={estilos["modulosTitulo"]}>Módulos iniciales</p>
-          <Texto>
-            {submarca === undefined
-              ? "Elegí una submarca para ver sus módulos iniciales."
-              : submarca.modulosIniciales.length === 0
-                ? "Esta submarca no trae módulos iniciales."
-                : submarca.modulosIniciales.join(", ")}
-          </Texto>
-        </div>
-        <div className={estilos["acciones"]}>
-          <Boton
-            tipo="submit"
-            enviando={envio.enCurso}
-            textoEnviando="Dando de alta…"
-            deshabilitado={!envio.enCurso && envio.bloqueado}
-            motivo={envio.motivoQueNoPuede}
-          >
-            Dar de alta
-          </Boton>
-          <a className={estilos["enlaceSimple"]} href="/empresas">
-            Cancelar
-          </a>
-        </div>
-      </Pila>
+          </div>
+          <div className={estilos["acciones"]}>
+            <Boton
+              tipo="submit"
+              enviando={envio.enCurso}
+              textoEnviando="Dando de alta…"
+              deshabilitado={!envio.enCurso && envio.bloqueado}
+              motivo={envio.motivoQueNoPuede}
+            >
+              Dar de alta
+            </Boton>
+            <a className={estilos["enlaceSimple"]} href="/empresas">
+              Cancelar
+            </a>
+          </div>
+        </Pila>
+      </form>
+      {/* Fuera del formulario: la ventana tiene el suyo y HTML no admite formularios anidados. */}
       {ventana}
-    </form>
+    </>
   );
 }
 
