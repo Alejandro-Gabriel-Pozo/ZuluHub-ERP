@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
-import { RAIZ, cargarDelRepo } from "./guardian-apoyo";
+import { HAY_GIT, RAIZ, cargarDelRepo } from "./guardian-apoyo";
 
 /**
  * Clasificación de rutas: el matcher de globs mínimo, las reglas por niveles y la clasificación
@@ -16,10 +16,12 @@ type Clasificacion = {
   fallas: { codigo: string; archivo: string; motivo: string; correccion: string }[];
 };
 const require = createRequire(import.meta.url);
-const { compilar, esRutaExacta } = require("../../arquitectura/contratos/globs.cjs") as {
-  compilar: (glob: string) => RegExp;
-  esRutaExacta: (ruta: string) => boolean;
-};
+const { compilar, esRutaExacta, segmentoARegexp } =
+  require("../../arquitectura/contratos/globs.cjs") as {
+    compilar: (glob: string) => RegExp;
+    esRutaExacta: (ruta: string) => boolean;
+    segmentoARegexp: (segmento: string) => string;
+  };
 const coincide = (glob: string, ruta: string): boolean => compilar(glob).test(ruta);
 const { clasificar, CLASES, CLASES_ESPERADAS } =
   require("../../arquitectura/contratos/clasificacion.cjs") as {
@@ -75,6 +77,30 @@ describe("matcher de globs", () => {
     ["barra invertida", "src\\x.ts"],
   ])("rechaza un glob con %s", (_nombre, glob) => {
     expect(() => compilar(glob)).toThrow();
+  });
+
+  it.each([
+    ["a+b.ts", "a+b.ts", "aab.ts"],
+    ["a.b", "a.b", "axb"],
+    ["a^b", "a^b", "ab"],
+    ["a$b", "a$b", "ab"],
+    ["a|b", "a|b", "a"],
+  ])("el metacaracter de «%s» calza literal y no como regexp", (glob, literal, comoRegexp) => {
+    expect(coincide(glob, literal)).toBe(true);
+    expect(coincide(glob, comoRegexp)).toBe(false);
+  });
+
+  it.each(["\\", "{", "}", "(", ")", "[", "]", ".", "+", "^", "$", "|"])(
+    "segmentoARegexp escapa «%s» como literal",
+    (caracter) => {
+      const regexp = new RegExp(`^${segmentoARegexp(`a${caracter}b`)}$`);
+      expect(regexp.test(`a${caracter}b`)).toBe(true);
+      expect(regexp.test("ab")).toBe(false);
+    },
+  );
+
+  it("segmentoARegexp mantiene los comodines y escapa lo que los rodea", () => {
+    expect(segmentoARegexp("*.{x}?")).toBe("[^/]*\\.\\{x\\}[^/]");
   });
 
   it.each([
@@ -211,8 +237,11 @@ describe("reglas de clasificación (con violaciones inyectadas)", () => {
   });
 });
 
-describe("clasificación de las rutas reales del repositorio", () => {
-  const { rutas } = cargarDelRepo(RAIZ);
+const describeConGit = describe.skipIf(!HAY_GIT);
+// Sin `.git` (sandbox de Stryker) `cargarDelRepo` no encuentra rutas: se saltea. La prueba de
+// guardian-nucleo.test.ts impide que el salto ocurra fuera de ese sandbox.
+describeConGit("clasificación de las rutas reales del repositorio", () => {
+  const rutas = HAY_GIT ? cargarDelRepo(RAIZ).rutas : [];
   const resultado = clasificar(rutas);
 
   it("no deja ninguna ruta sin clase ni ambigua", () => {

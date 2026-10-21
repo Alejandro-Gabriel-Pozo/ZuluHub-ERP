@@ -14,9 +14,15 @@
  */
 
 const CARACTERES_PROHIBIDOS = /[{}[\]()!\\]/;
-const ESPECIALES_DE_REGEXP = /[.+^$|]/g;
+// Todos los metacaracteres de RegExp que pueden llegar como literales a `segmentoARegexp`
+// (`*` y `?` ya se tratan antes como comodines del glob). `compilar` rechaza antes `\ { } [ ] ( )`,
+// pero el escapado no depende de eso: es defensa en profundidad.
+const ESPECIALES_DE_REGEXP = /[.+^$|\\{}()[\]]/g;
 
-/** Convierte un segmento sin `**` en su expresión regular (sin anclas). */
+/**
+ * Convierte un segmento sin `**` en su expresión regular (sin anclas). Se exporta para probar el
+ * escapado directo, también con los caracteres que `compilar` rechaza antes de llegar acá.
+ */
 function segmentoARegexp(segmento) {
   let salida = "";
   for (const caracter of segmento) {
@@ -70,4 +76,4 @@ function esRutaExacta(ruta) {
   return !ruta.split("/").some((segmento) => segmento === "." || segmento === "..");
 }
 
-module.exports = { compilar, esRutaExacta };
+module.exports = { compilar, esRutaExacta, segmentoARegexp };

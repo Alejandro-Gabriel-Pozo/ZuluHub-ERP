@@ -1,12 +1,13 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   AHORA,
   BASE,
   EXCLUSIONES_BASE,
+  HAY_GIT,
   RAIZ,
   cargarDelRepo,
   codigos,
@@ -25,7 +26,18 @@ import {
  * huella cambiada, comodín) lo hace fallar; y un «pasó» siempre viene con evidencia de qué se miró.
  */
 
-const real = cargarDelRepo(RAIZ);
+// Sin `.git` (sandbox de Stryker) `cargarDelRepo` lanza o no encuentra rutas: se usa un repo vacío y los
+// bloques que lo miran se saltean (ver más abajo). Una corrida con `.git` lee el repo real, como siempre.
+const real: ReturnType<typeof cargarDelRepo> = HAY_GIT
+  ? cargarDelRepo(RAIZ)
+  : {
+      rutas: [],
+      leer: () => null,
+      contratos: [],
+      excepciones: [],
+      exclusiones: [],
+      previas: { fallas: [], avisos: [] },
+    };
 const CLASES_DEL_INFORME = [
   "frontend",
   "backend",
@@ -53,7 +65,13 @@ function sobreElRepo(
   });
 }
 
-describe("el repositorio actual pasa", () => {
+// Sin `.git` (sandbox de Stryker) no hay rutas versionadas y estos bloques se saltean: ver la prueba
+// «el salto por falta de .git…», que falla si el `.git` falta fuera de ese sandbox.
+const SIN_GIT = !HAY_GIT;
+const describeConGit = describe.skipIf(SIN_GIT);
+const itConGit = it.skipIf(SIN_GIT);
+
+describeConGit("el repositorio actual pasa", () => {
   const resultado = sobreElRepo();
 
   it("sin fallas ni avisos, con el registro real vacío", () => {
@@ -114,7 +132,7 @@ describe("el repositorio actual pasa", () => {
   });
 });
 
-describe("el repositorio real alterado en memoria falla", () => {
+describeConGit("el repositorio real alterado en memoria falla", () => {
   it("una ruta nueva sin clase", () => {
     const r = sobreElRepo({ "herramienta-nueva/x.ts": "export {};" });
     expect(r.fallas).toHaveLength(1);
@@ -319,7 +337,7 @@ describe("salida del guardián", () => {
 });
 
 describe("CLI: node arquitectura/contratos/guardian.cjs", () => {
-  it("sobre este repositorio sale 0, escribe el informe y lista las rutas por clase", () => {
+  itConGit("sobre este repositorio sale 0, escribe el informe y lista las rutas por clase", () => {
     const carpeta = mkdtempSync(join(tmpdir(), "guardian-"));
     try {
       const destino = join(carpeta, "informe.json");
@@ -339,7 +357,7 @@ describe("CLI: node arquitectura/contratos/guardian.cjs", () => {
     }
   });
 
-  it("el informe por defecto no se commitea (está en .gitignore)", () => {
+  itConGit("el informe por defecto no se commitea (está en .gitignore)", () => {
     const salida = execFileSync("git", ["check-ignore", "arquitectura/contratos/informe.json"], {
       cwd: RAIZ,
       encoding: "utf8",
@@ -354,5 +372,17 @@ describe("CLI: node arquitectura/contratos/guardian.cjs", () => {
     expect(scripts["guardian"]).toBe("node arquitectura/contratos/guardian.cjs");
     expect(scripts["arquitectura"]).toContain("npm run guardian");
     expect(scripts["gate"]).toContain("npm run arquitectura");
+  });
+});
+
+describe("el salto por falta de .git no esconde un guardián que dejó de analizar", () => {
+  it("sin .git solo se admite dentro del sandbox de Stryker (.stryker-tmp)", () => {
+    const enSandboxDeStryker = RAIZ.split(sep).includes(".stryker-tmp");
+    if (!HAY_GIT && !enSandboxDeStryker) {
+      expect.fail(
+        "falta .git fuera del sandbox de Stryker: las pruebas del repositorio real se estarían salteando",
+      );
+    }
+    expect(HAY_GIT || enSandboxDeStryker).toBe(true);
   });
 });

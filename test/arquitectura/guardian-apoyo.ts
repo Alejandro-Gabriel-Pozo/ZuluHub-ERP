@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 
@@ -72,6 +73,13 @@ export type Entradas = {
 
 const require = createRequire(import.meta.url);
 export const RAIZ = join(import.meta.dirname, "../..");
+/**
+ * `false` en el sandbox de Stryker (copia del repositorio sin `.git`): ahí `git ls-files` no lista
+ * nada y las pruebas que miran «el repositorio real» no tienen qué analizar. En un worktree `.git`
+ * es un archivo; `existsSync` sirve igual. La prueba «el salto no esconde un guardián que dejó de
+ * analizar» (guardian-nucleo.test.ts) impide que esto se use para saltear fuera de ese sandbox.
+ */
+export const HAY_GIT = existsSync(join(RAIZ, ".git"));
 export const { ejecutar, cargarDelRepo, formatearFalla } =
   require("../../arquitectura/contratos/guardian.cjs") as {
     ejecutar: (entradas: Entradas) => Resultado;
