@@ -18,7 +18,8 @@
   },
   {
     "grupo": "tenants y empresas",
-    "archivos": "src/modulos/tenants/dominio/**/*.ts,src/modulos/empresas/dominio/**/*.ts,src/consultas-de-grupo/vista-de-grupo.ts"
+    "archivos": "src/modulos/tenants/dominio/**/*.ts,src/modulos/empresas/dominio/**/*.ts,src/consultas-de-grupo/vista-de-grupo.ts",
+    "pruebas": "src/modulos/tenants/dominio src/modulos/empresas/dominio src/consultas-de-grupo"
   },
   {
     "grupo": "fiscal (numeración)",
