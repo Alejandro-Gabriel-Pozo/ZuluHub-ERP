@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { RAIZ_ORIGINAL } from "./guardian-apoyo";
 
 /**
  * El planificador decide qué grupos de mutación corre un PR. Cada decisión que previene un
@@ -347,7 +348,8 @@ describe("grupos de mutación contra la configuración real", () => {
     expect([...enteros, ...porArchivo.keys()].sort()).toEqual([...esperados].sort());
 
     for (const [archivo, rangos] of porArchivo) {
-      const texto = readFileSync(join(RAIZ, archivo), "utf8");
+      // El original: Stryker le agrega `// @ts-nocheck` a los `.cjs` de `mutate` dentro de su sandbox y corre las líneas.
+      const texto = readFileSync(join(RAIZ_ORIGINAL, archivo), "utf8");
       const lineas = texto.split("\n");
       const total = lineas.length - (texto.endsWith("\n") ? 1 : 0);
       rangos.sort((a, b) => (a[0] as number) - (b[0] as number));
