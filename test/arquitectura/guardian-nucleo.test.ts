@@ -331,9 +331,9 @@ describe("salida del guardián", () => {
     expect(correccion).toContain("apps/web/contratos.json");
   });
 
-  it("una falla sin línea ni contrato se imprime con guion", () => {
+  it("una falla sin contrato se imprime con guion, y siempre con archivo:línea", () => {
     const r = correr({ archivos: { "herramienta/x.ts": "" } });
-    expect(formatearFalla(r.fallas[0]!).startsWith("herramienta/x.ts · - · ")).toBe(true);
+    expect(formatearFalla(r.fallas[0]!).startsWith("herramienta/x.ts:1 · - · ")).toBe(true);
   });
 });
 

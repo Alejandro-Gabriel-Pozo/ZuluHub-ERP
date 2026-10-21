@@ -17,15 +17,22 @@
  * vencimiento). Hay dos alcances: una clase entera (solo `generado` y `docs`) o un archivo exacto
  * cuya huella es la del archivo completo (si el archivo cambia, hay que volver a aprobarlo).
  *
+ * Si una excepción o exclusión vence dentro de DIAS_DE_AVISO (14) días o menos, el guardián AVISA
+ * (`excepcion-por-vencer`, sin bloquear) con el archivo y la línea de su `id`; el día siguiente al
+ * vencimiento ya falla. Toda falla y todo aviso dicen en qué línea del JSON están (`ubicacion.cjs`).
+ *
  * El reloj es un parámetro (`ahora`): las pruebas lo inyectan. La fecha de hoy se toma en UTC.
  */
 const crypto = require("node:crypto");
 const { esRutaExacta } = require("./globs.cjs");
 const { CLASES_EXCLUIBLES } = require("./clasificacion.cjs");
+const { enJson } = require("./ubicacion.cjs");
 
 const ARCHIVO_DE_EXCEPCIONES = "arquitectura/contratos/excepciones.json";
 const ARCHIVO_DE_EXCLUSIONES = "arquitectura/contratos/exclusiones.json";
 const PLAZO_MAXIMO_DIAS = 60;
+/** Una excepción o exclusión que vence en este plazo (o menos) avisa; vencida, falla. */
+const DIAS_DE_AVISO = 14;
 const PATRON_DE_HUELLA = /^[0-9a-f]{64}$/;
 
 const CAMPOS_DE_EXCEPCION = [
@@ -85,9 +92,13 @@ function esFechaValida(texto) {
 const diasEntre = (desde, hasta) =>
   Math.round((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / 86_400_000);
 
+const rotuloDe = (entrada, nombre) =>
+  esTextoNoVacio(entrada.id) ? `${nombre} «${entrada.id}»` : nombre;
+
 /**
  * Chequeos que comparten excepciones y exclusiones: campos, vencimiento y forma de la huella.
- * Devuelve problemas `{ codigo, motivo, correccion }` (vacío = válida).
+ * Devuelve problemas `{ codigo, motivo, correccion, campo }` (vacío = válida); `campo` es la clave
+ * ofensora de la entrada (sin `campo`, la entrada entera).
  */
 function problemasComunes(entrada, campos, hoy, nombre) {
   if (!esObjetoPlano(entrada)) {
@@ -100,13 +111,14 @@ function problemasComunes(entrada, campos, hoy, nombre) {
     ];
   }
   const problemas = [];
-  const rotulo = esTextoNoVacio(entrada.id) ? `${nombre} «${entrada.id}»` : nombre;
+  const rotulo = rotuloDe(entrada, nombre);
   for (const clave of Object.keys(entrada)) {
     if (!campos.includes(clave)) {
       problemas.push({
         codigo: "excepcion-invalida",
         motivo: `${rotulo}: «${clave}» no es un campo permitido (una ampliación escondida no vale).`,
         correccion: `Dejá solo estos campos: ${campos.join(", ")}.`,
+        campo: clave,
       });
     }
   }
@@ -116,6 +128,7 @@ function problemasComunes(entrada, campos, hoy, nombre) {
         codigo: "excepcion-invalida",
         motivo: `${rotulo}: el campo «${campo}» falta o está vacío.`,
         correccion: `Completá «${campo}»: toda ${nombre.toLowerCase()} lleva motivo, responsable, aprobación y vencimiento.`,
+        campo,
       });
     }
   }
@@ -127,6 +140,7 @@ function problemasComunes(entrada, campos, hoy, nombre) {
         codigo: "excepcion-invalida",
         motivo: `${rotulo}: «${campo}» («${entrada[campo]}») no es una fecha válida AAAA-MM-DD.`,
         correccion: "Poné una fecha real con el formato AAAA-MM-DD.",
+        campo,
       });
     }
   }
@@ -135,6 +149,7 @@ function problemasComunes(entrada, campos, hoy, nombre) {
       codigo: "excepcion-creada-futura",
       motivo: `${rotulo}: «creada» (${entrada.creada}) es posterior a hoy (${hoy}).`,
       correccion: "Poné la fecha en que realmente se aprobó, no una futura.",
+      campo: "creada",
     });
   }
   if (creadaValida && venceValida) {
@@ -143,12 +158,14 @@ function problemasComunes(entrada, campos, hoy, nombre) {
         codigo: "excepcion-vence-antes-de-creada",
         motivo: `${rotulo}: vence el ${entrada.vence}, antes de su creación (${entrada.creada}).`,
         correccion: "Corregí las fechas: «vence» tiene que ser igual o posterior a «creada».",
+        campo: "vence",
       });
     } else if (diasEntre(entrada.creada, entrada.vence) > PLAZO_MAXIMO_DIAS) {
       problemas.push({
         codigo: "excepcion-plazo-excesivo",
         motivo: `${rotulo}: dura ${diasEntre(entrada.creada, entrada.vence)} días (de ${entrada.creada} a ${entrada.vence}) y el máximo es ${PLAZO_MAXIMO_DIAS}.`,
         correccion: `Acortá el vencimiento: toda excepción o exclusión dura como máximo ${PLAZO_MAXIMO_DIAS} días.`,
+        campo: "vence",
       });
     }
   }
@@ -158,6 +175,7 @@ function problemasComunes(entrada, campos, hoy, nombre) {
       motivo: `${rotulo}: venció el ${entrada.vence} (hoy es ${hoy}).`,
       correccion:
         "Corregí lo que silenciaba, o renovala con nueva aprobación y un vencimiento próximo.",
+      campo: "vence",
     });
   }
   if (
@@ -169,6 +187,7 @@ function problemasComunes(entrada, campos, hoy, nombre) {
       codigo: "excepcion-invalida",
       motivo: `${rotulo}: «huella» no es un SHA-256 en hexadecimal minúscula (64 caracteres).`,
       correccion: "Copiá la huella que imprime el guardián junto al hallazgo.",
+      campo: "huella",
     });
   }
   if (campos.includes("ruta") && esTextoNoVacio(entrada.ruta) && !esRutaExacta(entrada.ruta)) {
@@ -177,18 +196,42 @@ function problemasComunes(entrada, campos, hoy, nombre) {
       motivo: `${rotulo}: «ruta» («${entrada.ruta}») no es un archivo exacto (sin comodines, sin carpetas, sin «..»).`,
       correccion:
         "Una excepción cubre un solo archivo: escribí su ruta completa. Si son varios, una excepción por hallazgo.",
+      campo: "ruta",
     });
   }
   return problemas;
 }
 
-const aFalla = (problema, archivo, contrato) => ({
+/** La falla de un problema de la entrada número `indice` del archivo JSON `archivo`. */
+const aFalla = (problema, archivo, contrato, indice) => ({
   codigo: problema.codigo,
   archivo,
   contrato,
   motivo: problema.motivo,
   correccion: problema.correccion,
+  donde: enJson(indice, ...(problema.campo === undefined ? [] : [problema.campo])),
 });
+
+/**
+ * El aviso de una entrada que vence dentro de DIAS_DE_AVISO días (o `null`). Va en la línea de su `id`.
+ * Una fecha de vencimiento ausente, mal escrita o ya pasada no avisa: eso es falla, no aviso.
+ */
+function avisoDeVencimiento(entrada, hoy, nombre, archivo, contrato, indice) {
+  if (!esObjetoPlano(entrada) || !esTextoNoVacio(entrada.vence) || !esFechaValida(entrada.vence)) {
+    return null;
+  }
+  const faltan = diasEntre(hoy, entrada.vence);
+  if (faltan < 0 || faltan > DIAS_DE_AVISO) return null;
+  return {
+    codigo: "excepcion-por-vencer",
+    archivo,
+    contrato,
+    motivo: `${rotuloDe(entrada, nombre)}: vence el ${entrada.vence} (faltan ${faltan} días; hoy es ${hoy}).`,
+    correccion:
+      "Renovala con nueva aprobación y un vencimiento próximo, o corregí lo que silencia: al vencer, bloquea la integración.",
+    donde: enJson(indice, "id"),
+  };
+}
 
 /**
  * Valida las excepciones y las aplica a los hallazgos. Solo silencia lo que cumple TODO; una
@@ -205,6 +248,7 @@ const aFalla = (problema, archivo, contrato) => ({
 function aplicarExcepciones(lista, contexto) {
   const { rutas, idsDeContratos, ahora, hallazgos } = contexto;
   const fallas = [];
+  const avisos = [];
   const aplicadas = [];
   const consumidos = new Set();
   if (!Array.isArray(lista)) {
@@ -214,14 +258,30 @@ function aplicarExcepciones(lista, contexto) {
       contrato: null,
       motivo: "El archivo de excepciones tiene que ser una lista.",
       correccion: "Dejalo como una lista JSON (vacía si no hay excepciones).",
+      donde: enJson(),
     });
-    return { fallas, aplicadas, restantes: hallazgos };
+    return { fallas, avisos, aplicadas, restantes: hallazgos };
   }
   const hoy = diaDe(ahora);
   const ids = new Set();
-  for (const entrada of lista) {
+  /** Una falla de la entrada `indice` sobre su clave `campo`. */
+  const enEntrada = (indice, campo, datos) => ({
+    archivo: ARCHIVO_DE_EXCEPCIONES,
+    ...datos,
+    donde: enJson(indice, campo),
+  });
+  lista.forEach((entrada, indice) => {
     const contrato =
       esObjetoPlano(entrada) && esTextoNoVacio(entrada.contrato) ? entrada.contrato : null;
+    const aviso = avisoDeVencimiento(
+      entrada,
+      hoy,
+      "Excepción",
+      ARCHIVO_DE_EXCEPCIONES,
+      contrato,
+      indice,
+    );
+    if (aviso !== null) avisos.push(aviso);
     const problemas = problemasComunes(entrada, CAMPOS_DE_EXCEPCION, hoy, "Excepción");
     if (esObjetoPlano(entrada) && esTextoNoVacio(entrada.id)) {
       if (ids.has(entrada.id)) {
@@ -229,34 +289,38 @@ function aplicarExcepciones(lista, contexto) {
           codigo: "excepcion-invalida",
           motivo: `Excepción «${entrada.id}»: el id está repetido.`,
           correccion: "Cada excepción lleva un id propio.",
+          campo: "id",
         });
       }
       ids.add(entrada.id);
     }
     if (problemas.length > 0) {
-      for (const problema of problemas)
-        fallas.push(aFalla(problema, ARCHIVO_DE_EXCEPCIONES, contrato));
-      continue;
+      for (const problema of problemas) {
+        fallas.push(aFalla(problema, ARCHIVO_DE_EXCEPCIONES, contrato, indice));
+      }
+      return;
     }
     if (!idsDeContratos.has(entrada.contrato)) {
-      fallas.push({
-        codigo: "excepcion-contrato-inexistente",
-        archivo: ARCHIVO_DE_EXCEPCIONES,
-        contrato: entrada.contrato,
-        motivo: `La excepción «${entrada.id}» apunta al contrato «${entrada.contrato}», que no está en el registro.`,
-        correccion: "Borrala o corregí el id del contrato.",
-      });
-      continue;
+      fallas.push(
+        enEntrada(indice, "contrato", {
+          codigo: "excepcion-contrato-inexistente",
+          contrato: entrada.contrato,
+          motivo: `La excepción «${entrada.id}» apunta al contrato «${entrada.contrato}», que no está en el registro.`,
+          correccion: "Borrala o corregí el id del contrato.",
+        }),
+      );
+      return;
     }
     if (!rutas.has(entrada.ruta)) {
-      fallas.push({
-        codigo: "excepcion-obsoleta",
-        archivo: ARCHIVO_DE_EXCEPCIONES,
-        contrato: entrada.contrato,
-        motivo: `La excepción «${entrada.id}» apunta a «${entrada.ruta}», que ya no es un archivo versionado.`,
-        correccion: "Borrá la excepción (el archivo se movió o se eliminó).",
-      });
-      continue;
+      fallas.push(
+        enEntrada(indice, "id", {
+          codigo: "excepcion-obsoleta",
+          contrato: entrada.contrato,
+          motivo: `La excepción «${entrada.id}» apunta a «${entrada.ruta}», que ya no es un archivo versionado.`,
+          correccion: "Borrá la excepción (el archivo se movió o se eliminó).",
+        }),
+      );
+      return;
     }
     const delArchivo = hallazgos
       .map((hallazgo, posicion) => ({ hallazgo, posicion }))
@@ -284,27 +348,29 @@ function aplicarExcepciones(lista, contexto) {
         aprobadoPor: entrada.aprobadoPor,
       });
     } else if (delArchivo.length > 0) {
-      fallas.push({
-        codigo: "excepcion-huella-cambiada",
-        archivo: entrada.ruta,
-        contrato: entrada.contrato,
-        motivo: `La excepción «${entrada.id}» ya no calza: la línea afectada cambió o ya está cubierta por otra excepción (la huella aprobada no coincide con la de ningún hallazgo del archivo).`,
-        correccion:
-          "Revisá el hallazgo nuevo; si sigue justificado, pedí una nueva aprobación y actualizá la huella.",
-      });
+      fallas.push(
+        enEntrada(indice, "huella", {
+          codigo: "excepcion-huella-cambiada",
+          contrato: entrada.contrato,
+          motivo: `La excepción «${entrada.id}» ya no calza en «${entrada.ruta}»: la línea afectada cambió o ya está cubierta por otra excepción (la huella aprobada no coincide con la de ningún hallazgo del archivo).`,
+          correccion:
+            "Revisá el hallazgo nuevo; si sigue justificado, pedí una nueva aprobación y actualizá la huella.",
+        }),
+      );
     } else {
-      fallas.push({
-        codigo: "excepcion-obsoleta",
-        archivo: entrada.ruta,
-        contrato: entrada.contrato,
-        motivo: `La excepción «${entrada.id}» no silencia ningún hallazgo: el archivo ya no tiene el problema.`,
-        correccion:
-          "Borrá la excepción: las excepciones que no se usan quedan como puertas abiertas.",
-      });
+      fallas.push(
+        enEntrada(indice, "id", {
+          codigo: "excepcion-obsoleta",
+          contrato: entrada.contrato,
+          motivo: `La excepción «${entrada.id}» no silencia ningún hallazgo: «${entrada.ruta}» ya no tiene el problema.`,
+          correccion:
+            "Borrá la excepción: las excepciones que no se usan quedan como puertas abiertas.",
+        }),
+      );
     }
-  }
+  });
   const restantes = hallazgos.filter((_, posicion) => !consumidos.has(posicion));
-  return { fallas, aplicadas, restantes };
+  return { fallas, avisos, aplicadas, restantes };
 }
 
 /**
@@ -323,6 +389,7 @@ function aplicarExcepciones(lista, contexto) {
 function procesarExclusiones(lista, contexto) {
   const { rutas, porRuta, porClase, leer, ahora } = contexto;
   const fallas = [];
+  const avisos = [];
   const clases = new Map();
   const archivos = new Map();
   if (!Array.isArray(lista)) {
@@ -332,12 +399,29 @@ function procesarExclusiones(lista, contexto) {
       contrato: null,
       motivo: "El archivo de exclusiones tiene que ser una lista.",
       correccion: "Dejalo como una lista JSON.",
+      donde: enJson(),
     });
-    return { fallas, clases, archivos };
+    return { fallas, avisos, clases, archivos };
   }
   const hoy = diaDe(ahora);
   const ids = new Set();
-  for (const entrada of lista) {
+  /** Una falla de la entrada `indice` sobre su clave `campo`. */
+  const enEntrada = (indice, campo, datos) => ({
+    archivo: ARCHIVO_DE_EXCLUSIONES,
+    contrato: "exclusión",
+    ...datos,
+    donde: enJson(indice, campo),
+  });
+  lista.forEach((entrada, indice) => {
+    const aviso = avisoDeVencimiento(
+      entrada,
+      hoy,
+      "Exclusión",
+      ARCHIVO_DE_EXCLUSIONES,
+      "exclusión",
+      indice,
+    );
+    if (aviso !== null) avisos.push(aviso);
     const alcance = esObjetoPlano(entrada) ? entrada.alcance : undefined;
     const campos = alcance === "ruta" ? CAMPOS_DE_EXCLUSION_DE_RUTA : CAMPOS_DE_EXCLUSION_DE_CLASE;
     const problemas = problemasComunes(entrada, campos, hoy, "Exclusión");
@@ -346,6 +430,7 @@ function procesarExclusiones(lista, contexto) {
         codigo: "excepcion-invalida",
         motivo: "Exclusión: «alcance» tiene que ser «clase» o «ruta».",
         correccion: "Indicá si excluye una clase (generado o docs) o un archivo exacto.",
+        campo: "alcance",
       });
     }
     if (esObjetoPlano(entrada) && esTextoNoVacio(entrada.id)) {
@@ -354,87 +439,89 @@ function procesarExclusiones(lista, contexto) {
           codigo: "excepcion-invalida",
           motivo: `Exclusión «${entrada.id}»: el id está repetido.`,
           correccion: "Cada exclusión lleva un id propio.",
+          campo: "id",
         });
       }
       ids.add(entrada.id);
     }
     if (problemas.length > 0) {
-      for (const problema of problemas)
-        fallas.push(aFalla(problema, ARCHIVO_DE_EXCLUSIONES, "exclusión"));
-      continue;
+      for (const problema of problemas) {
+        fallas.push(aFalla(problema, ARCHIVO_DE_EXCLUSIONES, "exclusión", indice));
+      }
+      return;
     }
     if (alcance === "clase") {
       if (!CLASES_EXCLUIBLES.includes(entrada.clase)) {
-        fallas.push({
-          codigo: "excepcion-invalida",
-          archivo: ARCHIVO_DE_EXCLUSIONES,
-          contrato: "exclusión",
-          motivo: `La exclusión «${entrada.id}» saca la clase «${entrada.clase}» del análisis, y solo se pueden excluir: ${CLASES_EXCLUIBLES.join(", ")}.`,
-          correccion:
-            "Borrala: el código de aplicación, de pruebas y de configuración siempre se analiza.",
-        });
+        fallas.push(
+          enEntrada(indice, "clase", {
+            codigo: "excepcion-invalida",
+            motivo: `La exclusión «${entrada.id}» saca la clase «${entrada.clase}» del análisis, y solo se pueden excluir: ${CLASES_EXCLUIBLES.join(", ")}.`,
+            correccion:
+              "Borrala: el código de aplicación, de pruebas y de configuración siempre se analiza.",
+          }),
+        );
       } else if (clases.has(entrada.clase)) {
-        fallas.push({
-          codigo: "excepcion-invalida",
-          archivo: ARCHIVO_DE_EXCLUSIONES,
-          contrato: "exclusión",
-          motivo: `La clase «${entrada.clase}» ya está excluida por otra entrada (la «${entrada.id}» la repite).`,
-          correccion: "Dejá una sola exclusión por clase.",
-        });
+        fallas.push(
+          enEntrada(indice, "clase", {
+            codigo: "excepcion-invalida",
+            motivo: `La clase «${entrada.clase}» ya está excluida por otra entrada (la «${entrada.id}» la repite).`,
+            correccion: "Dejá una sola exclusión por clase.",
+          }),
+        );
       } else if ((porClase[entrada.clase] ?? []).length === 0) {
-        fallas.push({
-          codigo: "excepcion-obsoleta",
-          archivo: ARCHIVO_DE_EXCLUSIONES,
-          contrato: "exclusión",
-          motivo: `La exclusión «${entrada.id}» no saca nada del análisis: la clase «${entrada.clase}» no tiene archivos.`,
-          correccion: "Borrala.",
-        });
+        fallas.push(
+          enEntrada(indice, "id", {
+            codigo: "excepcion-obsoleta",
+            motivo: `La exclusión «${entrada.id}» no saca nada del análisis: la clase «${entrada.clase}» no tiene archivos.`,
+            correccion: "Borrala.",
+          }),
+        );
       } else {
         clases.set(entrada.clase, entrada);
       }
-      continue;
+      return;
     }
     // alcance «ruta»
     const claseDeLaRuta = porRuta.get(entrada.ruta);
     const contenido = rutas.has(entrada.ruta) ? leer(entrada.ruta) : null;
     if (claseDeLaRuta === undefined || contenido === null) {
-      fallas.push({
-        codigo: "excepcion-obsoleta",
-        archivo: ARCHIVO_DE_EXCLUSIONES,
-        contrato: "exclusión",
-        motivo: `La exclusión «${entrada.id}» apunta a «${entrada.ruta}», que no es un archivo versionado y clasificado.`,
-        correccion: "Borrala (el archivo se movió o se eliminó).",
-      });
+      fallas.push(
+        enEntrada(indice, "id", {
+          codigo: "excepcion-obsoleta",
+          motivo: `La exclusión «${entrada.id}» apunta a «${entrada.ruta}», que no es un archivo versionado y clasificado.`,
+          correccion: "Borrala (el archivo se movió o se eliminó).",
+        }),
+      );
     } else if (CLASES_EXCLUIBLES.includes(claseDeLaRuta)) {
-      fallas.push({
-        codigo: "excepcion-obsoleta",
-        archivo: ARCHIVO_DE_EXCLUSIONES,
-        contrato: "exclusión",
-        motivo: `La exclusión «${entrada.id}» es innecesaria: «${entrada.ruta}» es de la clase «${claseDeLaRuta}», que ya se excluye por clase.`,
-        correccion: "Borrala.",
-      });
+      fallas.push(
+        enEntrada(indice, "id", {
+          codigo: "excepcion-obsoleta",
+          motivo: `La exclusión «${entrada.id}» es innecesaria: «${entrada.ruta}» es de la clase «${claseDeLaRuta}», que ya se excluye por clase.`,
+          correccion: "Borrala.",
+        }),
+      );
     } else if (archivos.has(entrada.ruta)) {
-      fallas.push({
-        codigo: "excepcion-invalida",
-        archivo: ARCHIVO_DE_EXCLUSIONES,
-        contrato: "exclusión",
-        motivo: `«${entrada.ruta}» ya está excluido por otra entrada (la «${entrada.id}» lo repite).`,
-        correccion: "Dejá una sola exclusión por archivo.",
-      });
+      fallas.push(
+        enEntrada(indice, "ruta", {
+          codigo: "excepcion-invalida",
+          motivo: `«${entrada.ruta}» ya está excluido por otra entrada (la «${entrada.id}» lo repite).`,
+          correccion: "Dejá una sola exclusión por archivo.",
+        }),
+      );
     } else if (huellaDeArchivo(contenido) !== entrada.huella) {
-      fallas.push({
-        codigo: "excepcion-huella-cambiada",
-        archivo: entrada.ruta,
-        contrato: "exclusión",
-        motivo: `La exclusión «${entrada.id}» ya no calza: el archivo cambió desde que se aprobó.`,
-        correccion:
-          "Revisá el archivo; si sigue justificado, pedí una nueva aprobación y actualizá la huella.",
-      });
+      fallas.push(
+        enEntrada(indice, "huella", {
+          codigo: "excepcion-huella-cambiada",
+          motivo: `La exclusión «${entrada.id}» ya no calza: «${entrada.ruta}» cambió desde que se aprobó.`,
+          correccion:
+            "Revisá el archivo; si sigue justificado, pedí una nueva aprobación y actualizá la huella.",
+        }),
+      );
     } else {
       archivos.set(entrada.ruta, entrada);
     }
-  }
-  return { fallas, clases, archivos };
+  });
+  return { fallas, avisos, clases, archivos };
 }
 
 module.exports = {

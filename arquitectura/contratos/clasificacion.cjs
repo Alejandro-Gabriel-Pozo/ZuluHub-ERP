@@ -14,6 +14,7 @@
  * vive en `exclusiones.json`, con motivo, responsable, aprobación y vencimiento, y sale en el informe.
  */
 const { compilar } = require("./globs.cjs");
+const { enArchivo, enTexto } = require("./ubicacion.cjs");
 
 const CLASES = Object.freeze([
   "frontend",
@@ -180,14 +181,18 @@ function compilarNiveles(niveles) {
     reglas: nivel.reglas.map((regla) => {
       let expresion = null;
       if (!CLASES.includes(regla.clase)) {
-        problemas.push(
-          `nivel ${indice + 1}: la clase «${regla.clase}» no existe (${CLASES.join(", ")})`,
-        );
+        problemas.push({
+          texto: `nivel ${indice + 1}: la clase «${regla.clase}» no existe (${CLASES.join(", ")})`,
+          donde: enTexto(`clase: "${regla.clase}"`),
+        });
       }
       try {
         expresion = compilar(regla.glob);
       } catch (error) {
-        problemas.push(`nivel ${indice + 1}: ${error.message}`);
+        problemas.push({
+          texto: `nivel ${indice + 1}: ${error.message}`,
+          donde: enTexto(`glob: "${regla.glob}"`),
+        });
       }
       return { clase: regla.clase, glob: regla.glob, expresion, coincidencias: 0 };
     }),
@@ -211,8 +216,9 @@ function clasificar(rutas, opciones = {}) {
       codigo: "regla-de-clasificacion-invalida",
       archivo: ARCHIVO_DE_REGLAS,
       contrato: null,
-      motivo: `La tabla de clasificación es inválida: ${problema}.`,
+      motivo: `La tabla de clasificación es inválida: ${problema.texto}.`,
       correccion: "Corregí la regla en la tabla de clasificación.",
+      donde: problema.donde,
     });
   }
   const porRuta = new Map();
@@ -237,6 +243,7 @@ function clasificar(rutas, opciones = {}) {
             .map((regla) => regla.glob)
             .join(", ")}).`,
           correccion: `Separá las reglas en niveles distintos o corregí el glob en ${ARCHIVO_DE_REGLAS}.`,
+          donde: enArchivo(),
         });
       } else {
         porRuta.set(ruta, clases[0]);
@@ -253,6 +260,7 @@ function clasificar(rutas, opciones = {}) {
         motivo:
           "La ruta versionada no calza con ninguna clase (frontend, backend, migraciones, scripts, workers, generado, docs, config, pruebas).",
         correccion: `Agregá su regla de clasificación en ${ARCHIVO_DE_REGLAS}; una ruta sin clase no se ignora.`,
+        donde: enArchivo(),
       });
     }
   }

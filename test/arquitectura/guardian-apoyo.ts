@@ -24,7 +24,7 @@ export type Informe = {
   analisisCompleto: boolean;
   totales: Record<string, number>;
   reglasEjecutadas: {
-    chequeos: { codigo: string; descripcion: string }[];
+    chequeos: { codigo: string; descripcion: string; reglaDeLinea: string }[];
     clasificacion: { nivel: number; clase: string; glob: string; rutas: number }[];
     detectores: { contrato: string; detector: string; tipo: string; clases: string[] }[];
   };
@@ -90,6 +90,15 @@ export const { ejecutar, cargarDelRepo, formatearFalla } =
     };
     formatearFalla: (falla: Falla) => string;
   };
+export const { CODIGOS_DE_FALLA, CODIGOS_DE_AVISO, DESCRIPCION_DE_CODIGOS } =
+  require("../../arquitectura/contratos/codigos.cjs") as {
+    CODIGOS_DE_FALLA: readonly string[];
+    CODIGOS_DE_AVISO: readonly string[];
+    DESCRIPCION_DE_CODIGOS: Record<string, string>;
+  };
+export const { REGLAS_DE_LINEA } = require("../../arquitectura/contratos/ubicacion.cjs") as {
+  REGLAS_DE_LINEA: Record<string, string>;
+};
 export const { porPatron } = require("../../arquitectura/contratos/detectores.cjs") as {
   porPatron: (datos: {
     tipo: string;

@@ -15,6 +15,8 @@
  */
 const { CLASES } = require("./clasificacion.cjs");
 
+/** El archivo donde vive el registro real: es el archivo de toda falla del registro (la línea es la del id). */
+const ARCHIVO_DEL_REGISTRO = "arquitectura/contratos/contratos.cjs";
 const TIPOS_DE_DETECTOR = ["uso", "definicion"];
 const CAMPOS_DEL_CONTRATO = [
   "id",
@@ -33,11 +35,17 @@ const PATRON_DE_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const PATRON_DE_VERSION = /^\d+\.\d+\.\d+$/;
 
 class ErrorDeRegistro extends Error {
-  /** @param {string[]} problemas */
-  constructor(problemas) {
+  /**
+   * @param {{ problema: string, contrato: string | null }[]} detalles Cada problema con el id del
+   *   contrato al que pertenece (`null` si el contrato no tiene un id válido o el registro no es una
+   *   lista), para que el guardián pueda decir en qué línea de `contratos.cjs` está.
+   */
+  constructor(detalles) {
+    const problemas = detalles.map((detalle) => detalle.problema);
     super(`El registro de contratos es inválido:\n- ${problemas.join("\n- ")}`);
     this.name = "ErrorDeRegistro";
     this.problemas = problemas;
+    this.detalles = detalles;
   }
 }
 
@@ -177,21 +185,26 @@ function problemasDelContrato(contrato) {
  */
 function cargarRegistro(lista) {
   if (!Array.isArray(lista)) {
-    throw new ErrorDeRegistro(["el registro tiene que ser una lista de contratos"]);
+    throw new ErrorDeRegistro([
+      { problema: "el registro tiene que ser una lista de contratos", contrato: null },
+    ]);
   }
-  const problemas = [];
+  const detalles = [];
   const vistos = new Set();
   lista.forEach((contrato, posicion) => {
     const id = esObjetoPlano(contrato) && esTextoNoVacio(contrato.id) ? contrato.id : null;
     const rotulo = id === null ? `Contrato #${posicion + 1} (sin id válido)` : `Contrato «${id}»`;
-    for (const problema of problemasDelContrato(contrato)) problemas.push(`${rotulo}: ${problema}`);
+    for (const problema of problemasDelContrato(contrato)) {
+      detalles.push({ problema: `${rotulo}: ${problema}`, contrato: id });
+    }
     if (id !== null) {
-      if (vistos.has(id)) problemas.push(`${rotulo}: el id está repetido`);
+      if (vistos.has(id))
+        detalles.push({ problema: `${rotulo}: el id está repetido`, contrato: id });
       vistos.add(id);
     }
   });
-  if (problemas.length > 0) throw new ErrorDeRegistro(problemas);
+  if (detalles.length > 0) throw new ErrorDeRegistro(detalles);
   return { contratos: lista, porId: new Map(lista.map((contrato) => [contrato.id, contrato])) };
 }
 
-module.exports = { cargarRegistro, ErrorDeRegistro };
+module.exports = { ARCHIVO_DEL_REGISTRO, cargarRegistro, ErrorDeRegistro };

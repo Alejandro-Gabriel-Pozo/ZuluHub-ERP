@@ -17,6 +17,8 @@
  */
 const { huellaDeLinea } = require("./excepciones.cjs");
 const { unidadDe } = require("./declaraciones.cjs");
+const { ARCHIVO_DEL_REGISTRO } = require("./registro.cjs");
+const { enArchivo, enContrato, enJson } = require("./ubicacion.cjs");
 
 /** Archivos que no son texto: se clasifican pero un detector de texto no los lee. */
 const EXTENSIONES_BINARIAS = /\.(png|jpe?g|webp|gif|ico|heic|woff2?|ttf|otf|pdf|zip)$/i;
@@ -85,6 +87,7 @@ function comparar(datos) {
         contrato: contrato.id,
         motivo: `El archivo de la fuente de verdad del contrato «${contrato.id}» no existe.`,
         correccion: `Creá ${archivo} con «${nombre}» o corregí fuenteDeVerdad.archivo en el registro.`,
+        donde: enArchivo(),
       });
     } else if (!mencionaLaFuente(contenido.toString(), contrato.fuenteDeVerdad)) {
       fallas.push({
@@ -93,6 +96,7 @@ function comparar(datos) {
         contrato: contrato.id,
         motivo: `El archivo existe pero no contiene «${nombre}», la fuente de verdad que declara el contrato «${contrato.id}».`,
         correccion: `Definí «${nombre}» en ${archivo} o corregí la fuente en el registro.`,
+        donde: enArchivo(),
       });
     }
   }
@@ -136,6 +140,7 @@ function comparar(datos) {
         contrato: null,
         motivo: "No se pudo leer el archivo para analizarlo.",
         correccion: "Verificá que el archivo exista en el árbol de trabajo.",
+        donde: enArchivo(),
       });
       continue;
     }
@@ -150,11 +155,12 @@ function comparar(datos) {
       } catch (error) {
         fallas.push({
           codigo: "detector-invalido",
-          archivo: ruta,
+          archivo: ARCHIVO_DEL_REGISTRO,
           contrato: contrato.id,
-          motivo: `El detector ${indice + 1} del contrato «${contrato.id}» lanzó un error: ${String(error?.message ?? error)}.`,
+          motivo: `El detector ${indice + 1} del contrato «${contrato.id}» lanzó un error con «${ruta}»: ${String(error?.message ?? error)}.`,
           correccion:
             "Corregí el detector: tiene que ser una función pura que no falla con ningún archivo.",
+          donde: enContrato(contrato.id),
         });
         continue;
       }
@@ -162,11 +168,12 @@ function comparar(datos) {
       if (problema !== null) {
         fallas.push({
           codigo: "detector-invalido",
-          archivo: ruta,
+          archivo: ARCHIVO_DEL_REGISTRO,
           contrato: contrato.id,
-          motivo: `El detector ${indice + 1} del contrato «${contrato.id}» ${problema}.`,
+          motivo: `El detector ${indice + 1} del contrato «${contrato.id}» ${problema} (en «${ruta}»).`,
           correccion:
             "Corregí el detector: tiene que devolver [{linea, texto}] con líneas reales (desde 1).",
+          donde: enContrato(contrato.id),
         });
         continue;
       }
@@ -239,6 +246,7 @@ function comparar(datos) {
           contrato: contrato.id,
           motivo: `La unidad «${unidad}» declara usar «${contrato.id}» pero el código no tiene ningún uso detectable.`,
           correccion: `Quitá «${contrato.id}» de "usa" en ${unidad}/contratos.json (una etiqueta sin uso real es una declaración falsa).`,
+          donde: enJson("usa", declaracion.usa.indexOf(contrato.id)),
         };
         if (contrato.bloqueaDeclaracionFalsa) fallas.push(falla);
         else avisos.push(falla);
