@@ -46,7 +46,7 @@ function descubrirUnidades(rutas) {
     if (!unidades.has(unidad)) unidades.set(unidad, []);
     unidades.get(unidad).push(ruta);
   }
-  return new Map([...unidades.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+  return new Map([...unidades.keys()].sort().map((unidad) => [unidad, unidades.get(unidad)]));
 }
 
 const archivoDeDeclaracion = (unidad) => `${unidad}/contratos.json`;

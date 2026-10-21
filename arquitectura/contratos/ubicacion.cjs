@@ -75,20 +75,19 @@ const REGLAS_DE_LINEA = Object.freeze({
 });
 
 const PATRON_DE_LITERAL = /true|false|null|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/y;
+/** Los cuatro dígitos hexadecimales de un escape `\uXXXX` (se prueba justo donde dice `lastIndex`). */
+const PATRON_DE_HEXA = /[0-9a-fA-F]{4}/y;
 
-/** El analizador encontró un error de forma; lleva la línea donde lo vio. */
+/** El analizador encontró un error de forma; lleva la línea donde lo vio (`analizarJson` lo atrapa: nunca sale). */
 class ErrorDeAnalisis extends Error {
   constructor(linea) {
-    super(`JSON inválido en la línea ${linea}`);
+    super();
     this.linea = linea;
   }
 }
 
 /** Cantidad de líneas hasta el último carácter que no es espacio (1 si el texto está vacío). */
-function lineaDelFinal(texto) {
-  const contenido = texto.trimEnd();
-  return contenido === "" ? 1 : contenido.split("\n").length;
-}
+const lineaDelFinal = (texto) => texto.trimEnd().split("\n").length;
 
 /**
  * Analiza un texto JSON (estricto, igual que `JSON.parse`) y devuelve el árbol con la línea de cada
@@ -100,8 +99,9 @@ function analizarJson(texto) {
   const falla = () => {
     throw new ErrorDeAnalisis(i >= texto.length ? lineaDelFinal(texto) : linea);
   };
+  // Se detiene en el primer carácter que no es blanco; pasado el final, `texto[i]` es `undefined` y corta también.
   const saltar = () => {
-    while (i < texto.length) {
+    for (;;) {
       const c = texto[i];
       if (c === "\n") linea += 1;
       else if (c !== " " && c !== "\t" && c !== "\r") break;
@@ -117,8 +117,10 @@ function analizarJson(texto) {
       if (c === '"') break;
       if (c === "\\") {
         const siguiente = texto[i + 1];
-        if (siguiente === "u" && /^[0-9a-fA-F]{4}$/.test(texto.slice(i + 2, i + 6))) i += 6;
-        else if (siguiente !== undefined && '"\\/bfnrt'.includes(siguiente)) i += 2;
+        PATRON_DE_HEXA.lastIndex = i + 2;
+        // `includes(undefined)` busca el texto «undefined»: una barra al final del texto no calza y cae en `falla()`.
+        if (siguiente === "u" && PATRON_DE_HEXA.test(texto)) i += 6;
+        else if ('"\\/bfnrt'.includes(siguiente)) i += 2;
         else falla();
       } else {
         i += 1;
@@ -213,7 +215,6 @@ function lineaDelCamino(raiz, camino) {
  */
 function crearUbicador(leer) {
   const textos = new Map();
-  const arboles = new Map();
   const textoDe = (archivo) => {
     if (!textos.has(archivo)) {
       const contenido = leer(archivo);
@@ -221,20 +222,19 @@ function crearUbicador(leer) {
     }
     return textos.get(archivo);
   };
-  const arbolDe = (archivo) => {
-    if (!arboles.has(archivo)) arboles.set(archivo, analizarJson(textoDe(archivo)));
-    return arboles.get(archivo);
-  };
   const lineaSegun = (archivo, donde) => {
     if (donde?.tipo === "archivo") return 1;
     if (donde?.tipo === "texto") {
-      const lineas = (textoDe(archivo) ?? "").split(/\r\n|\n/);
-      const indice = lineas.findIndex((texto) => texto.includes(donde.texto));
+      const texto = textoDe(archivo);
+      if (texto === null) return 1;
+      const lineas = texto.split(/\r\n|\n/);
+      const indice = lineas.findIndex((renglon) => renglon.includes(donde.texto));
       return indice === -1 ? 1 : indice + 1;
     }
     if (donde?.tipo === "json") {
-      if (textoDe(archivo) === null) return 1;
-      const arbol = arbolDe(archivo);
+      const texto = textoDe(archivo);
+      if (texto === null) return 1;
+      const arbol = analizarJson(texto);
       return arbol.error ?? lineaDelCamino(arbol.raiz, donde.camino);
     }
     return undefined;

@@ -278,32 +278,32 @@
   {
     "grupo": "guardián (patrones, clasificación, declaraciones y comparación)",
     "archivos": "arquitectura/contratos/globs.cjs,arquitectura/contratos/detectores.cjs,arquitectura/contratos/clasificacion.cjs,arquitectura/contratos/declaraciones.cjs,arquitectura/contratos/comparacion.cjs",
-    "pruebas": "test/arquitectura/guardian-clasificacion.test.ts test/arquitectura/guardian-declaraciones.test.ts test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-excepciones.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-nucleo.test.ts test/arquitectura/guardian-registro.test.ts"
+    "pruebas": "test/arquitectura/guardian-clasificacion.test.ts test/arquitectura/guardian-declaraciones.test.ts test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-excepciones.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-a-clasificacion.test.ts test/arquitectura/guardian-mutantes-a-comparacion.test.ts test/arquitectura/guardian-mutantes-a-declaraciones.test.ts test/arquitectura/guardian-nucleo.test.ts test/arquitectura/guardian-registro.test.ts"
   },
   {
     "grupo": "guardián (registro y ubicación de las fallas)",
     "archivos": "arquitectura/contratos/registro.cjs,arquitectura/contratos/ubicacion.cjs",
-    "pruebas": "test/arquitectura/guardian-clasificacion.test.ts test/arquitectura/guardian-declaraciones.test.ts test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-excepciones.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-nucleo.test.ts test/arquitectura/guardian-registro.test.ts"
+    "pruebas": "test/arquitectura/guardian-clasificacion.test.ts test/arquitectura/guardian-declaraciones.test.ts test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-excepciones.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-b-registro.test.ts test/arquitectura/guardian-mutantes-b-ubicacion.test.ts test/arquitectura/guardian-nucleo.test.ts test/arquitectura/guardian-registro.test.ts"
   },
   {
     "grupo": "guardián (excepciones)",
     "archivos": "arquitectura/contratos/excepciones.cjs",
-    "pruebas": "test/arquitectura/guardian-clasificacion.test.ts test/arquitectura/guardian-declaraciones.test.ts test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-excepciones.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-nucleo.test.ts test/arquitectura/guardian-registro.test.ts"
+    "pruebas": "test/arquitectura/guardian-clasificacion.test.ts test/arquitectura/guardian-declaraciones.test.ts test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-excepciones.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-a-excepciones.test.ts test/arquitectura/guardian-nucleo.test.ts test/arquitectura/guardian-registro.test.ts"
   },
   {
     "grupo": "guardián (núcleo)",
     "archivos": "arquitectura/contratos/guardian.cjs",
-    "pruebas": "test/arquitectura/guardian-clasificacion.test.ts test/arquitectura/guardian-declaraciones.test.ts test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-excepciones.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-no-debilitar.test.ts test/arquitectura/guardian-nucleo.test.ts test/arquitectura/guardian-registro.test.ts"
+    "pruebas": "test/arquitectura/guardian-clasificacion.test.ts test/arquitectura/guardian-declaraciones.test.ts test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-excepciones.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-b-cli.test.ts test/arquitectura/guardian-mutantes-b-nucleo.test.ts test/arquitectura/guardian-no-debilitar.test.ts test/arquitectura/guardian-nucleo.test.ts test/arquitectura/guardian-registro.test.ts"
   },
   {
     "grupo": "guardián (verificador del mecanismo, parte 1)",
-    "archivos": "arquitectura/contratos/verificar-mecanismo.cjs:1-308",
-    "pruebas": "test/arquitectura/guardian-matriz.test.ts"
+    "archivos": "arquitectura/contratos/verificar-mecanismo.cjs:1-313",
+    "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-c-verificador.test.ts"
   },
   {
     "grupo": "guardián (verificador del mecanismo, parte 2)",
-    "archivos": "arquitectura/contratos/verificar-mecanismo.cjs:309-703",
-    "pruebas": "test/arquitectura/guardian-matriz.test.ts"
+    "archivos": "arquitectura/contratos/verificar-mecanismo.cjs:314-711",
+    "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-c-verificador.test.ts"
   },
   {
     "grupo": "guardián (vigilancia de la versión anterior, parte 1)",

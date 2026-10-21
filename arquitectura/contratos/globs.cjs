@@ -68,9 +68,10 @@ function compilar(glob) {
  * `true` si el texto es una ruta de archivo exacta: sin comodines (`*`, `?`, llaves) ni formas
  * ambiguas. Los corchetes y paréntesis son literales a propósito: las carpetas de Next.js los usan
  * (`[...todo]`, `(entrada)`) y una ruta exacta se compara por igualdad, nunca como patrón.
+ * Recibe un texto: su único llamador (`excepciones.cjs`) ya exige uno no vacío.
  */
 function esRutaExacta(ruta) {
-  if (typeof ruta !== "string" || ruta.trim() === "" || ruta !== ruta.trim()) return false;
+  if (ruta === "" || ruta !== ruta.trim()) return false;
   if (/[*?{}\\]/.test(ruta)) return false;
   if (ruta.startsWith("/") || ruta.endsWith("/") || ruta.includes("//")) return false;
   return !ruta.split("/").some((segmento) => segmento === "." || segmento === "..");

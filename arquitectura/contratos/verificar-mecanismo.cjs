@@ -109,11 +109,10 @@ const problema = (codigo, archivo, linea, motivo, correccion) => ({
 
 /** La última línea (desde 1) que declara la clave JSON; 1 si no está. La última gana en `JSON.parse`. */
 function lineaDeClaveJson(texto, clave) {
-  const lineas = texto.split(/\r\n|\n/);
-  for (let i = lineas.length - 1; i >= 0; i -= 1) {
-    if (lineas[i].trimStart().startsWith(`"${clave}"`)) return i + 1;
-  }
-  return 1;
+  const indice = texto
+    .split(/\r\n|\n/)
+    .findLastIndex((linea) => linea.trimStart().startsWith(`"${clave}"`));
+  return indice === -1 ? 1 : indice + 1;
 }
 
 /** La primera línea (desde 1) que contiene el texto; 1 si no está. */
@@ -147,12 +146,13 @@ function verificarScriptsDeArquitectura(textoPackageJson) {
   const scripts = datos?.scripts ?? {};
   const problemas = [];
   const linea = (clave) => lineaDeClaveJson(textoPackageJson, clave);
-  const comandos = (texto) =>
-    typeof texto === "string" ? texto.split("&&").map((c) => c.trim()) : [];
-  const tolerante = (texto) => /\|\||;|\|/.test(texto);
+  // `texto` es lo que haya escrito en el script (puede no ser texto): vale si uno de sus comandos es `comando`.
+  const encadena = (texto, comando) =>
+    typeof texto === "string" && texto.split("&&").some((c) => c.trim() === comando);
+  const tolerante = (texto) => /[;|]/.test(texto);
 
   const arquitectura = scripts["arquitectura"];
-  if (!comandos(arquitectura).includes("npm run guardian") || tolerante(arquitectura ?? "")) {
+  if (!encadena(arquitectura, "npm run guardian") || tolerante(arquitectura)) {
     problemas.push(
       problema(
         "script-arquitectura-sin-guardian",
@@ -176,7 +176,7 @@ function verificarScriptsDeArquitectura(textoPackageJson) {
     );
   }
   const gate = scripts["gate"];
-  if (!comandos(gate).includes("npm run arquitectura") || !comandos(gate).includes("npm test")) {
+  if (!encadena(gate, "npm run arquitectura") || !encadena(gate, "npm test")) {
     problemas.push(
       problema(
         "script-gate-sin-arquitectura",
@@ -225,13 +225,15 @@ function trabajosDe(lineas) {
   return { inicio, trabajos };
 }
 
-const sinComentario = (linea) => linea.replace(/\s+#.*$/, "");
+const sinComentario = (linea) => linea.replace(/\s#.*/, "");
 const esComentario = (linea) => linea.trimStart().startsWith("#");
 
 const CORRE_EL_GUARDIAN = /npm run (?:arquitectura|guardian|gate)\b|guardian\.cjs/;
 const CORRE_LAS_PRUEBAS = /npm test\b|npm run gate\b|vitest run --project node\b/;
+/** La línea corre el guardián o las pruebas (ningún patrón cruza líneas: se mira de a una). */
+const corre = (linea) => CORRE_EL_GUARDIAN.test(linea) || CORRE_LAS_PRUEBAS.test(linea);
 const COMANDO_TOLERANTE =
-  /(?:npm run (?:arquitectura|guardian|gate)\b|npm test\b|guardian\.cjs).*(?:\|\|\s*(?:true|exit\s+0|:)\b|;\s*true\b)/;
+  /(?:npm run (?:arquitectura|guardian|gate)\b|npm test\b|guardian\.cjs).*(?:\|\|\s*(?:(?:true|exit\s+0)\b|:(?!\w))|;\s*true\b)/;
 const CONDICION_FALSA = /^(?:\$\{\{\s*)?(?:false|0|''|"")(?:\s*\}\})?$/;
 
 /**
@@ -243,7 +245,7 @@ function pasosDe(trabajo) {
   let enSteps = false;
   let actual = null;
   trabajo.lineas.forEach((texto, indice) => {
-    if (esComentario(texto) || texto.trim() === "") return;
+    if (esComentario(texto)) return;
     if (/^ {4}\S/.test(texto)) {
       enSteps = /^ {4}steps:\s*(?:#.*)?$/.test(texto);
       actual = null;
@@ -267,12 +269,11 @@ function pasosDe(trabajo) {
 function verificarPasosCondicionados(trabajo) {
   const problemas = [];
   for (const paso of pasosDe(trabajo)) {
-    const cuerpo = paso.lineas.map(({ texto }) => texto).join("\n");
-    if (!CORRE_EL_GUARDIAN.test(cuerpo) && !CORRE_LAS_PRUEBAS.test(cuerpo)) continue;
+    if (!paso.lineas.some(({ texto }) => corre(texto))) continue;
     for (const { indice, texto } of paso.lineas) {
-      const condicion = /^ {6}-\s+if:\s*(.*)$|^ {8}if:\s*(.*)$/.exec(sinComentario(texto));
+      const condicion = /^ {6}-\s+if:\s*(.*)|^ {8}if:\s*(.*)/.exec(sinComentario(texto));
       if (condicion === null) continue;
-      const valor = (condicion[1] ?? condicion[2] ?? "").trim();
+      const valor = (condicion[1] ?? condicion[2]).trim();
       if (CONDICION_FALSA.test(valor)) continue; // ya lo dice `ci-job-desactivado`
       problemas.push(
         problema(
@@ -288,21 +289,25 @@ function verificarPasosCondicionados(trabajo) {
   return problemas;
 }
 
+const CLAVE_NEEDS = /^ {4}needs:(.*)/;
+
 /** Los nombres de trabajo que lista `needs:` del Gate (lista en línea, en varias líneas o con guiones). */
 function necesidadesDe(trabajo) {
-  const indice = trabajo.lineas.findIndex((linea) => /^ {4}needs:/.test(linea));
+  const indice = trabajo.lineas.findIndex((linea) => CLAVE_NEEDS.test(linea));
   if (indice === -1) return { indice: -1, nombres: new Set() };
-  const partes = [sinComentario(trabajo.lineas[indice]).replace(/^ {4}needs:/, "")];
+  const partes = [CLAVE_NEEDS.exec(sinComentario(trabajo.lineas[indice]))[1]];
   for (let i = indice + 1; i < trabajo.lineas.length; i += 1) {
     const linea = trabajo.lineas[i];
-    const sangria = /^ */.exec(linea)[0].length;
+    const sangria = linea.length - linea.trimStart().length;
     if (linea.trim() === "" || sangria > 4 || (sangria === 4 && linea.trim().startsWith("-"))) {
       partes.push(sinComentario(linea));
     } else {
       break;
     }
   }
-  const nombres = new Set(partes.join(" ").match(/[A-Za-z0-9_-]+/g) ?? []);
+  const nombres = new Set(
+    partes.flatMap((parte) => Array.from(parte.matchAll(/[A-Za-z0-9_-]+/g), (m) => m[0])),
+  );
   return { indice, nombres };
 }
 
@@ -338,13 +343,14 @@ function verificarDisparadores(lineas) {
     ];
   }
   const problemas = [];
-  for (let i = posicion + 1; i < bloque.length; i += 1) {
-    if (/^ {2}\S/.test(bloque[i])) break;
-    if (/^ {4}(?:paths|paths-ignore|branches|branches-ignore)\s*:/.test(bloque[i])) {
+  for (const [i, linea] of bloque.entries()) {
+    if (i <= posicion) continue;
+    if (/^ {2}\S/.test(linea)) break;
+    if (/^ {4}(?:paths|paths-ignore|branches|branches-ignore)\s*:/.test(linea)) {
       problemas.push(
         falta(
           inicio + i + 1,
-          `El disparador \`pull_request\` filtra con «${bloque[i].trim()}»: hay cambios que no pasarían por el Gate.`,
+          `El disparador \`pull_request\` filtra con «${linea.trim()}»: hay cambios que no pasarían por el Gate.`,
         ),
       );
     }
@@ -398,9 +404,8 @@ function verificarWorkflowDeCi(textoCi) {
   let hayPruebas = false;
   for (const trabajo of trabajos.values()) {
     if (trabajo.nombre === "gate") continue;
-    const cuerpo = trabajo.lineas.filter((linea) => !esComentario(linea)).join("\n");
-    const guardian = CORRE_EL_GUARDIAN.test(cuerpo);
-    const pruebas = CORRE_LAS_PRUEBAS.test(cuerpo);
+    const guardian = trabajo.lineas.some((l) => !esComentario(l) && CORRE_EL_GUARDIAN.test(l));
+    const pruebas = trabajo.lineas.some((l) => !esComentario(l) && CORRE_LAS_PRUEBAS.test(l));
     hayGuardian ||= guardian;
     hayPruebas ||= pruebas;
     if (guardian || pruebas) obligatorios.push(trabajo);
@@ -455,7 +460,7 @@ function verificarWorkflowDeCi(textoCi) {
     trabajo.lineas.forEach((linea, posicion) => {
       if (esComentario(linea)) return;
       const absoluta = trabajo.desde + posicion + 1;
-      const tolera = /^\s*continue-on-error:\s*(.*)$/.exec(sinComentario(linea));
+      const tolera = /^\s*continue-on-error:\s*(.*)/.exec(sinComentario(linea));
       if (tolera !== null && tolera[1].trim() !== "false") {
         problemas.push(
           problema(
@@ -467,27 +472,30 @@ function verificarWorkflowDeCi(textoCi) {
           ),
         );
       }
-      const condicion = /^\s*(?:- )?if:\s*(.*)$/.exec(sinComentario(linea));
-      if (condicion !== null && CONDICION_FALSA.test(condicion[1].trim())) {
-        problemas.push(
-          problema(
-            "ci-job-desactivado",
-            ARCHIVO_DE_CI,
-            absoluta,
-            `El trabajo «${trabajo.nombre}» tiene una condición siempre falsa (\`if: ${condicion[1].trim()}\`): nunca corre.`,
-            "Sacá la condición o ponela en una expresión que dependa del evento.",
-          ),
-        );
-      } else if (condicion !== null && !esGate && /^ {4}if:/.test(linea)) {
-        problemas.push(
-          problema(
-            "ci-job-condicionado",
-            ARCHIVO_DE_CI,
-            absoluta,
-            `El trabajo «${trabajo.nombre}» corre el guardián o las pruebas solo bajo una condición (\`if: ${condicion[1].trim()}\`): tiene que correr en todo evento relevante.`,
-            "Sacá la condición del trabajo (si algo no aplica, que lo decida el paso, no el trabajo entero).",
-          ),
-        );
+      const condicion = /^\s*(?:- )?if:\s*(.*)/.exec(sinComentario(linea));
+      if (condicion !== null) {
+        const valor = condicion[1].trim();
+        if (CONDICION_FALSA.test(valor)) {
+          problemas.push(
+            problema(
+              "ci-job-desactivado",
+              ARCHIVO_DE_CI,
+              absoluta,
+              `El trabajo «${trabajo.nombre}» tiene una condición siempre falsa (\`if: ${valor}\`): nunca corre.`,
+              "Sacá la condición o ponela en una expresión que dependa del evento.",
+            ),
+          );
+        } else if (!esGate && /^ {4}if:/.test(linea)) {
+          problemas.push(
+            problema(
+              "ci-job-condicionado",
+              ARCHIVO_DE_CI,
+              absoluta,
+              `El trabajo «${trabajo.nombre}» corre el guardián o las pruebas solo bajo una condición (\`if: ${valor}\`): tiene que correr en todo evento relevante.`,
+              "Sacá la condición del trabajo (si algo no aplica, que lo decida el paso, no el trabajo entero).",
+            ),
+          );
+        }
       }
       if (COMANDO_TOLERANTE.test(sinComentario(linea))) {
         problemas.push(
@@ -515,7 +523,7 @@ function verificarVitestConfig(textoVitest) {
   const lineas = textoVitest.split(/\r\n|\n/);
   const problemas = [];
   lineas.forEach((linea, posicion) => {
-    const sinComentarios = linea.replace(/\/\/.*$/, "");
+    const sinComentarios = linea.replace(/\/\/.*/, "");
     if (/^\s*(?:exclude|testNamePattern|dir|root)\s*:/.test(sinComentarios)) {
       problemas.push(
         problema(
@@ -630,7 +638,7 @@ function verificarInformeDeEvidencia(informe) {
     }
     if (informe.totales?.fallas !== 0) motivos.push("dice que pasa pero cuenta fallas");
   }
-  const ejecutados = new Set((informe.reglasEjecutadas?.chequeos ?? []).map((c) => c.codigo));
+  const ejecutados = new Set(informe.reglasEjecutadas?.chequeos?.map((c) => c.codigo));
   const faltan = CODIGOS_DE_FALLA.filter((codigo) => !ejecutados.has(codigo));
   if (faltan.length > 0) {
     motivos.push(

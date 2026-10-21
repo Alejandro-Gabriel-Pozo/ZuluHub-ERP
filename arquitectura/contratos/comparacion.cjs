@@ -122,9 +122,8 @@ function comparar(datos) {
   const usos = new Map(); // `${unidad}\u0000${contrato}` → usos[]
   const hallazgosVistos = new Set();
   const definiciones = [];
-  for (const [ruta, clase] of [...porRuta.entries()].sort(([a], [b]) =>
-    a < b ? -1 : a > b ? 1 : 0,
-  )) {
+  for (const ruta of [...porRuta.keys()].sort()) {
+    const clase = porRuta.get(ruta);
     if (clasesExcluidas.has(clase) || rutasExcluidas.has(ruta)) continue;
     const pares = paresPorClase.get(clase) ?? [];
     if (pares.length === 0) continue;
