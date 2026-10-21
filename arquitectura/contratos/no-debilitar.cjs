@@ -131,8 +131,10 @@ function versionMayor(nueva, vieja) {
   const n = partes(nueva);
   const v = partes(vieja);
   if (n === null || v === null) return false;
-  for (let i = 0; i < 3; i += 1) {
-    if (n[i] !== v[i]) return n[i] > v[i];
+  // Los dos tienen exactamente tres tramos (lo asegura la regex): el primero que difiere decide.
+  for (const [i, tramo] of n.entries()) {
+    if (tramo > v[i]) return true;
+    if (tramo < v[i]) return false;
   }
   return false;
 }
@@ -141,7 +143,7 @@ function versionMayor(nueva, vieja) {
 // Lectura de texto: ci.yml, retiros.json, package.json, constantes de rigor.
 // ---------------------------------------------------------------------------------------------
 
-const sinComentario = (valor) => valor.replace(/\s+#.*$/, "").trim();
+const sinComentario = (valor) => valor.replace(/\s#.*/, "").trim();
 const sinComillas = (valor) => (/^(["'])[^"']*\1$/.test(valor) ? valor.slice(1, -1) : valor);
 const escalar = (valor) => sinComillas(sinComentario(valor));
 
@@ -156,7 +158,6 @@ const OPCION_DEL_GUARDIAN = /^--?[\w=./-]+$/;
  * de `ci.yml` que escribe quien abre el PR, eso podía hacer backtracking exponencial (CodeQL js/redos).
  */
 function esComandoDelGuardian(tokens) {
-  if (tokens.length < COMANDO_DEL_GUARDIAN.length) return false;
   for (let i = 0; i < COMANDO_DEL_GUARDIAN.length; i += 1) {
     if (tokens[i] !== COMANDO_DEL_GUARDIAN[i]) return false;
   }
@@ -190,8 +191,9 @@ function leerCi(texto) {
   for (let i = inicio + 1; i < lineas.length; i += 1) {
     const linea = lineas[i];
     if (linea.trimStart().startsWith("#")) continue;
+    const entrada = { n: i + 1, t: linea };
     if (linea.trim() === "") {
-      actual?.cuerpo.push({ n: i + 1, t: linea });
+      actual?.cuerpo.push(entrada);
       continue;
     }
     if (/^\S/.test(linea)) break;
@@ -205,7 +207,7 @@ function leerCi(texto) {
     } else if (actual === null) {
       return { error: `contenido antes del primer job: «${linea.trim()}»` };
     } else {
-      actual.cuerpo.push({ n: i + 1, t: linea });
+      actual.cuerpo.push(entrada);
     }
   }
   if (bloques.size === 0) return { error: "la sección `jobs:` no tiene ningún job" };
@@ -219,15 +221,14 @@ function leerCi(texto) {
 }
 
 function leerJob({ id, linea, cuerpo }) {
-  const sinComentarios = cuerpo.filter((l) => !l.t.trimStart().startsWith("#"));
   const propiedad = (nombre) => {
-    for (const l of sinComentarios) {
+    for (const l of cuerpo) {
       const encontrada = new RegExp(`^ {4}${nombre}:[ \\t]*(.*)$`).exec(l.t);
       if (encontrada !== null) return { valor: escalar(encontrada[1]), linea: l.n };
     }
     return undefined;
   };
-  const needs = leerNeeds(sinComentarios);
+  const needs = leerNeeds(cuerpo);
   if (needs.error !== undefined) return { error: `job «${id}»: ${needs.error}` };
   const si = propiedad("if");
   return {
@@ -238,10 +239,8 @@ function leerJob({ id, linea, cuerpo }) {
     si: si?.valor,
     lineaSi: si?.linea,
     // Cualquier mención, en el job, en un paso o en la estrategia: todas dejan pasar un fallo.
-    continuaConError: sinComentarios
-      .filter((l) => l.t.includes("continue-on-error"))
-      .map((l) => l.n),
-    pasos: leerPasos(sinComentarios),
+    continuaConError: cuerpo.filter((l) => l.t.includes("continue-on-error")).map((l) => l.n),
+    pasos: leerPasos(cuerpo),
   };
 }
 
@@ -265,21 +264,24 @@ function leerPasos(cuerpo) {
     if (paso === null) continue;
     paso.hasta = l.n;
     if (ejecutaElGuardian(l.t)) paso.ejecutaGuardian = true;
-    const si = /^ {6}-\s+if:\s*(.*)$|^ {8}if:\s*(.*)$/.exec(l.t);
+    const si = /^ {6}-\s+if:\s*(.*)|^ {8}if:\s*(.*)/.exec(l.t);
     if (si !== null && paso.si === undefined) {
-      paso.si = { valor: escalar(si[1] ?? si[2] ?? ""), linea: l.n };
+      paso.si = { valor: escalar(si[1] ?? si[2]), linea: l.n };
     }
   }
   return pasos;
 }
 
+const PROPIEDAD_NEEDS = /^ {4}needs:(.*)/;
+
 function leerNeeds(cuerpo) {
-  const donde = cuerpo.findIndex((l) => /^ {4}needs:/.test(l.t));
+  const donde = cuerpo.findIndex((l) => PROPIEDAD_NEEDS.test(l.t));
   if (donde < 0) return { lista: [], linea: undefined };
   const linea = cuerpo[donde].n;
   let desde = donde;
-  let valor = sinComentario(cuerpo[donde].t.replace(/^ {4}needs:/, ""));
-  if (valor === "" && sinComentario(cuerpo[donde + 1]?.t ?? "").startsWith("[")) {
+  let valor = sinComentario(PROPIEDAD_NEEDS.exec(cuerpo[donde].t)[1]);
+  const siguiente = cuerpo[donde + 1];
+  if (valor === "" && siguiente !== undefined && sinComentario(siguiente.t).startsWith("[")) {
     desde = donde + 1;
     valor = sinComentario(cuerpo[desde].t);
   }
@@ -301,7 +303,7 @@ function leerNeeds(cuerpo) {
   if (valor !== "") return { lista: [sinComillas(valor)], linea };
   const lista = [];
   for (const l of cuerpo.slice(donde + 1)) {
-    const item = /^ {5,}-\s+(.+)$/.exec(l.t)?.[1];
+    const item = /^ {5,}-\s(.+)/.exec(l.t)?.[1];
     if (item === undefined) break;
     lista.push(escalar(item));
   }
@@ -315,7 +317,7 @@ function leerRetiros(texto) {
     const dato = JSON.parse(texto);
     return Array.isArray(dato) ? { valor: dato } : { error: "no es una lista" };
   } catch (error) {
-    return { error: `no es JSON válido (${String(error?.message ?? error)})` };
+    return { error: `no es JSON válido (${error.message})` };
   }
 }
 
@@ -324,8 +326,8 @@ function leerConstante(texto, nombre) {
   if (texto === null) return { ausente: true };
   const lineas = texto.split(/\r\n|\n/);
   const patron = new RegExp(`^const ${nombre} = (\\d+);\\s*(?://.*)?$`);
-  for (let i = 0; i < lineas.length; i += 1) {
-    const encontrada = patron.exec(lineas[i]);
+  for (const [i, linea] of lineas.entries()) {
+    const encontrada = patron.exec(linea);
     if (encontrada !== null) return { valor: Number(encontrada[1]), linea: i + 1 };
   }
   return { error: `no hay una línea «const ${nombre} = <entero>;»` };
@@ -339,7 +341,7 @@ function leerPaquete(texto) {
     const scripts = esObjeto(dato) && esObjeto(dato.scripts) ? dato.scripts : {};
     return { valor: { arquitectura: scripts.arquitectura, guardian: scripts.guardian } };
   } catch (error) {
-    return { error: `no es JSON válido (${String(error?.message ?? error)})` };
+    return { error: `no es JSON válido (${error.message})` };
   }
 }
 
@@ -495,7 +497,7 @@ function extraerEnProceso(raiz, idsDeJobs) {
     const datos = JSON.parse(linea.slice(MARCA_DEL_RESULTADO.length));
     return Object.fromEntries(SECCIONES_DEL_HIJO.map((nombre) => [nombre, datos[nombre]]));
   } catch (error) {
-    const detalle = String(error?.stderr || error?.message || error)
+    const detalle = String(error.stderr || error.message)
       .trim()
       .split("\n")[0];
     return Object.fromEntries(
@@ -681,7 +683,7 @@ function chequearContratos(base, pr) {
   if (!tiene(base.registro) || !tiene(pr.registro)) return [];
   const hallazgos = [];
   const delPr = new Map(pr.registro.valor.filter((c) => c.id !== null).map((c) => [c.id, c]));
-  const deLaBase = new Map(base.registro.valor.filter((c) => c.id !== null).map((c) => [c.id, c]));
+  const deLaBase = new Map(base.registro.valor.map((c) => [c.id, c]));
   // Un contrato que declara no poder tener detector de definición, y la base no lo declaraba (sea nuevo o
   // existente): copiar su valor en otro archivo no fallaría. Es un debilitamiento, no un cambio de rutina.
   for (const nuevo of delPr.values()) {
@@ -701,7 +703,7 @@ function chequearContratos(base, pr) {
   }
   for (const viejo of base.registro.valor) {
     const nuevo = delPr.get(viejo.id);
-    if (viejo.id === null || nuevo === undefined) continue;
+    if (nuevo === undefined) continue;
     const donde = enContrato(viejo.id);
     for (const tipo of TIPOS_DE_DETECTOR) {
       const antes = viejo.detectores.filter((d) => d.tipo === tipo);
@@ -769,7 +771,6 @@ function chequearRigor(base, pr) {
   const reglas = [
     {
       clave: "plazo",
-      nombre: "PLAZO_MAXIMO_DIAS",
       empeora: (antes, ahora) => ahora > antes,
       falla: "tope-de-excepciones-subio",
       que: (antes, ahora) =>
@@ -778,7 +779,6 @@ function chequearRigor(base, pr) {
     },
     {
       clave: "aviso",
-      nombre: "DIAS_DE_AVISO",
       empeora: (antes, ahora) => ahora < antes,
       falla: "aviso-de-excepciones-bajo",
       que: (antes, ahora) =>
@@ -857,7 +857,7 @@ function chequearPermitidas(deLaBase, clasesDelPr) {
     ];
   }
   const nuevas = Object.entries(delPr).flatMap(([clase, entradas]) =>
-    faltantes(entradas, deLaBase[clase] ?? []).map((entrada) => `${clase} → ${entrada}`),
+    faltantes(entradas, listaOVacia(deLaBase[clase])).map((entrada) => `${clase} → ${entrada}`),
   );
   if (nuevas.length === 0) return [];
   return [
@@ -1071,7 +1071,7 @@ function chequearInvariantes(base, pr) {
   return hallazgos;
 }
 
-/** Avisos: lo que se saltea y se dice. */
+/** Avisos: lo que se saltea y se dice. Sin `donde`: es del archivo entero y `verificar` lo ubica en la línea 1. */
 function avisarSaltos(base) {
   if (base.invariantes?.ausente !== true) return [];
   return [
@@ -1080,7 +1080,6 @@ function avisarSaltos(base) {
       ARCHIVOS.invariantes,
       "La base no trae la matriz de invariantes (invariantes.cjs): se saltea el chequeo (h). Es esperable solo hasta que la matriz entre a la rama principal.",
       "Nada por ahora; cuando la base la tenga, el chequeo (h) se activa solo.",
-      { donde: enArchivo() },
     ),
   ];
 }
@@ -1099,13 +1098,12 @@ const CHEQUEOS = Object.freeze([
 ]);
 
 function esFechaValida(texto) {
-  const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(texto);
+  // Sin anclas: lo que sobre antes o después de la fecha hace que el texto no coincida con su ISO, abajo.
+  const partes = /(\d{4})-(\d{2})-(\d{2})/.exec(texto);
   if (partes === null) return false;
   const [anio, mes, dia] = [Number(partes[1]), Number(partes[2]), Number(partes[3])];
-  const fecha = new Date(Date.UTC(anio, mes - 1, dia));
-  return (
-    fecha.getUTCFullYear() === anio && fecha.getUTCMonth() === mes - 1 && fecha.getUTCDate() === dia
-  );
+  // Si el calendario la corrigió (30 de febrero, mes 13, año de dos dígitos), ya no es el mismo texto.
+  return new Date(Date.UTC(anio, mes - 1, dia)).toISOString().slice(0, 10) === texto;
 }
 
 const ordenar = (lista) =>
@@ -1128,7 +1126,7 @@ function verificar({ base, pr, ahora = new Date(), leerPr }) {
   const ubicar = crearUbicador(leerPr);
   const completar = (h) => {
     const completo = ubicar(h);
-    return Number.isInteger(completo.linea) && completo.linea >= 1
+    return Number.isInteger(completo.linea) && completo.linea > 0
       ? completo
       : { ...completo, linea: 1 };
   };

@@ -307,12 +307,12 @@
   },
   {
     "grupo": "guardián (vigilancia de la versión anterior, parte 1)",
-    "archivos": "arquitectura/contratos/no-debilitar.cjs:1-509",
-    "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
+    "archivos": "arquitectura/contratos/no-debilitar.cjs:1-511",
+    "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
   },
   {
     "grupo": "guardián (vigilancia de la versión anterior, parte 2)",
-    "archivos": "arquitectura/contratos/no-debilitar.cjs:510-1252",
-    "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
+    "archivos": "arquitectura/contratos/no-debilitar.cjs:512-1250",
+    "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
   }
 ]
