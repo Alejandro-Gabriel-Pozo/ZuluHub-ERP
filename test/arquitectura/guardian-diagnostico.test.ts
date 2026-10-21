@@ -996,7 +996,8 @@ describe("la lista cerrada de códigos", () => {
     const carpeta = join(RAIZ, "arquitectura/contratos");
     const escritos = new Set<string>();
     for (const archivo of readdirSync(carpeta).filter((a) => a.endsWith(".cjs"))) {
-      if (archivo === "codigos.cjs") continue;
+      // `invariantes.cjs` es el catálogo de la matriz: cita códigos en cada `esperado`, no los emite.
+      if (archivo === "codigos.cjs" || archivo === "invariantes.cjs") continue;
       const texto = readFileSync(join(carpeta, archivo), "utf8");
       for (const [, codigo] of texto.matchAll(/codigo: "([a-z-]+)"/g))
         escritos.add(codigo as string);
