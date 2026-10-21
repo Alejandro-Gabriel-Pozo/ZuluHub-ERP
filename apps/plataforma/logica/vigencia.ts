@@ -47,3 +47,15 @@ export function fechaLegible(fecha: string): string {
     ? fecha
     : `${dosDigitos(partes.d)}/${dosDigitos(partes.m)}/${String(partes.a)}`;
 }
+
+/**
+ * El día argentino ('AAAA-MM-DD') de un instante ISO. La vigencia se guarda como la medianoche argentina (03:00 en UTC),
+ * pero un instante cualquiera cae en otro día según la zona: cortar el texto ISO mostraría el día corrido. Si el texto
+ * no es una fecha, se devuelve tal cual.
+ */
+export function fechaArgentinaDeInstante(iso: string): string {
+  const instante = new Date(iso);
+  if (Number.isNaN(instante.getTime())) return iso;
+  const local = new Date(instante.getTime() - DESFASE_EN_HORAS * 3_600_000);
+  return `${String(local.getUTCFullYear())}-${dosDigitos(local.getUTCMonth() + 1)}-${dosDigitos(local.getUTCDate())}`;
+}

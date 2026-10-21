@@ -10,15 +10,15 @@ import {
   rotuloDePerilla,
   textoDeValor,
 } from "../logica/plan";
-import { fechaLegible } from "../logica/vigencia";
+import { fechaArgentinaDeInstante, fechaLegible } from "../logica/vigencia";
 import { CambioDePlan } from "./cambio-de-plan.cliente";
 import estilos from "./empresas.module.css";
 import propios from "./plan.module.css";
 
 export type PropsDePanelDePlan = Readonly<{ plan: PlanDeEmpresa }>;
 
-/** De un instante ISO a la fecha 'AAAA-MM-DD' que entiende `fechaLegible`. */
-const soloFecha = (iso: string): string => iso.slice(0, 10);
+/** De un instante ISO al día argentino 'AAAA-MM-DD' que entiende `fechaLegible`. */
+const soloFecha = fechaArgentinaDeInstante;
 
 /**
  * La sección «Plan» de una empresa: plan actual, límites y módulos. Sin estado propio (se arma en el servidor);

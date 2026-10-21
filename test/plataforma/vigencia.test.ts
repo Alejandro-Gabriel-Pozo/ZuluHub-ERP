@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  fechaArgentinaDeInstante,
   fechaLegible,
   fechaMinimaDeVigencia,
   instanteDeVigencia,
@@ -53,5 +54,32 @@ describe("fechaLegible", () => {
   it("devuelve el texto tal cual si no es válida", () => {
     expect(fechaLegible("2026-02-30")).toBe("2026-02-30");
     expect(fechaLegible("x")).toBe("x");
+  });
+});
+
+describe("fechaArgentinaDeInstante", () => {
+  it("la medianoche argentina (03:00 UTC) es el mismo día", () => {
+    expect(fechaArgentinaDeInstante("2026-11-01T03:00:00.000Z")).toBe("2026-11-01");
+  });
+
+  it("un instante entre las 00:00 y las 03:00 UTC todavía es el día anterior en Argentina", () => {
+    expect(fechaArgentinaDeInstante("2026-11-01T02:59:59.000Z")).toBe("2026-10-31");
+    expect(fechaArgentinaDeInstante("2026-11-01T00:00:00.000Z")).toBe("2026-10-31");
+  });
+
+  it("fin de año y bisiesto", () => {
+    expect(fechaArgentinaDeInstante("2027-01-01T02:00:00.000Z")).toBe("2026-12-31");
+    expect(fechaArgentinaDeInstante("2028-03-01T02:00:00.000Z")).toBe("2028-02-29");
+  });
+
+  it("ida y vuelta con instanteDeVigencia", () => {
+    const instante = instanteDeVigencia("2026-11-01");
+    expect(instante).not.toBeNull();
+    expect(fechaArgentinaDeInstante((instante as Date).toISOString())).toBe("2026-11-01");
+  });
+
+  it("un texto que no es fecha se devuelve tal cual", () => {
+    expect(fechaArgentinaDeInstante("no es fecha")).toBe("no es fecha");
+    expect(fechaArgentinaDeInstante("")).toBe("");
   });
 });
