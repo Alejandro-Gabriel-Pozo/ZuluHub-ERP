@@ -23,10 +23,12 @@
  *      (`{ id, motivo, responsable, aprobadoPor, creada }`); y los retiros de la base siguen presentes
  *      (el registro es histórico: un retiro no se borra);
  *  (b) un contrato presente en ambos perdió detectores de un tipo o clases de ese tipo, o cambió su
- *      `fuenteDeVerdad` sin subir `version`;
+ *      `fuenteDeVerdad` sin subir `version`; y un contrato que declara `sinDetectorDeDefinicion` (no tener
+ *      detector de definición, ver `registro.cjs`) cuando la base no lo declaraba, sea nuevo o no;
  *  (c) un código de falla de la base ya no existe (se borró un chequeo);
  *  (d) las constantes de rigor empeoraron: subió el tope de días de las excepciones o bajó el aviso;
- *  (e) las clases esperadas con rutas se redujeron o las clases excluibles se ampliaron;
+ *  (e) las clases esperadas con rutas se redujeron, las clases excluibles se ampliaron o crecieron las
+ *      extensiones y rutas permitidas dentro de una clase excluida (`PERMITIDO_EN_CLASE_EXCLUIDA`);
  *  (f) en `ci.yml`: falta el job `guardian`, el job `gate` no lo espera en `needs`, `evaluar-gate.cjs` ya
  *      no lo trata como obligatorio, ya no ejecuta `guardian.cjs`, o tiene `continue-on-error`/`if` que
  *      la base no tenía;
@@ -78,19 +80,23 @@ const DESCRIPCION_DE_CODIGOS = Object.freeze({
   "detectores-perdidos": "(b) un contrato tiene menos detectores de un tipo que en la base",
   "clases-de-detector-perdidas": "(b) los detectores de un contrato cubren menos clases que antes",
   "fuente-cambiada-sin-version": "(b) un contrato cambió su fuente de verdad sin subir la versión",
+  "sin-definicion-nueva":
+    "(b) un contrato declara sinDetectorDeDefinicion y la base no lo declaraba (un contrato sin detector de definición es un debilitamiento)",
   "chequeo-borrado": "(c) un código de falla de la base ya no existe",
   "tope-de-excepciones-subio": "(d) el plazo máximo de las excepciones es mayor que el de la base",
   "aviso-de-excepciones-bajo":
     "(d) el aviso previo al vencimiento es menor (más tarde) que el de la base",
   "clases-esperadas-reducidas": "(e) una clase esperada con rutas dejó de esperarse",
   "clases-excluibles-ampliadas": "(e) se puede excluir del análisis una clase que antes no",
+  "extensiones-permitidas-ampliadas":
+    "(e) una clase excluida del análisis admite extensiones o rutas que la base no admitía",
   "ci-sin-job-guardian": "(f) ci.yml no tiene el job guardian",
   "ci-gate-no-espera-guardian": "(f) el job gate no espera al guardián en needs",
   "gate-no-exige-guardian": "(f) evaluar-gate.cjs no marca en rojo un guardián caído o saltado",
   "ci-guardian-sin-ejecutar": "(f) el job guardian ya no ejecuta guardian.cjs",
   "ci-guardian-con-salto":
     "(f) el job guardian tiene continue-on-error o un if que la base no tenía",
-  "script-arquitectura-sin-guardian": "(g) el script arquitectura ya no encadena npm run guardian",
+  "script-arquitectura-desviado": "(g) el script arquitectura ya no encadena npm run guardian",
   "script-guardian-desviado": "(g) el script guardian ya no ejecuta el guardián",
   "invariante-borrada": "(h) un invariante de la base ya no está en la matriz",
   "mutacion-borrada": "(h) una mutación de la base ya no está en la matriz",
@@ -346,6 +352,28 @@ function extraerInvariantes(modulo) {
   return { ids, mutaciones };
 }
 
+/**
+ * Lo permitido en cada clase excluida como una lista plana de textos por clase (`extension:.md`,
+ * `ruta:package-lock.json`). `null` si el módulo no define la constante (una base anterior a este
+ * chequeo); una constante mal formada lanza, y la sección queda ilegible.
+ */
+function permitidasEnClasesExcluidas(valor) {
+  if (valor === undefined) return null;
+  if (!esObjeto(valor)) throw new Error("«PERMITIDO_EN_CLASE_EXCLUIDA» no es un objeto");
+  return Object.fromEntries(
+    Object.entries(valor).map(([clase, permitido]) => {
+      if (!esObjeto(permitido)) throw new Error(`lo permitido en «${clase}» no es un objeto`);
+      return [
+        clase,
+        [
+          ...listaOVacia(permitido.extensiones).map((e) => `extension:${String(e)}`),
+          ...listaOVacia(permitido.rutas).map((r) => `ruta:${String(r)}`),
+        ],
+      ];
+    }),
+  );
+}
+
 const resumirDetector = (detector) => ({
   tipo: esObjeto(detector) ? detector.tipo : undefined,
   clases: esObjeto(detector) ? listaOVacia(detector.clases).map(String) : [],
@@ -359,6 +387,9 @@ const resumirContrato = (contrato) => {
     version: typeof c.version === "string" ? c.version : null,
     fuente: { archivo: fuente.archivo, exportacion: fuente.exportacion, variable: fuente.variable },
     detectores: listaOVacia(c.deteccion).map(resumirDetector),
+    // El motivo de «no puede haber un detector de definición» (texto) o `null` si no lo declara.
+    sinDefinicion:
+      c.sinDetectorDeDefinicion === undefined ? null : String(c.sinDetectorDeDefinicion),
   };
 };
 
@@ -390,6 +421,7 @@ function extraer(raiz, idsDeJobs) {
     clases: cargar(ARCHIVOS.clasificacion, (m) => ({
       esperadas: lista(m.CLASES_ESPERADAS, "CLASES_ESPERADAS"),
       excluibles: lista(m.CLASES_EXCLUIBLES, "CLASES_EXCLUIBLES"),
+      permitidas: permitidasEnClasesExcluidas(m.PERMITIDO_EN_CLASE_EXCLUIDA),
     })),
     invariantes: cargar(ARCHIVOS.invariantes, extraerInvariantes),
     gate: cargar(ARCHIVOS.evaluarGate, (m) => {
@@ -616,11 +648,32 @@ function chequearRetiros(base, pr, { ahora }) {
   return hallazgos;
 }
 
+/** El contrato declara `sinDetectorDeDefinicion` (el resumen trae el motivo como texto o `null`). */
+const declaraSinDefinicion = (contrato) => typeof contrato.sinDefinicion === "string";
+
 /** (b) Contratos presentes en ambos: detectores, clases y fuente de verdad. */
 function chequearContratos(base, pr) {
   if (!tiene(base.registro) || !tiene(pr.registro)) return [];
   const hallazgos = [];
   const delPr = new Map(pr.registro.valor.filter((c) => c.id !== null).map((c) => [c.id, c]));
+  const deLaBase = new Map(base.registro.valor.filter((c) => c.id !== null).map((c) => [c.id, c]));
+  // Un contrato que declara no poder tener detector de definición, y la base no lo declaraba (sea nuevo o
+  // existente): copiar su valor en otro archivo no fallaría. Es un debilitamiento, no un cambio de rutina.
+  for (const nuevo of delPr.values()) {
+    const antes = deLaBase.get(nuevo.id);
+    if (!declaraSinDefinicion(nuevo) || (antes !== undefined && declaraSinDefinicion(antes))) {
+      continue;
+    }
+    hallazgos.push(
+      hallazgo(
+        "sin-definicion-nueva",
+        ARCHIVOS.registro,
+        `El contrato «${nuevo.id}» declara «sinDetectorDeDefinicion» y la base no lo declaraba: un valor copiado en otro archivo no se detectaría para ese contrato.`,
+        "Agregá un detector de tipo «definicion». Que un contrato no pueda tenerlo es una decisión del dueño que se habilita a propósito, no un cambio de rutina.",
+        { contrato: nuevo.id, donde: enContrato(nuevo.id) },
+      ),
+    );
+  }
   for (const viejo of base.registro.valor) {
     const nuevo = delPr.get(viejo.id);
     if (viejo.id === null || nuevo === undefined) continue;
@@ -754,7 +807,43 @@ function chequearClases(base, pr) {
       ),
     );
   }
+  hallazgos.push(...chequearPermitidas(base.clases.valor.permitidas ?? null, pr.clases.valor));
   return hallazgos;
+}
+
+/**
+ * (e) Lo permitido dentro de una clase excluida no crece: una extensión o ruta nueva en `docs` o `generado`
+ * dejaría esconder más archivos del análisis. Si la base todavía no tiene la lista (`null`) no hay con qué
+ * comparar; si la tenía y el PR la borró, el PR ya no tiene lo vigilado.
+ */
+function chequearPermitidas(deLaBase, clasesDelPr) {
+  const donde = enTexto("const PERMITIDO_EN_CLASE_EXCLUIDA");
+  if (deLaBase === null) return [];
+  const delPr = clasesDelPr.permitidas ?? null;
+  if (delPr === null) {
+    return [
+      hallazgo(
+        "arbol-ilegible",
+        ARCHIVOS.clasificacion,
+        "La clasificación del PR ya no define PERMITIDO_EN_CLASE_EXCLUIDA, que la base usaba para limitar qué puede haber en las clases excluidas del análisis.",
+        "Devolvé la constante PERMITIDO_EN_CLASE_EXCLUIDA con lo que la base permitía.",
+        { donde: enArchivo() },
+      ),
+    ];
+  }
+  const nuevas = Object.entries(delPr).flatMap(([clase, entradas]) =>
+    faltantes(entradas, deLaBase[clase] ?? []).map((entrada) => `${clase} → ${entrada}`),
+  );
+  if (nuevas.length === 0) return [];
+  return [
+    hallazgo(
+      "extensiones-permitidas-ampliadas",
+      ARCHIVOS.clasificacion,
+      `Una clase excluida del análisis ahora admite más tipos de archivo que en la base: ${nuevas.join(", ")}. Código u otros archivos nuevos podrían quedar fuera del análisis.`,
+      "Devolvé PERMITIDO_EN_CLASE_EXCLUIDA a lo que era; ampliarlo es una decisión del dueño que se registra aparte.",
+      { donde },
+    ),
+  ];
 }
 
 /**
@@ -886,7 +975,7 @@ function chequearPaquete(base, pr) {
   if (!encadena) {
     hallazgos.push(
       hallazgo(
-        "script-arquitectura-sin-guardian",
+        "script-arquitectura-desviado",
         ARCHIVOS.paquete,
         `El script «arquitectura» (${JSON.stringify(arquitectura ?? null)}) ya no encadena \`&& npm run guardian\`: \`npm run gate\` no correría el guardián.`,
         "Devolvé `&& npm run guardian` al final del script arquitectura.",
@@ -938,7 +1027,7 @@ function chequearInvariantes(base, pr) {
         ARCHIVOS.invariantes,
         `El invariante «${id}» de la matriz de la base ya no está: su protección dejó de probarse.`,
         "Devolvé el invariante con sus mutaciones.",
-        { donde: enTexto("module.exports") },
+        { donde: enTexto("const INVARIANTES") },
       ),
     );
   }

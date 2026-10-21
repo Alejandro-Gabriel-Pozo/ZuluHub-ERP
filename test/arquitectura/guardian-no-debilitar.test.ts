@@ -1,18 +1,24 @@
 import { spawnSync } from "node:child_process";
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { HAY_GIT, RAIZ } from "./guardian-apoyo";
+import {
+  REGISTRO_DE_EJEMPLO,
+  RAIZ,
+  alterar,
+  arbolDesdeElRepo,
+  carpetaTemporal,
+  escribirEn,
+  leerEn,
+  limpiarTemporales,
+  lineaEn,
+  quitarInvarianteDelCatalogo,
+  quitarMutacionDelCatalogo,
+  repoSanoEnDisco,
+  retiroCompleto,
+} from "./guardian-apoyo";
 
 /**
  * La vigilancia de la versión anterior (`no-debilitar.cjs`): el verificador de la BASE corre contra el
@@ -88,11 +94,19 @@ interface Contrato {
   version: string;
   fuente: Record<string, string>;
   detectores: Detector[];
+  /** El motivo de «no puede haber un detector de definición» o `null` si el contrato no lo declara. */
+  sinDefinicion?: string | null;
+}
+interface Clases {
+  esperadas: string[];
+  excluibles: string[];
+  /** Lo permitido en cada clase excluida (`extension:.md`, `ruta:package-lock.json`); `null` = la lista no existe. */
+  permitidas: Record<string, string[]> | null;
 }
 interface Estructura {
   registro: Contrato[];
   codigos: string[];
-  clases: { esperadas: string[]; excluibles: string[] };
+  clases: Clases;
   gateConGuardianCaido: Record<string, string[]>;
   invariantes: { id: string; mutaciones: string[] }[] | null;
 }
@@ -111,13 +125,14 @@ const textoDelRegistro = (contratos: Contrato[]): string =>
     ...contratos.flatMap((c) => ["  {", `    id: "${c.id}",`, "  },"]),
     "];",
   );
-/** Igual para la matriz: el `id` del invariante número i (desde 0) está en la línea 4 + 3 * i. */
+/** Igual para la matriz: `const INVARIANTES` está en la línea 2 y el `id` del invariante i (desde 0), en la 4 + 3 * i. */
 const textoDeLaMatriz = (invariantes: { id: string }[]): string =>
   lineas(
     "/** Matriz sintética. */",
-    "module.exports = [",
+    "const INVARIANTES = [",
     ...invariantes.flatMap((i) => ["  {", `    id: "${i.id}",`, "  },"]),
     "];",
+    "module.exports = { INVARIANTES };",
   );
 const textoDeCodigos = (codigos: string[]): string =>
   lineas(
@@ -126,7 +141,8 @@ const textoDeCodigos = (codigos: string[]): string =>
     "const DESCRIPCION_DE_CODIGOS = {};",
     `const CODIGOS_DE_FALLA = ${JSON.stringify(codigos)};`,
   );
-const textoDeClases = (c: { esperadas: string[]; excluibles: string[] }): string =>
+/** `CLASES_EXCLUIBLES` en la línea 4, `CLASES_ESPERADAS` en la 6 y `PERMITIDO_EN_CLASE_EXCLUIDA` en la 8. */
+const textoDeClases = (c: Clases): string =>
   lineas(
     "/** Clasificación. */",
     "const CLASES = [];",
@@ -134,6 +150,10 @@ const textoDeClases = (c: { esperadas: string[]; excluibles: string[] }): string
     `const CLASES_EXCLUIBLES = ${JSON.stringify(c.excluibles)};`,
     "",
     `const CLASES_ESPERADAS = ${JSON.stringify(c.esperadas)};`,
+    "",
+    c.permitidas === null
+      ? "// sin lista de lo permitido"
+      : `const PERMITIDO_EN_CLASE_EXCLUIDA = ${JSON.stringify(c.permitidas)};`,
   );
 const textoDeExcepciones = (plazo: string, aviso: string): string =>
   lineas(
@@ -222,7 +242,14 @@ function estadoSano(): Estado {
   const estructura: Estructura = {
     registro: [copia(CONTRATO_COLOR), copia(CONTRATO_CLAVES)],
     codigos: ["a-uno", "b-dos", "c-tres"],
-    clases: { esperadas: ["frontend", "backend", "config"], excluibles: ["generado", "docs"] },
+    clases: {
+      esperadas: ["frontend", "backend", "config"],
+      excluibles: ["generado", "docs"],
+      permitidas: {
+        docs: ["extension:.md", "extension:.txt"],
+        generado: ["ruta:package-lock.json", "ruta:skills-lock.json"],
+      },
+    },
     gateConGuardianCaido: {
       failure: ["guardian: failure"],
       skipped: ["guardian: skipped"],
@@ -327,14 +354,6 @@ interface Caso {
   avisos?: Esperado[];
 }
 const SANO = estadoSano();
-const retiroCompleto = (id: string, extra: Record<string, unknown> = {}) => ({
-  id,
-  motivo: "El contrato se reemplazó por otro.",
-  responsable: "Equipo de plataforma",
-  aprobadoPor: "Dueño",
-  creada: "2026-10-01",
-  ...extra,
-});
 const conRetiros = (estado: Estado, retiros: unknown): Estado =>
   conTexto(estado, ARCHIVO_RETIROS, `${JSON.stringify(retiros, null, 2)}\n`);
 const sinColor = conEstructura(SANO, (e) => {
@@ -589,6 +608,64 @@ const CASOS_B: Caso[] = [
     }),
     esperado: [],
   },
+  {
+    nombre: "(b) un contrato NUEVO declara que no tiene detector de definición",
+    pr: conEstructura(SANO, (e) => {
+      e.registro.push({
+        id: "contrato-nuevo",
+        version: "1.0.0",
+        fuente: { archivo: "x.ts", exportacion: "X" },
+        detectores: [{ tipo: "uso", clases: ["backend"] }],
+        sinDefinicion: "El valor no se escribe en ningún archivo: lo calcula un servicio externo.",
+      });
+    }),
+    esperado: [["sin-definicion-nueva", ARCHIVO_REGISTRO, 10]],
+  },
+  {
+    nombre:
+      "(b) un contrato que existía pasa a declarar sinDetectorDeDefinicion y pierde su detector de definición",
+    pr: conEstructura(SANO, (e) => {
+      const c = contrato(e, "color-de-separadores");
+      c.detectores = c.detectores.filter((d) => d.tipo !== "definicion");
+      c.sinDefinicion = "No se puede reconocer la definición con un patrón de texto simple.";
+    }),
+    esperado: [
+      ["clases-de-detector-perdidas", ARCHIVO_REGISTRO, 4],
+      ["detectores-perdidos", ARCHIVO_REGISTRO, 4],
+      ["sin-definicion-nueva", ARCHIVO_REGISTRO, 4],
+    ],
+  },
+  {
+    nombre:
+      "(b) un contrato que existía declara sinDetectorDeDefinicion SIN perder ningún detector",
+    pr: conEstructura(SANO, (e) => {
+      contrato(e, "claves-de-permisos").sinDefinicion =
+        "El valor no se escribe en ningún archivo: lo calcula un servicio externo.";
+    }),
+    esperado: [["sin-definicion-nueva", ARCHIVO_REGISTRO, 7]],
+  },
+  {
+    nombre: "(b) LEGÍTIMO: la base ya declaraba sinDetectorDeDefinicion y el PR lo conserva",
+    base: conEstructura(SANO, (e) => {
+      contrato(e, "claves-de-permisos").sinDefinicion =
+        "Lo calcula un servicio externo, sin texto.";
+    }),
+    pr: conEstructura(SANO, (e) => {
+      contrato(e, "claves-de-permisos").sinDefinicion =
+        "Lo calcula un servicio externo, sin texto.";
+    }),
+    esperado: [],
+  },
+  {
+    nombre:
+      "(b) LEGÍTIMO: el contrato deja de declarar sinDetectorDeDefinicion (ahora tiene detector)",
+    base: conEstructura(SANO, (e) => {
+      contrato(e, "claves-de-permisos").sinDefinicion =
+        "Lo calcula un servicio externo, sin texto.";
+    }),
+    pr: SANO,
+    esperado: [],
+  },
 ];
 
 const CASOS_C: Caso[] = [
@@ -723,6 +800,56 @@ const CASOS_E: Caso[] = [
     pr: conEstructura(SANO, (e) => {
       e.clases.excluibles = ["generado"];
     }),
+    esperado: [],
+  },
+  {
+    nombre: "(e) la clase docs admite una extensión más (.ts): se podría esconder código ahí",
+    pr: conEstructura(SANO, (e) => {
+      e.clases.permitidas = {
+        ...e.clases.permitidas,
+        docs: ["extension:.md", "extension:.txt", "extension:.ts"],
+      };
+    }),
+    esperado: [["extensiones-permitidas-ampliadas", ARCHIVO_CLASIFICACION, 8]],
+  },
+  {
+    nombre: "(e) la clase generado admite una ruta más",
+    pr: conEstructura(SANO, (e) => {
+      e.clases.permitidas = {
+        ...e.clases.permitidas,
+        generado: ["ruta:package-lock.json", "ruta:skills-lock.json", "ruta:scripts/cargador.mjs"],
+      };
+    }),
+    esperado: [["extensiones-permitidas-ampliadas", ARCHIVO_CLASIFICACION, 8]],
+  },
+  {
+    nombre: "(e) una clase nueva con tipos permitidos cuenta como ampliación",
+    pr: conEstructura(SANO, (e) => {
+      e.clases.permitidas = { ...e.clases.permitidas, config: ["extension:.json"] };
+    }),
+    esperado: [["extensiones-permitidas-ampliadas", ARCHIVO_CLASIFICACION, 8]],
+  },
+  {
+    nombre: "(e) LEGÍTIMO: lo permitido en una clase excluida se reduce",
+    pr: conEstructura(SANO, (e) => {
+      e.clases.permitidas = { docs: ["extension:.md"], generado: ["ruta:package-lock.json"] };
+    }),
+    esperado: [],
+  },
+  {
+    nombre: "(e) el PR borra la lista de lo permitido que la base tenía: ya no tiene lo vigilado",
+    pr: conEstructura(SANO, (e) => {
+      e.clases.permitidas = null;
+    }),
+    esperado: [["arbol-ilegible", ARCHIVO_CLASIFICACION, 1]],
+  },
+  {
+    nombre:
+      "(e) LEGÍTIMO: la base todavía no traía la lista de lo permitido: no hay con qué comparar",
+    base: conEstructura(SANO, (e) => {
+      e.clases.permitidas = null;
+    }),
+    pr: SANO,
     esperado: [],
   },
 ];
@@ -938,7 +1065,7 @@ const CASOS_G: Caso[] = [
   {
     nombre: "(g) el script arquitectura ya no encadena `&& npm run guardian`",
     pr: reemplazando(SANO, ARCHIVO_PAQUETE, "depcruise src && npm run guardian", "depcruise src"),
-    esperado: [["script-arquitectura-sin-guardian", ARCHIVO_PAQUETE, 4]],
+    esperado: [["script-arquitectura-desviado", ARCHIVO_PAQUETE, 4]],
   },
   {
     nombre: "(g) el script arquitectura lo encadena con `||` (solo correría si falla lo anterior)",
@@ -948,7 +1075,7 @@ const CASOS_G: Caso[] = [
       "depcruise src && npm run guardian",
       "depcruise src || npm run guardian",
     ),
-    esperado: [["script-arquitectura-sin-guardian", ARCHIVO_PAQUETE, 4]],
+    esperado: [["script-arquitectura-desviado", ARCHIVO_PAQUETE, 4]],
   },
   {
     nombre: "(g) el script arquitectura sale de package.json",
@@ -958,7 +1085,7 @@ const CASOS_G: Caso[] = [
       '    "arquitectura": "depcruise src && npm run guardian",\n',
       "",
     ),
-    esperado: [["script-arquitectura-sin-guardian", ARCHIVO_PAQUETE, 3]],
+    esperado: [["script-arquitectura-desviado", ARCHIVO_PAQUETE, 3]],
   },
   {
     nombre: "(g) el script guardian ya no apunta al guardián",
@@ -984,7 +1111,7 @@ const CASOS_G: Caso[] = [
     nombre: "(g) los dos scripts desaparecen",
     pr: conTexto(SANO, ARCHIVO_PAQUETE, lineas("{", '  "name": "x",', '  "scripts": {}', "}")),
     esperado: [
-      ["script-arquitectura-sin-guardian", ARCHIVO_PAQUETE, 3],
+      ["script-arquitectura-desviado", ARCHIVO_PAQUETE, 3],
       ["script-guardian-desviado", ARCHIVO_PAQUETE, 3],
     ],
   },
@@ -1393,56 +1520,7 @@ describe("funciones de apoyo", () => {
 // De punta a punta: árboles temporales, el CLI real y el proceso hijo que carga el código del PR.
 // ---------------------------------------------------------------------------------------------
 
-const temporales: string[] = [];
-afterAll(() => {
-  for (const carpeta of temporales) rmSync(carpeta, { recursive: true, force: true });
-});
-
-/** Una copia de lo que lee la vigilancia: `arquitectura/`, el workflow y `package.json` del repo real. */
-function arbolDesdeElRepo(): string {
-  const destino = mkdtempSync(join(tmpdir(), "no-debilitar-"));
-  temporales.push(destino);
-  cpSync(join(RAIZ, "arquitectura"), join(destino, "arquitectura"), {
-    recursive: true,
-    filter: (origen) => !origen.endsWith("informe.json"),
-  });
-  mkdirSync(join(destino, ".github/workflows"), { recursive: true });
-  cpSync(join(RAIZ, ".github/workflows/ci.yml"), join(destino, ".github/workflows/ci.yml"));
-  cpSync(join(RAIZ, "package.json"), join(destino, "package.json"));
-  return destino;
-}
-const leerEn = (raiz: string, archivo: string): string => readFileSync(join(raiz, archivo), "utf8");
-function escribirEn(raiz: string, archivo: string, texto: string): void {
-  mkdirSync(dirname(join(raiz, archivo)), { recursive: true });
-  writeFileSync(join(raiz, archivo), texto);
-}
-/** Cambia el texto de un archivo del árbol (debe aparecer exactamente una vez lo que se reemplaza). */
-function alterar(raiz: string, archivo: string, de: string | RegExp, a: string): void {
-  const texto = leerEn(raiz, archivo);
-  const veces =
-    typeof de === "string"
-      ? texto.split(de).length - 1
-      : (texto.match(new RegExp(de.source, `${de.flags}g`)) ?? []).length;
-  expect(veces, `«${String(de)}» debe aparecer una vez en ${archivo}`).toBe(1);
-  escribirEn(
-    raiz,
-    archivo,
-    texto.replace(de, () => a),
-  );
-}
-/** Número de línea (desde 1) de la primera línea que cumple, calculado acá y no por el verificador. */
-function lineaDe(
-  raiz: string,
-  archivo: string,
-  cumple: (linea: string) => boolean,
-  desde = 0,
-): number {
-  const indice = leerEn(raiz, archivo)
-    .split("\n")
-    .findIndex((l, i) => i >= desde && cumple(l));
-  expect(indice, `no hay una línea que cumpla en ${archivo}`).toBeGreaterThanOrEqual(0);
-  return indice + 1;
-}
+afterAll(limpiarTemporales);
 
 const VERIFICADOR = "arquitectura/contratos/no-debilitar.cjs";
 function vigilar(base: string, arbol: string, verificador: string = base) {
@@ -1454,36 +1532,12 @@ function vigilar(base: string, arbol: string, verificador: string = base) {
 }
 const CI_REAL = ".github/workflows/ci.yml";
 const lineaDelNeedsDelGate = (raiz: string): number =>
-  lineaDe(
+  lineaEn(
     raiz,
     CI_REAL,
     (l) => /^ {4}needs:/.test(l),
-    lineaDe(raiz, CI_REAL, (l) => l === "  gate:"),
+    lineaEn(raiz, CI_REAL, (l) => l === "  gate:"),
   );
-
-/** Un registro real (con detectores de verdad) para los casos de punta a punta. */
-const REGISTRO_E2E = lineas(
-  'const { porPatron } = require("./detectores.cjs");',
-  "",
-  "module.exports = [",
-  "  {",
-  '    id: "color-de-separadores",',
-  '    protege: "Que los separadores tengan un solo color.",',
-  '    alcance: "frontend",',
-  '    fuenteDeVerdad: { archivo: "apps/web/ui/tokens.css", variable: "--color-separador" },',
-  '    incumplimiento: "Un color de separador fuera de la fuente.",',
-  "    deteccion: [",
-  '      porPatron({ tipo: "uso", clases: ["frontend"], patron: /var\\(--color-separador\\)/ }),',
-  '      porPatron({ tipo: "uso", clases: ["frontend"], patron: /separador/ }),',
-  '      porPatron({ tipo: "definicion", clases: ["frontend"], patron: /--color-separador:/ }),',
-  "    ],",
-  '    limites: "No ve usos dinámicos.",',
-  '    version: "1.0.0",',
-  '    politicaDeCambio: "Compatible: se agrega.",',
-  "    bloqueaDeclaracionFalsa: true,",
-  "  },",
-  "];",
-);
 
 describe("de punta a punta: el verificador de la base sobre el árbol del PR (CLI real)", () => {
   it("el repositorio real contra sí mismo no tiene debilitamientos", () => {
@@ -1499,9 +1553,9 @@ describe("de punta a punta: el verificador de la base sobre el árbol del PR (CL
     const r = vigilar(base, pr);
     expect(r.estado).toBe(0);
     expect(r.error).toBe("");
-    // Mientras la base no traiga la matriz de invariantes, el chequeo (h) se saltea y lo dice.
-    const avisoDeLaMatriz = `AVISO ${ARCHIVO_INVARIANTES}:1`;
-    expect(r.salida.includes(avisoDeLaMatriz)).toBe(!existsSync(join(base, ARCHIVO_INVARIANTES)));
+    // La base trae la matriz de invariantes: el chequeo (h) corre y no se saltea con un aviso.
+    expect(existsSync(join(base, ARCHIVO_INVARIANTES))).toBe(true);
+    expect(r.salida).not.toContain(`AVISO ${ARCHIVO_INVARIANTES}:1`);
   });
 
   it("falla con el archivo y la línea EXACTOS: gate sin guardian en needs, tope de 90 días y script desviado", () => {
@@ -1523,8 +1577,8 @@ describe("de punta a punta: el verificador de la base sobre el árbol del PR (CL
     const r = vigilar(base, pr);
     expect(r.estado).toBe(1);
     const necesidades = lineaDelNeedsDelGate(pr);
-    const tope = lineaDe(pr, ARCHIVO_EXCEPCIONES, (l) => l.startsWith("const PLAZO_MAXIMO_DIAS"));
-    const script = lineaDe(pr, ARCHIVO_PAQUETE, (l) => l.includes('"guardian": "echo ok"'));
+    const tope = lineaEn(pr, ARCHIVO_EXCEPCIONES, (l) => l.startsWith("const PLAZO_MAXIMO_DIAS"));
+    const script = lineaEn(pr, ARCHIVO_PAQUETE, (l) => l.includes('"guardian": "echo ok"'));
     expect(r.error).toContain(
       `FALLA ${CI_REAL}:${necesidades} · - · El job gate ya no espera a «guardian»`,
     );
@@ -1542,7 +1596,7 @@ describe("de punta a punta: el verificador de la base sobre el árbol del PR (CL
     const pr = arbolDesdeElRepo();
     alterar(pr, "arquitectura/evaluar-gate.cjs", '  "guardian",\n', "");
     const r = vigilar(base, pr);
-    const obligatorios = lineaDe(pr, "arquitectura/evaluar-gate.cjs", (l) =>
+    const obligatorios = lineaEn(pr, "arquitectura/evaluar-gate.cjs", (l) =>
       l.startsWith("const OBLIGATORIOS"),
     );
     expect(r.estado).toBe(1);
@@ -1558,15 +1612,40 @@ describe("de punta a punta: el verificador de la base sobre el árbol del PR (CL
     const r2 = vigilar(base, sinJob);
     expect(r2.estado).toBe(1);
     expect(r2.error).toContain(
-      `FALLA ${CI_REAL}:${lineaDe(sinJob, CI_REAL, (l) => l === "jobs:")} · - · ci.yml no tiene el job «guardian»`,
+      `FALLA ${CI_REAL}:${lineaEn(sinJob, CI_REAL, (l) => l === "jobs:")} · - · ci.yml no tiene el job «guardian»`,
     );
+  });
+
+  it("con el invariantes.cjs REAL como base: borrar una mutación o un invariante falla con archivo:línea (la forma real del catálogo)", () => {
+    const base = arbolDesdeElRepo();
+    expect(existsSync(join(base, ARCHIVO_INVARIANTES))).toBe(true);
+    const pr = arbolDesdeElRepo();
+    quitarMutacionDelCatalogo(pr, "I1-quitar-la-regla-de-una-carpeta");
+    quitarInvarianteDelCatalogo(pr, "I7");
+    const r = vigilar(base, pr);
+    expect(r.estado).toBe(1);
+    const lineaDeI1 = lineaEn(pr, ARCHIVO_INVARIANTES, (l) => l.includes('id: "I1",'));
+    const lineaDeLaTabla = lineaEn(pr, ARCHIVO_INVARIANTES, (l) =>
+      l.startsWith("const INVARIANTES"),
+    );
+    expect(r.error).toContain(
+      `FALLA ${ARCHIVO_INVARIANTES}:${lineaDeI1} · - · La mutación «I1-quitar-la-regla-de-una-carpeta» del invariante «I1» estaba en la base y ya no`,
+    );
+    expect(r.error).toContain(
+      `FALLA ${ARCHIVO_INVARIANTES}:${lineaDeLaTabla} · - · El invariante «I7» de la matriz de la base ya no está`,
+    );
+    // Y sin alterar nada, la matriz real contra sí misma pasa y no avisa que la base no la trae.
+    const sano = vigilar(base, arbolDesdeElRepo());
+    expect(sano.estado).toBe(0);
+    expect(sano.salida).not.toContain("invariantes-sin-base");
+    expect(sano.salida).not.toContain("AVISO");
   });
 
   it("el PR quita un detector del registro y cambia su fuente sin subir la versión: falla en la línea del id", () => {
     const base = arbolDesdeElRepo();
-    escribirEn(base, ARCHIVO_REGISTRO, REGISTRO_E2E);
+    escribirEn(base, ARCHIVO_REGISTRO, REGISTRO_DE_EJEMPLO);
     const pr = arbolDesdeElRepo();
-    escribirEn(pr, ARCHIVO_REGISTRO, REGISTRO_E2E);
+    escribirEn(pr, ARCHIVO_REGISTRO, REGISTRO_DE_EJEMPLO);
     alterar(
       pr,
       ARCHIVO_REGISTRO,
@@ -1575,7 +1654,7 @@ describe("de punta a punta: el verificador de la base sobre el árbol del PR (CL
     );
     alterar(pr, ARCHIVO_REGISTRO, 'variable: "--color-separador" }', 'variable: "--otro" }');
     const r = vigilar(base, pr);
-    const id = lineaDe(pr, ARCHIVO_REGISTRO, (l) => l.includes('id: "color-de-separadores"'));
+    const id = lineaEn(pr, ARCHIVO_REGISTRO, (l) => l.includes('id: "color-de-separadores"'));
     expect(r.estado).toBe(1);
     expect(r.error).toContain(
       `FALLA ${ARCHIVO_REGISTRO}:${id} · color-de-separadores · El contrato «color-de-separadores» tenía 2 detectores de tipo «uso» y ahora tiene 1`,
@@ -1587,12 +1666,12 @@ describe("de punta a punta: el verificador de la base sobre el árbol del PR (CL
 
   it("LEGÍTIMO: un PR que agrega un contrato, un código, endurece el rigor y retira otro contrato con registro pasa", () => {
     const base = arbolDesdeElRepo();
-    escribirEn(base, ARCHIVO_REGISTRO, REGISTRO_E2E);
+    escribirEn(base, ARCHIVO_REGISTRO, REGISTRO_DE_EJEMPLO);
     const pr = arbolDesdeElRepo();
     escribirEn(
       pr,
       ARCHIVO_REGISTRO,
-      REGISTRO_E2E.replace("color-de-separadores", "contrato-reemplazante"),
+      REGISTRO_DE_EJEMPLO.replace("color-de-separadores", "contrato-reemplazante"),
     );
     escribirEn(
       pr,
@@ -1686,7 +1765,7 @@ describe("el PR debilita el verificador mismo", () => {
       `FALLA ${CI_REAL}:${lineaDelNeedsDelGate(pr)} · - · El job gate ya no espera a «guardian»`,
     );
     expect(delaBase.error).toContain(
-      `FALLA ${ARCHIVO_EXCEPCIONES}:${lineaDe(pr, ARCHIVO_EXCEPCIONES, (l) => l.startsWith("const DIAS_DE_AVISO"))} · - · El aviso previo al vencimiento bajó de 14 a 1 días`,
+      `FALLA ${ARCHIVO_EXCEPCIONES}:${lineaEn(pr, ARCHIVO_EXCEPCIONES, (l) => l.startsWith("const DIAS_DE_AVISO"))} · - · El aviso previo al vencimiento bajó de 14 a 1 días`,
     );
   });
 
@@ -1700,8 +1779,7 @@ describe("el PR debilita el verificador mismo", () => {
 
 describe("guardian.cjs --base: la vigilancia con la base en un solo comando", () => {
   const crearBase = (contenido: string | null): string => {
-    const carpeta = mkdtempSync(join(tmpdir(), "base-falsa-"));
-    temporales.push(carpeta);
+    const carpeta = carpetaTemporal("base-falsa-");
     if (contenido !== null) escribirEn(carpeta, VERIFICADOR, contenido);
     return carpeta;
   };
@@ -1741,21 +1819,40 @@ describe("guardian.cjs --base: la vigilancia con la base en un solo comando", ()
     expect(guardian.vigilarConLaBase("", RAIZ)).toBe(2);
   });
 
-  const itConGit = it.skipIf(!HAY_GIT);
-  itConGit(
-    "el CLI sale ≠ 0 si la vigilancia falla aunque el guardián pase, y 0 si ambos pasan",
-    () => {
-      const guardianCli = join(RAIZ, "arquitectura/contratos/guardian.cjs");
-      const corre = (...args: string[]) =>
-        spawnSync(process.execPath, [guardianCli, "--sin-informe", ...args], {
-          encoding: "utf8",
-          cwd: RAIZ,
-        });
-      expect(corre().status).toBe(0);
-      expect(corre("--base", crearBase("process.exit(0);\n")).status).toBe(0);
-      const falla = corre(`--base=${crearBase("process.exit(1);\n")}`);
-      expect(falla.status).toBe(1);
-      expect(falla.stdout).toContain("Guardián de contratos: OK");
-    },
-  );
+  // Sobre un repositorio git sintético en disco (el guardián real copiado + los archivos de `BASE`), no
+  // sobre el repo real: así no depende de que haya `.git` aquí y NUNCA se saltea (el sandbox de la
+  // mutación no lo tiene).
+  it("el CLI sale ≠ 0 si la vigilancia falla aunque el guardián pase, y 0 si ambos pasan", () => {
+    const repo = repoSanoEnDisco();
+    const guardianCli = join(repo, "arquitectura/contratos/guardian.cjs");
+    const corre = (...args: string[]) =>
+      spawnSync(process.execPath, [guardianCli, "--sin-informe", ...args], {
+        encoding: "utf8",
+        cwd: repo,
+      });
+    const sola = corre();
+    expect(sola.stderr).toBe("");
+    expect(sola.status).toBe(0);
+    expect(corre("--base", crearBase("process.exit(0);\n")).status).toBe(0);
+    const falla = corre(`--base=${crearBase("process.exit(1);\n")}`);
+    expect(falla.status).toBe(1);
+    expect(falla.stdout).toContain("Guardián de contratos: OK");
+  });
+
+  it("el guardián del repo sintético falla (y la base no lo tapa) si el repositorio está roto", () => {
+    const repo = repoSanoEnDisco();
+    escribirEn(repo, "herramienta-sin-clase/x.ts", "export {};\n");
+    const corrida = spawnSync(
+      process.execPath,
+      [
+        join(repo, "arquitectura/contratos/guardian.cjs"),
+        "--sin-informe",
+        "--base",
+        crearBase("process.exit(0);\n"),
+      ],
+      { encoding: "utf8", cwd: repo },
+    );
+    expect(corrida.status).toBe(1);
+    expect(corrida.stderr).toContain("FALLA herramienta-sin-clase/x.ts:1 · ");
+  });
 });

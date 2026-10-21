@@ -9,6 +9,7 @@ import {
   contratoDeRadio,
   correr,
   declaracion,
+  definicionInerte,
   type Detector,
 } from "./guardian-apoyo";
 
@@ -323,7 +324,7 @@ describe("comparación declaración-uso (el uso real se deduce del código)", ()
   });
 
   it("(e) la fuente por exportación se busca como palabra entera", () => {
-    const soloUso = [(contrato().deteccion as Detector[])[0]];
+    const soloUso = [(contrato().deteccion as Detector[])[0], definicionInerte()];
     const delArchivo = "src/capacidades/permisos/permisos.ts";
     const registro = contrato({
       fuenteDeVerdad: { archivo: delArchivo, exportacion: "permiso" },
@@ -346,6 +347,7 @@ describe("comparación declaración-uso (el uso real se deduce del código)", ()
           nombre: "roto",
           reconoce: () => [{ linea: 99, texto: "x" }],
         },
+        definicionInerte(),
       ],
     });
     const resultado = correr({ contratos: [registro] });
@@ -363,6 +365,7 @@ describe("comparación declaración-uso (el uso real se deduce del código)", ()
             throw new Error("boom");
           },
         },
+        definicionInerte(),
       ],
     });
     const resultado = correr({ contratos: [registro] });

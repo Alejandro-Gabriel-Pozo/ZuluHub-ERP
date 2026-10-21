@@ -8,6 +8,7 @@ import {
   correr,
   huellaDe,
   huellaDelArchivo,
+  definicionInerte,
   type Opciones,
 } from "./guardian-apoyo";
 
@@ -359,7 +360,10 @@ describe("exclusiones del análisis (mismo formato y rigor)", () => {
 
   it("un detector que apunta a una clase excluida falla: nunca vería nada", () => {
     const registro = contrato({
-      deteccion: [{ tipo: "uso", clases: ["docs"], nombre: "en docs", reconoce: () => [] }],
+      deteccion: [
+        { tipo: "uso", clases: ["docs"], nombre: "en docs", reconoce: () => [] },
+        definicionInerte(),
+      ],
     });
     const resultado = correr({ contratos: [registro] });
     expect(codigos(resultado)).toEqual(["detector-en-clase-excluida"]);

@@ -17,6 +17,8 @@ const DESCRIPCION_DE_CODIGOS = Object.freeze({
   "ruta-sin-clase": "toda ruta versionada cae en una clase; si no, falla",
   "clasificacion-ambigua": "dos reglas del mismo nivel que clasifican distinto fallan",
   "clase-sin-rutas": "una clase que el repo debe tener no puede quedar vacía",
+  "codigo-en-clase-excluida":
+    "una clase excluida del análisis (docs, generado) solo admite sus extensiones o rutas permitidas, nunca código",
   "registro-invalido":
     "un contrato con campos faltantes, vacíos o mal formados invalida el registro",
   "unidad-sin-declaracion": "cada unidad tiene su contratos.json",

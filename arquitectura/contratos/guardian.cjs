@@ -348,6 +348,16 @@ function resultado(datos) {
     exclusiones: {},
     unidades: [],
     excepcionesAplicadas: datos.excepciones === undefined ? [] : datos.excepciones.aplicadas,
+    // Los contratos que declaran no poder tener un detector de definición (registro.cjs): quedan a la vista.
+    contratosSinDetectorDeDefinicion:
+      datos.registro === null || datos.registro === undefined
+        ? []
+        : datos.registro.contratos
+            .filter((contrato) => contrato.sinDetectorDeDefinicion !== undefined)
+            .map((contrato) => ({
+              contrato: contrato.id,
+              motivo: contrato.sinDetectorDeDefinicion,
+            })),
     usosFueraDeUnidades:
       datos.comparacion === null || datos.comparacion === undefined
         ? []

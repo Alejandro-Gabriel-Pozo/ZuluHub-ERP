@@ -12,6 +12,13 @@
  * determinista: mismo contenido, mismas coincidencias. `linea` cuenta desde 1.
  *  - `uso`: el archivo consume el contrato (lo declara la unidad en su `contratos.json`).
  *  - `definicion`: el archivo DEFINE el valor del contrato; solo puede pasar en `fuenteDeVerdad.archivo`.
+ *
+ * Todo contrato exige al menos un detector de `uso` Y al menos uno de `definicion`: sin el segundo, copiar
+ * el valor en otro archivo (la duplicación que el contrato quiere evitar) pasaría sin falla. Si de verdad
+ * no puede haber un detector de definición, el contrato lo DECLARA con `sinDetectorDeDefinicion: "motivo"`:
+ * el registro valida el motivo, el informe del guardián lo lista y la vigilancia de la versión anterior
+ * (`no-debilitar.cjs`) lo trata como un debilitamiento cuando aparece nuevo. Declararlo Y tener un detector
+ * de definición a la vez es contradictorio y se rechaza.
  */
 const { CLASES } = require("./clasificacion.cjs");
 
@@ -29,10 +36,13 @@ const CAMPOS_DEL_CONTRATO = [
   "version",
   "politicaDeCambio",
   "bloqueaDeclaracionFalsa",
+  "sinDetectorDeDefinicion",
 ];
 const CAMPOS_DE_TEXTO = ["protege", "alcance", "incumplimiento", "limites", "politicaDeCambio"];
 const PATRON_DE_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const PATRON_DE_VERSION = /^\d+\.\d+\.\d+$/;
+/** Largo mínimo del motivo de `sinDetectorDeDefinicion`: una palabra suelta («n/a») no explica nada. */
+const LARGO_MINIMO_DEL_MOTIVO = 20;
 
 class ErrorDeRegistro extends Error {
   /**
@@ -126,6 +136,33 @@ function validarDetector(detector, posicion) {
 }
 
 /**
+ * Todo contrato tiene un detector de `definicion` o declara por qué no puede tenerlo. Un registro sin
+ * lista de detectores ya falla por otro lado: acá solo se mira la parte de la definición.
+ */
+function validarDefinicion(contrato) {
+  const motivo = contrato.sinDetectorDeDefinicion;
+  const detectores = Array.isArray(contrato.deteccion) ? contrato.deteccion : [];
+  const tieneDefinicion = detectores.some((d) => esObjetoPlano(d) && d.tipo === "definicion");
+  if (motivo === undefined) {
+    return detectores.length > 0 && !tieneDefinicion
+      ? [
+          "«deteccion» necesita al menos un detector de tipo «definicion» (sin él, copiar el valor en otro archivo no falla) o declarar «sinDetectorDeDefinicion» con el motivo de por qué no puede haberlo",
+        ]
+      : [];
+  }
+  if (!esTextoNoVacio(motivo) || motivo.trim().length < LARGO_MINIMO_DEL_MOTIVO) {
+    return [
+      `«sinDetectorDeDefinicion» tiene que ser un texto que explique por qué no puede haber un detector de definición (mínimo ${LARGO_MINIMO_DEL_MOTIVO} caracteres)`,
+    ];
+  }
+  return tieneDefinicion
+    ? [
+        "«sinDetectorDeDefinicion» y un detector de tipo «definicion» a la vez son contradictorios: dejá solo uno",
+      ]
+    : [];
+}
+
+/**
  * Devuelve la lista de problemas de UN contrato (vacía si es válido).
  * @param {unknown} contrato
  * @returns {string[]}
@@ -169,6 +206,7 @@ function problemasDelContrato(contrato) {
       );
     }
   }
+  problemas.push(...validarDefinicion(contrato));
   if (contrato.bloqueaDeclaracionFalsa === undefined) {
     problemas.push("falta «bloqueaDeclaracionFalsa»");
   } else if (typeof contrato.bloqueaDeclaracionFalsa !== "boolean") {

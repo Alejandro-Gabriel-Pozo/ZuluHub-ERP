@@ -132,6 +132,82 @@ describe("registro de contratos", () => {
     expect(problemas.every((p) => p.startsWith("Contrato"))).toBe(true);
   });
 
+  describe("todo contrato tiene un detector de definición o declara por qué no puede tenerlo", () => {
+    const soloUso = () => [
+      porPatron({ tipo: "uso", clases: ["frontend"], patron: /var\(--x\)/, nombre: "uso" }),
+    ];
+    const MOTIVO = "El valor lo calcula un servicio externo y no se escribe en ningún archivo.";
+
+    it("un contrato con solo detectores de uso falla y dice cómo corregirlo", () => {
+      const problemas = problemasDe([contrato({ deteccion: soloUso() })]);
+      expect(problemas).toHaveLength(1);
+      expect(problemas[0]).toContain("«color-separador»");
+      expect(problemas[0]).toContain("«definicion»");
+      expect(problemas[0]).toContain("«sinDetectorDeDefinicion»");
+    });
+
+    it("con la ausencia declarada (y un motivo escrito) el contrato carga y conserva el campo", () => {
+      const registro = cargarRegistro([
+        contrato({ deteccion: soloUso(), sinDetectorDeDefinicion: MOTIVO }),
+      ]);
+      expect(registro.contratos[0]?.["sinDetectorDeDefinicion"]).toBe(MOTIVO);
+    });
+
+    it.each([
+      ["vacío", ""],
+      ["solo espacios", "     "],
+      ["una palabra suelta", "n/a"],
+      ["un motivo de 19 caracteres", "x".repeat(19)],
+      ["un booleano", true],
+      ["un número", 7],
+      ["un objeto", { motivo: MOTIVO }],
+    ])("la ausencia declarada con %s se rechaza", (_nombre, motivo) => {
+      const problemas = problemasDe([
+        contrato({ deteccion: soloUso(), sinDetectorDeDefinicion: motivo }),
+      ]);
+      expect(problemas).toHaveLength(1);
+      expect(problemas[0]).toContain("sinDetectorDeDefinicion");
+      expect(problemas[0]).toContain("20 caracteres");
+    });
+
+    it("un motivo de justo 20 caracteres alcanza", () => {
+      expect(
+        cargarRegistro([
+          contrato({ deteccion: soloUso(), sinDetectorDeDefinicion: "x".repeat(20) }),
+        ]).contratos,
+      ).toHaveLength(1);
+    });
+
+    it("declarar la ausencia Y tener un detector de definición es contradictorio", () => {
+      const problemas = problemasDe([contrato({ sinDetectorDeDefinicion: MOTIVO })]);
+      expect(problemas).toHaveLength(1);
+      expect(problemas[0]).toContain("contradictorios");
+    });
+
+    it("la ausencia declarada no reemplaza al detector de uso", () => {
+      const problemas = problemasDe([contrato({ deteccion: [], sinDetectorDeDefinicion: MOTIVO })]);
+      expect(problemas.join("\n")).toContain("al menos un detector");
+    });
+
+    it("un contrato sin ningún detector avisa solo de la lista, sin repetir el reclamo de definición", () => {
+      const problemas = problemasDe([contrato({ deteccion: [] })]);
+      expect(problemas.join("\n")).not.toContain("«definicion»");
+    });
+
+    it("en el guardián, el registro sin detector de definición es una falla del registro con la línea del id", () => {
+      const resultado = correr({
+        contratos: [contrato({ deteccion: soloUso() })],
+        archivos: {
+          "arquitectura/contratos/contratos.cjs":
+            '// registro\nmodule.exports = [\n  {\n    id: "color-separador",\n  },\n];\n',
+        },
+      });
+      const falla = resultado.fallas.find((f) => f.codigo === "registro-invalido");
+      expect(falla).toMatchObject({ archivo: "arquitectura/contratos/contratos.cjs", linea: 4 });
+      expect(falla?.motivo).toContain("«definicion»");
+    });
+  });
+
   it("dos contratos con el mismo id fallan", () => {
     const problemas = problemasDe([contrato(), contrato()]);
     expect(problemas.join("\n")).toContain("el id está repetido");

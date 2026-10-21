@@ -5,6 +5,7 @@ import {
   APLICADORES,
   CODIGOS_DE_MECANISMO,
   CONTRATO_A,
+  ID_DEL_EJEMPLO,
   IDS_DE_INVARIANTES,
   INVARIANTES,
   OBJETIVOS,
@@ -18,9 +19,12 @@ import {
   ejecutarMundo,
   escanearPruebasDelGuardian,
   evaluarCanario,
+  evaluarHueco,
   huecosAbiertos,
   leerPruebasDelGuardian,
   leerReal,
+  compararArbolesSanos,
+  mundoConElContratoBorradoJuntoConSusDeclaraciones,
   mundoConExcepcionVigente,
   mundoSano,
   resolverLinea,
@@ -62,6 +66,13 @@ function aplicar(id: string): Corrida {
   memoria.set(id, corrida);
   return corrida;
 }
+
+/** Las mutaciones cuyas salidas traen `contrato` y se imprimen con el formato del guardián. */
+const delGuardian = (objetivo: string | undefined): boolean =>
+  objetivo === "repo" || objetivo === "base-y-pr";
+
+const aplicarSano = (): string[] =>
+  compararArbolesSanos().salidas.map((s) => `${s.codigo} @ ${s.archivo}:${String(s.linea)}`);
 
 const todas = INVARIANTES.flatMap((invariante) =>
   invariante.mutaciones.map((mutacion) => ({ invariante, mutacion })),
@@ -115,6 +126,10 @@ describe("base: el repositorio sintético sano pasa", () => {
 
   it("el informe del sano trae evidencia: rutas analizadas, clases y reglas ejecutadas", () => {
     expect(verificarInformeDeEvidencia(ejecutarMundo(mundoSano()).informe)).toEqual([]);
+  });
+
+  it("dos árboles sanos (la base y un pull request sin cambios, con un contrato real) pasan la vigilancia de la versión anterior", () => {
+    expect(aplicarSano()).toEqual([]);
   });
 
   it("el canario aprueba al guardián real: sale distinto de 0 y diagnostica archivo:línea", () => {
@@ -289,16 +304,16 @@ for (const invariante of INVARIANTES) {
       if (mutacion.pendiente !== undefined) {
         it(`HUECO ABIERTO · ${rotulo}: sigue sin detectarse (${mutacion.pendiente.slice(0, 60)}…)`, () => {
           const corrida = aplicar(mutacion.id);
-          const resultado = veredicto(esperado, corrida);
+          const hueco = evaluarHueco(mutacion, corrida);
           expect(
-            resultado.cumple,
+            hueco.abierto,
             `El hueco «${mutacion.id}» YA SE CERRÓ: el guardián ahora lo detecta. Sacá la marca ` +
               "`pendiente` de la mutación en arquitectura/contratos/invariantes.cjs. " +
-              resultado.detalle,
-          ).toBe(false);
+              hueco.detalle,
+          ).toBe(true);
           for (const salida of corrida.salidas) {
             expect(
-              defectosDeUbicacion(salida, mutacion.objetivo === "repo"),
+              defectosDeUbicacion(salida, delGuardian(mutacion.objetivo)),
               salida.codigo,
             ).toEqual([]);
           }
@@ -311,15 +326,16 @@ for (const invariante of INVARIANTES) {
         expect(resultado.cumple, `SOBREVIVIÓ: ${resultado.detalle}`).toBe(true);
         // M3: toda falla trae archivo, línea entera desde 1, motivo y corrección (y contrato si es del guardián).
         for (const salida of corrida.salidas) {
-          expect(defectosDeUbicacion(salida, mutacion.objetivo === "repo"), salida.codigo).toEqual(
-            [],
-          );
+          expect(
+            defectosDeUbicacion(salida, delGuardian(mutacion.objetivo)),
+            salida.codigo,
+          ).toEqual([]);
         }
         if (esperado.pasa === true) return;
         // El diagnóstico esperado, completo: archivo:línea · contrato · motivo · corrección.
         const dicha = corrida.salidas.find((s) => cumpleLoEsperado(esperado, s, corrida.textos));
         expect(dicha).toBeDefined();
-        if (mutacion.objetivo === "repo" && dicha !== undefined) {
+        if (delGuardian(mutacion.objetivo) && dicha !== undefined) {
           const impresa = formatearFalla(dicha as Falla);
           expect(impresa.startsWith(`${dicha.archivo}:${String(dicha.linea)} · `)).toBe(true);
           expect(impresa.split(" · ").length).toBeGreaterThanOrEqual(4);
@@ -332,16 +348,93 @@ for (const invariante of INVARIANTES) {
 }
 
 describe("lo que la matriz muestra como hueco o como «analiza más»", () => {
-  it("los huecos abiertos son exactamente los declarados: ni uno cerrado sin sacar la marca ni uno nuevo sin aviso", () => {
-    expect(huecosAbiertos().map((h) => h.mutacion)).toEqual([
-      "I1-reclasificar-codigo-como-documentacion",
-      "I4-quitar-el-detector-de-definicion",
-      "I8-contrato-borrado-junto-con-todas-sus-declaraciones",
+  it("NO queda ningún hueco abierto: toda mutación que sobrevivía se cerró (regla del dueño)", () => {
+    expect(huecosAbiertos()).toEqual([]);
+    expect(INVARIANTES.flatMap((i) => i.mutaciones).filter((m) => "pendiente" in m)).toEqual([]);
+    expect(textoDelCatalogo).not.toMatch(/^\s*pendiente:/m);
+  });
+
+  describe("el mecanismo para marcar un hueco futuro sigue funcionando (caso sintético)", () => {
+    const sintetico = (pendiente: string | undefined): Invariante[] => {
+      const copia = structuredClone(INVARIANTES);
+      copia[0]?.mutaciones.push({
+        id: "I1-hueco-sintetico",
+        tipo: "alteracion",
+        objetivo: "repo",
+        descripcion: "Una mutación inventada que el guardián no detecta.",
+        esperado: { codigo: "ruta-sin-clase", archivo: "x.ts", linea: 1 },
+        ...(pendiente === undefined ? {} : { pendiente }),
+      });
+      return copia;
+    };
+    const sinAplicarNada = (): Corrida => ({ salidas: [], textos: {} });
+    const MOTIVO = "HUECO: el guardián todavía no detecta esta alteración y falta el chequeo.";
+
+    it("huecosAbiertos lista la mutación marcada con su invariante y su motivo", () => {
+      expect(huecosAbiertos(sintetico(MOTIVO))).toEqual([
+        { invariante: "I1", mutacion: "I1-hueco-sintetico", motivo: MOTIVO },
+      ]);
+      expect(huecosAbiertos(sintetico(undefined))).toEqual([]);
+    });
+
+    it("la matriz acepta el hueco marcado (aunque su código esperado sea provisorio) y rechaza una marca sin motivo", () => {
+      const conAplicador = [...Object.keys(APLICADORES), "I1-hueco-sintetico"];
+      const marcada = sintetico(MOTIVO);
+      (marcada[0]?.mutaciones.at(-1) as Mutacion).esperado = { codigo: "codigo-provisorio" };
+      expect(problemasDe(marcada, { idsConAplicador: conAplicador })).toEqual([]);
+      expect(codigosDe(problemasDe(sintetico("  "), { idsConAplicador: conAplicador }))).toContain(
+        "matriz-mutacion-mal-formada",
+      );
+    });
+
+    it("un hueco que sobrevive se reporta abierto; si el guardián lo detecta, se avisa que hay que sacar la marca", () => {
+      const hueco = sintetico(MOTIVO)[0]?.mutaciones.at(-1) as Mutacion;
+      expect(evaluarHueco(hueco, sinAplicarNada()).abierto).toBe(true);
+      const detectado: Corrida = {
+        salidas: [
+          {
+            codigo: "ruta-sin-clase",
+            archivo: "x.ts",
+            linea: 1,
+            contrato: null,
+            motivo: "m",
+            correccion: "c",
+          },
+        ],
+        textos: {},
+      };
+      expect(evaluarHueco(hueco, detectado).abierto).toBe(false);
+    });
+  });
+
+  it("I8: con UN solo árbol, un contrato borrado junto con todas sus declaraciones pasa (por eso lo cubre la comparación con la base)", () => {
+    const { fallas } = ejecutarMundo(mundoConElContratoBorradoJuntoConSusDeclaraciones());
+    expect(fallas).toEqual([]);
+    const dosArboles = aplicar("I8-contrato-borrado-junto-con-todas-sus-declaraciones");
+    expect(dosArboles.salidas.map((f) => f.codigo)).toEqual(["retiro-sin-registro"]);
+    expect(dosArboles.salidas[0]?.contrato).toBe(ID_DEL_EJEMPLO);
+  });
+
+  it("I4: un contrato que DECLARA no tener detector de definición pasa el guardián, queda en el informe y la base lo marca", () => {
+    const m = mundoSano();
+    const registro = m.contratos.find((c) => c["id"] === CONTRATO_A) as Record<string, unknown>;
+    registro["deteccion"] = (registro["deteccion"] as { tipo: string }[]).filter(
+      (d) => d.tipo !== "definicion",
+    );
+    registro["sinDetectorDeDefinicion"] = "El valor lo calcula un servicio externo, sin archivo.";
+    m.archivos["apps/web/ui/Otra.module.css"] = ":root {\n  --color-separador: #cccccc;\n}\n";
+    const { fallas, informe } = ejecutarMundo(m);
+    expect(fallas).toEqual([]);
+    expect(informe.contratosSinDetectorDeDefinicion).toEqual([
+      {
+        contrato: CONTRATO_A,
+        motivo: "El valor lo calcula un servicio externo, sin archivo.",
+      },
     ]);
-    for (const hueco of huecosAbiertos()) {
-      expect(hueco.motivo.length, hueco.mutacion).toBeGreaterThan(40);
-      expect(aplicar(hueco.mutacion).salidas, hueco.mutacion).toEqual([]);
-    }
+    expect(ejecutarMundo(mundoSano()).informe.contratosSinDetectorDeDefinicion).toEqual([]);
+    expect(
+      aplicar("I8-declarar-que-no-hay-detector-de-definicion").salidas.map((s) => s.codigo),
+    ).toContain("sin-definicion-nueva");
   });
 
   it("I6: vaciar exclusiones.json no es una falla, pero SÍ analiza más (clase docs y generado)", () => {
@@ -560,7 +653,7 @@ describe("(d) meta-invariantes: M3 y M4", () => {
       for (const salida of aplicar(mutacion.id).salidas) {
         revisadas += 1;
         expect(
-          defectosDeUbicacion(salida, mutacion.objetivo === "repo"),
+          defectosDeUbicacion(salida, delGuardian(mutacion.objetivo)),
           `${mutacion.id} · ${salida.codigo}`,
         ).toEqual([]);
         expect(Number.isInteger(salida.linea) && (salida.linea ?? 0) >= 1).toBe(true);

@@ -9,13 +9,21 @@ import {
   EXCLUSIONES_BASE,
   LINEA_DE_USO,
   RAIZ,
+  REGISTRO_DE_EJEMPLO,
   SIN_CONTRATOS,
   TOKENS,
+  alterar,
+  arbolDesdeElRepo,
+  borrarTemporal,
   contrato,
   contratoDeRadio,
   ejecutar,
+  escribirEn,
   huellaDe,
   huellaDelArchivo,
+  quitarInvarianteDelCatalogo,
+  quitarMutacionDelCatalogo,
+  retiroCompleto,
   type Contrato,
   type Detector,
   type Entradas,
@@ -127,6 +135,18 @@ export const {
     esperadas: { archivo: string; linea: number }[],
     archivoDelGuardian: string,
   ) => Problema[];
+};
+
+/** La vigilancia de la versión anterior (`no-debilitar.cjs`): se ejecuta como función sobre dos árboles en disco. */
+const vigilancia = require("../../arquitectura/contratos/no-debilitar.cjs") as {
+  ARCHIVOS: Record<string, string>;
+  capturar: (raiz: string) => object;
+  verificar: (datos: {
+    base: object;
+    pr: object;
+    ahora?: Date;
+    leerPr: (ruta: string) => Buffer | null;
+  }) => { fallas: Salida[]; avisos: Salida[] };
 };
 
 type Regla = { clase: string; glob: string };
@@ -646,6 +666,111 @@ const enLaMatriz =
 
 const exclusionesDe = (m: Mundo) => listaDe(m.exclusiones);
 
+// --- Dos árboles: la base y el pull request -------------------------------------------------------------
+
+type Arboles = {
+  /** Se aplica a la base Y al pull request antes de alterar cada uno (el punto de partida común). */
+  ambos?: (raiz: string) => void;
+  /** Solo la base. */
+  base?: (raiz: string) => void;
+  /** Solo el pull request: la alteración que se prueba. */
+  pr?: (raiz: string) => void;
+};
+
+/**
+ * Compara DOS árboles temporales (copias del repositorio real: `arquitectura/`, `ci.yml` y `package.json`)
+ * con la vigilancia de la versión anterior (`no-debilitar.cjs`, como función: carga el código de cada árbol
+ * en un proceso hijo, igual que el CLI) y devuelve lo que dijo. Los árboles se borran al terminar. Es lo
+ * único que ve lo que un solo árbol no puede: lo que la base exigía y el pull request dejó de exigir.
+ */
+function compararArboles({ ambos, base: enBase, pr: enPr }: Arboles): Corrida {
+  const base = arbolDesdeElRepo();
+  const pr = arbolDesdeElRepo();
+  try {
+    for (const raiz of [base, pr]) ambos?.(raiz);
+    enBase?.(base);
+    enPr?.(pr);
+    const leerPr = (ruta: string): Buffer | null => {
+      try {
+        return readFileSync(join(pr, ruta));
+      } catch {
+        return null;
+      }
+    };
+    const { fallas } = vigilancia.verificar({
+      base: vigilancia.capturar(base),
+      pr: vigilancia.capturar(pr),
+      ahora: AHORA,
+      leerPr,
+    });
+    const textos: Record<string, string> = {};
+    for (const archivo of Object.values(vigilancia.ARCHIVOS)) {
+      const texto = leerPr(archivo);
+      if (texto !== null) textos[archivo] = texto.toString();
+    }
+    return { salidas: fallas.map((f) => ({ ...f })), textos };
+  } finally {
+    borrarTemporal(base);
+    borrarTemporal(pr);
+  }
+}
+/** Dos árboles sin ninguna alteración (con el contrato de ejemplo en el registro de ambos): no debe fallar nada. */
+export const compararArbolesSanos = (): Corrida =>
+  compararArboles({ ambos: (raiz) => escribirEn(raiz, REGISTRO_REAL, REGISTRO_DE_EJEMPLO) });
+const enArboles =
+  (arboles: Arboles): Aplicador =>
+  () =>
+    compararArboles(arboles);
+
+const REGISTRO_REAL = "arquitectura/contratos/contratos.cjs";
+const CLASIFICACION_REAL = "arquitectura/contratos/clasificacion.cjs";
+const EXCEPCIONES_REAL = "arquitectura/contratos/excepciones.cjs";
+const CODIGOS_REAL = "arquitectura/contratos/codigos.cjs";
+const RETIROS_REAL = "arquitectura/contratos/retiros.json";
+const GATE_REAL = "arquitectura/evaluar-gate.cjs";
+const CI_REAL = ".github/workflows/ci.yml";
+export const ID_DEL_EJEMPLO = "color-de-separadores";
+const REGISTRO_SIN_EL_EJEMPLO = `// El contrato «${ID_DEL_EJEMPLO}» ya no está en el registro.\nmodule.exports = [];\n`;
+const conElContratoDeEjemplo = (raiz: string): void =>
+  escribirEn(raiz, REGISTRO_REAL, REGISTRO_DE_EJEMPLO);
+const sinElTrabajoGuardian = (texto: string): string => {
+  const inicio = texto.indexOf("  guardian:\n");
+  const fin = texto.indexOf("  pruebas:\n");
+  if (inicio < 0 || fin < inicio) throw new Error("el ci.yml real no tiene el trabajo guardian");
+  return texto.slice(0, inicio) + texto.slice(fin);
+};
+const alterarCi = (raiz: string, alterarTexto: (texto: string) => string): void =>
+  escribirEn(raiz, CI_REAL, alterarTexto(readFileSync(join(raiz, CI_REAL), "utf8")));
+
+/** El contrato de ejemplo declarado por dos unidades (la base) o por ninguna (el pull request). */
+const declararElEjemplo = (raiz: string, usa: boolean): void => {
+  for (const unidad of ["apps/web", "src/modulos/empresas"]) {
+    escribirEn(
+      raiz,
+      `${unidad}/contratos.json`,
+      json(usa ? { usa: [ID_DEL_EJEMPLO] } : { usa: [], noUsa: "Ya no usa contratos." }),
+    );
+  }
+};
+
+/** El mundo (un solo árbol) en que el contrato desaparece del registro Y de todas sus declaraciones. */
+export function mundoConElContratoBorradoJuntoConSusDeclaraciones(): Mundo {
+  const m = mundoSano();
+  m.contratos = m.contratos.filter((c) => c["id"] !== CONTRATO_A);
+  declarar(m, "apps/web", { usa: [CONTRATO_B] });
+  declarar(m, "src/modulos/empresas", { usa: [], noUsa: "Ya no usa contratos." });
+  return m;
+}
+
+/** Las dos mitades de un hueco abierto: ¿sigue sin detectarse (`abierto`) o ya lo detecta el guardián? */
+export function evaluarHueco(
+  mutacion: Mutacion,
+  corrida: Corrida,
+): { abierto: boolean; detalle: string } {
+  const resultado = veredicto(mutacion.esperado as Esperado, corrida);
+  return { abierto: !resultado.cumple, detalle: resultado.detalle };
+}
+
 /** Aplicadores por id de mutación: la otra mitad del catálogo (M5: ninguna mutación sin aplicador). */
 export const APLICADORES: Record<string, Aplicador> = {
   // I1 · Toda ruta versionada tiene exactamente una clase.
@@ -678,6 +803,18 @@ export const APLICADORES: Record<string, Aplicador> = {
   "I1-reclasificar-codigo-como-documentacion": enRepo((m) => {
     cambiarClase(m, "src/capacidades/**", "docs");
     poner(m, "src/capacidades/permisos/separador.ts", `${USO_EN_TS}\n`);
+  }),
+  "I1-reclasificar-un-script-como-generado": enRepo((m) =>
+    cambiarClase(m, "scripts/**", "generado"),
+  ),
+  "I1-codigo-escondido-en-la-carpeta-de-documentos": enRepo((m) =>
+    poner(m, ".claude/hooks/ejecutar.sh", "echo hola\n"),
+  ),
+  "I1-archivo-binario-en-una-clase-excluida": enRepo((m) =>
+    poner(m, ".claude/imagen.png", "binario"),
+  ),
+  "I1-dejar-de-esperar-una-clase": enArboles({
+    pr: (raiz) => alterar(raiz, CLASIFICACION_REAL, '  "scripts",\n  "generado",', '  "generado",'),
   }),
 
   // I2 · Toda unidad declara sus contratos (o declara que no tiene).
@@ -779,6 +916,15 @@ export const APLICADORES: Record<string, Aplicador> = {
     registro.deteccion = registro.deteccion.filter((d) => d.tipo !== "definicion");
     poner(m, "apps/web/ui/Otra.module.css", ":root {\n  --color-separador: #cccccc;\n}\n");
   }),
+  "I4-motivo-de-ausencia-de-definicion-vacio": enRepo((m) => {
+    const registro = contratoDe(m, CONTRATO_A);
+    registro.deteccion = registro.deteccion.filter((d) => d.tipo !== "definicion");
+    registro["sinDetectorDeDefinicion"] = "n/a";
+  }),
+  "I4-ausencia-declarada-con-un-detector-de-definicion": enRepo((m) => {
+    contratoDe(m, CONTRATO_A)["sinDetectorDeDefinicion"] =
+      "El valor lo calcula un servicio externo y no se escribe en ningún archivo.";
+  }),
   "I4-silenciar-la-copia-con-una-exclusion-vencida": enRepo((m) => {
     poner(m, "apps/web/ui/Otra.module.css", ":root {\n  --color-separador: #cccccc;\n}\n");
     m.exclusiones = [
@@ -823,6 +969,20 @@ export const APLICADORES: Record<string, Aplicador> = {
   }),
   "I5-contrato-inexistente": enRepoConExcepcion((_m, excepcion) => {
     excepcion["contrato"] = "no-existe";
+  }),
+
+  "I5-subir-el-tope-de-dias-de-las-excepciones": enArboles({
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        EXCEPCIONES_REAL,
+        "const PLAZO_MAXIMO_DIAS = 60;",
+        "const PLAZO_MAXIMO_DIAS = 90;",
+      ),
+  }),
+  "I5-bajar-el-aviso-previo-al-vencimiento": enArboles({
+    pr: (raiz) =>
+      alterar(raiz, EXCEPCIONES_REAL, "const DIAS_DE_AVISO = 14;", "const DIAS_DE_AVISO = 1;"),
   }),
 
   // I6 · Lo que no se analiza está excluido de forma explícita y temporal.
@@ -872,6 +1032,25 @@ export const APLICADORES: Record<string, Aplicador> = {
     ];
   }),
 
+  "I6-ampliar-las-clases-que-se-pueden-excluir": enArboles({
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        CLASIFICACION_REAL,
+        'const CLASES_EXCLUIBLES = Object.freeze(["generado", "docs"]);',
+        'const CLASES_EXCLUIBLES = Object.freeze(["generado", "docs", "backend"]);',
+      ),
+  }),
+  "I6-ampliar-lo-permitido-en-una-clase-excluida": enArboles({
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        CLASIFICACION_REAL,
+        'extensiones: Object.freeze([".md", ".txt"]),',
+        'extensiones: Object.freeze([".md", ".txt", ".ts"]),',
+      ),
+  }),
+
   // I7 · «Pasó» significa «se analizó algo».
   "I7-repositorio-sin-archivos": enRepo((m) => {
     m.sinRutas = true;
@@ -894,6 +1073,14 @@ export const APLICADORES: Record<string, Aplicador> = {
       ...frontend.map((ruta) => exclusionDeRuta(m, ruta)),
     ];
   }),
+  "I7-el-registro-del-pr-no-se-puede-leer": enArboles({
+    pr: (raiz) =>
+      escribirEn(raiz, REGISTRO_REAL, 'throw new Error("el registro del PR se rompió");\n'),
+  }),
+  "I7-el-registro-de-la-base-no-se-puede-leer": enArboles({
+    base: (raiz) =>
+      escribirEn(raiz, REGISTRO_REAL, 'throw new Error("el registro de la base se rompió");\n'),
+  }),
   "I7-informe-sin-reglas-ejecutadas": () => {
     const { informe } = ejecutarMundo(mundoSano());
     informe.reglasEjecutadas.chequeos = [];
@@ -907,10 +1094,70 @@ export const APLICADORES: Record<string, Aplicador> = {
   "I8-contrato-borrado-con-unidades-que-lo-declaran": enRepo((m) => {
     m.contratos = m.contratos.filter((c) => c["id"] !== CONTRATO_A);
   }),
-  "I8-contrato-borrado-junto-con-todas-sus-declaraciones": enRepo((m) => {
-    m.contratos = m.contratos.filter((c) => c["id"] !== CONTRATO_A);
-    declarar(m, "apps/web", { usa: [CONTRATO_B] });
-    declarar(m, "src/modulos/empresas", { usa: [], noUsa: "Ya no usa contratos." });
+  // Dos árboles: la base sana con un contrato real y sus declaraciones; el pull request lo borra de todos lados.
+  "I8-contrato-borrado-junto-con-todas-sus-declaraciones": enArboles({
+    base: (raiz) => {
+      conElContratoDeEjemplo(raiz);
+      declararElEjemplo(raiz, true);
+    },
+    pr: (raiz) => {
+      escribirEn(raiz, REGISTRO_REAL, REGISTRO_SIN_EL_EJEMPLO);
+      declararElEjemplo(raiz, false);
+    },
+  }),
+  "I8-retiro-registrado-sin-aprobacion": enArboles({
+    base: conElContratoDeEjemplo,
+    pr: (raiz) => {
+      escribirEn(raiz, REGISTRO_REAL, REGISTRO_SIN_EL_EJEMPLO);
+      const { aprobadoPor: _sinAprobacion, ...incompleto } = retiroCompleto(ID_DEL_EJEMPLO);
+      void _sinAprobacion;
+      escribirEn(raiz, RETIROS_REAL, `${JSON.stringify([incompleto], null, 2)}\n`);
+    },
+  }),
+  "I8-borrar-un-retiro-registrado": enArboles({
+    base: (raiz) =>
+      escribirEn(
+        raiz,
+        RETIROS_REAL,
+        `${JSON.stringify([retiroCompleto("contrato-viejo")], null, 2)}\n`,
+      ),
+  }),
+  "I8-perder-un-detector-de-uso": enArboles({
+    ambos: conElContratoDeEjemplo,
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        REGISTRO_REAL,
+        /\n {6}porPatron\(\{ tipo: "uso", clases: \["frontend"\], patron: \/separador\/ \}\),/,
+        "",
+      ),
+  }),
+  "I8-detector-que-deja-de-mirar-una-clase": enArboles({
+    ambos: conElContratoDeEjemplo,
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        REGISTRO_REAL,
+        'tipo: "uso", clases: ["frontend", "backend"]',
+        'tipo: "uso", clases: ["frontend"]',
+      ),
+  }),
+  "I8-cambiar-la-fuente-de-verdad-sin-subir-la-version": enArboles({
+    ambos: conElContratoDeEjemplo,
+    pr: (raiz) =>
+      alterar(raiz, REGISTRO_REAL, 'variable: "--color-separador" }', 'variable: "--otro" }'),
+  }),
+  "I8-declarar-que-no-hay-detector-de-definicion": enArboles({
+    ambos: conElContratoDeEjemplo,
+    pr: (raiz) => {
+      alterar(raiz, REGISTRO_REAL, /\n {6}porPatron\(\{ tipo: "definicion", [^\n]*\}\),/, "");
+      alterar(
+        raiz,
+        REGISTRO_REAL,
+        '    limites: "No ve usos dinámicos.",',
+        '    limites: "No ve usos dinámicos.",\n    sinDetectorDeDefinicion: "El valor lo calcula un servicio externo y no se escribe en ningún archivo.",',
+      );
+    },
   }),
   "I8-version-mal-formada": enRepo((m) => {
     contratoDe(m, CONTRATO_A).version = "1";
@@ -1035,6 +1282,79 @@ export const APLICADORES: Record<string, Aplicador> = {
   "I9-job-solo-en-un-evento": enWorkflow((t) =>
     insertarEnElTrabajo(t, "pruebas", "    if: github.event_name == 'workflow_dispatch'"),
   ),
+  "I9-el-guardian-sale-de-los-needs-del-gate": enWorkflow((t) => {
+    const lineas = t.split("\n");
+    const [desde, hasta] = tramoDelTrabajo(t, "gate");
+    const indice = lineas.slice(desde, hasta).findIndex((l) => l.trim() === "guardian,");
+    if (indice === -1) throw new Error("el Gate real no lista `guardian,` en needs");
+    lineas.splice(desde + indice, 1);
+    return lineas.join("\n");
+  }),
+  "I9-el-guardian-pierde-su-tope-de-tiempo": enWorkflow((t) =>
+    quitarLineaDelTrabajo(t, "guardian", /^ {4}timeout-minutes:/),
+  ),
+  "I9-condicion-en-el-paso-que-corre-el-guardian": enWorkflow((t) =>
+    reemplazar(
+      t,
+      "      - name: Guardián del cambio (la versión nueva)\n",
+      "      - name: Guardián del cambio (la versión nueva)\n        if: github.event_name == 'push'\n",
+    ),
+  ),
+  "I9-el-guardian-corre-con-tolerancia-al-error": enWorkflow((t) =>
+    reemplazar(
+      t,
+      "run: node arquitectura/contratos/guardian.cjs\n",
+      "run: node arquitectura/contratos/guardian.cjs || true\n",
+    ),
+  ),
+  "I9-el-pull-request-borra-el-trabajo-guardian": enArboles({
+    pr: (raiz) => alterarCi(raiz, sinElTrabajoGuardian),
+  }),
+  "I9-el-gate-deja-de-esperar-al-guardian": enArboles({
+    pr: (raiz) => alterar(raiz, CI_REAL, /^ {8}guardian,\n/m, ""),
+  }),
+  "I9-evaluar-gate-deja-pasar-un-guardian-caido": enArboles({
+    pr: (raiz) => alterar(raiz, GATE_REAL, '  "guardian",\n', ""),
+  }),
+  "I9-el-trabajo-guardian-deja-de-ejecutar-el-guardian": enArboles({
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        CI_REAL,
+        "run: node arquitectura/contratos/guardian.cjs\n",
+        "run: node arquitectura/contratos/guardian.cjs || true\n",
+      ),
+  }),
+  "I9-continue-on-error-en-el-trabajo-guardian": enArboles({
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        CI_REAL,
+        "    name: Guardián de contratos\n",
+        "    name: Guardián de contratos\n    continue-on-error: true\n",
+      ),
+  }),
+  "I9-condicion-nueva-en-el-paso-del-guardian-respecto-de-la-base": enArboles({
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        CI_REAL,
+        "      - name: Guardián del cambio (la versión nueva)\n",
+        "      - name: Guardián del cambio (la versión nueva)\n        if: github.event_name == 'push'\n",
+      ),
+  }),
+  "I9-el-script-arquitectura-deja-de-encadenar-el-guardian-respecto-de-la-base": enArboles({
+    pr: (raiz) => alterar(raiz, "package.json", ' && npm run guardian",', '",'),
+  }),
+  "I9-el-script-guardian-se-desvia-respecto-de-la-base": enArboles({
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        "package.json",
+        '"guardian": "node arquitectura/contratos/guardian.cjs"',
+        '"guardian": "node arquitectura/contratos/guardian.cjs || true"',
+      ),
+  }),
   "I9-sin-disparador-de-pull-request": enWorkflow((t) => reemplazar(t, "  pull_request:\n", "")),
   "I9-disparador-con-filtro-de-rutas": enWorkflow((t) =>
     reemplazar(t, "  pull_request:\n", '  pull_request:\n    paths-ignore: ["**/*.md"]\n'),
@@ -1127,6 +1447,21 @@ export const APLICADORES: Record<string, Aplicador> = {
       motivo: "Un chequeo nuevo con un código que no está en la lista cerrada.",
       correccion: "Anotar el código.",
     });
+  }),
+  "I10-borrar-un-chequeo-del-guardian": enArboles({
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        CODIGOS_REAL,
+        '  "sin-rutas": "el repositorio tiene rutas versionadas para analizar",\n',
+        "",
+      ),
+  }),
+  "I10-quitar-una-mutacion-del-catalogo-real": enArboles({
+    pr: (raiz) => quitarMutacionDelCatalogo(raiz, "I1-quitar-la-regla-de-una-carpeta"),
+  }),
+  "I10-quitar-un-invariante-del-catalogo-real": enArboles({
+    pr: (raiz) => quitarInvarianteDelCatalogo(raiz, "I7"),
   }),
   "I10-excluir-la-matriz-en-vitest": enVitest((t) =>
     reemplazar(

@@ -16,7 +16,9 @@
  *  - `objetivo`      sobre qué se aplica: `repo` (repositorio sintético en memoria, corre el
  *                    guardián), `package-json`, `workflow`, `vitest-config`, `pruebas-del-guardian`
  *                    (textos reales alterados en memoria), `informe`, `canario` (corre el CLI sobre un
- *                    repo roto conocido) o `matriz` (una copia de este mismo catálogo);
+ *                    repo roto conocido), `matriz` (una copia de este mismo catálogo) o `base-y-pr`
+ *                    (DOS árboles temporales —copias del repositorio real, la base sana y el pull request
+ *                    alterado— que compara `no-debilitar.cjs`, la vigilancia de la versión anterior);
  *  - `descripcion`   qué se le hace al sistema;
  *  - `esperado`      qué tiene que pasar: `{ codigo, archivo?, linea? | lineaDe?, contrato?,
  *                    contieneMotivo? }` (la verificación FALLA con ese código y, si se fija, en ese
@@ -25,7 +27,9 @@
  *                    invariante (el motivo es obligatorio: M2);
  *  - `pendiente`     HUECO ABIERTO: la mutación hoy SOBREVIVE (el guardián no falla) y el motivo dice
  *                    qué falta. La prueba exige que siga sobreviviendo; si alguien cierra el hueco y no
- *                    saca la marca, falla (así un hueco nunca queda anotado de más ni olvidado).
+ *                    saca la marca, falla (así un hueco nunca queda anotado de más ni olvidado). Hoy no
+ *                    hay ninguno (regla del dueño: una mutación que sobrevive se corrige, no se deja
+ *                    pendiente); el mecanismo sigue para marcar uno futuro mientras se lo cierra.
  * `lineaDe` es `"texto"` o `{ texto, despuesDe }`: la línea del primer renglón que contiene `texto`
  * (después de `despuesDe`) en el archivo ALTERADO, para no atar el catálogo a números de línea de
  * archivos reales que otras personas editan.
@@ -38,6 +42,7 @@
  *  - M5  cada id de mutación es único y cada mutación tiene su aplicador.
  */
 const { CODIGOS_DE_MECANISMO } = require("./verificar-mecanismo.cjs");
+const { CODIGOS_DE_FALLA: CODIGOS_DE_VIGILANCIA } = require("./no-debilitar.cjs");
 
 const ARCHIVO_DE_LA_MATRIZ = "arquitectura/contratos/invariantes.cjs";
 const TIPOS_DE_MUTACION = Object.freeze([
@@ -57,6 +62,7 @@ const OBJETIVOS = Object.freeze([
   "informe",
   "canario",
   "matriz",
+  "base-y-pr",
 ]);
 const IDS_DE_INVARIANTES = Object.freeze([
   "I1",
@@ -80,6 +86,7 @@ const COMPARACION = "arquitectura/contratos/comparacion.cjs";
 const EXCEPCIONES = "arquitectura/contratos/excepciones.cjs";
 const REGISTRO = "arquitectura/contratos/registro.cjs";
 const MECANISMO = "arquitectura/contratos/verificar-mecanismo.cjs";
+const VIGILANCIA = "arquitectura/contratos/no-debilitar.cjs";
 const CI = ".github/workflows/ci.yml";
 const PRUEBAS = "test/arquitectura/guardian-*.test.ts";
 
@@ -91,14 +98,26 @@ const INVARIANTES = [
     elementos: {
       aplica: [`${CLASIFICACION}#clasificar`, `${GUARDIAN}#ejecutar (clase-sin-rutas)`],
       define: [`${CLASIFICACION}#NIVELES`, `${CLASIFICACION}#CLASES`],
-      parametriza: [`${CLASIFICACION}#CLASES_ESPERADAS`, `${CLASIFICACION}#CLASES_EXCLUIBLES`],
-      hacePosible: ["`git ls-files` (cargarDelRepo)", "npm run guardian", `${PRUEBAS}`],
+      parametriza: [
+        `${CLASIFICACION}#CLASES_ESPERADAS`,
+        `${CLASIFICACION}#CLASES_EXCLUIBLES`,
+        `${CLASIFICACION}#PERMITIDO_EN_CLASE_EXCLUIDA`,
+        `${CLASIFICACION}#EXTENSIONES_DE_CODIGO`,
+      ],
+      hacePosible: [
+        "`git ls-files` (cargarDelRepo)",
+        `${VIGILANCIA}#chequearClases (las clases esperadas no se reducen)`,
+        "npm run guardian",
+        `${PRUEBAS}`,
+      ],
     },
     codigosDeFalla: [
       "regla-de-clasificacion-invalida",
       "ruta-sin-clase",
       "clasificacion-ambigua",
       "clase-sin-rutas",
+      "codigo-en-clase-excluida",
+      "clases-esperadas-reducidas",
     ],
     mutaciones: [
       {
@@ -184,14 +203,51 @@ const INVARIANTES = [
         tipo: "elusion",
         objetivo: "repo",
         descripcion:
-          "La tabla de clasificación manda `src/capacidades/**` a la clase `docs` (excluida) mientras ahí se usa un contrato sin declararlo.",
+          "La tabla de clasificación manda `src/capacidades/**` a la clase `docs` (excluida) mientras ahí se usa un contrato sin declararlo: el código saldría del análisis.",
         esperado: {
-          codigo: "clase-excluida-con-codigo",
-          archivo: "arquitectura/contratos/clasificacion.cjs",
-          linea: 9,
+          codigo: "codigo-en-clase-excluida",
+          archivo: "src/capacidades/permisos/separador.ts",
+          linea: 1,
         },
-        pendiente:
-          "HUECO: nada impide que la tabla mande código a una clase excluida (docs o generado); el uso queda sin analizar y la unidad que declara `noUsa` sigue pasando. Con un solo árbol no se distingue una reclasificación legítima de una maliciosa: lo cubre el guardián de `main` (§5) con su propia tabla, y se cierra con un chequeo propio (las clases excluidas solo admiten extensiones de documentos o archivos de bloqueo). El código esperado es provisorio.",
+      },
+      {
+        id: "I1-reclasificar-un-script-como-generado",
+        tipo: "alteracion",
+        objetivo: "repo",
+        descripcion: "La regla de `scripts/**` pasa a la clase `generado` (excluida).",
+        esperado: { codigo: "codigo-en-clase-excluida", archivo: "scripts/migrar.ts", linea: 1 },
+      },
+      {
+        id: "I1-codigo-escondido-en-la-carpeta-de-documentos",
+        tipo: "elusion",
+        objetivo: "repo",
+        descripcion:
+          "Un script `.sh` se agrega bajo `.claude/`, que la tabla clasifica como `docs` (excluida).",
+        esperado: {
+          codigo: "codigo-en-clase-excluida",
+          archivo: ".claude/hooks/ejecutar.sh",
+          linea: 1,
+        },
+      },
+      {
+        id: "I1-archivo-binario-en-una-clase-excluida",
+        tipo: "alteracion",
+        objetivo: "repo",
+        descripcion:
+          "Un archivo que no es documento (una imagen) se agrega bajo `.claude/`: tampoco es de un tipo permitido en una clase excluida.",
+        esperado: { codigo: "codigo-en-clase-excluida", archivo: ".claude/imagen.png", linea: 1 },
+      },
+      {
+        id: "I1-dejar-de-esperar-una-clase",
+        tipo: "exclusion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request saca `scripts` de `CLASES_ESPERADAS`: si la clase quedara vacía, el guardián diría «pasó» sin haber mirado nada de ella.",
+        esperado: {
+          codigo: "clases-esperadas-reducidas",
+          archivo: CLASIFICACION,
+          lineaDe: "const CLASES_ESPERADAS",
+        },
       },
     ],
   },
@@ -504,12 +560,24 @@ const INVARIANTES = [
     id: "I4",
     enunciado: "Cada contrato tiene una única fuente de verdad.",
     elementos: {
-      aplica: [`${COMPARACION}#comparar (definicion-fuera-de-la-fuente, contrato-sin-fuente)`],
+      aplica: [
+        `${COMPARACION}#comparar (definicion-fuera-de-la-fuente, contrato-sin-fuente)`,
+        `${REGISTRO}#validarDefinicion (todo contrato tiene un detector de definicion)`,
+      ],
       define: ["contrato.fuenteDeVerdad en contratos.cjs", "el archivo que la contiene"],
-      parametriza: ["detectores de tipo `definicion` de cada contrato", "detector.clases"],
-      hacePosible: [`${REGISTRO}#cargarRegistro`, "npm run guardian", `${PRUEBAS}`],
+      parametriza: [
+        "detectores de tipo `definicion` de cada contrato",
+        "detector.clases",
+        "contrato.sinDetectorDeDefinicion (la ausencia declarada, con motivo)",
+      ],
+      hacePosible: [
+        `${REGISTRO}#cargarRegistro`,
+        `${VIGILANCIA}#chequearContratos (sin-definicion-nueva)`,
+        "npm run guardian",
+        `${PRUEBAS}`,
+      ],
     },
-    codigosDeFalla: ["definicion-fuera-de-la-fuente", "contrato-sin-fuente"],
+    codigosDeFalla: ["definicion-fuera-de-la-fuente", "contrato-sin-fuente", "registro-invalido"],
     mutaciones: [
       {
         id: "I4-borrar-la-fuente",
@@ -578,15 +646,39 @@ const INVARIANTES = [
         tipo: "desconexion",
         objetivo: "repo",
         descripcion:
-          "Se saca del contrato el detector de `definicion` y se copia el valor en otro archivo.",
+          "Se saca del contrato el detector de `definicion` y se copia el valor en otro archivo: el registro ya no se acepta, así que la copia no pasa en silencio.",
         esperado: {
-          codigo: "definicion-fuera-de-la-fuente",
-          archivo: "apps/web/ui/Otra.module.css",
-          linea: 2,
-          contrato: "color-separador",
+          codigo: "registro-invalido",
+          archivo: "arquitectura/contratos/contratos.cjs",
+          linea: 4,
+          contieneMotivo: "«definicion»",
         },
-        pendiente:
-          "HUECO: el registro exige al menos un detector de `uso` pero NO exige uno de `definicion`; un contrato sin él acepta copias del valor sin falla (I4 queda sin protección para ese contrato). Cierre previsto: `registro.cjs` rechaza un contrato sin detector de definición (o declara explícitamente que no tiene valor que copiar).",
+      },
+      {
+        id: "I4-motivo-de-ausencia-de-definicion-vacio",
+        tipo: "alteracion",
+        objetivo: "repo",
+        descripcion:
+          "El contrato sin detector de definición declara `sinDetectorDeDefinicion` con una palabra suelta en vez de un motivo.",
+        esperado: {
+          codigo: "registro-invalido",
+          archivo: "arquitectura/contratos/contratos.cjs",
+          linea: 4,
+          contieneMotivo: "sinDetectorDeDefinicion",
+        },
+      },
+      {
+        id: "I4-ausencia-declarada-con-un-detector-de-definicion",
+        tipo: "duplicacion",
+        objetivo: "repo",
+        descripcion:
+          "El contrato declara `sinDetectorDeDefinicion` y conserva su detector de `definicion`: la declaración es contradictoria.",
+        esperado: {
+          codigo: "registro-invalido",
+          archivo: "arquitectura/contratos/contratos.cjs",
+          linea: 4,
+          contieneMotivo: "contradictorios",
+        },
       },
       {
         id: "I4-silenciar-la-copia-con-una-exclusion-vencida",
@@ -621,7 +713,12 @@ const INVARIANTES = [
         `${EXCEPCIONES}#DIAS_DE_AVISO`,
         `${EXCEPCIONES}#CAMPOS_DE_EXCEPCION`,
       ],
-      hacePosible: ["el reloj inyectable (`ahora`)", "npm run guardian", `${PRUEBAS}`],
+      hacePosible: [
+        "el reloj inyectable (`ahora`)",
+        `${VIGILANCIA}#chequearRigor (el tope no sube y el aviso no baja)`,
+        "npm run guardian",
+        `${PRUEBAS}`,
+      ],
     },
     codigosDeFalla: [
       "excepcion-invalida",
@@ -634,6 +731,8 @@ const INVARIANTES = [
       "excepcion-obsoleta",
       "excepcion-contrato-inexistente",
       "no-usa-falso",
+      "tope-de-excepciones-subio",
+      "aviso-de-excepciones-bajo",
     ],
     mutaciones: [
       {
@@ -763,6 +862,30 @@ const INVARIANTES = [
         },
       },
       {
+        id: "I5-subir-el-tope-de-dias-de-las-excepciones",
+        tipo: "alteracion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request sube `PLAZO_MAXIMO_DIAS` de 60 a 90: las excepciones durarían más de lo que decidió el dueño.",
+        esperado: {
+          codigo: "tope-de-excepciones-subio",
+          archivo: "arquitectura/contratos/excepciones.cjs",
+          lineaDe: "const PLAZO_MAXIMO_DIAS",
+        },
+      },
+      {
+        id: "I5-bajar-el-aviso-previo-al-vencimiento",
+        tipo: "alteracion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request baja `DIAS_DE_AVISO` de 14 a 1: el aviso de vencimiento llegaría tarde.",
+        esperado: {
+          codigo: "aviso-de-excepciones-bajo",
+          archivo: "arquitectura/contratos/excepciones.cjs",
+          lineaDe: "const DIAS_DE_AVISO",
+        },
+      },
+      {
         id: "I5-excluir-las-excepciones-del-control",
         tipo: "exclusion",
         noAplica:
@@ -792,6 +915,8 @@ const INVARIANTES = [
       ],
       hacePosible: [
         "el informe (`exclusiones`, `clases[*].excluidas`)",
+        `${CLASIFICACION}#revisarClasesExcluidas (lo que una clase excluida puede contener)`,
+        `${VIGILANCIA}#chequearClases (las clases excluibles y lo permitido en ellas no se amplían)`,
         "npm run guardian",
         `${PRUEBAS}`,
       ],
@@ -804,6 +929,9 @@ const INVARIANTES = [
       "excepcion-huella-cambiada",
       "excepcion-obsoleta",
       "detector-en-clase-excluida",
+      "codigo-en-clase-excluida",
+      "clases-excluibles-ampliadas",
+      "extensiones-permitidas-ampliadas",
     ],
     mutaciones: [
       {
@@ -920,6 +1048,32 @@ const INVARIANTES = [
         },
       },
       {
+        id: "I6-ampliar-las-clases-que-se-pueden-excluir",
+        tipo: "exclusion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request agrega `backend` a `CLASES_EXCLUIBLES`: una exclusión podría sacar el código del servidor del análisis.",
+        esperado: {
+          codigo: "clases-excluibles-ampliadas",
+          archivo: CLASIFICACION,
+          lineaDe: "const CLASES_EXCLUIBLES",
+          contieneMotivo: "backend",
+        },
+      },
+      {
+        id: "I6-ampliar-lo-permitido-en-una-clase-excluida",
+        tipo: "exclusion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request agrega la extensión `.ts` a lo permitido en la clase `docs` para poder esconder código ahí.",
+        esperado: {
+          codigo: "extensiones-permitidas-ampliadas",
+          archivo: CLASIFICACION,
+          lineaDe: "const PERMITIDO_EN_CLASE_EXCLUIDA",
+          contieneMotivo: "docs → extension:.ts",
+        },
+      },
+      {
         id: "I6-exclusion-con-comodin",
         tipo: "elusion",
         objetivo: "repo",
@@ -941,6 +1095,7 @@ const INVARIANTES = [
         `${GUARDIAN}#ejecutar (sin-rutas, clase-sin-rutas, detector-sin-rutas)`,
         `${COMPARACION}#comparar (ruta-ilegible)`,
         `${MECANISMO}#verificarInformeDeEvidencia`,
+        `${VIGILANCIA}#chequearLectura (lo que no se pudo leer es una falla, no un «pasa»)`,
       ],
       define: ["arquitectura/contratos/informe.json (evidencia de cada corrida)"],
       parametriza: [`${CLASIFICACION}#CLASES_ESPERADAS`, "detector.clases"],
@@ -952,6 +1107,8 @@ const INVARIANTES = [
       "detector-sin-rutas",
       "ruta-ilegible",
       "informe-sin-evidencia",
+      "arbol-ilegible",
+      "base-ilegible",
     ],
     mutaciones: [
       {
@@ -1018,6 +1175,30 @@ const INVARIANTES = [
         },
       },
       {
+        id: "I7-el-registro-del-pr-no-se-puede-leer",
+        tipo: "alteracion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El `contratos.cjs` del pull request lanza un error al cargarse: la vigilancia no puede comparar y no lo da por bueno.",
+        esperado: {
+          codigo: "arbol-ilegible",
+          archivo: "arquitectura/contratos/contratos.cjs",
+          linea: 1,
+        },
+      },
+      {
+        id: "I7-el-registro-de-la-base-no-se-puede-leer",
+        tipo: "desconexion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El `contratos.cjs` de la base lanza un error al cargarse: no hay con qué comparar y no se da por bueno.",
+        esperado: {
+          codigo: "base-ilegible",
+          archivo: "arquitectura/contratos/contratos.cjs",
+          linea: 1,
+        },
+      },
+      {
         id: "I7-duplicar-rutas",
         tipo: "duplicacion",
         noAplica:
@@ -1033,12 +1214,23 @@ const INVARIANTES = [
       define: ["arquitectura/contratos/contratos.cjs", `${REGISTRO}#CAMPOS_DEL_CONTRATO`],
       parametriza: [`${REGISTRO}#PATRON_DE_ID`, `${REGISTRO}#PATRON_DE_VERSION`],
       hacePosible: [
-        "comparación con `main` (--base, no-debilitar.cjs: paso paralelo de G1c)",
+        `comparación con la base (\`--base\` del guardián y ${VIGILANCIA}#chequearRetiros, #chequearContratos)`,
+        "arquitectura/contratos/retiros.json (el retiro de un contrato es una decisión registrada)",
         "npm run guardian",
         `${PRUEBAS}`,
       ],
     },
-    codigosDeFalla: ["registro-invalido", "declara-contrato-inexistente"],
+    codigosDeFalla: [
+      "registro-invalido",
+      "declara-contrato-inexistente",
+      "retiro-sin-registro",
+      "retiro-invalido",
+      "retiro-borrado",
+      "detectores-perdidos",
+      "clases-de-detector-perdidas",
+      "fuente-cambiada-sin-version",
+      "sin-definicion-nueva",
+    ],
     mutaciones: [
       {
         id: "I8-campo-del-contrato-faltante",
@@ -1068,16 +1260,93 @@ const INVARIANTES = [
       {
         id: "I8-contrato-borrado-junto-con-todas-sus-declaraciones",
         tipo: "eliminacion",
-        objetivo: "repo",
+        objetivo: "base-y-pr",
         descripcion:
-          "Se borra el contrato del registro y también su id de todas las declaraciones: el árbol queda coherente.",
+          "Dos árboles: la base trae un contrato real con sus declaraciones; el pull request borra el contrato del registro y su id de todas las declaraciones, y el árbol queda coherente (un solo árbol no lo ve: lo detecta la vigilancia de la versión anterior).",
         esperado: {
-          codigo: "contrato-retirado-sin-registro",
+          codigo: "retiro-sin-registro",
           archivo: "arquitectura/contratos/contratos.cjs",
-          linea: 1,
+          lineaDe: "module.exports",
+          contrato: "color-de-separadores",
         },
-        pendiente:
-          "HUECO: con un solo árbol no se puede ver que un contrato desapareció junto con sus declaraciones; lo detecta la comparación con `main` (opción `--base` del guardián y `no-debilitar.cjs`, a cargo del paso paralelo de G1c). Cuando esa comparación exista, esta mutación pasa a correr contra una base y se saca la marca; el código esperado es provisorio.",
+      },
+      {
+        id: "I8-retiro-registrado-sin-aprobacion",
+        tipo: "alteracion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El contrato se borra con una entrada en `retiros.json` a la que le falta `aprobadoPor`: el retiro no es una decisión registrada completa.",
+        esperado: {
+          codigo: "retiro-invalido",
+          archivo: "arquitectura/contratos/retiros.json",
+          linea: 2,
+        },
+      },
+      {
+        id: "I8-borrar-un-retiro-registrado",
+        tipo: "eliminacion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request borra de `retiros.json` un retiro que la base ya registraba: el registro de retiros es histórico.",
+        esperado: {
+          codigo: "retiro-borrado",
+          archivo: "arquitectura/contratos/retiros.json",
+          linea: 1,
+          contrato: "contrato-viejo",
+        },
+      },
+      {
+        id: "I8-perder-un-detector-de-uso",
+        tipo: "eliminacion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request quita uno de los dos detectores de uso del contrato: reconocería menos usos que antes.",
+        esperado: {
+          codigo: "detectores-perdidos",
+          archivo: "arquitectura/contratos/contratos.cjs",
+          lineaDe: 'id: "color-de-separadores"',
+          contrato: "color-de-separadores",
+        },
+      },
+      {
+        id: "I8-detector-que-deja-de-mirar-una-clase",
+        tipo: "desconexion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "Un detector de uso del contrato deja de mirar la clase `backend`: un uso ahí ya no se vería.",
+        esperado: {
+          codigo: "clases-de-detector-perdidas",
+          archivo: "arquitectura/contratos/contratos.cjs",
+          lineaDe: 'id: "color-de-separadores"',
+          contrato: "color-de-separadores",
+          contieneMotivo: "backend",
+        },
+      },
+      {
+        id: "I8-cambiar-la-fuente-de-verdad-sin-subir-la-version",
+        tipo: "alteracion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request apunta el contrato a otra variable sin subir su `version`: un cambio de fuente es un cambio de contrato.",
+        esperado: {
+          codigo: "fuente-cambiada-sin-version",
+          archivo: "arquitectura/contratos/contratos.cjs",
+          lineaDe: 'id: "color-de-separadores"',
+          contrato: "color-de-separadores",
+        },
+      },
+      {
+        id: "I8-declarar-que-no-hay-detector-de-definicion",
+        tipo: "elusion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request quita el detector de definición del contrato y declara `sinDetectorDeDefinicion` con un motivo: el registro lo acepta, la vigilancia de la versión anterior lo trata como debilitamiento.",
+        esperado: {
+          codigo: "sin-definicion-nueva",
+          archivo: "arquitectura/contratos/contratos.cjs",
+          lineaDe: 'id: "color-de-separadores"',
+          contrato: "color-de-separadores",
+        },
       },
       {
         id: "I8-version-mal-formada",
@@ -1152,8 +1421,9 @@ const INVARIANTES = [
       ],
       hacePosible: [
         "arquitectura/evaluar-gate.cjs",
-        "test/arquitectura/gate-coincide-con-ci.test.ts (paso paralelo de G1c)",
+        "test/arquitectura/gate-coincide-con-ci.test.ts",
         `${MECANISMO}#evaluarCanario`,
+        `${VIGILANCIA}#chequearCi, #chequearGate y #chequearPaquete (contra la base)`,
         `${PRUEBAS}`,
       ],
     },
@@ -1181,6 +1451,13 @@ const INVARIANTES = [
       "canario-pasa-un-repo-roto",
       "canario-sin-diagnostico",
       "package-json-ilegible",
+      "ci-sin-job-guardian",
+      "ci-gate-no-espera-guardian",
+      "gate-no-exige-guardian",
+      "ci-guardian-sin-ejecutar",
+      "ci-guardian-con-salto",
+      "script-arquitectura-desviado",
+      "script-guardian-desviado",
     ],
     mutaciones: [
       {
@@ -1465,6 +1742,133 @@ const INVARIANTES = [
           lineaDe: "marca-de-la-matriz",
         },
       },
+      // El trabajo `guardian` del ci.yml real (con sus pasos condicionales de la rama base): el verificador
+      // de la matriz tiene que ser compatible con él y fallar donde corresponde.
+      {
+        id: "I9-el-guardian-sale-de-los-needs-del-gate",
+        tipo: "eliminacion",
+        objetivo: "workflow",
+        descripcion: "El trabajo `guardian` sale de `needs` del Gate: podría fallar sin bloquear.",
+        esperado: {
+          codigo: "ci-job-fuera-del-gate",
+          archivo: CI,
+          lineaDe: { texto: "needs:", despuesDe: "  gate:" },
+        },
+      },
+      {
+        id: "I9-el-guardian-pierde-su-tope-de-tiempo",
+        tipo: "eliminacion",
+        objetivo: "workflow",
+        descripcion: "El trabajo `guardian` pierde su `timeout-minutes`.",
+        esperado: { codigo: "ci-job-sin-tope", archivo: CI, lineaDe: "  guardian:" },
+      },
+      {
+        id: "I9-condicion-en-el-paso-que-corre-el-guardian",
+        tipo: "exclusion",
+        objetivo: "workflow",
+        descripcion:
+          "El paso que corre `guardian.cjs` en el trabajo `guardian` suma `if: github.event_name == 'push'`: en un pull request se saltearía y el trabajo quedaría en verde.",
+        esperado: {
+          codigo: "ci-job-condicionado",
+          archivo: CI,
+          lineaDe: "if: github.event_name == 'push'",
+        },
+      },
+      {
+        id: "I9-el-guardian-corre-con-tolerancia-al-error",
+        tipo: "alteracion",
+        objetivo: "workflow",
+        descripcion: "El paso que corre `guardian.cjs` termina en `|| true`: nunca falla.",
+        esperado: {
+          codigo: "ci-comando-tolerante",
+          archivo: CI,
+          lineaDe: "guardian.cjs || true",
+        },
+      },
+      // La versión anterior (la base) vigila a la nueva: no se debilita lo que la base exigía.
+      {
+        id: "I9-el-pull-request-borra-el-trabajo-guardian",
+        tipo: "eliminacion",
+        objetivo: "base-y-pr",
+        descripcion: "El pull request borra el trabajo `guardian` de `ci.yml`.",
+        esperado: { codigo: "ci-sin-job-guardian", archivo: CI, lineaDe: "jobs:" },
+      },
+      {
+        id: "I9-el-gate-deja-de-esperar-al-guardian",
+        tipo: "eliminacion",
+        objetivo: "base-y-pr",
+        descripcion: "El pull request saca `guardian` de `needs` del Gate.",
+        esperado: {
+          codigo: "ci-gate-no-espera-guardian",
+          archivo: CI,
+          lineaDe: { texto: "needs:", despuesDe: "  gate:" },
+        },
+      },
+      {
+        id: "I9-evaluar-gate-deja-pasar-un-guardian-caido",
+        tipo: "alteracion",
+        objetivo: "base-y-pr",
+        descripcion: "El pull request saca `guardian` de `OBLIGATORIOS` en `evaluar-gate.cjs`.",
+        esperado: {
+          codigo: "gate-no-exige-guardian",
+          archivo: "arquitectura/evaluar-gate.cjs",
+          lineaDe: "const OBLIGATORIOS",
+        },
+      },
+      {
+        id: "I9-el-trabajo-guardian-deja-de-ejecutar-el-guardian",
+        tipo: "desconexion",
+        objetivo: "base-y-pr",
+        descripcion: "El paso del trabajo `guardian` queda como `guardian.cjs || true`.",
+        esperado: { codigo: "ci-guardian-sin-ejecutar", archivo: CI, lineaDe: "  guardian:" },
+      },
+      {
+        id: "I9-continue-on-error-en-el-trabajo-guardian",
+        tipo: "alteracion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request agrega `continue-on-error: true` al trabajo `guardian`, que la base no tenía.",
+        esperado: {
+          codigo: "ci-guardian-con-salto",
+          archivo: CI,
+          lineaDe: "continue-on-error: true",
+        },
+      },
+      {
+        id: "I9-condicion-nueva-en-el-paso-del-guardian-respecto-de-la-base",
+        tipo: "exclusion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request suma un `if` al paso que corre `guardian.cjs`, que la base no tenía.",
+        esperado: {
+          codigo: "ci-guardian-con-salto",
+          archivo: CI,
+          lineaDe: "if: github.event_name == 'push'",
+        },
+      },
+      {
+        id: "I9-el-script-arquitectura-deja-de-encadenar-el-guardian-respecto-de-la-base",
+        tipo: "duplicacion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request quita `&& npm run guardian` del script `arquitectura` del package.json real.",
+        esperado: {
+          codigo: "script-arquitectura-desviado",
+          archivo: "package.json",
+          lineaDe: '"arquitectura":',
+        },
+      },
+      {
+        id: "I9-el-script-guardian-se-desvia-respecto-de-la-base",
+        tipo: "elusion",
+        objetivo: "base-y-pr",
+        descripcion: "El pull request deja el script `guardian` como `guardian.cjs || true`.",
+        esperado: {
+          codigo: "script-guardian-desviado",
+          archivo: "package.json",
+          lineaDe: '"guardian":',
+        },
+      },
     ],
   },
   {
@@ -1485,6 +1889,7 @@ const INVARIANTES = [
         "test/arquitectura/guardian-matriz.test.ts",
         `${MECANISMO}#escanearPruebasDelGuardian`,
         `${MECANISMO}#verificarVitestConfig`,
+        `${VIGILANCIA}#chequearCodigos y #chequearInvariantes (la base vigila que la matriz solo crezca)`,
         `${CI} (job pruebas, requerido por el Gate)`,
       ],
     },
@@ -1504,6 +1909,9 @@ const INVARIANTES = [
       "matriz-aplicador-huerfano",
       "vitest-excluye-pruebas",
       "prueba-saltada",
+      "chequeo-borrado",
+      "invariante-borrada",
+      "mutacion-borrada",
     ],
     mutaciones: [
       {
@@ -1684,6 +2092,45 @@ const INVARIANTES = [
           lineaDe: "marca-de-la-matriz",
         },
       },
+      // La versión anterior vigila que la matriz y los chequeos solo crezcan (probado con el
+      // `invariantes.cjs` y el `codigos.cjs` REALES como base).
+      {
+        id: "I10-borrar-un-chequeo-del-guardian",
+        tipo: "eliminacion",
+        objetivo: "base-y-pr",
+        descripcion: "El pull request borra un código de falla de `codigos.cjs` (un chequeo).",
+        esperado: {
+          codigo: "chequeo-borrado",
+          archivo: "arquitectura/contratos/codigos.cjs",
+          lineaDe: "const CODIGOS_DE_FALLA",
+          contieneMotivo: "sin-rutas",
+        },
+      },
+      {
+        id: "I10-quitar-una-mutacion-del-catalogo-real",
+        tipo: "eliminacion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request borra la mutación `I1-quitar-la-regla-de-una-carpeta` del `invariantes.cjs` real.",
+        esperado: {
+          codigo: "mutacion-borrada",
+          archivo: ARCHIVO_DE_LA_MATRIZ,
+          lineaDe: 'id: "I1",',
+          contieneMotivo: "I1-quitar-la-regla-de-una-carpeta",
+        },
+      },
+      {
+        id: "I10-quitar-un-invariante-del-catalogo-real",
+        tipo: "exclusion",
+        objetivo: "base-y-pr",
+        descripcion: "El pull request borra el invariante I7 entero del `invariantes.cjs` real.",
+        esperado: {
+          codigo: "invariante-borrada",
+          archivo: ARCHIVO_DE_LA_MATRIZ,
+          lineaDe: "const INVARIANTES",
+          contieneMotivo: "I7",
+        },
+      },
     ],
   },
 ];
@@ -1697,9 +2144,12 @@ function lineaDe(texto, buscado) {
 const esTextoNoVacio = (valor) => typeof valor === "string" && valor.trim() !== "";
 const esObjeto = (valor) => typeof valor === "object" && valor !== null && !Array.isArray(valor);
 
-/** Los códigos que un invariante conoce y puede nombrar: los del guardián y los de los verificadores. */
+/**
+ * Los códigos que un invariante conoce y puede nombrar: los del guardián, los de los verificadores del
+ * mecanismo y los de la vigilancia de la versión anterior (`no-debilitar.cjs`).
+ */
 function codigosConocidos(codigosDeFalla) {
-  return new Set([...codigosDeFalla, ...CODIGOS_DE_MECANISMO]);
+  return new Set([...codigosDeFalla, ...CODIGOS_DE_MECANISMO, ...CODIGOS_DE_VIGILANCIA]);
 }
 
 /** Las mutaciones que se ejecutan (no `noAplica`) de un invariante. */

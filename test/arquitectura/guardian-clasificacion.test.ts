@@ -23,13 +23,27 @@ const { compilar, esRutaExacta, segmentoARegexp } =
     segmentoARegexp: (segmento: string) => string;
   };
 const coincide = (glob: string, ruta: string): boolean => compilar(glob).test(ruta);
-const { clasificar, CLASES, CLASES_ESPERADAS } =
-  require("../../arquitectura/contratos/clasificacion.cjs") as {
-    clasificar: (rutas: string[], opciones?: { niveles?: Nivel[] }) => Clasificacion;
-    CLASES: string[];
-    CLASES_ESPERADAS: string[];
-    NIVELES: Nivel[];
-  };
+const {
+  clasificar,
+  CLASES,
+  CLASES_ESPERADAS,
+  CLASES_EXCLUIBLES,
+  EXTENSIONES_DE_CODIGO,
+  PERMITIDO_EN_CLASE_EXCLUIDA,
+  revisarClasesExcluidas,
+} = require("../../arquitectura/contratos/clasificacion.cjs") as {
+  clasificar: (rutas: string[], opciones?: { niveles?: Nivel[] }) => Clasificacion;
+  CLASES: string[];
+  CLASES_ESPERADAS: string[];
+  CLASES_EXCLUIBLES: string[];
+  EXTENSIONES_DE_CODIGO: string[];
+  PERMITIDO_EN_CLASE_EXCLUIDA: Record<string, { extensiones: string[]; rutas: string[] }>;
+  revisarClasesExcluidas: (
+    porClase: Record<string, string[]>,
+    opciones?: { excluibles?: string[]; permitidoPorClase?: object },
+  ) => { archivo: string; motivo: string }[];
+  NIVELES: Nivel[];
+};
 
 describe("matcher de globs", () => {
   it.each([
@@ -247,6 +261,153 @@ describe("reglas de clasificación (con violaciones inyectadas)", () => {
   });
 });
 
+describe("clases excluidas del análisis: solo admiten lo permitido, nunca código", () => {
+  /** Una tabla que manda TODO a la clase indicada: lo que cae ahí lo decide la lista de lo permitido. */
+  const todoA = (clase: string): { niveles: Nivel[] } => ({
+    niveles: [{ nombre: "todo", reglas: [{ clase, glob: "**" }] }],
+  });
+  const fallasDe = (clase: string, rutas: string[]) =>
+    clasificar(rutas, todoA(clase)).fallas.map((f) => [f.codigo, f.archivo, f.motivo] as const);
+
+  it("lo permitido hoy es exactamente esto (ampliarlo es una decisión del dueño)", () => {
+    expect(PERMITIDO_EN_CLASE_EXCLUIDA).toEqual({
+      docs: { extensiones: [".md", ".txt"], rutas: [] },
+      generado: { extensiones: [], rutas: ["package-lock.json", "skills-lock.json"] },
+    });
+  });
+
+  it("toda clase excluible tiene su lista y ninguna lista admite una extensión de código", () => {
+    expect(Object.keys(PERMITIDO_EN_CLASE_EXCLUIDA).sort()).toEqual([...CLASES_EXCLUIBLES].sort());
+    for (const permitido of Object.values(PERMITIDO_EN_CLASE_EXCLUIDA)) {
+      for (const extension of permitido.extensiones) {
+        expect(EXTENSIONES_DE_CODIGO).not.toContain(extension);
+        expect(extension).toMatch(/^\.[a-z0-9]+$/);
+      }
+      for (const ruta of permitido.rutas) expect(ruta).not.toMatch(/[*?/]/);
+    }
+  });
+
+  it("las extensiones de código son las del pedido, todas en minúsculas y con punto", () => {
+    expect([...EXTENSIONES_DE_CODIGO].sort()).toEqual(
+      [".ts", ".tsx", ".js", ".cjs", ".mjs", ".sql", ".yml", ".yaml", ".sh"].sort(),
+    );
+  });
+
+  it.each(["docs", "generado"])(
+    "una ruta de código en la clase «%s» falla con `codigo-en-clase-excluida`, en la ruta y línea 1",
+    (clase) => {
+      for (const extension of ["ts", "tsx", "js", "cjs", "mjs", "sql", "yml", "yaml", "sh"]) {
+        const ruta = `lo/que/sea/ejecutable.${extension}`;
+        const { fallas } = clasificar([ruta], todoA(clase));
+        expect(fallas, ruta).toHaveLength(1);
+        expect(fallas[0], ruta).toMatchObject({
+          codigo: "codigo-en-clase-excluida",
+          archivo: ruta,
+          contrato: null,
+        });
+        expect(fallas[0]?.motivo, ruta).toContain(`es código («.${extension}»)`);
+        expect(fallas[0]?.motivo, ruta).toContain(`«${clase}»`);
+        expect(fallas[0]?.correccion, ruta).toContain("clasificacion.cjs");
+      }
+    },
+  );
+
+  it("la extensión se compara sin distinguir mayúsculas (`.TS` también es código; `.MD` es un documento)", () => {
+    expect(fallasDe("docs", ["a/Script.TS", "a/Guia.MD", "a/Notas.Txt"]).map((f) => f[1])).toEqual([
+      "a/Script.TS",
+    ]);
+  });
+
+  it("lo permitido en docs pasa: .md y .txt, a cualquier profundidad, y las dobles extensiones valen por la última", () => {
+    expect(
+      fallasDe("docs", [
+        "README.md",
+        "a/b/c/guia.md",
+        "notas.txt",
+        ".claude/skills/neon/SKILL.md",
+        "ejemplo.ts.md",
+      ]),
+    ).toEqual([]);
+    expect(fallasDe("docs", ["ejemplo.md.ts"]).map((f) => f[1])).toEqual(["ejemplo.md.ts"]);
+  });
+
+  it("lo permitido en generado son SOLO los dos archivos de bloqueo, exactos y en la raíz", () => {
+    expect(fallasDe("generado", ["package-lock.json", "skills-lock.json"])).toEqual([]);
+    expect(
+      fallasDe("generado", ["sub/package-lock.json", "otro-lock.json", "package-lock.json.ts"]).map(
+        (f) => f[1],
+      ),
+    ).toEqual(["otro-lock.json", "package-lock.json.ts", "sub/package-lock.json"]);
+  });
+
+  it.each([
+    ["una imagen en docs", "docs", ".claude/imagen.png"],
+    ["un json en docs", "docs", "datos.json"],
+    ["un archivo sin extensión en docs", "docs", "LICENSE"],
+    ["un archivo oculto en docs", "docs", ".gitignore"],
+    ["un json cualquiera en generado", "generado", "datos.json"],
+    ["un documento en generado", "generado", "README.md"],
+  ])(
+    "%s no es de un tipo permitido: falla con el mismo código y otro motivo",
+    (_n, clase, ruta) => {
+      const [falla] = fallasDe(clase, [ruta]);
+      expect(falla?.[0]).toBe("codigo-en-clase-excluida");
+      expect(falla?.[1]).toBe(ruta);
+      expect(falla?.[2]).toContain("no es de un tipo permitido");
+      expect(falla?.[2]).not.toContain("es código");
+    },
+  );
+
+  it("el motivo lista lo permitido en esa clase", () => {
+    expect(fallasDe("docs", ["a.png"])[0]?.[2]).toContain("solo .md, .txt");
+    expect(fallasDe("generado", ["a.png"])[0]?.[2]).toContain(
+      "solo package-lock.json, skills-lock.json",
+    );
+  });
+
+  it("el código en una clase que SÍ se analiza (backend, scripts, config) no falla por esta regla", () => {
+    for (const clase of ["backend", "scripts", "config", "pruebas", "frontend"]) {
+      expect(fallasDe(clase, ["a/b.ts", "c.sh", "d.yml", "e.mjs"]), clase).toEqual([]);
+    }
+  });
+
+  it("una clase excluible sin lista (se agregó a CLASES_EXCLUIBLES y nadie dijo qué admite) no admite ninguna ruta", () => {
+    const porClase = { docs: ["README.md"], nueva: ["a.md"] };
+    const fallas = revisarClasesExcluidas(porClase, {
+      excluibles: ["docs", "nueva"],
+      permitidoPorClase: PERMITIDO_EN_CLASE_EXCLUIDA,
+    });
+    expect(fallas.map((f) => f.archivo)).toEqual(["a.md"]);
+    expect(fallas[0]?.motivo).toContain("solo nada");
+  });
+
+  it("revisarClasesExcluidas mira solo las clases excluibles que se le dan (y tolera una clase sin rutas)", () => {
+    expect(revisarClasesExcluidas({ backend: ["a.ts"] }, { excluibles: ["docs"] })).toEqual([]);
+    expect(revisarClasesExcluidas({ docs: ["a.ts"] }, { excluibles: [] })).toEqual([]);
+    expect(revisarClasesExcluidas({ docs: ["a.ts"] }).map((f) => f.archivo)).toEqual(["a.ts"]);
+  });
+
+  it("las rutas se reportan en orden y una por falla, junto con las demás fallas de clasificación", () => {
+    const { fallas } = clasificar(["z.ts", "a.sh", "m.md", "sin-clase/x"], {
+      niveles: [
+        {
+          nombre: "docs",
+          reglas: [
+            { clase: "docs", glob: "*.ts" },
+            { clase: "docs", glob: "*.sh" },
+            { clase: "docs", glob: "*.md" },
+          ],
+        },
+      ],
+    });
+    expect(fallas.map((f) => [f.codigo, f.archivo])).toEqual([
+      ["ruta-sin-clase", "sin-clase/x"],
+      ["codigo-en-clase-excluida", "a.sh"],
+      ["codigo-en-clase-excluida", "z.ts"],
+    ]);
+  });
+});
+
 const describeConGit = describe.skipIf(!HAY_GIT);
 // Sin `.git` (sandbox de Stryker) `cargarDelRepo` no encuentra rutas: se saltea. La prueba de
 // guardian-nucleo.test.ts impide que el salto ocurra fuera de ese sandbox.
@@ -257,6 +418,13 @@ describeConGit("clasificación de las rutas reales del repositorio", () => {
   it("no deja ninguna ruta sin clase ni ambigua", () => {
     expect(resultado.fallas).toEqual([]);
     expect(rutas.length).toBeGreaterThan(1000);
+  });
+
+  it("las clases excluidas del repositorio real solo contienen lo permitido (ningún código escondido)", () => {
+    expect(resultado.fallas.filter((f) => f.codigo === "codigo-en-clase-excluida")).toEqual([]);
+    expect(resultado.porClase["generado"]).toEqual(["package-lock.json", "skills-lock.json"]);
+    expect((resultado.porClase["docs"] ?? []).length).toBeGreaterThan(30);
+    expect((resultado.porClase["docs"] ?? []).every((ruta) => /\.(md|txt)$/.test(ruta))).toBe(true);
   });
 
   it("cada ruta cae en exactamente una clase", () => {

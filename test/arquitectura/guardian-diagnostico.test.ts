@@ -30,6 +30,7 @@ import {
   formatearFalla,
   huellaDe,
   huellaDelArchivo,
+  definicionInerte,
   type Falla,
   type Opciones,
   type Resultado,
@@ -271,6 +272,28 @@ function casos(): Caso[] {
       esperado: [["herramienta/x.ts", 1]],
     },
     {
+      nombre: "código ejecutable en una clase excluida (docs): la ruta, línea 1",
+      codigo: "codigo-en-clase-excluida",
+      armar: () => correr({ archivos: { ".claude/hooks/ejecutar.sh": "echo hola\n\n\n" } }),
+      esperado: [[".claude/hooks/ejecutar.sh", 1]],
+    },
+    {
+      nombre:
+        "las migraciones reclasificadas como generado (un .sql y un .json fuera de lo permitido): cada ruta, línea 1",
+      codigo: "codigo-en-clase-excluida",
+      armar: () =>
+        correr({
+          niveles: [
+            { nombre: "mal", reglas: [{ clase: "generado", glob: "migraciones/**" }] },
+            ...NIVELES,
+          ],
+        }),
+      esperado: [
+        ["migraciones/0001_base.sql", 1],
+        ["migraciones/contratos.json", 1],
+      ],
+    },
+    {
       nombre: "archivo ilegible",
       codigo: "ruta-ilegible",
       armar: () =>
@@ -344,6 +367,7 @@ function casos(): Caso[] {
                     throw new Error("boom");
                   },
                 },
+                definicionInerte(),
               ],
             }),
           ],
@@ -365,6 +389,7 @@ function casos(): Caso[] {
                   nombre: "roto",
                   reconoce: () => [{ linea: 99, texto: "x" }],
                 },
+                definicionInerte(),
               ],
             }),
           ],
@@ -386,6 +411,7 @@ function casos(): Caso[] {
                   nombre: "mira el frontend",
                   reconoce: () => [],
                 },
+                definicionInerte(),
               ],
             }),
           ],
@@ -414,7 +440,10 @@ function casos(): Caso[] {
         correr({
           contratos: [
             contrato({
-              deteccion: [{ tipo: "uso", clases: ["docs"], nombre: "en docs", reconoce: () => [] }],
+              deteccion: [
+                { tipo: "uso", clases: ["docs"], nombre: "en docs", reconoce: () => [] },
+                definicionInerte(),
+              ],
             }),
           ],
           archivos: { [REGISTRO]: FUENTE_DEL_REGISTRO },

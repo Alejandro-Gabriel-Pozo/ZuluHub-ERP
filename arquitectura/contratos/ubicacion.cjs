@@ -13,7 +13,8 @@
  *      contiene. JSON inválido: la línea donde el analizador encuentra el error (en el final del texto,
  *      la de su último carácter); archivo vacío, ilegible o sin texto: 1.
  *  (b) Declaración AUSENTE: el archivo es el que habría que crear y la línea es 1.
- *  (c) Ruta sin clase, ambigua o ilegible: el archivo es la ruta y la línea es 1.
+ *  (c) Ruta sin clase, ambigua, ilegible o con código en una clase excluida: el archivo es la ruta y la
+ *      línea es 1.
  *  (d) Falla del registro de contratos (`contratos.cjs`): la línea de `id: "<id>"` del contrato; si no
  *      está (contrato sin id, registro que no es una lista) es 1.
  *  (e) Falla de alcance global (clase esperada sin rutas, tabla de clasificación inválida): archivo
@@ -40,6 +41,7 @@ const REGLAS_DE_LINEA = Object.freeze({
     '(e) clasificacion.cjs: línea de la regla ofensora (`clase: "…"` o `glob: "…"`), 1 si no está',
   "ruta-sin-clase": "(c) la ruta, línea 1",
   "clasificacion-ambigua": "(c) la ruta, línea 1",
+  "codigo-en-clase-excluida": "(c) la ruta, línea 1",
   "clase-sin-rutas":
     '(e) clasificacion.cjs: línea de la primera regla `clase: "<clase>"`, 1 si no está',
   "registro-invalido": '(d) contratos.cjs: línea de `id: "<id>"` del contrato, 1 si no está',

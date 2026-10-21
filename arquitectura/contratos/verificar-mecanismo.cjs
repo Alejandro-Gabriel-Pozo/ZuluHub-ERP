@@ -65,6 +65,7 @@ const PRUEBAS_DEL_GUARDIAN = Object.freeze([
   "guardian-diagnostico.test.ts",
   "guardian-excepciones.test.ts",
   "guardian-matriz.test.ts",
+  "guardian-no-debilitar.test.ts",
   "guardian-nucleo.test.ts",
   "guardian-registro.test.ts",
 ]);
@@ -233,6 +234,60 @@ const COMANDO_TOLERANTE =
   /(?:npm run (?:arquitectura|guardian|gate)\b|npm test\b|guardian\.cjs).*(?:\|\|\s*(?:true|exit\s+0|:)\b|;\s*true\b)/;
 const CONDICION_FALSA = /^(?:\$\{\{\s*)?(?:false|0|''|"")(?:\s*\}\})?$/;
 
+/**
+ * Los pasos de `steps:` de un trabajo con su texto sin comentarios: `{ lineas: [{ indice, texto }] }`.
+ * `indice` es la posición dentro de `trabajo.lineas`. Entiende el estilo de Prettier (pasos a 6 espacios).
+ */
+function pasosDe(trabajo) {
+  const pasos = [];
+  let enSteps = false;
+  let actual = null;
+  trabajo.lineas.forEach((texto, indice) => {
+    if (esComentario(texto) || texto.trim() === "") return;
+    if (/^ {4}\S/.test(texto)) {
+      enSteps = /^ {4}steps:\s*(?:#.*)?$/.test(texto);
+      actual = null;
+      return;
+    }
+    if (!enSteps) return;
+    if (/^ {6}-(?:\s|$)/.test(texto)) {
+      actual = { lineas: [] };
+      pasos.push(actual);
+    }
+    actual?.lineas.push({ indice, texto });
+  });
+  return pasos;
+}
+
+/**
+ * Un paso que corre el guardián o las pruebas no puede llevar su propio `if`: el trabajo seguiría en verde
+ * (saltado el paso) sin haber analizado nada. Los pasos que NO los corren (extraer la rama base, vigilar,
+ * subir un informe) sí pueden ser condicionales.
+ */
+function verificarPasosCondicionados(trabajo) {
+  const problemas = [];
+  for (const paso of pasosDe(trabajo)) {
+    const cuerpo = paso.lineas.map(({ texto }) => texto).join("\n");
+    if (!CORRE_EL_GUARDIAN.test(cuerpo) && !CORRE_LAS_PRUEBAS.test(cuerpo)) continue;
+    for (const { indice, texto } of paso.lineas) {
+      const condicion = /^ {6}-\s+if:\s*(.*)$|^ {8}if:\s*(.*)$/.exec(sinComentario(texto));
+      if (condicion === null) continue;
+      const valor = (condicion[1] ?? condicion[2] ?? "").trim();
+      if (CONDICION_FALSA.test(valor)) continue; // ya lo dice `ci-job-desactivado`
+      problemas.push(
+        problema(
+          "ci-job-condicionado",
+          ARCHIVO_DE_CI,
+          trabajo.desde + indice + 1,
+          `Un paso del trabajo «${trabajo.nombre}» que corre el guardián o las pruebas solo corre bajo una condición (\`if: ${valor}\`): saltado, el trabajo quedaría en verde sin analizar nada.`,
+          "Sacá la condición del paso que corre el guardián o las pruebas (los pasos que preparan o vigilan sí pueden ser condicionales).",
+        ),
+      );
+    }
+  }
+  return problemas;
+}
+
 /** Los nombres de trabajo que lista `needs:` del Gate (lista en línea, en varias líneas o con guiones). */
 function necesidadesDe(trabajo) {
   const indice = trabajo.lineas.findIndex((linea) => /^ {4}needs:/.test(linea));
@@ -396,6 +451,7 @@ function verificarWorkflowDeCi(textoCi) {
         ),
       );
     }
+    if (!esGate) problemas.push(...verificarPasosCondicionados(trabajo));
     trabajo.lineas.forEach((linea, posicion) => {
       if (esComentario(linea)) return;
       const absoluta = trabajo.desde + posicion + 1;
