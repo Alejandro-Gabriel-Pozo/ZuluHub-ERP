@@ -16,6 +16,7 @@ import {
   ejecutar,
   formatearFalla,
   huellaDelArchivo,
+  definicionInerte,
   type Entradas,
   type Informe,
 } from "./guardian-apoyo";
@@ -263,6 +264,7 @@ describe("distinguir «pasó» de «no encontró nada»", () => {
     const registro = contrato({
       deteccion: [
         { tipo: "uso", clases: ["frontend"], nombre: "mira el frontend", reconoce: () => [] },
+        definicionInerte(),
       ],
     });
     expect(correr({ contratos: [registro] }).fallas).toEqual([]);
@@ -290,6 +292,7 @@ describe("distinguir «pasó» de «no encontró nada»", () => {
     const registro = contrato({
       deteccion: [
         { tipo: "uso", clases: ["pruebas"], nombre: "mira las pruebas", reconoce: () => [] },
+        definicionInerte(),
       ],
     });
     const sinPruebasDeTexto = correr({
@@ -331,9 +334,9 @@ describe("salida del guardián", () => {
     expect(correccion).toContain("apps/web/contratos.json");
   });
 
-  it("una falla sin línea ni contrato se imprime con guion", () => {
+  it("una falla sin contrato se imprime con guion, y siempre con archivo:línea", () => {
     const r = correr({ archivos: { "herramienta/x.ts": "" } });
-    expect(formatearFalla(r.fallas[0]!).startsWith("herramienta/x.ts · - · ")).toBe(true);
+    expect(formatearFalla(r.fallas[0]!).startsWith("herramienta/x.ts:1 · - · ")).toBe(true);
   });
 });
 

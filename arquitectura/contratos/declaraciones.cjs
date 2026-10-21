@@ -15,6 +15,7 @@
  *  - `usa` con ids exige que existan en el registro;
  *  - `usa` con ids y `noUsa` a la vez es contradictorio y se rechaza.
  */
+const { enArchivo, enJson } = require("./ubicacion.cjs");
 
 const GRUPOS_FIJOS = ["scripts", "migraciones", "workers"];
 const CAMPOS_PERMITIDOS = ["usa", "noUsa"];
@@ -52,12 +53,14 @@ const archivoDeDeclaracion = (unidad) => `${unidad}/contratos.json`;
 
 const esTextoNoVacio = (valor) => typeof valor === "string" && valor.trim() !== "";
 
-const invalida = (unidad, motivo) => ({
+/** `camino`: la clave ofensora dentro del JSON (vacío = el objeto entero o, si no es JSON, el error). */
+const invalida = (unidad, motivo, ...camino) => ({
   codigo: "declaracion-invalida",
   archivo: archivoDeDeclaracion(unidad),
   contrato: null,
   motivo: `La declaración de «${unidad}» es inválida: ${motivo}.`,
   correccion: `Dejala con la forma ${EJEMPLO}`,
+  donde: enJson(...camino),
 });
 
 /**
@@ -82,6 +85,7 @@ function leerDeclaraciones(unidades, contexto) {
         contrato: null,
         motivo: `La unidad «${unidad}» no tiene declaración de contratos.`,
         correccion: `Creá ${archivo} con ${EJEMPLO} (o listá en "usa" los contratos que usa).`,
+        donde: enArchivo(),
       });
       continue;
     }
@@ -99,37 +103,38 @@ function leerDeclaraciones(unidades, contexto) {
     const problemas = [];
     for (const clave of Object.keys(datos)) {
       if (!CAMPOS_PERMITIDOS.includes(clave))
-        problemas.push(`«${clave}» no es un campo permitido (usa, noUsa)`);
+        problemas.push([`«${clave}» no es un campo permitido (usa, noUsa)`, clave]);
     }
     if (datos.usa === undefined && datos.noUsa === undefined) {
-      problemas.push("falta «usa» o «noUsa»: hay que declarar al menos uno");
+      problemas.push(["falta «usa» o «noUsa»: hay que declarar al menos uno"]);
     }
     let usa = [];
     if (datos.usa !== undefined) {
       if (!Array.isArray(datos.usa) || !datos.usa.every(esTextoNoVacio)) {
-        problemas.push("«usa» tiene que ser una lista de ids de contrato");
+        problemas.push(["«usa» tiene que ser una lista de ids de contrato", "usa"]);
       } else if (new Set(datos.usa).size !== datos.usa.length) {
-        problemas.push("«usa» repite un contrato");
+        problemas.push(["«usa» repite un contrato", "usa"]);
       } else {
         usa = datos.usa;
       }
     }
     if (datos.noUsa !== undefined && !esTextoNoVacio(datos.noUsa)) {
-      problemas.push("«noUsa» tiene que ser un motivo escrito, no vacío");
+      problemas.push(["«noUsa» tiene que ser un motivo escrito, no vacío", "noUsa"]);
     }
     if (Array.isArray(datos.usa) && datos.usa.length === 0 && datos.noUsa === undefined) {
-      problemas.push(
+      problemas.push([
         "«usa» está vacío y falta «noUsa»: una unidad sin contratos tiene que explicar por qué",
-      );
+        "usa",
+      ]);
     }
     if (usa.length > 0 && datos.noUsa !== undefined) {
-      problemas.push("declara contratos en «usa» y también «noUsa»: son excluyentes");
+      problemas.push(["declara contratos en «usa» y también «noUsa»: son excluyentes", "noUsa"]);
     }
     if (problemas.length > 0) {
-      for (const problema of problemas) fallas.push(invalida(unidad, problema));
+      for (const problema of problemas) fallas.push(invalida(unidad, ...problema));
       continue;
     }
-    for (const id of usa) {
+    usa.forEach((id, posicion) => {
       if (idsDeContratos !== null && !idsDeContratos.has(id)) {
         fallas.push({
           codigo: "declara-contrato-inexistente",
@@ -137,9 +142,10 @@ function leerDeclaraciones(unidades, contexto) {
           contrato: id,
           motivo: `La unidad «${unidad}» declara usar «${id}», que no está en el registro de contratos.`,
           correccion: "Quitá el id de «usa» o corregí su nombre.",
+          donde: enJson("usa", posicion),
         });
       }
-    }
+    });
     declaraciones.set(unidad, { usa, noUsa: datos.noUsa ?? null });
   }
   return { declaraciones, fallas };

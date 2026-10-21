@@ -1,7 +1,18 @@
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
-import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 
 /**
  * Apoyo de las pruebas del guardián de contratos: tipos de lo que devuelve, un repositorio sintético
@@ -24,7 +35,7 @@ export type Informe = {
   analisisCompleto: boolean;
   totales: Record<string, number>;
   reglasEjecutadas: {
-    chequeos: { codigo: string; descripcion: string }[];
+    chequeos: { codigo: string; descripcion: string; reglaDeLinea: string }[];
     clasificacion: { nivel: number; clase: string; glob: string; rutas: number }[];
     detectores: { contrato: string; detector: string; tipo: string; clases: string[] }[];
   };
@@ -47,6 +58,7 @@ export type Informe = {
   };
   unidades: { unidad: string; archivos: number; declaracion: unknown }[];
   excepcionesAplicadas: { id: string }[];
+  contratosSinDetectorDeDefinicion: { contrato: string; motivo: string }[];
   usosFueraDeUnidades: { archivo: string; linea: number }[];
   fallas: Falla[];
   avisos: Falla[];
@@ -90,6 +102,15 @@ export const { ejecutar, cargarDelRepo, formatearFalla } =
     };
     formatearFalla: (falla: Falla) => string;
   };
+export const { CODIGOS_DE_FALLA, CODIGOS_DE_AVISO, DESCRIPCION_DE_CODIGOS } =
+  require("../../arquitectura/contratos/codigos.cjs") as {
+    CODIGOS_DE_FALLA: readonly string[];
+    CODIGOS_DE_AVISO: readonly string[];
+    DESCRIPCION_DE_CODIGOS: Record<string, string>;
+  };
+export const { REGLAS_DE_LINEA } = require("../../arquitectura/contratos/ubicacion.cjs") as {
+  REGLAS_DE_LINEA: Record<string, string>;
+};
 export const { porPatron } = require("../../arquitectura/contratos/detectores.cjs") as {
   porPatron: (datos: {
     tipo: string;
@@ -188,6 +209,19 @@ export function contrato(cambios: Contrato = {}): Contrato {
   };
 }
 
+/**
+ * Un detector de `definicion` que no reconoce nada real: para los registros de prueba que solo quieren
+ * detectores de uso (el registro exige uno de definición: ver `registro.cjs`). Mira `config`, una clase
+ * con archivos en todos los repositorios de prueba, para no sumar fallas de «detector sin rutas».
+ */
+export const definicionInerte = (): Detector =>
+  porPatron({
+    tipo: "definicion",
+    clases: ["config"],
+    patron: /^--definicion-que-no-existe:/,
+    nombre: "definición inerte",
+  });
+
 /** Un segundo contrato, para probar «usa uno y no el otro». */
 export function contratoDeRadio(cambios: Contrato = {}): Contrato {
   return contrato({
@@ -199,6 +233,12 @@ export function contratoDeRadio(cambios: Contrato = {}): Contrato {
         clases: ["frontend"],
         patron: /var\(--radio\)/,
         nombre: "uso del radio",
+      }),
+      porPatron({
+        tipo: "definicion",
+        clases: ["frontend"],
+        patron: /^\s*--radio\s*:/,
+        nombre: "definición del radio",
       }),
     ],
     ...cambios,
@@ -241,3 +281,158 @@ export function correr(opciones: Opciones = {}): Resultado & { archivos: Record<
 }
 
 export const codigos = (resultado: Resultado): string[] => resultado.fallas.map((f) => f.codigo);
+
+// --- Árboles temporales y repositorios en disco ----------------------------------------------------------
+
+const temporales: string[] = [];
+
+/** Una carpeta temporal nueva; `limpiarTemporales` (o `borrarTemporal`) la borra. */
+export function carpetaTemporal(prefijo: string): string {
+  const carpeta = mkdtempSync(join(tmpdir(), prefijo));
+  temporales.push(carpeta);
+  return carpeta;
+}
+export function borrarTemporal(carpeta: string): void {
+  rmSync(carpeta, { recursive: true, force: true });
+  const posicion = temporales.indexOf(carpeta);
+  if (posicion !== -1) temporales.splice(posicion, 1);
+}
+export function limpiarTemporales(): void {
+  for (const carpeta of temporales.splice(0)) rmSync(carpeta, { recursive: true, force: true });
+}
+
+export const leerEn = (raiz: string, archivo: string): string =>
+  readFileSync(join(raiz, archivo), "utf8");
+export function escribirEn(raiz: string, archivo: string, texto: string): void {
+  mkdirSync(dirname(join(raiz, archivo)), { recursive: true });
+  writeFileSync(join(raiz, archivo), texto);
+}
+/** Cambia el texto de un archivo del árbol; lo que se reemplaza tiene que aparecer exactamente una vez. */
+export function alterar(raiz: string, archivo: string, de: string | RegExp, a: string): void {
+  const texto = leerEn(raiz, archivo);
+  const veces =
+    typeof de === "string"
+      ? texto.split(de).length - 1
+      : (texto.match(new RegExp(de.source, `${de.flags}g`)) ?? []).length;
+  if (veces !== 1) {
+    throw new Error(`«${String(de)}» debe aparecer una vez en ${archivo} y aparece ${veces}`);
+  }
+  escribirEn(
+    raiz,
+    archivo,
+    texto.replace(de, () => a),
+  );
+}
+/** Número de línea (desde 1) de la primera línea que cumple, calculado acá y no por el verificador. */
+export function lineaEn(
+  raiz: string,
+  archivo: string,
+  cumple: (linea: string) => boolean,
+  desde = 0,
+): number {
+  const indice = leerEn(raiz, archivo)
+    .split("\n")
+    .findIndex((linea, i) => i >= desde && cumple(linea));
+  if (indice < 0) throw new Error(`no hay una línea que cumpla en ${archivo}`);
+  return indice + 1;
+}
+
+/**
+ * Una copia de lo que lee la vigilancia de la versión anterior (`no-debilitar.cjs`): `arquitectura/`, el
+ * workflow de CI y `package.json` del repositorio real. Es la base y el pull request de las pruebas.
+ */
+export function arbolDesdeElRepo(): string {
+  const destino = carpetaTemporal("arbol-");
+  cpSync(join(RAIZ, "arquitectura"), join(destino, "arquitectura"), {
+    recursive: true,
+    filter: (origen) => !origen.endsWith("informe.json"),
+  });
+  mkdirSync(join(destino, ".github/workflows"), { recursive: true });
+  cpSync(join(RAIZ, ".github/workflows/ci.yml"), join(destino, ".github/workflows/ci.yml"));
+  cpSync(join(RAIZ, "package.json"), join(destino, "package.json"));
+  return destino;
+}
+
+const CATALOGO = "arquitectura/contratos/invariantes.cjs";
+/** Borra del `invariantes.cjs` de un árbol la mutación con ese id (el bloque entero, a 6 espacios de sangría). */
+export function quitarMutacionDelCatalogo(raiz: string, id: string): void {
+  alterar(raiz, CATALOGO, new RegExp(`\\n {6}\\{\\n {8}id: "${id}",[\\s\\S]*?\\n {6}\\},`), "");
+}
+/** Borra del `invariantes.cjs` de un árbol el invariante con ese id (el bloque entero, a 2 espacios de sangría). */
+export function quitarInvarianteDelCatalogo(raiz: string, id: string): void {
+  alterar(raiz, CATALOGO, new RegExp(`\\n {2}\\{\\n {4}id: "${id}",[\\s\\S]*?\\n {2}\\},`), "");
+}
+
+/** Un registro con un contrato real (con detectores de verdad): la base de los casos de punta a punta. */
+export const REGISTRO_DE_EJEMPLO = [
+  'const { porPatron } = require("./detectores.cjs");',
+  "",
+  "module.exports = [",
+  "  {",
+  '    id: "color-de-separadores",',
+  '    protege: "Que los separadores tengan un solo color.",',
+  '    alcance: "frontend",',
+  '    fuenteDeVerdad: { archivo: "apps/web/ui/tokens.css", variable: "--color-separador" },',
+  '    incumplimiento: "Un color de separador fuera de la fuente.",',
+  "    deteccion: [",
+  '      porPatron({ tipo: "uso", clases: ["frontend", "backend"], patron: /var\\(--color-separador\\)/ }),',
+  '      porPatron({ tipo: "uso", clases: ["frontend"], patron: /separador/ }),',
+  '      porPatron({ tipo: "definicion", clases: ["frontend"], patron: /--color-separador:/ }),',
+  "    ],",
+  '    limites: "No ve usos dinámicos.",',
+  '    version: "1.0.0",',
+  '    politicaDeCambio: "Compatible: se agrega.",',
+  "    bloqueaDeclaracionFalsa: true,",
+  "  },",
+  "];",
+  "",
+].join("\n");
+
+/** Un retiro completo de `retiros.json` (con campos de más o de menos para romperlo). */
+export const retiroCompleto = (
+  id: string,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> => ({
+  id,
+  motivo: "El contrato se reemplazó por otro.",
+  responsable: "Equipo de plataforma",
+  aprobadoPor: "Dueño",
+  creada: "2026-10-01",
+  ...extra,
+});
+
+/**
+ * Un repositorio git REAL en disco que pasa el guardián: el código del guardián (el real, copiado), los
+ * archivos de `BASE` y un `exclusiones.json` con fechas relativas a hoy (así no vence nunca). Sirve para
+ * correr el CLI sin depender de que este árbol tenga `.git` (el sandbox de Stryker no lo tiene).
+ */
+export function repoSanoEnDisco(): string {
+  const carpeta = carpetaTemporal("repo-sano-");
+  const origen = join(RAIZ, "arquitectura/contratos");
+  for (const nombre of readdirSync(origen)) {
+    if (/\.cjs$/.test(nombre) || nombre === "excepciones.json" || nombre === "retiros.json") {
+      escribirEn(
+        carpeta,
+        `arquitectura/contratos/${nombre}`,
+        readFileSync(join(origen, nombre), "utf8"),
+      );
+    }
+  }
+  for (const [ruta, texto] of Object.entries(BASE)) escribirEn(carpeta, ruta, texto);
+  const hoy = new Date();
+  const dia = (desplazamiento: number): string =>
+    new Date(hoy.getTime() + desplazamiento * 86_400_000).toISOString().slice(0, 10);
+  escribirEn(
+    carpeta,
+    "arquitectura/contratos/exclusiones.json",
+    `${JSON.stringify(
+      EXCLUSIONES_BASE.map((e) => ({ ...e, creada: dia(0), vence: dia(30) })),
+      null,
+      2,
+    )}\n`,
+  );
+  const entorno = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" };
+  const inicio = spawnSync("git", ["init", "-q"], { cwd: carpeta, env: entorno, encoding: "utf8" });
+  if (inicio.status !== 0) throw new Error(`git init falló: ${inicio.stderr}`);
+  return carpeta;
+}

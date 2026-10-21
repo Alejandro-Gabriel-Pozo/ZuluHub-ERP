@@ -12,10 +12,15 @@
  * `archivo:línea · contrato · motivo · corrección sugerida`, escribe el informe de evidencia
  * (`arquitectura/contratos/informe.json`, que NO se commitea) y sale 0 si todo pasa, 1 si algo falla.
  *
+ * Toda falla y todo aviso traen archivo y línea (M3): los del código analizado, con la línea del
+ * detector; los demás, con la que calcula `ubicacion.cjs` (regla por código en `REGLAS_DE_LINEA`).
+ * Una AUTOCOMPROBACIÓN reemplaza cualquier hallazgo sin archivo o sin línea entera desde 1 (o con un
+ * código fuera de la lista cerrada de `codigos.cjs`) por una falla propia que nombra el código ofensor.
+ *
  * Distingue «pasó» de «no encontró nada que analizar»: falla si una clase que el repo debe tener
  * quedó con cero rutas, o si un detector declara una clase de la que no analizó ni un archivo.
  */
-const { execFileSync } = require("node:child_process");
+const { execFileSync, spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const {
@@ -25,7 +30,7 @@ const {
   NIVELES,
   clasificar,
 } = require("./clasificacion.cjs");
-const { cargarRegistro, ErrorDeRegistro } = require("./registro.cjs");
+const { ARCHIVO_DEL_REGISTRO, cargarRegistro, ErrorDeRegistro } = require("./registro.cjs");
 const { descubrirUnidades, leerDeclaraciones, unidadDe } = require("./declaraciones.cjs");
 const {
   ARCHIVO_DE_EXCEPCIONES,
@@ -35,46 +40,28 @@ const {
 } = require("./excepciones.cjs");
 const { comparar } = require("./comparacion.cjs");
 const contratos = require("./contratos.cjs");
+const { CODIGOS_DE_AVISO, CODIGOS_DE_FALLA, DESCRIPCION_DE_CODIGOS } = require("./codigos.cjs");
+const {
+  REGLAS_DE_LINEA,
+  crearUbicador,
+  enArchivo,
+  enContrato,
+  enJson,
+  enTexto,
+} = require("./ubicacion.cjs");
 
-const ARCHIVO_DEL_REGISTRO = "arquitectura/contratos/contratos.cjs";
+const ARCHIVO_DEL_GUARDIAN = "arquitectura/contratos/guardian.cjs";
 const ARCHIVO_DEL_INFORME = "arquitectura/contratos/informe.json";
 const VERSION_DEL_INFORME = 1;
 
-/** Qué comprueba el guardián: queda en el informe como «reglas ejecutadas». */
-const CHEQUEOS = Object.freeze([
-  ["ruta-sin-clase", "toda ruta versionada cae en una clase; si no, falla"],
-  ["clasificacion-ambigua", "dos reglas del mismo nivel que clasifican distinto fallan"],
-  ["clase-sin-rutas", "una clase que el repo debe tener no puede quedar vacía"],
-  [
-    "registro-invalido",
-    "un contrato con campos faltantes, vacíos o mal formados invalida el registro",
-  ],
-  ["unidad-sin-declaracion", "cada unidad tiene su contratos.json"],
-  ["declaracion-invalida", "el contratos.json declara usa y/o noUsa con la forma correcta"],
-  ["declara-contrato-inexistente", "los ids de usa existen en el registro"],
-  ["uso-sin-declarar", "la unidad que usa un contrato lo declara"],
-  ["no-usa-falso", "la unidad que declara no usar nada no usa ningún contrato"],
-  ["declaracion-falsa", "la unidad que declara un contrato lo usa de verdad"],
-  ["definicion-fuera-de-la-fuente", "un valor de contrato solo se define en su fuente de verdad"],
-  ["contrato-sin-fuente", "la fuente de verdad existe y contiene lo que dice"],
-  [
-    "detector-sin-rutas",
-    "un detector no puede declarar una clase de la que no analizó ni un archivo",
-  ],
-  ["detector-en-clase-excluida", "ningún detector apunta a una clase excluida del análisis"],
-  ["excepcion-invalida", "las excepciones y exclusiones traen todos sus campos, sin sobrantes"],
-  ["excepcion-vencida", "ninguna excepción o exclusión está vencida"],
-  [
-    "excepcion-plazo-excesivo",
-    "ninguna excepción o exclusión dura más de 60 días (vence - creada)",
-  ],
-  ["excepcion-vence-antes-de-creada", "el vencimiento no es anterior a la creación"],
-  ["excepcion-creada-futura", "la fecha de creación no es futura respecto del reloj"],
-  ["excepcion-ruta-no-exacta", "la ruta de una excepción es un archivo exacto, sin comodines"],
-  ["excepcion-huella-cambiada", "la huella aprobada coincide con la línea (o el archivo) actual"],
-  ["excepcion-obsoleta", "toda excepción o exclusión silencia algo"],
-  ["excepcion-contrato-inexistente", "la excepción apunta a un contrato del registro"],
-]);
+/** Qué comprueba el guardián y cómo ubica cada falla: queda en el informe como «reglas ejecutadas». */
+const CHEQUEOS = Object.freeze(
+  CODIGOS_DE_FALLA.map((codigo) => [
+    codigo,
+    DESCRIPCION_DE_CODIGOS[codigo],
+    REGLAS_DE_LINEA[codigo],
+  ]),
+);
 
 const orden = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -98,6 +85,53 @@ const comoFalla = (hallazgo) => ({
   correccion: hallazgo.correccion,
   huella: hallazgo.huella,
 });
+
+const tieneArchivo = (hallazgo) => typeof hallazgo.archivo === "string" && hallazgo.archivo !== "";
+const tieneLinea = (hallazgo) => Number.isInteger(hallazgo.linea) && hallazgo.linea >= 1;
+
+/**
+ * AUTOCOMPROBACIÓN (M3): ningún hallazgo sale sin archivo y sin una línea entera desde 1, ni con un
+ * código fuera de la lista cerrada (`codigos.cjs`). Un hallazgo que no cumple se reemplaza por una
+ * falla propia que nombra el código ofensor: el guardián falla en vez de imprimir una falla que nadie
+ * puede ubicar. Así M3 no depende de la memoria de quien agrega un chequeo.
+ */
+function comprobarUbicaciones(fallas, avisos) {
+  const propias = [];
+  const revisar = (lista, tipo, codigosValidos) =>
+    lista.filter((hallazgo) => {
+      const problemas = [];
+      if (!tieneArchivo(hallazgo) || !tieneLinea(hallazgo)) {
+        problemas.push({
+          codigo: "falla-sin-ubicacion",
+          queOcurrio: `salió sin ubicación completa (archivo: ${JSON.stringify(hallazgo.archivo)}, línea: ${JSON.stringify(hallazgo.linea)})`,
+          correccion:
+            "Hacé que el chequeo diga el archivo y la línea (o cómo calcularla en ubicacion.cjs): M3 exige archivo:línea en toda falla.",
+        });
+      }
+      if (!codigosValidos.includes(hallazgo.codigo)) {
+        problemas.push({
+          codigo: "codigo-fuera-de-la-lista",
+          queOcurrio: `usa un código que no está en la lista cerrada de ${tipo}s del guardián`,
+          correccion:
+            "Agregá el código a codigos.cjs (con su regla de línea en ubicacion.cjs) o usá uno existente.",
+        });
+      }
+      for (const problema of problemas) {
+        propias.push({
+          codigo: problema.codigo,
+          archivo: tieneArchivo(hallazgo) ? hallazgo.archivo : ARCHIVO_DEL_GUARDIAN,
+          linea: 1,
+          contrato: hallazgo.contrato ?? null,
+          motivo: `Un ${tipo} con código «${hallazgo.codigo}» ${problema.queOcurrio}: ${hallazgo.motivo}`,
+          correccion: problema.correccion,
+        });
+      }
+      return problemas.length === 0;
+    });
+  const fallasValidas = revisar(fallas, "falla", CODIGOS_DE_FALLA);
+  const avisosValidos = revisar(avisos, "aviso", CODIGOS_DE_AVISO);
+  return { fallas: [...fallasValidas, ...propias], avisos: avisosValidos };
+}
 
 /**
  * Ejecuta el guardián sobre un árbol descrito por sus rutas y una función de lectura.
@@ -132,8 +166,9 @@ function ejecutar(opciones) {
       motivo:
         "No hay ninguna ruta versionada para analizar: «pasó» no significa nada si no se miró nada.",
       correccion: "Corré el guardián dentro de un repositorio git con archivos versionados.",
+      donde: enTexto("const NIVELES"),
     });
-    return resultado({ fallas, avisos, listaDeRutas, ahora, parcial: true });
+    return resultado({ fallas, avisos, listaDeRutas, ahora, leer, parcial: true });
   }
 
   // 1. Clasificación completa.
@@ -152,6 +187,7 @@ function ejecutar(opciones) {
           motivo: `La clase «${clase}» no tiene ninguna ruta, y este repositorio debería tener archivos de esa clase: el análisis no cubrió nada de ella.`,
           correccion:
             "Revisá las reglas de clasificación (¿se movió o se renombró una carpeta?) o, si la clase ya no existe, quitala de CLASES_ESPERADAS.",
+          donde: enTexto(`clase: "${clase}"`),
         });
       }
     }
@@ -166,6 +202,7 @@ function ejecutar(opciones) {
     ahora,
   });
   fallas.push(...exclusiones.fallas);
+  avisos.push(...exclusiones.avisos);
   const clasesExcluidas = new Set(exclusiones.clases.keys());
   const rutasExcluidas = new Set(exclusiones.archivos.keys());
 
@@ -175,7 +212,7 @@ function ejecutar(opciones) {
     registro = cargarRegistro(opciones.contratos);
   } catch (error) {
     if (!(error instanceof ErrorDeRegistro)) throw error;
-    for (const problema of error.problemas) {
+    for (const { problema, contrato } of error.detalles) {
       fallas.push({
         codigo: "registro-invalido",
         archivo: ARCHIVO_DEL_REGISTRO,
@@ -183,6 +220,7 @@ function ejecutar(opciones) {
         motivo: problema,
         correccion:
           "Completá o corregí el contrato en el registro; un contrato roto invalida todo el registro.",
+        donde: enContrato(contrato),
       });
     }
   }
@@ -221,6 +259,7 @@ function ejecutar(opciones) {
             contrato: regla.contrato,
             motivo: `El detector «${regla.detector}» apunta a la clase «${clase}», que está excluida del análisis: nunca va a ver nada.`,
             correccion: "Sacá la clase del detector o quitá la exclusión de esa clase.",
+            donde: enContrato(regla.contrato),
           });
         } else if (
           analizadas === 0 &&
@@ -234,6 +273,7 @@ function ejecutar(opciones) {
             motivo: `El detector «${regla.detector}» declara la clase «${clase}» pero no analizó ni un archivo de ella (${clasificacion.porClase[clase].length} rutas de esa clase): «sin hallazgos» no sería un resultado.`,
             correccion:
               "Revisá la clasificación y las exclusiones: el detector tiene que alcanzar archivos reales.",
+            donde: enContrato(regla.contrato),
           });
         }
       }
@@ -245,6 +285,7 @@ function ejecutar(opciones) {
       hallazgos: comparacion.hallazgos,
     });
     fallas.push(...excepciones.fallas);
+    avisos.push(...excepciones.avisos);
     fallas.push(...excepciones.restantes.map(comoFalla));
   }
 
@@ -253,6 +294,7 @@ function ejecutar(opciones) {
     avisos,
     listaDeRutas,
     ahora,
+    leer,
     clasificacion,
     exclusiones,
     registro,
@@ -267,8 +309,10 @@ function ejecutar(opciones) {
 
 /** Arma el resultado y el informe de evidencia a partir de lo que se ejecutó. */
 function resultado(datos) {
-  const fallas = ordenarFallas(datos.fallas);
-  const avisos = ordenarFallas(datos.avisos);
+  const ubicar = crearUbicador(datos.leer);
+  const comprobadas = comprobarUbicaciones(datos.fallas.map(ubicar), datos.avisos.map(ubicar));
+  const fallas = ordenarFallas(comprobadas.fallas);
+  const avisos = ordenarFallas(comprobadas.avisos);
   const informe = {
     version: VERSION_DEL_INFORME,
     generadoEn: datos.ahora.toISOString(),
@@ -289,7 +333,11 @@ function resultado(datos) {
       avisos: avisos.length,
     },
     reglasEjecutadas: {
-      chequeos: CHEQUEOS.map(([codigo, descripcion]) => ({ codigo, descripcion })),
+      chequeos: CHEQUEOS.map(([codigo, descripcion, reglaDeLinea]) => ({
+        codigo,
+        descripcion,
+        reglaDeLinea,
+      })),
       clasificacion: datos.clasificacion === undefined ? [] : datos.clasificacion.reglas,
       detectores:
         datos.comparacion === null || datos.comparacion === undefined
@@ -300,6 +348,16 @@ function resultado(datos) {
     exclusiones: {},
     unidades: [],
     excepcionesAplicadas: datos.excepciones === undefined ? [] : datos.excepciones.aplicadas,
+    // Los contratos que declaran no poder tener un detector de definición (registro.cjs): quedan a la vista.
+    contratosSinDetectorDeDefinicion:
+      datos.registro === null || datos.registro === undefined
+        ? []
+        : datos.registro.contratos
+            .filter((contrato) => contrato.sinDetectorDeDefinicion !== undefined)
+            .map((contrato) => ({
+              contrato: contrato.id,
+              motivo: contrato.sinDetectorDeDefinicion,
+            })),
     usosFueraDeUnidades:
       datos.comparacion === null || datos.comparacion === undefined
         ? []
@@ -350,8 +408,7 @@ function resultado(datos) {
 
 /** Una falla en una línea: `archivo:línea · contrato · motivo · corrección sugerida`. */
 function formatearFalla(falla) {
-  const ubicacion = falla.linea === undefined ? falla.archivo : `${falla.archivo}:${falla.linea}`;
-  return `${ubicacion} · ${falla.contrato ?? "-"} · ${falla.motivo} · ${falla.correccion}`;
+  return `${falla.archivo}:${falla.linea} · ${falla.contrato ?? "-"} · ${falla.motivo} · ${falla.correccion}`;
 }
 
 /** Lista las rutas versionadas y las sin versionar que git no ignora (lo que entraría a un commit). */
@@ -378,6 +435,7 @@ function leerJson(raiz, archivo, previas) {
       contrato: null,
       motivo: `No se pudo leer el archivo como JSON: ${String(error?.message ?? error)}.`,
       correccion: "Dejalo como una lista JSON válida.",
+      donde: enJson(),
     });
     return [];
   }
@@ -401,6 +459,7 @@ function cargarDelRepo(raiz) {
         contrato: null,
         motivo: "Git la lista pero ya no está en el disco; no se analiza.",
         correccion: "Registrá el borrado (git rm) para que deje de listarse.",
+        donde: enArchivo(),
       });
     }
   }
@@ -421,8 +480,41 @@ function cargarDelRepo(raiz) {
   };
 }
 
-function principal(argumentos) {
-  const raiz = path.resolve(__dirname, "../..");
+/** El valor de una opción `--nombre <valor>` o `--nombre=<valor>` (`undefined` si no está). */
+function valorDeOpcion(argumentos, nombre) {
+  const posicion = argumentos.indexOf(nombre);
+  if (posicion >= 0) return argumentos[posicion + 1] ?? "";
+  const conIgual = argumentos.find((argumento) => argumento.startsWith(`${nombre}=`));
+  return conIgual === undefined ? undefined : conIgual.slice(nombre.length + 1);
+}
+
+/**
+ * Vigilancia de la versión anterior: corre el `no-debilitar.cjs` DE LA CARPETA DE LA BASE contra el árbol
+ * `raiz` (ver `no-debilitar.cjs`). Devuelve 0 si no hay debilitamientos, ≠ 0 si los hay o si la carpeta no
+ * existe. Si la base todavía no trae ese verificador (la primera vez que se incorpora) avisa y devuelve 0:
+ * no hay versión anterior que vigile.
+ */
+function vigilarConLaBase(carpetaDeLaBase, raiz) {
+  const base = path.resolve(carpetaDeLaBase);
+  if (carpetaDeLaBase === "" || !fs.existsSync(base) || !fs.statSync(base).isDirectory()) {
+    process.stderr.write(`--base: «${carpetaDeLaBase}» no es una carpeta.\n`);
+    return 2;
+  }
+  const verificador = path.join(base, "arquitectura/contratos/no-debilitar.cjs");
+  if (!fs.existsSync(verificador)) {
+    process.stdout.write(
+      `AVISO ${base} no trae arquitectura/contratos/no-debilitar.cjs: no hay versión anterior que vigile.\n`,
+    );
+    return 0;
+  }
+  const resultado = spawnSync(process.execPath, [verificador, "--arbol", raiz], {
+    stdio: "inherit",
+  });
+  return resultado.status ?? 1;
+}
+
+/** Corre el guardián sobre el repositorio de `raiz`, imprime y devuelve `true` si pasa. */
+function correrGuardian(argumentos, raiz) {
   const sinInforme = argumentos.includes("--sin-informe");
   const indicado = argumentos.find((argumento) => argumento.startsWith("--informe="));
   const destino = path.resolve(
@@ -444,16 +536,30 @@ function principal(argumentos) {
     process.stderr.write(
       `Guardián de contratos: ${fallas.length} fallas, ${avisos.length} avisos (${donde}).\n`,
     );
-    process.exitCode = 1;
-    return;
+    return false;
   }
   process.stdout.write(
     `Guardián de contratos: OK · ${informe.totales.rutasClasificadas} rutas clasificadas (${porClase}) · ` +
       `${informe.totales.unidadesDeclaradas} unidades declaradas · ${informe.totales.contratos} contratos · ` +
       `${avisos.length} avisos (${donde}).\n`,
   );
+  return true;
 }
 
-module.exports = { ejecutar, cargarDelRepo, formatearFalla };
+/**
+ * CLI. Opción `--base <carpeta>` (opcional): además de la corrida normal, corre la vigilancia de la versión
+ * anterior (`vigilarConLaBase`) y sale ≠ 0 si cualquiera de las dos falla. Sin `--base` no cambia nada.
+ * La CI llama a las dos cosas por separado (dos pasos del job `guardian`, para ver cada una en su registro);
+ * esta opción es la forma de hacer lo mismo a mano en un solo comando.
+ */
+function principal(argumentos) {
+  const raiz = path.resolve(__dirname, "../..");
+  const base = valorDeOpcion(argumentos, "--base");
+  const pasa = correrGuardian(argumentos, raiz);
+  const salidaDeLaBase = base === undefined ? 0 : vigilarConLaBase(base, raiz);
+  if (!pasa || salidaDeLaBase !== 0) process.exitCode = pasa ? salidaDeLaBase : 1;
+}
+
+module.exports = { ejecutar, cargarDelRepo, formatearFalla, vigilarConLaBase, valorDeOpcion };
 
 if (require.main === module) principal(process.argv.slice(2));

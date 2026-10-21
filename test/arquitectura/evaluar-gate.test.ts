@@ -14,6 +14,7 @@ const { evaluarGate } = require("../../arquitectura/evaluar-gate.cjs") as {
 
 const VERDE: Needs = {
   estatico: { result: "success" },
+  guardian: { result: "success" },
   pruebas: { result: "success" },
   seguridad: { result: "success" },
   flujos: { result: "success" },
@@ -67,7 +68,7 @@ describe("Gate: veredicto sobre los jobs", () => {
     expect(evaluarGate(sinPlan)).toEqual(["mutacion-plan: failure", "mutacion: skipped"]);
   });
 
-  it.each(["estatico", "pruebas", "seguridad", "flujos", "web", "componentes"])(
+  it.each(["estatico", "guardian", "pruebas", "seguridad", "flujos", "web", "componentes"])(
     "%s fallido o saltado falla",
     (job) => {
       expect(evaluarGate(con({ [job]: { result: "failure" } }))).toEqual([`${job}: failure`]);
@@ -80,10 +81,23 @@ describe("Gate: veredicto sobre los jobs", () => {
     expect(evaluarGate(con({ [job]: { result: "cancelled" } }))).toEqual([`${job}: cancelled`]);
   });
 
+  it("el guardián cancelado también falla (no cuenta como verde)", () => {
+    expect(evaluarGate(con({ guardian: { result: "cancelled" } }))).toEqual([
+      "guardian: cancelled",
+    ]);
+  });
+
   it("un job que falta en `needs` cuenta como fallo", () => {
     const sinPruebas = Object.fromEntries(
       Object.entries(VERDE).filter(([job]) => job !== "pruebas"),
     );
     expect(evaluarGate(sinPruebas)).toEqual(["pruebas: ausente"]);
+  });
+
+  it("el guardián ausente de `needs` cuenta como fallo (quitarlo del Gate no lo deja pasar)", () => {
+    const sinGuardian = Object.fromEntries(
+      Object.entries(VERDE).filter(([job]) => job !== "guardian"),
+    );
+    expect(evaluarGate(sinGuardian)).toEqual(["guardian: ausente"]);
   });
 });

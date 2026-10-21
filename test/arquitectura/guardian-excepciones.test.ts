@@ -8,6 +8,7 @@ import {
   correr,
   huellaDe,
   huellaDelArchivo,
+  definicionInerte,
   type Opciones,
 } from "./guardian-apoyo";
 
@@ -270,10 +271,12 @@ describe("excepciones: cada forma de fallar (violaciones inyectadas)", () => {
         archivos: { [RUTA]: ".nada {}\n", [OTRA_RUTA]: `${LINEA_DE_USO}\n` },
       }),
     );
+    // La excepción obsoleta se señala en excepciones.json (la entrada a borrar) y nombra la ruta.
     expect(resultado.fallas.map((f) => [f.codigo, f.archivo]).sort()).toEqual([
-      ["excepcion-obsoleta", RUTA],
+      ["excepcion-obsoleta", "arquitectura/contratos/excepciones.json"],
       ["no-usa-falso", OTRA_RUTA],
     ]);
+    expect(resultado.fallas.find((f) => f.codigo === "excepcion-obsoleta")?.motivo).toContain(RUTA);
   });
 
   it("obsoleta: el archivo ya no tiene el problema", () => {
@@ -357,7 +360,10 @@ describe("exclusiones del análisis (mismo formato y rigor)", () => {
 
   it("un detector que apunta a una clase excluida falla: nunca vería nada", () => {
     const registro = contrato({
-      deteccion: [{ tipo: "uso", clases: ["docs"], nombre: "en docs", reconoce: () => [] }],
+      deteccion: [
+        { tipo: "uso", clases: ["docs"], nombre: "en docs", reconoce: () => [] },
+        definicionInerte(),
+      ],
     });
     const resultado = correr({ contratos: [registro] });
     expect(codigos(resultado)).toEqual(["detector-en-clase-excluida"]);
