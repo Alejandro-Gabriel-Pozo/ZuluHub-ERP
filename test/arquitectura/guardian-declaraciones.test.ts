@@ -37,6 +37,7 @@ describe("unidades", () => {
     ["src/primitivas/dinero/dinero.ts", "src/primitivas"],
     ["src/consultas-de-grupo/publico.ts", "src/consultas-de-grupo"],
     ["apps/web/ui/tokens.css", "apps/web"],
+    ["apps/plataforma/servidor/ingreso.ts", "apps/plataforma"],
     ["scripts/migrar-base.ts", "scripts"],
     ["migraciones/0001_base.sql", "migraciones"],
     ["workers/cola.ts", "workers"],

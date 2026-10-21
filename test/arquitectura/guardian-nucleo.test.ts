@@ -94,13 +94,14 @@ describeConGit("el repositorio actual pasa", () => {
 
   it("toda unidad existente tiene su declaración, con `noUsa` y sin contratos", () => {
     const { unidades } = resultado.informe;
-    expect(unidades.length).toBeGreaterThanOrEqual(17);
+    expect(unidades.length).toBeGreaterThanOrEqual(18);
     for (const { unidad, declaracion } of unidades) {
       expect(declaracion, unidad).toMatchObject({ usa: [] });
     }
     expect(unidades.map((u) => u.unidad)).toEqual(
       expect.arrayContaining([
         "apps/web",
+        "apps/plataforma",
         "scripts",
         "migraciones",
         "src/modulos/fiscal",

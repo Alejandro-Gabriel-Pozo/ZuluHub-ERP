@@ -120,6 +120,10 @@ const NIVELES = [
       { clase: "backend", glob: "apps/web/proxy.ts" },
       { clase: "backend", glob: "apps/web/app/**/route.ts" },
       { clase: "backend", glob: "apps/web/app/**/acciones.ts" },
+      { clase: "backend", glob: "apps/plataforma/servidor/**" },
+      { clase: "backend", glob: "apps/plataforma/proxy.ts" },
+      { clase: "backend", glob: "apps/plataforma/app/**/route.ts" },
+      { clase: "backend", glob: "apps/plataforma/app/**/acciones.ts" },
     ],
   },
   {
@@ -132,6 +136,14 @@ const NIVELES = [
       { clase: "config", glob: "apps/web/package.json" },
       { clase: "config", glob: "apps/web/tsconfig.json" },
       { clase: "config", glob: "apps/web/vercel.json" },
+      { clase: "frontend", glob: "apps/plataforma/app/**" },
+      { clase: "frontend", glob: "apps/plataforma/pantallas/**" },
+      // Lógica pura de las pantallas (sin servidor ni framework): es parte del frontend.
+      { clase: "frontend", glob: "apps/plataforma/logica/**" },
+      { clase: "config", glob: "apps/plataforma/next.config.ts" },
+      { clase: "config", glob: "apps/plataforma/package.json" },
+      { clase: "config", glob: "apps/plataforma/tsconfig.json" },
+      { clase: "config", glob: "apps/plataforma/vercel.json" },
     ],
   },
   {
