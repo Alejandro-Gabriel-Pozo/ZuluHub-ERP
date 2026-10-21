@@ -19,6 +19,8 @@
     }
   },
   "ignoreIssues": {
-    "arquitectura/lint-sql.cjs": ["exports"]
+    "arquitectura/lint-sql.cjs": ["exports"],
+    // Los lee la prueba por `createRequire`, que knip no sigue: lo usa el registro de contratos que todavía no existe.
+    "arquitectura/contratos/detectores.cjs": ["exports"]
   }
 }
