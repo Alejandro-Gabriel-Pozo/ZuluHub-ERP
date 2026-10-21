@@ -1,0 +1,16 @@
+# REGISTRO DE RESPONSABLES, NADA MÁS.
+# Dice quién responde por cada pieza que sostiene el control de calidad. NO exige aprobación de nadie:
+# el dueño decidió que no hay segundo revisor (contratos-arquitectonicos.md §5), y mientras en la
+# protección de `main` no esté activada la opción «Require review from Code Owners», este archivo no
+# bloquea ningún merge. La traba real es el chequeo `Gate`, obligatorio en `main`.
+
+/arquitectura/contratos/                         @Alejandro-Gabriel-Pozo
+/arquitectura/evaluar-gate.cjs                   @Alejandro-Gabriel-Pozo
+/arquitectura/reglas.cjs                         @Alejandro-Gabriel-Pozo
+/.github/workflows/                              @Alejandro-Gabriel-Pozo
+/.github/CODEOWNERS                              @Alejandro-Gabriel-Pozo
+/test/arquitectura/guardian-*                    @Alejandro-Gabriel-Pozo
+/test/arquitectura/gate-coincide-con-ci.test.ts  @Alejandro-Gabriel-Pozo
+/package.json                                    @Alejandro-Gabriel-Pozo
+/stryker.config.json                             @Alejandro-Gabriel-Pozo
+/vitest.config.ts                                @Alejandro-Gabriel-Pozo
