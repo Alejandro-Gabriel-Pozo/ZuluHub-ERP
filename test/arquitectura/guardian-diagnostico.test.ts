@@ -21,6 +21,7 @@ import {
   EXCLUSIONES_BASE,
   LINEA_DE_USO,
   RAIZ,
+  RAIZ_ORIGINAL,
   REGLAS_DE_LINEA,
   cargarDelRepo,
   contrato,
@@ -1022,7 +1023,7 @@ describe("la lista cerrada de códigos", () => {
   });
 
   it('todo código que el código fuente del guardián escribe como `codigo: "…"` está en la lista', () => {
-    const carpeta = join(RAIZ, "arquitectura/contratos");
+    const carpeta = join(RAIZ_ORIGINAL, "arquitectura/contratos");
     const escritos = new Set<string>();
     for (const archivo of readdirSync(carpeta).filter((a) => a.endsWith(".cjs"))) {
       // `invariantes.cjs` es el catálogo de la matriz: cita códigos en cada `esperado`, no los emite.

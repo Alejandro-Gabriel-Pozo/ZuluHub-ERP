@@ -155,8 +155,9 @@ function ejecutar(opciones) {
   const { leer } = opciones;
   const fallas = [...(opciones.previas?.fallas ?? [])];
   const avisos = [...(opciones.previas?.avisos ?? [])];
-  const listaDeRutas = [...new Set(opciones.rutas)].sort();
-  const rutas = new Set(listaDeRutas);
+  // Sin repetidas. El orden de entrada da igual: quien recorre las rutas (`clasificar`, `descubrirUnidades`) las ordena.
+  const rutas = new Set(opciones.rutas);
+  const listaDeRutas = [...rutas];
 
   if (listaDeRutas.length === 0) {
     fallas.push({
@@ -236,7 +237,7 @@ function ejecutar(opciones) {
 
   // 5. Comparación declaración-uso, excepciones y cobertura de los detectores.
   let comparacion = null;
-  let excepciones = { aplicadas: [], restantes: [] };
+  let excepciones = { aplicadas: [] };
   if (registro !== null) {
     comparacion = comparar({
       registro,
@@ -380,13 +381,9 @@ function resultado(datos) {
         excluidas: clase in excluidasPorClase ? delaClase.length : excluidasAMano,
         exclusionPorClase: excluidasPorClase[clase] ?? null,
         analizadasPorDetectores:
-          datos.comparacion === null || datos.comparacion === undefined
-            ? 0
-            : (datos.comparacion.escaneadasPorClase[clase] ?? 0),
+          datos.comparacion === null ? 0 : (datos.comparacion.escaneadasPorClase[clase] ?? 0),
         binariasOmitidas:
-          datos.comparacion === null || datos.comparacion === undefined
-            ? 0
-            : (datos.comparacion.omitidasPorClase[clase] ?? 0),
+          datos.comparacion === null ? 0 : (datos.comparacion.omitidasPorClase[clase] ?? 0),
         sinUnidad: delaClase.filter((ruta) => unidadDe(ruta) === null).length,
         listaDeRutas: delaClase,
       };
@@ -427,13 +424,14 @@ function listarRutas(raiz) {
 
 function leerJson(raiz, archivo, previas) {
   try {
-    return JSON.parse(fs.readFileSync(path.join(raiz, archivo), "utf8"));
+    // `JSON.parse` lee el `Buffer` como UTF-8: no hace falta decodificarlo antes.
+    return JSON.parse(fs.readFileSync(path.join(raiz, archivo)));
   } catch (error) {
     previas.fallas.push({
       codigo: "excepcion-invalida",
       archivo,
       contrato: null,
-      motivo: `No se pudo leer el archivo como JSON: ${String(error?.message ?? error)}.`,
+      motivo: `No se pudo leer el archivo como JSON: ${error.message}.`,
       correccion: "Dejalo como una lista JSON válida.",
       donde: enJson(),
     });
@@ -557,9 +555,12 @@ function principal(argumentos) {
   const base = valorDeOpcion(argumentos, "--base");
   const pasa = correrGuardian(argumentos, raiz);
   const salidaDeLaBase = base === undefined ? 0 : vigilarConLaBase(base, raiz);
-  if (!pasa || salidaDeLaBase !== 0) process.exitCode = pasa ? salidaDeLaBase : 1;
+  process.exitCode = pasa ? salidaDeLaBase : 1;
 }
 
 module.exports = { ejecutar, cargarDelRepo, formatearFalla, vigilarConLaBase, valorDeOpcion };
 
-if (require.main === module) principal(process.argv.slice(2));
+if (require.main === module) {
+  const [, , ...argumentos] = process.argv;
+  principal(argumentos);
+}

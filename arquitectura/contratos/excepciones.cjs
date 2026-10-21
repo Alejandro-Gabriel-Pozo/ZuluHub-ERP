@@ -84,9 +84,8 @@ function esFechaValida(texto) {
   if (partes === null) return false;
   const [anio, mes, dia] = [Number(partes[1]), Number(partes[2]), Number(partes[3])];
   const fecha = new Date(Date.UTC(anio, mes - 1, dia));
-  return (
-    fecha.getUTCFullYear() === anio && fecha.getUTCMonth() === mes - 1 && fecha.getUTCDate() === dia
-  );
+  // Año y día alcanzan: un mes fuera de rango (00, 13…) cambia el año, y un día de más cambia el día.
+  return fecha.getUTCFullYear() === anio && fecha.getUTCDate() === dia;
 }
 
 const diasEntre = (desde, hasta) =>

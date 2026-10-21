@@ -9,6 +9,7 @@ import {
   EXCLUSIONES_BASE,
   LINEA_DE_USO,
   RAIZ,
+  RAIZ_ORIGINAL,
   REGISTRO_DE_EJEMPLO,
   SIN_CONTRATOS,
   TOKENS,
@@ -172,7 +173,7 @@ export type Corrida = { salidas: Salida[]; textos: Record<string, string> };
 
 // --- Lectura de lo real (solo lectura) ---------------------------------------------------------------
 
-export const leerReal = (ruta: string): string => readFileSync(join(RAIZ, ruta), "utf8");
+export const leerReal = (ruta: string): string => readFileSync(join(RAIZ_ORIGINAL, ruta), "utf8");
 
 /** Reemplaza la primera aparición; si el texto real ya no la tiene, falla fuerte (la mutación caducó). */
 function reemplazar(texto: string, de: string, a: string): string {
@@ -1373,7 +1374,11 @@ export const APLICADORES: Record<string, Aplicador> = {
       const archivo = join(carpeta, "arquitectura/contratos/clasificacion.cjs");
       writeFileSync(
         archivo,
-        reemplazar(readFileSync(archivo, "utf8"), "if (!decidida) {", "if (false) {"),
+        reemplazar(
+          leerReal("arquitectura/contratos/clasificacion.cjs"),
+          "if (!decidida) {",
+          "if (false) {",
+        ),
       );
     }),
     textos: {},

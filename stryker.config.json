@@ -2,7 +2,7 @@
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "testRunner": "command",
   "commandRunner": {
-    "command": "PEDERNAL_SIN_INTEGRACION=1 npx vitest run --project node --reporter=dot $PEDERNAL_FILTRO_PRUEBAS"
+    "command": "PEDERNAL_SIN_INTEGRACION=1 npx vitest run --project node --reporter=dot --bail=1 $PEDERNAL_FILTRO_PRUEBAS"
   },
   "mutate": [
     "src/primitivas/dinero/**/*.ts",
@@ -69,6 +69,17 @@
     "src/composicion/puerta-de-consola.ts",
     "src/composicion/autenticacion-de-host-fijo.ts",
     "src/composicion/a-respuesta.ts",
+    "arquitectura/contratos/clasificacion.cjs",
+    "arquitectura/contratos/comparacion.cjs",
+    "arquitectura/contratos/declaraciones.cjs",
+    "arquitectura/contratos/excepciones.cjs",
+    "arquitectura/contratos/globs.cjs",
+    "arquitectura/contratos/guardian.cjs",
+    "arquitectura/contratos/registro.cjs",
+    "arquitectura/contratos/ubicacion.cjs",
+    "arquitectura/contratos/detectores.cjs",
+    "arquitectura/contratos/verificar-mecanismo.cjs",
+    "arquitectura/contratos/no-debilitar.cjs",
     "!src/**/*.test.ts"
   ],
   "coverageAnalysis": "off",
