@@ -12,3 +12,6 @@ reports/
 next-env.d.ts
 *.tsbuildinfo
 .vitest/
+
+# Informe de evidencia del guardián de contratos (se genera en cada corrida).
+arquitectura/contratos/informe.json
