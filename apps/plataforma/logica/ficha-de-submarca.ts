@@ -17,6 +17,8 @@ export type FichaDeSubmarca = Readonly<{
   nombre: string;
   estado: string;
   versionVigente: number | null;
+  /** El número que tendrá la versión que nace al confirmar: la mayor confirmada más uno (NO es la `version` del borrador). */
+  numeroDeLaVersionNueva: number;
   borrador: { version: number } | null;
   hayProgramada: boolean;
   /** Lo que se edita: el borrador efectivo; si no hay, lo que rige; si tampoco, vacío con el aspecto por defecto. */
@@ -65,6 +67,7 @@ export function armarFichaDeSubmarca(
     nombre: ficha.efectiva?.nombreVisible.valor ?? ficha.marca.codigo,
     estado: ficha.marca.estado,
     versionVigente: ficha.versiones.find((v) => v.estado === "VIGENTE")?.numero ?? null,
+    numeroDeLaVersionNueva: Math.max(0, ...ficha.versiones.map((v) => v.numero)) + 1,
     borrador: ficha.borrador === null ? null : { version: ficha.borrador.version },
     hayProgramada: ficha.versiones.some((v) => v.estado === "PROGRAMADA"),
     formulario: delBorrador ?? vigente ?? FORMULARIO_VACIO,

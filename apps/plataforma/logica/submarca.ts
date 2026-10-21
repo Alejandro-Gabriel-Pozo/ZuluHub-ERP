@@ -29,11 +29,11 @@ export const INGRESOS = [
   { valor: "CON_IMAGEN", etiqueta: "Con imagen" },
 ] as const;
 
-export type Estilo = (typeof ESTILOS)[number]["valor"];
-export type Superficie = (typeof SUPERFICIES)[number]["valor"];
-export type Esquinas = (typeof ESQUINAS)[number]["valor"];
-export type Titulos = (typeof TITULOS)[number]["valor"];
-export type Ingreso = (typeof INGRESOS)[number]["valor"];
+type Estilo = (typeof ESTILOS)[number]["valor"];
+type Superficie = (typeof SUPERFICIES)[number]["valor"];
+type Esquinas = (typeof ESQUINAS)[number]["valor"];
+type Titulos = (typeof TITULOS)[number]["valor"];
+type Ingreso = (typeof INGRESOS)[number]["valor"];
 
 /** Cada color es `#rrggbb` en minúsculas, o "" si no está definido. */
 export type ColoresDeSubmarca = Readonly<{

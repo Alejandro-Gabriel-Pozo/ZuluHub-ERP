@@ -182,7 +182,7 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
       ? (textoParaAviso(ficha.puedeConfirmarse.error) ?? "Todavía no se puede confirmar.")
       : undefined;
 
-  const numeroNuevo = ficha.borrador?.version ?? (ficha.versionVigente ?? 0) + 1;
+  const numeroNuevo = ficha.numeroDeLaVersionNueva;
 
   return (
     <>

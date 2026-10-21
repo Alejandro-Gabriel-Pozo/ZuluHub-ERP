@@ -122,6 +122,24 @@ describe("armarFichaDeSubmarca", () => {
     expect(r.formularioDeLaVigente?.nombreVisible).toBe("Viejo");
   });
 
+  it("el número de la versión nueva es la mayor confirmada más uno, NO la version del borrador", () => {
+    const sinNada = armarFichaDeSubmarca(ficha({}), CATALOGOS);
+    expect(sinNada.numeroDeLaVersionNueva).toBe(1);
+    const conHistoria = armarFichaDeSubmarca(
+      ficha({
+        versiones: [
+          { numero: 1, estado: "REEMPLAZADA" },
+          { numero: 3, estado: "PROGRAMADA" },
+          { numero: 2, estado: "VIGENTE" },
+        ],
+        borrador: { id: "b", version: 17, definicion: {} },
+      }),
+      CATALOGOS,
+    );
+    expect(conHistoria.numeroDeLaVersionNueva).toBe(4);
+    expect(conHistoria.borrador).toEqual({ version: 17 });
+  });
+
   it("hayProgramada sale de las versiones PROGRAMADA", () => {
     const con = armarFichaDeSubmarca(
       ficha({
@@ -156,7 +174,8 @@ describe("armarFichaDeSubmarca", () => {
       ok: false,
       error: {
         tipo: "PANTALLA_VIEJA",
-        texto: "La pantalla quedó vieja. Volvé a abrirla y probá de nuevo.",
+        texto:
+          "Alguien más cambió el borrador. Recargá la pantalla para ver sus cambios antes de guardar los tuyos.",
       },
     });
     const raro = armarFichaDeSubmarca(
