@@ -1,317 +1,381 @@
 [
   {
     "grupo": "dinero (cálculo exacto y redondeo)",
+    "minutos": 13.7,
     "archivos": "src/primitivas/dinero/monto-exacto.ts,src/primitivas/dinero/interno.ts,src/primitivas/dinero/redondeo.ts"
   },
   {
     "grupo": "dinero (importe, prorrateo y moneda)",
+    "minutos": 10.7,
     "archivos": "src/primitivas/dinero/**/*.ts,!src/primitivas/dinero/monto-exacto.ts,!src/primitivas/dinero/interno.ts,!src/primitivas/dinero/redondeo.ts"
   },
   {
     "grupo": "cantidad",
+    "minutos": 1.6,
     "archivos": "src/primitivas/cantidad/**/*.ts",
     "pruebas": "src/primitivas/cantidad src/primitivas/dinero"
   },
   {
     "grupo": "identificación fiscal, resultado y estados",
+    "minutos": 9.8,
     "archivos": "src/primitivas/identificacion-fiscal/**/*.ts,src/primitivas/resultado/**/*.ts,src/contexto/estados.ts"
   },
   {
     "grupo": "tenants y empresas",
+    "minutos": 2.8,
     "archivos": "src/modulos/tenants/dominio/**/*.ts,src/modulos/empresas/dominio/**/*.ts,src/consultas-de-grupo/vista-de-grupo.ts",
     "pruebas": "src/modulos/tenants/dominio src/modulos/empresas/dominio src/consultas-de-grupo"
   },
   {
     "grupo": "fiscal (numeración)",
+    "minutos": 3.8,
     "archivos": "src/modulos/fiscal/dominio/numeracion.ts",
     "pruebas": "src/modulos/fiscal"
   },
   {
     "grupo": "fiscal (datos y vigencia)",
+    "minutos": 5.6,
     "archivos": "src/modulos/fiscal/dominio/datos-fiscales.ts,src/modulos/fiscal/dominio/vigencia.ts",
     "pruebas": "src/modulos/fiscal"
   },
   {
     "grupo": "fiscal (puntos de venta y emisor)",
+    "minutos": 3.1,
     "archivos": "src/modulos/fiscal/dominio/punto-de-venta.ts,src/modulos/fiscal/dominio/resolucion-de-emisor.ts",
     "pruebas": "src/modulos/fiscal"
   },
   {
     "grupo": "fiscal (resto)",
+    "minutos": 4.2,
     "archivos": "src/modulos/fiscal/dominio/**/*.ts,!src/modulos/fiscal/dominio/numeracion.ts,!src/modulos/fiscal/dominio/datos-fiscales.ts,!src/modulos/fiscal/dominio/vigencia.ts,!src/modulos/fiscal/dominio/punto-de-venta.ts,!src/modulos/fiscal/dominio/resolucion-de-emisor.ts,!src/modulos/fiscal/dominio/calculo-de-renglones.ts,!src/modulos/fiscal/dominio/codigos-de-arca.ts,!src/modulos/fiscal/dominio/comprobante-nuevo.ts,!src/modulos/fiscal/dominio/condicion-iva-receptor.ts,!src/modulos/fiscal/dominio/estados-de-comprobante.ts,!src/modulos/fiscal/dominio/importes-para-arca.ts,!src/modulos/fiscal/dominio/letra-de-comprobante.ts,!src/modulos/fiscal/dominio/modelo-de-impresion.ts,!src/modulos/fiscal/dominio/nota-asociada.ts,!src/modulos/fiscal/dominio/qr-de-arca.ts,!src/modulos/fiscal/dominio/receptor.ts,!src/modulos/fiscal/dominio/reconciliacion-de-comprobante.ts,!src/modulos/fiscal/dominio/certificado-carga.ts,!src/modulos/fiscal/dominio/certificado-pedido.ts,!src/modulos/fiscal/dominio/vencimiento-de-certificados.ts",
     "pruebas": "src/modulos/fiscal"
   },
   {
     "grupo": "domicilio",
+    "minutos": 2.2,
     "archivos": "src/primitivas/domicilio/**/*.ts",
     "pruebas": "src/primitivas/domicilio"
   },
   {
     "grupo": "tiempo",
+    "minutos": 1.8,
     "archivos": "src/primitivas/tiempo/**/*.ts",
     "pruebas": "src/primitivas/tiempo"
   },
   {
     "grupo": "identidad (invitación)",
+    "minutos": 4.2,
     "archivos": "src/modulos/identidad/dominio/invitacion.ts",
     "pruebas": "src/modulos/identidad"
   },
   {
     "grupo": "identidad (resto)",
+    "minutos": 4.5,
     "archivos": "src/modulos/identidad/dominio/**/*.ts,!src/modulos/identidad/dominio/invitacion.ts",
     "pruebas": "src/modulos/identidad"
   },
   {
     "grupo": "permisos y módulos",
+    "minutos": 23,
     "archivos": "src/capacidades/permisos/**/*.ts,src/capacidades/modulos/**/*.ts"
   },
   {
     "grupo": "plataforma (dominio)",
+    "minutos": 16.4,
     "archivos": "src/plataforma/dominio/**/*.ts",
     "pruebas": "src/plataforma/dominio src/plataforma/casos-de-uso src/plataforma/consultas src/plataforma/sin-reloj-ni-azar.test.ts test/plataforma"
   },
   {
     "grupo": "identificadores",
+    "minutos": 0.9,
     "archivos": "src/primitivas/identificadores/**/*.ts",
     "pruebas": "src/primitivas/identificadores"
   },
   {
     "grupo": "vocabulario",
+    "minutos": 1.4,
     "archivos": "src/capacidades/vocabulario/**/*.ts",
     "pruebas": "src/capacidades/vocabulario"
   },
   {
     "grupo": "marcas (host, tema y jerarquía)",
+    "minutos": 3.4,
     "archivos": "src/modulos/marcas/dominio/host.ts,src/modulos/marcas/dominio/tema.ts,src/modulos/marcas/dominio/jerarquia.ts",
     "pruebas": "src/modulos/marcas"
   },
   {
     "grupo": "marcas (definición, versión y vigencia)",
+    "minutos": 3.9,
     "archivos": "src/modulos/marcas/dominio/**/*.ts,!src/modulos/marcas/dominio/host.ts,!src/modulos/marcas/dominio/tema.ts,!src/modulos/marcas/dominio/jerarquia.ts,!src/modulos/marcas/dominio/ciclo-de-dominio.ts,!src/modulos/marcas/dominio/marca-de-mail.ts,!src/modulos/marcas/dominio/configuracion-publica.ts",
     "pruebas": "src/modulos/marcas"
   },
   {
     "grupo": "trabajos y correo (lógica pura)",
+    "minutos": 9.6,
     "archivos": "src/adaptadores/trabajos/reintentos.ts,src/adaptadores/trabajos/error-seguro.ts,src/adaptadores/correo/configuracion.ts,src/adaptadores/postgres/huella-canonica.ts,src/adaptadores/postgres/describir-falla-de-base.ts,src/adaptadores/postgres/roles-de-la-aplicacion.ts",
     "pruebas": "src/adaptadores"
   },
   {
     "grupo": "planes (derechos de uso, vigencia y niveles)",
+    "minutos": 8,
     "archivos": "src/capacidades/planes/**/*.ts",
     "pruebas": "src/capacidades/planes"
   },
   {
     "grupo": "planes (decisiones del módulo)",
+    "minutos": 2.2,
     "archivos": "src/modulos/planes/dominio/**/*.ts",
     "pruebas": "src/modulos/planes"
   },
   {
     "grupo": "marcas (ciclo de vida de los dominios)",
+    "minutos": 1.2,
     "archivos": "src/modulos/marcas/dominio/ciclo-de-dominio.ts",
     "pruebas": "src/modulos/marcas/dominio/ciclo-de-dominio.test.ts"
   },
   {
     "grupo": "marcas (marca de los mails)",
+    "minutos": 0.5,
     "archivos": "src/modulos/marcas/dominio/marca-de-mail.ts",
     "pruebas": "src/modulos/marcas/dominio/marca-de-mail.test.ts"
   },
   {
     "grupo": "marcas (configuración pública)",
+    "minutos": 1.1,
     "archivos": "src/modulos/marcas/dominio/configuracion-publica.ts",
     "pruebas": "src/modulos/marcas/dominio/configuracion-publica.test.ts"
   },
   {
     "grupo": "web (puerta mínima)",
+    "minutos": 7.3,
     "archivos": "src/capacidades/experiencia/**/*.ts,!src/capacidades/experiencia/carta/**/*.ts,!src/capacidades/experiencia/respuesta.ts,!src/capacidades/experiencia/origen.ts,!src/capacidades/experiencia/ruta-de-retorno.ts,!src/capacidades/experiencia/estado-de-sesion.ts,!src/capacidades/experiencia/empresa-elegida.ts,!src/capacidades/experiencia/destinos.ts,!src/capacidades/experiencia/sucursal.ts,!src/capacidades/experiencia/errores-de-ingreso.ts,!src/capacidades/experiencia/set-cookie.ts",
     "pruebas": "src/capacidades/experiencia"
   },
   {
     "grupo": "web (composición, entorno y contextos)",
+    "minutos": 2.6,
     "archivos": "src/composicion/entorno.ts,src/composicion/entorno-de-plataforma.ts,src/composicion/perezoso.ts,src/composicion/contextos.ts",
     "pruebas": "src/composicion"
   },
   {
     "grupo": "captación (formulario y atribución)",
+    "minutos": 2.8,
     "archivos": "src/plataforma/captacion/dominio/formulario.ts,src/plataforma/captacion/dominio/atribucion.ts",
     "pruebas": "src/plataforma/captacion"
   },
   {
     "grupo": "captación (resto del dominio)",
+    "minutos": 3.6,
     "archivos": "src/plataforma/captacion/dominio/**/*.ts,!src/plataforma/captacion/dominio/formulario.ts,!src/plataforma/captacion/dominio/atribucion.ts",
     "pruebas": "src/plataforma/captacion"
   },
   {
     "grupo": "fiscal (facturación)",
+    "minutos": 10.3,
     "archivos": "src/modulos/fiscal/dominio/calculo-de-renglones.ts,src/modulos/fiscal/dominio/codigos-de-arca.ts,src/modulos/fiscal/dominio/comprobante-nuevo.ts,src/modulos/fiscal/dominio/condicion-iva-receptor.ts,src/modulos/fiscal/dominio/estados-de-comprobante.ts,src/modulos/fiscal/dominio/importes-para-arca.ts,src/modulos/fiscal/dominio/letra-de-comprobante.ts,src/modulos/fiscal/dominio/nota-asociada.ts,src/modulos/fiscal/dominio/qr-de-arca.ts,src/modulos/fiscal/dominio/receptor.ts,src/modulos/fiscal/dominio/reconciliacion-de-comprobante.ts",
     "pruebas": "src/modulos/fiscal/dominio/calculo-de-renglones.test.ts src/modulos/fiscal/dominio/codigos-de-arca.test.ts src/modulos/fiscal/dominio/comprobante-nuevo.test.ts src/modulos/fiscal/dominio/condicion-iva-receptor.test.ts src/modulos/fiscal/dominio/estados-de-comprobante.test.ts src/modulos/fiscal/dominio/importes-para-arca.test.ts src/modulos/fiscal/dominio/letra-de-comprobante.test.ts src/modulos/fiscal/dominio/nota-asociada.test.ts src/modulos/fiscal/dominio/qr-de-arca.test.ts src/modulos/fiscal/dominio/receptor.test.ts src/modulos/fiscal/dominio/reconciliacion-de-comprobante.test.ts src/modulos/fiscal/dominio/propiedades-de-facturacion.test.ts src/modulos/fiscal/dominio/sin-ventas.test.ts"
   },
   {
     "grupo": "carta (piezas puras)",
+    "minutos": 5.4,
     "archivos": "src/capacidades/experiencia/carta/**/*.ts",
     "pruebas": "src/capacidades/experiencia/carta"
   },
   {
     "grupo": "activos (cabeceras)",
+    "minutos": 26.4,
     "archivos": "src/capacidades/activos/cabeceras.ts",
     "pruebas": "src/capacidades/activos/activos.propiedades.test.ts src/capacidades/activos/cabeceras.test.ts src/capacidades/activos/limpieza.test.ts src/capacidades/activos/validacion.test.ts"
   },
   {
     "grupo": "activos (validación y limpieza)",
+    "minutos": 7.5,
     "archivos": "src/capacidades/activos/validacion.ts,src/capacidades/activos/limpieza.ts",
     "pruebas": "src/capacidades/activos/activos.propiedades.test.ts src/capacidades/activos/limpieza.test.ts src/capacidades/activos/validacion.test.ts"
   },
   {
     "grupo": "activos (dirección externa)",
+    "minutos": 5,
     "archivos": "src/capacidades/activos/direccion-externa.ts,src/capacidades/activos/proveedores-de-imagen.ts",
     "pruebas": "src/capacidades/activos/direccion-externa.propiedades.test.ts src/capacidades/activos/direccion-externa.test.ts src/capacidades/activos/proveedores-de-imagen.test.ts"
   },
   {
     "grupo": "activos (red)",
+    "minutos": 2.3,
     "archivos": "src/capacidades/activos/red.ts",
     "pruebas": "src/capacidades/activos/red.propiedades.test.ts src/capacidades/activos/red.test.ts"
   },
   {
     "grupo": "controles (nivel, decisión y catálogo)",
+    "minutos": 0.7,
     "archivos": "src/capacidades/controles/**/*.ts",
     "pruebas": "src/capacidades/controles"
   },
   {
     "grupo": "contacto (email)",
+    "minutos": 0.6,
     "archivos": "src/primitivas/contacto/**/*.ts",
     "pruebas": "src/primitivas/contacto"
   },
   {
     "grupo": "fiscal (modelo de impresión)",
+    "minutos": 0.9,
     "archivos": "src/modulos/fiscal/dominio/modelo-de-impresion.ts",
     "pruebas": "src/modulos/fiscal/dominio/modelo-de-impresion.test.ts"
   },
   {
     "grupo": "fiscal (criterios del listado)",
+    "minutos": 2,
     "archivos": "src/modulos/fiscal/consultas/criterios-de-listado.ts",
     "pruebas": "src/modulos/fiscal/consultas/criterios-de-listado.test.ts"
   },
   {
     "grupo": "vercel (carga de variables)",
+    "minutos": 5.8,
     "archivos": "src/adaptadores/vercel/**/*.ts",
     "pruebas": "src/adaptadores/vercel"
   },
   {
     "grupo": "fiscal (certificados)",
+    "minutos": 1.9,
     "archivos": "src/modulos/fiscal/dominio/certificado-carga.ts,src/modulos/fiscal/dominio/certificado-pedido.ts,src/modulos/fiscal/dominio/vencimiento-de-certificados.ts",
     "pruebas": "src/modulos/fiscal/dominio/certificado-carga.test.ts src/modulos/fiscal/dominio/certificado-pedido.test.ts src/modulos/fiscal/dominio/vencimiento-de-certificados.test.ts"
   },
   {
     "grupo": "secreto",
+    "minutos": 0.5,
     "archivos": "src/primitivas/secreto/**/*.ts",
     "pruebas": "src/primitivas/secreto"
   },
   {
     "grupo": "arca (XML, lectura y clasificación)",
+    "minutos": 14.8,
     "archivos": "src/adaptadores/arca/xml.ts,src/adaptadores/arca/saneamiento.ts,src/adaptadores/arca/errores-de-arca.ts,src/adaptadores/arca/pedidos-de-wsaa.ts,src/adaptadores/arca/pedidos-de-wsfe.ts,src/adaptadores/arca/leer-respuestas.ts,src/adaptadores/arca/clasificar.ts,src/adaptadores/arca/constantes.ts",
     "pruebas": "src/adaptadores/arca/xml.test.ts src/adaptadores/arca/saneamiento.test.ts src/adaptadores/arca/errores-de-arca.test.ts src/adaptadores/arca/pedidos.test.ts src/adaptadores/arca/leer-respuestas.test.ts src/adaptadores/arca/clasificar.test.ts src/adaptadores/arca/constantes.test.ts"
   },
   {
     "grupo": "arca (códigos y traducción)",
+    "minutos": 0.8,
     "archivos": "src/adaptadores/arca/codigos.ts,src/adaptadores/arca/traducir.ts",
     "pruebas": "src/adaptadores/arca/codigos.test.ts src/adaptadores/arca/traducir.test.ts"
   },
   {
     "grupo": "autenticación (piezas puras)",
+    "minutos": 13.9,
     "archivos": "src/capacidades/autenticacion/**/*.ts,src/adaptadores/autenticacion/configuracion.ts,src/adaptadores/autenticacion/sesion-leida.ts,src/adaptadores/autenticacion/rutas-bloqueadas.ts,src/adaptadores/autenticacion/plataforma/qr-svg.ts,src/adaptadores/autenticacion/plataforma/respuestas.ts",
     "pruebas": "src/capacidades/autenticacion src/adaptadores/autenticacion"
   },
   {
     "grupo": "autenticación (ruta de ingreso, G8)",
+    "minutos": 0.9,
     "archivos": "src/composicion/ruta-de-ingreso.ts",
     "pruebas": "src/composicion/ruta-de-ingreso.test.ts"
   },
   {
     "grupo": "web (autorización del cron)",
+    "minutos": 0.5,
     "archivos": "src/composicion/autorizacion-de-cron.ts",
     "pruebas": "src/composicion/autorizacion-de-cron.test.ts"
   },
   {
     "grupo": "web (verificación memorizada)",
+    "minutos": 0.4,
     "archivos": "src/composicion/verificacion-memorizada.ts",
     "pruebas": "src/composicion/verificacion-memorizada.test.ts"
   },
   {
     "grupo": "web (guarda de migración)",
+    "minutos": 0.7,
     "archivos": "src/composicion/guarda-de-migracion.ts",
     "pruebas": "src/composicion/guarda-de-migracion.test.ts"
   },
   {
     "grupo": "web (tipo de falla)",
+    "minutos": 0.4,
     "archivos": "src/composicion/tipo-de-falla.ts",
     "pruebas": "src/composicion/tipo-de-falla.test.ts"
   },
   {
     "grupo": "consola de plataforma (contexto de la sesión, puerta y host fijo, P8b y P8c)",
+    "minutos": 2.3,
     "archivos": "src/composicion/sesion-de-plataforma.ts,src/composicion/puerta-de-consola.ts,src/composicion/autenticacion-de-host-fijo.ts",
     "pruebas": "src/composicion/sesion-de-plataforma.test.ts src/composicion/puerta-de-consola.test.ts src/composicion/autenticacion-de-host-fijo.test.ts"
   },
   {
     "grupo": "web (rutas de sistema: cron y salud)",
+    "minutos": 0.8,
     "archivos": "src/composicion/rutas-de-sistema.ts",
     "pruebas": "src/composicion/rutas-de-sistema.test.ts"
   },
   {
     "grupo": "web (traductor único de respuestas, ADR-016)",
+    "minutos": 2.3,
     "archivos": "src/capacidades/experiencia/respuesta.ts,src/composicion/a-respuesta.ts",
     "pruebas": "src/capacidades/experiencia/respuesta.test.ts src/capacidades/experiencia/respuesta.propiedades.test.ts src/composicion/a-respuesta.test.ts"
   },
   {
     "grupo": "web (sesión: origen, retorno y estado de la pantalla)",
+    "minutos": 1.1,
     "archivos": "src/capacidades/experiencia/origen.ts,src/capacidades/experiencia/ruta-de-retorno.ts,src/capacidades/experiencia/estado-de-sesion.ts",
     "pruebas": "src/capacidades/experiencia/origen.test.ts src/capacidades/experiencia/ruta-de-retorno.test.ts src/capacidades/experiencia/estado-de-sesion.test.ts"
   },
   {
     "grupo": "web (empresa elegida, destinos, sucursal y errores de ingreso)",
+    "minutos": 1.2,
     "archivos": "src/capacidades/experiencia/empresa-elegida.ts,src/capacidades/experiencia/destinos.ts,src/capacidades/experiencia/sucursal.ts,src/capacidades/experiencia/errores-de-ingreso.ts",
     "pruebas": "src/capacidades/experiencia/empresa-elegida.test.ts src/capacidades/experiencia/destinos.test.ts src/capacidades/experiencia/sucursal.test.ts src/capacidades/experiencia/errores-de-ingreso.test.ts"
   },
   {
     "grupo": "web (Set-Cookie de la librería de ingreso)",
+    "minutos": 1.3,
     "archivos": "src/capacidades/experiencia/set-cookie.ts",
     "pruebas": "src/capacidades/experiencia/set-cookie.test.ts"
   },
   {
     "grupo": "guardián (patrones, clasificación, declaraciones y comparación)",
+    "minutos": 8.7,
     "archivos": "arquitectura/contratos/globs.cjs,arquitectura/contratos/detectores.cjs,arquitectura/contratos/clasificacion.cjs,arquitectura/contratos/declaraciones.cjs,arquitectura/contratos/comparacion.cjs",
     "pruebas": "test/arquitectura/guardian-clasificacion.test.ts test/arquitectura/guardian-declaraciones.test.ts test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-excepciones.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-a-clasificacion.test.ts test/arquitectura/guardian-mutantes-a-comparacion.test.ts test/arquitectura/guardian-mutantes-a-declaraciones.test.ts test/arquitectura/guardian-nucleo.test.ts test/arquitectura/guardian-registro.test.ts"
   },
   {
     "grupo": "guardián (registro y ubicación de las fallas)",
+    "minutos": 8.3,
     "archivos": "arquitectura/contratos/registro.cjs,arquitectura/contratos/ubicacion.cjs",
     "pruebas": "test/arquitectura/guardian-clasificacion.test.ts test/arquitectura/guardian-declaraciones.test.ts test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-excepciones.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-b-registro.test.ts test/arquitectura/guardian-mutantes-b-ubicacion.test.ts test/arquitectura/guardian-nucleo.test.ts test/arquitectura/guardian-registro.test.ts"
   },
   {
     "grupo": "guardián (excepciones)",
+    "minutos": 6.4,
     "archivos": "arquitectura/contratos/excepciones.cjs",
     "pruebas": "test/arquitectura/guardian-clasificacion.test.ts test/arquitectura/guardian-declaraciones.test.ts test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-excepciones.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-a-excepciones.test.ts test/arquitectura/guardian-nucleo.test.ts test/arquitectura/guardian-registro.test.ts"
   },
   {
     "grupo": "guardián (núcleo)",
+    "minutos": 11.9,
     "archivos": "arquitectura/contratos/guardian.cjs",
     "pruebas": "test/arquitectura/guardian-clasificacion.test.ts test/arquitectura/guardian-declaraciones.test.ts test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-excepciones.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-b-cli.test.ts test/arquitectura/guardian-mutantes-b-nucleo.test.ts test/arquitectura/guardian-no-debilitar.test.ts test/arquitectura/guardian-nucleo.test.ts test/arquitectura/guardian-registro.test.ts"
   },
   {
     "grupo": "guardián (verificador del mecanismo, parte 1)",
+    "minutos": 4.8,
     "archivos": "arquitectura/contratos/verificar-mecanismo.cjs:1-313",
     "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-c-verificador.test.ts"
   },
   {
     "grupo": "guardián (verificador del mecanismo, parte 2)",
+    "minutos": 6.5,
     "archivos": "arquitectura/contratos/verificar-mecanismo.cjs:314-711",
     "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-c-verificador.test.ts"
   },
   {
     "grupo": "guardián (vigilancia de la versión anterior, parte 1)",
+    "minutos": 15.2,
     "archivos": "arquitectura/contratos/no-debilitar.cjs:1-511",
     "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
   },
   {
     "grupo": "guardián (vigilancia de la versión anterior, parte 2)",
+    "minutos": 18.9,
     "archivos": "arquitectura/contratos/no-debilitar.cjs:512-1250",
     "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
   }
