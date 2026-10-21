@@ -26,6 +26,9 @@ export function TablaDeEmpresas({ filas }: PropsDeTablaDeEmpresas) {
           <th scope="col">Submarca</th>
           <th scope="col">Plan</th>
           <th scope="col">Estado</th>
+          <th scope="col">
+            <SoloLector>Acción</SoloLector>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -56,6 +59,15 @@ export function TablaDeEmpresas({ filas }: PropsDeTablaDeEmpresas) {
                     <span className={estilos["motivo"]}>{fila.motivoEstado}</span>
                   )}
                 </span>
+              </td>
+              <td>
+                <a
+                  className={estilos["enlaceSimple"]}
+                  href={`/empresas/${encodeURIComponent(fila.id)}/plan`}
+                  aria-label={`Plan de ${fila.razonSocial}`}
+                >
+                  Plan
+                </a>
               </td>
             </tr>
           );
