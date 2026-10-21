@@ -11,6 +11,7 @@
 /** Jobs que siempre tienen que terminar en `success`. */
 const OBLIGATORIOS = [
   "estatico",
+  "guardian",
   "pruebas",
   "seguridad",
   "flujos",
@@ -56,6 +57,6 @@ function principal() {
   process.stdout.write("Gate en verde.\n");
 }
 
-module.exports = { evaluarGate };
+module.exports = { evaluarGate, OBLIGATORIOS, SOLO_EN_PULL_REQUEST };
 
 if (require.main === module) principal();
