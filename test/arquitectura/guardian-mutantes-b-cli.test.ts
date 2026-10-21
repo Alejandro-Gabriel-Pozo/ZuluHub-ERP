@@ -247,11 +247,11 @@ describe("CLI: el informe y la salida", () => {
     escribirEn(repo, "herramienta/x.ts", "export {};\n");
     const corrida = correrCli(repo);
     expect(corrida.status).toBe(1);
-    expect(corrida.stderr).toMatch(
-      new RegExp(
-        `\\nGuardián de contratos: 1 fallas, 0 avisos \\(informe: ${INFORME.replace(/[./]/g, "\\$&")}\\)\\.\\n$`,
+    expect(
+      corrida.stderr.endsWith(
+        `\nGuardián de contratos: 1 fallas, 0 avisos (informe: ${INFORME}).\n`,
       ),
-    );
+    ).toBe(true);
     expect(
       (JSON.parse(readFileSync(join(repo, INFORME), "utf8")) as { resultado: string }).resultado,
     ).toBe("falla");
