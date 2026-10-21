@@ -168,8 +168,9 @@ const reglas = [
   {
     name: "apps-independientes",
     severity: "error",
-    comment: "Una app no importa a otra (plataforma y web son aplicaciones separadas).",
-    from: { path: "^apps/([^/]+)/" },
+    comment:
+      "Una app no importa a otra (plataforma y web son aplicaciones separadas). Única excepción: la consola importa la interfaz de la web, regla plataforma-solo-importa-la-interfaz-de-la-web.",
+    from: { path: "^apps/([^/]+)/", pathNot: "^apps/plataforma/" },
     to: { path: "^apps/", pathNot: "^apps/$1/" },
   },
   {
@@ -526,6 +527,19 @@ const reglas = [
         "^apps/plataforma/servidor/|^src/composicion/ingreso-de-consola\\.ts$|\\.test\\.(ts|tsx)$",
     },
     to: { path: "^src/composicion/ingreso-de-consola\\.ts$" },
+  },
+  {
+    // Consola de plataforma (UX1 §4, decisión del 2026-10-20). La consola reutiliza la interfaz de `apps/web/ui`
+    // (primitivas, componentes, patrones, plantillas y tokens) y nada más de la web: ni sus pantallas, ni su servidor,
+    // ni sus rutas. Previene: que la consola herede el código de empresa (sesión, marcas, cookies `pd_emp`). El sentido
+    // inverso (la web importando la consola) lo cubre `apps-independientes`, que sigue valiendo para todo `apps/web`.
+    // Chequeo: las violaciones inyectadas de reglas.test.ts.
+    name: "plataforma-solo-importa-la-interfaz-de-la-web",
+    severity: "error",
+    comment:
+      "apps/plataforma importa de apps/web solo apps/web/ui/ (la interfaz compartida); nunca sus pantallas, su servidor ni sus rutas.",
+    from: { path: "^apps/plataforma/" },
+    to: { path: "^apps/", pathNot: "^apps/(plataforma/|web/ui/)" },
   },
 ];
 

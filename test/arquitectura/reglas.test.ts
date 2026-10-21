@@ -440,6 +440,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
         "src/composicion/ingreso-de-consola.ts": exporta,
       },
     },
+    {
+      regla: "plataforma-solo-importa-la-interfaz-de-la-web",
+      archivos: {
+        "apps/plataforma/servidor/a.ts": importa("../../web/servidor/sesion"),
+        "apps/web/servidor/sesion.ts": exporta,
+      },
+    },
   ];
 
   it("cada regla definida tiene su caso de violación", () => {
@@ -1958,5 +1965,46 @@ describe("P8a: el generador de QR solo entra por la autenticación de plataforma
       dependencies: Record<string, string>;
     };
     expect(paquete.dependencies["qrcode-generator"]).toBe("2.0.4");
+  });
+});
+
+/**
+ * Consola de plataforma (UX1 §4): importa la interfaz de `apps/web/ui` y nada más de la web; la web nunca importa la
+ * consola ni la interfaz importa nada de la consola.
+ */
+describe("la consola reutiliza solo la interfaz de la web", () => {
+  it("importar apps/web/ui no rompe ninguna regla de apps entre sí", async () => {
+    const v = await violacionesDe({
+      "apps/plataforma/pantallas/a.tsx": importa("../../web/ui/componentes/Boton"),
+      "apps/web/ui/componentes/Boton.tsx": exporta,
+    });
+    expect(v).not.toContain("plataforma-solo-importa-la-interfaz-de-la-web");
+    expect(v).not.toContain("apps-independientes");
+  });
+
+  it.each([
+    ["el servidor de la web", "apps/web/servidor/sesion.ts"],
+    ["las pantallas de la web", "apps/web/pantallas/errores.tsx"],
+    ["las rutas de la web", "apps/web/app/layout.tsx"],
+  ])("importar %s sí rompe la regla", async (_nombre, destino) => {
+    const v = await violacionesDe({
+      "apps/plataforma/servidor/a.ts": importa(
+        `../../web/${destino
+          .split("/")
+          .slice(2)
+          .join("/")
+          .replace(/\.tsx?$/, "")}`,
+      ),
+      [destino]: exporta,
+    });
+    expect(v).toContain("plataforma-solo-importa-la-interfaz-de-la-web");
+  });
+
+  it("la interfaz de la web no puede importar la consola", async () => {
+    const v = await violacionesDe({
+      "apps/web/ui/componentes/Boton.tsx": importa("../../../plataforma/logica/ingreso"),
+      "apps/plataforma/logica/ingreso.ts": exporta,
+    });
+    expect(v).toContain("apps-independientes");
   });
 });
