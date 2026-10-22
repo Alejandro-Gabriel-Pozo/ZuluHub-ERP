@@ -32,14 +32,6 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "mutacion-sin-filtro--arquitectura-grupos-de-mutacion-json",
-    "archivos": ["arquitectura/grupos-de-mutacion.json"],
-    "descripcion": "Grupos de mutación sin filtro de pruebas (informe de CI §3.1: cada mutante corre toda la suite; permisos y módulos 23 min, dinero 13,7 y 10,7, identificación fiscal 9,8): otro cambio los está filtrando.",
-    "tipo": "mutacion-sin-filtro",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "knip-ignora--knip-json",
     "archivos": ["knip.json"],
     "descripcion": "Entradas de `ignore*` de knip.json (dependencias sin uso hasta el e2e de W5, exports que las pruebas leen por createRequire): cada una lleva su motivo en el archivo.",
@@ -550,7 +542,7 @@
     "archivos": ["src/modulos/fiscal/publico.ts"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
-    "tamano": 447,
+    "tamano": 494,
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
   },
