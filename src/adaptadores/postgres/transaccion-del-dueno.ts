@@ -1,15 +1,17 @@
 import pg from "pg";
 import { esReintentable } from "./errores";
+import { esperaDelReintento } from "./espera-del-reintento";
 
 /**
  * Una transacción SERIALIZABLE con la conexión DIRECTA del dueño de la base, para los scripts de operación del dueño
  * (baja de un administrador, reseteo de su segundo factor): ningún rol limitado puede escribir en `admin_plataforma` ni
  * borrar en el esquema de la librería de ingreso. Reintenta hasta `REINTENTOS` veces con un conflicto de serialización
  * o un deadlock (dos corridas simultáneas del mismo script): el reintento vuelve a leer y ve lo que dejó la que ganó.
+ * La espera crece con cada intento y se reparte al azar (`esperaDelReintento`): una espera corta y casi fija hacía chocar
+ * otra vez en bloque a las transacciones simultáneas y agotaba los reintentos con la base cargada.
  * El trabajo tiene que ser repetible y no hacer nada fuera de la base. Cierra la conexión siempre.
  */
-const REINTENTOS = 5;
-const ESPERA_MAXIMA_EN_MS = 80;
+const REINTENTOS = 12;
 const esperar = (ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms));
 
 export async function enTransaccionDelDueno<T>(
@@ -33,7 +35,7 @@ export async function enTransaccionDelDueno<T>(
         // La transacción queda abortada: se la deshace antes de decidir qué hacer con la falla.
         await cliente.query("ROLLBACK").catch(() => undefined);
         if (esReintentable(falla) && intento < REINTENTOS) {
-          await esperar(Math.random() * ESPERA_MAXIMA_EN_MS);
+          await esperar(esperaDelReintento(intento));
           continue;
         }
         throw falla;
