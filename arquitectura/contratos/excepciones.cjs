@@ -529,4 +529,7 @@ module.exports = {
   aplicarExcepciones,
   procesarExclusiones,
   huellaDeLinea,
+  esFechaValida,
+  diaDe,
+  diasEntre,
 };

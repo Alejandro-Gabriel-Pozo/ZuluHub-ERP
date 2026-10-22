@@ -80,6 +80,7 @@
     "arquitectura/contratos/detectores.cjs",
     "arquitectura/contratos/verificar-mecanismo.cjs",
     "arquitectura/contratos/no-debilitar.cjs",
+    "arquitectura/contratos/evasiones.cjs",
     "!src/**/*.test.ts"
   ],
   "coverageAnalysis": "off",

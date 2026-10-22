@@ -34,6 +34,9 @@
     "arquitectura/contratos/clasificacion.cjs": ["exports"],
     // `segmentoARegexp` se exporta solo para probar el escapado directo (la prueba la lee por `createRequire`;
     // `@public` no alcanza en un módulo CommonJS).
-    "arquitectura/contratos/globs.cjs": ["exports"]
+    "arquitectura/contratos/globs.cjs": ["exports"],
+    // La batería de evasión y las pruebas del guardián leen sus constantes y `evaluarResultado` por `require`,
+    // que knip no sigue (misma razón que `detectores.cjs`).
+    "arquitectura/contratos/evasiones.cjs": ["exports"]
   }
 }

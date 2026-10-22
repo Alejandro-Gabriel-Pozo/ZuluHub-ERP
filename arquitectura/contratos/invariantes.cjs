@@ -16,9 +16,11 @@
  *  - `objetivo`      sobre qué se aplica: `repo` (repositorio sintético en memoria, corre el
  *                    guardián), `package-json`, `workflow`, `vitest-config`, `pruebas-del-guardian`
  *                    (textos reales alterados en memoria), `informe`, `canario` (corre el CLI sobre un
- *                    repo roto conocido), `matriz` (una copia de este mismo catálogo) o `base-y-pr`
- *                    (DOS árboles temporales —copias del repositorio real, la base sana y el pull request
- *                    alterado— que compara `no-debilitar.cjs`, la vigilancia de la versión anterior);
+ *                    repo roto conocido), `matriz` (una copia de este mismo catálogo), `evasion` (un caso de
+ *                    la batería de evasión con un resultado observado simulado: lo que dice
+ *                    `evasiones.cjs#evaluarResultado`) o `base-y-pr` (DOS árboles temporales —copias del
+ *                    repositorio real, la base sana y el pull request alterado— que compara
+ *                    `no-debilitar.cjs`, la vigilancia de la versión anterior);
  *  - `descripcion`   qué se le hace al sistema;
  *  - `esperado`      qué tiene que pasar: `{ codigo, archivo?, linea? | lineaDe?, contrato?,
  *                    contieneMotivo? }` (la verificación FALLA con ese código y, si se fija, en ese
@@ -62,6 +64,7 @@ const OBJETIVOS = Object.freeze([
   "informe",
   "canario",
   "matriz",
+  "evasion",
   "base-y-pr",
 ]);
 const IDS_DE_INVARIANTES = Object.freeze([
@@ -75,6 +78,7 @@ const IDS_DE_INVARIANTES = Object.freeze([
   "I8",
   "I9",
   "I10",
+  "I11",
 ]);
 const CLAVES_DE_ELEMENTOS = Object.freeze(["aplica", "define", "parametriza", "hacePosible"]);
 const LARGO_MINIMO_DEL_MOTIVO = 20;
@@ -87,6 +91,8 @@ const EXCEPCIONES = "arquitectura/contratos/excepciones.cjs";
 const REGISTRO = "arquitectura/contratos/registro.cjs";
 const MECANISMO = "arquitectura/contratos/verificar-mecanismo.cjs";
 const VIGILANCIA = "arquitectura/contratos/no-debilitar.cjs";
+const EVASIONES = "arquitectura/contratos/evasiones.cjs";
+const CATALOGO_DE_EVASION = "arquitectura/contratos/evasiones.json";
 const CI = ".github/workflows/ci.yml";
 const PRUEBAS = "test/arquitectura/guardian-*.test.ts";
 
@@ -694,6 +700,19 @@ const INVARIANTES = [
         },
       },
       {
+        id: "I4-definicion-escondida-en-un-archivo-con-extension-de-binario",
+        tipo: "elusion",
+        objetivo: "repo",
+        descripcion:
+          "La copia del valor se escribe como texto dentro de un archivo `.png`: el detector tiene que leerlo igual, porque no es un binario de verdad.",
+        esperado: {
+          codigo: "definicion-fuera-de-la-fuente",
+          archivo: "apps/web/ui/paleta.png",
+          linea: 1,
+          contrato: "color-separador",
+        },
+      },
+      {
         id: "I4-definir-el-valor-por-un-camino-que-el-detector-no-conoce",
         tipo: "elusion",
         noAplica:
@@ -1099,7 +1118,12 @@ const INVARIANTES = [
       ],
       define: ["arquitectura/contratos/informe.json (evidencia de cada corrida)"],
       parametriza: [`${CLASIFICACION}#CLASES_ESPERADAS`, "detector.clases"],
-      hacePosible: ["`git ls-files` (cargarDelRepo)", "npm run guardian", `${PRUEBAS}`],
+      hacePosible: [
+        "`git ls-files -z` (cargarDelRepo: un nombre que no es UTF-8, un enlace roto o una ruta ausente que no es un borrado pendiente fallan)",
+        "npm run guardian",
+        `${PRUEBAS}`,
+        "la batería de evasión (EV-084, EV-100, EV-101: lo que no se pudo leer nunca pasa en silencio)",
+      ],
     },
     codigosDeFalla: [
       "sin-rutas",
@@ -1136,6 +1160,14 @@ const INVARIANTES = [
         objetivo: "repo",
         descripcion: "Un archivo que un detector debe analizar no se puede leer.",
         esperado: { codigo: "ruta-ilegible", archivo: "apps/web/ui/Caja.module.css", linea: 1 },
+      },
+      {
+        id: "I7-archivo-que-no-es-texto-utf8",
+        tipo: "elusion",
+        objetivo: "repo",
+        descripcion:
+          "Una hoja de estilos se guarda en UTF-16 (con bytes nulos): ningún detector la puede leer y no se omite por su extensión.",
+        esperado: { codigo: "ruta-ilegible", archivo: "apps/web/ui/Linea.module.css", linea: 1 },
       },
       {
         id: "I7-detector-sobre-clase-sin-texto",
@@ -2129,6 +2161,269 @@ const INVARIANTES = [
           archivo: ARCHIVO_DE_LA_MATRIZ,
           lineaDe: "const INVARIANTES",
           contieneMotivo: "I7",
+        },
+      },
+    ],
+  },
+  {
+    id: "I11",
+    enunciado:
+      "La batería de evasión (§11) conserva todos sus casos y lo que esperan, no se afloja en silencio, no deja brechas ni riesgos vencidos y corre en el Gate.",
+    elementos: {
+      aplica: [
+        `${EVASIONES}#validarCatalogo`,
+        `${EVASIONES}#evaluarResultado`,
+        `${GUARDIAN}#ejecutar (paso 6: el catálogo de la batería de evasión)`,
+        `${VIGILANCIA}#chequearEvasiones y #avisarRiesgosNuevos`,
+        "test/arquitectura/guardian-evasion.test.ts (el corredor: un repositorio sintético por caso)",
+      ],
+      define: [CATALOGO_DE_EVASION, "arquitectura/contratos/evasiones-github.json"],
+      parametriza: [
+        `${EVASIONES}#PLAZO_DE_BRECHA`,
+        `${EVASIONES}#PLAZO_DE_RIESGO`,
+        `${EVASIONES}#DIAS_DE_AVISO_DE_BRECHA`,
+        `${EVASIONES}#DIAS_DE_AVISO_DE_RIESGO`,
+        `${EVASIONES}#VIAS`,
+        "arquitectura/contratos/retiros.json (retirar un caso exige una entrada con su id)",
+      ],
+      hacePosible: [
+        "npm run guardian (reporta las brechas en cada corrida y falla si vencen)",
+        "test/arquitectura/guardian-evasion.test.ts (job pruebas, requerido por el Gate)",
+        `${MECANISMO}#PRUEBAS_DEL_GUARDIAN y #escanearPruebasDelGuardian`,
+        `${MECANISMO}#verificarVitestConfig`,
+        `${VIGILANCIA}#chequearEvasiones (la base vigila que el catálogo solo se endurezca)`,
+      ],
+    },
+    codigosDeFalla: [
+      "evasion-invalida",
+      "brecha-plazo-excesivo",
+      "brecha-vencida",
+      "riesgo-plazo-excesivo",
+      "riesgo-vencido",
+      "evasion-no-bloqueada",
+      "brecha-cerrada",
+      "riesgo-cerrado",
+      "evasion-borrada",
+      "evasion-esperado-cambiado",
+      "evasion-degradada",
+      "evasion-via-perdida",
+      "vitest-excluye-pruebas",
+      "prueba-saltada",
+      "pruebas-del-guardian-borradas",
+    ],
+    mutaciones: [
+      {
+        id: "I11-borrar-un-caso-del-catalogo",
+        tipo: "eliminacion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request borra del catálogo real el caso EV-001 (un control positivo) sin registrar su retiro.",
+        esperado: {
+          codigo: "evasion-borrada",
+          archivo: CATALOGO_DE_EVASION,
+          linea: 1,
+          contieneMotivo: "EV-001",
+        },
+      },
+      {
+        id: "I11-retirar-un-caso-con-su-entrada-en-retiros",
+        tipo: "alteracion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request borra el caso EV-001 y registra su retiro en `retiros.json` con el id del caso: es una decisión escrita y no falla.",
+        esperado: { pasa: true },
+      },
+      {
+        id: "I11-borrar-el-catalogo-entero",
+        tipo: "eliminacion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request borra `evasiones.json` entero: cada caso de la base queda sin retiro.",
+        esperado: { codigo: "evasion-borrada", archivo: CATALOGO_DE_EVASION, linea: 1 },
+      },
+      {
+        id: "I11-vaciar-una-via",
+        tipo: "eliminacion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request retira (con su entrada en `retiros.json`) el único caso de la vía `renombrar-mover`: esa ruta de evasión deja de probarse.",
+        esperado: {
+          codigo: "evasion-via-perdida",
+          archivo: CATALOGO_DE_EVASION,
+          linea: 1,
+          contieneMotivo: "renombrar-mover",
+        },
+      },
+      {
+        id: "I11-cambiar-lo-que-un-caso-espera",
+        tipo: "alteracion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request cambia el código que el caso EV-001 espera: lo que se considera un resultado aceptable cambió.",
+        esperado: {
+          codigo: "evasion-esperado-cambiado",
+          archivo: CATALOGO_DE_EVASION,
+          lineaDe: { texto: '"esperado"', despuesDe: '"id": "EV-001"' },
+          contieneMotivo: "EV-001",
+        },
+      },
+      {
+        id: "I11-aflojar-un-caso-exigido",
+        tipo: "alteracion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request pasa el caso exigido EV-001 a riesgo aceptado (con todos sus campos): un control positivo se afloja en silencio.",
+        esperado: {
+          codigo: "evasion-degradada",
+          archivo: CATALOGO_DE_EVASION,
+          lineaDe: { texto: '"estado"', despuesDe: '"id": "EV-001"' },
+          contieneMotivo: "EV-001",
+        },
+      },
+      {
+        id: "I11-extender-una-brecha",
+        tipo: "alteracion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request mueve más tarde el `vence` de la brecha abierta de la base (los mismos 60 días, desde un `creada` nuevo): extender una brecha es debilitarla.",
+        esperado: {
+          codigo: "evasion-degradada",
+          archivo: CATALOGO_DE_EVASION,
+          lineaDe: { texto: '"vence"', despuesDe: '"id": "EV-950"' },
+        },
+      },
+      {
+        id: "I11-mover-un-caso-a-los-externos",
+        tipo: "exclusion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request saca el caso EV-001 de `evasiones.json` y lo anota en `evasiones-github.json` como externo: dejaría de correr y de bloquear.",
+        esperado: {
+          codigo: "evasion-degradada",
+          archivo: "arquitectura/contratos/evasiones-github.json",
+          contieneMotivo: "EV-001",
+        },
+      },
+      {
+        id: "I11-id-repetido-en-el-catalogo",
+        tipo: "duplicacion",
+        objetivo: "repo",
+        descripcion: "Dos casos del catálogo comparten el mismo id.",
+        esperado: {
+          codigo: "evasion-invalida",
+          archivo: CATALOGO_DE_EVASION,
+          lineaDe: { texto: '"id"', despuesDe: '"id": "EV-001"' },
+          contieneMotivo: "repetido",
+        },
+      },
+      {
+        id: "I11-caso-exigido-con-campos-de-brecha",
+        tipo: "alteracion",
+        objetivo: "repo",
+        descripcion: "Un caso exigido trae el campo `vence` de las brechas: no se mezclan estados.",
+        esperado: {
+          codigo: "evasion-invalida",
+          archivo: CATALOGO_DE_EVASION,
+          lineaDe: '"vence"',
+          contieneMotivo: "vence",
+        },
+      },
+      {
+        id: "I11-brecha-con-mas-de-60-dias",
+        tipo: "alteracion",
+        objetivo: "repo",
+        descripcion: "Una brecha abierta vence a 90 días de su creación.",
+        esperado: {
+          codigo: "brecha-plazo-excesivo",
+          archivo: CATALOGO_DE_EVASION,
+          lineaDe: '"vence"',
+        },
+      },
+      {
+        id: "I11-brecha-vencida",
+        tipo: "alteracion",
+        objetivo: "repo",
+        descripcion: "Una brecha abierta venció respecto del reloj.",
+        esperado: { codigo: "brecha-vencida", archivo: CATALOGO_DE_EVASION, lineaDe: '"vence"' },
+      },
+      {
+        id: "I11-riesgo-con-revision-a-mas-de-180-dias",
+        tipo: "alteracion",
+        objetivo: "repo",
+        descripcion: "Un riesgo aceptado se revisa a 200 días de su creación.",
+        esperado: {
+          codigo: "riesgo-plazo-excesivo",
+          archivo: CATALOGO_DE_EVASION,
+          lineaDe: '"revisar"',
+        },
+      },
+      {
+        id: "I11-riesgo-con-revision-vencida",
+        tipo: "alteracion",
+        objetivo: "repo",
+        descripcion: "La fecha de revisión de un riesgo aceptado ya pasó.",
+        esperado: { codigo: "riesgo-vencido", archivo: CATALOGO_DE_EVASION, lineaDe: '"revisar"' },
+      },
+      {
+        id: "I11-caso-exigido-que-pasa-sin-deteccion",
+        tipo: "elusion",
+        objetivo: "evasion",
+        descripcion:
+          "Un caso exigido corre y el cambio PASA: el control que lo bloqueaba dejó de hacerlo.",
+        esperado: {
+          codigo: "evasion-no-bloqueada",
+          archivo: CATALOGO_DE_EVASION,
+          lineaDe: '"estado"',
+        },
+      },
+      {
+        id: "I11-brecha-cerrada-sin-pasarla-a-exigido",
+        tipo: "elusion",
+        objetivo: "evasion",
+        descripcion:
+          "Una brecha abierta corre y el cambio ahora se bloquea: hay que pasarla a exigido, no dejarla como brecha.",
+        esperado: { codigo: "brecha-cerrada", archivo: CATALOGO_DE_EVASION, lineaDe: '"estado"' },
+      },
+      {
+        id: "I11-riesgo-que-dejo-de-existir",
+        tipo: "elusion",
+        objetivo: "evasion",
+        descripcion:
+          "Un riesgo aceptado corre y el cambio ahora se bloquea: hay que pasarlo a exigido.",
+        esperado: { codigo: "riesgo-cerrado", archivo: CATALOGO_DE_EVASION, lineaDe: '"estado"' },
+      },
+      {
+        id: "I11-desconectar-la-prueba-de-evasion",
+        tipo: "desconexion",
+        objetivo: "pruebas-del-guardian",
+        descripcion: "Se borra `guardian-evasion.test.ts`: el corredor de la batería no corre.",
+        esperado: {
+          codigo: "pruebas-del-guardian-borradas",
+          archivo: "test/arquitectura/guardian-evasion.test.ts",
+          linea: 1,
+        },
+      },
+      {
+        id: "I11-excluir-la-bateria-en-vitest",
+        tipo: "exclusion",
+        objetivo: "vitest-config",
+        descripcion:
+          'Se agrega `exclude: ["test/arquitectura/guardian-evasion*"]` al proyecto de Node.',
+        esperado: {
+          codigo: "vitest-excluye-pruebas",
+          archivo: "vitest.config.ts",
+          lineaDe: "exclude:",
+        },
+      },
+      {
+        id: "I11-saltar-la-bateria",
+        tipo: "elusion",
+        objetivo: "pruebas-del-guardian",
+        descripcion: "Una prueba del corredor de la batería se marca `skip`.",
+        esperado: {
+          codigo: "prueba-saltada",
+          archivo: "test/arquitectura/guardian-evasion.test.ts",
+          lineaDe: "marca-de-la-matriz",
         },
       },
     ],

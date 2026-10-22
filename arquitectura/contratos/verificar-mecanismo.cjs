@@ -63,6 +63,7 @@ const PRUEBAS_DEL_GUARDIAN = Object.freeze([
   "guardian-clasificacion.test.ts",
   "guardian-declaraciones.test.ts",
   "guardian-diagnostico.test.ts",
+  "guardian-evasion.test.ts",
   "guardian-excepciones.test.ts",
   "guardian-matriz.test.ts",
   "guardian-no-debilitar.test.ts",

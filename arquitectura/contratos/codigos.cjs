@@ -43,6 +43,20 @@ const DESCRIPCION_DE_CODIGOS = Object.freeze({
   "excepcion-huella-cambiada": "la huella aprobada coincide con la línea (o el archivo) actual",
   "excepcion-obsoleta": "toda excepción o exclusión silencia algo",
   "excepcion-contrato-inexistente": "la excepción apunta a un contrato del registro",
+  "evasion-invalida":
+    "el catálogo de la batería de evasión (evasiones.json) tiene casos completos, con los campos de su estado y sin sobrantes",
+  "brecha-plazo-excesivo":
+    "ninguna brecha abierta de la batería de evasión vence a más de 60 días de su creación",
+  "brecha-vencida": "ninguna brecha abierta de la batería de evasión está vencida",
+  "riesgo-plazo-excesivo":
+    "ningún riesgo aceptado de la batería de evasión se revisa a más de 180 días de su creación",
+  "riesgo-vencido": "ningún riesgo aceptado de la batería de evasión pasó su fecha de revisión",
+  "evasion-no-bloqueada":
+    "un caso exigido de la batería de evasión se bloquea como dice su resultado esperado",
+  "brecha-cerrada":
+    "una brecha abierta de la batería de evasión sigue pasando sin detección: si se cerró, el caso pasa a exigido",
+  "riesgo-cerrado":
+    "un riesgo aceptado de la batería de evasión sigue pasando sin detección: si dejó de existir, el caso pasa a exigido",
   "falla-sin-ubicacion": "toda falla y todo aviso traen archivo y una línea entera desde 1 (M3)",
   "codigo-fuera-de-la-lista": "todo hallazgo usa un código de la lista cerrada del guardián",
 });
@@ -53,12 +67,17 @@ const CODIGOS_DE_FALLA = Object.freeze(Object.keys(DESCRIPCION_DE_CODIGOS));
 /**
  * Los códigos con los que el guardián puede AVISAR (no bloquea). `declaracion-falsa` es aviso cuando el
  * contrato no bloquea la declaración falsa; `excepcion-por-vencer` avisa que una excepción o exclusión
- * vence en pocos días; `ruta-ausente-en-disco` avisa de una ruta que git lista y ya no está.
+ * vence en pocos días; `ruta-ausente-en-disco` avisa de una ruta que git lista y ya no está (un borrado
+ * que todavía no se registró); `brecha-abierta`, `brecha-por-vencer` y `riesgo-por-revisar` reportan, en cada
+ * corrida, lo que la batería de evasión tiene registrado como brecha o como riesgo aceptado.
  */
 const CODIGOS_DE_AVISO = Object.freeze([
   "declaracion-falsa",
   "excepcion-por-vencer",
   "ruta-ausente-en-disco",
+  "brecha-abierta",
+  "brecha-por-vencer",
+  "riesgo-por-revisar",
 ]);
 
 module.exports = { DESCRIPCION_DE_CODIGOS, CODIGOS_DE_FALLA, CODIGOS_DE_AVISO };
