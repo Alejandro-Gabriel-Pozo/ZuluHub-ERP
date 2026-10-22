@@ -763,9 +763,24 @@ async function correrCaso(caso: Caso, contexto: Contexto): Promise<Observado> {
     const despues = await aplicar(pr, caso.construccion, contexto.ahora, true);
     await commitear(pr, `cambio de ${caso.id}`);
     await aplicar(pr, despues, contexto.ahora, true);
-    if (caso.sinGit === true) rmSync(join(pr, ".git"), { recursive: true, force: true });
-
     const entorno: Entorno = { ...entornoBase() };
+    if (caso.sinGit === true) {
+      rmSync(join(pr, ".git"), { recursive: true, force: true });
+      // Sin `.git` propio, git sigue buscando un repositorio en las carpetas de arriba (el temporal y lo que
+      // haya por encima en el entorno donde corre la prueba): el caso exige que NO encuentre ninguno, así que
+      // se le pone un techo en la carpeta del caso y se comprueba que de verdad falla antes de correr el job.
+      entorno["GIT_CEILING_DIRECTORIES"] = trabajo;
+      const busqueda = await correr("git", ["rev-parse", "--git-dir"], {
+        cwd: pr,
+        env: entorno,
+        limiteMs: 30_000,
+      });
+      if (busqueda.estado === 0) {
+        throw new Error(
+          `${caso.id}: aun sin .git propio y con techo, git encuentra un repositorio (${busqueda.stdout.trim()}): el caso no puede probar «git falla»`,
+        );
+      }
+    }
     if (caso.reloj !== undefined && caso.reloj > 0) {
       entorno["NODE_OPTIONS"] = `--require=${contexto.relojFalso}`;
       entorno["PEDERNAL_EVASION_DIAS"] = String(caso.reloj);
