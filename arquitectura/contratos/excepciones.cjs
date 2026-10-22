@@ -527,6 +527,8 @@ module.exports = {
   ARCHIVO_DE_EXCEPCIONES,
   ARCHIVO_DE_EXCLUSIONES,
   aplicarExcepciones,
+  avisoDeVencimiento,
+  problemasComunes,
   procesarExclusiones,
   huellaDeLinea,
   esFechaValida,

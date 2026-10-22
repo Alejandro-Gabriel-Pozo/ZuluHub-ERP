@@ -52,6 +52,7 @@ const nd = require("../../arquitectura/contratos/no-debilitar.cjs") as {
   ejecutaElGuardian: (linea: string) => boolean;
   chequearPaquete: (base: Instantanea, pr: Instantanea) => Array<{ codigo: string }>;
   leerCi: (texto: string) => Seccion;
+  leerDeuda: (registro: string | null, configuracion: string | null) => Seccion;
   leerConstante: (texto: string | null, nombre: string) => Seccion;
   leerEvasiones: (catalogo: string | null, externos: string | null) => Seccion;
   leerPaquete: (texto: string | null) => Seccion;
@@ -85,6 +86,8 @@ const ARCHIVO_CI = A["ci"] ?? "";
 const ARCHIVO_PAQUETE = A["paquete"] ?? "";
 const ARCHIVO_EVASIONES = A["evasiones"] ?? "";
 const ARCHIVO_EXTERNOS = A["evasionesExternas"] ?? "";
+const ARCHIVO_DEUDA = A["deudaRegistro"] ?? "";
+const ARCHIVO_CONFIGURACION_DE_DEUDA = A["deudaConfiguracion"] ?? "";
 
 // ---------------------------------------------------------------------------------------------
 // Un árbol sintético sano: instantánea estructural + textos con líneas conocidas.
@@ -168,6 +171,33 @@ const textoDeExcepciones = (plazo: string, aviso: string): string =>
     `const PLAZO_MAXIMO_DIAS = ${plazo};`,
     "/** Aviso. */",
     `const DIAS_DE_AVISO = ${aviso};`,
+  );
+/**
+ * `topeDeExcepciones` en la línea 2, `bloqueaDeudaEnArchivoTocado` en la 3, `topeDeLineasPorArchivo` en la 4 y
+ * `excluidosDelTope` en la 5 (cada exclusión, si hay, en su línea desde la 6).
+ */
+const textoDeLaConfiguracionDeDeuda = (
+  tope: number,
+  bloquea: boolean,
+  topeDeLineas = 400,
+  excluidos: string[] = [],
+): string =>
+  lineas(
+    "{",
+    `  "topeDeExcepciones": ${String(tope)},`,
+    `  "bloqueaDeudaEnArchivoTocado": ${String(bloquea)},`,
+    `  "topeDeLineasPorArchivo": ${String(topeDeLineas)},`,
+    ...(excluidos.length === 0
+      ? ['  "excluidosDelTope": []']
+      : [
+          '  "excluidosDelTope": [',
+          ...excluidos.map(
+            (ruta, i) =>
+              `    { "ruta": "${ruta}", "motivo": "Datos." }${i < excluidos.length - 1 ? "," : ""}`,
+          ),
+          "  ]",
+        ]),
+    "}",
   );
 const TEXTO_DEL_GATE = lineas("/** Gate. */", "", 'const OBLIGATORIOS = ["estatico", "guardian"];');
 const TEXTO_DE_CI = lineas(
@@ -308,6 +338,8 @@ function estadoSano(): Estado {
     [ARCHIVO_INVARIANTES]: textoDeLaMatriz(MATRIZ_BASE),
     [ARCHIVO_EVASIONES]: textoDeEvasiones(CATALOGO_SANO),
     [ARCHIVO_EXTERNOS]: textoDeEvasiones(EXTERNOS_SANO),
+    [ARCHIVO_DEUDA]: "[]\n",
+    [ARCHIVO_CONFIGURACION_DE_DEUDA]: textoDeLaConfiguracionDeDeuda(10, true),
   };
   return { estructura, arbol };
 }
@@ -366,6 +398,10 @@ function aInstantanea(estado: Estado): Instantanea {
     aviso: nd.leerConstante(arbol[ARCHIVO_EXCEPCIONES] ?? null, "DIAS_DE_AVISO"),
     ci: nd.leerCi(arbol[ARCHIVO_CI] ?? ""),
     paquete: nd.leerPaquete(arbol[ARCHIVO_PAQUETE] ?? null),
+    deuda: nd.leerDeuda(
+      arbol[ARCHIVO_DEUDA] ?? null,
+      arbol[ARCHIVO_CONFIGURACION_DE_DEUDA] ?? null,
+    ),
   };
 }
 
@@ -1684,6 +1720,308 @@ const CASOS_I: Caso[] = [
   },
 ];
 
+// --- (j) la deuda técnica -------------------------------------------------------------------------------------
+
+const PASO_DE_LA_DEUDA = [
+  "      - name: Deuda técnica", //                                     27
+  "        run: |", //                                                  28
+  "          if [ -d base ]; then", //                                  29
+  "            node arquitectura/deuda/deuda.cjs --base=base", //       30
+  "          else", //                                                 31
+  "            node arquitectura/deuda/deuda.cjs", //                   32
+  "          fi", //                                                   33
+];
+/** El ci.yml sano con el paso de la deuda al final del job guardian (el gate pasa a la línea 35). */
+const TEXTO_DE_CI_CON_DEUDA = lineas(
+  ...TEXTO_DE_CI.split("\n").slice(0, 26),
+  ...PASO_DE_LA_DEUDA,
+  ...TEXTO_DE_CI.split("\n").slice(26, -1),
+);
+const TEXTO_DE_PAQUETE_CON_DEUDA = lineas(
+  "{", //                                                                                  1
+  '  "name": "x",', //                                                                     2
+  '  "scripts": {', //                                                                     3
+  '    "arquitectura": "depcruise src && npm run guardian && npm run deuda",', //          4
+  '    "guardian": "node arquitectura/contratos/guardian.cjs",', //                        5
+  '    "deuda": "node arquitectura/deuda/deuda.cjs",', //                                  6
+  '    "gate": "npm run arquitectura"', //                                                 7
+  "  }", //                                                                                8
+  "}",
+);
+const ENTRADA_DE_X = {
+  id: "todo--x-ts",
+  tipo: "todo",
+  archivos: ["x.ts"],
+};
+const ENTRADA_DE_Y = {
+  id: "backlog-y",
+  tipo: "backlog",
+  archivos: ["y.ts"],
+  verificacion: { contiene: "PENDIENTE" },
+};
+const registroDeDeuda = (...entradas: unknown[]): string =>
+  `${JSON.stringify(entradas, null, 2)}\n`;
+/** Un estado sano con la deuda: el paso de CI, los scripts, una entrada (un TODO en x.ts) y otra con verificación (y.ts). */
+const CON_DEUDA: Estado = [
+  [ARCHIVO_CI, TEXTO_DE_CI_CON_DEUDA],
+  [ARCHIVO_PAQUETE, TEXTO_DE_PAQUETE_CON_DEUDA],
+  [ARCHIVO_DEUDA, registroDeDeuda(ENTRADA_DE_X, ENTRADA_DE_Y)],
+  ["x.ts", "// TODO: arreglar\n"],
+  ["y.ts", "// PENDIENTE de extraer\nexport {};\n"],
+].reduce((estado, [archivo, texto]) => conTexto(estado, archivo as string, texto as string), SANO);
+const LINEA_DEL_JOB_GUARDIAN = 12;
+
+const CASOS_J: Caso[] = [
+  {
+    nombre: "(j) estado sano: con el paso, los scripts y las entradas no hay nada que reclamar",
+    base: CON_DEUDA,
+    pr: CON_DEUDA,
+    esperado: [],
+  },
+  {
+    nombre: "(j) el tope de excepciones SUBE: debilita (en la línea de la clave)",
+    base: CON_DEUDA,
+    pr: conTexto(
+      CON_DEUDA,
+      ARCHIVO_CONFIGURACION_DE_DEUDA,
+      textoDeLaConfiguracionDeDeuda(11, true),
+    ),
+    esperado: [["deuda-tope-subio", ARCHIVO_CONFIGURACION_DE_DEUDA, 2]],
+  },
+  {
+    nombre: "(j) el tope de líneas por archivo SUBE: debilita (en la línea de la clave)",
+    base: CON_DEUDA,
+    pr: conTexto(
+      CON_DEUDA,
+      ARCHIVO_CONFIGURACION_DE_DEUDA,
+      textoDeLaConfiguracionDeDeuda(10, true, 401),
+    ),
+    esperado: [["deuda-tope-de-lineas-subio", ARCHIVO_CONFIGURACION_DE_DEUDA, 4]],
+  },
+  {
+    nombre: "(j) LEGÍTIMO: el tope de líneas BAJA",
+    base: CON_DEUDA,
+    pr: conTexto(
+      CON_DEUDA,
+      ARCHIVO_CONFIGURACION_DE_DEUDA,
+      textoDeLaConfiguracionDeDeuda(10, true, 300),
+    ),
+    esperado: [],
+  },
+  {
+    nombre: "(j) una exclusión NUEVA del tope de líneas: debilita (en la ruta de esa exclusión)",
+    base: CON_DEUDA,
+    pr: conTexto(
+      CON_DEUDA,
+      ARCHIVO_CONFIGURACION_DE_DEUDA,
+      textoDeLaConfiguracionDeDeuda(10, true, 400, ["src/datos.ts"]),
+    ),
+    esperado: [["deuda-exclusion-nueva", ARCHIVO_CONFIGURACION_DE_DEUDA, 6]],
+  },
+  {
+    nombre: "(j) LEGÍTIMO: se saca una exclusión, o la lista no cambia",
+    base: conTexto(
+      CON_DEUDA,
+      ARCHIVO_CONFIGURACION_DE_DEUDA,
+      textoDeLaConfiguracionDeDeuda(10, true, 400, ["src/datos.ts", "src/otros.ts"]),
+    ),
+    pr: conTexto(
+      CON_DEUDA,
+      ARCHIVO_CONFIGURACION_DE_DEUDA,
+      textoDeLaConfiguracionDeDeuda(10, true, 400, ["src/datos.ts"]),
+    ),
+    esperado: [],
+  },
+  {
+    nombre: "(j) LEGÍTIMO: el tope BAJA",
+    base: CON_DEUDA,
+    pr: conTexto(CON_DEUDA, ARCHIVO_CONFIGURACION_DE_DEUDA, textoDeLaConfiguracionDeDeuda(3, true)),
+    esperado: [],
+  },
+  {
+    nombre: "(j) el bloqueo en archivo tocado pasa de true a false: debilita",
+    base: CON_DEUDA,
+    pr: conTexto(
+      CON_DEUDA,
+      ARCHIVO_CONFIGURACION_DE_DEUDA,
+      textoDeLaConfiguracionDeDeuda(10, false),
+    ),
+    esperado: [["deuda-bloqueo-aflojado", ARCHIVO_CONFIGURACION_DE_DEUDA, 3]],
+  },
+  {
+    nombre: "(j) LEGÍTIMO: el bloqueo pasa de false a true, o sigue en false",
+    base: conTexto(
+      CON_DEUDA,
+      ARCHIVO_CONFIGURACION_DE_DEUDA,
+      textoDeLaConfiguracionDeDeuda(10, false),
+    ),
+    pr: CON_DEUDA,
+    esperado: [],
+  },
+  {
+    nombre: "(j) se borra la entrada de un marcador que sigue en el archivo: en el marcador",
+    base: CON_DEUDA,
+    pr: conTexto(CON_DEUDA, ARCHIVO_DEUDA, registroDeDeuda(ENTRADA_DE_Y)),
+    esperado: [["deuda-entrada-borrada-sin-pagar", "x.ts", 1]],
+  },
+  {
+    nombre: "(j) LEGÍTIMO: se borra la entrada y el marcador ya no está (se pagó)",
+    base: CON_DEUDA,
+    pr: conTexto(
+      conTexto(CON_DEUDA, ARCHIVO_DEUDA, registroDeDeuda(ENTRADA_DE_Y)),
+      "x.ts",
+      "export {};\n",
+    ),
+    esperado: [],
+  },
+  {
+    nombre: "(j) LEGÍTIMO: se borra la entrada y el archivo ya no existe",
+    base: CON_DEUDA,
+    pr: conTexto(conTexto(CON_DEUDA, ARCHIVO_DEUDA, registroDeDeuda(ENTRADA_DE_Y)), "x.ts", null),
+    esperado: [],
+  },
+  {
+    nombre: "(j) se borra la entrada de un hallazgo cuyo texto sigue: en la línea del texto",
+    base: CON_DEUDA,
+    pr: conTexto(CON_DEUDA, ARCHIVO_DEUDA, registroDeDeuda(ENTRADA_DE_X)),
+    esperado: [["deuda-entrada-borrada-sin-pagar", "y.ts", 1]],
+  },
+  {
+    nombre: "(j) LEGÍTIMO: la entrada de un hallazgo se borra cuando su texto ya no está",
+    base: CON_DEUDA,
+    pr: conTexto(
+      conTexto(CON_DEUDA, ARCHIVO_DEUDA, registroDeDeuda(ENTRADA_DE_X)),
+      "y.ts",
+      "export {};\n",
+    ),
+    esperado: [],
+  },
+  {
+    nombre: "(j) el job guardian ya no ejecuta el paso de la deuda: debilita, en la línea del job",
+    base: CON_DEUDA,
+    pr: conTexto(CON_DEUDA, ARCHIVO_CI, TEXTO_DE_CI),
+    esperado: [["ci-sin-paso-de-deuda", ARCHIVO_CI, LINEA_DEL_JOB_GUARDIAN]],
+  },
+  {
+    nombre: "(j) el paso solo ejecuta una de las dos formas: ya no es el paso de la deuda",
+    base: CON_DEUDA,
+    pr: reemplazando(
+      CON_DEUDA,
+      ARCHIVO_CI,
+      "            node arquitectura/deuda/deuda.cjs --base=base\n",
+      "            echo base\n",
+    ),
+    esperado: [["ci-sin-paso-de-deuda", ARCHIVO_CI, LINEA_DEL_JOB_GUARDIAN]],
+  },
+  {
+    nombre:
+      "(j) LEGÍTIMO: la base todavía no tenía el paso de la deuda (la primera vez que se incorpora)",
+    base: SANO,
+    pr: CON_DEUDA,
+    esperado: [],
+  },
+  {
+    nombre: "(j) el paso de la deuda gana un continue-on-error: debilita, en esa línea",
+    base: CON_DEUDA,
+    pr: reemplazando(
+      CON_DEUDA,
+      ARCHIVO_CI,
+      "      - name: Deuda técnica\n",
+      "      - name: Deuda técnica\n        continue-on-error: true\n",
+    ),
+    esperado: [["ci-deuda-con-salto", ARCHIVO_CI, 28]],
+  },
+  {
+    nombre: "(j) el paso de la deuda gana un if: debilita, en la línea del if",
+    base: CON_DEUDA,
+    pr: reemplazando(
+      CON_DEUDA,
+      ARCHIVO_CI,
+      "      - name: Deuda técnica\n",
+      "      - name: Deuda técnica\n        if: false\n",
+    ),
+    esperado: [["ci-deuda-con-salto", ARCHIVO_CI, 28]],
+  },
+  {
+    nombre: "(j) un continue-on-error o un if que la base ya tenía en el paso no se reclama",
+    base: reemplazando(
+      CON_DEUDA,
+      ARCHIVO_CI,
+      "      - name: Deuda técnica\n",
+      "      - name: Deuda técnica\n        if: false\n        continue-on-error: true\n",
+    ),
+    pr: reemplazando(
+      CON_DEUDA,
+      ARCHIVO_CI,
+      "      - name: Deuda técnica\n",
+      "      - name: Deuda técnica\n        if: false\n        continue-on-error: true\n",
+    ),
+    esperado: [],
+  },
+  {
+    nombre:
+      "(j) el script arquitectura ya no encadena `npm run deuda`: debilita, en la línea del script",
+    base: CON_DEUDA,
+    pr: reemplazando(CON_DEUDA, ARCHIVO_PAQUETE, " && npm run deuda", ""),
+    esperado: [["script-arquitectura-sin-deuda", ARCHIVO_PAQUETE, 4]],
+  },
+  {
+    nombre: "(j) el script deuda se desvía: debilita",
+    base: CON_DEUDA,
+    pr: reemplazando(
+      CON_DEUDA,
+      ARCHIVO_PAQUETE,
+      'node arquitectura/deuda/deuda.cjs"',
+      'node otra.cjs"',
+    ),
+    esperado: [["script-deuda-desviado", ARCHIVO_PAQUETE, 6]],
+  },
+  {
+    nombre: "(j) LEGÍTIMO: la base no tenía los scripts de la deuda",
+    base: SANO,
+    pr: CON_DEUDA,
+    esperado: [],
+  },
+  {
+    nombre: "(j) el PR borra el registro de deuda que la base tenía: el árbol no se puede mirar",
+    base: CON_DEUDA,
+    pr: conTexto(CON_DEUDA, ARCHIVO_DEUDA, null),
+    esperado: [["arbol-ilegible", ARCHIVO_DEUDA, 1]],
+  },
+  {
+    nombre: "(j) el PR borra los dos archivos de la deuda que la base tenía: tampoco",
+    base: CON_DEUDA,
+    pr: conTexto(conTexto(CON_DEUDA, ARCHIVO_DEUDA, null), ARCHIVO_CONFIGURACION_DE_DEUDA, null),
+    esperado: [["arbol-ilegible", ARCHIVO_DEUDA, 1]],
+  },
+  {
+    nombre: "(j) la configuración del PR no es un objeto: no se puede mirar",
+    base: CON_DEUDA,
+    pr: conTexto(CON_DEUDA, ARCHIVO_CONFIGURACION_DE_DEUDA, "[]\n"),
+    esperado: [["arbol-ilegible", ARCHIVO_DEUDA, 1]],
+  },
+  {
+    nombre: "(j) la base no trae la deuda: el chequeo se saltea con un aviso explícito",
+    base: conTexto(conTexto(SANO, ARCHIVO_DEUDA, null), ARCHIVO_CONFIGURACION_DE_DEUDA, null),
+    pr: CON_DEUDA,
+    esperado: [],
+    avisos: [["deuda-sin-base", ARCHIVO_DEUDA, 1]],
+  },
+  {
+    nombre: "(j) ni la base ni el PR traen la deuda: no falla, y se avisa",
+    base: conTexto(conTexto(SANO, ARCHIVO_DEUDA, null), ARCHIVO_CONFIGURACION_DE_DEUDA, null),
+    pr: conTexto(conTexto(SANO, ARCHIVO_DEUDA, null), ARCHIVO_CONFIGURACION_DE_DEUDA, null),
+    esperado: [],
+    avisos: [["deuda-sin-base", ARCHIVO_DEUDA, 1]],
+  },
+  {
+    nombre: "(j) el registro de la base no se puede leer: no hay con qué comparar",
+    base: conTexto(CON_DEUDA, ARCHIVO_DEUDA, "{ roto\n"),
+    pr: CON_DEUDA,
+    esperado: [["base-ilegible", ARCHIVO_DEUDA, 1]],
+  },
+];
+
 const TABLAS: [string, Caso[]][] = [
   ["a: contratos retirados y retiros", CASOS_A],
   ["b: detectores, clases y fuente de verdad", CASOS_B],
@@ -1694,6 +2032,7 @@ const TABLAS: [string, Caso[]][] = [
   ["g: scripts de package.json", CASOS_G],
   ["h: matriz de invariantes y mutaciones", CASOS_H],
   ["i: batería de evasión", CASOS_I],
+  ["j: deuda técnica", CASOS_J],
 ];
 
 describe.each(TABLAS)("chequeo %s", (_titulo, casos) => {
@@ -1784,8 +2123,8 @@ describe("la lista cerrada de códigos", () => {
     for (const [codigo] of avisos) expect(nd.CODIGOS_DE_AVISO).toContain(codigo);
   });
 
-  it("los once chequeos están conectados (quitar uno de la lista no pasa inadvertido)", () => {
-    expect(nd.CHEQUEOS).toHaveLength(11);
+  it("los doce chequeos están conectados (quitar uno de la lista no pasa inadvertido)", () => {
+    expect(nd.CHEQUEOS).toHaveLength(12);
   });
 });
 
@@ -1928,18 +2267,22 @@ describe("funciones de apoyo", () => {
     const guardianJob = ci.valor.get("guardian");
     expect(guardianJob?.["linea"]).toBe(12);
     expect(guardianJob?.["pasos"]).toEqual([
-      { desde: 17, hasta: 17, ejecutaGuardian: false },
-      { desde: 18, hasta: 18, ejecutaGuardian: true },
+      { desde: 17, hasta: 17, ejecutaGuardian: false, deudaSola: false, deudaConBase: false },
+      { desde: 18, hasta: 18, ejecutaGuardian: true, deudaSola: false, deudaConBase: false },
       {
         desde: 19,
         hasta: 23,
         ejecutaGuardian: false,
+        deudaSola: false,
+        deudaConBase: false,
         si: { valor: "github.event_name == 'pull_request'", linea: 20 },
       },
       {
         desde: 24,
         hasta: 26,
         ejecutaGuardian: false,
+        deudaSola: false,
+        deudaConBase: false,
         si: { valor: "github.event_name == 'pull_request'", linea: 25 },
       },
     ]);

@@ -30,6 +30,19 @@ import {
   type Entradas,
   type Informe,
 } from "./guardian-apoyo";
+import {
+  AHORA as AHORA_DE_LA_DEUDA,
+  CONFIGURACION as CONFIGURACION_DE_DEUDA,
+  REGISTRO as REGISTRO_DE_DEUDA,
+  SIN_DEUDA,
+  arbolDe,
+  conMarcadores,
+  deuda as controlDeDeuda,
+  entrada as entradaDeDeuda,
+  excepcion as excepcionDeDeuda,
+  lineas as juntarLineas,
+  mundo as mundoDeDeuda,
+} from "./guardian-deuda-apoyo";
 
 /**
  * Apoyo de la matriz de invariantes (`guardian-matriz.test.ts`): el repositorio sintético SANO, los
@@ -876,6 +889,59 @@ const enCatalogo =
   () =>
     correrMundo({ ...mundoSano(), evasiones: casos });
 
+// --- La deuda técnica (I12) ------------------------------------------------------------------------------------
+
+type ArbolesDeDeuda = Record<string, string>;
+
+/** El mundo sano de la deuda: `a.ts` con dos `@ts-expect-error` registrados, `b.ts` sin deuda, bloqueo activo. */
+const deudaSana = (entradas: unknown[] = [entradaDeDeuda()]): ArbolesDeDeuda =>
+  mundoDeDeuda({ "a.ts": conMarcadores(2), "b.ts": SIN_DEUDA }, entradas, {
+    bloqueaDeudaEnArchivoTocado: true,
+  });
+/** Lo que dice el control de deuda sobre el cambio (y, si hay, la base), con los textos del cambio para ubicar líneas. */
+const enDeuda =
+  (cambio: ArbolesDeDeuda, base: ArbolesDeDeuda | null = null): Aplicador =>
+  () => {
+    const resultado = controlDeDeuda.ejecutar({
+      pr: arbolDe(cambio),
+      base: base === null ? null : arbolDe(base),
+      ahora: AHORA_DE_LA_DEUDA,
+    });
+    return { salidas: resultado.fallas.map((f) => ({ ...f })), textos: cambio };
+  };
+/** El mundo sano con esos archivos cambiados (y, si se pasa, otro registro). */
+const deudaCon = (
+  archivos: Record<string, string>,
+  entradas: unknown[] = [entradaDeDeuda()],
+): ArbolesDeDeuda => ({ ...deudaSana(entradas), ...archivos });
+
+const CONFIGURACION_REAL = "arquitectura/deuda/configuracion.json";
+const PAQUETE_REAL = "package.json";
+const PASO_DE_LA_DEUDA = "      - name: Deuda técnica (no crece y se paga al tocar el archivo)\n";
+/** Quita del ci.yml de un árbol el paso de la deuda técnica (su comentario y su `run`). */
+const sinElPasoDeLaDeuda = (texto: string): string => {
+  const inicio = texto.indexOf("      # La deuda técnica (§10)");
+  const fin =
+    texto.indexOf("          fi\n", texto.indexOf(PASO_DE_LA_DEUDA)) + "          fi\n".length;
+  if (inicio < 0 || fin < inicio) throw new Error("el ci.yml real no tiene el paso de la deuda");
+  return texto.slice(0, inicio) + texto.slice(fin);
+};
+/** Un archivo de código de `n` líneas. */
+const archivoDeLineas = (n: number): string =>
+  juntarLineas(
+    ...Array.from({ length: n }, (_, i) => `export const x${String(i)} = ${String(i)};`),
+  );
+/** La entrada de un archivo sobre el tope, con el tamaño que registra. */
+const entradaDeUnArchivoGrande = (tamano: number) =>
+  entradaDeDeuda({
+    id: "archivo-grande--src-grande-ts",
+    tipo: "archivo-grande",
+    archivos: ["src/grande.ts"],
+    tamano,
+  });
+/** Una entrada del registro para un TODO en `x.ts`, que la base conoce. */
+const entradaDeX = entradaDeDeuda({ id: "todo--x-ts", tipo: "todo", archivos: ["x.ts"] });
+
 /** Aplicadores por id de mutación: la otra mitad del catálogo (M5: ninguna mutación sin aplicador). */
 export const APLICADORES: Record<string, Aplicador> = {
   // I1 · Toda ruta versionada tiene exactamente una clase.
@@ -1456,7 +1522,7 @@ export const APLICADORES: Record<string, Aplicador> = {
       ),
   }),
   "I9-el-script-arquitectura-deja-de-encadenar-el-guardian-respecto-de-la-base": enArboles({
-    pr: (raiz) => alterar(raiz, "package.json", ' && npm run guardian",', '",'),
+    pr: (raiz) => alterar(raiz, "package.json", " && npm run guardian", ""),
   }),
   "I9-el-script-guardian-se-desvia-respecto-de-la-base": enArboles({
     pr: (raiz) =>
@@ -1687,4 +1753,182 @@ export const APLICADORES: Record<string, Aplicador> = {
       'it.skip("marca-de-la-matriz", () => {});',
     ),
   ),
+  // I12 · La deuda técnica conocida no crece ni se esconde.
+  "I12-pagar-la-deuda-y-borrar-su-entrada": enDeuda(
+    deudaCon({ "a.ts": SIN_DEUDA }, []),
+    deudaSana(),
+  ),
+  "I12-borrar-el-paso-de-deuda-del-ci": enArboles({
+    pr: (raiz) => alterarCi(raiz, sinElPasoDeLaDeuda),
+  }),
+  "I12-borrar-el-registro-de-deuda": () => {
+    const cambio = deudaSana();
+    delete cambio[REGISTRO_DE_DEUDA];
+    return enDeuda(cambio)();
+  },
+  "I12-borrar-una-entrada-sin-pagar": enDeuda(deudaCon({}, []), deudaSana()),
+  "I12-la-base-ve-la-entrada-borrada-sin-pagar": enArboles({
+    ambos: (raiz) => escribirEn(raiz, "x.ts", "// TODO: arreglar\n"),
+    base: (raiz) => escribirEn(raiz, REGISTRO_DE_DEUDA, json([entradaDeX])),
+    pr: (raiz) => escribirEn(raiz, REGISTRO_DE_DEUDA, json([])),
+  }),
+  "I12-la-base-deja-pagar-la-deuda": enArboles({
+    base: (raiz) => {
+      escribirEn(raiz, "x.ts", "// TODO: arreglar\n");
+      escribirEn(raiz, REGISTRO_DE_DEUDA, json([entradaDeX]));
+    },
+    pr: (raiz) => {
+      escribirEn(raiz, "x.ts", "export {};\n");
+      escribirEn(raiz, REGISTRO_DE_DEUDA, json([]));
+    },
+  }),
+  "I12-marcador-sin-registrar": enDeuda(deudaCon({ "a.ts": conMarcadores(1) }, [])),
+  "I12-marcador-nuevo-sin-excepcion": enDeuda(
+    deudaCon({ "b.ts": "// @ts-expect-error motivo\n" }, [
+      entradaDeDeuda(),
+      entradaDeDeuda({ id: "ts-expect-error--b-ts", archivos: ["b.ts"] }),
+    ]),
+    deudaSana(),
+  ),
+  "I12-el-total-sube-sin-excepcion": enDeuda(deudaCon({ "a.ts": conMarcadores(3) }), deudaSana()),
+  "I12-tocar-un-archivo-con-deuda": enDeuda(
+    deudaCon({ "a.ts": `${conMarcadores(2)}export const nuevo = 1;\n` }),
+    deudaSana(),
+  ),
+  "I12-entrada-con-un-campo-faltante": enDeuda(deudaCon({}, [entradaDeDeuda({ descripcion: "" })])),
+  "I12-archivo-que-no-existe": enDeuda(
+    deudaCon({}, [
+      entradaDeDeuda(),
+      entradaDeDeuda({ id: "h", tipo: "backlog", archivos: ["x.ts"] }),
+    ]),
+  ),
+  "I12-configuracion-invalida": () => {
+    const cambio = deudaSana();
+    cambio[CONFIGURACION_DE_DEUDA] = json({
+      topeDeExcepciones: "diez",
+      bloqueaDeudaEnArchivoTocado: true,
+    });
+    return enDeuda(cambio)();
+  },
+  "I12-excepcion-vencida": enDeuda(
+    deudaCon({}, [
+      entradaDeDeuda(),
+      excepcionDeDeuda({ id: "exc", tipo: "backlog", creada: "2026-08-01", vence: "2026-09-01" }),
+    ]),
+  ),
+  "I12-excepcion-de-mas-de-60-dias": enDeuda(
+    deudaCon({}, [
+      entradaDeDeuda(),
+      excepcionDeDeuda({ id: "exc", tipo: "backlog", creada: "2026-10-22", vence: "2027-01-20" }),
+    ]),
+  ),
+  "I12-excepcion-que-no-cubre-nada": enDeuda(
+    deudaCon({}, [
+      excepcionDeDeuda({ id: "exc", tipo: "todo", archivos: ["b.ts"] }),
+      entradaDeDeuda(),
+    ]),
+  ),
+  "I12-pasar-el-tope-de-excepciones": () => {
+    const cambio = deudaCon({}, [
+      entradaDeDeuda(),
+      excepcionDeDeuda({ id: "exc-1", tipo: "backlog" }),
+      excepcionDeDeuda({ id: "exc-2", tipo: "backlog" }),
+    ]);
+    cambio[CONFIGURACION_DE_DEUDA] = json({
+      topeDeExcepciones: 1,
+      bloqueaDeudaEnArchivoTocado: true,
+    });
+    return enDeuda(cambio)();
+  },
+  "I12-archivo-de-datos-que-no-se-puede-leer": enDeuda(
+    deudaCon({ "knip.json": '{\n  "ignore": [\n' }),
+  ),
+  "I12-subir-el-tope-de-excepciones": enArboles({
+    pr: (raiz) =>
+      alterar(raiz, CONFIGURACION_REAL, '"topeDeExcepciones": 10', '"topeDeExcepciones": 11'),
+  }),
+  "I12-bajar-el-bloqueo-a-false": enArboles({
+    base: (raiz) =>
+      alterar(
+        raiz,
+        CONFIGURACION_REAL,
+        '"bloqueaDeudaEnArchivoTocado": false',
+        '"bloqueaDeudaEnArchivoTocado": true',
+      ),
+  }),
+  "I12-archivo-grande-sin-registrar": enDeuda(deudaCon({ "src/grande.ts": archivoDeLineas(450) })),
+  "I12-archivo-grande-crece-sobre-lo-registrado": enDeuda(
+    deudaCon({ "src/grande.ts": archivoDeLineas(460) }, [
+      entradaDeDeuda(),
+      entradaDeUnArchivoGrande(450),
+    ]),
+  ),
+  "I12-archivo-grande-crece-contra-la-base": enDeuda(
+    deudaCon({ "src/grande.ts": archivoDeLineas(460) }, [
+      entradaDeDeuda(),
+      entradaDeUnArchivoGrande(460),
+    ]),
+    deudaCon({ "src/grande.ts": archivoDeLineas(450) }, [
+      entradaDeDeuda(),
+      entradaDeUnArchivoGrande(450),
+    ]),
+  ),
+  "I12-subir-el-tope-de-lineas": enArboles({
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        CONFIGURACION_REAL,
+        '"topeDeLineasPorArchivo": 400',
+        '"topeDeLineasPorArchivo": 401',
+      ),
+  }),
+  "I12-excluir-un-archivo-del-tope": enArboles({
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        CONFIGURACION_REAL,
+        '"excluidosDelTope": [',
+        '"excluidosDelTope": [\n    { "ruta": "src/otro.ts", "motivo": "Datos." },',
+      ),
+  }),
+  "I12-duplicar-el-id-de-una-entrada": enDeuda(
+    deudaCon({}, [entradaDeDeuda(), entradaDeDeuda({ tipo: "backlog" })]),
+  ),
+  "I12-duplicar-un-marcador": enDeuda(deudaCon({ "a.ts": conMarcadores(3) }), deudaSana()),
+  "I12-desconectar-el-script-deuda": enArboles({
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        PAQUETE_REAL,
+        '"deuda": "node arquitectura/deuda/deuda.cjs"',
+        '"deuda": "node arquitectura/deuda/deuda.cjs || true"',
+      ),
+  }),
+  "I12-quitar-la-deuda-del-script-arquitectura": enArboles({
+    pr: (raiz) => alterar(raiz, PAQUETE_REAL, " && npm run deuda", ""),
+  }),
+  "I12-continue-on-error-en-el-paso-de-deuda": enArboles({
+    pr: (raiz) =>
+      alterarCi(raiz, (t) =>
+        reemplazar(
+          t,
+          `${PASO_DE_LA_DEUDA}        run: |`,
+          `${PASO_DE_LA_DEUDA}        continue-on-error: true\n        run: |`,
+        ),
+      ),
+  }),
+  "I12-if-en-el-paso-de-deuda": enArboles({
+    pr: (raiz) =>
+      alterarCi(raiz, (t) =>
+        reemplazar(
+          t,
+          `${PASO_DE_LA_DEUDA}        run: |`,
+          `${PASO_DE_LA_DEUDA}        if: false\n        run: |`,
+        ),
+      ),
+  }),
+  "I12-borrar-las-pruebas-de-la-deuda": enPruebas((archivos) => {
+    delete archivos["guardian-deuda-libro.test.ts"];
+  }),
+  "I12-marcador-con-otra-capitalizacion": enDeuda(deudaCon({ "b.ts": "// ToDo: arreglar\n" })),
 };

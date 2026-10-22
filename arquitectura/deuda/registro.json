@@ -1,0 +1,585 @@
+[
+  {
+    "id": "ts-expect-error--apps-web-ui-componentes-botonicono-test-tsx",
+    "archivos": ["apps/web/ui/componentes/BotonIcono.test.tsx"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--apps-web-ui-iconos-icono-test-tsx",
+    "archivos": ["apps/web/ui/iconos/Icono.test.tsx"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--apps-web-ui-plantillas-plantillas-test-tsx",
+    "archivos": ["apps/web/ui/plantillas/plantillas.test.tsx"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "excepcion-del-guardian--arquitectura-contratos-exclusiones-json",
+    "archivos": ["arquitectura/contratos/exclusiones.json"],
+    "descripcion": "Las dos exclusiones del análisis del guardián (clases `generado` y `docs`) vencen el 2026-12-20: hay que renovarlas con nueva aprobación del dueño o analizar esas clases.",
+    "tipo": "excepcion-del-guardian",
+    "responsable": "dueño",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "knip-ignora--knip-json",
+    "archivos": ["knip.json"],
+    "descripcion": "Entradas de `ignore*` de knip.json (dependencias sin uso hasta el e2e de W5, exports que las pruebas leen por createRequire): cada una lleva su motivo en el archivo.",
+    "tipo": "knip-ignora",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "eslint-disable--src-adaptadores-correo-correo-resend-test-ts",
+    "archivos": ["src/adaptadores/correo/correo-resend.test.ts"],
+    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
+    "tipo": "eslint-disable",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--src-capacidades-activos-direccion-externa-test-ts",
+    "archivos": ["src/capacidades/activos/direccion-externa.test.ts"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--src-capacidades-controles-decision-test-ts",
+    "archivos": ["src/capacidades/controles/decision.test.ts"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "eslint-disable--src-capacidades-experiencia-puerta-ts",
+    "archivos": ["src/capacidades/experiencia/puerta.ts"],
+    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
+    "tipo": "eslint-disable",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "eslint-disable--src-capacidades-experiencia-ruta-de-retorno-test-ts",
+    "archivos": ["src/capacidades/experiencia/ruta-de-retorno.test.ts"],
+    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
+    "tipo": "eslint-disable",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "eslint-disable--src-capacidades-experiencia-ruta-de-retorno-ts",
+    "archivos": ["src/capacidades/experiencia/ruta-de-retorno.ts"],
+    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
+    "tipo": "eslint-disable",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--src-capacidades-permisos-exigir-test-ts",
+    "archivos": ["src/capacidades/permisos/exigir.test.ts"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--src-capacidades-permisos-grupo-test-ts",
+    "archivos": ["src/capacidades/permisos/grupo.test.ts"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--src-capacidades-permisos-guard-test-ts",
+    "archivos": ["src/capacidades/permisos/guard.test.ts"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--src-capacidades-planes-perillas-test-ts",
+    "archivos": ["src/capacidades/planes/perillas.test.ts"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--src-capacidades-vocabulario-catalogo-test-ts",
+    "archivos": ["src/capacidades/vocabulario/catalogo.test.ts"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--src-capacidades-vocabulario-vocabulario-test-ts",
+    "archivos": ["src/capacidades/vocabulario/vocabulario.test.ts"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "eslint-disable--src-composicion-guarda-de-migracion-test-ts",
+    "archivos": ["src/composicion/guarda-de-migracion.test.ts"],
+    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
+    "tipo": "eslint-disable",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "eslint-disable--src-composicion-ruta-de-ingreso-test-ts",
+    "archivos": ["src/composicion/ruta-de-ingreso.test.ts"],
+    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
+    "tipo": "eslint-disable",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "eslint-disable--src-composicion-rutas-de-sistema-test-ts",
+    "archivos": ["src/composicion/rutas-de-sistema.test.ts"],
+    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
+    "tipo": "eslint-disable",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "eslint-disable--src-composicion-sesion-de-plataforma-test-ts",
+    "archivos": ["src/composicion/sesion-de-plataforma.test.ts"],
+    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
+    "tipo": "eslint-disable",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--src-plataforma-dominio-soporte-explicar-test-ts",
+    "archivos": ["src/plataforma/dominio/soporte/explicar.test.ts"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--src-primitivas-identificadores-marca-test-ts",
+    "archivos": ["src/primitivas/identificadores/marca.test.ts"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--src-puertos-emisores-test-ts",
+    "archivos": ["src/puertos/emisores.test.ts"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--test-arquitectura-contexto-con-marca-test-ts",
+    "archivos": ["test/arquitectura/contexto-con-marca.test.ts"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "eslint-disable--test-arquitectura-guardian-mutantes-a-comparacion-test-ts",
+    "archivos": ["test/arquitectura/guardian-mutantes-a-comparacion.test.ts"],
+    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
+    "tipo": "eslint-disable",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--test-arquitectura-tipos-permisos-test-ts",
+    "archivos": ["test/arquitectura/tipos-permisos.test.ts"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--test-arquitectura-tipos-tx-test-ts",
+    "archivos": ["test/arquitectura/tipos-tx.test.ts"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "ts-expect-error--test-plataforma-dominios-test-ts",
+    "archivos": ["test/plataforma/dominios.test.ts"],
+    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
+    "tipo": "ts-expect-error",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "eslint-disable--test-web-despacho-test-ts",
+    "archivos": ["test/web/despacho.test.ts"],
+    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
+    "tipo": "eslint-disable",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "intermitente-primer-admin",
+    "archivos": ["src/adaptadores/postgres/primer-admin.ts"],
+    "descripcion": "Prueba intermitente de la siembra concurrente del primer administrador (error 40001 bajo SERIALIZABLE, visto en Estabilidad, copia 2). Se arregló en #83 (espera exponencial con jitter y 12 reintentos) SIN poder reproducirla localmente: se da por cerrada cuando Estabilidad (12 copias) pase en varios cambios seguidos.",
+    "tipo": "intermitente",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "mutar-comprobar-matriz",
+    "archivos": ["arquitectura/contratos/invariantes.cjs"],
+    "descripcion": "`comprobarMatriz` (los meta-invariantes M1, M2 y M5) vive dentro de invariantes.cjs y no está bajo Stryker: extraerla a su propio archivo y mutarla hasta 0 sobrevivientes.",
+    "tipo": "backlog",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22",
+    "verificacion": {
+      "contiene": "function comprobarMatriz"
+    }
+  },
+  {
+    "id": "descripciones-de-codigos-sin-prueba",
+    "archivos": ["arquitectura/contratos/codigos.cjs"],
+    "descripcion": "Las descripciones de codigos.cjs (el texto de `reglasEjecutadas.chequeos`) no tienen prueba que las ancle: un cambio de texto no hace fallar nada ni entra a Stryker.",
+    "tipo": "backlog",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "texto-un-falla-en-comprobar-ubicaciones",
+    "archivos": ["arquitectura/contratos/guardian.cjs"],
+    "descripcion": "El motivo de `comprobarUbicaciones` dice «Un falla…» (concordancia): usar «Una falla» y «Un aviso» y ajustar las pruebas que lo citan.",
+    "tipo": "backlog",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22",
+    "verificacion": {
+      "contiene": "Un ${tipo} con código"
+    }
+  },
+  {
+    "id": "presupuesto-de-tiempo-del-ci-por-job",
+    "archivos": [".github/workflows/ci.yml"],
+    "descripcion": "Presupuesto de tiempo del CI por job (informe de CI §3.2 D5, D8, D9 y §7.3): topes de `timeout-minutes` ajustados a lo medido, cancelación al primer rojo y arranque compartido de los grupos de mutación. Decisión de cuánto se acepta por PR: del dueño.",
+    "tipo": "backlog",
+    "responsable": "dueño",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "e2e-sin-playwright-cableado",
+    "archivos": ["knip.json"],
+    "descripcion": "No hay pruebas e2e: @playwright/test y @axe-core/playwright están instalados pero sin uso (knip los ignora) hasta el e2e de la web (W5). Falta cablear Playwright en el CI (informe de CI §4 y §5); `continue-on-error` está prohibido en ci.yml, así que un modo «reporte» necesita otro diseño.",
+    "tipo": "backlog",
+    "responsable": "dueño",
+    "creada": "2026-10-22",
+    "verificacion": {
+      "contiene": "@playwright/test"
+    }
+  },
+  {
+    "id": "sondeo-ast-pendiente",
+    "archivos": ["arquitectura/contratos/detectores.cjs"],
+    "descripcion": "El sondeo de primitivas con análisis AST (contratos-arquitectonicos.md §12, G7) no se hizo: los detectores del guardián son texto línea por línea. Se hace en modo reporte, regla por regla.",
+    "tipo": "backlog",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "brecha-ev-094",
+    "archivos": ["arquitectura/contratos/evasiones.json"],
+    "descripcion": "Brecha abierta EV-094 de la batería de evasión: un consumidor real del contrato movido a `workers/` sale del alcance del detector sin que nada falle. Vence el 2026-12-20; se cierra con un chequeo del registro que exija cobertura de las clases con código.",
+    "tipo": "brecha",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22",
+    "verificacion": {
+      "contiene": "\"brecha-abierta\""
+    }
+  },
+  {
+    "id": "riesgos-aceptados-de-la-bateria-de-evasion",
+    "archivos": ["arquitectura/contratos/evasiones.json"],
+    "descripcion": "Los casos `riesgo-aceptado` de la batería de evasión (47 hoy): evasiones que exigen editar la maquinaria o límites declarados de los detectores de texto, aceptados por el dueño (§11.1) y a revisar en la fecha de cada caso.",
+    "tipo": "riesgo-aceptado",
+    "responsable": "dueño",
+    "creada": "2026-10-22",
+    "verificacion": {
+      "contiene": "\"estado\": \"riesgo-aceptado\""
+    }
+  },
+  {
+    "id": "gate-local-no-replica-el-ci",
+    "archivos": ["package.json"],
+    "descripcion": "`npm run gate` no replica el CI (informe de CI §3.2 D11): faltan componentes (Chromium), builds, seguridad, estabilidad y mutación; y las pruebas de integración se saltean en silencio sin PRUEBAS_DATABASE_URL (`describe.skipIf`), salvo con CI=true.",
+    "tipo": "backlog",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "gate-coincide-con-ci-parcial",
+    "archivos": ["test/arquitectura/gate-coincide-con-ci.test.ts"],
+    "descripcion": "`gate-coincide-con-ci` solo compara jobs, needs, if, continue-on-error y timeouts (informe de CI §3.2 D12): no compara los comandos de `estatico` con `npm run gate` ni cubre gate-rapido.yml (una copia de 4 jobs).",
+    "tipo": "backlog",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "dependabot-sin-agrupar",
+    "archivos": [".github/dependabot.yml"],
+    "descripcion": "Dependabot sube `next` y `react` de a un workspace y abre PR rojos (informe de CI §3.2 D14): conviene agruparlos en un solo PR.",
+    "tipo": "backlog",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "workflows-de-migracion-duplicados",
+    "archivos": [".github/workflows/migrar.yml", ".github/workflows/migrar-base.yml"],
+    "descripcion": "Dos workflows de migración (migrar.yml y migrar-base.yml) duplican la superficie de secretos (informe de CI §3.2 D15). Requiere una decisión del dueño.",
+    "tipo": "backlog",
+    "responsable": "dueño",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "permisos-y-acciones-menores-del-ci",
+    "archivos": [".github/workflows/ci.yml", ".github/workflows/codeql.yml"],
+    "descripcion": "Pendientes menores de permisos y acciones (informe de CI §3.2 D10): la imagen de gitleaks está fijada por tag y no por digest, `codeql.yml` pide `security-events: write` a nivel de workflow en vez de job, y `permissions:` repetido en `guardian` y `dependencias` es redundante.",
+    "tipo": "backlog",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--arquitectura-contratos-evasiones-cjs",
+    "archivos": ["arquitectura/contratos/evasiones.cjs"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 566,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--arquitectura-contratos-excepciones-cjs",
+    "archivos": ["arquitectura/contratos/excepciones.cjs"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 537,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--arquitectura-contratos-guardian-cjs",
+    "archivos": ["arquitectura/contratos/guardian.cjs"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 628,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--arquitectura-contratos-invariantes-cjs",
+    "archivos": ["arquitectura/contratos/invariantes.cjs"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 3051,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--arquitectura-contratos-no-debilitar-cjs",
+    "archivos": ["arquitectura/contratos/no-debilitar.cjs"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 1762,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--arquitectura-contratos-verificar-mecanismo-cjs",
+    "archivos": ["arquitectura/contratos/verificar-mecanismo.cjs"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 716,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--arquitectura-planificar-mutacion-cjs",
+    "archivos": ["arquitectura/planificar-mutacion.cjs"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 608,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--arquitectura-reglas-cjs",
+    "archivos": ["arquitectura/reglas.cjs"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 554,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-adaptadores-arca-clasificar-ts",
+    "archivos": ["src/adaptadores/arca/clasificar.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 476,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-adaptadores-postgres-soporte-de-plataforma-ts",
+    "archivos": ["src/adaptadores/postgres/soporte-de-plataforma.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 738,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-capacidades-activos-cabeceras-ts",
+    "archivos": ["src/capacidades/activos/cabeceras.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 482,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-composicion-sesion-y-empresa-ts",
+    "archivos": ["src/composicion/sesion-y-empresa.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 405,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-modulos-empresas-persistencia-repositorios-ts",
+    "archivos": ["src/modulos/empresas/persistencia/repositorios.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 411,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-modulos-fiscal-casos-de-uso-numeracion-en-tx-ts",
+    "archivos": ["src/modulos/fiscal/casos-de-uso/numeracion-en-tx.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 453,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-modulos-fiscal-casos-de-uso-validar-comprobante-ts",
+    "archivos": ["src/modulos/fiscal/casos-de-uso/validar-comprobante.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 546,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-modulos-fiscal-dominio-numeracion-ts",
+    "archivos": ["src/modulos/fiscal/dominio/numeracion.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 426,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-modulos-fiscal-persistencia-repositorio-de-certificados-ts",
+    "archivos": ["src/modulos/fiscal/persistencia/repositorio-de-certificados.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 617,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-modulos-fiscal-persistencia-repositorio-de-comprobantes-ts",
+    "archivos": ["src/modulos/fiscal/persistencia/repositorio-de-comprobantes.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 882,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-modulos-fiscal-persistencia-repositorios-ts",
+    "archivos": ["src/modulos/fiscal/persistencia/repositorios.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 1245,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-modulos-fiscal-publico-ts",
+    "archivos": ["src/modulos/fiscal/publico.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 494,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-modulos-identidad-dominio-invitacion-ts",
+    "archivos": ["src/modulos/identidad/dominio/invitacion.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 410,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-modulos-identidad-persistencia-repositorios-ts",
+    "archivos": ["src/modulos/identidad/persistencia/repositorios.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 912,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-modulos-planes-persistencia-repositorio-de-planes-ts",
+    "archivos": ["src/modulos/planes/persistencia/repositorio-de-planes.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 757,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  },
+  {
+    "id": "archivo-grande--src-plataforma-consultas-consultas-de-planes-ts",
+    "archivos": ["src/plataforma/consultas/consultas-de-planes.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 622,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-10-22"
+  }
+]

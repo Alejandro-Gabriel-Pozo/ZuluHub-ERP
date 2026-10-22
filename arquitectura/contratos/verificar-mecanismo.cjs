@@ -62,6 +62,10 @@ const CARPETA_DE_PRUEBAS = "test/arquitectura";
 const PRUEBAS_DEL_GUARDIAN = Object.freeze([
   "guardian-clasificacion.test.ts",
   "guardian-declaraciones.test.ts",
+  "guardian-deuda-comparacion.test.ts",
+  "guardian-deuda-control.test.ts",
+  "guardian-deuda-libro.test.ts",
+  "guardian-deuda-marcadores.test.ts",
   "guardian-diagnostico.test.ts",
   "guardian-evasion.test.ts",
   "guardian-excepciones.test.ts",

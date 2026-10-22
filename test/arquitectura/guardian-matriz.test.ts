@@ -42,7 +42,7 @@ import {
 
 /**
  * MATRIZ DE INVARIANTES (contratos-arquitectonicos.md §4). El catálogo (`arquitectura/contratos/
- * invariantes.cjs`) dice, por cada invariante de G1 (I1 a I10), qué mutaciones lo atacan y qué tiene que
+ * invariantes.cjs`) dice, por cada invariante de G1 (I1 a I12), qué mutaciones lo atacan y qué tiene que
  * pasar; acá se aplica cada una sobre un repositorio sintético (o sobre una copia en memoria de
  * package.json, ci.yml, vitest.config.ts, las pruebas del guardián o el propio catálogo) y se exige que
  * el guardián, o el verificador del mecanismo, FALLE como se declaró. Una mutación que sobrevive es un
@@ -69,7 +69,7 @@ function aplicar(id: string): Corrida {
 
 /** Las mutaciones cuyas salidas traen `contrato` y se imprimen con el formato del guardián. */
 const delGuardian = (objetivo: string | undefined): boolean =>
-  objetivo === "repo" || objetivo === "base-y-pr";
+  objetivo === "repo" || objetivo === "base-y-pr" || objetivo === "deuda";
 
 const aplicarSano = (): string[] =>
   compararArbolesSanos().salidas.map((s) => `${s.codigo} @ ${s.archivo}:${String(s.linea)}`);
@@ -145,7 +145,7 @@ describe("base: el repositorio sintético sano pasa", () => {
 });
 
 describe("el catálogo", () => {
-  it("cubre los diez invariantes de G1 (I1 a I10), con enunciado y elementos", () => {
+  it("cubre los doce invariantes de G1 (I1 a I12), con enunciado y elementos", () => {
     expect(INVARIANTES.map((i) => i.id)).toEqual([...IDS_DE_INVARIANTES]);
     for (const invariante of INVARIANTES) {
       expect(invariante.enunciado.length, invariante.id).toBeGreaterThan(10);

@@ -90,8 +90,8 @@ const esPruebaDeNode = (archivo) => esPrueba(archivo) && /^(src|test)\//.test(ar
 
 /**
  * Lo que el grafo de importaciones NO ve del guardián. El grafo sí sigue los `require()` de sus pruebas
- * (`test/arquitectura/guardian-*.ts` cargan `arquitectura/contratos/*.cjs`), pero no lo que esas pruebas
- * copian a carpetas temporales, lanzan con `node` o leen como texto: los datos de la carpeta (`*.json`), los
+ * (`test/arquitectura/guardian-*.ts` cargan `arquitectura/contratos/*.cjs` y `arquitectura/deuda/*.cjs`), pero no lo
+ * que esas pruebas copian a carpetas temporales, lanzan con `node` o leen como texto: los datos de las carpetas (`*.json`), los
  * `.cjs` que solo corren como proceso aparte (`no-debilitar.cjs` como CLI) y los archivos de `arquitectura/`
  * que el verificador carga del árbol (`evaluar-gate.cjs`, `reglas.cjs`, `ci.yml`). Como el código del guardián también
  * se muta (`stryker.config.json`), el mapa es EXPLÍCITO: toda prueba o auxiliar del guardián depende de TODOS
@@ -100,7 +100,8 @@ const esPruebaDeNode = (archivo) => esPrueba(archivo) && /^(src|test)\//.test(ar
  * dependencias: lo que el grafo ya sabía sigue igual, y el resto de `arquitectura/` sigue sin estar en el mapa.
  */
 const PRUEBAS_DEL_GUARDIAN = /^test\/arquitectura\/guardian-[^/]+\.ts$/;
-const CARPETA_DEL_GUARDIAN = "arquitectura/contratos";
+/** Las carpetas del guardián: el código de los contratos y el control de deuda técnica (una pieza del guardián). */
+const CARPETAS_DEL_GUARDIAN = ["arquitectura/contratos", "arquitectura/deuda"];
 const OTROS_ARCHIVOS_DEL_GUARDIAN = [
   "arquitectura/evaluar-gate.cjs",
   "arquitectura/reglas.cjs",
@@ -146,15 +147,15 @@ function conEnlacesDelGuardian(dependencias, archivosDelGuardian) {
 }
 
 /**
- * Los archivos que el guardián lee: `arquitectura/contratos/**` (el informe que genera no cuenta) y los
- * otros archivos de `arquitectura/` que su verificador carga. Un archivo que falta en disco no se inventa.
+ * Los archivos que el guardián lee: `arquitectura/contratos/**` y `arquitectura/deuda/**` (los informes que
+ * generan no cuentan) y los otros archivos de `arquitectura/` que su verificador carga. Un archivo que falta en
+ * disco no se inventa.
  */
 function leerArchivosDelGuardian(raiz) {
   const presentes = (archivo) =>
     fs.statSync(path.join(raiz, archivo), { throwIfNoEntry: false })?.isFile() === true;
   return [
-    ...fs
-      .globSync(`${CARPETA_DEL_GUARDIAN}/**/*`, { cwd: raiz })
+    ...CARPETAS_DEL_GUARDIAN.flatMap((carpeta) => fs.globSync(`${carpeta}/**/*`, { cwd: raiz }))
       .map((archivo) => archivo.split(path.sep).join("/"))
       .filter((archivo) => !archivo.endsWith("/informe.json")),
     ...OTROS_ARCHIVOS_DEL_GUARDIAN,

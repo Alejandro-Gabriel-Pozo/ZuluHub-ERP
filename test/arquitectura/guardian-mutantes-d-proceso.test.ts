@@ -92,6 +92,7 @@ describe("capturar: lee el árbol y arma una sección por archivo", () => {
       "ci",
       "clases",
       "codigos",
+      "deuda",
       "evasiones",
       "gate",
       "invariantes",
@@ -136,7 +137,12 @@ describe("capturar: lee el árbol y arma una sección por archivo", () => {
     expect(instantanea["retiros"]).toStrictEqual({ valor: [{ id: "x" }] });
     expect(instantanea["plazo"]).toStrictEqual({ valor: 60, linea: 2 });
     expect(instantanea["aviso"]).toStrictEqual({ valor: 14, linea: 3 });
-    expect(instantanea["paquete"]).toStrictEqual({ valor: { arquitectura: "a", guardian: "g" } });
+    expect(instantanea["paquete"]).toStrictEqual({
+      valor: { arquitectura: "a", guardian: "g", deuda: undefined },
+    });
+    expect(instantanea["deuda"]).toStrictEqual({
+      valor: { entradas: [], tope: 10, bloquea: true, topeDeLineas: 400, excluidos: [] },
+    });
     const ci = instantanea["ci"] as { valor: Map<string, unknown>; lineaDeJobs: number };
     expect([...ci.valor.keys()]).toEqual(["estatico", "mutacion-plan", "guardian", "gate"]);
     expect(ci.lineaDeJobs).toBe(1);
@@ -203,6 +209,7 @@ describe("capturar: lee el árbol y arma una sección por archivo", () => {
       aviso: { ausente: true },
       ci: { ausente: true },
       paquete: { ausente: true },
+      deuda: { ausente: true },
     });
   });
 });

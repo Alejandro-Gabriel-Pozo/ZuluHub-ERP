@@ -105,8 +105,22 @@ describe("leerCi: lee jobs, needs, if, pasos y continue-on-error con su línea",
       lineaSi: 8,
       continuaConError: [17],
       pasos: [
-        { desde: 13, hasta: 13, ejecutaGuardian: false, si: undefined },
-        { desde: 14, hasta: 17, ejecutaGuardian: true, si: { valor: "always()", linea: 15 } },
+        {
+          desde: 13,
+          hasta: 13,
+          ejecutaGuardian: false,
+          deudaSola: false,
+          deudaConBase: false,
+          si: undefined,
+        },
+        {
+          desde: 14,
+          hasta: 17,
+          ejecutaGuardian: true,
+          deudaSola: false,
+          deudaConBase: false,
+          si: { valor: "always()", linea: 15 },
+        },
       ],
     });
     expect(leido.valor.get("estatico")).toStrictEqual({
@@ -117,7 +131,16 @@ describe("leerCi: lee jobs, needs, if, pasos y continue-on-error con su línea",
       si: undefined,
       lineaSi: undefined,
       continuaConError: [],
-      pasos: [{ desde: 22, hasta: 22, ejecutaGuardian: false, si: undefined }],
+      pasos: [
+        {
+          desde: 22,
+          hasta: 22,
+          ejecutaGuardian: false,
+          deudaSola: false,
+          deudaConBase: false,
+          si: undefined,
+        },
+      ],
     });
   });
 
@@ -224,7 +247,16 @@ describe("leerCi: lee jobs, needs, if, pasos y continue-on-error con su línea",
     const a = job(texto, "a");
     expect(a.continuaConError).toEqual([]);
     expect(a.si).toBeUndefined();
-    expect(a.pasos).toStrictEqual([{ desde: 7, hasta: 7, ejecutaGuardian: false, si: undefined }]);
+    expect(a.pasos).toStrictEqual([
+      {
+        desde: 7,
+        hasta: 7,
+        ejecutaGuardian: false,
+        deudaSola: false,
+        deudaConBase: false,
+        si: undefined,
+      },
+    ]);
   });
 });
 
@@ -235,6 +267,8 @@ describe("leerCi: los pasos de steps", () => {
     desde,
     hasta,
     ejecutaGuardian: false,
+    deudaSola: false,
+    deudaConBase: false,
     si: undefined,
     ...extra,
   });
@@ -410,12 +444,14 @@ describe("leerConstante, leerRetiros y leerPaquete", () => {
     });
   });
 
-  it("leerPaquete: solo los dos scripts vigilados, y los errores se explican", () => {
+  it("leerPaquete: solo los tres scripts vigilados, y los errores se explican", () => {
     expect(nd.leerPaquete(null)).toStrictEqual({ ausente: true });
     expect(
-      nd.leerPaquete('{"scripts":{"arquitectura":"a","guardian":"g","gate":"z"}}'),
-    ).toStrictEqual({ valor: { arquitectura: "a", guardian: "g" } });
-    const sinScripts = { valor: { arquitectura: undefined, guardian: undefined } };
+      nd.leerPaquete('{"scripts":{"arquitectura":"a","guardian":"g","deuda":"d","gate":"z"}}'),
+    ).toStrictEqual({ valor: { arquitectura: "a", guardian: "g", deuda: "d" } });
+    const sinScripts = {
+      valor: { arquitectura: undefined, guardian: undefined, deuda: undefined },
+    };
     expect(nd.leerPaquete("null")).toStrictEqual(sinScripts);
     expect(nd.leerPaquete("[]")).toStrictEqual(sinScripts);
     expect(nd.leerPaquete('{"scripts":5}')).toStrictEqual(sinScripts);
