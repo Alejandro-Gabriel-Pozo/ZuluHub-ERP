@@ -1,5 +1,15 @@
 import pg from "pg";
-import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  inject,
+  it,
+  vi,
+} from "vitest";
 import {
   Navegador,
   levantarProveedorLocal,
@@ -21,13 +31,21 @@ import { crearBaseAparte } from "./entorno";
  * El segundo factor de la consola contra la librería REAL y una base real: G2 (un código TOTP usado no se acepta de
  * nuevo), G3 (ver el secreto, regenerar códigos y dar de baja el TOTP exigen segundo factor reciente: 403) y el límite
  * de intentos (5 fallidos en 10 minutos bloquean 15, asentado en la auditoría de plataforma sin datos sensibles).
- * Las pruebas de tiempo mueven las fechas en la base: la librería verifica el código con el reloj real.
+ * Las pruebas de tiempo mueven las fechas en la base. La librería verifica el código con `Date.now()` y su paso es de 30
+ * segundos: con el reloj real, un paso que cambiara en medio de una prueba (enrolar y, un instante después, pedir «el
+ * anterior») la hacía fallar una de cada tantas corridas. Por eso cada prueba corre con la FECHA controlada
+ * (`vi.useFakeTimers({ toFake: ["Date"] })`, los temporizadores siguen siendo reales para la base y la red): arranca en
+ * la mitad de un paso y solo avanza si la prueba la mueve con `vi.setSystemTime`. Los bordes del paso se prueban
+ * a propósito, con la fecha puesta en ellos (ver G2: «sin importar en qué momento del paso» y «cuando el reloj cruza»).
  */
 
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 120_000, hookTimeout: 120_000 });
 
 const MINUTO = 60_000;
+const PASO = 30_000;
+/** El comienzo del paso de TOTP en que cae `instante` (milisegundos). */
+const comienzoDelPaso = (instante: number): number => Math.floor(instante / PASO) * PASO;
 type Alta = Readonly<{ qrSvg: string; secreto: string; codigosDeRecuperacion: string[] }>;
 
 describe.skipIf(base === null)("consola de plataforma: G2, G3 e intentos", () => {
@@ -54,6 +72,16 @@ describe.skipIf(base === null)("consola de plataforma: G2, G3 e intentos", () =>
     vi.unstubAllEnvs();
   });
 
+  // La fecha queda quieta en la mitad de un paso (a lo sumo 15 s de la real, lo que no mueve ninguna ventana de minutos).
+  beforeEach(() => {
+    const ahora = Date.now();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(comienzoDelPaso(ahora) + PASO / 2);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   const pedir = (n: Navegador, metodo: "GET" | "POST", ruta: string, cuerpo?: unknown) =>
     n.pedir(p.autenticacion, HOST, metodo, ruta, cuerpo === undefined ? {} : { cuerpo });
   /** Un pedido desde otra IP con la misma sesión (el límite de pedidos de la librería es por IP y ruta). */
@@ -62,6 +90,9 @@ describe.skipIf(base === null)("consola de plataforma: G2, G3 e intentos", () =>
     const n = new Navegador();
     const r = await n.ingresarConGoogle(p.autenticacion, HOST, proveedor, admin);
     expect(r.ubicacion).toBe("/");
+    // Con la fecha quieta, dos sesiones del mismo administrador tendrían el mismo `createdAt` y `sesionDe` (la más reciente
+    // primero) no sabría cuál es cuál: cada ingreso avanza un milisegundo, muy lejos de mover el paso de 30 s.
+    vi.setSystemTime(Date.now() + 1);
     return n;
   }
   async function enrolado() {
@@ -170,6 +201,45 @@ describe.skipIf(base === null)("consola de plataforma: G2, G3 e intentos", () =>
           ).estado,
         ).toBe(401);
       }
+    });
+
+    // Hasta 29_990: los dos ingresos de la prueba avanzan 2 ms y no llegan a cruzar (el cruce tiene su prueba, abajo).
+    it.each([0, 1, 14_999, 29_990])(
+      "el anterior y el siguiente valen UNA vez cada uno, sin importar en qué momento del paso se enrola (a %i ms de su comienzo)",
+      async (desfase) => {
+        vi.setSystemTime(comienzoDelPaso(Date.now()) + desfase);
+        const { admin, alta } = await enrolado();
+        const n = await sesionNueva(admin);
+        for (const desvio of [-1, 1]) {
+          const codigo = codigoDeLaAplicacion(alta.secreto, new Date(), desvio);
+          for (const esperado of [200, 401]) {
+            const r = await pedir(desdeOtraIp(n), "POST", "/api/auth/two-factor/verify-totp", {
+              code: codigo,
+            });
+            expect(r.estado, `desvío ${desvio}, desfase ${desfase}`).toBe(esperado);
+          }
+        }
+      },
+    );
+
+    it("el paso gastado al enrolar sigue gastado cuando el reloj cruza al paso siguiente; el nuevo y el que le sigue valen una vez", async () => {
+      // El borde que antes dependía del azar: se enrola en el último milisegundo de un paso y se verifica en el siguiente.
+      const siguiente = comienzoDelPaso(Date.now()) + PASO;
+      vi.setSystemTime(siguiente - 2);
+      const { admin, alta } = await enrolado();
+      const n = await sesionNueva(admin);
+      vi.setSystemTime(siguiente);
+      const verificar = async (desvio: number) =>
+        (
+          await pedir(desdeOtraIp(n), "POST", "/api/auth/two-factor/verify-totp", {
+            code: codigoDeLaAplicacion(alta.secreto, new Date(), desvio),
+          })
+        ).estado;
+      expect(await verificar(-1), "el paso del enrolamiento ya se usó").toBe(401);
+      expect(await verificar(0), "el paso nuevo está libre").toBe(200);
+      expect(await verificar(0), "y se usa una sola vez").toBe(401);
+      expect(await verificar(1), "el que le sigue está libre").toBe(200);
+      expect(await verificar(1), "y también una sola vez").toBe(401);
     });
 
     it("la base guarda solo el NÚMERO de paso usado, nunca el código; y otro administrador con el mismo código no choca", async () => {
