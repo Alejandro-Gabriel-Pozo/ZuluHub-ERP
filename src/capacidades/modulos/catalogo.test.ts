@@ -15,7 +15,7 @@ describe("el catálogo comercial de módulos", () => {
         requiere: [],
         usaSiExiste: [],
         datosRequeridos: [],
-        implementadoPor: ["modulos/identidad", "modulos/empresas"],
+        implementadoPor: ["modulos/identidad", "modulos/empresas", "modulos/fiscal"],
         acciones: {
           "usuarios.invitar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "usuarios.reenviar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
@@ -35,6 +35,13 @@ describe("el catálogo comercial de módulos", () => {
           "gerencia.rechazar_traspaso": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "modulos.ver": { capacidad: null, efecto: "LECTURA" },
           "permisos.ver_propios": { capacidad: null, efecto: "LECTURA" },
+          "datos_fiscales.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "datos_fiscales.confirmar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "puntos_de_venta.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "puntos_de_venta.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "puntos_de_venta.activar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "puntos_de_venta.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "emisores.confirmar_regla": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
       facturacion: {
@@ -149,8 +156,9 @@ describe("el catálogo comercial de módulos", () => {
       Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
     expect([cuantas("catalogo"), cuantas("carta"), cuantas("stock")]).toEqual([20, 9, 19]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
-    // 18 de administración, 9 de facturación (2 de H7, 6 de F5 y 1 de F7) y 48 de catálogo, carta y stock.
-    expect(todas).toHaveLength(18 + 9 + 48);
+    // 25 de administración (18 de usuarios, sucursales, gerencia y permisos, y 7 de la configuración fiscal de H7 T5),
+    // 9 de facturación (2 de H7, 6 de F5 y 1 de F7) y 48 de catálogo, carta y stock.
+    expect(todas).toHaveLength(25 + 9 + 48);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -209,6 +217,10 @@ function accionesPorEfecto(
  *  - Catálogo, carta y stock (§C de catalogo-y-stock): desactivar, retirar, anular, aplicar o cancelar
  *    un conteo CIERRAN algo iniciado; registrar un conteo completa uno ya abierto, así que también.
  *    Cambiar un precio, publicar, mover stock, controlar un artículo o asignar un emisor AMPLÍAN.
+ *  - Configuración fiscal del gerente (H7 fiscal §C, T5): guardar un borrador de datos fiscales, crear, editar y
+ *    activar un punto de venta y confirmar la regla del emisor crean o amplían (CREA_AMPLIA); confirmar los
+ *    datos fiscales y desactivar un punto de venta cierran lo ya iniciado (COMPLETA_CIERRA). Son de `administracion`,
+ *    que es obligatoria: nunca quedan en solo lectura.
  *  - CE0 (§7.2): editar variantes, asignar elecciones, crear, editar, asignar y reactivar un grupo de
  *    precio y editar el contenido de un combo AMPLÍAN; desactivar un grupo de precio CIERRA.
  */
@@ -240,10 +252,12 @@ const EFECTOS_DE_EMPRESA = {
     "combos.editar_contenido",
     "comprobantes.emitir_manual",
     "conteos.abrir",
+    "datos_fiscales.editar",
     "depositos.asignar_emisor",
     "depositos.crear",
     "depositos.editar",
     "depositos.reactivar",
+    "emisores.confirmar_regla",
     "gerencia.proponer_traspaso",
     "grupos_de_precio.asignar",
     "grupos_de_precio.crear",
@@ -256,7 +270,10 @@ const EFECTOS_DE_EMPRESA = {
     "productos.crear",
     "productos.editar",
     "productos.reactivar",
+    "puntos_de_venta.activar",
     "puntos_de_venta.cambiar_ambiente",
+    "puntos_de_venta.crear",
+    "puntos_de_venta.editar",
     "recetas.editar",
     "stock.ajustar",
     "stock.registrar_entrada",
@@ -280,6 +297,7 @@ const EFECTOS_DE_EMPRESA = {
     "conteos.aplicar",
     "conteos.cancelar",
     "conteos.registrar",
+    "datos_fiscales.confirmar",
     "depositos.desactivar",
     "gerencia.aceptar_traspaso",
     "gerencia.cancelar_traspaso",
@@ -287,6 +305,7 @@ const EFECTOS_DE_EMPRESA = {
     "grupos_de_precio.desactivar",
     "notas_de_credito.emitir",
     "productos.desactivar",
+    "puntos_de_venta.desactivar",
     "series.resincronizar",
     "stock.anular",
     "sucursales.desactivar",

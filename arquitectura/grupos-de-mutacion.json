@@ -2,12 +2,14 @@
   {
     "grupo": "dinero (cálculo exacto y redondeo)",
     "archivos": "src/primitivas/dinero/monto-exacto.ts,src/primitivas/dinero/interno.ts,src/primitivas/dinero/redondeo.ts",
-    "minutos": 13.7
+    "minutos": 2.4,
+    "pruebas": "src/primitivas/dinero test/propiedades/comprobante.test.ts"
   },
   {
     "grupo": "dinero (importe, prorrateo y moneda)",
     "archivos": "src/primitivas/dinero/**/*.ts,!src/primitivas/dinero/monto-exacto.ts,!src/primitivas/dinero/interno.ts,!src/primitivas/dinero/redondeo.ts",
-    "minutos": 10.7
+    "minutos": 5,
+    "pruebas": "src/primitivas/dinero test/propiedades/dinero.test.ts"
   },
   {
     "grupo": "cantidad",
@@ -18,7 +20,8 @@
   {
     "grupo": "identificación fiscal, resultado y estados",
     "archivos": "src/primitivas/identificacion-fiscal/**/*.ts,src/primitivas/resultado/**/*.ts,src/contexto/estados.ts",
-    "minutos": 9.8
+    "minutos": 4.3,
+    "pruebas": "src/primitivas/identificacion-fiscal src/primitivas/resultado src/contexto"
   },
   {
     "grupo": "tenants y empresas",
@@ -77,7 +80,8 @@
   {
     "grupo": "permisos y módulos",
     "archivos": "src/capacidades/permisos/**/*.ts,src/capacidades/modulos/**/*.ts",
-    "minutos": 23
+    "minutos": 5.6,
+    "pruebas": "src/capacidades/permisos src/capacidades/modulos"
   },
   {
     "grupo": "plataforma (dominio)",
