@@ -31,6 +31,12 @@ export interface CargaDeAutorizacion {
    * permisos). La membresía de otra empresa no cuenta. Tampoco cuenta si la persona entró por la
    * puerta de otra marca: `marcaDeEntrada` tiene que ser la marca del tenant de la empresa (una
    * marca de entrada `null` con persona tampoco autoriza); si no, `rol: null` y todo da `SIN_PERMISO`.
+   *
+   * Con rol, en la misma transacción y sin caché: `modulosActivados` son las filas ACTIVAS de la empresa y
+   * `modulosHabilitados` los módulos de la versión de plan VIGENTE de su tenant (sin asignación vigente,
+   * ninguno: lo activado queda en solo lectura). Lo que la base guarda y el catálogo no conoce (un módulo
+   * activado o de un plan), o una asignación vigente sin versión visible, es una falla (el adaptador tira
+   * un `Error`, no autoriza por omisión). Sin rol, listas vacías.
    */
   delActor(contexto: ContextoOperativo): Promise<DatosDelActor>;
   /**
