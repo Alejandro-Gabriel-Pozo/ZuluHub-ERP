@@ -428,6 +428,32 @@ describe("grupos de mutación contra la configuración real", () => {
     }
   });
 
+  it("todo grupo trae su filtro de pruebas, y el filtro existe y alcanza alguna prueba", () => {
+    // Sin `pruebas` cada mutante corre TODA la suite unitaria: lento y con riesgo de timeout. Es la deuda que
+    // cierra esta regla: un grupo nuevo se mide y se acota (ver `minutos` y `pruebas` de los demás grupos).
+    expect(grupos.length).toBeGreaterThan(0);
+    for (const g of grupos) {
+      const entradas = (g.pruebas ?? "").split(" ").filter((e) => e !== "");
+      expect(
+        entradas.length,
+        `${g.grupo}: falta «pruebas» (el filtro de archivos de prueba)`,
+      ).toBeGreaterThan(0);
+      expect(g.pruebas, `${g.grupo}: «pruebas» con espacios de más`).toBe(entradas.join(" "));
+      // vitest filtra por subcadena de la ruta: una entrada con un error de tipeo no falla, solo deja de correr pruebas
+      for (const entrada of entradas) {
+        expect(existsSync(join(RAIZ, entrada)), `${g.grupo}: «${entrada}» no existe`).toBe(true);
+      }
+      const alcanzadas = entradas.flatMap((entrada) =>
+        entrada.endsWith(".test.ts")
+          ? [entrada]
+          : globSync(`${entrada}/**/*.test.ts`, { cwd: RAIZ }),
+      );
+      expect(alcanzadas.length, `${g.grupo}: el filtro no alcanza ninguna prueba`).toBeGreaterThan(
+        0,
+      );
+    }
+  });
+
   it("cada grupo del guardián corre solo con las pruebas del guardián", () => {
     const delGuardian = grupos.filter((g) => g.archivos.includes("arquitectura/contratos/"));
     expect(delGuardian.length).toBeGreaterThan(0);
