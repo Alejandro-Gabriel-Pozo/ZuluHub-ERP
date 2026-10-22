@@ -12,9 +12,13 @@ on:
 permissions:
   contents: read
 
+# Un pull request cancela su corrida anterior cuando recibe un push nuevo (la vieja ya no sirve). Las corridas
+# de `main` NO se cancelan entre sí: cada push a `main` tiene su grupo (por SHA) y la nocturna, el suyo, así
+# que ni un push cancela al anterior ni la nocturna cancela a un push. La prueba
+# `test/arquitectura/gate-coincide-con-ci.test.ts` fija esta política.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   estatico:
@@ -167,10 +171,13 @@ jobs:
           deny-licenses: AGPL-3.0-only, AGPL-3.0-or-later, GPL-3.0-only, GPL-3.0-or-later
 
   estabilidad:
-    # Repite la integración en paralelo (12 copias) para detectar fallas intermitentes antes de
-    # integrar. Solo en pull requests: en main ya se probó antes de entrar.
+    # Repite la integración en paralelo (12 copias) para detectar fallas intermitentes. En push a main y en la
+    # corrida nocturna corre SIEMPRE; en un pull request, solo si el cambio puede afectar a la integración (lo
+    # decide `mutacion-plan` con el mismo grafo de importaciones de la mutación: salida `estabilidad`). Saltearlo
+    # por esa salida es válido solo en un pull request y lo verifica `arquitectura/evaluar-gate.cjs`.
     name: Estabilidad (integración, copia ${{ matrix.corrida }})
-    if: github.event_name == 'pull_request'
+    needs: mutacion-plan
+    if: github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -212,15 +219,17 @@ jobs:
       - run: npx vitest run test/integracion
 
   mutacion-plan:
-    # Decide qué grupos de mutación corren. En pull requests solo los que alcanza el cambio (grafo
-    # de importaciones, ver arquitectura/planificar-mutacion.cjs); en push a main y en la corrida
-    # nocturna, todos completos. Si este job falla, el Gate falla: nunca se saltea por error.
+    # Decide qué grupos de mutación corren (y, con el mismo grafo, si Estabilidad se repite). En pull
+    # requests solo los que alcanza el cambio (grafo de importaciones, ver arquitectura/planificar-mutacion.cjs);
+    # en push a main y en la corrida nocturna, todos completos. Si este job falla, el Gate falla: nunca se
+    # saltea por error.
     name: Mutación (plan)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
       hay: ${{ steps.plan.outputs.hay }}
       grupos: ${{ steps.plan.outputs.grupos }}
+      estabilidad: ${{ steps.plan.outputs.estabilidad }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -293,11 +302,13 @@ jobs:
         run: node arquitectura/evaluar-gate.cjs
         env:
           NEEDS: ${{ toJSON(needs) }}
+          # Estabilidad saltada por el plan solo vale en un pull request; en push a main y en la nocturna no.
+          EVENTO: ${{ github.event_name }}
 
   web:
-    # P-12: la web compila sin ningún secreto. Las variables viven en Vercel y se leen al primer uso,
-    # nunca al compilar; si alguien lee una al importar, este job falla.
-    name: Web (next build sin variables PEDERNAL_*)
+    # P-12: la web y la consola de plataforma compilan sin ningún secreto. Las variables viven en Vercel y se
+    # leen al primer uso, nunca al compilar; si alguien lee una al importar, este job falla.
+    name: Web y consola (next build sin variables PEDERNAL_*)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -316,6 +327,9 @@ jobs:
             exit 1
           fi
       - run: npm run build:web
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      - run: npm run build:plataforma
         env:
           NEXT_TELEMETRY_DISABLED: "1"
 

@@ -208,6 +208,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "src-sin-apps",
+      archivos: {
+        "src/composicion/a.ts": importa("../../apps/web/servidor/b"),
+        "apps/web/servidor/b.ts": exporta,
+      },
+    },
+    {
       regla: "permisos-plataforma-sin-empresa",
       archivos: {
         "src/capacidades/permisos/plataforma.ts": importa("./empresa"),

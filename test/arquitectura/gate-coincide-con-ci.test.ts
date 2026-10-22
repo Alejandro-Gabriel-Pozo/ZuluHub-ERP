@@ -48,7 +48,9 @@ const CLASIFICACION: Clasificacion = {
   soloEnPullRequest: gate.SOLO_EN_PULL_REQUEST,
   // `mutacion` es la matriz por grupos: puede quedar `skipped` solo si el plan dijo `hay == false`
   // (regla de `mutacionAceptable` en evaluar-gate.cjs; se verifica abajo con `evaluarGate`).
-  tratadosAparte: ["mutacion"],
+  // `estabilidad` (12 copias de la integración) puede quedar `skipped` solo en un pull request y si el plan
+  // dijo `estabilidad == "false"` (regla de `estabilidadAceptable`; `EVENTO` se verifica abajo).
+  tratadosAparte: ["mutacion", "estabilidad"],
   gate: "gate",
 };
 
@@ -70,8 +72,9 @@ const SI_DE_JOB_ESPERADO: Readonly<Record<string, { si: string; motivo: string }
       "revisa lo que un pull request agrega; en push a main queda skipped (SOLO_EN_PULL_REQUEST)",
   },
   estabilidad: {
-    si: "github.event_name == 'pull_request'",
-    motivo: "repite la integración antes de integrar; en main ya se probó (SOLO_EN_PULL_REQUEST)",
+    si: "github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true'",
+    motivo:
+      "corre siempre en push a main y en la nocturna; en un pull request, solo si el plan dice que el cambio puede afectar a la integración (el Gate acepta el salto solo así)",
   },
   mutacion: {
     si: "needs.mutacion-plan.outputs.hay == 'true'",
@@ -258,11 +261,29 @@ function verificarCI(texto: string, clasificacion: Clasificacion = CLASIFICACION
     if (!elGate.texto.includes("run: node arquitectura/evaluar-gate.cjs")) {
       problemas.push(`«${elGate.id}»: ya no ejecuta \`node arquitectura/evaluar-gate.cjs\``);
     }
+    if (!elGate.texto.includes("EVENTO: ${{ github.event_name }}")) {
+      problemas.push(
+        `«${elGate.id}»: ya no le pasa \`EVENTO: \${{ github.event_name }}\` a evaluar-gate (sin él, Estabilidad saltada nunca es válida)`,
+      );
+    }
     if (!elGate.texto.includes("NEEDS: ${{ toJSON(needs) }}")) {
       problemas.push(
         `«${elGate.id}»: ya no le pasa \`NEEDS: \${{ toJSON(needs) }}\` a evaluar-gate`,
       );
     }
+  }
+
+  // (f) La política de concurrencia: los pull requests se cancelan entre sí, main y la nocturna no.
+  const concurrencia = leerConcurrencia(texto);
+  if (concurrencia.grupo !== GRUPO_ESPERADO) {
+    problemas.push(
+      `concurrencia: el \`group\` es ${concurrencia.grupo === undefined ? "(ninguno)" : `«${concurrencia.grupo}»`} y debe ser «${GRUPO_ESPERADO}» (push, nocturna y cada pull request en grupos propios)`,
+    );
+  }
+  if (concurrencia.cancelar !== CANCELAR_ESPERADO) {
+    problemas.push(
+      `concurrencia: \`cancel-in-progress\` es ${concurrencia.cancelar === undefined ? "(ninguno)" : `«${concurrencia.cancelar}»`} y debe ser «${CANCELAR_ESPERADO}» (solo los pull requests cancelan; main no se cancela a sí mismo)`,
+    );
   }
 
   // (c) y (e) Por cada job clasificado que existe: sin fallos tragados, sin saltos, con tope.
@@ -303,6 +324,50 @@ function verificarCI(texto: string, clasificacion: Clasificacion = CLASIFICACION
     }
   }
   return problemas;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Política de concurrencia
+// ---------------------------------------------------------------------------------------------
+
+const GRUPO_ESPERADO =
+  "ci-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}";
+const CANCELAR_ESPERADO = "${{ github.event_name == 'pull_request' }}";
+
+/** El bloque `concurrency:` de primer nivel (`group` y `cancel-in-progress`), sin comentarios. */
+function leerConcurrencia(texto: string): {
+  grupo: string | undefined;
+  cancelar: string | undefined;
+} {
+  const lineas = texto.replaceAll("\r", "").split("\n");
+  const inicio = lineas.findIndex((l) => /^concurrency:\s*$/.test(l));
+  if (inicio < 0) return { grupo: undefined, cancelar: undefined };
+  const bloque: string[] = [];
+  for (const l of lineas.slice(inicio + 1)) {
+    if (/^\S/.test(l)) break;
+    if (!l.trimStart().startsWith("#")) bloque.push(l);
+  }
+  const campo = (nombre: string): string | undefined => {
+    const valor = bloque
+      .map((l) => new RegExp(`^ {2}${nombre}:[ \\t]*(.*)$`).exec(l)?.[1])
+      .find((v) => v !== undefined);
+    return valor === undefined ? undefined : escalar(valor);
+  };
+  return { grupo: campo("group"), cancelar: campo("cancel-in-progress") };
+}
+
+/**
+ * Qué grupo y qué cancelación resultan para un evento. Evalúa a mano las dos expresiones del `ci.yml` (lo que
+ * calcularía GitHub): si alguien las cambia, `leerConcurrencia` ya no coincide con lo esperado y esto no se usa.
+ */
+function decisionDeConcurrencia(e: { evento: string; ref: string; sha: string }): {
+  grupo: string;
+  cancelar: boolean;
+} {
+  return {
+    grupo: `ci-${e.evento}-${e.evento === "pull_request" ? e.ref : e.sha}`,
+    cancelar: e.evento === "pull_request",
+  };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -430,10 +495,25 @@ const CASOS: Caso[] = [
     esperado: ["«dependencias»", "debe ser"],
   },
   {
-    nombre: "dejar «estabilidad» sin su if de pull request",
+    nombre:
+      "dejar «estabilidad» sin su if (correría siempre, aun cuando el plan dice que no hace falta)",
+    alterar: (t) => enJob(t, "estabilidad", (b) => reemplazarUnico(b, /^ {4}if: .*\n/m, "")),
+    esperado: ["«estabilidad»", "debe ser"],
+  },
+  {
+    nombre:
+      "«estabilidad» vuelve a ser solo de pull request (en main y en la nocturna no correría)",
     alterar: (t) =>
       enJob(t, "estabilidad", (b) =>
-        reemplazarUnico(b, "    if: github.event_name == 'pull_request'\n", ""),
+        reemplazarUnico(b, /^ {4}if: .*\n/m, "    if: github.event_name == 'pull_request'\n"),
+      ),
+    esperado: ["«estabilidad»", "debe ser"],
+  },
+  {
+    nombre: "«estabilidad» se saltea en push a main (el if pierde la rama de «no es pull request»)",
+    alterar: (t) =>
+      enJob(t, "estabilidad", (b) =>
+        reemplazarUnico(b, "github.event_name != 'pull_request' || ", ""),
       ),
     esperado: ["«estabilidad»", "debe ser"],
   },
@@ -551,6 +631,33 @@ const CASOS: Caso[] = [
     esperado: ["«gate»", "NEEDS"],
   },
   {
+    nombre: "volver a cancelar siempre (un push a main cancelaría al anterior y a la nocturna)",
+    alterar: (t) =>
+      reemplazarUnico(
+        t,
+        "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
+        "cancel-in-progress: true",
+      ),
+    esperado: ["concurrencia", "cancel-in-progress"],
+  },
+  {
+    nombre: "un grupo único por rama (push y nocturna de main vuelven a compartir cola)",
+    alterar: (t) => reemplazarUnico(t, /^ {2}group: ci-.*\n/m, "  group: ci-${{ github.ref }}\n"),
+    esperado: ["concurrencia", "group"],
+  },
+  {
+    nombre:
+      "quitar el bloque concurrency (los pull requests dejarían de cancelar a la corrida vieja)",
+    alterar: (t) =>
+      reemplazarUnico(t, /^concurrency:\n {2}group: .*\n {2}cancel-in-progress: .*\n/m, ""),
+    esperado: ["concurrencia"],
+  },
+  {
+    nombre: "el Gate deja de recibir el evento",
+    alterar: (t) => reemplazarUnico(t, "          EVENTO: ${{ github.event_name }}\n", ""),
+    esperado: ["«gate»", "EVENTO"],
+  },
+  {
     nombre: "ci.yml sin sección jobs",
     alterar: (t) => t.replace(/^jobs:\s*$/m, "trabajos:"),
     esperado: ["no se pudo leer"],
@@ -572,7 +679,8 @@ describe("ci.yml y el Gate", () => {
     const jobs = leerJobs(CI);
     expect([...jobs.keys()].sort()).toEqual([...TODOS].sort());
     expect([...(jobs.get("gate")?.needs ?? [])].sort()).toEqual([...SIN_GATE].sort());
-    expect(jobs.get("estabilidad")?.si).toBe("github.event_name == 'pull_request'");
+    expect(jobs.get("estabilidad")?.si).toBe(SI_DE_JOB_ESPERADO["estabilidad"]?.si);
+    expect(jobs.get("estabilidad")?.needs).toEqual(["mutacion-plan"]);
     expect(jobs.get("componentes")?.siDePasos).toHaveLength(2);
     expect(jobs.get("mutacion")?.timeout).toBe("90");
     expect(jobs.get("guardian")?.nombre).toBe("Guardián de contratos");
@@ -601,6 +709,44 @@ describe("ci.yml y el Gate", () => {
     const extrae = cuerpo.indexOf("path: base");
     expect(corre).toBeGreaterThan(-1);
     expect(extrae).toBeGreaterThan(corre);
+  });
+
+  it("la concurrencia: los pull requests cancelan a su corrida vieja; main y la nocturna nunca se cancelan entre sí", () => {
+    const { grupo, cancelar } = leerConcurrencia(CI);
+    expect(grupo).toBe(GRUPO_ESPERADO);
+    expect(cancelar).toBe(CANCELAR_ESPERADO);
+    // Lo que importa, evaluando las dos expresiones para cada evento (con el único operador que usan).
+    const pr1 = decisionDeConcurrencia({
+      evento: "pull_request",
+      ref: "refs/pull/7/merge",
+      sha: "a",
+    });
+    const pr2 = decisionDeConcurrencia({
+      evento: "pull_request",
+      ref: "refs/pull/7/merge",
+      sha: "b",
+    });
+    const otroPr = decisionDeConcurrencia({
+      evento: "pull_request",
+      ref: "refs/pull/8/merge",
+      sha: "a",
+    });
+    expect(pr1.grupo).toBe(pr2.grupo); // mismo PR, otro push: misma cola, la vieja se cancela
+    expect(pr1.cancelar).toBe(true);
+    expect(pr1.grupo).not.toBe(otroPr.grupo);
+    const push1 = decisionDeConcurrencia({ evento: "push", ref: "refs/heads/main", sha: "a" });
+    const push2 = decisionDeConcurrencia({ evento: "push", ref: "refs/heads/main", sha: "b" });
+    const noche = decisionDeConcurrencia({ evento: "schedule", ref: "refs/heads/main", sha: "b" });
+    expect(push1.cancelar).toBe(false);
+    expect(push2.cancelar).toBe(false);
+    expect(noche.cancelar).toBe(false);
+    expect(new Set([push1.grupo, push2.grupo, noche.grupo]).size).toBe(3); // ninguno comparte grupo
+    // En ningún grupo de main/nocturna pueden convivir dos corridas de SHA distinto bajo una misma cola con cancelación.
+    expect(push1.grupo).not.toBe(pr1.grupo);
+  });
+
+  it("el Gate recibe el evento (sin él no puede saber si saltar Estabilidad es legítimo)", () => {
+    expect(leerJobs(CI).get("gate")?.texto).toContain("EVENTO: ${{ github.event_name }}");
   });
 
   it("el workflow no usa pull_request_target ni secretos (la base y el PR corren sin credenciales)", () => {
