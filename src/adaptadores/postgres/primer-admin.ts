@@ -42,15 +42,27 @@ export type ErrorDelSembrado =
 const ROL_DEL_PRIMER_ADMIN = "ADMIN";
 const ACCION_DE_LA_CONSTANCIA: AccionDePlataforma = "ADMIN_PLATAFORMA_ALTA";
 const ORIGEN_DE_LA_CONSTANCIA = "script crear-primer-admin";
-const REINTENTOS = 5;
+const REINTENTOS = 12;
 const UNICIDAD_DEL_EMAIL = "admin_plataforma_email_uk";
 const BARRERA_DE_MEMBRESIAS = "admin_plataforma_sin_membresia";
-const ESPERA_MAXIMA_EN_MS = 80;
+const ESPERA_BASE_EN_MS = 40;
+const ESPERA_TOPE_EN_MS = 1000;
 
 type FilaDeAdmin = { id: string; rol: string; activo: boolean };
 type Hechos = { tiene_membresia: boolean; tiene_invitacion_pendiente: boolean };
 
 const esperar = (ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms));
+
+/**
+ * Cuánto esperar antes del reintento número `intento` (0 es el primero): espera exponencial con «jitter completo»
+ * (un valor al azar entre 0 y el techo del intento). Bajo SERIALIZABLE los chequeos de existencia toman bloqueos de
+ * lectura gruesos, así que varias siembras simultáneas (aunque sean de emails distintos) se cancelan entre sí al
+ * confirmar (40001); una espera fija y corta las hace chocar otra vez en bloque y agota los reintentos. El techo
+ * crece con cada intento y se corta en `ESPERA_TOPE_EN_MS`.
+ */
+export function esperaDelReintento(intento: number, azar: () => number = Math.random): number {
+  return azar() * Math.min(ESPERA_TOPE_EN_MS, ESPERA_BASE_EN_MS * 2 ** intento);
+}
 
 /** Un choque de unicidad del email: lo causó una siembra simultánea del mismo email. Se repite y ve al ganador. */
 function esChoqueDelEmail(falla: unknown): boolean {
@@ -160,7 +172,7 @@ export async function crearPrimerAdmin(
       } catch (falla) {
         if (esBarreraDeMembresias(falla)) return err("ADMIN_CON_MEMBRESIA");
         if ((esReintentable(falla) || esChoqueDelEmail(falla)) && intento < REINTENTOS) {
-          await esperar(Math.random() * ESPERA_MAXIMA_EN_MS);
+          await esperar(esperaDelReintento(intento));
           continue;
         }
         throw falla;
