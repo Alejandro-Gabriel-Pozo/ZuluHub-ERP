@@ -20,7 +20,9 @@
  *                    la batería de evasión con un resultado observado simulado: lo que dice
  *                    `evasiones.cjs#evaluarResultado`) o `base-y-pr` (DOS árboles temporales —copias del
  *                    repositorio real, la base sana y el pull request alterado— que compara
- *                    `no-debilitar.cjs`, la vigilancia de la versión anterior);
+ *                    `no-debilitar.cjs`, la vigilancia de la versión anterior) o `deuda` (uno o dos
+ *                    árboles en memoria —el cambio y, si hace falta, la base— que evalúa el control de
+ *                    deuda técnica, `arquitectura/deuda/deuda.cjs`);
  *  - `descripcion`   qué se le hace al sistema;
  *  - `esperado`      qué tiene que pasar: `{ codigo, archivo?, linea? | lineaDe?, contrato?,
  *                    contieneMotivo? }` (la verificación FALLA con ese código y, si se fija, en ese
@@ -45,6 +47,7 @@
  */
 const { CODIGOS_DE_MECANISMO } = require("./verificar-mecanismo.cjs");
 const { CODIGOS_DE_FALLA: CODIGOS_DE_VIGILANCIA } = require("./no-debilitar.cjs");
+const { CODIGOS_DE_FALLA: CODIGOS_DE_DEUDA } = require("../deuda/codigos.cjs");
 
 const ARCHIVO_DE_LA_MATRIZ = "arquitectura/contratos/invariantes.cjs";
 const TIPOS_DE_MUTACION = Object.freeze([
@@ -66,6 +69,7 @@ const OBJETIVOS = Object.freeze([
   "matriz",
   "evasion",
   "base-y-pr",
+  "deuda",
 ]);
 const IDS_DE_INVARIANTES = Object.freeze([
   "I1",
@@ -79,6 +83,7 @@ const IDS_DE_INVARIANTES = Object.freeze([
   "I9",
   "I10",
   "I11",
+  "I12",
 ]);
 const CLAVES_DE_ELEMENTOS = Object.freeze(["aplica", "define", "parametriza", "hacePosible"]);
 const LARGO_MINIMO_DEL_MOTIVO = 20;
@@ -95,6 +100,15 @@ const EVASIONES = "arquitectura/contratos/evasiones.cjs";
 const CATALOGO_DE_EVASION = "arquitectura/contratos/evasiones.json";
 const CI = ".github/workflows/ci.yml";
 const PRUEBAS = "test/arquitectura/guardian-*.test.ts";
+const DEUDA = "arquitectura/deuda/deuda.cjs";
+const LIBRO_DE_DEUDA = "arquitectura/deuda/libro.cjs";
+const ANTES_Y_DESPUES = "arquitectura/deuda/antes-y-despues.cjs";
+const MARCADORES = "arquitectura/deuda/marcadores.cjs";
+const TAMANO_DE_ARCHIVOS = "arquitectura/deuda/tamano.cjs";
+const ENTRADAS_DE_DEUDA = "arquitectura/deuda/entradas.cjs";
+const REGISTRO_DE_DEUDA = "arquitectura/deuda/registro.json";
+const CONFIGURACION_DE_DEUDA = "arquitectura/deuda/configuracion.json";
+const PAQUETE = "package.json";
 
 /** @type {readonly object[]} */
 const INVARIANTES = [
@@ -2428,6 +2442,374 @@ const INVARIANTES = [
       },
     ],
   },
+  {
+    id: "I12",
+    enunciado:
+      "La deuda técnica conocida no crece ni se esconde (§10): todo marcador está en el registro, lo que se toca se paga o lleva una excepción vigente, un archivo sobre el tope de líneas no crece, el registro solo se achica si el problema se resolvió, los topes, las exclusiones y la opción de bloqueo no se aflojan y el control corre en el Gate.",
+    elementos: {
+      aplica: [
+        `${LIBRO_DE_DEUDA}#evaluarArbol (marcadores sin registrar, entradas, excepciones y tope)`,
+        `${ANTES_Y_DESPUES}#compararConLaBase (a-d: archivo tocado, deuda nueva, total que sube, entrada borrada)`,
+        `${MARCADORES}#detectar (qué marcadores hay y en qué línea)`,
+        `${TAMANO_DE_ARCHIVOS}#tamanoExcedido (qué archivo pasa del tope de líneas)`,
+        `${ENTRADAS_DE_DEUDA}#formaDeLaEntrada y #leerConfiguracion (la forma del registro, el tope de líneas y las exclusiones)`,
+        `${DEUDA}#ejecutar y #comprobarUbicaciones (archivo:línea en toda falla)`,
+        `${VIGILANCIA}#chequearDeuda, #chequearElPasoDeLaDeuda y #chequearPaquete (la versión anterior vigila el registro, el tope, el bloqueo, el paso de CI y los scripts)`,
+      ],
+      define: [REGISTRO_DE_DEUDA, `${LIBRO_DE_DEUDA}#TIPOS`, `${MARCADORES}#TIPOS_DE_MARCADOR`],
+      parametriza: [
+        CONFIGURACION_DE_DEUDA,
+        `${EXCEPCIONES}#PLAZO_MAXIMO_DIAS`,
+        `${EXCEPCIONES}#DIAS_DE_AVISO`,
+        "arquitectura/deuda/codigos.cjs#CODIGOS_DE_FALLA",
+      ],
+      hacePosible: [
+        `${PAQUETE} (scripts deuda y arquitectura)`,
+        `${CI} (el paso «Deuda técnica» del job guardian, obligatorio para el Gate)`,
+        `${VIGILANCIA}#chequearCi (el paso no se quita ni se saltea)`,
+        `${PRUEBAS}`,
+        `${MECANISMO}#PRUEBAS_DEL_GUARDIAN`,
+      ],
+    },
+    codigosDeFalla: [
+      "deuda-sin-registrar",
+      "deuda-entrada-invalida",
+      "deuda-archivo-inexistente",
+      "deuda-configuracion-invalida",
+      "deuda-tope-de-excepciones",
+      "deuda-archivo-ilegible",
+      "deuda-en-archivo-tocado",
+      "deuda-nueva-sin-excepcion",
+      "deuda-total-sube",
+      "deuda-archivo-crece",
+      "deuda-entrada-borrada",
+      "excepcion-vencida",
+      "excepcion-plazo-excesivo",
+      "excepcion-obsoleta",
+      "ci-sin-paso-de-deuda",
+      "ci-deuda-con-salto",
+      "script-arquitectura-sin-deuda",
+      "script-deuda-desviado",
+      "deuda-tope-subio",
+      "deuda-bloqueo-aflojado",
+      "deuda-tope-de-lineas-subio",
+      "deuda-exclusion-nueva",
+      "deuda-entrada-borrada-sin-pagar",
+      "pruebas-del-guardian-borradas",
+    ],
+    mutaciones: [
+      {
+        id: "I12-pagar-la-deuda-y-borrar-su-entrada",
+        tipo: "eliminacion",
+        objetivo: "deuda",
+        descripcion:
+          "El cambio resuelve todos los marcadores de `a.ts` y borra su entrada: pagar deuda nunca bloquea.",
+        esperado: { pasa: true },
+      },
+      {
+        id: "I12-borrar-el-paso-de-deuda-del-ci",
+        tipo: "eliminacion",
+        objetivo: "base-y-pr",
+        descripcion: "El pull request quita del job `guardian` el paso «Deuda técnica».",
+        esperado: { codigo: "ci-sin-paso-de-deuda", archivo: CI, lineaDe: "  guardian:" },
+      },
+      {
+        id: "I12-borrar-el-registro-de-deuda",
+        tipo: "eliminacion",
+        objetivo: "deuda",
+        descripcion: "Se borra `registro.json`: sin él no hay a qué comparar los marcadores.",
+        esperado: { codigo: "deuda-entrada-invalida", archivo: REGISTRO_DE_DEUDA, linea: 1 },
+      },
+      {
+        id: "I12-borrar-una-entrada-sin-pagar",
+        tipo: "eliminacion",
+        objetivo: "deuda",
+        descripcion:
+          "El cambio borra del registro la entrada de `a.ts` y los marcadores siguen: se «borró» la deuda sin pagarla.",
+        esperado: { codigo: "deuda-entrada-borrada", archivo: "a.ts", linea: 1 },
+      },
+      {
+        id: "I12-la-base-ve-la-entrada-borrada-sin-pagar",
+        tipo: "eliminacion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "La base tenía una entrada de `x.ts` (un TODO) y el pull request la borra con el TODO todavía en el archivo: lo ve el detector de la base.",
+        esperado: { codigo: "deuda-entrada-borrada-sin-pagar", archivo: "x.ts", linea: 1 },
+      },
+      {
+        id: "I12-la-base-deja-pagar-la-deuda",
+        tipo: "alteracion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "La base tenía la entrada de `x.ts` y el pull request resuelve el TODO y borra la entrada: no falla.",
+        esperado: { pasa: true },
+      },
+      {
+        id: "I12-marcador-sin-registrar",
+        tipo: "alteracion",
+        objetivo: "deuda",
+        descripcion:
+          "Un archivo tiene un `@ts-expect-error` y ninguna entrada del registro lo cubre.",
+        esperado: { codigo: "deuda-sin-registrar", archivo: "a.ts", linea: 1 },
+      },
+      {
+        id: "I12-marcador-nuevo-sin-excepcion",
+        tipo: "alteracion",
+        objetivo: "deuda",
+        descripcion:
+          "El cambio agrega un marcador (con su entrada, sin excepción) en un archivo que no tenía deuda.",
+        esperado: { codigo: "deuda-nueva-sin-excepcion", archivo: "b.ts", linea: 1 },
+      },
+      {
+        id: "I12-el-total-sube-sin-excepcion",
+        tipo: "alteracion",
+        objetivo: "deuda",
+        descripcion: "Un archivo con 2 marcadores pasa a tener 3, sin una excepción vigente.",
+        esperado: { codigo: "deuda-total-sube", archivo: "a.ts", linea: 3 },
+      },
+      {
+        id: "I12-tocar-un-archivo-con-deuda",
+        tipo: "alteracion",
+        objetivo: "deuda",
+        descripcion:
+          "El cambio toca `a.ts` (con `bloqueaDeudaEnArchivoTocado: true`) y le deja su deuda.",
+        esperado: { codigo: "deuda-en-archivo-tocado", archivo: "a.ts", linea: 1 },
+      },
+      {
+        id: "I12-entrada-con-un-campo-faltante",
+        tipo: "alteracion",
+        objetivo: "deuda",
+        descripcion: "Una entrada del registro no trae su descripción.",
+        esperado: {
+          codigo: "deuda-entrada-invalida",
+          archivo: REGISTRO_DE_DEUDA,
+          lineaDe: '"descripcion"',
+        },
+      },
+      {
+        id: "I12-archivo-que-no-existe",
+        tipo: "alteracion",
+        objetivo: "deuda",
+        descripcion: "Una entrada apunta a un archivo que no está versionado.",
+        esperado: {
+          codigo: "deuda-archivo-inexistente",
+          archivo: REGISTRO_DE_DEUDA,
+          lineaDe: { texto: '"archivos"', despuesDe: '"id": "h"' },
+        },
+      },
+      {
+        id: "I12-configuracion-invalida",
+        tipo: "alteracion",
+        objetivo: "deuda",
+        descripcion: "El tope de excepciones de `configuracion.json` no es un entero.",
+        esperado: {
+          codigo: "deuda-configuracion-invalida",
+          archivo: CONFIGURACION_DE_DEUDA,
+          lineaDe: '"topeDeExcepciones"',
+        },
+      },
+      {
+        id: "I12-excepcion-vencida",
+        tipo: "alteracion",
+        objetivo: "deuda",
+        descripcion: "Una excepción de deuda venció respecto del reloj.",
+        esperado: { codigo: "excepcion-vencida", archivo: REGISTRO_DE_DEUDA, lineaDe: '"vence"' },
+      },
+      {
+        id: "I12-excepcion-de-mas-de-60-dias",
+        tipo: "alteracion",
+        objetivo: "deuda",
+        descripcion: "Una excepción de deuda dura 90 días entre su creación y su vencimiento.",
+        esperado: {
+          codigo: "excepcion-plazo-excesivo",
+          archivo: REGISTRO_DE_DEUDA,
+          lineaDe: '"vence"',
+        },
+      },
+      {
+        id: "I12-excepcion-que-no-cubre-nada",
+        tipo: "alteracion",
+        objetivo: "deuda",
+        descripcion: "Una excepción de deuda apunta a un archivo que ya no tiene el problema.",
+        esperado: { codigo: "excepcion-obsoleta", archivo: REGISTRO_DE_DEUDA, lineaDe: '"id"' },
+      },
+      {
+        id: "I12-pasar-el-tope-de-excepciones",
+        tipo: "alteracion",
+        objetivo: "deuda",
+        descripcion: "Hay una excepción más que el tope configurado.",
+        esperado: {
+          codigo: "deuda-tope-de-excepciones",
+          archivo: REGISTRO_DE_DEUDA,
+          lineaDe: { texto: '"id"', despuesDe: '"id": "exc-1"' },
+        },
+      },
+      {
+        id: "I12-archivo-de-datos-que-no-se-puede-leer",
+        tipo: "alteracion",
+        objetivo: "deuda",
+        descripcion:
+          "`knip.json` deja de ser JSON válido: no se pueden contar sus entradas de `ignore*`.",
+        esperado: { codigo: "deuda-archivo-ilegible", archivo: "knip.json", linea: 2 },
+      },
+      {
+        id: "I12-subir-el-tope-de-excepciones",
+        tipo: "alteracion",
+        objetivo: "base-y-pr",
+        descripcion: "El pull request sube `topeDeExcepciones` de 10 a 11.",
+        esperado: {
+          codigo: "deuda-tope-subio",
+          archivo: CONFIGURACION_DE_DEUDA,
+          lineaDe: '"topeDeExcepciones"',
+        },
+      },
+      {
+        id: "I12-bajar-el-bloqueo-a-false",
+        tipo: "alteracion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "La base tenía `bloqueaDeudaEnArchivoTocado: true` y el pull request lo deja en false.",
+        esperado: {
+          codigo: "deuda-bloqueo-aflojado",
+          archivo: CONFIGURACION_DE_DEUDA,
+          lineaDe: '"bloqueaDeudaEnArchivoTocado"',
+        },
+      },
+      {
+        id: "I12-archivo-grande-sin-registrar",
+        tipo: "alteracion",
+        objetivo: "deuda",
+        descripcion:
+          "Un archivo de código de 450 líneas (sobre el tope de 400) no tiene entrada en el registro.",
+        esperado: { codigo: "deuda-sin-registrar", archivo: "src/grande.ts", linea: 401 },
+      },
+      {
+        id: "I12-archivo-grande-crece-sobre-lo-registrado",
+        tipo: "alteracion",
+        objetivo: "deuda",
+        descripcion:
+          "Un archivo registrado con 450 líneas pasa a medir 460: el trinquete solo deja bajar.",
+        esperado: { codigo: "deuda-archivo-crece", archivo: "src/grande.ts", linea: 451 },
+      },
+      {
+        id: "I12-archivo-grande-crece-contra-la-base",
+        tipo: "alteracion",
+        objetivo: "deuda",
+        descripcion:
+          "El pull request agranda de 450 a 460 líneas un archivo grande y actualiza el tamaño del registro: la base lo ve.",
+        esperado: { codigo: "deuda-total-sube", archivo: "src/grande.ts", linea: 451 },
+      },
+      {
+        id: "I12-subir-el-tope-de-lineas",
+        tipo: "alteracion",
+        objetivo: "base-y-pr",
+        descripcion: "El pull request sube `topeDeLineasPorArchivo` de 400 a 401.",
+        esperado: {
+          codigo: "deuda-tope-de-lineas-subio",
+          archivo: CONFIGURACION_DE_DEUDA,
+          lineaDe: '"topeDeLineasPorArchivo"',
+        },
+      },
+      {
+        id: "I12-excluir-un-archivo-del-tope",
+        tipo: "exclusion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request agrega `src/otro.ts` a `excluidosDelTope` para que no cuente como archivo grande.",
+        esperado: {
+          codigo: "deuda-exclusion-nueva",
+          archivo: CONFIGURACION_DE_DEUDA,
+          lineaDe: '"ruta": "src/otro.ts"',
+        },
+      },
+      {
+        id: "I12-duplicar-el-id-de-una-entrada",
+        tipo: "duplicacion",
+        objetivo: "deuda",
+        descripcion: "Dos entradas del registro comparten el mismo id.",
+        esperado: {
+          codigo: "deuda-entrada-invalida",
+          archivo: REGISTRO_DE_DEUDA,
+          lineaDe: { texto: '"id"', despuesDe: '"id": "ts-expect-error--a-ts"' },
+          contieneMotivo: "repetido",
+        },
+      },
+      {
+        id: "I12-duplicar-un-marcador",
+        tipo: "duplicacion",
+        objetivo: "deuda",
+        descripcion: "Se copia un `@ts-expect-error` de `a.ts` a otra línea del mismo archivo.",
+        esperado: { codigo: "deuda-total-sube", archivo: "a.ts", linea: 3 },
+      },
+      {
+        id: "I12-desconectar-el-script-deuda",
+        tipo: "desconexion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El script `deuda` del package.json pasa a `node arquitectura/deuda/deuda.cjs || true`.",
+        esperado: { codigo: "script-deuda-desviado", archivo: PAQUETE, lineaDe: '"deuda"' },
+      },
+      {
+        id: "I12-quitar-la-deuda-del-script-arquitectura",
+        tipo: "desconexion",
+        objetivo: "base-y-pr",
+        descripcion: "Se quita `&& npm run deuda` del script `arquitectura`.",
+        esperado: {
+          codigo: "script-arquitectura-sin-deuda",
+          archivo: PAQUETE,
+          lineaDe: '"arquitectura"',
+        },
+      },
+      {
+        id: "I12-continue-on-error-en-el-paso-de-deuda",
+        tipo: "desconexion",
+        objetivo: "base-y-pr",
+        descripcion: "El paso «Deuda técnica» agrega `continue-on-error: true`.",
+        esperado: {
+          codigo: "ci-deuda-con-salto",
+          archivo: CI,
+          lineaDe: { texto: "continue-on-error: true", despuesDe: "Deuda técnica (no crece" },
+        },
+      },
+      {
+        id: "I12-if-en-el-paso-de-deuda",
+        tipo: "desconexion",
+        objetivo: "base-y-pr",
+        descripcion: "El paso «Deuda técnica» agrega `if: false`.",
+        esperado: {
+          codigo: "ci-deuda-con-salto",
+          archivo: CI,
+          lineaDe: { texto: "if: false", despuesDe: "Deuda técnica (no crece" },
+        },
+      },
+      {
+        id: "I12-borrar-las-pruebas-de-la-deuda",
+        tipo: "desconexion",
+        objetivo: "pruebas-del-guardian",
+        descripcion:
+          "Se borra `guardian-deuda-libro.test.ts`: las pruebas del libro de deuda no corren.",
+        esperado: {
+          codigo: "pruebas-del-guardian-borradas",
+          archivo: "test/arquitectura/guardian-deuda-libro.test.ts",
+          linea: 1,
+        },
+      },
+      {
+        id: "I12-excluir-un-archivo-del-analisis",
+        tipo: "exclusion",
+        noAplica:
+          "El control no tiene exclusiones por configuración: analiza toda ruta versionada de las familias que conoce. Sacar un archivo del análisis es moverlo a una familia que no se analiza (.md, .txt) o ignorarlo en git, y eso es un límite declarado (la deuda no marcada no la ve ninguna máquina) que la batería de evasión registra como riesgo aceptado.",
+      },
+      {
+        id: "I12-marcador-con-otra-capitalizacion",
+        tipo: "elusion",
+        objetivo: "deuda",
+        descripcion:
+          "El marcador se escribe `// ToDo: arreglar`: otra capitalización no lo esconde.",
+        esperado: { codigo: "deuda-sin-registrar", archivo: "b.ts", linea: 1 },
+      },
+    ],
+  },
 ];
 
 /** La primera línea (desde 1) del texto que contiene `buscado`; 1 si no está. */
@@ -2441,10 +2823,15 @@ const esObjeto = (valor) => typeof valor === "object" && valor !== null && !Arra
 
 /**
  * Los códigos que un invariante conoce y puede nombrar: los del guardián, los de los verificadores del
- * mecanismo y los de la vigilancia de la versión anterior (`no-debilitar.cjs`).
+ * mecanismo, los de la vigilancia de la versión anterior (`no-debilitar.cjs`) y los del control de deuda técnica.
  */
 function codigosConocidos(codigosDeFalla) {
-  return new Set([...codigosDeFalla, ...CODIGOS_DE_MECANISMO, ...CODIGOS_DE_VIGILANCIA]);
+  return new Set([
+    ...codigosDeFalla,
+    ...CODIGOS_DE_MECANISMO,
+    ...CODIGOS_DE_VIGILANCIA,
+    ...CODIGOS_DE_DEUDA,
+  ]);
 }
 
 /** Las mutaciones que se ejecutan (no `noAplica`) de un invariante. */
@@ -2489,7 +2876,7 @@ function comprobarMatriz({ invariantes, codigosDeFalla, idsConAplicador, texto =
         "matriz-invariante-ausente",
         "const INVARIANTES",
         `Falta el invariante ${id} en la matriz.`,
-        "Restituí el invariante: la matriz tiene que cubrir I1 a I10.",
+        "Restituí el invariante: la matriz tiene que cubrir I1 a I12.",
       );
     }
   }

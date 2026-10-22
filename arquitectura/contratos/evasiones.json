@@ -1122,7 +1122,7 @@
   {
     "id": "EV-060",
     "via": "exclusiones",
-    "titulo": "Cambiar la lógica del plazo sin tocar la línea `const PLAZO_MAXIMO_DIAS = 60;` (`> PLAZO_MAXIMO_DIAS * 100`) y excluir un archivo por 10 años",
+    "titulo": "Cambiar la lógica del plazo sin tocar la línea `const PLAZO_MAXIMO_DIAS = 60;` (`> PLAZO_MAXIMO_DIAS * 100`) y extender por 10 años la exclusión de la clase docs",
     "construccion": [
       {
         "op": "reemplazar",
@@ -1131,20 +1131,10 @@
         "a": "} else if (diasEntre(entrada.creada, entrada.vence) > PLAZO_MAXIMO_DIAS * 100) {"
       },
       {
-        "op": "json-agregar",
+        "op": "json-poner",
         "ruta": "arquitectura/contratos/exclusiones.json",
-        "camino": [],
-        "valor": {
-          "id": "excl-demo",
-          "alcance": "ruta",
-          "ruta": "scripts/baja-de-admin.ts",
-          "huella": "{{huella-archivo:scripts/baja-de-admin.ts}}",
-          "motivo": "demo",
-          "responsable": "demo",
-          "aprobadoPor": "texto libre",
-          "creada": "{{hoy}}",
-          "vence": "{{hoy+3650}}"
-        }
+        "camino": [1, "vence"],
+        "valor": "{{hoy+3650}}"
       }
     ],
     "controlEsperado": "no-debilitar (d) lee la constante como texto; el comportamiento del plazo lo prueba `guardian-excepciones.test.ts`, que el cambio puede editar.",
@@ -1221,11 +1211,7 @@
     "esperado": {
       "tipo": "exige-excepcion"
     },
-    "estado": "riesgo-aceptado",
-    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
-    "motivo": "Exige editar `arquitectura/contratos/exclusiones.json` (maquinaria, §11.1): una exclusión nueva por ruta, con huella y plazo válidos, saca un archivo del análisis; la vigilancia no mira las exclusiones. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
-    "creada": "2026-10-21",
-    "revisar": "2027-04-19"
+    "estado": "exigido"
   },
   {
     "id": "EV-063",
@@ -1398,11 +1384,7 @@
     "esperado": {
       "tipo": "exige-excepcion"
     },
-    "estado": "riesgo-aceptado",
-    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
-    "motivo": "Exige editar `arquitectura/contratos/excepciones.json` (maquinaria, §11.1): renovar una excepción con fechas nuevas es siempre válido: no hay tope de renovaciones ni historial. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
-    "creada": "2026-10-21",
-    "revisar": "2027-04-19"
+    "estado": "exigido"
   },
   {
     "id": "EV-070",
@@ -1466,11 +1448,7 @@
     "esperado": {
       "tipo": "exige-excepcion"
     },
-    "estado": "riesgo-aceptado",
-    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
-    "motivo": "Exige editar `arquitectura/contratos/excepciones.json` (maquinaria, §11.1): una excepción nueva silencia un uso real y la vigilancia no mira las excepciones. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
-    "creada": "2026-10-21",
-    "revisar": "2027-04-19"
+    "estado": "exigido"
   },
   {
     "id": "EV-072",
@@ -2016,5 +1994,333 @@
     "motivo": "Exige editar `arquitectura/grupos-de-mutacion.json` y `stryker.config.json` (maquinaria, §11.1): con los dos vacíos la prueba que los compara entre sí queda en verde. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
     "creada": "2026-10-21",
     "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-103",
+    "via": "declaraciones-excepciones",
+    "titulo": "CONTROL (deuda): un `eslint-disable` nuevo en un archivo de código, sin registrarlo",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/dominio/nuevo.ts",
+        "contenido": "// eslint-disable-next-line no-console\nconsole.log(1);\n"
+      }
+    ],
+    "controlEsperado": "deuda.cjs: todo marcador de deuda tiene una entrada en el registro (deuda-sin-registrar).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-sin-registrar",
+      "archivo": "src/modulos/empresas/dominio/nuevo.ts",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-104",
+    "via": "declaraciones-excepciones",
+    "titulo": "Vaciar el registro de deuda para que los marcadores de `knip.json` queden sin entrada, sin pagar nada",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/deuda/registro.json",
+        "contenido": "[]\n"
+      }
+    ],
+    "controlEsperado": "no-debilitar (j): una entrada del registro de deuda de la base no desaparece mientras su marcador sigue (lo ve el detector de la base: deuda-entrada-borrada-sin-pagar).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-entrada-borrada-sin-pagar",
+      "archivo": "knip.json"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-105",
+    "via": "formato-no-soportado",
+    "titulo": "Un marcador de deuda con otra capitalización (`// ToDo: arreglar`) para que no lo reconozca el detector",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/dominio/nuevo.ts",
+        "contenido": "// ToDo: arreglar\nexport const x = 1;\n"
+      }
+    ],
+    "controlEsperado": "marcadores.cjs: TODO, FIXME, HACK y XXX con dos puntos o paréntesis se reconocen en cualquier capitalización.",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-sin-registrar",
+      "archivo": "src/modulos/empresas/dominio/nuevo.ts",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-106",
+    "via": "renombrar-mover",
+    "titulo": "Mover un `TODO` registrado a un archivo que el detector no analiza (`.md`) para «pagar» la deuda sin resolverla",
+    "construccionBase": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/dominio/deuda.ts",
+        "contenido": "// TODO: pagar\nexport const x = 1;\n"
+      },
+      {
+        "op": "json-agregar",
+        "ruta": "arquitectura/deuda/registro.json",
+        "camino": [],
+        "valor": {
+          "id": "todo--src-modulos-empresas-dominio-deuda-ts",
+          "archivos": ["src/modulos/empresas/dominio/deuda.ts"],
+          "descripcion": "Un TODO que se paga.",
+          "tipo": "todo",
+          "responsable": "agente (a pedido del dueño)",
+          "creada": "{{hoy}}"
+        }
+      }
+    ],
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/dominio/notas.md",
+        "contenido": "TODO: pagar\n"
+      }
+    ],
+    "controlEsperado": "Algo que distinga una deuda pagada de una deuda movida a un archivo sin análisis (hoy el detector solo mira código, datos y flujos).",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "brecha-abierta",
+    "responsable": "agente (a pedido del dueño)",
+    "severidad": "baja",
+    "justificacion": "El detector analiza código, datos y flujos, no `.md` ni `.txt` (ahí «TODO» es prosa): un marcador movido a un documento deja de verse y la comparación con la base lo toma por pagado. No oculta nada que una herramienta lea, pero sí deuda que alguien quería recordar.",
+    "mitigacion": "Es el límite declarado del §10 («la deuda no marcada y no registrada no la ve ninguna máquina»): lo cubre la revisión del cambio, que ve el marcador borrado y la entrada borrada. El dueño decide si lo acepta como riesgo o si se agrega un chequeo.",
+    "creada": "2026-10-21",
+    "vence": "2026-12-20"
+  },
+  {
+    "id": "EV-107",
+    "via": "declaraciones-excepciones",
+    "titulo": "Subir el tope de excepciones de deuda de 10 a 100 para poder abrir más",
+    "construccion": [
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/deuda/configuracion.json",
+        "camino": ["topeDeExcepciones"],
+        "valor": 100
+      }
+    ],
+    "controlEsperado": "no-debilitar (j): el tope de excepciones de deuda no sube respecto de la base (deuda-tope-subio).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-tope-subio",
+      "archivo": "arquitectura/deuda/configuracion.json",
+      "linea": 2
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-108",
+    "via": "workflow-ci",
+    "titulo": "Reemplazar en el paso de la deuda la forma que compara con la base por un `echo`",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "node arquitectura/deuda/deuda.cjs --base=base",
+        "a": "echo sin-comparar"
+      }
+    ],
+    "controlEsperado": "no-debilitar (j): el job guardian sigue ejecutando deuda.cjs sola y con --base=base en un mismo paso (ci-sin-paso-de-deuda).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "ci-sin-paso-de-deuda",
+      "archivo": ".github/workflows/ci.yml"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-109",
+    "via": "modificar-guardian",
+    "titulo": "Bajar `bloqueaDeudaEnArchivoTocado` de true a false (la base lo tenía activo)",
+    "construccionBase": [
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/deuda/configuracion.json",
+        "camino": ["bloqueaDeudaEnArchivoTocado"],
+        "valor": true
+      }
+    ],
+    "construccion": [
+      {
+        "op": "anexar",
+        "ruta": "README.md",
+        "contenido": "\n"
+      }
+    ],
+    "controlEsperado": "no-debilitar (j): la opción de bloqueo no pasa de true a otra cosa (deuda-bloqueo-aflojado).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-bloqueo-aflojado",
+      "archivo": "arquitectura/deuda/configuracion.json",
+      "linea": 3
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-110",
+    "via": "declaraciones-excepciones",
+    "titulo": "Con el bloqueo activo, tocar `knip.json` (que tiene deuda registrada) sin pagarla",
+    "construccion": [
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/deuda/configuracion.json",
+        "camino": ["bloqueaDeudaEnArchivoTocado"],
+        "valor": true
+      },
+      {
+        "op": "anexar",
+        "ruta": "knip.json",
+        "contenido": "\n"
+      }
+    ],
+    "controlEsperado": "antes-y-despues.cjs (a): un archivo tocado no conserva la deuda que ya tenía (deuda-en-archivo-tocado).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-en-archivo-tocado",
+      "archivo": "knip.json"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-111",
+    "via": "filtros",
+    "titulo": "Una prueba exclusiva (`.only`) nueva en un archivo de pruebas, sin registrarla",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "test/otra.test.ts",
+        "contenido": "it.only('x', () => {});\n"
+      }
+    ],
+    "controlEsperado": "marcadores.cjs: las pruebas saltadas, pendientes o exclusivas son un marcador de deuda (deuda-sin-registrar).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-sin-registrar",
+      "archivo": "test/otra.test.ts",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-112",
+    "via": "declaraciones-excepciones",
+    "titulo": "Subir el tope de líneas por archivo de 400 a 4000 para que los archivos grandes dejen de contar",
+    "construccion": [
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/deuda/configuracion.json",
+        "camino": ["topeDeLineasPorArchivo"],
+        "valor": 4000
+      }
+    ],
+    "controlEsperado": "no-debilitar (j): el tope de líneas por archivo no sube respecto de la base (deuda-tope-de-lineas-subio).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-tope-de-lineas-subio",
+      "archivo": "arquitectura/deuda/configuracion.json",
+      "linea": 4
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-113",
+    "via": "declaraciones-excepciones",
+    "titulo": "Un archivo de código nuevo de 450 líneas, sin registrarlo",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/dominio/otro-grande.ts",
+        "contenido": "export const x = 1;\n",
+        "repetir": 450
+      }
+    ],
+    "controlEsperado": "deuda.cjs: todo archivo que pasa del tope de líneas es deuda y tiene su entrada en el registro (deuda-sin-registrar en la línea 401).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-sin-registrar",
+      "archivo": "src/modulos/empresas/dominio/otro-grande.ts",
+      "linea": 401
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-114",
+    "via": "declaraciones-excepciones",
+    "titulo": "Un archivo de 450 líneas nuevo que se agrega a `excluidosDelTope` para que no cuente",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/dominio/otro-grande.ts",
+        "contenido": "export const x = 1;\n",
+        "repetir": 450
+      },
+      {
+        "op": "json-agregar",
+        "ruta": "arquitectura/deuda/configuracion.json",
+        "camino": ["excluidosDelTope"],
+        "valor": {
+          "ruta": "src/modulos/empresas/dominio/otro-grande.ts",
+          "motivo": "Es un catálogo de datos."
+        }
+      }
+    ],
+    "controlEsperado": "no-debilitar (j): la lista de exclusiones del tope no gana entradas respecto de la base (deuda-exclusion-nueva).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-exclusion-nueva",
+      "archivo": "arquitectura/deuda/configuracion.json"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-115",
+    "via": "declaraciones-excepciones",
+    "titulo": "Agrandar 10 líneas un archivo que ya estaba sobre el tope y registrado",
+    "construccion": [
+      {
+        "op": "anexar",
+        "ruta": "src/modulos/empresas/dominio/grande.ts",
+        "contenido": "export const y = 1;\n",
+        "repetir": 10
+      }
+    ],
+    "controlEsperado": "deuda.cjs: un archivo registrado como grande no mide más líneas que las registradas (el trinquete: deuda-archivo-crece).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-archivo-crece",
+      "archivo": "src/modulos/empresas/dominio/grande.ts",
+      "linea": 451
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-116",
+    "via": "declaraciones-excepciones",
+    "titulo": "Borrar del registro la entrada de un archivo grande que sigue grande",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/deuda/registro.json",
+        "contenido": "[]\n"
+      }
+    ],
+    "controlEsperado": "no-debilitar (j): una entrada del registro de deuda de la base no desaparece mientras el archivo sigue sobre el tope (deuda-entrada-borrada-sin-pagar, en la línea 401).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-entrada-borrada-sin-pagar",
+      "archivo": "src/modulos/empresas/dominio/grande.ts",
+      "linea": 401
+    },
+    "estado": "exigido"
   }
 ]

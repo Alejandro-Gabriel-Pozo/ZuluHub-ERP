@@ -7,6 +7,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   renameSync,
   rmSync,
@@ -55,11 +56,11 @@ type Falla = {
   codigo: string;
   archivo: string;
   linea?: number | undefined;
-  herramienta: "guardian" | "vigilancia";
+  herramienta: "guardian" | "vigilancia" | "deuda";
 };
 type PasoCorrido = {
   nombre: string;
-  rol: "guardian" | "vigilancia" | "otro";
+  rol: "guardian" | "vigilancia" | "deuda" | "otro";
   estado: number | null;
   salida: string;
 };
@@ -332,6 +333,7 @@ const sinExpresiones = (variables: Valor | undefined): Record<string, string> =>
 function rolDe(guion: string): PasoCorrido["rol"] {
   if (guion.includes("no-debilitar.cjs")) return "vigilancia";
   if (guion.includes("guardian.cjs")) return "guardian";
+  if (guion.includes("deuda.cjs")) return "deuda";
   return "otro";
 }
 
@@ -457,6 +459,23 @@ function fallasDelGuardian(pr: string): Falla[] {
   }
 }
 
+/** Las fallas (con su código) del informe que escribió el control de deuda del cambio; vacío si no hay informe. */
+function fallasDeLaDeuda(pr: string): Falla[] {
+  try {
+    const informe = JSON.parse(
+      readFileSync(join(pr, "arquitectura/deuda/informe.json"), "utf8"),
+    ) as { fallas: Omit<Falla, "herramienta">[] };
+    return informe.fallas.map((f) => ({
+      codigo: f.codigo,
+      archivo: f.archivo,
+      linea: f.linea,
+      herramienta: "deuda" as const,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // --- El repositorio sintético --------------------------------------------------------------------------------
 
 const hoyMas = (ahora: Date, dias: number): string =>
@@ -495,10 +514,82 @@ module.exports = [
 `;
 }
 
+const { medir } = require("../../arquitectura/deuda/libro.cjs") as {
+  medir: (
+    arbol: { rutas: string[]; leer: (ruta: string) => Buffer | null },
+    opciones: { topeDeLineas: number; excluidos: ReadonlySet<string> },
+  ) => {
+    lista: { tipo: string; archivo: string; tamano?: number }[];
+  };
+};
+
+/** Todos los archivos de una carpeta (rutas relativas con `/`), sin `.git`. */
+function archivosDe(carpeta: string, relativa = ""): string[] {
+  return readdirSync(join(carpeta, relativa), { withFileTypes: true }).flatMap((entrada) => {
+    const ruta = relativa === "" ? entrada.name : `${relativa}/${entrada.name}`;
+    if (entrada.name === ".git") return [];
+    return entrada.isDirectory() ? archivosDe(carpeta, ruta) : [ruta];
+  });
+}
+
+/**
+ * La deuda de la plantilla: un registro que cubre cada marcador que la plantilla ya tiene (copiada del
+ * repositorio real, tiene los de `knip.json`, las exclusiones y los grupos de mutación sin filtro), para que
+ * «sano» pase el control de deuda, y la configuración como la del repositorio real (tope 10 y el bloqueo en
+ * archivo tocado apagado: solo avisa); los casos que prueban ese bloqueo lo encienden en su construcción.
+ */
+function escribirLaDeudaDeLaPlantilla(destino: string, ahora: Date): void {
+  const medir_ = (excluidos: ReadonlySet<string>) =>
+    medir(
+      {
+        rutas: archivosDe(destino),
+        leer: (ruta) => readFileSync(join(destino, ruta)),
+      },
+      { topeDeLineas: 400, excluidos },
+    );
+  // La herramienta copiada (los `.cjs` reales de `arquitectura/`, que pasan del tope) no es parte de lo que la
+  // plantilla juega a medir: se excluye del tope, como haría el repositorio con un dato declarativo.
+  const herramienta = medir_(new Set())
+    .lista.filter((g) => g.tipo === "archivo-grande" && g.archivo.startsWith("arquitectura/"))
+    .map((g) => g.archivo);
+  const medicion = medir_(new Set(herramienta));
+  const entradas = medicion.lista.map(({ tipo, archivo, tamano }) => ({
+    id: `${tipo}--${archivo.replace(/[^A-Za-z0-9]+/g, "-")}`,
+    archivos: [archivo],
+    descripcion: "Deuda que la plantilla sintética ya tiene.",
+    tipo,
+    ...(tamano === undefined ? {} : { tamano }),
+    responsable: "plantilla de la batería de evasión",
+    creada: hoyMas(ahora, 0),
+  }));
+  ESCRIBIR(
+    join(destino, "arquitectura/deuda/registro.json"),
+    `${JSON.stringify(entradas, null, 2)}\n`,
+  );
+  const configuracion = {
+    topeDeExcepciones: 10,
+    bloqueaDeudaEnArchivoTocado: false,
+    topeDeLineasPorArchivo: 400,
+    excluidosDelTope: herramienta.map((ruta) => ({
+      ruta,
+      motivo: "Herramienta copiada a la plantilla de la batería de evasión.",
+    })),
+  };
+  ESCRIBIR(
+    join(destino, "arquitectura/deuda/configuracion.json"),
+    `${JSON.stringify(configuracion, null, 2)}\n`,
+  );
+}
+
 /** Arma la plantilla `nombre` en `destino` (carpeta nueva), con su `.git` y un commit. */
 function construirPlantilla(nombre: string, destino: string, ahora: Date): void {
   for (const [ruta, contenido] of Object.entries(BASE)) ESCRIBIR(join(destino, ruta), contenido);
   ESCRIBIR(join(destino, "scripts/baja-de-admin.ts"), "export {};\n");
+  // Un archivo ya sobre el tope de líneas (450), para los casos que lo agrandan o le borran la entrada.
+  ESCRIBIR(
+    join(destino, "src/modulos/empresas/dominio/grande.ts"),
+    "export const x = 1;\n".repeat(450),
+  );
   // Lo real que los casos de la maquinaria alteran: se copia del proyecto original, nunca del sandbox.
   cpSync(join(RAIZ_ORIGINAL, "arquitectura"), join(destino, "arquitectura"), {
     recursive: true,
@@ -548,6 +639,7 @@ function construirPlantilla(nombre: string, destino: string, ahora: Date): void 
       JSON.stringify({ usa: ["color-de-prueba"] }),
     );
   }
+  escribirLaDeudaDeLaPlantilla(destino, ahora);
   for (const orden of [
     ["init", "-q", "-b", "main"],
     ["add", "-A"],
@@ -779,6 +871,7 @@ async function correrCaso(caso: Caso, contexto: Contexto): Promise<Observado> {
       const baseCopiada = existsSync(join(pr, "base")) ? join(pr, "base") : base;
       fallas.push(...(await fallasDeLaVigilancia(baseCopiada, pr, entorno)));
     }
+    if (pasos.some((p) => p.rol === "deuda" && p.estado !== 0)) fallas.push(...fallasDeLaDeuda(pr));
     return { resultado: fallo ? "bloquea" : "pasa", fallas, pasos };
   } finally {
     rmSync(trabajo, { recursive: true, force: true });

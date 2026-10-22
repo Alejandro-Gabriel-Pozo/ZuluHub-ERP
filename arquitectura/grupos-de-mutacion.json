@@ -357,32 +357,56 @@
   },
   {
     "grupo": "guardián (verificador del mecanismo, parte 1)",
-    "archivos": "arquitectura/contratos/verificar-mecanismo.cjs:1-314",
+    "archivos": "arquitectura/contratos/verificar-mecanismo.cjs:1-318",
     "minutos": 4.8,
     "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-c-verificador.test.ts"
   },
   {
     "grupo": "guardián (verificador del mecanismo, parte 2)",
-    "archivos": "arquitectura/contratos/verificar-mecanismo.cjs:315-712",
+    "archivos": "arquitectura/contratos/verificar-mecanismo.cjs:319-717",
     "minutos": 6.5,
     "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-c-verificador.test.ts"
   },
   {
     "grupo": "guardián (vigilancia de la versión anterior, parte 1)",
-    "archivos": "arquitectura/contratos/no-debilitar.cjs:1-681",
-    "minutos": 15.2,
-    "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-mutantes-g-vigilancia.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
+    "archivos": "arquitectura/contratos/no-debilitar.cjs:1-585",
+    "minutos": 17.7,
+    "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-deuda.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-mutantes-g-vigilancia.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
   },
   {
     "grupo": "guardián (vigilancia de la versión anterior, parte 2)",
-    "archivos": "arquitectura/contratos/no-debilitar.cjs:682-1458",
-    "minutos": 18.9,
-    "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-mutantes-g-vigilancia.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
+    "archivos": "arquitectura/contratos/no-debilitar.cjs:586-1212",
+    "minutos": 17.4,
+    "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-deuda.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-mutantes-g-vigilancia.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
+  },
+  {
+    "grupo": "guardián (vigilancia de la versión anterior, parte 3)",
+    "archivos": "arquitectura/contratos/no-debilitar.cjs:1213-1763",
+    "minutos": 13.5,
+    "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-deuda.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-mutantes-g-vigilancia.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
   },
   {
     "grupo": "guardián (batería de evasión)",
     "archivos": "arquitectura/contratos/evasiones.cjs",
     "minutos": 16,
     "pruebas": "test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-g-evasiones.test.ts"
+  },
+  {
+    "grupo": "guardián (deuda técnica, detector de marcadores)",
+    "archivos": "arquitectura/deuda/marcadores.cjs,arquitectura/deuda/archivos-de-datos.cjs,arquitectura/deuda/tamano.cjs",
+    "minutos": 11.5,
+    "pruebas": "test/arquitectura/guardian-deuda-marcadores.test.ts"
+  },
+  {
+    "grupo": "guardián (deuda técnica, libro y comparación con la base)",
+    "archivos": "arquitectura/deuda/libro.cjs,arquitectura/deuda/entradas.cjs,arquitectura/deuda/antes-y-despues.cjs",
+    "minutos": 7.2,
+    "pruebas": "test/arquitectura/guardian-deuda-comparacion.test.ts test/arquitectura/guardian-deuda-libro.test.ts"
+  },
+  {
+    "grupo": "guardián (deuda técnica, control y códigos)",
+    "archivos": "arquitectura/deuda/deuda.cjs,arquitectura/deuda/codigos.cjs",
+    "minutos": 5.5,
+    "pruebas": "test/arquitectura/guardian-deuda-control.test.ts"
   }
 ]

@@ -151,12 +151,14 @@ describe("planificador de mutación: qué grupos corren", () => {
   });
 });
 
-describe("planificador de mutación: el código del guardián (arquitectura/contratos)", () => {
+describe("planificador de mutación: el código del guardián (arquitectura/contratos y arquitectura/deuda)", () => {
   // Lo que el grafo de importaciones no ve: datos, procesos lanzados y archivos que el verificador lee.
   const CONTRATOS = [
     "arquitectura/contratos/a.cjs",
     "arquitectura/contratos/b.cjs",
     "arquitectura/contratos/datos.json",
+    "arquitectura/deuda/c.cjs",
+    "arquitectura/deuda/registro.json",
   ];
   const grafo = (): Record<string, string[]> =>
     conEnlacesDelGuardian(
@@ -182,6 +184,12 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
       pruebas: "test/arquitectura/guardian-x.test.ts",
       expandidos: ["arquitectura/contratos/b.cjs"],
     },
+    {
+      grupo: "guardián (deuda)",
+      archivos: "arquitectura/deuda/c.cjs",
+      pruebas: "test/arquitectura/guardian-deuda-x.test.ts",
+      expandidos: ["arquitectura/deuda/c.cjs"],
+    },
   ];
   const planGuardian = (cambios: string[]): Plan =>
     planificar({ cambios, grupos: GRUPOS_CON_GUARDIAN, dependencias: grafo() });
@@ -189,12 +197,14 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
   it.each([
     ["un `.cjs` del guardián", "arquitectura/contratos/a.cjs"],
     ["un dato del guardián", "arquitectura/contratos/datos.json"],
+    ["un `.cjs` del control de deuda", "arquitectura/deuda/c.cjs"],
+    ["un dato del control de deuda", "arquitectura/deuda/registro.json"],
     ["un auxiliar de pruebas del guardián", "test/arquitectura/guardian-apoyo.ts"],
     ["una prueba del guardián", "test/arquitectura/guardian-x.test.ts"],
   ])("un cambio en %s corre TODOS los grupos del guardián y ninguno de src", (_nombre, archivo) => {
     const p = planGuardian([archivo]);
     expect(p.completo).toBe(false);
-    expect(nombres(p)).toEqual(["guardián (a)", "guardián (b)"]);
+    expect(nombres(p)).toEqual(["guardián (a)", "guardián (b)", "guardián (deuda)"]);
     // los archivos son los de cada grupo y con su filtro de pruebas (no se pierde ni se ensancha nada)
     expect(p.grupos).toEqual([
       {
@@ -206,6 +216,11 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
         grupo: "guardián (b)",
         archivos: "arquitectura/contratos/b.cjs",
         pruebas: "test/arquitectura/guardian-x.test.ts",
+      },
+      {
+        grupo: "guardián (deuda)",
+        archivos: "arquitectura/deuda/c.cjs",
+        pruebas: "test/arquitectura/guardian-deuda-x.test.ts",
       },
     ]);
   });
@@ -223,6 +238,7 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
       "arquitectura/lint-web.cjs",
       "arquitectura/lint-sql.cjs",
       "arquitectura/contratos/borrado.cjs",
+      "arquitectura/deuda/borrado.cjs",
       "package.json",
     ]) {
       const p = planGuardian([archivo]);
@@ -257,6 +273,9 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
         "arquitectura/contratos/a.cjs",
         "arquitectura/contratos/sub/datos.json",
         "arquitectura/contratos/informe.json",
+        "arquitectura/deuda/c.cjs",
+        "arquitectura/deuda/registro.json",
+        "arquitectura/deuda/informe.json",
         "arquitectura/evaluar-gate.cjs",
         "arquitectura/lint-sql.cjs",
       ]) {
@@ -265,9 +284,12 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
       }
       // una carpeta con nombre de archivo no es un archivo
       mkdirSync(join(raiz, "arquitectura/contratos/carpeta.json"));
+      mkdirSync(join(raiz, "arquitectura/deuda/carpeta.json"));
       expect(leerArchivosDelGuardian(raiz)).toEqual([
         "arquitectura/contratos/a.cjs",
         "arquitectura/contratos/sub/datos.json",
+        "arquitectura/deuda/c.cjs",
+        "arquitectura/deuda/registro.json",
         "arquitectura/evaluar-gate.cjs",
       ]);
     } finally {
@@ -279,9 +301,10 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
     const configuracion = JSON.parse(readFileSync(join(RAIZ, "stryker.config.json"), "utf8")) as {
       mutate: string[];
     };
-    const mutadosDelGuardian = expandir(configuracion.mutate.join(","), RAIZ).filter((a) =>
-      a.startsWith("arquitectura/contratos/"),
+    const mutadosDelGuardian = expandir(configuracion.mutate.join(","), RAIZ).filter(
+      (a) => a.startsWith("arquitectura/contratos/") || a.startsWith("arquitectura/deuda/"),
     );
+    expect(mutadosDelGuardian.some((a) => a.startsWith("arquitectura/deuda/"))).toBe(true);
     expect(mutadosDelGuardian.length).toBeGreaterThan(0);
 
     const archivosDelGuardian = leerArchivosDelGuardian(RAIZ);
@@ -290,6 +313,8 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
     // los datos de la carpeta y lo que el verificador carga del árbol también cuentan (el grafo no los ve)
     for (const dato of [
       "arquitectura/contratos/exclusiones.json",
+      "arquitectura/deuda/registro.json",
+      "arquitectura/deuda/configuracion.json",
       "arquitectura/evaluar-gate.cjs",
       "arquitectura/reglas.cjs",
     ]) {

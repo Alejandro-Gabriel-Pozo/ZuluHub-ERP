@@ -263,5 +263,6 @@ module.exports = {
   enTexto,
   enContrato,
   crearUbicador,
+  analizarJson,
   REGLAS_DE_LINEA,
 };
