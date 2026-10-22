@@ -57,9 +57,10 @@ export type CatalogoComercial = Readonly<Record<string, DefinicionDeModulo>>;
  * especificación de H4, §B.4). Una acción por caso de uso (cruce X1); quién puede cada una se
  * define en `permisos/empresa.ts`.
  *
- * Es el NÚCLEO (empresas, sucursales, identidad): no depende de un plan, así que nunca queda en solo
- * lectura (el guard ignora ese estado en los módulos obligatorios). Aun así cada acción declara su
- * `efecto`, para que el día que un módulo con plan copie el patrón no haya acciones sin clasificar.
+ * Es el NÚCLEO (empresas, sucursales, identidad y la configuración fiscal del gerente): no depende de un
+ * plan, así que nunca queda en solo lectura (el guard ignora ese estado en los módulos obligatorios). Aun
+ * así cada acción declara su `efecto`, para que el día que un módulo con plan copie el patrón no haya
+ * acciones sin clasificar.
  * Criterio: lo que quita, cierra o responde algo ya iniciado (apagar, revocar o reenviar una
  * invitación, desactivar una sucursal, cancelar, aceptar o rechazar un traspaso) es `COMPLETA_CIERRA`;
  * lo que da de alta, cambia la configuración, reactiva o amplía un alcance (invitar, asignar
@@ -72,7 +73,7 @@ export const CATALOGO_DE_MODULOS = {
     requiere: [],
     usaSiExiste: [],
     datosRequeridos: [],
-    implementadoPor: ["modulos/identidad", "modulos/empresas"],
+    implementadoPor: ["modulos/identidad", "modulos/empresas", "modulos/fiscal"],
     acciones: {
       "usuarios.invitar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "usuarios.reenviar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
@@ -92,6 +93,17 @@ export const CATALOGO_DE_MODULOS = {
       "gerencia.rechazar_traspaso": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "modulos.ver": { capacidad: null, efecto: "LECTURA" },
       "permisos.ver_propios": { capacidad: null, efecto: "LECTURA" },
+      // H7 fiscal §C (T5): la configuración fiscal del gerente. Vive acá y no en `facturacion` porque son los
+      // `datosRequeridos` de la facturación: si dependieran de ella (en desarrollo), el gerente nunca podría
+      // dejarlos listos. Guardar un borrador, crear, editar y activar un punto de venta o confirmar la regla del
+      // emisor crean o amplían; confirmar los datos fiscales y desactivar un punto de venta cierran.
+      "datos_fiscales.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "datos_fiscales.confirmar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "puntos_de_venta.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "puntos_de_venta.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "puntos_de_venta.activar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "puntos_de_venta.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "emisores.confirmar_regla": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
   /**
