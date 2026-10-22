@@ -42,6 +42,15 @@ export const PERMISOS_DE_EMPRESA = {
   "gerencia.rechazar_traspaso": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "modulos.ver": ["GERENTE", "ADMINISTRADOR"],
   "permisos.ver_propios": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  // H7 fiscal §C (T5), DECIDIDO (C11): la configuración fiscal es solo del gerente, igual que certificados. El
+  // administrador y el operador ni confirman datos fiscales ni activan puntos de venta.
+  "datos_fiscales.editar": ["GERENTE"],
+  "datos_fiscales.confirmar": ["GERENTE"],
+  "puntos_de_venta.crear": ["GERENTE"],
+  "puntos_de_venta.editar": ["GERENTE"],
+  "puntos_de_venta.activar": ["GERENTE"],
+  "puntos_de_venta.desactivar": ["GERENTE"],
+  "emisores.confirmar_regla": ["GERENTE"],
   // H7 (especificación §C): quien cobra puede emitir el comprobante en el mismo acto, los tres roles.
   "comprobantes.emitir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   // H7 facturación §B.4.9 (F6): las consultas del facturador; mirar lo emitido lo pueden los tres roles.

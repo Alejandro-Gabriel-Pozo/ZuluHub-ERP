@@ -108,6 +108,20 @@ const SOLO_DEL_GERENTE_DE_CATALOGO_Y_STOCK = [
   "stock.verificar_saldos",
 ] as const;
 
+/**
+ * Configuración fiscal (H7 fiscal §C, T5; C11): confirmar datos fiscales, activar un punto de venta y confirmar
+ * la regla del emisor son solo del gerente: el administrador y el operador quedan afuera.
+ */
+const SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL = [
+  "datos_fiscales.confirmar",
+  "datos_fiscales.editar",
+  "emisores.confirmar_regla",
+  "puntos_de_venta.activar",
+  "puntos_de_venta.crear",
+  "puntos_de_venta.desactivar",
+  "puntos_de_venta.editar",
+] as const;
+
 const SOLO_DEL_GERENTE = [
   "gerencia.cancelar_traspaso",
   "gerencia.proponer_traspaso",
@@ -115,6 +129,7 @@ const SOLO_DEL_GERENTE = [
   "sucursales.reactivar",
   ...SOLO_DEL_GERENTE_DE_CATALOGO_Y_STOCK,
   ...SOLO_DEL_GERENTE_DE_FACTURACION,
+  ...SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL,
 ] as const;
 
 const DEL_ADMINISTRADOR = [
@@ -151,9 +166,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 75 acciones: 27 de empresa y facturación, 48 de catálogo, carta y stock (40 de T0 y 8 de CE0)", () => {
+  it("hay 82 acciones: 34 de empresa, configuración fiscal y facturación, 48 de catálogo, carta y stock (40 de T0 y 8 de CE0)", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(75);
+    expect(todas).toHaveLength(82);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -166,7 +181,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("series"),
       porPrefijo("puntos_de_venta"),
       porPrefijo("certificados"),
-    ]).toEqual([6, 5, 5, 1, 1, 5, 1, 1, 1, 1]);
+      porPrefijo("datos_fiscales"),
+      porPrefijo("emisores"),
+    ]).toEqual([6, 5, 5, 1, 1, 5, 1, 1, 5, 1, 2, 1]);
     expect([
       porPrefijo("productos"),
       porPrefijo("categorias"),
@@ -190,6 +207,13 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     expect(deUsuarios).toEqual([...ACCIONES_DE_USUARIOS]);
     for (const accion of ACCIONES_DE_USUARIOS) {
       expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE", "ADMINISTRADOR"]);
+    }
+  });
+
+  it("las siete acciones de la configuración fiscal son solo del gerente: administrador y operador no pueden ninguna", () => {
+    expect(SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL).toHaveLength(7);
+    for (const accion of SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL) {
+      expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE"]);
     }
   });
 
