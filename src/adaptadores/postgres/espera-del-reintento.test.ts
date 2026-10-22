@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { esperaDelReintento } from "./primer-admin";
+import { esperaDelReintento } from "./espera-del-reintento";
 
-describe("espera entre reintentos del primer administrador", () => {
+describe("espera entre reintentos de las transacciones serializables", () => {
   it("el techo se duplica en cada intento y el azar lo reparte entre 0 y el techo", () => {
     expect(esperaDelReintento(0, () => 1)).toBe(40);
     expect(esperaDelReintento(1, () => 1)).toBe(80);
