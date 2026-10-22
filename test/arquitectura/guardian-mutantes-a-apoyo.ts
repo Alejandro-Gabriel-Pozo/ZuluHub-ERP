@@ -117,6 +117,7 @@ export type SalidaDeComparar = {
   reglas: { contrato: string; detector: string; tipo: string; clases: string[] }[];
   escaneadasPorClase: Record<string, number>;
   omitidasPorClase: Record<string, number>;
+  noAnalizablesPorClase: Record<string, number>;
   usosFueraDeUnidades: Hallazgo[];
 };
 export const { comparar } = require("../../arquitectura/contratos/comparacion.cjs") as {

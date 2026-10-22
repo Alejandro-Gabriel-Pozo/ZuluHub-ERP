@@ -53,6 +53,7 @@ export const nd = require("../../arquitectura/contratos/no-debilitar.cjs") as {
   chequearGate: (b: Instantanea, p: Instantanea) => Hallazgo[];
   chequearPaquete: (b: Instantanea, p: Instantanea) => Hallazgo[];
   chequearInvariantes: (b: Instantanea, p: Instantanea) => Hallazgo[];
+  chequearEvasiones: (b: Instantanea, p: Instantanea) => Hallazgo[];
   chequearLectura: (b: Instantanea, p: Instantanea) => Hallazgo[];
   ejecutaElGuardian: (linea: string) => boolean;
   extraerInvariantes: (modulo: unknown) => {
@@ -62,6 +63,7 @@ export const nd = require("../../arquitectura/contratos/no-debilitar.cjs") as {
   formatear: (h: Partial<Hallazgo>) => string;
   leerCi: (texto: string) => ResultadoDeCi;
   leerConstante: (texto: string | null, nombre: string) => Seccion;
+  leerEvasiones: (catalogo: string | null, externos: string | null) => Seccion;
   leerPaquete: (texto: string | null) => Seccion;
   leerRetiros: (texto: string | null) => Seccion;
   limites: readonly string[];
@@ -86,6 +88,8 @@ export const A = nd.ARCHIVOS as Record<string, string> & {
   excepciones: string;
   retiros: string;
   invariantes: string;
+  evasiones: string;
+  evasionesExternas: string;
   evaluarGate: string;
   ci: string;
   paquete: string;
@@ -142,6 +146,7 @@ export function instantanea(cambios: Instantanea = {}): Instantanea {
       },
     },
     invariantes: { valor: { ids: [], mutaciones: [] } },
+    evasiones: { valor: [] },
     ...cambios,
   };
 }
@@ -205,6 +210,7 @@ export const ARBOL_SANO: Record<string, string> = {
     },
   })}\n`,
   "arquitectura/contratos/invariantes.cjs": 'module.exports = [{ id: "I1", mutaciones: [] }];\n',
+  "arquitectura/contratos/evasiones.json": "[]\n",
 };
 
 /** Un árbol temporal con `ARBOL_SANO` pisado por `archivos` (`null` borra el archivo). */

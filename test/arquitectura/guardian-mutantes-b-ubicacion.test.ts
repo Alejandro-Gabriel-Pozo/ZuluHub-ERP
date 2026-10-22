@@ -90,6 +90,15 @@ describe("la regla de línea de cada código de falla", () => {
       "excepcion-huella-cambiada": '(a) excepciones.json / exclusiones.json: línea de "huella"',
       "excepcion-obsoleta": '(a) excepciones.json / exclusiones.json: línea del "id" de la entrada',
       "excepcion-contrato-inexistente": '(a) excepciones.json: línea de "contrato"',
+      "evasion-invalida":
+        "(a) evasiones.json: línea de la clave ofensora o de la entrada si falta; JSON inválido: línea del error",
+      "brecha-plazo-excesivo": '(a) evasiones.json: línea de "vence"',
+      "brecha-vencida": '(a) evasiones.json: línea de "vence"',
+      "riesgo-plazo-excesivo": '(a) evasiones.json: línea de "revisar"',
+      "riesgo-vencido": '(a) evasiones.json: línea de "revisar"',
+      "evasion-no-bloqueada": '(a) evasiones.json: línea de "estado" del caso',
+      "brecha-cerrada": '(a) evasiones.json: línea de "estado" del caso',
+      "riesgo-cerrado": '(a) evasiones.json: línea de "estado" del caso',
       "falla-sin-ubicacion": "guardian.cjs (o el archivo ofensor si lo trae), línea 1",
       "codigo-fuera-de-la-lista": "guardian.cjs (o el archivo ofensor si lo trae), línea 1",
     });

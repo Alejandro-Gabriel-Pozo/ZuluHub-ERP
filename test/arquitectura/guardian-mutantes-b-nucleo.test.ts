@@ -733,7 +733,7 @@ describe("el informe cuando todo se analizó", () => {
   it("lista los detectores ejecutados y cuántos archivos leyeron (y omitieron por binarios) por clase", () => {
     const { informe } = correr({
       contratos: [contrato()],
-      archivos: { "apps/web/ui/icono.png": "binario" },
+      archivos: { "apps/web/ui/icono.png": "\u0000binario" },
     });
     expect(informe.reglasEjecutadas.detectores).toEqual([
       {

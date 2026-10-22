@@ -35,7 +35,12 @@
  *  (g) `package.json`: el script `arquitectura` ya no encadena `npm run guardian` o el script
  *      `guardian` ya no apunta al guardián;
  *  (h) si la base trae `invariantes.cjs`: sus invariantes y mutaciones siguen en el PR (si la base no lo
- *      trae, se avisa y se saltea).
+ *      trae, se avisa y se saltea);
+ *  (i) si la base trae el catálogo de la batería de evasión (`evasiones.json` y `evasiones-github.json`,
+ *      contratos-arquitectonicos.md §11): no se borra un caso sin una entrada en `retiros.json` (con el id del
+ *      caso), no cambia lo que un caso espera, no se degrada su estado (`exigido` → `brecha-abierta` →
+ *      `riesgo-aceptado`) ni se mueve más tarde su fecha límite, y no se pierde una vía entera. Un riesgo
+ *      aceptado o una brecha NUEVOS no debilitan nada, pero se listan como aviso: quedan a la vista.
  * Además, un PR cuyo código no se puede leer (o ya no tiene un archivo vigilado) falla: nunca «pasa»
  * porque no se pudo mirar.
  *
@@ -60,6 +65,8 @@ const ARCHIVOS = Object.freeze({
   excepciones: "arquitectura/contratos/excepciones.cjs",
   retiros: "arquitectura/contratos/retiros.json",
   invariantes: "arquitectura/contratos/invariantes.cjs",
+  evasiones: "arquitectura/contratos/evasiones.json",
+  evasionesExternas: "arquitectura/contratos/evasiones-github.json",
   evaluarGate: "arquitectura/evaluar-gate.cjs",
   ci: ".github/workflows/ci.yml",
   paquete: "package.json",
@@ -100,12 +107,24 @@ const DESCRIPCION_DE_CODIGOS = Object.freeze({
   "script-guardian-desviado": "(g) el script guardian ya no ejecuta el guardián",
   "invariante-borrada": "(h) un invariante de la base ya no está en la matriz",
   "mutacion-borrada": "(h) una mutación de la base ya no está en la matriz",
+  "evasion-borrada":
+    "(i) un caso de la batería de evasión de la base ya no está y no hay un retiro registrado",
+  "evasion-esperado-cambiado":
+    "(i) un caso de la batería de evasión cambió lo que se considera un resultado aceptable",
+  "evasion-degradada":
+    "(i) un caso de la batería de evasión pasó a un estado más laxo o su fecha límite se movió más tarde",
+  "evasion-via-perdida":
+    "(i) la batería de evasión ya no tiene ningún caso de una vía que la base cubría",
   "arbol-ilegible": "el árbol del PR no se pudo leer o ya no tiene un archivo vigilado",
   "base-ilegible": "la base no se pudo leer: no hay con qué comparar",
 });
 
 /** Avisos (no bloquean). */
-const CODIGOS_DE_AVISO = Object.freeze(["invariantes-sin-base"]);
+const CODIGOS_DE_AVISO = Object.freeze([
+  "invariantes-sin-base",
+  "evasiones-sin-base",
+  "evasion-riesgo-nuevo",
+]);
 
 const orden = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const esObjeto = (valor) => typeof valor === "object" && valor !== null && !Array.isArray(valor);
@@ -321,6 +340,67 @@ function leerRetiros(texto) {
   }
 }
 
+/**
+ * Qué estado es más estricto que otro en la batería de evasión: `exigido` (el cambio se bloquea) por encima de
+ * `brecha-abierta` (pasa, con plazo corto) y de `riesgo-aceptado` (pasa, con plazo largo). Lo que no es
+ * ninguno de los tres (un caso externo, un valor roto) vale 0: pasar de un estado conocido a uno así es
+ * degradar.
+ */
+const RIGOR_DE_ESTADO = new Map([
+  ["exigido", 3],
+  ["brecha-abierta", 2],
+  ["riesgo-aceptado", 1],
+]);
+/** La clave del JSON con la fecha límite de cada estado que la tiene. */
+const CAMPO_DE_LIMITE = new Map([
+  ["brecha-abierta", "vence"],
+  ["riesgo-aceptado", "revisar"],
+]);
+
+/** Lo que la vigilancia compara de un caso del catálogo de evasión (`indice` y `archivo` ubican el caso en el PR). */
+function resumirCaso(caso, indice, archivo) {
+  const c = esObjeto(caso) ? caso : {};
+  const campoDeLimite = CAMPO_DE_LIMITE.get(c.estado);
+  const limite = campoDeLimite === undefined ? undefined : c[campoDeLimite];
+  return {
+    id: esTexto(c.id) ? c.id : null,
+    via: typeof c.via === "string" ? c.via : null,
+    // Con las claves ordenadas: reordenar el JSON no es cambiar lo que el caso espera.
+    esperado: JSON.stringify(
+      c.esperado ?? null,
+      esObjeto(c.esperado) ? Object.keys(c.esperado).sort() : null,
+    ),
+    estado: typeof c.estado === "string" ? c.estado : null,
+    limite: typeof limite === "string" ? limite : null,
+    indice,
+    archivo,
+  };
+}
+
+/**
+ * Los casos de la batería de evasión: `evasiones.json` y `evasiones-github.json`, uno detrás del otro. Sin
+ * el catálogo es `{ ausente: true }`; sin el de los casos externos sigue valiendo el catálogo; si alguno no
+ * es una lista JSON, `{ error }` con el archivo.
+ */
+function leerEvasiones(textoDelCatalogo, textoDeLosExternos) {
+  if (textoDelCatalogo === null) return { ausente: true };
+  const casos = [];
+  for (const [archivo, texto] of [
+    [ARCHIVOS.evasiones, textoDelCatalogo],
+    [ARCHIVOS.evasionesExternas, textoDeLosExternos],
+  ]) {
+    if (texto === null) continue;
+    try {
+      const dato = JSON.parse(texto);
+      if (!Array.isArray(dato)) return { error: `${archivo} no es una lista` };
+      casos.push(...dato.map((caso, indice) => resumirCaso(caso, indice, archivo)));
+    } catch (error) {
+      return { error: `${archivo} no es JSON válido (${error.message})` };
+    }
+  }
+  return { valor: casos };
+}
+
 /** Lee `const NOMBRE = <entero>;` de un módulo como texto (no se ejecuta): valor y línea. */
 function leerConstante(texto, nombre) {
   if (texto === null) return { ausente: true };
@@ -527,6 +607,7 @@ function capturar(raiz) {
   return {
     ...extraerEnProceso(raiz, ci.valor === undefined ? [] : [...ci.valor.keys()]),
     retiros: leerRetiros(leerTexto(ARCHIVOS.retiros)),
+    evasiones: leerEvasiones(leerTexto(ARCHIVOS.evasiones), leerTexto(ARCHIVOS.evasionesExternas)),
     plazo: leerConstante(textoDeExcepciones, "PLAZO_MAXIMO_DIAS"),
     aviso: leerConstante(textoDeExcepciones, "DIAS_DE_AVISO"),
     ci,
@@ -554,6 +635,8 @@ const SECCIONES = Object.freeze([
   { nombre: "paquete", archivo: ARCHIVOS.paquete, enBase: false },
   // La matriz de invariantes puede no existir (todavía): "ausente" no es ilegible, lo decide el chequeo (h).
   { nombre: "invariantes", archivo: ARCHIVOS.invariantes, enBase: true, puedeFaltar: true },
+  // La batería de evasión puede no existir en la base (todavía): lo decide el chequeo (i).
+  { nombre: "evasiones", archivo: ARCHIVOS.evasiones, enBase: true, puedeFaltar: true },
 ]);
 
 const motivoDeSeccion = (seccion) =>
@@ -1071,17 +1154,139 @@ function chequearInvariantes(base, pr) {
   return hallazgos;
 }
 
+/** El texto que explica qué cambió en la fecha límite o en el estado de un caso degradado. */
+const comoEstado = (resumen) =>
+  resumen.limite === null
+    ? `«${resumen.estado}»`
+    : `«${resumen.estado}» hasta el ${resumen.limite}`;
+
+/** (i) Los casos de la batería de evasión de la base siguen en el PR, esperan lo mismo y no se aflojaron. */
+function chequearEvasiones(base, pr) {
+  if (!tiene(base.evasiones) || pr.evasiones === undefined) return [];
+  // Un catálogo ilegible ya lo dice `chequearLectura`; uno ausente es lo mismo que sin ningún caso.
+  if (!tiene(pr.evasiones) && pr.evasiones.ausente !== true) return [];
+  const actuales = new Map();
+  const viasDelPr = new Set();
+  if (tiene(pr.evasiones)) {
+    for (const caso of pr.evasiones.valor) {
+      actuales.set(caso.id, caso);
+      viasDelPr.add(caso.via);
+    }
+  }
+  const retirados = new Set();
+  if (tiene(pr.retiros)) {
+    for (const retiro of pr.retiros.valor) {
+      if (esObjeto(retiro)) retirados.add(retiro.id);
+    }
+  }
+  const hallazgos = [];
+  for (const antes of base.evasiones.valor) {
+    if (antes.id === null) continue;
+    const ahora = actuales.get(antes.id);
+    if (ahora === undefined) {
+      if (!retirados.has(antes.id)) {
+        hallazgos.push(
+          hallazgo(
+            "evasion-borrada",
+            antes.archivo,
+            `El caso «${antes.id}» de la batería de evasión estaba en la base y ya no está, y no hay un retiro registrado: sería quitar una prueba de evasión en silencio.`,
+            "Devolvé el caso al catálogo; si el retiro es una decisión, agregá a retiros.json { id (el del caso), motivo, responsable, aprobadoPor, creada }.",
+            { contrato: antes.id, donde: enArchivo() },
+          ),
+        );
+      }
+      continue;
+    }
+    if (ahora.esperado !== antes.esperado) {
+      hallazgos.push(
+        hallazgo(
+          "evasion-esperado-cambiado",
+          ahora.archivo,
+          `El caso «${antes.id}» cambió lo que espera: antes ${antes.esperado}, ahora ${ahora.esperado}. Cambiar el resultado aceptable es debilitar el caso.`,
+          "Devolvé «esperado» a lo que era; si el control mejoró, el caso se endurece en un cambio aparte y a la vista.",
+          { contrato: antes.id, donde: enJson(ahora.indice, "esperado") },
+        ),
+      );
+    }
+    const rigorAntes = RIGOR_DE_ESTADO.get(antes.estado) ?? 0;
+    const rigorAhora = RIGOR_DE_ESTADO.get(ahora.estado) ?? 0;
+    const masTarde = ahora.estado === antes.estado && ahora.limite > antes.limite;
+    if (rigorAhora < rigorAntes || masTarde) {
+      hallazgos.push(
+        hallazgo(
+          "evasion-degradada",
+          ahora.archivo,
+          rigorAhora < rigorAntes
+            ? `El caso «${antes.id}» pasó de ${comoEstado(antes)} a ${comoEstado(ahora)}: un caso exigido no se afloja a brecha ni a riesgo aceptado en silencio.`
+            : `El caso «${antes.id}» sigue ${comoEstado(antes)} pero su fecha límite se movió al ${ahora.limite}: extender una brecha o un riesgo es debilitarlo.`,
+          "Devolvé el estado y la fecha que tenía; un hueco que no se puede cerrar se registra como un caso nuevo con su propio plazo.",
+          {
+            contrato: antes.id,
+            donde: enJson(ahora.indice, masTarde ? CAMPO_DE_LIMITE.get(ahora.estado) : "estado"),
+          },
+        ),
+      );
+    }
+  }
+  for (const via of new Set(base.evasiones.valor.map((c) => c.via))) {
+    if (via !== null && !viasDelPr.has(via)) {
+      hallazgos.push(
+        hallazgo(
+          "evasion-via-perdida",
+          ARCHIVOS.evasiones,
+          `La batería de evasión ya no tiene ningún caso de la vía «${via}», que la base cubría: esa ruta de evasión dejó de probarse.`,
+          "Devolvé al menos un caso de la vía (la batería solo crece).",
+          { donde: enArchivo() },
+        ),
+      );
+    }
+  }
+  return hallazgos;
+}
+
 /** Avisos: lo que se saltea y se dice. Sin `donde`: es del archivo entero y `verificar` lo ubica en la línea 1. */
 function avisarSaltos(base) {
-  if (base.invariantes?.ausente !== true) return [];
-  return [
-    hallazgo(
-      "invariantes-sin-base",
-      ARCHIVOS.invariantes,
-      "La base no trae la matriz de invariantes (invariantes.cjs): se saltea el chequeo (h). Es esperable solo hasta que la matriz entre a la rama principal.",
-      "Nada por ahora; cuando la base la tenga, el chequeo (h) se activa solo.",
-    ),
-  ];
+  const avisos = [];
+  if (base.invariantes?.ausente === true) {
+    avisos.push(
+      hallazgo(
+        "invariantes-sin-base",
+        ARCHIVOS.invariantes,
+        "La base no trae la matriz de invariantes (invariantes.cjs): se saltea el chequeo (h). Es esperable solo hasta que la matriz entre a la rama principal.",
+        "Nada por ahora; cuando la base la tenga, el chequeo (h) se activa solo.",
+      ),
+    );
+  }
+  if (base.evasiones?.ausente === true) {
+    avisos.push(
+      hallazgo(
+        "evasiones-sin-base",
+        ARCHIVOS.evasiones,
+        "La base no trae el catálogo de la batería de evasión (evasiones.json): se saltea el chequeo (i). Es esperable solo hasta que el catálogo entre a la rama principal.",
+        "Nada por ahora; cuando la base lo tenga, el chequeo (i) se activa solo.",
+      ),
+    );
+  }
+  return avisos;
+}
+
+/** Un caso de la batería con brecha o riesgo aceptado que la base no tenía: no debilita nada, pero queda a la vista. */
+function avisarRiesgosNuevos(base, pr) {
+  if (!tiene(base.evasiones) || !tiene(pr.evasiones)) return [];
+  const deLaBase = new Set(base.evasiones.valor.map((c) => c.id));
+  return pr.evasiones.valor
+    .filter((c) => c.id !== null && !deLaBase.has(c.id) && CAMPO_DE_LIMITE.has(c.estado))
+    .map((c) =>
+      hallazgo(
+        "evasion-riesgo-nuevo",
+        c.archivo,
+        c.estado === "riesgo-aceptado"
+          ? `Nuevo riesgo aceptado: ${c.id} (revisar el ${c.limite}). No debilita nada, pero alguien aceptó que un cambio pase sin detección.`
+          : `Nueva brecha abierta: ${c.id} (vence el ${c.limite}). No debilita nada, pero hoy un cambio pasa sin detección.`,
+        "Confirmá con el dueño que el riesgo es aceptado (o cerralo con un control que bloquee y pasá el caso a exigido).",
+        { contrato: c.id, donde: enJson(c.indice, "estado") },
+      ),
+    );
 }
 
 const CHEQUEOS = Object.freeze([
@@ -1095,6 +1300,7 @@ const CHEQUEOS = Object.freeze([
   chequearGate,
   chequearPaquete,
   chequearInvariantes,
+  chequearEvasiones,
 ]);
 
 function esFechaValida(texto) {
@@ -1131,7 +1337,7 @@ function verificar({ base, pr, ahora = new Date(), leerPr }) {
       : { ...completo, linea: 1 };
   };
   const fallas = CHEQUEOS.flatMap((chequeo) => chequeo(base, pr, { ahora })).map(completar);
-  const avisos = avisarSaltos(base).map(completar);
+  const avisos = [...avisarSaltos(base), ...avisarRiesgosNuevos(base, pr)].map(completar);
   return { fallas: ordenar(fallas), avisos: ordenar(avisos) };
 }
 
@@ -1234,12 +1440,14 @@ module.exports = {
   chequearGate,
   chequearPaquete,
   chequearInvariantes,
+  chequearEvasiones,
   chequearLectura,
   ejecutaElGuardian,
   extraerInvariantes,
   formatear,
   leerCi,
   leerConstante,
+  leerEvasiones,
   leerPaquete,
   leerRetiros,
   limites,

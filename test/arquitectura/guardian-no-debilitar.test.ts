@@ -53,6 +53,7 @@ const nd = require("../../arquitectura/contratos/no-debilitar.cjs") as {
   chequearPaquete: (base: Instantanea, pr: Instantanea) => Array<{ codigo: string }>;
   leerCi: (texto: string) => Seccion;
   leerConstante: (texto: string | null, nombre: string) => Seccion;
+  leerEvasiones: (catalogo: string | null, externos: string | null) => Seccion;
   leerPaquete: (texto: string | null) => Seccion;
   leerRetiros: (texto: string | null) => Seccion;
   extraerInvariantes: (modulo: unknown) => { ids: string[]; mutaciones: unknown[] };
@@ -82,6 +83,8 @@ const ARCHIVO_INVARIANTES = A["invariantes"] ?? "";
 const ARCHIVO_GATE = A["evaluarGate"] ?? "";
 const ARCHIVO_CI = A["ci"] ?? "";
 const ARCHIVO_PAQUETE = A["paquete"] ?? "";
+const ARCHIVO_EVASIONES = A["evasiones"] ?? "";
+const ARCHIVO_EXTERNOS = A["evasionesExternas"] ?? "";
 
 // ---------------------------------------------------------------------------------------------
 // Un árbol sintético sano: instantánea estructural + textos con líneas conocidas.
@@ -238,6 +241,40 @@ const MATRIZ_BASE = [
   { id: "I2", mutaciones: ["eliminacion"] },
 ];
 
+/** Un caso de la batería de evasión, con lo que la vigilancia compara (el resto del caso no importa acá). */
+interface CasoDeEvasion {
+  id: string;
+  via: string;
+  esperado: Record<string, unknown>;
+  estado: string;
+  vence?: string;
+  revisar?: string;
+}
+const textoDeEvasiones = (casos: CasoDeEvasion[]): string => `${JSON.stringify(casos, null, 2)}\n`;
+const ESPERA_RUTA = { tipo: "bloquea", codigo: "ruta-sin-clase", archivo: "x.ts" };
+const EXIGE = { tipo: "exige-excepcion" };
+const CATALOGO_SANO: CasoDeEvasion[] = [
+  { id: "EV-001", via: "filtros", esperado: ESPERA_RUTA, estado: "exigido" },
+  {
+    id: "EV-002",
+    via: "workflow-ci",
+    esperado: EXIGE,
+    estado: "brecha-abierta",
+    vence: "2026-12-20",
+  },
+  {
+    id: "EV-003",
+    via: "formato-no-soportado",
+    esperado: EXIGE,
+    estado: "riesgo-aceptado",
+    revisar: "2027-04-19",
+  },
+  { id: "EV-004", via: "filtros", esperado: ESPERA_RUTA, estado: "exigido" },
+];
+const EXTERNOS_SANO: CasoDeEvasion[] = [
+  { id: "EV-047", via: "ruta-alternativa", esperado: EXIGE, estado: "externo" },
+];
+
 const copia = <T>(valor: T): T => structuredClone(valor);
 
 function estadoSano(): Estado {
@@ -269,6 +306,8 @@ function estadoSano(): Estado {
     [ARCHIVO_CI]: TEXTO_DE_CI,
     [ARCHIVO_PAQUETE]: TEXTO_DE_PAQUETE,
     [ARCHIVO_INVARIANTES]: textoDeLaMatriz(MATRIZ_BASE),
+    [ARCHIVO_EVASIONES]: textoDeEvasiones(CATALOGO_SANO),
+    [ARCHIVO_EXTERNOS]: textoDeEvasiones(EXTERNOS_SANO),
   };
   return { estructura, arbol };
 }
@@ -322,6 +361,7 @@ function aInstantanea(estado: Estado): Instantanea {
           },
     gate: { valor: { conGuardianCaido: e.gateConGuardianCaido } },
     retiros: nd.leerRetiros(arbol[ARCHIVO_RETIROS] ?? null),
+    evasiones: nd.leerEvasiones(arbol[ARCHIVO_EVASIONES] ?? null, arbol[ARCHIVO_EXTERNOS] ?? null),
     plazo: nd.leerConstante(arbol[ARCHIVO_EXCEPCIONES] ?? null, "PLAZO_MAXIMO_DIAS"),
     aviso: nd.leerConstante(arbol[ARCHIVO_EXCEPCIONES] ?? null, "DIAS_DE_AVISO"),
     ci: nd.leerCi(arbol[ARCHIVO_CI] ?? ""),
@@ -1262,6 +1302,388 @@ const SECCIONES_ROTAS: {
   },
 ];
 
+// (i) La batería de evasión: el catálogo (`evasiones.json`) y los casos externos (`evasiones-github.json`).
+/** El estado con el catálogo y los casos externos dados (`null` borra el archivo). */
+const conEvasiones = (
+  estado: Estado,
+  casos: CasoDeEvasion[] | null,
+  externos: CasoDeEvasion[] | null = EXTERNOS_SANO,
+): Estado =>
+  conTexto(
+    conTexto(estado, ARCHIVO_EVASIONES, casos === null ? null : textoDeEvasiones(casos)),
+    ARCHIVO_EXTERNOS,
+    externos === null ? null : textoDeEvasiones(externos),
+  );
+/** La línea (desde 1) de la clave `clave` del caso `id` en el texto del catálogo de ese estado. */
+function lineaDeEvasion(archivo: string, estado: Estado, id: string, clave: string): number {
+  const lineas = (estado.arbol[archivo] ?? "").split("\n");
+  const inicio = lineas.findIndex((linea) => linea === `    "id": "${id}",`);
+  const relativa = lineas.slice(inicio).findIndex((linea) => linea.startsWith(`    "${clave}":`));
+  expect(inicio, `el caso ${id} está en ${archivo}`).toBeGreaterThan(0);
+  expect(relativa, `${id} tiene «${clave}»`).toBeGreaterThanOrEqual(0);
+  return inicio + relativa + 1;
+}
+/** El catálogo sano, cambiando algunos casos (por id) o agregando otros. */
+const catalogo = (
+  cambios: Record<string, Partial<CasoDeEvasion>> = {},
+  quitar: string[] = [],
+  agregar: CasoDeEvasion[] = [],
+): CasoDeEvasion[] => [
+  ...CATALOGO_SANO.filter((c) => !quitar.includes(c.id)).map((c) => ({
+    ...c,
+    ...cambios[c.id],
+  })),
+  ...agregar,
+];
+const sinCaso = (id: string): CasoDeEvasion[] => catalogo({}, [id]);
+const sinCasos = (...ids: string[]): CasoDeEvasion[] => catalogo({}, ids);
+const prConCatalogo = (casos: CasoDeEvasion[], externos?: CasoDeEvasion[] | null): Estado =>
+  conEvasiones(SANO, casos, externos);
+const evasion = (id: string, clave: string, estado: Estado, archivo = ARCHIVO_EVASIONES): number =>
+  lineaDeEvasion(archivo, estado, id, clave);
+const NUEVO_EXIGIDO: CasoDeEvasion = {
+  id: "EV-050",
+  via: "filtros",
+  esperado: EXIGE,
+  estado: "exigido",
+};
+const NUEVO_RIESGO: CasoDeEvasion = {
+  id: "EV-051",
+  via: "filtros",
+  esperado: EXIGE,
+  estado: "riesgo-aceptado",
+  revisar: "2027-04-19",
+};
+const NUEVA_BRECHA: CasoDeEvasion = {
+  id: "EV-052",
+  via: "filtros",
+  esperado: EXIGE,
+  estado: "brecha-abierta",
+  vence: "2026-12-20",
+};
+const conRetirosDeCasos = (estado: Estado, ...ids: string[]): Estado =>
+  conRetiros(
+    estado,
+    ids.map((id) => retiroCompleto(id)),
+  );
+
+const PR_SIN_EV001 = prConCatalogo(sinCaso("EV-001"));
+const PR_EXIGIDO_A_BRECHA = prConCatalogo(
+  catalogo({ "EV-001": { estado: "brecha-abierta", vence: "2026-12-20" } }),
+);
+const PR_EXIGIDO_A_RIESGO = prConCatalogo(
+  catalogo({ "EV-001": { estado: "riesgo-aceptado", revisar: "2027-04-19" } }),
+);
+const PR_BRECHA_A_RIESGO = prConCatalogo(
+  catalogo({ "EV-002": { estado: "riesgo-aceptado", revisar: "2027-04-19" } }),
+);
+const PR_BRECHA_MAS_TARDE = prConCatalogo(catalogo({ "EV-002": { vence: "2026-12-21" } }));
+const PR_RIESGO_MAS_TARDE = prConCatalogo(catalogo({ "EV-003": { revisar: "2027-04-20" } }));
+const PR_ESPERADO_CAMBIADO = prConCatalogo(
+  catalogo({ "EV-001": { esperado: { ...ESPERA_RUTA, codigo: "otro-codigo" } } }),
+);
+const PR_EV001_EN_LOS_EXTERNOS = prConCatalogo(sinCaso("EV-001"), [
+  ...EXTERNOS_SANO,
+  { id: "EV-001", via: "filtros", esperado: ESPERA_RUTA, estado: "externo" },
+]);
+
+const CASOS_I: Caso[] = [
+  { nombre: "(i) estado sano: el catálogo de la base sigue completo", pr: SANO, esperado: [] },
+  {
+    nombre: "(i) se borra un caso del catálogo sin registrar su retiro",
+    pr: PR_SIN_EV001,
+    esperado: [["evasion-borrada", ARCHIVO_EVASIONES, 1]],
+  },
+  {
+    nombre: "(i) se borran dos casos de una misma vía sin retiro: dos faltas y la vía perdida",
+    pr: prConCatalogo(sinCasos("EV-001", "EV-004")),
+    esperado: [
+      ["evasion-borrada", ARCHIVO_EVASIONES, 1],
+      ["evasion-borrada", ARCHIVO_EVASIONES, 1],
+      ["evasion-via-perdida", ARCHIVO_EVASIONES, 1],
+    ],
+  },
+  {
+    nombre: "(i) LEGÍTIMO: el caso se retira con una entrada en retiros.json con su id",
+    pr: conRetirosDeCasos(PR_SIN_EV001, "EV-001"),
+    esperado: [],
+  },
+  {
+    nombre: "(i) un retiro de otro id no cubre el caso borrado",
+    pr: conRetirosDeCasos(PR_SIN_EV001, "EV-999"),
+    esperado: [["evasion-borrada", ARCHIVO_EVASIONES, 1]],
+  },
+  {
+    nombre: "(i) se retiran con registro los dos casos de una vía: la vía deja de probarse",
+    pr: conRetirosDeCasos(prConCatalogo(sinCasos("EV-001", "EV-004")), "EV-001", "EV-004"),
+    esperado: [["evasion-via-perdida", ARCHIVO_EVASIONES, 1]],
+  },
+  {
+    nombre: "(i) se borra el único caso de una vía sin retiro: la falta y la vía perdida",
+    pr: prConCatalogo(sinCaso("EV-002")),
+    esperado: [
+      ["evasion-borrada", ARCHIVO_EVASIONES, 1],
+      ["evasion-via-perdida", ARCHIVO_EVASIONES, 1],
+    ],
+  },
+  {
+    nombre: "(i) el catálogo entero desaparece del PR: cada caso sin retiro y las vías perdidas",
+    pr: conEvasiones(SANO, null),
+    esperado: [
+      ["evasion-borrada", ARCHIVO_EVASIONES, 1],
+      ["evasion-borrada", ARCHIVO_EVASIONES, 1],
+      ["evasion-borrada", ARCHIVO_EVASIONES, 1],
+      ["evasion-borrada", ARCHIVO_EVASIONES, 1],
+      // Sin el catálogo no queda ningún caso, tampoco los externos que siguen en su archivo.
+      ["evasion-borrada", ARCHIVO_EXTERNOS, 1],
+      ["evasion-via-perdida", ARCHIVO_EVASIONES, 1],
+      ["evasion-via-perdida", ARCHIVO_EVASIONES, 1],
+      ["evasion-via-perdida", ARCHIVO_EVASIONES, 1],
+      ["evasion-via-perdida", ARCHIVO_EVASIONES, 1],
+    ],
+  },
+  {
+    nombre: "(i) se borran los casos externos del PR: faltan sin retiro (y se pierde su vía)",
+    pr: conEvasiones(SANO, CATALOGO_SANO, null),
+    esperado: [
+      ["evasion-borrada", ARCHIVO_EXTERNOS, 1],
+      ["evasion-via-perdida", ARCHIVO_EVASIONES, 1],
+    ],
+  },
+  {
+    nombre: "(i) un caso cambia lo que espera (otro código de falla)",
+    pr: PR_ESPERADO_CAMBIADO,
+    esperado: [
+      [
+        "evasion-esperado-cambiado",
+        ARCHIVO_EVASIONES,
+        evasion("EV-001", "esperado", PR_ESPERADO_CAMBIADO),
+      ],
+    ],
+  },
+  {
+    nombre: "(i) un caso agrega una línea a lo que espera",
+    pr: prConCatalogo(catalogo({ "EV-001": { esperado: { ...ESPERA_RUTA, linea: 1 } } })),
+    esperado: [
+      [
+        "evasion-esperado-cambiado",
+        ARCHIVO_EVASIONES,
+        evasion(
+          "EV-001",
+          "esperado",
+          prConCatalogo(catalogo({ "EV-001": { esperado: { ...ESPERA_RUTA, linea: 1 } } })),
+        ),
+      ],
+    ],
+  },
+  {
+    nombre: "(i) un caso de tipo bloquea pasa a exige-excepcion",
+    pr: prConCatalogo(catalogo({ "EV-001": { esperado: EXIGE } })),
+    esperado: [
+      [
+        "evasion-esperado-cambiado",
+        ARCHIVO_EVASIONES,
+        evasion("EV-001", "esperado", prConCatalogo(catalogo({ "EV-001": { esperado: EXIGE } }))),
+      ],
+    ],
+  },
+  {
+    nombre: "(i) LEGÍTIMO: las claves de lo esperado cambian de orden y dicen lo mismo",
+    pr: prConCatalogo(
+      catalogo({
+        "EV-001": { esperado: { archivo: "x.ts", codigo: "ruta-sin-clase", tipo: "bloquea" } },
+      }),
+    ),
+    esperado: [],
+  },
+  {
+    nombre: "(i) un caso exigido pasa a brecha abierta",
+    pr: PR_EXIGIDO_A_BRECHA,
+    esperado: [
+      ["evasion-degradada", ARCHIVO_EVASIONES, evasion("EV-001", "estado", PR_EXIGIDO_A_BRECHA)],
+    ],
+  },
+  {
+    nombre: "(i) un caso exigido pasa a riesgo aceptado",
+    pr: PR_EXIGIDO_A_RIESGO,
+    esperado: [
+      ["evasion-degradada", ARCHIVO_EVASIONES, evasion("EV-001", "estado", PR_EXIGIDO_A_RIESGO)],
+    ],
+  },
+  {
+    nombre: "(i) una brecha abierta pasa a riesgo aceptado (plazo de 180 en vez de 60)",
+    pr: PR_BRECHA_A_RIESGO,
+    esperado: [
+      ["evasion-degradada", ARCHIVO_EVASIONES, evasion("EV-002", "estado", PR_BRECHA_A_RIESGO)],
+    ],
+  },
+  {
+    nombre: "(i) un caso exigido desconocido (estado raro) cuenta como degradado",
+    pr: prConCatalogo(catalogo({ "EV-001": { estado: "tal vez" } })),
+    esperado: [
+      [
+        "evasion-degradada",
+        ARCHIVO_EVASIONES,
+        evasion("EV-001", "estado", prConCatalogo(catalogo({ "EV-001": { estado: "tal vez" } }))),
+      ],
+    ],
+  },
+  {
+    nombre: "(i) el vencimiento de una brecha se mueve un día más tarde",
+    pr: PR_BRECHA_MAS_TARDE,
+    esperado: [
+      ["evasion-degradada", ARCHIVO_EVASIONES, evasion("EV-002", "vence", PR_BRECHA_MAS_TARDE)],
+    ],
+  },
+  {
+    nombre: "(i) la revisión de un riesgo aceptado se mueve un día más tarde",
+    pr: PR_RIESGO_MAS_TARDE,
+    esperado: [
+      ["evasion-degradada", ARCHIVO_EVASIONES, evasion("EV-003", "revisar", PR_RIESGO_MAS_TARDE)],
+    ],
+  },
+  {
+    nombre: "(i) LEGÍTIMO: el vencimiento de una brecha se adelanta",
+    pr: prConCatalogo(catalogo({ "EV-002": { vence: "2026-12-19" } })),
+    esperado: [],
+  },
+  {
+    nombre: "(i) LEGÍTIMO: la revisión de un riesgo aceptado se adelanta",
+    pr: prConCatalogo(catalogo({ "EV-003": { revisar: "2027-01-01" } })),
+    esperado: [],
+  },
+  {
+    nombre: "(i) LEGÍTIMO: un riesgo aceptado pasa a brecha abierta (más estricto)",
+    pr: prConCatalogo(catalogo({ "EV-003": { estado: "brecha-abierta", vence: "2026-12-20" } })),
+    esperado: [],
+  },
+  {
+    nombre: "(i) LEGÍTIMO: una brecha abierta se cierra y pasa a exigido",
+    pr: prConCatalogo(catalogo({ "EV-002": { estado: "exigido" } })),
+    esperado: [],
+  },
+  {
+    nombre: "(i) un caso exigido se muda a los casos externos: deja de correr",
+    pr: PR_EV001_EN_LOS_EXTERNOS,
+    esperado: [
+      [
+        "evasion-degradada",
+        ARCHIVO_EXTERNOS,
+        evasion("EV-001", "estado", PR_EV001_EN_LOS_EXTERNOS, ARCHIVO_EXTERNOS),
+      ],
+    ],
+  },
+  {
+    nombre: "(i) LEGÍTIMO: se agrega un caso exigido (sin aviso)",
+    pr: prConCatalogo(catalogo({}, [], [NUEVO_EXIGIDO])),
+    esperado: [],
+  },
+  {
+    nombre: "(i) un riesgo aceptado NUEVO no falla, pero se avisa en la línea de su estado",
+    pr: prConCatalogo(catalogo({}, [], [NUEVO_RIESGO])),
+    esperado: [],
+    avisos: [
+      [
+        "evasion-riesgo-nuevo",
+        ARCHIVO_EVASIONES,
+        evasion("EV-051", "estado", prConCatalogo(catalogo({}, [], [NUEVO_RIESGO]))),
+      ],
+    ],
+  },
+  {
+    nombre: "(i) una brecha abierta NUEVA no falla, pero se avisa en la línea de su estado",
+    pr: prConCatalogo(catalogo({}, [], [NUEVA_BRECHA])),
+    esperado: [],
+    avisos: [
+      [
+        "evasion-riesgo-nuevo",
+        ARCHIVO_EVASIONES,
+        evasion("EV-052", "estado", prConCatalogo(catalogo({}, [], [NUEVA_BRECHA]))),
+      ],
+    ],
+  },
+  {
+    nombre: "(i) un caso externo NUEVO no avisa (no acepta ningún riesgo del repositorio)",
+    pr: prConCatalogo(CATALOGO_SANO, [
+      ...EXTERNOS_SANO,
+      { id: "EV-048", via: "ruta-alternativa", esperado: EXIGE, estado: "externo" },
+    ]),
+    esperado: [],
+  },
+  {
+    nombre: "(i) un riesgo aceptado que la base ya tenía no se avisa de nuevo",
+    base: prConCatalogo(catalogo({}, [], [NUEVO_RIESGO])),
+    pr: prConCatalogo(catalogo({}, [], [NUEVO_RIESGO])),
+    esperado: [],
+  },
+  {
+    nombre: "(i) entradas que no son un caso (basura en la lista) no rompen la comparación",
+    pr: conTexto(
+      SANO,
+      ARCHIVO_EVASIONES,
+      `${JSON.stringify([...CATALOGO_SANO, 5, null, { sin: "id" }], null, 2)}\n`,
+    ),
+    esperado: [],
+  },
+  {
+    nombre: "(i) un caso de la base sin id no se puede seguir: se ignora",
+    base: conTexto(
+      SANO,
+      ARCHIVO_EVASIONES,
+      `${JSON.stringify([...CATALOGO_SANO, { via: "filtros" }], null, 2)}\n`,
+    ),
+    pr: SANO,
+    esperado: [],
+  },
+  {
+    nombre: "(i) el catálogo del PR no es JSON válido: no se puede mirar",
+    pr: conTexto(SANO, ARCHIVO_EVASIONES, "{ roto\n"),
+    esperado: [["arbol-ilegible", ARCHIVO_EVASIONES, 1]],
+  },
+  {
+    nombre: "(i) el catálogo del PR no es una lista",
+    pr: conTexto(SANO, ARCHIVO_EVASIONES, '{ "casos": [] }\n'),
+    esperado: [["arbol-ilegible", ARCHIVO_EVASIONES, 1]],
+  },
+  {
+    nombre: "(i) los casos externos del PR no son JSON válido: tampoco se puede mirar",
+    pr: conTexto(SANO, ARCHIVO_EXTERNOS, "[ roto\n"),
+    esperado: [["arbol-ilegible", ARCHIVO_EVASIONES, 1]],
+  },
+  {
+    nombre: "(i) los casos externos del PR no son una lista",
+    pr: conTexto(SANO, ARCHIVO_EXTERNOS, '{ "casos": [] }\n'),
+    esperado: [["arbol-ilegible", ARCHIVO_EVASIONES, 1]],
+  },
+  {
+    nombre: "(i) el catálogo de la base no se puede leer: no hay con qué comparar",
+    base: conTexto(SANO, ARCHIVO_EVASIONES, "{ roto\n"),
+    pr: SANO,
+    esperado: [["base-ilegible", ARCHIVO_EVASIONES, 1]],
+  },
+  {
+    nombre: "(i) la base NO trae el catálogo: el chequeo se saltea con un aviso explícito",
+    base: conEvasiones(SANO, null),
+    pr: SANO,
+    esperado: [],
+    avisos: [["evasiones-sin-base", ARCHIVO_EVASIONES, 1]],
+  },
+  {
+    nombre: "(i) ni la base ni el PR traen el catálogo: no falla, y se avisa",
+    base: conEvasiones(SANO, null),
+    pr: conEvasiones(SANO, null),
+    esperado: [],
+    avisos: [["evasiones-sin-base", ARCHIVO_EVASIONES, 1]],
+  },
+  {
+    nombre: "(i) la base trae los externos pero no el catálogo: el catálogo no está, se avisa",
+    base: conEvasiones(SANO, null, EXTERNOS_SANO),
+    pr: conEvasiones(SANO, CATALOGO_SANO, null),
+    esperado: [],
+    avisos: [["evasiones-sin-base", ARCHIVO_EVASIONES, 1]],
+  },
+];
+
 const TABLAS: [string, Caso[]][] = [
   ["a: contratos retirados y retiros", CASOS_A],
   ["b: detectores, clases y fuente de verdad", CASOS_B],
@@ -1271,6 +1693,7 @@ const TABLAS: [string, Caso[]][] = [
   ["f: job guardian, gate y evaluar-gate", CASOS_F],
   ["g: scripts de package.json", CASOS_G],
   ["h: matriz de invariantes y mutaciones", CASOS_H],
+  ["i: batería de evasión", CASOS_I],
 ];
 
 describe.each(TABLAS)("chequeo %s", (_titulo, casos) => {
@@ -1361,8 +1784,8 @@ describe("la lista cerrada de códigos", () => {
     for (const [codigo] of avisos) expect(nd.CODIGOS_DE_AVISO).toContain(codigo);
   });
 
-  it("los diez chequeos están conectados (quitar uno de la lista no pasa inadvertido)", () => {
-    expect(nd.CHEQUEOS).toHaveLength(10);
+  it("los once chequeos están conectados (quitar uno de la lista no pasa inadvertido)", () => {
+    expect(nd.CHEQUEOS).toHaveLength(11);
   });
 });
 

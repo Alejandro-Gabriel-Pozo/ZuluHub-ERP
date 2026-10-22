@@ -85,7 +85,7 @@ function correr(entrada: Entrada): SalidaDeComparar & { leidas: string[] } {
 }
 
 describe("comparación: archivos binarios", () => {
-  it("se omiten por extensión sin leerlos; el resto se escanea aunque el nombre se les parezca", () => {
+  it("se omiten si de verdad son binarios (por su contenido); el resto se escanea aunque el nombre se les parezca", () => {
     const binarios = [
       "png",
       "jpg",
@@ -107,11 +107,19 @@ describe("comparación: archivos binarios", () => {
       clases: Object.fromEntries(
         [...binarios, "src/u/MAYUS.PNG", ...escaneados].map((ruta) => [ruta, "frontend"]),
       ),
-      archivos: Object.fromEntries(escaneados.map((ruta) => [ruta, "texto"])),
+      archivos: {
+        // Un binario de verdad tiene bytes nulos: la extensión conocida lo deja afuera del análisis.
+        ...Object.fromEntries([...binarios, "src/u/MAYUS.PNG"].map((ruta) => [ruta, "\u0000PNG"])),
+        ...Object.fromEntries(escaneados.map((ruta) => [ruta, "texto"])),
+      },
     });
     expect(salida.omitidasPorClase).toEqual({ frontend: 14 });
     expect(salida.escaneadasPorClase).toEqual({ frontend: 3 });
-    expect(salida.leidas.filter((ruta) => ruta !== FUENTE)).toEqual(escaneados);
+    expect(salida.noAnalizablesPorClase).toEqual({});
+    // Se leen todos (la extensión sola no alcanza para saltear un archivo), en orden de ruta.
+    expect(salida.leidas.filter((ruta) => ruta !== FUENTE)).toEqual(
+      [...binarios, "src/u/MAYUS.PNG", ...escaneados].sort(),
+    );
     expect(salida.fallas).toEqual([]);
   });
 
