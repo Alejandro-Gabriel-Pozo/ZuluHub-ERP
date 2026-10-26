@@ -56,7 +56,7 @@ const carpetaExiste = (carpeta: string): boolean => {
 type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 
 /** Los módulos declarados en el catálogo cuyas carpetas y casos de uso todavía no existen (T0). */
-const SIN_CONSTRUIR: readonly string[] = ["catalogo", "carta", "stock"];
+const SIN_CONSTRUIR: readonly string[] = ["catalogo", "vidriera", "stock"];
 
 function crucesDelCatalogo(
   catalogo: CatalogoComercial,
@@ -315,7 +315,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
   });
 
   it("catálogo, carta y stock son los únicos módulos sin construir, y siguen en desarrollo (T0)", () => {
-    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "carta", "stock"]);
+    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "vidriera", "stock"]);
     for (const clave of SIN_CONSTRUIR) {
       expect(CATALOGO_DE_MODULOS[clave as keyof typeof CATALOGO_DE_MODULOS].estado, clave).toBe(
         "en_desarrollo",

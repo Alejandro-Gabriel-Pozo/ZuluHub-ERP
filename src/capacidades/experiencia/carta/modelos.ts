@@ -9,7 +9,7 @@
  */
 
 type DefinicionDeModelo = Readonly<{
-  /** Perilla de plan que lo habilita (`null` = base del extra `carta_por_qr`: no se cobra aparte). */
+  /** Perilla de plan que lo habilita (`null` = base del extra `vidriera_por_qr`: no se cobra aparte). */
   perilla: string | null;
   /** Sin ninguna foto visible no tiene sentido: el modelo efectivo cae a la Lista. */
   requiereFotos: boolean;
