@@ -686,7 +686,7 @@ describe.skipIf(base === null)("asignaciones y ajustes: casos de uso contra Post
       exito(
         await ajustar(
           tenant,
-          "carta_por_qr",
+          "vidriera_por_qr",
           { tipo: "INTERRUPTOR", encendida: true },
           { empresaId: primera },
         ),
@@ -699,7 +699,7 @@ describe.skipIf(base === null)("asignaciones y ajustes: casos de uso contra Post
           { empresaId: primera },
         ),
       );
-      expect((await ajustes(tenant)).filter((a) => a.perilla === "carta_por_qr")).toMatchObject([
+      expect((await ajustes(tenant)).filter((a) => a.perilla === "vidriera_por_qr")).toMatchObject([
         { empresa_id: primera, valor: "1" },
       ]);
       expect(
@@ -834,8 +834,8 @@ describe.skipIf(base === null)("asignaciones y ajustes: casos de uso contra Post
         ],
         [
           "interruptor con valor de límite",
-          [tenant, "carta_por_qr", { tipo: "LIMITE", limite: 1 }],
-          { codigo: "VALOR_DE_PERILLA_INVALIDO", perilla: "carta_por_qr" },
+          [tenant, "vidriera_por_qr", { tipo: "LIMITE", limite: 1 }],
+          { codigo: "VALOR_DE_PERILLA_INVALIDO", perilla: "vidriera_por_qr" },
         ],
         [
           "límite negativo",
@@ -865,7 +865,7 @@ describe.skipIf(base === null)("asignaciones y ajustes: casos de uso contra Post
           "empresa de otro tenant",
           [
             tenant,
-            "carta_por_qr",
+            "vidriera_por_qr",
             { tipo: "INTERRUPTOR", encendida: true },
             { empresaId: ajena.empresas[0] as string },
           ],
@@ -875,7 +875,7 @@ describe.skipIf(base === null)("asignaciones y ajustes: casos de uso contra Post
           "empresa inexistente",
           [
             tenant,
-            "carta_por_qr",
+            "vidriera_por_qr",
             { tipo: "INTERRUPTOR", encendida: true },
             { empresaId: INEXISTENTE },
           ],
@@ -883,14 +883,14 @@ describe.skipIf(base === null)("asignaciones y ajustes: casos de uso contra Post
         ],
         [
           "tenant inexistente",
-          [INEXISTENTE, "carta_por_qr", { tipo: "INTERRUPTOR", encendida: true }],
+          [INEXISTENTE, "vidriera_por_qr", { tipo: "INTERRUPTOR", encendida: true }],
           "TENANT_NO_ENCONTRADO",
         ],
         [
           "tenant inexistente con un número esperado que de otro modo sería desactualizado",
           [
             INEXISTENTE,
-            "carta_por_qr",
+            "vidriera_por_qr",
             { tipo: "INTERRUPTOR", encendida: true },
             { numeroEsperado: 3 },
           ],
@@ -898,14 +898,14 @@ describe.skipIf(base === null)("asignaciones y ajustes: casos de uso contra Post
         ],
         [
           "motivo vacío",
-          [tenant, "carta_por_qr", { tipo: "INTERRUPTOR", encendida: true }, { motivo: " " }],
+          [tenant, "vidriera_por_qr", { tipo: "INTERRUPTOR", encendida: true }, { motivo: " " }],
           "MOTIVO_OBLIGATORIO",
         ],
         [
           "vigencia retroactiva",
           [
             tenant,
-            "carta_por_qr",
+            "vidriera_por_qr",
             { tipo: "INTERRUPTOR", encendida: true },
             { vigenteDesde: desdeAhora(-3600) },
           ],
@@ -913,12 +913,12 @@ describe.skipIf(base === null)("asignaciones y ajustes: casos de uso contra Post
         ],
         [
           "tenant que no es un id",
-          ["x", "carta_por_qr", { tipo: "INTERRUPTOR", encendida: true }],
+          ["x", "vidriera_por_qr", { tipo: "INTERRUPTOR", encendida: true }],
           "ID_INVALIDO",
         ],
         [
           "empresa que no es un id",
-          [tenant, "carta_por_qr", { tipo: "INTERRUPTOR", encendida: true }, { empresaId: "x" }],
+          [tenant, "vidriera_por_qr", { tipo: "INTERRUPTOR", encendida: true }, { empresaId: "x" }],
           "ID_INVALIDO",
         ],
       ];

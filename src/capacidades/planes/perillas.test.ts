@@ -68,13 +68,13 @@ describe("el catálogo de perillas real", () => {
         base: { limite: 1 },
         modulo: "administracion",
       },
-      recetas_con_merma: {
+      composiciones_con_perdida: {
         ambito: "EMPRESA",
         tipo: "INTERRUPTOR",
         base: { encendida: false },
         modulo: "stock",
       },
-      sub_recetas: {
+      subcomposiciones: {
         ambito: "EMPRESA",
         tipo: "INTERRUPTOR",
         base: { encendida: false },
@@ -86,7 +86,7 @@ describe("el catálogo de perillas real", () => {
         base: { encendida: false },
         modulo: "catalogo",
       },
-      combos: {
+      conjuntos: {
         ambito: "EMPRESA",
         tipo: "INTERRUPTOR",
         base: { encendida: false },
@@ -98,7 +98,7 @@ describe("el catálogo de perillas real", () => {
         base: { encendida: false },
         modulo: "catalogo",
       },
-      recetas_por_tamano: {
+      composiciones_por_tamano: {
         ambito: "EMPRESA",
         tipo: "INTERRUPTOR",
         base: { encendida: false },
@@ -110,21 +110,21 @@ describe("el catálogo de perillas real", () => {
   it("la clave es un tipo cerrado: una perilla mal escrita no compila", () => {
     expectTypeOf<ClavePerilla>().toEqualTypeOf<
       | "empresas_por_tenant"
-      | "recetas_con_merma"
-      | "sub_recetas"
+      | "composiciones_con_perdida"
+      | "subcomposiciones"
       | "variantes_y_grupos_de_precio"
-      | "combos"
+      | "conjuntos"
       | "elecciones_reutilizables"
-      | "recetas_por_tamano"
+      | "composiciones_por_tamano"
     >();
     // @ts-expect-error esa perilla no está declarada (la registra el módulo que la verifica)
     const inventada: ClavePerilla = "cajas_por_sucursal";
     expect(inventada in CATALOGO_DE_PERILLAS).toBe(false);
   });
 
-  it("las de la carta no se declaran hasta construir la carta: ni carta_por_qr ni las de fotos, modelos y estadísticas", () => {
+  it("las de la carta no se declaran hasta construir la carta: ni vidriera_por_qr ni las de fotos, modelos y estadísticas", () => {
     for (const clave of [
-      "carta_por_qr",
+      "vidriera_por_qr",
       "productos_con_foto",
       "fotos_alojadas",
       "carta_modelo_cuadricula",
@@ -142,12 +142,12 @@ describe("el catálogo de perillas real", () => {
     );
     expect(duenos).toEqual({
       empresas_por_tenant: "administracion",
-      recetas_con_merma: "stock",
-      sub_recetas: "stock",
+      composiciones_con_perdida: "stock",
+      subcomposiciones: "stock",
       variantes_y_grupos_de_precio: "catalogo",
-      combos: "catalogo",
+      conjuntos: "catalogo",
       elecciones_reutilizables: "catalogo",
-      recetas_por_tamano: "stock",
+      composiciones_por_tamano: "stock",
     });
   });
 

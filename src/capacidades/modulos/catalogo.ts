@@ -179,16 +179,16 @@ export const CATALOGO_DE_MODULOS = {
       "grupos_de_precio.asignar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "grupos_de_precio.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "grupos_de_precio.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "combos.editar_contenido": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "conjuntos.editar_contenido": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
   /**
    * La carta: una vista publicada del catálogo, que es otro módulo comercial pero lo implementa el
    * mismo código (`modulos/catalogo`). Sola, sin stock ni ventas, es la vidriera (§F8). La publicación
-   * en línea (QR) es un extra de pago: lo decide la perilla `carta_por_qr`, que se declara cuando se
+   * en línea (QR) es un extra de pago: lo decide la perilla `vidriera_por_qr`, que se declara cuando se
    * construya la carta; las tres acciones `*_en_linea` y `renovar_enlace` ya se clasifican acá.
    */
-  carta: {
+  vidriera: {
     estado: "en_desarrollo",
     obligatorio: false,
     requiere: ["catalogo"],
@@ -196,15 +196,15 @@ export const CATALOGO_DE_MODULOS = {
     datosRequeridos: [],
     implementadoPor: ["modulos/catalogo"],
     acciones: {
-      "cartas.ver": { capacidad: null, efecto: "LECTURA" },
-      "cartas.marcar_disponibilidad": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cartas.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cartas.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cartas.publicar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cartas.retirar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "cartas.publicar_en_linea": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cartas.renovar_enlace": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cartas.retirar_de_linea": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "vidrieras.ver": { capacidad: null, efecto: "LECTURA" },
+      "vidrieras.marcar_disponibilidad": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "vidrieras.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "vidrieras.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "vidrieras.publicar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "vidrieras.retirar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "vidrieras.publicar_en_linea": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "vidrieras.renovar_enlace": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "vidrieras.retirar_de_linea": { capacidad: null, efecto: "COMPLETA_CIERRA" },
     },
   },
   stock: {
@@ -230,7 +230,7 @@ export const CATALOGO_DE_MODULOS = {
       "depositos.asignar_emisor": { capacidad: null, efecto: "CREA_AMPLIA" },
       "articulos.controlar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "articulos.dejar_de_controlar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "recetas.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "composiciones.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "conteos.abrir": { capacidad: null, efecto: "CREA_AMPLIA" },
       "conteos.registrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "conteos.aplicar": { capacidad: null, efecto: "COMPLETA_CIERRA" },

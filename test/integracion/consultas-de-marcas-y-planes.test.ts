@@ -374,7 +374,7 @@ describe.skipIf(base === null)("consultas de marcas y planes: contra Postgres", 
       await ajustarPerilla(dueno, tenant, "empresas_por_tenant", "DEL_PLAN", {
         desdeSegundos: -20,
       });
-      await ajustarPerilla(dueno, tenant, "carta_por_qr", "1", {
+      await ajustarPerilla(dueno, tenant, "vidriera_por_qr", "1", {
         empresa: empresas[0],
         desdeSegundos: 3600,
       });
@@ -400,9 +400,9 @@ describe.skipIf(base === null)("consultas de marcas y planes: contra Postgres", 
       expect(
         plan.ajustes.map((a) => [a.perilla, a.empresaId, a.numero, a.estado, a.valor]),
       ).toEqual([
-        ["carta_por_qr", empresas[0], 1, "PROGRAMADA", { tipo: "INTERRUPTOR", encendida: true }],
         ["empresas_por_tenant", null, 1, "ANTERIOR", { tipo: "LIMITE", limite: 3 }],
         ["empresas_por_tenant", null, 2, "VIGENTE", "DEL_PLAN"],
+        ["vidriera_por_qr", empresas[0], 1, "PROGRAMADA", { tipo: "INTERRUPTOR", encendida: true }],
       ]);
       const deLaPrimera = plan.empresas.find((e) => e.empresaId === empresas[0]);
       expect(deLaPrimera?.modulos).toEqual([
@@ -437,7 +437,7 @@ describe.skipIf(base === null)("consultas de marcas y planes: contra Postgres", 
         perillas: { cajas_por_sucursal: { tipo: "LIMITE", limite: 4 } },
       });
       await asignarPlan(dueno, tenant, plan.version, { desdeSegundos: -30 });
-      await ajustarPerilla(dueno, tenant, "carta_por_qr", "1", {
+      await ajustarPerilla(dueno, tenant, "vidriera_por_qr", "1", {
         empresa: empresas[0],
         desdeSegundos: -30,
       });
@@ -482,8 +482,8 @@ describe.skipIf(base === null)("consultas de marcas y planes: contra Postgres", 
         valor: { tipo: "LIMITE", limite: 4 },
         origen: "PLAN",
       });
-      expect(perilla("carta_por_qr")).toEqual({
-        perilla: "carta_por_qr",
+      expect(perilla("vidriera_por_qr")).toEqual({
+        perilla: "vidriera_por_qr",
         valor: { tipo: "INTERRUPTOR", encendida: true },
         origen: "AJUSTE",
       });
@@ -496,7 +496,7 @@ describe.skipIf(base === null)("consultas de marcas y planes: contra Postgres", 
       const otra = exito(
         await consultas.derechosDeUsoDeEmpresa(comoAdminAhora(), { empresaId: empresas[1] }),
       );
-      expect(otra.perillas.find((x) => x.perilla === "carta_por_qr")).toMatchObject({
+      expect(otra.perillas.find((x) => x.perilla === "vidriera_por_qr")).toMatchObject({
         origen: "BASE",
       });
     });
@@ -584,7 +584,7 @@ describe.skipIf(base === null)("consultas de marcas y planes: contra Postgres", 
         modulos: ["caja", "ventas"],
         perillas: {
           cajas_por_sucursal: { tipo: "LIMITE", limite: 5 },
-          carta_por_qr: { tipo: "INTERRUPTOR", encendida: true },
+          vidriera_por_qr: { tipo: "INTERRUPTOR", encendida: true },
         },
       });
       const hastaId = await crearBorradorDePlan(dueno, desde.plan, {
@@ -616,7 +616,7 @@ describe.skipIf(base === null)("consultas de marcas y planes: contra Postgres", 
       });
       expect(sinTenants.perillas.map((p) => [p.perilla, p.sentido])).toEqual([
         ["cajas_por_sucursal", "BAJA"],
-        ["carta_por_qr", "BAJA"],
+        ["vidriera_por_qr", "BAJA"],
       ]);
       // Sin `tenantIds`: todos los que hoy tienen la versión de origen vigente.
       const todos = exito(

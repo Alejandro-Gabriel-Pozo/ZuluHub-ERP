@@ -45,7 +45,7 @@ export type DefinicionDePerilla = ComunDeUnaPerilla &
  * por tamaño) y los niveles de elecciones del catálogo (variantes con precio y grupos de precio,
  * combos, biblioteca). Cada tramo que las verifica con `exigirPerilla` las cubre; hasta entonces
  * ningún caso de uso las nombra (no existe todavía la prueba «toda perilla tiene un uso»). Todas son
- * interruptores de empresa con base apagada: si el plan no las nombra, no vienen. `carta_por_qr` y las
+ * interruptores de empresa con base apagada: si el plan no las nombra, no vienen. `vidriera_por_qr` y las
  * de la carta (fotos, modelos, estadísticas) se declaran cuando se construya la carta.
  */
 export const CATALOGO_DE_PERILLAS = {
@@ -58,20 +58,20 @@ export const CATALOGO_DE_PERILLAS = {
   // Stock (catalogo-y-stock §C): los extras de la receta; la verifican `guardarReceta` y
   // `guardarRecetaDeOpcion` (T10 y T14). Lo ya guardado con pérdida o con elaborados se sigue aplicando
   // aunque la perilla se apague (baja de plan): lo que se rechaza es guardar una receta nueva.
-  recetas_con_merma: {
+  composiciones_con_perdida: {
     ambito: "EMPRESA",
     tipo: "INTERRUPTOR",
     base: { encendida: false },
     modulo: "stock",
   },
-  sub_recetas: {
+  subcomposiciones: {
     ambito: "EMPRESA",
     tipo: "INTERRUPTOR",
     base: { encendida: false },
     modulo: "stock",
   },
   // CE0 (catalogo-carta-niveles-y-elecciones §2.1): un interruptor por nivel extra de la escalera de
-  // elecciones. El de stock (`recetas_por_tamano`, N4) escala la receta por tamaño y suma la excepción
+  // elecciones. El de stock (`composiciones_por_tamano`, N4) escala la receta por tamaño y suma la excepción
   // por variante; los de catálogo (N1 a N3) habilitan precio por variante y grupos de precio, combos y
   // la biblioteca de guarniciones y adicionales compartidos. N0 (la vidriera, con ejes por base más
   // agregado) es estándar y no tiene perilla.
@@ -81,7 +81,7 @@ export const CATALOGO_DE_PERILLAS = {
     base: { encendida: false },
     modulo: "catalogo",
   },
-  combos: {
+  conjuntos: {
     ambito: "EMPRESA",
     tipo: "INTERRUPTOR",
     base: { encendida: false },
@@ -93,7 +93,7 @@ export const CATALOGO_DE_PERILLAS = {
     base: { encendida: false },
     modulo: "catalogo",
   },
-  recetas_por_tamano: {
+  composiciones_por_tamano: {
     ambito: "EMPRESA",
     tipo: "INTERRUPTOR",
     base: { encendida: false },
