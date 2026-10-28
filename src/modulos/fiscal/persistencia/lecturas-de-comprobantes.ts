@@ -12,6 +12,7 @@ import {
   type TipoDeOrigen,
 } from "../dominio/comprobante-emitido";
 import { AMBIENTES, type Ambiente } from "../dominio/comprobante-nuevo";
+import type { NotaParaAcreditar } from "../dominio/acreditacion";
 import {
   ESTADOS_DE_COMPROBANTE_ARCA,
   type EstadoDeComprobanteArca,
@@ -117,6 +118,16 @@ export interface LecturasDeComprobantes {
    * Los `DESCARTADO` no cuentan: nunca existieron para ARCA.
    */
   notasQueCitan(empresa: EmpresaId, id: ComprobanteId): Promise<readonly NotaQueCita[]>;
+  /**
+   * Para el listado, con UNA sola consulta agregada (sin una por fila): lo que citan a cada uno de `ids` los
+   * comprobantes de la empresa, sumado por tipo y estado (`total` es la suma exacta del grupo). Solo trae a quien
+   * tiene notas; los `DESCARTADO` vienen y no los descarta esta lectura: qué cuenta como acreditado lo decide
+   * el dominio (`acreditacion.ts`), en un solo lugar.
+   */
+  notasQueCitanA(
+    empresa: EmpresaId,
+    ids: readonly ComprobanteId[],
+  ): Promise<ReadonlyMap<ComprobanteId, readonly NotaParaAcreditar[]>>;
 }
 
 const FECHA_DEL_LISTADO = sql<string>`coalesce(fecha_emision, (creado_en at time zone ${ZONA_DE_ARGENTINA})::date)`;
@@ -268,6 +279,40 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
         total: importeDesdeTexto(moneda(f.moneda), f.total),
         estado: deLaLista(ESTADOS_DE_COMPROBANTE_ARCA, f.estado, "estado de comprobante"),
       }));
+    },
+
+    async notasQueCitanA(empresa, ids) {
+      const porId = new Map<ComprobanteId, NotaParaAcreditar[]>();
+      if (ids.length === 0) return porId;
+      const filas = await db
+        .selectFrom("comprobante")
+        .select([
+          "comprobante_asociado_id",
+          "tipo_comprobante",
+          "estado",
+          "moneda",
+          // `sum` de `numeric` es exacta; viaja como texto (nunca como `number`).
+          sql<string>`sum(total)::text`.as("suma"),
+        ])
+        .where("empresa_id", "=", empresa)
+        .where("comprobante_asociado_id", "in", ids)
+        .groupBy(["comprobante_asociado_id", "tipo_comprobante", "estado", "moneda"])
+        .execute();
+      for (const f of filas) {
+        // El `in (...)` descarta los nulos: una fila sin asociado no puede venir.
+        if (f.comprobante_asociado_id === null)
+          throw new Error("una nota sin comprobante asociado");
+        const asociado = comprobanteId(f.comprobante_asociado_id);
+        porId.set(asociado, [
+          ...(porId.get(asociado) ?? []),
+          {
+            tipo: deLaLista(TIPOS_DE_COMPROBANTE, f.tipo_comprobante, "tipo de comprobante"),
+            estado: deLaLista(ESTADOS_DE_COMPROBANTE_ARCA, f.estado, "estado de comprobante"),
+            total: importeDesdeTexto(moneda(f.moneda), f.suma),
+          },
+        ]);
+      }
+      return porId;
     },
   };
 }

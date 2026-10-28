@@ -3,6 +3,11 @@ import { porcentajeATexto } from "../../../primitivas/cantidad/porcentaje";
 import { importeATexto } from "../../../primitivas/dinero/importe";
 import { precioUnitarioATexto } from "../../../primitivas/dinero/precio-unitario";
 import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
+import {
+  acreditacionDe,
+  type EtiquetaDeAcreditacion,
+  type NotaParaAcreditar,
+} from "../dominio/acreditacion";
 import { numeroImpreso } from "../dominio/modelo-de-impresion";
 import type { IntentoDeArca } from "../persistencia/repositorio-de-intentos";
 import type { ComprobanteGuardado } from "../persistencia/repositorio-de-comprobantes";
@@ -28,6 +33,11 @@ export type ResumenDeComprobante = Readonly<{
   total: string;
   estado: FilaDeListado["estado"];
   ambiente: FilaDeListado["ambiente"];
+  /**
+   * Cuánto lleva acreditado, calculado de sus notas de crédito (D-12 y D-16): `NINGUNA`, `PARCIAL` o `TOTAL`. `null`
+   * en una nota de crédito: no se acredita.
+   */
+  acreditacion: EtiquetaDeAcreditacion | null;
 }>;
 
 export type PaginaDeComprobantes = Readonly<{
@@ -39,7 +49,11 @@ export type PaginaDeComprobantes = Readonly<{
 const numeroDe = (puntoDeVenta: number, numero: bigint | null): string | null =>
   numero === null ? null : numeroImpreso(puntoDeVenta, numero);
 
-export function resumenDe(fila: FilaDeListado): ResumenDeComprobante {
+/** `notas`: lo que citan a la fila (de `notasQueCitanA`); vacío si nadie la cita. */
+export function resumenDe(
+  fila: FilaDeListado,
+  notas: readonly NotaParaAcreditar[],
+): ResumenDeComprobante {
   return {
     id: fila.id,
     tipo: fila.tipo,
@@ -49,6 +63,7 @@ export function resumenDe(fila: FilaDeListado): ResumenDeComprobante {
     total: importeATexto(fila.total),
     estado: fila.estado,
     ambiente: fila.ambiente,
+    acreditacion: acreditacionDe(fila.tipo, fila.total, notas)?.etiqueta ?? null,
   };
 }
 
@@ -159,6 +174,14 @@ export type DetalleDeComprobante = Readonly<{
   motivo: string | null;
   motivoDeDescarte: string | null;
   notasQueLoCitan: readonly NotaQueCitaVista[];
+  /**
+   * Lo ya acreditado por las notas de crédito que lo citan, texto decimal exacto (D-16). Cuentan las autorizadas y las
+   * pendientes (D-15: validando y confirmando); no las rechazadas ni las descartadas. Puede superar el total (D-11:
+   * sin tope). `null` en una nota de crédito: no se acredita.
+   */
+  acreditado: string | null;
+  /** La etiqueta de la factura, calculada de lo acreditado (D-12); `null` en una nota de crédito. */
+  acreditacion: EtiquetaDeAcreditacion | null;
   ultimoIntento: UltimoIntentoVisto | null;
   serie: SerieVista | null;
   versionDeRepresentacion: number;
@@ -175,6 +198,7 @@ export function detalleDe(
     serie: SerieGuardada | null;
   }>,
 ): DetalleDeComprobante {
+  const acreditacion = acreditacionDe(c.tipo, c.importes.total, adicionales.notasQueLoCitan);
   return {
     id: c.id,
     emisorId: c.emisorId,
@@ -241,6 +265,8 @@ export function detalleDe(
     motivo: c.motivo,
     motivoDeDescarte: c.motivoDeDescarte,
     notasQueLoCitan: adicionales.notasQueLoCitan.map(notaQueCitaVista),
+    acreditado: acreditacion === null ? null : importeATexto(acreditacion.acreditado),
+    acreditacion: acreditacion?.etiqueta ?? null,
     ultimoIntento:
       adicionales.ultimoIntento === null ? null : ultimoIntentoVisto(adicionales.ultimoIntento),
     serie: adicionales.serie === null ? null : serieVista(adicionales.serie),

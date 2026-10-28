@@ -10,6 +10,7 @@ import {
   descartarComprobante,
   emitirFactura,
   emitirNotaDeCredito,
+  emitirNotaDeDebito,
   listarComprobantes,
   reintentarComprobante,
   resincronizarSerie,
@@ -201,6 +202,8 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
           ambiente: "HOMOLOGACION",
           origenTipo: "MANUAL",
           importes: { total: "121.00" },
+          acreditado: "0.00",
+          acreditacion: "NINGUNA",
           ultimoIntento: { operacion: "AUTORIZAR", desenlace: "AUTORIZADO" },
         },
       });
@@ -217,7 +220,10 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
       const lista = await listarComprobantes(d, comoPersonaDe(e), undefined);
       expect(lista).toMatchObject({
         ok: true,
-        dato: { items: [{ id, estado: "AUTORIZADO", total: "121.00" }], siguiente: null },
+        dato: {
+          items: [{ id, estado: "AUTORIZADO", total: "121.00", acreditacion: "NINGUNA" }],
+          siguiente: null,
+        },
       });
     });
 
@@ -252,6 +258,59 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
           ahora(),
         );
       expect(await estadoDe(nota.dato.comprobanteId)).toBe("AUTORIZADO");
+      // Lo ya acreditado llega a la pantalla, en el detalle y en el listado (D-16).
+      const original = await verComprobante(d, comoPersonaDe(e), {
+        comprobanteId: factura.comprobanteId,
+      });
+      expect(original).toMatchObject({
+        ok: true,
+        dato: { estado: "AUTORIZADO", acreditado: "121.00", acreditacion: "TOTAL" },
+      });
+      const lista = await listarComprobantes(d, comoPersonaDe(e), undefined);
+      expect(
+        lista.ok && lista.dato.items.find((i) => i.id === factura.comprobanteId),
+      ).toMatchObject({
+        acreditacion: "TOTAL",
+      });
+    });
+
+    it("la nota de crédito exige motivo desde el pedido (D-17): vacío, de espacios o de más de 200 caracteres es FISCAL_MOTIVO_INVALIDO", async () => {
+      const e = await empresaConFacturacion();
+      const factura = await emitirYValidar(e);
+      const pedido = (motivo: string | null) => ({
+        clave: randomUUID(),
+        comprobanteAsociadoId: factura.comprobanteId,
+        puntoDeVentaId: null,
+        concepto: "PRODUCTOS",
+        servicio: null,
+        modoDePrecio: "IVA_INCLUIDO",
+        renglones: [
+          {
+            descripcion: "Devolución",
+            cantidad: "1",
+            precioUnitario: "10",
+            descuento: null,
+            alicuota: "21",
+          },
+        ],
+        motivo,
+      });
+      for (const motivo of [null, "", "   ", "m".repeat(201)]) {
+        expect(await emitirNotaDeCredito(d, comoPersonaDe(e), pedido(motivo))).toMatchObject({
+          ok: false,
+          error: { codigo: "FISCAL_MOTIVO_INVALIDO", campo: "motivo" },
+        });
+      }
+      // La nota de débito sigue sin exigirlo.
+      expect(await emitirNotaDeDebito(d, comoPersonaDe(e), pedido(null))).toMatchObject({
+        ok: true,
+        dato: { tipo: "NOTA_DEBITO_B" },
+      });
+      expect(await emitirNotaDeCredito(d, comoPersonaDe(e), pedido("m".repeat(200)))).toMatchObject(
+        {
+          ok: true,
+        },
+      );
     });
 
     it("lo que ARCA rechaza se ve traducido: el texto crudo de ARCA no llega a la pantalla", async () => {

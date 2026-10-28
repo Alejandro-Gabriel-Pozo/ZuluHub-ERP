@@ -281,6 +281,8 @@ export type DetalleParaLaPantalla = Readonly<{
   motivo: string | null;
   motivoDeDescarte: string | null;
   notasQueLoCitan: DetalleDeComprobante["notasQueLoCitan"];
+  acreditado: DetalleDeComprobante["acreditado"];
+  acreditacion: DetalleDeComprobante["acreditacion"];
   ultimoIntento: IntentoParaLaPantalla | null;
   serie: DetalleDeComprobante["serie"];
   creadoEn: string;
@@ -315,6 +317,8 @@ export function presentarDetalle(c: DetalleDeComprobante): DetalleParaLaPantalla
     motivo: c.motivo,
     motivoDeDescarte: c.motivoDeDescarte,
     notasQueLoCitan: c.notasQueLoCitan,
+    acreditado: c.acreditado,
+    acreditacion: c.acreditacion,
     ultimoIntento:
       c.ultimoIntento === null
         ? null

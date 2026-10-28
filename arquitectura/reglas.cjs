@@ -248,10 +248,10 @@ const reglas = [
     from: { path: "^src/modulos/[^/]+/consultas/" },
     to: {
       path: "^src/modulos/[^/]+/dominio/",
-      // Única excepción: el modelo de impresión del facturador (H7 facturación §B.7), un valor puro sin reglas
-      // de emisión que la consulta de impresión solo arma con lo guardado. Previene: abrir la puerta a todo el
-      // dominio de fiscal desde las consultas. Chequeo: las violaciones inyectadas de reglas.test.ts.
-      pathNot: "^src/modulos/fiscal/dominio/modelo-de-impresion\\.ts$",
+      // Únicas excepciones (fiscal, funciones puras): el modelo de impresión (§B.7) y la acreditación (D-16), que el
+      // detalle y el listado deben calcular con UNA regla. Previene: abrir todo el dominio de fiscal a las consultas.
+      // Chequeo: las violaciones inyectadas de reglas.test.ts.
+      pathNot: "^src/modulos/fiscal/dominio/(modelo-de-impresion|acreditacion)\\.ts$",
     },
   },
   {
