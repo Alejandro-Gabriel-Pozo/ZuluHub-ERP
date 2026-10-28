@@ -41,7 +41,7 @@ export const TEXTOS_DE_FISCAL = {
     largoMaximo: 160,
   },
   "error.fiscal_comprobante_no_encontrado": {
-    porDefecto: "No se encontró el comprobante.",
+    porDefecto: "No encontramos ese comprobante.",
     largoMaximo: 160,
   },
   "error.fiscal_asociado_no_autorizado": {

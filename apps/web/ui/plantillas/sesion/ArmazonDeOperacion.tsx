@@ -22,6 +22,7 @@ export type DestinoDeModulo = Readonly<{
   icono: ClaveDeIcono;
 }>;
 
+/** Los destinos fijos de la barra; la pantalla de un módulo no marca ninguno como actual (omite `actual`). */
 export type DestinoActual = "inicio" | "empresa" | "cuenta";
 
 export type PropsDeArmazonDeOperacion = Readonly<{

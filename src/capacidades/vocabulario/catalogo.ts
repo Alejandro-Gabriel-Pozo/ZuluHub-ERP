@@ -18,6 +18,7 @@
  */
 
 import { TEXTOS_DE_FISCAL } from "./catalogo-fiscal";
+import { TEXTOS_DE_FISCAL_PANTALLAS } from "./catalogo-fiscal-pantallas";
 
 /** El largo máximo de un texto que no declara otro (la base admite hasta 200 en cualquier caso). */
 export const LARGO_MAXIMO_DE_TEXTO = 80;
@@ -315,6 +316,7 @@ export const CATALOGO_DE_TEXTOS = {
   },
   // Facturador (H7 facturación): sus errores de negocio y lo que informa ARCA, traducido (`catalogo-fiscal.ts`).
   ...TEXTOS_DE_FISCAL,
+  ...TEXTOS_DE_FISCAL_PANTALLAS,
 } as const satisfies Record<string, DefinicionDeTexto>;
 
 export type ClaveDeTexto = keyof typeof CATALOGO_DE_TEXTOS;
