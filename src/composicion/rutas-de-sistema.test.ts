@@ -32,6 +32,9 @@ type Registro = {
   barrer: Date[];
   registrados: string[];
   relojes: number;
+  /** El orden en que arrancaron las tareas. */
+  orden: string[];
+  reconciliar: Date[];
 };
 
 function armar(
@@ -41,11 +44,21 @@ function armar(
     barrer: () => Promise<ResumenDelBarrido>;
     registrar: (d: string) => void;
     ahora: () => Date;
+    /** Si se da, el cron encola reconciliaciones (si no, es como cuando fiscal no está cableada). */
+    reconciliar: () => Promise<unknown>;
   }> = {},
 ): { dependencias: DependenciasDelCron; registro: Registro } {
-  const registro: Registro = { procesar: [], barrer: [], registrados: [], relojes: 0 };
+  const registro: Registro = {
+    procesar: [],
+    barrer: [],
+    registrados: [],
+    relojes: 0,
+    orden: [],
+    reconciliar: [],
+  };
   const procesador = {
     procesarPendientes: (opciones: { ahora: Date; limite: number }) => {
+      registro.orden.push("despacho");
       registro.procesar.push(opciones);
       return (cambios.procesar ?? (() => Promise.resolve(RESUMEN)))();
     },
@@ -59,6 +72,15 @@ function armar(
         return (cambios.barrer ?? (() => Promise.resolve(BARRIDO)))();
       },
     }),
+    ...(cambios.reconciliar === undefined
+      ? {}
+      : {
+          reconciliaciones: (ahora: Date) => {
+            registro.orden.push("reconciliaciones");
+            registro.reconciliar.push(ahora);
+            return (cambios.reconciliar ?? (() => Promise.resolve(null)))();
+          },
+        }),
     ahora:
       cambios.ahora ??
       (() => {
@@ -179,6 +201,48 @@ describe("atenderCron: qué hace", () => {
       expect(r.headers.get(nombre)).toBe(valor);
     sinCookies(r);
     expect(await r.json()).toEqual({ ok: true, despacho: RESUMEN, barrido: BARRIDO });
+  });
+
+  it("encola las reconciliaciones de fiscal ANTES de despachar, con el mismo reloj, y las cuenta en la respuesta", async () => {
+    const resumen = { empresas: 3, encoladas: 2, yaEncoladas: 1 };
+    const { dependencias, registro } = armar({ reconciliar: () => Promise.resolve(resumen) });
+    const r = await atenderCron(pedido(`Bearer ${SECRETO}`), dependencias);
+    expect(registro.orden).toEqual(["reconciliaciones", "despacho"]);
+    expect(registro.relojes).toBe(1);
+    expect(registro.reconciliar).toEqual([AHORA]);
+    expect(await r.json()).toEqual({
+      ok: true,
+      despacho: RESUMEN,
+      barrido: BARRIDO,
+      reconciliaciones: resumen,
+    });
+  });
+
+  it("sin la autorización del cron no se encola nada", async () => {
+    const { dependencias, registro } = armar({ reconciliar: () => Promise.resolve(null) });
+    expect((await atenderCron(pedido("Bearer otro"), dependencias)).status).toBe(401);
+    expect((await atenderCron(pedido(), dependencias)).status).toBe(401);
+    expect(registro.reconciliar).toEqual([]);
+    expect(registro.orden).toEqual([]);
+  });
+
+  it("si encolar las reconciliaciones falla, el despacho y el barrido corren igual; 500 con referencia y sin detalle", async () => {
+    const { dependencias, registro } = armar({
+      reconciliar: () =>
+        Promise.reject(
+          new Error("no se pudo encolar la reconciliación de 1 de 3 empresas (Inesperado)"),
+        ),
+    });
+    const r = await atenderCron(pedido(`Bearer ${SECRETO}`), dependencias);
+    expect(registro.procesar).toHaveLength(1);
+    expect(registro.barrer).toHaveLength(1);
+    expect(r.status).toBe(500);
+    const cuerpo = await r.text();
+    expect(JSON.parse(cuerpo)).toEqual({ codigo: "ERROR_INTERNO", referencia: REFERENCIA });
+    expect(cuerpo).not.toMatch(/empresas|reconcili/);
+    expect(registro.registrados).toEqual([
+      `${REFERENCIA} [cron] reconciliaciones: Error: no se pudo encolar la reconciliación de 1 de 3 empresas (Inesperado)`,
+    ]);
   });
 
   it("si el despacho falla, el barrido corre igual; 500 con referencia y sin detalle en la respuesta", async () => {

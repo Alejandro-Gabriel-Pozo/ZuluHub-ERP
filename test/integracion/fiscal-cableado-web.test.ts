@@ -16,7 +16,8 @@ import {
   verComprobante,
   type DependenciasDeFacturacionWeb,
 } from "../../src/composicion/facturacion-web";
-import { armarTrabajos } from "../../src/composicion/trabajos";
+import { atenderCron } from "../../src/composicion/rutas-de-sistema";
+import { armarTrabajos, claveDeReconciliacion } from "../../src/composicion/trabajos";
 import { armarWeb } from "../../src/composicion/web";
 import { empresaId, personaId } from "../../src/primitivas/identificadores/marca";
 import type { ProveedorDeEmision } from "../../src/modulos/fiscal/publico";
@@ -676,6 +677,124 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
       } finally {
         await roto.transaccionesDeApp().cerrar();
       }
+    });
+  });
+
+  // ===============================================================================================
+  describe("la reconciliación: quién la encola", () => {
+    const reconciliacionesDe = (empresa: string) =>
+      filas<{ clave_idempotencia: string; estado: string }>(
+        "select clave_idempotencia, estado from trabajo where empresa_id = $1 and tipo = 'fiscal.reconciliar' order by 1",
+        [empresa],
+      );
+    const unaHoraDespues = (desde: Date, horas = 1) =>
+      new Date(desde.getTime() + horas * 3_600_000);
+
+    it("el cron encola UNA por empresa que facturó y por hora (repetir no duplica); una empresa sin facturación no", async () => {
+      const con = await empresaConFacturacion();
+      await emitirYValidar(con);
+      const sin = await empresaConFacturacion();
+      const momento = new Date("2031-03-05T10:20:00Z");
+      // Las validaciones de arriba son «de hoy»: se mira desde un momento cercano a hoy.
+      const hoy = ahora();
+
+      const primera = await trabajos.encolarReconciliaciones(hoy);
+      expect(primera.encoladas).toBeGreaterThanOrEqual(1);
+      expect(await reconciliacionesDe(con.empresa)).toEqual([
+        {
+          clave_idempotencia: claveDeReconciliacion(empresaId(con.empresa), hoy),
+          estado: "PENDIENTE",
+        },
+      ]);
+      expect(await reconciliacionesDe(sin.empresa)).toEqual([]);
+
+      // La misma hora: ya estaba; no hay una segunda fila.
+      const repetida = await trabajos.encolarReconciliaciones(new Date(hoy.getTime() + 1_000));
+      expect(repetida.encoladas).toBe(0);
+      expect(repetida.yaEncoladas).toBeGreaterThanOrEqual(1);
+      expect(await reconciliacionesDe(con.empresa)).toHaveLength(1);
+
+      // Otra hora: otra reconciliación.
+      await trabajos.encolarReconciliaciones(unaHoraDespues(hoy));
+      expect(await reconciliacionesDe(con.empresa)).toHaveLength(2);
+      expect(claveDeReconciliacion(empresaId(con.empresa), momento)).toBe(
+        `fiscal.reconciliar:${con.empresa}:2031-03-05T10`,
+      );
+    });
+
+    it("una empresa cuya última validación es de hace más de 30 días ya no entra", async () => {
+      const vieja = await empresaConFacturacion();
+      await dueno.query(
+        `insert into trabajo (empresa_id, tipo, datos, clave_idempotencia, creado_en)
+         values ($1, 'fiscal.validar_comprobante', $2::jsonb, $3, now() - interval '40 days')`,
+        [
+          vieja.empresa,
+          JSON.stringify({ comprobanteId: randomUUID() }),
+          `fiscal.validar:${randomUUID()}:1`,
+        ],
+      );
+      await trabajos.encolarReconciliaciones(ahora());
+      expect(await reconciliacionesDe(vieja.empresa)).toEqual([]);
+      // Con una validación de hoy, sí entra.
+      await dueno.query(
+        `insert into trabajo (empresa_id, tipo, datos, clave_idempotencia)
+         values ($1, 'fiscal.validar_comprobante', $2::jsonb, $3)`,
+        [
+          vieja.empresa,
+          JSON.stringify({ comprobanteId: randomUUID() }),
+          `fiscal.validar:${randomUUID()}:1`,
+        ],
+      );
+      await trabajos.encolarReconciliaciones(ahora());
+      expect(await reconciliacionesDe(vieja.empresa)).toHaveLength(1);
+    });
+
+    it("un comprobante INCIERTO se resuelve solo: el cron encola la reconciliación y el despacho de la misma pasada la ejecuta, consultando (nunca reenviando)", async () => {
+      const e = await empresaConFacturacion();
+      // «Autorizó y se cayó»: ARCA lo tiene y nosotros no lo sabemos.
+      arca.HOMOLOGACION.programar("AUTORIZA_Y_SE_CAE");
+      const emitido = await emitirYValidar(e);
+      expect(await estadoDe(emitido.comprobanteId)).toBe("INCIERTO");
+      // Se cuenta solo lo de ESTE comprobante: el cron también despacha lo pendiente de las demás pruebas.
+      const deEste = <T extends { puntoDeVenta: { cuit: string } }>(lista: readonly T[]) =>
+        lista.filter((x) => x.puntoDeVenta.cuit === e.cuit).length;
+      const autorizaciones = deEste(arca.HOMOLOGACION.pedidos);
+      const consultas = deEste(arca.HOMOLOGACION.consultas);
+      expect(autorizaciones).toBe(1);
+
+      // Pasó la reserva (5 minutos): una pasada del cron, tal cual la arma la web, con un reloj que ya avanzó una hora
+      // (también el de los casos de uso: la reserva se compara con él).
+      const despues = unaHoraDespues(ahora());
+      const trabajosDeDespues = armarTrabajos(conexiones, {
+        emision,
+        reloj: { ahora: () => despues },
+      });
+      const respuesta = await atenderCron(
+        new Request("https://pedernal-erp.vercel.app/api/trabajos/cron", {
+          headers: { authorization: "Bearer el-secreto-largo-del-cron-de-prueba" },
+        }),
+        {
+          secreto: () => "el-secreto-largo-del-cron-de-prueba",
+          procesador: trabajosDeDespues.procesador,
+          barrido: () => ({
+            barrerVencidos: () =>
+              Promise.resolve({ sesiones: 0, verificaciones: 0, limitesDePedidos: 0 }),
+          }),
+          reconciliaciones: (momento) => trabajosDeDespues.encolarReconciliaciones(momento),
+          ahora: () => despues,
+          registrar: (x) => registrados.push(x),
+        },
+      );
+      expect(respuesta.status).toBe(200);
+      expect(await estadoDe(emitido.comprobanteId)).toBe("AUTORIZADO");
+      expect(deEste(arca.HOMOLOGACION.pedidos)).toBe(autorizaciones);
+      expect(deEste(arca.HOMOLOGACION.consultas)).toBeGreaterThan(consultas);
+      const [fila] = await filas<{ resuelto_por: string }>(
+        "select resuelto_por from comprobante where id = $1",
+        [emitido.comprobanteId],
+      );
+      expect(fila?.resuelto_por).toBe("RECONCILIACION");
+      expect((await reconciliacionesDe(e.empresa))[0]?.estado).toBe("HECHO");
     });
   });
 

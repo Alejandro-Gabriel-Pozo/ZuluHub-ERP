@@ -112,6 +112,7 @@ function colaEnMemoria(
       return Promise.resolve(true);
     },
     idsPorClaves: opciones.porClaves ?? (() => Promise.resolve([])),
+    empresasConTrabajosDe: () => Promise.resolve([]),
   };
   const transacciones: Transacciones<TxDeCola> = {
     ejecutar: async (opcionesDeTx, trabajo) => {

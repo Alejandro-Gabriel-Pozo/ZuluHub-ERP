@@ -17,6 +17,7 @@ const mundo = vi.hoisted(() => {
       (opciones: { ahora: Date; limite: number }) => Promise<ResumenDeProcesamiento>
     >,
     barrer: undefined as unknown as Mock<(ahora: Date) => Promise<ResumenDelBarrido>>,
+    reconciliar: undefined as unknown as Mock<(ahora: Date) => Promise<unknown>>,
     baseResponde: undefined as unknown as Mock<() => Promise<boolean>>,
   };
 });
@@ -35,6 +36,7 @@ vi.mock("../../apps/web/servidor/composicion", () => {
   mundo.barrer = vi.fn(() =>
     Promise.resolve({ sesiones: 0, verificaciones: 0, limitesDePedidos: 0 }),
   );
+  mundo.reconciliar = vi.fn(() => Promise.resolve({ empresas: 0, encoladas: 0, yaEncoladas: 0 }));
   mundo.baseResponde = vi.fn(() => Promise.resolve(true));
   return {
     sistema: {
@@ -44,7 +46,10 @@ vi.mock("../../apps/web/servidor/composicion", () => {
       },
       baseResponde: () => mundo.baseResponde,
     },
-    trabajos: { procesador: () => ({ procesarPendientes: mundo.procesar }) },
+    trabajos: {
+      procesador: () => ({ procesarPendientes: mundo.procesar }),
+      encolarReconciliaciones: (ahora: Date) => mundo.reconciliar(ahora),
+    },
     web: { barridoDeAutenticacion: () => ({ barrerVencidos: mundo.barrer }) },
   };
 });
@@ -60,6 +65,7 @@ beforeEach(() => {
   mundo.secreto.valor = SECRETO;
   mundo.procesar.mockClear();
   mundo.barrer.mockClear();
+  mundo.reconciliar.mockClear();
   mundo.baseResponde.mockClear();
   mundo.baseResponde.mockImplementation(() => Promise.resolve(true));
 });
@@ -82,15 +88,21 @@ describe("app/api/trabajos/cron", () => {
     }
     expect(mundo.procesar).not.toHaveBeenCalled();
     expect(mundo.barrer).not.toHaveBeenCalled();
+    expect(mundo.reconciliar).not.toHaveBeenCalled();
   });
 
-  it("con el secreto: despacha la cola y barre, con el mismo `ahora`", async () => {
+  it("con el secreto: encola las reconciliaciones de fiscal, despacha la cola y barre, con el mismo `ahora`", async () => {
     const r = await rutaDelCron.GET(pedido(URL_DEL_CRON, `Bearer ${SECRETO}`));
     expect(r.status).toBe(200);
     expect(mundo.procesar).toHaveBeenCalledTimes(1);
     expect(mundo.barrer).toHaveBeenCalledTimes(1);
+    expect(mundo.reconciliar).toHaveBeenCalledTimes(1);
+    expect(mundo.reconciliar.mock.invocationCallOrder[0]).toBeLessThan(
+      mundo.procesar.mock.invocationCallOrder[0] ?? 0,
+    );
     const { ahora, limite } = mundo.procesar.mock.calls[0]?.[0] as { ahora: Date; limite: number };
     expect(mundo.barrer.mock.calls[0]?.[0]).toBe(ahora);
+    expect(mundo.reconciliar.mock.calls[0]?.[0]).toBe(ahora);
     expect(limite).toBe(50);
   });
 
@@ -102,6 +114,7 @@ describe("app/api/trabajos/cron", () => {
     }
     expect(mundo.procesar).not.toHaveBeenCalled();
     expect(mundo.barrer).not.toHaveBeenCalled();
+    expect(mundo.reconciliar).not.toHaveBeenCalled();
   });
 
   it("una falla de la tarea sale como 500 con referencia y se registra en el servidor", async () => {

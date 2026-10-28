@@ -28,6 +28,7 @@ export type ColaDb = {
     proximo_intento: Date;
     tomado_hasta: Date | null;
     ultimo_error: string | null;
+    creado_en: Date;
   };
 };
 
@@ -124,6 +125,24 @@ export function crearColaDePostgres(db: Kysely<ColaDb>): ColaDeTrabajos {
         .where("intentos", "=", intentos)
         .executeTakeFirst();
       return r.numUpdatedRows === 1n;
+    },
+
+    async empresasConTrabajosDe(tipo, desde, limite) {
+      if (!Number.isInteger(limite) || limite < 1) {
+        throw new RangeError(`limite debe ser un entero mayor o igual a 1 (llegó ${limite})`);
+      }
+      const filas = await db
+        .selectFrom("trabajo")
+        .select("empresa_id")
+        .distinct()
+        .where("tipo", "=", tipo)
+        .where("creado_en", ">=", desde)
+        // Los de plataforma (sin empresa) no son de ninguna empresa.
+        .where("empresa_id", "is not", null)
+        .orderBy("empresa_id")
+        .limit(limite)
+        .execute();
+      return filas.flatMap((f) => (f.empresa_id === null ? [] : [aEmpresaId(f.empresa_id)]));
     },
 
     async idsPorClaves(empresa, claves) {
