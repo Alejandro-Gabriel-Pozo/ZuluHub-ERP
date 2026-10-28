@@ -30,6 +30,8 @@ export type ResumenDeComprobante = Readonly<{
   numero: string | null;
   fecha: FechaCivil;
   receptorNombre: string | null;
+  /** Tipo y número del documento del receptor, como en el detalle (`SIN_IDENTIFICAR` no tiene número). */
+  receptorDocumento: FilaDeListado["receptorDocumento"];
   total: string;
   estado: FilaDeListado["estado"];
   ambiente: FilaDeListado["ambiente"];
@@ -60,6 +62,7 @@ export function resumenDe(
     numero: numeroDe(fila.puntoDeVentaNumero, fila.numero),
     fecha: fila.fecha,
     receptorNombre: fila.receptorNombre,
+    receptorDocumento: fila.receptorDocumento,
     total: importeATexto(fila.total),
     estado: fila.estado,
     ambiente: fila.ambiente,

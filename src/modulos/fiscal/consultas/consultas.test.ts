@@ -12,7 +12,8 @@ import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../../capacidades/
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { importeDesdeTexto } from "../../../primitivas/dinero/importe";
 import { ARS } from "../../../primitivas/dinero/moneda";
-import { personaId, type EmpresaId } from "../../../primitivas/identificadores/marca";
+import type { AlcanceDeSucursales } from "../../../capacidades/permisos/alcance";
+import { personaId, sucursalId, type EmpresaId } from "../../../primitivas/identificadores/marca";
 import type { Transacciones } from "../../../puertos/transacciones";
 import { modeloDeImpresion, type MarcaParaImprimir } from "../dominio/modelo-de-impresion";
 import type { NotaParaAcreditar } from "../dominio/acreditacion";
@@ -165,6 +166,7 @@ type Llamadas = {
   notasDeLaPagina: unknown[][];
   intentos: unknown[][];
   series: unknown[][];
+  puntosDeVenta: unknown[][];
 };
 
 type Datos = Readonly<{
@@ -175,6 +177,8 @@ type Datos = Readonly<{
   intentos?: readonly IntentoDeArca[];
   serie?: SerieGuardada | null;
   pagina?: PaginaDeFilas;
+  puntosDeVenta?: readonly number[];
+  alcance?: AlcanceDeSucursales;
 }>;
 
 /** Las consultas sobre una transacción en memoria; devuelve además todo lo que se pidió. */
@@ -186,6 +190,7 @@ function armar(datos: Datos = {}) {
     notasDeLaPagina: [],
     intentos: [],
     series: [],
+    puntosDeVenta: [],
   };
   const marcasPedidas: EmpresaId[] = [];
   const tx: TxDeConsultasDeFacturacion = {
@@ -207,6 +212,10 @@ function armar(datos: Datos = {}) {
       notasQueCitanA: (...args) => {
         llamadas.notasDeLaPagina.push(args);
         return Promise.resolve(datos.notasDeLaPagina ?? new Map());
+      },
+      puntosDeVentaActivosDeLaSucursal: (...args) => {
+        llamadas.puntosDeVenta.push(args);
+        return Promise.resolve(datos.puntosDeVenta ?? []);
       },
     },
     intentos: {
@@ -234,7 +243,7 @@ function armar(datos: Datos = {}) {
           modulosActivados: ["facturacion"],
           modulosHabilitados: ["facturacion"],
         }),
-      sucursalesDelActor: () => Promise.resolve("TODAS"),
+      sucursalesDelActor: () => Promise.resolve(datos.alcance ?? "TODAS"),
     },
   };
   const transacciones: Transacciones<TxDeConsultasDeFacturacion> = {
@@ -265,6 +274,10 @@ describe("listarComprobantes", () => {
     numero: n % 2 === 0 ? BigInt(n) : null,
     fecha: fecha("2026-10-13"),
     receptorNombre: n === 1 ? null : `Cliente ${n}`,
+    receptorDocumento:
+      n === 1
+        ? ({ tipo: "SIN_IDENTIFICAR" } as const)
+        : ({ tipo: "DNI", numero: `3000000${n}` } as const),
     total: importeDesdeTexto(ARS, `${n}00.50`),
     estado: n % 2 === 0 ? ("AUTORIZADO" as const) : ("PENDIENTE" as const),
     ambiente: "PRODUCCION" as const,
@@ -299,6 +312,7 @@ describe("listarComprobantes", () => {
         numero: null,
         fecha: "2026-10-13",
         receptorNombre: null,
+        receptorDocumento: { tipo: "SIN_IDENTIFICAR" },
         total: "100.50",
         estado: "PENDIENTE",
         ambiente: "PRODUCCION",
@@ -310,6 +324,7 @@ describe("listarComprobantes", () => {
         numero: "00003-00000002",
         fecha: "2026-10-13",
         receptorNombre: "Cliente 2",
+        receptorDocumento: { tipo: "DNI", numero: "30000002" },
         total: "200.50",
         estado: "AUTORIZADO",
         ambiente: "PRODUCCION",
@@ -403,6 +418,50 @@ describe("listarComprobantes", () => {
       });
     }
     expect(filtros).toEqual([]);
+  });
+});
+
+describe("listarPuntosDeVentaDeLaSucursal", () => {
+  const SUCURSAL = sucursalId("s-1");
+
+  it("pide los puntos de venta activos de ESA sucursal, de la empresa del contexto, y los devuelve por número", async () => {
+    const { consultas, llamadas } = armar({ puntosDeVenta: [1, 3, 12] });
+    const r = exito(
+      await consultas.listarPuntosDeVentaDeLaSucursal(contexto(OTRA_EMPRESA), {
+        sucursalId: SUCURSAL,
+      }),
+    );
+    expect(r).toEqual({ items: [{ numero: 1 }, { numero: 3 }, { numero: 12 }] });
+    expect(llamadas.puntosDeVenta).toEqual([[OTRA_EMPRESA, SUCURSAL]]);
+  });
+
+  it("una sucursal sin puntos de venta activos da una lista vacía, no un error", async () => {
+    const { consultas } = armar();
+    expect(
+      exito(await consultas.listarPuntosDeVentaDeLaSucursal(contexto(), { sucursalId: SUCURSAL })),
+    ).toEqual({ items: [] });
+  });
+
+  it("un operador pide solo una sucursal de su alcance; fuera de él no se lee nada", async () => {
+    const dentro = armar({ alcance: [SUCURSAL], puntosDeVenta: [2] });
+    expect(
+      exito(
+        await dentro.consultas.listarPuntosDeVentaDeLaSucursal(contexto(), {
+          sucursalId: SUCURSAL,
+        }),
+      ).items,
+    ).toEqual([{ numero: 2 }]);
+    const fuera = armar({ alcance: [sucursalId("s-2")], puntosDeVenta: [2] });
+    expect(
+      await fuera.consultas.listarPuntosDeVentaDeLaSucursal(contexto(), { sucursalId: SUCURSAL }),
+    ).toEqual({ ok: false, error: "SUCURSAL_FUERA_DE_ALCANCE" });
+    expect(fuera.llamadas.puntosDeVenta).toEqual([]);
+    const sinAsignaciones = armar({ alcance: [] });
+    expect(
+      await sinAsignaciones.consultas.listarPuntosDeVentaDeLaSucursal(contexto(), {
+        sucursalId: SUCURSAL,
+      }),
+    ).toEqual({ ok: false, error: "SUCURSAL_FUERA_DE_ALCANCE" });
   });
 });
 

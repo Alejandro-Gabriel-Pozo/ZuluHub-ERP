@@ -58,7 +58,8 @@ import {
   type VersionId,
 } from "../dominio/identificadores";
 import { importesParaArca } from "../dominio/importes-para-arca";
-import { TIPOS_DE_DOCUMENTO, type DocumentoDelReceptor, type Receptor } from "../dominio/receptor";
+import type { Receptor } from "../dominio/receptor";
+import { documentoDelReceptorDeLaBase } from "./documento-del-receptor";
 import { deLaLista, exigir, type ErrorDeAlta, type ResultadoDeAlta } from "./repositorios";
 import type { FiscalDb } from "./tablas";
 
@@ -421,17 +422,12 @@ const RESUELTO_POR: readonly ResueltoPor[] = ["RESPUESTA", "RECONCILIACION"];
 const CLASES: readonly ClaseDeComprobante[] = ["FACTURA", "NOTA_DEBITO", "NOTA_CREDITO"];
 
 function aReceptor(fila: FilaDeComprobante): Receptor {
-  const tipo = fila.receptor_documento_tipo;
-  const documento: DocumentoDelReceptor =
-    tipo === "SIN_IDENTIFICAR"
-      ? { tipo }
-      : {
-          tipo: deLaLista(TIPOS_DE_DOCUMENTO, tipo, "tipo de documento del receptor"),
-          numero: exigir(fila.receptor_documento_numero, "receptor_documento_numero"),
-        };
   return {
     nombre: fila.receptor_nombre,
-    documento,
+    documento: documentoDelReceptorDeLaBase(
+      fila.receptor_documento_tipo,
+      fila.receptor_documento_numero,
+    ),
     condicionIva: deLaLista(
       CONDICIONES_DE_IVA_DEL_RECEPTOR,
       fila.receptor_condicion_iva,

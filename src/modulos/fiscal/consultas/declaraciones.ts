@@ -7,6 +7,7 @@ import type { DeclaracionDeCaso } from "../../../capacidades/permisos/declaracio
  */
 export const DECLARACIONES_DE_CONSULTAS = {
   listarComprobantes: { accion: "comprobantes.ver" },
+  listarPuntosDeVentaDeLaSucursal: { accion: "comprobantes.ver" },
   verComprobante: { accion: "comprobantes.ver" },
   modeloDeImpresion: { accion: "comprobantes.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

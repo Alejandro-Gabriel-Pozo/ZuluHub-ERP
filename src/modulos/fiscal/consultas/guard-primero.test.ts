@@ -9,7 +9,7 @@ import {
 } from "../../../capacidades/permisos/empresa";
 import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "../../../capacidades/permisos/roles";
 import type { ContextoOperativo } from "../../../contexto/contexto";
-import { empresaId, personaId } from "../../../primitivas/identificadores/marca";
+import { empresaId, personaId, sucursalId } from "../../../primitivas/identificadores/marca";
 import type { CargaDeAutorizacion, DatosDelActor } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
 import { comprobanteId } from "../publico";
@@ -91,6 +91,8 @@ const ID = comprobanteId("c-1");
 /** Cómo se llama a cada consulta. Una nueva obliga a sumar su fila. */
 const LLAMADAS: Record<ConAccion, (consultas: ConsultasDeFacturacion) => Promise<unknown>> = {
   listarComprobantes: (c) => c.listarComprobantes(contexto, {}),
+  listarPuntosDeVentaDeLaSucursal: (c) =>
+    c.listarPuntosDeVentaDeLaSucursal(contexto, { sucursalId: sucursalId("s-1") }),
   verComprobante: (c) => c.verComprobante(contexto, { comprobanteId: ID }),
   modeloDeImpresion: (c) => c.modeloDeImpresion(contexto, { comprobanteId: ID }),
 };
@@ -109,9 +111,10 @@ const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
 };
 
 describe("P7: el guard va primero en cada consulta del facturador", () => {
-  it("hay tres consultas, todas con acción", () => {
+  it("hay cuatro consultas, todas con acción", () => {
     expect([...NOMBRES].sort()).toEqual([
       "listarComprobantes",
+      "listarPuntosDeVentaDeLaSucursal",
       "modeloDeImpresion",
       "verComprobante",
     ]);

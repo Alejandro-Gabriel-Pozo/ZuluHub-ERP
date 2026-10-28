@@ -22,7 +22,8 @@ export type ErrorAlListarComprobantes = MotivoDeRechazo | ErrorDeCriterios | Err
  * H7 facturación §B.4.9). Pide `comprobantes.ver` al guard dentro de su transacción (`read committed`, solo
  * lectura) y recién después mira el pedido. Se pagina por clave `(creado_en, id)`, sin `OFFSET`: `siguiente` es la
  * clave de la última fila de la página, o `null` si no queda nada. Por defecto oculta los `DESCARTADO`. Cada fila trae
- * su `acreditacion` (D-16) con UNA consulta más para toda la página, no una por fila.
+ * su `acreditacion` (D-16) con UNA consulta más para toda la página, no una por fila; el documento del receptor viene en
+ * la misma consulta de la página, sin otra por fila.
  */
 export function armarListarComprobantes({
   transacciones,
