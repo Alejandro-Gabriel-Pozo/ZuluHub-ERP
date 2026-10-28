@@ -105,7 +105,9 @@ export async function firmarTra(
       ],
       certificates: [certificado],
     });
-    await firmado.sign(clave, 0, "SHA-256");
+    // El tipo de la clave de `node:crypto` y el `CryptoKey` del DOM (que ve `apps/web`) no son el mismo para
+    // TypeScript, aunque en ejecución son el mismo objeto: sin este puente, `apps/web` no compila.
+    await firmado.sign(clave as unknown as Parameters<typeof firmado.sign>[0], 0, "SHA-256");
     const envoltorio = new pkijs.ContentInfo({
       contentType: OID_DATOS_FIRMADOS,
       content: firmado.toSchema(true),

@@ -12,6 +12,7 @@ import {
   PEDERNAL_AUTH_SECRETO_EMPRESA,
   caracteresDistintos,
 } from "../adaptadores/autenticacion/configuracion";
+import { PEDERNAL_CLAVE_CERTIFICADOS } from "../adaptadores/cifrado/aes-gcm";
 import { PEDERNAL_CLAVE_CONTEXTO } from "../adaptadores/postgres/contexto-firmado";
 import { ErrorDeConfiguracion } from "../adaptadores/postgres/errores";
 import { PEDERNAL_SECRETO_INVITACIONES } from "../adaptadores/tokens/tokens-hmac";
@@ -89,6 +90,10 @@ export const NOMBRES_DE_ENTORNO = [
   { nombre: GOOGLE_CLIENT_ID, forma: texto, piezas: ["autenticacion"] },
   { nombre: GOOGLE_CLIENT_SECRET, forma: texto, piezas: ["autenticacion"] },
   { nombre: PEDERNAL_SECRETO_INVITACIONES, forma: texto, piezas: ["tokens"] },
+  // La clave maestra que cifra las claves privadas de los certificados de ARCA y los tickets de acceso (h7 §B.6.3 y
+  // §B.9): `<kid>:<64 hexadecimales>`, una por entorno. Solo la pide el facturador (`cifrador-de-certificados`): sin
+  // ella la web arranca y el resto funciona; lo fiscal falla cerrado. El formato fino lo valida `parsearClaveMaestra`.
+  { nombre: PEDERNAL_CLAVE_CERTIFICADOS, forma: texto, piezas: ["cifrador-de-certificados"] },
   { nombre: PEDERNAL_RESEND_API_KEY, forma: texto, piezas: ["correo"] },
   { nombre: PEDERNAL_CORREO_REMITENTE, forma: texto, piezas: ["correo"] },
   { nombre: PEDERNAL_URL_BASE, forma: texto, piezas: ["correo"] },

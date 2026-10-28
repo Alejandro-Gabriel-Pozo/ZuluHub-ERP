@@ -20,6 +20,7 @@ import { armarWeb } from "./web";
 const valida = (): Record<string, string> => ({
   PEDERNAL_CLAVE_CONTEXTO: `1:${randomBytes(32).toString("hex")}`,
   PEDERNAL_SECRETO_INVITACIONES: randomBytes(32).toString("hex"),
+  PEDERNAL_CLAVE_CERTIFICADOS: `k1:${randomBytes(32).toString("hex")}`,
   PEDERNAL_RESEND_API_KEY: "clave-de-relleno",
   PEDERNAL_CORREO_REMITENTE: "Prueba <prueba@ejemplo.test>",
   PEDERNAL_NOMBRE_DE_MARCA: "Marca de relleno",
@@ -92,6 +93,11 @@ const PEDIDOS: { nombre: string; pedir: (c: Conexiones) => unknown; nombra: stri
     nombra: "GOOGLE_CLIENT_SECRET",
   },
   { nombre: "tokens", pedir: (c) => c.tokens(), nombra: "PEDERNAL_SECRETO_INVITACIONES" },
+  {
+    nombre: "cifradorDeCertificados",
+    pedir: (c) => c.cifradorDeCertificados(),
+    nombra: "PEDERNAL_CLAVE_CERTIFICADOS",
+  },
   { nombre: "correo", pedir: (c) => c.correo(), nombra: "PEDERNAL_RESEND_API_KEY" },
   {
     nombre: "configuracionDeCorreo",
@@ -116,6 +122,21 @@ const PEDIDOS: { nombre: string; pedir: (c: Conexiones) => unknown; nombra: stri
   {
     nombre: "web.consultasDeIdentidad",
     pedir: (c) => armarWeb(c).consultasDeIdentidad(),
+    nombra: "PEDERNAL_DB_APP",
+  },
+  {
+    nombre: "web.casosDeUsoDeFacturacion",
+    pedir: (c) => armarWeb(c).casosDeUsoDeFacturacion(),
+    nombra: "PEDERNAL_DB_APP",
+  },
+  {
+    nombre: "web.casosDeUsoDeConfiguracionFiscal",
+    pedir: (c) => armarWeb(c).casosDeUsoDeConfiguracionFiscal(),
+    nombra: "PEDERNAL_DB_APP",
+  },
+  {
+    nombre: "web.consultasDeFacturacion",
+    pedir: (c) => armarWeb(c).consultasDeFacturacion(),
     nombra: "PEDERNAL_DB_APP",
   },
   {
@@ -303,6 +324,41 @@ describe("con el entorno completo", () => {
     });
     expect(registrados).toEqual([]);
     await pedidos[0]?.cerrar();
+  });
+
+  it("sin la clave de los certificados, la web de facturación y el procesador de la cola se arman igual: la pide recién quien habla con ARCA", () => {
+    const sinClave: Record<string, string> = valida();
+    delete sinClave["PEDERNAL_CLAVE_CERTIFICADOS"];
+    const { conexiones, registrados } = conFuente(sinClave);
+    const web = armarWeb(conexiones);
+    expect(web.casosDeUsoDeFacturacion()).toBeDefined();
+    expect(web.casosDeUsoDeConfiguracionFiscal()).toBeDefined();
+    expect(web.consultasDeFacturacion()).toBeDefined();
+    expect(armarTrabajos(conexiones).procesador()).toBeDefined();
+    expect(registrados).toEqual([]);
+    // La pieza que SÍ la necesita falla cerrado y nombra la variable solo en el registro.
+    expect(() => conexiones.cifradorDeCertificados()).toThrow(ErrorDeEntorno);
+    expect(registrados).toEqual([
+      "pieza cifrador-de-certificados: PEDERNAL_CLAVE_CERTIFICADOS falta",
+    ]);
+  });
+
+  it("la web ofrece de fiscal solo lo que una persona dispara: ni los trabajos de sistema ni la numeración suelta ni el modelo de impresión", () => {
+    const { conexiones } = conFuente(valida());
+    const web = armarWeb(conexiones);
+    expect(Object.keys(web.casosDeUsoDeFacturacion()).sort()).toEqual([
+      "cambiarAmbienteDePuntoDeVenta",
+      "descartarComprobante",
+      "emitirComprobanteManual",
+      "emitirNotaDeCredito",
+      "emitirNotaDeDebito",
+      "reintentarComprobante",
+      "resincronizarSerie",
+    ]);
+    expect(Object.keys(web.consultasDeFacturacion()).sort()).toEqual([
+      "listarComprobantes",
+      "verComprobante",
+    ]);
   });
 
   it("las transacciones de la aplicación y las de los trabajos son instancias distintas", () => {

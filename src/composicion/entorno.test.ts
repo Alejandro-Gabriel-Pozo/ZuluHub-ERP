@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { inspect } from "node:util";
 import { describe, expect, it } from "vitest";
 import { ErrorDeConfiguracion } from "../adaptadores/postgres/errores";
@@ -25,6 +26,8 @@ const CENTINELA = "valor-secreto-de-prueba-123";
 
 const COMPLETO: FuenteDeEntorno = {
   PEDERNAL_CLAVE_CONTEXTO: "  1:abcdef  ",
+  // Una clave maestra al azar de ESTA corrida: el código no lleva ningún valor.
+  PEDERNAL_CLAVE_CERTIFICADOS: `k1:${randomBytes(32).toString("hex")}`,
   PEDERNAL_SECRETO_INVITACIONES: "secreto-de-prueba",
   PEDERNAL_RESEND_API_KEY: "clave-de-prueba",
   PEDERNAL_CORREO_REMITENTE: "Prueba <prueba@ejemplo.test>",
@@ -50,6 +53,8 @@ const PIEZAS: Record<Pieza, string[]> = {
   "conexion-de-autenticacion": ["PEDERNAL_DB_AUTENTICACION"],
   autenticacion: ["PEDERNAL_AUTH_SECRETO_EMPRESA", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
   tokens: ["PEDERNAL_SECRETO_INVITACIONES"],
+  // El facturador: la clave que cifra las claves privadas de ARCA y los tickets; solo la pide su pieza.
+  "cifrador-de-certificados": ["PEDERNAL_CLAVE_CERTIFICADOS"],
   // W6: la guarda de migración y la salud miran la base con el rol de la aplicación, sin firmar contexto.
   esquema: ["PEDERNAL_DB_APP"],
   cron: ["CRON_SECRET"],
@@ -70,13 +75,14 @@ const sin = (fuente: FuenteDeEntorno, nombre: string): FuenteDeEntorno => {
 describe("NOMBRES_DE_ENTORNO (P-13: la lista de nombres)", () => {
   const nombres = NOMBRES_DE_ENTORNO.map((e) => e.nombre);
 
-  it("son exactamente los de W1, la cadena de la puerta pública, los de la autenticación y el secreto del cron (los demás llegan en sus tramos)", () => {
+  it("son exactamente los de W1, la cadena de la puerta pública, los de la autenticación, el secreto del cron y la clave de los certificados (los demás llegan en sus tramos)", () => {
     expect([...nombres].sort()).toEqual(
       [
         "CRON_SECRET",
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",
         "PEDERNAL_AUTH_SECRETO_EMPRESA",
+        "PEDERNAL_CLAVE_CERTIFICADOS",
         "PEDERNAL_CLAVE_CONTEXTO",
         "PEDERNAL_CORREO_REMITENTE",
         "PEDERNAL_DB_APP",

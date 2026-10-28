@@ -124,6 +124,7 @@ sale de `src/composicion/entorno.ts` (la verificó W6; coincide con la del plan 
 | ------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------- |
 | `PEDERNAL_CLAVE_CONTEXTO`       | Firmar el contexto; la misma clave se instala en `contexto_clave` de esa rama                   | Vos (B.4, a mano)                               |
 | `PEDERNAL_SECRETO_INVITACIONES` | Firmar los enlaces de invitación                                                                | `--secretos` o a mano                           |
+| `PEDERNAL_CLAVE_CERTIFICADOS`   | Cifrar claves de ARCA (`<kid>:<64 hex>`, distinta de la de contexto). Solo la pide lo fiscal    | Vos (B.4, a mano)                               |
 | `PEDERNAL_RESEND_API_KEY`       | Mandar mails (Resend)                                                                           | Vos                                             |
 | `PEDERNAL_CORREO_REMITENTE`     | Remitente de los mails                                                                          | Vos                                             |
 | `PEDERNAL_NOMBRE_DE_MARCA`      | Nombre que firma el mail hasta que existan los mails por marca                                  | Vos                                             |
@@ -141,7 +142,9 @@ Las de sistema (`VERCEL_ENV`, `VERCEL_GIT_COMMIT_SHA`) las pone Vercel; no las c
 
 Diferencias con el plan, para que no te sorprendan: (1) `CRON_SECRET` no estaba declarada en el código; W6 la sumó a
 `entorno.ts` con su validación (≥ 16 caracteres) y su prueba. (2) `PEDERNAL_CLAVE_CERTIFICADOS` (cifrado de las claves de
-ARCA) la declara la facturación fiscal, no esta lista; se carga cuando ese tramo llegue. (3) La cadena de `pedernal_captacion`
+ARCA y de sus tickets) la declara el cableado fiscal. Solo hace falta cuando se use la facturación (el módulo sigue «en
+desarrollo»): sin ella la web arranca y lo fiscal falla cerrado. Se genera como la de contexto (B.4, el mismo comando),
+una por entorno y **distinta** de aquella; el `kid` puede ser un texto corto de letras o números. (3) La cadena de `pedernal_captacion`
 (`PEDERNAL_DB_CAPTACION`) la crea el comando con un nombre provisorio pero la aplicación todavía no la usa: no la cargues.
 
 #### Lo que NO debe existir (ni en Production ni en Preview)

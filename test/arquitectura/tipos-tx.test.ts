@@ -1,7 +1,15 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type { NivelesDeControl } from "../../src/capacidades/controles/niveles";
 import type { TxDeApp } from "../../src/composicion/conexiones";
+import type { TxDeCredenciales } from "../../src/adaptadores/certificados/credenciales-de-emisor";
+import type { TxDeTickets } from "../../src/adaptadores/certificados/almacen-de-tickets";
 import type { TxDeConsultasDeEmpresas, TxDeEmpresas } from "../../src/modulos/empresas/publico";
+import type {
+  TxDeCertificados,
+  TxDeConfiguracionFiscal,
+  TxDeConsultasDeFacturacion,
+  TxDeFacturacion,
+} from "../../src/modulos/fiscal/publico";
 import type { TxDeConsultasDeIdentidad, TxDeIdentidad } from "../../src/modulos/identidad/publico";
 import type { Transacciones } from "../../src/puertos/transacciones";
 
@@ -29,9 +37,24 @@ describe("la Tx compuesta de la composición contiene la Tx angosta de cada mód
     expectTypeOf<TxDeApp>().toExtend<Readonly<{ niveles: NivelesDeControl }>>();
   });
 
+  it("fiscal: facturación, consultas, configuración, certificados y lo que descifra el adaptador de ARCA", () => {
+    expectTypeOf<TxDeApp>().toExtend<TxDeFacturacion>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeConsultasDeFacturacion>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeConfiguracionFiscal>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeCertificados>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeCredenciales>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeTickets>();
+  });
+
   it("las Transacciones de la composición sirven donde un módulo pide las suyas", () => {
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeEmpresas>>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeIdentidad>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeFacturacion>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConsultasDeFacturacion>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConfiguracionFiscal>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeCertificados>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeCredenciales>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeTickets>>();
   });
 
   it("la Tx angosta de un módulo no alcanza donde hace falta la compuesta (no compila)", () => {
