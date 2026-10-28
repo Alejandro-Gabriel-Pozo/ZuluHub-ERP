@@ -57,12 +57,19 @@ export interface ColaDeTrabajos {
   /** Los ids de los trabajos de la empresa con esas claves de idempotencia. */
   idsPorClaves(empresaId: EmpresaId, claves: readonly string[]): Promise<string[]>;
   /**
-   * Las empresas que encolaron algún trabajo de ese tipo desde `desde` (en cualquier estado), sin repetir y en un orden
-   * estable, hasta `limite`. Es lo único que el cron puede saber de las empresas sin romper el aislamiento: ver la
-   * cola de todas es lo que hace este rol, y no lee ninguna otra tabla. Sirve para saber a qué empresas barrerles lo que
-   * quedó en vuelo (`fiscal.reconciliar`).
+   * Las empresas que encolaron algún trabajo de ese tipo desde `desde` (en cualquier estado), sin repetir, hasta
+   * `limite`. Es lo único que el cron puede saber de las empresas sin romper el aislamiento: ver la cola de todas es lo
+   * que hace este rol, y no lee ninguna otra tabla. Sirve para saber a qué empresas barrerles lo que quedó en vuelo
+   * (`fiscal.reconciliar`). El orden es por id; si llega `postergadasEn` (otro tipo de trabajo), es primero las que hace
+   * más que no encolan ese tipo (las que nunca, antes que todas) y por id entre iguales: con más empresas que `limite`,
+   * las pasadas sucesivas las recorren a todas.
    */
-  empresasConTrabajosDe(tipo: string, desde: Date, limite: number): Promise<EmpresaId[]>;
+  empresasConTrabajosDe(
+    tipo: string,
+    desde: Date,
+    limite: number,
+    postergadasEn?: string,
+  ): Promise<EmpresaId[]>;
 }
 
 /** Cómo termina un intento de ejecutar el efecto de un trabajo. */

@@ -1,4 +1,4 @@
-import type { ExpressionBuilder, Kysely } from "kysely";
+import { sql, type ExpressionBuilder, type Kysely } from "kysely";
 import type { ColaDeTrabajos } from "../../puertos/cola-de-trabajos";
 import type { Dato } from "../../puertos/sin-secretos";
 import { empresaId as aEmpresaId } from "../../primitivas/identificadores/marca";
@@ -127,21 +127,30 @@ export function crearColaDePostgres(db: Kysely<ColaDb>): ColaDeTrabajos {
       return r.numUpdatedRows === 1n;
     },
 
-    async empresasConTrabajosDe(tipo, desde, limite) {
+    async empresasConTrabajosDe(tipo, desde, limite, postergadasEn) {
       if (!Number.isInteger(limite) || limite < 1) {
         throw new RangeError(`limite debe ser un entero mayor o igual a 1 (llegó ${limite})`);
       }
-      const filas = await db
+      const base = db
         .selectFrom("trabajo")
         .select("empresa_id")
-        .distinct()
         .where("tipo", "=", tipo)
         .where("creado_en", ">=", desde)
         // Los de plataforma (sin empresa) no son de ninguna empresa.
         .where("empresa_id", "is not", null)
-        .orderBy("empresa_id")
-        .limit(limite)
-        .execute();
+        .groupBy("empresa_id");
+      // Sin `postergadasEn`: por id. Con él: primero las que hace más que no encolan ese tipo (las que nunca, antes que
+      // todas), desempatando por id. Así, con más empresas que `limite`, cada pasada atiende a las más atrasadas y
+      // todas se recorren en pasadas sucesivas, sin guardar ningún cursor aparte.
+      const ordenada =
+        postergadasEn === undefined
+          ? base.orderBy("empresa_id")
+          : base
+              .orderBy(
+                sql`(select max(r.creado_en) from trabajo r where r.empresa_id = trabajo.empresa_id and r.tipo = ${postergadasEn}) asc nulls first`,
+              )
+              .orderBy("empresa_id");
+      const filas = await ordenada.limit(limite).execute();
       return filas.flatMap((f) => (f.empresa_id === null ? [] : [aEmpresaId(f.empresa_id)]));
     },
 

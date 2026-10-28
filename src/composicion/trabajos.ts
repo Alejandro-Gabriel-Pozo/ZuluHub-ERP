@@ -20,9 +20,11 @@ import {
   crearManejadorDeEnviarInvitacion,
   crearManejadorDeRevocarSesiones,
 } from "../modulos/identidad/publico";
+import type { ManejadorDeTrabajo } from "../puertos/cola-de-trabajos";
 import type { Conexiones } from "./conexiones";
 import { armarEmisionFiscal } from "./emision-fiscal";
 import { perezoso } from "./perezoso";
+import { LIMITE_DE_TRABAJOS_POR_PASADA } from "./rutas-de-sistema";
 import { tipoDeFalla } from "./tipo-de-falla";
 
 /**
@@ -31,8 +33,12 @@ import { tipoDeFalla } from "./tipo-de-falla";
  * ARCA que falla por semanas. Una empresa sin validaciones en esa ventana no tiene qué reconciliar.
  */
 export const VENTANA_DE_ACTIVIDAD_FISCAL_EN_MS = 30 * 24 * 3_600_000;
-/** Cuántas empresas atiende una pasada del cron (el resto va en la siguiente: el orden es estable). */
-export const EMPRESAS_POR_PASADA_DE_RECONCILIACION = 200;
+/**
+ * Cuántas empresas encola una pasada del cron: no más de los trabajos que esa misma pasada despacha
+ * (`LIMITE_DE_TRABAJOS_POR_PASADA`), para que lo encolado no se acumule sin que alcance a procesarse. Las que no entran
+ * van en la pasada siguiente: se atiende primero a las que hace más que no se reconcilian, así que todas se recorren.
+ */
+export const EMPRESAS_POR_PASADA_DE_RECONCILIACION = LIMITE_DE_TRABAJOS_POR_PASADA;
 
 /**
  * La clave de idempotencia de la reconciliación de una empresa: UNA por hora (UTC). Dos pasadas del cron en la misma
@@ -56,6 +62,12 @@ export type OpcionesDeTrabajos = Readonly<{
   reloj?: Readonly<{ ahora(): Date }>;
 }>;
 
+/** Un manejador que se arma la primera vez que corre (y se vuelve a intentar armar si lanzó). */
+function diferido(armar: () => ManejadorDeTrabajo): ManejadorDeTrabajo {
+  const manejador = perezoso(armar);
+  return (trabajo, ahora) => manejador()(trabajo, ahora);
+}
+
 /**
  * El procesador de la cola y los manejadores de los tipos de trabajo que existen. Hoy `enviar_invitacion`,
  * `revocar_sesiones` (h5-p8 §2.5: la suspensión de una persona lo encola y se borran sus sesiones con el rol de
@@ -75,7 +87,11 @@ export function armarTrabajos(conexiones: Conexiones, opciones: OpcionesDeTrabaj
      * trabajo de reconciliación, que llama el cron antes de despachar. Qué empresas hay lo dice la propia cola (el cron
      * no puede leer comprobantes de todas las empresas: la base los aísla por empresa); encolar es una transacción por
      * empresa, con su contexto de sistema, y repetirlo en la misma hora no duplica nada. Si falla alguna empresa, sigue
-     * con las demás y al final avisa cuántas fallaron (sin datos de ninguna); la próxima pasada las reintenta.
+     * con las demás y al final avisa cuántas fallaron (sin datos de ninguna); la próxima pasada las reintenta. Cada
+     * pasada encola a lo sumo `EMPRESAS_POR_PASADA_DE_RECONCILIACION` empresas, las que hace más que no se reconcilian.
+     *
+     * Escribe en `trabajo` sin auditoría a propósito: es infraestructura de la cola, sin dato de negocio (no toca
+     * comprobantes, series ni importes). La reconciliación sí audita cada comprobante que resuelve, en su transacción.
      */
     async encolarReconciliaciones(ahora: Date): Promise<ResumenDeReconciliaciones> {
       const desde = new Date(ahora.getTime() - VENTANA_DE_ACTIVIDAD_FISCAL_EN_MS);
@@ -91,6 +107,7 @@ export function armarTrabajos(conexiones: Conexiones, opciones: OpcionesDeTrabaj
               TRABAJO_VALIDAR_COMPROBANTE,
               desde,
               EMPRESAS_POR_PASADA_DE_RECONCILIACION,
+              TRABAJO_RECONCILIAR,
             ),
           ),
       );
@@ -129,31 +146,39 @@ export function armarTrabajos(conexiones: Conexiones, opciones: OpcionesDeTrabaj
     },
 
     procesador: perezoso((): ProcesadorDeTrabajos => {
-      const { urlBase, nombreDeMarca } = conexiones.configuracionDeCorreo();
-      const manejadorDeInvitaciones = crearManejadorDeEnviarInvitacion({
-        // El envío corre con el contexto OPERATIVO de la empresa del trabajo: por la puerta de la aplicación.
-        transacciones: conexiones.transaccionesDeApp(),
-        tokens: conexiones.tokens(),
-        correo: conexiones.correo(),
-        urlBase,
-        marca: { nombre: nombreDeMarca },
+      // Cada manejador se arma recién al ejecutar un trabajo de su tipo: así los de fiscal no dependen de la
+      // configuración del correo (Resend, URL base) y una variable que falta rompe solo al tipo que la necesita; ese
+      // trabajo falla (con reintento) y los demás siguen. Lo que se arma bien se guarda; lo que lanza se vuelve a intentar.
+      const manejadorDeInvitaciones = diferido(() => {
+        const { urlBase, nombreDeMarca } = conexiones.configuracionDeCorreo();
+        return crearManejadorDeEnviarInvitacion({
+          // El envío corre con el contexto OPERATIVO de la empresa del trabajo: por la puerta de la aplicación.
+          transacciones: conexiones.transaccionesDeApp(),
+          tokens: conexiones.tokens(),
+          correo: conexiones.correo(),
+          urlBase,
+          marca: { nombre: nombreDeMarca },
+        });
       });
-      const dependenciasDeFacturacion = {
+      const dependenciasDeFacturacion = perezoso(() => ({
         transacciones: conexiones.transaccionesDeApp(),
         reglas: REGLAS_DE_EMPRESA,
         emision:
           opciones.emision ?? armarEmisionFiscal(conexiones, reloj === undefined ? {} : { reloj }),
         reloj: reloj ?? { ahora: () => new Date() },
-      };
+      }));
       return crearProcesadorDeTrabajos({
         transacciones: conexiones.transaccionesDeTrabajos(),
         manejadores: new Map([
           [TRABAJO_ENVIAR_INVITACION, manejadorDeInvitaciones],
           [
             TRABAJO_VALIDAR_COMPROBANTE,
-            crearManejadorDeValidarComprobante(dependenciasDeFacturacion),
+            diferido(() => crearManejadorDeValidarComprobante(dependenciasDeFacturacion())),
           ],
-          [TRABAJO_RECONCILIAR, crearManejadorDeReconciliar(dependenciasDeFacturacion)],
+          [
+            TRABAJO_RECONCILIAR,
+            diferido(() => crearManejadorDeReconciliar(dependenciasDeFacturacion())),
+          ],
           [
             TRABAJO_REVOCAR_SESIONES,
             crearManejadorDeRevocarSesiones({

@@ -386,6 +386,60 @@ describe.skipIf(base === null)("cola de trabajos: el procesador contra una base 
       }
     });
 
+    it("con `postergadasEn`, primero las que hace más que no encolan ese otro tipo (y las que nunca, antes que todas)", async () => {
+      const t = tipo();
+      const otro = tipo();
+      const a = await crearEmpresaActiva(entorno);
+      const b = await crearEmpresaActiva(entorno);
+      const c = await crearEmpresaActiva(entorno);
+      for (const e of [a, b, c]) await encolarCon(e, t, nombreAlAzar("k"));
+      // `a` encoló el otro tipo hace poco, `b` hace mucho y `c` nunca: el orden es c, b, a, sin importar los ids.
+      await encolarCon(a, otro, nombreAlAzar("k"), "2026-03-02T00:00:00Z");
+      await encolarCon(b, otro, nombreAlAzar("k"), "2026-03-01T00:00:00Z");
+      const desde = new Date(0);
+      expect(await enLaCola((q) => q.empresasConTrabajosDe(t, desde, 50, otro))).toEqual([
+        c.empresa,
+        b.empresa,
+        a.empresa,
+      ]);
+      // Con tope, la más atrasada primero; y una empresa sin trabajos del primer tipo no aparece aunque tenga del otro.
+      expect(await enLaCola((q) => q.empresasConTrabajosDe(t, desde, 1, otro))).toEqual([
+        c.empresa,
+      ]);
+      const d = await crearEmpresaActiva(entorno);
+      await encolarCon(d, otro, nombreAlAzar("k"));
+      expect(await enLaCola((q) => q.empresasConTrabajosDe(t, desde, 50, otro))).not.toContain(
+        d.empresa,
+      );
+    });
+
+    it("con más empresas que el límite (205 y tope 200), pasadas sucesivas las cubren a todas", async () => {
+      const t = tipo();
+      const otro = tipo();
+      const todas: string[] = [];
+      for (let i = 0; i < 205; i++) {
+        const e = await crearEmpresaActiva(entorno);
+        await encolarCon(e, t, nombreAlAzar("k"));
+        todas.push(e.empresa);
+      }
+      const desde = new Date(0);
+      const cubiertas = new Set<string>();
+      for (let pasada = 1; pasada <= 2; pasada++) {
+        const elegidas = await enLaCola((q) => q.empresasConTrabajosDe(t, desde, 200, otro));
+        expect(elegidas).toHaveLength(200);
+        // Lo que la pasada «encola»: lo que sigue es lo que la composición hace con cada empresa elegida.
+        for (const empresa of elegidas) {
+          await dueno.query(
+            "insert into trabajo (empresa_id, tipo, clave_idempotencia) values ($1, $2, $3)",
+            [empresa, otro, nombreAlAzar("k")],
+          );
+          cubiertas.add(empresa);
+        }
+      }
+      // Sin rotación, la 201 en adelante no se atendía nunca; con ella, dos pasadas ya las cubren a todas.
+      expect([...cubiertas].sort()).toEqual([...todas].sort());
+    }, 120_000);
+
     it("no incluye los trabajos de plataforma (sin empresa)", async () => {
       const t = tipo();
       await dueno.query(
