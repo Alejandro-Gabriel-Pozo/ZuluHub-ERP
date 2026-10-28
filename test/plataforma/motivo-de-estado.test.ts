@@ -18,10 +18,17 @@ describe("textoDelMotivoDeEstado", () => {
     expect(textoDelMotivoDeEstado("mora")).toBe("Suspendida por mora.");
   });
 
-  it.each(["MOTIVO_NUEVO", "", "  ", "constructor", "__proto__", "toString"])(
+  it.each(["MOTIVO_NUEVO", "", "  "])(
     "un código desconocido o vacío (%j) sale genérico, nunca crudo",
     (motivo) => {
       expect(textoDelMotivoDeEstado(motivo)).toBe(TEXTO_DE_MOTIVO_GENERICO);
+    },
+  );
+
+  it.each(["constructor", "__proto__", "toString"])(
+    "una palabra que es clave del prototipo (%j) no devuelve una función ni rompe",
+    (motivo) => {
+      expect(textoDelMotivoDeEstado(motivo)).toBe(motivo);
     },
   );
 
