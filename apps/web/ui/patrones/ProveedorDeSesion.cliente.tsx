@@ -149,7 +149,7 @@ export function ProveedorDeSesion({
           vencidaTitulo: texto(diccionario, "sesion.vencida_titulo"),
           vencidaDetalle: texto(diccionario, "sesion.vencida_detalle"),
           ingresarDeNuevo: texto(diccionario, "sesion.ingresar_de_nuevo"),
-          cerrar: texto(diccionario, "carta.producto.cerrar"),
+          cerrar: texto(diccionario, "vidriera.producto.cerrar"),
         }}
         alSeguir={alSeguir}
         alIngresar={alIngresar}
