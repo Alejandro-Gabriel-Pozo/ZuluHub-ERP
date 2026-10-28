@@ -141,19 +141,51 @@ export type DecisionDeBorrador = Readonly<{
 }>;
 
 /**
- * Aplica los cambios al borrador (o arranca uno vacío). `versionEsperada` es lo que el cliente vio:
- * `null` = «no había borrador», un número = la `version` del borrador que miró. Si no coincide con lo
- * que hay ahora, `VERSION_DESACTUALIZADA` y no se pierde el trabajo de nadie (dos personas editando).
+ * La definición de la ÚLTIMA decisión de la marca: la de la versión confirmada de MAYOR `numero`, regida o
+ * programada a futuro (la última decisión manda, §B.5.6; el número manda sobre la fecha). `null` si la marca
+ * no tiene ninguna confirmada. Es la base del primer borrador (`decidirGuardadoDeBorrador`). No depende del
+ * orden en que vengan las versiones.
+ */
+export function definicionDeLaUltimaDecision(
+  confirmadas: readonly Readonly<{ numero: number; definicion: DefinicionDeMarca }>[],
+): DefinicionDeMarca | null {
+  let ultima: (typeof confirmadas)[number] | null = null;
+  for (const version of confirmadas) {
+    if (ultima === null || version.numero > ultima.numero) ultima = version;
+  }
+  return ultima === null ? null : ultima.definicion;
+}
+
+/**
+ * Aplica los cambios al borrador. Si ya hay uno, parte de él. Si NO hay, el primer borrador parte de la
+ * definición de la ÚLTIMA versión confirmada de la marca (`baseDeLaUltimaConfirmada`: la de mayor `numero`,
+ * aunque esté programada a futuro, porque la última decisión manda) y no de una definición vacía; sin
+ * ninguna confirmada (`null`) parte de `DEFINICION_VACIA`. Previene que cambiar un solo color deje un
+ * borrador con solo el tema: lo que la persona ve vigente es lo que se guarda, y confirmar no pierde el resto.
+ *
+ * `baseDeLaUltimaConfirmada` se ignora cuando ya hay borrador (el borrador manda sobre lo confirmado).
+ * Un primer borrador sin cambios, o con cambios iguales a lo confirmado, se crea igual: devuelve la `version`
+ * que la persona necesita para seguir editando, y confirmarlo sigue exigiendo motivo y decisión explícita.
+ *
+ * `versionEsperada` es lo que el cliente vio: `null` = «no había borrador», un número = la `version` del
+ * borrador que miró. Si no coincide con lo que hay ahora, `VERSION_DESACTUALIZADA` y no se pierde el
+ * trabajo de nadie (dos personas editando).
  */
 export function decidirGuardadoDeBorrador(
   existente: BorradorGuardado | null,
+  baseDeLaUltimaConfirmada: DefinicionDeMarca | null,
   versionEsperada: number | null,
   cambios: CambiosValidadosDeBorrador,
 ): Resultado<DecisionDeBorrador, "VERSION_DESACTUALIZADA"> {
   if ((existente === null ? null : existente.version) !== versionEsperada) {
     return err("VERSION_DESACTUALIZADA");
   }
-  const base = existente === null ? DEFINICION_VACIA : existente.definicion;
+  const base =
+    existente !== null
+      ? existente.definicion
+      : baseDeLaUltimaConfirmada === null
+        ? DEFINICION_VACIA
+        : baseDeLaUltimaConfirmada;
   return ok({
     esNuevo: existente === null,
     definicion: {

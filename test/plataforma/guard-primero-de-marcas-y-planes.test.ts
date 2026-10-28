@@ -90,6 +90,7 @@ const LLAMADAS: Record<
     c.confirmarVersionDeMarca(comoAdministrador, {
       claveDeIdempotencia: CLAVE,
       marcaId: uuid(1),
+      versionEsperada: 1,
       vigenteDesde: FECHA,
       motivo: "alta",
       reemplazaProgramada: false,

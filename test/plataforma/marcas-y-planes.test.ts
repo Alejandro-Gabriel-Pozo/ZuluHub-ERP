@@ -78,6 +78,7 @@ const CASOS: readonly Caso[] = [
       c.confirmarVersionDeMarca(CONTEXTO, {
         claveDeIdempotencia,
         marcaId: id(1),
+        versionEsperada: 1,
         vigenteDesde: FECHA,
         motivo: "alta",
         reemplazaProgramada: false,
@@ -215,6 +216,13 @@ describe("la forma de la entrada se valida DESPUÉS del guard y ANTES de tocar n
       { codigo: "MODULO_DESCONOCIDO", modulo: "comandas" },
     ],
     ["confirmarVersionDeMarca", { marcaId: "x" }, "ID_INVALIDO"],
+    // La versión que se vio es obligatoria: nada de «sin borrador» (null) ni de entradas sin tipar.
+    ["confirmarVersionDeMarca", { versionEsperada: 0 }, "VERSION_ESPERADA_INVALIDA"],
+    ["confirmarVersionDeMarca", { versionEsperada: 1.5 }, "VERSION_ESPERADA_INVALIDA"],
+    ["confirmarVersionDeMarca", { versionEsperada: Number.NaN }, "VERSION_ESPERADA_INVALIDA"],
+    ["confirmarVersionDeMarca", { versionEsperada: null }, "VERSION_ESPERADA_INVALIDA"],
+    ["confirmarVersionDeMarca", { versionEsperada: undefined }, "VERSION_ESPERADA_INVALIDA"],
+    ["confirmarVersionDeMarca", { versionEsperada: 2 ** 31 }, "VERSION_ESPERADA_INVALIDA"],
     ["confirmarVersionDeMarca", { vigenteDesde: new Date("x") }, "VIGENCIA_INVALIDA"],
     ["confirmarVersionDeMarca", { motivo: "m".repeat(501) }, "MOTIVO_DEMASIADO_LARGO"],
     ["crearPlan", { codigo: "Plan Pro" }, "CODIGO_DE_PLAN_INVALIDO"],
@@ -319,6 +327,15 @@ describe("la repetición de la clave devuelve lo guardado, marcado, sin tocar na
       desactivarModuloDeEmpresa: { modulo: "ventas" },
     };
     expect(await caso.llamar(armado.casos, CLAVE, OTRA[caso.nombre])).toEqual({
+      ok: false,
+      error: "CLAVE_REUTILIZADA",
+    });
+  });
+
+  it("confirmarVersionDeMarca: la misma clave con OTRA versionEsperada es CLAVE_REUTILIZADA (entra en la huella)", async () => {
+    const caso = CASOS.find((c) => c.nombre === "confirmarVersionDeMarca") as Caso;
+    const { armado } = await conLaClaveYaUsada(caso);
+    expect(await caso.llamar(armado.casos, CLAVE, { versionEsperada: 2 })).toEqual({
       ok: false,
       error: "CLAVE_REUTILIZADA",
     });
