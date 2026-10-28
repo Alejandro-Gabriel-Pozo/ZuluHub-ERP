@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { violacionesDeAccesibilidad } from "../../pruebas/ayudas";
 import type { DetalleParaMostrar } from "./modelo-del-detalle";
@@ -104,5 +104,32 @@ describe("detalle de un comprobante en el celular", () => {
     expect(total).toBeDefined();
     expect(tamano(total as HTMLElement)).toBeGreaterThanOrEqual(22);
     expect(ancho(document.body.querySelector("article"))).toBeLessThanOrEqual(window.innerWidth);
+  });
+
+  it("dos mensajes de ARCA con el mismo texto se ven los dos y React no avisa de claves repetidas", async () => {
+    // Los códigos 10242 y 10243 se traducen al mismo texto: una clave que sea solo el texto se repetiría.
+    const avisos = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      await render(
+        <PantallaDeDetalleDeComprobante
+          detalle={{
+            ...rechazada,
+            ultimoIntento: {
+              mensajes: [
+                { clave: "fiscal.arca.receptor_para_a" },
+                { clave: "fiscal.arca.receptor_para_a" },
+              ],
+            },
+          }}
+        />,
+      );
+      const iguales = [...document.body.querySelectorAll("p")].filter((p) =>
+        (p.textContent ?? "").includes("CUIT"),
+      );
+      expect(iguales).toHaveLength(2);
+      expect(avisos.mock.calls.flat().join(" ")).not.toMatch(/same key|unique "key"/i);
+    } finally {
+      avisos.mockRestore();
+    }
   });
 });

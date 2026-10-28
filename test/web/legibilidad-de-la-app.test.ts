@@ -100,20 +100,108 @@ describe("el documento de la aplicación", () => {
   });
 });
 
+/**
+ * El código sin comentarios ni textos entre comillas: lo que queda es lo que se ejecuta. Un recorrido simple (no un
+ * parser): los comentarios de línea y de bloque, comillas simples y dobles (terminan al fin de la línea si falta la de cierre) y plantillas,
+ * cuyo `${...}` sí es código.
+ */
+function sinComentariosNiTextos(codigo: string): string {
+  let salida = "";
+  const plantillas: number[] = []; // por cada plantilla abierta, cuántas llaves de `${` faltan cerrar
+  let i = 0;
+  const texto = (cierre: string, enPlantilla: boolean): void => {
+    i++;
+    while (i < codigo.length) {
+      const c = codigo.charAt(i);
+      if (c === "\\") i += 2;
+      else if (c === cierre) return void i++;
+      else if (enPlantilla && c === "$" && codigo.charAt(i + 1) === "{") {
+        plantillas.push(1);
+        i += 2;
+        return;
+      } else if (!enPlantilla && c === "\n") return;
+      else i++;
+    }
+  };
+  while (i < codigo.length) {
+    const c = codigo.charAt(i);
+    const dos = codigo.slice(i, i + 2);
+    if (dos === "//") {
+      while (i < codigo.length && codigo.charAt(i) !== "\n") i++;
+    } else if (dos === "/*") {
+      const fin = codigo.indexOf("*/", i + 2);
+      i = fin === -1 ? codigo.length : fin + 2;
+    } else if (c === '"' || c === "'") texto(c, false);
+    else if (c === "`") texto("`", true);
+    else {
+      if (plantillas.length > 0 && c === "{") plantillas[plantillas.length - 1]!++;
+      if (plantillas.length > 0 && c === "}") {
+        plantillas[plantillas.length - 1]!--;
+        if (plantillas[plantillas.length - 1] === 0) {
+          plantillas.pop();
+          texto("`", true); // `i` está en la `}`: `texto` salta un carácter al empezar
+
+          continue;
+        }
+      }
+      salida += c;
+      i++;
+    }
+  }
+  return salida;
+}
+
+// `BigInt` NO está prohibido: es entero exacto, no pierde dígitos. Sí lo está todo lo que redondea o corre un día.
+const PROHIBIDO_EN_EL_DETALLE =
+  /\b(Number|parseFloat|parseInt|Date|Intl|toFixed|toLocale\w*)\b|\bMath\./;
+
+const usosProhibidos = (codigo: string): string[] =>
+  sinComentariosNiTextos(codigo).match(new RegExp(PROHIBIDO_EN_EL_DETALLE, "g")) ?? [];
+
 describe("el detalle de un comprobante: importes y fechas solo como texto (ADR-006)", () => {
   // Previene: un importe que pierde centavos por pasar por `Number`, o un día corrido por pasar por `Date`.
   const carpeta = join(RAIZ, "ui/plantillas/facturacion");
+  // Todo archivo de la carpeta (se lee el directorio: uno nuevo queda cubierto solo), menos pruebas y estilos.
+  const delDetalle = readdirSync(carpeta).filter(
+    (nombre) => !/\.test\./.test(nombre) && !nombre.endsWith(".css"),
+  );
 
-  it.each(["formato-fiscal.ts", "modelo-del-detalle.ts", "PantallaDeDetalleDeComprobante.tsx"])(
+  it("la carpeta tiene los archivos del detalle", () => {
+    expect(delDetalle).toEqual(
+      expect.arrayContaining(["formato-fiscal.ts", "modelo-del-detalle.ts"]),
+    );
+  });
+
+  it.each(delDetalle)(
     "%s no usa Number, parseFloat, Date ni formateadores del navegador",
     (archivo) => {
-      const codigo = readFileSync(join(carpeta, archivo), "utf8")
-        .split("\n")
-        .filter((l) => !/^\s*(\*|\/\*|\/\/)/.test(l))
-        .join("\n");
-      expect(codigo).not.toMatch(
-        /\b(Number|parseFloat|parseInt|BigInt|Date|Intl|toFixed|toLocale\w*)\b|\bMath\./,
-      );
+      expect(usosProhibidos(readFileSync(join(carpeta, archivo), "utf8"))).toEqual([]);
     },
   );
+
+  describe("el detector (violación inyectada)", () => {
+    it("marca Number(x) y new Date()", () => {
+      expect(usosProhibidos("const a = Number(x);")).toEqual(["Number"]);
+      expect(usosProhibidos("const d = new Date();")).toEqual(["Date"]);
+      expect(usosProhibidos("const t = `${Number(x)}`;")).toEqual(["Number"]);
+    });
+
+    it("no marca comentarios ni textos que nombran Date o Number", () => {
+      const inocente = [
+        "// Number y Date no se usan",
+        "/* Date(x) y Number(y) */",
+        "/** Previene `Number(x)`.",
+        " * Y `new Date()`. */",
+        'const a = "Date";',
+        "const b = 'Number(x)';",
+        "const c = `la Date y el Number`;",
+        "const d = <p>{'Date'}</p>;",
+      ].join("\n");
+      expect(usosProhibidos(inocente)).toEqual([]);
+    });
+
+    it("no prohíbe BigInt", () => {
+      expect(usosProhibidos("const n = BigInt(x);")).toEqual([]);
+    });
+  });
 });

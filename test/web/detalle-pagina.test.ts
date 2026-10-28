@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { errorDeCodigo, type Respuesta } from "../../src/capacidades/experiencia/respuesta";
@@ -21,25 +21,20 @@ vi.mock("../../apps/web/servidor/facturacion", () => ({
     return Promise.resolve(lectura.respuesta);
   },
 }));
-const armazon = vi.hoisted((): { opciones: unknown } => ({ opciones: null }));
-// El armazón falso pinta el único h1 igual que el real: el título del catálogo, o el que trae `conTitulo`.
-vi.mock("../../apps/web/pantallas/operacion", () => ({
-  conTitulo: (tituloResuelto: string, cuerpo: ReactNode) => ({ tituloResuelto, cuerpo }),
-  pantallaDeOperacion: async (
-    opciones: { titulo: string },
-    contenido: (d: object) => Promise<unknown>,
-  ) => {
-    armazon.opciones = opciones;
-    const r = await contenido({});
-    const titulado = (x: unknown): x is { tituloResuelto: string; cuerpo: ReactNode } =>
-      typeof x === "object" && x !== null && "tituloResuelto" in x;
-    return createElement(
-      "main",
-      null,
-      createElement("h1", null, titulado(r) ? r.tituloResuelto : "Comprobante"),
-      titulado(r) ? r.cuerpo : (r as ReactNode),
-    );
-  },
+// La guarda real (`pantallaDeOperacion`) y el armazón real: solo se simula lo externo, la sesión, la puerta y la empresa.
+vi.mock("../../apps/web/servidor/sesion", () => ({
+  empresaDelPedido: () =>
+    Promise.resolve({
+      puerta: { marca: { nombre: "Marca de prueba" } },
+      entrada: {
+        ok: true,
+        dato: {
+          tipo: "ENTRA",
+          empresa: { nombre: "Empresa de prueba" },
+          contexto: {},
+        },
+      },
+    }),
 }));
 
 const ID = "0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b";
@@ -58,6 +53,9 @@ async function html(id: string): Promise<string> {
   return renderToStaticMarkup(arbol as ReactNode);
 }
 
+const titulos = (marcado: string): string[] =>
+  [...marcado.matchAll(/<h1\b[^>]*>(.*?)<\/h1>/g)].map((m) => m[1] as string);
+
 const pagina = async (id: string): Promise<string> => (await html(id)).replace(/<[^>]+>/g, " ");
 
 const respuesta = (r: Respuesta<unknown>): void => {
@@ -67,12 +65,6 @@ const respuesta = (r: Respuesta<unknown>): void => {
 describe("la página del detalle de un comprobante", () => {
   beforeEach(() => {
     lectura.llamadas = [];
-  });
-
-  it("usa la guarda de operación, con el destino de facturación", async () => {
-    respuesta({ ok: true, dato: base });
-    await pagina(ID);
-    expect(armazon.opciones).toEqual({ titulo: "fiscal.pantalla.titulo", actual: "facturacion" });
   });
 
   it("con un comprobante, lo lee por su id y lo pinta", async () => {
@@ -85,13 +77,12 @@ describe("la página del detalle de un comprobante", () => {
   it("con un comprobante hay UN solo h1, con el título real", async () => {
     respuesta({ ok: true, dato: base });
     const marcado = await html(ID);
-    expect(marcado.match(/<h1\b[^>]*>(.*?)<\/h1>/g)).toEqual(["<h1>Factura B 00001-00001234</h1>"]);
+    expect(titulos(marcado)).toEqual(["Factura B 00001-00001234"]);
   });
 
   it("sin comprobante (id inválido o error) el único h1 es el genérico «Comprobante»", async () => {
     respuesta({ ok: false, error: errorDeCodigo("FISCAL_COMPROBANTE_NO_ENCONTRADO") });
-    for (const id of ["no-es-un-id", ID])
-      expect((await html(id)).match(/<h1\b[^>]*>(.*?)<\/h1>/g)).toEqual(["<h1>Comprobante</h1>"]);
+    for (const id of ["no-es-un-id", ID]) expect(titulos(await html(id))).toEqual(["Comprobante"]);
   });
 
   it.each(["no-es-un-id", "0B9F6A1E-2C3D-4E5F-8A7B-9C0D1E2F3A4B", `${ID}x`, "1; drop table"])(

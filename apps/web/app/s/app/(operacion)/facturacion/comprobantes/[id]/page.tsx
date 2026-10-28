@@ -15,19 +15,16 @@ export default async function PaginaDeDetalleDeComprobante({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return pantallaDeOperacion(
-    { titulo: "fiscal.pantalla.titulo", actual: "facturacion" },
-    async () => {
-      if (!FORMA_DE_ID.test(id)) {
-        return <ErrorDelDetalle error={errorDeCodigo("FISCAL_COMPROBANTE_NO_ENCONTRADO")} />;
-      }
-      const respuesta = await verElComprobante({ comprobanteId: id });
-      if (!respuesta.ok) return <ErrorDelDetalle error={respuesta.error} />;
-      // El título real es el único h1 (el de un error sigue siendo el genérico del catálogo).
-      return conTitulo(
-        armarElDetalle(respuesta.dato, {}).titulo,
-        <PantallaDeDetalleDeComprobante detalle={respuesta.dato} />,
-      );
-    },
-  );
+  return pantallaDeOperacion({ titulo: "fiscal.pantalla.titulo" }, async () => {
+    if (!FORMA_DE_ID.test(id)) {
+      return <ErrorDelDetalle error={errorDeCodigo("FISCAL_COMPROBANTE_NO_ENCONTRADO")} />;
+    }
+    const respuesta = await verElComprobante({ comprobanteId: id });
+    if (!respuesta.ok) return <ErrorDelDetalle error={respuesta.error} />;
+    // El título real es el único h1 (el de un error sigue siendo el genérico del catálogo).
+    return conTitulo(
+      armarElDetalle(respuesta.dato, {}).titulo,
+      <PantallaDeDetalleDeComprobante detalle={respuesta.dato} />,
+    );
+  });
 }

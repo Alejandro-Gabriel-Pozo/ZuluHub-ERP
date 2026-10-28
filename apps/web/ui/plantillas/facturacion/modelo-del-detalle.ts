@@ -18,7 +18,8 @@ import {
  * se ve y NADA más. Puro: sin React ni servidor. Es una lista blanca a propósito: el origen, el ambiente, los códigos
  * crudos y la reserva y folio no están en el modelo, así que no pueden aparecer. Previene: mostrar un dato que el dueño no
  * aprobó, o mostrarlo en el estado equivocado (el CAE de un comprobante que no está autorizado). Chequeo:
- * `test/web/detalle-de-comprobante.test.ts`.
+ * `test/web/detalle-modelo.test.ts` (qué se arma por estado), `test/web/detalle-contrato.test.ts` (lo que está y lo que no) y
+ * `test/web/detalle-pagina.test.ts` (la página).
  */
 
 type TipoVisible =
@@ -134,13 +135,14 @@ const TONO_DE_ESTADO = {
   DESCARTADO: "neutro",
 } as const satisfies Record<EstadoVisible, Tono>;
 
+/** Los nombres de los tipos de documento: aprobados por el backend (mensaje del 2026-10-28, «Pasaporte» y las siglas). */
 const CLAVE_DE_DOCUMENTO = {
   CUIT: "fiscal.pantalla.documento_cuit",
   CUIL: "fiscal.pantalla.documento_cuil",
   CDI: "fiscal.pantalla.documento_cdi",
   DNI: "fiscal.pantalla.documento_dni",
   PASAPORTE: "fiscal.pantalla.documento_pasaporte",
-} as const satisfies Record<TipoDeDocumentoVisible, ClaveDeTexto>;
+} as const satisfies Partial<Record<TipoDeDocumentoVisible, ClaveDeTexto>>;
 
 const esNotaDeCredito = (tipo: TipoVisible): boolean => tipo.startsWith("NOTA_CREDITO");
 const esFactura = (tipo: TipoVisible): boolean => tipo.startsWith("FACTURA");
@@ -172,9 +174,10 @@ function clienteDe(d: DiccionarioResuelto, receptor: DetalleParaMostrar["recepto
       ? { valor: consumidor, secundario: null }
       : { valor: receptor.nombre, secundario: consumidor };
   }
+  const numeroDelDocumento = formatearNumeroDeDocumento(documento.tipo, documento.numero);
   const identificacion = texto(d, "fiscal.pantalla.documento", {
     tipo: texto(d, CLAVE_DE_DOCUMENTO[documento.tipo]),
-    numero: formatearNumeroDeDocumento(documento.tipo, documento.numero),
+    numero: numeroDelDocumento,
   });
   return receptor.nombre === null
     ? { valor: identificacion, secundario: null }
@@ -220,13 +223,6 @@ function datosDe(d: DiccionarioResuelto, detalle: DetalleParaMostrar): DetalleAr
   const cliente = clienteDe(d, detalle.receptor);
   const autorizado = detalle.estado === "AUTORIZADO";
   const filas: { rotulo: string; valor: string; secundario: string | null }[] = [];
-  if (detalle.numero !== null) {
-    filas.push({
-      rotulo: texto(d, "fiscal.pantalla.rotulo_numero"),
-      valor: detalle.numero,
-      secundario: null,
-    });
-  }
   if (detalle.fechaEmision !== null) {
     filas.push({
       rotulo: texto(d, "fiscal.pantalla.rotulo_fecha"),

@@ -30,8 +30,9 @@ export function PantallaDeDetalleDeComprobante({
 
       {m.aviso === null ? null : (
         <Aviso tono={m.aviso.tono} {...(m.aviso.titulo === null ? {} : { titulo: m.aviso.titulo })}>
-          {m.aviso.lineas.map((linea) => (
-            <p key={linea} className={estilos["texto"]}>
+          {/* Dos códigos de ARCA pueden traducirse al mismo texto: el índice evita la clave repetida. */}
+          {m.aviso.lineas.map((linea, i) => (
+            <p key={`${i}-${linea}`} className={estilos["texto"]}>
               {linea}
             </p>
           ))}

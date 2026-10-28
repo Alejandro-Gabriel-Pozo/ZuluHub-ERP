@@ -18,7 +18,8 @@ export type DatosDeLaEmpresaActiva = Readonly<{
 /**
  * Contenido cuyo título (el único `h1`) solo se conoce al leer los datos, como el «Factura B 00001-00001234» del
  * detalle. Previene: dos títulos en la pantalla (el genérico del armazón y el real como `h2`). Chequeo:
- * `test/web/detalle-contrato.test.ts` (exactamente un `h1`).
+ * `test/web/operacion-titulo.test.ts` (renderiza `pantallaDeOperacion` de verdad: un solo `h1`, el real) y
+ * `test/web/detalle-pagina.test.ts` (la página del detalle sobre esa misma función).
  */
 export type ContenidoConTitulo = Readonly<{ tituloResuelto: string; cuerpo: ReactNode }>;
 
@@ -38,7 +39,7 @@ const esConTitulo = (c: ReactNode | ContenidoConTitulo): c is ContenidoConTitulo
  * catálogo; si el contenido devuelve `conTitulo(...)`, manda ese texto ya resuelto.
  */
 export async function pantallaDeOperacion(
-  opciones: Readonly<{ titulo: ClaveDeTexto; actual: DestinoActual }>,
+  opciones: Readonly<{ titulo: ClaveDeTexto; actual?: DestinoActual }>,
   contenido: (
     datos: DatosDeLaEmpresaActiva,
   ) => ReactNode | ContenidoConTitulo | Promise<ReactNode | ContenidoConTitulo>,
@@ -52,7 +53,7 @@ export async function pantallaDeOperacion(
   return (
     <ArmazonDeOperacion
       titulo={titulado ? resultado.tituloResuelto : texto({}, opciones.titulo)}
-      actual={opciones.actual}
+      {...(opciones.actual === undefined ? {} : { actual: opciones.actual })}
       marca={puerta.marca.nombre}
       empresa={empresa.nombre}
       modulos={destinosDeModulos()}

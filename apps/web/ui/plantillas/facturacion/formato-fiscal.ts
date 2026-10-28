@@ -1,8 +1,8 @@
 /**
  * Formato de lo que muestra el detalle de un comprobante, SOLO con funciones de cadena. Previene: perder centavos o
  * dígitos al pasar un importe por `Number` (ADR-006: el servidor manda texto decimal y la pantalla solo lo formatea), y
- * correr un día una fecha civil al pasarla por `Date` y su zona horaria. Chequeo: `test/web/detalle-de-comprobante.test.ts`
- * (importes enormes sin pérdida y ausencia de `Number`/`Date` en el código).
+ * correr un día una fecha civil al pasarla por `Date` y su zona horaria. Chequeo: `test/web/detalle-formato.test.ts`
+ * (importes enormes sin pérdida y ausencia de `Number`/`Date` en el código: `test/web/legibilidad-de-la-app.test.ts`).
  */
 
 const DECIMAL = /^(-?)([0-9]+)(?:\.([0-9]+))?$/;

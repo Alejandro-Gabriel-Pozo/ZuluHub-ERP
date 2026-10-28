@@ -38,7 +38,6 @@ describe("prueba de contrato: lo que está y lo que no está", () => {
     for (const esperado of [
       "Autorizada",
       "Anulación parcial",
-      "Número",
       "Fecha",
       "14/10/2026",
       "CAE",

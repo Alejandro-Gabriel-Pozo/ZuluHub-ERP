@@ -12,7 +12,6 @@ describe("el modelo del detalle", () => {
     expect(m.anulacion).toBeNull();
     expect(m.aviso).toBeNull();
     expect(m.datos).toEqual([
-      { rotulo: "Número", valor: "00001-00001234", secundario: null },
       { rotulo: "Fecha", valor: "14/10/2026", secundario: null },
       { rotulo: "CAE", valor: "74123456789012 · vence 24/10/2026", secundario: null },
       { rotulo: "Cliente", valor: "Consumidor final", secundario: null },
@@ -122,7 +121,7 @@ describe("el modelo del detalle", () => {
     expect(armarElDetalle(con({ estado: "INCIERTO" })).aviso).toEqual({
       tono: "aviso",
       titulo: "ARCA no respondió a tiempo",
-      lineas: ["Lo confirmamos solos en unos minutos consultando a ARCA. No lo emitas de nuevo."],
+      lineas: ["Lo confirmamos solos en unos minutos. No lo emitas de nuevo."],
     });
     expect(armarElDetalle(con({ estado: "CONFLICTO" })).aviso).toEqual({
       tono: "peligro",
@@ -197,6 +196,11 @@ describe("el modelo del detalle", () => {
       con({ receptor: { nombre: "Ana Pérez", documento: { tipo: "DNI", numero: "12345678" } } }),
     );
     expect(dni.datos.find((d) => d.rotulo === "Cliente")?.secundario).toBe("DNI 12.345.678");
+    // CUIL, CDI y Pasaporte: textos aprobados por el backend (2026-10-28).
+    const cuil = armarElDetalle(
+      con({ receptor: { nombre: "Ana", documento: { tipo: "CUIL", numero: "27123456784" } } }),
+    );
+    expect(cuil.datos.find((d) => d.rotulo === "Cliente")?.secundario).toBe("CUIL 27-12345678-4");
     const consumidor = armarElDetalle(
       con({ receptor: { nombre: "Ana", documento: { tipo: "SIN_IDENTIFICAR" } } }),
     );
