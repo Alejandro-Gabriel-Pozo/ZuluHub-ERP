@@ -5,7 +5,6 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Aviso } from "../../web/ui/componentes/Aviso";
 import { Boton } from "../../web/ui/componentes/Boton";
 import { Campo } from "../../web/ui/componentes/Campo";
-import { Selector } from "../../web/ui/componentes/Selector";
 import { useEnvioConClave } from "../../web/ui/patrones/useEnvioConClave";
 import { Pila } from "../../web/ui/primitivas/Pila";
 import { Texto } from "../../web/ui/primitivas/Texto";
@@ -15,19 +14,17 @@ import type { CampoDeSubmarca, ErrorParaLaPantalla } from "../logica/errores-de-
 import type { FichaDeSubmarca } from "../logica/ficha-de-submarca";
 import {
   cambiosDelBorrador,
-  ESQUINAS,
-  ESTILOS,
   esColorHex,
   hayCambios,
-  INGRESOS,
   normalizarColor,
-  SUPERFICIES,
-  TITULOS,
   type AspectoDeSubmarca,
   type CambiosDelBorrador,
   type ColoresDeSubmarca,
   type FormularioDeSubmarca,
 } from "../logica/submarca";
+import { CampoDeColor } from "./campo-de-color.cliente";
+import { DesplegablesDeAspecto } from "./desplegables-de-aspecto.cliente";
+import { textoGeneral, textoParaAviso } from "./textos-del-editor";
 import { VentanaDeConfirmacion } from "./ventana-de-confirmacion.cliente";
 import { VistaPreviaDeIngreso } from "./vista-previa-de-ingreso.cliente";
 import propios from "./submarcas.module.css";
@@ -46,18 +43,7 @@ const COLORES = [
   { clave: "secondary", etiqueta: "Secundario" },
 ] as const satisfies readonly { clave: ClaveDeColor; etiqueta: string }[];
 
-/** Lo que muestra el selector nativo de color cuando el texto está vacío o a medio escribir. */
-const COLOR_DE_MUESTRA = "#000000";
-
 type Rechazo = Readonly<{ error: ErrorParaLaPantalla; referencia: string | undefined }>;
-
-/** Elige de una lista cerrada el valor tipado que corresponde al texto del desplegable. */
-function elegir<T extends string>(
-  opciones: readonly Readonly<{ valor: T }>[],
-  texto: string,
-): T | undefined {
-  return opciones.find((o) => o.valor === texto)?.valor;
-}
 
 /**
  * El editor de una submarca: formulario a la izquierda y vista previa en vivo a la derecha (debajo en el celular).
@@ -292,7 +278,7 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
                 <legend className={propios["leyenda"]}>Colores</legend>
                 <Pila separacion={4}>
                   {COLORES.map((c) => (
-                    <ColorEditable
+                    <CampoDeColor
                       key={c.clave}
                       etiqueta={c.etiqueta}
                       valor={actual.colores[c.clave]}
@@ -306,66 +292,12 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
                 </Pila>
               </fieldset>
 
-              <fieldset className={propios["grupo"]}>
-                <legend className={propios["leyenda"]}>Aspecto</legend>
-                <Pila separacion={4}>
-                  <Selector
-                    etiqueta="Estilo"
-                    nombre="estilo"
-                    opciones={ESTILOS}
-                    valor={actual.aspecto.estilo}
-                    alCambiar={(v) => {
-                      ponerAspecto("estilo", elegir(ESTILOS, v));
-                    }}
-                    error={textoDelCampo("estilo")}
-                    deshabilitado={bloqueadaLaEdicion}
-                  />
-                  <Selector
-                    etiqueta="Superficie"
-                    nombre="superficie"
-                    opciones={SUPERFICIES}
-                    valor={actual.aspecto.superficie}
-                    alCambiar={(v) => {
-                      ponerAspecto("superficie", elegir(SUPERFICIES, v));
-                    }}
-                    error={textoDelCampo("superficie")}
-                    deshabilitado={bloqueadaLaEdicion}
-                  />
-                  <Selector
-                    etiqueta="Esquinas"
-                    nombre="esquinas"
-                    opciones={ESQUINAS}
-                    valor={actual.aspecto.esquinas}
-                    alCambiar={(v) => {
-                      ponerAspecto("esquinas", elegir(ESQUINAS, v));
-                    }}
-                    error={textoDelCampo("esquinas")}
-                    deshabilitado={bloqueadaLaEdicion}
-                  />
-                  <Selector
-                    etiqueta="Títulos"
-                    nombre="titulos"
-                    opciones={TITULOS}
-                    valor={actual.aspecto.titulos}
-                    alCambiar={(v) => {
-                      ponerAspecto("titulos", elegir(TITULOS, v));
-                    }}
-                    error={textoDelCampo("titulos")}
-                    deshabilitado={bloqueadaLaEdicion}
-                  />
-                  <Selector
-                    etiqueta="Ingreso"
-                    nombre="ingreso"
-                    opciones={INGRESOS}
-                    valor={actual.aspecto.ingreso}
-                    alCambiar={(v) => {
-                      ponerAspecto("ingreso", elegir(INGRESOS, v));
-                    }}
-                    error={textoDelCampo("ingreso")}
-                    deshabilitado={bloqueadaLaEdicion}
-                  />
-                </Pila>
-              </fieldset>
+              <DesplegablesDeAspecto
+                aspecto={actual.aspecto}
+                deshabilitado={bloqueadaLaEdicion}
+                textoDelCampo={textoDelCampo}
+                alElegir={ponerAspecto}
+              />
 
               <div className={propios["grupo"]}>
                 <p className={propios["leyenda"]}>Vigente desde</p>
@@ -405,80 +337,4 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
       />
     </>
   );
-}
-
-type PropsDeColorEditable = Readonly<{
-  etiqueta: string;
-  valor: string;
-  error: string | undefined;
-  deshabilitado: boolean;
-  alCambiar: (valor: string) => void;
-}>;
-
-/** Un color: el selector nativo y el texto `#rrggbb` van sincronizados. El texto se normaliza al salir del campo. */
-function ColorEditable({ etiqueta, valor, error, deshabilitado, alCambiar }: PropsDeColorEditable) {
-  const normalizado = normalizarColor(valor);
-  const paraElSelector = esColorHex(normalizado) ? normalizado : COLOR_DE_MUESTRA;
-  return (
-    <div className={propios["color"]}>
-      <div
-        className={propios["colorTexto"]}
-        onBlur={() => {
-          if (normalizado !== valor) alCambiar(normalizado);
-        }}
-      >
-        <Campo
-          etiqueta={etiqueta}
-          nombre={`color-${etiqueta}`}
-          autoComplete="off"
-          autoCapitalize="off"
-          ayuda="Por ejemplo #1f4e79."
-          valor={valor}
-          alCambiar={alCambiar}
-          error={error}
-          deshabilitado={deshabilitado}
-        />
-      </div>
-      <input
-        type="color"
-        className={propios["muestra"]}
-        aria-label={`Elegir el color: ${etiqueta}`}
-        value={paraElSelector}
-        disabled={deshabilitado}
-        onChange={(evento) => {
-          alCambiar(evento.target.value.toLowerCase());
-        }}
-      />
-    </div>
-  );
-}
-
-/** El texto de un error que no es de un campo; el de campo se ve junto a su campo. */
-function textoGeneral(error: ErrorParaLaPantalla): string {
-  switch (error.tipo) {
-    case "GENERAL":
-    case "PANTALLA_VIEJA":
-      return error.texto;
-    case "OCULTAR_ACCION":
-      return "No tenés permiso para editar submarcas.";
-    case "CAMPO":
-    case "SEGUNDO_FACTOR":
-    case "INESPERADO":
-      return "No pudimos guardar el borrador.";
-  }
-}
-
-/** El texto de un error de la ficha que se muestra en un aviso, o `null` si no dice nada útil. */
-function textoParaAviso(error: ErrorParaLaPantalla): string | null {
-  switch (error.tipo) {
-    case "CAMPO":
-    case "GENERAL":
-    case "PANTALLA_VIEJA":
-      return error.texto;
-    case "OCULTAR_ACCION":
-      return "No tenés permiso para confirmar versiones.";
-    case "SEGUNDO_FACTOR":
-    case "INESPERADO":
-      return null;
-  }
 }
