@@ -8,7 +8,11 @@ import {
 import { marcaComercialId, type MarcaComercialId } from "../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
 import type { DeclaracionDeAccionDePlataforma } from "../consultas/declaraciones";
-import { validarLargoDelMotivo, validarVigencia } from "../dominio/formas-de-entrada";
+import {
+  validarLargoDelMotivo,
+  validarVersionVista,
+  validarVigencia,
+} from "../dominio/formas-de-entrada";
 import { uuidDesdeTexto } from "../dominio/soporte/consulta";
 import { ancestrosDe, planPorDefectoDe } from "./cadena-de-marca";
 import { datosDeLaDefinicion, paresDeVocabulario } from "./datos-de-marcas";
@@ -33,6 +37,12 @@ export type EntradaDeConfirmarVersionDeMarca = Readonly<{
   /** Identifica el pedido: repetirlo con la misma clave devuelve lo mismo SIN confirmar otra versión ni auditar de nuevo. */
   claveDeIdempotencia: string;
   marcaId: string;
+  /**
+   * La `version` del borrador que vio quien confirma (la de la ficha de la marca): OBLIGATORIA, un entero de 1 en
+   * adelante. Si el borrador ya cambió (otra persona lo guardó), `VERSION_DESACTUALIZADA` y no se publica algo
+   * que quien confirma no vio.
+   */
+  versionEsperada: number;
   /** Desde cuándo rige la versión. No puede ser retroactiva (se tolera un minuto de reloj). */
   vigenteDesde: Date;
   motivo: string;
@@ -55,6 +65,8 @@ const MOTIVOS_QUE_ADMITE = [
 type ErrorPropio =
   | ErrorDeConfirmacion
   | "ID_INVALIDO"
+  | "VERSION_ESPERADA_INVALIDA"
+  | "VERSION_DESACTUALIZADA"
   | "VIGENCIA_INVALIDA"
   | "MOTIVO_DEMASIADO_LARGO"
   | "MARCA_NO_ENCONTRADA"
@@ -66,6 +78,7 @@ export type ErrorAlConfirmarVersionDeMarca = ErrorPlano<
 
 type Pedido = Readonly<{
   marcaId: MarcaComercialId;
+  versionEsperada: number;
   vigenteDesde: Date;
   motivo: string;
   reemplazaProgramada: boolean;
@@ -79,7 +92,10 @@ type Pedido = Readonly<{
  * entren en el plan por defecto. Deja la constancia `MARCA_VERSION_CONFIRMADA` con la diferencia contra la
  * versión que regía (el vocabulario, como pares texto, antes, después). Dos confirmaciones del mismo
  * borrador a la vez: una sola confirma y la otra ve que ya no hay borrador (`SIN_BORRADOR`), salvo que sea
- * la misma clave, que devuelve lo mismo.
+ * la misma clave, que devuelve lo mismo. Confirma solo el borrador que quien confirma vio (`versionEsperada`):
+ * si otra persona lo guardó entretanto, `VERSION_DESACTUALIZADA` y el borrador de la otra queda intacto. La
+ * clave de idempotencia se mira ANTES de esa decisión: repetir el mismo pedido ya confirmado devuelve lo mismo
+ * aunque el borrador ya no exista; la misma clave con otra `versionEsperada` es `CLAVE_REUTILIZADA`.
  */
 export function armarConfirmarVersionDeMarca(dependencias: DependenciasDeMarcasYPlanes) {
   return async function confirmarVersionDeMarca(
@@ -98,6 +114,8 @@ export function armarConfirmarVersionDeMarca(dependencias: DependenciasDeMarcasY
       validar: () => {
         const marca = uuidDesdeTexto(entrada.marcaId);
         if (!marca.ok) return marca;
+        const version = validarVersionVista(entrada.versionEsperada);
+        if (!version.ok) return version;
         const vigencia = validarVigencia(entrada.vigenteDesde);
         if (!vigencia.ok) return vigencia;
         const motivo = validarLargoDelMotivo(entrada.motivo);
@@ -105,12 +123,14 @@ export function armarConfirmarVersionDeMarca(dependencias: DependenciasDeMarcasY
         return ok({
           entrada: {
             marcaId: marca.valor,
+            versionEsperada: version.valor,
             vigenteDesde: instanteISO(vigencia.valor),
             motivo: motivo.valor.trim(),
             reemplazaProgramada: entrada.reemplazaProgramada,
           },
           valor: {
             marcaId: marcaComercialId(marca.valor),
+            versionEsperada: version.valor,
             vigenteDesde: vigencia.valor,
             motivo: motivo.valor,
             reemplazaProgramada: entrada.reemplazaProgramada,
@@ -123,6 +143,11 @@ export function armarConfirmarVersionDeMarca(dependencias: DependenciasDeMarcasY
         if (marca.estado === "RETIRADA") return err("MARCA_RETIRADA");
 
         const borrador = await tx.marcas.borradorDe(pedido.marcaId);
+        // Se confirma el borrador que la persona VIO, no «el que haya»: si cambió entretanto, no se publica nada.
+        // Sin borrador, `decidirConfirmacionDeMarca` dice `SIN_BORRADOR` (la segunda de dos confirmaciones a la vez).
+        if (borrador !== null && borrador.version !== pedido.versionEsperada) {
+          return err("VERSION_DESACTUALIZADA");
+        }
         const confirmadas = await tx.marcas.confirmadasDe(pedido.marcaId);
         const ancestros = await ancestrosDe(tx, marca, contexto.ahora);
         const planPorDefecto =

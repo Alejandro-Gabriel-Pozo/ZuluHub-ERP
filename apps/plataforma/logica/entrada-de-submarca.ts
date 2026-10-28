@@ -16,6 +16,8 @@ export type EntradaDelBorrador = Readonly<{
 export type EntradaDeLaConfirmacion = Readonly<{
   claveDeIdempotencia: string;
   marcaId: string;
+  /** La `version` del borrador que la persona vio al abrir la ventana: un entero de 1 en adelante, nunca `null`. */
+  versionEsperada: number;
   /** AAAA-MM-DD: la acción la convierte a instante con `instanteDeVigencia`. */
   vigenteDesde: string;
   motivo: string;
@@ -127,6 +129,9 @@ export function entradaDeLaConfirmacion(
   if (!esRegistro(entrada)) return { ok: false };
   const claveDeIdempotencia = uuidDe(entrada["claveDeIdempotencia"]);
   const marcaId = uuidDe(entrada["marcaId"]);
+  const version = entrada["versionEsperada"];
+  const versionEsperada =
+    typeof version === "number" && Number.isInteger(version) && version >= 1 ? version : null;
   const fecha = entrada["vigenteDesde"];
   const vigenteDesde = typeof fecha === "string" && FECHA.test(fecha) ? fecha : null;
   const crudo = entrada["motivo"];
@@ -135,6 +140,7 @@ export function entradaDeLaConfirmacion(
   if (
     claveDeIdempotencia === null ||
     marcaId === null ||
+    versionEsperada === null ||
     vigenteDesde === null ||
     motivo.length < 1 ||
     motivo.length > LARGO_MAXIMO_DEL_MOTIVO ||
@@ -144,6 +150,13 @@ export function entradaDeLaConfirmacion(
   }
   return {
     ok: true,
-    valor: { claveDeIdempotencia, marcaId, vigenteDesde, motivo, reemplazaProgramada: reemplaza },
+    valor: {
+      claveDeIdempotencia,
+      marcaId,
+      versionEsperada,
+      vigenteDesde,
+      motivo,
+      reemplazaProgramada: reemplaza,
+    },
   };
 }

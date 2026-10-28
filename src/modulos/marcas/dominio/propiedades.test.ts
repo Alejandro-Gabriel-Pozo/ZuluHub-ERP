@@ -13,7 +13,12 @@ import {
   TOKENS_DE_ASPECTO,
   completarAspecto,
 } from "./aspecto";
-import { completarDefinicion, resolverDefinicion, type DefinicionDeMarca } from "./definicion";
+import {
+  DEFINICION_VACIA,
+  completarDefinicion,
+  resolverDefinicion,
+  type DefinicionDeMarca,
+} from "./definicion";
 import { decidirAltaDeMarca } from "./jerarquia";
 import {
   COLORES_DE_SUPERFICIE,
@@ -23,7 +28,12 @@ import {
   validarTema,
   type TokenDeTema,
 } from "./tema";
-import { decidirConfirmacionDeMarca } from "./version";
+import {
+  decidirConfirmacionDeMarca,
+  decidirGuardadoDeBorrador,
+  definicionDeLaUltimaDecision,
+  type CambiosValidadosDeBorrador,
+} from "./version";
 import { estadosDeVigencia, versionVigente, type VersionConVigencia } from "./vigencia";
 
 const color = fc
@@ -273,6 +283,77 @@ describe("herencia entre marcas: propiedades", () => {
           r.planPorDefectoId !== null;
         expect(completa.ok).toBe(sinHuecos);
         if (!completa.ok) expect(completa.error.length).toBeGreaterThan(0);
+      }),
+    );
+  });
+});
+
+// ----- El primer borrador -----------------------------------------------------------------------------
+
+const CAMPOS_DE_LA_DEFINICION = [
+  "nombreVisible",
+  "tema",
+  "aspecto",
+  "logo",
+  "vocabulario",
+  "modulosIniciales",
+  "planPorDefectoId",
+] as const;
+
+/** Cambios parciales: de una definición cualquiera, solo los campos elegidos (los demás quedan AUSENTES). */
+const cambiosParciales = fc
+  .tuple(definicion, fc.subarray([...CAMPOS_DE_LA_DEFINICION]))
+  .map(([d, campos]): CambiosValidadosDeBorrador => {
+    const cambios: Record<string, unknown> = {};
+    for (const campo of campos) cambios[campo] = d[campo];
+    return cambios;
+  });
+
+describe("el primer borrador (propiedades)", () => {
+  it("cualquier cambio parcial sobre la última confirmada cambia solo esos campos y deja los demás intactos", () => {
+    fc.assert(
+      fc.property(definicion, cambiosParciales, (confirmada, cambios) => {
+        const r = decidirGuardadoDeBorrador(null, confirmada, null, cambios);
+        expect(r.ok).toBe(true);
+        if (!r.ok) return;
+        expect(r.valor.esNuevo).toBe(true);
+        for (const campo of CAMPOS_DE_LA_DEFINICION) {
+          const esperado = campo in cambios ? cambios[campo] : confirmada[campo];
+          expect(r.valor.definicion[campo]).toEqual(esperado);
+        }
+      }),
+    );
+  });
+
+  it("sin confirmadas, un cambio parcial parte de la definición vacía: los campos que no se mandan quedan sin definir", () => {
+    fc.assert(
+      fc.property(cambiosParciales, (cambios) => {
+        const r = decidirGuardadoDeBorrador(null, null, null, cambios);
+        expect(r.ok).toBe(true);
+        if (!r.ok) return;
+        for (const campo of CAMPOS_DE_LA_DEFINICION) {
+          const esperado = campo in cambios ? cambios[campo] : DEFINICION_VACIA[campo];
+          expect(r.valor.definicion[campo]).toEqual(esperado);
+        }
+      }),
+    );
+  });
+
+  it("la base es la de mayor número aunque la última esté programada a futuro, en cualquier orden", () => {
+    const versiones = fc.array(definicion, { minLength: 1, maxLength: 5 });
+    fc.assert(
+      fc.property(versiones, fc.boolean(), cambiosParciales, (defs, alReves, cambios) => {
+        const numeradas = defs.map((d, i) => ({ numero: i + 1, definicion: d }));
+        const base = definicionDeLaUltimaDecision(alReves ? [...numeradas].reverse() : numeradas);
+        expect(base).toBe(defs.at(-1));
+        const r = decidirGuardadoDeBorrador(null, base, null, cambios);
+        expect(r.ok).toBe(true);
+        if (!r.ok) return;
+        for (const campo of CAMPOS_DE_LA_DEFINICION) {
+          const esperado =
+            campo in cambios ? cambios[campo] : (defs.at(-1) as DefinicionDeMarca)[campo];
+          expect(r.valor.definicion[campo]).toEqual(esperado);
+        }
       }),
     );
   });

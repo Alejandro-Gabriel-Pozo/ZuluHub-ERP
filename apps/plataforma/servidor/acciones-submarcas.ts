@@ -70,6 +70,7 @@ export async function confirmarVersionDeSubmarcaDeConsola(
     const resultado = await acceso.casos.confirmarVersionDeMarca({
       claveDeIdempotencia: datos.claveDeIdempotencia,
       marcaId: datos.marcaId,
+      versionEsperada: datos.versionEsperada,
       vigenteDesde,
       motivo: datos.motivo,
       reemplazaProgramada: datos.reemplazaProgramada,

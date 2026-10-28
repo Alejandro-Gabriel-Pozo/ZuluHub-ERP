@@ -132,6 +132,7 @@ describe("entradaDelBorrador: la forma de lo que manda el navegador", () => {
 const CONFIRMACION = {
   claveDeIdempotencia: UUID_V4,
   marcaId: UUID_V7,
+  versionEsperada: 3,
   vigenteDesde: "2026-11-02",
   motivo: "Nueva identidad",
   reemplazaProgramada: false,
@@ -143,6 +144,17 @@ describe("entradaDeLaConfirmacion: la forma de lo que manda el navegador", () =>
       ok: true,
       valor: CONFIRMACION,
     });
+  });
+
+  it.each([0, -1, 1.5, NaN, Infinity, "3", null, undefined])(
+    "rechaza versionEsperada %j (entero de 1 en adelante, nunca null)",
+    (versionEsperada) => {
+      expect(entradaDeLaConfirmacion({ ...CONFIRMACION, versionEsperada })).toEqual({ ok: false });
+    },
+  );
+
+  it("acepta versionEsperada 1", () => {
+    expect(entradaDeLaConfirmacion({ ...CONFIRMACION, versionEsperada: 1 }).ok).toBe(true);
   });
 
   it("recorta el motivo", () => {
