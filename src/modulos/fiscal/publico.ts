@@ -49,7 +49,8 @@ export {
   type SolicitudId,
   type VersionId,
 } from "./dominio/identificadores";
-export { AMBIENTES, CONCEPTOS, type Ambiente } from "./dominio/comprobante-nuevo";
+export { AMBIENTES, CONCEPTOS, LIMITES_DE_COMPROBANTE } from "./dominio/comprobante-nuevo";
+export type { Ambiente } from "./dominio/comprobante-nuevo";
 export { MODOS_DE_PRECIO } from "./dominio/calculo-de-renglones";
 export {
   confirmarVersion,
@@ -155,6 +156,7 @@ export {
   iniciarSerie,
   reconciliarSerie,
   reservarNumero,
+  resincronizarSerie,
   serieEsConsistente,
   serieUsada,
   transicionDeSerieValida,
@@ -163,6 +165,7 @@ export {
   type ErrorDeNumeracion,
   type ErrorDeSecuencia,
   type EstadoDeSerie,
+  type ErrorDeResincronizacion,
   type OpcionesDeNumeracion,
   type ReconciliacionDeSerie,
   type ReservaDeNumero,
@@ -239,6 +242,8 @@ export {
 } from "./persistencia/repositorio-de-intentos";
 export {
   ESTADOS_DE_CERTIFICADO,
+  dondeSeGuardaLaClave,
+  dondeSeGuardaLaCredencial,
   crearRepositorioDeAccesos,
   crearRepositorioDeCertificados,
   type AccesoGuardado,
@@ -288,9 +293,7 @@ export type {
   ResultadoPorSerie,
   SalidaDeReconciliarSeriesVencidas,
 } from "./casos-de-uso/reconciliar-series-vencidas";
-// H7 facturación F4: numeración con ambiente (la serie es de un punto de venta, un tipo y un ambiente), puerto de
-// emisión ampliado (consultar, no enviado) y salida de una serie bloqueada.
-export { resincronizarSerie, type ErrorDeResincronizacion } from "./dominio/numeracion";
+// H7 facturación F4: puerto de emisión ampliado (consultar, no enviado) y estados del comprobante frente a ARCA.
 export {
   ESTADOS_DE_COMPROBANTE_ARCA,
   type DatosConsultados,
@@ -426,10 +429,6 @@ export type {
   ErrorAlCargarCertificadoDeUso,
   SalidaDeCargarCertificado,
 } from "./casos-de-uso/cargar-certificado";
-export {
-  dondeSeGuardaLaClave,
-  dondeSeGuardaLaCredencial,
-} from "./persistencia/repositorio-de-certificados";
 export {
   DIAS_DE_AVISO_POR_DEFECTO,
   certificadosPorVencer,

@@ -21,7 +21,8 @@ export type ErrorAlListarComprobantes = MotivoDeRechazo | ErrorDeCriterios | Err
  * Una página de los comprobantes de la empresa del contexto, los más nuevos primero (pantalla del facturador,
  * H7 facturación §B.4.9). Pide `comprobantes.ver` al guard dentro de su transacción (`read committed`, solo
  * lectura) y recién después mira el pedido. Se pagina por clave `(creado_en, id)`, sin `OFFSET`: `siguiente` es la
- * clave de la última fila de la página, o `null` si no queda nada. Por defecto oculta los `DESCARTADO`.
+ * clave de la última fila de la página, o `null` si no queda nada. Por defecto oculta los `DESCARTADO`. Cada fila trae
+ * su `acreditacion` (D-16) con UNA consulta más para toda la página, no una por fila.
  */
 export function armarListarComprobantes({
   transacciones,
@@ -43,9 +44,14 @@ export function armarListarComprobantes({
         const criterios = criteriosDeListado(entrada);
         if (!criterios.ok) return criterios;
         const pagina = await tx.lecturas.listar(contexto.empresaId, criterios.valor);
+        // Las notas de TODA la página en una sola consulta (sin una por fila): de ellas sale la etiqueta de cada una.
+        const notas = await tx.lecturas.notasQueCitanA(
+          contexto.empresaId,
+          pagina.filas.map((f) => f.id),
+        );
         const ultima = pagina.filas.at(-1);
         return ok({
-          items: pagina.filas.map(resumenDe),
+          items: pagina.filas.map((f) => resumenDe(f, notas.get(f.id) ?? [])),
           siguiente: pagina.hayMas && ultima !== undefined ? claveDePagina(ultima) : null,
         });
       },

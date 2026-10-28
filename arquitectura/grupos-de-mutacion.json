@@ -49,7 +49,7 @@
   },
   {
     "grupo": "fiscal (resto)",
-    "archivos": "src/modulos/fiscal/dominio/**/*.ts,!src/modulos/fiscal/dominio/numeracion.ts,!src/modulos/fiscal/dominio/datos-fiscales.ts,!src/modulos/fiscal/dominio/vigencia.ts,!src/modulos/fiscal/dominio/punto-de-venta.ts,!src/modulos/fiscal/dominio/resolucion-de-emisor.ts,!src/modulos/fiscal/dominio/calculo-de-renglones.ts,!src/modulos/fiscal/dominio/codigos-de-arca.ts,!src/modulos/fiscal/dominio/comprobante-nuevo.ts,!src/modulos/fiscal/dominio/condicion-iva-receptor.ts,!src/modulos/fiscal/dominio/estados-de-comprobante.ts,!src/modulos/fiscal/dominio/importes-para-arca.ts,!src/modulos/fiscal/dominio/letra-de-comprobante.ts,!src/modulos/fiscal/dominio/modelo-de-impresion.ts,!src/modulos/fiscal/dominio/nota-asociada.ts,!src/modulos/fiscal/dominio/qr-de-arca.ts,!src/modulos/fiscal/dominio/receptor.ts,!src/modulos/fiscal/dominio/reconciliacion-de-comprobante.ts,!src/modulos/fiscal/dominio/certificado-carga.ts,!src/modulos/fiscal/dominio/certificado-pedido.ts,!src/modulos/fiscal/dominio/vencimiento-de-certificados.ts",
+    "archivos": "src/modulos/fiscal/dominio/**/*.ts,!src/modulos/fiscal/dominio/numeracion.ts,!src/modulos/fiscal/dominio/datos-fiscales.ts,!src/modulos/fiscal/dominio/vigencia.ts,!src/modulos/fiscal/dominio/punto-de-venta.ts,!src/modulos/fiscal/dominio/resolucion-de-emisor.ts,!src/modulos/fiscal/dominio/calculo-de-renglones.ts,!src/modulos/fiscal/dominio/codigos-de-arca.ts,!src/modulos/fiscal/dominio/comprobante-nuevo.ts,!src/modulos/fiscal/dominio/condicion-iva-receptor.ts,!src/modulos/fiscal/dominio/estados-de-comprobante.ts,!src/modulos/fiscal/dominio/importes-para-arca.ts,!src/modulos/fiscal/dominio/letra-de-comprobante.ts,!src/modulos/fiscal/dominio/modelo-de-impresion.ts,!src/modulos/fiscal/dominio/acreditacion.ts,!src/modulos/fiscal/dominio/nota-asociada.ts,!src/modulos/fiscal/dominio/qr-de-arca.ts,!src/modulos/fiscal/dominio/receptor.ts,!src/modulos/fiscal/dominio/reconciliacion-de-comprobante.ts,!src/modulos/fiscal/dominio/certificado-carga.ts,!src/modulos/fiscal/dominio/certificado-pedido.ts,!src/modulos/fiscal/dominio/vencimiento-de-certificados.ts",
     "minutos": 4.2,
     "pruebas": "src/modulos/fiscal"
   },
@@ -226,6 +226,12 @@
     "archivos": "src/modulos/fiscal/dominio/modelo-de-impresion.ts",
     "minutos": 0.9,
     "pruebas": "src/modulos/fiscal/dominio/modelo-de-impresion.test.ts"
+  },
+  {
+    "grupo": "fiscal (acreditación)",
+    "archivos": "src/modulos/fiscal/dominio/acreditacion.ts",
+    "minutos": 1,
+    "pruebas": "src/modulos/fiscal/dominio/acreditacion.test.ts"
   },
   {
     "grupo": "fiscal (criterios del listado)",

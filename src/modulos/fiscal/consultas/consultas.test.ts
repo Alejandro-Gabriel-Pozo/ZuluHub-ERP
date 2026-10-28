@@ -15,6 +15,7 @@ import { ARS } from "../../../primitivas/dinero/moneda";
 import { personaId, type EmpresaId } from "../../../primitivas/identificadores/marca";
 import type { Transacciones } from "../../../puertos/transacciones";
 import { modeloDeImpresion, type MarcaParaImprimir } from "../dominio/modelo-de-impresion";
+import type { NotaParaAcreditar } from "../dominio/acreditacion";
 import type {
   FiltroDeListado,
   NotaQueCita,
@@ -23,7 +24,7 @@ import type {
 import type { ComprobanteGuardado } from "../persistencia/repositorio-de-comprobantes";
 import type { IntentoDeArca } from "../persistencia/repositorio-de-intentos";
 import type { SerieGuardada } from "../persistencia/repositorios";
-import { comprobanteId, intentoId, versionId } from "../publico";
+import { comprobanteId, intentoId, versionId, type ComprobanteId } from "../publico";
 import { crearConsultasDeFacturacion } from "./consultas";
 import type { TxDeConsultasDeFacturacion } from "./contrato";
 import { claveDePagina } from "./criterios-de-listado";
@@ -160,6 +161,8 @@ const serie = (cambios: Record<string, unknown> = {}): SerieGuardada => ({
 type Llamadas = {
   comprobante: unknown[][];
   notas: unknown[][];
+  /** Una entrada por cada vez que el listado pidió las notas de su página. */
+  notasDeLaPagina: unknown[][];
   intentos: unknown[][];
   series: unknown[][];
 };
@@ -167,6 +170,8 @@ type Llamadas = {
 type Datos = Readonly<{
   comprobante?: ComprobanteGuardado | null;
   notas?: readonly NotaQueCita[];
+  /** Lo que citan a cada fila del listado (`notasQueCitanA`). */
+  notasDeLaPagina?: ReadonlyMap<ComprobanteId, readonly NotaParaAcreditar[]>;
   intentos?: readonly IntentoDeArca[];
   serie?: SerieGuardada | null;
   pagina?: PaginaDeFilas;
@@ -175,7 +180,13 @@ type Datos = Readonly<{
 /** Las consultas sobre una transacción en memoria; devuelve además todo lo que se pidió. */
 function armar(datos: Datos = {}) {
   const filtros: { empresa: EmpresaId; filtro: FiltroDeListado }[] = [];
-  const llamadas: Llamadas = { comprobante: [], notas: [], intentos: [], series: [] };
+  const llamadas: Llamadas = {
+    comprobante: [],
+    notas: [],
+    notasDeLaPagina: [],
+    intentos: [],
+    series: [],
+  };
   const marcasPedidas: EmpresaId[] = [];
   const tx: TxDeConsultasDeFacturacion = {
     comprobantes: {
@@ -192,6 +203,10 @@ function armar(datos: Datos = {}) {
       notasQueCitan: (...args) => {
         llamadas.notas.push(args);
         return Promise.resolve(datos.notas ?? []);
+      },
+      notasQueCitanA: (...args) => {
+        llamadas.notasDeLaPagina.push(args);
+        return Promise.resolve(datos.notasDeLaPagina ?? new Map());
       },
     },
     intentos: {
@@ -287,6 +302,7 @@ describe("listarComprobantes", () => {
         total: "100.50",
         estado: "PENDIENTE",
         ambiente: "PRODUCCION",
+        acreditacion: "NINGUNA",
       },
       {
         id: fila(2).id,
@@ -297,9 +313,44 @@ describe("listarComprobantes", () => {
         total: "200.50",
         estado: "AUTORIZADO",
         ambiente: "PRODUCCION",
+        acreditacion: "NINGUNA",
       },
     ]);
     expect(pagina.siguiente).toBeNull();
+  });
+
+  it("D-16: la etiqueta de cada fila sale de las notas que la citan, con una sola lectura para toda la página", async () => {
+    const filas = [fila(1), fila(2), fila(3), fila(4)];
+    const credito = (total: string, estado: NotaParaAcreditar["estado"] = "AUTORIZADO") => ({
+      tipo: "NOTA_CREDITO_B" as const,
+      estado,
+      total: importeDesdeTexto(ARS, total),
+    });
+    const { consultas, llamadas } = armar({
+      pagina: { filas, hayMas: false },
+      notasDeLaPagina: new Map([
+        [fila(1).id, [credito("50.00")]],
+        [fila(2).id, [credito("200.50")]],
+        [fila(3).id, [credito("300.50", "RECHAZADO")]],
+      ]),
+    });
+    const pagina = exito(await consultas.listarComprobantes(contexto(OTRA_EMPRESA), {}));
+    expect(pagina.items.map((i) => i.acreditacion)).toEqual([
+      "PARCIAL",
+      "TOTAL",
+      "NINGUNA",
+      "NINGUNA",
+    ]);
+    // Una sola lectura de notas, de la empresa del contexto y con los ids de la página: no una por fila.
+    expect(llamadas.notasDeLaPagina).toEqual([[OTRA_EMPRESA, filas.map((f) => f.id)]]);
+  });
+
+  it("una nota de crédito en el listado no lleva etiqueta; una de débito sí", async () => {
+    const nc = { ...fila(1), tipo: "NOTA_CREDITO_B" as const };
+    const nd = { ...fila(2), tipo: "NOTA_DEBITO_B" as const };
+    const { consultas } = armar({ pagina: { filas: [nc, nd], hayMas: false } });
+    const pagina = exito(await consultas.listarComprobantes(contexto(), {}));
+    expect(pagina.items.map((i) => i.acreditacion)).toEqual([null, "NINGUNA"]);
   });
 
   it("`siguiente` es la clave de la última fila de la página, y solo si queda algo después", async () => {
@@ -534,6 +585,62 @@ describe("verComprobante", () => {
         estado: "PENDIENTE",
       },
     ]);
+  });
+
+  describe("lo ya acreditado (D-16)", () => {
+    const verCon = async (notas: readonly NotaQueCita[], comprobante?: ComprobanteGuardado) =>
+      exito(
+        await armar({
+          notas,
+          ...(comprobante === undefined ? {} : { comprobante }),
+        }).consultas.verComprobante(contexto(), { comprobanteId: ID }),
+      );
+    // El total de la factura de prueba es 2260.00.
+
+    it("sin notas: 0.00 y NINGUNA", async () => {
+      const d = await verCon([]);
+      expect(d).toMatchObject({ acreditado: "0.00", acreditacion: "NINGUNA" });
+    });
+
+    it("suma las autorizadas y las pendientes, no las rechazadas, y marca PARCIAL", async () => {
+      const d = await verCon([
+        nota({ total: importeDesdeTexto(ARS, "1000.00") }),
+        nota({
+          id: comprobanteId("n-2"),
+          total: importeDesdeTexto(ARS, "260.25"),
+          estado: "EN_VALIDACION",
+        }),
+        nota({
+          id: comprobanteId("n-3"),
+          total: importeDesdeTexto(ARS, "700.00"),
+          estado: "INCIERTO",
+        }),
+        nota({
+          id: comprobanteId("n-4"),
+          total: importeDesdeTexto(ARS, "999.00"),
+          estado: "RECHAZADO",
+        }),
+      ]);
+      expect(d).toMatchObject({ acreditado: "1960.25", acreditacion: "PARCIAL" });
+    });
+
+    it("el total exacto es TOTAL, y pasarse también (sin tope ni aviso)", async () => {
+      const exacto = await verCon([nota({ total: importeDesdeTexto(ARS, "2260.00") })]);
+      expect(exacto).toMatchObject({ acreditado: "2260.00", acreditacion: "TOTAL" });
+      const pasado = await verCon([
+        nota({ total: importeDesdeTexto(ARS, "2260.00") }),
+        nota({ id: comprobanteId("n-2"), total: importeDesdeTexto(ARS, "0.01") }),
+      ]);
+      expect(pasado).toMatchObject({ acreditado: "2260.01", acreditacion: "TOTAL" });
+    });
+
+    it("una nota de crédito en sí no tiene cifra ni etiqueta", async () => {
+      const d = await verCon(
+        [],
+        guardado({ clase: "NOTA_CREDITO", tipo: "NOTA_CREDITO_B", asociado: null }),
+      );
+      expect(d).toMatchObject({ acreditado: null, acreditacion: null });
+    });
   });
 
   it("el último intento, solo con sus códigos; sin intentos, null", async () => {

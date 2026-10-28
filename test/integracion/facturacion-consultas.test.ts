@@ -359,6 +359,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
         total: "121.00",
         estado: "PENDIENTE",
         ambiente: "HOMOLOGACION",
+        acreditacion: "NINGUNA",
       });
       expect(deLaLista(autorizado.id)).toEqual({
         id: autorizado.id,
@@ -370,9 +371,20 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
         total: "121.00",
         estado: "AUTORIZADO",
         ambiente: "HOMOLOGACION",
+        acreditacion: "NINGUNA",
       });
       expect(Object.keys(deLaLista(autorizado.id) ?? {}).sort()).toEqual(
-        ["ambiente", "estado", "fecha", "id", "numero", "receptorNombre", "tipo", "total"].sort(),
+        [
+          "acreditacion",
+          "ambiente",
+          "estado",
+          "fecha",
+          "id",
+          "numero",
+          "receptorNombre",
+          "tipo",
+          "total",
+        ].sort(),
       );
     });
 

@@ -29,6 +29,9 @@ import type { Receptor } from "./receptor";
  * - La letra es la del asociado (no se recalcula: el emisor pudo cambiar de condición después de
  *   facturar) y el receptor es una COPIA del del asociado (una nota a otro receptor no corrige la
  *   factura).
+ * - El motivo de una nota de crédito es obligatorio, sin contar los espacios de los bordes, y de hasta
+ *   `LIMITES_DE_COMPROBANTE.motivo` caracteres; el de una nota de débito es opcional (mismo código de error:
+ *   `MOTIVO_INVALIDO`, como en los demás motivos del módulo).
  * - Los renglones los da quien emite; fiscal no decide si la nota es total o parcial. El importe
  *   siempre es positivo: la clase da el sentido. Una nota mayor que su asociado se permite (ARCA la
  *   aprueba con la observación 10237, que se muestra): es un control (ADR-008), no una regla.
@@ -56,7 +59,7 @@ export type ComprobanteAAsociar =
 
 export type EntradaDeNota = Readonly<{
   clase: "NOTA_CREDITO" | "NOTA_DEBITO";
-  /** Por qué se emite; opcional. */
+  /** Por qué se emite: obligatorio en la nota de crédito (D-17), opcional en la de débito. */
   motivo: string | null;
 }> &
   Omit<EntradaDeComprobante, "receptor">;
@@ -88,6 +91,8 @@ export function armarNotaAsociada(
   }
   const motivo = entrada.motivo?.trim() ?? "";
   if (motivo.length > LIMITES_DE_COMPROBANTE.motivo) return err({ codigo: "MOTIVO_INVALIDO" });
+  // D-17: anular sin decir por qué no se puede, ni por otra vía que la pantalla; la nota de débito sí puede ir sin motivo.
+  if (entrada.clase === "NOTA_CREDITO" && motivo === "") return err({ codigo: "MOTIVO_INVALIDO" });
   return armarContenido({
     contexto,
     clase: entrada.clase,

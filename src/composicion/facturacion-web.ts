@@ -13,7 +13,8 @@ import {
   entradaDeDescartar,
   entradaDeFactura,
   entradaDeListar,
-  entradaDeNota,
+  entradaDeNotaDeCredito,
+  entradaDeNotaDeDebito,
   entradaDeReintentar,
   entradaDeResincronizar,
   entradaDeVerComprobante,
@@ -131,7 +132,7 @@ export function emitirNotaDeCredito(
   return accion(
     d,
     crudo,
-    entradaDeNota,
+    entradaDeNotaDeCredito,
     (entrada) => d.casosDeUso().emitirNotaDeCredito(contexto, entrada),
     presentarEmision,
   );
@@ -146,7 +147,7 @@ export function emitirNotaDeDebito(
   return accion(
     d,
     crudo,
-    entradaDeNota,
+    entradaDeNotaDeDebito,
     (entrada) => d.casosDeUso().emitirNotaDeDebito(contexto, entrada),
     presentarEmision,
   );
@@ -280,6 +281,8 @@ export type DetalleParaLaPantalla = Readonly<{
   motivo: string | null;
   motivoDeDescarte: string | null;
   notasQueLoCitan: DetalleDeComprobante["notasQueLoCitan"];
+  acreditado: DetalleDeComprobante["acreditado"];
+  acreditacion: DetalleDeComprobante["acreditacion"];
   ultimoIntento: IntentoParaLaPantalla | null;
   serie: DetalleDeComprobante["serie"];
   creadoEn: string;
@@ -314,6 +317,8 @@ export function presentarDetalle(c: DetalleDeComprobante): DetalleParaLaPantalla
     motivo: c.motivo,
     motivoDeDescarte: c.motivoDeDescarte,
     notasQueLoCitan: c.notasQueLoCitan,
+    acreditado: c.acreditado,
+    acreditacion: c.acreditacion,
     ultimoIntento:
       c.ultimoIntento === null
         ? null

@@ -113,7 +113,8 @@ describe("la nota hereda la letra del asociado y es positiva", () => {
             asociado,
             {
               clase,
-              motivo: null,
+              // La nota de crédito exige motivo (D-17); acá no se prueba el motivo.
+              motivo: "Devolución",
               modoDePrecio,
               concepto: "PRODUCTOS",
               servicio: null,

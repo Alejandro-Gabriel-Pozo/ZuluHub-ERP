@@ -1374,10 +1374,25 @@ describe("facturación F6: las consultas del facturador (spec H7 facturación §
     expect(prohibido).toContain("consultas-sin-dominio");
   });
 
-  it("la excepción es solo de fiscal: el modelo de impresión de otro módulo sigue prohibido", async () => {
+  it("una consulta de fiscal importa la acreditación (D-16), pero ningún otro archivo del dominio", async () => {
+    const permitido = await violacionesDe({
+      "src/modulos/fiscal/dominio/acreditacion.ts": exporta,
+      "src/modulos/fiscal/consultas/c.ts": importa("../dominio/acreditacion"),
+    });
+    expect(permitido).not.toContain("consultas-sin-dominio");
+    const prohibido = await violacionesDe({
+      "src/modulos/fiscal/dominio/acreditacion-de-otra-cosa.ts": exporta,
+      "src/modulos/fiscal/consultas/c.ts": importa("../dominio/acreditacion-de-otra-cosa"),
+    });
+    expect(prohibido).toContain("consultas-sin-dominio");
+  });
+
+  it("la excepción es solo de fiscal: el modelo de impresión y la acreditación de otro módulo siguen prohibidos", async () => {
     const v = await violacionesDe({
       "src/modulos/empresas/dominio/modelo-de-impresion.ts": exporta,
+      "src/modulos/empresas/dominio/acreditacion.ts": exporta,
       "src/modulos/empresas/consultas/c.ts": importa("../dominio/modelo-de-impresion"),
+      "src/modulos/empresas/consultas/d.ts": importa("../dominio/acreditacion"),
     });
     expect(v).toContain("consultas-sin-dominio");
   });
