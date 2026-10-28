@@ -1463,9 +1463,9 @@ describe("facturación F8: el adaptador real de ARCA (spec H7 facturación §B.5
 });
 
 /**
- * C-2 (D10): ningún `font-size` en `px` dentro de `apps/web/ui/plantillas/carta`. Previene que un CSS de la
+ * C-2 (D10): ningún `font-size` en `px` dentro de `apps/web/ui/plantillas/vidriera`. Previene que un CSS de la
  * carta fije la letra e ignore el tamaño del celular del comensal y el control «Letra» (ESLint no mira CSS:
- * la parte de JavaScript es el bloque `web/carta-sin-px-de-letra`). Chequeo: las violaciones inyectadas de acá
+ * la parte de JavaScript es el bloque `web/vidriera-sin-px-de-letra`). Chequeo: las violaciones inyectadas de acá
  * y la aplicación al repositorio real. Se prohíbe también `font:` abreviado y `calc()` con px.
  */
 function tamanosDeLetraEnPx(css: string): string[] {
@@ -1475,8 +1475,8 @@ function tamanosDeLetraEnPx(css: string): string[] {
     .filter((declaracion) => /\d\s*px\b/i.test(declaracion));
 }
 
-function archivosCssDeLaCarta(raiz: string): string[] {
-  const carpeta = join(raiz, "apps/web/ui/plantillas/carta");
+function archivosCssDeLaVidriera(raiz: string): string[] {
+  const carpeta = join(raiz, "apps/web/ui/plantillas/vidriera");
   if (!existsSync(carpeta)) return [];
   return readdirSync(carpeta, { recursive: true, encoding: "utf8" })
     .filter((f) => f.endsWith(".css"))
@@ -1484,10 +1484,10 @@ function archivosCssDeLaCarta(raiz: string): string[] {
     .sort();
 }
 
-function cssDeLaCartaConPx(raiz: string): string[] {
-  return archivosCssDeLaCarta(raiz).filter(
+function cssDeLaVidrieraConPx(raiz: string): string[] {
+  return archivosCssDeLaVidriera(raiz).filter(
     (f) =>
-      tamanosDeLetraEnPx(readFileSync(join(raiz, "apps/web/ui/plantillas/carta", f), "utf8"))
+      tamanosDeLetraEnPx(readFileSync(join(raiz, "apps/web/ui/plantillas/vidriera", f), "utf8"))
         .length > 0,
   );
 }
@@ -1521,18 +1521,18 @@ describe("C-2: la plantilla de la carta no fija la letra en px (D10)", () => {
   it("encuentra el CSS de la carta en el árbol y marca el que tiene px", () => {
     const base = mkdtempSync(join(tmpdir(), "pedernal-letra-"));
     directorios.push(base);
-    const carpeta = join(base, "apps/web/ui/plantillas/carta");
+    const carpeta = join(base, "apps/web/ui/plantillas/vidriera");
     mkdirSync(carpeta, { recursive: true });
     writeFileSync(join(carpeta, "bien.module.css"), ".a { font-size: 1em; }");
     writeFileSync(join(carpeta, "mal.module.css"), ".a { font-size: 18px; }");
     mkdirSync(join(base, "apps/web/ui/componentes"), { recursive: true });
     writeFileSync(join(base, "apps/web/ui/componentes/otro.module.css"), ".a { font-size: 14px; }");
-    expect(cssDeLaCartaConPx(base)).toEqual(["mal.module.css"]);
+    expect(cssDeLaVidrieraConPx(base)).toEqual(["mal.module.css"]);
   });
 
   it("el repositorio real la cumple y tiene CSS de la carta que revisar", () => {
-    expect(archivosCssDeLaCarta(".").length).toBeGreaterThanOrEqual(8);
-    expect(cssDeLaCartaConPx(".")).toEqual([]);
+    expect(archivosCssDeLaVidriera(".").length).toBeGreaterThanOrEqual(8);
+    expect(cssDeLaVidrieraConPx(".")).toEqual([]);
   });
 });
 

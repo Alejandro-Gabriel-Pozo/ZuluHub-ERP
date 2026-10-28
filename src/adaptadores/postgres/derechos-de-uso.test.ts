@@ -265,14 +265,14 @@ describe("deLaEmpresaParaLaPlataforma", () => {
   });
 });
 
-describe("deLaCartaPublica: falla cerrado hasta que exista el módulo de catálogo", () => {
+describe("deLaVidrieraPublica: falla cerrado hasta que exista el módulo de catálogo", () => {
   it("devuelve null para cualquier código y NO lee nada de la base", async () => {
     const { derechos, llamadas } = planesCon({
       asignaciones: [{ numero: 1, vigenteDesde: antes, version: version(1, ["caja"], 3) }],
     });
     for (const codigo of ["", "x", "a".repeat(43), "0123456789abcdef".repeat(4)]) {
       for (const marca of [marcaComercialId("m1"), marcaComercialId("m2")]) {
-        expect(await derechos.deLaCartaPublica(marca, codigo), `${marca}/${codigo}`).toBeNull();
+        expect(await derechos.deLaVidrieraPublica(marca, codigo), `${marca}/${codigo}`).toBeNull();
       }
     }
     expect(llamadas).toEqual([]);

@@ -4,7 +4,7 @@ import {
   crearPuertaFalsa,
   HOST_APP_A,
   HOST_APP_B,
-  HOST_CARTA_A,
+  HOST_VIDRIERA_A,
   HOST_LANDING_A,
 } from "../utilidades/puertas-falsas";
 
@@ -39,7 +39,7 @@ describe("armarResolverDePuerta", () => {
     ]);
     const l = await resolver(HOST_LANDING_A);
     expect(l.tipo === "RESUELTA" && l.puerta.superficie).toBe("LANDING");
-    const c = await resolver(HOST_CARTA_A);
+    const c = await resolver(HOST_VIDRIERA_A);
     expect(c.tipo === "RESUELTA" && c.puerta.superficie).toBe("CARTA");
     const b = await resolver(HOST_APP_B);
     expect(b.tipo === "RESUELTA" && b.puerta.marca.nombre).toBe("Panadería Los Pinos");

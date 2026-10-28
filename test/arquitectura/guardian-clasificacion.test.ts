@@ -211,7 +211,7 @@ describe("reglas de clasificación (con violaciones inyectadas)", () => {
     ["package-lock.json", "generado"],
     ["skills-lock.json", "generado"],
     ["README.md", "docs"],
-    ["test/fixtures/cartas/README.md", "docs"],
+    ["test/fixtures/vidrieras/README.md", "docs"],
     [".claude/skills/neon/SKILL.md", "docs"],
     ["src/modulos/fiscal/contratos.json", "config"],
     ["apps/web/contratos.json", "config"],

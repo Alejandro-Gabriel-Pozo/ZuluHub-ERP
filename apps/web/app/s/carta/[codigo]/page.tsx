@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { PlantillaDeCarta } from "../../../../ui/plantillas/carta/PlantillaDeCarta.cliente";
-import { cartaParaLaPantalla } from "../../../../servidor/carta";
+import { PlantillaDeVidriera } from "../../../../ui/plantillas/vidriera/PlantillaDeVidriera.cliente";
+import { vidrieraParaLaPantalla } from "../../../../servidor/vidriera";
 import { exigirPuerta } from "../../../../servidor/pedido";
 
 type Props = Readonly<{ params: Promise<{ codigo: string }> }>;
@@ -11,15 +11,15 @@ type Props = Readonly<{ params: Promise<{ codigo: string }> }>;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // S2: la carta se busca en la marca de ESTE host; en un host que no es de carta, la neutra.
   const puerta = await exigirPuerta("CARTA");
-  const carta = await cartaParaLaPantalla(puerta.marcaId, (await params).codigo);
-  return carta === null
+  const vidriera = await vidrieraParaLaPantalla(puerta.marcaId, (await params).codigo);
+  return vidriera === null
     ? { robots: { index: false, follow: false } }
-    : { title: carta.vista.nombre, robots: { index: false, follow: false } };
+    : { title: vidriera.vista.nombre, robots: { index: false, follow: false } };
 }
 
-export default async function PaginaDeLaCarta({ params }: Props) {
+export default async function PaginaDeLaVidriera({ params }: Props) {
   const puerta = await exigirPuerta("CARTA");
-  const carta = await cartaParaLaPantalla(puerta.marcaId, (await params).codigo);
-  if (carta === null) notFound();
-  return <PlantillaDeCarta vista={carta.vista} textos={carta.textos} />;
+  const vidriera = await vidrieraParaLaPantalla(puerta.marcaId, (await params).codigo);
+  if (vidriera === null) notFound();
+  return <PlantillaDeVidriera vista={vidriera.vista} textos={vidriera.textos} />;
 }

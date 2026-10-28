@@ -349,7 +349,7 @@ describe("lint de la letra de la carta (D10)", () => {
   const { bloques: bloquesDeWeb } = require("../../arquitectura/lint-web.cjs") as {
     bloques: ESLint.Options["baseConfig"] extends infer T ? Exclude<T, null> : never;
   };
-  const eslintCarta = new ESLint({
+  const eslintVidriera = new ESLint({
     overrideConfigFile: true,
     overrideConfig: [
       {
@@ -362,29 +362,29 @@ describe("lint de la letra de la carta (D10)", () => {
       ...(bloquesDeWeb as never[]),
     ],
   });
-  const mensajesCarta = async (ruta: string, codigo: string): Promise<string[]> => {
-    const [resultado] = await eslintCarta.lintText(codigo, { filePath: ruta });
+  const mensajesVidriera = async (ruta: string, codigo: string): Promise<string[]> => {
+    const [resultado] = await eslintVidriera.lintText(codigo, { filePath: ruta });
     return (resultado?.messages ?? []).map((m) => `${m.ruleId ?? "?"}: ${m.message}`);
   };
-  const carta = "apps/web/ui/plantillas/carta/X.tsx";
+  const vidriera = "apps/web/ui/plantillas/vidriera/X.tsx";
 
   it.each([
     ["en px como texto", 'export const a = <p style={{ fontSize: "18px" }} />;'],
     ["en px con espacio", 'export const a = <p style={{ fontSize: "18 px" }} />;'],
     ["con un número (React lo toma como px)", "export const a = <p style={{ fontSize: 18 }} />;"],
   ])("se prohíbe fontSize %s", async (_nombre, codigo) => {
-    expect((await mensajesCarta(carta, codigo)).join("\n")).toContain("D10");
+    expect((await mensajesVidriera(vidriera, codigo)).join("\n")).toContain("D10");
   });
 
   it("rem y em pasan, y fuera de la carta no aplica", async () => {
     expect(
-      await mensajesCarta(carta, 'export const a = <p style={{ fontSize: "1.125rem" }} />;'),
+      await mensajesVidriera(vidriera, 'export const a = <p style={{ fontSize: "1.125rem" }} />;'),
     ).toEqual([]);
     expect(
-      await mensajesCarta(carta, 'export const a = <p style={{ fontSize: "1em" }} />;'),
+      await mensajesVidriera(vidriera, 'export const a = <p style={{ fontSize: "1em" }} />;'),
     ).toEqual([]);
     expect(
-      await mensajesCarta(
+      await mensajesVidriera(
         "apps/web/ui/componentes/X.tsx",
         'export const a = <p style={{ fontSize: "18px" }} />;',
       ),
@@ -393,8 +393,8 @@ describe("lint de la letra de la carta (D10)", () => {
 
   it("conserva las otras reglas de la web dentro de la carta (R-W8 y R-W10)", async () => {
     const mensajes = (
-      await mensajesCarta(
-        carta,
+      await mensajesVidriera(
+        vidriera,
         "export const a = <div dangerouslySetInnerHTML={x} {...{ importe: 1 }} />;",
       )
     ).join("\n");

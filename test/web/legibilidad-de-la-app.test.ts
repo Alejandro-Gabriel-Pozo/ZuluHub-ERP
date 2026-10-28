@@ -55,7 +55,7 @@ describe("legibilidad de la aplicación (D4 y D10)", () => {
 
   it("los tamaños de letra de los módulos CSS (menos la carta, que tiene su propia escala D10) salen de los tokens o son rem/em de 1 o más", () => {
     const sueltos = css
-      .filter((f) => !f.includes("/plantillas/carta/"))
+      .filter((f) => !f.includes("/plantillas/vidriera/"))
       .flatMap((f) =>
         [...readFileSync(f, "utf8").matchAll(/font-size:\s*([^;]+);/g)]
           .map((m) => (m[1] as string).trim())
