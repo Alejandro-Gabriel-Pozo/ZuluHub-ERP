@@ -57,9 +57,10 @@ export type CatalogoComercial = Readonly<Record<string, DefinicionDeModulo>>;
  * especificación de H4, §B.4). Una acción por caso de uso (cruce X1); quién puede cada una se
  * define en `permisos/empresa.ts`.
  *
- * Es el NÚCLEO (empresas, sucursales, identidad): no depende de un plan, así que nunca queda en solo
- * lectura (el guard ignora ese estado en los módulos obligatorios). Aun así cada acción declara su
- * `efecto`, para que el día que un módulo con plan copie el patrón no haya acciones sin clasificar.
+ * Es el NÚCLEO (empresas, sucursales, identidad y la configuración fiscal del gerente): no depende de un
+ * plan, así que nunca queda en solo lectura (el guard ignora ese estado en los módulos obligatorios). Aun
+ * así cada acción declara su `efecto`, para que el día que un módulo con plan copie el patrón no haya
+ * acciones sin clasificar.
  * Criterio: lo que quita, cierra o responde algo ya iniciado (apagar, revocar o reenviar una
  * invitación, desactivar una sucursal, cancelar, aceptar o rechazar un traspaso) es `COMPLETA_CIERRA`;
  * lo que da de alta, cambia la configuración, reactiva o amplía un alcance (invitar, asignar
@@ -72,7 +73,7 @@ export const CATALOGO_DE_MODULOS = {
     requiere: [],
     usaSiExiste: [],
     datosRequeridos: [],
-    implementadoPor: ["modulos/identidad", "modulos/empresas"],
+    implementadoPor: ["modulos/identidad", "modulos/empresas", "modulos/fiscal"],
     acciones: {
       "usuarios.invitar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "usuarios.reenviar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
@@ -92,6 +93,17 @@ export const CATALOGO_DE_MODULOS = {
       "gerencia.rechazar_traspaso": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "modulos.ver": { capacidad: null, efecto: "LECTURA" },
       "permisos.ver_propios": { capacidad: null, efecto: "LECTURA" },
+      // H7 fiscal §C (T5): la configuración fiscal del gerente. Vive acá y no en `facturacion` porque son los
+      // `datosRequeridos` de la facturación: si dependieran de ella (en desarrollo), el gerente nunca podría
+      // dejarlos listos. Guardar un borrador, crear, editar y activar un punto de venta o confirmar la regla del
+      // emisor crean o amplían; confirmar los datos fiscales y desactivar un punto de venta cierran.
+      "datos_fiscales.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "datos_fiscales.confirmar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "puntos_de_venta.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "puntos_de_venta.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "puntos_de_venta.activar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "puntos_de_venta.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "emisores.confirmar_regla": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
   /**
@@ -167,16 +179,16 @@ export const CATALOGO_DE_MODULOS = {
       "grupos_de_precio.asignar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "grupos_de_precio.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "grupos_de_precio.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "combos.editar_contenido": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "conjuntos.editar_contenido": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
   /**
    * La carta: una vista publicada del catálogo, que es otro módulo comercial pero lo implementa el
    * mismo código (`modulos/catalogo`). Sola, sin stock ni ventas, es la vidriera (§F8). La publicación
-   * en línea (QR) es un extra de pago: lo decide la perilla `carta_por_qr`, que se declara cuando se
+   * en línea (QR) es un extra de pago: lo decide la perilla `vidriera_por_qr`, que se declara cuando se
    * construya la carta; las tres acciones `*_en_linea` y `renovar_enlace` ya se clasifican acá.
    */
-  carta: {
+  vidriera: {
     estado: "en_desarrollo",
     obligatorio: false,
     requiere: ["catalogo"],
@@ -184,15 +196,15 @@ export const CATALOGO_DE_MODULOS = {
     datosRequeridos: [],
     implementadoPor: ["modulos/catalogo"],
     acciones: {
-      "cartas.ver": { capacidad: null, efecto: "LECTURA" },
-      "cartas.marcar_disponibilidad": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cartas.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cartas.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cartas.publicar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cartas.retirar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "cartas.publicar_en_linea": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cartas.renovar_enlace": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cartas.retirar_de_linea": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "vidrieras.ver": { capacidad: null, efecto: "LECTURA" },
+      "vidrieras.marcar_disponibilidad": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "vidrieras.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "vidrieras.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "vidrieras.publicar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "vidrieras.retirar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "vidrieras.publicar_en_linea": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "vidrieras.renovar_enlace": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "vidrieras.retirar_de_linea": { capacidad: null, efecto: "COMPLETA_CIERRA" },
     },
   },
   stock: {
@@ -218,7 +230,7 @@ export const CATALOGO_DE_MODULOS = {
       "depositos.asignar_emisor": { capacidad: null, efecto: "CREA_AMPLIA" },
       "articulos.controlar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "articulos.dejar_de_controlar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "recetas.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "composiciones.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "conteos.abrir": { capacidad: null, efecto: "CREA_AMPLIA" },
       "conteos.registrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "conteos.aplicar": { capacidad: null, efecto: "COMPLETA_CIERRA" },

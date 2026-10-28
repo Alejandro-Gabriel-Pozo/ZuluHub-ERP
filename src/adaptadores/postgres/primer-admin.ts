@@ -6,6 +6,7 @@ import type { AccionDePlataforma } from "../../puertos/auditoria-de-plataforma";
 import { exigirSinSecretos } from "../../puertos/sin-secretos";
 import { ACTOR_DE_SISTEMA } from "./contexto-firmado";
 import { esReintentable } from "./errores";
+import { esperaDelReintento } from "./espera-del-reintento";
 
 /**
  * Siembra al primer administrador de plataforma (H5 §B.2 y P7). Se corre con la cadena DIRECTA del dueño
@@ -42,10 +43,9 @@ export type ErrorDelSembrado =
 const ROL_DEL_PRIMER_ADMIN = "ADMIN";
 const ACCION_DE_LA_CONSTANCIA: AccionDePlataforma = "ADMIN_PLATAFORMA_ALTA";
 const ORIGEN_DE_LA_CONSTANCIA = "script crear-primer-admin";
-const REINTENTOS = 5;
+const REINTENTOS = 12;
 const UNICIDAD_DEL_EMAIL = "admin_plataforma_email_uk";
 const BARRERA_DE_MEMBRESIAS = "admin_plataforma_sin_membresia";
-const ESPERA_MAXIMA_EN_MS = 80;
 
 type FilaDeAdmin = { id: string; rol: string; activo: boolean };
 type Hechos = { tiene_membresia: boolean; tiene_invitacion_pendiente: boolean };
@@ -160,7 +160,7 @@ export async function crearPrimerAdmin(
       } catch (falla) {
         if (esBarreraDeMembresias(falla)) return err("ADMIN_CON_MEMBRESIA");
         if ((esReintentable(falla) || esChoqueDelEmail(falla)) && intento < REINTENTOS) {
-          await esperar(Math.random() * ESPERA_MAXIMA_EN_MS);
+          await esperar(esperaDelReintento(intento));
           continue;
         }
         throw falla;

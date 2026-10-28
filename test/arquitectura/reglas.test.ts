@@ -208,6 +208,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "src-sin-apps",
+      archivos: {
+        "src/composicion/a.ts": importa("../../apps/web/servidor/b"),
+        "apps/web/servidor/b.ts": exporta,
+      },
+    },
+    {
       regla: "permisos-plataforma-sin-empresa",
       archivos: {
         "src/capacidades/permisos/plataforma.ts": importa("./empresa"),
@@ -869,7 +876,8 @@ describe("R-W0: el comando de arquitectura alcanza a apps y scripts", () => {
   const paquete = JSON.parse(readFileSync("package.json", "utf8")) as {
     scripts: Record<string, string>;
   };
-  const comando = paquete.scripts["arquitectura"] ?? "";
+  // El script encadena el guardián de contratos con `&&`: acá interesa solo la parte de depcruise.
+  const comando = (paquete.scripts["arquitectura"] ?? "").split("&&")[0]?.trim() ?? "";
   // Las carpetas que recibe depcruise: todo lo que no es la opción `--config` ni su valor.
   const partes = comando.split(/\s+/).slice(1);
   const carpetasDelComando = partes.filter(

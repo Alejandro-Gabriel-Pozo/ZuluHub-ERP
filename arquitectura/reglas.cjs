@@ -174,6 +174,14 @@ const reglas = [
     to: { path: "^apps/", pathNot: "^apps/$1/" },
   },
   {
+    name: "src-sin-apps",
+    severity: "error",
+    comment:
+      "Lo compartido (src, scripts) no importa ninguna aplicación: las apps importan de src, nunca al revés. De esto depende el planificador de mutación (arquitectura/planificar-mutacion.cjs): un cambio en apps/ solo puede alterar un resultado de mutación por una prueba que lo importa o lo lee.",
+    from: { path: "^(src|scripts)/" },
+    to: { path: "^apps/" },
+  },
+  {
     name: "permisos-plataforma-sin-empresa",
     severity: "error",
     comment:

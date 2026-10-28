@@ -130,16 +130,16 @@ describe("derechosDeUso: el valor de cada perilla y su origen", () => {
     const d = derechos();
     expect([...d.perillas.keys()]).toEqual(CLAVES_DE_PERILLAS_DE_PRUEBA);
     expect(valor(d, "cajas_por_sucursal")).toEqual({ ...limite(1), origen: "BASE" });
-    expect(valor(d, "carta_por_qr")).toEqual({ ...apagada, origen: "BASE" });
+    expect(valor(d, "vidriera_por_qr")).toEqual({ ...apagada, origen: "BASE" });
     expect(valor(d, "con_sello")).toEqual({ ...encendida, origen: "BASE" });
   });
 
   it("el plan reemplaza a la base (origen PLAN); lo que no fija sigue en BASE", () => {
     const d = derechos({
-      versionDePlan: version([], { cajas_por_sucursal: limite(4), carta_por_qr: encendida }),
+      versionDePlan: version([], { cajas_por_sucursal: limite(4), vidriera_por_qr: encendida }),
     });
     expect(valor(d, "cajas_por_sucursal")).toEqual({ ...limite(4), origen: "PLAN" });
-    expect(valor(d, "carta_por_qr")).toEqual({ ...encendida, origen: "PLAN" });
+    expect(valor(d, "vidriera_por_qr")).toEqual({ ...encendida, origen: "PLAN" });
     expect(valor(d, "con_sello")).toEqual({ ...encendida, origen: "BASE" });
     expect(valor(d, "empresas_por_tenant")).toEqual({ ...limite(1), origen: "BASE" });
   });
@@ -433,7 +433,7 @@ describe("derechosDeUso: el resto del contrato", () => {
   });
 
   it("no modifica sus entradas", () => {
-    const plan = version(["caja"], { carta_por_qr: encendida });
+    const plan = version(["caja"], { vidriera_por_qr: encendida });
     const ajustes = [ajuste("cajas_por_sucursal", limite(9))];
     const copia = structuredClone({ plan, ajustes });
     derechos({ versionDePlan: plan, ajustes });
@@ -456,8 +456,8 @@ describe("valorDePerilla", () => {
 
   it("falta una perilla en derechos armados a mano: es un defecto y se lanza", () => {
     const incompleto = { perillas: new Map<string, ValorEfectivo>() };
-    expect(() => valorDePerilla(incompleto, "carta_por_qr")).toThrow(RangeError);
-    expect(() => valorDePerilla(incompleto, "carta_por_qr")).toThrow(/carta_por_qr/);
+    expect(() => valorDePerilla(incompleto, "vidriera_por_qr")).toThrow(RangeError);
+    expect(() => valorDePerilla(incompleto, "vidriera_por_qr")).toThrow(/vidriera_por_qr/);
   });
 });
 

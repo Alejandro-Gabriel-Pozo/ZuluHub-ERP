@@ -619,10 +619,10 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
       const { modulos } = esperar(await consultas.verConfiguracion(soporte));
       expect(modulos.map((m) => m.clave)).toEqual([
         "administracion",
-        "carta",
         "catalogo",
         "facturacion",
         "stock",
+        "vidriera",
       ]);
       expect(modulos[0]).toMatchObject({ estado: "disponible", obligatorio: true });
       for (const modulo of modulos.slice(1)) {

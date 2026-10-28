@@ -445,3 +445,50 @@ export {
   CODIGO_DE_TIPO_DE_DOCUMENTO,
 } from "./dominio/codigos-de-arca";
 export { numeroDeDocumentoParaArca } from "./dominio/receptor";
+
+// H7 T5: la configuración fiscal del gerente. Guardar y confirmar los datos fiscales de un emisor, dar de alta,
+// editar, activar y desactivar puntos de venta y confirmar la regla de resolución del emisor, con el guard primero
+// (las siete acciones son de `administracion`, solo del gerente). La composición los arma con
+// `crearCasosDeUsoDeConfiguracionFiscal`.
+export { DECLARACIONES_DE_CONFIGURACION as DECLARACIONES_DE_CONFIGURACION_FISCAL } from "./casos-de-uso/declaraciones-de-configuracion";
+export {
+  crearCasosDeUsoDeConfiguracionFiscal,
+  type CasosDeUsoDeConfiguracionFiscal,
+} from "./casos-de-uso/casos-de-uso-de-configuracion";
+export type {
+  DependenciasDeConfiguracionFiscal,
+  TxDeConfiguracionFiscal,
+} from "./casos-de-uso/contrato-de-configuracion";
+export type {
+  DomicilioDeEntrada,
+  ErrorDeDomicilioDeEntrada,
+} from "./casos-de-uso/comun-de-configuracion";
+export type {
+  EntradaDeGuardarBorradorDeDatosFiscales,
+  ErrorAlGuardarElBorrador,
+  SalidaDeGuardarBorradorDeDatosFiscales,
+} from "./casos-de-uso/guardar-borrador-de-datos-fiscales";
+export type {
+  EntradaDeConfirmarDatosFiscales,
+  ErrorAlConfirmarDatosFiscales,
+  SalidaDeConfirmarDatosFiscales,
+} from "./casos-de-uso/confirmar-datos-fiscales";
+export type {
+  EntradaDeCrearPuntoDeVenta,
+  EntradaDeEditarPuntoDeVenta,
+  ErrorAlCrearPuntoDeVenta,
+  ErrorAlEditarPuntoDeVenta,
+  SalidaDeCrearPuntoDeVenta,
+  SalidaDeEditarPuntoDeVenta,
+} from "./casos-de-uso/crear-y-editar-punto-de-venta";
+export type {
+  EntradaDeCambiarElEstadoDelPuntoDeVenta,
+  ErrorAlActivarPuntoDeVenta,
+  ErrorAlDesactivarPuntoDeVenta,
+  SalidaDeCambiarElEstadoDelPuntoDeVenta,
+} from "./casos-de-uso/activar-y-desactivar-punto-de-venta";
+export type {
+  EntradaDeConfirmarReglaDeEmisor,
+  ErrorAlConfirmarLaRegla,
+  SalidaDeConfirmarReglaDeEmisor,
+} from "./casos-de-uso/confirmar-regla-de-emisor";

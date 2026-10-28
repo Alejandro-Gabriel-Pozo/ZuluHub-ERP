@@ -42,7 +42,7 @@ import {
 describe("tipos cerrados derivados del catálogo", () => {
   it("las claves salen del catálogo real", () => {
     expectTypeOf<ClaveModulo>().toEqualTypeOf<
-      "administracion" | "facturacion" | "catalogo" | "carta" | "stock"
+      "administracion" | "facturacion" | "catalogo" | "vidriera" | "stock"
     >();
     expectTypeOf<ClaveAccion>().toEqualTypeOf<
       | "usuarios.invitar"
@@ -63,6 +63,13 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "gerencia.rechazar_traspaso"
       | "modulos.ver"
       | "permisos.ver_propios"
+      | "datos_fiscales.editar"
+      | "datos_fiscales.confirmar"
+      | "puntos_de_venta.crear"
+      | "puntos_de_venta.editar"
+      | "puntos_de_venta.activar"
+      | "puntos_de_venta.desactivar"
+      | "emisores.confirmar_regla"
       | "comprobantes.emitir"
       | "comprobantes.ver"
       | "comprobantes.emitir_manual"
@@ -91,16 +98,16 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "grupos_de_precio.asignar"
       | "grupos_de_precio.reactivar"
       | "grupos_de_precio.desactivar"
-      | "combos.editar_contenido"
-      | "cartas.ver"
-      | "cartas.marcar_disponibilidad"
-      | "cartas.crear"
-      | "cartas.editar"
-      | "cartas.publicar"
-      | "cartas.retirar"
-      | "cartas.publicar_en_linea"
-      | "cartas.renovar_enlace"
-      | "cartas.retirar_de_linea"
+      | "conjuntos.editar_contenido"
+      | "vidrieras.ver"
+      | "vidrieras.marcar_disponibilidad"
+      | "vidrieras.crear"
+      | "vidrieras.editar"
+      | "vidrieras.publicar"
+      | "vidrieras.retirar"
+      | "vidrieras.publicar_en_linea"
+      | "vidrieras.renovar_enlace"
+      | "vidrieras.retirar_de_linea"
       | "stock.ver"
       | "stock.verificar_saldos"
       | "stock.registrar_entrada"
@@ -115,7 +122,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "depositos.asignar_emisor"
       | "articulos.controlar"
       | "articulos.dejar_de_controlar"
-      | "recetas.editar"
+      | "composiciones.editar"
       | "conteos.abrir"
       | "conteos.registrar"
       | "conteos.aplicar"
@@ -177,7 +184,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       "administracion",
       "facturacion",
       "catalogo",
-      "carta",
+      "vidriera",
       "stock",
     ]);
   });

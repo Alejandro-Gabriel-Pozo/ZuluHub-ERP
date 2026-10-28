@@ -101,11 +101,12 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
     const enrolar = await pedir(n, "POST", "/api/auth/two-factor/enable", {});
     expect(enrolar.estado).toBe(200);
     const alta = enrolar.json() as Alta;
-    const verificar = await pedir(n, "POST", "/api/auth/two-factor/verify-totp", {
-      code: codigoDeLaAplicacion(alta.secreto),
-    });
+    // El código con que se enrola: quien lo repite lo repite TAL CUAL, no uno recalculado (si el paso del reloj cambiara en
+    // el medio, uno recalculado sería otro código, todavía sin usar).
+    const codigo = codigoDeLaAplicacion(alta.secreto);
+    const verificar = await pedir(n, "POST", "/api/auth/two-factor/verify-totp", { code: codigo });
     expect(verificar.estado).toBe(200);
-    return { admin, n, alta };
+    return { admin, n, alta, codigo };
   }
   /** Un ingreso nuevo (sesión nueva, sin segundo factor) del mismo administrador ya enrolado. */
   const reingresar = async (admin: PerfilDePrueba) => (await ingresar(admin)).n;
@@ -691,7 +692,7 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
     });
 
     it("el mismo texto de error ante un código TOTP malo, un código de recuperación malo y uno ya usado (sin oráculo)", async () => {
-      const { admin, alta } = await enrolado();
+      const { admin, codigo } = await enrolado();
       const nuevo = await reingresar(admin);
       const totpMalo = await pedir(nuevo, "POST", "/api/auth/two-factor/verify-totp", {
         code: "999999",
@@ -709,7 +710,7 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
       expect(recuperacionMala.texto).toBe(totpMalo.texto);
       // Un código TOTP repetido (G2) también da lo mismo.
       const repetido = await pedir(nuevo, "POST", "/api/auth/two-factor/verify-totp", {
-        code: codigoDeLaAplicacion(alta.secreto),
+        code: codigo,
       });
       expect(repetido.estado).toBe(401);
       expect(repetido.texto).toBe(totpMalo.texto);
