@@ -306,7 +306,7 @@ const cambiosParciales = fc
   .map(([d, campos]): CambiosValidadosDeBorrador => {
     const cambios: Record<string, unknown> = {};
     for (const campo of campos) cambios[campo] = d[campo];
-    return cambios as CambiosValidadosDeBorrador;
+    return cambios;
   });
 
 describe("el primer borrador (propiedades)", () => {
