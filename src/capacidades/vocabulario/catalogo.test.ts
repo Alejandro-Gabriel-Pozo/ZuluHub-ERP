@@ -3,6 +3,7 @@ import { campoConPosibleSecreto, type Dato } from "../../puertos/sin-secretos";
 import type { EstadoEfectivo } from "../../contexto/estados";
 import type { MotivoDeRechazo } from "../permisos/guard";
 import type { RolDeEmpresa } from "../permisos/roles";
+import { CLAVES_DE_ERRORES_FISCALES } from "../experiencia/respuesta-fiscal";
 import {
   CATALOGO_DE_TEXTOS,
   LARGO_MAXIMO_DE_TEXTO,
@@ -113,7 +114,9 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
   });
 
   it("los errores nuevos que ve una empresa o la puerta de entrada", () => {
-    expect(claves.filter((c) => c.startsWith("error.")).sort()).toEqual(
+    expect(
+      claves.filter((c) => c.startsWith("error.") && !c.startsWith("error.fiscal_")).sort(),
+    ).toEqual(
       [
         "error.empresa_de_otra_marca",
         "error.funcion_no_incluida",
@@ -138,6 +141,23 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
         "error.empresa_no_opera",
       ].sort(),
     );
+  });
+
+  it("los errores del facturador son exactamente los códigos fiscales, y lo de ARCA sale traducido con su código como marcador", () => {
+    expect(claves.filter((c) => c.startsWith("error.fiscal_")).sort()).toEqual(
+      Object.values(CLAVES_DE_ERRORES_FISCALES).sort(),
+    );
+    for (const generico of ["error_generico", "observacion_generica", "evento_generico"] as const) {
+      expect(CATALOGO_DE_TEXTOS[`fiscal.arca.${generico}`].marcadores).toEqual(["codigo"]);
+    }
+    // Nada del facturador habla en voseo: los textos de ARCA y de los errores van en castellano neutro.
+    for (const clave of claves.filter(
+      (c) => c.startsWith("error.fiscal_") || c.startsWith("fiscal."),
+    )) {
+      expect(CATALOGO_DE_TEXTOS[clave as ClaveDeTexto].porDefecto, clave).not.toMatch(
+        /\b(podés|tenés|revisá|probá|volvé|esperá|cargalo|activalo|consultá)\b/i,
+      );
+    }
   });
 
   it("los textos de los errores con datos declaran su marcador", () => {

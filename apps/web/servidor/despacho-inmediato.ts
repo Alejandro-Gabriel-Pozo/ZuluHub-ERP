@@ -1,6 +1,7 @@
 import "server-only";
 
 import { after } from "next/server";
+import type { EmpresaId } from "../../../src/primitivas/identificadores/marca";
 import { trabajos } from "./composicion";
 
 /**
@@ -20,6 +21,28 @@ export function despacharDespuesDeConfirmar(ids: readonly string[]): void {
   after(async () => {
     try {
       await trabajos.procesador().despacharAhora(ids, new Date());
+    } catch (error) {
+      console.error(
+        `[despacho] no se pudo despachar de inmediato (${error instanceof Error ? error.name : "falla que no es un Error"}); queda para el cron`,
+      );
+    }
+  });
+}
+
+/**
+ * Lo mismo para quien encoló por CLAVE de idempotencia y no conoce el id del trabajo (encolar no lo devuelve): después
+ * de confirmar, busca los trabajos DE ESA EMPRESA con esas claves y los intenta. Así una factura recién emitida sale a
+ * ARCA sin esperar al cron. Mejor esfuerzo, igual que arriba: si algo falla queda registrado por su tipo y el trabajo
+ * sigue `PENDIENTE` para el cron. Sin claves no se programa nada.
+ */
+export function despacharPorClavesDespuesDeConfirmar(
+  empresaId: EmpresaId,
+  claves: readonly string[],
+): void {
+  if (claves.length === 0) return;
+  after(async () => {
+    try {
+      await trabajos.procesador().despacharPorClaves(empresaId, claves, new Date());
     } catch (error) {
       console.error(
         `[despacho] no se pudo despachar de inmediato (${error instanceof Error ? error.name : "falla que no es un Error"}); queda para el cron`,

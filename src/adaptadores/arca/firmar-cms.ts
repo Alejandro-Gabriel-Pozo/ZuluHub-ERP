@@ -68,7 +68,9 @@ export async function firmarTra(
   try {
     const certificado = certificadoDesdePem(credencial.certificadoPem);
     // La clave se revela acá, en el último punto posible, y no sale de esta función.
-    const clave = await claveDeFirma(credencial.clavePrivada.revelar());
+    // `unknown` a propósito: el `CryptoKey` de `node:crypto` y el del DOM (que ve `apps/web`) no son el mismo tipo
+    // para TypeScript aunque en ejecución son el mismo objeto; el puente se hace una sola vez, al firmar.
+    const clave: unknown = await claveDeFirma(credencial.clavePrivada.revelar());
     const contenido = new TextEncoder().encode(tra);
     const resumen = await webcrypto.subtle.digest("SHA-256", contenido);
     const firmado = new pkijs.SignedData({
@@ -105,9 +107,7 @@ export async function firmarTra(
       ],
       certificates: [certificado],
     });
-    // El tipo de la clave de `node:crypto` y el `CryptoKey` del DOM (que ve `apps/web`) no son el mismo para
-    // TypeScript, aunque en ejecución son el mismo objeto: sin este puente, `apps/web` no compila.
-    await firmado.sign(clave as unknown as Parameters<typeof firmado.sign>[0], 0, "SHA-256");
+    await firmado.sign(clave as Parameters<typeof firmado.sign>[0], 0, "SHA-256");
     const envoltorio = new pkijs.ContentInfo({
       contentType: OID_DATOS_FIRMADOS,
       content: firmado.toSchema(true),

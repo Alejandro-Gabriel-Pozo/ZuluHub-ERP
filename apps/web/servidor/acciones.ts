@@ -52,7 +52,7 @@ const textoDe = (datos: FormData, nombre: string): string => {
 type PedidoDeAccion = Readonly<{ puerta: PuertaResuelta; encabezados: Headers }>;
 
 /** Puerta de la aplicación y origen propio. Un pedido de otro origen es «sin permiso». */
-async function pedidoDeLaAccion(): Promise<Respuesta<PedidoDeAccion>> {
+export async function pedidoDeLaAccion(): Promise<Respuesta<PedidoDeAccion>> {
   const puerta = await exigirPuerta("APP");
   const encabezados = await headers();
   if (!origenEsPropio(encabezados.get("origin"), hostDelPedido(encabezados))) {
