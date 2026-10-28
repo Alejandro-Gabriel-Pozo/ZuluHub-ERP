@@ -561,6 +561,23 @@ describe("despacharAhora", () => {
     expect(filas[0]).toMatchObject({ estado: "EN_CURSO", intentos: 1 });
   });
 
+  it("con esperarHastaTerminar no corta a los 5 s: espera a un manejador más lento que el tope y el trabajo queda HECHO", async () => {
+    const filas = [fila("a")];
+    const lento: ManejadorDeTrabajo = async () => {
+      await new Promise((resolver) => setTimeout(resolver, 120));
+      return { tipo: "HECHO" };
+    };
+    // El tope (20 ms) vence mucho antes de que el manejador termine.
+    await procesadorCon(filas, lento, { tope: 20 }).despacharAhora(["a"], T0, {
+      esperarHastaTerminar: true,
+    });
+    expect(filas[0]).toMatchObject({ estado: "HECHO", intentos: 1 });
+    // Sin la opción, el mismo caso devuelve el control a los 20 ms y el trabajo sigue EN_CURSO.
+    const otras = [fila("b")];
+    await procesadorCon(otras, lento, { tope: 20 }).despacharAhora(["b"], T0);
+    expect(otras[0]).toMatchObject({ estado: "EN_CURSO" });
+  });
+
   it("un trabajo que otro ya tomó no se ejecuta de nuevo", async () => {
     const filas = [fila("a")];
     let ejecuciones = 0;
@@ -589,6 +606,17 @@ describe("despacharPorClaves", () => {
     await p.despacharPorClaves(empresa, ["fiscal.validar:x:1"], T0);
     expect(pedidos).toEqual([{ empresa, claves: ["fiscal.validar:x:1"] }]);
     expect(filas.map((f) => f.estado)).toEqual(["PENDIENTE", "HECHO", "PENDIENTE"]);
+  });
+
+  it("con esperarHastaTerminar pasa la opción al despacho: espera a un manejador más lento que el tope", async () => {
+    const filas = [fila("a")];
+    const lento: ManejadorDeTrabajo = async () => {
+      await new Promise((resolver) => setTimeout(resolver, 120));
+      return { tipo: "HECHO" };
+    };
+    const p = procesadorCon(filas, lento, { tope: 20, porClaves: () => Promise.resolve(["a"]) });
+    await p.despacharPorClaves(empresa, ["k"], T0, { esperarHastaTerminar: true });
+    expect(filas[0]).toMatchObject({ estado: "HECHO" });
   });
 
   it("sin claves no consulta la cola ni ejecuta nada", async () => {

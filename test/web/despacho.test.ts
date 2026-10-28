@@ -8,12 +8,23 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vite
 vi.mock("server-only", () => ({}));
 const mundo = vi.hoisted(() => ({
   programadas: [] as (() => Promise<void> | void)[],
-  despachar: undefined as unknown as Mock<(ids: readonly string[], ahora: Date) => Promise<void>>,
+  despachar: undefined as unknown as Mock<
+    (
+      ids: readonly string[],
+      ahora: Date,
+      opciones?: { esperarHastaTerminar?: boolean },
+    ) => Promise<void>
+  >,
   procesador: undefined as unknown as Mock<
     () => { despacharAhora: unknown; despacharPorClaves: unknown }
   >,
   porClaves: undefined as unknown as Mock<
-    (empresa: string, claves: readonly string[], ahora: Date) => Promise<void>
+    (
+      empresa: string,
+      claves: readonly string[],
+      ahora: Date,
+      opciones?: { esperarHastaTerminar?: boolean },
+    ) => Promise<void>
   >,
 }));
 vi.mock("next/server", () => ({
@@ -67,6 +78,8 @@ describe("despacharDespuesDeConfirmar", () => {
     expect(mundo.despachar).toHaveBeenCalledWith(
       ["t1", "t2"],
       new Date("2026-10-14T12:00:07.000Z"),
+      // `after()` corre con la respuesta ya enviada: espera a que termine (el tope de 5 s no aplica).
+      { esperarHastaTerminar: true },
     );
   });
 
@@ -114,6 +127,7 @@ describe("despacharPorClavesDespuesDeConfirmar", () => {
       empresa,
       ["fiscal.validar:x:1"],
       new Date("2026-10-14T12:00:09.000Z"),
+      { esperarHastaTerminar: true },
     );
   });
 
