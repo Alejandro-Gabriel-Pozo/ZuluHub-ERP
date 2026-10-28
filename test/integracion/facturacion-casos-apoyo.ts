@@ -48,7 +48,11 @@ import { comoEmpresa } from "./entorno";
 import { crearEscenario as crearEscenarioDeFacturacion, type Escenario } from "./facturacion-apoyo";
 import { cargaDe, crearEntornoFacturacion, pedidoDe } from "./facturacion-persistencia-apoyo";
 import { REGLAS_CON_FACTURACION, conFacturacion } from "./fiscal-numeracion-apoyo";
-import { crearMembresiaDeBase, type RolDePrueba } from "./fixtures-identidad";
+import {
+  crearAsignacionDeBase,
+  crearMembresiaDeBase,
+  type RolDePrueba,
+} from "./fixtures-identidad";
 import type { BaseDePruebas } from "./global";
 
 /**
@@ -136,7 +140,10 @@ export async function crearEscenarioDeCasos(
   } = {},
 ): Promise<EscenarioDeCasos> {
   const e = await crearEscenarioDeFacturacion(dueno, opciones);
-  await crearMembresiaDeBase(dueno, e.empresa, e.persona, opciones.rol ?? "OPERADOR");
+  const rol = opciones.rol ?? "OPERADOR";
+  await crearMembresiaDeBase(dueno, e.empresa, e.persona, rol);
+  // Un operador trabaja en las sucursales que tiene asignadas (el listado se acota a una): en la de la empresa de prueba.
+  if (rol === "OPERADOR") await crearAsignacionDeBase(dueno, e.empresa, e.persona, e.sucursal);
   if (opciones.sinCertificado !== true) {
     await cargarCertificado(base, e, opciones.ambienteDelCertificado ?? "HOMOLOGACION");
   }

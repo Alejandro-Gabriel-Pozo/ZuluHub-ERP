@@ -123,8 +123,11 @@ describe.skipIf(base === null)(
         exito(await casos.validarComprobante(e.sistema(reloj.ahora()), { comprobanteId: id }));
       const detalle = async (id: ComprobanteId) =>
         exito(await consultas.verComprobante(como(), { comprobanteId: id }));
-      const listado = async (pedido: Parameters<typeof consultas.listarComprobantes>[1] = {}) =>
-        exito(await consultas.listarComprobantes(como(), pedido)).items;
+      const listado = async (
+        pedido: Omit<Parameters<typeof consultas.listarComprobantes>[1], "sucursalElegida"> = {},
+      ) =>
+        exito(await consultas.listarComprobantes(como(), { ...pedido, sucursalElegida: null }))
+          .items;
       const acreditacionEnLista = async (id: ComprobanteId) =>
         (await listado({ limite: 50 })).find((i) => i.id === id)?.acreditacion;
       return {

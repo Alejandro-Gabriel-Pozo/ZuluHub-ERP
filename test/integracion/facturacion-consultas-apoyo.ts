@@ -21,6 +21,7 @@ import {
   type MarcaParaImprimir,
   type TxDeConsultasDeFacturacion,
 } from "../../src/modulos/fiscal/publico";
+import { crearRepositorioDeSucursales, type EmpresasDb } from "../../src/modulos/empresas/publico";
 import type { ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import {
   confirmarDueno,
@@ -87,6 +88,7 @@ export function crearEntornoDeConsultas(base: BaseDePruebas): EntornoDeConsultas
         comprobantes: crearRepositorioDeComprobantes(fiscal),
         lecturas: crearLecturasDeComprobantes(fiscal),
         intentos: crearRepositorioDeIntentos(fiscal),
+        sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
         series: crearRepositorioDeSeries(fiscal),
         marca: {
           async deLaEmpresa() {

@@ -6,6 +6,7 @@ import {
   type DetalleDeComprobante,
   type PaginaDeComprobantes,
 } from "../modulos/fiscal/publico";
+import type { SucursalId } from "../primitivas/identificadores/marca";
 import type { Resultado } from "../primitivas/resultado/resultado";
 import { aRespuestaDeExcepcion, errorAPublico, type DependenciasDeRespuesta } from "./a-respuesta";
 import {
@@ -226,17 +227,23 @@ export function cambiarAmbienteDePuntoDeVenta(
 // Consultas
 // ---------------------------------------------------------------------------------------------------------------
 
-/** El listado de comprobantes de la empresa (`comprobantes.ver`); `crudo` puede faltar. */
+/**
+ * El listado de comprobantes de UNA sucursal de la empresa (`comprobantes.ver`, D-18); `crudo` puede faltar.
+ * `sucursalElegida` NO sale del pedido del navegador: la toma el servidor de su sesión (o es `null` si la persona todavía no
+ * eligió) y la consulta la verifica contra el alcance antes de filtrar. Sin elegir y con varias a elegir, responde
+ * `FISCAL_SUCURSAL_NO_ELEGIDA`; con una sola, la toma sola; fuera de alcance, `FISCAL_SUCURSAL_FUERA_DE_ALCANCE`.
+ */
 export function listarComprobantes(
   d: DependenciasDeFacturacionWeb,
   contexto: ContextoOperativo,
+  sucursalElegida: SucursalId | null,
   crudo: unknown,
 ): Promise<Respuesta<PaginaDeComprobantes>> {
   return accion(
     d,
     crudo,
     entradaDeListar,
-    (pedido) => d.consultas().listarComprobantes(contexto, pedido),
+    (pedido) => d.consultas().listarComprobantes(contexto, { ...pedido, sucursalElegida }),
     (pagina) => ({ items: pagina.items, siguiente: pagina.siguiente }),
   );
 }

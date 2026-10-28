@@ -191,6 +191,18 @@ export const TEXTOS_DE_FISCAL = {
     porDefecto: "Los filtros del listado no son válidos.",
     largoMaximo: 160,
   },
+  // Fuente: decisión del dueño del 2026-10-28 relevada por el coordinador («error tipado "sucursal no elegida" y la pantalla
+  // la hace elegir»; y, para una elegida que ya no es de su alcance, el error `SUCURSAL_FUERA_DE_ALCANCE` de
+  // `capacidades/permisos/alcance.ts`). Los TEXTOS son solo la lectura literal de esos dos nombres: la pantalla se guía por el
+  // CÓDIGO (abre el selector) y el texto definitivo no está aprobado (pregunta pendiente).
+  "error.fiscal_sucursal_no_elegida": {
+    porDefecto: "Sucursal no elegida.",
+    largoMaximo: 160,
+  },
+  "error.fiscal_sucursal_fuera_de_alcance": {
+    porDefecto: "Sucursal fuera de su alcance.",
+    largoMaximo: 160,
+  },
   "fiscal.arca.error_generico": {
     porDefecto: "ARCA no aceptó el comprobante. Código {codigo}.",
     largoMaximo: 160,

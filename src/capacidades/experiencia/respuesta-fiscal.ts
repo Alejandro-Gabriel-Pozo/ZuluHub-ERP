@@ -56,6 +56,8 @@ export const CLAVES_DE_ERRORES_FISCALES = {
   FISCAL_AMBIENTE_NO_VUELVE: "error.fiscal_ambiente_no_vuelve",
   FISCAL_YA_EMITIO_EN_PRODUCCION: "error.fiscal_ya_emitio_en_produccion",
   FISCAL_FILTRO_INVALIDO: "error.fiscal_filtro_invalido",
+  FISCAL_SUCURSAL_NO_ELEGIDA: "error.fiscal_sucursal_no_elegida",
+  FISCAL_SUCURSAL_FUERA_DE_ALCANCE: "error.fiscal_sucursal_fuera_de_alcance",
 } as const satisfies Record<string, ClaveDeTexto>;
 
 export type CodigoFiscal = keyof typeof CLAVES_DE_ERRORES_FISCALES;

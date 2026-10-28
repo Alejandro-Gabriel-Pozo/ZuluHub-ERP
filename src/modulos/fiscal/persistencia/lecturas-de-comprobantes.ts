@@ -60,6 +60,11 @@ export const VALORES_DEL_FILTRO = {
 export type ClaveDeListado = Readonly<{ creadoEn: string; id: ComprobanteId }>;
 
 export type FiltroDeListado = Readonly<{
+  /**
+   * La sucursal del comprobante (`comprobante.sucursal_id`, 0016: la del punto de venta AL EMITIRSE, que no cambia aunque el
+   * punto de venta se mude). Obligatoria y siempre se filtra por ella: no hay un listado «de todas las sucursales».
+   */
+  sucursalId: SucursalId;
   /** `null`: todos los estados menos `DESCARTADO`. */
   estado: EstadoDeComprobanteArca | null;
   tipo: TipoDeComprobante | null;
@@ -213,7 +218,9 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
 
   return {
     async listar(empresa, filtro) {
-      let consulta = resumen().where("empresa_id", "=", empresa);
+      let consulta = resumen()
+        .where("empresa_id", "=", empresa)
+        .where("sucursal_id", "=", filtro.sucursalId);
       consulta =
         filtro.estado === null
           ? consulta.where("estado", "<>", "DESCARTADO")

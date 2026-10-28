@@ -8,20 +8,17 @@ import {
   claveDePagina,
   criteriosDeListado,
   leerClaveDePagina,
+  type CriteriosDeListado,
   type ErrorDeCriterios,
   type PedidoDeListado,
 } from "./criterios-de-listado";
-import {
-  VALORES_DEL_FILTRO,
-  type ClaveDeListado,
-  type FiltroDeListado,
-} from "../persistencia/lecturas-de-comprobantes";
+import { VALORES_DEL_FILTRO, type ClaveDeListado } from "../persistencia/lecturas-de-comprobantes";
 
 const ID = "0192f3a4-5b6c-7d8e-9f01-23456789abcd";
 const CREADO_EN = "2026-10-12T15:30:45.123456Z";
 const clave = (creadoEn = CREADO_EN, id = ID) => `${creadoEn}|${id}`;
 
-const VACIO: FiltroDeListado = {
+const VACIO: CriteriosDeListado = {
   estado: null,
   tipo: null,
   ambiente: null,

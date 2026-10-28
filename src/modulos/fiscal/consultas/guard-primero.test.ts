@@ -90,9 +90,9 @@ const ID = comprobanteId("c-1");
 
 /** Cómo se llama a cada consulta. Una nueva obliga a sumar su fila. */
 const LLAMADAS: Record<ConAccion, (consultas: ConsultasDeFacturacion) => Promise<unknown>> = {
-  listarComprobantes: (c) => c.listarComprobantes(contexto, {}),
+  listarComprobantes: (c) => c.listarComprobantes(contexto, { sucursalElegida: null }),
   listarPuntosDeVentaDeLaSucursal: (c) =>
-    c.listarPuntosDeVentaDeLaSucursal(contexto, { sucursalId: sucursalId("s-1") }),
+    c.listarPuntosDeVentaDeLaSucursal(contexto, { sucursalElegida: sucursalId("s-1") }),
   verComprobante: (c) => c.verComprobante(contexto, { comprobanteId: ID }),
   modeloDeImpresion: (c) => c.modeloDeImpresion(contexto, { comprobanteId: ID }),
 };
@@ -207,12 +207,22 @@ describe("P7: el guard va primero en cada consulta del facturador", () => {
 
   it("el pedido del listado se mira DESPUÉS del guard: sin permiso no se sabe si estaba bien armado", async () => {
     const sinPermiso = vigilar(actor(null));
-    expect(await consultasCon(sinPermiso).listarComprobantes(contexto, { limite: 0 })).toEqual({
+    expect(
+      await consultasCon(sinPermiso).listarComprobantes(contexto, {
+        sucursalElegida: null,
+        limite: 0,
+      }),
+    ).toEqual({
       ok: false,
       error: "SIN_PERMISO",
     });
     const conPermiso = vigilar(actor("OPERADOR"));
-    expect(await consultasCon(conPermiso).listarComprobantes(contexto, { limite: 0 })).toEqual({
+    expect(
+      await consultasCon(conPermiso).listarComprobantes(contexto, {
+        sucursalElegida: null,
+        limite: 0,
+      }),
+    ).toEqual({
       ok: false,
       error: "LIMITE_INVALIDO",
     });

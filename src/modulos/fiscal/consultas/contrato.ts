@@ -1,5 +1,5 @@
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
-import type { EmpresaId } from "../../../primitivas/identificadores/marca";
+import type { EmpresaId, SucursalId } from "../../../primitivas/identificadores/marca";
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { MarcaParaImprimir } from "../dominio/modelo-de-impresion";
@@ -24,6 +24,13 @@ export type TxDeConsultasDeFacturacion = Readonly<{
    * si la marca no tiene logo o color, los campos vienen en `null`.
    */
   marca: Readonly<{ deLaEmpresa(empresa: EmpresaId): Promise<MarcaParaImprimir> }>;
+  /**
+   * Las sucursales ACTIVAS de la empresa (las del módulo de empresas: la composición pasa su repositorio, que ya cumple
+   * esto). De ellas y del alcance del actor sale la sucursal en la que trabaja el listado (`sucursal-del-pedido.ts`).
+   */
+  sucursales: Readonly<{
+    listarActivas(empresa: EmpresaId): Promise<readonly Readonly<{ id: SucursalId }>[]>;
+  }>;
   /** Quién es el actor y qué módulos tiene la empresa, leído dentro de la transacción (sin caché). */
   autorizacion: CargaDeAutorizacion;
 }>;
