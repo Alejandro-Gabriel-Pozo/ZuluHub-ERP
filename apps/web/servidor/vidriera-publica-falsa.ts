@@ -1,0 +1,115 @@
+import "server-only";
+
+import type {
+  VidrieraPublica,
+  VidrieraPublicada,
+  FotoPublicada,
+} from "../../../src/puertos/vidriera-publica";
+import {
+  VIDRIERAS_DE_EJEMPLO,
+  type VidrieraDeEjemplo,
+  type ProductoDeEjemplo,
+} from "../../../test/fixtures/vidrieras";
+
+/**
+ * Falso del puerto `VidrieraPublica` (C-2): sirve las cuatro cartas de ejemplo de `test/fixtures/vidrieras`, que son
+ * datos INVENTADOS (ningún nombre, precio ni foto es de un cliente). Vive acá y no en `test/` porque la página
+ * lo necesita para compilar y mostrarse antes de que exista el adaptador real; C-3 lo reemplaza en
+ * `carta.ts` por el que lee la base por la puerta pública, y este archivo se borra.
+ *
+ * Lo que las cartas de ejemplo no traen (el lugar, la perilla de letra y las fotos) se completa acá con datos
+ * igual de inventados: la hostería parte con la letra GRANDE para poder ver la perilla del comerciante.
+ */
+
+const RUBROS: Readonly<Record<VidrieraDeEjemplo["rubro"], string>> = {
+  CAFETERIA: "Cafetería",
+  PANADERIA: "Panadería",
+  HOSTERIA: "Hostería",
+  BARBERIA: "Barbería",
+};
+
+const COMPLEMENTOS: Readonly<Record<string, Pick<VidrieraPublicada, "lugar" | "letraBase">>> = {
+  "ejemplo-cafeteria": {
+    lugar: "Av. Belgrano 412 · todos los días de 7 a 21",
+    letraBase: "NORMAL",
+  },
+  "ejemplo-panaderia": { lugar: "25 de Mayo 90 · lunes a sábado de 7 a 20", letraBase: "NORMAL" },
+  "ejemplo-hosteria": { lugar: "Ruta 40, km 12 · cenas de 20 a 23", letraBase: "GRANDE" },
+  "ejemplo-barberia": { lugar: "San Martín 230 · de martes a sábado", letraBase: "NORMAL" },
+};
+
+/** Un tono estable por nombre, para que cada foto de ejemplo sea de un color distinto. */
+function tonoDe(nombre: string): number {
+  let tono = 0;
+  for (const caracter of nombre) tono = (tono * 31 + (caracter.codePointAt(0) ?? 0)) % 360;
+  return tono;
+}
+
+/** Una "foto" de ejemplo: un bloque de color como SVG en línea (no hay archivos ni pedidos de red). */
+function bloqueDeColor(producto: ProductoDeEjemplo, ancho: number, alto: number): string {
+  const tono = tonoDe(producto.nombre);
+  const svg =
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${ancho} ${alto}'>` +
+    `<rect width='${ancho}' height='${alto}' fill='hsl(${tono} 38% 46%)'/></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+function conFotoDeEjemplo(producto: ProductoDeEjemplo): ProductoDeEjemplo {
+  const foto = producto.foto;
+  if (foto === null) return producto;
+  const reemplazo: FotoPublicada = {
+    ...foto,
+    direccion: bloqueDeColor(producto, foto.ancho, foto.alto),
+  };
+  return { ...producto, foto: reemplazo };
+}
+
+function comoVidrieraPublicada(vidriera: VidrieraDeEjemplo): VidrieraPublicada {
+  const complemento = COMPLEMENTOS[vidriera.codigo] ?? {
+    lugar: null,
+    letraBase: "NORMAL" as const,
+  };
+  return {
+    id: vidriera.id,
+    codigo: vidriera.codigo,
+    nombre: vidriera.nombre,
+    rubro: RUBROS[vidriera.rubro],
+    ...complemento,
+    secciones: vidriera.secciones.map((s) => ({
+      ...s,
+      productos: s.productos.map(conFotoDeEjemplo),
+    })),
+  };
+}
+
+/**
+ * De qué marca es cada carta de ejemplo (S2). Ids INVENTADOS, de forma de UUID: ninguna marca real los tiene,
+ * así que mientras este falso esté puesto la carta no sale en ningún dominio real (falla cerrado). Las
+ * pruebas arman el suyo con `crearVidrieraPublicaFalsa` y las marcas que necesiten.
+ */
+const MARCA_DE_EJEMPLO_DE_LA_CAFETERIA = "00000e01-0000-4000-8000-000000000001";
+const MARCA_DE_EJEMPLO_DE_LA_PANADERIA = "00000e01-0000-4000-8000-000000000002";
+
+type MarcaPorCodigo = Readonly<Record<string, string>>;
+
+/** El falso: una carta de ejemplo solo se devuelve a la marca a la que se la asocia; a cualquier otra, `null`. */
+export function crearVidrieraPublicaFalsa(marcaPorCodigo: MarcaPorCodigo): VidrieraPublica {
+  return {
+    porCodigo(marcaId, codigo) {
+      const vidriera = VIDRIERAS_DE_EJEMPLO.find((c) => c.codigo === codigo);
+      const duenia = vidriera === undefined ? undefined : marcaPorCodigo[vidriera.codigo];
+      return Promise.resolve(
+        vidriera === undefined || duenia === undefined || duenia !== marcaId
+          ? null
+          : comoVidrieraPublicada(vidriera),
+      );
+    },
+  };
+}
+
+export const vidrieraPublicaFalsa: VidrieraPublica = crearVidrieraPublicaFalsa({
+  "ejemplo-cafeteria": MARCA_DE_EJEMPLO_DE_LA_CAFETERIA,
+  "ejemplo-hosteria": MARCA_DE_EJEMPLO_DE_LA_CAFETERIA,
+  "ejemplo-panaderia": MARCA_DE_EJEMPLO_DE_LA_PANADERIA,
+  "ejemplo-barberia": MARCA_DE_EJEMPLO_DE_LA_PANADERIA,
+});

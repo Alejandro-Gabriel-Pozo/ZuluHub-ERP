@@ -84,7 +84,7 @@
   --objetivo-minimo: var(--objetivo-minimo-operacion);
 
   /* Carta pública (C-2): «Agotado» es un estado y tiene que llegar a 7:1 sobre los fondos de la carta
-     (nunca toma la marca). Lo verifica `plantillas/carta/contraste.test.ts`. */
+     (nunca toma la marca). Lo verifica `plantillas/vidriera/contraste.test.ts`. */
   --color-agotado: #8f1d16;
 
   /* Capas (z-index): una escala corta con nombre por función; ningún `z-index` suelto en los componentes. */

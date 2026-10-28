@@ -254,7 +254,7 @@ const SONDAS = {
   hostSoloSirveSuSuperficie: async (ctx: Ctx) => {
     const m = await crearMarca(ctx.dueno);
     const app = await crearDominio(ctx.dueno, m, { superficie: "APP" });
-    const carta = await crearDominio(ctx.dueno, m, { superficie: "CARTA" });
+    const vidriera = await crearDominio(ctx.dueno, m, { superficie: "CARTA" });
     return conPublico(ctx, async (s) => {
       const cuantos = async (host: string, superficie: string) =>
         filasDe(
@@ -266,8 +266,8 @@ const SONDAS = {
       return (
         (await cuantos(app.host, "APP")) === 1 &&
         (await cuantos(app.host, "CARTA")) === 0 &&
-        (await cuantos(carta.host, "CARTA")) === 1 &&
-        (await cuantos(carta.host, "APP")) === 0
+        (await cuantos(vidriera.host, "CARTA")) === 1 &&
+        (await cuantos(vidriera.host, "APP")) === 0
       );
     });
   },

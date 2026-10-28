@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ContenedorDeLetra } from "../../../../../ui/plantillas/carta/ContenedorDeLetra.cliente";
-import { PaginaDeProducto } from "../../../../../ui/plantillas/carta/PaginaDeProducto";
-import { productoParaLaPantalla } from "../../../../../servidor/carta";
+import { ContenedorDeLetra } from "../../../../../ui/plantillas/vidriera/ContenedorDeLetra.cliente";
+import { PaginaDeProducto } from "../../../../../ui/plantillas/vidriera/PaginaDeProducto";
+import { productoParaLaPantalla } from "../../../../../servidor/vidriera";
 import { exigirPuerta } from "../../../../../servidor/pedido";
 
 type Props = Readonly<{ params: Promise<{ codigo: string; producto: string }> }>;
@@ -32,8 +32,8 @@ export default async function PaginaDelProducto({ params }: Props) {
     <ContenedorDeLetra letraBase={vista.letraBase}>
       <PaginaDeProducto
         producto={datos.producto}
-        carta={vista.nombre}
-        hrefDeLaCarta={`${vista.hrefDeLaCarta}#${datos.producto.seccion}`}
+        vidriera={vista.nombre}
+        hrefDeLaVidriera={`${vista.hrefDeLaVidriera}#${datos.producto.seccion}`}
         textos={textos}
       />
     </ContenedorDeLetra>

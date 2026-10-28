@@ -414,7 +414,7 @@ describe.skipIf(base === null)("derechos de uso: lectura del plan y de los ajust
         const codigos = ["", "x", "a".repeat(64), "0123456789abcdef".repeat(4)];
         const marcas = [MARCA_PRINCIPAL_DE_PRUEBA, OTRA_MARCA_DE_PRUEBA];
         const respuestas = await Promise.all(
-          marcas.flatMap((m) => codigos.map((c) => tx.derechos.deLaCartaPublica(m, c))),
+          marcas.flatMap((m) => codigos.map((c) => tx.derechos.deLaVidrieraPublica(m, c))),
         );
         return ok(respuestas);
       });

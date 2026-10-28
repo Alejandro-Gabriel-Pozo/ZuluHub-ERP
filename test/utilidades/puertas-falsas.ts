@@ -66,7 +66,7 @@ const DOMINIOS: readonly (readonly [string, SuperficieDeHost, MarcaSembrada, Est
 /** Los hosts ACTIVOS de la APP de cada marca, para las pruebas que solo necesitan uno bueno. */
 export const HOST_APP_A = "app.hoteldellago.test";
 export const HOST_LANDING_A = "hoteldellago.test";
-export const HOST_CARTA_A = "carta.hoteldellago.test";
+export const HOST_VIDRIERA_A = "carta.hoteldellago.test";
 export const HOST_APP_B = "app.panaderialospinos.test";
 export const HOST_LANDING_B = "panaderialospinos.test";
 

@@ -213,10 +213,10 @@ describe.skipIf(base === null)("configuración pública de la marca de un host",
     it("la misma marca da la misma configuración en cada superficie que sirve", async () => {
       const m = await marca({ datos: { nombreVisible: "Varias" }, alias: true });
       const landing = await crearDominio(dueno, m.id, { superficie: "LANDING" });
-      const carta = await crearDominio(dueno, m.id, { superficie: "CARTA" });
+      const vidriera = await crearDominio(dueno, m.id, { superficie: "CARTA" });
       const deLaApp = await leer(m.canonico as string, "APP");
       expect(await leer(landing.host, "LANDING")).toEqual(deLaApp);
-      expect(await leer(carta.host, "CARTA")).toEqual(deLaApp);
+      expect(await leer(vidriera.host, "CARTA")).toEqual(deLaApp);
       expect(await leer(m.alias as string, "APP")).toEqual(deLaApp);
     });
   });

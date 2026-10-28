@@ -151,7 +151,7 @@
   },
   {
     "grupo": "web (puerta mínima)",
-    "archivos": "src/capacidades/experiencia/**/*.ts,!src/capacidades/experiencia/carta/**/*.ts,!src/capacidades/experiencia/respuesta.ts,!src/capacidades/experiencia/origen.ts,!src/capacidades/experiencia/ruta-de-retorno.ts,!src/capacidades/experiencia/estado-de-sesion.ts,!src/capacidades/experiencia/empresa-elegida.ts,!src/capacidades/experiencia/destinos.ts,!src/capacidades/experiencia/sucursal.ts,!src/capacidades/experiencia/errores-de-ingreso.ts,!src/capacidades/experiencia/set-cookie.ts",
+    "archivos": "src/capacidades/experiencia/**/*.ts,!src/capacidades/experiencia/vidriera/**/*.ts,!src/capacidades/experiencia/respuesta.ts,!src/capacidades/experiencia/origen.ts,!src/capacidades/experiencia/ruta-de-retorno.ts,!src/capacidades/experiencia/estado-de-sesion.ts,!src/capacidades/experiencia/empresa-elegida.ts,!src/capacidades/experiencia/destinos.ts,!src/capacidades/experiencia/sucursal.ts,!src/capacidades/experiencia/errores-de-ingreso.ts,!src/capacidades/experiencia/set-cookie.ts",
     "minutos": 7.3,
     "pruebas": "src/capacidades/experiencia"
   },
@@ -180,10 +180,10 @@
     "pruebas": "src/modulos/fiscal/dominio/calculo-de-renglones.test.ts src/modulos/fiscal/dominio/codigos-de-arca.test.ts src/modulos/fiscal/dominio/comprobante-nuevo.test.ts src/modulos/fiscal/dominio/condicion-iva-receptor.test.ts src/modulos/fiscal/dominio/estados-de-comprobante.test.ts src/modulos/fiscal/dominio/importes-para-arca.test.ts src/modulos/fiscal/dominio/letra-de-comprobante.test.ts src/modulos/fiscal/dominio/nota-asociada.test.ts src/modulos/fiscal/dominio/qr-de-arca.test.ts src/modulos/fiscal/dominio/receptor.test.ts src/modulos/fiscal/dominio/reconciliacion-de-comprobante.test.ts src/modulos/fiscal/dominio/propiedades-de-facturacion.test.ts src/modulos/fiscal/dominio/sin-ventas.test.ts"
   },
   {
-    "grupo": "carta (piezas puras)",
-    "archivos": "src/capacidades/experiencia/carta/**/*.ts",
+    "grupo": "vidriera (piezas puras)",
+    "archivos": "src/capacidades/experiencia/vidriera/**/*.ts",
     "minutos": 5.4,
-    "pruebas": "src/capacidades/experiencia/carta"
+    "pruebas": "src/capacidades/experiencia/vidriera"
   },
   {
     "grupo": "activos (cabeceras)",

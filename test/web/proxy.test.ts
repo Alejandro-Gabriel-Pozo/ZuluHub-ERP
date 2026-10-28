@@ -4,7 +4,7 @@ import { config, proxy } from "../../apps/web/proxy";
 import {
   HOST_APP_A,
   HOST_APP_B,
-  HOST_CARTA_A,
+  HOST_VIDRIERA_A,
   HOST_LANDING_A,
   HOST_LANDING_B,
   MARCA_A,
@@ -152,7 +152,7 @@ describe("P-2: host desconocido, retirado o inválido = la neutra", () => {
   });
 
   it("/api/** en un host que no es APP también es la neutra; en APP sigue su camino", async () => {
-    for (const host of [HOST_LANDING_A, HOST_CARTA_A, HOST_LANDING_B]) {
+    for (const host of [HOST_LANDING_A, HOST_VIDRIERA_A, HOST_LANDING_B]) {
       for (const ruta of ["/api/auth/signin", "/api/auth/callback/google", "/api/otra", "/api"]) {
         const r = await proxy(pedido(host, ruta));
         expect(reescritura(r), `${host} ${ruta}`).toBe("/s/neutra");
@@ -168,7 +168,7 @@ describe("P-2: host desconocido, retirado o inválido = la neutra", () => {
   });
 
   it("nadie entra por una URL interna, ni en un host bueno", async () => {
-    for (const host of [HOST_APP_A, HOST_LANDING_A, HOST_CARTA_A]) {
+    for (const host of [HOST_APP_A, HOST_LANDING_A, HOST_VIDRIERA_A]) {
       for (const ruta of ["/s/app", "/s/landing", "/s/carta", "/s/neutra", "/S/app", "/%73/app"]) {
         const r = await proxy(pedido(host, ruta));
         expect(reescritura(r), `${host} ${ruta}`).toBe("/s/neutra");
@@ -192,8 +192,8 @@ describe("la reescritura por superficie", () => {
     [HOST_APP_B, "/invitacion", "/s/app/invitacion"],
     [HOST_LANDING_A, "/", "/s/landing"],
     [HOST_LANDING_B, "/precios", "/s/landing/precios"],
-    [HOST_CARTA_A, "/", "/s/carta"],
-    [HOST_CARTA_A, "/mesa/3", "/s/carta/mesa/3"],
+    [HOST_VIDRIERA_A, "/", "/s/carta"],
+    [HOST_VIDRIERA_A, "/mesa/3", "/s/carta/mesa/3"],
   ])("%s %s → %s, sin estado propio", async (host, ruta, destino) => {
     const r = await proxy(pedido(host, ruta));
     expect(reescritura(r)).toBe(destino);
@@ -233,7 +233,7 @@ describe("P-3: noindex en lo privado", () => {
       [HOST_APP_A, "/s/app"],
       [HOST_APP_B, "/invitacion?t=1"],
       ["otro.test", "/"],
-      [HOST_CARTA_A, "/"],
+      [HOST_VIDRIERA_A, "/"],
     ] as const) {
       const r = await proxy(pedido(host, ruta));
       expect(r.headers.get("x-robots-tag"), `${host} ${ruta}`).toBe("noindex");
@@ -266,7 +266,7 @@ describe("P-4: cabeceras de seguridad", () => {
   const SUPERFICIES: readonly (readonly [string, string])[] = [
     [HOST_APP_A, "/"],
     [HOST_LANDING_A, "/"],
-    [HOST_CARTA_A, "/"],
+    [HOST_VIDRIERA_A, "/"],
     ["otro.test", "/"],
     [HOST_APP_A, "/api/auth/signin"],
   ];
