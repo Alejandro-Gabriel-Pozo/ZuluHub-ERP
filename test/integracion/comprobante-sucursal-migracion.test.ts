@@ -6,14 +6,21 @@ import { describe, expect, inject, it, vi } from "vitest";
 import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
 import {
   RENGLON_DE_121,
+  asegurarSerie,
+  cerrarSerie,
   crearComprobante,
   crearEscenario,
   datosDeComprobante,
+  entrarEnValidacion,
   insertarComprobante,
+  marcarAutorizado,
+  reservarSerie,
+  serieDe,
+  viaDueno,
   viaDuenoDirecto,
   type Escenario,
 } from "./facturacion-apoyo";
-import { crearPuntoDeVenta } from "./fiscal-apoyo";
+import { acepta, crearPuntoDeVenta } from "./fiscal-apoyo";
 import type { BaseDePruebas } from "./global";
 import {
   CARPETA_DE_MIGRACIONES,
@@ -70,12 +77,41 @@ const codigoDe = (consulta: Promise<unknown>): Promise<string | null> =>
   );
 
 type Sembrado = Readonly<{
-  /** Cada comprobante y la sucursal que le tiene que tocar (la ACTUAL de su punto de venta). */
+  /** Cada comprobante y la sucursal que le tiene que tocar (la ACTUAL de su punto de venta; la de la factura, una nota de crédito). */
   esperadas: ReadonlyMap<string, string>;
   a: Escenario;
   b: Escenario;
   norte: string;
+  /** Un punto de venta activo de «Norte». */
+  pvNorte: string;
+  /** Una factura AUTORIZADA de la sucursal de la empresa (punto de venta 1). */
+  factura: string;
 }>;
+
+/** Una factura B AUTORIZADA, por el camino legal y confirmada (como la deja el trabajo de validación). */
+async function facturaAutorizada(c: pg.Client, e: Escenario): Promise<string> {
+  const ej = viaDueno(c);
+  const serie = serieDe(e);
+  const datos = datosDeComprobante(e);
+  const id = datos["id"] as string;
+  await c.query("begin");
+  acepta(await insertarComprobante(ej, datos));
+  acepta(await asegurarSerie(ej, serie));
+  acepta(await reservarSerie(ej, serie, id));
+  acepta(await entrarEnValidacion(ej, id, "1"));
+  acepta(await marcarAutorizado(ej, id));
+  acepta(await cerrarSerie(ej, serie, true));
+  await c.query("commit");
+  return id;
+}
+
+/** Lo que hay que cambiar de una factura B para que sea una nota (crédito o débito) sobre `factura`. */
+const notaSobre = (factura: string, clase: "NOTA_CREDITO" | "NOTA_DEBITO") => ({
+  clase,
+  tipo_comprobante: `${clase}_B`,
+  comprobante_asociado_id: factura,
+  motivo: "devolución",
+});
 
 /**
  * Datos de ANTES de 0016: dos empresas, comprobantes en distintos puntos de venta y sucursales, un descartado y un punto de
@@ -111,7 +147,27 @@ async function sembrar(c: pg.Client): Promise<Sembrado> {
   );
   esperadas.set(descartado, a.sucursal);
   esperadas.set(await crearComprobante(c, b), b.sucursal);
-  return { esperadas, a, b, norte };
+  // D-38: una nota de crédito emitida por el punto de venta de «Norte» sobre una factura de «Casa central» lleva la sucursal de la
+  // FACTURA. Una de débito, la de su punto de venta.
+  const factura = await facturaAutorizada(c, a);
+  esperadas.set(factura, a.sucursal);
+  esperadas.set(
+    await crearComprobante(c, a, {
+      punto_de_venta_id: pvNorte,
+      punto_de_venta_numero: 2,
+      ...notaSobre(factura, "NOTA_CREDITO"),
+    }),
+    a.sucursal,
+  );
+  esperadas.set(
+    await crearComprobante(c, a, {
+      punto_de_venta_id: pvNorte,
+      punto_de_venta_numero: 2,
+      ...notaSobre(factura, "NOTA_DEBITO"),
+    }),
+    norte,
+  );
+  return { esperadas, a, b, norte, pvNorte, factura };
 }
 
 /** El contenido de cada comprobante SIN la columna nueva: el relleno no puede cambiar ni un valor de lo que ya estaba. */
@@ -224,7 +280,8 @@ describe.skipIf(base === null)("comprobante con sucursal: la migración 0016 y s
       const { rows: fn } = await c.query<{ src: string }>(
         "select prosrc as src from pg_proc where proname = 'comprobante_validar_alta'",
       );
-      expect(fn[0]?.src).toContain("NEW.sucursal_id := v_pv.sucursal_id");
+      expect(fn[0]?.src).toContain("NEW.sucursal_id := v_sucursal");
+      expect(fn[0]?.src).toContain("NEW.clase = 'NOTA_CREDITO'");
       expect(fn[0]?.src).toContain("FOR SHARE");
     } finally {
       await vacia.cerrar();
@@ -311,6 +368,66 @@ describe.skipIf(base === null)("comprobante con sucursal: la migración 0016 y s
         constraint: "comprobante_sin_sucursal",
       });
       await c.query("rollback").catch(() => undefined);
+    });
+  });
+
+  it("D-38: una nota de crédito lleva la sucursal de la FACTURA que corrige aunque salga por un punto de venta de otra sucursal; una de débito, la de su punto de venta; una distinta se rechaza", async () => {
+    await conTodas(async (previa, s) => {
+      const c = previa.cliente;
+      const sucursalDe = async (id: string) =>
+        (
+          await c.query<{ sucursal_id: string }>(
+            "select sucursal_id from comprobante where id = $1",
+            [id],
+          )
+        ).rows[0]?.sucursal_id;
+      const porNorte = { punto_de_venta_id: s.pvNorte, punto_de_venta_numero: 2 };
+
+      const credito = await crearComprobante(c, s.a, {
+        ...porNorte,
+        ...notaSobre(s.factura, "NOTA_CREDITO"),
+      });
+      expect(await sucursalDe(credito)).toBe(s.a.sucursal);
+      const debito = await crearComprobante(c, s.a, {
+        ...porNorte,
+        ...notaSobre(s.factura, "NOTA_DEBITO"),
+      });
+      expect(await sucursalDe(debito)).toBe(s.norte);
+
+      // Mandando la sucursal del punto de venta en vez de la de la factura: rechazada.
+      await c.query("begin");
+      const mal = await insertarComprobante(
+        viaDuenoDirecto(c),
+        datosDeComprobante(s.a, {
+          ...porNorte,
+          ...notaSobre(s.factura, "NOTA_CREDITO"),
+          sucursal_id: s.norte,
+        }),
+      );
+      await c.query("rollback");
+      expect(mal.ok).toBe(false);
+      if (!mal.ok) expect(mal.restriccion).toBe("comprobante_alta_invalida");
+      // Y mandando la de la factura, se acepta (es la que le corresponde).
+      await c.query("begin");
+      const bien = await insertarComprobante(
+        viaDuenoDirecto(c),
+        datosDeComprobante(s.a, {
+          ...porNorte,
+          ...notaSobre(s.factura, "NOTA_CREDITO"),
+          sucursal_id: s.a.sucursal,
+        }),
+      );
+      await c.query("rollback");
+      expect(bien.ok).toBe(true);
+
+      // Si el punto de venta de la factura se muda después, la nota nueva sigue a la FACTURA (que no cambió).
+      await c.query("update punto_de_venta set sucursal_id = $2 where id = $1", [s.a.pv, s.norte]);
+      const otra = await crearComprobante(c, s.a, {
+        ...porNorte,
+        ...notaSobre(s.factura, "NOTA_CREDITO"),
+      });
+      expect(await sucursalDe(otra)).toBe(s.a.sucursal);
+      expect(await sucursalDe(s.factura)).toBe(s.a.sucursal);
     });
   });
 
