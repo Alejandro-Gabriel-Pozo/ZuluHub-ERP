@@ -11,6 +11,10 @@ const ROTULO_DE_PERILLA: Readonly<Record<string, string>> = {
   combos: "Combos",
   elecciones_reutilizables: "Elecciones reutilizables",
   recetas_por_tamano: "Recetas por tamaño",
+  composiciones_con_perdida: "Composiciones con pérdida",
+  subcomposiciones: "Subcomposiciones",
+  conjuntos: "Conjuntos",
+  composiciones_por_tamano: "Composiciones por tamaño",
 };
 
 const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {
@@ -19,6 +23,7 @@ const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {
   catalogo: "Catálogo",
   carta: "Carta",
   stock: "Stock",
+  vidriera: "Vidriera",
 };
 
 const buscar = (tabla: Readonly<Record<string, string>>, clave: string): string =>

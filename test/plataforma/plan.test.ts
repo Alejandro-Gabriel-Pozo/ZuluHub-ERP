@@ -18,6 +18,12 @@ describe("rotuloDePerilla", () => {
     expect(rotulo).not.toBe(clave);
     expect(rotulo).not.toContain("_");
   });
+  it("las perillas con nombres neutros tienen su rótulo exacto", () => {
+    expect(rotuloDePerilla("composiciones_con_perdida")).toBe("Composiciones con pérdida");
+    expect(rotuloDePerilla("subcomposiciones")).toBe("Subcomposiciones");
+    expect(rotuloDePerilla("conjuntos")).toBe("Conjuntos");
+    expect(rotuloDePerilla("composiciones_por_tamano")).toBe("Composiciones por tamaño");
+  });
   it("una desconocida vuelve tal cual y no lanza", () => {
     expect(rotuloDePerilla("perilla_nueva")).toBe("perilla_nueva");
     expect(rotuloDePerilla("constructor")).toBe("constructor");
@@ -27,6 +33,9 @@ describe("rotuloDePerilla", () => {
 describe("rotuloDeModulo", () => {
   it.each(Object.keys(CATALOGO_DE_MODULOS))("el módulo real %s tiene rótulo propio", (clave) => {
     expect(rotuloDeModulo(clave)).not.toBe(clave);
+  });
+  it("vidriera se llama «Vidriera»", () => {
+    expect(rotuloDeModulo("vidriera")).toBe("Vidriera");
   });
   it("una desconocida vuelve tal cual", () => {
     expect(rotuloDeModulo("modulo_nuevo")).toBe("modulo_nuevo");
