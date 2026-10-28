@@ -15,7 +15,8 @@ export type EntradaDelCambioDePlan = Readonly<{
 }>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const LARGO_MAXIMO_DEL_MOTIVO = 2000;
+/** Espejo de `LARGO_MAXIMO_DEL_MOTIVO` del backend (`formas-de-entrada.ts`); una prueba los compara. */
+export const LARGO_MAXIMO_DEL_MOTIVO = 500;
 
 const esRegistro = (valor: unknown): valor is Record<string, unknown> =>
   typeof valor === "object" && valor !== null && !Array.isArray(valor);
@@ -41,7 +42,7 @@ export function entradaDelCambioDePlan(
   }
   if (
     numeroEsperado !== null &&
-    !(typeof numeroEsperado === "number" && Number.isInteger(numeroEsperado) && numeroEsperado >= 0)
+    !(typeof numeroEsperado === "number" && Number.isInteger(numeroEsperado) && numeroEsperado >= 1)
   ) {
     return { ok: false };
   }

@@ -157,6 +157,7 @@ const TEXTO_PLAN_NO_ASIGNABLE = "Ese plan no se puede asignar: no está publicad
 const POR_CODIGO_DE_PLAN: Readonly<Record<string, ErrorParaLaPantalla>> = {
   ID_INVALIDO: { tipo: "PANTALLA_VIEJA", texto: TEXTO_SUBMARCA_VIEJA },
   TENANT_NO_ENCONTRADO: { tipo: "PANTALLA_VIEJA", texto: TEXTO_SUBMARCA_VIEJA },
+  EMPRESA_NO_ENCONTRADA: general("No encontramos esa empresa."),
   VERSION_DE_PLAN_NO_ENCONTRADA: { tipo: "PANTALLA_VIEJA", texto: TEXTO_SUBMARCA_VIEJA },
   VIGENCIA_INVALIDA: campo("vigenteDesde", "Elegí una fecha válida."),
   VIGENCIA_RETROACTIVA: campo("vigenteDesde", "La fecha tiene que ser posterior a hoy."),

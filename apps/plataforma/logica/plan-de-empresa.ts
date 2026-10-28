@@ -28,14 +28,21 @@ export type PlanDeEmpresa = Readonly<{
   modulos: {
     modulo: string;
     obligatorio: boolean;
+    /** `false`: el módulo todavía está en desarrollo. */
+    disponible: boolean;
     habilitadoPorElPlan: boolean;
     activado: boolean;
     estado: string;
   }[];
   perillas: { perilla: string; valor: ValorDePerilla; origen: string }[];
   empresasDelCliente: { enUso: number; limite: number | "ILIMITADO" | null } | null;
-  /** La última versión PUBLICADA de cada plan; `esActual`: es la versión asignada hoy. */
-  planesElegibles: { versionDePlanId: string; nombre: string; esActual: boolean }[];
+  /** La última versión PUBLICADA de cada plan no retirado (y la actual, aunque esté retirada); `esActual`: la asignada hoy. */
+  planesElegibles: {
+    versionDePlanId: string;
+    nombre: string;
+    versionNumero: number;
+    esActual: boolean;
+  }[];
 }>;
 
 export type EntradasDelPlanDeEmpresa = Readonly<{
@@ -86,6 +93,7 @@ export function armarPlanDeEmpresa(entradas: EntradasDelPlanDeEmpresa): PlanDeEm
     modulos: derechos.modulos.map((m) => ({
       modulo: m.modulo,
       obligatorio: m.obligatorio,
+      disponible: m.disponible,
       habilitadoPorElPlan: m.habilitadoPorElPlan,
       activado: m.activado,
       estado: m.estado,
@@ -97,16 +105,19 @@ export function armarPlanDeEmpresa(entradas: EntradasDelPlanDeEmpresa): PlanDeEm
     })),
     empresasDelCliente:
       cliente === null ? null : { enUso: cliente.empresasEnUso, limite: cliente.limiteDeEmpresas },
-    planesElegibles: planes.planes.flatMap((p) =>
-      p.ultimaVersion === null
-        ? []
-        : [
-            {
-              versionDePlanId: p.ultimaVersion.versionDePlanId,
-              nombre: p.ultimaVersion.nombreComercial,
-              esActual: p.ultimaVersion.versionDePlanId === idDeLaVigente,
-            },
-          ],
-    ),
+    planesElegibles: planes.planes.flatMap((p) => {
+      if (p.ultimaVersion === null) return [];
+      const esActual = p.ultimaVersion.versionDePlanId === idDeLaVigente;
+      // Un plan retirado no se ofrece, salvo que sea el que la empresa tiene hoy.
+      if (p.plan.estado === "RETIRADO" && !esActual) return [];
+      return [
+        {
+          versionDePlanId: p.ultimaVersion.versionDePlanId,
+          nombre: p.ultimaVersion.nombreComercial,
+          versionNumero: p.ultimaVersion.numero,
+          esActual,
+        },
+      ];
+    }),
   };
 }

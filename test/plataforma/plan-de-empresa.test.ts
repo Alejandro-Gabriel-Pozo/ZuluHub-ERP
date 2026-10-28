@@ -33,6 +33,7 @@ function entradas(
     versionDePlan: unknown;
     cliente: unknown;
     razonSocial: string | null;
+    estadoDeLosPlanes: [string, string];
   }> = {},
 ): EntradasDelPlanDeEmpresa {
   return {
@@ -57,12 +58,12 @@ function entradas(
     planes: {
       planes: [
         {
-          plan: {},
+          plan: { estado: extra.estadoDeLosPlanes?.[0] ?? "ACTIVO" },
           ultimaVersion: { versionDePlanId: V1, numero: 1, nombreComercial: "Básico" },
           hayBorrador: false,
         },
         {
-          plan: {},
+          plan: { estado: extra.estadoDeLosPlanes?.[1] ?? "ACTIVO" },
           ultimaVersion: { versionDePlanId: V2, numero: 2, nombreComercial: "Pro" },
           hayBorrador: true,
         },
@@ -134,6 +135,7 @@ describe("armarPlanDeEmpresa", () => {
       {
         modulo: "ventas",
         obligatorio: false,
+        disponible: true,
         habilitadoPorElPlan: true,
         activado: true,
         estado: "ACTIVO",
@@ -154,13 +156,44 @@ describe("armarPlanDeEmpresa", () => {
     expect(armarPlanDeEmpresa(entradas([], { razonSocial: null })).empresa).toBe("Empresa");
   });
 
-  it("planes elegibles: solo con versión publicada, marcando la actual", () => {
+  it("planes elegibles: solo con versión publicada, con su número de versión, marcando la actual", () => {
     const r = armarPlanDeEmpresa(
       entradas([asignacion(1, "VIGENTE", V2, 1)], { versionDePlan: { versionDePlanId: V2 } }),
     );
     expect(r.planesElegibles).toEqual([
-      { versionDePlanId: V1, nombre: "Básico", esActual: false },
-      { versionDePlanId: V2, nombre: "Pro", esActual: true },
+      { versionDePlanId: V1, nombre: "Básico", versionNumero: 1, esActual: false },
+      { versionDePlanId: V2, nombre: "Pro", versionNumero: 2, esActual: true },
     ]);
+  });
+
+  it("planes elegibles: un plan retirado no se ofrece, salvo que sea el actual", () => {
+    const sinActual = armarPlanDeEmpresa(
+      entradas([asignacion(1, "VIGENTE", V2, 1)], {
+        versionDePlan: { versionDePlanId: V2 },
+        estadoDeLosPlanes: ["RETIRADO", "ACTIVO"],
+      }),
+    );
+    expect(sinActual.planesElegibles.map((p) => p.versionDePlanId)).toEqual([V2]);
+    const conActual = armarPlanDeEmpresa(
+      entradas([asignacion(1, "VIGENTE", V1, 1)], {
+        versionDePlan: { versionDePlanId: V1 },
+        estadoDeLosPlanes: ["RETIRADO", "RETIRADO"],
+      }),
+    );
+    expect(conActual.planesElegibles).toEqual([
+      { versionDePlanId: V1, nombre: "Básico", versionNumero: 1, esActual: true },
+    ]);
+  });
+
+  it("pasa si el módulo está disponible o en desarrollo", () => {
+    const e = entradas([]);
+    const r = armarPlanDeEmpresa({
+      ...e,
+      derechos: {
+        ...e.derechos,
+        modulos: e.derechos.modulos.map((m) => ({ ...m, disponible: false })),
+      },
+    });
+    expect(r.modulos.map((m) => m.disponible)).toEqual([false]);
   });
 });

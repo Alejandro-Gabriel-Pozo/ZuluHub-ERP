@@ -4,6 +4,7 @@ import { SoloLector } from "../../web/ui/primitivas/SoloLector";
 import { Texto } from "../../web/ui/primitivas/Texto";
 import type { PlanDeEmpresa } from "../logica/plan-de-empresa";
 import {
+  textoDeEmpresasDelCliente,
   rotuloDeEstadoDeModulo,
   rotuloDeModulo,
   rotuloDeOrigen,
@@ -92,17 +93,7 @@ export function PanelDePlan({ plan }: PropsDePanelDePlan) {
             ))}
           </tbody>
         </table>
-        {empresasDelCliente === null ? null : (
-          <Texto>
-            Empresas del cliente: {empresasDelCliente.enUso} de{" "}
-            {empresasDelCliente.limite === null
-              ? "sin dato"
-              : empresasDelCliente.limite === "ILIMITADO"
-                ? "ilimitadas"
-                : empresasDelCliente.limite}
-            .
-          </Texto>
-        )}
+        <Texto>{textoDeEmpresasDelCliente(empresasDelCliente)}</Texto>
         <p className={propios["nota"]}>
           El uso de usuarios y sucursales no se ve desde la consola.
         </p>
@@ -125,7 +116,9 @@ export function PanelDePlan({ plan }: PropsDePanelDePlan) {
           </thead>
           <tbody>
             {plan.modulos.map((modulo) => {
-              const estado = rotuloDeEstadoDeModulo(modulo.estado);
+              const estado = modulo.disponible
+                ? rotuloDeEstadoDeModulo(modulo.estado)
+                : { texto: "En desarrollo", tono: "info" as const };
               return (
                 <tr key={modulo.modulo}>
                   <th scope="row" className={estilos["nombre"]}>

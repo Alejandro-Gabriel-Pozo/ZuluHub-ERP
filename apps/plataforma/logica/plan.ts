@@ -3,25 +3,21 @@
  * vuelve tal cual (clave) o como raya, y las pruebas exigen rótulo propio para cada perilla y módulo reales.
  */
 
-const ROTULO_DE_PERILLA: Readonly<Record<string, string>> = {
+/** Las claves con rótulo propio: una prueba exige que todas existan en los catálogos reales. */
+export const ROTULO_DE_PERILLA: Readonly<Record<string, string>> = {
   empresas_por_tenant: "Empresas por cliente",
-  recetas_con_merma: "Recetas con merma",
-  sub_recetas: "Sub-recetas",
   variantes_y_grupos_de_precio: "Variantes y grupos de precio",
-  combos: "Combos",
   elecciones_reutilizables: "Elecciones reutilizables",
-  recetas_por_tamano: "Recetas por tamaño",
   composiciones_con_perdida: "Composiciones con pérdida",
   subcomposiciones: "Subcomposiciones",
   conjuntos: "Conjuntos",
   composiciones_por_tamano: "Composiciones por tamaño",
 };
 
-const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {
+export const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {
   administracion: "Administración",
   facturacion: "Facturación",
   catalogo: "Catálogo",
-  carta: "Carta",
   stock: "Stock",
   vidriera: "Vidriera",
 };
@@ -40,6 +36,9 @@ export function rotuloDeModulo(clave: string): string {
 }
 
 const SIN_DATO = "—";
+
+/** Lo que se dice cuando un dato no se pudo leer (no se omite la línea ni se inventa un valor). */
+const DATO_NO_DISPONIBLE = "dato no disponible";
 
 /** «Sí»/«No» para un interruptor; el límite con punto de miles, o «Sin límite». */
 export function textoDeValor(
@@ -83,4 +82,16 @@ export function rotuloDeEstadoDeModulo(estado: string): EstadoRotulado {
   if (!Object.hasOwn(ROTULO_DE_ESTADO, estado)) return { texto: SIN_DATO, tono: "info" };
   const r = ROTULO_DE_ESTADO[estado];
   return r === undefined ? { texto: SIN_DATO, tono: "info" } : { ...r };
+}
+
+/** «Empresas del cliente: 2 de 3.»; lo que no se pudo leer se dice, no se omite. */
+export function textoDeEmpresasDelCliente(
+  datos: { enUso: number; limite: number | "ILIMITADO" | null } | null,
+): string {
+  if (datos === null) return `Empresas del cliente: ${DATO_NO_DISPONIBLE}.`;
+  if (datos.limite === null) {
+    return `Empresas del cliente: ${String(datos.enUso)} en uso; el tope es ${DATO_NO_DISPONIBLE}.`;
+  }
+  const tope = datos.limite === "ILIMITADO" ? "sin límite" : String(datos.limite);
+  return `Empresas del cliente: ${String(datos.enUso)} en uso, tope ${tope}.`;
 }

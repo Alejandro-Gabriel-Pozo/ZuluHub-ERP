@@ -402,6 +402,14 @@ describe("errorParaLaPantalla: contexto PLAN (asignarPlan)", () => {
     },
   );
 
+  it("EMPRESA_NO_ENCONTRADA dice que no se encontró la empresa; fuera del contexto PLAN sigue siendo inesperado", () => {
+    expect(errorParaLaPantalla("EMPRESA_NO_ENCONTRADA", "PLAN")).toEqual({
+      tipo: "GENERAL",
+      texto: "No encontramos esa empresa.",
+    });
+    expect(errorParaLaPantalla("EMPRESA_NO_ENCONTRADA")).toEqual({ tipo: "INESPERADO" });
+  });
+
   it.each(["NUMERO_ESPERADO_INVALIDO", "VERSION_DESACTUALIZADA"])(
     "%s avisa que alguien cambió el plan",
     (codigo) => {

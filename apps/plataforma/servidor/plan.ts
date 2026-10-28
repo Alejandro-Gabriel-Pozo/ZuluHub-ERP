@@ -15,7 +15,7 @@ const FORMA_DE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]
 
 /** El error de un resultado para la pantalla, con el contexto del plan; lo inesperado, con su referencia. */
 function fallaDelPlan(error: unknown): Falla {
-  const paraLaPantalla = errorParaLaPantalla(error);
+  const paraLaPantalla = errorParaLaPantalla(error, "PLAN");
   if (paraLaPantalla.tipo === "INESPERADO") return fallaInesperada(ETIQUETA, detalleDeFalla(error));
   return { ok: false, error: paraLaPantalla };
 }

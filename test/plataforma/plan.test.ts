@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  ROTULO_DE_MODULO,
+  ROTULO_DE_PERILLA,
   rotuloDeEstadoDeModulo,
   rotuloDeModulo,
   rotuloDeOrigen,
   rotuloDePerilla,
+  textoDeEmpresasDelCliente,
   textoDeValor,
 } from "../../apps/plataforma/logica/plan";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
@@ -24,6 +27,12 @@ describe("rotuloDePerilla", () => {
     expect(rotuloDePerilla("conjuntos")).toBe("Conjuntos");
     expect(rotuloDePerilla("composiciones_por_tamano")).toBe("Composiciones por tamaño");
   });
+  it("todo rótulo corresponde a una perilla real (no quedan rótulos viejos)", () => {
+    for (const clave of Object.keys(ROTULO_DE_PERILLA)) {
+      expect(Object.keys(CATALOGO_DE_PERILLAS), clave).toContain(clave);
+    }
+    expect(Object.keys(ROTULO_DE_PERILLA)).toHaveLength(Object.keys(CATALOGO_DE_PERILLAS).length);
+  });
   it("una desconocida vuelve tal cual y no lanza", () => {
     expect(rotuloDePerilla("perilla_nueva")).toBe("perilla_nueva");
     expect(rotuloDePerilla("constructor")).toBe("constructor");
@@ -33,6 +42,12 @@ describe("rotuloDePerilla", () => {
 describe("rotuloDeModulo", () => {
   it.each(Object.keys(CATALOGO_DE_MODULOS))("el módulo real %s tiene rótulo propio", (clave) => {
     expect(rotuloDeModulo(clave)).not.toBe(clave);
+  });
+  it("todo rótulo corresponde a un módulo real (no quedan rótulos viejos)", () => {
+    for (const clave of Object.keys(ROTULO_DE_MODULO)) {
+      expect(Object.keys(CATALOGO_DE_MODULOS), clave).toContain(clave);
+    }
+    expect(Object.keys(ROTULO_DE_MODULO)).toHaveLength(Object.keys(CATALOGO_DE_MODULOS).length);
   });
   it("vidriera se llama «Vidriera»", () => {
     expect(rotuloDeModulo("vidriera")).toBe("Vidriera");
@@ -87,5 +102,22 @@ describe("rotuloDeEstadoDeModulo", () => {
   it("desconocido da raya", () => {
     expect(rotuloDeEstadoDeModulo("ZZ")).toEqual({ texto: "—", tono: "info" });
     expect(rotuloDeEstadoDeModulo("toString")).toEqual({ texto: "—", tono: "info" });
+  });
+});
+
+describe("textoDeEmpresasDelCliente", () => {
+  it("con tope, ilimitado y sin tope conocido", () => {
+    expect(textoDeEmpresasDelCliente({ enUso: 2, limite: 3 })).toBe(
+      "Empresas del cliente: 2 en uso, tope 3.",
+    );
+    expect(textoDeEmpresasDelCliente({ enUso: 2, limite: "ILIMITADO" })).toBe(
+      "Empresas del cliente: 2 en uso, tope sin límite.",
+    );
+    expect(textoDeEmpresasDelCliente({ enUso: 2, limite: null })).toBe(
+      "Empresas del cliente: 2 en uso; el tope es dato no disponible.",
+    );
+  });
+  it("si no se pudo leer el cliente, lo dice en vez de omitir la línea", () => {
+    expect(textoDeEmpresasDelCliente(null)).toBe("Empresas del cliente: dato no disponible.");
   });
 });

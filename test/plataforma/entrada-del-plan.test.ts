@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { entradaDelCambioDePlan } from "../../apps/plataforma/logica/entrada-del-plan";
+import {
+  entradaDelCambioDePlan,
+  LARGO_MAXIMO_DEL_MOTIVO,
+} from "../../apps/plataforma/logica/entrada-del-plan";
+import { LARGO_MAXIMO_DEL_MOTIVO as LARGO_DEL_BACKEND } from "../../src/plataforma/dominio/formas-de-entrada";
 
 const U1 = "11111111-1111-4111-8111-111111111111";
 const U2 = "22222222-2222-4222-8222-222222222222";
@@ -20,9 +24,13 @@ describe("entradaDelCambioDePlan", () => {
     const r = entradaDelCambioDePlan(buena);
     expect(r).toEqual({ ok: true, valor: { ...buena, motivo: "Pasa al plan Pro" } });
   });
-  it("acepta numeroEsperado null y 0", () => {
+  it("acepta numeroEsperado null y 1; rechaza 0 (el backend lo rechaza: la serie empieza en 1)", () => {
     expect(entradaDelCambioDePlan({ ...buena, numeroEsperado: null }).ok).toBe(true);
-    expect(entradaDelCambioDePlan({ ...buena, numeroEsperado: 0 }).ok).toBe(true);
+    expect(entradaDelCambioDePlan({ ...buena, numeroEsperado: 1 }).ok).toBe(true);
+    expect(entradaDelCambioDePlan({ ...buena, numeroEsperado: 0 }).ok).toBe(false);
+  });
+  it("el largo máximo del motivo es el del backend", () => {
+    expect(LARGO_MAXIMO_DEL_MOTIVO).toBe(LARGO_DEL_BACKEND);
   });
   it.each([null, undefined, [], [buena], "texto", 5])("rechaza %j", (x) => {
     expect(entradaDelCambioDePlan(x)).toEqual({ ok: false });
@@ -40,8 +48,8 @@ describe("entradaDelCambioDePlan", () => {
   it("rechaza motivo vacío, de espacios, largo o no texto", () => {
     expect(entradaDelCambioDePlan({ ...buena, motivo: "" }).ok).toBe(false);
     expect(entradaDelCambioDePlan({ ...buena, motivo: "   " }).ok).toBe(false);
-    expect(entradaDelCambioDePlan({ ...buena, motivo: "a".repeat(2001) }).ok).toBe(false);
-    expect(entradaDelCambioDePlan({ ...buena, motivo: "a".repeat(2000) }).ok).toBe(true);
+    expect(entradaDelCambioDePlan({ ...buena, motivo: "a".repeat(501) }).ok).toBe(false);
+    expect(entradaDelCambioDePlan({ ...buena, motivo: "a".repeat(500) }).ok).toBe(true);
     expect(entradaDelCambioDePlan({ ...buena, motivo: 4 }).ok).toBe(false);
   });
   it.each([-1, 1.5, "3", undefined, Number.NaN])("rechaza numeroEsperado %j", (n) => {
