@@ -44,6 +44,48 @@ function nombreDe(atributos: readonly AttributeTypeAndValue[]): RelativeDistingu
   return new RelativeDistinguishedNames({ schema: asn1js.fromBER(nombre.toBER()).result });
 }
 
+/**
+ * Un entero positivo en DER MÍNIMO (X.690 §8.3.2): sin ceros a la izquierda salvo el único que evita que el bit alto
+ * se lea como signo. OpenSSL rechaza cualquier otro relleno («illegal padding») y el certificado deja de verificar.
+ */
+function enteroEnDer(bytes: Uint8Array): Uint8Array {
+  let desde = 0;
+  while (desde < bytes.length - 1 && bytes[desde] === 0) desde++;
+  const significativos = bytes.subarray(desde);
+  const signo = ((significativos[0] ?? 0) & 0x80) === 0 ? [] : [0];
+  const contenido = Uint8Array.from([...signo, ...significativos]);
+  // P-256: cada entero mide a lo sumo 33 bytes, así que el largo cabe en la forma corta (< 128).
+  return Uint8Array.from([0x02, contenido.length, ...contenido]);
+}
+
+/**
+ * La firma ECDSA como la guarda un certificado: `SEQUENCE { INTEGER r, INTEGER s }` en DER, a partir de `r || s` (el
+ * formato de WebCrypto, P1363). `pkijs` 3.4.1 lo hace mal en una firma de cada ~65.000: a un `r` o `s` que empieza con
+ * dos bytes en cero (y un tercero menor que 0x80) le saca un solo cero y deja un relleno que OpenSSL no acepta; el
+ * certificado así firmado no cierra ninguna cadena (visto como falso rojo en el CI, intermitente).
+ */
+export function firmaEcdsaEnDer(cruda: Uint8Array): Uint8Array {
+  const mitad = cruda.length / 2;
+  const r = enteroEnDer(cruda.subarray(0, mitad));
+  const s = enteroEnDer(cruda.subarray(mitad));
+  return Uint8Array.from([0x30, r.length + s.length, ...r, ...s]);
+}
+
+/**
+ * Firma el certificado con una clave ECDSA P-256 (SHA-256). `pkijs` arma el algoritmo y el cuerpo a firmar; la firma
+ * se vuelve a calcular acá sobre ese mismo cuerpo para escribirla en DER mínimo (ver `firmaEcdsaEnDer`).
+ */
+async function firmar(c: Certificate, claveDeFirma: webcrypto.CryptoKey): Promise<void> {
+  await c.sign(claveDeFirma, "SHA-256");
+  const cruda = await subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    claveDeFirma,
+    Uint8Array.from(c.tbsView),
+  );
+  const der = Uint8Array.from(firmaEcdsaEnDer(new Uint8Array(cruda)));
+  c.signatureValue = new asn1js.BitString({ valueHex: der.buffer });
+}
+
 const numeroDeSerieAlAzar = (): ArrayBuffer => {
   const bytes = randomBytes(16);
   // Positivo y sin ceros a la izquierda (un INTEGER no mínimo lo rechaza X.509): primer byte entre 0x40 y 0x7f
@@ -100,7 +142,7 @@ async function crearAutoridad(
     ? [restriccionesBasicas(true), usoDeClaveDeAutoridad()]
     : [restriccionesBasicas(false)];
   await c.subjectPublicKeyInfo.importKey(par.publicKey);
-  await c.sign(emisor === null ? par.privateKey : emisor.claveDeFirma, "SHA-256");
+  await firmar(c, emisor === null ? par.privateKey : emisor.claveDeFirma);
   return {
     certificado: c,
     certificadoPem: aPem(c.toSchema(true).toBER(false)),
@@ -159,6 +201,6 @@ export async function emitirCertificado(
   c.issuer = autoridad.certificado.subject;
   c.subjectPublicKeyInfo = pedido.subjectPublicKeyInfo;
   c.extensions = [restriccionesBasicas(false)];
-  await c.sign(autoridad.claveDeFirma, "SHA-256");
+  await firmar(c, autoridad.claveDeFirma);
   return aPem(c.toSchema(true).toBER(false));
 }

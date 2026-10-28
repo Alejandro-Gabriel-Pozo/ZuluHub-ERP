@@ -87,14 +87,14 @@ describe("validarVersionDePlan: lo que se congela", () => {
     const r = validar({
       nombreComercial: "  Completo ",
       modulos: ["ventas", "caja", "ventas", "nucleo"],
-      perillas: { cajas_por_sucursal: limite(3), carta_por_qr: encendida },
+      perillas: { cajas_por_sucursal: limite(3), vidriera_por_qr: encendida },
     });
     expect(r).toEqual({
       ok: true,
       valor: {
         nombreComercial: "Completo",
         modulos: ["caja", "nucleo", "ventas"],
-        perillas: { cajas_por_sucursal: limite(3), carta_por_qr: encendida },
+        perillas: { cajas_por_sucursal: limite(3), vidriera_por_qr: encendida },
       },
     });
   });
@@ -126,7 +126,7 @@ describe("validarVersionDePlan: lo que se congela", () => {
   it("no modifica lo que recibe", () => {
     const contenido = valida({
       modulos: ["ventas", "caja"],
-      perillas: { carta_por_qr: encendida },
+      perillas: { vidriera_por_qr: encendida },
     });
     const copia = structuredClone(contenido);
     validar(contenido);
@@ -189,11 +189,11 @@ describe("validarVersionDePlan: los errores, en su orden", () => {
   });
 
   it.each([
-    ["tipo equivocado", { carta_por_qr: limite(1) }, "carta_por_qr"],
+    ["tipo equivocado", { vidriera_por_qr: limite(1) }, "vidriera_por_qr"],
     ["límite fuera de rango", { cajas_por_sucursal: limite(-1) }, "cajas_por_sucursal"],
     ["límite decimal", { cajas_por_sucursal: limite(1.5) }, "cajas_por_sucursal"],
-    ["sin etiqueta", { carta_por_qr: { encendida: true } }, "carta_por_qr"],
-    ["nulo", { carta_por_qr: null }, "carta_por_qr"],
+    ["sin etiqueta", { vidriera_por_qr: { encendida: true } }, "vidriera_por_qr"],
+    ["nulo", { vidriera_por_qr: null }, "vidriera_por_qr"],
     ["texto", { cajas_por_sucursal: "3" }, "cajas_por_sucursal"],
   ])("valor de perilla inválido: %s", (_, perillas, perilla) => {
     expect(validar(valida({ perillas }))).toEqual({
@@ -305,8 +305,8 @@ describe("validarVersionDePlan: los errores, en su orden", () => {
       validar({
         nombreComercial: "x",
         modulos: [],
-        perillas: { carta_por_qr: 1, confirmacion_por_sena: encendida },
+        perillas: { vidriera_por_qr: 1, confirmacion_por_sena: encendida },
       }),
-    ).toMatchObject({ error: { codigo: "VALOR_DE_PERILLA_INVALIDO", perilla: "carta_por_qr" } });
+    ).toMatchObject({ error: { codigo: "VALOR_DE_PERILLA_INVALIDO", perilla: "vidriera_por_qr" } });
   });
 });

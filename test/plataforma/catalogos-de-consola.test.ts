@@ -190,7 +190,23 @@ describe("catalogoDePerillas", () => {
     const r = await plataforma(CATALOGO_DE_PERILLAS).catalogoDePerillas(comoAdministrador);
     expect(r.ok && r.valor.perillas).toEqual([
       {
-        perilla: "combos",
+        perilla: "composiciones_con_perdida",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "stock",
+      },
+      {
+        perilla: "composiciones_por_tamano",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "stock",
+      },
+      {
+        perilla: "conjuntos",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",
         valorBase: { tipo: "INTERRUPTOR", encendida: false },
@@ -214,23 +230,7 @@ describe("catalogoDePerillas", () => {
         modulo: "administracion",
       },
       {
-        perilla: "recetas_con_merma",
-        tipo: "INTERRUPTOR",
-        ambito: "EMPRESA",
-        valorBase: { tipo: "INTERRUPTOR", encendida: false },
-        requiere: null,
-        modulo: "stock",
-      },
-      {
-        perilla: "recetas_por_tamano",
-        tipo: "INTERRUPTOR",
-        ambito: "EMPRESA",
-        valorBase: { tipo: "INTERRUPTOR", encendida: false },
-        requiere: null,
-        modulo: "stock",
-      },
-      {
-        perilla: "sub_recetas",
+        perilla: "subcomposiciones",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",
         valorBase: { tipo: "INTERRUPTOR", encendida: false },
