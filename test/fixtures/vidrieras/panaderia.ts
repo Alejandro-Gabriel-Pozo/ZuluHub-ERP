@@ -53,7 +53,7 @@ export const PANADERIA: VidrieraDeEjemplo = {
   nombre: "Panadería El Trigal",
   rubro: "PANADERIA",
   modeloElegido: "CUADRICULA",
-  perillasEncendidas: ["carta_modelo_cuadricula", "productos_con_foto"],
+  perillasEncendidas: ["vidriera_modelo_cuadricula", "productos_con_foto"],
   secciones: [
     {
       id: idDeEjemplo(2, 11),

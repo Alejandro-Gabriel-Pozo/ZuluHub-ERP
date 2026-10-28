@@ -46,7 +46,7 @@ export const HOSTERIA: VidrieraDeEjemplo = {
   nombre: "Los Cardones Restaurante",
   rubro: "HOSTERIA",
   modeloElegido: "LIBRO",
-  perillasEncendidas: ["carta_modelo_libro"],
+  perillasEncendidas: ["vidriera_modelo_libro"],
   secciones: [
     {
       id: idDeEjemplo(2, 21),

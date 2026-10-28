@@ -17,8 +17,8 @@ type DefinicionDeModelo = Readonly<{
 
 export const CATALOGO_DE_MODELOS_DE_VIDRIERA = {
   LISTA: { perilla: null, requiereFotos: false },
-  CUADRICULA: { perilla: "carta_modelo_cuadricula", requiereFotos: true },
-  LIBRO: { perilla: "carta_modelo_libro", requiereFotos: false },
+  CUADRICULA: { perilla: "vidriera_modelo_cuadricula", requiereFotos: true },
+  LIBRO: { perilla: "vidriera_modelo_libro", requiereFotos: false },
 } as const satisfies Readonly<Record<string, DefinicionDeModelo>>;
 
 export type ModeloDeVidriera = keyof typeof CATALOGO_DE_MODELOS_DE_VIDRIERA;

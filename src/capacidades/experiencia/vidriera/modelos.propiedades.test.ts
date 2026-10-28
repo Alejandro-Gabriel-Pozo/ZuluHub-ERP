@@ -9,7 +9,11 @@ import { CATALOGO_DE_MODELOS_DE_VIDRIERA, modeloEfectivo, type ModeloDeVidriera 
  */
 
 const MODELOS = Object.keys(CATALOGO_DE_MODELOS_DE_VIDRIERA) as ModeloDeVidriera[];
-const PERILLAS = ["carta_modelo_cuadricula", "carta_modelo_libro", "productos_con_foto"] as const;
+const PERILLAS = [
+  "vidriera_modelo_cuadricula",
+  "vidriera_modelo_libro",
+  "productos_con_foto",
+] as const;
 const CONJUNTOS = Array.from({ length: 2 ** PERILLAS.length }, (_, mascara) =>
   PERILLAS.filter((_, i) => (mascara >> i) & 1),
 );

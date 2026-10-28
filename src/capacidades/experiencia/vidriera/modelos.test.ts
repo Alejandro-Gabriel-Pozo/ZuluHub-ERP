@@ -7,7 +7,7 @@ import {
   type EntradaDelModeloEfectivo,
 } from "./modelos";
 
-const TODAS = ["carta_modelo_cuadricula", "carta_modelo_libro"];
+const TODAS = ["vidriera_modelo_cuadricula", "vidriera_modelo_libro"];
 
 function entrada(parcial: Partial<EntradaDelModeloEfectivo>): EntradaDelModeloEfectivo {
   return {
@@ -23,8 +23,8 @@ describe("CATALOGO_DE_MODELOS_DE_VIDRIERA (§4.5)", () => {
   it("v1: Lista de base y reserva, Cuadrícula y Libro con su perilla; Tablero y Carrusel no están", () => {
     expect(CATALOGO_DE_MODELOS_DE_VIDRIERA).toEqual({
       LISTA: { perilla: null, requiereFotos: false },
-      CUADRICULA: { perilla: "carta_modelo_cuadricula", requiereFotos: true },
-      LIBRO: { perilla: "carta_modelo_libro", requiereFotos: false },
+      CUADRICULA: { perilla: "vidriera_modelo_cuadricula", requiereFotos: true },
+      LIBRO: { perilla: "vidriera_modelo_libro", requiereFotos: false },
     });
     expect(MODELO_DE_RESERVA).toBe("LISTA");
   });
@@ -67,12 +67,12 @@ describe("modeloEfectivo (§4.4, servidor)", () => {
     expect(modeloEfectivo(entrada({ elegido: "LIBRO", perillasEncendidas: [] }))).toBe("LISTA");
     expect(
       modeloEfectivo(
-        entrada({ elegido: "LIBRO", perillasEncendidas: ["carta_modelo_cuadricula"] }),
+        entrada({ elegido: "LIBRO", perillasEncendidas: ["vidriera_modelo_cuadricula"] }),
       ),
     ).toBe("LISTA");
     expect(
       modeloEfectivo(
-        entrada({ elegido: "CUADRICULA", perillasEncendidas: ["carta_modelo_libro"] }),
+        entrada({ elegido: "CUADRICULA", perillasEncendidas: ["vidriera_modelo_libro"] }),
       ),
     ).toBe("LISTA");
   });

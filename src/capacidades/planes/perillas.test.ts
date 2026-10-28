@@ -127,10 +127,10 @@ describe("el catálogo de perillas real", () => {
       "vidriera_por_qr",
       "productos_con_foto",
       "fotos_alojadas",
-      "carta_modelo_cuadricula",
-      "carta_modelo_libro",
-      "carta_modelo_tablero",
-      "carta_estadisticas",
+      "vidriera_modelo_cuadricula",
+      "vidriera_modelo_libro",
+      "vidriera_modelo_tablero",
+      "vidriera_estadisticas",
     ]) {
       expect(Object.hasOwn(CATALOGO_DE_PERILLAS, clave), clave).toBe(false);
     }
