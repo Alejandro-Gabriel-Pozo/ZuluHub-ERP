@@ -81,6 +81,7 @@ export function textoDelError(error: ErrorParaLaPantalla): string | null {
   switch (error.tipo) {
     case "GENERAL":
     case "PANTALLA_VIEJA":
+    case "MARCA_RETIRADA":
       return error.texto;
     case "CAMPO":
       return error.campo === "vigenteDesde" ||
