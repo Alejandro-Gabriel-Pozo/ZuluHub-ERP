@@ -74,7 +74,7 @@ describe("direccionDeProducto: propiedades", () => {
     fc.assert(
       fc.property(uuid, uuid, (vidrieraId, productoId) => {
         const esperado = createHash("sha256")
-          .update(`producto-de-carta:${vidrieraId}${productoId}`)
+          .update(`producto-de-vidriera:${vidrieraId}${productoId}`)
           .digest("hex");
         expect(huellaDeProducto(vidrieraId, productoId)).toBe(esperado.slice(0, 8));
         expect(huellaDeProducto(vidrieraId, productoId, 12)).toBe(esperado.slice(0, 12));

@@ -15,9 +15,9 @@ const VIDRIERA = "00000003-0000-4000-8000-000000000001";
 const OTRA_VIDRIERA = "00000003-0000-4000-8000-000000000002";
 const P1 = "00000001-0000-4000-8000-000000000001";
 const P2 = "00000001-0000-4000-8000-000000000002";
-// Dos productos REALES de CARTA cuyo sufijo de 8 caracteres es el mismo (buscados por fuerza bruta).
-const CHOCAN_A = "000000c0-0000-4000-8000-00000000295b";
-const CHOCAN_B = "000000c0-0000-4000-8000-000000011b1d";
+// Dos productos REALES de VIDRIERA cuyo sufijo de 8 caracteres es el mismo (buscados por fuerza bruta).
+const CHOCAN_A = "000000c0-0000-4000-8000-0000000072e4";
+const CHOCAN_B = "000000c0-0000-4000-8000-00000000bc73";
 
 describe("slugDeNombre (§3.3)", () => {
   it.each([
@@ -60,12 +60,12 @@ describe("slugDeNombre (§3.3)", () => {
 });
 
 describe("huellaDeProducto", () => {
-  it("golden: los primeros caracteres de SHA-256(«producto-de-carta:» ‖ carta ‖ producto)", () => {
-    expect(huellaDeProducto(VIDRIERA, P1)).toBe("989b7d2c");
-    expect(huellaDeProducto(VIDRIERA, P1, LARGO_DEL_SUFIJO)).toBe("989b7d2c");
-    expect(huellaDeProducto(VIDRIERA, P1, LARGO_DEL_SUFIJO_ALARGADO)).toBe("989b7d2ce175");
-    expect(huellaDeProducto(VIDRIERA, P2)).toBe("1fca518a");
-    expect(huellaDeProducto(OTRA_VIDRIERA, P1)).toBe("814c2e57");
+  it("golden: los primeros caracteres de SHA-256(«producto-de-vidriera:» ‖ vidriera ‖ producto)", () => {
+    expect(huellaDeProducto(VIDRIERA, P1)).toBe("1c81ed4d");
+    expect(huellaDeProducto(VIDRIERA, P1, LARGO_DEL_SUFIJO)).toBe("1c81ed4d");
+    expect(huellaDeProducto(VIDRIERA, P1, LARGO_DEL_SUFIJO_ALARGADO)).toBe("1c81ed4da106");
+    expect(huellaDeProducto(VIDRIERA, P2)).toBe("2a70c18b");
+    expect(huellaDeProducto(OTRA_VIDRIERA, P1)).toBe("743d3a01");
   });
 
   it("los largos son 8 y 12", () => {
@@ -78,8 +78,8 @@ describe("direccionDeProducto", () => {
   it("arma <slug>-<h8>", () => {
     expect(direccionDeProducto(VIDRIERA, { productoId: P1, nombre: "Café con leche" })).toEqual({
       slug: "cafe-con-leche",
-      h8: "989b7d2c",
-      segmento: "cafe-con-leche-989b7d2c",
+      h8: "1c81ed4d",
+      segmento: "cafe-con-leche-1c81ed4d",
     });
   });
 
@@ -95,7 +95,7 @@ describe("direccionDeProducto", () => {
 
   it("el mismo producto en otra carta tiene otro sufijo", () => {
     expect(direccionDeProducto(OTRA_VIDRIERA, { productoId: P1, nombre: "x" }).h8).not.toBe(
-      "989b7d2c",
+      "1c81ed4d",
     );
   });
 
@@ -113,7 +113,7 @@ describe("direccionesDeVidriera: choques de sufijo", () => {
       { productoId: P1, nombre: "Café" },
       { productoId: P2, nombre: "Café" },
     ]);
-    expect(d.map((x) => x.segmento)).toEqual(["cafe-989b7d2c", "cafe-1fca518a"]);
+    expect(d.map((x) => x.segmento)).toEqual(["cafe-1c81ed4d", "cafe-2a70c18b"]);
   });
 
   it("dos productos que comparten sufijo de 8 (choque real) se alargan a 12 los DOS", () => {
@@ -124,9 +124,9 @@ describe("direccionesDeVidriera: choques de sufijo", () => {
       { productoId: CHOCAN_B, nombre: "Pan" },
     ]);
     expect(d.map((x) => x.h8)).toEqual([
-      "1ad235dffd68".replace("fd68", "87c4"),
-      "989b7d2c",
-      "1ad235dffd68",
+      "a07abd630512".replace("0512", "7a96"),
+      "1c81ed4d",
+      "a07abd630512",
     ]);
     expect(new Set(d.map((x) => x.segmento)).size).toBe(3);
   });
@@ -143,31 +143,31 @@ describe("resolverProductoPorSegmento (resolución por sufijo)", () => {
   ];
 
   it("encuentra el producto por su dirección actual, sin redirigir", () => {
-    const r = resolverProductoPorSegmento(VIDRIERA, productos, "cafe-con-leche-989b7d2c");
+    const r = resolverProductoPorSegmento(VIDRIERA, productos, "cafe-con-leche-1c81ed4d");
     expect(r).toEqual({
       ok: true,
       valor: {
         productoId: P1,
-        direccion: { slug: "cafe-con-leche", h8: "989b7d2c", segmento: "cafe-con-leche-989b7d2c" },
+        direccion: { slug: "cafe-con-leche", h8: "1c81ed4d", segmento: "cafe-con-leche-1c81ed4d" },
         redirigir: false,
       },
     });
   });
 
   it("un enlace viejo (otro slug) resuelve el mismo producto y pide 307 a la dirección actual", () => {
-    const r = resolverProductoPorSegmento(VIDRIERA, productos, "cafe-989b7d2c");
+    const r = resolverProductoPorSegmento(VIDRIERA, productos, "cafe-1c81ed4d");
     expect(r.ok && r.valor.productoId).toBe(P1);
     expect(r.ok && r.valor.redirigir).toBe(true);
-    expect(r.ok && r.valor.direccion.segmento).toBe("cafe-con-leche-989b7d2c");
+    expect(r.ok && r.valor.direccion.segmento).toBe("cafe-con-leche-1c81ed4d");
   });
 
   it("el slug no decide: con cualquier slug y el mismo sufijo es el mismo producto", () => {
-    const r = resolverProductoPorSegmento(VIDRIERA, productos, "nada-que-ver-1fca518a");
+    const r = resolverProductoPorSegmento(VIDRIERA, productos, "nada-que-ver-2a70c18b");
     expect(r.ok && r.valor.productoId).toBe(P2);
   });
 
   it("acepta el sufijo de 12 aunque la dirección actual sea de 8, y redirige", () => {
-    const r = resolverProductoPorSegmento(VIDRIERA, productos, "cafe-con-leche-989b7d2ce175");
+    const r = resolverProductoPorSegmento(VIDRIERA, productos, "cafe-con-leche-1c81ed4da106");
     expect(r.ok && r.valor.productoId).toBe(P1);
     expect(r.ok && r.valor.redirigir).toBe(true);
   });
@@ -180,7 +180,7 @@ describe("resolverProductoPorSegmento (resolución por sufijo)", () => {
   });
 
   it("el sufijo de otra carta no resuelve", () => {
-    expect(resolverProductoPorSegmento(OTRA_VIDRIERA, productos, "cafe-989b7d2c")).toEqual({
+    expect(resolverProductoPorSegmento(OTRA_VIDRIERA, productos, "cafe-1c81ed4d")).toEqual({
       ok: false,
       error: "PRODUCTO_NO_ENCONTRADO",
     });
@@ -189,15 +189,15 @@ describe("resolverProductoPorSegmento (resolución por sufijo)", () => {
   it.each([
     "",
     "cafe",
-    "989b7d2c",
-    "-989b7d2c-",
+    "1c81ed4d",
+    "-1c81ed4d-",
     "cafe-989b7d2",
-    "cafe-989b7d2c0",
-    "cafe-989b7d2ce17",
+    "cafe-1c81ed4d0",
+    "cafe-1c81ed4da10",
     "cafe-989B7D2C",
     "cafe-989b7d2g",
-    "cafe-989b7d2c\n",
-    "otra\ncafe-989b7d2c",
+    "cafe-1c81ed4d\n",
+    "otra\ncafe-1c81ed4d",
   ])("%j no tiene forma de dirección", (segmento) => {
     expect(resolverProductoPorSegmento(VIDRIERA, productos, segmento)).toEqual({
       ok: false,
@@ -206,14 +206,14 @@ describe("resolverProductoPorSegmento (resolución por sufijo)", () => {
   });
 
   it("un slug raro en el pedido no engaña: se resuelve por el sufijo y se redirige a la dirección limpia", () => {
-    const r = resolverProductoPorSegmento(VIDRIERA, productos, "../CAFE <b>-989b7d2c");
+    const r = resolverProductoPorSegmento(VIDRIERA, productos, "../CAFE <b>-1c81ed4d");
     expect(r.ok && r.valor.productoId).toBe(P1);
     expect(r.ok && r.valor.redirigir).toBe(true);
-    expect(r.ok && r.valor.direccion.segmento).toBe("cafe-con-leche-989b7d2c");
+    expect(r.ok && r.valor.direccion.segmento).toBe("cafe-con-leche-1c81ed4d");
   });
 
   it("el slug puede tener guiones y números sin confundir el sufijo", () => {
-    const r = resolverProductoPorSegmento(VIDRIERA, productos, "pan-12345678-989b7d2c");
+    const r = resolverProductoPorSegmento(VIDRIERA, productos, "pan-12345678-1c81ed4d");
     expect(r.ok && r.valor.productoId).toBe(P1);
   });
 
@@ -222,17 +222,17 @@ describe("resolverProductoPorSegmento (resolución por sufijo)", () => {
       { productoId: CHOCAN_A, nombre: "Pan" },
       { productoId: CHOCAN_B, nombre: "Pan" },
     ];
-    expect(resolverProductoPorSegmento(VIDRIERA, dos, "pan-1ad235df")).toEqual({
+    expect(resolverProductoPorSegmento(VIDRIERA, dos, "pan-a07abd63")).toEqual({
       ok: false,
       error: "PRODUCTO_NO_ENCONTRADO",
     });
-    const r = resolverProductoPorSegmento(VIDRIERA, dos, "pan-1ad235dffd68");
+    const r = resolverProductoPorSegmento(VIDRIERA, dos, "pan-a07abd630512");
     expect(r.ok && r.valor.productoId).toBe(CHOCAN_B);
     expect(r.ok && r.valor.redirigir).toBe(false);
   });
 
   it("una carta sin productos no resuelve nada", () => {
-    expect(resolverProductoPorSegmento(VIDRIERA, [], "cafe-989b7d2c")).toEqual({
+    expect(resolverProductoPorSegmento(VIDRIERA, [], "cafe-1c81ed4d")).toEqual({
       ok: false,
       error: "PRODUCTO_NO_ENCONTRADO",
     });

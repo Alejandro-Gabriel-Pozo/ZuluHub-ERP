@@ -15,7 +15,7 @@ export const SLUG_POR_DEFECTO = "producto";
 export const LARGO_DEL_SUFIJO = 8;
 export const LARGO_DEL_SUFIJO_ALARGADO = 12;
 
-const PREFIJO_DEL_HASH = "producto-de-carta:";
+const PREFIJO_DEL_HASH = "producto-de-vidriera:";
 /** `<slug>-<8 o 12 hexadecimales>`: el sufijo es lo último, así que un slug con guiones no lo confunde. */
 const SEGMENTO = /^.*-([0-9a-f]{8}|[0-9a-f]{12})$/;
 
@@ -38,7 +38,7 @@ export function slugDeNombre(nombre: string): string {
 }
 
 /**
- * Los primeros `largo` hexadecimales de `SHA-256("producto-de-carta:" ‖ vidrieraId ‖ productoId)`. Los ids son
+ * Los primeros `largo` hexadecimales de `SHA-256("producto-de-vidriera:" ‖ vidrieraId ‖ productoId)`. Los ids son
  * UUID (largo fijo), así que la concatenación sin separador no es ambigua. Determinista: la misma carta y el
  * mismo producto dan siempre el mismo sufijo, aunque cambie el nombre.
  */
