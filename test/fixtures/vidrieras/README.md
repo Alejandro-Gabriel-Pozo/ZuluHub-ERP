@@ -10,11 +10,11 @@ falso) y los prototipos de C-1b. Son **inventados**: nombres, precios y "fotos" 
 | `hosteria.ts`  | Los Cardones        | `LIBRO`        | pocos platos, carta de vinos (copa o botella), importes con fracción de centavo |
 | `barberia.ts`  | Navaja y Tijera     | ninguno        | servicios (no comidas), recargo por largo, sin fotos                            |
 
-`index.ts` exporta las cuatro (`CARTAS_DE_EJEMPLO`); `tipos.ts` define la forma.
+`index.ts` exporta las cuatro (`VIDRIERAS_DE_EJEMPLO`); `tipos.ts` define la forma.
 
 ## Estructura
 
-`CartaDeEjemplo` → `secciones[]` → `productos[]`. Cada producto trae lo que lee la puerta pública
+`VidrieraDeEjemplo` → `secciones[]` → `productos[]`. Cada producto trae lo que lee la puerta pública
 (`id`, `nombre`, `descripcion`, `agotado`, `foto`) y los grupos de precio de `ProductoParaPrecios`
 (`precioBase`, `tamanos`, `obligatorios`, `adicionales`), así que se le puede pasar tal cual a
 `listaDePreciosDelProducto`. El orden de los arreglos es el orden de la carta.
@@ -26,5 +26,5 @@ falso) y los prototipos de C-1b. Son **inventados**: nombres, precios y "fotos" 
   `VISIBLE` cuentan para el modelo efectivo. `alt: null` = el comerciante no cargó texto alternativo.
 - **Plan:** `perillasEncendidas` es el plan de la empresa de ejemplo, para probar `modeloEfectivo`.
 
-La prueba `src/capacidades/experiencia/carta/cartas-de-ejemplo.test.ts` valida que las cuatro cumplan
+La prueba `src/capacidades/experiencia/vidriera/vidrieras-de-ejemplo.test.ts` valida que las cuatro cumplan
 estas reglas (60 productos, importes válidos, descripciones válidas, ids únicos, direcciones sin choques).
