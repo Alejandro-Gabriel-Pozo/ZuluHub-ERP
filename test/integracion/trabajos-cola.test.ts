@@ -332,6 +332,124 @@ describe.skipIf(base === null)("cola de trabajos: el procesador contra una base 
     });
   });
 
+  describe("empresas con trabajos de un tipo (el cron sabe a quién barrerle lo que quedó en vuelo)", () => {
+    const tipo = () => `tipo-${nombreAlAzar("empresas")}`;
+    const encolarCon = async (e: EmpresaDePrueba, t: string, clave: string, creadoEn?: string) => {
+      await entorno.ejecutar({ contexto: comoEmpresa(e.empresa) }, async (tx) =>
+        ok(
+          await tx.trabajos.encolar({
+            empresaId: e.empresa,
+            tipo: t,
+            datos: {},
+            claveDeIdempotencia: clave,
+          }),
+        ),
+      );
+      if (creadoEn !== undefined) {
+        await dueno.query("update trabajo set creado_en = $2 where clave_idempotencia = $1", [
+          clave,
+          creadoEn,
+        ]);
+      }
+    };
+    const empresasDe = (t: string, desde: Date, limite = 50) =>
+      enLaCola((c) => c.empresasConTrabajosDe(t, desde, limite));
+
+    it("devuelve cada empresa una vez, solo las de ese tipo y solo desde esa fecha, en orden estable", async () => {
+      const t = tipo();
+      const a = await crearEmpresaActiva(entorno);
+      const b = await crearEmpresaActiva(entorno);
+      const c = await crearEmpresaActiva(entorno);
+      await encolarCon(a, t, nombreAlAzar("k"));
+      await encolarCon(a, t, nombreAlAzar("k"));
+      await encolarCon(b, t, nombreAlAzar("k"));
+      // Otro tipo: no cuenta. Uno viejo: no cuenta.
+      await encolarCon(c, "otro-tipo", nombreAlAzar("k"));
+      await encolarCon(c, t, nombreAlAzar("k"), "2020-01-01T00:00:00Z");
+      const hallada = await empresasDe(t, new Date("2025-01-01T00:00:00Z"));
+      expect([...hallada].sort()).toEqual([a.empresa, b.empresa].sort());
+      expect(hallada).toEqual([...hallada].sort());
+      // Con la fecha vieja entra también la empresa del trabajo antiguo.
+      expect(await empresasDe(t, new Date("2019-01-01T00:00:00Z"))).toHaveLength(3);
+    });
+
+    it("respeta el límite (las primeras en orden) y rechaza uno que no sirve", async () => {
+      const t = tipo();
+      const e1 = await crearEmpresaActiva(entorno);
+      const e2 = await crearEmpresaActiva(entorno);
+      await encolarCon(e1, t, nombreAlAzar("k"));
+      await encolarCon(e2, t, nombreAlAzar("k"));
+      const todas = await empresasDe(t, new Date(0));
+      expect(await empresasDe(t, new Date(0), 1)).toEqual([todas[0]]);
+      for (const limite of [0, -1, 1.5]) {
+        await expect(empresasDe(t, new Date(0), limite)).rejects.toThrow(RangeError);
+      }
+    });
+
+    it("con `postergadasEn`, primero las que hace más que no encolan ese otro tipo (y las que nunca, antes que todas)", async () => {
+      const t = tipo();
+      const otro = tipo();
+      const a = await crearEmpresaActiva(entorno);
+      const b = await crearEmpresaActiva(entorno);
+      const c = await crearEmpresaActiva(entorno);
+      for (const e of [a, b, c]) await encolarCon(e, t, nombreAlAzar("k"));
+      // `a` encoló el otro tipo hace poco, `b` hace mucho y `c` nunca: el orden es c, b, a, sin importar los ids.
+      await encolarCon(a, otro, nombreAlAzar("k"), "2026-03-02T00:00:00Z");
+      await encolarCon(b, otro, nombreAlAzar("k"), "2026-03-01T00:00:00Z");
+      const desde = new Date(0);
+      expect(await enLaCola((q) => q.empresasConTrabajosDe(t, desde, 50, otro))).toEqual([
+        c.empresa,
+        b.empresa,
+        a.empresa,
+      ]);
+      // Con tope, la más atrasada primero; y una empresa sin trabajos del primer tipo no aparece aunque tenga del otro.
+      expect(await enLaCola((q) => q.empresasConTrabajosDe(t, desde, 1, otro))).toEqual([
+        c.empresa,
+      ]);
+      const d = await crearEmpresaActiva(entorno);
+      await encolarCon(d, otro, nombreAlAzar("k"));
+      expect(await enLaCola((q) => q.empresasConTrabajosDe(t, desde, 50, otro))).not.toContain(
+        d.empresa,
+      );
+    });
+
+    it("con más empresas que el límite (205 y tope 200), pasadas sucesivas las cubren a todas", async () => {
+      const t = tipo();
+      const otro = tipo();
+      const todas: string[] = [];
+      for (let i = 0; i < 205; i++) {
+        const e = await crearEmpresaActiva(entorno);
+        await encolarCon(e, t, nombreAlAzar("k"));
+        todas.push(e.empresa);
+      }
+      const desde = new Date(0);
+      const cubiertas = new Set<string>();
+      for (let pasada = 1; pasada <= 2; pasada++) {
+        const elegidas = await enLaCola((q) => q.empresasConTrabajosDe(t, desde, 200, otro));
+        expect(elegidas).toHaveLength(200);
+        // Lo que la pasada «encola»: lo que sigue es lo que la composición hace con cada empresa elegida.
+        for (const empresa of elegidas) {
+          await dueno.query(
+            "insert into trabajo (empresa_id, tipo, clave_idempotencia) values ($1, $2, $3)",
+            [empresa, otro, nombreAlAzar("k")],
+          );
+          cubiertas.add(empresa);
+        }
+      }
+      // Sin rotación, la 201 en adelante no se atendía nunca; con ella, dos pasadas ya las cubren a todas.
+      expect([...cubiertas].sort()).toEqual([...todas].sort());
+    }, 120_000);
+
+    it("no incluye los trabajos de plataforma (sin empresa)", async () => {
+      const t = tipo();
+      await dueno.query(
+        "insert into trabajo (empresa_id, tipo, clave_idempotencia) values (null, $1, $2)",
+        [t, nombreAlAzar("k")],
+      );
+      expect(await empresasDe(t, new Date(0))).toEqual([]);
+    });
+  });
+
   describe("concurrencia", () => {
     it("dos procesadores toman el mismo trabajo a la vez: lo ejecuta uno solo", async () => {
       const ids: string[] = [];

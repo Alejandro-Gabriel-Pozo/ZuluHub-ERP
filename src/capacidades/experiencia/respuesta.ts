@@ -1,6 +1,7 @@
 import type { EmpresaNoOpera } from "../../contexto/estados";
 import type { MotivoDeRechazo } from "../permisos/guard";
 import type { ClaveDeTexto } from "../vocabulario/catalogo";
+import { CLAVES_DE_ERRORES_FISCALES, type CodigoFiscal } from "./respuesta-fiscal";
 
 /**
  * El núcleo PURO del traductor único de respuestas (ADR-016): de cualquier resultado de un caso de uso, una
@@ -34,7 +35,8 @@ export type CodigoDeNegocio =
   | "USUARIO_DE_OTRA_PERSONA"
   | "YA_ES_MIEMBRO"
   | "ROL_DISTINTO_AL_ANTERIOR"
-  | "EMPRESA_NO_OPERA";
+  | "EMPRESA_NO_OPERA"
+  | CodigoFiscal;
 
 export type CodigoPublico =
   CodigoDeNegocio | MotivoDeRechazo | "SESION_VENCIDA" | "ERROR_INTERNO" | "NO_DISPONIBLE";
@@ -57,6 +59,11 @@ const motivo = (clave: ClaveDeTexto, estadoHttp: 403 | 422 = 403): DefinicionDeC
   estadoHttp,
 });
 
+/** Los códigos del facturador (`respuesta-fiscal.ts`): cada uno es un aviso con su texto `error.<código>`. */
+const AVISOS_FISCALES = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_FISCALES).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoFiscal, DefinicionDeCodigo>>;
+
 /** La tabla de los códigos públicos: código estable → clave del texto, presentación y estado HTTP. */
 export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo>> = Object.freeze({
   INVITACION_NO_ENCONTRADA: aviso("error.invitacion_no_encontrada"),
@@ -71,6 +78,7 @@ export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo
   YA_ES_MIEMBRO: aviso("error.ya_es_miembro"),
   ROL_DISTINTO_AL_ANTERIOR: aviso("error.rol_distinto_al_anterior"),
   EMPRESA_NO_OPERA: motivo("error.empresa_no_opera", 422),
+  ...AVISOS_FISCALES,
   MODULO_EN_DESARROLLO: motivo("motivo.modulo_en_desarrollo"),
   MODULO_NO_ACTIVO: motivo("motivo.modulo_no_activo"),
   MODULO_EN_SOLO_LECTURA: motivo("motivo.modulo_en_solo_lectura"),

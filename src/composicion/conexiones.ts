@@ -3,6 +3,7 @@ import {
   leerClienteDeGoogle,
   leerSecretoDeAutenticacion,
 } from "../adaptadores/autenticacion/configuracion";
+import { PEDERNAL_CLAVE_CERTIFICADOS, crearCifradorAesGcm } from "../adaptadores/cifrado/aes-gcm";
 import { crearCorreoResend } from "../adaptadores/correo/correo-resend";
 import {
   leerConfiguracionDeCorreo,
@@ -46,6 +47,7 @@ import {
 } from "../adaptadores/tokens/tokens-hmac";
 import type { TxDeCola } from "../adaptadores/trabajos/procesador";
 import type { NivelesDeControl } from "../capacidades/controles/niveles";
+import type { EmpresaId } from "../primitivas/identificadores/marca";
 import {
   crearRepositorioDeEmpresas,
   crearRepositorioDeSucursales,
@@ -66,6 +68,32 @@ import {
   type RepositorioDePersonas,
   type RepositorioDeTraspasos,
 } from "../modulos/identidad/publico";
+import {
+  crearLecturasDeComprobantes,
+  crearRepositorioDeAccesos,
+  crearRepositorioDeCertificados,
+  crearRepositorioDeComprobantes,
+  crearRepositorioDeDatosFiscales,
+  crearRepositorioDeDomicilios,
+  crearRepositorioDeEmisores,
+  crearRepositorioDeIntentos,
+  crearRepositorioDePuntosDeVenta,
+  crearRepositorioDeReglasDeEmisor,
+  crearRepositorioDeSeries,
+  type FiscalDb,
+  type LecturasDeComprobantes,
+  type MarcaParaImprimir,
+  type RepositorioDeAccesos,
+  type RepositorioDeCertificados,
+  type RepositorioDeComprobantes,
+  type RepositorioDeDatosFiscales,
+  type RepositorioDeDomicilios,
+  type RepositorioDeEmisores,
+  type RepositorioDeIntentos,
+  type RepositorioDePuntosDeVenta,
+  type RepositorioDeReglasDeEmisor,
+  type RepositorioDeSeries,
+} from "../modulos/fiscal/publico";
 import { crearLecturaPublicaDeMarcas, type PublicoDb } from "../modulos/marcas/publico";
 import {
   crearRepositorioDeTenants,
@@ -75,12 +103,13 @@ import {
 import type { Auditoria } from "../puertos/auditoria";
 import type { Autenticacion, BarridoDeAutenticacion } from "../puertos/autenticacion";
 import type { CargaDeAutorizacion } from "../puertos/autorizacion";
+import type { CifradorDeSecretos } from "../puertos/cifrado-de-secretos";
 import type { Correo } from "../puertos/correo";
 import type { RevocacionDeSesiones } from "../puertos/revocacion-de-sesiones";
 import type { ConfiguracionPublicaDeHost, ResolucionDeHost } from "../puertos/marcas";
 import type { LecturasDeSesion } from "../puertos/sesion";
 import type { Tokens } from "../puertos/tokens";
-import type { Trabajos } from "../puertos/trabajos";
+import type { TrabajosReencolables } from "../puertos/trabajos";
 import {
   entornoDelProceso,
   registrandoFallosDeEntorno,
@@ -89,6 +118,7 @@ import {
   type Pieza,
   type ValoresDeLaPieza,
 } from "./entorno";
+import { leerClaveDeCertificados } from "./clave-de-certificados";
 import { perezoso } from "./perezoso";
 
 /**
@@ -119,9 +149,29 @@ export type TxDeApp = Readonly<{
   asignaciones: RepositorioDeAsignaciones;
   invitaciones: RepositorioDeInvitaciones;
   traspasos: RepositorioDeTraspasos;
-  trabajos: Trabajos;
+  /** Encola, y mira lo encolado (la validación de un comprobante se reencola con su número de intento). */
+  trabajos: TrabajosReencolables;
   auditoria: Auditoria;
   autorizacion: CargaDeAutorizacion;
+  /** Fiscal (H7): emisores, domicilios, datos fiscales, puntos de venta y series, comprobantes e intentos de ARCA. */
+  emisores: RepositorioDeEmisores;
+  domicilios: RepositorioDeDomicilios;
+  datosFiscales: RepositorioDeDatosFiscales;
+  reglasDeEmisor: RepositorioDeReglasDeEmisor;
+  puntosDeVenta: RepositorioDePuntosDeVenta;
+  series: RepositorioDeSeries;
+  comprobantes: RepositorioDeComprobantes;
+  intentos: RepositorioDeIntentos;
+  /** Las lecturas del listado y del detalle de comprobantes (solo `select`). */
+  lecturas: LecturasDeComprobantes;
+  /** Certificados de ARCA y su ticket de acceso (columnas cifradas: solo las ve quien descifra, F7/F8). */
+  certificados: RepositorioDeCertificados;
+  accesos: RepositorioDeAccesos;
+  /**
+   * La marca con que se imprime un comprobante (solo la pide `modeloDeImpresion`). TODAVÍA NO ESTÁ CABLEADA: la
+   * impresión es F9 y la web no ofrece esa consulta. Falla fuerte antes que imprimir sin marca en silencio.
+   */
+  marca: Readonly<{ deLaEmpresa(empresa: EmpresaId): Promise<MarcaParaImprimir> }>;
   /** El nivel vigente de cada control (permitir, avisar, bloquear), leído en la misma transacción. */
   niveles: NivelesDeControl;
   /** Lo que lee la puerta `SESION` (la persona del usuario y sus empresas). */
@@ -146,6 +196,11 @@ export type Conexiones = Readonly<{
   /** Revocar las sesiones de un usuario (el trabajo `revocar_sesiones`): solo `PEDERNAL_DB_AUTENTICACION`. */
   revocacionDeSesiones: () => RevocacionDeSesiones;
   tokens: () => Tokens;
+  /**
+   * Cifra y descifra las claves privadas de los certificados de ARCA y los tickets de acceso (AES-256-GCM con la
+   * clave maestra `PEDERNAL_CLAVE_CERTIFICADOS`). Solo la pide lo fiscal: lanza `ErrorDeEntorno` si falta o no sirve.
+   */
+  cifradorDeCertificados: () => CifradorDeSecretos;
   /** Origen y marca del mail (el respaldo hasta que exista M7) y la clave del proveedor. */
   configuracionDeCorreo: () => ConfiguracionDeCorreo;
   correo: () => Correo;
@@ -163,6 +218,12 @@ export type OpcionesDeConexiones = Readonly<{
   /** Registro del servidor para lo que cuenta la librería de ingreso (con detalle: nunca sale en una respuesta). */
   registrarDeIngreso?: (detalle: string) => void;
 }>;
+
+/** La marca de impresión no está cableada (F9): pedirla falla fuerte, nunca imprime sin marca en silencio. */
+const marcaSinCablear: TxDeApp["marca"] = {
+  deLaEmpresa: () =>
+    Promise.reject(new Error("la marca para imprimir no está cableada todavía (F9, impresión)")),
+};
 
 export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones {
   const fuente = opciones.fuente ?? entornoDelProceso;
@@ -213,6 +274,19 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
           trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
           auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
           autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>()),
+          // Fiscal sobre la MISMA conexión de la transacción (una operación que cruza módulos es atómica).
+          emisores: crearRepositorioDeEmisores(db.withTables<FiscalDb>()),
+          domicilios: crearRepositorioDeDomicilios(db.withTables<FiscalDb>()),
+          datosFiscales: crearRepositorioDeDatosFiscales(db.withTables<FiscalDb>()),
+          reglasDeEmisor: crearRepositorioDeReglasDeEmisor(db.withTables<FiscalDb>()),
+          puntosDeVenta: crearRepositorioDePuntosDeVenta(db.withTables<FiscalDb>()),
+          series: crearRepositorioDeSeries(db.withTables<FiscalDb>()),
+          comprobantes: crearRepositorioDeComprobantes(db.withTables<FiscalDb>()),
+          intentos: crearRepositorioDeIntentos(db.withTables<FiscalDb>()),
+          lecturas: crearLecturasDeComprobantes(db.withTables<FiscalDb>()),
+          certificados: crearRepositorioDeCertificados(db.withTables<FiscalDb>()),
+          accesos: crearRepositorioDeAccesos(db.withTables<FiscalDb>()),
+          marca: marcaSinCablear,
           niveles: crearNivelesDeControlDePostgres(db.withTables<NivelesDeControlDb>()),
           sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
         }),
@@ -242,6 +316,14 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
     revocacionDeSesiones: () => conexionDeAutenticacion().revocacion,
     tokens: armarPieza("tokens", (valores) =>
       crearTokensHmac(leerSecretoDeInvitaciones(valores[PEDERNAL_SECRETO_INVITACIONES])),
+    ),
+    cifradorDeCertificados: armarPieza("cifrador-de-certificados", (valores) =>
+      crearCifradorAesGcm({
+        activa: leerClaveDeCertificados(
+          valores[PEDERNAL_CLAVE_CERTIFICADOS],
+          valores[PEDERNAL_CLAVE_CONTEXTO],
+        ),
+      }),
     ),
     configuracionDeCorreo,
     correo: perezoso(() => crearCorreoResend({ configuracion: configuracionDeCorreo() })),

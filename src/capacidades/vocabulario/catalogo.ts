@@ -17,6 +17,8 @@
  *    caracteres de control; los marcadores van entre llaves (`{limite}`) y se insertan como texto.
  */
 
+import { TEXTOS_DE_FISCAL } from "./catalogo-fiscal";
+
 /** El largo máximo de un texto que no declara otro (la base admite hasta 200 en cualquier caso). */
 export const LARGO_MAXIMO_DE_TEXTO = 80;
 
@@ -311,6 +313,8 @@ export const CATALOGO_DE_TEXTOS = {
     porDefecto: "La empresa no está operando en este momento.",
     largoMaximo: 160,
   },
+  // Facturador (H7 facturación): sus errores de negocio y lo que informa ARCA, traducido (`catalogo-fiscal.ts`).
+  ...TEXTOS_DE_FISCAL,
 } as const satisfies Record<string, DefinicionDeTexto>;
 
 export type ClaveDeTexto = keyof typeof CATALOGO_DE_TEXTOS;

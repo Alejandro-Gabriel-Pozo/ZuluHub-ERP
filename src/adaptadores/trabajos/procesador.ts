@@ -4,6 +4,7 @@ import type {
   ResultadoDeManejador,
   TrabajoTomado,
 } from "../../puertos/cola-de-trabajos";
+import type { EmpresaId } from "../../primitivas/identificadores/marca";
 import type { Transacciones } from "../../puertos/transacciones";
 import { ok } from "../../primitivas/resultado/resultado";
 import { textoDeErrorSeguro, textoDeExcepcionSegura } from "./error-seguro";
@@ -75,6 +76,15 @@ export type ResumenDeProcesamiento = Readonly<{
   errores: number;
 }>;
 
+/**
+ * Cómo despachar de inmediato. Por defecto `despacharAhora` espera lo que dice `topeDeEsperaDelDespachoEnMs` y devuelve el
+ * control (el trabajo sigue por su cuenta). Con `esperarHastaTerminar`, devuelve recién cuando terminó todo: es para quien
+ * corre DESPUÉS de responder (`after()`), donde la plataforma puede congelar la función apenas ese trabajo termina y cortar
+ * lo que quedó en vuelo (una llamada a ARCA de hasta 25 s). Lo acota entonces el plazo de la función (`maxDuration`) y los
+ * tiempos propios de cada llamada, no este tope.
+ */
+export type OpcionesDeDespacho = Readonly<{ esperarHastaTerminar?: boolean }>;
+
 export type ProcesadorDeTrabajos = Readonly<{
   /** Punto de entrada del cron: toma y ejecuta hasta `limite` trabajos disponibles. */
   procesarPendientes(opciones: { ahora: Date; limite: number }): Promise<ResumenDeProcesamiento>;
@@ -83,7 +93,18 @@ export type ProcesadorDeTrabajos = Readonly<{
    * Mejor esfuerzo: NUNCA lanza ni demora más que el tope; cualquier error queda en `ultimo_error` del
    * trabajo (que sigue `PENDIENTE` para el cron) o, si ni eso se pudo, en `alRegistrarProblema`.
    */
-  despacharAhora(ids: readonly string[], ahora: Date): Promise<void>;
+  despacharAhora(ids: readonly string[], ahora: Date, opciones?: OpcionesDeDespacho): Promise<void>;
+  /**
+   * Lo mismo, pero para quien encoló por CLAVE de idempotencia y no conoce el `id` (encolar no lo devuelve): busca los
+   * trabajos de la empresa con esas claves y los despacha. Mejor esfuerzo, como `despacharAhora`: NUNCA lanza; si ni
+   * siquiera pudo buscarlos, lo informa y el cron los levanta. Nunca mira trabajos de otra empresa.
+   */
+  despacharPorClaves(
+    empresaId: EmpresaId,
+    claves: readonly string[],
+    ahora: Date,
+    opciones?: OpcionesDeDespacho,
+  ): Promise<void>;
   /** Toma y ejecuta un trabajo. No lanza. */
   procesarUno(id: string, ahora: Date): Promise<ResultadoDeProcesar>;
 }>;
@@ -204,8 +225,48 @@ export function crearProcesadorDeTrabajos(
     }
   }
 
+  async function despacharAhora(
+    ids: readonly string[],
+    ahora: Date,
+    opciones: OpcionesDeDespacho = {},
+  ): Promise<void> {
+    if (ids.length === 0) return;
+    const trabajo = (async () => {
+      for (const id of ids) await procesarUno(id, ahora);
+    })().catch((error: unknown) => {
+      informar({ trabajoId: null, fase: "despachar", mensaje: textoDeExcepcionSegura(error) });
+    });
+    if (opciones.esperarHastaTerminar === true) {
+      await trabajo;
+      return;
+    }
+    let temporizador: ReturnType<typeof setTimeout> | undefined;
+    const tope = new Promise<void>((resolver) => {
+      temporizador = setTimeout(resolver, topeDelDespacho);
+    });
+    try {
+      await Promise.race([trabajo, tope]);
+    } finally {
+      clearTimeout(temporizador);
+    }
+  }
+
   return {
     procesarUno,
+
+    despacharAhora,
+
+    async despacharPorClaves(empresaId, claves, ahora, opciones) {
+      if (claves.length === 0) return;
+      let ids: string[];
+      try {
+        ids = await enLaCola(ahora, (cola) => cola.idsPorClaves(empresaId, claves));
+      } catch (error) {
+        informar({ trabajoId: null, fase: "despachar", mensaje: textoDeExcepcionSegura(error) });
+        return;
+      }
+      await despacharAhora(ids, ahora, opciones);
+    },
 
     async procesarPendientes({ ahora, limite }) {
       if (!Number.isInteger(limite) || limite < 1) {
@@ -230,24 +291,6 @@ export function crearProcesadorDeTrabajos(
         perdidos: cuenta.PERDIDO,
         errores: cuenta.ERROR_INTERNO,
       };
-    },
-
-    async despacharAhora(ids, ahora) {
-      if (ids.length === 0) return;
-      const trabajo = (async () => {
-        for (const id of ids) await procesarUno(id, ahora);
-      })().catch((error: unknown) => {
-        informar({ trabajoId: null, fase: "despachar", mensaje: textoDeExcepcionSegura(error) });
-      });
-      let temporizador: ReturnType<typeof setTimeout> | undefined;
-      const tope = new Promise<void>((resolver) => {
-        temporizador = setTimeout(resolver, topeDelDespacho);
-      });
-      try {
-        await Promise.race([trabajo, tope]);
-      } finally {
-        clearTimeout(temporizador);
-      }
     },
   };
 }

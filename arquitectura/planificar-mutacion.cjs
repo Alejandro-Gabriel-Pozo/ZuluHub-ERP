@@ -63,12 +63,12 @@ const CONFIGURACION_DE_APPS = /^apps\/[^/]+\/(package\.json|tsconfig[^/]*\.json)
  * Pruebas que LEEN archivos de `apps/` como texto (el grafo no ve ese vínculo, no es un `import`), con los
  * patrones que leen. Un cambio en uno de esos archivos alcanza a la prueba y, por su cierre de importaciones,
  * a lo que ella ejercita. Hoy solo `contraste-de-superficies` ejerce código que se muta (el contraste); el resto
- * está declarado igual para que, si mañana importa algo mutado, el plan ya lo tenga en cuenta.
- * `planificar-mutacion.test.ts` busca pruebas nuevas que lean `apps/` y exige declararlas acá.
+ * está declarado igual para que, si mañana importa algo mutado, el plan ya lo tenga en cuenta. Una prueba nueva que lea `apps/` se declara acá (`planificar-mutacion.test.ts` lo exige).
  */
 const LECTURAS_DE_APPS = {
   "test/web/contraste-de-superficies.test.ts": ["apps/web/ui/tokens.css"],
   "test/web/legibilidad-de-la-app.test.ts": ["apps/web/**"],
+  "test/web/acciones-de-facturacion.test.ts": ["apps/web/app/s/app/acciones-de-facturacion.ts"],
   "test/arquitectura/vercel-json.test.ts": ["apps/web/**"],
   "test/arquitectura/reglas.test.ts": ["apps/**"],
   "test/arquitectura/lint.test.ts": ["apps/**"],
