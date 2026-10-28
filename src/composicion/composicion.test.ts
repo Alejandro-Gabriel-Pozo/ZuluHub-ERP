@@ -130,11 +130,6 @@ const PEDIDOS: { nombre: string; pedir: (c: Conexiones) => unknown; nombra: stri
     nombra: "PEDERNAL_DB_APP",
   },
   {
-    nombre: "web.casosDeUsoDeConfiguracionFiscal",
-    pedir: (c) => armarWeb(c).casosDeUsoDeConfiguracionFiscal(),
-    nombra: "PEDERNAL_DB_APP",
-  },
-  {
     nombre: "web.consultasDeFacturacion",
     pedir: (c) => armarWeb(c).consultasDeFacturacion(),
     nombra: "PEDERNAL_DB_APP",
@@ -147,7 +142,7 @@ const PEDIDOS: { nombre: string; pedir: (c: Conexiones) => unknown; nombra: stri
   {
     nombre: "trabajos.procesador",
     pedir: (c) => armarTrabajos(c).procesador(),
-    nombra: "PEDERNAL_URL_BASE",
+    nombra: "PEDERNAL_DB_TRABAJOS",
   },
 ];
 
@@ -332,7 +327,6 @@ describe("con el entorno completo", () => {
     const { conexiones, registrados } = conFuente(sinClave);
     const web = armarWeb(conexiones);
     expect(web.casosDeUsoDeFacturacion()).toBeDefined();
-    expect(web.casosDeUsoDeConfiguracionFiscal()).toBeDefined();
     expect(web.consultasDeFacturacion()).toBeDefined();
     expect(armarTrabajos(conexiones).procesador()).toBeDefined();
     expect(registrados).toEqual([]);
@@ -406,6 +400,49 @@ describe("con el entorno completo", () => {
     expect(Object.keys(web.consultasDeIdentidad()).length).toBeGreaterThan(0);
     expect(web.casosDeUsoDeEmpresas()).toBe(web.casosDeUsoDeEmpresas());
     expect(web.consultasDeIdentidad()).toBe(web.consultasDeIdentidad());
+  });
+
+  it("la clave de los certificados no puede ser la de contexto ni tener poca variedad: falla cerrado y solo el registro nombra la variable", () => {
+    const hex = randomBytes(32).toString("hex");
+    for (const clave of [`k1:${hex}`, `otro:${hex.toUpperCase()}`, `k1:${"0".repeat(64)}`]) {
+      const fuente: Record<string, string> = {
+        ...valida(),
+        PEDERNAL_CLAVE_CONTEXTO: `1:${hex}`,
+        PEDERNAL_CLAVE_CERTIFICADOS: clave,
+      };
+      const { conexiones, registrados } = conFuente(fuente);
+      let error: unknown;
+      try {
+        conexiones.cifradorDeCertificados();
+      } catch (e) {
+        error = e;
+      }
+      expect(error).toBeInstanceOf(ErrorDeEntorno);
+      expect((error as ErrorDeEntorno).message).not.toMatch(/PEDERNAL|\b[0-9a-f]{16,}\b/i);
+      expect(registrados).toHaveLength(1);
+      expect(registrados[0]).toContain("PEDERNAL_CLAVE_CERTIFICADOS");
+      expect(registrados[0]).not.toContain(hex);
+    }
+    // Una distinta y variada sí sirve.
+    const { conexiones } = conFuente(valida());
+    expect(conexiones.cifradorDeCertificados()).toBeDefined();
+  });
+
+  it("el procesador de la cola se arma sin la configuración del correo ni el secreto de invitaciones: lo fiscal no depende de ellos", () => {
+    const sinCorreo: Record<string, string> = valida();
+    for (const nombre of [
+      "PEDERNAL_RESEND_API_KEY",
+      "PEDERNAL_CORREO_REMITENTE",
+      "PEDERNAL_NOMBRE_DE_MARCA",
+      "PEDERNAL_URL_BASE",
+      "PEDERNAL_SECRETO_INVITACIONES",
+    ]) {
+      delete sinCorreo[nombre];
+    }
+    const { conexiones, registrados } = conFuente(sinCorreo);
+    expect(armarTrabajos(conexiones).procesador()).toBeDefined();
+    // Armar el procesador no pidió ninguna pieza del correo: recién el manejador de invitaciones la pide.
+    expect(registrados).toEqual([]);
   });
 
   it("los trabajos arman el procesador una sola vez", () => {

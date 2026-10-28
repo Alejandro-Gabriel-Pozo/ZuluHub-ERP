@@ -66,7 +66,8 @@ export const NOMBRES_DE_ENTORNO = [
   {
     nombre: PEDERNAL_CLAVE_CONTEXTO,
     forma: texto,
-    piezas: ["transacciones-app", "transacciones-trabajos"],
+    // También la pide el cifrador de certificados: no puede ser la misma clave (se instala en la base).
+    piezas: ["transacciones-app", "transacciones-trabajos", "cifrador-de-certificados"],
   },
   // `esquema`: lo que mira la guarda de migración y la salud (W6) con el mismo rol de la aplicación.
   {

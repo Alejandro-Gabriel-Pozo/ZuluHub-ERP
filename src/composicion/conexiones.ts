@@ -3,11 +3,7 @@ import {
   leerClienteDeGoogle,
   leerSecretoDeAutenticacion,
 } from "../adaptadores/autenticacion/configuracion";
-import {
-  PEDERNAL_CLAVE_CERTIFICADOS,
-  crearCifradorAesGcm,
-  parsearClaveMaestra,
-} from "../adaptadores/cifrado/aes-gcm";
+import { PEDERNAL_CLAVE_CERTIFICADOS, crearCifradorAesGcm } from "../adaptadores/cifrado/aes-gcm";
 import { crearCorreoResend } from "../adaptadores/correo/correo-resend";
 import {
   leerConfiguracionDeCorreo,
@@ -122,6 +118,7 @@ import {
   type Pieza,
   type ValoresDeLaPieza,
 } from "./entorno";
+import { leerClaveDeCertificados } from "./clave-de-certificados";
 import { perezoso } from "./perezoso";
 
 /**
@@ -321,7 +318,12 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
       crearTokensHmac(leerSecretoDeInvitaciones(valores[PEDERNAL_SECRETO_INVITACIONES])),
     ),
     cifradorDeCertificados: armarPieza("cifrador-de-certificados", (valores) =>
-      crearCifradorAesGcm({ activa: parsearClaveMaestra(valores[PEDERNAL_CLAVE_CERTIFICADOS]) }),
+      crearCifradorAesGcm({
+        activa: leerClaveDeCertificados(
+          valores[PEDERNAL_CLAVE_CERTIFICADOS],
+          valores[PEDERNAL_CLAVE_CONTEXTO],
+        ),
+      }),
     ),
     configuracionDeCorreo,
     correo: perezoso(() => crearCorreoResend({ configuracion: configuracionDeCorreo() })),

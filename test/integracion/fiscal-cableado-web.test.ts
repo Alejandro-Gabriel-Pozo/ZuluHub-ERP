@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
@@ -44,8 +44,6 @@ import { comoEmpresa } from "./entorno";
 
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 120_000 });
-
-const aleatorio = (): string => randomBytes(32).toString("hex");
 
 /** Lo que manda el navegador: JSON sin tipos de dominio. Dinero y cantidades, como texto. */
 const renglonCrudo = (cambios: Record<string, unknown> = {}) => ({
@@ -93,12 +91,8 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
       PEDERNAL_CLAVE_CONTEXTO: `${propia.base.clave.kid}:${propia.base.clave.secreto.toString("hex")}`,
       PEDERNAL_DB_APP: propia.base.app,
       PEDERNAL_DB_TRABAJOS: propia.base.trabajos,
-      // Lo que pide armar el procesador completo (los manejadores de invitaciones); nunca se usa acá.
-      PEDERNAL_SECRETO_INVITACIONES: aleatorio(),
-      PEDERNAL_RESEND_API_KEY: "relleno",
-      PEDERNAL_CORREO_REMITENTE: "Prueba <prueba@ejemplo.test>",
-      PEDERNAL_NOMBRE_DE_MARCA: "Marca de prueba",
-      PEDERNAL_URL_BASE: "https://app.ejemplo.test",
+      // Sin la configuración del correo ni el secreto de invitaciones, a propósito: lo fiscal (validar, reconciliar y el
+      // despacho de `after()`) no depende de ellas; solo el manejador de invitaciones las pide, y acá nunca corre.
     };
     conexiones = armarConexiones({ fuente: () => fuente, registrar: (x) => registrados.push(x) });
     web = armarWeb(conexiones, { reglas: REGLAS_CON_FACTURACION, emision });

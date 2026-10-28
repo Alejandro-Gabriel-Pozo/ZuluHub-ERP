@@ -1,7 +1,6 @@
 import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../capacidades/permisos/empresa";
 import { crearCasosDeUsoDeEmpresas, crearConsultasDeEmpresas } from "../modulos/empresas/publico";
 import {
-  crearCasosDeUsoDeConfiguracionFiscal,
   crearCasosDeUsoDeFacturacion,
   crearConsultasDeFacturacion,
   type ProveedorDeEmision,
@@ -26,10 +25,10 @@ import { perezoso } from "./perezoso";
  * el logo y el vocabulario llegan con la puerta web (M9).
  *
  * Fiscal (H7): `casosDeUsoDeFacturacion` (emitir factura, nota de crédito y de débito, descartar, reintentar,
- * resincronizar una serie y cambiar el ambiente de un punto de venta), `casosDeUsoDeConfiguracionFiscal` (datos
- * fiscales, puntos de venta y regla de emisor, solo del gerente) y `consultasDeFacturacion` (listado y detalle de
+ * resincronizar una serie y cambiar el ambiente de un punto de venta) y `consultasDeFacturacion` (listado y detalle de
  * comprobantes). Cada uno exige SU acción al guard dentro de la transacción: acá no se decide ningún permiso. Quedan
- * AFUERA, a propósito: los dos trabajos de sistema (`validarComprobante` y `reconciliarComprobantes`, sin guard: son
+ * AFUERA, a propósito: la configuración fiscal (datos fiscales, puntos de venta y regla de emisor: ninguna acción la usa
+ * todavía; se suma con su pantalla), los dos trabajos de sistema (`validarComprobante` y `reconciliarComprobantes`, sin guard: son
  * de la cola), la numeración suelta (`reservarNumeroDeComprobante`...: la web entra solo por emitir, h7 §C), el modelo
  * de impresión (F9: falta la marca y la librería del QR) y los certificados (faltan las cadenas de confianza de
  * ARCA, D-F7). `consultasDeSesion` (la
@@ -90,12 +89,6 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
         cambiarAmbienteDePuntoDeVenta: casos.cambiarAmbienteDePuntoDeVenta,
       };
     }),
-    casosDeUsoDeConfiguracionFiscal: perezoso(() =>
-      crearCasosDeUsoDeConfiguracionFiscal({
-        transacciones: conexiones.transaccionesDeApp(),
-        reglas,
-      }),
-    ),
     /** Listado y detalle de comprobantes (`comprobantes.ver`); el modelo de impresión es de F9 y no sale. */
     consultasDeFacturacion: perezoso(() => {
       const consultas = crearConsultasDeFacturacion({

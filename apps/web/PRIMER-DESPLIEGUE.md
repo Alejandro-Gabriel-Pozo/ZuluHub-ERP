@@ -143,9 +143,28 @@ Las de sistema (`VERCEL_ENV`, `VERCEL_GIT_COMMIT_SHA`) las pone Vercel; no las c
 Diferencias con el plan, para que no te sorprendan: (1) `CRON_SECRET` no estaba declarada en el código; W6 la sumó a
 `entorno.ts` con su validación (≥ 16 caracteres) y su prueba. (2) `PEDERNAL_CLAVE_CERTIFICADOS` (cifrado de las claves de
 ARCA y de sus tickets) la declara el cableado fiscal. Solo hace falta cuando se use la facturación (el módulo sigue «en
-desarrollo»): sin ella la web arranca y lo fiscal falla cerrado. Se genera como la de contexto (B.4, el mismo comando),
-una por entorno y **distinta** de aquella; el `kid` puede ser un texto corto de letras o números. (3) La cadena de `pedernal_captacion`
+desarrollo»): sin ella la web arranca y lo fiscal falla cerrado. Se genera con SU PROPIO comando (abajo), una por entorno, y **no
+puede ser la de contexto** (ni tener sus mismos bytes): la composición la rechaza. (3) La cadena de `pedernal_captacion`
 (`PEDERNAL_DB_CAPTACION`) la crea el comando con un nombre provisorio pero la aplicación todavía no la usa: no la cargues.
+
+#### La clave de los certificados (`PEDERNAL_CLAVE_CERTIFICADOS`)
+
+- **Generala con su propio comando**, distinto del de la de contexto, y cargala solo en Vercel (el entorno que corresponda):
+  `node -e "console.log('c1:' + require('node:crypto').randomBytes(32).toString('hex'))"` (formato `<kid>:<64 dígitos
+hexadecimales>`; el `kid` es un texto corto de letras o números). Es un secreto: no lo pegues en ningún chat ni archivo.
+- **No puede ser la de contexto.** `PEDERNAL_CLAVE_CONTEXTO` se instala en la base (`contexto_clave`): si la de los
+  certificados fuera la misma, quien lea esa tabla descifraría las claves de ARCA y el cifrado en reposo no serviría. La
+  composición rechaza una clave con los mismos bytes que la de contexto, y también una con muy pocos caracteres distintos
+  (la misma exigencia que `CRON_SECRET`: 10), como `000…0`.
+- **Todavía NO se puede rotar.** La composición pasa solo la clave activa, sin claves anteriores: cambiar el valor (o el
+  `kid`) deja ilegibles los certificados y los tickets ya guardados, y hay que volver a cargarlos.
+- **Si la perdés, perdés los certificados cargados.** No hay forma de recuperarlos sin la clave: guardá una copia en tu
+  gestor de secretos antes de cargar el primer certificado. Rotarla (aceptar claves anteriores para descifrar) es una tarea
+  pendiente.
+- **El despacho inmediato (`after()`) espera el trabajo completo** (una autorización de ARCA puede tardar hasta 25 s, más
+  el login de WSAA de hasta 20 s). Para que la plataforma no lo corte antes, la página que aloje las acciones de facturación
+  tiene que declarar `maxDuration` (Next: «se fija a nivel de página para todas las Server Actions de esa página»). Hoy no
+  hay ninguna pantalla que las use, así que no se declaró ninguno, y el valor depende del plan de Vercel: ver G.11.
 
 #### Lo que NO debe existir (ni en Production ni en Preview)
 
@@ -297,3 +316,6 @@ aplicadas por `migrar.yml`, variables y dominios) y, para el paso 6, las pantall
    no, la clave del límite de intentos de ingreso es una sola para todos y un poco de tráfico bloquea a todos: no se
    enciende el despliegue hasta resolverlo (plan: `x-real-ip` o `x-forwarded-for`).
 10. Que el ingreso con Google sin JavaScript no lo bloquee Chrome por `form-action 'self'` (chequeo 15).
+11. El `maxDuration` de la página que aloje las acciones de facturación (el despacho con `after()` espera hasta que ARCA
+    responda: autorizar tiene un tiempo límite de 25 s, WSAA de 20 s y WSFE de 15 s). Qué valor admite el plan de Vercel
+    no se pudo verificar: queda como pregunta pendiente, con 60 (como el cron) como opción recomendada si el plan lo admite.

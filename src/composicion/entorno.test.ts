@@ -54,7 +54,7 @@ const PIEZAS: Record<Pieza, string[]> = {
   autenticacion: ["PEDERNAL_AUTH_SECRETO_EMPRESA", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
   tokens: ["PEDERNAL_SECRETO_INVITACIONES"],
   // El facturador: la clave que cifra las claves privadas de ARCA y los tickets; solo la pide su pieza.
-  "cifrador-de-certificados": ["PEDERNAL_CLAVE_CERTIFICADOS"],
+  "cifrador-de-certificados": ["PEDERNAL_CLAVE_CERTIFICADOS", "PEDERNAL_CLAVE_CONTEXTO"],
   // W6: la guarda de migración y la salud miran la base con el rol de la aplicación, sin firmar contexto.
   esquema: ["PEDERNAL_DB_APP"],
   cron: ["CRON_SECRET"],
