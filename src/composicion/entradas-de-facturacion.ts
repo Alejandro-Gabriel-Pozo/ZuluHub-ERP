@@ -4,6 +4,7 @@ import {
   CODIGOS_DE_ALICUOTA,
   CONCEPTOS,
   ESTADOS_DE_COMPROBANTE_ARCA,
+  LIMITES_DE_COMPROBANTE,
   MODOS_DE_PRECIO,
   TIPOS_DE_COMPROBANTE,
   TIPOS_DE_DOCUMENTO,
@@ -41,7 +42,10 @@ import { fechaCivilDesdeTexto, type FechaCivil } from "../primitivas/tiempo/fech
  * `receptor.documento.numero`...), nunca con el texto del esquema ni el valor recibido.
  */
 
-export type ErrorDeEntrada = Readonly<{ codigo: "FISCAL_DATOS_INVALIDOS"; campo?: string }>;
+export type ErrorDeEntrada = Readonly<{
+  codigo: "FISCAL_DATOS_INVALIDOS" | "FISCAL_MOTIVO_INVALIDO";
+  campo?: string;
+}>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const identificador = z.string().regex(UUID);
@@ -99,7 +103,8 @@ const formaDeNota = z.object({
   comprobanteAsociadoId: identificador,
   /** `null`: el punto de venta del comprobante que se corrige. */
   puntoDeVentaId: identificador.nullable(),
-  motivo: texto.nullable(),
+  /** El largo y si es obligatorio los mira `leerMotivo`, con el límite del dominio: ver ahí. */
+  motivo: z.string().nullable(),
 });
 
 const formaDeDescartar = z.object({
@@ -251,10 +256,32 @@ export function entradaDeFactura(
   });
 }
 
-export function entradaDeNota(crudo: unknown): Resultado<EntradaDeNotaManual, ErrorDeEntrada> {
+/**
+ * El motivo de una nota, con la misma regla y el mismo código público que el dominio (`armarNotaAsociada`, D-17): sin
+ * los espacios de los bordes, de hasta `LIMITES_DE_COMPROBANTE.motivo` caracteres, y obligatorio en la nota de crédito
+ * (la de débito puede ir sin motivo). Se mira ya al leer el pedido para no llegar a la base con un motivo que el
+ * dominio va a rechazar; el dominio lo vuelve a exigir, porque no es la única vía de emisión.
+ */
+function leerMotivo(
+  motivo: string | null,
+  obligatorio: boolean,
+): Resultado<string | null, ErrorDeEntrada> {
+  const largo = motivo?.trim().length ?? 0;
+  const sobra = largo > LIMITES_DE_COMPROBANTE.motivo;
+  return sobra || (obligatorio && largo === 0)
+    ? err({ codigo: "FISCAL_MOTIVO_INVALIDO", campo: "motivo" })
+    : ok(motivo);
+}
+
+function leerNota(
+  crudo: unknown,
+  motivoObligatorio: boolean,
+): Resultado<EntradaDeNotaManual, ErrorDeEntrada> {
   const forma = leer(formaDeNota, crudo);
   if (!forma.ok) return forma;
   const n = forma.valor;
+  const motivo = leerMotivo(n.motivo, motivoObligatorio);
+  if (!motivo.ok) return motivo;
   const renglones = aRenglones(n.renglones);
   if (!renglones.ok) return renglones;
   const periodo = aServicio(n.servicio);
@@ -267,9 +294,15 @@ export function entradaDeNota(crudo: unknown): Resultado<EntradaDeNotaManual, Er
     servicio: periodo.valor,
     modoDePrecio: n.modoDePrecio,
     renglones: renglones.valor,
-    motivo: n.motivo,
+    motivo: motivo.valor,
   });
 }
+
+/** El pedido de una nota de crédito: el motivo es obligatorio (D-17). */
+export const entradaDeNotaDeCredito = (crudo: unknown) => leerNota(crudo, true);
+
+/** El pedido de una nota de débito: el motivo es opcional. */
+export const entradaDeNotaDeDebito = (crudo: unknown) => leerNota(crudo, false);
 
 export function entradaDeDescartar(
   crudo: unknown,

@@ -13,7 +13,8 @@ import {
   entradaDeDescartar,
   entradaDeFactura,
   entradaDeListar,
-  entradaDeNota,
+  entradaDeNotaDeCredito,
+  entradaDeNotaDeDebito,
   entradaDeReintentar,
   entradaDeResincronizar,
   entradaDeVerComprobante,
@@ -131,7 +132,7 @@ export function emitirNotaDeCredito(
   return accion(
     d,
     crudo,
-    entradaDeNota,
+    entradaDeNotaDeCredito,
     (entrada) => d.casosDeUso().emitirNotaDeCredito(contexto, entrada),
     presentarEmision,
   );
@@ -146,7 +147,7 @@ export function emitirNotaDeDebito(
   return accion(
     d,
     crudo,
-    entradaDeNota,
+    entradaDeNotaDeDebito,
     (entrada) => d.casosDeUso().emitirNotaDeDebito(contexto, entrada),
     presentarEmision,
   );

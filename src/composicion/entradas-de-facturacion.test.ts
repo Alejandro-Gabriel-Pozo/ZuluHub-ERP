@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { cantidadATexto } from "../primitivas/cantidad/cantidad";
 import { precioUnitarioATexto } from "../primitivas/dinero/precio-unitario";
+import { LIMITES_DE_COMPROBANTE } from "../modulos/fiscal/publico";
 import {
   entradaDeCambiarAmbiente,
   entradaDeDescartar,
   entradaDeFactura,
   entradaDeListar,
-  entradaDeNota,
+  entradaDeNotaDeCredito,
+  entradaDeNotaDeDebito,
   entradaDeReintentar,
   entradaDeResincronizar,
   entradaDeVerComprobante,
@@ -193,7 +195,7 @@ describe("entradaDeFactura", () => {
   });
 });
 
-describe("entradaDeNota", () => {
+describe("entradaDeNotaDeCredito y entradaDeNotaDeDebito", () => {
   const nota = (cambios: Record<string, unknown> = {}) => ({
     clave: ID,
     comprobanteAsociadoId: OTRO,
@@ -207,18 +209,63 @@ describe("entradaDeNota", () => {
   });
 
   it("toma el comprobante asociado y el motivo; el punto de venta es opcional", () => {
-    const r = entradaDeNota(nota());
+    const r = entradaDeNotaDeCredito(nota());
     expect(r.ok && r.valor.comprobanteAsociadoId).toBe(OTRO);
     expect(r.ok && r.valor.puntoDeVentaId).toBeNull();
     expect(r.ok && r.valor.motivo).toBe("Devolución");
-    const conPuntoDeVenta = entradaDeNota(nota({ puntoDeVentaId: ID }));
+    const conPuntoDeVenta = entradaDeNotaDeCredito(nota({ puntoDeVentaId: ID }));
     expect(conPuntoDeVenta.ok && conPuntoDeVenta.valor.puntoDeVentaId).toBe(ID);
   });
 
   it("rechaza un asociado sin forma de id", () => {
-    expect(mal(entradaDeNota(nota({ comprobanteAsociadoId: "x" }))).error).toEqual({
-      codigo: "FISCAL_DATOS_INVALIDOS",
-      campo: "comprobanteAsociadoId",
+    for (const leer of [entradaDeNotaDeCredito, entradaDeNotaDeDebito]) {
+      expect(mal(leer(nota({ comprobanteAsociadoId: "x" }))).error).toEqual({
+        codigo: "FISCAL_DATOS_INVALIDOS",
+        campo: "comprobanteAsociadoId",
+      });
+    }
+  });
+
+  describe("el motivo (D-17)", () => {
+    const motivoInvalido = { codigo: "FISCAL_MOTIVO_INVALIDO", campo: "motivo" };
+    const limite = LIMITES_DE_COMPROBANTE.motivo;
+
+    it("la nota de crédito exige un motivo: ausente, vacío o de solo espacios se rechazan con el código del motivo", () => {
+      for (const motivo of [null, "", " ", "   ", "\n\t"]) {
+        expect(mal(entradaDeNotaDeCredito(nota({ motivo }))).error, JSON.stringify(motivo)).toEqual(
+          motivoInvalido,
+        );
+      }
+      // un pedido sin la clave `motivo` tampoco: no es un motivo
+      const sinMotivo = nota({ motivo: undefined });
+      expect(mal(entradaDeNotaDeCredito(sinMotivo)).error).toEqual({
+        codigo: "FISCAL_DATOS_INVALIDOS",
+        campo: "motivo",
+      });
+    });
+
+    it("el largo es el del dominio, contado sin los espacios de los bordes: el límite pasa y uno más no", () => {
+      const justo = entradaDeNotaDeCredito(nota({ motivo: "m".repeat(limite) }));
+      expect(justo.ok && justo.valor.motivo).toBe("m".repeat(limite));
+      expect(mal(entradaDeNotaDeCredito(nota({ motivo: "m".repeat(limite + 1) }))).error).toEqual(
+        motivoInvalido,
+      );
+      // 1000 y más ya no es otro error: es el mismo código del motivo
+      expect(mal(entradaDeNotaDeCredito(nota({ motivo: "m".repeat(5000) }))).error).toEqual(
+        motivoInvalido,
+      );
+      // con espacios alrededor, lo que cuenta es el texto recortado (el dominio lo recorta igual)
+      expect(entradaDeNotaDeCredito(nota({ motivo: ` ${"m".repeat(limite)} ` })).ok).toBe(true);
+    });
+
+    it("la nota de débito sigue con motivo opcional, pero con el mismo largo máximo", () => {
+      for (const motivo of [null, "", "   "]) {
+        expect(entradaDeNotaDeDebito(nota({ motivo })).ok, JSON.stringify(motivo)).toBe(true);
+      }
+      expect(entradaDeNotaDeDebito(nota({ motivo: "m".repeat(limite) })).ok).toBe(true);
+      expect(mal(entradaDeNotaDeDebito(nota({ motivo: "m".repeat(limite + 1) }))).error).toEqual(
+        motivoInvalido,
+      );
     });
   });
 });
