@@ -2,6 +2,7 @@ import { Insignia } from "../../web/ui/componentes/Insignia";
 import { SoloLector } from "../../web/ui/primitivas/SoloLector";
 import { rotuloDeEstado } from "../logica/filtros-de-empresas";
 import { cuitConGuiones } from "../logica/formato-de-cuit";
+import { textoDelMotivoDeEstado } from "../logica/motivo-de-estado";
 import type { FilaDeEmpresa } from "../servidor/empresas";
 import estilos from "./empresas.module.css";
 
@@ -53,7 +54,9 @@ export function TablaDeEmpresas({ filas }: PropsDeTablaDeEmpresas) {
                 <span>
                   <Insignia tono={rotulo.tono}>{rotulo.texto}</Insignia>
                   {fila.motivoEstado === null ? null : (
-                    <span className={estilos["motivo"]}>{fila.motivoEstado}</span>
+                    <span className={estilos["motivo"]}>
+                      {textoDelMotivoDeEstado(fila.motivoEstado)}
+                    </span>
                   )}
                 </span>
               </td>

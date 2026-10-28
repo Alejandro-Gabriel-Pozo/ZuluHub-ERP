@@ -66,6 +66,7 @@ export function FormularioDeAlta({ submarcas, planes }: PropsDeFormularioDeAlta)
   const [zonaHoraria, setZonaHoraria] = useState<string>(ZONA_POR_DEFECTO);
   const [locales, setLocales] = useState<Partial<Record<CampoDelAlta, string>>>({});
   const fijada = useRef<EntradaFijada | null>(null);
+  const [referenciaIncierta, setReferenciaIncierta] = useState<string | undefined>(undefined);
   const { pedirCodigo, ventana } = useVentanaDeCodigo();
 
   const envio = useEnvioConClave<Hecho, Rechazo>({
@@ -83,8 +84,20 @@ export function FormularioDeAlta({ submarcas, planes }: PropsDeFormularioDeAlta)
         pideCodigo: (r) => !r.ok && r.error.tipo === "SEGUNDO_FACTOR",
         pedirCodigo,
       });
+      if (resultado === CANCELADO) {
+        fijada.current = null;
+        setReferenciaIncierta(undefined);
+        return { ok: false, rechazo: { tipo: "CANCELADO" } };
+      }
+      // Un error inesperado NO es una respuesta definitiva: puede que el alta haya quedado registrada. Se lanza
+      // para que el intento quede «incierto» y se reintente con la MISMA clave y los MISMOS valores (no se toca
+      // `fijada`); la referencia `PD-…` se guarda para mostrarla junto al aviso.
+      if (!resultado.ok && resultado.error.tipo === "INESPERADO") {
+        setReferenciaIncierta(resultado.referencia);
+        throw new Error("Resultado inesperado: se reintenta con la misma clave");
+      }
       fijada.current = null;
-      if (resultado === CANCELADO) return { ok: false, rechazo: { tipo: "CANCELADO" } };
+      setReferenciaIncierta(undefined);
       if (resultado.ok) {
         return {
           ok: true,
@@ -164,7 +177,7 @@ export function FormularioDeAlta({ submarcas, planes }: PropsDeFormularioDeAlta)
           <Texto>
             {estado.valor.yaExistia
               ? "Esta alta ya estaba hecha; no se duplicó."
-              : `Empresa dada de alta. Le enviamos una invitación a ${estado.valor.email}.`}
+              : `Empresa dada de alta. Le vamos a enviar una invitación a ${estado.valor.email}.`}
           </Texto>
         </Aviso>
         <a className={estilos["enlaceSimple"]} href="/empresas">
@@ -221,6 +234,9 @@ export function FormularioDeAlta({ submarcas, planes }: PropsDeFormularioDeAlta)
                 {envio.motivoQueNoPuede ??
                   "No supimos si el alta quedó registrada. Reintentá: no se va a duplicar."}
               </Texto>
+              {referenciaIncierta === undefined ? null : (
+                <Texto>Código de referencia: {referenciaIncierta}</Texto>
+              )}
             </Aviso>
           ) : null}
           <Campo
@@ -358,8 +374,9 @@ function textoGeneral(error: ErrorParaLaPantalla): string {
       return error.texto;
     case "OCULTAR_ACCION":
       return "No tenés permiso para dar de alta empresas.";
-    case "CAMPO":
     case "SEGUNDO_FACTOR":
+      return "No pudimos confirmar tu identidad. Probá de nuevo.";
+    case "CAMPO":
     case "INESPERADO":
       return "No pudimos dar de alta la empresa.";
   }

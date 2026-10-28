@@ -77,9 +77,7 @@ export default async function PaginaDeEmpresas({ searchParams }: PropsDePagina) 
               <>
                 <TablaDeEmpresas filas={lista.filas} />
                 <div className={estilos["pie"]}>
-                  <Texto>
-                    {lista.filas.length} {lista.filas.length === 1 ? "empresa" : "empresas"}
-                  </Texto>
+                  <Texto>Mostrando {lista.filas.length}</Texto>
                   {lista.siguienteDespuesDeId === null ? null : (
                     <a
                       className={estilos["enlaceSimple"]}
@@ -88,7 +86,7 @@ export default async function PaginaDeEmpresas({ searchParams }: PropsDePagina) 
                         despuesDeId: lista.siguienteDespuesDeId,
                       })}
                     >
-                      Ver más
+                      Página siguiente
                     </a>
                   )}
                 </div>
