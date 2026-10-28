@@ -31,7 +31,12 @@ export function AvisoDeError({
       </Aviso>
     );
   }
-  if (error.tipo === "GENERAL" || error.tipo === "PANTALLA_VIEJA" || error.tipo === "CAMPO") {
+  if (
+    error.tipo === "GENERAL" ||
+    error.tipo === "PANTALLA_VIEJA" ||
+    error.tipo === "MARCA_RETIRADA" ||
+    error.tipo === "CAMPO"
+  ) {
     return (
       <Aviso tono="peligro" accion={reintentar}>
         <Texto>{error.texto}</Texto>
