@@ -8,6 +8,8 @@ import type { DeclaracionDeCaso } from "../../../capacidades/permisos/declaracio
 export const DECLARACIONES_DE_CONSULTAS = {
   listarSucursales: { accion: "sucursales.ver" },
   fichaDeSucursal: { accion: "sucursales.ver" },
+  // Las sucursales que la persona puede elegir para trabajar: los tres roles (es lo propio, no administración).
+  sucursalesElegibles: { accion: "permisos.ver_propios" },
   planYModulos: { accion: "modulos.ver" },
   permisosDelActor: { accion: "permisos.ver_propios" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

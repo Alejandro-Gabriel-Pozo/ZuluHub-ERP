@@ -2,6 +2,7 @@ import type { DependenciasDeConsultasDeEmpresas } from "./contrato";
 import type { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 import { armarFichaDeSucursal } from "./ficha-de-sucursal";
 import { armarListarSucursales } from "./listar-sucursales";
+import { armarSucursalesElegibles } from "./sucursales-elegibles";
 
 /**
  * Las consultas por pantalla de empresas (ADR-005). El `satisfies` exige que cada una tenga su
@@ -13,6 +14,7 @@ export function crearConsultasDeEmpresas(dependencias: DependenciasDeConsultasDe
   return {
     listarSucursales: armarListarSucursales(dependencias),
     fichaDeSucursal: armarFichaDeSucursal(dependencias),
+    sucursalesElegibles: armarSucursalesElegibles(dependencias),
   } satisfies Partial<Record<keyof typeof DECLARACIONES_DE_CONSULTAS, unknown>>;
 }
 
