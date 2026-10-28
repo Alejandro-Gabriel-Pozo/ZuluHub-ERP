@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { errorDeCodigo, type Respuesta } from "../../src/capacidades/experiencia/respuesta";
@@ -22,10 +22,23 @@ vi.mock("../../apps/web/servidor/facturacion", () => ({
   },
 }));
 const armazon = vi.hoisted((): { opciones: unknown } => ({ opciones: null }));
+// El armazón falso pinta el único h1 igual que el real: el título del catálogo, o el que trae `conTitulo`.
 vi.mock("../../apps/web/pantallas/operacion", () => ({
-  pantallaDeOperacion: async (opciones: unknown, contenido: (d: object) => Promise<unknown>) => {
+  conTitulo: (tituloResuelto: string, cuerpo: ReactNode) => ({ tituloResuelto, cuerpo }),
+  pantallaDeOperacion: async (
+    opciones: { titulo: string },
+    contenido: (d: object) => Promise<unknown>,
+  ) => {
     armazon.opciones = opciones;
-    return contenido({});
+    const r = await contenido({});
+    const titulado = (x: unknown): x is { tituloResuelto: string; cuerpo: ReactNode } =>
+      typeof x === "object" && x !== null && "tituloResuelto" in x;
+    return createElement(
+      "main",
+      null,
+      createElement("h1", null, titulado(r) ? r.tituloResuelto : "Comprobante"),
+      titulado(r) ? r.cuerpo : (r as ReactNode),
+    );
   },
 }));
 
@@ -37,13 +50,15 @@ const cargar = (
 ): Promise<{ default: (p: { params: Promise<{ id: string }> }) => Promise<unknown> }> =>
   import(/* @vite-ignore */ ruta);
 
-async function pagina(id: string): Promise<string> {
+async function html(id: string): Promise<string> {
   const { default: Pagina } = await cargar(
     "../../apps/web/app/s/app/(operacion)/facturacion/comprobantes/[id]/page",
   );
   const arbol = await Pagina({ params: Promise.resolve({ id }) });
-  return renderToStaticMarkup(arbol as ReactNode).replace(/<[^>]+>/g, " ");
+  return renderToStaticMarkup(arbol as ReactNode);
 }
+
+const pagina = async (id: string): Promise<string> => (await html(id)).replace(/<[^>]+>/g, " ");
 
 const respuesta = (r: Respuesta<unknown>): void => {
   lectura.respuesta = r;
@@ -65,6 +80,18 @@ describe("la página del detalle de un comprobante", () => {
     const texto = await pagina(ID);
     expect(lectura.llamadas).toEqual([{ comprobanteId: ID }]);
     expect(texto).toContain("Factura B 00001-00001234");
+  });
+
+  it("con un comprobante hay UN solo h1, con el título real", async () => {
+    respuesta({ ok: true, dato: base });
+    const marcado = await html(ID);
+    expect(marcado.match(/<h1\b[^>]*>(.*?)<\/h1>/g)).toEqual(["<h1>Factura B 00001-00001234</h1>"]);
+  });
+
+  it("sin comprobante (id inválido o error) el único h1 es el genérico «Comprobante»", async () => {
+    respuesta({ ok: false, error: errorDeCodigo("FISCAL_COMPROBANTE_NO_ENCONTRADO") });
+    for (const id of ["no-es-un-id", ID])
+      expect((await html(id)).match(/<h1\b[^>]*>(.*?)<\/h1>/g)).toEqual(["<h1>Comprobante</h1>"]);
   });
 
   it.each(["no-es-un-id", "0B9F6A1E-2C3D-4E5F-8A7B-9C0D1E2F3A4B", `${ID}x`, "1; drop table"])(

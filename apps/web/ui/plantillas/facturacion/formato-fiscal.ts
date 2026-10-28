@@ -64,9 +64,12 @@ export function formatearNumeroDeDocumento(tipo: string, numero: string): string
   return numero;
 }
 
-/** El número del punto de venta en cuatro dígitos («1» pasa a «0001»). */
+/**
+ * El punto de venta en cinco dígitos («1» pasa a «00001»), como el prefijo de `numeroImpreso` del backend (PPPPP-NNNNNNNN).
+ * SUPUESTO: el backend no exporta este formato por separado; hay que pedirle que lo exponga.
+ */
 export function formatearPuntoDeVenta(numero: number): string {
-  return String(numero).padStart(4, "0");
+  return String(numero).padStart(5, "0");
 }
 
 /** La alícuota («10.5») con coma («10,5»); `null` si no lleva IVA (exento, no gravado). */

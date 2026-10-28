@@ -12,14 +12,6 @@
   gap: var(--espacio-2);
 }
 
-.titulo {
-  margin: 0;
-  font-family: var(--tipo-familia-titulos);
-  font-size: var(--tipo-tamano-grande);
-  font-weight: var(--tipo-peso-fuerte);
-  overflow-wrap: anywhere;
-}
-
 .estados {
   display: flex;
   flex-wrap: wrap;

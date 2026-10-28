@@ -56,9 +56,9 @@ describe("formato de importes, fechas y documentos (solo cadenas)", () => {
     expect(formatearNumeroDeDocumento("PASAPORTE", "123456789")).toBe("123456789");
   });
 
-  it("punto de venta en cuatro dígitos y alícuotas con coma", () => {
-    expect(formatearPuntoDeVenta(1)).toBe("0001");
-    expect(formatearPuntoDeVenta(12)).toBe("0012");
+  it("punto de venta en cinco dígitos y alícuotas con coma", () => {
+    expect(formatearPuntoDeVenta(1)).toBe("00001");
+    expect(formatearPuntoDeVenta(12)).toBe("00012");
     expect(formatearPuntoDeVenta(12345)).toBe("12345");
     expect(formatearAlicuota("21")).toBe("21");
     expect(formatearAlicuota("10.5")).toBe("10,5");

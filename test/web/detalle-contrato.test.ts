@@ -36,7 +36,6 @@ describe("prueba de contrato: lo que está y lo que no está", () => {
   it("la factura autorizada trae todo lo del contrato", () => {
     const texto = visible(completo);
     for (const esperado of [
-      "Factura B 00001-00001234",
       "Autorizada",
       "Anulación parcial",
       "Número",
@@ -48,7 +47,7 @@ describe("prueba de contrato: lo que está y lo que no está", () => {
       "Panadería Sol SRL",
       "CUIT 30-71234567-8",
       "Punto de venta",
-      "0001",
+      "00001",
       "Renglones",
       "Medialunas (docena)",
       "2 × $ 4.500,00",
@@ -90,6 +89,11 @@ describe("prueba de contrato: lo que está y lo que no está", () => {
       expect(html, v.estado).not.toMatch(/<(button|a|form|input|select|textarea)\b/);
       expect(html, v.estado).not.toMatch(/\sstyle=/);
     }
+  });
+
+  it("el cuerpo no trae h1 propio: el único es el de la pantalla", () => {
+    for (const v of [completo, base, con({ estado: "RECHAZADO", numero: null })])
+      expect(pintar(v), v.estado).not.toMatch(/<h1\b/);
   });
 
   it("no autorizado: ni CAE ni su rótulo", () => {

@@ -1,7 +1,8 @@
 import { errorDeCodigo } from "../../../../../../../../../src/capacidades/experiencia/respuesta";
-import { pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
+import { conTitulo, pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
 import { verElComprobante } from "../../../../../../../servidor/facturacion";
 import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { armarElDetalle } from "../../../../../../../ui/plantillas/facturacion/modelo-del-detalle";
 import { PantallaDeDetalleDeComprobante } from "../../../../../../../ui/plantillas/facturacion/PantallaDeDetalleDeComprobante";
 
 // Mismo formato que valida el servidor: si el id de la URL no lo tiene, ni se pregunta (es «no encontrado»).
@@ -21,10 +22,11 @@ export default async function PaginaDeDetalleDeComprobante({
         return <ErrorDelDetalle error={errorDeCodigo("FISCAL_COMPROBANTE_NO_ENCONTRADO")} />;
       }
       const respuesta = await verElComprobante({ comprobanteId: id });
-      return respuesta.ok ? (
-        <PantallaDeDetalleDeComprobante detalle={respuesta.dato} />
-      ) : (
-        <ErrorDelDetalle error={respuesta.error} />
+      if (!respuesta.ok) return <ErrorDelDetalle error={respuesta.error} />;
+      // El título real es el único h1 (el de un error sigue siendo el genérico del catálogo).
+      return conTitulo(
+        armarElDetalle(respuesta.dato, {}).titulo,
+        <PantallaDeDetalleDeComprobante detalle={respuesta.dato} />,
       );
     },
   );

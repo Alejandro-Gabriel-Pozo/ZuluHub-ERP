@@ -65,8 +65,15 @@ describe("detalle de un comprobante en el celular", () => {
     ["autorizada con notas", autorizada],
     ["rechazada", rechazada],
   ])("%s: sin violaciones de accesibilidad y sin letra de menos de 16 px", async (_n, detalle) => {
-    await render(<PantallaDeDetalleDeComprobante detalle={detalle} />);
+    // El h1 lo pone el armazón (con el título real); el cuerpo arranca en h2.
+    await render(
+      <>
+        <h1>Título de la pantalla</h1>
+        <PantallaDeDetalleDeComprobante detalle={detalle} />
+      </>,
+    );
     expect(await violacionesDeAccesibilidad(document.body)).toEqual([]);
+    expect(document.body.querySelectorAll("h1")).toHaveLength(1);
     const chicos: string[] = [];
     for (const el of document.body.querySelectorAll<HTMLElement>("*")) {
       const tieneTexto = [...el.childNodes].some(

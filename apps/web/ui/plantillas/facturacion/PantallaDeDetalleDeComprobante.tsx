@@ -21,7 +21,6 @@ export function PantallaDeDetalleDeComprobante({
   return (
     <article className={estilos["raiz"]}>
       <header className={estilos["cabecera"]}>
-        <h2 className={estilos["titulo"]}>{m.titulo}</h2>
         <div className={estilos["estados"]}>
           <Insignia tono={m.estado.tono}>{m.estado.texto}</Insignia>
           {m.anulacion === null ? null : <Insignia tono="aviso">{m.anulacion}</Insignia>}
@@ -54,9 +53,9 @@ export function PantallaDeDetalleDeComprobante({
       </dl>
 
       <section aria-labelledby="renglones">
-        <h3 id="renglones" className={estilos["seccion"]}>
+        <h2 id="renglones" className={estilos["seccion"]}>
           {m.rotuloDeRenglones}
-        </h3>
+        </h2>
         <ul className={estilos["lista"]}>
           {m.renglones.map((r, i) => (
             <li key={i} className={estilos["renglon"]}>
@@ -77,9 +76,9 @@ export function PantallaDeDetalleDeComprobante({
 
       {m.anulado === null ? null : (
         <section aria-labelledby="anulado" className={estilos["anulado"]}>
-          <h3 id="anulado" className={estilos["seccion"]}>
+          <h2 id="anulado" className={estilos["seccion"]}>
             {m.anulado.titulo}
-          </h3>
+          </h2>
           {m.anulado.cifra === null ? null : (
             <p className={estilos["importe"]}>{m.anulado.cifra}</p>
           )}

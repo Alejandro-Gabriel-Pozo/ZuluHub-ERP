@@ -16,7 +16,7 @@ describe("el modelo del detalle", () => {
       { rotulo: "Fecha", valor: "14/10/2026", secundario: null },
       { rotulo: "CAE", valor: "74123456789012 · vence 24/10/2026", secundario: null },
       { rotulo: "Cliente", valor: "Consumidor final", secundario: null },
-      { rotulo: "Punto de venta", valor: "0001", secundario: null },
+      { rotulo: "Punto de venta", valor: "00001", secundario: null },
     ]);
     expect(m.renglones).toEqual([
       {
