@@ -54,6 +54,8 @@
 
 .tabla th,
 .tabla td {
+  /* Un nombre o un correo largo, sin espacios, no rompe el ancho. */
+  overflow-wrap: anywhere;
   padding: var(--espacio-3);
   border-bottom: var(--borde-grosor) solid var(--color-borde);
   text-align: left;
@@ -70,6 +72,7 @@
 }
 
 .motivo {
+  overflow-wrap: anywhere;
   display: block;
   margin: var(--espacio-1) 0 0;
   color: var(--color-texto-suave);
@@ -139,6 +142,7 @@
 }
 
 .modulos {
+  overflow-wrap: anywhere;
   margin: 0;
   padding: var(--espacio-3);
   border: var(--borde-grosor) solid var(--color-borde);

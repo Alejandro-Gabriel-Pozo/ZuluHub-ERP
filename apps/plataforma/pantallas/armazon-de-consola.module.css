@@ -1,6 +1,11 @@
 .raiz {
-  /* La consola es administración: objetivo táctil de la administración, nunca menor a 44 px. */
-  --objetivo-minimo: var(--objetivo-minimo-administracion);
+  /*
+   * Decisión del dueño: la consola usa objetivos táctiles de 48 px (3rem). Es un token LOCAL de la consola: no se
+   * toca el de administración (44 px) de los tokens compartidos. Los botones, campos y enlaces de `web/ui` leen
+   * `--objetivo-minimo`, y esta definición baja por la herencia a todo lo que se pinta dentro de la consola.
+   */
+  --objetivo-consola: 3rem;
+  --objetivo-minimo: var(--objetivo-consola);
 
   min-height: 100dvh;
 }

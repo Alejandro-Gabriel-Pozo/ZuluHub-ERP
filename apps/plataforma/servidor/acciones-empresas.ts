@@ -29,7 +29,8 @@ function fallaInesperada(detalle: string): Falla {
  * El alta de una empresa con tenant NUEVO desde la consola. La entrada viene del navegador: se valida la forma
  * (`entradaDelAlta`) y el resto lo decide el caso de uso. La clave de idempotencia es del intento y la trae el
  * navegador: esta acción no genera claves, y repetirla con la misma devuelve lo mismo sin crear otra empresa.
- * Nada del pedido (CUIT, email) va al registro.
+ * Al registro del servidor solo va el detalle técnico del fallo con su referencia `PD-…`: esta acción no escribe
+ * el pedido (CUIT, email) en el registro; el detalle de un error de una capa inferior no se puede garantizar desde acá.
  */
 export async function altaDeEmpresaDeConsola(
   entrada: unknown,
