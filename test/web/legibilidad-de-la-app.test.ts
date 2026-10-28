@@ -99,3 +99,21 @@ describe("el documento de la aplicación", () => {
     expect(raiz).toContain('width: "device-width"');
   });
 });
+
+describe("el detalle de un comprobante: importes y fechas solo como texto (ADR-006)", () => {
+  // Previene: un importe que pierde centavos por pasar por `Number`, o un día corrido por pasar por `Date`.
+  const carpeta = join(RAIZ, "ui/plantillas/facturacion");
+
+  it.each(["formato-fiscal.ts", "modelo-del-detalle.ts", "PantallaDeDetalleDeComprobante.tsx"])(
+    "%s no usa Number, parseFloat, Date ni formateadores del navegador",
+    (archivo) => {
+      const codigo = readFileSync(join(carpeta, archivo), "utf8")
+        .split("\n")
+        .filter((l) => !/^\s*(\*|\/\*|\/\/)/.test(l))
+        .join("\n");
+      expect(codigo).not.toMatch(
+        /\b(Number|parseFloat|parseInt|BigInt|Date|Intl|toFixed|toLocale\w*)\b|\bMath\./,
+      );
+    },
+  );
+});

@@ -160,6 +160,38 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     }
   });
 
+  it("los textos de la pantalla de detalle del facturador: los siete estados (D-25), la anulación (D-29) y sin «acreditad»", () => {
+    const pantalla = claves.filter((c) => c.startsWith("fiscal.pantalla."));
+    expect(pantalla.length).toBeGreaterThan(0);
+    const estados = (Object.entries(CATALOGO_DE_TEXTOS) as [ClaveDeTexto, DefinicionDeTexto][])
+      .filter(([c]) => c.startsWith("fiscal.pantalla.estado_"))
+      .map(([c, d]) => [c, d.porDefecto]);
+    expect(Object.fromEntries(estados)).toEqual({
+      "fiscal.pantalla.estado_pendiente": "Pendiente de enviar",
+      "fiscal.pantalla.estado_en_validacion": "Validando",
+      "fiscal.pantalla.estado_autorizado": "Autorizada",
+      "fiscal.pantalla.estado_rechazado": "Rechazada",
+      "fiscal.pantalla.estado_incierto": "Confirmando",
+      "fiscal.pantalla.estado_conflicto": "Requiere revisión",
+      "fiscal.pantalla.estado_descartado": "Descartada",
+    });
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.anulacion_parcial"].porDefecto).toBe(
+      "Anulación parcial",
+    );
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.anulacion_total"].porDefecto).toBe(
+      "Anulación total",
+    );
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.ya_anulado"].porDefecto).toBe(
+      "Ya anulado con notas de crédito",
+    );
+    for (const clave of pantalla) {
+      expect(CATALOGO_DE_TEXTOS[clave].porDefecto, clave).not.toMatch(/acreditad/i);
+    }
+    expect(CATALOGO_DE_TEXTOS["error.fiscal_comprobante_no_encontrado"].porDefecto).toBe(
+      "No encontramos ese comprobante.",
+    );
+  });
+
   it("los textos de los errores con datos declaran su marcador", () => {
     expect(CATALOGO_DE_TEXTOS["error.limite_del_plan"].marcadores).toEqual(["limite"]);
     expect(CATALOGO_DE_TEXTOS["error.limite_del_plan"].porDefecto).toContain("{limite}");

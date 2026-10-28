@@ -1,0 +1,126 @@
+.raiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-5);
+  font-size: var(--tipo-tamano-medio);
+  min-width: 0;
+}
+
+.cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.titulo {
+  margin: 0;
+  font-family: var(--tipo-familia-titulos);
+  font-size: var(--tipo-tamano-grande);
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+.estados {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+}
+
+.texto {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.datos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  margin: 0;
+}
+
+.dato {
+  display: flex;
+  flex-direction: column;
+}
+
+.rotulo {
+  color: var(--color-texto-suave);
+}
+
+.valor {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+.secundario {
+  font-weight: var(--tipo-peso-normal);
+  color: var(--color-texto-suave);
+}
+
+.seccion {
+  margin: 0 0 var(--espacio-3);
+  font-size: var(--tipo-tamano-medio);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.renglon,
+.nota {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie);
+}
+
+.nota {
+  align-items: flex-start;
+}
+
+.descripcion {
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+.cuenta {
+  color: var(--color-texto-suave);
+}
+
+.importe {
+  margin: 0;
+  font-size: var(--tipo-tamano-medio);
+  font-weight: var(--tipo-peso-fuerte);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  margin: var(--espacio-3) 0 0;
+  padding-top: var(--espacio-3);
+  border-top: var(--borde-grosor-fuerte) solid var(--color-texto);
+  font-size: var(--tipo-tamano-grande);
+  font-weight: var(--tipo-peso-fuerte);
+  font-variant-numeric: tabular-nums;
+}
+
+.anulado {
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+}
