@@ -1,6 +1,7 @@
 import type { ContextoDePlataforma } from "../../contexto/contexto";
 import {
   decidirGuardadoDeBorrador,
+  definicionDeLaUltimaDecision,
   traducirErroresDeMarca,
   validarCambiosDeBorrador,
   type CambiosDeBorrador,
@@ -118,8 +119,10 @@ function cambiosDeLaEntrada(
 
 /**
  * Guardar el borrador de una marca (M5). Contexto de PLATAFORMA, solo ADMIN. Crea el borrador si no había
- * (`versionEsperada: null`) o aplica los cambios al que hay; una marca tiene a lo sumo un borrador. El
- * borrador no cambia lo que se ve: eso lo hace confirmarlo. Guardar sin cambios reales es éxito sin escribir
+ * (`versionEsperada: null`) o aplica los cambios al que hay; una marca tiene a lo sumo un borrador. El PRIMER
+ * borrador parte de la definición de la última versión confirmada (la de mayor número, aunque sea futura), no de
+ * una vacía: cambiar solo un color deja todo lo demás como estaba. Un primer borrador sin diferencia con lo
+ * confirmado se crea igual (devuelve la `version` para seguir editando). El borrador no cambia lo que se ve: eso lo hace confirmarlo. Guardar sin cambios reales es éxito sin escribir
  * ni auditar. Deja la constancia `MARCA_BORRADOR_GUARDADO` (el vocabulario, como pares texto, antes,
  * después). Dos ediciones desde la misma `version`: una gana y la otra es `VERSION_DESACTUALIZADA`.
  */
@@ -197,10 +200,17 @@ export function armarGuardarBorradorDeMarca(dependencias: DependenciasDeMarcasYP
           return err("PLAN_NO_ENCONTRADO");
         }
         const existente = await tx.marcas.borradorDe(pedido.marcaId);
+        // El primer borrador parte de lo que la marca decidió por última vez (la confirmada de mayor número,
+        // aunque esté programada): lo que la consola muestra vigente es lo que se guarda. Con borrador, no hace falta.
+        const baseDeLaUltimaConfirmada =
+          existente === null
+            ? definicionDeLaUltimaDecision(await tx.marcas.confirmadasDe(pedido.marcaId))
+            : null;
         const decision = decidirGuardadoDeBorrador(
           existente === null
             ? null
             : { definicion: existente.definicion, version: existente.version },
+          baseDeLaUltimaConfirmada,
           pedido.versionEsperada,
           pedido.cambios,
         );
@@ -219,7 +229,9 @@ export function armarGuardarBorradorDeMarca(dependencias: DependenciasDeMarcasYP
         // Con SERIALIZABLE otra transacción que cambiara el borrador antes ya habría abortado ésta (40001, que
         // el adaptador reintenta): sin fila acá es un nivel de aislamiento menor y se pide repetir.
         if (guardado === null) return err({ tipo: "ConcurrenciaAgotada" });
-        const antes = existente === null ? null : existente.definicion;
+        // `antes` es lo que había: el borrador, o (en el primero) la última confirmada de la que parte, para que la
+        // constancia muestre la diferencia real campo por campo y no «todo nuevo». Sin ninguna, `null`.
+        const antes = existente === null ? baseDeLaUltimaConfirmada : existente.definicion;
         return ok({
           salida: { borradorId: guardado.id, version: guardado.version },
           constancias: [

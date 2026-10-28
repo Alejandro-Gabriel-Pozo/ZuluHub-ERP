@@ -5,6 +5,7 @@ import {
   validarLargoDelMotivo,
   validarNumeroEsperado,
   validarVersionEsperada,
+  validarVersionVista,
   validarVigencia,
 } from "./formas-de-entrada";
 import { claveDeIdempotenciaValida, uuidDesdeTexto } from "./soporte/consulta";
@@ -54,6 +55,7 @@ const FORMAS = {
   confirmarVersionDeMarca: {
     claveDeIdempotencia: req("clave"),
     marcaId: req("id"),
+    versionEsperada: req("version"),
     vigenteDesde: req("vigencia"),
     motivo: req("motivo"),
     reemplazaProgramada: req("booleano"),
@@ -179,6 +181,8 @@ const TIPOS = {
   idONulo: (valor: unknown): Leido<string | null> => (valor === null ? ok(null) : id(valor)),
   versionONula: (valor: unknown): Leido<number | null> =>
     valor === null || typeof valor === "number" ? validarVersionEsperada(valor) : FORMA_INVALIDA,
+  version: (valor: unknown): Leido<number> =>
+    typeof valor === "number" ? validarVersionVista(valor) : FORMA_INVALIDA,
   numeroONulo: (valor: unknown): Leido<number | null> =>
     valor === null || typeof valor === "number" ? validarNumeroEsperado(valor) : FORMA_INVALIDA,
   booleano: (valor: unknown): Leido<boolean> =>

@@ -28,6 +28,7 @@ const DESCRIPCION_DE_TIPO: Readonly<Record<NonNullable<ProblemaDeForma["esperado
   id: "un identificador (uuid) escrito entre comillas",
   idONulo: "un identificador (uuid) entre comillas, o null",
   versionONula: "un número entero, o null si no había borrador",
+  version: "un número entero desde 1: la versión del borrador que viste",
   numeroONulo: "un número entero, o null si no había ninguna",
   booleano: "true o false",
   vigencia: 'una fecha y hora con zona, por ejemplo "2026-10-20T12:00:00-03:00"',
@@ -50,7 +51,8 @@ export const MENSAJES_DE_MOTIVO: Readonly<Record<string, string>> = {
   ID_INVALIDO: "Hay un identificador que no tiene la forma de un uuid.",
   VERSION_DESACTUALIZADA:
     "Otra persona cambió esto mientras tanto. Volvé a mirar el estado actual y repetí con los datos al día.",
-  VERSION_ESPERADA_INVALIDA: "La versión esperada tiene que ser un entero desde 1, o null.",
+  VERSION_ESPERADA_INVALIDA:
+    "La versión esperada tiene que ser un entero desde 1 (al guardar un borrador, también puede ser null si no había).",
   NUMERO_ESPERADO_INVALIDO: "El número esperado tiene que ser un entero desde 1, o null.",
   VIGENCIA_INVALIDA: "La fecha de vigencia no es una fecha válida con zona.",
   VIGENCIA_RETROACTIVA: "La vigencia no puede ser anterior a ahora.",
