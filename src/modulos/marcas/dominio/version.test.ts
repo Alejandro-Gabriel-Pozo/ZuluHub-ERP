@@ -417,6 +417,18 @@ describe("definicionDeLaUltimaDecision", () => {
     expect(definicionDeLaUltimaDecision([v2, v3, v1])).toBe(v3.definicion);
     expect(definicionDeLaUltimaDecision([v1])).toBe(v1.definicion);
   });
+
+  // La base lo impide (`version_de_marca_numero_uk`), pero el desempate queda fijado: ante dos versiones con el
+  // mismo número gana la primera de la lista, en cualquier orden, y no la última por casualidad.
+  it("con el mismo número en dos versiones gana la primera de la lista (desempate fijo)", () => {
+    const a = { numero: 2, definicion: def("a") };
+    const b = { numero: 2, definicion: def("b") };
+    expect(definicionDeLaUltimaDecision([a, b])).toBe(a.definicion);
+    expect(definicionDeLaUltimaDecision([b, a])).toBe(b.definicion);
+    // Y un número mayor posterior sigue ganando sobre el empate.
+    const c = { numero: 3, definicion: def("c") };
+    expect(definicionDeLaUltimaDecision([a, b, c])).toBe(c.definicion);
+  });
 });
 
 describe("decidirConfirmacionDeMarca", () => {
