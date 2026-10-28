@@ -26,9 +26,16 @@ export type PropsDeVentanaDeConfirmacion = Readonly<{
   numero: number;
   /** Hay un cambio programado: confirmar exige reemplazarlo. */
   hayProgramada: boolean;
+  /** La `version` del borrador que se va a confirmar (la de la ficha); `null` si no hay borrador y no se puede confirmar. */
+  versionDelBorrador: number | null;
 }>;
 
-type Fijada = Readonly<{ vigenteDesde: string; motivo: string; reemplazaProgramada: boolean }>;
+type Fijada = Readonly<{
+  versionEsperada: number;
+  vigenteDesde: string;
+  motivo: string;
+  reemplazaProgramada: boolean;
+}>;
 
 type Rechazo =
   | Readonly<{ tipo: "ERROR"; error: ErrorParaLaPantalla; referencia: string | undefined }>
@@ -38,9 +45,9 @@ type Hecho = Readonly<{ numero: number; vigenteDesde: string }>;
 type CampoLocal = "vigenteDesde" | "motivo" | "reemplaza";
 
 /**
- * La ventana de «Confirmar versión». La fecha, el motivo y la casilla se FIJAN una sola vez, junto con la clave de
- * idempotencia, al primer toque del intento y se reusan en cada reintento (si cambiaran, el servidor respondería
- * CLAVE_REUTILIZADA). El código del segundo factor se pide en otra ventana, apilada encima.
+ * La ventana de «Confirmar versión». La versión del borrador, la fecha, el motivo y la casilla se FIJAN una sola vez,
+ * junto con la clave de idempotencia, al primer toque del intento y se reusan en cada reintento (si cambiaran, el
+ * servidor respondería CLAVE_REUTILIZADA, aunque la ficha de atrás se haya refrescado con otra versión). El código del segundo factor se pide en otra ventana, apilada encima.
  */
 export function VentanaDeConfirmacion({
   abierta,
@@ -49,6 +56,7 @@ export function VentanaDeConfirmacion({
   nombre,
   numero,
   hayProgramada,
+  versionDelBorrador,
 }: PropsDeVentanaDeConfirmacion) {
   const router = useRouter();
   const [, enTransicion] = useTransition();
@@ -57,6 +65,7 @@ export function VentanaDeConfirmacion({
   const [reemplaza, setReemplaza] = useState(false);
   const [locales, setLocales] = useState<Partial<Record<CampoLocal, string>>>({});
   const fijada = useRef<Fijada | null>(null);
+  const [versionDelIntento, setVersionDelIntento] = useState<number | null>(null);
   const [referenciaIncierta, setReferenciaIncierta] = useState<string | undefined>(undefined);
   const idDeLaCasilla = useId();
   const { pedirCodigo, ventana } = useVentanaDeCodigo();
@@ -155,11 +164,14 @@ export function VentanaDeConfirmacion({
   function tocarConfirmar() {
     if (envio.enCurso) return;
     if (fijada.current === null) {
+      if (versionDelBorrador === null) return;
       const faltas = validar();
       setLocales(faltas);
       if (Object.keys(faltas).length > 0) return;
       // Se fijan acá, al primer toque del intento, junto con la clave.
+      setVersionDelIntento(versionDelBorrador);
       fijada.current = {
+        versionEsperada: versionDelBorrador,
         vigenteDesde,
         motivo: motivo.trim(),
         reemplazaProgramada: hayProgramada && reemplaza,
@@ -179,6 +191,11 @@ export function VentanaDeConfirmacion({
     alCerrar();
   }
 
+  // Con un intento en marcha se muestra la versión fijada, aunque la ficha de atrás ya traiga otra.
+  const versionAConfirmar = bloqueada
+    ? (versionDelIntento ?? versionDelBorrador)
+    : versionDelBorrador;
+  const sinBorrador = versionDelBorrador === null && !bloqueada;
   const resumen = `Se confirma la versión ${String(numero)} de ${nombre}, vigente desde ${
     vigenteDesde === "" ? "la fecha que elijas" : fechaLegible(vigenteDesde)
   }.`;
@@ -318,13 +335,16 @@ export function VentanaDeConfirmacion({
                   )}
                 </div>
               ) : null}
+              {versionAConfirmar === null ? null : (
+                <Texto>Vas a confirmar el borrador n.º {versionAConfirmar}.</Texto>
+              )}
               <Texto>{resumen}</Texto>
               <Boton
                 tipo="submit"
                 ancho="completo"
                 enviando={envio.enCurso}
                 textoEnviando="Confirmando…"
-                deshabilitado={!envio.enCurso && (envio.bloqueado || retirada)}
+                deshabilitado={!envio.enCurso && (envio.bloqueado || retirada || sinBorrador)}
                 motivo={envio.motivoQueNoPuede}
               >
                 Confirmar versión

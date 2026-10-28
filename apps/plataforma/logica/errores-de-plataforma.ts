@@ -151,9 +151,10 @@ const POR_CODIGO_DE_SUBMARCA: Readonly<Record<string, ErrorParaLaPantalla>> = {
   ID_INVALIDO: { tipo: "PANTALLA_VIEJA", texto: TEXTO_SUBMARCA_VIEJA },
   VERSION_DESACTUALIZADA: {
     tipo: "PANTALLA_VIEJA",
-    texto:
-      "Alguien más cambió el borrador. Recargá la pantalla para ver sus cambios antes de guardar los tuyos.",
+    texto: "Alguien más cambió el borrador. Recargá para ver la última versión.",
   },
+  // La pantalla siempre manda una versión válida: si el servidor la rechaza es un error nuestro, no algo que la persona arregle.
+  VERSION_ESPERADA_INVALIDA: { tipo: "INESPERADO" },
 };
 
 const CAMPO_DE_TEMA: Readonly<Record<string, CampoDeSubmarca>> = {

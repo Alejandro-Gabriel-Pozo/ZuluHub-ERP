@@ -34,6 +34,7 @@ const BORRADOR = {
 const CONFIRMACION = {
   claveDeIdempotencia: CLAVE,
   marcaId: MARCA,
+  versionEsperada: 3,
   vigenteDesde: "2026-11-02",
   motivo: "Cambio de imagen",
   reemplazaProgramada: false,
@@ -140,10 +141,46 @@ describe("confirmarVersionDeSubmarcaDeConsola", () => {
     expect(pedido).toMatchObject({
       claveDeIdempotencia: CLAVE,
       marcaId: MARCA,
+      versionEsperada: 3,
       motivo: "Cambio de imagen",
       reemplazaProgramada: false,
     });
     expect(pedido["vigenteDesde"]).toBeInstanceOf(Date);
+  });
+
+  it("la versión del borrador que se vio llega al caso de uso tal cual", async () => {
+    await confirmarVersionDeSubmarcaDeConsola({ ...CONFIRMACION, versionEsperada: 7 });
+    expect(confirmarVersionDeMarca.mock.calls[0]?.[0]).toMatchObject({ versionEsperada: 7 });
+  });
+
+  it.each([undefined, null, 0, -2, 1.5, "3"])(
+    "versionEsperada %j: entrada inválida, no llega a pedir acceso ni al caso",
+    async (versionEsperada) => {
+      const r = await confirmarVersionDeSubmarcaDeConsola({ ...CONFIRMACION, versionEsperada });
+      expect(r).toMatchObject({ ok: false, error: { tipo: "GENERAL" } });
+      expect(exigirAcceso).not.toHaveBeenCalled();
+      expect(confirmarVersionDeMarca).not.toHaveBeenCalled();
+    },
+  );
+
+  it("el borrador cambió desde que se vio: pantalla vieja con el texto de «Recargar», sin el código", async () => {
+    confirmarVersionDeMarca.mockResolvedValue({ ok: false, error: "VERSION_DESACTUALIZADA" });
+    const r = await confirmarVersionDeSubmarcaDeConsola(CONFIRMACION);
+    expect(r).toEqual({
+      ok: false,
+      error: {
+        tipo: "PANTALLA_VIEJA",
+        texto: "Alguien más cambió el borrador. Recargá para ver la última versión.",
+      },
+    });
+  });
+
+  it("VERSION_ESPERADA_INVALIDA del caso: INESPERADO con referencia y sin el código hacia afuera", async () => {
+    confirmarVersionDeMarca.mockResolvedValue({ ok: false, error: "VERSION_ESPERADA_INVALIDA" });
+    const r = await confirmarVersionDeSubmarcaDeConsola(CONFIRMACION);
+    expect(r).toMatchObject({ ok: false, error: { tipo: "INESPERADO" } });
+    expect(JSON.stringify(r)).not.toContain("VERSION_ESPERADA_INVALIDA");
+    expect(registro).toHaveBeenCalled();
   });
 
   it("segundo factor: se devuelve para que la pantalla pida el código y repita con la misma clave", async () => {

@@ -179,9 +179,11 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
     ? TEXTO_DE_RETIRADA
     : conCambios
       ? "Guardá el borrador antes de confirmar."
-      : !ficha.puedeConfirmarse.ok
-        ? (textoParaAviso(ficha.puedeConfirmarse.error) ?? "Todavía no se puede confirmar.")
-        : undefined;
+      : ficha.borrador === null
+        ? "Guardá un borrador antes de confirmar."
+        : !ficha.puedeConfirmarse.ok
+          ? (textoParaAviso(ficha.puedeConfirmarse.error) ?? "Todavía no se puede confirmar.")
+          : undefined;
 
   const numeroNuevo = ficha.numeroDeLaVersionNueva;
 
@@ -215,7 +217,12 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
             </Boton>
             <Boton
               variante="secundaria"
-              deshabilitado={conCambios || !ficha.puedeConfirmarse.ok || bloqueadaLaEdicion}
+              deshabilitado={
+                conCambios ||
+                ficha.borrador === null ||
+                !ficha.puedeConfirmarse.ok ||
+                bloqueadaLaEdicion
+              }
               motivo={motivoDeConfirmar}
               alTocar={() => {
                 setConfirmando(true);
@@ -308,6 +315,7 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
         nombre={ficha.nombre}
         numero={numeroNuevo}
         hayProgramada={ficha.hayProgramada}
+        versionDelBorrador={ficha.borrador?.version ?? null}
       />
     </>
   );

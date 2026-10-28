@@ -376,8 +376,17 @@ describe("errorParaLaPantalla: submarca", () => {
     }
     const v = errorParaLaPantalla("VERSION_DESACTUALIZADA", "SUBMARCA");
     expect(v.tipo).toBe("PANTALLA_VIEJA");
-    expect(textoDe(v)).toContain("Alguien más cambió el borrador");
-    expect(textoDe(v)).toContain("Recargá la pantalla");
+    expect(v).toEqual({
+      tipo: "PANTALLA_VIEJA",
+      texto: "Alguien más cambió el borrador. Recargá para ver la última versión.",
+    });
+  });
+
+  it("VERSION_ESPERADA_INVALIDA en submarca es un error interno sin detalle; sin contexto sigue general", () => {
+    expect(errorParaLaPantalla("VERSION_ESPERADA_INVALIDA", "SUBMARCA")).toEqual({
+      tipo: "INESPERADO",
+    });
+    expect(errorParaLaPantalla("VERSION_ESPERADA_INVALIDA").tipo).toBe("GENERAL");
   });
 
   it("sin contexto, el alta conserva su traducción", () => {

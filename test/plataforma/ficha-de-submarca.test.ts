@@ -206,8 +206,7 @@ describe("armarFichaDeSubmarca", () => {
       ok: false,
       error: {
         tipo: "PANTALLA_VIEJA",
-        texto:
-          "Alguien más cambió el borrador. Recargá la pantalla para ver sus cambios antes de guardar los tuyos.",
+        texto: "Alguien más cambió el borrador. Recargá para ver la última versión.",
       },
     });
     const raro = armarFichaDeSubmarca(
