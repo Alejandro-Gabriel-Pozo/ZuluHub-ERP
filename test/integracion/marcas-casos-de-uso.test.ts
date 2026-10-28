@@ -500,13 +500,28 @@ describe.skipIf(base === null)("marcas de plataforma: casos de uso contra Postgr
   });
 
   describe("confirmarVersionDeMarca", () => {
-    const confirmar = (
+    /** La `version` del borrador de la marca, como la leería la ficha; 1 si no hay (o si el id no es un uuid). */
+    const versionDelBorrador = async (marcaId: string): Promise<number> => {
+      try {
+        const fila = (
+          await dueno.query<{ version: number }>(
+            "select version from version_de_marca where marca_id = $1 and estado = 'BORRADOR'",
+            [marcaId],
+          )
+        ).rows[0];
+        return fila?.version ?? 1;
+      } catch {
+        return 1;
+      }
+    };
+    const confirmar = async (
       marcaId: string,
       extra: Partial<Parameters<CasosDeUsoDeMarcasYPlanes["confirmarVersionDeMarca"]>[1]> = {},
     ) =>
       casos.confirmarVersionDeMarca(comoAdminAhora(), {
         claveDeIdempotencia: clave(),
         marcaId,
+        versionEsperada: await versionDelBorrador(marcaId),
         vigenteDesde: desdeAhora(0),
         motivo: "primera versión",
         reemplazaProgramada: false,
@@ -594,28 +609,21 @@ describe.skipIf(base === null)("marcas de plataforma: casos de uso contra Postgr
           vocabulario: { "rol.operador.nombre": "Mozo" },
         }),
       );
-      // El borrador nuevo hereda la definición de la anterior? No: arranca vacío; hay que completar lo que falta.
-      expect(falla(await confirmar(marca))).toEqual({
-        codigo: "DEFINICION_INCOMPLETA",
-        faltan: [
-          "tema.primary",
-          "tema.on-primary",
-          "tema.secondary",
-          "tema.accent",
-          "logo",
-          "modulos_iniciales",
-          "plan_por_defecto",
-        ],
-      });
-      const { plan } = await crearPlanPublicado(dueno, { modulos: ["caja"] });
-      exito(
-        await guardar(marca, 1, {
-          tema: TEMA,
-          logo: LOGO,
-          modulosIniciales: [],
-          planPorDefectoId: plan,
-        }),
+      // El primer borrador parte de la versión confirmada: conserva los colores, el logo, los módulos y el plan.
+      const borrador = await filaDeVersion(
+        (
+          await dueno.query<{ id: string }>(
+            "select id from version_de_marca where marca_id = $1 and estado = 'BORRADOR'",
+            [marca],
+          )
+        ).rows[0]?.id as string,
       );
+      expect(borrador).toMatchObject({
+        nombre_visible: "Mi Calendario 2",
+        tema: TEMA,
+        logo: LOGO,
+        modulos_iniciales: ["caja"],
+      });
       expect(exito(await confirmar(marca, { motivo: "cambio de nombre" }))).toEqual({ numero: 2 });
       const constancias = (await auditoriaDePlataformaDe(dueno, "marca", marca)).filter(
         (c) => c.accion === "MARCA_VERSION_CONFIRMADA",
@@ -626,7 +634,8 @@ describe.skipIf(base === null)("marcas de plataforma: casos de uso contra Postgr
         despues: {
           numero: 2,
           nombreVisible: "Mi Calendario 2",
-          modulosIniciales: [],
+          tema: TEMA,
+          modulosIniciales: ["caja"],
           vocabulario: [{ texto: "rol.operador.nombre", antes: null, despues: "Mozo" }],
         },
       });
@@ -749,6 +758,7 @@ describe.skipIf(base === null)("marcas de plataforma: casos de uso contra Postgr
       const entrada = {
         claveDeIdempotencia: clave(),
         marcaId: marca,
+        versionEsperada: 1,
         vigenteDesde: desdeAhora(0),
         motivo: "primera",
         reemplazaProgramada: false,
@@ -781,6 +791,7 @@ describe.skipIf(base === null)("marcas de plataforma: casos de uso contra Postgr
       const r = await casos.confirmarVersionDeMarca(enLaHora(manana), {
         claveDeIdempotencia: clave(),
         marcaId: marca,
+        versionEsperada: 1,
         vigenteDesde: manana,
         motivo: "adelantada",
         reemplazaProgramada: false,

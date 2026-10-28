@@ -139,6 +139,7 @@ describe.skipIf(base === null)("marcas y planes de plataforma: autorización y a
         c.confirmarVersionDeMarca(x, {
           claveDeIdempotencia: claveFija ?? clave(),
           marcaId: m.marcaConBorrador,
+          versionEsperada: 1,
           vigenteDesde: desdeAhora(0),
           motivo: "alta",
           reemplazaProgramada: false,

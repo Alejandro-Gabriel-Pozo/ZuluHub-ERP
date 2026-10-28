@@ -252,6 +252,7 @@ describe.skipIf(base === null)("fichaDeMarca efectiva: contra Postgres", () => {
       return casos.confirmarVersionDeMarca(contexto, {
         claveDeIdempotencia: clave(),
         marcaId,
+        versionEsperada: 1,
         vigenteDesde: contexto.ahora,
         motivo: "prueba de coincidencia",
         reemplazaProgramada: true,
@@ -419,6 +420,7 @@ describe.skipIf(base === null)("fichaDeMarca efectiva: contra Postgres", () => {
       const sinReemplazar = await casos.confirmarVersionDeMarca(contexto, {
         claveDeIdempotencia: clave(),
         marcaId: marca,
+        versionEsperada: 1,
         vigenteDesde: contexto.ahora,
         motivo: "x",
         reemplazaProgramada: false,

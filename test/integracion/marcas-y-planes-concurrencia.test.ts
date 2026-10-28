@@ -198,6 +198,7 @@ describe.skipIf(base === null)("marcas y planes de plataforma: concurrencia", ()
               casos.confirmarVersionDeMarca(comoAdminAhora(), {
                 claveDeIdempotencia: clave(),
                 marcaId: marca,
+                versionEsperada: 1,
                 vigenteDesde: desdeAhora(0),
                 motivo: "alta",
                 reemplazaProgramada: false,
@@ -231,6 +232,7 @@ describe.skipIf(base === null)("marcas y planes de plataforma: concurrencia", ()
           const entrada = {
             claveDeIdempotencia: clave(),
             marcaId: marca,
+            versionEsperada: 1,
             vigenteDesde: desdeAhora(0),
             motivo: "alta",
             reemplazaProgramada: false,
