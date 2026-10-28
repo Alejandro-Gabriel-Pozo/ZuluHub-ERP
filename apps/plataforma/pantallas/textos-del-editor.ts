@@ -5,6 +5,7 @@ export function textoGeneral(error: ErrorParaLaPantalla): string {
   switch (error.tipo) {
     case "GENERAL":
     case "PANTALLA_VIEJA":
+    case "MARCA_RETIRADA":
       return error.texto;
     case "OCULTAR_ACCION":
       return "No tenés permiso para editar submarcas.";
@@ -21,6 +22,7 @@ export function textoParaAviso(error: ErrorParaLaPantalla): string | null {
     case "CAMPO":
     case "GENERAL":
     case "PANTALLA_VIEJA":
+    case "MARCA_RETIRADA":
       return error.texto;
     case "OCULTAR_ACCION":
       return "No tenés permiso para confirmar versiones.";

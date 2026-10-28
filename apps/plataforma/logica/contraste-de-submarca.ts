@@ -3,7 +3,7 @@
  * dominio de marcas, pero sin importarlo: la prueba compara las dos. Los mínimos y los colores de las
  * superficies llegan del catálogo del backend (`catalogosDeMarca`).
  */
-import { SUPERFICIES, type ColoresDeSubmarca } from "./submarca";
+import { normalizarColor, SUPERFICIES, type ColoresDeSubmarca } from "./submarca";
 
 export type CatalogoDeContraste = Readonly<{
   superficies: readonly { valor: string; fondo: string; superficie: string }[];
@@ -40,11 +40,20 @@ const MINIMO_POR_DEFECTO: Readonly<Record<ResultadoDeContraste["par"], number>> 
   "accent/superficie": 3,
 };
 
-/** Trunca a un decimal (nunca sube) y usa coma: 4,499 se muestra «4,4», no «4,5». */
-function numeroParaLeer(n: number): string {
-  const truncado = Math.floor(n * 10 + 1e-9) / 10;
-  return truncado.toFixed(1).replace(".", ",");
+/**
+ * Trunca a un decimal (nunca sube) y usa coma: 4,499 se muestra «4,4», no «4,5». Sin épsilon. Si la razón no
+ * llega al mínimo, el texto tampoco puede mostrar el mínimo (un error de coma flotante podría empujarlo hasta
+ * ahí): se muestra «mínimo − 0,1».
+ */
+export function razonParaLeer(razon: number, minimo: number): string {
+  const truncado = Math.floor(razon * 10);
+  const decimas =
+    razon < minimo && truncado / 10 >= minimo ? Math.round(minimo * 10) - 1 : truncado;
+  return (decimas / 10).toFixed(1).replace(".", ",");
 }
+
+const minimoParaLeer = (minimo: number): string =>
+  (Math.floor(minimo * 10) / 10).toFixed(1).replace(".", ",");
 
 function textoDeContraste(
   par: ResultadoDeContraste["par"],
@@ -53,7 +62,7 @@ function textoDeContraste(
   superficie: string,
 ): string {
   const rotulo = (SUPERFICIES.find((s) => s.valor === superficie)?.etiqueta ?? "").toLowerCase();
-  const llega = `llega a ${numeroParaLeer(razon)} de ${numeroParaLeer(minimo)} que se necesita.`;
+  const llega = `llega a ${razonParaLeer(razon, minimo)} de ${minimoParaLeer(minimo)} que se necesita.`;
   switch (par) {
     case "on-primary/primary":
       return `El texto no se lee sobre el color principal: ${llega}`;
@@ -75,12 +84,15 @@ export function evaluarContraste(
     catalogo.pares.find((p) => p.par === par)?.minimo ?? MINIMO_POR_DEFECTO[par];
   const medir = (
     par: ResultadoDeContraste["par"],
-    a: string,
+    escritoA: string,
     rotuloA: string,
-    b: string | undefined,
+    escritoB: string | undefined,
     rotuloB: string,
   ): ResultadoDeContraste => {
     const minimo = minimoDe(par);
+    // Se mide lo que se va a guardar: sin espacios, sin mayúsculas y con el «#».
+    const a = normalizarColor(escritoA);
+    const b = escritoB === undefined ? undefined : normalizarColor(escritoB);
     const falta = !HEX.test(a) ? rotuloA : b === undefined || !HEX.test(b) ? rotuloB : null;
     if (falta !== null || b === undefined) {
       return {

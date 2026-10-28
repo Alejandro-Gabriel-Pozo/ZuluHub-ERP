@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { armarFichaDeSubmarca } from "../../apps/plataforma/logica/ficha-de-submarca";
-import { ASPECTO_POR_DEFECTO } from "../../apps/plataforma/logica/submarca";
+import { ASPECTO_POR_DEFECTO, SIN_PROPIOS } from "../../apps/plataforma/logica/submarca";
 import type {
   FichaDeMarca,
   VistaDeCatalogosDeMarca,
@@ -79,6 +79,7 @@ describe("armarFichaDeSubmarca", () => {
       nombreVisible: "",
       colores: { primary: "", onPrimary: "", secondary: "", accent: "" },
       aspecto: ASPECTO_POR_DEFECTO,
+      propio: SIN_PROPIOS,
     });
   });
 
@@ -102,9 +103,40 @@ describe("armarFichaDeSubmarca", () => {
         titulos: "SERIF",
         ingreso: "DIVIDIDO",
       },
+      propio: {
+        colores: { primary: true, onPrimary: true, secondary: true, accent: true },
+        aspecto: { estilo: true, superficie: true, esquinas: true, titulos: true, ingreso: true },
+      },
     });
     expect(r.formularioDeLaVigente).toEqual(r.formulario);
     expect(r.borrador).toBeNull();
+  });
+
+  it("el origen de cada dato se lleva como `propio`: heredado y defecto no lo son", () => {
+    const heredado = { tipo: "heredado", marcaId: "m-padre", marcaCodigo: "padre" } as const;
+    const base = definicion("Sur", "#112233");
+    const r = armarFichaDeSubmarca(
+      ficha({
+        borradorEfectivo: {
+          ...base,
+          tema: {
+            ...base.tema,
+            primary: { valor: "#112233", origen: heredado },
+            accent: { valor: "#aa00bb", origen: { tipo: "defecto" } },
+          },
+          aspecto: {
+            ...base.aspecto,
+            esquinas: { valor: "SUAVE", origen: { tipo: "defecto" } },
+            titulos: { valor: "SERIF", origen: heredado },
+          },
+        },
+      }),
+      CATALOGOS,
+    );
+    expect(r.formulario.propio).toEqual({
+      colores: { primary: false, onPrimary: true, secondary: true, accent: false },
+      aspecto: { estilo: true, superficie: true, esquinas: false, titulos: false, ingreso: true },
+    });
   });
 
   it("con borrador: el formulario sale del borrador efectivo y trae su versión", () => {

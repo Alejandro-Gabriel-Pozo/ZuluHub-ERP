@@ -9,7 +9,7 @@ import type {
 } from "../../../src/plataforma/consultas/contrato-de-marcas-y-planes";
 import type { CatalogoDeContraste, ResultadoDeContraste } from "./contraste-de-submarca";
 import { errorParaLaPantalla, type ErrorParaLaPantalla } from "./errores-de-plataforma";
-import { ASPECTO_POR_DEFECTO, type FormularioDeSubmarca } from "./submarca";
+import { ASPECTO_POR_DEFECTO, SIN_PROPIOS, type FormularioDeSubmarca } from "./submarca";
 
 export type FichaDeSubmarca = Readonly<{
   id: string;
@@ -30,7 +30,10 @@ export type FichaDeSubmarca = Readonly<{
   catalogo: CatalogoDeContraste;
 }>;
 
+const esPropio = (campo: { origen: { tipo: string } }): boolean => campo.origen.tipo === "propio";
+
 function formularioDe(definicion: DefinicionEfectivaDeMarca): FormularioDeSubmarca {
+  const { tema, aspecto } = definicion;
   return {
     nombreVisible: definicion.nombreVisible.valor ?? "",
     colores: {
@@ -46,6 +49,21 @@ function formularioDe(definicion: DefinicionEfectivaDeMarca): FormularioDeSubmar
       titulos: definicion.aspecto.titulos.valor,
       ingreso: definicion.aspecto.ingreso.valor,
     },
+    propio: {
+      colores: {
+        primary: esPropio(tema["primary"]),
+        onPrimary: esPropio(tema["on-primary"]),
+        secondary: esPropio(tema["secondary"]),
+        accent: esPropio(tema["accent"]),
+      },
+      aspecto: {
+        estilo: esPropio(aspecto.estilo),
+        superficie: esPropio(aspecto.superficie),
+        esquinas: esPropio(aspecto.esquinas),
+        titulos: esPropio(aspecto.titulos),
+        ingreso: esPropio(aspecto.ingreso),
+      },
+    },
   } as FormularioDeSubmarca;
 }
 
@@ -53,6 +71,7 @@ const FORMULARIO_VACIO: FormularioDeSubmarca = {
   nombreVisible: "",
   colores: { primary: "", onPrimary: "", secondary: "", accent: "" },
   aspecto: ASPECTO_POR_DEFECTO,
+  propio: SIN_PROPIOS,
 };
 
 export function armarFichaDeSubmarca(

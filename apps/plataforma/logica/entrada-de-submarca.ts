@@ -86,8 +86,9 @@ function cambiosDe(valor: unknown): CambiosDelBorrador | null {
     cambios.tema = tema;
   }
   if (Object.hasOwn(valor, "aspecto")) {
+    // Parcial: lo que no se manda sigue heredando (o rige el defecto); el caso de uso valida cada valor.
     const aspecto = textosDe(valor["aspecto"], TOKENS_DE_ASPECTO, LARGO_MAXIMO_DE_ASPECTO, {
-      completo: true,
+      completo: false,
     });
     if (aspecto === null) return null;
     cambios.aspecto = aspecto;

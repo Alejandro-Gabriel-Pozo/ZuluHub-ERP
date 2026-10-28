@@ -57,6 +57,7 @@ export function VentanaDeConfirmacion({
   const [reemplaza, setReemplaza] = useState(false);
   const [locales, setLocales] = useState<Partial<Record<CampoLocal, string>>>({});
   const fijada = useRef<Fijada | null>(null);
+  const [referenciaIncierta, setReferenciaIncierta] = useState<string | undefined>(undefined);
   const idDeLaCasilla = useId();
   const { pedirCodigo, ventana } = useVentanaDeCodigo();
 
@@ -74,8 +75,20 @@ export function VentanaDeConfirmacion({
         pideCodigo: (r) => !r.ok && r.error.tipo === "SEGUNDO_FACTOR",
         pedirCodigo,
       });
+      if (resultado === CANCELADO) {
+        fijada.current = null;
+        setReferenciaIncierta(undefined);
+        return { ok: false, rechazo: { tipo: "CANCELADO" } };
+      }
+      // Un error inesperado NO es una respuesta definitiva: puede que la versión haya quedado confirmada. Se lanza
+      // para que el intento quede «incierto» y se reintente con la MISMA clave y los MISMOS valores (no se toca
+      // `fijada`); la referencia `PD-…` se guarda para mostrarla junto al aviso.
+      if (!resultado.ok && resultado.error.tipo === "INESPERADO") {
+        setReferenciaIncierta(resultado.referencia);
+        throw new Error("Resultado inesperado: se reintenta con la misma clave");
+      }
       fijada.current = null;
-      if (resultado === CANCELADO) return { ok: false, rechazo: { tipo: "CANCELADO" } };
+      setReferenciaIncierta(undefined);
       if (resultado.ok) {
         return {
           ok: true,
@@ -96,6 +109,8 @@ export function VentanaDeConfirmacion({
   const rechazo = estado.tipo === "rechazado" ? estado.rechazo : null;
   const errorDeServidor = rechazo?.tipo === "ERROR" ? rechazo.error : null;
   const textoGeneral = errorDeServidor === null ? null : textoDelError(errorDeServidor);
+  // Una submarca retirada no se puede confirmar: no hay nada que reintentar.
+  const retirada = errorDeServidor?.tipo === "MARCA_RETIRADA";
 
   // Al confirmarse, la pantalla de atrás se vuelve a pedir al servidor para mostrar la versión nueva.
   useEffect(() => {
@@ -200,7 +215,7 @@ export function VentanaDeConfirmacion({
           >
             <Pila separacion={4}>
               {errorDeServidor === null || textoGeneral === null ? null : (
-                <Aviso tono={errorDeServidor.tipo === "OCULTAR_ACCION" ? "aviso" : "peligro"}>
+                <Aviso tono={tonoDelError(errorDeServidor)}>
                   <Texto>{textoGeneral}</Texto>
                   {errorDeServidor.tipo === "INESPERADO" &&
                   rechazo?.tipo === "ERROR" &&
@@ -239,6 +254,9 @@ export function VentanaDeConfirmacion({
                     {envio.motivoQueNoPuede ??
                       "No supimos si la confirmación quedó registrada. Reintentá: no se va a duplicar."}
                   </Texto>
+                  {referenciaIncierta === undefined ? null : (
+                    <Texto>Código de referencia: {referenciaIncierta}</Texto>
+                  )}
                 </Aviso>
               ) : null}
               <Campo
@@ -306,7 +324,7 @@ export function VentanaDeConfirmacion({
                 ancho="completo"
                 enviando={envio.enCurso}
                 textoEnviando="Confirmando…"
-                deshabilitado={!envio.enCurso && envio.bloqueado}
+                deshabilitado={!envio.enCurso && (envio.bloqueado || retirada)}
                 motivo={envio.motivoQueNoPuede}
               >
                 Confirmar versión
@@ -329,11 +347,15 @@ export function VentanaDeConfirmacion({
   );
 }
 
+const tonoDelError = (error: ErrorParaLaPantalla): "aviso" | "peligro" =>
+  error.tipo === "OCULTAR_ACCION" || error.tipo === "MARCA_RETIRADA" ? "aviso" : "peligro";
+
 /** El texto de un error que no es de los campos de la ventana. */
 function textoDelError(error: ErrorParaLaPantalla): string | null {
   switch (error.tipo) {
     case "GENERAL":
     case "PANTALLA_VIEJA":
+    case "MARCA_RETIRADA":
       return error.texto;
     case "CAMPO":
       return error.campo === "vigenteDesde" || error.campo === "motivo" ? null : error.texto;
