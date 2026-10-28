@@ -157,6 +157,30 @@ const POR_CODIGO_DE_SUBMARCA: Readonly<Record<string, ErrorParaLaPantalla>> = {
   VERSION_ESPERADA_INVALIDA: { tipo: "INESPERADO" },
 };
 
+const TEXTO_PLAN_VIEJO =
+  "Alguien más cambió el plan de este cliente. Recargá la pantalla para ver el estado actual antes de cambiarlo.";
+const TEXTO_PLAN_NO_ASIGNABLE = "Ese plan no se puede asignar: no está publicado o fue retirado.";
+
+/** En la pantalla «Plan de una empresa» (`asignarPlan`) estos códigos tienen su propio texto. */
+const POR_CODIGO_DE_PLAN: Readonly<Record<string, ErrorParaLaPantalla>> = {
+  ID_INVALIDO: { tipo: "PANTALLA_VIEJA", texto: TEXTO_SUBMARCA_VIEJA },
+  TENANT_NO_ENCONTRADO: { tipo: "PANTALLA_VIEJA", texto: TEXTO_SUBMARCA_VIEJA },
+  EMPRESA_NO_ENCONTRADA: general("No encontramos esa empresa."),
+  VERSION_DE_PLAN_NO_ENCONTRADA: { tipo: "PANTALLA_VIEJA", texto: TEXTO_SUBMARCA_VIEJA },
+  VIGENCIA_INVALIDA: campo("vigenteDesde", "Elegí una fecha válida."),
+  VIGENCIA_RETROACTIVA: campo("vigenteDesde", "La fecha tiene que ser posterior a hoy."),
+  MOTIVO_OBLIGATORIO: campo("motivo", "Escribí el motivo del cambio."),
+  MOTIVO_DEMASIADO_LARGO: campo("motivo", "El motivo es demasiado largo."),
+  NUMERO_ESPERADO_INVALIDO: { tipo: "PANTALLA_VIEJA", texto: TEXTO_PLAN_VIEJO },
+  VERSION_DESACTUALIZADA: { tipo: "PANTALLA_VIEJA", texto: TEXTO_PLAN_VIEJO },
+  VERSION_DE_PLAN_NO_PUBLICADA: campo("versionDePlanId", TEXTO_PLAN_NO_ASIGNABLE),
+  PLAN_RETIRADO: campo("versionDePlanId", TEXTO_PLAN_NO_ASIGNABLE),
+  CAMBIO_PROGRAMADO_PENDIENTE: general(
+    "Ya hay un cambio de plan programado. Tildá «Reemplazar el cambio programado» para continuar.",
+  ),
+  ConcurrenciaAgotada: general("Se estaba guardando otro cambio a la vez. Probá de nuevo."),
+};
+
 const CAMPO_DE_TEMA: Readonly<Record<string, CampoDeSubmarca>> = {
   primary: "primary",
   "on-primary": "onPrimary",
@@ -253,7 +277,7 @@ function textoDeLimiteDelPlan(datos: Record<string, unknown>): string {
  */
 export function errorParaLaPantalla(
   error: unknown,
-  contexto: "GENERAL" | "SUBMARCA" = "GENERAL",
+  contexto: "GENERAL" | "SUBMARCA" | "PLAN" = "GENERAL",
 ): ErrorParaLaPantalla {
   let codigo: string;
   let datos: Record<string, unknown> = {};
@@ -271,6 +295,9 @@ export function errorParaLaPantalla(
   if (deSubmarca !== null) return deSubmarca;
   if (contexto === "SUBMARCA" && Object.hasOwn(POR_CODIGO_DE_SUBMARCA, codigo)) {
     return POR_CODIGO_DE_SUBMARCA[codigo] ?? INESPERADO;
+  }
+  if (contexto === "PLAN" && Object.hasOwn(POR_CODIGO_DE_PLAN, codigo)) {
+    return POR_CODIGO_DE_PLAN[codigo] ?? INESPERADO;
   }
   if (codigo === "LIMITE_DEL_PLAN") return general(textoDeLimiteDelPlan(datos));
   if (!Object.hasOwn(POR_CODIGO, codigo)) return INESPERADO;

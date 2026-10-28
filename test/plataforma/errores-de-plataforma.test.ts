@@ -394,3 +394,100 @@ describe("errorParaLaPantalla: submarca", () => {
     expect(errorParaLaPantalla("ID_INVALIDO").tipo).toBe("GENERAL");
   });
 });
+
+describe("errorParaLaPantalla: contexto PLAN (asignarPlan)", () => {
+  const VIEJA_PLAN = "La pantalla quedó vieja. Volvé a abrirla.";
+  const PLAN_CAMBIADO =
+    "Alguien más cambió el plan de este cliente. Recargá la pantalla para ver el estado actual antes de cambiarlo.";
+  const NO_ASIGNABLE = "Ese plan no se puede asignar: no está publicado o fue retirado.";
+
+  it.each(["ID_INVALIDO", "TENANT_NO_ENCONTRADO", "VERSION_DE_PLAN_NO_ENCONTRADA"])(
+    "%s es pantalla vieja",
+    (codigo) => {
+      expect(errorParaLaPantalla(codigo, "PLAN")).toEqual({
+        tipo: "PANTALLA_VIEJA",
+        texto: VIEJA_PLAN,
+      });
+    },
+  );
+
+  it("EMPRESA_NO_ENCONTRADA dice que no se encontró la empresa; fuera del contexto PLAN sigue siendo inesperado", () => {
+    expect(errorParaLaPantalla("EMPRESA_NO_ENCONTRADA", "PLAN")).toEqual({
+      tipo: "GENERAL",
+      texto: "No encontramos esa empresa.",
+    });
+    expect(errorParaLaPantalla("EMPRESA_NO_ENCONTRADA")).toEqual({ tipo: "INESPERADO" });
+  });
+
+  it.each(["NUMERO_ESPERADO_INVALIDO", "VERSION_DESACTUALIZADA"])(
+    "%s avisa que alguien cambió el plan",
+    (codigo) => {
+      expect(errorParaLaPantalla(codigo, "PLAN")).toEqual({
+        tipo: "PANTALLA_VIEJA",
+        texto: PLAN_CAMBIADO,
+      });
+    },
+  );
+
+  it("las fechas apuntan a vigenteDesde", () => {
+    expect(errorParaLaPantalla("VIGENCIA_INVALIDA", "PLAN")).toEqual({
+      tipo: "CAMPO",
+      campo: "vigenteDesde",
+      texto: "Elegí una fecha válida.",
+    });
+    expect(errorParaLaPantalla("VIGENCIA_RETROACTIVA", "PLAN")).toEqual({
+      tipo: "CAMPO",
+      campo: "vigenteDesde",
+      texto: "La fecha tiene que ser posterior a hoy.",
+    });
+  });
+
+  it("el motivo apunta a motivo", () => {
+    expect(errorParaLaPantalla("MOTIVO_OBLIGATORIO", "PLAN")).toMatchObject({
+      tipo: "CAMPO",
+      campo: "motivo",
+    });
+    expect(errorParaLaPantalla("MOTIVO_DEMASIADO_LARGO", "PLAN")).toMatchObject({
+      tipo: "CAMPO",
+      campo: "motivo",
+    });
+  });
+
+  it.each(["VERSION_DE_PLAN_NO_PUBLICADA", "PLAN_RETIRADO"])("%s apunta a versionDePlanId", (c) => {
+    expect(errorParaLaPantalla(c, "PLAN")).toEqual({
+      tipo: "CAMPO",
+      campo: "versionDePlanId",
+      texto: NO_ASIGNABLE,
+    });
+  });
+
+  it("cambio programado pendiente y concurrencia son generales", () => {
+    expect(errorParaLaPantalla("CAMBIO_PROGRAMADO_PENDIENTE", "PLAN")).toEqual({
+      tipo: "GENERAL",
+      texto:
+        "Ya hay un cambio de plan programado. Tildá «Reemplazar el cambio programado» para continuar.",
+    });
+    expect(errorParaLaPantalla({ tipo: "ConcurrenciaAgotada" }, "PLAN")).toEqual({
+      tipo: "GENERAL",
+      texto: "Se estaba guardando otro cambio a la vez. Probá de nuevo.",
+    });
+  });
+
+  it("lo común sigue igual y lo desconocido o con datos del cliente no se interpola", () => {
+    expect(errorParaLaPantalla("SIN_PERMISO", "PLAN")).toEqual({ tipo: "OCULTAR_ACCION" });
+    expect(errorParaLaPantalla("segundo_factor_reciente_requerido", "PLAN")).toEqual({
+      tipo: "SEGUNDO_FACTOR",
+    });
+    expect(errorParaLaPantalla("CODIGO_QUE_NO_EXISTE", "PLAN")).toEqual({ tipo: "INESPERADO" });
+    expect(errorParaLaPantalla("constructor", "PLAN")).toEqual({ tipo: "INESPERADO" });
+    const e = errorParaLaPantalla({ codigo: "PLAN_RETIRADO", dato: "<script>" }, "PLAN");
+    expect(textoDe(e)).not.toContain("<script>");
+  });
+
+  it("fuera del contexto PLAN no cambia lo existente", () => {
+    expect(errorParaLaPantalla("VERSION_DESACTUALIZADA")).toEqual({
+      tipo: "PANTALLA_VIEJA",
+      texto: VIEJA,
+    });
+  });
+});
