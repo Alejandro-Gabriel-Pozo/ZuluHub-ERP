@@ -428,6 +428,53 @@ describe.skipIf(base === null)("fichaDeMarca efectiva: contra Postgres", () => {
       expect(falla(sinReemplazar)).toBe("CAMBIO_PROGRAMADO_PENDIENTE");
     });
 
+    it("la última confirmada que expone la ficha es la definición de la que parte el primer borrador (una sola regla), también con una versión programada", async () => {
+      const marca = await crearMarca(dueno, { codigo: codigoAlAzar("uc"), padre: f.hija });
+      await crearVersionDeMarcaConfirmada(dueno, marca, {
+        nombreVisible: "Hoy",
+        tema: { primary: "#111111", accent: "#0f766e" },
+        aspecto: { estilo: "MODERNO" },
+        desdeSegundos: -30,
+      });
+      const programada = await crearVersionDeMarcaConfirmada(dueno, marca, {
+        nombreVisible: "Mañana",
+        tema: { primary: "#222222", "on-primary": "#ffffff" },
+        aspecto: { estilo: "LUDICO", titulos: "SERIF" },
+        vocabulario: { "rol.gerente.nombre": "Encargado" },
+        modulosIniciales: ["caja"],
+        desdeSegundos: 3600,
+      });
+
+      const antes = await ficha(marca);
+      // Rige la primera; la última decisión es la programada, y la ficha las distingue.
+      expect(antes.efectiva?.nombreVisible.valor).toBe("Hoy");
+      expect(antes.ultimaConfirmada?.numero).toBe(programada.numero);
+      expect(antes.ultimaConfirmada?.efectiva.nombreVisible.valor).toBe("Mañana");
+      expect(antes.ultimaConfirmada?.efectiva.aspecto.estilo.valor).toBe("LUDICO");
+      // Hereda de la hija lo que la programada no dice (el logo de la principal), con su origen.
+      expect(antes.ultimaConfirmada?.efectiva.logo.origen).toMatchObject({ tipo: "heredado" });
+      expect(antes.borrador).toBeNull();
+
+      // El primer borrador, sin cambios, parte de ESA definición: lo que la ficha expone es lo que se guarda.
+      const guardado = exito(
+        await casos.guardarBorradorDeMarca(comoAdminAhora(), {
+          claveDeIdempotencia: clave(),
+          marcaId: marca,
+          versionEsperada: null,
+        }),
+      );
+      const despues = await ficha(marca);
+      expect(despues.borrador?.id).toBe(guardado.borradorId);
+      expect(despues.borrador?.definicion).toEqual(antes.ultimaConfirmada?.definicion);
+      // Y el borrador no cambia cuál es la última confirmada.
+      expect(despues.ultimaConfirmada).toEqual(antes.ultimaConfirmada);
+    });
+
+    it("una marca sin versiones confirmadas no tiene última confirmada", async () => {
+      const marca = await crearMarca(dueno, { codigo: codigoAlAzar("sc"), padre: f.hija });
+      expect((await ficha(marca)).ultimaConfirmada).toBeNull();
+    });
+
     it("la ficha solo lee: no escribe, no audita y no toca claves de idempotencia", async () => {
       const antes = await huellaDeEscrituras(dueno);
       await ficha(f.nieta);
