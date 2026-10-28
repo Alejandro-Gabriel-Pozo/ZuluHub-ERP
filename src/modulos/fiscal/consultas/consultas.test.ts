@@ -184,8 +184,12 @@ type Datos = Readonly<{
   pagina?: PaginaDeFilas;
   puntosDeVenta?: readonly number[];
   alcance?: AlcanceDeSucursales;
-  /** Las sucursales activas de la empresa; por defecto una sola (`SUCURSAL_UNICA`). */
+  /** Las sucursales abiertas de la empresa; por defecto una sola (`SUCURSAL_UNICA`). */
   sucursalesActivas?: readonly SucursalId[];
+  /** Las sucursales cerradas de la empresa (D-37); por defecto ninguna. */
+  sucursalesCerradas?: readonly SucursalId[];
+  /** A qué sucursal pertenece el comprobante que se pide (D-39); por defecto `SUCURSAL_UNICA`. */
+  sucursalDelComprobante?: SucursalId | null;
 }>;
 
 /** La sucursal que tiene la empresa de prueba cuando el caso no dice otra cosa. */
@@ -223,6 +227,12 @@ function armar(datos: Datos = {}) {
         llamadas.notasDeLaPagina.push(args);
         return Promise.resolve(datos.notasDeLaPagina ?? new Map());
       },
+      sucursalDelComprobante: () =>
+        Promise.resolve(
+          datos.sucursalDelComprobante === undefined
+            ? SUCURSAL_UNICA
+            : datos.sucursalDelComprobante,
+        ),
       puntosDeVentaActivosDeLaSucursal: (...args) => {
         llamadas.puntosDeVenta.push(args);
         return Promise.resolve(datos.puntosDeVenta ?? []);
@@ -241,8 +251,11 @@ function armar(datos: Datos = {}) {
       },
     },
     sucursales: {
-      listarActivas: () =>
-        Promise.resolve((datos.sucursalesActivas ?? [SUCURSAL_UNICA]).map((id) => ({ id }))),
+      listar: () =>
+        Promise.resolve([
+          ...(datos.sucursalesActivas ?? [SUCURSAL_UNICA]).map((id) => ({ id, activa: true })),
+          ...(datos.sucursalesCerradas ?? []).map((id) => ({ id, activa: false })),
+        ]),
     },
     marca: {
       deLaEmpresa: (empresa) => {
@@ -339,9 +352,56 @@ describe("listarComprobantes", () => {
       expect(r.lecturas).toBe(0);
     });
 
-    it("una elegida que existe pero no está activa no se puede usar, ni para el gerente", async () => {
-      const r = await listarCon({ sucursalesActivas: [A, B], alcance: "TODAS" }, C);
+    it("una sucursal CERRADA se puede elegir para ver su historial (D-37): gerente y administrador, cualquiera", async () => {
+      const r = await listarCon(
+        { sucursalesActivas: [A, B], sucursalesCerradas: [C], alcance: "TODAS" },
+        C,
+      );
+      expect(r.resultado.ok).toBe(true);
+      expect(r.filtro?.sucursalId).toBe(C);
+    });
+
+    it("sin elegir, una sola ABIERTA se toma sola aunque haya cerradas; solo cerradas o varias abiertas obligan a elegir", async () => {
+      expect(
+        (await listarCon({ sucursalesActivas: [A], sucursalesCerradas: [B, C] }, null)).filtro
+          ?.sucursalId,
+      ).toBe(A);
+      for (const datos of [
+        { sucursalesActivas: [], sucursalesCerradas: [B] },
+        { sucursalesActivas: [], sucursalesCerradas: [B, C] },
+        { sucursalesActivas: [A, B], sucursalesCerradas: [C] },
+      ] as const) {
+        const r = await listarCon(
+          { ...datos, sucursalesActivas: [...datos.sucursalesActivas] },
+          null,
+        );
+        expect(r.resultado).toEqual({ ok: false, error: "SUCURSAL_NO_ELEGIDA" });
+        expect(r.lecturas).toBe(0);
+      }
+    });
+
+    it("una elegida que no es de la empresa sigue fuera de alcance, también si hay cerradas", async () => {
+      const r = await listarCon(
+        { sucursalesActivas: [A], sucursalesCerradas: [B], alcance: "TODAS" },
+        C,
+      );
       expect(r.resultado).toEqual({ ok: false, error: "SUCURSAL_FUERA_DE_ALCANCE" });
+    });
+
+    it("el operador elige las cerradas que tiene asignadas, no las demás", async () => {
+      const datos = { sucursalesActivas: [A], sucursalesCerradas: [B, C], alcance: [A, B] };
+      expect((await listarCon(datos, B)).filtro?.sucursalId).toBe(B);
+      expect((await listarCon(datos, C)).resultado).toEqual({
+        ok: false,
+        error: "SUCURSAL_FUERA_DE_ALCANCE",
+      });
+      // Con una abierta y una cerrada asignadas, sin elegir toma la abierta.
+      expect((await listarCon(datos, null)).filtro?.sucursalId).toBe(A);
+      // Con solo cerradas asignadas, hay que elegir.
+      expect((await listarCon({ ...datos, alcance: [B] }, null)).resultado).toEqual({
+        ok: false,
+        error: "SUCURSAL_NO_ELEGIDA",
+      });
     });
 
     it("sin sucursales activas: fuera de alcance, con o sin elección, y no lee nada", async () => {
@@ -606,6 +666,51 @@ describe("verComprobante", () => {
     expect(llamadas.notas).toEqual([[OTRA_EMPRESA, ID]]);
     expect(llamadas.intentos).toEqual([[OTRA_EMPRESA, ID]]);
     expect(llamadas.series).toEqual([[OTRA_EMPRESA, c.puntoDeVentaId, "FACTURA_B", "PRODUCCION"]]);
+  });
+
+  describe("la sucursal del comprobante (D-39)", () => {
+    const A = sucursalId("s-a");
+    const B = sucursalId("s-b");
+    const NO_ENCONTRADO = { ok: false, error: "COMPROBANTE_NO_ENCONTRADO" };
+    const ver = async (datos: Datos) => {
+      const { consultas, llamadas } = armar({ comprobante: guardado(), ...datos });
+      const r = await consultas.verComprobante(contexto(), { comprobanteId: ID });
+      return {
+        r,
+        leyoElResto: llamadas.notas.length + llamadas.intentos.length + llamadas.series.length,
+      };
+    };
+
+    it("gerente y administrador (todas) abren el de cualquier sucursal, también de una cerrada", async () => {
+      expect((await ver({ alcance: "TODAS", sucursalDelComprobante: A })).r.ok).toBe(true);
+      expect(
+        (await ver({ alcance: "TODAS", sucursalDelComprobante: B, sucursalesCerradas: [B] })).r.ok,
+      ).toBe(true);
+    });
+
+    it("el operador abre el de las sucursales que tiene asignadas, también si está cerrada", async () => {
+      expect((await ver({ alcance: [A], sucursalDelComprobante: A })).r.ok).toBe(true);
+      expect(
+        (await ver({ alcance: [B], sucursalDelComprobante: B, sucursalesCerradas: [B] })).r.ok,
+      ).toBe(true);
+    });
+
+    it("el operador NO abre el de una sucursal que no tiene asignada: lo mismo que si no existiera, y no lee nada más", async () => {
+      const ajeno = await ver({ alcance: [A], sucursalDelComprobante: B });
+      expect(ajeno.r).toEqual(NO_ENCONTRADO);
+      expect(ajeno.leyoElResto).toBe(0);
+      const sinAsignaciones = await ver({ alcance: [], sucursalDelComprobante: A });
+      expect(sinAsignaciones.r).toEqual(NO_ENCONTRADO);
+      // Idéntico al de un comprobante que no existe.
+      const { consultas } = armar({ comprobante: null });
+      expect(await consultas.verComprobante(contexto(), { comprobanteId: ID })).toEqual(ajeno.r);
+    });
+
+    it("un comprobante sin sucursal legible (otra empresa, borrado) también es COMPROBANTE_NO_ENCONTRADO", async () => {
+      expect((await ver({ alcance: "TODAS", sucursalDelComprobante: null })).r).toEqual(
+        NO_ENCONTRADO,
+      );
+    });
   });
 
   it("un comprobante que no está (o es de otra empresa) es COMPROBANTE_NO_ENCONTRADO", async () => {

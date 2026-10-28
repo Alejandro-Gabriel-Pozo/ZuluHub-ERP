@@ -21,6 +21,13 @@ export type DatosDelActor = Readonly<{
 }>;
 
 /**
+ * Qué sucursales cuenta el alcance. Por defecto, las ACTIVAS (para operar: emitir, vender, mover stock). Con
+ * `incluirDesactivadas`, también las que se cerraron, para quien solo MIRA el historial de una sucursal cerrada (el listado y
+ * el detalle de comprobantes, D-37 y D-39); no autoriza a operar en ellas.
+ */
+export type OpcionesDeAlcance = Readonly<{ incluirDesactivadas?: boolean }>;
+
+/**
  * Puerto de carga de datos de autorización. Solo el contexto OPERATIVO tiene actor y empresa: pasarle
  * uno de plataforma, de grupo, de trabajos o de invitación no compila.
  */
@@ -46,7 +53,11 @@ export interface CargaDeAutorizacion {
    * membresía activa, con la persona suspendida globalmente o sin persona: vacía (falla cerrado). Se
    * lee en cada llamada, sin caché: una asignación apagada un instante antes ya no cuenta. Con la
    * puerta de otra marca (o sin ella, con persona): vacía, como si no tuviera rol. El caso
-   * de uso lo usa con `exigirSucursal`; este puerto no autoriza por sí mismo.
+   * de uso lo usa con `exigirSucursal`; este puerto no autoriza por sí mismo. Con `incluirDesactivadas`, el operador
+   * recibe también las sucursales cerradas que tiene asignadas (solo para mirar historial, D-37).
    */
-  sucursalesDelActor(contexto: ContextoOperativo): Promise<AlcanceDeSucursales>;
+  sucursalesDelActor(
+    contexto: ContextoOperativo,
+    opciones?: OpcionesDeAlcance,
+  ): Promise<AlcanceDeSucursales>;
 }
