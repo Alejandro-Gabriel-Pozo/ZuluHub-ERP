@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   evaluarContraste,
   razonDeContraste,
+  razonParaLeer,
   type CatalogoDeContraste,
 } from "../../apps/plataforma/logica/contraste-de-submarca";
 import type { ColoresDeSubmarca } from "../../apps/plataforma/logica/submarca";
@@ -127,5 +128,42 @@ describe("evaluarContraste", () => {
     expect(r[0]?.cumple).toBe(true);
     expect(r[1]?.cumple).toBeNull();
     expect(r[2]?.cumple).toBeNull();
+  });
+});
+
+describe("evaluarContraste: el hex se normaliza antes de medir", () => {
+  it("mide igual un color con espacios, mayúsculas y sin «#»", () => {
+    const limpio = evaluarContraste(COLORES, "NEUTRA", CATALOGO);
+    const sucio = evaluarContraste(
+      { ...COLORES, primary: " 9A3412 ", onPrimary: "FFFFFF", accent: "0F766E" },
+      "NEUTRA",
+      CATALOGO,
+    );
+    expect(sucio).toEqual(limpio);
+  });
+
+  it("un color que no se puede normalizar sigue sin medirse", () => {
+    const [t] = evaluarContraste({ ...COLORES, primary: "#12" }, "NEUTRA", CATALOGO);
+    expect(t?.cumple).toBeNull();
+  });
+});
+
+describe("razonParaLeer: trunca sin épsilon y nunca muestra que cumple cuando no cumple", () => {
+  it.each([
+    [4.499, 4.5, "4,4"],
+    [4.45, 4.5, "4,4"],
+    [3.05, 3, "3,0"],
+    [2.999, 3, "2,9"],
+    [7.0, 4.5, "7,0"],
+  ])("razonParaLeer(%d, %d) = %s", (razon, minimo, texto) => {
+    expect(razonParaLeer(razon, minimo)).toBe(texto);
+  });
+
+  it("si el truncado alcanzaría el mínimo sin llegar, muestra mínimo − 0,1", () => {
+    // 6,8999999999999995 * 10 da 69 en coma flotante: truncar a mano diría «6,9» y parecería que cumple.
+    const casiSeisNueve = 6.8999999999999995;
+    expect(casiSeisNueve).toBeLessThan(6.9);
+    expect(Math.floor(casiSeisNueve * 10) / 10).toBe(6.9);
+    expect(razonParaLeer(casiSeisNueve, 6.9)).toBe("6,8");
   });
 });

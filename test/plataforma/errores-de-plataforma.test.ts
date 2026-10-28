@@ -368,7 +368,7 @@ describe("errorParaLaPantalla: submarca", () => {
   });
 
   it("en el contexto de submarca, los códigos compartidos son pantalla vieja", () => {
-    for (const c of ["MARCA_NO_ENCONTRADA", "MARCA_RETIRADA", "ID_INVALIDO"]) {
+    for (const c of ["MARCA_NO_ENCONTRADA", "ID_INVALIDO"]) {
       expect(errorParaLaPantalla(c, "SUBMARCA")).toEqual({
         tipo: "PANTALLA_VIEJA",
         texto: "La pantalla quedó vieja. Volvé a abrirla.",

@@ -4,7 +4,12 @@ import { useLayoutEffect, useRef } from "react";
 import { Icono } from "../../web/ui/iconos/Icono";
 import { Texto } from "../../web/ui/primitivas/Texto";
 import type { CatalogoDeContraste } from "../logica/contraste-de-submarca";
-import { esColorHex, type AspectoDeSubmarca, type ColoresDeSubmarca } from "../logica/submarca";
+import {
+  esColorHex,
+  normalizarColor,
+  type AspectoDeSubmarca,
+  type ColoresDeSubmarca,
+} from "../logica/submarca";
 import estilos from "./vista-previa-de-ingreso.module.css";
 
 export type PropsDeVistaPreviaDeIngreso = Readonly<{
@@ -36,7 +41,9 @@ export function VistaPreviaDeIngreso({
   useLayoutEffect(() => {
     const el = raiz.current;
     if (el === null) return;
-    const poner = (variable: string, valor: string | undefined) => {
+    const poner = (variable: string, escrito: string | undefined) => {
+      // Lo mismo que se va a guardar: sin espacios, en minúsculas y con el «#» (la previa no espera al «blur»).
+      const valor = escrito === undefined ? undefined : normalizarColor(escrito);
       if (valor !== undefined && esColorHex(valor)) el.style.setProperty(variable, valor);
       else el.style.removeProperty(variable);
     };

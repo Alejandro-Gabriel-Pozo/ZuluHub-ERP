@@ -101,11 +101,16 @@ describe("entradaDelBorrador: la forma de lo que manda el navegador", () => {
     }
   });
 
-  it("exige el aspecto completo con valores cortos", () => {
-    const incompleto: Record<string, string> = { ...ASPECTO };
-    delete incompleto["ingreso"];
+  it("acepta un aspecto parcial (lo que falta sigue heredando)", () => {
+    const parcial = { esquinas: "RECTA" };
+    expect(entradaDelBorrador({ ...BORRADOR, cambios: { aspecto: parcial } })).toMatchObject({
+      ok: true,
+      valor: { cambios: { aspecto: parcial } },
+    });
+  });
+
+  it("rechaza un aspecto con valores que no son texto corto", () => {
     for (const malo of [
-      incompleto,
       { ...ASPECTO, estilo: 3 },
       { ...ASPECTO, estilo: "x".repeat(41) },
       null,

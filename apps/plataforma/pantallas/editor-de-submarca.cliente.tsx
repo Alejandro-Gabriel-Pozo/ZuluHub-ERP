@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Aviso } from "../../web/ui/componentes/Aviso";
 import { Boton } from "../../web/ui/componentes/Boton";
 import { Campo } from "../../web/ui/componentes/Campo";
 import { useEnvioConClave } from "../../web/ui/patrones/useEnvioConClave";
@@ -14,9 +13,8 @@ import type { CampoDeSubmarca, ErrorParaLaPantalla } from "../logica/errores-de-
 import type { FichaDeSubmarca } from "../logica/ficha-de-submarca";
 import {
   cambiosDelBorrador,
-  esColorHex,
+  esColorMalEscrito,
   hayCambios,
-  normalizarColor,
   type AspectoDeSubmarca,
   type CambiosDelBorrador,
   type ColoresDeSubmarca,
@@ -24,7 +22,8 @@ import {
 } from "../logica/submarca";
 import { CampoDeColor } from "./campo-de-color.cliente";
 import { DesplegablesDeAspecto } from "./desplegables-de-aspecto.cliente";
-import { textoGeneral, textoParaAviso } from "./textos-del-editor";
+import { AvisosDelEditor, TEXTO_DE_RETIRADA } from "./avisos-del-editor";
+import { textoParaAviso } from "./textos-del-editor";
 import { VentanaDeConfirmacion } from "./ventana-de-confirmacion.cliente";
 import { VistaPreviaDeIngreso } from "./vista-previa-de-ingreso.cliente";
 import propios from "./submarcas.module.css";
@@ -56,6 +55,7 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
   const [fichaVista, setFichaVista] = useState(ficha);
   const [confirmando, setConfirmando] = useState(false);
   const fijada = useRef<CambiosDelBorrador | null>(null);
+  const [referenciaIncierta, setReferenciaIncierta] = useState<string | undefined>(undefined);
 
   // Cuando el servidor entrega una ficha nueva (después de guardar o confirmar), el formulario vuelve a lo guardado.
   if (ficha !== fichaVista) {
@@ -78,9 +78,17 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
         versionEsperada: ficha.borrador?.version ?? null,
         cambios,
       });
+      // Un error inesperado NO es una respuesta definitiva: puede que el borrador haya quedado guardado. Se lanza
+      // para que el intento quede «incierto» y se reintente con la MISMA clave y los MISMOS valores (no se toca
+      // `fijada`); la referencia `PD-…` se guarda para mostrarla junto al aviso.
+      if (!resultado.ok && resultado.error.tipo === "INESPERADO") {
+        setReferenciaIncierta(resultado.referencia);
+        throw new Error("Resultado inesperado: se reintenta con la misma clave");
+      }
       fijada.current = null;
+      setReferenciaIncierta(undefined);
       if (resultado.ok) return { ok: true, valor: null };
-      // Guardar no pide el segundo factor: si lo pidiera, es un error inesperado.
+      // Guardar no pide el segundo factor: si lo pidiera, la puerta lo rechazó antes de tocar nada.
       const error: ErrorParaLaPantalla =
         resultado.error.tipo === "SEGUNDO_FACTOR" ? { tipo: "INESPERADO" } : resultado.error;
       return { ok: false, rechazo: { error, referencia: resultado.referencia } };
@@ -89,10 +97,13 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
 
   const estado = envio.estado;
   const incierto = estado.tipo === "incierto";
-  const bloqueadaLaEdicion = envio.enCurso || incierto;
   const guardado = estado.tipo === "hecho";
   const rechazo = estado.tipo === "rechazado" ? estado.rechazo : null;
   const errorDeServidor = rechazo?.error ?? null;
+  // Retirada: la dice la ficha o el servidor (se retiró mientras la pantalla estaba abierta). No hay nada que editar.
+  const retiradaPorLaFicha = ficha.estado.toUpperCase() === "RETIRADA";
+  const retirada = retiradaPorLaFicha || errorDeServidor?.tipo === "MARCA_RETIRADA";
+  const bloqueadaLaEdicion = envio.enCurso || incierto || refrescando || retirada;
 
   // Guardado el borrador, se vuelve a pedir la ficha para traer la versión nueva.
   useEffect(() => {
@@ -107,8 +118,7 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
 
   /** El error de un color que se ve junto a él: formato, luego el del servidor y por último el contraste en vivo. */
   function errorDeColor(clave: ClaveDeColor): string | undefined {
-    const texto = actual.colores[clave];
-    if (texto !== "" && !esColorHex(normalizarColor(texto))) {
+    if (esColorMalEscrito(actual.colores[clave])) {
       return "Escribí el color con seis cifras, por ejemplo #1f4e79.";
     }
     const delServidor = textoDelCampo(clave);
@@ -146,12 +156,15 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
     editar((previo) => ({ ...previo, aspecto: { ...previo.aspecto, [clave]: valor } }));
   }
 
-  const hayColorMalEscrito = COLORES.some(
-    (c) => actual.colores[c.clave] !== "" && !esColorHex(normalizarColor(actual.colores[c.clave])),
-  );
+  const hayColorMalEscrito = COLORES.some((c) => esColorMalEscrito(actual.colores[c.clave]));
 
+  /**
+   * Guardar por el botón o, si algún navegador lo permitiera, con Enter en el formulario: las dos vías pasan por
+   * las mismas guardas (en curso, resultado incierto, refrescando, retirada) y, además, por la guarda síncrona del
+   * hook, así que un doble envío es un solo envío.
+   */
   function tocarGuardar() {
-    if (envio.enCurso || hayColorMalEscrito) return;
+    if (bloqueadaLaEdicion || guardado || envio.bloqueado || hayColorMalEscrito) return;
     if (fijada.current === null) {
       // Los valores del pedido se fijan acá, al primer toque del intento, y se reusan en cada reintento.
       const cambios = cambiosDelBorrador(ficha.formulario, actual);
@@ -162,11 +175,13 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
   }
 
   const motivoDeGuardar = !conCambios ? "No hay cambios para guardar." : envio.motivoQueNoPuede;
-  const motivoDeConfirmar = conCambios
-    ? "Guardá el borrador antes de confirmar."
-    : !ficha.puedeConfirmarse.ok
-      ? (textoParaAviso(ficha.puedeConfirmarse.error) ?? "Todavía no se puede confirmar.")
-      : undefined;
+  const motivoDeConfirmar = retirada
+    ? TEXTO_DE_RETIRADA
+    : conCambios
+      ? "Guardá el borrador antes de confirmar."
+      : !ficha.puedeConfirmarse.ok
+        ? (textoParaAviso(ficha.puedeConfirmarse.error) ?? "Todavía no se puede confirmar.")
+        : undefined;
 
   const numeroNuevo = ficha.numeroDeLaVersionNueva;
 
@@ -174,64 +189,25 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
     <>
       <div className={propios["editor"]}>
         <Pila separacion={4}>
-          {ficha.puedeConfirmarse.ok ? null : (
-            <Aviso tono="aviso" titulo="Todavía no se puede confirmar">
-              <Texto>
-                {textoParaAviso(ficha.puedeConfirmarse.error) ??
-                  "Revisá el borrador antes de confirmar."}
-              </Texto>
-            </Aviso>
-          )}
-          {errorDeServidor === null || errorDeServidor.tipo === "CAMPO" ? null : (
-            <Aviso
-              tono={errorDeServidor.tipo === "OCULTAR_ACCION" ? "aviso" : "peligro"}
-              accion={
-                errorDeServidor.tipo === "PANTALLA_VIEJA" ? (
-                  <Boton
-                    variante="secundaria"
-                    alTocar={() => {
-                      window.location.reload();
-                    }}
-                  >
-                    Recargar
-                  </Boton>
-                ) : null
-              }
-            >
-              <Texto>{textoGeneral(errorDeServidor)}</Texto>
-              {errorDeServidor.tipo === "INESPERADO" && rechazo?.referencia !== undefined ? (
-                <Texto>Código de referencia: {rechazo.referencia}</Texto>
-              ) : null}
-            </Aviso>
-          )}
-          {incierto ? (
-            <Aviso
-              tono="aviso"
-              accion={
-                envio.enCurso ? null : (
-                  <Boton variante="secundaria" alTocar={envio.enviar}>
-                    Reintentar
-                  </Boton>
-                )
-              }
-            >
-              <Texto>
-                {envio.motivoQueNoPuede ??
-                  "No supimos si el borrador quedó guardado. Reintentá: no se va a duplicar."}
-              </Texto>
-            </Aviso>
-          ) : null}
-          {guardado ? (
-            <Aviso tono="exito">
-              <Texto>Borrador guardado.</Texto>
-            </Aviso>
-          ) : null}
+          <AvisosDelEditor
+            puedeConfirmarse={ficha.puedeConfirmarse}
+            retiradaPorLaFicha={retiradaPorLaFicha}
+            errorDeServidor={errorDeServidor}
+            incierto={incierto}
+            enCurso={envio.enCurso}
+            guardado={guardado}
+            motivoQueNoPuede={envio.motivoQueNoPuede}
+            referenciaIncierta={referenciaIncierta}
+            alReintentar={envio.enviar}
+          />
 
           <div className={propios["barra"]}>
             <Boton
               enviando={envio.enCurso}
               textoEnviando="Guardando…"
-              deshabilitado={!envio.enCurso && (!conCambios || envio.bloqueado || refrescando)}
+              deshabilitado={
+                !envio.enCurso && (!conCambios || envio.bloqueado || bloqueadaLaEdicion)
+              }
               motivo={motivoDeGuardar}
               alTocar={tocarGuardar}
             >
@@ -239,9 +215,7 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
             </Boton>
             <Boton
               variante="secundaria"
-              deshabilitado={
-                conCambios || !ficha.puedeConfirmarse.ok || bloqueadaLaEdicion || refrescando
-              }
+              deshabilitado={conCambios || !ficha.puedeConfirmarse.ok || bloqueadaLaEdicion}
               motivo={motivoDeConfirmar}
               alTocar={() => {
                 setConfirmando(true);

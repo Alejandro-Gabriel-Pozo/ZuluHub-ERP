@@ -371,6 +371,7 @@ function textoGeneral(error: ErrorParaLaPantalla): string {
   switch (error.tipo) {
     case "GENERAL":
     case "PANTALLA_VIEJA":
+    case "MARCA_RETIRADA":
       return error.texto;
     case "OCULTAR_ACCION":
       return "No tenés permiso para dar de alta empresas.";

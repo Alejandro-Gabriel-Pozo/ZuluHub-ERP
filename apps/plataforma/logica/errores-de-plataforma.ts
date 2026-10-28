@@ -26,6 +26,8 @@ export type ErrorParaLaPantalla =
   | { tipo: "GENERAL"; texto: string }
   | { tipo: "SEGUNDO_FACTOR" }
   | { tipo: "PANTALLA_VIEJA"; texto: string }
+  /** La submarca está retirada: no se edita ni se confirma. No es una pantalla vieja: recargar no lo arregla. */
+  | { tipo: "MARCA_RETIRADA"; texto: string }
   | { tipo: "OCULTAR_ACCION" }
   | { tipo: "INESPERADO" };
 
@@ -136,11 +138,16 @@ const POR_CODIGO: Readonly<Record<string, ErrorParaLaPantalla>> = {
 };
 
 const TEXTO_SUBMARCA_VIEJA = "La pantalla quedó vieja. Volvé a abrirla.";
+const TEXTO_SUBMARCA_RETIRADA =
+  "Esta submarca está retirada. Se puede ver, pero ya no se puede modificar ni confirmar.";
+const TEXTO_PROGRAMADA_NUEVA =
+  "Hay un cambio programado que esta pantalla no mostraba. Recargala para verlo y volvé a confirmar.";
 
 /** En la pantalla de submarca estos códigos significan otra cosa que en el alta o en los filtros. */
 const POR_CODIGO_DE_SUBMARCA: Readonly<Record<string, ErrorParaLaPantalla>> = {
   MARCA_NO_ENCONTRADA: { tipo: "PANTALLA_VIEJA", texto: TEXTO_SUBMARCA_VIEJA },
-  MARCA_RETIRADA: { tipo: "PANTALLA_VIEJA", texto: TEXTO_SUBMARCA_VIEJA },
+  MARCA_RETIRADA: { tipo: "MARCA_RETIRADA", texto: TEXTO_SUBMARCA_RETIRADA },
+  CAMBIO_PROGRAMADO_PENDIENTE: { tipo: "PANTALLA_VIEJA", texto: TEXTO_PROGRAMADA_NUEVA },
   ID_INVALIDO: { tipo: "PANTALLA_VIEJA", texto: TEXTO_SUBMARCA_VIEJA },
   VERSION_DESACTUALIZADA: {
     tipo: "PANTALLA_VIEJA",
