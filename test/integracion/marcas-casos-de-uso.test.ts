@@ -713,6 +713,149 @@ describe.skipIf(base === null)("marcas de plataforma: casos de uso contra Postgr
       expect(await huellaDeEscrituras(dueno)).toEqual(antes);
     });
 
+    it("el primer borrador parte de la última confirmada: editar un solo color conserva todo lo demás, audita la diferencia y confirma una versión completa", async () => {
+      const aspecto = { estilo: "LUDICO", superficie: "CALIDA", ingreso: "CENTRADO" };
+      const vocabulario = { "rol.gerente.nombre": "Encargado" };
+      const { marca, plan } = await marcaConBorrador({ aspecto, vocabulario });
+      exito(await confirmar(marca));
+
+      const acento = { ...TEMA, accent: "#b91c1c" };
+      const nuevo = exito(await guardar(marca, null, { tema: acento }));
+      expect(await filaDeVersion(nuevo.borradorId)).toMatchObject({
+        estado: "BORRADOR",
+        nombre_visible: "Mi Calendario",
+        tema: acento,
+        aspecto,
+        logo: LOGO,
+        vocabulario,
+        modulos_iniciales: ["caja"],
+        plan_por_defecto_id: plan,
+      });
+      // La constancia muestra la diferencia real: `antes` es la confirmada de la que parte, y el vocabulario no cambió.
+      const [constancia] = await auditoriaDePlataformaDe(
+        dueno,
+        "version_de_marca",
+        nuevo.borradorId,
+      );
+      expect(constancia).toMatchObject({
+        accion: "MARCA_BORRADOR_GUARDADO",
+        antes: {
+          nombreVisible: "Mi Calendario",
+          tema: TEMA,
+          aspecto,
+          logo: LOGO,
+          planPorDefectoId: plan,
+        },
+        despues: { esNuevo: true, nombreVisible: "Mi Calendario", tema: acento, vocabulario: [] },
+      });
+
+      expect(exito(await confirmar(marca, { motivo: "otro acento" }))).toEqual({ numero: 2 });
+      expect(
+        await dueno.query(
+          "select nombre_visible, tema, aspecto, logo, vocabulario, modulos_iniciales, plan_por_defecto_id from version_de_marca where marca_id = $1 and numero = 2",
+          [marca],
+        ),
+      ).toMatchObject({
+        rows: [
+          {
+            nombre_visible: "Mi Calendario",
+            tema: acento,
+            aspecto,
+            logo: LOGO,
+            vocabulario,
+            modulos_iniciales: ["caja"],
+            plan_por_defecto_id: plan,
+          },
+        ],
+      });
+      const confirmaciones = (await auditoriaDePlataformaDe(dueno, "marca", marca)).filter(
+        (c) => c.accion === "MARCA_VERSION_CONFIRMADA",
+      );
+      expect(confirmaciones[1]).toMatchObject({
+        antes: { numero: 1, tema: TEMA },
+        despues: { numero: 2, tema: acento, vocabulario: [] },
+      });
+    });
+
+    it("con una versión confirmada programada a futuro, el primer borrador parte de ESA (la última decisión), no de la vigente", async () => {
+      const { marca } = await marcaConBorrador();
+      exito(await confirmar(marca, { vigenteDesde: desdeAhora(-30) }));
+      exito(await guardar(marca, null, { nombreVisible: "Mañana" }));
+      expect(exito(await confirmar(marca, { vigenteDesde: desdeAhora(3600) }))).toEqual({
+        numero: 2,
+      });
+
+      const acento = { ...TEMA, accent: "#b91c1c" };
+      const nuevo = exito(await guardar(marca, null, { tema: acento }));
+      expect(await filaDeVersion(nuevo.borradorId)).toMatchObject({
+        nombre_visible: "Mañana",
+        tema: acento,
+        logo: LOGO,
+        modulos_iniciales: ["caja"],
+      });
+      expect(
+        exito(
+          await confirmar(marca, { vigenteDesde: desdeAhora(7200), reemplazaProgramada: true }),
+        ),
+      ).toEqual({ numero: 3 });
+    });
+
+    it("un primer borrador sin cambios se crea igual, idéntico a la última confirmada, y se puede seguir editando con su versión", async () => {
+      const { marca } = await marcaConBorrador();
+      exito(await confirmar(marca));
+      const nuevo = exito(await guardar(marca, null, {}));
+      expect(await filaDeVersion(nuevo.borradorId)).toMatchObject({
+        estado: "BORRADOR",
+        nombre_visible: "Mi Calendario",
+        tema: TEMA,
+        logo: LOGO,
+        modulos_iniciales: ["caja"],
+      });
+      expect(
+        await auditoriaDePlataformaDe(dueno, "version_de_marca", nuevo.borradorId),
+      ).toHaveLength(1);
+      // Repetir el mismo guardado vacío con la versión que devolvió no escribe ni audita.
+      expect(exito(await guardar(marca, nuevo.version, {}))).toEqual(nuevo);
+      expect(
+        await auditoriaDePlataformaDe(dueno, "version_de_marca", nuevo.borradorId),
+      ).toHaveLength(1);
+    });
+
+    it("confirmar con la versión que se vio: si otra persona guardó entretanto, VERSION_DESACTUALIZADA y su borrador queda intacto", async () => {
+      const { marca, borrador } = await marcaConBorrador();
+      expect(borrador.version).toBe(1);
+      // B guarda otro borrador (versión 2) mientras A mira la versión 1.
+      exito(await guardar(marca, 1, { nombreVisible: "El de B" }));
+      const antes = await huellaDeEscrituras(dueno);
+      expect(falla(await confirmar(marca, { versionEsperada: 1 }))).toBe("VERSION_DESACTUALIZADA");
+      expect(falla(await confirmar(marca, { versionEsperada: 3 }))).toBe("VERSION_DESACTUALIZADA");
+      expect(await huellaDeEscrituras(dueno)).toEqual(antes);
+      expect(await filaDeVersion(borrador.borradorId)).toMatchObject({
+        estado: "BORRADOR",
+        numero: null,
+        nombre_visible: "El de B",
+        version: 2,
+      });
+      // Con la versión que sí es, se publica exactamente lo que B guardó.
+      expect(exito(await confirmar(marca, { versionEsperada: 2 }))).toEqual({ numero: 1 });
+      expect(await filaDeVersion(borrador.borradorId)).toMatchObject({
+        estado: "CONFIRMADA",
+        nombre_visible: "El de B",
+      });
+    });
+
+    it("la versionEsperada es obligatoria y tiene que ser un entero desde 1: lo demás se rechaza sin escribir", async () => {
+      const { marca } = await marcaConBorrador();
+      const antes = await huellaDeEscrituras(dueno);
+      for (const mala of [0, -1, 1.5, Number.NaN, null, undefined]) {
+        expect(
+          falla(await confirmar(marca, { versionEsperada: mala as unknown as number })),
+          String(mala),
+        ).toBe("VERSION_ESPERADA_INVALIDA");
+      }
+      expect(await huellaDeEscrituras(dueno)).toEqual(antes);
+    });
+
     it("sin borrador no hay nada que confirmar (SIN_BORRADOR), y un borrador incompleto lo dice", async () => {
       const marca = exito(await crear({ marcaPadreId: null })).marcaId;
       expect(falla(await confirmar(marca))).toBe("SIN_BORRADOR");
@@ -775,6 +918,12 @@ describe.skipIf(base === null)("marcas de plataforma: casos de uso contra Postgr
           await casos.confirmarVersionDeMarca(comoAdminAhora(), { ...entrada, motivo: "otra" }),
         ),
       ).toBe("CLAVE_REUTILIZADA");
+      // La versión esperada entra en la huella: la misma clave con otra versión es otro pedido.
+      expect(
+        falla(
+          await casos.confirmarVersionDeMarca(comoAdminAhora(), { ...entrada, versionEsperada: 2 }),
+        ),
+      ).toBe("CLAVE_REUTILIZADA");
       expect(
         await cuenta(
           dueno,
@@ -782,6 +931,28 @@ describe.skipIf(base === null)("marcas de plataforma: casos de uso contra Postgr
           [marca],
         ),
       ).toBe(1);
+    });
+
+    it("repetir el mismo pedido ya confirmado devuelve lo mismo aunque haya un borrador nuevo: la clave se mira antes que la decisión", async () => {
+      const { marca } = await marcaConBorrador();
+      const entrada = {
+        claveDeIdempotencia: clave(),
+        marcaId: marca,
+        versionEsperada: 1,
+        vigenteDesde: desdeAhora(0),
+        motivo: "primera",
+        reemplazaProgramada: false,
+      };
+      const primera = exito(await casos.confirmarVersionDeMarca(comoAdminAhora(), entrada));
+      expect(primera).toEqual({ numero: 1 });
+      // Otra persona abre un borrador nuevo: la repetición NO lo confirma, devuelve lo de la primera vez.
+      const nuevo = exito(await guardar(marca, null, { nombreVisible: "Siguiente" }));
+      const antes = await huellaDeEscrituras(dueno);
+      expect(exito(await casos.confirmarVersionDeMarca(comoAdminAhora(), entrada))).toEqual(
+        primera,
+      );
+      expect(await huellaDeEscrituras(dueno)).toEqual(antes);
+      expect(await filaDeVersion(nuevo.borradorId)).toMatchObject({ estado: "BORRADOR" });
     });
 
     it("confirmar con la hora de un contexto en el pasado usa ESA hora para decidir la vigencia", async () => {

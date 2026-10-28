@@ -13,6 +13,7 @@ import {
   crearMundoDeMarca,
   crearPlan,
   crearPlanPublicado,
+  crearVersionDeMarcaConfirmada,
   marcaPrincipal,
 } from "./marcas-apoyo";
 import {
@@ -188,6 +189,128 @@ describe.skipIf(base === null)("marcas y planes de plataforma: concurrencia", ()
       }
     });
 
+    it("dos guardarBorrador que abren el primer borrador desde la misma confirmada: uno gana, el otro es VERSION_DESACTUALIZADA, y el borrador conserva lo confirmado", async () => {
+      for (let vuelta = 0; vuelta < VUELTAS; vuelta++) {
+        const { cerrar, casos } = conBarrera(2, { marcas: ["borradorDe"] });
+        try {
+          const { marca } = await marcaConConfirmada();
+          const rs = await Promise.all(
+            ["#b91c1c", "#7c3aed"].map((accent) =>
+              casos.guardarBorradorDeMarca(comoAdminAhora(), {
+                claveDeIdempotencia: clave(),
+                marcaId: marca,
+                versionEsperada: null,
+                tema: { ...TEMA, accent },
+              }),
+            ),
+          );
+          expect(valores(rs)).toHaveLength(1);
+          expect(errores(rs)).toEqual(["VERSION_DESACTUALIZADA"]);
+          const borradores = (
+            await dueno.query<{ nombre_visible: string; logo: string; tema: { accent: string } }>(
+              "select nombre_visible, logo, tema from version_de_marca where marca_id = $1 and estado = 'BORRADOR'",
+              [marca],
+            )
+          ).rows;
+          expect(borradores).toHaveLength(1);
+          expect(borradores[0]).toMatchObject({
+            nombre_visible: "Marca",
+            logo: "/marcas/mc/logo.png",
+          });
+          expect(["#b91c1c", "#7c3aed"]).toContain(borradores[0]?.tema.accent);
+        } finally {
+          await cerrar();
+        }
+      }
+    });
+
+    it("dos confirmarVersion con la misma versionEsperada y claves distintas sobre una marca ya confirmada: una sola versión nueva, sin números repetidos", async () => {
+      for (let vuelta = 0; vuelta < VUELTAS; vuelta++) {
+        const { cerrar, casos } = conBarrera(2, { marcas: ["borradorDe"] });
+        try {
+          const { marca, plan } = await marcaConConfirmada();
+          await crearBorradorDeMarca(dueno, marca, {
+            nombreVisible: "Segunda",
+            tema: TEMA,
+            logo: "/marcas/mc/logo.png",
+            modulosIniciales: ["caja"],
+            planPorDefecto: plan,
+          });
+          const rs = await Promise.all(
+            [0, 1].map(() =>
+              casos.confirmarVersionDeMarca(comoAdminAhora(), {
+                claveDeIdempotencia: clave(),
+                marcaId: marca,
+                versionEsperada: 1,
+                vigenteDesde: desdeAhora(0),
+                motivo: "segunda",
+                reemplazaProgramada: false,
+              }),
+            ),
+          );
+          expect(valores(rs)).toEqual([{ numero: 2 }]);
+          expect(errores(rs)).toEqual(["SIN_BORRADOR"]);
+          const numeros = (
+            await dueno.query<{ numero: number }>(
+              "select numero from version_de_marca where marca_id = $1 and estado = 'CONFIRMADA' order by numero",
+              [marca],
+            )
+          ).rows.map((f) => f.numero);
+          expect(numeros).toEqual([1, 2]);
+        } finally {
+          await cerrar();
+        }
+      }
+    });
+
+    it("confirmar a la vez que otra persona guarda: nunca se publica un borrador que quien confirma no vio", async () => {
+      for (let vuelta = 0; vuelta < VUELTAS; vuelta++) {
+        const { cerrar, casos } = conBarrera(2, { marcas: ["borradorDe"] });
+        try {
+          const { marca } = await marcaConBorradorCompleto();
+          const [confirmacion, guardado] = await Promise.all([
+            casos.confirmarVersionDeMarca(comoAdminAhora(), {
+              claveDeIdempotencia: clave(),
+              marcaId: marca,
+              versionEsperada: 1,
+              vigenteDesde: desdeAhora(0),
+              motivo: "alta",
+              reemplazaProgramada: false,
+            }),
+            casos.guardarBorradorDeMarca(comoAdminAhora(), {
+              claveDeIdempotencia: clave(),
+              marcaId: marca,
+              versionEsperada: 1,
+              nombreVisible: "El de B",
+            }),
+          ]);
+          // Una de las dos gana; la otra ve que lo que miraba ya no es lo que hay.
+          expect([confirmacion.ok, guardado.ok].filter(Boolean)).toHaveLength(1);
+          expect(errores([confirmacion, guardado])).toEqual(["VERSION_DESACTUALIZADA"]);
+          const filas = (
+            await dueno.query<{ estado: string; nombre_visible: string; version: number }>(
+              "select estado, nombre_visible, version from version_de_marca where marca_id = $1",
+              [marca],
+            )
+          ).rows;
+          expect(filas).toHaveLength(1);
+          if (confirmacion.ok) {
+            // Confirmó lo que A vio.
+            expect(filas[0]).toMatchObject({ estado: "CONFIRMADA", nombre_visible: "Marca" });
+          } else {
+            // B guardó primero: su borrador (versión 2) sigue ahí, intacto y sin publicar.
+            expect(filas[0]).toMatchObject({
+              estado: "BORRADOR",
+              nombre_visible: "El de B",
+              version: 2,
+            });
+          }
+        } finally {
+          await cerrar();
+        }
+      }
+    });
+
     it("dos confirmarVersion del mismo borrador con claves distintas: una sola confirma y la otra ve que ya no hay borrador", async () => {
       for (let vuelta = 0; vuelta < VUELTAS; vuelta++) {
         const { cerrar, casos } = conBarrera(2, { marcas: ["borradorDe"] });
@@ -296,6 +419,20 @@ describe.skipIf(base === null)("marcas y planes de plataforma: concurrencia", ()
   });
 
   /** Una marca sin padre con su borrador COMPLETO (nombre, colores, logo, módulos iniciales y plan por defecto). */
+  /** Una marca con una versión confirmada COMPLETA (nombre «Marca», colores, logo, módulos iniciales y plan) y sin borrador. */
+  async function marcaConConfirmada() {
+    const marca = await crearMarca(dueno);
+    const { plan } = await crearPlanPublicado(dueno, { modulos: ["caja"] });
+    await crearVersionDeMarcaConfirmada(dueno, marca, {
+      nombreVisible: "Marca",
+      tema: TEMA,
+      logo: "/marcas/mc/logo.png",
+      modulosIniciales: ["caja"],
+      planPorDefecto: plan,
+    });
+    return { marca, plan };
+  }
+
   async function marcaConBorradorCompleto() {
     const marca = await crearMarca(dueno);
     const { plan } = await crearPlanPublicado(dueno, { modulos: ["caja"] });
