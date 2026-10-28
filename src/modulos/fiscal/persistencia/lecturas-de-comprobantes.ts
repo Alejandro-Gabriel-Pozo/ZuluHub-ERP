@@ -1,7 +1,7 @@
 import { sql, type Kysely } from "kysely";
 import { importeDesdeTexto, type Importe } from "../../../primitivas/dinero/importe";
 import { moneda } from "../../../primitivas/dinero/moneda";
-import type { EmpresaId } from "../../../primitivas/identificadores/marca";
+import type { EmpresaId, SucursalId } from "../../../primitivas/identificadores/marca";
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import {
   TIPOS_DE_COMPROBANTE,
@@ -19,12 +19,14 @@ import {
 } from "../dominio/estados-de-comprobante";
 import { comprobanteId, type ComprobanteId } from "../dominio/identificadores";
 import { RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA } from "../dominio/punto-de-venta";
+import type { DocumentoDelReceptor } from "../dominio/receptor";
+import { documentoDelReceptorDeLaBase } from "./documento-del-receptor";
 import { deLaLista } from "./repositorios";
 import type { FiscalDb } from "./tablas";
 
 /**
  * Lecturas de comprobantes para las pantallas del facturador (spec H7 facturación §B.4.9, tramo F6): el listado
- * paginado y las notas que citan a un comprobante. Solo leen: no hay ninguna escritura acá, y el tipo que
+ * paginado, los puntos de venta de una sucursal y las notas que citan a un comprobante. Solo leen: no hay ninguna escritura acá, y el tipo que
  * reciben los casos de uso (`Pick` de estas funciones) no ofrece otra cosa.
  *
  *  - Todo filtra por empresa aunque la RLS ya lo imponga.
@@ -90,6 +92,8 @@ export type FilaDeListado = Readonly<{
   numero: bigint | null;
   fecha: FechaCivil;
   receptorNombre: string | null;
+  /** Tipo y número del documento del receptor, como los congeló el comprobante (el mismo dato que trae el detalle). */
+  receptorDocumento: DocumentoDelReceptor;
   total: Importe;
   estado: EstadoDeComprobanteArca;
   ambiente: Ambiente;
@@ -113,6 +117,14 @@ export type NotaQueCita = Readonly<{
 export interface LecturasDeComprobantes {
   /** Una página del listado de la empresa, los más nuevos primero; `hayMas` si queda algo después de ella. */
   listar(empresa: EmpresaId, filtro: FiltroDeListado): Promise<PaginaDeFilas>;
+  /**
+   * Los números de los puntos de venta ACTIVOS de la sucursal, de menor a mayor y sin repetir (dos emisores pueden
+   * tener cada uno su número 1: el listado filtra por el número, que es lo que se imprime).
+   */
+  puntosDeVentaActivosDeLaSucursal(
+    empresa: EmpresaId,
+    sucursal: SucursalId,
+  ): Promise<readonly number[]>;
   /**
    * Los comprobantes de la empresa que citan a `id` como su asociado (las notas), del más viejo al más nuevo.
    * Los `DESCARTADO` no cuentan: nunca existieron para ARCA.
@@ -145,6 +157,8 @@ type FilaCruda = Readonly<{
   numero: string | null;
   fecha: string;
   receptor_nombre: string | null;
+  receptor_documento_tipo: string;
+  receptor_documento_numero: string | null;
   moneda: string;
   total: string;
   estado: string;
@@ -166,6 +180,10 @@ function aFila(f: FilaCruda): FilaDeListado {
     numero: f.numero === null ? null : BigInt(f.numero),
     fecha: fechaDeLaBase(f.fecha),
     receptorNombre: f.receptor_nombre,
+    receptorDocumento: documentoDelReceptorDeLaBase(
+      f.receptor_documento_tipo,
+      f.receptor_documento_numero,
+    ),
     total: importeDesdeTexto(moneda(f.moneda), f.total),
     estado: deLaLista(ESTADOS_DE_COMPROBANTE_ARCA, f.estado, "estado de comprobante"),
     ambiente: deLaLista(AMBIENTES, f.ambiente, "ambiente"),
@@ -184,6 +202,8 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
         "numero",
         FECHA_COMO_TEXTO,
         "receptor_nombre",
+        "receptor_documento_tipo",
+        "receptor_documento_numero",
         "moneda",
         "total",
         "estado",
@@ -249,6 +269,19 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
         filas: filas.slice(0, filtro.limite).map(aFila),
         hayMas: filas.length > filtro.limite,
       };
+    },
+
+    async puntosDeVentaActivosDeLaSucursal(empresa, sucursal) {
+      const filas = await db
+        .selectFrom("punto_de_venta")
+        .select("numero")
+        .distinct()
+        .where("empresa_id", "=", empresa)
+        .where("sucursal_id", "=", sucursal)
+        .where("estado", "=", "ACTIVO")
+        .orderBy("numero")
+        .execute();
+      return filas.map((f) => f.numero);
     },
 
     async notasQueCitan(empresa, id) {

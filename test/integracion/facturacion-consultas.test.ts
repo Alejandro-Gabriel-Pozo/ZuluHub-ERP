@@ -16,8 +16,9 @@ import {
 import { criteriosDeListado } from "../../src/modulos/fiscal/consultas/criterios-de-listado";
 import { modeloDeImpresion } from "../../src/modulos/fiscal/dominio/modelo-de-impresion";
 import { formatearDomicilio } from "../../src/primitivas/domicilio/domicilio";
-import { empresaId, personaId } from "../../src/primitivas/identificadores/marca";
+import { empresaId, personaId, sucursalId } from "../../src/primitivas/identificadores/marca";
 import { ok, type Resultado } from "../../src/primitivas/resultado/resultado";
+import { CUIT_C } from "../utilidades/fiscal";
 import { receptorInscripto } from "../utilidades/facturacion";
 import {
   RENGLON_DE_100_SIN_ALICUOTA,
@@ -48,8 +49,14 @@ import {
   type TxFacturacionDePrueba,
 } from "./facturacion-persistencia-apoyo";
 import { comoEmpresa } from "./entorno";
+import { cuitAlAzar } from "./entorno";
 import { crearMundo, crearPuntoDeVenta } from "./fiscal-apoyo";
-import { crearMembresiaDeBase, crearPersonaDeBase, type RolDePrueba } from "./fixtures-identidad";
+import {
+  crearAsignacionDeBase,
+  crearMembresiaDeBase,
+  crearPersonaDeBase,
+  type RolDePrueba,
+} from "./fixtures-identidad";
 
 /**
  * Facturación F6: las consultas del facturador contra una base real, con los roles reales y su contexto firmado
@@ -356,6 +363,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
         // todavía sin numerar: el día de creación en Argentina
         fecha: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) as unknown,
         receptorNombre: null,
+        receptorDocumento: { tipo: "SIN_IDENTIFICAR" },
         total: "121.00",
         estado: "PENDIENTE",
         ambiente: "HOMOLOGACION",
@@ -368,6 +376,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
         // la fecha de emisión gana sobre la de creación
         fecha: diaDe(AHORA),
         receptorNombre: "Distribuidora Sur SA",
+        receptorDocumento: { tipo: "CUIT", numero: CUIT_C },
         total: "121.00",
         estado: "AUTORIZADO",
         ambiente: "HOMOLOGACION",
@@ -381,6 +390,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
           "fecha",
           "id",
           "numero",
+          "receptorDocumento",
           "receptorNombre",
           "tipo",
           "total",
@@ -928,6 +938,214 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
       });
       return id;
     }
+  });
+
+  // ===============================================================================================
+  // 4 ter. Listado ampliado: documento del receptor por fila y puntos de venta de la sucursal
+  // ===============================================================================================
+  describe("listado ampliado", () => {
+    const receptorConDni = {
+      nombre: "Ana Gómez",
+      documento: { tipo: "DNI", numero: "30123456" },
+      condicionIva: "CONSUMIDOR_FINAL",
+      domicilio: null,
+    } as const;
+
+    it("cada fila trae tipo y número de documento del receptor, igual que el detalle", async () => {
+      const a = await crearEmpresa();
+      const sinDatos = await crearPendiente(a.x);
+      const conDni = await crearPendiente(a.x, { receptor: receptorConDni });
+      const conCuit = await crearAutorizado(a.x, { receptor: receptorInscripto });
+      const items = (await listar(a)).items;
+      const documentoDe = (id: string) => items.find((i) => i.id === id)?.receptorDocumento;
+      expect(documentoDe(sinDatos.id)).toEqual({ tipo: "SIN_IDENTIFICAR" });
+      expect(documentoDe(conDni.id)).toEqual({ tipo: "DNI", numero: "30123456" });
+      expect(documentoDe(conCuit.id)).toEqual({ tipo: "CUIT", numero: CUIT_C });
+      // Lo mismo que muestra el detalle del mismo comprobante.
+      for (const c of [sinDatos, conDni, conCuit]) {
+        const detalle = exito(await consultas.verComprobante(mira(a), { comprobanteId: c.id }));
+        expect(documentoDe(c.id)).toEqual(detalle.receptor.documento);
+      }
+    });
+
+    it("el documento de otra empresa no se cuela: cada una lista solo lo suyo", async () => {
+      const a = await crearEmpresa();
+      const b = await crearEmpresa();
+      const deA = await crearPendiente(a.x, { receptor: receptorConDni });
+      await crearAutorizado(b.x, { receptor: receptorInscripto });
+      const items = (await listar(a)).items;
+      expect(items.map((i) => i.id)).toEqual([deA.id]);
+      expect(items[0]?.receptorDocumento).toEqual({ tipo: "DNI", numero: "30123456" });
+    });
+
+    it("sin N+1: una página de 1 fila y una de 10 hacen la misma cantidad de consultas", async () => {
+      const una = await crearEmpresa();
+      await crearAutorizado(una.x, { receptor: receptorInscripto });
+      const diez = await crearEmpresa();
+      for (let i = 0; i < 5; i++) await crearPendiente(diez.x, { receptor: receptorConDni });
+      for (let i = 0; i < 5; i++) await crearAutorizado(diez.x, { receptor: receptorInscripto });
+
+      const contar = async (e: Empresa) => {
+        const antes = entorno.consultasFiscalesHechas();
+        const pagina = await listar(e);
+        return { consultas: entorno.consultasFiscalesHechas() - antes, filas: pagina.items.length };
+      };
+      const deUna = await contar(una);
+      const deDiez = await contar(diez);
+      expect(deUna.filas).toBe(1);
+      expect(deDiez.filas).toBe(10);
+      expect(deDiez.consultas).toBe(deUna.consultas);
+      // La página y las notas que la citan: dos consultas, tenga una fila o diez.
+      expect(deUna.consultas).toBe(2);
+    });
+
+    it("leer es estable: el mismo pedido da lo mismo, y no toma locks que frenen a quien escribe o a otra lectura", async () => {
+      const a = await crearEmpresa();
+      await crearPendiente(a.x, { receptor: receptorConDni });
+      await crearAutorizado(a.x, { receptor: receptorInscripto });
+      const primera = await listar(a);
+      expect(await listar(a)).toEqual(primera);
+
+      // Otra conexión retiene `FOR UPDATE` sobre los comprobantes y los puntos de venta de la empresa: una lectura que
+      // pidiera un lock de fila (o de tabla) quedaría esperando; una lectura común no espera.
+      const retiene = new pg.Client({ connectionString: base?.dueno });
+      await retiene.connect();
+      try {
+        await retiene.query("begin");
+        await retiene.query("select id from comprobante where empresa_id = $1 for update", [
+          a.x.empresa,
+        ]);
+        await retiene.query("select id from punto_de_venta where empresa_id = $1 for update", [
+          a.x.empresa,
+        ]);
+        const sinEsperar = <T>(trabajo: Promise<T>): Promise<T> =>
+          Promise.race([
+            trabajo,
+            new Promise<never>((_, rechazar) =>
+              setTimeout(() => rechazar(new Error("la lectura quedó esperando un lock")), 5_000),
+            ),
+          ]);
+        expect(await sinEsperar(listar(a))).toEqual(primera);
+        const r = await sinEsperar(
+          consultas.listarPuntosDeVentaDeLaSucursal(mira(a), {
+            sucursalId: sucursalId(a.x.sucursal),
+          }),
+        );
+        expect(exito(r).items).toEqual([{ numero: a.x.pvNumero }]);
+      } finally {
+        await retiene.query("rollback");
+        await retiene.end();
+      }
+    });
+  });
+
+  describe("puntos de venta activos de la sucursal", () => {
+    /** Una empresa con dos sucursales: la casa central (PV 1 activo, 5 activo, 7 inactivo) y «Norte» (PV 9 activo). */
+    async function empresaConDosSucursales() {
+      const e = await crearEmpresa();
+      const norte = (
+        await dueno.query<{ id: string }>(
+          "insert into sucursal (empresa_id, nombre) values ($1, 'Norte') returning id",
+          [e.x.empresa],
+        )
+      ).rows[0]?.id as string;
+      await crearPuntoDeVenta(dueno, e.x, { numero: 5, activo: true });
+      await crearPuntoDeVenta(dueno, e.x, { numero: 7 });
+      await crearPuntoDeVenta(dueno, e.x, { numero: 9, sucursal: norte, activo: true });
+      return { e, norte };
+    }
+    const pedir = async (e: Empresa, sucursal: string, persona = e.persona.GERENTE) =>
+      consultas.listarPuntosDeVentaDeLaSucursal(
+        comoEmpresa(empresaId(e.x.empresa), personaId(persona)),
+        {
+          sucursalId: sucursalId(sucursal),
+        },
+      );
+
+    it("devuelve solo los activos de ESA sucursal, por número", async () => {
+      const { e, norte } = await empresaConDosSucursales();
+      expect(exito(await pedir(e, e.x.sucursal)).items).toEqual([{ numero: 1 }, { numero: 5 }]);
+      expect(exito(await pedir(e, norte)).items).toEqual([{ numero: 9 }]);
+    });
+
+    it("un punto de venta desactivado sale de la lista, y uno que se muda de sucursal la sigue", async () => {
+      const { e, norte } = await empresaConDosSucursales();
+      const pv5 = (
+        await dueno.query<{ id: string }>(
+          "select id from punto_de_venta where empresa_id = $1 and numero = 5",
+          [e.x.empresa],
+        )
+      ).rows[0]?.id as string;
+      await dueno.query("update punto_de_venta set estado = 'INACTIVO' where id = $1", [pv5]);
+      expect(exito(await pedir(e, e.x.sucursal)).items).toEqual([{ numero: 1 }]);
+      await dueno.query("update punto_de_venta set sucursal_id = $2 where id = $1", [pv5, norte]);
+      await dueno.query("update punto_de_venta set estado = 'ACTIVO' where id = $1", [pv5]);
+      expect(exito(await pedir(e, norte)).items).toEqual([{ numero: 5 }, { numero: 9 }]);
+      expect(exito(await pedir(e, e.x.sucursal)).items).toEqual([{ numero: 1 }]);
+    });
+
+    it("dos emisores con el mismo número en la sucursal dan un solo número", async () => {
+      const { e } = await empresaConDosSucursales();
+      const otroEmisor = (
+        await dueno.query<{ id: string }>(
+          "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
+          [e.x.empresa, cuitAlAzar()],
+        )
+      ).rows[0]?.id as string;
+      await crearPuntoDeVenta(dueno, e.x, { numero: 5, emisor: otroEmisor, activo: true });
+      expect(exito(await pedir(e, e.x.sucursal)).items).toEqual([{ numero: 1 }, { numero: 5 }]);
+    });
+
+    it("una sucursal sin puntos de venta activos da una lista vacía", async () => {
+      const { e } = await empresaConDosSucursales();
+      const vacia = (
+        await dueno.query<{ id: string }>(
+          "insert into sucursal (empresa_id, nombre) values ($1, 'Sin puntos') returning id",
+          [e.x.empresa],
+        )
+      ).rows[0]?.id as string;
+      expect(exito(await pedir(e, vacia)).items).toEqual([]);
+    });
+
+    it("aislamiento entre empresas: la sucursal de otra empresa no devuelve nada, ni con su propio gerente", async () => {
+      const a = await empresaConDosSucursales();
+      const b = await crearEmpresa();
+      expect(exito(await pedir(b, a.e.x.sucursal)).items).toEqual([]);
+      expect(exito(await pedir(a.e, b.x.sucursal)).items).toEqual([]);
+    });
+
+    it("aislamiento entre sucursales: el operador ve solo las suyas y pedir otra es SUCURSAL_FUERA_DE_ALCANCE", async () => {
+      const { e, norte } = await empresaConDosSucursales();
+      await crearAsignacionDeBase(dueno, e.x.empresa, e.persona.OPERADOR, e.x.sucursal);
+      expect(exito(await pedir(e, e.x.sucursal, e.persona.OPERADOR)).items).toEqual([
+        { numero: 1 },
+        { numero: 5 },
+      ]);
+      expect(await pedir(e, norte, e.persona.OPERADOR)).toEqual({
+        ok: false,
+        error: "SUCURSAL_FUERA_DE_ALCANCE",
+      });
+      // Una asignación apagada ya no cuenta, y gerente y administrador operan en todas.
+      await dueno.query(
+        "update asignacion_sucursal set activa = false where empresa_id = $1 and persona_id = $2",
+        [e.x.empresa, e.persona.OPERADOR],
+      );
+      expect(await pedir(e, e.x.sucursal, e.persona.OPERADOR)).toEqual({
+        ok: false,
+        error: "SUCURSAL_FUERA_DE_ALCANCE",
+      });
+      expect(exito(await pedir(e, norte, e.persona.ADMINISTRADOR)).items).toEqual([{ numero: 9 }]);
+    });
+
+    it("sin membresía o con la membresía apagada: SIN_PERMISO, antes de mirar la sucursal", async () => {
+      const { e } = await empresaConDosSucursales();
+      for (const persona of [e.persona.SIN_MEMBRESIA, e.persona.APAGADA]) {
+        expect(await pedir(e, e.x.sucursal, persona)).toEqual({
+          ok: false,
+          error: "SIN_PERMISO",
+        });
+      }
+    });
   });
 
   // ===============================================================================================
