@@ -187,6 +187,8 @@ export type FiscalDb = {
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
+    /** 0016: la sucursal del punto de venta al emitirse. La copia la base en el alta (la aplicación no la manda) y no cambia nunca. */
+    sucursal_id: Generated<string>;
   };
   /** 0009: los renglones del comprobante, de solo inserción. `posicion` desde 1. */
   comprobante_linea: {

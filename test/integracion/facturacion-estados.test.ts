@@ -393,7 +393,7 @@ describe.skipIf(base === null)(
         ];
         const contenido = columnas.rows.filter((c) => !DE_ESTADO.includes(c.column_name));
         // Una columna nueva tiene que decidir a propósito de qué lado está: este número cambia con ella.
-        expect(contenido).toHaveLength(42);
+        expect(contenido).toHaveLength(43);
         const otroValor = (c: { column_name: string; data_type: string }): string => {
           const n = c.column_name;
           switch (c.data_type) {

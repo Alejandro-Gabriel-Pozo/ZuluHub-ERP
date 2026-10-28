@@ -60,6 +60,7 @@ const FUNCIONES_DE_LA_FACTURACION = [
   "comprobante_serie_con_reserva",
   "comprobante_verificar_cuadre",
   "comprobante_hijo_validar_alta",
+  "comprobante_exigir_sucursal",
   "certificado_arca_validar_alta",
   "certificado_arca_validar_cambio",
 ] as const;
@@ -122,7 +123,7 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
       ).toEqual([]);
     });
 
-    it("los 11 nombres que lanzan los disparadores de la facturación son exactamente la lista, y cada uno tiene motivo", async () => {
+    it("los 12 nombres que lanzan los disparadores de la facturación son exactamente la lista, y cada uno tiene motivo", async () => {
       const cuerpos = await filas<{ prosrc: string }>(
         `select prosrc from pg_proc where pronamespace = 'public'::regnamespace and proname = any($1)`,
         [[...FUNCIONES_DE_LA_FACTURACION]],
@@ -133,7 +134,7 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
         for (const m of prosrc.matchAll(/CONSTRAINT = '([a-z_]+)'/g)) lanzadas.add(m[1] as string);
       }
       expect([...lanzadas].sort()).toEqual([...DISPARADORES_DE_LA_FACTURACION].sort());
-      expect(lanzadas.size).toBe(11);
+      expect(lanzadas.size).toBe(12);
       for (const nombre of lanzadas) {
         const motivo = (ERRORES_DE_FISCAL_POR_RESTRICCION as Record<string, string>)[nombre];
         expect(motivo, nombre).toBeDefined();
@@ -505,6 +506,12 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
       tipo: "Check",
       provocar: () =>
         provocar(insertando({}, { renglones: [{ ...RENGLON_DE_121, importe: "120.00" }] })),
+    },
+    {
+      // Sin el disparador de alta nadie copia la sucursal: al confirmar el comprobante sin sucursal no pasa.
+      restriccion: "comprobante_sin_sucursal",
+      tipo: "Check",
+      provocar: () => provocar(insertando({}), { sinAlta: true }),
     },
     // ---- renglones y desglose -----------------------------------------------------------------------------------
     {
