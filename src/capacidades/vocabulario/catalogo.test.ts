@@ -154,7 +154,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     for (const clave of claves.filter(
       (c) => c.startsWith("error.fiscal_") || c.startsWith("fiscal."),
     )) {
-      expect(CATALOGO_DE_TEXTOS[clave as ClaveDeTexto].porDefecto, clave).not.toMatch(
+      expect(CATALOGO_DE_TEXTOS[clave].porDefecto, clave).not.toMatch(
         /\b(podés|tenés|revisá|probá|volvé|esperá|cargalo|activalo|consultá)\b/i,
       );
     }
