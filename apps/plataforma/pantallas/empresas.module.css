@@ -1,0 +1,156 @@
+.enlaceSimple {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--objetivo-minimo);
+  padding: 0 var(--espacio-2);
+  color: var(--color-info);
+  font-weight: var(--tipo-peso-fuerte);
+  text-decoration: underline;
+}
+
+/* Filtros: en el celular uno debajo del otro; en escritorio en una fila que se acomoda. */
+.filtros {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--espacio-4);
+  align-items: end;
+  padding: var(--espacio-4);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie);
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+@media (min-width: 48rem) {
+  .filtros {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 72rem) {
+  .filtros {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .acciones {
+    grid-column: 1 / -1;
+  }
+}
+
+.lista {
+  margin-top: var(--espacio-5);
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabla th,
+.tabla td {
+  /* Un nombre o un correo largo, sin espacios, no rompe el ancho. */
+  overflow-wrap: anywhere;
+  padding: var(--espacio-3);
+  border-bottom: var(--borde-grosor) solid var(--color-borde);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tabla th {
+  background: var(--color-superficie);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.tabla th.nombre {
+  background: transparent;
+}
+
+.motivo {
+  overflow-wrap: anywhere;
+  display: block;
+  margin: var(--espacio-1) 0 0;
+  color: var(--color-texto-suave);
+}
+
+.rotulo {
+  display: none;
+}
+
+.pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-3);
+}
+
+.vacio {
+  margin-top: var(--espacio-5);
+}
+
+/* Celular: cada fila es una tarjeta con su rótulo en cada dato; los encabezados quedan solo para el lector. */
+@media (max-width: 47.99rem) {
+  .tabla,
+  .tabla tbody,
+  .tabla tr,
+  .tabla tbody th,
+  .tabla td {
+    display: block;
+    width: 100%;
+  }
+
+  .tabla thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .tabla tr {
+    margin-bottom: var(--espacio-3);
+    padding: var(--espacio-2) 0;
+    border: var(--borde-grosor) solid var(--color-borde);
+    border-radius: var(--radio-base);
+    background: var(--color-superficie-elevada);
+  }
+
+  .tabla td {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--espacio-1) var(--espacio-3);
+    border-bottom: 0;
+  }
+
+  .rotulo {
+    display: inline;
+    min-width: 6rem;
+    color: var(--color-texto-suave);
+  }
+}
+
+.formulario {
+  max-width: 36rem;
+}
+
+.modulos {
+  overflow-wrap: anywhere;
+  margin: 0;
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie);
+}
+
+.modulosTitulo {
+  margin: 0 0 var(--espacio-1);
+  font-weight: var(--tipo-peso-fuerte);
+}
