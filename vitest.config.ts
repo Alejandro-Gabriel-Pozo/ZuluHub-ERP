@@ -26,7 +26,7 @@ export default defineConfig({
         // no necesiten navegador.
         test: {
           name: "componentes",
-          include: ["apps/web/ui/**/*.test.{ts,tsx}"],
+          include: ["apps/web/ui/**/*.test.{ts,tsx}", "apps/plataforma/**/*.test.{ts,tsx}"],
           browser: {
             enabled: true,
             headless: true,
