@@ -93,21 +93,21 @@ describe.skipIf(base === null)("derechos de uso: lectura del plan y de los ajust
       expect(d.perillas.size).toBe(Object.keys(PERILLAS_DE_PRUEBA).length);
       expect(valor(d, "empresas_por_tenant")).toEqual({ ...lim(1), origen: "BASE" });
       expect(valor(d, "con_sello")).toEqual({ ...interruptor(true), origen: "BASE" });
-      expect(valor(d, "carta_por_qr")).toEqual({ ...interruptor(false), origen: "BASE" });
+      expect(valor(d, "vidriera_por_qr")).toEqual({ ...interruptor(false), origen: "BASE" });
     });
 
     it("con plan: el techo de módulos y los valores del plan, con su origen", async () => {
       const mundo = await crearMundoDeMarca(dueno);
       const { plan, version, numero } = await crearPlanPublicado(dueno, {
         modulos: ["caja", "ventas"],
-        perillas: { cajas_por_sucursal: lim(3), carta_por_qr: interruptor(true) },
+        perillas: { cajas_por_sucursal: lim(3), vidriera_por_qr: interruptor(true) },
       });
       await asignarPlan(dueno, mundo.tenant, version, { origen: "ALTA" });
       const d = await deLaEmpresa(mundo);
       expect(d.versionDePlan).toEqual({ planId: plan, versionDePlanId: version, numero });
       expect([...d.modulosHabilitados].sort()).toEqual(["caja", "nucleo", "ventas"]);
       expect(valor(d, "cajas_por_sucursal")).toEqual({ ...lim(3), origen: "PLAN" });
-      expect(valor(d, "carta_por_qr")).toEqual({ ...interruptor(true), origen: "PLAN" });
+      expect(valor(d, "vidriera_por_qr")).toEqual({ ...interruptor(true), origen: "PLAN" });
       // lo que el plan no dice vale el estándar
       expect(valor(d, "empresas_por_tenant")).toEqual({ ...lim(1), origen: "BASE" });
     });
@@ -142,13 +142,13 @@ describe.skipIf(base === null)("derechos de uso: lectura del plan y de los ajust
 
     it("un interruptor se ajusta con 1 (encendido) y 0 (apagado)", async () => {
       const mundo = await crearMundoDeMarca(dueno);
-      await ajustarPerilla(dueno, mundo.tenant, "carta_por_qr", "1");
-      expect(valor(await deLaEmpresa(mundo), "carta_por_qr")).toEqual({
+      await ajustarPerilla(dueno, mundo.tenant, "vidriera_por_qr", "1");
+      expect(valor(await deLaEmpresa(mundo), "vidriera_por_qr")).toEqual({
         ...interruptor(true),
         origen: "AJUSTE",
       });
-      await ajustarPerilla(dueno, mundo.tenant, "carta_por_qr", "0");
-      expect(valor(await deLaEmpresa(mundo), "carta_por_qr")).toEqual({
+      await ajustarPerilla(dueno, mundo.tenant, "vidriera_por_qr", "0");
+      expect(valor(await deLaEmpresa(mundo), "vidriera_por_qr")).toEqual({
         ...interruptor(false),
         origen: "AJUSTE",
       });
@@ -157,14 +157,14 @@ describe.skipIf(base === null)("derechos de uso: lectura del plan y de los ajust
     it("el ajuste de la EMPRESA es más específico que el del tenant, y el de otra empresa del tenant no la toca", async () => {
       const a = await crearMundoDeMarca(dueno);
       const b = await crearMundoDeMarca(dueno, { tenant: a.tenant });
-      await ajustarPerilla(dueno, a.tenant, "carta_por_qr", "0"); // todo el tenant: apagada
-      await ajustarPerilla(dueno, a.tenant, "carta_por_qr", "1", { empresa: a.empresa });
-      expect(valor(await deLaEmpresa(a), "carta_por_qr")).toEqual({
+      await ajustarPerilla(dueno, a.tenant, "vidriera_por_qr", "0"); // todo el tenant: apagada
+      await ajustarPerilla(dueno, a.tenant, "vidriera_por_qr", "1", { empresa: a.empresa });
+      expect(valor(await deLaEmpresa(a), "vidriera_por_qr")).toEqual({
         ...interruptor(true),
         origen: "AJUSTE",
       });
       // La empresa B sigue con el del tenant y NO ve que A tiene uno propio.
-      expect(valor(await deLaEmpresa(b), "carta_por_qr")).toEqual({
+      expect(valor(await deLaEmpresa(b), "vidriera_por_qr")).toEqual({
         ...interruptor(false),
         origen: "AJUSTE",
       });
@@ -211,14 +211,14 @@ describe.skipIf(base === null)("derechos de uso: lectura del plan y de los ajust
     it("lo que la base guarda pero el catálogo no entiende no rompe: perilla desconocida se ignora y un valor de otro tipo vuelve al plan", async () => {
       const mundo = await crearMundoDeMarca(dueno);
       const { version } = await crearPlanPublicado(dueno, {
-        perillas: { carta_por_qr: interruptor(true) },
+        perillas: { vidriera_por_qr: interruptor(true) },
       });
       await asignarPlan(dueno, mundo.tenant, version);
       await ajustarPerilla(dueno, mundo.tenant, "perilla_que_ya_no_existe", "5");
-      await ajustarPerilla(dueno, mundo.tenant, "carta_por_qr", "2"); // un interruptor no vale 2
+      await ajustarPerilla(dueno, mundo.tenant, "vidriera_por_qr", "2"); // un interruptor no vale 2
       const d = await deLaEmpresa(mundo);
       expect(d.perillas.size).toBe(Object.keys(PERILLAS_DE_PRUEBA).length);
-      expect(valor(d, "carta_por_qr")).toEqual({ ...interruptor(true), origen: "PLAN" });
+      expect(valor(d, "vidriera_por_qr")).toEqual({ ...interruptor(true), origen: "PLAN" });
     });
 
     it("un módulo o una perilla del plan que el catálogo ya no tiene no habilita nada", async () => {
@@ -283,11 +283,11 @@ describe.skipIf(base === null)("derechos de uso: lectura del plan y de los ajust
         perillas: { cajas_por_sucursal: lim(50) },
       });
       await asignarPlan(dueno, b.tenant, planB.version);
-      await ajustarPerilla(dueno, b.tenant, "carta_por_qr", "1");
+      await ajustarPerilla(dueno, b.tenant, "vidriera_por_qr", "1");
       const deA = await deLaEmpresa(a);
       expect(deA.versionDePlan).toBeNull();
       expect([...deA.modulosHabilitados]).toEqual(["nucleo"]);
-      expect(valor(deA, "carta_por_qr")?.origen).toBe("BASE");
+      expect(valor(deA, "vidriera_por_qr")?.origen).toBe("BASE");
       expect(valor(deA, "cajas_por_sucursal")).toEqual({ ...lim(1), origen: "BASE" });
       // y a la inversa: B sí tiene lo suyo
       const deB = await deLaEmpresa(b);
@@ -331,14 +331,17 @@ describe.skipIf(base === null)("derechos de uso: lectura del plan y de los ajust
         perillas: { cajas_por_sucursal: lim(3) },
       });
       await asignarPlan(dueno, mundo.tenant, version);
-      await ajustarPerilla(dueno, mundo.tenant, "carta_por_qr", "1");
+      await ajustarPerilla(dueno, mundo.tenant, "vidriera_por_qr", "1");
       await ajustarPerilla(dueno, mundo.tenant, "con_sello", "0", { empresa: mundo.empresa });
       const d = await delTenant(mundo.tenant);
       expect(d?.empresaId).toBeNull();
       expect(d?.tenantId).toBe(mundo.tenant);
       expect(d?.versionDePlan?.versionDePlanId).toBe(version);
       expect([...(d?.modulosHabilitados ?? [])].sort()).toEqual(["caja", "nucleo"]);
-      expect(d?.perillas.get("carta_por_qr")).toEqual({ ...interruptor(true), origen: "AJUSTE" });
+      expect(d?.perillas.get("vidriera_por_qr")).toEqual({
+        ...interruptor(true),
+        origen: "AJUSTE",
+      });
       expect(d?.perillas.get("con_sello")).toEqual({ ...interruptor(true), origen: "BASE" });
     });
 
@@ -442,7 +445,7 @@ describe.skipIf(base === null)("derechos de uso: lectura del plan y de los ajust
       const uno = await crearPlanPublicado(dueno, { perillas: { cajas_por_sucursal: lim(1) } });
       const dos = await crearPlanPublicado(dueno, { perillas: { cajas_por_sucursal: lim(2) } });
       await asignarPlan(dueno, mundo.tenant, uno.version);
-      await ajustarPerilla(dueno, mundo.tenant, "carta_por_qr", "0");
+      await ajustarPerilla(dueno, mundo.tenant, "vidriera_por_qr", "0");
 
       const llegoALaMitad = crearBarrera(2);
       const seguir = crearBarrera(2);
@@ -467,7 +470,7 @@ describe.skipIf(base === null)("derechos de uso: lectura del plan y de los ajust
         // El escritor cambia plan y ajuste en UNA transacción y confirma.
         await dueno.query("begin");
         await asignarPlan(dueno, mundo.tenant, dos.version);
-        await ajustarPerilla(dueno, mundo.tenant, "carta_por_qr", "1");
+        await ajustarPerilla(dueno, mundo.tenant, "vidriera_por_qr", "1");
         await dueno.query("commit");
         await seguir();
         const r = await lector;
@@ -481,7 +484,7 @@ describe.skipIf(base === null)("derechos de uso: lectura del plan y de los ajust
     it("SERIALIZABLE: el lector ve el plan viejo con el ajuste viejo (una foto, sin mezcla)", async () => {
       const { derechos, uno } = await lectorConCambioEnElMedio("serializable");
       expect(derechos.versionDePlan?.versionDePlanId).toBe(uno);
-      expect(derechos.perillas.get("carta_por_qr")).toEqual({
+      expect(derechos.perillas.get("vidriera_por_qr")).toEqual({
         ...interruptor(false),
         origen: "AJUSTE",
       });
@@ -490,7 +493,7 @@ describe.skipIf(base === null)("derechos de uso: lectura del plan y de los ajust
     it("READ COMMITTED mezclaría (plan viejo con ajuste nuevo): por eso los derechos se leen en la transacción serializable", async () => {
       const { derechos, uno } = await lectorConCambioEnElMedio("read committed");
       expect(derechos.versionDePlan?.versionDePlanId).toBe(uno);
-      expect(derechos.perillas.get("carta_por_qr")).toEqual({
+      expect(derechos.perillas.get("vidriera_por_qr")).toEqual({
         ...interruptor(true),
         origen: "AJUSTE",
       });

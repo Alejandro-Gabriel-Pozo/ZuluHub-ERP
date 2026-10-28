@@ -1,0 +1,22 @@
+[
+  {
+    "id": "excl-generado",
+    "alcance": "clase",
+    "clase": "generado",
+    "motivo": "Archivos de bloqueo que escribe una herramienta (package-lock.json, skills-lock.json): no tienen c\u00f3digo propio que comparar contra un contrato. Exclusi\u00f3n prevista en contratos-arquitectonicos.md \u00a72.2.",
+    "responsable": "Ingenier\u00eda de Pedernal-ERP",
+    "aprobadoPor": "Due\u00f1o del producto (dise\u00f1o G1)",
+    "vence": "2026-12-20",
+    "creada": "2026-10-21"
+  },
+  {
+    "id": "excl-docs",
+    "alcance": "clase",
+    "clase": "docs",
+    "motivo": "Documentaci\u00f3n en Markdown y gu\u00edas de agentes (.claude): texto para leer, sin c\u00f3digo ejecutable. Un contrato que necesite mirar documentos tiene que quitar esta exclusi\u00f3n a prop\u00f3sito. Exclusi\u00f3n prevista en contratos-arquitectonicos.md \u00a72.2.",
+    "responsable": "Ingenier\u00eda de Pedernal-ERP",
+    "aprobadoPor": "Due\u00f1o del producto (dise\u00f1o G1)",
+    "vence": "2026-12-20",
+    "creada": "2026-10-21"
+  }
+]

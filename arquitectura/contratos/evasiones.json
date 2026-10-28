@@ -1,0 +1,2326 @@
+[
+  {
+    "id": "EV-001",
+    "via": "filtros",
+    "titulo": "CONTROL: carpeta nueva en la raíz del repositorio, sin regla de clasificación",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "carpeta-nueva/codigo.ts",
+        "contenido": "export const x = 1;\n"
+      }
+    ],
+    "controlEsperado": "clasificacion.cjs: toda ruta versionada tiene que calzar una clase (ruta-sin-clase).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "ruta-sin-clase",
+      "archivo": "carpeta-nueva/codigo.ts",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-002",
+    "via": "filtros",
+    "titulo": "CONTROL: módulo nuevo `src/modulos/x` sin regla de clasificación ni `contratos.json`",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/x/dominio.ts",
+        "contenido": "export const x = 1;\n"
+      }
+    ],
+    "controlEsperado": "ruta-sin-clase: los módulos de `src/modulos` se listan uno por uno; un módulo nuevo obliga a decidir su clase y su declaración.",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "ruta-sin-clase",
+      "archivo": "src/modulos/x/dominio.ts",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-003",
+    "via": "filtros",
+    "titulo": "CONTROL: código `.ts` dentro de `.claude/` (clase `docs`, excluida del análisis)",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": ".claude/hook.ts",
+        "contenido": "export const h = 1;\n"
+      }
+    ],
+    "controlEsperado": "clasificacion.cjs: el código ejecutable no puede salir del análisis por una clase excluida (codigo-en-clase-excluida).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "codigo-en-clase-excluida",
+      "archivo": ".claude/hook.ts",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-004",
+    "via": "filtros",
+    "titulo": "CONTROL: ampliar `PERMITIDO_EN_CLASE_EXCLUIDA` (`.ts` en docs) y esconder código en `.claude/`",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": "arquitectura/contratos/clasificacion.cjs",
+        "de": "extensiones: Object.freeze([\".md\", \".txt\"])",
+        "a": "extensiones: Object.freeze([\".md\", \".txt\", \".ts\"])"
+      },
+      {
+        "op": "escribir",
+        "ruta": ".claude/hook.ts",
+        "contenido": "export const h = 1;\n"
+      }
+    ],
+    "controlEsperado": "no-debilitar (e): lo permitido dentro de una clase excluida no crece (extensiones-permitidas-ampliadas).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "extensiones-permitidas-ampliadas",
+      "archivo": "arquitectura/contratos/clasificacion.cjs"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-005",
+    "via": "workflow-ci",
+    "titulo": "CONTROL: sacar `guardian` del `needs` del job `gate`",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "        estatico,\n        guardian,\n        pruebas,\n",
+        "a": "        estatico,\n        pruebas,\n"
+      }
+    ],
+    "controlEsperado": "no-debilitar (f): el Gate tiene que esperar al guardián (ci-gate-no-espera-guardian).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "ci-gate-no-espera-guardian",
+      "archivo": ".github/workflows/ci.yml"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-006",
+    "via": "workflow-ci",
+    "titulo": "CONTROL: `if: false` en el paso que corre `guardian.cjs` (clave `if` sin comillas)",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "      - name: Guardián del cambio (la versión nueva)\n        run:",
+        "a": "      - name: Guardián del cambio (la versión nueva)\n        if: false\n        run:"
+      }
+    ],
+    "controlEsperado": "no-debilitar (f): el paso que corre el guardián no puede traer un `if` que la base no tenía (ci-guardian-con-salto).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "ci-guardian-con-salto",
+      "archivo": ".github/workflows/ci.yml"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-007",
+    "via": "declaraciones-excepciones",
+    "titulo": "CONTROL: exclusión por ruta con vencimiento a 90 días (más que el máximo de 60)",
+    "construccion": [
+      {
+        "op": "json-agregar",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [],
+        "valor": {
+          "id": "excl-demo",
+          "alcance": "ruta",
+          "ruta": "scripts/baja-de-admin.ts",
+          "huella": "{{huella-archivo:scripts/baja-de-admin.ts}}",
+          "motivo": "demo",
+          "responsable": "demo",
+          "aprobadoPor": "texto libre",
+          "creada": "{{hoy}}",
+          "vence": "{{hoy+90}}"
+        }
+      }
+    ],
+    "controlEsperado": "excepciones.cjs: ninguna exclusión dura más de 60 días (excepcion-plazo-excesivo), con la línea del JSON.",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "excepcion-plazo-excesivo",
+      "archivo": "arquitectura/contratos/exclusiones.json",
+      "linea": 31
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-008",
+    "via": "declaraciones-excepciones",
+    "titulo": "CONTROL: `exclusiones.json` roto (JSON inválido)",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "contenido": "{ esto no es json\n"
+      }
+    ],
+    "controlEsperado": "guardian.cjs: un archivo de datos que no se puede leer como JSON falla (excepcion-invalida).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "excepcion-invalida",
+      "archivo": "arquitectura/contratos/exclusiones.json",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-009",
+    "via": "formato-no-soportado",
+    "titulo": "CONTROL: `contratos.json` de una unidad con BOM UTF-8",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/contratos.json",
+        "contenido": "",
+        "contenidoBase64": "77u/eyJ1c2EiOltdLCJub1VzYSI6IlNpbiBjb250cmF0b3MgdG9kYXbDrWEuIn0="
+      }
+    ],
+    "controlEsperado": "declaraciones.cjs: una declaración que no es JSON válido falla (declaracion-invalida).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "declaracion-invalida",
+      "archivo": "src/modulos/empresas/contratos.json",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-010",
+    "via": "no-se-pudo-interpretar",
+    "titulo": "CONTROL: `git` falla (el guardián corre fuera de un repositorio git)",
+    "construccion": [],
+    "sinGit": true,
+    "controlEsperado": "El guardián no puede listar las rutas: sale distinto de 0 (falla cerrado), nunca «pasó».",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-011",
+    "via": "no-se-pudo-interpretar",
+    "titulo": "CONTROL: excepción no capturada (el registro `contratos.cjs` lanza al cargarse)",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/contratos/contratos.cjs",
+        "contenido": "throw new Error(\"boom\");\n"
+      }
+    ],
+    "controlEsperado": "Cualquier excepción termina el guardián con salida distinta de 0 (sin un catch global que la trague).",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-012",
+    "via": "declaraciones-excepciones",
+    "titulo": "CONTROL (contrato sintético): una unidad que declara `noUsa` usa el contrato directamente",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/uso-directo.cjs",
+        "contenido": "\"use strict\";\nmodule.exports = require(\"../../primitivas/color-de-prueba.cjs\").COLOR_DE_PRUEBA;\n"
+      }
+    ],
+    "controlEsperado": "comparacion.cjs: un uso real contra una declaración `noUsa` falla con la línea del uso (no-usa-falso).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "no-usa-falso",
+      "archivo": "src/modulos/empresas/uso-directo.cjs",
+      "linea": 2
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-013",
+    "via": "declaraciones-excepciones",
+    "titulo": "CONTROL (contrato sintético): declarar `usa` un contrato que no se usa, con `bloqueaDeclaracionFalsa: true`",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/contratos.json",
+        "contenido": "{\"usa\":[\"color-de-prueba\"]}"
+      }
+    ],
+    "controlEsperado": "comparacion.cjs: una declaración sin uso real falla con la línea del id en el `contratos.json` (declaracion-falsa).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "declaracion-falsa",
+      "archivo": "src/modulos/empresas/contratos.json",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-020",
+    "via": "workflow-ci",
+    "titulo": "Quitar el paso «Vigilancia de la versión anterior» de `ci.yml` (el resto del árbol, limpio)",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "      # El verificador de la BASE mira el árbol del PR: lo que la base exigía no puede dejar de exigirse.\n      # Si la base todavía no lo trae (la primera vez que se incorpora), se avisa y se sigue.\n      - name: Vigilancia de la versión anterior (no se debilita lo que la base exigía)\n        if: github.event_name == 'pull_request'\n        run: |\n          if [ -f base/arquitectura/contratos/no-debilitar.cjs ]; then\n            node base/arquitectura/contratos/no-debilitar.cjs --arbol .\n          else\n            echo \"::notice::La rama base no trae no-debilitar.cjs: no hay versión anterior que vigile.\"\n          fi\n",
+        "a": ""
+      }
+    ],
+    "controlEsperado": "Algo ajeno al cambio tiene que exigir que el paso de vigilancia exista (la base, o un check requerido en la protección de `main`).",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): quien se evalúa trae su propio evaluador: sin el paso, la vigilancia de la base no corre. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-021",
+    "via": "workflow-ci",
+    "titulo": "Quitar el paso de vigilancia Y debilitar a la vez (`PLAZO_MAXIMO_DIAS` 60 → 90)",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "      # El verificador de la BASE mira el árbol del PR: lo que la base exigía no puede dejar de exigirse.\n      # Si la base todavía no lo trae (la primera vez que se incorpora), se avisa y se sigue.\n      - name: Vigilancia de la versión anterior (no se debilita lo que la base exigía)\n        if: github.event_name == 'pull_request'\n        run: |\n          if [ -f base/arquitectura/contratos/no-debilitar.cjs ]; then\n            node base/arquitectura/contratos/no-debilitar.cjs --arbol .\n          else\n            echo \"::notice::La rama base no trae no-debilitar.cjs: no hay versión anterior que vigile.\"\n          fi\n",
+        "a": ""
+      },
+      {
+        "op": "reemplazar",
+        "ruta": "arquitectura/contratos/excepciones.cjs",
+        "de": "const PLAZO_MAXIMO_DIAS = 60;",
+        "a": "const PLAZO_MAXIMO_DIAS = 90;"
+      }
+    ],
+    "controlEsperado": "Un debilitamiento que la base sí detecta no puede pasar quitando el paso que lo detecta.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` y `excepciones.cjs` (maquinaria, §11.1): con el paso quitado, el debilitamiento del plazo que la base detectaría no se evalúa. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-022",
+    "via": "workflow-ci",
+    "titulo": "Dejar el paso de vigilancia pero tolerar su fallo (`… --arbol . || true`) y debilitar (plazo 90)",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "            node base/arquitectura/contratos/no-debilitar.cjs --arbol .\n",
+        "a": "            node base/arquitectura/contratos/no-debilitar.cjs --arbol . || true\n"
+      },
+      {
+        "op": "reemplazar",
+        "ruta": "arquitectura/contratos/excepciones.cjs",
+        "de": "const PLAZO_MAXIMO_DIAS = 60;",
+        "a": "const PLAZO_MAXIMO_DIAS = 90;"
+      }
+    ],
+    "controlEsperado": "El paso de vigilancia no puede ser tolerante (hoy el chequeo de comandos tolerantes solo mira los pasos que corren el guardián o las pruebas).",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): con `|| true` el fallo de la vigilancia no frena el job; el chequeo de comandos tolerantes no mira ese paso. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-023",
+    "via": "workflow-ci",
+    "titulo": "El paso de vigilancia neutraliza al verificador de la base antes de invocarlo (la línea del comando queda intacta) + plazo 90",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "            node base/arquitectura/contratos/no-debilitar.cjs --arbol .\n",
+        "a": "            echo 'process.exit(0)' > base/arquitectura/contratos/no-debilitar.cjs\n            node base/arquitectura/contratos/no-debilitar.cjs --arbol .\n"
+      },
+      {
+        "op": "reemplazar",
+        "ruta": "arquitectura/contratos/excepciones.cjs",
+        "de": "const PLAZO_MAXIMO_DIAS = 60;",
+        "a": "const PLAZO_MAXIMO_DIAS = 90;"
+      }
+    ],
+    "controlEsperado": "La vigilancia no puede alterarse a sí misma desde su propio paso de CI.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): el paso de vigilancia puede reemplazar al verificador de la base antes de invocarlo. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-024",
+    "via": "workflow-ci",
+    "titulo": "`env: NODE_OPTIONS=--require ./arquitectura/silencio.cjs` a nivel del job guardian, con una violación escondida",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/silencio.cjs",
+        "contenido": "process.on(\"exit\", () => {\n  process.exitCode = 0;\n});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "carpeta-nueva/codigo.ts",
+        "contenido": "export const x = 1;\n"
+      },
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "    name: Guardián de contratos\n    runs-on: ubuntu-latest\n    timeout-minutes: 10\n    permissions:\n      contents: read\n",
+        "a": "    name: Guardián de contratos\n    runs-on: ubuntu-latest\n    timeout-minutes: 10\n    permissions:\n      contents: read\n    env:\n      NODE_OPTIONS: --require ./arquitectura/silencio.cjs\n"
+      }
+    ],
+    "controlEsperado": "El job guardian no puede alterar el entorno con el que corre el guardián.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): un `env` del job cambia cómo corre el guardián (la vigilancia no compara el entorno). El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-025",
+    "via": "workflow-ci",
+    "titulo": "Paso previo al guardián que parchea `guardian.cjs` en el runner (el árbol commiteado queda intacto) + violación escondida",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "carpeta-nueva/codigo.ts",
+        "contenido": "export const x = 1;\n"
+      },
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "      - name: Guardián del cambio (la versión nueva)\n",
+        "a": "      - name: Preparar el entorno\n        run: |\n          sed -i 's/process.exitCode = pasa ? salidaDeLaBase : 1;/process.exitCode = 0;/' arquitectura/contratos/guardian.cjs\n      - name: Guardián del cambio (la versión nueva)\n"
+      }
+    ],
+    "controlEsperado": "Nada ajeno a los pasos vigilados puede ejecutarse antes del guardián en su job.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): un paso previo puede parchear el guardián en el runner sin tocar el árbol. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-026",
+    "via": "workflow-ci",
+    "titulo": "Paso previo que escribe `NODE_OPTIONS` en `$GITHUB_ENV` (preload que fuerza salida 0) + violación escondida",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/silencio.cjs",
+        "contenido": "process.on(\"exit\", () => {\n  process.exitCode = 0;\n});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "carpeta-nueva/codigo.ts",
+        "contenido": "export const x = 1;\n"
+      },
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "      - name: Guardián del cambio (la versión nueva)\n",
+        "a": "      - name: Preparar el entorno\n        run: echo \"NODE_OPTIONS=--require ./arquitectura/silencio.cjs\" >> \"$GITHUB_ENV\"\n      - name: Guardián del cambio (la versión nueva)\n"
+      }
+    ],
+    "controlEsperado": "Ningún paso previo puede alterar el entorno del guardián.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): un paso previo puede escribir `NODE_OPTIONS` en `$GITHUB_ENV` y silenciar al guardián. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-027",
+    "via": "workflow-ci",
+    "titulo": "`defaults.run.shell: \"true {0}\"` en el job guardian (los scripts nunca se interpretan) + violación escondida",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "carpeta-nueva/codigo.ts",
+        "contenido": "export const x = 1;\n"
+      },
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "    name: Guardián de contratos\n    runs-on: ubuntu-latest\n    timeout-minutes: 10\n    permissions:\n      contents: read\n",
+        "a": "    name: Guardián de contratos\n    runs-on: ubuntu-latest\n    timeout-minutes: 10\n    permissions:\n      contents: read\n    defaults:\n      run:\n        shell: \"true {0}\"\n"
+      }
+    ],
+    "controlEsperado": "El job guardian no puede cambiar el shell con el que corre.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): `defaults.run.shell` cambia el intérprete con que corre el guardián. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-028",
+    "via": "workflow-ci",
+    "titulo": "`shell: \"true {0}\"` en el paso que corre `guardian.cjs` (la línea `run:` queda idéntica) + violación escondida",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "carpeta-nueva/codigo.ts",
+        "contenido": "export const x = 1;\n"
+      },
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "        run: node arquitectura/contratos/guardian.cjs\n",
+        "a": "        run: node arquitectura/contratos/guardian.cjs\n        shell: \"true {0}\"\n"
+      }
+    ],
+    "controlEsperado": "El paso que corre el guardián no puede traer propiedades que cambien cómo corre.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): una propiedad `shell` del paso cambia cómo corre el guardián sin tocar su línea `run:`. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-029",
+    "via": "workflow-ci",
+    "titulo": "Solo `… --arbol . || true` en el paso de vigilancia (sin otro cambio: aísla qué detecta cada control)",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "            node base/arquitectura/contratos/no-debilitar.cjs --arbol .\n",
+        "a": "            node base/arquitectura/contratos/no-debilitar.cjs --arbol . || true\n"
+      }
+    ],
+    "controlEsperado": "Ver EV-022: sin sumar el debilitamiento del plazo, para saber si algo lo detecta por sí solo.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): `|| true` en el paso de vigilancia, sin otro cambio. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-030",
+    "via": "workflow-ci",
+    "titulo": "Clave `\"if\": false` ENTRECOMILLADA en el paso que corre `guardian.cjs` + violación escondida",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "carpeta-nueva/codigo.ts",
+        "contenido": "export const x = 1;\n"
+      },
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "      - name: Guardián del cambio (la versión nueva)\n        run:",
+        "a": "      - name: Guardián del cambio (la versión nueva)\n        \"if\": false\n        run:"
+      }
+    ],
+    "controlEsperado": "no-debilitar (f) detecta el `if` del paso del guardián (EV-006 lo hace con la clave sin comillas); una clave YAML entrecomillada es la misma clave.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): el lector de texto de la vigilancia no entiende la clave `\"if\"` entrecomillada (divergencia con el YAML real). El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-031",
+    "via": "workflow-ci",
+    "titulo": "`if : false` (espacio antes de los dos puntos) en el paso que corre `guardian.cjs` + violación escondida",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "carpeta-nueva/codigo.ts",
+        "contenido": "export const x = 1;\n"
+      },
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "      - name: Guardián del cambio (la versión nueva)\n        run:",
+        "a": "      - name: Guardián del cambio (la versión nueva)\n        if : false\n        run:"
+      }
+    ],
+    "controlEsperado": "Igual que EV-030: la variante con espacio sigue siendo la clave `if` para YAML.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): el lector de texto de la vigilancia no entiende `if :` con espacio (divergencia con el YAML real). El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-032",
+    "via": "workflow-ci",
+    "titulo": "`run: |` con `exit 0` ANTES de `node arquitectura/contratos/guardian.cjs` (el lector de texto ve el comando; el shell nunca llega) + violación escondida",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "carpeta-nueva/codigo.ts",
+        "contenido": "export const x = 1;\n"
+      },
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "        run: node arquitectura/contratos/guardian.cjs\n",
+        "a": "        run: |\n          exit 0\n          node arquitectura/contratos/guardian.cjs\n"
+      }
+    ],
+    "controlEsperado": "no-debilitar (f) exige que el paso ejecute el guardián «tal cual», pero lo comprueba línea por línea, no la semántica del script.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): un `exit 0` antes del comando: el lector ve el comando y el shell no llega a él. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-033",
+    "via": "workflow-ci",
+    "titulo": "`principal()` de `evaluar-gate.cjs` solo falla fuera de la CI (`&& !process.env[\"CI\"]`); la función exportada `evaluarGate` queda intacta",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": "arquitectura/evaluar-gate.cjs",
+        "de": "  if (problemas.length > 0) {",
+        "a": "  if (problemas.length > 0 && !process.env[\"CI\"]) {"
+      }
+    ],
+    "controlEsperado": "La vigilancia prueba `evaluarGate` pero no el CLI que corre el job gate: algo tiene que probar el comportamiento del paso real.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `arquitectura/evaluar-gate.cjs` (maquinaria, §11.1): el CLI del Gate puede dejar de fallar en la CI sin cambiar la función que la vigilancia prueba. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-034",
+    "via": "workflow-ci",
+    "titulo": "El paso del job gate suma `NODE_OPTIONS=--require ./arquitectura/silencio.cjs` (conserva `run:` y `NEEDS:` literales)",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/silencio.cjs",
+        "contenido": "process.on(\"exit\", () => {\n  process.exitCode = 0;\n});\n"
+      },
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "          NEEDS: ${{ toJSON(needs) }}\n",
+        "a": "          NEEDS: ${{ toJSON(needs) }}\n          NODE_OPTIONS: --require ./arquitectura/silencio.cjs\n"
+      }
+    ],
+    "controlEsperado": "Alterar el paso del job gate (no su lógica exportada) no puede pasar en silencio.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): el paso del job gate puede silenciarse con `NODE_OPTIONS` sin tocar su lógica. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-035",
+    "via": "workflow-ci",
+    "titulo": "Solo la neutralización del verificador de la base dentro del paso de vigilancia (sin otro cambio)",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "            node base/arquitectura/contratos/no-debilitar.cjs --arbol .\n",
+        "a": "            echo 'process.exit(0)' > base/arquitectura/contratos/no-debilitar.cjs\n            node base/arquitectura/contratos/no-debilitar.cjs --arbol .\n"
+      }
+    ],
+    "controlEsperado": "Ver EV-023, sin el debilitamiento del plazo.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): el paso de vigilancia puede neutralizar al verificador de la base, sin otro cambio. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-040",
+    "via": "workflow-ci",
+    "titulo": "Workflow nuevo `.github/workflows/lateral.yml` con `on: push` (corre desde la rama empujada, antes de cualquier PR)",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": ".github/workflows/lateral.yml",
+        "contenido": "name: Lateral\n\non:\n  push:\n\npermissions:\n  contents: read\n\njobs:\n  lateral:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo \"corre desde la rama empujada\"\n"
+      }
+    ],
+    "controlEsperado": "Un workflow nuevo o cambiado tiene que evaluarse (revisión humana o vigilancia externa, G4); el guardián solo lo clasifica como `config`.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/` (un workflow nuevo) (maquinaria, §11.1): un `on: push` corre desde la rama empujada, antes de cualquier PR; los permisos que reciba dependen de la configuración de Actions. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-041",
+    "via": "filtros",
+    "titulo": "`pull_request: types: [closed]` (el CI deja de correr al abrir o actualizar el PR)",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "  pull_request:\n  schedule:",
+        "a": "  pull_request:\n    types: [closed]\n  schedule:"
+      }
+    ],
+    "controlEsperado": "Nadie mira `types:`; con el check «Gate» requerido GitHub deja el PR esperando (falla cerrado), pero eso es configuración externa (G4).",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): `types: [closed]` hace que el CI no corra al abrir el PR; con «Gate» requerido GitHub lo deja esperando, pero eso es configuración externa que vigila G4. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-042",
+    "via": "filtros",
+    "titulo": "`pull_request: paths-ignore: [\"**.ts\"]` (un PR que solo toca `.ts` no dispara el workflow)",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "  pull_request:\n  schedule:",
+        "a": "  pull_request:\n    paths-ignore:\n      - \"**.ts\"\n  schedule:"
+      }
+    ],
+    "controlEsperado": "verificar-mecanismo.verificarDisparadores (`ci-disparador-incompleto`) lo detecta, pero corre dentro de las pruebas del propio cambio.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): `paths-ignore` evita el workflow en ciertos cambios; la comprobación existe pero corre dentro de las pruebas del propio cambio. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-043",
+    "via": "workflow-ci",
+    "titulo": "Renombrar el `name:` del job guardian («Guardián de contratos» → «Guardián de contratos (v2)»)",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "    name: Guardián de contratos\n",
+        "a": "    name: Guardián de contratos (v2)\n"
+      }
+    ],
+    "controlEsperado": "Una prueba (`gate-coincide-con-ci.test.ts`) fija el nombre; la vigilancia no lo mira. El check requerido por nombre es configuración externa (G4).",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): renombrar el job cambia el check que exige la protección de `main` (configuración externa que vigila G4). El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-044",
+    "via": "workflow-ci",
+    "titulo": "Job homónimo: un job nuevo `guardian-eco` con `name: Guardián de contratos` que solo hace `echo` (el original se conserva)",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "\n  pruebas:\n    name: Pruebas (con Postgres real)\n",
+        "a": "\n  guardian-eco:\n    name: Guardián de contratos\n    runs-on: ubuntu-latest\n    timeout-minutes: 1\n    steps:\n      - run: echo ok\n\n  pruebas:\n    name: Pruebas (con Postgres real)\n"
+      }
+    ],
+    "controlEsperado": "Dos jobs no pueden compartir el nombre del check requerido; GitHub puede satisfacer el requerido con el verde del eco (configuración externa, G4).",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): un job homónimo puede satisfacer el check requerido (comportamiento de GitHub con nombres repetidos, que vigila G4). El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-045",
+    "via": "workflow-ci",
+    "titulo": "Cambiar la acción `actions/checkout` del job guardian por otra (`actions-fork/checkout@<mismo sha>`)",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "    name: Guardián de contratos\n    runs-on: ubuntu-latest\n    timeout-minutes: 10\n    permissions:\n      contents: read\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n",
+        "a": "    name: Guardián de contratos\n    runs-on: ubuntu-latest\n    timeout-minutes: 10\n    permissions:\n      contents: read\n    steps:\n      - uses: actions-fork/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n"
+      }
+    ],
+    "controlEsperado": "Que cambiar de dónde sale el árbol que evalúa el guardián se vea (el job `flujos` con zizmor lo revisa; esta batería no lo corre).",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): cambiar la acción de checkout cambia de dónde sale el árbol evaluado; lo revisa zizmor (job «flujos»), no esta batería. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-046",
+    "via": "workflow-ci",
+    "titulo": "`pull_request` → `pull_request_target` en `ci.yml` (cambia qué `ci.yml` se evalúa y con qué permisos)",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "  pull_request:\n  schedule:",
+        "a": "  pull_request_target:\n  schedule:"
+      }
+    ],
+    "controlEsperado": "Una prueba (`gate-coincide-con-ci.test.ts`) lo prohíbe; la vigilancia no lo mira.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `.github/workflows/ci.yml` (maquinaria, §11.1): `pull_request_target` corre el `ci.yml` de la rama base con otros permisos; lo prohíbe una prueba que el propio cambio puede editar. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-050",
+    "via": "modificar-guardian",
+    "titulo": "Reemplazar `guardian.cjs` por un stub que sale 0 (sin tocar las pruebas) + violación escondida",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "carpeta-nueva/codigo.ts",
+        "contenido": "export const x = 1;\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/contratos/guardian.cjs",
+        "contenido": "\"use strict\";\n// Guardián de contratos: versión mínima.\nconst ejecutar = () => ({ fallas: [], avisos: [], informe: {} });\nconst cargarDelRepo = () => ({});\nconst formatearFalla = (falla) => String(falla);\nconst vigilarConLaBase = () => 0;\nconst valorDeOpcion = () => undefined;\n\nmodule.exports = { ejecutar, cargarDelRepo, formatearFalla, vigilarConLaBase, valorDeOpcion };\n\nif (require.main === module) process.stdout.write(\"Guardián de contratos: OK\\n\");\n"
+      }
+    ],
+    "controlEsperado": "Las pruebas de resistencia y la matriz (`test/arquitectura/guardian-*`) fallan; la vigilancia declara esto fuera de su alcance (§5).",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `arquitectura/contratos/guardian.cjs` (maquinaria, §11.1): el guardián del cambio es el que el cambio trae; solo las pruebas del guardián (que el cambio puede editar) lo detectarían. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-051",
+    "via": "modificar-guardian",
+    "titulo": "Stub de `guardian.cjs` + las 8 pruebas del guardián reemplazadas por una prueba vacía, en el mismo cambio + violación escondida",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "carpeta-nueva/codigo.ts",
+        "contenido": "export const x = 1;\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/contratos/guardian.cjs",
+        "contenido": "\"use strict\";\n// Guardián de contratos: versión mínima.\nconst ejecutar = () => ({ fallas: [], avisos: [], informe: {} });\nconst cargarDelRepo = () => ({});\nconst formatearFalla = (falla) => String(falla);\nconst vigilarConLaBase = () => 0;\nconst valorDeOpcion = () => undefined;\n\nmodule.exports = { ejecutar, cargarDelRepo, formatearFalla, vigilarConLaBase, valorDeOpcion };\n\nif (require.main === module) process.stdout.write(\"Guardián de contratos: OK\\n\");\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-clasificacion.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-declaraciones.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-diagnostico.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-excepciones.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-matriz.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-no-debilitar.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-nucleo.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-registro.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      }
+    ],
+    "controlEsperado": "El guardián no puede ser reemplazado y sus pruebas neutralizadas en el mismo cambio (§5: la versión anterior vigila a la nueva).",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `guardian.cjs` y sus pruebas (maquinaria, §11.1): el stub y las pruebas neutralizadas entran en el mismo cambio y la vigilancia no compara el contenido del guardián. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-053",
+    "via": "modificar-guardian",
+    "titulo": "Vaciar por dentro el detector de uso (misma cantidad y clases, el patrón ya no reconoce nada) y pasar la unidad a `noUsa`",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": "arquitectura/contratos/contratos.cjs",
+        "de": "/^(?!\\s*exports\\.COLOR_DE_PRUEBA\\s*=).*\\bCOLOR_DE_PRUEBA\\b/",
+        "a": "/(?!)/"
+      },
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/fiscal/contratos.json",
+        "contenido": "{\"usa\":[],\"noUsa\":\"sin contratos\"}"
+      },
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/uso-directo.cjs",
+        "contenido": "\"use strict\";\nmodule.exports = require(\"../../primitivas/color-de-prueba.cjs\").COLOR_DE_PRUEBA;\n"
+      }
+    ],
+    "controlEsperado": "La vigilancia compara cantidades y clases, no la lógica del detector; lo cubren la matriz y la mutación sobre registros reales.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `arquitectura/contratos/contratos.cjs` (maquinaria, §11.1): un detector vaciado por dentro mantiene cantidad y clases; la vigilancia no compara su lógica. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-054",
+    "via": "modificar-guardian",
+    "titulo": "Como EV-051 y además borrando el código que `knip` marcaría como muerto (`verificar-mecanismo.cjs` y los dos auxiliares de prueba)",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "carpeta-nueva/codigo.ts",
+        "contenido": "export const x = 1;\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/contratos/guardian.cjs",
+        "contenido": "\"use strict\";\n// Guardián de contratos: versión mínima.\nconst ejecutar = () => ({ fallas: [], avisos: [], informe: {} });\nconst cargarDelRepo = () => ({});\nconst formatearFalla = (falla) => String(falla);\nconst vigilarConLaBase = () => 0;\nconst valorDeOpcion = () => undefined;\n\nconst { REGLAS_DE_LINEA } = require(\"./ubicacion.cjs\");\n\nmodule.exports = { REGLAS_DE_LINEA, ejecutar, cargarDelRepo, formatearFalla, vigilarConLaBase, valorDeOpcion };\n\nif (require.main === module) process.stdout.write(\"Guardián de contratos: OK\\n\");\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-clasificacion.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-declaraciones.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-diagnostico.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-excepciones.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-matriz.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-no-debilitar.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-nucleo.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-registro.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "borrar",
+        "ruta": "arquitectura/contratos/verificar-mecanismo.cjs"
+      },
+      {
+        "op": "borrar",
+        "ruta": "test/arquitectura/guardian-apoyo.ts"
+      },
+      {
+        "op": "borrar",
+        "ruta": "test/arquitectura/guardian-matriz-apoyo.ts"
+      }
+    ],
+    "controlEsperado": "Ninguna combinación de stub + pruebas neutralizadas + limpieza de código muerto pasa todos los jobs. Acá lo frena la vigilancia: sin `verificar-mecanismo.cjs` la matriz del cambio no carga (arbol-ilegible); en la auditoría lo frenó además `knip` (job estático, que esta batería no corre).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "arbol-ilegible",
+      "archivo": "arquitectura/contratos/invariantes.cjs",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-055",
+    "via": "modificar-guardian",
+    "titulo": "Como EV-051 más `knip.json`: el análisis de código muerto deja de mirar `test/**` y `arquitectura/**`",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "carpeta-nueva/codigo.ts",
+        "contenido": "export const x = 1;\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/contratos/guardian.cjs",
+        "contenido": "\"use strict\";\n// Guardián de contratos: versión mínima.\nconst ejecutar = () => ({ fallas: [], avisos: [], informe: {} });\nconst cargarDelRepo = () => ({});\nconst formatearFalla = (falla) => String(falla);\nconst vigilarConLaBase = () => 0;\nconst valorDeOpcion = () => undefined;\n\nmodule.exports = { ejecutar, cargarDelRepo, formatearFalla, vigilarConLaBase, valorDeOpcion };\n\nif (require.main === module) process.stdout.write(\"Guardián de contratos: OK\\n\");\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-clasificacion.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-declaraciones.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-diagnostico.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-excepciones.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-matriz.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-no-debilitar.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-nucleo.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "test/arquitectura/guardian-registro.test.ts",
+        "contenido": "import { it } from \"vitest\";\n\nit(\"guardián (versión mínima)\", () => {});\n"
+      },
+      {
+        "op": "reemplazar",
+        "ruta": "knip.json",
+        "de": "\"project\": [\"src/**/*.ts\", \"test/**/*.ts\", \"arquitectura/**/*.cjs\"],",
+        "a": "\"project\": [\"src/**/*.ts\"],"
+      }
+    ],
+    "controlEsperado": "El stub del guardián y la neutralización de sus pruebas no pueden integrarse en un solo cambio; la vigilancia no mira `knip.json` ni el contenido del guardián.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `knip.json` y el guardián (maquinaria, §11.1): el análisis de código muerto deja de mirar `test/**` y `arquitectura/**`; la vigilancia no mira `knip.json`. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-060",
+    "via": "exclusiones",
+    "titulo": "Cambiar la lógica del plazo sin tocar la línea `const PLAZO_MAXIMO_DIAS = 60;` (`> PLAZO_MAXIMO_DIAS * 100`) y extender por 10 años la exclusión de la clase docs",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": "arquitectura/contratos/excepciones.cjs",
+        "de": "} else if (diasEntre(entrada.creada, entrada.vence) > PLAZO_MAXIMO_DIAS) {",
+        "a": "} else if (diasEntre(entrada.creada, entrada.vence) > PLAZO_MAXIMO_DIAS * 100) {"
+      },
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [1, "vence"],
+        "valor": "{{hoy+3650}}"
+      }
+    ],
+    "controlEsperado": "no-debilitar (d) lee la constante como texto; el comportamiento del plazo lo prueba `guardian-excepciones.test.ts`, que el cambio puede editar.",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "excepcion-plazo-excesivo",
+      "archivo": "arquitectura/contratos/exclusiones.json"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `arquitectura/contratos/excepciones.cjs` (maquinaria, §11.1): se cambia la lógica del plazo sin tocar la constante que la vigilancia lee como texto. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-061",
+    "via": "filtros",
+    "titulo": "Reclasificar por NIVELES: `src/modulos/empresas/**` como `pruebas` (el detector del contrato no mira esa clase) + uso directo del contrato",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": "arquitectura/contratos/clasificacion.cjs",
+        "de": "      { clase: \"pruebas\", glob: \"test/**\" },\n",
+        "a": "      { clase: \"pruebas\", glob: \"test/**\" },\n      { clase: \"pruebas\", glob: \"src/modulos/empresas/**\" },\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/uso-directo.cjs",
+        "contenido": "\"use strict\";\nmodule.exports = require(\"../../primitivas/color-de-prueba.cjs\").COLOR_DE_PRUEBA;\n"
+      }
+    ],
+    "controlEsperado": "La vigilancia no compara la tabla NIVELES; haría falta una prueba que fije la clase de cada carpeta de producción.",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "no-usa-falso",
+      "archivo": "src/modulos/empresas/uso-directo.cjs"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `arquitectura/contratos/clasificacion.cjs` (maquinaria, §11.1): reclasificar una carpeta por NIVELES la saca del alcance de los detectores; la vigilancia no compara la tabla. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-062",
+    "via": "exclusiones",
+    "titulo": "Exclusión nueva por `ruta` (huella y 60 días válidos, `aprobadoPor` libre) del archivo de backend que usa el contrato sin declararlo",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/uso-directo.cjs",
+        "contenido": "\"use strict\";\nmodule.exports = require(\"../../primitivas/color-de-prueba.cjs\").COLOR_DE_PRUEBA;\n"
+      },
+      {
+        "op": "json-agregar",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [],
+        "valor": {
+          "id": "excl-demo",
+          "alcance": "ruta",
+          "ruta": "src/modulos/empresas/uso-directo.cjs",
+          "huella": "{{huella-archivo:src/modulos/empresas/uso-directo.cjs}}",
+          "motivo": "demo",
+          "responsable": "demo",
+          "aprobadoPor": "texto libre",
+          "creada": "{{hoy}}",
+          "vence": "{{hoy+60}}"
+        }
+      }
+    ],
+    "controlEsperado": "§5: «agregó una exclusión» debe detectarse; la vigilancia no mira `exclusiones.json`.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-063",
+    "via": "exclusiones",
+    "titulo": "Renovar las exclusiones de clase tres veces seguidas (creada = día del cambio, vence = +60) con el reloj adelantado 55, 110 y 165 días",
+    "construccion": [
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [0, "creada"],
+        "valor": "{{hoy+165}}"
+      },
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [0, "vence"],
+        "valor": "{{hoy+225}}"
+      },
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [1, "creada"],
+        "valor": "{{hoy+165}}"
+      },
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [1, "vence"],
+        "valor": "{{hoy+225}}"
+      }
+    ],
+    "construccionBase": [
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [0, "creada"],
+        "valor": "{{hoy+110}}"
+      },
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [0, "vence"],
+        "valor": "{{hoy+170}}"
+      },
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [1, "creada"],
+        "valor": "{{hoy+110}}"
+      },
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [1, "vence"],
+        "valor": "{{hoy+170}}"
+      }
+    ],
+    "reloj": 165,
+    "controlEsperado": "Un tope de renovaciones o un historial (el «tope de 10» de §10 no está hecho): hoy renovar una exclusión es siempre válido.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `arquitectura/contratos/exclusiones.json` (maquinaria, §11.1): renovar una exclusión con fechas nuevas es siempre válido: no hay tope de renovaciones ni historial. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-064",
+    "via": "declaraciones-excepciones",
+    "titulo": "Excepción (`excepciones.json`) para un uso real del contrato, renovada tres veces con el reloj adelantado (la última, a 165 días)",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/uso-directo.cjs",
+        "contenido": "\"use strict\";\nmodule.exports = require(\"../../primitivas/color-de-prueba.cjs\").COLOR_DE_PRUEBA;\n"
+      },
+      {
+        "op": "json-agregar",
+        "ruta": "arquitectura/contratos/excepciones.json",
+        "camino": [],
+        "valor": {
+          "id": "exc-demo",
+          "contrato": "color-de-prueba",
+          "ruta": "src/modulos/empresas/uso-directo.cjs",
+          "huella": "{{huella-texto:module.exports = require(\"../../primitivas/color-de-prueba.cjs\").COLOR_DE_PRUEBA;}}",
+          "motivo": "demo",
+          "responsable": "demo",
+          "aprobadoPor": "texto libre",
+          "creada": "{{hoy+165}}",
+          "vence": "{{hoy+225}}"
+        }
+      },
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [0, "creada"],
+        "valor": "{{hoy+165}}"
+      },
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [0, "vence"],
+        "valor": "{{hoy+225}}"
+      },
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [1, "creada"],
+        "valor": "{{hoy+165}}"
+      },
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [1, "vence"],
+        "valor": "{{hoy+225}}"
+      }
+    ],
+    "construccionBase": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/uso-directo.cjs",
+        "contenido": "\"use strict\";\nmodule.exports = require(\"../../primitivas/color-de-prueba.cjs\").COLOR_DE_PRUEBA;\n"
+      },
+      {
+        "op": "json-agregar",
+        "ruta": "arquitectura/contratos/excepciones.json",
+        "camino": [],
+        "valor": {
+          "id": "exc-demo",
+          "contrato": "color-de-prueba",
+          "ruta": "src/modulos/empresas/uso-directo.cjs",
+          "huella": "{{huella-texto:module.exports = require(\"../../primitivas/color-de-prueba.cjs\").COLOR_DE_PRUEBA;}}",
+          "motivo": "demo",
+          "responsable": "demo",
+          "aprobadoPor": "texto libre",
+          "creada": "{{hoy+110}}",
+          "vence": "{{hoy+170}}"
+        }
+      },
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [0, "creada"],
+        "valor": "{{hoy+110}}"
+      },
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [0, "vence"],
+        "valor": "{{hoy+170}}"
+      },
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [1, "creada"],
+        "valor": "{{hoy+110}}"
+      },
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/contratos/exclusiones.json",
+        "camino": [1, "vence"],
+        "valor": "{{hoy+170}}"
+      }
+    ],
+    "reloj": 165,
+    "controlEsperado": "Historial o tope de renovaciones, y verificación de `aprobadoPor`: hoy una excepción renovada con fechas nuevas es válida.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-070",
+    "via": "declaraciones-excepciones",
+    "titulo": "Pasar `bloqueaDeclaracionFalsa` de true a false y declarar `usa` un contrato que no se usa",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": "arquitectura/contratos/contratos.cjs",
+        "de": "bloqueaDeclaracionFalsa: true",
+        "a": "bloqueaDeclaracionFalsa: false"
+      },
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/contratos.json",
+        "contenido": "{\"usa\":[\"color-de-prueba\"]}"
+      }
+    ],
+    "controlEsperado": "La vigilancia debería cuidar el endurecimiento del contrato (hoy compara detectores, clases y fuente). Control positivo: EV-013 (con true bloquea).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "declaracion-falsa",
+      "archivo": "src/modulos/empresas/contratos.json"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `arquitectura/contratos/contratos.cjs` (maquinaria, §11.1): pasar `bloqueaDeclaracionFalsa` a false afloja el contrato y la vigilancia no lo compara. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-071",
+    "via": "declaraciones-excepciones",
+    "titulo": "Excepción NUEVA (`excepciones.json`) que silencia un uso real no declarado, con `aprobadoPor` de texto libre",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/uso-directo.cjs",
+        "contenido": "\"use strict\";\nmodule.exports = require(\"../../primitivas/color-de-prueba.cjs\").COLOR_DE_PRUEBA;\n"
+      },
+      {
+        "op": "json-agregar",
+        "ruta": "arquitectura/contratos/excepciones.json",
+        "camino": [],
+        "valor": {
+          "id": "exc-demo",
+          "contrato": "color-de-prueba",
+          "ruta": "src/modulos/empresas/uso-directo.cjs",
+          "huella": "{{huella-texto:module.exports = require(\"../../primitivas/color-de-prueba.cjs\").COLOR_DE_PRUEBA;}}",
+          "motivo": "demo",
+          "responsable": "demo",
+          "aprobadoPor": "texto libre",
+          "creada": "{{hoy}}",
+          "vence": "{{hoy+60}}"
+        }
+      }
+    ],
+    "controlEsperado": "Toda excepción nueva debería exigir un registro de aprobación verificable; la vigilancia no mira `excepciones.json`.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-072",
+    "via": "declaraciones-excepciones",
+    "titulo": "Retirar el contrato con una entrada en `retiros.json` (`aprobadoPor` sin verificar) y dejar un uso directo",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/contratos/contratos.cjs",
+        "contenido": "\"use strict\";\nmodule.exports = [];\n"
+      },
+      {
+        "op": "json-agregar",
+        "ruta": "arquitectura/contratos/retiros.json",
+        "camino": [],
+        "valor": {
+          "id": "color-de-prueba",
+          "motivo": "demo",
+          "responsable": "demo",
+          "aprobadoPor": "texto libre",
+          "creada": "{{hoy}}"
+        }
+      },
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/fiscal/contratos.json",
+        "contenido": "{\"usa\":[],\"noUsa\":\"sin contratos\"}"
+      },
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/uso-directo.cjs",
+        "contenido": "\"use strict\";\nmodule.exports = require(\"../../primitivas/color-de-prueba.cjs\").COLOR_DE_PRUEBA;\n"
+      }
+    ],
+    "controlEsperado": "Aceptado por diseño: la decisión queda escrita y visible en el diff, pero nadie verifica quién la aprobó.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `arquitectura/contratos/contratos.cjs` y `retiros.json` (maquinaria, §11.1): un retiro registrado con `aprobadoPor` sin verificar es aceptado por diseño: la decisión queda escrita en el diff. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-073",
+    "via": "declaraciones-excepciones",
+    "titulo": "CONTROL: retirar el contrato del registro SIN entrada en `retiros.json`",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/contratos/contratos.cjs",
+        "contenido": "\"use strict\";\nmodule.exports = [];\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/fiscal/contratos.json",
+        "contenido": "{\"usa\":[],\"noUsa\":\"sin contratos\"}"
+      }
+    ],
+    "controlEsperado": "no-debilitar (a): un contrato de la base que ya no está exige un retiro registrado (retiro-sin-registro).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "retiro-sin-registro",
+      "archivo": "arquitectura/contratos/contratos.cjs"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-080",
+    "via": "formato-no-soportado",
+    "titulo": "Definición duplicada (el literal `#a1b2c3`) dentro de un archivo con extensión «binaria» (`.png`) en backend",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/paleta.png",
+        "contenido": "color de respaldo: #a1b2c3\n"
+      }
+    ],
+    "controlEsperado": "El guardián no puede saltear por extensión un archivo que es texto: si el contenido es texto UTF-8 se analiza igual (definicion-fuera-de-la-fuente).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "definicion-fuera-de-la-fuente",
+      "archivo": "src/modulos/empresas/paleta.png",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-081",
+    "via": "formato-no-soportado",
+    "titulo": "Clave calculada: `modulo[\"COLOR\" + \"_DE_PRUEBA\"]` (ninguna línea contiene el identificador completo)",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/uso-calculado.cjs",
+        "contenido": "\"use strict\";\nmodule.exports = require(\"../../primitivas/color-de-prueba.cjs\")[\"COLOR\" + \"_DE_PRUEBA\"];\n"
+      }
+    ],
+    "controlEsperado": "Límite declarado en `detectores.cjs`: el contrato tiene que cubrirlo con una técnica adicional (análisis estático o prueba de ejecución).",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Límite declarado de los detectores de texto: no siguen claves calculadas (`modulo[\"A\" + \"B\"]`). El dueño lo acepta (§11.1); cada contrato real lo cubre con la técnica adicional que declara en `limites`.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-082",
+    "via": "formato-no-soportado",
+    "titulo": "Definición duplicada dentro de un `.md` (clase docs, excluida) que un adaptador carga en runtime como dato",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "docs/paleta-de-respaldo.md",
+        "contenido": "# Paleta de respaldo\n\ncolor de respaldo: #a1b2c3\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/leer-paleta.cjs",
+        "contenido": "\"use strict\";\nconst fs = require(\"node:fs\");\nconst path = require(\"node:path\");\nconst texto = fs.readFileSync(path.join(__dirname, \"../../../docs/paleta-de-respaldo.md\"), \"utf8\");\nmodule.exports = /#([0-9a-f]{6})/.exec(texto)[0];\n"
+      }
+    ],
+    "controlEsperado": "Límite declarado: un `.md` nunca se analiza como código aunque otro archivo lo cargue en runtime; lo cubre una prueba de ejecución.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Límite declarado de los detectores de texto: un `.md` (clase `docs`, excluida) nunca se analiza como código aunque otro archivo lo cargue en runtime. El dueño lo acepta (§11.1); cada contrato real lo cubre con la técnica adicional que declara en `limites`.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-083",
+    "via": "formato-no-soportado",
+    "titulo": "Definición duplicada dentro de `**/golden/**` (reclasificado como `pruebas`, clase que el contrato no mira)",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "test/evasion/golden/datos.ts",
+        "contenido": "export const RESPALDO = \"#a1b2c3\";\n"
+      }
+    ],
+    "controlEsperado": "El refugio depende de qué clases declara el contrato (contraste: EV-088); cada contrato dice en `limites` cómo lo cubre.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Límite declarado de los detectores de texto: `**/golden/**` es clase `pruebas`, que el contrato de ejemplo no mira (contraste: EV-088 con `pruebas` en el detector). El dueño lo acepta (§11.1); cada contrato real lo cubre con la técnica adicional que declara en `limites`.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-084",
+    "via": "formato-no-soportado",
+    "titulo": "Archivo TypeScript de backend codificado en UTF-16LE con BOM, con un uso real del contrato (el detector decodifica como UTF-8 y no calza)",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/uso-utf16.ts",
+        "contenido": "",
+        "contenidoBase64": "//5pAG0AcABvAHIAdAAgAHsAIABDAE8ATABPAFIAXwBEAEUAXwBQAFIAVQBFAEIAQQAgAH0AIABmAHIAbwBtACAAIgAuAC4ALwAuAC4ALwBwAHIAaQBtAGkAdABpAHYAYQBzAC8AYwBvAGwAbwByAC0AZABlAC0AcAByAHUAZQBiAGEALgBjAGoAcwAiADsACgBlAHgAcABvAHIAdAAgAGMAbwBuAHMAdAAgAGMAbwBsAG8AcgAgAD0AIABDAE8ATABPAFIAXwBEAEUAXwBQAFIAVQBFAEIAQQA7AAoA"
+      }
+    ],
+    "controlEsperado": "Un archivo que un detector tenía que leer y no se puede decodificar como UTF-8 falla (ruta-ilegible): nunca se omite en silencio.",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "ruta-ilegible",
+      "archivo": "src/modulos/empresas/uso-utf16.ts",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-085",
+    "via": "formato-no-soportado",
+    "titulo": "Alias + reexportación fuera de cualquier unidad (`test/`), con un contrato que SÍ mira la clase `pruebas`: el guardián la ve pero solo la reporta",
+    "plantilla": "con-contrato-y-pruebas",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "test/apoyo-evasion/alias-color.cjs",
+        "contenido": "\"use strict\";\nconst ELALIAS = require(\"../../src/primitivas/color-de-prueba.cjs\").COLOR_DE_PRUEBA;\nmodule.exports = ELALIAS;\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/uso-con-alias.cjs",
+        "contenido": "\"use strict\";\nmodule.exports = require(\"../../../test/apoyo-evasion/alias-color.cjs\");\n"
+      }
+    ],
+    "controlEsperado": "Límite declarado: los detectores de texto no siguen alias ni reexportaciones; un uso fuera de toda unidad se reporta (`usosFueraDeUnidades`) pero no falla.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Límite declarado de los detectores de texto: no siguen alias ni reexportaciones; un uso fuera de toda unidad se reporta (`usosFueraDeUnidades`) y no falla. El dueño lo acepta (§11.1); cada contrato real lo cubre con la técnica adicional que declara en `limites`.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-088",
+    "via": "formato-no-soportado",
+    "titulo": "CONTROL: el mismo uso directo dentro de `src/modulos/empresas/golden/` con un contrato que SÍ mira la clase `pruebas`",
+    "plantilla": "con-contrato-y-pruebas",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/golden/uso.cjs",
+        "contenido": "\"use strict\";\nmodule.exports = require(\"../../../primitivas/color-de-prueba.cjs\").COLOR_DE_PRUEBA;\n"
+      }
+    ],
+    "controlEsperado": "Contraste de EV-083: el refugio de `**/golden/**` depende de las clases que declara el contrato; con `pruebas` el uso cuenta para la unidad.",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "no-usa-falso",
+      "archivo": "src/modulos/empresas/golden/uso.cjs",
+      "linea": 2
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-090",
+    "via": "formato-no-soportado",
+    "titulo": "Archivo con extensión desconocida (`.py`) dentro de una carpeta backend conocida",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/script-raro.py",
+        "contenido": "# codigo python arbitrario, nadie lo analiza como TS\n"
+      }
+    ],
+    "controlEsperado": "La clasificación no exige un tipo de archivo por clase (límite declarado en el mapa de cobertura); ningún otro chequeo del guardián lo mira.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Límite declarado de los detectores de texto: la clasificación no exige un tipo de archivo por clase: un `.py` en una carpeta de backend se acepta. El dueño lo acepta (§11.1); cada contrato real lo cubre con la técnica adicional que declara en `limites`.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-091",
+    "via": "formato-no-soportado",
+    "titulo": "Archivo ejecutable (`.sh`) nuevo en `scripts/`, con bit +x, sin pasar por ningún linter de shell",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "scripts/tarea-nueva.sh",
+        "contenido": "#!/bin/sh\necho hola\n",
+        "modo": "0755"
+      }
+    ],
+    "controlEsperado": "`scripts/**` acepta cualquier extensión; nada revisa el contenido de un `.sh` ni su bit ejecutable.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Límite declarado de los detectores de texto: `scripts/**` acepta cualquier extensión y nada revisa el contenido de un `.sh` ni su bit ejecutable. El dueño lo acepta (§11.1); cada contrato real lo cubre con la técnica adicional que declara en `limites`.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-092",
+    "via": "formato-no-soportado",
+    "titulo": "CONTROL: `.gitignore` nuevo que intenta ocultar un archivo YA COMMITEADO con una violación",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "carpeta-nueva/codigo.ts",
+        "contenido": "export const x = 1;\n"
+      },
+      {
+        "op": "commit"
+      },
+      {
+        "op": "anexar",
+        "ruta": ".gitignore",
+        "contenido": "\ncarpeta-nueva/\n"
+      }
+    ],
+    "controlEsperado": "`git ls-files --cached` sigue listando un archivo ya versionado aunque `.gitignore` lo mencione después: hay que sacarlo del índice a propósito.",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "ruta-sin-clase",
+      "archivo": "carpeta-nueva/codigo.ts",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-093",
+    "via": "no-se-pudo-interpretar",
+    "titulo": "Archivo NO versionado, colocado en el checkout del runner por un paso previo, con un patrón que SÍ calza en `.gitignore` (`*.log`)",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "checkout"
+      },
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/temporal.log",
+        "contenido": "violacion-de-contrato: #a1b2c3\n"
+      }
+    ],
+    "controlEsperado": "`git ls-files --others --exclude-standard` respeta `.gitignore`: un archivo puesto por fuera de git que calza un patrón existente no se lista ni se avisa.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige un paso previo del workflow (maquinaria, §11.1) que deje un archivo fuera de git: un cambio común no puede poner archivos en el checkout sin versionarlos. El dueño lo acepta; se mitiga con proceso y visibilidad, y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-094",
+    "via": "renombrar-mover",
+    "titulo": "Mover un consumidor real del contrato a `workers/` (clase que el detector del contrato no declara)",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "workers/consumidor.cjs",
+        "contenido": "\"use strict\";\nmodule.exports = require(\"../src/primitivas/color-de-prueba.cjs\").COLOR_DE_PRUEBA;\n"
+      },
+      {
+        "op": "escribir",
+        "ruta": "workers/contratos.json",
+        "contenido": "{\"usa\":[],\"noUsa\":\"sin contratos\"}"
+      }
+    ],
+    "controlEsperado": "Mover un consumidor real a otra clase no puede sacarlo en silencio del alcance de un contrato que lo protegía.",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "no-usa-falso",
+      "archivo": "workers/consumidor.cjs",
+      "linea": 2
+    },
+    "estado": "brecha-abierta",
+    "responsable": "agente (a pedido del dueño)",
+    "severidad": "media",
+    "justificacion": "El detector de un contrato declara las clases donde mira (`frontend`, `backend`, `scripts`, `migraciones`) y `workers` es una clase legítima que ninguna lista: un consumidor movido ahí sale del alcance del contrato sin que nada falle. Hoy el registro real no tiene contratos, así que no hay ningún uso desprotegido; aparece con el primer contrato.",
+    "mitigacion": "Al sumar el primer contrato real, su detector lista todas las clases con código (incluida `workers`) y la revisión del contrato lo comprueba. El cierre es un chequeo del registro que exija cobertura de las clases con código, o un motivo escrito por cada clase que no mira; ahí el caso pasa a `exigido`.",
+    "creada": "2026-10-21",
+    "vence": "2026-12-20"
+  },
+  {
+    "id": "EV-095",
+    "via": "formato-no-soportado",
+    "titulo": "Definición duplicada con otra capitalización (`#A1B2C3` en vez de `#a1b2c3`): el patrón es sensible a mayúsculas",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/paleta-mayus.cjs",
+        "contenido": "\"use strict\";\nmodule.exports = \"#A1B2C3\";\n"
+      }
+    ],
+    "controlEsperado": "El detector de definición tendría que ignorar mayúsculas y espacios, o el contrato declararlo en `limites`.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Límite declarado de los detectores de texto: el patrón de definición distingue mayúsculas de minúsculas (`#A1B2C3` ≠ `#a1b2c3`). El dueño lo acepta (§11.1); cada contrato real lo cubre con la técnica adicional que declara en `limites`.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-096",
+    "via": "no-se-pudo-interpretar",
+    "titulo": "Archivo gigante (~8 MB) con un uso real del contrato en la última línea: el tamaño no puede esconder el uso",
+    "plantilla": "con-contrato",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/datos-grandes.ts",
+        "contenido": "export const DATOS = [\n"
+      },
+      {
+        "op": "anexar",
+        "ruta": "src/modulos/empresas/datos-grandes.ts",
+        "contenido": "  \"linea de relleno sin nada especial\",\n",
+        "repetir": 220000
+      },
+      {
+        "op": "anexar",
+        "ruta": "src/modulos/empresas/datos-grandes.ts",
+        "contenido": "];\nexport const COLOR = require(\"../../primitivas/color-de-prueba.cjs\").COLOR_DE_PRUEBA;\n"
+      }
+    ],
+    "controlEsperado": "El guardián no declara ningún tope de tamaño: un archivo enorme se analiza completo (o el job se corta por su tiempo), y nunca se saltea.",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "no-usa-falso",
+      "archivo": "src/modulos/empresas/datos-grandes.ts",
+      "linea": 220003
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-097",
+    "via": "workflow-ci",
+    "titulo": "Script `postinstall` nuevo en `package.json` (el guardián no lo mira; correrlo depende de `npm ci` sin `--ignore-scripts`)",
+    "construccion": [
+      {
+        "op": "json-poner",
+        "ruta": "package.json",
+        "camino": ["scripts", "postinstall"],
+        "valor": "node -e \"require('fs').writeFileSync('.postinstall-corrio','si')\""
+      }
+    ],
+    "controlEsperado": "La vigilancia (g) solo mira los scripts «arquitectura» y «guardian»; cualquier otro script de `package.json` es invisible.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `package.json` (maquinaria, §11.1): un `postinstall` es invisible para la vigilancia, que solo mira los scripts «arquitectura» y «guardian». El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-098",
+    "via": "exclusiones",
+    "titulo": "Vaciar `grupos-de-mutacion.json` a `[]`: el plan de mutación siempre da «sin grupos» y el Gate lo acepta",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/grupos-de-mutacion.json",
+        "contenido": "[]\n"
+      }
+    ],
+    "controlEsperado": "La vigilancia no mira `grupos-de-mutacion.json` ni `stryker.config.json`; el Gate acepta `mutacion: skipped` cuando `mutacion-plan` dice `hay=false`.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `arquitectura/grupos-de-mutacion.json` (maquinaria, §11.1): con la lista vacía el plan de mutación siempre da «sin grupos» y el Gate lo acepta. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-099",
+    "via": "modificar-guardian",
+    "titulo": "`vitest.config.ts` saca `test/**/*.test.ts` del proyecto «node»: las pruebas del propio guardián no corren",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": "vitest.config.ts",
+        "de": "include: [\"src/**/*.test.ts\", \"test/**/*.test.ts\"],",
+        "a": "include: [\"src/**/*.test.ts\"],"
+      }
+    ],
+    "controlEsperado": "verificarVitestConfig lo detectaría, pero esa comprobación corre DENTRO de las pruebas que el cambio saca de la corrida: el chequeo se apaga a sí mismo.",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `vitest.config.ts` (maquinaria, §11.1): la comprobación que lo detecta corre dentro de las pruebas que el cambio saca de la corrida. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-100",
+    "via": "no-se-pudo-interpretar",
+    "titulo": "Enlace simbólico colgante (su destino no existe en el disco)",
+    "construccion": [
+      {
+        "op": "symlink",
+        "ruta": "src/modulos/empresas/enlace-colgante.ts",
+        "destino": "/no/existe/en/el/runner"
+      }
+    ],
+    "controlEsperado": "Una ruta que git lista y que no se puede leer en el disco falla (ruta-ilegible): no se avisa y se sigue.",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "ruta-ilegible",
+      "archivo": "src/modulos/empresas/enlace-colgante.ts",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-101",
+    "via": "no-se-pudo-interpretar",
+    "titulo": "Nombre de archivo con bytes que no son UTF-8 (un byte 0xFF en el nombre)",
+    "construccion": [
+      {
+        "op": "escribir",
+        "rutaBase64": "c3JjL21vZHVsb3MvZW1wcmVzYXMvYXJjaGl2by3/LnRz",
+        "contenido": "// contiene #a1b2c3\n"
+      }
+    ],
+    "controlEsperado": "Un nombre que no se puede reconstruir como texto falla cerrado (ruta-ilegible) con el nombre escapado; el archivo no queda sin analizar en silencio.",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "ruta-ilegible",
+      "archivo": "src/modulos/empresas/archivo-\\xff.ts",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-102",
+    "via": "exclusiones",
+    "titulo": "Vaciar a la vez `grupos-de-mutacion.json` y el `mutate` de `stryker.config.json` (la prueba que los compara entre sí queda en verde)",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/grupos-de-mutacion.json",
+        "contenido": "[]\n"
+      },
+      {
+        "op": "json-poner",
+        "ruta": "stryker.config.json",
+        "camino": ["mutate"],
+        "valor": []
+      }
+    ],
+    "controlEsperado": "Algo ajeno al cambio que exija que la mutación cubra los archivos de dominio (la corrida nocturna también quedaría vacía).",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "riesgo-aceptado",
+    "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
+    "motivo": "Exige editar `arquitectura/grupos-de-mutacion.json` y `stryker.config.json` (maquinaria, §11.1): con los dos vacíos la prueba que los compara entre sí queda en verde. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "creada": "2026-10-21",
+    "revisar": "2027-04-19"
+  },
+  {
+    "id": "EV-103",
+    "via": "declaraciones-excepciones",
+    "titulo": "CONTROL (deuda): un `eslint-disable` nuevo en un archivo de código, sin registrarlo",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/dominio/nuevo.ts",
+        "contenido": "// eslint-disable-next-line no-console\nconsole.log(1);\n"
+      }
+    ],
+    "controlEsperado": "deuda.cjs: todo marcador de deuda tiene una entrada en el registro (deuda-sin-registrar).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-sin-registrar",
+      "archivo": "src/modulos/empresas/dominio/nuevo.ts",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-104",
+    "via": "declaraciones-excepciones",
+    "titulo": "Vaciar el registro de deuda para que los marcadores de `knip.json` queden sin entrada, sin pagar nada",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/deuda/registro.json",
+        "contenido": "[]\n"
+      }
+    ],
+    "controlEsperado": "no-debilitar (j): una entrada del registro de deuda de la base no desaparece mientras su marcador sigue (lo ve el detector de la base: deuda-entrada-borrada-sin-pagar).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-entrada-borrada-sin-pagar",
+      "archivo": "knip.json"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-105",
+    "via": "formato-no-soportado",
+    "titulo": "Un marcador de deuda con otra capitalización (`// ToDo: arreglar`) para que no lo reconozca el detector",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/dominio/nuevo.ts",
+        "contenido": "// ToDo: arreglar\nexport const x = 1;\n"
+      }
+    ],
+    "controlEsperado": "marcadores.cjs: TODO, FIXME, HACK y XXX con dos puntos o paréntesis se reconocen en cualquier capitalización.",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-sin-registrar",
+      "archivo": "src/modulos/empresas/dominio/nuevo.ts",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-106",
+    "via": "renombrar-mover",
+    "titulo": "Mover un `TODO` registrado a un archivo que el detector no analiza (`.md`) para «pagar» la deuda sin resolverla",
+    "construccionBase": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/dominio/deuda.ts",
+        "contenido": "// TODO: pagar\nexport const x = 1;\n"
+      },
+      {
+        "op": "json-agregar",
+        "ruta": "arquitectura/deuda/registro.json",
+        "camino": [],
+        "valor": {
+          "id": "todo--src-modulos-empresas-dominio-deuda-ts",
+          "archivos": ["src/modulos/empresas/dominio/deuda.ts"],
+          "descripcion": "Un TODO que se paga.",
+          "tipo": "todo",
+          "responsable": "agente (a pedido del dueño)",
+          "creada": "{{hoy}}"
+        }
+      }
+    ],
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/dominio/notas.md",
+        "contenido": "TODO: pagar\n"
+      }
+    ],
+    "controlEsperado": "Algo que distinga una deuda pagada de una deuda movida a un archivo sin análisis (hoy el detector solo mira código, datos y flujos).",
+    "esperado": {
+      "tipo": "exige-excepcion"
+    },
+    "estado": "brecha-abierta",
+    "responsable": "agente (a pedido del dueño)",
+    "severidad": "baja",
+    "justificacion": "El detector analiza código, datos y flujos, no `.md` ni `.txt` (ahí «TODO» es prosa): un marcador movido a un documento deja de verse y la comparación con la base lo toma por pagado. No oculta nada que una herramienta lea, pero sí deuda que alguien quería recordar.",
+    "mitigacion": "Es el límite declarado del §10 («la deuda no marcada y no registrada no la ve ninguna máquina»): lo cubre la revisión del cambio, que ve el marcador borrado y la entrada borrada. El dueño decide si lo acepta como riesgo o si se agrega un chequeo.",
+    "creada": "2026-10-21",
+    "vence": "2026-12-20"
+  },
+  {
+    "id": "EV-107",
+    "via": "declaraciones-excepciones",
+    "titulo": "Subir el tope de excepciones de deuda de 10 a 100 para poder abrir más",
+    "construccion": [
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/deuda/configuracion.json",
+        "camino": ["topeDeExcepciones"],
+        "valor": 100
+      }
+    ],
+    "controlEsperado": "no-debilitar (j): el tope de excepciones de deuda no sube respecto de la base (deuda-tope-subio).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-tope-subio",
+      "archivo": "arquitectura/deuda/configuracion.json",
+      "linea": 2
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-108",
+    "via": "workflow-ci",
+    "titulo": "Reemplazar en el paso de la deuda la forma que compara con la base por un `echo`",
+    "construccion": [
+      {
+        "op": "reemplazar",
+        "ruta": ".github/workflows/ci.yml",
+        "de": "node arquitectura/deuda/deuda.cjs --base=base",
+        "a": "echo sin-comparar"
+      }
+    ],
+    "controlEsperado": "no-debilitar (j): el job guardian sigue ejecutando deuda.cjs sola y con --base=base en un mismo paso (ci-sin-paso-de-deuda).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "ci-sin-paso-de-deuda",
+      "archivo": ".github/workflows/ci.yml"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-109",
+    "via": "modificar-guardian",
+    "titulo": "Bajar `bloqueaDeudaEnArchivoTocado` de true a false (la base lo tenía activo)",
+    "construccionBase": [
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/deuda/configuracion.json",
+        "camino": ["bloqueaDeudaEnArchivoTocado"],
+        "valor": true
+      }
+    ],
+    "construccion": [
+      {
+        "op": "anexar",
+        "ruta": "README.md",
+        "contenido": "\n"
+      }
+    ],
+    "controlEsperado": "no-debilitar (j): la opción de bloqueo no pasa de true a otra cosa (deuda-bloqueo-aflojado).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-bloqueo-aflojado",
+      "archivo": "arquitectura/deuda/configuracion.json",
+      "linea": 3
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-110",
+    "via": "declaraciones-excepciones",
+    "titulo": "Con el bloqueo activo, tocar `knip.json` (que tiene deuda registrada) sin pagarla",
+    "construccion": [
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/deuda/configuracion.json",
+        "camino": ["bloqueaDeudaEnArchivoTocado"],
+        "valor": true
+      },
+      {
+        "op": "anexar",
+        "ruta": "knip.json",
+        "contenido": "\n"
+      }
+    ],
+    "controlEsperado": "antes-y-despues.cjs (a): un archivo tocado no conserva la deuda que ya tenía (deuda-en-archivo-tocado).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-en-archivo-tocado",
+      "archivo": "knip.json"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-111",
+    "via": "filtros",
+    "titulo": "Una prueba exclusiva (`.only`) nueva en un archivo de pruebas, sin registrarla",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "test/otra.test.ts",
+        "contenido": "it.only('x', () => {});\n"
+      }
+    ],
+    "controlEsperado": "marcadores.cjs: las pruebas saltadas, pendientes o exclusivas son un marcador de deuda (deuda-sin-registrar).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-sin-registrar",
+      "archivo": "test/otra.test.ts",
+      "linea": 1
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-112",
+    "via": "declaraciones-excepciones",
+    "titulo": "Subir el tope de líneas por archivo de 400 a 4000 para que los archivos grandes dejen de contar",
+    "construccion": [
+      {
+        "op": "json-poner",
+        "ruta": "arquitectura/deuda/configuracion.json",
+        "camino": ["topeDeLineasPorArchivo"],
+        "valor": 4000
+      }
+    ],
+    "controlEsperado": "no-debilitar (j): el tope de líneas por archivo no sube respecto de la base (deuda-tope-de-lineas-subio).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-tope-de-lineas-subio",
+      "archivo": "arquitectura/deuda/configuracion.json",
+      "linea": 4
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-113",
+    "via": "declaraciones-excepciones",
+    "titulo": "Un archivo de código nuevo de 450 líneas, sin registrarlo",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/dominio/otro-grande.ts",
+        "contenido": "export const x = 1;\n",
+        "repetir": 450
+      }
+    ],
+    "controlEsperado": "deuda.cjs: todo archivo que pasa del tope de líneas es deuda y tiene su entrada en el registro (deuda-sin-registrar en la línea 401).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-sin-registrar",
+      "archivo": "src/modulos/empresas/dominio/otro-grande.ts",
+      "linea": 401
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-114",
+    "via": "declaraciones-excepciones",
+    "titulo": "Un archivo de 450 líneas nuevo que se agrega a `excluidosDelTope` para que no cuente",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "src/modulos/empresas/dominio/otro-grande.ts",
+        "contenido": "export const x = 1;\n",
+        "repetir": 450
+      },
+      {
+        "op": "json-agregar",
+        "ruta": "arquitectura/deuda/configuracion.json",
+        "camino": ["excluidosDelTope"],
+        "valor": {
+          "ruta": "src/modulos/empresas/dominio/otro-grande.ts",
+          "motivo": "Es un catálogo de datos."
+        }
+      }
+    ],
+    "controlEsperado": "no-debilitar (j): la lista de exclusiones del tope no gana entradas respecto de la base (deuda-exclusion-nueva).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-exclusion-nueva",
+      "archivo": "arquitectura/deuda/configuracion.json"
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-115",
+    "via": "declaraciones-excepciones",
+    "titulo": "Agrandar 10 líneas un archivo que ya estaba sobre el tope y registrado",
+    "construccion": [
+      {
+        "op": "anexar",
+        "ruta": "src/modulos/empresas/dominio/grande.ts",
+        "contenido": "export const y = 1;\n",
+        "repetir": 10
+      }
+    ],
+    "controlEsperado": "deuda.cjs: un archivo registrado como grande no mide más líneas que las registradas (el trinquete: deuda-archivo-crece).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-archivo-crece",
+      "archivo": "src/modulos/empresas/dominio/grande.ts",
+      "linea": 451
+    },
+    "estado": "exigido"
+  },
+  {
+    "id": "EV-116",
+    "via": "declaraciones-excepciones",
+    "titulo": "Borrar del registro la entrada de un archivo grande que sigue grande",
+    "construccion": [
+      {
+        "op": "escribir",
+        "ruta": "arquitectura/deuda/registro.json",
+        "contenido": "[]\n"
+      }
+    ],
+    "controlEsperado": "no-debilitar (j): una entrada del registro de deuda de la base no desaparece mientras el archivo sigue sobre el tope (deuda-entrada-borrada-sin-pagar, en la línea 401).",
+    "esperado": {
+      "tipo": "bloquea",
+      "codigo": "deuda-entrada-borrada-sin-pagar",
+      "archivo": "src/modulos/empresas/dominio/grande.ts",
+      "linea": 401
+    },
+    "estado": "exigido"
+  }
+]

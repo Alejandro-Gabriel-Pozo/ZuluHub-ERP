@@ -14,6 +14,7 @@ import {
   DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS,
 } from "../../src/modulos/empresas/publico";
 import {
+  DECLARACIONES_DE_CONFIGURACION_FISCAL,
   DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
   DECLARACIONES_DE_CERTIFICADOS,
   DECLARACIONES_DE_FACTURACION,
@@ -55,7 +56,7 @@ const carpetaExiste = (carpeta: string): boolean => {
 type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 
 /** Los módulos declarados en el catálogo cuyas carpetas y casos de uso todavía no existen (T0). */
-const SIN_CONSTRUIR: readonly string[] = ["catalogo", "carta", "stock"];
+const SIN_CONSTRUIR: readonly string[] = ["catalogo", "vidriera", "stock"];
 
 function crucesDelCatalogo(
   catalogo: CatalogoComercial,
@@ -224,6 +225,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
       DECLARACIONES_DE_FACTURACION,
       DECLARACIONES_DE_CERTIFICADOS,
+      DECLARACIONES_DE_CONFIGURACION_FISCAL,
     ),
   };
 
@@ -255,7 +257,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ]);
   });
 
-  it("fiscal exige emitir comprobantes (reservar, cerrar y numerar) y verlos (consultas); reconciliar es de sistema y no pasa por el guard", () => {
+  it("fiscal exige emitir comprobantes (reservar, cerrar y numerar) y verlos (consultas), la configuración fiscal del gerente (T5); reconciliar es de sistema y no pasa por el guard", () => {
     expect([...new Set(declaradas["modulos/fiscal"])]).toEqual([
       "comprobantes.emitir",
       "comprobantes.ver",
@@ -266,6 +268,13 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       "series.resincronizar",
       "puntos_de_venta.cambiar_ambiente",
       "certificados.gestionar",
+      "datos_fiscales.editar",
+      "datos_fiscales.confirmar",
+      "puntos_de_venta.crear",
+      "puntos_de_venta.editar",
+      "puntos_de_venta.activar",
+      "puntos_de_venta.desactivar",
+      "emisores.confirmar_regla",
     ]);
     expect(DECLARACIONES_DE_FISCAL.reconciliarSerie).toHaveProperty("sinGuard");
     expect(DECLARACIONES_DE_FISCAL.reconciliarSeriesVencidas).toHaveProperty("sinGuard");
@@ -278,12 +287,25 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     expect(CATALOGO_DE_MODULOS.facturacion.implementadoPor).toEqual(["modulos/fiscal"]);
   });
 
-  it("administracion lo implementan exactamente las carpetas que exigen sus acciones", () => {
+  it("administracion lo implementan exactamente las carpetas que exigen alguna de sus acciones", () => {
+    const deAdministracion = Object.keys(CATALOGO_DE_MODULOS.administracion.acciones);
     expect([...CATALOGO_DE_MODULOS.administracion.implementadoPor].sort()).toEqual(
       Object.keys(declaradas)
-        .filter((carpeta) => carpeta !== "modulos/fiscal")
+        .filter((carpeta) => declaradas[carpeta]?.some((a) => deAdministracion.includes(a)))
         .sort(),
     );
+  });
+
+  it("la configuración fiscal del gerente (T5) es de administracion y no de facturacion: así se puede dejar lista antes de que la facturación exista", () => {
+    const acciones = Object.values(DECLARACIONES_DE_CONFIGURACION_FISCAL).flatMap((d) =>
+      "accion" in d ? [d.accion] : [],
+    );
+    expect(acciones).toHaveLength(7);
+    for (const accion of acciones) {
+      expect(Object.keys(CATALOGO_DE_MODULOS.administracion.acciones), accion).toContain(accion);
+      expect(Object.keys(CATALOGO_DE_MODULOS.facturacion.acciones), accion).not.toContain(accion);
+    }
+    expect(CATALOGO_DE_MODULOS.administracion.implementadoPor).toContain("modulos/fiscal");
   });
 
   it("no tiene ningún problema de X1, X3, X4 ni de obligatorios", () => {
@@ -293,7 +315,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
   });
 
   it("catálogo, carta y stock son los únicos módulos sin construir, y siguen en desarrollo (T0)", () => {
-    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "carta", "stock"]);
+    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "vidriera", "stock"]);
     for (const clave of SIN_CONSTRUIR) {
       expect(CATALOGO_DE_MODULOS[clave as keyof typeof CATALOGO_DE_MODULOS].estado, clave).toBe(
         "en_desarrollo",
@@ -338,6 +360,13 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
         SIN_CONSTRUIR,
       ),
     ).toEqual([
+      "X1: la acción datos_fiscales.editar no la exige ningún caso de uso",
+      "X1: la acción datos_fiscales.confirmar no la exige ningún caso de uso",
+      "X1: la acción puntos_de_venta.crear no la exige ningún caso de uso",
+      "X1: la acción puntos_de_venta.editar no la exige ningún caso de uso",
+      "X1: la acción puntos_de_venta.activar no la exige ningún caso de uso",
+      "X1: la acción puntos_de_venta.desactivar no la exige ningún caso de uso",
+      "X1: la acción emisores.confirmar_regla no la exige ningún caso de uso",
       "X1: la acción comprobantes.emitir no la exige ningún caso de uso",
       "X1: la acción comprobantes.ver no la exige ningún caso de uso",
       "X1: la acción comprobantes.emitir_manual no la exige ningún caso de uso",
@@ -363,6 +392,21 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
         SIN_CONSTRUIR,
       ),
     ).toEqual(["X1: la acción comprobantes.ver no la exige ningún caso de uso"]);
+  });
+
+  it("X1 se dispara si fiscal deja de exigir una acción de la configuración fiscal (violación inyectada)", () => {
+    expect(
+      crucesDelCatalogo(
+        CATALOGO_DE_MODULOS,
+        {
+          ...declaradas,
+          "modulos/fiscal":
+            declaradas["modulos/fiscal"]?.filter((a) => a !== "datos_fiscales.confirmar") ?? [],
+        },
+        carpetaExiste,
+        SIN_CONSTRUIR,
+      ),
+    ).toEqual(["X1: la acción datos_fiscales.confirmar no la exige ningún caso de uso"]);
   });
 
   it("X1 se dispara si una carpeta que el catálogo no lista exige una acción (violación inyectada)", () => {

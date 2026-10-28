@@ -30,9 +30,15 @@ ningún merge publica nada.
 | Migrar / dar LOGIN a los roles / cargar Vercel | `npm run migrar -- --ver \| --aplicar \| --preparar-roles [--vercel …]` | Ya existía (tanda 4/5). Ver la sección B.4.                                                                                                                                                                                                                          |
 | Un freno contra encender el despliegue de paso | `test/arquitectura/vercel-json.test.ts`                                 | Falla si `deploymentEnabled` deja de ser `false` sin cambiar a propósito la constante `DESPLIEGUE_APROBADO_POR_EL_DUENO` del mismo archivo.                                                                                                                          |
 
-**Todavía NO está** (y por eso el primer cliente no puede entrar aún; ver la sección E): los scripts `crear-primer-admin` y
-`ejecutar-caso-de-plataforma`, los casos de uso de marca/plan/alta de empresa que usarían, y el enchufe de la resolución
-de hosts a la base (`apps/web/servidor/fuente-de-puertas.ts` sigue siendo un falso: todo host responde la página neutra).
+**Ya está** (verificado contra `main`, 2026-10-22): los scripts `npm run plataforma:primer-admin` y
+`npm run plataforma:caso` (más `plataforma:baja-admin` y `plataforma:resetear-segundo-factor`), los casos de uso de
+plataforma de marca, plan y alta de empresa (M5/M6) y el enchufe de la resolución de hosts a la base
+(`apps/web/servidor/fuente-de-puertas.ts` usa la puerta pública REAL: si falta la cadena `PEDERNAL_DB_PUBLICO` el pedido
+falla cerrado y la puerta muestra la neutra).
+
+**Todavía NO está** (y por eso el primer cliente no puede entrar aún; ver la sección E): lo que depende de vos (rama
+`preview` de Neon, Environments de GitHub, proyecto y variables de Vercel, cliente de Google, dominios) y, para facturar, las
+pantallas del facturador y el cableado de lo fiscal (composición, cola de trabajos y claves de certificados).
 
 ---
 
@@ -253,13 +259,12 @@ Orden, cuando todo lo anterior ande:
 Esos scripts se corren en **tu computadora**, no en un workflow de GitHub: los datos del cliente (CUIT, razón social, email)
 no tienen que quedar en el registro de una ejecución.
 
-**Estado hoy (honesto):** los pasos 2, 3 y 5 **no se pueden ejecutar todavía**. Los scripts no existen porque faltan sus
-cimientos: el caso de uso del primer administrador (H5 P7) y los casos de plataforma de marca, plan y alta de empresa (M5/M6)
-no están en el código; solo existen sus dominios y su persistencia. Además, los scripts propuestos usaban `tsx`, que **no está
-instalado** ni fue aprobado como dependencia: el plan lo condicionaba a que `node archivo.ts` fallara, y falla (la
-mayoría del código importa sin extensión `.ts`, que Node no resuelve). Para el script de la clave de contexto no hizo falta
-(se agregó la extensión `.ts` a dos importaciones, igual que ya se hizo con las migraciones); para los otros dos, cuando
-existan sus casos de uso, hay que decidir entre aprobar `tsx` o repetir ese arreglo en toda la cadena de importaciones.
+**Estado hoy (honesto, 2026-10-22):** los scripts del paso 2 y 3 **existen** y se corren con
+`npm run plataforma:primer-admin` y `npm run plataforma:caso` (con `node --import ./scripts/cargador-de-ts.mjs`; no hace
+falta `tsx`). Los casos de uso de marca, plan y alta de empresa (M5/M6) están en `main`, y la resolución de hosts ya lee la
+base. Lo que **sigue sin poder ejecutarse** es todo lo que depende de tus pasos de la sección B (rama `preview`, migraciones
+aplicadas por `migrar.yml`, variables y dominios) y, para el paso 6, las pantallas del facturador: el backend fiscal
+(emisión, certificados, adaptador de ARCA, casos de uso del gerente) está en `main` pero no está cableado a la web.
 
 ---
 

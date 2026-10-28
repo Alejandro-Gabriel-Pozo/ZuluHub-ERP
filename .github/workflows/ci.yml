@@ -12,9 +12,13 @@ on:
 permissions:
   contents: read
 
+# Un pull request cancela su corrida anterior cuando recibe un push nuevo (la vieja ya no sirve). Las corridas
+# de `main` NO se cancelan entre sí: cada push a `main` tiene su grupo (por SHA) y la nocturna, el suyo, así
+# que ni un push cancela al anterior ni la nocturna cancela a un push. La prueba
+# `test/arquitectura/gate-coincide-con-ci.test.ts` fija esta política.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   estatico:
@@ -35,6 +39,54 @@ jobs:
       - run: npm run format:check
       - run: npm run arquitectura
       - run: npm run analizar:muerto
+
+  guardian:
+    # Contratos arquitectónicos (contratos-arquitectonicos.md §5): el guardián del PR y, en pull requests,
+    # la VIGILANCIA de la versión anterior. No instala dependencias: solo usa Node y git. Sin secretos.
+    name: Guardián de contratos
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Guardián del cambio (la versión nueva)
+        run: node arquitectura/contratos/guardian.cjs
+      # La rama base se extrae DESPUÉS de correr el guardián: es un repositorio anidado (`base/`) y
+      # `git ls-files` lo listaría como una ruta sin clase. Solo hay base en un pull request.
+      - name: Rama base (la versión anterior del guardián)
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+      # El verificador de la BASE mira el árbol del PR: lo que la base exigía no puede dejar de exigirse.
+      # Si la base todavía no lo trae (la primera vez que se incorpora), se avisa y se sigue.
+      - name: Vigilancia de la versión anterior (no se debilita lo que la base exigía)
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ -f base/arquitectura/contratos/no-debilitar.cjs ]; then
+            node base/arquitectura/contratos/no-debilitar.cjs --arbol .
+          else
+            echo "::notice::La rama base no trae no-debilitar.cjs: no hay versión anterior que vigile."
+          fi
+      # La deuda técnica (§10): todo marcador está registrado, las excepciones valen ≤ 60 días y no pasan del tope, y,
+      # con la rama base extraída en `base/`, la deuda no crece y un archivo tocado no conserva la que ya tenía. Sin
+      # `if`: en un push a `main` no hay `base/` y corre la forma sin `--base`. Es la misma versión nueva del control;
+      # la vigilancia de arriba (la versión anterior) cuida que este paso, el registro y el tope no se aflojen.
+      - name: Deuda técnica (no crece y se paga al tocar el archivo)
+        run: |
+          if [ -d base ]; then
+            node arquitectura/deuda/deuda.cjs --base=base
+          else
+            node arquitectura/deuda/deuda.cjs
+          fi
 
   pruebas:
     name: Pruebas (con Postgres real)
@@ -130,10 +182,13 @@ jobs:
           deny-licenses: AGPL-3.0-only, AGPL-3.0-or-later, GPL-3.0-only, GPL-3.0-or-later
 
   estabilidad:
-    # Repite la integración en paralelo (12 copias) para detectar fallas intermitentes antes de
-    # integrar. Solo en pull requests: en main ya se probó antes de entrar.
+    # Repite la integración en paralelo (12 copias) para detectar fallas intermitentes. En push a main y en la
+    # corrida nocturna corre SIEMPRE; en un pull request, solo si el cambio puede afectar a la integración (lo
+    # decide `mutacion-plan` con el mismo grafo de importaciones de la mutación: salida `estabilidad`). Saltearlo
+    # por esa salida es válido solo en un pull request y lo verifica `arquitectura/evaluar-gate.cjs`.
     name: Estabilidad (integración, copia ${{ matrix.corrida }})
-    if: github.event_name == 'pull_request'
+    needs: mutacion-plan
+    if: github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -175,15 +230,17 @@ jobs:
       - run: npx vitest run test/integracion
 
   mutacion-plan:
-    # Decide qué grupos de mutación corren. En pull requests solo los que alcanza el cambio (grafo
-    # de importaciones, ver arquitectura/planificar-mutacion.cjs); en push a main y en la corrida
-    # nocturna, todos completos. Si este job falla, el Gate falla: nunca se saltea por error.
+    # Decide qué grupos de mutación corren (y, con el mismo grafo, si Estabilidad se repite). En pull
+    # requests solo los que alcanza el cambio (grafo de importaciones, ver arquitectura/planificar-mutacion.cjs);
+    # en push a main y en la corrida nocturna, todos completos. Si este job falla, el Gate falla: nunca se
+    # saltea por error.
     name: Mutación (plan)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
       hay: ${{ steps.plan.outputs.hay }}
       grupos: ${{ steps.plan.outputs.grupos }}
+      estabilidad: ${{ steps.plan.outputs.estabilidad }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -233,6 +290,7 @@ jobs:
     needs:
       [
         estatico,
+        guardian,
         pruebas,
         seguridad,
         flujos,
@@ -244,6 +302,7 @@ jobs:
         componentes,
       ]
     if: always()
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -254,11 +313,13 @@ jobs:
         run: node arquitectura/evaluar-gate.cjs
         env:
           NEEDS: ${{ toJSON(needs) }}
+          # Estabilidad saltada por el plan solo vale en un pull request; en push a main y en la nocturna no.
+          EVENTO: ${{ github.event_name }}
 
   web:
-    # P-12: la web compila sin ningún secreto. Las variables viven en Vercel y se leen al primer uso,
-    # nunca al compilar; si alguien lee una al importar, este job falla.
-    name: Web (next build sin variables PEDERNAL_*)
+    # P-12: la web y la consola de plataforma compilan sin ningún secreto. Las variables viven en Vercel y se
+    # leen al primer uso, nunca al compilar; si alguien lee una al importar, este job falla.
+    name: Web y consola (next build sin variables PEDERNAL_*)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -277,6 +338,9 @@ jobs:
             exit 1
           fi
       - run: npm run build:web
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      - run: npm run build:plataforma
         env:
           NEXT_TELEMETRY_DISABLED: "1"
 

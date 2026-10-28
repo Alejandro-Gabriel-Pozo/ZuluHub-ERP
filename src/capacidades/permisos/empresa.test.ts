@@ -44,14 +44,14 @@ const SOLO_DEL_GERENTE_DE_FACTURACION = [
  * «agotado», registra entradas y salidas, transfiere y cuenta, en sus sucursales.
  */
 const DEL_OPERADOR_DE_CATALOGO_Y_STOCK = [
-  "cartas.marcar_disponibilidad",
-  "cartas.ver",
   "conteos.registrar",
   "productos.ver",
   "stock.registrar_entrada",
   "stock.registrar_salida",
   "stock.transferir",
   "stock.ver",
+  "vidrieras.marcar_disponibilidad",
+  "vidrieras.ver",
 ] as const;
 
 const DEL_OPERADOR = [...DEL_OPERADOR_DE_EMPRESA, ...DEL_OPERADOR_DE_CATALOGO_Y_STOCK] as const;
@@ -64,13 +64,7 @@ const SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK = [
   "categorias.desactivar",
   "categorias.editar",
   "categorias.reactivar",
-  "cartas.crear",
-  "cartas.editar",
-  "cartas.publicar",
-  "cartas.publicar_en_linea",
-  "cartas.renovar_enlace",
-  "cartas.retirar",
-  "cartas.retirar_de_linea",
+  "composiciones.editar",
   "conteos.abrir",
   "conteos.aplicar",
   "conteos.cancelar",
@@ -84,14 +78,20 @@ const SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK = [
   "productos.desactivar",
   "productos.editar",
   "productos.reactivar",
-  "recetas.editar",
   "stock.ajustar",
   "stock.anular",
+  "vidrieras.crear",
+  "vidrieras.editar",
+  "vidrieras.publicar",
+  "vidrieras.publicar_en_linea",
+  "vidrieras.renovar_enlace",
+  "vidrieras.retirar",
+  "vidrieras.retirar_de_linea",
 ] as const;
 
 /** Las 8 acciones de CE0 (catalogo-carta-niveles-y-elecciones §7.2): gerente y administrador. */
 const DE_LA_ESCALERA_DE_ELECCIONES = [
-  "combos.editar_contenido",
+  "conjuntos.editar_contenido",
   "grupos_de_precio.asignar",
   "grupos_de_precio.crear",
   "grupos_de_precio.desactivar",
@@ -108,6 +108,20 @@ const SOLO_DEL_GERENTE_DE_CATALOGO_Y_STOCK = [
   "stock.verificar_saldos",
 ] as const;
 
+/**
+ * Configuración fiscal (H7 fiscal §C, T5; C11): confirmar datos fiscales, activar un punto de venta y confirmar
+ * la regla del emisor son solo del gerente: el administrador y el operador quedan afuera.
+ */
+const SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL = [
+  "datos_fiscales.confirmar",
+  "datos_fiscales.editar",
+  "emisores.confirmar_regla",
+  "puntos_de_venta.activar",
+  "puntos_de_venta.crear",
+  "puntos_de_venta.desactivar",
+  "puntos_de_venta.editar",
+] as const;
+
 const SOLO_DEL_GERENTE = [
   "gerencia.cancelar_traspaso",
   "gerencia.proponer_traspaso",
@@ -115,6 +129,7 @@ const SOLO_DEL_GERENTE = [
   "sucursales.reactivar",
   ...SOLO_DEL_GERENTE_DE_CATALOGO_Y_STOCK,
   ...SOLO_DEL_GERENTE_DE_FACTURACION,
+  ...SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL,
 ] as const;
 
 const DEL_ADMINISTRADOR = [
@@ -151,9 +166,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 75 acciones: 27 de empresa y facturación, 48 de catálogo, carta y stock (40 de T0 y 8 de CE0)", () => {
+  it("hay 82 acciones: 34 de empresa, configuración fiscal y facturación, 48 de catálogo, carta y stock (40 de T0 y 8 de CE0)", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(75);
+    expect(todas).toHaveLength(82);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -166,19 +181,21 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("series"),
       porPrefijo("puntos_de_venta"),
       porPrefijo("certificados"),
-    ]).toEqual([6, 5, 5, 1, 1, 5, 1, 1, 1, 1]);
+      porPrefijo("datos_fiscales"),
+      porPrefijo("emisores"),
+    ]).toEqual([6, 5, 5, 1, 1, 5, 1, 1, 5, 1, 2, 1]);
     expect([
       porPrefijo("productos"),
       porPrefijo("categorias"),
       porPrefijo("opciones"),
       porPrefijo("variantes"),
       porPrefijo("grupos_de_precio"),
-      porPrefijo("combos"),
-      porPrefijo("cartas"),
+      porPrefijo("conjuntos"),
+      porPrefijo("vidrieras"),
       porPrefijo("stock"),
       porPrefijo("depositos"),
       porPrefijo("articulos"),
-      porPrefijo("recetas"),
+      porPrefijo("composiciones"),
       porPrefijo("conteos"),
     ]).toEqual([7, 4, 2, 1, 5, 1, 9, 7, 5, 2, 1, 4]);
   });
@@ -190,6 +207,13 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     expect(deUsuarios).toEqual([...ACCIONES_DE_USUARIOS]);
     for (const accion of ACCIONES_DE_USUARIOS) {
       expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE", "ADMINISTRADOR"]);
+    }
+  });
+
+  it("las siete acciones de la configuración fiscal son solo del gerente: administrador y operador no pueden ninguna", () => {
+    expect(SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL).toHaveLength(7);
+    for (const accion of SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL) {
+      expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE"]);
     }
   });
 
@@ -368,12 +392,12 @@ describe("el guard con las reglas reales", () => {
   it("las 48 acciones de catálogo, carta y stock dan MODULO_EN_DESARROLLO a todos los roles mientras no se cierre T12", () => {
     const { modulosActivos } = estadoDeModulos(
       CATALOGO_DE_MODULOS,
-      ["catalogo", "carta", "stock"],
-      ["catalogo", "carta", "stock"],
+      ["catalogo", "vidriera", "stock"],
+      ["catalogo", "vidriera", "stock"],
     );
     const nuevas = [
       ...Object.keys(CATALOGO_DE_MODULOS.catalogo.acciones),
-      ...Object.keys(CATALOGO_DE_MODULOS.carta.acciones),
+      ...Object.keys(CATALOGO_DE_MODULOS.vidriera.acciones),
       ...Object.keys(CATALOGO_DE_MODULOS.stock.acciones),
     ] as (keyof typeof PERMISOS_DE_EMPRESA)[];
     expect(nuevas).toHaveLength(48);
@@ -450,12 +474,12 @@ describe("el guard con las reglas reales y la solo lectura (corrección 16)", ()
 });
 
 describe("el guard con catálogo, carta y stock como si ya estuvieran disponibles (lo que decidirá T12)", () => {
-  const modulosNuevos = ["catalogo", "carta", "stock"] as const;
+  const modulosNuevos = ["catalogo", "vidriera", "stock"] as const;
   const disponibles: ReglasDeEmpresa = {
     catalogo: {
       ...CATALOGO_DE_MODULOS,
       catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "disponible" },
-      carta: { ...CATALOGO_DE_MODULOS.carta, estado: "disponible" },
+      vidriera: { ...CATALOGO_DE_MODULOS.vidriera, estado: "disponible" },
       stock: { ...CATALOGO_DE_MODULOS.stock, estado: "disponible" },
     },
     permisos: PERMISOS_DE_EMPRESA,

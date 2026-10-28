@@ -7,7 +7,7 @@ import type { EmpresaId, MarcaComercialId, TenantId } from "../primitivas/identi
 
 /**
  * Lo que la puerta pública de la carta por QR puede saber de una carta (marcas y planes, §B.2.5): solo
- * si el módulo de la carta está activo para la empresa dueña del enlace y el valor de `carta_por_qr`.
+ * si el módulo de la carta está activo para la empresa dueña del enlace y el valor de `vidriera_por_qr`.
  * Nada del plan, de los ajustes ni de sus motivos llega a la respuesta pública.
  */
 export type DerechosDeCartaPublica = Readonly<{
