@@ -37,6 +37,12 @@ plataforma tuvo en el menú «Dominios» y «Soporte» sin pantalla aprobada.
   en «Hallazgos aparte» sin tocarlo. Entre quedarse corto y agrandar, quedarse corto.
 - **Una regla, un lugar.** Antes de crear una función, una regla o una constante, buscá si ya tiene dueño (registro de contratos,
   `primitivas/`, el `publico.ts` del módulo). Un mismo límite o cálculo no se escribe en dos lugares.
+- **Lo que el dueño no aprobó lleva su fuente.** Todo texto, rótulo, regla o dato que ve el cliente y que el dueño no aprobó se agrega
+  solo si tiene una **fuente verificable** y se cita junto a la clave o la regla (comentario del catálogo o del código) y en la descripción del
+  PR: archivo y línea o sección (documento, manual de ARCA, grabación, código) o el mensaje con su fecha, y quién lo decidió. «Lo aprobó el
+  backend» o «lo aprobó el orquestador» no es una fuente. Sin fuente verificable no se agrega: va a preguntas pendientes. Caso real: los
+  textos de tipos de documento de la pantalla del detalle del facturador figuraban como «aprobados por el backend»; la fuente real era la
+  grabación de ARCA (`test/utilidades/arca-grabaciones/corrida1/012-FEParamGetTiposDoc-respuesta-http200.xml`) y hubo que buscarla después.
 - Si no podés frenar porque el resto depende de la respuesta, elegí la opción más chica y reversible, marcala **SUPUESTO** en el informe
   con cuánto cuesta revertirla, y no la entregues como definitiva: el orquestador la trata como pregunta pendiente.
 
