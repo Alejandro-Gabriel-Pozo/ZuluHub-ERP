@@ -53,12 +53,30 @@ function ficha(parcial: Record<string, unknown>): FichaDeMarca {
     dominios: [],
     clavesDeTextoHuerfanas: [],
     efectiva: null,
+    ultimaConfirmada: null,
     borradorEfectivo: null,
     puedeConfirmarse: { ok: true },
     contraste: null,
     ...parcial,
   } as unknown as FichaDeMarca;
 }
+
+const ultima = (numero: number, efectiva: unknown) => ({
+  numero,
+  vigenteDesde: new Date("2026-01-01T03:00:00.000Z"),
+  definicion: {
+    nombreVisible: "x",
+    tema: { primary: "#112233", "on-primary": "#ffffff", secondary: "#445566", accent: "#aa00bb" },
+    aspecto: {
+      estilo: "MODERNO",
+      superficie: "CALIDA",
+      esquinas: "RECTA",
+      titulos: "SERIF",
+      ingreso: "DIVIDIDO",
+    },
+  },
+  efectiva,
+});
 
 describe("armarFichaDeSubmarca", () => {
   it("sin nada: formulario vacío, aspecto por defecto, nombre = código", () => {
@@ -87,6 +105,7 @@ describe("armarFichaDeSubmarca", () => {
     const r = armarFichaDeSubmarca(
       ficha({
         efectiva: definicion("Pedernal Sur", "#112233"),
+        ultimaConfirmada: ultima(2, definicion("Pedernal Sur", "#112233")),
         versiones: [{ numero: 2, estado: "VIGENTE" }],
       }),
       CATALOGOS,

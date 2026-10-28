@@ -10,6 +10,8 @@ export const TEXTO_DE_RETIRADA =
 
 export type PropsDeAvisosDelEditor = Readonly<{
   puedeConfirmarse: FichaDeSubmarca["puedeConfirmarse"];
+  /** Fecha legible del cambio programado del que parte el formulario (sin borrador), o `null`. */
+  partidaProgramadaDesde: string | null;
   /** La ficha dice que la submarca está retirada (la edición ya está bloqueada). */
   retiradaPorLaFicha: boolean;
   /** El error de negocio del último guardado, si lo hubo (el de un campo se ve junto al campo). */
@@ -27,6 +29,7 @@ export type PropsDeAvisosDelEditor = Readonly<{
 /** Los avisos de arriba del editor: retirada, confirmación imposible, error del servidor, resultado incierto y éxito. */
 export function AvisosDelEditor({
   puedeConfirmarse,
+  partidaProgramadaDesde,
   retiradaPorLaFicha,
   errorDeServidor,
   incierto,
@@ -38,6 +41,14 @@ export function AvisosDelEditor({
 }: PropsDeAvisosDelEditor) {
   return (
     <>
+      {partidaProgramadaDesde === null ? null : (
+        <Aviso tono="aviso">
+          <Texto>
+            Estás partiendo de un cambio programado para el {partidaProgramadaDesde}. Lo que rige
+            hoy es distinto.
+          </Texto>
+        </Aviso>
+      )}
       {retiradaPorLaFicha ? (
         <Aviso tono="aviso" titulo="Submarca retirada">
           <Texto>{TEXTO_DE_RETIRADA}</Texto>

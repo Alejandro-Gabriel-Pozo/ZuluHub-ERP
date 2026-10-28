@@ -193,6 +193,7 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
         <Pila separacion={4}>
           <AvisosDelEditor
             puedeConfirmarse={ficha.puedeConfirmarse}
+            partidaProgramadaDesde={ficha.partidaProgramadaDesde}
             retiradaPorLaFicha={retiradaPorLaFicha}
             errorDeServidor={errorDeServidor}
             incierto={incierto}

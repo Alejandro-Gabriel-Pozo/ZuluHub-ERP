@@ -64,6 +64,7 @@ function ficha(cambios: Partial<FichaDeSubmarca> = {}): FichaDeSubmarca {
       },
     },
     formularioDeLaVigente: null,
+    partidaProgramadaDesde: null,
     puedeConfirmarse: { ok: true },
     contrasteDelBorrador: null,
     catalogo: CATALOGO,
@@ -233,5 +234,25 @@ describe("EditorDeSubmarca: Enter en el formulario", () => {
     await userEvent.keyboard("{Enter}");
     await pausa(150);
     expect(accion).not.toHaveBeenCalled();
+  });
+});
+
+describe("EditorDeSubmarca: partir de un cambio programado", () => {
+  it("avisa que el formulario parte de un cambio programado y que lo que rige hoy es distinto", async () => {
+    await render(<EditorDeSubmarca ficha={ficha({ partidaProgramadaDesde: "15/11/2026" })} />);
+    await expect
+      .element(
+        page.getByText(
+          "Estás partiendo de un cambio programado para el 15/11/2026. Lo que rige hoy es distinto.",
+        ),
+      )
+      .toBeVisible();
+  });
+
+  it("sin cambio programado no hay aviso de partida", async () => {
+    await render(<EditorDeSubmarca ficha={ficha()} />);
+    await expect
+      .element(page.getByText(/Estás partiendo de un cambio programado/))
+      .not.toBeInTheDocument();
   });
 });
