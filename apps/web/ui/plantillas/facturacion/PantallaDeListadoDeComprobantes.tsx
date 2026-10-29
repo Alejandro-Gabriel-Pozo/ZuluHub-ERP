@@ -66,6 +66,7 @@ function Tabla({ listado }: Readonly<{ listado: ListadoArmado }>) {
             <th scope="col">{c.comprobante}</th>
             <th scope="col">{c.cliente}</th>
             <th scope="col">{c.documento}</th>
+            <th scope="col">{c.puntoDeVenta}</th>
             <th scope="col" className={estilos["numerica"]}>
               {c.total}
             </th>
@@ -83,6 +84,7 @@ function Tabla({ listado }: Readonly<{ listado: ListadoArmado }>) {
               </td>
               <td className={estilos["cliente"]}>{fila.cliente}</td>
               <td>{fila.documento}</td>
+              <td>{fila.puntoDeVenta}</td>
               <td className={`${estilos["numerica"]} ${estilos["importe"]}`}>{fila.total}</td>
               <td className={estilos["celdaDeEstado"]}>
                 <Estados fila={fila} />

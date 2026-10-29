@@ -106,7 +106,15 @@ describe("prueba de contrato: lo que está", () => {
 
   it("la tabla tiene las columnas del contrato y cada fila, sus datos", () => {
     const columnas = [...marcado.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]);
-    expect(columnas).toEqual(["Fecha", "Comprobante", "Cliente", "Documento", "Total", "Estado"]);
+    expect(columnas).toEqual([
+      "Fecha",
+      "Comprobante",
+      "Cliente",
+      "Documento",
+      "Punto de venta",
+      "Total",
+      "Estado",
+    ]);
     for (const esperado of [
       "14/10/2026",
       "Factura B 00001-00001234",
@@ -115,6 +123,7 @@ describe("prueba de contrato: lo que está", () => {
       "Distribuidora Sur SA",
       "CUIT 30-71234567-8",
       "DNI 27.345.678",
+      "00077",
       "$ 9.000,00",
       "$ 121.000,00",
       "Autorizada",
@@ -150,6 +159,13 @@ describe("prueba de contrato: lo que está", () => {
     ]) {
       expect(delCliente, esperado).toContain(esperado);
     }
+  });
+
+  it("D-53: la tarjeta del celular no suma el punto de venta (el contrato no lo pide ahí; es solo una columna de la tabla)", () => {
+    const tarjetas = /<ul[^>]*>([\s\S]*?)<\/ul>/.exec(marcado)?.[1] ?? "";
+    // El 00077 es el punto de venta de la segunda fila y no figura en ningún otro dato de la tarjeta.
+    expect(visible(tarjetas)).not.toContain("00077");
+    expect(visible(marcado.split("<table")[1] ?? "")).toContain("00077");
   });
 
   it("tocar una fila (tarjeta o tabla) abre el detalle con un enlace real", () => {
@@ -232,13 +248,6 @@ describe("prueba de contrato: lo que no está", () => {
     const marcado = await pintar(propsDe());
     const fuera = marcado.replace(/<th[^>]*>Total<\/th>/g, "");
     expect(visible(fuera)).not.toMatch(/\bTotal\b/);
-  });
-
-  it("la tabla no tiene columna de punto de venta (el listado no trae ese dato como campo)", async () => {
-    const columnas = [...(await pintar(propsDe())).matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map(
-      (m) => m[1],
-    );
-    expect(columnas).not.toContain("Punto de venta");
   });
 
   it("la fila no trae botones: solo enlaces (tocar abre el detalle, sin confirmar nada)", async () => {

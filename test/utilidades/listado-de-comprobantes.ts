@@ -5,6 +5,7 @@ import {
   armarLosFiltros,
   FILTROS_POR_DEFECTO,
   type FiltrosDelListado,
+  type PuntoDeVentaParaMostrar,
 } from "../../apps/web/ui/plantillas/facturacion/filtros-del-listado";
 import {
   type EleccionDeSucursalArmada,
@@ -38,6 +39,7 @@ export const fila = (cambios: Partial<ResumenParaMostrar> = {}): ResumenParaMost
   id: ID_1,
   tipo: "FACTURA_B",
   numero: "00001-00001234",
+  puntoDeVentaNumero: 1,
   fecha: "2026-10-14",
   receptorNombre: null,
   receptorDocumento: { tipo: "SIN_IDENTIFICAR" },
@@ -59,6 +61,7 @@ export const PAGINA: PaginaParaMostrar = {
       id: ID_2,
       tipo: "FACTURA_A",
       numero: null,
+      puntoDeVentaNumero: 77,
       fecha: "2026-10-13",
       estado: "EN_VALIDACION",
       total: "121000.00",
@@ -81,6 +84,13 @@ export const SUCURSALES = [
   { id: "s-norte", nombre: "Norte", activa: false },
 ] as const;
 
+/** Los puntos de venta de la sucursal de ejemplo, como los entrega el servidor: el 00003 está dado de baja (D-58). */
+const PUNTOS_DE_VENTA: readonly PuntoDeVentaParaMostrar[] = [
+  { numero: 1, activo: true },
+  { numero: 2, activo: true },
+  { numero: 3, activo: false },
+];
+
 const accionFalsa: PropsDePantallaDeListadoDeComprobantes["accionDeSucursal"] = () =>
   Promise.resolve({ error: null });
 
@@ -88,7 +98,7 @@ export function propsDe(
   datos: Readonly<{
     pagina?: PaginaParaMostrar;
     filtros?: FiltrosDelListado;
-    puntosDeVenta?: readonly number[];
+    puntosDeVenta?: readonly PuntoDeVentaParaMostrar[];
     elegida?: string;
   }> = {},
   sobre: Partial<PropsDePantallaDeListadoDeComprobantes> = {},
@@ -97,7 +107,7 @@ export function propsDe(
   return {
     eleccionDeSucursal: armarLaEleccionDeSucursal(SUCURSALES, datos.elegida ?? "s-centro"),
     accionDeSucursal: accionFalsa,
-    filtros: armarLosFiltros(filtros, datos.puntosDeVenta ?? [1, 2]),
+    filtros: armarLosFiltros(filtros, datos.puntosDeVenta ?? PUNTOS_DE_VENTA),
     listado: armarElListado(datos.pagina ?? PAGINA, filtros),
     ...sobre,
   };

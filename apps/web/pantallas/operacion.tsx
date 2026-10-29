@@ -56,7 +56,7 @@ export async function pantallaDeOperacion(
       {...(opciones.actual === undefined ? {} : { actual: opciones.actual })}
       marca={puerta.marca.nombre}
       empresa={empresa.nombre}
-      modulos={destinosDeModulos()}
+      modulos={await destinosDeModulos(contexto)}
     >
       {titulado ? resultado.cuerpo : resultado}
     </ArmazonDeOperacion>

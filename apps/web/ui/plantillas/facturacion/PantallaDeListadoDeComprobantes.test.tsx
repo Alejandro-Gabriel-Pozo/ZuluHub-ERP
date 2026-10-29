@@ -31,6 +31,7 @@ const pagina: PaginaParaMostrar = {
       id: "0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b",
       tipo: "FACTURA_B",
       numero: "00001-00001234",
+      puntoDeVentaNumero: 1,
       fecha: "2026-10-14",
       receptorNombre: null,
       receptorDocumento: { tipo: "SIN_IDENTIFICAR" },
@@ -42,6 +43,7 @@ const pagina: PaginaParaMostrar = {
       id: "1c0a7b2f-3d4e-4f60-9b8c-0d1e2f3a4b5c",
       tipo: "FACTURA_A",
       numero: null,
+      puntoDeVentaNumero: 12345,
       fecha: "2026-10-13",
       receptorNombre: "Distribuidora del Sur y Compañía Sociedad de Responsabilidad Limitada",
       receptorDocumento: { tipo: "CUIT", numero: "30712345678" },
@@ -52,7 +54,8 @@ const pagina: PaginaParaMostrar = {
     {
       id: "2d1b8c3a-4e5f-4a71-8c9d-1e2f3a4b5c6d",
       tipo: "NOTA_CREDITO_B",
-      numero: "00001-00000045",
+      numero: "00003-00000045",
+      puntoDeVentaNumero: 3,
       fecha: "2026-10-12",
       receptorNombre: "Juan Pérez",
       receptorDocumento: { tipo: "DNI", numero: "27345678" },
@@ -64,13 +67,20 @@ const pagina: PaginaParaMostrar = {
   siguiente: "2026-10-12T10:00:00.000000Z|2d1b8c3a-4e5f-4a71-8c9d-1e2f3a4b5c6d",
 };
 
+/** Como los entrega el servidor: el 00003 está dado de baja o es nuevo sin uso (D-58, D-60). */
+const puntosDeVenta = [
+  { numero: 1, activo: true },
+  { numero: 2, activo: true },
+  { numero: 3, activo: false },
+];
+
 const props = (
   cambios: Partial<PropsDePantallaDeListadoDeComprobantes> = {},
   filtros = FILTROS_POR_DEFECTO,
 ): PropsDePantallaDeListadoDeComprobantes => ({
   eleccionDeSucursal: armarLaEleccionDeSucursal(sucursales, "s-centro"),
   accionDeSucursal: () => Promise.resolve({ error: null }),
-  filtros: armarLosFiltros(filtros, [1, 2]),
+  filtros: armarLosFiltros(filtros, puntosDeVenta),
   listado: armarElListado(pagina, filtros),
   ...cambios,
 });
@@ -187,6 +197,17 @@ describe("listado de comprobantes en el celular (6A, tarjetas)", () => {
     expect(visible(periodo.element())).toBe(false);
   });
 
+  it("el filtro «Punto de venta» con el no activo marcado: accesible, legible y tocable con el panel abierto", async () => {
+    await ventana(390);
+    await render(enArmazon(props({}, { ...FILTROS_POR_DEFECTO, puntoDeVenta: "3" })));
+    await userEvent.click(page.getByText("Filtros (1)"));
+    const selector = page.getByLabelText("Punto de venta").element() as HTMLSelectElement;
+    expect(selector.value).toBe("3");
+    expect(selector.selectedOptions[0]?.textContent).toBe("00003 · No activo");
+    legibleYTocable();
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+  });
+
   it("el foco se ve en el botón de filtros, en una tarjeta y en «Página siguiente»", async () => {
     await render(enArmazon(props()));
     const resumen = document.querySelector("summary") as HTMLElement;
@@ -291,7 +312,33 @@ describe("listado de comprobantes en escritorio (6C, tabla)", () => {
     const columnas = [...(tabla() as HTMLElement).querySelectorAll("th")].map(
       (th) => th.textContent,
     );
-    expect(columnas).toEqual(["Fecha", "Comprobante", "Cliente", "Documento", "Total", "Estado"]);
+    expect(columnas).toEqual([
+      "Fecha",
+      "Comprobante",
+      "Cliente",
+      "Documento",
+      "Punto de venta",
+      "Total",
+      "Estado",
+    ]);
+    // La columna lleva el número de cinco dígitos de cada fila.
+    const puntos = [...(tabla() as HTMLElement).querySelectorAll("tbody tr")].map(
+      (fila) => fila.querySelectorAll("td")[4]?.textContent,
+    );
+    expect(puntos).toEqual(["00001", "12345", "00003"]);
+  });
+
+  it("el filtro «Punto de venta» ofrece «Todos» y cada punto de venta; el no activo, marcado «00003 · No activo»", async () => {
+    await ventana(1280);
+    await render(enArmazon(props()));
+    const selector = page.getByLabelText("Punto de venta").element() as HTMLSelectElement;
+    expect([...selector.options].map((o) => [o.value, o.textContent])).toEqual([
+      ["", "Todos"],
+      ["1", "00001"],
+      ["2", "00002"],
+      ["3", "00003 · No activo"],
+    ]);
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
   });
 
   it("cada fila es un enlace al detalle que cubre toda la fila", async () => {

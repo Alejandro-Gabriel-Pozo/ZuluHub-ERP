@@ -11,6 +11,7 @@ import {
   emitirNotaDeCredito,
   emitirNotaDeDebito,
   listarComprobantes,
+  listarPuntosDeVentaDeLaSucursal,
   reintentarComprobante,
   resincronizarSerie,
   verComprobante,
@@ -22,7 +23,10 @@ import { resolverEmpresa } from "../../../src/composicion/sesion-y-empresa";
 import type { PaginaDeComprobantes } from "../../../src/modulos/fiscal/publico";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { marcaComercialId } from "../../../src/primitivas/identificadores/marca";
-import { RUTA_DEL_LISTADO } from "../ui/plantillas/facturacion/filtros-del-listado";
+import {
+  RUTA_DEL_LISTADO,
+  type PuntoDeVentaParaMostrar,
+} from "../ui/plantillas/facturacion/filtros-del-listado";
 import { pedidoDeLaAccion, type ResultadoDeAccion } from "./acciones";
 import { web } from "./composicion";
 import { COOKIE_DE_EMPRESA, COOKIE_DE_SUCURSAL, OPCIONES_DE_COOKIE_DE_SUCURSAL } from "./cookies";
@@ -158,16 +162,18 @@ export type ListadoCargado = Readonly<{
   sucursales: readonly SucursalParaElegir[];
   /** La sucursal con la que trabaja el listado; `""` si todavía no hay una. */
   efectiva: string;
-  puntosDeVenta: readonly number[];
+  /** Todos los de la sucursal (activos, dados de baja y nuevos sin uso: D-58, D-60), de menor a mayor número; `[]` si no se pudieron pedir. */
+  puntosDeVenta: readonly PuntoDeVentaParaMostrar[];
   pagina: Respuesta<PaginaDeComprobantes>;
 }>;
 
 /**
  * Carga el listado de la pantalla con el contexto que ya resolvió la página (sin volver a resolver la empresa). Pide en orden:
- * las sucursales y la elegida; los puntos de venta de esa sucursal (hoy ninguno: ver abajo); y, con los puntos de venta ya
- * conocidos, la página (`armarEntrada` recibe los números para descartar un filtro de punto de venta ajeno a la sucursal).
+ * las sucursales y la elegida; los puntos de venta de esa sucursal (con la MISMA `elegida` que el listado: la consulta aplica la
+ * misma regla y verifica el alcance); y, con los puntos de venta ya conocidos, la página (`armarEntrada` recibe los números para descartar un filtro de punto de venta ajeno a la sucursal).
  * Si la sucursal no se puede resolver, la página trae el error del servidor (`FISCAL_SUCURSAL_NO_ELEGIDA` o fuera de alcance) y la
- * pantalla muestra igual el selector.
+ * pantalla muestra igual el selector. Si los puntos de venta no se pueden pedir (el mismo error u otro), la lista va vacía: sin
+ * selector «Punto de venta», como sin sucursal; la página, que se pide aparte, dice su propio error.
  */
 export async function cargarElListado(
   contexto: ContextoOperativo,
@@ -177,10 +183,10 @@ export async function cargarElListado(
     const sucursal = await sucursalDelPedido(contexto);
     if (!sucursal.ok) return { sucursales: [], efectiva: "", puntosDeVenta: [], pagina: sucursal };
     const { elegibles, elegida, efectiva } = sucursal.dato;
-    // BLOQUEADO (pregunta pendiente al backend): `listarPuntosDeVentaDeLaSucursal` existe en el módulo fiscal pero
-    // `armarWeb` (`src/composicion/web.ts`) no lo expone en `consultasDeFacturacion`, así que acá no se puede llamar. Hasta
-    // entonces la lista va vacía: el filtro «Punto de venta» no se ofrece y la dirección no lo filtra.
-    const puntosDeVenta: readonly number[] = [];
+    const delServidor = await listarPuntosDeVentaDeLaSucursal(dependencias, contexto, elegida);
+    const puntosDeVenta: readonly PuntoDeVentaParaMostrar[] = delServidor.ok
+      ? delServidor.dato.items
+      : [];
     return {
       sucursales: elegibles,
       efectiva,
@@ -189,7 +195,7 @@ export async function cargarElListado(
         dependencias,
         contexto,
         elegida,
-        armarEntrada(puntosDeVenta),
+        armarEntrada(puntosDeVenta.map((p) => p.numero)),
       ),
     };
   } catch (excepcion) {
