@@ -3,6 +3,7 @@ import type { Transporte } from "../adaptadores/arca/tipos";
 import { crearTransporteHttp } from "../adaptadores/arca/transporte-http";
 import { crearAlmacenDeTickets } from "../adaptadores/certificados/almacen-de-tickets";
 import { crearCredencialesDeEmisor } from "../adaptadores/certificados/credenciales-de-emisor";
+import { crearVerificacionDeAutorizacion } from "../adaptadores/certificados/verificacion-de-autorizacion";
 import type {
   EmisionElectronica,
   ErrorDeEmision,
@@ -83,6 +84,8 @@ export function armarEmisionFiscal(
     return {
       credenciales: crearCredencialesDeEmisor({ transacciones, cifrador, reloj }),
       tickets: crearAlmacenDeTickets({ transacciones, cifrador, reloj }),
+      verificacion: crearVerificacionDeAutorizacion({ transacciones, reloj }),
+      registrar: (aviso: string) => registrar(aviso),
       transporte,
       reloj,
       esperar,

@@ -238,6 +238,13 @@ function armar(datos: Datos = {}) {
         return Promise.resolve(datos.puntosDeVenta ?? []);
       },
     },
+    // El estado de los certificados tiene sus pruebas en `estado-de-certificados.test.ts`: acá nadie lo toca.
+    emisores: {
+      obtener: () => Promise.reject(new Error("estas consultas no leen emisores")),
+    },
+    lecturasDeCertificados: {
+      actualesDelEmisor: () => Promise.reject(new Error("estas consultas no leen certificados")),
+    },
     intentos: {
       delComprobante: (...args) => {
         llamadas.intentos.push(args);

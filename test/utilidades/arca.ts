@@ -19,6 +19,8 @@ import type {
   CredencialesDescifradas,
   ErrorDeCredenciales,
 } from "../../src/puertos/credenciales-de-emisor";
+import type { ErrorDePersistencia } from "../../src/puertos/transacciones";
+import type { VerificacionDeAutorizacion } from "../../src/puertos/verificacion-de-autorizacion";
 
 /**
  * Ayudas de las pruebas del adaptador real de ARCA (tramo F8): las grabaciones reales de homologación, un
@@ -143,6 +145,26 @@ export class CredencialesEnMemoria implements CredencialesDeEmisor {
       return Promise.resolve(err(this.credencial));
     }
     return Promise.resolve(ok(this.credencial));
+  }
+}
+
+/**
+ * La verificación de autorización en memoria (puerto de F7, D-42): anota qué certificado se verificó y cuántas veces
+ * se pidió. Con `fallar` lanza una excepción (con una cadena de conexión adentro) como lo haría una base caída.
+ */
+export class VerificacionEnMemoria implements VerificacionDeAutorizacion {
+  anotadas: { empresa: EmpresaId; certificado: string }[] = [];
+  fallar = false;
+  /** `anotar` devuelve este error de persistencia (un valor, no una excepción). */
+  errorDePersistencia: ErrorDePersistencia | null = null;
+  anotar(
+    empresa: EmpresaId,
+    certificado: string,
+  ): Promise<Resultado<Readonly<{ cambio: boolean }>, ErrorDePersistencia>> {
+    if (this.errorDePersistencia !== null) return Promise.resolve(err(this.errorDePersistencia));
+    if (this.fallar) return Promise.reject(new Error("falla de la base con postgres://secreto"));
+    this.anotadas.push({ empresa, certificado });
+    return Promise.resolve(ok({ cambio: true }));
   }
 }
 

@@ -258,6 +258,7 @@ export {
   type ServicioDeArca,
   type TextoCifrado,
 } from "./persistencia/repositorio-de-certificados";
+export { crearLecturasDeCertificados } from "./persistencia/lecturas-de-certificados";
 export { errorFiscalDeRestriccion, traducirErroresDeFiscal } from "./persistencia/traducir";
 
 // H7 T6: casos de uso de numeración (reservar, cerrar y reconciliar), con el guard primero y el servicio
@@ -406,10 +407,9 @@ export {
 } from "./casos-de-uso/reconciliar-comprobantes";
 
 // H7 facturación F7: certificados de ARCA. Generar el pedido (la clave privada se genera y se guarda CIFRADA dentro
-// del servidor: nunca sale ni se muestra) y cargar el certificado que devolvió ARCA (validado contra la clave, el
-// CUIT del emisor, la cadena y el vencimiento), con el guard primero. La composición los arma con
-// `crearCasosDeUsoDeCertificados`. `dondeSeGuardaLaClave` y `dondeSeGuardaLaCredencial` dicen a qué fila y columna
-// se ata cada texto cifrado (lo piden quien cifra y quien descifra, para que no diverjan).
+// del servidor: nunca sale ni se muestra) y cargar el certificado que devolvió ARCA (validado contra la clave, el CUIT
+// del TITULAR declarado —puede no ser el del emisor, D-42—, la cadena y el vencimiento), con el guard primero. La
+// composición los arma con `crearCasosDeUsoDeCertificados`; `dondeSeGuardaLaClave` y `…Credencial` ubican lo cifrado.
 export { DECLARACIONES_DE_CERTIFICADOS } from "./casos-de-uso/declaraciones-de-certificados";
 export {
   crearCasosDeUsoDeCertificados,

@@ -23,6 +23,7 @@ import {
   OPCIONES_DE_COOKIE_DE_EMPRESA,
   OPCIONES_DE_COOKIE_DE_INVITACION,
   aplicarCookies,
+  vencerCookie,
 } from "./cookies";
 import { exigirPuerta } from "./pedido";
 import { dependenciasDeSesion, sesionDelPedido } from "./sesion";
@@ -135,8 +136,8 @@ async function terminarSesion(): Promise<Respuesta<null>> {
     const almacen = await cookies();
     aplicarCookies(almacen, cierre.dato.cookies);
     // La próxima persona que use este celular no hereda la empresa ni la invitación de esta.
-    almacen.delete(COOKIE_DE_EMPRESA);
-    almacen.delete(COOKIE_DE_INVITACION);
+    vencerCookie(almacen, COOKIE_DE_EMPRESA, OPCIONES_DE_COOKIE_DE_EMPRESA);
+    vencerCookie(almacen, COOKIE_DE_INVITACION, OPCIONES_DE_COOKIE_DE_INVITACION);
     return { ok: true, dato: null };
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta);
@@ -175,7 +176,7 @@ export async function aceptarLaInvitacion(
       marcaId: marcaComercialId(puerta.marcaId),
     });
     if (!resultado.ok) return resultado;
-    (await cookies()).delete(COOKIE_DE_INVITACION);
+    vencerCookie(await cookies(), COOKIE_DE_INVITACION, OPCIONES_DE_COOKIE_DE_INVITACION);
     // A la pantalla solo le llega lo que muestra: ni la persona ni las empresas de la invitación.
     return { ok: true, dato: { yaEstabaAceptada: resultado.dato.yaEstabaAceptada } };
   } catch (excepcion) {

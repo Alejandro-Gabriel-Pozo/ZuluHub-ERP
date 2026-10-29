@@ -25,12 +25,15 @@ import { DECLARACIONES_DE_CERTIFICADOS } from "./declaraciones-de-certificados";
  * `generarPedidoDeCertificado` (spec H7 facturación §B.4 y §B.6, tramo F7): Pedernal genera la clave privada y el
  * pedido (CSR) dentro del servidor; la clave se guarda CIFRADA, atada a su fila, y nunca sale ni se muestra: lo único
  * que vuelve es el pedido en PEM, que el gerente sube a ARCA con su clave fiscal. Cada cliente es dueño de su propio
- * certificado (decisión del dueño 2026-10-14): el titular tiene que ser el CUIT del emisor.
+ * certificado (decisión del dueño 2026-10-14). El titular es la persona física que lo saca y firma el pedido con su
+ * clave fiscal (el `serialNumber` del CSR tiene que ser el CUIT de quien está conectado en ARCA, manual del WSASS);
+ * puede ser distinta del emisor (D-42, 2026-10-29: reemplaza la regla «titular = CUIT del emisor»), que es la
+ * empresa representada. Se guarda con el pedido y no cambia; `cargarCertificado` lo compara con el certificado.
  *
  * Una transacción SERIALIZABLE con el guard primero: 1. guard `certificados.gestionar`. 2. La empresa opera.
  * 3. Forma del pedido. 4. Repetición: el `id` (uuid que genera la pantalla) ES la clave de idempotencia; con el mismo
  * pedido (emisor, ambiente, alias y titular) devuelve el que existe (`yaExistia`) SIN generar otra clave; con otro
- * pedido, `CLAVE_REUTILIZADA`. 5. El emisor existe, está activo y su CUIT es el del titular. 6. Se genera el par, se
+ * pedido, `CLAVE_REUTILIZADA`. 5. El emisor existe y está activo. 6. Se genera el par, se
  * cifra la clave con su fila, se guarda `PEDIDO_GENERADO`. 7. Auditoría `CERTIFICADO_PEDIDO_GENERADO` en la misma
  * transacción: el hecho (quién, cuándo, alias, emisor, ambiente), nunca la clave ni su cifrado.
  *
@@ -52,11 +55,7 @@ export type SalidaDeGenerarPedido = Readonly<{
 }>;
 
 export type ErrorPropioAlGenerarPedido =
-  | ErrorDePedidoDeCertificado
-  | "EMISOR_NO_ENCONTRADO"
-  | "EMISOR_INACTIVO"
-  | "TITULAR_DISTINTO"
-  | "CLAVE_REUTILIZADA";
+  ErrorDePedidoDeCertificado | "EMISOR_NO_ENCONTRADO" | "EMISOR_INACTIVO" | "CLAVE_REUTILIZADA";
 
 export type ErrorAlGenerarPedido =
   ErrorPropioAlGenerarPedido | MotivoDeRechazo | EmpresaNoOpera | ErrorDePersistencia;
@@ -124,7 +123,6 @@ export function armarGenerarPedidoDeCertificado({
         const emisor = await tx.emisores.obtener(empresaId, pedido.emisorId);
         if (emisor === null) return err("EMISOR_NO_ENCONTRADO");
         if (!emisor.activo) return err("EMISOR_INACTIVO");
-        if (emisor.cuit !== pedido.cuitTitular) return err("TITULAR_DISTINTO");
 
         const generada = await generador.generar({
           alias: pedido.alias,

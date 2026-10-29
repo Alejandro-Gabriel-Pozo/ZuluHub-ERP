@@ -12,7 +12,7 @@ import type { ContextoOperativo } from "../../../contexto/contexto";
 import { empresaId, personaId, sucursalId } from "../../../primitivas/identificadores/marca";
 import type { CargaDeAutorizacion, DatosDelActor } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
-import { comprobanteId } from "../publico";
+import { comprobanteId, emisorId } from "../publico";
 import { crearConsultasDeFacturacion, type ConsultasDeFacturacion } from "./consultas";
 import type { TxDeConsultasDeFacturacion } from "./contrato";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
@@ -95,9 +95,17 @@ const LLAMADAS: Record<ConAccion, (consultas: ConsultasDeFacturacion) => Promise
     c.listarPuntosDeVentaDeLaSucursal(contexto, { sucursalElegida: sucursalId("s-1") }),
   verComprobante: (c) => c.verComprobante(contexto, { comprobanteId: ID }),
   modeloDeImpresion: (c) => c.modeloDeImpresion(contexto, { comprobanteId: ID }),
+  estadoDeCertificados: (c) => c.estadoDeCertificados(contexto, { emisorId: emisorId("x-1") }),
 };
 
 const NOMBRES = clavesDe(LLAMADAS);
+/**
+ * Las que miran comprobantes (`comprobantes.ver`, de los tres roles y de lectura). El estado de los certificados es del
+ * gerente y amplía: su guard y su matriz se prueban en `estado-de-certificados.test.ts`.
+ */
+const NOMBRES_DE_COMPROBANTES = NOMBRES.filter(
+  (nombre) => DECLARACIONES_DE_CONSULTAS[nombre].accion === "comprobantes.ver",
+);
 
 /** Pasar el guard = tocar algo que no es la autorización (la transacción vigilada corta ahí). */
 const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
@@ -111,17 +119,19 @@ const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
 };
 
 describe("P7: el guard va primero en cada consulta del facturador", () => {
-  it("hay cuatro consultas, todas con acción", () => {
+  it("hay cinco consultas, todas con acción: cuatro de comprobantes y la del estado de los certificados", () => {
     expect([...NOMBRES].sort()).toEqual([
+      "estadoDeCertificados",
       "listarComprobantes",
       "listarPuntosDeVentaDeLaSucursal",
       "modeloDeImpresion",
       "verComprobante",
     ]);
     expect(Object.keys(DECLARACIONES_DE_CONSULTAS).sort()).toEqual([...NOMBRES].sort());
+    expect(NOMBRES_DE_COMPROBANTES).toHaveLength(4);
   });
 
-  it.each(NOMBRES)("%s exige comprobantes.ver", (nombre) => {
+  it.each(NOMBRES_DE_COMPROBANTES)("%s exige comprobantes.ver", (nombre) => {
     expect(DECLARACIONES_DE_CONSULTAS[nombre]).toEqual({ accion: "comprobantes.ver" });
   });
 
@@ -141,7 +151,9 @@ describe("P7: el guard va primero en cada consulta del facturador", () => {
     expect(vigilada.accesos).toEqual(["autorizacion"]);
   });
 
-  it.each(NOMBRES.flatMap((nombre) => ROLES_DE_EMPRESA.map((rol) => ({ nombre, rol }))))(
+  it.each(
+    NOMBRES_DE_COMPROBANTES.flatMap((nombre) => ROLES_DE_EMPRESA.map((rol) => ({ nombre, rol }))),
+  )(
     "$nombre con $rol: los tres roles pasan el guard y recién ahí se toca lo demás",
     async ({ nombre, rol }) => {
       const vigilada = vigilar(actor(rol));
@@ -173,7 +185,7 @@ describe("P7: el guard va primero en cada consulta del facturador", () => {
     expect(vigilada.accesos).toEqual(["autorizacion"]);
   });
 
-  it.each(NOMBRES)(
+  it.each(NOMBRES_DE_COMPROBANTES)(
     "%s con el plan dado de baja (módulo en solo lectura) sigue pasando: mirar es lectura",
     async (nombre) => {
       const vigilada = vigilar({
@@ -186,24 +198,19 @@ describe("P7: el guard va primero en cada consulta del facturador", () => {
     },
   );
 
-  it.each(NOMBRES)(
-    "%s exige SU acción (comprobantes.ver) y no la de otro: sin ella nadie pasa",
-    async (nombre) => {
-      const sinVer = Object.fromEntries(
-        clavesDe(PERMISOS_DE_EMPRESA).map((a) => [
-          a,
-          a === "comprobantes.ver" ? [] : ROLES_DE_EMPRESA,
-        ]),
-      ) as unknown as ReglasDeEmpresa["permisos"];
-      const vigilada = vigilar(actor("GERENTE"));
-      const reglas = { ...CON_FACTURACION, permisos: sinVer };
-      expect(await LLAMADAS[nombre](consultasCon(vigilada, reglas))).toEqual({
-        ok: false,
-        error: "SIN_PERMISO",
-      });
-      expect(vigilada.accesos).toEqual(["autorizacion"]);
-    },
-  );
+  it.each(NOMBRES)("%s exige SU acción y no la de otro: sin ella nadie pasa", async (nombre) => {
+    const accion: ClaveAccion = DECLARACIONES_DE_CONSULTAS[nombre].accion;
+    const sinLaAccion = Object.fromEntries(
+      clavesDe(PERMISOS_DE_EMPRESA).map((a) => [a, a === accion ? [] : ROLES_DE_EMPRESA]),
+    ) as unknown as ReglasDeEmpresa["permisos"];
+    const vigilada = vigilar(actor("GERENTE"));
+    const reglas = { ...CON_FACTURACION, permisos: sinLaAccion };
+    expect(await LLAMADAS[nombre](consultasCon(vigilada, reglas))).toEqual({
+      ok: false,
+      error: "SIN_PERMISO",
+    });
+    expect(vigilada.accesos).toEqual(["autorizacion"]);
+  });
 
   it("el pedido del listado se mira DESPUÉS del guard: sin permiso no se sabe si estaba bien armado", async () => {
     const sinPermiso = vigilar(actor(null));

@@ -3,19 +3,25 @@ import type { EmpresaId, SucursalId } from "../../../primitivas/identificadores/
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { MarcaParaImprimir } from "../dominio/modelo-de-impresion";
+import type { LecturasDeCertificados } from "../persistencia/lecturas-de-certificados";
 import type { LecturasDeComprobantes } from "../persistencia/lecturas-de-comprobantes";
 import type { RepositorioDeComprobantes } from "../persistencia/repositorio-de-comprobantes";
 import type { RepositorioDeIntentos } from "../persistencia/repositorio-de-intentos";
-import type { RepositorioDeSeries } from "../persistencia/repositorios";
+import type { RepositorioDeEmisores, RepositorioDeSeries } from "../persistencia/repositorios";
 
 /**
  * Lo que recibe el trabajo de una consulta (ADR-005): solo métodos de lectura de los repositorios y la carga
- * de autorización. No hay auditoría ni trabajos: por tipos, una consulta no escribe. Los certificados y las
- * credenciales de acceso a ARCA no figuran: ninguna consulta del facturador los lee.
+ * de autorización. No hay auditoría ni trabajos: por tipos, una consulta no escribe. Las credenciales de acceso a
+ * ARCA y la clave de los certificados no figuran: ninguna consulta las lee (los certificados se miran solo por
+ * `lecturasDeCertificados`, que no trae ninguna columna cifrada).
  */
 export type TxDeConsultasDeFacturacion = Readonly<{
   comprobantes: Pick<RepositorioDeComprobantes, "obtener">;
   lecturas: LecturasDeComprobantes;
+  /** El emisor al que se le mira el estado de los certificados (de otra empresa, no existe). */
+  emisores: Pick<RepositorioDeEmisores, "obtener">;
+  /** Qué certificado cuenta hoy de un emisor en cada ambiente (D-42): sin clave, solo lectura. */
+  lecturasDeCertificados: LecturasDeCertificados;
   intentos: Pick<RepositorioDeIntentos, "delComprobante">;
   series: Pick<RepositorioDeSeries, "obtener">;
   /**

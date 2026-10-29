@@ -267,7 +267,7 @@ type FilaDeCertificado = Readonly<{
 }>;
 
 /** Las columnas que se pueden mostrar: ni `clave_*` ni nada cifrado. */
-const COLUMNAS_DE_CERTIFICADO = [
+export const COLUMNAS_DE_CERTIFICADO = [
   "id",
   "empresa_id",
   "emisor_id",
@@ -285,7 +285,7 @@ const COLUMNAS_DE_CERTIFICADO = [
   "version",
 ] as const;
 
-function aCertificado(fila: FilaDeCertificado): CertificadoGuardado {
+export function aCertificado(fila: FilaDeCertificado): CertificadoGuardado {
   return {
     id: certificadoId(fila.id),
     empresaId: empresaId(fila.empresa_id),

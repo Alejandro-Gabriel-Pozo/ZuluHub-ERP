@@ -1,5 +1,6 @@
 import type { DependenciasDeConsultasDeFacturacion } from "./contrato";
 import type { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
+import { armarEstadoDeCertificados } from "./estado-de-certificados";
 import { armarListarComprobantes } from "./listar-comprobantes";
 import { armarModeloDeImpresion } from "./modelo-de-impresion";
 import { armarListarPuntosDeVentaDeLaSucursal } from "./puntos-de-venta-de-la-sucursal";
@@ -16,6 +17,7 @@ export function crearConsultasDeFacturacion(dependencias: DependenciasDeConsulta
     listarPuntosDeVentaDeLaSucursal: armarListarPuntosDeVentaDeLaSucursal(dependencias),
     verComprobante: armarVerComprobante(dependencias),
     modeloDeImpresion: armarModeloDeImpresion(dependencias),
+    estadoDeCertificados: armarEstadoDeCertificados(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES_DE_CONSULTAS, unknown>;
 }
 

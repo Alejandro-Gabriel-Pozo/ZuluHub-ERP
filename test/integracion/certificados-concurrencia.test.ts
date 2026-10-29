@@ -14,7 +14,9 @@ import {
   credencialesDe,
   crearEntornoDeCertificados,
   crearServicios,
+  cuitConPrefijo,
   escenarioDeCertificados,
+  escenarioDeSociedad,
   pedidoDeCertificado,
   type ServiciosDePrueba,
 } from "./certificados-apoyo";
@@ -96,8 +98,12 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
   async function pedirYEmitir(
     e: Awaited<ReturnType<typeof escenarioDeCertificados>>,
     alias?: string,
+    cuitTitular?: string,
   ) {
-    const entrada = pedidoDeCertificado(e, alias === undefined ? {} : { alias });
+    const entrada = pedidoDeCertificado(e, {
+      ...(alias === undefined ? {} : { alias }),
+      ...(cuitTitular === undefined ? {} : { cuitTitular }),
+    });
     const r = await casos.generarPedidoDeCertificado(e.como(new Date()), entrada);
     if (!r.ok) throw new Error(`pedido: ${JSON.stringify(r.error)}`);
     return {
@@ -224,6 +230,60 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
       expect(reemplazados).toHaveLength(3);
       expect(await auditoriasDe(e.empresa, "CERTIFICADO_CARGADO")).toBe(4);
       expect(await auditoriasDe(e.empresa, "CERTIFICADO_REEMPLAZADO")).toBe(3);
+    }
+  });
+
+  it("D-42: dos personas distintas sacan certificados para la misma sociedad y los cargan a la vez: uno solo queda vigente, con SU titular", async () => {
+    for (let ronda = 0; ronda < RONDAS; ronda++) {
+      const e = await escenarioDeSociedad(dueno, propia.base);
+      const titulares = [cuitConPrefijo("20"), cuitConPrefijo("27")];
+      const pedidos = await Promise.all(
+        [0, 1, 2, 3].map((i) => pedirYEmitir(e, undefined, titulares[i % 2])),
+      );
+      const rs = await juntas(pedidos.length, (i) =>
+        cargar(e, pedidos[i]?.id ?? "", pedidos[i]?.pem ?? ""),
+      );
+      expect(
+        rs.every((r) => r.ok),
+        JSON.stringify(rs),
+      ).toBe(true);
+      const estados = await filas<{ id: string; estado: string; cuit_titular: string }>(
+        "select id, estado, cuit_titular from certificado_arca where empresa_id = $1",
+        [e.empresa],
+      );
+      const vigente = estados.filter((s) => s.estado === "VIGENTE");
+      expect(vigente).toHaveLength(1);
+      expect(estados.filter((s) => s.estado === "REEMPLAZADO")).toHaveLength(3);
+      // El titular de cada certificado es el que se declaró al pedirlo, nunca el de la sociedad.
+      for (const c of estados) {
+        const i = pedidos.findIndex((pedido) => pedido.id === c.id);
+        expect(c.cuit_titular).toBe(titulares[i % 2]);
+        expect(c.cuit_titular).not.toBe(e.cuit);
+      }
+      expect(await auditoriasDe(e.empresa, "CERTIFICADO_CARGADO")).toBe(4);
+      expect(await auditoriasDe(e.empresa, "CERTIFICADO_REEMPLAZADO")).toBe(3);
+    }
+  });
+
+  it("D-42: el mismo certificado de una persona para una sociedad cargado a la vez N veces: uno solo lo cargó y queda sin verificar", async () => {
+    for (let ronda = 0; ronda < RONDAS; ronda++) {
+      const e = await escenarioDeSociedad(dueno, propia.base);
+      const { id, pem } = await pedirYEmitir(e, undefined, cuitConPrefijo("20"));
+      const rs = await juntas(4, () => cargar(e, id, pem));
+      expect(
+        rs.every((r) => r.ok),
+        JSON.stringify(rs),
+      ).toBe(true);
+      const salidas = rs.flatMap((r) => (r.ok ? [r.valor] : []));
+      expect(salidas.filter((s) => !s.yaEstaba)).toHaveLength(1);
+      expect((await vigentesDe(e)).map((v) => v.id)).toEqual([id]);
+      expect(await auditoriasDe(e.empresa, "CERTIFICADO_CARGADO")).toBe(1);
+      expect(
+        await filas(
+          "select 1 from certificado_arca where id = $1 and autorizacion_verificada_en is null",
+          [id],
+        ),
+      ).toHaveLength(1);
     }
   });
 

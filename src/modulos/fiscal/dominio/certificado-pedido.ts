@@ -20,7 +20,7 @@ export type EntradaDePedidoDeCertificado = Readonly<{
   emisorId: EmisorId;
   ambiente: Ambiente;
   alias: string;
-  /** El CUIT del titular (de 11 dígitos, con o sin guiones). */
+  /** El CUIT del titular (de 11 dígitos, con o sin guiones): la persona física que saca el certificado, no el emisor. */
   cuitTitular: string;
   organizacion: string;
 }>;
@@ -39,8 +39,8 @@ export type ErrorDePedidoDeCertificado =
   "ID_INVALIDO" | "ALIAS_INVALIDO" | "CUIT_INVALIDO" | "ORGANIZACION_INVALIDA";
 
 /**
- * Valida la forma del pedido. Orden de los errores: el `id`, el alias, el CUIT y la organización. Que el CUIT sea
- * el del emisor lo decide el caso de uso (el dominio no conoce al emisor).
+ * Valida la forma del pedido. Orden de los errores: el `id`, el alias, el CUIT y la organización. El CUIT es el del
+ * TITULAR (la persona física que saca el certificado, D-42) y no tiene por qué ser el del emisor.
  */
 export function armarPedidoDeCertificado(
   entrada: EntradaDePedidoDeCertificado,
