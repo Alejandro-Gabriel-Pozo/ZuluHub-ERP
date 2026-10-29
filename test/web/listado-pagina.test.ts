@@ -12,22 +12,40 @@ import { PAGINA, SUCURSALES } from "../utilidades/listado-de-comprobantes";
  * fuera de alcance, vacío, errores (con la referencia, sin el código crudo) y clave de página que no sirve (vuelve a la primera).
  */
 vi.mock("server-only", () => ({}));
+// La barra pide los permisos de la persona (`permisosDelActor`): acá ve «Comprobantes» (el filtro se prueba en `modulos-de-la-barra.test.ts`).
+vi.mock("../../apps/web/servidor/composicion", () => ({
+  web: {
+    consultasDeEmpresas: () => ({
+      permisosDelActor: () =>
+        Promise.resolve({
+          ok: true,
+          valor: {
+            acciones: ["comprobantes.ver"],
+            modulos: { activos: ["facturacion"], enSoloLectura: [] },
+          },
+        }),
+    }),
+  },
+}));
 type Cargado = {
   sucursales: readonly { id: string; nombre: string; activa: boolean }[];
   efectiva: string;
-  puntosDeVenta: readonly number[];
+  puntosDeVenta: readonly { numero: number; activo: boolean }[];
   pagina: Respuesta<unknown>;
 };
 const servidor = vi.hoisted(
   (): {
     llamadas: { contexto: unknown; entrada: unknown }[];
-    puntosDeVenta: number[];
+    puntosDeVenta: { numero: number; activo: boolean }[];
     cargado: unknown;
   } => ({ llamadas: [], puntosDeVenta: [], cargado: null }),
 );
 vi.mock("../../apps/web/servidor/facturacion", () => ({
   cargarElListado: (contexto: unknown, armar: (puntosDeVenta: readonly number[]) => unknown) => {
-    servidor.llamadas.push({ contexto, entrada: armar(servidor.puntosDeVenta) });
+    servidor.llamadas.push({
+      contexto,
+      entrada: armar(servidor.puntosDeVenta.map((p) => p.numero)),
+    });
     return Promise.resolve(servidor.cargado);
   },
   elegirLaSucursal: () => Promise.resolve({ error: null }),
@@ -76,7 +94,7 @@ const cargado = (c: Partial<Cargado> = {}) => {
   servidor.cargado = {
     sucursales: SUCURSALES,
     efectiva: "s-centro",
-    puntosDeVenta: [],
+    puntosDeVenta: servidor.puntosDeVenta,
     pagina: { ok: true, dato: PAGINA },
     ...c,
   } satisfies Cargado;
@@ -125,10 +143,40 @@ describe("la página del listado de comprobantes", () => {
     ]);
   });
 
-  it("sin puntos de venta reales del servidor, no se ofrece el filtro «Punto de venta» ni su columna", async () => {
+  it("sin puntos de venta del servidor (p. ej. no se pudieron pedir), no se ofrece el selector «Punto de venta»", async () => {
     const marcado = await html({ puntoDeVenta: "3" });
     expect(marcado).not.toContain('name="puntoDeVenta"');
-    expect(await texto()).not.toContain("Punto de venta");
+    expect(servidor.llamadas.map((l) => l.entrada)).toEqual([
+      { desde: "2026-10-01", hasta: "2026-10-28" },
+    ]);
+  });
+
+  it("con los puntos de venta reales del servidor: «Todos» y cada uno, en orden, el no activo marcado; y la columna de la tabla", async () => {
+    servidor.puntosDeVenta = [
+      { numero: 1, activo: true },
+      { numero: 2, activo: true },
+      { numero: 3, activo: false },
+    ];
+    cargado();
+    const marcado = await html({ puntoDeVenta: "3" });
+    const selector =
+      /<select[^>]*name="puntoDeVenta"[^>]*>([\s\S]*?)<\/select>/.exec(marcado)?.[1] ?? "";
+    const opciones = [...selector.matchAll(/<option([^>]*)>([^<]*)<\/option>/g)].map((m) => [
+      /value="([^"]*)"/.exec(m[1] ?? "")?.[1],
+      m[2],
+    ]);
+    expect(opciones).toEqual([
+      ["", "Todos"],
+      ["1", "00001"],
+      ["2", "00002"],
+      ["3", "00003 · No activo"],
+    ]);
+    expect(/<option[^>]*selected[^>]*>([^<]*)</.exec(selector)?.[1]).toBe("00003 · No activo");
+    // El filtro elegido (3) viaja a la consulta como número.
+    expect(servidor.llamadas.map((l) => l.entrada)).toEqual([
+      { desde: "2026-10-01", hasta: "2026-10-28", puntoDeVenta: 3 },
+    ]);
+    expect(await texto()).toContain("Punto de venta");
   });
 
   it("la barra marca «Comprobantes» como el destino actual y no marca ningún otro", async () => {
@@ -169,7 +217,11 @@ describe("la página del listado de comprobantes", () => {
   });
 
   it("un punto de venta que no es de la sucursal no se filtra; uno que sí, sí", async () => {
-    servidor.puntosDeVenta = [1, 2];
+    servidor.puntosDeVenta = [
+      { numero: 1, activo: true },
+      { numero: 2, activo: true },
+    ];
+    cargado();
     await html({ puntoDeVenta: "3" });
     await html({ puntoDeVenta: "2" });
     expect(servidor.llamadas.map((l) => l.entrada)).toEqual([

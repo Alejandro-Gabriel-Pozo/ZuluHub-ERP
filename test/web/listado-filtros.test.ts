@@ -177,7 +177,11 @@ describe("el punto de venta de otra sucursal", () => {
 
 describe("los filtros armados para el formulario", () => {
   it("los textos y las opciones salen del catálogo", () => {
-    const f = armarLosFiltros({ ...FILTROS_POR_DEFECTO, estado: "RECHAZADO" }, [1, 12]);
+    const f = armarLosFiltros({ ...FILTROS_POR_DEFECTO, estado: "RECHAZADO" }, [
+      { numero: 1, activo: true },
+      { numero: 3, activo: false },
+      { numero: 12, activo: true },
+    ]);
     expect(f.textos).toEqual({
       filtros: "Filtros (1)",
       periodo: "Período",
@@ -211,6 +215,7 @@ describe("los filtros armados para el formulario", () => {
     expect(f.letras.map((o) => o.etiqueta)).toEqual(["Factura A", "Factura B", "Factura C"]);
     expect(f.puntosDeVenta).toEqual([
       { valor: "1", etiqueta: "00001" },
+      { valor: "3", etiqueta: "00003 · No activo" },
       { valor: "12", etiqueta: "00012" },
     ]);
   });

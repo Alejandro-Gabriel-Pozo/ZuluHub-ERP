@@ -66,7 +66,7 @@ export function formatearNumeroDeDocumento(tipo: string, numero: string): string
 
 /**
  * El punto de venta en cinco dígitos («1» pasa a «00001»), como el prefijo de `numeroImpreso` del backend (PPPPP-NNNNNNNN).
- * SUPUESTO: el backend no exporta este formato por separado; hay que pedirle que lo exponga.
+ * Fuente: el backend confirmó el 2026-10-29 que el formato de 5 dígitos lo pone la pantalla (`puntoDeVentaNumero` llega como número).
  */
 export function formatearPuntoDeVenta(numero: number): string {
   return String(numero).padStart(5, "0");

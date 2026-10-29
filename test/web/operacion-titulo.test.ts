@@ -11,6 +11,21 @@ import { describe, expect, it, vi } from "vitest";
  * Solo se simula lo externo: la sesión, la puerta y la empresa.
  */
 vi.mock("server-only", () => ({}));
+// La barra pide los permisos de la persona (`permisosDelActor`): acá ve «Comprobantes» (el filtro se prueba en `modulos-de-la-barra.test.ts`).
+vi.mock("../../apps/web/servidor/composicion", () => ({
+  web: {
+    consultasDeEmpresas: () => ({
+      permisosDelActor: () =>
+        Promise.resolve({
+          ok: true,
+          valor: {
+            acciones: ["comprobantes.ver"],
+            modulos: { activos: ["facturacion"], enSoloLectura: [] },
+          },
+        }),
+    }),
+  },
+}));
 vi.mock("../../apps/web/servidor/sesion", () => ({
   empresaDelPedido: () =>
     Promise.resolve({

@@ -11,6 +11,21 @@ import { base } from "../utilidades/detalle-de-comprobante";
  * solo con ese id (la empresa y el permiso los decide el servidor) y pinta cada error con su texto, sin el código crudo.
  */
 vi.mock("server-only", () => ({}));
+// La barra pide los permisos de la persona (`permisosDelActor`): acá ve «Comprobantes» (el filtro se prueba en `modulos-de-la-barra.test.ts`).
+vi.mock("../../apps/web/servidor/composicion", () => ({
+  web: {
+    consultasDeEmpresas: () => ({
+      permisosDelActor: () =>
+        Promise.resolve({
+          ok: true,
+          valor: {
+            acciones: ["comprobantes.ver"],
+            modulos: { activos: ["facturacion"], enSoloLectura: [] },
+          },
+        }),
+    }),
+  },
+}));
 const lectura = vi.hoisted((): { llamadas: unknown[]; respuesta: unknown } => ({
   llamadas: [],
   respuesta: null,

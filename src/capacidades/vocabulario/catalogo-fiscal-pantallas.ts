@@ -192,6 +192,12 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
     porDefecto: "{nombre} · Cerrada",
     marcadores: ["nombre"],
   },
+  // Aprobado por el dueño el 2026-10-29 (respuesta a un cuestionario en la sesión web del carril web; D-58 y D-60): en el filtro
+  // «Punto de venta», el que no está activo (dado de baja o nuevo sin uso) se ve «00003 · No activo»; el activo, solo «00003».
+  "fiscal.pantalla.listado_punto_de_venta_no_activo": {
+    porDefecto: "{numero} · No activo",
+    marcadores: ["numero"],
+  },
 
   // RESPUESTA-DUEÑO-2026-10-29: el botón que aplica los filtros se llama «Aplicar filtros» (y «Ver comprobantes» queda solo para
   // la elección de sucursal), y la fecha que no existe en el calendario (por ejemplo 31 de febrero) se dice por campo.

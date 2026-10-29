@@ -8,7 +8,7 @@ import {
   direccionDelListado,
   type FiltrosDelListado,
 } from "./filtros-del-listado";
-import { formatearFecha, formatearImporte } from "./formato-fiscal";
+import { formatearFecha, formatearImporte, formatearPuntoDeVenta } from "./formato-fiscal";
 import {
   anulacionDe,
   documentoDe,
@@ -23,7 +23,7 @@ import {
 /**
  * El modelo de vista del listado de comprobantes (contrato de la pantalla 1): de lo que entrega la consulta, TODO lo que se ve y
  * NADA más. Puro: sin React ni servidor. Es una lista blanca a propósito: el origen (D-33), el ambiente, la cantidad y el total
- * del resultado (D-32) y el número del punto de venta como dato aparte no están en el modelo, así que no pueden aparecer.
+ * del resultado (D-32) no están en el modelo, así que no pueden aparecer.
  * Previene: mostrar un dato que el dueño no aprobó. El formato (estados, nombre del comprobante, documento, importes y fechas) es
  * el del detalle: está en un solo lugar. Chequeo: `test/web/listado-modelo.test.ts` y `test/web/listado-contrato.test.ts`.
  */
@@ -33,6 +33,8 @@ export type ResumenParaMostrar = Readonly<{
   id: string;
   tipo: TipoVisible;
   numero: string | null;
+  /** El número del punto de venta como dato; los 5 dígitos los pone la pantalla. */
+  puntoDeVentaNumero: number;
   fecha: string;
   receptorNombre: string | null;
   receptorDocumento:
@@ -59,6 +61,8 @@ export type FilaArmada = Readonly<{
   cliente: string;
   /** «CUIT 30-71234567-8»; «—» si el cliente no está identificado. */
   documento: string;
+  /** «00001»: el punto de venta en cinco dígitos (columna de la tabla de escritorio; la tarjeta del celular no lo lleva: D-53). */
+  puntoDeVenta: string;
   total: string;
   estado: EstadoArmado;
   /** «Anulación parcial» o «Anulación total»; `null` si no hay. */
@@ -75,6 +79,7 @@ export type ListadoArmado = Readonly<{
     comprobante: string;
     cliente: string;
     documento: string;
+    puntoDeVenta: string;
     total: string;
     estado: string;
   }>;
@@ -90,6 +95,7 @@ function filaDe(d: DiccionarioResuelto, r: ResumenParaMostrar): FilaArmada {
     cliente: r.receptorNombre ?? texto(d, "fiscal.pantalla.consumidor_final"),
     documento:
       documentoDe(d, r.receptorDocumento) ?? texto(d, "fiscal.pantalla.listado_sin_documento"),
+    puntoDeVenta: formatearPuntoDeVenta(r.puntoDeVentaNumero),
     total: formatearImporte(r.total),
     estado: estadoDe(d, r.estado),
     anulacion: anulacionDe(d, r.estado, r.acreditacion),
@@ -116,6 +122,7 @@ export function armarElListado(
       comprobante: texto(d, "fiscal.pantalla.listado_rotulo_comprobante"),
       cliente: texto(d, "fiscal.pantalla.rotulo_cliente"),
       documento: texto(d, "fiscal.pantalla.listado_rotulo_documento"),
+      puntoDeVenta: texto(d, "fiscal.pantalla.rotulo_punto_de_venta"),
       total: texto(d, "fiscal.pantalla.rotulo_total"),
       estado: texto(d, "fiscal.pantalla.listado_rotulo_estado"),
     },

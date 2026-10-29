@@ -143,6 +143,9 @@ export function direccionDelListado(filtros: FiltrosDelListado, despues: string 
     : `${RUTA_DEL_LISTADO}?${new URLSearchParams(pares).toString()}`;
 }
 
+/** Un punto de venta de la sucursal como lo entrega el servidor (D-58, D-60): `activo: false` es dado de baja o nuevo sin uso. */
+export type PuntoDeVentaParaMostrar = Readonly<{ numero: number; activo: boolean }>;
+
 type OpcionDeLista = Readonly<{ valor: string; etiqueta: string }>;
 
 /** Lo que el formulario de filtros necesita, con todos los textos ya resueltos (un componente de cliente no arma textos). */
@@ -192,7 +195,7 @@ const CLAVE_DE_ESTADO_DEL_FILTRO = {
 
 export function armarLosFiltros(
   filtros: FiltrosDelListado,
-  puntosDeVenta: readonly number[],
+  puntosDeVenta: readonly PuntoDeVentaParaMostrar[],
   d: DiccionarioResuelto = {},
 ): FiltrosArmados {
   return {
@@ -229,9 +232,14 @@ export function armarLosFiltros(
         letra,
       }),
     })),
-    puntosDeVenta: puntosDeVenta.map((numero) => ({
+    // Todos los de la sucursal, en el orden del servidor (de menor a mayor número); el no activo lleva su marca (D-58, D-60).
+    puntosDeVenta: puntosDeVenta.map(({ numero, activo }) => ({
       valor: String(numero),
-      etiqueta: formatearPuntoDeVenta(numero),
+      etiqueta: activo
+        ? formatearPuntoDeVenta(numero)
+        : texto(d, "fiscal.pantalla.listado_punto_de_venta_no_activo", {
+            numero: formatearPuntoDeVenta(numero),
+          }),
     })),
     direccionDeLimpiar: RUTA_DEL_LISTADO,
   };

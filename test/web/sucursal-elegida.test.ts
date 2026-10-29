@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { errorDeCodigo } from "../../src/capacidades/experiencia/respuesta";
-import { ok } from "../../src/primitivas/resultado/resultado";
+import { err, ok } from "../../src/primitivas/resultado/resultado";
 
 /**
  * La sucursal del listado (D-34): vive en una cookie del servidor que se valida contra las sucursales que la persona puede elegir en
@@ -21,6 +21,10 @@ const mundo = vi.hoisted(() => ({
   sesion: true,
   mismoOrigen: true,
   listados: [] as { sucursalElegida: unknown; pedido: unknown }[],
+  /** Lo que pide el filtro «Punto de venta»: la sucursal elegida que se le pasó. */
+  puntosPedidos: [] as unknown[],
+  /** Lo que contesta esa consulta: `null` es un error del servidor (p. ej. sucursal no elegida). */
+  puntosDeVenta: null as { numero: number; activo: boolean }[] | null,
 }));
 
 vi.mock("next/headers", () => ({
@@ -61,6 +65,17 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
     }),
     casosDeUsoDeFacturacion: () => ({}),
     consultasDeFacturacion: () => ({
+      listarPuntosDeVentaDeLaSucursal: (
+        _contexto: unknown,
+        pedido: { sucursalElegida: unknown },
+      ) => {
+        mundo.puntosPedidos.push(pedido.sucursalElegida);
+        return Promise.resolve(
+          mundo.puntosDeVenta === null
+            ? err({ codigo: "SUCURSAL_NO_ELEGIDA" })
+            : ok({ items: mundo.puntosDeVenta }),
+        );
+      },
       listarComprobantes: (_contexto: unknown, pedido: { sucursalElegida: unknown }) => {
         mundo.listados.push({ sucursalElegida: pedido.sucursalElegida, pedido });
         // La página trae la sucursal que usó el servidor (D-18, #115).
@@ -96,6 +111,8 @@ beforeEach(() => {
   mundo.sesion = true;
   mundo.mismoOrigen = true;
   mundo.listados = [];
+  mundo.puntosPedidos = [];
+  mundo.puntosDeVenta = [];
 });
 
 describe("elegir la sucursal (la acción)", () => {
@@ -210,16 +227,24 @@ describe("la sucursal con la que trabaja la pantalla", () => {
     expect((await cargarElListado(contexto, () => ({}))).efectiva).toBe("");
   });
 
-  it("devuelve las sucursales, los puntos de venta (ninguno por ahora) y la página que dio la consulta", async () => {
+  it("devuelve las sucursales, los puntos de venta de la sucursal y la página que dio la consulta", async () => {
     const { cargarElListado } = await import("../../apps/web/servidor/facturacion");
+    mundo.puntosDeVenta = [
+      { numero: 1, activo: true },
+      { numero: 3, activo: false },
+    ];
     const pedidos: unknown[] = [];
     const cargado = await cargarElListado({ empresaId: "empresa-1" } as never, (puntosDeVenta) => {
       pedidos.push(puntosDeVenta);
       return { estado: "RECHAZADO" };
     });
     expect(cargado.sucursales.map((s) => s.nombre)).toEqual(["Centro", "Norte"]);
-    expect(cargado.puntosDeVenta).toEqual([]);
-    expect(pedidos).toEqual([[]]);
+    // Todos los de la sucursal, activos y no activos (D-58, D-60), y al armar el pedido llegan solo los números.
+    expect(cargado.puntosDeVenta).toEqual([
+      { numero: 1, activo: true },
+      { numero: 3, activo: false },
+    ]);
+    expect(pedidos).toEqual([[1, 3]]);
     expect(cargado.pagina).toEqual({
       ok: true,
       dato: {
@@ -229,6 +254,29 @@ describe("la sucursal con la que trabaja la pantalla", () => {
       },
     });
     expect(mundo.listados[0]?.pedido).toMatchObject({ estado: "RECHAZADO" });
+  });
+
+  it("pide los puntos de venta con la MISMA sucursal que el listado: la elegida de la cookie, o ninguna si el servidor la toma sola", async () => {
+    const { cargarElListado } = await import("../../apps/web/servidor/facturacion");
+    const contexto = { empresaId: "empresa-1" } as never;
+    mundo.cookies.set(COOKIE, NORTE);
+    await cargarElListado(contexto, () => ({}));
+    mundo.cookies.clear();
+    await cargarElListado(contexto, () => ({}));
+    // Una cookie ajena no pasa: se pide como si no hubiera elegido.
+    mundo.cookies.set(COOKIE, AJENA);
+    await cargarElListado(contexto, () => ({}));
+    expect(mundo.puntosPedidos).toEqual([NORTE, null, null]);
+    expect(mundo.listados.map((l) => l.sucursalElegida)).toEqual(mundo.puntosPedidos);
+  });
+
+  it("si no se pueden pedir los puntos de venta, la lista va vacía y el listado se carga igual", async () => {
+    const { cargarElListado } = await import("../../apps/web/servidor/facturacion");
+    mundo.puntosDeVenta = null;
+    const cargado = await cargarElListado({ empresaId: "empresa-1" } as never, () => ({}));
+    expect(cargado.puntosDeVenta).toEqual([]);
+    expect(cargado.pagina.ok).toBe(true);
+    expect(cargado.efectiva).toBe(CENTRO);
   });
 });
 

@@ -38,7 +38,10 @@ export default async function PaginaDeListadoDeComprobantes({ searchParams }: Pr
       const cargado = await cargarElListado(contexto, (puntosDeVenta) =>
         entradaDelListado(conPuntoDeVentaDe(filtros, puntosDeVenta), ahora, despues),
       );
-      const aplicados = conPuntoDeVentaDe(filtros, cargado.puntosDeVenta);
+      const aplicados = conPuntoDeVentaDe(
+        filtros,
+        cargado.puntosDeVenta.map((p) => p.numero),
+      );
       const { pagina } = cargado;
       // Una clave de página que no sirve (vieja, tocada a mano) no se muestra como error: se vuelve a la primera página.
       if (!pagina.ok && pagina.error.codigo === "FISCAL_FILTRO_INVALIDO" && despues !== null) {

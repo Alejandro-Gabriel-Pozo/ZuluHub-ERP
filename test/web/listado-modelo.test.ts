@@ -25,6 +25,7 @@ describe("las filas", () => {
       fecha: "14/10/2026",
       cliente: "Consumidor final",
       documento: "—",
+      puntoDeVenta: "00001",
       total: "$ 9.000,00",
       estado: { texto: "Autorizada", tono: "exito" },
       anulacion: null,
@@ -114,9 +115,18 @@ describe("el vacío y la página siguiente", () => {
       "Comprobante",
       "Cliente",
       "Documento",
+      "Punto de venta",
       "Total",
       "Estado",
     ]);
+  });
+
+  it("el punto de venta de la fila sale de su número, con cinco dígitos", () => {
+    expect(
+      armar({ puntoDeVentaNumero: 3 }, { puntoDeVentaNumero: 12345 }).filas.map(
+        (f) => f.puntoDeVenta,
+      ),
+    ).toEqual(["00003", "12345"]);
   });
 });
 
