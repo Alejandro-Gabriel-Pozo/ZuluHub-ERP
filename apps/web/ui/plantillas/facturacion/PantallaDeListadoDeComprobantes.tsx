@@ -82,7 +82,7 @@ function Tabla({ listado }: Readonly<{ listado: ListadoArmado }>) {
                 </a>
               </td>
               <td className={estilos["cliente"]}>{fila.cliente}</td>
-              <td className={estilos["celdaQueCede"]}>{fila.documento}</td>
+              <td>{fila.documento}</td>
               <td className={`${estilos["numerica"]} ${estilos["importe"]}`}>{fila.total}</td>
               <td className={estilos["celdaDeEstado"]}>
                 <Estados fila={fila} />
