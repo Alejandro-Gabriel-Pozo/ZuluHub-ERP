@@ -51,7 +51,7 @@ const emisor: Emisor = {
   version: 1,
 };
 
-const domicilioGuardado = (id: string) => ({
+const domicilioGuardado = (id: string, cambios: Record<string, unknown> = {}) => ({
   id: domicilioId(id),
   empresaId: empresaId("e-1"),
   domicilio: {
@@ -62,6 +62,7 @@ const domicilioGuardado = (id: string) => ({
     localidad: "Rosario",
     provincia: "AR-S" as never,
     codigoPostal: "S2000",
+    ...cambios,
   },
 });
 
@@ -147,6 +148,8 @@ type Datos = Partial<{
   }[];
   sucursales: { id: typeof SUCURSAL; nombre: string; activa: boolean }[];
   domiciliosFaltantes: ReadonlySet<string>;
+  /** Los domicilios que un punto de venta tiene distintos al de siempre, por id. */
+  domiciliosPropios: ReadonlyMap<string, Record<string, unknown>>;
 }>;
 
 function consultasCon(datos: Datos = {}) {
@@ -181,6 +184,14 @@ function consultasCon(datos: Datos = {}) {
     domicilios: {
       obtener: (_empresa: unknown, id: string) =>
         Promise.resolve(datos.domiciliosFaltantes?.has(id) === true ? null : domicilioGuardado(id)),
+      obtenerVarios: (_empresa: unknown, ids: readonly string[]) => {
+        lecturas.push(`domicilios.obtenerVarios(${ids.join(",")})`);
+        return Promise.resolve(
+          ids
+            .filter((id) => datos.domiciliosFaltantes?.has(id) !== true)
+            .map((id) => domicilioGuardado(id, datos.domiciliosPropios?.get(id))),
+        );
+      },
     },
     puntosDeVenta: { listarDelEmisor: () => Promise.resolve(datos.puntos ?? []) },
     series: {
@@ -527,6 +538,16 @@ describe("puntosDeVentaDelEmisor: lo que la pantalla de Puntos de venta muestra"
           ambiente: "HOMOLOGACION",
           sucursal: { id: SUCURSAL, nombre: "Casa central", activa: false },
           tieneDomicilio: true,
+          domicilio: {
+            id: "d-2",
+            calle: "Av. Corrientes",
+            numero: "1234",
+            piso: null,
+            departamento: null,
+            localidad: "Rosario",
+            provincia: "AR-S",
+            codigoPostal: "S2000",
+          },
           hayNumerosUsados: true,
           version: 5,
         },
@@ -537,11 +558,60 @@ describe("puntosDeVentaDelEmisor: lo que la pantalla de Puntos de venta muestra"
           ambiente: "PRODUCCION",
           sucursal: { id: SUCURSAL, nombre: "Casa central", activa: false },
           tieneDomicilio: false,
+          domicilio: null,
           hayNumerosUsados: false,
           version: 2,
         },
       ],
     });
+  });
+
+  it("los domicilios se leen en UNA lectura para todos los puntos de venta (sin N+1), y solo los de los que tienen", async () => {
+    const { consultas, lecturas } = consultasCon({
+      puntos: [
+        punto({ id: puntoDeVentaId("a"), numero: 1, domicilioId: domicilioId("d-a") }),
+        punto({ id: puntoDeVentaId("b"), numero: 2, domicilioId: null }),
+        punto({ id: puntoDeVentaId("c"), numero: 3, domicilioId: domicilioId("d-c") }),
+      ],
+      domiciliosPropios: new Map([
+        ["d-a", { calle: "Mitre", piso: "2", departamento: "B", codigoPostal: null }],
+      ]),
+    });
+    const r = valor(await consultas.puntosDeVentaDelEmisor(contexto, { emisorId: EMISOR }));
+    expect(lecturas.filter((l) => l.startsWith("domicilios."))).toEqual([
+      "domicilios.obtenerVarios(d-a,d-c)",
+    ]);
+    expect(r.items.map((i) => i.domicilio?.id ?? null)).toEqual(["d-a", null, "d-c"]);
+    expect(r.items[0]?.domicilio).toEqual({
+      id: "d-a",
+      calle: "Mitre",
+      numero: "1234",
+      piso: "2",
+      departamento: "B",
+      localidad: "Rosario",
+      provincia: "AR-S",
+      codigoPostal: null,
+    });
+  });
+
+  it("el domicilio sale con la lista blanca de Datos fiscales: ni la empresa ni nada de más", async () => {
+    const r = await puntos({ puntos: [punto()] });
+    expect(Object.keys(r.items[0]?.domicilio ?? {}).sort()).toEqual([
+      "calle",
+      "codigoPostal",
+      "departamento",
+      "id",
+      "localidad",
+      "numero",
+      "piso",
+      "provincia",
+    ]);
+  });
+
+  it("un punto de venta de un domicilio que no existe (no pasa: clave foránea) es un defecto", async () => {
+    await expect(
+      puntos({ puntos: [punto()], domiciliosFaltantes: new Set(["d-2"]) }),
+    ).rejects.toThrow("un punto de venta de un domicilio que no existe");
   });
 
   it("sin puntos de venta: lista vacía", async () => {

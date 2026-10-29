@@ -1,6 +1,5 @@
 import { sql, type Kysely } from "kysely";
 import type { Domicilio } from "../../../primitivas/domicilio/domicilio";
-import { provinciaDesdeCodigo } from "../../../primitivas/domicilio/provincias";
 import type { Cuit } from "../../../primitivas/identificacion-fiscal/cuit";
 import {
   empresaId,
@@ -37,6 +36,7 @@ import type {
   ReglaDeEmisor,
   VersionGuardadaDeReglaDeEmisor,
 } from "../dominio/resolucion-de-emisor";
+import { aDomicilioGuardado, domiciliosPorIds, type DomicilioGuardado } from "./domicilios";
 import type { FiscalDb } from "./tablas";
 
 /**
@@ -262,11 +262,7 @@ export function crearRepositorioDeEmisores(db: Kysely<FiscalDb>): RepositorioDeE
 // Domicilios (solo inserción: cambiar un domicilio es crear otro)
 // =================================================================================================
 
-export type DomicilioGuardado = Readonly<{
-  id: DomicilioId;
-  empresaId: EmpresaId;
-  domicilio: Domicilio;
-}>;
+export type { DomicilioGuardado };
 
 function mismoDomicilio(a: Domicilio, b: Domicilio): boolean {
   return (
@@ -292,6 +288,8 @@ export interface RepositorioDeDomicilios {
     domicilio: Domicilio,
   ): Promise<Resultado<ResultadoDeAlta<DomicilioGuardado>, ErrorDeAlta>>;
   obtener(empresa: EmpresaId, id: DomicilioId): Promise<DomicilioGuardado | null>;
+  /** Varios domicilios de la empresa en UNA lectura (sin N+1); los ids ajenos o inexistentes no aparecen. */
+  obtenerVarios(empresa: EmpresaId, ids: readonly DomicilioId[]): Promise<DomicilioGuardado[]>;
 }
 
 export function crearRepositorioDeDomicilios(db: Kysely<FiscalDb>): RepositorioDeDomicilios {
@@ -302,27 +300,12 @@ export function crearRepositorioDeDomicilios(db: Kysely<FiscalDb>): RepositorioD
       .where("empresa_id", "=", empresa)
       .where("id", "=", id)
       .executeTakeFirst();
-    if (fila === undefined) return null;
-    const provincia = provinciaDesdeCodigo(fila.provincia);
-    if (provincia === null)
-      throw new RangeError(`provincia desconocida en la base: ${fila.provincia}`);
-    return {
-      id: domicilioId(fila.id),
-      empresaId: empresaId(fila.empresa_id),
-      domicilio: {
-        calle: fila.calle,
-        numero: fila.numero,
-        piso: fila.piso,
-        departamento: fila.departamento,
-        localidad: fila.localidad,
-        provincia: provincia.codigo,
-        codigoPostal: fila.codigo_postal,
-      },
-    };
+    return fila === undefined ? null : aDomicilioGuardado(fila);
   }
 
   return {
     obtener,
+    obtenerVarios: (empresa, ids) => domiciliosPorIds(db, empresa, ids),
 
     async crear(empresa, id, domicilio) {
       await serializarAltaDeId(db, "domicilio", id);

@@ -255,6 +255,7 @@ function armar(datos: Datos = {}) {
     },
     domicilios: {
       obtener: () => Promise.reject(new Error("estas consultas no leen domicilios")),
+      obtenerVarios: () => Promise.reject(new Error("estas consultas no leen domicilios")),
     },
     puntosDeVenta: {
       listarDelEmisor: () => Promise.reject(new Error("estas consultas no leen puntos de venta")),

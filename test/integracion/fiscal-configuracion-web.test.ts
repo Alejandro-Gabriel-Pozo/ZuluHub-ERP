@@ -854,6 +854,7 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
             ambiente: "HOMOLOGACION",
             sucursal: { id: e.mundo.sucursal, nombre: "Casa central", activa: true },
             tieneDomicilio: false,
+            domicilio: null,
             hayNumerosUsados: false,
             version: 1,
           },
@@ -982,6 +983,338 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
         await puntosDeVentaDelEmisor(d, e.como(ahora()), { emisorId: e.mundo.emisor }),
       );
       expect(lista.items[0]).toMatchObject({ numero: 9, version: 2 });
+    });
+
+    // -------------------------------------------------------------------------------------------------------------
+    // El domicilio de cada punto de venta en la lista (D-63): lo que la pantalla muestra y precarga al editar.
+    // -------------------------------------------------------------------------------------------------------------
+    describe("la lista trae el domicilio de cada punto de venta", () => {
+      const lista = async (e: EscenarioDeConfiguracion) =>
+        dato(await puntosDeVentaDelEmisor(d, e.como(ahora()), { emisorId: e.mundo.emisor }));
+      const alta = (e: EscenarioDeConfiguracion, cambios: Record<string, unknown>) =>
+        crearPuntoDeVenta(d, e.como(ahora()), {
+          id: uuid(),
+          emisorId: e.mundo.emisor,
+          sucursalId: e.mundo.sucursal,
+          ...cambios,
+        });
+
+      it("cada uno con el suyo (lista blanca de Datos fiscales), sin domicilio es null, y uno compartido sale en los dos", async () => {
+        const e = await nuevo();
+        const idDomicilio = uuid();
+        dato(
+          await alta(e, {
+            numero: 1,
+            domicilio: domicilioNuevo({ id: idDomicilio, piso: "3", departamento: "B" }),
+          }),
+        );
+        dato(await alta(e, { numero: 2 }));
+        dato(await alta(e, { numero: 3, domicilio: { tipo: "EXISTENTE", id: idDomicilio } }));
+        const { items } = await lista(e);
+        expect(items.map((i) => [i.numero, i.tieneDomicilio])).toEqual([
+          [1, true],
+          [2, false],
+          [3, true],
+        ]);
+        const esperado = {
+          id: idDomicilio,
+          calle: "Av. Corrientes",
+          numero: "1234",
+          piso: "3",
+          departamento: "B",
+          localidad: "Rosario",
+          provincia: "AR-S",
+          codigoPostal: "S2000",
+        };
+        expect(items.map((i) => i.domicilio)).toEqual([esperado, null, esperado]);
+
+        // Misma forma y mismas claves que el domicilio de Datos fiscales: una sola lista blanca.
+        const fiscales = dato(
+          await guardarBorradorDeDatosFiscales(d, e.como(ahora()), {
+            emisorId: e.mundo.emisor,
+            borradorId: uuid(),
+            ...completos(),
+          }),
+        );
+        const borrador = dato(
+          await datosFiscalesDelEmisor(d, e.como(ahora()), { emisorId: e.mundo.emisor }),
+        ).borrador;
+        expect(fiscales.borradorId).toBe(borrador?.id);
+        expect(Object.keys(items[0]?.domicilio ?? {}).sort()).toEqual(
+          Object.keys(borrador?.domicilio ?? {}).sort(),
+        );
+      });
+
+      it("editar el domicilio lo cambia en la lista; el anterior se conserva (un domicilio no se edita)", async () => {
+        const e = await nuevo();
+        const primero = uuid();
+        const segundo = uuid();
+        const id = uuid();
+        dato(await alta(e, { id, numero: 1, domicilio: domicilioNuevo({ id: primero }) }));
+        dato(
+          await editarPuntoDeVenta(d, e.como(ahora()), {
+            puntoDeVentaId: id,
+            versionEsperada: 1,
+            domicilio: domicilioNuevo({ id: segundo, calle: "Mitre", numero: "55" }),
+          }),
+        );
+        expect((await lista(e)).items[0]?.domicilio).toMatchObject({
+          id: segundo,
+          calle: "Mitre",
+          numero: "55",
+        });
+        expect(await cuenta("domicilio", e.mundo.empresa)).toBe(2);
+      });
+
+      it("aislamiento: cada empresa ve solo los domicilios de sus puntos de venta, y el emisor de otra no existe", async () => {
+        const a = await nuevo();
+        const b = await nuevo();
+        const deA = uuid();
+        const deB = uuid();
+        dato(
+          await alta(a, { numero: 1, domicilio: domicilioNuevo({ id: deA, calle: "Calle A" }) }),
+        );
+        dato(
+          await alta(b, { numero: 1, domicilio: domicilioNuevo({ id: deB, calle: "Calle B" }) }),
+        );
+        expect((await lista(a)).items.map((i) => i.domicilio?.calle)).toEqual(["Calle A"]);
+        expect((await lista(b)).items.map((i) => i.domicilio?.calle)).toEqual(["Calle B"]);
+        const ajeno = await puntosDeVentaDelEmisor(d, a.como(ahora()), {
+          emisorId: b.mundo.emisor,
+        });
+        expect(ajeno).toMatchObject({ ok: false });
+        expect(JSON.stringify(ajeno)).not.toContain("Calle B");
+      });
+
+      it("solo el gerente: administrador y operador reciben SIN_PERMISO y ningún domicilio", async () => {
+        const g = await nuevo();
+        dato(await alta(g, { numero: 1, domicilio: domicilioNuevo({ calle: "Secreta 1" }) }));
+        for (const rol of ["ADMINISTRADOR", "OPERADOR"] as const) {
+          const c = (await otraPersona(dueno, g, rol)).como(ahora());
+          const r = await puntosDeVentaDelEmisor(d, c, { emisorId: g.mundo.emisor });
+          expect(r).toMatchObject(SIN_PERMISO);
+          expect(JSON.stringify(r)).not.toContain("Secreta");
+        }
+      });
+    });
+
+    // -------------------------------------------------------------------------------------------------------------
+    // Editar cuando la respuesta se perdió: guardó, el navegador no lo supo y reintenta con la MISMA versión esperada.
+    // Regla del dueño: cualquier acción puede llegar dos veces; repetirla no duplica ni perjudica. Si lo pedido ya es el
+    // estado actual, es éxito sin cambios (aunque la versión esperada haya quedado vieja); si difiere, sigue siendo
+    // «versión desactualizada».
+    // -------------------------------------------------------------------------------------------------------------
+    describe("editar con la respuesta perdida", () => {
+      const nuevaSucursal = async (e: EscenarioDeConfiguracion, nombre = "Sucursal norte") =>
+        (
+          await filas<{ id: string }>(
+            "insert into sucursal (empresa_id, nombre) values ($1, $2) returning id",
+            [e.mundo.empresa, nombre],
+          )
+        )[0]?.id ?? "";
+      async function conPunto(rol: RolDePrueba = "GERENTE") {
+        const e = await nuevo(rol);
+        const id = uuid();
+        dato(
+          await crearPuntoDeVenta(d, e.como(ahora()), {
+            id,
+            emisorId: e.mundo.emisor,
+            sucursalId: e.mundo.sucursal,
+            numero: 1,
+          }),
+        );
+        const editar = (cambios: Record<string, unknown>, quien = e) =>
+          editarPuntoDeVenta(d, quien.como(ahora()), { puntoDeVentaId: id, ...cambios });
+        const fila = async () =>
+          (
+            await filas<{
+              numero: number;
+              sucursal_id: string;
+              domicilio_id: string | null;
+              version: number;
+            }>(
+              "select numero, sucursal_id, domicilio_id, version from punto_de_venta where id = $1",
+              [id],
+            )
+          )[0];
+        const editadas = async () =>
+          (await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_EDITADO")).length;
+        return { e, id, editar, fila, editadas };
+      }
+      const DESACTUALIZADA = { ok: false, error: { codigo: "FISCAL_VERSION_DESACTUALIZADA" } };
+
+      it("el número: el reintento con la misma versión es «sin cambios» con la versión actual, y no escribe ni audita", async () => {
+        const { editar, fila, editadas } = await conPunto();
+        expect(dato(await editar({ versionEsperada: 1, numero: 9 }))).toEqual({
+          version: 2,
+          sinCambios: false,
+        });
+        // La respuesta se perdió: el navegador reintenta el mismo pedido, con la misma versión esperada (1).
+        expect(dato(await editar({ versionEsperada: 1, numero: 9 }))).toEqual({
+          version: 2,
+          sinCambios: true,
+        });
+        expect(dato(await editar({ versionEsperada: 1, numero: 9 }))).toEqual({
+          version: 2,
+          sinCambios: true,
+        });
+        expect(await fila()).toMatchObject({ numero: 9, version: 2 });
+        expect(await editadas()).toBe(1);
+      });
+
+      it("sucursal y domicilio nuevo juntos: el reintento (mismo id de domicilio) es «sin cambios» y no deja otro domicilio", async () => {
+        const { e, editar, fila, editadas } = await conPunto();
+        const norte = await nuevaSucursal(e);
+        const pedido = {
+          versionEsperada: 1,
+          numero: 5,
+          sucursalId: norte,
+          domicilio: domicilioNuevo({ id: uuid() }),
+        };
+        expect(dato(await editar(pedido))).toEqual({ version: 2, sinCambios: false });
+        const domicilios = await cuenta("domicilio", e.mundo.empresa);
+        expect(dato(await editar(pedido))).toEqual({ version: 2, sinCambios: true });
+        expect(await cuenta("domicilio", e.mundo.empresa)).toBe(domicilios);
+        expect(await fila()).toMatchObject({ numero: 5, sucursal_id: norte, version: 2 });
+        expect(await editadas()).toBe(1);
+      });
+
+      it("con contenido distinto sigue siendo «versión desactualizada»: no cambia nada, ni deja el domicilio nuevo", async () => {
+        const { e, editar, fila, editadas } = await conPunto();
+        dato(await editar({ versionEsperada: 1, numero: 9 }));
+        const antes = await fila();
+        const domicilios = await cuenta("domicilio", e.mundo.empresa);
+        // Otro número.
+        expect(await editar({ versionEsperada: 1, numero: 10 })).toMatchObject(DESACTUALIZADA);
+        // Mitad igual y mitad distinto: no se aplica ni se da por hecho a medias.
+        expect(
+          await editar({ versionEsperada: 1, numero: 9, sucursalId: await nuevaSucursal(e) }),
+        ).toMatchObject(DESACTUALIZADA);
+        // Otro domicilio: la base no guarda el nuevo (todo o nada).
+        expect(
+          await editar({
+            versionEsperada: 1,
+            numero: 9,
+            domicilio: domicilioNuevo({ id: uuid() }),
+          }),
+        ).toMatchObject(DESACTUALIZADA);
+        expect(await fila()).toEqual(antes);
+        expect(await cuenta("domicilio", e.mundo.empresa)).toBe(domicilios);
+        expect(await editadas()).toBe(1);
+      });
+
+      it("si otra pestaña cambió después lo mismo a otro valor, el reintento no lo pisa", async () => {
+        const { editar, fila, editadas } = await conPunto();
+        dato(await editar({ versionEsperada: 1, numero: 9 }));
+        // Otra pestaña (hay un solo gerente por empresa) lo vio ya cambiado y lo cambia otra vez.
+        dato(await editar({ versionEsperada: 2, numero: 10 }));
+        expect(await editar({ versionEsperada: 1, numero: 9 })).toMatchObject(DESACTUALIZADA);
+        expect(await fila()).toMatchObject({ numero: 10, version: 3 });
+        expect(await editadas()).toBe(2);
+      });
+
+      it("pedir lo que ya es el estado actual con una versión vieja sin que nadie lo haya editado tampoco escribe", async () => {
+        const { editar, fila, editadas } = await conPunto();
+        expect(dato(await editar({ versionEsperada: 77, numero: 1 }))).toEqual({
+          version: 1,
+          sinCambios: true,
+        });
+        expect(await fila()).toMatchObject({ numero: 1, version: 1 });
+        expect(await editadas()).toBe(0);
+      });
+
+      it("un domicilio nuevo con OTRO id (aunque tenga el mismo contenido) es un pedido distinto: versión desactualizada y no queda huérfano", async () => {
+        const { e, editar, editadas } = await conPunto();
+        const datosDelDomicilio = { calle: "Mitre", numero: "55" };
+        dato(
+          await editar({
+            versionEsperada: 1,
+            domicilio: domicilioNuevo({ id: uuid(), ...datosDelDomicilio }),
+          }),
+        );
+        const domicilios = await cuenta("domicilio", e.mundo.empresa);
+        expect(
+          await editar({
+            versionEsperada: 1,
+            domicilio: domicilioNuevo({ id: uuid(), ...datosDelDomicilio }),
+          }),
+        ).toMatchObject(DESACTUALIZADA);
+        expect(await cuenta("domicilio", e.mundo.empresa)).toBe(domicilios);
+        expect(await editadas()).toBe(1);
+      });
+
+      it("el permiso va primero: quien no es gerente no se entera del estado aunque lo pedido ya esté aplicado", async () => {
+        const { e, editar, fila, editadas } = await conPunto();
+        dato(await editar({ versionEsperada: 1, numero: 9 }));
+        const antes = await fila();
+        for (const rol of ["ADMINISTRADOR", "OPERADOR"] as const) {
+          const otro = await otraPersona(dueno, e, rol);
+          expect(await editar({ versionEsperada: 1, numero: 9 }, otro)).toMatchObject(SIN_PERMISO);
+        }
+        expect(await fila()).toEqual(antes);
+        expect(await editadas()).toBe(1);
+      });
+
+      it("aislamiento: el gerente de otra empresa no puede reintentar ni cambiar el punto de venta, ni siquiera con lo ya aplicado", async () => {
+        const { e, id, editar, fila, editadas } = await conPunto();
+        dato(await editar({ versionEsperada: 1, numero: 9 }));
+        const ajeno = await nuevo();
+        const antes = await fila();
+        for (const pedido of [
+          { versionEsperada: 1, numero: 9 },
+          { versionEsperada: 2, numero: 30 },
+        ]) {
+          expect(
+            await editarPuntoDeVenta(d, ajeno.como(ahora()), { puntoDeVentaId: id, ...pedido }),
+          ).toMatchObject({ ok: false, error: { codigo: "FISCAL_PUNTO_DE_VENTA_NO_ENCONTRADO" } });
+        }
+        expect(await fila()).toEqual(antes);
+        expect(await editadas()).toBe(1);
+        expect(await cuenta("punto_de_venta", ajeno.mundo.empresa)).toBe(0);
+        expect(e.mundo.empresa).not.toBe(ajeno.mundo.empresa);
+      });
+
+      it("dos veces a la vez (doble clic): los dos salen bien, uno escribe y el otro es «sin cambios»; una sola auditoría", async () => {
+        const { editar, fila, editadas } = await conPunto();
+        const pedido = { versionEsperada: 1, numero: 9 };
+        const salidas = (await Promise.all([editar(pedido), editar(pedido)])).map(dato);
+        expect(salidas.map((x) => x.sinCambios).sort()).toEqual([false, true]);
+        expect(salidas.map((x) => x.version)).toEqual([2, 2]);
+        expect(await fila()).toMatchObject({ numero: 9, version: 2 });
+        expect(await editadas()).toBe(1);
+      });
+
+      it("el reintento perdido y uno nuevo distinto a la vez: gana uno solo y no se mezclan", async () => {
+        const { e, editar, fila, editadas } = await conPunto();
+        const norte = await nuevaSucursal(e);
+        dato(await editar({ versionEsperada: 1, numero: 9 }));
+        // A la vez: el reintento de la edición ya aplicada y otra edición (otra sucursal) con la versión vigente.
+        const [reintento, nueva] = await Promise.all([
+          editar({ versionEsperada: 1, numero: 9 }),
+          editar({ versionEsperada: 2, sucursalId: norte }),
+        ]);
+        expect(dato(reintento).sinCambios).toBe(true);
+        expect(dato(nueva)).toEqual({ version: 3, sinCambios: false });
+        expect(await fila()).toMatchObject({ numero: 9, sucursal_id: norte, version: 3 });
+        expect(await editadas()).toBe(2);
+      });
+
+      it("dos ediciones de campos distintos con la misma versión: una gana y la otra no se aplica ni a medias", async () => {
+        const { e, editar, fila, editadas } = await conPunto();
+        const norte = await nuevaSucursal(e);
+        const [x, y] = await Promise.all([
+          editar({ versionEsperada: 1, numero: 9 }),
+          editar({ versionEsperada: 1, sucursalId: norte }),
+        ]);
+        expect([x, y].filter((r) => r.ok)).toHaveLength(1);
+        expect([x, y].filter((r) => !r.ok)).toMatchObject([DESACTUALIZADA]);
+        const despues = await fila();
+        expect(despues?.version).toBe(2);
+        const ganoNumero = despues?.numero === 9 && despues.sucursal_id === e.mundo.sucursal;
+        const ganoSucursal = despues?.numero === 1 && despues.sucursal_id === norte;
+        expect(ganoNumero || ganoSucursal).toBe(true);
+        expect(await editadas()).toBe(1);
+      });
     });
 
     it("hayNumerosUsados: lo dice la lista, y con números usados el número no se puede cambiar", async () => {
