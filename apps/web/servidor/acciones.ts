@@ -23,6 +23,7 @@ import {
   OPCIONES_DE_COOKIE_DE_EMPRESA,
   OPCIONES_DE_COOKIE_DE_INVITACION,
   aplicarCookies,
+  vencerCookie,
 } from "./cookies";
 import { exigirPuerta } from "./pedido";
 import { dependenciasDeSesion, sesionDelPedido } from "./sesion";
@@ -134,11 +135,9 @@ async function terminarSesion(): Promise<Respuesta<null>> {
     if (!cierre.ok) return cierre;
     const almacen = await cookies();
     aplicarCookies(almacen, cierre.dato.cookies);
-    // La próxima persona que use este celular no hereda la empresa ni la invitación de esta. Se vencen con los
-    // MISMOS atributos con que se fijaron: `delete(nombre)` no manda `Secure` y el navegador rechaza tocar una
-    // cookie `__Host-` sin él (previene una cookie que sigue viva tras cerrar sesión).
-    almacen.set(COOKIE_DE_EMPRESA, "", { ...OPCIONES_DE_COOKIE_DE_EMPRESA, maxAge: 0 });
-    almacen.set(COOKIE_DE_INVITACION, "", { ...OPCIONES_DE_COOKIE_DE_INVITACION, maxAge: 0 });
+    // La próxima persona que use este celular no hereda la empresa ni la invitación de esta.
+    vencerCookie(almacen, COOKIE_DE_EMPRESA, OPCIONES_DE_COOKIE_DE_EMPRESA);
+    vencerCookie(almacen, COOKIE_DE_INVITACION, OPCIONES_DE_COOKIE_DE_INVITACION);
     return { ok: true, dato: null };
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta);
@@ -177,7 +176,7 @@ export async function aceptarLaInvitacion(
       marcaId: marcaComercialId(puerta.marcaId),
     });
     if (!resultado.ok) return resultado;
-    (await cookies()).delete(COOKIE_DE_INVITACION);
+    vencerCookie(await cookies(), COOKIE_DE_INVITACION, OPCIONES_DE_COOKIE_DE_INVITACION);
     // A la pantalla solo le llega lo que muestra: ni la persona ni las empresas de la invitación.
     return { ok: true, dato: { yaEstabaAceptada: resultado.dato.yaEstabaAceptada } };
   } catch (excepcion) {

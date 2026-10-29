@@ -475,7 +475,16 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       comoNavegador(HOST_A);
       const primera = await acciones.aceptarLaInvitacion({ token, clave: "intento-1" });
       expect(primera).toEqual({ ok: true, dato: { yaEstabaAceptada: false } });
-      expect(estado.borrados).toEqual(["__Host-pd_invitacion"]);
+      expect(estado.borrados).toEqual([]);
+      const vencida = estado.escrituras.find((x) => x.nombre === "__Host-pd_invitacion");
+      expect(vencida?.valor).toBe("");
+      expect(vencida?.opciones).toMatchObject({
+        maxAge: 0,
+        secure: true,
+        httpOnly: true,
+        path: "/",
+      });
+      expect(vencida?.opciones["domain"]).toBeUndefined();
       // Repetida (reintento con la MISMA clave, o con otra): el mismo resultado exitoso y una sola membresía.
       comoNavegador(HOST_A);
       const segunda = await acciones.aceptarLaInvitacion({ token, clave: "intento-1" });

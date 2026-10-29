@@ -30,11 +30,13 @@ vi.mock("../../apps/web/servidor/pedido", () => ({
 }));
 vi.mock("../../apps/web/servidor/sesion", () => ({
   dependenciasDeSesion: { respuesta: {} },
-  sesionDelPedido: vi.fn(),
+  sesionDelPedido: () =>
+    Promise.resolve({ sesion: {}, puerta: { host: "app.prueba", marcaId: "marca" } }),
 }));
 vi.mock("../../src/composicion/a-respuesta", () => ({ aRespuestaDeExcepcion: vi.fn() }));
 vi.mock("../../src/composicion/sesion-y-empresa", () => ({
-  aceptarInvitacionDeLaSesion: vi.fn(),
+  aceptarInvitacionDeLaSesion: () =>
+    Promise.resolve({ ok: true, dato: { yaEstabaAceptada: false } }),
   elegirEmpresa: vi.fn(),
   iniciarIngresoConGoogle: vi.fn(),
   cerrarSesion: () => Promise.resolve({ ok: true, dato: { cookies: [] } }),
@@ -45,8 +47,9 @@ import {
   COOKIE_DE_INVITACION,
   OPCIONES_DE_COOKIE_DE_EMPRESA,
   OPCIONES_DE_COOKIE_DE_INVITACION,
+  vencerCookie,
 } from "../../apps/web/servidor/cookies";
-import { cerrarLaSesion } from "../../apps/web/servidor/acciones";
+import { aceptarLaInvitacion, cerrarLaSesion } from "../../apps/web/servidor/acciones";
 
 beforeEach(() => {
   estado.escrituras.length = 0;
@@ -67,5 +70,41 @@ describe.each([
     expect(vencida?.opciones["secure"]).toBe(true);
     expect(vencida?.opciones["domain"]).toBeUndefined();
     expect(estado.borrados).not.toContain(cookie);
+  });
+});
+
+describe("vencerCookie", () => {
+  it.each([
+    ["empresa", COOKIE_DE_EMPRESA, OPCIONES_DE_COOKIE_DE_EMPRESA],
+    ["invitación", COOKIE_DE_INVITACION, OPCIONES_DE_COOKIE_DE_INVITACION],
+  ])("%s: vacía, maxAge 0 y el resto de los atributos del fijado", (_n, cookie, opciones) => {
+    vencerCookie(
+      {
+        set: (n: string, v: string, o: Record<string, unknown>) =>
+          void estado.escrituras.push({ nombre: n, valor: v, opciones: { ...o } }),
+      } as unknown as Parameters<typeof vencerCookie>[0],
+      cookie,
+      opciones,
+    );
+    const [escritura] = estado.escrituras;
+    expect(escritura?.nombre).toBe(cookie);
+    expect(escritura?.valor).toBe("");
+    expect(escritura?.opciones).toEqual({ ...opciones, maxAge: 0 });
+    expect(escritura?.opciones["secure"]).toBe(true);
+    expect(escritura?.opciones["httpOnly"]).toBe(true);
+    expect(escritura?.opciones["path"]).toBe("/");
+    expect(escritura?.opciones["sameSite"]).toBe(opciones.sameSite);
+    expect(escritura?.opciones["domain"]).toBeUndefined();
+  });
+});
+
+describe("aceptar la invitación", () => {
+  it("vence la cookie del enlace con los atributos del fijado, sin delete(nombre)", async () => {
+    const r = await aceptarLaInvitacion({ token: "t", clave: "c" });
+    expect(r.ok).toBe(true);
+    const vencida = estado.escrituras.find((x) => x.nombre === COOKIE_DE_INVITACION);
+    expect(vencida?.valor).toBe("");
+    expect(vencida?.opciones).toEqual({ ...OPCIONES_DE_COOKIE_DE_INVITACION, maxAge: 0 });
+    expect(estado.borrados).toEqual([]);
   });
 });
