@@ -372,6 +372,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       conSesionDe(yo, HOST_A);
       estado.jar.set("__Host-pd_empresa", "una-empresa");
       estado.jar.set("__Host-pd_invitacion", "un-token");
+      estado.jar.set("__Host-pd_sucursal", "una-sucursal");
       comoNavegador(HOST_A);
       expect(await filasDeSesion(yo)).toBe(1);
       expect(await redirigeA(() => acciones.cerrarLaSesion())).toBe("/ingreso");
@@ -379,7 +380,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       // Las `__Host-` no se borran con `delete(nombre)` (sin `Secure` el navegador lo rechaza): se vencen vacías
       // y con los atributos con que se fijaron (el detalle exacto: test/web/cerrar-sesion-cookies.test.ts).
       expect(estado.borrados).toEqual([]);
-      for (const nombre of ["__Host-pd_empresa", "__Host-pd_invitacion"]) {
+      for (const nombre of ["__Host-pd_empresa", "__Host-pd_invitacion", "__Host-pd_sucursal"]) {
         const vencida = estado.escrituras.find((x) => x.nombre === nombre);
         expect(vencida?.valor, nombre).toBe("");
         expect(vencida?.opciones, nombre).toMatchObject({

@@ -15,6 +15,8 @@ export type PropsDeSelector = Readonly<{
   ayuda?: string | undefined;
   error?: string | undefined;
   deshabilitado?: boolean;
+  /** El navegador no deja enviar el formulario con la opción vacía (`required`). Sin texto visible: el aviso lo da el navegador. */
+  requerido?: boolean;
 }>;
 
 /** Selector nativo (`<select>`): en el celular es el mejor selector que existe. */
@@ -29,6 +31,7 @@ export function Selector({
   ayuda,
   error,
   deshabilitado = false,
+  requerido = false,
 }: PropsDeSelector) {
   return (
     <CajaDeCampo
@@ -43,6 +46,7 @@ export function Selector({
           name={nombre}
           value={valor}
           disabled={deshabilitado}
+          required={requerido}
           onChange={(evento) => {
             alCambiar(evento.target.value);
           }}

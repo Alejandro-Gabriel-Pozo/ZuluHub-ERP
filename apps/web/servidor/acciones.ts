@@ -20,8 +20,10 @@ import { marcaComercialId } from "../../../src/primitivas/identificadores/marca"
 import {
   COOKIE_DE_EMPRESA,
   COOKIE_DE_INVITACION,
+  COOKIE_DE_SUCURSAL,
   OPCIONES_DE_COOKIE_DE_EMPRESA,
   OPCIONES_DE_COOKIE_DE_INVITACION,
+  OPCIONES_DE_COOKIE_DE_SUCURSAL,
   aplicarCookies,
   vencerCookie,
 } from "./cookies";
@@ -138,6 +140,8 @@ async function terminarSesion(): Promise<Respuesta<null>> {
     // La próxima persona que use este celular no hereda la empresa ni la invitación de esta.
     vencerCookie(almacen, COOKIE_DE_EMPRESA, OPCIONES_DE_COOKIE_DE_EMPRESA);
     vencerCookie(almacen, COOKIE_DE_INVITACION, OPCIONES_DE_COOKIE_DE_INVITACION);
+    // Tampoco la sucursal del listado (D-34).
+    vencerCookie(almacen, COOKIE_DE_SUCURSAL, OPCIONES_DE_COOKIE_DE_SUCURSAL);
     return { ok: true, dato: null };
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta);

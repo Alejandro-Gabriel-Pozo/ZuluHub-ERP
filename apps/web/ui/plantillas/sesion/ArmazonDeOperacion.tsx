@@ -14,20 +14,24 @@ import {
 } from "../PlantillaOperacion";
 import { BarraSuperior } from "./BarraSuperior";
 
+/** Cada módulo suma la clave de su destino: así la pantalla de ese módulo lo marca como actual. */
+type ClaveDeModulo = "comprobantes";
+
 /** Un destino que suma un módulo habilitado a la barra inferior (las entradas las llenan los otros tramos). */
 export type DestinoDeModulo = Readonly<{
+  clave: ClaveDeModulo;
   href: string;
   /** El texto del destino, ya resuelto. */
   etiqueta: string;
   icono: ClaveDeIcono;
 }>;
 
-/** Los destinos fijos de la barra; la pantalla de un módulo no marca ninguno como actual (omite `actual`). */
-export type DestinoActual = "inicio" | "empresa" | "cuenta";
+/** Cuál de los destinos de la barra es el de esta pantalla: uno de los fijos o el de su módulo. */
+export type DestinoActual = "inicio" | "empresa" | "cuenta" | ClaveDeModulo;
 
 export type PropsDeArmazonDeOperacion = Readonly<{
   titulo: string;
-  /** Cuál de los destinos fijos es el de esta pantalla; ninguno si es la de un módulo. */
+  /** Cuál de los destinos es el de esta pantalla; ninguno si no está en la barra. */
   actual?: DestinoActual;
   marca: string;
   empresa: string;
@@ -67,7 +71,12 @@ export function ArmazonDeOperacion({
     inicio: fijo("inicio", "inicio", "navegacion.inicio", "/"),
     empresa: fijo("empresa", "empresa", "navegacion.empresa", "/empresa"),
     cuenta: fijo("cuenta", "cuenta", "navegacion.cuenta", "/cuenta"),
-    modulos: modulos.map((m) => ({ etiqueta: m.etiqueta, icono: m.icono, href: m.href })),
+    modulos: modulos.map((m) => ({
+      etiqueta: m.etiqueta,
+      icono: m.icono,
+      href: m.href,
+      actual: actual === m.clave,
+    })),
   });
   return (
     <PlantillaOperacion
