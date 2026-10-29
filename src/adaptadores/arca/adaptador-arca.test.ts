@@ -8,6 +8,7 @@ import {
   respuestaHttp,
   TOKEN_DE_PRUEBA,
   TransporteFalso,
+  VerificacionEnMemoria,
 } from "../../../test/utilidades/arca";
 import { credencialDePrueba } from "../../../test/utilidades/arca-credencial";
 import { servidorFalso } from "../../../test/utilidades/arca-servidor";
@@ -139,6 +140,7 @@ type Mundo = Readonly<{
   transporte: TransporteFalso;
   tickets: AlmacenDeTicketsEnMemoria;
   credenciales: CredencialesEnMemoria;
+  verificacion: VerificacionEnMemoria;
   esperas: number[];
   /** Cada paso de la prueba, en orden: lecturas, guardados y pedidos. */
   bitacora: string[];
@@ -171,6 +173,7 @@ function armar(
   const credenciales = new CredencialesEnMemoria(
     opciones.credencial === undefined ? CREDENCIAL_FALSA : opciones.credencial,
   );
+  const verificacion = new VerificacionEnMemoria();
   const esperas: number[] = [];
   const bitacora: string[] = [];
   const leer = tickets.leer.bind(tickets);
@@ -187,6 +190,7 @@ function armar(
   const dependencias: DependenciasDeArca = {
     credenciales,
     tickets,
+    verificacion,
     transporte: (pedido) => {
       bitacora.push(`pedido:${TransporteFalso.operacionDe(pedido)}`);
       return enviar(pedido);
@@ -208,7 +212,15 @@ function armar(
     estadoDelServicio: async () => sinSecretos(await real.estadoDelServicio()),
     parametros: async (...a) => sinSecretos(await real.parametros(...a)),
   };
-  return { adaptador: vigilado, transporte, tickets, credenciales, esperas, bitacora };
+  return {
+    adaptador: vigilado,
+    transporte,
+    tickets,
+    credenciales,
+    verificacion,
+    esperas,
+    bitacora,
+  };
 }
 
 const wsfe = (
@@ -1088,6 +1100,117 @@ describe("nada secreto sale: la guarda y los casos adversarios", () => {
 
 // ---------------------------------------------------------------------------------------------------------------
 
+describe("la primera llamada exitosa verifica la autorización del certificado (D-42)", () => {
+  const conErroresDeUltimo = (codigo: string) =>
+    respuestaHttp(
+      `<soap:Envelope xmlns:soap="x"><soap:Body><FECompUltimoAutorizadoResponse><FECompUltimoAutorizadoResult><Errors><Err><Code>${codigo}</Code><Msg>m</Msg></Err></Errors></FECompUltimoAutorizadoResult></FECompUltimoAutorizadoResponse></soap:Body></soap:Envelope>`,
+    );
+  const delTicket = { empresa: EMPRESA, certificado: ticketVigente.certificadoId };
+
+  it("el último autorizado exitoso anota al certificado QUE PIDIÓ el ticket, de la empresa del adaptador", async () => {
+    const m = armar({ transporte: wsfe(["FECompUltimoAutorizado", grabada(1, "024")]) });
+    expect((await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B")).ok).toBe(true);
+    expect(m.verificacion.anotadas).toEqual([delTicket]);
+  });
+
+  it("autorizar (AUTORIZADO), consultar (ENCONTRADO) y una tabla de parámetros exitosa también lo anotan", async () => {
+    const autorizar = armar({ transporte: wsfe(["FECAESolicitar", grabada(1, "032")]) });
+    expect((await autorizar.adaptador.autorizar(solicitudDeLaGrabacion())).tipo).toBe("AUTORIZADO");
+    expect(autorizar.verificacion.anotadas).toEqual([delTicket]);
+
+    const consultar = armar({ transporte: wsfe(["FECompConsultar", grabada(1, "058")]) });
+    expect((await consultar.adaptador.consultar(PUNTO_DE_VENTA, "FACTURA_B", 14n)).tipo).toBe(
+      "ENCONTRADO",
+    );
+    expect(consultar.verificacion.anotadas).toEqual([delTicket]);
+
+    const parametros = armar({
+      transporte: wsfe(["FEParamGetTiposDoc", grabada(1, "012")]),
+    });
+    expect((await parametros.adaptador.parametros("20111111112", "TiposDoc")).ok).toBe(true);
+    expect(parametros.verificacion.anotadas).toEqual([delTicket]);
+  });
+
+  it("la verificación usa el certificado del ticket que se pidió a WSAA, no otro", async () => {
+    const m = armar({
+      ticket: null,
+      credencial: { ...CREDENCIAL_FALSA, certificadoId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" },
+      transporte: wsfe(
+        ["loginCms", respuestaHttp(respuestaDeLoginCms())],
+        ["FECompUltimoAutorizado", grabada(1, "024")],
+      ),
+    });
+    await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B");
+    expect(m.verificacion.anotadas).toEqual([
+      { empresa: EMPRESA, certificado: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" },
+    ]);
+  });
+
+  it.each([
+    ["ARCA no aceptó el token (600)", conErroresDeUltimo("600")],
+    ["la CUIT representada no está en el token (601)", conErroresDeUltimo("601")],
+    ["un error interno de ARCA (500)", conErroresDeUltimo("500")],
+    ["una respuesta ilegible", respuestaHttp("<html>no es SOAP</html>")],
+    ["la conexión no se abrió", { tipo: "NO_SALIO", motivo: "ECONNREFUSED" } as const],
+  ])("%s: NO anota nada", async (_nombre, respuesta) => {
+    const m = armar({ transporte: wsfe(["FECompUltimoAutorizado", respuesta]) });
+    expect((await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B")).ok).toBe(false);
+    expect(m.verificacion.anotadas).toEqual([]);
+  });
+
+  it("un comprobante rechazado, uno no encontrado o uno incierto no anotan: no es una llamada exitosa", async () => {
+    const rechazado = armar({ transporte: wsfe(["FECAESolicitar", grabada(1, "054")]) });
+    expect((await rechazado.adaptador.autorizar(solicitudDeLaGrabacion())).tipo).toBe("RECHAZADO");
+    const incierto = armar({
+      transporte: wsfe(["FECAESolicitar", { tipo: "SIN_RESPUESTA", motivo: "TIEMPO_AGOTADO" }]),
+    });
+    expect((await incierto.adaptador.autorizar(solicitudDeLaGrabacion())).tipo).toBe("INCIERTO");
+    const noExiste = armar({ transporte: wsfe(["FECompConsultar", grabada(1, "060")]) });
+    expect((await noExiste.adaptador.consultar(PUNTO_DE_VENTA, "FACTURA_B", 99n)).tipo).not.toBe(
+      "ENCONTRADO",
+    );
+    expect([rechazado, incierto, noExiste].flatMap((m) => m.verificacion.anotadas)).toEqual([]);
+  });
+
+  it("sin ticket ni credencial (nada salió a ARCA) no anota; FEDummy no usa ticket y tampoco", async () => {
+    const sinTicket = armar({ ticket: null, credencial: null, transporte: wsfe() });
+    expect((await sinTicket.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B")).ok).toBe(
+      false,
+    );
+    const dummy = armar({ transporte: wsfe(["FEDummy", grabada(1, "008")]) });
+    expect((await dummy.adaptador.estadoDelServicio()).ok).toBe(true);
+    expect([sinTicket, dummy].flatMap((m) => m.verificacion.anotadas)).toEqual([]);
+  });
+
+  it("si anotar falla (la base caída), lo que ARCA contestó se devuelve igual, sin filtrar el texto de la falla", async () => {
+    const m = armar({
+      transporte: wsfe(
+        ["FECompUltimoAutorizado", grabada(1, "024")],
+        ["FECAESolicitar", grabada(1, "032")],
+      ),
+    });
+    m.verificacion.fallar = true;
+    expect(await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B")).toEqual({
+      ok: true,
+      valor: 13n,
+    });
+    expect((await m.adaptador.autorizar(solicitudDeLaGrabacion())).tipo).toBe("AUTORIZADO");
+    // `sinSecretos` (dentro de `armar`) ya habría fallado si «postgres://» apareciera en lo devuelto.
+    expect(m.verificacion.anotadas).toEqual([]);
+  });
+
+  it("cada llamada exitosa vuelve a pedir la anotación (la base decide que es una sola): el adaptador no recuerda nada", async () => {
+    const m = armar({
+      transporte: wsfe(["FECompUltimoAutorizado", grabada(1, "024"), grabada(1, "024")]),
+    });
+    await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B");
+    await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B");
+    expect(m.verificacion.anotadas).toEqual([delTicket, delTicket]);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+
 describe("el proveedor: un adaptador por (empresa, emisor, ambiente)", () => {
   it("cada ambiente usa sus direcciones y cada par lee su propio ticket", async () => {
     const transporte = wsfe(["FECompUltimoAutorizado", grabada(1, "024")]);
@@ -1100,6 +1223,7 @@ describe("el proveedor: un adaptador por (empresa, emisor, ambiente)", () => {
     const proveedor = crearProveedorDeEmisionArca({
       credenciales: new CredencialesEnMemoria(CREDENCIAL_FALSA),
       tickets,
+      verificacion: new VerificacionEnMemoria(),
       transporte: transporte.transporte,
       reloj: { ahora: () => AHORA },
       esperar: () => Promise.resolve(),
@@ -1133,6 +1257,7 @@ describe("el proveedor: un adaptador por (empresa, emisor, ambiente)", () => {
     const proveedor = crearProveedorDeEmisionArca({
       credenciales,
       tickets: new AlmacenDeTicketsEnMemoria(null),
+      verificacion: new VerificacionEnMemoria(),
       transporte: new TransporteFalso().transporte,
       reloj: { ahora: () => AHORA },
       esperar: () => Promise.resolve(),
@@ -1158,6 +1283,7 @@ describe("de punta a punta con el transporte REAL contra un servidor de loopback
       {
         credenciales: new CredencialesEnMemoria(CREDENCIAL_FALSA),
         tickets: new AlmacenDeTicketsEnMemoria(ticketVigente),
+        verificacion: new VerificacionEnMemoria(),
         transporte,
         reloj: { ahora: () => AHORA },
         esperar: () => Promise.resolve(),

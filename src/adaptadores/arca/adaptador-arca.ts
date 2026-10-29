@@ -21,6 +21,7 @@ import type {
   CredencialesDescifradas,
   ErrorDeCredenciales,
 } from "../../puertos/credenciales-de-emisor";
+import type { VerificacionDeAutorizacion } from "../../puertos/verificacion-de-autorizacion";
 import {
   clasificarAutorizacion,
   clasificarConsulta,
@@ -71,6 +72,14 @@ import { aSolicitudDeWsfe } from "./traducir";
  *  4. **Nada secreto sale.** El token, la firma y el PEM no aparecen en ningún resultado (motivo, detalle,
  *     mensaje): los textos se arman solo con códigos, textos fijos y los `Msg` de ARCA saneados, y el texto de
  *     una excepción no se usa nunca.
+ *  5. **La primera llamada exitosa verifica la autorización** (D-42, 2026-10-29): cuando una operación de WSFE que usa
+ *     el ticket vuelve con éxito, se anota en el certificado que pidió ese ticket que ARCA lo aceptó para la CUIT del
+ *     emisor. Anotarlo nunca cambia lo que se devuelve: si falla, se ignora y la próxima llamada exitosa lo intenta de
+ *     nuevo. Fuente: `h7-facturacion.md` §B.6.2 («`autorizacion_verificada_en` se fija en el primer `loginCms` +
+ *     `FEDummy`/`FECompUltimoAutorizado` exitoso»). SUPUESTO (pendiente de confirmar con el dueño): también cuentan
+ *     `FECAESolicitar` autorizado, `FECompConsultar` encontrado y `FEParamGet*` exitoso, que usan el mismo ticket y la
+ *     misma CUIT representada; `FEDummy` NO cuenta porque no usa ticket y no prueba nada de la autorización. Revertirlo
+ *     es borrar tres líneas de `aceptado(...)`.
  *
  * No lanza: toda falla es un valor del puerto. Los desenlaces son los de `clasificar.ts`.
  */
@@ -85,6 +94,8 @@ export type DependenciasDeArca = Readonly<{
   reloj: Readonly<{ ahora(): Date }>;
   /** Espera `ms` milisegundos (tras `coe.alreadyAuthenticated`). En pruebas, instantánea. */
   esperar(ms: number): Promise<void>;
+  /** Anota que ARCA aceptó al certificado, la primera vez que una llamada con su ticket sale bien (D-42). */
+  verificacion: VerificacionDeAutorizacion;
   /** Por defecto, la firma CMS real; las pruebas la reemplazan para forzar un fallo. */
   firmar?: typeof firmarTra;
 }>;
@@ -135,7 +146,7 @@ export function crearEmisionArca(
   emisor: EmisorId,
   ambiente: AmbienteDeArca,
 ): AdaptadorDeArca {
-  const { credenciales, tickets, transporte, reloj, esperar } = dependencias;
+  const { credenciales, tickets, transporte, reloj, esperar, verificacion } = dependencias;
   const firmar = dependencias.firmar ?? firmarTra;
   const destinos = DESTINOS_DE_ARCA[ambiente];
 
@@ -219,27 +230,43 @@ export function crearEmisionArca(
       : nuevo;
   }
 
+  /** El ticket para armar un pedido a WSFE (con la CUIT del emisor) y el certificado que lo pidió. */
+  type SesionDeWsfe = Readonly<{ autenticacion: AutenticacionDeWsfe; certificadoId: string }>;
+
   /**
    * El ticket con la CUIT del emisor, o el error de emisión. Una falla del almacén o de las credenciales no
    * lanza (y su texto no se usa: podría traer una cadena de conexión): es que no hay ticket.
    */
-  async function conAutenticacion(
-    cuit: string,
-  ): Promise<Resultado<AutenticacionDeWsfe, ErrorDeEmision>> {
+  async function conAutenticacion(cuit: string): Promise<Resultado<SesionDeWsfe, ErrorDeEmision>> {
     try {
       const ticket = await obtenerTicket();
       if (!ticket.ok) return ticket;
       // Los secretos se revelan acá, en el último punto posible: solo para armar el pedido a WSFE.
       return ok({
-        token: ticket.valor.token.revelar(),
-        sign: ticket.valor.firma.revelar(),
-        cuit,
+        autenticacion: {
+          token: ticket.valor.token.revelar(),
+          sign: ticket.valor.firma.revelar(),
+          cuit,
+        },
+        certificadoId: ticket.valor.certificadoId,
       });
     } catch {
       return err({
         codigo: "SERVICIO_NO_DISPONIBLE",
         detalle: "no se pudo obtener el ticket de acceso",
       });
+    }
+  }
+
+  /**
+   * ARCA aceptó el ticket del certificado para la CUIT del emisor: se anota (una sola vez, la base lo garantiza). No
+   * lanza y no cambia lo que la operación devuelve: si no se pudo anotar, la próxima llamada exitosa lo intenta.
+   */
+  async function aceptado(sesion: SesionDeWsfe): Promise<void> {
+    try {
+      await verificacion.anotar(empresa, sesion.certificadoId);
+    } catch {
+      // Un fallo de la base al anotar no es un fallo de ARCA.
     }
   }
 
@@ -254,13 +281,19 @@ export function crearEmisionArca(
       const auth = await conAutenticacion(puntoDeVenta.cuit);
       if (!auth.ok) return auth;
       const tipoDeComprobante = CODIGO_DE_TIPO_DE_COMPROBANTE[tipo];
-      return clasificarUltimoAutorizado(
+      const ultimo = clasificarUltimoAutorizado(
         await llamarWsfe(
           "FECompUltimoAutorizado",
-          pedidoFECompUltimoAutorizado(auth.valor, puntoDeVenta.numero, tipoDeComprobante),
+          pedidoFECompUltimoAutorizado(
+            auth.valor.autenticacion,
+            puntoDeVenta.numero,
+            tipoDeComprobante,
+          ),
         ),
         { puntoDeVenta: puntoDeVenta.numero, tipoDeComprobante },
       );
+      if (ultimo.ok) await aceptado(auth.valor);
+      return ultimo;
     },
 
     async autorizar(solicitud: SolicitudDeAutorizacion): Promise<ResultadoDeAutorizacionArca> {
@@ -271,17 +304,19 @@ export function crearEmisionArca(
       }
       let cuerpo: string;
       try {
-        cuerpo = pedidoFECAESolicitar(auth.valor, aSolicitudDeWsfe(solicitud));
+        cuerpo = pedidoFECAESolicitar(auth.valor.autenticacion, aSolicitudDeWsfe(solicitud));
       } catch {
         return {
           tipo: "NO_ENVIADO",
           motivo: "el pedido no se pudo traducir a los valores de WSFE",
         };
       }
-      return clasificarAutorizacion(await llamarWsfe("FECAESolicitar", cuerpo), {
+      const resultado = clasificarAutorizacion(await llamarWsfe("FECAESolicitar", cuerpo), {
         numero: solicitud.numero,
         fecha: solicitud.fecha,
       });
+      if (resultado.tipo === "AUTORIZADO") await aceptado(auth.valor);
+      return resultado;
     },
 
     async consultar(
@@ -297,10 +332,15 @@ export function crearEmisionArca(
         };
       }
       const tipoDeComprobante = CODIGO_DE_TIPO_DE_COMPROBANTE[tipo];
-      return clasificarConsulta(
+      const consulta = clasificarConsulta(
         await llamarWsfe(
           "FECompConsultar",
-          pedidoFECompConsultar(auth.valor, puntoDeVenta.numero, tipoDeComprobante, String(numero)),
+          pedidoFECompConsultar(
+            auth.valor.autenticacion,
+            puntoDeVenta.numero,
+            tipoDeComprobante,
+            String(numero),
+          ),
         ),
         {
           cuit: puntoDeVenta.cuit,
@@ -310,6 +350,8 @@ export function crearEmisionArca(
           esNota: claseDeComprobante(tipo) !== "FACTURA",
         },
       );
+      if (consulta.tipo === "ENCONTRADO") await aceptado(auth.valor);
+      return consulta;
     },
 
     async estadoDelServicio(): Promise<Resultado<EstadoDelServicio, ErrorDeEmision>> {
@@ -322,10 +364,12 @@ export function crearEmisionArca(
     ): Promise<Resultado<readonly FilaDeParametro[], ErrorDeEmision>> {
       const auth = await conAutenticacion(cuit);
       if (!auth.ok) return auth;
-      return clasificarParametros(
-        await llamarWsfe(`FEParamGet${tabla}`, pedidoFEParamGet(auth.valor, tabla)),
+      const filas = clasificarParametros(
+        await llamarWsfe(`FEParamGet${tabla}`, pedidoFEParamGet(auth.valor.autenticacion, tabla)),
         `FEParamGet${tabla}`,
       );
+      if (filas.ok) await aceptado(auth.valor);
+      return filas;
     },
   };
 }
