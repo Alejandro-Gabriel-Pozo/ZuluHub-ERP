@@ -127,6 +127,9 @@ describe("anular, paso 1: qué anular", () => {
     await userEvent.click(boton("Anular solo una parte"));
     await expect.element(page.getByLabelText("Importe a anular", { exact: true })).toBeVisible();
     expect(document.body.textContent).not.toContain("IVA");
+    await userEvent.type(page.getByLabelText("Importe a anular", { exact: true }), "50000");
+    await expect.element(page.getByText("El importe supera lo facturado.")).toBeVisible();
+    await expect.element(boton("Siguiente")).toBeEnabled();
     await expect.element(page.getByText("$ 45.000,00").first()).toBeVisible();
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
     legibleYTocable();
@@ -225,5 +228,6 @@ describe("anular, paso 2: motivo y revisar", () => {
     await irAlPaso2();
     await expect.element(page.getByText("Se va a emitir una nota de crédito B")).toBeVisible();
     expect(document.body.textContent).not.toContain("Ya anulado");
+    await expect.element(page.getByText("Total de la nota de débito")).toBeVisible();
   });
 });

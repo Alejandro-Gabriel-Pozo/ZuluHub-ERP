@@ -248,6 +248,16 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
   "fiscal.pantalla.anular_facturado": { porDefecto: "Facturado" },
   "fiscal.pantalla.anular_importe_con_iva": { porDefecto: "Importe a anular (con IVA incluido)" },
   "fiscal.pantalla.anular_importe": { porDefecto: "Importe a anular" },
+  // Aprobados por el dueño el 2026-10-29 (cuestionario en la sesión web del carril web): el nombre de la fila de una alícuota sin
+  // IVA, «Exento» y «No gravado» (una fila por tipo); el aviso de la letra C, «El importe supera lo facturado.» (sin bloqueo, D-72);
+  // y, al anular una nota de débito, el rótulo «Total de la nota de débito» (en factura sigue «Total de la factura»).
+  "fiscal.pantalla.anular_alicuota_exento": { porDefecto: "Exento" },
+  "fiscal.pantalla.anular_alicuota_no_gravado": { porDefecto: "No gravado" },
+  "fiscal.pantalla.anular_aviso_supera_c": {
+    porDefecto: "El importe supera lo facturado.",
+    largoMaximo: 120,
+  },
+  "fiscal.pantalla.anular_total_de_la_nota_de_debito": { porDefecto: "Total de la nota de débito" },
   "fiscal.pantalla.anular_aviso_supera": {
     porDefecto: "El importe supera lo facturado con IVA {alicuota} %.",
     largoMaximo: 120,
@@ -271,7 +281,7 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
   },
   "fiscal.pantalla.anular_a_anular_ahora": { porDefecto: "A anular ahora" },
 
-  // D-74 (propuesta del ingeniero; texto sin aprobar): el texto de cada renglón de la nota lo arma el sistema con las palabras de
+  // D-74 (aprobado por el dueño el 2026-10-29, cuestionario en la sesión web del carril web): el texto de cada renglón de la nota lo arma el sistema con las palabras de
   // D-29, «Anulación parcial de la factura 00001-00000123, IVA 21 %» («Anulación total de …» si se anula todo; «nota de débito» en
   // lugar de «factura» si se anula una nota de débito). Va en el comprobante, no se le muestra a la persona. La alícuota sin IVA
   // (letra C, exento, no gravado) lleva el texto sin la coma final. «{anulacion}» es «Anulación parcial» o «Anulación total» (D-29).

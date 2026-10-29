@@ -67,7 +67,7 @@ type Fila = Readonly<{ rotulo: string; importe: string }>;
 
 type FilaParaEscribir = Readonly<{
   clave: string;
-  /** «IVA 21 %»; `null` si la fila no lleva IVA (letra C, exento, no gravado: no hay texto aprobado para su nombre). */
+  /** «IVA 21 %», «Exento» o «No gravado»; `null` en la letra C (un solo importe, sin alícuota). */
   nombre: string | null;
   facturado: Fila;
   /** La etiqueta del campo: «Importe a anular (con IVA incluido)», o «Importe a anular» en la letra C. */
@@ -116,6 +116,12 @@ function clienteDe(d: DiccionarioResuelto, receptor: FacturaParaAnular["receptor
   return receptor.nombre ?? texto(d, "fiscal.pantalla.consumidor_final");
 }
 
+function nombreDeLaFila(d: DiccionarioResuelto, alicuota: string | null, tasa: string | null) {
+  if (tasa !== null) return texto(d, "fiscal.pantalla.renglon_iva", { alicuota: tasa });
+  if (alicuota === "EXENTO") return texto(d, "fiscal.pantalla.anular_alicuota_exento");
+  return alicuota === "NO_GRAVADO" ? texto(d, "fiscal.pantalla.anular_alicuota_no_gravado") : null;
+}
+
 function filasParaEscribir(
   d: DiccionarioResuelto,
   f: FacturaParaAnular,
@@ -127,7 +133,7 @@ function filasParaEscribir(
     const tasa = fila.alicuota === null ? null : formatearAlicuota(fila.alicuota);
     return {
       clave: fila.clave,
-      nombre: tasa === null ? null : texto(d, "fiscal.pantalla.renglon_iva", { alicuota: tasa }),
+      nombre: nombreDeLaFila(d, fila.alicuota, tasa),
       facturado: {
         rotulo: texto(d, "fiscal.pantalla.anular_facturado"),
         importe: formatearImporte(fila.facturado),
@@ -137,10 +143,11 @@ function filasParaEscribir(
         unico ? "fiscal.pantalla.anular_importe" : "fiscal.pantalla.anular_importe_con_iva",
       ),
       valor: e.importes[fila.clave] ?? "",
-      aviso:
-        tasa !== null && supera.has(fila.clave)
-          ? texto(d, "fiscal.pantalla.anular_aviso_supera", { alicuota: tasa })
-          : null,
+      aviso: supera.has(fila.clave)
+        ? tasa === null
+          ? texto(d, "fiscal.pantalla.anular_aviso_supera_c")
+          : texto(d, "fiscal.pantalla.anular_aviso_supera", { alicuota: tasa })
+        : null,
     };
   });
 }
@@ -153,7 +160,12 @@ export function armarLaVista(
   const calculo = calcularLaAnulacion(f, e);
   const aAnular = formatearImporte(calculo.aAnular);
   const totalDeLaFactura = formatearImporte(f.importes.total);
-  const rotuloTotal = texto(d, "fiscal.pantalla.anular_total_de_la_factura");
+  const rotuloTotal = texto(
+    d,
+    f.tipo.startsWith("NOTA_DEBITO")
+      ? "fiscal.pantalla.anular_total_de_la_nota_de_debito"
+      : "fiscal.pantalla.anular_total_de_la_factura",
+  );
   const supera = new Set(
     calculo.partes.filter((p) => p.superaLoFacturado).map((p) => p.fila.clave),
   );

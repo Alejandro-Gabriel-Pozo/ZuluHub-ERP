@@ -196,7 +196,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     );
   });
 
-  it("los textos de anular por importe son exactamente los que el dueño aprobó el 2026-10-29 (12A) y la propuesta D-74", () => {
+  it("los textos de anular por importe son exactamente los que el dueño aprobó el 2026-10-29 (12A, D-74 incluido)", () => {
     const porDefecto = (clave: ClaveDeTexto): string => CATALOGO_DE_TEXTOS[clave].porDefecto;
     expect(
       Object.fromEntries(
@@ -226,6 +226,10 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "fiscal.pantalla.anular_facturado": "Facturado",
       "fiscal.pantalla.anular_importe_con_iva": "Importe a anular (con IVA incluido)",
       "fiscal.pantalla.anular_importe": "Importe a anular",
+      "fiscal.pantalla.anular_alicuota_exento": "Exento",
+      "fiscal.pantalla.anular_alicuota_no_gravado": "No gravado",
+      "fiscal.pantalla.anular_aviso_supera_c": "El importe supera lo facturado.",
+      "fiscal.pantalla.anular_total_de_la_nota_de_debito": "Total de la nota de débito",
       "fiscal.pantalla.anular_aviso_supera": "El importe supera lo facturado con IVA {alicuota} %.",
       "fiscal.pantalla.anular_motivo": "Motivo (obligatorio)",
       "fiscal.pantalla.anular_motivo_guardado": "Queda guardado junto a la nota de crédito.",

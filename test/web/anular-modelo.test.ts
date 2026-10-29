@@ -107,17 +107,26 @@ describe("paso 1, solo una parte", () => {
     expect(v.queAnular.fila.importe).toBe("$ 45.000,00");
   });
 
-  it("letra C: pasarse del total no muestra el aviso por alícuota (no hay tasa que nombrar; no hay texto aprobado)", () => {
+  it("letra C: pasarse del total avisa «El importe supera lo facturado.» sin bloquear; justo el total no avisa", () => {
     const v = armarLaVista({}, facturaC, unaParte(["C", "50000.00"]));
-    expect(v.queAnular.filas[0]?.aviso).toBeNull();
+    expect(v.queAnular.filas[0]?.aviso).toBe("El importe supera lo facturado.");
     expect(v.queAnular.sePuedeSeguir).toBe(true);
+    expect(
+      armarLaVista({}, facturaC, unaParte(["C", "45000.00"])).queAnular.filas[0]?.aviso,
+    ).toBeNull();
   });
 
-  it("una alícuota sin IVA (exento) no tiene nombre aprobado: la fila va sin nombre", () => {
-    const f = conFactura({ alicuotas: [{ alicuota: "EXENTO", total: "100.00" }] });
-    expect(
-      armarLaVista({}, f, pasarAUnaParte(anulacionTotal)).queAnular.filas[0]?.nombre,
-    ).toBeNull();
+  it("exento y no gravado: una fila por tipo, con su nombre; el aviso de IVA no aplica a ellas por nombre pero sí avisa", () => {
+    const f = conFactura({
+      alicuotas: [
+        { alicuota: "EXENTO", total: "100.00" },
+        { alicuota: "NO_GRAVADO", total: "50.00" },
+      ],
+    });
+    const v = armarLaVista({}, f, pasarAUnaParte(anulacionTotal));
+    expect(v.queAnular.filas.map((x) => x.nombre)).toEqual(["Exento", "No gravado"]);
+    const pasado = armarLaVista({}, f, unaParte(["EXENTO", "100.01"]));
+    expect(pasado.queAnular.filas[0]?.aviso).toBe("El importe supera lo facturado.");
   });
 });
 
@@ -178,12 +187,17 @@ describe("paso 2, motivo y revisar", () => {
     expect(JSON.stringify(revision)).not.toMatch(/supera|tope|excede/i);
   });
 
-  it("una nota de débito: mismo título, la letra de la nota, y sin «Ya anulado» (D-73: la nota no lo lleva)", () => {
+  it("una nota de débito: mismo título, la letra de la nota, «Total de la nota de débito» y sin «Ya anulado» (D-73: la nota no lo lleva)", () => {
     const nd = conFactura({ tipo: "NOTA_DEBITO_B", numero: "00001-00000200" });
     const v = armarLaVista({}, nd, anulacionTotal);
     expect(v.subtitulo).toBe("Nota de débito B 00001-00000200 · Juan Pérez");
     expect(v.revision.titulo).toBe("Se va a emitir una nota de crédito B");
     expect(v.revision.anulado).toBeNull();
+    expect(v.revision.totalDeLaFactura.rotulo).toBe("Total de la nota de débito");
+    expect(v.queAnular.fila.rotulo).toBe("Total de la nota de débito");
+    expect(armarLaVista({}, factura, anulacionTotal).revision.totalDeLaFactura.rotulo).toBe(
+      "Total de la factura",
+    );
   });
 
   it("un consumidor final sin nombre se llama «Consumidor final»", () => {
