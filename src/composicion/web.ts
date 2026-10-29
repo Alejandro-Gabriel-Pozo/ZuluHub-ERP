@@ -26,7 +26,7 @@ import { perezoso } from "./perezoso";
  *
  * Fiscal (H7): `casosDeUsoDeFacturacion` (emitir factura, nota de crédito y de débito, descartar, reintentar,
  * resincronizar una serie y cambiar el ambiente de un punto de venta) y `consultasDeFacturacion` (listado y detalle de
- * comprobantes). Cada uno exige SU acción al guard dentro de la transacción: acá no se decide ningún permiso. Quedan
+ * comprobantes y los puntos de venta de la sucursal). Cada uno exige SU acción al guard dentro de la transacción: acá no se decide ningún permiso. Quedan
  * AFUERA, a propósito: la configuración fiscal (datos fiscales, puntos de venta y regla de emisor: ninguna acción la usa
  * todavía; se suma con su pantalla), los dos trabajos de sistema (`validarComprobante` y `reconciliarComprobantes`, sin guard: son
  * de la cola), la numeración suelta (`reservarNumeroDeComprobante`...: la web entra solo por emitir, h7 §C), el modelo
@@ -89,7 +89,10 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
         cambiarAmbienteDePuntoDeVenta: casos.cambiarAmbienteDePuntoDeVenta,
       };
     }),
-    /** Listado y detalle de comprobantes (`comprobantes.ver`); el modelo de impresión es de F9 y no sale. */
+    /**
+     * Listado y detalle de comprobantes y los puntos de venta de la sucursal para el filtro (todos `comprobantes.ver`); el modelo
+     * de impresión es de F9 y no sale.
+     */
     consultasDeFacturacion: perezoso(() => {
       const consultas = crearConsultasDeFacturacion({
         transacciones: conexiones.transaccionesDeApp(),
@@ -97,6 +100,7 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
       });
       return {
         listarComprobantes: consultas.listarComprobantes,
+        listarPuntosDeVentaDeLaSucursal: consultas.listarPuntosDeVentaDeLaSucursal,
         verComprobante: consultas.verComprobante,
       };
     }),

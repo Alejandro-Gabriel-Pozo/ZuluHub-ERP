@@ -34,8 +34,9 @@ export type ErrorAlListarComprobantes =
  * clave de la última fila de la página, o `null` si no queda nada. Por defecto oculta los `DESCARTADO`. Lista SOLO los de la sucursal que la persona eligió y que el servidor verifica
  * (`sucursalDelPedido`): la elegida si es de su alcance, la única que tiene si no eligió, o un error tipado
  * (`SUCURSAL_NO_ELEGIDA`, `SUCURSAL_FUERA_DE_ALCANCE`); nunca las de todas. Cada fila trae
- * su `acreditacion` (D-16) con UNA consulta más para toda la página, no una por fila; el documento del receptor viene en
- * la misma consulta de la página, sin otra por fila.
+ * su `acreditacion` (D-16) con UNA consulta más para toda la página, no una por fila; el documento del receptor y el
+ * número del punto de venta vienen en la misma consulta de la página, sin otra por fila. La respuesta dice qué sucursal usó
+ * (`sucursal`: id, nombre y si está abierta), que sale de la misma lectura de sucursales con la que se verificó: sin otra consulta.
  */
 export function armarListarComprobantes({
   transacciones,
@@ -65,7 +66,7 @@ export function armarListarComprobantes({
         if (!sucursal.ok) return sucursal;
         const pagina = await tx.lecturas.listar(contexto.empresaId, {
           ...criterios.valor,
-          sucursalId: sucursal.valor,
+          sucursalId: sucursal.valor.id,
         });
         // Las notas de TODA la página en una sola consulta (sin una por fila): de ellas sale la etiqueta de cada una.
         const notas = await tx.lecturas.notasQueCitanA(
@@ -76,6 +77,7 @@ export function armarListarComprobantes({
         return ok({
           items: pagina.filas.map((f) => resumenDe(f, notas.get(f.id) ?? [])),
           siguiente: pagina.hayMas && ultima !== undefined ? claveDePagina(ultima) : null,
+          sucursal: sucursal.valor,
         });
       },
     );

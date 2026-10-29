@@ -351,6 +351,7 @@ describe("con el entorno completo", () => {
     ]);
     expect(Object.keys(web.consultasDeFacturacion()).sort()).toEqual([
       "listarComprobantes",
+      "listarPuntosDeVentaDeLaSucursal",
       "verComprobante",
     ]);
   });

@@ -60,7 +60,7 @@ export function armarListarPuntosDeVentaDeLaSucursal({
         if (!sucursal.ok) return sucursal;
         const numeros = await tx.lecturas.puntosDeVentaActivosDeLaSucursal(
           contexto.empresaId,
-          sucursal.valor,
+          sucursal.valor.id,
         );
         return ok({ items: numeros.map((numero) => ({ numero })) });
       },

@@ -9,6 +9,7 @@ import {
   type NotaParaAcreditar,
 } from "../dominio/acreditacion";
 import { numeroImpreso } from "../dominio/modelo-de-impresion";
+import type { SucursalDelPedido } from "./sucursal-del-pedido";
 import type { IntentoDeArca } from "../persistencia/repositorio-de-intentos";
 import type { ComprobanteGuardado } from "../persistencia/repositorio-de-comprobantes";
 import type { FilaDeListado, NotaQueCita } from "../persistencia/lecturas-de-comprobantes";
@@ -28,6 +29,11 @@ export type ResumenDeComprobante = Readonly<{
   tipo: FilaDeListado["tipo"];
   /** `PPPPP-NNNNNNNN`; `null` mientras no esté `AUTORIZADO` (un número reservado todavía puede perderse). */
   numero: string | null;
+  /**
+   * El número del punto de venta como DATO (5 dígitos al imprimirse: ese formato lo pone la pantalla). Es el mismo que va en
+   * `numero` y el que filtra la lista de puntos de venta de la sucursal.
+   */
+  puntoDeVentaNumero: number;
   fecha: FechaCivil;
   receptorNombre: string | null;
   /** Tipo y número del documento del receptor, como en el detalle (`SIN_IDENTIFICAR` no tiene número). */
@@ -46,6 +52,8 @@ export type PaginaDeComprobantes = Readonly<{
   items: readonly ResumenDeComprobante[];
   /** La clave para pedir la página que sigue (`despuesDe`); `null` en la última. */
   siguiente: string | null;
+  /** La sucursal que el servidor usó para este listado (D-18): la que la pantalla muestra, abierta o cerrada. */
+  sucursal: SucursalDelPedido;
 }>;
 
 const numeroDe = (puntoDeVenta: number, numero: bigint | null): string | null =>
@@ -60,6 +68,7 @@ export function resumenDe(
     id: fila.id,
     tipo: fila.tipo,
     numero: numeroDe(fila.puntoDeVentaNumero, fila.numero),
+    puntoDeVentaNumero: fila.puntoDeVentaNumero,
     fecha: fila.fecha,
     receptorNombre: fila.receptorNombre,
     receptorDocumento: fila.receptorDocumento,

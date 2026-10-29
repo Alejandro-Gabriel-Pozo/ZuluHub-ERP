@@ -172,6 +172,8 @@ type Llamadas = {
   intentos: unknown[][];
   series: unknown[][];
   puntosDeVenta: unknown[][];
+  /** Una entrada por cada vez que se leyeron las sucursales de la empresa. */
+  sucursales: unknown[][];
 };
 
 type Datos = Readonly<{
@@ -194,6 +196,8 @@ type Datos = Readonly<{
 
 /** La sucursal que tiene la empresa de prueba cuando el caso no dice otra cosa. */
 const SUCURSAL_UNICA = sucursalId("s-unica");
+/** El nombre que la empresa de prueba le pone a cada sucursal (se deriva del id para distinguirlas en las expectativas). */
+const nombreDe = (id: SucursalId): string => `Sucursal ${id}`;
 
 /** Las consultas sobre una transacción en memoria; devuelve además todo lo que se pidió. */
 function armar(datos: Datos = {}) {
@@ -205,6 +209,7 @@ function armar(datos: Datos = {}) {
     intentos: [],
     series: [],
     puntosDeVenta: [],
+    sucursales: [],
   };
   const marcasPedidas: EmpresaId[] = [];
   const tx: TxDeConsultasDeFacturacion = {
@@ -258,11 +263,21 @@ function armar(datos: Datos = {}) {
       },
     },
     sucursales: {
-      listar: () =>
-        Promise.resolve([
-          ...(datos.sucursalesActivas ?? [SUCURSAL_UNICA]).map((id) => ({ id, activa: true })),
-          ...(datos.sucursalesCerradas ?? []).map((id) => ({ id, activa: false })),
-        ]),
+      listar: (...args) => {
+        llamadas.sucursales.push(args);
+        return Promise.resolve([
+          ...(datos.sucursalesActivas ?? [SUCURSAL_UNICA]).map((id) => ({
+            id,
+            nombre: nombreDe(id),
+            activa: true,
+          })),
+          ...(datos.sucursalesCerradas ?? []).map((id) => ({
+            id,
+            nombre: nombreDe(id),
+            activa: false,
+          })),
+        ]);
+      },
     },
     marca: {
       deLaEmpresa: (empresa) => {
@@ -339,6 +354,31 @@ describe("listarComprobantes", () => {
       const r = await listarCon({ sucursalesActivas: [B] }, null);
       expect(r.resultado.ok).toBe(true);
       expect(r.filtro?.sucursalId).toBe(B);
+    });
+
+    it("la respuesta dice qué sucursal usó: id, nombre y si está abierta, sea la elegida o la única", async () => {
+      const elegida = await listarCon({ sucursalesActivas: [A, B] }, B);
+      expect(exito(elegida.resultado).sucursal).toEqual({
+        id: B,
+        nombre: nombreDe(B),
+        activa: true,
+      });
+      const unica = await listarCon({ sucursalesActivas: [A], sucursalesCerradas: [C] }, null);
+      expect(exito(unica.resultado).sucursal).toEqual({ id: A, nombre: nombreDe(A), activa: true });
+    });
+
+    it("el nombre y si está abierta salen de la MISMA lectura de sucursales que la verifica: una sola, sea cual sea la página", async () => {
+      const { consultas, llamadas } = armar({
+        sucursalesActivas: [A, B],
+        pagina: { filas: [fila(1), fila(2), fila(3)], hayMas: false },
+      });
+      exito(await consultas.listarComprobantes(contexto(), { sucursalElegida: B }));
+      expect(llamadas.sucursales).toEqual([[contexto().empresaId]]);
+    });
+
+    it("una sucursal CERRADA se informa como no activa, con su nombre (D-37)", async () => {
+      const r = await listarCon({ sucursalesActivas: [A], sucursalesCerradas: [C] }, C);
+      expect(exito(r.resultado).sucursal).toEqual({ id: C, nombre: nombreDe(C), activa: false });
     });
 
     it("con varias a elegir y sin elección, SUCURSAL_NO_ELEGIDA y no lee ningún comprobante", async () => {
@@ -476,6 +516,7 @@ describe("listarComprobantes", () => {
         id: fila(1).id,
         tipo: "FACTURA_B",
         numero: null,
+        puntoDeVentaNumero: 3,
         fecha: "2026-10-13",
         receptorNombre: null,
         receptorDocumento: { tipo: "SIN_IDENTIFICAR" },
@@ -488,6 +529,7 @@ describe("listarComprobantes", () => {
         id: fila(2).id,
         tipo: "FACTURA_B",
         numero: "00003-00000002",
+        puntoDeVentaNumero: 3,
         fecha: "2026-10-13",
         receptorNombre: "Cliente 2",
         receptorDocumento: { tipo: "DNI", numero: "30000002" },

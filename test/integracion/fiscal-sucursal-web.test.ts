@@ -9,6 +9,7 @@ import {
   emitirNotaDeCredito,
   emitirNotaDeDebito,
   listarComprobantes,
+  listarPuntosDeVentaDeLaSucursal,
   verComprobante,
   type DependenciasDeFacturacionWeb,
 } from "../../src/composicion/facturacion-web";
@@ -163,6 +164,13 @@ describe.skipIf(base === null)("la sucursal de los comprobantes y del listado y 
         [id],
       )
     )[0]?.sucursal_id;
+  const puntoDeVentaIdDe = async (e: EscenarioDeCasos, numero: number) =>
+    (
+      await filas<{ id: string }>(
+        "select id from punto_de_venta where empresa_id = $1 and numero = $2",
+        [e.empresa, numero],
+      )
+    )[0]?.id as string;
   const mudar = (pv: string, sucursal: string) =>
     dueno.query("update punto_de_venta set sucursal_id = $2 where id = $1", [pv, sucursal]);
 
@@ -524,6 +532,54 @@ describe.skipIf(base === null)("la sucursal de los comprobantes y del listado y 
       expect(await listaDe(e, randomUUID())).toMatchObject(FUERA);
     });
 
+    it("la respuesta dice qué sucursal usó (id, nombre y si está cerrada) y cada fila trae el número de su punto de venta como dato", async () => {
+      const e = await empresaConFacturacion();
+      const norte = await sucursalNueva(e, "Norte");
+      const pvNorte = await puntoDeVentaEn(e, norte, 9);
+      await emitirYValidar(e);
+      await emitirYValidar(e, facturaCruda(e, { puntoDeVentaId: pvNorte }));
+      const nombreCentro = (
+        await filas<{ nombre: string }>("select nombre from sucursal where id = $1", [e.sucursal])
+      )[0]?.nombre;
+
+      const enCentro = await listaDe(e, e.sucursal);
+      const enNorte = await listaDe(e, norte);
+      if (!enCentro.ok || !enNorte.ok) throw new Error("no listó");
+      expect(enCentro.dato.sucursal).toEqual({
+        id: e.sucursal,
+        nombre: nombreCentro,
+        activa: true,
+      });
+      expect(enNorte.dato.sucursal).toEqual({ id: norte, nombre: "Norte", activa: true });
+      expect(enCentro.dato.items.map((i) => i.puntoDeVentaNumero)).toEqual([e.pvNumero]);
+      expect(enNorte.dato.items.map((i) => i.puntoDeVentaNumero)).toEqual([9]);
+      // Sin elegir, la única abierta se toma sola y la respuesta dice cuál fue.
+      const sola = await listaDe(await empresaConFacturacion(), null);
+      expect(sola).toMatchObject({ ok: true, dato: { sucursal: { activa: true } } });
+      // La respuesta lleva solo esos tres datos de la sucursal.
+      expect(Object.keys(enNorte.dato.sucursal).sort()).toEqual(["activa", "id", "nombre"]);
+
+      await cerrar(norte);
+      expect(await listaDe(e, norte)).toMatchObject({
+        ok: true,
+        dato: { sucursal: { id: norte, nombre: "Norte", activa: false } },
+      });
+    });
+
+    it("el operador recibe la sucursal que tiene asignada con su nombre, y la que no tiene sigue siendo FUERA DE ALCANCE sin revelar su nombre", async () => {
+      const e = await empresaConFacturacion();
+      const norte = await sucursalNueva(e, "Norte reservada");
+      const asignada = await persona(e, "OPERADOR", [e.sucursal]);
+      const lista = await listaDe(e, e.sucursal, asignada);
+      expect(lista).toMatchObject({ ok: true, dato: { sucursal: { id: e.sucursal } } });
+      const ajena = await listaDe(e, norte, asignada);
+      expect(ajena).toMatchObject(FUERA);
+      expect(JSON.stringify(ajena)).not.toContain("Norte reservada");
+      const sinNinguna = await listaDe(e, null, await persona(e, "OPERADOR"));
+      expect(sinNinguna).toMatchObject(FUERA);
+      expect(JSON.stringify(sinNinguna)).not.toContain("Norte reservada");
+    });
+
     it("aislamiento entre empresas: con la misma sucursal «elegida» nunca aparece un comprobante de otra empresa", async () => {
       const a = await empresaConFacturacion();
       const b = await empresaConFacturacion();
@@ -532,6 +588,125 @@ describe.skipIf(base === null)("la sucursal de los comprobantes y del listado y 
       expect(await idsDeLaLista(a, a.sucursal)).toEqual([deA]);
       expect(await idsDeLaLista(b, b.sucursal)).toEqual([deB]);
       expect(await listaDe(a, b.sucursal)).toMatchObject(FUERA);
+    });
+  });
+
+  // ===============================================================================================
+  // Los puntos de venta de la sucursal (el filtro «Punto de venta» del listado, D-6 y D-18)
+  // ===============================================================================================
+  describe("los puntos de venta de la sucursal", () => {
+    const pvsDe = (e: EscenarioDeCasos, elegida: string | null, ctx = comoGerente(e)) =>
+      listarPuntosDeVentaDeLaSucursal(d, ctx, elegida === null ? null : sucursalId(elegida));
+    const numeros = async (e: EscenarioDeCasos, elegida: string | null, ctx = comoGerente(e)) => {
+      const r = await pvsDe(e, elegida, ctx);
+      if (!r.ok) throw new Error(`no listó: ${JSON.stringify(r.error)}`);
+      return r.dato.items.map((i) => i.numero);
+    };
+
+    it("trae solo los ACTIVOS de la sucursal pedida, de menor a mayor, sin los inactivos ni los de otra sucursal", async () => {
+      const e = await empresaConFacturacion();
+      const norte = await sucursalNueva(e, "Norte");
+      await puntoDeVentaEn(e, e.sucursal, 30);
+      await puntoDeVentaEn(e, e.sucursal, 12);
+      await crearPuntoDeVenta(dueno, e, { numero: 21, sucursal: e.sucursal, activo: false });
+      await puntoDeVentaEn(e, norte, 40);
+      expect(await numeros(e, e.sucursal)).toEqual([e.pvNumero, 12, 30].sort((a, b) => a - b));
+      expect(await numeros(e, norte)).toEqual([40]);
+      // Si el punto de venta se muda de sucursal, el filtro lo sigue.
+      await mudar(await puntoDeVentaIdDe(e, 12), norte);
+      expect(await numeros(e, norte)).toEqual([12, 40]);
+      expect(await numeros(e, e.sucursal)).toEqual([e.pvNumero, 30].sort((a, b) => a - b));
+    });
+
+    it("la respuesta lleva solo el número de cada punto de venta (el formato de 5 dígitos lo pone la pantalla)", async () => {
+      const e = await empresaConFacturacion();
+      const r = await pvsDe(e, e.sucursal);
+      expect(r).toEqual({ ok: true, dato: { items: [{ numero: e.pvNumero }] } });
+    });
+
+    it("la sucursal se resuelve en el servidor con la regla del listado: sin elegir, una abierta se toma sola; con varias, hay que elegir", async () => {
+      const e = await empresaConFacturacion();
+      expect(await numeros(e, null)).toEqual([e.pvNumero]);
+      // Las cerradas no cuentan para «una sola».
+      await sucursalNueva(e, "Cerrada", false);
+      expect(await numeros(e, null)).toEqual([e.pvNumero]);
+      await sucursalNueva(e, "Otra");
+      expect(await pvsDe(e, null)).toMatchObject(NO_ELEGIDA);
+      expect(await numeros(e, e.sucursal)).toEqual([e.pvNumero]);
+    });
+
+    it("una sucursal cerrada se puede pedir (D-37) y, sin puntos de venta activos, da una lista vacía; no es un error", async () => {
+      const e = await empresaConFacturacion();
+      const vieja = await sucursalNueva(e, "Vieja");
+      await puntoDeVentaEn(e, vieja, 50);
+      await cerrar(vieja);
+      await dueno.query("update punto_de_venta set estado = 'INACTIVO' where sucursal_id = $1", [
+        vieja,
+      ]);
+      expect(await pvsDe(e, vieja)).toEqual({ ok: true, dato: { items: [] } });
+    });
+
+    it("el operador con sucursal asignada pide la suya; la ajena, o ninguna asignada, es FUERA DE ALCANCE y no devuelve números", async () => {
+      const e = await empresaConFacturacion();
+      const norte = await sucursalNueva(e, "Norte");
+      await puntoDeVentaEn(e, norte, 77);
+      const conAsignada = await persona(e, "OPERADOR", [e.sucursal]);
+      expect(await numeros(e, e.sucursal, conAsignada)).toEqual([e.pvNumero]);
+      expect(await numeros(e, null, conAsignada)).toEqual([e.pvNumero]);
+      const ajena = await pvsDe(e, norte, conAsignada);
+      expect(ajena).toMatchObject(FUERA);
+      expect(JSON.stringify(ajena)).not.toContain("77");
+      const sinAsignaciones = await persona(e, "OPERADOR");
+      expect(await pvsDe(e, null, sinAsignaciones)).toMatchObject(FUERA);
+      expect(await pvsDe(e, e.sucursal, sinAsignaciones)).toMatchObject(FUERA);
+    });
+
+    it("el administrador y el gerente piden cualquiera de su empresa; una sucursal de otra empresa, inexistente o mal formada es FUERA DE ALCANCE", async () => {
+      const a = await empresaConFacturacion();
+      const b = await empresaConFacturacion();
+      await puntoDeVentaEn(b, b.sucursal, 88);
+      const administrador = await persona(a, "ADMINISTRADOR");
+      expect(await numeros(a, a.sucursal, administrador)).toEqual([a.pvNumero]);
+      for (const ctx of [comoGerente(a), administrador]) {
+        for (const elegida of [b.sucursal, randomUUID(), "no-es-un-uuid", "' or 1=1 --"]) {
+          const r = await pvsDe(a, elegida, ctx);
+          expect(r, elegida).toMatchObject(FUERA);
+          expect(JSON.stringify(r), elegida).not.toContain("88");
+        }
+      }
+    });
+
+    it("aislamiento entre empresas: con el mismo número de punto de venta en dos empresas, cada una ve solo el suyo", async () => {
+      const a = await empresaConFacturacion();
+      const b = await empresaConFacturacion();
+      await puntoDeVentaEn(a, a.sucursal, 61);
+      await puntoDeVentaEn(b, b.sucursal, 61);
+      await puntoDeVentaEn(b, b.sucursal, 62);
+      expect(await numeros(a, a.sucursal)).toEqual([a.pvNumero, 61].sort((x, y) => x - y));
+      expect(await numeros(b, b.sucursal)).toEqual([b.pvNumero, 61, 62].sort((x, y) => x - y));
+    });
+
+    it("sin membresía en la empresa no se accede a nada (sin membresía no hay módulos: el guard rechaza primero por el módulo), y la persona de otra empresa tampoco con el contexto de esta", async () => {
+      const a = await empresaConFacturacion();
+      const b = await empresaConFacturacion("GERENTE");
+      const ajeno = await crearPersonaDeBase(dueno);
+      const sinMembresia = {
+        ...comoEmpresa(empresaId(a.empresa), personaId(ajeno.id)),
+        ahora: new Date(),
+      };
+      expect(await pvsDe(a, a.sucursal, sinMembresia)).toMatchObject({
+        ok: false,
+        error: { codigo: "MODULO_NO_ACTIVO" },
+      });
+      // El gerente de B, con el contexto de A (membresía que no tiene en A).
+      const deOtraEmpresa = {
+        ...comoEmpresa(empresaId(a.empresa), personaId(b.persona)),
+        ahora: new Date(),
+      };
+      expect(await pvsDe(a, a.sucursal, deOtraEmpresa)).toMatchObject({
+        ok: false,
+        error: { codigo: "MODULO_NO_ACTIVO" },
+      });
     });
   });
 
