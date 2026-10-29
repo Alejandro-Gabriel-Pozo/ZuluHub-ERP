@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { errorDeCodigo } from "../../src/capacidades/experiencia/respuesta";
+import { texto } from "../../src/capacidades/vocabulario/vocabulario";
+import { traducirErrorFiscal } from "../../src/composicion/errores-fiscales";
 import { FILTROS_POR_DEFECTO } from "../../apps/web/ui/plantillas/facturacion/filtros-del-listado";
 import {
   armarElListado,
@@ -143,10 +145,24 @@ describe("la elección de sucursal", () => {
     expect(armarLaEleccionDeSucursal([SUCURSALES[1]], "")?.opciones).toHaveLength(1);
   });
 
+  it("D-37: con una sola y cerrada, ya elegida, el selector sigue y la marca «Cerrada» se ve", () => {
+    const e = armarLaEleccionDeSucursal([SUCURSALES[1]], "s-norte");
+    expect(e).not.toBeNull();
+    expect(e?.elegida).toBe("s-norte");
+    expect(e?.opciones).toEqual([{ valor: "s-norte", etiqueta: "Norte · Cerrada" }]);
+    expect(e?.invitacion).toBeNull();
+  });
+
   it("sin ninguna que elegir, nada", () => {
     expect(armarLaEleccionDeSucursal([], "")).toBeNull();
   });
 });
+
+/** El error del listado tal como sale del traductor real de un criterio inválido de la consulta, ya pasado por la pantalla. */
+const filtroInvalido = (criterio: string) => {
+  const { campo } = traducirErrorFiscal(criterio) as { campo: string };
+  return errorParaElListado({ ...errorDeCodigo("FISCAL_FILTRO_INVALIDO"), campo });
+};
 
 describe("el error de la lista", () => {
   it("un error inesperado dice «No pudimos cargar la lista…» y conserva la referencia", () => {
@@ -154,6 +170,26 @@ describe("el error de la lista", () => {
     const e = errorParaElListado(inesperado);
     expect(e.clave).toBe("fiscal.pantalla.listado_error");
     expect(e.referencia).toBe("PD-ABC123");
+  });
+
+  it("fechas invertidas (guía §4.6): «La fecha «desde» es posterior a «hasta».»", () => {
+    // El error sale del traductor real: el campo `hasta` es el que lo distingue de otro filtro inválido.
+    expect(traducirErrorFiscal("FECHAS_INVERTIDAS")).toEqual({
+      codigo: "FISCAL_FILTRO_INVALIDO",
+      campo: "hasta",
+    });
+    const e = filtroInvalido("FECHAS_INVERTIDAS");
+    expect(texto({}, e.clave)).toBe("La fecha «desde» es posterior a «hasta».");
+  });
+
+  it("texto demasiado largo (guía §4.6): «Buscá con menos letras.»", () => {
+    const e = filtroInvalido("TEXTO_DEMASIADO_LARGO");
+    expect(texto({}, e.clave)).toBe("Buscá con menos letras.");
+  });
+
+  it("otro filtro inválido conserva el texto general", () => {
+    const e = filtroInvalido("LETRA_INVALIDA");
+    expect(texto({}, e.clave)).toBe("Los filtros del listado no son válidos.");
   });
 
   it.each([

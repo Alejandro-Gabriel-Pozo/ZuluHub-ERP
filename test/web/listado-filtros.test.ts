@@ -48,8 +48,8 @@ describe("leer los filtros de la dirección", () => {
 
   it.each([
     ["periodo", "ayer"],
-    ["estado", "DESCARTADO"],
-    ["estado", "PENDIENTE"],
+    ["estado", "INVENTADO"],
+    ["estado", "autorizado"],
     ["letra", "Z"],
     ["letra", "a"],
     ["puntoDeVenta", "1a"],
@@ -82,11 +82,19 @@ describe("leer los filtros de la dirección", () => {
 });
 
 describe("los estados del filtro son estados que la consulta conoce", () => {
-  it("cada uno es un estado de la consulta (y no el descartado, que el listado oculta)", () => {
+  it("D-52: son los siete estados de la consulta, cada uno una vez", () => {
     for (const estado of ESTADOS_DEL_FILTRO) {
       expect(ESTADOS_DE_COMPROBANTE_ARCA as readonly string[]).toContain(estado);
     }
-    expect(ESTADOS_DEL_FILTRO as readonly string[]).not.toContain("DESCARTADO");
+    expect(ESTADOS_DEL_FILTRO).toHaveLength(7);
+    expect(new Set(ESTADOS_DEL_FILTRO).size).toBe(7);
+    expect([...ESTADOS_DEL_FILTRO].sort()).toEqual([...ESTADOS_DE_COMPROBANTE_ARCA].sort());
+  });
+
+  it("cada uno de los siete viaja por la dirección y vuelve igual", () => {
+    for (const estado of ESTADOS_DEL_FILTRO) {
+      expect(leerLosFiltros({ estado }).estado).toBe(estado);
+    }
   });
 });
 
@@ -196,6 +204,9 @@ describe("los filtros armados para el formulario", () => {
       "Validando",
       "Confirmando",
       "Rechazada",
+      "Pendiente de enviar",
+      "Requiere revisión",
+      "Descartada",
     ]);
     expect(f.letras.map((o) => o.etiqueta)).toEqual(["Factura A", "Factura B", "Factura C"]);
     expect(f.puntosDeVenta).toEqual([

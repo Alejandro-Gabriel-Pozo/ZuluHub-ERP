@@ -86,7 +86,7 @@ function filaDe(d: DiccionarioResuelto, r: ResumenParaMostrar): FilaArmada {
     href: direccionDelDetalle(r.id),
     comprobante: nombreDe(d, r.tipo, r.numero),
     fecha: formatearFecha(r.fecha),
-    // PROTO-LISTADO: sin nombre, «Consumidor final».
+    // Sin nombre, «Consumidor final» (contrato, D-24: el cliente se carga a mano o es «Consumidor final»).
     cliente: r.receptorNombre ?? texto(d, "fiscal.pantalla.consumidor_final"),
     documento:
       documentoDe(d, r.receptorDocumento) ?? texto(d, "fiscal.pantalla.listado_sin_documento"),
@@ -139,9 +139,9 @@ export type EleccionDeSucursalArmada = Readonly<{
 }>;
 
 /**
- * El selector de sucursal. Con una sola, que el servidor ya tomó, no hay nada que elegir (D-36: «si hay una sola, se elige
- * sola»): `null`. Una sola CERRADA no se toma sola (solo cuentan las abiertas): ahí sí se muestra, para elegirla. Una cerrada se
- * puede elegir y se marca como tal (D-37). `elegida` es la sucursal con la que está trabajando el listado (`""` si ninguna): la
+ * El selector de sucursal. Con una sola ABIERTA, que el servidor ya tomó, no hay nada que elegir (D-36: «si hay una sola, se elige
+ * sola»): `null`. Una sola CERRADA no se toma sola (solo cuentan las abiertas): ahí sí se muestra, para elegirla, y se sigue
+ * mostrando una vez elegida para que la marca «Cerrada» no se pierda (D-37: «aparece marcada como cerrada», dueño, 2026-10-28). `elegida` es la sucursal con la que está trabajando el listado (`""` si ninguna): la
  * invitación a elegir va solo en ese caso.
  */
 export function armarLaEleccionDeSucursal(
@@ -149,7 +149,10 @@ export function armarLaEleccionDeSucursal(
   elegida: string,
   d: DiccionarioResuelto = {},
 ): EleccionDeSucursalArmada | null {
-  if (sucursales.length === 0 || (sucursales.length === 1 && elegida !== "")) return null;
+  // Una sola ABIERTA y ya en uso: nada que elegir. Una sola CERRADA sigue mostrándose: el selector es lo que lleva la marca «Cerrada» (D-37).
+  if (sucursales.length === 0) return null;
+  const [unica] = sucursales;
+  if (sucursales.length === 1 && unica?.activa === true && elegida !== "") return null;
   return {
     rotulo: texto(d, "fiscal.pantalla.listado_rotulo_sucursal"),
     aplicar: texto(d, "fiscal.pantalla.listado_aplicar"),
@@ -171,5 +174,17 @@ export function armarLaEleccionDeSucursal(
  * referencia `PD-…`; el resto (sin permiso, módulo en desarrollo, sesión vencida, filtros inválidos, sucursal fuera de alcance)
  * conserva su texto del catálogo. `NO_DISPONIBLE` también es inesperado pero tiene su texto propio («probá en unos minutos»).
  */
-export const errorParaElListado = (error: ErrorPublico): ErrorPublico =>
-  error.codigo === "ERROR_INTERNO" ? { ...error, clave: "fiscal.pantalla.listado_error" } : error;
+export function errorParaElListado(error: ErrorPublico): ErrorPublico {
+  if (error.codigo === "ERROR_INTERNO") return { ...error, clave: "fiscal.pantalla.listado_error" };
+  if (error.codigo === "FISCAL_FILTRO_INVALIDO") {
+    // El campo lo pone `CAMPO_DE_CRITERIO` de `src/composicion/errores-fiscales.ts`: `hasta` es solo `FECHAS_INVERTIDAS`, `texto` es solo
+    // `TEXTO_DEMASIADO_LARGO`. Cualquier otro filtro inválido conserva el texto general.
+    if (error.campo === "hasta") {
+      return { ...error, clave: "fiscal.pantalla.listado_error_fechas_invertidas" };
+    }
+    if (error.campo === "texto") {
+      return { ...error, clave: "fiscal.pantalla.listado_error_texto_demasiado_largo" };
+    }
+  }
+  return error;
+}

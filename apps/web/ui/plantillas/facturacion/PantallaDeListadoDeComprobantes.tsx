@@ -29,7 +29,7 @@ function Estados({ fila }: Readonly<{ fila: FilaArmada }>) {
   );
 }
 
-/** 6A: en el celular, una tarjeta por comprobante; toda la tarjeta es el enlace al detalle. */
+/** 6A: en el celular, una tarjeta por comprobante (cliente, documento, comprobante y fecha: D-53); toda la tarjeta es el enlace al detalle. */
 function Tarjetas({ filas }: Readonly<{ filas: readonly FilaArmada[] }>) {
   return (
     <ul className={estilos["tarjetas"]}>
@@ -38,6 +38,7 @@ function Tarjetas({ filas }: Readonly<{ filas: readonly FilaArmada[] }>) {
           <a className={estilos["tarjeta"]} href={fila.href}>
             <span className={estilos["datos"]}>
               <span className={estilos["cliente"]}>{fila.cliente}</span>
+              <span className={estilos["secundario"]}>{fila.documento}</span>
               <span className={estilos["secundario"]}>
                 {fila.comprobante} · {fila.fecha}
               </span>
@@ -110,7 +111,8 @@ export function PantallaDeListadoDeComprobantes({
   return (
     <div className={estilos["raiz"]}>
       {eleccionDeSucursal === null ? null : (
-        <div className={estilos["sucursal"]}>
+        // Con nombre («Sucursal»), para que su «Ver comprobantes» no se confunda con el de los filtros (que está en la búsqueda «Filtros»).
+        <div className={estilos["sucursal"]} role="group" aria-label={eleccionDeSucursal.rotulo}>
           <EleccionDeSucursal eleccion={eleccionDeSucursal} accion={accionDeSucursal} />
         </div>
       )}

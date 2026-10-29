@@ -20,8 +20,10 @@ import { marcaComercialId } from "../../../src/primitivas/identificadores/marca"
 import {
   COOKIE_DE_EMPRESA,
   COOKIE_DE_INVITACION,
+  COOKIE_DE_SUCURSAL,
   OPCIONES_DE_COOKIE_DE_EMPRESA,
   OPCIONES_DE_COOKIE_DE_INVITACION,
+  OPCIONES_DE_COOKIE_DE_SUCURSAL,
   aplicarCookies,
 } from "./cookies";
 import { exigirPuerta } from "./pedido";
@@ -137,6 +139,9 @@ async function terminarSesion(): Promise<Respuesta<null>> {
     // La próxima persona que use este celular no hereda la empresa ni la invitación de esta.
     almacen.delete(COOKIE_DE_EMPRESA);
     almacen.delete(COOKIE_DE_INVITACION);
+    // Tampoco la sucursal del listado (D-34). Se vence con los MISMOS atributos con que se fijó: una cookie `__Host-` exige `Secure`
+    // y `delete(nombre)` no lo manda, así que el navegador podría no aceptar el borrado.
+    almacen.set(COOKIE_DE_SUCURSAL, "", { ...OPCIONES_DE_COOKIE_DE_SUCURSAL, maxAge: 0 });
     return { ok: true, dato: null };
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta);

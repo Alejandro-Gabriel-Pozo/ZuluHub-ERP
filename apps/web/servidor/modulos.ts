@@ -18,7 +18,7 @@ export function destinosDeModulos(): readonly DestinoDeModulo[] {
     {
       clave: "comprobantes",
       href: RUTA_DEL_LISTADO,
-      // PROTO-LISTADO: el título «Comprobantes».
+      // PROPUESTA sin fuente verificable, pendiente del dueño: el título «Comprobantes» (ver el catálogo).
       etiqueta: texto({}, "fiscal.pantalla.listado_titulo"),
       icono: "comprobantes",
     },

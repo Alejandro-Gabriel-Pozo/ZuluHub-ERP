@@ -372,11 +372,21 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       conSesionDe(yo, HOST_A);
       estado.jar.set("__Host-pd_empresa", "una-empresa");
       estado.jar.set("__Host-pd_invitacion", "un-token");
+      estado.jar.set("__Host-pd_sucursal", "una-sucursal");
       comoNavegador(HOST_A);
       expect(await filasDeSesion(yo)).toBe(1);
       expect(await redirigeA(() => acciones.cerrarLaSesion())).toBe("/ingreso");
       expect(await filasDeSesion(yo)).toBe(0);
       expect(estado.borrados.sort()).toEqual(["__Host-pd_empresa", "__Host-pd_invitacion"]);
+      // La sucursal del listado también se vence, con los atributos con que se fijó (un `__Host-` exige `Secure`).
+      const sucursal = estado.escrituras.find((x) => x.nombre === "__Host-pd_sucursal");
+      expect(sucursal?.valor).toBe("");
+      expect(sucursal?.opciones).toMatchObject({
+        maxAge: 0,
+        secure: true,
+        path: "/",
+        httpOnly: true,
+      });
       // La cookie de sesión se escribió vacía y vencida (el navegador la borra).
       const sesion = estado.escrituras.find((x) => x.nombre.endsWith("session_token"));
       expect(sesion?.valor).toBe("");

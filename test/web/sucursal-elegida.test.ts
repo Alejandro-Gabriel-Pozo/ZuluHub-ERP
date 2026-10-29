@@ -115,7 +115,6 @@ describe("elegir la sucursal (la acción)", () => {
 
   it.each([
     ["una sucursal que no es de su alcance", AJENA],
-    ["vacío (no eligió ninguna)", ""],
     ["un texto cualquiera", "todas"],
     ["un valor con espacios", ` ${CENTRO}`],
   ])("%s: error de sucursal fuera de alcance y no escribe nada", async (_n, id) => {
@@ -126,10 +125,13 @@ describe("elegir la sucursal (la acción)", () => {
     expect(mundo.escrituras).toEqual([]);
   });
 
-  it("sin el campo del formulario, lo mismo", async () => {
+  it.each([
+    ["en blanco (envió el selector sin elegir)", ""],
+    ["sin el campo del formulario", undefined],
+  ])("%s: «sucursal no elegida» (no «fuera de alcance») y no escribe nada", async (_n, id) => {
     const { elegirLaSucursal } = await import("../../apps/web/servidor/facturacion");
-    expect(await elegirLaSucursal(formulario())).toEqual({
-      error: conCodigo("FISCAL_SUCURSAL_FUERA_DE_ALCANCE"),
+    expect(await elegirLaSucursal(formulario(id))).toEqual({
+      error: conCodigo("FISCAL_SUCURSAL_NO_ELEGIDA"),
     });
     expect(mundo.escrituras).toEqual([]);
   });

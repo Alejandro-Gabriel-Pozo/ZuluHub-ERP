@@ -26,7 +26,13 @@ export function FormularioDeFiltros({ filtros }: PropsDeFormularioDeFiltros) {
   const [puntoDeVenta, setPuntoDeVenta] = useState(valores.puntoDeVenta);
   const [buscar, setBuscar] = useState(valores.texto);
   return (
-    <form method="get" action={filtros.accion} role="search" className={estilos["formulario"]}>
+    <form
+      method="get"
+      action={filtros.accion}
+      role="search"
+      aria-label={textos.filtros}
+      className={estilos["formulario"]}
+    >
       <div className={estilos["buscar"]}>
         <Campo
           etiqueta={textos.buscar}

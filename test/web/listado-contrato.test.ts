@@ -62,6 +62,9 @@ describe("prueba de contrato: lo que está", () => {
       "Validando",
       "Confirmando",
       "Rechazada",
+      "Pendiente de enviar",
+      "Requiere revisión",
+      "Descartada",
       "Letra",
       "Todas",
       "Factura A",
@@ -122,6 +125,31 @@ describe("prueba de contrato: lo que está", () => {
     }
   });
 
+  it("los dos «Ver comprobantes» se distinguen: uno dentro del grupo «Sucursal», el otro en la búsqueda «Filtros (n)»", () => {
+    expect(marcado).toMatch(/role="group"[^>]*aria-label="Sucursal"/);
+    expect(marcado).toMatch(/role="search"[^>]*aria-label="Filtros \(0\)"/);
+    const delGrupo = /aria-label="Sucursal">([\s\S]*?)<\/form>/.exec(marcado)?.[1] ?? "";
+    expect(delGrupo).toContain("Ver comprobantes");
+    expect(delGrupo).not.toContain('name="periodo"');
+  });
+
+  it("D-53: la tarjeta del celular lleva nombre, documento, número de comprobante y fecha", () => {
+    const tarjetas = /<ul[^>]*>([\s\S]*?)<\/ul>/.exec(marcado)?.[1] ?? "";
+    const delCliente = visible(tarjetas);
+    for (const esperado of [
+      "Distribuidora Sur SA",
+      "CUIT 30-71234567-8",
+      "Factura A",
+      "13/10/2026",
+      "Juan Pérez",
+      "DNI 27.345.678",
+      "Factura B 00001-00001234",
+      "14/10/2026",
+    ]) {
+      expect(delCliente, esperado).toContain(esperado);
+    }
+  });
+
   it("tocar una fila (tarjeta o tabla) abre el detalle con un enlace real", () => {
     const enlaces = [
       ...marcado.matchAll(/<a[^>]*href="(\/facturacion\/comprobantes\/[^"]+)"/g),
@@ -169,6 +197,8 @@ describe("prueba de contrato: lo que está", () => {
     );
     expect(visible(sinElegir)).toContain("Elegí una sucursal para ver sus comprobantes.");
     expect(sinElegir).toContain('name="sucursalId"');
+    // El selector en blanco es obligatorio: el navegador no deja enviarlo sin elegir.
+    expect(/<select[^>]*>/.exec(sinElegir)?.[0]).toContain("required");
     expect(sinElegir).not.toContain('name="periodo"');
     expect(sinElegir).not.toContain("<table");
   });

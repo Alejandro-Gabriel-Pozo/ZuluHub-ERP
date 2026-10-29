@@ -22,8 +22,19 @@ export const direccionDelDetalle = (id: string): string => `${RUTA_DEL_LISTADO}/
 const PERIODOS = ["hoy", "7dias", "mes", "todo", "personalizado"] as const;
 type Periodo = (typeof PERIODOS)[number];
 
-/** Los estados que ofrece el filtro (CONTRATO: Autorizada, Validando, Confirmando, Rechazada), con el nombre que usa la consulta. */
-export const ESTADOS_DEL_FILTRO = ["AUTORIZADO", "EN_VALIDACION", "INCIERTO", "RECHAZADO"] as const;
+/**
+ * Los siete estados que ofrece el filtro, con el nombre que usa la consulta (que acepta los siete). Fuente: D-52 de
+ * `facturador-contratos-de-pantalla.md`, confirmada por el dueño el 2026-10-29: el filtro ofrece «Todos» y los siete estados.
+ */
+export const ESTADOS_DEL_FILTRO = [
+  "AUTORIZADO",
+  "EN_VALIDACION",
+  "INCIERTO",
+  "RECHAZADO",
+  "PENDIENTE",
+  "CONFLICTO",
+  "DESCARTADO",
+] as const;
 type EstadoDelFiltro = (typeof ESTADOS_DEL_FILTRO)[number];
 
 const LETRAS_DEL_FILTRO = ["A", "B", "C"] as const;
@@ -106,7 +117,7 @@ export function leerLaPagina(params: ParametrosDeLaDireccion): string | null {
   return valor === "" ? null : valor;
 }
 
-/** Cuántos filtros del panel se apartan del valor por defecto: lo que dice «Filtros (n)». La búsqueda queda afuera, como en el prototipo. */
+/** Cuántos filtros del panel se apartan del valor por defecto: lo que dice «Filtros (n)». La búsqueda queda afuera: no es un filtro del panel «Filtros (n)». */
 export function cantidadDeFiltrosActivos(filtros: FiltrosDelListado): number {
   return [
     filtros.periodo !== FILTROS_POR_DEFECTO.periodo,
@@ -174,6 +185,9 @@ const CLAVE_DE_ESTADO_DEL_FILTRO = {
   EN_VALIDACION: "fiscal.pantalla.estado_en_validacion",
   INCIERTO: "fiscal.pantalla.estado_incierto",
   RECHAZADO: "fiscal.pantalla.estado_rechazado",
+  PENDIENTE: "fiscal.pantalla.estado_pendiente",
+  CONFLICTO: "fiscal.pantalla.estado_conflicto",
+  DESCARTADO: "fiscal.pantalla.estado_descartado",
 } as const satisfies Record<EstadoDelFiltro, Parameters<typeof texto>[1]>;
 
 export function armarLosFiltros(
@@ -206,7 +220,8 @@ export function armarLosFiltros(
       valor: e,
       etiqueta: texto(d, CLAVE_DE_ESTADO_DEL_FILTRO[e]),
     })),
-    // PROTO-LISTADO: «Factura A», «Factura B», «Factura C».
+    // Letra (CONTRATO-LISTADO: «Letra (Todas, A, B, C)»). PROPUESTA sin fuente verificable, pendiente del dueño: que cada opción se
+    // vea «Factura A», «Factura B», «Factura C» (el contrato dice solo A, B, C).
     letras: LETRAS_DEL_FILTRO.map((letra) => ({
       valor: letra,
       etiqueta: texto(d, "fiscal.pantalla.comprobante_sin_numero", {

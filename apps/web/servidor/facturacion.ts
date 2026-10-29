@@ -208,7 +208,11 @@ function fijarLaSucursal(datos: FormData): Promise<Respuesta<null>> {
     const lista = await sucursalesParaElegir(contexto);
     if (!lista.ok) return lista;
     const valor = datos.get("sucursalId");
-    const elegida = elegidaEntre(typeof valor === "string" ? valor : null, lista.dato);
+    // No eligió (el campo falta o viene en blanco): se lo dice como tal, no como un problema de permisos.
+    if (typeof valor !== "string" || valor === "") {
+      return { ok: false, error: errorDeCodigo("FISCAL_SUCURSAL_NO_ELEGIDA") } as const;
+    }
+    const elegida = elegidaEntre(valor, lista.dato);
     if (elegida === null) {
       return { ok: false, error: errorDeCodigo("FISCAL_SUCURSAL_FUERA_DE_ALCANCE") } as const;
     }
@@ -219,8 +223,8 @@ function fijarLaSucursal(datos: FormData): Promise<Respuesta<null>> {
 
 /**
  * «Ver comprobantes» de la sucursal elegida (D-34): guarda la elección en la cookie (abiertas o cerradas, D-37) y vuelve al listado
- * sin filtros (los puntos de venta son de la sucursal anterior). Una sucursal que no es de las que la persona puede elegir, o un
- * valor que no es una sucursal, es `FISCAL_SUCURSAL_FUERA_DE_ALCANCE` y no escribe nada. Se repite sin duplicar: elegir la misma
+ * sin filtros (los puntos de venta son de la sucursal anterior). Enviar sin elegir ninguna es `FISCAL_SUCURSAL_NO_ELEGIDA`; una sucursal
+ * que no es de las que la persona puede elegir, o un valor que no es una sucursal, es `FISCAL_SUCURSAL_FUERA_DE_ALCANCE`. Ninguna escribe nada. Se repite sin duplicar: elegir la misma
  * otra vez deja la misma cookie.
  */
 export async function elegirLaSucursal(datos: FormData): Promise<ResultadoDeAccion> {

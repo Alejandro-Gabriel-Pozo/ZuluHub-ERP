@@ -106,6 +106,31 @@ describe("la página del listado de comprobantes", () => {
     expect(t).toContain("Página siguiente");
   });
 
+  it("«Página siguiente» fija las fechas del período en el enlace (no se corren si pasa la medianoche)", async () => {
+    const marcado = await html({ estado: "RECHAZADO" });
+    const href = /<a[^>]*href="([^"]+)"[^>]*>Página siguiente/.exec(marcado)?.[1] ?? "";
+    const url = new URL(href.replace(/&amp;/g, "&"), "https://app.ejemplo.test");
+    expect(url.searchParams.get("periodo")).toBe("personalizado");
+    expect(url.searchParams.get("desde")).toBe("2026-10-01");
+    expect(url.searchParams.get("hasta")).toBe("2026-10-28");
+    expect(url.searchParams.get("estado")).toBe("RECHAZADO");
+    expect(url.searchParams.get("despues")).toBe(PAGINA.siguiente);
+
+    // Un minuto después de la medianoche (ya es el 29 en Argentina), la página siguiente pide el mismo rango.
+    vi.setSystemTime(new Date("2026-10-29T03:01:00Z"));
+    servidor.llamadas = [];
+    await html({ periodo: "personalizado", desde: "2026-10-01", hasta: "2026-10-28" });
+    expect(servidor.llamadas.map((l) => l.entrada)).toEqual([
+      { desde: "2026-10-01", hasta: "2026-10-28" },
+    ]);
+  });
+
+  it("sin puntos de venta reales del servidor, no se ofrece el filtro «Punto de venta» ni su columna", async () => {
+    const marcado = await html({ puntoDeVenta: "3" });
+    expect(marcado).not.toContain('name="puntoDeVenta"');
+    expect(await texto()).not.toContain("Punto de venta");
+  });
+
   it("la barra marca «Comprobantes» como el destino actual y no marca ningún otro", async () => {
     const marcado = await html();
     const actuales = [
@@ -129,7 +154,7 @@ describe("la página del listado de comprobantes", () => {
       texto: "Sur",
       despues: "2026-10-12T10:00:00.000000Z|0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b",
     });
-    await html({ periodo: "ayer", estado: "DESCARTADO", letra: "Z", puntoDeVenta: "x" });
+    await html({ periodo: "ayer", estado: "INVENTADO", letra: "Z", puntoDeVenta: "x" });
     expect(servidor.llamadas.map((l) => l.entrada)).toEqual([
       {
         desde: "2026-10-28",

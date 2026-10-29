@@ -10,9 +10,9 @@
  * CONTRATO = `facturador-contratos-de-pantalla.md`. Un texto que no figure literalmente en una de las tres no entra:
  * lo prueba `catalogo.test.ts` solo en lo que puede (sin código crudo); la cita es la que se revisa a mano.
  *
- * El listado suma dos fuentes más: PROTO-LISTADO = prototipo aprobado `Listado.dc.html` (tablero «Listado 6A + 6C», sin lo
- * marcado Exportar, Origen, Pago y Referencias) y MENSAJE-DUEÑO = lo que el dueño dijo con fecha. Un texto marcado PROPUESTA
- * no tiene fuente: es del carril web y espera la aprobación del dueño.
+ * El listado cita, además, CONTRATO-LISTADO = la sección «Contrato de la pantalla 1: Listado de comprobantes» del mismo contrato y
+ * MENSAJE-DUEÑO = lo que el dueño dijo con fecha. El prototipo `Listado.dc.html` NO es fuente. Un texto marcado «PROPUESTA sin
+ * fuente verificable, pendiente del dueño» no figura en ninguna fuente: es del carril web y espera la aprobación del dueño.
  */
 export const TEXTOS_DE_FISCAL_PANTALLAS = {
   // PROTO: <title>Comprobante</title>.
@@ -111,12 +111,13 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
   // Listado de comprobantes (6A celular + 6C escritorio, control de período A). CONTRATO: «6a+6c aprobado» (dueño, 2026-10-28).
   // ---------------------------------------------------------------------------------------------------------------------
 
-  // PROTO-LISTADO: encabezado «Comprobantes» (celular y escritorio). Es también el rótulo de la barra inferior.
+  // PROPUESTA sin fuente verificable, pendiente del dueño: el encabezado «Comprobantes» (celular y escritorio), que es también el
+  // rótulo de la barra inferior. (La guía §P3 la llama «Comprobantes emitidos»; el contrato, «Listado de comprobantes».)
   "fiscal.pantalla.listado_titulo": { porDefecto: "Comprobantes" },
 
-  // Rótulos de los filtros y de las columnas. PROTO-LISTADO: «Período», «Estado», «Letra», «Punto de venta» (ya está arriba:
-  // `rotulo_punto_de_venta`), «Nombre o CUIT» (el texto del campo de búsqueda; CONTRATO: Búsqueda «Nombre o CUIT»), y las
-  // columnas «Fecha», «Comprobante», «Cliente», «Documento», «Total» y «Estado».
+  // Rótulos de los filtros y de las columnas. CONTRATO-LISTADO, tabla de datos: «Período», «Estado», «Letra», «Punto de venta» (ya
+  // está arriba: `rotulo_punto_de_venta`), «Búsqueda "Nombre o CUIT"» (el texto del campo de búsqueda), y la fila «Por fila: fecha,
+  // comprobante (letra y número), cliente, documento, punto de venta, total, estado» (las columnas, con mayúscula inicial).
   "fiscal.pantalla.listado_rotulo_periodo": { porDefecto: "Período" },
   "fiscal.pantalla.listado_rotulo_estado": { porDefecto: "Estado" },
   "fiscal.pantalla.listado_rotulo_letra": { porDefecto: "Letra" },
@@ -124,8 +125,8 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
   "fiscal.pantalla.listado_rotulo_comprobante": { porDefecto: "Comprobante" },
   "fiscal.pantalla.listado_rotulo_documento": { porDefecto: "Documento" },
 
-  // Las opciones del período. PROTO-LISTADO: «Hoy», «Últimos 7 días», «Este mes», «Todo». CONTRATO: «Período (Hoy, Últimos 7 días,
-  // Este mes, Todo, Personalizado)».
+  // Las opciones del período. CONTRATO-LISTADO: «Período (Hoy, Últimos 7 días, Este mes, Todo, Personalizado)». «Últimos 7 días»
+  // incluye hoy (hoy y los 6 anteriores): D-54, confirmada por el dueño el 2026-10-29.
   "fiscal.pantalla.listado_periodo_hoy": { porDefecto: "Hoy" },
   "fiscal.pantalla.listado_periodo_ultimos_7_dias": { porDefecto: "Últimos 7 días" },
   "fiscal.pantalla.listado_periodo_este_mes": { porDefecto: "Este mes" },
@@ -137,11 +138,12 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
   "fiscal.pantalla.listado_rotulo_desde": { porDefecto: "Desde" },
   "fiscal.pantalla.listado_rotulo_hasta": { porDefecto: "Hasta" },
 
-  // «Sin filtrar» de las listas. PROTO-LISTADO: «Todos» (estado y punto de venta) y «Todas» (letra). CONTRATO: «Todos» / «Todas».
+  // «Sin filtrar» de las listas. CONTRATO-LISTADO: Estado «Todos», Punto de venta «Todos», Letra «Todas». El filtro de Estado
+  // ofrece «Todos» y los siete estados de D-25 (D-52, confirmada por el dueño el 2026-10-29).
   "fiscal.pantalla.listado_todos": { porDefecto: "Todos" },
   "fiscal.pantalla.listado_todas": { porDefecto: "Todas" },
 
-  // PROTO-LISTADO: el botón del celular «Filtros ({{activos}})» y «Limpiar». CONTRATO: «"Filtros (n)" y "Limpiar"».
+  // CONTRATO-LISTADO, «Acciones»: «"Filtros (n)" y "Limpiar"».
   "fiscal.pantalla.listado_filtros": {
     porDefecto: "Filtros ({cantidad})",
     marcadores: ["cantidad"],
@@ -151,8 +153,18 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
   // CONTRATO: paginación «Página siguiente».
   "fiscal.pantalla.listado_pagina_siguiente": { porDefecto: "Página siguiente" },
 
-  // CONTRATO, estados: vacío «No hay comprobantes con esos filtros. Probá con otro período o tocá «Limpiar».» (también PROTO-LISTADO,
-  // escritorio); error «No pudimos cargar la lista. Probá de nuevo.» más la referencia PD-… (la referencia es `error.referencia`).
+  // Filtro inválido en el listado. Fuente: guía `06-facturador-pantallas-y-mensajes.md` §4.6 (Consultas): `FECHAS_INVERTIDAS` «La fecha
+  // «desde» es posterior a «hasta».» y `TEXTO_DEMASIADO_LARGO` «Buscá con menos letras.».
+  "fiscal.pantalla.listado_error_fechas_invertidas": {
+    porDefecto: "La fecha «desde» es posterior a «hasta».",
+    largoMaximo: 120,
+  },
+  "fiscal.pantalla.listado_error_texto_demasiado_largo": {
+    porDefecto: "Buscá con menos letras.",
+    largoMaximo: 120,
+  },
+
+  // CONTRATO-LISTADO, «Estados»: vacío «No hay comprobantes con esos filtros. Probá con otro período o tocá «Limpiar».»; error «No pudimos cargar la lista. Probá de nuevo.» más la referencia PD-… (la referencia es `error.referencia`).
   "fiscal.pantalla.listado_vacio": {
     porDefecto: "No hay comprobantes con esos filtros. Probá con otro período o tocá «Limpiar».",
     largoMaximo: 160,
@@ -162,7 +174,7 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
     largoMaximo: 120,
   },
 
-  // PROTO-LISTADO: el documento de un consumidor final sin identificar se ve «—».
+  // PROPUESTA sin fuente verificable, pendiente del dueño: el documento de un consumidor final sin identificar se ve «—».
   "fiscal.pantalla.listado_sin_documento": { porDefecto: "—" },
 
   // PROPUESTA del carril web, pendiente de aprobación del dueño (no tienen fuente): el rótulo del selector de sucursal, la

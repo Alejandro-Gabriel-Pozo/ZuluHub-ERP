@@ -261,8 +261,12 @@ describe("listado de comprobantes en el celular (6A, tarjetas)", () => {
     await expect
       .element(page.getByText("Elegí una sucursal para ver sus comprobantes."))
       .toBeVisible();
-    await expect.element(page.getByLabelText("Sucursal")).toBeVisible();
-    const opciones = [...(page.getByLabelText("Sucursal").element() as HTMLSelectElement).options];
+    // «Sucursal» nombra el grupo y el selector: el selector se busca por su rol.
+    const selector = page.getByRole("combobox", { name: "Sucursal" });
+    await expect.element(selector).toBeVisible();
+    expect((selector.element() as HTMLSelectElement).required).toBe(true);
+    await expect.element(page.getByRole("group", { name: "Sucursal" })).toBeVisible();
+    const opciones = [...(selector.element() as HTMLSelectElement).options];
     expect(opciones.map((o) => o.textContent)).toEqual([
       "Elegí una sucursal",
       "Centro",

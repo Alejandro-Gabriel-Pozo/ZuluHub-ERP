@@ -32,6 +32,8 @@ export function EleccionDeSucursal({ eleccion, accion }: PropsDeEleccionDeSucurs
         valor={elegida}
         alCambiar={setElegida}
         opciones={eleccion.opciones}
+        // Sin elegir, el navegador no envía el formulario; el servidor lo vuelve a comprobar (`FISCAL_SUCURSAL_NO_ELEGIDA`).
+        requerido
         // Sin sucursal elegida, el selector arranca en blanco: tiene que elegir una (no se toma la primera).
         {...(eleccion.elegida === "" ? { textoDeElegir: eleccion.elegir } : {})}
       />

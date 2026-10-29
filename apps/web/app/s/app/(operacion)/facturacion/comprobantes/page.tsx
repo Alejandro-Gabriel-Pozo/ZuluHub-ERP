@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { pantallaDeOperacion } from "../../../../../../pantallas/operacion";
-import { entradaDelListado } from "../../../../../../pantallas/entrada-del-listado";
+import {
+  conElPeriodoFijo,
+  entradaDelListado,
+} from "../../../../../../pantallas/entrada-del-listado";
 import { cargarElListado } from "../../../../../../servidor/facturacion";
 import { ErrorDelDetalle } from "../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
 import {
@@ -49,7 +52,9 @@ export default async function PaginaDeListadoDeComprobantes({ searchParams }: Pr
           eleccionDeSucursal={armarLaEleccionDeSucursal(cargado.sucursales, cargado.efectiva)}
           accionDeSucursal={elegirSucursalAccion}
           filtros={sinSucursal ? null : armarLosFiltros(aplicados, cargado.puntosDeVenta)}
-          listado={pagina.ok ? armarElListado(pagina.dato, aplicados) : null}
+          listado={
+            pagina.ok ? armarElListado(pagina.dato, conElPeriodoFijo(aplicados, ahora)) : null
+          }
           error={
             pagina.ok || sinElegir ? null : (
               <ErrorDelDetalle error={errorParaElListado(pagina.error)} />
