@@ -138,7 +138,7 @@ describe("el certificado sin punto de venta activo (respuesta del dueño, 2026-1
 });
 
 describe("las tres filas de la lista", () => {
-  it("el orden y los textos aprobados; solo los puntos de venta llevan a su pantalla", () => {
+  it("el orden y los textos aprobados; datos fiscales y puntos de venta llevan a su pantalla", () => {
     const filas = armarLaLista(
       estado({ datos: "SIN_CARGAR", puntos: "SIN_PUNTOS", enUso: [], certificados: [] }),
     );
@@ -148,9 +148,7 @@ describe("las tres filas de la lista", () => {
       "Certificado de ARCA",
     ]);
     expect(filas.map((f) => f.href)).toEqual([
-      // Datos fiscales NO es un enlace hoy: su pantalla va en otro PR y su ruta todavía no existe (sería un 404). Vuelve a ser enlace
-      // (a `/configuracion-fiscal/datos-fiscales`) cuando exista la ruta.
-      null,
+      "/configuracion-fiscal/datos-fiscales",
       "/configuracion-fiscal/puntos-de-venta",
       // Su pantalla de estado no tiene textos aprobados: la fila no es un enlace.
       null,
