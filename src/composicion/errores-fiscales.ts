@@ -97,6 +97,8 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<Record<ErrorTextual, CodigoFisc
   // La sucursal del listado (D-18): sin elegir la pantalla hace elegir; una que no es de su alcance se dice como tal.
   SUCURSAL_NO_ELEGIDA: "FISCAL_SUCURSAL_NO_ELEGIDA",
   SUCURSAL_FUERA_DE_ALCANCE: "FISCAL_SUCURSAL_FUERA_DE_ALCANCE",
+  // Emitir (D-41, D-51 y D-50): la sucursal del punto de venta (o de la factura que corrige una nota) no es de la persona, o está cerrada.
+  SUCURSAL_CERRADA: "FISCAL_SUCURSAL_CERRADA",
 };
 
 /** El campo del listado al que apunta cada criterio inválido (el nombre que usa el pedido, no uno interno). */
