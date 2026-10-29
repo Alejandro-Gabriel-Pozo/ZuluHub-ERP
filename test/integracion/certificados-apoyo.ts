@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes, randomInt, randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
 import type pg from "pg";
 import {
@@ -40,6 +40,7 @@ import {
   type TxDeCertificados,
 } from "../../src/modulos/fiscal/publico";
 import { crearRepositorioDeTenants, type TenantsDb } from "../../src/modulos/tenants/publico";
+import { digitoVerificadorDeCuit } from "../../src/primitivas/identificacion-fiscal/cuit";
 import { emisorId } from "../../src/primitivas/identificadores/marca";
 import type { CifradorDeSecretos } from "../../src/puertos/cifrado-de-secretos";
 import type { GeneradorDeCredenciales } from "../../src/puertos/generador-de-credenciales";
@@ -185,6 +186,28 @@ export const almacenDe = (
 /** Una empresa con su emisor, un punto de venta, un gerente y NINGÚN certificado. */
 export const escenarioDeCertificados = (dueno: pg.Client, base: BaseDePruebas) =>
   crearEscenarioDeCasos(dueno, base, { rol: "GERENTE", sinCertificado: true });
+
+/** Un CUIT válido al azar con ese prefijo (30 = sociedad, 20 y 27 = personas físicas): único con altísima probabilidad. */
+export function cuitConPrefijo(prefijo: "20" | "27" | "30"): string {
+  for (;;) {
+    let diez = prefijo;
+    while (diez.length < 10) diez += String(randomInt(0, 10));
+    const verificador = digitoVerificadorDeCuit(diez);
+    if (verificador !== null) return `${diez}${verificador}`;
+  }
+}
+
+/**
+ * D-42: una empresa que factura y es una SOCIEDAD (CUIT 30-…), con su emisor, un punto de venta, un gerente y ningún
+ * certificado. El certificado lo saca una persona física (otro CUIT): el titular. El CUIT de la empresa se cambia acá,
+ * con el dueño de la base, antes de usar el primer número (lo permite la base: `empresa_cuit_inmutable`).
+ */
+export async function escenarioDeSociedad(dueno: pg.Client, base: BaseDePruebas) {
+  const e = await escenarioDeCertificados(dueno, base);
+  const cuit = cuitConPrefijo("30");
+  await dueno.query("update empresa set cuit = $1 where id = $2", [cuit, e.empresa]);
+  return { ...e, cuit };
+}
 
 /** El pedido de un certificado de prueba del emisor principal del escenario (con un `id` y un alias nuevos). */
 export function pedidoDeCertificado(

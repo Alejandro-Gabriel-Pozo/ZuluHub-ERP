@@ -25,10 +25,16 @@ import { DECLARACIONES_DE_CERTIFICADOS } from "./declaraciones-de-certificados";
  * repite). 4. El pedido existe. 5. Repetición: el mismo certificado (por su huella) en un pedido ya cargado
  * devuelve lo mismo (`yaEstaba`) sin escribir; otro certificado, o un pedido descartado, `PEDIDO_NO_PENDIENTE`.
  * 6. Las validaciones (§B.6.2), en este orden: corresponde a la clave que generó Pedernal (se descifra SOLO en
- * memoria y atada a su fila), el `serialNumber` del sujeto es el CUIT del emisor (`TITULAR_DISTINTO`: cada cliente
- * es dueño de su certificado), la cadena cierra contra la del mismo ambiente, no está vencido. 7. Si el emisor ya
- * tenía uno `VIGENTE` en ese ambiente, queda `REEMPLAZADO` en la misma transacción (`reemplazoA`). 8. Auditoría
- * `CERTIFICADO_CARGADO` (y `CERTIFICADO_REEMPLAZADO`): el hecho, nunca el contenido.
+ * memoria y atada a su fila), el `serialNumber` del sujeto es el CUIT del TITULAR declarado al generar el pedido
+ * (`NO_CORRESPONDE_AL_TITULAR`; D-42, 2026-10-29: el titular es la persona física que sacó el certificado y puede ser
+ * distinta del emisor; el titular quedó guardado en el pedido y viaja en el `serialNumber` de su CSR), la cadena cierra
+ * contra la del mismo ambiente, no está vencido. 7. Si el emisor ya tenía uno `VIGENTE` en ese ambiente, queda
+ * `REEMPLAZADO` en la misma transacción (`reemplazoA`). 8. Auditoría `CERTIFICADO_CARGADO` (y
+ * `CERTIFICADO_REEMPLAZADO`): el hecho, nunca el contenido.
+ *
+ * Que el titular esté autorizado a actuar por la empresa NO se puede verificar acá (D-42): el certificado nace con
+ * `autorizacion_verificada_en` vacío («autorización sin verificar») y lo anota la primera llamada exitosa a ARCA
+ * (`crearVerificacionDeAutorizacion`).
  *
  * Dos cargas a la vez del mismo certificado, o de certificados distintos para el mismo (emisor, ambiente), se
  * serializan (la base y el repositorio): al final hay exactamente un `VIGENTE`, y la repetición devuelve `yaEstaba`.
@@ -112,17 +118,13 @@ export function armarCargarCertificado({
           return err("PEDIDO_NO_PENDIENTE");
         }
 
-        const emisor = await tx.emisores.obtener(empresaId, pedido.emisorId);
-        // La clave foránea compuesta garantiza que el emisor del certificado existe y es de la empresa.
-        if (emisor === null)
-          throw new Error(`el emisor ${pedido.emisorId} del certificado no existe`);
         const guardada = await tx.certificados.obtenerClave(empresaId, pedido.id);
         if (guardada === null) throw new Error("el pedido existe pero su clave no es visible");
         const clave = cifrador.descifrar(guardada, dondeSeGuardaLaClave(empresaId, pedido.id));
         if (clave === null) return err("CLAVE_ILEGIBLE");
 
         const evaluado = evaluarCertificado(
-          emisor.cuit,
+          pedido.cuitTitular,
           {
             correspondeALaClave: lector.correspondeALaClave(pem.valor, clave),
             numeroDeSerieDelSujeto: leido.numeroDeSerieDelSujeto,
