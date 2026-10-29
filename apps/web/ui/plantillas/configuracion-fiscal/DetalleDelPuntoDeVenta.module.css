@@ -1,0 +1,22 @@
+.tarjeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie-elevada);
+}
+
+.destacado {
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+.botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+}

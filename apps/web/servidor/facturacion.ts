@@ -70,9 +70,10 @@ const dependencias: DependenciasDeFacturacionWeb = {
 
 /**
  * Corre `hacer` con el contexto operativo de la persona del pedido en su empresa, o devuelve por qué no se puede
- * (otro origen, sin sesión, sin empresa elegida, empresa que no es suya).
+ * (otro origen, sin sesión, sin empresa elegida, empresa que no es suya). Exportada para que las acciones de Configuración fiscal
+ * (`servidor/configuracion-fiscal.ts`) no repitan esta resolución: una regla, un lugar.
  */
-async function conLaEmpresa<D>(
+export async function conLaEmpresa<D>(
   hacer: (contexto: ContextoOperativo) => Promise<Respuesta<D>>,
 ): Promise<Respuesta<D>> {
   // Fuera del `try`: en un host que no es de la aplicación la puerta responde «no existe» (404), no un fallo.
