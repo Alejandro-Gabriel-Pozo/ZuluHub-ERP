@@ -400,6 +400,30 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       ).toEqual([{ n: 1 }]);
     });
 
+    it("obtenerVarios: los de esta empresa con esos ids en una lectura; sin ids no lee; un id ajeno o inexistente no aparece", async () => {
+      const a = await mundo();
+      const b = await mundo({ tenant: a.tenant });
+      const uno = domicilioId(nuevoId());
+      const dos = domicilioId(nuevoId());
+      const ajeno = domicilioId(nuevoId());
+      await correr(app(a), async (tx) => {
+        await tx.domicilios.crear(empresaDe(a), uno, unDomicilio({ calle: "Uno" }));
+        await tx.domicilios.crear(empresaDe(a), dos, unDomicilio({ calle: "Dos", piso: "3" }));
+      });
+      await correr(app(b), (tx) => tx.domicilios.crear(empresaDe(b), ajeno, unDomicilio()));
+      const leidos = await correr(app(a), (tx) =>
+        tx.domicilios.obtenerVarios(empresaDe(a), [dos, uno, ajeno, domicilioId(nuevoId())]),
+      );
+      expect(leidos.map((x) => x.domicilio.calle).sort()).toEqual(["Dos", "Uno"]);
+      expect(leidos.find((x) => x.id === dos)?.domicilio.piso).toBe("3");
+      expect(await correr(app(a), (tx) => tx.domicilios.obtenerVarios(empresaDe(a), []))).toEqual(
+        [],
+      );
+      expect(
+        await correr(app(b), (tx) => tx.domicilios.obtenerVarios(empresaDe(a), [uno, dos])),
+      ).toEqual([]);
+    });
+
     it("el mismo id con OTRO contenido es ID_EN_USO: un domicilio no se edita", async () => {
       const m = await mundo();
       const id = domicilioId(nuevoId());
@@ -1817,6 +1841,8 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       expect(await emisores.obtener(eB, sec.id)).toBeNull();
       expect(await emisores.guardar({ ...sec, empresaId: eB, activo: false })).toBeNull();
       expect(await domicilios.obtener(eB, dom)).toBeNull();
+      expect(await domicilios.obtenerVarios(eB, [dom])).toEqual([]);
+      expect(await domicilios.obtenerVarios(empresaDe(a), [dom])).toHaveLength(1); // control
       expect(await datos.obtener(eB, borrador.id)).toBeNull();
       expect(await datos.obtenerBorrador(eB, principalA.id)).toBeNull();
       expect(await datos.confirmadas(eB, principalA.id)).toEqual([]);

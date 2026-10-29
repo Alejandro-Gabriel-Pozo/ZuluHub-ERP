@@ -76,7 +76,7 @@ export type EntradaDeDatosFiscalesDelEmisor = Readonly<{ emisorId: EmisorId }>;
 export type ErrorAlVerLosDatosFiscales =
   MotivoDeRechazo | "EMISOR_NO_ENCONTRADO" | ErrorDePersistencia;
 
-const aDomicilioParaLaPantalla = ({
+export const aDomicilioParaLaPantalla = ({
   id,
   domicilio,
 }: DomicilioGuardado): DomicilioParaLaPantalla => ({

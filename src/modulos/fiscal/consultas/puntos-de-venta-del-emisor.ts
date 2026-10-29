@@ -6,6 +6,10 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { PuntoDeVentaGuardado, RepositorioDeEmisores } from "../persistencia/repositorios";
 import type { DependenciasDeConsultasDeFacturacion } from "./contrato";
+import {
+  aDomicilioParaLaPantalla,
+  type DomicilioParaLaPantalla,
+} from "./datos-fiscales-del-emisor";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 
 /**
@@ -30,6 +34,11 @@ export type PuntoDeVentaParaConfigurar = Readonly<{
   sucursal: Readonly<{ id: SucursalId; nombre: string; activa: boolean }>;
   /** Sin domicilio no se puede activar (`PUNTO_DE_VENTA_SIN_DOMICILIO`). */
   tieneDomicilio: boolean;
+  /**
+   * El domicilio del punto de venta (D-63), con la misma forma y lista blanca que el de Datos fiscales (`DomicilioParaLaPantalla`):
+   * la pantalla lo muestra y precarga la edición con él. `null` si no tiene (entonces `tieneDomicilio` es `false`).
+   */
+  domicilio: DomicilioParaLaPantalla | null;
   /**
    * `true`: alguna serie del punto de venta ya se usó, así que su número ya no se puede cambiar
    * (`PUNTO_DE_VENTA_NUMERO_INMUTABLE`, con el texto aprobado de D-66).
@@ -75,12 +84,26 @@ export function armarPuntosDeVentaDelEmisor({
         const sucursales = new Map(
           (await tx.sucursales.listar(empresaId)).map((s) => [s.id, s] as const),
         );
+        const puntos = await tx.puntosDeVenta.listarDelEmisor(empresaId, entrada.emisorId);
+        // Una sola lectura para todos los domicilios (sin N+1), siempre filtrada por la empresa del contexto.
+        const domicilios = new Map(
+          (
+            await tx.domicilios.obtenerVarios(
+              empresaId,
+              puntos.flatMap((p) => (p.domicilioId === null ? [] : [p.domicilioId])),
+            )
+          ).map((d) => [d.id, aDomicilioParaLaPantalla(d)] as const),
+        );
         const items: PuntoDeVentaParaConfigurar[] = [];
-        for (const punto of await tx.puntosDeVenta.listarDelEmisor(empresaId, entrada.emisorId)) {
+        for (const punto of puntos) {
           // La base lo impide (clave foránea): la sucursal de un punto de venta siempre existe y es de la empresa.
           const sucursal = sucursales.get(punto.sucursalId);
           if (sucursal === undefined)
             throw new Error("un punto de venta de una sucursal que no existe");
+          // La base lo impide (clave foránea): el domicilio de un punto de venta siempre existe y es de la empresa.
+          const domicilio = punto.domicilioId === null ? null : domicilios.get(punto.domicilioId);
+          if (domicilio === undefined)
+            throw new Error("un punto de venta de un domicilio que no existe");
           items.push({
             id: punto.id,
             numero: punto.numero,
@@ -88,6 +111,7 @@ export function armarPuntosDeVentaDelEmisor({
             ambiente: punto.ambiente,
             sucursal: { id: sucursal.id, nombre: sucursal.nombre, activa: sucursal.activa },
             tieneDomicilio: punto.domicilioId !== null,
+            domicilio,
             hayNumerosUsados: await tx.series.hayNumerosUsadosDelPuntoDeVenta(empresaId, punto.id),
             version: punto.version,
           });

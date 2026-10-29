@@ -24,7 +24,11 @@ import { empresaId, personaId } from "../../src/primitivas/identificadores/marca
 import type { ProveedorDeEmision } from "../../src/modulos/fiscal/publico";
 import { EmisionFalsa } from "../utilidades/emision-falsa";
 import { crearBaseAparte } from "./entorno";
-import { crearEscenarioDeCasos, type EscenarioDeCasos } from "./facturacion-casos-apoyo";
+import {
+  cargarCertificado,
+  crearEscenarioDeCasos,
+  type EscenarioDeCasos,
+} from "./facturacion-casos-apoyo";
 import { REGLAS_CON_FACTURACION } from "./fiscal-numeracion-apoyo";
 import { crearMembresiaDeBase, crearPersonaDeBase, type RolDePrueba } from "./fixtures-identidad";
 import { asignarPlan, crearPlanPublicado } from "./marcas-apoyo";
@@ -450,6 +454,175 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
         [e.empresa],
       );
       expect(numeros.map((n) => n.numero)).toEqual(["1", "2", "3", "4"]);
+    });
+  });
+
+  // ===============================================================================================
+  // Cambiar el ambiente de un punto de venta (D-48), repetido: regla del dueño, cualquier acción puede llegar dos veces
+  // y repetirla no duplica ni perjudica. Si el punto de venta YA está en el ambiente pedido, es «ya estaba» aunque la
+  // versión esperada haya quedado vieja; si no, la versión manda.
+  describe("cambiar el ambiente de un punto de venta, repetido", () => {
+    const pedido = (e: EscenarioDeCasos, version: number, ambiente = "PRODUCCION") => ({
+      puntoDeVentaId: e.pv,
+      ambiente,
+      versionEsperada: version,
+    });
+    const estadoDelPunto = async (e: EscenarioDeCasos) =>
+      (
+        await filas<{ ambiente: string; version: number }>(
+          "select ambiente, version from punto_de_venta where id = $1",
+          [e.pv],
+        )
+      )[0];
+    const cambiosDeAmbiente = async (e: EscenarioDeCasos) =>
+      (
+        await filas(
+          "select 1 from auditoria_empresa where empresa_id = $1 and accion = 'PUNTO_DE_VENTA_AMBIENTE_CAMBIADO'",
+          [e.empresa],
+        )
+      ).length;
+    async function listoParaProduccion(rol: RolDePrueba = "GERENTE") {
+      const e = await empresaConFacturacion(rol);
+      await cargarCertificado(propia.base, e, "PRODUCCION");
+      const inicial = await estadoDelPunto(e);
+      return { e, version: inicial?.version ?? 0 };
+    }
+
+    it("la misma entrada dos o tres veces: la primera cambia; las otras son «ya estaba» (éxito), sin escribir ni auditar", async () => {
+      const { e, version } = await listoParaProduccion();
+      const gerente = comoPersonaDe(e);
+      expect(await cambiarAmbienteDePuntoDeVenta(d, gerente, pedido(e, version))).toEqual({
+        ok: true,
+        dato: { yaEstaba: false },
+      });
+      const despues = await estadoDelPunto(e);
+      expect(despues?.ambiente).toBe("PRODUCCION");
+      // La respuesta se perdió: el navegador reintenta el MISMO pedido, con la versión esperada que ya quedó vieja.
+      for (let i = 0; i < 2; i++) {
+        expect(await cambiarAmbienteDePuntoDeVenta(d, gerente, pedido(e, version))).toEqual({
+          ok: true,
+          dato: { yaEstaba: true },
+        });
+      }
+      expect(await estadoDelPunto(e)).toEqual(despues);
+      expect(await cambiosDeAmbiente(e)).toBe(1);
+    });
+
+    it("pedir el ambiente en el que ya está, con cualquier versión, es «ya estaba»", async () => {
+      const e = await empresaConFacturacion("GERENTE");
+      const antes = await estadoDelPunto(e);
+      expect(antes?.ambiente).toBe("HOMOLOGACION");
+      expect(
+        await cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, 999, "HOMOLOGACION")),
+      ).toEqual({ ok: true, dato: { yaEstaba: true } });
+      expect(await estadoDelPunto(e)).toEqual(antes);
+      expect(await cambiosDeAmbiente(e)).toBe(0);
+    });
+
+    it("si cambia de verdad, la versión manda: una vieja o inventada es «versión desactualizada» y no cambia nada", async () => {
+      const { e, version } = await listoParaProduccion();
+      const antes = await estadoDelPunto(e);
+      for (const vieja of [version + 5, version - 1]) {
+        expect(
+          await cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, vieja)),
+        ).toMatchObject({
+          ok: false,
+          error: { codigo: "FISCAL_VERSION_DESACTUALIZADA" },
+        });
+      }
+      expect(await estadoDelPunto(e)).toEqual(antes);
+      expect(await cambiosDeAmbiente(e)).toBe(0);
+    });
+
+    it("de producción no se vuelve: pedir homologación da FISCAL_AMBIENTE_NO_VUELVE, todas las veces, y nada cambia", async () => {
+      const { e, version } = await listoParaProduccion();
+      expect(await cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version))).toEqual({
+        ok: true,
+        dato: { yaEstaba: false },
+      });
+      const despues = await estadoDelPunto(e);
+      for (let i = 0; i < 2; i++) {
+        expect(
+          await cambiarAmbienteDePuntoDeVenta(
+            d,
+            comoPersonaDe(e),
+            pedido(e, despues?.version ?? 0, "HOMOLOGACION"),
+          ),
+        ).toMatchObject({ ok: false, error: { codigo: "FISCAL_AMBIENTE_NO_VUELVE" } });
+      }
+      expect(await estadoDelPunto(e)).toEqual(despues);
+      expect(await cambiosDeAmbiente(e)).toBe(1);
+    });
+
+    it("todo o nada: sin certificado de producción vigente no cambia ni se audita, y reintentar da lo mismo", async () => {
+      const e = await empresaConFacturacion("GERENTE");
+      const version = (await estadoDelPunto(e))?.version ?? 0;
+      for (let i = 0; i < 2; i++) {
+        expect(
+          await cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version)),
+        ).toMatchObject({ ok: false, error: { codigo: "FISCAL_SIN_CERTIFICADO" } });
+      }
+      expect((await estadoDelPunto(e))?.ambiente).toBe("HOMOLOGACION");
+      expect(await cambiosDeAmbiente(e)).toBe(0);
+    });
+
+    it("solo el gerente, también al repetir: administrador y operador reciben SIN_PERMISO y no se enteran del ambiente", async () => {
+      const { e, version } = await listoParaProduccion();
+      expect(await cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version))).toEqual({
+        ok: true,
+        dato: { yaEstaba: false },
+      });
+      const despues = await estadoDelPunto(e);
+      for (const rol of ["ADMINISTRADOR", "OPERADOR"] as const) {
+        const contexto = await comoOtroRol(e, rol);
+        for (const ambiente of ["PRODUCCION", "HOMOLOGACION"]) {
+          expect(
+            await cambiarAmbienteDePuntoDeVenta(d, contexto, pedido(e, version, ambiente)),
+          ).toMatchObject({ ok: false, error: { codigo: "SIN_PERMISO" } });
+        }
+      }
+      expect(await estadoDelPunto(e)).toEqual(despues);
+      expect(await cambiosDeAmbiente(e)).toBe(1);
+    });
+
+    it("aislamiento: el gerente de otra empresa recibe «no encontrado», no «ya estaba», y no toca nada", async () => {
+      const { e, version } = await listoParaProduccion();
+      expect(await cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version))).toEqual({
+        ok: true,
+        dato: { yaEstaba: false },
+      });
+      const ajeno = await empresaConFacturacion("GERENTE");
+      const despues = await estadoDelPunto(e);
+      for (const ambiente of ["PRODUCCION", "HOMOLOGACION"]) {
+        expect(
+          await cambiarAmbienteDePuntoDeVenta(
+            d,
+            comoPersonaDe(ajeno),
+            pedido(e, version, ambiente),
+          ),
+        ).toMatchObject({ ok: false, error: { codigo: "FISCAL_PUNTO_DE_VENTA_NO_ENCONTRADO" } });
+      }
+      expect(await estadoDelPunto(e)).toEqual(despues);
+      expect((await estadoDelPunto(ajeno))?.ambiente).toBe("HOMOLOGACION");
+      expect(await cambiosDeAmbiente(e)).toBe(1);
+      expect(await cambiosDeAmbiente(ajeno)).toBe(0);
+    });
+
+    it("el mismo cambio a la vez (doble clic): los dos salen bien, uno cambia y el otro «ya estaba», con una sola auditoría", async () => {
+      const { e, version } = await listoParaProduccion();
+      const salidas = await Promise.all([
+        cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version)),
+        cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version)),
+        cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version)),
+      ]);
+      expect(salidas.every((r) => r.ok)).toBe(true);
+      expect(salidas.map((r) => (r.ok ? r.dato.yaEstaba : null)).sort()).toEqual([
+        false,
+        true,
+        true,
+      ]);
+      expect((await estadoDelPunto(e))?.ambiente).toBe("PRODUCCION");
+      expect(await cambiosDeAmbiente(e)).toBe(1);
     });
   });
 
