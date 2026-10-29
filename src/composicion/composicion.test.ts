@@ -1,5 +1,18 @@
 import { randomBytes } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS,
+  DECLARACIONES_DE_EMPRESAS,
+} from "../modulos/empresas/publico";
+import {
+  DECLARACIONES_DE_CONFIGURACION_FISCAL,
+  DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
+  DECLARACIONES_DE_FACTURACION,
+} from "../modulos/fiscal/publico";
+import {
+  DECLARACIONES_DE_CONSULTAS_DE_IDENTIDAD,
+  DECLARACIONES_DE_IDENTIDAD,
+} from "../modulos/identidad/publico";
 import { armarConexiones, type Conexiones } from "./conexiones";
 import {
   ErrorDeEntorno,
@@ -503,5 +516,104 @@ describe("con el entorno completo", () => {
     const { conexiones } = conFuente(valida());
     armarWeb(conexiones).casosDeUsoDeIdentidad();
     await expect(conexiones.transaccionesDeApp().cerrar()).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * Toda acción o consulta que `armarWeb` expone pasa por el guard, o figura aquí con su motivo («todo nace cerrado»).
+ * Previene: un caso nuevo declarado `sinGuard` (o una entrada nueva de `web`) que sale a la web sin que ninguna prueba lo vea;
+ * las pruebas por módulo miran sus propias tablas, no lo que `web.ts` realmente expone.
+ */
+type Declaraciones = Readonly<Record<string, Readonly<{ accion: string } | { sinGuard: string }>>>;
+type Decision =
+  | Readonly<{ conGuard: Declaraciones; exentos?: Readonly<Record<string, string>> }>
+  | Readonly<{ sinGuard: string }>;
+
+/** Lo que incumple la regla; vacío si cumple. Recibe `web` y las decisiones para poder probarla con un doble. */
+function incumplimientosDeLaWeb(
+  web: Readonly<Record<string, () => object>>,
+  decisiones: Readonly<Record<string, Decision>>,
+): string[] {
+  const falta = Object.keys(web)
+    .filter((nombre) => !(nombre in decisiones))
+    .map((nombre) => `${nombre}: sin decidir (con guard, o sin guard con su motivo)`);
+  const de = Object.entries(decisiones).flatMap(([nombre, decision]) => {
+    const grupo = web[nombre];
+    if (grupo === undefined) return [`${nombre}: decidida pero web no la expone`];
+    if ("sinGuard" in decision) return [];
+    const exentos = decision.exentos ?? {};
+    const expuestos = Object.keys(grupo());
+    return [
+      ...expuestos.flatMap((caso) => {
+        const declaracion = decision.conGuard[caso];
+        if (declaracion === undefined) return [`${nombre}.${caso}: sin declaración`];
+        return "accion" in declaracion || caso in exentos
+          ? []
+          : [`${nombre}.${caso}: sinGuard y no está en los exentos`];
+      }),
+      ...Object.keys(exentos)
+        .filter((caso) => !expuestos.includes(caso) || "accion" in (decision.conGuard[caso] ?? {}))
+        .map((caso) => `${nombre}.${caso}: exento que ya no corresponde`),
+    ];
+  });
+  return [...falta, ...de];
+}
+
+/** Una entrada nueva de `armarWeb` no compila hasta que se la decide acá. */
+const DECISIONES_DE_WEB: Record<keyof ReturnType<typeof armarWeb>, Decision> = {
+  casosDeUsoDeEmpresas: { conGuard: DECLARACIONES_DE_EMPRESAS },
+  consultasDeEmpresas: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS },
+  casosDeUsoDeIdentidad: {
+    conGuard: DECLARACIONES_DE_IDENTIDAD,
+    exentos: {
+      // Fuente: identidad/casos-de-uso/declaraciones.ts:21-23 (el invitado aún no es miembro: autorizan el hash del token, la RLS y el email).
+      aceptarInvitacion: "autoriza el token de la invitación (contexto INVITACION), no el guard",
+    },
+  },
+  consultasDeIdentidad: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_IDENTIDAD },
+  casosDeUsoDeFacturacion: { conGuard: DECLARACIONES_DE_FACTURACION },
+  casosDeUsoDeConfiguracionFiscal: { conGuard: DECLARACIONES_DE_CONFIGURACION_FISCAL },
+  consultasDeFacturacion: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_FISCAL },
+  // Sin guard por diseño. Fuentes: web.ts:23-26 (puerta pública), :36-38 (autenticación y barrido), :133 y de-la-sesion.ts:18-22 (sesión).
+  resolucionDeHost: { sinGuard: "puerta pública: sin sesión, solo lectura" },
+  configuracionPublicaDeHost: { sinGuard: "puerta pública: sin sesión, solo lectura" },
+  autenticacion: { sinGuard: "dice QUIÉN es (usuario y email verificado, por host)" },
+  barridoDeAutenticacion: { sinGuard: "lo llama el cron, no una persona" },
+  consultasDeSesion: { sinGuard: "contexto SESION: todavía no hay empresa; acota la base (RLS)" },
+};
+
+describe("toda acción o consulta de la web pasa por el guard o figura con su motivo", () => {
+  it("la web real cumple la regla", () => {
+    const web = armarWeb(conFuente(valida()).conexiones);
+    expect(incumplimientosDeLaWeb(web, DECISIONES_DE_WEB)).toEqual([]);
+  });
+
+  it("violación inyectada: un caso sinGuard expuesto, una entrada sin decidir y una declaración faltante la hacen fallar", () => {
+    const doble = {
+      casos: () => ({ conPermiso: () => 1, nuevoSinGuard: () => 2, sinDeclarar: () => 3 }),
+      entradaNueva: () => ({}),
+    };
+    const decisiones: Record<string, Decision> = {
+      casos: {
+        conGuard: {
+          conPermiso: { accion: "sucursales.ver" },
+          nuevoSinGuard: { sinGuard: "motivo cualquiera" },
+        },
+      },
+    };
+    expect(incumplimientosDeLaWeb(doble, decisiones)).toEqual([
+      "entradaNueva: sin decidir (con guard, o sin guard con su motivo)",
+      "casos.nuevoSinGuard: sinGuard y no está en los exentos",
+      "casos.sinDeclarar: sin declaración",
+    ]);
+    // Con su excepción explícita pasa, y una excepción que ya no corresponde falla.
+    const exento = {
+      ...decisiones["casos"],
+      exentos: { nuevoSinGuard: "motivo", conPermiso: "x" },
+    } as Decision;
+    expect(incumplimientosDeLaWeb({ casos: doble.casos }, { casos: exento })).toEqual([
+      "casos.sinDeclarar: sin declaración",
+      "casos.conPermiso: exento que ya no corresponde",
+    ]);
   });
 });

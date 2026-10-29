@@ -196,6 +196,61 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     );
   });
 
+  it("los textos de anular por importe son exactamente los que el dueño aprobó el 2026-10-29 (12A, D-74 incluido)", () => {
+    const porDefecto = (clave: ClaveDeTexto): string => CATALOGO_DE_TEXTOS[clave].porDefecto;
+    expect(
+      Object.fromEntries(
+        claves
+          .filter(
+            (c) =>
+              c.startsWith("fiscal.pantalla.anular_") ||
+              c.startsWith("fiscal.pantalla.detalle_anular"),
+          )
+          .map((c) => [c, porDefecto(c)]),
+      ),
+    ).toEqual({
+      "fiscal.pantalla.anular_titulo": "Anular comprobante",
+      "fiscal.pantalla.anular_subtitulo": "{comprobante} · {cliente}",
+      "fiscal.pantalla.anular_paso_que": "Qué anular",
+      "fiscal.pantalla.anular_paso_motivo": "Motivo y revisar",
+      "fiscal.pantalla.anular_cancelar": "Cancelar",
+      "fiscal.pantalla.anular_siguiente": "Siguiente",
+      "fiscal.pantalla.anular_volver": "Volver",
+      "fiscal.pantalla.anular_boton_final": "Anular comprobante",
+      "fiscal.pantalla.anular_enviando": "Anulando…",
+      "fiscal.pantalla.anular_se_anula_el_total": "Se anula el total",
+      "fiscal.pantalla.anular_solo_una_parte": "Anular solo una parte",
+      "fiscal.pantalla.anular_elegi": "Elegí qué anular",
+      "fiscal.pantalla.anular_a_anular": "A anular",
+      "fiscal.pantalla.anular_el_total": "Anular el total",
+      "fiscal.pantalla.anular_total_de_la_factura": "Total de la factura",
+      "fiscal.pantalla.anular_facturado": "Facturado",
+      "fiscal.pantalla.anular_importe_con_iva": "Importe a anular (con IVA incluido)",
+      "fiscal.pantalla.anular_importe": "Importe a anular",
+      "fiscal.pantalla.anular_alicuota_exento": "Exento",
+      "fiscal.pantalla.anular_alicuota_no_gravado": "No gravado",
+      "fiscal.pantalla.anular_aviso_supera_c": "El importe supera lo facturado.",
+      "fiscal.pantalla.anular_total_de_la_nota_de_debito": "Total de la nota de débito",
+      "fiscal.pantalla.anular_aviso_supera": "El importe supera lo facturado con IVA {alicuota} %.",
+      "fiscal.pantalla.anular_motivo": "Motivo (obligatorio)",
+      "fiscal.pantalla.anular_motivo_guardado": "Queda guardado junto a la nota de crédito.",
+      "fiscal.pantalla.anular_contador": "{cantidad} / {limite}",
+      "fiscal.pantalla.anular_se_va_a_emitir": "Se va a emitir una nota de crédito {letra}",
+      "fiscal.pantalla.anular_a_anular_ahora": "A anular ahora",
+      "fiscal.pantalla.anular_descripcion": "{anulacion} de la {clase} {numero}",
+      "fiscal.pantalla.anular_descripcion_con_iva": "{anulacion} de la {clase} {numero}, {iva}",
+      "fiscal.pantalla.anular_clase_factura": "factura",
+      "fiscal.pantalla.anular_clase_nota_de_debito": "nota de débito",
+      "fiscal.pantalla.detalle_anular": "Anular con nota de crédito",
+      "fiscal.pantalla.detalle_anular_motivo":
+        "Solo se anula una factura o una nota de débito Autorizada.",
+    });
+    // El aviso lleva la tasa que corresponde en un marcador `alicuota`.
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.anular_aviso_supera"].marcadores).toEqual([
+      "alicuota",
+    ]);
+  });
+
   it("los textos de los errores con datos declaran su marcador", () => {
     expect(CATALOGO_DE_TEXTOS["error.limite_del_plan"].marcadores).toEqual(["limite"]);
     expect(CATALOGO_DE_TEXTOS["error.limite_del_plan"].porDefecto).toContain("{limite}");

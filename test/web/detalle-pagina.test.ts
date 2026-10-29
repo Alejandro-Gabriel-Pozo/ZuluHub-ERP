@@ -11,7 +11,15 @@ import { base } from "../utilidades/detalle-de-comprobante";
  * solo con ese id (la empresa y el permiso los decide el servidor) y pinta cada error con su texto, sin el código crudo.
  */
 vi.mock("server-only", () => ({}));
-// La barra pide los permisos de la persona (`permisosDelActor`): acá ve «Comprobantes» (el filtro se prueba en `modulos-de-la-barra.test.ts`).
+// La barra y el botón «Anular con nota de crédito» piden los permisos de la persona (`permisosDelActor`). Por defecto ve «Comprobantes»
+// pero no puede anular (el filtro de la barra se prueba en `modulos-de-la-barra.test.ts`).
+const permisos = vi.hoisted(
+  (): { acciones: string[]; activos: string[]; enSoloLectura: string[] } => ({
+    acciones: [],
+    activos: [],
+    enSoloLectura: [],
+  }),
+);
 vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
     consultasDeEmpresas: () => ({
@@ -19,8 +27,8 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
         Promise.resolve({
           ok: true,
           valor: {
-            acciones: ["comprobantes.ver"],
-            modulos: { activos: ["facturacion"], enSoloLectura: [] },
+            acciones: permisos.acciones,
+            modulos: { activos: permisos.activos, enSoloLectura: permisos.enSoloLectura },
           },
         }),
     }),
@@ -80,6 +88,9 @@ const respuesta = (r: Respuesta<unknown>): void => {
 describe("la página del detalle de un comprobante", () => {
   beforeEach(() => {
     lectura.llamadas = [];
+    permisos.acciones = ["comprobantes.ver"];
+    permisos.activos = ["facturacion"];
+    permisos.enSoloLectura = [];
   });
 
   it("con un comprobante, lo lee por su id y lo pinta", async () => {
@@ -137,4 +148,99 @@ describe("la página del detalle de un comprobante", () => {
     expect(texto).toContain("PD-ABC123");
     expect(texto).not.toContain("ERROR_INTERNO");
   });
+});
+
+describe("la página del detalle: el botón «Anular con nota de crédito»", () => {
+  const BOTON = "Anular con nota de crédito";
+  const MOTIVO = "Solo se anula una factura o una nota de débito Autorizada.";
+  /** Apagado: el botón existe, no lleva al enlace, y su motivo está a la vista y asociado (`aria-describedby`). */
+  const expectApagado = (marcado: string): void => {
+    expect(marcado).toContain(BOTON);
+    expect(marcado).toContain(MOTIVO);
+    expect(marcado).not.toContain("/anular");
+    expect(marcado).toMatch(/<button[^>]*disabled[^>]*aria-describedby="[^"]+"/);
+  };
+  const poder = (cambios: Partial<typeof permisos> = {}) => {
+    permisos.acciones = ["comprobantes.ver", "notas_de_credito.emitir"];
+    permisos.activos = ["facturacion"];
+    permisos.enSoloLectura = [];
+    Object.assign(permisos, cambios);
+  };
+
+  // El fixture del detalle no trae `id` (la pantalla no lo usa); el botón sí: lleva a `/…/{id}/anular`.
+  const conId = { ...base, id: ID };
+  beforeEach(() => {
+    lectura.llamadas = [];
+    respuesta({ ok: true, dato: conId });
+  });
+
+  it("con la acción de emitir notas de crédito y la factura Autorizada: aparece y lleva a la pantalla de anular", async () => {
+    poder();
+    const marcado = await html(ID);
+    expect(marcado).toContain(BOTON);
+    expect(marcado).toContain(`href="/facturacion/comprobantes/${ID}/anular"`);
+  });
+
+  it("una nota de débito Autorizada también se anula (D-70): aparece y lleva a la pantalla de anular", async () => {
+    poder();
+    respuesta({
+      ok: true,
+      dato: { ...conId, tipo: "NOTA_DEBITO_B", acreditado: null, acreditacion: null },
+    });
+    const marcado = await html(ID);
+    expect(marcado).toContain(BOTON);
+    expect(marcado).toContain(`href="/facturacion/comprobantes/${ID}/anular"`);
+  });
+
+  it("una nota de débito que no está Autorizada: el botón aparece APAGADO, con su motivo", async () => {
+    poder();
+    respuesta({ ok: true, dato: { ...conId, tipo: "NOTA_DEBITO_B", estado: "RECHAZADO" } });
+    expectApagado(await html(ID));
+  });
+
+  it("sin la acción de emitir notas de crédito (solo puede ver): no aparece", async () => {
+    poder({ acciones: ["comprobantes.ver"] });
+    expect(await html(ID)).not.toContain(BOTON);
+  });
+
+  it("con otra acción de emitir (la factura manual) pero no la de notas de crédito: no aparece", async () => {
+    poder({ acciones: ["comprobantes.ver", "comprobantes.emitir_manual"] });
+    expect(await html(ID)).not.toContain(BOTON);
+  });
+
+  it("con el módulo en solo lectura y la acción: SÍ aparece (el servidor la permite; dueño, 2026-10-29)", async () => {
+    poder({ activos: [], enSoloLectura: ["facturacion"] });
+    expect(await html(ID)).toContain(`href="/facturacion/comprobantes/${ID}/anular"`);
+  });
+
+  it.each([
+    "PENDIENTE",
+    "EN_VALIDACION",
+    "RECHAZADO",
+    "INCIERTO",
+    "CONFLICTO",
+    "DESCARTADO",
+  ] as const)(
+    "una factura %s no se anula: el botón aparece APAGADO, con su motivo",
+    async (estado) => {
+      poder();
+      respuesta({ ok: true, dato: { ...conId, estado } });
+      expectApagado(await html(ID));
+    },
+  );
+
+  it("apagado y sin la acción de emitir notas de crédito: no aparece", async () => {
+    poder({ acciones: ["comprobantes.ver"] });
+    respuesta({ ok: true, dato: { ...conId, estado: "RECHAZADO" } });
+    expect(await html(ID)).not.toContain(BOTON);
+  });
+
+  it.each(["NOTA_CREDITO_A", "NOTA_CREDITO_B", "NOTA_CREDITO_C"] as const)(
+    "una nota de crédito (%s) no se anula: no aparece",
+    async (tipo) => {
+      poder();
+      respuesta({ ok: true, dato: { ...conId, tipo, acreditado: null, acreditacion: null } });
+      expect(await html(ID)).not.toContain(BOTON);
+    },
+  );
 });

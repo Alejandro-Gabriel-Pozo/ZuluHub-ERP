@@ -296,6 +296,8 @@ export type PuntosDeVentaParaConfigurar = Readonly<{
     ambiente: "HOMOLOGACION" | "PRODUCCION";
     sucursal: Readonly<{ id: string; nombre: string; activa: boolean }>;
     tieneDomicilio: boolean;
+    /** El domicilio del punto de venta (D-63), con la misma forma que el de Datos fiscales; `null` si no tiene. */
+    domicilio: DomicilioParaLaPantalla | null;
     /** `true`: ya usó números, así que su número no se puede cambiar. */
     hayNumerosUsados: boolean;
     version: number;
@@ -322,6 +324,7 @@ export function puntosDeVentaDelEmisor(
         ambiente: i.ambiente,
         sucursal: { id: i.sucursal.id, nombre: i.sucursal.nombre, activa: i.sucursal.activa },
         tieneDomicilio: i.tieneDomicilio,
+        domicilio: i.domicilio === null ? null : aDomicilio(i.domicilio),
         hayNumerosUsados: i.hayNumerosUsados,
         version: i.version,
       })),

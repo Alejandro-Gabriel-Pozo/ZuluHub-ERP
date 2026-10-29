@@ -18,6 +18,8 @@ export const RUTA_DEL_LISTADO = "/facturacion/comprobantes";
 
 /** El enlace al detalle de un comprobante (su id es un uuid que sale de la consulta, nunca de un texto libre). */
 export const direccionDelDetalle = (id: string): string => `${RUTA_DEL_LISTADO}/${id}`;
+/** La pantalla de anular un comprobante: cuelga de su detalle. */
+export const direccionDeAnular = (id: string): string => `${direccionDelDetalle(id)}/anular`;
 
 const PERIODOS = ["hoy", "7dias", "mes", "todo", "personalizado"] as const;
 type Periodo = (typeof PERIODOS)[number];
