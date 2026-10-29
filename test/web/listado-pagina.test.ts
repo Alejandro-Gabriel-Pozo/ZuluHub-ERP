@@ -108,9 +108,9 @@ describe("la página del listado de comprobantes", () => {
 
   it("la barra marca «Comprobantes» como el destino actual y no marca ningún otro", async () => {
     const marcado = await html();
-    const actuales = [...marcado.matchAll(/<a[^>]*aria-current="page"[^>]*>(.*?)<\/a>/g)].map((m) =>
-      (m[1] ?? "").replace(/<[^>]+>/g, ""),
-    );
+    const actuales = [
+      ...marcado.matchAll(/<a[^>]*aria-current="page"[^>]*>(?:<[^>]+>)*([^<]+)/g),
+    ].map((m) => m[1]);
     expect(actuales).toEqual(["Comprobantes"]);
   });
 
