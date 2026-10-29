@@ -1387,14 +1387,30 @@ describe("facturación F6: las consultas del facturador (spec H7 facturación §
     expect(prohibido).toContain("consultas-sin-dominio");
   });
 
-  it("la excepción es solo de fiscal: el modelo de impresión y la acreditación de otro módulo siguen prohibidos", async () => {
-    const v = await violacionesDe({
-      "src/modulos/empresas/dominio/modelo-de-impresion.ts": exporta,
-      "src/modulos/empresas/dominio/acreditacion.ts": exporta,
-      "src/modulos/empresas/consultas/c.ts": importa("../dominio/modelo-de-impresion"),
-      "src/modulos/empresas/consultas/d.ts": importa("../dominio/acreditacion"),
+  it("una consulta de fiscal importa la vigencia de una versión (D-43), pero ningún otro archivo del dominio", async () => {
+    const permitido = await violacionesDe({
+      "src/modulos/fiscal/dominio/vigencia.ts": exporta,
+      "src/modulos/fiscal/consultas/c.ts": importa("../dominio/vigencia"),
     });
-    expect(v).toContain("consultas-sin-dominio");
+    expect(permitido).not.toContain("consultas-sin-dominio");
+    // Lo vecino no entra por parecerse: ni otro archivo de «vigencia», ni los datos fiscales o el punto de venta, que son del dominio.
+    for (const otro of ["vigencia-de-otra-cosa", "datos-fiscales", "punto-de-venta", "emisor"]) {
+      const prohibido = await violacionesDe({
+        [`src/modulos/fiscal/dominio/${otro}.ts`]: exporta,
+        "src/modulos/fiscal/consultas/c.ts": importa(`../dominio/${otro}`),
+      });
+      expect(prohibido, otro).toContain("consultas-sin-dominio");
+    }
+  });
+
+  it("la excepción es solo de fiscal: el modelo de impresión, la acreditación y la vigencia de otro módulo siguen prohibidos", async () => {
+    for (const archivo of ["modelo-de-impresion", "acreditacion", "vigencia"]) {
+      const v = await violacionesDe({
+        [`src/modulos/empresas/dominio/${archivo}.ts`]: exporta,
+        "src/modulos/empresas/consultas/c.ts": importa(`../dominio/${archivo}`),
+      });
+      expect(v, archivo).toContain("consultas-sin-dominio");
+    }
   });
 });
 

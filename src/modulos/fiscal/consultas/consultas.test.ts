@@ -246,6 +246,18 @@ function armar(datos: Datos = {}) {
     // El estado de los certificados tiene sus pruebas en `estado-de-certificados.test.ts`: acá nadie lo toca.
     emisores: {
       obtener: () => Promise.reject(new Error("estas consultas no leen emisores")),
+      delPrincipal: () => Promise.reject(new Error("estas consultas no leen emisores")),
+    },
+    // La configuración fiscal tiene sus pruebas en `configuracion-fiscal.test.ts`: acá nadie la toca.
+    datosFiscales: {
+      obtenerBorrador: () => Promise.reject(new Error("estas consultas no leen datos fiscales")),
+      confirmadas: () => Promise.reject(new Error("estas consultas no leen datos fiscales")),
+    },
+    domicilios: {
+      obtener: () => Promise.reject(new Error("estas consultas no leen domicilios")),
+    },
+    puntosDeVenta: {
+      listarDelEmisor: () => Promise.reject(new Error("estas consultas no leen puntos de venta")),
     },
     lecturasDeCertificados: {
       actualesDelEmisor: () => Promise.reject(new Error("estas consultas no leen certificados")),
@@ -261,6 +273,8 @@ function armar(datos: Datos = {}) {
         llamadas.series.push(args);
         return Promise.resolve(datos.serie === undefined ? serie() : datos.serie);
       },
+      hayNumerosUsadosDelPuntoDeVenta: () =>
+        Promise.reject(new Error("estas consultas no miran si se usaron números")),
     },
     sucursales: {
       listar: (...args) => {

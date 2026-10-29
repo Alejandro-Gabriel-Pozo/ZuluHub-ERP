@@ -264,16 +264,18 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       // La primera vez que aparece es la consulta del estado de los certificados (D-43: del gerente); los casos de uso de
       // certificados la exigen también.
       "certificados.gestionar",
+      // Las consultas de la pantalla de Configuración fiscal (la lista, los datos fiscales y los puntos de venta de un emisor)
+      // piden la acción de quien edita lo que muestran, de `administracion`: no se creó un permiso nuevo para mirar.
+      "datos_fiscales.editar",
+      "puntos_de_venta.editar",
       "comprobantes.emitir_manual",
       "notas_de_credito.emitir",
       "comprobantes.descartar",
       "comprobantes.reintentar",
       "series.resincronizar",
       "puntos_de_venta.cambiar_ambiente",
-      "datos_fiscales.editar",
       "datos_fiscales.confirmar",
       "puntos_de_venta.crear",
-      "puntos_de_venta.editar",
       "puntos_de_venta.activar",
       "puntos_de_venta.desactivar",
       "emisores.confirmar_regla",

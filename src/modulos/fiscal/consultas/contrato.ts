@@ -7,7 +7,13 @@ import type { LecturasDeCertificados } from "../persistencia/lecturas-de-certifi
 import type { LecturasDeComprobantes } from "../persistencia/lecturas-de-comprobantes";
 import type { RepositorioDeComprobantes } from "../persistencia/repositorio-de-comprobantes";
 import type { RepositorioDeIntentos } from "../persistencia/repositorio-de-intentos";
-import type { RepositorioDeEmisores, RepositorioDeSeries } from "../persistencia/repositorios";
+import type {
+  RepositorioDeDatosFiscales,
+  RepositorioDeDomicilios,
+  RepositorioDeEmisores,
+  RepositorioDePuntosDeVenta,
+  RepositorioDeSeries,
+} from "../persistencia/repositorios";
 
 /**
  * Lo que recibe el trabajo de una consulta (ADR-005): solo métodos de lectura de los repositorios y la carga
@@ -18,12 +24,21 @@ import type { RepositorioDeEmisores, RepositorioDeSeries } from "../persistencia
 export type TxDeConsultasDeFacturacion = Readonly<{
   comprobantes: Pick<RepositorioDeComprobantes, "obtener">;
   lecturas: LecturasDeComprobantes;
-  /** El emisor al que se le mira el estado de los certificados (de otra empresa, no existe). */
-  emisores: Pick<RepositorioDeEmisores, "obtener">;
+  /**
+   * El emisor al que se le mira el estado de los certificados o la configuración (de otra empresa, no existe) y el
+   * principal, que es el que muestra la lista de configuración fiscal (D-47).
+   */
+  emisores: Pick<RepositorioDeEmisores, "obtener" | "delPrincipal">;
+  /** Los datos fiscales de un emisor para la pantalla de configuración: su borrador y sus versiones confirmadas. */
+  datosFiscales: Pick<RepositorioDeDatosFiscales, "obtenerBorrador" | "confirmadas">;
+  /** El domicilio fiscal de esas versiones. */
+  domicilios: Pick<RepositorioDeDomicilios, "obtener">;
+  /** Los puntos de venta de un emisor, con su ambiente y su estado (pantalla de configuración). */
+  puntosDeVenta: Pick<RepositorioDePuntosDeVenta, "listarDelEmisor">;
   /** Qué certificado cuenta hoy de un emisor en cada ambiente (D-42): sin clave, solo lectura. */
   lecturasDeCertificados: LecturasDeCertificados;
   intentos: Pick<RepositorioDeIntentos, "delComprobante">;
-  series: Pick<RepositorioDeSeries, "obtener">;
+  series: Pick<RepositorioDeSeries, "obtener" | "hayNumerosUsadosDelPuntoDeVenta">;
   /**
    * La marca con la que se imprime el comprobante de una empresa: la de su tenant, con la herencia ya
    * resuelta. La arma la composición desde `marcas` (fiscal no importa ese módulo: la marca es presentación);
