@@ -68,6 +68,7 @@ const LECTURAS_DE_APPS = {
   "test/web/contraste-de-superficies.test.ts": ["apps/web/ui/tokens.css"],
   "test/web/legibilidad-de-la-app.test.ts": ["apps/web/**"],
   "test/web/acciones-de-facturacion.test.ts": ["apps/web/app/s/app/acciones-de-facturacion.ts"],
+  "test/web/acciones-de-config-fiscal.test.ts": ["apps/web/app/s/app/acciones-de-config-fiscal.ts"],
   "test/web/sucursal-elegida.test.ts": ["apps/web/app/s/app/acciones-de-sucursal.ts"],
   "test/arquitectura/vercel-json.test.ts": ["apps/web/**"],
   "test/arquitectura/reglas.test.ts": ["apps/**"],
@@ -147,9 +148,8 @@ function conEnlacesDelGuardian(dependencias, archivosDelGuardian) {
 }
 
 /**
- * Los archivos que el guardián lee: `arquitectura/contratos/**` y `arquitectura/deuda/**` (los informes que
- * generan no cuentan) y los otros archivos de `arquitectura/` que su verificador carga. Un archivo que falta en
- * disco no se inventa.
+ * Los archivos que el guardián lee: `arquitectura/contratos/**` y `arquitectura/deuda/**` (los informes que generan no cuentan) y los
+ * otros archivos de `arquitectura/` que su verificador carga. Un archivo que falta en disco no se inventa.
  */
 function leerArchivosDelGuardian(raiz) {
   const presentes = (archivo) =>

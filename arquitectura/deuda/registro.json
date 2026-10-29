@@ -524,7 +524,7 @@
     "archivos": ["src/modulos/fiscal/persistencia/repositorio-de-comprobantes.ts"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
-    "tamano": 882,
+    "tamano": 878,
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
   },

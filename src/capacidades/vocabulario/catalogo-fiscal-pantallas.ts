@@ -1,6 +1,6 @@
 /**
- * Los textos de las PANTALLAS del facturador (prefijo `fiscal.pantalla.*`), hoy la del detalle de un comprobante y la del
- * listado (sección «Listado» al final): los rótulos, los siete estados (D-25), la etiqueta de anulación (D-29) y los avisos por estado de la guía de pantallas y
+ * Los textos de las PANTALLAS del facturador (prefijo `fiscal.pantalla.*`), hoy la del detalle de un comprobante, la del
+ * listado (sección «Listado») y la anulación (los de Configuración fiscal están en `catalogo-fiscal-configuracion.ts`): los rótulos, los siete estados (D-25), la etiqueta de anulación (D-29) y los avisos por estado de la guía de pantallas y
  * mensajes (§1.2). Viven aparte de `catalogo-fiscal.ts` (errores y mensajes de ARCA) para que ninguno de los dos crezca sin
  * tope; `catalogo.ts` los incluye y su prueba (`catalogo.test.ts`) los revisa como a todos. Castellano neutro y en
  * términos del negocio: ninguna palabra técnica ni el código crudo de nada. No se usa «acreditado» en lo que ve la
@@ -211,7 +211,6 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
     largoMaximo: 120,
   },
 
-  // ---------------------------------------------------------------------------------------------------------------------
   // Anular un comprobante por importe (opción 12A, aprobada por el dueño el 2026-10-29). Fuentes de los textos que siguen:
   // DUEÑO-ANULAR = «dueño, 2026-10-29, respuestas a cuestionarios de opciones en la sesión web del carril web» (los textos tal
   // cual figuran en el prototipo `Main.dc.html`, pantallas A y su variante letra C de `OpcionB.dc.html`); CONTRATO = D-69 a D-74 y

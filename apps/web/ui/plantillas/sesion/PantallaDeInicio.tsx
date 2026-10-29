@@ -18,7 +18,7 @@ export type Pendiente = Readonly<{
 
 export type PropsDePantallaDeInicio = Readonly<{
   empresa: EmpresaParaMostrar;
-  /** La ranura «lo que falta»: la llenan los módulos. Vacía en v1. */
+  /** La ranura «lo que falta»: la llenan los módulos. La llena Configuración fiscal cuando falta algo. */
   pendientes: readonly Pendiente[];
   diccionario?: DiccionarioResuelto;
 }>;

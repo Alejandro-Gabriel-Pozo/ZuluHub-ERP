@@ -29,6 +29,18 @@ export async function sucursalesParaElegir(
   );
 }
 
+/**
+ * Las sucursales ABIERTAS que la persona puede elegir: las del alta de un punto de venta (respuesta del dueño, 2026-10-29: una
+ * sucursal cerrada no se ofrece para uno nuevo). El filtro vive en el servidor: al formulario nunca llega una cerrada. Previene:
+ * crear un punto de venta en una sucursal que ya cerró. Chequeo: `test/web/sucursal-elegida.test.ts`.
+ */
+export async function sucursalesAbiertasParaElegir(
+  contexto: ContextoOperativo,
+): Promise<Respuesta<readonly SucursalParaElegir[]>> {
+  const lista = await sucursalesParaElegir(contexto);
+  return lista.ok ? { ok: true, dato: lista.dato.filter((s) => s.activa) } : lista;
+}
+
 /** La elegida de la cookie si sigue siendo una de las que la persona puede elegir; si no (vieja, de otra empresa, ajena), `null`. */
 export function elegidaEntre(
   guardada: string | null,
