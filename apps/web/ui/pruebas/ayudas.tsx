@@ -14,12 +14,18 @@ const ETIQUETAS_DE_AXE = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"
  * Corre axe sobre `raiz` con el contraste incluido (es navegador real: calcula el color pintado) y
  * devuelve las violaciones como texto, para comparar con `[]`. Un componente suelto no es una página:
  * las reglas de página (una región principal, un `h1`, todo dentro de un landmark) solo se exigen con
- * `pagina: true`, que usan las plantillas.
+ * `pagina: true`, que usan las plantillas. Antes de medir espera a que terminen las transiciones y animaciones finitas en curso (las infinitas, como un esqueleto, no): tras un
+ * cambio de estado (un botón que se habilita) el fondo está a medio camino y el contraste medido no es el final
+ * (previene una violación de `color-contrast` intermitente en un navegador lento, como el del CI).
  */
 export async function violacionesDeAccesibilidad(
   raiz: Element = document.body,
   { pagina = false }: { pagina?: boolean } = {},
 ): Promise<string[]> {
+  const enCurso = document
+    .getAnimations()
+    .filter((animacion) => animacion.effect?.getComputedTiming().iterations !== Infinity);
+  await Promise.all(enCurso.map((animacion) => animacion.finished.catch(() => undefined)));
   const resultado = await axe.run(raiz, {
     runOnly: { type: "tag", values: ETIQUETAS_DE_AXE },
     rules: pagina
