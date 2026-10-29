@@ -134,9 +134,11 @@ async function terminarSesion(): Promise<Respuesta<null>> {
     if (!cierre.ok) return cierre;
     const almacen = await cookies();
     aplicarCookies(almacen, cierre.dato.cookies);
-    // La próxima persona que use este celular no hereda la empresa ni la invitación de esta.
-    almacen.delete(COOKIE_DE_EMPRESA);
-    almacen.delete(COOKIE_DE_INVITACION);
+    // La próxima persona que use este celular no hereda la empresa ni la invitación de esta. Se vencen con los
+    // MISMOS atributos con que se fijaron: `delete(nombre)` no manda `Secure` y el navegador rechaza tocar una
+    // cookie `__Host-` sin él (previene una cookie que sigue viva tras cerrar sesión).
+    almacen.set(COOKIE_DE_EMPRESA, "", { ...OPCIONES_DE_COOKIE_DE_EMPRESA, maxAge: 0 });
+    almacen.set(COOKIE_DE_INVITACION, "", { ...OPCIONES_DE_COOKIE_DE_INVITACION, maxAge: 0 });
     return { ok: true, dato: null };
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta);
