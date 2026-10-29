@@ -388,7 +388,21 @@ describe("datosFiscalesDelEmisor: lo que la pantalla de Datos fiscales muestra y
     valor(await consultasCon(d).consultas.datosFiscalesDelEmisor(contexto, { emisorId: EMISOR }));
 
   it("sin nada cargado: ni vigente ni borrador", async () => {
-    expect(await datos()).toEqual({ emisorId: EMISOR, vigente: null, borrador: null });
+    expect(await datos()).toEqual({
+      emisorId: EMISOR,
+      cuit: "20123456786",
+      vigente: null,
+      borrador: null,
+    });
+  });
+
+  it("D-65: el CUIT es el del emisor leído (texto de 11 dígitos sin guiones), no un dato de la versión", async () => {
+    const r = await datos({ obtenerEmisor: { ...emisor, cuit: "30708533935" as Cuit } });
+    expect(r.cuit).toBe("30708533935");
+    expect(r.cuit).toMatch(/^\d{11}$/);
+    // Una versión confirmada no lo trae: el CUIT no se versiona con los datos.
+    const conVersion = await datos({ confirmadas: [confirmada()] });
+    expect(Object.keys(conVersion.vigente ?? {})).not.toContain("cuit");
   });
 
   it("la versión que rige, con su domicilio y sin Ingresos Brutos; las futuras no cuentan", async () => {

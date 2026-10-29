@@ -43,7 +43,11 @@ import { fechaCivilDesdeTexto, type FechaCivil } from "../primitivas/tiempo/fech
  */
 
 export type ErrorDeEntrada = Readonly<{
-  codigo: "FISCAL_DATOS_INVALIDOS" | "FISCAL_MOTIVO_INVALIDO";
+  codigo:
+    | "FISCAL_DATOS_INVALIDOS"
+    | "FISCAL_MOTIVO_INVALIDO"
+    // Lo arma `entradas-de-configuracion-fiscal.ts` para sus pantallas (D-67).
+    | "FISCAL_CONFIGURACION_DATOS_INVALIDOS";
   campo?: string;
 }>;
 

@@ -8,6 +8,7 @@ import {
   entradaDeCrearPuntoDeVenta,
   entradaDeEditarPuntoDeVenta,
   entradaDeEmisor,
+  entradaDeEmpezarCorreccion,
   entradaDeGuardarBorrador,
   entradaDePuntoDeVenta,
 } from "./entradas-de-configuracion-fiscal";
@@ -16,8 +17,8 @@ import type { Web } from "./web";
 
 /**
  * Lo que hace la web en la pantalla de Configuración fiscal (D-43: «lista de lo que falta + una pantalla por tema»; solo el
- * gerente; carga a mano, sin padrón de ARCA ni segundo factor): la lista de lo que falta, los datos fiscales (ver, guardar a mano
- * y confirmar) y los puntos de venta (ver, crear, editar, activar y desactivar). El estado del certificado está en
+ * gerente; carga a mano, sin padrón de ARCA ni segundo factor): la lista de lo que falta, los datos fiscales (ver, guardar a mano,
+ * empezar a corregir lo confirmado y confirmar) y los puntos de venta (ver, crear, editar, activar y desactivar). El estado del certificado está en
  * `certificado-de-arca-web.ts`. El cambio de
  * ambiente de un punto de venta (D-48) ya está en `facturacion-web.ts` (`cambiarAmbienteDePuntoDeVenta`). Vive acá, y no en
  * `apps/web`, por la misma razón que `facturacion-web.ts`: probarse con la base real sin levantar Next.
@@ -134,6 +135,8 @@ export type DomicilioParaLaPantalla = Readonly<{
 /** Los datos fiscales de un emisor: la versión que rige y el borrador en curso. Sin Ingresos Brutos (D-45). */
 export type DatosFiscalesParaLaPantalla = Readonly<{
   emisorId: string;
+  /** El CUIT del emisor (D-65): 11 dígitos sin guiones, solo para leer; no se versiona con los datos. */
+  cuit: string;
   vigente: Readonly<{
     id: string;
     numero: number;
@@ -179,6 +182,7 @@ export function datosFiscalesDelEmisor(
     (entrada) => d.consultas().datosFiscalesDelEmisor(contexto, entrada),
     (datos) => ({
       emisorId: datos.emisorId,
+      cuit: datos.cuit,
       vigente:
         datos.vigente === null
           ? null
@@ -228,10 +232,31 @@ export function guardarBorradorDeDatosFiscales(
 }
 
 /**
- * Confirmar los datos fiscales (`datos_fiscales.confirmar`): el borrador pasa a una versión inmutable. `crudo`: `{ emisorId,
- * borradorId, versionEsperada, motivo, vigenteDesde? }`; `vigenteDesde` es un instante ISO 8601 con zona y, si no viene, rige
- * desde ya (el instante del servidor). Con datos obligatorios sin cargar responde `FISCAL_DATOS_INVALIDOS` con el primer campo que
- * falta.
+ * Empezar a corregir los datos ya confirmados (`datos_fiscales.editar`; D-62: la pantalla precarga lo vigente y se confirma de
+ * nuevo, lo que deja una versión nueva): crea el borrador del emisor a partir de la versión que rige. El borrador es del emisor,
+ * no de la pestaña: si ya hay uno (de esta u otra pantalla), devuelve ese con `yaEstaba: true` y la pantalla sigue con él. Sin versión
+ * que rija, `FISCAL_SIN_DATOS_FISCALES`: se empieza de cero con `guardarBorradorDeDatosFiscales`. `crudo`: `{ emisorId, borradorId }`;
+ * `borradorId` lo genera la pantalla y es la clave de idempotencia.
+ */
+export function empezarCorreccionDeDatosFiscales(
+  d: DependenciasDeConfiguracionFiscalWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<Readonly<{ borradorId: string; version: number; yaEstaba: boolean }>>> {
+  return accion(
+    d,
+    crudo,
+    entradaDeEmpezarCorreccion,
+    (entrada) => d.casosDeUso().empezarCorreccionDeDatosFiscales(contexto, entrada),
+    (s) => ({ borradorId: s.borradorId, version: s.version, yaEstaba: s.yaEstaba }),
+  );
+}
+
+/**
+ * Confirmar los datos fiscales (`datos_fiscales.confirmar`): el borrador pasa a una versión inmutable que rige desde ya, con el
+ * instante del servidor (D-61: un solo botón «Confirmar», sin fecha de vigencia elegible; un `vigenteDesde` en el pedido se descarta).
+ * `crudo`: `{ emisorId, borradorId, versionEsperada, motivo }`. Con datos obligatorios sin cargar responde `FISCAL_DATOS_INVALIDOS`
+ * con el primer campo que falta.
  */
 export function confirmarDatosFiscales(
   d: DependenciasDeConfiguracionFiscalWeb,

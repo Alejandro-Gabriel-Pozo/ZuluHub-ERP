@@ -356,6 +356,7 @@ describe("con el entorno completo", () => {
       "crearPuntoDeVenta",
       "desactivarPuntoDeVenta",
       "editarPuntoDeVenta",
+      "empezarCorreccionDeDatosFiscales",
       "guardarBorradorDeDatosFiscales",
     ]);
     expect(Object.keys(web.consultasDeFacturacion()).sort()).toEqual([

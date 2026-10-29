@@ -11,8 +11,9 @@ import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 /**
  * Los puntos de venta de un emisor tal como la pantalla de Puntos de venta los necesita (D-43, D-48): número, si está activo, su
  * AMBIENTE (pruebas o producción: es lo que se cambia con confirmación), su sucursal y los datos que dicen qué se le puede hacer.
- * Son TODOS los del emisor, activos o no (un punto de venta nuevo todavía sin activar figura igual que uno dado de baja, D-60), de
- * menor a mayor número. De solo lectura.
+ * Son TODOS los del emisor, activos o no, de menor a mayor número: criterio del ingeniero (el dueño no decidió cuáles lista esta
+ * pantalla), porque para activar o editar un punto de venta hay que verlo aunque esté inactivo. D-58 y D-60 son del filtro «Punto de
+ * venta» del Listado, no de esta consulta. De solo lectura.
  *
  * Exige `puntos_de_venta.editar` (gerente, `administracion`) al guard dentro de su transacción. Un emisor de otra empresa es
  * indistinguible de uno que no existe.
@@ -31,7 +32,7 @@ export type PuntoDeVentaParaConfigurar = Readonly<{
   tieneDomicilio: boolean;
   /**
    * `true`: alguna serie del punto de venta ya se usó, así que su número ya no se puede cambiar
-   * (`PUNTO_DE_VENTA_NUMERO_INMUTABLE`). El texto que lo explica no está aprobado: lo decide la pantalla.
+   * (`PUNTO_DE_VENTA_NUMERO_INMUTABLE`, con el texto aprobado de D-66).
    */
   hayNumerosUsados: boolean;
   /** La versión que la pantalla manda al editarlo o cambiarle el ambiente (control de versión optimista). */

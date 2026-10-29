@@ -5,6 +5,7 @@ import {
   entradaDeCrearPuntoDeVenta,
   entradaDeEditarPuntoDeVenta,
   entradaDeEmisor,
+  entradaDeEmpezarCorreccion,
   entradaDeGuardarBorrador,
   entradaDePuntoDeVenta,
 } from "./entradas-de-configuracion-fiscal";
@@ -129,7 +130,7 @@ describe("entradaDeGuardarBorrador", () => {
   ])("%s: datos inválidos del campo %s", (_caso, crudo, campo) => {
     expect(entradaDeGuardarBorrador(crudo)).toEqual({
       ok: false,
-      error: { codigo: "FISCAL_DATOS_INVALIDOS", campo },
+      error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo },
     });
   });
 
@@ -138,7 +139,7 @@ describe("entradaDeGuardarBorrador", () => {
     (crudo) => {
       expect(entradaDeGuardarBorrador(crudo)).toEqual({
         ok: false,
-        error: { codigo: "FISCAL_DATOS_INVALIDOS" },
+        error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS" },
       });
     },
   );
@@ -152,33 +153,31 @@ describe("entradaDeConfirmarDatosFiscales", () => {
     motivo: "Alta inicial",
   });
 
-  it("sin «desde cuándo rige»: rige desde el instante del servidor", () => {
+  it("rige siempre desde el instante del servidor (D-61)", () => {
     const r = entradaDeConfirmarDatosFiscales(base(), AHORA);
     expect(r.ok && r.valor.vigenteDesde).toEqual(AHORA);
     expect(r.ok && r.valor.versionEsperada).toBe(2);
     expect(r.ok && r.valor.motivo).toBe("Alta inicial");
   });
 
-  it("con un instante ISO con zona: ese instante", () => {
-    const r = entradaDeConfirmarDatosFiscales(
-      { ...base(), vigenteDesde: "2026-11-01T03:00:00.000Z" },
-      AHORA,
-    );
-    expect(r.ok && r.valor.vigenteDesde).toEqual(new Date("2026-11-01T03:00:00.000Z"));
-    const conZona = entradaDeConfirmarDatosFiscales(
-      { ...base(), vigenteDesde: "2026-11-01T00:00:00-03:00" },
-      AHORA,
-    );
-    expect(conZona.ok && conZona.valor.vigenteDesde).toEqual(new Date("2026-11-01T03:00:00.000Z"));
-  });
-
-  it.each([["mañana"], ["2026-11-01"], ["2026-13-45T00:00:00Z"], [20261101]])(
-    "un «desde cuándo rige» que no es un instante (%s): datos inválidos de vigenteDesde",
-    (vigenteDesde) => {
-      expect(entradaDeConfirmarDatosFiscales({ ...base(), vigenteDesde }, AHORA)).toEqual({
-        ok: false,
-        error: { codigo: "FISCAL_DATOS_INVALIDOS", campo: "vigenteDesde" },
-      });
+  it.each([
+    ["futuro", "2026-11-01T03:00:00.000Z"],
+    ["pasado", "2020-01-01T00:00:00.000Z"],
+    ["con zona", "2026-11-01T00:00:00-03:00"],
+    ["que no es un instante", "mañana"],
+    ["que no es un texto", 20261101],
+  ])(
+    "un «desde cuándo rige» %s que mande el navegador se descarta: rige desde el servidor (D-61)",
+    (_caso, vigenteDesde) => {
+      const r = entradaDeConfirmarDatosFiscales({ ...base(), vigenteDesde }, AHORA);
+      expect(r.ok && r.valor.vigenteDesde).toEqual(AHORA);
+      expect(r.ok && Object.keys(r.valor).sort()).toEqual([
+        "borradorId",
+        "emisorId",
+        "motivo",
+        "versionEsperada",
+        "vigenteDesde",
+      ]);
     },
   );
 
@@ -186,7 +185,28 @@ describe("entradaDeConfirmarDatosFiscales", () => {
     const sinVersion = { emisorId: id(), borradorId: id(), motivo: "Alta inicial" };
     expect(entradaDeConfirmarDatosFiscales(sinVersion, AHORA)).toEqual({
       ok: false,
-      error: { codigo: "FISCAL_DATOS_INVALIDOS", campo: "versionEsperada" },
+      error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo: "versionEsperada" },
+    });
+  });
+});
+
+describe("entradaDeEmpezarCorreccion (D-62)", () => {
+  it("toma el emisor y la clave del borrador; lo demás se descarta (la empresa sale del contexto)", () => {
+    const e = id();
+    const b = id();
+    expect(
+      entradaDeEmpezarCorreccion({ emisorId: e, borradorId: b, empresaId: id(), razonSocial: "X" }),
+    ).toEqual({ ok: true, valor: { emisorId: e, borradorId: b } });
+  });
+
+  it.each([
+    ["sin emisor", { borradorId: id() }, "emisorId"],
+    ["sin clave del borrador", { emisorId: id() }, "borradorId"],
+    ["clave que no es un identificador", { emisorId: id(), borradorId: "uno" }, "borradorId"],
+  ])("%s: datos inválidos de Configuración fiscal con el campo", (_caso, crudo, campo) => {
+    expect(entradaDeEmpezarCorreccion(crudo)).toEqual({
+      ok: false,
+      error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo },
     });
   });
 });
@@ -208,11 +228,11 @@ describe("entradaDeEmisor y entradaDePuntoDeVenta", () => {
   it("un identificador mal armado es un dato inválido de ese campo", () => {
     expect(entradaDeEmisor({ emisorId: "x" })).toEqual({
       ok: false,
-      error: { codigo: "FISCAL_DATOS_INVALIDOS", campo: "emisorId" },
+      error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo: "emisorId" },
     });
     expect(entradaDePuntoDeVenta({})).toEqual({
       ok: false,
-      error: { codigo: "FISCAL_DATOS_INVALIDOS", campo: "puntoDeVentaId" },
+      error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo: "puntoDeVentaId" },
     });
   });
 });
@@ -244,11 +264,11 @@ describe("entradaDeCrearPuntoDeVenta y entradaDeEditarPuntoDeVenta", () => {
     const ok = { id: id(), emisorId: id(), sucursalId: id(), numero: 1 };
     expect(entradaDeCrearPuntoDeVenta({ ...ok, numero: "1.5" })).toEqual({
       ok: false,
-      error: { codigo: "FISCAL_DATOS_INVALIDOS", campo: "numero" },
+      error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo: "numero" },
     });
     expect(entradaDeCrearPuntoDeVenta({ ...ok, sucursalId: undefined })).toEqual({
       ok: false,
-      error: { codigo: "FISCAL_DATOS_INVALIDOS", campo: "sucursalId" },
+      error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo: "sucursalId" },
     });
   });
 
@@ -264,7 +284,7 @@ describe("entradaDeCrearPuntoDeVenta y entradaDeEditarPuntoDeVenta", () => {
     expect(r).toEqual({ ok: true, valor: { puntoDeVentaId: pv, versionEsperada: 4, numero: 7 } });
     expect(entradaDeEditarPuntoDeVenta({ puntoDeVentaId: pv })).toEqual({
       ok: false,
-      error: { codigo: "FISCAL_DATOS_INVALIDOS", campo: "versionEsperada" },
+      error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo: "versionEsperada" },
     });
   });
 });

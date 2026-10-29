@@ -3,6 +3,7 @@ import {
   domicilioId,
   emisorId,
   puntoDeVentaId,
+  type CasosDeUsoDeConfiguracionFiscal,
   type DomicilioDeEntrada,
   type EmisorId,
   type EntradaDeCrearPuntoDeVenta,
@@ -12,8 +13,14 @@ import {
   type EntradaDeConfirmarDatosFiscales,
 } from "../modulos/fiscal/publico";
 import { sucursalId } from "../primitivas/identificadores/marca";
-import { ok, type Resultado } from "../primitivas/resultado/resultado";
-import { entero, identificador, leer, texto, type ErrorDeEntrada } from "./entradas-de-facturacion";
+import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
+import {
+  entero,
+  identificador,
+  leer as leerDeFacturacion,
+  texto,
+  type ErrorDeEntrada,
+} from "./entradas-de-facturacion";
 
 /**
  * La frontera de las acciones de configuración fiscal (D-43): de lo que manda el navegador (JSON sin tipo) a la entrada de cada
@@ -25,6 +32,20 @@ import { entero, identificador, leer, texto, type ErrorDeEntrada } from "./entra
  * nunca los recibe y el backend los guarda vacíos. El emisor viaja en el pedido (la pantalla lo recibe de la lista, D-47) y el
  * caso de uso comprueba que sea de la empresa del contexto: el de otra empresa es indistinguible de uno que no existe.
  */
+
+/**
+ * Leer con el esquema de la pantalla. Un dato sin la forma pedida sale con el código de Configuración fiscal y su campo (D-67:
+ * «Revisá los datos marcados.», no el «Revise los datos del comprobante» de las facturas). Previene: el texto de las facturas en
+ * Datos fiscales y Puntos de venta.
+ */
+function leer<S extends z.ZodType>(
+  forma: S,
+  crudo: unknown,
+): Resultado<z.output<S>, ErrorDeEntrada> {
+  const r = leerDeFacturacion(forma, crudo);
+  if (r.ok || r.error.codigo !== "FISCAL_DATOS_INVALIDOS") return r;
+  return err({ ...r.error, codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS" });
+}
 
 const domicilio = z.discriminatedUnion("tipo", [
   z.object({
@@ -52,12 +73,16 @@ const formaDeBorrador = z.object({
   domicilio: domicilio.optional(),
 });
 
+const formaDeEmpezarCorreccion = z.object({
+  emisorId: identificador,
+  /** La clave de idempotencia del borrador que se crea: la genera la pantalla al pedir corregir. */
+  borradorId: identificador,
+});
+
 const formaDeConfirmar = z.object({
   emisorId: identificador,
   borradorId: identificador,
   versionEsperada: entero,
-  /** Un instante ISO 8601 con zona. Sin él, rige desde ya. */
-  vigenteDesde: z.iso.datetime({ offset: true }).optional(),
   motivo: texto,
 });
 
@@ -126,7 +151,27 @@ export function entradaDeGuardarBorrador(
   });
 }
 
-/** El pedido de confirmar los datos fiscales: `ahora` es el instante del servidor, para el «rige desde ya» de quien no pide otro. */
+// `publico.ts` de fiscal no puede crecer (deuda registrada): el tipo sale del caso de uso que lo declara.
+type EntradaDeEmpezarCorreccionDeDatosFiscales = Parameters<
+  CasosDeUsoDeConfiguracionFiscal["empezarCorreccionDeDatosFiscales"]
+>[1];
+
+/** El pedido de empezar a corregir los datos ya confirmados (D-62): el emisor y la clave del borrador que se crea. */
+export function entradaDeEmpezarCorreccion(
+  crudo: unknown,
+): Resultado<EntradaDeEmpezarCorreccionDeDatosFiscales, ErrorDeEntrada> {
+  const forma = leer(formaDeEmpezarCorreccion, crudo);
+  if (!forma.ok) return forma;
+  return ok({ emisorId: emisorId(forma.valor.emisorId), borradorId: forma.valor.borradorId });
+}
+
+/**
+ * El pedido de confirmar los datos fiscales. D-61 (`Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md`, registro de
+ * decisiones; confirmada por el dueño el 2026-10-29): un solo botón «Confirmar» y lo confirmado rige desde ese momento, sin fecha de
+ * vigencia elegible. Por eso el pedido NO trae `vigenteDesde` (si el navegador lo manda, se descarta como cualquier dato que el
+ * esquema no declara) y `ahora`, el instante del servidor, es siempre el «rige desde». Previene: versiones futuras que la pantalla no
+ * muestra y `VIGENCIA_RETROACTIVA` por diferencia entre el reloj del navegador y el del servidor.
+ */
 export function entradaDeConfirmarDatosFiscales(
   crudo: unknown,
   ahora: Date,
@@ -138,7 +183,7 @@ export function entradaDeConfirmarDatosFiscales(
     emisorId: emisorId(f.emisorId),
     borradorId: f.borradorId,
     versionEsperada: f.versionEsperada,
-    vigenteDesde: f.vigenteDesde === undefined ? ahora : new Date(f.vigenteDesde),
+    vigenteDesde: ahora,
     motivo: f.motivo,
   });
 }

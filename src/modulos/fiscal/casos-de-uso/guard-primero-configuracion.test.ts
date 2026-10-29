@@ -25,7 +25,7 @@ import { DECLARACIONES_DE_CONFIGURACION } from "./declaraciones-de-configuracion
  * P7 para la configuración fiscal del gerente (spec H7 fiscal §C, T5): ningún caso de uso se salta el guard. Corren
  * contra una transacción VIGILADA: solo `autorizacion` responde y cualquier otro acceso (un repositorio, la
  * auditoría, los estados de la empresa) queda registrado y corta la ejecución. Sin base de datos. Y la matriz: solo el
- * gerente, con el catálogo REAL (la facturación está en desarrollo y eso no frena a la configuración: las siete
+ * gerente, con el catálogo REAL (la facturación está en desarrollo y eso no frena a la configuración: las ocho
  * acciones son de `administracion`).
  */
 
@@ -89,6 +89,8 @@ const LLAMADAS: Record<
 > = {
   guardarBorradorDeDatosFiscales: (casos, c = contexto) =>
     casos.guardarBorradorDeDatosFiscales(c, { emisorId: emisor, borradorId: ID, cambios: {} }),
+  empezarCorreccionDeDatosFiscales: (casos, c = contexto) =>
+    casos.empezarCorreccionDeDatosFiscales(c, { emisorId: emisor, borradorId: ID }),
   confirmarDatosFiscales: (casos, c = contexto) =>
     casos.confirmarDatosFiscales(c, {
       emisorId: emisor,
@@ -132,10 +134,11 @@ const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
 };
 
 describe("P7: el guard va primero en cada caso de uso de configuración fiscal", () => {
-  it("hay siete casos de uso, cada uno con SU acción, todos de administracion y solo del gerente", () => {
-    expect(NOMBRES).toHaveLength(7);
+  it("hay ocho casos de uso, cada uno con SU acción, todos de administracion y solo del gerente", () => {
+    expect(NOMBRES).toHaveLength(8);
     expect(DECLARACIONES_DE_CONFIGURACION).toEqual({
       guardarBorradorDeDatosFiscales: { accion: "datos_fiscales.editar" },
+      empezarCorreccionDeDatosFiscales: { accion: "datos_fiscales.editar" },
       confirmarDatosFiscales: { accion: "datos_fiscales.confirmar" },
       crearPuntoDeVenta: { accion: "puntos_de_venta.crear" },
       editarPuntoDeVenta: { accion: "puntos_de_venta.editar" },

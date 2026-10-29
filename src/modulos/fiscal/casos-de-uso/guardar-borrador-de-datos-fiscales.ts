@@ -84,7 +84,7 @@ const ADMITIDOS = [
 ] as const;
 
 /** El contenido de un borrador como dato de auditoría (lo que cambia entre guardados, no la versión). */
-function contenidoDelBorrador(b: DatosFiscalesBorrador): Record<string, Dato> {
+export function contenidoDelBorrador(b: DatosFiscalesBorrador): Record<string, Dato> {
   return {
     razonSocial: b.razonSocial,
     condicionIva: b.condicionIva,

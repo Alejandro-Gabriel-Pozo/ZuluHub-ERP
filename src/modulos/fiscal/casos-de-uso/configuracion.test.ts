@@ -211,6 +211,208 @@ describe("guardarBorradorDeDatosFiscales: lo que la base real no deja armar", ()
   });
 });
 
+describe("empezarCorreccionDeDatosFiscales (D-62): repositorios en memoria", () => {
+  const entrada = { emisorId: EMISOR_1, borradorId: ID } as const;
+  const confirmadaN = (numero: number, cambios: Partial<DatosFiscalesConfirmados> = {}) =>
+    ({
+      id: versionId(ID_2),
+      empresaId: EMPRESA,
+      emisorId: EMISOR_1,
+      numero,
+      razonSocial: "Coop SA",
+      condicionIva: "MONOTRIBUTO",
+      domicilioFiscalId: DOMICILIO_1,
+      inicioActividades: "2020-01-01",
+      iibbNumero: "902-1",
+      iibbCondicion: "LOCAL",
+      vigenteDesde: new Date(AHORA.getTime() - 86_400_000),
+      confirmadaEn: AHORA,
+      confirmadaPor: GERENTE,
+      motivo: "Alta",
+      version: 2,
+      ...cambios,
+    }) satisfies DatosFiscalesConfirmados;
+
+  it("sin ninguna versión que rija (nada confirmado, o solo futuras): SIN_DATOS_FISCALES_VIGENTES y no escribe", async () => {
+    for (const confirmadas of [[], [confirmadaN(1, { vigenteDesde: MANANA })]]) {
+      const { casos, mundo } = armar({
+        datosFiscales: {
+          obtenerBorrador: () => Promise.resolve(null),
+          obtener: () => Promise.resolve(null),
+          confirmadas: () => Promise.resolve(confirmadas),
+        } as never,
+      });
+      expect(await casos.empezarCorreccionDeDatosFiscales(contexto, entrada)).toEqual(
+        err("SIN_DATOS_FISCALES_VIGENTES"),
+      );
+      expect(mundo.auditoria).toEqual([]);
+    }
+  });
+
+  it("crea el borrador con lo de la versión que rige (no la última ni una futura) y lo audita con su origen", async () => {
+    const creados: DatosFiscalesBorrador[] = [];
+    const { casos, mundo } = armar({
+      datosFiscales: {
+        obtenerBorrador: () => Promise.resolve(null),
+        obtener: () => Promise.resolve(null),
+        confirmadas: () =>
+          Promise.resolve([
+            confirmadaN(1, { razonSocial: "Vieja SA", id: versionId("v-viejo") }),
+            confirmadaN(2),
+            confirmadaN(3, { razonSocial: "Futura SA", vigenteDesde: MANANA }),
+          ]),
+        crearBorrador: (b: DatosFiscalesBorrador) => {
+          creados.push(b);
+          return Promise.resolve(ok({ creado: true, valor: b }));
+        },
+      } as never,
+    });
+    expect(await casos.empezarCorreccionDeDatosFiscales(contexto, entrada)).toEqual(
+      ok({ borradorId: versionId(ID), version: 1, yaEstaba: false }),
+    );
+    expect(creados).toEqual([
+      {
+        id: versionId(ID),
+        empresaId: EMPRESA,
+        emisorId: EMISOR_1,
+        razonSocial: "Coop SA",
+        condicionIva: "MONOTRIBUTO",
+        domicilioFiscalId: DOMICILIO_1,
+        inicioActividades: "2020-01-01",
+        iibbNumero: "902-1",
+        iibbCondicion: "LOCAL",
+        creadoPor: GERENTE,
+        version: 1,
+      },
+    ]);
+    expect(mundo.auditoria).toHaveLength(1);
+    expect(mundo.auditoria[0]).toMatchObject({
+      accion: "DATOS_FISCALES_BORRADOR_GUARDADO",
+      entidad: "datos_fiscales",
+      entidadId: ID,
+      actorPersonaId: GERENTE,
+      despues: { emisorId: EMISOR_1, razonSocial: "Coop SA", desdeNumero: 2 },
+    });
+  });
+
+  it("si ya hay un borrador del emisor, sea el pedido o el de otra pestaña, devuelve ESE sin escribir ni auditar", async () => {
+    for (const idDelExistente of [ID, ID_2]) {
+      const { casos, mundo } = armar({
+        datosFiscales: {
+          obtenerBorrador: () =>
+            Promise.resolve(borrador({ id: versionId(idDelExistente), version: 5 })),
+        } as never,
+      });
+      expect(await casos.empezarCorreccionDeDatosFiscales(contexto, entrada)).toEqual(
+        ok({ borradorId: versionId(idDelExistente), version: 5, yaEstaba: true }),
+      );
+      expect(mundo.auditoria).toEqual([]);
+    }
+  });
+
+  it("el id de una versión ya confirmada es VERSION_CONFIRMADA_INMUTABLE", async () => {
+    const { casos } = armar({
+      datosFiscales: {
+        obtenerBorrador: () => Promise.resolve(null),
+        obtener: () =>
+          Promise.resolve({
+            estado: "CONFIRMADA",
+            confirmada: confirmadaN(1, { id: versionId(ID) }),
+          }),
+      } as never,
+    });
+    expect(await casos.empezarCorreccionDeDatosFiscales(contexto, entrada)).toEqual(
+      err("VERSION_CONFIRMADA_INMUTABLE"),
+    );
+  });
+
+  it("un id que ya es el borrador de otro emisor es ID_EN_USO; el mismo id ganado por otro pedido es la repetición", async () => {
+    const base = {
+      obtenerBorrador: () => Promise.resolve(null),
+      obtener: () => Promise.resolve(null),
+      confirmadas: () => Promise.resolve([confirmadaN(1)]),
+    };
+    const deOtro = armar({
+      datosFiscales: {
+        ...base,
+        crearBorrador: () =>
+          Promise.resolve(
+            ok({ creado: false, valor: borrador({ emisorId: "otro-emisor" as never }) }),
+          ),
+      } as never,
+    });
+    expect(await deOtro.casos.empezarCorreccionDeDatosFiscales(contexto, entrada)).toEqual(
+      err("ID_EN_USO"),
+    );
+    const repetido = armar({
+      datosFiscales: {
+        ...base,
+        crearBorrador: () =>
+          Promise.resolve(ok({ creado: false, valor: borrador({ version: 4 }) })),
+      } as never,
+    });
+    expect(await repetido.casos.empezarCorreccionDeDatosFiscales(contexto, entrada)).toEqual(
+      ok({ borradorId: versionId(ID), version: 4, yaEstaba: true }),
+    );
+    expect(repetido.mundo.auditoria).toEqual([]);
+  });
+
+  it("quien pierde la carrera por la restricción del borrador único repite UNA vez y recibe al ganador", async () => {
+    let lecturas = 0;
+    const { casos, mundo } = armar({
+      datosFiscales: {
+        obtenerBorrador: () =>
+          // La primera transacción no ve a nadie; la segunda ya ve al ganador.
+          Promise.resolve(++lecturas === 1 ? null : borrador({ id: versionId(ID_2), version: 2 })),
+        obtener: () => Promise.resolve(null),
+        confirmadas: () => Promise.resolve([confirmadaN(1)]),
+        crearBorrador: () =>
+          Promise.resolve(err({ tipo: "Unicidad", restriccion: "datos_fiscales_borrador_uk" })),
+      } as never,
+    });
+    expect(await casos.empezarCorreccionDeDatosFiscales(contexto, entrada)).toEqual(
+      ok({ borradorId: versionId(ID_2), version: 2, yaEstaba: true }),
+    );
+    expect(lecturas).toBe(2);
+    expect(mundo.auditoria).toEqual([]);
+  });
+
+  it("si en el segundo intento la restricción vuelve a saltar, se informa YA_HAY_BORRADOR (no se repite sin fin)", async () => {
+    let altas = 0;
+    const { casos } = armar({
+      datosFiscales: {
+        obtenerBorrador: () => Promise.resolve(null),
+        obtener: () => Promise.resolve(null),
+        confirmadas: () => Promise.resolve([confirmadaN(1)]),
+        crearBorrador: () => {
+          altas++;
+          return Promise.resolve(
+            err({ tipo: "Unicidad", restriccion: "datos_fiscales_borrador_uk" }),
+          );
+        },
+      } as never,
+    });
+    expect(await casos.empezarCorreccionDeDatosFiscales(contexto, entrada)).toEqual(
+      err("YA_HAY_BORRADOR"),
+    );
+    expect(altas).toBe(2);
+  });
+
+  it("un id mal armado es ID_INVALIDO y un emisor ajeno, EMISOR_NO_ENCONTRADO, sin tocar nada más", async () => {
+    const invalido = armar();
+    expect(
+      await invalido.casos.empezarCorreccionDeDatosFiscales(contexto, {
+        ...entrada,
+        borradorId: "no-es-uuid",
+      }),
+    ).toEqual(err("ID_INVALIDO"));
+    const ajeno = armar({ emisores: { obtener: () => Promise.resolve(null) } });
+    expect(await ajeno.casos.empezarCorreccionDeDatosFiscales(contexto, entrada)).toEqual(
+      err("EMISOR_NO_ENCONTRADO"),
+    );
+  });
+});
+
 describe("confirmarDatosFiscales: lo que la base real no deja armar", () => {
   const entrada = {
     emisorId: EMISOR_1,

@@ -7,6 +7,7 @@ import { armarConfirmarReglaDeEmisor } from "./confirmar-regla-de-emisor";
 import type { DependenciasDeConfiguracionFiscal } from "./contrato-de-configuracion";
 import { armarCrearPuntoDeVenta, armarEditarPuntoDeVenta } from "./crear-y-editar-punto-de-venta";
 import type { DECLARACIONES_DE_CONFIGURACION } from "./declaraciones-de-configuracion";
+import { armarEmpezarCorreccionDeDatosFiscales } from "./empezar-correccion-de-datos-fiscales";
 import { armarGuardarBorradorDeDatosFiscales } from "./guardar-borrador-de-datos-fiscales";
 
 /**
@@ -19,6 +20,7 @@ export function crearCasosDeUsoDeConfiguracionFiscal(
 ) {
   return {
     guardarBorradorDeDatosFiscales: armarGuardarBorradorDeDatosFiscales(dependencias),
+    empezarCorreccionDeDatosFiscales: armarEmpezarCorreccionDeDatosFiscales(dependencias),
     confirmarDatosFiscales: armarConfirmarDatosFiscales(dependencias),
     crearPuntoDeVenta: armarCrearPuntoDeVenta(dependencias),
     editarPuntoDeVenta: armarEditarPuntoDeVenta(dependencias),
