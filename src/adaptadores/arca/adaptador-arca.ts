@@ -72,14 +72,11 @@ import { aSolicitudDeWsfe } from "./traducir";
  *  4. **Nada secreto sale.** El token, la firma y el PEM no aparecen en ningún resultado (motivo, detalle,
  *     mensaje): los textos se arman solo con códigos, textos fijos y los `Msg` de ARCA saneados, y el texto de
  *     una excepción no se usa nunca.
- *  5. **La primera llamada exitosa verifica la autorización** (D-42, 2026-10-29): cuando una operación de WSFE que usa
- *     el ticket vuelve con éxito, se anota en el certificado que pidió ese ticket que ARCA lo aceptó para la CUIT del
- *     emisor. Anotarlo nunca cambia lo que se devuelve: si falla, se ignora y la próxima llamada exitosa lo intenta de
- *     nuevo. Fuente: `h7-facturacion.md` §B.6.2 («`autorizacion_verificada_en` se fija en el primer `loginCms` +
- *     `FEDummy`/`FECompUltimoAutorizado` exitoso»). SUPUESTO (pendiente de confirmar con el dueño): también cuentan
- *     `FECAESolicitar` autorizado, `FECompConsultar` encontrado y `FEParamGet*` exitoso, que usan el mismo ticket y la
- *     misma CUIT representada; `FEDummy` NO cuenta porque no usa ticket y no prueba nada de la autorización. Revertirlo
- *     es borrar tres líneas de `aceptado(...)`.
+ *  5. **La primera llamada exitosa verifica la autorización** (D-42, `h7-facturacion.md` §B.6.2): si una operación de WSFE
+ *     con ticket sale bien, se anota en el certificado que pidió ese ticket que ARCA lo aceptó. Nunca cambia lo que se
+ *     devuelve; si falla, queda rastro (solo el tipo de la falla) y la próxima llamada lo intenta. SUPUESTO aprobado por el
+ *     dueño: cuentan `FECompUltimoAutorizado`, `FECAESolicitar` autorizado y `FECompConsultar` encontrado. `FEDummy` (sin
+ *     ticket) y `FEParamGet*` (la CUIT la manda quien llama: la de otro no prueba la autorización) NO cuentan.
  *
  * No lanza: toda falla es un valor del puerto. Los desenlaces son los de `clasificar.ts`.
  */
@@ -96,6 +93,8 @@ export type DependenciasDeArca = Readonly<{
   esperar(ms: number): Promise<void>;
   /** Anota que ARCA aceptó al certificado, la primera vez que una llamada con su ticket sale bien (D-42). */
   verificacion: VerificacionDeAutorizacion;
+  /** Registro del servidor: recibe el aviso de una falla al anotar la verificación (sin secretos ni texto de la base). */
+  registrar(aviso: string): void;
   /** Por defecto, la firma CMS real; las pruebas la reemplazan para forzar un fallo. */
   firmar?: typeof firmarTra;
 }>;
@@ -146,7 +145,8 @@ export function crearEmisionArca(
   emisor: EmisorId,
   ambiente: AmbienteDeArca,
 ): AdaptadorDeArca {
-  const { credenciales, tickets, transporte, reloj, esperar, verificacion } = dependencias;
+  const { credenciales, tickets, transporte, reloj, esperar, verificacion, registrar } =
+    dependencias;
   const firmar = dependencias.firmar ?? firmarTra;
   const destinos = DESTINOS_DE_ARCA[ambiente];
 
@@ -258,15 +258,30 @@ export function crearEmisionArca(
     }
   }
 
-  /**
-   * ARCA aceptó el ticket del certificado para la CUIT del emisor: se anota (una sola vez, la base lo garantiza). No
-   * lanza y no cambia lo que la operación devuelve: si no se pudo anotar, la próxima llamada exitosa lo intenta.
-   */
+  /** Deja rastro de la falla sin arriesgar secretos: solo su tipo, nunca su mensaje. */
+  function avisar(causa: string): void {
+    try {
+      registrar(
+        `[fiscal] no se pudo anotar la verificación de la autorización del certificado (${causa})`,
+      );
+    } catch {
+      // Un registro que falla no cambia lo que se devuelve.
+    }
+  }
+
+  /** ARCA aceptó el ticket del certificado para la CUIT del emisor: se anota (la base lo garantiza una sola vez). No lanza. */
   async function aceptado(sesion: SesionDeWsfe): Promise<void> {
     try {
-      await verificacion.anotar(empresa, sesion.certificadoId);
-    } catch {
-      // Un fallo de la base al anotar no es un fallo de ARCA.
+      const r = await verificacion.anotar(empresa, sesion.certificadoId);
+      if (!r.ok) {
+        avisar(
+          r.error.tipo === "Inesperado"
+            ? `Inesperado ${r.error.sqlstate ?? ""}`.trim()
+            : r.error.tipo,
+        );
+      }
+    } catch (error) {
+      avisar(error instanceof Error ? error.name : "falla que no es un Error");
     }
   }
 
@@ -364,12 +379,11 @@ export function crearEmisionArca(
     ): Promise<Resultado<readonly FilaDeParametro[], ErrorDeEmision>> {
       const auth = await conAutenticacion(cuit);
       if (!auth.ok) return auth;
-      const filas = clasificarParametros(
+      // No verifica la autorización: la CUIT la manda quien llama y no se sabe si es la del emisor del certificado.
+      return clasificarParametros(
         await llamarWsfe(`FEParamGet${tabla}`, pedidoFEParamGet(auth.valor.autenticacion, tabla)),
         `FEParamGet${tabla}`,
       );
-      if (filas.ok) await aceptado(auth.valor);
-      return filas;
     },
   };
 }

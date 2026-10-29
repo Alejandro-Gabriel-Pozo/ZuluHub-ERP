@@ -18,10 +18,14 @@ import type { VerificacionDeAutorizacion } from "../../puertos/verificacion-de-a
  * encuentra fila para cambiar (o, bajo aislamiento serializable, reintenta y ya no la encuentra) y no audita. El hecho
  * queda en la auditoría de la MISMA transacción (`CERTIFICADO_AUTORIZACION_VERIFICADA`): qué certificado y cuándo,
  * nada más.
+ *
+ * Una vez verificado, un certificado no se vuelve a abrir una transacción por él: la verificación no se pisa nunca (la base
+ * lo impide), así que recordarla en memoria es siempre correcto. Cada instancia recuerda lo suyo; la composición crea una
+ * sola por proceso. La primera llamada de un proceso sí lee el certificado (para enterarse), y solo escribe si falta.
  */
 
 export type TxDeVerificacion = Readonly<{
-  certificados: Pick<RepositorioDeCertificados, "anotarVerificacion">;
+  certificados: Pick<RepositorioDeCertificados, "obtener" | "anotarVerificacion">;
   auditoria: Auditoria;
 }>;
 
@@ -35,18 +39,29 @@ export function crearVerificacionDeAutorizacion({
   transacciones,
   reloj,
 }: DependenciasDeVerificacion): VerificacionDeAutorizacion {
+  /** Los certificados (`empresa|id`) que ya se sabe verificados. Crece de a un texto corto por certificado. */
+  const yaVerificados = new Set<string>();
   return {
-    anotar(empresa, certificado) {
+    async anotar(empresa, certificado) {
+      const clave = `${empresa}|${certificado}`;
+      if (yaVerificados.has(clave)) return ok({ cambio: false });
       const ahora = reloj.ahora();
-      return transacciones.ejecutar(
+      const r = await transacciones.ejecutar(
         { contexto: contextoDeSistema(empresa, ahora) },
-        async (tx): Promise<Resultado<Readonly<{ cambio: boolean }>, never>> => {
-          const anotado = await tx.certificados.anotarVerificacion(
-            empresa,
-            certificadoId(certificado),
-            ahora,
-          );
-          if (anotado === null) return ok({ cambio: false });
+        async (
+          tx,
+        ): Promise<Resultado<Readonly<{ cambio: boolean; verificado: boolean }>, never>> => {
+          const id = certificadoId(certificado);
+          const actual = await tx.certificados.obtener(empresa, id);
+          // Ya verificado: nada que escribir (y se recuerda). Que no exista, o ya no sea el vigente: tampoco.
+          if (actual?.autorizacionVerificadaEn != null) {
+            return ok({ cambio: false, verificado: true });
+          }
+          if (actual === null || actual.estado !== "VIGENTE") {
+            return ok({ cambio: false, verificado: false });
+          }
+          const anotado = await tx.certificados.anotarVerificacion(empresa, id, ahora);
+          if (anotado === null) return ok({ cambio: false, verificado: false });
           await tx.auditoria.registrar({
             empresaId: empresa,
             actorPersonaId: null,
@@ -56,9 +71,12 @@ export function crearVerificacionDeAutorizacion({
             antes: { autorizacion: "SIN_VERIFICAR" },
             despues: { autorizacion: "VERIFICADA", verificadaEn: ahora.toISOString() },
           });
-          return ok({ cambio: true });
+          return ok({ cambio: true, verificado: true });
         },
       );
+      // Recién con la transacción confirmada (si se reintenta, el trabajo corre de nuevo).
+      if (r.ok && r.valor.verificado) yaVerificados.add(clave);
+      return r.ok ? ok({ cambio: r.valor.cambio }) : r;
     },
   };
 }

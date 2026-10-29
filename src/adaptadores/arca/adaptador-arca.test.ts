@@ -141,6 +141,8 @@ type Mundo = Readonly<{
   tickets: AlmacenDeTicketsEnMemoria;
   credenciales: CredencialesEnMemoria;
   verificacion: VerificacionEnMemoria;
+  /** Lo que el adaptador dejó en el registro del servidor. */
+  avisos: string[];
   esperas: number[];
   /** Cada paso de la prueba, en orden: lecturas, guardados y pedidos. */
   bitacora: string[];
@@ -174,6 +176,7 @@ function armar(
     opciones.credencial === undefined ? CREDENCIAL_FALSA : opciones.credencial,
   );
   const verificacion = new VerificacionEnMemoria();
+  const avisos: string[] = [];
   const esperas: number[] = [];
   const bitacora: string[] = [];
   const leer = tickets.leer.bind(tickets);
@@ -191,6 +194,7 @@ function armar(
     credenciales,
     tickets,
     verificacion,
+    registrar: (aviso) => avisos.push(aviso),
     transporte: (pedido) => {
       bitacora.push(`pedido:${TransporteFalso.operacionDe(pedido)}`);
       return enviar(pedido);
@@ -218,6 +222,7 @@ function armar(
     tickets,
     credenciales,
     verificacion,
+    avisos,
     esperas,
     bitacora,
   };
@@ -1113,7 +1118,7 @@ describe("la primera llamada exitosa verifica la autorización del certificado (
     expect(m.verificacion.anotadas).toEqual([delTicket]);
   });
 
-  it("autorizar (AUTORIZADO), consultar (ENCONTRADO) y una tabla de parámetros exitosa también lo anotan", async () => {
+  it("autorizar (AUTORIZADO) y consultar (ENCONTRADO) también lo anotan", async () => {
     const autorizar = armar({ transporte: wsfe(["FECAESolicitar", grabada(1, "032")]) });
     expect((await autorizar.adaptador.autorizar(solicitudDeLaGrabacion())).tipo).toBe("AUTORIZADO");
     expect(autorizar.verificacion.anotadas).toEqual([delTicket]);
@@ -1123,12 +1128,14 @@ describe("la primera llamada exitosa verifica la autorización del certificado (
       "ENCONTRADO",
     );
     expect(consultar.verificacion.anotadas).toEqual([delTicket]);
+  });
 
-    const parametros = armar({
-      transporte: wsfe(["FEParamGetTiposDoc", grabada(1, "012")]),
-    });
-    expect((await parametros.adaptador.parametros("20111111112", "TiposDoc")).ok).toBe(true);
-    expect(parametros.verificacion.anotadas).toEqual([delTicket]);
+  it("una tabla de parámetros exitosa NO verifica: la CUIT la manda quien llama y la de otro no prueba la autorización", async () => {
+    for (const cuit of ["20111111112", "30500010912"]) {
+      const m = armar({ transporte: wsfe(["FEParamGetTiposDoc", grabada(1, "012")]) });
+      expect((await m.adaptador.parametros(cuit, "TiposDoc")).ok).toBe(true);
+      expect(m.verificacion.anotadas).toEqual([]);
+    }
   });
 
   it("la verificación usa el certificado del ticket que se pidió a WSAA, no otro", async () => {
@@ -1182,7 +1189,7 @@ describe("la primera llamada exitosa verifica la autorización del certificado (
     expect([sinTicket, dummy].flatMap((m) => m.verificacion.anotadas)).toEqual([]);
   });
 
-  it("si anotar falla (la base caída), lo que ARCA contestó se devuelve igual, sin filtrar el texto de la falla", async () => {
+  it("si anotar falla (excepción), lo que ARCA contestó se devuelve igual, queda rastro y no se filtra el texto de la falla", async () => {
     const m = armar({
       transporte: wsfe(
         ["FECompUltimoAutorizado", grabada(1, "024")],
@@ -1197,6 +1204,56 @@ describe("la primera llamada exitosa verifica la autorización del certificado (
     expect((await m.adaptador.autorizar(solicitudDeLaGrabacion())).tipo).toBe("AUTORIZADO");
     // `sinSecretos` (dentro de `armar`) ya habría fallado si «postgres://» apareciera en lo devuelto.
     expect(m.verificacion.anotadas).toEqual([]);
+    // Un aviso por falla, con el TIPO de la falla y nunca su mensaje (que traía una cadena de conexión).
+    expect(m.avisos).toEqual([
+      "[fiscal] no se pudo anotar la verificación de la autorización del certificado (Error)",
+      "[fiscal] no se pudo anotar la verificación de la autorización del certificado (Error)",
+    ]);
+    expect(m.avisos.join(" ")).not.toMatch(/postgres|secreto/);
+  });
+
+  it("si anotar devuelve un error de persistencia, también queda rastro (el tipo y el código de Postgres, sin texto) y la respuesta sale igual", async () => {
+    const m = armar({
+      transporte: wsfe(["FECompUltimoAutorizado", grabada(1, "024"), grabada(1, "024")]),
+    });
+    m.verificacion.errorDePersistencia = { tipo: "ConcurrenciaAgotada" };
+    expect((await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B")).ok).toBe(true);
+    m.verificacion.errorDePersistencia = {
+      tipo: "Inesperado",
+      sqlstate: "08006",
+      mensaje: "no se pudo conectar a postgres://usuario:clave@host/base",
+    };
+    expect((await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B")).ok).toBe(true);
+    expect(m.avisos).toEqual([
+      "[fiscal] no se pudo anotar la verificación de la autorización del certificado (ConcurrenciaAgotada)",
+      "[fiscal] no se pudo anotar la verificación de la autorización del certificado (Inesperado 08006)",
+    ]);
+    expect(m.avisos.join(" ")).not.toMatch(/postgres|clave@/);
+  });
+
+  it("si el propio registro falla, la respuesta de ARCA sale igual", async () => {
+    const m = armar({ transporte: wsfe(["FECompUltimoAutorizado", grabada(1, "024")]) });
+    m.verificacion.fallar = true;
+    const roto = crearEmisionArca(
+      {
+        credenciales: m.credenciales,
+        tickets: m.tickets,
+        verificacion: m.verificacion,
+        registrar: () => {
+          throw new Error("el registro no anda");
+        },
+        transporte: m.transporte.transporte,
+        reloj: { ahora: () => AHORA },
+        esperar: () => Promise.resolve(),
+      },
+      EMPRESA,
+      EMISOR,
+      "HOMOLOGACION",
+    );
+    expect(await roto.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B")).toEqual({
+      ok: true,
+      valor: 13n,
+    });
   });
 
   it("cada llamada exitosa vuelve a pedir la anotación (la base decide que es una sola): el adaptador no recuerda nada", async () => {
@@ -1224,6 +1281,7 @@ describe("el proveedor: un adaptador por (empresa, emisor, ambiente)", () => {
       credenciales: new CredencialesEnMemoria(CREDENCIAL_FALSA),
       tickets,
       verificacion: new VerificacionEnMemoria(),
+      registrar: () => undefined,
       transporte: transporte.transporte,
       reloj: { ahora: () => AHORA },
       esperar: () => Promise.resolve(),
@@ -1258,6 +1316,7 @@ describe("el proveedor: un adaptador por (empresa, emisor, ambiente)", () => {
       credenciales,
       tickets: new AlmacenDeTicketsEnMemoria(null),
       verificacion: new VerificacionEnMemoria(),
+      registrar: () => undefined,
       transporte: new TransporteFalso().transporte,
       reloj: { ahora: () => AHORA },
       esperar: () => Promise.resolve(),
@@ -1284,6 +1343,7 @@ describe("de punta a punta con el transporte REAL contra un servidor de loopback
         credenciales: new CredencialesEnMemoria(CREDENCIAL_FALSA),
         tickets: new AlmacenDeTicketsEnMemoria(ticketVigente),
         verificacion: new VerificacionEnMemoria(),
+        registrar: () => undefined,
         transporte,
         reloj: { ahora: () => AHORA },
         esperar: () => Promise.resolve(),

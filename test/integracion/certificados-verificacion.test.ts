@@ -248,6 +248,72 @@ describe.skipIf(base === null)(
         expect((await verificada(b.id))?.en ?? null).toBeNull();
       });
 
+      it("ya verificado, una vez sabido no se abre otra transacción por ese certificado (ni siquiera de lectura)", async () => {
+        const { e, id } = await conCertificadoVigente();
+        let abiertas = 0;
+        const contadas = {
+          ejecutar: ((...args: Parameters<typeof entorno.ejecutar>) => {
+            abiertas += 1;
+            return entorno.ejecutar(...args);
+          }) as typeof entorno.ejecutar,
+        };
+        const v = crearVerificacionDeAutorizacion({
+          transacciones: contadas,
+          reloj: { ahora: () => new Date() },
+        });
+        expect(await v.anotar(empresaId(e.empresa), id)).toEqual({
+          ok: true,
+          valor: { cambio: true },
+        });
+        expect(abiertas).toBe(1);
+        const fijada = await verificada(id);
+        for (let i = 0; i < 3; i++) {
+          expect(await v.anotar(empresaId(e.empresa), id)).toEqual({
+            ok: true,
+            valor: { cambio: false },
+          });
+        }
+        expect(abiertas).toBe(1);
+        expect(await verificada(id)).toEqual(fijada);
+        expect(await auditorias(e.empresa, id)).toHaveLength(1);
+      });
+
+      it("un certificado que ya estaba verificado (otro proceso) se descubre con una lectura, sin escribir ni auditar, y se recuerda", async () => {
+        const { e, id } = await conCertificadoVigente();
+        await verificacionCon({ ahora: () => new Date() }).anotar(empresaId(e.empresa), id);
+        const fijada = await verificada(id);
+        let abiertas = 0;
+        const v = crearVerificacionDeAutorizacion({
+          transacciones: {
+            ejecutar: ((...args: Parameters<typeof entorno.ejecutar>) => {
+              abiertas += 1;
+              return entorno.ejecutar(...args);
+            }) as typeof entorno.ejecutar,
+          },
+          reloj: { ahora: () => new Date() },
+        });
+        for (let i = 0; i < 3; i++) await v.anotar(empresaId(e.empresa), id);
+        expect(abiertas).toBe(1);
+        expect(await verificada(id)).toEqual(fijada);
+        expect(await auditorias(e.empresa, id)).toHaveLength(1);
+      });
+
+      it("lo que no se verificó (pedido, reemplazado, otra empresa) NO se recuerda como verificado: si después corresponde, se anota", async () => {
+        const a = await conCertificadoVigente();
+        const b = await conCertificadoVigente();
+        const v = verificacionCon({ ahora: () => new Date() });
+        // Con la empresa equivocada no pasa nada y no queda recordado.
+        expect(await v.anotar(empresaId(b.e.empresa), a.id)).toEqual({
+          ok: true,
+          valor: { cambio: false },
+        });
+        expect(await v.anotar(empresaId(a.e.empresa), a.id)).toEqual({
+          ok: true,
+          valor: { cambio: true },
+        });
+        expect((await verificada(a.id))?.en).not.toBeNull();
+      });
+
       it("la base no deja pisar ni borrar una verificación ya anotada (ni siquiera el dueño de la base)", async () => {
         const { e, id } = await conCertificadoVigente();
         await verificacionCon({ ahora: () => new Date() }).anotar(empresaId(e.empresa), id);
@@ -292,6 +358,7 @@ describe.skipIf(base === null)(
             credenciales: credencialesDe(entorno, servicios, reloj),
             tickets: almacen,
             verificacion: verificacionCon(reloj),
+            registrar: () => undefined,
             transporte,
             reloj,
             esperar: () => Promise.resolve(),
@@ -417,6 +484,7 @@ describe.skipIf(base === null)(
           respuestaHttp(ultimo),
         );
         const { adaptador, reloj, punto } = await armar(c, falso.transporte);
+        const avisos: string[] = [];
         const roto = crearEmisionArca(
           {
             credenciales: credencialesDe(entorno, servicios, reloj),
@@ -424,6 +492,7 @@ describe.skipIf(base === null)(
             verificacion: {
               anotar: () => Promise.reject(new Error("conexión perdida con postgres://secreto")),
             },
+            registrar: (aviso) => avisos.push(aviso),
             transporte: falso.transporte,
             reloj,
             esperar: () => Promise.resolve(),
@@ -434,6 +503,10 @@ describe.skipIf(base === null)(
         );
         expect(await roto.ultimoAutorizado(punto, "FACTURA_B")).toEqual({ ok: true, valor: 13n });
         expect((await verificada(c.id))?.en).toBeNull();
+        // Queda rastro con el tipo de la falla y sin su texto (traía una cadena de conexión).
+        expect(avisos).toEqual([
+          "[fiscal] no se pudo anotar la verificación de la autorización del certificado (Error)",
+        ]);
         // Y la próxima llamada, con la base de vuelta, lo anota.
         expect((await adaptador.ultimoAutorizado(punto, "FACTURA_B")).ok).toBe(true);
         expect((await verificada(c.id))?.en).not.toBeNull();

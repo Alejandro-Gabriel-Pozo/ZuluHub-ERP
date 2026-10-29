@@ -85,6 +85,7 @@ export function armarEmisionFiscal(
       credenciales: crearCredencialesDeEmisor({ transacciones, cifrador, reloj }),
       tickets: crearAlmacenDeTickets({ transacciones, cifrador, reloj }),
       verificacion: crearVerificacionDeAutorizacion({ transacciones, reloj }),
+      registrar: (aviso: string) => registrar(aviso),
       transporte,
       reloj,
       esperar,

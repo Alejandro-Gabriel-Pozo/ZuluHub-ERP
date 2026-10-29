@@ -155,10 +155,13 @@ export class CredencialesEnMemoria implements CredencialesDeEmisor {
 export class VerificacionEnMemoria implements VerificacionDeAutorizacion {
   anotadas: { empresa: EmpresaId; certificado: string }[] = [];
   fallar = false;
+  /** `anotar` devuelve este error de persistencia (un valor, no una excepción). */
+  errorDePersistencia: ErrorDePersistencia | null = null;
   anotar(
     empresa: EmpresaId,
     certificado: string,
   ): Promise<Resultado<Readonly<{ cambio: boolean }>, ErrorDePersistencia>> {
+    if (this.errorDePersistencia !== null) return Promise.resolve(err(this.errorDePersistencia));
     if (this.fallar) return Promise.reject(new Error("falla de la base con postgres://secreto"));
     this.anotadas.push({ empresa, certificado });
     return Promise.resolve(ok({ cambio: true }));
