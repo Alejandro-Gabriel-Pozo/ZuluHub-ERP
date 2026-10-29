@@ -125,16 +125,16 @@ describe("las acciones de Puntos de venta según el servidor", () => {
     expect(a.desactivar).toEqual(apagada(SIN_PERMISO));
   });
 
-  it("si no se pudieron leer los permisos (rechazo): todo se ofrece como hasta ahora; decide el guard al enviar", async () => {
+  it("si no se pudieron leer los permisos (rechazo): todo sale apagado con el motivo de falta de permiso (falla cerrado)", async () => {
     mundo.respuesta = err("SIN_PERMISO");
     const a = await acciones();
-    for (const oferta of Object.values(a)) expect(oferta).toEqual(PERMITIDA);
+    for (const oferta of Object.values(a)) expect(oferta).toEqual(apagada(SIN_PERMISO));
   });
 
-  it("si la lectura lanza: todo se ofrece como hasta ahora y el registro dice solo el TIPO de la falla", async () => {
+  it("si la lectura lanza: todo sale apagado (falla cerrado) y el registro dice solo el TIPO de la falla", async () => {
     mundo.falla = true;
     const a = await acciones();
-    for (const oferta of Object.values(a)) expect(oferta).toEqual(PERMITIDA);
+    for (const oferta of Object.values(a)) expect(oferta).toEqual(apagada(SIN_PERMISO));
     const lineas = registro.mock.calls.map((l) => l.map(String).join(" "));
     expect(lineas).toEqual(["[modulos] no se pudieron leer los permisos de la persona (Error)"]);
   });
