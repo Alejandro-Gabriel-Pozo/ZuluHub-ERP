@@ -1,4 +1,5 @@
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
+import type { EmpresaId, SucursalId } from "../../../primitivas/identificadores/marca";
 import type { Auditoria } from "../../../puertos/auditoria";
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
@@ -29,6 +30,16 @@ export type TxDeConfiguracionFiscal = Readonly<{
     RepositorioDePuntosDeVenta,
     "obtener" | "listarDelEmisor" | "crear" | "guardar"
   >;
+  /**
+   * La sucursal donde se da de alta un punto de venta, leída con `FOR SHARE` (la composición pasa la lectura de empresas, que ya cumple
+   * esto): el alta exige que esté abierta y el bloqueo hace que quien la cierra a la vez espere (o la vea cerrada).
+   */
+  sucursalBloqueada: Readonly<{
+    obtenerBloqueandoElCierre(
+      empresa: EmpresaId,
+      id: SucursalId,
+    ): Promise<Readonly<{ activa: boolean }> | null>;
+  }>;
   /** Solo para saber si el punto de venta ya usó números (el número deja de poder cambiar). */
   series: Pick<RepositorioDeSeries, "hayNumerosUsadosDelPuntoDeVenta">;
   auditoria: Auditoria;

@@ -49,9 +49,11 @@ import type { TxDeCola } from "../adaptadores/trabajos/procesador";
 import type { NivelesDeControl } from "../capacidades/controles/niveles";
 import type { EmpresaId } from "../primitivas/identificadores/marca";
 import {
+  crearLecturaDeSucursalBloqueada,
   crearRepositorioDeEmpresas,
   crearRepositorioDeSucursales,
   type EmpresasDb,
+  type LecturaDeSucursalBloqueada,
   type RepositorioDeEmpresas,
   type RepositorioDeSucursales,
 } from "../modulos/empresas/publico";
@@ -145,6 +147,8 @@ export type TxDeApp = Readonly<{
   tenants: RepositorioDeTenants;
   empresas: RepositorioDeEmpresas;
   sucursales: RepositorioDeSucursales;
+  /** La sucursal leída con `FOR SHARE`: dar de alta un punto de venta exige que siga abierta (el cierre concurrente espera). */
+  sucursalBloqueada: LecturaDeSucursalBloqueada;
   personas: RepositorioDePersonas;
   membresias: RepositorioDeMembresias;
   asignaciones: RepositorioDeAsignaciones;
@@ -269,6 +273,7 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
           tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
           empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
           sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
+          sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
           personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
           membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
           asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
