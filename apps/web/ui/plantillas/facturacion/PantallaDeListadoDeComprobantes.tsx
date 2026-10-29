@@ -75,13 +75,13 @@ function Tabla({ listado }: Readonly<{ listado: ListadoArmado }>) {
           {listado.filas.map((fila) => (
             <tr key={fila.id}>
               <td>{fila.fecha}</td>
-              <td>
+              <td className={estilos["celdaQueCede"]}>
                 <a className={estilos["enlaceDeFila"]} href={fila.href}>
                   {fila.comprobante}
                 </a>
               </td>
               <td className={estilos["cliente"]}>{fila.cliente}</td>
-              <td>{fila.documento}</td>
+              <td className={estilos["celdaQueCede"]}>{fila.documento}</td>
               <td className={`${estilos["numerica"]} ${estilos["importe"]}`}>{fila.total}</td>
               <td className={estilos["celdaDeEstado"]}>
                 <Estados fila={fila} />

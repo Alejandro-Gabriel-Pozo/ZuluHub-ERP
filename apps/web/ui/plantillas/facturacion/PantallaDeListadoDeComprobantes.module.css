@@ -151,7 +151,13 @@
   .tabla td.cliente {
     min-width: 12rem;
     white-space: normal;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  /* Comprobante y documento ceden y se cortan en renglones antes que ensanchar la tabla: con otra tipografía la suma de columnas no corre la página. */
+  .tabla td.celdaQueCede {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .tabla td.celdaDeEstado {
