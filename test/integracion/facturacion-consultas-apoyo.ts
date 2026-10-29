@@ -12,8 +12,10 @@ import {
 } from "../../src/adaptadores/postgres/transacciones";
 import {
   crearConsultasDeFacturacion,
+  crearLecturasDeCertificados,
   crearLecturasDeComprobantes,
   crearRepositorioDeComprobantes,
+  crearRepositorioDeEmisores,
   crearRepositorioDeIntentos,
   crearRepositorioDeSeries,
   type ConsultasDeFacturacion,
@@ -87,6 +89,8 @@ export function crearEntornoDeConsultas(base: BaseDePruebas): EntornoDeConsultas
         db,
         comprobantes: crearRepositorioDeComprobantes(fiscal),
         lecturas: crearLecturasDeComprobantes(fiscal),
+        emisores: crearRepositorioDeEmisores(fiscal),
+        lecturasDeCertificados: crearLecturasDeCertificados(fiscal),
         intentos: crearRepositorioDeIntentos(fiscal),
         sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
         series: crearRepositorioDeSeries(fiscal),

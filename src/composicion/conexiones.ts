@@ -69,6 +69,7 @@ import {
   type RepositorioDeTraspasos,
 } from "../modulos/identidad/publico";
 import {
+  crearLecturasDeCertificados,
   crearLecturasDeComprobantes,
   crearRepositorioDeAccesos,
   crearRepositorioDeCertificados,
@@ -164,6 +165,8 @@ export type TxDeApp = Readonly<{
   intentos: RepositorioDeIntentos;
   /** Las lecturas del listado y del detalle de comprobantes (solo `select`). */
   lecturas: LecturasDeComprobantes;
+  /** Qué certificado cuenta hoy de un emisor en cada ambiente (D-42): solo `select`, sin columnas cifradas. */
+  lecturasDeCertificados: ReturnType<typeof crearLecturasDeCertificados>;
   /** Certificados de ARCA y su ticket de acceso (columnas cifradas: solo las ve quien descifra, F7/F8). */
   certificados: RepositorioDeCertificados;
   accesos: RepositorioDeAccesos;
@@ -284,6 +287,7 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
           comprobantes: crearRepositorioDeComprobantes(db.withTables<FiscalDb>()),
           intentos: crearRepositorioDeIntentos(db.withTables<FiscalDb>()),
           lecturas: crearLecturasDeComprobantes(db.withTables<FiscalDb>()),
+          lecturasDeCertificados: crearLecturasDeCertificados(db.withTables<FiscalDb>()),
           certificados: crearRepositorioDeCertificados(db.withTables<FiscalDb>()),
           accesos: crearRepositorioDeAccesos(db.withTables<FiscalDb>()),
           marca: marcaSinCablear,
