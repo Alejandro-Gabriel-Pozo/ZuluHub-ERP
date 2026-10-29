@@ -7,6 +7,15 @@ import { CATALOGO_DE_MODULOS, EFECTOS_DE_ACCION, type EfectoDeAccion } from "./c
  * actualizar esta prueba en el mismo cambio (y a pensar su matriz, sus cruces y su ficha).
  */
 describe("el catálogo comercial de módulos", () => {
+  it("ninguna acción declara una capacidad de sucursal: `accionesPermitidas` lo da por cierto (si algún día una la exige, hay que darle la sucursal a esa función)", () => {
+    const conCapacidad = Object.entries(CATALOGO_DE_MODULOS).flatMap(([modulo, definicion]) =>
+      Object.entries(definicion.acciones)
+        .filter(([, accion]) => accion.capacidad !== null)
+        .map(([accion]) => `${modulo}/${accion}`),
+    );
+    expect(conCapacidad).toEqual([]);
+  });
+
   it("tiene cinco módulos: administracion (obligatorio y disponible) y facturacion, catalogo, carta y stock (en desarrollo)", () => {
     expect(CATALOGO_DE_MODULOS).toEqual({
       administracion: {

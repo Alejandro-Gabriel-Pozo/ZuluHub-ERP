@@ -6,7 +6,7 @@ import { CONDICIONES_DE_IVA, type CondicionIva } from "../modulos/fiscal/publico
  * muestra.
  *
  * Condición frente al IVA del emisor: las tres que hoy admite el dominio (`CONDICIONES_DE_IVA` de fiscal), en ese orden, con el texto
- * que el dueño confirmó el 2026-10-29 (D-44 de `facturador-contratos-de-pantalla.md`, repositorio `Pedernal-docs`): los de la tabla
+ * que el dueño confirmó el 2026-10-29 (D-44 de `facturador-contratos-de-pantalla.md`, repositorio de documentos (github.com/Alejandro-Gabriel-Pozo/ZuluHub-docs)): los de la tabla
  * «Condición Frente al IVA del receptor» del manual WSFE v4.8 (`12-referencias-externas/arca-manuales-del-dueno/WSFE_manual_RG-4291_v4-8.md`,
  * l. 5717, 5718 y 5720), que ARCA contestó igual en homologación (`test/utilidades/arca-grabaciones/corrida1/016-FEParamGetCondicionIvaReceptor-respuesta-http200.xml`).
  * Que el emisor solo pueda tener esas tres es un supuesto del diseño no verificado (D-44, `emisor.ts`).

@@ -252,6 +252,23 @@ describe.skipIf(base === null)("aislamiento por empresa (RLS)", () => {
       });
     });
 
+    it("el repositorio de sucursales filtra por empresa por sí mismo: con la política del grupo, que deja ver las dos empresas del tenant, `listar(A)` trae solo las de A", async () => {
+      // Acá la RLS NO separa a A de C (el grupo ve las dos): lo único que las separa es el `where empresa_id` del repositorio.
+      // Sin ese filtro, `listar(A)` traería también las de C y esta prueba falla.
+      const dueno = await crearPropietario(entorno, a.tenant);
+      const listadas = async (empresa: string) => {
+        const r = await entorno.ejecutar(
+          { contexto: comoGrupo(a.tenant, dueno) },
+          async ({ sucursales }) =>
+            ok((await sucursales.listar(empresa as never)).map((s) => s.nombre)),
+        );
+        if (!r.ok) throw new Error(JSON.stringify(r.error));
+        return r.valor;
+      };
+      expect(await listadas(a.empresa)).toEqual(["Sucursal de A"]);
+      expect(await listadas(c.empresa)).toEqual(["Sucursal de C"]);
+    });
+
     it("no puede escribir en ninguna empresa: ni insertar, ni modificar, ni borrar", async () => {
       const dueno = await crearPropietario(entorno, a.tenant);
       for (const consulta of [

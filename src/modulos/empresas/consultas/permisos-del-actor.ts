@@ -27,6 +27,10 @@ export type ErrorAlPedirLosPermisosDelActor = MotivoDeRechazo | ErrorDePersisten
  * activo para la empresa (lo que un módulo en desarrollo, sin activar o fuera del plan no cumple). Los tres roles la pueden pedir:
  * pide `permisos.ver_propios` al guard dentro de su transacción (`read committed`, solo lectura) y carga al actor UNA vez, sin caché.
  * Sin membresía activa en la empresa del contexto (ni la persona suspendida) no devuelve nada: `SIN_PERMISO`.
+ *
+ * Los módulos (`modulos.activos` y `modulos.enSoloLectura`) salen para CUALQUIER rol, también el operador (D-59, github.com/Alejandro-Gabriel-Pozo/ZuluHub-docs,
+ * `11-especificaciones/facturador-contratos-de-pantalla.md`): la pantalla necesita explicar por qué un botón está apagado (por ejemplo,
+ * «Facturación está solo para consultar»; el texto exacto no está aprobado). No devuelve el motivo escrito: eso lo pone la pantalla.
  */
 export function armarPermisosDelActor({
   transacciones,

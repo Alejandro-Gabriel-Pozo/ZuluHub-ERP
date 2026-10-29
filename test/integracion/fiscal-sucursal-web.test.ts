@@ -602,26 +602,42 @@ describe.skipIf(base === null)("la sucursal de los comprobantes y del listado y 
       if (!r.ok) throw new Error(`no listó: ${JSON.stringify(r.error)}`);
       return r.dato.items.map((i) => i.numero);
     };
+    const estados = async (e: EscenarioDeCasos, elegida: string | null, ctx = comoGerente(e)) => {
+      const r = await pvsDe(e, elegida, ctx);
+      if (!r.ok) throw new Error(`no listó: ${JSON.stringify(r.error)}`);
+      return r.dato.items.map((i) => [i.numero, i.activo] as const);
+    };
 
-    it("trae solo los ACTIVOS de la sucursal pedida, de menor a mayor, sin los inactivos ni los de otra sucursal", async () => {
+    it("trae los ACTIVOS y los dados de baja de la sucursal pedida (D-58), de menor a mayor y cada uno con su estado, sin los de otra sucursal", async () => {
       const e = await empresaConFacturacion();
       const norte = await sucursalNueva(e, "Norte");
       await puntoDeVentaEn(e, e.sucursal, 30);
       await puntoDeVentaEn(e, e.sucursal, 12);
       await crearPuntoDeVenta(dueno, e, { numero: 21, sucursal: e.sucursal, activo: false });
       await puntoDeVentaEn(e, norte, 40);
-      expect(await numeros(e, e.sucursal)).toEqual([e.pvNumero, 12, 30].sort((a, b) => a - b));
+      expect(await estados(e, e.sucursal)).toEqual(
+        (
+          [
+            [e.pvNumero, true],
+            [12, true],
+            [21, false],
+            [30, true],
+          ] as const
+        )
+          .slice()
+          .sort((x, y) => x[0] - y[0]),
+      );
       expect(await numeros(e, norte)).toEqual([40]);
       // Si el punto de venta se muda de sucursal, el filtro lo sigue.
       await mudar(await puntoDeVentaIdDe(e, 12), norte);
       expect(await numeros(e, norte)).toEqual([12, 40]);
-      expect(await numeros(e, e.sucursal)).toEqual([e.pvNumero, 30].sort((a, b) => a - b));
+      expect(await numeros(e, e.sucursal)).toEqual([e.pvNumero, 21, 30].sort((a, b) => a - b));
     });
 
-    it("la respuesta lleva solo el número de cada punto de venta (el formato de 5 dígitos lo pone la pantalla)", async () => {
+    it("la respuesta lleva solo el número y si está activo de cada punto de venta (el formato de 5 dígitos lo pone la pantalla)", async () => {
       const e = await empresaConFacturacion();
       const r = await pvsDe(e, e.sucursal);
-      expect(r).toEqual({ ok: true, dato: { items: [{ numero: e.pvNumero }] } });
+      expect(r).toEqual({ ok: true, dato: { items: [{ numero: e.pvNumero, activo: true }] } });
     });
 
     it("la sucursal se resuelve en el servidor con la regla del listado: sin elegir, una abierta se toma sola; con varias, hay que elegir", async () => {
@@ -635,7 +651,7 @@ describe.skipIf(base === null)("la sucursal de los comprobantes y del listado y 
       expect(await numeros(e, e.sucursal)).toEqual([e.pvNumero]);
     });
 
-    it("una sucursal cerrada se puede pedir (D-37) y, sin puntos de venta activos, da una lista vacía; no es un error", async () => {
+    it("una sucursal cerrada se puede pedir (D-37) y lista sus puntos de venta dados de baja (D-58); sin ninguno, una lista vacía y no un error", async () => {
       const e = await empresaConFacturacion();
       const vieja = await sucursalNueva(e, "Vieja");
       await puntoDeVentaEn(e, vieja, 50);
@@ -643,7 +659,12 @@ describe.skipIf(base === null)("la sucursal de los comprobantes y del listado y 
       await dueno.query("update punto_de_venta set estado = 'INACTIVO' where sucursal_id = $1", [
         vieja,
       ]);
-      expect(await pvsDe(e, vieja)).toEqual({ ok: true, dato: { items: [] } });
+      expect(await pvsDe(e, vieja)).toEqual({
+        ok: true,
+        dato: { items: [{ numero: 50, activo: false }] },
+      });
+      const sinNinguno = await sucursalNueva(e, "Sin puntos", false);
+      expect(await pvsDe(e, sinNinguno)).toEqual({ ok: true, dato: { items: [] } });
     });
 
     it("el operador con sucursal asignada pide la suya; la ajena, o ninguna asignada, es FUERA DE ALCANCE y no devuelve números", async () => {

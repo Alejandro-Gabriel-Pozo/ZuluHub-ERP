@@ -184,7 +184,7 @@ type Datos = Readonly<{
   intentos?: readonly IntentoDeArca[];
   serie?: SerieGuardada | null;
   pagina?: PaginaDeFilas;
-  puntosDeVenta?: readonly number[];
+  puntosDeVenta?: readonly Readonly<{ numero: number; activo: boolean }>[];
   alcance?: AlcanceDeSucursales;
   /** Las sucursales abiertas de la empresa; por defecto una sola (`SUCURSAL_UNICA`). */
   sucursalesActivas?: readonly SucursalId[];
@@ -238,7 +238,7 @@ function armar(datos: Datos = {}) {
             ? SUCURSAL_UNICA
             : datos.sucursalDelComprobante,
         ),
-      puntosDeVentaActivosDeLaSucursal: (...args) => {
+      puntosDeVentaDeLaSucursal: (...args) => {
         llamadas.puntosDeVenta.push(args);
         return Promise.resolve(datos.puntosDeVenta ?? []);
       },
@@ -650,9 +650,13 @@ describe("listarComprobantes", () => {
 describe("listarPuntosDeVentaDeLaSucursal", () => {
   const SUCURSAL = sucursalId("s-1");
 
-  it("pide los puntos de venta activos de ESA sucursal, de la empresa del contexto, y los devuelve por número", async () => {
+  it("pide los puntos de venta de ESA sucursal, de la empresa del contexto, y los devuelve por número, cada uno con su estado (D-58)", async () => {
     const { consultas, llamadas } = armar({
-      puntosDeVenta: [1, 3, 12],
+      puntosDeVenta: [
+        { numero: 1, activo: true },
+        { numero: 3, activo: false },
+        { numero: 12, activo: true },
+      ],
       sucursalesActivas: [SUCURSAL],
     });
     const r = exito(
@@ -660,11 +664,17 @@ describe("listarPuntosDeVentaDeLaSucursal", () => {
         sucursalElegida: SUCURSAL,
       }),
     );
-    expect(r).toEqual({ items: [{ numero: 1 }, { numero: 3 }, { numero: 12 }] });
+    expect(r).toEqual({
+      items: [
+        { numero: 1, activo: true },
+        { numero: 3, activo: false },
+        { numero: 12, activo: true },
+      ],
+    });
     expect(llamadas.puntosDeVenta).toEqual([[OTRA_EMPRESA, SUCURSAL]]);
   });
 
-  it("una sucursal sin puntos de venta activos da una lista vacía, no un error", async () => {
+  it("una sucursal sin ningún punto de venta da una lista vacía, no un error", async () => {
     const { consultas } = armar({ sucursalesActivas: [SUCURSAL] });
     expect(
       exito(
@@ -673,10 +683,24 @@ describe("listarPuntosDeVentaDeLaSucursal", () => {
     ).toEqual({ items: [] });
   });
 
+  it("una sucursal CERRADA se pide para ver su historial: devuelve sus puntos de venta dados de baja (D-58 y D-37)", async () => {
+    const cerrada = sucursalId("s-vieja");
+    const { consultas } = armar({
+      sucursalesActivas: [SUCURSAL],
+      sucursalesCerradas: [cerrada],
+      puntosDeVenta: [{ numero: 3, activo: false }],
+    });
+    expect(
+      exito(
+        await consultas.listarPuntosDeVentaDeLaSucursal(contexto(), { sucursalElegida: cerrada }),
+      ),
+    ).toEqual({ items: [{ numero: 3, activo: false }] });
+  });
+
   it("un operador pide solo una sucursal de su alcance; fuera de él no se lee nada", async () => {
     const dentro = armar({
       alcance: [SUCURSAL],
-      puntosDeVenta: [2],
+      puntosDeVenta: [{ numero: 2, activo: true }],
       sucursalesActivas: [SUCURSAL, sucursalId("s-2")],
     });
     expect(
@@ -685,10 +709,10 @@ describe("listarPuntosDeVentaDeLaSucursal", () => {
           sucursalElegida: SUCURSAL,
         }),
       ).items,
-    ).toEqual([{ numero: 2 }]);
+    ).toEqual([{ numero: 2, activo: true }]);
     const fuera = armar({
       alcance: [sucursalId("s-2")],
-      puntosDeVenta: [2],
+      puntosDeVenta: [{ numero: 2, activo: true }],
       sucursalesActivas: [SUCURSAL, sucursalId("s-2")],
     });
     expect(

@@ -109,7 +109,7 @@ export async function exigirAcciones<
  * Todas las acciones que el guard deja hacer HOY a un actor ya cargado (ordenadas): el mismo veredicto que `exigirAccion` da una por
  * una (módulo activo, rol), calculado de una vez para mostrar u ocultar en una pantalla. No autoriza nada por sí mismo: cada caso de
  * uso y cada consulta vuelve a pasar por el guard dentro de su transacción. Las acciones que exigen una capacidad de sucursal no
- * figuran (sin sucursal no hay capacidad); hoy ninguna la exige. Previene: que la pantalla ofrezca lo que el rol permite pero el
+ * figuran (sin sucursal no hay capacidad); hoy ninguna la exige (lo vigila `catalogo.test.ts`: si una la declara, esa prueba falla y hay que pasarle la sucursal a esta función). Previene: que la pantalla ofrezca lo que el rol permite pero el
  * módulo no (apagado, en desarrollo o fuera del plan), si la lista saliera solo de la matriz de roles. Chequeo: `exigir.test.ts`.
  */
 export function accionesPermitidas<

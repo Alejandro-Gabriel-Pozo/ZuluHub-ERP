@@ -112,6 +112,9 @@ export type FilaDeListado = Readonly<{
 
 export type PaginaDeFilas = Readonly<{ filas: readonly FilaDeListado[]; hayMas: boolean }>;
 
+/** Un punto de venta de una sucursal para el filtro del listado: su número y si está activo (`false`: dado de baja). */
+export type PuntoDeVentaDeLaSucursal = Readonly<{ numero: number; activo: boolean }>;
+
 /** Una nota (o factura) que cita a otro comprobante como su asociado. */
 export type NotaQueCita = Readonly<{
   id: ComprobanteId;
@@ -132,13 +135,14 @@ export interface LecturasDeComprobantes {
    */
   sucursalDelComprobante(empresa: EmpresaId, id: ComprobanteId): Promise<SucursalId | null>;
   /**
-   * Los números de los puntos de venta ACTIVOS de la sucursal, de menor a mayor y sin repetir (dos emisores pueden
-   * tener cada uno su número 1: el listado filtra por el número, que es lo que se imprime).
+   * Los puntos de venta de la sucursal, ACTIVOS y dados de baja (`INACTIVO`: el único otro estado que existe), de menor a mayor
+   * número y sin repetir (dos emisores pueden tener cada uno su número 1: el listado filtra por el número, que es lo que se
+   * imprime). `activo` es verdadero si ALGUNO de los puntos de venta con ese número en la sucursal está activo.
    */
-  puntosDeVentaActivosDeLaSucursal(
+  puntosDeVentaDeLaSucursal(
     empresa: EmpresaId,
     sucursal: SucursalId,
-  ): Promise<readonly number[]>;
+  ): Promise<readonly PuntoDeVentaDeLaSucursal[]>;
   /**
    * Los comprobantes de la empresa que citan a `id` como su asociado (las notas), del más viejo al más nuevo.
    * Los `DESCARTADO` no cuentan: nunca existieron para ARCA.
@@ -298,17 +302,16 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
       return fila === undefined || fila.sucursal_id === null ? null : sucursalId(fila.sucursal_id);
     },
 
-    async puntosDeVentaActivosDeLaSucursal(empresa, sucursal) {
+    async puntosDeVentaDeLaSucursal(empresa, sucursal) {
       const filas = await db
         .selectFrom("punto_de_venta")
-        .select("numero")
-        .distinct()
+        .select(["numero", sql<boolean>`bool_or(estado = 'ACTIVO')`.as("activo")])
         .where("empresa_id", "=", empresa)
         .where("sucursal_id", "=", sucursal)
-        .where("estado", "=", "ACTIVO")
+        .groupBy("numero")
         .orderBy("numero")
         .execute();
-      return filas.map((f) => f.numero);
+      return filas.map((f) => ({ numero: f.numero, activo: f.activo }));
     },
 
     async notasQueCitan(empresa, id) {

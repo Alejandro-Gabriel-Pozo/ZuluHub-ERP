@@ -21,17 +21,21 @@ export type EntradaDeListarPuntosDeVentaDeLaSucursal = Readonly<{
 export type ErrorAlListarPuntosDeVentaDeLaSucursal =
   MotivoDeRechazo | ErrorDeSucursalElegida | ErrorDePersistencia;
 
-/** Un punto de venta para el filtro del listado: su NÚMERO, que es lo que se imprime y lo que filtra. */
-export type PuntoDeVentaParaFiltrar = Readonly<{ numero: number }>;
+/**
+ * Un punto de venta para el filtro del listado: su NÚMERO, que es lo que se imprime y lo que filtra, y si está `activo`
+ * (`false`: dado de baja; la pantalla lo marca así, D-58).
+ */
+export type PuntoDeVentaParaFiltrar = Readonly<{ numero: number; activo: boolean }>;
 
 export type PuntosDeVentaDeLaSucursal = Readonly<{ items: readonly PuntoDeVentaParaFiltrar[] }>;
 
 /**
- * Los puntos de venta ACTIVOS de una sucursal de la empresa del contexto (el filtro «Punto de venta» del listado,
- * D-6 y D-18), de menor a mayor número y sin repetir. Pide `comprobantes.ver` al guard dentro de su transacción
+ * Los puntos de venta ACTIVOS Y DADOS DE BAJA de una sucursal de la empresa del contexto (el filtro «Punto de venta» del
+ * listado, D-6, D-18 y D-58: así se encuentran las facturas viejas de uno dado de baja), de menor a mayor número y sin
+ * repetir; cada uno dice si está activo. Pide `comprobantes.ver` al guard dentro de su transacción
  * (`read committed`, solo lectura) y recién después resuelve la sucursal con la misma regla que el listado (D-34, D-36 y D-37):
- * gerente y administrador pueden pedir cualquiera de su empresa, abierta o CERRADA (para ver su historial; una cerrada
- * normalmente no tiene puntos de venta activos y da una lista vacía); un operador, solo las que tiene asignadas
+ * gerente y administrador pueden pedir cualquiera de su empresa, abierta o CERRADA (para ver su historial: lista
+ * los dados de baja que tenga, o nada si nunca tuvo); un operador, solo las que tiene asignadas
  * (`SUCURSAL_FUERA_DE_ALCANCE` con otra). Sin elección: con una sola ABIERTA, esa; con varias, o solo cerradas,
  * `SUCURSAL_NO_ELEGIDA`.
  */
@@ -58,11 +62,11 @@ export function armarListarPuntosDeVentaDeLaSucursal({
         if (!permiso.ok) return permiso;
         const sucursal = await sucursalDelPedido(tx, contexto, entrada.sucursalElegida);
         if (!sucursal.ok) return sucursal;
-        const numeros = await tx.lecturas.puntosDeVentaActivosDeLaSucursal(
+        const puntos = await tx.lecturas.puntosDeVentaDeLaSucursal(
           contexto.empresaId,
           sucursal.valor.id,
         );
-        return ok({ items: numeros.map((numero) => ({ numero })) });
+        return ok({ items: puntos.map(({ numero, activo }) => ({ numero, activo })) });
       },
     );
   };

@@ -175,4 +175,16 @@ describe("permisosDelActor", () => {
       { contexto, aislamiento: "read committed", soloLectura: true },
     ]);
   });
+
+  it("D-59: el operador también recibe los módulos, incluso el que quedó solo para consultar", async () => {
+    const { consultas } = armar(
+      () => ({ rol: "OPERADOR", modulosActivados: ["facturacion"], modulosHabilitados: [] }),
+      CON_FACTURACION,
+    );
+    const permisos = exito(await consultas.permisosDelActor(contexto));
+    expect(permisos.modulos).toEqual({
+      activos: ["administracion"],
+      enSoloLectura: ["facturacion"],
+    });
+  });
 });

@@ -257,13 +257,16 @@ export function listarComprobantes(
   );
 }
 
-/** Los puntos de venta activos de la sucursal, para el filtro «Punto de venta» del listado: solo el número (el formato lo pone la pantalla). */
+/**
+ * Los puntos de venta de la sucursal, para el filtro «Punto de venta» del listado: el número (el formato de 5 dígitos lo pone la
+ * pantalla) y si está activo (`false`: dado de baja, D-58).
+ */
 export type PuntosDeVentaParaLaPantalla = Readonly<{
-  items: readonly Readonly<{ numero: number }>[];
+  items: readonly Readonly<{ numero: number; activo: boolean }>[];
 }>;
 
 /**
- * Los puntos de venta ACTIVOS de UNA sucursal de la empresa (`comprobantes.ver`, D-6 y D-18), de menor a mayor número. La sucursal
+ * Los puntos de venta ACTIVOS Y DADOS DE BAJA de UNA sucursal de la empresa (`comprobantes.ver`, D-6, D-18 y D-58), de menor a mayor número. La sucursal
  * se resuelve con la MISMA regla que el listado (D-34, D-36 y D-37) y por el servidor: `sucursalElegida` NO sale del pedido del
  * navegador sin más (la toma el servidor de su sesión, o es `null` si la persona todavía no eligió) y la consulta la verifica
  * contra el alcance de la persona, dentro de su transacción, antes de leer nada: un id ajeno, de otra empresa o mal formado es
@@ -280,7 +283,9 @@ export function listarPuntosDeVentaDeLaSucursal(
     null,
     () => ok({ sucursalElegida }),
     (entrada) => d.consultas().listarPuntosDeVentaDeLaSucursal(contexto, entrada),
-    (puntos) => ({ items: puntos.items.map((punto) => ({ numero: punto.numero })) }),
+    (puntos) => ({
+      items: puntos.items.map((punto) => ({ numero: punto.numero, activo: punto.activo })),
+    }),
   );
 }
 
