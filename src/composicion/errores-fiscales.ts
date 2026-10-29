@@ -158,16 +158,17 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<
   PUNTO_DE_VENTA_DUPLICADO: "FISCAL_PUNTO_DE_VENTA_DUPLICADO",
   PUNTO_DE_VENTA_NUMERO_INMUTABLE: "FISCAL_PUNTO_DE_VENTA_NUMERO_INMUTABLE",
   PUNTO_DE_VENTA_SIN_DOMICILIO: "FISCAL_PUNTO_DE_VENTA_SIN_DOMICILIO",
-  // SUPUESTO del ingeniero (no aprobado por el dueño): dos primeras altas del borrador a la vez, o una pantalla que quedó abierta sin
-  // borrador mientras otra lo creó, es «los datos cambiaron mientras los miraba»: se dice con el texto ya aprobado de
-  // `VERSION_DESACTUALIZADA` (la pantalla se actualiza y abre el borrador que existe). Fuente: nota «dos pantallas abiertas a la vez» de
-  // `Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md` (resolución propuesta, no aprobada: «al guardar con una versión
-  // vieja el servidor responde `FISCAL_VERSION_DESACTUALIZADA`, que ya tiene texto aprobado») y el texto de `error.fiscal_version_desactualizada`
-  // en `catalogo-fiscal.ts`. Revertirlo cuesta una línea (volver a `SIN_TEXTO_APROBADO` o un código propio con su texto).
+  // D-68 (`Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md`, confirmada por el dueño el 2026-10-29: «Sí me cierra»):
+  // el borrador de datos fiscales es del emisor, no de la pestaña, y una pantalla con datos viejos recibe «versión desactualizada» (texto ya
+  // aprobado: `error.fiscal_version_desactualizada`, sin texto nuevo). `YA_HAY_BORRADOR` (otra pestaña creó el borrador mientras esta
+  // pantalla seguía sin él) sale así; la pantalla se actualiza y abre el borrador que existe.
   YA_HAY_BORRADOR: "FISCAL_VERSION_DESACTUALIZADA",
-  // Sin texto aprobado todavía (ver `SIN_TEXTO_APROBADO`).
+  // Decisión del ingeniero, misma fuente (D-68) y mismo texto aprobado: guardar sobre el `borradorId` de una versión que otra pantalla ya
+  // confirmó es, para la persona, la misma situación (su pantalla tenía datos viejos). Actualiza y ve lo vigente.
+  VERSION_CONFIRMADA_INMUTABLE: "FISCAL_VERSION_DESACTUALIZADA",
+  // Sin texto aprobado, y así debe seguir: en el uso normal no ocurren (la pantalla solo ofrece ids que existen y son de la empresa), así
+  // que si pasan es un defecto o un pedido armado a mano y salen como error inesperado con su referencia `PD-…`.
   EMISOR_NO_ENCONTRADO: SIN_TEXTO_APROBADO,
-  VERSION_CONFIRMADA_INMUTABLE: SIN_TEXTO_APROBADO,
   DATOS_FISCALES_NO_ENCONTRADOS: SIN_TEXTO_APROBADO,
   DOMICILIO_NO_ENCONTRADO: SIN_TEXTO_APROBADO,
   ID_EN_USO: SIN_TEXTO_APROBADO,
@@ -207,6 +208,11 @@ const CAMPO_DE_CRITERIO: Readonly<Partial<Record<ErrorTextual, string>>> = {
   PROVINCIA_INVALIDA: "domicilio.provincia",
   CODIGO_POSTAL_INVALIDO: "domicilio.codigoPostal",
   PUNTO_DE_VENTA_NUMERO_INVALIDO: "numero",
+  // D-66 (los tres mensajes al cargar un punto de venta): el campo que la pantalla marca, sin texto nuevo. Decisión del ingeniero: D-66 aprueba
+  // los textos y no dice dónde se marcan; se marca el campo del que habla cada mensaje.
+  PUNTO_DE_VENTA_DUPLICADO: "numero",
+  PUNTO_DE_VENTA_NUMERO_INMUTABLE: "numero",
+  PUNTO_DE_VENTA_SIN_DOMICILIO: "domicilio",
 };
 
 /**

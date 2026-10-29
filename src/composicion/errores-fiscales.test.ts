@@ -139,13 +139,12 @@ describe("la configuración fiscal (D-43)", () => {
     });
   });
 
-  it("los códigos sin texto aprobado son estos cinco: salen sin cambios (inesperado con referencia) hasta que el dueño los apruebe", () => {
+  it("los códigos sin texto aprobado son estos cuatro: salen sin cambios (inesperado con referencia) hasta que el dueño los apruebe", () => {
     expect([...CODIGOS_DE_CONFIGURACION_SIN_TEXTO].sort()).toEqual([
       "DATOS_FISCALES_NO_ENCONTRADOS",
       "DOMICILIO_NO_ENCONTRADO",
       "EMISOR_NO_ENCONTRADO",
       "ID_EN_USO",
-      "VERSION_CONFIRMADA_INMUTABLE",
     ]);
     for (const error of CODIGOS_DE_CONFIGURACION_SIN_TEXTO) {
       expect(traducirErrorFiscal(error), error).toBe(error);
@@ -158,37 +157,39 @@ describe("la configuración fiscal (D-43)", () => {
   });
 });
 
-describe("textos de puntos de venta (D-66) y carrera del borrador", () => {
+describe("textos de puntos de venta (D-66) y borrador viejo (D-68)", () => {
   it.each([
-    ["PUNTO_DE_VENTA_DUPLICADO", "Ya existe un punto de venta con ese número."],
+    ["PUNTO_DE_VENTA_DUPLICADO", "Ya existe un punto de venta con ese número.", "numero"],
     [
       "PUNTO_DE_VENTA_NUMERO_INMUTABLE",
       "Este punto de venta ya emitió comprobantes: el número no se puede cambiar.",
+      "numero",
     ],
-    ["PUNTO_DE_VENTA_SIN_DOMICILIO", "Para activarlo, cargá un domicilio."],
-  ])("%s sale con su código y el texto aprobado, sin referencia", (error, texto) => {
-    registrados.length = 0;
-    const r = aRespuestaFiscal(err(error), dependencias, () => 0);
-    expect(r).toMatchObject({
-      ok: false,
-      error: { codigo: `FISCAL_${error}`, presentacion: "AVISO" },
-    });
-    expect(
-      r.ok
-        ? ""
-        : CATALOGO_DE_TEXTOS[r.error.clave as "error.fiscal_ultimo_distinto_del_de_arca"]
-            .porDefecto,
-    ).toBe(texto);
-    expect(registrados).toEqual([]);
-  });
+    ["PUNTO_DE_VENTA_SIN_DOMICILIO", "Para activarlo, cargá un domicilio.", "domicilio"],
+  ])(
+    "%s sale con su código, el texto aprobado y el campo %s, sin referencia",
+    (error, texto, campo) => {
+      registrados.length = 0;
+      expect(traducirErrorFiscal(error)).toEqual({ codigo: `FISCAL_${error}`, campo });
+      const r = aRespuestaFiscal(err(error), dependencias, () => 0);
+      expect(r).toMatchObject({
+        ok: false,
+        error: { codigo: `FISCAL_${error}`, presentacion: "AVISO", campo },
+      });
+      expect(r.ok ? "" : CATALOGO_DE_TEXTOS[r.error.clave].porDefecto).toBe(texto);
+      expect(registrados).toEqual([]);
+    },
+  );
 
-  it("SUPUESTO: la carrera de dos primeras altas (YA_HAY_BORRADOR) se dice como versión desactualizada", () => {
-    expect(traducirErrorFiscal("YA_HAY_BORRADOR")).toEqual(
-      traducirErrorFiscal("VERSION_DESACTUALIZADA"),
-    );
-    expect(traducirErrorFiscal("YA_HAY_BORRADOR")).toEqual({
-      codigo: "FISCAL_VERSION_DESACTUALIZADA",
-    });
+  it("D-68: YA_HAY_BORRADOR y VERSION_CONFIRMADA_INMUTABLE (pantalla con datos viejos) se dicen como versión desactualizada, sin texto nuevo", () => {
+    for (const error of ["YA_HAY_BORRADOR", "VERSION_CONFIRMADA_INMUTABLE"]) {
+      expect(traducirErrorFiscal(error), error).toEqual(
+        traducirErrorFiscal("VERSION_DESACTUALIZADA"),
+      );
+      expect(traducirErrorFiscal(error), error).toEqual({
+        codigo: "FISCAL_VERSION_DESACTUALIZADA",
+      });
+    }
   });
 });
 

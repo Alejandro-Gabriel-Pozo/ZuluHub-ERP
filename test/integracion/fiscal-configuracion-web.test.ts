@@ -776,7 +776,7 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
     expect(await cuenta("datos_fiscales", e.mundo.empresa)).toBe(0);
   });
 
-  it("SUPUESTO: una pantalla que quedó abierta sin borrador mientras otra lo creó (YA_HAY_BORRADOR) recibe «versión desactualizada»", async () => {
+  it("D-68: una pantalla que quedó abierta sin borrador mientras otra lo creó (YA_HAY_BORRADOR) recibe «versión desactualizada»", async () => {
     const e = await nuevo();
     const primero = await guardar(e);
     dato(primero.r);
@@ -790,6 +790,35 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
       },
     });
     expect(await cuenta("datos_fiscales", e.mundo.empresa)).toBe(1);
+  });
+
+  it("D-68: guardar sobre una versión que otra pantalla ya confirmó también dice «versión desactualizada» y no cambia nada", async () => {
+    const e = await nuevo();
+    const { borradorId, r } = await guardar(e);
+    dato(
+      await confirmarDatosFiscales(d, e.como(ahora()), {
+        emisorId: e.mundo.emisor,
+        borradorId,
+        versionEsperada: (dato(r) as { version: number }).version,
+        motivo: "Alta",
+      }),
+    );
+    const antes = await cuenta("datos_fiscales", e.mundo.empresa);
+    const viejo = await guardar(e, { borradorId, versionEsperada: 1, razonSocial: "Vieja SA" });
+    expect(viejo.r).toEqual({
+      ok: false,
+      error: {
+        codigo: "FISCAL_VERSION_DESACTUALIZADA",
+        clave: "error.fiscal_version_desactualizada",
+        presentacion: "AVISO",
+      },
+    });
+    expect(await cuenta("datos_fiscales", e.mundo.empresa)).toBe(antes);
+    const [fila] = await filas<{ razon_social: string }>(
+      "select razon_social from datos_fiscales where id = $1",
+      [borradorId],
+    );
+    expect(fila?.razon_social).toBe("Panadería Zulu SA");
   });
 
   // ---------------------------------------------------------------------------------------------------------------
@@ -874,6 +903,7 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
           codigo: "FISCAL_PUNTO_DE_VENTA_DUPLICADO",
           clave: "error.fiscal_punto_de_venta_duplicado",
           presentacion: "AVISO",
+          campo: "numero",
         },
       });
       expect(await cuenta("punto_de_venta", e.mundo.empresa)).toBe(1);
@@ -899,6 +929,7 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
         error: {
           codigo: "FISCAL_PUNTO_DE_VENTA_SIN_DOMICILIO",
           clave: "error.fiscal_punto_de_venta_sin_domicilio",
+          campo: "domicilio",
         },
       });
       const conDomicilio = uuid();
@@ -974,6 +1005,7 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
         error: {
           codigo: "FISCAL_PUNTO_DE_VENTA_NUMERO_INMUTABLE",
           clave: "error.fiscal_punto_de_venta_numero_inmutable",
+          campo: "numero",
         },
       });
     });
@@ -1225,7 +1257,7 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
       const [x, y] = await Promise.all([alta(), alta()]);
       expect([x, y].filter((r) => r.ok)).toHaveLength(1);
       expect([x, y].filter((r) => !r.ok)).toMatchObject([
-        { error: { codigo: "FISCAL_PUNTO_DE_VENTA_DUPLICADO" } },
+        { error: { codigo: "FISCAL_PUNTO_DE_VENTA_DUPLICADO", campo: "numero" } },
       ]);
       expect(await cuenta("punto_de_venta", e.mundo.empresa)).toBe(1);
       expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_CREADO")).toHaveLength(1);
