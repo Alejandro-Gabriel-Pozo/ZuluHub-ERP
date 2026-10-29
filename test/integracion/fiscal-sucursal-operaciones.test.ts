@@ -40,7 +40,9 @@ import { asignarPlan, crearPlanPublicado } from "./marcas-apoyo";
  * composición REAL (conexiones, web y trabajos, base de verdad, roles limitados) y ARCA falso:
  *  - D-41: el operador emite solo desde puntos de venta de sus sucursales asignadas; gerente y administrador, desde cualquiera.
  *  - D-50: una sucursal CERRADA no emite (aunque su punto de venta siga activo); sus facturas viejas se siguen viendo.
- *  - D-51: una NOTA necesita las dos sucursales (la del punto de venta y la de la factura); gerente y administrador, cualquiera.
+ *  - D-51: una NOTA necesita las dos sucursales (la del punto de venta y la de la factura); gerente y administrador, cualquiera. Si la
+ *    que falta es la de la FACTURA, la respuesta es «comprobante no encontrado» (como el Detalle, D-39; decisión del ingeniero); si es la
+ *    del punto de venta, «sucursal fuera de su alcance».
  *  - D-39 extendido: descartar, reintentar y el modelo de impresión aplican el mismo alcance que el Detalle y responden
  *    «no encontrado» (idéntico a un comprobante que no existe) cuando no corresponde.
  *  - Repetir el mismo pedido de emisión no duplica ni cambia el resultado.
@@ -399,7 +401,7 @@ describe.skipIf(base === null)("las operaciones fiscales y la sucursal", () => {
     });
 
     type Quien = "gerente" | "administrador" | "operador" | "operadorConSur" | "operadorDeNorte";
-    type Esperado = "OK" | "FUERA" | "CERRADA";
+    type Esperado = "OK" | "FUERA" | "CERRADA" | "NO_ENCONTRADO";
     const todos: readonly Quien[] = [
       "gerente",
       "administrador",
@@ -437,8 +439,8 @@ describe.skipIf(base === null)("las operaciones fiscales y la sucursal", () => {
         esperado: {
           gerente: "OK",
           administrador: "OK",
-          operador: "FUERA",
-          operadorConSur: "FUERA",
+          operador: "NO_ENCONTRADO",
+          operadorConSur: "NO_ENCONTRADO",
           operadorDeNorte: "FUERA",
         },
       },
@@ -452,7 +454,7 @@ describe.skipIf(base === null)("las operaciones fiscales y la sucursal", () => {
           administrador: "OK",
           operador: "FUERA",
           operadorConSur: "FUERA",
-          operadorDeNorte: "FUERA",
+          operadorDeNorte: "NO_ENCONTRADO",
         },
       },
       {
@@ -477,7 +479,7 @@ describe.skipIf(base === null)("las operaciones fiscales y la sucursal", () => {
         esperado: {
           gerente: "OK",
           administrador: "OK",
-          operador: "FUERA",
+          operador: "NO_ENCONTRADO",
           operadorConSur: "OK",
           operadorDeNorte: "FUERA",
         },
@@ -510,7 +512,7 @@ describe.skipIf(base === null)("las operaciones fiscales y la sucursal", () => {
               // D-38 y D-40: la nota queda en la sucursal de la FACTURA.
               expect(await sucursalDe(r.dato.comprobanteId)).toBe(caso.sucursalDeLaNota());
             } else {
-              expect(r).toMatchObject({ FUERA, CERRADA }[esperado]);
+              expect(r).toMatchObject({ FUERA, CERRADA, NO_ENCONTRADO }[esperado]);
               expect(await cuantos(pedido.clave), "no se escribió nada").toBe(0);
             }
           });

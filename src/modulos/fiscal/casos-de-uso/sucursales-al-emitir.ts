@@ -26,7 +26,8 @@ type PedidoConSucursales = Readonly<{
 /**
  * El comprobante que una nota corrige y el punto de venta del pedido (una nota sin punto de venta toma el del comprobante que
  * corrige), y D-41 y D-51: las sucursales del pedido contra el alcance de la persona, con las cerradas que tiene asignadas (si la
- * del punto de venta está cerrada, el motivo es D-50 y lo da `sucursalDelPuntoDeVentaAbierta`). Va ANTES de mirar si el pedido ya se
+ * del punto de venta está cerrada, el motivo es D-50 y lo da `sucursalDelPuntoDeVentaAbierta`). Si la sucursal de la FACTURA que corrige
+ * una nota no es de la persona, responde como si la factura no existiera (D-39). Va ANTES de mirar si el pedido ya se
  * había emitido: una clave ya usada no le devuelve a nadie el comprobante de una sucursal que no es suya.
  */
 export async function puntoDeVentaYSucursalesDelPedido(

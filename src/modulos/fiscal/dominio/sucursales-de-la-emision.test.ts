@@ -9,6 +9,8 @@ const SUR = sucursalId("sur");
 
 const FUERA = { ok: false, error: "SUCURSAL_FUERA_DE_ALCANCE" };
 const OK = { ok: true, valor: null };
+// La sucursal de la FACTURA que no es de la persona: lo mismo que si la factura no existiera (D-39).
+const SIN_FACTURA = { ok: false, error: "COMPROBANTE_ASOCIADO_NO_ENCONTRADO" };
 
 describe("sucursalesDeLaEmision (D-41 y D-51)", () => {
   describe("una factura (no corrige nada)", () => {
@@ -30,11 +32,11 @@ describe("sucursalesDeLaEmision (D-41 y D-51)", () => {
   });
 
   describe("una nota: necesita las DOS sucursales (D-51)", () => {
-    it("el operador de Centro no puede emitir una nota sobre una factura de Norte, aunque el punto de venta sea de Centro", () => {
-      expect(sucursalesDeLaEmision([CENTRO], CENTRO, { sucursalId: NORTE })).toEqual(FUERA);
+    it("el operador de Centro no puede emitir una nota sobre una factura de Norte, aunque el punto de venta sea de Centro: «no encontrado»", () => {
+      expect(sucursalesDeLaEmision([CENTRO], CENTRO, { sucursalId: NORTE })).toEqual(SIN_FACTURA);
     });
 
-    it("tampoco si la factura es de Centro y el punto de venta de Norte", () => {
+    it("tampoco si la factura es de Centro y el punto de venta de Norte: la sucursal del punto de venta ajeno sigue dando «fuera de alcance»", () => {
       expect(sucursalesDeLaEmision([CENTRO], NORTE, { sucursalId: CENTRO })).toEqual(FUERA);
     });
 
@@ -48,12 +50,13 @@ describe("sucursalesDeLaEmision (D-41 y D-51)", () => {
     });
 
     it("una factura sin sucursal guardada no corresponde a nadie: ni siquiera a «todas»", () => {
-      expect(sucursalesDeLaEmision("TODAS", CENTRO, { sucursalId: null })).toEqual(FUERA);
-      expect(sucursalesDeLaEmision([CENTRO], CENTRO, { sucursalId: null })).toEqual(FUERA);
+      expect(sucursalesDeLaEmision("TODAS", CENTRO, { sucursalId: null })).toEqual(SIN_FACTURA);
+      expect(sucursalesDeLaEmision([CENTRO], CENTRO, { sucursalId: null })).toEqual(SIN_FACTURA);
     });
 
-    it("sin sucursal del punto de venta en el alcance, el error es el mismo aunque la factura sí lo esté", () => {
+    it("sin la sucursal del punto de venta en el alcance manda «fuera de alcance» (se mira primero), esté o no la de la factura", () => {
       expect(sucursalesDeLaEmision([NORTE], CENTRO, { sucursalId: NORTE })).toEqual(FUERA);
+      expect(sucursalesDeLaEmision([SUR], CENTRO, { sucursalId: NORTE })).toEqual(FUERA);
     });
   });
 });
