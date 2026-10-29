@@ -464,7 +464,14 @@ describe.skipIf(base === null)("comprobante en sucursal abierta: la migración 0
       try {
         const c = previa.cliente;
         const antes = await huellaDeCatalogo(c);
+        const filaDeLaMigracion = async () =>
+          (
+            await c.query<{ n: number }>("select 1 as n from migracion where nombre = $1", [
+              await archivoDeLaMigracion(),
+            ])
+          ).rows;
         await aplicarMigraciones(previa.aparte.base.dueno, conMia);
+        expect(await filaDeLaMigracion()).toHaveLength(1);
         const x = await conSucursalDelSegundoPuntoDeVenta(c);
         await c.query("update sucursal set activa = false where id = $1", [x.sur]);
         await c.query("begin");
@@ -475,13 +482,15 @@ describe.skipIf(base === null)("comprobante en sucursal abierta: la migración 0
         const reversion = await textoDeLaReversion();
         await c.query(`begin; ${reversion}; commit;`);
         expect(await huellaDeCatalogo(c)).toEqual(antes);
+        // La reversión borra la fila del registro: sin ella la migración figuraría aplicada y el ejecutor no la volvería a correr.
+        expect(await filaDeLaMigracion()).toEqual([]);
         await crearComprobante(c, x.e, x.delSur());
         await c.query(`begin; ${reversion}; commit;`);
         expect(await huellaDeCatalogo(c)).toEqual(antes);
-        // Se marca como no aplicada para volver a correrla.
-        await c.query("delete from migracion where nombre = $1", [await archivoDeLaMigracion()]);
+        expect(await filaDeLaMigracion()).toEqual([]);
         const otra = await aplicarMigraciones(previa.aparte.base.dueno, conMia);
         expect(otra.aplicadas).toEqual([await archivoDeLaMigracion()]);
+        expect(await filaDeLaMigracion()).toHaveLength(1);
       } finally {
         await rm(conMia, { recursive: true, force: true });
         await previa.cerrar();
@@ -494,7 +503,11 @@ describe.skipIf(base === null)("comprobante en sucursal abierta: la migración 0
       expect(texto).toMatch(/NO lo aplica el ejecutor de migraciones/);
       expect(texto).toMatch(/BEGIN;/);
       const codigo = texto.replace(/--.*$/gm, "");
-      expect(codigo).not.toMatch(/\b(DROP|TRUNCATE|CASCADE|DELETE)\b/i);
+      // El único DELETE es el de su propia fila del registro de migraciones; ningún dato de negocio se borra.
+      const borrados = codigo.match(/\bDELETE\b[^;]*;/gi) ?? [];
+      expect(borrados).toHaveLength(1);
+      expect(borrados[0]).toMatch(/^DELETE FROM public\.migracion WHERE nombre LIKE /i);
+      expect(codigo).not.toMatch(/\b(DROP|TRUNCATE|CASCADE)\b/i);
     });
   });
 });

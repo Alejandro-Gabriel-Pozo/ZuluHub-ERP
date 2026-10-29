@@ -2,7 +2,8 @@
 -- `comprobante_validar_alta` a su versión de 0016 (sin mirar si la sucursal del punto de venta está abierta). Después de esto una
 -- sucursal cerrada vuelve a poder emitir por sus puntos de venta activos (D-50 deja de cumplirse en la base).
 --
--- NO ES DESTRUCTIVA: reemplaza una función y no toca ninguna tabla, columna ni fila. No hace falta avisar al dueño por pérdida de
+-- NO ES DESTRUCTIVA: reemplaza una función y no toca ninguna tabla, columna ni fila de negocio (solo borra su propia fila del
+-- registro `migracion`, para que 0017 pueda volver a aplicarse). No hace falta avisar al dueño por pérdida de
 -- datos, pero sí de que la regla de «una sucursal cerrada no emite» queda sin el bloqueo de la base (la aplicación seguirá
 -- rechazando por su lado mientras el código sea el nuevo; con el código viejo, no).
 --
@@ -109,5 +110,15 @@ BEGIN
     NEW.sucursal_id := v_sucursal;
   END IF;
   RETURN NEW;
+END
+$$;
+
+-- Sin esta fila, la migración figuraría aplicada y el ejecutor no volvería a correrla (y la guarda MIGRACION_REQUERIDA='0017'
+-- dejaría pasar código nuevo sobre una base sin el bloqueo).
+DO $$
+BEGIN
+  IF to_regclass('public.migracion') IS NOT NULL THEN
+    DELETE FROM public.migracion WHERE nombre LIKE '%\_comprobante_sucursal_abierta.sql' ESCAPE '\';
+  END IF;
 END
 $$;
