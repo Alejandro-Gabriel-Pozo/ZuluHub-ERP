@@ -78,7 +78,13 @@ type Registro = { accesos: string[]; pedidos: unknown[][] };
 /** Una transacción cuyo repositorio contesta lo programado por ambiente; cuenta qué se tocó. */
 function armar(
   datos: DatosDelActor,
-  porAmbiente: Partial<Record<"HOMOLOGACION" | "PRODUCCION", CertificadoGuardado | null>> = {},
+  porAmbiente: Partial<
+    Record<
+      "HOMOLOGACION" | "PRODUCCION",
+      | CertificadoGuardado
+      | Readonly<{ vigente: CertificadoGuardado | null; pendiente: CertificadoGuardado | null }>
+    >
+  > = {},
   emisorExiste = true,
   reglas: ReglasDeEmpresa = CON_FACTURACION,
 ) {
@@ -99,10 +105,14 @@ function armar(
       actualesDelEmisor: () => {
         registro.accesos.push("certificados");
         return Promise.resolve(
-          (["HOMOLOGACION", "PRODUCCION"] as const).map((ambiente) => ({
-            ambiente,
-            certificado: porAmbiente[ambiente] ?? null,
-          })),
+          (["HOMOLOGACION", "PRODUCCION"] as const).map((ambiente) => {
+            const dado = porAmbiente[ambiente];
+            if (dado === undefined) return { ambiente, vigente: null, pendiente: null };
+            if ("vigente" in dado) return { ambiente, ...dado };
+            return dado.estado === "VIGENTE"
+              ? { ambiente, vigente: dado, pendiente: null }
+              : { ambiente, vigente: null, pendiente: dado };
+          }),
         );
       },
     },
@@ -227,6 +237,7 @@ describe("las situaciones salen de lo que guardó el repositorio", () => {
           venceEn: sin.venceEn,
           vencido: false,
           autorizacion: { estado: "SIN_VERIFICAR" },
+          pedidoPendiente: null,
         },
         {
           ambiente: "PRODUCCION",
@@ -237,11 +248,54 @@ describe("las situaciones salen de lo que guardó el repositorio", () => {
           venceEn: verificada.venceEn,
           vencido: false,
           autorizacion: { estado: "VERIFICADA", en: new Date("2026-10-28T10:00:00.000Z") },
+          pedidoPendiente: null,
         },
       ],
     });
     expect(JSON.stringify(r)).not.toContain("NO-SALE");
     expect(JSON.stringify(r)).not.toContain("hhhh");
+  });
+
+  it("un vigente con una renovación en curso devuelve también el pedido pendiente (id, alias, titular y fecha), sin su contenido", async () => {
+    const vigente = guardado({ autorizacionVerificadaEn: new Date("2026-10-28T10:00:00.000Z") });
+    const pendiente = guardado({
+      id: certificadoId("cert-2"),
+      alias: "renovacion",
+      cuitTitular: cuit("30703088534"),
+      estado: "PEDIDO_GENERADO",
+      certificadoPem: null,
+      huellaSha256: null,
+      venceEn: null,
+      creadoEn: new Date("2026-10-20T00:00:00.000Z"),
+    });
+    const r = await ver(armar(actor("GERENTE"), { HOMOLOGACION: { vigente, pendiente } }));
+    expect(r).toMatchObject({
+      ok: true,
+      valor: [
+        {
+          ambiente: "HOMOLOGACION",
+          situacion: "VIGENTE",
+          certificadoId: vigente.id,
+          autorizacion: { estado: "VERIFICADA" },
+          pedidoPendiente: {
+            certificadoId: pendiente.id,
+            alias: "renovacion",
+            cuitTitular: pendiente.cuitTitular,
+            creadoEn: pendiente.creadoEn,
+          },
+        },
+        { ambiente: "PRODUCCION", situacion: "FALTA_CARGAR" },
+      ],
+    });
+    const mostrado = (r.ok ? r.valor[0] : null) as { pedidoPendiente: object } | null;
+    // El pedido pendiente trae solo esos cuatro datos: ni el pedido (CSR), ni PEM, ni huella, ni clave.
+    expect(Object.keys(mostrado?.pedidoPendiente ?? {}).sort()).toEqual([
+      "alias",
+      "certificadoId",
+      "creadoEn",
+      "cuitTitular",
+    ]);
+    expect(JSON.stringify(r)).not.toContain("NO-SALE");
   });
 
   it("vencido es venceEn <= ahora: justo en el instante ya venció, un milisegundo antes no", async () => {

@@ -1,4 +1,4 @@
-import { sql, type Kysely } from "kysely";
+import type { Kysely } from "kysely";
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import { AMBIENTES, type Ambiente } from "../dominio/comprobante-nuevo";
 import type { EmisorId } from "../dominio/identificadores";
@@ -18,16 +18,24 @@ import type { FiscalDb } from "./tablas";
  *
  * Todo filtra por empresa aunque la RLS ya lo imponga.
  */
+export type CertificadosDelAmbiente = Readonly<{
+  ambiente: Ambiente;
+  /** El certificado `VIGENTE` de ese emisor en ese ambiente, si lo hay. */
+  vigente: CertificadoGuardado | null;
+  /** El último pedido `PEDIDO_GENERADO` (todavía sin certificado), haya o no un vigente: es la renovación en curso. */
+  pendiente: CertificadoGuardado | null;
+}>;
+
 export interface LecturasDeCertificados {
   /**
    * Lo que cuenta hoy de ese emisor en CADA ambiente (primero homologación, después producción), SIN clave y en UNA
-   * lectura: el certificado `VIGENTE` si lo hay; si no, el último pedido `PEDIDO_GENERADO`; si no hay ninguno de los
-   * dos, `null` (falta cargar). Un reemplazado o un descartado no cuentan.
+   * lectura: su certificado vigente y su último pedido pendiente, cada uno o `null`. Un reemplazado o un descartado no
+   * cuentan. Sin vigente ni pendiente, falta cargar.
    */
   actualesDelEmisor(
     empresa: EmpresaId,
     emisor: EmisorId,
-  ): Promise<readonly Readonly<{ ambiente: Ambiente; certificado: CertificadoGuardado | null }>[]>;
+  ): Promise<readonly CertificadosDelAmbiente[]>;
 }
 
 export function crearLecturasDeCertificados(db: Kysely<FiscalDb>): LecturasDeCertificados {
@@ -41,14 +49,19 @@ export function crearLecturasDeCertificados(db: Kysely<FiscalDb>): LecturasDeCer
         .where("empresa_id", "=", empresa)
         .where("emisor_id", "=", emisor)
         .where("estado", "in", ["VIGENTE", "PEDIDO_GENERADO"])
-        .orderBy(sql`estado = 'VIGENTE'`, "desc")
         .orderBy("creado_en", "desc")
         .orderBy("id")
         .execute();
       return AMBIENTES.map((ambiente) => {
-        // Las filas ya vienen ordenadas: la primera de cada ambiente es la que cuenta.
-        const fila = filas.find((f) => f.ambiente === ambiente);
-        return { ambiente, certificado: fila === undefined ? null : aCertificado(fila) };
+        // Las filas ya vienen ordenadas: el primer pedido de cada ambiente es el último que se pidió.
+        const deAca = filas.filter((f) => f.ambiente === ambiente);
+        const vigente = deAca.find((f) => f.estado === "VIGENTE");
+        const pendiente = deAca.find((f) => f.estado === "PEDIDO_GENERADO");
+        return {
+          ambiente,
+          vigente: vigente === undefined ? null : aCertificado(vigente),
+          pendiente: pendiente === undefined ? null : aCertificado(pendiente),
+        };
       });
     },
   };

@@ -66,8 +66,8 @@ describe.skipIf(base === null)("certificados D-42: consulta del estado de los ce
         : never
       : never
   >;
-  const situaciones = async (e: Sociedad, ahora = new Date()) => {
-    const r = await ver(e, ahora);
+  const situaciones = async (e: Sociedad, ahora = new Date(), emisor: string = e.emisor) => {
+    const r = await ver(e, ahora, emisor);
     if (!r.ok) throw new Error(`consulta: ${JSON.stringify(r.error)}`);
     return r.valor;
   };
@@ -146,6 +146,7 @@ describe.skipIf(base === null)("certificados D-42: consulta del estado de los ce
       venceEn: noDespues,
       vencido: false,
       autorizacion: { estado: "SIN_VERIFICAR" },
+      pedidoPendiente: null,
     });
   });
 
@@ -177,20 +178,114 @@ describe.skipIf(base === null)("certificados D-42: consulta del estado de los ce
     expect(await vencido(new Date(noDespues.getTime() + DIA))).toBe(true);
   });
 
-  it("con un vigente y un pedido nuevo (renovación) sigue mostrando el vigente; cada ambiente tiene el suyo", async () => {
+  it("solo un vigente: sin pedido pendiente (pedidoPendiente es null)", async () => {
+    const e = await escenarioDeSociedad(dueno, propia.base);
+    await cargar(e, await pedir(e));
+    expect(de(await situaciones(e), "HOMOLOGACION")).toMatchObject({
+      situacion: "VIGENTE",
+      pedidoPendiente: null,
+    });
+  });
+
+  it("un vigente con una renovación en curso devuelve también el pedido pendiente, y con su id se completa la renovación", async () => {
     const e = await escenarioDeSociedad(dueno, propia.base);
     const vigente = await pedir(e);
     await cargar(e, vigente);
+    const titularNuevo = cuitConPrefijo("27");
+    const renovacion = await pedir(e, { cuitTitular: titularNuevo, alias: "renovacion" });
+
+    const lista = await situaciones(e);
+    const homologacion = de(lista, "HOMOLOGACION") as { pedidoPendiente: Record<string, unknown> };
+    expect(homologacion).toMatchObject({
+      situacion: "VIGENTE",
+      certificadoId: vigente.entrada.id,
+      pedidoPendiente: {
+        certificadoId: renovacion.entrada.id,
+        alias: "renovacion",
+        cuitTitular: titularNuevo,
+      },
+    });
+    expect(homologacion.pedidoPendiente["creadoEn"]).toBeInstanceOf(Date);
+    // Solo esos cuatro datos: nunca el pedido (CSR), la clave, el certificado ni la huella.
+    expect(Object.keys(homologacion.pedidoPendiente).sort()).toEqual([
+      "alias",
+      "certificadoId",
+      "creadoEn",
+      "cuitTitular",
+    ]);
+    const texto = JSON.stringify(lista);
+    expect(texto).not.toContain("BEGIN");
+    expect(texto).not.toContain("PRIVATE");
+
+    // Con ese id la pantalla carga el certificado de la renovación: pasa a vigente y ya no queda pendiente.
+    await cargar(e, renovacion);
+    expect(de(await situaciones(e), "HOMOLOGACION")).toMatchObject({
+      situacion: "VIGENTE",
+      certificadoId: renovacion.entrada.id,
+      cuitTitular: titularNuevo,
+      autorizacion: { estado: "SIN_VERIFICAR" },
+      pedidoPendiente: null,
+    });
+  });
+
+  it("de varios pedidos pendientes junto a un vigente muestra el último; los descartados no cuentan", async () => {
+    const e = await escenarioDeSociedad(dueno, propia.base);
+    await cargar(e, await pedir(e));
+    const descartado = await pedir(e);
     await pedir(e);
+    const ultimo = await pedir(e);
+    await dueno.query("update certificado_arca set estado = 'DESCARTADO' where id = $1", [
+      descartado.entrada.id,
+    ]);
+    expect(de(await situaciones(e), "HOMOLOGACION")).toMatchObject({
+      pedidoPendiente: { certificadoId: ultimo.entrada.id },
+    });
+  });
+
+  it("cada ambiente tiene lo suyo: un vigente con renovación en homologación y solo un pedido en producción", async () => {
+    const e = await escenarioDeSociedad(dueno, propia.base);
+    const vigente = await pedir(e);
+    await cargar(e, vigente);
+    const renovacion = await pedir(e);
     const prod = await pedir(e, { ambiente: "PRODUCCION" });
     const lista = await situaciones(e);
     expect(de(lista, "HOMOLOGACION")).toMatchObject({
       situacion: "VIGENTE",
       certificadoId: vigente.entrada.id,
+      pedidoPendiente: { certificadoId: renovacion.entrada.id },
     });
     expect(de(lista, "PRODUCCION")).toMatchObject({
       situacion: "PEDIDO_GENERADO",
       certificadoId: prod.entrada.id,
+    });
+  });
+
+  it("cada emisor ve solo lo suyo (un pedido de un emisor no aparece en el otro de la misma empresa)", async () => {
+    const e = await escenarioDeSociedad(dueno, propia.base);
+    const otroEmisor = (
+      await dueno.query<{ id: string }>(
+        "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
+        [e.empresa, cuitConPrefijo("20")],
+      )
+    ).rows[0]?.id;
+    if (otroEmisor === undefined) throw new Error("no se creó el emisor");
+    const delPrincipal = await pedir(e);
+    await cargar(e, delPrincipal);
+    const entrada = pedidoDeCertificado(e, {
+      emisorId: emisorId(otroEmisor),
+      cuitTitular: cuitConPrefijo("20"),
+    });
+    const p = await casos.generarPedidoDeCertificado(e.como(new Date()), entrada);
+    expect(p.ok).toBe(true);
+
+    const delOtro = await situaciones(e, new Date(), otroEmisor);
+    expect(delOtro).toMatchObject([
+      { situacion: "PEDIDO_GENERADO", certificadoId: entrada.id },
+      { situacion: "FALTA_CARGAR" },
+    ]);
+    expect(de(await situaciones(e), "HOMOLOGACION")).toMatchObject({
+      certificadoId: delPrincipal.entrada.id,
+      pedidoPendiente: null,
     });
   });
 
@@ -270,7 +365,7 @@ describe.skipIf(base === null)("certificados D-42: consulta del estado de los ce
     const texto = JSON.stringify(r);
     expect(texto).not.toContain("PRIVATE");
     expect(texto).not.toContain("BEGIN");
-    expect(texto).not.toMatch(/clave|pem|huella|pedido|nonce|etiqueta|kid/i);
+    expect(texto).not.toMatch(/clave|pem|huella|nonce|etiqueta|kid/i);
     for (const clave of servicios.clavesGeneradas) {
       expect(texto).not.toContain(clave.split("\n")[1] ?? "x".repeat(99));
     }
@@ -292,7 +387,7 @@ describe.skipIf(base === null)("certificados D-42: consulta del estado de los ce
     const actual = async (e: Sociedad, ambiente: string, empresa?: string, emisor?: string) => {
       const r = await todos(e, empresa, emisor);
       if (!r.ok) throw new Error(JSON.stringify(r.error));
-      return r.valor.find((a) => a.ambiente === ambiente)?.certificado ?? null;
+      return r.valor.find((a) => a.ambiente === ambiente) ?? null;
     };
 
     it("siempre los dos ambientes, en ese orden, aunque no haya nada", async () => {
@@ -300,46 +395,55 @@ describe.skipIf(base === null)("certificados D-42: consulta del estado de los ce
       expect(await todos(e)).toEqual({
         ok: true,
         valor: [
-          { ambiente: "HOMOLOGACION", certificado: null },
-          { ambiente: "PRODUCCION", certificado: null },
+          { ambiente: "HOMOLOGACION", vigente: null, pendiente: null },
+          { ambiente: "PRODUCCION", vigente: null, pendiente: null },
         ],
       });
     });
 
-    it("el vigente manda sobre un pedido posterior; sin vigente, el último pedido; un reemplazado o un descartado no cuentan", async () => {
+    it("trae el vigente y el último pedido pendiente a la vez; un reemplazado o un descartado no cuentan", async () => {
       const e = await escenarioDeSociedad(dueno, propia.base);
       const viejo = await pedir(e);
       const nuevo = await pedir(e);
       // Sin vigente: el último pedido (el de creación más reciente).
-      expect((await actual(e, "HOMOLOGACION"))?.id).toBe(nuevo.entrada.id);
-      expect(await actual(e, "PRODUCCION")).toBeNull();
+      expect((await actual(e, "HOMOLOGACION"))?.pendiente?.id).toBe(nuevo.entrada.id);
+      expect((await actual(e, "HOMOLOGACION"))?.vigente).toBeNull();
+      expect(await actual(e, "PRODUCCION")).toMatchObject({ vigente: null, pendiente: null });
 
       await cargar(e, viejo);
       const conVigente = await actual(e, "HOMOLOGACION");
-      expect(conVigente).toMatchObject({ id: viejo.entrada.id, estado: "VIGENTE" });
+      expect(conVigente?.vigente).toMatchObject({ id: viejo.entrada.id, estado: "VIGENTE" });
+      expect(conVigente?.pendiente?.id).toBe(nuevo.entrada.id);
       // Nunca la clave: ni sus columnas ni sus bytes.
-      expect(
-        Object.keys(conVigente ?? {}).filter((k) => /clave|nonce|etiqueta|cifrad|kid/i.test(k)),
-      ).toEqual([]);
+      for (const c of [conVigente?.vigente, conVigente?.pendiente]) {
+        expect(
+          Object.keys(c ?? {}).filter((k) => /clave|nonce|etiqueta|cifrad|kid/i.test(k)),
+        ).toEqual([]);
+      }
 
-      // Al cargar el otro, el viejo queda reemplazado y no cuenta.
+      // Al cargar el otro, el viejo queda reemplazado y no cuenta; ya no hay pendiente.
       await cargar(e, nuevo);
-      expect((await actual(e, "HOMOLOGACION"))?.id).toBe(nuevo.entrada.id);
+      expect(await actual(e, "HOMOLOGACION")).toMatchObject({ pendiente: null });
+      expect((await actual(e, "HOMOLOGACION"))?.vigente?.id).toBe(nuevo.entrada.id);
       const descartable = await pedir(e, { ambiente: "PRODUCCION" });
-      expect((await actual(e, "PRODUCCION"))?.id).toBe(descartable.entrada.id);
+      expect((await actual(e, "PRODUCCION"))?.pendiente?.id).toBe(descartable.entrada.id);
       await dueno.query("update certificado_arca set estado = 'DESCARTADO' where id = $1", [
         descartable.entrada.id,
       ]);
-      expect(await actual(e, "PRODUCCION")).toBeNull();
+      expect(await actual(e, "PRODUCCION")).toMatchObject({ vigente: null, pendiente: null });
     });
 
     it("aislamiento: otra empresa no ve a esta, ni nombrando su empresa o su emisor", async () => {
       const a = await escenarioDeSociedad(dueno, propia.base);
       const b = await escenarioDeSociedad(dueno, propia.base);
       await cargar(a, await pedir(a));
+      await pedir(a);
       // La empresa del contexto es B: pedir la de A devuelve nada.
-      expect(await actual(b, "HOMOLOGACION", a.empresa, a.emisor)).toBeNull();
-      expect(await actual(b, "HOMOLOGACION")).toBeNull();
+      expect(await actual(b, "HOMOLOGACION", a.empresa, a.emisor)).toMatchObject({
+        vigente: null,
+        pendiente: null,
+      });
+      expect(await actual(b, "HOMOLOGACION")).toMatchObject({ vigente: null, pendiente: null });
     });
   });
 });
