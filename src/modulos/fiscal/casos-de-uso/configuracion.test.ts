@@ -72,6 +72,7 @@ function armar(pisar: Partial<TxDeConfiguracionFiscal> = {}) {
       guardarBorrador: sinUso("reglas.guardarBorrador"),
       confirmar: sinUso("reglas.confirmar"),
     },
+    sucursalBloqueada: { obtenerBloqueandoElCierre: () => Promise.resolve({ activa: true }) },
     puntosDeVenta: {
       obtener: sinUso("pv.obtener"),
       listarDelEmisor: sinUso("pv.listarDelEmisor"),
@@ -505,6 +506,83 @@ describe("puntos de venta: lo que la base real no deja armar", () => {
       } as never,
     });
     expect(await otros.crearPuntoDeVenta(contexto, nuevoPv)).toEqual(err("ID_EN_USO"));
+  });
+
+  // Un punto de venta solo se da de alta en una sucursal abierta (dueño, 2026-10-29: «No: solo en sucursales abiertas»). El orden:
+  // permiso, repetición por id, sucursal de la empresa, sucursal abierta; y todo ANTES de escribir (el domicilio nuevo también).
+  describe("crearPuntoDeVenta: la sucursal", () => {
+    const conDomicilioNuevo = {
+      ...nuevoPv,
+      domicilio: {
+        tipo: "NUEVO",
+        id: domicilioId(ID_2),
+        datos: {
+          calle: "Mitre",
+          numero: "900",
+          piso: null,
+          departamento: null,
+          localidad: "Rosario",
+          provincia: "AR-S",
+          codigoPostal: "S2000",
+        },
+      },
+    } as const;
+    // Lo que no se nombra falla si se usa: ni el domicilio, ni la lista del emisor, ni el alta se tocan.
+    const sinPuntos = { obtener: () => Promise.resolve(null) } as never;
+
+    it("una sucursal cerrada es SUCURSAL_CERRADA y no escribe ni lee nada más (ni el domicilio nuevo, ni la lista del emisor, ni el alta)", async () => {
+      const { casos, mundo } = armar({
+        sucursalBloqueada: { obtenerBloqueandoElCierre: () => Promise.resolve({ activa: false }) },
+        puntosDeVenta: sinPuntos,
+      });
+      expect(await casos.crearPuntoDeVenta(contexto, conDomicilioNuevo)).toEqual(
+        err("SUCURSAL_CERRADA"),
+      );
+      expect(mundo.auditoria).toEqual([]);
+    });
+
+    it("pide la sucursal elegida, de la empresa del contexto", async () => {
+      const pedidas: unknown[][] = [];
+      const { casos } = armar({
+        sucursalBloqueada: {
+          obtenerBloqueandoElCierre: (...args) => {
+            pedidas.push(args);
+            return Promise.resolve({ activa: false });
+          },
+        },
+        puntosDeVenta: sinPuntos,
+      });
+      await casos.crearPuntoDeVenta(contexto, nuevoPv);
+      expect(pedidas).toEqual([[EMPRESA, SUCURSAL]]);
+    });
+
+    it("una sucursal que la empresa no ve (ajena o inexistente) es SUCURSAL_DE_OTRA_EMPRESA, no «cerrada»", async () => {
+      const { casos } = armar({
+        sucursalBloqueada: { obtenerBloqueandoElCierre: () => Promise.resolve(null) },
+        puntosDeVenta: sinPuntos,
+      });
+      expect(await casos.crearPuntoDeVenta(contexto, conDomicilioNuevo)).toEqual(
+        err("SUCURSAL_DE_OTRA_EMPRESA"),
+      );
+    });
+
+    it("la repetición va antes: si el punto de venta ya existía con ese contenido es «ya existía» sin mirar la sucursal; con otro contenido, ID_EN_USO", async () => {
+      const { casos, mundo } = armar({
+        sucursalBloqueada: {
+          obtenerBloqueandoElCierre: sinUso("sucursalBloqueada.obtenerBloqueandoElCierre"),
+        },
+        puntosDeVenta: {
+          obtener: () => Promise.resolve(pvGuardado({ id: puntoDeVentaId(ID) })),
+        } as never,
+      });
+      expect(await casos.crearPuntoDeVenta(contexto, nuevoPv)).toEqual(
+        ok({ puntoDeVentaId: puntoDeVentaId(ID), version: 1, yaExistia: true }),
+      );
+      expect(await casos.crearPuntoDeVenta(contexto, { ...nuevoPv, numero: 2 })).toEqual(
+        err("ID_EN_USO"),
+      );
+      expect(mundo.auditoria).toEqual([]);
+    });
   });
 
   it("editar: si `guardar` pierde la versión es VERSION_DESACTUALIZADA y no audita", async () => {

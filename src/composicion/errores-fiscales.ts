@@ -129,7 +129,8 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<
   SUCURSAL_NO_ELEGIDA: "FISCAL_SUCURSAL_NO_ELEGIDA",
   SUCURSAL_FUERA_DE_ALCANCE: "FISCAL_SUCURSAL_FUERA_DE_ALCANCE",
   // Emitir (D-41, D-51 y D-50): la sucursal del punto de venta no es de la persona, o está cerrada. (La de la factura que corrige una nota no
-  // llega acá: da «comprobante no encontrado», decisión del dueño, 29/10/2026 (D-56).)
+  // llega acá: da «comprobante no encontrado», decisión del dueño, 29/10/2026 (D-56).) También dar de alta un punto de venta en una sucursal
+  // cerrada (decisión del dueño, 2026-10-29: «No: solo en sucursales abiertas»): mismo código y mismo texto, que sigue provisorio.
   SUCURSAL_CERRADA: "FISCAL_SUCURSAL_CERRADA",
   // Datos fiscales y puntos de venta (D-43): lo que la persona escribió mal sale como `FISCAL_CONFIGURACION_DATOS_INVALIDOS` con el campo
   // (el formulario lo marca). Su texto, «Revisá los datos marcados.», es el de D-67 y reemplaza acá al «Revise los datos del comprobante»,

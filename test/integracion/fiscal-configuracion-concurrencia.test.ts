@@ -2,7 +2,7 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { puntoDeVentaId, reglaDeEmisorVigente } from "../../src/modulos/fiscal/publico";
 import { emisorId, sucursalId } from "../../src/primitivas/identificadores/marca";
-import { ok, type Resultado } from "../../src/primitivas/resultado/resultado";
+import { err, ok, type Resultado } from "../../src/primitivas/resultado/resultado";
 import { EmisionFalsa } from "../utilidades/emision-falsa";
 import { crearBarrera, crearBaseAparte } from "./entorno";
 import {
@@ -86,6 +86,14 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
         obtener: async (...args) => {
           const r = await tx.reglasDeEmisor.obtener(...args);
           await enBarrera("reglas.obtener");
+          return r;
+        },
+      },
+      sucursalBloqueada: {
+        ...tx.sucursalBloqueada,
+        obtenerBloqueandoElCierre: async (...args) => {
+          const r = await tx.sucursalBloqueada.obtenerBloqueandoElCierre(...args);
+          await enBarrera("sucursal.obtenerBloqueandoElCierre");
           return r;
         },
       },
@@ -599,6 +607,179 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
         );
         // Si se rechazó el cambio por números usados, fue porque la reserva ya había entrado.
         if (codigoDe(edicion) === "PUNTO_DE_VENTA_NUMERO_INMUTABLE") expect(reserva.ok).toBe(true);
+      }
+    });
+  });
+
+  // ===============================================================================================
+  // Dar de alta un punto de venta mientras otra transacción CIERRA la sucursal (decisión del dueño, 2026-10-29: «No: solo en
+  // sucursales abiertas»). La clave foránea del punto de venta toma `FOR KEY SHARE` sobre la sucursal y el cierre es un `UPDATE` de
+  // `activa` (`FOR NO KEY UPDATE`): no se esperan. Lo que los ordena es el `FOR SHARE` de la lectura de la sucursal en el alta, y lo
+  // confirma la propia base (`pg_stat_activity`), no un reloj. El cierre lo hace la base con sus disparadores (0005), como el real.
+  // ===============================================================================================
+  describe("puntos de venta: el alta contra el cierre de la sucursal", () => {
+    async function esperar(condicion: () => Promise<boolean>, que: string, ms = 15_000) {
+      const hasta = Date.now() + ms;
+      while (Date.now() < hasta) {
+        if (await condicion()) return;
+        await new Promise((r) => setTimeout(r, 40));
+      }
+      throw new Error(`no pasó a tiempo: ${que}`);
+    }
+    /** ¿Hay una sentencia esperando un bloqueo cuyo texto coincide? */
+    const esperandoBloqueo = async (patron: string) =>
+      (await cuenta(
+        `select count(*) as n from pg_stat_activity
+          where datname = current_database() and wait_event_type = 'Lock' and query ~* $1`,
+        [patron],
+      )) > 0;
+    const unaConexion = async () => {
+      const c = new pg.Client({ connectionString: propia.base.dueno });
+      await c.connect();
+      return c;
+    };
+    const terminado = (promesa: Promise<unknown>) => {
+      const estado = { listo: false };
+      void promesa.then(
+        () => (estado.listo = true),
+        () => (estado.listo = true),
+      );
+      return estado;
+    };
+    const sucursalNueva = async (e: EscenarioDeConfiguracion, nombre = "Norte") =>
+      (
+        await filas<{ id: string }>(
+          "insert into sucursal (empresa_id, nombre) values ($1, $2) returning id",
+          [e.mundo.empresa, nombre],
+        )
+      )[0]?.id as string;
+    const puntosDeLaEmpresa = (e: EscenarioDeConfiguracion) =>
+      cuenta("select count(*) as n from punto_de_venta where empresa_id = $1", [e.mundo.empresa]);
+    const estaActiva = async (sucursal: string) =>
+      (await filas<{ activa: boolean }>("select activa from sucursal where id = $1", [sucursal]))[0]
+        ?.activa;
+    const altaEn = (e: EscenarioDeConfiguracion, sucursal: string, extra = {}) =>
+      crearPv(e, { sucursalId: sucursalId(sucursal), ...extra });
+
+    it("el cierre primero: el alta ESPERA (lo confirma pg_stat_activity) y, cuando el cierre confirma, repite, ve la sucursal cerrada y no escribe nada: ni el punto de venta, ni el domicilio nuevo, ni la auditoría", async () => {
+      const e = await nuevo();
+      const norte = await sucursalNueva(e);
+      const cierre = await unaConexion();
+      try {
+        await cierre.query("begin");
+        await cierre.query("update sucursal set activa = false where id = $1", [norte]);
+        const alta = altaEn(e, norte);
+        const estado = terminado(alta);
+        await esperar(
+          () => esperandoBloqueo('from "sucursal" .* for share'),
+          "el alta espera a la sucursal que se está cerrando",
+        );
+        expect(estado.listo).toBe(false);
+        await cierre.query("commit");
+        expect(await alta).toEqual(err("SUCURSAL_CERRADA"));
+        expect(await puntosDeLaEmpresa(e)).toBe(0);
+        expect(await domicilios(e.mundo.empresa)).toBe(0);
+        expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_CREADO")).toBe(0);
+      } finally {
+        await cierre.query("rollback").catch(() => undefined);
+        await cierre.end();
+      }
+    });
+
+    it("el cierre que se deshace: el alta que esperaba sigue y entra, con su domicilio y su auditoría", async () => {
+      const e = await nuevo();
+      const norte = await sucursalNueva(e);
+      const cierre = await unaConexion();
+      try {
+        await cierre.query("begin");
+        await cierre.query("update sucursal set activa = false where id = $1", [norte]);
+        const alta = altaEn(e, norte);
+        await esperar(
+          () => esperandoBloqueo('from "sucursal" .* for share'),
+          "el alta espera a la sucursal",
+        );
+        await cierre.query("rollback");
+        expect((await alta).ok).toBe(true);
+        expect(await puntosDeLaEmpresa(e)).toBe(1);
+        expect(await domicilios(e.mundo.empresa)).toBe(1);
+        expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_CREADO")).toBe(1);
+        expect(await estaActiva(norte)).toBe(true);
+      } finally {
+        await cierre.query("rollback").catch(() => undefined);
+        await cierre.end();
+      }
+    });
+
+    it("el alta primero: el cierre ESPERA (lo confirma pg_stat_activity), el alta sale, y recién entonces la sucursal queda cerrada; desde ahí no se da de alta ninguno más", async () => {
+      const e = await nuevo();
+      const norte = await sucursalNueva(e);
+      const cierre = await unaConexion();
+      let tomada: () => void = () => undefined;
+      const yaLaTomo = new Promise<void>((resolver) => (tomada = resolver));
+      let soltar: () => void = () => undefined;
+      const compuerta = new Promise<void>((resolver) => (soltar = resolver));
+      // El alta lee la sucursal (con su bloqueo) y se queda ahí, DENTRO de su transacción, hasta que la prueba la suelte.
+      barrera = {
+        donde: ["sucursal.obtenerBloqueandoElCierre"],
+        esperar: async () => {
+          tomada();
+          await compuerta;
+        },
+      };
+      try {
+        const alta = altaEn(e, norte);
+        const estadoAlta = terminado(alta);
+        await yaLaTomo;
+        await cierre.query("begin");
+        const cerrando = cierre.query("update sucursal set activa = false where id = $1", [norte]);
+        const estadoCierre = terminado(cerrando);
+        await esperar(
+          () => esperandoBloqueo("update sucursal"),
+          "el cierre espera al alta que tiene la sucursal",
+        );
+        expect(estadoAlta.listo).toBe(false);
+        expect(estadoCierre.listo).toBe(false);
+        soltar();
+        const r = await alta;
+        if (!r.ok) throw new Error(`no se dio de alta: ${JSON.stringify(r.error)}`);
+        await cerrando;
+        await cierre.query("commit");
+        expect(await puntosDeLaEmpresa(e)).toBe(1);
+        expect(await estaActiva(norte)).toBe(false);
+        expect(await altaEn(e, norte, { numero: 2 })).toEqual(err("SUCURSAL_CERRADA"));
+        expect(await puntosDeLaEmpresa(e)).toBe(1);
+      } finally {
+        soltar();
+        barrera = null;
+        await cierre.query("rollback").catch(() => undefined);
+        await cierre.end();
+      }
+    });
+
+    it("dos altas y un cierre a la vez, sin esperas circulares: cada alta entra o es SUCURSAL_CERRADA, la sucursal queda cerrada y los puntos de venta son exactamente los que entraron", async () => {
+      for (let ronda = 0; ronda < RONDAS; ronda++) {
+        const e = await nuevo();
+        const norte = await sucursalNueva(e);
+        const [a, b] = await Promise.all([
+          altaEn(e, norte, { numero: 1 }),
+          altaEn(e, norte, { numero: 2 }),
+          (async () => {
+            await new Promise((r) => setTimeout(r, ronda * 12));
+            await dueno.query("update sucursal set activa = false where id = $1", [norte]);
+          })(),
+        ]);
+        for (const r of [a, b] as const) {
+          expect(["ok", "SUCURSAL_CERRADA", "ConcurrenciaAgotada"], `ronda ${ronda}`).toContain(
+            codigoDe(r),
+          );
+        }
+        expect(await estaActiva(norte), `ronda ${ronda}`).toBe(false);
+        expect(await puntosDeLaEmpresa(e), `ronda ${ronda}`).toBe(
+          [a, b].filter((r) => r.ok).length,
+        );
+        expect(await domicilios(e.mundo.empresa), `ronda ${ronda}`).toBe(
+          [a, b].filter((r) => r.ok).length,
+        );
       }
     });
   });

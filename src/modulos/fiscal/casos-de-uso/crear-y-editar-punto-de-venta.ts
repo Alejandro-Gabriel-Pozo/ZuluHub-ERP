@@ -17,6 +17,10 @@ import {
   type ErrorDePuntoDeVenta,
   type PuntoDeVenta,
 } from "../dominio/punto-de-venta";
+import {
+  exigirSucursalAbierta,
+  type ErrorDeSucursalCerrada,
+} from "../dominio/sucursales-de-la-emision";
 import { traducirErroresDeFiscal } from "../persistencia/traducir";
 import { empresaOpera } from "./comun";
 import {
@@ -56,7 +60,8 @@ export type ErrorPropioAlCrearPuntoDeVenta =
   | ErrorDeDomicilioDeEntrada
   | "ID_INVALIDO"
   | "ID_EN_USO"
-  | "EMISOR_NO_ENCONTRADO";
+  | "EMISOR_NO_ENCONTRADO"
+  | ErrorDeSucursalCerrada;
 
 export type ErrorAlCrearPuntoDeVenta =
   ErrorPropioAlCrearPuntoDeVenta | MotivoDeRechazo | EmpresaNoOpera | ErrorDePersistencia;
@@ -76,9 +81,22 @@ const ADMITIDOS_AL_CREAR = [
  * del `id`, el emisor existe (es de esta empresa) y entonces:
  *
  *  - ya existe un punto de venta con ese `id` → si es del mismo emisor, la misma sucursal y el mismo número es la
- *    repetición (éxito, `yaExistia`, sin escribir); si no, `ID_EN_USO`;
+ *    repetición (éxito, `yaExistia`, sin escribir, aunque la sucursal se haya cerrado después); si no, `ID_EN_USO`;
+ *  - la sucursal elegida se lee con `FOR SHARE`: si no es de esta empresa, `SUCURSAL_DE_OTRA_EMPRESA`; si está cerrada
+ *    (`activa = false`), `SUCURSAL_CERRADA` (el código de emitir desde una sucursal cerrada; ver abajo) y no se escribe nada, ni el
+ *    domicilio nuevo (todo o nada);
  *  - si no, el dominio decide (`nuevoPuntoDeVenta`: sucursal de la empresa, número entre 1 y 99999, número libre
  *    en el emisor), se guarda con su domicilio nuevo si viene y se audita `PUNTO_DE_VENTA_CREADO`.
+ *
+ * Solo en una sucursal ABIERTA (decisión del dueño, 2026-10-29, cuestionario respondido a las 21:08:28Z: «¿Se puede crear un punto de
+ * venta en una sucursal que está cerrada?» → «No: solo en sucursales abiertas»). La pantalla ya filtra la lista; el servidor no confía
+ * en ella. La sucursal se lee con `FOR SHARE`: la clave foránea sola toma `FOR KEY SHARE`, que el cierre (un `UPDATE` de `activa`) no
+ * espera, y bajo serializable un alta que leyó la sucursal abierta podía confirmar después de que su cierre confirmó. Con el bloqueo
+ * el cierre espera al alta, o el alta repite y ve la sucursal cerrada. Sin ciclos de espera: el alta toma una sola sucursal y el
+ * cierre (0005) no espera nada que el alta tenga que esperar. La base NO lo impone (ningún disparador de `punto_de_venta` mira la
+ * sucursal): la protección es de aplicación.
+ * Previene: un punto de venta en una sucursal cerrada, por un pedido armado a mano o por la carrera con su cierre.
+ * Chequeo: `fiscal-configuracion-puntos-de-venta.test.ts` y los dos órdenes de la carrera en `fiscal-configuracion-concurrencia.test.ts`.
  *
  * Nace `INACTIVO` y en homologación (lo fija la base). Dos altas simultáneas del mismo número del mismo emisor:
  * gana una; la otra, tras el reintento serializable, ve el número ocupado (`PUNTO_DE_VENTA_DUPLICADO`). Un
@@ -128,6 +146,16 @@ export function armarCrearPuntoDeVenta({
             ? ok({ puntoDeVentaId: id, version: previo.version, yaExistia: true })
             : err("ID_EN_USO");
         }
+
+        // La sucursal, ANTES de escribir nada (ni el domicilio nuevo): de esta empresa (una de otra empresa o que no existe se dice igual,
+        // sin oráculo) y abierta. Con `FOR SHARE`: ver arriba. Después de la repetición, que gana aunque la sucursal se haya cerrado.
+        const sucursal = await tx.sucursalBloqueada.obtenerBloqueandoElCierre(
+          empresaId,
+          entrada.sucursalId,
+        );
+        if (sucursal === null) return err("SUCURSAL_DE_OTRA_EMPRESA");
+        const abierta = exigirSucursalAbierta(sucursal);
+        if (!abierta.ok) return abierta;
 
         const domicilio =
           entrada.domicilio === undefined
