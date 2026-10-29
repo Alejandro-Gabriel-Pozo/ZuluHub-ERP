@@ -694,4 +694,116 @@ describe.skipIf(base === null)("la sucursal de los comprobantes y del listado y 
       expect(await detalleDe(comoGerente(b.e), a.enNorte)).toMatchObject(NO_ENCONTRADO);
     });
   });
+
+  // ===============================================================================================
+  // Los permisos de la persona (la barra del facturador): calculados por el servidor
+  // ===============================================================================================
+  describe("los permisos de la persona para la barra (consulta de empresas)", () => {
+    const permisosDe = (ctx: ContextoOperativo) => web.consultasDeEmpresas().permisosDelActor(ctx);
+    const accionesDe = async (ctx: ContextoOperativo) => {
+      const r = await permisosDe(ctx);
+      if (!r.ok) throw new Error(`no devolvió permisos: ${JSON.stringify(r.error)}`);
+      return r.valor.acciones;
+    };
+
+    it("los tres roles de una empresa con facturación ven comprobantes.ver, con los módulos activos que lo explican", async () => {
+      const e = await empresaConFacturacion();
+      for (const ctx of [
+        comoGerente(e),
+        await persona(e, "ADMINISTRADOR"),
+        await persona(e, "OPERADOR"),
+        await persona(e, "OPERADOR", [e.sucursal]),
+      ]) {
+        const r = await permisosDe(ctx);
+        expect(r).toMatchObject({
+          ok: true,
+          valor: { modulos: { activos: ["administracion", "facturacion"], enSoloLectura: [] } },
+        });
+        expect(await accionesDe(ctx)).toContain("comprobantes.ver");
+      }
+    });
+
+    it("el rol manda: certificados y resincronizar series son solo del gerente; emitir una nota, de los tres", async () => {
+      const e = await empresaConFacturacion();
+      const delGerente = ["certificados.gestionar", "series.resincronizar"];
+      const gerente = await accionesDe(comoGerente(e));
+      for (const accion of delGerente) expect(gerente).toContain(accion);
+      for (const ctx of [await persona(e, "ADMINISTRADOR"), await persona(e, "OPERADOR")]) {
+        const acciones = await accionesDe(ctx);
+        for (const accion of delGerente) expect(acciones).not.toContain(accion);
+        expect(acciones).toContain("notas_de_credito.emitir");
+      }
+    });
+
+    it("el módulo manda: una empresa que no activó facturación no tiene comprobantes.ver aunque el rol alcance, y la otra empresa sí", async () => {
+      const sin = await crearEscenarioDeCasos(dueno, propia.base, { rol: "GERENTE" });
+      const con = await empresaConFacturacion();
+      const deLaSin = await permisosDe(comoGerente(sin));
+      expect(deLaSin).toMatchObject({
+        ok: true,
+        valor: { modulos: { activos: ["administracion"] } },
+      });
+      expect(await accionesDe(comoGerente(sin))).not.toContain("comprobantes.ver");
+      expect(await accionesDe(comoGerente(sin))).toContain("usuarios.invitar");
+      expect(await accionesDe(comoGerente(con))).toContain("comprobantes.ver");
+    });
+
+    it("un módulo fuera del plan queda en solo lectura: puede mirar y anular, no emitir una factura nueva", async () => {
+      const e = await crearEscenarioDeCasos(dueno, propia.base, { rol: "GERENTE" });
+      const { version } = await crearPlanPublicado(dueno, { modulos: [] });
+      await asignarPlan(dueno, e.tenant, version);
+      await dueno.query(
+        "insert into modulo_de_empresa (empresa_id, modulo) values ($1, 'facturacion')",
+        [e.empresa],
+      );
+      const r = await permisosDe(comoGerente(e));
+      expect(r).toMatchObject({
+        ok: true,
+        valor: { modulos: { activos: ["administracion"], enSoloLectura: ["facturacion"] } },
+      });
+      const acciones = await accionesDe(comoGerente(e));
+      expect(acciones).toContain("comprobantes.ver");
+      expect(acciones).toContain("notas_de_credito.emitir");
+      expect(acciones).not.toContain("comprobantes.emitir_manual");
+    });
+
+    it("lo que dice es lo que el servidor después acepta: sin comprobantes.ver el listado también lo rechaza, con él lo acepta", async () => {
+      const sin = await crearEscenarioDeCasos(dueno, propia.base, { rol: "GERENTE" });
+      const con = await empresaConFacturacion();
+      expect(await accionesDe(comoGerente(sin))).not.toContain("comprobantes.ver");
+      expect(await listaDe(sin, null)).toMatchObject({
+        ok: false,
+        error: { codigo: "MODULO_NO_ACTIVO" },
+      });
+      expect(await accionesDe(comoGerente(con))).toContain("comprobantes.ver");
+      expect(await listaDe(con, null)).toMatchObject({ ok: true });
+    });
+
+    it("sin membresía activa (o apagada) da SIN_PERMISO; no se guarda: al apagar a la persona el pedido siguiente ya no ve nada", async () => {
+      const e = await empresaConFacturacion();
+      const ajeno = await crearPersonaDeBase(dueno);
+      const sinMembresia = {
+        ...comoEmpresa(empresaId(e.empresa), personaId(ajeno.id)),
+        ahora: new Date(),
+      };
+      expect(await permisosDe(sinMembresia)).toEqual({ ok: false, error: "SIN_PERMISO" });
+      const apagada = await persona(e, "ADMINISTRADOR");
+      expect(await accionesDe(apagada)).toContain("comprobantes.ver");
+      await dueno.query(
+        "update membresia set activo = false where empresa_id = $1 and persona_id = $2",
+        [e.empresa, apagada.personaId],
+      );
+      expect(await permisosDe(apagada)).toEqual({ ok: false, error: "SIN_PERMISO" });
+    });
+
+    it("aislamiento entre empresas: la membresía de una no da permisos en la otra", async () => {
+      const a = await empresaConFacturacion();
+      const b = await empresaConFacturacion();
+      const gerenteDeB = {
+        ...comoEmpresa(empresaId(a.empresa), personaId(b.persona)),
+        ahora: new Date(),
+      };
+      expect(await permisosDe(gerenteDeB)).toEqual({ ok: false, error: "SIN_PERMISO" });
+    });
+  });
 });
