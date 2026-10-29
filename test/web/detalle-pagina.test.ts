@@ -74,6 +74,13 @@ describe("la página del detalle de un comprobante", () => {
     expect(texto).toContain("Factura B 00001-00001234");
   });
 
+  it("la barra marca «Comprobantes» como el destino actual (el detalle es del módulo)", async () => {
+    respuesta({ ok: true, dato: base });
+    expect(await html(ID)).toMatch(
+      /<a[^>]*href="\/facturacion\/comprobantes"[^>]*aria-current="page"|<a[^>]*aria-current="page"[^>]*href="\/facturacion\/comprobantes"/,
+    );
+  });
+
   it("con un comprobante hay UN solo h1, con el título real", async () => {
     respuesta({ ok: true, dato: base });
     const marcado = await html(ID);

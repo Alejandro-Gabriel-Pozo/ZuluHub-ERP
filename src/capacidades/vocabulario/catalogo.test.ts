@@ -150,9 +150,13 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     for (const generico of ["error_generico", "observacion_generica", "evento_generico"] as const) {
       expect(CATALOGO_DE_TEXTOS[`fiscal.arca.${generico}`].marcadores).toEqual(["codigo"]);
     }
-    // Nada del facturador habla en voseo: los textos de ARCA y de los errores van en castellano neutro.
+    // Nada del facturador habla en voseo: los textos de ARCA y de los errores van en castellano neutro. Salvo los dos del
+    // listado que el dueño aprobó tal cual (CONTRATO del listado: «Probá con otro período…» y «Probá de nuevo.»).
+    const APROBADOS_EN_VOSEO = ["fiscal.pantalla.listado_vacio", "fiscal.pantalla.listado_error"];
     for (const clave of claves.filter(
-      (c) => c.startsWith("error.fiscal_") || c.startsWith("fiscal."),
+      (c) =>
+        (c.startsWith("error.fiscal_") || c.startsWith("fiscal.")) &&
+        !APROBADOS_EN_VOSEO.includes(c),
     )) {
       expect(CATALOGO_DE_TEXTOS[clave].porDefecto, clave).not.toMatch(
         /\b(podés|tenés|revisá|probá|volvé|esperá|cargalo|activalo|consultá)\b/i,

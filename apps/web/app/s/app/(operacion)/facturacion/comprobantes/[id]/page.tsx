@@ -8,6 +8,9 @@ import { PantallaDeDetalleDeComprobante } from "../../../../../../../ui/plantill
 // Mismo formato que valida el servidor: si el id de la URL no lo tiene, ni se pregunta (es «no encontrado»).
 const FORMA_DE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
+// El detalle también es del módulo: «Comprobantes» queda marcado en la barra.
+const OPCIONES = { titulo: "fiscal.pantalla.titulo", actual: "comprobantes" } as const;
+
 // Detalle de un comprobante (solo lectura). El servidor decide empresa y permiso; el id es lo único que viene de la URL.
 export default async function PaginaDeDetalleDeComprobante({
   params,
@@ -15,7 +18,7 @@ export default async function PaginaDeDetalleDeComprobante({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return pantallaDeOperacion({ titulo: "fiscal.pantalla.titulo" }, async () => {
+  return pantallaDeOperacion(OPCIONES, async () => {
     if (!FORMA_DE_ID.test(id)) {
       return <ErrorDelDetalle error={errorDeCodigo("FISCAL_COMPROBANTE_NO_ENCONTRADO")} />;
     }

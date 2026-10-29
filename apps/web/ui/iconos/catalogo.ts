@@ -2,6 +2,7 @@ import {
   Building2,
   CircleCheck,
   Clock,
+  FileText,
   House,
   Info,
   LogOut,
@@ -38,6 +39,8 @@ export const CATALOGO_DE_ICONOS = {
   empresa: Building2,
   cuenta: UserRound,
   salir: LogOut,
+  // Facturador: el módulo de comprobantes. PROPUESTA del carril web, pendiente de aprobación (no hay ícono aprobado).
+  comprobantes: FileText,
   // Carta pública (C-2).
   secciones: Menu,
   compartir: Share2,

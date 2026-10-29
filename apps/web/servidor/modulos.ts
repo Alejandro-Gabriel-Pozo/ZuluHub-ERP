@@ -1,10 +1,12 @@
 import "server-only";
+import { texto } from "../../../src/capacidades/vocabulario/vocabulario";
+import { RUTA_DEL_LISTADO } from "../ui/plantillas/facturacion/filtros-del-listado";
 import type { DestinoDeModulo } from "../ui/plantillas/sesion/ArmazonDeOperacion";
 import type { Pendiente } from "../ui/plantillas/sesion/PantallaDeInicio";
 
 /**
  * Lo que cada módulo suma al armazón: sus destinos de la barra inferior y lo que falta hacer en el inicio.
- * En v1 NO hay ninguno: los llenan los tramos de los módulos (el facturador, [FAC]) agregando sus entradas acá.
+ * Hoy hay uno: el facturador (Comprobantes). Los demás tramos de los módulos agregan sus entradas acá.
  *
  * SUPUESTO declarado: todavía no hay una consulta de módulos habilitados por empresa en la composición de la
  * web (`planYModulos` y los derechos de uso no llegan a `TxDeApp`), así que el armazón muestra las entradas
@@ -12,7 +14,15 @@ import type { Pendiente } from "../ui/plantillas/sesion/PantallaDeInicio";
  * tiene. Cuando exista la consulta, se filtra acá, en un solo lugar.
  */
 export function destinosDeModulos(): readonly DestinoDeModulo[] {
-  return [];
+  return [
+    {
+      clave: "comprobantes",
+      href: RUTA_DEL_LISTADO,
+      // PROTO-LISTADO: el título «Comprobantes».
+      etiqueta: texto({}, "fiscal.pantalla.listado_titulo"),
+      icono: "comprobantes",
+    },
+  ];
 }
 
 /** La ranura «lo que falta» del inicio (en v1 [FAC]: datos fiscales, punto de venta, certificado). Vacía hasta entonces. */

@@ -1,0 +1,183 @@
+.raiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  font-size: var(--tipo-tamano-medio);
+  min-width: 0;
+}
+
+/* 6A (celular): una tarjeta por comprobante, que es un enlace entero al detalle. */
+.tarjetas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tarjeta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie-elevada);
+  color: var(--color-texto);
+  text-decoration: none;
+}
+
+.datos {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Sin `min-width: 0`: el importe no se achica por debajo de su ancho; el que cede y se corta en renglones es el nombre del cliente. */
+.cifras {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--espacio-1);
+}
+
+.cliente {
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+.secundario {
+  color: var(--color-texto-suave);
+  font-size: var(--tipo-tamano-base);
+  overflow-wrap: anywhere;
+}
+
+.importe {
+  font-weight: var(--tipo-peso-fuerte);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.estados {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--espacio-1);
+}
+
+/* La elección de sucursal es un bloque chico: no se estira a todo el ancho del escritorio. */
+.sucursal {
+  max-width: 28rem;
+}
+
+.siguiente {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-width: var(--objetivo-minimo);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-5);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+  text-decoration: none;
+}
+
+.contenedorDeTabla {
+  display: none;
+}
+
+/* 6C (escritorio): la tabla reemplaza a las tarjetas. */
+@media (min-width: 64rem) {
+  .tarjetas {
+    display: none;
+  }
+
+  .contenedorDeTabla {
+    display: block;
+    overflow-x: auto;
+    border: var(--borde-grosor) solid var(--color-borde);
+    border-radius: var(--radio-base);
+    background: var(--color-superficie-elevada);
+  }
+
+  .tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--tipo-tamano-base);
+  }
+
+  .tabla th,
+  .tabla td {
+    padding: var(--espacio-3);
+    border-bottom: var(--borde-grosor) solid var(--color-borde);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .tabla th {
+    background: var(--color-superficie);
+    font-weight: var(--tipo-peso-fuerte);
+  }
+
+  .tabla tbody tr {
+    position: relative;
+  }
+
+  .tabla tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .tabla tbody tr:hover {
+    background: var(--color-superficie);
+  }
+
+  .tabla .numerica {
+    text-align: right;
+  }
+
+  /* Una fila, un renglón: solo el nombre del cliente se corta; las etiquetas de estado van una junto a la otra. */
+  .tabla td {
+    white-space: nowrap;
+  }
+
+  .tabla td.cliente {
+    min-width: 12rem;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .tabla td.celdaDeEstado {
+    white-space: normal;
+  }
+
+  .tabla td.importe {
+    font-size: var(--tipo-tamano-medio);
+  }
+
+  .tabla .estados {
+    justify-content: flex-start;
+  }
+
+  /* El enlace del comprobante cubre toda la fila: tocar la fila abre el detalle. */
+  .enlaceDeFila {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--objetivo-minimo);
+    color: var(--color-texto);
+    font-weight: var(--tipo-peso-fuerte);
+  }
+
+  .enlaceDeFila::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+}

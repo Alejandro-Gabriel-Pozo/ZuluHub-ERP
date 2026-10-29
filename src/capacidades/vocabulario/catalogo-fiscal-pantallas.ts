@@ -1,6 +1,6 @@
 /**
- * Los textos de las PANTALLAS del facturador (prefijo `fiscal.pantalla.*`), hoy la del detalle de un comprobante: los
- * rótulos, los siete estados (D-25), la etiqueta de anulación (D-29) y los avisos por estado de la guía de pantallas y
+ * Los textos de las PANTALLAS del facturador (prefijo `fiscal.pantalla.*`), hoy la del detalle de un comprobante y la del
+ * listado (sección «Listado» al final): los rótulos, los siete estados (D-25), la etiqueta de anulación (D-29) y los avisos por estado de la guía de pantallas y
  * mensajes (§1.2). Viven aparte de `catalogo-fiscal.ts` (errores y mensajes de ARCA) para que ninguno de los dos crezca sin
  * tope; `catalogo.ts` los incluye y su prueba (`catalogo.test.ts`) los revisa como a todos. Castellano neutro y en
  * términos del negocio: ninguna palabra técnica ni el código crudo de nada. No se usa «acreditado» en lo que ve la
@@ -9,6 +9,10 @@
  * Fuente de cada texto (verificable): PROTO = prototipo aprobado `detalle.html`; GUIA = `06-facturador-pantallas-y-mensajes.md`;
  * CONTRATO = `facturador-contratos-de-pantalla.md`. Un texto que no figure literalmente en una de las tres no entra:
  * lo prueba `catalogo.test.ts` solo en lo que puede (sin código crudo); la cita es la que se revisa a mano.
+ *
+ * El listado suma dos fuentes más: PROTO-LISTADO = prototipo aprobado `Listado.dc.html` (tablero «Listado 6A + 6C», sin lo
+ * marcado Exportar, Origen, Pago y Referencias) y MENSAJE-DUEÑO = lo que el dueño dijo con fecha. Un texto marcado PROPUESTA
+ * no tiene fuente: es del carril web y espera la aprobación del dueño.
  */
 export const TEXTOS_DE_FISCAL_PANTALLAS = {
   // PROTO: <title>Comprobante</title>.
@@ -101,5 +105,78 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
   "fiscal.pantalla.aviso_conflicto_detalle": {
     porDefecto: "El punto de venta quedó bloqueado hasta resincronizar.",
     largoMaximo: 120,
+  },
+
+  // ---------------------------------------------------------------------------------------------------------------------
+  // Listado de comprobantes (6A celular + 6C escritorio, control de período A). CONTRATO: «6a+6c aprobado» (dueño, 2026-10-28).
+  // ---------------------------------------------------------------------------------------------------------------------
+
+  // PROTO-LISTADO: encabezado «Comprobantes» (celular y escritorio). Es también el rótulo de la barra inferior.
+  "fiscal.pantalla.listado_titulo": { porDefecto: "Comprobantes" },
+
+  // Rótulos de los filtros y de las columnas. PROTO-LISTADO: «Período», «Estado», «Letra», «Punto de venta» (ya está arriba:
+  // `rotulo_punto_de_venta`), «Nombre o CUIT» (el texto del campo de búsqueda; CONTRATO: Búsqueda «Nombre o CUIT»), y las
+  // columnas «Fecha», «Comprobante», «Cliente», «Documento», «Total» y «Estado».
+  "fiscal.pantalla.listado_rotulo_periodo": { porDefecto: "Período" },
+  "fiscal.pantalla.listado_rotulo_estado": { porDefecto: "Estado" },
+  "fiscal.pantalla.listado_rotulo_letra": { porDefecto: "Letra" },
+  "fiscal.pantalla.listado_rotulo_buscar": { porDefecto: "Nombre o CUIT" },
+  "fiscal.pantalla.listado_rotulo_comprobante": { porDefecto: "Comprobante" },
+  "fiscal.pantalla.listado_rotulo_documento": { porDefecto: "Documento" },
+
+  // Las opciones del período. PROTO-LISTADO: «Hoy», «Últimos 7 días», «Este mes», «Todo». CONTRATO: «Período (Hoy, Últimos 7 días,
+  // Este mes, Todo, Personalizado)».
+  "fiscal.pantalla.listado_periodo_hoy": { porDefecto: "Hoy" },
+  "fiscal.pantalla.listado_periodo_ultimos_7_dias": { porDefecto: "Últimos 7 días" },
+  "fiscal.pantalla.listado_periodo_este_mes": { porDefecto: "Este mes" },
+  "fiscal.pantalla.listado_periodo_todo": { porDefecto: "Todo" },
+  "fiscal.pantalla.listado_periodo_personalizado": { porDefecto: "Personalizado" },
+
+  // PROPUESTA del carril web, pendiente de aprobación del dueño: los rótulos de las dos fechas del período «Personalizado».
+  // Fuente solo indirecta: GUIA §4.6, `FECHAS_INVERTIDAS` («La fecha «desde» es posterior a «hasta».»).
+  "fiscal.pantalla.listado_rotulo_desde": { porDefecto: "Desde" },
+  "fiscal.pantalla.listado_rotulo_hasta": { porDefecto: "Hasta" },
+
+  // «Sin filtrar» de las listas. PROTO-LISTADO: «Todos» (estado y punto de venta) y «Todas» (letra). CONTRATO: «Todos» / «Todas».
+  "fiscal.pantalla.listado_todos": { porDefecto: "Todos" },
+  "fiscal.pantalla.listado_todas": { porDefecto: "Todas" },
+
+  // PROTO-LISTADO: el botón del celular «Filtros ({{activos}})» y «Limpiar». CONTRATO: «"Filtros (n)" y "Limpiar"».
+  "fiscal.pantalla.listado_filtros": {
+    porDefecto: "Filtros ({cantidad})",
+    marcadores: ["cantidad"],
+  },
+  "fiscal.pantalla.listado_limpiar": { porDefecto: "Limpiar" },
+
+  // CONTRATO: paginación «Página siguiente».
+  "fiscal.pantalla.listado_pagina_siguiente": { porDefecto: "Página siguiente" },
+
+  // CONTRATO, estados: vacío «No hay comprobantes con esos filtros. Probá con otro período o tocá «Limpiar».» (también PROTO-LISTADO,
+  // escritorio); error «No pudimos cargar la lista. Probá de nuevo.» más la referencia PD-… (la referencia es `error.referencia`).
+  "fiscal.pantalla.listado_vacio": {
+    porDefecto: "No hay comprobantes con esos filtros. Probá con otro período o tocá «Limpiar».",
+    largoMaximo: 160,
+  },
+  "fiscal.pantalla.listado_error": {
+    porDefecto: "No pudimos cargar la lista. Probá de nuevo.",
+    largoMaximo: 120,
+  },
+
+  // PROTO-LISTADO: el documento de un consumidor final sin identificar se ve «—».
+  "fiscal.pantalla.listado_sin_documento": { porDefecto: "—" },
+
+  // PROPUESTA del carril web, pendiente de aprobación del dueño (no tienen fuente): el rótulo del selector de sucursal, la
+  // invitación a elegir cuando todavía no eligió (D-36), el botón que aplica lo elegido (el del prototipo, «Ver {{cantidad}}
+  // comprobantes», lleva la cantidad, que no va: D-32) y la marca de una sucursal cerrada (D-37; MENSAJE-DUEÑO, 2026-10-28:
+  // «Sí, aparece marcada como cerrada»: lo del dueño es que se marque, la redacción es de la propuesta).
+  "fiscal.pantalla.listado_rotulo_sucursal": { porDefecto: "Sucursal" },
+  "fiscal.pantalla.listado_elegir_sucursal": {
+    porDefecto: "Elegí una sucursal para ver sus comprobantes.",
+    largoMaximo: 120,
+  },
+  "fiscal.pantalla.listado_aplicar": { porDefecto: "Ver comprobantes" },
+  "fiscal.pantalla.listado_sucursal_cerrada": {
+    porDefecto: "{nombre} · Cerrada",
+    marcadores: ["nombre"],
   },
 } as const;

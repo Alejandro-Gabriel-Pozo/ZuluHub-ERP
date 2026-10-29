@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { errorDeCodigo, type Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import { aRespuestaDeExcepcion } from "../../../src/composicion/a-respuesta";
 import {
@@ -18,13 +19,21 @@ import {
   type DetalleParaLaPantalla,
 } from "../../../src/composicion/facturacion-web";
 import { resolverEmpresa } from "../../../src/composicion/sesion-y-empresa";
+import type { PaginaDeComprobantes } from "../../../src/modulos/fiscal/publico";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { marcaComercialId } from "../../../src/primitivas/identificadores/marca";
-import { pedidoDeLaAccion } from "./acciones";
+import { RUTA_DEL_LISTADO } from "../ui/plantillas/facturacion/filtros-del-listado";
+import { pedidoDeLaAccion, type ResultadoDeAccion } from "./acciones";
 import { web } from "./composicion";
-import { COOKIE_DE_EMPRESA } from "./cookies";
+import { COOKIE_DE_EMPRESA, COOKIE_DE_SUCURSAL, OPCIONES_DE_COOKIE_DE_SUCURSAL } from "./cookies";
 import { despacharPorClavesDespuesDeConfirmar } from "./despacho-inmediato";
 import { dependenciasDeSesion, sesionDelPedido } from "./sesion";
+import {
+  elegidaEntre,
+  sucursalDelPedido,
+  sucursalesParaElegir,
+  type SucursalParaElegir,
+} from "./sucursal-elegida";
 
 /**
  * Las acciones de servidor del facturador (H7 facturación): emitir una factura, una nota de crédito o de débito,
@@ -131,10 +140,93 @@ export function cambiarElAmbiente(entrada: unknown) {
   return conLaEmpresa((contexto) => cambiarAmbienteDePuntoDeVenta(dependencias, contexto, entrada));
 }
 
+/**
+ * El listado de la sucursal que la persona eligió (D-34). La elección la guarda y valida el servidor (`sucursal-elegida.ts`); la
+ * consulta la verifica de nuevo. Sin elegir y con varias sucursales para elegir responde `FISCAL_SUCURSAL_NO_ELEGIDA`; con una sola
+ * abierta, el servidor la toma sola. Nunca lista todas.
+ */
 export function listarLosComprobantes(entrada?: unknown) {
-  // La sesión web todavía no guarda la sucursal elegida (la hace el selector de sucursal, capa web): sin ella el listado
-  // responde SUCURSAL_NO_ELEGIDA, salvo que la persona tenga una sola sucursal, que el servidor toma solo. Nunca lista todas.
-  return conLaEmpresa((contexto) => listarComprobantes(dependencias, contexto, null, entrada));
+  return conLaEmpresa(async (contexto) => {
+    const sucursal = await sucursalDelPedido(contexto);
+    if (!sucursal.ok) return sucursal;
+    return listarComprobantes(dependencias, contexto, sucursal.dato.elegida, entrada);
+  });
+}
+
+/** Lo que la pantalla del listado necesita de una sola vez: las sucursales, cuál se usa, los puntos de venta y la página. */
+export type ListadoCargado = Readonly<{
+  sucursales: readonly SucursalParaElegir[];
+  /** La sucursal con la que trabaja el listado; `""` si todavía no hay una. */
+  efectiva: string;
+  puntosDeVenta: readonly number[];
+  pagina: Respuesta<PaginaDeComprobantes>;
+}>;
+
+/**
+ * Carga el listado de la pantalla con el contexto que ya resolvió la página (sin volver a resolver la empresa). Pide en orden:
+ * las sucursales y la elegida; los puntos de venta de esa sucursal (hoy ninguno: ver abajo); y, con los puntos de venta ya
+ * conocidos, la página (`armarEntrada` recibe los números para descartar un filtro de punto de venta ajeno a la sucursal).
+ * Si la sucursal no se puede resolver, la página trae el error del servidor (`FISCAL_SUCURSAL_NO_ELEGIDA` o fuera de alcance) y la
+ * pantalla muestra igual el selector.
+ */
+export async function cargarElListado(
+  contexto: ContextoOperativo,
+  armarEntrada: (puntosDeVenta: readonly number[]) => unknown,
+): Promise<ListadoCargado> {
+  try {
+    const sucursal = await sucursalDelPedido(contexto);
+    if (!sucursal.ok) return { sucursales: [], efectiva: "", puntosDeVenta: [], pagina: sucursal };
+    const { elegibles, elegida, efectiva } = sucursal.dato;
+    // BLOQUEADO (pregunta pendiente al backend): `listarPuntosDeVentaDeLaSucursal` existe en el módulo fiscal pero
+    // `armarWeb` (`src/composicion/web.ts`) no lo expone en `consultasDeFacturacion`, así que acá no se puede llamar. Hasta
+    // entonces la lista va vacía: el filtro «Punto de venta» no se ofrece y la dirección no lo filtra.
+    const puntosDeVenta: readonly number[] = [];
+    return {
+      sucursales: elegibles,
+      efectiva,
+      puntosDeVenta,
+      pagina: await listarComprobantes(
+        dependencias,
+        contexto,
+        elegida,
+        armarEntrada(puntosDeVenta),
+      ),
+    };
+  } catch (excepcion) {
+    return {
+      sucursales: [],
+      efectiva: "",
+      puntosDeVenta: [],
+      pagina: aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta),
+    };
+  }
+}
+
+/** Guarda la sucursal elegida, pero solo si es una de las que la persona puede elegir. */
+function fijarLaSucursal(datos: FormData): Promise<Respuesta<null>> {
+  return conLaEmpresa(async (contexto) => {
+    const lista = await sucursalesParaElegir(contexto);
+    if (!lista.ok) return lista;
+    const valor = datos.get("sucursalId");
+    const elegida = elegidaEntre(typeof valor === "string" ? valor : null, lista.dato);
+    if (elegida === null) {
+      return { ok: false, error: errorDeCodigo("FISCAL_SUCURSAL_FUERA_DE_ALCANCE") } as const;
+    }
+    (await cookies()).set(COOKIE_DE_SUCURSAL, elegida, OPCIONES_DE_COOKIE_DE_SUCURSAL);
+    return { ok: true, dato: null } as const;
+  });
+}
+
+/**
+ * «Ver comprobantes» de la sucursal elegida (D-34): guarda la elección en la cookie (abiertas o cerradas, D-37) y vuelve al listado
+ * sin filtros (los puntos de venta son de la sucursal anterior). Una sucursal que no es de las que la persona puede elegir, o un
+ * valor que no es una sucursal, es `FISCAL_SUCURSAL_FUERA_DE_ALCANCE` y no escribe nada. Se repite sin duplicar: elegir la misma
+ * otra vez deja la misma cookie.
+ */
+export async function elegirLaSucursal(datos: FormData): Promise<ResultadoDeAccion> {
+  const resultado = await fijarLaSucursal(datos);
+  if (!resultado.ok) return { error: resultado.error };
+  redirect(RUTA_DEL_LISTADO);
 }
 
 export function verElComprobante(entrada: unknown): Promise<Respuesta<DetalleParaLaPantalla>> {

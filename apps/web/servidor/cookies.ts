@@ -5,13 +5,19 @@ import { cookieParaNext } from "../../../src/capacidades/experiencia/set-cookie"
 
 /**
  * Las cookies propias de la aplicación y cómo se aplican las de la librería de ingreso. Todas son del HOST
- * (sin `Domain`): una cookie de la marca A nunca viaja a la B (armazón web §4.4). Las dos propias llevan el
+ * (sin `Domain`): una cookie de la marca A nunca viaja a la B (armazón web §4.4). Las propias llevan el
  * prefijo `__Host-` (M1), igual que las de la librería: el navegador exige `Secure`, `Path=/` y sin `Domain`, y
  * no deja que un subdominio del cliente las fije para todo el dominio.
  */
 
 /** La empresa elegida en este host. No es de confianza: se valida contra las empresas de la persona en CADA pedido. */
 export const COOKIE_DE_EMPRESA = `${PREFIJO_DE_NAVEGADOR}pd_empresa`;
+/**
+ * La sucursal que la persona eligió para mirar el listado de comprobantes (D-34). Como la de empresa, no es de confianza: se valida
+ * contra las sucursales que el alcance de la persona deja elegir en CADA pedido (`sucursal-elegida.ts`), y el servidor la
+ * verifica otra vez en la consulta. Un `localStorage` no serviría: el servidor no lo ve.
+ */
+export const COOKIE_DE_SUCURSAL = `${PREFIJO_DE_NAVEGADOR}pd_sucursal`;
 /** El enlace de la invitación mientras la persona pasa por Google (el token no viaja en la dirección de retorno). */
 export const COOKIE_DE_INVITACION = `${PREFIJO_DE_NAVEGADOR}pd_invitacion`;
 
@@ -21,6 +27,10 @@ const QUINCE_MINUTOS_EN_SEGUNDOS = 15 * 60;
 /** HttpOnly (el JavaScript de la página no la lee), Secure, SameSite=Lax (P-7) y sin Domain. */
 const BASE = { httpOnly: true, secure: true, sameSite: "lax", path: "/" } as const;
 export const OPCIONES_DE_COOKIE_DE_EMPRESA = { ...BASE, maxAge: TREINTA_DIAS_EN_SEGUNDOS } as const;
+export const OPCIONES_DE_COOKIE_DE_SUCURSAL = {
+  ...BASE,
+  maxAge: TREINTA_DIAS_EN_SEGUNDOS,
+} as const;
 export const OPCIONES_DE_COOKIE_DE_INVITACION = {
   ...BASE,
   maxAge: QUINCE_MINUTOS_EN_SEGUNDOS,

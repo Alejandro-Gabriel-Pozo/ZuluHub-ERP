@@ -166,9 +166,17 @@ describe("el detalle de un comprobante: importes y fechas solo como texto (ADR-0
     (nombre) => !/\.test\./.test(nombre) && !nombre.endsWith(".css"),
   );
 
-  it("la carpeta tiene los archivos del detalle", () => {
+  it("la carpeta tiene los archivos del detalle y los del listado de comprobantes", () => {
     expect(delDetalle).toEqual(
-      expect.arrayContaining(["formato-fiscal.ts", "modelo-del-detalle.ts"]),
+      expect.arrayContaining([
+        "formato-fiscal.ts",
+        "modelo-del-detalle.ts",
+        "filtros-del-listado.ts",
+        "modelo-del-listado.ts",
+        "PantallaDeListadoDeComprobantes.tsx",
+        "FormularioDeFiltros.cliente.tsx",
+        "EleccionDeSucursal.cliente.tsx",
+      ]),
     );
   });
 

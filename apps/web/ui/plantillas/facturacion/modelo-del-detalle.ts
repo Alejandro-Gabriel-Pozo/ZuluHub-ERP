@@ -22,7 +22,7 @@ import {
  * `test/web/detalle-pagina.test.ts` (la página).
  */
 
-type TipoVisible =
+export type TipoVisible =
   | "FACTURA_A"
   | "FACTURA_B"
   | "FACTURA_C"
@@ -33,7 +33,7 @@ type TipoVisible =
   | "NOTA_CREDITO_B"
   | "NOTA_CREDITO_C";
 
-type EstadoVisible =
+export type EstadoVisible =
   | "PENDIENTE"
   | "EN_VALIDACION"
   | "AUTORIZADO"
@@ -42,7 +42,7 @@ type EstadoVisible =
   | "CONFLICTO"
   | "DESCARTADO";
 
-type TipoDeDocumentoVisible = "CUIT" | "CUIL" | "CDI" | "DNI" | "PASAPORTE";
+export type TipoDeDocumentoVisible = "CUIT" | "CUIL" | "CDI" | "DNI" | "PASAPORTE";
 
 /** Lo que el detalle necesita de `DetalleParaLaPantalla`: un subconjunto estructural (la UI no importa la composición). */
 export type DetalleParaMostrar = Readonly<{
@@ -87,7 +87,7 @@ export type DetalleParaMostrar = Readonly<{
 }>;
 
 type Tono = PropsDeInsignia["tono"];
-type EstadoArmado = Readonly<{ texto: string; tono: Tono }>;
+export type EstadoArmado = Readonly<{ texto: string; tono: Tono }>;
 
 export type DetalleArmado = Readonly<{
   titulo: string;
@@ -155,30 +155,37 @@ function claveDeClase(tipo: TipoVisible): ClaveDeTexto {
 }
 
 /** «Factura B 0001-00001234»; sin número («Factura B») mientras no está autorizada. */
-function nombreDe(d: DiccionarioResuelto, tipo: TipoVisible, numero: string | null): string {
+export function nombreDe(d: DiccionarioResuelto, tipo: TipoVisible, numero: string | null): string {
   const base = { tipo: texto(d, claveDeClase(tipo)), letra: tipo.slice(-1) };
   return numero === null
     ? texto(d, "fiscal.pantalla.comprobante_sin_numero", base)
     : texto(d, "fiscal.pantalla.comprobante_con_numero", { ...base, numero });
 }
 
-function estadoDe(d: DiccionarioResuelto, estado: EstadoVisible): EstadoArmado {
+export function estadoDe(d: DiccionarioResuelto, estado: EstadoVisible): EstadoArmado {
   return { texto: texto(d, CLAVE_DE_ESTADO[estado]), tono: TONO_DE_ESTADO[estado] };
+}
+
+/** «CUIT 30-71234567-8» o «DNI 12.345.678»; `null` si el cliente no está identificado. Lo comparten el detalle y el listado. */
+export function documentoDe(
+  d: DiccionarioResuelto,
+  documento: DetalleParaMostrar["receptor"]["documento"],
+): string | null {
+  if (documento.tipo === "SIN_IDENTIFICAR") return null;
+  return texto(d, "fiscal.pantalla.documento", {
+    tipo: texto(d, CLAVE_DE_DOCUMENTO[documento.tipo]),
+    numero: formatearNumeroDeDocumento(documento.tipo, documento.numero),
+  });
 }
 
 function clienteDe(d: DiccionarioResuelto, receptor: DetalleParaMostrar["receptor"]) {
   const consumidor = texto(d, "fiscal.pantalla.consumidor_final");
-  const documento = receptor.documento;
-  if (documento.tipo === "SIN_IDENTIFICAR") {
+  const identificacion = documentoDe(d, receptor.documento);
+  if (identificacion === null) {
     return receptor.nombre === null
       ? { valor: consumidor, secundario: null }
       : { valor: receptor.nombre, secundario: consumidor };
   }
-  const numeroDelDocumento = formatearNumeroDeDocumento(documento.tipo, documento.numero);
-  const identificacion = texto(d, "fiscal.pantalla.documento", {
-    tipo: texto(d, CLAVE_DE_DOCUMENTO[documento.tipo]),
-    numero: numeroDelDocumento,
-  });
   return receptor.nombre === null
     ? { valor: identificacion, secundario: null }
     : { valor: receptor.nombre, secundario: identificacion };
@@ -272,10 +279,15 @@ function anuladoDe(d: DiccionarioResuelto, detalle: DetalleParaMostrar): Detalle
   };
 }
 
-function anulacionDe(d: DiccionarioResuelto, detalle: DetalleParaMostrar): string | null {
-  if (detalle.estado !== "AUTORIZADO") return null;
-  if (detalle.acreditacion === "PARCIAL") return texto(d, "fiscal.pantalla.anulacion_parcial");
-  return detalle.acreditacion === "TOTAL" ? texto(d, "fiscal.pantalla.anulacion_total") : null;
+/** «Anulación parcial» o «Anulación total» junto al estado, solo de una factura autorizada (D-29). Lo comparten el detalle y el listado. */
+export function anulacionDe(
+  d: DiccionarioResuelto,
+  estado: EstadoVisible,
+  acreditacion: DetalleParaMostrar["acreditacion"],
+): string | null {
+  if (estado !== "AUTORIZADO") return null;
+  if (acreditacion === "PARCIAL") return texto(d, "fiscal.pantalla.anulacion_parcial");
+  return acreditacion === "TOTAL" ? texto(d, "fiscal.pantalla.anulacion_total") : null;
 }
 
 export function armarElDetalle(
@@ -285,7 +297,7 @@ export function armarElDetalle(
   return {
     titulo: nombreDe(d, detalle.tipo, detalle.numero),
     estado: estadoDe(d, detalle.estado),
-    anulacion: anulacionDe(d, detalle),
+    anulacion: anulacionDe(d, detalle.estado, detalle.acreditacion),
     corresponde:
       detalle.asociado === null
         ? null
