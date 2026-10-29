@@ -13,6 +13,7 @@
  * El listado cita, además, CONTRATO-LISTADO = la sección «Contrato de la pantalla 1: Listado de comprobantes» del mismo contrato y
  * MENSAJE-DUEÑO = lo que el dueño dijo con fecha. El prototipo `Listado.dc.html` NO es fuente. Un texto marcado «PROPUESTA sin
  * fuente verificable, pendiente del dueño» no figura en ninguna fuente: es del carril web y espera la aprobación del dueño.
+ * RESPUESTA-DUEÑO-2026-10-29 = «dueño, 2026-10-29, respuesta en la sesión web del carril web» (cuestionario de opciones).
  */
 export const TEXTOS_DE_FISCAL_PANTALLAS = {
   // PROTO: <title>Comprobante</title>.
@@ -111,7 +112,7 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
   // Listado de comprobantes (6A celular + 6C escritorio, control de período A). CONTRATO: «6a+6c aprobado» (dueño, 2026-10-28).
   // ---------------------------------------------------------------------------------------------------------------------
 
-  // PROPUESTA sin fuente verificable, pendiente del dueño: el encabezado «Comprobantes» (celular y escritorio), que es también el
+  // Aprobado por el dueño el 2026-10-29 (respuesta en la sesión web del carril web): el encabezado «Comprobantes» (celular y escritorio), que es también el
   // rótulo de la barra inferior. (La guía §P3 la llama «Comprobantes emitidos»; el contrato, «Listado de comprobantes».)
   "fiscal.pantalla.listado_titulo": { porDefecto: "Comprobantes" },
 
@@ -133,8 +134,8 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
   "fiscal.pantalla.listado_periodo_todo": { porDefecto: "Todo" },
   "fiscal.pantalla.listado_periodo_personalizado": { porDefecto: "Personalizado" },
 
-  // PROPUESTA del carril web, pendiente de aprobación del dueño: los rótulos de las dos fechas del período «Personalizado».
-  // Fuente solo indirecta: GUIA §4.6, `FECHAS_INVERTIDAS` («La fecha «desde» es posterior a «hasta».»).
+  // Aprobado por el dueño el 2026-10-29 (respuesta en la sesión web del carril web): los rótulos de las dos fechas del período «Personalizado».
+  // Fuente de la redacción: GUIA §4.6, `FECHAS_INVERTIDAS` («La fecha «desde» es posterior a «hasta».»).
   "fiscal.pantalla.listado_rotulo_desde": { porDefecto: "Desde" },
   "fiscal.pantalla.listado_rotulo_hasta": { porDefecto: "Hasta" },
 
@@ -174,21 +175,33 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
     largoMaximo: 120,
   },
 
-  // PROPUESTA sin fuente verificable, pendiente del dueño: el documento de un consumidor final sin identificar se ve «—».
+  // Aprobado por el dueño el 2026-10-29 (respuesta en la sesión web del carril web): el documento de un consumidor final sin identificar se ve «—».
   "fiscal.pantalla.listado_sin_documento": { porDefecto: "—" },
 
-  // PROPUESTA del carril web, pendiente de aprobación del dueño (no tienen fuente): el rótulo del selector de sucursal, la
-  // invitación a elegir cuando todavía no eligió (D-36), el botón que aplica lo elegido (el del prototipo, «Ver {{cantidad}}
+  // Aprobado por el dueño el 2026-10-29 (respuesta en la sesión web del carril web): el rótulo del selector de sucursal, la
+  // invitación a elegir cuando todavía no eligió (D-36), el botón de esa elección «Ver comprobantes» (el del prototipo, «Ver {{cantidad}}
   // comprobantes», lleva la cantidad, que no va: D-32) y la marca de una sucursal cerrada (D-37; MENSAJE-DUEÑO, 2026-10-28:
-  // «Sí, aparece marcada como cerrada»: lo del dueño es que se marque, la redacción es de la propuesta).
+  // «Sí, aparece marcada como cerrada»).
   "fiscal.pantalla.listado_rotulo_sucursal": { porDefecto: "Sucursal" },
   "fiscal.pantalla.listado_elegir_sucursal": {
     porDefecto: "Elegí una sucursal para ver sus comprobantes.",
     largoMaximo: 120,
   },
-  "fiscal.pantalla.listado_aplicar": { porDefecto: "Ver comprobantes" },
+  "fiscal.pantalla.listado_ver_comprobantes": { porDefecto: "Ver comprobantes" },
   "fiscal.pantalla.listado_sucursal_cerrada": {
     porDefecto: "{nombre} · Cerrada",
     marcadores: ["nombre"],
+  },
+
+  // RESPUESTA-DUEÑO-2026-10-29: el botón que aplica los filtros se llama «Aplicar filtros» (y «Ver comprobantes» queda solo para
+  // la elección de sucursal), y la fecha que no existe en el calendario (por ejemplo 31 de febrero) se dice por campo.
+  "fiscal.pantalla.listado_aplicar": { porDefecto: "Aplicar filtros" },
+  "fiscal.pantalla.listado_error_fecha_desde_no_existe": {
+    porDefecto: "La fecha «desde» no existe.",
+    largoMaximo: 120,
+  },
+  "fiscal.pantalla.listado_error_fecha_hasta_no_existe": {
+    porDefecto: "La fecha «hasta» no existe.",
+    largoMaximo: 120,
   },
 } as const;

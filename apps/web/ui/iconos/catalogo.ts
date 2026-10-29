@@ -39,7 +39,7 @@ export const CATALOGO_DE_ICONOS = {
   empresa: Building2,
   cuenta: UserRound,
   salir: LogOut,
-  // Facturador: el módulo de comprobantes. PROPUESTA del carril web, pendiente de aprobación (no hay ícono aprobado).
+  // Facturador: el módulo de comprobantes. Ícono «Comprobantes» (hoja con renglones): Aprobado por el dueño el 2026-10-29 (respuesta en la sesión web del carril web).
   comprobantes: FileText,
   // Carta pública (C-2).
   secciones: Menu,

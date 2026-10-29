@@ -187,7 +187,7 @@ describe("los filtros armados para el formulario", () => {
       letra: "Letra",
       puntoDeVenta: "Punto de venta",
       buscar: "Nombre o CUIT",
-      aplicar: "Ver comprobantes",
+      aplicar: "Aplicar filtros",
       limpiar: "Limpiar",
       todos: "Todos",
       todas: "Todas",

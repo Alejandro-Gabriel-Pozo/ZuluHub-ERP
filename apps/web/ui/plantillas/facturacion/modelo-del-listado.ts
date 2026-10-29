@@ -155,7 +155,7 @@ export function armarLaEleccionDeSucursal(
   if (sucursales.length === 1 && unica?.activa === true && elegida !== "") return null;
   return {
     rotulo: texto(d, "fiscal.pantalla.listado_rotulo_sucursal"),
-    aplicar: texto(d, "fiscal.pantalla.listado_aplicar"),
+    aplicar: texto(d, "fiscal.pantalla.listado_ver_comprobantes"),
     enviando: texto(d, "conexion.enviando"),
     elegir: texto(d, "sucursal.elegir"),
     invitacion: elegida === "" ? texto(d, "fiscal.pantalla.listado_elegir_sucursal") : null,
@@ -184,6 +184,16 @@ export function errorParaElListado(error: ErrorPublico): ErrorPublico {
     }
     if (error.campo === "texto") {
       return { ...error, clave: "fiscal.pantalla.listado_error_texto_demasiado_largo" };
+    }
+  }
+  // Una fecha con forma de fecha pero que no existe (31 de febrero) la rechaza la frontera de la acción (`aFecha` de
+  // `src/composicion/entradas-de-facturacion.ts`) como datos inválidos con el campo `desde` o `hasta`.
+  if (error.codigo === "FISCAL_DATOS_INVALIDOS") {
+    if (error.campo === "desde") {
+      return { ...error, clave: "fiscal.pantalla.listado_error_fecha_desde_no_existe" };
+    }
+    if (error.campo === "hasta") {
+      return { ...error, clave: "fiscal.pantalla.listado_error_fecha_hasta_no_existe" };
     }
   }
   return error;

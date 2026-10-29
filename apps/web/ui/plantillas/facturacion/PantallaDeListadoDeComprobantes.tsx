@@ -111,7 +111,7 @@ export function PantallaDeListadoDeComprobantes({
   return (
     <div className={estilos["raiz"]}>
       {eleccionDeSucursal === null ? null : (
-        // Con nombre («Sucursal»), para que su «Ver comprobantes» no se confunda con el de los filtros (que está en la búsqueda «Filtros»).
+        // Con nombre («Sucursal»): el grupo de la elección de sucursal se anuncia aparte del formulario de filtros.
         <div className={estilos["sucursal"]} role="group" aria-label={eleccionDeSucursal.rotulo}>
           <EleccionDeSucursal eleccion={eleccionDeSucursal} accion={accionDeSucursal} />
         </div>

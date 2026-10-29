@@ -196,7 +196,7 @@ describe("la página del listado de comprobantes", () => {
     expect(marcado).toContain('name="sucursalId"');
     expect(marcado).not.toContain('name="periodo"');
     expect(marcado).not.toContain("<table");
-    expect(t).not.toContain("Sucursal no elegida.");
+    expect(t).not.toContain("Elegí una sucursal.");
   });
 
   it("sucursal fuera de alcance: lo dice, y deja elegir otra", async () => {

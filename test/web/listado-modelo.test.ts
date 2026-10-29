@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { errorDeCodigo } from "../../src/capacidades/experiencia/respuesta";
 import { texto } from "../../src/capacidades/vocabulario/vocabulario";
+import { entradaDeListar } from "../../src/composicion/entradas-de-facturacion";
 import { traducirErrorFiscal } from "../../src/composicion/errores-fiscales";
 import { FILTROS_POR_DEFECTO } from "../../apps/web/ui/plantillas/facturacion/filtros-del-listado";
 import {
@@ -185,6 +186,28 @@ describe("el error de la lista", () => {
   it("texto demasiado largo (guía §4.6): «Buscá con menos letras.»", () => {
     const e = filtroInvalido("TEXTO_DEMASIADO_LARGO");
     expect(texto({}, e.clave)).toBe("Buscá con menos letras.");
+  });
+
+  it.each(["desde", "hasta"] as const)(
+    "la fecha «%s» que no existe (31 de febrero) dice «La fecha «%s» no existe.»",
+    (campo) => {
+      // El error sale de la frontera real de la acción: una fecha con forma de fecha pero fuera del calendario.
+      const r = entradaDeListar({ [campo]: "2026-02-31" });
+      if (r.ok) throw new Error("debía rechazar la fecha");
+      expect(r.error).toEqual({ codigo: "FISCAL_DATOS_INVALIDOS", campo });
+      const e = errorParaElListado({ ...errorDeCodigo("FISCAL_DATOS_INVALIDOS"), campo });
+      expect(texto({}, e.clave)).toBe(`La fecha «${campo}» no existe.`);
+    },
+  );
+
+  it("otros datos inválidos conservan el texto general", () => {
+    const e = { ...errorDeCodigo("FISCAL_DATOS_INVALIDOS"), campo: "texto" };
+    expect(errorParaElListado(e)).toBe(e);
+  });
+
+  it("sucursal no elegida (dueño, 2026-10-29): «Elegí una sucursal.»", () => {
+    const e = errorParaElListado(errorDeCodigo("FISCAL_SUCURSAL_NO_ELEGIDA"));
+    expect(texto({}, e.clave)).toBe("Elegí una sucursal.");
   });
 
   it("otro filtro inválido conserva el texto general", () => {

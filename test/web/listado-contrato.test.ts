@@ -83,7 +83,7 @@ describe("prueba de contrato: lo que está", () => {
   it("«Filtros (n)», «Limpiar» y el botón que aplica", () => {
     expect(texto).toContain("Filtros (0)");
     expect(texto).toContain("Limpiar");
-    expect(texto).toContain("Ver comprobantes");
+    expect(texto).toContain("Aplicar filtros");
     expect(marcado).toContain(`href="${RUTA_DEL_LISTADO}"`);
   });
 
@@ -125,11 +125,13 @@ describe("prueba de contrato: lo que está", () => {
     }
   });
 
-  it("los dos «Ver comprobantes» se distinguen: uno dentro del grupo «Sucursal», el otro en la búsqueda «Filtros (n)»", () => {
+  it("«Ver comprobantes» es solo el botón del grupo «Sucursal»; «Aplicar filtros» es el de la búsqueda «Filtros (n)»", () => {
     expect(marcado).toMatch(/role="group"[^>]*aria-label="Sucursal"/);
     expect(marcado).toMatch(/role="search"[^>]*aria-label="Filtros \(0\)"/);
     const delGrupo = /aria-label="Sucursal">([\s\S]*?)<\/form>/.exec(marcado)?.[1] ?? "";
     expect(delGrupo).toContain("Ver comprobantes");
+    expect(delGrupo).not.toContain("Aplicar filtros");
+    expect(marcado.match(/Ver comprobantes/g)).toHaveLength(1);
     expect(delGrupo).not.toContain('name="periodo"');
   });
 
