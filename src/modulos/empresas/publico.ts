@@ -86,3 +86,7 @@ export {
   type RepositorioDeEmpresas,
   type RepositorioDeSucursales,
 } from "./persistencia/repositorios";
+export {
+  crearLecturaDeSucursalBloqueada,
+  type LecturaDeSucursalBloqueada,
+} from "./persistencia/sucursal-bloqueada";

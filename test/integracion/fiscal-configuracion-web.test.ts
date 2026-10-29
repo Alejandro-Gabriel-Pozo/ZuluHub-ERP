@@ -919,6 +919,30 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
       expect(await cuenta("punto_de_venta", b.mundo.empresa)).toBe(0);
     });
 
+    it("una sucursal cerrada no sirve (dueño, 2026-10-29: «No: solo en sucursales abiertas»): FISCAL_SUCURSAL_CERRADA, el mismo código de emitir; no queda ni el domicilio nuevo; con la sucursal abierta el mismo pedido entra", async () => {
+      const e = await nuevo();
+      const cerrada = (
+        await filas<{ id: string }>(
+          "insert into sucursal (empresa_id, nombre) values ($1, 'Sucursal cerrada') returning id",
+          [e.mundo.empresa],
+        )
+      )[0]?.id as string;
+      await dueno.query("update sucursal set activa = false where id = $1", [cerrada]);
+      const pedido = { id: uuid(), sucursalId: cerrada, numero: 2, domicilio: domicilioNuevo() };
+      expect(await crear(e, pedido)).toMatchObject({
+        ok: false,
+        error: { codigo: "FISCAL_SUCURSAL_CERRADA", clave: "error.fiscal_sucursal_cerrada" },
+      });
+      expect(await cuenta("punto_de_venta", e.mundo.empresa)).toBe(0);
+      expect(await cuenta("domicilio", e.mundo.empresa)).toBe(0);
+      expect(await auditorias(e.mundo.empresa)).toHaveLength(0);
+      await dueno.query("update sucursal set activa = true where id = $1", [cerrada]);
+      expect(dato(await crear(e, pedido))).toMatchObject({
+        puntoDeVentaId: pedido.id,
+        yaExistia: false,
+      });
+    });
+
     it("activar necesita domicilio; con domicilio activa, y repetir es «ya estaba» sin auditar de nuevo", async () => {
       const e = await nuevo();
       const sinDomicilio = uuid();

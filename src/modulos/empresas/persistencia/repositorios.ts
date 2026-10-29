@@ -177,7 +177,7 @@ export interface RepositorioDeSucursales {
   ): Promise<Sucursal | null>;
 }
 
-const FORMA_DE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const FORMA_DE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function aEmpresa(fila: Selectable<EmpresasDb["empresa"]>): Empresa {
   return {

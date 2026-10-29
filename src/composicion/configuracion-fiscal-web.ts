@@ -334,7 +334,8 @@ export function puntosDeVentaDelEmisor(
 
 /**
  * Dar de alta un punto de venta (`puntos_de_venta.crear`): nace inactivo y en pruebas. `crudo`: `{ id, emisorId, sucursalId,
- * numero, domicilio? }`; `id` lo genera la pantalla y es la clave de idempotencia.
+ * numero, domicilio? }`; `id` lo genera la pantalla y es la clave de idempotencia. Solo en una sucursal abierta (dueño, 2026-10-29): el
+ * servidor lo valida y una cerrada sale como `FISCAL_SUCURSAL_CERRADA`, sin escribir nada.
  */
 export function crearPuntoDeVenta(
   d: DependenciasDeConfiguracionFiscalWeb,

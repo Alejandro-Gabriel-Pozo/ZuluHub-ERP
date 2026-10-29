@@ -16,7 +16,11 @@ import {
 } from "../../src/adaptadores/postgres/transacciones";
 import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
-import { crearRepositorioDeEmpresas, type EmpresasDb } from "../../src/modulos/empresas/publico";
+import {
+  crearRepositorioDeEmpresas,
+  crearLecturaDeSucursalBloqueada,
+  type EmpresasDb,
+} from "../../src/modulos/empresas/publico";
 import {
   crearCasosDeUsoDeConfiguracionFiscal,
   crearRepositorioDeDatosFiscales,
@@ -59,6 +63,7 @@ export function crearEntornoDeConfiguracion(
       return ajustar({
         db,
         empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
+        sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
         tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
         emisores: crearRepositorioDeEmisores(fiscal),
         domicilios: crearRepositorioDeDomicilios(fiscal),
