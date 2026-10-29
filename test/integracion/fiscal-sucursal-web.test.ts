@@ -227,7 +227,7 @@ describe.skipIf(base === null)("la sucursal de los comprobantes y del listado y 
       expect(await sucursalDelComprobante(nueva.dato.comprobanteId)).toBe(norte);
     });
 
-    it("D-38: una nota de crédito lleva la sucursal de la FACTURA que corrige, salga por el punto de venta que salga; una de débito, la de su punto de venta", async () => {
+    it("D-38 y D-40: una nota (de crédito o de débito) lleva la sucursal de la FACTURA, salga por el punto de venta que salga", async () => {
       const e = await empresaConFacturacion();
       const norte = await sucursalNueva(e);
       const pvNorte = await puntoDeVentaEn(e, norte, 7);
@@ -248,38 +248,46 @@ describe.skipIf(base === null)("la sucursal de los comprobantes y del listado y 
         return r as T & { dato: { comprobanteId: string } };
       };
 
-      // Por el punto de venta de «Norte»: la de crédito se queda en la sucursal de la factura; la de débito sigue al punto de venta.
+      // Por el punto de venta de «Norte»: las dos se quedan en la sucursal de la factura.
       const creditoPorNorte = ok(
         await emitirNotaDeCredito(d, comoGerente(e), pedidoDeNota(pvNorte)),
       );
       const debitoPorNorte = ok(await emitirNotaDeDebito(d, comoGerente(e), pedidoDeNota(pvNorte)));
       expect(await sucursalDelComprobante(creditoPorNorte.dato.comprobanteId)).toBe(e.sucursal);
-      expect(await sucursalDelComprobante(debitoPorNorte.dato.comprobanteId)).toBe(norte);
+      expect(await sucursalDelComprobante(debitoPorNorte.dato.comprobanteId)).toBe(e.sucursal);
       // Por el de la factura: las dos en su sucursal.
       const creditoPropio = ok(await emitirNotaDeCredito(d, comoGerente(e), pedidoDeNota(null)));
       const debitoPropio = ok(await emitirNotaDeDebito(d, comoGerente(e), pedidoDeNota(null)));
       expect(await sucursalDelComprobante(creditoPropio.dato.comprobanteId)).toBe(e.sucursal);
       expect(await sucursalDelComprobante(debitoPropio.dato.comprobanteId)).toBe(e.sucursal);
 
-      // El punto de venta de la factura se muda a «Norte»: una nota de crédito nueva sigue a la FACTURA; una de débito, al punto de venta.
+      // El punto de venta de la factura se muda a «Norte»: las notas nuevas siguen a la FACTURA, no al punto de venta.
       await mudar(e.pv, norte);
       const creditoDespues = ok(await emitirNotaDeCredito(d, comoGerente(e), pedidoDeNota(null)));
       const debitoDespues = ok(await emitirNotaDeDebito(d, comoGerente(e), pedidoDeNota(null)));
       expect(await sucursalDelComprobante(creditoDespues.dato.comprobanteId)).toBe(e.sucursal);
-      expect(await sucursalDelComprobante(debitoDespues.dato.comprobanteId)).toBe(norte);
+      expect(await sucursalDelComprobante(debitoDespues.dato.comprobanteId)).toBe(e.sucursal);
       expect(await sucursalDelComprobante(debitoPropio.dato.comprobanteId)).toBe(e.sucursal);
 
-      // Y en el listado, la nota de crédito aparece donde la factura que corrige.
+      // Y en el listado, las notas aparecen donde la factura, y en el de «Norte» no aparece ninguna.
+      const notas = [
+        creditoPorNorte,
+        debitoPorNorte,
+        creditoPropio,
+        debitoPropio,
+        creditoDespues,
+        debitoDespues,
+      ].map((n) => n.dato.comprobanteId);
       const enCentro = await idsDeLaLista(e, e.sucursal);
-      expect(enCentro).toEqual(
-        expect.arrayContaining([
-          factura.comprobanteId,
-          creditoPorNorte.dato.comprobanteId,
-          creditoPropio.dato.comprobanteId,
-          creditoDespues.dato.comprobanteId,
-        ]),
+      expect(enCentro).toEqual([factura.comprobanteId, ...notas].sort());
+      expect(await idsDeLaLista(e, norte)).toEqual([]);
+      // Y el Detalle de la factura lista sus notas de débito sin sacarlas de su sucursal.
+      const detalle = await verComprobante(d, comoGerente(e), {
+        comprobanteId: factura.comprobanteId,
+      });
+      expect(detalle.ok && detalle.dato.notasQueLoCitan.map((n) => n.id).sort()).toEqual(
+        [...notas].sort(),
       );
-      expect(await idsDeLaLista(e, norte)).not.toContain(creditoPorNorte.dato.comprobanteId);
     });
   });
 
@@ -655,6 +663,28 @@ describe.skipIf(base === null)("la sucursal de los comprobantes y del listado y 
       const operadorDeNorte = await persona(e, "OPERADOR", [norte]);
       expect(await detalleDe(operadorDeCentro, enCentro)).toMatchObject({ ok: true });
       expect(await detalleDe(operadorDeNorte, enCentro)).toMatchObject(NO_ENCONTRADO);
+    });
+
+    it("un comprobante cuya sucursal quedó vacía (carga que apagó los disparadores) no rompe: es «no encontrado», como si no existiera", async () => {
+      const e = await empresaConFacturacion();
+      const c = new pg.Client({ connectionString: propia.base.dueno });
+      await c.connect();
+      const datos = datosDeComprobante(e);
+      try {
+        // Como lo dejaría una restauración con `--disable-triggers`: sin disparadores no se copia la sucursal ni se exige.
+        await c.query("begin");
+        await c.query("alter table comprobante disable trigger user");
+        expect((await insertarComprobante(viaDuenoDirecto(c), datos)).ok).toBe(true);
+        await c.query("alter table comprobante enable trigger user");
+        await c.query("commit");
+      } finally {
+        await c.query("rollback").catch(() => undefined);
+        await c.end();
+      }
+      expect(await sucursalDelComprobante(datos["id"] as string)).toBeNull();
+      for (const ctx of [comoGerente(e), await persona(e, "OPERADOR", [e.sucursal])]) {
+        expect(await detalleDe(ctx, datos["id"] as string)).toMatchObject(NO_ENCONTRADO);
+      }
     });
 
     it("aislamiento entre empresas: el comprobante de otra empresa no se abre, ni con un contexto de gerente", async () => {

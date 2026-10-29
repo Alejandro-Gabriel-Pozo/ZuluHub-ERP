@@ -128,7 +128,7 @@ export interface LecturasDeComprobantes {
   listar(empresa: EmpresaId, filtro: FiltroDeListado): Promise<PaginaDeFilas>;
   /**
    * La sucursal a la que pertenece un comprobante de la empresa (`comprobante.sucursal_id`, la de cuando se emitió), o `null` si
-   * no existe o es de otra empresa (indistinguibles). Es lo que el detalle compara con el alcance de la persona (D-39).
+   * no existe, es de otra empresa o no tiene sucursal guardada (indistinguibles). Es lo que el detalle compara con el alcance de la persona (D-39).
    */
   sucursalDelComprobante(empresa: EmpresaId, id: ComprobanteId): Promise<SucursalId | null>;
   /**
@@ -294,7 +294,8 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
         .where("empresa_id", "=", empresa)
         .where("id", "=", id)
         .executeTakeFirst();
-      return fila === undefined ? null : sucursalId(fila.sucursal_id);
+      // Una fila sin sucursal (solo una carga que apagó los disparadores) no tiene a quién corresponder: como si no existiera.
+      return fila === undefined || fila.sucursal_id === null ? null : sucursalId(fila.sucursal_id);
     },
 
     async puntosDeVentaActivosDeLaSucursal(empresa, sucursal) {

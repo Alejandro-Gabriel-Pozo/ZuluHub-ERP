@@ -29,9 +29,11 @@ export type PuntosDeVentaDeLaSucursal = Readonly<{ items: readonly PuntoDeVentaP
 /**
  * Los puntos de venta ACTIVOS de una sucursal de la empresa del contexto (el filtro «Punto de venta» del listado,
  * D-6 y D-18), de menor a mayor número y sin repetir. Pide `comprobantes.ver` al guard dentro de su transacción
- * (`read committed`, solo lectura) y recién después resuelve la sucursal: un operador solo pide una sucursal donde tiene
- * asignación activa (`SUCURSAL_FUERA_DE_ALCANCE`); gerente y administrador, cualquiera de su empresa que esté activa.
- * Sin elección y con varias a elegir, `SUCURSAL_NO_ELEGIDA`; con una sola, esa. Igual que el listado.
+ * (`read committed`, solo lectura) y recién después resuelve la sucursal con la misma regla que el listado (D-34, D-36 y D-37):
+ * gerente y administrador pueden pedir cualquiera de su empresa, abierta o CERRADA (para ver su historial; una cerrada
+ * normalmente no tiene puntos de venta activos y da una lista vacía); un operador, solo las que tiene asignadas
+ * (`SUCURSAL_FUERA_DE_ALCANCE` con otra). Sin elección: con una sola ABIERTA, esa; con varias, o solo cerradas,
+ * `SUCURSAL_NO_ELEGIDA`.
  */
 export function armarListarPuntosDeVentaDeLaSucursal({
   transacciones,

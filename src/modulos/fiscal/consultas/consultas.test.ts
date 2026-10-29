@@ -677,6 +677,8 @@ describe("verComprobante", () => {
       const r = await consultas.verComprobante(contexto(), { comprobanteId: ID });
       return {
         r,
+        // Cuántas lecturas del comprobante y de lo que lo rodea hizo (el comprobante mismo, las notas, los intentos y la serie).
+        leyoElComprobante: llamadas.comprobante.length,
         leyoElResto: llamadas.notas.length + llamadas.intentos.length + llamadas.series.length,
       };
     };
@@ -698,16 +700,30 @@ describe("verComprobante", () => {
     it("el operador NO abre el de una sucursal que no tiene asignada: lo mismo que si no existiera, y no lee nada más", async () => {
       const ajeno = await ver({ alcance: [A], sucursalDelComprobante: B });
       expect(ajeno.r).toEqual(NO_ENCONTRADO);
+      // Hizo el trabajo mínimo: ni siquiera leyó el comprobante (`obtener`), igual que si no existiera.
+      expect(ajeno.leyoElComprobante).toBe(0);
       expect(ajeno.leyoElResto).toBe(0);
       const sinAsignaciones = await ver({ alcance: [], sucursalDelComprobante: A });
       expect(sinAsignaciones.r).toEqual(NO_ENCONTRADO);
+      expect(sinAsignaciones.leyoElComprobante).toBe(0);
       // Idéntico al de un comprobante que no existe.
       const { consultas } = armar({ comprobante: null });
       expect(await consultas.verComprobante(contexto(), { comprobanteId: ID })).toEqual(ajeno.r);
     });
 
     it("un comprobante sin sucursal legible (otra empresa, borrado) también es COMPROBANTE_NO_ENCONTRADO", async () => {
-      expect((await ver({ alcance: "TODAS", sucursalDelComprobante: null })).r).toEqual(
+      const sinSucursal = await ver({ alcance: "TODAS", sucursalDelComprobante: null });
+      expect(sinSucursal.r).toEqual(NO_ENCONTRADO);
+      expect(sinSucursal.leyoElComprobante).toBe(0);
+      expect(sinSucursal.leyoElResto).toBe(0);
+    });
+
+    it("si corresponde, lee el comprobante una vez; y si desapareció entre la sucursal y la lectura, sigue siendo no encontrado", async () => {
+      const abre = await ver({ alcance: [A], sucursalDelComprobante: A });
+      expect(abre.r.ok).toBe(true);
+      expect(abre.leyoElComprobante).toBe(1);
+      const { consultas } = armar({ comprobante: null, alcance: "TODAS" });
+      expect(await consultas.verComprobante(contexto(), { comprobanteId: ID })).toEqual(
         NO_ENCONTRADO,
       );
     });

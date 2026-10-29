@@ -46,16 +46,18 @@ export function armarVerComprobante({
           () => tx.autorizacion.delActor(contexto),
         );
         if (!permiso.ok) return permiso;
-        const comprobante = await tx.comprobantes.obtener(empresaId, entrada.comprobanteId);
-        if (comprobante === null) return err("COMPROBANTE_NO_ENCONTRADO");
-        // D-39: el de una sucursal que la persona no puede ver es indistinguible de uno que no existe.
-        const sucursal = await tx.lecturas.sucursalDelComprobante(empresaId, comprobante.id);
+        // D-39, ANTES de leer el comprobante: el de una sucursal que la persona no puede ver hace el mismo trabajo mínimo que uno que
+        // no existe (una lectura de su sucursal y el alcance), y responde lo mismo. Sin sucursal legible (no existe, es de otra
+        // empresa, o la columna está vacía) tampoco corresponde.
+        const sucursal = await tx.lecturas.sucursalDelComprobante(empresaId, entrada.comprobanteId);
         const alcance = await tx.autorizacion.sucursalesDelActor(contexto, {
           incluirDesactivadas: true,
         });
         if (sucursal === null || !exigirSucursal(alcance, sucursal).ok) {
           return err("COMPROBANTE_NO_ENCONTRADO");
         }
+        const comprobante = await tx.comprobantes.obtener(empresaId, entrada.comprobanteId);
+        if (comprobante === null) return err("COMPROBANTE_NO_ENCONTRADO");
         const notasQueLoCitan = await tx.lecturas.notasQueCitan(empresaId, comprobante.id);
         const intentos = await tx.intentos.delComprobante(empresaId, comprobante.id);
         const serie = await tx.series.obtener(
