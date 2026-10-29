@@ -19,6 +19,7 @@ import type {
   ErrorAlResincronizarSerie,
   ErrorAlVerComprobante,
   MensajeDeIntento,
+  CasosDeUsoDeConfiguracionFiscal,
 } from "../modulos/fiscal/publico";
 import { err, type Resultado } from "../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../puertos/transacciones";
@@ -44,6 +45,12 @@ import { aRespuesta, type DependenciasDeRespuesta } from "./a-respuesta";
  *    acción por su código.
  */
 
+// `publico.ts` de fiscal no puede crecer (deuda registrada): el tipo de error de «empezar corrección» sale del caso de uso.
+type ErrorAlEmpezarLaCorreccion = Extract<
+  Awaited<ReturnType<CasosDeUsoDeConfiguracionFiscal["empezarCorreccionDeDatosFiscales"]>>,
+  Readonly<{ ok: false }>
+>["error"];
+
 /** Los errores de negocio de fiscal que la web puede recibir (sin los que `aRespuesta` ya sabe tratar). */
 type ErrorDeNegocioFiscal = Exclude<
   | ErrorAlEmitir
@@ -55,6 +62,7 @@ type ErrorDeNegocioFiscal = Exclude<
   | ErrorAlVerComprobante
   // La configuración fiscal (D-43): datos fiscales, puntos de venta y las consultas de esas pantallas (`EMISOR_NO_ENCONTRADO`).
   | ErrorAlGuardarElBorrador
+  | ErrorAlEmpezarLaCorreccion
   | ErrorAlConfirmarDatosFiscales
   | ErrorAlCrearPuntoDeVenta
   | ErrorAlEditarPuntoDeVenta
@@ -123,37 +131,47 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<
   // Emitir (D-41, D-51 y D-50): la sucursal del punto de venta no es de la persona, o está cerrada. (La de la factura que corrige una nota no
   // llega acá: da «comprobante no encontrado», decisión del dueño, 29/10/2026 (D-56).)
   SUCURSAL_CERRADA: "FISCAL_SUCURSAL_CERRADA",
-  // Datos fiscales (D-43): lo que la persona escribió mal sale como datos inválidos con el campo (el formulario lo marca); un
-  // identificador de la pantalla mal armado es «no se pudo identificar el pedido». D-45: los de Ingresos Brutos no los puede
-  // provocar nadie (el pedido no los trae), y la base no deja un número de versión repetido: defectos.
-  RAZON_SOCIAL_INVALIDA: "FISCAL_DATOS_INVALIDOS",
-  CONDICION_IVA_INVALIDA: "FISCAL_DATOS_INVALIDOS",
-  INICIO_DE_ACTIVIDADES_INVALIDO: "FISCAL_DATOS_INVALIDOS",
+  // Datos fiscales y puntos de venta (D-43): lo que la persona escribió mal sale como `FISCAL_CONFIGURACION_DATOS_INVALIDOS` con el campo
+  // (el formulario lo marca). Su texto, «Revisá los datos marcados.», es el de D-67 y reemplaza acá al «Revise los datos del comprobante»,
+  // que es de las facturas (`FISCAL_DATOS_INVALIDOS`). Un identificador de la pantalla mal armado es «no se pudo identificar el
+  // pedido». D-45: los de Ingresos Brutos no los puede provocar nadie (el pedido no los trae), y la base no deja un número de versión
+  // repetido: defectos.
+  RAZON_SOCIAL_INVALIDA: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
+  CONDICION_IVA_INVALIDA: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
+  INICIO_DE_ACTIVIDADES_INVALIDO: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
   IIBB_NUMERO_INVALIDO: null,
   IIBB_CONDICION_INVALIDA: null,
   NUMERO_DE_VERSION_INVALIDO: null,
   MOTIVO_OBLIGATORIO: "FISCAL_MOTIVO_INVALIDO",
-  VIGENCIA_RETROACTIVA: "FISCAL_DATOS_INVALIDOS",
-  INSTANTE_INVALIDO: "FISCAL_DATOS_INVALIDOS",
-  CALLE_INVALIDA: "FISCAL_DATOS_INVALIDOS",
-  NUMERO_INVALIDO: "FISCAL_DATOS_INVALIDOS",
-  PISO_INVALIDO: "FISCAL_DATOS_INVALIDOS",
-  DEPARTAMENTO_INVALIDO: "FISCAL_DATOS_INVALIDOS",
-  LOCALIDAD_INVALIDA: "FISCAL_DATOS_INVALIDOS",
-  PROVINCIA_INVALIDA: "FISCAL_DATOS_INVALIDOS",
-  CODIGO_POSTAL_INVALIDO: "FISCAL_DATOS_INVALIDOS",
-  PUNTO_DE_VENTA_NUMERO_INVALIDO: "FISCAL_DATOS_INVALIDOS",
+  VIGENCIA_RETROACTIVA: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
+  INSTANTE_INVALIDO: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
+  CALLE_INVALIDA: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
+  NUMERO_INVALIDO: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
+  PISO_INVALIDO: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
+  DEPARTAMENTO_INVALIDO: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
+  LOCALIDAD_INVALIDA: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
+  PROVINCIA_INVALIDA: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
+  CODIGO_POSTAL_INVALIDO: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
+  PUNTO_DE_VENTA_NUMERO_INVALIDO: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
   ID_INVALIDO: "FISCAL_PEDIDO_SIN_IDENTIFICAR",
-  // Sin texto aprobado todavía (ver `SIN_TEXTO_APROBADO`).
+  // Puntos de venta (D-66, confirmada por el dueño el 2026-10-29): sus tres textos aprobados.
+  PUNTO_DE_VENTA_DUPLICADO: "FISCAL_PUNTO_DE_VENTA_DUPLICADO",
+  PUNTO_DE_VENTA_NUMERO_INMUTABLE: "FISCAL_PUNTO_DE_VENTA_NUMERO_INMUTABLE",
+  PUNTO_DE_VENTA_SIN_DOMICILIO: "FISCAL_PUNTO_DE_VENTA_SIN_DOMICILIO",
+  // D-68 (`Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md`, confirmada por el dueño el 2026-10-29: «Sí me cierra»):
+  // el borrador de datos fiscales es del emisor, no de la pestaña, y una pantalla con datos viejos recibe «versión desactualizada» (texto ya
+  // aprobado: `error.fiscal_version_desactualizada`, sin texto nuevo). `YA_HAY_BORRADOR` (otra pestaña creó el borrador mientras esta
+  // pantalla seguía sin él) sale así; la pantalla se actualiza y abre el borrador que existe.
+  YA_HAY_BORRADOR: "FISCAL_VERSION_DESACTUALIZADA",
+  // Decisión del ingeniero, misma fuente (D-68) y mismo texto aprobado: guardar sobre el `borradorId` de una versión que otra pantalla ya
+  // confirmó es, para la persona, la misma situación (su pantalla tenía datos viejos). Actualiza y ve lo vigente.
+  VERSION_CONFIRMADA_INMUTABLE: "FISCAL_VERSION_DESACTUALIZADA",
+  // Sin texto aprobado, y así debe seguir: en el uso normal no ocurren (la pantalla solo ofrece ids que existen y son de la empresa), así
+  // que si pasan es un defecto o un pedido armado a mano y salen como error inesperado con su referencia `PD-…`.
   EMISOR_NO_ENCONTRADO: SIN_TEXTO_APROBADO,
-  YA_HAY_BORRADOR: SIN_TEXTO_APROBADO,
-  VERSION_CONFIRMADA_INMUTABLE: SIN_TEXTO_APROBADO,
   DATOS_FISCALES_NO_ENCONTRADOS: SIN_TEXTO_APROBADO,
   DOMICILIO_NO_ENCONTRADO: SIN_TEXTO_APROBADO,
   ID_EN_USO: SIN_TEXTO_APROBADO,
-  PUNTO_DE_VENTA_DUPLICADO: SIN_TEXTO_APROBADO,
-  PUNTO_DE_VENTA_NUMERO_INMUTABLE: SIN_TEXTO_APROBADO,
-  PUNTO_DE_VENTA_SIN_DOMICILIO: SIN_TEXTO_APROBADO,
   // La pantalla solo ofrece las sucursales de la empresa: un id ajeno es un pedido armado a mano, y decir que existe en otra
   // empresa sería un oráculo. La base lo rechaza por la referencia, no por una regla que la persona pueda corregir.
   SUCURSAL_DE_OTRA_EMPRESA: null,
@@ -190,6 +208,11 @@ const CAMPO_DE_CRITERIO: Readonly<Partial<Record<ErrorTextual, string>>> = {
   PROVINCIA_INVALIDA: "domicilio.provincia",
   CODIGO_POSTAL_INVALIDO: "domicilio.codigoPostal",
   PUNTO_DE_VENTA_NUMERO_INVALIDO: "numero",
+  // D-66 (los tres mensajes al cargar un punto de venta): el campo que la pantalla marca, sin texto nuevo. Decisión del ingeniero: D-66 aprueba
+  // los textos y no dice dónde se marcan; se marca el campo del que habla cada mensaje.
+  PUNTO_DE_VENTA_DUPLICADO: "numero",
+  PUNTO_DE_VENTA_NUMERO_INMUTABLE: "numero",
+  PUNTO_DE_VENTA_SIN_DOMICILIO: "domicilio",
 };
 
 /**
@@ -220,8 +243,9 @@ export const FISCAL_POR_ERROR_CON_CODIGO: Readonly<Record<ErrorConCodigo["codigo
     SIN_CREDENCIAL: "FISCAL_ARCA_CERTIFICADO_NO_SIRVE",
     AUTORIZACION_DEL_SERVICIO_FALTANTE: "FISCAL_ARCA_SERVICIO_NO_AUTORIZADO",
     ACCESO_YA_EMITIDO: "FISCAL_ARCA_ACCESO_EN_CURSO",
-    // Confirmar datos fiscales incompletos: el campo es el primero que falta (D-43: «validación de campos obligatorios»).
-    DATOS_FISCALES_INCOMPLETOS: "FISCAL_DATOS_INVALIDOS",
+    // Confirmar datos fiscales incompletos: el campo es el primero que falta (D-43: «validación de campos obligatorios»); el texto es el
+    // de Datos fiscales (D-67), no el de las facturas.
+    DATOS_FISCALES_INCOMPLETOS: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
   };
 
 /** El campo del formulario de cada dato obligatorio de los datos fiscales (el domicilio es un bloque entero). */

@@ -15,7 +15,9 @@ import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 /**
  * Los datos fiscales de un emisor tal como la pantalla de Datos fiscales los necesita para mostrarlos y editarlos a mano (D-43):
  * la versión que rige hoy y el borrador en curso, cada uno con su domicilio fiscal. Los de Ingresos Brutos NO salen: D-45 los deja
- * fuera de la primera versión de la pantalla y el backend los guarda vacíos. De solo lectura.
+ * fuera de la primera versión de la pantalla y el backend los guarda vacíos. Trae también el CUIT del emisor, solo para mostrarlo
+ * (D-65, confirmada por el dueño el 2026-10-29: «Datos fiscales muestra el CUIT de la empresa, solo para leer»; el CUIT es del emisor,
+ * no de los datos que se versionan): para el principal es el de la empresa (`emisor.cuit`, el repositorio ya lo resuelve). De solo lectura.
  *
  * Exige `datos_fiscales.editar` (gerente, `administracion`) al guard dentro de su transacción. Un emisor de otra empresa es
  * indistinguible de uno que no existe.
@@ -63,6 +65,8 @@ export type BorradorDeDatosFiscales = Readonly<{
 
 export type DatosFiscalesDelEmisor = Readonly<{
   emisorId: EmisorId;
+  /** El CUIT del emisor: 11 dígitos, sin guiones. Solo para leer. */
+  cuit: string;
   vigente: DatosFiscalesVigentes | null;
   borrador: BorradorDeDatosFiscales | null;
 }>;
@@ -106,9 +110,8 @@ export function armarDatosFiscalesDelEmisor({
           () => tx.autorizacion.delActor(contexto),
         );
         if (!permiso.ok) return permiso;
-        if ((await tx.emisores.obtener(empresaId, entrada.emisorId)) === null) {
-          return err("EMISOR_NO_ENCONTRADO");
-        }
+        const emisor = await tx.emisores.obtener(empresaId, entrada.emisorId);
+        if (emisor === null) return err("EMISOR_NO_ENCONTRADO");
         // La base lo impide (clave foránea): el domicilio de una versión siempre existe y es de la empresa.
         const domicilioDe = async (
           id: DomicilioGuardado["id"],
@@ -150,7 +153,7 @@ export function armarDatosFiscalesDelEmisor({
                     : await domicilioDe(enCurso.domicilioFiscalId),
                 inicioActividades: enCurso.inicioActividades,
               };
-        return ok({ emisorId: entrada.emisorId, vigente, borrador });
+        return ok({ emisorId: entrada.emisorId, cuit: emisor.cuit, vigente, borrador });
       },
     );
   };

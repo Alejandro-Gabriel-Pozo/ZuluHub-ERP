@@ -211,6 +211,26 @@ export const TEXTOS_DE_FISCAL = {
     porDefecto: "Sucursal cerrada.",
     largoMaximo: 160,
   },
+  // Fuente de los cuatro textos que siguen: `Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md`, registro de decisiones,
+  // D-66 (los tres mensajes al cargar un punto de venta) y D-67 («Revisá los datos marcados.», que reemplaza en Datos fiscales y Puntos
+  // de venta al «Revise los datos del comprobante», que es de las facturas); ambas confirmadas por el dueño el 2026-10-29, que aprobó
+  // los textos tal cual (en voseo, como los aprobó).
+  "error.fiscal_configuracion_datos_invalidos": {
+    porDefecto: "Revisá los datos marcados.",
+    largoMaximo: 160,
+  },
+  "error.fiscal_punto_de_venta_duplicado": {
+    porDefecto: "Ya existe un punto de venta con ese número.",
+    largoMaximo: 160,
+  },
+  "error.fiscal_punto_de_venta_numero_inmutable": {
+    porDefecto: "Este punto de venta ya emitió comprobantes: el número no se puede cambiar.",
+    largoMaximo: 160,
+  },
+  "error.fiscal_punto_de_venta_sin_domicilio": {
+    porDefecto: "Para activarlo, cargá un domicilio.",
+    largoMaximo: 160,
+  },
   "fiscal.arca.error_generico": {
     porDefecto: "ARCA no aceptó el comprobante. Código {codigo}.",
     largoMaximo: 160,

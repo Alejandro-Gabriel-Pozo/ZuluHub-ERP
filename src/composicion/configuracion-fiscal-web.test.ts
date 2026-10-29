@@ -139,6 +139,7 @@ describe("los datos fiscales y los puntos de venta dejan pasar solo lo suyo (sin
         datosFiscalesDelEmisor: () =>
           ok({
             emisorId: "emisor-1",
+            cuit: "20123456786",
             ...SECRETOS,
             vigente: {
               id: "v-1",
@@ -178,6 +179,8 @@ describe("los datos fiscales y los puntos de venta dejan pasar solo lo suyo (sin
       ok: true,
       dato: {
         emisorId: "emisor-1",
+        // D-65: el CUIT del emisor, solo para leer.
+        cuit: "20123456786",
         vigente: {
           id: "v-1",
           numero: 2,

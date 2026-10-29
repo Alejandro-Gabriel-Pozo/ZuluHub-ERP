@@ -112,7 +112,7 @@ describe.skipIf(base === null)("fiscal T5: permisos, estado de la empresa y aisl
     };
   }
 
-  /** Los siete casos de uso, cada uno con un pedido que SERÍA válido para el gerente de `c`. */
+  /** Los ocho casos de uso, cada uno con un pedido que SERÍA válido para el gerente de `c`. */
   function llamadasSobre(
     c: Awaited<ReturnType<typeof conConfiguracion>>,
     quien: EscenarioDeConfiguracion,
@@ -126,6 +126,11 @@ describe.skipIf(base === null)("fiscal T5: permisos, estado de la empresa y aisl
           borradorId: c.borradorId,
           versionEsperada: c.versionDelBorrador,
           cambios: { razonSocial: "Cambiada SA" },
+        }),
+      empezarCorreccionDeDatosFiscales: () =>
+        casos.empezarCorreccionDeDatosFiscales(contexto, {
+          emisorId: emisor,
+          borradorId: nuevoUuid(),
         }),
       confirmarDatosFiscales: () =>
         casos.confirmarDatosFiscales(contexto, {
@@ -163,6 +168,7 @@ describe.skipIf(base === null)("fiscal T5: permisos, estado de la empresa y aisl
   }
   const NOMBRES = [
     "guardarBorradorDeDatosFiscales",
+    "empezarCorreccionDeDatosFiscales",
     "confirmarDatosFiscales",
     "crearPuntoDeVenta",
     "editarPuntoDeVenta",
@@ -172,17 +178,18 @@ describe.skipIf(base === null)("fiscal T5: permisos, estado de la empresa y aisl
   ] as const;
 
   describe("permisos", () => {
-    it("la facturación sigue en desarrollo y aun así el gerente configura: las siete acciones son de administracion", async () => {
+    it("la facturación sigue en desarrollo y aun así el gerente configura: las ocho acciones son de administracion", async () => {
       expect(REGLAS_DE_EMPRESA.catalogo.facturacion.estado).toBe("en_desarrollo");
       const c = await conConfiguracion();
       const llamadas = llamadasSobre(c, c.e);
+      expect((await llamadas.empezarCorreccionDeDatosFiscales()).ok).toBe(true);
       expect((await llamadas.confirmarDatosFiscales()).ok).toBe(true);
       expect((await llamadas.activarPuntoDeVenta()).ok).toBe(true);
       expect((await llamadas.confirmarReglaDeEmisor()).ok).toBe(true);
     });
 
     it.each(["ADMINISTRADOR", "OPERADOR"] as const)(
-      "un %s no puede ninguno de los siete: SIN_PERMISO y no cambia NADA en la base",
+      "un %s no puede ninguno de los ocho: SIN_PERMISO y no cambia NADA en la base",
       async (rol) => {
         const c = await conConfiguracion();
         const otro = await otraPersona(dueno, c.e, rol);
@@ -308,6 +315,9 @@ describe.skipIf(base === null)("fiscal T5: permisos, estado de la empresa y aisl
         // El contexto de B con los ids de A.
         const llamadas = llamadasSobre(a, b);
         expect(await llamadas.guardarBorradorDeDatosFiscales()).toEqual(
+          err("EMISOR_NO_ENCONTRADO"),
+        );
+        expect(await llamadas.empezarCorreccionDeDatosFiscales()).toEqual(
           err("EMISOR_NO_ENCONTRADO"),
         );
         expect(await llamadas.confirmarDatosFiscales()).toEqual(err("EMISOR_NO_ENCONTRADO"));

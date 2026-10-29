@@ -101,6 +101,7 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
       });
       return {
         guardarBorradorDeDatosFiscales: casos.guardarBorradorDeDatosFiscales,
+        empezarCorreccionDeDatosFiscales: casos.empezarCorreccionDeDatosFiscales,
         confirmarDatosFiscales: casos.confirmarDatosFiscales,
         crearPuntoDeVenta: casos.crearPuntoDeVenta,
         editarPuntoDeVenta: casos.editarPuntoDeVenta,

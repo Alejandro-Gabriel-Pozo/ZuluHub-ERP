@@ -304,7 +304,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     const acciones = Object.values(DECLARACIONES_DE_CONFIGURACION_FISCAL).flatMap((d) =>
       "accion" in d ? [d.accion] : [],
     );
-    expect(acciones).toHaveLength(7);
+    expect(acciones).toHaveLength(8);
     for (const accion of acciones) {
       expect(Object.keys(CATALOGO_DE_MODULOS.administracion.acciones), accion).toContain(accion);
       expect(Object.keys(CATALOGO_DE_MODULOS.facturacion.acciones), accion).not.toContain(accion);

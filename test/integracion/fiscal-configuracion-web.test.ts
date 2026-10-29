@@ -8,6 +8,7 @@ import {
   crearPuntoDeVenta,
   datosFiscalesDelEmisor,
   desactivarPuntoDeVenta,
+  empezarCorreccionDeDatosFiscales,
   editarPuntoDeVenta,
   estadoDeLaConfiguracionFiscal,
   guardarBorradorDeDatosFiscales,
@@ -449,7 +450,10 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
     ])("%s: datos inválidos del campo, sin escribir nada", async (_caso, cambios, campo) => {
       const e = await nuevo();
       const { r } = await guardar(e, cambios);
-      expect(r).toMatchObject({ ok: false, error: { codigo: "FISCAL_DATOS_INVALIDOS", campo } });
+      expect(r).toMatchObject({
+        ok: false,
+        error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo },
+      });
       expect(await cuenta("datos_fiscales", e.mundo.empresa)).toBe(0);
       expect(await cuenta("domicilio", e.mundo.empresa)).toBe(0);
       expect(await auditorias(e.mundo.empresa)).toHaveLength(0);
@@ -473,7 +477,7 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
       });
       expect(r).toMatchObject({
         ok: false,
-        error: { codigo: "FISCAL_DATOS_INVALIDOS", campo: "razonSocial" },
+        error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo: "razonSocial" },
       });
       const [fila] = await filas<{ estado: string }>(
         "select estado from datos_fiscales where id = $1",
@@ -483,7 +487,7 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
       expect(await auditorias(e.mundo.empresa, "DATOS_FISCALES_CONFIRMADOS")).toHaveLength(0);
     });
 
-    it("confirmar sin motivo, o con «rige desde» en el pasado, o con una versión vieja: cada uno su error y nada confirmado", async () => {
+    it("confirmar sin motivo o con una versión vieja: cada uno su error y nada confirmado", async () => {
       const e = await nuevo();
       const { borradorId, r } = await guardar(e);
       const { version } = dato(r) as { version: number };
@@ -493,16 +497,6 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
       ).toMatchObject({
         ok: false,
         error: { codigo: "FISCAL_MOTIVO_INVALIDO", campo: "motivo" },
-      });
-      expect(
-        await confirmarDatosFiscales(d, e.como(ahora()), {
-          ...base,
-          motivo: "Alta",
-          vigenteDesde: new Date(Date.now() - 2 * DIA).toISOString(),
-        }),
-      ).toMatchObject({
-        ok: false,
-        error: { codigo: "FISCAL_DATOS_INVALIDOS", campo: "vigenteDesde" },
       });
       expect(
         await confirmarDatosFiscales(d, e.como(ahora()), {
@@ -549,26 +543,39 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
       expect(leido.borrador).toBeNull();
     });
 
-    it("«rige desde» futuro: la lista dice SOLO_FUTUROS y la pantalla no lo muestra como vigente todavía", async () => {
-      const e = await nuevo();
-      const { borradorId, r } = await guardar(e);
-      dato(
-        await confirmarDatosFiscales(d, e.como(ahora()), {
-          emisorId: e.mundo.emisor,
-          borradorId,
-          versionEsperada: (dato(r) as { version: number }).version,
-          motivo: "Cambio de domicilio",
-          vigenteDesde: new Date(Date.now() + 30 * DIA).toISOString(),
-        }),
-      );
-      expect(
-        dato(await estadoDeLaConfiguracionFiscal(d, e.como(ahora()))).datosFiscales.estado,
-      ).toBe("SOLO_FUTUROS");
-      expect(
-        dato(await datosFiscalesDelEmisor(d, e.como(ahora()), { emisorId: e.mundo.emisor }))
-          .vigente,
-      ).toBeNull();
-    });
+    it.each([
+      ["futuro", () => new Date(Date.now() + 30 * DIA).toISOString()],
+      ["pasado", () => new Date(Date.now() - 2 * DIA).toISOString()],
+    ])(
+      "D-61: un «rige desde» %s que mande el navegador se descarta: rige desde ya con el reloj del servidor y la pantalla lo ve vigente",
+      async (_caso, instante) => {
+        const e = await nuevo();
+        const { borradorId, r } = await guardar(e);
+        const contexto = e.como(new Date());
+        const confirmada = dato(
+          await confirmarDatosFiscales(d, contexto, {
+            emisorId: e.mundo.emisor,
+            borradorId,
+            versionEsperada: (dato(r) as { version: number }).version,
+            motivo: "Cambio de domicilio",
+            vigenteDesde: instante(),
+          }),
+        );
+        expect(confirmada.vigenteDesde).toBe(contexto.ahora.toISOString());
+        const [fila] = await filas<{ vigente_desde: Date }>(
+          "select vigente_desde from datos_fiscales where id = $1",
+          [borradorId],
+        );
+        expect(fila?.vigente_desde.toISOString()).toBe(contexto.ahora.toISOString());
+        expect(
+          dato(await estadoDeLaConfiguracionFiscal(d, e.como(ahora()))).datosFiscales.estado,
+        ).toBe("VIGENTES");
+        expect(
+          dato(await datosFiscalesDelEmisor(d, e.como(ahora()), { emisorId: e.mundo.emisor }))
+            .vigente,
+        ).toMatchObject({ id: borradorId, numero: 1 });
+      },
+    );
 
     it("solo el gerente: el administrador y el operador no ven, ni guardan, ni confirman, y no se escribe nada", async () => {
       const g = await nuevo();
@@ -644,6 +651,176 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
     });
   });
 
+  it("D-65: los datos fiscales traen el CUIT del emisor (11 dígitos, solo para leer) y cada empresa ve el suyo", async () => {
+    const a = await nuevo();
+    const b = await nuevo();
+    const deA = dato(
+      await datosFiscalesDelEmisor(d, a.como(ahora()), { emisorId: a.mundo.emisor }),
+    );
+    const deB = dato(
+      await datosFiscalesDelEmisor(d, b.como(ahora()), { emisorId: b.mundo.emisor }),
+    );
+    expect(deA.cuit).toBe(a.mundo.cuit);
+    expect(deB.cuit).toBe(b.mundo.cuit);
+    expect(deA.cuit).toMatch(/^\d{11}$/);
+    expect(deA.cuit).not.toBe(deB.cuit);
+    // También con una versión confirmada: el CUIT no se versiona con los datos.
+    const { borradorId, r } = await guardar(a);
+    dato(
+      await confirmarDatosFiscales(d, a.como(ahora()), {
+        emisorId: a.mundo.emisor,
+        borradorId,
+        versionEsperada: (dato(r) as { version: number }).version,
+        motivo: "Alta",
+      }),
+    );
+    const conVersion = dato(
+      await datosFiscalesDelEmisor(d, a.como(new Date(Date.now() + 1000)), {
+        emisorId: a.mundo.emisor,
+      }),
+    );
+    expect(conVersion.cuit).toBe(a.mundo.cuit);
+    expect(Object.keys(conVersion.vigente ?? {})).not.toContain("cuit");
+    // El CUIT de B no sale por la puerta de A (el emisor de otra empresa no existe) ni lo lee quien no es gerente.
+    expect(
+      await datosFiscalesDelEmisor(d, a.como(ahora()), { emisorId: b.mundo.emisor }),
+    ).toMatchObject({ ok: false, error: { codigo: "ERROR_INTERNO" } });
+    const operador = await otraPersona(dueno, a, "OPERADOR");
+    const sinPermiso = await datosFiscalesDelEmisor(d, operador.como(ahora()), {
+      emisorId: a.mundo.emisor,
+    });
+    expect(sinPermiso).toMatchObject(SIN_PERMISO);
+    expect(JSON.stringify(sinPermiso)).not.toContain(a.mundo.cuit);
+  });
+
+  it("D-62: empezar la corrección crea el borrador desde lo vigente; repetir o llamar desde otra pestaña devuelve el que existe", async () => {
+    const e = await nuevo();
+    const { borradorId: confirmada, r } = await guardar(e);
+    dato(
+      await confirmarDatosFiscales(d, e.como(ahora()), {
+        emisorId: e.mundo.emisor,
+        borradorId: confirmada,
+        versionEsperada: (dato(r) as { version: number }).version,
+        motivo: "Alta",
+      }),
+    );
+    const contexto = () => e.como(new Date(Date.now() + 1000));
+    const id = uuid();
+    expect(
+      dato(
+        await empezarCorreccionDeDatosFiscales(d, contexto(), {
+          emisorId: e.mundo.emisor,
+          borradorId: id,
+        }),
+      ),
+    ).toEqual({ borradorId: id, version: 1, yaEstaba: false });
+    // La pantalla ve lo vigente y el borrador precargado con lo mismo.
+    const leido = dato(await datosFiscalesDelEmisor(d, contexto(), { emisorId: e.mundo.emisor }));
+    expect(leido.vigente).toMatchObject({ id: confirmada, razonSocial: "Panadería Zulu SA" });
+    expect(leido.borrador).toMatchObject({
+      id,
+      version: 1,
+      razonSocial: "Panadería Zulu SA",
+      condicionIva: "RESPONSABLE_INSCRIPTO",
+      inicioActividades: "2020-03-01",
+    });
+    expect(leido.borrador?.domicilio?.id).toBe(leido.vigente?.domicilio.id);
+    const antes = (await auditorias(e.mundo.empresa)).length;
+    // Repetir, y otra pestaña con otra clave: el mismo borrador, sin escribir.
+    for (const clave of [id, uuid()]) {
+      expect(
+        dato(
+          await empezarCorreccionDeDatosFiscales(d, contexto(), {
+            emisorId: e.mundo.emisor,
+            borradorId: clave,
+          }),
+        ),
+      ).toEqual({ borradorId: id, version: 1, yaEstaba: true });
+    }
+    expect((await auditorias(e.mundo.empresa)).length).toBe(antes);
+    expect(await cuenta("datos_fiscales", e.mundo.empresa)).toBe(2);
+  });
+
+  it("D-62: sin datos vigentes dice «faltan los datos fiscales»; un pedido mal armado, «revisá los datos marcados»; otra empresa y otro rol, lo de siempre", async () => {
+    const e = await nuevo();
+    const pedido = { emisorId: e.mundo.emisor, borradorId: uuid() };
+    expect(await empezarCorreccionDeDatosFiscales(d, e.como(ahora()), pedido)).toMatchObject({
+      ok: false,
+      error: { codigo: "FISCAL_SIN_DATOS_FISCALES" },
+    });
+    expect(await empezarCorreccionDeDatosFiscales(d, e.como(ahora()), { emisorId: "uno" })).toEqual(
+      {
+        ok: false,
+        error: {
+          codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
+          clave: "error.fiscal_configuracion_datos_invalidos",
+          presentacion: "AVISO",
+          campo: "emisorId",
+        },
+      },
+    );
+    expect(
+      await empezarCorreccionDeDatosFiscales(d, e.como(ahora()), { ...pedido, borradorId: "x" }),
+    ).toMatchObject({ ok: false, error: { campo: "borradorId" } });
+    const ajena = await nuevo();
+    expect(await empezarCorreccionDeDatosFiscales(d, ajena.como(ahora()), pedido)).toMatchObject({
+      ok: false,
+      error: { codigo: "ERROR_INTERNO" },
+    });
+    for (const rol of ["ADMINISTRADOR", "OPERADOR"] as const) {
+      const otra = await otraPersona(dueno, e, rol);
+      expect(await empezarCorreccionDeDatosFiscales(d, otra.como(ahora()), pedido)).toMatchObject(
+        SIN_PERMISO,
+      );
+    }
+    expect(await cuenta("datos_fiscales", e.mundo.empresa)).toBe(0);
+  });
+
+  it("D-68: una pantalla que quedó abierta sin borrador mientras otra lo creó (YA_HAY_BORRADOR) recibe «versión desactualizada»", async () => {
+    const e = await nuevo();
+    const primero = await guardar(e);
+    dato(primero.r);
+    const rezagada = await guardar(e);
+    expect(rezagada.r).toEqual({
+      ok: false,
+      error: {
+        codigo: "FISCAL_VERSION_DESACTUALIZADA",
+        clave: "error.fiscal_version_desactualizada",
+        presentacion: "AVISO",
+      },
+    });
+    expect(await cuenta("datos_fiscales", e.mundo.empresa)).toBe(1);
+  });
+
+  it("D-68: guardar sobre una versión que otra pantalla ya confirmó también dice «versión desactualizada» y no cambia nada", async () => {
+    const e = await nuevo();
+    const { borradorId, r } = await guardar(e);
+    dato(
+      await confirmarDatosFiscales(d, e.como(ahora()), {
+        emisorId: e.mundo.emisor,
+        borradorId,
+        versionEsperada: (dato(r) as { version: number }).version,
+        motivo: "Alta",
+      }),
+    );
+    const antes = await cuenta("datos_fiscales", e.mundo.empresa);
+    const viejo = await guardar(e, { borradorId, versionEsperada: 1, razonSocial: "Vieja SA" });
+    expect(viejo.r).toEqual({
+      ok: false,
+      error: {
+        codigo: "FISCAL_VERSION_DESACTUALIZADA",
+        clave: "error.fiscal_version_desactualizada",
+        presentacion: "AVISO",
+      },
+    });
+    expect(await cuenta("datos_fiscales", e.mundo.empresa)).toBe(antes);
+    const [fila] = await filas<{ razon_social: string }>(
+      "select razon_social from datos_fiscales where id = $1",
+      [borradorId],
+    );
+    expect(fila?.razon_social).toBe("Panadería Zulu SA");
+  });
+
   // ---------------------------------------------------------------------------------------------------------------
 
   describe("puntos de venta: ver, crear, editar, activar y desactivar", () => {
@@ -708,7 +885,7 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
       for (const numero of [0, 100000]) {
         expect(await crear(e, { numero, domicilio: domicilioNuevo() })).toMatchObject({
           ok: false,
-          error: { codigo: "FISCAL_DATOS_INVALIDOS", campo: "numero" },
+          error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo: "numero" },
         });
       }
       expect(await cuenta("punto_de_venta", e.mundo.empresa)).toBe(0);
@@ -716,15 +893,19 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
       expect(await auditorias(e.mundo.empresa)).toHaveLength(0);
     });
 
-    it("número repetido en el mismo emisor: sin texto aprobado todavía (error inesperado con referencia); nada nuevo", async () => {
+    it("número repetido en el mismo emisor: «Ya existe un punto de venta con ese número.» (D-66); nada nuevo", async () => {
       const e = await nuevo();
       dato(await crear(e, { numero: 5 }));
       const repetido = await crear(e, { numero: 5 });
-      expect(repetido).toMatchObject({
+      expect(repetido).toEqual({
         ok: false,
-        error: { codigo: "ERROR_INTERNO", referencia: expect.stringMatching(/^PD-/) as string },
+        error: {
+          codigo: "FISCAL_PUNTO_DE_VENTA_DUPLICADO",
+          clave: "error.fiscal_punto_de_venta_duplicado",
+          presentacion: "AVISO",
+          campo: "numero",
+        },
       });
-      expect(registrados.at(-1)).toContain("PUNTO_DE_VENTA_DUPLICADO");
       expect(await cuenta("punto_de_venta", e.mundo.empresa)).toBe(1);
     });
 
@@ -745,9 +926,12 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
         await activarPuntoDeVenta(d, e.como(ahora()), { puntoDeVentaId: sinDomicilio }),
       ).toMatchObject({
         ok: false,
-        error: { codigo: "ERROR_INTERNO" },
+        error: {
+          codigo: "FISCAL_PUNTO_DE_VENTA_SIN_DOMICILIO",
+          clave: "error.fiscal_punto_de_venta_sin_domicilio",
+          campo: "domicilio",
+        },
       });
-      expect(registrados.at(-1)).toContain("PUNTO_DE_VENTA_SIN_DOMICILIO");
       const conDomicilio = uuid();
       dato(await crear(e, { id: conDomicilio, numero: 2, domicilio: domicilioNuevo() }));
       expect(
@@ -816,8 +1000,14 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
           versionEsperada: lista.items[0]?.version,
           numero: 2,
         }),
-      ).toMatchObject({ ok: false, error: { codigo: "ERROR_INTERNO" } });
-      expect(registrados.at(-1)).toContain("PUNTO_DE_VENTA_NUMERO_INMUTABLE");
+      ).toMatchObject({
+        ok: false,
+        error: {
+          codigo: "FISCAL_PUNTO_DE_VENTA_NUMERO_INMUTABLE",
+          clave: "error.fiscal_punto_de_venta_numero_inmutable",
+          campo: "numero",
+        },
+      });
     });
 
     it("el ambiente se ve por punto de venta (pruebas o producción)", async () => {
@@ -1066,7 +1256,9 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
         });
       const [x, y] = await Promise.all([alta(), alta()]);
       expect([x, y].filter((r) => r.ok)).toHaveLength(1);
-      expect([x, y].filter((r) => !r.ok)).toMatchObject([{ error: { codigo: "ERROR_INTERNO" } }]);
+      expect([x, y].filter((r) => !r.ok)).toMatchObject([
+        { error: { codigo: "FISCAL_PUNTO_DE_VENTA_DUPLICADO", campo: "numero" } },
+      ]);
       expect(await cuenta("punto_de_venta", e.mundo.empresa)).toBe(1);
       expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_CREADO")).toHaveLength(1);
     });

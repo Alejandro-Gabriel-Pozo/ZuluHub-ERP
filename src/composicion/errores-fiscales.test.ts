@@ -66,7 +66,7 @@ describe("las tablas de traducción", () => {
       ...Object.values(FISCAL_POR_ERROR_CON_CODIGO),
     ]);
     // Los que arma la entrada de la web y no el módulo (`entradas-de-facturacion.ts`).
-    const delBorde = new Set(["FISCAL_DATOS_INVALIDOS"]);
+    const delBorde = new Set(["FISCAL_DATOS_INVALIDOS", "FISCAL_CONFIGURACION_DATOS_INVALIDOS"]);
     for (const codigo of Object.keys(CODIGOS_PUBLICOS).filter((c) => c.startsWith("FISCAL_"))) {
       expect(usados.has(codigo) || delBorde.has(codigo), codigo).toBe(true);
     }
@@ -74,7 +74,7 @@ describe("las tablas de traducción", () => {
 });
 
 describe("la configuración fiscal (D-43)", () => {
-  it("los errores de datos salen como datos inválidos con el campo del formulario", () => {
+  it("los errores de datos salen como «Revisá los datos marcados» (D-67) con el campo del formulario, y NO como los datos de las facturas", () => {
     const campos: Record<string, string> = {
       RAZON_SOCIAL_INVALIDA: "razonSocial",
       CONDICION_IVA_INVALIDA: "condicionIva",
@@ -92,33 +92,40 @@ describe("la configuración fiscal (D-43)", () => {
     };
     for (const [error, campo] of Object.entries(campos)) {
       expect(traducirErrorFiscal(error), error).toEqual({
-        codigo: "FISCAL_DATOS_INVALIDOS",
+        codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
         campo,
       });
     }
+    expect(CATALOGO_DE_TEXTOS["error.fiscal_configuracion_datos_invalidos"].porDefecto).toBe(
+      "Revisá los datos marcados.",
+    );
+    // El texto de las facturas no cambia.
+    expect(CATALOGO_DE_TEXTOS["error.fiscal_datos_invalidos"].porDefecto).toMatch(
+      /^Revise los datos del comprobante/,
+    );
   });
 
   it("faltan datos obligatorios: apunta al primer campo que falta, con los nombres del formulario", () => {
     const faltan = (faltantes: string[]) =>
       traducirErrorFiscal({ codigo: "DATOS_FISCALES_INCOMPLETOS", faltantes });
     expect(faltan(["razonSocial", "inicioActividades"])).toEqual({
-      codigo: "FISCAL_DATOS_INVALIDOS",
+      codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
       campo: "razonSocial",
     });
     expect(faltan(["condicionIva"])).toEqual({
-      codigo: "FISCAL_DATOS_INVALIDOS",
+      codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
       campo: "condicionIva",
     });
     expect(faltan(["domicilioFiscalId", "inicioActividades"])).toEqual({
-      codigo: "FISCAL_DATOS_INVALIDOS",
+      codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
       campo: "domicilio",
     });
     expect(faltan(["inicioActividades"])).toEqual({
-      codigo: "FISCAL_DATOS_INVALIDOS",
+      codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
       campo: "inicioActividades",
     });
     // Sin faltantes (no pasa: el dominio siempre informa uno): el código sin campo.
-    expect(faltan([])).toEqual({ codigo: "FISCAL_DATOS_INVALIDOS" });
+    expect(faltan([])).toEqual({ codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS" });
   });
 
   it("reusa lo ya aprobado: motivo obligatorio, identificador mal armado y versión desactualizada", () => {
@@ -132,17 +139,12 @@ describe("la configuración fiscal (D-43)", () => {
     });
   });
 
-  it("los códigos sin texto aprobado son estos nueve: salen sin cambios (inesperado con referencia) hasta que el dueño los apruebe", () => {
+  it("los códigos sin texto aprobado son estos cuatro: salen sin cambios (inesperado con referencia) hasta que el dueño los apruebe", () => {
     expect([...CODIGOS_DE_CONFIGURACION_SIN_TEXTO].sort()).toEqual([
       "DATOS_FISCALES_NO_ENCONTRADOS",
       "DOMICILIO_NO_ENCONTRADO",
       "EMISOR_NO_ENCONTRADO",
       "ID_EN_USO",
-      "PUNTO_DE_VENTA_DUPLICADO",
-      "PUNTO_DE_VENTA_NUMERO_INMUTABLE",
-      "PUNTO_DE_VENTA_SIN_DOMICILIO",
-      "VERSION_CONFIRMADA_INMUTABLE",
-      "YA_HAY_BORRADOR",
     ]);
     for (const error of CODIGOS_DE_CONFIGURACION_SIN_TEXTO) {
       expect(traducirErrorFiscal(error), error).toBe(error);
@@ -150,6 +152,42 @@ describe("la configuración fiscal (D-43)", () => {
       expect(respuesta, error).toMatchObject({
         ok: false,
         error: { codigo: "ERROR_INTERNO", referencia: expect.stringMatching(/^PD-/) as string },
+      });
+    }
+  });
+});
+
+describe("textos de puntos de venta (D-66) y borrador viejo (D-68)", () => {
+  it.each([
+    ["PUNTO_DE_VENTA_DUPLICADO", "Ya existe un punto de venta con ese número.", "numero"],
+    [
+      "PUNTO_DE_VENTA_NUMERO_INMUTABLE",
+      "Este punto de venta ya emitió comprobantes: el número no se puede cambiar.",
+      "numero",
+    ],
+    ["PUNTO_DE_VENTA_SIN_DOMICILIO", "Para activarlo, cargá un domicilio.", "domicilio"],
+  ])(
+    "%s sale con su código, el texto aprobado y el campo %s, sin referencia",
+    (error, texto, campo) => {
+      registrados.length = 0;
+      expect(traducirErrorFiscal(error)).toEqual({ codigo: `FISCAL_${error}`, campo });
+      const r = aRespuestaFiscal(err(error), dependencias, () => 0);
+      expect(r).toMatchObject({
+        ok: false,
+        error: { codigo: `FISCAL_${error}`, presentacion: "AVISO", campo },
+      });
+      expect(r.ok ? "" : CATALOGO_DE_TEXTOS[r.error.clave].porDefecto).toBe(texto);
+      expect(registrados).toEqual([]);
+    },
+  );
+
+  it("D-68: YA_HAY_BORRADOR y VERSION_CONFIRMADA_INMUTABLE (pantalla con datos viejos) se dicen como versión desactualizada, sin texto nuevo", () => {
+    for (const error of ["YA_HAY_BORRADOR", "VERSION_CONFIRMADA_INMUTABLE"]) {
+      expect(traducirErrorFiscal(error), error).toEqual(
+        traducirErrorFiscal("VERSION_DESACTUALIZADA"),
+      );
+      expect(traducirErrorFiscal(error), error).toEqual({
+        codigo: "FISCAL_VERSION_DESACTUALIZADA",
       });
     }
   });
