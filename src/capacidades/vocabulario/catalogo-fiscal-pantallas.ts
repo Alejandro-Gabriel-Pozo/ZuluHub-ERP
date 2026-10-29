@@ -210,4 +210,99 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
     porDefecto: "La fecha «hasta» no existe.",
     largoMaximo: 120,
   },
+
+  // ---------------------------------------------------------------------------------------------------------------------
+  // Anular un comprobante por importe (opción 12A, aprobada por el dueño el 2026-10-29). Fuentes de los textos que siguen:
+  // DUEÑO-ANULAR = «dueño, 2026-10-29, respuestas a cuestionarios de opciones en la sesión web del carril web» (los textos tal
+  // cual figuran en el prototipo `Main.dc.html`, pantallas A y su variante letra C de `OpcionB.dc.html`); CONTRATO = D-69 a D-74 y
+  // D-29 de `facturador-contratos-de-pantalla.md`. «Ya anulado con notas de crédito», «Sin notas», «IVA {alicuota} %» (el nombre de
+  // cada fila) y el texto de cada nota de la lista ya existen arriba (`ya_anulado`, `sin_notas`, `renglon_iva`, `nombreDe`): una
+  // regla, un lugar.
+  // ---------------------------------------------------------------------------------------------------------------------
+
+  // DUEÑO-ANULAR: el título de la pantalla; debajo, «Factura B 00001-00000123 · Juan Pérez» (el comprobante y el cliente).
+  "fiscal.pantalla.anular_titulo": { porDefecto: "Anular comprobante" },
+  "fiscal.pantalla.anular_subtitulo": {
+    porDefecto: "{comprobante} · {cliente}",
+    marcadores: ["cliente", "comprobante"],
+  },
+  // DUEÑO-ANULAR: los dos pasos y los botones. El botón final se llama como la pantalla.
+  "fiscal.pantalla.anular_paso_que": { porDefecto: "Qué anular" },
+  "fiscal.pantalla.anular_paso_motivo": { porDefecto: "Motivo y revisar" },
+  "fiscal.pantalla.anular_cancelar": { porDefecto: "Cancelar" },
+  "fiscal.pantalla.anular_siguiente": { porDefecto: "Siguiente" },
+  "fiscal.pantalla.anular_volver": { porDefecto: "Volver" },
+  "fiscal.pantalla.anular_boton_final": { porDefecto: "Anular comprobante" },
+  "fiscal.pantalla.anular_enviando": { porDefecto: "Anulando…" },
+  // DUEÑO-ANULAR (paso 1): «Se anula el total», «Anular solo una parte», «Elegí qué anular», «A anular», «Anular el total» y «Total
+  // de la factura» (también en el paso 2).
+  "fiscal.pantalla.anular_se_anula_el_total": { porDefecto: "Se anula el total" },
+  "fiscal.pantalla.anular_solo_una_parte": { porDefecto: "Anular solo una parte" },
+  "fiscal.pantalla.anular_elegi": { porDefecto: "Elegí qué anular" },
+  "fiscal.pantalla.anular_a_anular": { porDefecto: "A anular" },
+  "fiscal.pantalla.anular_el_total": { porDefecto: "Anular el total" },
+  "fiscal.pantalla.anular_total_de_la_factura": { porDefecto: "Total de la factura" },
+  // DUEÑO-ANULAR (paso 1, solo una parte; D-69, D-71): «Facturado» y el campo de cada alícuota, y en letra C el campo único
+  // «Importe a anular» (ARCA no recibe alícuotas en la letra C). El aviso (D-72) no bloquea: «El importe supera lo facturado con
+  // IVA 10,5 %.», con la tasa que corresponda.
+  "fiscal.pantalla.anular_facturado": { porDefecto: "Facturado" },
+  "fiscal.pantalla.anular_importe_con_iva": { porDefecto: "Importe a anular (con IVA incluido)" },
+  "fiscal.pantalla.anular_importe": { porDefecto: "Importe a anular" },
+  // Aprobados por el dueño el 2026-10-29 (cuestionario en la sesión web del carril web): el nombre de la fila de una alícuota sin
+  // IVA, «Exento» y «No gravado» (una fila por tipo); el aviso de la letra C, «El importe supera lo facturado.» (sin bloqueo, D-72);
+  // y, al anular una nota de débito, el rótulo «Total de la nota de débito» (en factura sigue «Total de la factura»).
+  "fiscal.pantalla.anular_alicuota_exento": { porDefecto: "Exento" },
+  "fiscal.pantalla.anular_alicuota_no_gravado": { porDefecto: "No gravado" },
+  "fiscal.pantalla.anular_aviso_supera_c": {
+    porDefecto: "El importe supera lo facturado.",
+    largoMaximo: 120,
+  },
+  "fiscal.pantalla.anular_total_de_la_nota_de_debito": { porDefecto: "Total de la nota de débito" },
+  "fiscal.pantalla.anular_aviso_supera": {
+    porDefecto: "El importe supera lo facturado con IVA {alicuota} %.",
+    largoMaximo: 120,
+    marcadores: ["alicuota"],
+  },
+  // DUEÑO-ANULAR (paso 2): «Motivo (obligatorio)», «Queda guardado junto a la nota de crédito.», el contador «0 / 200», «Se va a
+  // emitir una nota de crédito B» (la letra según la factura) y «A anular ahora». El 200 es el límite del servidor
+  // (`LIMITES_DE_COMPROBANTE.motivo`): lo trae la página, no se escribe acá.
+  "fiscal.pantalla.anular_motivo": { porDefecto: "Motivo (obligatorio)" },
+  "fiscal.pantalla.anular_motivo_guardado": {
+    porDefecto: "Queda guardado junto a la nota de crédito.",
+    largoMaximo: 120,
+  },
+  "fiscal.pantalla.anular_contador": {
+    porDefecto: "{cantidad} / {limite}",
+    marcadores: ["cantidad", "limite"],
+  },
+  "fiscal.pantalla.anular_se_va_a_emitir": {
+    porDefecto: "Se va a emitir una nota de crédito {letra}",
+    marcadores: ["letra"],
+  },
+  "fiscal.pantalla.anular_a_anular_ahora": { porDefecto: "A anular ahora" },
+
+  // D-74 (aprobado por el dueño el 2026-10-29, cuestionario en la sesión web del carril web): el texto de cada renglón de la nota lo arma el sistema con las palabras de
+  // D-29, «Anulación parcial de la factura 00001-00000123, IVA 21 %» («Anulación total de …» si se anula todo; «nota de débito» en
+  // lugar de «factura» si se anula una nota de débito). Va en el comprobante, no se le muestra a la persona. La alícuota sin IVA
+  // (letra C, exento, no gravado) lleva el texto sin la coma final. «{anulacion}» es «Anulación parcial» o «Anulación total» (D-29).
+  "fiscal.pantalla.anular_descripcion": {
+    porDefecto: "{anulacion} de la {clase} {numero}",
+    marcadores: ["anulacion", "clase", "numero"],
+  },
+  "fiscal.pantalla.anular_descripcion_con_iva": {
+    porDefecto: "{anulacion} de la {clase} {numero}, {iva}",
+    marcadores: ["anulacion", "clase", "iva", "numero"],
+  },
+  "fiscal.pantalla.anular_clase_factura": { porDefecto: "factura" },
+  "fiscal.pantalla.anular_clase_nota_de_debito": { porDefecto: "nota de débito" },
+
+  // CONTRATO (pantalla 2, «Acciones»): «Anular con nota de crédito» es la acción del Detalle; GUIA §1.2 (estados del comprobante)
+  // y el dueño, 2026-10-28 («Ver y Anular con nota de crédito»), lo nombran igual.
+  "fiscal.pantalla.detalle_anular": { porDefecto: "Anular con nota de crédito" },
+  // Aprobado por el dueño el 2026-10-29 (cuestionario en la sesión web del carril web; fuente D-10 y D-70): el motivo del botón
+  // apagado en el Detalle de una factura o una nota de débito que no está Autorizada.
+  "fiscal.pantalla.detalle_anular_motivo": {
+    porDefecto: "Solo se anula una factura o una nota de débito Autorizada.",
+    largoMaximo: 120,
+  },
 } as const;
