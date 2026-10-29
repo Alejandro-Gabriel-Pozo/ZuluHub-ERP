@@ -40,6 +40,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0014_aspecto_de_marca.sql",
         "0015_segundo_factor_de_plataforma.sql",
         "0016_comprobante_con_sucursal.sql",
+        "0017_comprobante_sucursal_abierta.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -61,6 +62,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0014_aspecto_de_marca.sql",
           "0015_segundo_factor_de_plataforma.sql",
           "0016_comprobante_con_sucursal.sql",
+          "0017_comprobante_sucursal_abierta.sql",
         ],
       });
     } finally {
@@ -187,6 +189,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0014_aspecto_de_marca.sql",
         "0015_segundo_factor_de_plataforma.sql",
         "0016_comprobante_con_sucursal.sql",
+        "0017_comprobante_sucursal_abierta.sql",
       ]);
     } finally {
       await aparte.destruir();

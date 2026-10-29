@@ -405,6 +405,7 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   comprobante_asociado_invalido: "COMPROBANTE_ASOCIADO_INVALIDO", // lo lanza un disparador
   comprobante_inmutable: "COMPROBANTE_INMUTABLE", // lo lanza un disparador
   comprobante_sin_sucursal: "COMPROBANTE_ALTA_INVALIDA", // lo lanza un disparador (diferido): el alta siempre copia la del punto de venta
+  comprobante_sucursal_cerrada: "SUCURSAL_CERRADA", // lo lanza un disparador (0017, D-50): el punto de venta es de una sucursal cerrada
   comprobante_transicion_invalida: "COMPROBANTE_TRANSICION_INVALIDA", // lo lanza un disparador
   comprobante_sin_reserva: "COMPROBANTE_SIN_RESERVA", // lo lanza un disparador (diferido)
   comprobante_serie_sin_reserva: "SERIE_CON_COMPROBANTE_EN_VUELO", // lo lanza un disparador (diferido)
@@ -475,9 +476,10 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
 } as const satisfies Readonly<Record<string, string>>;
 
 /**
- * Los 35 nombres que lanzan los disparadores con `ERRCODE '23514'`: 21 de 0006 (spec H7 §B.10) y 14 de 0009:
- * 3 sobre las tablas viejas (`punto_de_venta_ambiente_con_serie_en_curso`, `punto_de_venta_ambiente_no_vuelve`,
- * `serie_ambiente_invalido`) y 11 de la facturación (comprobante, renglones, desglose y certificados).
+ * Los 37 nombres que lanzan los disparadores con `ERRCODE '23514'`: 21 de 0006 (spec H7 §B.10), 14 de 0009 y 2 de la sucursal del
+ * comprobante (`comprobante_sin_sucursal` de 0016 y `comprobante_sucursal_cerrada` de 0017). Los de 0009: 3 sobre las tablas viejas
+ * (`punto_de_venta_ambiente_con_serie_en_curso`, `punto_de_venta_ambiente_no_vuelve`, `serie_ambiente_invalido`) y 11 de la
+ * facturación (comprobante, renglones, desglose y certificados).
  */
 export const RESTRICCIONES_DE_DISPARADORES_DE_FISCAL = [
   "empresa_cuit_es_emisor",
@@ -508,6 +510,7 @@ export const RESTRICCIONES_DE_DISPARADORES_DE_FISCAL = [
   "comprobante_asociado_invalido",
   "comprobante_inmutable",
   "comprobante_sin_sucursal",
+  "comprobante_sucursal_cerrada",
   "comprobante_transicion_invalida",
   "comprobante_sin_reserva",
   "comprobante_serie_sin_reserva",
