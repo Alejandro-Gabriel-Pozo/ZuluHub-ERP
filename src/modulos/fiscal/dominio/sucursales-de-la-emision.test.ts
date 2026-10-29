@@ -52,11 +52,20 @@ describe("sucursalesDeLaEmision (D-41 y D-51)", () => {
     it("una factura sin sucursal guardada no corresponde a nadie: ni siquiera a «todas»", () => {
       expect(sucursalesDeLaEmision("TODAS", CENTRO, { sucursalId: null })).toEqual(SIN_FACTURA);
       expect(sucursalesDeLaEmision([CENTRO], CENTRO, { sucursalId: null })).toEqual(SIN_FACTURA);
+      expect(sucursalesDeLaEmision([CENTRO], NORTE, { sucursalId: null })).toEqual(SIN_FACTURA);
     });
 
-    it("sin la sucursal del punto de venta en el alcance manda «fuera de alcance» (se mira primero), esté o no la de la factura", () => {
+    it("con la factura en el alcance y sin la sucursal del punto de venta, manda «fuera de alcance»", () => {
       expect(sucursalesDeLaEmision([NORTE], CENTRO, { sucursalId: NORTE })).toEqual(FUERA);
-      expect(sucursalesDeLaEmision([SUR], CENTRO, { sucursalId: NORTE })).toEqual(FUERA);
+      expect(sucursalesDeLaEmision([NORTE, SUR], CENTRO, { sucursalId: SUR })).toEqual(FUERA);
+    });
+
+    it("D-56: sin la sucursal de la factura manda «no encontrado» (se mira primero), esté o no la del punto de venta: la misma respuesta en los dos casos", () => {
+      // El ejemplo del dueño: el operador de Centro, un punto de venta de Norte y una factura de Norte.
+      expect(sucursalesDeLaEmision([CENTRO], NORTE, { sucursalId: NORTE })).toEqual(SIN_FACTURA);
+      expect(sucursalesDeLaEmision([SUR], CENTRO, { sucursalId: NORTE })).toEqual(SIN_FACTURA);
+      expect(sucursalesDeLaEmision([CENTRO], CENTRO, { sucursalId: NORTE })).toEqual(SIN_FACTURA);
+      expect(sucursalesDeLaEmision([], NORTE, { sucursalId: NORTE })).toEqual(SIN_FACTURA);
     });
   });
 });

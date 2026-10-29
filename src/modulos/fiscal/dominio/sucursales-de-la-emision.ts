@@ -28,9 +28,12 @@ export type ComprobanteQueSeCorrige = Readonly<{ sucursalId: SucursalId | null }
  * la factura que corrige; gerente y administrador (`"TODAS"`), cualquiera. `alcance` es el de la persona CON las sucursales cerradas
  * que tiene asignadas (`incluirDesactivadas`): si la del punto de venta está cerrada, el motivo es otro y lo da
  * `exigirSucursalAbierta`, no un «fuera de alcance» que el operador no entendería. `corrige` es `null` en una factura.
- * Primero se mira el punto de venta (`SUCURSAL_FUERA_DE_ALCANCE`) y después la factura: si no es de una sucursal de la persona, la
- * respuesta es la misma que si no existiera (`COMPROBANTE_ASOCIADO_NO_ENCONTRADO`, como el Detalle, D-39: la existencia no se revela;
- * decisión del ingeniero, no del dueño).
+ * En una nota se mira PRIMERO la factura y después el punto de venta: si la factura no es de una sucursal de la persona, la respuesta
+ * es la misma que si no existiera (`COMPROBANTE_ASOCIADO_NO_ENCONTRADO`, como el Detalle, D-39: la existencia no se revela), sin
+ * importar si el punto de venta también está fuera de su alcance (decisión del dueño, 29/10/2026 (D-56): el operador de Centro que
+ * pide una nota desde un punto de venta de Norte sobre una factura de Norte ve «No encontramos ese comprobante», no «Sucursal fuera
+ * de su alcance»). Con la factura en alcance, un punto de venta ajeno da `SUCURSAL_FUERA_DE_ALCANCE`; y en una factura (no nota) el
+ * punto de venta ajeno sigue dando `SUCURSAL_FUERA_DE_ALCANCE`.
  * Previene: que un operador emita en una sucursal que no es suya (o una nota que después no podría abrir, D-39).
  * Chequeo: `sucursales-de-la-emision.test.ts` y la matriz de `fiscal-sucursal-operaciones.test.ts`.
  */
@@ -39,12 +42,14 @@ export function sucursalesDeLaEmision(
   delPuntoDeVenta: SucursalId,
   corrige: ComprobanteQueSeCorrige | null,
 ): Resultado<null, ErrorDeAlcance | "COMPROBANTE_ASOCIADO_NO_ENCONTRADO"> {
+  if (
+    corrige !== null &&
+    (corrige.sucursalId === null || !exigirSucursal(alcance, corrige.sucursalId).ok)
+  ) {
+    return err("COMPROBANTE_ASOCIADO_NO_ENCONTRADO");
+  }
   const punto = exigirSucursal(alcance, delPuntoDeVenta);
-  if (!punto.ok) return punto;
-  if (corrige === null) return ok(null);
-  return corrige.sucursalId !== null && exigirSucursal(alcance, corrige.sucursalId).ok
-    ? ok(null)
-    : err("COMPROBANTE_ASOCIADO_NO_ENCONTRADO");
+  return punto.ok ? ok(null) : punto;
 }
 
 /** El error de emitir desde una sucursal cerrada. Lo traduce `errores-fiscales.ts` a `FISCAL_SUCURSAL_CERRADA`. */

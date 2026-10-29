@@ -41,8 +41,9 @@ import { asignarPlan, crearPlanPublicado } from "./marcas-apoyo";
  *  - D-41: el operador emite solo desde puntos de venta de sus sucursales asignadas; gerente y administrador, desde cualquiera.
  *  - D-50: una sucursal CERRADA no emite (aunque su punto de venta siga activo); sus facturas viejas se siguen viendo.
  *  - D-51: una NOTA necesita las dos sucursales (la del punto de venta y la de la factura); gerente y administrador, cualquiera. Si la
- *    que falta es la de la FACTURA, la respuesta es «comprobante no encontrado» (como el Detalle, D-39; decisión del ingeniero); si es la
- *    del punto de venta, «sucursal fuera de su alcance».
+ *    que falta es la de la FACTURA, la respuesta es «comprobante no encontrado» (como el Detalle, D-39), aunque también falte la del
+ *    punto de venta: la factura se evalúa primero (decisión del dueño, 29/10/2026 (D-56)); si falta solo la del punto de venta,
+ *    «sucursal fuera de su alcance». En una factura (no nota) el punto de venta ajeno sigue siendo «sucursal fuera de su alcance».
  *  - D-39 extendido: descartar, reintentar y el modelo de impresión aplican el mismo alcance que el Detalle y responden
  *    «no encontrado» (idéntico a un comprobante que no existe) cuando no corresponde.
  *  - Repetir el mismo pedido de emisión no duplica ni cambia el resultado.
@@ -427,7 +428,7 @@ describe.skipIf(base === null)("las operaciones fiscales y la sucursal", () => {
           administrador: "OK",
           operador: "OK",
           operadorConSur: "OK",
-          operadorDeNorte: "FUERA",
+          operadorDeNorte: "NO_ENCONTRADO",
         },
       },
       {
@@ -465,8 +466,8 @@ describe.skipIf(base === null)("las operaciones fiscales y la sucursal", () => {
         esperado: {
           gerente: "OK",
           administrador: "OK",
-          operador: "FUERA",
-          operadorConSur: "FUERA",
+          operador: "NO_ENCONTRADO",
+          operadorConSur: "NO_ENCONTRADO",
           operadorDeNorte: "OK",
         },
       },
@@ -481,7 +482,7 @@ describe.skipIf(base === null)("las operaciones fiscales y la sucursal", () => {
           administrador: "OK",
           operador: "NO_ENCONTRADO",
           operadorConSur: "OK",
-          operadorDeNorte: "FUERA",
+          operadorDeNorte: "NO_ENCONTRADO",
         },
       },
       {
@@ -494,7 +495,7 @@ describe.skipIf(base === null)("las operaciones fiscales y la sucursal", () => {
           administrador: "CERRADA",
           operador: "FUERA",
           operadorConSur: "CERRADA",
-          operadorDeNorte: "FUERA",
+          operadorDeNorte: "NO_ENCONTRADO",
         },
       },
     ];
@@ -529,6 +530,21 @@ describe.skipIf(base === null)("las operaciones fiscales y la sucursal", () => {
           expect(r, `${quien} ${factura}`).toMatchObject(NO_ENCONTRADO);
         }
       }
+    });
+
+    it("D-56: una nota sobre una factura de Norte, por un punto de venta de Norte, que pide quien no tiene Norte, responde IGUAL que sobre una factura que no existe: «comprobante no encontrado», nunca «sucursal fuera de su alcance», y no escribe nada", async () => {
+      for (const clase of ["NOTA_DE_CREDITO", "NOTA_DE_DEBITO"] as const) {
+        for (const quien of ["operador", "operadorConSur"] as const) {
+          const inexistente = await emitirComo(clase, m[quien], notaCruda(randomUUID(), m.pvNorte));
+          expect(inexistente, `${clase} ${quien}`).toMatchObject(NO_ENCONTRADO);
+          const pedido = notaCruda(m.facturaNorte, m.pvNorte);
+          const existente = await emitirComo(clase, m[quien], pedido);
+          expect(existente, `${clase} ${quien}`).toEqual(inexistente);
+          expect(await cuantos(pedido.clave), "no se escribió nada").toBe(0);
+        }
+      }
+      // Una FACTURA (no nota) por ese mismo punto de venta ajeno sigue siendo «fuera de alcance».
+      expect(await emitirFactura(d, m.operador, facturaCruda(m.pvNorte))).toMatchObject(FUERA);
     });
   });
 
@@ -1027,6 +1043,32 @@ describe.skipIf(base === null)("las operaciones fiscales y la sucursal", () => {
       });
       // Sigue siendo de Sur aunque esté cerrada: un operador de Norte no la toca.
       expect(await reintentar(m.operadorDeNorte, m.pendienteDeSur)).toMatchObject(NO_ENCONTRADO);
+    });
+
+    it("Reintentar y Descartar de un comprobante PENDIENTE de una sucursal cerrada se PERMITEN (decisión del dueño, 29/10/2026 (D-56)): al gerente y a quien la tenía asignada", async () => {
+      const e = await empresaConFacturacion();
+      const cerrada = await sucursalNueva(e, "Cerrada");
+      const pv = await puntoDeVentaEn(e, cerrada, 7);
+      const gerente = comoGerente(e);
+      const operador = await persona(e, "OPERADOR", [cerrada]);
+      const emitir = async () => {
+        const r = await emitirFactura(d, gerente, facturaCruda(pv));
+        if (!r.ok) throw new Error("no emitió");
+        return r.dato.comprobanteId;
+      };
+      const paraReintentar = await emitir();
+      const paraDescartarElOperador = await emitir();
+      const paraDescartarElGerente = await emitir();
+      await cerrar(cerrada);
+      for (const c of [gerente, operador]) {
+        expect(await reintentar(c, paraReintentar)).toMatchObject({ ok: true });
+      }
+      expect(await descartar(operador, paraDescartarElOperador)).toMatchObject({ ok: true });
+      expect(await descartar(gerente, paraDescartarElGerente)).toMatchObject({ ok: true });
+      for (const id of [paraDescartarElOperador, paraDescartarElGerente]) {
+        expect((await estadoYVersion(id))?.estado).toBe("DESCARTADO");
+      }
+      expect((await estadoYVersion(paraReintentar))?.estado).toBe("PENDIENTE");
     });
 
     it("aislamiento entre empresas: el comprobante de otra empresa es «no encontrado» aun para su gerente, igual que uno que no existe", async () => {
