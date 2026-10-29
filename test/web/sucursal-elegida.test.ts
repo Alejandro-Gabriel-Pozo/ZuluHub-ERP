@@ -63,7 +63,14 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
     consultasDeFacturacion: () => ({
       listarComprobantes: (_contexto: unknown, pedido: { sucursalElegida: unknown }) => {
         mundo.listados.push({ sucursalElegida: pedido.sucursalElegida, pedido });
-        return Promise.resolve(ok({ items: [], siguiente: null }));
+        // La página trae la sucursal que usó el servidor (D-18, #115).
+        return Promise.resolve(
+          ok({
+            items: [],
+            siguiente: null,
+            sucursal: { id: CENTRO, nombre: "Centro", activa: true },
+          }),
+        );
       },
     }),
   },
@@ -213,7 +220,14 @@ describe("la sucursal con la que trabaja la pantalla", () => {
     expect(cargado.sucursales.map((s) => s.nombre)).toEqual(["Centro", "Norte"]);
     expect(cargado.puntosDeVenta).toEqual([]);
     expect(pedidos).toEqual([[]]);
-    expect(cargado.pagina).toEqual({ ok: true, dato: { items: [], siguiente: null } });
+    expect(cargado.pagina).toEqual({
+      ok: true,
+      dato: {
+        items: [],
+        siguiente: null,
+        sucursal: { id: CENTRO, nombre: "Centro", activa: true },
+      },
+    });
     expect(mundo.listados[0]?.pedido).toMatchObject({ estado: "RECHAZADO" });
   });
 });
