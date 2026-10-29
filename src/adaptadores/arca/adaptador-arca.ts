@@ -74,9 +74,10 @@ import { aSolicitudDeWsfe } from "./traducir";
  *     una excepción no se usa nunca.
  *  5. **La primera llamada exitosa verifica la autorización** (D-42, `h7-facturacion.md` §B.6.2): si una operación de WSFE
  *     con ticket sale bien, se anota en el certificado que pidió ese ticket que ARCA lo aceptó. Nunca cambia lo que se
- *     devuelve; si falla, queda rastro (solo el tipo de la falla) y la próxima llamada lo intenta. SUPUESTO aprobado por el
- *     dueño: cuentan `FECompUltimoAutorizado`, `FECAESolicitar` autorizado y `FECompConsultar` encontrado. `FEDummy` (sin
- *     ticket) y `FEParamGet*` (la CUIT la manda quien llama: la de otro no prueba la autorización) NO cuentan.
+ *     devuelve; si falla, queda rastro (solo el tipo de la falla) y la próxima llamada lo intenta. SUPUESTO del ingeniero
+ *     (declarado al dueño el 2026-10-29, sin aprobación expresa): cuentan `FECompUltimoAutorizado`, `FECAESolicitar`
+ *     autorizado y `FECompConsultar` encontrado. `FEDummy` (sin ticket) y `FEParamGet*` (la CUIT la manda quien llama: la
+ *     de otro no prueba la autorización) NO cuentan.
  *
  * No lanza: toda falla es un valor del puerto. Los desenlaces son los de `clasificar.ts`.
  */
