@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { CODIGOS_PUBLICOS } from "../capacidades/experiencia/respuesta";
+import type { CodigoFiscal } from "../capacidades/experiencia/respuesta-fiscal";
 import { CATALOGO_DE_TEXTOS } from "../capacidades/vocabulario/catalogo";
 import { err, ok } from "../primitivas/resultado/resultado";
 import {
+  CODIGOS_DE_CONFIGURACION_SIN_TEXTO,
   FISCAL_POR_ERROR_CON_CODIGO,
   FISCAL_POR_ERROR_DE_TEXTO,
   aRespuestaFiscal,
@@ -17,6 +19,10 @@ import {
  * del módulo sin traducir lo exige el compilador (las tablas son `Record` sobre la unión de errores).
  */
 
+/** Los códigos públicos de una tabla: sin los defectos (`null`) ni los que todavía no tienen texto aprobado. */
+const conCodigoPublico = (valores: readonly (string | null)[]): CodigoFiscal[] =>
+  valores.filter((c): c is CodigoFiscal => c !== null && c !== "SIN_TEXTO_APROBADO");
+
 const registrados: string[] = [];
 const dependencias = {
   registrar: (detalle: string) => registrados.push(detalle),
@@ -26,7 +32,7 @@ const dependencias = {
 describe("las tablas de traducción", () => {
   it("cada error de negocio traducido apunta a un código público fiscal con su texto en el catálogo", () => {
     const codigos = [
-      ...Object.values(FISCAL_POR_ERROR_DE_TEXTO).filter((c) => c !== null),
+      ...conCodigoPublico(Object.values(FISCAL_POR_ERROR_DE_TEXTO)),
       ...Object.values(FISCAL_POR_ERROR_CON_CODIGO),
     ];
     expect(codigos.length).toBeGreaterThan(40);
@@ -42,18 +48,109 @@ describe("las tablas de traducción", () => {
       .filter(([, codigo]) => codigo === null)
       .map(([error]) => error)
       .sort();
-    expect(defectos).toEqual(["COMPROBANTE_ALTA_INVALIDA", "COMPROBANTE_ASOCIADO_INVALIDO"]);
+    expect(defectos).toEqual([
+      "COMPROBANTE_ALTA_INVALIDA",
+      "COMPROBANTE_ASOCIADO_INVALIDO",
+      // Configuración fiscal: Ingresos Brutos no lo puede provocar nadie (D-45), la base no repite el número de versión, y una
+      // sucursal ajena es un pedido armado a mano (sin oráculo).
+      "IIBB_CONDICION_INVALIDA",
+      "IIBB_NUMERO_INVALIDO",
+      "NUMERO_DE_VERSION_INVALIDO",
+      "SUCURSAL_DE_OTRA_EMPRESA",
+    ]);
   });
 
   it("todo código fiscal público lo usa algún error (ninguno queda sin camino)", () => {
     const usados = new Set<string>([
-      ...Object.values(FISCAL_POR_ERROR_DE_TEXTO).filter((c) => c !== null),
+      ...conCodigoPublico(Object.values(FISCAL_POR_ERROR_DE_TEXTO)),
       ...Object.values(FISCAL_POR_ERROR_CON_CODIGO),
     ]);
     // Los que arma la entrada de la web y no el módulo (`entradas-de-facturacion.ts`).
     const delBorde = new Set(["FISCAL_DATOS_INVALIDOS"]);
     for (const codigo of Object.keys(CODIGOS_PUBLICOS).filter((c) => c.startsWith("FISCAL_"))) {
       expect(usados.has(codigo) || delBorde.has(codigo), codigo).toBe(true);
+    }
+  });
+});
+
+describe("la configuración fiscal (D-43)", () => {
+  it("los errores de datos salen como datos inválidos con el campo del formulario", () => {
+    const campos: Record<string, string> = {
+      RAZON_SOCIAL_INVALIDA: "razonSocial",
+      CONDICION_IVA_INVALIDA: "condicionIva",
+      INICIO_DE_ACTIVIDADES_INVALIDO: "inicioActividades",
+      CALLE_INVALIDA: "domicilio.calle",
+      NUMERO_INVALIDO: "domicilio.numero",
+      PISO_INVALIDO: "domicilio.piso",
+      DEPARTAMENTO_INVALIDO: "domicilio.departamento",
+      LOCALIDAD_INVALIDA: "domicilio.localidad",
+      PROVINCIA_INVALIDA: "domicilio.provincia",
+      CODIGO_POSTAL_INVALIDO: "domicilio.codigoPostal",
+      PUNTO_DE_VENTA_NUMERO_INVALIDO: "numero",
+      VIGENCIA_RETROACTIVA: "vigenteDesde",
+      INSTANTE_INVALIDO: "vigenteDesde",
+    };
+    for (const [error, campo] of Object.entries(campos)) {
+      expect(traducirErrorFiscal(error), error).toEqual({
+        codigo: "FISCAL_DATOS_INVALIDOS",
+        campo,
+      });
+    }
+  });
+
+  it("faltan datos obligatorios: apunta al primer campo que falta, con los nombres del formulario", () => {
+    const faltan = (faltantes: string[]) =>
+      traducirErrorFiscal({ codigo: "DATOS_FISCALES_INCOMPLETOS", faltantes });
+    expect(faltan(["razonSocial", "inicioActividades"])).toEqual({
+      codigo: "FISCAL_DATOS_INVALIDOS",
+      campo: "razonSocial",
+    });
+    expect(faltan(["condicionIva"])).toEqual({
+      codigo: "FISCAL_DATOS_INVALIDOS",
+      campo: "condicionIva",
+    });
+    expect(faltan(["domicilioFiscalId", "inicioActividades"])).toEqual({
+      codigo: "FISCAL_DATOS_INVALIDOS",
+      campo: "domicilio",
+    });
+    expect(faltan(["inicioActividades"])).toEqual({
+      codigo: "FISCAL_DATOS_INVALIDOS",
+      campo: "inicioActividades",
+    });
+    // Sin faltantes (no pasa: el dominio siempre informa uno): el código sin campo.
+    expect(faltan([])).toEqual({ codigo: "FISCAL_DATOS_INVALIDOS" });
+  });
+
+  it("reusa lo ya aprobado: motivo obligatorio, identificador mal armado y versión desactualizada", () => {
+    expect(traducirErrorFiscal("MOTIVO_OBLIGATORIO")).toEqual({
+      codigo: "FISCAL_MOTIVO_INVALIDO",
+      campo: "motivo",
+    });
+    expect(traducirErrorFiscal("ID_INVALIDO")).toEqual({ codigo: "FISCAL_PEDIDO_SIN_IDENTIFICAR" });
+    expect(traducirErrorFiscal("VERSION_DESACTUALIZADA")).toEqual({
+      codigo: "FISCAL_VERSION_DESACTUALIZADA",
+    });
+  });
+
+  it("los códigos sin texto aprobado son estos nueve: salen sin cambios (inesperado con referencia) hasta que el dueño los apruebe", () => {
+    expect([...CODIGOS_DE_CONFIGURACION_SIN_TEXTO].sort()).toEqual([
+      "DATOS_FISCALES_NO_ENCONTRADOS",
+      "DOMICILIO_NO_ENCONTRADO",
+      "EMISOR_NO_ENCONTRADO",
+      "ID_EN_USO",
+      "PUNTO_DE_VENTA_DUPLICADO",
+      "PUNTO_DE_VENTA_NUMERO_INMUTABLE",
+      "PUNTO_DE_VENTA_SIN_DOMICILIO",
+      "VERSION_CONFIRMADA_INMUTABLE",
+      "YA_HAY_BORRADOR",
+    ]);
+    for (const error of CODIGOS_DE_CONFIGURACION_SIN_TEXTO) {
+      expect(traducirErrorFiscal(error), error).toBe(error);
+      const respuesta = aRespuestaFiscal(err(error), dependencias, () => null);
+      expect(respuesta, error).toMatchObject({
+        ok: false,
+        error: { codigo: "ERROR_INTERNO", referencia: expect.stringMatching(/^PD-/) as string },
+      });
     }
   });
 });

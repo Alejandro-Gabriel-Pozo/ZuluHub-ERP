@@ -48,13 +48,14 @@ export type ErrorDeEntrada = Readonly<{
 }>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const identificador = z.string().regex(UUID);
+export const identificador = z.string().regex(UUID);
 const fecha = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 /** La forma canónica la comprueba la primitiva; acá solo se acota el largo de lo que se lee. */
 const decimal = z.string().max(40);
-const texto = z.string().max(1000);
+/** Texto de formulario: la forma (que sea texto y no sea enorme); el largo y el contenido válidos los decide el dominio. */
+export const texto = z.string().max(1000);
 /** Un entero que un formulario manda como número o como texto de dígitos (nunca `"3.5"`, `"1e3"` ni `"-1"`). */
-const entero = z
+export const entero = z
   .union([
     z.number(),
     z
@@ -167,7 +168,7 @@ const invalida = (campo?: string): ErrorDeEntrada =>
     ? { codigo: "FISCAL_DATOS_INVALIDOS" }
     : { codigo: "FISCAL_DATOS_INVALIDOS", campo };
 
-function leer<S extends z.ZodType>(
+export function leer<S extends z.ZodType>(
   forma: S,
   crudo: unknown,
 ): Resultado<z.output<S>, ErrorDeEntrada> {

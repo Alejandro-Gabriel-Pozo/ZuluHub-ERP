@@ -8,7 +8,8 @@ import {
 } from "../modulos/fiscal/publico";
 import type { SucursalId } from "../primitivas/identificadores/marca";
 import { ok, type Resultado } from "../primitivas/resultado/resultado";
-import { aRespuestaDeExcepcion, errorAPublico, type DependenciasDeRespuesta } from "./a-respuesta";
+import type { DependenciasDeRespuesta } from "./a-respuesta";
+import { accionDeWeb } from "./accion-de-web";
 import {
   entradaDeCambiarAmbiente,
   entradaDeDescartar,
@@ -21,11 +22,7 @@ import {
   entradaDeVerComprobante,
   type ErrorDeEntrada,
 } from "./entradas-de-facturacion";
-import {
-  aRespuestaFiscal,
-  traducirMensajeDeArca,
-  type MensajeDeArcaParaLaPantalla,
-} from "./errores-fiscales";
+import { traducirMensajeDeArca, type MensajeDeArcaParaLaPantalla } from "./errores-fiscales";
 import type { Web } from "./web";
 
 /**
@@ -53,31 +50,14 @@ export type DependenciasDeFacturacionWeb = Readonly<{
   respuesta: DependenciasDeRespuesta;
 }>;
 
-/** La entrada que no tiene la forma pedida, como error público (sin el valor recibido). */
-const entradaInvalida = (
-  d: DependenciasDeFacturacionWeb,
-  error: ErrorDeEntrada,
-): Respuesta<never> => ({ ok: false, error: errorAPublico(error, d.respuesta) });
-
-/**
- * Lee el pedido, corre el caso de uso con el contexto del servidor y traduce el resultado. Una excepción (la base
- * caída, un defecto) sale sin detalle y con referencia.
- */
-async function accion<E, S, D>(
+/** Lee el pedido, corre el caso de uso con el contexto del servidor y traduce el resultado (ver `accion-de-web.ts`). */
+const accion = <E, S, D>(
   d: DependenciasDeFacturacionWeb,
   crudo: unknown,
   leer: (crudo: unknown) => Resultado<E, ErrorDeEntrada>,
   correr: (entrada: E) => Promise<Resultado<S, unknown>>,
   presentar: (salida: S) => D,
-): Promise<Respuesta<D>> {
-  const entrada = leer(crudo);
-  if (!entrada.ok) return entradaInvalida(d, entrada.error);
-  try {
-    return aRespuestaFiscal(await correr(entrada.valor), d.respuesta, presentar);
-  } catch (excepcion) {
-    return aRespuestaDeExcepcion(excepcion, d.respuesta);
-  }
-}
+): Promise<Respuesta<D>> => accionDeWeb(d.respuesta, crudo, leer, correr, presentar);
 
 // ---------------------------------------------------------------------------------------------------------------
 // Emitir

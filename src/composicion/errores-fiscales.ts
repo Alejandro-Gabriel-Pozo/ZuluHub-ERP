@@ -5,9 +5,15 @@ import type { ClaveDeTexto } from "../capacidades/vocabulario/catalogo";
 import type { MotivoDeRechazo } from "../capacidades/permisos/guard";
 import type { EmpresaNoOpera } from "../contexto/estados";
 import type {
+  ErrorAlActivarPuntoDeVenta,
   ErrorAlCambiarAmbiente,
+  ErrorAlConfirmarDatosFiscales,
+  ErrorAlCrearPuntoDeVenta,
   ErrorAlDescartarComprobante,
+  ErrorAlDesactivarPuntoDeVenta,
+  ErrorAlEditarPuntoDeVenta,
   ErrorAlEmitir,
+  ErrorAlGuardarElBorrador,
   ErrorAlListarComprobantes,
   ErrorAlReintentarComprobante,
   ErrorAlResincronizarSerie,
@@ -46,9 +52,24 @@ type ErrorDeNegocioFiscal = Exclude<
   | ErrorAlResincronizarSerie
   | ErrorAlCambiarAmbiente
   | ErrorAlListarComprobantes
-  | ErrorAlVerComprobante,
+  | ErrorAlVerComprobante
+  // La configuración fiscal (D-43): datos fiscales, puntos de venta y las consultas de esas pantallas (`EMISOR_NO_ENCONTRADO`).
+  | ErrorAlGuardarElBorrador
+  | ErrorAlConfirmarDatosFiscales
+  | ErrorAlCrearPuntoDeVenta
+  | ErrorAlEditarPuntoDeVenta
+  | ErrorAlActivarPuntoDeVenta
+  | ErrorAlDesactivarPuntoDeVenta,
   MotivoDeRechazo | EmpresaNoOpera | ErrorDePersistencia
 >;
+
+/**
+ * Un error de negocio de la configuración fiscal que NO tiene todavía un texto aprobado por el dueño (la regla del repositorio:
+ * sin fuente verificable no se agrega un texto). Hasta que lo tenga sale como un error inesperado, con su referencia `PD-…`, y el
+ * código queda en el registro del servidor (soporte lo ve ahí). Sumarle su código público es: una línea acá, su clave en
+ * `respuesta-fiscal.ts` y su texto en el catálogo. Previene: inventar el cartel que ve el cliente por un error que no se decidió.
+ */
+const SIN_TEXTO_APROBADO = "SIN_TEXTO_APROBADO";
 
 type ErrorTextual = Extract<ErrorDeNegocioFiscal, string>;
 type ErrorConCodigo = Extract<ErrorDeNegocioFiscal, Readonly<{ codigo: string }>>;
@@ -58,7 +79,9 @@ type ErrorConCodigo = Extract<ErrorDeNegocioFiscal, Readonly<{ codigo: string }>
  * hacer nada: sale como error inesperado con referencia). Los de la lista de criterios del listado salen todos como
  * `FISCAL_FILTRO_INVALIDO`, y `CAMPO_DE_CRITERIO` dice cuál.
  */
-export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<Record<ErrorTextual, CodigoFiscal | null>> = {
+export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<
+  Record<ErrorTextual, CodigoFiscal | typeof SIN_TEXTO_APROBADO | null>
+> = {
   CLAVE_INVALIDA: "FISCAL_PEDIDO_SIN_IDENTIFICAR",
   CLAVE_REUTILIZADA: "FISCAL_PEDIDO_REPETIDO",
   PUNTO_DE_VENTA_NO_ENCONTRADO: "FISCAL_PUNTO_DE_VENTA_NO_ENCONTRADO",
@@ -100,9 +123,50 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<Record<ErrorTextual, CodigoFisc
   // Emitir (D-41, D-51 y D-50): la sucursal del punto de venta no es de la persona, o está cerrada. (La de la factura que corrige una nota no
   // llega acá: da «comprobante no encontrado», decisión del dueño, 29/10/2026 (D-56).)
   SUCURSAL_CERRADA: "FISCAL_SUCURSAL_CERRADA",
+  // Datos fiscales (D-43): lo que la persona escribió mal sale como datos inválidos con el campo (el formulario lo marca); un
+  // identificador de la pantalla mal armado es «no se pudo identificar el pedido». D-45: los de Ingresos Brutos no los puede
+  // provocar nadie (el pedido no los trae), y la base no deja un número de versión repetido: defectos.
+  RAZON_SOCIAL_INVALIDA: "FISCAL_DATOS_INVALIDOS",
+  CONDICION_IVA_INVALIDA: "FISCAL_DATOS_INVALIDOS",
+  INICIO_DE_ACTIVIDADES_INVALIDO: "FISCAL_DATOS_INVALIDOS",
+  IIBB_NUMERO_INVALIDO: null,
+  IIBB_CONDICION_INVALIDA: null,
+  NUMERO_DE_VERSION_INVALIDO: null,
+  MOTIVO_OBLIGATORIO: "FISCAL_MOTIVO_INVALIDO",
+  VIGENCIA_RETROACTIVA: "FISCAL_DATOS_INVALIDOS",
+  INSTANTE_INVALIDO: "FISCAL_DATOS_INVALIDOS",
+  CALLE_INVALIDA: "FISCAL_DATOS_INVALIDOS",
+  NUMERO_INVALIDO: "FISCAL_DATOS_INVALIDOS",
+  PISO_INVALIDO: "FISCAL_DATOS_INVALIDOS",
+  DEPARTAMENTO_INVALIDO: "FISCAL_DATOS_INVALIDOS",
+  LOCALIDAD_INVALIDA: "FISCAL_DATOS_INVALIDOS",
+  PROVINCIA_INVALIDA: "FISCAL_DATOS_INVALIDOS",
+  CODIGO_POSTAL_INVALIDO: "FISCAL_DATOS_INVALIDOS",
+  PUNTO_DE_VENTA_NUMERO_INVALIDO: "FISCAL_DATOS_INVALIDOS",
+  ID_INVALIDO: "FISCAL_PEDIDO_SIN_IDENTIFICAR",
+  // Sin texto aprobado todavía (ver `SIN_TEXTO_APROBADO`).
+  EMISOR_NO_ENCONTRADO: SIN_TEXTO_APROBADO,
+  YA_HAY_BORRADOR: SIN_TEXTO_APROBADO,
+  VERSION_CONFIRMADA_INMUTABLE: SIN_TEXTO_APROBADO,
+  DATOS_FISCALES_NO_ENCONTRADOS: SIN_TEXTO_APROBADO,
+  DOMICILIO_NO_ENCONTRADO: SIN_TEXTO_APROBADO,
+  ID_EN_USO: SIN_TEXTO_APROBADO,
+  PUNTO_DE_VENTA_DUPLICADO: SIN_TEXTO_APROBADO,
+  PUNTO_DE_VENTA_NUMERO_INMUTABLE: SIN_TEXTO_APROBADO,
+  PUNTO_DE_VENTA_SIN_DOMICILIO: SIN_TEXTO_APROBADO,
+  // La pantalla solo ofrece las sucursales de la empresa: un id ajeno es un pedido armado a mano, y decir que existe en otra
+  // empresa sería un oráculo. La base lo rechaza por la referencia, no por una regla que la persona pueda corregir.
+  SUCURSAL_DE_OTRA_EMPRESA: null,
 };
 
-/** El campo del listado al que apunta cada criterio inválido (el nombre que usa el pedido, no uno interno). */
+/** Los códigos de la configuración fiscal que todavía salen sin texto propio: lo que hay que preguntarle al dueño. */
+export const CODIGOS_DE_CONFIGURACION_SIN_TEXTO: readonly string[] = Object.entries(
+  FISCAL_POR_ERROR_DE_TEXTO,
+)
+  .filter(([, codigo]) => codigo === SIN_TEXTO_APROBADO)
+  .map(([error]) => error);
+
+/** El campo del formulario al que apunta cada error de dato (el nombre que usa el pedido, no uno interno). */
 const CAMPO_DE_CRITERIO: Readonly<Partial<Record<ErrorTextual, string>>> = {
   LIMITE_INVALIDO: "limite",
   TEXTO_DEMASIADO_LARGO: "texto",
@@ -113,6 +177,19 @@ const CAMPO_DE_CRITERIO: Readonly<Partial<Record<ErrorTextual, string>>> = {
   ORIGEN_ID_INVALIDO: "origenId",
   ORIGEN_ID_SIN_TIPO: "origenTipo",
   CLAVE_DE_PAGINA_INVALIDA: "despuesDe",
+  RAZON_SOCIAL_INVALIDA: "razonSocial",
+  CONDICION_IVA_INVALIDA: "condicionIva",
+  INICIO_DE_ACTIVIDADES_INVALIDO: "inicioActividades",
+  VIGENCIA_RETROACTIVA: "vigenteDesde",
+  INSTANTE_INVALIDO: "vigenteDesde",
+  CALLE_INVALIDA: "domicilio.calle",
+  NUMERO_INVALIDO: "domicilio.numero",
+  PISO_INVALIDO: "domicilio.piso",
+  DEPARTAMENTO_INVALIDO: "domicilio.departamento",
+  LOCALIDAD_INVALIDA: "domicilio.localidad",
+  PROVINCIA_INVALIDA: "domicilio.provincia",
+  CODIGO_POSTAL_INVALIDO: "domicilio.codigoPostal",
+  PUNTO_DE_VENTA_NUMERO_INVALIDO: "numero",
 };
 
 /**
@@ -143,7 +220,17 @@ export const FISCAL_POR_ERROR_CON_CODIGO: Readonly<Record<ErrorConCodigo["codigo
     SIN_CREDENCIAL: "FISCAL_ARCA_CERTIFICADO_NO_SIRVE",
     AUTORIZACION_DEL_SERVICIO_FALTANTE: "FISCAL_ARCA_SERVICIO_NO_AUTORIZADO",
     ACCESO_YA_EMITIDO: "FISCAL_ARCA_ACCESO_EN_CURSO",
+    // Confirmar datos fiscales incompletos: el campo es el primero que falta (D-43: «validación de campos obligatorios»).
+    DATOS_FISCALES_INCOMPLETOS: "FISCAL_DATOS_INVALIDOS",
   };
+
+/** El campo del formulario de cada dato obligatorio de los datos fiscales (el domicilio es un bloque entero). */
+const CAMPO_DE_OBLIGATORIO: Readonly<Record<string, string>> = {
+  razonSocial: "razonSocial",
+  condicionIva: "condicionIva",
+  domicilioFiscalId: "domicilio",
+  inicioActividades: "inicioActividades",
+};
 
 const esObjeto = (x: unknown): x is Readonly<Record<string, unknown>> =>
   typeof x === "object" && x !== null;
@@ -167,6 +254,12 @@ function campoDeError(error: Readonly<Record<string, unknown>>): string | undefi
       return campoDeRenglon(error["posicion"], "alicuota");
     case "MOTIVO_INVALIDO":
       return "motivo";
+    case "DATOS_FISCALES_INCOMPLETOS": {
+      const primero: unknown = Array.isArray(error["faltantes"])
+        ? error["faltantes"][0]
+        : undefined;
+      return typeof primero === "string" ? (CAMPO_DE_OBLIGATORIO[primero] ?? undefined) : undefined;
+    }
     default:
       return undefined;
   }
@@ -182,7 +275,7 @@ export function traducirErrorFiscal(error: unknown): unknown {
   if (typeof error === "string") {
     if (!Object.hasOwn(FISCAL_POR_ERROR_DE_TEXTO, error)) return error;
     const codigo = FISCAL_POR_ERROR_DE_TEXTO[error as ErrorTextual];
-    if (codigo === null) return error;
+    if (codigo === null || codigo === SIN_TEXTO_APROBADO) return error;
     const campo =
       CAMPO_DE_CRITERIO[error as ErrorTextual] ??
       (codigo === "FISCAL_MOTIVO_INVALIDO" ? "motivo" : undefined);

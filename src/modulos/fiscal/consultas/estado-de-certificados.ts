@@ -3,6 +3,7 @@ import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
+import type { CertificadosDelAmbiente } from "../persistencia/lecturas-de-certificados";
 import type { CertificadoGuardado } from "../persistencia/repositorio-de-certificados";
 import type { RepositorioDeEmisores } from "../persistencia/repositorios";
 import type { DependenciasDeConsultasDeFacturacion } from "./contrato";
@@ -58,6 +59,46 @@ export type SituacionDelCertificado =
       pedidoPendiente: PedidoPendiente | null;
     }>;
 
+/**
+ * La situación de UN ambiente a partir de lo que cuenta hoy de él (su vigente y su último pedido). Una sola regla para
+ * esta consulta y para la lista de configuración fiscal: lo que dicen no puede diferir.
+ */
+export function situacionDelAmbiente(
+  { ambiente, vigente, pendiente }: CertificadosDelAmbiente,
+  ahora: Date,
+): SituacionDelCertificado {
+  const pedido: PedidoPendiente | null =
+    pendiente === null
+      ? null
+      : {
+          certificadoId: pendiente.id,
+          alias: pendiente.alias,
+          cuitTitular: pendiente.cuitTitular,
+          creadoEn: pendiente.creadoEn,
+        };
+  if (vigente !== null) {
+    // La base lo impide (`certificado_cargado_ck`): un vigente siempre tiene vencimiento.
+    if (vigente.venceEn === null) throw new Error("un certificado vigente sin vencimiento");
+    return {
+      ambiente,
+      situacion: "VIGENTE",
+      certificadoId: vigente.id,
+      alias: vigente.alias,
+      cuitTitular: vigente.cuitTitular,
+      venceEn: vigente.venceEn,
+      vencido: vigente.venceEn.getTime() <= ahora.getTime(),
+      autorizacion:
+        vigente.autorizacionVerificadaEn === null
+          ? { estado: "SIN_VERIFICAR" }
+          : { estado: "VERIFICADA", en: vigente.autorizacionVerificadaEn },
+      pedidoPendiente: pedido,
+    };
+  }
+  return pedido === null
+    ? { ambiente, situacion: "FALTA_CARGAR" }
+    : { ambiente, situacion: "PEDIDO_GENERADO", ...pedido };
+}
+
 export type EntradaDeEstadoDeCertificados = Readonly<{
   emisorId: Parameters<RepositorioDeEmisores["obtener"]>[1];
 }>;
@@ -91,44 +132,11 @@ export function armarEstadoDeCertificados({
         if ((await tx.emisores.obtener(empresaId, entrada.emisorId)) === null) {
           return err("EMISOR_NO_ENCONTRADO");
         }
-        const situaciones: SituacionDelCertificado[] = [];
-        for (const {
-          ambiente,
-          vigente,
-          pendiente,
-        } of await tx.lecturasDeCertificados.actualesDelEmisor(empresaId, entrada.emisorId)) {
-          const pedido: PedidoPendiente | null =
-            pendiente === null
-              ? null
-              : {
-                  certificadoId: pendiente.id,
-                  alias: pendiente.alias,
-                  cuitTitular: pendiente.cuitTitular,
-                  creadoEn: pendiente.creadoEn,
-                };
-          if (vigente !== null) {
-            // La base lo impide (`certificado_cargado_ck`): un vigente siempre tiene vencimiento.
-            if (vigente.venceEn === null) throw new Error("un certificado vigente sin vencimiento");
-            situaciones.push({
-              ambiente,
-              situacion: "VIGENTE",
-              certificadoId: vigente.id,
-              alias: vigente.alias,
-              cuitTitular: vigente.cuitTitular,
-              venceEn: vigente.venceEn,
-              vencido: vigente.venceEn.getTime() <= ahora.getTime(),
-              autorizacion:
-                vigente.autorizacionVerificadaEn === null
-                  ? { estado: "SIN_VERIFICAR" }
-                  : { estado: "VERIFICADA", en: vigente.autorizacionVerificadaEn },
-              pedidoPendiente: pedido,
-            });
-          } else if (pedido !== null) {
-            situaciones.push({ ambiente, situacion: "PEDIDO_GENERADO", ...pedido });
-          } else {
-            situaciones.push({ ambiente, situacion: "FALTA_CARGAR" });
-          }
-        }
+        const lecturas = await tx.lecturasDeCertificados.actualesDelEmisor(
+          empresaId,
+          entrada.emisorId,
+        );
+        const situaciones = lecturas.map((lectura) => situacionDelAmbiente(lectura, ahora));
         return ok(situaciones);
       },
     );
