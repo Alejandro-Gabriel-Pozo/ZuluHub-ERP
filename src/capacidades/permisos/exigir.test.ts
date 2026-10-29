@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CATALOGO_DE_MODULOS, type ClaveAccion, type ClaveModulo } from "../modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "./empresa";
-import { exigirAccion, exigirAcciones, type ActorCargado } from "./exigir";
+import { accionesPermitidas, exigirAccion, exigirAcciones, type ActorCargado } from "./exigir";
 import {
   CATALOGO_DE_PLATAFORMA,
   PERMISOS_DE_PLATAFORMA,
@@ -364,5 +364,90 @@ describe("exigirAccion con las reglas de plataforma (H5 P1)", () => {
       void exigirAccion(REGLAS_DE_EMPRESA, "usuarios.invitar", deAdmin.cargar);
     };
     expect(noSeEjecuta).toBeTypeOf("function");
+  });
+});
+
+describe("accionesPermitidas", () => {
+  const CON_FACTURACION: ReglasDeEmpresa = {
+    catalogo: {
+      ...CATALOGO_DE_MODULOS,
+      facturacion: { ...CATALOGO_DE_MODULOS.facturacion, estado: "disponible" },
+    },
+    permisos: PERMISOS_DE_EMPRESA,
+  };
+  const TODAS = Object.keys(PERMISOS_DE_EMPRESA) as ClaveAccion[];
+  const actores: readonly [string, ActorCargado][] = [
+    ...ROLES_DE_EMPRESA.flatMap((rol): [string, ActorCargado][] => [
+      [`${rol} sin módulos`, { rol, modulosActivados: [], modulosHabilitados: [] }],
+      [
+        `${rol} con facturación en el plan`,
+        { rol, modulosActivados: ["facturacion"], modulosHabilitados: ["facturacion"] },
+      ],
+      [
+        `${rol} con facturación fuera del plan`,
+        { rol, modulosActivados: ["facturacion"], modulosHabilitados: [] },
+      ],
+    ]),
+    [
+      "sin rol",
+      { rol: null, modulosActivados: ["facturacion"], modulosHabilitados: ["facturacion"] },
+    ],
+  ];
+
+  it.each(actores)(
+    "%s: da exactamente lo que exigirAccion deja pasar, acción por acción (con y sin el módulo en desarrollo)",
+    async (_nombre, actor) => {
+      for (const reglas of [REGLAS_DE_EMPRESA, CON_FACTURACION]) {
+        const esperadas: ClaveAccion[] = [];
+        for (const accion of TODAS) {
+          const veredicto = await exigirAccion(reglas, accion, () => Promise.resolve(actor));
+          if (veredicto.ok) esperadas.push(accion);
+        }
+        expect(accionesPermitidas(reglas, actor)).toEqual(esperadas.sort());
+      }
+    },
+  );
+
+  it("el rol no alcanza: con el módulo en desarrollo, el gerente no ve ninguna acción de facturación", () => {
+    const gerente: ActorCargado = {
+      rol: "GERENTE",
+      modulosActivados: ["facturacion"],
+      modulosHabilitados: ["facturacion"],
+    };
+    const real = accionesPermitidas(REGLAS_DE_EMPRESA, gerente);
+    expect(real).not.toContain("comprobantes.ver");
+    expect(real).toContain("usuarios.invitar");
+    expect(accionesPermitidas(CON_FACTURACION, gerente)).toContain("comprobantes.ver");
+  });
+
+  it("el módulo no alcanza: sin activar, o sin rol, no figura; fuera del plan solo lo que mira o cierra", () => {
+    const sinActivar: ActorCargado = {
+      rol: "OPERADOR",
+      modulosActivados: [],
+      modulosHabilitados: [],
+    };
+    expect(accionesPermitidas(CON_FACTURACION, sinActivar)).not.toContain("comprobantes.ver");
+    const fueraDelPlan: ActorCargado = {
+      rol: "OPERADOR",
+      modulosActivados: ["facturacion"],
+      modulosHabilitados: [],
+    };
+    const lista = accionesPermitidas(CON_FACTURACION, fueraDelPlan);
+    expect(lista).toContain("comprobantes.ver");
+    expect(lista).toContain("notas_de_credito.emitir");
+    expect(lista).not.toContain("comprobantes.emitir_manual");
+    expect(accionesPermitidas(CON_FACTURACION, { ...fueraDelPlan, rol: null })).toEqual([]);
+  });
+
+  it("sale ordenada y sin repetir, y el operador no recibe lo que es del gerente", () => {
+    const operador: ActorCargado = {
+      rol: "OPERADOR",
+      modulosActivados: ["facturacion"],
+      modulosHabilitados: ["facturacion"],
+    };
+    const lista = accionesPermitidas(CON_FACTURACION, operador);
+    expect(lista).toEqual([...new Set(lista)].sort());
+    expect(lista).not.toContain("series.resincronizar");
+    expect(lista).not.toContain("certificados.gestionar");
   });
 });

@@ -7,7 +7,7 @@ import {
   type PaginaDeComprobantes,
 } from "../modulos/fiscal/publico";
 import type { SucursalId } from "../primitivas/identificadores/marca";
-import type { Resultado } from "../primitivas/resultado/resultado";
+import { ok, type Resultado } from "../primitivas/resultado/resultado";
 import { aRespuestaDeExcepcion, errorAPublico, type DependenciasDeRespuesta } from "./a-respuesta";
 import {
   entradaDeCambiarAmbiente,
@@ -244,7 +244,48 @@ export function listarComprobantes(
     crudo,
     entradaDeListar,
     (pedido) => d.consultas().listarComprobantes(contexto, { ...pedido, sucursalElegida }),
-    (pagina) => ({ items: pagina.items, siguiente: pagina.siguiente }),
+    // Lista blanca: la sucursal que usó el servidor (D-18) sale con su id, su nombre y si está abierta, y nada más.
+    (pagina) => ({
+      items: pagina.items,
+      siguiente: pagina.siguiente,
+      sucursal: {
+        id: pagina.sucursal.id,
+        nombre: pagina.sucursal.nombre,
+        activa: pagina.sucursal.activa,
+      },
+    }),
+  );
+}
+
+/**
+ * Los puntos de venta de la sucursal, para el filtro «Punto de venta» del listado: el número (el formato de 5 dígitos lo pone la
+ * pantalla) y si está activo (`false`: dado de baja, D-58).
+ */
+export type PuntosDeVentaParaLaPantalla = Readonly<{
+  items: readonly Readonly<{ numero: number; activo: boolean }>[];
+}>;
+
+/**
+ * Los puntos de venta ACTIVOS Y DADOS DE BAJA de UNA sucursal de la empresa (`comprobantes.ver`, D-6, D-18 y D-58), de menor a mayor número. La sucursal
+ * se resuelve con la MISMA regla que el listado (D-34, D-36 y D-37) y por el servidor: `sucursalElegida` NO sale del pedido del
+ * navegador sin más (la toma el servidor de su sesión, o es `null` si la persona todavía no eligió) y la consulta la verifica
+ * contra el alcance de la persona, dentro de su transacción, antes de leer nada: un id ajeno, de otra empresa o mal formado es
+ * `FISCAL_SUCURSAL_FUERA_DE_ALCANCE` y no devuelve ningún punto de venta. Sin elegir y con varias a elegir, `FISCAL_SUCURSAL_NO_ELEGIDA`.
+ * Nunca trae puntos de venta de otra empresa ni de otra sucursal.
+ */
+export function listarPuntosDeVentaDeLaSucursal(
+  d: DependenciasDeFacturacionWeb,
+  contexto: ContextoOperativo,
+  sucursalElegida: SucursalId | null,
+): Promise<Respuesta<PuntosDeVentaParaLaPantalla>> {
+  return accion(
+    d,
+    null,
+    () => ok({ sucursalElegida }),
+    (entrada) => d.consultas().listarPuntosDeVentaDeLaSucursal(contexto, entrada),
+    (puntos) => ({
+      items: puntos.items.map((punto) => ({ numero: punto.numero, activo: punto.activo })),
+    }),
   );
 }
 
