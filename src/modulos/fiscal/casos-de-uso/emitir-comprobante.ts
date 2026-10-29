@@ -1,4 +1,5 @@
 import type { ClaveAccion } from "../../../capacidades/modulos/catalogo";
+import type { ErrorDeAlcance } from "../../../capacidades/permisos/alcance";
 import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
@@ -35,6 +36,7 @@ import {
   type ErrorDeNota,
 } from "../dominio/nota-asociada";
 import type { Receptor } from "../dominio/receptor";
+import type { ErrorDeSucursalCerrada } from "../dominio/sucursales-de-la-emision";
 import { versionVigente } from "../dominio/vigencia";
 import type { ComprobanteGuardado } from "../persistencia/repositorio-de-comprobantes";
 import { traducirErroresDeFiscal } from "../persistencia/traducir";
@@ -46,6 +48,10 @@ import {
 } from "./contrato-de-facturacion";
 import { DECLARACIONES_DE_FACTURACION } from "./declaraciones-de-facturacion";
 import { huellaDe } from "./llamadas-a-arca";
+import {
+  puntoDeVentaYSucursalesDelPedido,
+  sucursalDelPuntoDeVentaAbierta,
+} from "./sucursales-al-emitir";
 
 /**
  * Emitir a mano (spec H7 facturación §B.4.1 y §B.4.3): una factura (`emitirComprobanteManual`), una nota de
@@ -60,6 +66,9 @@ import { huellaDe } from "./llamadas-a-arca";
  *     5. El dominio arma el contenido (letra, receptor, cálculo). 6. Alta `PENDIENTE` con renglones y alícuotas.
  *     7. Auditoría `COMPROBANTE_CREADO` (sin nombre ni documento del receptor). 8. Encola
  *     `fiscal.validar_comprobante` (`fiscal.validar:<id>:1`).
+ *
+ * Las sucursales (D-41, D-50 y D-51): el alcance de la persona se mira ANTES de la repetición y que la del punto de venta esté
+ * abierta DESPUÉS, junto al punto de venta activo (repetir da lo mismo aunque se cierre); la base lo impone con bloqueo (0017).
  *
  * El `id` del comprobante ES la clave de la pantalla (un uuid): una clave nunca da dos comprobantes, ni siquiera
  * después de un rechazo (corregir es otro pedido con otra clave). Dos emisiones simultáneas con la misma clave:
@@ -107,6 +116,8 @@ export type ErrorPropioAlEmitir =
   | "CLAVE_REUTILIZADA"
   | "PUNTO_DE_VENTA_NO_ENCONTRADO"
   | "PUNTO_DE_VENTA_INACTIVO"
+  | ErrorDeSucursalCerrada
+  | ErrorDeAlcance
   | "EMISOR_INACTIVO"
   | "SIN_DATOS_FISCALES_VIGENTES"
   | "SIN_CERTIFICADO_VIGENTE"
@@ -172,6 +183,7 @@ const ADMITIDOS_AL_EMITIR = [
   "COMPROBANTE_ASOCIADO_INVALIDO",
   "COMPROBANTE_ASOCIADO_NO_ENCONTRADO",
   "PUNTO_DE_VENTA_NO_ENCONTRADO",
+  "SUCURSAL_CERRADA",
 ] as const;
 
 /** El cuerpo común, dentro de la transacción y DESPUÉS del guard. */
@@ -186,6 +198,10 @@ async function emitirEnTx(
   const opera = await empresaOpera(tx, empresaId);
   if (!opera.ok) return opera;
 
+  // El asociado (solo las notas), el punto de venta y sus sucursales, antes de la repetición (`sucursales-al-emitir.ts`).
+  const sucursales = await puntoDeVentaYSucursalesDelPedido(tx, contexto, entrada);
+  if (!sucursales.ok) return sucursales;
+  const { pv, asociado } = sucursales.valor;
   // 3. Repetición: la clave de la pantalla, en cualquier estado y de cualquier clase.
   const origen = { tipo: "MANUAL" as const, id: origenId(entrada.clave) };
   const huella = huellaDelPedido(pedido);
@@ -195,20 +211,11 @@ async function emitirEnTx(
     return previo.huella === huella ? ok(salidaDe(previo, true)) : err("CLAVE_REUTILIZADA");
   }
 
-  // 4. El asociado (solo las notas), el punto de venta, el emisor, sus datos y su certificado.
-  const asociado =
-    pedido.clase === "FACTURA"
-      ? null
-      : await tx.comprobantes.obtener(empresaId, pedido.entrada.comprobanteAsociadoId);
-  if (pedido.clase !== "FACTURA" && asociado === null) {
-    return err("COMPROBANTE_ASOCIADO_NO_ENCONTRADO");
-  }
-  const pvId = entrada.puntoDeVentaId ?? asociado?.puntoDeVentaId;
-  // Una nota sin punto de venta toma el del asociado, que ya se leyó: la guarda solo afina el tipo.
-  if (pvId === undefined) return err("PUNTO_DE_VENTA_NO_ENCONTRADO");
-  const pv = await tx.puntosDeVenta.obtener(empresaId, pvId);
-  if (pv === null) return err("PUNTO_DE_VENTA_NO_ENCONTRADO");
+  // 4. El punto de venta (activo, de una sucursal abierta), el emisor, sus datos y su certificado.
   if (pv.estado !== "ACTIVO") return err("PUNTO_DE_VENTA_INACTIVO");
+  // D-50 (la base lo vuelve a imponer, con bloqueo, al dar de alta).
+  const abierta = await sucursalDelPuntoDeVentaAbierta(tx, empresaId, pv);
+  if (!abierta.ok) return abierta;
   const emisor = await tx.emisores.obtener(empresaId, pv.emisorId);
   // La clave foránea compuesta garantiza que el emisor del punto de venta existe y es de la empresa.
   if (emisor === null) throw new Error(`el emisor ${pv.emisorId} del punto de venta no existe`);

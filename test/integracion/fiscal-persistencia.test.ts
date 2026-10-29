@@ -182,7 +182,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       ).toEqual([]);
     });
 
-    it("los 36 errores con nombre de los disparadores son exactamente la lista, y ninguno queda sin traducir", async () => {
+    it("los 37 errores con nombre de los disparadores son exactamente la lista, y ninguno queda sin traducir", async () => {
       const { rows } = await dueno.query<{ prosrc: string }>(
         `select prosrc from pg_proc
          where pronamespace = 'public'::regnamespace and prorettype = 'trigger'::regtype
@@ -194,7 +194,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
           lanzados.add(m[1] as string);
       }
       expect([...lanzados].sort()).toEqual([...RESTRICCIONES_DE_DISPARADORES_DE_FISCAL].sort());
-      expect(lanzados.size).toBe(36);
+      expect(lanzados.size).toBe(37);
       for (const nombre of lanzados) {
         const traduccion = (ERRORES_DE_FISCAL_POR_RESTRICCION as Record<string, string>)[nombre];
         expect(traduccion, nombre).toBeDefined();
@@ -1715,11 +1715,11 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       },
     ];
 
-    it("los casos cubren exactamente los 24 nombres de las tablas de 0006, una vez cada uno (14 por repositorio, 10 solo del dueño); los otros 12 son de la facturación", () => {
+    it("los casos cubren exactamente los 24 nombres de las tablas de 0006, una vez cada uno (14 por repositorio, 10 solo del dueño); los otros 13 son de la facturación", () => {
       const deLaFacturacion = RESTRICCIONES_DE_DISPARADORES_DE_FISCAL.filter((n) =>
         /^(comprobante|certificado)_/.test(n),
       );
-      expect(deLaFacturacion).toHaveLength(12);
+      expect(deLaFacturacion).toHaveLength(13);
       expect(casos.map((c) => c.restriccion).sort()).toEqual(
         RESTRICCIONES_DE_DISPARADORES_DE_FISCAL.filter((n) => !deLaFacturacion.includes(n)).sort(),
       );

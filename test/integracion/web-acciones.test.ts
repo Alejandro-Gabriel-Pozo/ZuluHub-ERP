@@ -377,16 +377,20 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       expect(await filasDeSesion(yo)).toBe(1);
       expect(await redirigeA(() => acciones.cerrarLaSesion())).toBe("/ingreso");
       expect(await filasDeSesion(yo)).toBe(0);
-      expect(estado.borrados.sort()).toEqual(["__Host-pd_empresa", "__Host-pd_invitacion"]);
-      // La sucursal del listado también se vence, con los atributos con que se fijó (un `__Host-` exige `Secure`).
-      const sucursal = estado.escrituras.find((x) => x.nombre === "__Host-pd_sucursal");
-      expect(sucursal?.valor).toBe("");
-      expect(sucursal?.opciones).toMatchObject({
-        maxAge: 0,
-        secure: true,
-        path: "/",
-        httpOnly: true,
-      });
+      // Las `__Host-` no se borran con `delete(nombre)` (sin `Secure` el navegador lo rechaza): se vencen vacías
+      // y con los atributos con que se fijaron (el detalle exacto: test/web/cerrar-sesion-cookies.test.ts).
+      expect(estado.borrados).toEqual([]);
+      for (const nombre of ["__Host-pd_empresa", "__Host-pd_invitacion", "__Host-pd_sucursal"]) {
+        const vencida = estado.escrituras.find((x) => x.nombre === nombre);
+        expect(vencida?.valor, nombre).toBe("");
+        expect(vencida?.opciones, nombre).toMatchObject({
+          maxAge: 0,
+          secure: true,
+          httpOnly: true,
+          path: "/",
+        });
+        expect(vencida?.opciones["domain"], nombre).toBeUndefined();
+      }
       // La cookie de sesión se escribió vacía y vencida (el navegador la borra).
       const sesion = estado.escrituras.find((x) => x.nombre.endsWith("session_token"));
       expect(sesion?.valor).toBe("");
@@ -472,7 +476,16 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       comoNavegador(HOST_A);
       const primera = await acciones.aceptarLaInvitacion({ token, clave: "intento-1" });
       expect(primera).toEqual({ ok: true, dato: { yaEstabaAceptada: false } });
-      expect(estado.borrados).toEqual(["__Host-pd_invitacion"]);
+      expect(estado.borrados).toEqual([]);
+      const vencida = estado.escrituras.find((x) => x.nombre === "__Host-pd_invitacion");
+      expect(vencida?.valor).toBe("");
+      expect(vencida?.opciones).toMatchObject({
+        maxAge: 0,
+        secure: true,
+        httpOnly: true,
+        path: "/",
+      });
+      expect(vencida?.opciones["domain"]).toBeUndefined();
       // Repetida (reintento con la MISMA clave, o con otra): el mismo resultado exitoso y una sola membresía.
       comoNavegador(HOST_A);
       const segunda = await acciones.aceptarLaInvitacion({ token, clave: "intento-1" });

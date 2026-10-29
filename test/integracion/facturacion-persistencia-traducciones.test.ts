@@ -12,6 +12,7 @@ import {
 import { err } from "../../src/primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../src/puertos/transacciones";
 import { crearBaseAparte } from "./entorno";
+import { crearPuntoDeVenta } from "./fiscal-apoyo";
 import {
   RENGLON_DE_121,
   asegurarSerie,
@@ -33,7 +34,7 @@ import {
 /**
  * Facturación F3: la TRADUCCIÓN de cada restricción y cada disparador de 0009 a su motivo del dominio, contra la base REAL.
  *  1. Exhaustiva: toda restricción (y todo índice único) de las seis tablas de la facturación tiene su entrada en el mapa, no
- *     sobra ninguna, y los 11 errores con nombre de los disparadores son exactamente los de la lista. Si una migración agrega
+ *     sobra ninguna, y los 13 errores con nombre de los disparadores son exactamente los de la lista. Si una migración agrega
  *     una restricción sin traducirla, o el mapa nombra una que no existe, esta prueba falla.
  *  2. Cada traducción que tiene motivo se fuerza con el error verdadero de la base (el mismo traductor del adaptador) y cae en
  *     su motivo; cada `NO_TRADUCIDA` de muestra sale tal cual, tipada, sin disfrazarse.
@@ -123,7 +124,7 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
       ).toEqual([]);
     });
 
-    it("los 12 nombres que lanzan los disparadores de la facturación son exactamente la lista, y cada uno tiene motivo", async () => {
+    it("los 13 nombres que lanzan los disparadores de la facturación son exactamente la lista, y cada uno tiene motivo", async () => {
       const cuerpos = await filas<{ prosrc: string }>(
         `select prosrc from pg_proc where pronamespace = 'public'::regnamespace and proname = any($1)`,
         [[...FUNCIONES_DE_LA_FACTURACION]],
@@ -134,7 +135,7 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
         for (const m of prosrc.matchAll(/CONSTRAINT = '([a-z_]+)'/g)) lanzadas.add(m[1] as string);
       }
       expect([...lanzadas].sort()).toEqual([...DISPARADORES_DE_LA_FACTURACION].sort());
-      expect(lanzadas.size).toBe(12);
+      expect(lanzadas.size).toBe(13);
       for (const nombre of lanzadas) {
         const motivo = (ERRORES_DE_FISCAL_POR_RESTRICCION as Record<string, string>)[nombre];
         expect(motivo, nombre).toBeDefined();
@@ -512,6 +513,28 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
       restriccion: "comprobante_sin_sucursal",
       tipo: "Check",
       provocar: () => provocar(insertando({}), { sinAlta: true }),
+    },
+    {
+      // 0017 (D-50): el punto de venta sigue ACTIVO pero su sucursal se cerró.
+      restriccion: "comprobante_sucursal_cerrada",
+      tipo: "Check",
+      provocar: async () => {
+        const x = await crearEscenario(dueno);
+        const cerrada = (
+          await dueno.query<{ id: string }>(
+            "insert into sucursal (empresa_id, nombre) values ($1, 'Cerrada') returning id",
+            [x.empresa],
+          )
+        ).rows[0]?.id as string;
+        const pv = await crearPuntoDeVenta(dueno, x, {
+          numero: 7,
+          sucursal: cerrada,
+          domicilio: x.domicilio,
+          activo: true,
+        });
+        await dueno.query("update sucursal set activa = false where id = $1", [cerrada]);
+        return provocar(insertando({ punto_de_venta_id: pv, punto_de_venta_numero: 7 }, { x }));
+      },
     },
     // ---- renglones y desglose -----------------------------------------------------------------------------------
     {

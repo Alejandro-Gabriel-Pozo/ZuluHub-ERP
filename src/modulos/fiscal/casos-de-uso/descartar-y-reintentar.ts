@@ -5,6 +5,7 @@ import type { EmpresaNoOpera } from "../../../contexto/estados";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { ComprobanteId } from "../dominio/identificadores";
+import { exigirComprobanteEnAlcance } from "../consultas/comprobante-en-alcance";
 import { traducirErroresDeFiscal } from "../persistencia/traducir";
 import { empresaOpera } from "./comun";
 import { encolarValidacion, type DependenciasDeFacturacion } from "./contrato-de-facturacion";
@@ -13,6 +14,9 @@ import { DECLARACIONES_DE_FACTURACION } from "./declaraciones-de-facturacion";
 /**
  * Descartar y reintentar un comprobante (spec H7 facturación §B.4.4). Cada uno en una transacción SERIALIZABLE,
  * con el guard primero y la auditoría en la misma transacción.
+ *
+ * Los dos aplican el MISMO alcance de sucursal que el Detalle (D-39, `exigirComprobanteEnAlcance`): el comprobante de una sucursal que la
+ * persona no tiene se responde `COMPROBANTE_NO_ENCONTRADO`, igual que uno que no existe.
  *
  * Descartar: solo un `PENDIENTE` o un `CONFLICTO` (nunca llegó a ARCA con ese número, o lo usó otro sistema), con
  * motivo; `EN_VALIDACION` o `INCIERTO` → `COMPROBANTE_YA_ENVIADO` (hay que esperar a ARCA); dos veces → «ya
@@ -66,6 +70,10 @@ export function armarDescartarComprobante({ transacciones, reglas }: Dependencia
         if (!permiso.ok) return permiso;
         const opera = await empresaOpera(tx, contexto.empresaId);
         if (!opera.ok) return opera;
+        // D-39 extendido: la sucursal del comprobante contra el alcance de la persona ANTES de leer nada más; si no corresponde, lo
+        // mismo que si no existiera (nunca «ya estaba», «versión desactualizada» ni «estado no descartable»).
+        const enAlcance = await exigirComprobanteEnAlcance(tx, contexto, entrada.comprobanteId);
+        if (!enAlcance.ok) return enAlcance;
         const c = await tx.comprobantes.obtener(contexto.empresaId, entrada.comprobanteId);
         if (c === null) return err("COMPROBANTE_NO_ENCONTRADO");
         if (c.estado === "DESCARTADO") return ok({ yaEstaba: true });
@@ -137,6 +145,9 @@ export function armarReintentarComprobante({ transacciones, reglas }: Dependenci
         const { empresaId } = contexto;
         const opera = await empresaOpera(tx, empresaId);
         if (!opera.ok) return opera;
+        // D-39 extendido (ver descartar): antes de leer el comprobante, y sin distinguir al ajeno del que no existe.
+        const enAlcance = await exigirComprobanteEnAlcance(tx, contexto, entrada.comprobanteId);
+        if (!enAlcance.ok) return enAlcance;
         const c = await tx.comprobantes.obtener(empresaId, entrada.comprobanteId);
         if (c === null) return err("COMPROBANTE_NO_ENCONTRADO");
         if (c.estado !== "PENDIENTE" && c.estado !== "CONFLICTO") {

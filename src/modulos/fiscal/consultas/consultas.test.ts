@@ -238,6 +238,13 @@ function armar(datos: Datos = {}) {
         return Promise.resolve(datos.puntosDeVenta ?? []);
       },
     },
+    // El estado de los certificados tiene sus pruebas en `estado-de-certificados.test.ts`: acá nadie lo toca.
+    emisores: {
+      obtener: () => Promise.reject(new Error("estas consultas no leen emisores")),
+    },
+    lecturasDeCertificados: {
+      actualesDelEmisor: () => Promise.reject(new Error("estas consultas no leen certificados")),
+    },
     intentos: {
       delComprobante: (...args) => {
         llamadas.intentos.push(args);
@@ -1052,6 +1059,65 @@ describe("modeloDeImpresion (la consulta)", () => {
       });
       expect(marcasPedidas).toEqual([]);
     }
+  });
+
+  describe("la sucursal del comprobante (D-39 extendido)", () => {
+    const A = sucursalId("s-a");
+    const B = sucursalId("s-b");
+    const NO_ENCONTRADO = { ok: false, error: "COMPROBANTE_NO_ENCONTRADO" };
+    const pedir = async (datos: Datos) => {
+      const { consultas, llamadas, marcasPedidas } = armar(datos);
+      const r = await consultas.modeloDeImpresion(contexto(), { comprobanteId: ID });
+      return { r, leidos: llamadas.comprobante.length, marcasPedidas };
+    };
+
+    it("gerente y administrador (todas) lo piden de cualquier sucursal, también cerrada; el operador, de las suyas, también cerradas", async () => {
+      expect((await pedir({ alcance: "TODAS", sucursalDelComprobante: B })).r.ok).toBe(true);
+      expect(
+        (await pedir({ alcance: "TODAS", sucursalDelComprobante: B, sucursalesCerradas: [B] })).r
+          .ok,
+      ).toBe(true);
+      expect((await pedir({ alcance: [A], sucursalDelComprobante: A })).r.ok).toBe(true);
+      expect(
+        (await pedir({ alcance: [B], sucursalDelComprobante: B, sucursalesCerradas: [B] })).r.ok,
+      ).toBe(true);
+    });
+
+    it("el operador NO lo pide de una sucursal que no tiene: lo mismo que si no existiera, sin leer el comprobante ni la marca", async () => {
+      for (const alcance of [[A], []] as const) {
+        const ajeno = await pedir({ alcance, sucursalDelComprobante: B });
+        expect(ajeno.r).toEqual(NO_ENCONTRADO);
+        expect(ajeno.leidos).toBe(0);
+        expect(ajeno.marcasPedidas).toEqual([]);
+      }
+      const inexistente = await pedir({
+        comprobante: null,
+        alcance: [A],
+        sucursalDelComprobante: B,
+      });
+      expect(inexistente.r).toEqual(NO_ENCONTRADO);
+    });
+
+    it("de una sucursal ajena responde NO_ENCONTRADO aunque el estado sea otro: no delata que existe (nada de COMPROBANTE_NO_AUTORIZADO)", async () => {
+      const ajeno = await pedir({
+        comprobante: guardado({ estado: "PENDIENTE" }),
+        alcance: [A],
+        sucursalDelComprobante: B,
+      });
+      expect(ajeno.r).toEqual(NO_ENCONTRADO);
+      const propio = await pedir({
+        comprobante: guardado({ estado: "PENDIENTE" }),
+        alcance: [A],
+        sucursalDelComprobante: A,
+      });
+      expect(propio.r).toEqual({ ok: false, error: "COMPROBANTE_NO_AUTORIZADO" });
+    });
+
+    it("sin sucursal legible (otra empresa, columna vacía) también es NO_ENCONTRADO", async () => {
+      const r = await pedir({ alcance: "TODAS", sucursalDelComprobante: null });
+      expect(r.r).toEqual(NO_ENCONTRADO);
+      expect(r.leidos).toBe(0);
+    });
   });
 
   it("pide la comprobante y la marca de la empresa del contexto", async () => {

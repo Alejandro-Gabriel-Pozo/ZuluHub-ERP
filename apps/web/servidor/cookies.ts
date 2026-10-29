@@ -40,6 +40,18 @@ export const OPCIONES_DE_COOKIE_DE_INVITACION = {
 export type AlmacenDeCookies = Pick<Awaited<ReturnType<typeof cookies>>, "set" | "delete">;
 
 /**
+ * Vence una cookie con los MISMOS atributos con que se fijó: vacía y `maxAge: 0`. Todo vencimiento de una `__Host-` pasa
+ * por acá: `delete(nombre)` no manda `Secure` y el navegador rechaza tocar una `__Host-` sin él (la cookie seguiría viva).
+ */
+export function vencerCookie(
+  almacen: Pick<AlmacenDeCookies, "set">,
+  nombre: string,
+  opciones: typeof OPCIONES_DE_COOKIE_DE_EMPRESA | typeof OPCIONES_DE_COOKIE_DE_INVITACION,
+): void {
+  almacen.set(nombre, "", { ...opciones, maxAge: 0 });
+}
+
+/**
  * Aplica los `Set-Cookie` que dejó la librería (sesión, estado del ingreso, borrado al cerrar sesión). Un
  * componente de servidor no puede: solo una acción o una ruta. Un `Set-Cookie` que no se entiende se
  * descarta (no se aplica a medias).

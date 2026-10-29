@@ -67,7 +67,7 @@ describe("cerrar sesión y la sucursal del listado", () => {
         opciones: { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 0 },
       },
     ]);
-    // La empresa y la invitación se siguen borrando como antes.
-    expect(estado.borrados.sort()).toEqual(["__Host-pd_empresa", "__Host-pd_invitacion"]);
+    // Ninguna `__Host-` se borra por nombre: la empresa y la invitación también se vencen con `set` (el detalle: cerrar-sesion-cookies.test.ts).
+    expect(estado.borrados).toEqual([]);
   });
 });
