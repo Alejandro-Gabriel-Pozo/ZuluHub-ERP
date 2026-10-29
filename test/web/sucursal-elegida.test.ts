@@ -297,3 +297,24 @@ describe("el archivo «use server» que la expone", () => {
     });
   });
 });
+
+describe("las sucursales para el alta de un punto de venta", () => {
+  it("solo las abiertas: una cerrada no llega a quien arma el formulario", async () => {
+    const { sucursalesAbiertasParaElegir } =
+      await import("../../apps/web/servidor/sucursal-elegida");
+    expect(await sucursalesAbiertasParaElegir({ empresaId: "empresa-1" } as never)).toEqual({
+      ok: true,
+      dato: [{ id: CENTRO, nombre: "Centro", activa: true }],
+    });
+  });
+
+  it("si todas están cerradas, la lista queda vacía", async () => {
+    mundo.sucursales = [{ id: NORTE, nombre: "Norte", activa: false }];
+    const { sucursalesAbiertasParaElegir } =
+      await import("../../apps/web/servidor/sucursal-elegida");
+    expect(await sucursalesAbiertasParaElegir({ empresaId: "empresa-1" } as never)).toEqual({
+      ok: true,
+      dato: [],
+    });
+  });
+});

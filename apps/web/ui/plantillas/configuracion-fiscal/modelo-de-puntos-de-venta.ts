@@ -21,14 +21,26 @@ export type PuntoParaConfigurar = Readonly<{
   version: number;
 }>;
 
-type Marca = Readonly<{ texto: string; tono: TonoDeEstado | "neutro" }>;
+/** Una marca del punto de venta: su rótulo visible («Estado», «Ambiente»), su valor y el tono. */
+type Marca = Readonly<{ rotulo: string; texto: string; tono: TonoDeEstado | "neutro" }>;
 
-const marcaDeActivo = (activo: boolean): Marca =>
-  activo
-    ? { texto: texto({}, "fiscal.pantalla.config_pv_activo"), tono: "exito" }
-    : { texto: texto({}, "fiscal.pantalla.config_pv_no_activo"), tono: "neutro" };
+const marcaDeActivo = (activo: boolean): Marca => {
+  // El rótulo «Estado» ya existe en el Listado: una regla, un lugar.
+  const rotulo = texto({}, "fiscal.pantalla.listado_rotulo_estado");
+  return activo
+    ? { rotulo, texto: texto({}, "fiscal.pantalla.config_pv_activo"), tono: "exito" }
+    : { rotulo, texto: texto({}, "fiscal.pantalla.config_pv_no_activo"), tono: "neutro" };
+};
+
+/**
+ * El aviso de pruebas, solo para un punto de venta en homologación: sin él, una factura de pruebas se confunde con una real.
+ * Chequeo: `test/web/configuracion-fiscal-puntos-de-venta-modelo.test.ts` (aparece solo en pruebas).
+ */
+const avisoDePruebas = (ambiente: PuntoParaConfigurar["ambiente"]): string | null =>
+  ambiente === "HOMOLOGACION" ? texto({}, "fiscal.pantalla.config_pv_aviso_pruebas") : null;
 
 const marcaDeAmbiente = (ambiente: PuntoParaConfigurar["ambiente"]): Marca => ({
+  rotulo: texto({}, "fiscal.pantalla.config_pv_rotulo_ambiente"),
   texto: texto(
     {},
     ambiente === "PRODUCCION"
@@ -50,6 +62,8 @@ export type FilaDePuntoDeVenta = Readonly<{
   sucursal: string;
   activo: Marca;
   ambiente: Marca;
+  /** «Las facturas de pruebas no tienen valor fiscal.», solo en ambiente de pruebas; `null` en producción. */
+  avisoDePruebas: string | null;
 }>;
 
 /** La lista: todos los del emisor, activos o no (D-60), en el orden en que llegan (de menor a mayor número). */
@@ -63,6 +77,7 @@ export function armarLaListaDePuntosDeVenta(
     sucursal: sucursalParaMostrar(p.sucursal),
     activo: marcaDeActivo(p.activo),
     ambiente: marcaDeAmbiente(p.ambiente),
+    avisoDePruebas: avisoDePruebas(p.ambiente),
   }));
 }
 
@@ -71,6 +86,7 @@ export type PuntoDeVentaArmado = Readonly<{
   sucursal: string;
   activo: Marca;
   ambiente: Marca;
+  avisoDePruebas: string | null;
   /** `true` si todavía está en pruebas: solo ahí se ofrece «Pasar a producción» (D-48: de producción no se vuelve). */
   puedePasarAProduccion: boolean;
 }>;
@@ -81,6 +97,7 @@ export function armarElPuntoDeVenta(p: PuntoParaConfigurar): PuntoDeVentaArmado 
     sucursal: sucursalParaMostrar(p.sucursal),
     activo: marcaDeActivo(p.activo),
     ambiente: marcaDeAmbiente(p.ambiente),
+    avisoDePruebas: avisoDePruebas(p.ambiente),
     puedePasarAProduccion: p.ambiente === "HOMOLOGACION",
   };
 }

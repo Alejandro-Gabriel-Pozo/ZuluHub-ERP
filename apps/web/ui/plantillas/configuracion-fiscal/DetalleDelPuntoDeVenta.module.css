@@ -10,6 +10,16 @@
   background: var(--color-superficie-elevada);
 }
 
+.rotulo {
+  color: var(--color-texto-suave);
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
 .destacado {
   font-weight: var(--tipo-peso-fuerte);
   overflow-wrap: anywhere;

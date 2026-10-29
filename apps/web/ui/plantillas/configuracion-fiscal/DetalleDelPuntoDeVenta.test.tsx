@@ -87,6 +87,19 @@ describe("un punto de venta: accesibilidad y medidas", () => {
     },
   );
 
+  it("«Estado» y «Ambiente» tienen su rótulo visible; el aviso de pruebas aparece solo en ambiente de pruebas", async () => {
+    const enPruebas = await render(pantalla());
+    await expect.element(page.getByText("Estado", { exact: true })).toBeVisible();
+    await expect.element(page.getByText("Ambiente", { exact: true })).toBeVisible();
+    await expect
+      .element(page.getByText("Las facturas de pruebas no tienen valor fiscal."))
+      .toBeVisible();
+    await enPruebas.unmount();
+    await render(pantalla({ ambiente: "PRODUCCION" }));
+    expect(document.body.textContent).not.toContain("valor fiscal");
+    await expect.element(page.getByText("Producción", { exact: true })).toBeVisible();
+  });
+
   it("en producción ya no se ofrece pasar a producción", async () => {
     await render(pantalla({ ambiente: "PRODUCCION" }));
     await expect.element(page.getByText("Producción", { exact: true })).toBeVisible();
@@ -116,6 +129,16 @@ describe("activar y desactivar", () => {
     expect(desactivar).toHaveBeenCalledTimes(1);
     expect(desactivar).toHaveBeenCalledWith({ puntoDeVentaId: PUNTO.id });
     expect(activar).not.toHaveBeenCalled();
+  });
+
+  it("mientras envía, el botón dice «Guardando…»", async () => {
+    const abierta = puerta();
+    desactivar.mockReturnValue(abierta.espera);
+    await render(pantalla());
+    tocar(page.getByRole("button", { name: "Desactivar" }));
+    await expect.element(page.getByRole("button", { name: "Guardando…" })).toBeVisible();
+    abierta.soltar(BIEN);
+    await vi.waitFor(() => expect(router.refresh).toHaveBeenCalled());
   });
 
   it("«Activar» (en uno no activo) manda solo el id a su acción", async () => {
@@ -152,7 +175,8 @@ describe("activar y desactivar", () => {
     await expect
       .element(page.getByRole("status").first())
       .toHaveTextContent("Verificando si se registró…");
-    await expect.element(page.getByRole("button", { name: "Desactivar" })).toBeDisabled();
+    // Mientras verifica, el botón dice «Guardando…» y no se puede tocar.
+    await expect.element(page.getByRole("button", { name: "Guardando…" })).toBeDisabled();
     segunda.soltar(BIEN);
     await vi.waitFor(() => expect(router.refresh).toHaveBeenCalled());
     expect(desactivar.mock.calls[1]).toEqual(desactivar.mock.calls[0]);
@@ -263,6 +287,18 @@ describe("el cambio de ambiente y su ventana de confirmación (D-48)", () => {
       versionEsperada: 7,
     });
     await vi.waitFor(() => expect(document.activeElement).toBe(boton.element()));
+  });
+
+  it("mientras cambia el ambiente, el botón de la ventana dice «Guardando…»", async () => {
+    const abierta = puerta();
+    cambiarAmbiente.mockReturnValue(abierta.espera);
+    await render(pantalla());
+    tocar(pasarAProduccion());
+    await expect.element(dialogo()).toBeVisible();
+    tocar(enLaVentana("Pasar a producción"));
+    await expect.element(enLaVentana("Guardando…")).toBeVisible();
+    abierta.soltar(BIEN);
+    await expect.element(dialogo()).not.toBeInTheDocument();
   });
 
   it("mientras envía la ventana no se cierra con Escape", async () => {

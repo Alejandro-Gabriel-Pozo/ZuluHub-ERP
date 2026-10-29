@@ -41,7 +41,7 @@ describe("el cartel de los datos fiscales (D-64)", () => {
     ["SIN_CARGAR", "FALTA_CARGAR"],
     ["BORRADOR", "PENDIENTE"],
     ["VIGENTES", null],
-    // SUPUESTO declarado: D-61 sacó la vigencia futura y D-64 no lo define; se dice «Pendiente».
+    // Lo confirmó el backend (D-61: la web ya no puede producirlo): se sigue diciendo «Pendiente».
     ["SOLO_FUTUROS", "PENDIENTE"],
   ] as const)("%s lleva %s", (entrada, esperado) => {
     expect(cartelDeDatosFiscales(entrada)).toBe(esperado);
@@ -118,6 +118,23 @@ describe("el cartel del certificado (D-64) según los ambientes en uso", () => {
       ),
     ).toBe("FALTA_CARGAR");
   });
+});
+
+describe("el certificado sin punto de venta activo (respuesta del dueño, 2026-10-29: «sigue faltando»)", () => {
+  // Producción cargada y vigente: lo único que puede faltar es el punto de venta.
+  const PRODUCCION_VIGENTE = [cert("PRODUCCION", "VIGENTE")];
+
+  it.each([
+    ["SIN_ACTIVOS", "Ninguno activo"],
+    ["SIN_PUNTOS", "Falta crear uno"],
+  ] as const)(
+    "con %s la fila de puntos de venta lleva «%s» y la lista cuenta como «falta algo»",
+    (puntos, cartel) => {
+      const filas = armarLaLista(estado({ puntos, enUso: [], certificados: PRODUCCION_VIGENTE }));
+      expect(filas.find((f) => f.clave === "PUNTOS_DE_VENTA")?.cartel?.texto).toBe(cartel);
+      expect(filas.some((f) => f.cartel !== null)).toBe(true);
+    },
+  );
 });
 
 describe("las tres filas de la lista", () => {

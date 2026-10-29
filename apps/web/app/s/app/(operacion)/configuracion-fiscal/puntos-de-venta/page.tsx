@@ -22,6 +22,7 @@ export default async function PaginaDePuntosDeVenta() {
             },
           ]}
           filas={armarLaListaDePuntosDeVenta(puntos.dato.items)}
+          vacio={texto({}, "fiscal.pantalla.config_pv_vacio")}
           ayuda={texto({}, "fiscal.pantalla.config_pv_ayuda")}
           agregar={{
             texto: texto({}, "fiscal.pantalla.config_pv_agregar"),

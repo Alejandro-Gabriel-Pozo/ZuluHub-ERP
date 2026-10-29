@@ -8,6 +8,8 @@ import estilos from "./PantallaDePuntosDeVenta.module.css";
 export type PropsDePantallaDePuntosDeVenta = Readonly<{
   migas: readonly TramoDeMigas[];
   filas: readonly FilaDePuntoDeVenta[];
+  /** «Todavía no hay puntos de venta.», cuando no hay ninguno. */
+  vacio: string;
   /** «Tocá un punto de venta para editarlo, activarlo o desactivarlo.» */
   ayuda: string;
   /** «Agregar punto de venta» y adónde lleva. */
@@ -16,19 +18,22 @@ export type PropsDePantallaDePuntosDeVenta = Readonly<{
 
 /**
  * La lista de puntos de venta (PROTO-PV, pantalla 1): todos los del emisor, también los que no están activos (D-60), cada uno con su
- * número de cinco dígitos, su sucursal, si está activo y su ambiente; tocarlo abre su pantalla. Sin ninguno, solo queda «Agregar»
- * (no hay un texto aprobado para el vacío).
+ * número de cinco dígitos, su sucursal, su estado y su ambiente (cada uno con su rótulo) y, en pruebas, el aviso de que no tiene valor
+ * fiscal; tocarlo abre su pantalla. Sin ninguno, el texto del vacío y «Agregar».
  */
 export function PantallaDePuntosDeVenta({
   migas,
   filas,
+  vacio,
   ayuda,
   agregar,
 }: PropsDePantallaDePuntosDeVenta) {
   return (
     <div className={estilos["raiz"]}>
       <MigasDeConfiguracion tramos={migas} />
-      {filas.length === 0 ? null : (
+      {filas.length === 0 ? (
+        <Texto variante="suave">{vacio}</Texto>
+      ) : (
         <>
           <ul className={estilos["lista"]}>
             {filas.map((fila) => (
@@ -37,10 +42,17 @@ export function PantallaDePuntosDeVenta({
                   <span className={estilos["datos"]}>
                     <span className={estilos["numero"]}>{fila.numero}</span>
                     <span className={estilos["sucursal"]}>{fila.sucursal}</span>
+                    {fila.avisoDePruebas === null ? null : (
+                      <span className={estilos["aviso"]}>{fila.avisoDePruebas}</span>
+                    )}
                   </span>
                   <span className={estilos["marcas"]}>
-                    <Insignia tono={fila.activo.tono}>{fila.activo.texto}</Insignia>
-                    <Insignia tono={fila.ambiente.tono}>{fila.ambiente.texto}</Insignia>
+                    {[fila.activo, fila.ambiente].map((marca) => (
+                      <span key={marca.rotulo} className={estilos["marca"]}>
+                        <span className={estilos["rotulo"]}>{marca.rotulo}</span>
+                        <Insignia tono={marca.tono}>{marca.texto}</Insignia>
+                      </span>
+                    ))}
                   </span>
                 </a>
               </li>

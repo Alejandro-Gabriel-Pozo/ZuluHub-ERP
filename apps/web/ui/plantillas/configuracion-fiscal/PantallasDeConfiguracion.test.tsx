@@ -59,6 +59,7 @@ const puntos = (items = PUNTOS) => (
   <PantallaDePuntosDeVenta
     migas={MIGAS}
     filas={armarLaListaDePuntosDeVenta(items)}
+    vacio="Todavía no hay puntos de venta."
     ayuda="Tocá un punto de venta para editarlo, activarlo o desactivarlo."
     agregar={{
       texto: "Agregar punto de venta",
@@ -133,10 +134,36 @@ describe("las filas y el teclado", () => {
     expect(getComputedStyle(agregar).outlineStyle).toBe("solid");
   });
 
-  it("sin puntos de venta: solo «Agregar punto de venta», sin la ayuda de tocar uno", async () => {
+  it("sin puntos de venta: «Todavía no hay puntos de venta.» y «Agregar punto de venta» debajo, sin la ayuda de tocar uno", async () => {
     await render(puntos([]));
-    await expect.element(page.getByRole("link", { name: "Agregar punto de venta" })).toBeVisible();
+    const vacio = page.getByText("Todavía no hay puntos de venta.");
+    await expect.element(vacio).toBeVisible();
+    const agregar = page.getByRole("link", { name: "Agregar punto de venta" });
+    await expect.element(agregar).toBeVisible();
+    expect(
+      vacio.element().compareDocumentPosition(agregar.element()) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(document.body.textContent).not.toContain("Tocá un punto de venta");
+  });
+
+  it("con puntos de venta no se dice que no hay", async () => {
+    await render(puntos());
+    expect(document.body.textContent).not.toContain("Todavía no hay");
+  });
+
+  it("cada punto de venta lleva los rótulos «Estado» y «Ambiente» a la vista; el aviso solo en los de pruebas", async () => {
+    await ventana(390);
+    await render(enArmazon("Puntos de venta", puntos()));
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    legibleYTocable();
+    expect(page.getByText("Estado", { exact: true }).elements()).toHaveLength(3);
+    expect(page.getByText("Ambiente", { exact: true }).elements()).toHaveLength(3);
+    // El 1 es de producción; el 2 y el 3, de pruebas.
+    expect(
+      page.getByText("Las facturas de pruebas no tienen valor fiscal.").elements(),
+    ).toHaveLength(2);
+    const primera = document.querySelector("li") as HTMLElement;
+    expect(primera.textContent).not.toContain("valor fiscal");
   });
 
   it("las migas son un enlace por tramo, separados por un símbolo que el lector de pantalla no lee", async () => {

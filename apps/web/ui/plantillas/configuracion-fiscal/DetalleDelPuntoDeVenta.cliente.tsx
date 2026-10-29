@@ -120,10 +120,14 @@ export function DetalleDelPuntoDeVenta({
         <span className={estilos["destacado"]}>{armado.sucursal}</span>
       </div>
       <div className={estilos["tarjeta"]}>
-        <Insignia tono={armado.activo.tono}>{armado.activo.texto}</Insignia>
+        <span className={estilos["marca"]}>
+          <span className={estilos["rotulo"]}>{armado.activo.rotulo}</span>
+          <Insignia tono={armado.activo.tono}>{armado.activo.texto}</Insignia>
+        </span>
         <Boton
           variante="secundaria"
           enviando={estadoDelPunto.envio.enCurso}
+          textoEnviando={texto({}, "fiscal.pantalla.config_pv_guardando")}
           deshabilitado={!estadoDelPunto.envio.enCurso && estadoDelPunto.envio.bloqueado}
           motivo={estadoDelPunto.envio.motivoQueNoPuede}
           alTocar={() => {
@@ -139,7 +143,10 @@ export function DetalleDelPuntoDeVenta({
         </Boton>
       </div>
       <div className={estilos["tarjeta"]}>
-        <Insignia tono={armado.ambiente.tono}>{armado.ambiente.texto}</Insignia>
+        <span className={estilos["marca"]}>
+          <span className={estilos["rotulo"]}>{armado.ambiente.rotulo}</span>
+          <Insignia tono={armado.ambiente.tono}>{armado.ambiente.texto}</Insignia>
+        </span>
         {armado.puedePasarAProduccion ? (
           <span ref={envolturaDelBoton}>
             <Boton
@@ -153,6 +160,7 @@ export function DetalleDelPuntoDeVenta({
           </span>
         ) : null}
       </div>
+      {armado.avisoDePruebas === null ? null : <Texto>{armado.avisoDePruebas}</Texto>}
       <div>
         <Boton
           variante="secundaria"
@@ -186,6 +194,7 @@ export function DetalleDelPuntoDeVenta({
             </Boton>
             <Boton
               enviando={ambiente.envio.enCurso}
+              textoEnviando={texto({}, "fiscal.pantalla.config_pv_guardando")}
               deshabilitado={!ambiente.envio.enCurso && ambiente.envio.bloqueado}
               motivo={ambiente.envio.motivoQueNoPuede}
               alTocar={() => {

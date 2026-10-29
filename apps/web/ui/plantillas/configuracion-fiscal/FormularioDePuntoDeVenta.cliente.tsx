@@ -214,6 +214,7 @@ export function FormularioDePuntoDeVenta({
           <Boton
             tipo="submit"
             enviando={envio.enCurso}
+            textoEnviando={texto({}, "fiscal.pantalla.config_pv_guardando")}
             deshabilitado={!envio.enCurso && envio.bloqueado}
             motivo={envio.motivoQueNoPuede}
           >

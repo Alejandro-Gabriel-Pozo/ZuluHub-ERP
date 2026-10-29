@@ -265,6 +265,23 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
     porDefecto: "Tocá un punto de venta para editarlo, activarlo o desactivarlo.",
     largoMaximo: 120,
   },
+  // RESPUESTA-DUEÑO-2026-10-29 (segundo cuestionario), punto 2: el texto de la lista de Puntos de venta cuando no hay ninguno.
+  "fiscal.pantalla.config_pv_vacio": { porDefecto: "Todavía no hay puntos de venta." },
+  // RESPUESTA-DUEÑO-2026-10-29 (segundo cuestionario), punto 3: el rótulo «Ambiente» y el aviso de pruebas. El rótulo «Estado» es
+  // `listado_rotulo_estado` (mismo texto: una regla, un lugar).
+  "fiscal.pantalla.config_pv_rotulo_ambiente": { porDefecto: "Ambiente" },
+  "fiscal.pantalla.config_pv_aviso_pruebas": {
+    porDefecto: "Las facturas de pruebas no tienen valor fiscal.",
+    largoMaximo: 120,
+  },
+  // RESPUESTA-DUEÑO-2026-10-29 (segundo cuestionario), punto 5: el texto del botón mientras guarda (alta, edición, cambio de
+  // ambiente, activar y desactivar).
+  "fiscal.pantalla.config_pv_guardando": { porDefecto: "Guardando…" },
+  // RESPUESTA-DUEÑO-2026-10-29 (segundo cuestionario), punto 1: el pendiente de Inicio que lleva a la lista de Configuración fiscal.
+  "fiscal.pantalla.config_pendiente_inicio": {
+    porDefecto: "Completá la configuración fiscal.",
+    largoMaximo: 120,
+  },
   // PROTO-PV, pantalla 3 («Punto de venta 00002»): el título de un punto de venta. Lo aprobó el prototipo, no la lista del cuestionario.
   "fiscal.pantalla.config_pv_titulo_con_numero": {
     porDefecto: "Punto de venta {numero}",

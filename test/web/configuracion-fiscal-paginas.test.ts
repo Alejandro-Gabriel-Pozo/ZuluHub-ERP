@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { errorDeCodigo, type Respuesta } from "../../src/capacidades/experiencia/respuesta";
+import { err, ok } from "../../src/primitivas/resultado/resultado";
 
 /// <reference path="../../apps/web/ui/css-modules.d.ts" />
 
@@ -14,6 +15,8 @@ vi.mock("next/navigation", () => ({
   redirect: vi.fn(),
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
+// Las sucursales pasan por el servidor REAL (`sucursal-elegida.ts`): lo simulado es la consulta de la composición, así la página prueba
+// que el alta no recibe las cerradas.
 vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
     consultasDeEmpresas: () => ({
@@ -22,6 +25,11 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
           ok: true,
           valor: { acciones: [], modulos: { activos: [], enSoloLectura: [] } },
         }),
+      sucursalesElegibles: () => {
+        servidor.pedidos.push("sucursales");
+        const dada = servidor.sucursales as Respuesta<unknown>;
+        return Promise.resolve(dada.ok ? ok(dada.dato) : err({ codigo: dada.error.codigo }));
+      },
     }),
   },
 }));
@@ -47,14 +55,9 @@ vi.mock("../../apps/web/servidor/configuracion-fiscal", () => ({
   activarElPuntoDeVenta: () => Promise.resolve(null),
   desactivarElPuntoDeVenta: () => Promise.resolve(null),
 }));
-vi.mock("../../apps/web/servidor/sucursal-elegida", () => ({
-  sucursalesParaElegir: () => {
-    servidor.pedidos.push("sucursales");
-    return Promise.resolve(servidor.sucursales);
-  },
-}));
 vi.mock("../../apps/web/servidor/facturacion", () => ({ cambiarElAmbiente: () => null }));
 vi.mock("../../apps/web/servidor/sesion", () => ({
+  dependenciasDeSesion: { respuesta: { registrar: () => undefined } },
   empresaDelPedido: () =>
     Promise.resolve({
       puerta: { marca: { nombre: "Marca de prueba" } },
@@ -211,11 +214,27 @@ describe("la página «Puntos de venta»", () => {
     );
   });
 
-  it("sin ninguno: solo «Agregar punto de venta» (no hay un texto aprobado para el vacío)", async () => {
+  it("sin ninguno: «Todavía no hay puntos de venta.» y el botón «Agregar punto de venta» debajo", async () => {
     servidor.puntos = puntos([]);
     const t = texto(await html("/puntos-de-venta/page"));
-    expect(t).toContain("Agregar punto de venta");
+    expect(t).toContain("Todavía no hay puntos de venta. Agregar punto de venta");
     expect(t).not.toContain("Tocá un punto de venta");
+  });
+
+  it("con puntos de venta no aparece el texto del vacío", async () => {
+    expect(texto(await html("/puntos-de-venta/page"))).not.toContain("Todavía no hay");
+  });
+
+  it("cada punto de venta lleva los rótulos «Estado» y «Ambiente»; el aviso de pruebas, solo en el de pruebas", async () => {
+    servidor.puntos = puntos([PV(ID, 2), PV(ID_2, 3, { ambiente: "PRODUCCION" })]);
+    const marcado = await html("/puntos-de-venta/page");
+    const t = texto(marcado);
+    expect(t.match(/Estado/g)).toHaveLength(2);
+    expect(t.match(/Ambiente/g)).toHaveLength(2);
+    expect(t).toContain("Estado Activo");
+    expect(t).toContain("Ambiente Pruebas");
+    expect(t).toContain("Ambiente Producción");
+    expect(t.match(/Las facturas de pruebas no tienen valor fiscal\./g)).toHaveLength(1);
   });
 
   it("sin permiso o con error: el texto del catálogo, sin «Agregar»", async () => {
@@ -247,7 +266,9 @@ describe("la página «Agregar punto de venta»", () => {
       expect(t).toContain(rotulo);
     }
     expect(t).toContain("Sucursal Norte");
-    expect(t).toContain("Sucursal Sur · Cerrada");
+    // Respuesta del dueño 2026-10-29: una sucursal cerrada no se ofrece para un punto de venta nuevo.
+    expect(t).not.toContain("Sucursal Sur");
+    expect(marcado).not.toContain("s-sur");
     // Las 24 provincias.
     expect(marcado.match(/<option value="AR-/g)).toHaveLength(24);
   });
@@ -278,6 +299,17 @@ describe("la página de un punto de venta", () => {
     expect(t).toContain("Desactivar");
     expect(t).toContain("Pasar a producción");
     expect(t).toContain("Editar");
+  });
+
+  it("lleva los rótulos «Estado» y «Ambiente»; el aviso de pruebas aparece solo en pruebas", async () => {
+    const enPruebas = texto(await html("/puntos-de-venta/[id]/page", { id: ID }));
+    expect(enPruebas).toContain("Estado Activo");
+    expect(enPruebas).toContain("Ambiente Pruebas");
+    expect(enPruebas).toContain("Las facturas de pruebas no tienen valor fiscal.");
+    servidor.puntos = puntos([PV(ID, 2, { ambiente: "PRODUCCION" })]);
+    const enProduccion = texto(await html("/puntos-de-venta/[id]/page", { id: ID }));
+    expect(enProduccion).toContain("Ambiente Producción");
+    expect(enProduccion).not.toContain("valor fiscal");
   });
 
   it("uno no activo ofrece Activar; uno en producción ya no ofrece pasar a producción", async () => {
@@ -322,6 +354,14 @@ describe("la página de un punto de venta", () => {
       busqueda: { editar: "1" },
     });
     expect(marcado).toMatch(/<option value="s-norte"[^>]*>Sucursal Norte/);
+  });
+
+  it("al editar un punto de venta cuya sucursal está cerrada, no cambia nada: se sigue ofreciendo, dicha como cerrada", async () => {
+    servidor.puntos = puntos([
+      PV(ID, 2, { sucursal: { id: "s-sur", nombre: "Sucursal Sur", activa: false } }),
+    ]);
+    const marcado = await html("/puntos-de-venta/[id]/page", { id: ID, busqueda: { editar: "1" } });
+    expect(marcado).toMatch(/<option value="s-sur"[^>]*>Sucursal Sur · Cerrada/);
   });
 
   it("otro valor de «editar» no abre la edición", async () => {

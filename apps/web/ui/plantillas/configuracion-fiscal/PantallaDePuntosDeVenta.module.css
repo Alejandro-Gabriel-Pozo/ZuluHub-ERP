@@ -51,3 +51,18 @@
   align-items: flex-end;
   gap: var(--espacio-1);
 }
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.rotulo {
+  color: var(--color-texto-suave);
+}
+
+.aviso {
+  color: var(--color-texto);
+  overflow-wrap: anywhere;
+}

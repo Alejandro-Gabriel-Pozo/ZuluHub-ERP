@@ -44,8 +44,8 @@ const TONO_DEL_CARTEL: Readonly<Record<CartelDeLaLista, TonoDeEstado>> = {
 };
 
 /**
- * D-64. SOLO_FUTUROS (datos que rigen más adelante) no tiene cartel definido: D-61 sacó la vigencia futura, así que no debería
- * darse. SUPUESTO: se dice «Pendiente» (no «completo»), a la espera de la respuesta del dueño.
+ * D-64. SOLO_FUTUROS (datos que rigen más adelante) dice «Pendiente» (no «completo»): lo confirmó el backend (D-61: la web ya no
+ * puede producirlo).
  */
 export function cartelDeDatosFiscales(
   estado: EstadoParaLaLista["datosFiscales"]["estado"],

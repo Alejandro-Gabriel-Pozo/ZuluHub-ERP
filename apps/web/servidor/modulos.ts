@@ -1,7 +1,12 @@
 import "server-only";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { texto } from "../../../src/capacidades/vocabulario/vocabulario";
+import type { ClaveAccion } from "../../../src/capacidades/modulos/catalogo";
 import { web } from "./composicion";
+import {
+  RUTAS_DE_CONFIGURACION,
+  armarLaLista,
+} from "../ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { RUTA_DEL_LISTADO } from "../ui/plantillas/facturacion/filtros-del-listado";
 import type { DestinoDeModulo } from "../ui/plantillas/sesion/ArmazonDeOperacion";
 import type { Pendiente } from "../ui/plantillas/sesion/PantallaDeInicio";
@@ -48,7 +53,56 @@ async function permisosDeLaPersona(contexto: ContextoOperativo) {
   }
 }
 
-/** La ranura «lo que falta» del inicio (en v1 [FAC]: datos fiscales, punto de venta, certificado). Vacía hasta entonces. */
-export function pendientesDeLaEmpresa(): readonly Pendiente[] {
-  return [];
+/**
+ * La acción con la que ya se protege la pantalla de Configuración fiscal: la consulta de su lista la exige al guard
+ * (`estadoDeLaConfiguracionFiscal`, solo el gerente). Previene: ofrecer la entrada a quien el servidor va a rechazar. Chequeo:
+ * `test/web/modulos-de-la-barra.test.ts` la compara con la declaración de la consulta.
+ */
+export const ACCION_DE_CONFIGURACION_FISCAL: ClaveAccion = "datos_fiscales.editar";
+
+/**
+ * ¿La persona puede entrar a Configuración fiscal? Mismo permiso que la pantalla, según `permisosDelActor`. Si no se pudieron leer
+ * los permisos, `false` (cierra, no abre). Ocultar no es autorizar: la pantalla vuelve a pasar por el guard.
+ */
+export async function puedeVerLaConfiguracionFiscal(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && permisos.acciones.includes(ACCION_DE_CONFIGURACION_FISCAL);
+}
+
+/** De un error, solo su TIPO para el registro: nunca el mensaje ni datos (pueden traer algo de la empresa). */
+const tipoDelError = (excepcion: unknown): string =>
+  excepcion instanceof Error ? excepcion.name : typeof excepcion;
+
+/**
+ * La ranura «lo que falta» del inicio. Hoy un solo pendiente: «Completá la configuración fiscal.», que lleva a la lista, si la
+ * persona tiene el permiso de esa pantalla Y alguna fila de la lista lleva cartel (el mismo cálculo que la lista: `armarLaLista`).
+ * Respuesta del dueño 2026-10-29 (segundo cuestionario). Si la lectura falla no muestra nada y deja en el registro del servidor el
+ * TIPO del error (el código del rechazo o el nombre de la excepción), nunca el mensaje.
+ */
+export async function pendientesDeLaEmpresa(
+  contexto: ContextoOperativo,
+): Promise<readonly Pendiente[]> {
+  if (!(await puedeVerLaConfiguracionFiscal(contexto))) return [];
+  try {
+    // Se carga recién acá: solo Inicio la usa, y así las demás pantallas (que pasan por este archivo en la barra) no arrastran la
+    // composición fiscal entera.
+    const { cargarElEstadoDeLaConfiguracion } = await import("./configuracion-fiscal");
+    const estado = await cargarElEstadoDeLaConfiguracion(contexto);
+    if (!estado.ok) {
+      console.error(`[inicio] no se pudo leer la configuración fiscal: ${estado.error.codigo}`);
+      return [];
+    }
+    return armarLaLista(estado.dato).some((fila) => fila.cartel !== null)
+      ? [
+          {
+            id: "configuracion-fiscal",
+            titulo: texto({}, "fiscal.pantalla.config_pendiente_inicio"),
+            href: RUTAS_DE_CONFIGURACION.lista,
+          },
+        ]
+      : [];
+  } catch (excepcion) {
+    console.error(`[inicio] no se pudo leer la configuración fiscal: ${tipoDelError(excepcion)}`);
+    return [];
+  }
 }
