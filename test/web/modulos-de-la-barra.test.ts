@@ -8,9 +8,14 @@ import { describe, expect, it, vi } from "vitest";
  */
 vi.mock("server-only", () => ({}));
 
+const RUTA = "../../apps/web/servidor/modulos";
+// Ruta en una variable: el tipado de la raíz no arrastra los archivos del navegador que importa la barra.
+const cargar = (ruta: string): Promise<{ destinosDeModulos: () => readonly { clave: string }[] }> =>
+  import(/* @vite-ignore */ ruta);
+
 describe("destinosDeModulos (pendiente de T-D)", () => {
   it("declara «Comprobantes» sin filtrar por permiso ni por módulo habilitado; el servidor rechaza lo que no corresponde", async () => {
-    const { destinosDeModulos } = await import("../../apps/web/servidor/modulos");
+    const { destinosDeModulos } = await cargar(RUTA);
     expect(destinosDeModulos().map((d) => d.clave)).toEqual(["comprobantes"]);
   });
 });
