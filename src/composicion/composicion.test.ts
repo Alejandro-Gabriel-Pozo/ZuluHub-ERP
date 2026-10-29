@@ -349,9 +349,22 @@ describe("con el entorno completo", () => {
       "reintentarComprobante",
       "resincronizarSerie",
     ]);
+    // La configuración fiscal del gerente (D-43): solo los dos temas con acciones y sin la regla del emisor.
+    expect(Object.keys(web.casosDeUsoDeConfiguracionFiscal()).sort()).toEqual([
+      "activarPuntoDeVenta",
+      "confirmarDatosFiscales",
+      "crearPuntoDeVenta",
+      "desactivarPuntoDeVenta",
+      "editarPuntoDeVenta",
+      "guardarBorradorDeDatosFiscales",
+    ]);
     expect(Object.keys(web.consultasDeFacturacion()).sort()).toEqual([
+      "datosFiscalesDelEmisor",
+      "estadoDeCertificados",
+      "estadoDeLaConfiguracionFiscal",
       "listarComprobantes",
       "listarPuntosDeVentaDeLaSucursal",
+      "puntosDeVentaDelEmisor",
       "verComprobante",
     ]);
   });
