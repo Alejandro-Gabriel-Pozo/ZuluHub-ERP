@@ -393,6 +393,7 @@ describe("con el entorno completo", () => {
     expect(Object.keys(web.consultasDeEmpresas()).sort()).toEqual([
       "fichaDeSucursal",
       "listarSucursales",
+      "sucursalesElegibles",
     ]);
     expect(Object.keys(web.casosDeUsoDeIdentidad())).toEqual(
       expect.arrayContaining(["invitarUsuario", "aceptarInvitacion", "revocarInvitacion"]),

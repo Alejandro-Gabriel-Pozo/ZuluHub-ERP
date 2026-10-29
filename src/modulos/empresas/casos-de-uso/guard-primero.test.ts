@@ -107,6 +107,7 @@ const LLAMADAS_DE_CONSULTAS: Record<
 > = {
   listarSucursales: (c) => c.listarSucursales(contexto, { incluirInactivas: true }),
   fichaDeSucursal: (c) => c.fichaDeSucursal(contexto, { sucursalId: sucursalId("s-1") }),
+  sucursalesElegibles: (c) => c.sucursalesElegibles(contexto),
 };
 
 /** Pasar el guard = tocar algo que no es la autorización (la transacción vigilada corta ahí). */
@@ -154,7 +155,11 @@ describe("P7: el guard va primero en cada caso de uso y consulta de empresas", (
       "editarSucursal",
       "reactivarSucursal",
     ]);
-    expect(consultas.map((c) => c.nombre).sort()).toEqual(["fichaDeSucursal", "listarSucursales"]);
+    expect(consultas.map((c) => c.nombre).sort()).toEqual([
+      "fichaDeSucursal",
+      "listarSucursales",
+      "sucursalesElegibles",
+    ]);
   });
 
   it("los casos de uso con acción son todos los declarados", () => {
@@ -245,6 +250,7 @@ describe("cada caso de uso y cada consulta exigen SU acción (no la de otro)", (
       reactivarSucursal: "sucursales.reactivar",
       listarSucursales: "sucursales.ver",
       fichaDeSucursal: "sucursales.ver",
+      sucursalesElegibles: "permisos.ver_propios",
     });
   });
 });

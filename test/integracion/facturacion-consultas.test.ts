@@ -117,6 +117,8 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
       persona[rol] = (await crearPersonaDeBase(dueno)).id;
       await crearMembresiaDeBase(dueno, x.empresa, persona[rol], rol);
     }
+    // El operador trabaja en la sucursal de la empresa (su alcance); gerente y administrador, en todas.
+    await crearAsignacionDeBase(dueno, x.empresa, persona.OPERADOR, x.sucursal);
     persona.SIN_MEMBRESIA = (await crearPersonaDeBase(dueno)).id;
     persona.APAGADA = (await crearPersonaDeBase(dueno)).id;
     await crearMembresiaDeBase(dueno, x.empresa, persona.APAGADA, "GERENTE", false);
@@ -180,7 +182,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
     });
 
   const listar = async (e: Empresa, pedido: PedidoDeListado = {}) =>
-    exito(await consultas.listarComprobantes(mira(e), pedido));
+    exito(await consultas.listarComprobantes(mira(e), { ...pedido, sucursalElegida: null }));
   const idsDe = async (e: Empresa, pedido: PedidoDeListado = {}) =>
     (await listar(e, pedido)).items.map((i) => i.id);
   const ordenados = (ids: readonly string[]) => [...ids].sort();
@@ -238,7 +240,12 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
         const lecturas = crearLecturasDeComprobantes(sinRls);
         const filtro = exito(criteriosDeListado({ limite: 50 }));
         const ids = async (e: Empresa) =>
-          (await lecturas.listar(empresaId(e.x.empresa), filtro)).filas.map((f) => f.id);
+          (
+            await lecturas.listar(empresaId(e.x.empresa), {
+              ...filtro,
+              sucursalId: sucursalId(e.x.sucursal),
+            })
+          ).filas.map((f) => f.id);
         expect(ordenados(await ids(a))).toEqual(ordenados([original.id, nota.id]));
         expect(await ids(b)).toEqual([deB.id]);
         // control: la base sin RLS ve las dos empresas; solo el filtro de las lecturas las separa
@@ -269,7 +276,10 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
       const c = await crearAutorizado(a.x);
       for (const rol of ["GERENTE", "ADMINISTRADOR", "OPERADOR"] as const) {
         const contexto = comoEmpresa(empresaId(a.x.empresa), personaId(a.persona[rol]));
-        expect((await consultas.listarComprobantes(contexto, {})).ok, rol).toBe(true);
+        expect(
+          (await consultas.listarComprobantes(contexto, { sucursalElegida: null })).ok,
+          rol,
+        ).toBe(true);
         expect((await consultas.verComprobante(contexto, { comprobanteId: c.id })).ok, rol).toBe(
           true,
         );
@@ -294,7 +304,10 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
       ];
       for (const [quien, contexto] of intrusos) {
         const esperado = { ok: false, error: "SIN_PERMISO" };
-        expect(await consultas.listarComprobantes(contexto, {}), quien).toEqual(esperado);
+        expect(
+          await consultas.listarComprobantes(contexto, { sucursalElegida: null }),
+          quien,
+        ).toEqual(esperado);
         expect(await consultas.verComprobante(contexto, { comprobanteId: c.id }), quien).toEqual(
           esperado,
         );
@@ -309,7 +322,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
       const c = await crearAutorizado(a.x);
       const reales = entorno.consultas(REGLAS_DE_EMPRESA);
       const esperado = { ok: false, error: "MODULO_EN_DESARROLLO" };
-      expect(await reales.listarComprobantes(mira(a), {})).toEqual(esperado);
+      expect(await reales.listarComprobantes(mira(a), { sucursalElegida: null })).toEqual(esperado);
       expect(await reales.verComprobante(mira(a), { comprobanteId: c.id })).toEqual(esperado);
       expect(await reales.modeloDeImpresion(mira(a), { comprobanteId: c.id })).toEqual(esperado);
     });
@@ -492,7 +505,9 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
     it("un pedido inválido es un error de negocio, no un fallo de la base", async () => {
       const a = await crearEmpresa();
       const errores = async (pedido: PedidoDeListado) =>
-        (await consultas.listarComprobantes(mira(a), pedido)) as { error?: string };
+        (await consultas.listarComprobantes(mira(a), { ...pedido, sucursalElegida: null })) as {
+          error?: string;
+        };
       expect((await errores({ limite: 51 })).error).toBe("LIMITE_INVALIDO");
       expect((await errores({ limite: 0 })).error).toBe("LIMITE_INVALIDO");
       expect((await errores({ despuesDe: "' or 1=1 --|x" })).error).toBe(
@@ -842,12 +857,18 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
         origenTipo: "EJEMPLAR_DE_TICKET",
         origenId: "ticket-1",
       } as const;
-      const primera = await consultas.listarComprobantes(mira(a), pedido);
-      const segunda = await consultas.listarComprobantes(mira(a), pedido);
+      const primera = await consultas.listarComprobantes(mira(a), {
+        ...pedido,
+        sucursalElegida: null,
+      });
+      const segunda = await consultas.listarComprobantes(mira(a), {
+        ...pedido,
+        sucursalElegida: null,
+      });
       expect(segunda).toEqual(primera);
       expect(exito(primera).items).toHaveLength(1);
       const errores = async (pedido: Record<string, unknown>) =>
-        (await consultas.listarComprobantes(mira(a), pedido)) as {
+        (await consultas.listarComprobantes(mira(a), { ...pedido, sucursalElegida: null })) as {
           error?: string;
         };
       expect((await errores({ letra: "Z" })).error).toBe("LETRA_INVALIDA");
@@ -864,14 +885,22 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
     it("sin permiso no hay listado filtrado: el guard va antes que los criterios", async () => {
       const a = await crearEmpresa();
       const sinPermiso = comoEmpresa(empresaId(a.x.empresa), personaId(a.persona.SIN_MEMBRESIA));
-      const esperado = await consultas.listarComprobantes(sinPermiso, {});
+      const esperado = await consultas.listarComprobantes(sinPermiso, { sucursalElegida: null });
       expect(esperado.ok).toBe(false);
       // un criterio inválido de quien no puede mirar es SIN_PERMISO, no LETRA_INVALIDA
       expect(
-        await consultas.listarComprobantes(sinPermiso, { letra: "Z" as never, puntoDeVenta: 0 }),
+        await consultas.listarComprobantes(sinPermiso, {
+          sucursalElegida: null,
+          letra: "Z" as never,
+          puntoDeVenta: 0,
+        }),
       ).toEqual(esperado);
       expect(
-        await consultas.listarComprobantes(sinPermiso, { letra: "A", origenTipo: "MANUAL" }),
+        await consultas.listarComprobantes(sinPermiso, {
+          sucursalElegida: null,
+          letra: "A",
+          origenTipo: "MANUAL",
+        }),
       ).toEqual(esperado);
     });
 
@@ -1028,7 +1057,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
         expect(await sinEsperar(listar(a))).toEqual(primera);
         const r = await sinEsperar(
           consultas.listarPuntosDeVentaDeLaSucursal(mira(a), {
-            sucursalId: sucursalId(a.x.sucursal),
+            sucursalElegida: sucursalId(a.x.sucursal),
           }),
         );
         expect(exito(r).items).toEqual([{ numero: a.x.pvNumero }]);
@@ -1058,7 +1087,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
       consultas.listarPuntosDeVentaDeLaSucursal(
         comoEmpresa(empresaId(e.x.empresa), personaId(persona)),
         {
-          sucursalId: sucursalId(sucursal),
+          sucursalElegida: sucursalId(sucursal),
         },
       );
 
@@ -1110,13 +1139,20 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
     it("aislamiento entre empresas: la sucursal de otra empresa no devuelve nada, ni con su propio gerente", async () => {
       const a = await empresaConDosSucursales();
       const b = await crearEmpresa();
-      expect(exito(await pedir(b, a.e.x.sucursal)).items).toEqual([]);
-      expect(exito(await pedir(a.e, b.x.sucursal)).items).toEqual([]);
+      // La sucursal de otra empresa no existe para quien pide: ni su gerente puede elegirla.
+      for (const [quien, ajena] of [
+        [b, a.e.x.sucursal],
+        [a.e, b.x.sucursal],
+      ] as const) {
+        expect(await pedir(quien, ajena)).toEqual({
+          ok: false,
+          error: "SUCURSAL_FUERA_DE_ALCANCE",
+        });
+      }
     });
 
     it("aislamiento entre sucursales: el operador ve solo las suyas y pedir otra es SUCURSAL_FUERA_DE_ALCANCE", async () => {
       const { e, norte } = await empresaConDosSucursales();
-      await crearAsignacionDeBase(dueno, e.x.empresa, e.persona.OPERADOR, e.x.sucursal);
       expect(exito(await pedir(e, e.x.sucursal, e.persona.OPERADOR)).items).toEqual([
         { numero: 1 },
         { numero: 5 },

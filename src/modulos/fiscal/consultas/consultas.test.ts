@@ -13,7 +13,12 @@ import type { ContextoOperativo } from "../../../contexto/contexto";
 import { importeDesdeTexto } from "../../../primitivas/dinero/importe";
 import { ARS } from "../../../primitivas/dinero/moneda";
 import type { AlcanceDeSucursales } from "../../../capacidades/permisos/alcance";
-import { personaId, sucursalId, type EmpresaId } from "../../../primitivas/identificadores/marca";
+import {
+  personaId,
+  sucursalId,
+  type EmpresaId,
+  type SucursalId,
+} from "../../../primitivas/identificadores/marca";
 import type { Transacciones } from "../../../puertos/transacciones";
 import { modeloDeImpresion, type MarcaParaImprimir } from "../dominio/modelo-de-impresion";
 import type { NotaParaAcreditar } from "../dominio/acreditacion";
@@ -179,7 +184,16 @@ type Datos = Readonly<{
   pagina?: PaginaDeFilas;
   puntosDeVenta?: readonly number[];
   alcance?: AlcanceDeSucursales;
+  /** Las sucursales abiertas de la empresa; por defecto una sola (`SUCURSAL_UNICA`). */
+  sucursalesActivas?: readonly SucursalId[];
+  /** Las sucursales cerradas de la empresa (D-37); por defecto ninguna. */
+  sucursalesCerradas?: readonly SucursalId[];
+  /** A qué sucursal pertenece el comprobante que se pide (D-39); por defecto `SUCURSAL_UNICA`. */
+  sucursalDelComprobante?: SucursalId | null;
 }>;
+
+/** La sucursal que tiene la empresa de prueba cuando el caso no dice otra cosa. */
+const SUCURSAL_UNICA = sucursalId("s-unica");
 
 /** Las consultas sobre una transacción en memoria; devuelve además todo lo que se pidió. */
 function armar(datos: Datos = {}) {
@@ -213,6 +227,12 @@ function armar(datos: Datos = {}) {
         llamadas.notasDeLaPagina.push(args);
         return Promise.resolve(datos.notasDeLaPagina ?? new Map());
       },
+      sucursalDelComprobante: () =>
+        Promise.resolve(
+          datos.sucursalDelComprobante === undefined
+            ? SUCURSAL_UNICA
+            : datos.sucursalDelComprobante,
+        ),
       puntosDeVentaActivosDeLaSucursal: (...args) => {
         llamadas.puntosDeVenta.push(args);
         return Promise.resolve(datos.puntosDeVenta ?? []);
@@ -229,6 +249,13 @@ function armar(datos: Datos = {}) {
         llamadas.series.push(args);
         return Promise.resolve(datos.serie === undefined ? serie() : datos.serie);
       },
+    },
+    sucursales: {
+      listar: () =>
+        Promise.resolve([
+          ...(datos.sucursalesActivas ?? [SUCURSAL_UNICA]).map((id) => ({ id, activa: true })),
+          ...(datos.sucursalesCerradas ?? []).map((id) => ({ id, activa: false })),
+        ]),
     },
     marca: {
       deLaEmpresa: (empresa) => {
@@ -284,10 +311,142 @@ describe("listarComprobantes", () => {
     creadoEn: `2026-10-13T12:00:0${n}.123456Z`,
   });
 
+  describe("la sucursal (D-18)", () => {
+    const A = sucursalId("s-a");
+    const B = sucursalId("s-b");
+    const C = sucursalId("s-c");
+    const listarCon = async (
+      datos: Datos,
+      sucursalElegida: SucursalId | null,
+    ): Promise<{
+      resultado: Awaited<ReturnType<ReturnType<typeof armar>["consultas"]["listarComprobantes"]>>;
+      lecturas: number;
+      filtro: FiltroDeListado | undefined;
+    }> => {
+      const { consultas, filtros } = armar(datos);
+      const resultado = await consultas.listarComprobantes(contexto(), { sucursalElegida });
+      return { resultado, lecturas: filtros.length, filtro: filtros[0]?.filtro };
+    };
+
+    it("con UNA sucursal a elegir y sin elección, la toma sola y filtra por ella", async () => {
+      const r = await listarCon({ sucursalesActivas: [B] }, null);
+      expect(r.resultado.ok).toBe(true);
+      expect(r.filtro?.sucursalId).toBe(B);
+    });
+
+    it("con varias a elegir y sin elección, SUCURSAL_NO_ELEGIDA y no lee ningún comprobante", async () => {
+      const r = await listarCon({ sucursalesActivas: [A, B] }, null);
+      expect(r.resultado).toEqual({ ok: false, error: "SUCURSAL_NO_ELEGIDA" });
+      expect(r.lecturas).toBe(0);
+    });
+
+    it("con varias a elegir y una elegida de ellas, filtra por esa y por ninguna otra", async () => {
+      const r = await listarCon({ sucursalesActivas: [A, B, C] }, B);
+      expect(r.resultado.ok).toBe(true);
+      expect(r.filtro?.sucursalId).toBe(B);
+    });
+
+    it("con una sola a elegir y OTRA elegida (vieja, desactivada, ajena): fuera de alcance, no se reemplaza en silencio", async () => {
+      const r = await listarCon({ sucursalesActivas: [A] }, C);
+      expect(r.resultado).toEqual({ ok: false, error: "SUCURSAL_FUERA_DE_ALCANCE" });
+      expect(r.lecturas).toBe(0);
+    });
+
+    it("una sucursal CERRADA se puede elegir para ver su historial (D-37): gerente y administrador, cualquiera", async () => {
+      const r = await listarCon(
+        { sucursalesActivas: [A, B], sucursalesCerradas: [C], alcance: "TODAS" },
+        C,
+      );
+      expect(r.resultado.ok).toBe(true);
+      expect(r.filtro?.sucursalId).toBe(C);
+    });
+
+    it("sin elegir, una sola ABIERTA se toma sola aunque haya cerradas; solo cerradas o varias abiertas obligan a elegir", async () => {
+      expect(
+        (await listarCon({ sucursalesActivas: [A], sucursalesCerradas: [B, C] }, null)).filtro
+          ?.sucursalId,
+      ).toBe(A);
+      for (const datos of [
+        { sucursalesActivas: [], sucursalesCerradas: [B] },
+        { sucursalesActivas: [], sucursalesCerradas: [B, C] },
+        { sucursalesActivas: [A, B], sucursalesCerradas: [C] },
+      ] as const) {
+        const r = await listarCon(
+          { ...datos, sucursalesActivas: [...datos.sucursalesActivas] },
+          null,
+        );
+        expect(r.resultado).toEqual({ ok: false, error: "SUCURSAL_NO_ELEGIDA" });
+        expect(r.lecturas).toBe(0);
+      }
+    });
+
+    it("una elegida que no es de la empresa sigue fuera de alcance, también si hay cerradas", async () => {
+      const r = await listarCon(
+        { sucursalesActivas: [A], sucursalesCerradas: [B], alcance: "TODAS" },
+        C,
+      );
+      expect(r.resultado).toEqual({ ok: false, error: "SUCURSAL_FUERA_DE_ALCANCE" });
+    });
+
+    it("el operador elige las cerradas que tiene asignadas, no las demás", async () => {
+      const datos = { sucursalesActivas: [A], sucursalesCerradas: [B, C], alcance: [A, B] };
+      expect((await listarCon(datos, B)).filtro?.sucursalId).toBe(B);
+      expect((await listarCon(datos, C)).resultado).toEqual({
+        ok: false,
+        error: "SUCURSAL_FUERA_DE_ALCANCE",
+      });
+      // Con una abierta y una cerrada asignadas, sin elegir toma la abierta.
+      expect((await listarCon(datos, null)).filtro?.sucursalId).toBe(A);
+      // Con solo cerradas asignadas, hay que elegir.
+      expect((await listarCon({ ...datos, alcance: [B] }, null)).resultado).toEqual({
+        ok: false,
+        error: "SUCURSAL_NO_ELEGIDA",
+      });
+    });
+
+    it("sin sucursales activas: fuera de alcance, con o sin elección, y no lee nada", async () => {
+      for (const elegida of [null, A]) {
+        const r = await listarCon({ sucursalesActivas: [] }, elegida);
+        expect(r.resultado, String(elegida)).toEqual({
+          ok: false,
+          error: "SUCURSAL_FUERA_DE_ALCANCE",
+        });
+        expect(r.lecturas).toBe(0);
+      }
+    });
+
+    it("un operador sin asignaciones no tiene nada para elegir: fuera de alcance, con o sin elección", async () => {
+      for (const elegida of [null, A]) {
+        const r = await listarCon({ sucursalesActivas: [A, B], alcance: [] }, elegida);
+        expect(r.resultado, String(elegida)).toEqual({
+          ok: false,
+          error: "SUCURSAL_FUERA_DE_ALCANCE",
+        });
+        expect(r.lecturas).toBe(0);
+      }
+    });
+
+    it("el alcance del operador manda: de las activas, solo puede elegir las asignadas", async () => {
+      const datos = { sucursalesActivas: [A, B, C], alcance: [B] };
+      // una sola asignada: la toma sola
+      expect((await listarCon(datos, null)).filtro?.sucursalId).toBe(B);
+      // pedir una activa pero no asignada: fuera de alcance
+      expect((await listarCon(datos, A)).resultado).toEqual({
+        ok: false,
+        error: "SUCURSAL_FUERA_DE_ALCANCE",
+      });
+      // dos asignadas y sin elegir: hay que elegir
+      expect(
+        (await listarCon({ sucursalesActivas: [A, B, C], alcance: [A, B] }, null)).resultado,
+      ).toEqual({ ok: false, error: "SUCURSAL_NO_ELEGIDA" });
+    });
+  });
+
   it("pide la página de la empresa del contexto con los criterios del pedido", async () => {
     const { consultas, filtros } = armar();
     exito(
       await consultas.listarComprobantes(contexto(OTRA_EMPRESA), {
+        sucursalElegida: null,
         estado: "AUTORIZADO",
         limite: 7,
         texto: "Ana",
@@ -304,7 +463,7 @@ describe("listarComprobantes", () => {
 
   it("devuelve cada fila con su número impreso, el total como texto y solo lo del spec", async () => {
     const { consultas } = armar({ pagina: { filas: [fila(1), fila(2)], hayMas: false } });
-    const pagina = exito(await consultas.listarComprobantes(contexto(), {}));
+    const pagina = exito(await consultas.listarComprobantes(contexto(), { sucursalElegida: null }));
     expect(pagina.items).toEqual([
       {
         id: fila(1).id,
@@ -349,7 +508,9 @@ describe("listarComprobantes", () => {
         [fila(3).id, [credito("300.50", "RECHAZADO")]],
       ]),
     });
-    const pagina = exito(await consultas.listarComprobantes(contexto(OTRA_EMPRESA), {}));
+    const pagina = exito(
+      await consultas.listarComprobantes(contexto(OTRA_EMPRESA), { sucursalElegida: null }),
+    );
     expect(pagina.items.map((i) => i.acreditacion)).toEqual([
       "PARCIAL",
       "TOTAL",
@@ -364,25 +525,34 @@ describe("listarComprobantes", () => {
     const nc = { ...fila(1), tipo: "NOTA_CREDITO_B" as const };
     const nd = { ...fila(2), tipo: "NOTA_DEBITO_B" as const };
     const { consultas } = armar({ pagina: { filas: [nc, nd], hayMas: false } });
-    const pagina = exito(await consultas.listarComprobantes(contexto(), {}));
+    const pagina = exito(await consultas.listarComprobantes(contexto(), { sucursalElegida: null }));
     expect(pagina.items.map((i) => i.acreditacion)).toEqual([null, "NINGUNA"]);
   });
 
   it("`siguiente` es la clave de la última fila de la página, y solo si queda algo después", async () => {
     const filas = [fila(1), fila(2), fila(3)];
     const con = armar({ pagina: { filas, hayMas: true } });
-    const pagina = exito(await con.consultas.listarComprobantes(contexto(), {}));
+    const pagina = exito(
+      await con.consultas.listarComprobantes(contexto(), { sucursalElegida: null }),
+    );
     expect(pagina.siguiente).toBe(claveDePagina({ creadoEn: fila(3).creadoEn, id: fila(3).id }));
     const sin = armar({ pagina: { filas, hayMas: false } });
-    expect(exito(await sin.consultas.listarComprobantes(contexto(), {})).siguiente).toBeNull();
+    expect(
+      exito(await sin.consultas.listarComprobantes(contexto(), { sucursalElegida: null }))
+        .siguiente,
+    ).toBeNull();
     const vacia = armar({ pagina: { filas: [], hayMas: true } });
-    expect(exito(await vacia.consultas.listarComprobantes(contexto(), {})).siguiente).toBeNull();
+    expect(
+      exito(await vacia.consultas.listarComprobantes(contexto(), { sucursalElegida: null }))
+        .siguiente,
+    ).toBeNull();
   });
 
   it("la letra, el punto de venta y el origen llegan a la lectura de la empresa del contexto", async () => {
     const { consultas, filtros } = armar();
     exito(
       await consultas.listarComprobantes(contexto(OTRA_EMPRESA), {
+        sucursalElegida: null,
         letra: "B",
         puntoDeVenta: 3,
         origenTipo: "EJEMPLAR_DE_TICKET",
@@ -401,7 +571,9 @@ describe("listarComprobantes", () => {
 
   it("un pedido inválido no llega a la base", async () => {
     const { consultas, filtros } = armar();
-    expect(await consultas.listarComprobantes(contexto(), { limite: 51 })).toEqual({
+    expect(
+      await consultas.listarComprobantes(contexto(), { sucursalElegida: null, limite: 51 }),
+    ).toEqual({
       ok: false,
       error: "LIMITE_INVALIDO",
     });
@@ -412,7 +584,12 @@ describe("listarComprobantes", () => {
       [{ origenTipo: "MANUAL", origenId: " " }, "ORIGEN_ID_INVALIDO"],
       [{ origenId: "x" }, "ORIGEN_ID_SIN_TIPO"],
     ] as const) {
-      expect(await consultas.listarComprobantes(contexto(), pedido as never)).toEqual({
+      expect(
+        await consultas.listarComprobantes(contexto(), {
+          sucursalElegida: null,
+          ...pedido,
+        } as never),
+      ).toEqual({
         ok: false,
         error,
       });
@@ -425,10 +602,13 @@ describe("listarPuntosDeVentaDeLaSucursal", () => {
   const SUCURSAL = sucursalId("s-1");
 
   it("pide los puntos de venta activos de ESA sucursal, de la empresa del contexto, y los devuelve por número", async () => {
-    const { consultas, llamadas } = armar({ puntosDeVenta: [1, 3, 12] });
+    const { consultas, llamadas } = armar({
+      puntosDeVenta: [1, 3, 12],
+      sucursalesActivas: [SUCURSAL],
+    });
     const r = exito(
       await consultas.listarPuntosDeVentaDeLaSucursal(contexto(OTRA_EMPRESA), {
-        sucursalId: SUCURSAL,
+        sucursalElegida: SUCURSAL,
       }),
     );
     expect(r).toEqual({ items: [{ numero: 1 }, { numero: 3 }, { numero: 12 }] });
@@ -436,30 +616,42 @@ describe("listarPuntosDeVentaDeLaSucursal", () => {
   });
 
   it("una sucursal sin puntos de venta activos da una lista vacía, no un error", async () => {
-    const { consultas } = armar();
+    const { consultas } = armar({ sucursalesActivas: [SUCURSAL] });
     expect(
-      exito(await consultas.listarPuntosDeVentaDeLaSucursal(contexto(), { sucursalId: SUCURSAL })),
+      exito(
+        await consultas.listarPuntosDeVentaDeLaSucursal(contexto(), { sucursalElegida: SUCURSAL }),
+      ),
     ).toEqual({ items: [] });
   });
 
   it("un operador pide solo una sucursal de su alcance; fuera de él no se lee nada", async () => {
-    const dentro = armar({ alcance: [SUCURSAL], puntosDeVenta: [2] });
+    const dentro = armar({
+      alcance: [SUCURSAL],
+      puntosDeVenta: [2],
+      sucursalesActivas: [SUCURSAL, sucursalId("s-2")],
+    });
     expect(
       exito(
         await dentro.consultas.listarPuntosDeVentaDeLaSucursal(contexto(), {
-          sucursalId: SUCURSAL,
+          sucursalElegida: SUCURSAL,
         }),
       ).items,
     ).toEqual([{ numero: 2 }]);
-    const fuera = armar({ alcance: [sucursalId("s-2")], puntosDeVenta: [2] });
+    const fuera = armar({
+      alcance: [sucursalId("s-2")],
+      puntosDeVenta: [2],
+      sucursalesActivas: [SUCURSAL, sucursalId("s-2")],
+    });
     expect(
-      await fuera.consultas.listarPuntosDeVentaDeLaSucursal(contexto(), { sucursalId: SUCURSAL }),
+      await fuera.consultas.listarPuntosDeVentaDeLaSucursal(contexto(), {
+        sucursalElegida: SUCURSAL,
+      }),
     ).toEqual({ ok: false, error: "SUCURSAL_FUERA_DE_ALCANCE" });
     expect(fuera.llamadas.puntosDeVenta).toEqual([]);
-    const sinAsignaciones = armar({ alcance: [] });
+    const sinAsignaciones = armar({ alcance: [], sucursalesActivas: [SUCURSAL] });
     expect(
       await sinAsignaciones.consultas.listarPuntosDeVentaDeLaSucursal(contexto(), {
-        sucursalId: SUCURSAL,
+        sucursalElegida: SUCURSAL,
       }),
     ).toEqual({ ok: false, error: "SUCURSAL_FUERA_DE_ALCANCE" });
   });
@@ -474,6 +666,67 @@ describe("verComprobante", () => {
     expect(llamadas.notas).toEqual([[OTRA_EMPRESA, ID]]);
     expect(llamadas.intentos).toEqual([[OTRA_EMPRESA, ID]]);
     expect(llamadas.series).toEqual([[OTRA_EMPRESA, c.puntoDeVentaId, "FACTURA_B", "PRODUCCION"]]);
+  });
+
+  describe("la sucursal del comprobante (D-39)", () => {
+    const A = sucursalId("s-a");
+    const B = sucursalId("s-b");
+    const NO_ENCONTRADO = { ok: false, error: "COMPROBANTE_NO_ENCONTRADO" };
+    const ver = async (datos: Datos) => {
+      const { consultas, llamadas } = armar({ comprobante: guardado(), ...datos });
+      const r = await consultas.verComprobante(contexto(), { comprobanteId: ID });
+      return {
+        r,
+        // Cuántas lecturas del comprobante y de lo que lo rodea hizo (el comprobante mismo, las notas, los intentos y la serie).
+        leyoElComprobante: llamadas.comprobante.length,
+        leyoElResto: llamadas.notas.length + llamadas.intentos.length + llamadas.series.length,
+      };
+    };
+
+    it("gerente y administrador (todas) abren el de cualquier sucursal, también de una cerrada", async () => {
+      expect((await ver({ alcance: "TODAS", sucursalDelComprobante: A })).r.ok).toBe(true);
+      expect(
+        (await ver({ alcance: "TODAS", sucursalDelComprobante: B, sucursalesCerradas: [B] })).r.ok,
+      ).toBe(true);
+    });
+
+    it("el operador abre el de las sucursales que tiene asignadas, también si está cerrada", async () => {
+      expect((await ver({ alcance: [A], sucursalDelComprobante: A })).r.ok).toBe(true);
+      expect(
+        (await ver({ alcance: [B], sucursalDelComprobante: B, sucursalesCerradas: [B] })).r.ok,
+      ).toBe(true);
+    });
+
+    it("el operador NO abre el de una sucursal que no tiene asignada: lo mismo que si no existiera, y no lee nada más", async () => {
+      const ajeno = await ver({ alcance: [A], sucursalDelComprobante: B });
+      expect(ajeno.r).toEqual(NO_ENCONTRADO);
+      // Hizo el trabajo mínimo: ni siquiera leyó el comprobante (`obtener`), igual que si no existiera.
+      expect(ajeno.leyoElComprobante).toBe(0);
+      expect(ajeno.leyoElResto).toBe(0);
+      const sinAsignaciones = await ver({ alcance: [], sucursalDelComprobante: A });
+      expect(sinAsignaciones.r).toEqual(NO_ENCONTRADO);
+      expect(sinAsignaciones.leyoElComprobante).toBe(0);
+      // Idéntico al de un comprobante que no existe.
+      const { consultas } = armar({ comprobante: null });
+      expect(await consultas.verComprobante(contexto(), { comprobanteId: ID })).toEqual(ajeno.r);
+    });
+
+    it("un comprobante sin sucursal legible (otra empresa, borrado) también es COMPROBANTE_NO_ENCONTRADO", async () => {
+      const sinSucursal = await ver({ alcance: "TODAS", sucursalDelComprobante: null });
+      expect(sinSucursal.r).toEqual(NO_ENCONTRADO);
+      expect(sinSucursal.leyoElComprobante).toBe(0);
+      expect(sinSucursal.leyoElResto).toBe(0);
+    });
+
+    it("si corresponde, lee el comprobante una vez; y si desapareció entre la sucursal y la lectura, sigue siendo no encontrado", async () => {
+      const abre = await ver({ alcance: [A], sucursalDelComprobante: A });
+      expect(abre.r.ok).toBe(true);
+      expect(abre.leyoElComprobante).toBe(1);
+      const { consultas } = armar({ comprobante: null, alcance: "TODAS" });
+      expect(await consultas.verComprobante(contexto(), { comprobanteId: ID })).toEqual(
+        NO_ENCONTRADO,
+      );
+    });
   });
 
   it("un comprobante que no está (o es de otra empresa) es COMPROBANTE_NO_ENCONTRADO", async () => {

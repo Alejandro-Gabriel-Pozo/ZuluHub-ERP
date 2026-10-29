@@ -94,6 +94,9 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<Record<ErrorTextual, CodigoFisc
   ORIGEN_ID_INVALIDO: "FISCAL_FILTRO_INVALIDO",
   ORIGEN_ID_SIN_TIPO: "FISCAL_FILTRO_INVALIDO",
   CLAVE_DE_PAGINA_INVALIDA: "FISCAL_FILTRO_INVALIDO",
+  // La sucursal del listado (D-18): sin elegir la pantalla hace elegir; una que no es de su alcance se dice como tal.
+  SUCURSAL_NO_ELEGIDA: "FISCAL_SUCURSAL_NO_ELEGIDA",
+  SUCURSAL_FUERA_DE_ALCANCE: "FISCAL_SUCURSAL_FUERA_DE_ALCANCE",
 };
 
 /** El campo del listado al que apunta cada criterio inválido (el nombre que usa el pedido, no uno interno). */

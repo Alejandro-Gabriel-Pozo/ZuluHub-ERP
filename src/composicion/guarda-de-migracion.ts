@@ -16,7 +16,7 @@ import { verificacionMemorizada } from "./verificacion-memorizada";
  *    mirar pasados unos segundos, para que la app vuelva sola apenas el dueño migra.
  *  - Falla cerrado: no poder leer la tabla (sin conexión, sin permiso, sin tabla) es «no al día».
  */
-export const MIGRACION_REQUERIDA = "0015";
+export const MIGRACION_REQUERIDA = "0016";
 
 /** Cuánto se espera antes de volver a mirar una base que no estaba al día. */
 export const ESPERA_ENTRE_VERIFICACIONES_EN_MS = 10_000;

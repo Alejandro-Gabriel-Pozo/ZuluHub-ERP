@@ -64,6 +64,10 @@ export type {
   ErrorAlPedirLaFichaDeSucursal,
 } from "./consultas/ficha-de-sucursal";
 export type { FichaDeSucursal, SucursalDeLista } from "./consultas/sucursales";
+export type {
+  ErrorAlListarSucursalesElegibles,
+  SucursalElegible,
+} from "./consultas/sucursales-elegibles";
 export {
   COLUMNAS_DE_EMPRESAS,
   ERRORES_DE_EMPRESAS_POR_RESTRICCION,

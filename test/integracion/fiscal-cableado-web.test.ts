@@ -217,7 +217,7 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
         expect.arrayContaining(["emisorId", "creadoPor", "origen", "huella"]),
       );
 
-      const lista = await listarComprobantes(d, comoPersonaDe(e), undefined);
+      const lista = await listarComprobantes(d, comoPersonaDe(e), null, undefined);
       expect(lista).toMatchObject({
         ok: true,
         dato: {
@@ -266,7 +266,7 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
         ok: true,
         dato: { estado: "AUTORIZADO", acreditado: "121.00", acreditacion: "TOTAL" },
       });
-      const lista = await listarComprobantes(d, comoPersonaDe(e), undefined);
+      const lista = await listarComprobantes(d, comoPersonaDe(e), null, undefined);
       expect(
         lista.ok && lista.dato.items.find((i) => i.id === factura.comprobanteId),
       ).toMatchObject({
@@ -466,7 +466,7 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
       expect(REGLAS_DE_EMPRESA.catalogo.facturacion.estado).toBe("en_desarrollo");
       const emitido = await emitirFactura(dReal, comoPersonaDe(e), facturaCruda(e));
       expect(emitido).toMatchObject({ ok: false, error: { codigo: "MODULO_EN_DESARROLLO" } });
-      const lista = await listarComprobantes(dReal, comoPersonaDe(e), undefined);
+      const lista = await listarComprobantes(dReal, comoPersonaDe(e), null, undefined);
       expect(lista).toMatchObject({ ok: false, error: { codigo: "MODULO_EN_DESARROLLO" } });
       expect(
         (await filas("select 1 from comprobante where empresa_id = $1", [e.empresa])).length,
@@ -505,7 +505,7 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
       for (const contexto of [operador, administrador, gerente]) {
         const emitido = await emitirFactura(d, contexto, facturaCruda(e));
         expect(emitido.ok).toBe(true);
-        expect((await listarComprobantes(d, contexto, undefined)).ok).toBe(true);
+        expect((await listarComprobantes(d, contexto, null, undefined)).ok).toBe(true);
       }
     });
 
@@ -520,7 +520,7 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
       // Sin membresía no hay rol y la autorización no trae módulos: el motivo sale del guard, nunca un dato de la empresa.
       for (const r of [
         await emitirFactura(d, contexto, facturaCruda(e)),
-        await listarComprobantes(d, contexto, undefined),
+        await listarComprobantes(d, contexto, null, undefined),
         await verComprobante(d, contexto, { comprobanteId: randomUUID() }),
       ]) {
         expect(r).toMatchObject({ ok: false, error: { presentacion: "POR_QUE_NO_PUEDO" } });
@@ -568,7 +568,7 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
         ok: false,
         error: { codigo: "FISCAL_COMPROBANTE_NO_ENCONTRADO" },
       });
-      expect(await listarComprobantes(d, comoPersonaDe(b), undefined)).toMatchObject({
+      expect(await listarComprobantes(d, comoPersonaDe(b), null, undefined)).toMatchObject({
         ok: true,
         dato: { items: [] },
       });

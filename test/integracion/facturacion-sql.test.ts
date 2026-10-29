@@ -165,6 +165,8 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "creado_en",
         "actualizado_en",
         "version",
+        // 0016: la sucursal del punto de venta al emitirse
+        "sucursal_id",
       ]);
       expect(await columnasDe("comprobante_linea")).toEqual([
         "empresa_id",
@@ -287,6 +289,7 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "comprobante_clase_ck:c",
         "comprobante_clase_tipo_ck:c",
         "comprobante_coherente_con_serie:t",
+        "comprobante_con_sucursal:t",
         "comprobante_concepto_ck:c",
         "comprobante_creado_por_fkey:f",
         "comprobante_cuadra:t",
@@ -326,6 +329,7 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "comprobante_representacion_ck:c",
         "comprobante_reserva_ck:c",
         "comprobante_servicio_ck:c",
+        "comprobante_sucursal_fkey:f",
         "comprobante_tipo_ck:c",
       ]);
       expect(de("comprobante_linea")).toEqual([
@@ -412,6 +416,8 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
           "FOREIGN KEY (comprobante_id, empresa_id) REFERENCES comprobante(id, empresa_id)",
         comprobante_pv_fkey:
           "FOREIGN KEY (punto_de_venta_id, emisor_id, empresa_id) REFERENCES punto_de_venta(id, emisor_id, empresa_id)",
+        comprobante_sucursal_fkey:
+          "FOREIGN KEY (sucursal_id, empresa_id) REFERENCES sucursal(id, empresa_id)",
         intento_comprobante_fkey:
           "FOREIGN KEY (comprobante_id, empresa_id) REFERENCES comprobante(id, empresa_id)",
       });
@@ -439,6 +445,7 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "comprobante.comprobante_numero_uk",
         "comprobante.comprobante_origen_ix",
         "comprobante.comprobante_pkey",
+        "comprobante.comprobante_sucursal_listado_ix",
         "comprobante_alicuota.comprobante_alicuota_pkey",
         "comprobante_linea.comprobante_linea_pkey",
         "intento_arca.intento_arca_pkey",
@@ -484,6 +491,7 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "comprobante.comprobante_alta",
         "comprobante.comprobante_cambio",
         "comprobante.comprobante_coherente_con_serie",
+        "comprobante.comprobante_con_sucursal",
         "comprobante.comprobante_cuadra",
         "comprobante.comprobante_sin_borrado",
         "comprobante.comprobante_sin_truncate",

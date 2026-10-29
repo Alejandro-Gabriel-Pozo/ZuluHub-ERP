@@ -10,7 +10,11 @@ import { ipUnica } from "./autenticacion-ingreso-apoyo";
 import { cargarCertificado } from "./facturacion-casos-apoyo";
 import { crearEscenario } from "./facturacion-apoyo";
 import { REGLAS_CON_FACTURACION } from "./fiscal-numeracion-apoyo";
-import { crearMembresiaDeBase, type RolDePrueba } from "./fixtures-identidad";
+import {
+  crearAsignacionDeBase,
+  crearMembresiaDeBase,
+  type RolDePrueba,
+} from "./fixtures-identidad";
 import { asignarPlan, crearMundoDeMarca, crearPlanPublicado } from "./marcas-apoyo";
 import {
   HOST_A,
@@ -383,6 +387,8 @@ describe.skipIf(base === null)("web: las acciones de servidor del facturador", (
     const yo = await ingresarEn(mundo, HOST_A);
     const persona = await personaVinculada(mundo, yo.sesion);
     const e = await empresaFacturadora(yo, persona, "OPERADOR");
+    // Un operador lista la sucursal en la que trabaja (su alcance): la única que tiene, que el servidor toma sola.
+    await crearAsignacionDeBase(mundo.dueno, e.empresa, persona, e.sucursal);
     comoNavegador(yo, HOST_A, e.empresa);
     expect(
       await acciones.resincronizarLaSerie({

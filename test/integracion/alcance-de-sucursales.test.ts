@@ -44,10 +44,14 @@ describe.skipIf(base === null)("alcance de sucursales: el adaptador contra una b
     await propia.destruir();
   });
 
-  const alcanceDe = async (empresa: EmpresaId, persona: PersonaId | null) => {
+  const alcanceDe = async (
+    empresa: EmpresaId,
+    persona: PersonaId | null,
+    opciones?: { incluirDesactivadas?: boolean },
+  ) => {
     const contexto = comoEmpresa(empresa, persona);
     const r = await entorno.ejecutar({ contexto }, async (tx) =>
-      ok(await tx.autorizacion.sucursalesDelActor(contexto)),
+      ok(await tx.autorizacion.sucursalesDelActor(contexto, opciones)),
     );
     if (!r.ok) throw new Error(`falló la transacción: ${JSON.stringify(r.error)}`);
     return r.valor;
@@ -118,6 +122,38 @@ describe.skipIf(base === null)("alcance de sucursales: el adaptador contra una b
     await dueno.query("update sucursal set activa = false where id = $1", [a]);
     expect(await alcanceDe(empresa, persona)).toEqual([b]);
   });
+
+  it("con `incluirDesactivadas` el operador recibe también las cerradas que tiene asignadas (para mirar historial); sin esa opción, no", async () => {
+    const { empresa, sucursales } = await empresaConSucursales(2);
+    const persona = await miembro(empresa, "OPERADOR");
+    const [a, b, c] = sucursales as [SucursalId, SucursalId, SucursalId];
+    await crearAsignacionDeBase(dueno, empresa, persona, a);
+    await crearAsignacionDeBase(dueno, empresa, persona, b);
+    await dueno.query("update sucursal set activa = false where id = $1", [a]);
+    await dueno.query("update sucursal set activa = false where id = $1", [c]);
+    expect(await alcanceDe(empresa, persona)).toEqual([b]);
+    expect(await alcanceDe(empresa, persona, { incluirDesactivadas: false })).toEqual([b]);
+    // Con la opción, la cerrada asignada entra; la cerrada NO asignada, no; y una asignación apagada tampoco.
+    expect(await alcanceDe(empresa, persona, { incluirDesactivadas: true })).toEqual([a, b]);
+    await dueno.query(
+      "update asignacion_sucursal set activa = false where empresa_id = $1 and persona_id = $2 and sucursal_id = $3",
+      [empresa, persona, a],
+    );
+    expect(await alcanceDe(empresa, persona, { incluirDesactivadas: true })).toEqual([b]);
+  });
+
+  it.each(["GERENTE", "ADMINISTRADOR"] as const)(
+    "con `incluirDesactivadas` un %s sigue siendo «TODAS»; y sin membresía sigue sin alcance",
+    async (rol) => {
+      const { empresa } = await empresaConSucursales(1);
+      expect(
+        await alcanceDe(empresa, await miembro(empresa, rol), { incluirDesactivadas: true }),
+      ).toBe("TODAS");
+      expect(await alcanceDe(empresa, null, { incluirDesactivadas: true })).toEqual([]);
+      const ajeno = personaId((await crearPersonaDeBase(dueno)).id);
+      expect(await alcanceDe(empresa, ajeno, { incluirDesactivadas: true })).toEqual([]);
+    },
+  );
 
   it("un operador con membresía apagada no tiene alcance, aunque conserve asignaciones activas", async () => {
     const { empresa, sucursales } = await empresaConSucursales(0);

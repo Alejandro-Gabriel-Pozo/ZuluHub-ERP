@@ -191,6 +191,19 @@ export const TEXTOS_DE_FISCAL = {
     porDefecto: "Los filtros del listado no son válidos.",
     largoMaximo: 160,
   },
+  // Fuente: `Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md`, D-36 («el servidor responde "sucursal no elegida"
+  // y se pide elegir»; confirmada por el dueño el 2026-10-28) y D-34 (el servidor valida la sucursal elegida cada vez; el error
+  // de una que no es de su alcance es `SUCURSAL_FUERA_DE_ALCANCE`, de `capacidades/permisos/alcance.ts`). Los TEXTOS son solo la
+  // lectura literal de esos dos nombres: la pantalla se guía por el CÓDIGO (abre el selector) y el texto definitivo no está
+  // aprobado (pregunta pendiente).
+  "error.fiscal_sucursal_no_elegida": {
+    porDefecto: "Sucursal no elegida.",
+    largoMaximo: 160,
+  },
+  "error.fiscal_sucursal_fuera_de_alcance": {
+    porDefecto: "Sucursal fuera de su alcance.",
+    largoMaximo: 160,
+  },
   "fiscal.arca.error_generico": {
     porDefecto: "ARCA no aceptó el comprobante. Código {codigo}.",
     largoMaximo: 160,

@@ -152,6 +152,7 @@ export const COLUMNAS_DE_FISCAL = {
     "creado_en",
     "actualizado_en",
     "version",
+    "sucursal_id",
   ],
   comprobante_linea: [
     "empresa_id",
@@ -393,6 +394,7 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   comprobante_id_empresa_emisor_uk: "NO_TRADUCIDA",
   comprobante_emisor_fkey: "EMISOR_NO_ENCONTRADO",
   comprobante_pv_fkey: "PUNTO_DE_VENTA_NO_ENCONTRADO",
+  comprobante_sucursal_fkey: "NO_TRADUCIDA", // la copia el disparador de alta del punto de venta, que ya apunta a una sucursal de la empresa
   comprobante_datos_fiscales_fkey: "DATOS_FISCALES_NO_ENCONTRADOS",
   comprobante_asociado_fkey: "COMPROBANTE_ASOCIADO_NO_ENCONTRADO",
   comprobante_identidad_uk: "COMPROBANTE_YA_EXISTE", // el alta del repositorio lo absorbe y devuelve el existente
@@ -402,6 +404,7 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   comprobante_alta_invalida: "COMPROBANTE_ALTA_INVALIDA", // lo lanza un disparador
   comprobante_asociado_invalido: "COMPROBANTE_ASOCIADO_INVALIDO", // lo lanza un disparador
   comprobante_inmutable: "COMPROBANTE_INMUTABLE", // lo lanza un disparador
+  comprobante_sin_sucursal: "COMPROBANTE_ALTA_INVALIDA", // lo lanza un disparador (diferido): el alta siempre copia la del punto de venta
   comprobante_transicion_invalida: "COMPROBANTE_TRANSICION_INVALIDA", // lo lanza un disparador
   comprobante_sin_reserva: "COMPROBANTE_SIN_RESERVA", // lo lanza un disparador (diferido)
   comprobante_serie_sin_reserva: "SERIE_CON_COMPROBANTE_EN_VUELO", // lo lanza un disparador (diferido)
@@ -504,6 +507,7 @@ export const RESTRICCIONES_DE_DISPARADORES_DE_FISCAL = [
   "comprobante_alta_invalida",
   "comprobante_asociado_invalido",
   "comprobante_inmutable",
+  "comprobante_sin_sucursal",
   "comprobante_transicion_invalida",
   "comprobante_sin_reserva",
   "comprobante_serie_sin_reserva",

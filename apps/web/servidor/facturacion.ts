@@ -132,7 +132,9 @@ export function cambiarElAmbiente(entrada: unknown) {
 }
 
 export function listarLosComprobantes(entrada?: unknown) {
-  return conLaEmpresa((contexto) => listarComprobantes(dependencias, contexto, entrada));
+  // La sesión web todavía no guarda la sucursal elegida (la hace el selector de sucursal, capa web): sin ella el listado
+  // responde SUCURSAL_NO_ELEGIDA, salvo que la persona tenga una sola sucursal, que el servidor toma solo. Nunca lista todas.
+  return conLaEmpresa((contexto) => listarComprobantes(dependencias, contexto, null, entrada));
 }
 
 export function verElComprobante(entrada: unknown): Promise<Respuesta<DetalleParaLaPantalla>> {

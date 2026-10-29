@@ -1,7 +1,11 @@
 import { sql, type Kysely } from "kysely";
 import { importeDesdeTexto, type Importe } from "../../../primitivas/dinero/importe";
 import { moneda } from "../../../primitivas/dinero/moneda";
-import type { EmpresaId, SucursalId } from "../../../primitivas/identificadores/marca";
+import {
+  sucursalId,
+  type EmpresaId,
+  type SucursalId,
+} from "../../../primitivas/identificadores/marca";
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import {
   TIPOS_DE_COMPROBANTE,
@@ -60,6 +64,11 @@ export const VALORES_DEL_FILTRO = {
 export type ClaveDeListado = Readonly<{ creadoEn: string; id: ComprobanteId }>;
 
 export type FiltroDeListado = Readonly<{
+  /**
+   * La sucursal del comprobante (`comprobante.sucursal_id`, 0016: la del punto de venta AL EMITIRSE, que no cambia aunque el
+   * punto de venta se mude). Obligatoria y siempre se filtra por ella: no hay un listado «de todas las sucursales».
+   */
+  sucursalId: SucursalId;
   /** `null`: todos los estados menos `DESCARTADO`. */
   estado: EstadoDeComprobanteArca | null;
   tipo: TipoDeComprobante | null;
@@ -117,6 +126,11 @@ export type NotaQueCita = Readonly<{
 export interface LecturasDeComprobantes {
   /** Una página del listado de la empresa, los más nuevos primero; `hayMas` si queda algo después de ella. */
   listar(empresa: EmpresaId, filtro: FiltroDeListado): Promise<PaginaDeFilas>;
+  /**
+   * La sucursal a la que pertenece un comprobante de la empresa (`comprobante.sucursal_id`, la de cuando se emitió), o `null` si
+   * no existe, es de otra empresa o no tiene sucursal guardada (indistinguibles). Es lo que el detalle compara con el alcance de la persona (D-39).
+   */
+  sucursalDelComprobante(empresa: EmpresaId, id: ComprobanteId): Promise<SucursalId | null>;
   /**
    * Los números de los puntos de venta ACTIVOS de la sucursal, de menor a mayor y sin repetir (dos emisores pueden
    * tener cada uno su número 1: el listado filtra por el número, que es lo que se imprime).
@@ -213,7 +227,9 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
 
   return {
     async listar(empresa, filtro) {
-      let consulta = resumen().where("empresa_id", "=", empresa);
+      let consulta = resumen()
+        .where("empresa_id", "=", empresa)
+        .where("sucursal_id", "=", filtro.sucursalId);
       consulta =
         filtro.estado === null
           ? consulta.where("estado", "<>", "DESCARTADO")
@@ -269,6 +285,17 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
         filas: filas.slice(0, filtro.limite).map(aFila),
         hayMas: filas.length > filtro.limite,
       };
+    },
+
+    async sucursalDelComprobante(empresa, id) {
+      const fila = await db
+        .selectFrom("comprobante")
+        .select("sucursal_id")
+        .where("empresa_id", "=", empresa)
+        .where("id", "=", id)
+        .executeTakeFirst();
+      // Una fila sin sucursal (solo una carga que apagó los disparadores) no tiene a quién corresponder: como si no existiera.
+      return fila === undefined || fila.sucursal_id === null ? null : sucursalId(fila.sucursal_id);
     },
 
     async puntosDeVentaActivosDeLaSucursal(empresa, sucursal) {
