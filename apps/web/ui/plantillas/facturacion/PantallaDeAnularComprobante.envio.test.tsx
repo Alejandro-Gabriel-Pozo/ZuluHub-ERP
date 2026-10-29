@@ -163,6 +163,10 @@ describe("anular: el envío es idempotente por intento", () => {
     // Agotadas las verificaciones automáticas queda el «Reintentar» a mano.
     await vi.waitFor(() => expect(servidor.pedidos).toHaveLength(4), { timeout: 3000 });
     await expect.element(boton("Reintentar")).toBeVisible();
+    // Salida sin cambiar la clave (D-11): «Cancelar» lleva al Detalle.
+    await expect
+      .element(page.getByRole("link", { name: "Cancelar" }))
+      .toHaveAttribute("href", `/facturacion/comprobantes/${ID}`);
     expect(document.body.textContent).not.toContain("ERROR_INTERNO");
     await userEvent.click(boton("Reintentar"));
     await vi.waitFor(() => expect(irA).toHaveBeenCalled(), { timeout: 3000 });

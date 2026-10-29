@@ -1,8 +1,10 @@
 import type { DiccionarioResuelto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { Aviso } from "../../componentes/Aviso";
+import { Boton } from "../../componentes/Boton";
 import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../componentes/Insignia";
 import estilos from "./PantallaDeDetalleDeComprobante.module.css";
+import type { AccionDeAnularDelDetalle } from "./modelo-de-anulacion";
 import { armarElDetalle, type DetalleParaMostrar } from "./modelo-del-detalle";
 
 export type PropsDePantallaDeDetalleDeComprobante = Readonly<{
@@ -12,7 +14,7 @@ export type PropsDePantallaDeDetalleDeComprobante = Readonly<{
    * «Anular con nota de crédito», o `null`/ausente si no se ofrece. Lo decide la página con `accionDeAnularDelDetalle` (permiso, módulo
    * activo y comprobante autorizado): la pantalla solo la pinta.
    */
-  anular?: Readonly<{ href: string; etiqueta: string }> | null;
+  anular?: AccionDeAnularDelDetalle | null;
 }>;
 
 /**
@@ -108,7 +110,14 @@ export function PantallaDeDetalleDeComprobante({
 
       {anular === null ? null : (
         <div className={estilos["acciones"]}>
-          <EnlaceDeAccion href={anular.href}>{anular.etiqueta}</EnlaceDeAccion>
+          {anular.href === null ? (
+            // Apagado con su motivo visible y asociado (`aria-describedby`), como el botón sin conexión.
+            <Boton deshabilitado motivo={anular.motivo ?? undefined}>
+              {anular.etiqueta}
+            </Boton>
+          ) : (
+            <EnlaceDeAccion href={anular.href}>{anular.etiqueta}</EnlaceDeAccion>
+          )}
         </div>
       )}
     </article>

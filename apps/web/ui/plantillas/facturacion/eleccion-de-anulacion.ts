@@ -85,7 +85,7 @@ export type FilaDeAlicuota = Readonly<{
 }>;
 
 /** La letra C no informa IVA ni alícuotas a ARCA (D-71): se pide un solo importe. */
-export const esLetraC = (f: Pick<FacturaParaAnular, "tipo">): boolean => f.tipo.endsWith("C");
+const esLetraC = (f: Pick<FacturaParaAnular, "tipo">): boolean => f.tipo.endsWith("C");
 
 export function filasDeLaFactura(f: FacturaParaAnular): readonly FilaDeAlicuota[] {
   return esLetraC(f)

@@ -19,7 +19,7 @@ import { conFactura, factura, facturaC, ID_FACTURA } from "../utilidades/anulaci
 
 /**
  * El pedido de la nota de crédito (D-69, D-71, D-74): un renglón por alícuota, de cantidad 1, con el total con IVA a anular como
- * precio y en modo «IVA incluido»; letra C, un solo renglón sin alícuota. La descripción es la propuesta D-74 (sin aprobar).
+ * precio y en modo «IVA incluido»; letra C, un solo renglón sin alícuota. La descripción es la de D-74, aprobada por el dueño el 2026-10-29.
  */
 
 const unaParte = (...escritos: [string, string][]) =>

@@ -25,7 +25,12 @@ export async function violacionesDeAccesibilidad(
   const enCurso = document
     .getAnimations()
     .filter((animacion) => animacion.effect?.getComputedTiming().iterations !== Infinity);
-  await Promise.all(enCurso.map((animacion) => animacion.finished.catch(() => undefined)));
+  // Con un tope: una animación que no termina no cuelga la prueba (axe mide igual al vencer el plazo).
+  const tope = new Promise<void>((resolver) => setTimeout(resolver, 2000));
+  await Promise.race([
+    Promise.all(enCurso.map((animacion) => animacion.finished.catch(() => undefined))),
+    tope,
+  ]);
   const resultado = await axe.run(raiz, {
     runOnly: { type: "tag", values: ETIQUETAS_DE_AXE },
     rules: pagina

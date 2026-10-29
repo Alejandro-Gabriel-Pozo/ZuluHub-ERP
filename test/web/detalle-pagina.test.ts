@@ -152,6 +152,14 @@ describe("la página del detalle de un comprobante", () => {
 
 describe("la página del detalle: el botón «Anular con nota de crédito»", () => {
   const BOTON = "Anular con nota de crédito";
+  const MOTIVO = "Solo se anula una factura o una nota de débito Autorizada.";
+  /** Apagado: el botón existe, no lleva al enlace, y su motivo está a la vista y asociado (`aria-describedby`). */
+  const expectApagado = (marcado: string): void => {
+    expect(marcado).toContain(BOTON);
+    expect(marcado).toContain(MOTIVO);
+    expect(marcado).not.toContain("/anular");
+    expect(marcado).toMatch(/<button[^>]*disabled[^>]*aria-describedby="[^"]+"/);
+  };
   const poder = (cambios: Partial<typeof permisos> = {}) => {
     permisos.acciones = ["comprobantes.ver", "notas_de_credito.emitir"];
     permisos.activos = ["facturacion"];
@@ -166,7 +174,7 @@ describe("la página del detalle: el botón «Anular con nota de crédito»", ()
     respuesta({ ok: true, dato: conId });
   });
 
-  it("con la acción de emitir notas de crédito, el módulo activo y la factura Autorizada: aparece y lleva a la pantalla de anular", async () => {
+  it("con la acción de emitir notas de crédito y la factura Autorizada: aparece y lleva a la pantalla de anular", async () => {
     poder();
     const marcado = await html(ID);
     expect(marcado).toContain(BOTON);
@@ -184,10 +192,10 @@ describe("la página del detalle: el botón «Anular con nota de crédito»", ()
     expect(marcado).toContain(`href="/facturacion/comprobantes/${ID}/anular"`);
   });
 
-  it("una nota de débito que no está Autorizada: no aparece", async () => {
+  it("una nota de débito que no está Autorizada: el botón aparece APAGADO, con su motivo", async () => {
     poder();
     respuesta({ ok: true, dato: { ...conId, tipo: "NOTA_DEBITO_B", estado: "RECHAZADO" } });
-    expect(await html(ID)).not.toContain(BOTON);
+    expectApagado(await html(ID));
   });
 
   it("sin la acción de emitir notas de crédito (solo puede ver): no aparece", async () => {
@@ -200,14 +208,9 @@ describe("la página del detalle: el botón «Anular con nota de crédito»", ()
     expect(await html(ID)).not.toContain(BOTON);
   });
 
-  it("con el módulo de facturación apagado: no aparece", async () => {
-    poder({ activos: [] });
-    expect(await html(ID)).not.toContain(BOTON);
-  });
-
-  it("SUPUESTO: con el módulo en solo lectura no aparece (el texto del motivo del botón apagado, D-59, no está aprobado)", async () => {
+  it("con el módulo en solo lectura y la acción: SÍ aparece (el servidor la permite; dueño, 2026-10-29)", async () => {
     poder({ activos: [], enSoloLectura: ["facturacion"] });
-    expect(await html(ID)).not.toContain(BOTON);
+    expect(await html(ID)).toContain(`href="/facturacion/comprobantes/${ID}/anular"`);
   });
 
   it.each([
@@ -217,9 +220,18 @@ describe("la página del detalle: el botón «Anular con nota de crédito»", ()
     "INCIERTO",
     "CONFLICTO",
     "DESCARTADO",
-  ] as const)("una factura %s no se anula: no aparece", async (estado) => {
-    poder();
-    respuesta({ ok: true, dato: { ...conId, estado } });
+  ] as const)(
+    "una factura %s no se anula: el botón aparece APAGADO, con su motivo",
+    async (estado) => {
+      poder();
+      respuesta({ ok: true, dato: { ...conId, estado } });
+      expectApagado(await html(ID));
+    },
+  );
+
+  it("apagado y sin la acción de emitir notas de crédito: no aparece", async () => {
+    poder({ acciones: ["comprobantes.ver"] });
+    respuesta({ ok: true, dato: { ...conId, estado: "RECHAZADO" } });
     expect(await html(ID)).not.toContain(BOTON);
   });
 

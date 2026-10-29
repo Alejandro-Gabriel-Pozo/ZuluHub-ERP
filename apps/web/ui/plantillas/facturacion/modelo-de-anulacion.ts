@@ -5,7 +5,6 @@ import {
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import {
   calcularLaAnulacion,
-  esLetraC,
   filasDeLaFactura,
   type EleccionDeAnulacion,
   type FacturaParaAnular,
@@ -38,25 +37,35 @@ import {
 export function porQueNoSeAnula(
   c: Pick<DetalleParaMostrar, "tipo" | "estado">,
 ): Extract<CodigoFiscal, "FISCAL_ASOCIADO_NO_AUTORIZADO" | "FISCAL_ASOCIADO_NO_ASOCIABLE"> | null {
-  if (c.estado !== "AUTORIZADO") return "FISCAL_ASOCIADO_NO_AUTORIZADO";
-  return c.tipo.startsWith("NOTA_CREDITO") ? "FISCAL_ASOCIADO_NO_ASOCIABLE" : null;
+  // Una nota de crédito no se anula en ningún estado: se mira primero.
+  if (c.tipo.startsWith("NOTA_CREDITO")) return "FISCAL_ASOCIADO_NO_ASOCIABLE";
+  return c.estado === "AUTORIZADO" ? null : "FISCAL_ASOCIADO_NO_AUTORIZADO";
 }
 
+/** La acción del Detalle: un enlace a la pantalla de anular, o (con `motivo`) el botón apagado y su motivo, sin enlace. */
+export type AccionDeAnularDelDetalle = Readonly<{
+  etiqueta: string;
+  href: string | null;
+  motivo: string | null;
+}>;
+
 /**
- * La acción «Anular con nota de crédito» del detalle, o `null`. Se ofrece solo si la persona tiene hoy la acción de emitir notas de
- * crédito y el módulo está activo (`puedeAnular`, que decide el servidor) Y el comprobante se puede anular. Ocultar no es autorizar:
- * la acción vuelve a pasar por el guard.
+ * La acción «Anular con nota de crédito» del detalle, o `null`. Nunca en una nota de crédito. Para el resto se ofrece si la persona
+ * tiene hoy la acción de emitir notas de crédito (`puedeAnular`, que decide el servidor): habilitada si el comprobante está
+ * Autorizado, y apagada con su motivo en cualquier otro estado (contrato, pantalla 2; D-10, D-70). Ocultar no es autorizar: la
+ * acción vuelve a pasar por el guard.
  */
 export function accionDeAnularDelDetalle(
   d: DiccionarioResuelto,
   comprobante: Readonly<{ id: string }> & Pick<DetalleParaMostrar, "tipo" | "estado">,
   puedeAnular: boolean,
-): Readonly<{ href: string; etiqueta: string }> | null {
-  if (!puedeAnular || porQueNoSeAnula(comprobante) !== null) return null;
-  return {
-    href: direccionDeAnular(comprobante.id),
-    etiqueta: texto(d, "fiscal.pantalla.detalle_anular"),
-  };
+): AccionDeAnularDelDetalle | null {
+  const noSeAnula = porQueNoSeAnula(comprobante);
+  if (!puedeAnular || noSeAnula === "FISCAL_ASOCIADO_NO_ASOCIABLE") return null;
+  const etiqueta = texto(d, "fiscal.pantalla.detalle_anular");
+  return noSeAnula === null
+    ? { etiqueta, href: direccionDeAnular(comprobante.id), motivo: null }
+    : { etiqueta, href: null, motivo: texto(d, "fiscal.pantalla.detalle_anular_motivo") };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -128,7 +137,6 @@ function filasParaEscribir(
   e: EleccionDeAnulacion,
   supera: ReadonlySet<string>,
 ): readonly FilaParaEscribir[] {
-  const unico = esLetraC(f);
   return filasDeLaFactura(f).map((fila) => {
     const tasa = fila.alicuota === null ? null : formatearAlicuota(fila.alicuota);
     return {
@@ -138,9 +146,11 @@ function filasParaEscribir(
         rotulo: texto(d, "fiscal.pantalla.anular_facturado"),
         importe: formatearImporte(fila.facturado),
       },
+      // D-75 (decisión del ingeniero, no aprobada por el dueño): «con IVA incluido» solo donde hay IVA; en la letra C, Exento y
+      // No gravado el campo dice «Importe a anular».
       etiquetaDelCampo: texto(
         d,
-        unico ? "fiscal.pantalla.anular_importe" : "fiscal.pantalla.anular_importe_con_iva",
+        tasa === null ? "fiscal.pantalla.anular_importe" : "fiscal.pantalla.anular_importe_con_iva",
       ),
       valor: e.importes[fila.clave] ?? "",
       aviso: supera.has(fila.clave)

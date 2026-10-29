@@ -9,7 +9,7 @@ import { factura, ID_FACTURA } from "../utilidades/anulacion";
 
 /**
  * La página de anular `/facturacion/comprobantes/[id]/anular`, renderizada en el servidor: valida la forma del id ANTES de preguntar,
- * solo ofrece la pantalla a quien tiene la acción de emitir notas de crédito con el módulo activo, lee la factura por su id (la
+ * solo ofrece la pantalla a quien tiene la acción de emitir notas de crédito (también con el módulo en solo lectura), lee la factura por su id (la
  * empresa y el permiso de lectura los decide el servidor) y solo deja anular una factura o una nota de débito Autorizada (D-70). Cada error se ve con su texto y sin
  * el código crudo.
  */
@@ -80,7 +80,7 @@ beforeEach(() => {
 });
 
 describe("la página de anular", () => {
-  it("con permiso, módulo activo y una factura Autorizada: la lee por su id y muestra el paso 1 con el total por defecto", async () => {
+  it("con permiso y una factura Autorizada: la lee por su id y muestra el paso 1 con el total por defecto", async () => {
     const texto = await pagina(ID_FACTURA);
     expect(mundo.lecturas).toEqual([{ comprobanteId: ID_FACTURA }]);
     for (const esperado of [
@@ -146,19 +146,11 @@ describe("la página de anular: quién la ve", () => {
     expect(mundo.lecturas).toEqual([]);
   });
 
-  it("con el módulo de facturación apagado: no se ofrece", async () => {
-    permisos({ activos: ["administracion"] });
-    const texto = await pagina(ID_FACTURA);
-    expect(texto).toContain("Esta función no está activada para la empresa.");
-    expect(texto).not.toContain("Siguiente");
-    expect(mundo.lecturas).toEqual([]);
-  });
-
-  it("SUPUESTO: con el módulo en solo lectura tampoco se ofrece (el texto del motivo apagado, D-59, no está aprobado)", async () => {
+  it("con el módulo en solo lectura y la acción de emitir notas de crédito: SÍ se ofrece (el servidor la permite; dueño, 2026-10-29)", async () => {
     permisos({ activos: [], enSoloLectura: ["facturacion"] });
     const texto = await pagina(ID_FACTURA);
-    expect(texto).toContain("quedó en solo lectura");
-    expect(texto).not.toContain("Siguiente");
+    expect(texto).toContain("Siguiente");
+    expect(mundo.lecturas).toEqual([{ comprobanteId: ID_FACTURA }]);
   });
 
   it("si no se pudieron leer los permisos: no se ofrece (cierra, no abre)", async () => {

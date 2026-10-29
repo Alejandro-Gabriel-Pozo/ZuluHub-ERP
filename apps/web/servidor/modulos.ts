@@ -38,26 +38,16 @@ export async function destinosDeModulos(
     : [];
 }
 
-/** Por qué la persona no puede anular con nota de crédito ahora (los códigos públicos de siempre; su texto es el del catálogo). */
-export type FaltaParaAnular = "SIN_PERMISO" | "MODULO_NO_ACTIVO" | "MODULO_EN_SOLO_LECTURA";
-
 /**
- * Qué le falta a la persona para anular con nota de crédito, o `null` si puede: tiene hoy la acción `notas_de_credito.emitir` Y el
- * módulo `facturacion` está ACTIVO. SUPUESTO declarado: en solo lectura NO se ofrece (ni el botón ni la pantalla; el dueño lo pidió
- * el 2026-10-29: «en solo lectura el botón no aparece»); si `permisosDelActor` falla, tampoco (cierra, no abre). Ocultar no es
- * autorizar: la acción vuelve a pasar por el guard, con el mismo permiso, dentro de su transacción.
+ * ¿La persona puede emitir notas de crédito hoy? Depende SOLO de que `permisosDelActor().acciones` incluya `notas_de_credito.emitir`:
+ * esa lista sale del mismo cálculo que el guard, y esa acción es `COMPLETA_CIERRA` (`src/capacidades/modulos/catalogo.ts`), que el
+ * guard deja pasar también con el módulo en solo lectura. Por eso el botón y la pantalla de anular SÍ se ofrecen en solo lectura
+ * (corrección del dueño, 2026-10-29, cuestionario en la sesión web del carril web). Si `permisosDelActor` falla, no se ofrece
+ * (cierra, no abre). Ocultar no es autorizar: la acción vuelve a pasar por el guard, dentro de su transacción.
  */
-export async function loQueFaltaParaAnular(
-  contexto: ContextoOperativo,
-): Promise<FaltaParaAnular | null> {
+export async function puedeEmitirNotasDeCredito(contexto: ContextoOperativo): Promise<boolean> {
   const permisos = await permisosDeLaPersona(contexto);
-  if (permisos === null || !permisos.acciones.includes("notas_de_credito.emitir")) {
-    return "SIN_PERMISO";
-  }
-  if (permisos.modulos.activos.includes("facturacion")) return null;
-  return permisos.modulos.enSoloLectura.includes("facturacion")
-    ? "MODULO_EN_SOLO_LECTURA"
-    : "MODULO_NO_ACTIVO";
+  return permisos !== null && permisos.acciones.includes("notas_de_credito.emitir");
 }
 
 /**

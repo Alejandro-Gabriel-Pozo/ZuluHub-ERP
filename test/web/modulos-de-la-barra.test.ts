@@ -35,7 +35,7 @@ const cargar = (
   ruta: string,
 ): Promise<{
   destinosDeModulos: (contexto: unknown) => Promise<readonly { clave: string }[]>;
-  loQueFaltaParaAnular: (contexto: unknown) => Promise<string | null>;
+  puedeEmitirNotasDeCredito: (contexto: unknown) => Promise<boolean>;
 }> => import(/* @vite-ignore */ ruta);
 
 const claves = async (): Promise<string[]> => {
@@ -97,46 +97,42 @@ describe("destinosDeModulos", () => {
 });
 
 /**
- * Anular con nota de crédito: se ofrece (botón del detalle y pantalla) solo con la acción `notas_de_credito.emitir` Y el módulo de
- * facturación ACTIVO. En solo lectura no (lo pidió el dueño el 2026-10-29). Ante un error, no se ofrece.
- * Ocultar no autoriza: la acción de emitir vuelve a pasar por el guard.
+ * Anular con nota de crédito: se ofrece (botón del detalle y pantalla) con solo que `permisosDelActor().acciones` incluya
+ * `notas_de_credito.emitir`, también con el módulo en solo lectura (la acción es COMPLETA_CIERRA y el guard la deja pasar; corrección
+ * del dueño, 2026-10-29, cuestionario en la sesión web del carril web). Ante un error, no se ofrece. Ocultar no autoriza: la acción
+ * de emitir vuelve a pasar por el guard.
  */
-describe("loQueFaltaParaAnular", () => {
-  const falta = async (): Promise<string | null> => {
-    const { loQueFaltaParaAnular } = await cargar(RUTA);
-    return loQueFaltaParaAnular({ empresaId: "empresa-1" });
+describe("puedeEmitirNotasDeCredito", () => {
+  const puede = async (): Promise<boolean> => {
+    const { puedeEmitirNotasDeCredito } = await cargar(RUTA);
+    return puedeEmitirNotasDeCredito({ empresaId: "empresa-1" });
   };
   const EMITE = "notas_de_credito.emitir";
 
-  it("con la acción y el módulo activo: nada falta; la consulta usa el contexto de la empresa", async () => {
+  it("con la acción: sí; la consulta usa el contexto de la empresa", async () => {
     permisos({ acciones: ["comprobantes.ver", EMITE], activos: ["facturacion"] });
-    expect(await falta()).toBeNull();
+    expect(await puede()).toBe(true);
     expect(mundo.contextos).toEqual([{ empresaId: "empresa-1" }]);
   });
 
-  it("sin la acción: SIN_PERMISO, aunque el módulo esté activo y pueda emitir facturas", async () => {
+  it("sin la acción: no, aunque pueda emitir facturas", async () => {
     permisos({
       acciones: ["comprobantes.ver", "comprobantes.emitir_manual"],
       activos: ["facturacion"],
     });
-    expect(await falta()).toBe("SIN_PERMISO");
+    expect(await puede()).toBe(false);
   });
 
-  it("con la acción pero sin el módulo activo: MODULO_NO_ACTIVO", async () => {
-    permisos({ acciones: [EMITE], activos: ["administracion"] });
-    expect(await falta()).toBe("MODULO_NO_ACTIVO");
-  });
-
-  it("con el módulo en solo lectura no se ofrece: MODULO_EN_SOLO_LECTURA", async () => {
+  it("con el módulo en solo lectura y la acción: sí (el servidor la permite)", async () => {
     permisos({ acciones: [EMITE], activos: [], enSoloLectura: ["facturacion"] });
-    expect(await falta()).toBe("MODULO_EN_SOLO_LECTURA");
+    expect(await puede()).toBe(true);
   });
 
-  it("si no se pudieron leer los permisos (rechazo o excepción): SIN_PERMISO, cierra", async () => {
+  it("si no se pudieron leer los permisos (rechazo o excepción): no, cierra", async () => {
     mundo.respuesta = err({ codigo: "SIN_PERMISO" });
-    expect(await falta()).toBe("SIN_PERMISO");
+    expect(await puede()).toBe(false);
     mundo.falla = true;
-    expect(await falta()).toBe("SIN_PERMISO");
+    expect(await puede()).toBe(false);
   });
 });
 
@@ -161,8 +157,8 @@ describe("el rastro cuando no se pueden leer los permisos", () => {
       override name = "ErrorDeLaBase";
     }
     mundo.falla = new ErrorDeLaBase(SECRETO);
-    const { loQueFaltaParaAnular } = await cargar(RUTA);
-    expect(await loQueFaltaParaAnular({ empresaId: "empresa-1" })).toBe("SIN_PERMISO");
+    const { puedeEmitirNotasDeCredito } = await cargar(RUTA);
+    expect(await puedeEmitirNotasDeCredito({ empresaId: "empresa-1" })).toBe(false);
     const lineas = lineasDelRegistro();
     expect(lineas).toEqual([
       "[modulos] no se pudieron leer los permisos de la persona (ErrorDeLaBase)",

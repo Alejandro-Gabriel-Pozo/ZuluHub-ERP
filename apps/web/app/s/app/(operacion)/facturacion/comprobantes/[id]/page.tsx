@@ -2,7 +2,7 @@ import { errorDeCodigo } from "../../../../../../../../../src/capacidades/experi
 import { FORMA_DE_ID } from "../../../../../../../pantallas/comprobante-por-id";
 import { conTitulo, pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
 import { verElComprobante } from "../../../../../../../servidor/facturacion";
-import { loQueFaltaParaAnular } from "../../../../../../../servidor/modulos";
+import { puedeEmitirNotasDeCredito } from "../../../../../../../servidor/modulos";
 import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
 import {
   accionDeAnularDelDetalle,
@@ -15,8 +15,8 @@ import { PantallaDeDetalleDeComprobante } from "../../../../../../../ui/plantill
 const OPCIONES = { titulo: "fiscal.pantalla.titulo", actual: "comprobantes" } as const;
 
 // Detalle de un comprobante. El servidor decide empresa y permiso; el id es lo único que viene de la URL. Ofrece «Anular con nota de
-// crédito» solo si la persona puede (acción de emitir notas de crédito y módulo activo) y el comprobante es una factura o una nota de
-// débito Autorizada.
+// crédito» si la persona puede (acción de emitir notas de crédito, también con el módulo en solo lectura) y el comprobante es una
+// factura o una nota de débito: habilitado si está Autorizada, apagado con su motivo si no (D-10, D-70). A una nota de crédito, nunca.
 export default async function PaginaDeDetalleDeComprobante({
   params,
 }: {
@@ -30,9 +30,10 @@ export default async function PaginaDeDetalleDeComprobante({
     const respuesta = await verElComprobante({ comprobanteId: id });
     if (!respuesta.ok) return <ErrorDelDetalle error={respuesta.error} />;
     const dato = respuesta.dato;
-    // Solo se pregunta por los permisos si el comprobante se puede anular: a los demás no se les ofrece nada.
+    // A una nota de crédito no se le ofrece nada (ni se pregunta por los permisos); a los demás, solo si la persona puede emitir notas.
     const puedeAnular =
-      porQueNoSeAnula(dato) === null && (await loQueFaltaParaAnular(contexto)) === null;
+      porQueNoSeAnula(dato) !== "FISCAL_ASOCIADO_NO_ASOCIABLE" &&
+      (await puedeEmitirNotasDeCredito(contexto));
     // El título real es el único h1 (el de un error sigue siendo el genérico del catálogo).
     return conTitulo(
       armarElDetalle(dato, {}).titulo,

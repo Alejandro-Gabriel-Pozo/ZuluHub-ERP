@@ -203,7 +203,8 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
         claves
           .filter(
             (c) =>
-              c.startsWith("fiscal.pantalla.anular_") || c === "fiscal.pantalla.detalle_anular",
+              c.startsWith("fiscal.pantalla.anular_") ||
+              c.startsWith("fiscal.pantalla.detalle_anular"),
           )
           .map((c) => [c, porDefecto(c)]),
       ),
@@ -241,6 +242,8 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "fiscal.pantalla.anular_clase_factura": "factura",
       "fiscal.pantalla.anular_clase_nota_de_debito": "nota de débito",
       "fiscal.pantalla.detalle_anular": "Anular con nota de crédito",
+      "fiscal.pantalla.detalle_anular_motivo":
+        "Solo se anula una factura o una nota de débito Autorizada.",
     });
     // El aviso lleva la tasa que corresponde en un marcador `alicuota`.
     expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.anular_aviso_supera"].marcadores).toEqual([

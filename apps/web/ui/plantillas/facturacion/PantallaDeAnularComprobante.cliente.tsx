@@ -224,9 +224,18 @@ export function PantallaDeAnularComprobante({
               tono="aviso"
               accion={
                 envio.enCurso ? undefined : (
-                  <Boton variante="secundaria" alTocar={envio.enviar}>
-                    {texto(diccionario, "estado.reintentar")}
-                  </Boton>
+                  <div className={estilos["acciones"]}>
+                    <div className={estilos["accion"]}>
+                      <Boton ancho="completo" variante="secundaria" alTocar={envio.enviar}>
+                        {texto(diccionario, "estado.reintentar")}
+                      </Boton>
+                    </div>
+                    {/* Salida con un error que no se resuelve (D-11): vuelve al Detalle sin tocar la clave fijada; si la nota
+                        llegó a registrarse, el Detalle la muestra en «Ya anulado con notas de crédito». Reusa «Cancelar». */}
+                    <a className={estilos["cancelar"]} href={vista.hrefDeCancelar}>
+                      {vista.botones.cancelar}
+                    </a>
+                  </div>
                 )
               }
             >

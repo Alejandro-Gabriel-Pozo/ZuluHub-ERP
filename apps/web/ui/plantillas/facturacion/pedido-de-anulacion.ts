@@ -38,7 +38,7 @@ export type PedidoDeAnulacion = Readonly<{
 }>;
 
 /**
- * D-74 (propuesta del ingeniero, sin aprobar): «Anulación parcial de la factura 00001-00000123, IVA 21 %»; «Anulación total de …» si
+ * D-74 (aprobado por el dueño el 2026-10-29, cuestionario en la sesión web del carril web): «Anulación parcial de la factura 00001-00000123, IVA 21 %»; «Anulación total de …» si
  * se anula todo; «nota de débito» si se anula una nota de débito. Sin la alícuota si no lleva IVA (letra C, exento, no gravado).
  */
 function descripcionDelRenglon(

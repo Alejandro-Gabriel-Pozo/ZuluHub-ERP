@@ -248,16 +248,70 @@ describe("qué se puede anular y quién ve la acción", () => {
     }
   });
 
-  it("el botón del detalle: con permiso y Autorizada (factura o nota de débito) apunta a la pantalla; en otro caso, nada", () => {
+  it("el botón del detalle: con permiso y Autorizada (factura o nota de débito) apunta a la pantalla; sin permiso, nada", () => {
     const c = { id: ID_FACTURA, tipo: "FACTURA_B", estado: "AUTORIZADO" } as const;
     const boton = {
       href: `/facturacion/comprobantes/${ID_FACTURA}/anular`,
       etiqueta: "Anular con nota de crédito",
+      motivo: null,
     };
     expect(accionDeAnularDelDetalle({}, c, true)).toEqual(boton);
     expect(accionDeAnularDelDetalle({}, { ...c, tipo: "NOTA_DEBITO_B" }, true)).toEqual(boton);
     expect(accionDeAnularDelDetalle({}, c, false)).toBeNull();
-    expect(accionDeAnularDelDetalle({}, { ...c, estado: "EN_VALIDACION" }, true)).toBeNull();
-    expect(accionDeAnularDelDetalle({}, { ...c, tipo: "NOTA_CREDITO_B" }, true)).toBeNull();
+  });
+
+  it("no Autorizada (factura o nota de débito): el botón va apagado, sin enlace y con el motivo aprobado (D-10, D-70)", () => {
+    for (const tipo of ["FACTURA_B", "NOTA_DEBITO_B"] as const) {
+      for (const estado of [
+        "PENDIENTE",
+        "EN_VALIDACION",
+        "RECHAZADO",
+        "INCIERTO",
+        "CONFLICTO",
+        "DESCARTADO",
+      ] as const) {
+        expect(accionDeAnularDelDetalle({}, { id: ID_FACTURA, tipo, estado }, true)).toEqual({
+          etiqueta: "Anular con nota de crédito",
+          href: null,
+          motivo: "Solo se anula una factura o una nota de débito Autorizada.",
+        });
+      }
+    }
+    expect(
+      accionDeAnularDelDetalle(
+        {},
+        { id: ID_FACTURA, tipo: "FACTURA_B", estado: "RECHAZADO" },
+        false,
+      ),
+    ).toBeNull();
+  });
+
+  it("una nota de crédito: nunca (ni Autorizada ni en otro estado)", () => {
+    for (const estado of ["AUTORIZADO", "RECHAZADO", "PENDIENTE"] as const) {
+      expect(
+        accionDeAnularDelDetalle({}, { id: ID_FACTURA, tipo: "NOTA_CREDITO_B", estado }, true),
+      ).toBeNull();
+    }
+  });
+
+  it("D-75: «con IVA incluido» solo donde hay IVA; letra C, Exento y No gravado dicen «Importe a anular»", () => {
+    const etiquetas = (f: typeof factura) =>
+      armarLaVista({}, f, pasarAUnaParte(anulacionTotal)).queAnular.filas.map(
+        (x) => x.etiquetaDelCampo,
+      );
+    expect(etiquetas(factura)).toEqual(Array(2).fill("Importe a anular (con IVA incluido)"));
+    expect(etiquetas(facturaC)).toEqual(["Importe a anular"]);
+    const sinIva = conFactura({
+      alicuotas: [
+        { alicuota: "EXENTO", total: "1.00" },
+        { alicuota: "NO_GRAVADO", total: "1.00" },
+        { alicuota: "0", total: "1.00" },
+      ],
+    });
+    expect(etiquetas(sinIva)).toEqual([
+      "Importe a anular",
+      "Importe a anular",
+      "Importe a anular (con IVA incluido)",
+    ]);
   });
 });

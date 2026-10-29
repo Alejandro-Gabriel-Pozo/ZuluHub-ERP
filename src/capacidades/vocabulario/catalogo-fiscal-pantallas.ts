@@ -299,4 +299,10 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
   // CONTRATO (pantalla 2, «Acciones»): «Anular con nota de crédito» es la acción del Detalle; GUIA §1.2 (estados del comprobante)
   // y el dueño, 2026-10-28 («Ver y Anular con nota de crédito»), lo nombran igual.
   "fiscal.pantalla.detalle_anular": { porDefecto: "Anular con nota de crédito" },
+  // Aprobado por el dueño el 2026-10-29 (cuestionario en la sesión web del carril web; fuente D-10 y D-70): el motivo del botón
+  // apagado en el Detalle de una factura o una nota de débito que no está Autorizada.
+  "fiscal.pantalla.detalle_anular_motivo": {
+    porDefecto: "Solo se anula una factura o una nota de débito Autorizada.",
+    largoMaximo: 120,
+  },
 } as const;
