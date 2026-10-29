@@ -32,10 +32,13 @@ export type TxDeConsultasDeFacturacion = Readonly<{
   marca: Readonly<{ deLaEmpresa(empresa: EmpresaId): Promise<MarcaParaImprimir> }>;
   /**
    * Las sucursales de la empresa, abiertas y cerradas (las del módulo de empresas: la composición pasa su repositorio, que ya
-   * cumple esto). De ellas y del alcance del actor sale la sucursal en la que trabaja el listado (`sucursal-del-pedido.ts`).
+   * cumple esto). De ellas y del alcance del actor sale la sucursal en la que trabaja el listado (`sucursal-del-pedido.ts`),
+   * con el nombre que la pantalla muestra: viene de la misma lectura, sin otra consulta.
    */
   sucursales: Readonly<{
-    listar(empresa: EmpresaId): Promise<readonly Readonly<{ id: SucursalId; activa: boolean }>[]>;
+    listar(
+      empresa: EmpresaId,
+    ): Promise<readonly Readonly<{ id: SucursalId; nombre: string; activa: boolean }>[]>;
   }>;
   /** Quién es el actor y qué módulos tiene la empresa, leído dentro de la transacción (sin caché). */
   autorizacion: CargaDeAutorizacion;

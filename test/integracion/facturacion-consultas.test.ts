@@ -373,6 +373,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
         id: pendiente.id,
         tipo: "FACTURA_B",
         numero: null,
+        puntoDeVentaNumero: a.x.pvNumero,
         // todavía sin numerar: el día de creación en Argentina
         fecha: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) as unknown,
         receptorNombre: null,
@@ -386,6 +387,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
         id: autorizado.id,
         tipo: "FACTURA_A",
         numero: `${String(a.x.pvNumero).padStart(5, "0")}-00000001`,
+        puntoDeVentaNumero: a.x.pvNumero,
         // la fecha de emisión gana sobre la de creación
         fecha: diaDe(AHORA),
         receptorNombre: "Distribuidora Sur SA",
@@ -403,12 +405,66 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
           "fecha",
           "id",
           "numero",
+          "puntoDeVentaNumero",
           "receptorDocumento",
           "receptorNombre",
           "tipo",
           "total",
         ].sort(),
       );
+    });
+
+    it("cada fila trae el número de SU punto de venta como dato, también cuando todavía no tiene número de comprobante", async () => {
+      const a = await crearEmpresa();
+      const otro = await crearPuntoDeVenta(dueno, a.x, { numero: a.x.pvNumero + 7, activo: true });
+      const enElPrimero = await crearPendiente(a.x);
+      const enElOtro = await crearPendiente({ ...a.x, pv: otro, pvNumero: a.x.pvNumero + 7 });
+      const items = (await listar(a)).items;
+      const numeroDe = (id: string) => items.find((i) => i.id === id)?.puntoDeVentaNumero;
+      expect(numeroDe(enElPrimero.id)).toBe(a.x.pvNumero);
+      expect(numeroDe(enElOtro.id)).toBe(a.x.pvNumero + 7);
+      expect(typeof numeroDe(enElOtro.id)).toBe("number");
+    });
+
+    it("la página dice qué sucursal usó: id, nombre y si está abierta; una cerrada se informa como no activa (D-37)", async () => {
+      const a = await crearEmpresa();
+      const centro = await dueno.query<{ nombre: string }>(
+        "select nombre from sucursal where id = $1",
+        [a.x.sucursal],
+      );
+      expect((await listar(a)).sucursal).toEqual({
+        id: a.x.sucursal,
+        nombre: centro.rows[0]?.nombre,
+        activa: true,
+      });
+      const norte = (
+        await dueno.query<{ id: string }>(
+          "insert into sucursal (empresa_id, nombre) values ($1, 'Norte') returning id",
+          [a.x.empresa],
+        )
+      ).rows[0]?.id as string;
+      const pedida = async (id: string) =>
+        exito(await consultas.listarComprobantes(mira(a), { sucursalElegida: sucursalId(id) }))
+          .sucursal;
+      expect(await pedida(norte)).toEqual({ id: norte, nombre: "Norte", activa: true });
+      await dueno.query("update sucursal set activa = false where id = $1", [norte]);
+      expect(await pedida(norte)).toEqual({ id: norte, nombre: "Norte", activa: false });
+    });
+
+    it("la sucursal que informa es la de esta empresa: otra con el mismo nombre no se confunde, y el operador sin esa sucursal no la recibe", async () => {
+      const a = await crearEmpresa();
+      const b = await crearEmpresa();
+      await dueno.query("update sucursal set nombre = 'Centro' where id in ($1, $2)", [
+        a.x.sucursal,
+        b.x.sucursal,
+      ]);
+      expect((await listar(a)).sucursal.id).toBe(a.x.sucursal);
+      expect((await listar(b)).sucursal.id).toBe(b.x.sucursal);
+      // La sucursal de otra empresa no se puede pedir: no se informa ni su nombre.
+      const ajena = await consultas.listarComprobantes(mira(a), {
+        sucursalElegida: sucursalId(b.x.sucursal),
+      });
+      expect(ajena).toEqual({ ok: false, error: "SUCURSAL_FUERA_DE_ALCANCE" });
     });
 
     it("filtra por tipo y por ambiente", async () => {
@@ -834,9 +890,11 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
         expect(paginas).toBe(Math.ceil(buscados.length / limite));
       }
       // vacío: sin items ni siguiente, y la clave de una página no hace aparecer lo que no cumple
+      const sucursalDeA = { id: a.x.sucursal, nombre: expect.any(String) as unknown, activa: true };
       expect(await listar(a, { ...criterio, puntoDeVenta: 4 })).toEqual({
         items: [],
         siguiente: null,
+        sucursal: sucursalDeA,
       });
       const primera = await listar(a, { ...criterio, limite: 2 });
       const vacia = await listar(a, {
@@ -844,7 +902,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
         letra: "A",
         despuesDe: primera.siguiente ?? "",
       });
-      expect(vacia).toEqual({ items: [], siguiente: null });
+      expect(vacia).toEqual({ items: [], siguiente: null, sucursal: sucursalDeA });
     });
 
     it("repetir la consulta devuelve lo mismo, y los criterios inválidos son errores de negocio sin tocar la base", async () => {
@@ -1060,7 +1118,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
             sucursalElegida: sucursalId(a.x.sucursal),
           }),
         );
-        expect(exito(r).items).toEqual([{ numero: a.x.pvNumero }]);
+        expect(exito(r).items).toEqual([{ numero: a.x.pvNumero, activo: true }]);
       } finally {
         await retiene.query("rollback");
         await retiene.end();
@@ -1068,8 +1126,8 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
     });
   });
 
-  describe("puntos de venta activos de la sucursal", () => {
-    /** Una empresa con dos sucursales: la casa central (PV 1 activo, 5 activo, 7 inactivo) y «Norte» (PV 9 activo). */
+  describe("puntos de venta de la sucursal (activos y dados de baja, D-58)", () => {
+    /** Una empresa con dos sucursales: la casa central (PV 1 activo, 5 activo, 7 dado de baja) y «Norte» (PV 9 activo). */
     async function empresaConDosSucursales() {
       const e = await crearEmpresa();
       const norte = (
@@ -1091,13 +1149,17 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
         },
       );
 
-    it("devuelve solo los activos de ESA sucursal, por número", async () => {
+    it("devuelve los activos y los dados de baja de ESA sucursal, por número y cada uno con su estado", async () => {
       const { e, norte } = await empresaConDosSucursales();
-      expect(exito(await pedir(e, e.x.sucursal)).items).toEqual([{ numero: 1 }, { numero: 5 }]);
-      expect(exito(await pedir(e, norte)).items).toEqual([{ numero: 9 }]);
+      expect(exito(await pedir(e, e.x.sucursal)).items).toEqual([
+        { numero: 1, activo: true },
+        { numero: 5, activo: true },
+        { numero: 7, activo: false },
+      ]);
+      expect(exito(await pedir(e, norte)).items).toEqual([{ numero: 9, activo: true }]);
     });
 
-    it("un punto de venta desactivado sale de la lista, y uno que se muda de sucursal la sigue", async () => {
+    it("un punto de venta dado de baja sigue en la lista marcado como tal, y uno que se muda de sucursal la sigue", async () => {
       const { e, norte } = await empresaConDosSucursales();
       const pv5 = (
         await dueno.query<{ id: string }>(
@@ -1106,11 +1168,21 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
         )
       ).rows[0]?.id as string;
       await dueno.query("update punto_de_venta set estado = 'INACTIVO' where id = $1", [pv5]);
-      expect(exito(await pedir(e, e.x.sucursal)).items).toEqual([{ numero: 1 }]);
+      expect(exito(await pedir(e, e.x.sucursal)).items).toEqual([
+        { numero: 1, activo: true },
+        { numero: 5, activo: false },
+        { numero: 7, activo: false },
+      ]);
       await dueno.query("update punto_de_venta set sucursal_id = $2 where id = $1", [pv5, norte]);
       await dueno.query("update punto_de_venta set estado = 'ACTIVO' where id = $1", [pv5]);
-      expect(exito(await pedir(e, norte)).items).toEqual([{ numero: 5 }, { numero: 9 }]);
-      expect(exito(await pedir(e, e.x.sucursal)).items).toEqual([{ numero: 1 }]);
+      expect(exito(await pedir(e, norte)).items).toEqual([
+        { numero: 5, activo: true },
+        { numero: 9, activo: true },
+      ]);
+      expect(exito(await pedir(e, e.x.sucursal)).items).toEqual([
+        { numero: 1, activo: true },
+        { numero: 7, activo: false },
+      ]);
     });
 
     it("dos emisores con el mismo número en la sucursal dan un solo número", async () => {
@@ -1122,10 +1194,43 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
         )
       ).rows[0]?.id as string;
       await crearPuntoDeVenta(dueno, e.x, { numero: 5, emisor: otroEmisor, activo: true });
-      expect(exito(await pedir(e, e.x.sucursal)).items).toEqual([{ numero: 1 }, { numero: 5 }]);
+      const esperada = [
+        { numero: 1, activo: true },
+        { numero: 5, activo: true },
+        { numero: 7, activo: false },
+      ];
+      expect(exito(await pedir(e, e.x.sucursal)).items).toEqual(esperada);
+      // Mismo número con uno activo y otro dado de baja: un solo ítem, activo (alguno lo está).
+      await crearPuntoDeVenta(dueno, e.x, { numero: 7, emisor: otroEmisor, activo: true });
+      await dueno.query(
+        "update punto_de_venta set estado = 'INACTIVO' where empresa_id = $1 and emisor_id = $2 and numero = 5",
+        [e.x.empresa, otroEmisor],
+      );
+      expect(exito(await pedir(e, e.x.sucursal)).items).toEqual([
+        { numero: 1, activo: true },
+        { numero: 5, activo: true },
+        { numero: 7, activo: true },
+      ]);
+      // Mismo número, los dos dados de baja: un solo ítem, dado de baja.
+      await dueno.query(
+        "update punto_de_venta set estado = 'INACTIVO' where empresa_id = $1 and numero = 7",
+        [e.x.empresa],
+      );
+      expect(exito(await pedir(e, e.x.sucursal)).items.filter((i) => i.numero === 7)).toEqual([
+        { numero: 7, activo: false },
+      ]);
     });
 
-    it("una sucursal sin puntos de venta activos da una lista vacía", async () => {
+    it("una sucursal CERRADA lista sus puntos de venta dados de baja, para ver su historial (D-37)", async () => {
+      const { e, norte } = await empresaConDosSucursales();
+      await dueno.query("update punto_de_venta set estado = 'INACTIVO' where sucursal_id = $1", [
+        norte,
+      ]);
+      await dueno.query("update sucursal set activa = false where id = $1", [norte]);
+      expect(exito(await pedir(e, norte)).items).toEqual([{ numero: 9, activo: false }]);
+    });
+
+    it("una sucursal sin ningún punto de venta da una lista vacía", async () => {
       const { e } = await empresaConDosSucursales();
       const vacia = (
         await dueno.query<{ id: string }>(
@@ -1154,8 +1259,9 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
     it("aislamiento entre sucursales: el operador ve solo las suyas y pedir otra es SUCURSAL_FUERA_DE_ALCANCE", async () => {
       const { e, norte } = await empresaConDosSucursales();
       expect(exito(await pedir(e, e.x.sucursal, e.persona.OPERADOR)).items).toEqual([
-        { numero: 1 },
-        { numero: 5 },
+        { numero: 1, activo: true },
+        { numero: 5, activo: true },
+        { numero: 7, activo: false },
       ]);
       expect(await pedir(e, norte, e.persona.OPERADOR)).toEqual({
         ok: false,
@@ -1170,7 +1276,9 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
         ok: false,
         error: "SUCURSAL_FUERA_DE_ALCANCE",
       });
-      expect(exito(await pedir(e, norte, e.persona.ADMINISTRADOR)).items).toEqual([{ numero: 9 }]);
+      expect(exito(await pedir(e, norte, e.persona.ADMINISTRADOR)).items).toEqual([
+        { numero: 9, activo: true },
+      ]);
     });
 
     it("sin membresía o con la membresía apagada: SIN_PERMISO, antes de mirar la sucursal", async () => {

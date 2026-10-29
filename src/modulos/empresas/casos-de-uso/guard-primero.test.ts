@@ -89,10 +89,10 @@ const LLAMADAS: Record<ConAccion, (casos: CasosDeUsoDeEmpresas) => Promise<unkno
 };
 
 /**
- * Las consultas que ya existen (T2); `planYModulos` y `permisosDelActor` las suma el tramo T5 de H6
- * y entonces suman su fila acá. Una consulta declarada y ya implementada sin fila no compila.
+ * Las consultas que ya existen (T2 y `permisosDelActor`); `planYModulos` la suma el tramo T5 de H6 y entonces
+ * suma su fila acá. Una consulta declarada y ya implementada sin fila no compila.
  */
-type ConsultasPendientes = "planYModulos" | "permisosDelActor";
+type ConsultasPendientes = "planYModulos";
 type DeclaracionesDeConsultas = typeof DECLARACIONES_DE_CONSULTAS;
 type ConsultaConAccion = {
   [K in keyof DeclaracionesDeConsultas]: DeclaracionesDeConsultas[K] extends {
@@ -108,13 +108,19 @@ const LLAMADAS_DE_CONSULTAS: Record<
   listarSucursales: (c) => c.listarSucursales(contexto, { incluirInactivas: true }),
   fichaDeSucursal: (c) => c.fichaDeSucursal(contexto, { sucursalId: sucursalId("s-1") }),
   sucursalesElegibles: (c) => c.sucursalesElegibles(contexto),
+  permisosDelActor: (c) => c.permisosDelActor(contexto),
 };
 
-/** Pasar el guard = tocar algo que no es la autorización (la transacción vigilada corta ahí). */
+/**
+ * Pasar el guard = tocar algo que no es la autorización (la transacción vigilada corta ahí) o, en una consulta que solo lee
+ * al actor (`permisosDelActor`), terminar bien: un resultado `ok` solo existe si el guard dejó pasar.
+ */
 const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
   try {
-    await llamada;
-    return false;
+    const resultado = await llamada;
+    return typeof resultado === "object" && resultado !== null && "ok" in resultado
+      ? resultado.ok === true
+      : false;
   } catch (e) {
     if (e instanceof AccesoFueraDelGuard) return true;
     throw e;
@@ -158,6 +164,7 @@ describe("P7: el guard va primero en cada caso de uso y consulta de empresas", (
     expect(consultas.map((c) => c.nombre).sort()).toEqual([
       "fichaDeSucursal",
       "listarSucursales",
+      "permisosDelActor",
       "sucursalesElegibles",
     ]);
   });
@@ -251,6 +258,7 @@ describe("cada caso de uso y cada consulta exigen SU acción (no la de otro)", (
       listarSucursales: "sucursales.ver",
       fichaDeSucursal: "sucursales.ver",
       sucursalesElegibles: "permisos.ver_propios",
+      permisosDelActor: "permisos.ver_propios",
     });
   });
 });

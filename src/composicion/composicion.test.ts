@@ -351,6 +351,7 @@ describe("con el entorno completo", () => {
     ]);
     expect(Object.keys(web.consultasDeFacturacion()).sort()).toEqual([
       "listarComprobantes",
+      "listarPuntosDeVentaDeLaSucursal",
       "verComprobante",
     ]);
   });
@@ -393,6 +394,7 @@ describe("con el entorno completo", () => {
     expect(Object.keys(web.consultasDeEmpresas()).sort()).toEqual([
       "fichaDeSucursal",
       "listarSucursales",
+      "permisosDelActor",
       "sucursalesElegibles",
     ]);
     expect(Object.keys(web.casosDeUsoDeIdentidad())).toEqual(
