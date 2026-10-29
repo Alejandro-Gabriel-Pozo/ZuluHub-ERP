@@ -261,13 +261,15 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     expect([...new Set(declaradas["modulos/fiscal"])]).toEqual([
       "comprobantes.emitir",
       "comprobantes.ver",
+      // La primera vez que aparece es la consulta del estado de los certificados (D-43: del gerente); los casos de uso de
+      // certificados la exigen también.
+      "certificados.gestionar",
       "comprobantes.emitir_manual",
       "notas_de_credito.emitir",
       "comprobantes.descartar",
       "comprobantes.reintentar",
       "series.resincronizar",
       "puntos_de_venta.cambiar_ambiente",
-      "certificados.gestionar",
       "datos_fiscales.editar",
       "datos_fiscales.confirmar",
       "puntos_de_venta.crear",
