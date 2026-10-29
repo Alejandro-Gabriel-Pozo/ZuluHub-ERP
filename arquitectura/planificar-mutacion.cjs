@@ -148,9 +148,8 @@ function conEnlacesDelGuardian(dependencias, archivosDelGuardian) {
 }
 
 /**
- * Los archivos que el guardián lee: `arquitectura/contratos/**` y `arquitectura/deuda/**` (los informes que
- * generan no cuentan) y los otros archivos de `arquitectura/` que su verificador carga. Un archivo que falta en
- * disco no se inventa.
+ * Los archivos que el guardián lee: `arquitectura/contratos/**` y `arquitectura/deuda/**` (los informes que generan no cuentan) y los
+ * otros archivos de `arquitectura/` que su verificador carga. Un archivo que falta en disco no se inventa.
  */
 function leerArchivosDelGuardian(raiz) {
   const presentes = (archivo) =>
