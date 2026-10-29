@@ -42,12 +42,11 @@
 --      vale para la aplicación y para el dueño de la base. NO vale para quien apaga los disparadores a propósito
 --      (`session_replication_role = replica`, `pg_restore --disable-triggers`): una restauración o una carga masiva así puede
 --      dejar filas sin sucursal, y quien la haga tiene que rellenarlas antes de volver a operar.
---  S6. Una NOTA DE CRÉDITO lleva la sucursal del comprobante que corrige, no la de su punto de venta de emisión (D-38, decisión
---      del dueño del 2026-10-28), fijada por el mismo disparador de alta e inmutable como todo el contenido. El comprobante
---      que corrige es AUTORIZADO y no cambia nunca, así que su sucursal tampoco: no hace falta bloquearlo. Las notas de DÉBITO
---      siguen con la sucursal de su punto de venta (decisión pendiente). Las notas de crédito que ya existían se rellenan igual.
---  S5. Índice `comprobante_sucursal_listado_ix (empresa_id, sucursal_id, creado_en DESC, id)`: el listado siempre filtra
---      por la sucursal y pagina por `(creado_en, id)`; sin él cada página recorrería todos los comprobantes de la empresa.
+--  S6. Una NOTA (de crédito o de débito) lleva la sucursal del comprobante que corrige o aumenta, no la de su punto de venta de
+--      emisión (D-38 y D-40, decisiones del dueño del 2026-10-28 y 2026-10-29), fijada por el mismo disparador de alta e
+--      inmutable como todo el contenido. La sucursal del comprobante asociado se lee en la misma lectura que ya valida la nota. El
+--      asociado es AUTORIZADO y no cambia nunca, así que su sucursal tampoco: no hace falta bloquearlo. Las notas que ya existían
+--      se rellenan igual.
 
 DO $$
 BEGIN
@@ -67,11 +66,25 @@ UPDATE comprobante c
    SET sucursal_id = p.sucursal_id
   FROM punto_de_venta p
  WHERE p.id = c.punto_de_venta_id AND p.empresa_id = c.empresa_id AND c.sucursal_id IS NULL;
--- D-38: una nota de crédito lleva la sucursal del comprobante que corrige (que ya tiene la suya del paso anterior).
-UPDATE comprobante n
-   SET sucursal_id = f.sucursal_id
-  FROM comprobante f
- WHERE n.clase = 'NOTA_CREDITO' AND f.id = n.comprobante_asociado_id AND f.empresa_id = n.empresa_id;
+-- D-38 y D-40: una nota (de crédito o de débito) lleva la sucursal del comprobante que corrige o aumenta. El asociado es una factura o
+-- una nota de débito (nunca una de crédito) y una nota de débito puede citar a otra: se repite hasta que ninguna cambie, así la
+-- sucursal de la factura de origen baja por toda la cadena (un UPDATE solo vería los valores de antes). Termina: una nota cita a un
+-- comprobante que ya existía, no hay ciclos.
+DO $$
+DECLARE
+  v_filas bigint;
+BEGIN
+  LOOP
+    UPDATE comprobante n
+       SET sucursal_id = f.sucursal_id
+      FROM comprobante f
+     WHERE n.clase <> 'FACTURA' AND f.id = n.comprobante_asociado_id AND f.empresa_id = n.empresa_id
+       AND n.sucursal_id IS DISTINCT FROM f.sucursal_id;
+    GET DIAGNOSTICS v_filas = ROW_COUNT;
+    EXIT WHEN v_filas = 0;
+  END LOOP;
+END
+$$;
 ALTER TABLE comprobante ENABLE TRIGGER USER;
 
 DO $$
@@ -103,7 +116,7 @@ CREATE CONSTRAINT TRIGGER comprobante_con_sucursal AFTER INSERT ON comprobante
   DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW WHEN (NEW.sucursal_id IS NULL) EXECUTE FUNCTION comprobante_exigir_sucursal();
 
--- El alta fija la sucursal (S1 y S6). Es la función de 0009 con agregados al final y al leer el punto de venta (`sucursal_id`).
+-- El alta fija la sucursal (S1 y S6). Es la función de 0009 con agregados al final y al leer el punto de venta y el asociado (`sucursal_id`).
 -- Todo lo demás, igual (los debilitamientos de 0009 buscan esos mismos textos).
 CREATE OR REPLACE FUNCTION comprobante_validar_alta() RETURNS trigger LANGUAGE plpgsql
   SET search_path = pg_catalog, public, pg_temp AS
@@ -163,7 +176,8 @@ BEGIN
   END IF;
 
   IF NEW.comprobante_asociado_id IS NOT NULL THEN
-    SELECT a.estado, a.ambiente, a.clase, a.tipo_comprobante, a.receptor_documento_tipo, a.receptor_documento_numero
+    SELECT a.estado, a.ambiente, a.clase, a.tipo_comprobante, a.receptor_documento_tipo, a.receptor_documento_numero,
+           a.sucursal_id
       INTO v_aso
       FROM public.comprobante a
      WHERE a.id = NEW.comprobante_asociado_id AND a.empresa_id = NEW.empresa_id AND a.emisor_id = NEW.emisor_id;
@@ -176,24 +190,23 @@ BEGIN
       RAISE EXCEPTION 'la nota no corresponde a su comprobante asociado (autorizado, mismo ambiente, misma letra, mismo receptor, y no una nota de crédito)'
         USING ERRCODE = '23514', CONSTRAINT = 'comprobante_asociado_invalido';
     END IF;
+    -- La nota lleva la sucursal del comprobante que corrige o aumenta (D-38 y D-40), leída en la MISMA lectura de arriba.
+    IF FOUND THEN
+      v_sucursal_aso := v_aso.sucursal_id;
+    END IF;
   END IF;
 
   -- La sucursal (S1 y S6). Sin punto de venta (inexistente, de otro emisor o de otra empresa) no hay nada que copiar: la fila no
   -- puede quedar (la clave foránea del punto de venta la rechaza, y la política antes que ella si es de otra empresa) y esos
-  -- errores siguen siendo los de siempre. Una NOTA DE CRÉDITO lleva la sucursal del comprobante que corrige, que no cambia nunca
-  -- (D-38); lo demás, la de su punto de venta. Nadie la elige: la aplicación no la manda (no tiene INSERT sobre la columna) y, si
-  -- el dueño de la base manda una, tiene que ser esa.
+  -- errores siguen siendo los de siempre. Una NOTA (de crédito o de débito) lleva la sucursal del comprobante que corrige o
+  -- aumenta, que no cambia nunca (D-38 y D-40); una factura, la de su punto de venta. Nadie la elige: la aplicación no la manda
+  -- (no tiene INSERT sobre la columna) y, si el dueño de la base manda una, tiene que ser esa.
   IF v_sucursal IS NOT NULL THEN
-    IF NEW.clase = 'NOTA_CREDITO' AND NEW.comprobante_asociado_id IS NOT NULL THEN
-      SELECT a.sucursal_id INTO v_sucursal_aso
-        FROM public.comprobante a
-       WHERE a.id = NEW.comprobante_asociado_id AND a.empresa_id = NEW.empresa_id AND a.emisor_id = NEW.emisor_id;
-      IF v_sucursal_aso IS NOT NULL THEN
-        v_sucursal := v_sucursal_aso;
-      END IF;
+    IF v_sucursal_aso IS NOT NULL THEN
+      v_sucursal := v_sucursal_aso;
     END IF;
     IF NEW.sucursal_id IS NOT NULL AND NEW.sucursal_id <> v_sucursal THEN
-      RAISE EXCEPTION 'la sucursal del comprobante no es la que le corresponde (la de su punto de venta, o la del comprobante que corrige una nota de crédito)'
+      RAISE EXCEPTION 'la sucursal del comprobante no es la que le corresponde (la de su punto de venta, o la del comprobante que corrige una nota)'
         USING ERRCODE = '23514', CONSTRAINT = 'comprobante_alta_invalida';
     END IF;
     NEW.sucursal_id := v_sucursal;
