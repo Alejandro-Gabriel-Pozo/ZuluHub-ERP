@@ -12,7 +12,7 @@ import {
   verificarFoco,
   violacionesDeAccesibilidad,
 } from "../../pruebas/ayudas";
-import { enArmazon, legibleYTocable, ventana } from "./ayudas-de-pruebas";
+import { PERMITIDO, enArmazon, legibleYTocable, ventana } from "./ayudas-de-pruebas";
 import { FormularioDePuntoDeVenta } from "./FormularioDePuntoDeVenta.cliente";
 import type { PuntoParaConfigurar } from "./modelo-de-puntos-de-venta";
 
@@ -64,6 +64,7 @@ const formulario = (original: PuntoParaConfigurar | null = null) => (
     guardar={guardar}
     rutaAlTerminar={LISTA}
     rutaAlCancelar={LISTA}
+    oferta={PERMITIDO}
   />
 );
 

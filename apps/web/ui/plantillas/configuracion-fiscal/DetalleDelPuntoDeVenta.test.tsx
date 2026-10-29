@@ -6,7 +6,7 @@ import {
   type Respuesta,
 } from "../../../../../src/capacidades/experiencia/respuesta";
 import { tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
-import { enArmazon, legibleYTocable, ventana } from "./ayudas-de-pruebas";
+import { TODO_PERMITIDO, enArmazon, legibleYTocable, ventana } from "./ayudas-de-pruebas";
 import { DetalleDelPuntoDeVenta } from "./DetalleDelPuntoDeVenta.cliente";
 import { armarElPuntoDeVenta, type PuntoParaConfigurar } from "./modelo-de-puntos-de-venta";
 
@@ -50,6 +50,7 @@ const pantalla = (cambios: Partial<PuntoParaConfigurar> = {}) => {
       desactivar={desactivar}
       cambiarAmbiente={cambiarAmbiente}
       rutaDeEdicion={`/configuracion-fiscal/puntos-de-venta/${punto.id}?editar=1`}
+      acciones={TODO_PERMITIDO}
     />
   );
 };
@@ -286,7 +287,9 @@ describe("el cambio de ambiente y su ventana de confirmación (D-48)", () => {
       ambiente: "PRODUCCION",
       versionEsperada: 7,
     });
-    await vi.waitFor(() => expect(document.activeElement).toBe(boton.element()));
+    // El foco NO vuelve al botón que abrió la ventana: al refrescar desaparece (de producción no se vuelve). Va a la tarjeta del
+    // ambiente (ver `DetalleDelPuntoDeVenta.oferta.test.tsx`).
+    await vi.waitFor(() => expect(document.activeElement?.getAttribute("role")).toBe("group"));
   });
 
   it("mientras cambia el ambiente, el botón de la ventana dice «Guardando…»", async () => {

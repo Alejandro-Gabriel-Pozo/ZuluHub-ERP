@@ -2,6 +2,7 @@ import { errorDeCodigo } from "../../../../../../../../../src/capacidades/experi
 import { texto } from "../../../../../../../../../src/capacidades/vocabulario/vocabulario";
 import { conTitulo, pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
 import { cargarLosPuntosDeVenta } from "../../../../../../../servidor/configuracion-fiscal";
+import { accionesDePuntosDeVenta } from "../../../../../../../servidor/modulos";
 import { sucursalesParaElegir } from "../../../../../../../servidor/sucursal-elegida";
 import { DetalleDelPuntoDeVenta } from "../../../../../../../ui/plantillas/configuracion-fiscal/DetalleDelPuntoDeVenta.cliente";
 import { FormularioDePuntoDeVenta } from "../../../../../../../ui/plantillas/configuracion-fiscal/FormularioDePuntoDeVenta.cliente";
@@ -51,6 +52,7 @@ export default async function PaginaDeUnPuntoDeVenta({ params, searchParams }: P
         return <ErrorDelDetalle error={errorDeCodigo("FISCAL_PUNTO_DE_VENTA_NO_ENCONTRADO")} />;
       }
       const titulo = tituloDelPuntoDeVenta(punto.numero);
+      const acciones = await accionesDePuntosDeVenta(contexto);
       if (!editando) {
         return conTitulo(
           titulo,
@@ -62,6 +64,7 @@ export default async function PaginaDeUnPuntoDeVenta({ params, searchParams }: P
               desactivar={desactivarPuntoDeVentaAccion}
               cambiarAmbiente={cambiarAmbienteAccion}
               rutaDeEdicion={`${rutaDeUnPuntoDeVenta(punto.id)}?editar=1`}
+              acciones={acciones}
             />
           </ConMigas>,
         );
@@ -87,6 +90,7 @@ export default async function PaginaDeUnPuntoDeVenta({ params, searchParams }: P
             guardar={editarPuntoDeVentaAccion}
             rutaAlTerminar={rutaDeUnPuntoDeVenta(punto.id)}
             rutaAlCancelar={rutaDeUnPuntoDeVenta(punto.id)}
+            oferta={acciones.editar}
           />
         </ConMigas>,
       );

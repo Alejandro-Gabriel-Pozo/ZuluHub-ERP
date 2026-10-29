@@ -11,6 +11,10 @@ import { useEnvioConClave, type EnvioConClave } from "../../patrones/useEnvioCon
  * Lo que evita el duplicado no es la clave del hook sino la que lleva el pedido: el `id` del punto de venta y del domicilio nuevos
  * (alta), o el hecho de que activar, desactivar y cambiar de ambiente son idempotentes (`yaEstaba`).
  *
+ * Límite conocido: tras 3 intentos inciertos seguidos (`verificacionesAutomaticas`, el tope del hook compartido `useEnvioConClave`) ya no
+ * reintenta solo y la pantalla queda en «Verificando…», con el botón bloqueado y sin «Reintentar» a mano; la persona recarga la
+ * página. Es el mismo comportamiento que «Anular»; cambiarlo es cambiar el hook compartido, no esta pantalla.
+ *
  * Un error INESPERADO devuelto como valor no es una respuesta definitiva (la acción puede haber quedado registrada): se lanza, sin
  * tocar lo fijado, para que el intento quede incierto y se reintente igual. Previene: reenviar con valores nuevos algo que ya se hizo.
  * Chequeo: `useEnvioFijado.test.tsx` (con la mutación manual descripta ahí).

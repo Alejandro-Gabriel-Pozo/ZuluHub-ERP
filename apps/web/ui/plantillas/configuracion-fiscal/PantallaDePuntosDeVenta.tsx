@@ -1,8 +1,9 @@
+import { Boton } from "../../componentes/Boton";
 import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../componentes/Insignia";
 import { Texto } from "../../primitivas/Texto";
 import { MigasDeConfiguracion, type TramoDeMigas } from "./MigasDeConfiguracion";
-import type { FilaDePuntoDeVenta } from "./modelo-de-puntos-de-venta";
+import type { FilaDePuntoDeVenta, OfertaDeAccion } from "./modelo-de-puntos-de-venta";
 import estilos from "./PantallaDePuntosDeVenta.module.css";
 
 export type PropsDePantallaDePuntosDeVenta = Readonly<{
@@ -12,8 +13,8 @@ export type PropsDePantallaDePuntosDeVenta = Readonly<{
   vacio: string;
   /** «Tocá un punto de venta para editarlo, activarlo o desactivarlo.» */
   ayuda: string;
-  /** «Agregar punto de venta» y adónde lleva. */
-  agregar: Readonly<{ texto: string; href: string }>;
+  /** «Agregar punto de venta», adónde lleva y si el servidor lo deja hacer hoy (apagado, con su motivo, si no). */
+  agregar: Readonly<{ texto: string; href: string; oferta: OfertaDeAccion }>;
 }>;
 
 /**
@@ -62,7 +63,14 @@ export function PantallaDePuntosDeVenta({
         </>
       )}
       <div>
-        <EnlaceDeAccion href={agregar.href}>{agregar.texto}</EnlaceDeAccion>
+        {agregar.oferta.permitida ? (
+          <EnlaceDeAccion href={agregar.href}>{agregar.texto}</EnlaceDeAccion>
+        ) : (
+          // Apagado con su motivo visible y asociado, igual que «Anular» en el Detalle de comprobantes.
+          <Boton deshabilitado motivo={agregar.oferta.motivo ?? undefined}>
+            {agregar.texto}
+          </Boton>
+        )}
       </div>
     </div>
   );

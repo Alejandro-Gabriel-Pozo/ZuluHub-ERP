@@ -41,7 +41,7 @@ describe("el cartel de los datos fiscales (D-64)", () => {
     ["SIN_CARGAR", "FALTA_CARGAR"],
     ["BORRADOR", "PENDIENTE"],
     ["VIGENTES", null],
-    // Lo confirmó el backend (D-61: la web ya no puede producirlo): se sigue diciendo «Pendiente».
+    // SUPUESTO del ingeniero; fuente D-61 (la web ya no puede producirlo): se sigue diciendo «Pendiente».
     ["SOLO_FUTUROS", "PENDIENTE"],
   ] as const)("%s lleva %s", (entrada, esperado) => {
     expect(cartelDeDatosFiscales(entrada)).toBe(esperado);
@@ -138,7 +138,7 @@ describe("el certificado sin punto de venta activo (respuesta del dueño, 2026-1
 });
 
 describe("las tres filas de la lista", () => {
-  it("el orden y los textos aprobados; los datos y los puntos de venta llevan a su pantalla", () => {
+  it("el orden y los textos aprobados; solo los puntos de venta llevan a su pantalla", () => {
     const filas = armarLaLista(
       estado({ datos: "SIN_CARGAR", puntos: "SIN_PUNTOS", enUso: [], certificados: [] }),
     );
@@ -148,7 +148,9 @@ describe("las tres filas de la lista", () => {
       "Certificado de ARCA",
     ]);
     expect(filas.map((f) => f.href)).toEqual([
-      "/configuracion-fiscal/datos-fiscales",
+      // Datos fiscales NO es un enlace hoy: su pantalla va en otro PR y su ruta todavía no existe (sería un 404). Vuelve a ser enlace
+      // (a `/configuracion-fiscal/datos-fiscales`) cuando exista la ruta.
+      null,
       "/configuracion-fiscal/puntos-de-venta",
       // Su pantalla de estado no tiene textos aprobados: la fila no es un enlace.
       null,
@@ -186,7 +188,6 @@ describe("las tres filas de la lista", () => {
   it("las rutas son las aprobadas", () => {
     expect(RUTAS_DE_CONFIGURACION).toEqual({
       lista: "/configuracion-fiscal",
-      datosFiscales: "/configuracion-fiscal/datos-fiscales",
       puntosDeVenta: "/configuracion-fiscal/puntos-de-venta",
       nuevoPuntoDeVenta: "/configuracion-fiscal/puntos-de-venta/nuevo",
     });

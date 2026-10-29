@@ -21,6 +21,22 @@ export type PuntoParaConfigurar = Readonly<{
   version: number;
 }>;
 
+/**
+ * Lo que el servidor deja hacer HOY con una acción de Puntos de venta, para la pantalla: si el botón va activo o apagado y, apagado,
+ * el motivo ya escrito (del catálogo `motivo.*`). Solo una ayuda: el guard del servidor vuelve a decidir al enviar. Lo arma
+ * `servidor/modulos.ts` con `permisosDelActor`. Previene: que la persona abra una ventana, confirme y recién ahí reciba el rechazo
+ * del módulo en desarrollo. Chequeo: `test/web/configuracion-fiscal-acciones.test.ts`.
+ */
+export type OfertaDeAccion = Readonly<{ permitida: boolean; motivo: string | null }>;
+
+export type AccionesDePuntosDeVenta = Readonly<{
+  agregar: OfertaDeAccion;
+  editar: OfertaDeAccion;
+  activar: OfertaDeAccion;
+  desactivar: OfertaDeAccion;
+  pasarAProduccion: OfertaDeAccion;
+}>;
+
 /** Una marca del punto de venta: su rótulo visible («Estado», «Ambiente»), su valor y el tono. */
 type Marca = Readonly<{ rotulo: string; texto: string; tono: TonoDeEstado | "neutro" }>;
 
@@ -50,7 +66,11 @@ const marcaDeAmbiente = (ambiente: PuntoParaConfigurar["ambiente"]): Marca => ({
   tono: "neutro",
 });
 
-/** La sucursal de un punto de venta; una cerrada se dice como en el Listado (D-37). */
+/**
+ * La sucursal de un punto de venta; una cerrada se dice como en el Listado: «{nombre} · Cerrada» (D-37, `listado_sucursal_cerrada`).
+ * SUPUESTO del ingeniero: reutilizar ese texto acá. Fuente: cuestionario A (21:08Z), pregunta 4 (solo se crea en sucursales
+ * abiertas); no se le preguntó al dueño cómo se dice una sucursal cerrada en Puntos de venta. Una regla, un lugar.
+ */
 const sucursalParaMostrar = (s: PuntoParaConfigurar["sucursal"]): string =>
   s.activa ? s.nombre : texto({}, "fiscal.pantalla.listado_sucursal_cerrada", { nombre: s.nombre });
 
@@ -144,8 +164,9 @@ export const OPCIONES_DE_PROVINCIA: readonly Readonly<{ valor: string; etiqueta:
   PROVINCIAS.map((p) => ({ valor: p.codigo, etiqueta: p.nombre }));
 
 /**
- * Los valores con los que abre la edición. El domicilio queda en blanco: ninguna consulta entrega todavía el domicilio de un punto
- * de venta (solo si lo tiene), así que no se puede precargar. Ver «Huecos del servidor» en el informe.
+ * Los valores con los que abre la edición. El domicilio queda en blanco: `PuntoParaConfigurar` todavía no trae el domicilio, solo si
+ * lo tiene (`tieneDomicilio`), así que esta pantalla no lo precarga. La consulta del servidor ya lo entrega (#123): precargarlo es
+ * trabajo de otro tramo, con su texto y su prueba.
  */
 export function valoresParaEditar(p: PuntoParaConfigurar): ValoresDelFormulario {
   return {

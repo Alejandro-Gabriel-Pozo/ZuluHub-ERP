@@ -1,6 +1,7 @@
 import { expect } from "vitest";
 import { page } from "vitest/browser";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
+import type { AccionesDePuntosDeVenta, OfertaDeAccion } from "./modelo-de-puntos-de-venta";
 import { ArmazonDeOperacion } from "../sesion/ArmazonDeOperacion";
 import type { ReactNode } from "react";
 
@@ -27,6 +28,16 @@ export const enArmazon = (titulo: string, contenido: ReactNode): ReactNode => (
     {contenido}
   </ArmazonDeOperacion>
 );
+
+/** El servidor deja hacer todo: las pantallas de Puntos de venta con todos sus botones activos. */
+export const PERMITIDO: OfertaDeAccion = { permitida: true, motivo: null };
+export const TODO_PERMITIDO: AccionesDePuntosDeVenta = {
+  agregar: PERMITIDO,
+  editar: PERMITIDO,
+  activar: PERMITIDO,
+  desactivar: PERMITIDO,
+  pasarAProduccion: PERMITIDO,
+};
 
 /** Se ve de verdad: ni `hidden`, ni `display:none`. */
 const visible = (el: Element): boolean =>

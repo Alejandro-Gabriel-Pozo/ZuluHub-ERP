@@ -20,11 +20,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
     consultasDeEmpresas: () => ({
-      permisosDelActor: () =>
-        Promise.resolve({
-          ok: true,
-          valor: { acciones: [], modulos: { activos: [], enSoloLectura: [] } },
-        }),
+      permisosDelActor: () => Promise.resolve({ ok: true, valor: servidor.permisos }),
       sucursalesElegibles: () => {
         servidor.pedidos.push("sucursales");
         const dada = servidor.sucursales as Respuesta<unknown>;
@@ -39,7 +35,8 @@ const servidor = vi.hoisted(
     puntos: unknown;
     sucursales: unknown;
     pedidos: string[];
-  } => ({ estado: null, puntos: null, sucursales: null, pedidos: [] }),
+    permisos: unknown;
+  } => ({ estado: null, puntos: null, sucursales: null, pedidos: [], permisos: null }),
 );
 vi.mock("../../apps/web/servidor/configuracion-fiscal", () => ({
   cargarElEstadoDeLaConfiguracion: () => {
@@ -133,7 +130,21 @@ const sucursales = respuesta([
   { id: "s-sur", nombre: "Sucursal Sur", activa: false },
 ]);
 
+// Lo que hoy entrega el servidor al gerente en Puntos de venta: las acciones de `administracion` y ninguna de `facturacion` (en
+// desarrollo). Los botones apagados se prueban en `configuracion-fiscal-paginas-botones.test.ts`.
+const PERMISOS_DEL_GERENTE = {
+  acciones: [
+    "datos_fiscales.editar",
+    "puntos_de_venta.activar",
+    "puntos_de_venta.crear",
+    "puntos_de_venta.desactivar",
+    "puntos_de_venta.editar",
+  ],
+  modulos: { activos: ["administracion"], enSoloLectura: [] },
+};
+
 beforeEach(() => {
+  servidor.permisos = PERMISOS_DEL_GERENTE;
   servidor.pedidos = [];
   servidor.estado = estado();
   servidor.puntos = puntos([PV(ID, 2), PV(ID_2, 3, { activo: false })]);
@@ -151,9 +162,11 @@ describe("la página «Configuración fiscal» (la lista de lo que falta)", () =
     expect(t).toContain("Certificado de ARCA");
   });
 
-  it("las filas de datos fiscales y de puntos de venta son enlaces; la del certificado no", async () => {
+  it("solo la fila de puntos de venta es un enlace; la de datos fiscales (su ruta va en otro PR) y la del certificado no", async () => {
     const marcado = await html("/page");
-    expect(marcado).toContain('href="/configuracion-fiscal/datos-fiscales"');
+    // Vuelve a ser enlace cuando exista la ruta de Datos fiscales.
+    expect(marcado).not.toContain("/configuracion-fiscal/datos-fiscales");
+    expect(marcado).not.toMatch(/<a[^>]*>[^<]*<span[^>]*>Datos fiscales/);
     expect(marcado).toContain('href="/configuracion-fiscal/puntos-de-venta"');
     expect(marcado).not.toMatch(/<a[^>]*>[^<]*<span[^>]*>Certificado de ARCA/);
     expect(marcado.match(/<li>/g)).toHaveLength(3);

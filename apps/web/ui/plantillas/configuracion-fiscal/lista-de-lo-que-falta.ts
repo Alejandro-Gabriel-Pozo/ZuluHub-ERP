@@ -44,8 +44,8 @@ const TONO_DEL_CARTEL: Readonly<Record<CartelDeLaLista, TonoDeEstado>> = {
 };
 
 /**
- * D-64. SOLO_FUTUROS (datos que rigen más adelante) dice «Pendiente» (no «completo»): lo confirmó el backend (D-61: la web ya no
- * puede producirlo).
+ * D-64. SOLO_FUTUROS (datos que rigen más adelante) dice «Pendiente» (no «completo»): SUPUESTO del ingeniero; fuente D-61 (la web ya
+ * no puede producirlo).
  */
 export function cartelDeDatosFiscales(
   estado: EstadoParaLaLista["datosFiscales"]["estado"],
@@ -74,7 +74,11 @@ export function cartelDePuntosDeVenta(
   }
 }
 
-/** De más a menos urgente (SUPUESTO del carril web: D-64 no ordena los carteles del certificado). */
+/**
+ * De más a menos urgente. SUPUESTO del ingeniero: con varios ambientes la fila del certificado muestra UN solo cartel, el más urgente
+ * (Vencido, Falta cargar, Pendiente). Fuente: cuestionario B (21:11Z), pregunta 2 (la fila solo informa «Vencido», «Falta cargar» o
+ * «Pendiente») y D-64, que no ordena los carteles del certificado; no se le preguntó al dueño cuál gana cuando hay más de uno.
+ */
 const URGENCIA_DEL_CERTIFICADO = ["VENCIDO", "FALTA_CARGAR", "PENDIENTE"] as const;
 
 function cartelDeUnCertificado(
@@ -86,8 +90,10 @@ function cartelDeUnCertificado(
 }
 
 /**
- * El cartel del certificado: el MÁS URGENTE entre los ambientes en uso (los de los puntos de venta activos). SUPUESTO: sin ningún
- * ambiente en uso (ningún punto de venta activo) cuentan los dos, porque la fila tiene que decir algo y no hay otro criterio.
+ * El cartel del certificado: el MÁS URGENTE entre los ambientes en uso (los de los puntos de venta activos). SUPUESTO del ingeniero:
+ * sin ningún ambiente en uso (ningún punto de venta activo) cuentan los dos, porque la fila tiene que decir algo y no hay otro
+ * criterio. Fuente: cuestionario B (21:11Z), pregunta 3, donde el dueño contestó que sin punto de venta activo «sigue faltando»; no se
+ * le preguntó qué cartel lleva la fila del certificado en ese caso (esa falta ya la dice la fila de Puntos de venta: «Ninguno activo»).
  */
 export function cartelDelCertificado(
   ambientesEnUso: EstadoParaLaLista["puntosDeVenta"]["ambientesEnUso"],
@@ -104,7 +110,7 @@ export function cartelDelCertificado(
 export type FilaDeLaLista = Readonly<{
   clave: "DATOS_FISCALES" | "PUNTOS_DE_VENTA" | "CERTIFICADO";
   titulo: string;
-  /** Adónde lleva; `null`: la fila no es un enlace (la pantalla del certificado todavía no tiene textos aprobados). */
+  /** Adónde lleva; `null`: la fila no es un enlace (Datos fiscales: su pantalla va en otro PR; Certificado: no tiene textos aprobados). */
   href: string | null;
   cartel: Readonly<{ texto: string; tono: TonoDeEstado }> | null;
 }>;
@@ -112,7 +118,6 @@ export type FilaDeLaLista = Readonly<{
 /** Las rutas de Configuración fiscal. Un solo lugar: las usan la lista, las pantallas de puntos de venta y sus pruebas. */
 export const RUTAS_DE_CONFIGURACION = {
   lista: "/configuracion-fiscal",
-  datosFiscales: "/configuracion-fiscal/datos-fiscales",
   puntosDeVenta: "/configuracion-fiscal/puntos-de-venta",
   nuevoPuntoDeVenta: "/configuracion-fiscal/puntos-de-venta/nuevo",
 } as const;
@@ -132,7 +137,9 @@ export function armarLaLista(estado: EstadoParaLaLista): readonly FilaDeLaLista[
     {
       clave: "DATOS_FISCALES",
       titulo: texto({}, "fiscal.pantalla.config_fila_datos_fiscales"),
-      href: RUTAS_DE_CONFIGURACION.datosFiscales,
+      // La pantalla de Datos fiscales va en otro PR: hasta que exista su ruta la fila no es un enlace (sería un 404). Cuando se
+      // agregue, vuelve `datosFiscales` a `RUTAS_DE_CONFIGURACION` y la fila vuelve a apuntar ahí.
+      href: null,
       cartel: conCartel(cartelDeDatosFiscales(estado.datosFiscales.estado)),
     },
     {

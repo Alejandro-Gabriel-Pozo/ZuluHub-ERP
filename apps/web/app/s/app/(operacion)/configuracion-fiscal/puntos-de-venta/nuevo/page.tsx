@@ -1,6 +1,7 @@
 import { texto } from "../../../../../../../../../src/capacidades/vocabulario/vocabulario";
 import { pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
 import { cargarLosPuntosDeVenta } from "../../../../../../../servidor/configuracion-fiscal";
+import { accionesDePuntosDeVenta } from "../../../../../../../servidor/modulos";
 import { sucursalesAbiertasParaElegir } from "../../../../../../../servidor/sucursal-elegida";
 import { FormularioDePuntoDeVenta } from "../../../../../../../ui/plantillas/configuracion-fiscal/FormularioDePuntoDeVenta.cliente";
 import { RUTAS_DE_CONFIGURACION } from "../../../../../../../ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta";
@@ -18,6 +19,7 @@ export default async function PaginaDeAltaDePuntoDeVenta() {
       if (!puntos.ok) return <ErrorDelDetalle error={puntos.error} />;
       const sucursales = await sucursalesAbiertasParaElegir(contexto);
       if (!sucursales.ok) return <ErrorDelDetalle error={sucursales.error} />;
+      const acciones = await accionesDePuntosDeVenta(contexto);
       return (
         <ConMigas
           tramos={[
@@ -41,6 +43,7 @@ export default async function PaginaDeAltaDePuntoDeVenta() {
             guardar={crearPuntoDeVentaAccion}
             rutaAlTerminar={RUTAS_DE_CONFIGURACION.puntosDeVenta}
             rutaAlCancelar={RUTAS_DE_CONFIGURACION.puntosDeVenta}
+            oferta={acciones.agregar}
           />
         </ConMigas>
       );

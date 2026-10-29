@@ -1,6 +1,6 @@
 /**
  * Los textos de las PANTALLAS del facturador (prefijo `fiscal.pantalla.*`), hoy la del detalle de un comprobante, la del
- * listado (sección «Listado») y las de Configuración fiscal (sección final): los rótulos, los siete estados (D-25), la etiqueta de anulación (D-29) y los avisos por estado de la guía de pantallas y
+ * listado (sección «Listado») y la anulación (los de Configuración fiscal están en `catalogo-fiscal-configuracion.ts`): los rótulos, los siete estados (D-25), la etiqueta de anulación (D-29) y los avisos por estado de la guía de pantallas y
  * mensajes (§1.2). Viven aparte de `catalogo-fiscal.ts` (errores y mensajes de ARCA) para que ninguno de los dos crezca sin
  * tope; `catalogo.ts` los incluye y su prueba (`catalogo.test.ts`) los revisa como a todos. Castellano neutro y en
  * términos del negocio: ninguna palabra técnica ni el código crudo de nada. No se usa «acreditado» en lo que ve la
@@ -209,83 +209,6 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
   "fiscal.pantalla.listado_error_fecha_hasta_no_existe": {
     porDefecto: "La fecha «hasta» no existe.",
     largoMaximo: 120,
-  },
-
-  // ---------------------------------------------------------------------------------------------------------------------
-  // Configuración fiscal (D-43): la lista de lo que falta y la pantalla de Puntos de venta. Fuentes, además de las de arriba:
-  // CONTRATO-CONFIG = `facturador-contratos-de-pantalla.md`, registro de decisiones D-43 a D-49 y D-60 a D-68 (los números van junto a
-  // cada texto); PROTO-PV = prototipo aprobado por el dueño el 2026-10-29, `Main.dc.html` de Puntos de venta, opción A (cada punto de
-  // venta en su pantalla); PROTO-LISTA = el prototipo aprobado `OpcionC.dc.html` (lista de lo que falta, opción C).
-  // RESPUESTA-DUEÑO-2026-10-29 = cuestionario de textos de Configuración fiscal, respondido por el dueño en la sesión web del carril web.
-  // ---------------------------------------------------------------------------------------------------------------------
-
-  // RESPUESTA-DUEÑO-2026-10-29 (título y subtítulo; PROTO-LISTA: «Configuración fiscal» / «Lo que hace falta para emitir comprobantes»).
-  "fiscal.pantalla.config_titulo": { porDefecto: "Configuración fiscal" },
-  "fiscal.pantalla.config_subtitulo": { porDefecto: "Lo que hace falta para emitir comprobantes" },
-
-  // RESPUESTA-DUEÑO-2026-10-29 (las tres filas de la lista; PROTO-LISTA). «Puntos de venta» es también el título de su pantalla.
-  "fiscal.pantalla.config_fila_datos_fiscales": { porDefecto: "Datos fiscales" },
-  "fiscal.pantalla.config_puntos_de_venta": { porDefecto: "Puntos de venta" },
-  "fiscal.pantalla.config_fila_certificado": { porDefecto: "Certificado de ARCA" },
-
-  // Los carteles de la lista. CONTRATO-CONFIG D-46 («Pendiente», «Falta cargar» y «Falta crear uno») y D-64 (suma «Vencido» y «Ninguno
-  // activo»; un tema completo no lleva cartel); RESPUESTA-DUEÑO-2026-10-29.
-  "fiscal.pantalla.config_cartel_falta_cargar": { porDefecto: "Falta cargar" },
-  "fiscal.pantalla.config_cartel_pendiente": { porDefecto: "Pendiente" },
-  "fiscal.pantalla.config_cartel_falta_crear_uno": { porDefecto: "Falta crear uno" },
-  "fiscal.pantalla.config_cartel_vencido": { porDefecto: "Vencido" },
-  "fiscal.pantalla.config_cartel_ninguno_activo": { porDefecto: "Ninguno activo" },
-
-  // Puntos de venta. RESPUESTA-DUEÑO-2026-10-29 (todos los de esta sección salvo los que se marcan); PROTO-PV los muestra en sus tres pantallas.
-  "fiscal.pantalla.config_pv_agregar": { porDefecto: "Agregar punto de venta" },
-  "fiscal.pantalla.config_pv_activo": { porDefecto: "Activo" },
-  // «No activo» solo, como rótulo de la marca: el del filtro del Listado es `listado_punto_de_venta_no_activo` («{numero} · No activo»).
-  "fiscal.pantalla.config_pv_no_activo": { porDefecto: "No activo" },
-  "fiscal.pantalla.config_pv_pruebas": { porDefecto: "Pruebas" },
-  "fiscal.pantalla.config_pv_produccion": { porDefecto: "Producción" },
-  // D-48: el botón y la ventana de confirmación del cambio de ambiente. El aviso de la ventana es el texto que ya existe,
-  // `error.fiscal_ambiente_no_vuelve`.
-  "fiscal.pantalla.config_pv_pasar_a_produccion": { porDefecto: "Pasar a producción" },
-  "fiscal.pantalla.config_pv_ventana_titulo": { porDefecto: "¿Pasar a producción?" },
-  "fiscal.pantalla.config_pv_activar": { porDefecto: "Activar" },
-  "fiscal.pantalla.config_pv_desactivar": { porDefecto: "Desactivar" },
-  "fiscal.pantalla.config_pv_editar": { porDefecto: "Editar" },
-  "fiscal.pantalla.config_pv_guardar": { porDefecto: "Guardar" },
-  "fiscal.pantalla.config_pv_cancelar": { porDefecto: "Cancelar" },
-  "fiscal.pantalla.config_pv_campo_numero": { porDefecto: "Número de punto de venta" },
-  "fiscal.pantalla.config_pv_domicilio": { porDefecto: "Domicilio del punto de venta" },
-  "fiscal.pantalla.config_pv_calle": { porDefecto: "Calle" },
-  "fiscal.pantalla.config_pv_numero_de_calle": { porDefecto: "Número" },
-  "fiscal.pantalla.config_pv_piso": { porDefecto: "Piso" },
-  "fiscal.pantalla.config_pv_departamento": { porDefecto: "Departamento" },
-  "fiscal.pantalla.config_pv_localidad": { porDefecto: "Localidad" },
-  "fiscal.pantalla.config_pv_provincia": { porDefecto: "Provincia" },
-  "fiscal.pantalla.config_pv_codigo_postal": { porDefecto: "Código postal" },
-  "fiscal.pantalla.config_pv_ayuda": {
-    porDefecto: "Tocá un punto de venta para editarlo, activarlo o desactivarlo.",
-    largoMaximo: 120,
-  },
-  // RESPUESTA-DUEÑO-2026-10-29 (segundo cuestionario), punto 2: el texto de la lista de Puntos de venta cuando no hay ninguno.
-  "fiscal.pantalla.config_pv_vacio": { porDefecto: "Todavía no hay puntos de venta." },
-  // RESPUESTA-DUEÑO-2026-10-29 (segundo cuestionario), punto 3: el rótulo «Ambiente» y el aviso de pruebas. El rótulo «Estado» es
-  // `listado_rotulo_estado` (mismo texto: una regla, un lugar).
-  "fiscal.pantalla.config_pv_rotulo_ambiente": { porDefecto: "Ambiente" },
-  "fiscal.pantalla.config_pv_aviso_pruebas": {
-    porDefecto: "Las facturas de pruebas no tienen valor fiscal.",
-    largoMaximo: 120,
-  },
-  // RESPUESTA-DUEÑO-2026-10-29 (segundo cuestionario), punto 5: el texto del botón mientras guarda (alta, edición, cambio de
-  // ambiente, activar y desactivar).
-  "fiscal.pantalla.config_pv_guardando": { porDefecto: "Guardando…" },
-  // RESPUESTA-DUEÑO-2026-10-29 (segundo cuestionario), punto 1: el pendiente de Inicio que lleva a la lista de Configuración fiscal.
-  "fiscal.pantalla.config_pendiente_inicio": {
-    porDefecto: "Completá la configuración fiscal.",
-    largoMaximo: 120,
-  },
-  // PROTO-PV, pantalla 3 («Punto de venta 00002»): el título de un punto de venta. Lo aprobó el prototipo, no la lista del cuestionario.
-  "fiscal.pantalla.config_pv_titulo_con_numero": {
-    porDefecto: "Punto de venta {numero}",
-    marcadores: ["numero"],
   },
 
   // Anular un comprobante por importe (opción 12A, aprobada por el dueño el 2026-10-29). Fuentes de los textos que siguen:

@@ -1,12 +1,22 @@
 import "server-only";
+import { cache } from "react";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { texto } from "../../../src/capacidades/vocabulario/vocabulario";
-import type { ClaveAccion } from "../../../src/capacidades/modulos/catalogo";
+import {
+  CATALOGO_DE_MODULOS,
+  type ClaveAccion,
+  type ClaveModulo,
+} from "../../../src/capacidades/modulos/catalogo";
+import type { ClaveDeTexto } from "../../../src/capacidades/vocabulario/catalogo";
 import { web } from "./composicion";
 import {
   RUTAS_DE_CONFIGURACION,
   armarLaLista,
 } from "../ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta";
+import type {
+  AccionesDePuntosDeVenta,
+  OfertaDeAccion,
+} from "../ui/plantillas/configuracion-fiscal/modelo-de-puntos-de-venta";
 import { RUTA_DEL_LISTADO } from "../ui/plantillas/facturacion/filtros-del-listado";
 import type { DestinoDeModulo } from "../ui/plantillas/sesion/ArmazonDeOperacion";
 import type { Pendiente } from "../ui/plantillas/sesion/PantallaDeInicio";
@@ -60,8 +70,11 @@ export async function puedeEmitirNotasDeCredito(contexto: ContextoOperativo): Pr
  * nada por las dudas. Una excepción no se traga en silencio: queda en el registro del servidor, con el mismo formato que los demás
  * (`[etiqueta] qué falló (Tipo)`), SOLO el tipo de la falla, nunca su texto (puede traer datos de la base). Previene: que una base
  * caída deje la barra vacía sin que nadie lo vea. Chequeo: `test/web/modulos-de-la-barra.test.ts`.
+ *
+ * Con `cache` de React se lee UNA vez por pedido: la barra y los botones de la página comparten el mismo `contexto` (la misma
+ * referencia), así que la segunda llamada no vuelve a abrir una transacción. Previene: dos lecturas de los permisos por pantalla.
  */
-async function permisosDeLaPersona(contexto: ContextoOperativo) {
+const permisosDeLaPersona = cache(async (contexto: ContextoOperativo) => {
   try {
     const permisos = await web.consultasDeEmpresas().permisosDelActor(contexto);
     return permisos.ok ? permisos.valor : null;
@@ -71,7 +84,7 @@ async function permisosDeLaPersona(contexto: ContextoOperativo) {
     );
     return null;
   }
-}
+});
 
 /**
  * La acción con la que ya se protege la pantalla de Configuración fiscal: la consulta de su lista la exige al guard
@@ -89,6 +102,71 @@ export async function puedeVerLaConfiguracionFiscal(contexto: ContextoOperativo)
   return permisos !== null && permisos.acciones.includes(ACCION_DE_CONFIGURACION_FISCAL);
 }
 
+type PermisosLeidos = NonNullable<Awaited<ReturnType<typeof permisosDeLaPersona>>>;
+
+/** De una acción, su módulo, el estado de construcción de ese módulo y su efecto: el catálogo es el único dueño de esos datos. */
+function dondeVive(accion: ClaveAccion): {
+  modulo: ClaveModulo;
+  enDesarrollo: boolean;
+  creaAmplia: boolean;
+} {
+  for (const [modulo, definicion] of Object.entries(CATALOGO_DE_MODULOS) as [
+    ClaveModulo,
+    (typeof CATALOGO_DE_MODULOS)[ClaveModulo],
+  ][]) {
+    const acciones: Readonly<Record<string, { efecto: string }>> = definicion.acciones;
+    const propia = Object.hasOwn(acciones, accion) ? acciones[accion] : undefined;
+    if (propia !== undefined) {
+      return {
+        modulo,
+        enDesarrollo: definicion.estado === "en_desarrollo",
+        creaAmplia: propia.efecto === "CREA_AMPLIA",
+      };
+    }
+  }
+  throw new Error(`La acción ${accion} no está en el catálogo de módulos`);
+}
+
+/**
+ * Si el servidor deja hacer `accion` hoy y, si no, el motivo con un texto que YA existe en el catálogo. Sigue el mismo orden que
+ * el guard (`evaluarGuard`): en desarrollo, módulo no activo, módulo en solo lectura (solo para las acciones que crean o amplían) y,
+ * por último, el rol. `permisosDelActor` no devuelve los módulos en desarrollo ni los no activos (ni sus acciones): por eso «en
+ * desarrollo» se distingue mirando el catálogo.
+ */
+function ofertaDe(accion: ClaveAccion, permisos: PermisosLeidos): OfertaDeAccion {
+  if (permisos.acciones.includes(accion)) return { permitida: true, motivo: null };
+  const { modulo, enDesarrollo, creaAmplia } = dondeVive(accion);
+  const enSoloLectura = permisos.modulos.enSoloLectura.includes(modulo);
+  let clave: ClaveDeTexto = "motivo.sin_permiso";
+  if (enDesarrollo) clave = "motivo.modulo_en_desarrollo";
+  else if (!enSoloLectura && !permisos.modulos.activos.includes(modulo))
+    clave = "motivo.modulo_no_activo";
+  else if (enSoloLectura && creaAmplia) clave = "motivo.modulo_en_solo_lectura";
+  return { permitida: false, motivo: texto({}, clave) };
+}
+
+/**
+ * Qué botones de Puntos de venta se ofrecen activos hoy, según lo que el SERVIDOR deja hacer (`permisosDelActor`, una lectura por
+ * pedido). «Pasar a producción» (`puntos_de_venta.cambiar_ambiente`) es del módulo `facturacion`, en desarrollo: sale apagado con
+ * «Esta función todavía está en desarrollo.»; las demás son de `administracion`. Si no se pudieron leer los permisos, todo se ofrece
+ * como hasta ahora y decide el guard al enviar (sin un texto aprobado para «no se pudo saber» no se apaga a ciegas). Es solo una
+ * ayuda: ocultar o apagar no es autorizar, cada acción vuelve a pasar por el guard dentro de su transacción.
+ */
+export async function accionesDePuntosDeVenta(
+  contexto: ContextoOperativo,
+): Promise<AccionesDePuntosDeVenta> {
+  const permisos = await permisosDeLaPersona(contexto);
+  const de = (accion: ClaveAccion): OfertaDeAccion =>
+    permisos === null ? { permitida: true, motivo: null } : ofertaDe(accion, permisos);
+  return {
+    agregar: de("puntos_de_venta.crear"),
+    editar: de("puntos_de_venta.editar"),
+    activar: de("puntos_de_venta.activar"),
+    desactivar: de("puntos_de_venta.desactivar"),
+    pasarAProduccion: de("puntos_de_venta.cambiar_ambiente"),
+  };
+}
+
 /** De un error, solo su TIPO para el registro: nunca el mensaje ni datos (pueden traer algo de la empresa). */
 const tipoDelError = (excepcion: unknown): string =>
   excepcion instanceof Error ? excepcion.name : typeof excepcion;
@@ -96,7 +174,7 @@ const tipoDelError = (excepcion: unknown): string =>
 /**
  * La ranura «lo que falta» del inicio. Hoy un solo pendiente: «Completá la configuración fiscal.», que lleva a la lista, si la
  * persona tiene el permiso de esa pantalla Y alguna fila de la lista lleva cartel (el mismo cálculo que la lista: `armarLaLista`).
- * Respuesta del dueño 2026-10-29 (segundo cuestionario). Si la lectura falla no muestra nada y deja en el registro del servidor el
+ * Dueño, 2026-10-29, cuestionario B (21:11Z), pregunta 1. Si la lectura falla no muestra nada y deja en el registro del servidor el
  * TIPO del error (el código del rechazo o el nombre de la excepción), nunca el mensaje.
  */
 export async function pendientesDeLaEmpresa(

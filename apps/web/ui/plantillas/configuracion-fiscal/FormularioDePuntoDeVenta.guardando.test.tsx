@@ -3,6 +3,7 @@ import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import type { Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
 import { tocar } from "../../pruebas/ayudas";
+import { PERMITIDO } from "./ayudas-de-pruebas";
 import { FormularioDePuntoDeVenta } from "./FormularioDePuntoDeVenta.cliente";
 import type { PuntoParaConfigurar } from "./modelo-de-puntos-de-venta";
 
@@ -33,6 +34,7 @@ const formulario = (original: PuntoParaConfigurar | null) => (
     guardar={guardar}
     rutaAlTerminar={LISTA}
     rutaAlCancelar={LISTA}
+    oferta={PERMITIDO}
   />
 );
 

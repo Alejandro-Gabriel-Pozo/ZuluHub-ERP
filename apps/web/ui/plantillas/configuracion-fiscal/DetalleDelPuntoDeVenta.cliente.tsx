@@ -12,7 +12,7 @@ import { Pila } from "../../primitivas/Pila";
 import { Texto } from "../../primitivas/Texto";
 import { ErrorDelDetalle } from "../facturacion/ErrorDelDetalle";
 import estilos from "./DetalleDelPuntoDeVenta.module.css";
-import type { PuntoDeVentaArmado } from "./modelo-de-puntos-de-venta";
+import type { AccionesDePuntosDeVenta, PuntoDeVentaArmado } from "./modelo-de-puntos-de-venta";
 import { useEnvioFijado, type EnvioFijado } from "./useEnvioFijado";
 
 type Accion = (pedido: unknown) => Promise<Respuesta<unknown>>;
@@ -26,6 +26,8 @@ export type PropsDeDetalleDelPuntoDeVenta = Readonly<{
   cambiarAmbiente: Accion;
   /** Adónde lleva «Editar». */
   rutaDeEdicion: string;
+  /** Qué deja hacer hoy el servidor (módulo y permisos): lo que no, sale apagado con su motivo. Solo una ayuda: el guard decide. */
+  acciones: AccionesDePuntosDeVenta;
 }>;
 
 /** Cuando termina bien se pide de nuevo la pantalla; ante «versión desactualizada» también, para ver lo último. */
@@ -53,13 +55,18 @@ export function DetalleDelPuntoDeVenta({
   desactivar,
   cambiarAmbiente,
   rutaDeEdicion,
+  acciones,
 }: PropsDeDetalleDelPuntoDeVenta) {
   const router = useRouter();
   const idDeLaDescripcion = useId();
   const [ventanaAbierta, setVentanaAbierta] = useState(false);
   const envolturaDelBoton = useRef<HTMLSpanElement>(null);
+  const tarjetaDelAmbiente = useRef<HTMLDivElement>(null);
+  const idDelRotuloDelAmbiente = useId();
+  const idDelValorDelAmbiente = useId();
   const estabaAbierta = useRef(false);
 
+  // Tras 3 intentos inciertos (límite de `useEnvioConClave`) cada acción queda en «Verificando…», bloqueada: ver `useEnvioFijado`.
   const estadoDelPunto = useEnvioFijado<{ puntoDeVentaId: string; activar: boolean }, unknown>(
     (p) =>
       p.activar
@@ -78,19 +85,23 @@ export function DetalleDelPuntoDeVenta({
   const ambienteIncierto = ambiente.envio.estado.tipo === "incierto";
   const estadoIncierto = estadoDelPunto.envio.estado.tipo === "incierto";
 
-  // Hecho el cambio de ambiente: la ventana se cierra (el botón recupera el foco) y el envío vuelve a reposo.
   // Al cerrarse la ventana el foco vuelve al botón que la abrió. `Superposicion` lo restaura al elemento activo de entonces, que en
-  // Safari no es el botón (tocar un botón no le da el foco): se fija acá, sin depender de eso.
+  // Safari no es el botón (tocar un botón no le da el foco): se fija acá, sin depender de eso. Si el cierre fue porque el cambio de
+  // ambiente salió bien, ese botón desaparece al refrescar (de producción no se vuelve): el foco va entonces a la tarjeta del ambiente
+  // (más abajo), que sigue en pantalla, y no cae al <body>.
   useEffect(() => {
     if (estabaAbierta.current && !ventanaAbierta) {
       envolturaDelBoton.current?.querySelector("button")?.focus();
     }
     estabaAbierta.current = ventanaAbierta;
   }, [ventanaAbierta]);
+  // Hecho el cambio de ambiente: la ventana se cierra, el foco va a la tarjeta del ambiente y el envío vuelve a reposo.
   const reiniciarAmbiente = ambiente.envio.reiniciar;
   if (ambienteHecho && ventanaAbierta) setVentanaAbierta(false);
   useEffect(() => {
-    if (ambienteHecho) reiniciarAmbiente();
+    if (!ambienteHecho) return;
+    tarjetaDelAmbiente.current?.focus();
+    reiniciarAmbiente();
   }, [ambienteHecho, reiniciarAmbiente]);
 
   function cerrarLaVentana(): void {
@@ -99,6 +110,7 @@ export function DetalleDelPuntoDeVenta({
   }
 
   const ocupado = estadoDelPunto.envio.enCurso || ambiente.envio.enCurso;
+  const ofertaDelEstado = punto.activo ? acciones.desactivar : acciones.activar;
 
   return (
     <Pila separacion={4}>
@@ -128,8 +140,15 @@ export function DetalleDelPuntoDeVenta({
           variante="secundaria"
           enviando={estadoDelPunto.envio.enCurso}
           textoEnviando={texto({}, "fiscal.pantalla.config_pv_guardando")}
-          deshabilitado={!estadoDelPunto.envio.enCurso && estadoDelPunto.envio.bloqueado}
-          motivo={estadoDelPunto.envio.motivoQueNoPuede}
+          deshabilitado={
+            !ofertaDelEstado.permitida ||
+            (!estadoDelPunto.envio.enCurso && estadoDelPunto.envio.bloqueado)
+          }
+          motivo={
+            ofertaDelEstado.permitida
+              ? estadoDelPunto.envio.motivoQueNoPuede
+              : (ofertaDelEstado.motivo ?? undefined)
+          }
           alTocar={() => {
             estadoDelPunto.enviarCon({ puntoDeVentaId: punto.id, activar: !punto.activo });
           }}
@@ -142,15 +161,30 @@ export function DetalleDelPuntoDeVenta({
           )}
         </Boton>
       </div>
-      <div className={estilos["tarjeta"]}>
+      <div
+        ref={tarjetaDelAmbiente}
+        className={estilos["tarjeta"]}
+        role="group"
+        aria-labelledby={`${idDelRotuloDelAmbiente} ${idDelValorDelAmbiente}`}
+        tabIndex={-1}
+      >
         <span className={estilos["marca"]}>
-          <span className={estilos["rotulo"]}>{armado.ambiente.rotulo}</span>
-          <Insignia tono={armado.ambiente.tono}>{armado.ambiente.texto}</Insignia>
+          <span id={idDelRotuloDelAmbiente} className={estilos["rotulo"]}>
+            {armado.ambiente.rotulo}
+          </span>
+          <span id={idDelValorDelAmbiente}>
+            <Insignia tono={armado.ambiente.tono}>{armado.ambiente.texto}</Insignia>
+          </span>
         </span>
         {armado.puedePasarAProduccion ? (
           <span ref={envolturaDelBoton}>
+            {/* Hoy sale apagado: `puntos_de_venta.cambiar_ambiente` es del módulo `facturacion`, en desarrollo, y el servidor lo rechaza
+                siempre. Aun con el módulo activo el servidor exigirá un certificado de producción vigente (SIN_CERTIFICADO_VIGENTE), y la
+                verificación contra ARCA (D-77) todavía no está construida. La oferta la calcula `accionesDePuntosDeVenta`. */}
             <Boton
               variante="secundaria"
+              deshabilitado={!acciones.pasarAProduccion.permitida}
+              motivo={acciones.pasarAProduccion.motivo ?? undefined}
               alTocar={() => {
                 setVentanaAbierta(true);
               }}
@@ -164,6 +198,8 @@ export function DetalleDelPuntoDeVenta({
       <div>
         <Boton
           variante="secundaria"
+          deshabilitado={!acciones.editar.permitida}
+          motivo={acciones.editar.motivo ?? undefined}
           alTocar={() => {
             router.push(rutaDeEdicion);
           }}

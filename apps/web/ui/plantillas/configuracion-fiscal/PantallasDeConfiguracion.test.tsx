@@ -3,10 +3,14 @@ import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { verificarFoco, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
-import { enArmazon, legibleYTocable, ventana } from "./ayudas-de-pruebas";
+import { PERMITIDO, enArmazon, legibleYTocable, ventana } from "./ayudas-de-pruebas";
 import { armarLaLista, type EstadoParaLaLista } from "./lista-de-lo-que-falta";
 import { MigasDeConfiguracion } from "./MigasDeConfiguracion";
-import { armarLaListaDePuntosDeVenta, type PuntoParaConfigurar } from "./modelo-de-puntos-de-venta";
+import {
+  armarLaListaDePuntosDeVenta,
+  type OfertaDeAccion,
+  type PuntoParaConfigurar,
+} from "./modelo-de-puntos-de-venta";
 import { PantallaDeConfiguracionFiscal } from "./PantallaDeConfiguracionFiscal";
 import { PantallaDePuntosDeVenta } from "./PantallaDePuntosDeVenta";
 
@@ -55,7 +59,7 @@ const lista = () => (
     filas={armarLaLista(ESTADO)}
   />
 );
-const puntos = (items = PUNTOS) => (
+const puntos = (items = PUNTOS, oferta: OfertaDeAccion = PERMITIDO) => (
   <PantallaDePuntosDeVenta
     migas={MIGAS}
     filas={armarLaListaDePuntosDeVenta(items)}
@@ -64,6 +68,7 @@ const puntos = (items = PUNTOS) => (
     agregar={{
       texto: "Agregar punto de venta",
       href: "/configuracion-fiscal/puntos-de-venta/nuevo",
+      oferta,
     }}
   />
 );
@@ -91,23 +96,21 @@ describe.each([390, 1280])("a %i px", (ancho) => {
 });
 
 describe("las filas y el teclado", () => {
-  it("datos fiscales y puntos de venta son enlaces; el certificado, no", async () => {
+  it("solo puntos de venta es un enlace; datos fiscales (su ruta va en otro PR) y el certificado, no", async () => {
     await render(lista());
     const enlaces = [...document.querySelectorAll("a[href]")].map((a) => a.getAttribute("href"));
-    expect(enlaces).toEqual([
-      "/configuracion-fiscal/datos-fiscales",
-      "/configuracion-fiscal/puntos-de-venta",
-    ]);
+    // Datos fiscales vuelve a ser enlace (a `/configuracion-fiscal/datos-fiscales`) cuando exista la ruta.
+    expect(enlaces).toEqual(["/configuracion-fiscal/puntos-de-venta"]);
+    await expect.element(page.getByText("Datos fiscales")).toBeVisible();
+    expect(page.getByRole("link", { name: /Datos fiscales/ }).elements()).toHaveLength(0);
     await expect.element(page.getByText("Certificado de ARCA")).toBeVisible();
     expect(page.getByRole("link", { name: /Certificado de ARCA/ }).elements()).toHaveLength(0);
   });
 
-  it("Tab recorre las filas con enlace en orden con el foco visible", async () => {
+  it("Tab llega a la fila con enlace con el foco visible", async () => {
     await render(lista());
-    const [primera, segunda] = [...document.querySelectorAll<HTMLElement>("a[href]")];
-    await verificarFoco(primera as HTMLElement);
-    await userEvent.tab();
-    expect(document.activeElement).toBe(segunda);
+    const enlace = document.querySelector<HTMLElement>("a[href]") as HTMLElement;
+    await verificarFoco(enlace);
   });
 
   it("cada punto de venta es un enlace a su pantalla y «Agregar punto de venta» al alta; el foco se ve en ambos", async () => {
@@ -144,6 +147,21 @@ describe("las filas y el teclado", () => {
       vacio.element().compareDocumentPosition(agregar.element()) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(document.body.textContent).not.toContain("Tocá un punto de venta");
+  });
+
+  it("si el servidor no deja agregar: «Agregar punto de venta» sale apagado con su motivo a la vista, sin enlace al alta", async () => {
+    await ventana(390);
+    await render(
+      enArmazon(
+        "Puntos de venta",
+        puntos(PUNTOS, { permitida: false, motivo: "No tiene permiso para hacer esto." }),
+      ),
+    );
+    const agregar = page.getByRole("button", { name: "Agregar punto de venta" });
+    await expect.element(agregar).toBeDisabled();
+    await expect.element(page.getByText("No tiene permiso para hacer esto.")).toBeVisible();
+    expect(page.getByRole("link", { name: "Agregar punto de venta" }).elements()).toHaveLength(0);
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
   });
 
   it("con puntos de venta no se dice que no hay", async () => {

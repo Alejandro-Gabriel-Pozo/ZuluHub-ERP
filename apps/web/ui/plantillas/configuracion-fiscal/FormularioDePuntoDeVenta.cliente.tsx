@@ -20,6 +20,7 @@ import {
   valoresParaEditar,
   type CampoDelFormulario,
   type IdsDelFormulario,
+  type OfertaDeAccion,
   type PuntoParaConfigurar,
   type ValoresDelFormulario,
 } from "./modelo-de-puntos-de-venta";
@@ -37,6 +38,8 @@ export type PropsDeFormularioDePuntoDeVenta = Readonly<{
   rutaAlTerminar: string;
   /** Adónde se va con «Cancelar». */
   rutaAlCancelar: string;
+  /** Si el servidor deja guardar hoy (crear o editar, según la pantalla): si no, «Guardar» sale apagado con su motivo. Solo una ayuda: el guard decide. */
+  oferta: OfertaDeAccion;
 }>;
 
 const nuevosIds = (): IdsDelFormulario => ({
@@ -60,6 +63,7 @@ export function FormularioDePuntoDeVenta({
   guardar,
   rutaAlTerminar,
   rutaAlCancelar,
+  oferta,
 }: PropsDeFormularioDePuntoDeVenta) {
   const router = useRouter();
   const formulario = useRef<HTMLFormElement>(null);
@@ -81,6 +85,7 @@ export function FormularioDePuntoDeVenta({
     setIds(nuevosIds());
   }
 
+  // Tras 3 intentos inciertos (límite de `useEnvioConClave`) el formulario queda en «Verificando…», bloqueado: ver `useEnvioFijado`.
   const { envio, enviarCon, referenciaIncierta } = useEnvioFijado<object, unknown>(guardar);
   const estado = envio.estado;
   const incierto = estado.tipo === "incierto";
@@ -128,6 +133,10 @@ export function FormularioDePuntoDeVenta({
 
   function alEnviar(evento: SyntheticEvent): void {
     evento.preventDefault();
+    if (!oferta.permitida) return;
+    // Con Enter dentro de un campo, el foco está en un campo que se apaga (`disabled`) al enviar y caería al <body>: pasa a «Guardar»,
+    // que durante el envío queda `aria-disabled` y lo conserva.
+    formulario.current?.querySelector<HTMLElement>('button[type="submit"]')?.focus();
     enviarCon(
       original === null
         ? armarElPedidoDeAlta(valores, ids, emisorId)
@@ -193,7 +202,8 @@ export function FormularioDePuntoDeVenta({
               poner("provincia", v);
             }}
             opciones={OPCIONES_DE_PROVINCIA}
-            textoDeElegir=""
+            // La opción vacía lleva el nombre del campo para que el lector de pantalla no la diga sin nombre.
+            textoDeElegir={texto({}, "fiscal.pantalla.config_pv_provincia")}
             error={errorEn("provincia")}
             deshabilitado={bloqueado}
           />
@@ -204,7 +214,8 @@ export function FormularioDePuntoDeVenta({
         <div className={estilos["botones"]}>
           <Boton
             variante="secundaria"
-            deshabilitado={envio.enCurso}
+            // Mientras guarda no se puede cancelar, pero sin `disabled`: el foco no se pierde y el toque se ignora.
+            enviando={envio.enCurso}
             alTocar={() => {
               router.push(rutaAlCancelar);
             }}
@@ -215,8 +226,8 @@ export function FormularioDePuntoDeVenta({
             tipo="submit"
             enviando={envio.enCurso}
             textoEnviando={texto({}, "fiscal.pantalla.config_pv_guardando")}
-            deshabilitado={!envio.enCurso && envio.bloqueado}
-            motivo={envio.motivoQueNoPuede}
+            deshabilitado={!oferta.permitida || (!envio.enCurso && envio.bloqueado)}
+            motivo={oferta.permitida ? envio.motivoQueNoPuede : (oferta.motivo ?? undefined)}
           >
             {texto({}, "fiscal.pantalla.config_pv_guardar")}
           </Boton>

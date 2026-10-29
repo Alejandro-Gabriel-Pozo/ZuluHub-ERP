@@ -1,6 +1,7 @@
 import { texto } from "../../../../../../../../src/capacidades/vocabulario/vocabulario";
 import { pantallaDeOperacion } from "../../../../../../pantallas/operacion";
 import { cargarLosPuntosDeVenta } from "../../../../../../servidor/configuracion-fiscal";
+import { accionesDePuntosDeVenta } from "../../../../../../servidor/modulos";
 import { RUTAS_DE_CONFIGURACION } from "../../../../../../ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { armarLaListaDePuntosDeVenta } from "../../../../../../ui/plantillas/configuracion-fiscal/modelo-de-puntos-de-venta";
 import { PantallaDePuntosDeVenta } from "../../../../../../ui/plantillas/configuracion-fiscal/PantallaDePuntosDeVenta";
@@ -13,6 +14,7 @@ export default async function PaginaDePuntosDeVenta() {
     async ({ contexto }) => {
       const puntos = await cargarLosPuntosDeVenta(contexto);
       if (!puntos.ok) return <ErrorDelDetalle error={puntos.error} />;
+      const acciones = await accionesDePuntosDeVenta(contexto);
       return (
         <PantallaDePuntosDeVenta
           migas={[
@@ -27,6 +29,7 @@ export default async function PaginaDePuntosDeVenta() {
           agregar={{
             texto: texto({}, "fiscal.pantalla.config_pv_agregar"),
             href: RUTAS_DE_CONFIGURACION.nuevoPuntoDeVenta,
+            oferta: acciones.agregar,
           }}
         />
       );
