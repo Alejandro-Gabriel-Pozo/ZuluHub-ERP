@@ -6,7 +6,7 @@ import { armarLaLista } from "../../../../../ui/plantillas/configuracion-fiscal/
 import { PantallaDeConfiguracionFiscal } from "../../../../../ui/plantillas/configuracion-fiscal/PantallaDeConfiguracionFiscal";
 
 // `/configuracion-fiscal`: la lista de lo que falta para emitir (D-43, opción C). Solo el gerente: el servidor decide y, sin permiso, la
-// pantalla dice «sin permiso» como las demás. No está en la barra de abajo (el punto de entrada todavía no está decidido).
+// pantalla dice «sin permiso» como las demás. No está en la barra de abajo: se entra desde Cuenta y desde «lo que falta» de Inicio (decisión del dueño, 2026-10-29).
 export default async function PaginaDeConfiguracionFiscal() {
   return pantallaDeOperacion({ titulo: "fiscal.pantalla.config_titulo" }, async ({ contexto }) => {
     const estado = await cargarElEstadoDeLaConfiguracion(contexto);
