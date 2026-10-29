@@ -38,12 +38,42 @@ export async function destinosDeModulos(
     : [];
 }
 
-/** Los permisos de la persona, o `null` si no se pudieron leer (un rechazo o una excepción): la barra no abre nada por las dudas. */
+/** Por qué la persona no puede anular con nota de crédito ahora (los códigos públicos de siempre; su texto es el del catálogo). */
+export type FaltaParaAnular = "SIN_PERMISO" | "MODULO_NO_ACTIVO" | "MODULO_EN_SOLO_LECTURA";
+
+/**
+ * Qué le falta a la persona para anular con nota de crédito, o `null` si puede: tiene hoy la acción `notas_de_credito.emitir` Y el
+ * módulo `facturacion` está ACTIVO. SUPUESTO declarado: en solo lectura NO se ofrece (ni el botón ni la pantalla; el dueño lo pidió
+ * el 2026-10-29: «en solo lectura el botón no aparece»); si `permisosDelActor` falla, tampoco (cierra, no abre). Ocultar no es
+ * autorizar: la acción vuelve a pasar por el guard, con el mismo permiso, dentro de su transacción.
+ */
+export async function loQueFaltaParaAnular(
+  contexto: ContextoOperativo,
+): Promise<FaltaParaAnular | null> {
+  const permisos = await permisosDeLaPersona(contexto);
+  if (permisos === null || !permisos.acciones.includes("notas_de_credito.emitir")) {
+    return "SIN_PERMISO";
+  }
+  if (permisos.modulos.activos.includes("facturacion")) return null;
+  return permisos.modulos.enSoloLectura.includes("facturacion")
+    ? "MODULO_EN_SOLO_LECTURA"
+    : "MODULO_NO_ACTIVO";
+}
+
+/**
+ * Los permisos de la persona, o `null` si no se pudieron leer (un rechazo o una excepción): la barra y el botón de anular no abren
+ * nada por las dudas. Una excepción no se traga en silencio: queda en el registro del servidor, con el mismo formato que los demás
+ * (`[etiqueta] qué falló (Tipo)`), SOLO el tipo de la falla, nunca su texto (puede traer datos de la base). Previene: que una base
+ * caída deje la barra vacía sin que nadie lo vea. Chequeo: `test/web/modulos-de-la-barra.test.ts`.
+ */
 async function permisosDeLaPersona(contexto: ContextoOperativo) {
   try {
     const permisos = await web.consultasDeEmpresas().permisosDelActor(contexto);
     return permisos.ok ? permisos.valor : null;
-  } catch {
+  } catch (error) {
+    console.error(
+      `[modulos] no se pudieron leer los permisos de la persona (${error instanceof Error ? error.name : "falla que no es un Error"})`,
+    );
     return null;
   }
 }

@@ -260,7 +260,11 @@ function datosDe(d: DiccionarioResuelto, detalle: DetalleParaMostrar): DetalleAr
   return filas;
 }
 
-function anuladoDe(d: DiccionarioResuelto, detalle: DetalleParaMostrar): DetalleArmado["anulado"] {
+/** «Ya anulado con notas de crédito»: la cifra y la lista de notas con su estado. Lo comparten el detalle y la revisión de la anulación. */
+export function anuladoDe(
+  d: DiccionarioResuelto,
+  detalle: Pick<DetalleParaMostrar, "estado" | "tipo" | "notasQueLoCitan" | "acreditado">,
+): DetalleArmado["anulado"] {
   // Solo una factura autorizada; una nota (de crédito o de débito) muestra a qué corresponde, no lo anulado.
   if (detalle.estado !== "AUTORIZADO" || !esFactura(detalle.tipo)) return null;
   const notas = detalle.notasQueLoCitan
