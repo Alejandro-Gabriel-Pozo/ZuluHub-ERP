@@ -26,7 +26,13 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
     consultasDeEmpresas: () => ({
       permisosDelActor: () => Promise.resolve({ ok: true, valor: servidor.permisos }),
       sucursalesElegibles: () =>
-        Promise.resolve(ok([{ id: "s-norte", nombre: "Sucursal Norte", activa: true }])),
+        Promise.resolve(
+          ok([
+            { id: "s-norte", nombre: "Sucursal Norte", activa: true },
+            { id: "s-sur", nombre: "Sucursal Sur", activa: false },
+            { id: "s-este", nombre: "Sucursal Este", activa: false },
+          ]),
+        ),
     }),
   },
 }));
@@ -178,6 +184,71 @@ describe("los botones apagados según el servidor", () => {
       apagado: true,
       motivo: SIN_PERMISO,
     });
+  });
+
+  // D-79 y D-80 (`facturador-contratos-de-pantalla.md`, confirmadas por el dueño el 2026-10-29). El servidor valida igual.
+  it("detalle de uno no activo en una sucursal cerrada: «Activar» apagado con «Sucursal cerrada.»", async () => {
+    servidor.puntos = respuesta({
+      emisorId: EMISOR,
+      items: [
+        PV({ activo: false, sucursal: { id: "s-este", nombre: "Sucursal Este", activa: false } }),
+      ],
+    });
+    expect(boton(await html("/puntos-de-venta/[id]/page", { id: ID }), "Activar")).toEqual({
+      nombre: "Activar",
+      apagado: true,
+      motivo: "Sucursal cerrada.",
+    });
+  });
+
+  it("detalle de uno activo en una sucursal cerrada: «Desactivar» sigue activo, y «Editar» también", async () => {
+    servidor.puntos = respuesta({
+      emisorId: EMISOR,
+      items: [PV({ sucursal: { id: "s-este", nombre: "Sucursal Este", activa: false } })],
+    });
+    const marcado = await html("/puntos-de-venta/[id]/page", { id: ID });
+    expect(boton(marcado, "Desactivar")).toMatchObject({ apagado: false, motivo: null });
+    expect(boton(marcado, "Editar")).toMatchObject({ apagado: false });
+  });
+
+  it("detalle de uno no activo en una sucursal abierta: «Activar» activo, como hasta ahora", async () => {
+    servidor.puntos = respuesta({ emisorId: EMISOR, items: [PV({ activo: false })] });
+    expect(boton(await html("/puntos-de-venta/[id]/page", { id: ID }), "Activar")).toMatchObject({
+      apagado: false,
+      motivo: null,
+    });
+  });
+
+  it("detalle de uno no activo en sucursal cerrada y sin permiso de activar: queda el motivo del permiso", async () => {
+    servidor.puntos = respuesta({
+      emisorId: EMISOR,
+      items: [
+        PV({ activo: false, sucursal: { id: "s-este", nombre: "Sucursal Este", activa: false } }),
+      ],
+    });
+    servidor.permisos = sinPermisosDe("puntos_de_venta.activar");
+    expect(boton(await html("/puntos-de-venta/[id]/page", { id: ID }), "Activar")).toMatchObject({
+      apagado: true,
+      motivo: SIN_PERMISO,
+    });
+  });
+
+  it("edición: ofrece las sucursales abiertas y no las cerradas ajenas", async () => {
+    const marcado = await html("/puntos-de-venta/[id]/page", EDICION);
+    expect(marcado).toMatch(/<option value="s-norte"[^>]*>Sucursal Norte/);
+    expect(marcado).not.toContain("Sucursal Sur");
+    expect(marcado).not.toContain("Sucursal Este");
+  });
+
+  it("edición de uno en una sucursal cerrada: se ofrece la actual, dicha como cerrada, y ninguna otra cerrada", async () => {
+    servidor.puntos = respuesta({
+      emisorId: EMISOR,
+      items: [PV({ sucursal: { id: "s-este", nombre: "Sucursal Este", activa: false } })],
+    });
+    const marcado = await html("/puntos-de-venta/[id]/page", EDICION);
+    expect(marcado).toMatch(/<option value="s-este"[^>]*>Sucursal Este · Cerrada/);
+    expect(marcado).toMatch(/<option value="s-norte"[^>]*>Sucursal Norte/);
+    expect(marcado).not.toContain("Sucursal Sur");
   });
 
   it("alta: «Guardar» activo con permiso; sin crear, apagado con su motivo", async () => {

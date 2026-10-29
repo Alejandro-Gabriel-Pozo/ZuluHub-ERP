@@ -3,7 +3,7 @@ import { texto } from "../../../../../../../../../src/capacidades/vocabulario/vo
 import { conTitulo, pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
 import { cargarLosPuntosDeVenta } from "../../../../../../../servidor/configuracion-fiscal";
 import { accionesDePuntosDeVenta } from "../../../../../../../servidor/modulos";
-import { sucursalesParaElegir } from "../../../../../../../servidor/sucursal-elegida";
+import { sucursalesAbiertasParaElegir } from "../../../../../../../servidor/sucursal-elegida";
 import { DetalleDelPuntoDeVenta } from "../../../../../../../ui/plantillas/configuracion-fiscal/DetalleDelPuntoDeVenta.cliente";
 import { FormularioDePuntoDeVenta } from "../../../../../../../ui/plantillas/configuracion-fiscal/FormularioDePuntoDeVenta.cliente";
 import {
@@ -12,6 +12,7 @@ import {
 } from "../../../../../../../ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { ConMigas } from "../../../../../../../ui/plantillas/configuracion-fiscal/MigasDeConfiguracion";
 import {
+  accionesDelPuntoDeVenta,
   armarElPuntoDeVenta,
   tituloDelPuntoDeVenta,
 } from "../../../../../../../ui/plantillas/configuracion-fiscal/modelo-de-puntos-de-venta";
@@ -64,14 +65,16 @@ export default async function PaginaDeUnPuntoDeVenta({ params, searchParams }: P
               desactivar={desactivarPuntoDeVentaAccion}
               cambiarAmbiente={cambiarAmbienteAccion}
               rutaDeEdicion={`${rutaDeUnPuntoDeVenta(punto.id)}?editar=1`}
-              acciones={acciones}
+              acciones={accionesDelPuntoDeVenta(acciones, punto)}
             />
           </ConMigas>,
         );
       }
-      const sucursales = await sucursalesParaElegir(contexto);
+      // D-79 (`facturador-contratos-de-pantalla.md`, confirmada por el dueño el 2026-10-29): no se puede mudar un punto de venta a una
+      // sucursal cerrada, así que solo se ofrecen las abiertas. Mudarlo DESDE una cerrada sí se puede, y editar sin cambiar la sucursal
+      // también: la actual se ofrece siempre, aunque esté cerrada (así no se cambia sin querer). El servidor valida igual.
+      const sucursales = await sucursalesAbiertasParaElegir(contexto);
       if (!sucursales.ok) return <ErrorDelDetalle error={sucursales.error} />;
-      // La sucursal actual siempre se ofrece, aunque la persona no la pueda elegir hoy (así no se cambia sin querer).
       const opciones = sucursales.dato.some((s) => s.id === punto.sucursal.id)
         ? sucursales.dato
         : [...sucursales.dato, punto.sucursal];

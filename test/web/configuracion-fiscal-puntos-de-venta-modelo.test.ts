@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   OPCIONES_DE_PROVINCIA,
+  accionesDelPuntoDeVenta,
   VALORES_EN_BLANCO,
   armarElPedidoDeAlta,
   armarElPedidoDeEdicion,
@@ -204,5 +205,40 @@ describe("dónde se marca cada error del servidor", () => {
     expect(lugarDelError(undefined)).toBeNull();
     expect(lugarDelError("otraCosa")).toBeNull();
     expect(lugarDelError("constructor")).toBeNull();
+  });
+});
+
+describe("las acciones de un punto de venta según su sucursal (D-79 y D-80)", () => {
+  const permitida = { permitida: true, motivo: null } as const;
+  const acciones = {
+    agregar: permitida,
+    editar: permitida,
+    activar: permitida,
+    desactivar: permitida,
+    pasarAProduccion: permitida,
+  };
+  const cerrada = { id: "s-sur", nombre: "Sucursal Sur", activa: false };
+
+  it("no activo en una sucursal cerrada: «Activar» se apaga con «Sucursal cerrada.» y lo demás queda igual", () => {
+    const r = accionesDelPuntoDeVenta(acciones, punto({ activo: false, sucursal: cerrada }));
+    expect(r.activar).toEqual({ permitida: false, motivo: "Sucursal cerrada." });
+    expect(r).toEqual({ ...acciones, activar: r.activar });
+  });
+
+  it("activo en una sucursal cerrada: nada cambia (desactivar nunca se bloquea por esto)", () => {
+    expect(accionesDelPuntoDeVenta(acciones, punto({ activo: true, sucursal: cerrada }))).toBe(
+      acciones,
+    );
+  });
+
+  it("en una sucursal abierta: nada cambia", () => {
+    expect(accionesDelPuntoDeVenta(acciones, punto({ activo: false }))).toBe(acciones);
+  });
+
+  it("si el actor ya no puede activar, queda su motivo", () => {
+    const sinPermiso = { ...acciones, activar: { permitida: false, motivo: "Sin permiso." } };
+    expect(accionesDelPuntoDeVenta(sinPermiso, punto({ activo: false, sucursal: cerrada }))).toBe(
+      sinPermiso,
+    );
   });
 });

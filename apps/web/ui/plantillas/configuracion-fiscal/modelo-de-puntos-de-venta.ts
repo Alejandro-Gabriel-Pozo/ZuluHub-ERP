@@ -101,6 +101,25 @@ export function armarLaListaDePuntosDeVenta(
   }));
 }
 
+/**
+ * Las acciones del detalle de UN punto de venta: las del actor (`accionesDePuntosDeVenta`) más lo que depende de este punto. D-80
+ * (`facturador-contratos-de-pantalla.md`, confirmada por el dueño el 2026-10-29): uno no activo cuya sucursal está cerrada no se
+ * puede activar, y «Activar» sale apagado con «Sucursal cerrada.» (el texto que ya existe, `error.fiscal_sucursal_cerrada`: una
+ * regla, un lugar). Desactivar nunca se bloquea por esto. Si el actor ya no puede activar, queda su motivo (permiso o módulo).
+ * Solo una ayuda: el servidor vuelve a validarlo. Previene: tocar «Activar» y recién ahí recibir el rechazo. Chequeo:
+ * `test/web/configuracion-fiscal-puntos-de-venta-modelo.test.ts`.
+ */
+export function accionesDelPuntoDeVenta(
+  acciones: AccionesDePuntosDeVenta,
+  p: PuntoParaConfigurar,
+): AccionesDePuntosDeVenta {
+  if (p.activo || p.sucursal.activa || !acciones.activar.permitida) return acciones;
+  return {
+    ...acciones,
+    activar: { permitida: false, motivo: texto({}, "error.fiscal_sucursal_cerrada") },
+  };
+}
+
 export type PuntoDeVentaArmado = Readonly<{
   titulo: string;
   sucursal: string;

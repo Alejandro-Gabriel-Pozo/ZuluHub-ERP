@@ -12,6 +12,7 @@ import {
 } from "./ayudas-de-pruebas";
 import { DetalleDelPuntoDeVenta } from "./DetalleDelPuntoDeVenta.cliente";
 import {
+  accionesDelPuntoDeVenta,
   armarElPuntoDeVenta,
   type AccionesDePuntosDeVenta,
   type PuntoParaConfigurar,
@@ -47,7 +48,7 @@ const PUNTO: PuntoParaConfigurar = {
 
 const pantalla = (
   acciones: AccionesDePuntosDeVenta,
-  cambios: Partial<PuntoParaConfigurar> = {},
+  cambios: Partial<PuntoParaConfigurar> | PuntoParaConfigurar = {},
 ) => {
   const punto = { ...PUNTO, ...cambios };
   return (
@@ -150,5 +151,45 @@ describe("el detalle con lo que el servidor deja hacer hoy", () => {
     // Se nombra con lo que dice: «Ambiente Pruebas» (el lector de pantalla lo anuncia al caer el foco).
     await expect.element(page.getByRole("group", { name: "Ambiente Pruebas" })).toBeVisible();
     expect(router.refresh).toHaveBeenCalled();
+  });
+});
+
+// D-79 y D-80 (`facturador-contratos-de-pantalla.md`, confirmadas por el dueño el 2026-10-29): uno no activo en una sucursal cerrada
+// no se puede activar. La oferta sale del modelo, con las acciones reales del punto de venta.
+describe("el detalle de un punto de venta no activo en una sucursal cerrada", () => {
+  const CERRADA = "Sucursal cerrada.";
+  const enSucursalCerrada = (cambios: Partial<PuntoParaConfigurar>) => {
+    const punto = {
+      ...PUNTO,
+      sucursal: { id: "s-sur", nombre: "Sucursal Sur", activa: false },
+      ...cambios,
+    };
+    return pantalla(accionesDelPuntoDeVenta(TODO_PERMITIDO, punto), punto);
+  };
+
+  it.each([390, 1280])(
+    "a %i px: «Activar» apagado con «Sucursal cerrada.» a la vista y asociado al botón, sin violaciones de axe",
+    async (ancho) => {
+      await ventana(ancho);
+      await render(enArmazon("Punto de venta 00002", enSucursalCerrada({ activo: false })));
+      const apagado = boton("Activar");
+      await expect.element(apagado).toBeDisabled();
+      await expect.element(page.getByText(CERRADA)).toBeVisible();
+      const descripcion = apagado.element().getAttribute("aria-describedby") ?? "";
+      expect(document.getElementById(descripcion)?.textContent).toBe(CERRADA);
+      expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+      legibleYTocable();
+    },
+  );
+
+  it("tocar «Activar» apagado no envía nada", async () => {
+    await render(enSucursalCerrada({ activo: false }));
+    tocar(boton("Activar"));
+    expect(activar).not.toHaveBeenCalled();
+  });
+
+  it("uno activo en una sucursal cerrada sigue pudiendo desactivarse", async () => {
+    await render(enSucursalCerrada({ activo: true }));
+    await expect.element(boton("Desactivar")).toBeEnabled();
   });
 });
