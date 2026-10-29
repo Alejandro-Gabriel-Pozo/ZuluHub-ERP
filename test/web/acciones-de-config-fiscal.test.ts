@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
 /**
- * El archivo `"use server"` de Puntos de venta (`apps/web/app/s/app/acciones-de-configuracion-fiscal.ts`): lo que expone a Next. Fino a
+ * El archivo `"use server"` de Puntos de venta (`apps/web/app/s/app/acciones-de-config-fiscal.ts`): lo que expone a Next. Fino a
  * propósito: la directiva va PRIMERO, solo exporta funciones asíncronas y cada una delega en su par de
  * `servidor/configuracion-fiscal.ts` con el pedido tal cual, sin decidir nada.
  */
@@ -21,9 +21,9 @@ vi.mock("../../apps/web/servidor/configuracion-fiscal", () => {
   };
 });
 
-import * as acciones from "../../apps/web/app/s/app/acciones-de-configuracion-fiscal";
+import * as acciones from "../../apps/web/app/s/app/acciones-de-config-fiscal";
 
-const ARCHIVO = "apps/web/app/s/app/acciones-de-configuracion-fiscal.ts";
+const ARCHIVO = "apps/web/app/s/app/acciones-de-config-fiscal.ts";
 
 const ESPERADAS = {
   crearPuntoDeVentaAccion: "crearElPuntoDeVenta",

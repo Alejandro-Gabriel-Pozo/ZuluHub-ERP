@@ -20,7 +20,7 @@ import {
   activarPuntoDeVentaAccion,
   desactivarPuntoDeVentaAccion,
   editarPuntoDeVentaAccion,
-} from "../../../../acciones-de-configuracion-fiscal";
+} from "../../../../acciones-de-config-fiscal";
 
 type PropsDePagina = Readonly<{
   params: Promise<{ id: string }>;

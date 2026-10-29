@@ -6,7 +6,7 @@ import { FormularioDePuntoDeVenta } from "../../../../../../../ui/plantillas/con
 import { RUTAS_DE_CONFIGURACION } from "../../../../../../../ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { ConMigas } from "../../../../../../../ui/plantillas/configuracion-fiscal/MigasDeConfiguracion";
 import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
-import { crearPuntoDeVentaAccion } from "../../../../acciones-de-configuracion-fiscal";
+import { crearPuntoDeVentaAccion } from "../../../../acciones-de-config-fiscal";
 
 // `/configuracion-fiscal/puntos-de-venta/nuevo`: el alta de un punto de venta. El emisor sale del servidor (D-47) y las sucursales, de
 // las de la empresa; el formulario genera las claves de idempotencia al abrirse.
