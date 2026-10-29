@@ -17,11 +17,16 @@ import {
 } from "../../src/adaptadores/postgres/transacciones";
 import type { ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
-import { crearRepositorioDeEmpresas, type EmpresasDb } from "../../src/modulos/empresas/publico";
+import {
+  crearRepositorioDeEmpresas,
+  crearRepositorioDeSucursales,
+  type EmpresasDb,
+} from "../../src/modulos/empresas/publico";
 import {
   comprobanteId,
   crearCasosDeUsoDeFacturacion,
   crearRepositorioDeCertificados,
+  crearLecturasDeComprobantes,
   crearRepositorioDeComprobantes,
   crearRepositorioDeDatosFiscales,
   crearRepositorioDeDomicilios,
@@ -75,6 +80,8 @@ export function crearEntornoDeFacturacion(
       return ajustar({
         db,
         empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
+        sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
+        lecturas: crearLecturasDeComprobantes(fiscal),
         tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
         puntosDeVenta: crearRepositorioDePuntosDeVenta(fiscal),
         emisores: crearRepositorioDeEmisores(fiscal),

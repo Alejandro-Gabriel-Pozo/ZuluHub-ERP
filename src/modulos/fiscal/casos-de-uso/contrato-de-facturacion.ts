@@ -1,12 +1,13 @@
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { EstadoDeEmpresa } from "../../../contexto/estados";
-import type { EmpresaId, TenantId } from "../../../primitivas/identificadores/marca";
+import type { EmpresaId, SucursalId, TenantId } from "../../../primitivas/identificadores/marca";
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { TrabajosReencolables } from "../../../puertos/trabajos";
 import type { Ambiente } from "../dominio/comprobante-nuevo";
 import type { ComprobanteId, EmisorId } from "../dominio/identificadores";
 import { OPCIONES_DE_NUMERACION, type OpcionesDeNumeracion } from "../dominio/numeracion";
+import type { LecturasDeComprobantes } from "../persistencia/lecturas-de-comprobantes";
 import type { RepositorioDeCertificados } from "../persistencia/repositorio-de-certificados";
 import type { RepositorioDeComprobantes } from "../persistencia/repositorio-de-comprobantes";
 import type { RepositorioDeIntentos } from "../persistencia/repositorio-de-intentos";
@@ -36,6 +37,18 @@ export type TxDeFacturacion = Omit<TxDeNumeracion, "empresas" | "puntosDeVenta" 
       }> | null>;
     }>;
     tenants: TxDeNumeracion["tenants"];
+    /**
+     * La sucursal de un comprobante guardado: lo único que se lee para decidir si la persona lo alcanza (D-39) antes de leer el
+     * resto (`consultas/comprobante-en-alcance.ts`), y la de la factura que una nota corrige (D-51).
+     */
+    lecturas: Pick<LecturasDeComprobantes, "sucursalDelComprobante">;
+    /**
+     * Una sucursal de la empresa, abierta o cerrada (la composición pasa el repositorio de empresas, que ya cumple esto): emitir
+     * exige la del punto de venta abierta (D-50).
+     */
+    sucursales: Readonly<{
+      obtener(empresa: EmpresaId, id: SucursalId): Promise<Readonly<{ activa: boolean }> | null>;
+    }>;
     puntosDeVenta: Pick<RepositorioDePuntosDeVenta, "obtener" | "cambiarAmbiente">;
     series: Pick<
       RepositorioDeSeries,

@@ -204,6 +204,13 @@ export const TEXTOS_DE_FISCAL = {
     porDefecto: "Sucursal fuera de su alcance.",
     largoMaximo: 160,
   },
+  // Fuente: `Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md`, D-50 («Una sucursal cerrada no emite»; confirmada
+  // por el dueño el 2026-10-29: «No, una sucursal cerrada no emite»). El TEXTO es solo la lectura literal del nombre de la decisión: la
+  // pantalla se guía por el CÓDIGO y el texto definitivo no está aprobado (pregunta pendiente).
+  "error.fiscal_sucursal_cerrada": {
+    porDefecto: "Sucursal cerrada.",
+    largoMaximo: 160,
+  },
   "fiscal.arca.error_generico": {
     porDefecto: "ARCA no aceptó el comprobante. Código {codigo}.",
     largoMaximo: 160,
