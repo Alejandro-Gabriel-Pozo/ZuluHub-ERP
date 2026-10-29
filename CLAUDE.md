@@ -21,6 +21,10 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
 - Todo cambio de datos: transacción, idempotencia, aislamiento por empresa, auditoría en la misma transacción.
 - Migraciones: SQL revisado; avisar antes de cualquier cambio destructivo.
 - No hacer commit de `.env`, claves ni cadenas de conexión.
+- **Todo nace cerrado (denegar por defecto).** Nada se habilita sin declararlo, autorizarlo y dejar rastro; ante un error o una duda el
+  sistema cierra (fail closed). Las capacidades son opt-in, con el mínimo privilegio y lista blanca: solo pasa lo declarado. Ejemplos: un
+  módulo «en desarrollo» no da permisos a nadie; sin sucursal elegida nunca se asume «todas»; la barra que no puede leer permisos no
+  muestra la entrada.
 
 ## Cómo trabajan los agentes: no suponer y alcance cerrado
 
