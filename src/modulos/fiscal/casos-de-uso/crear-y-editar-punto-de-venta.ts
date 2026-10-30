@@ -232,7 +232,8 @@ export type ErrorPropioAlEditarPuntoDeVenta =
   | ErrorDePuntoDeVenta
   | ErrorDeDomicilioDeEntrada
   | "PUNTO_DE_VENTA_NO_ENCONTRADO"
-  | "VERSION_DESACTUALIZADA";
+  | "VERSION_DESACTUALIZADA"
+  | ErrorDeSucursalCerrada;
 
 export type ErrorAlEditarPuntoDeVenta =
   ErrorPropioAlEditarPuntoDeVenta | MotivoDeRechazo | EmpresaNoOpera | ErrorDePersistencia;
@@ -253,10 +254,21 @@ const ADMITIDOS_AL_EDITAR = [
  * número válido, libre en el emisor y SIN números usados):
  *
  *  - lo pedido no cambia nada → éxito sin escribir ni auditar (repetir una edición ya aplicada es idempotente,
- *    aunque la versión esperada haya quedado vieja);
+ *    aunque la versión esperada haya quedado vieja y aunque su sucursal esté cerrada);
  *  - la versión esperada no es la vigente → `VERSION_DESACTUALIZADA`;
  *  - si no, `UPDATE` condicionado a la versión y auditoría `PUNTO_DE_VENTA_EDITADO` con el antes y el después de
  *    lo que cambió.
+ *
+ * Mudarlo a una sucursal CERRADA no se puede (decisión del dueño, D-79 de `facturador-contratos-de-pantalla.md`, 2026-10-29: «No dejarlo:
+ * solo a sucursales abiertas»); mudarlo DESDE una cerrada HACIA una abierta sí, y editar el número o el domicilio de uno que ya está en una
+ * cerrada también (solo se mira la sucursal cuando CAMBIA). La sucursal destino se lee con `FOR SHARE`, igual que el alta, ANTES de
+ * escribir nada (ni el domicilio nuevo ni la auditoría: todo o nada): `SUCURSAL_DE_OTRA_EMPRESA` si no es de esta empresa (sin oráculo),
+ * `SUCURSAL_CERRADA` si está cerrada (sale como `FISCAL_SUCURSAL_CERRADA`, el texto provisorio «Sucursal cerrada.» que el dueño confirmó
+ * también para mudar). Si el pedido nombra la sucursal que el punto de venta YA tiene no se lee ni se bloquea nada: es la repetición.
+ * Orden: permiso, empresa, punto de venta, sucursal destino (si cambia: de la empresa y abierta), el dominio, la versión.
+ * Previene: un punto de venta mudado a una sucursal cerrada, por un pedido armado a mano o por la carrera con su cierre (el cierre espera
+ * a la edición, o la edición ve la sucursal cerrada; sin ciclos de espera, mismo razonamiento que el alta). La base NO lo impone.
+ * Chequeo: `fiscal-configuracion-puntos-de-venta.test.ts` y los dos órdenes de la carrera en `fiscal-configuracion-concurrencia.test.ts`.
  *
  * Dos ediciones simultáneas con la misma versión: gana una; la otra, tras el reintento serializable, ve la
  * versión nueva y da `VERSION_DESACTUALIZADA`. Cambiar el número mientras otro proceso reserva un número de su
@@ -293,6 +305,18 @@ export function armarEditarPuntoDeVenta({
 
         const actual = await tx.puntosDeVenta.obtener(empresaId, entrada.puntoDeVentaId);
         if (actual === null) return err("PUNTO_DE_VENTA_NO_ENCONTRADO");
+
+        // La sucursal destino, ANTES de escribir nada (ni el domicilio nuevo), solo si CAMBIA: nombrar la que ya tiene es la repetición
+        // (o una edición de otra cosa en una sucursal que se cerró después) y no se mira. Con `FOR SHARE`: ver arriba.
+        if (entrada.sucursalId !== undefined && entrada.sucursalId !== actual.sucursalId) {
+          const destino = await tx.sucursalBloqueada.obtenerBloqueandoElCierre(
+            empresaId,
+            entrada.sucursalId,
+          );
+          if (destino === null) return err("SUCURSAL_DE_OTRA_EMPRESA");
+          const abierta = exigirSucursalAbierta(destino);
+          if (!abierta.ok) return abierta;
+        }
 
         const domicilio =
           entrada.domicilio === undefined

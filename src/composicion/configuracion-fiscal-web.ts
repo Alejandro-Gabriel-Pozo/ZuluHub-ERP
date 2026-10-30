@@ -351,7 +351,7 @@ export function crearPuntoDeVenta(
   );
 }
 
-/** Cambiar el número, la sucursal o el domicilio (`puntos_de_venta.editar`). `crudo`: `{ puntoDeVentaId, versionEsperada, numero?, sucursalId?, domicilio? }`. */
+/** Cambiar el número, la sucursal o el domicilio (`puntos_de_venta.editar`). `crudo`: `{ puntoDeVentaId, versionEsperada, numero?, sucursalId?, domicilio? }`. Mudarlo a una sucursal cerrada sale como `FISCAL_SUCURSAL_CERRADA` (dueño, D-79). */
 export function editarPuntoDeVenta(
   d: DependenciasDeConfiguracionFiscalWeb,
   contexto: ContextoOperativo,
@@ -366,7 +366,7 @@ export function editarPuntoDeVenta(
   );
 }
 
-/** Activar un punto de venta (`puntos_de_venta.activar`). `crudo`: `{ puntoDeVentaId }`. */
+/** Activar un punto de venta (`puntos_de_venta.activar`). `crudo`: `{ puntoDeVentaId }`. Con su sucursal cerrada sale como `FISCAL_SUCURSAL_CERRADA` (dueño, D-80). */
 export function activarPuntoDeVenta(
   d: DependenciasDeConfiguracionFiscalWeb,
   contexto: ContextoOperativo,

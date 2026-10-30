@@ -3,8 +3,8 @@ import type { EmpresaId, SucursalId } from "../../../primitivas/identificadores/
 import { FORMA_DE_UUID, type EmpresasDb } from "./repositorios";
 
 /**
- * La lectura de una sucursal con `FOR SHARE`, para quien decide algo que depende de que SIGA abierta (hoy: dar de alta un punto de
- * venta, módulo fiscal). Vive aparte de `RepositorioDeSucursales` (que ya pasó el tope de líneas de un archivo) y se arma sobre la
+ * La lectura de una sucursal con `FOR SHARE`, para quien decide algo que depende de que SIGA abierta (hoy, en el módulo fiscal: dar de
+ * alta un punto de venta, mudarlo a otra sucursal y activarlo). Vive aparte de `RepositorioDeSucursales` (que ya pasó el tope de líneas de un archivo) y se arma sobre la
  * misma conexión de la transacción.
  *
  * Por qué hace falta: la clave foránea del punto de venta toma `FOR KEY SHARE` sobre la sucursal y el cierre (0005) es un `UPDATE` de
@@ -14,7 +14,7 @@ import { FORMA_DE_UUID, type EmpresasDb } from "./repositorios";
  * Sin ciclos de espera: el cierre toma su bloqueo consultivo, la fila que cierra y `FOR SHARE` de las OTRAS sucursales activas de la
  * empresa, nunca algo que quien lee espere. El rol de la aplicación ya tiene `SELECT` y `UPDATE (nombre, activa)` sobre `sucursal`, que
  * es lo que `FOR SHARE` exige (0017, A2).
- * Previene: un punto de venta nuevo en una sucursal que se cerró a la vez. Chequeo: los dos órdenes de la carrera en
+ * Previene: un punto de venta nuevo, mudado o activado en una sucursal que se cerró a la vez. Chequeo: los dos órdenes de la carrera en
  * `test/integracion/fiscal-configuracion-concurrencia.test.ts`.
  */
 export interface LecturaDeSucursalBloqueada {
