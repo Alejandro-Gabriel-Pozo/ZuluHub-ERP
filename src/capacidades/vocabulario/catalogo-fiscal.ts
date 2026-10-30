@@ -206,7 +206,8 @@ export const TEXTOS_DE_FISCAL = {
   },
   // Fuente: `Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md`, D-50 («Una sucursal cerrada no emite»; confirmada
   // por el dueño el 2026-10-29: «No, una sucursal cerrada no emite»). El TEXTO es solo la lectura literal del nombre de la decisión: la
-  // pantalla se guía por el CÓDIGO y el texto definitivo no está aprobado (pregunta pendiente).
+  // pantalla se guía por el CÓDIGO. Para emitir sigue siendo el texto provisorio de D-50; para crear, mudar y activar un punto de
+  // venta en una sucursal cerrada, D-78, D-79 y D-80 (el dueño, 2026-10-29) confirmaron que «Sucursal cerrada.» sirve.
   "error.fiscal_sucursal_cerrada": {
     porDefecto: "Sucursal cerrada.",
     largoMaximo: 160,
