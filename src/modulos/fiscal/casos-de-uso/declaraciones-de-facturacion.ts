@@ -49,6 +49,8 @@ export const DECLARACIONES_DE_FACTURACION = {
       },
     },
   },
+  // `YA_ESTABA` solo mientras el comprobante siga `PENDIENTE` con su trabajo de validación vivo (`encolado: false`, sin auditar); con el
+  // trabajo ya terminado, reintentar encola el siguiente y audita (`descartar-y-reintentar.ts`). La prueba fija las dos mitades.
   reintentarComprobante: {
     accion: "comprobantes.reintentar",
     repeticion: {
@@ -98,8 +100,8 @@ export const DECLARACIONES_DE_FACTURACION = {
     repeticion: {
       regla: "YA_ESTABA",
       prueba: {
-        archivo: "test/integracion/facturacion-fuera-de-secuencia.test.ts",
-        it: "la misma clave, el trabajo otra vez y la reconciliación después del bloqueo devuelven lo mismo y no tocan nada",
+        archivo: "test/integracion/facturacion-casos.test.ts",
+        it: "repetir la reconciliación de un comprobante que ya se resolvió no encuentra nada en vuelo: sin consultar a ARCA, escribir ni auditar de nuevo",
       },
     },
   },

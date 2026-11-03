@@ -678,6 +678,12 @@ function incumplimientosDeRepeticion(
       if (!REGLAS_DE_REPETICION.some((r) => r === regla)) {
         return [`${donde}: regla de repetición desconocida`];
       }
+      if (
+        regla === "NO_APLICA" &&
+        (typeof repeticion["motivo"] !== "string" || repeticion["motivo"].trim() === "")
+      ) {
+        return [`${donde}: NO_APLICA sin el motivo escrito`];
+      }
       const archivo = esObjeto(prueba) ? prueba["archivo"] : undefined;
       const titulo = esObjeto(prueba) ? prueba["it"] : undefined;
       if (
@@ -727,7 +733,7 @@ describe("cada caso de uso declara cómo se repite y la prueba que nombra existe
     expect(incumplimientosDeRepeticion(CASOS_DE_USO_A_REVISAR, leer)).toEqual([]);
   });
 
-  it("violación inyectada: sin declarar, regla inventada, archivo ausente, título renombrado, it salteado, título repetido y archivo que no es una prueba la hacen fallar", () => {
+  it("violación inyectada: sin declarar, regla inventada, NO_APLICA sin motivo, archivo ausente, título renombrado, it salteado, título repetido y archivo que no es una prueba la hacen fallar", () => {
     const archivos: Record<string, string> = {
       "test/a.test.ts": [
         '  it("repetir no duplica", async () => {',
@@ -749,6 +755,26 @@ describe("cada caso de uso declara cómo se repite y la prueba que nombra existe
         reglaInventada: {
           repeticion: { regla: "A_VECES", prueba: prueba("test/a.test.ts", "repetir no duplica") },
         },
+        noAplicaSinMotivo: {
+          repeticion: {
+            regla: "NO_APLICA",
+            prueba: prueba("test/a.test.ts", "repetir no duplica"),
+          },
+        },
+        noAplicaConMotivoVacio: {
+          repeticion: {
+            regla: "NO_APLICA",
+            motivo: "  ",
+            prueba: prueba("test/a.test.ts", "repetir no duplica"),
+          },
+        },
+        noAplicaConMotivo: {
+          repeticion: {
+            regla: "NO_APLICA",
+            motivo: "lo evita quien la llama",
+            prueba: prueba("test/a.test.ts", "repetir no duplica"),
+          },
+        },
         sinArchivo: {
           repeticion: { regla: "SIN_CAMBIOS", prueba: prueba("test/no-esta.test.ts", "x") },
         },
@@ -765,6 +791,8 @@ describe("cada caso de uso declara cómo se repite y la prueba que nombra existe
     expect(incumplimientosDeRepeticion(grupos, (archivo) => archivos[archivo] ?? null)).toEqual([
       "g.sinDeclarar: no declara cómo se repite",
       "g.reglaInventada: regla de repetición desconocida",
+      "g.noAplicaSinMotivo: NO_APLICA sin el motivo escrito",
+      "g.noAplicaConMotivoVacio: NO_APLICA sin el motivo escrito",
       "g.sinArchivo: no existe test/no-esta.test.ts",
       "g.renombrada: test/a.test.ts no tiene un it con el título «repetir duplica» (¿borrado, renombrado o salteado?)",
       "g.salteada: test/a.test.ts no tiene un it con el título «salteada» (¿borrado, renombrado o salteado?)",

@@ -5,10 +5,13 @@ import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/decla
  * (cruce X1 de ADR-003). Emitir completa algo ya vendido o cobrado: la acción es `comprobantes.emitir`.
  */
 export const DECLARACIONES = {
+  // Fuente: `reservar-numero.ts` («Límite conocido»). La prueba nombrada fija solo la mitad abierta; la mitad cerrada no tiene prueba.
   reservarNumeroDeComprobante: {
     accion: "comprobantes.emitir",
     repeticion: {
-      regla: "CLAVE_DE_IDEMPOTENCIA",
+      regla: "NO_APLICA",
+      motivo:
+        "Con la misma solicitud devuelve el mismo número solo mientras la reserva sigue abierta; ya cerrada, repetirla reservaría un número nuevo (no guarda las solicitudes cerradas). La repetición la evita quien la llama: la facturación, por la unicidad del origen del comprobante",
       prueba: {
         archivo: "test/integracion/fiscal-numeracion.test.ts",
         it: "repetir con la misma solicitud devuelve el mismo número, sin escribir ni auditar de nuevo",
@@ -36,6 +39,7 @@ export const DECLARACIONES = {
       },
     },
   },
+  // La prueba nombrada es la de la corrida completa: la repetición («no queda nada vencido») es su última aserción; no hay otra mejor.
   reconciliarSeriesVencidas: {
     sinGuard:
       "Trabajo de sistema (ADR-007): recorre las reservas vencidas de la empresa del trabajo y reconcilia cada una",

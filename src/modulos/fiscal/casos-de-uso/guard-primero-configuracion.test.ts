@@ -133,18 +133,36 @@ const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
   }
 };
 
+/** La declaración de repetición no es lo que se mira acá, pero que no sobren claves sí. */
+const UNA_REPETICION: unknown = expect.any(Object);
+
 describe("P7: el guard va primero en cada caso de uso de configuración fiscal", () => {
   it("hay ocho casos de uso, cada uno con SU acción, todos de administracion y solo del gerente", () => {
     expect(NOMBRES).toHaveLength(8);
-    expect(DECLARACIONES_DE_CONFIGURACION).toMatchObject({
-      guardarBorradorDeDatosFiscales: { accion: "datos_fiscales.editar" },
-      empezarCorreccionDeDatosFiscales: { accion: "datos_fiscales.editar" },
-      confirmarDatosFiscales: { accion: "datos_fiscales.confirmar" },
-      crearPuntoDeVenta: { accion: "puntos_de_venta.crear" },
-      editarPuntoDeVenta: { accion: "puntos_de_venta.editar" },
-      activarPuntoDeVenta: { accion: "puntos_de_venta.activar" },
-      desactivarPuntoDeVenta: { accion: "puntos_de_venta.desactivar" },
-      confirmarReglaDeEmisor: { accion: "emisores.confirmar_regla" },
+    expect(DECLARACIONES_DE_CONFIGURACION).toEqual({
+      guardarBorradorDeDatosFiscales: {
+        accion: "datos_fiscales.editar",
+        repeticion: UNA_REPETICION,
+      },
+      empezarCorreccionDeDatosFiscales: {
+        accion: "datos_fiscales.editar",
+        repeticion: UNA_REPETICION,
+      },
+      confirmarDatosFiscales: {
+        accion: "datos_fiscales.confirmar",
+        repeticion: UNA_REPETICION,
+      },
+      crearPuntoDeVenta: { accion: "puntos_de_venta.crear", repeticion: UNA_REPETICION },
+      editarPuntoDeVenta: { accion: "puntos_de_venta.editar", repeticion: UNA_REPETICION },
+      activarPuntoDeVenta: { accion: "puntos_de_venta.activar", repeticion: UNA_REPETICION },
+      desactivarPuntoDeVenta: {
+        accion: "puntos_de_venta.desactivar",
+        repeticion: UNA_REPETICION,
+      },
+      confirmarReglaDeEmisor: {
+        accion: "emisores.confirmar_regla",
+        repeticion: UNA_REPETICION,
+      },
     });
     for (const nombre of NOMBRES) {
       const accion = DECLARACIONES_DE_CONFIGURACION[nombre].accion;
