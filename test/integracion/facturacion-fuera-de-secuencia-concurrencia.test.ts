@@ -114,19 +114,31 @@ describe.skipIf(base === null)(
       return { e, reloj, falsa, pv, casos };
     }
 
+    /**
+     * Emite un comprobante. `ConcurrenciaAgotada` es una respuesta legítima bajo carga (SERIALIZABLE agotó sus
+     * reintentos y el servidor pide reintentar): se repite con la MISMA clave, y emitir es idempotente por clave, así
+     * que no se crea otro comprobante. Se acota para que un error persistente no quede disfrazado de «carga»;
+     * cualquier otro error falla mostrando el error real.
+     */
+    const emitirUno = async (p: Awaited<ReturnType<typeof preparar>>): Promise<ComprobanteId> => {
+      const entrada = facturaManual(p.e);
+      for (let intento = 0; ; intento++) {
+        const r = await p.casos.emitirComprobanteManual(p.e.como(p.reloj.ahora()), entrada);
+        if (r.ok) return r.valor.comprobanteId;
+        const agotada =
+          typeof r.error === "object" &&
+          "tipo" in r.error &&
+          r.error.tipo === "ConcurrenciaAgotada";
+        if (!agotada || intento >= 20) throw new Error(`no emitió: ${comoTexto(r.error)}`);
+      }
+    };
+
     const emitir = async (
       p: Awaited<ReturnType<typeof preparar>>,
       n: number,
     ): Promise<ComprobanteId[]> => {
       const ids: ComprobanteId[] = [];
-      for (let i = 0; i < n; i++) {
-        const r = await p.casos.emitirComprobanteManual(
-          p.e.como(p.reloj.ahora()),
-          facturaManual(p.e),
-        );
-        if (!r.ok) throw new Error("no emitió");
-        ids.push(r.valor.comprobanteId);
-      }
+      for (let i = 0; i < n; i++) ids.push(await emitirUno(p));
       return ids;
     };
 
@@ -276,14 +288,10 @@ describe.skipIf(base === null)(
         const p = await preparar();
         const ids = await Promise.all(
           Array.from({ length: 3 }, async () => {
-            const r = await p.casos.emitirComprobanteManual(
-              p.e.como(p.reloj.ahora()),
-              facturaManual(p.e),
-            );
-            if (!r.ok) throw new Error("no emitió");
-            const v = await validar(p, r.valor.comprobanteId);
+            const id = await emitirUno(p);
+            const v = await validar(p, id);
             if (!v.ok) throw new Error(`validar falló: ${comoTexto(v.error)}`);
-            return r.valor.comprobanteId;
+            return id;
           }),
         );
         await validarHastaQueNoHayaOcupadas(p, ids);
