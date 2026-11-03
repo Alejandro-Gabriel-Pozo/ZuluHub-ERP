@@ -10,6 +10,7 @@ import {
   CODIGO_DE_TIPO_DE_DOCUMENTO,
 } from "../../src/modulos/fiscal/dominio/codigos-de-arca";
 import type { TipoDeComprobante } from "../../src/modulos/fiscal/dominio/comprobante-emitido";
+import type { PuntoDeVentaDeArca } from "../../src/modulos/fiscal/dominio/habilitacion-en-arca";
 import type {
   DatosConsultados,
   Mensaje,
@@ -18,6 +19,7 @@ import type {
 } from "../../src/modulos/fiscal/dominio/estados-de-comprobante";
 import { numeroDeDocumentoParaArca } from "../../src/modulos/fiscal/dominio/receptor";
 import { importeDesdeTexto, sumar } from "../../src/primitivas/dinero/importe";
+import type { Cuit } from "../../src/primitivas/identificacion-fiscal/cuit";
 import { ARS } from "../../src/primitivas/dinero/moneda";
 import { err, ok, type Resultado } from "../../src/primitivas/resultado/resultado";
 import type { FechaCivil } from "../../src/primitivas/tiempo/fecha-civil";
@@ -188,7 +190,12 @@ export class EmisionFalsa implements EmisionElectronica {
   servicioCaido = false;
   /** Con `true`, `consultar` responde `CONSULTA_FALLIDA` (la consulta no pudo hacerse). */
   consultaCaida = false;
+  /** Con `true`, `puntosDeVenta` responde que el servicio no está disponible. */
+  puntosDeVentaCaido = false;
+  /** Cada consulta de los puntos de venta, con la CUIT que se pidió, en orden. */
+  readonly consultasDePuntosDeVenta: Cuit[] = [];
 
+  private readonly puntosDeVentaPorCuit = new Map<string, readonly PuntoDeVentaDeArca[]>();
   private readonly ultimos = new Map<string, bigint>();
   private readonly registros = new Map<string, Registro>();
   private readonly guiones: GuionConDetalle[] = [];
@@ -203,6 +210,14 @@ export class EmisionFalsa implements EmisionElectronica {
   /** Los próximos pedidos terminan así, en orden; después manda `decidir`. */
   programar(...guiones: (Guion | GuionConDetalle)[]): void {
     this.guiones.push(...guiones.map(comoDetalle));
+  }
+
+  /**
+   * Los puntos de venta que ARCA tiene para una CUIT (`FEParamGetPtosVenta`). Sin declarar nada, ARCA no tiene ninguno: una CUIT que no
+   * se declaró es una lista vacía, no un error (el falso no sabe más de ARCA que lo que el manual dice).
+   */
+  declararPuntosDeVenta(cuit: Cuit, puntos: readonly PuntoDeVentaDeArca[]): void {
+    this.puntosDeVentaPorCuit.set(cuit, puntos);
   }
 
   /** Fija el último número autorizado de una serie (para simular un desfase). */
@@ -224,6 +239,16 @@ export class EmisionFalsa implements EmisionElectronica {
       );
     }
     return Promise.resolve(ok(this.ultimo(pv, tipo)));
+  }
+
+  puntosDeVenta(cuit: Cuit): Promise<Resultado<readonly PuntoDeVentaDeArca[], ErrorDeEmision>> {
+    this.consultasDePuntosDeVenta.push(cuit);
+    if (this.puntosDeVentaCaido) {
+      return Promise.resolve(
+        err({ codigo: "SERVICIO_NO_DISPONIBLE", detalle: "servicio caído (falso)" }),
+      );
+    }
+    return Promise.resolve(ok(this.puntosDeVentaPorCuit.get(cuit) ?? []));
   }
 
   autorizar(solicitud: SolicitudDeAutorizacion): Promise<ResultadoDeAutorizacionArca> {

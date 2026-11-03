@@ -21,7 +21,7 @@ export type TxDeCertificados = Readonly<{
   emisores: Pick<RepositorioDeEmisores, "obtener">;
   certificados: Pick<
     RepositorioDeCertificados,
-    "obtener" | "obtenerClave" | "crearPedido" | "activar"
+    "obtener" | "obtenerClave" | "crearPedido" | "activar" | "descartarPendientes"
   >;
   auditoria: Auditoria;
   /** Quién es el actor y qué módulos tiene la empresa, leído dentro de la transacción (sin caché). */

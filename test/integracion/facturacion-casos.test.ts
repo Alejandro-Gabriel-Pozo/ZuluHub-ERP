@@ -20,6 +20,7 @@ import {
   cargarCertificado,
   casosDeFacturacion,
   crearEntornoDeFacturacion,
+  darDeAltaEnArca,
   crearEscenarioDeCasos,
   facturaManual,
   idDe,
@@ -126,7 +127,12 @@ describe.skipIf(base === null)("facturación F5: casos de uso contra una base re
     const e = await crearEscenarioDeCasos(dueno, propia.base, opciones);
     const reloj = new RelojDePrueba(new Date());
     const casos = casosDeFacturacion(entorno, arca, reloj, {
-      tiempos: { autorizarEnMs: 2_000, consultarEnMs: 2_000, ultimoAutorizadoEnMs: 2_000 },
+      tiempos: {
+        autorizarEnMs: 2_000,
+        consultarEnMs: 2_000,
+        ultimoAutorizadoEnMs: 2_000,
+        puntosDeVentaEnMs: 2_000,
+      },
     });
     const dependencias: DependenciasDeFacturacion = {
       transacciones: entorno,
@@ -620,6 +626,7 @@ describe.skipIf(base === null)("facturación F5: casos de uso contra una base re
         ultimoAutorizado: () => Promise.resolve({ ok: true, valor: 5n }),
         autorizar: (s) => p.falsa.autorizar(s),
         consultar: () => Promise.resolve({ tipo: "NO_ENCONTRADO" }),
+        puntosDeVenta: (cuit) => p.falsa.puntosDeVenta(cuit),
       };
       const conArcaAdelante = casosDeFacturacion(
         entorno,
@@ -661,6 +668,7 @@ describe.skipIf(base === null)("facturación F5: casos de uso contra una base re
               throw new Error("el proceso murió antes de llamar");
             },
             consultar: (pv, tipo, n) => p.falsa.consultar(pv, tipo, n),
+            puntosDeVenta: (cuit) => p.falsa.puntosDeVenta(cuit),
           },
           PRODUCCION: new EmisionFalsa(),
         },
@@ -684,6 +692,7 @@ describe.skipIf(base === null)("facturación F5: casos de uso contra una base re
         ultimoAutorizado: (pv, tipo) => colgada.ultimoAutorizado(pv, tipo),
         autorizar: () => new Promise(() => undefined),
         consultar: (pv, tipo, n) => colgada.consultar(pv, tipo, n),
+        puntosDeVenta: (cuit) => colgada.puntosDeVenta(cuit),
       };
       const p = await preparar({}, { HOMOLOGACION: nunca, PRODUCCION: colgada });
       const { comprobanteId: id } = await p.emitir();
@@ -876,7 +885,10 @@ describe.skipIf(base === null)("facturación F5: casos de uso contra una base re
     });
 
     it("cambiar a producción exige un certificado de producción, no con una serie en curso; «ya estaba»; y no se vuelve (QF2)", async () => {
-      const p = await preparar({ rol: "GERENTE" });
+      const arca = { HOMOLOGACION: new EmisionFalsa(), PRODUCCION: new EmisionFalsa() };
+      const p = await preparar({ rol: "GERENTE" }, arca);
+      // D-77: ARCA de producción tiene dado de alta el punto de venta (sin eso no pasa; está en `facturacion-ambiente-arca.test.ts`).
+      darDeAltaEnArca(arca.PRODUCCION, p.e);
       const version = async () =>
         Number(
           (await filas("select version from punto_de_venta where id = $1", [p.e.pv]))[0]?.[

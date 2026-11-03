@@ -1,10 +1,12 @@
 import { createHash } from "node:crypto";
+import type { Cuit } from "../../../primitivas/identificacion-fiscal/cuit";
 import { err, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { TipoDeComprobante } from "../dominio/comprobante-emitido";
 import type {
   ResultadoDeAutorizacionArca,
   ResultadoDeConsulta,
 } from "../dominio/estados-de-comprobante";
+import type { PuntoDeVentaDeArca } from "../dominio/habilitacion-en-arca";
 import type { ComprobanteId } from "../dominio/identificadores";
 import type { OperacionDeIntento } from "../persistencia/repositorio-de-intentos";
 import type { TiemposLimite } from "./contrato-de-facturacion";
@@ -21,7 +23,7 @@ import type {
  * colgado ni lo hace reintentar a ciegas. Lo que no se sabe se trata como no sabido:
  *  - autorizar: `INCIERTO` (pudo haber llegado: NUNCA se reenvía, se consulta);
  *  - consultar: `CONSULTA_FALLIDA` (se reintenta en la próxima reconciliación);
- *  - último autorizado: `SERVICIO_NO_DISPONIBLE`.
+ *  - último autorizado y puntos de venta de ARCA: `SERVICIO_NO_DISPONIBLE`.
  * Los motivos no llevan el texto de la excepción: podría traer la credencial del adaptador.
  */
 
@@ -95,6 +97,23 @@ export function ultimoAutorizadoConLimite(
       err({
         codigo: "SERVICIO_NO_DISPONIBLE",
         detalle: motivoDe(motivo, "último autorizado", tiempos.ultimoAutorizadoEnMs),
+      }),
+  );
+}
+
+/** Los puntos de venta que ARCA tiene para la CUIT del emisor (D-77); sin respuesta a tiempo, `SERVICIO_NO_DISPONIBLE`. */
+export function puntosDeVentaConLimite(
+  emision: EmisionElectronica,
+  cuit: Cuit,
+  tiempos: TiemposLimite,
+): Promise<Resultado<readonly PuntoDeVentaDeArca[], ErrorDeEmision>> {
+  return conTiempoLimite(
+    () => emision.puntosDeVenta(cuit),
+    tiempos.puntosDeVentaEnMs,
+    (motivo): Resultado<readonly PuntoDeVentaDeArca[], ErrorDeEmision> =>
+      err({
+        codigo: "SERVICIO_NO_DISPONIBLE",
+        detalle: motivoDe(motivo, "puntos de venta", tiempos.puntosDeVentaEnMs),
       }),
   );
 }

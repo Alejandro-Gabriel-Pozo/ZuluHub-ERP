@@ -130,6 +130,28 @@ describe("la configuración fiscal (D-43)", () => {
     expect(faltan([])).toEqual({ codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS" });
   });
 
+  it("D-77: pasar a producción un punto de venta que ARCA no habilita sale con SU código y el texto ya aprobado del rechazo 10005", () => {
+    expect(traducirErrorFiscal("PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA")).toEqual({
+      codigo: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA",
+    });
+    const r = aRespuestaFiscal(
+      err("PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA"),
+      dependencias,
+      () => null,
+    );
+    expect(r).toMatchObject({
+      ok: false,
+      error: { codigo: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA" },
+    });
+    const texto =
+      CATALOGO_DE_TEXTOS["error.fiscal_punto_de_venta_no_habilitado_en_arca"].porDefecto;
+    expect(texto).toBe(
+      "El punto de venta no está habilitado en ARCA para facturar con web service.",
+    );
+    // El mismo texto, palabra por palabra, que el dueño aprobó para el 10005 (no se inventa uno parecido).
+    expect(texto).toBe(CATALOGO_DE_TEXTOS["fiscal.arca.punto_de_venta_no_habilitado"].porDefecto);
+  });
+
   it("reusa lo ya aprobado: motivo obligatorio, identificador mal armado y versión desactualizada", () => {
     expect(traducirErrorFiscal("MOTIVO_OBLIGATORIO")).toEqual({
       codigo: "FISCAL_MOTIVO_INVALIDO",
