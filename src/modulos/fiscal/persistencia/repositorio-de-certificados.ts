@@ -1,11 +1,6 @@
 import { sql, type Kysely } from "kysely";
 import type { Cuit } from "../../../primitivas/identificacion-fiscal/cuit";
-import {
-  empresaId,
-  personaId,
-  type EmpresaId,
-  type PersonaId,
-} from "../../../primitivas/identificadores/marca";
+import { empresaId, personaId, type EmpresaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { DondeSeGuarda, TextoCifrado } from "../../../puertos/cifrado-de-secretos";
 import { AMBIENTES, type Ambiente } from "../dominio/comprobante-nuevo";
@@ -23,6 +18,22 @@ import {
   type ResultadoDeAlta,
 } from "./repositorios";
 import type { FiscalDb } from "./tablas";
+import {
+  ESTADOS_DE_CERTIFICADO,
+  type ActivacionDeCertificado,
+  type CargaDeCertificado,
+  type CertificadoGuardado,
+  type PedidoDeCertificado,
+} from "./tipos-de-certificados";
+
+export {
+  ESTADOS_DE_CERTIFICADO,
+  type ActivacionDeCertificado,
+  type CargaDeCertificado,
+  type CertificadoGuardado,
+  type EstadoDeCertificado,
+  type PedidoDeCertificado,
+} from "./tipos-de-certificados";
 
 /**
  * Repositorio de los certificados de ARCA y de la credencial de acceso (spec H7 facturación §B.6, §B.8.5).
@@ -38,14 +49,6 @@ import type { FiscalDb } from "./tablas";
  * aplicación son idempotentes; los cambios son `UPDATE ... WHERE version = <la que se leyó>` y devuelven la
  * fila nueva o `null`; ninguna restricción de la base se atrapa acá. Un certificado no se borra jamás.
  */
-
-export const ESTADOS_DE_CERTIFICADO = [
-  "PEDIDO_GENERADO",
-  "VIGENTE",
-  "REEMPLAZADO",
-  "DESCARTADO",
-] as const;
-export type EstadoDeCertificado = (typeof ESTADOS_DE_CERTIFICADO)[number];
 
 /** Un texto cifrado con AES-256-GCM (el puerto de cifrado lo define; acá se guarda tal cual). */
 export type { TextoCifrado };
@@ -80,53 +83,6 @@ export const dondeSeGuardaLaCredencial = (
 
 /** El servicio de ARCA al que sirve la credencial. Hoy solo la factura electrónica. */
 export type ServicioDeArca = "wsfe";
-
-/** El pedido de certificado que Pedernal genera: la clave queda cifrada y el pedido (CSR) es público. */
-export type PedidoDeCertificado = Readonly<{
-  id: CertificadoId;
-  empresaId: EmpresaId;
-  emisorId: EmisorId;
-  ambiente: Ambiente;
-  alias: string;
-  cuitTitular: Cuit;
-  pedidoPem: string;
-  clave: TextoCifrado;
-  creadoPor: PersonaId;
-}>;
-
-/** Lo que un certificado muestra de sí: nunca la clave. */
-export type CertificadoGuardado = Readonly<{
-  id: CertificadoId;
-  empresaId: EmpresaId;
-  emisorId: EmisorId;
-  ambiente: Ambiente;
-  alias: string;
-  cuitTitular: Cuit;
-  estado: EstadoDeCertificado;
-  pedidoPem: string;
-  certificadoPem: string | null;
-  huellaSha256: string | null;
-  venceEn: Date | null;
-  /** La primera llamada exitosa a ARCA con este certificado; se anota una sola vez. */
-  autorizacionVerificadaEn: Date | null;
-  creadoPor: PersonaId;
-  creadoEn: Date;
-  version: number;
-}>;
-
-/** El certificado que pegó el gerente, ya validado: lo que nace al pasar de `PEDIDO_GENERADO` a `VIGENTE`. */
-export type CargaDeCertificado = Readonly<{
-  certificadoPem: string;
-  /** SHA-256 en hexadecimal minúscula (64 caracteres). */
-  huellaSha256: string;
-  venceEn: Date;
-}>;
-
-export type ActivacionDeCertificado = Readonly<{
-  certificado: CertificadoGuardado;
-  /** El que era `VIGENTE` para ese `(emisor, ambiente)` y quedó `REEMPLAZADO` en la misma transacción. */
-  reemplazado: CertificadoGuardado | null;
-}>;
 
 export interface RepositorioDeCertificados {
   /** Un certificado de la empresa, SIN su clave; `null` si no existe o es de otra empresa. */
@@ -171,6 +127,18 @@ export interface RepositorioDeCertificados {
     id: CertificadoId,
     versionEsperada: number,
   ): Promise<CertificadoGuardado | null>;
+  /**
+   * Los pedidos `PEDIDO_GENERADO` de ese `(emisor, ambiente)` distintos de `salvo` pasan a `DESCARTADO`, de una
+   * sola sentencia (D-92, 2026-11-03: un pedido nuevo anula al pendiente anterior). Devuelve los que pasaron, del más
+   * viejo al más nuevo; no toca `VIGENTE` ni `REEMPLAZADO` ni otro emisor, ambiente o empresa. Previene dos pedidos
+   * pendientes a la vez para el mismo `(emisor, ambiente)`.
+   */
+  descartarPendientes(
+    empresa: EmpresaId,
+    emisor: EmisorId,
+    ambiente: Ambiente,
+    salvo: CertificadoId,
+  ): Promise<readonly CertificadoGuardado[]>;
   /**
    * Anota la primera llamada exitosa a ARCA de un certificado `VIGENTE`. Se anota UNA vez: si ya estaba
    * anotada (o no es vigente, o no existe) devuelve `null` y no escribe.
@@ -460,6 +428,22 @@ export function crearRepositorioDeCertificados(db: Kysely<FiscalDb>): Repositori
         .returning(COLUMNAS_DE_CERTIFICADO)
         .executeTakeFirst();
       return descartado === undefined ? null : aCertificado(descartado);
+    },
+
+    async descartarPendientes(empresa, emisor, ambiente, salvo) {
+      const descartados = await db
+        .updateTable("certificado_arca")
+        .set({ estado: "DESCARTADO" })
+        .where("empresa_id", "=", empresa)
+        .where("emisor_id", "=", emisor)
+        .where("ambiente", "=", ambiente)
+        .where("estado", "=", "PEDIDO_GENERADO")
+        .where("id", "<>", salvo)
+        .returning(COLUMNAS_DE_CERTIFICADO)
+        .execute();
+      return descartados
+        .map(aCertificado)
+        .sort((a, b) => a.creadoEn.getTime() - b.creadoEn.getTime() || a.id.localeCompare(b.id));
     },
 
     async anotarVerificacion(empresa, id, cuando) {

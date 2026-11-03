@@ -361,11 +361,16 @@ describe.skipIf(base === null)(
       it("un certificado que no es el del pedido (otra clave, otro titular, vencido o de otra cadena) no se carga: el pedido sigue pendiente", async () => {
         const e = await nuevo();
         const { p, r } = await generar(e);
-        const otro = await generar(e);
+        // El otro pedido va a producción: uno nuevo del mismo ambiente anularía a este (D-92).
+        const otro = await generar(e, { ambiente: "PRODUCCION" });
         const pedidoPem = dato(r).pedidoPem;
         const casos: [string, string, string][] = [
           // El certificado que ARCA hizo para OTRO pedido (otra clave).
-          ["NO_CORRESPONDE_A_LA_CLAVE", await deArca(dato(otro.r).pedidoPem), p.id],
+          [
+            "NO_CORRESPONDE_A_LA_CLAVE",
+            await deArca(dato(otro.r).pedidoPem, {}, "PRODUCCION"),
+            p.id,
+          ],
           [
             "NO_CORRESPONDE_AL_TITULAR",
             await deArca(pedidoPem, { numeroDeSerie: "CUIT 20111111112" }),
@@ -544,7 +549,7 @@ describe.skipIf(base === null)(
         await sinSecretos(e, [x, y]);
       });
 
-      it("dos pedidos distintos para el mismo emisor y ambiente (dos pestañas): son dos pedidos, cada uno con su clave y su auditoría", async () => {
+      it("dos pedidos distintos para el mismo emisor y ambiente (dos pestañas): cada uno con su clave y su auditoría, y queda pendiente uno solo: el otro, descartado (D-92)", async () => {
         const e = await nuevo();
         const [x, y] = await Promise.all([
           generarPedidoDeCertificado(d, como(e), pedido(e)),
@@ -554,11 +559,12 @@ describe.skipIf(base === null)(
         expect([x, y].filter((r) => r.ok && r.dato.yaExistia)).toHaveLength(0);
         expect(dato(x).pedidoPem).not.toBe(dato(y).pedidoPem);
         const filasDespues = await certificados(e.mundo.empresa);
-        expect(filasDespues.map((c) => c.estado)).toEqual(["PEDIDO_GENERADO", "PEDIDO_GENERADO"]);
+        expect(filasDespues.map((c) => c.estado).sort()).toEqual(["DESCARTADO", "PEDIDO_GENERADO"]);
         expect(
           filasDespues[0]?.clave_cifrada.equals(filasDespues[1]?.clave_cifrada ?? Buffer.alloc(0)),
         ).toBe(false);
         expect(await auditorias(e.mundo.empresa, "CERTIFICADO_PEDIDO_GENERADO")).toHaveLength(2);
+        expect(await auditorias(e.mundo.empresa, "CERTIFICADO_PEDIDO_DESCARTADO")).toHaveLength(1);
       });
 
       it("el mismo certificado cargado dos veces a la vez: uno lo carga y el otro es «ya estaba»; un solo vigente y una sola auditoría", async () => {
@@ -576,7 +582,7 @@ describe.skipIf(base === null)(
         expect(await auditorias(e.mundo.empresa, "CERTIFICADO_CARGADO")).toHaveLength(1);
       });
 
-      it("dos certificados distintos cargados a la vez para el mismo emisor y ambiente: al final hay exactamente uno vigente y el otro reemplazado", async () => {
+      it("un pedido nuevo anula al anterior: el certificado del primero ya no se carga (sin texto aprobado: inesperado) y el del segundo sí; un solo vigente", async () => {
         const e = await nuevo();
         const uno = await generar(e);
         const dos = await generar(e);
@@ -584,17 +590,21 @@ describe.skipIf(base === null)(
           deArca(dato(uno.r).pedidoPem),
           deArca(dato(dos.r).pedidoPem),
         ]);
-        const resultados = await Promise.all([
-          cargarCertificado(d, como(e), { certificadoId: uno.p.id, certificadoPem: pemUno }),
-          cargarCertificado(d, como(e), { certificadoId: dos.p.id, certificadoPem: pemDos }),
-        ]);
-        expect(resultados.every((x) => x.ok)).toBe(true);
-        expect((await certificados(e.mundo.empresa)).map((c) => c.estado).sort()).toEqual([
-          "REEMPLAZADO",
+        registrados.length = 0;
+        expect(
+          await cargarCertificado(d, como(e), { certificadoId: uno.p.id, certificadoPem: pemUno }),
+        ).toMatchObject(INESPERADO);
+        expect(registrados.join("\n")).toContain("PEDIDO_NO_PENDIENTE");
+        expect(
+          (await cargarCertificado(d, como(e), { certificadoId: dos.p.id, certificadoPem: pemDos }))
+            .ok,
+        ).toBe(true);
+        expect((await certificados(e.mundo.empresa)).map((c) => c.estado)).toEqual([
+          "DESCARTADO",
           "VIGENTE",
         ]);
-        expect(await auditorias(e.mundo.empresa, "CERTIFICADO_CARGADO")).toHaveLength(2);
-        expect(await auditorias(e.mundo.empresa, "CERTIFICADO_REEMPLAZADO")).toHaveLength(1);
+        expect(await auditorias(e.mundo.empresa, "CERTIFICADO_CARGADO")).toHaveLength(1);
+        expect(await auditorias(e.mundo.empresa, "CERTIFICADO_REEMPLAZADO")).toHaveLength(0);
       });
     });
 

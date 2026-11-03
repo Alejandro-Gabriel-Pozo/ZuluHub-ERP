@@ -34,12 +34,18 @@ import { DECLARACIONES_DE_CERTIFICADOS } from "./declaraciones-de-certificados";
  * 3. Forma del pedido. 4. Repetición: el `id` (uuid que genera la pantalla) ES la clave de idempotencia; con el mismo
  * pedido (emisor, ambiente, alias y titular) devuelve el que existe (`yaExistia`) SIN generar otra clave; con otro
  * pedido, `CLAVE_REUTILIZADA`. 5. El emisor existe y está activo. 6. Se genera el par, se
- * cifra la clave con su fila, se guarda `PEDIDO_GENERADO`. 7. Auditoría `CERTIFICADO_PEDIDO_GENERADO` en la misma
- * transacción: el hecho (quién, cuándo, alias, emisor, ambiente), nunca la clave ni su cifrado.
+ * cifra la clave con su fila, se guarda `PEDIDO_GENERADO`. 7. Los pedidos pendientes anteriores del mismo emisor y
+ * ambiente pasan a `DESCARTADO` (D-92, 2026-11-03: un pedido nuevo anula al pendiente anterior; no se borran; no se
+ * toca un `VIGENTE`): siempre hay UNO solo pendiente. 8. Auditoría `CERTIFICADO_PEDIDO_GENERADO` y, por cada pedido
+ * anulado, `CERTIFICADO_PEDIDO_DESCARTADO` en la misma transacción: el hecho (quién, cuándo, alias, emisor, ambiente),
+ * nunca la clave ni su cifrado. Dos pedidos nuevos a la vez para el mismo emisor y ambiente: la base (SERIALIZABLE)
+ * deja pasar uno y repite el otro, que ve al primero y lo anula; queda el último que se confirma.
  *
  * Dos pedidos simultáneos con el mismo `id`: la base deja pasar uno; el otro repite, lo encuentra y lo devuelve (la
- * clave que había generado se descarta sin guardarse). Dos pedidos con el mismo alias y distinto `id` son dos pedidos
- * (cada uno con su clave): que ARCA acepte o no un alias repetido es NO VERIFICADO y lo dirá ella al subir el pedido.
+ * clave que había generado se descarta sin guardarse). Repetir el `id` de un pedido que ya fue anulado devuelve ese
+ * pedido (`yaExistia`) sin anular nada: la repetición no mira el estado (pregunta pendiente al dueño). Dos pedidos con
+ * el mismo alias y distinto `id` son dos pedidos (cada uno con su clave; el segundo anula al primero): que ARCA acepte
+ * o no un alias repetido es NO VERIFICADO y lo dirá ella al subir el pedido.
  * El pedido no guarda la organización aparte (solo vive en el CSR): repetir con otra organización devuelve el pedido
  * que ya existe.
  */
@@ -146,6 +152,12 @@ export function armarGenerarPedidoDeCertificado({
           return ganador === null ? err("CLAVE_REUTILIZADA") : repeticion(ganador, pedido);
         }
         const creado = alta.valor.valor;
+        const anulados = await tx.certificados.descartarPendientes(
+          empresaId,
+          creado.emisorId,
+          creado.ambiente,
+          creado.id,
+        );
         await tx.auditoria.registrar({
           empresaId,
           actorPersonaId: personaId,
@@ -160,6 +172,17 @@ export function armarGenerarPedidoDeCertificado({
             cuitTitular: creado.cuitTitular,
           },
         });
+        for (const anulado of anulados) {
+          await tx.auditoria.registrar({
+            empresaId,
+            actorPersonaId: personaId,
+            accion: "CERTIFICADO_PEDIDO_DESCARTADO",
+            entidad: "certificado_arca",
+            entidadId: anulado.id,
+            antes: { estado: "PEDIDO_GENERADO" },
+            despues: { estado: anulado.estado, reemplazadoPor: creado.id },
+          });
+        }
         return ok({ certificadoId: creado.id, pedidoPem: creado.pedidoPem, yaExistia: false });
       },
     );

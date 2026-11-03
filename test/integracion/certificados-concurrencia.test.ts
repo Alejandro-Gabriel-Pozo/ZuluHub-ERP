@@ -155,11 +155,12 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
     }
   });
 
-  it("dos pedidos con el mismo alias y distinto id son dos pedidos independientes: cada clave con el suyo", async () => {
+  it("dos pedidos con el mismo alias y distinto id (cada uno en su ambiente) son dos pedidos independientes: cada clave con el suyo", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const e = await escenarioDeCertificados(dueno, propia.base);
+      // En ambientes distintos: dos pedidos del mismo ambiente no conviven, el nuevo anula al anterior (D-92).
       const a = pedidoDeCertificado(e, { alias: "mismoalias" });
-      const b = pedidoDeCertificado(e, { alias: "mismoalias" });
+      const b = pedidoDeCertificado(e, { alias: "mismoalias", ambiente: "PRODUCCION" });
       const rs = await juntas(2, (i) =>
         casos.generarPedidoDeCertificado(e.como(new Date()), i === 0 ? a : b),
       );
@@ -177,12 +178,12 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
       const pa = rs[0]?.ok ? rs[0].valor.pedidoPem : "";
       const pb = rs[1]?.ok ? rs[1].valor.pedidoPem : "";
       const deA = await certificadoDeArca(servicios, "HOMOLOGACION", pa);
-      const deB = await certificadoDeArca(servicios, "HOMOLOGACION", pb);
+      const deB = await certificadoDeArca(servicios, "PRODUCCION", pb);
       expect(await cargar(e, b.id, deA)).toEqual({ ok: false, error: "NO_CORRESPONDE_A_LA_CLAVE" });
       expect(await cargar(e, a.id, deB)).toEqual({ ok: false, error: "NO_CORRESPONDE_A_LA_CLAVE" });
       const carga1 = await cargar(e, a.id, deA);
       expect(carga1.ok, JSON.stringify(carga1)).toBe(true);
-      expect(await cargar(e, b.id, deB)).toMatchObject({ ok: true, valor: { reemplazoA: a.id } });
+      expect(await cargar(e, b.id, deB)).toMatchObject({ ok: true, valor: { reemplazoA: null } });
     }
   });
 
@@ -204,64 +205,133 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
     }
   });
 
-  it("certificados distintos cargados a la vez para el mismo emisor y ambiente: todos ok, uno solo queda vigente y los demás reemplazados", async () => {
+  it("D-92: dos pedidos nuevos a la vez para el mismo emisor y ambiente: queda UN solo pendiente (el último que se confirma) y el otro DESCARTADO, sin estado a medias", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const e = await escenarioDeCertificados(dueno, propia.base);
-      const pedidos = await Promise.all([0, 1, 2, 3].map(() => pedirYEmitir(e)));
-      const rs = await juntas(pedidos.length, (i) =>
-        cargar(e, pedidos[i]?.id ?? "", pedidos[i]?.pem ?? ""),
+      const entradas = [pedidoDeCertificado(e), pedidoDeCertificado(e)];
+      const rs = await juntas(2, (i) =>
+        casos.generarPedidoDeCertificado(e.como(new Date()), entradas[i] ?? pedidoDeCertificado(e)),
       );
-      expect(
-        rs.every((r) => r.ok),
-        JSON.stringify(rs),
-      ).toBe(true);
-
+      // Bajo SERIALIZABLE un perdedor puede agotar los reintentos: es aceptable; otro resultado, no.
+      for (const r of rs) {
+        expect(
+          r.ok || JSON.stringify(r.error).includes("ConcurrenciaAgotada"),
+          JSON.stringify(r),
+        ).toBe(true);
+      }
+      const confirmados = entradas.filter((_, i) => rs[i]?.ok === true).map((x) => x.id);
+      expect(confirmados.length).toBeGreaterThanOrEqual(1);
       const estados = await filas<{ id: string; estado: string }>(
-        "select id, estado from certificado_arca where empresa_id = $1 order by id",
+        "select id, estado from certificado_arca where empresa_id = $1",
         [e.empresa],
       );
-      expect(estados.filter((s) => s.estado === "VIGENTE")).toHaveLength(1);
-      expect(estados.filter((s) => s.estado === "REEMPLAZADO")).toHaveLength(3);
-      // Cada carga que reemplazó a uno lo dice, y cada reemplazado figura una sola vez.
-      const reemplazados = rs.flatMap((r) =>
-        r.ok && r.valor.reemplazoA !== null ? [r.valor.reemplazoA] : [],
+      // Lo que no se confirmó no dejó nada; lo confirmado, o es el pendiente o quedó descartado.
+      expect(estados.map((s) => s.id).sort()).toEqual([...confirmados].sort());
+      const pendientes = estados.filter((s) => s.estado === "PEDIDO_GENERADO");
+      expect(pendientes).toHaveLength(1);
+      expect(estados.filter((s) => s.estado === "DESCARTADO")).toHaveLength(confirmados.length - 1);
+      expect(await auditoriasDe(e.empresa, "CERTIFICADO_PEDIDO_GENERADO")).toBe(confirmados.length);
+      expect(await auditoriasDe(e.empresa, "CERTIFICADO_PEDIDO_DESCARTADO")).toBe(
+        confirmados.length - 1,
       );
-      expect(new Set(reemplazados).size).toBe(reemplazados.length);
-      expect(reemplazados).toHaveLength(3);
-      expect(await auditoriasDe(e.empresa, "CERTIFICADO_CARGADO")).toBe(4);
-      expect(await auditoriasDe(e.empresa, "CERTIFICADO_REEMPLAZADO")).toBe(3);
+      // El que quedó descartado lo anuló el pendiente: el último que se confirmó.
+      const descartes = await filas<{ id: string; por: string }>(
+        "select entidad_id as id, despues->>'reemplazadoPor' as por from auditoria_empresa where empresa_id = $1 and accion = 'CERTIFICADO_PEDIDO_DESCARTADO'",
+        [e.empresa],
+      );
+      for (const d of descartes) expect(d.por).toBe(pendientes[0]?.id);
     }
   });
 
-  it("D-42: dos personas distintas sacan certificados para la misma sociedad y los cargan a la vez: uno solo queda vigente, con SU titular", async () => {
+  it("D-92: cargar un pedido contra generar otro nuevo a la vez: nunca dos pendientes ni dos vigentes, y cada resultado dice lo que quedó", async () => {
+    for (let ronda = 0; ronda < RONDAS; ronda++) {
+      const e = await escenarioDeCertificados(dueno, propia.base);
+      const { id, pem } = await pedirYEmitir(e);
+      const nuevo = pedidoDeCertificado(e);
+      barrera = crearBarrera(2);
+      let carga: Awaited<ReturnType<typeof cargar>>;
+      let generado: Awaited<ReturnType<typeof casos.generarPedidoDeCertificado>>;
+      try {
+        [carga, generado] = await Promise.all([
+          cargar(e, id, pem),
+          casos.generarPedidoDeCertificado(e.como(new Date()), nuevo),
+        ]);
+      } finally {
+        barrera = null;
+      }
+      const agotado = (r: unknown) => JSON.stringify(r).includes("ConcurrenciaAgotada");
+      const estadoDe = async (cual: string) =>
+        (
+          await filas<{ estado: string }>("select estado from certificado_arca where id = $1", [
+            cual,
+          ])
+        )[0]?.estado;
+      const estados = await filas<{ estado: string }>(
+        "select estado from certificado_arca where empresa_id = $1",
+        [e.empresa],
+      );
+      expect(estados.filter((s) => s.estado === "PEDIDO_GENERADO").length).toBeLessThanOrEqual(1);
+      expect(estados.filter((s) => s.estado === "VIGENTE").length).toBeLessThanOrEqual(1);
+      expect(generado.ok === true || agotado(generado), JSON.stringify(generado)).toBe(true);
+      expect(await estadoDe(nuevo.id)).toBe(generado.ok === true ? "PEDIDO_GENERADO" : undefined);
+      if (carga.ok === true) {
+        expect(await estadoDe(id)).toBe("VIGENTE");
+        expect(await auditoriasDe(e.empresa, "CERTIFICADO_PEDIDO_DESCARTADO")).toBe(0);
+      } else {
+        expect(
+          JSON.stringify(carga.error) === JSON.stringify("PEDIDO_NO_PENDIENTE") || agotado(carga),
+          JSON.stringify(carga),
+        ).toBe(true);
+        if (!agotado(carga)) {
+          expect(await estadoDe(id)).toBe("DESCARTADO");
+          expect(await auditoriasDe(e.empresa, "CERTIFICADO_PEDIDO_DESCARTADO")).toBe(1);
+        }
+      }
+      expect(await auditoriasDe(e.empresa, "CERTIFICADO_CARGADO")).toBe(carga.ok === true ? 1 : 0);
+    }
+  });
+
+  it("D-42: dos personas distintas sacan certificados para la misma sociedad a la vez: queda un solo pedido pendiente y, cargado, queda vigente con SU titular", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const e = await escenarioDeSociedad(dueno, propia.base);
       const titulares = [cuitConPrefijo("20"), cuitConPrefijo("27")];
-      const pedidos = await Promise.all(
-        [0, 1, 2, 3].map((i) => pedirYEmitir(e, undefined, titulares[i % 2])),
+      const entradas = titulares.map((cuitTitular) => pedidoDeCertificado(e, { cuitTitular }));
+      const rs = await juntas(2, (i) =>
+        casos.generarPedidoDeCertificado(e.como(new Date()), entradas[i] ?? pedidoDeCertificado(e)),
       );
-      const rs = await juntas(pedidos.length, (i) =>
-        cargar(e, pedidos[i]?.id ?? "", pedidos[i]?.pem ?? ""),
+      for (const r of rs) {
+        expect(
+          r.ok || JSON.stringify(r.error).includes("ConcurrenciaAgotada"),
+          JSON.stringify(r),
+        ).toBe(true);
+      }
+      const pendientes = await filas<{ id: string; cuit_titular: string }>(
+        "select id, cuit_titular from certificado_arca where empresa_id = $1 and estado = 'PEDIDO_GENERADO'",
+        [e.empresa],
       );
-      expect(
-        rs.every((r) => r.ok),
-        JSON.stringify(rs),
-      ).toBe(true);
+      expect(pendientes).toHaveLength(1);
+      const i = entradas.findIndex((x) => x.id === pendientes[0]?.id);
+      const r = rs[i];
+      const pemDelPendiente = r?.ok ? r.valor.pedidoPem : "";
+      const carga = await cargar(
+        e,
+        pendientes[0]?.id ?? "",
+        await certificadoDeArca(servicios, "HOMOLOGACION", pemDelPendiente),
+      );
+      expect(carga.ok, JSON.stringify(carga)).toBe(true);
       const estados = await filas<{ id: string; estado: string; cuit_titular: string }>(
         "select id, estado, cuit_titular from certificado_arca where empresa_id = $1",
         [e.empresa],
       );
       const vigente = estados.filter((s) => s.estado === "VIGENTE");
       expect(vigente).toHaveLength(1);
-      expect(estados.filter((s) => s.estado === "REEMPLAZADO")).toHaveLength(3);
       // El titular de cada certificado es el que se declaró al pedirlo, nunca el de la sociedad.
       for (const c of estados) {
-        const i = pedidos.findIndex((pedido) => pedido.id === c.id);
-        expect(c.cuit_titular).toBe(titulares[i % 2]);
+        expect(c.cuit_titular).toBe(titulares[entradas.findIndex((x) => x.id === c.id)]);
         expect(c.cuit_titular).not.toBe(e.cuit);
       }
-      expect(await auditoriasDe(e.empresa, "CERTIFICADO_CARGADO")).toBe(4);
-      expect(await auditoriasDe(e.empresa, "CERTIFICADO_REEMPLAZADO")).toBe(3);
+      expect(await auditoriasDe(e.empresa, "CERTIFICADO_CARGADO")).toBe(1);
+      expect(await auditoriasDe(e.empresa, "CERTIFICADO_REEMPLAZADO")).toBe(0);
     }
   });
 
