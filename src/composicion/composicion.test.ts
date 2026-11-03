@@ -374,10 +374,12 @@ describe("con el entorno completo", () => {
     ]);
     expect(Object.keys(web.consultasDeFacturacion()).sort()).toEqual([
       "datosFiscalesDelEmisor",
+      "discriminaIvaAlEmitir",
       "estadoDeCertificados",
       "estadoDeLaConfiguracionFiscal",
       "listarComprobantes",
       "listarPuntosDeVentaDeLaSucursal",
+      "listarPuntosDeVentaParaEmitir",
       "puntosDeVentaDelEmisor",
       "verComprobante",
     ]);

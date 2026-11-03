@@ -19,6 +19,12 @@ import {
   type DependenciasDeFacturacionWeb,
   type DetalleParaLaPantalla,
 } from "../../../src/composicion/facturacion-web";
+import {
+  discriminaIvaAlEmitir,
+  listarPuntosDeVentaParaEmitir,
+  type DiscriminaIvaParaLaPantalla,
+  type PuntosDeVentaParaEmitirEnLaPantalla,
+} from "../../../src/composicion/lecturas-para-emitir-web";
 import { resolverEmpresa } from "../../../src/composicion/sesion-y-empresa";
 import type { PaginaDeComprobantes } from "../../../src/modulos/fiscal/publico";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
@@ -206,6 +212,34 @@ export async function cargarElListado(
       puntosDeVenta: [],
       pagina: aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta),
     };
+  }
+}
+
+/**
+ * Si la empresa discrimina IVA, para que el paso de renglones de Emitir sepa si pide la alícuota (D-86; `comprobantes.emitir_manual`).
+ * Con el contexto que ya resolvió la página. Devuelve un sí o un no: ningún dato fiscal más.
+ */
+export function discriminaIvaParaEmitir(
+  contexto: ContextoOperativo,
+): Promise<Respuesta<DiscriminaIvaParaLaPantalla>> {
+  return discriminaIvaAlEmitir(dependencias, contexto);
+}
+
+/**
+ * Los puntos de venta activos de la sucursal de la persona, para elegir con cuál emitir (D-6 y D-86; `comprobantes.emitir_manual`).
+ * La sucursal sale de la cookie que valida el servidor (`sucursal-elegida.ts`), nunca del pedido del navegador, y la consulta la
+ * verifica otra vez contra el alcance de la persona dentro de su transacción. Sin elegir y con varias a elegir responde
+ * `FISCAL_SUCURSAL_NO_ELEGIDA`; con una sola abierta, el servidor la toma sola; una cerrada no ofrece ninguno (D-50).
+ */
+export async function puntosDeVentaParaEmitir(
+  contexto: ContextoOperativo,
+): Promise<Respuesta<PuntosDeVentaParaEmitirEnLaPantalla>> {
+  try {
+    const sucursal = await sucursalDelPedido(contexto);
+    if (!sucursal.ok) return sucursal;
+    return await listarPuntosDeVentaParaEmitir(dependencias, contexto, sucursal.dato.elegida);
+  } catch (excepcion) {
+    return aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta);
   }
 }
 

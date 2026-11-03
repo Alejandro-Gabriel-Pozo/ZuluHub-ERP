@@ -261,6 +261,9 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     expect([...new Set(declaradas["modulos/fiscal"])]).toEqual([
       "comprobantes.emitir",
       "comprobantes.ver",
+      // La primera vez que aparece es la consulta de las dos lecturas de Emitir (si la empresa discrimina IVA y los puntos de
+      // venta activos de la sucursal, D-86); el caso de uso de emitir una factura la exige también: no se creó un permiso nuevo.
+      "comprobantes.emitir_manual",
       // La primera vez que aparece es la consulta del estado de los certificados (D-43: del gerente); los casos de uso de
       // certificados la exigen también.
       "certificados.gestionar",
@@ -268,7 +271,6 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       // piden la acción de quien edita lo que muestran, de `administracion`: no se creó un permiso nuevo para mirar.
       "datos_fiscales.editar",
       "puntos_de_venta.editar",
-      "comprobantes.emitir_manual",
       "notas_de_credito.emitir",
       "comprobantes.descartar",
       "comprobantes.reintentar",

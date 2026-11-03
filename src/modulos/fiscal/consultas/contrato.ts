@@ -33,8 +33,11 @@ export type TxDeConsultasDeFacturacion = Readonly<{
   datosFiscales: Pick<RepositorioDeDatosFiscales, "obtenerBorrador" | "confirmadas">;
   /** El domicilio fiscal de esas versiones. */
   domicilios: Pick<RepositorioDeDomicilios, "obtener" | "obtenerVarios">;
-  /** Los puntos de venta de un emisor, con su ambiente y su estado (pantalla de configuración). */
-  puntosDeVenta: Pick<RepositorioDePuntosDeVenta, "listarDelEmisor">;
+  /**
+   * Los puntos de venta de un emisor, con su ambiente y su estado (pantalla de configuración), y los de una sucursal (los que
+   * se ofrecen al emitir, D-86).
+   */
+  puntosDeVenta: Pick<RepositorioDePuntosDeVenta, "listarDelEmisor" | "listarDeLaSucursal">;
   /** Qué certificado cuenta hoy de un emisor en cada ambiente (D-42): sin clave, solo lectura. */
   lecturasDeCertificados: LecturasDeCertificados;
   intentos: Pick<RepositorioDeIntentos, "delComprobante">;
