@@ -636,41 +636,32 @@ describe.skipIf(base === null)("facturación F3: concurrencia de los repositorio
   // ===============================================================================================
   describe("certificados, accesos, intentos y ambiente", () => {
     for (const aislamiento of AISLAMIENTOS) {
-      it(`dos cargas de certificado para el mismo emisor y ambiente: queda UN vigente y el otro reemplazado, sin errores crudos [${aislamiento}]`, async () => {
+      it(`dos pedidos de certificado distintos para el mismo emisor y ambiente a la vez: entra uno y el otro recibe la violación de certificado_pendiente_uk [${aislamiento}]`, async () => {
+        // 0018: no hay dos pendientes, así que ya no hay dos cargas del mismo ambiente a la vez; lo que se cruza son los pedidos.
         for (let n = 0; n < RONDAS; n++) {
           const e = await escenario();
-          const [uno, dos] = [pedidoDe(e), pedidoDe(e)];
-          for (const p of [uno, dos]) {
-            valor(
-              await entorno.ejecutar(
-                { contexto: comoPersonaDe(e) },
-                exitoso((tx) => tx.certificados.crearPedido(p)),
-              ),
-            );
-          }
-          const cargar = (id: typeof uno.id) =>
-            exitoso((tx: TxFacturacionDePrueba) =>
-              tx.certificados.activar(empresaId(e.empresa), id, 1, cargaDe()),
-            );
-          const rs = (
-            await enParalelo(comoPersonaDe(e), [cargar(uno.id), cargar(dos.id)], aislamiento)
-          ).map(valor);
+          const altas = [pedidoDe(e), pedidoDe(e)].map((p) =>
+            exitoso((tx: TxFacturacionDePrueba) => tx.certificados.crearPedido(p)),
+          );
+          const rs = await enParalelo(comoPersonaDe(e), altas, aislamiento);
           expect(
-            rs.every((r) => r !== null),
+            rs.filter((r) => r.ok),
             `ronda ${n}`,
-          ).toBe(true);
+          ).toHaveLength(1);
+          expect(
+            rs.find((r) => !r.ok),
+            `ronda ${n}`,
+          ).toEqual({
+            ok: false,
+            error: { tipo: "Unicidad", restriccion: "certificado_pendiente_uk" },
+          });
           const estados = (
             await consultar<{ estado: string }>(
-              "select estado from certificado_arca where empresa_id = $1 order by estado",
+              "select estado from certificado_arca where empresa_id = $1",
               [e.empresa],
             )
           ).map((f) => f.estado);
-          expect(estados, `ronda ${n}`).toEqual(["REEMPLAZADO", "VIGENTE"]);
-          // Exactamente una de las dos cargas reemplazó a la otra.
-          expect(
-            rs.filter((r) => r?.reemplazado !== null),
-            `ronda ${n}`,
-          ).toHaveLength(1);
+          expect(estados, `ronda ${n}`).toEqual(["PEDIDO_GENERADO"]);
         }
       });
 
