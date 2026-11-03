@@ -98,6 +98,14 @@ export function pedidoFEParamGet(auth: AutenticacionDeWsfe, tabla: TablaDeParame
   return operacion(`FEParamGet${tabla}`, autenticacion(auth), "");
 }
 
+/**
+ * `FEParamGetPtosVenta`: los puntos de venta de la CUIT para CAE y CAEA (manual WSFE v4.8, l. 3000-3030). Lleva solo la autenticación,
+ * igual que las `FEParamGet*` de las tablas; no es una de ellas (su respuesta no es una tabla de códigos de ARCA sino lo que registró
+ * la CUIT) y por eso no está en `TABLAS_DE_PARAMETROS`, que se compara con grabaciones reales.
+ */
+export const pedidoFEParamGetPtosVenta = (auth: AutenticacionDeWsfe): string =>
+  operacion("FEParamGetPtosVenta", autenticacion(auth), "");
+
 const fechasDelServicio = (s: SolicitudDeWsfe["servicio"]): string =>
   s === null
     ? ""

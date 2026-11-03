@@ -18,6 +18,7 @@ import type {
   RepositorioDeSeries,
 } from "../persistencia/repositorios";
 import type { TxDeNumeracion } from "./contrato";
+import type { TxDeConfiguracionFiscal } from "./contrato-de-configuracion";
 import type { EmisionElectronica } from "./emision-electronica";
 
 /**
@@ -49,6 +50,11 @@ export type TxDeFacturacion = Omit<TxDeNumeracion, "empresas" | "puntosDeVenta" 
     sucursales: Readonly<{
       obtener(empresa: EmpresaId, id: SucursalId): Promise<Readonly<{ activa: boolean }> | null>;
     }>;
+    /**
+     * La sucursal del punto de venta que pasa a producción, leída con `FOR SHARE` (la misma lectura que usan activar y mudar un punto de
+     * venta): el cierre de esa sucursal espera a que termine el pasaje, o el pasaje la ve cerrada. Solo dentro de una transacción.
+     */
+    sucursalBloqueada: TxDeConfiguracionFiscal["sucursalBloqueada"];
     puntosDeVenta: Pick<RepositorioDePuntosDeVenta, "obtener" | "cambiarAmbiente">;
     series: Pick<
       RepositorioDeSeries,
@@ -77,13 +83,15 @@ export type ProveedorDeEmision = Readonly<{
 /**
  * Tiempos límite PROPIOS de cada llamada al servicio de emisión, en milisegundos (§B.5.4). Son el respaldo del
  * caso de uso por encima de los del adaptador: una llamada que no vuelve a tiempo es `INCIERTO` (autorizar, que
- * NUNCA se reenvía), `CONSULTA_FALLIDA` (consultar) o `SERVICIO_NO_DISPONIBLE` (último autorizado). ASUMIDOS:
+ * NUNCA se reenvía), `CONSULTA_FALLIDA` (consultar) o `SERVICIO_NO_DISPONIBLE` (último autorizado y puntos de venta). ASUMIDOS:
  * un poco más que los del adaptador (20 s y 10 s) y bastante menos que la reserva de la serie (5 minutos).
  */
 export type TiemposLimite = Readonly<{
   autorizarEnMs: number;
   consultarEnMs: number;
   ultimoAutorizadoEnMs: number;
+  /** Listar los puntos de venta de ARCA (`FEParamGetPtosVenta`, D-77): una lectura, igual que el último autorizado. */
+  puntosDeVentaEnMs: number;
 }>;
 
 export type OpcionesDeFacturacion = Readonly<{
@@ -97,7 +105,12 @@ export type OpcionesDeFacturacion = Readonly<{
 
 export const OPCIONES_DE_FACTURACION: OpcionesDeFacturacion = {
   numeracion: OPCIONES_DE_NUMERACION,
-  tiempos: { autorizarEnMs: 25_000, consultarEnMs: 15_000, ultimoAutorizadoEnMs: 15_000 },
+  tiempos: {
+    autorizarEnMs: 25_000,
+    consultarEnMs: 15_000,
+    ultimoAutorizadoEnMs: 15_000,
+    puntosDeVentaEnMs: 15_000,
+  },
   pendienteHuerfanoEnMs: 10 * 60_000,
   limitePorCorrida: 50,
 };

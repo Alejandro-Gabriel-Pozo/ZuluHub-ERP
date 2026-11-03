@@ -10,6 +10,7 @@ import {
   pedidoFECompUltimoAutorizado,
   pedidoFEDummy,
   pedidoFEParamGet,
+  pedidoFEParamGetPtosVenta,
   type AutenticacionDeWsfe,
   type SolicitudDeWsfe,
 } from "./pedidos-de-wsfe";
@@ -216,6 +217,17 @@ describe("las demás operaciones de WSFE: igual a lo grabado", () => {
     TABLAS_DE_PARAMETROS.forEach((tabla, i) => {
       expect(pedidoFEParamGet(AUTH, tabla), tabla).toBe(grabacion(1, grabados[i] ?? "", "pedido"));
     });
+  });
+
+  it("FEParamGetPtosVenta (CONSTRUIDO DEL MANUAL, no grabado): solo la autenticación, como las FEParamGet* grabadas", () => {
+    // El manual (WSFE v4.8, l. 3017-3030) pide `Auth` con `Token`, `Sign` y `Cuit` y nada más: la misma forma que la grabación de otra
+    // `FEParamGet*` con el nombre de la operación cambiado. SIN VERIFICAR contra ARCA real: ninguna grabación llamó a esta operación.
+    expect(pedidoFEParamGetPtosVenta(AUTH)).toBe(
+      grabacion(1, "011", "pedido").replaceAll("TiposDoc", "PtosVenta"),
+    );
+    expect(pedidoFEParamGetPtosVenta(AUTH)).toContain(
+      "<ar:FEParamGetPtosVenta><ar:Auth><ar:Token>[OCULTO]</ar:Token><ar:Sign>[OCULTO]</ar:Sign><ar:Cuit>20111111112</ar:Cuit></ar:Auth></ar:FEParamGetPtosVenta>",
+    );
   });
 
   it("FECompUltimoAutorizado: punto de venta y tipo, en ese orden", () => {

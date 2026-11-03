@@ -65,6 +65,8 @@ function emisionSinCliente(): EmisionElectronica {
       Promise.resolve({ tipo: "NO_ENVIADO", motivo: SIN_CLIENTE }),
     consultar: (): Promise<ResultadoDeConsulta> =>
       Promise.resolve({ tipo: "CONSULTA_FALLIDA", detalle: SIN_CLIENTE }),
+    puntosDeVenta: () =>
+      Promise.resolve(err({ codigo: "SERVICIO_NO_DISPONIBLE", detalle: SIN_CLIENTE })),
   };
 }
 

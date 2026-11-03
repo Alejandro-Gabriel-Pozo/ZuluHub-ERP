@@ -132,6 +132,9 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
       this.transaccionesDuranteLosPedidos.push(await transaccionesAbiertas());
       return this.falsa.consultar(...args);
     }
+    puntosDeVenta(...args: Parameters<EmisionFalsa["puntosDeVenta"]>) {
+      return this.falsa.puntosDeVenta(...args);
+    }
   }
   const cuitDe = (e: Escenario) => {
     const r = cuitDesdeTexto(e.mundo.cuit);
@@ -799,6 +802,7 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
         ultimoAutorizado: (...a) => falsa.ultimoAutorizado(...a),
         autorizar: () => Promise.reject(new Error("se cortó la conexión")),
         consultar: (...a) => falsa.consultar(...a),
+        puntosDeVenta: (...a) => falsa.puntosDeVenta(...a),
       };
       const c = casos(caido);
       await expect(c.numerarComprobante(e.como(T0), entradaDe(e))).rejects.toThrow(
