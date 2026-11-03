@@ -1,12 +1,14 @@
 import type { DependenciasDeConsultasDeFacturacion } from "./contrato";
 import type { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 import { armarDatosFiscalesDelEmisor } from "./datos-fiscales-del-emisor";
+import { armarDiscriminaIvaAlEmitir } from "./discrimina-iva-al-emitir";
 import { armarEstadoDeCertificados } from "./estado-de-certificados";
 import { armarEstadoDeLaConfiguracionFiscal } from "./estado-de-la-configuracion-fiscal";
 import { armarListarComprobantes } from "./listar-comprobantes";
 import { armarModeloDeImpresion } from "./modelo-de-impresion";
 import { armarListarPuntosDeVentaDeLaSucursal } from "./puntos-de-venta-de-la-sucursal";
 import { armarPuntosDeVentaDelEmisor } from "./puntos-de-venta-del-emisor";
+import { armarListarPuntosDeVentaParaEmitir } from "./puntos-de-venta-para-emitir";
 import { armarVerComprobante } from "./ver-comprobante";
 
 /**
@@ -18,6 +20,8 @@ export function crearConsultasDeFacturacion(dependencias: DependenciasDeConsulta
   return {
     listarComprobantes: armarListarComprobantes(dependencias),
     listarPuntosDeVentaDeLaSucursal: armarListarPuntosDeVentaDeLaSucursal(dependencias),
+    discriminaIvaAlEmitir: armarDiscriminaIvaAlEmitir(dependencias),
+    listarPuntosDeVentaParaEmitir: armarListarPuntosDeVentaParaEmitir(dependencias),
     verComprobante: armarVerComprobante(dependencias),
     modeloDeImpresion: armarModeloDeImpresion(dependencias),
     estadoDeCertificados: armarEstadoDeCertificados(dependencias),

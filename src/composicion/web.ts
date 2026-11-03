@@ -143,7 +143,8 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
     }),
     /**
      * Listado y detalle de comprobantes y los puntos de venta de la sucursal para el filtro (todos `comprobantes.ver`); el modelo
-     * de impresión es de F9 y no sale. Y las de la pantalla de Configuración fiscal, solo del gerente: el estado de los
+     * de impresión es de F9 y no sale. Las dos de la pantalla de Emitir (si la empresa discrimina IVA y los puntos de venta activos de la
+     * sucursal, D-86) son de `comprobantes.emitir_manual`. Y las de la pantalla de Configuración fiscal, solo del gerente: el estado de los
      * certificados de un emisor (`certificados.gestionar`), la lista de lo que falta, los datos fiscales y los puntos de venta de
      * un emisor (`datos_fiscales.editar` y `puntos_de_venta.editar`, de `administracion`).
      */
@@ -155,6 +156,8 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
       return {
         listarComprobantes: consultas.listarComprobantes,
         listarPuntosDeVentaDeLaSucursal: consultas.listarPuntosDeVentaDeLaSucursal,
+        discriminaIvaAlEmitir: consultas.discriminaIvaAlEmitir,
+        listarPuntosDeVentaParaEmitir: consultas.listarPuntosDeVentaParaEmitir,
         verComprobante: consultas.verComprobante,
         estadoDeCertificados: consultas.estadoDeCertificados,
         estadoDeLaConfiguracionFiscal: consultas.estadoDeLaConfiguracionFiscal,

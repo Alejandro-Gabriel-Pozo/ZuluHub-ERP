@@ -259,6 +259,9 @@ function armar(datos: Datos = {}) {
     },
     puntosDeVenta: {
       listarDelEmisor: () => Promise.reject(new Error("estas consultas no leen puntos de venta")),
+      // Los de Emitir (D-86) tienen sus pruebas en `lecturas-para-emitir.test.ts`: acá nadie los toca.
+      listarDeLaSucursal: () =>
+        Promise.reject(new Error("estas consultas no leen puntos de venta")),
     },
     lecturasDeCertificados: {
       actualesDelEmisor: () => Promise.reject(new Error("estas consultas no leen certificados")),
