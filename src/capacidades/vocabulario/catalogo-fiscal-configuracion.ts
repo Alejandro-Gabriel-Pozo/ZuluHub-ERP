@@ -136,8 +136,8 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
   "fiscal.pantalla.config_df_razon_social": { porDefecto: "Razón social" },
   // Dueño, 2026-10-29, Q17 pregunta 4. También nombra la opción vacía del selector (como «Provincia»), sin texto nuevo.
   "fiscal.pantalla.config_df_condicion_iva": { porDefecto: "Condición frente al IVA" },
-  // Dueño, 2026-10-29, Q17 pregunta 4.
-  "fiscal.pantalla.config_df_domicilio_fiscal": { porDefecto: "Domicilio fiscal" },
+  // Dueño, 2026-11-03, D-82 (rótulos aprobados).
+  "fiscal.pantalla.config_df_domicilio_fiscal": { porDefecto: "Domicilio" },
   // Dueño, 2026-10-29, Q17 pregunta 4.
   "fiscal.pantalla.config_df_inicio_actividades": { porDefecto: "Inicio de actividades" },
 } as const;

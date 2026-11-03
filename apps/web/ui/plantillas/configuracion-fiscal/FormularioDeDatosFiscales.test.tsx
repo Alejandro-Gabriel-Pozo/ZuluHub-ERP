@@ -144,7 +144,7 @@ describe("accesibilidad y medidas", () => {
     ]) {
       await expect.element(page.getByLabelText(etiqueta, { exact: true })).toBeVisible();
     }
-    await expect.element(page.getByRole("group", { name: "Domicilio fiscal" })).toBeVisible();
+    await expect.element(page.getByRole("group", { name: "Domicilio" })).toBeVisible();
     const condiciones = (
       page.getByLabelText("Condición frente al IVA").element() as HTMLSelectElement
     ).options;
