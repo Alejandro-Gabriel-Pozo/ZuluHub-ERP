@@ -165,6 +165,17 @@ describe("svgDeLaMatriz", () => {
     ]);
   });
 
+  it("sin etiqueta el SVG es exactamente el dibujo, sin nada entre el último atributo y el cierre; con etiqueta, sale exactamente la esperada", () => {
+    const base =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 9" shape-rendering="crispEdges"';
+    const dibujo =
+      '><rect width="9" height="9" fill="#ffffff"/><path d="M4 4h1v1h-1z" fill="#000000"/></svg>';
+    expect(svgDeLaMatriz([[true]])).toBe(`${base}${dibujo}`);
+    expect(svgDeLaMatriz([[true]], "Etiqueta")).toBe(
+      `${base} role="img" aria-label="Etiqueta"${dibujo}`,
+    );
+  });
+
   it("sin etiqueta no lleva role ni aria-label; con etiqueta, la escapa", () => {
     expect(qrComoSvg("A", "M")).not.toMatch(/role=|aria-label=/);
     const svg = qrComoSvg("A", "M", `a"<b>&c`);
