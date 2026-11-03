@@ -1,14 +1,18 @@
 import { randomBytes } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS,
   DECLARACIONES_DE_EMPRESAS,
 } from "../modulos/empresas/publico";
+import { REGLAS_DE_REPETICION } from "../capacidades/permisos/declaracion";
 import {
   DECLARACIONES_DE_CERTIFICADOS,
   DECLARACIONES_DE_CONFIGURACION_FISCAL,
   DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
   DECLARACIONES_DE_FACTURACION,
+  DECLARACIONES_DE_FISCAL,
 } from "../modulos/fiscal/publico";
 import {
   DECLARACIONES_DE_CONSULTAS_DE_IDENTIDAD,
@@ -643,6 +647,129 @@ describe("toda acción o consulta de la web pasa por el guard o figura con su mo
     expect(incumplimientosDeLaWeb({ casos: doble.casos }, { casos: exento })).toEqual([
       "casos.sinDeclarar: sin declaración",
       "casos.conPermiso: exento que ya no corresponde",
+    ]);
+  });
+});
+
+/**
+ * Cada caso de uso declara cómo se repite sin duplicar (ADR-015 §4) y la prueba de «repetir la misma acción» que nombra existe.
+ * La declaración nombra el archivo y el título exacto del `it`: así ni una prueba borrada, ni renombrada, ni salteada (`it.skip`)
+ * deja una declaración que nadie respalda; sin el campo ni compila (`DeclaracionDeCasoDeUso`).
+ * Previene: un caso de uso que se sube sin que nadie haya decidido ni probado qué pasa al repetirlo (doble clic, reintento de red),
+ * o una declaración cuya prueba dejó de existir sin que nada lo note. No juzga que la prueba nombrada repita de verdad la acción:
+ * eso lo ve quien revisa; lo que no se puede dejar pasar es que no exista.
+ */
+type Fuentes = (archivo: string) => string | null;
+
+const esObjeto = (valor: unknown): valor is Record<string, unknown> =>
+  typeof valor === "object" && valor !== null;
+
+/** Lo que incumple la regla; vacío si cumple. Recibe cómo leer un archivo para poder probarla con archivos inventados. */
+function incumplimientosDeRepeticion(
+  grupos: Readonly<Record<string, Readonly<Record<string, unknown>>>>,
+  leer: Fuentes,
+): string[] {
+  return Object.entries(grupos).flatMap(([grupo, casos]) =>
+    Object.entries(casos).flatMap(([caso, declaracion]) => {
+      const donde = `${grupo}.${caso}`;
+      const repeticion = esObjeto(declaracion) ? declaracion["repeticion"] : undefined;
+      if (!esObjeto(repeticion)) return [`${donde}: no declara cómo se repite`];
+      const { regla, prueba } = repeticion;
+      if (!REGLAS_DE_REPETICION.some((r) => r === regla)) {
+        return [`${donde}: regla de repetición desconocida`];
+      }
+      const archivo = esObjeto(prueba) ? prueba["archivo"] : undefined;
+      const titulo = esObjeto(prueba) ? prueba["it"] : undefined;
+      if (
+        typeof archivo !== "string" ||
+        typeof titulo !== "string" ||
+        !archivo.endsWith(".test.ts")
+      ) {
+        return [`${donde}: la prueba no nombra un archivo .test.ts y el título de su it`];
+      }
+      const fuente = leer(archivo);
+      if (fuente === null) return [`${donde}: no existe ${archivo}`];
+      const apertura = `it(${JSON.stringify(titulo)},`;
+      const veces = fuente
+        .split("\n")
+        .filter((linea) => linea.trimStart().startsWith(apertura)).length;
+      if (veces === 0) {
+        return [
+          `${donde}: ${archivo} no tiene un it con el título «${titulo}» (¿borrado, renombrado o salteado?)`,
+        ];
+      }
+      return veces === 1
+        ? []
+        : [`${donde}: ${archivo} tiene ${veces} it con el título «${titulo}»`];
+    }),
+  );
+}
+
+/** Los casos de uso que sale a la web (cada grupo `casosDeUso…` decidido con guard) y los de numeración, que no salen a la web. */
+const CASOS_DE_USO_A_REVISAR: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {
+  ...Object.fromEntries(
+    Object.entries(DECISIONES_DE_WEB).flatMap(([nombre, decision]) =>
+      nombre.startsWith("casosDeUso") && "conGuard" in decision
+        ? [[nombre, decision.conGuard]]
+        : [],
+    ),
+  ),
+  numeracionDeFiscal: DECLARACIONES_DE_FISCAL,
+};
+
+describe("cada caso de uso declara cómo se repite y la prueba que nombra existe", () => {
+  it("los casos de uso reales cumplen la regla", () => {
+    const raiz = join(import.meta.dirname, "..", "..");
+    const leer: Fuentes = (archivo) =>
+      existsSync(join(raiz, archivo)) ? readFileSync(join(raiz, archivo), "utf8") : null;
+    const casos = Object.values(CASOS_DE_USO_A_REVISAR).flatMap((grupo) => Object.keys(grupo));
+    expect(casos.length).toBeGreaterThan(0);
+    expect(incumplimientosDeRepeticion(CASOS_DE_USO_A_REVISAR, leer)).toEqual([]);
+  });
+
+  it("violación inyectada: sin declarar, regla inventada, archivo ausente, título renombrado, it salteado, título repetido y archivo que no es una prueba la hacen fallar", () => {
+    const archivos: Record<string, string> = {
+      "test/a.test.ts": [
+        '  it("repetir no duplica", async () => {',
+        '  it.skip("salteada", async () => {',
+        '  it("doble", () => {',
+        '  it("doble", () => {',
+      ].join("\n"),
+    };
+    const prueba = (archivo: string, it: string) => ({ archivo, it });
+    const grupos = {
+      g: {
+        bien: {
+          repeticion: {
+            regla: "YA_ESTABA",
+            prueba: prueba("test/a.test.ts", "repetir no duplica"),
+          },
+        },
+        sinDeclarar: { accion: "sucursales.crear" },
+        reglaInventada: {
+          repeticion: { regla: "A_VECES", prueba: prueba("test/a.test.ts", "repetir no duplica") },
+        },
+        sinArchivo: {
+          repeticion: { regla: "SIN_CAMBIOS", prueba: prueba("test/no-esta.test.ts", "x") },
+        },
+        renombrada: {
+          repeticion: { regla: "SIN_CAMBIOS", prueba: prueba("test/a.test.ts", "repetir duplica") },
+        },
+        salteada: {
+          repeticion: { regla: "YA_ESTABA", prueba: prueba("test/a.test.ts", "salteada") },
+        },
+        repetida: { repeticion: { regla: "YA_ESTABA", prueba: prueba("test/a.test.ts", "doble") } },
+        noEsPrueba: { repeticion: { regla: "YA_ESTABA", prueba: prueba("README.md", "x") } },
+      },
+    };
+    expect(incumplimientosDeRepeticion(grupos, (archivo) => archivos[archivo] ?? null)).toEqual([
+      "g.sinDeclarar: no declara cómo se repite",
+      "g.reglaInventada: regla de repetición desconocida",
+      "g.sinArchivo: no existe test/no-esta.test.ts",
+      "g.renombrada: test/a.test.ts no tiene un it con el título «repetir duplica» (¿borrado, renombrado o salteado?)",
+      "g.salteada: test/a.test.ts no tiene un it con el título «salteada» (¿borrado, renombrado o salteado?)",
+      "g.repetida: test/a.test.ts tiene 2 it con el título «doble»",
+      "g.noEsPrueba: la prueba no nombra un archivo .test.ts y el título de su it",
     ]);
   });
 });

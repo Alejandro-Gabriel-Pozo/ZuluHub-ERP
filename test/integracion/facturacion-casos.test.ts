@@ -328,6 +328,33 @@ describe.skipIf(base === null)("facturación F5: casos de uso contra una base re
       });
     });
 
+    it("repetir la validación de un comprobante ya enviado no hace nada: NADA_QUE_VALIDAR, sin reenviar a ARCA ni escribir ni auditar de nuevo", async () => {
+      const p = await preparar();
+      const { comprobanteId: id } = await p.emitir();
+      const validar = () => p.casos.validarComprobante(p.sistema(), { comprobanteId: id });
+      expect(await validar()).toEqual({
+        ok: true,
+        valor: { tipo: "ENVIADO", numero: 1n, desenlace: "AUTORIZADO", cerrado: true },
+      });
+      const foto = async () => ({
+        comprobante: await comprobante(id),
+        serie: await serie(p.e),
+        intentos: await intentos(id),
+        auditorias: await auditorias(p.e, id),
+        trabajos: await trabajos(id),
+        pedidos: p.falsa.pedidos.length,
+      });
+      const despuesDeLaPrimera = await foto();
+      for (let repeticion = 0; repeticion < 2; repeticion += 1) {
+        expect(await validar()).toEqual({
+          ok: true,
+          valor: { tipo: "NADA_QUE_VALIDAR", estado: "AUTORIZADO" },
+        });
+        expect(await foto()).toEqual(despuesDeLaPrimera);
+      }
+      expect(despuesDeLaPrimera.pedidos).toBe(1);
+    });
+
     it("rechaza: RECHAZADO con los códigos en el intento, la serie libre sin avanzar; la misma clave sigue dando ese", async () => {
       const p = await preparar();
       p.falsa.programar({ guion: "RECHAZA", errores: [{ codigo: 10015, texto: "doc" }] });

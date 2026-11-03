@@ -130,7 +130,7 @@ describe("P7: el guard va primero en cada caso de uso de numeración", () => {
   });
 
   it.each(NOMBRES)("%s exige comprobantes.emitir", (nombre) => {
-    expect(DECLARACIONES[nombre]).toEqual({ accion: "comprobantes.emitir" });
+    expect(DECLARACIONES[nombre]).toMatchObject({ accion: "comprobantes.emitir" });
   });
 
   it.each(NOMBRES)("%s: sin rol da SIN_PERMISO sin leer ni escribir nada más", async (nombre) => {

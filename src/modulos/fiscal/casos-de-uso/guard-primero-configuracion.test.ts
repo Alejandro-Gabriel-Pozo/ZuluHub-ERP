@@ -136,7 +136,7 @@ const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
 describe("P7: el guard va primero en cada caso de uso de configuración fiscal", () => {
   it("hay ocho casos de uso, cada uno con SU acción, todos de administracion y solo del gerente", () => {
     expect(NOMBRES).toHaveLength(8);
-    expect(DECLARACIONES_DE_CONFIGURACION).toEqual({
+    expect(DECLARACIONES_DE_CONFIGURACION).toMatchObject({
       guardarBorradorDeDatosFiscales: { accion: "datos_fiscales.editar" },
       empezarCorreccionDeDatosFiscales: { accion: "datos_fiscales.editar" },
       confirmarDatosFiscales: { accion: "datos_fiscales.confirmar" },

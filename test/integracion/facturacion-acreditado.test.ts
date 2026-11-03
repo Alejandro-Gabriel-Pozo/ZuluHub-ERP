@@ -402,6 +402,44 @@ describe.skipIf(base === null)(
         ).toHaveLength(1);
       });
 
+      it("emitir la misma nota de débito con la misma clave devuelve la misma nota y no duplica filas, auditoría ni trabajo", async () => {
+        const p = await preparar();
+        const factura = await p.facturaAutorizada();
+        const pedido = p.pedidoDeNota(factura, "60.50");
+        const primera = p.exito(await p.casos.emitirNotaDeDebito(p.como(), pedido));
+        const segunda = p.exito(await p.casos.emitirNotaDeDebito(p.como(), pedido));
+        expect(primera).toMatchObject({
+          tipo: "NOTA_DEBITO_B",
+          estado: "PENDIENTE",
+          yaExistia: false,
+        });
+        expect(segunda).toEqual({ ...primera, yaExistia: true });
+        // También después de autorizarse la nota: devuelve esa misma nota, ya autorizada.
+        await p.validar(primera.comprobanteId);
+        const tercera = p.exito(await p.casos.emitirNotaDeDebito(p.como(), pedido));
+        expect(tercera).toEqual({ ...primera, estado: "AUTORIZADO", yaExistia: true });
+        const notas = await filas(
+          "select id from comprobante where empresa_id = $1 and clase = 'NOTA_DEBITO'",
+          [p.e.empresa],
+        );
+        expect(notas).toEqual([{ id: primera.comprobanteId }]);
+        const creadas = await filas(
+          "select 1 from auditoria_empresa where empresa_id = $1 and entidad_id = $2 and accion = 'COMPROBANTE_CREADO'",
+          [p.e.empresa, primera.comprobanteId],
+        );
+        expect(creadas).toHaveLength(1);
+        const trabajos = await filas(
+          "select 1 from trabajo where starts_with(clave_idempotencia, $1)",
+          [`fiscal.validar:${primera.comprobanteId}:`],
+        );
+        expect(trabajos).toHaveLength(1);
+        // Una nota de débito no acredita: repetirla tampoco mueve lo acreditado de la factura.
+        expect(await p.detalle(factura)).toMatchObject({
+          acreditado: "0.00",
+          acreditacion: "NINGUNA",
+        });
+      });
+
       it("la misma clave con OTRO importe es CLAVE_REUTILIZADA y no suma nada", async () => {
         const p = await preparar();
         const factura = await p.facturaAutorizada();

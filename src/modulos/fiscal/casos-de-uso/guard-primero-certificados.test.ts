@@ -129,7 +129,7 @@ const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
 describe("P7: el guard va primero en cada caso de uso de certificados", () => {
   it("hay dos casos y los dos exigen certificados.gestionar (CA, solo el gerente)", () => {
     expect(NOMBRES).toHaveLength(2);
-    expect(DECLARACIONES_DE_CERTIFICADOS).toEqual({
+    expect(DECLARACIONES_DE_CERTIFICADOS).toMatchObject({
       generarPedidoDeCertificado: { accion: "certificados.gestionar" },
       cargarCertificado: { accion: "certificados.gestionar" },
     });
