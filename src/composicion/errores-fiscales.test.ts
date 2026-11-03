@@ -43,12 +43,14 @@ describe("las tablas de traducción", () => {
     }
   });
 
-  it("los únicos defectos (sin código público) son los que vienen de una restricción de la base", () => {
+  it("los únicos defectos (sin código público) son los que vienen de una restricción de la base, de un pedido armado a mano o de la clave guardada que no se descifra", () => {
     const defectos = Object.entries(FISCAL_POR_ERROR_DE_TEXTO)
       .filter(([, codigo]) => codigo === null)
       .map(([error]) => error)
       .sort();
     expect(defectos).toEqual([
+      // Certificados: la clave guardada no se descifra (clave maestra equivocada o fila alterada); la persona no puede corregirlo.
+      "CLAVE_ILEGIBLE",
       "COMPROBANTE_ALTA_INVALIDA",
       "COMPROBANTE_ASOCIADO_INVALIDO",
       // Configuración fiscal: Ingresos Brutos no lo puede provocar nadie (D-45), la base no repite el número de versión, y una
@@ -139,13 +141,28 @@ describe("la configuración fiscal (D-43)", () => {
     });
   });
 
-  it("los códigos sin texto aprobado son estos cuatro: salen sin cambios (inesperado con referencia) hasta que el dueño los apruebe", () => {
-    expect([...CODIGOS_DE_CONFIGURACION_SIN_TEXTO].sort()).toEqual([
-      "DATOS_FISCALES_NO_ENCONTRADOS",
-      "DOMICILIO_NO_ENCONTRADO",
-      "EMISOR_NO_ENCONTRADO",
-      "ID_EN_USO",
-    ]);
+  it("los códigos sin texto aprobado son estos: salen sin cambios (inesperado con referencia) hasta que el dueño los apruebe", () => {
+    expect([...CODIGOS_DE_CONFIGURACION_SIN_TEXTO].sort()).toEqual(
+      [
+        // Datos fiscales y puntos de venta.
+        "DATOS_FISCALES_NO_ENCONTRADOS",
+        "DOMICILIO_NO_ENCONTRADO",
+        "EMISOR_NO_ENCONTRADO",
+        "ID_EN_USO",
+        // El certificado de ARCA: generar el pedido y cargar el certificado.
+        "ALIAS_INVALIDO",
+        "CADENA_NO_CONFIABLE",
+        "CERTIFICADO_ILEGIBLE",
+        "CERTIFICADO_NO_ENCONTRADO",
+        "CERTIFICADO_VENCIDO",
+        "CERTIFICADO_YA_CARGADO",
+        "CUIT_INVALIDO",
+        "NO_CORRESPONDE_AL_TITULAR",
+        "NO_CORRESPONDE_A_LA_CLAVE",
+        "ORGANIZACION_INVALIDA",
+        "PEDIDO_NO_PENDIENTE",
+      ].sort(),
+    );
     for (const error of CODIGOS_DE_CONFIGURACION_SIN_TEXTO) {
       expect(traducirErrorFiscal(error), error).toBe(error);
       const respuesta = aRespuestaFiscal(err(error), dependencias, () => null);

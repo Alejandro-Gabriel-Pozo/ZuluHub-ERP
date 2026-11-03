@@ -1,6 +1,12 @@
+import { crearGeneradorDeCredenciales } from "../adaptadores/certificados/generador-pkijs";
+import {
+  crearLectorDeCertificados,
+  type CadenasDeConfianza,
+} from "../adaptadores/certificados/lector-x509";
 import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../capacidades/permisos/empresa";
 import { crearCasosDeUsoDeEmpresas, crearConsultasDeEmpresas } from "../modulos/empresas/publico";
 import {
+  crearCasosDeUsoDeCertificados,
   crearCasosDeUsoDeConfiguracionFiscal,
   crearCasosDeUsoDeFacturacion,
   crearConsultasDeFacturacion,
@@ -31,8 +37,10 @@ import { perezoso } from "./perezoso";
  * del gerente, con las consultas de esa pantalla dentro de `consultasDeFacturacion`). Cada uno exige SU acción al guard dentro de la transacción: acá no se decide ningún permiso. Quedan
  * AFUERA, a propósito: la regla de emisor (no es uno de los tres temas de la pantalla), los dos trabajos de sistema (`validarComprobante` y `reconciliarComprobantes`, sin guard: son
  * de la cola), la numeración suelta (`reservarNumeroDeComprobante`...: la web entra solo por emitir, h7 §C), el modelo
- * de impresión (F9: falta la marca y la librería del QR) y las acciones de certificados (generar el pedido y cargar el certificado: faltan las cadenas de
- * confianza de ARCA, D-F7; su ESTADO sí sale, en `consultasDeFacturacion`). `consultasDeSesion` (la
+ * de impresión (F9: falta la marca y la librería del QR). Las acciones de certificados (generar el pedido y cargar el certificado que
+ * devolvió ARCA, `certificados.gestionar`) salen en `casosDeUsoDeCertificados`; su ESTADO, en `consultasDeFacturacion`. Las cadenas de
+ * confianza de ARCA con las que se valida un certificado cargado NO están en el repositorio (su autenticidad la confirma el dueño
+ * comparando huellas, D-F7): por defecto no hay ninguna y la carga falla cerrado (`CADENA_NO_CONFIABLE`). `consultasDeSesion` (la
  * persona del usuario y sus empresas, puerta `SESION`) llegó con W3a. La autenticación (W3b) es otra
  * puerta: `autenticacion()` dice QUIÉN es (usuario y email verificado, por host) y `barridoDeAutenticacion()`
  * es lo que llama el cron; la persona y las empresas salen después, con el contexto `SESION`.
@@ -44,6 +52,11 @@ export type OpcionesDeWeb = Readonly<{
   emision?: ProveedorDeEmision;
   /** La hora de lo que sigue a una llamada a ARCA; por defecto, el reloj del sistema. */
   reloj?: Readonly<{ ahora(): Date }>;
+  /**
+   * Las autoridades (PEM) de ARCA contra las que cierra la cadena de un certificado cargado, por ambiente. Por defecto, ninguna: sin
+   * autoridades la cadena no cierra y cargar un certificado falla cerrado. En pruebas, las que nacen en la propia prueba.
+   */
+  cadenasDeConfianza?: CadenasDeConfianza;
 }>;
 
 export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
@@ -51,6 +64,7 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
   const reloj = opciones.reloj ?? { ahora: () => new Date() };
   // Armarlo no lee ninguna variable: el proveedor pide la clave de los certificados recién al hablar con ARCA.
   const emision = opciones.emision ?? armarEmisionFiscal(conexiones, { reloj });
+  const cadenasDeConfianza = opciones.cadenasDeConfianza ?? { HOMOLOGACION: [], PRODUCCION: [] };
   return {
     resolucionDeHost: () => conexiones.resolucionDeHost(),
     configuracionPublicaDeHost: () => conexiones.configuracionPublicaDeHost(),
@@ -107,6 +121,24 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
         editarPuntoDeVenta: casos.editarPuntoDeVenta,
         activarPuntoDeVenta: casos.activarPuntoDeVenta,
         desactivarPuntoDeVenta: casos.desactivarPuntoDeVenta,
+      };
+    }),
+    /**
+     * Las dos acciones del certificado de ARCA, solo del gerente (`certificados.gestionar`, cada una la exige al guard dentro de su
+     * transacción): generar el pedido (la clave privada se genera y se guarda cifrada en el servidor, nunca sale) y cargar el
+     * certificado que devolvió ARCA. Pide la clave de los certificados (`PEDERNAL_CLAVE_CERTIFICADOS`) recién al armarse, no antes.
+     */
+    casosDeUsoDeCertificados: perezoso(() => {
+      const casos = crearCasosDeUsoDeCertificados({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        cifrador: conexiones.cifradorDeCertificados(),
+        generador: crearGeneradorDeCredenciales(),
+        lector: crearLectorDeCertificados(cadenasDeConfianza),
+      });
+      return {
+        generarPedidoDeCertificado: casos.generarPedidoDeCertificado,
+        cargarCertificado: casos.cargarCertificado,
       };
     }),
     /**
