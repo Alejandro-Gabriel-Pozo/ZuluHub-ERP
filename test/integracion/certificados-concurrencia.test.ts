@@ -207,7 +207,9 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
   it("certificados distintos cargados a la vez para el mismo emisor y ambiente: todos ok, uno solo queda vigente y los demás reemplazados", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const e = await escenarioDeCertificados(dueno, propia.base);
-      const pedidos = await Promise.all([0, 1, 2, 3].map(() => pedirYEmitir(e)));
+      // Preparación en serie: cada pedido genera su clave RSA dentro de la transacción y en paralelo se pisarían; lo que se prueba es la carga.
+      const pedidos: Awaited<ReturnType<typeof pedirYEmitir>>[] = [];
+      for (let i = 0; i < 4; i++) pedidos.push(await pedirYEmitir(e));
       const rs = await juntas(pedidos.length, (i) =>
         cargar(e, pedidos[i]?.id ?? "", pedidos[i]?.pem ?? ""),
       );
@@ -237,9 +239,9 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const e = await escenarioDeSociedad(dueno, propia.base);
       const titulares = [cuitConPrefijo("20"), cuitConPrefijo("27")];
-      const pedidos = await Promise.all(
-        [0, 1, 2, 3].map((i) => pedirYEmitir(e, undefined, titulares[i % 2])),
-      );
+      // Preparación en serie (mismo motivo que arriba); lo que se prueba es la carga concurrente.
+      const pedidos: Awaited<ReturnType<typeof pedirYEmitir>>[] = [];
+      for (let i = 0; i < 4; i++) pedidos.push(await pedirYEmitir(e, undefined, titulares[i % 2]));
       const rs = await juntas(pedidos.length, (i) =>
         cargar(e, pedidos[i]?.id ?? "", pedidos[i]?.pem ?? ""),
       );
