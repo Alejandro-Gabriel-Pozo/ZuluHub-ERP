@@ -4,7 +4,13 @@ import { puntoDeVentaId, reglaDeEmisorVigente } from "../../src/modulos/fiscal/p
 import { emisorId, sucursalId } from "../../src/primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../src/primitivas/resultado/resultado";
 import { EmisionFalsa } from "../utilidades/emision-falsa";
-import { crearBarrera, crearBaseAparte } from "./entorno";
+import {
+  codigoDe,
+  correrEnParalelo,
+  esConcurrenciaAgotada,
+  perdedorAceptable,
+} from "./concurrencia-apoyo";
+import { crearBaseAparte } from "./entorno";
 import {
   casosDeConfiguracion,
   crearEntornoDeConfiguracion,
@@ -36,15 +42,6 @@ const DIA = 86_400_000;
 
 type Fila = Record<string, unknown>;
 type Cualquiera = Resultado<unknown, unknown>;
-
-const codigoDe = (r: Cualquiera): string => {
-  if (r.ok) return "ok";
-  if (typeof r.error === "string") return r.error;
-  const tipo = (r.error as { tipo?: unknown }).tipo;
-  return typeof tipo === "string" ? tipo : "otro";
-};
-/** Los que perdieron la carrera por quedarse sin reintentos: no es un defecto, pero no cuenta como éxito. */
-const agotada = (r: Cualquiera) => codigoDe(r) === "ConcurrenciaAgotada";
 
 describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fiscal", () => {
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
@@ -159,15 +156,12 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
     n: number,
     llamada: (i: number) => Promise<T>,
   ): Promise<T[]> {
-    barrera =
-      donde === null
-        ? null
-        : { donde: typeof donde === "string" ? [donde] : donde, esperar: crearBarrera(n) };
-    try {
-      return await Promise.all(Array.from({ length: n }, (_, i) => llamada(i)));
-    } finally {
-      barrera = null;
-    }
+    return correrEnParalelo(n, llamada, (esperar) => {
+      barrera =
+        donde === null || esperar === null
+          ? null
+          : { donde: typeof donde === "string" ? [donde] : donde, esperar };
+    });
   }
 
   const nuevo = () => crearEscenarioDeConfiguracion(dueno, { rol: "GERENTE" });
@@ -240,11 +234,7 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
         const rs = await enParalelo("datos.obtenerBorrador", 3, () => guardar(e));
         const ganadoras = rs.filter((r) => r.ok);
         expect(ganadoras, `ronda ${ronda}`).toHaveLength(1);
-        for (const r of rs.filter((x) => !x.ok)) {
-          expect(["YA_HAY_BORRADOR", "ConcurrenciaAgotada"], `ronda ${ronda}`).toContain(
-            codigoDe(r),
-          );
-        }
+        perdedorAceptable(rs, { esperados: ["YA_HAY_BORRADOR"], contexto: `ronda ${ronda}` });
         expect(
           await cuenta("select count(*) as n from datos_fiscales where emisor_id = $1", [
             e.mundo.emisor,
@@ -263,7 +253,7 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
         const rs = await enParalelo("datos.obtenerBorrador", 4, () =>
           guardar(e, { borradorId, domicilio }),
         );
-        for (const r of rs) expect(r.ok || agotada(r), `ronda ${ronda}: ${codigoDe(r)}`).toBe(true);
+        perdedorAceptable(rs, { esperados: [], contexto: `ronda ${ronda}` });
         expect(
           rs.filter((r) => r.ok && !r.valor.yaEstaba),
           `ronda ${ronda}`,
@@ -296,10 +286,10 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
           rs.filter((r) => r.ok),
           `ronda ${ronda}`,
         ).toHaveLength(1);
-        const perdedora = rs.find((r) => !r.ok);
-        expect(["VERSION_DESACTUALIZADA", "ConcurrenciaAgotada"]).toContain(
-          perdedora === undefined ? "nada" : codigoDe(perdedora),
-        );
+        perdedorAceptable(rs, {
+          esperados: ["VERSION_DESACTUALIZADA"],
+          contexto: `ronda ${ronda}`,
+        });
         const [fila] = await filas<{ razon_social: string; version: number }>(
           "select razon_social, version from datos_fiscales where id = $1",
           [borradorId],
@@ -320,7 +310,7 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
         const rs = await enParalelo("datos.obtener", 4, () =>
           confirmar(e, borradorId, alta.valor.version),
         );
-        for (const r of rs) expect(r.ok || agotada(r), `ronda ${ronda}: ${codigoDe(r)}`).toBe(true);
+        perdedorAceptable(rs, { esperados: [], contexto: `ronda ${ronda}` });
         expect(
           rs.filter((r) => r.ok && !r.valor.yaEstaba),
           `ronda ${ronda}`,
@@ -387,7 +377,7 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
         const rs = await enParalelo("reglas.confirmadas", 2, (i) =>
           regla(e, { permitirEleccionManual: i === 0 }),
         );
-        for (const r of rs) expect(r.ok || agotada(r), `ronda ${ronda}: ${codigoDe(r)}`).toBe(true);
+        perdedorAceptable(rs, { esperados: [], contexto: `ronda ${ronda}` });
         const guardadas = await filas<{ numero: number; estado: string; permitir: boolean }>(
           `select numero, estado, permitir_eleccion_manual as permitir from regla_emisor
             where empresa_id = $1 order by numero nulls last`,
@@ -420,7 +410,7 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
         const e = await nuevo();
         const versionId = nuevoUuid();
         const rs = await enParalelo("reglas.obtener", 4, () => regla(e, { versionId }));
-        for (const r of rs) expect(r.ok || agotada(r), `ronda ${ronda}: ${codigoDe(r)}`).toBe(true);
+        perdedorAceptable(rs, { esperados: [], contexto: `ronda ${ronda}` });
         expect(
           rs.filter((r) => r.ok && !r.valor.yaEstaba),
           `ronda ${ronda}`,
@@ -445,11 +435,10 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
           rs.filter((r) => r.ok),
           `ronda ${ronda}`,
         ).toHaveLength(1);
-        for (const r of rs.filter((x) => !x.ok)) {
-          expect(["PUNTO_DE_VENTA_DUPLICADO", "ConcurrenciaAgotada"], `ronda ${ronda}`).toContain(
-            codigoDe(r),
-          );
-        }
+        perdedorAceptable(rs, {
+          esperados: ["PUNTO_DE_VENTA_DUPLICADO"],
+          contexto: `ronda ${ronda}`,
+        });
         expect(
           await cuenta("select count(*) as n from punto_de_venta where emisor_id = $1", [
             e.mundo.emisor,
@@ -468,7 +457,7 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
         const rs = await enParalelo("pv.obtener", 4, () =>
           crearPv(e, { id, numero: 2, domicilio }),
         );
-        for (const r of rs) expect(r.ok || agotada(r), `ronda ${ronda}: ${codigoDe(r)}`).toBe(true);
+        perdedorAceptable(rs, { esperados: [], contexto: `ronda ${ronda}` });
         expect(
           rs.filter((r) => r.ok && !r.valor.yaExistia),
           `ronda ${ronda}`,
@@ -498,10 +487,10 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
           rs.filter((r) => r.ok),
           `ronda ${ronda}`,
         ).toHaveLength(1);
-        const perdedora = rs.find((r) => !r.ok);
-        expect(["VERSION_DESACTUALIZADA", "ConcurrenciaAgotada"]).toContain(
-          perdedora === undefined ? "nada" : codigoDe(perdedora),
-        );
+        perdedorAceptable(rs, {
+          esperados: ["VERSION_DESACTUALIZADA"],
+          contexto: `ronda ${ronda}`,
+        });
         const [fila] = await filas<{ numero: number; version: number }>(
           "select numero, version from punto_de_venta where id = $1",
           [p.id],
@@ -518,7 +507,7 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
         const rs = await enParalelo("pv.obtener", 4, () =>
           casos.activarPuntoDeVenta(e.como(), { puntoDeVentaId: puntoDeVentaId(p.id) }),
         );
-        for (const r of rs) expect(r.ok || agotada(r), `ronda ${ronda}: ${codigoDe(r)}`).toBe(true);
+        perdedorAceptable(rs, { esperados: [], contexto: `ronda ${ronda}` });
         expect(
           rs.filter((r) => r.ok && !r.valor.yaEstaba),
           `ronda ${ronda}`,
@@ -540,7 +529,7 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
             ? casos.activarPuntoDeVenta(e.como(), { puntoDeVentaId: puntoDeVentaId(p.id) })
             : casos.desactivarPuntoDeVenta(e.como(), { puntoDeVentaId: puntoDeVentaId(p.id) }),
         );
-        for (const r of rs) expect(r.ok || agotada(r), `ronda ${ronda}: ${codigoDe(r)}`).toBe(true);
+        perdedorAceptable(rs, { esperados: [], contexto: `ronda ${ronda}` });
         const [fila] = await filas<{ estado: string }>(
           "select estado from punto_de_venta where id = $1",
           [p.id],
@@ -585,7 +574,10 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
                 })
               : numerar.reservarNumeroDeComprobante(e.como(), entradaDe({ puntoDeVenta: p.id })),
         )) as [Cualquiera, Cualquiera];
-        expect(reserva.ok || agotada(reserva), `ronda ${ronda}: ${codigoDe(reserva)}`).toBe(true);
+        expect(
+          reserva.ok || esConcurrenciaAgotada(reserva.error),
+          `ronda ${ronda}: ${codigoDe(reserva)}`,
+        ).toBe(true);
         expect(
           ["ok", "PUNTO_DE_VENTA_NUMERO_INMUTABLE", "ConcurrenciaAgotada"],
           `ronda ${ronda}`,

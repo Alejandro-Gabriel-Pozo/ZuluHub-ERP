@@ -3,7 +3,8 @@ import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { domicilioId, puntoDeVentaId } from "../../src/modulos/fiscal/publico";
 import { emisorId } from "../../src/primitivas/identificadores/marca";
 import type { Resultado } from "../../src/primitivas/resultado/resultado";
-import { crearBarrera, crearBaseAparte } from "./entorno";
+import { codigoDe, correrEnParalelo, perdedorAceptable } from "./concurrencia-apoyo";
+import { crearBaseAparte } from "./entorno";
 import {
   casosDeConfiguracion,
   crearEntornoDeConfiguracion,
@@ -32,15 +33,6 @@ const MANANA = new Date(AHORA.getTime() + DIA);
 
 type Fila = Record<string, unknown>;
 type Cualquiera = Resultado<unknown, unknown>;
-
-const codigoDe = (r: Cualquiera): string => {
-  if (r.ok) return "ok";
-  if (typeof r.error === "string") return r.error;
-  const tipo = (r.error as { tipo?: unknown }).tipo;
-  return typeof tipo === "string" ? tipo : "otro";
-};
-/** Quien perdió la carrera por quedarse sin reintentos: no es un defecto, pero no cuenta como éxito. */
-const agotada = (r: Cualquiera) => codigoDe(r) === "ConcurrenciaAgotada";
 
 const COMPLETOS = {
   razonSocial: "Coop Pampa SA",
@@ -196,15 +188,12 @@ describe.skipIf(base === null)(
       n: number,
       llamada: (i: number) => Promise<T>,
     ): Promise<T[]> {
-      barrera =
-        donde === null
-          ? null
-          : { donde: typeof donde === "string" ? [donde] : donde, esperar: crearBarrera(n) };
-      try {
-        return await Promise.all(Array.from({ length: n }, (_, i) => llamada(i)));
-      } finally {
-        barrera = null;
-      }
+      return correrEnParalelo(n, llamada, (esperar) => {
+        barrera =
+          donde === null || esperar === null
+            ? null
+            : { donde: typeof donde === "string" ? [donde] : donde, esperar };
+      });
     }
 
     // ===============================================================================================
@@ -594,8 +583,7 @@ describe.skipIf(base === null)(
           const { e } = await conVigente();
           const auditoriasAntes = await auditorias(e.mundo.empresa);
           const rs = await enParalelo("datos.obtenerBorrador", 4, () => empezar(e));
-          for (const r of rs)
-            expect(r.ok || agotada(r), `ronda ${ronda}: ${codigoDe(r)}`).toBe(true);
+          perdedorAceptable(rs, { esperados: [], contexto: `ronda ${ronda}` });
           const borradores = (await versiones(e.mundo.emisor)).filter(
             (v) => v.estado === "BORRADOR",
           );
@@ -621,8 +609,7 @@ describe.skipIf(base === null)(
           const rs = await enParalelo("datos.obtenerBorrador", 4, () =>
             empezar(e, { borradorId: id }),
           );
-          for (const r of rs)
-            expect(r.ok || agotada(r), `ronda ${ronda}: ${codigoDe(r)}`).toBe(true);
+          perdedorAceptable(rs, { esperados: [], contexto: `ronda ${ronda}` });
           expect(
             (await versiones(e.mundo.emisor)).filter((v) => v.estado === "BORRADOR"),
             `ronda ${ronda}`,
@@ -693,8 +680,7 @@ describe.skipIf(base === null)(
                   })
                 : empezar(e, {}, new Date(MANANA.getTime() + 1000)),
           );
-          for (const r of rs)
-            expect(r.ok || agotada(r), `ronda ${ronda}: ${codigoDe(r)}`).toBe(true);
+          perdedorAceptable(rs, { esperados: [], contexto: `ronda ${ronda}` });
           const todas = await versiones(e.mundo.emisor);
           expect(
             todas.filter((v) => v.estado === "BORRADOR").length,

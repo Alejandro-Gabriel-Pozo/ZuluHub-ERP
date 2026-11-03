@@ -12,6 +12,7 @@ import {
   crearTenantConPlan,
   type TxDeAltaDePrueba,
 } from "./altas-apoyo";
+import { esConcurrenciaAgotada } from "./concurrencia-apoyo";
 import { crearBarrera, crearBaseAparte, cuitAlAzar } from "./entorno";
 import { emailAlAzar } from "./fixtures-identidad";
 import { claveAlAzar } from "./plataforma-apoyo";
@@ -31,15 +32,8 @@ const valores = <T>(rs: ReadonlyArray<Resultado<T, unknown>>) =>
 const errores = (rs: ReadonlyArray<Resultado<unknown, unknown>>) =>
   rs.flatMap((r) => (r.ok ? [] : [r.error]));
 
-/**
- * El adaptador agota sus reintentos cuando una carrera se encadena bajo carga y devuelve el error tipado
- * `ConcurrenciaAgotada`: es una respuesta legítima («reintentá»), no un estado inconsistente. Lo que estas pruebas
- * garantizan es la regla de negocio (el tope, la unicidad), no que nadie pierda nunca la carrera por agotamiento.
- */
-const esAgotada = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  (error as { tipo?: unknown }).tipo === "ConcurrenciaAgotada";
+// `ConcurrenciaAgotada` es una respuesta legítima («reintentá»), ver `concurrencia-apoyo.ts`: lo que estas pruebas
+// garantizan es la regla de negocio (el tope, la unicidad), no que nadie pierda nunca la carrera por agotamiento.
 const esLimiteDelPlan = (error: unknown): boolean =>
   typeof error === "object" &&
   error !== null &&
@@ -108,7 +102,7 @@ describe.skipIf(base === null)("alta de empresa: concurrencia", () => {
     for (const [i, r] of rs.entries()) {
       const entrada = entradas[i];
       reintentadas.push(
-        !r.ok && esAgotada(r.error) && entrada !== undefined
+        !r.ok && esConcurrenciaAgotada(r.error) && entrada !== undefined
           ? await alta(comoAdminAhora(), entrada)
           : r,
       );
@@ -230,7 +224,7 @@ describe.skipIf(base === null)("alta de empresa: concurrencia", () => {
           // En la carrera nunca se supera el tope; quien pierde recibe el límite del plan o `ConcurrenciaAgotada`.
           expect(valores(rs).length, `vuelta ${vuelta}`).toBeLessThanOrEqual(1);
           for (const e of errores(rs)) {
-            expect(esLimiteDelPlan(e) || esAgotada(e), JSON.stringify(e)).toBe(true);
+            expect(esLimiteDelPlan(e) || esConcurrenciaAgotada(e), JSON.stringify(e)).toBe(true);
           }
           // Reintentadas sin carrera: entra exactamente una y la otra es LIMITE_DEL_PLAN; quedan exactamente 2.
           expect(valores(reintentadas), `vuelta ${vuelta}`).toHaveLength(1);
@@ -260,7 +254,7 @@ describe.skipIf(base === null)("alta de empresa: concurrencia", () => {
           // En la carrera nunca se supera el tope; quien pierde recibe el límite del plan o `ConcurrenciaAgotada`.
           expect(valores(rs).length, `vuelta ${vuelta}`).toBeLessThanOrEqual(lugares);
           for (const e of errores(rs)) {
-            expect(esLimiteDelPlan(e) || esAgotada(e), JSON.stringify(e)).toBe(true);
+            expect(esLimiteDelPlan(e) || esConcurrenciaAgotada(e), JSON.stringify(e)).toBe(true);
           }
           // Reintentadas sin carrera: entran exactamente K y las demás son LIMITE_DEL_PLAN.
           expect(valores(reintentadas), `vuelta ${vuelta}`).toHaveLength(lugares);

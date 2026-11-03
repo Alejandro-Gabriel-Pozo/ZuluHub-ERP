@@ -16,6 +16,7 @@ import {
 } from "../../src/modulos/fiscal/publico";
 import { empresaId, personaId } from "../../src/primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../src/primitivas/resultado/resultado";
+import { esConcurrenciaAgotada } from "./concurrencia-apoyo";
 import {
   comoEmpresa,
   comoPlataforma,
@@ -271,11 +272,6 @@ describe.skipIf(base === null)("fiscal: concurrencia de lo que impone la 0006", 
           return ok({ solicitud: serie.solicitud, desfase: false });
         },
       );
-
-    const esConcurrenciaAgotada = (error: unknown): boolean =>
-      typeof error === "object" &&
-      error !== null &&
-      (error as { tipo?: string }).tipo === "ConcurrenciaAgotada";
 
     type Resumen = Record<
       "autorizadas" | "rechazadas" | "inciertasQueAutorizaron" | "inciertasQueNo",

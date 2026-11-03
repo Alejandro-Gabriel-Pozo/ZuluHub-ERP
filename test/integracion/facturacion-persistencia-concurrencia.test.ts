@@ -14,6 +14,7 @@ import type { Contexto } from "../../src/contexto/contexto";
 import type { Aislamiento } from "../../src/puertos/transacciones";
 import { empresaId } from "../../src/primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../src/primitivas/resultado/resultado";
+import { esConcurrenciaAgotada } from "./concurrencia-apoyo";
 import { crearBarrera, crearBaseAparte } from "./entorno";
 import { crearEscenario, type Escenario } from "./facturacion-apoyo";
 import {
@@ -433,7 +434,7 @@ describe.skipIf(base === null)("facturación F3: concurrencia de los repositorio
           if (r.ok) return;
           // Con muchos trabajadores sobre una misma fila, SERIALIZABLE puede agotar sus reintentos: el trabajo
           // (que tiene su propia cola) lo vuelve a intentar.
-          const agotada = typeof r.error === "object" && r.error.tipo === "ConcurrenciaAgotada";
+          const agotada = esConcurrenciaAgotada(r.error);
           if (typeof r.error !== "string" && !agotada) {
             throw new Error(`error inesperado: ${JSON.stringify(r.error)}`);
           }
