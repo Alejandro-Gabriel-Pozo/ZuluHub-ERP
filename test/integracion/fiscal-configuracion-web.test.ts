@@ -1559,7 +1559,13 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
         situacion: "FALTA_CARGAR",
       });
 
-      const vigente = await conCertificado(e, "VIGENTE");
+      // El pedido se carga (queda vigente) y recién entonces se pide la renovación: dos pendientes del mismo ambiente no conviven (0018).
+      const vigente = pedido;
+      await dueno.query(
+        `update certificado_arca set estado = 'VIGENTE', certificado_pem = 'PEM-SECRETO', huella_sha256 = $2, vence_en = $3 where id = $1`,
+        [vigente, "cd".repeat(32), new Date(Date.now() + 60 * DIA)],
+      );
+      const renovacion = await conCertificado(e, "PEDIDO_GENERADO");
       const lista = dato(
         await estadoDeCertificados(dConFacturacion, e.como(ahora()), { emisorId: e.mundo.emisor }),
       );
@@ -1568,7 +1574,7 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
         certificadoId: vigente,
         vencido: false,
         autorizacion: { estado: "SIN_VERIFICAR" },
-        pedidoPendiente: { certificadoId: pedido, alias: "pedernal1" },
+        pedidoPendiente: { certificadoId: renovacion, alias: "pedernal1" },
       });
       expect(typeof (lista[0] as { venceEn: unknown }).venceEn).toBe("string");
       expect(JSON.stringify(lista)).not.toMatch(/SECRETO|cdcd|kid-1|clave|huella|pem/i);

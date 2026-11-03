@@ -34,12 +34,12 @@ import { DECLARACIONES_DE_CERTIFICADOS } from "./declaraciones-de-certificados";
  * 3. Forma del pedido. 4. Repetición: el `id` (uuid que genera la pantalla) ES la clave de idempotencia; con el mismo
  * pedido (emisor, ambiente, alias y titular) devuelve el que existe (`yaExistia`) SIN generar otra clave; con otro
  * pedido, `CLAVE_REUTILIZADA`. 5. El emisor existe y está activo. 6. Se genera el par, se
- * cifra la clave con su fila, se guarda `PEDIDO_GENERADO`. 7. Los pedidos pendientes anteriores del mismo emisor y
- * ambiente pasan a `DESCARTADO` (D-92, 2026-11-03: un pedido nuevo anula al pendiente anterior; no se borran; no se
- * toca un `VIGENTE`): siempre hay UNO solo pendiente. 8. Auditoría `CERTIFICADO_PEDIDO_GENERADO` y, por cada pedido
+ * cifra la clave con su fila; los pedidos pendientes anteriores del mismo emisor y ambiente pasan a `DESCARTADO` (D-92,
+ * 2026-11-03: un pedido nuevo anula al pendiente anterior; no se borran; no se toca un `VIGENTE`) ANTES de guardar el nuevo
+ * `PEDIDO_GENERADO`, porque la base (0018) admite uno solo pendiente: siempre hay UNO. 7. Auditoría `CERTIFICADO_PEDIDO_GENERADO` y, por cada pedido
  * anulado, `CERTIFICADO_PEDIDO_DESCARTADO` en la misma transacción: el hecho (quién, cuándo, alias, emisor, ambiente),
- * nunca la clave ni su cifrado. Dos pedidos nuevos a la vez para el mismo emisor y ambiente: la base (SERIALIZABLE)
- * deja pasar uno y repite el otro, que ve al primero y lo anula; queda el último que se confirma.
+ * nunca la clave ni su cifrado. Dos pedidos nuevos a la vez para el mismo emisor y ambiente: la base (SERIALIZABLE y
+ * `certificado_pendiente_uk`) deja pasar uno y repite el otro, que ve al primero y lo anula; queda el último que se confirma.
  *
  * Dos pedidos simultáneos con el mismo `id`: la base deja pasar uno; el otro repite, lo encuentra y lo devuelve (la
  * clave que había generado se descarta sin guardarse). Repetir el `id` de un pedido que ya fue anulado devuelve ese
@@ -135,6 +135,15 @@ export function armarGenerarPedidoDeCertificado({
           organizacion: pedido.organizacion,
           numeroDeSerie: numeroDeSerieDeCuit(pedido.cuitTitular),
         });
+        // Primero se anulan los pendientes anteriores y después se crea el nuevo: la base (0018, `certificado_pendiente_uk`) no deja
+        // dos `PEDIDO_GENERADO` del mismo emisor y ambiente, ni siquiera un instante. El pedido nuevo se nombra por su `id`, que
+        // ya se conoce (lo trae la entrada); la auditoría lo cita sin clave foránea.
+        const anulados = await tx.certificados.descartarPendientes(
+          empresaId,
+          pedido.emisorId,
+          pedido.ambiente,
+          pedido.id,
+        );
         const alta = await tx.certificados.crearPedido({
           id: pedido.id,
           empresaId,
@@ -152,12 +161,6 @@ export function armarGenerarPedidoDeCertificado({
           return ganador === null ? err("CLAVE_REUTILIZADA") : repeticion(ganador, pedido);
         }
         const creado = alta.valor.valor;
-        const anulados = await tx.certificados.descartarPendientes(
-          empresaId,
-          creado.emisorId,
-          creado.ambiente,
-          creado.id,
-        );
         await tx.auditoria.registrar({
           empresaId,
           actorPersonaId: personaId,
