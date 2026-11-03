@@ -334,6 +334,33 @@ describe.skipIf(base === null)("facturación F5: casos de uso contra una base re
       });
     });
 
+    it("repetir la validación de un comprobante ya enviado no hace nada: NADA_QUE_VALIDAR, sin reenviar a ARCA ni escribir ni auditar de nuevo", async () => {
+      const p = await preparar();
+      const { comprobanteId: id } = await p.emitir();
+      const validar = () => p.casos.validarComprobante(p.sistema(), { comprobanteId: id });
+      expect(await validar()).toEqual({
+        ok: true,
+        valor: { tipo: "ENVIADO", numero: 1n, desenlace: "AUTORIZADO", cerrado: true },
+      });
+      const foto = async () => ({
+        comprobante: await comprobante(id),
+        serie: await serie(p.e),
+        intentos: await intentos(id),
+        auditorias: await auditorias(p.e, id),
+        trabajos: await trabajos(id),
+        pedidos: p.falsa.pedidos.length,
+      });
+      const despuesDeLaPrimera = await foto();
+      for (let repeticion = 0; repeticion < 2; repeticion += 1) {
+        expect(await validar()).toEqual({
+          ok: true,
+          valor: { tipo: "NADA_QUE_VALIDAR", estado: "AUTORIZADO" },
+        });
+        expect(await foto()).toEqual(despuesDeLaPrimera);
+      }
+      expect(despuesDeLaPrimera.pedidos).toBe(1);
+    });
+
     it("rechaza: RECHAZADO con los códigos en el intento, la serie libre sin avanzar; la misma clave sigue dando ese", async () => {
       const p = await preparar();
       p.falsa.programar({ guion: "RECHAZA", errores: [{ codigo: 10015, texto: "doc" }] });
@@ -506,6 +533,38 @@ describe.skipIf(base === null)("facturación F5: casos de uso contra una base re
       expect(p.falsa.pedidos).toHaveLength(1);
     });
 
+    it("repetir la reconciliación de un comprobante que ya se resolvió no encuentra nada en vuelo: sin consultar a ARCA, escribir ni auditar de nuevo", async () => {
+      const p = await preparar();
+      const { comprobanteId: id } = await p.emitir();
+      p.falsa.programar("AUTORIZA_Y_SE_CAE");
+      await p.validar(id);
+      p.reloj.avanzar(6);
+      expect(await p.casos.reconciliarComprobantes(p.sistema())).toMatchObject({
+        ok: true,
+        valor: {
+          comprobantes: [
+            { comprobanteId: id, resultado: { ok: true, valor: "AUTORIZADO_POR_CONSULTA" } },
+          ],
+        },
+      });
+      const foto = async () => ({
+        comprobante: await comprobante(id),
+        serie: await serie(p.e),
+        intentos: await intentos(id),
+        auditorias: await auditorias(p.e, id),
+        trabajos: await trabajos(id),
+        pedidos: p.falsa.pedidos.length,
+      });
+      const despuesDeLaPrimera = await foto();
+      for (let repeticion = 0; repeticion < 2; repeticion += 1) {
+        expect(await p.casos.reconciliarComprobantes(p.sistema())).toEqual({
+          ok: true,
+          valor: { comprobantes: [], reencolados: 0 },
+        });
+        expect(await foto()).toEqual(despuesDeLaPrimera);
+      }
+    });
+
     it("incierto que nunca llegó: la consulta da «no existe», la serie se libera y sale con el MISMO número", async () => {
       const p = await preparar();
       const { comprobanteId: id } = await p.emitir();
@@ -564,9 +623,20 @@ describe.skipIf(base === null)("facturación F5: casos de uso contra una base re
         await p.casos.resincronizarSerie(p.como(), { ...resincronizar, ultimoVistoEnArca: 1n }),
       ).toEqual({ ok: true, valor: { ultimoNumero: 1n, reencolados: 0 } });
       expect(await serie(p.e)).toMatchObject({ estado: "LIBRE", ultimo: "1" });
+      // Repetirla: la serie ya está LIBRE, se rechaza con su nombre y no escribe ni audita de nuevo.
+      const resincronizaciones = () =>
+        filas(
+          "select 1 from auditoria_empresa where empresa_id = $1 and accion = 'SERIE_RESINCRONIZADA'",
+          [p.e.empresa],
+        );
+      const antesDeRepetir = { serie: await serie(p.e), auditorias: await resincronizaciones() };
       expect(
         await p.casos.resincronizarSerie(p.como(), { ...resincronizar, ultimoVistoEnArca: 1n }),
       ).toEqual({ ok: false, error: "SERIE_NO_BLOQUEADA" });
+      expect({ serie: await serie(p.e), auditorias: await resincronizaciones() }).toEqual(
+        antesDeRepetir,
+      );
+      expect(antesDeRepetir.auditorias).toHaveLength(1);
       await terminarTrabajos(id);
       expect(await p.casos.reintentarComprobante(p.como(), { comprobanteId: id })).toEqual({
         ok: true,
