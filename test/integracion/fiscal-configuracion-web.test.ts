@@ -943,6 +943,76 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
       });
     });
 
+    it("mudar a una sucursal cerrada no se puede (dueño, D-79): FISCAL_SUCURSAL_CERRADA y no queda nada; hacia una abierta, y desde una cerrada hacia una abierta, sí", async () => {
+      const e = await nuevo();
+      const sucursales = await filas<{ id: string }>(
+        "insert into sucursal (empresa_id, nombre) select $1, n from unnest(array['Cerrada','Abierta']) n returning id",
+        [e.mundo.empresa],
+      );
+      const [cerrada, abierta] = [sucursales[0]?.id as string, sucursales[1]?.id as string];
+      await dueno.query("update sucursal set activa = false where id = $1", [cerrada]);
+      const id = uuid();
+      dato(await crear(e, { id, numero: 1 }));
+      const editar = (cambios: Record<string, unknown>) =>
+        editarPuntoDeVenta(d, e.como(ahora()), { puntoDeVentaId: id, ...cambios });
+      const pedido = { versionEsperada: 1, sucursalId: cerrada, domicilio: domicilioNuevo() };
+      expect(await editar(pedido)).toMatchObject({
+        ok: false,
+        error: { codigo: "FISCAL_SUCURSAL_CERRADA", clave: "error.fiscal_sucursal_cerrada" },
+      });
+      // Ni el domicilio nuevo del pedido, ni la auditoría: el punto de venta nació sin domicilio y sigue igual.
+      expect(await cuenta("domicilio", e.mundo.empresa)).toBe(0);
+      expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_EDITADO")).toHaveLength(0);
+      expect(dato(await editar({ versionEsperada: 1, sucursalId: abierta }))).toEqual({
+        version: 2,
+        sinCambios: false,
+      });
+      await dueno.query("update sucursal set activa = false where id = $1", [abierta]);
+      // Ya mudado, estando en una cerrada: editar el número sin cambiar de sucursal sigue permitido, y salir hacia una abierta también.
+      expect(dato(await editar({ versionEsperada: 2, numero: 5 }))).toEqual({
+        version: 3,
+        sinCambios: false,
+      });
+      expect(dato(await editar({ versionEsperada: 3, sucursalId: e.mundo.sucursal }))).toEqual({
+        version: 4,
+        sinCambios: false,
+      });
+    });
+
+    it("activar con la sucursal cerrada no se puede (dueño, D-80): FISCAL_SUCURSAL_CERRADA; desactivar sí, y «ya estaba activo» no mira la sucursal", async () => {
+      const e = await nuevo();
+      const norte = (
+        await filas<{ id: string }>(
+          "insert into sucursal (empresa_id, nombre) values ($1, 'Norte') returning id",
+          [e.mundo.empresa],
+        )
+      )[0]?.id as string;
+      const [inactivo, activo] = [uuid(), uuid()];
+      dato(
+        await crear(e, { id: inactivo, numero: 1, sucursalId: norte, domicilio: domicilioNuevo() }),
+      );
+      dato(
+        await crear(e, { id: activo, numero: 2, sucursalId: norte, domicilio: domicilioNuevo() }),
+      );
+      expect(
+        dato(await activarPuntoDeVenta(d, e.como(ahora()), { puntoDeVentaId: activo })),
+      ).toEqual({ yaEstaba: false });
+      await dueno.query("update sucursal set activa = false where id = $1", [norte]);
+      expect(
+        await activarPuntoDeVenta(d, e.como(ahora()), { puntoDeVentaId: inactivo }),
+      ).toMatchObject({
+        ok: false,
+        error: { codigo: "FISCAL_SUCURSAL_CERRADA", clave: "error.fiscal_sucursal_cerrada" },
+      });
+      expect(
+        dato(await activarPuntoDeVenta(d, e.como(ahora()), { puntoDeVentaId: activo })),
+      ).toEqual({ yaEstaba: true });
+      expect(
+        dato(await desactivarPuntoDeVenta(d, e.como(ahora()), { puntoDeVentaId: activo })),
+      ).toEqual({ yaEstaba: false });
+      expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_ACTIVADO")).toHaveLength(1);
+    });
+
     it("activar necesita domicilio; con domicilio activa, y repetir es «ya estaba» sin auditar de nuevo", async () => {
       const e = await nuevo();
       const sinDomicilio = uuid();

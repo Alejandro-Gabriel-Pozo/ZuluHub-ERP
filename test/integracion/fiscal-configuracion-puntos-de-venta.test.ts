@@ -479,33 +479,261 @@ describe.skipIf(base === null)("fiscal T5: puntos de venta del gerente", () => {
   });
 
   // ===============================================================================================
-  // LO QUE HACEN HOY editar y activar con una sucursal cerrada. NO es una decisión del dueño: no dijo qué pasa al MOVER un punto de
-  // venta a una sucursal cerrada ni al ACTIVAR uno de una sucursal cerrada (pregunta pendiente en el PR). Estas pruebas solo lo dejan
-  // documentado; si el dueño decide otra cosa, se cambian junto con el código.
+  // Mudar y activar un punto de venta solo con la sucursal ABIERTA. Decisiones del dueño, 2026-10-29 (cuestionario respondido en la
+  // sesión web; D-79 y D-80 de `facturador-contratos-de-pantalla.md`): «No dejarlo: solo a sucursales abiertas» (mudar; desde una cerrada
+  // hacia una abierta sí) y «No dejarlo activar» (activar; desactivar siempre se puede); el texto de rechazo es el mismo código
+  // `FISCAL_SUCURSAL_CERRADA`. Las carreras con el cierre están en `fiscal-configuracion-concurrencia.test.ts`.
   // ===============================================================================================
-  describe("HOY: editar y activar con una sucursal cerrada no la miran (sin decisión del dueño)", () => {
+  describe("mudar y activar con una sucursal cerrada", () => {
     const cerrar = (sucursal: string) =>
       dueno.query("update sucursal set activa = false where id = $1", [sucursal]);
-
-    it("editar: mover un punto de venta a una sucursal cerrada se acepta (sube la versión y se audita)", async () => {
+    const abrir = (sucursal: string) =>
+      dueno.query("update sucursal set activa = true where id = $1", [sucursal]);
+    const nada = async (empresa: string) => ({
+      puntos: await puntosDeVenta(empresa),
+      domicilios: await domicilios(empresa),
+      auditorias: await todasLasAuditorias(empresa),
+    });
+    /** Una empresa con una sucursal cerrada y una abierta aparte de la de siempre (que sigue abierta). */
+    async function conCerradaYAbierta() {
       const e = await nuevo();
       const cerrada = await otraSucursal(e.mundo.empresa, "Sucursal cerrada");
+      const abierta = await otraSucursal(e.mundo.empresa, "Sucursal abierta");
       await cerrar(cerrada);
-      const p = await creado(e, { numero: 1 });
-      const r = await editar(e, p, { sucursalId: sucursalId(cerrada) });
-      expect(r).toEqual(ok({ version: 2, sinCambios: false }));
-      expect((await unPuntoDeVenta(p.id))?.sucursal_id).toBe(cerrada);
-      expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_EDITADO")).toHaveLength(1);
+      return { e, cerrada, abierta };
+    }
+
+    describe("editarPuntoDeVenta", () => {
+      it("mudarlo a una sucursal abierta se guarda (sube la versión y se audita)", async () => {
+        const { e, abierta } = await conCerradaYAbierta();
+        const p = await creado(e, { numero: 1 });
+        const r = await editar(e, p, { sucursalId: sucursalId(abierta) });
+        expect(r).toEqual(ok({ version: 2, sinCambios: false }));
+        expect((await unPuntoDeVenta(p.id))?.sucursal_id).toBe(abierta);
+        expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_EDITADO")).toHaveLength(1);
+      });
+
+      it("mudarlo a una sucursal cerrada es SUCURSAL_CERRADA y no escribe NADA: ni la sucursal, ni la versión, ni el número, ni el domicilio nuevo, ni la auditoría", async () => {
+        const { e, cerrada } = await conCerradaYAbierta();
+        const p = await creado(e, { numero: 1 });
+        const antes = await nada(e.mundo.empresa);
+        const pedido = {
+          sucursalId: sucursalId(cerrada),
+          numero: 7,
+          domicilio: domicilioNuevo({ calle: "Nueva" }),
+        };
+        const r = await editar(e, p, pedido);
+        expect(r).toEqual(err("SUCURSAL_CERRADA"));
+        expect(await nada(e.mundo.empresa)).toEqual(antes);
+        expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_EDITADO")).toEqual([]);
+        // Reabierta, el MISMO pedido (con su domicilio) entra: no quedó nada tomado.
+        await abrir(cerrada);
+        expect(await editar(e, p, pedido)).toEqual(ok({ version: 2, sinCambios: false }));
+        expect(await domicilios(e.mundo.empresa)).toBe(2);
+      });
+
+      it("mudarlo DESDE una sucursal cerrada HACIA una abierta sí se puede", async () => {
+        const e = await nuevo();
+        const norte = await otraSucursal(e.mundo.empresa, "Norte");
+        const p = await creado(e, { numero: 1, sucursalId: sucursalId(norte) });
+        await cerrar(norte);
+        const r = await editar(e, p, { sucursalId: sucursalId(e.mundo.sucursal) });
+        expect(r).toEqual(ok({ version: 2, sinCambios: false }));
+        expect((await unPuntoDeVenta(p.id))?.sucursal_id).toBe(e.mundo.sucursal);
+      });
+
+      it("mudarlo de una cerrada a OTRA cerrada no se puede: se mira el destino, no el origen", async () => {
+        const { e, cerrada } = await conCerradaYAbierta();
+        const sur = await otraSucursal(e.mundo.empresa, "Sur");
+        const p = await creado(e, { numero: 1, sucursalId: sucursalId(sur) });
+        await cerrar(sur);
+        const antes = await nada(e.mundo.empresa);
+        expect(await editar(e, p, { sucursalId: sucursalId(cerrada) })).toEqual(
+          err("SUCURSAL_CERRADA"),
+        );
+        expect(await nada(e.mundo.empresa)).toEqual(antes);
+      });
+
+      it("editar SIN cambiar de sucursal un punto de venta que está en una cerrada sigue permitido: el número y el domicilio cambian, con o sin nombrar su sucursal", async () => {
+        const e = await nuevo();
+        const norte = await otraSucursal(e.mundo.empresa, "Norte");
+        const p = await creado(e, { numero: 1, sucursalId: sucursalId(norte) });
+        await cerrar(norte);
+        const r1 = await editar(e, p, { numero: 2 });
+        expect(r1).toEqual(ok({ version: 2, sinCambios: false }));
+        const domicilio = domicilioNuevo({ calle: "Otra" });
+        const r2 = await editar(
+          e,
+          { id: p.id, version: 2 },
+          { sucursalId: sucursalId(norte), numero: 3, domicilio },
+        );
+        expect(r2).toEqual(ok({ version: 3, sinCambios: false }));
+        expect(await unPuntoDeVenta(p.id)).toMatchObject({
+          numero: 3,
+          sucursal_id: norte,
+          domicilio_id: domicilio.id,
+          version: 3,
+        });
+        expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_EDITADO")).toHaveLength(2);
+      });
+
+      it("la repetición manda: un pedido ya aplicado da «sin cambios» aunque la sucursal se haya cerrado después y la versión esperada esté vieja, sin escribir ni auditar", async () => {
+        const { e, abierta } = await conCerradaYAbierta();
+        const p = await creado(e, { numero: 1 });
+        const pedido = { sucursalId: sucursalId(abierta), numero: 4 };
+        expect(await editar(e, p, pedido)).toEqual(ok({ version: 2, sinCambios: false }));
+        await cerrar(abierta);
+        const antes = await nada(e.mundo.empresa);
+        expect(await editar(e, p, pedido)).toEqual(ok({ version: 2, sinCambios: true }));
+        expect(await nada(e.mundo.empresa)).toEqual(antes);
+        expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_EDITADO")).toHaveLength(1);
+      });
+
+      it("el permiso va primero: un administrador o un operador reciben SIN_PERMISO, nunca «sucursal cerrada», y no se escribe nada", async () => {
+        const { e, cerrada } = await conCerradaYAbierta();
+        const p = await creado(e, { numero: 1 });
+        const antes = await nada(e.mundo.empresa);
+        for (const rol of ["ADMINISTRADOR", "OPERADOR"] as const) {
+          const otro = await otraPersona(dueno, e, rol);
+          const r = await casos.editarPuntoDeVenta(otro.como(), {
+            puntoDeVentaId: puntoDeVentaId(p.id),
+            versionEsperada: p.version,
+            sucursalId: sucursalId(cerrada),
+            domicilio: domicilioNuevo(),
+          });
+          expect(r, rol).toEqual(err("SIN_PERMISO"));
+        }
+        expect(await nada(e.mundo.empresa)).toEqual(antes);
+      });
+
+      it("la sucursal de otra empresa va antes que la cerrada: una cerrada AJENA (o inexistente) es SUCURSAL_DE_OTRA_EMPRESA, sin decir que existe ni que está cerrada, y no escribe nada", async () => {
+        const e = await nuevo();
+        const p = await creado(e, { numero: 1 });
+        const { e: otra, cerrada } = await conCerradaYAbierta();
+        const antes = await nada(e.mundo.empresa);
+        for (const sucursal of [cerrada, otra.mundo.sucursal, nuevoUuid()]) {
+          const r = await editar(e, p, {
+            sucursalId: sucursalId(sucursal),
+            domicilio: domicilioNuevo(),
+          });
+          expect(r, sucursal).toEqual(err("SUCURSAL_DE_OTRA_EMPRESA"));
+        }
+        expect(await nada(e.mundo.empresa)).toEqual(antes);
+        expect(await nada(otra.mundo.empresa)).toEqual({
+          puntos: [],
+          domicilios: 0,
+          auditorias: 0,
+        });
+      });
+
+      it("la sucursal cerrada de una empresa no frena a las otras: mudar a una abierta propia sigue entrando, y la cerrada de la otra empresa no se ve", async () => {
+        const { cerrada } = await conCerradaYAbierta();
+        const otra = await nuevo();
+        const suya = await otraSucursal(otra.mundo.empresa, "Suya");
+        const p = await creado(otra, { numero: 1 });
+        expect(await editar(otra, p, { sucursalId: sucursalId(suya) })).toEqual(
+          ok({ version: 2, sinCambios: false }),
+        );
+        expect(
+          await editar(otra, { id: p.id, version: 2 }, { sucursalId: sucursalId(cerrada) }),
+        ).toEqual(err("SUCURSAL_DE_OTRA_EMPRESA"));
+      });
     });
 
-    it("activar: activar un punto de venta cuya sucursal se cerró se acepta (queda ACTIVO en la sucursal cerrada)", async () => {
-      const e = await nuevo();
-      const sucursal = await otraSucursal(e.mundo.empresa, "Sucursal norte");
-      const p = await creado(e, { numero: 1, sucursalId: sucursalId(sucursal) });
-      await cerrar(sucursal);
-      expect(await activar(e, p.id)).toEqual(ok({ yaEstaba: false }));
-      expect((await unPuntoDeVenta(p.id))?.estado).toBe("ACTIVO");
-      expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_ACTIVADO")).toHaveLength(1);
+    describe("activarPuntoDeVenta y desactivarPuntoDeVenta", () => {
+      /** Un punto de venta INACTIVO en `norte`, que después se cierra. */
+      async function enUnaCerrada() {
+        const e = await nuevo();
+        const norte = await otraSucursal(e.mundo.empresa, "Norte");
+        const p = await creado(e, { numero: 1, sucursalId: sucursalId(norte) });
+        await cerrar(norte);
+        return { e, norte, p };
+      }
+
+      it("activarlo con su sucursal cerrada es SUCURSAL_CERRADA: sigue INACTIVO, la versión no cambia y no se audita", async () => {
+        const { e, p } = await enUnaCerrada();
+        const antes = await nada(e.mundo.empresa);
+        expect(await activar(e, p.id)).toEqual(err("SUCURSAL_CERRADA"));
+        expect(await nada(e.mundo.empresa)).toEqual(antes);
+        expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_ACTIVADO")).toEqual([]);
+      });
+
+      it("activarlo con su sucursal abierta entra; reabrir la sucursal o mudarlo a una abierta lo deja activar", async () => {
+        const e = await nuevo();
+        const p1 = await creado(e, { numero: 1 });
+        expect(await activar(e, p1.id)).toEqual(ok({ yaEstaba: false }));
+        expect((await unPuntoDeVenta(p1.id))?.estado).toBe("ACTIVO");
+
+        const { e: f, norte, p } = await enUnaCerrada();
+        expect(await activar(f, p.id)).toEqual(err("SUCURSAL_CERRADA"));
+        await abrir(norte);
+        expect(await activar(f, p.id)).toEqual(ok({ yaEstaba: false }));
+
+        const { e: g, p: pG } = await enUnaCerrada();
+        expect(await activar(g, pG.id)).toEqual(err("SUCURSAL_CERRADA"));
+        expect(await editar(g, pG, { sucursalId: sucursalId(g.mundo.sucursal) })).toEqual(
+          ok({ version: 2, sinCambios: false }),
+        );
+        expect(await activar(g, pG.id)).toEqual(ok({ yaEstaba: false }));
+      });
+
+      it("desactivar se puede siempre: un punto de venta activo cuya sucursal se cerró se desactiva, y repetirlo es «ya estaba»", async () => {
+        const e = await nuevo();
+        const norte = await otraSucursal(e.mundo.empresa, "Norte");
+        const p = await creado(e, { numero: 1, sucursalId: sucursalId(norte) });
+        expect(await activar(e, p.id)).toEqual(ok({ yaEstaba: false }));
+        await cerrar(norte);
+        expect(await desactivar(e, p.id)).toEqual(ok({ yaEstaba: false }));
+        expect((await unPuntoDeVenta(p.id))?.estado).toBe("INACTIVO");
+        expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_DESACTIVADO")).toHaveLength(1);
+        expect(await desactivar(e, p.id)).toEqual(ok({ yaEstaba: true }));
+        expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_DESACTIVADO")).toHaveLength(1);
+      });
+
+      it("la repetición manda: activar uno que ya estaba activo es «ya estaba» aunque su sucursal se haya cerrado después, sin escribir ni auditar de nuevo", async () => {
+        const e = await nuevo();
+        const norte = await otraSucursal(e.mundo.empresa, "Norte");
+        const p = await creado(e, { numero: 1, sucursalId: sucursalId(norte) });
+        expect(await activar(e, p.id)).toEqual(ok({ yaEstaba: false }));
+        await cerrar(norte);
+        const antes = await nada(e.mundo.empresa);
+        expect(await activar(e, p.id)).toEqual(ok({ yaEstaba: true }));
+        expect(await nada(e.mundo.empresa)).toEqual(antes);
+        expect(await auditorias(e.mundo.empresa, "PUNTO_DE_VENTA_ACTIVADO")).toHaveLength(1);
+      });
+
+      it("el permiso va primero: un administrador o un operador reciben SIN_PERMISO, nunca «sucursal cerrada»", async () => {
+        const { e, p } = await enUnaCerrada();
+        for (const rol of ["ADMINISTRADOR", "OPERADOR"] as const) {
+          const otro = await otraPersona(dueno, e, rol);
+          const r = await casos.activarPuntoDeVenta(otro.como(), {
+            puntoDeVentaId: puntoDeVentaId(p.id),
+          });
+          expect(r, rol).toEqual(err("SIN_PERMISO"));
+        }
+        expect((await unPuntoDeVenta(p.id))?.estado).toBe("INACTIVO");
+      });
+
+      it("los errores propios del punto de venta van antes: sin domicilio es PUNTO_DE_VENTA_SIN_DOMICILIO aunque la sucursal esté cerrada", async () => {
+        const e = await nuevo();
+        const norte = await otraSucursal(e.mundo.empresa, "Norte");
+        const p = await creado(e, {
+          numero: 1,
+          sucursalId: sucursalId(norte),
+          domicilio: undefined,
+        });
+        await cerrar(norte);
+        expect(await activar(e, p.id)).toEqual(err("PUNTO_DE_VENTA_SIN_DOMICILIO"));
+      });
+
+      it("aislamiento: la sucursal cerrada de una empresa no frena la activación en otra, y el punto de venta de otra empresa no se ve", async () => {
+        const { e, p } = await enUnaCerrada();
+        const otra = await nuevo();
+        const q = await creado(otra, { numero: 1 });
+        expect(await activar(otra, q.id)).toEqual(ok({ yaEstaba: false }));
+        expect(await activar(otra, p.id)).toEqual(err("PUNTO_DE_VENTA_NO_ENCONTRADO"));
+        expect(await activar(e, p.id)).toEqual(err("SUCURSAL_CERRADA"));
+      });
     });
   });
 

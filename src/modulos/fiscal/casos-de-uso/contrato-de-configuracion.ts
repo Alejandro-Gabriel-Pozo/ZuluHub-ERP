@@ -31,8 +31,8 @@ export type TxDeConfiguracionFiscal = Readonly<{
     "obtener" | "listarDelEmisor" | "crear" | "guardar"
   >;
   /**
-   * La sucursal donde se da de alta un punto de venta, leída con `FOR SHARE` (la composición pasa la lectura de empresas, que ya cumple
-   * esto): el alta exige que esté abierta y el bloqueo hace que quien la cierra a la vez espere (o la vea cerrada).
+   * La sucursal de un punto de venta que se da de alta, se muda o se activa, leída con `FOR SHARE` (la composición pasa la lectura de
+   * empresas, que ya cumple esto): el caso exige que esté abierta y el bloqueo hace que quien la cierra a la vez espere (o la vea cerrada).
    */
   sucursalBloqueada: Readonly<{
     obtenerBloqueandoElCierre(

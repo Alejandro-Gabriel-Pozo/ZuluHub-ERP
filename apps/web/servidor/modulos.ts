@@ -148,16 +148,19 @@ function ofertaDe(accion: ClaveAccion, permisos: PermisosLeidos): OfertaDeAccion
 /**
  * Qué botones de Puntos de venta se ofrecen activos hoy, según lo que el SERVIDOR deja hacer (`permisosDelActor`, una lectura por
  * pedido). «Pasar a producción» (`puntos_de_venta.cambiar_ambiente`) es del módulo `facturacion`, en desarrollo: sale apagado con
- * «Esta función todavía está en desarrollo.»; las demás son de `administracion`. Si no se pudieron leer los permisos, todo se ofrece
- * como hasta ahora y decide el guard al enviar (sin un texto aprobado para «no se pudo saber» no se apaga a ciegas). Es solo una
- * ayuda: ocultar o apagar no es autorizar, cada acción vuelve a pasar por el guard dentro de su transacción.
+ * «Esta función todavía está en desarrollo.»; las demás son de `administracion`. Si no se pudieron leer los permisos, TODO sale apagado
+ * con `motivo.sin_permiso` (ante un error o una duda el sistema cierra, `CLAUDE.md`; igual que `puedeEmitirNotasDeCredito` y la barra).
+ * Previene: ofrecer un botón que el guard va a rechazar sin saber si la persona puede. Es solo una ayuda: ocultar o apagar no es
+ * autorizar, cada acción vuelve a pasar por el guard dentro de su transacción.
  */
 export async function accionesDePuntosDeVenta(
   contexto: ContextoOperativo,
 ): Promise<AccionesDePuntosDeVenta> {
   const permisos = await permisosDeLaPersona(contexto);
   const de = (accion: ClaveAccion): OfertaDeAccion =>
-    permisos === null ? { permitida: true, motivo: null } : ofertaDe(accion, permisos);
+    permisos === null
+      ? { permitida: false, motivo: texto({}, "motivo.sin_permiso") }
+      : ofertaDe(accion, permisos);
   return {
     agregar: de("puntos_de_venta.crear"),
     editar: de("puntos_de_venta.editar"),

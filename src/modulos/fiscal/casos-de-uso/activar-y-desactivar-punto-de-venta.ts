@@ -10,6 +10,10 @@ import {
   desactivarPuntoDeVenta as desactivarEnElDominio,
   type ErrorDePuntoDeVenta,
 } from "../dominio/punto-de-venta";
+import {
+  exigirSucursalAbierta,
+  type ErrorDeSucursalCerrada,
+} from "../dominio/sucursales-de-la-emision";
 import { traducirErroresDeFiscal } from "../persistencia/traducir";
 import { empresaOpera } from "./comun";
 import { personaQueActua } from "./comun-de-configuracion";
@@ -23,7 +27,8 @@ export type SalidaDeCambiarElEstadoDelPuntoDeVenta = Readonly<{
   yaEstaba: boolean;
 }>;
 
-export type ErrorPropioAlActivarPuntoDeVenta = ErrorDePuntoDeVenta | "PUNTO_DE_VENTA_NO_ENCONTRADO";
+export type ErrorPropioAlActivarPuntoDeVenta =
+  ErrorDePuntoDeVenta | "PUNTO_DE_VENTA_NO_ENCONTRADO" | ErrorDeSucursalCerrada;
 
 export type ErrorAlActivarPuntoDeVenta =
   ErrorPropioAlActivarPuntoDeVenta | MotivoDeRechazo | EmpresaNoOpera | ErrorDePersistencia;
@@ -40,6 +45,15 @@ const ADMITIDOS_AL_ACTIVAR = ["EMISOR_INACTIVO", "PUNTO_DE_VENTA_SIN_DOMICILIO"]
  * de venta existe y el dominio decide (`activarPuntoDeVenta`): sin domicilio → `PUNTO_DE_VENTA_SIN_DOMICILIO`;
  * con el emisor inactivo → `EMISOR_INACTIVO`; ya activo → «ya estaba», éxito sin escribir ni auditar. Si no, se
  * guarda condicionado a la versión leída y se audita `PUNTO_DE_VENTA_ACTIVADO` en la misma transacción.
+ *
+ * Con la sucursal del punto de venta CERRADA no se activa (decisión del dueño, D-80 de `facturador-contratos-de-pantalla.md`, 2026-10-29: «No
+ * dejarlo activar»): `SUCURSAL_CERRADA` (sale como `FISCAL_SUCURSAL_CERRADA`, el texto provisorio «Sucursal cerrada.»). Para activarlo hay
+ * que reabrir la sucursal o mudarlo a una abierta. Desactivar se puede siempre. «Ya estaba activo» va ANTES y no mira la sucursal (la
+ * repetición da lo mismo que la primera vez aunque se haya cerrado después). La sucursal se lee con `FOR SHARE` antes de escribir, como
+ * el alta: el cierre espera a la activación, o la activación ve la sucursal cerrada (sin ciclos de espera). Orden: permiso, empresa,
+ * punto de venta, ya estaba, sin domicilio, emisor inactivo, sucursal abierta. La base NO lo impone: la protección es de aplicación.
+ * Previene: un punto de venta activo en una sucursal cerrada, por un pedido armado a mano o por la carrera con su cierre.
+ * Chequeo: `fiscal-configuracion-puntos-de-venta.test.ts` y los dos órdenes de la carrera en `fiscal-configuracion-concurrencia.test.ts`.
  *
  * Que sea «ya estaba» (y no un conflicto de versión) es lo que hace inocuo el doble clic: dos activaciones
  * simultáneas, o una activación contra una desactivación, se ordenan por la serializable (la que reintenta lee
@@ -85,6 +99,17 @@ export function armarActivarPuntoDeVenta({
         const decision = activarEnElDominio(actual, emisor);
         if (!decision.ok) return decision;
         if (!decision.valor.cambio) return ok({ yaEstaba: true });
+
+        // La sucursal del punto de venta, ANTES de escribir, con `FOR SHARE` (ver arriba). La clave foránea compuesta garantiza que existe
+        // y es de la empresa.
+        const sucursal = await tx.sucursalBloqueada.obtenerBloqueandoElCierre(
+          empresaId,
+          actual.sucursalId,
+        );
+        if (sucursal === null)
+          throw new Error(`la sucursal ${actual.sucursalId} del punto de venta no existe`);
+        const abierta = exigirSucursalAbierta(sucursal);
+        if (!abierta.ok) return abierta;
 
         const guardado = await tx.puntosDeVenta.guardar(decision.valor.puntoDeVenta);
         if (guardado === null) return err("PUNTO_DE_VENTA_NO_ENCONTRADO");

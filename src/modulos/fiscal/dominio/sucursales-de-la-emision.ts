@@ -53,7 +53,8 @@ export function sucursalesDeLaEmision(
 }
 
 /**
- * El error de emitir desde una sucursal cerrada, y de dar de alta un punto de venta en una (`crearPuntoDeVenta`). Lo traduce
+ * El error de emitir desde una sucursal cerrada, y de dar de alta un punto de venta en una (`crearPuntoDeVenta`), mudarlo a una
+ * (`editarPuntoDeVenta`) o activar uno que está en una (`activarPuntoDeVenta`). Lo traduce
  * `errores-fiscales.ts` a `FISCAL_SUCURSAL_CERRADA`.
  */
 export type ErrorDeSucursalCerrada = "SUCURSAL_CERRADA";
@@ -64,7 +65,8 @@ export type ErrorDeSucursalCerrada = "SUCURSAL_CERRADA";
  * comprobantes viejos se siguen viendo (D-37 y D-39). La base lo impone también al confirmar (`comprobante_sucursal_cerrada`,
  * 0017): esto es el error de negocio antes de llegar a ella.
  * Previene: que una sucursal que se cerró siga facturando por un punto de venta que nadie apagó. La misma regla, sobre la sucursal
- * elegida, impide dar de alta un punto de venta en una sucursal cerrada (decisión del dueño, 2026-10-29).
+ * elegida (o la del punto de venta, al activarlo), impide dar de alta, mudar o activar un punto de venta en una sucursal cerrada
+ * (decisiones del dueño, 2026-10-29: D-78, D-79 y D-80).
  * Chequeo: `sucursales-de-la-emision.test.ts`, la matriz de `fiscal-sucursal-operaciones.test.ts` y los dos órdenes de la carrera
  * contra el cierre.
  */
