@@ -320,6 +320,7 @@ describe.skipIf(base === null)(
             return falsa.autorizar(s);
           },
           consultar: (pv, tipo, n) => falsa.consultar(pv, tipo, n),
+          puntosDeVenta: (cuit) => falsa.puntosDeVenta(cuit),
         }));
         return { ...p, soltar, enViaje };
       })();

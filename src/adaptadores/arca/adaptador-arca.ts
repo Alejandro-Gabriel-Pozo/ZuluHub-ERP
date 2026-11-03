@@ -12,6 +12,7 @@ import {
   type TipoDeComprobante,
 } from "../../modulos/fiscal/publico";
 import type { EmpresaId } from "../../primitivas/identificadores/marca";
+import type { Cuit } from "../../primitivas/identificacion-fiscal/cuit";
 import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
 import { Secreto } from "../../primitivas/secreto/secreto";
 import type { AlmacenDeTickets, TicketDeAcceso } from "../../puertos/almacen-de-tickets";
@@ -19,7 +20,6 @@ import type {
   AmbienteDeArca,
   CredencialesDeEmisor,
   CredencialesDescifradas,
-  ErrorDeCredenciales,
 } from "../../puertos/credenciales-de-emisor";
 import type { VerificacionDeAutorizacion } from "../../puertos/verificacion-de-autorizacion";
 import {
@@ -40,6 +40,7 @@ import {
   TIEMPO_LIMITE_DE_LOGIN_EN_MS,
   TIEMPO_LIMITE_DE_WSFE_EN_MS,
 } from "./constantes";
+import { errorDeCredenciales } from "./errores-de-credenciales";
 import { firmarTra } from "./firmar-cms";
 import type { FilaDeParametro } from "./leer-respuestas";
 import { armarTra, pedidoLoginCms } from "./pedidos-de-wsaa";
@@ -50,8 +51,10 @@ import {
   pedidoFECompUltimoAutorizado,
   pedidoFEDummy,
   pedidoFEParamGet,
+  pedidoFEParamGetPtosVenta,
   type AutenticacionDeWsfe,
 } from "./pedidos-de-wsfe";
+import { aPuntosDeVentaDeArca } from "./puntos-de-venta-de-arca";
 import type { RespuestaDeTransporte, Transporte } from "./tipos";
 import { aSolicitudDeWsfe } from "./traducir";
 
@@ -76,8 +79,8 @@ import { aSolicitudDeWsfe } from "./traducir";
  *     con ticket sale bien, se anota en el certificado que pidió ese ticket que ARCA lo aceptó. Nunca cambia lo que se
  *     devuelve; si falla, queda rastro (solo el tipo de la falla) y la próxima llamada lo intenta. SUPUESTO del ingeniero
  *     (declarado al dueño el 2026-10-29, sin aprobación expresa): cuentan `FECompUltimoAutorizado`, `FECAESolicitar`
- *     autorizado y `FECompConsultar` encontrado. `FEDummy` (sin ticket) y `FEParamGet*` (la CUIT la manda quien llama: la
- *     de otro no prueba la autorización) NO cuentan.
+ *     autorizado y `FECompConsultar` encontrado. `FEDummy` (sin ticket), `FEParamGet*` y `FEParamGetPtosVenta` (la CUIT la
+ *     manda quien llama: la de otro no prueba la autorización) NO cuentan.
  *
  * No lanza: toda falla es un valor del puerto. Los desenlaces son los de `clasificar.ts`.
  */
@@ -109,33 +112,6 @@ export interface AdaptadorDeArca extends EmisionElectronica {
     cuit: string,
     tabla: TablaDeParametros,
   ): Promise<Resultado<readonly FilaDeParametro[], ErrorDeEmision>>;
-}
-
-/**
- * Por qué no hay credencial, con un texto fijo (nunca el de una excepción): las tres causas de la credencial
- * misma son `SIN_CREDENCIAL` (hay que cargar o corregir el certificado); un error de persistencia es que el
- * servicio no está disponible (se reintenta).
- */
-function errorDeCredenciales(error: ErrorDeCredenciales): ErrorDeEmision {
-  switch (error) {
-    case "SIN_CERTIFICADO_VIGENTE":
-      return {
-        codigo: "SIN_CREDENCIAL",
-        detalle: "el emisor no tiene un certificado vigente en este ambiente",
-      };
-    case "CERTIFICADO_VENCIDO":
-      return { codigo: "SIN_CREDENCIAL", detalle: "el certificado del emisor está vencido" };
-    case "CLAVE_ILEGIBLE":
-      return {
-        codigo: "SIN_CREDENCIAL",
-        detalle: "la clave del certificado del emisor no se pudo leer",
-      };
-    default:
-      return {
-        codigo: "SERVICIO_NO_DISPONIBLE",
-        detalle: "no se pudieron obtener las credenciales del emisor",
-      };
-  }
 }
 
 const textoDeError = (e: ErrorDeEmision): string => `${e.codigo}: ${e.detalle}`;
@@ -368,6 +344,15 @@ export function crearEmisionArca(
       );
       if (consulta.tipo === "ENCONTRADO") await aceptado(auth.valor);
       return consulta;
+    },
+
+    async puntosDeVenta(cuit: Cuit) {
+      // Como `parametros`, no verifica la autorización: la CUIT la manda quien llama.
+      const auth = await conAutenticacion(cuit);
+      if (!auth.ok) return auth;
+      const pedido = pedidoFEParamGetPtosVenta(auth.valor.autenticacion);
+      const respuesta = await llamarWsfe("FEParamGetPtosVenta", pedido);
+      return aPuntosDeVentaDeArca(clasificarParametros(respuesta, "FEParamGetPtosVenta"));
     },
 
     async estadoDelServicio(): Promise<Resultado<EstadoDelServicio, ErrorDeEmision>> {

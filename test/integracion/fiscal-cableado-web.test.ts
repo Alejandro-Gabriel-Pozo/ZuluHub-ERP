@@ -27,6 +27,7 @@ import { crearBaseAparte } from "./entorno";
 import {
   cargarCertificado,
   crearEscenarioDeCasos,
+  darDeAltaEnArca,
   type EscenarioDeCasos,
 } from "./facturacion-casos-apoyo";
 import { REGLAS_CON_FACTURACION } from "./fiscal-numeracion-apoyo";
@@ -484,6 +485,8 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
     async function listoParaProduccion(rol: RolDePrueba = "GERENTE") {
       const e = await empresaConFacturacion(rol);
       await cargarCertificado(propia.base, e, "PRODUCCION");
+      // D-77: ARCA de producción tiene dado de alta el punto de venta.
+      darDeAltaEnArca(arca.PRODUCCION, e);
       const inicial = await estadoDelPunto(e);
       return { e, version: inicial?.version ?? 0 };
     }
@@ -564,6 +567,32 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
       }
       expect((await estadoDelPunto(e))?.ambiente).toBe("HOMOLOGACION");
       expect(await cambiosDeAmbiente(e)).toBe(0);
+    });
+
+    it("D-77: si ARCA no tiene el punto de venta no pasa y nada cambia; la respuesta es un error inesperado con referencia (el texto del aviso no está aprobado), sin el código interno", async () => {
+      const e = await empresaConFacturacion("GERENTE");
+      await cargarCertificado(propia.base, e, "PRODUCCION");
+      const version = (await estadoDelPunto(e))?.version ?? 0;
+      // `arca.PRODUCCION` no tiene declarado el punto de venta de esta empresa: para ARCA no existe.
+      const respuesta = await cambiarAmbienteDePuntoDeVenta(
+        d,
+        comoPersonaDe(e),
+        pedido(e, version),
+      );
+      expect(respuesta).toMatchObject({
+        ok: false,
+        error: { codigo: "ERROR_INTERNO", referencia: expect.stringMatching(/^PD-/) as string },
+      });
+      expect(JSON.stringify(respuesta)).not.toContain("NO_HABILITADO");
+      expect((await estadoDelPunto(e))?.ambiente).toBe("HOMOLOGACION");
+      expect(await cambiosDeAmbiente(e)).toBe(0);
+      // Cuando ARCA lo da de alta, el mismo pedido pasa.
+      darDeAltaEnArca(arca.PRODUCCION, e);
+      expect(await cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version))).toEqual({
+        ok: true,
+        dato: { yaEstaba: false },
+      });
+      expect(await cambiosDeAmbiente(e)).toBe(1);
     });
 
     it("solo el gerente, también al repetir: administrador y operador reciben SIN_PERMISO y no se enteran del ambiente", async () => {

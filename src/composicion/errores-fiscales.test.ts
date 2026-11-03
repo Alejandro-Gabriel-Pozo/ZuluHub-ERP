@@ -149,6 +149,8 @@ describe("la configuración fiscal (D-43)", () => {
         "DOMICILIO_NO_ENCONTRADO",
         "EMISOR_NO_ENCONTRADO",
         "ID_EN_USO",
+        // Pasar un punto de venta a producción cuando ARCA no lo tiene habilitado (D-77): su texto no está aprobado.
+        "PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA",
         // El certificado de ARCA: generar el pedido y cargar el certificado.
         "ALIAS_INVALIDO",
         "CADENA_NO_CONFIABLE",
