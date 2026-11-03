@@ -26,7 +26,7 @@ function aPuntoDeVenta(fila: FilaDeParametro): PuntoDeVentaDeArca | null {
  *  - `Bloqueado`: `S` o `N`, nada más;
  *  - `FchBaja`: opcional, de 8 caracteres (una fecha `yyyymmdd`); vacío o ausente es que no está dado de baja.
  * Lo que no tiene esa forma no se interpreta ni se completa con lo que se supone que ARCA querría decir: toda la respuesta es
- * `SERVICIO_NO_DISPONIBLE` (no se sabe, no se pasa). `EmisionTipo` no se lee (sin decidir qué hacer con él).
+ * `SERVICIO_NO_DISPONIBLE` (no se sabe, no se pasa). `EmisionTipo` no se lee: se ignora a propósito (D-77 no lo pide).
  * SIN VERIFICAR contra ARCA real: no hay una grabación de esta operación. Si ARCA manda algo distinto en `FchBaja` cuando no hay baja
  * (un texto fijo, por ejemplo), toda consulta se rechaza hasta ajustar este lector con la grabación.
  */

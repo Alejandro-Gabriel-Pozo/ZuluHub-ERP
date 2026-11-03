@@ -19,8 +19,8 @@ import type { Receptor } from "../dominio/receptor";
 /**
  * Puerto de emisión electrónica (spec H7 facturación §B.5.2): lo único que la numeración y la
  * validación necesitan saber del servicio de ARCA. Un adaptador por (emisor, ambiente); lo arma la
- * composición. Hoy solo existe el adaptador FALSO de pruebas (`test/utilidades/emision-falsa.ts`);
- * el real (WSAA + WSFE) es del tramo F8.
+ * composición. Lo implementan el adaptador REAL (WSAA + WSFE v4.8, `src/adaptadores/arca/adaptador-arca.ts`)
+ * y, en pruebas, el FALSO (`test/utilidades/emision-falsa.ts`).
  *
  * Los códigos de ARCA viajan CRUDOS (`Mensaje.codigo`): traducirlos a texto para la persona es de la
  * pantalla. Toda llamada se hace FUERA de una transacción (ADR-007): el reintento serializable la

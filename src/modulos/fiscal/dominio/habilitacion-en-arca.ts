@@ -1,7 +1,8 @@
 /**
  * Un punto de venta tal como lo informa ARCA en `FEParamGetPtosVenta` (manual WSFE v4.8, l. 3000-3114): su número (`Nro`), si está
- * bloqueado (`Bloqueado`, `S` o `N`) y si tiene fecha de baja (`FchBaja`, opcional). `EmisionTipo` (CAE o CAEA) NO se carga: qué hacer
- * con él está sin decidir (pregunta pendiente al dueño), y un dato que nadie usa no se guarda.
+ * bloqueado (`Bloqueado`, `S` o `N`) y si tiene fecha de baja (`FchBaja`, opcional). `EmisionTipo` (CAE o CAEA) se IGNORA a propósito
+ * (D-77 solo pide que el número exista y no esté bloqueado ni dado de baja; decisión del orquestador, 2026-11-03) y por eso no se carga.
+ * SIN VERIFICAR contra ARCA real qué literales manda ni si un punto de venta solo CAEA debería pasar.
  */
 export type PuntoDeVentaDeArca = Readonly<{
   numero: number;

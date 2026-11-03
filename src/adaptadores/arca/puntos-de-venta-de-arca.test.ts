@@ -76,7 +76,7 @@ describe("los puntos de venta de ARCA, tal como los describe el manual", () => {
     });
   });
 
-  it("EmisionTipo no cambia nada de lo que se lee (sin decidir qué hacer con él)", () => {
+  it("EmisionTipo no cambia nada de lo que se lee (se ignora a propósito: D-77 no lo pide)", () => {
     const con = (EmisionTipo: string | undefined) =>
       leer(respuestaDePtosVentaDelManual({ puntos: [{ ...habilitado, EmisionTipo }] }));
     expect(con("CAEA")).toEqual(con("CAE"));
