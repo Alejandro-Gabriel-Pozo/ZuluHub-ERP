@@ -165,8 +165,8 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<
   // aprobado: `error.fiscal_version_desactualizada`, sin texto nuevo). `YA_HAY_BORRADOR` (otra pestaña creó el borrador mientras esta
   // pantalla seguía sin él) sale así; la pantalla se actualiza y abre el borrador que existe.
   YA_HAY_BORRADOR: "FISCAL_VERSION_DESACTUALIZADA",
-  // Decisión del ingeniero, misma fuente (D-68) y mismo texto aprobado: guardar sobre el `borradorId` de una versión que otra pantalla ya
-  // confirmó es, para la persona, la misma situación (su pantalla tenía datos viejos). Actualiza y ve lo vigente.
+  // Decisión del ingeniero, misma fuente (D-68) y mismo texto aprobado: guardar con OTROS datos sobre el `borradorId` de una versión que otra
+  // pantalla ya confirmó es, para la persona, la misma situación (su pantalla tenía datos viejos). Actualiza y ve lo vigente.
   VERSION_CONFIRMADA_INMUTABLE: "FISCAL_VERSION_DESACTUALIZADA",
   // Sin texto aprobado, y así debe seguir: en el uso normal no ocurren (la pantalla solo ofrece ids que existen y son de la empresa), así
   // que si pasan es un defecto o un pedido armado a mano y salen como error inesperado con su referencia `PD-…`.
