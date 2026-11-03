@@ -146,11 +146,18 @@ const CAMPOS_DEL_DOMICILIO = [
 const mismoDomicilio = (a: ValoresDelDomicilio, b: ValoresDelDomicilio): boolean =>
   CAMPOS_DEL_DOMICILIO.every((campo) => a[campo].trim() === b[campo].trim());
 
+/** El domicilio viaja como NUEVO solo si cambió respecto del que tiene el borrador; si no, el borrador conserva el suyo. */
+const cambioElDomicilio = (v: ValoresDeDatosFiscales, original: BorradorDeDatosFiscales | null) =>
+  original === null || original.domicilio === null
+    ? hayDomicilioCargado(v)
+    : !mismoDomicilio(v, valoresDelBorrador(original));
+
 /**
  * El pedido de «Guardar borrador» (`guardarBorradorDeDatosFiscales`): el `borradorId` es el del borrador (o el que generó el
  * formulario si todavía no hay), y la versión es la última que vio la pantalla. Un dato en blanco no se manda salvo que antes tuviera
  * valor (así un borrador a medio llenar se guarda, y borrar un dato ya cargado lo rechaza el servidor marcándolo). El domicilio va
- * como NUEVO solo si cambió: si no, el borrador conserva el que tiene.
+ * como NUEVO solo si cambió: si no, el borrador conserva el que tiene. Un domicilio no se edita (la tabla es de solo inserción: el
+ * mismo id con otro contenido es `ID_EN_USO`, `dejarListoElDomicilio`): cada domicilio nuevo lleva un id que no se usó antes.
  */
 export function armarElPedidoDeGuardado(
   v: ValoresDeDatosFiscales,
@@ -163,10 +170,6 @@ export function armarElPedidoDeGuardado(
   const dato = (clave: "razonSocial" | "condicionIva", valor: string) =>
     valor.trim() !== "" || base[clave] !== "" ? { [clave]: valor.trim() } : {};
   const inicio = aFechaCivil(v.inicioActividades);
-  const cambioElDomicilio =
-    original === null || original.domicilio === null
-      ? hayDomicilioCargado(v)
-      : !mismoDomicilio(v, base);
   return {
     emisorId,
     borradorId: ids.borradorId,
@@ -174,7 +177,40 @@ export function armarElPedidoDeGuardado(
     ...dato("razonSocial", v.razonSocial),
     ...dato("condicionIva", v.condicionIva),
     ...(inicio !== "" || base.inicioActividades !== "" ? { inicioActividades: inicio } : {}),
-    ...(cambioElDomicilio ? { domicilio: domicilioNuevo(v, ids.domicilioId) } : {}),
+    ...(cambioElDomicilio(v, original) ? { domicilio: domicilioNuevo(v, ids.domicilioId) } : {}),
+  };
+}
+
+const opcional = (t: string): string | null => (t.trim() === "" ? null : t.trim());
+
+/**
+ * El borrador que queda guardado cuando el guardado del pedido de arriba sale bien (sin su versión, que la devuelve el servidor):
+ * el formulario sigue desde ahí y el próximo guardado se compara con esto, no con lo que había al abrir. Si el domicilio viajó, el
+ * borrador pasa a tener ese (con su id, que ya no se reutiliza); si no, conserva el que tenía. Previene: reenviar el mismo id de
+ * domicilio con otro contenido (`ID_EN_USO`) cuando la persona corrige tras una confirmación rechazada.
+ */
+export function borradorTrasGuardar(
+  v: ValoresDeDatosFiscales,
+  ids: IdsDeDatosFiscales,
+  original: BorradorDeDatosFiscales | null,
+): Omit<BorradorDeDatosFiscales, "version"> {
+  return {
+    id: ids.borradorId,
+    razonSocial: opcional(v.razonSocial),
+    condicionIva: opcional(v.condicionIva),
+    inicioActividades: opcional(aFechaCivil(v.inicioActividades)),
+    domicilio: cambioElDomicilio(v, original)
+      ? {
+          id: ids.domicilioId,
+          calle: v.calle.trim(),
+          numero: v.numeroDeCalle.trim(),
+          piso: opcional(v.piso),
+          departamento: opcional(v.departamento),
+          localidad: v.localidad.trim(),
+          provincia: v.provincia.trim(),
+          codigoPostal: opcional(v.codigoPostal),
+        }
+      : (original?.domicilio ?? null),
   };
 }
 
@@ -195,6 +231,8 @@ export const armarElPedidoDeConfirmacion = (emisorId: string, borradorId: string
 /** Un envío del formulario: siempre guarda el borrador y, con «Confirmar», lo confirma con la versión que quedó guardada. */
 export type PedidoDelFormulario = Readonly<{
   guardar: object;
+  /** Lo que queda guardado si el guardado sale bien (`borradorTrasGuardar`). */
+  tras: Omit<BorradorDeDatosFiscales, "version">;
   confirmar: object | null;
 }>;
 

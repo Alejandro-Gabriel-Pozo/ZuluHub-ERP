@@ -7,8 +7,8 @@
  * web del carril web, 2026-10-29):
  *   Q17 = cuestionario de las 17:45Z: P1 provincias, P2 textos de la lista, P3 textos de Puntos de venta, P4 textos de Datos fiscales
  *   (el dueño contestó «Aprobar tal cual» a la P4, que listaba, entre otros: los botones «Guardar borrador», «Confirmar» y «Cancelar»;
- *   los campos «CUIT», «Razón social», «Condición frente al IVA», «Domicilio fiscal», «Inicio de actividades» y los mismos de domicilio
- *   que en Puntos de venta).
+ *   los campos «CUIT», «Razón social», «Condición frente al IVA», «Domicilio», «Inicio de actividades» y los mismos de domicilio
+ *   que en Puntos de venta). El rótulo «Domicilio» (no «Domicilio fiscal») es el de D-82 (dueño, 2026-11-03).
  *   QA  = cuestionario A (21:08Z): P1 entrada, P2 sin puntos de venta, P3 rótulos y aviso de pruebas, P4 sucursal cerrada.
  *   QB  = cuestionario B (21:11Z): P1 accesos, P2 el certificado solo informa, P3 certificado sin punto de venta, P4 «Guardando…».
  *   CONTRATO-CONFIG = `facturador-contratos-de-pantalla.md` (D-43 a D-49 y D-60 a D-68); PROTO-PV = prototipo de Puntos de venta,

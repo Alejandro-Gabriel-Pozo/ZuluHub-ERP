@@ -13,6 +13,7 @@ import estilos from "./FormularioDePuntoDeVenta.module.css";
 import {
   armarElPedidoDeConfirmacion,
   armarElPedidoDeGuardado,
+  borradorTrasGuardar,
   filaDelCuit,
   lugarDelError,
   valoresDelBorrador,
@@ -67,6 +68,9 @@ const claveDe = (b: BorradorDeDatosFiscales | null, v: VigenteDeDatosFiscales | 
  *    tiene delante. Repetir el guardado con el mismo contenido no escribe nada, así que un reintento tras un corte es seguro.
  *  - Idempotencia: el `borradorId` (si todavía no hay borrador) y el id del domicilio nuevo se generan UNA vez al abrir el formulario
  *    (recargar no crea nada: no se escribió); el primer envío fija el pedido entero y un reintento reenvía lo mismo (`useEnvioFijado`).
+ *  - Tras un guardado exitoso el borrador pasa a ser el guardado (su id, la versión que devolvió el servidor y su domicilio): si la
+ *    confirmación se rechaza y la persona corrige, el siguiente guardado sale con esa versión y, si cambió el domicilio, con un id de
+ *    domicilio nuevo (un domicilio no se edita: el mismo id con otro contenido es `ID_EN_USO`).
  *  - Concurrencia: lleva la versión que vio la pantalla. Con «versión desactualizada» se vuelve a leer: con borrador, el formulario se
  *    abre con SU id y SU versión (el borrador es de la empresa, no de la pestaña); sin él, parte de lo vigente.
  *  - Errores: el que trae un `campo` se marca en ese campo y el foco va al primero; los demás se dicen arriba. La validez la decide
@@ -91,7 +95,9 @@ export function FormularioDeDatosFiscales({
   const [valores, setValores] = useState<ValoresDeDatosFiscales>(() =>
     valoresDelBorrador(borrador, vigente),
   );
-  const [version, setVersion] = useState(borrador?.version ?? null);
+  // El borrador tal como quedó guardado: al abrir es el que llegó; tras cada guardado exitoso pasa a ser el que se guardó (con su
+  // versión), y el próximo guardado se compara con él y sale con esa versión. `null`: todavía no se creó.
+  const [guardadoYa, setGuardadoYa] = useState(borrador);
   const [claveVista, setClaveVista] = useState(claveDe(borrador, vigente));
 
   // Llegó otro borrador u otra versión vigente (después de «versión desactualizada»): se parte de lo último, con su id y su versión.
@@ -99,7 +105,7 @@ export function FormularioDeDatosFiscales({
   if (clave !== claveVista) {
     setClaveVista(clave);
     setValores(valoresDelBorrador(borrador, vigente));
-    setVersion(borrador?.version ?? null);
+    setGuardadoYa(borrador);
     setIds(nuevosIds(borrador));
   }
 
@@ -111,8 +117,10 @@ export function FormularioDeDatosFiscales({
   >(async (pedido) => {
     const guardado = await guardar(pedido.guardar);
     if (!guardado.ok) return guardado;
-    // La versión nueva queda: si lo que sigue se rechaza, el próximo intento parte de ella y no choca con su propio guardado.
-    setVersion(guardado.dato.version);
+    // Lo guardado queda como el borrador que existe: si lo que sigue se rechaza, el próximo intento parte de él (su id, su versión
+    // y su domicilio) y no choca con su propio guardado. El domicilio es de solo inserción: el id usado no se reutiliza.
+    setGuardadoYa({ ...pedido.tras, version: guardado.dato.version });
+    setIds((previos) => ({ ...previos, domicilioId: crypto.randomUUID() }));
     if (pedido.confirmar === null) return guardado;
     return confirmar({ ...pedido.confirmar, versionEsperada: guardado.dato.version });
   });
@@ -164,7 +172,14 @@ export function FormularioDeDatosFiscales({
     // Un intento en marcha (o incierto) sigue siendo el que se fijó: no se cambia de botón a mitad de camino.
     if (fijado === null && !envio.enCurso) cual.current = que;
     enviarCon({
-      guardar: armarElPedidoDeGuardado(valores, ids, emisorId, version, borrador),
+      guardar: armarElPedidoDeGuardado(
+        valores,
+        ids,
+        emisorId,
+        guardadoYa?.version ?? null,
+        guardadoYa,
+      ),
+      tras: borradorTrasGuardar(valores, ids, guardadoYa),
       confirmar: que === "confirmar" ? armarElPedidoDeConfirmacion(emisorId, ids.borradorId) : null,
     });
   }

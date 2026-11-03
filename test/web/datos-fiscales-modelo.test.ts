@@ -4,6 +4,7 @@ import {
   aFechaCivil,
   armarElPedidoDeConfirmacion,
   armarElPedidoDeGuardado,
+  borradorTrasGuardar,
   lugarDelError,
   valoresDelBorrador,
   type BorradorDeDatosFiscales,
@@ -197,6 +198,67 @@ describe("el pedido de «Guardar borrador»", () => {
   it("nunca pide Ingresos Brutos (D-45) ni fecha de vigencia (D-61)", () => {
     const claves = Object.keys(PIDE({ calle: "x" }));
     expect(claves.join(" ")).not.toMatch(/iibb|ingresos|vigente/i);
+  });
+});
+
+describe("tras un guardado exitoso el borrador es el guardado (confirmación rechazada y corrección)", () => {
+  const ESCRITO = {
+    ...valoresDelBorrador(null),
+    razonSocial: "Mi Empresa SRL",
+    calle: "Mitre",
+    numeroDeCalle: "10",
+  };
+
+  it("queda con su id, el domicilio que viajó (con su id) y lo que se guardó, sin blancos como texto", () => {
+    expect(borradorTrasGuardar(ESCRITO, IDS, null)).toEqual({
+      id: "nuevo-b",
+      razonSocial: "Mi Empresa SRL",
+      condicionIva: null,
+      inicioActividades: null,
+      domicilio: {
+        id: "nuevo-d",
+        calle: "Mitre",
+        numero: "10",
+        piso: null,
+        departamento: null,
+        localidad: "",
+        provincia: "",
+        codigoPostal: null,
+      },
+    });
+  });
+
+  it("el segundo guardado sale con la versión devuelta, el mismo borrador y, si el domicilio cambió, con un id de domicilio NUEVO (nunca el mismo id con otro contenido)", () => {
+    const tras = { ...borradorTrasGuardar(ESCRITO, IDS, null), version: 1 };
+    const corregido = { ...ESCRITO, calle: "Belgrano", inicioActividades: "01/03/2018" };
+    const pedido = armarElPedidoDeGuardado(
+      corregido,
+      { borradorId: IDS.borradorId, domicilioId: "otro-d" },
+      EMISOR,
+      tras.version,
+      tras,
+    );
+    expect(pedido).toMatchObject({
+      borradorId: "nuevo-b",
+      versionEsperada: 1,
+      inicioActividades: "2018-03-01",
+      domicilio: { tipo: "NUEVO", id: "otro-d", calle: "Belgrano" },
+    });
+  });
+
+  it("si solo se completó otra cosa, el domicilio ya guardado NO viaja de nuevo", () => {
+    const tras = { ...borradorTrasGuardar(ESCRITO, IDS, null), version: 1 };
+    const pedido = armarElPedidoDeGuardado(
+      { ...ESCRITO, inicioActividades: "01/03/2018" },
+      { borradorId: IDS.borradorId, domicilioId: "otro-d" },
+      EMISOR,
+      tras.version,
+      tras,
+    );
+    expect(pedido).not.toHaveProperty("domicilio");
+    expect(
+      borradorTrasGuardar({ ...ESCRITO, inicioActividades: "01/03/2018" }, IDS, tras).domicilio,
+    ).toEqual(tras.domicilio);
   });
 });
 
