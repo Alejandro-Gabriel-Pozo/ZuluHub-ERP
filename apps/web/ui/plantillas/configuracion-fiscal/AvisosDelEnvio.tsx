@@ -6,7 +6,7 @@ import { ErrorDelDetalle } from "../facturacion/ErrorDelDetalle";
 /**
  * Lo que dice una pantalla de Datos fiscales mientras envía (los mismos textos que ya usa Puntos de venta): «Verificando si se
  * registró…» cuando el resultado es incierto (con la referencia si fue un INESPERADO devuelto como valor) y, si el servidor rechazó, su
- * rechazo con el texto del catálogo. Lo comparten el botón «Corregir» y el formulario.
+ * rechazo con el texto del catálogo. Lo usa el formulario de Datos fiscales.
  */
 export function AvisosDelEnvio({
   enCurso,

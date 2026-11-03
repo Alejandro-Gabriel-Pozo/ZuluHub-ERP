@@ -7,10 +7,10 @@ import {
 } from "../../../../../src/capacidades/experiencia/respuesta";
 import { restaurarConexion, simularConexion, tocar } from "../../pruebas/ayudas";
 import { FormularioDeDatosFiscales } from "./FormularioDeDatosFiscales.cliente";
-import type { BorradorDeDatosFiscales } from "./modelo-de-datos-fiscales";
+import type { BorradorDeDatosFiscales, VigenteDeDatosFiscales } from "./modelo-de-datos-fiscales";
 
 /**
- * El envío de «Corregir datos fiscales» en Chromium. Lo que se verifica: la idempotencia (el pedido se fija con su clave al primer
+ * El envío del formulario de Datos fiscales en Chromium. Lo que se verifica: la idempotencia (el pedido se fija con su clave al primer
  * intento; doble toque = un solo envío; un reintento por red cortada reenvía lo MISMO, también el id del borrador y el del domicilio
  * nuevo; un INESPERADO devuelto como valor no suelta lo fijado), el texto «Guardando…» solo en el botón que se tocó, y la concurrencia
  * (D-68): ante «versión desactualizada» el formulario se abre con el id y la versión del borrador que llega. Las acciones van simuladas.
@@ -22,7 +22,7 @@ const guardar = vi.fn<(pedido: unknown) => Promise<Respuesta<{ version: number }
 const confirmar = vi.fn<(pedido: unknown) => Promise<Respuesta<unknown>>>();
 
 const EMISOR = "2d1b8c3a-4e5f-4a71-8c9d-1e2f3a4b5c6d";
-const LECTURA = "/configuracion-fiscal/datos-fiscales";
+const LISTA = "/configuracion-fiscal";
 const BORRADOR: BorradorDeDatosFiscales = {
   id: "0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b",
   version: 4,
@@ -61,17 +61,37 @@ const INESPERADO = {
   error: { ...errorDeCodigo("ERROR_INTERNO"), referencia: "PD-ABCD-0123" },
 } as const;
 
-const formulario = (borrador: BorradorDeDatosFiscales | null = BORRADOR) => (
+const VIGENTE: VigenteDeDatosFiscales = {
+  id: "v1",
+  numero: 2,
+  vigenteDesde: "2026-10-13T01:30:00.000Z",
+  razonSocial: "Distribuidora Sur SA",
+  condicionIva: "RESPONSABLE_INSCRIPTO",
+  domicilio: BORRADOR.domicilio!,
+  inicioActividades: "2018-03-01",
+};
+const OTRA_VIGENTE: VigenteDeDatosFiscales = {
+  ...VIGENTE,
+  id: "v2",
+  numero: 3,
+  razonSocial: "Confirmada por otra persona SA",
+};
+
+const formulario = (
+  borrador: BorradorDeDatosFiscales | null = BORRADOR,
+  vigente: VigenteDeDatosFiscales | null = null,
+) => (
   <FormularioDeDatosFiscales
     emisorId={EMISOR}
     cuit="30712345678"
     borrador={borrador}
+    vigente={vigente}
     condicionesDeIva={[{ valor: "RESPONSABLE_INSCRIPTO", etiqueta: "IVA Responsable Inscripto" }]}
     guardar={guardar}
     confirmar={confirmar}
-    rutaAlGuardar={LECTURA}
-    rutaAlConfirmar={LECTURA}
-    rutaAlCancelar={LECTURA}
+    rutaAlGuardar={LISTA}
+    rutaAlConfirmar={LISTA}
+    rutaAlCancelar={LISTA}
   />
 );
 
@@ -110,7 +130,7 @@ describe("idempotencia del intento", () => {
     tocar(boton("Confirmar"));
     tocar(boton("Confirmar"));
     abierta.soltar(GUARDADO(5));
-    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LECTURA));
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
     expect(guardar).toHaveBeenCalledTimes(1);
     expect(confirmar).toHaveBeenCalledTimes(1);
     const pedido = pedidos()[0] as { borradorId: string; domicilio: { id: string } };
@@ -126,7 +146,7 @@ describe("idempotencia del intento", () => {
     tocar(boton("Confirmar"));
     tocar(boton("Guardar borrador"));
     abierta.soltar(GUARDADO(5));
-    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LECTURA));
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
     expect(guardar).toHaveBeenCalledTimes(1);
     expect(confirmar).not.toHaveBeenCalled();
   });
@@ -146,7 +166,7 @@ describe("idempotencia del intento", () => {
     await expect.element(page.getByLabelText("Razón social")).toBeDisabled();
     await expect.element(page.getByLabelText("Calle")).toBeDisabled();
     segunda.soltar(GUARDADO(1));
-    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LECTURA));
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
     expect(guardar).toHaveBeenCalledTimes(2);
     expect(pedidos()[1]).toEqual(pedidos()[0]);
     // Empezando de cero el id del borrador lo puso el formulario: una vez, y sin versión.
@@ -165,7 +185,7 @@ describe("idempotencia del intento", () => {
     await render(formulario());
     await cambiarElDomicilio();
     tocar(boton("Confirmar"));
-    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LECTURA), { timeout: 5000 });
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA), { timeout: 5000 });
     expect(guardar).toHaveBeenCalledTimes(2);
     expect(pedidos()[1]).toEqual(pedidos()[0]);
     expect(confirmar).toHaveBeenCalledTimes(2);
@@ -185,7 +205,7 @@ describe("idempotencia del intento", () => {
       "Av. Corrientes",
     );
     segunda.soltar(GUARDADO(5));
-    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LECTURA));
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
     expect(pedidos()[1]).toEqual(pedidos()[0]);
   });
 
@@ -218,7 +238,7 @@ describe("idempotencia del intento", () => {
       .toHaveAttribute("aria-invalid", "true");
     await page.getByLabelText("Razón social").fill("Mi Empresa SRL");
     tocar(boton("Guardar borrador"));
-    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LECTURA));
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
     expect(pedidos()[1]?.["borradorId"]).toBe(pedidos()[0]?.["borradorId"]);
     expect(pedidos()[1]).toMatchObject({ razonSocial: "Mi Empresa SRL" });
   });
@@ -236,7 +256,7 @@ describe("el texto de espera", () => {
     expect(boton("Confirmar").element().textContent).toBe("Confirmar");
     await expect.element(boton("Confirmar")).toHaveAttribute("aria-disabled", "true");
     abierta.soltar(GUARDADO(5));
-    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LECTURA));
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
   });
 
   it("«Confirmar» dice «Guardando…» y «Guardar borrador» conserva su texto; «Cancelar» no hace nada mientras tanto", async () => {
@@ -250,7 +270,7 @@ describe("el texto de espera", () => {
     tocar(boton("Cancelar"));
     expect(router.push).not.toHaveBeenCalled();
     abierta.soltar(GUARDADO(5));
-    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LECTURA));
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
   });
 });
 
@@ -295,6 +315,46 @@ describe("concurrencia (D-68): el borrador es de la empresa, no de la pestaña",
     await vi.waitFor(() => expect(guardar).toHaveBeenCalledTimes(2));
     expect(pedidos()[1]).toMatchObject({ borradorId: OTRO.id, versionEsperada: 9 });
     expect(pedidos()[0]).not.toHaveProperty("versionEsperada");
+  });
+
+  it("sin borrador y con lo vigente: «versión desactualizada» y llega otro borrador: se abre ese, con su id y su versión", async () => {
+    guardar.mockResolvedValueOnce(DESACTUALIZADA).mockResolvedValueOnce(GUARDADO(10));
+    const { rerender } = await render(formulario(null, VIGENTE));
+    tocar(boton("Guardar borrador"));
+    await vi.waitFor(() => expect(router.refresh).toHaveBeenCalled());
+    await rerender(formulario(OTRO, VIGENTE));
+    expect((page.getByLabelText("Razón social").element() as HTMLInputElement).value).toBe(
+      "Cargado en otra pestaña SA",
+    );
+    tocar(boton("Guardar borrador"));
+    await vi.waitFor(() => expect(guardar).toHaveBeenCalledTimes(2));
+    expect(pedidos()[1]).toMatchObject({ borradorId: OTRO.id, versionEsperada: 9 });
+  });
+
+  it("sin borrador: «versión desactualizada» y llega otra versión vigente: se carga lo vigente nuevo y sin versión", async () => {
+    guardar.mockResolvedValueOnce(DESACTUALIZADA).mockResolvedValueOnce(GUARDADO(1));
+    const { rerender } = await render(formulario(null, VIGENTE));
+    tocar(boton("Guardar borrador"));
+    await vi.waitFor(() => expect(router.refresh).toHaveBeenCalled());
+    await rerender(formulario(null, OTRA_VIGENTE));
+    expect((page.getByLabelText("Razón social").element() as HTMLInputElement).value).toBe(
+      "Confirmada por otra persona SA",
+    );
+    tocar(boton("Guardar borrador"));
+    await vi.waitFor(() => expect(guardar).toHaveBeenCalledTimes(2));
+    expect(pedidos()[1]).not.toHaveProperty("versionEsperada");
+    expect(pedidos()[1]).toMatchObject({ razonSocial: "Confirmada por otra persona SA" });
+  });
+
+  it("recargar el formulario sin borrador no crea nada: no se envía hasta que la persona guarda, y cada apertura trae su propio id", async () => {
+    guardar.mockResolvedValue(GUARDADO(1));
+    const primera = await render(formulario(null, VIGENTE));
+    expect(guardar).not.toHaveBeenCalled();
+    await primera.unmount();
+    await render(formulario(null, VIGENTE));
+    expect(guardar).not.toHaveBeenCalled();
+    tocar(boton("Guardar borrador"));
+    await vi.waitFor(() => expect(guardar).toHaveBeenCalledTimes(1));
   });
 
   it("versión desactualizada al confirmar (alguien cambió el borrador entre el guardado y la confirmación): se recarga y no se confirma otra cosa", async () => {

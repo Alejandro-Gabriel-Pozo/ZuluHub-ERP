@@ -4,8 +4,6 @@ import {
   aFechaCivil,
   armarElPedidoDeConfirmacion,
   armarElPedidoDeGuardado,
-  armarLaLectura,
-  domicilioEnUnaLinea,
   lugarDelError,
   valoresDelBorrador,
   type BorradorDeDatosFiscales,
@@ -15,7 +13,7 @@ import {
 } from "../../apps/web/ui/plantillas/configuracion-fiscal/modelo-de-datos-fiscales";
 
 /**
- * El modelo de vista de Datos fiscales (D-43, D-61 a D-65, D-68): lo que se lee y el pedido que arma el formulario. Previene: un
+ * El modelo de vista de Datos fiscales (D-43, D-61 a D-65, D-68, D-88): con qué se abre el formulario y el pedido que arma el formulario. Previene: un
  * `vigenteDesde` en el pedido de confirmar (D-61), la fecha corrida un día por pasar por `Date`, un domicilio nuevo en cada guardado
  * aunque no cambió, y un dato borrado que se pierde en silencio.
  */
@@ -38,10 +36,6 @@ const VIGENTE: VigenteDeDatosFiscales = {
   domicilio: DOMICILIO,
   inicioActividades: "2018-03-01",
 };
-const CONDICIONES = [
-  { valor: "RESPONSABLE_INSCRIPTO", etiqueta: "IVA Responsable Inscripto" },
-  { valor: "MONOTRIBUTO", etiqueta: "Responsable Monotributo" },
-];
 const BORRADOR: BorradorDeDatosFiscales = {
   id: "b1",
   version: 4,
@@ -53,43 +47,7 @@ const BORRADOR: BorradorDeDatosFiscales = {
 const IDS = { borradorId: "nuevo-b", domicilioId: "nuevo-d" };
 const EMISOR = "e1";
 
-describe("lo vigente, para leer", () => {
-  it("el CUIT con guiones, la razón social, la condición con el texto del manual de ARCA (D-44), el domicilio, el inicio en dd/mm/aaaa y «Rige desde»", () => {
-    const lectura = armarLaLectura("30712345678", VIGENTE, CONDICIONES, "2026-10-12");
-    expect(lectura.filas).toEqual([
-      { rotulo: "CUIT", valor: "30-71234567-8" },
-      { rotulo: "Razón social", valor: "Distribuidora Sur SA" },
-      { rotulo: "Condición frente al IVA", valor: "IVA Responsable Inscripto" },
-      {
-        rotulo: "Domicilio fiscal",
-        valor:
-          "Av. Rivadavia 1234, Ciudad de Buenos Aires, Ciudad Autónoma de Buenos Aires, Código postal 1000",
-      },
-      { rotulo: "Inicio de actividades", valor: "01/03/2018" },
-    ]);
-    expect(lectura.rigeDesde).toBe("Rige desde el 12/10/2026.");
-  });
-
-  it("una condición que la lista no conoce se muestra como llegó, no se inventa un texto", () => {
-    const lectura = armarLaLectura(
-      "30712345678",
-      { ...VIGENTE, condicionIva: "OTRA" },
-      CONDICIONES,
-      "2026-10-12",
-    );
-    expect(lectura.filas[2]?.valor).toBe("OTRA");
-  });
-
-  it("el domicilio dice piso y departamento con los rótulos ya aprobados", () => {
-    expect(
-      domicilioEnUnaLinea({ ...DOMICILIO, piso: "3", departamento: "B", codigoPostal: null }),
-    ).toBe(
-      "Av. Rivadavia 1234, Piso 3, Departamento B, Ciudad de Buenos Aires, Ciudad Autónoma de Buenos Aires",
-    );
-  });
-});
-
-describe("el formulario se abre con el borrador (D-62) o en blanco", () => {
+describe("el formulario se abre con el borrador, con lo vigente o en blanco (D-88)", () => {
   it("el borrador precargado: la fecha en dd/mm/aaaa y el domicilio en sus campos", () => {
     expect(valoresDelBorrador(BORRADOR)).toEqual({
       razonSocial: "Distribuidora Sur SA",
@@ -105,8 +63,37 @@ describe("el formulario se abre con el borrador (D-62) o en blanco", () => {
     });
   });
 
-  it("sin borrador, todo en blanco", () => {
+  it("sin borrador y con algo vigente: los datos vigentes, la fecha en dd/mm/aaaa", () => {
+    expect(valoresDelBorrador(null, VIGENTE)).toEqual(valoresDelBorrador(BORRADOR));
+  });
+
+  it("con borrador y con algo vigente, gana el borrador", () => {
+    const otro = { ...BORRADOR, razonSocial: "Otra SRL" };
+    expect(valoresDelBorrador(otro, VIGENTE).razonSocial).toBe("Otra SRL");
+  });
+
+  it("sin borrador ni vigente (nunca hubo nada), todo en blanco", () => {
     expect(Object.values(valoresDelBorrador(null)).every((v) => v === "")).toBe(true);
+    expect(Object.values(valoresDelBorrador(null, null)).every((v) => v === "")).toBe(true);
+  });
+
+  it("el primer guardado desde lo vigente crea el borrador con todo lo que se ve, sin versión y con el domicilio como nuevo", () => {
+    const pedido = armarElPedidoDeGuardado(
+      valoresDelBorrador(null, VIGENTE),
+      IDS,
+      EMISOR,
+      null,
+      null,
+    );
+    expect(pedido).toMatchObject({
+      emisorId: EMISOR,
+      borradorId: "nuevo-b",
+      razonSocial: "Distribuidora Sur SA",
+      condicionIva: "RESPONSABLE_INSCRIPTO",
+      inicioActividades: "2018-03-01",
+      domicilio: { id: "nuevo-d", calle: "Av. Rivadavia" },
+    });
+    expect(pedido).not.toHaveProperty("versionEsperada");
   });
 });
 

@@ -13,10 +13,10 @@ import {
 } from "../../pruebas/ayudas";
 import { enArmazon, legibleYTocable, ventana } from "./ayudas-de-pruebas";
 import { FormularioDeDatosFiscales } from "./FormularioDeDatosFiscales.cliente";
-import type { BorradorDeDatosFiscales } from "./modelo-de-datos-fiscales";
+import type { BorradorDeDatosFiscales, VigenteDeDatosFiscales } from "./modelo-de-datos-fiscales";
 
 /**
- * El formulario «Corregir datos fiscales» en Chromium: precarga (D-62), CUIT solo para leer (D-65), los tres botones, el guardado y la
+ * El formulario de Datos fiscales en Chromium: se abre con el borrador, con lo vigente o en blanco (D-88), CUIT solo para leer (D-65), los tres botones, el guardado y la
  * confirmación en dos pasos con la versión que dejó el guardado (D-61), los errores marcados en su campo con el foco en el primero
  * (D-67) y la accesibilidad en celular y escritorio. La idempotencia, la concurrencia y la espera están en
  * `FormularioDeDatosFiscales.envio.test.tsx`. Las acciones del servidor van simuladas.
@@ -28,7 +28,6 @@ const guardar = vi.fn<(pedido: unknown) => Promise<Respuesta<{ version: number }
 const confirmar = vi.fn<(pedido: unknown) => Promise<Respuesta<unknown>>>();
 
 const EMISOR = "2d1b8c3a-4e5f-4a71-8c9d-1e2f3a4b5c6d";
-const LECTURA = "/configuracion-fiscal/datos-fiscales";
 const LISTA = "/configuracion-fiscal";
 const CONDICIONES = [
   { valor: "RESPONSABLE_INSCRIPTO", etiqueta: "IVA Responsable Inscripto" },
@@ -53,6 +52,16 @@ const BORRADOR: BorradorDeDatosFiscales = {
   inicioActividades: "2018-03-01",
 };
 
+const VIGENTE: VigenteDeDatosFiscales = {
+  id: "v1",
+  numero: 2,
+  vigenteDesde: "2026-10-13T01:30:00.000Z",
+  razonSocial: "Distribuidora Sur SA",
+  condicionIva: "RESPONSABLE_INSCRIPTO",
+  domicilio: BORRADOR.domicilio!,
+  inicioActividades: "2018-03-01",
+};
+
 const GUARDADO = (version: number): Respuesta<{ version: number }> => ({
   ok: true,
   dato: { version },
@@ -63,17 +72,21 @@ const conCampo = (
   campo: string,
 ): Respuesta<never> => ({ ok: false, error: { ...errorDeCodigo(codigo), campo } });
 
-const formulario = (borrador: BorradorDeDatosFiscales | null = BORRADOR, hayVigente = true) => (
+const formulario = (
+  borrador: BorradorDeDatosFiscales | null = BORRADOR,
+  vigente: VigenteDeDatosFiscales | null = null,
+) => (
   <FormularioDeDatosFiscales
     emisorId={EMISOR}
     cuit="30712345678"
     borrador={borrador}
+    vigente={vigente}
     condicionesDeIva={CONDICIONES}
     guardar={guardar}
     confirmar={confirmar}
-    rutaAlGuardar={hayVigente ? LECTURA : LISTA}
-    rutaAlConfirmar={LECTURA}
-    rutaAlCancelar={hayVigente ? LECTURA : LISTA}
+    rutaAlGuardar={LISTA}
+    rutaAlConfirmar={LISTA}
+    rutaAlCancelar={LISTA}
   />
 );
 
@@ -98,7 +111,7 @@ describe("accesibilidad y medidas", () => {
     "a %i px: sin violaciones como página, legible y tocable, sin desborde lateral",
     async (ancho) => {
       await ventana(ancho);
-      await render(enArmazon("Corregir datos fiscales", formulario()));
+      await render(enArmazon("Datos fiscales", formulario()));
       expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
       legibleYTocable();
     },
@@ -107,7 +120,7 @@ describe("accesibilidad y medidas", () => {
   it.each([390, 1280])("a %i px, con los errores marcados: sin violaciones", async (ancho) => {
     await ventana(ancho);
     guardar.mockResolvedValue(conCampo("FISCAL_CONFIGURACION_DATOS_INVALIDOS", "razonSocial"));
-    await render(enArmazon("Corregir datos fiscales", formulario()));
+    await render(enArmazon("Datos fiscales", formulario()));
     tocar(boton("Guardar borrador"));
     await expect
       .element(page.getByLabelText("Razón social"))
@@ -116,7 +129,7 @@ describe("accesibilidad y medidas", () => {
   });
 
   it("cada campo tiene su etiqueta, el domicilio es un grupo con su leyenda y las opciones vacías llevan el nombre del campo", async () => {
-    await render(formulario(null, false));
+    await render(formulario(null));
     for (const etiqueta of [
       "Razón social",
       "Condición frente al IVA",
@@ -158,7 +171,7 @@ describe("accesibilidad y medidas", () => {
     expect(document.activeElement).toBe(page.getByLabelText("Calle").element());
     await userEvent.keyboard("{Enter}");
     await vi.waitFor(() => expect(guardar).toHaveBeenCalledTimes(1));
-    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LECTURA));
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
     expect(confirmar).not.toHaveBeenCalled();
   });
 });
@@ -178,8 +191,33 @@ describe("lo que muestra", () => {
     expect(valor("Inicio de actividades")).toBe("01/03/2018");
   });
 
-  it("sin borrador (empieza de cero): todo en blanco", async () => {
-    await render(formulario(null, false));
+  it("sin borrador y con algo vigente (D-88): se abre con lo vigente, sin escribir nada", async () => {
+    await render(formulario(null, VIGENTE));
+    expect(valor("Razón social")).toBe("Distribuidora Sur SA");
+    expect(valor("Calle")).toBe("Av. Rivadavia");
+    expect(valor("Inicio de actividades")).toBe("01/03/2018");
+    expect((page.getByLabelText("Provincia").element() as HTMLSelectElement).value).toBe("AR-C");
+    expect(guardar).not.toHaveBeenCalled();
+    expect(confirmar).not.toHaveBeenCalled();
+  });
+
+  it("sin borrador y con algo vigente, «Confirmar» crea el borrador con lo que se ve (sin versión) y lo confirma", async () => {
+    guardar.mockResolvedValue(GUARDADO(1));
+    confirmar.mockResolvedValue(BIEN);
+    await render(formulario(null, VIGENTE));
+    await page.getByLabelText("Calle").fill("Av. Corrientes");
+    tocar(boton("Confirmar"));
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
+    expect(pedidoGuardado()).not.toHaveProperty("versionEsperada");
+    expect(pedidoGuardado()).toMatchObject({
+      razonSocial: "Distribuidora Sur SA",
+      domicilio: { calle: "Av. Corrientes" },
+    });
+    expect(confirmar).toHaveBeenCalledWith(expect.objectContaining({ versionEsperada: 1 }));
+  });
+
+  it("sin borrador ni vigente (nunca hubo nada): todo en blanco", async () => {
+    await render(formulario(null));
     expect(valor("Razón social")).toBe("");
     expect(valor("Inicio de actividades")).toBe("");
     expect((page.getByLabelText("Provincia").element() as HTMLSelectElement).value).toBe("");
@@ -187,12 +225,12 @@ describe("lo que muestra", () => {
 });
 
 describe("«Guardar borrador», «Confirmar» y «Cancelar»", () => {
-  it("«Guardar borrador» guarda con la versión que vio la pantalla y vuelve a la lectura, sin confirmar", async () => {
+  it("«Guardar borrador» guarda con la versión que vio la pantalla y vuelve a la lista de Configuración fiscal, sin confirmar", async () => {
     guardar.mockResolvedValue(GUARDADO(5));
     await render(formulario());
     await page.getByLabelText("Razón social").fill("Distribuidora Sur SRL");
     tocar(boton("Guardar borrador"));
-    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LECTURA));
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
     expect(guardar).toHaveBeenCalledTimes(1);
     expect(pedidoGuardado()).toEqual({
       emisorId: EMISOR,
@@ -205,9 +243,9 @@ describe("«Guardar borrador», «Confirmar» y «Cancelar»", () => {
     expect(confirmar).not.toHaveBeenCalled();
   });
 
-  it("empezando de cero, «Guardar borrador» vuelve a la lista de Configuración fiscal (no hay lectura adonde volver)", async () => {
+  it("empezando de cero, «Guardar borrador» crea el borrador sin versión y vuelve a la lista", async () => {
     guardar.mockResolvedValue(GUARDADO(1));
-    await render(formulario(null, false));
+    await render(formulario(null));
     await page.getByLabelText("Razón social").fill("Mi Empresa SRL");
     tocar(boton("Guardar borrador"));
     await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
@@ -221,7 +259,7 @@ describe("«Guardar borrador», «Confirmar» y «Cancelar»", () => {
     await render(formulario());
     await page.getByLabelText("Calle").fill("Av. Corrientes");
     tocar(boton("Confirmar"));
-    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LECTURA));
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
     expect(pedidoGuardado()).toMatchObject({
       versionEsperada: 4,
       domicilio: { tipo: "NUEVO", calle: "Av. Corrientes", numero: "1234", provincia: "AR-C" },
@@ -255,7 +293,7 @@ describe("«Guardar borrador», «Confirmar» y «Cancelar»", () => {
       .toHaveAttribute("aria-invalid", "true");
     await page.getByLabelText("Inicio de actividades").fill("02/03/2018");
     tocar(boton("Confirmar"));
-    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LECTURA));
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
     expect(pedidoGuardado(1)).toMatchObject({
       versionEsperada: 5,
       inicioActividades: "2018-03-02",
@@ -266,7 +304,7 @@ describe("«Guardar borrador», «Confirmar» y «Cancelar»", () => {
   it("«Cancelar» vuelve sin enviar nada", async () => {
     await render(formulario());
     tocar(boton("Cancelar"));
-    expect(router.push).toHaveBeenCalledWith(LECTURA);
+    expect(router.push).toHaveBeenCalledWith(LISTA);
     expect(guardar).not.toHaveBeenCalled();
     expect(confirmar).not.toHaveBeenCalled();
   });

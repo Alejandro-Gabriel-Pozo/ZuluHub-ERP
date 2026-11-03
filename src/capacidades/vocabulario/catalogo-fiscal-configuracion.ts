@@ -6,9 +6,7 @@
  * Una línea de fuente por texto, con el cuestionario real y la pregunta (preguntas hechas al dueño con AskUserQuestion en la sesión
  * web del carril web, 2026-10-29):
  *   Q17 = cuestionario de las 17:45Z: P1 provincias, P2 textos de la lista, P3 textos de Puntos de venta, P4 textos de Datos fiscales
- *   (el dueño contestó «Aprobar tal cual» a la P4, que listaba: los títulos «Datos fiscales» y «Corregir datos fiscales»; los botones
- *   «Corregir», «Guardar borrador», «Confirmar», «Cancelar» y «Seguir con el borrador»; «Rige desde el 12/10/2026.»; el aviso «Hay un
- *   borrador sin confirmar.» con «Lo guardó otra persona o desde otro dispositivo. Los datos que rigen siguen siendo los de abajo.»;
+ *   (el dueño contestó «Aprobar tal cual» a la P4, que listaba, entre otros: los botones «Guardar borrador», «Confirmar» y «Cancelar»;
  *   los campos «CUIT», «Razón social», «Condición frente al IVA», «Domicilio fiscal», «Inicio de actividades» y los mismos de domicilio
  *   que en Puntos de venta).
  *   QA  = cuestionario A (21:08Z): P1 entrada, P2 sin puntos de venta, P3 rótulos y aviso de pruebas, P4 sucursal cerrada.
@@ -109,8 +107,9 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
   // Dueño, 2026-10-29, cuestionario B (21:11Z), pregunta 4 («Guardando…» en alta, edición y cambio de ambiente).
   // SUPUESTO del ingeniero: el mismo texto también en Activar y Desactivar; el dueño lo aprobó para alta, edición y cambio de
   // ambiente, no para estas dos acciones. Revertirlo es quitar `textoEnviando` de ese botón en `DetalleDelPuntoDeVenta.cliente.tsx`.
-  // SUPUESTO del ingeniero, mismo caso: «Guardar borrador» y «Confirmar» de Datos fiscales también dicen «Guardando…» mientras esperan
-  // (el dueño no lo aprobó para esa pantalla). Revertirlo es quitar `textoEnviando` de ambos botones en `FormularioDeDatosFiscales.cliente.tsx`.
+  // Datos fiscales reutiliza esta misma clave para «Guardar borrador» y «Confirmar» (sin clave nueva). SUPUESTO del ingeniero: el dueño
+  // aprobó «Guardando…» para Puntos de venta, no se le preguntó tal cual para Datos fiscales. Revertirlo es quitar `textoEnviando` de ambos
+  // botones en `FormularioDeDatosFiscales.cliente.tsx`.
   "fiscal.pantalla.config_pv_guardando": { porDefecto: "Guardando…" },
   // Dueño, 2026-10-29, cuestionario B (21:11Z), pregunta 1: el pendiente de Inicio que lleva a la lista de Configuración fiscal.
   "fiscal.pantalla.config_pendiente_inicio": {
@@ -123,31 +122,14 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
     porDefecto: "Punto de venta {numero}",
     marcadores: ["numero"],
   },
-  // Datos fiscales (opción A de 2026-10-29). Los textos de la condición frente al IVA son los de D-44, en `opciones-de-datos-fiscales.ts`.
-  // Dueño, 2026-10-29, Q17 pregunta 4 («Corregir datos fiscales»); «Datos fiscales» es `config_fila_datos_fiscales`.
-  "fiscal.pantalla.config_df_titulo_corregir": { porDefecto: "Corregir datos fiscales" },
-  // Dueño, 2026-10-29, Q17 pregunta 4.
-  "fiscal.pantalla.config_df_corregir": { porDefecto: "Corregir" },
+  // Datos fiscales (Q17 de 2026-10-29; D-82 y D-88 del 2026-11-03 sacaron la lectura intermedia, «Corregir», «Seguir con el borrador», el aviso
+  // del borrador y «Rige desde…»). Los textos de la condición frente al IVA son los de D-44, en `opciones-de-datos-fiscales.ts`.
+  // «Datos fiscales», el título del formulario, es `config_fila_datos_fiscales` (D-88: la fila de la lista abre directo el formulario).
   // Dueño, 2026-10-29, Q17 pregunta 4.
   "fiscal.pantalla.config_df_guardar_borrador": { porDefecto: "Guardar borrador" },
   // Dueño, 2026-10-29, Q17 pregunta 4 (un solo botón que rige desde ya: D-61). La clave no dice «confirmar»: el catálogo rechaza como
   // secreto todo nombre que contenga «firma» (`NOMBRE_DE_SECRETO`).
   "fiscal.pantalla.config_df_que_rija": { porDefecto: "Confirmar" },
-  // Dueño, 2026-10-29, Q17 pregunta 4.
-  "fiscal.pantalla.config_df_seguir_con_el_borrador": { porDefecto: "Seguir con el borrador" },
-  // Dueño, 2026-10-29, Q17 pregunta 4 («Rige desde el 12/10/2026.»); la fecha va en dd/mm/aaaa.
-  "fiscal.pantalla.config_df_rige_desde": {
-    porDefecto: "Rige desde el {fecha}.",
-    marcadores: ["fecha"],
-  },
-  // Dueño, 2026-10-29, Q17 pregunta 4 (título del aviso).
-  "fiscal.pantalla.config_df_aviso_titulo": { porDefecto: "Hay un borrador sin confirmar." },
-  // Dueño, 2026-10-29, Q17 pregunta 4 (texto del aviso).
-  "fiscal.pantalla.config_df_aviso_detalle": {
-    porDefecto:
-      "Lo guardó otra persona o desde otro dispositivo. Los datos que rigen siguen siendo los de abajo.",
-    largoMaximo: 120,
-  },
   // Dueño, 2026-10-29, Q17 pregunta 4.
   "fiscal.pantalla.config_df_cuit": { porDefecto: "CUIT" },
   // Dueño, 2026-10-29, Q17 pregunta 4.

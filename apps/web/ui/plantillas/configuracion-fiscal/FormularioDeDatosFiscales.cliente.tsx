@@ -22,17 +22,21 @@ import {
   type OpcionDeCondicionDeIva,
   type PedidoDelFormulario,
   type ValoresDeDatosFiscales,
+  type VigenteDeDatosFiscales,
 } from "./modelo-de-datos-fiscales";
 import { OPCIONES_DE_PROVINCIA } from "./modelo-de-puntos-de-venta";
-import { DatosParaLeer } from "./PantallaDeDatosFiscales";
+import { DatosParaLeer } from "./DatosParaLeer";
+
 import { useEnvioFijado } from "./useEnvioFijado";
 
 export type PropsDeFormularioDeDatosFiscales = Readonly<{
   emisorId: string;
   /** El CUIT de la empresa, 11 dígitos: solo para leer (D-65). */
   cuit: string;
-  /** El borrador con el que se abre (D-62: precargado con lo vigente; D-68: el que ya existe). `null`: se empieza de cero. */
+  /** El borrador que ya existe (D-68): se abre con su id y su versión. `null`: todavía no hay. */
   borrador: BorradorDeDatosFiscales | null;
+  /** Lo que rige hoy (D-88): sin borrador, el formulario se abre con esto. `null` (y sin borrador): se empieza en blanco. */
+  vigente: VigenteDeDatosFiscales | null;
   condicionesDeIva: readonly OpcionDeCondicionDeIva[];
   /** `guardarBorradorDeDatosFiscalesAccion`: devuelve la versión que quedó guardada. */
   guardar: (pedido: unknown) => Promise<Respuesta<Readonly<{ version: number }>>>;
@@ -51,18 +55,20 @@ const nuevosIds = (borrador: BorradorDeDatosFiscales | null): IdsDeDatosFiscales
   domicilioId: crypto.randomUUID(),
 });
 
-const claveDe = (b: BorradorDeDatosFiscales | null): string =>
-  b === null ? "" : `${b.id}:${String(b.version)}`;
+// Qué se le mostró a la persona: el borrador con su versión o, sin borrador, la versión vigente (si cambió, se vuelve a partir de ella).
+const claveDe = (b: BorradorDeDatosFiscales | null, v: VigenteDeDatosFiscales | null): string =>
+  b !== null ? `b:${b.id}:${String(b.version)}` : v === null ? "" : `v:${v.id}`;
 
 /**
- * Corregir datos fiscales (opción A, estado 2): el formulario precargado con lo vigente (D-62) o con el borrador que ya existe (D-68),
- * el CUIT solo para leer (D-65) y tres botones: «Cancelar», «Guardar borrador» y «Confirmar», que rige desde ya (D-61).
+ * Datos fiscales (D-88): el formulario se abre directo, con el borrador que ya existe (D-68), si no con lo vigente (D-62) y, si nunca
+ * hubo nada, en blanco. El CUIT va solo para leer (D-65) y hay tres botones: «Cancelar», «Guardar borrador» y «Confirmar», que rige desde
+ * ya (D-61). Abrirlo no escribe nada: el borrador se crea en el primer «Guardar borrador» o «Confirmar».
  *  - «Confirmar» guarda el borrador con lo que se ve y lo confirma con la versión que devolvió el guardado: la persona confirma lo que
  *    tiene delante. Repetir el guardado con el mismo contenido no escribe nada, así que un reintento tras un corte es seguro.
- *  - Idempotencia: el `borradorId` (si todavía no hay borrador) y el id del domicilio nuevo se generan UNA vez; el primer envío fija el
- *    pedido entero y un reintento reenvía lo mismo (`useEnvioFijado`).
- *  - Concurrencia: lleva la versión que vio la pantalla. Con «versión desactualizada» se vuelve a leer: sin borrador, la página
- *    vuelve a la lectura; con uno, el formulario se abre con SU id y SU versión (el borrador es de la empresa, no de la pestaña).
+ *  - Idempotencia: el `borradorId` (si todavía no hay borrador) y el id del domicilio nuevo se generan UNA vez al abrir el formulario
+ *    (recargar no crea nada: no se escribió); el primer envío fija el pedido entero y un reintento reenvía lo mismo (`useEnvioFijado`).
+ *  - Concurrencia: lleva la versión que vio la pantalla. Con «versión desactualizada» se vuelve a leer: con borrador, el formulario se
+ *    abre con SU id y SU versión (el borrador es de la empresa, no de la pestaña); sin él, parte de lo vigente.
  *  - Errores: el que trae un `campo` se marca en ese campo y el foco va al primero; los demás se dicen arriba. La validez la decide
  *    el servidor.
  */
@@ -70,6 +76,7 @@ export function FormularioDeDatosFiscales({
   emisorId,
   cuit,
   borrador,
+  vigente,
   condicionesDeIva,
   guardar,
   confirmar,
@@ -82,16 +89,17 @@ export function FormularioDeDatosFiscales({
   const cual = useRef<"guardar" | "confirmar">("guardar");
   const [ids, setIds] = useState(() => nuevosIds(borrador));
   const [valores, setValores] = useState<ValoresDeDatosFiscales>(() =>
-    valoresDelBorrador(borrador),
+    valoresDelBorrador(borrador, vigente),
   );
   const [version, setVersion] = useState(borrador?.version ?? null);
-  const [claveVista, setClaveVista] = useState(claveDe(borrador));
+  const [claveVista, setClaveVista] = useState(claveDe(borrador, vigente));
 
-  // Llegó otro borrador (después de «versión desactualizada»): se parte de lo último, con su id y su versión.
-  if (borrador !== null && claveDe(borrador) !== claveVista) {
-    setClaveVista(claveDe(borrador));
-    setValores(valoresDelBorrador(borrador));
-    setVersion(borrador.version);
+  // Llegó otro borrador u otra versión vigente (después de «versión desactualizada»): se parte de lo último, con su id y su versión.
+  const clave = claveDe(borrador, vigente);
+  if (clave !== claveVista) {
+    setClaveVista(clave);
+    setValores(valoresDelBorrador(borrador, vigente));
+    setVersion(borrador?.version ?? null);
     setIds(nuevosIds(borrador));
   }
 

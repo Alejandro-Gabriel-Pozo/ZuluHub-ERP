@@ -1,5 +1,4 @@
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { PROVINCIAS } from "../../../../../src/primitivas/domicilio/provincias";
 import { formatearFecha, formatearNumeroDeDocumento } from "../facturacion/formato-fiscal";
 import {
   domicilioNuevo,
@@ -8,8 +7,7 @@ import {
 } from "./modelo-de-puntos-de-venta";
 
 /**
- * El modelo de vista de Datos fiscales (D-43, D-61 a D-65, D-68): de lo que entrega `datosFiscalesDelEmisor` (el CUIT, la versión vigente y el borrador), lo que se lee y lo que
- * se escribe. Puro: sin React ni servidor. Los textos salen del catálogo. Las reglas de negocio (qué es una razón social, una fecha,
+ * El modelo de vista de Datos fiscales (D-43, D-61 a D-65, D-68, D-88): de lo que entrega `datosFiscalesDelEmisor` (el CUIT, la versión vigente y el borrador), lo que se escribe. Puro: sin React ni servidor. Los textos salen del catálogo. Las reglas de negocio (qué es una razón social, una fecha,
  * una provincia válidas) las decide el servidor: acá solo se acomoda la forma del pedido.
  */
 
@@ -50,76 +48,11 @@ export type BorradorDeDatosFiscales = Readonly<{
 
 export type OpcionDeCondicionDeIva = Readonly<{ valor: string; etiqueta: string }>;
 
-const provinciaParaMostrar = (codigo: string): string =>
-  PROVINCIAS.find((p) => p.codigo === codigo)?.nombre ?? codigo;
-
-/**
- * El domicilio en una línea, con los rótulos ya aprobados de los campos para lo opcional («Piso 3», «Departamento B», «Código postal
- * 1000»). SUPUESTO del ingeniero: el prototipo muestra «Av. Rivadavia 1234, CABA» y no dice cómo se escriben piso, departamento y
- * código postal; se usan sus rótulos de Puntos de venta. Revertirlo es cambiar esta función.
- */
-export function domicilioEnUnaLinea(d: DomicilioDeDatosFiscales): string {
-  return [
-    `${d.calle} ${d.numero}`,
-    d.piso === null ? null : `${texto({}, "fiscal.pantalla.config_pv_piso")} ${d.piso}`,
-    d.departamento === null
-      ? null
-      : `${texto({}, "fiscal.pantalla.config_pv_departamento")} ${d.departamento}`,
-    d.localidad,
-    provinciaParaMostrar(d.provincia),
-    d.codigoPostal === null
-      ? null
-      : `${texto({}, "fiscal.pantalla.config_pv_codigo_postal")} ${d.codigoPostal}`,
-  ]
-    .filter((parte) => parte !== null)
-    .join(", ");
-}
-
-/** El CUIT de la empresa (D-65), en su forma de lectura («30-71234567-8»): solo para leer, en la lectura y en el formulario. */
+/** El CUIT de la empresa (D-65), en su forma de lectura («30-71234567-8»): solo para leer en el formulario. */
 export const filaDelCuit = (cuit: string): Readonly<{ rotulo: string; valor: string }> => ({
   rotulo: texto({}, "fiscal.pantalla.config_df_cuit"),
   valor: formatearNumeroDeDocumento("CUIT", cuit),
 });
-
-export type LecturaDeDatosFiscales = Readonly<{
-  filas: readonly Readonly<{ rotulo: string; valor: string }>[];
-  /** «Rige desde el 12/10/2026.» */
-  rigeDesde: string;
-}>;
-
-/**
- * Lo vigente, para leer (estado 1 y 3 de la opción A). `rigeDesdeEnArgentina`: el día civil argentino (`AAAA-MM-DD`) del instante
- * desde el que rige; lo calcula la página con la utilidad que ya existe (`hoyEnArgentina`).
- */
-export function armarLaLectura(
-  cuit: string,
-  v: VigenteDeDatosFiscales,
-  condiciones: readonly OpcionDeCondicionDeIva[],
-  rigeDesdeEnArgentina: string,
-): LecturaDeDatosFiscales {
-  return {
-    filas: [
-      filaDelCuit(cuit),
-      { rotulo: texto({}, "fiscal.pantalla.config_df_razon_social"), valor: v.razonSocial },
-      {
-        rotulo: texto({}, "fiscal.pantalla.config_df_condicion_iva"),
-        // Una condición que la lista no conoce se muestra como llegó: nunca se inventa un texto.
-        valor: condiciones.find((c) => c.valor === v.condicionIva)?.etiqueta ?? v.condicionIva,
-      },
-      {
-        rotulo: texto({}, "fiscal.pantalla.config_df_domicilio_fiscal"),
-        valor: domicilioEnUnaLinea(v.domicilio),
-      },
-      {
-        rotulo: texto({}, "fiscal.pantalla.config_df_inicio_actividades"),
-        valor: formatearFecha(v.inicioActividades),
-      },
-    ],
-    rigeDesde: texto({}, "fiscal.pantalla.config_df_rige_desde", {
-      fecha: formatearFecha(rigeDesdeEnArgentina),
-    }),
-  };
-}
 
 // ---------------------------------------------------------------------------------------------------------------
 // El formulario
@@ -160,9 +93,22 @@ const valoresDelDomicilio = (d: DomicilioDeDatosFiscales | null): ValoresDelDomi
   codigoPostal: d?.codigoPostal ?? "",
 });
 
-/** Los valores con los que abre el formulario: los del borrador (D-62: ya precargado con lo vigente), o en blanco si no hay. */
-export function valoresDelBorrador(b: BorradorDeDatosFiscales | null): ValoresDeDatosFiscales {
-  if (b === null) return VALORES_EN_BLANCO;
+/** Lo vigente en los campos del formulario (D-88: sin borrador se abre con lo que rige; no se guarda nada hasta Guardar borrador o Confirmar). */
+function valoresDeLoVigente(v: VigenteDeDatosFiscales): ValoresDeDatosFiscales {
+  return {
+    razonSocial: v.razonSocial,
+    condicionIva: v.condicionIva,
+    inicioActividades: formatearFecha(v.inicioActividades),
+    ...valoresDelDomicilio(v.domicilio),
+  };
+}
+
+/** Los valores con los que abre el formulario: los del borrador si existe (D-88), si no los de lo vigente, y en blanco si nunca hubo nada. */
+export function valoresDelBorrador(
+  b: BorradorDeDatosFiscales | null,
+  vigente: VigenteDeDatosFiscales | null = null,
+): ValoresDeDatosFiscales {
+  if (b === null) return vigente === null ? VALORES_EN_BLANCO : valoresDeLoVigente(vigente);
   return {
     razonSocial: b.razonSocial ?? "",
     condicionIva: b.condicionIva ?? "",
@@ -233,9 +179,9 @@ export function armarElPedidoDeGuardado(
 }
 
 /**
- * El motivo que pide el caso de uso al confirmar (`confirmarDatosFiscales`: obligatorio). La pantalla aprobada no tiene un campo de
- * motivo, así que viaja este texto fijo. SUPUESTO del ingeniero, sin aprobar y sin fuente: se guarda en la versión confirmada, no se
- * muestra. Revertirlo es cambiar esta constante o agregar el campo a la pantalla (pregunta pendiente al dueño).
+ * El motivo que pide el caso de uso al confirmar (`confirmarDatosFiscales`: obligatorio). La pantalla no tiene un campo de
+ * motivo: viaja este texto fijo, que se guarda en la versión confirmada y nunca se muestra. Fuente: D-89 de
+ * `facturador-contratos-de-pantalla.md`, confirmada por el dueño el 2026-11-03.
  */
 export const MOTIVO_DE_LA_CONFIRMACION = "Confirmación de datos fiscales";
 
