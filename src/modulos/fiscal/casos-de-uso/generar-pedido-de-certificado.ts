@@ -36,8 +36,8 @@ import { DECLARACIONES_DE_CERTIFICADOS } from "./declaraciones-de-certificados";
  * pedido, `CLAVE_REUTILIZADA`. 5. El emisor existe y está activo. 6. Se genera el par, se
  * cifra la clave con su fila; los pedidos pendientes anteriores del mismo emisor y ambiente pasan a `DESCARTADO` (D-92,
  * 2026-11-03: un pedido nuevo anula al pendiente anterior; no se borran; no se toca un `VIGENTE`) ANTES de guardar el nuevo
- * `PEDIDO_GENERADO`, porque la base (0018) admite uno solo pendiente: siempre hay UNO. 7. Auditoría `CERTIFICADO_PEDIDO_GENERADO` y, por cada pedido
- * anulado, `CERTIFICADO_PEDIDO_DESCARTADO` en la misma transacción: el hecho (quién, cuándo, alias, emisor, ambiente),
+ * `PEDIDO_GENERADO`, porque la base (0018) admite uno solo pendiente: siempre hay UNO. 7. Auditoría `CERTIFICADO_PEDIDO_DESCARTADO` por cada pedido
+ * anulado (junto al descarte, antes de crear el nuevo) y `CERTIFICADO_PEDIDO_GENERADO`, en la misma transacción: el hecho (quién, cuándo, alias, emisor, ambiente),
  * nunca la clave ni su cifrado. Dos pedidos nuevos a la vez para el mismo emisor y ambiente: la base (SERIALIZABLE y
  * `certificado_pendiente_uk`) deja pasar uno y repite el otro, que ve al primero y lo anula; queda el último que se confirma.
  *
@@ -144,6 +144,19 @@ export function armarGenerarPedidoDeCertificado({
           pedido.ambiente,
           pedido.id,
         );
+        // La auditoría de cada descarte va JUNTO al descarte, antes de crear el nuevo: si `crearPedido` devuelve que ya existía (ganó
+        // otro con el mismo `id`) la transacción se confirma igual, y un descarte nunca queda sin su rastro.
+        for (const anulado of anulados) {
+          await tx.auditoria.registrar({
+            empresaId,
+            actorPersonaId: personaId,
+            accion: "CERTIFICADO_PEDIDO_DESCARTADO",
+            entidad: "certificado_arca",
+            entidadId: anulado.id,
+            antes: { estado: "PEDIDO_GENERADO" },
+            despues: { estado: anulado.estado, reemplazadoPor: pedido.id },
+          });
+        }
         const alta = await tx.certificados.crearPedido({
           id: pedido.id,
           empresaId,
@@ -175,17 +188,6 @@ export function armarGenerarPedidoDeCertificado({
             cuitTitular: creado.cuitTitular,
           },
         });
-        for (const anulado of anulados) {
-          await tx.auditoria.registrar({
-            empresaId,
-            actorPersonaId: personaId,
-            accion: "CERTIFICADO_PEDIDO_DESCARTADO",
-            entidad: "certificado_arca",
-            entidadId: anulado.id,
-            antes: { estado: "PEDIDO_GENERADO" },
-            despues: { estado: anulado.estado, reemplazadoPor: creado.id },
-          });
-        }
         return ok({ certificadoId: creado.id, pedidoPem: creado.pedidoPem, yaExistia: false });
       },
     );

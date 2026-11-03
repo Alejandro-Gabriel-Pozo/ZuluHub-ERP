@@ -243,6 +243,40 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
     }
   });
 
+  it("D-92: el mismo pedido nuevo a la vez N veces sobre un pendiente anterior: un solo descarte y nunca un descarte sin su auditoría", async () => {
+    for (let ronda = 0; ronda < RONDAS; ronda++) {
+      const e = await escenarioDeCertificados(dueno, propia.base);
+      const anterior = pedidoDeCertificado(e);
+      expect((await casos.generarPedidoDeCertificado(e.como(new Date()), anterior)).ok).toBe(true);
+      const nuevo = pedidoDeCertificado(e);
+      const rs = await juntas(4, () => casos.generarPedidoDeCertificado(e.como(new Date()), nuevo));
+      for (const r of rs) {
+        expect(
+          r.ok || JSON.stringify(r.error).includes("ConcurrenciaAgotada"),
+          JSON.stringify(r),
+        ).toBe(true);
+      }
+      const estados = await filas<{ id: string; estado: string }>(
+        "select id, estado from certificado_arca where empresa_id = $1 order by id",
+        [e.empresa],
+      );
+      expect(estados.find((s) => s.id === anterior.id)?.estado).toBe("DESCARTADO");
+      expect(estados.filter((s) => s.estado === "PEDIDO_GENERADO").map((s) => s.id)).toEqual([
+        nuevo.id,
+      ]);
+      // El invariante: cada pedido descartado tiene su auditoría de descarte, una sola, y cada auditoría de descarte es de un descartado.
+      const descartados = estados.filter((s) => s.estado === "DESCARTADO").map((s) => s.id);
+      const auditados = (
+        await filas<{ entidad_id: string }>(
+          "select entidad_id from auditoria_empresa where empresa_id = $1 and accion = 'CERTIFICADO_PEDIDO_DESCARTADO'",
+          [e.empresa],
+        )
+      ).map((f) => f.entidad_id);
+      expect(auditados.sort()).toEqual(descartados.sort());
+      expect(await auditoriasDe(e.empresa, "CERTIFICADO_PEDIDO_GENERADO")).toBe(2);
+    }
+  });
+
   it("D-92: cargar un pedido contra generar otro nuevo a la vez: nunca dos pendientes ni dos vigentes, y cada resultado dice lo que quedó", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const e = await escenarioDeCertificados(dueno, propia.base);
