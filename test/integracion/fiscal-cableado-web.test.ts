@@ -579,11 +579,15 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
         comoPersonaDe(e),
         pedido(e, version),
       );
-      expect(respuesta).toMatchObject({
+      // El código público, con su clave del catálogo y como aviso; el nombre interno del caso de uso no sale.
+      expect(respuesta).toEqual({
         ok: false,
-        error: { codigo: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA" },
+        error: {
+          codigo: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA",
+          clave: "error.fiscal_punto_de_venta_no_habilitado_en_arca",
+          presentacion: "AVISO",
+        },
       });
-      expect(JSON.stringify(respuesta)).not.toContain('PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA"');
       expect((await estadoDelPunto(e))?.ambiente).toBe("HOMOLOGACION");
       expect(await cambiosDeAmbiente(e)).toBe(0);
       // Cuando ARCA lo da de alta, el mismo pedido pasa.
