@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { datosDelAlta, secretoEnGrupos } from "../../apps/plataforma/logica/alta";
 import { dibujoDeQr } from "../../apps/plataforma/logica/qr-seguro";
-import { matrizDelQr, svgDeLaMatriz } from "../../src/adaptadores/autenticacion/plataforma/qr-svg";
+import { matrizDelQr, svgDeLaMatriz } from "../../src/adaptadores/qr/qr-svg";
 
-const SVG_REAL = svgDeLaMatriz(matrizDelQr("otpauth://totp/Prueba:ana?secret=JBSWY3DPEHPK3PXP"));
+// Como lo arma el servidor del alta: con la etiqueta que la consola reconoce (`respuestas.ts`).
+const SVG_REAL = svgDeLaMatriz(
+  matrizDelQr("otpauth://totp/Prueba:ana?secret=JBSWY3DPEHPK3PXP", "M"),
+  "Código QR para la aplicación autenticadora",
+);
 const SECRETO = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
 const CODIGOS = Array.from({ length: 10 }, (_, i) => `abcd${i}-wxyz${i}`);
 

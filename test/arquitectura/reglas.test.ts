@@ -394,7 +394,7 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
-      regla: "qr-solo-en-la-autenticacion-de-plataforma",
+      regla: "qr-solo-en-su-adaptador",
       archivos: {
         "src/adaptadores/autenticacion/opciones.ts": importa("qrcode-generator"),
       },
@@ -1947,29 +1947,34 @@ describe("P8c: el ingreso de la consola solo lo importa el servidor de la consol
 });
 
 /**
- * P8a (h5-p8 §2.4 ter). El generador del QR (`qrcode-generator`, 2.0.4 exacta, aprobada por el dueño) recibe la
- * dirección `otpauth://` con el secreto del segundo factor: solo lo importa el adaptador de la autenticación de
- * plataforma, la carpeta `src/adaptadores/autenticacion/plataforma/`, y nada más.
+ * P8a y F9 (h5-p8 §2.4 ter). El generador del QR (`qrcode-generator`, 2.0.4 exacta, aprobada por el dueño) recibe textos
+ * sensibles (la dirección `otpauth://` con el secreto del segundo factor, la URL de una factura): solo lo importa el
+ * adaptador de QR, la carpeta `src/adaptadores/qr/`, y nada más (ni siquiera el adaptador de autenticación, que ahora
+ * le pide el dibujo como cualquier otro).
  */
-describe("P8a: el generador de QR solo entra por la autenticación de plataforma", () => {
-  it("lo importa el adaptador de la autenticación de plataforma (y sus pruebas), y nadie más puede", async () => {
+describe("P8a y F9: el generador de QR solo entra por el adaptador de QR", () => {
+  it("lo importa el adaptador de QR (y sus pruebas), y nadie más puede", async () => {
     const v = await violacionesDe({
-      "src/adaptadores/autenticacion/plataforma/qr-svg.ts": importa("qrcode-generator"),
-      "src/adaptadores/autenticacion/plataforma/qr-svg.test.ts": importa("qrcode-generator"),
-      "src/adaptadores/autenticacion/plataforma/otro/archivo.ts": importa(
-        "qrcode-generator/dist/qrcode",
-      ),
+      "src/adaptadores/qr/qr-svg.ts": importa("qrcode-generator"),
+      "src/adaptadores/qr/qr-svg.test.ts": importa("qrcode-generator"),
+      "src/adaptadores/qr/otro/archivo.ts": importa("qrcode-generator/dist/qrcode"),
     });
-    expect(v).not.toContain("qr-solo-en-la-autenticacion-de-plataforma");
+    expect(v).not.toContain("qr-solo-en-su-adaptador");
   });
 
   it.each([
+    [
+      "la autenticación de plataforma (antes era el único lugar)",
+      "src/adaptadores/autenticacion/plataforma/qr-svg.ts",
+    ],
     [
       "el adaptador de autenticación de EMPRESA (misma carpeta padre)",
       "src/adaptadores/autenticacion/opciones.ts",
     ],
     ["la web de empresa", "src/adaptadores/autenticacion/autenticacion-de-better-auth.ts"],
     ["otro adaptador", "src/adaptadores/postgres/segundo-factor-de-autenticacion.ts"],
+    ["el adaptador de ARCA", "src/adaptadores/arca/adaptador-arca.ts"],
+    ["el dominio fiscal", "src/modulos/fiscal/dominio/qr-de-arca.ts"],
     ["una capacidad", "src/capacidades/autenticacion/totp.ts"],
     ["un puerto", "src/puertos/autenticacion.ts"],
     ["la composición", "src/composicion/plataforma.ts"],
@@ -1980,7 +1985,7 @@ describe("P8a: el generador de QR solo entra por la autenticación de plataforma
     ["un script", "scripts/crear-qr.ts"],
   ])("%s no puede importarlo (%s)", async (_nombre, origen) => {
     const v = await violacionesDe({ [origen]: importa("qrcode-generator") });
-    expect(v).toContain("qr-solo-en-la-autenticacion-de-plataforma");
+    expect(v).toContain("qr-solo-en-su-adaptador");
   });
 
   it("también se ve el import de un archivo interno del paquete, y desde una carpeta que solo se parece", async () => {
@@ -1988,15 +1993,13 @@ describe("P8a: el generador de QR solo entra por la autenticación de plataforma
       await violacionesDe({
         "src/adaptadores/autenticacion/instancia.ts": importa("qrcode-generator/dist/qrcode"),
       }),
-    ).toContain("qr-solo-en-la-autenticacion-de-plataforma");
+    ).toContain("qr-solo-en-su-adaptador");
     expect(
-      await violacionesDe({
-        "src/adaptadores/autenticacion/plataformas/qr.ts": importa("qrcode-generator"),
-      }),
-    ).toContain("qr-solo-en-la-autenticacion-de-plataforma");
+      await violacionesDe({ "src/adaptadores/qrs/qr.ts": importa("qrcode-generator") }),
+    ).toContain("qr-solo-en-su-adaptador");
     expect(
-      await violacionesDe({ "src/adaptadores/otra/plataforma/qr.ts": importa("qrcode-generator") }),
-    ).toContain("qr-solo-en-la-autenticacion-de-plataforma");
+      await violacionesDe({ "src/adaptadores/otra/qr/qr.ts": importa("qrcode-generator") }),
+    ).toContain("qr-solo-en-su-adaptador");
   });
 
   it("la dependencia está fijada en la versión exacta aprobada, sin rango", () => {
