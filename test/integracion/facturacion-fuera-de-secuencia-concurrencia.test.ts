@@ -9,7 +9,8 @@ import {
   type PuntoDeVentaParaEmision,
 } from "../../src/modulos/fiscal/publico";
 import { EmisionFalsa } from "../utilidades/emision-falsa";
-import { crearBarrera, crearBaseAparte } from "./entorno";
+import { correrEnParalelo, reintentarSiAgotada } from "./concurrencia-apoyo";
+import { crearBaseAparte } from "./entorno";
 import {
   RelojDePrueba,
   casosDeFacturacion,
@@ -89,14 +90,10 @@ describe.skipIf(base === null)(
     const filas = async <T extends Record<string, unknown>>(texto: string, p: unknown[] = []) =>
       (await dueno.query<T>(texto, p)).rows;
 
-    async function juntas<T>(n: number, llamada: (i: number) => Promise<T>): Promise<T[]> {
-      barrera = crearBarrera(n);
-      try {
-        return await Promise.all(Array.from({ length: n }, (_, i) => llamada(i)));
-      } finally {
-        barrera = null;
-      }
-    }
+    const juntas = <T>(n: number, llamada: (i: number) => Promise<T>): Promise<T[]> =>
+      correrEnParalelo(n, llamada, (esperar) => {
+        barrera = esperar;
+      });
 
     /** Una empresa con su serie en 0 y ARCA falsa ya en `ARCA_ADELANTE`: otro sistema usó el punto de venta. */
     async function preparar(arcaDe: (falsa: EmisionFalsa) => EmisionElectronica = (f) => f) {
@@ -115,22 +112,16 @@ describe.skipIf(base === null)(
     }
 
     /**
-     * Emite un comprobante. `ConcurrenciaAgotada` es una respuesta legítima bajo carga (SERIALIZABLE agotó sus
-     * reintentos y el servidor pide reintentar): se repite con la MISMA clave, y emitir es idempotente por clave, así
-     * que no se crea otro comprobante. Se acota para que un error persistente no quede disfrazado de «carga»;
-     * cualquier otro error falla mostrando el error real.
+     * Emite un comprobante. Ante `ConcurrenciaAgotada` se repite con la MISMA clave (`reintentarSiAgotada`): emitir es
+     * idempotente por clave, así que no se crea otro comprobante.
      */
     const emitirUno = async (p: Awaited<ReturnType<typeof preparar>>): Promise<ComprobanteId> => {
       const entrada = facturaManual(p.e);
-      for (let intento = 0; ; intento++) {
-        const r = await p.casos.emitirComprobanteManual(p.e.como(p.reloj.ahora()), entrada);
-        if (r.ok) return r.valor.comprobanteId;
-        const agotada =
-          typeof r.error === "object" &&
-          "tipo" in r.error &&
-          r.error.tipo === "ConcurrenciaAgotada";
-        if (!agotada || intento >= 20) throw new Error(`no emitió: ${comoTexto(r.error)}`);
-      }
+      const emitido = await reintentarSiAgotada(
+        () => p.casos.emitirComprobanteManual(p.e.como(p.reloj.ahora()), entrada),
+        { contexto: "no emitió" },
+      );
+      return emitido.comprobanteId;
     };
 
     const emitir = async (
