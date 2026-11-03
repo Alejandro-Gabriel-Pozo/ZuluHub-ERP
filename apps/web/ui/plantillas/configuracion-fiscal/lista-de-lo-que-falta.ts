@@ -110,14 +110,15 @@ export function cartelDelCertificado(
 export type FilaDeLaLista = Readonly<{
   clave: "DATOS_FISCALES" | "PUNTOS_DE_VENTA" | "CERTIFICADO";
   titulo: string;
-  /** Adónde lleva; `null`: la fila no es un enlace (Datos fiscales: su pantalla va en otro PR; Certificado: no tiene textos aprobados). */
+  /** Adónde lleva; `null`: la fila no es un enlace (Certificado: no tiene textos aprobados). */
   href: string | null;
   cartel: Readonly<{ texto: string; tono: TonoDeEstado }> | null;
 }>;
 
-/** Las rutas de Configuración fiscal. Un solo lugar: las usan la lista, las pantallas de puntos de venta y sus pruebas. */
+/** Las rutas de Configuración fiscal. Un solo lugar: las usan la lista, las pantallas de Datos fiscales y de puntos de venta y sus pruebas. */
 export const RUTAS_DE_CONFIGURACION = {
   lista: "/configuracion-fiscal",
+  datosFiscales: "/configuracion-fiscal/datos-fiscales",
   puntosDeVenta: "/configuracion-fiscal/puntos-de-venta",
   nuevoPuntoDeVenta: "/configuracion-fiscal/puntos-de-venta/nuevo",
 } as const;
@@ -137,9 +138,7 @@ export function armarLaLista(estado: EstadoParaLaLista): readonly FilaDeLaLista[
     {
       clave: "DATOS_FISCALES",
       titulo: texto({}, "fiscal.pantalla.config_fila_datos_fiscales"),
-      // La pantalla de Datos fiscales va en otro PR: hasta que exista su ruta la fila no es un enlace (sería un 404). Cuando se
-      // agregue, vuelve `datosFiscales` a `RUTAS_DE_CONFIGURACION` y la fila vuelve a apuntar ahí.
-      href: null,
+      href: RUTAS_DE_CONFIGURACION.datosFiscales,
       cartel: conCartel(cartelDeDatosFiscales(estado.datosFiscales.estado)),
     },
     {

@@ -2,12 +2,15 @@
 
 import {
   activarElPuntoDeVenta,
+  confirmarLosDatosFiscales,
   crearElPuntoDeVenta,
   desactivarElPuntoDeVenta,
   editarElPuntoDeVenta,
+  empezarLaCorreccionDeDatosFiscales,
+  guardarElBorradorDeDatosFiscales,
 } from "../../../servidor/configuracion-fiscal";
 
-// Las acciones de servidor de Puntos de venta, expuestas a Next. Finas a propósito (ADR-015, punto 2): la directiva `"use server"`
+// Las acciones de servidor de Puntos de venta y de Datos fiscales, expuestas a Next. Finas a propósito (ADR-015, punto 2): la directiva `"use server"`
 // tiene que ser lo primero de este archivo, así que lo que hacen vive en `servidor/configuracion-fiscal.ts` (que empieza con
 // `server-only`). Reciben el pedido tal como lo arma la pantalla (sin tipo: se lee y se valida en el servidor) y devuelven la
 // respuesta ya traducida (ADR-016). La empresa y quién actúa no viajan: los decide el servidor. El cambio de ambiente es
@@ -27,4 +30,16 @@ export async function activarPuntoDeVentaAccion(entrada: unknown) {
 
 export async function desactivarPuntoDeVentaAccion(entrada: unknown) {
   return desactivarElPuntoDeVenta(entrada);
+}
+
+export async function guardarBorradorDeDatosFiscalesAccion(entrada: unknown) {
+  return guardarElBorradorDeDatosFiscales(entrada);
+}
+
+export async function empezarCorreccionDeDatosFiscalesAccion(entrada: unknown) {
+  return empezarLaCorreccionDeDatosFiscales(entrada);
+}
+
+export async function confirmarDatosFiscalesAccion(entrada: unknown) {
+  return confirmarLosDatosFiscales(entrada);
 }

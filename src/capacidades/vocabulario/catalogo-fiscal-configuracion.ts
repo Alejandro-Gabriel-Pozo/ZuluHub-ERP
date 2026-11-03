@@ -1,11 +1,14 @@
 /**
  * Los textos de Configuración fiscal (prefijo `fiscal.pantalla.config_*`): la lista de lo que falta y las pantallas de Puntos de
- * venta (D-43). Viven aparte de `catalogo-fiscal-pantallas.ts` para que ninguno de los dos pase del tope de líneas; `catalogo.ts`
+ * venta y de Datos fiscales (D-43). Viven aparte de `catalogo-fiscal-pantallas.ts` para que ninguno de los dos pase del tope de líneas; `catalogo.ts`
  * los incluye y `catalogo.test.ts` los revisa como a todos. Castellano neutro y en términos del negocio.
  *
  * Una línea de fuente por texto, con el cuestionario real y la pregunta (preguntas hechas al dueño con AskUserQuestion en la sesión
  * web del carril web, 2026-10-29):
- *   Q17 = cuestionario de las 17:45Z: P1 provincias, P2 textos de la lista, P3 textos de Puntos de venta, P4 textos de Datos fiscales.
+ *   Q17 = cuestionario de las 17:45Z: P1 provincias, P2 textos de la lista, P3 textos de Puntos de venta, P4 textos de Datos fiscales
+ *   (el dueño contestó «Aprobar tal cual» a la P4, que listaba, entre otros: los botones «Guardar borrador», «Confirmar» y «Cancelar»;
+ *   los campos «CUIT», «Razón social», «Condición frente al IVA», «Domicilio», «Inicio de actividades» y los mismos de domicilio
+ *   que en Puntos de venta). El rótulo «Domicilio» (no «Domicilio fiscal») es el de D-82 (dueño, 2026-11-03).
  *   QA  = cuestionario A (21:08Z): P1 entrada, P2 sin puntos de venta, P3 rótulos y aviso de pruebas, P4 sucursal cerrada.
  *   QB  = cuestionario B (21:11Z): P1 accesos, P2 el certificado solo informa, P3 certificado sin punto de venta, P4 «Guardando…».
  *   CONTRATO-CONFIG = `facturador-contratos-de-pantalla.md` (D-43 a D-49 y D-60 a D-68); PROTO-PV = prototipo de Puntos de venta,
@@ -104,6 +107,9 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
   // Dueño, 2026-10-29, cuestionario B (21:11Z), pregunta 4 («Guardando…» en alta, edición y cambio de ambiente).
   // SUPUESTO del ingeniero: el mismo texto también en Activar y Desactivar; el dueño lo aprobó para alta, edición y cambio de
   // ambiente, no para estas dos acciones. Revertirlo es quitar `textoEnviando` de ese botón en `DetalleDelPuntoDeVenta.cliente.tsx`.
+  // Datos fiscales reutiliza esta misma clave para «Guardar borrador» y «Confirmar» (sin clave nueva). SUPUESTO del ingeniero: el dueño
+  // aprobó «Guardando…» para Puntos de venta, no se le preguntó tal cual para Datos fiscales. Revertirlo es quitar `textoEnviando` de ambos
+  // botones en `FormularioDeDatosFiscales.cliente.tsx`.
   "fiscal.pantalla.config_pv_guardando": { porDefecto: "Guardando…" },
   // Dueño, 2026-10-29, cuestionario B (21:11Z), pregunta 1: el pendiente de Inicio que lleva a la lista de Configuración fiscal.
   "fiscal.pantalla.config_pendiente_inicio": {
@@ -116,4 +122,22 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
     porDefecto: "Punto de venta {numero}",
     marcadores: ["numero"],
   },
+  // Datos fiscales (Q17 de 2026-10-29; D-82 y D-88 del 2026-11-03 sacaron la lectura intermedia, «Corregir», «Seguir con el borrador», el aviso
+  // del borrador y «Rige desde…»). Los textos de la condición frente al IVA son los de D-44, en `opciones-de-datos-fiscales.ts`.
+  // «Datos fiscales», el título del formulario, es `config_fila_datos_fiscales` (D-88: la fila de la lista abre directo el formulario).
+  // Dueño, 2026-10-29, Q17 pregunta 4.
+  "fiscal.pantalla.config_df_guardar_borrador": { porDefecto: "Guardar borrador" },
+  // Dueño, 2026-10-29, Q17 pregunta 4 (un solo botón que rige desde ya: D-61). La clave no dice «confirmar»: el catálogo rechaza como
+  // secreto todo nombre que contenga «firma» (`NOMBRE_DE_SECRETO`).
+  "fiscal.pantalla.config_df_que_rija": { porDefecto: "Confirmar" },
+  // Dueño, 2026-10-29, Q17 pregunta 4.
+  "fiscal.pantalla.config_df_cuit": { porDefecto: "CUIT" },
+  // Dueño, 2026-10-29, Q17 pregunta 4.
+  "fiscal.pantalla.config_df_razon_social": { porDefecto: "Razón social" },
+  // Dueño, 2026-10-29, Q17 pregunta 4. También nombra la opción vacía del selector (como «Provincia»), sin texto nuevo.
+  "fiscal.pantalla.config_df_condicion_iva": { porDefecto: "Condición frente al IVA" },
+  // Dueño, 2026-11-03, D-82 (rótulos aprobados).
+  "fiscal.pantalla.config_df_domicilio_fiscal": { porDefecto: "Domicilio" },
+  // Dueño, 2026-10-29, Q17 pregunta 4.
+  "fiscal.pantalla.config_df_inicio_actividades": { porDefecto: "Inicio de actividades" },
 } as const;

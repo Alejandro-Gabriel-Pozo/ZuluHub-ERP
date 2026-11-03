@@ -96,13 +96,14 @@ describe.each([390, 1280])("a %i px", (ancho) => {
 });
 
 describe("las filas y el teclado", () => {
-  it("solo puntos de venta es un enlace; datos fiscales (su ruta va en otro PR) y el certificado, no", async () => {
+  it("datos fiscales y puntos de venta son enlaces; el certificado, no", async () => {
     await render(lista());
     const enlaces = [...document.querySelectorAll("a[href]")].map((a) => a.getAttribute("href"));
-    // Datos fiscales vuelve a ser enlace (a `/configuracion-fiscal/datos-fiscales`) cuando exista la ruta.
-    expect(enlaces).toEqual(["/configuracion-fiscal/puntos-de-venta"]);
-    await expect.element(page.getByText("Datos fiscales")).toBeVisible();
-    expect(page.getByRole("link", { name: /Datos fiscales/ }).elements()).toHaveLength(0);
+    expect(enlaces).toEqual([
+      "/configuracion-fiscal/datos-fiscales",
+      "/configuracion-fiscal/puntos-de-venta",
+    ]);
+    await expect.element(page.getByRole("link", { name: /Datos fiscales/ })).toBeVisible();
     await expect.element(page.getByText("Certificado de ARCA")).toBeVisible();
     expect(page.getByRole("link", { name: /Certificado de ARCA/ }).elements()).toHaveLength(0);
   });
