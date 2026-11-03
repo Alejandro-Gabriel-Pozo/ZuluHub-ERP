@@ -167,13 +167,13 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<
   // Decisión del ingeniero, misma fuente (D-68) y mismo texto aprobado: guardar con OTROS datos sobre el `borradorId` de una versión que otra
   // pantalla ya confirmó es, para la persona, la misma situación (su pantalla tenía datos viejos). Actualiza y ve lo vigente.
   VERSION_CONFIRMADA_INMUTABLE: "FISCAL_VERSION_DESACTUALIZADA",
-  // Sin texto aprobado, y así debe seguir: o no ocurren en el uso normal (la pantalla solo ofrece ids que existen y son de la empresa), o su aviso
-  // no está aprobado (`PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA`, D-77). Salen como error inesperado con su referencia `PD-…`, sin el código.
+  // Sin texto aprobado, y así debe seguir: en el uso normal no ocurren (la pantalla solo ofrece ids que existen y son de la empresa), así
+  // que si pasan es un defecto o un pedido armado a mano y salen como error inesperado con su referencia `PD-…`.
   EMISOR_NO_ENCONTRADO: SIN_TEXTO_APROBADO,
   DATOS_FISCALES_NO_ENCONTRADOS: SIN_TEXTO_APROBADO,
   DOMICILIO_NO_ENCONTRADO: SIN_TEXTO_APROBADO,
   ID_EN_USO: SIN_TEXTO_APROBADO,
-  PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA: SIN_TEXTO_APROBADO,
+  PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA", // D-77: texto del 10005 (catalogo-fiscal.ts)
   // La pantalla solo ofrece las sucursales de la empresa: un id ajeno es un pedido armado a mano, y decir que existe en otra
   // empresa sería un oráculo. La base lo rechaza por la referencia, no por una regla que la persona pueda corregir.
   SUCURSAL_DE_OTRA_EMPRESA: null,

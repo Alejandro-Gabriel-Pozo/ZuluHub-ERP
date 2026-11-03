@@ -569,7 +569,7 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
       expect(await cambiosDeAmbiente(e)).toBe(0);
     });
 
-    it("D-77: si ARCA no tiene el punto de venta no pasa y nada cambia; la respuesta es un error inesperado con referencia (el texto del aviso no está aprobado), sin el código interno", async () => {
+    it("D-77: si ARCA no tiene el punto de venta no pasa y nada cambia; la respuesta es FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA (texto ya aprobado del 10005), no el nombre interno", async () => {
       const e = await empresaConFacturacion("GERENTE");
       await cargarCertificado(propia.base, e, "PRODUCCION");
       const version = (await estadoDelPunto(e))?.version ?? 0;
@@ -581,9 +581,9 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
       );
       expect(respuesta).toMatchObject({
         ok: false,
-        error: { codigo: "ERROR_INTERNO", referencia: expect.stringMatching(/^PD-/) as string },
+        error: { codigo: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA" },
       });
-      expect(JSON.stringify(respuesta)).not.toContain("NO_HABILITADO");
+      expect(JSON.stringify(respuesta)).not.toContain('PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA"');
       expect((await estadoDelPunto(e))?.ambiente).toBe("HOMOLOGACION");
       expect(await cambiosDeAmbiente(e)).toBe(0);
       // Cuando ARCA lo da de alta, el mismo pedido pasa.
