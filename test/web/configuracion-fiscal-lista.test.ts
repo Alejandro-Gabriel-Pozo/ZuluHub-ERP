@@ -186,6 +186,8 @@ describe("las tres filas de la lista", () => {
   it("las rutas son las aprobadas", () => {
     expect(RUTAS_DE_CONFIGURACION).toEqual({
       lista: "/configuracion-fiscal",
+      datosFiscales: "/configuracion-fiscal/datos-fiscales",
+      corregirDatosFiscales: "/configuracion-fiscal/datos-fiscales/corregir",
       puntosDeVenta: "/configuracion-fiscal/puntos-de-venta",
       nuevoPuntoDeVenta: "/configuracion-fiscal/puntos-de-venta/nuevo",
     });

@@ -119,6 +119,7 @@ export type FilaDeLaLista = Readonly<{
 export const RUTAS_DE_CONFIGURACION = {
   lista: "/configuracion-fiscal",
   datosFiscales: "/configuracion-fiscal/datos-fiscales",
+  corregirDatosFiscales: "/configuracion-fiscal/datos-fiscales/corregir",
   puntosDeVenta: "/configuracion-fiscal/puntos-de-venta",
   nuevoPuntoDeVenta: "/configuracion-fiscal/puntos-de-venta/nuevo",
 } as const;

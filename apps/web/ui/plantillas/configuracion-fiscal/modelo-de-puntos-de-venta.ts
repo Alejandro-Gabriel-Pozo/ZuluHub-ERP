@@ -202,8 +202,7 @@ const sinVacios = (t: string): string => t.trim();
 const opcional = (t: string): string | null => (sinVacios(t) === "" ? null : sinVacios(t));
 const sinCeros = (t: string): string => sinVacios(t).replace(/^0+(?=\d)/, "");
 
-/** Los campos del domicilio: los comparte el formulario de Datos fiscales (una regla, un lugar). */
-export const CAMPOS_DEL_DOMICILIO = [
+const CAMPOS_DEL_DOMICILIO = [
   "calle",
   "numeroDeCalle",
   "piso",
@@ -213,6 +212,7 @@ export const CAMPOS_DEL_DOMICILIO = [
   "codigoPostal",
 ] as const satisfies readonly CampoDelFormulario[];
 
+/** Solo los campos del domicilio: así lo reutiliza el formulario de Datos fiscales (una regla, un lugar). */
 export type ValoresDelDomicilio = Pick<ValoresDelFormulario, (typeof CAMPOS_DEL_DOMICILIO)[number]>;
 
 /** La persona cargó algo del domicilio. Ninguno: no se manda domicilio (se puede crear o editar un punto de venta sin él; no se activa). */

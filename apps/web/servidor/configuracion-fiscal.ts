@@ -3,11 +3,16 @@ import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import { aRespuestaDeExcepcion } from "../../../src/composicion/a-respuesta";
 import {
   activarPuntoDeVenta,
+  confirmarDatosFiscales,
   crearPuntoDeVenta,
+  datosFiscalesDelEmisor,
   desactivarPuntoDeVenta,
   editarPuntoDeVenta,
+  empezarCorreccionDeDatosFiscales,
   estadoDeLaConfiguracionFiscal,
+  guardarBorradorDeDatosFiscales,
   puntosDeVentaDelEmisor,
+  type DatosFiscalesParaLaPantalla,
   type DependenciasDeConfiguracionFiscalWeb,
   type EstadoDeLaConfiguracionParaLaPantalla,
   type PuntosDeVentaParaConfigurar,
@@ -18,8 +23,8 @@ import { conLaEmpresa } from "./facturacion";
 import { dependenciasDeSesion } from "./sesion";
 
 /**
- * Las acciones de servidor de Configuración fiscal (D-43), parte de Puntos de venta: crear, editar, activar y desactivar un punto de
- * venta, y las lecturas que arman sus pantallas. Finas a propósito (ADR-015, punto 2): resuelven DÓNDE y QUIÉN actúa con
+ * Las acciones de servidor de Configuración fiscal (D-43): crear, editar, activar y desactivar un punto de venta; guardar el borrador
+ * de los datos fiscales, empezar a corregirlos y confirmarlos; y las lecturas que arman las pantallas. Finas a propósito (ADR-015, punto 2): resuelven DÓNDE y QUIÉN actúa con
  * `conLaEmpresa` (la misma resolución que el facturador) y llaman a `src/composicion/configuracion-fiscal-web.ts`, donde se prueba
  * todo lo demás. Ninguna decide permisos (cada caso de uso y cada consulta exige el suyo, solo el gerente, dentro de su transacción)
  * ni toca la base. El pedido del navegador trae el contenido del punto de venta y el emisor, que el servidor valida contra la empresa;
@@ -48,6 +53,22 @@ export function desactivarElPuntoDeVenta(entrada: unknown) {
   return conLaEmpresa((contexto) => desactivarPuntoDeVenta(dependencias, contexto, entrada));
 }
 
+export function guardarElBorradorDeDatosFiscales(entrada: unknown) {
+  return conLaEmpresa((contexto) =>
+    guardarBorradorDeDatosFiscales(dependencias, contexto, entrada),
+  );
+}
+
+export function empezarLaCorreccionDeDatosFiscales(entrada: unknown) {
+  return conLaEmpresa((contexto) =>
+    empezarCorreccionDeDatosFiscales(dependencias, contexto, entrada),
+  );
+}
+
+export function confirmarLosDatosFiscales(entrada: unknown) {
+  return conLaEmpresa((contexto) => confirmarDatosFiscales(dependencias, contexto, entrada));
+}
+
 /** La lista de lo que falta, con el contexto que ya resolvió la página. Solo el gerente. */
 export async function cargarElEstadoDeLaConfiguracion(
   contexto: ContextoOperativo,
@@ -74,3 +95,23 @@ export async function cargarLosPuntosDeVenta(
     return aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta);
   }
 }
+
+/**
+ * Los datos fiscales del emisor principal (D-47): la versión que rige y el borrador en curso, que es del emisor y no de la pestaña
+ * (D-68). El emisor sale del estado de la configuración, no del navegador; si ese estado falla (sin permiso, por ejemplo), responde
+ * ese error.
+ */
+export async function cargarLosDatosFiscales(
+  contexto: ContextoOperativo,
+): Promise<Respuesta<DatosFiscalesParaLaPantalla>> {
+  try {
+    const estado = await estadoDeLaConfiguracionFiscal(dependencias, contexto);
+    if (!estado.ok) return estado;
+    return await datosFiscalesDelEmisor(dependencias, contexto, { emisorId: estado.dato.emisorId });
+  } catch (excepcion) {
+    return aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta);
+  }
+}
+
+// Las condiciones frente al IVA que ofrece el formulario (D-44): una lista fija del código, sin lectura ni permiso.
+export { opcionesDeDatosFiscales } from "../../../src/composicion/opciones-de-datos-fiscales";

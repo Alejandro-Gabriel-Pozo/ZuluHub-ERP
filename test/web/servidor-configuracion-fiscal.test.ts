@@ -19,7 +19,8 @@ const composicion = vi.hoisted(
     llamadas: { nombre: string; contexto: unknown; entrada: unknown }[];
     estado: unknown;
     puntos: unknown;
-  } => ({ llamadas: [], estado: null, puntos: null }),
+    datos: unknown;
+  } => ({ llamadas: [], estado: null, puntos: null, datos: null }),
 );
 
 vi.mock("../../src/composicion/configuracion-fiscal-web", () => {
@@ -32,6 +33,13 @@ vi.mock("../../src/composicion/configuracion-fiscal-web", () => {
     editarPuntoDeVenta: delegada("editarPuntoDeVenta"),
     activarPuntoDeVenta: delegada("activarPuntoDeVenta"),
     desactivarPuntoDeVenta: delegada("desactivarPuntoDeVenta"),
+    guardarBorradorDeDatosFiscales: delegada("guardarBorradorDeDatosFiscales"),
+    empezarCorreccionDeDatosFiscales: delegada("empezarCorreccionDeDatosFiscales"),
+    confirmarDatosFiscales: delegada("confirmarDatosFiscales"),
+    datosFiscalesDelEmisor: (_d: unknown, contexto: unknown, entrada: unknown) => {
+      composicion.llamadas.push({ nombre: "datos", contexto, entrada });
+      return Promise.resolve(composicion.datos);
+    },
     estadoDeLaConfiguracionFiscal: (_d: unknown, contexto: unknown) => {
       composicion.llamadas.push({ nombre: "estado", contexto, entrada: undefined });
       return Promise.resolve(composicion.estado);
@@ -46,22 +54,29 @@ vi.mock("../../src/composicion/configuracion-fiscal-web", () => {
 import {
   activarElPuntoDeVenta,
   cargarElEstadoDeLaConfiguracion,
+  cargarLosDatosFiscales,
   cargarLosPuntosDeVenta,
+  confirmarLosDatosFiscales,
   crearElPuntoDeVenta,
   desactivarElPuntoDeVenta,
   editarElPuntoDeVenta,
+  empezarLaCorreccionDeDatosFiscales,
+  guardarElBorradorDeDatosFiscales,
 } from "../../apps/web/servidor/configuracion-fiscal";
 
 beforeEach(() => {
   composicion.llamadas = [];
 });
 
-describe("las acciones de Puntos de venta del servidor", () => {
+describe("las acciones de Puntos de venta y de Datos fiscales del servidor", () => {
   it.each([
     ["crearPuntoDeVenta", crearElPuntoDeVenta],
     ["editarPuntoDeVenta", editarElPuntoDeVenta],
     ["activarPuntoDeVenta", activarElPuntoDeVenta],
     ["desactivarPuntoDeVenta", desactivarElPuntoDeVenta],
+    ["guardarBorradorDeDatosFiscales", guardarElBorradorDeDatosFiscales],
+    ["empezarCorreccionDeDatosFiscales", empezarLaCorreccionDeDatosFiscales],
+    ["confirmarDatosFiscales", confirmarLosDatosFiscales],
   ] as const)(
     "%s corre con el contexto de la sesión y el pedido tal cual",
     async (nombre, accion) => {
@@ -95,5 +110,23 @@ describe("las lecturas de Puntos de venta", () => {
     expect(composicion.llamadas).toEqual([
       { nombre: "estado", contexto: CONTEXTO, entrada: undefined },
     ]);
+  });
+});
+
+describe("la lectura de Datos fiscales", () => {
+  it("el emisor sale del estado de la configuración (D-47), no del navegador", async () => {
+    composicion.estado = { ok: true, dato: { emisorId: "emisor-principal" } };
+    composicion.datos = { ok: true, dato: { emisorId: "emisor-principal", vigente: null } };
+    expect(await cargarLosDatosFiscales(CONTEXTO as never)).toEqual(composicion.datos);
+    expect(composicion.llamadas).toEqual([
+      { nombre: "estado", contexto: CONTEXTO, entrada: undefined },
+      { nombre: "datos", contexto: CONTEXTO, entrada: { emisorId: "emisor-principal" } },
+    ]);
+  });
+
+  it("si el estado falla (sin permiso), responde ese error y no pide los datos", async () => {
+    composicion.estado = { ok: false, error: errorDeCodigo("SIN_PERMISO") };
+    expect(await cargarLosDatosFiscales(CONTEXTO as never)).toEqual(composicion.estado);
+    expect(composicion.llamadas.map((l) => l.nombre)).toEqual(["estado"]);
   });
 });

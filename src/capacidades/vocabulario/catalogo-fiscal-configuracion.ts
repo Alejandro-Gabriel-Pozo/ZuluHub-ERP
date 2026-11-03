@@ -130,8 +130,9 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
   "fiscal.pantalla.config_df_corregir": { porDefecto: "Corregir" },
   // Dueño, 2026-10-29, Q17 pregunta 4.
   "fiscal.pantalla.config_df_guardar_borrador": { porDefecto: "Guardar borrador" },
-  // Dueño, 2026-10-29, Q17 pregunta 4 (un solo botón que rige desde ya: D-61).
-  "fiscal.pantalla.config_df_confirmar": { porDefecto: "Confirmar" },
+  // Dueño, 2026-10-29, Q17 pregunta 4 (un solo botón que rige desde ya: D-61). La clave no dice «confirmar»: el catálogo rechaza como
+  // secreto todo nombre que contenga «firma» (`NOMBRE_DE_SECRETO`).
+  "fiscal.pantalla.config_df_que_rija": { porDefecto: "Confirmar" },
   // Dueño, 2026-10-29, Q17 pregunta 4.
   "fiscal.pantalla.config_df_seguir_con_el_borrador": { porDefecto: "Seguir con el borrador" },
   // Dueño, 2026-10-29, Q17 pregunta 4 («Rige desde el 12/10/2026.»); la fecha va en dd/mm/aaaa.
