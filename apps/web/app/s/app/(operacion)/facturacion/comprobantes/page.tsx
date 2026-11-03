@@ -5,6 +5,7 @@ import {
   entradaDelListado,
 } from "../../../../../../pantallas/entrada-del-listado";
 import { cargarElListado } from "../../../../../../servidor/facturacion";
+import { puedeEmitirFacturas } from "../../../../../../servidor/modulos";
 import { ErrorDelDetalle } from "../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
 import {
   armarLosFiltros,
@@ -16,6 +17,7 @@ import {
 import {
   armarElListado,
   armarLaEleccionDeSucursal,
+  enlaceDeEmitir,
   errorParaElListado,
 } from "../../../../../../ui/plantillas/facturacion/modelo-del-listado";
 import { PantallaDeListadoDeComprobantes } from "../../../../../../ui/plantillas/facturacion/PantallaDeListadoDeComprobantes";
@@ -50,8 +52,11 @@ export default async function PaginaDeListadoDeComprobantes({ searchParams }: Pr
       // Sin sucursal con la que listar la pantalla hace elegir: el selector (con su invitación) reemplaza al error.
       const sinElegir = !pagina.ok && pagina.error.codigo === "FISCAL_SUCURSAL_NO_ELEGIDA";
       const sinSucursal = cargado.efectiva === "";
+      // «+ Emitir» solo para quien puede emitir hoy (el servidor vuelve a validar al abrir Emitir y al emitir).
+      const puedeEmitir = await puedeEmitirFacturas(contexto);
       return (
         <PantallaDeListadoDeComprobantes
+          emitir={puedeEmitir ? enlaceDeEmitir({}) : null}
           eleccionDeSucursal={armarLaEleccionDeSucursal(cargado.sucursales, cargado.efectiva)}
           accionDeSucursal={elegirSucursalAccion}
           filtros={sinSucursal ? null : armarLosFiltros(aplicados, cargado.puntosDeVenta)}

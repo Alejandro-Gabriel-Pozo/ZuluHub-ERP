@@ -30,6 +30,7 @@ export type PropsDePantallaDeListadoDeComprobantes = Readonly<{
   filtros: FiltrosArmados | null;
   listado: ListadoArmado | null;
   error?: ReactNode;
+  emitir?: Readonly<{ href: string; texto: string }> | null;
 }>;
 
 export const ID_1 = "0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b";

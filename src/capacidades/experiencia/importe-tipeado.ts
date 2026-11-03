@@ -29,8 +29,8 @@ const CANONICO = new RegExp(
   `^(?:0|[1-9]\\d{0,${DIGITOS_ENTEROS_MAXIMOS - 1}})(?:\\.\\d{1,${DECIMALES}})?$`,
 );
 
-/** Separa lo tipeado en parte entera y parte decimal. `decimal` es `null` si no se tipeó separador. */
-function partirTipeado(crudo: string): { entera: string; decimal: string | null } {
+/** Separa lo tipeado en parte entera y parte decimal. `decimal` es `null` si no se tipeó separador. También la usa la cantidad de Emitir (una regla, un lugar). */
+export function partirTipeado(crudo: string): { entera: string; decimal: string | null } {
   const limpio = crudo.replace(/[^\d.,]/g, "");
   // La coma es el decimal de es-AR; con coma, los puntos son miles. Una segunda coma se descarta.
   const coma = limpio.indexOf(",");

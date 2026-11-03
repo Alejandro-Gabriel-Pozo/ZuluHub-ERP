@@ -1,0 +1,147 @@
+.raiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  font-size: var(--tipo-tamano-medio);
+  min-width: 0;
+}
+
+/* Los tres pasos: el actual lleva un trazo fuerte arriba y el texto en negro (nunca solo color: también el número y aria-current). */
+.pasos {
+  display: flex;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.etapa {
+  flex: 1;
+  min-width: 0;
+  padding-top: var(--espacio-2);
+  border-top: 4px solid var(--color-borde);
+  color: var(--color-texto-suave);
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+.etapa[data-actual="true"] {
+  border-top-color: var(--color-texto);
+  color: var(--color-texto);
+}
+
+.numero {
+  font-variant-numeric: tabular-nums;
+}
+
+.seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  min-width: 0;
+}
+
+.titulo {
+  margin: 0;
+  font-size: var(--tipo-tamano-medio);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+/* Un renglón: su número, y debajo sus campos. */
+.renglon {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  min-width: 0;
+  margin: 0;
+  padding: var(--espacio-3);
+  border: var(--borde-grosor-fuerte) solid var(--color-texto);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+}
+
+.nombre {
+  padding: 0 var(--espacio-1);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.fila {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: var(--espacio-2) 0;
+  border-bottom: var(--borde-grosor) solid var(--color-borde);
+}
+
+.fila > * {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.fila[data-fuerte="true"] {
+  border-bottom: var(--borde-grosor-fuerte) solid var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.importe {
+  margin: 0;
+  font-weight: var(--tipo-peso-fuerte);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.suave {
+  color: var(--color-texto-suave);
+}
+
+.descripcion {
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+/* Una tarjeta de «Revisar»: un rótulo y sus datos. */
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  min-width: 0;
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+}
+
+.rotulo {
+  margin: 0;
+  color: var(--color-texto-suave);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.dato {
+  margin: 0;
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+.filas {
+  margin: 0;
+}
+
+.marca {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.acciones {
+  display: flex;
+  gap: var(--espacio-3);
+  padding-top: var(--espacio-2);
+}
+
+.accion {
+  flex: 1;
+  min-width: 0;
+}

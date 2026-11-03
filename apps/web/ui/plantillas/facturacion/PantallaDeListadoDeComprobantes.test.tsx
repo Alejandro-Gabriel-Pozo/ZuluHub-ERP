@@ -162,6 +162,21 @@ describe("listado de comprobantes en el celular (6A, tarjetas)", () => {
     );
   });
 
+  it("«+ Emitir» (que la página ofrece solo con el permiso): un enlace a Emitir, accesible y tocable en el celular y en escritorio", async () => {
+    await ventana(390);
+    await render(
+      enArmazon(props({ emitir: { href: "/facturacion/comprobantes/emitir", texto: "+ Emitir" } })),
+    );
+    await expect
+      .element(page.getByRole("link", { name: "+ Emitir" }))
+      .toHaveAttribute("href", "/facturacion/comprobantes/emitir");
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    legibleYTocable();
+    await ventana(1280);
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    legibleYTocable();
+  });
+
   it("los importes, también el enorme, no desbordan y se leen a 18 px con peso fuerte", async () => {
     await render(enArmazon(props()));
     const importes = [...(tarjetas() as HTMLElement).querySelectorAll<HTMLElement>("span")].filter(

@@ -19,6 +19,7 @@
 
 import { TEXTOS_DE_FISCAL } from "./catalogo-fiscal";
 import { TEXTOS_DE_FISCAL_CONFIGURACION } from "./catalogo-fiscal-configuracion";
+import { TEXTOS_DE_FISCAL_EMITIR } from "./catalogo-fiscal-emitir";
 import { TEXTOS_DE_FISCAL_PANTALLAS } from "./catalogo-fiscal-pantallas";
 
 /** El largo máximo de un texto que no declara otro (la base admite hasta 200 en cualquier caso). */
@@ -319,6 +320,7 @@ export const CATALOGO_DE_TEXTOS = {
   ...TEXTOS_DE_FISCAL,
   ...TEXTOS_DE_FISCAL_PANTALLAS,
   ...TEXTOS_DE_FISCAL_CONFIGURACION,
+  ...TEXTOS_DE_FISCAL_EMITIR,
 } as const satisfies Record<string, DefinicionDeTexto>;
 
 export type ClaveDeTexto = keyof typeof CATALOGO_DE_TEXTOS;

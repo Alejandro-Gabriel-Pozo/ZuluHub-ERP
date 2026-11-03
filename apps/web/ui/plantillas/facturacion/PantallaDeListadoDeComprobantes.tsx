@@ -18,6 +18,8 @@ export type PropsDePantallaDeListadoDeComprobantes = Readonly<{
   listado: ListadoArmado | null;
   /** El error ya pintado (la página lo arma con el catálogo y la referencia). */
   error?: ReactNode;
+  /** «+ Emitir» (contrato, «Acciones»): solo si la persona puede emitir; `null` o ausente, no se muestra. */
+  emitir?: Readonly<{ href: string; texto: string }> | null;
 }>;
 
 function Estados({ fila }: Readonly<{ fila: FilaArmada }>) {
@@ -100,8 +102,8 @@ function Tabla({ listado }: Readonly<{ listado: ListadoArmado }>) {
 /**
  * El listado de comprobantes (contrato de la pantalla 1, 6A + 6C): los filtros, la lista y «Página siguiente». Una sola lista de
  * datos que se pinta como tarjetas en el celular y como tabla en escritorio (el CSS elige cuál se ve; la otra queda fuera del
- * árbol de accesibilidad). Sin Exportar, Origen, Pago, Referencias, «+ Emitir», cantidad ni total del resultado: no están en el
- * contrato (D-3, D-33, D-23, D-32). El `h1` lo pone el armazón.
+ * árbol de accesibilidad). «+ Emitir» abre Emitir y solo lo ve quien puede emitir (contrato, pantalla 1, «Acciones»). Sin Exportar,
+ * Origen, Pago, Referencias, cantidad ni total del resultado: no están en el contrato (D-3, D-33, D-23, D-32). El `h1` lo pone el armazón.
  */
 export function PantallaDeListadoDeComprobantes({
   eleccionDeSucursal,
@@ -109,9 +111,15 @@ export function PantallaDeListadoDeComprobantes({
   filtros,
   listado,
   error,
+  emitir = null,
 }: PropsDePantallaDeListadoDeComprobantes) {
   return (
     <div className={estilos["raiz"]}>
+      {emitir === null ? null : (
+        <a className={estilos["emitir"]} href={emitir.href}>
+          {emitir.texto}
+        </a>
+      )}
       {eleccionDeSucursal === null ? null : (
         // Con nombre («Sucursal»): el grupo de la elección de sucursal se anuncia aparte del formulario de filtros.
         <div className={estilos["sucursal"]} role="group" aria-label={eleccionDeSucursal.rotulo}>
