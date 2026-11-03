@@ -5,6 +5,7 @@ import {
   DECLARACIONES_DE_EMPRESAS,
 } from "../modulos/empresas/publico";
 import {
+  DECLARACIONES_DE_CERTIFICADOS,
   DECLARACIONES_DE_CONFIGURACION_FISCAL,
   DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
   DECLARACIONES_DE_FACTURACION,
@@ -140,6 +141,11 @@ const PEDIDOS: { nombre: string; pedir: (c: Conexiones) => unknown; nombra: stri
   {
     nombre: "web.casosDeUsoDeFacturacion",
     pedir: (c) => armarWeb(c).casosDeUsoDeFacturacion(),
+    nombra: "PEDERNAL_DB_APP",
+  },
+  {
+    nombre: "web.casosDeUsoDeCertificados",
+    pedir: (c) => armarWeb(c).casosDeUsoDeCertificados(),
     nombra: "PEDERNAL_DB_APP",
   },
   {
@@ -350,6 +356,21 @@ describe("con el entorno completo", () => {
     ]);
   });
 
+  it("sin la clave de los certificados, las acciones del certificado fallan cerrado al pedirse y el nombre de la variable va solo al registro", () => {
+    const sinClave: Record<string, string> = valida();
+    delete sinClave["PEDERNAL_CLAVE_CERTIFICADOS"];
+    const { conexiones, registrados } = conFuente(sinClave);
+    const web = armarWeb(conexiones);
+    expect(registrados).toEqual([]);
+    expect(() => web.casosDeUsoDeCertificados()).toThrow(ErrorDeEntorno);
+    expect(registrados).toEqual([
+      "pieza cifrador-de-certificados: PEDERNAL_CLAVE_CERTIFICADOS falta",
+    ]);
+    // Nada se memoriza: con la clave corregida, el mismo grupo se arma.
+    sinClave["PEDERNAL_CLAVE_CERTIFICADOS"] = valida()["PEDERNAL_CLAVE_CERTIFICADOS"] as string;
+    expect(web.casosDeUsoDeCertificados()).toBeDefined();
+  });
+
   it("la web ofrece de fiscal solo lo que una persona dispara: ni los trabajos de sistema ni la numeración suelta ni el modelo de impresión", () => {
     const { conexiones } = conFuente(valida());
     const web = armarWeb(conexiones);
@@ -371,6 +392,11 @@ describe("con el entorno completo", () => {
       "editarPuntoDeVenta",
       "empezarCorreccionDeDatosFiscales",
       "guardarBorradorDeDatosFiscales",
+    ]);
+    // El certificado de ARCA: solo generar el pedido y cargar el certificado (el estado va por las consultas).
+    expect(Object.keys(web.casosDeUsoDeCertificados()).sort()).toEqual([
+      "cargarCertificado",
+      "generarPedidoDeCertificado",
     ]);
     expect(Object.keys(web.consultasDeFacturacion()).sort()).toEqual([
       "datosFiscalesDelEmisor",
@@ -573,6 +599,7 @@ const DECISIONES_DE_WEB: Record<keyof ReturnType<typeof armarWeb>, Decision> = {
   consultasDeIdentidad: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_IDENTIDAD },
   casosDeUsoDeFacturacion: { conGuard: DECLARACIONES_DE_FACTURACION },
   casosDeUsoDeConfiguracionFiscal: { conGuard: DECLARACIONES_DE_CONFIGURACION_FISCAL },
+  casosDeUsoDeCertificados: { conGuard: DECLARACIONES_DE_CERTIFICADOS },
   consultasDeFacturacion: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_FISCAL },
   // Sin guard por diseño. Fuentes: web.ts:23-26 (puerta pública), :36-38 (autenticación y barrido), :133 y de-la-sesion.ts:18-22 (sesión).
   resolucionDeHost: { sinGuard: "puerta pública: sin sesión, solo lectura" },
