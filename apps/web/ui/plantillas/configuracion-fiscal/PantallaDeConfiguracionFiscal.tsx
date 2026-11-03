@@ -22,7 +22,7 @@ function Contenido({ fila }: Readonly<{ fila: FilaDeLaLista }>) {
 
 /**
  * La lista de lo que falta para emitir (D-43, opción C): una fila por tema, con su cartel si hay algo pendiente (D-64). Una fila con
- * enlace lleva a la pantalla de su tema; la del certificado todavía no es un enlace (su pantalla no tiene textos aprobados).
+ * enlace lleva a la pantalla de su tema (las tres filas lo son: el certificado, desde el 2026-11-03).
  */
 export function PantallaDeConfiguracionFiscal({
   subtitulo,

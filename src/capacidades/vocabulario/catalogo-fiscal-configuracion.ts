@@ -27,7 +27,8 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
   "fiscal.pantalla.config_fila_datos_fiscales": { porDefecto: "Datos fiscales" },
   // Dueño, 2026-10-29, cuestionario de las 17:45Z, pregunta 2.
   "fiscal.pantalla.config_puntos_de_venta": { porDefecto: "Puntos de venta" },
-  // Dueño, 2026-10-29, cuestionario de las 17:45Z, pregunta 2; que la fila solo informa y no es un enlace: cuestionario B, pregunta 2.
+  // Dueño, 2026-10-29, cuestionario de las 17:45Z, pregunta 2. La fila es un enlace a la pantalla del certificado: dueño, 2026-11-03,
+  // cuestionario «Certificado», opción B (asistente por ambiente).
   "fiscal.pantalla.config_fila_certificado": { porDefecto: "Certificado de ARCA" },
 
   // Los carteles de la lista (un tema completo no lleva cartel): CONTRATO-CONFIG D-46 y D-64, que el cuestionario de las 17:45Z,
@@ -140,4 +141,33 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
   "fiscal.pantalla.config_df_domicilio_fiscal": { porDefecto: "Domicilio" },
   // Dueño, 2026-10-29, Q17 pregunta 4.
   "fiscal.pantalla.config_df_inicio_actividades": { porDefecto: "Inicio de actividades" },
+  // Certificado de ARCA (opción B, asistente de 3 pasos por ambiente): los 13 textos nuevos los aprobó el dueño el 2026-11-03 en el
+  // cuestionario «Certificado»; «Guardando…» del certificado reutiliza `config_pv_guardando` (mismo cuestionario). Las claves no dicen
+  // «clave» ni «firma»: el catálogo rechaza como secreto todo nombre que las contenga (`NOMBRE_DE_SECRETO`).
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Generar pedido» (botón y título del paso 1).
+  "fiscal.pantalla.config_cert_generar_pedido": { porDefecto: "Generar pedido" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Alias».
+  "fiscal.pantalla.config_cert_alias": { porDefecto: "Alias" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «CUIT del titular».
+  "fiscal.pantalla.config_cert_cuit_titular": { porDefecto: "CUIT del titular" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Organización».
+  "fiscal.pantalla.config_cert_organizacion": { porDefecto: "Organización" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Titular» (el dato, no el campo).
+  "fiscal.pantalla.config_cert_titular": { porDefecto: "Titular" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Vence» (la fecha va aparte, dd/mm/aaaa).
+  "fiscal.pantalla.config_cert_vence": { porDefecto: "Vence" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Pedido» (título del paso 2).
+  "fiscal.pantalla.config_cert_pedido": { porDefecto: "Pedido" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Copiar».
+  "fiscal.pantalla.config_cert_copiar": { porDefecto: "Copiar" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Descargar».
+  "fiscal.pantalla.config_cert_descargar": { porDefecto: "Descargar" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Certificado» (título del paso 3 y rótulo del campo de pegado).
+  "fiscal.pantalla.config_cert_certificado": { porDefecto: "Certificado" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Cargar certificado».
+  "fiscal.pantalla.config_cert_cargar": { porDefecto: "Cargar certificado" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Reemplazar».
+  "fiscal.pantalla.config_cert_reemplazar": { porDefecto: "Reemplazar" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Siguiente».
+  "fiscal.pantalla.config_cert_siguiente": { porDefecto: "Siguiente" },
 } as const;

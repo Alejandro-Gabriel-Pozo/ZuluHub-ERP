@@ -1,0 +1,70 @@
+.pasos {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.paso {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--objetivo-minimo);
+  height: var(--objetivo-minimo);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.paso[aria-current="step"] {
+  background: var(--color-texto);
+  color: var(--color-fondo);
+}
+
+.linea {
+  flex: 1 1 auto;
+  height: var(--borde-grosor);
+  background: var(--color-borde);
+}
+
+/* El título del paso recibe el foco al cambiar de paso (para el lector de pantalla), sin dibujar un marco. */
+.titulo:focus {
+  outline: none;
+}
+
+.botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+}
+
+/* El pedido y el certificado son texto largo de ancho fijo: monoespaciado y sin partir las líneas de forma rara. */
+.area {
+  width: 100%;
+  min-height: calc(var(--objetivo-minimo) * 4);
+  padding: var(--espacio-2) var(--espacio-3);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-family: var(--tipo-familia-monoespaciada, ui-monospace, monospace);
+  font-size: inherit;
+  overflow-wrap: anywhere;
+  resize: vertical;
+}
+
+.area[aria-invalid="true"] {
+  border-color: var(--color-peligro);
+}
+
+.area:disabled {
+  background: var(--color-deshabilitado);
+  color: var(--color-sobre-deshabilitado);
+}
+
+.sub {
+  color: var(--color-texto-suave);
+}
