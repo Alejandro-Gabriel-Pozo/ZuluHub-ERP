@@ -1,14 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
+  CARACTERES_DISTINTOS_PEDIDOS,
   EQUIPO_DE_VERCEL,
   NOMBRE_DE_LA_CADENA_DE_DUENO,
   PROYECTO_DE_VERCEL,
   VARIABLE_CLAVE_CONTEXTO,
+  VARIABLES_GENERABLES,
+  VARIABLE_CLAVE_CERTIFICADOS,
   VARIABLE_DEL_TOKEN,
+  VARIABLE_SECRETO_DEL_CRON,
+  VARIABLE_SECRETO_DE_AUTENTICACION,
   VARIABLE_SECRETO_INVITACIONES,
   generarSecretos,
+  generarValor,
   leerDestino,
+  leerTokenDeVercel,
   leerVariablesRemotas,
+  noDebeEstarEnVercel,
   planificar,
   sobraEnVercel,
   type VariableRemota,
@@ -364,5 +372,143 @@ describe("planificar", () => {
     expect(plan.yaCargadas).toEqual(["PEDERNAL_DB_APP"]);
     expect(plan.faltaRotar).toEqual(["PEDERNAL_DB_TRABAJOS", "PEDERNAL_DB_PUBLICO"]);
     expect(plan.pasos).toEqual([]);
+  });
+});
+
+describe("generarValor", () => {
+  const relleno = (byte: number) => (cuantos: number) => new Uint8Array(cuantos).fill(byte);
+  const ascendente = (cuantos: number) => Uint8Array.from({ length: cuantos }, (_, i) => i);
+
+  it("las cinco, con su forma exacta, sacadas de 32 bytes", () => {
+    const pedidos: number[] = [];
+    const bytes = (cuantos: number) => {
+      pedidos.push(cuantos);
+      return ascendente(cuantos);
+    };
+    const hex = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
+    expect(generarValor("PEDERNAL_CLAVE_CONTEXTO", bytes)).toBe(`1:${hex}`);
+    expect(generarValor("PEDERNAL_CLAVE_CERTIFICADOS", bytes)).toBe(`c1:${hex}`);
+    expect(generarValor("PEDERNAL_SECRETO_INVITACIONES", bytes)).toBe(hex);
+    expect(generarValor("PEDERNAL_AUTH_SECRETO_EMPRESA", bytes)).toBe(hex);
+    expect(generarValor("CRON_SECRET", bytes)).toBe(hex);
+    expect(pedidos).toEqual([32, 32, 32, 32, 32]);
+  });
+
+  it("por defecto usa el azar real: dos valores no se repiten", () => {
+    for (const nombre of VARIABLES_GENERABLES) {
+      expect(generarValor(nombre)).not.toBe(generarValor(nombre));
+    }
+  });
+
+  it.each([
+    VARIABLE_SECRETO_DE_AUTENTICACION,
+    VARIABLE_SECRETO_DEL_CRON,
+    VARIABLE_CLAVE_CERTIFICADOS,
+  ] as const)("%s exige variedad: con 9 caracteres distintos falla y con 10 sirve", (nombre) => {
+    expect(CARACTERES_DISTINTOS_PEDIDOS).toBe(10);
+    // 9 dígitos distintos: falla; 10: sirve (el piso está en el límite exacto).
+    const con = (distintos: number) => (cuantos: number) =>
+      Uint8Array.from({ length: cuantos }, (_, i) => {
+        const d = i % distintos;
+        return d * 16 + d;
+      });
+    expect(() => generarValor(nombre, con(9))).toThrow(
+      new RangeError(`no se pudo generar ${nombre}: lo sorteado tiene muy poca variedad`),
+    );
+    expect(() => generarValor(nombre, con(10))).not.toThrow();
+  });
+
+  it("el error no repite lo sorteado", () => {
+    try {
+      generarValor(VARIABLE_SECRETO_DEL_CRON, relleno(0xab));
+      expect.unreachable();
+    } catch (falla) {
+      expect(String(falla)).not.toContain("abab");
+    }
+  });
+
+  it("la clave de contexto y el secreto de invitaciones no piden variedad (su validador no la pide)", () => {
+    expect(generarValor("PEDERNAL_CLAVE_CONTEXTO", relleno(0))).toBe(`1:${"00".repeat(32)}`);
+    expect(generarValor("PEDERNAL_SECRETO_INVITACIONES", relleno(0))).toBe("00".repeat(32));
+  });
+
+  it("las generables son exactamente estas cinco, en este orden", () => {
+    expect(VARIABLES_GENERABLES).toEqual([
+      "PEDERNAL_SECRETO_INVITACIONES",
+      "PEDERNAL_AUTH_SECRETO_EMPRESA",
+      "CRON_SECRET",
+      "PEDERNAL_CLAVE_CERTIFICADOS",
+      "PEDERNAL_CLAVE_CONTEXTO",
+    ]);
+  });
+});
+
+describe("leerTokenDeVercel", () => {
+  it("devuelve el token sin blancos en los extremos", () => {
+    expect(leerTokenDeVercel({ PEDERNAL_VERCEL_TOKEN: "  vcp_Token123\n" })).toEqual({
+      token: "vcp_Token123",
+    });
+  });
+
+  it("el texto de cuando falta es éste, entero", () => {
+    expect(leerTokenDeVercel({})).toEqual({
+      problema:
+        "falta la variable PEDERNAL_VERCEL_TOKEN: es el token con el que este comando escribe en Vercel. " +
+        "Para crearlo: entrá a vercel.com, abrí Settings de tu cuenta > Tokens, creá uno con alcance limitado " +
+        "al equipo «alepozod» y vencimiento corto, y ponelo en esa variable de entorno de la terminal " +
+        "(no lo pegues en ningún archivo ni en un chat).",
+    });
+  });
+
+  it.each([undefined, "", "   "])("sin token (%j) explica cómo crearlo", (valor) => {
+    const r = leerTokenDeVercel({ PEDERNAL_VERCEL_TOKEN: valor });
+    expect(r).toHaveProperty("problema");
+    const { problema } = r as { problema: string };
+    for (const parte of [
+      "falta la variable PEDERNAL_VERCEL_TOKEN",
+      "vercel.com",
+      "Settings",
+      "Tokens",
+      "alepozod",
+      "vencimiento corto",
+    ]) {
+      expect(problema).toContain(parte);
+    }
+  });
+
+  it.each(["con espacio", "con\nsalto", "ñandú", "tab\tulado"])(
+    "un token raro (%j) se rechaza sin repetirlo",
+    (valor) => {
+      const r = leerTokenDeVercel({ PEDERNAL_VERCEL_TOKEN: valor }) as { problema: string };
+      expect(r.problema).toBe(
+        "PEDERNAL_VERCEL_TOKEN tiene espacios, saltos de línea o letras raras: copialo de nuevo.",
+      );
+    },
+  );
+});
+
+describe("noDebeEstarEnVercel", () => {
+  it("incluye todo lo que `--vercel` borra, y además la cadena de GitHub y los roles que la web no recibe", () => {
+    for (const nombre of [
+      "DATABASE_URL",
+      "BETTER_AUTH_SECRET",
+      "POSTGRES_URL",
+      "PEDERNAL_DB_MIGRACIONES",
+    ]) {
+      expect(noDebeEstarEnVercel(nombre)).toBe(true);
+      expect(sobraEnVercel(nombre)).toBe(true);
+    }
+    for (const nombre of [
+      "PEDERNAL_DB_DUENO_DIRECTA",
+      "PEDERNAL_DB_PLATAFORMA",
+      "PEDERNAL_DB_GRUPO",
+    ]) {
+      expect(noDebeEstarEnVercel(nombre)).toBe(true);
+      // Esas tres solo se informan: `--vercel` no las borra.
+      expect(sobraEnVercel(nombre)).toBe(false);
+    }
+    for (const nombre of ["PEDERNAL_DB_APP", "CRON_SECRET", "VERCEL_ENV", "PEDERNAL_DB_PUBLICO"]) {
+      expect(noDebeEstarEnVercel(nombre)).toBe(false);
+    }
   });
 });

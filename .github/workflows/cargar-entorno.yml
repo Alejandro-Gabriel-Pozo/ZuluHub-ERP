@@ -1,0 +1,169 @@
+name: Cargar entorno (preview y producción)
+
+# Carga en Vercel, con un clic y sin mostrar ningún valor, las variables de entorno que se pueden GENERAR sin intervención
+# del dueño: Actions → «Cargar entorno (preview y producción)» → Run workflow. Solo se dispara a mano.
+#
+#  - Genera al azar en el runner (nunca en un `echo`; cada valor se entrega a GitHub con `::add-mask::` apenas nace) y carga
+#    como SENSIBLES, solo en el entorno elegido de Vercel (Preview o Production, nunca los dos): PEDERNAL_SECRETO_INVITACIONES,
+#    PEDERNAL_AUTH_SECRETO_EMPRESA, CRON_SECRET, PEDERNAL_CLAVE_CERTIFICADOS y PEDERNAL_CLAVE_CONTEXTO (esta última se INSTALA
+#    primero en la base de esa rama, con lo mismo que hace `npm run instalar-clave`, y recién después se carga).
+#  - NUNCA SOBRESCRIBE: lo que ya existe en Vercel para ese entorno se saltea («ya existía»). Si la base ya tiene una clave de
+#    contexto y Vercel no, la corrida PARA antes de cambiar nada y lo decide el dueño.
+#  - El informe final lleva solo NOMBRES con su resultado, las variables que tiene que cargar el dueño a mano y las que no
+#    deben existir en Vercel (se informan; no se borra nada).
+#  - Opcional (`dar_login_a_los_roles`): antes, hace lo que ya hace `npm run migrar -- --preparar-roles --con-autenticacion
+#    --vercel <destino>`: da LOGIN a los roles de la base y carga sus cadenas en Vercel, sin mostrar contraseñas. Exige que la
+#    base esté al día (no aplica migraciones: eso es de `migrar.yml`, con su respaldo y su aprobación).
+#
+#  - El Environment `produccion` exige la APROBACIÓN DEL DUEÑO (revisores obligatorios y solo `main`, PRIMER-DESPLIEGUE.md, B.1).
+#    El Environment `preview` no pide aprobación. Los secretos viven en cada Environment, nunca en el repositorio:
+#      PEDERNAL_DB_DUENO_DIRECTA  cadena DIRECTA (nunca la del pooler) del dueño de la base de ese entorno (la misma de `migrar.yml`).
+#                                 Sin ella, la clave de contexto queda para el dueño y lo demás se carga igual.
+#      PEDERNAL_VERCEL_TOKEN      token de Vercel con alcance al equipo `alepozod` y vencimiento corto.
+#    El proyecto y el equipo de Vercel no son secretos: están en el código (`plan-de-variables.ts`), no hay variables que cargar.
+#
+# Los scripts leen la cadena de la variable PEDERNAL_DB_MIGRACIONES; acá se la alimenta con el secreto PEDERNAL_DB_DUENO_DIRECTA.
+# Ningún paso imprime la cadena, el token ni un valor generado.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: "A qué entorno de Vercel (y a qué base)"
+        type: choice
+        required: true
+        options:
+          - preview
+          - produccion
+      confirmacion:
+        description: "Escribir CARGAR PREVIEW (preview) o CARGAR PRODUCCION (produccion)"
+        type: string
+        required: true
+      dar_login_a_los_roles:
+        description: "Además, dar LOGIN a los roles de la base y cargar sus cadenas en Vercel (la base tiene que estar al día)"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  # Una carga por entorno a la vez. Una que ya está corriendo nunca se cancela: la nueva espera.
+  group: cargar-entorno-${{ inputs.ambiente }}
+  cancel-in-progress: false
+
+jobs:
+  validar:
+    # Todo lo que se puede rechazar sin los secretos se rechaza ACÁ, antes del Environment: así los secretos no se
+    # entregan a una corrida que iba a fallar y nadie aprueba una corrida inválida.
+    name: Validar la corrida
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      ambiente: ${{ steps.validar.outputs.ambiente }}
+      destino: ${{ steps.validar.outputs.destino }}
+      roles: ${{ steps.validar.outputs.roles }}
+    steps:
+      - id: validar
+        run: |
+          set -eu
+          # La protección de fondo de los secretos es «Deployment branches: solo main» en los dos Environments
+          # (PRIMER-DESPLIEGUE.md, B.1). Acá se repite para fallar claro y temprano.
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Solo se carga el entorno desde la rama main (esta corrida es de $REF). Volvé a correrlo eligiendo main en «Use workflow from»."
+            exit 1
+          fi
+          case "$AMBIENTE" in
+            preview) esperado="CARGAR PREVIEW"; destino="preview" ;;
+            produccion) esperado="CARGAR PRODUCCION"; destino="production" ;;
+            *) echo "::error::Ambiente no permitido (preview o produccion)."; exit 1 ;;
+          esac
+          if [ "$CONFIRMACION" != "$esperado" ]; then
+            echo "::error::Para cargar el entorno de $AMBIENTE hay que escribir exactamente «$esperado» en el campo de confirmación."
+            exit 1
+          fi
+          case "$ROLES" in
+            true|false) ;;
+            *) echo "::error::La opción de los roles no tiene un valor permitido."; exit 1 ;;
+          esac
+          echo "ambiente=$AMBIENTE" >> "$GITHUB_OUTPUT"
+          echo "destino=$destino" >> "$GITHUB_OUTPUT"
+          echo "roles=$ROLES" >> "$GITHUB_OUTPUT"
+        env:
+          REF: ${{ github.ref }}
+          AMBIENTE: ${{ inputs.ambiente }}
+          CONFIRMACION: ${{ inputs.confirmacion }}
+          ROLES: ${{ inputs.dar_login_a_los_roles }}
+
+  cargar:
+    name: Cargar el entorno (${{ needs.validar.outputs.ambiente }})
+    needs: validar
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # En `produccion` los revisores obligatorios (el dueño) aprueban ANTES de que arranque cualquier paso de este job.
+    environment: ${{ needs.validar.outputs.ambiente }}
+    permissions:
+      contents: read
+    steps:
+      - name: Comprobar que el Environment tiene el token de Vercel
+        run: |
+          if [ -z "${PEDERNAL_VERCEL_TOKEN:-}" ]; then
+            echo "::error::Falta el secreto PEDERNAL_VERCEL_TOKEN en este Environment (Settings → Environments → Secrets): un token de Vercel con alcance al equipo alepozod y vencimiento corto."
+            exit 1
+          fi
+        env:
+          PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # Sin caché de npm: este job tiene los secretos y no restaura nada que no sea el lockfile.
+      - name: Dependencias (solo las de producción, sin scripts de instalación)
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: La base tiene que estar al día (solo con los roles)
+        # El login de los roles aplica las migraciones pendientes sin respaldo ni aprobación: eso es de `migrar.yml`.
+        # `shell: bash` activa `pipefail`: si `--ver` falla, el paso falla aunque `tee` termine bien.
+        if: needs.validar.outputs.roles == 'true'
+        shell: bash
+        run: |
+          set -eu
+          npm run migrar -- --ver | tee "$RUNNER_TEMP/estado.txt"
+          if grep -q "faltan aplicar" "$RUNNER_TEMP/estado.txt"; then
+            echo "::error::Hay migraciones pendientes. Corré antes «Migrar (preview y producción)» (en producción, con su respaldo y tu aprobación) y volvé a cargar el entorno."
+            exit 1
+          fi
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+
+      - name: Dar LOGIN a los roles y cargar sus cadenas en Vercel (sin mostrar contraseñas)
+        if: needs.validar.outputs.roles == 'true'
+        run: |
+          set -eu
+          if [ "$DESTINO" = "production" ]; then
+            npm run migrar -- --preparar-roles --con-autenticacion --vercel production --confirmo production
+          else
+            npm run migrar -- --preparar-roles --con-autenticacion --vercel preview
+          fi
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
+          DESTINO: ${{ needs.validar.outputs.destino }}
+
+      - name: Generar y cargar en Vercel lo que se puede generar (sin sobrescribir nada)
+        run: |
+          set -eu
+          if [ "$DESTINO" = "production" ]; then
+            npm run cargar-entorno -- --vercel production --confirmo production
+          else
+            npm run cargar-entorno -- --vercel preview
+          fi
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
+          DESTINO: ${{ needs.validar.outputs.destino }}

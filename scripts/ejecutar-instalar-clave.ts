@@ -29,6 +29,38 @@ import { NOMBRE_DE_LA_CADENA_DE_DUENO } from "../src/adaptadores/vercel/plan-de-
 
 export const VARIABLE_DE_LA_CADENA = NOMBRE_DE_LA_CADENA_DE_DUENO;
 
+/**
+ * La cadena DIRECTA del dueño de la base ya revisada, o el texto de lo que está mal (falta, no es de Postgres o apunta
+ * al pooler). Una sola definición para `instalar-clave` y `cargar-entorno`: la escritura de `contexto_clave` no vale
+ * detrás de PgBouncer.
+ */
+export function leerCadenaDeDueno(
+  cadena: string | undefined,
+): Readonly<{ cadena: string }> | Readonly<{ problema: string }> {
+  if (cadena === undefined || cadena === "") {
+    return {
+      problema: `falta la variable ${VARIABLE_DE_LA_CADENA}: es la cadena de conexión DIRECTA del dueño de la base.`,
+    };
+  }
+  let protocolo: string;
+  try {
+    protocolo = new URL(cadena).protocol;
+  } catch {
+    protocolo = "";
+  }
+  if (protocolo !== "postgres:" && protocolo !== "postgresql:") {
+    return {
+      problema: `${VARIABLE_DE_LA_CADENA} no tiene forma de cadena de conexión (postgresql://usuario:clave@host/base).`,
+    };
+  }
+  if (hostConPooler(cadena)) {
+    return {
+      problema: `${VARIABLE_DE_LA_CADENA} apunta al pooler (el host lleva «-pooler»): se usa la cadena DIRECTA.`,
+    };
+  }
+  return { cadena };
+}
+
 export type EntradaDeInstalacionDeClave = Readonly<{
   entorno: Readonly<Record<string, string | undefined>>;
   info: (linea: string) => void;
@@ -48,28 +80,9 @@ export async function ejecutarInstalacionDeClave(
   const info = (linea: string) => entrada.info(tapar(linea));
   const error = (linea: string) => entrada.error(tapar(linea));
 
-  if (cadena === undefined || cadena === "") {
-    error(
-      `ERROR: falta la variable ${VARIABLE_DE_LA_CADENA}: es la cadena de conexión DIRECTA del dueño de la base.`,
-    );
-    return 1;
-  }
-  let protocolo: string;
-  try {
-    protocolo = new URL(cadena).protocol;
-  } catch {
-    protocolo = "";
-  }
-  if (protocolo !== "postgres:" && protocolo !== "postgresql:") {
-    error(
-      `ERROR: ${VARIABLE_DE_LA_CADENA} no tiene forma de cadena de conexión (postgresql://usuario:clave@host/base).`,
-    );
-    return 1;
-  }
-  if (hostConPooler(cadena)) {
-    error(
-      `ERROR: ${VARIABLE_DE_LA_CADENA} apunta al pooler (el host lleva «-pooler»): se usa la cadena DIRECTA.`,
-    );
+  const revisada = leerCadenaDeDueno(cadena);
+  if ("problema" in revisada) {
+    error(`ERROR: ${revisada.problema}`);
     return 1;
   }
 
@@ -83,7 +96,7 @@ export async function ejecutarInstalacionDeClave(
   }
 
   try {
-    await instalarClaveDeContexto(cadena, parseada);
+    await instalarClaveDeContexto(revisada.cadena, parseada);
   } catch (falla) {
     error(`ERROR: ${describirFallaDeBase(falla, cadena)}`);
     error("RESULTADO: FALLA (la clave de contexto no quedó instalada).");

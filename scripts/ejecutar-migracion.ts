@@ -31,8 +31,8 @@ import {
 import {
   EQUIPO_DE_VERCEL,
   NOMBRE_DE_LA_CADENA_DE_DUENO,
-  VARIABLE_DEL_TOKEN,
   generarSecretos,
+  leerTokenDeVercel,
   leerDestino,
   planificar,
   type Destino,
@@ -80,8 +80,11 @@ export type EntradaDeMigracion = Readonly<{
   carpeta: string;
   info: (linea: string) => void;
   error: (linea: string) => void;
-  /** Donde va el bloque con credenciales de `--preparar-roles`. */
-  secreto: (linea: string) => void;
+  /**
+   * Donde va el bloque con credenciales de `--preparar-roles`. Sin él (el workflow de GitHub: el registro queda
+   * guardado) las contraseñas NO se muestran nunca, ni siquiera cuando no llegan a Vercel: se repite con `--rotar`.
+   */
+  secreto?: (linea: string) => void;
   /** Se inyectan en las pruebas (roles propios, contraseñas conocidas); por defecto, los reales. */
   roles?: (conAutenticacion: boolean, conRespaldo: boolean) => readonly RolPorPreparar[];
   generarClave?: () => string;
@@ -94,12 +97,6 @@ export type EntradaDeMigracion = Readonly<{
   /** Bytes para los secretos de `--secretos`. */
   bytesAlAzar?: (cuantos: number) => Uint8Array;
 }>;
-
-const SIN_TOKEN =
-  `falta la variable ${VARIABLE_DEL_TOKEN}: es el token con el que este comando escribe en Vercel. ` +
-  `Para crearlo: entrá a vercel.com, abrí Settings de tu cuenta > Tokens, creá uno con alcance limitado ` +
-  `al equipo «${EQUIPO_DE_VERCEL}» y vencimiento corto, y ponelo en esa variable de entorno de la terminal ` +
-  "(no lo pegues en ningún archivo ni en un chat).";
 
 const USO =
   "uso: migrar-base --ver | --aplicar | --preparar-roles [--con-autenticacion] [--con-respaldo] [--rotar] [--directa] [--diagnostico] " +
@@ -190,6 +187,14 @@ function leerPedido(argumentos: readonly string[]): Pedido | string {
   };
 }
 
+const NO_SE_MUESTRAN =
+  "acá no se muestran (el registro de GitHub queda guardado). Repetí el comando desde tu terminal con --rotar " +
+  "para generar otras y cargarlas.";
+
+function nombresDe(roles: readonly RolPreparado[]): string {
+  return roles.map((p) => p.variable).join(", ");
+}
+
 function lista(nombres: readonly string[]): string[] {
   return nombres.map((nombre) => `  - ${nombre}`);
 }
@@ -234,12 +239,21 @@ export async function ejecutarMigracion(entrada: EntradaDeMigracion): Promise<nu
     error(`ERROR: ${pedido}`);
     return 2;
   }
-  if (pedido.modo === "--preparar-roles" && entorno["GITHUB_ACTIONS"] === "true") {
-    error(
-      "ERROR: --preparar-roles imprime contraseñas y no se corre en GitHub Actions (el registro queda " +
-        "guardado). Correlo en tu terminal.",
-    );
-    return 2;
+  // Las contraseñas solo se muestran en la terminal del dueño. En GitHub Actions el registro queda guardado: ahí solo
+  // se corre `--vercel` y sin `secreto` (nada se muestra). Y sin `secreto` tampoco hay forma de mostrarlas sin `--vercel`.
+  if (pedido.modo === "--preparar-roles") {
+    const enActions = entorno["GITHUB_ACTIONS"] === "true";
+    const sinDondeMostrar = entrada.secreto === undefined;
+    const noSePuede =
+      pedido.vercel === null ? enActions || sinDondeMostrar : enActions && !sinDondeMostrar;
+    if (noSePuede) {
+      error(
+        "ERROR: --preparar-roles imprime contraseñas y no se corre en GitHub Actions (el registro queda " +
+          "guardado). Correlo en tu terminal. (En Actions solo con --vercel y sin mostrar contraseñas: " +
+          "lo hace el workflow cargar-entorno.)",
+      );
+      return 2;
+    }
   }
   if (cadena === undefined || cadena === "") {
     error(
@@ -264,17 +278,12 @@ export async function ejecutarMigracion(entrada: EntradaDeMigracion): Promise<nu
   // no, se corta acá y no se cambia ninguna contraseña.
   let vercel: Readonly<{ cliente: ClienteDeVariables; destino: Destino }> | null = null;
   if (pedido.vercel !== null) {
-    const token = entorno[VARIABLE_DEL_TOKEN]?.trim();
-    if (token === undefined || token === "") {
-      error(`ERROR: ${SIN_TOKEN}`);
+    const lecturaDelToken = leerTokenDeVercel(entorno);
+    if ("problema" in lecturaDelToken) {
+      error(`ERROR: ${lecturaDelToken.problema}`);
       return 1;
     }
-    if (!/^[\x21-\x7e]+$/.test(token)) {
-      error(
-        `ERROR: ${VARIABLE_DEL_TOKEN} tiene espacios, saltos de línea o letras raras: copialo de nuevo.`,
-      );
-      return 1;
-    }
+    const { token } = lecturaDelToken;
     tapados.push(token);
     const cliente = crearClienteVercel({
       token,
@@ -492,9 +501,11 @@ async function prepararYCargar(
       });
       if (sinCargar.length > 0) {
         error(
-          `Las contraseñas de abajo YA están cambiadas en la base y NO quedaron cargadas en Vercel (${contexto.destino.toUpperCase()}). ` +
-            "Pegalas a mano (Settings > Environment Variables, tipo Sensitive) o repetí este comando con --rotar " +
-            "para que genere otras y las cargue.",
+          entrada.secreto === undefined
+            ? `Las contraseñas de ${nombresDe(sinCargar)} YA están cambiadas en la base y NO quedaron cargadas en Vercel (${contexto.destino.toUpperCase()}); ${NO_SE_MUESTRAN}`
+            : `Las contraseñas de abajo YA están cambiadas en la base y NO quedaron cargadas en Vercel (${contexto.destino.toUpperCase()}). ` +
+                "Pegalas a mano (Settings > Environment Variables, tipo Sensitive) o repetí este comando con --rotar " +
+                "para que genere otras y las cargue.",
         );
         mostrarBloqueDeVercel(cadena, pedido, entrada, contexto.info, sinCargar);
       }
@@ -511,8 +522,10 @@ async function prepararYCargar(
       // Una excepción inesperada no puede perder las contraseñas que ya se cambiaron (y no se mostraron).
       if (falla !== fallaDeRoles && sinCargar.length > 0) {
         error(
-          "Se cortó la carga en Vercel antes de terminar: las contraseñas de abajo YA están cambiadas en la base. " +
-            "Pegalas a mano en Vercel o repetí el comando con --rotar.",
+          entrada.secreto === undefined
+            ? `Se cortó la carga en Vercel antes de terminar: las contraseñas de ${nombresDe(sinCargar)} YA están cambiadas en la base; ${NO_SE_MUESTRAN}`
+            : "Se cortó la carga en Vercel antes de terminar: las contraseñas de abajo YA están cambiadas en la base. " +
+                "Pegalas a mano en Vercel o repetí el comando con --rotar.",
         );
         mostrarBloqueDeVercel(cadena, pedido, entrada, contexto.info, sinCargar);
       }
@@ -625,6 +638,7 @@ function mostrarBloqueDeVercel(
 ): RolPreparado[] {
   const conClave = preparados.filter((p) => p.clave !== undefined);
   const secreto = entrada.secreto;
+  if (secreto === undefined) return conClave;
   const deRespaldo = conClave.filter((p) => esVariableDeRespaldo(p.variable));
   const paraVercel = conClave.filter((p) => !esVariableDeRespaldo(p.variable));
   let sinPooler = false;
