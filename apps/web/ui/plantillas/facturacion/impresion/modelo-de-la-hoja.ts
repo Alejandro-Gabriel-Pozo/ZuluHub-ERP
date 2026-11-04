@@ -91,6 +91,12 @@ export type ComprobanteParaLaHoja = Readonly<{
   }>;
   asociado: Readonly<{ rotulo: string; letra: string; numero: string; fecha: string }> | null;
   /**
+   * Cómo se cargaron los precios unitarios (`ModeloImpreso.modoDePrecio`; la vista solo imprime la versión 2 en adelante, ver `verElModeloDeImpresion`). Solo decide el
+   * encabezado de la columna de precio de la factura A: «Precio con IVA» si `IVA_INCLUIDO`, «Precio» si `IVA_DISCRIMINADO`.
+   * Previene: rotular con IVA un precio que va sin IVA (o al revés). Chequeo: `test/web/impresion-modelo.test.ts`.
+   */
+  modoDePrecio?: "IVA_INCLUIDO" | "IVA_DISCRIMINADO";
+  /**
    * Las leyendas del modelo (`ModeloImpreso.leyendas`), con su texto tal cual: la fuente única es fiscal (`LEYENDA_DE_HOMOLOGACION`);
    * la vista no tiene clave propia. Previene: que el texto de la leyenda diverja entre el modelo y la hoja.
    */
@@ -239,7 +245,8 @@ function receptorDe(d: DiccionarioResuelto, c: ComprobanteParaLaHoja): readonly 
   ];
 }
 
-function columnasDe(d: DiccionarioResuelto, conIva: boolean): readonly ColumnaArmada[] {
+function columnasDe(d: DiccionarioResuelto, c: ComprobanteParaLaHoja): readonly ColumnaArmada[] {
+  const conIva = c.fiscal.letra !== "C";
   const importe: ColumnaArmada = {
     clave: "importe",
     titulo: texto(d, "fiscal.pantalla.imprimir_rotulo_importe"),
@@ -263,10 +270,15 @@ function columnasDe(d: DiccionarioResuelto, conIva: boolean): readonly ColumnaAr
       importe,
     ];
   }
+  // Solo la A puede cargarse sin IVA (la B y la C llevan el IVA incluido).
+  const claveDelPrecio =
+    c.fiscal.letra === "A" && c.modoDePrecio === "IVA_DISCRIMINADO"
+      ? "fiscal.pantalla.emitir_precio"
+      : "fiscal.pantalla.emitir_precio_con_iva";
   return [
     descripcion,
     cantidad,
-    { clave: "precio", titulo: texto(d, "fiscal.pantalla.emitir_precio_con_iva"), numerica: true },
+    { clave: "precio", titulo: texto(d, claveDelPrecio), numerica: true },
     { clave: "iva", titulo: texto(d, "fiscal.pantalla.emitir_iva"), numerica: true },
     importe,
   ];
@@ -346,7 +358,7 @@ export function armarLaHoja(
             fecha: formatearFecha(asociado.fecha),
           }),
     receptor: receptorDe(d, c),
-    columnas: columnasDe(d, c.fiscal.letra !== "C"),
+    columnas: columnasDe(d, c),
     renglones: c.renglones.map((r) => renglonDe(d, r)),
     rotuloDeTransporte: texto(d, "fiscal.pantalla.imprimir_transporte"),
     rotuloDeATransportar: texto(d, "fiscal.pantalla.imprimir_a_transportar"),

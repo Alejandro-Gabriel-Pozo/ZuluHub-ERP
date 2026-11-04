@@ -8,7 +8,10 @@ import {
   accionDeAnularDelDetalle,
   porQueNoSeAnula,
 } from "../../../../../../../ui/plantillas/facturacion/modelo-de-anulacion";
-import { armarElDetalle } from "../../../../../../../ui/plantillas/facturacion/modelo-del-detalle";
+import {
+  accionDeImprimirDelDetalle,
+  armarElDetalle,
+} from "../../../../../../../ui/plantillas/facturacion/modelo-del-detalle";
 import { PantallaDeDetalleDeComprobante } from "../../../../../../../ui/plantillas/facturacion/PantallaDeDetalleDeComprobante";
 
 // El detalle también es del módulo: «Comprobantes» queda marcado en la barra.
@@ -40,6 +43,7 @@ export default async function PaginaDeDetalleDeComprobante({
       <PantallaDeDetalleDeComprobante
         detalle={dato}
         anular={accionDeAnularDelDetalle({}, dato, puedeAnular)}
+        imprimir={accionDeImprimirDelDetalle({}, dato)}
       />,
     );
   });
