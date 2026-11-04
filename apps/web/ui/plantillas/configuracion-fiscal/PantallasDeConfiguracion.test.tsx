@@ -96,16 +96,16 @@ describe.each([390, 1280])("a %i px", (ancho) => {
 });
 
 describe("las filas y el teclado", () => {
-  it("datos fiscales y puntos de venta son enlaces; el certificado, no", async () => {
+  it("las tres filas son enlaces, también el certificado", async () => {
     await render(lista());
     const enlaces = [...document.querySelectorAll("a[href]")].map((a) => a.getAttribute("href"));
     expect(enlaces).toEqual([
       "/configuracion-fiscal/datos-fiscales",
       "/configuracion-fiscal/puntos-de-venta",
+      "/configuracion-fiscal/certificado-de-arca",
     ]);
     await expect.element(page.getByRole("link", { name: /Datos fiscales/ })).toBeVisible();
-    await expect.element(page.getByText("Certificado de ARCA")).toBeVisible();
-    expect(page.getByRole("link", { name: /Certificado de ARCA/ }).elements()).toHaveLength(0);
+    await expect.element(page.getByRole("link", { name: /Certificado de ARCA/ })).toBeVisible();
   });
 
   it("Tab llega a la fila con enlace con el foco visible", async () => {

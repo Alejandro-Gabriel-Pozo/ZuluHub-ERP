@@ -29,8 +29,19 @@ export type EnvioFijado<P, D> = Readonly<{
   referenciaIncierta: string | undefined;
 }>;
 
+/**
+ * `inesperadoEsDefinitivo`: un INESPERADO devuelto como valor se dice como rechazo (con su referencia) y la pantalla queda libre para
+ * reintentar, en vez de quedar «incierto». Solo para acciones idempotentes por `id` cuyos rechazos de negocio sin texto aprobado salen
+ * como INESPERADO (las del certificado de ARCA): sin esto, un alias o un certificado mal pegados dejarían la pantalla en «Verificando…»
+ * y bloqueada tras 3 reintentos. Chequeo: `AsistenteDeCertificado.test.tsx`, los `it` «un rechazo del servidor sin texto propio sale como el mensaje
+ * genérico con su referencia y deja volver a pegar» (paso 3) y «un alias o un CUIT que el servidor rechaza sin texto propio: genérico
+ * con referencia, y se puede corregir y reintentar» (paso 1).
+ */
+export type OpcionesDeEnvioFijado = Readonly<{ inesperadoEsDefinitivo?: boolean }>;
+
 export function useEnvioFijado<P, D>(
   accion: (pedido: P) => Promise<Respuesta<D>>,
+  { inesperadoEsDefinitivo = false }: OpcionesDeEnvioFijado = {},
 ): EnvioFijado<P, D> {
   const ref = useRef<P | null>(null);
   const [fijado, setFijado] = useState<P | null>(null);
@@ -46,7 +57,11 @@ export function useEnvioFijado<P, D>(
       if (pedido === null) throw new Error("Sin pedido fijado");
       // Lo que lance la acción (red cortada) es «incierto»: se reintenta con el mismo pedido.
       const respuesta = await accion(pedido);
-      if (!respuesta.ok && respuesta.error.presentacion === "INESPERADO") {
+      if (
+        !respuesta.ok &&
+        respuesta.error.presentacion === "INESPERADO" &&
+        !inesperadoEsDefinitivo
+      ) {
         setReferenciaIncierta(respuesta.error.referencia);
         throw new Error("Resultado inesperado: se reintenta con el mismo pedido");
       }

@@ -162,12 +162,13 @@ describe("la página «Configuración fiscal» (la lista de lo que falta)", () =
     expect(t).toContain("Certificado de ARCA");
   });
 
-  it("las filas de datos fiscales y de puntos de venta son enlaces; la del certificado no", async () => {
+  it("las tres filas son enlaces, también la del certificado", async () => {
     const marcado = await html("/page");
     expect(marcado).toContain('href="/configuracion-fiscal/datos-fiscales"');
     expect(marcado).toMatch(/<a[^>]*>[^<]*<span[^>]*>Datos fiscales/);
     expect(marcado).toContain('href="/configuracion-fiscal/puntos-de-venta"');
-    expect(marcado).not.toMatch(/<a[^>]*>[^<]*<span[^>]*>Certificado de ARCA/);
+    expect(marcado).toContain('href="/configuracion-fiscal/certificado-de-arca"');
+    expect(marcado).toMatch(/<a[^>]*>[^<]*<span[^>]*>Certificado de ARCA/);
     expect(marcado.match(/<li>/g)).toHaveLength(3);
   });
 

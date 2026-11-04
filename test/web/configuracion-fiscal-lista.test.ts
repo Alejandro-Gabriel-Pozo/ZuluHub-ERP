@@ -138,7 +138,7 @@ describe("el certificado sin punto de venta activo (respuesta del dueño, 2026-1
 });
 
 describe("las tres filas de la lista", () => {
-  it("el orden y los textos aprobados; datos fiscales y puntos de venta llevan a su pantalla", () => {
+  it("el orden y los textos aprobados; las tres filas llevan a su pantalla", () => {
     const filas = armarLaLista(
       estado({ datos: "SIN_CARGAR", puntos: "SIN_PUNTOS", enUso: [], certificados: [] }),
     );
@@ -150,8 +150,8 @@ describe("las tres filas de la lista", () => {
     expect(filas.map((f) => f.href)).toEqual([
       "/configuracion-fiscal/datos-fiscales",
       "/configuracion-fiscal/puntos-de-venta",
-      // Su pantalla de estado no tiene textos aprobados: la fila no es un enlace.
-      null,
+      // Dueño, 2026-11-03, cuestionario «Certificado»: la fila del certificado es un enlace.
+      "/configuracion-fiscal/certificado-de-arca",
     ]);
     expect(filas.map((f) => f.cartel?.texto ?? null)).toEqual([
       "Falta cargar",
@@ -189,6 +189,7 @@ describe("las tres filas de la lista", () => {
       datosFiscales: "/configuracion-fiscal/datos-fiscales",
       puntosDeVenta: "/configuracion-fiscal/puntos-de-venta",
       nuevoPuntoDeVenta: "/configuracion-fiscal/puntos-de-venta/nuevo",
+      certificado: "/configuracion-fiscal/certificado-de-arca",
     });
   });
 });
