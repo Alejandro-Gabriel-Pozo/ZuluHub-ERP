@@ -42,7 +42,7 @@ import {
  * «Revisá los datos marcados.», no el «Revise los datos del comprobante» de las facturas). Previene: el texto de las facturas en
  * Datos fiscales y Puntos de venta.
  */
-function leer<S extends z.ZodType>(
+export function leer<S extends z.ZodType>(
   forma: S,
   crudo: unknown,
 ): Resultado<z.output<S>, ErrorDeEntrada> {
