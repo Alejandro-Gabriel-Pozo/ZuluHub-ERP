@@ -23,6 +23,7 @@ import { armarWeb } from "../../src/composicion/web";
 import { empresaId, personaId } from "../../src/primitivas/identificadores/marca";
 import type { ProveedorDeEmision } from "../../src/modulos/fiscal/publico";
 import { EmisionFalsa } from "../utilidades/emision-falsa";
+import { agotadaSegunElRegistro, repetirSiAgotada } from "./concurrencia-apoyo";
 import { crearBaseAparte } from "./entorno";
 import {
   cargarCertificado,
@@ -81,6 +82,15 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
   let dueno: pg.Client;
   let conexiones: Conexiones;
   const registrados: string[] = [];
+
+  /**
+   * Lo que el producto garantiza (la misma acción repetida sale bien, o cada una recibe lo suyo): el motor puede responder
+   * `ConcurrenciaAgotada` a quien pierde 7 rondas SERIALIZABLE seguidas y la web lo muestra como un `ERROR_INTERNO` (el
+   * registro tiene la causa). Entonces el cliente reintenta con el MISMO pedido (misma clave), que es seguro; acá se hace lo
+   * mismo y se sigue exigiendo que todos salgan bien.
+   */
+  const sinAgotar = <R extends { readonly ok: boolean }>(trabajo: () => Promise<R>) =>
+    repetirSiAgotada(trabajo, { esAgotada: agotadaSegunElRegistro(registrados) });
   /** Un ARCA falso por ambiente (cada ambiente es otro ARCA). */
   const arca = { HOMOLOGACION: new EmisionFalsa(), PRODUCCION: new EmisionFalsa() };
   const emision: ProveedorDeEmision = { para: (_empresa, _emisor, ambiente) => arca[ambiente] };
@@ -353,7 +363,9 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
       const entrada = facturaCruda(e);
       const antes = arca.HOMOLOGACION.pedidos.length;
       const respuestas = await Promise.all(
-        Array.from({ length: 10 }, () => emitirFactura(d, comoPersonaDe(e), entrada)),
+        Array.from({ length: 10 }, () =>
+          sinAgotar(() => emitirFactura(d, comoPersonaDe(e), entrada)),
+        ),
       );
       expect(respuestas.every((r) => r.ok)).toBe(true);
       const ids = new Set(respuestas.map((r) => (r.ok ? r.dato.comprobanteId : "")));
@@ -442,8 +454,10 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
 
     it("dos comprobantes distintos a la vez reciben números distintos y seguidos", async () => {
       const e = await empresaConFacturacion();
+      // Un pedido por comprobante, armado una sola vez: ante un agotamiento se repite con su misma clave.
+      const entradas = [1, 2, 3, 4].map(() => facturaCruda(e));
       const emitidos = await Promise.all(
-        [1, 2, 3, 4].map(() => emitirFactura(d, comoPersonaDe(e), facturaCruda(e))),
+        entradas.map((entrada) => sinAgotar(() => emitirFactura(d, comoPersonaDe(e), entrada))),
       );
       const claves = emitidos.flatMap((r) =>
         r.ok ? clavesDeLaValidacionInicial(r.dato.comprobanteId) : [],
@@ -644,9 +658,9 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
     it("el mismo cambio a la vez (doble clic): los dos salen bien, uno cambia y el otro «ya estaba», con una sola auditoría", async () => {
       const { e, version } = await listoParaProduccion();
       const salidas = await Promise.all([
-        cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version)),
-        cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version)),
-        cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version)),
+        sinAgotar(() => cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version))),
+        sinAgotar(() => cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version))),
+        sinAgotar(() => cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version))),
       ]);
       expect(salidas.every((r) => r.ok)).toBe(true);
       expect(salidas.map((r) => (r.ok ? r.dato.yaEstaba : null)).sort()).toEqual([

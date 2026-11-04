@@ -3,8 +3,10 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { certificadoId } from "../../src/modulos/fiscal/publico";
 import { emisorId, empresaId } from "../../src/primitivas/identificadores/marca";
+import type { Resultado } from "../../src/primitivas/resultado/resultado";
 import { Secreto } from "../../src/primitivas/secreto/secreto";
 import type { TicketDeAcceso } from "../../src/puertos/almacen-de-tickets";
+import { agotadaEnElResultado, repetirSiAgotada } from "./concurrencia-apoyo";
 import { crearBarrera, crearBaseAparte } from "./entorno";
 import {
   RelojDeCertificados,
@@ -112,6 +114,14 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
     };
   }
 
+  /**
+   * Lo que el producto garantiza como «todos terminan bien» (el mismo pedido, la misma carga o el mismo ticket repetidos a la
+   * vez): el motor puede responder `ConcurrenciaAgotada` a quien pierde 7 rondas SERIALIZABLE seguidas, y entonces el cliente
+   * reintenta con el MISMO pedido (misma clave), que es seguro. Acá se hace lo mismo y se sigue exigiendo que todos terminen ok.
+   */
+  const sinAgotar = <R extends Resultado<unknown, unknown>>(trabajo: () => Promise<R>) =>
+    repetirSiAgotada(trabajo, { esAgotada: agotadaEnElResultado });
+
   const cargar = (
     e: Awaited<ReturnType<typeof escenarioDeCertificados>>,
     id: string,
@@ -129,7 +139,7 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
       const entrada = pedidoDeCertificado(e);
       const antes = servicios.clavesGeneradas.length;
       const rs = await juntas(4, () =>
-        casos.generarPedidoDeCertificado(e.como(new Date()), entrada),
+        sinAgotar(() => casos.generarPedidoDeCertificado(e.como(new Date()), entrada)),
       );
 
       expect(
@@ -191,7 +201,7 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const e = await escenarioDeCertificados(dueno, propia.base);
       const { id, pem } = await pedirYEmitir(e);
-      const rs = await juntas(4, () => cargar(e, id, pem));
+      const rs = await juntas(4, () => sinAgotar(() => cargar(e, id, pem)));
       expect(
         rs.every((r) => r.ok),
         JSON.stringify(rs),
@@ -373,7 +383,7 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const e = await escenarioDeSociedad(dueno, propia.base);
       const { id, pem } = await pedirYEmitir(e, undefined, cuitConPrefijo("20"));
-      const rs = await juntas(4, () => cargar(e, id, pem));
+      const rs = await juntas(4, () => sinAgotar(() => cargar(e, id, pem)));
       expect(
         rs.every((r) => r.ok),
         JSON.stringify(rs),
@@ -451,7 +461,9 @@ describe.skipIf(base === null)("certificados F7: concurrencia", () => {
         ticket("T1", 1),
       ];
       const rs = await Promise.all(
-        tickets.map((t) => almacen.guardar(empresa, emisor, "HOMOLOGACION", "wsfe", t)),
+        tickets.map((t) =>
+          sinAgotar(() => almacen.guardar(empresa, emisor, "HOMOLOGACION", "wsfe", t)),
+        ),
       );
       expect(
         rs.every((r) => r.ok),
