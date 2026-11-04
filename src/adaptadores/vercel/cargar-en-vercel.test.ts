@@ -33,8 +33,10 @@ function clienteFalso(estado: readonly VariableRemota[], fallas: Fallas = {}) {
       llamadas.push("listar");
       return Promise.resolve(fallas.listar ?? { ok: true, valor: estado });
     },
-    escribir: (clave, valor, destino) => {
-      llamadas.push(`escribir ${clave}=${valor} en ${destino}`);
+    escribir: (clave, valor, destino, opciones) => {
+      llamadas.push(
+        `escribir ${clave}=${valor} en ${destino}${opciones === undefined ? "" : ` (pisar ${String(opciones.pisar)})`}`,
+      );
       return Promise.resolve(fallas.escribir ?? ok);
     },
     borrar: (id) => {
@@ -82,6 +84,20 @@ describe("cargarEnVercel", () => {
     const { cliente, llamadas } = clienteFalso([remota("A", { target: ["production"] })]);
     await cargarEnVercel(cliente, "production", [{ tipo: "escribir", key: "A", value: "x" }]);
     expect(llamadas[0]).toBe("escribir A=x en production");
+  });
+
+  it("un paso `sinPisar` escribe con pisar: false; uno común, sin opciones (con upsert)", async () => {
+    const { cliente, llamadas } = clienteFalso([remota("A"), remota("B")]);
+    await cargarEnVercel(cliente, "preview", [
+      { tipo: "escribir", key: "A", value: "1", sinPisar: true },
+      { tipo: "escribir", key: "B", value: "2" },
+      { tipo: "escribir", key: "C", value: "3", sinPisar: false },
+    ]);
+    expect(llamadas.slice(0, 3)).toEqual([
+      "escribir A=1 en preview (pisar false)",
+      "escribir B=2 en preview",
+      "escribir C=3 en preview",
+    ]);
   });
 
   it("se frena en la primera falla: lo que sigue no se intenta, no se verifica y se cuenta como no escrito", async () => {
