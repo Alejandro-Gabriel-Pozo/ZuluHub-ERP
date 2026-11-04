@@ -168,6 +168,13 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
     );
   const comoPersonaDe = (e: EscenarioDeCasos) => e.como(ahora());
 
+  /**
+   * Sin esto, `despacharPorClaves` devuelve a los 5 s aunque el trabajo siga en curso (el tope es para el `after()` de la
+   * web, que no puede esperar): bajo la carga del CI la validación tarda más y la prueba leía `PENDIENTE`. Acá se necesita
+   * el estado final, así que se espera a que termine (el procesador lo prevé: `esperarHastaTerminar`).
+   */
+  const ESPERAR_HASTA_TERMINAR = { esperarHastaTerminar: true } as const;
+
   /** Emite y corre el manejador de la cola, como lo haría el despacho inmediato. */
   async function emitirYValidar(e: EscenarioDeCasos, entrada = facturaCruda(e)) {
     const emitido = await emitirFactura(d, comoPersonaDe(e), entrada);
@@ -178,6 +185,7 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
         empresaId(e.empresa),
         clavesDeLaValidacionInicial(emitido.dato.comprobanteId),
         ahora(),
+        ESPERAR_HASTA_TERMINAR,
       );
     return emitido.dato;
   }
@@ -202,7 +210,12 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
 
       await trabajos
         .procesador()
-        .despacharPorClaves(empresaId(e.empresa), clavesDeLaValidacionInicial(id), ahora());
+        .despacharPorClaves(
+          empresaId(e.empresa),
+          clavesDeLaValidacionInicial(id),
+          ahora(),
+          ESPERAR_HASTA_TERMINAR,
+        );
       expect(await estadoDe(id)).toBe("AUTORIZADO");
       expect(arca.HOMOLOGACION.pedidos.length).toBe(antes + 1);
       expect((await trabajosDe(id))[0]?.estado).toBe("HECHO");
@@ -271,6 +284,7 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
           empresaId(e.empresa),
           clavesDeLaValidacionInicial(nota.dato.comprobanteId),
           ahora(),
+          ESPERAR_HASTA_TERMINAR,
         );
       expect(await estadoDe(nota.dato.comprobanteId)).toBe("AUTORIZADO");
       // Lo ya acreditado llega a la pantalla, en el detalle y en el listado (D-16).
@@ -383,7 +397,12 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
         Array.from({ length: 10 }, () =>
           trabajos
             .procesador()
-            .despacharPorClaves(empresaId(e.empresa), [`fiscal.validar:${id}:1`], ahora()),
+            .despacharPorClaves(
+              empresaId(e.empresa),
+              [`fiscal.validar:${id}:1`],
+              ahora(),
+              ESPERAR_HASTA_TERMINAR,
+            ),
         ),
       );
       expect(arca.HOMOLOGACION.pedidos.length).toBe(antes + 1);
@@ -441,6 +460,7 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
         empresaId(e.empresa),
         [1, 2, 3].map((n) => `fiscal.validar:${id}:${n}`),
         ahora(),
+        ESPERAR_HASTA_TERMINAR,
       );
       expect(arca.HOMOLOGACION.pedidos.length).toBe(antes + 1);
       expect(await estadoDe(id)).toBe("AUTORIZADO");
@@ -463,7 +483,9 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
         r.ok ? clavesDeLaValidacionInicial(r.dato.comprobanteId) : [],
       );
       expect(claves).toHaveLength(4);
-      await trabajos.procesador().despacharPorClaves(empresaId(e.empresa), claves, ahora());
+      await trabajos
+        .procesador()
+        .despacharPorClaves(empresaId(e.empresa), claves, ahora(), ESPERAR_HASTA_TERMINAR);
       const numeros = await filas<{ numero: string }>(
         "select numero from comprobante where empresa_id = $1 and estado = 'AUTORIZADO' order by numero::int",
         [e.empresa],
@@ -917,7 +939,12 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
       const antes2 = arca.HOMOLOGACION.pedidos.length;
       await trabajos
         .procesador()
-        .despacharPorClaves(empresaId(e.empresa), clavesDeLaValidacionInicial(id), ahora());
+        .despacharPorClaves(
+          empresaId(e.empresa),
+          clavesDeLaValidacionInicial(id),
+          ahora(),
+          ESPERAR_HASTA_TERMINAR,
+        );
       expect(arca.HOMOLOGACION.pedidos.length).toBe(antes2);
       expect(await estadoDe(id)).toBe("DESCARTADO");
       expect(await reintentarComprobante(d, comoPersonaDe(e), { comprobanteId: id })).toMatchObject(
