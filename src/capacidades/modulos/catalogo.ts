@@ -94,7 +94,7 @@ export const CATALOGO_DE_MODULOS = {
       "modulos.ver": { capacidad: null, efecto: "LECTURA" },
       "permisos.ver_propios": { capacidad: null, efecto: "LECTURA" },
       // H7 fiscal §C (T5): la configuración fiscal del gerente. Vive acá y no en `facturacion` porque son los
-      // `datosRequeridos` de la facturación: si dependieran de ella (en desarrollo), el gerente nunca podría
+      // `datosRequeridos` de la facturación: si dependieran de ella (que cada empresa tiene que activar), el gerente nunca podría
       // dejarlos listos. Guardar un borrador, crear, editar y activar un punto de venta o confirmar la regla del
       // emisor crean o amplían; confirmar los datos fiscales y desactivar un punto de venta cierran.
       "datos_fiscales.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -107,14 +107,16 @@ export const CATALOGO_DE_MODULOS = {
     },
   },
   /**
-   * Facturación electrónica (H7, especificación §C). `en_desarrollo`: el guard rechaza sus acciones
-   * con `MODULO_EN_DESARROLLO` hasta que exista la facturación. Hoy declara la acción que exigen los
+   * Facturación electrónica (H7, especificación §C). `disponible` (dueño, 2026-11-04) para probarla contra
+   * ARCA en homologación: NO la activa para nadie. Cada empresa la necesita activa (`modulo_de_empresa`, por
+   * la plataforma y dentro del techo de su plan) y la acción en su rol; si no, el guard rechaza con
+   * `MODULO_NO_ACTIVO` o `SIN_PERMISO`. Declara la acción que exigen los
    * casos de uso de numeración (reservar y cerrar el número de un comprobante) y la de las consultas
    * del facturador (F6). Emitir completa algo ya vendido o cobrado, así que es `COMPLETA_CIERRA` y
    * una baja de plan no lo traba; mirar lo emitido es `LECTURA` y se puede siempre.
    */
   facturacion: {
-    estado: "en_desarrollo",
+    estado: "disponible",
     obligatorio: false,
     requiere: ["administracion"],
     usaSiExiste: [],

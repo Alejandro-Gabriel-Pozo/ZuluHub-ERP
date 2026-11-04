@@ -311,14 +311,13 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
       }
     });
 
-    it("con el catálogo REAL la facturación sigue en desarrollo: nadie mira todavía", async () => {
+    it("con el catálogo REAL la facturación es disponible: con el módulo activo en la empresa se mira (el «no activo» lo cubren autorizacion-de-modulos y las pruebas de guard-primero)", async () => {
       const a = await crearEmpresa();
       const c = await crearAutorizado(a.x);
       const reales = entorno.consultas(REGLAS_DE_EMPRESA);
-      const esperado = { ok: false, error: "MODULO_EN_DESARROLLO" };
-      expect(await reales.listarComprobantes(mira(a), { sucursalElegida: null })).toEqual(esperado);
-      expect(await reales.verComprobante(mira(a), { comprobanteId: c.id })).toEqual(esperado);
-      expect(await reales.modeloDeImpresion(mira(a), { comprobanteId: c.id })).toEqual(esperado);
+      expect((await reales.listarComprobantes(mira(a), { sucursalElegida: null })).ok).toBe(true);
+      expect((await reales.verComprobante(mira(a), { comprobanteId: c.id })).ok).toBe(true);
+      expect((await reales.modeloDeImpresion(mira(a), { comprobanteId: c.id })).ok).toBe(true);
     });
   });
 
