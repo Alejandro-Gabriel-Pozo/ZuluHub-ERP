@@ -76,16 +76,18 @@ export {
   COLUMNAS_DE_EMPRESAS,
   ERRORES_DE_EMPRESAS_POR_RESTRICCION,
   crearRepositorioDeEmpresas,
-  crearRepositorioDeSucursales,
-  type AltaDeSucursal,
   type AltaVencida,
   type EmpresaConCreadoEn,
   type EmpresasDb,
   type ErrorDeRepositorioDeEmpresas,
   type NuevaEmpresa,
   type RepositorioDeEmpresas,
-  type RepositorioDeSucursales,
 } from "./persistencia/repositorios";
+export {
+  crearRepositorioDeSucursales,
+  type AltaDeSucursal,
+  type RepositorioDeSucursales,
+} from "./persistencia/repositorio-de-sucursales";
 export {
   crearLecturaDeSucursalBloqueada,
   type LecturaDeSucursalBloqueada,
