@@ -24,7 +24,8 @@ export type OpcionesDelComprobante = Readonly<{
   descripcionesLargas?: boolean;
   consumidorFinal?: boolean;
   notaDeCredito?: boolean;
-  homologacion?: boolean;
+  /** Las leyendas del modelo, tal cual; sin esto, el comprobante no lleva ninguna. */
+  leyendas?: readonly string[];
   contacto?: boolean;
 }>;
 
@@ -126,7 +127,7 @@ export function comprobanteDePrueba(o: OpcionesDelComprobante = {}): Comprobante
       o.notaDeCredito === true
         ? { rotulo: "FACTURA", letra, numero: "00001-00000007", fecha: "2026-10-01" }
         : null,
-    esDeHomologacion: o.homologacion === true,
+    leyendas: o.leyendas ?? [],
   };
 }
 

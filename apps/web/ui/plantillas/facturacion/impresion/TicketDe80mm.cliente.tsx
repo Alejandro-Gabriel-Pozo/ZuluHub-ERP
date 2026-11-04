@@ -51,9 +51,11 @@ export function TicketDe80mm({ a, qrSvg, alMedirElAlto }: PropsDelTicket) {
   }, [a, alMedirElAlto]);
   return (
     <div ref={raiz} className={estilos["ticket"]} style={estiloDelTicket()} data-ticket="">
-      {a.homologacion === null ? null : (
-        <div className={estilos["homologacion"]}>{a.homologacion}</div>
-      )}
+      {a.leyendas.map((leyenda, i) => (
+        <div key={i} className={estilos["homologacion"]}>
+          {leyenda}
+        </div>
+      ))}
       <div className={estilos["centrado"]}>
         {a.nombreDeFantasia === null ? null : (
           <div className={estilos["nombre"]}>{a.nombreDeFantasia}</div>

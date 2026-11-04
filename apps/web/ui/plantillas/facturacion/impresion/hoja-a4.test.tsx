@@ -244,10 +244,15 @@ describe("hoja A4: lo que dibuja según el comprobante", () => {
   });
 
   it("homologación: la leyenda en cada hoja; en producción, ninguna", async () => {
-    const pruebas = await dibujar({ homologacion: true, renglones: 60 });
+    const pruebas = await dibujar({
+      leyendas: ["HOMOLOGACIÓN — SIN VALIDEZ FISCAL", "OTRA LEYENDA DEL MODELO"],
+      renglones: 60,
+    });
     expect(pruebas.hojas.length).toBeGreaterThan(1);
-    for (const hoja of pruebas.hojas)
+    for (const hoja of pruebas.hojas) {
       expect(textoDe(hoja)).toContain("HOMOLOGACIÓN — SIN VALIDEZ FISCAL");
+      expect(textoDe(hoja)).toContain("OTRA LEYENDA DEL MODELO");
+    }
     await pruebas.pantalla.unmount();
     const produccion = await dibujar({ renglones: 8 });
     expect(textoDe(produccion.hojas[0])).not.toContain("HOMOLOGACIÓN");

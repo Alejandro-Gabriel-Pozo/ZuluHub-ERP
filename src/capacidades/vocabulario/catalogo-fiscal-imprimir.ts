@@ -31,10 +31,6 @@ export const TEXTOS_DE_FISCAL_IMPRIMIR = {
   "fiscal.pantalla.imprimir_a_transportar": { porDefecto: "A transportar" },
   // Dueño, 2026-11-04, D-111 y D-105: la primera fila de una hoja que continúa, con el parcial de la anterior (RG 1415, Anexo IV, punto 6 b) 2).
   "fiscal.pantalla.imprimir_transporte": { porDefecto: "Transporte" },
-  // Dueño, 2026-11-04, D-111: la leyenda de un comprobante de pruebas; el mismo texto que `LEYENDA_DE_HOMOLOGACION` de fiscal.
-  "fiscal.pantalla.imprimir_leyenda_homologacion": {
-    porDefecto: "HOMOLOGACIÓN — SIN VALIDEZ FISCAL",
-  },
   // Dueño, 2026-11-04, D-111 y D-105: la numeración de las hojas, «Hoja 2 de 3» (RG 1415, Anexo IV, punto 6 b) 2).
   "fiscal.pantalla.imprimir_hoja": { porDefecto: "Hoja {k} de {n}", marcadores: ["k", "n"] },
   // Dueño, 2026-11-04, D-111: el rótulo del número de ingresos brutos del emisor (RG 1415, Anexo II, A.I.a).

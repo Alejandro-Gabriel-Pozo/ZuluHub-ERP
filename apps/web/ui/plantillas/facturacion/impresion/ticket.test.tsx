@@ -78,7 +78,11 @@ describe("ticket de 80 mm", () => {
   });
 
   it("el CAE con su vencimiento y el QR enteros dentro del ticket; una nota de crédito dice a qué corresponde", async () => {
-    const { ticket } = await dibujar({ notaDeCredito: true, homologacion: true, contacto: true });
+    const { ticket } = await dibujar({
+      notaDeCredito: true,
+      leyendas: ["HOMOLOGACIÓN — SIN VALIDEZ FISCAL"],
+      contacto: true,
+    });
     const qr = ticket.querySelector("img[data-qr]");
     const rTicket = ticket.getBoundingClientRect();
     const rQr = (qr as Element).getBoundingClientRect();

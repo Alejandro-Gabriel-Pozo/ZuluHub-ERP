@@ -267,7 +267,6 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "fiscal.pantalla.imprimir_codigo": "COD.",
       "fiscal.pantalla.imprimir_a_transportar": "A transportar",
       "fiscal.pantalla.imprimir_transporte": "Transporte",
-      "fiscal.pantalla.imprimir_leyenda_homologacion": "HOMOLOGACIÓN — SIN VALIDEZ FISCAL",
       "fiscal.pantalla.imprimir_hoja": "Hoja {k} de {n}",
       "fiscal.pantalla.imprimir_ingresos_brutos": "Ingresos Brutos",
     });

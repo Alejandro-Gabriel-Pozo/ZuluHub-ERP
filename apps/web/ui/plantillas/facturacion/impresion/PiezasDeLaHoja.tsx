@@ -27,9 +27,11 @@ function Fila({ fila }: Readonly<{ fila: FilaArmada }>) {
 export function EncabezadoDeHoja({ a }: Readonly<{ a: HojaArmada }>) {
   return (
     <header className={estilos["encabezado"]} data-medida="encabezado">
-      {a.homologacion === null ? null : (
-        <div className={estilos["homologacion"]}>{a.homologacion}</div>
-      )}
+      {a.leyendas.map((leyenda, i) => (
+        <div key={i} className={estilos["homologacion"]}>
+          {leyenda}
+        </div>
+      ))}
       <div className={estilos["cabecera"]}>
         <div>
           {a.nombreDeFantasia === null ? null : (

@@ -43,10 +43,7 @@ function modelo(c: Parameters<typeof modeloDeImpresion>[0]): ModeloImpreso {
 }
 
 /** El modelo de fiscal se pasa tal cual: si dejara de cumplir el tipo de la hoja, esta asignación no compila. */
-const paraLaHoja = (m: ModeloImpreso): ComprobanteParaLaHoja => ({
-  ...m,
-  esDeHomologacion: m.leyendas.length > 0,
-});
+const paraLaHoja = (m: ModeloImpreso): ComprobanteParaLaHoja => m;
 
 const facturaB = facturaArmada(consumidorFinal, [
   renglon("1210.00", "1", "21", null, "Torta"),
@@ -166,11 +163,14 @@ describe("armarLaHoja: nota con comprobante asociado, homologación, contacto e 
     expect(a.corresponde).toBe("Corresponde a FACTURA B 00001-00000007 del 13/10/2026");
   });
 
-  it("la leyenda de homologación sale del catálogo solo en un comprobante de pruebas", () => {
+  it("las leyendas son las del modelo, tal cual y todas; sin leyendas no hay ninguna", () => {
     const pruebas = modelo(imprimibleDe({ ...facturaB, ambiente: "HOMOLOGACION" }));
     const produccion = modelo(imprimibleDe({ ...facturaB, ambiente: "PRODUCCION" }));
-    expect(armarLaHoja({}, paraLaHoja(pruebas), "A4").homologacion).toBe(pruebas.leyendas[0]);
-    expect(armarLaHoja({}, paraLaHoja(produccion), "A4").homologacion).toBeNull();
+    expect(pruebas.leyendas.length).toBeGreaterThan(0);
+    expect(armarLaHoja({}, paraLaHoja(pruebas), "A4").leyendas).toEqual(pruebas.leyendas);
+    expect(armarLaHoja({}, paraLaHoja(produccion), "A4").leyendas).toEqual([]);
+    const varias = { ...paraLaHoja(pruebas), leyendas: [...pruebas.leyendas, "OTRA"] };
+    expect(armarLaHoja({}, varias, "A4").leyendas).toEqual([...pruebas.leyendas, "OTRA"]);
   });
 
   it("el contacto son los datos que existen, sueltos y separados por « · » (la web, sin esquema)", () => {

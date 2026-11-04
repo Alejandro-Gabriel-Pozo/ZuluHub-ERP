@@ -91,10 +91,10 @@ export type ComprobanteParaLaHoja = Readonly<{
   }>;
   asociado: Readonly<{ rotulo: string; letra: string; numero: string; fecha: string }> | null;
   /**
-   * Verdadero si el comprobante es de pruebas. Lo arma la página a partir de `leyendas` del modelo; el texto de la leyenda es el del
-   * catálogo (`imprimir_leyenda_homologacion`), el mismo que `LEYENDA_DE_HOMOLOGACION` de fiscal.
+   * Las leyendas del modelo (`ModeloImpreso.leyendas`), con su texto tal cual: la fuente única es fiscal (`LEYENDA_DE_HOMOLOGACION`);
+   * la vista no tiene clave propia. Previene: que el texto de la leyenda diverja entre el modelo y la hoja.
    */
-  esDeHomologacion: boolean;
+  leyendas: readonly string[];
 }>;
 
 export type FilaArmada = Readonly<{ rotulo: string | null; valor: string }>;
@@ -120,7 +120,7 @@ type TotalArmado = Readonly<{ rotulo: string; valor: string; fuerte: boolean }>;
 
 export type HojaArmada = Readonly<{
   formato: FormatoDeImpresion;
-  homologacion: string | null;
+  leyendas: readonly string[];
   nombreDeFantasia: string | null;
   emisor: readonly FilaArmada[];
   /** Teléfono, correo y web sueltos, sin rótulos, separados por « · »; `null` si no hay ninguno. */
@@ -304,9 +304,7 @@ export function armarLaHoja(
   const asociado = c.asociado;
   return {
     formato,
-    homologacion: c.esDeHomologacion
-      ? texto(d, "fiscal.pantalla.imprimir_leyenda_homologacion")
-      : null,
+    leyendas: c.leyendas,
     nombreDeFantasia: c.marca.nombreDeFantasia,
     emisor: [
       { rotulo: texto(d, "fiscal.pantalla.config_df_razon_social"), valor: e.razonSocial },
