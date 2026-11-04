@@ -175,8 +175,9 @@ export type TxDeApp = Readonly<{
   certificados: RepositorioDeCertificados;
   accesos: RepositorioDeAccesos;
   /**
-   * La marca con que se imprime un comprobante (solo la pide `modeloDeImpresion`). TODAVÍA NO ESTÁ CABLEADA: la
-   * impresión es F9 y la web no ofrece esa consulta. Falla fuerte antes que imprimir sin marca en silencio.
+   * La marca con que se imprime un comprobante (solo la pide `modeloDeImpresion`). TODAVÍA NO ESTÁ CABLEADA: qué marca se imprime y
+   * qué pasa sin ella son decisiones del dueño (preguntas pendientes del PR que expuso el modelo a la web). Falla fuerte antes que
+   * imprimir sin marca en silencio: la web recibe el error inesperado con su referencia.
    */
   marca: Readonly<{ deLaEmpresa(empresa: EmpresaId): Promise<MarcaParaImprimir> }>;
   /** El nivel vigente de cada control (permitir, avisar, bloquear), leído en la misma transacción. */
@@ -226,7 +227,7 @@ export type OpcionesDeConexiones = Readonly<{
   registrarDeIngreso?: (detalle: string) => void;
 }>;
 
-/** La marca de impresión no está cableada (F9): pedirla falla fuerte, nunca imprime sin marca en silencio. */
+/** La marca de impresión no está cableada (decisión pendiente): pedirla falla fuerte, nunca imprime sin marca en silencio. */
 const marcaSinCablear: TxDeApp["marca"] = {
   deLaEmpresa: () =>
     Promise.reject(new Error("la marca para imprimir no está cableada todavía (F9, impresión)")),

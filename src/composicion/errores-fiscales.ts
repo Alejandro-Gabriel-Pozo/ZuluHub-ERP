@@ -14,16 +14,15 @@ import type {
   ErrorAlEditarPuntoDeVenta,
   ErrorAlEmitir,
   ErrorAlGuardarElBorrador,
-  ErrorAlListarComprobantes,
   ErrorAlReintentarComprobante,
   ErrorAlResincronizarSerie,
-  ErrorAlVerComprobante,
   MensajeDeIntento,
   CasosDeUsoDeConfiguracionFiscal,
 } from "../modulos/fiscal/publico";
 import { err, type Resultado } from "../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../puertos/transacciones";
 import { aRespuesta, type DependenciasDeRespuesta } from "./a-respuesta";
+import { ERRORES_DE_IMPRESION, type ErrorAlLeerComprobantes } from "./errores-fiscales-de-lectura";
 import {
   ERRORES_DE_CERTIFICADO,
   SIN_TEXTO_APROBADO,
@@ -63,8 +62,7 @@ type ErrorDeNegocioFiscal = Exclude<
   | ErrorAlReintentarComprobante
   | ErrorAlResincronizarSerie
   | ErrorAlCambiarAmbiente
-  | ErrorAlListarComprobantes
-  | ErrorAlVerComprobante
+  | ErrorAlLeerComprobantes
   // La configuración fiscal (D-43): datos fiscales, puntos de venta y las consultas de esas pantallas (`EMISOR_NO_ENCONTRADO`).
   | ErrorAlGuardarElBorrador
   | ErrorAlEmpezarLaCorreccion
@@ -178,6 +176,7 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<
   // empresa sería un oráculo. La base lo rechaza por la referencia, no por una regla que la persona pueda corregir.
   SUCURSAL_DE_OTRA_EMPRESA: null,
   ...ERRORES_DE_CERTIFICADO,
+  ...ERRORES_DE_IMPRESION,
 };
 
 /** Los códigos de la configuración fiscal que todavía salen sin texto propio: lo que hay que preguntarle al dueño. */

@@ -49,16 +49,22 @@ describe("las tablas de traducción", () => {
       .map(([error]) => error)
       .sort();
     expect(defectos).toEqual([
+      // El modelo de impresión: un CAE sin 14 dígitos (no hay QR posible) es un dato que la persona no puede corregir.
+      "CAE_INVALIDO",
       // Certificados: la clave guardada no se descifra (clave maestra equivocada o fila alterada); la persona no puede corregirlo.
       "CLAVE_ILEGIBLE",
       "COMPROBANTE_ALTA_INVALIDA",
       "COMPROBANTE_ASOCIADO_INVALIDO",
+      // El modelo de impresión: pedir uno que no está autorizado es un pedido armado a mano (la pantalla solo ofrece imprimir los autorizados).
+      "COMPROBANTE_NO_AUTORIZADO",
       // Configuración fiscal: Ingresos Brutos no lo puede provocar nadie (D-45), la base no repite el número de versión, y una
       // sucursal ajena es un pedido armado a mano (sin oráculo).
       "IIBB_CONDICION_INVALIDA",
       "IIBB_NUMERO_INVALIDO",
       "NUMERO_DE_VERSION_INVALIDO",
       "SUCURSAL_DE_OTRA_EMPRESA",
+      // El modelo de impresión: una versión de representación que este código no sabe dibujar (lista cerrada, `modelo-de-impresion.ts`).
+      "VERSION_DE_REPRESENTACION_DESCONOCIDA",
     ]);
   });
 
