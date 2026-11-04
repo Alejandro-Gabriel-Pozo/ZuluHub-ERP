@@ -1,7 +1,11 @@
 import { expect } from "vitest";
 import { page } from "vitest/browser";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import type { AccionesDePuntosDeVenta, OfertaDeAccion } from "./modelo-de-puntos-de-venta";
+import type {
+  AccionesDePuntosDeVenta,
+  DomicilioGuardado,
+  OfertaDeAccion,
+} from "./modelo-de-puntos-de-venta";
 import { ArmazonDeOperacion } from "../sesion/ArmazonDeOperacion";
 import type { ReactNode } from "react";
 
@@ -37,6 +41,18 @@ export const TODO_PERMITIDO: AccionesDePuntosDeVenta = {
   activar: PERMITIDO,
   desactivar: PERMITIDO,
   pasarAProduccion: PERMITIDO,
+};
+
+/** El domicilio guardado de un punto de venta de prueba (el que la consulta entrega y el formulario de edición precarga). */
+export const DOMICILIO_DE_PRUEBA: DomicilioGuardado = {
+  id: "3e2f4a5b-6c7d-4e8f-9a0b-1c2d3e4f5a6b",
+  calle: "Mitre",
+  numero: "55",
+  piso: "2",
+  departamento: "B",
+  localidad: "Rosario",
+  provincia: "AR-S",
+  codigoPostal: "2000",
 };
 
 /** Se ve de verdad: ni `hidden`, ni `display:none`. */
