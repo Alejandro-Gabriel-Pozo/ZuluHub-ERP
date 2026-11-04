@@ -1,8 +1,10 @@
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { formatearFecha, formatearNumeroDeDocumento } from "../facturacion/formato-fiscal";
 import {
+  cambioElDomicilio,
   domicilioNuevo,
-  hayDomicilioCargado,
+  valoresDelDomicilio,
+  type DomicilioGuardado,
   type ValoresDelDomicilio,
 } from "./modelo-de-puntos-de-venta";
 
@@ -11,17 +13,7 @@ import {
  * una provincia válidas) las decide el servidor: acá solo se acomoda la forma del pedido.
  */
 
-export type DomicilioDeDatosFiscales = Readonly<{
-  id: string;
-  calle: string;
-  numero: string;
-  piso: string | null;
-  departamento: string | null;
-  localidad: string;
-  /** El código de la provincia (`AR-B`). */
-  provincia: string;
-  codigoPostal: string | null;
-}>;
+export type DomicilioDeDatosFiscales = DomicilioGuardado;
 
 export type VigenteDeDatosFiscales = Readonly<{
   id: string;
@@ -83,16 +75,6 @@ const VALORES_EN_BLANCO: ValoresDeDatosFiscales = {
   codigoPostal: "",
 };
 
-const valoresDelDomicilio = (d: DomicilioDeDatosFiscales | null): ValoresDelDomicilio => ({
-  calle: d?.calle ?? "",
-  numeroDeCalle: d?.numero ?? "",
-  piso: d?.piso ?? "",
-  departamento: d?.departamento ?? "",
-  localidad: d?.localidad ?? "",
-  provincia: d?.provincia ?? "",
-  codigoPostal: d?.codigoPostal ?? "",
-});
-
 /** Lo vigente en los campos del formulario (D-88: sin borrador se abre con lo que rige; no se guarda nada hasta Guardar borrador o Confirmar). */
 function valoresDeLoVigente(v: VigenteDeDatosFiscales): ValoresDeDatosFiscales {
   return {
@@ -133,25 +115,6 @@ export function aFechaCivil(escrita: string): string {
   return partes === null ? limpia : `${partes[3]}-${partes[2]}-${partes[1]}`;
 }
 
-const CAMPOS_DEL_DOMICILIO = [
-  "calle",
-  "numeroDeCalle",
-  "piso",
-  "departamento",
-  "localidad",
-  "provincia",
-  "codigoPostal",
-] as const satisfies readonly (keyof ValoresDelDomicilio)[];
-
-const mismoDomicilio = (a: ValoresDelDomicilio, b: ValoresDelDomicilio): boolean =>
-  CAMPOS_DEL_DOMICILIO.every((campo) => a[campo].trim() === b[campo].trim());
-
-/** El domicilio viaja como NUEVO solo si cambió respecto del que tiene el borrador; si no, el borrador conserva el suyo. */
-const cambioElDomicilio = (v: ValoresDeDatosFiscales, original: BorradorDeDatosFiscales | null) =>
-  original === null || original.domicilio === null
-    ? hayDomicilioCargado(v)
-    : !mismoDomicilio(v, valoresDelBorrador(original));
-
 /**
  * El pedido de «Guardar borrador» (`guardarBorradorDeDatosFiscales`): el `borradorId` es el del borrador (o el que generó el
  * formulario si todavía no hay), y la versión es la última que vio la pantalla. Un dato en blanco no se manda salvo que antes tuviera
@@ -177,7 +140,9 @@ export function armarElPedidoDeGuardado(
     ...dato("razonSocial", v.razonSocial),
     ...dato("condicionIva", v.condicionIva),
     ...(inicio !== "" || base.inicioActividades !== "" ? { inicioActividades: inicio } : {}),
-    ...(cambioElDomicilio(v, original) ? { domicilio: domicilioNuevo(v, ids.domicilioId) } : {}),
+    ...(cambioElDomicilio(v, original?.domicilio ?? null)
+      ? { domicilio: domicilioNuevo(v, ids.domicilioId) }
+      : {}),
   };
 }
 
@@ -199,7 +164,7 @@ export function borradorTrasGuardar(
     razonSocial: opcional(v.razonSocial),
     condicionIva: opcional(v.condicionIva),
     inicioActividades: opcional(aFechaCivil(v.inicioActividades)),
-    domicilio: cambioElDomicilio(v, original)
+    domicilio: cambioElDomicilio(v, original?.domicilio ?? null)
       ? {
           id: ids.domicilioId,
           calle: v.calle.trim(),

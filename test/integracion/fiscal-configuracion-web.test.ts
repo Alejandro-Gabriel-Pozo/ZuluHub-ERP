@@ -46,6 +46,15 @@ vi.setConfig({ testTimeout: 120_000 });
 const DIA = 86_400_000;
 
 const uuid = (): string => randomUUID();
+// Marcas que la respuesta del estado del certificado nunca debe llevar. La huella de la prueba es hexadecimal (la base lo exige) y un UUID
+// al azar también: «cdcd» puede aparecer en un identificador por casualidad (CI de #151, copia 5). Por eso se comparan los textos SIN
+// identificadores; una huella suelta, que no tiene la forma de un UUID, no se borra y sigue detectándose.
+const MARCAS_SECRETAS = /SECRETO|cdcd|kid-1|clave|huella|pem/i;
+const sinIdentificadores = (respuesta: unknown): string =>
+  JSON.stringify(respuesta).replace(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+    "<id>",
+  );
 const SIN_PERMISO = { ok: false, error: { codigo: "SIN_PERMISO" } };
 
 /** Los campos de un domicilio nuevo, como los manda la pantalla. */
@@ -132,13 +141,14 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
   async function conCertificado(
     e: EscenarioDeConfiguracion,
     estado: "PEDIDO_GENERADO" | "VIGENTE",
+    idForzado?: string,
   ) {
     const { rows } = await dueno.query<{ id: string }>(
-      `insert into certificado_arca (empresa_id, emisor_id, ambiente, alias, cuit_titular, pedido_pem, clave_cifrada, clave_nonce,
+      `insert into certificado_arca (id, empresa_id, emisor_id, ambiente, alias, cuit_titular, pedido_pem, clave_cifrada, clave_nonce,
                                      clave_etiqueta, clave_kid, creado_por)
-       values ($1, $2, 'HOMOLOGACION', 'pedernal1', $3, 'PEDIDO-SECRETO', '\\x01', '\\x000000000000000000000000',
-               '\\x00000000000000000000000000000000', 'kid-1', $4) returning id`,
-      [e.mundo.empresa, e.mundo.emisor, e.mundo.cuit, e.persona],
+       values (coalesce($5::uuid, gen_random_uuid()), $1, $2, 'HOMOLOGACION', 'pedernal1', $3, 'PEDIDO-SECRETO', '\\x01',
+               '\\x000000000000000000000000', '\\x00000000000000000000000000000000', 'kid-1', $4) returning id`,
+      [e.mundo.empresa, e.mundo.emisor, e.mundo.cuit, e.persona, idForzado ?? null],
     );
     const id = (rows[0] as { id: string }).id;
     if (estado === "VIGENTE") {
@@ -1541,9 +1551,10 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
       expect(estado[0]).toMatchObject({ situacion: "VIGENTE", vencido: true });
     });
 
-    it("pedido generado y vigente: lo que la pantalla necesita para cargar o renovar, y nunca la clave, el pedido, el PEM ni la huella", async () => {
+    /** Con identificadores al azar (lo normal) o forzados, para fijar un caso que en el azar sale una vez cada miles. */
+    async function pedidoYVigente(ids?: { pedido: string; renovacion: string }) {
       const e = await nuevoConFacturacion();
-      const pedido = await conCertificado(e, "PEDIDO_GENERADO");
+      const pedido = await conCertificado(e, "PEDIDO_GENERADO", ids?.pedido);
       const pedidoDeHomologacion = dato(
         await estadoDeCertificados(dConFacturacion, e.como(ahora()), { emisorId: e.mundo.emisor }),
       );
@@ -1565,7 +1576,7 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
         `update certificado_arca set estado = 'VIGENTE', certificado_pem = 'PEM-SECRETO', huella_sha256 = $2, vence_en = $3 where id = $1`,
         [vigente, "cd".repeat(32), new Date(Date.now() + 60 * DIA)],
       );
-      const renovacion = await conCertificado(e, "PEDIDO_GENERADO");
+      const renovacion = await conCertificado(e, "PEDIDO_GENERADO", ids?.renovacion);
       const lista = dato(
         await estadoDeCertificados(dConFacturacion, e.como(ahora()), { emisorId: e.mundo.emisor }),
       );
@@ -1577,7 +1588,34 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
         pedidoPendiente: { certificadoId: renovacion, alias: "pedernal1" },
       });
       expect(typeof (lista[0] as { venceEn: unknown }).venceEn).toBe("string");
-      expect(JSON.stringify(lista)).not.toMatch(/SECRETO|cdcd|kid-1|clave|huella|pem/i);
+      expect(sinIdentificadores(lista)).not.toMatch(MARCAS_SECRETAS);
+    }
+
+    it("pedido generado y vigente: lo que la pantalla necesita para cargar o renovar, y nunca la clave, el pedido, el PEM ni la huella", async () => {
+      await pedidoYVigente();
+    });
+
+    it("lo mismo cuando un identificador lleva por casualidad una marca hexadecimal («cdcd»): no es un secreto", async () => {
+      await pedidoYVigente({
+        pedido: "cdcdcdcd-cdcd-4cdc-8cdc-cdcdcdcdcdcd",
+        renovacion: "00000000-cdcd-4000-8000-cdcdcdcdcdcd",
+      });
+    });
+
+    it("el chequeo sigue atrapando un secreto suelto, aunque la respuesta lleve un identificador con «cdcd»", () => {
+      const certificadoId = "560950b3-78da-4dc9-bf8b-b1e2cdcd8c7f";
+      expect(sinIdentificadores({ certificadoId })).not.toMatch(MARCAS_SECRETAS);
+      const huella = "cd".repeat(32);
+      for (const filtrado of [
+        { certificadoId, algo: huella },
+        { certificadoId, algo: huella.slice(0, 8) },
+        { certificadoId, algo: `${certificadoId}${huella}` },
+        { certificadoId, algo: "PEM-SECRETO" },
+        { certificadoId, algo: "PEDIDO-SECRETO" },
+        { certificadoId, algo: "kid-1" },
+      ]) {
+        expect(sinIdentificadores(filtrado)).toMatch(MARCAS_SECRETAS);
+      }
     });
 
     it("solo el gerente (con la facturación habilitada): administrador y operador, SIN_PERMISO", async () => {

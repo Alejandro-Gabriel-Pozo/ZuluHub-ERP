@@ -162,7 +162,8 @@ function ofertaDe(accion: ClaveAccion, permisos: PermisosLeidos): OfertaDeAccion
  * Qué botones de Puntos de venta se ofrecen activos hoy, según lo que el SERVIDOR deja hacer (`permisosDelActor`, una lectura por
  * pedido). «Pasar a producción» (`puntos_de_venta.cambiar_ambiente`) es del módulo `facturacion`, en desarrollo: sale apagado con
  * «Esta función todavía está en desarrollo.»; las demás son de `administracion`. Si no se pudieron leer los permisos, TODO sale apagado
- * con `motivo.sin_permiso` (ante un error o una duda el sistema cierra, `CLAUDE.md`; igual que `puedeEmitirNotasDeCredito` y la barra).
+ * con el genérico de D-82, «Esta acción no está permitida.» (ante un error o una duda el sistema cierra, `CLAUDE.md`; igual que
+ * `puedeEmitirNotasDeCredito` y la barra).
  * Previene: ofrecer un botón que el guard va a rechazar sin saber si la persona puede. Es solo una ayuda: ocultar o apagar no es
  * autorizar, cada acción vuelve a pasar por el guard dentro de su transacción.
  */
@@ -172,7 +173,7 @@ export async function accionesDePuntosDeVenta(
   const permisos = await permisosDeLaPersona(contexto);
   const de = (accion: ClaveAccion): OfertaDeAccion =>
     permisos === null
-      ? { permitida: false, motivo: texto({}, "motivo.sin_permiso") }
+      ? { permitida: false, motivo: texto({}, "fiscal.pantalla.config_pv_accion_no_permitida") }
       : ofertaDe(accion, permisos);
   return {
     agregar: de("puntos_de_venta.crear"),

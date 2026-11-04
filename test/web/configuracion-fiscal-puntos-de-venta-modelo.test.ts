@@ -24,6 +24,17 @@ const ID = "0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b";
 const IDS = { puntoDeVentaId: ID, domicilioId: "1c0a7b2f-3d4e-4f60-9b8c-0d1e2f3a4b5c" } as const;
 const EMISOR = "2d1b8c3a-4e5f-4a71-8c9d-1e2f3a4b5c6d";
 
+const DOMICILIO = {
+  id: "3e2f4a5b-6c7d-4e8f-9a0b-1c2d3e4f5a6b",
+  calle: "Mitre",
+  numero: "55",
+  piso: "2",
+  departamento: "B",
+  localidad: "Rosario",
+  provincia: "AR-S",
+  codigoPostal: "2000",
+} as const;
+
 const punto = (cambios: Partial<PuntoParaConfigurar> = {}): PuntoParaConfigurar => ({
   id: ID,
   numero: 2,
@@ -31,6 +42,7 @@ const punto = (cambios: Partial<PuntoParaConfigurar> = {}): PuntoParaConfigurar 
   ambiente: "HOMOLOGACION",
   sucursal: { id: "s-norte", nombre: "Sucursal Norte", activa: true },
   tieneDomicilio: true,
+  domicilio: DOMICILIO,
   hayNumerosUsados: false,
   version: 7,
   ...cambios,
@@ -148,12 +160,31 @@ describe("el pedido de alta", () => {
 describe("el pedido de edición", () => {
   const original = punto({ numero: 2, version: 7 });
 
-  it("abre con el número en cinco dígitos y la sucursal; el domicilio queda en blanco (ninguna consulta lo entrega)", () => {
+  it("abre con el número en cinco dígitos, la sucursal y el domicilio actual del punto de venta", () => {
     expect(valoresParaEditar(original)).toEqual({
+      numero: "00002",
+      sucursalId: "s-norte",
+      calle: "Mitre",
+      numeroDeCalle: "55",
+      piso: "2",
+      departamento: "B",
+      localidad: "Rosario",
+      provincia: "AR-S",
+      codigoPostal: "2000",
+    });
+  });
+
+  it("sin domicilio abre con el domicilio en blanco; un piso, departamento o código postal que no tiene también", () => {
+    expect(valoresParaEditar(punto({ tieneDomicilio: false, domicilio: null }))).toEqual({
       ...VALORES_EN_BLANCO,
       numero: "00002",
       sucursalId: "s-norte",
     });
+    expect(
+      valoresParaEditar(
+        punto({ domicilio: { ...DOMICILIO, piso: null, departamento: null, codigoPostal: null } }),
+      ),
+    ).toMatchObject({ piso: "", departamento: "", codigoPostal: "" });
   });
 
   it("sin cambios manda solo la versión y el id: no toca el número (uno que ya emitió no se puede cambiar)", () => {
@@ -182,6 +213,88 @@ describe("el pedido de edición", () => {
       sucursalId: "s-central",
       domicilio: { tipo: "NUEVO", id: IDS.domicilioId, provincia: "AR-C" },
     });
+  });
+
+  it("el domicilio precargado y no tocado no se reenvía (un domicilio no se edita: reenviarlo es ID_EN_USO o uno repetido)", () => {
+    const pedido = armarElPedidoDeEdicion(
+      { ...valoresParaEditar(original), numero: "00009" },
+      IDS,
+      original,
+    );
+    expect(pedido).toEqual({ puntoDeVentaId: ID, versionEsperada: 7, numero: "00009" });
+  });
+
+  it("espacios sobrantes alrededor de lo precargado no son un cambio", () => {
+    const v = valoresParaEditar(original);
+    expect(
+      armarElPedidoDeEdicion({ ...v, calle: ` ${v.calle} `, piso: ` ${v.piso}` }, IDS, original),
+    ).toEqual({ puntoDeVentaId: ID, versionEsperada: 7 });
+  });
+
+  it.each([
+    ["la calle", { calle: "Sarmiento" }],
+    ["el número", { numeroDeCalle: "56" }],
+    ["el piso (se borra)", { piso: "" }],
+    ["el departamento", { departamento: "C" }],
+    ["la localidad", { localidad: "Funes" }],
+    ["la provincia", { provincia: "AR-B" }],
+    ["el código postal", { codigoPostal: "2001" }],
+  ] as const)(
+    "corregir %s viaja como domicilio NUEVO, con el id del formulario y no con el del domicilio guardado",
+    (_cual, cambio) => {
+      const pedido = armarElPedidoDeEdicion(
+        { ...valoresParaEditar(original), ...cambio },
+        IDS,
+        original,
+      );
+      expect(pedido).toMatchObject({ domicilio: { tipo: "NUEVO", id: IDS.domicilioId } });
+      expect(IDS.domicilioId).not.toBe(DOMICILIO.id);
+      expect(Object.keys(pedido).sort()).toEqual([
+        "domicilio",
+        "puntoDeVentaId",
+        "versionEsperada",
+      ]);
+    },
+  );
+
+  it("borrar todo el domicilio que tenía viaja vacío: lo rechaza el servidor marcando los campos (no se calla)", () => {
+    const pedido = armarElPedidoDeEdicion(
+      {
+        ...valoresParaEditar(original),
+        calle: "",
+        numeroDeCalle: "",
+        piso: "",
+        departamento: "",
+        localidad: "",
+        provincia: "",
+        codigoPostal: "",
+      },
+      IDS,
+      original,
+    );
+    expect(pedido).toMatchObject({ domicilio: { tipo: "NUEVO", calle: "", provincia: "" } });
+  });
+
+  it("un punto de venta sin domicilio: si no se escribe nada no viaja domicilio; si se escribe algo, viaja nuevo", () => {
+    const sin = punto({ tieneDomicilio: false, domicilio: null });
+    expect(armarElPedidoDeEdicion(valoresParaEditar(sin), IDS, sin)).toEqual({
+      puntoDeVentaId: ID,
+      versionEsperada: 7,
+    });
+    expect(
+      armarElPedidoDeEdicion(
+        { ...valoresParaEditar(sin), ...completo, numero: "00002", sucursalId: "s-norte" },
+        IDS,
+        sin,
+      ),
+    ).toMatchObject({ domicilio: { tipo: "NUEVO", id: IDS.domicilioId, calle: "Av. Rivadavia" } });
+  });
+
+  it("el mismo formulario y los mismos ids dan el mismo pedido (un reintento reenvía lo mismo)", () => {
+    const v = { ...valoresParaEditar(original), calle: "Sarmiento" };
+    expect(armarElPedidoDeEdicion(v, IDS, original)).toEqual(
+      armarElPedidoDeEdicion(v, IDS, original),
+    );
   });
 });
 

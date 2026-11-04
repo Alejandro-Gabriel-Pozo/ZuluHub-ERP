@@ -60,6 +60,8 @@ const apagada = (motivo: string): Oferta => ({ permitida: false, motivo });
 const EN_DESARROLLO = "Esta función todavía está en desarrollo.";
 const NO_ACTIVADA = "Esta función no está activada para la empresa.";
 const SIN_PERMISO = "No tiene permiso para hacer esto.";
+// Dueño, 2026-11-03, D-82: cuando no se pueden verificar los permisos.
+const NO_PERMITIDA = "Esta acción no está permitida.";
 
 let registro: MockInstance<typeof console.error>;
 beforeEach(() => {
@@ -155,16 +157,16 @@ describe("las acciones de Puntos de venta según el servidor", () => {
     expect(a.desactivar).toEqual(apagada(SIN_PERMISO));
   });
 
-  it("si no se pudieron leer los permisos (rechazo): todo sale apagado con el motivo de falta de permiso (falla cerrado)", async () => {
+  it("si no se pudieron leer los permisos (rechazo): todo sale apagado con el genérico «Esta acción no está permitida.» (falla cerrado)", async () => {
     mundo.respuesta = err("SIN_PERMISO");
     const a = await acciones();
-    for (const oferta of Object.values(a)) expect(oferta).toEqual(apagada(SIN_PERMISO));
+    for (const oferta of Object.values(a)) expect(oferta).toEqual(apagada(NO_PERMITIDA));
   });
 
   it("si la lectura lanza: todo sale apagado (falla cerrado) y el registro dice solo el TIPO de la falla", async () => {
     mundo.falla = true;
     const a = await acciones();
-    for (const oferta of Object.values(a)) expect(oferta).toEqual(apagada(SIN_PERMISO));
+    for (const oferta of Object.values(a)) expect(oferta).toEqual(apagada(NO_PERMITIDA));
     const lineas = registro.mock.calls.map((l) => l.map(String).join(" "));
     expect(lineas).toEqual(["[modulos] no se pudieron leer los permisos de la persona (Error)"]);
   });
