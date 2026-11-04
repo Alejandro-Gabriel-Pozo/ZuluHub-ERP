@@ -37,8 +37,8 @@ import { perezoso } from "./perezoso";
  * del gerente, con las consultas de esa pantalla dentro de `consultasDeFacturacion`). Cada uno exige SU acción al guard dentro de la transacción: acá no se decide ningún permiso. Quedan
  * AFUERA, a propósito: la regla de emisor (no es uno de los tres temas de la pantalla), los dos trabajos de sistema (`validarComprobante` y `reconciliarComprobantes`, sin guard: son
  * de la cola), la numeración suelta (`reservarNumeroDeComprobante`...: la web entra solo por emitir, h7 §C). El modelo
- * de impresión sale en `consultasDeFacturacion` (`comprobantes.ver`) y falla cerrado mientras la marca de la empresa no esté cableada
- * (`conexiones.ts`, `marca`; decisión del dueño pendiente). Las acciones de certificados (generar el pedido y cargar el certificado que
+ * de impresión sale en `consultasDeFacturacion` (`comprobantes.ver`) con la marca vacía de la primera entrega
+ * (`conexiones.ts`, `MARCA_DE_IMPRESION_VACIA`, D-112). Las acciones de certificados (generar el pedido y cargar el certificado que
  * devolvió ARCA, `certificados.gestionar`) salen en `casosDeUsoDeCertificados`; su ESTADO, en `consultasDeFacturacion`. Las cadenas de
  * confianza de ARCA con las que se valida un certificado cargado NO están en el repositorio (su autenticidad la confirma el dueño
  * comparando huellas, D-F7): por defecto no hay ninguna y la carga falla cerrado (`CADENA_NO_CONFIABLE`). `consultasDeSesion` (la

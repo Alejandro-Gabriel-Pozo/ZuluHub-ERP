@@ -27,7 +27,7 @@ export type ModeloDeImpresionParaLaPantalla = Readonly<{
  * ni audita, y pedirla de nuevo da lo mismo (la versión de representación la sella el comprobante al nacer). `crudo` solo aporta el id
  * del comprobante (la misma forma que ver su detalle: la empresa y cualquier versión que traiga el pedido se descartan). La consulta
  * valida dentro de su transacción el permiso, el módulo, la empresa y el alcance de sucursal del comprobante (D-39: el que no corresponde
- * se dice igual que el que no existe). Falla cerrado: no sale el modelo a medias. Si el QR no se puede dibujar, la marca no está cableada
+ * se dice igual que el que no existe). Falla cerrado: no sale el modelo a medias. Si el QR no se puede dibujar
  * o el comprobante no se puede imprimir (no autorizado, versión que no se sabe dibujar, CAE inválido), sale el error del camino común: los
  * del negocio con su código y los demás como inesperado con su referencia `PD-…`, sin texto nuevo.
  */

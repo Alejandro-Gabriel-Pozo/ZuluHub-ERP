@@ -31,7 +31,12 @@ import {
   crearPersonaDeBase,
   type RolDePrueba,
 } from "./fixtures-identidad";
-import { asignarPlan, crearPlanPublicado } from "./marcas-apoyo";
+import {
+  asignarPlan,
+  crearPlanPublicado,
+  crearVersionDeMarcaConfirmada,
+  marcaPrincipal,
+} from "./marcas-apoyo";
 
 /**
  * El modelo de impresión que recibe la ruta de impresión, con la composición REAL (conexiones, web y trabajos sobre la base de verdad con
@@ -43,8 +48,9 @@ import { asignarPlan, crearPlanPublicado } from "./marcas-apoyo";
  *    camino común (error con referencia, sin código ni texto nuevo);
  *  - el éxito trae el modelo y el QR dibujado desde su url; repetir la lectura da lo mismo y no escribe nada;
  *  - ningún valor secreto (clave cifrada, pedido y certificado, cadenas de conexión, clave del contexto) sale en la respuesta.
- * La MARCA de la empresa todavía no está cableada (`conexiones.ts`, decisión pendiente): para ver el éxito la prueba le da una a la
- * transacción de la consulta, y una prueba aparte fija que, sin ella, la web recibe un error con referencia (falla cerrado).
+ * La MARCA de impresión es hoy la VACÍA para toda empresa (D-112: sin logo, sin color y sin nombre de fantasía; `conexiones.ts`): lo que ofrece
+ * la web (`dReal`) se prueba tal cual, y para contar cuántas veces se pide la marca (y ver que viaja en el modelo) otras pruebas le dan una a
+ * la transacción de la consulta.
  */
 
 const base = inject("baseDePruebas");
@@ -228,6 +234,41 @@ describe.skipIf(base === null)("el modelo de impresión en la web, con la compos
       expect(qrSvg).toBe(qrDeFacturaComoSvg(modelo.qr.url));
       expect(qrSvg.startsWith("<svg ")).toBe(true);
       expect(marcasPedidas).toContain(e.empresa);
+    });
+
+    it("con la marca de la composición real (vacía, D-112): los tres campos en null, modelo y QR correctos, y nada de la marca del producto", async () => {
+      const e = await empresaConFacturacion();
+      const id = await emitir(e);
+      // La marca del producto (a la que pertenece el tenant) tiene una versión vigente con nombre, logo y color: no debe llegar a la hoja.
+      const producto = await crearVersionDeMarcaConfirmada(dueno, await marcaPrincipal(dueno), {
+        nombreVisible: "Marca-del-Producto-Canario",
+        logo: "/marcas/canario/logo.png",
+        tema: { primary: "#112233" },
+      });
+      expect(producto.numero).toBeGreaterThan(0);
+      const detalle = await verComprobante(dReal, comoPersonaDe(e), { comprobanteId: id });
+      const r = await verModeloDeImpresion(dReal, comoPersonaDe(e), { comprobanteId: id });
+      expect(r.ok).toBe(true);
+      if (!r.ok || !detalle.ok) return;
+      expect(r.dato.modelo.marca).toEqual({
+        nombreDeFantasia: null,
+        logoUrl: null,
+        colorPrincipal: null,
+      });
+      expect(r.dato.modelo.fiscal.numero).toBe(detalle.dato.numero);
+      expect(r.dato.modelo.fiscal.cae).toBe(detalle.dato.cae);
+      expect(r.dato.modelo.totales).toMatchObject({ letra: "B", total: "121.00" });
+      expect(r.dato.qrSvg).toBe(qrDeFacturaComoSvg(r.dato.modelo.qr.url));
+      const salida = JSON.stringify(r);
+      for (const ajeno of [
+        "Marca-del-Producto-Canario",
+        "canario",
+        "#112233",
+        "Pedernal",
+        "pedernal",
+      ]) {
+        expect(salida, ajeno).not.toContain(ajeno);
+      }
     });
 
     it("repetir la lectura da lo mismo y no escribe nada (sin auditoría, sin trabajos, sin intentos)", async () => {
@@ -433,19 +474,6 @@ describe.skipIf(base === null)("el modelo de impresión en la web, con la compos
         ).toMatchObject({ ok: false, error: { codigo: "FISCAL_DATOS_INVALIDOS" } });
       }
       expect(marcasPedidas.length).toBe(antes);
-    });
-
-    it("HOY, sin la marca de la empresa cableada, la web recibe un error con referencia y nada del modelo: falla cerrado", async () => {
-      const e = await empresaConFacturacion();
-      const id = await emitir(e);
-      const registros = registrados.length;
-      const r = await verModeloDeImpresion(dReal, comoPersonaDe(e), { comprobanteId: id });
-      expect(r).toMatchObject(inesperado);
-      expect(JSON.stringify(r)).not.toContain("cableada");
-      expect(JSON.stringify(r)).not.toContain("Medialunas");
-      expect(registrados.slice(registros).join("\n")).toContain(
-        "la marca para imprimir no está cableada",
-      );
     });
   });
 });
