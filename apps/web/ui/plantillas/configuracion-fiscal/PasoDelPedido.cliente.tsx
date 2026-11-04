@@ -53,8 +53,8 @@ export function PasoDelPedido({
         <Boton
           variante="secundaria"
           alTocar={() => {
-            // Sin permiso o sin contexto seguro el navegador rechaza: el pedido sigue a la vista para copiarlo a mano.
-            navigator.clipboard.writeText(pedidoPem).catch(() => undefined);
+            // Sin permiso el navegador rechaza y sin contexto seguro (http) ni existe `navigator.clipboard`: el pedido sigue a la vista para copiarlo a mano.
+            navigator.clipboard?.writeText(pedidoPem).catch(() => undefined);
           }}
         >
           {texto({}, "fiscal.pantalla.config_cert_copiar")}

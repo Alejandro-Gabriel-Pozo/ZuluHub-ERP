@@ -124,6 +124,8 @@ describe.skipIf(base === null)(
       cuitTitular: e.mundo.cuit,
       organizacion: "Panadería Zulú SA",
     });
+    const pedidoDe = (e: EscenarioDeConfiguracion, alias: string, id: string = uuid()) =>
+      armarElPedidoDeCertificado(valores(e, alias), id, e.mundo.emisor, "HOMOLOGACION");
     const filas = async <T extends Record<string, unknown>>(texto: string, p: unknown[] = []) =>
       (await dueno.query<T>(texto, p)).rows;
 
@@ -290,59 +292,53 @@ describe.skipIf(base === null)(
         expect(lugarDelErrorDelPedido(campo)).toBe("cuitTitular");
       });
 
-      it("un certificado que no es del pedido: error inesperado con referencia, sin el PEM en el registro, y el pedido sigue pendiente", async () => {
+      it("un certificado que no es del pedido pendiente (o el de un pedido anulado por D-92): error inesperado con referencia, sin el PEM en el registro, y el pendiente sigue pendiente", async () => {
         const e = await nuevo();
+        const pedir = async (alias: string, id: string) =>
+          dato(await generarPedidoDeCertificado(d, ctx(e), pedidoDe(e, alias, id)));
+        // D-92: el pedido nuevo anula al anterior; el certificado desajustado sale de ese primero (otra clave).
+        const viejoId = uuid();
+        const viejo = await pedir("pedernaly", viejoId);
+        const delViejo = await certificadoDeArca(servicios, "HOMOLOGACION", viejo.pedidoPem);
         const id = uuid();
-        const generado = dato(
-          await generarPedidoDeCertificado(
-            d,
-            ctx(e),
-            armarElPedidoDeCertificado(valores(e, "pedernalx"), id, e.mundo.emisor, "HOMOLOGACION"),
+        const generado = await pedir("pedernalx", id);
+        const rechazo = async (certificadoId: string) => {
+          const antes = registrados.length;
+          const carga = armarLaCargaDeCertificado(certificadoId, delViejo);
+          const r = await cargarCertificado(d, ctx(e), carga);
+          expect(r).toMatchObject({
+            ok: false,
+            error: {
+              presentacion: "INESPERADO",
+              referencia: expect.stringMatching(/^PD-/) as string,
+            },
+          });
+          const registro = registrados.slice(antes).join("\n");
+          expect(registro).not.toContain("BEGIN CERTIFICATE");
+          expect(registro).not.toContain(generado.pedidoPem.split("\n")[1] ?? "x".repeat(40));
+          return { registro, publico: JSON.stringify(r) };
+        };
+        // Contra el único pendiente: no corresponde (la clave es otra).
+        const noCorresponde = await rechazo(id);
+        expect(noCorresponde.registro).toContain("NO_CORRESPONDE");
+        expect(noCorresponde.publico).not.toContain("NO_CORRESPONDE");
+        // Contra el pedido anulado: ya no está pendiente, por la misma vía común.
+        const anulado = await rechazo(viejoId);
+        expect(anulado.registro).toContain("PEDIDO_NO_PENDIENTE");
+        expect(anulado.publico).not.toContain("PEDIDO_NO_PENDIENTE");
+        expect(
+          await filas(
+            "select estado from certificado_arca where empresa_id = $1 order by creado_en",
+            [e.mundo.empresa],
           ),
-        );
-        const otro = dato(
-          await generarPedidoDeCertificado(
-            d,
-            ctx(e),
-            armarElPedidoDeCertificado(
-              valores(e, "pedernaly"),
-              uuid(),
-              e.mundo.emisor,
-              "HOMOLOGACION",
-            ),
-          ),
-        );
-        const delOtro = await certificadoDeArca(servicios, "HOMOLOGACION", otro.pedidoPem);
-        const antes = registrados.length;
-        const r = await cargarCertificado(d, ctx(e), armarLaCargaDeCertificado(id, delOtro));
-        expect(r).toMatchObject({
-          ok: false,
-          error: {
-            presentacion: "INESPERADO",
-            referencia: expect.stringMatching(/^PD-/) as string,
-          },
-        });
-        const registro = registrados.slice(antes).join("\n");
-        expect(registro).toContain("NO_CORRESPONDE");
-        expect(registro).not.toContain("BEGIN CERTIFICATE");
-        expect(registro).not.toContain(generado.pedidoPem.split("\n")[1] ?? "x".repeat(40));
-        expect(JSON.stringify(r)).not.toContain("NO_CORRESPONDE");
-        const estados = await filas<{ estado: string }>(
-          "select estado from certificado_arca where empresa_id = $1",
-          [e.mundo.empresa],
-        );
-        expect(estados.every((x) => x.estado === "PEDIDO_GENERADO")).toBe(true);
+        ).toEqual([{ estado: "DESCARTADO" }, { estado: "PEDIDO_GENERADO" }]);
       });
 
       it("un certificado ilegible pegado: error inesperado con referencia; ni lo pegado ni el pedido llegan al registro", async () => {
         const e = await nuevo();
         const id = uuid();
         const generado = dato(
-          await generarPedidoDeCertificado(
-            d,
-            ctx(e),
-            armarElPedidoDeCertificado(valores(e, "pedernalz"), id, e.mundo.emisor, "HOMOLOGACION"),
-          ),
+          await generarPedidoDeCertificado(d, ctx(e), pedidoDe(e, "pedernalz", id)),
         );
         const antes = registrados.length;
         const r = await cargarCertificado(
@@ -364,11 +360,7 @@ describe.skipIf(base === null)(
         const b = await nuevo();
         const id = uuid();
         const generado = dato(
-          await generarPedidoDeCertificado(
-            d,
-            ctx(a),
-            armarElPedidoDeCertificado(valores(a, "pedernala"), id, a.mundo.emisor, "HOMOLOGACION"),
-          ),
+          await generarPedidoDeCertificado(d, ctx(a), pedidoDe(a, "pedernala", id)),
         );
         // El emisor de otra empresa no existe para B.
         expect(
@@ -405,13 +397,7 @@ describe.skipIf(base === null)(
       it("quien no es gerente recibe «sin permiso» en las dos acciones y en la lectura", async () => {
         const g = await nuevo();
         const id = uuid();
-        dato(
-          await generarPedidoDeCertificado(
-            d,
-            ctx(g),
-            armarElPedidoDeCertificado(valores(g, "pedernalg"), id, g.mundo.emisor, "HOMOLOGACION"),
-          ),
-        );
+        dato(await generarPedidoDeCertificado(d, ctx(g), pedidoDe(g, "pedernalg", id)));
         const otro = ctx(await otraPersona(dueno, g, "ADMINISTRADOR"));
         const sinPermiso = { ok: false, error: { codigo: "SIN_PERMISO" } };
         expect(

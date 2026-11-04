@@ -272,18 +272,18 @@ describe("el paso 2: «Copiar» y «Descargar»", () => {
     expect(generar).toHaveBeenCalledTimes(1);
   });
 
-  it("si el navegador no deja copiar, no se rompe ni se escribe nada en la consola", async () => {
-    const escribir = vi
-      .fn<(t: string) => Promise<void>>()
-      .mockRejectedValue(new Error("sin permiso"));
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText: escribir },
-    });
+  const rechaza = { writeText: vi.fn<(t: string) => Promise<void>>() };
+  it.each([
+    ["el navegador no deja copiar", rechaza],
+    ["no hay portapapeles (sin contexto seguro)", undefined],
+  ])("%s: no se rompe y el pedido sigue a la vista", async (_caso, portapapeles) => {
+    rechaza.writeText.mockRejectedValue(new Error("sin permiso"));
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: portapapeles });
     await enElPaso2();
     tocar(boton("Copiar"));
-    await vi.waitFor(() => expect(escribir).toHaveBeenCalled());
+    if (portapapeles) await vi.waitFor(() => expect(portapapeles.writeText).toHaveBeenCalled());
     await expect.element(boton("Siguiente")).toBeVisible();
+    await expect.element(page.getByRole("textbox")).toHaveValue(PEM_DEL_PEDIDO);
     sinPedidoNiCertificadoEnLaConsola();
   });
 
