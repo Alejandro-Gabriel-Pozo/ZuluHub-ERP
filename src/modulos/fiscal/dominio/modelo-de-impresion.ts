@@ -1,7 +1,6 @@
 import { cantidadATexto } from "../../../primitivas/cantidad/cantidad";
 import { porcentajeATexto } from "../../../primitivas/cantidad/porcentaje";
-import { importeATexto, importeCero, type Importe } from "../../../primitivas/dinero/importe";
-import type { Moneda } from "../../../primitivas/dinero/moneda";
+import { importeATexto, type Importe } from "../../../primitivas/dinero/importe";
 import { precioUnitarioATexto } from "../../../primitivas/dinero/precio-unitario";
 import { cuitConGuiones, type Cuit } from "../../../primitivas/identificacion-fiscal/cuit";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
@@ -21,6 +20,7 @@ import { importesParaArca } from "./importes-para-arca";
 import { urlDelQr, type ErrorDeQr } from "./qr-de-arca";
 import type { CondicionIva } from "./emisor";
 import type { DocumentoDelReceptor, Receptor } from "./receptor";
+import { transparenciaFiscal, type TransparenciaFiscalImpresa } from "./transparencia-fiscal";
 
 /**
  * Modelo de impresión de un comprobante autorizado (spec H7 facturación §B.7): un valor puro, sin
@@ -60,18 +60,11 @@ export const VERSION_DE_REPRESENTACION_ACTUAL = 2;
 const PRIMERA_VERSION_CON_TEXTOS_LEGALES = 2;
 
 /**
- * Textos legales (versión 2), copiados de la norma sin parafrasear; si ARCA los cambia, es una versión nueva.
- * FUENTE (repositorio de docs, `12-referencias-externas/arca-normas-de-comprobantes/`, rama
- * `web/especificaciones-del-qr`, PR #3; SHA-256 en su README):
- * - Título y rótulos: `norma_5614_2024.html`, RG 5614/2024 art. 2 punto 7 (sustituye el inciso g) del Apartado B
- *   del Anexo II de la RG 1415; subpunto 1, «espacio inferior izquierdo»), art. 5 (la representación gráfica de la
- *   RG 4291 debe incluirlos) y art. 6 b) (obligatorio desde el 01/04/2025). Texto vigente: `rg1415_dcp.html`,
- *   «Anexo II - Texto vigente según Resolución General Nº 5866/2026 ARCA», Apartado B, inciso g) 1.
- * - Leyenda: Anexo II, Apartado A, Título II, d) 1. (`rg1415_dcp.html`, texto vigente; `rg5866.html`, art. 1 f)).
+ * Leyenda del receptor (versión 2), copiada de la norma sin parafrasear; si ARCA la cambia, es una versión nueva.
+ * FUENTE (repositorio de docs, `12-referencias-externas/arca-normas-de-comprobantes/`, rama `web/especificaciones-del-qr`,
+ * PR #3): Anexo II, Apartado A, Título II, d) 1. (`rg1415_dcp.html`, texto vigente; `rg5866.html`, art. 1 f)). Los textos
+ * del bloque de transparencia fiscal están en `transparencia-fiscal.ts`.
  */
-const TITULO_DE_TRANSPARENCIA_FISCAL = "Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)";
-const ROTULO_DE_IVA_CONTENIDO = "IVA Contenido";
-const ROTULO_DE_OTROS_IMPUESTOS_INDIRECTOS = "Otros Impuestos Nacionales Indirectos";
 const LEYENDA_A_CONSUMIDOR_FINAL = "A CONSUMIDOR FINAL";
 
 export const LEYENDA_DE_HOMOLOGACION = "HOMOLOGACIÓN — SIN VALIDEZ FISCAL";
@@ -155,20 +148,6 @@ export type TotalesImpresos =
       ivaContenido: readonly { alicuota: string; iva: string }[];
     }>
   | Readonly<{ letra: "C"; total: string }>;
-
-/**
- * Bloque «espacio inferior izquierdo» de la B a consumidor final (versión 2 en adelante). Los textos son los de la
- * norma (ver la fuente arriba); los valores salen de los mismos importes que `totales`.
- */
-export type TransparenciaFiscalImpresa = Readonly<{
-  titulo: string;
-  ivaContenido: Readonly<{
-    rotulo: string;
-    /** Por alícuota, como `totales.ivaContenido` (decisión 9 del dueño; el contador debe ratificarla, C23). */
-    porAlicuota: readonly { alicuota: string; iva: string }[];
-  }>;
-  otrosImpuestosNacionalesIndirectos: Readonly<{ rotulo: string; valor: string }>;
-}>;
 
 export type ModeloImpreso = Readonly<{
   versionDeRepresentacion: number;
@@ -276,39 +255,6 @@ function totalesImpresos(
     neto: importeATexto(importes.neto),
     iva: importeATexto(importes.iva),
     total,
-  };
-}
-
-/**
- * «Otros Impuestos Nacionales Indirectos» que inciden en el precio (RG 5614 art. 2 punto 4: Anexo II A.III.f; art. 6
- * a): los impuestos internos). SUPUESTO: el producto no tiene hoy ese dato (no hay impuestos internos ni otros
- * tributos en el comprobante: `ImpTrib` es cero), así que el valor es siempre cero. Lo confirma el contador (C23).
- * ÚNICO lugar para cambiarlo cuando el producto tenga el dato.
- */
-function otrosImpuestosNacionalesIndirectos(moneda: Moneda): Importe {
-  return importeCero(moneda);
-}
-
-/**
- * El bloque de transparencia fiscal, o `null` si no corresponde: letra B (sus `totales` traen el IVA contenido) y
- * receptor consumidor final, según la autorización del dueño del 2026-11-04. PREGUNTAS PENDIENTES (contador, C23),
- * por eso NO se agrega fuera de este caso: ¿lleva el bloque la C a consumidor final (monotributo o exento; la RG 5614
- * art. 2 punto 7 no limita la letra y el art. 99 de la Ley 27.743 no está en el repo)? ¿La A? ¿La B a exento o no
- * alcanzado (Anexo II A.IV.a punto 2 manda discriminar el IVA también a ellos)?
- */
-function transparenciaFiscal(
-  totales: TotalesImpresos,
-  receptor: Receptor,
-  moneda: Moneda,
-): TransparenciaFiscalImpresa | null {
-  if (totales.letra !== "B" || receptor.condicionIva !== "CONSUMIDOR_FINAL") return null;
-  return {
-    titulo: TITULO_DE_TRANSPARENCIA_FISCAL,
-    ivaContenido: { rotulo: ROTULO_DE_IVA_CONTENIDO, porAlicuota: totales.ivaContenido },
-    otrosImpuestosNacionalesIndirectos: {
-      rotulo: ROTULO_DE_OTROS_IMPUESTOS_INDIRECTOS,
-      valor: importeATexto(otrosImpuestosNacionalesIndirectos(moneda)),
-    },
   };
 }
 
