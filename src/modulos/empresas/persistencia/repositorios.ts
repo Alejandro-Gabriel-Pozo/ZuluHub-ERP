@@ -31,6 +31,10 @@ export type EmpresasDb = {
     activa: Generated<boolean>;
     /** `time` de Postgres: llega como `HH:MM:SS` (la base exige los segundos en cero). */
     hora_de_corte: Generated<string>;
+    /** 0019: contacto opcional (nulo = no existe). La plataforma no lo escribe. */
+    telefono: Generated<string | null>;
+    correo: Generated<string | null>;
+    web: Generated<string | null>;
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
@@ -60,6 +64,9 @@ export const COLUMNAS_DE_EMPRESAS = {
     "actualizado_en",
     "version",
     "hora_de_corte", // 0007: la hora de corte de la jornada (tramo previo común)
+    "telefono", // 0019: contacto opcional de la sucursal
+    "correo",
+    "web",
   ],
 } as const;
 
@@ -91,6 +98,10 @@ export const ERRORES_DE_EMPRESAS_POR_RESTRICCION: Readonly<Record<string, string
   // 0007: la hora de corte de la jornada (minutos enteros, de 00:00 a 23:59); `editarSucursal` la valida
   // antes, así que esto es la red de seguridad de la base.
   sucursal_hora_de_corte_ck: "HORA_DE_CORTE_INVALIDA",
+  // 0019: el contacto opcional de la sucursal; `editarSucursal` y `crearSucursal` lo validan antes, esto es la red de seguridad.
+  sucursal_telefono_ck: "TELEFONO_DE_SUCURSAL_INVALIDO",
+  sucursal_correo_ck: "CORREO_DE_SUCURSAL_INVALIDO",
+  sucursal_web_ck: "WEB_DE_SUCURSAL_INVALIDA",
 };
 
 export type ErrorDeRepositorioDeEmpresas = "EMPRESA_NO_ENCONTRADA" | "VERSION_DESACTUALIZADA";
