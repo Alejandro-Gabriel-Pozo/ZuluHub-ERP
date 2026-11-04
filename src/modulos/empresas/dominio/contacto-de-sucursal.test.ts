@@ -33,16 +33,17 @@ describe("los datos de la sucursal delegan en las primitivas de contacto", () =>
       ok: true,
       valor: "centro@hotel.com",
     });
-    expect(webDeSucursalValida(" https://hotel.com/centro ")).toEqual({
+    expect(webDeSucursalValida(" HTTPS://Hotel.com/centro ")).toEqual({
       ok: true,
-      valor: "https://hotel.com/centro",
+      valor: "hotel.com/centro",
     });
+    expect(webDeSucursalValida("www.hotel.com")).toEqual({ ok: true, valor: "www.hotel.com" });
   });
 
   it("lo inválido da el error PROPIO de la sucursal, no el de la primitiva", () => {
     expect(telefonoDeSucursalValido("43\n21")).toEqual(TEL);
     expect(correoDeSucursalValido("centro")).toEqual(MAIL);
-    expect(webDeSucursalValida("www.hotel.com")).toEqual(WEB);
+    expect(webDeSucursalValida("javascript:alert(1)")).toEqual(WEB);
   });
 });
 
@@ -57,8 +58,8 @@ describe("cambiosDeContactoValidos", () => {
 
   it("null o en blanco BORRA (queda null); lo demás se limpia", () => {
     expect(
-      cambiosDeContactoValidos({ telefono: null, correo: "  ", web: " https://hotel.com " }),
-    ).toEqual({ ok: true, valor: { telefono: null, correo: null, web: "https://hotel.com" } });
+      cambiosDeContactoValidos({ telefono: null, correo: "  ", web: " https://Hotel.com/ " }),
+    ).toEqual({ ok: true, valor: { telefono: null, correo: null, web: "hotel.com" } });
   });
 
   it("el primer dato inválido corta, en el orden teléfono, correo, web", () => {
@@ -86,12 +87,12 @@ describe("cambiosDeContactoValidos", () => {
 });
 
 describe("contactoQueCambia y contactoDeLosDatos", () => {
-  const actual = { telefono: "4321-0000", correo: null, web: "https://hotel.com" };
+  const actual = { telefono: "4321-0000", correo: null, web: "hotel.com" };
 
   it("solo queda lo pedido que de verdad cambia (borrar lo que ya no hay no es un cambio)", () => {
     expect(
-      contactoQueCambia(actual, { telefono: "4321-0000", correo: null, web: "https://otra.com" }),
-    ).toEqual({ web: "https://otra.com" });
+      contactoQueCambia(actual, { telefono: "4321-0000", correo: null, web: "otra.com" }),
+    ).toEqual({ web: "otra.com" });
     expect(contactoQueCambia(actual, { correo: "a@b", web: null })).toEqual({
       correo: "a@b",
       web: null,
@@ -102,7 +103,7 @@ describe("contactoQueCambia y contactoDeLosDatos", () => {
   it("devuelve del contacto solo los datos nombrados, para el antes y el después de la auditoría", () => {
     expect(contactoDeLosDatos(actual, { correo: "a@b", web: null })).toEqual({
       correo: null,
-      web: "https://hotel.com",
+      web: "hotel.com",
     });
     expect(contactoDeLosDatos(actual, {})).toEqual({});
   });

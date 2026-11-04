@@ -16,6 +16,9 @@
  *   le manda nada para comprobarlo.
  * - Se congela en comprobantes: el de contacto SÍ, el vigente al darse de alta el comprobante (`comprobante.sucursal_correo`,
  *   copiado por la base); no cambia nunca después. Los anteriores a 0019 quedan sin correo (D-98).
+ * - Dónde se muestra (D-99): el de contacto, factura impresa, PDF, mails y detalle del comprobante. Como enlace `mailto:` donde el
+ *   medio lo permita (PDF, mail, pantalla); en papel, texto. Todavía no hay función para armar el `mailto:`: se agrega cuando
+ *   una superficie la necesite (SIN DECIDIR si se deja el correo en minúsculas tal cual o con otro tratamiento).
  * - Dato personal: SÍ puede serlo (un correo personal cargado como contacto del local). Se audita el antes y el después en
  *   `auditoria_empresa` (de solo inserción) y queda en las facturas emitidas. Si alguna norma de datos personales lo alcanza: SIN DECIDIR.
  * - Cómo se compara y cómo se imprime: por igualdad exacta del texto ya normalizado (por eso "Centro@Hotel.com" y "centro@hotel.com"

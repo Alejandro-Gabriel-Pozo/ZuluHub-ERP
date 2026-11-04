@@ -361,11 +361,7 @@ describe("horaDeCorteValida", () => {
     });
 
     it("un dato de contacto distinto, nuevo o borrado es un cambio y pide la versión vigente", () => {
-      for (const contacto of [
-        { telefono: "4000-1111" },
-        { web: "https://hotel.com" },
-        { correo: null },
-      ]) {
+      for (const contacto of [{ telefono: "4000-1111" }, { web: "hotel.com" }, { correo: null }]) {
         expect(decidirEdicion(conContacto, 3, pide(contacto))).toEqual({
           ok: true,
           valor: "EDITAR",

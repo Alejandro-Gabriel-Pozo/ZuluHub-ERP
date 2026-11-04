@@ -13,6 +13,8 @@
  * - Verificado o declarado: solo DECLARADO; nadie lo verifica.
  * - Se congela en comprobantes: SÍ, el vigente al darse de alta el comprobante (`comprobante.sucursal_telefono`, copiado por la
  *   base); no cambia nunca después. Los comprobantes anteriores a 0019 quedan sin teléfono (D-98).
+ * - Dónde se muestra (D-99): factura impresa, PDF, mails y detalle del comprobante (donde se muestran los datos de la sucursal del
+ *   comprobante). Si en PDF, mail o pantalla es un enlace `tel:` y cómo se imprime: SIN DECIDIR (no hay función para eso).
  * - Dato personal: puede serlo (un celular cargado como teléfono del local). Se audita el antes y el después en `auditoria_empresa`
  *   (de solo inserción) y queda en las facturas ya emitidas. Si alguna norma de datos personales lo alcanza: SIN DECIDIR.
  * - Cómo se compara y cómo se imprime: se compara por igualdad exacta del texto ya recortado ("4321-0000" y "43210000" son

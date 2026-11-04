@@ -69,7 +69,7 @@ const textoDeLaReversion = async (): Promise<string> =>
 
 const TELEFONO = "+54 11 4321-0000";
 const CORREO = "centro@hotel.com";
-const WEB = "https://hotel.com/centro";
+const WEB = "hotel.com/centro";
 type Contacto = { telefono: string | null; correo: string | null; web: string | null };
 
 /** Fija el contacto de la sucursal (como el dueño de la base: evade RLS). */
@@ -317,15 +317,31 @@ describe.skipIf(base === null)("contacto de la sucursal: la migración 0019", ()
         },
         web: {
           restriccion: "sucursal_web_ck",
-          buenos: [WEB, "http://hotel.com", "HTTPS://HOTEL.COM", `https://${"a".repeat(192)}`],
+          // La base guarda la forma CANÓNICA (sin esquema, host en minúsculas, sin barra si es solo el host): D-99.
+          buenos: [
+            WEB,
+            "hotel.com",
+            "www.hotel.com",
+            "hotel.com:8080/x?y=Z#w",
+            "hotel.com/centro/",
+            "hotel.com/Ruta",
+            `${"a".repeat(196)}.com`,
+          ],
           malos: [
             "",
-            "www.hotel.com",
-            "https://",
+            "https://hotel.com",
+            "http://hotel.com",
+            "javascript:alert(1)",
             "ftp://hotel.com",
-            "https://ho tel.com",
-            `https://${"a".repeat(193)}`,
-            "https://hotel.com\n",
+            "Hotel.com",
+            "WWW.hotel.com",
+            "hotel.com/",
+            "hotel",
+            "ho tel.com",
+            "hotel.com/a b",
+            "user@hotel.com",
+            `${"a".repeat(197)}.com`,
+            "hotel.com/\n",
           ],
         },
       };
@@ -370,7 +386,7 @@ describe.skipIf(base === null)("contacto de la sucursal: la migración 0019", ()
       const otro: Contacto = {
         telefono: "4000-1111",
         correo: "nuevo@hotel.com",
-        web: "https://nuevo.com",
+        web: "nuevo.com",
       };
       await fijarContacto(c, e.sucursal, otro.telefono, otro.correo, otro.web);
       const trasElCambio = await crearComprobante(c, e);
@@ -396,7 +412,7 @@ describe.skipIf(base === null)("contacto de la sucursal: la migración 0019", ()
       const cambios: [string, (string | null)[]][] = [
         ["sucursal_telefono", ["otro", null]],
         ["sucursal_correo", ["otro@x.com", null]],
-        ["sucursal_web", ["https://otro.com"]],
+        ["sucursal_web", ["otro.com"]],
       ];
       for (const [columna, valores] of cambios) {
         for (const valor of valores) {
@@ -410,7 +426,7 @@ describe.skipIf(base === null)("contacto de la sucursal: la migración 0019", ()
       const sembrado = await crearComprobante(c, e, {
         sucursal_telefono: "ajeno",
         sucursal_correo: "ajeno@x.com",
-        sucursal_web: "https://ajeno.com",
+        sucursal_web: "ajeno.com",
       });
       expect(await congelado(c, sembrado)).toEqual({
         telefono: TELEFONO,
@@ -444,17 +460,17 @@ describe.skipIf(base === null)("contacto de la sucursal: la migración 0019", ()
     it("aislamiento por empresa: cada comprobante lleva el contacto de la sucursal de SU empresa; con el alta y las claves apagadas, un sucursal_id ajeno no trae nada", async () => {
       const a = await crearEscenario(c);
       const z = await crearEscenario(c);
-      await fijarContacto(c, a.sucursal, "1111-1111", "a@a.com", "https://a.com");
-      await fijarContacto(c, z.sucursal, "2222-2222", "z@z.com", "https://z.com");
+      await fijarContacto(c, a.sucursal, "1111-1111", "a@a.com", "a.com");
+      await fijarContacto(c, z.sucursal, "2222-2222", "z@z.com", "z.com");
       expect(await congelado(c, await crearComprobante(c, a))).toEqual({
         telefono: "1111-1111",
         correo: "a@a.com",
-        web: "https://a.com",
+        web: "a.com",
       });
       expect(await congelado(c, await crearComprobante(c, z))).toEqual({
         telefono: "2222-2222",
         correo: "z@z.com",
-        web: "https://z.com",
+        web: "z.com",
       });
       // Mandando la sucursal de la otra empresa: la rechaza el alta (como siempre) y no queda ningún comprobante.
       await c.query("begin");
@@ -723,7 +739,7 @@ describe.skipIf(base === null)("contacto de la sucursal: la migración 0019", ()
       const datos = datosDeComprobante(e, {
         sucursal_telefono: "ajeno",
         sucursal_correo: "ajeno@x.com",
-        sucursal_web: "https://ajeno.com",
+        sucursal_web: "ajeno.com",
       });
       const r = await insertarComprobante(viaDueno(c), datos);
       if (!r.ok) return false;
@@ -745,7 +761,7 @@ describe.skipIf(base === null)("contacto de la sucursal: la migración 0019", ()
     /** Sonda: aun sin `comprobante_alta` ni claves foráneas, un `sucursal_id` de otra empresa no trae su contacto. */
     const noTraeLoAjeno = async (): Promise<boolean> => {
       const otra = await crearEscenario(c);
-      await fijarContacto(c, otra.sucursal, "7777-7777", "z@z.com", "https://z.com");
+      await fijarContacto(c, otra.sucursal, "7777-7777", "z@z.com", "z.com");
       await c.query("alter table comprobante disable trigger all");
       await c.query("alter table comprobante enable trigger comprobante_alta_contacto");
       const datos = datosDeComprobante(e, { sucursal_id: otra.sucursal });
@@ -842,7 +858,7 @@ describe.skipIf(base === null)("contacto de la sucursal: la migración 0019", ()
     for (const [columna, valorMalo] of [
       ["telefono", "43\n21"],
       ["correo", "sin-arroba"],
-      ["web", "www.hotel.com"],
+      ["web", "https://hotel.com"],
     ] as const) {
       it(`sin el CHECK de ${columna}, la sucursal acepta un valor mal formado (lo detecta el rechazo)`, async () => {
         const rechaza = async () =>

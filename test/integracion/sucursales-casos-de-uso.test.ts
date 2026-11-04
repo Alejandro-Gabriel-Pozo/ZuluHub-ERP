@@ -52,7 +52,7 @@ const SIN_CONTACTO = { telefono: null, correo: null, web: null };
 const CONTACTO = {
   telefono: "+54 11 4321-0000",
   correo: "centro@hotel.com",
-  web: "https://hotel.com",
+  web: "hotel.com",
 };
 
 describe.skipIf(base === null)(
@@ -293,7 +293,7 @@ describe.skipIf(base === null)(
           ["telefono", "x".repeat(41), "TELEFONO_DE_SUCURSAL_INVALIDO"],
           ["telefono", "43\n21", "TELEFONO_DE_SUCURSAL_INVALIDO"],
           ["correo", "sin-arroba", "CORREO_DE_SUCURSAL_INVALIDO"],
-          ["web", "www.hotel.com", "WEB_DE_SUCURSAL_INVALIDA"],
+          ["web", "javascript:alert(1)", "WEB_DE_SUCURSAL_INVALIDA"],
         ] as const) {
           expect(
             await casos.crearSucursal(e.ctx, { nombre: "Sucursal norte", [dato]: malo }),
@@ -458,6 +458,7 @@ describe.skipIf(base === null)(
             ...entrada,
             telefono: ` ${CONTACTO.telefono} `,
             correo: CONTACTO.correo.toUpperCase(),
+            web: "HTTPS://Hotel.com/",
           }),
         ).toEqual({ ok: true, valor: { version: 2 } });
         expect(
@@ -496,6 +497,31 @@ describe.skipIf(base === null)(
             antes: SIN_CONTACTO,
             despues: CONTACTO,
           },
+        ]);
+      });
+
+      it("la web se guarda sin esquema (D-99): con o sin http(s)://, en mayúsculas o con barra final, queda igual", async () => {
+        const e = await escenario();
+        let version = 1;
+        for (const escrito of [
+          "https://WWW.HotelCentro.com/",
+          "www.hotelcentro.com",
+          "HTTP://www.hotelcentro.com/",
+        ]) {
+          const r = await casos.editarSucursal(e.ctx, {
+            sucursalId: e.sucursal,
+            versionEsperada: version,
+            nombre: "Casa central",
+            web: escrito,
+          });
+          expect(r.ok, escrito).toBe(true);
+          if (r.ok) version = r.valor.version;
+          expect((await sucursal(e.sucursal))?.["web"], escrito).toBe("www.hotelcentro.com");
+        }
+        // Escribirla de tres maneras fue una sola edición: lo demás era lo mismo.
+        expect(version).toBe(2);
+        expect((await auditoria(e.empresa, "SUCURSAL_EDITADA")).map((a) => a["despues"])).toEqual([
+          { web: "www.hotelcentro.com" },
         ]);
       });
 
@@ -566,7 +592,7 @@ describe.skipIf(base === null)(
           ["telefono", "43\t21", "TELEFONO_DE_SUCURSAL_INVALIDO"],
           ["correo", "sin-arroba", "CORREO_DE_SUCURSAL_INVALIDO"],
           ["correo", "con espacio@hotel.com", "CORREO_DE_SUCURSAL_INVALIDO"],
-          ["web", "www.hotel.com", "WEB_DE_SUCURSAL_INVALIDA"],
+          ["web", "javascript:alert(1)", "WEB_DE_SUCURSAL_INVALIDA"],
           ["web", "ftp://hotel.com", "WEB_DE_SUCURSAL_INVALIDA"],
         ] as const) {
           expect(
@@ -587,7 +613,7 @@ describe.skipIf(base === null)(
         const maximos = {
           telefono: "9".repeat(LARGO_MAXIMO_DEL_TELEFONO),
           correo: `${"a".repeat(LARGO_MAXIMO_DEL_EMAIL_DE_CONTACTO - 6)}@b.com`,
-          web: `https://${"a".repeat(LARGO_MAXIMO_DE_LA_WEB - 8)}`,
+          web: `${"a".repeat(LARGO_MAXIMO_DE_LA_WEB - 4)}.com`,
         };
         const base = { sucursalId: e.sucursal, nombre: "Casa central" };
         expect(

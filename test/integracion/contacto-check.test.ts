@@ -3,7 +3,11 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { LARGO_MAXIMO_DEL_EMAIL_DE_CONTACTO } from "../../src/primitivas/contacto/email";
 import { LARGO_MAXIMO_DEL_TELEFONO } from "../../src/primitivas/contacto/telefono";
 import { esUnaLineaSinControl } from "../../src/primitivas/contacto/una-linea";
-import { LARGO_MAXIMO_DE_LA_WEB, PATRON_DE_LA_WEB } from "../../src/primitivas/contacto/web";
+import {
+  LARGO_MAXIMO_DE_LA_WEB,
+  PATRON_DE_HOST_CON_BARRA,
+  PATRON_DE_LA_WEB,
+} from "../../src/primitivas/contacto/web";
 
 /**
  * Los CHECK de contacto de la base (0019) repiten las reglas de `src/primitivas/contacto/`. Esta prueba lee sus definiciones del
@@ -63,13 +67,15 @@ describe.skipIf(base === null)("los CHECK de contacto de la base repiten las pri
     expect(def).toContain("'^\\S+@\\S+$'");
   });
 
-  it("la web: tope de largo y el MISMO patrón http/https que la primitiva", async () => {
+  it("la web: tope de largo y la MISMA forma canónica (sin esquema) y regla de la barra final que la primitiva", async () => {
     const def = await definicion("sucursal_web_ck");
     expect(topeDe(def, "web")).toBe(LARGO_MAXIMO_DE_LA_WEB);
-    // `~*` es sin distinguir mayúsculas, como la bandera `i` de la primitiva; el literal de la base no escapa la barra.
-    expect(PATRON_DE_LA_WEB.flags).toContain("i");
-    expect(def).toContain("~*");
-    expect(def).toContain(`'${PATRON_DE_LA_WEB.source.replaceAll("\\/", "/")}'`);
+    // Sin bandera `i`: la base exige el host en minúsculas con `~` (no `~*`), igual que el patrón de la primitiva.
+    expect(PATRON_DE_LA_WEB.flags).toBe("");
+    expect(def).not.toContain("~*");
+    expect(def).toContain(`~ '${PATRON_DE_LA_WEB.source}'`);
+    expect(PATRON_DE_HOST_CON_BARRA.flags).toBe("");
+    expect(def).toContain(`!~ '${PATRON_DE_HOST_CON_BARRA.source.replaceAll("\\/", "/")}'`);
   });
 
   it("«sin control»: la clase de la base y la regla de la primitiva coinciden en cada carácter hasta U+00FF y en los separadores de línea", async () => {

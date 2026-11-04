@@ -22,7 +22,7 @@
 -- Decisiones de diseño (todas probadas por tests):
 --
 --  C1. Nulo = «no existe». Un valor presente nunca es vacío ni lleva blancos en los extremos ni caracteres de control (una sola
---      línea). Los largos máximos (teléfono 40, correo 254, web 200) son un SUPUESTO del ingeniero, sin fuente del dueño: son
+--      línea). La web se guarda CANÓNICA, sin `http(s)://` (D-99: la persona la puede escribir con o sin esquema y el CHECK repite la forma guardada). Los largos máximos (teléfono 40, correo 254, web 200) son un SUPUESTO del ingeniero, sin fuente del dueño: son
 --      las constantes de `src/primitivas/contacto/` (telefono.ts, email.ts, web.ts) y cambiarlos es un CHECK nuevo, no un cambio de datos.
 --  C2. La BASE copia el contacto, no la aplicación (como `sucursal_id` en 0016): el disparador `comprobante_alta_contacto` lee la
 --      sucursal del comprobante con FOR SHARE y deja en la fila nueva el contacto VIGENTE EN ESE MOMENTO, pise lo que pise quien
@@ -64,9 +64,14 @@ ALTER TABLE sucursal
   ADD COLUMN correo text CONSTRAINT sucursal_correo_ck CHECK (
     correo = lower(btrim(correo)) AND char_length(correo) <= 254 AND correo ~ '^\S+@\S+$'
     AND correo !~ '[\x01-\x1F\x7F-\x9F]'),
-  -- Repite `web.ts`: LARGO_MAXIMO_DE_LA_WEB = 200, empieza con http:// o https:// (sin distinguir mayúsculas), sin blancos ni control.
+  -- Repite `web.ts` (D-99): la forma CANÓNICA, SIN esquema. PATRON_DE_LA_WEB (host en minúsculas con al menos un punto, puerto, y
+  -- después / ? # y texto sin blancos), PATRON_DE_HOST_CON_BARRA negado (sin la barra cuando es solo el host), el tope
+  -- LARGO_MAXIMO_DE_LA_WEB = 200 sobre lo guardado (ya sin esquema) y sin control. Un `https://` o un `javascript:` no calzan.
   ADD COLUMN web text CONSTRAINT sucursal_web_ck CHECK (
-    char_length(web) <= 200 AND web ~* '^https?://\S+$' AND web !~ '[\x01-\x1F\x7F-\x9F]');
+    char_length(web) <= 200
+    AND web ~ '^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]*[a-z0-9])?(:[0-9]{1,5})?([/?#]\S*)?$'
+    AND web !~ '^[^/?#]*/$'
+    AND web !~ '[\x01-\x1F\x7F-\x9F]');
 
 -- La política `sucursal_app_alta` / `sucursal_app_cambiar` ya acota la empresa operable. La plataforma, que solo siembra
 -- (`empresa_id`, `nombre`), no recibe nada.
