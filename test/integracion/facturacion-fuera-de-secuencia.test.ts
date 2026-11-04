@@ -62,6 +62,7 @@ class ArcaContada implements EmisionElectronica {
     this.llamadas.consultar += 1;
     return this.falsa.consultar(pv, tipo, n);
   };
+  puntosDeVenta: EmisionElectronica["puntosDeVenta"] = (cuit) => this.falsa.puntosDeVenta(cuit);
 }
 
 describe.skipIf(base === null)(
@@ -167,6 +168,7 @@ describe.skipIf(base === null)(
         autorizarEnMs: 2_000,
         consultarEnMs: 2_000,
         ultimoAutorizadoEnMs: opciones.tiempos?.ultimoAutorizadoEnMs ?? 2_000,
+        puntosDeVentaEnMs: 2_000,
       };
       const casos = casosDeFacturacion(
         entorno,

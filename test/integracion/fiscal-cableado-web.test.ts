@@ -27,6 +27,7 @@ import { crearBaseAparte } from "./entorno";
 import {
   cargarCertificado,
   crearEscenarioDeCasos,
+  darDeAltaEnArca,
   type EscenarioDeCasos,
 } from "./facturacion-casos-apoyo";
 import { REGLAS_CON_FACTURACION } from "./fiscal-numeracion-apoyo";
@@ -43,8 +44,8 @@ import { comoEmpresa } from "./entorno";
  *  - cada acción exige SU permiso en el servidor, la empresa sale del contexto y nunca del pedido, y ninguna empresa ve
  *    ni toca lo de otra;
  *  - ningún error de persistencia, texto de ARCA ni cadena de conexión llega a la respuesta.
- * El catálogo real tiene `facturacion` EN DESARROLLO: acá se usa uno con el módulo disponible (como las pruebas de
- * los casos de uso) y una prueba aparte verifica que con el real emitir da `MODULO_EN_DESARROLLO`.
+ * El catálogo real tiene `facturacion` DISPONIBLE pero sin activar para nadie: acá las empresas la activan de verdad (plan y
+ * `modulo_de_empresa`) y una prueba aparte verifica que con el catálogo real, sin activarla, emitir y ver dan `MODULO_NO_ACTIVO`.
  */
 
 const base = inject("baseDePruebas");
@@ -484,6 +485,8 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
     async function listoParaProduccion(rol: RolDePrueba = "GERENTE") {
       const e = await empresaConFacturacion(rol);
       await cargarCertificado(propia.base, e, "PRODUCCION");
+      // D-77: ARCA de producción tiene dado de alta el punto de venta.
+      darDeAltaEnArca(arca.PRODUCCION, e);
       const inicial = await estadoDelPunto(e);
       return { e, version: inicial?.version ?? 0 };
     }
@@ -566,6 +569,36 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
       expect(await cambiosDeAmbiente(e)).toBe(0);
     });
 
+    it("D-77: si ARCA no tiene el punto de venta no pasa y nada cambia; la respuesta es FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA (texto ya aprobado del 10005), no el nombre interno", async () => {
+      const e = await empresaConFacturacion("GERENTE");
+      await cargarCertificado(propia.base, e, "PRODUCCION");
+      const version = (await estadoDelPunto(e))?.version ?? 0;
+      // `arca.PRODUCCION` no tiene declarado el punto de venta de esta empresa: para ARCA no existe.
+      const respuesta = await cambiarAmbienteDePuntoDeVenta(
+        d,
+        comoPersonaDe(e),
+        pedido(e, version),
+      );
+      // El código público, con su clave del catálogo y como aviso; el nombre interno del caso de uso no sale.
+      expect(respuesta).toEqual({
+        ok: false,
+        error: {
+          codigo: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA",
+          clave: "error.fiscal_punto_de_venta_no_habilitado_en_arca",
+          presentacion: "AVISO",
+        },
+      });
+      expect((await estadoDelPunto(e))?.ambiente).toBe("HOMOLOGACION");
+      expect(await cambiosDeAmbiente(e)).toBe(0);
+      // Cuando ARCA lo da de alta, el mismo pedido pasa.
+      darDeAltaEnArca(arca.PRODUCCION, e);
+      expect(await cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version))).toEqual({
+        ok: true,
+        dato: { yaEstaba: false },
+      });
+      expect(await cambiosDeAmbiente(e)).toBe(1);
+    });
+
     it("solo el gerente, también al repetir: administrador y operador reciben SIN_PERMISO y no se enteran del ambiente", async () => {
       const { e, version } = await listoParaProduccion();
       expect(await cambiarAmbienteDePuntoDeVenta(d, comoPersonaDe(e), pedido(e, version))).toEqual({
@@ -628,22 +661,30 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
 
   // ===============================================================================================
   describe("autorización en el servidor y aislamiento entre empresas", () => {
-    it("con el catálogo REAL el módulo sigue en desarrollo: emitir y ver dan MODULO_EN_DESARROLLO", async () => {
+    it("con el catálogo REAL el módulo es disponible pero no nace activo: sin activarlo en la empresa, emitir y ver dan MODULO_NO_ACTIVO; activado, pasan", async () => {
       const e = await empresaConFacturacion();
+      const sinActivar = await crearEscenarioDeCasos(dueno, propia.base, { rol: "OPERADOR" });
       const real = armarWeb(conexiones, { emision });
       const dReal: DependenciasDeFacturacionWeb = {
         ...d,
         casosDeUso: real.casosDeUsoDeFacturacion,
         consultas: real.consultasDeFacturacion,
       };
-      expect(REGLAS_DE_EMPRESA.catalogo.facturacion.estado).toBe("en_desarrollo");
-      const emitido = await emitirFactura(dReal, comoPersonaDe(e), facturaCruda(e));
-      expect(emitido).toMatchObject({ ok: false, error: { codigo: "MODULO_EN_DESARROLLO" } });
-      const lista = await listarComprobantes(dReal, comoPersonaDe(e), null, undefined);
-      expect(lista).toMatchObject({ ok: false, error: { codigo: "MODULO_EN_DESARROLLO" } });
+      expect(REGLAS_DE_EMPRESA.catalogo.facturacion.estado).toBe("disponible");
+      const emitido = await emitirFactura(
+        dReal,
+        comoPersonaDe(sinActivar),
+        facturaCruda(sinActivar),
+      );
+      expect(emitido).toMatchObject({ ok: false, error: { codigo: "MODULO_NO_ACTIVO" } });
+      const lista = await listarComprobantes(dReal, comoPersonaDe(sinActivar), null, undefined);
+      expect(lista).toMatchObject({ ok: false, error: { codigo: "MODULO_NO_ACTIVO" } });
       expect(
-        (await filas("select 1 from comprobante where empresa_id = $1", [e.empresa])).length,
+        (await filas("select 1 from comprobante where empresa_id = $1", [sinActivar.empresa]))
+          .length,
       ).toBe(0);
+      expect((await emitirFactura(dReal, comoPersonaDe(e), facturaCruda(e))).ok).toBe(true);
+      expect((await listarComprobantes(dReal, comoPersonaDe(e), null, undefined)).ok).toBe(true);
     });
 
     it("cada acción exige SU permiso: el operador no resincroniza ni cambia el ambiente; el gerente sí puede intentarlo", async () => {

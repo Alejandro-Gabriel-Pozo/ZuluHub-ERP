@@ -138,7 +138,7 @@ describe("el certificado sin punto de venta activo (respuesta del dueño, 2026-1
 });
 
 describe("las tres filas de la lista", () => {
-  it("el orden y los textos aprobados; solo los puntos de venta llevan a su pantalla", () => {
+  it("el orden y los textos aprobados; las tres filas llevan a su pantalla", () => {
     const filas = armarLaLista(
       estado({ datos: "SIN_CARGAR", puntos: "SIN_PUNTOS", enUso: [], certificados: [] }),
     );
@@ -148,12 +148,10 @@ describe("las tres filas de la lista", () => {
       "Certificado de ARCA",
     ]);
     expect(filas.map((f) => f.href)).toEqual([
-      // Datos fiscales NO es un enlace hoy: su pantalla va en otro PR y su ruta todavía no existe (sería un 404). Vuelve a ser enlace
-      // (a `/configuracion-fiscal/datos-fiscales`) cuando exista la ruta.
-      null,
+      "/configuracion-fiscal/datos-fiscales",
       "/configuracion-fiscal/puntos-de-venta",
-      // Su pantalla de estado no tiene textos aprobados: la fila no es un enlace.
-      null,
+      // Dueño, 2026-11-03, cuestionario «Certificado»: la fila del certificado es un enlace.
+      "/configuracion-fiscal/certificado-de-arca",
     ]);
     expect(filas.map((f) => f.cartel?.texto ?? null)).toEqual([
       "Falta cargar",
@@ -188,8 +186,10 @@ describe("las tres filas de la lista", () => {
   it("las rutas son las aprobadas", () => {
     expect(RUTAS_DE_CONFIGURACION).toEqual({
       lista: "/configuracion-fiscal",
+      datosFiscales: "/configuracion-fiscal/datos-fiscales",
       puntosDeVenta: "/configuracion-fiscal/puntos-de-venta",
       nuevoPuntoDeVenta: "/configuracion-fiscal/puntos-de-venta/nuevo",
+      certificado: "/configuracion-fiscal/certificado-de-arca",
     });
   });
 });

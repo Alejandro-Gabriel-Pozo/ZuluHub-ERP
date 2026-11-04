@@ -13,6 +13,7 @@ import { PAGINA, SUCURSALES } from "../utilidades/listado-de-comprobantes";
  */
 vi.mock("server-only", () => ({}));
 // La barra pide los permisos de la persona (`permisosDelActor`): acá ve «Comprobantes» (el filtro se prueba en `modulos-de-la-barra.test.ts`).
+const permisos = vi.hoisted(() => ({ acciones: ["comprobantes.ver"] as string[] }));
 vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
     consultasDeEmpresas: () => ({
@@ -20,7 +21,7 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
         Promise.resolve({
           ok: true,
           valor: {
-            acciones: ["comprobantes.ver"],
+            acciones: permisos.acciones,
             modulos: { activos: ["facturacion"], enSoloLectura: [] },
           },
         }),
@@ -104,6 +105,7 @@ describe("la página del listado de comprobantes", () => {
   beforeEach(() => {
     servidor.llamadas = [];
     servidor.puntosDeVenta = [];
+    permisos.acciones = ["comprobantes.ver"];
     vi.useFakeTimers();
     // 23:30 del 28/10/2026 en Argentina: ya es el 29 en UTC.
     vi.setSystemTime(new Date("2026-10-29T02:30:00Z"));
@@ -122,6 +124,18 @@ describe("la página del listado de comprobantes", () => {
     expect(t).toContain("Filtros (0)");
     expect(t).toContain("Factura B 00001-00001234");
     expect(t).toContain("Página siguiente");
+  });
+
+  it("«+ Emitir» abre Emitir, solo para quien puede emitir (contrato, pantalla 1, «Acciones»)", async () => {
+    expect(await texto()).not.toContain("+ Emitir");
+    permisos.acciones = ["comprobantes.ver", "comprobantes.emitir_manual"];
+    const marcado = await html();
+    expect(marcado).toMatch(
+      /<a[^>]*href="\/facturacion\/comprobantes\/emitir"[^>]*>\+ Emitir<\/a>/,
+    );
+    // También cuando no se pudo cargar la lista: el servidor decide al abrir Emitir.
+    cargado({ pagina: { ok: false, error: errorDeCodigo("ERROR_INTERNO") } });
+    expect(await texto()).toContain("+ Emitir");
   });
 
   it("«Página siguiente» fija las fechas del período en el enlace (no se corren si pasa la medianoche)", async () => {

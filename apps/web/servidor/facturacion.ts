@@ -19,6 +19,16 @@ import {
   type DependenciasDeFacturacionWeb,
   type DetalleParaLaPantalla,
 } from "../../../src/composicion/facturacion-web";
+import {
+  discriminaIvaAlEmitir,
+  listarPuntosDeVentaParaEmitir,
+  type DiscriminaIvaParaLaPantalla,
+  type PuntosDeVentaParaEmitirEnLaPantalla,
+} from "../../../src/composicion/lecturas-para-emitir-web";
+import {
+  verModeloDeImpresion,
+  type ModeloDeImpresionParaLaPantalla,
+} from "../../../src/composicion/modelo-de-impresion-web";
 import { resolverEmpresa } from "../../../src/composicion/sesion-y-empresa";
 import type { PaginaDeComprobantes } from "../../../src/modulos/fiscal/publico";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
@@ -209,6 +219,34 @@ export async function cargarElListado(
   }
 }
 
+/**
+ * Si la empresa discrimina IVA, para que el paso de renglones de Emitir sepa si pide la alícuota (D-86; `comprobantes.emitir_manual`).
+ * Con el contexto que ya resolvió la página. Devuelve un sí o un no: ningún dato fiscal más.
+ */
+export function discriminaIvaParaEmitir(
+  contexto: ContextoOperativo,
+): Promise<Respuesta<DiscriminaIvaParaLaPantalla>> {
+  return discriminaIvaAlEmitir(dependencias, contexto);
+}
+
+/**
+ * Los puntos de venta activos de la sucursal de la persona, para elegir con cuál emitir (D-6 y D-86; `comprobantes.emitir_manual`).
+ * La sucursal sale de la cookie que valida el servidor (`sucursal-elegida.ts`), nunca del pedido del navegador, y la consulta la
+ * verifica otra vez contra el alcance de la persona dentro de su transacción. Sin elegir y con varias a elegir responde
+ * `FISCAL_SUCURSAL_NO_ELEGIDA`; con una sola abierta, el servidor la toma sola; una cerrada no ofrece ninguno (D-50).
+ */
+export async function puntosDeVentaParaEmitir(
+  contexto: ContextoOperativo,
+): Promise<Respuesta<PuntosDeVentaParaEmitirEnLaPantalla>> {
+  try {
+    const sucursal = await sucursalDelPedido(contexto);
+    if (!sucursal.ok) return sucursal;
+    return await listarPuntosDeVentaParaEmitir(dependencias, contexto, sucursal.dato.elegida);
+  } catch (excepcion) {
+    return aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta);
+  }
+}
+
 /** Guarda la sucursal elegida, pero solo si es una de las que la persona puede elegir. */
 function fijarLaSucursal(datos: FormData): Promise<Respuesta<null>> {
   return conLaEmpresa(async (contexto) => {
@@ -242,4 +280,35 @@ export async function elegirLaSucursal(datos: FormData): Promise<ResultadoDeAcci
 
 export function verElComprobante(entrada: unknown): Promise<Respuesta<DetalleParaLaPantalla>> {
   return conLaEmpresa((contexto) => verComprobante(dependencias, contexto, entrada));
+}
+
+/** Primera versión de representación que dibuja la vista (la 1 no trae el modo de precio). */
+const VERSION_MINIMA_QUE_SE_IMPRIME = 2;
+
+/** El modelo de impresión que recibe la ruta: lo reexporta el servidor para que las pantallas no importen la composición. */
+export type { ModeloDeImpresionParaLaPantalla };
+
+/**
+ * El modelo de impresión de un comprobante Autorizado, con el QR ya dibujado (D-97). Como `verElComprobante`: solo el id viene del
+ * pedido; la empresa, el permiso (`comprobantes.ver`) y la versión de representación (la sella el comprobante) las decide el servidor.
+ * La vista imprime desde la versión 2: un modelo de versión 1 no trae `modoDePrecio` y una A sellada en 1 pudo ser IVA discriminado,
+ * así que se rechaza con el error genérico y su referencia (sin texto nuevo) en vez de rotular el precio por suposición.
+ * Previene: «Precio con IVA» sobre un precio sin IVA. Chequeo: `test/web/servidor-modelo-de-impresion.test.ts`.
+ */
+export function verElModeloDeImpresion(
+  entrada: unknown,
+): Promise<Respuesta<ModeloDeImpresionParaLaPantalla>> {
+  return conLaEmpresa(async (contexto) => {
+    const respuesta = await verModeloDeImpresion(dependencias, contexto, entrada);
+    if (
+      respuesta.ok &&
+      respuesta.dato.modelo.versionDeRepresentacion < VERSION_MINIMA_QUE_SE_IMPRIME
+    ) {
+      return aRespuestaDeExcepcion(
+        new Error("El modelo de impresión es de una versión que la vista no imprime"),
+        dependenciasDeSesion.respuesta,
+      );
+    }
+    return respuesta;
+  });
 }

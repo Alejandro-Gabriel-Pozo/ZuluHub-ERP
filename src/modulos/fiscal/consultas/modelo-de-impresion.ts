@@ -44,6 +44,8 @@ export function paraImprimir(c: ComprobanteGuardado): ComprobanteParaImprimir {
     cae: exigir(c.cae, "cae"),
     caeVence: exigir(c.caeVence, "cae_vence"),
     versionDeRepresentacion: c.versionDeRepresentacion,
+    modoDePrecio: c.modoDePrecio,
+    contacto: c.contacto,
   };
 }
 

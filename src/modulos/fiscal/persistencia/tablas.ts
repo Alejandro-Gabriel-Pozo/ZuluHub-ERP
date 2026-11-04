@@ -193,6 +193,14 @@ export type FiscalDb = {
      * los disparadores la deja vacía, y quien la lee lo trata como «no corresponde».
      */
     sucursal_id: Generated<string | null>;
+    /**
+     * 0019: el contacto de la sucursal VIGENTE al darse de alta el comprobante (una nota toma el de su sucursal, la del comprobante
+     * que corrige). Nulo = la sucursal no lo tenía, o el comprobante es anterior a 0019. Los copia la base (la aplicación no los
+     * manda) y no cambian nunca.
+     */
+    sucursal_telefono: Generated<string | null>;
+    sucursal_correo: Generated<string | null>;
+    sucursal_web: Generated<string | null>;
   };
   /** 0009: los renglones del comprobante, de solo inserción. `posicion` desde 1. */
   comprobante_linea: {

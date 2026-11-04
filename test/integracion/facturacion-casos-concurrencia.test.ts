@@ -6,6 +6,7 @@ import {
   type ComprobanteId,
 } from "../../src/modulos/fiscal/publico";
 import { EmisionFalsa, guionAlAzar } from "../utilidades/emision-falsa";
+import { correrEnParalelo, esConcurrenciaAgotada } from "./concurrencia-apoyo";
 import { crearBarrera, crearBaseAparte } from "./entorno";
 import { crearSerie, usarSerie } from "./fiscal-apoyo";
 import {
@@ -75,14 +76,10 @@ describe.skipIf(base === null)("facturación F5: concurrencia de los casos de us
   const filas = async <T extends Record<string, unknown>>(texto: string, p: unknown[] = []) =>
     (await dueno.query<T>(texto, p)).rows;
 
-  async function juntas<T>(n: number, llamada: (i: number) => Promise<T>): Promise<T[]> {
-    barrera = crearBarrera(n);
-    try {
-      return await Promise.all(Array.from({ length: n }, (_, i) => llamada(i)));
-    } finally {
-      barrera = null;
-    }
-  }
+  const juntas = <T>(n: number, llamada: (i: number) => Promise<T>): Promise<T[]> =>
+    correrEnParalelo(n, llamada, (esperar) => {
+      barrera = esperar;
+    });
 
   async function preparar(semilla?: number) {
     const e = await crearEscenarioDeCasos(dueno, propia.base, { rol: "GERENTE" });
@@ -249,13 +246,7 @@ describe.skipIf(base === null)("facturación F5: concurrencia de los casos de us
             // `ConcurrenciaAgotada` es una respuesta legítima bajo carga (SERIALIZABLE agotó sus reintentos): un
             // trabajador real devuelve el trabajo a la cola y lo repite, y validar es idempotente. Se acota para que
             // un error persistente no quede disfrazado de «carga»; cualquier otro error sigue siendo un fallo.
-            if (
-              !r.ok &&
-              typeof r.error === "object" &&
-              "tipo" in r.error &&
-              r.error.tipo === "ConcurrenciaAgotada" &&
-              ++reintentosPorCarga <= 200
-            ) {
+            if (!r.ok && esConcurrenciaAgotada(r.error) && ++reintentosPorCarga <= 200) {
               cola.push(id);
               continue;
             }

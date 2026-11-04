@@ -1,0 +1,61 @@
+/**
+ * La fila de `comprobante` tal como la lee `seleccionar` (las fechas `date` ya como texto `YYYY-MM-DD`). Aparte del repositorio,
+ * que está en el tope de líneas de la deuda técnica: el tipo no tiene lógica.
+ */
+export type FilaDeComprobante = Readonly<{
+  id: string;
+  empresa_id: string;
+  emisor_id: string;
+  punto_de_venta_id: string;
+  ambiente: string;
+  origen_tipo: string;
+  origen_id: string;
+  clase: string;
+  tipo_comprobante: string;
+  concepto: string;
+  servicio_desde: string | null;
+  servicio_hasta: string | null;
+  vencimiento_pago: string | null;
+  moneda: string;
+  modo_de_precio: string;
+  total: string;
+  neto_gravado: string;
+  iva: string;
+  exento: string;
+  no_gravado: string;
+  datos_fiscales_id: string;
+  emisor_cuit: string;
+  emisor_razon_social: string;
+  emisor_condicion_iva: string;
+  emisor_domicilio_fiscal: string;
+  emisor_inicio_actividades: string;
+  emisor_iibb_numero: string | null;
+  emisor_iibb_condicion: string | null;
+  punto_de_venta_numero: number;
+  punto_de_venta_domicilio: string;
+  receptor_nombre: string | null;
+  receptor_documento_tipo: string;
+  receptor_documento_numero: string | null;
+  receptor_condicion_iva: string;
+  receptor_domicilio: string | null;
+  comprobante_asociado_id: string | null;
+  motivo: string | null;
+  estado: string;
+  envios: number;
+  numero_reservado: string | null;
+  fecha_emision: string | null;
+  numero: string | null;
+  cae: string | null;
+  cae_vence: string | null;
+  autorizado_en: Date | null;
+  resuelto_por: string | null;
+  motivo_descarte: string | null;
+  huella: string;
+  version_de_representacion: number;
+  sucursal_telefono: string | null;
+  sucursal_correo: string | null;
+  sucursal_web: string | null;
+  creado_por: string;
+  creado_en: Date;
+  version: number;
+}>;

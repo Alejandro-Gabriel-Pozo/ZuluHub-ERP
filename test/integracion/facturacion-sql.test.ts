@@ -167,6 +167,10 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "version",
         // 0016: la sucursal del punto de venta al emitirse
         "sucursal_id",
+        // 0019: el contacto de la sucursal vigente al darse de alta el comprobante (lo copia la base)
+        "sucursal_telefono",
+        "sucursal_correo",
+        "sucursal_web",
       ]);
       expect(await columnasDe("comprobante_linea")).toEqual([
         "empresa_id",
@@ -434,6 +438,7 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "certificado_arca.certificado_arca_pkey",
         "certificado_arca.certificado_huella_uk",
         "certificado_arca.certificado_id_empresa_uk",
+        "certificado_arca.certificado_pendiente_uk",
         "certificado_arca.certificado_vigente_uk",
         "comprobante.comprobante_asociado_ix",
         "comprobante.comprobante_en_vuelo_uk",
@@ -467,6 +472,9 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
       expect(def("certificado_vigente_uk")).toMatch(
         /UNIQUE INDEX .*\(empresa_id, emisor_id, ambiente\) WHERE \(estado = 'VIGENTE'::text\)/,
       );
+      expect(def("certificado_pendiente_uk")).toMatch(
+        /UNIQUE INDEX .*\(empresa_id, emisor_id, ambiente\) WHERE \(estado = 'PEDIDO_GENERADO'::text\)/,
+      );
       expect(def("certificado_huella_uk")).toMatch(
         /UNIQUE INDEX .*\(empresa_id, huella_sha256\) WHERE \(huella_sha256 IS NOT NULL\)/,
       );
@@ -489,6 +497,7 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "certificado_arca.certificado_arca_sin_truncate",
         "certificado_arca.certificado_arca_version",
         "comprobante.comprobante_alta",
+        "comprobante.comprobante_alta_contacto", // 0019
         "comprobante.comprobante_cambio",
         "comprobante.comprobante_coherente_con_serie",
         "comprobante.comprobante_con_sucursal",

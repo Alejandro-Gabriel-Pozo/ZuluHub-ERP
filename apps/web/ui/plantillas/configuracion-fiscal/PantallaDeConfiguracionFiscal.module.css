@@ -32,3 +32,10 @@
   font-weight: var(--tipo-peso-fuerte);
   overflow-wrap: anywhere;
 }
+
+/* La fecha de vencimiento bajo el nombre del ambiente (lista del certificado). */
+.sub {
+  display: block;
+  font-weight: normal;
+  color: var(--color-texto-suave);
+}

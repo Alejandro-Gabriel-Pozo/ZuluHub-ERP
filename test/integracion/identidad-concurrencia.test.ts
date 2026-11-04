@@ -21,6 +21,7 @@ import {
 } from "../../src/primitivas/identificadores/marca";
 import { err, ok } from "../../src/primitivas/resultado/resultado";
 import type { Tokens } from "../../src/puertos/tokens";
+import { esConcurrenciaAgotada, perdedorAceptable } from "./concurrencia-apoyo";
 import {
   AHORA_DE_PRUEBA,
   comoEmpresa,
@@ -66,15 +67,8 @@ type Gancho = (tx: TxDePrueba, esperar: () => Promise<void>) => TxDePrueba;
 // a los 60 s.
 vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
-/**
- * El adaptador agota sus reintentos cuando una carrera se encadena bajo carga y devuelve el error tipado
- * `ConcurrenciaAgotada`: es una respuesta legítima («reintentá»), no un estado inconsistente. Lo que estas
- * pruebas garantizan es la regla de negocio, no que nadie pierda nunca la carrera por agotamiento.
- */
-const esAgotada = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  (error as { tipo?: unknown }).tipo === "ConcurrenciaAgotada";
+// `ConcurrenciaAgotada` es una respuesta legítima («reintentá»), ver `concurrencia-apoyo.ts`: lo que estas pruebas
+// garantizan es la regla de negocio, no que nadie pierda nunca la carrera por agotamiento.
 
 describe.skipIf(base === null)("identidad: concurrencia de los casos de uso (K1 a K9)", () => {
   // Base propia de este archivo: SERIALIZABLE aborta por falsos positivos cuando OTROS archivos de
@@ -440,11 +434,16 @@ describe.skipIf(base === null)("identidad: concurrencia de los casos de uso (K1 
       expect(exitos, `ronda ${n}: se apagaron los dos`).toBeLessThanOrEqual(1);
       expect(activos.length, `ronda ${n}: cada éxito apaga a uno`).toBe(2 - exitos);
       // La que perdió ve al otro ya apagado (ya no es admin ella, o es la última) o agotó los reintentos.
+      perdedorAceptable(resultados, {
+        esperados: ["SIN_PERMISO", "ULTIMO_ADMIN"],
+        contexto: `ronda ${n}`,
+      });
       for (const r of resultados) {
         if (r.ok) continue;
-        const motivo = esAgotada(r.error) ? "ConcurrenciaAgotada" : JSON.stringify(r.error);
+        const motivo = esConcurrenciaAgotada(r.error)
+          ? "ConcurrenciaAgotada"
+          : JSON.stringify(r.error);
         motivos.set(motivo, (motivos.get(motivo) ?? 0) + 1);
-        expect(['"SIN_PERMISO"', '"ULTIMO_ADMIN"', "ConcurrenciaAgotada"]).toContain(motivo);
       }
       expect(
         await contar(
@@ -477,11 +476,10 @@ describe.skipIf(base === null)("identidad: concurrencia de los casos de uso (K1 
       expect(activos, `ronda ${n}: quedó sin admin`).toBeGreaterThanOrEqual(1);
       expect(exitos, `ronda ${n}: se apagaron los dos`).toBeLessThanOrEqual(1);
       expect(activos, `ronda ${n}: cada éxito apaga a uno`).toBe(2 - exitos);
-      for (const r of resultados) {
-        if (r.ok) continue;
-        const motivo = esAgotada(r.error) ? "ConcurrenciaAgotada" : r.error;
-        expect(["SIN_PERMISO", "ULTIMO_ADMIN", "ConcurrenciaAgotada"]).toContain(motivo);
-      }
+      perdedorAceptable(resultados, {
+        esperados: ["SIN_PERMISO", "ULTIMO_ADMIN"],
+        contexto: `ronda ${n}`,
+      });
     }
   });
 

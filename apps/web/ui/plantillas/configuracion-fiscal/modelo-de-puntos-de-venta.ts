@@ -9,6 +9,19 @@ import { rutaDeUnPuntoDeVenta } from "./lista-de-lo-que-falta";
  * la pantalla de cada punto de venta. Puro: sin React ni servidor. Los textos salen del catálogo.
  */
 
+/** Un domicilio guardado, como lo entrega la consulta (el del punto de venta y el de Datos fiscales: una forma, un lugar). */
+export type DomicilioGuardado = Readonly<{
+  id: string;
+  calle: string;
+  numero: string;
+  piso: string | null;
+  departamento: string | null;
+  localidad: string;
+  /** El código de la provincia (`AR-B`). */
+  provincia: string;
+  codigoPostal: string | null;
+}>;
+
 /** Un punto de venta como lo entrega la consulta (la misma forma, sin importar la composición). */
 export type PuntoParaConfigurar = Readonly<{
   id: string;
@@ -17,6 +30,7 @@ export type PuntoParaConfigurar = Readonly<{
   ambiente: "HOMOLOGACION" | "PRODUCCION";
   sucursal: Readonly<{ id: string; nombre: string; activa: boolean }>;
   tieneDomicilio: boolean;
+  domicilio: DomicilioGuardado | null;
   hayNumerosUsados: boolean;
   version: number;
 }>;
@@ -182,16 +196,24 @@ export const VALORES_EN_BLANCO: ValoresDelFormulario = {
 export const OPCIONES_DE_PROVINCIA: readonly Readonly<{ valor: string; etiqueta: string }>[] =
   PROVINCIAS.map((p) => ({ valor: p.codigo, etiqueta: p.nombre }));
 
-/**
- * Los valores con los que abre la edición. El domicilio queda en blanco: `PuntoParaConfigurar` todavía no trae el domicilio, solo si
- * lo tiene (`tieneDomicilio`), así que esta pantalla no lo precarga. La consulta del servidor ya lo entrega (#123): precargarlo es
- * trabajo de otro tramo, con su texto y su prueba.
- */
+/** Los campos del formulario con un domicilio guardado; en blanco si no hay. */
+export const valoresDelDomicilio = (d: DomicilioGuardado | null): ValoresDelDomicilio => ({
+  calle: d?.calle ?? "",
+  numeroDeCalle: d?.numero ?? "",
+  piso: d?.piso ?? "",
+  departamento: d?.departamento ?? "",
+  localidad: d?.localidad ?? "",
+  provincia: d?.provincia ?? "",
+  codigoPostal: d?.codigoPostal ?? "",
+});
+
+/** Los valores con los que abre la edición: el número, la sucursal y el domicilio actual del punto de venta (en blanco si no tiene). */
 export function valoresParaEditar(p: PuntoParaConfigurar): ValoresDelFormulario {
   return {
     ...VALORES_EN_BLANCO,
     numero: formatearPuntoDeVenta(p.numero),
     sucursalId: p.sucursal.id,
+    ...valoresDelDomicilio(p.domicilio),
   };
 }
 
@@ -212,11 +234,29 @@ const CAMPOS_DEL_DOMICILIO = [
   "codigoPostal",
 ] as const satisfies readonly CampoDelFormulario[];
 
+/** Solo los campos del domicilio: así lo reutiliza el formulario de Datos fiscales (una regla, un lugar). */
+export type ValoresDelDomicilio = Pick<ValoresDelFormulario, (typeof CAMPOS_DEL_DOMICILIO)[number]>;
+
 /** La persona cargó algo del domicilio. Ninguno: no se manda domicilio (se puede crear o editar un punto de venta sin él; no se activa). */
-export const hayDomicilioCargado = (v: ValoresDelFormulario): boolean =>
+export const hayDomicilioCargado = (v: ValoresDelDomicilio): boolean =>
   CAMPOS_DEL_DOMICILIO.some((campo) => sinVacios(v[campo]) !== "");
 
-function domicilioNuevo(v: ValoresDelFormulario, id: string) {
+const mismoDomicilio = (a: ValoresDelDomicilio, b: ValoresDelDomicilio): boolean =>
+  CAMPOS_DEL_DOMICILIO.every((campo) => sinVacios(a[campo]) === sinVacios(b[campo]));
+
+/**
+ * El domicilio viaja como NUEVO solo si la persona lo cambió respecto del guardado; si no, se conserva el que tiene. Un domicilio no se
+ * edita (la tabla es de solo inserción: el mismo id con otro contenido es `ID_EN_USO`): uno corregido es otro, con un id que no se usó.
+ * También lo usa Datos fiscales (una regla, un lugar). Chequeo: `test/web/configuracion-fiscal-puntos-de-venta-modelo.test.ts`.
+ */
+export const cambioElDomicilio = (
+  v: ValoresDelDomicilio,
+  guardado: DomicilioGuardado | null,
+): boolean =>
+  guardado === null ? hayDomicilioCargado(v) : !mismoDomicilio(v, valoresDelDomicilio(guardado));
+
+/** El domicilio nuevo que viaja en el pedido, con su clave de idempotencia (también el de Datos fiscales). */
+export function domicilioNuevo(v: ValoresDelDomicilio, id: string) {
   return {
     tipo: "NUEVO",
     id,
@@ -252,8 +292,8 @@ export function armarElPedidoDeAlta(
 
 /**
  * El pedido de edición (`editarPuntoDeVenta`): solo lo que cambió, con la versión que vio la pantalla (control de versión optimista).
- * El número igual al de antes no se manda (uno que ya emitió no se puede cambiar: no hay por qué tocarlo). El domicilio, si se
- * escribió algo, es uno NUEVO que reemplaza al anterior.
+ * El número igual al de antes no se manda (uno que ya emitió no se puede cambiar: no hay por qué tocarlo). El domicilio, si
+ * cambió (`cambioElDomicilio`), es uno NUEVO que reemplaza al anterior; si no, no se reenvía.
  */
 export function armarElPedidoDeEdicion(
   v: ValoresDelFormulario,
@@ -265,7 +305,9 @@ export function armarElPedidoDeEdicion(
     versionEsperada: original.version,
     ...(sinCeros(v.numero) === String(original.numero) ? {} : { numero: sinVacios(v.numero) }),
     ...(v.sucursalId === original.sucursal.id ? {} : { sucursalId: v.sucursalId }),
-    ...(hayDomicilioCargado(v) ? { domicilio: domicilioNuevo(v, ids.domicilioId) } : {}),
+    ...(cambioElDomicilio(v, original.domicilio)
+      ? { domicilio: domicilioNuevo(v, ids.domicilioId) }
+      : {}),
   };
 }
 

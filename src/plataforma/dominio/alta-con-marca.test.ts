@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CATALOGO_DE_MODULOS } from "../../capacidades/modulos/catalogo";
 import type { DefinicionDeMarca, DatosDeMarcaParaElAlta } from "../../modulos/marcas/publico";
 import type { Host } from "../../modulos/marcas/publico";
 import type { ModuloParaActivar, VersionDePlanAsignable } from "../../modulos/planes/publico";
@@ -180,6 +181,25 @@ describe("decidirModulosIniciales", () => {
 
   it("sin módulos iniciales no activa nada", () => {
     expect(decidirModulosIniciales(catalogo, [], TECHO)).toEqual({ activar: [], omitidos: [] });
+  });
+
+  it("con el catálogo REAL, un plan que incluye facturacion NO la activa en el alta si la marca no la pide como inicial", () => {
+    const techo = ["administracion", "facturacion"];
+    expect(decidirModulosIniciales(CATALOGO_DE_MODULOS, [], techo)).toEqual({
+      activar: [],
+      omitidos: [],
+    });
+    // Solo la activa quien la lista como inicial de la marca Y el plan la incluye; con un plan sin ella se omite con su motivo.
+    expect(decidirModulosIniciales(CATALOGO_DE_MODULOS, ["facturacion"], techo)).toEqual({
+      activar: ["facturacion"],
+      omitidos: [],
+    });
+    expect(
+      decidirModulosIniciales(CATALOGO_DE_MODULOS, ["facturacion"], ["administracion"]),
+    ).toEqual({
+      activar: [],
+      omitidos: [{ modulo: "facturacion", motivo: "MODULO_FUERA_DEL_PLAN" }],
+    });
   });
 
   it("lo que el plan no incluye se omite con su motivo, sin frenar el resto", () => {

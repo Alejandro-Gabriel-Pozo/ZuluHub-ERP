@@ -14,12 +14,15 @@ import {
   type TipoDeOrigen,
 } from "../../src/modulos/fiscal/publico";
 import { criteriosDeListado } from "../../src/modulos/fiscal/consultas/criterios-de-listado";
-import { modeloDeImpresion } from "../../src/modulos/fiscal/dominio/modelo-de-impresion";
+import {
+  modeloDeImpresion,
+  VERSION_DE_REPRESENTACION_ACTUAL,
+} from "../../src/modulos/fiscal/dominio/modelo-de-impresion";
 import { formatearDomicilio } from "../../src/primitivas/domicilio/domicilio";
 import { empresaId, personaId, sucursalId } from "../../src/primitivas/identificadores/marca";
 import { ok, type Resultado } from "../../src/primitivas/resultado/resultado";
 import { CUIT_C } from "../utilidades/fiscal";
-import { receptorInscripto } from "../utilidades/facturacion";
+import { receptorInscripto, SIN_CONTACTO } from "../utilidades/facturacion";
 import {
   RENGLON_DE_100_SIN_ALICUOTA,
   crearComprobante,
@@ -48,6 +51,7 @@ import {
   intentoDe,
   type TxFacturacionDePrueba,
 } from "./facturacion-persistencia-apoyo";
+import { reintentarSiAgotada } from "./concurrencia-apoyo";
 import { comoEmpresa } from "./entorno";
 import { cuitAlAzar } from "./entorno";
 import { crearMundo, crearPuntoDeVenta } from "./fiscal-apoyo";
@@ -129,25 +133,18 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
     comoEmpresa(empresaId(e.x.empresa), personaId(e.persona.GERENTE));
 
   /**
-   * Corre una escritura de prueba con el contexto de la persona que creó la empresa. `ConcurrenciaAgotada` es una
-   * respuesta legítima bajo carga (la transacción SERIALIZABLE agotó sus reintentos cuando otras pruebas escriben en
-   * la misma base): se repite la escritura, acotada; cualquier otro error corta la prueba como siempre.
+   * Corre una escritura de prueba con el contexto de la persona que creó la empresa. Ante `ConcurrenciaAgotada` (otras
+   * pruebas escriben en la misma base) se repite la escritura, acotada (`reintentarSiAgotada`); cualquier otro error
+   * corta la prueba como siempre.
    */
-  async function escribir<T>(
+  function escribir<T>(
     e: Escenario,
     trabajo: (tx: TxFacturacionDePrueba) => Promise<T>,
   ): Promise<T> {
-    for (let intento = 1; ; intento++) {
-      const r = await escritura.ejecutar({ contexto: comoPersonaDe(e) }, async (tx) =>
-        ok(await trabajo(tx)),
-      );
-      if (r.ok) return r.valor;
-      const agotada =
-        typeof r.error === "object" && "tipo" in r.error && r.error.tipo === "ConcurrenciaAgotada";
-      if (!agotada || intento >= 50) {
-        throw new Error(`falló la escritura: ${JSON.stringify(r.error)}`);
-      }
-    }
+    return reintentarSiAgotada(
+      () => escritura.ejecutar({ contexto: comoPersonaDe(e) }, async (tx) => ok(await trabajo(tx))),
+      { contexto: "falló la escritura" },
+    );
   }
   const crearPendiente = (e: Escenario, opciones: Parameters<typeof altaDe>[1] = {}) =>
     escribir(e, async (tx) => exito(await tx.comprobantes.crear(altaDe(e, opciones))).valor);
@@ -317,14 +314,13 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
       }
     });
 
-    it("con el catálogo REAL la facturación sigue en desarrollo: nadie mira todavía", async () => {
+    it("con el catálogo REAL la facturación es disponible: con el módulo activo en la empresa se mira (el «no activo» lo cubren autorizacion-de-modulos y las pruebas de guard-primero)", async () => {
       const a = await crearEmpresa();
       const c = await crearAutorizado(a.x);
       const reales = entorno.consultas(REGLAS_DE_EMPRESA);
-      const esperado = { ok: false, error: "MODULO_EN_DESARROLLO" };
-      expect(await reales.listarComprobantes(mira(a), { sucursalElegida: null })).toEqual(esperado);
-      expect(await reales.verComprobante(mira(a), { comprobanteId: c.id })).toEqual(esperado);
-      expect(await reales.modeloDeImpresion(mira(a), { comprobanteId: c.id })).toEqual(esperado);
+      expect((await reales.listarComprobantes(mira(a), { sucursalElegida: null })).ok).toBe(true);
+      expect((await reales.verComprobante(mira(a), { comprobanteId: c.id })).ok).toBe(true);
+      expect((await reales.modeloDeImpresion(mira(a), { comprobanteId: c.id })).ok).toBe(true);
     });
   });
 
@@ -1468,7 +1464,9 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
           fechaEmision: diaDe(AHORA),
           cae: CAE_DE_PRUEBA,
           caeVence: diaDe(new Date(AHORA.getTime() + 10 * 86_400_000)),
-          versionDeRepresentacion: 1,
+          versionDeRepresentacion: VERSION_DE_REPRESENTACION_ACTUAL,
+          modoDePrecio: c.modoDePrecio,
+          contacto: SIN_CONTACTO,
         },
         MARCA_UNO,
       );
@@ -1481,6 +1479,46 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
       });
       expect(m.leyendas).toEqual(["HOMOLOGACIÓN — SIN VALIDEZ FISCAL"]);
       expect(m.qr.url).toMatch(/^https:\/\/.+\/fe\/qr\/\?p=/);
+    });
+
+    it("reimprimir después de editar la sucursal conserva el contacto congelado (D-98); un comprobante nuevo toma el vigente", async () => {
+      const a = await crearEmpresa();
+      const editar = (telefono: string | null, correo: string | null, web: string | null) =>
+        dueno.query("update sucursal set telefono = $2, correo = $3, web = $4 where id = $1", [
+          a.x.sucursal,
+          telefono,
+          correo,
+          web,
+        ]);
+      const contactoDe = async (id: ComprobanteGuardado["id"]) =>
+        exito(await consultas.modeloDeImpresion(mira(a), { comprobanteId: id }));
+      // Sin contacto cargado: el modelo no trae el bloque.
+      const sinContacto = await crearAutorizado(a.x);
+      expect("contacto" in (await contactoDe(sinContacto.id))).toBe(false);
+
+      await editar("011 4555-1234", "reservas@hotelcentro.com", "www.hotelcentro.com");
+      const congelado = await crearAutorizado(a.x);
+      const antes = await contactoDe(congelado.id);
+      expect(antes.contacto).toEqual({
+        telefono: "011 4555-1234",
+        correo: "reservas@hotelcentro.com",
+        web: { texto: "www.hotelcentro.com", enlace: "https://www.hotelcentro.com" },
+      });
+
+      // La sucursal cambia (y le quitan datos): el comprobante ya emitido se reimprime igual.
+      await editar("0800-999-0000", null, "otra.com");
+      expect(JSON.stringify(await contactoDe(congelado.id))).toBe(JSON.stringify(antes));
+      expect("contacto" in (await contactoDe(sinContacto.id))).toBe(false);
+
+      // Un comprobante nuevo congela el contacto vigente al nacer.
+      const nueva = await crearAutorizado(a.x);
+      expect((await contactoDe(nueva.id)).contacto).toEqual({
+        telefono: "0800-999-0000",
+        correo: null,
+        web: { texto: "otra.com", enlace: "https://otra.com" },
+      });
+      // Y lo ya emitido sigue sin tocarse.
+      expect(JSON.stringify(await contactoDe(congelado.id))).toBe(JSON.stringify(antes));
     });
 
     it("la nota de crédito se imprime con el número impreso de la factura que corrige", async () => {

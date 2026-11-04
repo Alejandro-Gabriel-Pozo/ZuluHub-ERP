@@ -66,6 +66,19 @@ export async function puedeEmitirNotasDeCredito(contexto: ContextoOperativo): Pr
 }
 
 /**
+ * ¿La persona puede emitir una factura hoy? Depende SOLO de que `permisosDelActor().acciones` incluya `comprobantes.emitir_manual`, la
+ * acción que el guard de emitir exige (`DECLARACIONES_DE_FACTURACION.emitirComprobanteManual`) y la de las dos lecturas de Emitir.
+ * Esa lista sale del mismo cálculo que el guard (`accionesPermitidas`), así que sigue su regla sin repetirla: esa acción es
+ * `CREA_AMPLIA` (`catalogo.ts`), que el guard rechaza con el módulo en solo lectura, y entonces el botón NO se ofrece ahí (a
+ * diferencia de anular, que sí). Si `permisosDelActor` falla, no se ofrece (cierra, no abre). Ocultar no es autorizar: la acción vuelve a
+ * pasar por el guard, dentro de su transacción. Chequeo: `test/web/modulos-de-la-barra.test.ts`.
+ */
+export async function puedeEmitirFacturas(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && permisos.acciones.includes("comprobantes.emitir_manual");
+}
+
+/**
  * Los permisos de la persona, o `null` si no se pudieron leer (un rechazo o una excepción): la barra y el botón de anular no abren
  * nada por las dudas. Una excepción no se traga en silencio: queda en el registro del servidor, con el mismo formato que los demás
  * (`[etiqueta] qué falló (Tipo)`), SOLO el tipo de la falla, nunca su texto (puede traer datos de la base). Previene: que una base
@@ -149,7 +162,8 @@ function ofertaDe(accion: ClaveAccion, permisos: PermisosLeidos): OfertaDeAccion
  * Qué botones de Puntos de venta se ofrecen activos hoy, según lo que el SERVIDOR deja hacer (`permisosDelActor`, una lectura por
  * pedido). «Pasar a producción» (`puntos_de_venta.cambiar_ambiente`) es del módulo `facturacion`, en desarrollo: sale apagado con
  * «Esta función todavía está en desarrollo.»; las demás son de `administracion`. Si no se pudieron leer los permisos, TODO sale apagado
- * con `motivo.sin_permiso` (ante un error o una duda el sistema cierra, `CLAUDE.md`; igual que `puedeEmitirNotasDeCredito` y la barra).
+ * con el genérico de D-82, «Esta acción no está permitida.» (ante un error o una duda el sistema cierra, `CLAUDE.md`; igual que
+ * `puedeEmitirNotasDeCredito` y la barra).
  * Previene: ofrecer un botón que el guard va a rechazar sin saber si la persona puede. Es solo una ayuda: ocultar o apagar no es
  * autorizar, cada acción vuelve a pasar por el guard dentro de su transacción.
  */
@@ -159,7 +173,7 @@ export async function accionesDePuntosDeVenta(
   const permisos = await permisosDeLaPersona(contexto);
   const de = (accion: ClaveAccion): OfertaDeAccion =>
     permisos === null
-      ? { permitida: false, motivo: texto({}, "motivo.sin_permiso") }
+      ? { permitida: false, motivo: texto({}, "fiscal.pantalla.config_pv_accion_no_permitida") }
       : ofertaDe(accion, permisos);
   return {
     agregar: de("puntos_de_venta.crear"),

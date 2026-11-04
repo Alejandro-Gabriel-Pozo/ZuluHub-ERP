@@ -136,6 +136,7 @@ describe("guardarBorradorDeDatosFiscales: lo que la base real no deja armar", ()
       datosFiscales: {
         obtener: () => Promise.resolve(null),
         obtenerBorrador: () => Promise.resolve(null),
+        confirmadas: () => Promise.resolve([]),
         crearBorrador: () =>
           Promise.resolve(
             ok({
@@ -161,6 +162,7 @@ describe("guardarBorradorDeDatosFiscales: lo que la base real no deja armar", ()
       datosFiscales: {
         obtener: () => Promise.resolve(null),
         obtenerBorrador: () => Promise.resolve(null),
+        confirmadas: () => Promise.resolve([]),
         crearBorrador: () =>
           Promise.resolve(ok({ creado: false, valor: borrador({ razonSocial: "Otra SA" }) })),
       } as never,
@@ -175,6 +177,7 @@ describe("guardarBorradorDeDatosFiscales: lo que la base real no deja armar", ()
       datosFiscales: {
         obtener: () => Promise.resolve(null),
         obtenerBorrador: () => Promise.resolve(null),
+        confirmadas: () => Promise.resolve([]),
         crearBorrador: () => Promise.resolve(err("ID_EN_USO")),
       } as never,
     });
@@ -186,6 +189,7 @@ describe("guardarBorradorDeDatosFiscales: lo que la base real no deja armar", ()
       datosFiscales: {
         obtener: () => Promise.resolve(null),
         obtenerBorrador: () => Promise.resolve(null),
+        confirmadas: () => Promise.resolve([]),
         crearBorrador: () =>
           Promise.resolve(
             ok({ creado: false, valor: borrador({ emisorId: "otro-emisor" as never }) }),

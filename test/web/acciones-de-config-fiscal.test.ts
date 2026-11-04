@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
 /**
- * El archivo `"use server"` de Puntos de venta (`apps/web/app/s/app/acciones-de-config-fiscal.ts`): lo que expone a Next. Fino a
+ * El archivo `"use server"` de Puntos de venta y de Datos fiscales (`apps/web/app/s/app/acciones-de-config-fiscal.ts`): lo que expone a Next. Fino a
  * propósito: la directiva va PRIMERO, solo exporta funciones asíncronas y cada una delega en su par de
  * `servidor/configuracion-fiscal.ts` con el pedido tal cual, sin decidir nada.
  */
@@ -18,6 +18,9 @@ vi.mock("../../apps/web/servidor/configuracion-fiscal", () => {
     editarElPuntoDeVenta: delegada("editarElPuntoDeVenta"),
     activarElPuntoDeVenta: delegada("activarElPuntoDeVenta"),
     desactivarElPuntoDeVenta: delegada("desactivarElPuntoDeVenta"),
+    guardarElBorradorDeDatosFiscales: delegada("guardarElBorradorDeDatosFiscales"),
+    empezarLaCorreccionDeDatosFiscales: delegada("empezarLaCorreccionDeDatosFiscales"),
+    confirmarLosDatosFiscales: delegada("confirmarLosDatosFiscales"),
   };
 });
 
@@ -30,14 +33,17 @@ const ESPERADAS = {
   editarPuntoDeVentaAccion: "editarElPuntoDeVenta",
   activarPuntoDeVentaAccion: "activarElPuntoDeVenta",
   desactivarPuntoDeVentaAccion: "desactivarElPuntoDeVenta",
+  guardarBorradorDeDatosFiscalesAccion: "guardarElBorradorDeDatosFiscales",
+  empezarCorreccionDeDatosFiscalesAccion: "empezarLaCorreccionDeDatosFiscales",
+  confirmarDatosFiscalesAccion: "confirmarLosDatosFiscales",
 } as const;
 
-describe("las acciones de servidor de Puntos de venta expuestas a Next", () => {
+describe("las acciones de servidor de Puntos de venta y de Datos fiscales expuestas a Next", () => {
   it("la directiva «use server» es lo primero del archivo", () => {
     expect(readFileSync(ARCHIVO, "utf8").startsWith('"use server";')).toBe(true);
   });
 
-  it("exporta exactamente las cuatro acciones, todas funciones asíncronas", () => {
+  it("exporta exactamente las siete acciones, todas funciones asíncronas", () => {
     expect(Object.keys(acciones).sort()).toEqual(Object.keys(ESPERADAS).sort());
     for (const accion of Object.values(acciones)) {
       expect(accion.constructor.name).toBe("AsyncFunction");

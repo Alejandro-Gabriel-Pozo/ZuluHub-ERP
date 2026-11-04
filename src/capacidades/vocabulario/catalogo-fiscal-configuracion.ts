@@ -1,11 +1,14 @@
 /**
  * Los textos de Configuración fiscal (prefijo `fiscal.pantalla.config_*`): la lista de lo que falta y las pantallas de Puntos de
- * venta (D-43). Viven aparte de `catalogo-fiscal-pantallas.ts` para que ninguno de los dos pase del tope de líneas; `catalogo.ts`
+ * venta y de Datos fiscales (D-43). Viven aparte de `catalogo-fiscal-pantallas.ts` para que ninguno de los dos pase del tope de líneas; `catalogo.ts`
  * los incluye y `catalogo.test.ts` los revisa como a todos. Castellano neutro y en términos del negocio.
  *
  * Una línea de fuente por texto, con el cuestionario real y la pregunta (preguntas hechas al dueño con AskUserQuestion en la sesión
  * web del carril web, 2026-10-29):
- *   Q17 = cuestionario de las 17:45Z: P1 provincias, P2 textos de la lista, P3 textos de Puntos de venta, P4 textos de Datos fiscales.
+ *   Q17 = cuestionario de las 17:45Z: P1 provincias, P2 textos de la lista, P3 textos de Puntos de venta, P4 textos de Datos fiscales
+ *   (el dueño contestó «Aprobar tal cual» a la P4, que listaba, entre otros: los botones «Guardar borrador», «Confirmar» y «Cancelar»;
+ *   los campos «CUIT», «Razón social», «Condición frente al IVA», «Domicilio», «Inicio de actividades» y los mismos de domicilio
+ *   que en Puntos de venta). El rótulo «Domicilio» (no «Domicilio fiscal») es el de D-82 (dueño, 2026-11-03).
  *   QA  = cuestionario A (21:08Z): P1 entrada, P2 sin puntos de venta, P3 rótulos y aviso de pruebas, P4 sucursal cerrada.
  *   QB  = cuestionario B (21:11Z): P1 accesos, P2 el certificado solo informa, P3 certificado sin punto de venta, P4 «Guardando…».
  *   CONTRATO-CONFIG = `facturador-contratos-de-pantalla.md` (D-43 a D-49 y D-60 a D-68); PROTO-PV = prototipo de Puntos de venta,
@@ -24,7 +27,8 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
   "fiscal.pantalla.config_fila_datos_fiscales": { porDefecto: "Datos fiscales" },
   // Dueño, 2026-10-29, cuestionario de las 17:45Z, pregunta 2.
   "fiscal.pantalla.config_puntos_de_venta": { porDefecto: "Puntos de venta" },
-  // Dueño, 2026-10-29, cuestionario de las 17:45Z, pregunta 2; que la fila solo informa y no es un enlace: cuestionario B, pregunta 2.
+  // Dueño, 2026-10-29, cuestionario de las 17:45Z, pregunta 2. La fila es un enlace a la pantalla del certificado: dueño, 2026-11-03,
+  // cuestionario «Certificado», opción B (asistente por ambiente).
   "fiscal.pantalla.config_fila_certificado": { porDefecto: "Certificado de ARCA" },
 
   // Los carteles de la lista (un tema completo no lleva cartel): CONTRATO-CONFIG D-46 y D-64, que el cuestionario de las 17:45Z,
@@ -40,8 +44,10 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
   // CONTRATO-CONFIG D-64; cuestionario de las 17:45Z, pregunta 2.
   "fiscal.pantalla.config_cartel_ninguno_activo": { porDefecto: "Ninguno activo" },
 
-  // Dueño, 2026-10-29, cuestionario de las 17:45Z, pregunta 3.
-  "fiscal.pantalla.config_pv_agregar": { porDefecto: "Agregar punto de venta" },
+  // Dueño, 2026-11-03, D-82, Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md (botón único «Nuevo punto de venta», no «Agregar punto de venta»); también titula la pantalla del alta: título del alta confirmado por el dueño, 2026-11-04, D-96.
+  "fiscal.pantalla.config_pv_agregar": { porDefecto: "Nuevo punto de venta" },
+  // Dueño, 2026-11-03, D-82, Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md (cuando no se pueden verificar los permisos, los botones de Puntos de venta salen apagados con este genérico).
+  "fiscal.pantalla.config_pv_accion_no_permitida": { porDefecto: "Esta acción no está permitida." },
   // Dueño, 2026-10-29, cuestionario de las 17:45Z, pregunta 3.
   "fiscal.pantalla.config_pv_activo": { porDefecto: "Activo" },
   // SUPUESTO del ingeniero: «No activo» suelto, derivado de «00003 · No activo» (`listado_punto_de_venta_no_activo`), que el dueño
@@ -104,6 +110,9 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
   // Dueño, 2026-10-29, cuestionario B (21:11Z), pregunta 4 («Guardando…» en alta, edición y cambio de ambiente).
   // SUPUESTO del ingeniero: el mismo texto también en Activar y Desactivar; el dueño lo aprobó para alta, edición y cambio de
   // ambiente, no para estas dos acciones. Revertirlo es quitar `textoEnviando` de ese botón en `DetalleDelPuntoDeVenta.cliente.tsx`.
+  // Datos fiscales reutiliza esta misma clave para «Guardar borrador» y «Confirmar» (sin clave nueva). SUPUESTO del ingeniero: el dueño
+  // aprobó «Guardando…» para Puntos de venta, no se le preguntó tal cual para Datos fiscales. Revertirlo es quitar `textoEnviando` de ambos
+  // botones en `FormularioDeDatosFiscales.cliente.tsx`.
   "fiscal.pantalla.config_pv_guardando": { porDefecto: "Guardando…" },
   // Dueño, 2026-10-29, cuestionario B (21:11Z), pregunta 1: el pendiente de Inicio que lleva a la lista de Configuración fiscal.
   "fiscal.pantalla.config_pendiente_inicio": {
@@ -116,4 +125,51 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
     porDefecto: "Punto de venta {numero}",
     marcadores: ["numero"],
   },
+  // Datos fiscales (Q17 de 2026-10-29; D-82 y D-88 del 2026-11-03 sacaron la lectura intermedia, «Corregir», «Seguir con el borrador», el aviso
+  // del borrador y «Rige desde…»). Los textos de la condición frente al IVA son los de D-44, en `opciones-de-datos-fiscales.ts`.
+  // «Datos fiscales», el título del formulario, es `config_fila_datos_fiscales` (D-88: la fila de la lista abre directo el formulario).
+  // Dueño, 2026-10-29, Q17 pregunta 4.
+  "fiscal.pantalla.config_df_guardar_borrador": { porDefecto: "Guardar borrador" },
+  // Dueño, 2026-10-29, Q17 pregunta 4 (un solo botón que rige desde ya: D-61). La clave no dice «confirmar»: el catálogo rechaza como
+  // secreto todo nombre que contenga «firma» (`NOMBRE_DE_SECRETO`).
+  "fiscal.pantalla.config_df_que_rija": { porDefecto: "Confirmar" },
+  // Dueño, 2026-10-29, Q17 pregunta 4.
+  "fiscal.pantalla.config_df_cuit": { porDefecto: "CUIT" },
+  // Dueño, 2026-10-29, Q17 pregunta 4.
+  "fiscal.pantalla.config_df_razon_social": { porDefecto: "Razón social" },
+  // Dueño, 2026-10-29, Q17 pregunta 4. También nombra la opción vacía del selector (como «Provincia»), sin texto nuevo.
+  "fiscal.pantalla.config_df_condicion_iva": { porDefecto: "Condición frente al IVA" },
+  // Dueño, 2026-11-03, D-82 (rótulos aprobados).
+  "fiscal.pantalla.config_df_domicilio_fiscal": { porDefecto: "Domicilio" },
+  // Dueño, 2026-10-29, Q17 pregunta 4.
+  "fiscal.pantalla.config_df_inicio_actividades": { porDefecto: "Inicio de actividades" },
+  // Certificado de ARCA (opción B, asistente de 3 pasos por ambiente): los 13 textos nuevos los aprobó el dueño el 2026-11-03 en el
+  // cuestionario «Certificado»; «Guardando…» del certificado reutiliza `config_pv_guardando` (mismo cuestionario). Las claves no dicen
+  // «clave» ni «firma»: el catálogo rechaza como secreto todo nombre que las contenga (`NOMBRE_DE_SECRETO`).
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Generar pedido» (botón y título del paso 1).
+  "fiscal.pantalla.config_cert_generar_pedido": { porDefecto: "Generar pedido" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Alias».
+  "fiscal.pantalla.config_cert_alias": { porDefecto: "Alias" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «CUIT del titular».
+  "fiscal.pantalla.config_cert_cuit_titular": { porDefecto: "CUIT del titular" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Organización».
+  "fiscal.pantalla.config_cert_organizacion": { porDefecto: "Organización" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Titular» (el dato, no el campo).
+  "fiscal.pantalla.config_cert_titular": { porDefecto: "Titular" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Vence» (la fecha va aparte, dd/mm/aaaa).
+  "fiscal.pantalla.config_cert_vence": { porDefecto: "Vence" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Pedido» (título del paso 2).
+  "fiscal.pantalla.config_cert_pedido": { porDefecto: "Pedido" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Copiar».
+  "fiscal.pantalla.config_cert_copiar": { porDefecto: "Copiar" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Descargar».
+  "fiscal.pantalla.config_cert_descargar": { porDefecto: "Descargar" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Certificado» (título del paso 3 y rótulo del campo de pegado).
+  "fiscal.pantalla.config_cert_certificado": { porDefecto: "Certificado" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Cargar certificado».
+  "fiscal.pantalla.config_cert_cargar": { porDefecto: "Cargar certificado" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Reemplazar».
+  "fiscal.pantalla.config_cert_reemplazar": { porDefecto: "Reemplazar" },
+  // Dueño, 2026-11-03, cuestionario «Certificado», textos nuevos: «Siguiente».
+  "fiscal.pantalla.config_cert_siguiente": { porDefecto: "Siguiente" },
 } as const;

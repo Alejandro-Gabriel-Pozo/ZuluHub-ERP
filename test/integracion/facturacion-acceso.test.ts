@@ -370,8 +370,7 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
         const uno = randomUUID();
         const dos = randomUUID();
         const otroAmbiente = randomUUID();
-        for (const id of [uno, dos])
-          acepta(await insertarCertificado(intento(dueno), pedido(x, { id })));
+        acepta(await insertarCertificado(intento(dueno), pedido(x, { id: uno })));
         acepta(
           await insertarCertificado(
             intento(dueno),
@@ -385,6 +384,12 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
           const c = cargar(id, h);
           acepta(await intento(dueno)(c.texto, c.parametros));
         }
+        // Otro pendiente en el mismo ambiente mientras ya hay uno: no (0018); con el primero vigente, sí entra.
+        acepta(await insertarCertificado(intento(dueno), pedido(x, { id: dos })));
+        clave(
+          await insertarCertificado(intento(dueno), pedido(x, { id: randomUUID() })),
+          "certificado_pendiente_uk",
+        );
         // Otro VIGENTE en el mismo ambiente: no.
         const choque = cargar(dos, huellaDe("dos"));
         clave(await intento(dueno)(choque.texto, choque.parametros), "certificado_vigente_uk");

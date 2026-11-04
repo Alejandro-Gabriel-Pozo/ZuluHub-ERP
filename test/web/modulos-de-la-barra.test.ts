@@ -1,4 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { estadoDeModulos } from "../../src/capacidades/modulos/activos";
+import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
+import {
+  PERMISOS_DE_EMPRESA,
+  REGLAS_DE_EMPRESA,
+  type ReglasDeEmpresa,
+} from "../../src/capacidades/permisos/empresa";
+import { accionesPermitidas, exigirAccion } from "../../src/capacidades/permisos/exigir";
+import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "../../src/capacidades/permisos/roles";
+import { DECLARACIONES_DE_FACTURACION } from "../../src/modulos/fiscal/publico";
 import { err, ok } from "../../src/primitivas/resultado/resultado";
 
 /**
@@ -36,6 +46,7 @@ const cargar = (
 ): Promise<{
   destinosDeModulos: (contexto: unknown) => Promise<readonly { clave: string }[]>;
   puedeEmitirNotasDeCredito: (contexto: unknown) => Promise<boolean>;
+  puedeEmitirFacturas: (contexto: unknown) => Promise<boolean>;
 }> => import(/* @vite-ignore */ ruta);
 
 const claves = async (): Promise<string[]> => {
@@ -133,6 +144,107 @@ describe("puedeEmitirNotasDeCredito", () => {
     expect(await puede()).toBe(false);
     mundo.falla = true;
     expect(await puede()).toBe(false);
+  });
+});
+
+/**
+ * El botón de emitir una factura: se ofrece si y solo si el guard dejaría emitir (`comprobantes.emitir_manual`, la acción de
+ * `emitirComprobanteManual`). Previene: ofrecer a quien el servidor va a rechazar, o esconder el botón a quien puede, si la regla
+ * del botón se escribiera aparte de la del guard. Ocultar no autoriza: emitir vuelve a pasar por el guard.
+ */
+describe("puedeEmitirFacturas", () => {
+  const puede = async (): Promise<boolean> => {
+    const { puedeEmitirFacturas } = await cargar(RUTA);
+    return puedeEmitirFacturas({ empresaId: "empresa-1" });
+  };
+  const EMITE = "comprobantes.emitir_manual";
+
+  it("pregunta por la acción que exige el caso de uso de emitir una factura", () => {
+    expect(DECLARACIONES_DE_FACTURACION.emitirComprobanteManual.accion).toBe(EMITE);
+  });
+
+  it("con la acción: sí; la consulta usa el contexto de la empresa", async () => {
+    permisos({ acciones: ["comprobantes.ver", EMITE], activos: ["facturacion"] });
+    expect(await puede()).toBe(true);
+    expect(mundo.contextos).toEqual([{ empresaId: "empresa-1" }]);
+  });
+
+  it("sin la acción: no, aunque pueda emitir notas de crédito y ver comprobantes", async () => {
+    permisos({
+      acciones: ["comprobantes.ver", "notas_de_credito.emitir"],
+      activos: ["facturacion"],
+    });
+    expect(await puede()).toBe(false);
+  });
+
+  it("si no se pudieron leer los permisos (rechazo o excepción): no, cierra", async () => {
+    mundo.respuesta = err({ codigo: "SIN_PERMISO" });
+    expect(await puede()).toBe(false);
+    mundo.falla = true;
+    expect(await puede()).toBe(false);
+  });
+
+  describe("coincide con el guard, con los permisos que calcula el servidor de verdad", () => {
+    // El catálogo real ya trae la facturación disponible (dueño, 2026-11-04). Esta variante la fuerza «en desarrollo» para
+    // seguir probando que un módulo sin construir no ofrece nada aunque esté activo y en el plan (nace cerrado).
+    const EN_DESARROLLO: ReglasDeEmpresa = {
+      catalogo: {
+        ...CATALOGO_DE_MODULOS,
+        facturacion: { ...CATALOGO_DE_MODULOS.facturacion, estado: "en_desarrollo" },
+      },
+      permisos: PERMISOS_DE_EMPRESA,
+    };
+    const ESTADOS = {
+      "módulo activo": { activados: ["facturacion"], habilitados: ["facturacion"] },
+      "módulo en solo lectura (baja de plan)": { activados: ["facturacion"], habilitados: [] },
+      "módulo sin activar": { activados: [], habilitados: ["facturacion"] },
+    };
+    type Caso = {
+      nombre: string;
+      reglas: ReglasDeEmpresa;
+      actor: { rol: RolDeEmpresa | null; activados: string[]; habilitados: string[] };
+    };
+    const casos: Caso[] = [
+      ...ROLES_DE_EMPRESA.flatMap((rol) =>
+        Object.entries(ESTADOS).map(([estado, m]) => ({
+          nombre: `${rol}, ${estado}`,
+          reglas: REGLAS_DE_EMPRESA,
+          actor: { rol, ...m },
+        })),
+      ),
+      {
+        nombre: "sin membresía",
+        reglas: REGLAS_DE_EMPRESA,
+        actor: { rol: null, ...ESTADOS["módulo activo"] },
+      },
+      ...ROLES_DE_EMPRESA.map((rol) => ({
+        nombre: `${rol}, facturación en desarrollo`,
+        reglas: EN_DESARROLLO,
+        actor: { rol, ...ESTADOS["módulo activo"] },
+      })),
+    ];
+
+    it.each(casos)("$nombre", async ({ reglas, actor }) => {
+      const cargado = {
+        rol: actor.rol,
+        modulosActivados: actor.activados,
+        modulosHabilitados: actor.habilitados,
+      };
+      const modulos = estadoDeModulos(reglas.catalogo, actor.activados, actor.habilitados);
+      mundo.respuesta = ok({
+        acciones: accionesPermitidas(reglas, cargado),
+        modulos: {
+          activos: [...modulos.modulosActivos].sort(),
+          enSoloLectura: [...modulos.modulosEnSoloLectura].sort(),
+        },
+      });
+      const guard = await exigirAccion(reglas, EMITE, () => Promise.resolve(cargado));
+      expect(await puede()).toBe(guard.ok);
+    });
+
+    it("el efecto de la acción es el que hace que en solo lectura el botón no se ofrezca", () => {
+      expect(CATALOGO_DE_MODULOS.facturacion.acciones[EMITE].efecto).toBe("CREA_AMPLIA");
+    });
   });
 });
 

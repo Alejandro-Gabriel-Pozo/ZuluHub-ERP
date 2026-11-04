@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
+  entradaDeCargarCertificado,
   entradaDeConfirmarDatosFiscales,
   entradaDeCrearPuntoDeVenta,
   entradaDeEditarPuntoDeVenta,
   entradaDeEmisor,
   entradaDeEmpezarCorreccion,
+  entradaDeGenerarPedidoDeCertificado,
   entradaDeGuardarBorrador,
   entradaDePuntoDeVenta,
 } from "./entradas-de-configuracion-fiscal";
@@ -286,5 +288,97 @@ describe("entradaDeCrearPuntoDeVenta y entradaDeEditarPuntoDeVenta", () => {
       ok: false,
       error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo: "versionEsperada" },
     });
+  });
+});
+
+describe("entradaDeGenerarPedidoDeCertificado y entradaDeCargarCertificado", () => {
+  const pedido = (cambios: Record<string, unknown> = {}) => ({
+    id: id(),
+    emisorId: id(),
+    ambiente: "HOMOLOGACION",
+    alias: "pedernal1",
+    cuitTitular: "20-12345678-6",
+    organizacion: "Zulu SA",
+    ...cambios,
+  });
+
+  it("generar: toma el id de la pantalla, el emisor, el ambiente, el alias, el CUIT del titular y la organización; lo demás se descarta", () => {
+    const p = pedido({ empresaId: id(), creadoPor: id(), clavePrivada: "no", pedidoPem: "no" });
+    expect(entradaDeGenerarPedidoDeCertificado(p)).toEqual({
+      ok: true,
+      valor: {
+        id: p.id,
+        emisorId: p.emisorId,
+        ambiente: "HOMOLOGACION",
+        alias: "pedernal1",
+        cuitTitular: "20-12345678-6",
+        organizacion: "Zulu SA",
+      },
+    });
+  });
+
+  it("generar: el alias, el CUIT y la organización pasan tal cual a la forma del dominio (la regla de negocio la decide el caso de uso)", () => {
+    const r = entradaDeGenerarPedidoDeCertificado(
+      pedido({ alias: "no es válido!", cuitTitular: "abc", organizacion: "" }),
+    );
+    expect(r.ok && [r.valor.alias, r.valor.cuitTitular, r.valor.organizacion]).toEqual([
+      "no es válido!",
+      "abc",
+      "",
+    ]);
+  });
+
+  it.each([
+    ["id", { id: "x" }],
+    ["emisorId", { emisorId: "x" }],
+    ["ambiente", { ambiente: "PRUEBAS" }],
+    ["alias", { alias: 5 }],
+    ["cuitTitular", { cuitTitular: null }],
+    ["organizacion", { organizacion: undefined }],
+  ])("generar: un %s sin la forma pedida es un dato inválido de ese campo", (campo, cambios) => {
+    expect(entradaDeGenerarPedidoDeCertificado(pedido(cambios))).toEqual({
+      ok: false,
+      error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo },
+    });
+  });
+
+  it("generar: sin pedido o con algo que no es un objeto, inválido", () => {
+    for (const crudo of [undefined, null, "x", 3, []]) {
+      expect(entradaDeGenerarPedidoDeCertificado(crudo).ok).toBe(false);
+    }
+  });
+
+  it("cargar: toma el certificado y su pedido; lo demás se descarta", () => {
+    const c = id();
+    expect(
+      entradaDeCargarCertificado({
+        certificadoId: c,
+        certificadoPem: "-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----",
+        empresaId: id(),
+        huellaSha256: "no",
+      }),
+    ).toEqual({
+      ok: true,
+      valor: {
+        certificadoId: c,
+        certificadoPem: "-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----",
+      },
+    });
+  });
+
+  it("cargar: lo que no es texto, o es enorme, o no trae el pedido, es inválido y señala el campo; nunca repite lo recibido", () => {
+    const c = id();
+    const mal = (crudo: unknown, campo: string) =>
+      expect(entradaDeCargarCertificado(crudo)).toEqual({
+        ok: false,
+        error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo },
+      });
+    mal({ certificadoId: "x", certificadoPem: "a" }, "certificadoId");
+    mal({ certificadoId: c, certificadoPem: 7 }, "certificadoPem");
+    mal({ certificadoId: c }, "certificadoPem");
+    mal({ certificadoId: c, certificadoPem: "a".repeat(32_769) }, "certificadoPem");
+    expect(
+      entradaDeCargarCertificado({ certificadoId: c, certificadoPem: "a".repeat(32_768) }).ok,
+    ).toBe(true);
   });
 });

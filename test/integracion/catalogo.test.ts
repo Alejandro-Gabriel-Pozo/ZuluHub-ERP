@@ -433,6 +433,8 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "pedernal_app:sucursal.activa",
           "pedernal_app:sucursal.hora_de_corte", // 0007
           "pedernal_app:sucursal.nombre",
+          // 0019: el contacto opcional de la sucursal (nada sobre el contacto congelado del comprobante: lo copia la base)
+          ...["telefono", "correo", "web"].map((c) => `pedernal_app:sucursal.${c}`),
           "pedernal_app:traspaso_gerencia.estado",
           "pedernal_app:traspaso_gerencia.motivo",
           "pedernal_app:traspaso_gerencia.resuelto_en",
@@ -770,6 +772,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "persona.email",
           "sucursal.empresa_id",
           "sucursal.nombre",
+          ...["telefono", "correo", "web"].map((c) => `sucursal.${c}`), // 0019
           "trabajo.empresa_id",
           "trabajo.tipo",
           "trabajo.datos",

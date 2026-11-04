@@ -67,7 +67,8 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
   "fiscal.pantalla.rotulo_total": { porDefecto: "Total" },
 
   // El cliente: el consumidor final (PROTO) y el tipo de documento (GUIA: «CUIT o DNI»; CUIL, CDI y Pasaporte: aprobados por
-  // el backend en su mensaje del 2026-10-28).
+  // el backend en su mensaje del 2026-10-28). Los cinco nombres coinciden letra por letra con `Desc` de la grabación ARCA
+  // `test/utilidades/arca-grabaciones/corrida1/012-FEParamGetTiposDoc-respuesta-http200.xml` (CUIT 80, CUIL 86, CDI 87, DNI 96, Pasaporte 94).
   "fiscal.pantalla.consumidor_final": { porDefecto: "Consumidor final" },
   "fiscal.pantalla.documento": { porDefecto: "{tipo} {numero}", marcadores: ["numero", "tipo"] },
   "fiscal.pantalla.documento_cuit": { porDefecto: "CUIT" },
@@ -81,6 +82,8 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
     porDefecto: "{cantidad} × {precio}",
     marcadores: ["cantidad", "precio"],
   },
+  // La alícuota ({alicuota}: 21, 10,5, 27, 5, 2,5, 0) sale de `Desc` de la grabación ARCA `corrida1/014-FEParamGetTiposIva-respuesta-http200.xml`
+  // («21%», «10.5%», «27%», «5%», «2.5%», «0%»): el número coincide; el formato es-AR (coma, espacio antes de «%») es de esta pantalla.
   "fiscal.pantalla.renglon_iva": { porDefecto: "IVA {alicuota} %", marcadores: ["alicuota"] },
 
   // Lo ya anulado: CONTRATO D-29 «Ya anulado con notas de crédito» y CONTRATO «Se muestra "Sin notas"».
@@ -250,6 +253,7 @@ export const TEXTOS_DE_FISCAL_PANTALLAS = {
   // Aprobados por el dueño el 2026-10-29 (cuestionario en la sesión web del carril web): el nombre de la fila de una alícuota sin
   // IVA, «Exento» y «No gravado» (una fila por tipo); el aviso de la letra C, «El importe supera lo facturado.» (sin bloqueo, D-72);
   // y, al anular una nota de débito, el rótulo «Total de la nota de débito» (en factura sigue «Total de la factura»).
+  // «Exento» y «No gravado» NO figuran en la grabación `014-FEParamGetTiposIva` (solo trae 0, 10.5, 21, 27, 5 y 2.5 %): su fuente es esta aprobación.
   "fiscal.pantalla.anular_alicuota_exento": { porDefecto: "Exento" },
   "fiscal.pantalla.anular_alicuota_no_gravado": { porDefecto: "No gravado" },
   "fiscal.pantalla.anular_aviso_supera_c": {

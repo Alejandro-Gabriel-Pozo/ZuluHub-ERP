@@ -175,8 +175,8 @@ export type TxDeApp = Readonly<{
   certificados: RepositorioDeCertificados;
   accesos: RepositorioDeAccesos;
   /**
-   * La marca con que se imprime un comprobante (solo la pide `modeloDeImpresion`). TODAVÍA NO ESTÁ CABLEADA: la
-   * impresión es F9 y la web no ofrece esa consulta. Falla fuerte antes que imprimir sin marca en silencio.
+   * La marca con que se imprime un comprobante (solo la pide `modeloDeImpresion`). Hoy es `MARCA_DE_IMPRESION_VACIA` para todas las
+   * empresas (D-112); ver la constante.
    */
   marca: Readonly<{ deLaEmpresa(empresa: EmpresaId): Promise<MarcaParaImprimir> }>;
   /** El nivel vigente de cada control (permitir, avisar, bloquear), leído en la misma transacción. */
@@ -226,10 +226,21 @@ export type OpcionesDeConexiones = Readonly<{
   registrarDeIngreso?: (detalle: string) => void;
 }>;
 
-/** La marca de impresión no está cableada (F9): pedirla falla fuerte, nunca imprime sin marca en silencio. */
-const marcaSinCablear: TxDeApp["marca"] = {
-  deLaEmpresa: () =>
-    Promise.reject(new Error("la marca para imprimir no está cableada todavía (F9, impresión)")),
+/**
+ * SUPUESTO provisorio (D-112, dueño, 2026-11-04): la primera entrega imprime SIN logo, SIN color y SIN nombre de fantasía (blanco y negro): ese
+ * nombre no existe como dato por empresa. La marca de impresión es vacía para todas las empresas y no lee la base (nada de la marca del
+ * producto, p. ej. Pedernal, llega a la hoja). Previene: que la ruta de impresión falle siempre mientras el dueño no decide de dónde sale el
+ * nombre comercial de la empresa o la sucursal. Chequeo: `test/integracion/fiscal-modelo-de-impresion-web.test.ts`.
+ * Cómo revertir: reemplazar `deLaEmpresa` por una lectura real de `marcas` (en `src/modulos/marcas/persistencia`) cuando esa decisión exista;
+ * el modelo y la consulta no cambian (el tipo `MarcaParaImprimir` ya admite los tres campos).
+ */
+const MARCA_DE_IMPRESION_VACIA: MarcaParaImprimir = {
+  nombreDeFantasia: null,
+  logoUrl: null,
+  colorPrincipal: null,
+};
+const marcaDeImpresion: TxDeApp["marca"] = {
+  deLaEmpresa: () => Promise.resolve(MARCA_DE_IMPRESION_VACIA),
 };
 
 export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones {
@@ -295,7 +306,7 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
           lecturasDeCertificados: crearLecturasDeCertificados(db.withTables<FiscalDb>()),
           certificados: crearRepositorioDeCertificados(db.withTables<FiscalDb>()),
           accesos: crearRepositorioDeAccesos(db.withTables<FiscalDb>()),
-          marca: marcaSinCablear,
+          marca: marcaDeImpresion,
           niveles: crearNivelesDeControlDePostgres(db.withTables<NivelesDeControlDb>()),
           sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
         }),

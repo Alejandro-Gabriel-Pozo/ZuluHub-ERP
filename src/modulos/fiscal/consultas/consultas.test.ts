@@ -4,6 +4,7 @@ import {
   facturaArmada,
   fecha,
   renglon,
+  SIN_CONTACTO,
 } from "../../../../test/utilidades/facturacion";
 import { CUIT_B, EMPRESA, OTRA_EMPRESA } from "../../../../test/utilidades/fiscal";
 import { MARCA_PRINCIPAL_DE_PRUEBA } from "../../../../test/utilidades/marcas";
@@ -119,6 +120,7 @@ function guardado(cambios: Partial<ComprobanteGuardado> = {}): ComprobanteGuarda
     motivoDeDescarte: null,
     huella: "huella-interna",
     versionDeRepresentacion: 1,
+    contacto: SIN_CONTACTO,
     creadoPor: personaId("p-1"),
     creadoEn: new Date("2026-10-13T14:59:00.000Z"),
     version: 4,
@@ -259,6 +261,9 @@ function armar(datos: Datos = {}) {
     },
     puntosDeVenta: {
       listarDelEmisor: () => Promise.reject(new Error("estas consultas no leen puntos de venta")),
+      // Los de Emitir (D-86) tienen sus pruebas en `lecturas-para-emitir.test.ts`: acá nadie los toca.
+      listarDeLaSucursal: () =>
+        Promise.reject(new Error("estas consultas no leen puntos de venta")),
     },
     lecturasDeCertificados: {
       actualesDelEmisor: () => Promise.reject(new Error("estas consultas no leen certificados")),
@@ -1233,7 +1238,7 @@ describe("modeloDeImpresion (la consulta)", () => {
   });
 
   it("una versión de representación que no se sabe dibujar sale como error del modelo", async () => {
-    const { consultas } = armar({ comprobante: guardado({ versionDeRepresentacion: 2 }) });
+    const { consultas } = armar({ comprobante: guardado({ versionDeRepresentacion: 3 }) });
     expect(await consultas.modeloDeImpresion(contexto(), { comprobanteId: ID })).toEqual({
       ok: false,
       error: "VERSION_DE_REPRESENTACION_DESCONOCIDA",
@@ -1269,5 +1274,11 @@ describe("paraImprimir", () => {
     expect(p.emisor).toBe(c.emisor);
     expect(p.desglose).toBe(c.desglose);
     expect(p.renglones).toBe(c.renglones);
+  });
+
+  it("toma el modo de precio que guardó el comprobante", () => {
+    for (const modoDePrecio of ["IVA_INCLUIDO", "IVA_DISCRIMINADO"] as const) {
+      expect(paraImprimir(guardado({ modoDePrecio })).modoDePrecio).toBe(modoDePrecio);
+    }
   });
 });

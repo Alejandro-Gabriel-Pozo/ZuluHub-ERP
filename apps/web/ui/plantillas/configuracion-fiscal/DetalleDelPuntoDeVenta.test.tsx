@@ -6,7 +6,13 @@ import {
   type Respuesta,
 } from "../../../../../src/capacidades/experiencia/respuesta";
 import { tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
-import { TODO_PERMITIDO, enArmazon, legibleYTocable, ventana } from "./ayudas-de-pruebas";
+import {
+  DOMICILIO_DE_PRUEBA,
+  TODO_PERMITIDO,
+  enArmazon,
+  legibleYTocable,
+  ventana,
+} from "./ayudas-de-pruebas";
 import { DetalleDelPuntoDeVenta } from "./DetalleDelPuntoDeVenta.cliente";
 import { armarElPuntoDeVenta, type PuntoParaConfigurar } from "./modelo-de-puntos-de-venta";
 
@@ -36,6 +42,7 @@ const PUNTO: PuntoParaConfigurar = {
   ambiente: "HOMOLOGACION",
   sucursal: { id: "s-norte", nombre: "Sucursal Norte", activa: true },
   tieneDomicilio: true,
+  domicilio: DOMICILIO_DE_PRUEBA,
   hayNumerosUsados: false,
   version: 7,
 };
@@ -157,7 +164,7 @@ describe("activar y desactivar", () => {
       ok: false,
       error: { ...errorDeCodigo("FISCAL_PUNTO_DE_VENTA_SIN_DOMICILIO"), campo: "domicilio" },
     });
-    await render(pantalla({ activo: false, tieneDomicilio: false }));
+    await render(pantalla({ activo: false, tieneDomicilio: false, domicilio: null }));
     tocar(page.getByRole("button", { name: "Activar" }));
     await expect.element(page.getByText("Para activarlo, cargá un domicilio.")).toBeVisible();
     expect(document.body.textContent).not.toContain("FISCAL_PUNTO_DE_VENTA_SIN_DOMICILIO");

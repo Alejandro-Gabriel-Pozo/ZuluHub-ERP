@@ -6,13 +6,16 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 import type { Dato } from "../../../puertos/sin-secretos";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import {
+  borradorDesdeConfirmada,
   editarBorrador,
   nuevoBorrador,
   type CambiosDeBorrador,
   type DatosFiscalesBorrador,
+  type DatosFiscalesConfirmados,
   type ErrorDeDatosFiscales,
 } from "../dominio/datos-fiscales";
 import { esUuid, versionId, type EmisorId, type VersionId } from "../dominio/identificadores";
+import { versionVigente } from "../dominio/vigencia";
 import { traducirErroresDeFiscal } from "../persistencia/traducir";
 import { empresaOpera } from "./comun";
 import {
@@ -22,7 +25,10 @@ import {
   type DomicilioDeEntrada,
   type ErrorDeDomicilioDeEntrada,
 } from "./comun-de-configuracion";
-import type { DependenciasDeConfiguracionFiscal } from "./contrato-de-configuracion";
+import type {
+  DependenciasDeConfiguracionFiscal,
+  TxDeConfiguracionFiscal,
+} from "./contrato-de-configuracion";
 import { DECLARACIONES_DE_CONFIGURACION } from "./declaraciones-de-configuracion";
 
 export type EntradaDeGuardarBorradorDeDatosFiscales = Readonly<{
@@ -100,19 +106,56 @@ const diferenciaDe = (antes: DatosFiscalesBorrador, despues: DatosFiscalesBorrad
   cambiosParaAuditar(contenidoDelBorrador(antes), contenidoDelBorrador(despues));
 
 /**
+ * El guardado que llega sobre el `borradorId` de una versión YA confirmada de este emisor. Es la repetición (el
+ * cliente reintenta un guardado cuya confirmación ya se hizo) solo si pedir esto deja la versión confirmada tal
+ * cual, domicilio incluido: éxito sin escribir ni auditar, con la versión que tiene. Si pide algo distinto (o algo
+ * que no es válido), es el error de siempre: una versión confirmada no se cambia. La versión esperada no se mira,
+ * igual que en la repetición sobre un borrador abierto.
+ */
+async function guardarSobreLoConfirmado(
+  tx: Pick<TxDeConfiguracionFiscal, "domicilios">,
+  empresaId: Parameters<typeof dejarListoElDomicilio>[1],
+  confirmada: DatosFiscalesConfirmados,
+  entrada: EntradaDeGuardarBorradorDeDatosFiscales,
+): Promise<Resultado<SalidaDeGuardarBorradorDeDatosFiscales, ErrorPropioAlGuardarElBorrador>> {
+  const cambiaLaVersion = err("VERSION_CONFIRMADA_INMUTABLE" as const);
+  // Otro domicilio es otro contenido (y no se inserta nada para comprobarlo).
+  if (entrada.domicilio !== undefined && entrada.domicilio.id !== confirmada.domicilioFiscalId) {
+    return cambiaLaVersion;
+  }
+  if (entrada.domicilio !== undefined) {
+    // Mismo `id`: si es el mismo contenido no escribe; si no, la base lo rechaza con `ID_EN_USO`.
+    const domicilio = await dejarListoElDomicilio(tx, empresaId, entrada.domicilio);
+    if (!domicilio.ok) return cambiaLaVersion;
+  }
+  const base = borradorDesdeConfirmada(confirmada, {
+    id: confirmada.id,
+    creadoPor: confirmada.confirmadaPor,
+  });
+  const editado = editarBorrador(base, entrada.cambios);
+  if (!editado.ok || Object.keys(diferenciaDe(base, editado.valor).despues).length > 0) {
+    return cambiaLaVersion;
+  }
+  return ok({ borradorId: confirmada.id, version: confirmada.version, yaEstaba: true });
+}
+
+/**
  * Guardar el borrador de los datos fiscales de un emisor (spec H7 fiscal §C y §G.2), con su domicilio fiscal si
  * es nuevo. Solo el gerente (`datos_fiscales.editar`). Contexto OPERATIVO con persona. En UNA transacción
  * serializable: el guard primero, la empresa opera, la forma de los identificadores, el emisor existe (es de esta
  * empresa) y entonces:
  *
  *  - no hay borrador y el `borradorId` está libre → se crea (con el domicilio nuevo, si viene) y se audita
- *    `DATOS_FISCALES_BORRADOR_GUARDADO`;
+ *    `DATOS_FISCALES_BORRADOR_GUARDADO`; si el emisor ya tiene datos vigentes, el borrador parte de ellos (todo lo que
+ *    el pedido no cambia queda como está en la vigente, Ingresos Brutos incluido), igual que al empezar una corrección;
  *  - hay borrador con ese `borradorId` → si lo pedido deja el mismo contenido, es la repetición: éxito sin
  *    escribir (aunque la versión esperada haya quedado vieja); si no, la versión esperada tiene que ser la
  *    vigente (`VERSION_DESACTUALIZADA`) y el cambio se guarda y se audita con el antes y el después;
  *  - hay un borrador con OTRO `borradorId` (lo empezó otra pestaña u otro dispositivo) → `YA_HAY_BORRADOR`: se vuelve a abrir el que
  *    existe, no se pisa;
- *  - el `borradorId` es el de una versión ya confirmada → `VERSION_CONFIRMADA_INMUTABLE`.
+ *  - el `borradorId` es el de una versión ya confirmada de este emisor → si lo pedido deja esa versión tal cual, es la
+ *    repetición de un guardado cuya confirmación ya se hizo (se cortó la red al volver la respuesta): «ya estaba», con
+ *    la versión confirmada, sin escribir ni auditar; si pide algo distinto, `VERSION_CONFIRMADA_INMUTABLE`.
  *
  * El domicilio, el borrador y la auditoría se confirman juntos o ninguno. Dos guardados a la vez (dos pestañas del
  * mismo gerente, o un doble clic): la serializable aborta a uno y su reintento ve lo del otro (`YA_HAY_BORRADOR`,
@@ -155,7 +198,11 @@ export function armarGuardarBorradorDeDatosFiscales({
         if (existente !== null && existente.id !== borradorId) return err("YA_HAY_BORRADOR");
         if (existente === null) {
           const previa = await tx.datosFiscales.obtener(empresaId, borradorId);
-          if (previa?.estado === "CONFIRMADA") return err("VERSION_CONFIRMADA_INMUTABLE");
+          if (previa?.estado === "CONFIRMADA") {
+            return previa.confirmada.emisorId === emisor.id
+              ? guardarSobreLoConfirmado(tx, empresaId, previa.confirmada, entrada)
+              : err("VERSION_CONFIRMADA_INMUTABLE");
+          }
         }
 
         const domicilio =
@@ -164,9 +211,20 @@ export function armarGuardarBorradorDeDatosFiscales({
             : await dejarListoElDomicilio(tx, empresaId, entrada.domicilio);
         if (domicilio !== null && !domicilio.ok) return domicilio;
 
+        // El primero de un emisor que ya tiene datos vigentes parte de ellos (como `empezarCorreccionDeDatosFiscales`): lo
+        // que la pantalla no edita (Ingresos Brutos, D-45) no se pierde al confirmar.
+        const vigente =
+          existente === null
+            ? versionVigente(
+                await tx.datosFiscales.confirmadas(empresaId, emisor.id),
+                contexto.ahora,
+              )
+            : null;
         const base =
           existente ??
-          nuevoBorrador({ id: borradorId, empresaId, emisorId: emisor.id, creadoPor: persona });
+          (vigente === null
+            ? nuevoBorrador({ id: borradorId, empresaId, emisorId: emisor.id, creadoPor: persona })
+            : borradorDesdeConfirmada(vigente, { id: borradorId, creadoPor: persona }));
         const editado = editarBorrador(base, {
           ...entrada.cambios,
           ...(domicilio === null ? {} : { domicilioFiscalId: domicilio.valor }),

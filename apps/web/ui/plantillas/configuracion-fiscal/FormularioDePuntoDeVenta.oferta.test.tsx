@@ -41,7 +41,7 @@ describe("«Guardar» según lo que el servidor deja hacer", () => {
   it("apagado con su motivo a la vista y asociado; ni tocarlo ni Enter en un campo envían nada", async () => {
     await ventana(390);
     await render(
-      enArmazon("Agregar punto de venta", formulario({ permitida: false, motivo: SIN_PERMISO })),
+      enArmazon("Nuevo punto de venta", formulario({ permitida: false, motivo: SIN_PERMISO })),
     );
     const guardarBoton = page.getByRole("button", { name: "Guardar" });
     await expect.element(guardarBoton).toBeDisabled();

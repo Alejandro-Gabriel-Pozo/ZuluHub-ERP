@@ -1,13 +1,20 @@
 import type { EmpresaId, SucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { horaDelDiaDesdeTexto, type HoraDelDia } from "../../../primitivas/tiempo/hora-del-dia";
+import {
+  contactoQueCambia,
+  type CambiosDeContacto,
+  type ContactoDeSucursal,
+  type ErrorDeContactoDeSucursal,
+} from "./contacto-de-sucursal";
 
 /**
  * Sucursal: un local de la empresa (H6, especificación §B.1). Puro: sin reloj ni azar. Una sucursal
  * nunca se borra: se desactiva, y una desactivada conserva su nombre (no se puede crear otra igual:
  * se la reactiva). La sucursal no tiene zona horaria propia: rige la de la empresa. Sí tiene su hora de
  * corte de la jornada (`horaDeCorte`, `00:00` por defecto): con la zona de la empresa fija la fecha de
- * negocio de caja, ventas y stock (conciliación §3.2).
+ * negocio de caja, ventas y stock (conciliación §3.2). Su `contacto` (teléfono, correo y web, los tres opcionales) lo
+ * imprime la factura (D-98).
  */
 export type Sucursal = Readonly<{
   id: SucursalId;
@@ -15,6 +22,7 @@ export type Sucursal = Readonly<{
   nombre: string;
   activa: boolean;
   horaDeCorte: HoraDelDia;
+  contacto: ContactoDeSucursal;
   version: number;
 }>;
 
@@ -27,6 +35,7 @@ export type ErrorDeHoraDeCorte = "HORA_DE_CORTE_INVALIDA";
 export type ErrorDeSucursal =
   | ErrorDeNombreDeSucursal
   | ErrorDeHoraDeCorte
+  | ErrorDeContactoDeSucursal
   | "SUCURSAL_NO_ENCONTRADA"
   | "VERSION_DESACTUALIZADA"
   | "ULTIMA_SUCURSAL_ACTIVA"
@@ -111,22 +120,29 @@ export function decidirAltaConNombreOcupado(
 
 export type DecisionDeEdicion = "SIN_CAMBIOS" | "EDITAR";
 
+/** Lo que pide una edición: el nombre y, solo si se piden, la hora de corte y los datos de contacto (ausente = no se toca). */
+export type CambiosPedidosDeSucursal = Readonly<{
+  nombre: string;
+  horaDeCorte?: HoraDelDia | undefined;
+  contacto?: CambiosDeContacto | undefined;
+}>;
+
 /**
- * Editar el nombre y, si se pide, la hora de corte, con control de versión. Si lo pedido ya es lo que
- * hay (el nombre igual y la hora de corte omitida o igual) no hay nada que hacer, aunque la versión
- * sea otra: así repetir una edición que ya se aplicó (un corte de conexión) da el mismo resultado y no
- * un conflicto. Si no, la versión esperada tiene que ser la vigente. `horaDeCorte` omitida no la toca.
+ * Editar el nombre y, si se piden, la hora de corte y el contacto, con control de versión. Si lo pedido ya es lo que
+ * hay (el nombre igual y cada dato pedido igual al vigente) no hay nada que hacer, aunque la versión sea otra: así
+ * repetir una edición que ya se aplicó (un corte de conexión) da el mismo resultado y no un conflicto. Si no, la
+ * versión esperada tiene que ser la vigente. Un dato omitido no se toca.
  */
 export function decidirEdicion(
   sucursal: Sucursal | null,
   versionEsperada: number,
-  nombre: string,
-  horaDeCorte?: HoraDelDia,
+  cambios: CambiosPedidosDeSucursal,
 ): Resultado<DecisionDeEdicion, ErrorAlEditar> {
   if (sucursal === null) return err("SUCURSAL_NO_ENCONTRADA");
   if (
-    sucursal.nombre === nombre &&
-    (horaDeCorte === undefined || sucursal.horaDeCorte === horaDeCorte)
+    sucursal.nombre === cambios.nombre &&
+    (cambios.horaDeCorte === undefined || sucursal.horaDeCorte === cambios.horaDeCorte) &&
+    Object.keys(contactoQueCambia(sucursal.contacto, cambios.contacto ?? {})).length === 0
   ) {
     return ok("SIN_CAMBIOS");
   }

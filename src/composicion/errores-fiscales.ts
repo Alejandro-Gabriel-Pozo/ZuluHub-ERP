@@ -14,16 +14,20 @@ import type {
   ErrorAlEditarPuntoDeVenta,
   ErrorAlEmitir,
   ErrorAlGuardarElBorrador,
-  ErrorAlListarComprobantes,
   ErrorAlReintentarComprobante,
   ErrorAlResincronizarSerie,
-  ErrorAlVerComprobante,
   MensajeDeIntento,
   CasosDeUsoDeConfiguracionFiscal,
 } from "../modulos/fiscal/publico";
 import { err, type Resultado } from "../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../puertos/transacciones";
 import { aRespuesta, type DependenciasDeRespuesta } from "./a-respuesta";
+import { ERRORES_DE_IMPRESION, type ErrorAlLeerComprobantes } from "./errores-fiscales-de-lectura";
+import {
+  ERRORES_DE_CERTIFICADO,
+  SIN_TEXTO_APROBADO,
+  type ErrorDeCertificado,
+} from "./errores-fiscales-de-certificado";
 
 /**
  * El traductor de los errores del facturador a la forma pública (ADR-016): de lo que devuelven los casos de uso y
@@ -58,8 +62,7 @@ type ErrorDeNegocioFiscal = Exclude<
   | ErrorAlReintentarComprobante
   | ErrorAlResincronizarSerie
   | ErrorAlCambiarAmbiente
-  | ErrorAlListarComprobantes
-  | ErrorAlVerComprobante
+  | ErrorAlLeerComprobantes
   // La configuración fiscal (D-43): datos fiscales, puntos de venta y las consultas de esas pantallas (`EMISOR_NO_ENCONTRADO`).
   | ErrorAlGuardarElBorrador
   | ErrorAlEmpezarLaCorreccion
@@ -67,17 +70,11 @@ type ErrorDeNegocioFiscal = Exclude<
   | ErrorAlCrearPuntoDeVenta
   | ErrorAlEditarPuntoDeVenta
   | ErrorAlActivarPuntoDeVenta
-  | ErrorAlDesactivarPuntoDeVenta,
+  | ErrorAlDesactivarPuntoDeVenta
+  // Generar el pedido de un certificado y cargar el que devolvió ARCA (los textos sin aprobar: `errores-fiscales-de-certificado.ts`).
+  | ErrorDeCertificado,
   MotivoDeRechazo | EmpresaNoOpera | ErrorDePersistencia
 >;
-
-/**
- * Un error de negocio de la configuración fiscal que NO tiene todavía un texto aprobado por el dueño (la regla del repositorio:
- * sin fuente verificable no se agrega un texto). Hasta que lo tenga sale como un error inesperado, con su referencia `PD-…`, y el
- * código queda en el registro del servidor (soporte lo ve ahí). Sumarle su código público es: una línea acá, su clave en
- * `respuesta-fiscal.ts` y su texto en el catálogo. Previene: inventar el cartel que ve el cliente por un error que no se decidió.
- */
-const SIN_TEXTO_APROBADO = "SIN_TEXTO_APROBADO";
 
 type ErrorTextual = Extract<ErrorDeNegocioFiscal, string>;
 type ErrorConCodigo = Extract<ErrorDeNegocioFiscal, Readonly<{ codigo: string }>>;
@@ -165,8 +162,8 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<
   // aprobado: `error.fiscal_version_desactualizada`, sin texto nuevo). `YA_HAY_BORRADOR` (otra pestaña creó el borrador mientras esta
   // pantalla seguía sin él) sale así; la pantalla se actualiza y abre el borrador que existe.
   YA_HAY_BORRADOR: "FISCAL_VERSION_DESACTUALIZADA",
-  // Decisión del ingeniero, misma fuente (D-68) y mismo texto aprobado: guardar sobre el `borradorId` de una versión que otra pantalla ya
-  // confirmó es, para la persona, la misma situación (su pantalla tenía datos viejos). Actualiza y ve lo vigente.
+  // Decisión del ingeniero, misma fuente (D-68) y mismo texto aprobado: guardar con OTROS datos sobre el `borradorId` de una versión que otra
+  // pantalla ya confirmó es, para la persona, la misma situación (su pantalla tenía datos viejos). Actualiza y ve lo vigente.
   VERSION_CONFIRMADA_INMUTABLE: "FISCAL_VERSION_DESACTUALIZADA",
   // Sin texto aprobado, y así debe seguir: en el uso normal no ocurren (la pantalla solo ofrece ids que existen y son de la empresa), así
   // que si pasan es un defecto o un pedido armado a mano y salen como error inesperado con su referencia `PD-…`.
@@ -174,9 +171,12 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<
   DATOS_FISCALES_NO_ENCONTRADOS: SIN_TEXTO_APROBADO,
   DOMICILIO_NO_ENCONTRADO: SIN_TEXTO_APROBADO,
   ID_EN_USO: SIN_TEXTO_APROBADO,
+  PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA", // D-77: texto del 10005 (catalogo-fiscal.ts)
   // La pantalla solo ofrece las sucursales de la empresa: un id ajeno es un pedido armado a mano, y decir que existe en otra
   // empresa sería un oráculo. La base lo rechaza por la referencia, no por una regla que la persona pueda corregir.
   SUCURSAL_DE_OTRA_EMPRESA: null,
+  ...ERRORES_DE_CERTIFICADO,
+  ...ERRORES_DE_IMPRESION,
 };
 
 /** Los códigos de la configuración fiscal que todavía salen sin texto propio: lo que hay que preguntarle al dueño. */
@@ -185,7 +185,6 @@ export const CODIGOS_DE_CONFIGURACION_SIN_TEXTO: readonly string[] = Object.entr
 )
   .filter(([, codigo]) => codigo === SIN_TEXTO_APROBADO)
   .map(([error]) => error);
-
 /** El campo del formulario al que apunta cada error de dato (el nombre que usa el pedido, no uno interno). */
 const CAMPO_DE_CRITERIO: Readonly<Partial<Record<ErrorTextual, string>>> = {
   LIMITE_INVALIDO: "limite",

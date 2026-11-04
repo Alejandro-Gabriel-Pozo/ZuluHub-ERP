@@ -86,7 +86,15 @@ export function FormularioDePuntoDeVenta({
   }
 
   // Tras 3 intentos inciertos (límite de `useEnvioConClave`) el formulario queda en «Verificando…», bloqueado: ver `useEnvioFijado`.
-  const { envio, enviarCon, referenciaIncierta } = useEnvioFijado<object, unknown>(guardar);
+  // El domicilio es de solo inserción: tras un guardado exitoso el id usado no se reutiliza (otro contenido con el mismo id es
+  // `ID_EN_USO`), igual que en Datos fiscales. Lo fijado del envío en curso no cambia; el id nuevo es para el próximo envío.
+  const { envio, enviarCon, referenciaIncierta } = useEnvioFijado<object, unknown>(
+    async (pedido) => {
+      const respuesta = await guardar(pedido);
+      if (respuesta.ok) setIds((previos) => ({ ...previos, domicilioId: crypto.randomUUID() }));
+      return respuesta;
+    },
+  );
   const estado = envio.estado;
   const incierto = estado.tipo === "incierto";
   const bloqueado = envio.enCurso || incierto;

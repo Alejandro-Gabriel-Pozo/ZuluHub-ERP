@@ -113,6 +113,17 @@ const estado = (cambios: Record<string, unknown> = {}) =>
     certificados: [],
     ...cambios,
   });
+const DOMICILIO = {
+  id: "3e2f4a5b-6c7d-4e8f-9a0b-1c2d3e4f5a6b",
+  calle: "Mitre",
+  numero: "55",
+  piso: "2",
+  departamento: "B",
+  localidad: "Rosario",
+  provincia: "AR-S",
+  codigoPostal: "2000",
+} as const;
+
 const PV = (id: string, numero: number, cambios: Record<string, unknown> = {}) => ({
   id,
   numero,
@@ -120,6 +131,7 @@ const PV = (id: string, numero: number, cambios: Record<string, unknown> = {}) =
   ambiente: "HOMOLOGACION",
   sucursal: { id: "s-norte", nombre: "Sucursal Norte", activa: true },
   tieneDomicilio: true,
+  domicilio: DOMICILIO,
   hayNumerosUsados: false,
   version: 3,
   ...cambios,
@@ -162,13 +174,13 @@ describe("la página «Configuración fiscal» (la lista de lo que falta)", () =
     expect(t).toContain("Certificado de ARCA");
   });
 
-  it("solo la fila de puntos de venta es un enlace; la de datos fiscales (su ruta va en otro PR) y la del certificado no", async () => {
+  it("las tres filas son enlaces, también la del certificado", async () => {
     const marcado = await html("/page");
-    // Vuelve a ser enlace cuando exista la ruta de Datos fiscales.
-    expect(marcado).not.toContain("/configuracion-fiscal/datos-fiscales");
-    expect(marcado).not.toMatch(/<a[^>]*>[^<]*<span[^>]*>Datos fiscales/);
+    expect(marcado).toContain('href="/configuracion-fiscal/datos-fiscales"');
+    expect(marcado).toMatch(/<a[^>]*>[^<]*<span[^>]*>Datos fiscales/);
     expect(marcado).toContain('href="/configuracion-fiscal/puntos-de-venta"');
-    expect(marcado).not.toMatch(/<a[^>]*>[^<]*<span[^>]*>Certificado de ARCA/);
+    expect(marcado).toContain('href="/configuracion-fiscal/certificado-de-arca"');
+    expect(marcado).toMatch(/<a[^>]*>[^<]*<span[^>]*>Certificado de ARCA/);
     expect(marcado.match(/<li>/g)).toHaveLength(3);
   });
 
@@ -212,7 +224,7 @@ describe("la página «Configuración fiscal» (la lista de lo que falta)", () =
 });
 
 describe("la página «Puntos de venta»", () => {
-  it("lista todos, también los no activos, con el aviso de qué se puede hacer y «Agregar punto de venta»", async () => {
+  it("lista todos, también los no activos, con el aviso de qué se puede hacer y «Nuevo punto de venta»", async () => {
     const marcado = await html("/puntos-de-venta/page");
     expect(titulos(marcado)).toEqual(["Puntos de venta"]);
     const t = texto(marcado);
@@ -223,14 +235,14 @@ describe("la página «Puntos de venta»", () => {
     expect(t).toContain("Tocá un punto de venta para editarlo, activarlo o desactivarlo.");
     expect(marcado).toContain(`href="/configuracion-fiscal/puntos-de-venta/${ID}"`);
     expect(marcado).toMatch(
-      /<a[^>]*href="\/configuracion-fiscal\/puntos-de-venta\/nuevo"[^>]*>Agregar punto de venta/,
+      /<a[^>]*href="\/configuracion-fiscal\/puntos-de-venta\/nuevo"[^>]*>Nuevo punto de venta/,
     );
   });
 
-  it("sin ninguno: «Todavía no hay puntos de venta.» y el botón «Agregar punto de venta» debajo", async () => {
+  it("sin ninguno: «Todavía no hay puntos de venta.» y el botón «Nuevo punto de venta» debajo", async () => {
     servidor.puntos = puntos([]);
     const t = texto(await html("/puntos-de-venta/page"));
-    expect(t).toContain("Todavía no hay puntos de venta. Agregar punto de venta");
+    expect(t).toContain("Todavía no hay puntos de venta. Nuevo punto de venta");
     expect(t).not.toContain("Tocá un punto de venta");
   });
 
@@ -254,14 +266,14 @@ describe("la página «Puntos de venta»", () => {
     servidor.puntos = falla("SIN_PERMISO");
     const t = texto(await html("/puntos-de-venta/page"));
     expect(t).toContain("No tiene permiso para hacer esto.");
-    expect(t).not.toContain("Agregar punto de venta");
+    expect(t).not.toContain("Nuevo punto de venta");
   });
 });
 
-describe("la página «Agregar punto de venta»", () => {
+describe("la página «Nuevo punto de venta»", () => {
   it("con permiso: el h1, el formulario con sus campos y las sucursales de la empresa; el emisor sale del servidor", async () => {
     const marcado = await html("/puntos-de-venta/nuevo/page");
-    expect(titulos(marcado)).toEqual(["Agregar punto de venta"]);
+    expect(titulos(marcado)).toEqual(["Nuevo punto de venta"]);
     const t = texto(marcado);
     for (const rotulo of [
       "Número de punto de venta",

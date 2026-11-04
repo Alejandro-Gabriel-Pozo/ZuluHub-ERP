@@ -25,6 +25,10 @@ const mundo = vi.hoisted(() => ({
   puntosPedidos: [] as unknown[],
   /** Lo que contesta esa consulta: `null` es un error del servidor (p. ej. sucursal no elegida). */
   puntosDeVenta: null as { numero: number; activo: boolean }[] | null,
+  /** Lo que piden los puntos de venta de Emitir (D-86): la sucursal elegida que se le pasó. */
+  puntosParaEmitirPedidos: [] as unknown[],
+  /** Los contextos con los que se pidió si la empresa discrimina IVA. */
+  discriminaPedidos: [] as unknown[],
 }));
 
 vi.mock("next/headers", () => ({
@@ -76,6 +80,27 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
             : ok({ items: mundo.puntosDeVenta }),
         );
       },
+      listarPuntosDeVentaParaEmitir: (_contexto: unknown, pedido: { sucursalElegida: unknown }) => {
+        mundo.puntosParaEmitirPedidos.push(pedido.sucursalElegida);
+        // Lo que devuelve la consulta trae de más a propósito: la respuesta de la web es una lista blanca.
+        return Promise.resolve(
+          ok({
+            items: [
+              {
+                id: "pv-1",
+                numero: 1,
+                ambiente: "HOMOLOGACION",
+                emisorId: "emisor-secreto",
+                version: 9,
+              },
+            ],
+          }),
+        );
+      },
+      discriminaIvaAlEmitir: (contexto: unknown) => {
+        mundo.discriminaPedidos.push(contexto);
+        return Promise.resolve(ok({ discriminaIva: true, condicionIva: "RESPONSABLE_INSCRIPTO" }));
+      },
       listarComprobantes: (_contexto: unknown, pedido: { sucursalElegida: unknown }) => {
         mundo.listados.push({ sucursalElegida: pedido.sucursalElegida, pedido });
         // La página trae la sucursal que usó el servidor (D-18, #115).
@@ -113,6 +138,8 @@ beforeEach(() => {
   mundo.listados = [];
   mundo.puntosPedidos = [];
   mundo.puntosDeVenta = [];
+  mundo.puntosParaEmitirPedidos = [];
+  mundo.discriminaPedidos = [];
 });
 
 describe("elegir la sucursal (la acción)", () => {
@@ -277,6 +304,46 @@ describe("la sucursal con la que trabaja la pantalla", () => {
     expect(cargado.puntosDeVenta).toEqual([]);
     expect(cargado.pagina.ok).toBe(true);
     expect(cargado.efectiva).toBe(CENTRO);
+  });
+});
+
+describe("las lecturas de Emitir (D-86): la sucursal la pone el servidor", () => {
+  const contexto = { empresaId: "empresa-1" } as never;
+
+  it("los puntos de venta se piden con la sucursal de la cookie si sigue siendo de las que la persona puede elegir", async () => {
+    const { puntosDeVentaParaEmitir } = await import("../../apps/web/servidor/facturacion");
+    mundo.cookies.set(COOKIE, NORTE);
+    expect((await puntosDeVentaParaEmitir(contexto)).ok).toBe(true);
+    expect(mundo.puntosParaEmitirPedidos).toEqual([NORTE]);
+  });
+
+  it.each([
+    ["sin cookie", undefined],
+    ["una cookie ajena", AJENA],
+    ["una cookie con basura", "' or 1=1 --"],
+    ["una cookie vacía", ""],
+  ])("%s: no se pasa ninguna (la decide el servidor)", async (_n, valor) => {
+    const { puntosDeVentaParaEmitir } = await import("../../apps/web/servidor/facturacion");
+    if (valor !== undefined) mundo.cookies.set(COOKIE, valor);
+    await puntosDeVentaParaEmitir(contexto);
+    expect(mundo.puntosParaEmitirPedidos).toEqual([null]);
+  });
+
+  it("la respuesta es una lista blanca: identificador, número y ambiente; nada del emisor ni de la versión", async () => {
+    const { puntosDeVentaParaEmitir } = await import("../../apps/web/servidor/facturacion");
+    expect(await puntosDeVentaParaEmitir(contexto)).toEqual({
+      ok: true,
+      dato: { items: [{ id: "pv-1", numero: 1, ambiente: "HOMOLOGACION" }] },
+    });
+  });
+
+  it("si la empresa discrimina IVA sale un sí o un no, con el contexto de la empresa, y nada más de los datos fiscales", async () => {
+    const { discriminaIvaParaEmitir } = await import("../../apps/web/servidor/facturacion");
+    expect(await discriminaIvaParaEmitir(contexto)).toEqual({
+      ok: true,
+      dato: { discriminaIva: true },
+    });
+    expect(mundo.discriminaPedidos).toEqual([contexto]);
   });
 });
 

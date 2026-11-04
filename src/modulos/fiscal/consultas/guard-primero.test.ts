@@ -12,7 +12,7 @@ import type { ContextoOperativo } from "../../../contexto/contexto";
 import { empresaId, personaId, sucursalId } from "../../../primitivas/identificadores/marca";
 import type { CargaDeAutorizacion, DatosDelActor } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
-import { comprobanteId, emisorId } from "../publico";
+import { DECLARACIONES_DE_FACTURACION, comprobanteId, emisorId } from "../publico";
 import { crearConsultasDeFacturacion, type ConsultasDeFacturacion } from "./consultas";
 import type { TxDeConsultasDeFacturacion } from "./contrato";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
@@ -93,6 +93,9 @@ const LLAMADAS: Record<ConAccion, (consultas: ConsultasDeFacturacion) => Promise
   listarComprobantes: (c) => c.listarComprobantes(contexto, { sucursalElegida: null }),
   listarPuntosDeVentaDeLaSucursal: (c) =>
     c.listarPuntosDeVentaDeLaSucursal(contexto, { sucursalElegida: sucursalId("s-1") }),
+  discriminaIvaAlEmitir: (c) => c.discriminaIvaAlEmitir(contexto),
+  listarPuntosDeVentaParaEmitir: (c) =>
+    c.listarPuntosDeVentaParaEmitir(contexto, { sucursalElegida: sucursalId("s-1") }),
   verComprobante: (c) => c.verComprobante(contexto, { comprobanteId: ID }),
   modeloDeImpresion: (c) => c.modeloDeImpresion(contexto, { comprobanteId: ID }),
   estadoDeCertificados: (c) => c.estadoDeCertificados(contexto, { emisorId: emisorId("x-1") }),
@@ -108,6 +111,10 @@ const NOMBRES = clavesDe(LLAMADAS);
  */
 const NOMBRES_DE_COMPROBANTES = NOMBRES.filter(
   (nombre) => DECLARACIONES_DE_CONSULTAS[nombre].accion === "comprobantes.ver",
+);
+/** Las dos lecturas de la pantalla de Emitir (D-86): piden la acción de emitir, no la de mirar ni la de configurar. */
+const NOMBRES_DE_EMITIR = NOMBRES.filter(
+  (nombre) => DECLARACIONES_DE_CONSULTAS[nombre].accion === "comprobantes.emitir_manual",
 );
 /** Las acciones del módulo de facturación: las únicas que dependen de que esté activo, en desarrollo o en solo lectura. */
 const NOMBRES_DE_FACTURACION = NOMBRES.filter((nombre) =>
@@ -137,19 +144,22 @@ const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
 };
 
 describe("P7: el guard va primero en cada consulta del facturador", () => {
-  it("hay ocho consultas, todas con acción: cuatro de comprobantes, el estado de los certificados y tres de configuración fiscal", () => {
+  it("hay diez consultas, todas con acción: cuatro de comprobantes, dos de emitir, el estado de los certificados y tres de configuración fiscal", () => {
     expect([...NOMBRES].sort()).toEqual([
       "datosFiscalesDelEmisor",
+      "discriminaIvaAlEmitir",
       "estadoDeCertificados",
       "estadoDeLaConfiguracionFiscal",
       "listarComprobantes",
       "listarPuntosDeVentaDeLaSucursal",
+      "listarPuntosDeVentaParaEmitir",
       "modeloDeImpresion",
       "puntosDeVentaDelEmisor",
       "verComprobante",
     ]);
     expect(Object.keys(DECLARACIONES_DE_CONSULTAS).sort()).toEqual([...NOMBRES].sort());
     expect(NOMBRES_DE_COMPROBANTES).toHaveLength(4);
+    expect(NOMBRES_DE_EMITIR).toHaveLength(2);
     expect([...NOMBRES_DE_FACTURACION, ...NOMBRES_DE_CONFIGURACION].sort()).toEqual(
       [...NOMBRES].sort(),
     );
@@ -188,16 +198,20 @@ describe("P7: el guard va primero en cada consulta del facturador", () => {
   );
 
   it.each(NOMBRES_DE_FACTURACION)(
-    "%s con el catálogo REAL da MODULO_EN_DESARROLLO a todos: todavía no se puede usar (H7, §D)",
+    "%s con el catálogo REAL (facturación disponible): sin activar en la empresa sigue cerrado, y activa pasa el gerente",
     async (nombre) => {
       for (const rol of ROLES_DE_EMPRESA) {
-        const vigilada = vigilar(actor(rol));
-        expect(await LLAMADAS[nombre](consultasCon(vigilada, REGLAS_DE_EMPRESA)), rol).toEqual({
+        const sinActivar = vigilar({ rol, modulosActivados: [], modulosHabilitados: [] });
+        expect(await LLAMADAS[nombre](consultasCon(sinActivar, REGLAS_DE_EMPRESA)), rol).toEqual({
           ok: false,
-          error: "MODULO_EN_DESARROLLO",
+          error: "MODULO_NO_ACTIVO",
         });
-        expect(vigilada.accesos).toEqual(["autorizacion"]);
+        expect(sinActivar.accesos).toEqual(["autorizacion"]);
       }
+      const activa = vigilar(actor("GERENTE"));
+      expect(await pasoElGuard(LLAMADAS[nombre](consultasCon(activa, REGLAS_DE_EMPRESA)))).toBe(
+        true,
+      );
     },
   );
 
@@ -264,6 +278,49 @@ describe("P7: el guard va primero en cada consulta del facturador", () => {
     // y un pedido mal armado no llega a leer nada
     expect(conPermiso.accesos).toEqual(["autorizacion"]);
   });
+});
+
+describe("P7: el guard va primero en las dos lecturas de Emitir (comprobantes.emitir_manual)", () => {
+  it("piden la acción de emitir una factura, la misma del caso de uso, y ningún permiso nuevo", () => {
+    expect(
+      Object.fromEntries(NOMBRES_DE_EMITIR.map((n) => [n, DECLARACIONES_DE_CONSULTAS[n]])),
+    ).toEqual({
+      discriminaIvaAlEmitir: { accion: "comprobantes.emitir_manual" },
+      listarPuntosDeVentaParaEmitir: { accion: "comprobantes.emitir_manual" },
+    });
+    expect(DECLARACIONES_DE_FACTURACION.emitirComprobanteManual.accion).toBe(
+      "comprobantes.emitir_manual",
+    );
+  });
+
+  it.each(NOMBRES_DE_EMITIR.flatMap((nombre) => ROLES_DE_EMPRESA.map((rol) => ({ nombre, rol }))))(
+    "$nombre con $rol: pasa el guard (lo permite la matriz) y recién ahí se toca lo demás",
+    async ({ nombre, rol }) => {
+      expect(PERMISOS_DE_EMPRESA["comprobantes.emitir_manual"]).toContain(rol);
+      const vigilada = vigilar(actor(rol));
+      expect(await pasoElGuard(LLAMADAS[nombre](consultasCon(vigilada)))).toBe(true);
+      expect(vigilada.accesos[0]).toBe("autorizacion");
+    },
+  );
+
+  it.each(NOMBRES_DE_EMITIR)(
+    "%s sigue el efecto declarado de la acción (CREA_AMPLIA): con el módulo en solo lectura el guard la rechaza",
+    async (nombre) => {
+      expect(CATALOGO_DE_MODULOS.facturacion.acciones["comprobantes.emitir_manual"].efecto).toBe(
+        "CREA_AMPLIA",
+      );
+      const vigilada = vigilar({
+        rol: "GERENTE",
+        modulosActivados: ["facturacion"],
+        modulosHabilitados: [],
+      });
+      expect(await LLAMADAS[nombre](consultasCon(vigilada))).toEqual({
+        ok: false,
+        error: "MODULO_EN_SOLO_LECTURA",
+      });
+      expect(vigilada.accesos).toEqual(["autorizacion"]);
+    },
+  );
 });
 
 describe("P7: el guard va primero en las consultas de configuración fiscal (solo el gerente, de administracion)", () => {

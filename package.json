@@ -23,6 +23,7 @@
     "analizar:muerto": "knip",
     "mutacion": "stryker run",
     "migrar": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/migrar-base.ts",
+    "cargar-entorno": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/cargar-entorno.ts",
     "instalar-clave": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/instalar-clave-de-contexto.ts",
     "build:web": "npm run build --workspace @pedernal/web",
     "build:plataforma": "npm run build --workspace @pedernal/plataforma",

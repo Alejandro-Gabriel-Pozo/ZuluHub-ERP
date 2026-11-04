@@ -29,6 +29,14 @@ const COLUMNAS = 64;
 
 const subtle = webcrypto.subtle;
 
+/**
+ * `pkijs` pide el `CryptoKey` de la librería de tipos del proyecto: el global del navegador donde hay DOM (`apps/web`, que ahora
+ * alcanza este archivo por la composición) y el de Node donde no. Es la misma clave en ejecución; solo difieren los tipos (Node admite
+ * más usos de clave). Sin esto, `apps/web` no compila.
+ */
+type ClaveDePkijs = Parameters<CertificationRequest["sign"]>[0];
+const paraPkijs = (clave: unknown): ClaveDePkijs => clave as ClaveDePkijs;
+
 function aPem(etiqueta: string, der: ArrayBuffer): string {
   const base64 = Buffer.from(der).toString("base64");
   const lineas: string[] = [];
@@ -69,8 +77,8 @@ export function crearGeneradorDeCredenciales(): GeneradorDeCredenciales {
         atributo(OID.nombreComun, new asn1js.Utf8String({ value: datos.alias })),
         atributo(OID.numeroDeSerie, new asn1js.PrintableString({ value: datos.numeroDeSerie })),
       ]);
-      await pedido.subjectPublicKeyInfo.importKey(par.publicKey);
-      await pedido.sign(par.privateKey, "SHA-256");
+      await pedido.subjectPublicKeyInfo.importKey(paraPkijs(par.publicKey));
+      await pedido.sign(paraPkijs(par.privateKey), "SHA-256");
 
       const pkcs8 = await subtle.exportKey("pkcs8", par.privateKey);
       return {

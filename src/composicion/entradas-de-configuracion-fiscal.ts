@@ -1,13 +1,17 @@
 import { z } from "zod";
 import {
+  AMBIENTES,
+  certificadoId,
   domicilioId,
   emisorId,
   puntoDeVentaId,
   type CasosDeUsoDeConfiguracionFiscal,
   type DomicilioDeEntrada,
   type EmisorId,
+  type EntradaDeCargarCertificado,
   type EntradaDeCrearPuntoDeVenta,
   type EntradaDeEditarPuntoDeVenta,
+  type EntradaDeGenerarPedido,
   type EntradaDeGuardarBorradorDeDatosFiscales,
   type EntradaDeCambiarElEstadoDelPuntoDeVenta,
   type EntradaDeConfirmarDatosFiscales,
@@ -38,7 +42,7 @@ import {
  * «Revisá los datos marcados.», no el «Revise los datos del comprobante» de las facturas). Previene: el texto de las facturas en
  * Datos fiscales y Puntos de venta.
  */
-function leer<S extends z.ZodType>(
+export function leer<S extends z.ZodType>(
   forma: S,
   crudo: unknown,
 ): Resultado<z.output<S>, ErrorDeEntrada> {
@@ -105,6 +109,27 @@ const formaDeEditarPuntoDeVenta = z.object({
 });
 
 const formaDePuntoDeVenta = z.object({ puntoDeVentaId: identificador });
+
+const formaDeGenerarPedidoDeCertificado = z.object({
+  /** La clave de idempotencia: la genera la pantalla al abrir el formulario del pedido. */
+  id: identificador,
+  emisorId: identificador,
+  ambiente: z.enum(AMBIENTES),
+  alias: texto,
+  cuitTitular: texto,
+  organizacion: texto,
+});
+
+/**
+ * Tope de FORMA del certificado pegado (no de negocio): por encima de lo que admite el dominio (16.000 caracteres de base64) para
+ * que los saltos de línea y los blancos de un archivo de ARCA no lo rechacen aquí; si es un certificado legible lo decide el caso de uso.
+ */
+const certificadoPegado = z.string().max(32_768);
+
+const formaDeCargarCertificado = z.object({
+  certificadoId: identificador,
+  certificadoPem: certificadoPegado,
+});
 
 // ---------------------------------------------------------------------------------------------------------------
 
@@ -230,4 +255,37 @@ export function entradaDePuntoDeVenta(
 ): Resultado<EntradaDeCambiarElEstadoDelPuntoDeVenta, ErrorDeEntrada> {
   const forma = leer(formaDePuntoDeVenta, crudo);
   return forma.ok ? ok({ puntoDeVentaId: puntoDeVentaId(forma.valor.puntoDeVentaId) }) : forma;
+}
+
+/**
+ * El pedido de un certificado de ARCA (`certificados.gestionar`): el emisor, el ambiente, el alias, el CUIT del titular (la persona
+ * física que lo saca en ARCA, que puede no ser el emisor) y la organización del pedido. La forma del alias, del CUIT y de la
+ * organización la decide el caso de uso, dentro de la transacción. La empresa y la persona salen del contexto del servidor.
+ */
+export function entradaDeGenerarPedidoDeCertificado(
+  crudo: unknown,
+): Resultado<EntradaDeGenerarPedido, ErrorDeEntrada> {
+  const forma = leer(formaDeGenerarPedidoDeCertificado, crudo);
+  if (!forma.ok) return forma;
+  const f = forma.valor;
+  return ok({
+    id: f.id,
+    emisorId: emisorId(f.emisorId),
+    ambiente: f.ambiente,
+    alias: f.alias,
+    cuitTitular: f.cuitTitular,
+    organizacion: f.organizacion,
+  });
+}
+
+/** El certificado que ARCA devolvió, pegado o subido, contra el pedido que generó Pedernal (`certificados.gestionar`). */
+export function entradaDeCargarCertificado(
+  crudo: unknown,
+): Resultado<EntradaDeCargarCertificado, ErrorDeEntrada> {
+  const forma = leer(formaDeCargarCertificado, crudo);
+  if (!forma.ok) return forma;
+  return ok({
+    certificadoId: certificadoId(forma.valor.certificadoId),
+    certificadoPem: forma.valor.certificadoPem,
+  });
 }

@@ -43,20 +43,28 @@ describe("las tablas de traducción", () => {
     }
   });
 
-  it("los únicos defectos (sin código público) son los que vienen de una restricción de la base", () => {
+  it("los únicos defectos (sin código público) son los que vienen de una restricción de la base, de un pedido armado a mano o de la clave guardada que no se descifra", () => {
     const defectos = Object.entries(FISCAL_POR_ERROR_DE_TEXTO)
       .filter(([, codigo]) => codigo === null)
       .map(([error]) => error)
       .sort();
     expect(defectos).toEqual([
+      // El modelo de impresión: un CAE sin 14 dígitos (no hay QR posible) es un dato que la persona no puede corregir.
+      "CAE_INVALIDO",
+      // Certificados: la clave guardada no se descifra (clave maestra equivocada o fila alterada); la persona no puede corregirlo.
+      "CLAVE_ILEGIBLE",
       "COMPROBANTE_ALTA_INVALIDA",
       "COMPROBANTE_ASOCIADO_INVALIDO",
+      // El modelo de impresión: pedir uno que no está autorizado es un pedido armado a mano (la pantalla solo ofrece imprimir los autorizados).
+      "COMPROBANTE_NO_AUTORIZADO",
       // Configuración fiscal: Ingresos Brutos no lo puede provocar nadie (D-45), la base no repite el número de versión, y una
       // sucursal ajena es un pedido armado a mano (sin oráculo).
       "IIBB_CONDICION_INVALIDA",
       "IIBB_NUMERO_INVALIDO",
       "NUMERO_DE_VERSION_INVALIDO",
       "SUCURSAL_DE_OTRA_EMPRESA",
+      // El modelo de impresión: una versión de representación que este código no sabe dibujar (lista cerrada, `modelo-de-impresion.ts`).
+      "VERSION_DE_REPRESENTACION_DESCONOCIDA",
     ]);
   });
 
@@ -128,6 +136,28 @@ describe("la configuración fiscal (D-43)", () => {
     expect(faltan([])).toEqual({ codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS" });
   });
 
+  it("D-77: pasar a producción un punto de venta que ARCA no habilita sale con SU código y el texto ya aprobado del rechazo 10005", () => {
+    expect(traducirErrorFiscal("PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA")).toEqual({
+      codigo: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA",
+    });
+    const r = aRespuestaFiscal(
+      err("PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA"),
+      dependencias,
+      () => null,
+    );
+    expect(r).toMatchObject({
+      ok: false,
+      error: { codigo: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA" },
+    });
+    const texto =
+      CATALOGO_DE_TEXTOS["error.fiscal_punto_de_venta_no_habilitado_en_arca"].porDefecto;
+    expect(texto).toBe(
+      "El punto de venta no está habilitado en ARCA para facturar con web service.",
+    );
+    // El mismo texto, palabra por palabra, que el dueño aprobó para el 10005 (no se inventa uno parecido).
+    expect(texto).toBe(CATALOGO_DE_TEXTOS["fiscal.arca.punto_de_venta_no_habilitado"].porDefecto);
+  });
+
   it("reusa lo ya aprobado: motivo obligatorio, identificador mal armado y versión desactualizada", () => {
     expect(traducirErrorFiscal("MOTIVO_OBLIGATORIO")).toEqual({
       codigo: "FISCAL_MOTIVO_INVALIDO",
@@ -139,13 +169,28 @@ describe("la configuración fiscal (D-43)", () => {
     });
   });
 
-  it("los códigos sin texto aprobado son estos cuatro: salen sin cambios (inesperado con referencia) hasta que el dueño los apruebe", () => {
-    expect([...CODIGOS_DE_CONFIGURACION_SIN_TEXTO].sort()).toEqual([
-      "DATOS_FISCALES_NO_ENCONTRADOS",
-      "DOMICILIO_NO_ENCONTRADO",
-      "EMISOR_NO_ENCONTRADO",
-      "ID_EN_USO",
-    ]);
+  it("los códigos sin texto aprobado son estos: salen sin cambios (inesperado con referencia) hasta que el dueño los apruebe", () => {
+    expect([...CODIGOS_DE_CONFIGURACION_SIN_TEXTO].sort()).toEqual(
+      [
+        // Datos fiscales y puntos de venta.
+        "DATOS_FISCALES_NO_ENCONTRADOS",
+        "DOMICILIO_NO_ENCONTRADO",
+        "EMISOR_NO_ENCONTRADO",
+        "ID_EN_USO",
+        // El certificado de ARCA: generar el pedido y cargar el certificado.
+        "ALIAS_INVALIDO",
+        "CADENA_NO_CONFIABLE",
+        "CERTIFICADO_ILEGIBLE",
+        "CERTIFICADO_NO_ENCONTRADO",
+        "CERTIFICADO_VENCIDO",
+        "CERTIFICADO_YA_CARGADO",
+        "CUIT_INVALIDO",
+        "NO_CORRESPONDE_AL_TITULAR",
+        "NO_CORRESPONDE_A_LA_CLAVE",
+        "ORGANIZACION_INVALIDA",
+        "PEDIDO_NO_PENDIENTE",
+      ].sort(),
+    );
     for (const error of CODIGOS_DE_CONFIGURACION_SIN_TEXTO) {
       expect(traducirErrorFiscal(error), error).toBe(error);
       const respuesta = aRespuestaFiscal(err(error), dependencias, () => null);

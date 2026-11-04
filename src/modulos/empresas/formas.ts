@@ -27,18 +27,30 @@ const versionEsperada = z
   ])
   .pipe(z.number().int().min(1).max(2_147_483_647));
 
-/** `crearSucursal`: el nombre tal cual lo escribió la persona; el dominio lo valida. */
-export const formaDeCrearSucursal = z.object({ nombre: z.string() });
+/**
+ * El contacto opcional de la sucursal (D-98): teléfono, correo y web tal cual los escribió la persona, o
+ * `null`. Ausente no se toca; `null` o en blanco lo borra. Qué es un teléfono, un correo o una web válidos
+ * lo decide el dominio.
+ */
+const contactoDeSucursal = {
+  telefono: z.string().nullable().optional(),
+  correo: z.string().nullable().optional(),
+  web: z.string().nullable().optional(),
+};
+
+/** `crearSucursal`: el nombre tal cual lo escribió la persona y, si hay, su contacto; el dominio lo valida. */
+export const formaDeCrearSucursal = z.object({ nombre: z.string(), ...contactoDeSucursal });
 
 /**
- * `editarSucursal`: la sucursal, la versión que se vio, el nombre y, si se cambia, la hora de corte
- * `HH:MM` de la jornada (el dominio la valida; omitida, no se toca).
+ * `editarSucursal`: la sucursal, la versión que se vio, el nombre y, si se cambian, la hora de corte
+ * `HH:MM` de la jornada y el contacto (el dominio los valida; omitidos, no se tocan).
  */
 export const formaDeEditarSucursal = z.object({
   sucursalId: idDeSucursal,
   versionEsperada,
   nombre: z.string(),
   horaDeCorte: z.string().optional(),
+  ...contactoDeSucursal,
 });
 
 /** `desactivarSucursal` y `reactivarSucursal`: reciben la misma entrada, solo la sucursal. */

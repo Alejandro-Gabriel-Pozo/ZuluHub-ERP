@@ -7,6 +7,7 @@ import { FILTROS_POR_DEFECTO } from "../../apps/web/ui/plantillas/facturacion/fi
 import {
   armarElListado,
   armarLaEleccionDeSucursal,
+  enlaceDeEmitir,
   errorParaElListado,
 } from "../../apps/web/ui/plantillas/facturacion/modelo-del-listado";
 import { conNombre, fila, ID_1, PAGINA, SUCURSALES } from "../utilidades/listado-de-comprobantes";
@@ -233,5 +234,14 @@ describe("el error de la lista", () => {
   ] as const)("%s conserva su texto del catálogo", (codigo) => {
     const e = errorDeCodigo(codigo);
     expect(errorParaElListado(e)).toBe(e);
+  });
+});
+
+describe("«+ Emitir»", () => {
+  it("lleva a Emitir con el texto del contrato (pantalla 1, «Acciones»)", () => {
+    expect(enlaceDeEmitir({})).toEqual({
+      href: "/facturacion/comprobantes/emitir",
+      texto: "+ Emitir",
+    });
   });
 });

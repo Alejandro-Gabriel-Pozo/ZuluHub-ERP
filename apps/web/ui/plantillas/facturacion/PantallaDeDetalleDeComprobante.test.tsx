@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { violacionesDeAccesibilidad } from "../../pruebas/ayudas";
-import type { DetalleParaMostrar } from "./modelo-del-detalle";
+import { accionDeImprimirDelDetalle, type DetalleParaMostrar } from "./modelo-del-detalle";
 import { PantallaDeDetalleDeComprobante } from "./PantallaDeDetalleDeComprobante";
 
 /**
@@ -132,4 +132,30 @@ describe("detalle de un comprobante en el celular", () => {
       avisos.mockRestore();
     }
   });
+
+  it.each([
+    ["autorizada", autorizada, true],
+    ["rechazada", rechazada, false],
+  ] as const)(
+    "«Imprimir» (D-97): %s, se ofrece solo si está Autorizada; el enlace es accesible y se toca (44 px)",
+    async (_n, detalle, seOfrece) => {
+      await render(
+        <>
+          <h1>Título de la pantalla</h1>
+          <PantallaDeDetalleDeComprobante
+            detalle={detalle}
+            imprimir={accionDeImprimirDelDetalle({}, { id: "c1", estado: detalle.estado })}
+          />
+        </>,
+      );
+      const enlaces = [...document.body.querySelectorAll<HTMLAnchorElement>("a[href]")];
+      expect(enlaces.map((a) => a.textContent)).toEqual(seOfrece ? ["Imprimir"] : []);
+      expect(await violacionesDeAccesibilidad(document.body)).toEqual([]);
+      for (const a of enlaces) {
+        expect(a.getAttribute("href")).toBe("/facturacion/comprobantes/c1/imprimir");
+        expect(a.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+        expect(tamano(a)).toBeGreaterThanOrEqual(16);
+      }
+    },
+  );
 });
