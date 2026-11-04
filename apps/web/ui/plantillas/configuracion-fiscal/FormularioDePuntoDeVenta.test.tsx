@@ -374,7 +374,7 @@ describe("edición", () => {
     await expect
       .element(
         page.getByText(
-          "Los datos cambiaron mientras los miraba. Actualice la pantalla e intente de nuevo.",
+          "Los datos cambiaron mientras los mirabas. Actualizá la pantalla e intentá de nuevo.",
         ),
       )
       .toBeVisible();
