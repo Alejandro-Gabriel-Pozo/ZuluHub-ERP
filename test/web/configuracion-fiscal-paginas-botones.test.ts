@@ -83,6 +83,17 @@ const html = async (
 const EMISOR = "2d1b8c3a-4e5f-4a71-8c9d-1e2f3a4b5c6d";
 const ID = "0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b";
 const respuesta = (dato: unknown): Respuesta<unknown> => ({ ok: true, dato });
+const DOMICILIO = {
+  id: "3e2f4a5b-6c7d-4e8f-9a0b-1c2d3e4f5a6b",
+  calle: "Mitre",
+  numero: "55",
+  piso: "2",
+  departamento: "B",
+  localidad: "Rosario",
+  provincia: "AR-S",
+  codigoPostal: "2000",
+} as const;
+
 const PV = (cambios: Record<string, unknown> = {}) => ({
   id: ID,
   numero: 2,
@@ -90,6 +101,7 @@ const PV = (cambios: Record<string, unknown> = {}) => ({
   ambiente: "HOMOLOGACION",
   sucursal: { id: "s-norte", nombre: "Sucursal Norte", activa: true },
   tieneDomicilio: true,
+  domicilio: DOMICILIO,
   hayNumerosUsados: false,
   version: 3,
   ...cambios,
@@ -134,17 +146,17 @@ const SIN_PERMISO = "No tiene permiso para hacer esto.";
 const EDICION = { id: ID, busqueda: { editar: "1" } };
 
 describe("los botones apagados según el servidor", () => {
-  it("lista: «Agregar punto de venta» es un enlace activo si el servidor deja crear", async () => {
+  it("lista: «Nuevo punto de venta» es un enlace activo si el servidor deja crear", async () => {
     const marcado = await html("/puntos-de-venta/page");
     expect(marcado).toContain('href="/configuracion-fiscal/puntos-de-venta/nuevo"');
-    expect(boton(marcado, "Agregar punto de venta")).toBeUndefined();
+    expect(boton(marcado, "Nuevo punto de venta")).toBeUndefined();
   });
 
-  it("lista: sin crear, «Agregar punto de venta» sale apagado con su motivo y no lleva al alta", async () => {
+  it("lista: sin crear, «Nuevo punto de venta» sale apagado con su motivo y no lleva al alta", async () => {
     servidor.permisos = sinPermisosDe("puntos_de_venta.crear");
     const marcado = await html("/puntos-de-venta/page");
-    expect(boton(marcado, "Agregar punto de venta")).toEqual({
-      nombre: "Agregar punto de venta",
+    expect(boton(marcado, "Nuevo punto de venta")).toEqual({
+      nombre: "Nuevo punto de venta",
       apagado: true,
       motivo: SIN_PERMISO,
     });
@@ -260,6 +272,14 @@ describe("los botones apagados según el servidor", () => {
       apagado: true,
       motivo: SIN_PERMISO,
     });
+  });
+
+  it("edición: el formulario abre con el domicilio actual del punto de venta", async () => {
+    const marcado = await html("/puntos-de-venta/[id]/page", EDICION);
+    for (const valor of ["Mitre", "55", "Rosario", "2000"]) {
+      expect(marcado).toContain(`value="${valor}"`);
+    }
+    expect(marcado).toMatch(/<option value="AR-S" selected/);
   });
 
   it("edición: «Guardar» depende de editar (no de crear)", async () => {

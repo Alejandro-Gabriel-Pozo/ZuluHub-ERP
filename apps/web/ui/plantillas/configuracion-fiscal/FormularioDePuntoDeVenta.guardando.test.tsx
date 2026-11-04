@@ -3,7 +3,7 @@ import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import type { Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
 import { tocar } from "../../pruebas/ayudas";
-import { PERMITIDO } from "./ayudas-de-pruebas";
+import { DOMICILIO_DE_PRUEBA, PERMITIDO } from "./ayudas-de-pruebas";
 import { FormularioDePuntoDeVenta } from "./FormularioDePuntoDeVenta.cliente";
 import type { PuntoParaConfigurar } from "./modelo-de-puntos-de-venta";
 
@@ -23,6 +23,7 @@ const ORIGINAL: PuntoParaConfigurar = {
   ambiente: "HOMOLOGACION",
   sucursal: { id: "s-norte", nombre: "Sucursal Norte", activa: true },
   tieneDomicilio: true,
+  domicilio: DOMICILIO_DE_PRUEBA,
   hayNumerosUsados: false,
   version: 7,
 };
