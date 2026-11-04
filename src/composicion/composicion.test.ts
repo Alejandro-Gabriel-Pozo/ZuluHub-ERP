@@ -410,6 +410,7 @@ describe("con el entorno completo", () => {
       "listarComprobantes",
       "listarPuntosDeVentaDeLaSucursal",
       "listarPuntosDeVentaParaEmitir",
+      "modeloDeImpresion",
       "puntosDeVentaDelEmisor",
       "verComprobante",
     ]);
