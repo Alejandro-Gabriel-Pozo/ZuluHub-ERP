@@ -125,7 +125,7 @@ export function PantallaDeContactoDeLaSucursal({
           nombre="telefono"
           tipo="tel"
           inputMode="tel"
-          autoComplete="tel"
+          autoComplete="off"
           valor={valores.telefono}
           alCambiar={(v) => {
             poner("telefono", v);
@@ -138,7 +138,7 @@ export function PantallaDeContactoDeLaSucursal({
           nombre="correo"
           tipo="email"
           inputMode="email"
-          autoComplete="email"
+          autoComplete="off"
           autoCapitalize="off"
           valor={valores.correo}
           alCambiar={(v) => {
@@ -153,7 +153,7 @@ export function PantallaDeContactoDeLaSucursal({
           // Texto y no `url`: se guarda sin esquema, así que el navegador no debe exigir ni completar `https://`.
           tipo="text"
           inputMode="url"
-          autoComplete="url"
+          autoComplete="off"
           autoCapitalize="off"
           valor={valores.web}
           alCambiar={(v) => {

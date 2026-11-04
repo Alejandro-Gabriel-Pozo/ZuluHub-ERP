@@ -30,20 +30,20 @@ describe("armarElPedidoDeContacto", () => {
     expect(armarElPedidoDeContacto(SUCURSAL, CONTACTO, IGUALES)).toBeNull();
   });
 
-  it("espacios de más no son un cambio", () => {
-    expect(
-      armarElPedidoDeContacto(SUCURSAL, CONTACTO, {
-        ...IGUALES,
-        telefono: "  011 4555-1234 ",
-        correo: "   ",
-      }),
-    ).toBeNull();
+  it("no recorta espacios: ese recorte es del servidor (src/primitivas/contacto) y el valor viaja tal cual", () => {
+    const pedido = armarElPedidoDeContacto(SUCURSAL, CONTACTO, {
+      ...IGUALES,
+      telefono: "  011 4555-1234 ",
+    });
+    expect(pedido).toMatchObject({ telefono: "  011 4555-1234 " });
+    expect(pedido).not.toHaveProperty("correo");
+    expect(pedido).not.toHaveProperty("web");
   });
 
   it("solo lleva el campo que cambió, con la sucursal, el nombre y la versión esperada", () => {
     const pedido = armarElPedidoDeContacto(SUCURSAL, CONTACTO, {
       ...IGUALES,
-      correo: " reservas@hotelcentro.com ",
+      correo: "reservas@hotelcentro.com",
     });
     expect(pedido).toEqual({
       sucursalId: SUCURSAL.sucursalId,
@@ -55,8 +55,8 @@ describe("armarElPedidoDeContacto", () => {
     expect(pedido).not.toHaveProperty("web");
   });
 
-  it("vaciar un campo con valor manda null (lo borra); un campo en blanco que ya estaba vacío no viaja", () => {
-    const pedido = armarElPedidoDeContacto(SUCURSAL, CONTACTO, { ...IGUALES, telefono: "  " });
+  it("vaciar un campo con valor manda null (lo borra); un campo vacío que ya estaba vacío no viaja", () => {
+    const pedido = armarElPedidoDeContacto(SUCURSAL, CONTACTO, { ...IGUALES, telefono: "" });
     expect(pedido).toMatchObject({ telefono: null });
     expect(pedido).not.toHaveProperty("correo");
     expect(pedido).not.toHaveProperty("web");
