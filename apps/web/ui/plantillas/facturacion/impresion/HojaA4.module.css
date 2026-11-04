@@ -1,0 +1,270 @@
+/*
+ * La hoja A4 de un comprobante. Es papel, no pantalla: el tamaño de letra va en `pt` y la hoja mide lo mismo en cualquier celular
+ * (la vista previa la escala entera, nunca la achica de a partes). Los colores salen de los tokens: tinta (`--color-texto`) sobre
+ * papel (`--color-superficie-elevada`). Las medidas de la hoja las pone `estiloDeLaGeometria` (`geometria.ts`), una sola vez.
+ */
+
+.hoja,
+.medidor {
+  font-family: var(--tipo-familia-cuerpo);
+  font-size: 9pt;
+  line-height: 1.25;
+  color: var(--color-texto);
+}
+
+.hoja {
+  position: relative;
+  box-sizing: border-box;
+  width: var(--hoja-ancho);
+  height: var(--hoja-alto);
+  padding: var(--hoja-margen);
+  overflow: hidden;
+  background: var(--color-superficie-elevada);
+  outline: var(--borde-grosor) solid var(--color-borde);
+  break-after: page;
+}
+
+.hoja:last-child {
+  break-after: auto;
+}
+
+.hojas {
+  display: flex;
+  flex-direction: column;
+  gap: 8mm;
+}
+
+/* Fuera de pantalla y sin transformar: se mide con el mismo ancho útil y la misma letra que la hoja. */
+.medidor {
+  position: absolute;
+  top: 0;
+  left: -10000px;
+  box-sizing: border-box;
+  width: calc(var(--hoja-ancho) - 2 * var(--hoja-margen));
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.encabezado {
+  padding-bottom: 3mm;
+}
+
+.homologacion {
+  margin-bottom: 2mm;
+  padding: 1mm;
+  border: 2px solid var(--color-texto);
+  text-align: center;
+  font-size: 12pt;
+  font-weight: 700;
+}
+
+.cabecera {
+  display: grid;
+  grid-template-columns: 1fr 24mm 1fr;
+  border: var(--borde-grosor) solid var(--color-texto);
+}
+
+.cabecera > div {
+  min-width: 0;
+  padding: 2mm;
+  overflow-wrap: anywhere;
+}
+
+.letra {
+  border-right: var(--borde-grosor) solid var(--color-texto);
+  border-left: var(--borde-grosor) solid var(--color-texto);
+  text-align: center;
+}
+
+.letraGrande {
+  font-size: 30pt;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.codigo {
+  font-size: 8pt;
+}
+
+.nombre {
+  font-size: 13pt;
+  font-weight: 700;
+}
+
+.rotulo {
+  font-size: 13pt;
+  font-weight: 700;
+}
+
+.numero {
+  font-size: 11pt;
+  font-weight: 700;
+}
+
+.dato {
+  overflow-wrap: anywhere;
+}
+
+.negrita {
+  font-weight: 700;
+}
+
+.corresponde {
+  padding: 1.5mm 2mm;
+  border: var(--borde-grosor) solid var(--color-texto);
+  border-top: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.receptor {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8mm 4mm;
+  padding: 2mm;
+  border: var(--borde-grosor) solid var(--color-texto);
+  border-top: 0;
+}
+
+.receptor > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tabla {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.tabla th,
+.tabla td {
+  padding: 1.2mm 1mm;
+  border-bottom: var(--borde-grosor) solid var(--color-texto);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.tabla th {
+  font-weight: 700;
+}
+
+.tabla tr {
+  break-inside: avoid;
+}
+
+.tabla .numerica {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tabla .transporte td {
+  background: var(--color-superficie);
+  font-weight: 700;
+}
+
+.colCantidad {
+  width: 18mm;
+}
+
+.colPrecio {
+  width: 30mm;
+}
+
+.colIva {
+  width: 22mm;
+}
+
+.colImporte {
+  width: 30mm;
+}
+
+.pie {
+  position: absolute;
+  right: var(--hoja-margen);
+  bottom: var(--hoja-margen);
+  left: var(--hoja-margen);
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4mm;
+  height: var(--pie-alto);
+  padding-top: 2mm;
+  border-top: var(--borde-grosor-fuerte) solid var(--color-texto);
+  overflow: hidden;
+}
+
+/* El pie de medición: el mismo contenido y el mismo ancho, pero con el alto que el contenido pide. */
+.pieMedido {
+  position: static;
+  height: auto;
+  overflow: visible;
+}
+
+.pieIzquierdo {
+  display: flex;
+  flex-direction: column;
+  gap: 1mm;
+  min-width: 0;
+}
+
+.fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 2mm;
+}
+
+.filaFuerte {
+  margin-top: 0.5mm;
+  padding-top: 1mm;
+  border-top: var(--borde-grosor-fuerte) solid var(--color-texto);
+  font-size: 11pt;
+  font-weight: 700;
+}
+
+.transparencia {
+  padding: 1.5mm;
+  border: var(--borde-grosor) solid var(--color-texto);
+  font-size: 8pt;
+}
+
+.transparenciaTitulo {
+  margin-bottom: 0.5mm;
+  font-weight: 700;
+}
+
+.numeroDeHoja {
+  margin-top: auto;
+  font-size: 8pt;
+}
+
+.pieDerecho {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1.5mm;
+  font-size: 8pt;
+  text-align: right;
+}
+
+.qr {
+  display: block;
+  width: 28mm;
+  height: 28mm;
+}
+
+@media print {
+  .hojas {
+    gap: 0;
+  }
+
+  .hoja {
+    outline: 0;
+  }
+
+  .medidor {
+    display: none;
+  }
+}

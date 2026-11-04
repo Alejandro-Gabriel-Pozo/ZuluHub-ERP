@@ -1,0 +1,77 @@
+/*
+ * El ticket de 80 mm: largo continuo, sin hojas ni pie fijo. Es papel: letra en `pt`; los colores salen de los tokens. El ancho lo
+ * fija `--ticket-ancho` (`geometria.ts`); el largo lo mide `TicketDe80mm` y la página lo fija con `@page` (`EstiloDePagina`).
+ */
+
+.ticket {
+  box-sizing: border-box;
+  width: var(--ticket-ancho);
+  padding: 3mm;
+  background: var(--color-superficie-elevada);
+  outline: var(--borde-grosor) solid var(--color-borde);
+  color: var(--color-texto);
+  font-family: var(--tipo-familia-cuerpo);
+  font-size: 9pt;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.centrado {
+  text-align: center;
+}
+
+.separador {
+  margin: 2mm 0;
+  border: 0;
+  border-top: var(--borde-grosor) dashed var(--color-texto);
+}
+
+.homologacion {
+  margin-bottom: 2mm;
+  padding: 1mm;
+  border: 2px solid var(--color-texto);
+  text-align: center;
+  font-weight: 700;
+}
+
+.nombre {
+  font-size: 13pt;
+  font-weight: 700;
+}
+
+.rotulo {
+  font-size: 13pt;
+  font-weight: 700;
+}
+
+.negrita {
+  font-weight: 700;
+}
+
+.fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 2mm;
+}
+
+.filaFuerte {
+  font-size: 12pt;
+  font-weight: 700;
+}
+
+.cuenta {
+  font-size: 8pt;
+}
+
+.qr {
+  display: block;
+  width: 34mm;
+  height: 34mm;
+  margin: 1mm auto;
+}
+
+@media print {
+  .ticket {
+    outline: 0;
+  }
+}

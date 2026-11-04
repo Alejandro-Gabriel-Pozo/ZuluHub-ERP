@@ -25,6 +25,8 @@ function archivos(carpeta: string, extension: RegExp): string[] {
   });
 }
 const css = archivos(RAIZ, /\.css$/);
+/** El CSS de la hoja y del ticket impresos: es papel, tiene su propia regla (ver «el papel impreso» más abajo). */
+const esDelPapel = (ruta: string): boolean => ruta.includes("/plantillas/facturacion/impresion/");
 const fuentes = archivos(RAIZ, /\.(tsx?|css)$/).filter(
   (f) => !f.endsWith(".test.ts") && !f.endsWith(".test.tsx"),
 );
@@ -55,7 +57,7 @@ describe("legibilidad de la aplicación (D4 y D10)", () => {
 
   it("los tamaños de letra de los módulos CSS (menos la carta, que tiene su propia escala D10) salen de los tokens o son rem/em de 1 o más", () => {
     const sueltos = css
-      .filter((f) => !f.includes("/plantillas/vidriera/"))
+      .filter((f) => !f.includes("/plantillas/vidriera/") && !esDelPapel(f))
       .flatMap((f) =>
         [...readFileSync(f, "utf8").matchAll(/font-size:\s*([^;]+);/g)]
           .map((m) => (m[1] as string).trim())
@@ -66,6 +68,20 @@ describe("legibilidad de la aplicación (D4 y D10)", () => {
           })
           .map((valor) => `${f}: ${valor}`),
       );
+    expect(sueltos).toEqual([]);
+  });
+
+  it("el papel impreso (hoja A4 y ticket) fija la letra en `pt`: es papel, no se agranda con la configuración del celular", () => {
+    // Previene: que la hoja cambie de tamaño con la letra del celular y el paginador corte donde no es (la vista previa escala la hoja entera).
+    // Sin esto el papel quedaría exento de la regla de arriba sin ninguna otra; con esto solo puede usar `pt` (D4/D10 siguen valiendo en pantalla).
+    const delPapel = css.filter(esDelPapel);
+    expect(delPapel.length).toBeGreaterThanOrEqual(3);
+    const sueltos = delPapel.flatMap((f) =>
+      [...readFileSync(f, "utf8").matchAll(/font-size:\s*([^;]+);/g)]
+        .map((m) => (m[1] as string).trim())
+        .filter((valor) => !/^[\d.]+pt$/.test(valor))
+        .map((valor) => `${f}: ${valor}`),
+    );
     expect(sueltos).toEqual([]);
   });
 
@@ -162,9 +178,9 @@ describe("el detalle de un comprobante: importes y fechas solo como texto (ADR-0
   // Previene: un importe que pierde centavos por pasar por `Number`, o un día corrido por pasar por `Date`.
   const carpeta = join(RAIZ, "ui/plantillas/facturacion");
   // Todo archivo de la carpeta (se lee el directorio: uno nuevo queda cubierto solo), menos pruebas y estilos.
-  const delDetalle = readdirSync(carpeta).filter(
-    (nombre) => !/\.test\./.test(nombre) && !nombre.endsWith(".css"),
-  );
+  const delDetalle = readdirSync(carpeta, { withFileTypes: true })
+    .filter((e) => e.isFile() && !/\.test\./.test(e.name) && !e.name.endsWith(".css"))
+    .map((e) => e.name);
 
   it("la carpeta tiene los archivos del detalle y los del listado de comprobantes", () => {
     expect(delDetalle).toEqual(
@@ -212,4 +228,41 @@ describe("el detalle de un comprobante: importes y fechas solo como texto (ADR-0
       expect(usosProhibidos("const n = BigInt(x);")).toEqual([]);
     });
   });
+});
+
+describe("la vista imprimible: importes y fechas solo como texto (ADR-006)", () => {
+  // Misma regla que el detalle, para la subcarpeta de la hoja y el ticket. Previene: un importe que pierde centavos o un día corrido en el papel.
+  const carpeta = join(RAIZ, "ui/plantillas/facturacion/impresion");
+  const archivosDelPapel = readdirSync(carpeta, { withFileTypes: true })
+    .filter((e) => e.isFile() && /\.tsx?$/.test(e.name) && !/\.test\./.test(e.name))
+    .map((e) => e.name);
+  // Estos solo miden píxeles y milímetros (`Math.ceil`, `Math.min`): nunca tocan un importe ni una fecha. Siguen sin poder usar lo demás.
+  const MIDEN_PIXELES = [
+    "geometria.ts",
+    "medicion.ts",
+    "TicketDe80mm.cliente.tsx",
+    "VistaPrevia.cliente.tsx",
+  ];
+  const SIN_REDONDEO_DE_DINERO = /\b(parseFloat|parseInt|Date|Intl|toFixed|toLocale\w*)\b/;
+
+  it("la carpeta tiene el paginador, el modelo de la hoja y las piezas que miden", () => {
+    expect(archivosDelPapel).toEqual(
+      expect.arrayContaining(["paginador.ts", "modelo-de-la-hoja.ts", ...MIDEN_PIXELES]),
+    );
+  });
+
+  it.each(archivosDelPapel.filter((a) => !MIDEN_PIXELES.includes(a)))(
+    "%s no usa Number, parseFloat, Date, Math ni formateadores del navegador",
+    (archivo) => {
+      expect(usosProhibidos(readFileSync(join(carpeta, archivo), "utf8"))).toEqual([]);
+    },
+  );
+
+  it.each(MIDEN_PIXELES)(
+    "%s mide píxeles: puede usar Math, pero no redondea dinero ni toca fechas",
+    (archivo) => {
+      const codigo = sinComentariosNiTextos(readFileSync(join(carpeta, archivo), "utf8"));
+      expect(codigo).not.toMatch(SIN_REDONDEO_DE_DINERO);
+    },
+  );
 });

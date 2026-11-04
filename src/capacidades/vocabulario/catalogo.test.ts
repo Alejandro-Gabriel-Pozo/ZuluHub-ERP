@@ -251,6 +251,28 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     ]);
   });
 
+  it("los textos de la vista imprimible son exactamente los que el dueño aprobó el 2026-11-04 (D-111)", () => {
+    expect(
+      Object.fromEntries(
+        claves
+          .filter((c) => c.startsWith("fiscal.pantalla.imprimir_"))
+          .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
+      ),
+    ).toEqual({
+      "fiscal.pantalla.imprimir_boton": "Imprimir",
+      "fiscal.pantalla.imprimir_formato_a4": "A4",
+      "fiscal.pantalla.imprimir_formato_ticket": "Ticket",
+      "fiscal.pantalla.imprimir_rotulo_importe": "Importe",
+      "fiscal.pantalla.imprimir_neto_gravado": "Neto gravado {alicuota} %",
+      "fiscal.pantalla.imprimir_codigo": "COD.",
+      "fiscal.pantalla.imprimir_a_transportar": "A transportar",
+      "fiscal.pantalla.imprimir_transporte": "Transporte",
+      "fiscal.pantalla.imprimir_hoja": "Hoja {k} de {n}",
+      "fiscal.pantalla.imprimir_ingresos_brutos": "Ingresos Brutos",
+    });
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.imprimir_hoja"].marcadores).toEqual(["k", "n"]);
+  });
+
   it("los textos de los errores con datos declaran su marcador", () => {
     expect(CATALOGO_DE_TEXTOS["error.limite_del_plan"].marcadores).toEqual(["limite"]);
     expect(CATALOGO_DE_TEXTOS["error.limite_del_plan"].porDefecto).toContain("{limite}");
