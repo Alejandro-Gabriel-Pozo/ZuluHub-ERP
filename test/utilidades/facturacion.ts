@@ -214,6 +214,7 @@ export const imprimibleDe = (
   cae: "70417054367476",
   caeVence: fecha("2026-10-23"),
   versionDeRepresentacion: VERSION_DE_REPRESENTACION_ACTUAL,
+  modoDePrecio: contenido.modoDePrecio,
   contacto: SIN_CONTACTO,
   ...cambios,
 });

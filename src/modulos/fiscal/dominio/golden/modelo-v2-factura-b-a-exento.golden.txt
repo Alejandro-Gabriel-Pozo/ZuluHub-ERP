@@ -33,6 +33,7 @@
     "condicionIva": "EXENTO",
     "domicilio": "Av. Siempreviva 742"
   },
+  "modoDePrecio": "IVA_INCLUIDO",
   "renglones": [
     {
       "descripcion": "Torta",

@@ -1275,4 +1275,10 @@ describe("paraImprimir", () => {
     expect(p.desglose).toBe(c.desglose);
     expect(p.renglones).toBe(c.renglones);
   });
+
+  it("toma el modo de precio que guardó el comprobante", () => {
+    for (const modoDePrecio of ["IVA_INCLUIDO", "IVA_DISCRIMINADO"] as const) {
+      expect(paraImprimir(guardado({ modoDePrecio })).modoDePrecio).toBe(modoDePrecio);
+    }
+  });
 });

@@ -651,7 +651,7 @@ describe("modeloDeImpresion: la versión 1 sigue imprimiendo lo de antes", () =>
     }
   });
 
-  it("la versión 2 es la 1 más los textos legales y nada más: se sella la versión y se suman las dos claves", () => {
+  it("la versión 2 es la 1 más los textos legales y el modo de precio, y nada más: se sella la versión y se suman las claves", () => {
     for (const comprobante of [
       imprimible(facturaB),
       notaSobreFacturaB("NOTA_CREDITO"),
@@ -663,7 +663,9 @@ describe("modeloDeImpresion: la versión 1 sigue imprimiendo lo de antes", () =>
       const v2 = modelo(comprobante);
       const sinLosTextosLegales = {
         ...Object.fromEntries(
-          Object.entries(v2).filter(([clave]) => clave !== "transparenciaFiscal"),
+          Object.entries(v2).filter(
+            ([clave]) => clave !== "transparenciaFiscal" && clave !== "modoDePrecio",
+          ),
         ),
         receptor: Object.fromEntries(
           Object.entries(v2.receptor).filter(([clave]) => clave !== "leyenda"),
@@ -802,17 +804,53 @@ describe("modeloDeImpresion: contacto congelado de la sucursal (D-98, D-99)", ()
     }
   });
 
-  it("la versión 2 con contacto es la 1 más los textos legales y el contacto, y nada más", () => {
+  it("la versión 2 con contacto es la 1 más los textos legales, el modo de precio y el contacto, y nada más", () => {
     const comprobante = imprimible(facturaB, { contacto: CONTACTO_COMPLETO });
     const v1 = modelo({ ...comprobante, versionDeRepresentacion: 1 });
     const v2 = modelo(comprobante);
     const sinLoNuevo = {
       ...Object.fromEntries(
-        Object.entries(v2).filter(([c]) => c !== "transparenciaFiscal" && c !== "contacto"),
+        Object.entries(v2).filter(
+          ([c]) => c !== "transparenciaFiscal" && c !== "contacto" && c !== "modoDePrecio",
+        ),
       ),
       receptor: Object.fromEntries(Object.entries(v2.receptor).filter(([c]) => c !== "leyenda")),
       versionDeRepresentacion: 1,
     };
     expect(sinLoNuevo).toEqual(v1);
+  });
+});
+
+describe("modeloDeImpresion: modo de precio (versión 2 en adelante)", () => {
+  it("expone el modo que guardó el comprobante, en las dos modalidades de la A", () => {
+    const incluido = facturaArmada(receptorInscripto, [renglon("1210.00", "1", "21")], {
+      modoDePrecio: "IVA_INCLUIDO",
+    });
+    expect(modelo(imprimible(incluido)).modoDePrecio).toBe("IVA_INCLUIDO");
+    expect(modelo(imprimible(facturaAInscripto)).modoDePrecio).toBe("IVA_DISCRIMINADO");
+  });
+
+  it("la B a consumidor final con precios sin IVA lo expone tal cual se guardó", () => {
+    const sinIva = facturaArmada(consumidorFinal, [renglon("1000.00", "1", "21")], {
+      modoDePrecio: "IVA_DISCRIMINADO",
+    });
+    expect(modelo(imprimible(sinIva)).modoDePrecio).toBe("IVA_DISCRIMINADO");
+    expect(modelo(imprimible(facturaB)).modoDePrecio).toBe("IVA_INCLUIDO");
+  });
+
+  it("la C siempre es IVA_INCLUIDO", () => {
+    expect(modelo(imprimible(facturaCConsumidorFinal)).modoDePrecio).toBe("IVA_INCLUIDO");
+  });
+
+  it("lo llevan también las notas, que copian el modo de lo que corrigen", () => {
+    expect(modelo(notaSobreFacturaB("NOTA_CREDITO")).modoDePrecio).toBe("IVA_INCLUIDO");
+  });
+
+  it("la versión 1 no lo trae aunque el comprobante lo tenga guardado: reimprime idéntica", () => {
+    for (const comprobante of [facturaB, facturaCConsumidorFinal, facturaAInscripto]) {
+      const m = modelo(imprimible(comprobante, V1));
+      expect("modoDePrecio" in m).toBe(false);
+      expect(JSON.stringify(m)).not.toContain("modoDePrecio");
+    }
   });
 });
