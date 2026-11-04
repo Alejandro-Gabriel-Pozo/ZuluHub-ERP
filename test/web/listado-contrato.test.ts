@@ -17,8 +17,8 @@ import {
 
 /**
  * Contrato de la pantalla 1 (listado de comprobantes, 6A + 6C), en las dos direcciones: está todo lo que el contrato pide y no
- * aparece nada de lo que quedó afuera (Exportar D-3, Origen D-33, Pago D-23, Referencias, «+ Emitir», cantidad y total del
- * resultado D-32, ambiente y «acreditad» D-29).
+ * aparece nada de lo que quedó afuera (Exportar D-3, Origen D-33, Pago D-23, Referencias, cantidad y total del resultado D-32,
+ * ambiente y «acreditad» D-29). «+ Emitir» es una acción del contrato, pero solo para quien puede emitir: sin ese permiso no aparece.
  */
 
 /** Lo que NO va en la pantalla, cada cosa con su decisión. */
@@ -27,7 +27,7 @@ const PROHIBIDOS: readonly (readonly [string, RegExp])[] = [
   ["Origen (D-33)", /origen/i],
   ["Pago (D-23)", /\bpago\b|efectivo|tarjeta|transferencia|cuenta corriente/i],
   ["Referencias", /referencias/i],
-  ["+ Emitir (la pantalla no existe)", /emitir|\+/i],
+  ["+ Emitir sin permiso de emitir", /emitir|\+/i],
   ["Imprimir, mail, QR", /imprimir|mail|\bQR\b/i],
   ["«acreditad» (D-29)", /acreditad/i],
   ["ambiente o PRUEBAS", /ambiente|pruebas|homologaci/i],
@@ -267,7 +267,7 @@ describe("prueba de contrato: lo que no está", () => {
       ["Origen (D-33)", "<th>Origen</th>"],
       ["Pago (D-23)", "<th>Pago</th>"],
       ["Referencias", "<th>Referencias</th>"],
-      ["+ Emitir (la pantalla no existe)", "<a>+ Emitir</a>"],
+      ["+ Emitir sin permiso de emitir", "<a>+ Emitir</a>"],
       ["Imprimir, mail, QR", "<button>Imprimir</button>"],
       ["«acreditad» (D-29)", "<span>Acreditada parcialmente</span>"],
       ["cantidad del resultado (D-32)", "<p>42 comprobantes</p>"],

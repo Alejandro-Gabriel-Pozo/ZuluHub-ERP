@@ -4,6 +4,7 @@ import {
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import {
+  direccionDeEmitir,
   direccionDelDetalle,
   direccionDelListado,
   type FiltrosDelListado,
@@ -205,3 +206,15 @@ export function errorParaElListado(error: ErrorPublico): ErrorPublico {
   }
   return error;
 }
+
+/**
+ * El enlace «+ Emitir» del listado (contrato, pantalla 1, «Acciones»: «+ Emitir» abre Emitir): la página lo arma solo para quien puede
+ * emitir (`puedeEmitirFacturas`); el servidor vuelve a validar al abrir y al emitir. Dueño, 2026-11-03, cuestionario “Emitir”, «+ Emitir»:
+ * no se muestra cuando la persona no puede emitir.
+ */
+export const enlaceDeEmitir = (
+  d: DiccionarioResuelto,
+): Readonly<{ href: string; texto: string }> => ({
+  href: direccionDeEmitir(),
+  texto: texto(d, "fiscal.pantalla.listado_emitir"),
+});

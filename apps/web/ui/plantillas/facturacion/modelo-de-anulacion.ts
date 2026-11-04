@@ -125,7 +125,12 @@ function clienteDe(d: DiccionarioResuelto, receptor: FacturaParaAnular["receptor
   return receptor.nombre ?? texto(d, "fiscal.pantalla.consumidor_final");
 }
 
-function nombreDeLaFila(d: DiccionarioResuelto, alicuota: string | null, tasa: string | null) {
+/** El nombre de una alícuota («IVA 21 %», «Exento», «No gravado»); lo comparte Emitir (una regla, un lugar). */
+export function nombreDeLaFila(
+  d: DiccionarioResuelto,
+  alicuota: string | null,
+  tasa: string | null,
+) {
   if (tasa !== null) return texto(d, "fiscal.pantalla.renglon_iva", { alicuota: tasa });
   if (alicuota === "EXENTO") return texto(d, "fiscal.pantalla.anular_alicuota_exento");
   return alicuota === "NO_GRAVADO" ? texto(d, "fiscal.pantalla.anular_alicuota_no_gravado") : null;
