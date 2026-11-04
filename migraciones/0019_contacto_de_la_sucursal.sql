@@ -23,7 +23,7 @@
 --
 --  C1. Nulo = «no existe». Un valor presente nunca es vacío ni lleva blancos en los extremos ni caracteres de control (una sola
 --      línea). Los largos máximos (teléfono 40, correo 254, web 200) son un SUPUESTO del ingeniero, sin fuente del dueño: son
---      las constantes de `dominio/sucursal.ts` y cambiarlos es un CHECK nuevo, no un cambio de datos.
+--      las constantes de `src/primitivas/contacto/` (telefono.ts, email.ts, web.ts) y cambiarlos es un CHECK nuevo, no un cambio de datos.
 --  C2. La BASE copia el contacto, no la aplicación (como `sucursal_id` en 0016): el disparador `comprobante_alta_contacto` lee la
 --      sucursal del comprobante con FOR SHARE y deja en la fila nueva el contacto VIGENTE EN ESE MOMENTO, pise lo que pise quien
 --      inserte. La aplicación no manda esas columnas (no tiene INSERT sobre ellas) y no las puede falsear. «Al emitir» es al crear
@@ -53,13 +53,18 @@ BEGIN
 END
 $$;
 
+-- Cada CHECK repite la regla de la primitiva de contacto que se cita (src/primitivas/contacto/): si cambia el tope o la forma,
+-- cambian las dos puntas (la constante y un CHECK nuevo en cada tabla que guarde el dato).
 ALTER TABLE sucursal
+  -- Repite `telefono.ts`: LARGO_MAXIMO_DEL_TELEFONO = 40, texto de una línea sin control, sin blancos en los extremos.
   ADD COLUMN telefono text CONSTRAINT sucursal_telefono_ck CHECK (
     telefono = btrim(telefono) AND char_length(telefono) BETWEEN 1 AND 40 AND telefono !~ '[\x01-\x1F\x7F-\x9F]'),
-  -- La misma regla básica que `persona_email_ck` y `emailDesdeTexto`, más el largo y sin blancos adentro.
+  -- Repite `email.ts`: `emailDeContactoDesdeTexto` (la regla de `persona_email_ck` y `emailDesdeTexto`, sin blancos adentro) más
+  -- LARGO_MAXIMO_DEL_EMAIL_DE_CONTACTO = 254 y sin control.
   ADD COLUMN correo text CONSTRAINT sucursal_correo_ck CHECK (
     correo = lower(btrim(correo)) AND char_length(correo) <= 254 AND correo ~ '^\S+@\S+$'
     AND correo !~ '[\x01-\x1F\x7F-\x9F]'),
+  -- Repite `web.ts`: LARGO_MAXIMO_DE_LA_WEB = 200, empieza con http:// o https:// (sin distinguir mayúsculas), sin blancos ni control.
   ADD COLUMN web text CONSTRAINT sucursal_web_ck CHECK (
     char_length(web) <= 200 AND web ~* '^https?://\S+$' AND web !~ '[\x01-\x1F\x7F-\x9F]');
 

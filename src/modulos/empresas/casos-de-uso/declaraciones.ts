@@ -22,7 +22,7 @@ export const DECLARACIONES = {
       regla: "SIN_CAMBIOS",
       prueba: {
         archivo: "test/integracion/sucursales-casos-de-uso.test.ts",
-        it: "idempotente: repetir la edición ya aplicada devuelve la versión vigente y no escribe ni audita",
+        it: "idempotente: repetir la edición ya aplicada (nombre y contacto) devuelve la versión vigente y no escribe ni audita",
       },
     },
   },

@@ -11,6 +11,11 @@ export { datosDeJornada } from "./datos-de-jornada";
 export { DECLARACIONES as DECLARACIONES_DE_EMPRESAS } from "./casos-de-uso/declaraciones";
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS } from "./consultas/declaraciones";
 export {
+  type CambiosDeContacto,
+  type ContactoDeSucursal,
+  type ErrorDeContactoDeSucursal,
+} from "./dominio/contacto-de-sucursal";
+export {
   LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL,
   decidirAltaConNombreOcupado,
   decidirDesactivacion,

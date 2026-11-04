@@ -17,10 +17,11 @@ import {
   serieDe,
   viaDueno,
   viaDuenoDirecto,
+  viaSesion,
   type Escenario,
 } from "./facturacion-apoyo";
 import { crearBaseAparte } from "./entorno";
-import { acepta, crearPuntoDeVenta } from "./fiscal-apoyo";
+import { acepta, conAppDe, crearPuntoDeVenta, denegado, filas } from "./fiscal-apoyo";
 import type { BaseDePruebas } from "./global";
 import {
   CARPETA_DE_MIGRACIONES,
@@ -479,6 +480,44 @@ describe.skipIf(base === null)("contacto de la sucursal: la migración 0019", ()
       } finally {
         await c.query("rollback");
       }
+    });
+
+    it("con el rol de la APLICACIÓN (RLS y privilegios de columna): edita el contacto de su sucursal, el alta posterior lo congela y no puede mandarlo ni tocar el de otra empresa", async () => {
+      const e = await crearEscenario(c);
+      const otra = await crearEscenario(c);
+      await fijarContacto(c, otra.sucursal, "7777-7777", null, null);
+      await conAppDe(propia.base, e, async (s) => {
+        const ej = viaSesion(s);
+        const editado = await ej(
+          "update sucursal set telefono = $2, correo = $3, web = $4 where id = $1",
+          [e.sucursal, TELEFONO, CORREO, WEB],
+        );
+        acepta(editado);
+        filas(editado, 1);
+        // La de otra empresa no se ve ni se cambia (la política la oculta: cero filas).
+        filas(await ej("update sucursal set telefono = 'ajeno' where id = $1", [otra.sucursal]), 0);
+
+        const datos = datosDeComprobante(e);
+        acepta(await insertarComprobante(ej, datos));
+        const leido = await ej(
+          "select sucursal_telefono as telefono, sucursal_correo as correo, sucursal_web as web from comprobante where id = $1",
+          [datos["id"]],
+        );
+        acepta(leido);
+        expect(leido.ok && leido.rows).toEqual([CONTACTO]);
+
+        // Mandar el contacto en el alta, o cambiarlo después: sin privilegio de columna.
+        denegado(
+          await ej("update comprobante set sucursal_telefono = 'otro' where id = $1", [
+            datos["id"],
+          ]),
+        );
+        const conContacto = datosDeComprobante(e, { sucursal_telefono: "ajeno" });
+        denegado(await insertarComprobante(ej, conContacto));
+      });
+      expect(
+        (await c.query("select telefono from sucursal where id = $1", [otra.sucursal])).rows,
+      ).toEqual([{ telefono: "7777-7777" }]);
     });
 
     it("la sonda del orden: `comprobante_alta_contacto` dispara después de `comprobante_alta` (el alfabeto lo decide)", async () => {

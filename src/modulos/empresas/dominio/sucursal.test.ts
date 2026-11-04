@@ -23,6 +23,7 @@ const sucursal = (id: string, cambios: Partial<Sucursal> = {}): Sucursal => ({
   nombre: `Sucursal ${id}`,
   activa: true,
   horaDeCorte: HORA_DE_CORTE_POR_DEFECTO,
+  contacto: { telefono: null, correo: null, web: null },
   version: 1,
   ...cambios,
 });
@@ -201,43 +202,49 @@ describe("decidirEdicion", () => {
   const s = sucursal("a", { nombre: "Casa central", version: 3 });
 
   it("una sucursal que no existe es SUCURSAL_NO_ENCONTRADA", () => {
-    expect(decidirEdicion(null, 1, "Otra")).toEqual({
+    expect(decidirEdicion(null, 1, { nombre: "Otra" })).toEqual({
       ok: false,
       error: "SUCURSAL_NO_ENCONTRADA",
     });
   });
 
   it("con la versión vigente y otro nombre se renombra", () => {
-    expect(decidirEdicion(s, 3, "Casa matriz")).toEqual({ ok: true, valor: "EDITAR" });
+    expect(decidirEdicion(s, 3, { nombre: "Casa matriz" })).toEqual({ ok: true, valor: "EDITAR" });
   });
 
   it("con otra versión es VERSION_DESACTUALIZADA (más vieja o más nueva)", () => {
-    expect(decidirEdicion(s, 2, "Casa matriz")).toEqual({
+    expect(decidirEdicion(s, 2, { nombre: "Casa matriz" })).toEqual({
       ok: false,
       error: "VERSION_DESACTUALIZADA",
     });
-    expect(decidirEdicion(s, 4, "Casa matriz")).toEqual({
+    expect(decidirEdicion(s, 4, { nombre: "Casa matriz" })).toEqual({
       ok: false,
       error: "VERSION_DESACTUALIZADA",
     });
-    expect(decidirEdicion(s, Number.NaN, "Casa matriz")).toEqual({
+    expect(decidirEdicion(s, Number.NaN, { nombre: "Casa matriz" })).toEqual({
       ok: false,
       error: "VERSION_DESACTUALIZADA",
     });
   });
 
   it("si ya tiene ese nombre no hay cambios, con cualquier versión (repetir es idempotente)", () => {
-    expect(decidirEdicion(s, 3, "Casa central")).toEqual({ ok: true, valor: "SIN_CAMBIOS" });
-    expect(decidirEdicion(s, 1, "Casa central")).toEqual({ ok: true, valor: "SIN_CAMBIOS" });
+    expect(decidirEdicion(s, 3, { nombre: "Casa central" })).toEqual({
+      ok: true,
+      valor: "SIN_CAMBIOS",
+    });
+    expect(decidirEdicion(s, 1, { nombre: "Casa central" })).toEqual({
+      ok: true,
+      valor: "SIN_CAMBIOS",
+    });
   });
 
   it("cambiar solo las mayúsculas es un cambio", () => {
-    expect(decidirEdicion(s, 3, "casa central")).toEqual({ ok: true, valor: "EDITAR" });
+    expect(decidirEdicion(s, 3, { nombre: "casa central" })).toEqual({ ok: true, valor: "EDITAR" });
   });
 
   it("se puede editar una sucursal inactiva (conserva su nombre, pero se puede corregir)", () => {
     const inactiva = sucursal("a", { nombre: "Vieja", version: 2, activa: false });
-    expect(decidirEdicion(inactiva, 2, "Nueva")).toEqual({ ok: true, valor: "EDITAR" });
+    expect(decidirEdicion(inactiva, 2, { nombre: "Nueva" })).toEqual({ ok: true, valor: "EDITAR" });
   });
 
   describe("con hora de corte", () => {
@@ -248,50 +255,67 @@ describe("decidirEdicion", () => {
     });
 
     it("la misma hora de corte y el mismo nombre no hay cambios, con cualquier versión", () => {
-      expect(decidirEdicion(conCorte, 3, "Casa central", hora("04:00"))).toEqual({
+      expect(
+        decidirEdicion(conCorte, 3, { nombre: "Casa central", horaDeCorte: hora("04:00") }),
+      ).toEqual({
         ok: true,
         valor: "SIN_CAMBIOS",
       });
-      expect(decidirEdicion(conCorte, 1, "Casa central", hora("04:00"))).toEqual({
+      expect(
+        decidirEdicion(conCorte, 1, { nombre: "Casa central", horaDeCorte: hora("04:00") }),
+      ).toEqual({
         ok: true,
         valor: "SIN_CAMBIOS",
       });
     });
 
     it("otra hora de corte con el mismo nombre es un cambio y pide la versión vigente", () => {
-      expect(decidirEdicion(conCorte, 3, "Casa central", hora("06:30"))).toEqual({
+      expect(
+        decidirEdicion(conCorte, 3, { nombre: "Casa central", horaDeCorte: hora("06:30") }),
+      ).toEqual({
         ok: true,
         valor: "EDITAR",
       });
-      expect(decidirEdicion(conCorte, 2, "Casa central", hora("06:30"))).toEqual({
+      expect(
+        decidirEdicion(conCorte, 2, { nombre: "Casa central", horaDeCorte: hora("06:30") }),
+      ).toEqual({
         ok: false,
         error: "VERSION_DESACTUALIZADA",
       });
     });
 
     it("una hora de corte omitida no se toca: el mismo nombre sigue sin cambios aunque la sucursal tenga corte", () => {
-      expect(decidirEdicion(conCorte, 1, "Casa central")).toEqual({
+      expect(decidirEdicion(conCorte, 1, { nombre: "Casa central" })).toEqual({
         ok: true,
         valor: "SIN_CAMBIOS",
       });
     });
 
     it("otro nombre con la misma hora de corte es un cambio", () => {
-      expect(decidirEdicion(conCorte, 3, "Matriz", hora("04:00"))).toEqual({
-        ok: true,
-        valor: "EDITAR",
-      });
+      expect(decidirEdicion(conCorte, 3, { nombre: "Matriz", horaDeCorte: hora("04:00") })).toEqual(
+        {
+          ok: true,
+          valor: "EDITAR",
+        },
+      );
     });
 
     it("volver al corte por defecto (00:00) es un cambio como cualquier otro", () => {
-      expect(decidirEdicion(conCorte, 3, "Casa central", HORA_DE_CORTE_POR_DEFECTO)).toEqual({
+      expect(
+        decidirEdicion(conCorte, 3, {
+          nombre: "Casa central",
+          horaDeCorte: HORA_DE_CORTE_POR_DEFECTO,
+        }),
+      ).toEqual({
         ok: true,
         valor: "EDITAR",
       });
     });
 
     it("una sucursal que no existe sigue siendo SUCURSAL_NO_ENCONTRADA", () => {
-      expect(decidirEdicion(null, 3, "Casa central", hora("04:00"))).toEqual({
+      expect(
+        decidirEdicion(null, 3, { nombre: "Casa central", horaDeCorte: hora("04:00") }),
+      ).toEqual({
         ok: false,
         error: "SUCURSAL_NO_ENCONTRADA",
       });
@@ -310,4 +334,54 @@ describe("horaDeCorteValida", () => {
       expect(horaDeCorteValida(texto)).toEqual({ ok: false, error: "HORA_DE_CORTE_INVALIDA" });
     },
   );
+
+  describe("con contacto", () => {
+    const conContacto = sucursal("a", {
+      nombre: "Casa central",
+      version: 3,
+      contacto: { telefono: "4321-0000", correo: "centro@hotel.com", web: null },
+    });
+    const pide = (contacto: Parameters<typeof decidirEdicion>[2]["contacto"]) => ({
+      nombre: "Casa central",
+      contacto,
+    });
+
+    it("pedir lo que ya hay (o borrar lo que no hay) no cambia nada, con cualquier versión", () => {
+      for (const contacto of [
+        { telefono: "4321-0000" },
+        { correo: "centro@hotel.com", telefono: "4321-0000" },
+        { web: null },
+        {},
+      ]) {
+        expect(decidirEdicion(conContacto, 1, pide(contacto))).toEqual({
+          ok: true,
+          valor: "SIN_CAMBIOS",
+        });
+      }
+    });
+
+    it("un dato de contacto distinto, nuevo o borrado es un cambio y pide la versión vigente", () => {
+      for (const contacto of [
+        { telefono: "4000-1111" },
+        { web: "https://hotel.com" },
+        { correo: null },
+      ]) {
+        expect(decidirEdicion(conContacto, 3, pide(contacto))).toEqual({
+          ok: true,
+          valor: "EDITAR",
+        });
+        expect(decidirEdicion(conContacto, 2, pide(contacto))).toEqual({
+          ok: false,
+          error: "VERSION_DESACTUALIZADA",
+        });
+      }
+    });
+
+    it("el contacto omitido no se toca: el mismo nombre sigue sin cambios", () => {
+      expect(decidirEdicion(conContacto, 1, { nombre: "Casa central" })).toEqual({
+        ok: true,
+        valor: "SIN_CAMBIOS",
+      });
+    });
+  });
 });

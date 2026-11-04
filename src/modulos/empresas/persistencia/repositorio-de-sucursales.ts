@@ -6,6 +6,7 @@ import {
   type SucursalId,
 } from "../../../primitivas/identificadores/marca";
 import { horaDelDiaDesdeTexto, type HoraDelDia } from "../../../primitivas/tiempo/hora-del-dia";
+import type { CambiosDeContacto } from "../dominio/contacto-de-sucursal";
 import type { DatosDeJornada, Sucursal } from "../dominio/sucursal";
 import { FORMA_DE_UUID, type EmpresasDb } from "./repositorios";
 
@@ -16,13 +17,15 @@ export interface RepositorioDeSucursales {
   crear(empresa: EmpresaId, nombre: string): Promise<Sucursal>;
   listar(empresa: EmpresaId): Promise<Sucursal[]>;
   /**
-   * Cambia el nombre y/o la hora de corte en un solo `UPDATE` (una versión nueva) si la versión
-   * coincide; `null` si no coincide o no existe. Al menos un cambio: sin ninguno lanza `RangeError`.
+   * Cambia el nombre, la hora de corte y/o el contacto en un solo `UPDATE` (una versión nueva) si la
+   * versión coincide; `null` si no coincide o no existe. Un dato de contacto presente en `contacto` se
+   * escribe tal cual (`null` lo borra); uno ausente no se toca. Al menos un cambio: sin ninguno lanza
+   * `RangeError`.
    */
   editar(
     id: SucursalId,
     versionEsperada: number,
-    cambios: Readonly<{ nombre?: string; horaDeCorte?: HoraDelDia }>,
+    cambios: Readonly<{ nombre?: string; horaDeCorte?: HoraDelDia; contacto?: CambiosDeContacto }>,
   ): Promise<Sucursal | null>;
   /**
    * La zona horaria de la empresa de la sucursal y la hora de corte de la sucursal, en una lectura
@@ -42,9 +45,14 @@ export interface RepositorioDeSucursales {
   listarActivas(empresa: EmpresaId): Promise<Sucursal[]>;
   /**
    * Crea la sucursal salvo que la empresa ya tenga una con ese nombre (sin distinguir mayúsculas,
-   * activa o no): `INSERT ... ON CONFLICT DO NOTHING` y, si no insertó, devuelve la existente.
+   * activa o no): `INSERT ... ON CONFLICT DO NOTHING` y, si no insertó, devuelve la existente (con SU
+   * contacto: el `contacto` pedido solo se escribe en una sucursal nueva, nunca pisa el de una existente).
    */
-  crearSiNoExiste(empresa: EmpresaId, nombre: string): Promise<AltaDeSucursal>;
+  crearSiNoExiste(
+    empresa: EmpresaId,
+    nombre: string,
+    contacto?: CambiosDeContacto,
+  ): Promise<AltaDeSucursal>;
   /** Activa o desactiva si la versión coincide; `null` si no coincide o no es de la empresa. */
   cambiarActiva(
     empresa: EmpresaId,
@@ -70,7 +78,17 @@ function aSucursal(fila: Selectable<EmpresasDb["sucursal"]>): Sucursal {
     nombre: fila.nombre,
     activa: fila.activa,
     horaDeCorte: aHoraDeCorte(fila.hora_de_corte),
+    contacto: { telefono: fila.telefono, correo: fila.correo, web: fila.web },
     version: fila.version,
+  };
+}
+
+/** Solo las columnas de contacto pedidas: una ausente no se escribe (el `INSERT` sin contacto es el de antes de 0019). */
+function columnasDeContacto(contacto: CambiosDeContacto) {
+  return {
+    ...(contacto.telefono === undefined ? {} : { telefono: contacto.telefono }),
+    ...(contacto.correo === undefined ? {} : { correo: contacto.correo }),
+    ...(contacto.web === undefined ? {} : { web: contacto.web }),
   };
 }
 
@@ -105,10 +123,10 @@ export function crearRepositorioDeSucursales(db: Kysely<EmpresasDb>): Repositori
       await db.insertInto("sucursal").values({ empresa_id: empresa, nombre }).execute();
     },
 
-    async crearSiNoExiste(empresa, nombre) {
+    async crearSiNoExiste(empresa, nombre, contacto = {}) {
       const nueva = await db
         .insertInto("sucursal")
-        .values({ empresa_id: empresa, nombre })
+        .values({ empresa_id: empresa, nombre, ...columnasDeContacto(contacto) })
         .onConflict((oc) => oc.doNothing())
         .returningAll()
         .executeTakeFirst();
@@ -161,7 +179,12 @@ export function crearRepositorioDeSucursales(db: Kysely<EmpresasDb>): Repositori
     },
 
     async editar(id, versionEsperada, cambios) {
-      if (cambios.nombre === undefined && cambios.horaDeCorte === undefined) {
+      const contacto = columnasDeContacto(cambios.contacto ?? {});
+      if (
+        cambios.nombre === undefined &&
+        cambios.horaDeCorte === undefined &&
+        Object.keys(contacto).length === 0
+      ) {
         throw new RangeError("editar una sucursal exige al menos un cambio");
       }
       const fila = await db
@@ -169,6 +192,7 @@ export function crearRepositorioDeSucursales(db: Kysely<EmpresasDb>): Repositori
         .set({
           ...(cambios.nombre === undefined ? {} : { nombre: cambios.nombre }),
           ...(cambios.horaDeCorte === undefined ? {} : { hora_de_corte: cambios.horaDeCorte }),
+          ...contacto,
         })
         .where("id", "=", id)
         .where("version", "=", versionEsperada)
