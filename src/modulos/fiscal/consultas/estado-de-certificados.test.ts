@@ -150,12 +150,16 @@ describe("el guard va primero en el estado de los certificados", () => {
     }
   });
 
-  it("con el catálogo REAL todavía no se puede usar (MODULO_EN_DESARROLLO) y con la facturación sin activar, MODULO_NO_ACTIVO", async () => {
+  it("con el catálogo REAL (facturación disponible) y activada en la empresa pasa el gerente; sin activar, MODULO_NO_ACTIVO", async () => {
     const real = armar(actor("GERENTE"), {}, true, REGLAS_DE_EMPRESA);
-    expect(await ver(real)).toEqual({ ok: false, error: "MODULO_EN_DESARROLLO" });
-    const sinActivar = armar(actor("GERENTE", { modulosActivados: [], modulosHabilitados: [] }));
+    expect((await ver(real)).ok).toBe(true);
+    const sinActivar = armar(
+      actor("GERENTE", { modulosActivados: [], modulosHabilitados: [] }),
+      {},
+      true,
+      REGLAS_DE_EMPRESA,
+    );
     expect(await ver(sinActivar)).toEqual({ ok: false, error: "MODULO_NO_ACTIVO" });
-    expect(real.registro.accesos).toEqual([]);
     expect(sinActivar.registro.accesos).toEqual([]);
   });
 
