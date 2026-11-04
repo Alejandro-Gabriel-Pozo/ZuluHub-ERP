@@ -52,10 +52,18 @@ export type RespuestaDeVercel<T> = Resultado<T, FallaDeVercel>;
 
 export type ClienteDeVariables = Readonly<{
   listar: () => Promise<RespuestaDeVercel<readonly VariableRemota[]>>;
-  escribir: (clave: string, valor: string, destino: Destino) => Promise<RespuestaDeVercel<null>>;
+  /** `pisar: false` crea y nada más: si ya existe en el destino, Vercel rechaza (409) y no se cambia. Por defecto, `upsert`. */
+  escribir: (
+    clave: string,
+    valor: string,
+    destino: Destino,
+    opciones?: OpcionesDeEscritura,
+  ) => Promise<RespuestaDeVercel<null>>;
   borrar: (id: string) => Promise<RespuestaDeVercel<null>>;
   quitarDestinos: (id: string, quedan: readonly string[]) => Promise<RespuestaDeVercel<null>>;
 }>;
+
+export type OpcionesDeEscritura = Readonly<{ pisar: boolean }>;
 
 export type OpcionesDelCliente = Readonly<{
   token: string;
@@ -174,11 +182,11 @@ export function crearClienteVercel(opciones: OpcionesDelCliente): ClienteDeVaria
         ? fallar("Vercel contestó la lista de variables con una forma que no se entiende", false)
         : ok(variables);
     },
-    escribir(clave, valor, destino) {
+    escribir(clave, valor, destino, opciones) {
       return escribirYComprobar({
         metodo: "POST",
         ruta: RUTAS.crear,
-        consulta: { upsert: "true" },
+        ...(opciones?.pisar === false ? {} : { consulta: { upsert: "true" } }),
         cuerpo: { key: clave, value: valor, type: "sensitive", target: [destino] },
         valor,
       });
