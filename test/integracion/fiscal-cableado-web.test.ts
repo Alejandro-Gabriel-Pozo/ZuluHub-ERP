@@ -44,8 +44,8 @@ import { comoEmpresa } from "./entorno";
  *  - cada acción exige SU permiso en el servidor, la empresa sale del contexto y nunca del pedido, y ninguna empresa ve
  *    ni toca lo de otra;
  *  - ningún error de persistencia, texto de ARCA ni cadena de conexión llega a la respuesta.
- * El catálogo real tiene `facturacion` EN DESARROLLO: acá se usa uno con el módulo disponible (como las pruebas de
- * los casos de uso) y una prueba aparte verifica que con el real emitir da `MODULO_EN_DESARROLLO`.
+ * El catálogo real tiene `facturacion` DISPONIBLE pero sin activar para nadie: acá las empresas la activan de verdad (plan y
+ * `modulo_de_empresa`) y una prueba aparte verifica que con el catálogo real, sin activarla, emitir y ver dan `MODULO_NO_ACTIVO`.
  */
 
 const base = inject("baseDePruebas");
@@ -661,22 +661,30 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
 
   // ===============================================================================================
   describe("autorización en el servidor y aislamiento entre empresas", () => {
-    it("con el catálogo REAL el módulo sigue en desarrollo: emitir y ver dan MODULO_EN_DESARROLLO", async () => {
+    it("con el catálogo REAL el módulo es disponible pero no nace activo: sin activarlo en la empresa, emitir y ver dan MODULO_NO_ACTIVO; activado, pasan", async () => {
       const e = await empresaConFacturacion();
+      const sinActivar = await crearEscenarioDeCasos(dueno, propia.base, { rol: "OPERADOR" });
       const real = armarWeb(conexiones, { emision });
       const dReal: DependenciasDeFacturacionWeb = {
         ...d,
         casosDeUso: real.casosDeUsoDeFacturacion,
         consultas: real.consultasDeFacturacion,
       };
-      expect(REGLAS_DE_EMPRESA.catalogo.facturacion.estado).toBe("en_desarrollo");
-      const emitido = await emitirFactura(dReal, comoPersonaDe(e), facturaCruda(e));
-      expect(emitido).toMatchObject({ ok: false, error: { codigo: "MODULO_EN_DESARROLLO" } });
-      const lista = await listarComprobantes(dReal, comoPersonaDe(e), null, undefined);
-      expect(lista).toMatchObject({ ok: false, error: { codigo: "MODULO_EN_DESARROLLO" } });
+      expect(REGLAS_DE_EMPRESA.catalogo.facturacion.estado).toBe("disponible");
+      const emitido = await emitirFactura(
+        dReal,
+        comoPersonaDe(sinActivar),
+        facturaCruda(sinActivar),
+      );
+      expect(emitido).toMatchObject({ ok: false, error: { codigo: "MODULO_NO_ACTIVO" } });
+      const lista = await listarComprobantes(dReal, comoPersonaDe(sinActivar), null, undefined);
+      expect(lista).toMatchObject({ ok: false, error: { codigo: "MODULO_NO_ACTIVO" } });
       expect(
-        (await filas("select 1 from comprobante where empresa_id = $1", [e.empresa])).length,
+        (await filas("select 1 from comprobante where empresa_id = $1", [sinActivar.empresa]))
+          .length,
       ).toBe(0);
+      expect((await emitirFactura(dReal, comoPersonaDe(e), facturaCruda(e))).ok).toBe(true);
+      expect((await listarComprobantes(dReal, comoPersonaDe(e), null, undefined)).ok).toBe(true);
     });
 
     it("cada acción exige SU permiso: el operador no resincroniza ni cambia el ambiente; el gerente sí puede intentarlo", async () => {

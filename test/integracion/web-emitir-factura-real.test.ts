@@ -211,7 +211,13 @@ describe.skipIf(base === null)("Emitir (8B): la página y la acción contra el b
 
   async function empresaFacturadora(
     persona: string,
-    opciones: { rol?: RolDePrueba; condicionIva?: "MONOTRIBUTO"; sinCertificado?: boolean } = {},
+    opciones: {
+      rol?: RolDePrueba;
+      condicionIva?: "MONOTRIBUTO";
+      sinCertificado?: boolean;
+      /** Sin plan que la incluya ni `modulo_de_empresa`: la facturación es disponible pero esta empresa no la activó. */
+      sinActivarLaFacturacion?: boolean;
+    } = {},
   ) {
     const m = await crearMundoDeMarca(mundo.dueno, { marca: mundo.marcaA });
     await crearMembresiaDeBase(mundo.dueno, m.empresa, persona, opciones.rol ?? "GERENTE");
@@ -232,6 +238,7 @@ describe.skipIf(base === null)("Emitir (8B): la página y la acción contra el b
     });
     if (opciones.sinCertificado !== true)
       await cargarCertificado(mundo.propia.base, e, "HOMOLOGACION");
+    if (opciones.sinActivarLaFacturacion === true) return e;
     const { version } = await crearPlanPublicado(mundo.dueno, { modulos: ["facturacion"] });
     await asignarPlan(mundo.dueno, m.tenant, version);
     await mundo.dueno.query(
@@ -472,11 +479,10 @@ describe.skipIf(base === null)("Emitir (8B): la página y la acción contra el b
     expect(await comprobantesDe(e.empresa)).toHaveLength(1);
   });
 
-  it("con el catálogo REAL la facturación sigue en desarrollo: ni las lecturas de la página ni emitir pasan", async () => {
+  it("con el catálogo REAL la facturación es disponible pero no nace activa: sin activarla en la empresa ni las lecturas de la página ni emitir pasan; activada, sí", async () => {
     const { yo, persona } = await nuevaPersona();
-    const e = await empresaFacturadora(persona);
-    comoNavegador(yo, e.empresa);
-    const contexto = await contextoDeLaPagina();
+    const sinActivar = await empresaFacturadora(persona, { sinActivarLaFacturacion: true });
+    const activa = await empresaFacturadora(persona);
     const conCatalogoSimulado = estado.fiscal;
     const emision: ProveedorDeEmision = { para: (_e, _em, ambiente) => arca[ambiente] };
     estado.fiscal = {
@@ -484,16 +490,26 @@ describe.skipIf(base === null)("Emitir (8B): la página y la acción contra el b
       trabajos: conCatalogoSimulado?.trabajos,
     };
     try {
-      const enDesarrollo = { ok: false, error: { codigo: "MODULO_EN_DESARROLLO" } };
-      expect(await acciones.discriminaIvaParaEmitir(contexto)).toMatchObject(enDesarrollo);
-      expect(await acciones.puntosDeVentaParaEmitir(contexto)).toMatchObject(enDesarrollo);
+      comoNavegador(yo, sinActivar.empresa);
+      const contextoSinActivar = await contextoDeLaPagina();
+      const noActivo = { ok: false, error: { codigo: "MODULO_NO_ACTIVO" } };
+      expect(await acciones.discriminaIvaParaEmitir(contextoSinActivar)).toMatchObject(noActivo);
+      expect(await acciones.puntosDeVentaParaEmitir(contextoSinActivar)).toMatchObject(noActivo);
       expect(
         await acciones.emitirLaFactura({
-          ...armarElPedido(clienteInicial, [renglon({})], e.pv, true),
+          ...armarElPedido(clienteInicial, [renglon({})], sinActivar.pv, true),
           clave: randomUUID(),
         }),
-      ).toMatchObject(enDesarrollo);
-      expect(await comprobantesDe(e.empresa)).toEqual([]);
+      ).toMatchObject(noActivo);
+      expect(await comprobantesDe(sinActivar.empresa)).toEqual([]);
+
+      comoNavegador(yo, activa.empresa);
+      const emitida = await acciones.emitirLaFactura({
+        ...armarElPedido(clienteInicial, [renglon({})], activa.pv, true),
+        clave: randomUUID(),
+      });
+      expect(emitida.ok).toBe(true);
+      expect(await comprobantesDe(activa.empresa)).toHaveLength(1);
     } finally {
       estado.fiscal = conCatalogoSimulado;
     }

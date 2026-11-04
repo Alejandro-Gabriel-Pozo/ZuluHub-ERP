@@ -158,15 +158,19 @@ describe("P7: el guard va primero en cada caso de uso de numeración", () => {
   );
 
   it.each(NOMBRES)(
-    "%s con el catálogo REAL da MODULO_EN_DESARROLLO a todos: todavía no se puede emitir (H7, §D)",
+    "%s con el catálogo REAL (facturación disponible): sin activar en la empresa sigue cerrado, y activa los tres roles pasan",
     async (nombre) => {
       for (const rol of ROLES_DE_EMPRESA) {
-        const vigilada = vigilar(actor(rol));
-        expect(await LLAMADAS[nombre](casosCon(vigilada, REGLAS_DE_EMPRESA)), rol).toEqual({
+        const sinActivar = vigilar({ rol, modulosActivados: [], modulosHabilitados: [] });
+        expect(await LLAMADAS[nombre](casosCon(sinActivar, REGLAS_DE_EMPRESA)), rol).toEqual({
           ok: false,
-          error: "MODULO_EN_DESARROLLO",
+          error: "MODULO_NO_ACTIVO",
         });
-        expect(vigilada.accesos).toEqual(["autorizacion"]);
+        expect(sinActivar.accesos).toEqual(["autorizacion"]);
+        const activa = vigilar(actor(rol));
+        expect(await pasoElGuard(LLAMADAS[nombre](casosCon(activa, REGLAS_DE_EMPRESA))), rol).toBe(
+          true,
+        );
       }
     },
   );

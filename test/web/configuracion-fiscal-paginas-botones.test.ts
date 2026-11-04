@@ -9,7 +9,7 @@ import { ok } from "../../src/primitivas/resultado/resultado";
 /**
  * Los botones de las páginas de Puntos de venta según lo que el SERVIDOR deja hacer hoy (I1 del PR #122): lo que no, sale apagado con
  * su motivo del catálogo. El cálculo está en `configuracion-fiscal-acciones.test.ts`; acá, que cada página lo aplique a sus botones.
- * Previene: abrir la ventana de «Pasar a producción», confirmar y recién ahí recibir el rechazo del módulo en desarrollo. Ocultar no
+ * Previene: abrir la ventana de «Pasar a producción», confirmar y recién ahí recibir el rechazo del módulo no activado. Ocultar no
  * autoriza: el guard vuelve a decidir al enviar. Mismo armado que `configuracion-fiscal-paginas.test.ts` (guarda y armazón reales).
  */
 vi.mock("server-only", () => ({}));
@@ -107,8 +107,8 @@ const PV = (cambios: Record<string, unknown> = {}) => ({
   ...cambios,
 });
 
-// Lo que hoy entrega el servidor al gerente: las acciones de `administracion` (módulo obligatorio, siempre activo) y NINGUNA de
-// `facturacion`, que está en desarrollo.
+// Lo que entrega el servidor al gerente de una empresa que NO activó la facturación: las acciones de `administracion` (módulo
+// obligatorio, siempre activo) y NINGUNA de `facturacion`.
 const PERMISOS_DEL_GERENTE = {
   acciones: [
     "datos_fiscales.editar",
@@ -141,7 +141,7 @@ const botones = (marcado: string): { nombre: string; apagado: boolean; motivo: s
   }));
 const boton = (marcado: string, nombre: string) =>
   botones(marcado).find((b) => b.nombre === nombre);
-const EN_DESARROLLO = "Esta función todavía está en desarrollo.";
+const NO_ACTIVADA = "Esta función no está activada para la empresa.";
 const SIN_PERMISO = "No tiene permiso para hacer esto.";
 const EDICION = { id: ID, busqueda: { editar: "1" } };
 
@@ -163,12 +163,12 @@ describe("los botones apagados según el servidor", () => {
     expect(marcado).not.toContain('href="/configuracion-fiscal/puntos-de-venta/nuevo"');
   });
 
-  it("detalle: «Pasar a producción» sale apagado por el módulo en desarrollo; Desactivar y Editar, activos", async () => {
+  it("detalle: «Pasar a producción» sale apagado porque la empresa no activó la facturación; Desactivar y Editar, activos", async () => {
     const marcado = await html("/puntos-de-venta/[id]/page", { id: ID });
     expect(boton(marcado, "Pasar a producción")).toEqual({
       nombre: "Pasar a producción",
       apagado: true,
-      motivo: EN_DESARROLLO,
+      motivo: NO_ACTIVADA,
     });
     expect(boton(marcado, "Desactivar")).toEqual({
       nombre: "Desactivar",

@@ -1,6 +1,7 @@
 import { sql } from "kysely";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import { exigirAccion } from "../../src/capacidades/permisos/exigir";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import {
@@ -14,7 +15,6 @@ import {
 import { ok } from "../../src/primitivas/resultado/resultado";
 import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
 import { comoEmpresa, crearBaseAparte, crearEmpresaActiva, crearEntornoDePrueba } from "./entorno";
-import { REGLAS_CON_FACTURACION } from "./fiscal-numeracion-apoyo";
 import { crearMembresiaDeBase, crearPersonaDeBase, type RolDePrueba } from "./fixtures-identidad";
 import { asignarPlan, crearMarca, crearPlanPublicado } from "./marcas-apoyo";
 
@@ -25,9 +25,8 @@ import { asignarPlan, crearMarca, crearPlanPublicado } from "./marcas-apoyo";
  * curso y sin caché. `estadoDeModulos` y el guard consumen esas dos listas: acá se prueba también cómo
  * quedan el módulo activo, en solo lectura y no activo con la base de verdad.
  *
- * El catálogo real tiene `administracion` (obligatorio) y `facturacion` (en desarrollo). Estas pruebas
- * usan `facturacion` como el módulo activable y `REGLAS_CON_FACTURACION` (el mismo catálogo con
- * `facturacion` disponible) para ejercitar el guard.
+ * El catálogo real tiene `administracion` (obligatorio) y `facturacion` (disponible, no obligatoria). Estas pruebas
+ * usan `facturacion` como el módulo activable y el catálogo real (`REGLAS_DE_EMPRESA`) para ejercitar el guard.
  */
 
 const base = inject("baseDePruebas");
@@ -109,7 +108,7 @@ describe.skipIf(base === null)("autorización: los módulos reales de la empresa
     accion: "comprobantes.ver" | "comprobantes.emitir" | "comprobantes.emitir_manual",
   ) => {
     const r = await entorno.ejecutar({ contexto: ctx }, async (tx) =>
-      ok(await exigirAccion(REGLAS_CON_FACTURACION, accion, () => tx.autorizacion.delActor(ctx))),
+      ok(await exigirAccion(REGLAS_DE_EMPRESA, accion, () => tx.autorizacion.delActor(ctx))),
     );
     if (!r.ok) throw new Error(`falló la transacción: ${JSON.stringify(r.error)}`);
     return r.valor.ok ? "OK" : r.valor.error;
