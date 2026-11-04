@@ -189,6 +189,40 @@ describe("edición: qué viaja del domicilio", () => {
   });
 });
 
+describe("edición: tras guardar, el domicilio siguiente lleva otro id", () => {
+  it("guardado con domicilio corregido y corregido otra vez sin recargar: el segundo envío trae otro id", async () => {
+    guardar.mockResolvedValue(BIEN);
+    await render(formulario(ORIGINAL));
+    await page.getByLabelText("Calle").fill("Sarmiento");
+    tocar(guardarBoton());
+    await vi.waitFor(() => expect(guardar).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
+    await page.getByLabelText("Calle").fill("Alberdi");
+    tocar(guardarBoton());
+    await vi.waitFor(() => expect(guardar).toHaveBeenCalledTimes(2));
+    const [primero, segundo] = pedidos() as { domicilio: { id: string; calle: string } }[];
+    expect(segundo?.domicilio.calle).toBe("Alberdi");
+    expect(segundo?.domicilio.id).not.toBe(primero?.domicilio.id);
+  });
+
+  it("el segundo envío, si la red se corta, se reintenta con su propio id (el mismo en el reintento)", async () => {
+    guardar
+      .mockResolvedValueOnce(BIEN)
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce(BIEN);
+    await render(formulario(ORIGINAL));
+    await page.getByLabelText("Calle").fill("Sarmiento");
+    tocar(guardarBoton());
+    await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
+    await page.getByLabelText("Calle").fill("Alberdi");
+    tocar(guardarBoton());
+    await vi.waitFor(() => expect(guardar).toHaveBeenCalledTimes(3), { timeout: 5000 });
+    const [primero, segundo, tercero] = pedidos() as { domicilio: { id: string } }[];
+    expect(segundo).toEqual(tercero);
+    expect(segundo?.domicilio.id).not.toBe(primero?.domicilio.id);
+  });
+});
+
 describe("edición: errores del domicilio y versión desactualizada", () => {
   it("dejar la calle vacía: «Revisá los datos marcados.» con «Calle» marcada y el foco en ella", async () => {
     guardar.mockResolvedValue({
