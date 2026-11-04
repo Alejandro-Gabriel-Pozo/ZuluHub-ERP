@@ -24,8 +24,9 @@ name: Cargar entorno (preview y producción)
 #    y una migración del mismo entorno no corren a la vez. GitHub guarda UNA corrida en espera por grupo: una tercera
 #    reemplaza a la que esperaba. `migrar-base.yml` tiene sus propios Environments y su propio grupo (`migrar-base-…`); la
 #    base se protege además con el bloqueo de sesión de las migraciones y de la carga de roles.
-#  - El Environment `produccion` exige la APROBACIÓN DEL DUEÑO (revisores obligatorios y solo `main`, PRIMER-DESPLIEGUE.md, B.1).
-#    El Environment `preview` no pide aprobación. Los secretos viven en cada Environment, nunca en el repositorio:
+#  - Los Environments `produccion` y `preview` exigen la APROBACIÓN DEL DUEÑO (revisores obligatorios y solo `main`, decisión
+#    del dueño 2026-11-04, PRIMER-DESPLIEGUE.md, B.1). Es configuración de GitHub: el código no puede verificarla.
+#    Los secretos viven en cada Environment, nunca en el repositorio:
 #      PEDERNAL_DB_DUENO_DIRECTA  cadena DIRECTA (nunca la del pooler) del dueño de la base de ese entorno (la misma de `migrar.yml`).
 #                                 Sin ella, la clave de contexto queda para el dueño y lo demás se carga igual.
 #      PEDERNAL_VERCEL_TOKEN      token de Vercel con alcance al equipo `alepozod` y vencimiento corto.
@@ -112,7 +113,7 @@ jobs:
     needs: validar
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # En `produccion` los revisores obligatorios (el dueño) aprueban ANTES de que arranque cualquier paso de este job.
+    # En los dos Environments los revisores obligatorios (el dueño) aprueban ANTES de que arranque cualquier paso de este job.
     environment: ${{ needs.validar.outputs.ambiente }}
     permissions:
       contents: read

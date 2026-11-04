@@ -55,7 +55,7 @@ Settings → Environments → New environment. Dos, con estos nombres exactos:
 | Environment  | Revisores obligatorios | Ramas permitidas | Secretos (Environment secrets)                                                                                                  |
 | ------------ | ---------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `produccion` | **Vos** (obligatorio)  | solo `main`      | `PEDERNAL_DB_DUENO_DIRECTA` (obligatorio); `PEDERNAL_CLAVE_CONTEXTO`, `NEON_API_KEY`, `NEON_PROJECT_ID` (opcionales, ver abajo) |
-| `preview`    | ninguno                | solo `main`      | `PEDERNAL_DB_DUENO_DIRECTA` (obligatorio, de la rama `preview` de Neon); `PEDERNAL_CLAVE_CONTEXTO` (opcional, la de Preview)    |
+| `preview`    | **Vos** (obligatorio)  | solo `main`      | `PEDERNAL_DB_DUENO_DIRECTA` (obligatorio, de la rama `preview` de Neon); `PEDERNAL_CLAVE_CONTEXTO` (opcional, la de Preview)    |
 
 - `PEDERNAL_DB_DUENO_DIRECTA`: la cadena de conexión del **dueño** de esa base, **directa** (en Neon: Connect, y apagar
   «Connection pooling» antes de copiarla). Con el host del pooler (`-pooler`) el workflow se niega a migrar.
@@ -63,8 +63,8 @@ Settings → Environments → New environment. Dos, con estos nombres exactos:
   Si el Environment no la tiene, el workflow no instala ninguna clave.
 - `NEON_API_KEY` y `NEON_PROJECT_ID` (solo `produccion`): para la rama de respaldo `antes-de-<NNNN>` antes de migrar. Sin
   ellos se migra **sin respaldo** y el workflow lo avisa. Si los cargaste y el respaldo falla, **no se migra**.
-- Revisá que «Required reviewers» de `produccion` sea solo vos y que «Deployment branches» sea solo `main`: eso es lo que
-  protege el secreto de verdad.
+- Revisá que «Required reviewers» de `produccion` **y de `preview`** sea solo vos (decisión del dueño, 2026-11-04) y que
+  «Deployment branches» sea solo `main` en los dos: eso es lo que protege el secreto de verdad.
 - Ya existe otro workflow, `migrar-base.yml`, con sus propios Environments (`neon-preview`, `neon-production`) y su
   secreto `PEDERNAL_DB_MIGRACIONES`. Hacen lo mismo que `migrar.yml` sin respaldo ni clave de contexto. Cuando confirmes que
   `migrar.yml` anda, conviene borrar `migrar-base.yml` y esos dos Environments para que haya una sola puerta.
@@ -138,7 +138,8 @@ elegido) las variables que no dependen de vos: `PEDERNAL_SECRETO_INVITACIONES`, 
   (GitHub guarda una sola corrida en espera por grupo).
 - **Nunca sobrescribe.** Si una variable ya existe en Vercel para ese entorno (se mira por nombre), la saltea y dice «ya existía».
   Repetir el workflow es seguro. `PEDERNAL_CLAVE_CERTIFICADOS` **no se puede rotar** (cambiarla deja ilegibles los certificados
-  cargados) y, como nadie la ve, **no queda copia**: si se borra de Vercel, los certificados hay que volver a cargarlos.
+  cargados) y, como nadie la ve, **no queda copia** (decisión del dueño, 2026-11-04): si se borra de Vercel, se repite el trámite
+  del certificado.
 - **La clave de contexto** se instala primero en la base de esa rama y recién después se carga en Vercel; si la instalación falla,
   no se carga. Si la base **ya tiene** una clave y Vercel no tiene `PEDERNAL_CLAVE_CONTEXTO`, el workflow **se detiene sin cambiar
   nada**: no la copia a Vercel ni genera otra (reemplazarla dejaría a la aplicación sin poder firmar). Lo decidís vos (cargar a mano la que tengas guardada, o
@@ -154,9 +155,9 @@ elegido) las variables que no dependen de vos: `PEDERNAL_SECRETO_INVITACIONES`, 
   corrida termina en rojo mientras quede algo sin cargar o algo prohibido en el entorno.
 - **La protección real de los secretos es configuración de GitHub que el código no puede verificar.** Revisala en Settings →
   Environments: **«Deployment branches: solo `main`» en AMBOS Environments** (`preview` y `produccion`) y **revisor obligatorio
-  (vos) en `produccion`**. El Environment `preview` **no tiene revisor**: quien tenga permiso de escritura en el repositorio y corra el workflow desde `main`
-  lo dispara sin aprobación, con el token de Vercel y la cadena del dueño de la base de `preview`. Y el token de Vercel es **de
-  equipo** (alcance a `alepozod`): un token cargado en `preview` también puede escribir en Production; por eso conviene
+  (vos) en AMBOS** (decisión del dueño, 2026-11-04: `preview` también lleva revisor). Sin ese revisor, quien tenga permiso de
+  escritura en el repositorio y corra el workflow desde `main` lo dispararía sin aprobación, con el token de Vercel y la cadena
+  del dueño de la base de ese Environment. El token de Vercel es **de equipo** (alcance a `alepozod`): un token cargado en `preview` también puede escribir en Production; por eso conviene
   vencimiento corto y revisar quién tiene acceso al repositorio.
 - **NO VERIFICADO**: que Vercel rechace (409) crear una variable que ya existe cuando no se pide `upsert`. El Vercel de las
   pruebas lo hace; en el primer uso real, el informe lo va a decir si no.
@@ -195,9 +196,9 @@ puede ser la de contexto** (ni tener sus mismos bytes): la composición la recha
 
 #### La clave de los certificados (`PEDERNAL_CLAVE_CERTIFICADOS`)
 
-- **Dos caminos** (el primero está **pendiente de que lo ratifique el dueño**): (a) el workflow de B.4 bis la genera y la carga
-  sin que nadie la vea, y entonces **no hay copia posible** (ver «Si la perdés»); (b) generala vos con su propio comando, distinto
-  del de la de contexto, y cargala solo en Vercel (el entorno que corresponda), guardando la copia:
+- **Decisión del dueño, 2026-11-04: se genera por el workflow de B.4 bis, sin copia.** Nadie la ve, así que no hay copia posible
+  (ver «Si la perdés»). Si alguna vez se prefiere generarla a mano, con su propio comando, distinto del de la de contexto, y
+  cargarla solo en Vercel (el entorno que corresponda) guardando la copia:
   `node -e "console.log('c1:' + require('node:crypto').randomBytes(32).toString('hex'))"` (formato `<kid>:<64 dígitos
 hexadecimales>`; el `kid` es un texto corto de letras o números). Es un secreto: no lo pegues en ningún chat ni archivo.
 - **No puede ser la de contexto.** `PEDERNAL_CLAVE_CONTEXTO` se instala en la base (`contexto_clave`): si la de los
@@ -206,9 +207,9 @@ hexadecimales>`; el `kid` es un texto corto de letras o números). Es un secreto
   (la misma exigencia que `CRON_SECRET`: 10), como `000…0`.
 - **Todavía NO se puede rotar.** La composición pasa solo la clave activa, sin claves anteriores: cambiar el valor (o el
   `kid`) deja ilegibles los certificados y los tickets ya guardados, y hay que volver a cargarlos.
-- **Si la perdés, perdés los certificados cargados.** No hay forma de recuperarlos sin la clave: con el camino (b), guardá una
-  copia en tu gestor de secretos antes de cargar el primer certificado; con el workflow (a) no hay copia, y si se borra de
-  Vercel hay que volver a cargar los certificados. Rotarla (aceptar claves anteriores para descifrar) es una tarea
+- **Si la perdés, perdés los certificados cargados.** No hay forma de recuperarlos sin la clave: si la generaste a mano,
+  guardá una copia en tu gestor de secretos antes de cargar el primer certificado. Con el workflow no hay copia (decisión del
+  dueño, 2026-11-04): si se borra de Vercel se repite el trámite del certificado. Rotarla (aceptar claves anteriores para descifrar) es una tarea
   pendiente.
 - **El despacho inmediato (`after()`) espera el trabajo completo** (una autorización de ARCA puede tardar hasta 25 s, más
   el login de WSAA de hasta 20 s). Para que la plataforma no lo corte antes, la página que aloje las acciones de facturación
