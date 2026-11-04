@@ -1,3 +1,4 @@
+import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
@@ -39,13 +40,21 @@ describe("useActividad", () => {
   });
 
   it("usar la pantalla antes del aviso reinicia la cuenta", async () => {
-    await render(<Sonda />);
-    // Más tiempo total que el del vencimiento, pero con un toque antes de cada aviso.
-    for (let i = 0; i < 8; i++) {
-      await new Promise((r) => setTimeout(r, 300));
-      await userEvent.click(page.getByRole("button", { name: "Otro" }));
+    // Relojes falsos: con relojes reales un estancamiento del navegador entre toques dejaba pasar el aviso.
+    vi.useFakeTimers();
+    try {
+      await render(<Sonda />);
+      // Más tiempo total que el del vencimiento, pero con un toque antes de cada aviso.
+      for (let i = 0; i < 8; i++) {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(300);
+          window.dispatchEvent(new Event("pointerdown"));
+        });
+      }
+      expect(estadoActual()).toBe("activa");
+    } finally {
+      vi.useRealTimers();
     }
-    expect(estadoActual()).toBe("activa");
   });
 
   it("con el aviso a la vista, tocar alrededor no lo apaga: solo «Seguir»", async () => {
