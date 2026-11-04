@@ -160,8 +160,9 @@ function ofertaDe(accion: ClaveAccion, permisos: PermisosLeidos): OfertaDeAccion
 
 /**
  * Qué botones de Puntos de venta se ofrecen activos hoy, según lo que el SERVIDOR deja hacer (`permisosDelActor`, una lectura por
- * pedido). «Pasar a producción» (`puntos_de_venta.cambiar_ambiente`) es del módulo `facturacion`, en desarrollo: sale apagado con
- * «Esta función todavía está en desarrollo.»; las demás son de `administracion`. Si no se pudieron leer los permisos, TODO sale apagado
+ * pedido). «Pasar a producción» (`puntos_de_venta.cambiar_ambiente`) es del módulo `facturacion` (`disponible` desde 2026-11-04, pero
+ * activo solo en las empresas donde la plataforma lo activó): sale apagado, con el motivo que da el servidor, si el módulo no está activo
+ * para la empresa o el rol no alcanza; las demás son de `administracion`. Si no se pudieron leer los permisos, TODO sale apagado
  * con el genérico de D-82, «Esta acción no está permitida.» (ante un error o una duda el sistema cierra, `CLAUDE.md`; igual que
  * `puedeEmitirNotasDeCredito` y la barra).
  * Previene: ofrecer un botón que el guard va a rechazar sin saber si la persona puede. Es solo una ayuda: ocultar o apagar no es
