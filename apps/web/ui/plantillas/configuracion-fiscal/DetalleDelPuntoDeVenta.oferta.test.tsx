@@ -4,6 +4,7 @@ import { page } from "vitest/browser";
 import type { Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
 import { tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
 import {
+  DOMICILIO_DE_PRUEBA,
   PERMITIDO,
   TODO_PERMITIDO,
   enArmazon,
@@ -42,6 +43,7 @@ const PUNTO: PuntoParaConfigurar = {
   ambiente: "HOMOLOGACION",
   sucursal: { id: "s-norte", nombre: "Sucursal Norte", activa: true },
   tieneDomicilio: true,
+  domicilio: DOMICILIO_DE_PRUEBA,
   hayNumerosUsados: false,
   version: 7,
 };

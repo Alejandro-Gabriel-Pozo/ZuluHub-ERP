@@ -12,7 +12,13 @@ import {
   verificarFoco,
   violacionesDeAccesibilidad,
 } from "../../pruebas/ayudas";
-import { PERMITIDO, enArmazon, legibleYTocable, ventana } from "./ayudas-de-pruebas";
+import {
+  DOMICILIO_DE_PRUEBA,
+  PERMITIDO,
+  enArmazon,
+  legibleYTocable,
+  ventana,
+} from "./ayudas-de-pruebas";
 import { FormularioDePuntoDeVenta } from "./FormularioDePuntoDeVenta.cliente";
 import type { PuntoParaConfigurar } from "./modelo-de-puntos-de-venta";
 
@@ -52,6 +58,7 @@ const ORIGINAL: PuntoParaConfigurar = {
   ambiente: "HOMOLOGACION",
   sucursal: { id: "s-norte", nombre: "Sucursal Norte", activa: true },
   tieneDomicilio: true,
+  domicilio: DOMICILIO_DE_PRUEBA,
   hayNumerosUsados: false,
   version: 7,
 };
@@ -103,7 +110,7 @@ describe("alta de un punto de venta: accesibilidad y medidas", () => {
     "a %i px: sin violaciones como página, legible y tocable, sin desborde lateral",
     async (ancho) => {
       await ventana(ancho);
-      await render(enArmazon("Agregar punto de venta", formulario()));
+      await render(enArmazon("Nuevo punto de venta", formulario()));
       expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
       legibleYTocable();
     },
@@ -338,21 +345,21 @@ describe("edición", () => {
     expect(pedidos()).toEqual([{ puntoDeVentaId: ORIGINAL.id, versionEsperada: 7 }]);
   });
 
-  it("manda solo lo que cambió, con un domicilio nuevo (con su id) si se escribió", async () => {
+  it("manda solo lo que cambió, con un domicilio nuevo (con su id) si se corrigió", async () => {
     guardar.mockResolvedValue(BIEN);
     await render(formulario(ORIGINAL));
     await page.getByLabelText("Sucursal").selectOptions("s-centro");
-    await page.getByLabelText("Calle").fill("Mitre");
-    await page.getByLabelText("Número", { exact: true }).fill("55");
-    await page.getByLabelText("Localidad").fill("Rosario");
-    await page.getByLabelText("Provincia").selectOptions("AR-S");
+    await page.getByLabelText("Calle").fill("Belgrano");
+    await page.getByLabelText("Número", { exact: true }).fill("77");
+    await page.getByLabelText("Localidad").fill("Funes");
+    await page.getByLabelText("Provincia").selectOptions("AR-B");
     tocar(guardarBoton());
     await vi.waitFor(() => expect(guardar).toHaveBeenCalledTimes(1));
     expect(pedidos()[0]).toMatchObject({
       puntoDeVentaId: ORIGINAL.id,
       versionEsperada: 7,
       sucursalId: "s-centro",
-      domicilio: { tipo: "NUEVO", calle: "Mitre", numero: "55", provincia: "AR-S" },
+      domicilio: { tipo: "NUEVO", calle: "Belgrano", numero: "77", provincia: "AR-B" },
     });
     expect(pedidos()[0]).not.toHaveProperty("numero");
   });

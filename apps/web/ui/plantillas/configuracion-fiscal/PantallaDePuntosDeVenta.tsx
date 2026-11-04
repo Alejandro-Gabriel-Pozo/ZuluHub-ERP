@@ -13,14 +13,14 @@ export type PropsDePantallaDePuntosDeVenta = Readonly<{
   vacio: string;
   /** «Tocá un punto de venta para editarlo, activarlo o desactivarlo.» */
   ayuda: string;
-  /** «Agregar punto de venta», adónde lleva y si el servidor lo deja hacer hoy (apagado, con su motivo, si no). */
+  /** «Nuevo punto de venta», adónde lleva y si el servidor lo deja hacer hoy (apagado, con su motivo, si no). */
   agregar: Readonly<{ texto: string; href: string; oferta: OfertaDeAccion }>;
 }>;
 
 /**
  * La lista de puntos de venta (PROTO-PV, pantalla 1): todos los del emisor, también los que no están activos (D-60), cada uno con su
  * número de cinco dígitos, su sucursal, su estado y su ambiente (cada uno con su rótulo) y, en pruebas, el aviso de que no tiene valor
- * fiscal; tocarlo abre su pantalla. Sin ninguno, el texto del vacío y «Agregar».
+ * fiscal; tocarlo abre su pantalla. Sin ninguno, el texto del vacío y «Nuevo punto de venta».
  */
 export function PantallaDePuntosDeVenta({
   migas,
