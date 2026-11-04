@@ -282,6 +282,9 @@ export function verElComprobante(entrada: unknown): Promise<Respuesta<DetallePar
   return conLaEmpresa((contexto) => verComprobante(dependencias, contexto, entrada));
 }
 
+/** El modelo de impresión que recibe la ruta: lo reexporta el servidor para que las pantallas no importen la composición. */
+export type { ModeloDeImpresionParaLaPantalla };
+
 /**
  * El modelo de impresión de un comprobante Autorizado, con el QR ya dibujado (D-97). Como `verElComprobante`: solo el id viene del
  * pedido; la empresa, el permiso (`comprobantes.ver`) y la versión de representación (la sella el comprobante) las decide el servidor.

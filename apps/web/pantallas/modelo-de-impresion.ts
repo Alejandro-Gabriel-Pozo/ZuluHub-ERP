@@ -1,4 +1,4 @@
-import type { ModeloDeImpresionParaLaPantalla } from "../../../src/composicion/modelo-de-impresion-web";
+import type { ModeloDeImpresionParaLaPantalla } from "../servidor/facturacion";
 import type { ComprobanteParaLaHoja } from "../ui/plantillas/facturacion/impresion/modelo-de-la-hoja";
 
 type Modelo = ModeloDeImpresionParaLaPantalla["modelo"];
