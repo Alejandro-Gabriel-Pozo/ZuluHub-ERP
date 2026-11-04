@@ -141,9 +141,12 @@ function origenIdDelPedido(
   return ok(origenId);
 }
 
+/** Lo que sale del pedido de la pantalla: el filtro sin la sucursal, que no la manda el navegador sino que la resuelve el servidor. */
+export type CriteriosDeListado = Omit<FiltroDeListado, "sucursalId">;
+
 export function criteriosDeListado(
   pedido: PedidoDeListado,
-): Resultado<FiltroDeListado, ErrorDeCriterios> {
+): Resultado<CriteriosDeListado, ErrorDeCriterios> {
   const limite = pedido.limite ?? LIMITE_POR_DEFECTO;
   if (!Number.isInteger(limite) || limite < 1 || limite > LIMITE_MAXIMO) {
     return err("LIMITE_INVALIDO");

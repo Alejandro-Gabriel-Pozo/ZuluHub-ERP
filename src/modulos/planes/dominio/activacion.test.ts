@@ -198,3 +198,30 @@ describe("decidirDesactivacion", () => {
     expect(activados).toEqual(["caja", "ventas"]);
   });
 });
+
+describe("decidirActivacion con el catálogo REAL: facturacion", () => {
+  // Disponible (dueño, 2026-11-04) NO es activa: la plataforma la activa empresa por empresa y solo dentro del techo del plan.
+  const facturacion = (extra: Partial<PedidoDeActivacion<keyof typeof CATALOGO_DE_MODULOS>> = {}) =>
+    decidirActivacion({
+      catalogo: CATALOGO_DE_MODULOS,
+      modulo: "facturacion",
+      activados: [],
+      habilitados: ["administracion", "facturacion"],
+      ...extra,
+    });
+
+  it("se puede activar si el plan de la empresa la incluye", () => {
+    expect(facturacion()).toEqual({ ok: true, valor: { yaEstabaActivo: false } });
+  });
+
+  it("con un plan que no la incluye (el caso de cualquier plan que no la nombre) es MODULO_FUERA_DEL_PLAN", () => {
+    expect(facturacion({ habilitados: ["administracion"] })).toEqual({
+      ok: false,
+      error: { codigo: "MODULO_FUERA_DEL_PLAN" },
+    });
+    expect(facturacion({ habilitados: [] })).toEqual({
+      ok: false,
+      error: { codigo: "MODULO_FUERA_DEL_PLAN" },
+    });
+  });
+});

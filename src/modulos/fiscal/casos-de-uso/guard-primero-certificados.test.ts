@@ -126,12 +126,18 @@ const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
   }
 };
 
+/** La declaración de repetición no es lo que se mira acá, pero que no sobren claves sí. */
+const UNA_REPETICION: unknown = expect.any(Object);
+
 describe("P7: el guard va primero en cada caso de uso de certificados", () => {
   it("hay dos casos y los dos exigen certificados.gestionar (CA, solo el gerente)", () => {
     expect(NOMBRES).toHaveLength(2);
     expect(DECLARACIONES_DE_CERTIFICADOS).toEqual({
-      generarPedidoDeCertificado: { accion: "certificados.gestionar" },
-      cargarCertificado: { accion: "certificados.gestionar" },
+      generarPedidoDeCertificado: {
+        accion: "certificados.gestionar",
+        repeticion: UNA_REPETICION,
+      },
+      cargarCertificado: { accion: "certificados.gestionar", repeticion: UNA_REPETICION },
     });
     expect(PERMISOS_DE_EMPRESA["certificados.gestionar"]).toEqual(["GERENTE"]);
     expect(CATALOGO_DE_MODULOS.facturacion.acciones["certificados.gestionar"]).toEqual({
@@ -163,14 +169,19 @@ describe("P7: el guard va primero en cada caso de uso de certificados", () => {
     },
   );
 
-  it.each(NOMBRES)("%s con el catálogo REAL da MODULO_EN_DESARROLLO", async (nombre) => {
-    const vigilada = vigilar(actor("GERENTE"));
-    expect(await LLAMADAS[nombre](casosCon(vigilada, REGLAS_DE_EMPRESA))).toEqual({
-      ok: false,
-      error: "MODULO_EN_DESARROLLO",
-    });
-    expect(vigilada.accesos).toEqual(["autorizacion"]);
-  });
+  it.each(NOMBRES)(
+    "%s con el catálogo REAL (facturación disponible): sin activar en la empresa sigue cerrado, y activa pasa el gerente",
+    async (nombre) => {
+      const sinActivar = vigilar({ rol: "GERENTE", modulosActivados: [], modulosHabilitados: [] });
+      expect(await LLAMADAS[nombre](casosCon(sinActivar, REGLAS_DE_EMPRESA))).toEqual({
+        ok: false,
+        error: "MODULO_NO_ACTIVO",
+      });
+      expect(sinActivar.accesos).toEqual(["autorizacion"]);
+      const activa = vigilar(actor("GERENTE"));
+      expect(await pasoElGuard(LLAMADAS[nombre](casosCon(activa, REGLAS_DE_EMPRESA)))).toBe(true);
+    },
+  );
 
   it.each(NOMBRES)(
     "%s en solo lectura (baja de plan): no se genera ni se carga nada",

@@ -10,6 +10,7 @@ import {
 import type { UsuarioAuthId } from "../../src/primitivas/identificadores/marca";
 import type { Tokens } from "../../src/puertos/tokens";
 import { usuarioAlAzar } from "../utilidades/usuarios";
+import { esConcurrenciaAgotada } from "./concurrencia-apoyo";
 import {
   AHORA_DE_PRUEBA,
   crearBarrera,
@@ -45,13 +46,6 @@ vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
 type Fila = Record<string, unknown>;
 type Gancho = (tx: TxDePrueba, esperar: () => Promise<void>) => TxDePrueba;
-type Resultado = Awaited<ReturnType<CasosDeUsoDeIdentidad["aceptarInvitacion"]>>;
-
-const esAgotada = (r: Resultado): boolean =>
-  !r.ok &&
-  typeof r.error === "object" &&
-  "tipo" in r.error &&
-  r.error.tipo === "ConcurrenciaAgotada";
 
 describe.skipIf(base === null)(
   "autenticación: concurrencia de aceptarInvitacion con usuario",
@@ -246,7 +240,10 @@ describe.skipIf(base === null)(
           [y, u2],
         ] as const;
         const ganadores = intentos.filter(([r]) => r.ok);
-        if (ganadores.length === 2 || intentos.some(([r]) => esAgotada(r))) {
+        if (
+          ganadores.length === 2 ||
+          intentos.some(([r]) => !r.ok && esConcurrenciaAgotada(r.error))
+        ) {
           // Bajo una carga extrema el adaptador puede agotar los reintentos: eso no es una violación.
           expect(ganadores.length, `ronda ${n}: nunca dos ganadores con usuarios distintos`).toBe(
             1,
@@ -290,7 +287,7 @@ describe.skipIf(base === null)(
           aceptar(b.token, email, usuario),
         ]);
 
-        if (esAgotada(x) || esAgotada(y)) continue;
+        if ([x, y].some((r) => !r.ok && esConcurrenciaAgotada(r.error))) continue;
         expect([x.ok, y.ok], `ronda ${n}`).toEqual([true, true]);
         const personas = await personasDe(email);
         expect(personas, `ronda ${n}`).toEqual([{ id: personas[0]?.id, usuario_auth_id: usuario }]);
@@ -319,7 +316,7 @@ describe.skipIf(base === null)(
           aceptar(b.token, b.email, usuario),
         ]);
 
-        if (esAgotada(x) || esAgotada(y)) continue;
+        if ([x, y].some((r) => !r.ok && esConcurrenciaAgotada(r.error))) continue;
         const oks = [x, y].filter((r) => r.ok);
         expect(oks, `ronda ${n}: exactamente una`).toHaveLength(1);
         const fallo = [x, y].find((r) => !r.ok);

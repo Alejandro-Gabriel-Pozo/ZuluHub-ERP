@@ -2,9 +2,12 @@ import { PantallaDeInicio } from "../../../../ui/plantillas/sesion/PantallaDeIni
 import { pantallaDeOperacion } from "../../../../pantallas/operacion";
 import { pendientesDeLaEmpresa } from "../../../../servidor/modulos";
 
-// Inicio: dónde estás y la ranura «lo que falta» (vacía en v1: la llenan los módulos).
+// Inicio: dónde estás y la ranura «lo que falta» (hoy: completar la configuración fiscal; la llenan los módulos).
 export default function PaginaDeInicio() {
-  return pantallaDeOperacion({ titulo: "inicio.titulo", actual: "inicio" }, ({ empresa }) => (
-    <PantallaDeInicio empresa={empresa} pendientes={pendientesDeLaEmpresa()} />
-  ));
+  return pantallaDeOperacion(
+    { titulo: "inicio.titulo", actual: "inicio" },
+    async ({ empresa, contexto }) => (
+      <PantallaDeInicio empresa={empresa} pendientes={await pendientesDeLaEmpresa(contexto)} />
+    ),
+  );
 }

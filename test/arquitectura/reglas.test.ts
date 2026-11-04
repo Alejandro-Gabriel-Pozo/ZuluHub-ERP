@@ -394,7 +394,7 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
-      regla: "qr-solo-en-la-autenticacion-de-plataforma",
+      regla: "qr-solo-en-su-adaptador",
       archivos: {
         "src/adaptadores/autenticacion/opciones.ts": importa("qrcode-generator"),
       },
@@ -1374,12 +1374,43 @@ describe("facturación F6: las consultas del facturador (spec H7 facturación §
     expect(prohibido).toContain("consultas-sin-dominio");
   });
 
-  it("la excepción es solo de fiscal: el modelo de impresión de otro módulo sigue prohibido", async () => {
-    const v = await violacionesDe({
-      "src/modulos/empresas/dominio/modelo-de-impresion.ts": exporta,
-      "src/modulos/empresas/consultas/c.ts": importa("../dominio/modelo-de-impresion"),
+  it("una consulta de fiscal importa la acreditación (D-16), pero ningún otro archivo del dominio", async () => {
+    const permitido = await violacionesDe({
+      "src/modulos/fiscal/dominio/acreditacion.ts": exporta,
+      "src/modulos/fiscal/consultas/c.ts": importa("../dominio/acreditacion"),
     });
-    expect(v).toContain("consultas-sin-dominio");
+    expect(permitido).not.toContain("consultas-sin-dominio");
+    const prohibido = await violacionesDe({
+      "src/modulos/fiscal/dominio/acreditacion-de-otra-cosa.ts": exporta,
+      "src/modulos/fiscal/consultas/c.ts": importa("../dominio/acreditacion-de-otra-cosa"),
+    });
+    expect(prohibido).toContain("consultas-sin-dominio");
+  });
+
+  it("una consulta de fiscal importa la vigencia de una versión (D-43), pero ningún otro archivo del dominio", async () => {
+    const permitido = await violacionesDe({
+      "src/modulos/fiscal/dominio/vigencia.ts": exporta,
+      "src/modulos/fiscal/consultas/c.ts": importa("../dominio/vigencia"),
+    });
+    expect(permitido).not.toContain("consultas-sin-dominio");
+    // Lo vecino no entra por parecerse: ni otro archivo de «vigencia», ni los datos fiscales o el punto de venta, que son del dominio.
+    for (const otro of ["vigencia-de-otra-cosa", "datos-fiscales", "punto-de-venta", "emisor"]) {
+      const prohibido = await violacionesDe({
+        [`src/modulos/fiscal/dominio/${otro}.ts`]: exporta,
+        "src/modulos/fiscal/consultas/c.ts": importa(`../dominio/${otro}`),
+      });
+      expect(prohibido, otro).toContain("consultas-sin-dominio");
+    }
+  });
+
+  it("la excepción es solo de fiscal: el modelo de impresión, la acreditación y la vigencia de otro módulo siguen prohibidos", async () => {
+    for (const archivo of ["modelo-de-impresion", "acreditacion", "vigencia"]) {
+      const v = await violacionesDe({
+        [`src/modulos/empresas/dominio/${archivo}.ts`]: exporta,
+        "src/modulos/empresas/consultas/c.ts": importa(`../dominio/${archivo}`),
+      });
+      expect(v, archivo).toContain("consultas-sin-dominio");
+    }
   });
 });
 
@@ -1463,9 +1494,9 @@ describe("facturación F8: el adaptador real de ARCA (spec H7 facturación §B.5
 });
 
 /**
- * C-2 (D10): ningún `font-size` en `px` dentro de `apps/web/ui/plantillas/carta`. Previene que un CSS de la
+ * C-2 (D10): ningún `font-size` en `px` dentro de `apps/web/ui/plantillas/vidriera`. Previene que un CSS de la
  * carta fije la letra e ignore el tamaño del celular del comensal y el control «Letra» (ESLint no mira CSS:
- * la parte de JavaScript es el bloque `web/carta-sin-px-de-letra`). Chequeo: las violaciones inyectadas de acá
+ * la parte de JavaScript es el bloque `web/vidriera-sin-px-de-letra`). Chequeo: las violaciones inyectadas de acá
  * y la aplicación al repositorio real. Se prohíbe también `font:` abreviado y `calc()` con px.
  */
 function tamanosDeLetraEnPx(css: string): string[] {
@@ -1475,8 +1506,8 @@ function tamanosDeLetraEnPx(css: string): string[] {
     .filter((declaracion) => /\d\s*px\b/i.test(declaracion));
 }
 
-function archivosCssDeLaCarta(raiz: string): string[] {
-  const carpeta = join(raiz, "apps/web/ui/plantillas/carta");
+function archivosCssDeLaVidriera(raiz: string): string[] {
+  const carpeta = join(raiz, "apps/web/ui/plantillas/vidriera");
   if (!existsSync(carpeta)) return [];
   return readdirSync(carpeta, { recursive: true, encoding: "utf8" })
     .filter((f) => f.endsWith(".css"))
@@ -1484,10 +1515,10 @@ function archivosCssDeLaCarta(raiz: string): string[] {
     .sort();
 }
 
-function cssDeLaCartaConPx(raiz: string): string[] {
-  return archivosCssDeLaCarta(raiz).filter(
+function cssDeLaVidrieraConPx(raiz: string): string[] {
+  return archivosCssDeLaVidriera(raiz).filter(
     (f) =>
-      tamanosDeLetraEnPx(readFileSync(join(raiz, "apps/web/ui/plantillas/carta", f), "utf8"))
+      tamanosDeLetraEnPx(readFileSync(join(raiz, "apps/web/ui/plantillas/vidriera", f), "utf8"))
         .length > 0,
   );
 }
@@ -1521,18 +1552,18 @@ describe("C-2: la plantilla de la carta no fija la letra en px (D10)", () => {
   it("encuentra el CSS de la carta en el árbol y marca el que tiene px", () => {
     const base = mkdtempSync(join(tmpdir(), "pedernal-letra-"));
     directorios.push(base);
-    const carpeta = join(base, "apps/web/ui/plantillas/carta");
+    const carpeta = join(base, "apps/web/ui/plantillas/vidriera");
     mkdirSync(carpeta, { recursive: true });
     writeFileSync(join(carpeta, "bien.module.css"), ".a { font-size: 1em; }");
     writeFileSync(join(carpeta, "mal.module.css"), ".a { font-size: 18px; }");
     mkdirSync(join(base, "apps/web/ui/componentes"), { recursive: true });
     writeFileSync(join(base, "apps/web/ui/componentes/otro.module.css"), ".a { font-size: 14px; }");
-    expect(cssDeLaCartaConPx(base)).toEqual(["mal.module.css"]);
+    expect(cssDeLaVidrieraConPx(base)).toEqual(["mal.module.css"]);
   });
 
   it("el repositorio real la cumple y tiene CSS de la carta que revisar", () => {
-    expect(archivosCssDeLaCarta(".").length).toBeGreaterThanOrEqual(8);
-    expect(cssDeLaCartaConPx(".")).toEqual([]);
+    expect(archivosCssDeLaVidriera(".").length).toBeGreaterThanOrEqual(8);
+    expect(cssDeLaVidrieraConPx(".")).toEqual([]);
   });
 });
 
@@ -1916,29 +1947,34 @@ describe("P8c: el ingreso de la consola solo lo importa el servidor de la consol
 });
 
 /**
- * P8a (h5-p8 §2.4 ter). El generador del QR (`qrcode-generator`, 2.0.4 exacta, aprobada por el dueño) recibe la
- * dirección `otpauth://` con el secreto del segundo factor: solo lo importa el adaptador de la autenticación de
- * plataforma, la carpeta `src/adaptadores/autenticacion/plataforma/`, y nada más.
+ * P8a y F9 (h5-p8 §2.4 ter). El generador del QR (`qrcode-generator`, 2.0.4 exacta, aprobada por el dueño) recibe textos
+ * sensibles (la dirección `otpauth://` con el secreto del segundo factor, la URL de una factura): solo lo importa el
+ * adaptador de QR, la carpeta `src/adaptadores/qr/`, y nada más (ni siquiera el adaptador de autenticación, que ahora
+ * le pide el dibujo como cualquier otro).
  */
-describe("P8a: el generador de QR solo entra por la autenticación de plataforma", () => {
-  it("lo importa el adaptador de la autenticación de plataforma (y sus pruebas), y nadie más puede", async () => {
+describe("P8a y F9: el generador de QR solo entra por el adaptador de QR", () => {
+  it("lo importa el adaptador de QR (y sus pruebas), y nadie más puede", async () => {
     const v = await violacionesDe({
-      "src/adaptadores/autenticacion/plataforma/qr-svg.ts": importa("qrcode-generator"),
-      "src/adaptadores/autenticacion/plataforma/qr-svg.test.ts": importa("qrcode-generator"),
-      "src/adaptadores/autenticacion/plataforma/otro/archivo.ts": importa(
-        "qrcode-generator/dist/qrcode",
-      ),
+      "src/adaptadores/qr/qr-svg.ts": importa("qrcode-generator"),
+      "src/adaptadores/qr/qr-svg.test.ts": importa("qrcode-generator"),
+      "src/adaptadores/qr/otro/archivo.ts": importa("qrcode-generator/dist/qrcode"),
     });
-    expect(v).not.toContain("qr-solo-en-la-autenticacion-de-plataforma");
+    expect(v).not.toContain("qr-solo-en-su-adaptador");
   });
 
   it.each([
+    [
+      "la autenticación de plataforma (antes era el único lugar)",
+      "src/adaptadores/autenticacion/plataforma/qr-svg.ts",
+    ],
     [
       "el adaptador de autenticación de EMPRESA (misma carpeta padre)",
       "src/adaptadores/autenticacion/opciones.ts",
     ],
     ["la web de empresa", "src/adaptadores/autenticacion/autenticacion-de-better-auth.ts"],
     ["otro adaptador", "src/adaptadores/postgres/segundo-factor-de-autenticacion.ts"],
+    ["el adaptador de ARCA", "src/adaptadores/arca/adaptador-arca.ts"],
+    ["el dominio fiscal", "src/modulos/fiscal/dominio/qr-de-arca.ts"],
     ["una capacidad", "src/capacidades/autenticacion/totp.ts"],
     ["un puerto", "src/puertos/autenticacion.ts"],
     ["la composición", "src/composicion/plataforma.ts"],
@@ -1949,7 +1985,7 @@ describe("P8a: el generador de QR solo entra por la autenticación de plataforma
     ["un script", "scripts/crear-qr.ts"],
   ])("%s no puede importarlo (%s)", async (_nombre, origen) => {
     const v = await violacionesDe({ [origen]: importa("qrcode-generator") });
-    expect(v).toContain("qr-solo-en-la-autenticacion-de-plataforma");
+    expect(v).toContain("qr-solo-en-su-adaptador");
   });
 
   it("también se ve el import de un archivo interno del paquete, y desde una carpeta que solo se parece", async () => {
@@ -1957,15 +1993,13 @@ describe("P8a: el generador de QR solo entra por la autenticación de plataforma
       await violacionesDe({
         "src/adaptadores/autenticacion/instancia.ts": importa("qrcode-generator/dist/qrcode"),
       }),
-    ).toContain("qr-solo-en-la-autenticacion-de-plataforma");
+    ).toContain("qr-solo-en-su-adaptador");
     expect(
-      await violacionesDe({
-        "src/adaptadores/autenticacion/plataformas/qr.ts": importa("qrcode-generator"),
-      }),
-    ).toContain("qr-solo-en-la-autenticacion-de-plataforma");
+      await violacionesDe({ "src/adaptadores/qrs/qr.ts": importa("qrcode-generator") }),
+    ).toContain("qr-solo-en-su-adaptador");
     expect(
-      await violacionesDe({ "src/adaptadores/otra/plataforma/qr.ts": importa("qrcode-generator") }),
-    ).toContain("qr-solo-en-la-autenticacion-de-plataforma");
+      await violacionesDe({ "src/adaptadores/otra/qr/qr.ts": importa("qrcode-generator") }),
+    ).toContain("qr-solo-en-su-adaptador");
   });
 
   it("la dependencia está fijada en la versión exacta aprobada, sin rango", () => {

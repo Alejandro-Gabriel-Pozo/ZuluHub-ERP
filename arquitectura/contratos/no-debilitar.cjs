@@ -35,7 +35,18 @@
  *  (g) `package.json`: el script `arquitectura` ya no encadena `npm run guardian` o el script
  *      `guardian` ya no apunta al guardián;
  *  (h) si la base trae `invariantes.cjs`: sus invariantes y mutaciones siguen en el PR (si la base no lo
- *      trae, se avisa y se saltea).
+ *      trae, se avisa y se saltea);
+ *  (i) si la base trae el catálogo de la batería de evasión (`evasiones.json` y `evasiones-github.json`,
+ *      contratos-arquitectonicos.md §11): no se borra un caso sin una entrada en `retiros.json` (con el id del
+ *      caso), no cambia lo que un caso espera, no se degrada su estado (`exigido` → `brecha-abierta` →
+ *      `riesgo-aceptado`) ni se mueve más tarde su fecha límite, y no se pierde una vía entera. Un riesgo
+ *      aceptado o una brecha NUEVOS no debilitan nada, pero se listan como aviso: quedan a la vista.
+ *  (j) la deuda técnica (`arquitectura/deuda`, contratos-arquitectonicos.md §10): si la base ejecutaba
+ *      `deuda.cjs` (sola y con `--base=base`) en el job `guardian`, el PR lo sigue haciendo sin `continue-on-error`
+ *      ni `if` nuevos; si la base encadenaba `npm run deuda` en `arquitectura` y tenía el script `deuda`, el PR
+ *      también; el tope de excepciones no sube, `bloqueaDeudaEnArchivoTocado` no baja de true y ninguna entrada
+ *      del registro desaparece mientras su problema sigue (el detector de la BASE sigue encontrando el marcador, o
+ *      la verificación de la entrada sigue viendo su texto).
  * Además, un PR cuyo código no se puede leer (o ya no tiene un archivo vigilado) falla: nunca «pasa»
  * porque no se pudo mirar.
  *
@@ -51,6 +62,8 @@
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
+const { detectar } = require("../deuda/marcadores.cjs");
+const { OPCIONES_POR_DEFECTO } = require("../deuda/tamano.cjs");
 const { crearUbicador, enArchivo, enContrato, enJson, enTexto } = require("./ubicacion.cjs");
 
 const ARCHIVOS = Object.freeze({
@@ -60,6 +73,10 @@ const ARCHIVOS = Object.freeze({
   excepciones: "arquitectura/contratos/excepciones.cjs",
   retiros: "arquitectura/contratos/retiros.json",
   invariantes: "arquitectura/contratos/invariantes.cjs",
+  evasiones: "arquitectura/contratos/evasiones.json",
+  evasionesExternas: "arquitectura/contratos/evasiones-github.json",
+  deudaRegistro: "arquitectura/deuda/registro.json",
+  deudaConfiguracion: "arquitectura/deuda/configuracion.json",
   evaluarGate: "arquitectura/evaluar-gate.cjs",
   ci: ".github/workflows/ci.yml",
   paquete: "package.json",
@@ -100,12 +117,41 @@ const DESCRIPCION_DE_CODIGOS = Object.freeze({
   "script-guardian-desviado": "(g) el script guardian ya no ejecuta el guardián",
   "invariante-borrada": "(h) un invariante de la base ya no está en la matriz",
   "mutacion-borrada": "(h) una mutación de la base ya no está en la matriz",
+  "evasion-borrada":
+    "(i) un caso de la batería de evasión de la base ya no está y no hay un retiro registrado",
+  "evasion-esperado-cambiado":
+    "(i) un caso de la batería de evasión cambió lo que se considera un resultado aceptable",
+  "evasion-degradada":
+    "(i) un caso de la batería de evasión pasó a un estado más laxo o su fecha límite se movió más tarde",
+  "evasion-via-perdida":
+    "(i) la batería de evasión ya no tiene ningún caso de una vía que la base cubría",
+  "ci-sin-paso-de-deuda":
+    "(j) el job guardian ya no ejecuta deuda.cjs (sola y con --base=base) en un mismo paso, y la base sí",
+  "ci-deuda-con-salto":
+    "(j) el paso que ejecuta deuda.cjs tiene continue-on-error o un if que la base no tenía",
+  "script-arquitectura-sin-deuda":
+    "(j) el script arquitectura ya no encadena npm run deuda y la base sí",
+  "script-deuda-desviado": "(j) el script deuda ya no ejecuta el control de deuda y la base sí",
+  "deuda-tope-subio": "(j) el tope de excepciones de deuda es mayor que el de la base",
+  "deuda-bloqueo-aflojado":
+    "(j) bloqueaDeudaEnArchivoTocado pasó de true a otra cosa: tocar un archivo con deuda ya no bloquea",
+  "deuda-tope-de-lineas-subio":
+    "(j) el tope de líneas por archivo de la deuda es mayor que el de la base: se agrandarían los archivos permitidos",
+  "deuda-exclusion-nueva":
+    "(j) la configuración de la deuda excluye del tope de líneas un archivo que la base no excluía",
+  "deuda-entrada-borrada-sin-pagar":
+    "(j) una entrada del registro de deuda de la base ya no está y su problema sigue",
   "arbol-ilegible": "el árbol del PR no se pudo leer o ya no tiene un archivo vigilado",
   "base-ilegible": "la base no se pudo leer: no hay con qué comparar",
 });
 
 /** Avisos (no bloquean). */
-const CODIGOS_DE_AVISO = Object.freeze(["invariantes-sin-base"]);
+const CODIGOS_DE_AVISO = Object.freeze([
+  "invariantes-sin-base",
+  "evasiones-sin-base",
+  "evasion-riesgo-nuevo",
+  "deuda-sin-base",
+]);
 
 const orden = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const esObjeto = (valor) => typeof valor === "object" && valor !== null && !Array.isArray(valor);
@@ -148,6 +194,9 @@ const sinComillas = (valor) => (/^(["'])[^"']*\1$/.test(valor) ? valor.slice(1, 
 const escalar = (valor) => sinComillas(sinComentario(valor));
 
 const COMANDO_DEL_GUARDIAN = ["node", "arquitectura/contratos/guardian.cjs"];
+const COMANDO_DE_LA_DEUDA = ["node", "arquitectura/deuda/deuda.cjs"];
+/** La opción con que el paso de CI compara con la rama base extraída en `base/`. */
+const OPCION_DE_LA_BASE = "--base=base";
 /** Una opción suelta (`--base`, `-v`, `--base=x`): un solo cuantificador y sin repetición externa. */
 const OPCION_DEL_GUARDIAN = /^--?[\w=./-]+$/;
 
@@ -157,22 +206,36 @@ const OPCION_DEL_GUARDIAN = /^--?[\w=./-]+$/;
  * grupo repetido (`(?:\s+--?[\w=./-]+)*`) porque `-` está en la clase y el grupo queda ambiguo: con el texto
  * de `ci.yml` que escribe quien abre el PR, eso podía hacer backtracking exponencial (CodeQL js/redos).
  */
-function esComandoDelGuardian(tokens) {
-  for (let i = 0; i < COMANDO_DEL_GUARDIAN.length; i += 1) {
-    if (tokens[i] !== COMANDO_DEL_GUARDIAN[i]) return false;
+function esComandoDe(comando, tokens) {
+  for (let i = 0; i < comando.length; i += 1) {
+    if (tokens[i] !== comando[i]) return false;
   }
-  for (let i = COMANDO_DEL_GUARDIAN.length; i < tokens.length; i += 1) {
+  for (let i = comando.length; i < tokens.length; i += 1) {
     if (!OPCION_DEL_GUARDIAN.test(tokens[i])) return false;
   }
   return true;
 }
+const esComandoDelGuardian = (tokens) => esComandoDe(COMANDO_DEL_GUARDIAN, tokens);
 
-/** La línea de un paso que corre el guardián tal cual: sin `|| true` ni otro operador (opciones sí). */
-function ejecutaElGuardian(linea) {
+/** Los tokens del comando que escribe una línea de un paso (sin el guion de la lista ni el `run:`). */
+function tokensDeLaLinea(linea) {
   let resto = linea.trim();
   if (/^-\s/.test(resto)) resto = resto.slice(1).trimStart();
   if (resto.startsWith("run:")) resto = resto.slice("run:".length).trimStart();
-  return esComandoDelGuardian(resto.split(/\s+/));
+  return resto.split(/\s+/);
+}
+
+/** La línea de un paso que corre el guardián tal cual: sin `|| true` ni otro operador (opciones sí). */
+function ejecutaElGuardian(linea) {
+  return esComandoDelGuardian(tokensDeLaLinea(linea));
+}
+
+/** La línea corre `deuda.cjs` tal cual: `"sola"`, o `"con-base"` si lleva exactamente `--base=base`; si no, `null`. */
+function formaDeLaDeuda(linea) {
+  const comando = tokensDeLaLinea(linea).join(" ");
+  const sola = COMANDO_DE_LA_DEUDA.join(" ");
+  if (comando === sola) return "sola";
+  return comando === `${sola} ${OPCION_DE_LA_BASE}` ? "con-base" : null;
 }
 
 /**
@@ -244,7 +307,7 @@ function leerJob({ id, linea, cuerpo }) {
   };
 }
 
-/** Los pasos de `steps:` de un job: su rango de líneas, su `if` y si ejecutan el guardián. */
+/** Los pasos de `steps:` de un job: su rango de líneas, su `if` y si ejecutan el guardián o la deuda. */
 function leerPasos(cuerpo) {
   const pasos = [];
   let enSteps = false;
@@ -258,12 +321,22 @@ function leerPasos(cuerpo) {
     }
     if (!enSteps) continue;
     if (/^ {6}-(?:\s|$)/.test(l.t)) {
-      paso = { desde: l.n, hasta: l.n, ejecutaGuardian: false, si: undefined };
+      paso = {
+        desde: l.n,
+        hasta: l.n,
+        ejecutaGuardian: false,
+        deudaSola: false,
+        deudaConBase: false,
+        si: undefined,
+      };
       pasos.push(paso);
     }
     if (paso === null) continue;
     paso.hasta = l.n;
     if (ejecutaElGuardian(l.t)) paso.ejecutaGuardian = true;
+    const deuda = formaDeLaDeuda(l.t);
+    if (deuda === "sola") paso.deudaSola = true;
+    if (deuda === "con-base") paso.deudaConBase = true;
     const si = /^ {6}-\s+if:\s*(.*)|^ {8}if:\s*(.*)/.exec(l.t);
     if (si !== null && paso.si === undefined) {
       paso.si = { valor: escalar(si[1] ?? si[2]), linea: l.n };
@@ -321,6 +394,67 @@ function leerRetiros(texto) {
   }
 }
 
+/**
+ * Qué estado es más estricto que otro en la batería de evasión: `exigido` (el cambio se bloquea) por encima de
+ * `brecha-abierta` (pasa, con plazo corto) y de `riesgo-aceptado` (pasa, con plazo largo). Lo que no es
+ * ninguno de los tres (un caso externo, un valor roto) vale 0: pasar de un estado conocido a uno así es
+ * degradar.
+ */
+const RIGOR_DE_ESTADO = new Map([
+  ["exigido", 3],
+  ["brecha-abierta", 2],
+  ["riesgo-aceptado", 1],
+]);
+/** La clave del JSON con la fecha límite de cada estado que la tiene. */
+const CAMPO_DE_LIMITE = new Map([
+  ["brecha-abierta", "vence"],
+  ["riesgo-aceptado", "revisar"],
+]);
+
+/** Lo que la vigilancia compara de un caso del catálogo de evasión (`indice` y `archivo` ubican el caso en el PR). */
+function resumirCaso(caso, indice, archivo) {
+  const c = esObjeto(caso) ? caso : {};
+  const campoDeLimite = CAMPO_DE_LIMITE.get(c.estado);
+  const limite = campoDeLimite === undefined ? undefined : c[campoDeLimite];
+  return {
+    id: esTexto(c.id) ? c.id : null,
+    via: typeof c.via === "string" ? c.via : null,
+    // Con las claves ordenadas: reordenar el JSON no es cambiar lo que el caso espera.
+    esperado: JSON.stringify(
+      c.esperado ?? null,
+      esObjeto(c.esperado) ? Object.keys(c.esperado).sort() : null,
+    ),
+    estado: typeof c.estado === "string" ? c.estado : null,
+    limite: typeof limite === "string" ? limite : null,
+    indice,
+    archivo,
+  };
+}
+
+/**
+ * Los casos de la batería de evasión: `evasiones.json` y `evasiones-github.json`, uno detrás del otro. Sin
+ * el catálogo es `{ ausente: true }`; sin el de los casos externos sigue valiendo el catálogo; si alguno no
+ * es una lista JSON, `{ error }` con el archivo.
+ */
+function leerEvasiones(textoDelCatalogo, textoDeLosExternos) {
+  if (textoDelCatalogo === null) return { ausente: true };
+  const casos = [];
+  for (const [archivo, texto] of [
+    [ARCHIVOS.evasiones, textoDelCatalogo],
+    [ARCHIVOS.evasionesExternas, textoDeLosExternos],
+  ]) {
+    if (texto === null) continue;
+    try {
+      const dato = JSON.parse(texto);
+      if (!Array.isArray(dato)) return { error: `${archivo} no es una lista` };
+      casos.push(...dato.map((caso, indice) => resumirCaso(caso, indice, archivo)));
+    } catch (error) {
+      return { error: `${archivo} no es JSON válido (${error.message})` };
+    }
+  }
+  return { valor: casos };
+}
+
 /** Lee `const NOMBRE = <entero>;` de un módulo como texto (no se ejecuta): valor y línea. */
 function leerConstante(texto, nombre) {
   if (texto === null) return { ausente: true };
@@ -333,13 +467,61 @@ function leerConstante(texto, nombre) {
   return { error: `no hay una línea «const ${nombre} = <entero>;»` };
 }
 
-/** `package.json`: solo los dos scripts que se vigilan. */
+/** `package.json`: solo los tres scripts que se vigilan. */
 function leerPaquete(texto) {
   if (texto === null) return { ausente: true };
   try {
     const dato = JSON.parse(texto);
     const scripts = esObjeto(dato) && esObjeto(dato.scripts) ? dato.scripts : {};
-    return { valor: { arquitectura: scripts.arquitectura, guardian: scripts.guardian } };
+    return {
+      valor: {
+        arquitectura: scripts.arquitectura,
+        guardian: scripts.guardian,
+        deuda: scripts.deuda,
+      },
+    };
+  } catch (error) {
+    return { error: `no es JSON válido (${error.message})` };
+  }
+}
+
+/** Lo que la vigilancia compara de una entrada del registro de deuda. */
+function resumirEntradaDeDeuda(entrada, indice) {
+  const e = esObjeto(entrada) ? entrada : {};
+  return {
+    id: esTexto(e.id) ? e.id : null,
+    tipo: typeof e.tipo === "string" ? e.tipo : null,
+    archivos: listaOVacia(e.archivos).map(String),
+    verificacion:
+      esObjeto(e.verificacion) && esTexto(e.verificacion.contiene) ? e.verificacion.contiene : null,
+    indice,
+  };
+}
+
+/**
+ * La deuda técnica: el registro (lista de entradas) y la configuración (`topeDeExcepciones`,
+ * `bloqueaDeudaEnArchivoTocado`). Sin ninguno de los dos archivos es `{ ausente: true }`; si falta solo uno o
+ * alguno no es lo que debe ser, `{ error }`.
+ */
+function leerDeuda(textoDelRegistro, textoDeLaConfiguracion) {
+  if (textoDelRegistro === null && textoDeLaConfiguracion === null) return { ausente: true };
+  try {
+    const entradas = JSON.parse(textoDelRegistro ?? "null");
+    const configuracion = JSON.parse(textoDeLaConfiguracion ?? "null");
+    if (!Array.isArray(entradas)) return { error: "el registro no es una lista" };
+    if (!esObjeto(configuracion)) return { error: "la configuración no es un objeto" };
+    return {
+      valor: {
+        entradas: entradas.map(resumirEntradaDeDeuda),
+        tope: configuracion.topeDeExcepciones,
+        bloquea: configuracion.bloqueaDeudaEnArchivoTocado,
+        topeDeLineas: configuracion.topeDeLineasPorArchivo,
+        // una por exclusión, en su posición (`null` si no es un { ruta } legible)
+        excluidos: listaOVacia(configuracion.excluidosDelTope).map((e) =>
+          esObjeto(e) && esTexto(e.ruta) ? e.ruta : null,
+        ),
+      },
+    };
   } catch (error) {
     return { error: `no es JSON válido (${error.message})` };
   }
@@ -527,10 +709,12 @@ function capturar(raiz) {
   return {
     ...extraerEnProceso(raiz, ci.valor === undefined ? [] : [...ci.valor.keys()]),
     retiros: leerRetiros(leerTexto(ARCHIVOS.retiros)),
+    evasiones: leerEvasiones(leerTexto(ARCHIVOS.evasiones), leerTexto(ARCHIVOS.evasionesExternas)),
     plazo: leerConstante(textoDeExcepciones, "PLAZO_MAXIMO_DIAS"),
     aviso: leerConstante(textoDeExcepciones, "DIAS_DE_AVISO"),
     ci,
     paquete: leerPaquete(leerTexto(ARCHIVOS.paquete)),
+    deuda: leerDeuda(leerTexto(ARCHIVOS.deudaRegistro), leerTexto(ARCHIVOS.deudaConfiguracion)),
   };
 }
 
@@ -554,6 +738,16 @@ const SECCIONES = Object.freeze([
   { nombre: "paquete", archivo: ARCHIVOS.paquete, enBase: false },
   // La matriz de invariantes puede no existir (todavía): "ausente" no es ilegible, lo decide el chequeo (h).
   { nombre: "invariantes", archivo: ARCHIVOS.invariantes, enBase: true, puedeFaltar: true },
+  // La batería de evasión puede no existir en la base (todavía): lo decide el chequeo (i).
+  { nombre: "evasiones", archivo: ARCHIVOS.evasiones, enBase: true, puedeFaltar: true },
+  // La deuda técnica puede no existir en la base (todavía); si la base la tiene, el PR no puede quitarla.
+  {
+    nombre: "deuda",
+    archivo: ARCHIVOS.deudaRegistro,
+    enBase: true,
+    puedeFaltar: true,
+    soloSiLaBaseNoLaTiene: true,
+  },
 ]);
 
 const motivoDeSeccion = (seccion) =>
@@ -566,10 +760,14 @@ const motivoDeSeccion = (seccion) =>
  */
 function chequearLectura(base, pr) {
   const hallazgos = [];
-  for (const { nombre, archivo, enBase, texto, puedeFaltar } of SECCIONES) {
+  for (const { nombre, archivo, enBase, texto, puedeFaltar, soloSiLaBaseNoLaTiene } of SECCIONES) {
     const donde = texto === undefined ? enArchivo() : enTexto(texto);
     const delPr = pr[nombre] ?? { error: "no se leyó" };
-    if (!tiene(delPr) && !(puedeFaltar === true && delPr.ausente === true)) {
+    const deLaBase = base[nombre] ?? { error: "no se leyó" };
+    // Que el PR no tenga la sección es esperable si puede faltar; salvo que la base la tenga y no se pueda quitar.
+    const faltaPermitida =
+      puedeFaltar === true && (soloSiLaBaseNoLaTiene !== true || !tiene(deLaBase));
+    if (!tiene(delPr) && !(faltaPermitida && delPr.ausente === true)) {
       hallazgos.push(
         hallazgo(
           "arbol-ilegible",
@@ -580,7 +778,6 @@ function chequearLectura(base, pr) {
         ),
       );
     }
-    const deLaBase = base[nombre] ?? { error: "no se leyó" };
     if (enBase && !tiene(deLaBase) && !(puedeFaltar === true && deLaBase.ausente === true)) {
       hallazgos.push(
         hallazgo(
@@ -887,6 +1084,50 @@ function saltos(job) {
   };
 }
 
+/** Un paso que ejecuta `deuda.cjs` sola y con `--base=base`: el paso de la deuda técnica. */
+const esPasoDeLaDeuda = (paso) => paso.deudaSola && paso.deudaConBase;
+
+/**
+ * (j) Si la base ejecutaba `deuda.cjs` (sola y con `--base=base`) en un paso del job `guardian`, el PR lo sigue
+ * haciendo, y ese paso no gana `continue-on-error` ni un `if` que el de la base no tenía. Agrega sus hallazgos a
+ * `hallazgos`. Sin paso en la base no hay nada que no se pueda quitar (la primera vez que se incorpora).
+ */
+function chequearElPasoDeLaDeuda(deLaBase, guardian, hallazgos) {
+  const antes = deLaBase?.pasos.find(esPasoDeLaDeuda);
+  if (antes === undefined) return;
+  const paso = guardian.pasos.find(esPasoDeLaDeuda);
+  if (paso === undefined) {
+    hallazgos.push(
+      hallazgo(
+        "ci-sin-paso-de-deuda",
+        ARCHIVOS.ci,
+        "El job guardian ya no ejecuta `node arquitectura/deuda/deuda.cjs` y `node arquitectura/deuda/deuda.cjs --base=base` tal cual en un mismo paso, y la base sí: la deuda técnica no se controlaría en la CI.",
+        "Devolvé el paso de la deuda al job guardian.",
+        { linea: guardian.linea },
+      ),
+    );
+    return;
+  }
+  const salto = (motivo, linea) =>
+    hallazgos.push(
+      hallazgo(
+        "ci-deuda-con-salto",
+        ARCHIVOS.ci,
+        `El paso de la deuda ${motivo}, que la base no tenía: un fallo suyo se podría saltear.`,
+        "Sacá la línea: el control de deuda tiene que correr siempre y su fallo tiene que frenar el Gate.",
+        { linea },
+      ),
+    );
+  const continuas = (job, delPaso) =>
+    job.continuaConError.filter((linea) => linea >= delPaso.desde && linea <= delPaso.hasta);
+  for (const linea of continuas(guardian, paso).slice(continuas(deLaBase, antes).length)) {
+    salto("tiene `continue-on-error`", linea);
+  }
+  if (paso.si !== undefined && paso.si.valor !== antes.si?.valor) {
+    salto(`tiene \`if: ${paso.si.valor}\``, paso.si.linea);
+  }
+}
+
 /** (f) El job `guardian` existe, el Gate lo espera y lo exige, y no se puede saltear. */
 function chequearCi(base, pr) {
   if (!tiene(pr.ci)) return [];
@@ -927,6 +1168,7 @@ function chequearCi(base, pr) {
         ),
       );
     }
+    chequearElPasoDeLaDeuda(deLaBase, guardian, hallazgos);
     const nuevo = saltos(guardian);
     const viejo = deLaBase === undefined ? saltos(null) : saltos(deLaBase);
     for (const linea of nuevo.continuas.slice(viejo.continuas.length)) {
@@ -992,7 +1234,7 @@ function chequearGate(_base, pr) {
 /** (g) `package.json` sigue encadenando y apuntando al guardián. */
 function chequearPaquete(base, pr) {
   if (!tiene(pr.paquete)) return [];
-  const { arquitectura, guardian } = pr.paquete.valor;
+  const { arquitectura, guardian, deuda } = pr.paquete.valor;
   const hallazgos = [];
   const encadena =
     typeof arquitectura === "string" &&
@@ -1017,6 +1259,137 @@ function chequearPaquete(base, pr) {
         `El script «guardian» (${JSON.stringify(guardian ?? null)}) ya no ejecuta \`node arquitectura/contratos/guardian.cjs\`: \`npm run guardian\` no analizaría nada.`,
         "Devolvé el script guardian a `node arquitectura/contratos/guardian.cjs`.",
         { donde: enJson("scripts", "guardian") },
+      ),
+    );
+  }
+  // (j) la deuda: lo que la base encadenaba y apuntaba bien, el PR también.
+  const delaBase = tiene(base.paquete) ? base.paquete.valor : {};
+  const encadenaLaDeuda = (script) =>
+    typeof script === "string" &&
+    script.split("&&").some((paso) => paso.trim() === "npm run deuda");
+  if (encadenaLaDeuda(delaBase.arquitectura) && !encadenaLaDeuda(arquitectura)) {
+    hallazgos.push(
+      hallazgo(
+        "script-arquitectura-sin-deuda",
+        ARCHIVOS.paquete,
+        `El script «arquitectura» (${JSON.stringify(arquitectura ?? null)}) ya no encadena \`&& npm run deuda\`: \`npm run gate\` no controlaría la deuda técnica.`,
+        "Devolvé `&& npm run deuda` al final del script arquitectura.",
+        { donde: enJson("scripts", "arquitectura") },
+      ),
+    );
+  }
+  const apuntaLaDeuda = (script) =>
+    typeof script === "string" && esComandoDe(COMANDO_DE_LA_DEUDA, script.trim().split(" "));
+  if (apuntaLaDeuda(delaBase.deuda) && !apuntaLaDeuda(deuda)) {
+    hallazgos.push(
+      hallazgo(
+        "script-deuda-desviado",
+        ARCHIVOS.paquete,
+        `El script «deuda» (${JSON.stringify(deuda ?? null)}) ya no ejecuta \`node arquitectura/deuda/deuda.cjs\`: \`npm run deuda\` no analizaría nada.`,
+        "Devolvé el script deuda a `node arquitectura/deuda/deuda.cjs`.",
+        { donde: enJson("scripts", "deuda") },
+      ),
+    );
+  }
+  return hallazgos;
+}
+
+/**
+ * Dónde sigue abierto el problema de una entrada de deuda en el árbol del PR (`leerPr`): para un marcador, su
+ * primera línea según el detector (el de ESTE archivo, que es el de la base); para un hallazgo con
+ * `verificacion`, la primera línea que contiene su texto. `null` si ya no está (o si no hay forma de saberlo).
+ */
+function dondeSigueLaDeuda(entrada, leerPr, opciones) {
+  for (const archivo of entrada.archivos) {
+    const contenido = leerPr(archivo);
+    if (contenido === null) continue;
+    const texto = contenido.toString();
+    if (entrada.verificacion !== null) {
+      const indice = texto
+        .split(/\r\n|\n/)
+        .findIndex((renglon) => renglon.includes(entrada.verificacion));
+      if (indice !== -1) return { archivo, linea: indice + 1 };
+    } else {
+      // (un hallazgo sin `verificacion` no tiene tipo de marcador: el detector no halla nada y sigue)
+      const marcador = detectar(archivo, texto, opciones).marcadores.find(
+        (m) => m.tipo === entrada.tipo,
+      );
+      if (marcador !== undefined) return { archivo, linea: marcador.linea };
+    }
+  }
+  return null;
+}
+
+/** (j) La deuda técnica no se debilita: el tope no sube, el bloqueo no se afloja y ninguna entrada se borra sin pagar. */
+function chequearDeuda(base, pr, { leerPr }) {
+  if (!tiene(base.deuda) || !tiene(pr.deuda)) return [];
+  const hallazgos = [];
+  const antes = base.deuda.valor;
+  const ahora = pr.deuda.valor;
+  if (ahora.tope > antes.tope) {
+    hallazgos.push(
+      hallazgo(
+        "deuda-tope-subio",
+        ARCHIVOS.deudaConfiguracion,
+        `El tope de excepciones de deuda subió de ${antes.tope} a ${ahora.tope}: la excepción se volvería la norma.`,
+        "Dejá el tope como estaba (puede bajar, no subir).",
+        { donde: enJson("topeDeExcepciones") },
+      ),
+    );
+  }
+  if (antes.bloquea === true && ahora.bloquea !== true) {
+    hallazgos.push(
+      hallazgo(
+        "deuda-bloqueo-aflojado",
+        ARCHIVOS.deudaConfiguracion,
+        `\`bloqueaDeudaEnArchivoTocado\` pasó de true a ${JSON.stringify(ahora.bloquea ?? null)}: tocar un archivo con deuda sin pagarla ya no bloquearía.`,
+        "Dejá la opción en true: bajarla es un debilitamiento que decide el dueño.",
+        { donde: enJson("bloqueaDeudaEnArchivoTocado") },
+      ),
+    );
+  }
+  const excluidosDeLaBase = listaOVacia(antes.excluidos);
+  if (ahora.topeDeLineas > antes.topeDeLineas) {
+    hallazgos.push(
+      hallazgo(
+        "deuda-tope-de-lineas-subio",
+        ARCHIVOS.deudaConfiguracion,
+        `El tope de líneas por archivo subió de ${antes.topeDeLineas} a ${ahora.topeDeLineas}: archivos más grandes dejarían de ser deuda.`,
+        "Dejá el tope como estaba (puede bajar, no subir).",
+        { donde: enJson("topeDeLineasPorArchivo") },
+      ),
+    );
+  }
+  listaOVacia(ahora.excluidos).forEach((ruta, indice) => {
+    if (ruta === null || excluidosDeLaBase.includes(ruta)) return;
+    hallazgos.push(
+      hallazgo(
+        "deuda-exclusion-nueva",
+        ARCHIVOS.deudaConfiguracion,
+        `«${ruta}» pasó a las exclusiones del tope de líneas y la base no lo excluía: un archivo grande dejaría de contar.`,
+        "Sacá la exclusión: la lista de excluidos no crece sin decisión del dueño.",
+        { donde: enJson("excluidosDelTope", indice, "ruta") },
+      ),
+    );
+  });
+  const opcionesDeLaBase = {
+    topeDeLineas: Number.isInteger(antes.topeDeLineas)
+      ? antes.topeDeLineas
+      : OPCIONES_POR_DEFECTO.topeDeLineas,
+    excluidos: new Set(excluidosDeLaBase), // (un `null` de una exclusión ilegible no coincide con ninguna ruta)
+  };
+  const idsDelPr = new Set(ahora.entradas.map((entrada) => entrada.id));
+  for (const entrada of antes.entradas) {
+    if (entrada.id === null || idsDelPr.has(entrada.id)) continue;
+    const sigue = dondeSigueLaDeuda(entrada, leerPr, opcionesDeLaBase);
+    if (sigue === null) continue;
+    hallazgos.push(
+      hallazgo(
+        "deuda-entrada-borrada-sin-pagar",
+        sigue.archivo,
+        `La entrada «${entrada.id}» del registro de deuda de la base ya no está y el problema sigue acá (según el detector de la base): se borró la deuda sin pagarla.`,
+        "Devolvé la entrada al registro, o resolvé el problema.",
+        { linea: sigue.linea },
       ),
     );
   }
@@ -1071,17 +1444,149 @@ function chequearInvariantes(base, pr) {
   return hallazgos;
 }
 
+/** El texto que explica qué cambió en la fecha límite o en el estado de un caso degradado. */
+const comoEstado = (resumen) =>
+  resumen.limite === null
+    ? `«${resumen.estado}»`
+    : `«${resumen.estado}» hasta el ${resumen.limite}`;
+
+/** (i) Los casos de la batería de evasión de la base siguen en el PR, esperan lo mismo y no se aflojaron. */
+function chequearEvasiones(base, pr) {
+  if (!tiene(base.evasiones) || pr.evasiones === undefined) return [];
+  // Un catálogo ilegible ya lo dice `chequearLectura`; uno ausente es lo mismo que sin ningún caso.
+  if (!tiene(pr.evasiones) && pr.evasiones.ausente !== true) return [];
+  const actuales = new Map();
+  const viasDelPr = new Set();
+  if (tiene(pr.evasiones)) {
+    for (const caso of pr.evasiones.valor) {
+      actuales.set(caso.id, caso);
+      viasDelPr.add(caso.via);
+    }
+  }
+  const retirados = new Set();
+  if (tiene(pr.retiros)) {
+    for (const retiro of pr.retiros.valor) {
+      if (esObjeto(retiro)) retirados.add(retiro.id);
+    }
+  }
+  const hallazgos = [];
+  for (const antes of base.evasiones.valor) {
+    if (antes.id === null) continue;
+    const ahora = actuales.get(antes.id);
+    if (ahora === undefined) {
+      if (!retirados.has(antes.id)) {
+        hallazgos.push(
+          hallazgo(
+            "evasion-borrada",
+            antes.archivo,
+            `El caso «${antes.id}» de la batería de evasión estaba en la base y ya no está, y no hay un retiro registrado: sería quitar una prueba de evasión en silencio.`,
+            "Devolvé el caso al catálogo; si el retiro es una decisión, agregá a retiros.json { id (el del caso), motivo, responsable, aprobadoPor, creada }.",
+            { contrato: antes.id, donde: enArchivo() },
+          ),
+        );
+      }
+      continue;
+    }
+    if (ahora.esperado !== antes.esperado) {
+      hallazgos.push(
+        hallazgo(
+          "evasion-esperado-cambiado",
+          ahora.archivo,
+          `El caso «${antes.id}» cambió lo que espera: antes ${antes.esperado}, ahora ${ahora.esperado}. Cambiar el resultado aceptable es debilitar el caso.`,
+          "Devolvé «esperado» a lo que era; si el control mejoró, el caso se endurece en un cambio aparte y a la vista.",
+          { contrato: antes.id, donde: enJson(ahora.indice, "esperado") },
+        ),
+      );
+    }
+    const rigorAntes = RIGOR_DE_ESTADO.get(antes.estado) ?? 0;
+    const rigorAhora = RIGOR_DE_ESTADO.get(ahora.estado) ?? 0;
+    const masTarde = ahora.estado === antes.estado && ahora.limite > antes.limite;
+    if (rigorAhora < rigorAntes || masTarde) {
+      hallazgos.push(
+        hallazgo(
+          "evasion-degradada",
+          ahora.archivo,
+          rigorAhora < rigorAntes
+            ? `El caso «${antes.id}» pasó de ${comoEstado(antes)} a ${comoEstado(ahora)}: un caso exigido no se afloja a brecha ni a riesgo aceptado en silencio.`
+            : `El caso «${antes.id}» sigue ${comoEstado(antes)} pero su fecha límite se movió al ${ahora.limite}: extender una brecha o un riesgo es debilitarlo.`,
+          "Devolvé el estado y la fecha que tenía; un hueco que no se puede cerrar se registra como un caso nuevo con su propio plazo.",
+          {
+            contrato: antes.id,
+            donde: enJson(ahora.indice, masTarde ? CAMPO_DE_LIMITE.get(ahora.estado) : "estado"),
+          },
+        ),
+      );
+    }
+  }
+  for (const via of new Set(base.evasiones.valor.map((c) => c.via))) {
+    if (via !== null && !viasDelPr.has(via)) {
+      hallazgos.push(
+        hallazgo(
+          "evasion-via-perdida",
+          ARCHIVOS.evasiones,
+          `La batería de evasión ya no tiene ningún caso de la vía «${via}», que la base cubría: esa ruta de evasión dejó de probarse.`,
+          "Devolvé al menos un caso de la vía (la batería solo crece).",
+          { donde: enArchivo() },
+        ),
+      );
+    }
+  }
+  return hallazgos;
+}
+
 /** Avisos: lo que se saltea y se dice. Sin `donde`: es del archivo entero y `verificar` lo ubica en la línea 1. */
 function avisarSaltos(base) {
-  if (base.invariantes?.ausente !== true) return [];
-  return [
-    hallazgo(
-      "invariantes-sin-base",
-      ARCHIVOS.invariantes,
-      "La base no trae la matriz de invariantes (invariantes.cjs): se saltea el chequeo (h). Es esperable solo hasta que la matriz entre a la rama principal.",
-      "Nada por ahora; cuando la base la tenga, el chequeo (h) se activa solo.",
-    ),
-  ];
+  const avisos = [];
+  if (base.invariantes?.ausente === true) {
+    avisos.push(
+      hallazgo(
+        "invariantes-sin-base",
+        ARCHIVOS.invariantes,
+        "La base no trae la matriz de invariantes (invariantes.cjs): se saltea el chequeo (h). Es esperable solo hasta que la matriz entre a la rama principal.",
+        "Nada por ahora; cuando la base la tenga, el chequeo (h) se activa solo.",
+      ),
+    );
+  }
+  if (base.evasiones?.ausente === true) {
+    avisos.push(
+      hallazgo(
+        "evasiones-sin-base",
+        ARCHIVOS.evasiones,
+        "La base no trae el catálogo de la batería de evasión (evasiones.json): se saltea el chequeo (i). Es esperable solo hasta que el catálogo entre a la rama principal.",
+        "Nada por ahora; cuando la base lo tenga, el chequeo (i) se activa solo.",
+      ),
+    );
+  }
+  if (base.deuda?.ausente === true) {
+    avisos.push(
+      hallazgo(
+        "deuda-sin-base",
+        ARCHIVOS.deudaRegistro,
+        "La base no trae el registro de deuda técnica (arquitectura/deuda): se saltea el chequeo (j). Es esperable solo hasta que el control de deuda entre a la rama principal.",
+        "Nada por ahora; cuando la base lo tenga, el chequeo (j) se activa solo.",
+      ),
+    );
+  }
+  return avisos;
+}
+
+/** Un caso de la batería con brecha o riesgo aceptado que la base no tenía: no debilita nada, pero queda a la vista. */
+function avisarRiesgosNuevos(base, pr) {
+  if (!tiene(base.evasiones) || !tiene(pr.evasiones)) return [];
+  const deLaBase = new Set(base.evasiones.valor.map((c) => c.id));
+  return pr.evasiones.valor
+    .filter((c) => c.id !== null && !deLaBase.has(c.id) && CAMPO_DE_LIMITE.has(c.estado))
+    .map((c) =>
+      hallazgo(
+        "evasion-riesgo-nuevo",
+        c.archivo,
+        c.estado === "riesgo-aceptado"
+          ? `Nuevo riesgo aceptado: ${c.id} (revisar el ${c.limite}). No debilita nada, pero alguien aceptó que un cambio pase sin detección.`
+          : `Nueva brecha abierta: ${c.id} (vence el ${c.limite}). No debilita nada, pero hoy un cambio pasa sin detección.`,
+        "Confirmá con el dueño que el riesgo es aceptado (o cerralo con un control que bloquee y pasá el caso a exigido).",
+        { contrato: c.id, donde: enJson(c.indice, "estado") },
+      ),
+    );
 }
 
 const CHEQUEOS = Object.freeze([
@@ -1095,6 +1600,8 @@ const CHEQUEOS = Object.freeze([
   chequearGate,
   chequearPaquete,
   chequearInvariantes,
+  chequearEvasiones,
+  chequearDeuda,
 ]);
 
 function esFechaValida(texto) {
@@ -1130,8 +1637,8 @@ function verificar({ base, pr, ahora = new Date(), leerPr }) {
       ? completo
       : { ...completo, linea: 1 };
   };
-  const fallas = CHEQUEOS.flatMap((chequeo) => chequeo(base, pr, { ahora })).map(completar);
-  const avisos = avisarSaltos(base).map(completar);
+  const fallas = CHEQUEOS.flatMap((chequeo) => chequeo(base, pr, { ahora, leerPr })).map(completar);
+  const avisos = [...avisarSaltos(base), ...avisarRiesgosNuevos(base, pr)].map(completar);
   return { fallas: ordenar(fallas), avisos: ordenar(avisos) };
 }
 
@@ -1234,12 +1741,17 @@ module.exports = {
   chequearGate,
   chequearPaquete,
   chequearInvariantes,
+  chequearEvasiones,
+  chequearDeuda,
   chequearLectura,
   ejecutaElGuardian,
+  formaDeLaDeuda,
+  leerDeuda,
   extraerInvariantes,
   formatear,
   leerCi,
   leerConstante,
+  leerEvasiones,
   leerPaquete,
   leerRetiros,
   limites,

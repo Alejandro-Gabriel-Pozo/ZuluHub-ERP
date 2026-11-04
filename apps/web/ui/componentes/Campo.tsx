@@ -6,7 +6,7 @@ export type PropsDeCampo = Readonly<{
   valor: string;
   alCambiar: (valor: string) => void;
   nombre?: string | undefined;
-  tipo?: "text" | "email" | "search" | "tel" | "url";
+  tipo?: "text" | "email" | "search" | "tel" | "url" | "date";
   autoComplete?: string | undefined;
   /** `"off"` para códigos que distinguen mayúsculas: el teclado del celular no debe corregirlos ni capitalizarlos. */
   autoCapitalize?: "off" | undefined;

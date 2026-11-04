@@ -21,6 +21,8 @@ export type PropsDePantallaDeCuenta = Readonly<{
   empresa: EmpresaParaMostrar;
   /** Las sucursales activas que la persona puede ver; vacío si no puede listarlas (el selector no aparece). */
   sucursales: readonly SucursalParaElegir[];
+  /** El renglón «Configuración fiscal» y adónde lleva; solo para quien tiene el permiso (lo decide el servidor). Sin él, no se muestra. */
+  configuracionFiscal?: Readonly<{ texto: string; href: string }>;
   accionDeCerrarSesion: AccionDeFormulario;
   diccionario?: DiccionarioResuelto;
 }>;
@@ -29,6 +31,7 @@ export type PropsDePantallaDeCuenta = Readonly<{
 export function PantallaDeCuenta({
   empresa,
   sucursales,
+  configuracionFiscal,
   accionDeCerrarSesion,
   diccionario = {},
 }: PropsDePantallaDeCuenta) {
@@ -45,6 +48,13 @@ export function PantallaDeCuenta({
         sucursales={sucursales}
         diccionario={diccionario}
       />
+      {configuracionFiscal === undefined ? null : (
+        <Texto>
+          <a className={estilos["enlace"]} href={configuracionFiscal.href}>
+            {configuracionFiscal.texto}
+          </a>
+        </Texto>
+      )}
       <Texto>
         <a className={estilos["enlace"]} href="/empresa">
           {texto(diccionario, "empresa.cambiar")}

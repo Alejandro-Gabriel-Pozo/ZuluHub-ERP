@@ -4,6 +4,7 @@ import type { ContextoDePlataforma } from "../../contexto/contexto";
 import {
   contrastesDelTema,
   decidirConfirmacionDeMarca,
+  definicionDeLaUltimaDecision,
   estadosDeVigencia,
   hayProgramadaPendiente,
   resolverConOrigen,
@@ -195,7 +196,8 @@ function comoEfectiva(
  * La ficha de una marca (§B.11): la marca, su cadena de padres, sus versiones con el estado calculado
  * (`VIGENTE`, `PROGRAMADA`, `SIN_EFECTO`, `ANTERIOR`), su borrador, sus dominios y las claves de texto
  * huérfanas, y lo que la consola necesita para decidir: la definición EFECTIVA de lo que rige y la del
- * borrador (con el origen de cada campo), si el borrador se puede confirmar y cómo quedan los contrastes de
+ * borrador (con el origen de cada campo), la de la ÚLTIMA versión confirmada (la base del primer borrador),
+ * si el borrador se puede confirmar y cómo quedan los contrastes de
  * color. `marcas.ver`, solo lectura.
  *
  * La herencia sale de `resolverDefinicion` (vía `resolverConOrigen`) sobre LA MISMA cadena que valida
@@ -251,10 +253,24 @@ export function armarFichaDeMarca({
           borrador === null
             ? null
             : resolverConOrigen([borrador.definicion, ...definicionesDeLosAncestros]);
+        // La última decisión (mayor número, regida o programada): la MISMA regla y la misma función que usa
+        // `guardarBorradorDeMarca` para armar el primer borrador, así lo que la consola ofrece como base es lo que se guarda.
+        const definicionDeLaUltima = definicionDeLaUltimaDecision(confirmadas);
+        const ultima =
+          definicionDeLaUltima === null
+            ? null
+            : (confirmadas.find((v) => v.definicion === definicionDeLaUltima) ?? null);
+        if (definicionDeLaUltima !== null && ultima === null) {
+          throw new RangeError("la última decisión no está entre las versiones confirmadas");
+        }
+        const deLaUltima =
+          ultima === null
+            ? null
+            : resolverConOrigen([ultima.definicion, ...definicionesDeLosAncestros]);
 
-        // Los planes por defecto que esas dos definiciones nombran (a lo sumo dos, a menudo el mismo), leídos una vez.
+        // Los planes por defecto que esas dos definiciones nombran (a lo sumo tres, a menudo el mismo), leídos una vez.
         const planes = new Map<PlanId, PlanConSuUltimaVersion>();
-        for (const conOrigen of [deLaVigente, delBorrador]) {
+        for (const conOrigen of [deLaVigente, delBorrador, deLaUltima]) {
           const planId = conOrigen?.resuelta.planPorDefectoId ?? null;
           if (planId === null || planes.has(planId)) continue;
           const leido = await planConSuUltimaVersion(tx, planId);
@@ -303,6 +319,15 @@ export function armarFichaDeMarca({
           })),
           clavesDeTextoHuerfanas: [...new Set(vocabularios.flatMap(clavesHuerfanas))].sort(),
           efectiva: deLaVigente === null ? null : comoEfectiva(deLaVigente, ancestros, planes),
+          ultimaConfirmada:
+            ultima === null || deLaUltima === null
+              ? null
+              : {
+                  numero: ultima.numero,
+                  vigenteDesde: ultima.vigenteDesde,
+                  definicion: ultima.definicion,
+                  efectiva: comoEfectiva(deLaUltima, ancestros, planes),
+                },
           borradorEfectivo:
             delBorrador === null ? null : comoEfectiva(delBorrador, ancestros, planes),
           puedeConfirmarse,

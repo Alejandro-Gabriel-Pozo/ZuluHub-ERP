@@ -22,6 +22,9 @@ import { ErrorDeConfiguracion } from "../postgres/errores";
  *   a `parsearClaveMaestra`. Ningún mensaje de error incluye una clave.
  */
 
+/** NOMBRE de la variable de entorno con la clave maestra (`<kid>:<64 hexadecimales>`); el valor lo carga el dueño. */
+export const PEDERNAL_CLAVE_CERTIFICADOS = "PEDERNAL_CLAVE_CERTIFICADOS";
+
 const ALGORITMO = "aes-256-gcm";
 const BYTES_DE_CLAVE = 32;
 const BYTES_DE_NONCE = 12;
@@ -43,7 +46,7 @@ export function parsearClaveMaestra(texto: string): ClaveMaestra {
   const hexadecimal = limpio.slice(separador + 1);
   if (separador < 0 || !KID.test(kid) || !HEXADECIMAL_DE_CLAVE.test(hexadecimal)) {
     throw new ErrorDeConfiguracion(
-      `la clave maestra de cifrado de certificados no tiene la forma <kid>:<${BYTES_DE_CLAVE * 2} hexadecimales>`,
+      `${PEDERNAL_CLAVE_CERTIFICADOS} inválida: no tiene la forma <kid>:<${BYTES_DE_CLAVE * 2} hexadecimales>`,
     );
   }
   return { kid, clave: Buffer.from(hexadecimal, "hex") };

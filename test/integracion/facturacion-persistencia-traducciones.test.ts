@@ -12,6 +12,7 @@ import {
 import { err } from "../../src/primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../src/puertos/transacciones";
 import { crearBaseAparte } from "./entorno";
+import { crearPuntoDeVenta } from "./fiscal-apoyo";
 import {
   RENGLON_DE_121,
   asegurarSerie,
@@ -33,7 +34,7 @@ import {
 /**
  * Facturación F3: la TRADUCCIÓN de cada restricción y cada disparador de 0009 a su motivo del dominio, contra la base REAL.
  *  1. Exhaustiva: toda restricción (y todo índice único) de las seis tablas de la facturación tiene su entrada en el mapa, no
- *     sobra ninguna, y los 11 errores con nombre de los disparadores son exactamente los de la lista. Si una migración agrega
+ *     sobra ninguna, y los 13 errores con nombre de los disparadores son exactamente los de la lista. Si una migración agrega
  *     una restricción sin traducirla, o el mapa nombra una que no existe, esta prueba falla.
  *  2. Cada traducción que tiene motivo se fuerza con el error verdadero de la base (el mismo traductor del adaptador) y cae en
  *     su motivo; cada `NO_TRADUCIDA` de muestra sale tal cual, tipada, sin disfrazarse.
@@ -60,6 +61,7 @@ const FUNCIONES_DE_LA_FACTURACION = [
   "comprobante_serie_con_reserva",
   "comprobante_verificar_cuadre",
   "comprobante_hijo_validar_alta",
+  "comprobante_exigir_sucursal",
   "certificado_arca_validar_alta",
   "certificado_arca_validar_cambio",
 ] as const;
@@ -122,7 +124,7 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
       ).toEqual([]);
     });
 
-    it("los 11 nombres que lanzan los disparadores de la facturación son exactamente la lista, y cada uno tiene motivo", async () => {
+    it("los 13 nombres que lanzan los disparadores de la facturación son exactamente la lista, y cada uno tiene motivo", async () => {
       const cuerpos = await filas<{ prosrc: string }>(
         `select prosrc from pg_proc where pronamespace = 'public'::regnamespace and proname = any($1)`,
         [[...FUNCIONES_DE_LA_FACTURACION]],
@@ -133,7 +135,7 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
         for (const m of prosrc.matchAll(/CONSTRAINT = '([a-z_]+)'/g)) lanzadas.add(m[1] as string);
       }
       expect([...lanzadas].sort()).toEqual([...DISPARADORES_DE_LA_FACTURACION].sort());
-      expect(lanzadas.size).toBe(11);
+      expect(lanzadas.size).toBe(13);
       for (const nombre of lanzadas) {
         const motivo = (ERRORES_DE_FISCAL_POR_RESTRICCION as Record<string, string>)[nombre];
         expect(motivo, nombre).toBeDefined();
@@ -506,6 +508,34 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
       provocar: () =>
         provocar(insertando({}, { renglones: [{ ...RENGLON_DE_121, importe: "120.00" }] })),
     },
+    {
+      // Sin el disparador de alta nadie copia la sucursal: al confirmar el comprobante sin sucursal no pasa.
+      restriccion: "comprobante_sin_sucursal",
+      tipo: "Check",
+      provocar: () => provocar(insertando({}), { sinAlta: true }),
+    },
+    {
+      // 0017 (D-50): el punto de venta sigue ACTIVO pero su sucursal se cerró.
+      restriccion: "comprobante_sucursal_cerrada",
+      tipo: "Check",
+      provocar: async () => {
+        const x = await crearEscenario(dueno);
+        const cerrada = (
+          await dueno.query<{ id: string }>(
+            "insert into sucursal (empresa_id, nombre) values ($1, 'Cerrada') returning id",
+            [x.empresa],
+          )
+        ).rows[0]?.id as string;
+        const pv = await crearPuntoDeVenta(dueno, x, {
+          numero: 7,
+          sucursal: cerrada,
+          domicilio: x.domicilio,
+          activo: true,
+        });
+        await dueno.query("update sucursal set activa = false where id = $1", [cerrada]);
+        return provocar(insertando({ punto_de_venta_id: pv, punto_de_venta_numero: 7 }, { x }));
+      },
+    },
     // ---- renglones y desglose -----------------------------------------------------------------------------------
     {
       restriccion: "comprobante_linea_empresa_id_fkey",
@@ -628,7 +658,8 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
       tipo: "Check",
       provocar: async () => {
         const id = randomUUID();
-        await dueno.query(certificadoSql, certificado(e, { id }));
+        // Un escenario propio: dos pedidos pendientes del mismo emisor y ambiente no conviven (0018).
+        await dueno.query(certificadoSql, certificado(await crearEscenario(dueno), { id }));
         return provocar(async (ej) => {
           await ej(
             `update certificado_arca set estado = 'VIGENTE', certificado_pem = $2, huella_sha256 = $3, vence_en = now() where id = $1`,
@@ -642,10 +673,13 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
       tipo: "Unicidad",
       provocar: async () => {
         const x = await crearEscenario(dueno);
-        const ids = [randomUUID(), randomUUID()];
-        for (const id of ids) await dueno.query(certificadoSql, certificado(x, { id }));
+        const [primero, segundo] = [randomUUID(), randomUUID()];
+        // El segundo pedido se pide con el primero ya vigente: dos pendientes del mismo ambiente no conviven (0018).
+        await dueno.query(certificadoSql, certificado(x, { id: primero }));
+        await dueno.query(cargarSql, [primero, huellaAlAzar()]);
+        await dueno.query(certificadoSql, certificado(x, { id: segundo }));
         return provocar(async (ej) => {
-          for (const id of ids) await ej(cargarSql, [id, huellaAlAzar()]);
+          await ej(cargarSql, [segundo, huellaAlAzar()]);
         });
       },
     },
@@ -673,7 +707,7 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
       tipo: "Check",
       provocar: async () => {
         const id = randomUUID();
-        await dueno.query(certificadoSql, certificado(e, { id }));
+        await dueno.query(certificadoSql, certificado(await crearEscenario(dueno), { id }));
         return provocar(async (ej) => {
           await ej("update certificado_arca set estado = 'REEMPLAZADO' where id = $1", [id]);
         });
@@ -684,7 +718,7 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
       tipo: "Check",
       provocar: async () => {
         const id = randomUUID();
-        await dueno.query(certificadoSql, certificado(e, { id }));
+        await dueno.query(certificadoSql, certificado(await crearEscenario(dueno), { id }));
         return provocar(async (ej) => {
           await ej("update certificado_arca set alias = 'otro' where id = $1", [id]);
         });

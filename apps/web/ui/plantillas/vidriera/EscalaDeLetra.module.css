@@ -1,0 +1,28 @@
+/*
+ * El tamaño de la letra de la carta (D10), en `rem` para que respete el que el comensal ya configuró en su
+ * celular. Dos cosas se multiplican: la perilla del comerciante (`letra_base`: 18 px o ≈ 22 px) y el paso que
+ * elige el comensal con «Letra» (×1, ×11/9 ≈ 22 px, ×25/18 ≈ 25 px sobre 18 px). Todo lo de adentro mide en
+ * `em`, así que cambiar acá cambia toda la carta. Nunca hay un `px` fijo de tipografía (regla de lint).
+ */
+.escala {
+  --vidriera-base: 1.125rem;
+  --vidriera-paso: 1;
+  font-family: var(--tipo-familia-cuerpo);
+  font-size: calc(var(--vidriera-base) * var(--vidriera-paso));
+  line-height: 1.45;
+  color: var(--color-texto);
+  /* Una palabra larga se parte antes de salirse de la pantalla: nunca desplazamiento horizontal. */
+  overflow-wrap: anywhere;
+}
+
+.escala[data-letra-base="GRANDE"] {
+  --vidriera-base: 1.375rem;
+}
+
+.escala[data-letra="GRANDE"] {
+  --vidriera-paso: calc(11 / 9);
+}
+
+.escala[data-letra="MUY_GRANDE"] {
+  --vidriera-paso: calc(25 / 18);
+}

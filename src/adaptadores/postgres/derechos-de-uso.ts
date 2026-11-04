@@ -90,7 +90,7 @@ export function crearLecturaDeDerechosDeUso<M extends string, P extends string>(
       });
     },
 
-    deLaCartaPublica() {
+    deLaVidrieraPublica() {
       // Falla cerrado hasta que exista el enlace de carta de catálogo: ver la nota del puerto.
       return Promise.resolve(null);
     },

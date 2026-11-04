@@ -148,6 +148,20 @@ export type DefinicionEfectivaDeMarca = Readonly<{
 export type PuedeConfirmarse =
   Readonly<{ ok: true }> | Readonly<{ ok: false; error: ErrorPlano<ErrorDeConfirmacion> }>;
 
+/**
+ * La última decisión de la marca: la versión confirmada de MAYOR `numero`, rija ya o esté programada a futuro
+ * (con una programada, NO es la vigente). Es la definición de la que parte el primer borrador al guardar
+ * (`guardarBorradorDeMarca`), calculada con la misma función (`definicionDeLaUltimaDecision`).
+ */
+export type UltimaConfirmadaEnFicha = Readonly<{
+  numero: number;
+  vigenteDesde: Date;
+  /** Lo que la versión dice POR SÍ MISMA (un campo vacío hereda): es lo que el primer borrador copia tal cual. */
+  definicion: DefinicionDeMarca;
+  /** La misma definición resuelta con la herencia de HOY, con el origen de cada campo (como `efectiva`). */
+  efectiva: DefinicionEfectivaDeMarca;
+}>;
+
 export type FichaDeMarca = Readonly<{
   marca: MarcaGuardada;
   /** El padre y el abuelo, en ese orden (vacía si no tiene padre). */
@@ -168,6 +182,12 @@ export type FichaDeMarca = Readonly<{
    * abuelo, con el origen de cada campo; `null` si la marca todavía no tiene versión vigente.
    */
   efectiva: DefinicionEfectivaDeMarca | null;
+  /**
+   * La última versión confirmada (mayor `numero`, regida o programada); `null` si la marca no tiene ninguna.
+   * Sin borrador, el formulario de edición tiene que armarse desde ESTA y no desde `efectiva`: con un cambio
+   * programado, `efectiva` es la vigente y el primer borrador parte de la programada.
+   */
+  ultimaConfirmada: UltimaConfirmadaEnFicha | null;
   /** Lo mismo para el borrador, resuelto contra las versiones vigentes de los ancestros; `null` si no hay borrador. */
   borradorEfectivo: DefinicionEfectivaDeMarca | null;
   puedeConfirmarse: PuedeConfirmarse;

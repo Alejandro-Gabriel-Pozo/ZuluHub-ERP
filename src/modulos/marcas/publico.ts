@@ -85,6 +85,7 @@ export {
 export {
   decidirConfirmacionDeMarca,
   decidirGuardadoDeBorrador,
+  definicionDeLaUltimaDecision,
   validarCambiosDeBorrador,
   type BorradorGuardado,
   type CambiosDeBorrador,

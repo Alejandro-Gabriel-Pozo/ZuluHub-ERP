@@ -406,7 +406,12 @@ describe("armazón de operación", () => {
       .element(nav().getByRole("link", { name: "Inicio" }))
       .toHaveAttribute("aria-current", "page");
     await unmount();
-    const modulo = (n: string) => ({ href: `/${n}`, etiqueta: n, icono: "cuenta" as const });
+    const modulo = (n: string) => ({
+      clave: "comprobantes" as const,
+      href: `/${n}`,
+      etiqueta: n,
+      icono: "cuenta" as const,
+    });
     for (const [modulos, esperados] of [
       [[modulo("Ventas")], 3],
       [[modulo("Ventas"), modulo("Caja")], 4],
@@ -417,6 +422,39 @@ describe("armazón de operación", () => {
       legibleYTocable();
       await r.unmount();
     }
+  });
+
+  it("el destino de un módulo se marca como actual solo en la pantalla de ese módulo", async () => {
+    const modulo = {
+      clave: "comprobantes" as const,
+      href: "/facturacion/comprobantes",
+      etiqueta: "Comprobantes",
+      icono: "comprobantes" as const,
+    };
+    const conActual = (actual: "inicio" | "comprobantes") => (
+      <ArmazonDeOperacion
+        titulo="Pantalla"
+        actual={actual}
+        marca="Hotel del Lago"
+        empresa="Café del Puerto"
+        modulos={[modulo]}
+      >
+        <p>Contenido</p>
+      </ArmazonDeOperacion>
+    );
+    const nav = () => page.getByRole("navigation", { name: "Navegación principal" });
+    const enElModulo = await render(conActual("comprobantes"));
+    await expect
+      .element(nav().getByRole("link", { name: "Comprobantes" }))
+      .toHaveAttribute("aria-current", "page");
+    await expect
+      .element(nav().getByRole("link", { name: "Inicio" }))
+      .not.toHaveAttribute("aria-current");
+    await enElModulo.unmount();
+    await render(conActual("inicio"));
+    await expect
+      .element(nav().getByRole("link", { name: "Comprobantes" }))
+      .not.toHaveAttribute("aria-current");
   });
 
   it("cuenta: empresa, rol, sucursal y cerrar sesión", async () => {

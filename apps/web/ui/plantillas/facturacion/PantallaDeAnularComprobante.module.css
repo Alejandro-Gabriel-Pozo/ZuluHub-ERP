@@ -1,0 +1,193 @@
+.raiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  font-size: var(--tipo-tamano-medio);
+  min-width: 0;
+}
+
+.subtitulo {
+  margin: 0;
+  color: var(--color-texto-suave);
+  overflow-wrap: anywhere;
+}
+
+/* Los dos pasos: el actual lleva un trazo fuerte arriba y el texto en negro (nunca solo color: también el número y aria-current). */
+.pasos {
+  display: flex;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.etapa {
+  flex: 1;
+  min-width: 0;
+  padding-top: var(--espacio-2);
+  border-top: 4px solid var(--color-borde);
+  color: var(--color-texto-suave);
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+.etapa[data-actual="true"] {
+  border-top-color: var(--color-texto);
+  color: var(--color-texto);
+}
+
+.numero {
+  font-variant-numeric: tabular-nums;
+}
+
+.seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  min-width: 0;
+}
+
+.titulo {
+  margin: 0;
+  font-size: var(--tipo-tamano-medio);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.descripcion {
+  flex: 1;
+  min-width: 0;
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+.importe {
+  margin: 0;
+  font-weight: var(--tipo-peso-fuerte);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.fila {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: var(--espacio-2) 0;
+  border-bottom: var(--borde-grosor) solid var(--color-borde);
+}
+
+.fila > * {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.fila[data-fuerte="true"] {
+  border-bottom: var(--borde-grosor-fuerte) solid var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.motivo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+}
+
+.area {
+  width: 100%;
+  min-height: 6rem;
+  padding: var(--espacio-2) var(--espacio-3);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font: inherit;
+  resize: vertical;
+}
+
+.area:disabled {
+  background: var(--color-deshabilitado);
+  color: var(--color-sobre-deshabilitado);
+}
+
+.contador {
+  margin: 0;
+  color: var(--color-texto-suave);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.revision {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.filas {
+  margin: 0;
+}
+
+.notas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nota {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.acciones {
+  display: flex;
+  gap: var(--espacio-3);
+  padding-top: var(--espacio-2);
+}
+
+.accion {
+  flex: 1;
+  min-width: 0;
+}
+
+/* «Cancelar» navega (vuelve al detalle): un enlace con el aspecto del botón secundario. */
+.cancelar {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-5);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+  text-decoration: none;
+}
+
+/* Una alícuota: su nombre («IVA 21 %»), lo facturado en ella y dónde se escribe cuánto anular. */
+.alicuota {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  min-width: 0;
+  margin: 0;
+  padding: var(--espacio-3);
+  border: var(--borde-grosor-fuerte) solid var(--color-texto);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+}
+
+.nombre {
+  padding: 0 var(--espacio-1);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.suave {
+  color: var(--color-texto-suave);
+}

@@ -3,6 +3,7 @@ import { campoConPosibleSecreto, type Dato } from "../../puertos/sin-secretos";
 import type { EstadoEfectivo } from "../../contexto/estados";
 import type { MotivoDeRechazo } from "../permisos/guard";
 import type { RolDeEmpresa } from "../permisos/roles";
+import { CLAVES_DE_ERRORES_FISCALES } from "../experiencia/respuesta-fiscal";
 import {
   CATALOGO_DE_TEXTOS,
   LARGO_MAXIMO_DE_TEXTO,
@@ -113,7 +114,9 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
   });
 
   it("los errores nuevos que ve una empresa o la puerta de entrada", () => {
-    expect(claves.filter((c) => c.startsWith("error.")).sort()).toEqual(
+    expect(
+      claves.filter((c) => c.startsWith("error.") && !c.startsWith("error.fiscal_")).sort(),
+    ).toEqual(
       [
         "error.empresa_de_otra_marca",
         "error.funcion_no_incluida",
@@ -138,6 +141,136 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
         "error.empresa_no_opera",
       ].sort(),
     );
+  });
+
+  it("los errores del facturador son exactamente los códigos fiscales, y lo de ARCA sale traducido con su código como marcador", () => {
+    expect(claves.filter((c) => c.startsWith("error.fiscal_")).sort()).toEqual(
+      Object.values(CLAVES_DE_ERRORES_FISCALES).sort(),
+    );
+    for (const generico of ["error_generico", "observacion_generica", "evento_generico"] as const) {
+      expect(CATALOGO_DE_TEXTOS[`fiscal.arca.${generico}`].marcadores).toEqual(["codigo"]);
+    }
+    // Nada del facturador habla en voseo: los textos de ARCA y de los errores van en castellano neutro. Salvo los dos del
+    // listado que el dueño aprobó tal cual (CONTRATO del listado: «Probá con otro período…» y «Probá de nuevo.»).
+    const APROBADOS_EN_VOSEO = ["fiscal.pantalla.listado_vacio", "fiscal.pantalla.listado_error"];
+    for (const clave of claves.filter(
+      (c) =>
+        (c.startsWith("error.fiscal_") || c.startsWith("fiscal.")) &&
+        !APROBADOS_EN_VOSEO.includes(c),
+    )) {
+      expect(CATALOGO_DE_TEXTOS[clave].porDefecto, clave).not.toMatch(
+        /\b(podés|tenés|revisá|probá|volvé|esperá|cargalo|activalo|consultá)\b/i,
+      );
+    }
+  });
+
+  it("los textos de la pantalla de detalle del facturador: los siete estados (D-25), la anulación (D-29) y sin «acreditad»", () => {
+    const pantalla = claves.filter((c) => c.startsWith("fiscal.pantalla."));
+    expect(pantalla.length).toBeGreaterThan(0);
+    const estados = (Object.entries(CATALOGO_DE_TEXTOS) as [ClaveDeTexto, DefinicionDeTexto][])
+      .filter(([c]) => c.startsWith("fiscal.pantalla.estado_"))
+      .map(([c, d]) => [c, d.porDefecto]);
+    expect(Object.fromEntries(estados)).toEqual({
+      "fiscal.pantalla.estado_pendiente": "Pendiente de enviar",
+      "fiscal.pantalla.estado_en_validacion": "Validando",
+      "fiscal.pantalla.estado_autorizado": "Autorizada",
+      "fiscal.pantalla.estado_rechazado": "Rechazada",
+      "fiscal.pantalla.estado_incierto": "Confirmando",
+      "fiscal.pantalla.estado_conflicto": "Requiere revisión",
+      "fiscal.pantalla.estado_descartado": "Descartada",
+    });
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.anulacion_parcial"].porDefecto).toBe(
+      "Anulación parcial",
+    );
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.anulacion_total"].porDefecto).toBe(
+      "Anulación total",
+    );
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.ya_anulado"].porDefecto).toBe(
+      "Ya anulado con notas de crédito",
+    );
+    for (const clave of pantalla) {
+      expect(CATALOGO_DE_TEXTOS[clave].porDefecto, clave).not.toMatch(/acreditad/i);
+    }
+    expect(CATALOGO_DE_TEXTOS["error.fiscal_comprobante_no_encontrado"].porDefecto).toBe(
+      "No encontramos ese comprobante.",
+    );
+  });
+
+  it("los textos de anular por importe son exactamente los que el dueño aprobó el 2026-10-29 (12A, D-74 incluido)", () => {
+    const porDefecto = (clave: ClaveDeTexto): string => CATALOGO_DE_TEXTOS[clave].porDefecto;
+    expect(
+      Object.fromEntries(
+        claves
+          .filter(
+            (c) =>
+              c.startsWith("fiscal.pantalla.anular_") ||
+              c.startsWith("fiscal.pantalla.detalle_anular"),
+          )
+          .map((c) => [c, porDefecto(c)]),
+      ),
+    ).toEqual({
+      "fiscal.pantalla.anular_titulo": "Anular comprobante",
+      "fiscal.pantalla.anular_subtitulo": "{comprobante} · {cliente}",
+      "fiscal.pantalla.anular_paso_que": "Qué anular",
+      "fiscal.pantalla.anular_paso_motivo": "Motivo y revisar",
+      "fiscal.pantalla.anular_cancelar": "Cancelar",
+      "fiscal.pantalla.anular_siguiente": "Siguiente",
+      "fiscal.pantalla.anular_volver": "Volver",
+      "fiscal.pantalla.anular_boton_final": "Anular comprobante",
+      "fiscal.pantalla.anular_enviando": "Anulando…",
+      "fiscal.pantalla.anular_se_anula_el_total": "Se anula el total",
+      "fiscal.pantalla.anular_solo_una_parte": "Anular solo una parte",
+      "fiscal.pantalla.anular_elegi": "Elegí qué anular",
+      "fiscal.pantalla.anular_a_anular": "A anular",
+      "fiscal.pantalla.anular_el_total": "Anular el total",
+      "fiscal.pantalla.anular_total_de_la_factura": "Total de la factura",
+      "fiscal.pantalla.anular_facturado": "Facturado",
+      "fiscal.pantalla.anular_importe_con_iva": "Importe a anular (con IVA incluido)",
+      "fiscal.pantalla.anular_importe": "Importe a anular",
+      "fiscal.pantalla.anular_alicuota_exento": "Exento",
+      "fiscal.pantalla.anular_alicuota_no_gravado": "No gravado",
+      "fiscal.pantalla.anular_aviso_supera_c": "El importe supera lo facturado.",
+      "fiscal.pantalla.anular_total_de_la_nota_de_debito": "Total de la nota de débito",
+      "fiscal.pantalla.anular_aviso_supera": "El importe supera lo facturado con IVA {alicuota} %.",
+      "fiscal.pantalla.anular_motivo": "Motivo (obligatorio)",
+      "fiscal.pantalla.anular_motivo_guardado": "Queda guardado junto a la nota de crédito.",
+      "fiscal.pantalla.anular_contador": "{cantidad} / {limite}",
+      "fiscal.pantalla.anular_se_va_a_emitir": "Se va a emitir una nota de crédito {letra}",
+      "fiscal.pantalla.anular_a_anular_ahora": "A anular ahora",
+      "fiscal.pantalla.anular_descripcion": "{anulacion} de la {clase} {numero}",
+      "fiscal.pantalla.anular_descripcion_con_iva": "{anulacion} de la {clase} {numero}, {iva}",
+      "fiscal.pantalla.anular_clase_factura": "factura",
+      "fiscal.pantalla.anular_clase_nota_de_debito": "nota de débito",
+      "fiscal.pantalla.detalle_anular": "Anular con nota de crédito",
+      "fiscal.pantalla.detalle_anular_motivo":
+        "Solo se anula una factura o una nota de débito Autorizada.",
+    });
+    // El aviso lleva la tasa que corresponde en un marcador `alicuota`.
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.anular_aviso_supera"].marcadores).toEqual([
+      "alicuota",
+    ]);
+  });
+
+  it("los textos de la vista imprimible son exactamente los que el dueño aprobó el 2026-11-04 (D-111)", () => {
+    expect(
+      Object.fromEntries(
+        claves
+          .filter((c) => c.startsWith("fiscal.pantalla.imprimir_"))
+          .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
+      ),
+    ).toEqual({
+      "fiscal.pantalla.imprimir_boton": "Imprimir",
+      "fiscal.pantalla.imprimir_formato_a4": "A4",
+      "fiscal.pantalla.imprimir_formato_ticket": "Ticket",
+      "fiscal.pantalla.imprimir_rotulo_importe": "Importe",
+      "fiscal.pantalla.imprimir_neto_gravado": "Neto gravado {alicuota} %",
+      "fiscal.pantalla.imprimir_codigo": "COD.",
+      "fiscal.pantalla.imprimir_a_transportar": "A transportar",
+      "fiscal.pantalla.imprimir_transporte": "Transporte",
+      "fiscal.pantalla.imprimir_hoja": "Hoja {k} de {n}",
+      "fiscal.pantalla.imprimir_ingresos_brutos": "Ingresos Brutos",
+    });
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.imprimir_hoja"].marcadores).toEqual(["k", "n"]);
   });
 
   it("los textos de los errores con datos declaran su marcador", () => {

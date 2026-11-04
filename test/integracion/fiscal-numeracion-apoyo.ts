@@ -47,10 +47,10 @@ import { armarNumerarParaPruebas } from "../utilidades/numerar-para-pruebas";
  * composición real (repositorios fiscales, estados de empresa y tenant, auditoría y autorización
  * sobre la conexión de la transacción) más el `db` crudo para mirar.
  *
- * El módulo `facturacion` está en desarrollo en el catálogo real: las pruebas que ejercitan los casos
- * de uso lo hacen con `REGLAS_CON_FACTURACION` (el módulo `disponible`) y una carga de autorización
- * que lo trae activado y habilitado por el plan. Una prueba aparte verifica que con el catálogo REAL
- * emitir da `MODULO_EN_DESARROLLO`.
+ * El módulo `facturacion` es `disponible` en el catálogo real pero no nace activo: las pruebas que ejercitan los
+ * casos de uso usan una carga de autorización que lo trae activado y habilitado por el plan (`conFacturacion`).
+ * Una prueba aparte verifica que con la autorización REAL, sin activarlo en la empresa, da `MODULO_NO_ACTIVO`.
+ * `REGLAS_CON_FACTURACION` quedó igual al catálogo real (se conserva por los tests que ya lo usan).
  */
 export type TxDeNumeracionDePrueba = TxDeNumeracion & Readonly<{ db: Kysely<SinTablas> }>;
 

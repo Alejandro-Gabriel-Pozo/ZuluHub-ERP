@@ -1307,10 +1307,12 @@ describe.skipIf(base === null)(
         const ex = await crearMundoDeMarca(dueno, { marca: mx });
         const ey = await crearMundoDeMarca(dueno, { marca: my });
         const appX = await crearDominio(dueno, mx, { superficie: "APP", canonico: true });
-        const cartaX = await crearDominio(dueno, mx, { superficie: "CARTA" });
+        const vidrieraX = await crearDominio(dueno, mx, { superficie: "CARTA" });
         const landingX = await crearDominio(dueno, mx, { superficie: "LANDING" });
         const consolaX = await crearDominio(dueno, mx, { superficie: "CONSOLA" });
-        const cartaDeEx = await crearDominioDeEmpresa(dueno, ex.empresa, { superficie: "CARTA" });
+        const vidrieraDeEx = await crearDominioDeEmpresa(dueno, ex.empresa, {
+          superficie: "CARTA",
+        });
         const appDeEy = await crearDominioDeEmpresa(dueno, ey.empresa, { superficie: "APP" });
         const pendienteDeEx = await crearDominioDeEmpresa(dueno, ex.empresa, {
           superficie: "APP",
@@ -1330,10 +1332,10 @@ describe.skipIf(base === null)(
           ex,
           ey,
           appX,
-          cartaX,
+          vidrieraX,
           landingX,
           consolaX,
-          cartaDeEx,
+          vidrieraDeEx,
           appDeEy,
           pendienteDeEx,
           verificadoDeEy,
@@ -1362,7 +1364,7 @@ describe.skipIf(base === null)(
             },
           ]);
           for (const [d, superficie] of [
-            [w.cartaX, "CARTA"],
+            [w.vidrieraX, "CARTA"],
             [w.landingX, "LANDING"],
             [w.consolaX, "CONSOLA"],
           ] as const) {
@@ -1371,9 +1373,9 @@ describe.skipIf(base === null)(
             expect(fila?.duenio_marca_id).toBe(w.mx);
           }
           // host de empresa: dueño empresa, marca de entrada la de su tenant (cada una la suya)
-          expect(await resolver(w.cartaDeEx.host)).toEqual([
+          expect(await resolver(w.vidrieraDeEx.host)).toEqual([
             {
-              host: w.cartaDeEx.host,
+              host: w.vidrieraDeEx.host,
               superficie: "CARTA",
               duenio_marca_id: null,
               duenio_empresa_id: w.ex.empresa,
@@ -1406,10 +1408,10 @@ describe.skipIf(base === null)(
           const todas = ["APP", "CARTA", "LANDING", "CONSOLA"];
           for (const [d, propia] of [
             [w.appX, "APP"],
-            [w.cartaX, "CARTA"],
+            [w.vidrieraX, "CARTA"],
             [w.landingX, "LANDING"],
             [w.consolaX, "CONSOLA"],
-            [w.cartaDeEx, "CARTA"],
+            [w.vidrieraDeEx, "CARTA"],
             [w.appDeEy, "APP"],
           ] as const) {
             for (const superficie of todas) {
@@ -1428,7 +1430,7 @@ describe.skipIf(base === null)(
         const w = await armarMundo();
         await publico(async (s) => {
           const r = await s.intentar("select * from resolucion_de_host where host = $1", [
-            w.cartaDeEx.host,
+            w.vidrieraDeEx.host,
           ]);
           expect(r.ok).toBe(true);
           if (r.ok) {
@@ -1468,12 +1470,12 @@ describe.skipIf(base === null)(
         await publico(async (s) => {
           const r = await s.intentar(
             "select host, marca_id from resolucion_de_host where host = any($1)",
-            [[w.cartaDeEx.host, w.appDeEy.host, w.appX.host]],
+            [[w.vidrieraDeEx.host, w.appDeEy.host, w.appX.host]],
           );
           const porHost = new Map(
             (r.ok ? r.rows : []).map((f) => [f["host"] as string, f["marca_id"] as string]),
           );
-          expect(porHost.get(w.cartaDeEx.host)).toBe(w.mx);
+          expect(porHost.get(w.vidrieraDeEx.host)).toBe(w.mx);
           expect(porHost.get(w.appDeEy.host)).toBe(w.my);
           expect(porHost.get(w.appX.host)).toBe(w.mx);
         });
@@ -1492,7 +1494,15 @@ describe.skipIf(base === null)(
         await conAppDe(b, w.ex, async (s) => {
           const r = await s.intentar(
             "select host, superficie, marca_id, es_canonico from dominio where host = any($1)",
-            [[w.appX.host, w.cartaX.host, w.cartaDeEx.host, w.pendienteDeEx.host, w.appDeEy.host]],
+            [
+              [
+                w.appX.host,
+                w.vidrieraX.host,
+                w.vidrieraDeEx.host,
+                w.pendienteDeEx.host,
+                w.appDeEy.host,
+              ],
+            ],
           );
           expect(r.ok).toBe(true);
           expect(r.ok ? r.rows : []).toEqual([

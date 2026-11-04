@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CATALOGO_DE_MODULOS, type ClaveAccion, type ClaveModulo } from "../modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "./empresa";
-import { exigirAccion, exigirAcciones, type ActorCargado } from "./exigir";
+import { accionesPermitidas, exigirAccion, exigirAcciones, type ActorCargado } from "./exigir";
 import {
   CATALOGO_DE_PLATAFORMA,
   PERMISOS_DE_PLATAFORMA,
@@ -177,7 +177,13 @@ describe("exigirAccion", () => {
       // @ts-expect-error la acción no existe en el catálogo
       exigirAccion(REGLAS_DE_EMPRESA, "usuarios.borrar_todo", cargar);
     expect(noSeEjecuta).toBeTypeOf("function");
-    const claves: ClaveModulo[] = ["administracion", "facturacion", "catalogo", "carta", "stock"];
+    const claves: ClaveModulo[] = [
+      "administracion",
+      "facturacion",
+      "catalogo",
+      "vidriera",
+      "stock",
+    ];
     expect(claves).toEqual(Object.keys(CATALOGO_DE_MODULOS));
   });
 });
@@ -204,14 +210,14 @@ describe("exigirAcciones", () => {
   });
 
   it("devuelve el rechazo de la PRIMERA acción que falla, en el orden dado", async () => {
-    // Una acción que rechaza el rol (SIN_PERMISO) y otra que rechaza el módulo (facturación en desarrollo).
+    // Una acción que rechaza el rol (SIN_PERMISO) y otra que rechaza el módulo (facturación disponible pero sin activar).
     const { cargar } = cargaDe({ rol: "OPERADOR", modulosActivados: [], modulosHabilitados: [] });
     expect(
       await exigirAcciones(REGLAS_DE_EMPRESA, ["usuarios.invitar", "comprobantes.emitir"], cargar),
     ).toEqual({ ok: false, error: "SIN_PERMISO" });
     expect(
       await exigirAcciones(REGLAS_DE_EMPRESA, ["comprobantes.emitir", "usuarios.invitar"], cargar),
-    ).toEqual({ ok: false, error: "MODULO_EN_DESARROLLO" });
+    ).toEqual({ ok: false, error: "MODULO_NO_ACTIVO" });
   });
 
   it("evalúa cada acción: pasar la primera no alcanza si falla la última", async () => {
@@ -358,5 +364,96 @@ describe("exigirAccion con las reglas de plataforma (H5 P1)", () => {
       void exigirAccion(REGLAS_DE_EMPRESA, "usuarios.invitar", deAdmin.cargar);
     };
     expect(noSeEjecuta).toBeTypeOf("function");
+  });
+});
+
+describe("accionesPermitidas", () => {
+  // `catalogo` sigue en desarrollo en el catálogo real: esta variante lo pone disponible para comparar las dos situaciones.
+  const CON_CATALOGO: ReglasDeEmpresa = {
+    catalogo: {
+      ...CATALOGO_DE_MODULOS,
+      catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "disponible" },
+    },
+    permisos: PERMISOS_DE_EMPRESA,
+  };
+  const TODAS = Object.keys(PERMISOS_DE_EMPRESA) as ClaveAccion[];
+  const actores: readonly [string, ActorCargado][] = [
+    ...ROLES_DE_EMPRESA.flatMap((rol): [string, ActorCargado][] => [
+      [`${rol} sin módulos`, { rol, modulosActivados: [], modulosHabilitados: [] }],
+      [
+        `${rol} con facturación en el plan`,
+        {
+          rol,
+          modulosActivados: ["facturacion", "catalogo"],
+          modulosHabilitados: ["facturacion", "catalogo"],
+        },
+      ],
+      [
+        `${rol} con facturación fuera del plan`,
+        { rol, modulosActivados: ["facturacion"], modulosHabilitados: [] },
+      ],
+    ]),
+    [
+      "sin rol",
+      { rol: null, modulosActivados: ["facturacion"], modulosHabilitados: ["facturacion"] },
+    ],
+  ];
+
+  it.each(actores)(
+    "%s: da exactamente lo que exigirAccion deja pasar, acción por acción (con y sin un módulo en desarrollo)",
+    async (_nombre, actor) => {
+      for (const reglas of [REGLAS_DE_EMPRESA, CON_CATALOGO]) {
+        const esperadas: ClaveAccion[] = [];
+        for (const accion of TODAS) {
+          const veredicto = await exigirAccion(reglas, accion, () => Promise.resolve(actor));
+          if (veredicto.ok) esperadas.push(accion);
+        }
+        expect(accionesPermitidas(reglas, actor)).toEqual(esperadas.sort());
+      }
+    },
+  );
+
+  it("el rol no alcanza: con el módulo en desarrollo, el gerente no ve ninguna acción de catálogo aunque lo tenga activo y en el plan", () => {
+    const gerente: ActorCargado = {
+      rol: "GERENTE",
+      modulosActivados: ["facturacion", "catalogo"],
+      modulosHabilitados: ["facturacion", "catalogo"],
+    };
+    const real = accionesPermitidas(REGLAS_DE_EMPRESA, gerente);
+    expect(real).not.toContain("productos.ver");
+    expect(real).toContain("usuarios.invitar");
+    expect(real).toContain("comprobantes.ver");
+    expect(accionesPermitidas(CON_CATALOGO, gerente)).toContain("productos.ver");
+  });
+
+  it("el módulo no alcanza: sin activar, o sin rol, no figura; fuera del plan solo lo que mira o cierra", () => {
+    const sinActivar: ActorCargado = {
+      rol: "OPERADOR",
+      modulosActivados: [],
+      modulosHabilitados: [],
+    };
+    expect(accionesPermitidas(REGLAS_DE_EMPRESA, sinActivar)).not.toContain("comprobantes.ver");
+    const fueraDelPlan: ActorCargado = {
+      rol: "OPERADOR",
+      modulosActivados: ["facturacion"],
+      modulosHabilitados: [],
+    };
+    const lista = accionesPermitidas(REGLAS_DE_EMPRESA, fueraDelPlan);
+    expect(lista).toContain("comprobantes.ver");
+    expect(lista).toContain("notas_de_credito.emitir");
+    expect(lista).not.toContain("comprobantes.emitir_manual");
+    expect(accionesPermitidas(REGLAS_DE_EMPRESA, { ...fueraDelPlan, rol: null })).toEqual([]);
+  });
+
+  it("sale ordenada y sin repetir, y el operador no recibe lo que es del gerente", () => {
+    const operador: ActorCargado = {
+      rol: "OPERADOR",
+      modulosActivados: ["facturacion"],
+      modulosHabilitados: ["facturacion"],
+    };
+    const lista = accionesPermitidas(REGLAS_DE_EMPRESA, operador);
+    expect(lista).toEqual([...new Set(lista)].sort());
+    expect(lista).not.toContain("series.resincronizar");
+    expect(lista).not.toContain("certificados.gestionar");
   });
 });

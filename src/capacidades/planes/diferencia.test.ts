@@ -92,18 +92,22 @@ describe("diferenciaEntreVersiones: módulos y perillas", () => {
 
   it("perillas que suben y que bajan, con los dos valores, en el orden del catálogo", () => {
     const r = diferencia(
-      version([], { cajas_por_sucursal: limite(1), carta_por_qr: encendida, con_sello: encendida }),
-      version([], { cajas_por_sucursal: limite(4), carta_por_qr: apagada, con_sello: apagada }),
+      version([], {
+        cajas_por_sucursal: limite(1),
+        vidriera_por_qr: encendida,
+        con_sello: encendida,
+      }),
+      version([], { cajas_por_sucursal: limite(4), vidriera_por_qr: apagada, con_sello: apagada }),
     );
     expect(r.perillas).toEqual([
       { perilla: "cajas_por_sucursal", desde: limite(1), hasta: limite(4), sentido: "SUBE" },
-      { perilla: "carta_por_qr", desde: encendida, hasta: apagada, sentido: "BAJA" },
+      { perilla: "vidriera_por_qr", desde: encendida, hasta: apagada, sentido: "BAJA" },
       { perilla: "con_sello", desde: encendida, hasta: apagada, sentido: "BAJA" },
     ]);
   });
 
   it("lo que ninguna versión fija vale la base en las dos: no hay diferencia", () => {
-    const r = diferencia(version([], { carta_por_qr: apagada }), version([]));
+    const r = diferencia(version([], { vidriera_por_qr: apagada }), version([]));
     expect(r.perillas).toEqual([]);
   });
 
@@ -236,7 +240,7 @@ describe("diferenciaEntreVersiones: por tenant", () => {
     const t = tenant("t1", {
       ajustes: [
         ajuste("cajas_por_sucursal", limite(9)),
-        ajuste("carta_por_qr", "DEL_PLAN"),
+        ajuste("vidriera_por_qr", "DEL_PLAN"),
         ajuste("con_sello", apagada, { vigenteDesde: new Date(BASE + DIA) }),
       ],
     });
@@ -276,22 +280,22 @@ describe("diferenciaEntreVersiones: por tenant", () => {
         ajuste("cajas_por_sucursal", limite(6), { numero: 2 }),
         ajuste("cajas_por_sucursal", limite(4), { empresaId: E1 }),
         ajuste("cajas_por_sucursal", "DEL_PLAN", { empresaId: E1, numero: 99 }),
-        ajuste("carta_por_qr", encendida, { empresaId: E2 }),
+        ajuste("vidriera_por_qr", encendida, { empresaId: E2 }),
       ],
     });
     const r = diferencia(desde, hasta, [t]);
     expect(r.porTenant[0]?.ajustes.map((a) => [a.perilla, a.empresaId, a.valor])).toEqual([
       ["cajas_por_sucursal", null, limite(6)],
       ["cajas_por_sucursal", E2, limite(3)],
-      ["carta_por_qr", E2, encendida],
+      ["vidriera_por_qr", E2, encendida],
     ]);
   });
 
   it("los ajustes de varias empresas salen en orden de empresa, sin importar el orden en que llegan", () => {
     const t = tenant("t1", {
       ajustes: [
-        ajuste("carta_por_qr", encendida, { empresaId: E2 }),
-        ajuste("carta_por_qr", apagada, { empresaId: E1 }),
+        ajuste("vidriera_por_qr", encendida, { empresaId: E2 }),
+        ajuste("vidriera_por_qr", apagada, { empresaId: E1 }),
       ],
     });
     const r = diferencia(desde, hasta, [t]);

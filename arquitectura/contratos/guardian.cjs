@@ -23,6 +23,7 @@
 const { execFileSync, spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
+const { Buffer, isUtf8 } = require("node:buffer");
 const {
   CLASES,
   CLASES_ESPERADAS,
@@ -39,6 +40,7 @@ const {
   procesarExclusiones,
 } = require("./excepciones.cjs");
 const { comparar } = require("./comparacion.cjs");
+const { ARCHIVO_DEL_CATALOGO, validarCatalogo } = require("./evasiones.cjs");
 const contratos = require("./contratos.cjs");
 const { CODIGOS_DE_AVISO, CODIGOS_DE_FALLA, DESCRIPCION_DE_CODIGOS } = require("./codigos.cjs");
 const {
@@ -142,6 +144,7 @@ function comprobarUbicaciones(fallas, avisos) {
  *   contratos: unknown,
  *   excepciones: unknown,
  *   exclusiones: unknown,
+ *   evasiones?: unknown,
  *   ahora?: Date,
  *   niveles?: { nombre: string, reglas: { clase: string, glob: string }[] }[],
  *   clasesEsperadas?: string[],
@@ -290,6 +293,13 @@ function ejecutar(opciones) {
     fallas.push(...excepciones.restantes.map(comoFalla));
   }
 
+  // 6. Batería de evasión: el catálogo está en regla y sus brechas y riesgos se reportan en cada corrida.
+  if (opciones.evasiones !== undefined) {
+    const catalogo = validarCatalogo(opciones.evasiones, { ahora });
+    fallas.push(...catalogo.fallas);
+    avisos.push(...catalogo.avisos);
+  }
+
   return resultado({
     fallas,
     avisos,
@@ -384,6 +394,8 @@ function resultado(datos) {
           datos.comparacion === null ? 0 : (datos.comparacion.escaneadasPorClase[clase] ?? 0),
         binariasOmitidas:
           datos.comparacion === null ? 0 : (datos.comparacion.omitidasPorClase[clase] ?? 0),
+        noAnalizables:
+          datos.comparacion === null ? 0 : (datos.comparacion.noAnalizablesPorClase[clase] ?? 0),
         sinUnidad: delaClase.filter((ruta) => unidadDe(ruta) === null).length,
         listaDeRutas: delaClase,
       };
@@ -408,27 +420,52 @@ function formatearFalla(falla) {
   return `${falla.archivo}:${falla.linea} · ${falla.contrato ?? "-"} · ${falla.motivo} · ${falla.correccion}`;
 }
 
-/** Lista las rutas versionadas y las sin versionar que git no ignora (lo que entraría a un commit). */
-function listarRutas(raiz) {
-  const salida = execFileSync(
-    "git",
-    ["ls-files", "-z", "--cached", "--others", "--exclude-standard"],
-    {
-      cwd: raiz,
-      encoding: "utf8",
-      maxBuffer: 256 * 1024 * 1024,
-    },
-  );
-  return [...new Set(salida.split("\0").filter((ruta) => ruta !== ""))].sort();
+/** Los nombres que imprime `git ls-files -z` con esas opciones, uno por texto `latin1` (sin perder ningún byte). */
+function nombresDeGit(raiz, opciones) {
+  const salida = execFileSync("git", ["ls-files", "-z", ...opciones], {
+    cwd: raiz,
+    maxBuffer: 256 * 1024 * 1024,
+  });
+  return salida
+    .toString("latin1")
+    .split("\0")
+    .filter((nombre) => nombre !== "");
 }
 
-function leerJson(raiz, archivo, previas) {
+/**
+ * Lista las rutas versionadas y las sin versionar que git no ignora (lo que entraría a un commit), con los
+ * bytes del nombre intactos: un nombre que no es UTF-8 no se puede reconstruir como texto, y perderlo
+ * dejaría el archivo sin analizar. `borradas` son las que el índice tiene y el árbol de trabajo ya no
+ * (un borrado sin registrar); `bytes` son los del nombre; `visible` es el nombre para mostrar.
+ */
+function listarRutas(raiz) {
+  const borradas = new Set(nombresDeGit(raiz, ["--deleted"]));
+  return [...new Set(nombresDeGit(raiz, ["--cached", "--others", "--exclude-standard"]))]
+    .sort()
+    .map((nombre) => {
+      const bytes = Buffer.from(nombre, "latin1");
+      return {
+        bytes,
+        borrada: borradas.has(nombre),
+        // Un nombre no UTF-8 se muestra con cada byte fuera del ASCII escrito como \xNN.
+        visible: isUtf8(bytes)
+          ? bytes.toString("utf8")
+          : nombre.replace(
+              /[^\x20-\x7e]/g,
+              (c) => `\\x${c.charCodeAt(0).toString(16).padStart(2, "0")}`,
+            ),
+      };
+    });
+}
+
+/** Lee un archivo de datos como JSON; si no se puede, deja la falla en `previas` (con `codigo`) y devuelve una lista vacía. */
+function leerJson(raiz, archivo, previas, codigo) {
   try {
     // `JSON.parse` lee el `Buffer` como UTF-8: no hace falta decodificarlo antes.
     return JSON.parse(fs.readFileSync(path.join(raiz, archivo)));
   } catch (error) {
     previas.fallas.push({
-      codigo: "excepcion-invalida",
+      codigo,
       archivo,
       contrato: null,
       motivo: `No se pudo leer el archivo como JSON: ${error.message}.`,
@@ -441,24 +478,48 @@ function leerJson(raiz, archivo, previas) {
 
 /**
  * Arma las entradas del guardián desde el repositorio de `raiz`: `git ls-files`, lectura del disco y los
- * archivos de datos. Las rutas que git lista pero ya no están en el disco (borradas sin registrar) se
- * avisan y se omiten. Se separa de `ejecutar` para que las pruebas puedan alterar el árbol en memoria.
+ * archivos de datos. Lo que git lista y no se puede analizar FALLA (`ruta-ilegible`): un nombre que no es
+ * UTF-8, o una ruta que no está en el disco sin ser un borrado pendiente (un enlace simbólico roto, un
+ * archivo que un paso previo sacó del árbol). Solo un borrado todavía sin registrar (`git rm`) se avisa
+ * y se omite: no hay nada que analizar. Se separa de `ejecutar` para que las pruebas puedan alterar el
+ * árbol en memoria.
  */
 function cargarDelRepo(raiz) {
   const previas = { fallas: [], avisos: [] };
   const rutas = [];
-  for (const ruta of listarRutas(raiz)) {
-    if (fs.existsSync(path.join(raiz, ruta))) {
-      rutas.push(ruta);
-    } else {
+  const sinAnalizar = (archivo, motivo, correccion) =>
+    previas.fallas.push({
+      codigo: "ruta-ilegible",
+      archivo,
+      contrato: null,
+      motivo,
+      correccion,
+      donde: enArchivo(),
+    });
+  for (const { bytes, borrada, visible } of listarRutas(raiz)) {
+    if (!isUtf8(bytes)) {
+      sinAnalizar(
+        visible,
+        "El nombre del archivo no es UTF-8 válido: no se puede leer y quedaría sin analizar.",
+        "Renombralo con un nombre UTF-8 (git mv).",
+      );
+    } else if (fs.existsSync(path.join(raiz, visible))) {
+      rutas.push(visible);
+    } else if (borrada) {
       previas.avisos.push({
         codigo: "ruta-ausente-en-disco",
-        archivo: ruta,
+        archivo: visible,
         contrato: null,
         motivo: "Git la lista pero ya no está en el disco; no se analiza.",
         correccion: "Registrá el borrado (git rm) para que deje de listarse.",
         donde: enArchivo(),
       });
+    } else {
+      sinAnalizar(
+        visible,
+        "Git la lista y no se puede leer en el disco (¿un enlace simbólico roto?), y no es un borrado pendiente: quedaría sin analizar.",
+        "Arreglá el enlace o sacá el archivo del repositorio.",
+      );
     }
   }
   const leer = (ruta) => {
@@ -472,8 +533,9 @@ function cargarDelRepo(raiz) {
     rutas,
     leer,
     contratos,
-    excepciones: leerJson(raiz, ARCHIVO_DE_EXCEPCIONES, previas),
-    exclusiones: leerJson(raiz, ARCHIVO_DE_EXCLUSIONES, previas),
+    excepciones: leerJson(raiz, ARCHIVO_DE_EXCEPCIONES, previas, "excepcion-invalida"),
+    exclusiones: leerJson(raiz, ARCHIVO_DE_EXCLUSIONES, previas, "excepcion-invalida"),
+    evasiones: leerJson(raiz, ARCHIVO_DEL_CATALOGO, previas, "evasion-invalida"),
     previas,
   };
 }

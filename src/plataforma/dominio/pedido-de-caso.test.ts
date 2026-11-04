@@ -52,6 +52,7 @@ const VALIDOS: Record<NombreDeCaso, { json: unknown; entrada: unknown }> = {
     json: {
       claveDeIdempotencia: CLAVE,
       marcaId: ID_A,
+      versionEsperada: 3,
       vigenteDesde: "2026-10-20T12:30:00Z",
       motivo: "Primera versión",
       reemplazaProgramada: false,
@@ -59,6 +60,7 @@ const VALIDOS: Record<NombreDeCaso, { json: unknown; entrada: unknown }> = {
     entrada: {
       claveDeIdempotencia: CLAVE,
       marcaId: ID_A,
+      versionEsperada: 3,
       vigenteDesde: new Date("2026-10-20T12:30:00Z"),
       motivo: "Primera versión",
       reemplazaProgramada: false,
@@ -451,6 +453,51 @@ describe("la forma del archivo de cada caso", () => {
           con("guardarBorradorDePlan", { versionEsperada: valor }),
         ),
       ).toEqual([{ campo: "versionEsperada", motivo: "FORMA_INVALIDA", esperado: "versionONula" }]);
+    });
+
+    it.each([[1], [3], [2_147_483_647]])(
+      "confirmarVersionDeMarca: versionEsperada %j vale",
+      (valor) => {
+        const r = armarEntradaDelCaso(
+          "confirmarVersionDeMarca",
+          con("confirmarVersionDeMarca", { versionEsperada: valor }),
+        );
+        expect(r.ok && r.valor.versionEsperada).toBe(valor);
+      },
+    );
+
+    it.each([[0], [-1], [1.5], [2_147_483_648]])(
+      "confirmarVersionDeMarca: versionEsperada %j: VERSION_ESPERADA_INVALIDA",
+      (valor) => {
+        expect(
+          problemasDe(
+            "confirmarVersionDeMarca",
+            con("confirmarVersionDeMarca", { versionEsperada: valor }),
+          ),
+        ).toEqual([
+          { campo: "versionEsperada", motivo: "VERSION_ESPERADA_INVALIDA", esperado: null },
+        ]);
+      },
+    );
+
+    // Confirmar exige un borrador: `null` («no había») no es una versión que se pueda haber visto.
+    it.each([[null], ["3"], [true], [{}], [[3]]])(
+      "confirmarVersionDeMarca: versionEsperada %j: FORMA_INVALIDA",
+      (valor) => {
+        expect(
+          problemasDe(
+            "confirmarVersionDeMarca",
+            con("confirmarVersionDeMarca", { versionEsperada: valor }),
+          ),
+        ).toEqual([{ campo: "versionEsperada", motivo: "FORMA_INVALIDA", esperado: "version" }]);
+      },
+    );
+
+    it("confirmarVersionDeMarca: sin versionEsperada, FALTA", () => {
+      const json = con("confirmarVersionDeMarca", { versionEsperada: undefined });
+      expect(problemasDe("confirmarVersionDeMarca", json)).toEqual([
+        { campo: "versionEsperada", motivo: "FALTA", esperado: "version" },
+      ]);
     });
 
     it.each([[null], [1], [2_147_483_647]])("numeroEsperado %j vale", (valor) => {

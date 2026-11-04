@@ -7,12 +7,12 @@ import type { EmpresaId, MarcaComercialId, TenantId } from "../primitivas/identi
 
 /**
  * Lo que la puerta pública de la carta por QR puede saber de una carta (marcas y planes, §B.2.5): solo
- * si el módulo de la carta está activo para la empresa dueña del enlace y el valor de `carta_por_qr`.
+ * si el módulo de la carta está activo para la empresa dueña del enlace y el valor de `vidriera_por_qr`.
  * Nada del plan, de los ajustes ni de sus motivos llega a la respuesta pública.
  */
-export type DerechosDeCartaPublica = Readonly<{
-  moduloCarta: "ACTIVO" | "SOLO_LECTURA" | "NO_ACTIVO";
-  cartaPorQr: ValorEfectivo;
+export type DerechosDeVidrieraPublica = Readonly<{
+  moduloVidriera: "ACTIVO" | "SOLO_LECTURA" | "NO_ACTIVO";
+  vidrieraPorQr: ValorEfectivo;
 }>;
 
 /**
@@ -63,8 +63,8 @@ export interface LecturaDeDerechosDeUso<
    * (`null`, sin distinguir), como en el resto de las puertas (marcas y planes, §B.2.4). Está en la
    * firma desde ahora para que nadie tenga que cambiarla (y a todos sus llamadores) después.
    */
-  deLaCartaPublica(
+  deLaVidrieraPublica(
     marcaId: MarcaComercialId,
     codigo: string,
-  ): Promise<DerechosDeCartaPublica | null>;
+  ): Promise<DerechosDeVidrieraPublica | null>;
 }

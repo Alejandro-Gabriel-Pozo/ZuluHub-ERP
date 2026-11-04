@@ -44,7 +44,7 @@ const sinAutorizar = (
 
 const entrada = (cambios: Partial<EntradaDeNota> = {}): EntradaDeNota => ({
   clase: "NOTA_CREDITO",
-  motivo: null,
+  motivo: "Devolución de mercadería",
   modoDePrecio: "IVA_INCLUIDO",
   concepto: "PRODUCTOS",
   servicio: null,
@@ -81,14 +81,14 @@ describe("armarNotaAsociada: la nota que nace", () => {
     expect(importeATexto(n.total)).toBe("121.00");
     expect(importeATexto(n.neto)).toBe("100.00");
     expect(importeATexto(n.iva)).toBe("21.00");
-    expect(n.motivo).toBeNull();
+    expect(n.motivo).toBe("Devolución de mercadería");
     expect(n.renglones[0]?.descripcion).toBe("Devolución");
     expect(n.empresaId).toBe(EMPRESA);
     expect(n.origen).toEqual(contextoDeEmision().origen);
   });
 
   it("la nota de débito se arma igual con su propia clase", () => {
-    const r = arma(facturaB, entrada({ clase: "NOTA_DEBITO" }));
+    const r = arma(facturaB, entrada({ clase: "NOTA_DEBITO", motivo: null }));
     expect(r.ok && r.valor.tipo).toBe("NOTA_DEBITO_B");
   });
 
@@ -137,14 +137,51 @@ describe("armarNotaAsociada: la nota que nace", () => {
     expect(r.ok && importeATexto(r.valor.total)).toBe("1000000.00");
   });
 
-  it("el motivo se recorta; vacío es sin motivo", () => {
-    const r1 = arma(facturaB, entrada({ motivo: "  Devolución de mercadería  " }));
-    expect(r1.ok && r1.valor.motivo).toBe("Devolución de mercadería");
-    const r2 = arma(facturaB, entrada({ motivo: "   " }));
-    expect(r2.ok && r2.valor.motivo).toBeNull();
-    const largo = "m".repeat(LIMITES_DE_COMPROBANTE.motivo);
-    const r3 = arma(facturaB, entrada({ motivo: largo }));
-    expect(r3.ok && r3.valor.motivo).toBe(largo);
+  it("el motivo se recorta, en la nota de crédito y en la de débito", () => {
+    for (const clase of ["NOTA_CREDITO", "NOTA_DEBITO"] as const) {
+      const r1 = arma(facturaB, entrada({ clase, motivo: "  Devolución de mercadería  " }));
+      expect(r1.ok && r1.valor.motivo, clase).toBe("Devolución de mercadería");
+      const largo = "m".repeat(LIMITES_DE_COMPROBANTE.motivo);
+      const r2 = arma(facturaB, entrada({ clase, motivo: largo }));
+      expect(r2.ok && r2.valor.motivo, clase).toBe(largo);
+    }
+  });
+
+  it("D-17: la nota de crédito exige motivo; vacío, solo espacios o ausente se rechazan", () => {
+    for (const motivo of [null, "", " ", "   ", "\t\n ", "\u00a0"]) {
+      expect(
+        error(facturaB, entrada({ clase: "NOTA_CREDITO", motivo })),
+        JSON.stringify(motivo),
+      ).toEqual({
+        codigo: "MOTIVO_INVALIDO",
+      });
+    }
+  });
+
+  it("D-17: un carácter alcanza; 200 caracteres pasan y 201 no, contados después de recortar", () => {
+    const limite = LIMITES_DE_COMPROBANTE.motivo;
+    expect(limite).toBe(200);
+    const uno = arma(facturaB, entrada({ motivo: "x" }));
+    expect(uno.ok && uno.valor.motivo).toBe("x");
+    const justo = arma(facturaB, entrada({ motivo: "m".repeat(limite) }));
+    expect(justo.ok).toBe(true);
+    expect(error(facturaB, entrada({ motivo: "m".repeat(limite + 1) }))).toEqual({
+      codigo: "MOTIVO_INVALIDO",
+    });
+    // los espacios de los bordes no cuentan: 200 letras con espacios alrededor pasan
+    const conBordes = arma(facturaB, entrada({ motivo: ` ${"m".repeat(limite)} ` }));
+    expect(conBordes.ok && conBordes.valor.motivo).toBe("m".repeat(limite));
+  });
+
+  it("la nota de débito sigue con motivo opcional: sin motivo, vacío o con espacios queda sin motivo", () => {
+    for (const motivo of [null, "", "   "]) {
+      const r = arma(facturaB, entrada({ clase: "NOTA_DEBITO", motivo }));
+      expect(r.ok && r.valor.motivo, JSON.stringify(motivo)).toBeNull();
+    }
+    // el límite de largo rige también en la de débito
+    expect(error(facturaB, entrada({ clase: "NOTA_DEBITO", motivo: "m".repeat(201) }))).toEqual({
+      codigo: "MOTIVO_INVALIDO",
+    });
   });
 });
 
@@ -214,7 +251,11 @@ describe("armarNotaAsociada: errores", () => {
     expect(error(c3, e)).toEqual({ codigo: "ASOCIADO_NO_ASOCIABLE" });
     const c4: ComprobanteAAsociar = { ...c3, tipo: "FACTURA_B" };
     expect(error(c4, e)).toEqual({ codigo: "MOTIVO_INVALIDO" });
-    expect(error(c4, { ...e, motivo: null })).toEqual({ codigo: "SIN_RENGLONES" });
+    expect(error(c4, { ...e, motivo: null })).toEqual({ codigo: "MOTIVO_INVALIDO" });
+    expect(error(c4, { ...e, motivo: "Devolución" })).toEqual({ codigo: "SIN_RENGLONES" });
+    expect(error(c4, { ...e, clase: "NOTA_DEBITO", motivo: null })).toEqual({
+      codigo: "SIN_RENGLONES",
+    });
   });
 
   it("los errores del contenido llegan tal cual", () => {

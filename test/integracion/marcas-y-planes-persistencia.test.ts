@@ -165,7 +165,7 @@ describe.skipIf(base === null)(
           );
           const leido = valorDeAjuste(
             valor !== "DEL_PLAN" && valor.tipo === "INTERRUPTOR"
-              ? PERILLAS_DE_PRUEBA.carta_por_qr
+              ? PERILLAS_DE_PRUEBA.vidriera_por_qr
               : PERILLAS_DE_PRUEBA.cajas_por_sucursal,
             rows[0]?.valor as string,
           );

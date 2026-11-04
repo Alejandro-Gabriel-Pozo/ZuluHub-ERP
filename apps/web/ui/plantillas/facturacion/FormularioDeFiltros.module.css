@@ -1,0 +1,113 @@
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  min-width: 0;
+}
+
+.buscar {
+  min-width: 0;
+}
+
+.panel {
+  min-width: 0;
+}
+
+/* El botón «Filtros (n)» del celular: un objetivo de 48 px que se lee como botón. */
+.resumen {
+  display: flex;
+  align-items: center;
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-4);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  font-weight: var(--tipo-peso-fuerte);
+  cursor: pointer;
+}
+
+.campos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  padding-top: var(--espacio-3);
+}
+
+/* Las fechas del período «Personalizado» solo se ven con ese período elegido (sin JavaScript). */
+.fechas {
+  display: none;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.panel:has(select[name="periodo"] option[value="personalizado"]:checked) .fechas {
+  display: flex;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+.limpiar {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-3);
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+/*
+ * Escritorio (6C): los filtros siempre a la vista, en una fila. Se fuerza el contenido del `<details>` y se oculta el botón solo donde
+ * el navegador sabe hacerlo (`::details-content`); en uno que no, queda el botón y el panel se abre como en el celular.
+ */
+@media (min-width: 64rem) {
+  .formulario {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .buscar {
+    flex: 0 1 14rem;
+  }
+
+  .panel {
+    flex: 1 1 auto;
+  }
+
+  .campos {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    padding-top: 0;
+  }
+
+  .campos > *,
+  .fechas > * {
+    flex: 0 1 9rem;
+    min-width: 8rem;
+  }
+
+  .campos > .fechas {
+    flex: 0 1 auto;
+  }
+
+  .fechas {
+    flex-direction: row;
+    gap: var(--espacio-3);
+  }
+
+  @supports selector(::details-content) {
+    .panel::details-content {
+      content-visibility: visible;
+    }
+
+    .resumen {
+      display: none;
+    }
+  }
+}

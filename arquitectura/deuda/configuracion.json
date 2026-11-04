@@ -1,0 +1,11 @@
+{
+  "topeDeExcepciones": 10,
+  "bloqueaDeudaEnArchivoTocado": false,
+  "topeDeLineasPorArchivo": 400,
+  "excluidosDelTope": [
+    {
+      "ruta": "src/modulos/fiscal/persistencia/esquema.ts",
+      "motivo": "Datos declarativos: las listas de columnas de las tablas fiscales (sin lógica), que las pruebas de integración comparan contra la base real."
+    }
+  ]
+}

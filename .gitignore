@@ -15,3 +15,6 @@ next-env.d.ts
 
 # Informe de evidencia del guardián de contratos (se genera en cada corrida).
 arquitectura/contratos/informe.json
+
+# Informe de evidencia del control de deuda técnica (se genera en cada corrida).
+arquitectura/deuda/informe.json

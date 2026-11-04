@@ -9,7 +9,8 @@ import {
   type PuntoDeVentaParaEmision,
 } from "../../src/modulos/fiscal/publico";
 import { EmisionFalsa } from "../utilidades/emision-falsa";
-import { crearBarrera, crearBaseAparte } from "./entorno";
+import { correrEnParalelo, reintentarSiAgotada } from "./concurrencia-apoyo";
+import { crearBaseAparte } from "./entorno";
 import {
   RelojDePrueba,
   casosDeFacturacion,
@@ -89,14 +90,10 @@ describe.skipIf(base === null)(
     const filas = async <T extends Record<string, unknown>>(texto: string, p: unknown[] = []) =>
       (await dueno.query<T>(texto, p)).rows;
 
-    async function juntas<T>(n: number, llamada: (i: number) => Promise<T>): Promise<T[]> {
-      barrera = crearBarrera(n);
-      try {
-        return await Promise.all(Array.from({ length: n }, (_, i) => llamada(i)));
-      } finally {
-        barrera = null;
-      }
-    }
+    const juntas = <T>(n: number, llamada: (i: number) => Promise<T>): Promise<T[]> =>
+      correrEnParalelo(n, llamada, (esperar) => {
+        barrera = esperar;
+      });
 
     /** Una empresa con su serie en 0 y ARCA falsa ya en `ARCA_ADELANTE`: otro sistema usó el punto de venta. */
     async function preparar(arcaDe: (falsa: EmisionFalsa) => EmisionElectronica = (f) => f) {
@@ -114,19 +111,25 @@ describe.skipIf(base === null)(
       return { e, reloj, falsa, pv, casos };
     }
 
+    /**
+     * Emite un comprobante. Ante `ConcurrenciaAgotada` se repite con la MISMA clave (`reintentarSiAgotada`): emitir es
+     * idempotente por clave, así que no se crea otro comprobante.
+     */
+    const emitirUno = async (p: Awaited<ReturnType<typeof preparar>>): Promise<ComprobanteId> => {
+      const entrada = facturaManual(p.e);
+      const emitido = await reintentarSiAgotada(
+        () => p.casos.emitirComprobanteManual(p.e.como(p.reloj.ahora()), entrada),
+        { contexto: "no emitió" },
+      );
+      return emitido.comprobanteId;
+    };
+
     const emitir = async (
       p: Awaited<ReturnType<typeof preparar>>,
       n: number,
     ): Promise<ComprobanteId[]> => {
       const ids: ComprobanteId[] = [];
-      for (let i = 0; i < n; i++) {
-        const r = await p.casos.emitirComprobanteManual(
-          p.e.como(p.reloj.ahora()),
-          facturaManual(p.e),
-        );
-        if (!r.ok) throw new Error("no emitió");
-        ids.push(r.valor.comprobanteId);
-      }
+      for (let i = 0; i < n; i++) ids.push(await emitirUno(p));
       return ids;
     };
 
@@ -276,14 +279,10 @@ describe.skipIf(base === null)(
         const p = await preparar();
         const ids = await Promise.all(
           Array.from({ length: 3 }, async () => {
-            const r = await p.casos.emitirComprobanteManual(
-              p.e.como(p.reloj.ahora()),
-              facturaManual(p.e),
-            );
-            if (!r.ok) throw new Error("no emitió");
-            const v = await validar(p, r.valor.comprobanteId);
+            const id = await emitirUno(p);
+            const v = await validar(p, id);
             if (!v.ok) throw new Error(`validar falló: ${comoTexto(v.error)}`);
-            return r.valor.comprobanteId;
+            return id;
           }),
         );
         await validarHastaQueNoHayaOcupadas(p, ids);
@@ -320,6 +319,7 @@ describe.skipIf(base === null)(
             return falsa.autorizar(s);
           },
           consultar: (pv, tipo, n) => falsa.consultar(pv, tipo, n),
+          puntosDeVenta: (cuit) => falsa.puntosDeVenta(cuit),
         }));
         return { ...p, soltar, enViaje };
       })();

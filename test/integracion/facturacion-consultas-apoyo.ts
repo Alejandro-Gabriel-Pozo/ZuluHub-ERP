@@ -1,6 +1,6 @@
 import type pg from "pg";
 import type { Kysely } from "kysely";
-import { sql } from "kysely";
+import { sql, type KyselyPlugin } from "kysely";
 import {
   crearAutorizacionDePostgres,
   type AutorizacionDb,
@@ -12,15 +12,21 @@ import {
 } from "../../src/adaptadores/postgres/transacciones";
 import {
   crearConsultasDeFacturacion,
+  crearLecturasDeCertificados,
   crearLecturasDeComprobantes,
   crearRepositorioDeComprobantes,
+  crearRepositorioDeDatosFiscales,
+  crearRepositorioDeDomicilios,
+  crearRepositorioDeEmisores,
   crearRepositorioDeIntentos,
+  crearRepositorioDePuntosDeVenta,
   crearRepositorioDeSeries,
   type ConsultasDeFacturacion,
   type FiscalDb,
   type MarcaParaImprimir,
   type TxDeConsultasDeFacturacion,
 } from "../../src/modulos/fiscal/publico";
+import { crearRepositorioDeSucursales, type EmpresasDb } from "../../src/modulos/empresas/publico";
 import type { ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import {
   confirmarDueno,
@@ -50,6 +56,8 @@ export type EntornoDeConsultas = Readonly<{
   usarMarca(marca: MarcaParaImprimir): void;
   /** La transacción de la última consulta que pidió la marca. */
   ultimoEstadoVisto(): EstadoDeLaTransaccion | null;
+  /** Cuántas consultas SQL de los repositorios y lecturas fiscales se ejecutaron hasta ahora (para medir un N+1). */
+  consultasFiscalesHechas(): number;
   consultas(reglas?: ReglasDeEmpresa): ConsultasDeFacturacion;
 }>;
 
@@ -67,15 +75,30 @@ export const MARCA_DOS: MarcaParaImprimir = {
 export function crearEntornoDeConsultas(base: BaseDePruebas): EntornoDeConsultas {
   let marca = MARCA_UNO;
   let visto: EstadoDeLaTransaccion | null = null;
+  let hechas = 0;
+  // Cuenta cada consulta que vuelve de la base: un listado que pide algo por fila se nota en la cifra.
+  const contador: KyselyPlugin = {
+    transformQuery: (args) => args.node,
+    transformResult: (args) => {
+      hechas += 1;
+      return Promise.resolve(args.result);
+    },
+  };
   const transacciones = crearTransacciones<TxDeConsultasDePrueba>({
     urls: { OPERATIVO: base.app },
     armar: (db) => {
-      const fiscal = db.withTables<FiscalDb>();
+      const fiscal = db.withTables<FiscalDb>().withPlugin(contador);
       return {
         db,
         comprobantes: crearRepositorioDeComprobantes(fiscal),
         lecturas: crearLecturasDeComprobantes(fiscal),
+        emisores: crearRepositorioDeEmisores(fiscal),
+        datosFiscales: crearRepositorioDeDatosFiscales(fiscal),
+        domicilios: crearRepositorioDeDomicilios(fiscal),
+        puntosDeVenta: crearRepositorioDePuntosDeVenta(fiscal),
+        lecturasDeCertificados: crearLecturasDeCertificados(fiscal),
         intentos: crearRepositorioDeIntentos(fiscal),
+        sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
         series: crearRepositorioDeSeries(fiscal),
         marca: {
           async deLaEmpresa() {
@@ -99,6 +122,7 @@ export function crearEntornoDeConsultas(base: BaseDePruebas): EntornoDeConsultas
       marca = m;
     },
     ultimoEstadoVisto: () => visto,
+    consultasFiscalesHechas: () => hechas,
     consultas: (reglas = REGLAS_CON_FACTURACION) =>
       crearConsultasDeFacturacion({ transacciones, reglas }),
   };

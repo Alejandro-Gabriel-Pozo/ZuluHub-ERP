@@ -37,6 +37,7 @@ const real: ReturnType<typeof cargarDelRepo> = HAY_GIT
       contratos: [],
       excepciones: [],
       exclusiones: [],
+      evasiones: [],
       previas: { fallas: [], avisos: [] },
     };
 const CLASES_DEL_INFORME = [
@@ -75,9 +76,11 @@ const itConGit = it.skipIf(SIN_GIT);
 describeConGit("el repositorio actual pasa", () => {
   const resultado = sobreElRepo();
 
-  it("sin fallas ni avisos, con el registro real vacío", () => {
+  it("sin fallas ni avisos (salvo los de la batería de evasión), con el registro real vacío", () => {
     expect(resultado.fallas).toEqual([]);
-    expect(resultado.avisos).toEqual([]);
+    // Las brechas y los riesgos registrados en la batería de evasión se reportan en cada corrida; nada más avisa.
+    const deLaBateria = ["brecha-abierta", "brecha-por-vencer", "riesgo-por-revisar"];
+    expect(resultado.avisos.filter((aviso) => !deLaBateria.includes(aviso.codigo))).toEqual([]);
     expect(resultado.informe.resultado).toBe("pasa");
     expect(real.contratos).toEqual([]);
     expect(real.excepciones).toEqual([]);
@@ -218,7 +221,11 @@ describeConGit("el repositorio real alterado en memoria falla", () => {
 
   it("el reloj vence las exclusiones de clase del repositorio", () => {
     const r = sobreElRepo({}, [], { ahora: new Date("2027-01-01T00:00:00Z") });
-    expect(codigos(r)).toEqual(["excepcion-vencida", "excepcion-vencida"]);
+    // Vencen las dos exclusiones de clase (y las brechas de la batería de evasión que haya, que también vencen).
+    expect(codigos(r).filter((codigo) => codigo.startsWith("excepcion-"))).toEqual([
+      "excepcion-vencida",
+      "excepcion-vencida",
+    ]);
   });
 });
 
@@ -297,7 +304,7 @@ describe("distinguir «pasó» de «no encontró nada»", () => {
     });
     const sinPruebasDeTexto = correr({
       contratos: [registro],
-      archivos: { "test/una.test.ts": null, "test/foto.png": "binario" },
+      archivos: { "test/una.test.ts": null, "test/foto.png": "\u0000binario" },
     });
     expect(codigos(sinPruebasDeTexto)).toContain("detector-sin-rutas");
     expect(sinPruebasDeTexto.informe.clases["pruebas"]).toMatchObject({

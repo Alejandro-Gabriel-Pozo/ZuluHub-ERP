@@ -60,16 +60,17 @@ const ARCHIVO_DE_CI = ".github/workflows/ci.yml";
 const CONFIGURACION_DE_APPS = /^apps\/[^/]+\/(package\.json|tsconfig[^/]*\.json)$/;
 
 /**
- * Pruebas que LEEN archivos de `apps/` como texto (el grafo no ve ese vínculo, no es un `import`), con los
- * patrones que leen. Un cambio en uno de esos archivos alcanza a la prueba y, por su cierre de importaciones,
- * a lo que ella ejercita. Hoy solo `contraste-de-superficies` ejerce código que se muta (el contraste); el resto
- * está declarado igual para que, si mañana importa algo mutado, el plan ya lo tenga en cuenta.
- * `planificar-mutacion.test.ts` busca pruebas nuevas que lean `apps/` y exige declararlas acá.
+ * Pruebas que LEEN archivos de `apps/` como texto (el grafo no ve ese vínculo, no es un `import`), con los patrones que leen. Un cambio en uno de esos archivos alcanza a la prueba y, por su cierre de importaciones,
+ * a lo que ella ejercita. Hoy solo `contraste-de-superficies` ejerce código que se muta (el contraste); el resto está declarado igual para que, si mañana importa algo mutado, el plan ya lo tenga en cuenta. Una prueba nueva que lea `apps/` se declara acá (`planificar-mutacion.test.ts` lo exige).
  */
 const LECTURAS_DE_APPS = {
   "test/web/contraste-de-superficies.test.ts": ["apps/web/ui/tokens.css"],
   "test/web/legibilidad-de-la-app.test.ts": ["apps/web/**"],
+  "test/web/acciones-de-facturacion.test.ts": ["apps/web/app/s/app/acciones-de-facturacion.ts"],
+  "test/web/acciones-de-config-fiscal.test.ts": ["apps/web/app/s/app/acciones-de-config-fiscal.ts"],
+  "test/web/sucursal-elegida.test.ts": ["apps/web/app/s/app/acciones-de-sucursal.ts"],
   "test/arquitectura/vercel-json.test.ts": ["apps/web/**"],
+  "test/arquitectura/cargar-entorno-nombres.test.ts": ["apps/web/PRIMER-DESPLIEGUE.md"],
   "test/arquitectura/reglas.test.ts": ["apps/**"],
   "test/arquitectura/lint.test.ts": ["apps/**"],
 };
@@ -90,8 +91,8 @@ const esPruebaDeNode = (archivo) => esPrueba(archivo) && /^(src|test)\//.test(ar
 
 /**
  * Lo que el grafo de importaciones NO ve del guardián. El grafo sí sigue los `require()` de sus pruebas
- * (`test/arquitectura/guardian-*.ts` cargan `arquitectura/contratos/*.cjs`), pero no lo que esas pruebas
- * copian a carpetas temporales, lanzan con `node` o leen como texto: los datos de la carpeta (`*.json`), los
+ * (`test/arquitectura/guardian-*.ts` cargan `arquitectura/contratos/*.cjs` y `arquitectura/deuda/*.cjs`), pero no lo
+ * que esas pruebas copian a carpetas temporales, lanzan con `node` o leen como texto: los datos de las carpetas (`*.json`), los
  * `.cjs` que solo corren como proceso aparte (`no-debilitar.cjs` como CLI) y los archivos de `arquitectura/`
  * que el verificador carga del árbol (`evaluar-gate.cjs`, `reglas.cjs`, `ci.yml`). Como el código del guardián también
  * se muta (`stryker.config.json`), el mapa es EXPLÍCITO: toda prueba o auxiliar del guardián depende de TODOS
@@ -100,7 +101,8 @@ const esPruebaDeNode = (archivo) => esPrueba(archivo) && /^(src|test)\//.test(ar
  * dependencias: lo que el grafo ya sabía sigue igual, y el resto de `arquitectura/` sigue sin estar en el mapa.
  */
 const PRUEBAS_DEL_GUARDIAN = /^test\/arquitectura\/guardian-[^/]+\.ts$/;
-const CARPETA_DEL_GUARDIAN = "arquitectura/contratos";
+/** Las carpetas del guardián: el código de los contratos y el control de deuda técnica (una pieza del guardián). */
+const CARPETAS_DEL_GUARDIAN = ["arquitectura/contratos", "arquitectura/deuda"];
 const OTROS_ARCHIVOS_DEL_GUARDIAN = [
   "arquitectura/evaluar-gate.cjs",
   "arquitectura/reglas.cjs",
@@ -146,15 +148,14 @@ function conEnlacesDelGuardian(dependencias, archivosDelGuardian) {
 }
 
 /**
- * Los archivos que el guardián lee: `arquitectura/contratos/**` (el informe que genera no cuenta) y los
+ * Los archivos que el guardián lee: `arquitectura/contratos/**` y `arquitectura/deuda/**` (los informes que generan no cuentan) y los
  * otros archivos de `arquitectura/` que su verificador carga. Un archivo que falta en disco no se inventa.
  */
 function leerArchivosDelGuardian(raiz) {
   const presentes = (archivo) =>
     fs.statSync(path.join(raiz, archivo), { throwIfNoEntry: false })?.isFile() === true;
   return [
-    ...fs
-      .globSync(`${CARPETA_DEL_GUARDIAN}/**/*`, { cwd: raiz })
+    ...CARPETAS_DEL_GUARDIAN.flatMap((carpeta) => fs.globSync(`${carpeta}/**/*`, { cwd: raiz }))
       .map((archivo) => archivo.split(path.sep).join("/"))
       .filter((archivo) => !archivo.endsWith("/informe.json")),
     ...OTROS_ARCHIVOS_DEL_GUARDIAN,

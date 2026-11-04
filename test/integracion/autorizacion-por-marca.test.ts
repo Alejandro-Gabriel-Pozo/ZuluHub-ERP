@@ -379,6 +379,7 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
         ops.consultasDeEmpresas.listarSucursales(ctx, { incluirInactivas: true }),
       fichaDeSucursal: (e, ctx) =>
         ops.consultasDeEmpresas.fichaDeSucursal(ctx, { sucursalId: sucursalId(e.sucursal) }),
+      sucursalesElegibles: (_e, ctx) => ops.consultasDeEmpresas.sucursalesElegibles(ctx),
     };
 
     const accionDe = (declaraciones: Readonly<Record<string, unknown>>, nombre: string) => {

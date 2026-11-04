@@ -1,0 +1,38 @@
+[
+  {
+    "id": "EV-047",
+    "via": "ruta-alternativa",
+    "titulo": "`[skip ci]` en el commit, push directo a `main`, bypass de administrador o merge sin los checks requeridos",
+    "tipo": "externo",
+    "estado": "externo",
+    "construccion": "No se puede armar en un repositorio sintético: son reglas de la plataforma (protección de la rama `main`, rulesets, checks requeridos por nombre, sin bypass de administradores).",
+    "controlEsperado": "La protección de `main` (check «Gate» y «Guardián de contratos» requeridos, sin saltearlos, sin force-push, incluyendo administradores) y su vigilancia programada (G4).",
+    "esperado": { "tipo": "exige-excepcion" },
+    "queOcurriria": "`[skip ci]` evita los workflows de push y pull_request; sin check requerido el merge se habilita. Un push directo o un bypass de administrador evita todo el flujo: nada del repositorio (guardián, vigilancia, pruebas) corre.",
+    "vigilancia": "G4: workflow programado que consulta por la API la configuración de GitHub y avisa si cambió (detección, no impedimento). Riesgo aceptado por el dueño en contratos-arquitectonicos.md §5 y §11.1."
+  },
+  {
+    "id": "EV-048",
+    "via": "ruta-alternativa",
+    "titulo": "Base vieja: la vigilancia compara contra `pull_request.base.sha` del evento, no contra el `main` actual al integrar",
+    "tipo": "externo",
+    "estado": "externo",
+    "construccion": "No se puede armar en un repositorio sintético: depende del commit base que GitHub registra en el evento del pull request.",
+    "controlEsperado": "«Require branches to be up to date before merging» en la protección de `main` (configuración externa).",
+    "esperado": { "tipo": "exige-excepcion" },
+    "queOcurriria": "Si `main` sumó una protección después de abrir el PR, la vigilancia compara contra la base vieja (`ref: ${{ github.event.pull_request.base.sha }}` en `ci.yml`) y el PR no la ve; solo «branch up to date» lo cubre.",
+    "vigilancia": "G4: la comprobación programada de la protección de `main` incluye que la rama tenga que estar al día."
+  },
+  {
+    "id": "EV-052",
+    "via": "modificar-guardian",
+    "titulo": "Integridad del resultado del proceso hijo de `no-debilitar` (el hijo carga código del cambio en el mismo proceso que emite el resultado)",
+    "tipo": "externo",
+    "estado": "externo",
+    "construccion": "No se construyó el ataque en la auditoría (hallazgo por lectura, no demostrado) y esta batería no ejecuta código que falsifique la salida de la vigilancia: depende de un canal de resultado que el cambio no pueda escribir.",
+    "controlEsperado": "El resultado del hijo se valida contra un canal que el cambio no pueda escribir (hoy el padre toma la última línea marcada de su salida estándar).",
+    "esperado": { "tipo": "exige-excepcion" },
+    "queOcurriria": "El hijo `--extraer` hace `require()` de módulos del cambio y el padre toma la ÚLTIMA línea marcada de su salida: el aislamiento protege el código de salida del padre, no la veracidad de los datos. Quien edita la maquinaria (§11.1) puede hacer que la vigilancia vea datos falsos.",
+    "vigilancia": "G4 y el proceso de §11.1 (el cambio a la maquinaria se declara en la primera línea del PR y no se integra sin el «mergeá» explícito del dueño). No hay corredor: no se simula."
+  }
+]

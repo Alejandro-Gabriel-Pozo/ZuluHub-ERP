@@ -44,7 +44,7 @@ describe.skipIf(base === null)(
     let registros: string[];
     let hostApp: string;
     let hostLanding: string;
-    let hostCarta: string;
+    let hostVidriera: string;
     let hostRetirado: string;
     let hostSinVersion: string;
 
@@ -91,7 +91,7 @@ describe.skipIf(base === null)(
       await crearVersionDeMarcaConfirmada(dueno, marca, { nombreVisible: "Marca de prueba" });
       hostApp = (await crearDominio(dueno, marca, { canonico: true, superficie: "APP" })).host;
       hostLanding = (await crearDominio(dueno, marca, { superficie: "LANDING" })).host;
-      hostCarta = (await crearDominio(dueno, marca, { superficie: "CARTA" })).host;
+      hostVidriera = (await crearDominio(dueno, marca, { superficie: "CARTA" })).host;
       hostRetirado = (await crearDominio(dueno, marca, { superficie: "APP", estado: "RETIRADO" }))
         .host;
       const sinVersion = await crearMarca(dueno, { padre: principal });
@@ -180,7 +180,7 @@ describe.skipIf(base === null)(
 
     it.each([
       ["una landing", () => hostLanding],
-      ["una carta", () => hostCarta],
+      ["una carta", () => hostVidriera],
       ["un dominio retirado", () => hostRetirado],
       ["un host de una marca sin versión vigente", () => hostSinVersion],
       ["un host desconocido", () => hostAlAzar()],
@@ -222,7 +222,7 @@ describe.skipIf(base === null)(
         cabeceras: [...r.headers.entries()].sort(),
       });
       const esperado = await texto(referencia);
-      for (const host of [hostLanding, hostCarta, hostRetirado, hostSinVersion]) {
+      for (const host of [hostLanding, hostVidriera, hostRetirado, hostSinVersion]) {
         expect(await texto(await atenderRutaDeIngreso(pedido(host), dependencias()))).toEqual(
           esperado,
         );

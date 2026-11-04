@@ -25,18 +25,27 @@ import { DECLARACIONES_DE_CERTIFICADOS } from "./declaraciones-de-certificados";
  * `generarPedidoDeCertificado` (spec H7 facturación §B.4 y §B.6, tramo F7): Pedernal genera la clave privada y el
  * pedido (CSR) dentro del servidor; la clave se guarda CIFRADA, atada a su fila, y nunca sale ni se muestra: lo único
  * que vuelve es el pedido en PEM, que el gerente sube a ARCA con su clave fiscal. Cada cliente es dueño de su propio
- * certificado (decisión del dueño 2026-10-14): el titular tiene que ser el CUIT del emisor.
+ * certificado (decisión del dueño 2026-10-14). El titular es la persona física que lo saca y firma el pedido con su
+ * clave fiscal (el `serialNumber` del CSR tiene que ser el CUIT de quien está conectado en ARCA, manual del WSASS);
+ * puede ser distinta del emisor (D-42, 2026-10-29: reemplaza la regla «titular = CUIT del emisor»), que es la
+ * empresa representada. Se guarda con el pedido y no cambia; `cargarCertificado` lo compara con el certificado.
  *
  * Una transacción SERIALIZABLE con el guard primero: 1. guard `certificados.gestionar`. 2. La empresa opera.
  * 3. Forma del pedido. 4. Repetición: el `id` (uuid que genera la pantalla) ES la clave de idempotencia; con el mismo
  * pedido (emisor, ambiente, alias y titular) devuelve el que existe (`yaExistia`) SIN generar otra clave; con otro
- * pedido, `CLAVE_REUTILIZADA`. 5. El emisor existe, está activo y su CUIT es el del titular. 6. Se genera el par, se
- * cifra la clave con su fila, se guarda `PEDIDO_GENERADO`. 7. Auditoría `CERTIFICADO_PEDIDO_GENERADO` en la misma
- * transacción: el hecho (quién, cuándo, alias, emisor, ambiente), nunca la clave ni su cifrado.
+ * pedido, `CLAVE_REUTILIZADA`. 5. El emisor existe y está activo. 6. Se genera el par, se
+ * cifra la clave con su fila; los pedidos pendientes anteriores del mismo emisor y ambiente pasan a `DESCARTADO` (D-92,
+ * 2026-11-03: un pedido nuevo anula al pendiente anterior; no se borran; no se toca un `VIGENTE`) ANTES de guardar el nuevo
+ * `PEDIDO_GENERADO`, porque la base (0018) admite uno solo pendiente: siempre hay UNO. 7. Auditoría `CERTIFICADO_PEDIDO_DESCARTADO` por cada pedido
+ * anulado (junto al descarte, antes de crear el nuevo) y `CERTIFICADO_PEDIDO_GENERADO`, en la misma transacción: el hecho (quién, cuándo, alias, emisor, ambiente),
+ * nunca la clave ni su cifrado. Dos pedidos nuevos a la vez para el mismo emisor y ambiente: la base (SERIALIZABLE y
+ * `certificado_pendiente_uk`) deja pasar uno y repite el otro, que ve al primero y lo anula; queda el último que se confirma.
  *
  * Dos pedidos simultáneos con el mismo `id`: la base deja pasar uno; el otro repite, lo encuentra y lo devuelve (la
- * clave que había generado se descarta sin guardarse). Dos pedidos con el mismo alias y distinto `id` son dos pedidos
- * (cada uno con su clave): que ARCA acepte o no un alias repetido es NO VERIFICADO y lo dirá ella al subir el pedido.
+ * clave que había generado se descarta sin guardarse). Repetir el `id` de un pedido que ya fue anulado devuelve ese
+ * pedido (`yaExistia`) sin anular nada: la repetición no mira el estado (pregunta pendiente al dueño). Dos pedidos con
+ * el mismo alias y distinto `id` son dos pedidos (cada uno con su clave; el segundo anula al primero): que ARCA acepte
+ * o no un alias repetido es NO VERIFICADO y lo dirá ella al subir el pedido.
  * El pedido no guarda la organización aparte (solo vive en el CSR): repetir con otra organización devuelve el pedido
  * que ya existe.
  */
@@ -52,11 +61,7 @@ export type SalidaDeGenerarPedido = Readonly<{
 }>;
 
 export type ErrorPropioAlGenerarPedido =
-  | ErrorDePedidoDeCertificado
-  | "EMISOR_NO_ENCONTRADO"
-  | "EMISOR_INACTIVO"
-  | "TITULAR_DISTINTO"
-  | "CLAVE_REUTILIZADA";
+  ErrorDePedidoDeCertificado | "EMISOR_NO_ENCONTRADO" | "EMISOR_INACTIVO" | "CLAVE_REUTILIZADA";
 
 export type ErrorAlGenerarPedido =
   ErrorPropioAlGenerarPedido | MotivoDeRechazo | EmpresaNoOpera | ErrorDePersistencia;
@@ -124,13 +129,34 @@ export function armarGenerarPedidoDeCertificado({
         const emisor = await tx.emisores.obtener(empresaId, pedido.emisorId);
         if (emisor === null) return err("EMISOR_NO_ENCONTRADO");
         if (!emisor.activo) return err("EMISOR_INACTIVO");
-        if (emisor.cuit !== pedido.cuitTitular) return err("TITULAR_DISTINTO");
 
         const generada = await generador.generar({
           alias: pedido.alias,
           organizacion: pedido.organizacion,
           numeroDeSerie: numeroDeSerieDeCuit(pedido.cuitTitular),
         });
+        // Primero se anulan los pendientes anteriores y después se crea el nuevo: la base (0018, `certificado_pendiente_uk`) no deja
+        // dos `PEDIDO_GENERADO` del mismo emisor y ambiente, ni siquiera un instante. El pedido nuevo se nombra por su `id`, que
+        // ya se conoce (lo trae la entrada); la auditoría lo cita sin clave foránea.
+        const anulados = await tx.certificados.descartarPendientes(
+          empresaId,
+          pedido.emisorId,
+          pedido.ambiente,
+          pedido.id,
+        );
+        // La auditoría de cada descarte va JUNTO al descarte, antes de crear el nuevo: si `crearPedido` devuelve que ya existía (ganó
+        // otro con el mismo `id`) la transacción se confirma igual, y un descarte nunca queda sin su rastro.
+        for (const anulado of anulados) {
+          await tx.auditoria.registrar({
+            empresaId,
+            actorPersonaId: personaId,
+            accion: "CERTIFICADO_PEDIDO_DESCARTADO",
+            entidad: "certificado_arca",
+            entidadId: anulado.id,
+            antes: { estado: "PEDIDO_GENERADO" },
+            despues: { estado: anulado.estado, reemplazadoPor: pedido.id },
+          });
+        }
         const alta = await tx.certificados.crearPedido({
           id: pedido.id,
           empresaId,

@@ -26,11 +26,12 @@ afterEach(limpiarTemporales);
 
 const EXCEPCIONES = "arquitectura/contratos/excepciones.json";
 const EXCLUSIONES = "arquitectura/contratos/exclusiones.json";
+const EVASIONES = "arquitectura/contratos/evasiones.json";
 const INFORME = "arquitectura/contratos/informe.json";
 const VERIFICADOR = "arquitectura/contratos/no-debilitar.cjs";
 
 describe("cargarDelRepo sobre un repositorio git sintético", () => {
-  const DATOS = { [EXCEPCIONES]: "[]\n", [EXCLUSIONES]: "[]\n" };
+  const DATOS = { [EXCEPCIONES]: "[]\n", [EXCLUSIONES]: "[]\n", [EVASIONES]: "[]\n" };
 
   it("lista las rutas versionadas y las nuevas que git no ignora, ordenadas, sin las ignoradas", () => {
     const repo = repoConArchivos({
@@ -47,6 +48,7 @@ describe("cargarDelRepo sobre un repositorio git sintético", () => {
     expect(cargado.rutas).toEqual([
       ".gitignore",
       "a.txt",
+      EVASIONES,
       EXCEPCIONES,
       EXCLUSIONES,
       "b.txt",
@@ -71,10 +73,12 @@ describe("cargarDelRepo sobre un repositorio git sintético", () => {
     const repo = repoConArchivos({
       [EXCEPCIONES]: '[{ "id": "exc-1" }]\n',
       [EXCLUSIONES]: '[{ "id": "excl-1" }, { "id": "excl-2" }]\n',
+      [EVASIONES]: '[{ "id": "EV-001" }]\n',
     });
     const cargado = cargarDelRepo(repo);
     expect(cargado.excepciones).toEqual([{ id: "exc-1" }]);
     expect(cargado.exclusiones).toEqual([{ id: "excl-1" }, { id: "excl-2" }]);
+    expect(cargado.evasiones).toEqual([{ id: "EV-001" }]);
     expect(cargado.previas.fallas).toEqual([]);
   });
 
@@ -83,10 +87,11 @@ describe("cargarDelRepo sobre un repositorio git sintético", () => {
     const cargado = cargarDelRepo(repo);
     expect(cargado.excepciones).toEqual([]);
     expect(cargado.exclusiones).toEqual([]);
+    expect(cargado.evasiones).toEqual([]);
     expect(cargado.previas.avisos).toEqual([]);
     expect(cargado.previas.fallas).toEqual(
-      [EXCEPCIONES, EXCLUSIONES].map((archivo) => ({
-        codigo: "excepcion-invalida",
+      [EXCEPCIONES, EXCLUSIONES, EVASIONES].map((archivo) => ({
+        codigo: archivo === EVASIONES ? "evasion-invalida" : "excepcion-invalida",
         archivo,
         contrato: null,
         motivo: `No se pudo leer el archivo como JSON: ENOENT: no such file or directory, open '${join(repo, archivo)}'.`,
@@ -105,7 +110,11 @@ describe("cargarDelRepo sobre un repositorio git sintético", () => {
       motivoDelAnalizador = (error as Error).message;
     }
     expect(motivoDelAnalizador).not.toBe("");
-    const repo = repoConArchivos({ [EXCEPCIONES]: roto, [EXCLUSIONES]: "[]\n" });
+    const repo = repoConArchivos({
+      [EXCEPCIONES]: roto,
+      [EXCLUSIONES]: "[]\n",
+      [EVASIONES]: "[]\n",
+    });
     const cargado = cargarDelRepo(repo);
     expect(cargado.excepciones).toEqual([]);
     expect(cargado.previas.fallas).toEqual([
@@ -125,7 +134,7 @@ describe("cargarDelRepo sobre un repositorio git sintético", () => {
     git(repo, "add", ".");
     rmSync(join(repo, "se-borra.txt"));
     const cargado = cargarDelRepo(repo);
-    expect(cargado.rutas).toEqual([EXCEPCIONES, EXCLUSIONES, "queda.txt"]);
+    expect(cargado.rutas).toEqual([EVASIONES, EXCEPCIONES, EXCLUSIONES, "queda.txt"]);
     expect(cargado.previas.fallas).toEqual([]);
     expect(cargado.previas.avisos).toEqual([
       {

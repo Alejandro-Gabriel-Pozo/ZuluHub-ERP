@@ -4,14 +4,14 @@ import { numeroDeSerieDeCuit } from "./certificado-pedido";
 
 /**
  * Cargar el certificado que ARCA devolvió (spec H7 facturación §B.4 y §B.6.2, tramo F7): qué texto se acepta como
- * certificado y si el certificado leído sirve para ese emisor. Leerlo (X.509) y compararlo con la clave son del
+ * certificado y si el certificado leído sirve para su titular declarado. Leerlo (X.509) y compararlo con la clave son del
  * adaptador; acá se decide con lo que ese adaptador midió.
  */
 
 export type ErrorAlCargarCertificado =
   | "CERTIFICADO_ILEGIBLE"
   | "NO_CORRESPONDE_A_LA_CLAVE"
-  | "TITULAR_DISTINTO"
+  | "NO_CORRESPONDE_AL_TITULAR"
   | "CADENA_NO_CONFIABLE"
   | "CERTIFICADO_VENCIDO";
 
@@ -58,19 +58,22 @@ export type HallazgosDelCertificado = Readonly<{
 }>;
 
 /**
- * Si el certificado sirve para el emisor. Orden de los errores (el de §B.6.2): corresponde a la clave guardada,
- * el titular es el CUIT del emisor (cada cliente es dueño de su propio certificado: decisión del dueño
- * 2026-10-14), la cadena cierra y no está vencido. Un certificado rige hasta su `noDespues` exclusive: en ese
- * instante ya venció (como el resto del código: `venceEn <= ahora`).
+ * Si el certificado sirve para el titular declarado. Orden de los errores (el de §B.6.2): corresponde a la clave
+ * guardada, el `serialNumber` del sujeto es el CUIT del TITULAR declarado (la persona física que sacó el
+ * certificado, que puede NO ser el emisor: D-42, 2026-10-29, que reemplaza la regla «titular = CUIT del emisor»
+ * del 2026-10-14; `facturador-contratos-de-pantalla.md`, h7-fiscal.md §B.9), la cadena cierra y no está vencido. Que
+ * el titular esté autorizado a actuar por el emisor NO se puede ver en el certificado: queda «sin verificar» hasta la
+ * primera llamada exitosa a ARCA. Un certificado rige hasta su `noDespues` exclusive: en ese instante ya venció (como
+ * el resto del código: `venceEn <= ahora`).
  */
 export function evaluarCertificado(
-  cuitDelEmisor: Cuit,
+  cuitDelTitular: Cuit,
   hallazgos: HallazgosDelCertificado,
   ahora: Date,
 ): Resultado<Readonly<{ vence: Date }>, ErrorAlCargarCertificado> {
   if (!hallazgos.correspondeALaClave) return err("NO_CORRESPONDE_A_LA_CLAVE");
-  if (hallazgos.numeroDeSerieDelSujeto !== numeroDeSerieDeCuit(cuitDelEmisor)) {
-    return err("TITULAR_DISTINTO");
+  if (hallazgos.numeroDeSerieDelSujeto !== numeroDeSerieDeCuit(cuitDelTitular)) {
+    return err("NO_CORRESPONDE_AL_TITULAR");
   }
   if (!hallazgos.cadenaCierra) return err("CADENA_NO_CONFIABLE");
   if (hallazgos.noDespues.getTime() <= ahora.getTime()) return err("CERTIFICADO_VENCIDO");

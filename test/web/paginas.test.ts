@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   HOST_APP_A,
   HOST_APP_B,
-  HOST_CARTA_A,
+  HOST_VIDRIERA_A,
   HOST_LANDING_A,
   HOST_LANDING_B,
   MARCA_A,
@@ -181,7 +181,7 @@ describe("landing", () => {
 describe("cada página vuelve a resolver el host (no confía en el proxy)", () => {
   it.each([
     ["landing", HOST_APP_A],
-    ["landing", HOST_CARTA_A],
+    ["landing", HOST_VIDRIERA_A],
     ["landing", "otro.ejemplo.com"],
     ["landing", "viejo.hoteldellago.test"],
     ["landing", "pedernal-erp.vercel.app"],
@@ -197,7 +197,7 @@ describe("cada página vuelve a resolver el host (no confía en el proxy)", () =
   );
 
   it("la app en un host de landing, de carta o desconocido es la neutra", async () => {
-    for (const host of [HOST_LANDING_A, HOST_CARTA_A, HOST_LANDING_B, "otro.ejemplo.com"]) {
+    for (const host of [HOST_LANDING_A, HOST_VIDRIERA_A, HOST_LANDING_B, "otro.ejemplo.com"]) {
       comoPedido(host);
       expect(await app(), host).toBeNull();
     }

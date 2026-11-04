@@ -1,6 +1,7 @@
 import "server-only";
 
 import { armarConexiones } from "../../../src/composicion/conexiones";
+import { armarEmisionFiscal } from "../../../src/composicion/emision-fiscal";
 import { armarSistema } from "../../../src/composicion/sistema";
 import { armarTrabajos } from "../../../src/composicion/trabajos";
 import { armarWeb } from "../../../src/composicion/web";
@@ -25,8 +26,20 @@ const conexiones = armarConexiones({
   },
 });
 
+/**
+ * Quién habla con ARCA (H7 facturación): un cliente por (empresa, emisor, ambiente), con las credenciales de ESE
+ * emisor. Lo comparten la web (resincronizar una serie) y los trabajos (validar y reconciliar). Armarlo no lee nada:
+ * la clave de los certificados se pide recién al hablar con ARCA. Lo que no pudo armarse va al registro del
+ * servidor, sin secretos.
+ */
+const emision = armarEmisionFiscal(conexiones, {
+  registrar: (detalle) => {
+    console.error(detalle);
+  },
+});
+
 /** Casos de uso y consultas de la web. Cada grupo se arma al pedirlo: `web.consultasDeEmpresas()`. */
-export const web = armarWeb(conexiones);
+export const web = armarWeb(conexiones, { emision });
 
 /**
  * La cola de trabajos (ADR-007): `trabajos.procesador()` lo usan el cron y el despacho inmediato. Un problema
@@ -34,6 +47,7 @@ export const web = armarWeb(conexiones);
  * ya filtrado de secretos (nunca datos del trabajo).
  */
 export const trabajos = armarTrabajos(conexiones, {
+  emision,
   alRegistrarProblema: (problema) => {
     console.error(
       `[trabajos] fase=${problema.fase} trabajo=${problema.trabajoId ?? "-"} ${problema.mensaje}`,

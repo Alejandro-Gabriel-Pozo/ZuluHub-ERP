@@ -17,11 +17,17 @@ import {
 } from "../../src/adaptadores/postgres/transacciones";
 import type { ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
-import { crearRepositorioDeEmpresas, type EmpresasDb } from "../../src/modulos/empresas/publico";
+import {
+  crearLecturaDeSucursalBloqueada,
+  crearRepositorioDeEmpresas,
+  crearRepositorioDeSucursales,
+  type EmpresasDb,
+} from "../../src/modulos/empresas/publico";
 import {
   comprobanteId,
   crearCasosDeUsoDeFacturacion,
   crearRepositorioDeCertificados,
+  crearLecturasDeComprobantes,
   crearRepositorioDeComprobantes,
   crearRepositorioDeDatosFiscales,
   crearRepositorioDeDomicilios,
@@ -42,13 +48,20 @@ import {
   type TxDeFacturacion,
 } from "../../src/modulos/fiscal/publico";
 import { crearRepositorioDeTenants, type TenantsDb } from "../../src/modulos/tenants/publico";
+import { cuitDesdeTexto } from "../../src/primitivas/identificacion-fiscal/cuit";
 import { empresaId, personaId } from "../../src/primitivas/identificadores/marca";
+import type { PuntoDeVentaDeArca } from "../../src/modulos/fiscal/dominio/habilitacion-en-arca";
+import type { EmisionFalsa } from "../utilidades/emision-falsa";
 import { consumidorFinal, renglon } from "../utilidades/facturacion";
 import { comoEmpresa } from "./entorno";
 import { crearEscenario as crearEscenarioDeFacturacion, type Escenario } from "./facturacion-apoyo";
 import { cargaDe, crearEntornoFacturacion, pedidoDe } from "./facturacion-persistencia-apoyo";
 import { REGLAS_CON_FACTURACION, conFacturacion } from "./fiscal-numeracion-apoyo";
-import { crearMembresiaDeBase, type RolDePrueba } from "./fixtures-identidad";
+import {
+  crearAsignacionDeBase,
+  crearMembresiaDeBase,
+  type RolDePrueba,
+} from "./fixtures-identidad";
 import type { BaseDePruebas } from "./global";
 
 /**
@@ -71,6 +84,9 @@ export function crearEntornoDeFacturacion(
       return ajustar({
         db,
         empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
+        sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
+        sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
+        lecturas: crearLecturasDeComprobantes(fiscal),
         tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
         puntosDeVenta: crearRepositorioDePuntosDeVenta(fiscal),
         emisores: crearRepositorioDeEmisores(fiscal),
@@ -136,7 +152,10 @@ export async function crearEscenarioDeCasos(
   } = {},
 ): Promise<EscenarioDeCasos> {
   const e = await crearEscenarioDeFacturacion(dueno, opciones);
-  await crearMembresiaDeBase(dueno, e.empresa, e.persona, opciones.rol ?? "OPERADOR");
+  const rol = opciones.rol ?? "OPERADOR";
+  await crearMembresiaDeBase(dueno, e.empresa, e.persona, rol);
+  // Un operador trabaja en las sucursales que tiene asignadas (el listado se acota a una): en la de la empresa de prueba.
+  if (rol === "OPERADOR") await crearAsignacionDeBase(dueno, e.empresa, e.persona, e.sucursal);
   if (opciones.sinCertificado !== true) {
     await cargarCertificado(base, e, opciones.ambienteDelCertificado ?? "HOMOLOGACION");
   }
@@ -179,6 +198,22 @@ export async function cargarCertificado(
   } finally {
     await entorno.cerrar();
   }
+}
+
+/**
+ * ARCA (el falso) tiene dado de alta el punto de venta del escenario: lo que D-77 pide para pasarlo a producción. Con `cambios`, se lo
+ * ve bloqueado o dado de baja. (La CUIT es la del emisor del escenario; el falso la guarda por CUIT.)
+ */
+export function darDeAltaEnArca(
+  falsa: EmisionFalsa,
+  e: Pick<Escenario, "cuit" | "pvNumero">,
+  cambios: Partial<PuntoDeVentaDeArca> = {},
+): void {
+  const cuit = cuitDesdeTexto(e.cuit);
+  if (!cuit.ok) throw new Error("el CUIT del escenario de prueba no es válido");
+  falsa.declararPuntosDeVenta(cuit.valor, [
+    { numero: e.pvNumero, bloqueado: false, dadoDeBaja: false, ...cambios },
+  ]);
 }
 
 /** Un pedido de factura B a consumidor final por $121,00 (o lo que se cambie), con una clave nueva. */

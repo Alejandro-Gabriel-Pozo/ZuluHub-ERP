@@ -49,7 +49,9 @@ export {
   type SolicitudId,
   type VersionId,
 } from "./dominio/identificadores";
-export { AMBIENTES, type Ambiente } from "./dominio/comprobante-nuevo";
+export { AMBIENTES, CONCEPTOS, LIMITES_DE_COMPROBANTE } from "./dominio/comprobante-nuevo";
+export type { Ambiente } from "./dominio/comprobante-nuevo";
+export { MODOS_DE_PRECIO } from "./dominio/calculo-de-renglones";
 export {
   confirmarVersion,
   estadoDeVersion,
@@ -154,6 +156,7 @@ export {
   iniciarSerie,
   reconciliarSerie,
   reservarNumero,
+  resincronizarSerie,
   serieEsConsistente,
   serieUsada,
   transicionDeSerieValida,
@@ -162,6 +165,7 @@ export {
   type ErrorDeNumeracion,
   type ErrorDeSecuencia,
   type EstadoDeSerie,
+  type ErrorDeResincronizacion,
   type OpcionesDeNumeracion,
   type ReconciliacionDeSerie,
   type ReservaDeNumero,
@@ -238,6 +242,8 @@ export {
 } from "./persistencia/repositorio-de-intentos";
 export {
   ESTADOS_DE_CERTIFICADO,
+  dondeSeGuardaLaClave,
+  dondeSeGuardaLaCredencial,
   crearRepositorioDeAccesos,
   crearRepositorioDeCertificados,
   type AccesoGuardado,
@@ -252,6 +258,7 @@ export {
   type ServicioDeArca,
   type TextoCifrado,
 } from "./persistencia/repositorio-de-certificados";
+export { crearLecturasDeCertificados } from "./persistencia/lecturas-de-certificados";
 export { errorFiscalDeRestriccion, traducirErroresDeFiscal } from "./persistencia/traducir";
 
 // H7 T6: casos de uso de numeración (reservar, cerrar y reconciliar), con el guard primero y el servicio
@@ -287,16 +294,14 @@ export type {
   ResultadoPorSerie,
   SalidaDeReconciliarSeriesVencidas,
 } from "./casos-de-uso/reconciliar-series-vencidas";
-
-// H7 facturación F4: numeración con ambiente (la serie es de un punto de venta, un tipo y un ambiente), puerto de
-// emisión ampliado (consultar, no enviado) y salida de una serie bloqueada.
-export { resincronizarSerie, type ErrorDeResincronizacion } from "./dominio/numeracion";
-export type {
-  DatosConsultados,
-  DesenlaceDeAutorizacion,
-  Mensaje,
-  ResultadoDeAutorizacionArca,
-  ResultadoDeConsulta,
+// H7 facturación F4: puerto de emisión ampliado (consultar, no enviado) y estados del comprobante frente a ARCA.
+export {
+  ESTADOS_DE_COMPROBANTE_ARCA,
+  type DatosConsultados,
+  type DesenlaceDeAutorizacion,
+  type Mensaje,
+  type ResultadoDeAutorizacionArca,
+  type ResultadoDeConsulta,
 } from "./dominio/estados-de-comprobante";
 
 // H7 facturación F6: las consultas del facturador (listado, detalle y modelo de impresión) y el modelo de impresión.
@@ -347,7 +352,7 @@ export {
 // H7 facturación F5: emitir a mano (factura, nota de crédito, nota de débito), descartar, reintentar, resincronizar
 // una serie, cambiar el ambiente de un punto de venta y los dos trabajos de sistema (validar y reconciliar), con el
 // guard primero y ARCA siempre fuera de la transacción. La composición los arma con `crearCasosDeUsoDeFacturacion`
-// y registra los manejadores de la cola con los tipos `TRABAJO_VALIDAR_COMPROBANTE` y `TRABAJO_RECONCILIAR`.
+// y registra los manejadores de la cola con los tipos `TRABAJO_VALIDAR_COMPROBANTE` y `TRABAJO_RECONCILIAR`; `contextoDeSistema` es el contexto de esos trabajos (sin persona).
 export { DECLARACIONES_DE_FACTURACION } from "./casos-de-uso/declaraciones-de-facturacion";
 export {
   crearCasosDeUsoDeFacturacion,
@@ -355,6 +360,8 @@ export {
 } from "./casos-de-uso/casos-de-uso-de-facturacion";
 export {
   OPCIONES_DE_FACTURACION,
+  contextoDeSistema,
+  prefijoDeValidacion,
   TRABAJO_RECONCILIAR,
   TRABAJO_VALIDAR_COMPROBANTE,
   type DependenciasDeFacturacion,
@@ -400,10 +407,9 @@ export {
 } from "./casos-de-uso/reconciliar-comprobantes";
 
 // H7 facturación F7: certificados de ARCA. Generar el pedido (la clave privada se genera y se guarda CIFRADA dentro
-// del servidor: nunca sale ni se muestra) y cargar el certificado que devolvió ARCA (validado contra la clave, el
-// CUIT del emisor, la cadena y el vencimiento), con el guard primero. La composición los arma con
-// `crearCasosDeUsoDeCertificados`. `dondeSeGuardaLaClave` y `dondeSeGuardaLaCredencial` dicen a qué fila y columna
-// se ata cada texto cifrado (lo piden quien cifra y quien descifra, para que no diverjan).
+// del servidor: nunca sale ni se muestra) y cargar el certificado que devolvió ARCA (validado contra la clave, el CUIT
+// del TITULAR declarado —puede no ser el del emisor, D-42—, la cadena y el vencimiento), con el guard primero. La
+// composición los arma con `crearCasosDeUsoDeCertificados`; `dondeSeGuardaLaClave` y `…Credencial` ubican lo cifrado.
 export { DECLARACIONES_DE_CERTIFICADOS } from "./casos-de-uso/declaraciones-de-certificados";
 export {
   crearCasosDeUsoDeCertificados,
@@ -424,18 +430,11 @@ export type {
   SalidaDeCargarCertificado,
 } from "./casos-de-uso/cargar-certificado";
 export {
-  dondeSeGuardaLaClave,
-  dondeSeGuardaLaCredencial,
-} from "./persistencia/repositorio-de-certificados";
-export {
   DIAS_DE_AVISO_POR_DEFECTO,
   certificadosPorVencer,
   type AvisoDeVencimiento,
   type CertificadoParaAvisar,
 } from "./dominio/vencimiento-de-certificados";
-// El contexto de un trabajo de sistema (operativo, de una empresa, SIN persona): lo arma quien corre fuera de un
-// pedido (la cola, o el adaptador de ARCA al pedir las credenciales de un emisor).
-export { contextoDeSistema } from "./casos-de-uso/contrato-de-facturacion";
 // H7 facturación F8: lo que el adaptador real de ARCA (`adaptadores/arca`) necesita de fiscal para traducir un
 // pedido a los valores de WSFE: las tablas de códigos y el número de documento como lo manda ARCA. Los tipos del
 // pedido (`SolicitudDeAutorizacion`) y del resultado ya salen más arriba.
@@ -444,4 +443,51 @@ export {
   CODIGO_DE_TIPO_DE_COMPROBANTE,
   CODIGO_DE_TIPO_DE_DOCUMENTO,
 } from "./dominio/codigos-de-arca";
-export { numeroDeDocumentoParaArca } from "./dominio/receptor";
+export { TIPOS_DE_DOCUMENTO, numeroDeDocumentoParaArca } from "./dominio/receptor";
+
+// H7 T5: la configuración fiscal del gerente. Guardar y confirmar los datos fiscales de un emisor, dar de alta,
+// editar, activar y desactivar puntos de venta y confirmar la regla de resolución del emisor, con el guard primero
+// (las siete acciones son de `administracion`, solo del gerente). La composición los arma con
+// `crearCasosDeUsoDeConfiguracionFiscal`.
+export { DECLARACIONES_DE_CONFIGURACION as DECLARACIONES_DE_CONFIGURACION_FISCAL } from "./casos-de-uso/declaraciones-de-configuracion";
+export {
+  crearCasosDeUsoDeConfiguracionFiscal,
+  type CasosDeUsoDeConfiguracionFiscal,
+} from "./casos-de-uso/casos-de-uso-de-configuracion";
+export type {
+  DependenciasDeConfiguracionFiscal,
+  TxDeConfiguracionFiscal,
+} from "./casos-de-uso/contrato-de-configuracion";
+export type {
+  DomicilioDeEntrada,
+  ErrorDeDomicilioDeEntrada,
+} from "./casos-de-uso/comun-de-configuracion";
+export type {
+  EntradaDeGuardarBorradorDeDatosFiscales,
+  ErrorAlGuardarElBorrador,
+  SalidaDeGuardarBorradorDeDatosFiscales,
+} from "./casos-de-uso/guardar-borrador-de-datos-fiscales";
+export type {
+  EntradaDeConfirmarDatosFiscales,
+  ErrorAlConfirmarDatosFiscales,
+  SalidaDeConfirmarDatosFiscales,
+} from "./casos-de-uso/confirmar-datos-fiscales";
+export type {
+  EntradaDeCrearPuntoDeVenta,
+  EntradaDeEditarPuntoDeVenta,
+  ErrorAlCrearPuntoDeVenta,
+  ErrorAlEditarPuntoDeVenta,
+  SalidaDeCrearPuntoDeVenta,
+  SalidaDeEditarPuntoDeVenta,
+} from "./casos-de-uso/crear-y-editar-punto-de-venta";
+export type {
+  EntradaDeCambiarElEstadoDelPuntoDeVenta,
+  ErrorAlActivarPuntoDeVenta,
+  ErrorAlDesactivarPuntoDeVenta,
+  SalidaDeCambiarElEstadoDelPuntoDeVenta,
+} from "./casos-de-uso/activar-y-desactivar-punto-de-venta";
+export type {
+  EntradaDeConfirmarReglaDeEmisor,
+  ErrorAlConfirmarLaRegla,
+  SalidaDeConfirmarReglaDeEmisor,
+} from "./casos-de-uso/confirmar-regla-de-emisor";

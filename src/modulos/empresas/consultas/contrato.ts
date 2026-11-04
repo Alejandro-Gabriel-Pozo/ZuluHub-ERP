@@ -1,7 +1,8 @@
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
-import type { RepositorioDeEmpresas, RepositorioDeSucursales } from "../persistencia/repositorios";
+import type { RepositorioDeEmpresas } from "../persistencia/repositorios";
+import type { RepositorioDeSucursales } from "../persistencia/repositorio-de-sucursales";
 
 /**
  * Lo que recibe el trabajo de una consulta (ADR-005): solo métodos de lectura de los repositorios

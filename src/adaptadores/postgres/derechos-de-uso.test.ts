@@ -151,7 +151,7 @@ describe("deLaEmpresa", () => {
       asignaciones: [{ numero: 1, vigenteDesde: antes, version: version(1, [], 2) }],
       ajustes: [
         ajuste("cajas_por_sucursal", "ILIMITADO"),
-        ajuste("carta_por_qr", "1"),
+        ajuste("vidriera_por_qr", "1"),
         ajuste("con_sello", "DEL_PLAN"),
       ],
     });
@@ -161,7 +161,7 @@ describe("deLaEmpresa", () => {
       limite: "ILIMITADO",
       origen: "AJUSTE",
     });
-    expect(d.perillas.get("carta_por_qr")).toEqual({
+    expect(d.perillas.get("vidriera_por_qr")).toEqual({
       tipo: "INTERRUPTOR",
       encendida: true,
       origen: "AJUSTE",
@@ -194,13 +194,13 @@ describe("deLaEmpresa", () => {
   it("el ajuste de una empresa llega con su empresa para que el cálculo elija el más específico", async () => {
     const { derechos } = planesCon({
       ajustes: [
-        ajuste("carta_por_qr", "0"),
-        ajuste("carta_por_qr", "1", { empresaId: E }),
+        ajuste("vidriera_por_qr", "0"),
+        ajuste("vidriera_por_qr", "1", { empresaId: E }),
         ajuste("con_sello", "0", { empresaId: empresaId("e2") }),
       ],
     });
     const d = await derechos.deLaEmpresa(operativo);
-    expect(d.perillas.get("carta_por_qr")).toEqual({
+    expect(d.perillas.get("vidriera_por_qr")).toEqual({
       tipo: "INTERRUPTOR",
       encendida: true,
       origen: "AJUSTE",
@@ -265,14 +265,14 @@ describe("deLaEmpresaParaLaPlataforma", () => {
   });
 });
 
-describe("deLaCartaPublica: falla cerrado hasta que exista el módulo de catálogo", () => {
+describe("deLaVidrieraPublica: falla cerrado hasta que exista el módulo de catálogo", () => {
   it("devuelve null para cualquier código y NO lee nada de la base", async () => {
     const { derechos, llamadas } = planesCon({
       asignaciones: [{ numero: 1, vigenteDesde: antes, version: version(1, ["caja"], 3) }],
     });
     for (const codigo of ["", "x", "a".repeat(43), "0123456789abcdef".repeat(4)]) {
       for (const marca of [marcaComercialId("m1"), marcaComercialId("m2")]) {
-        expect(await derechos.deLaCartaPublica(marca, codigo), `${marca}/${codigo}`).toBeNull();
+        expect(await derechos.deLaVidrieraPublica(marca, codigo), `${marca}/${codigo}`).toBeNull();
       }
     }
     expect(llamadas).toEqual([]);

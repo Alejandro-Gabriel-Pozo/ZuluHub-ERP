@@ -102,6 +102,34 @@ describe("pedidos exactos", () => {
     },
   );
 
+  it("escribir con pisar: false crea y nada más: sin `upsert` en la dirección (el resto del pedido es el mismo)", async () => {
+    const f = fetchFalso({ cuerpo: { created: {}, failed: [] } });
+    const { api } = cliente(f);
+    expect(await api.escribir("CRON_SECRET", "valor-secreto", "preview", { pisar: false })).toEqual(
+      {
+        ok: true,
+        valor: null,
+      },
+    );
+    const { url, init } = f.llamadas[0] as Llamada;
+    expect(url).toBe(`${BASE_DE_LA_API}/v10/projects/${PROYECTO}/env?slug=alepozod`);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({
+      key: "CRON_SECRET",
+      value: "valor-secreto",
+      type: "sensitive",
+      target: ["preview"],
+    });
+  });
+
+  it("escribir con pisar: true, o sin opciones, sigue siendo con `upsert`", async () => {
+    for (const opciones of [{ pisar: true }, undefined] as const) {
+      const f = fetchFalso({ cuerpo: { created: {}, failed: [] } });
+      await cliente(f).api.escribir("A", "v", "preview", opciones);
+      expect((f.llamadas[0] as Llamada).url).toContain("upsert=true");
+    }
+  });
+
   it("borrar: DELETE de esa variable, con el id codificado y sin cuerpo", async () => {
     const f = fetchFalso({});
     const { api } = cliente(f);

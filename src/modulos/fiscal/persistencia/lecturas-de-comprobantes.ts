@@ -1,7 +1,11 @@
 import { sql, type Kysely } from "kysely";
 import { importeDesdeTexto, type Importe } from "../../../primitivas/dinero/importe";
 import { moneda } from "../../../primitivas/dinero/moneda";
-import type { EmpresaId } from "../../../primitivas/identificadores/marca";
+import {
+  sucursalId,
+  type EmpresaId,
+  type SucursalId,
+} from "../../../primitivas/identificadores/marca";
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import {
   TIPOS_DE_COMPROBANTE,
@@ -12,18 +16,21 @@ import {
   type TipoDeOrigen,
 } from "../dominio/comprobante-emitido";
 import { AMBIENTES, type Ambiente } from "../dominio/comprobante-nuevo";
+import type { NotaParaAcreditar } from "../dominio/acreditacion";
 import {
   ESTADOS_DE_COMPROBANTE_ARCA,
   type EstadoDeComprobanteArca,
 } from "../dominio/estados-de-comprobante";
 import { comprobanteId, type ComprobanteId } from "../dominio/identificadores";
 import { RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA } from "../dominio/punto-de-venta";
+import type { DocumentoDelReceptor } from "../dominio/receptor";
+import { documentoDelReceptorDeLaBase } from "./documento-del-receptor";
 import { deLaLista } from "./repositorios";
 import type { FiscalDb } from "./tablas";
 
 /**
  * Lecturas de comprobantes para las pantallas del facturador (spec H7 facturación §B.4.9, tramo F6): el listado
- * paginado y las notas que citan a un comprobante. Solo leen: no hay ninguna escritura acá, y el tipo que
+ * paginado, los puntos de venta de una sucursal y las notas que citan a un comprobante. Solo leen: no hay ninguna escritura acá, y el tipo que
  * reciben los casos de uso (`Pick` de estas funciones) no ofrece otra cosa.
  *
  *  - Todo filtra por empresa aunque la RLS ya lo imponga.
@@ -57,6 +64,11 @@ export const VALORES_DEL_FILTRO = {
 export type ClaveDeListado = Readonly<{ creadoEn: string; id: ComprobanteId }>;
 
 export type FiltroDeListado = Readonly<{
+  /**
+   * La sucursal del comprobante (`comprobante.sucursal_id`, 0016: la del punto de venta AL EMITIRSE, que no cambia aunque el
+   * punto de venta se mude). Obligatoria y siempre se filtra por ella: no hay un listado «de todas las sucursales».
+   */
+  sucursalId: SucursalId;
   /** `null`: todos los estados menos `DESCARTADO`. */
   estado: EstadoDeComprobanteArca | null;
   tipo: TipoDeComprobante | null;
@@ -89,6 +101,8 @@ export type FilaDeListado = Readonly<{
   numero: bigint | null;
   fecha: FechaCivil;
   receptorNombre: string | null;
+  /** Tipo y número del documento del receptor, como los congeló el comprobante (el mismo dato que trae el detalle). */
+  receptorDocumento: DocumentoDelReceptor;
   total: Importe;
   estado: EstadoDeComprobanteArca;
   ambiente: Ambiente;
@@ -97,6 +111,9 @@ export type FilaDeListado = Readonly<{
 }>;
 
 export type PaginaDeFilas = Readonly<{ filas: readonly FilaDeListado[]; hayMas: boolean }>;
+
+/** Un punto de venta de una sucursal para el filtro del listado: su número y si está activo (`false`: dado de baja). */
+export type PuntoDeVentaDeLaSucursal = Readonly<{ numero: number; activo: boolean }>;
 
 /** Una nota (o factura) que cita a otro comprobante como su asociado. */
 export type NotaQueCita = Readonly<{
@@ -113,10 +130,34 @@ export interface LecturasDeComprobantes {
   /** Una página del listado de la empresa, los más nuevos primero; `hayMas` si queda algo después de ella. */
   listar(empresa: EmpresaId, filtro: FiltroDeListado): Promise<PaginaDeFilas>;
   /**
+   * La sucursal a la que pertenece un comprobante de la empresa (`comprobante.sucursal_id`, la de cuando se emitió), o `null` si
+   * no existe, es de otra empresa o no tiene sucursal guardada (indistinguibles). Es lo que el detalle compara con el alcance de la persona (D-39).
+   */
+  sucursalDelComprobante(empresa: EmpresaId, id: ComprobanteId): Promise<SucursalId | null>;
+  /**
+   * Los puntos de venta de la sucursal, ACTIVOS y dados de baja (`INACTIVO`: el único otro estado que existe), de menor a mayor
+   * número y sin repetir (dos emisores pueden tener cada uno su número 1: el listado filtra por el número, que es lo que se
+   * imprime). `activo` es verdadero si ALGUNO de los puntos de venta con ese número en la sucursal está activo.
+   */
+  puntosDeVentaDeLaSucursal(
+    empresa: EmpresaId,
+    sucursal: SucursalId,
+  ): Promise<readonly PuntoDeVentaDeLaSucursal[]>;
+  /**
    * Los comprobantes de la empresa que citan a `id` como su asociado (las notas), del más viejo al más nuevo.
    * Los `DESCARTADO` no cuentan: nunca existieron para ARCA.
    */
   notasQueCitan(empresa: EmpresaId, id: ComprobanteId): Promise<readonly NotaQueCita[]>;
+  /**
+   * Para el listado, con UNA sola consulta agregada (sin una por fila): lo que citan a cada uno de `ids` los
+   * comprobantes de la empresa, sumado por tipo y estado (`total` es la suma exacta del grupo). Solo trae a quien
+   * tiene notas; los `DESCARTADO` vienen y no los descarta esta lectura: qué cuenta como acreditado lo decide
+   * el dominio (`acreditacion.ts`), en un solo lugar.
+   */
+  notasQueCitanA(
+    empresa: EmpresaId,
+    ids: readonly ComprobanteId[],
+  ): Promise<ReadonlyMap<ComprobanteId, readonly NotaParaAcreditar[]>>;
 }
 
 const FECHA_DEL_LISTADO = sql<string>`coalesce(fecha_emision, (creado_en at time zone ${ZONA_DE_ARGENTINA})::date)`;
@@ -134,6 +175,8 @@ type FilaCruda = Readonly<{
   numero: string | null;
   fecha: string;
   receptor_nombre: string | null;
+  receptor_documento_tipo: string;
+  receptor_documento_numero: string | null;
   moneda: string;
   total: string;
   estado: string;
@@ -155,6 +198,10 @@ function aFila(f: FilaCruda): FilaDeListado {
     numero: f.numero === null ? null : BigInt(f.numero),
     fecha: fechaDeLaBase(f.fecha),
     receptorNombre: f.receptor_nombre,
+    receptorDocumento: documentoDelReceptorDeLaBase(
+      f.receptor_documento_tipo,
+      f.receptor_documento_numero,
+    ),
     total: importeDesdeTexto(moneda(f.moneda), f.total),
     estado: deLaLista(ESTADOS_DE_COMPROBANTE_ARCA, f.estado, "estado de comprobante"),
     ambiente: deLaLista(AMBIENTES, f.ambiente, "ambiente"),
@@ -173,6 +220,8 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
         "numero",
         FECHA_COMO_TEXTO,
         "receptor_nombre",
+        "receptor_documento_tipo",
+        "receptor_documento_numero",
         "moneda",
         "total",
         "estado",
@@ -182,7 +231,9 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
 
   return {
     async listar(empresa, filtro) {
-      let consulta = resumen().where("empresa_id", "=", empresa);
+      let consulta = resumen()
+        .where("empresa_id", "=", empresa)
+        .where("sucursal_id", "=", filtro.sucursalId);
       consulta =
         filtro.estado === null
           ? consulta.where("estado", "<>", "DESCARTADO")
@@ -240,6 +291,29 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
       };
     },
 
+    async sucursalDelComprobante(empresa, id) {
+      const fila = await db
+        .selectFrom("comprobante")
+        .select("sucursal_id")
+        .where("empresa_id", "=", empresa)
+        .where("id", "=", id)
+        .executeTakeFirst();
+      // Una fila sin sucursal (solo una carga que apagó los disparadores) no tiene a quién corresponder: como si no existiera.
+      return fila === undefined || fila.sucursal_id === null ? null : sucursalId(fila.sucursal_id);
+    },
+
+    async puntosDeVentaDeLaSucursal(empresa, sucursal) {
+      const filas = await db
+        .selectFrom("punto_de_venta")
+        .select(["numero", sql<boolean>`bool_or(estado = 'ACTIVO')`.as("activo")])
+        .where("empresa_id", "=", empresa)
+        .where("sucursal_id", "=", sucursal)
+        .groupBy("numero")
+        .orderBy("numero")
+        .execute();
+      return filas.map((f) => ({ numero: f.numero, activo: f.activo }));
+    },
+
     async notasQueCitan(empresa, id) {
       const filas = await db
         .selectFrom("comprobante")
@@ -268,6 +342,40 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
         total: importeDesdeTexto(moneda(f.moneda), f.total),
         estado: deLaLista(ESTADOS_DE_COMPROBANTE_ARCA, f.estado, "estado de comprobante"),
       }));
+    },
+
+    async notasQueCitanA(empresa, ids) {
+      const porId = new Map<ComprobanteId, NotaParaAcreditar[]>();
+      if (ids.length === 0) return porId;
+      const filas = await db
+        .selectFrom("comprobante")
+        .select([
+          "comprobante_asociado_id",
+          "tipo_comprobante",
+          "estado",
+          "moneda",
+          // `sum` de `numeric` es exacta; viaja como texto (nunca como `number`).
+          sql<string>`sum(total)::text`.as("suma"),
+        ])
+        .where("empresa_id", "=", empresa)
+        .where("comprobante_asociado_id", "in", ids)
+        .groupBy(["comprobante_asociado_id", "tipo_comprobante", "estado", "moneda"])
+        .execute();
+      for (const f of filas) {
+        // El `in (...)` descarta los nulos: una fila sin asociado no puede venir.
+        if (f.comprobante_asociado_id === null)
+          throw new Error("una nota sin comprobante asociado");
+        const asociado = comprobanteId(f.comprobante_asociado_id);
+        porId.set(asociado, [
+          ...(porId.get(asociado) ?? []),
+          {
+            tipo: deLaLista(TIPOS_DE_COMPROBANTE, f.tipo_comprobante, "tipo de comprobante"),
+            estado: deLaLista(ESTADOS_DE_COMPROBANTE_ARCA, f.estado, "estado de comprobante"),
+            total: importeDesdeTexto(moneda(f.moneda), f.suma),
+          },
+        ]);
+      }
+      return porId;
     },
   };
 }

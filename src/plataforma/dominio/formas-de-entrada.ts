@@ -38,6 +38,17 @@ export function validarVersionEsperada(
 }
 
 /**
+ * La `versionEsperada` de una confirmación: la `version` del borrador que vio quien confirma. A diferencia de
+ * guardar, no hay «sin borrador» (confirmar exige uno): es un entero de 1 en adelante, nunca `null`. Sin
+ * esto, una entrada sin tipar (`undefined`, `NaN`) saltearía el chequeo de qué borrador se está confirmando.
+ */
+export function validarVersionVista(
+  version: number,
+): Resultado<number, "VERSION_ESPERADA_INVALIDA"> {
+  return esConsecutivo(version) ? ok(version) : err("VERSION_ESPERADA_INVALIDA");
+}
+
+/**
  * Desde cuándo rige una decisión: una fecha de verdad. (Que no sea retroactiva lo decide el dominio de la
  * decisión, con el reloj del contexto.)
  */

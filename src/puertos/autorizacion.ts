@@ -21,6 +21,13 @@ export type DatosDelActor = Readonly<{
 }>;
 
 /**
+ * Qué sucursales cuenta el alcance. Por defecto, las ACTIVAS (para operar: emitir, vender, mover stock). Con
+ * `incluirDesactivadas`, también las que se cerraron, para quien solo MIRA el historial de una sucursal cerrada (el listado y
+ * el detalle de comprobantes, D-37 y D-39); no autoriza a operar en ellas.
+ */
+export type OpcionesDeAlcance = Readonly<{ incluirDesactivadas?: boolean }>;
+
+/**
  * Puerto de carga de datos de autorización. Solo el contexto OPERATIVO tiene actor y empresa: pasarle
  * uno de plataforma, de grupo, de trabajos o de invitación no compila.
  */
@@ -31,6 +38,12 @@ export interface CargaDeAutorizacion {
    * permisos). La membresía de otra empresa no cuenta. Tampoco cuenta si la persona entró por la
    * puerta de otra marca: `marcaDeEntrada` tiene que ser la marca del tenant de la empresa (una
    * marca de entrada `null` con persona tampoco autoriza); si no, `rol: null` y todo da `SIN_PERMISO`.
+   *
+   * Con rol, en la misma transacción y sin caché: `modulosActivados` son las filas ACTIVAS de la empresa y
+   * `modulosHabilitados` los módulos de la versión de plan VIGENTE de su tenant (sin asignación vigente,
+   * ninguno: lo activado queda en solo lectura). Lo que la base guarda y el catálogo no conoce (un módulo
+   * activado o de un plan), o una asignación vigente sin versión visible, es una falla (el adaptador tira
+   * un `Error`, no autoriza por omisión). Sin rol, listas vacías.
    */
   delActor(contexto: ContextoOperativo): Promise<DatosDelActor>;
   /**
@@ -40,7 +53,11 @@ export interface CargaDeAutorizacion {
    * membresía activa, con la persona suspendida globalmente o sin persona: vacía (falla cerrado). Se
    * lee en cada llamada, sin caché: una asignación apagada un instante antes ya no cuenta. Con la
    * puerta de otra marca (o sin ella, con persona): vacía, como si no tuviera rol. El caso
-   * de uso lo usa con `exigirSucursal`; este puerto no autoriza por sí mismo.
+   * de uso lo usa con `exigirSucursal`; este puerto no autoriza por sí mismo. Con `incluirDesactivadas`, el operador
+   * recibe también las sucursales cerradas que tiene asignadas (solo para mirar historial, D-37).
    */
-  sucursalesDelActor(contexto: ContextoOperativo): Promise<AlcanceDeSucursales>;
+  sucursalesDelActor(
+    contexto: ContextoOperativo,
+    opciones?: OpcionesDeAlcance,
+  ): Promise<AlcanceDeSucursales>;
 }

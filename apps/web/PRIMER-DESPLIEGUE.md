@@ -18,21 +18,28 @@ ningún merge publica nada.
 
 ## A. Qué hay listo en el repositorio
 
-| Pieza                                          | Dónde                                                                   | Qué hace                                                                                                                                                                                                                                                             |
-| ---------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Configuración de Vercel                        | `apps/web/vercel.json`                                                  | Región `gru1`, despliegue automático apagado, un cron diario. Vercel la lee desde la carpeta raíz del proyecto (`apps/web`).                                                                                                                                         |
-| Cron de trabajos                               | `app/api/trabajos/cron`                                                 | Una vez por día (06:17 UTC): despacha la cola de trabajos (mails, reintentos) y barre las sesiones vencidas. Solo responde con `CRON_SECRET`; sin él, 401 sin cuerpo.                                                                                                |
-| Despacho inmediato                             | `servidor/despacho-inmediato.ts`                                        | `despacharDespuesDeConfirmar(ids)` (con `after()` de Next): las acciones que encolan lo usan para que el mail salga en segundos; el cron es el respaldo. Hoy ninguna acción lo llama todavía (no hay acciones que encolen en la web).                                |
-| Salud                                          | `app/api/salud`                                                         | `{"ok":true}` (200) o `{"ok":false}` (503), sin ningún detalle. Hace un `SELECT 1` con el rol limitado de la aplicación.                                                                                                                                             |
-| Guarda de migración                            | `src/composicion/guarda-de-migracion.ts`                                | Si la base no tiene la migración que el código necesita (`MIGRACION_REQUERIDA`), toda la app responde «En mantenimiento» (503 con una referencia `PD-…`) en vez de fallar a mitad de una factura. Vuelve sola, a los pocos segundos, apenas se migra.                |
-| Migrar la base                                 | `.github/workflows/migrar.yml`                                          | Workflow manual. `produccion` pide tu aprobación; antes de aplicar en producción crea la rama de respaldo `antes-de-<NNNN>` en Neon (si cargaste `NEON_API_KEY` y `NEON_PROJECT_ID`) y después instala la clave de contexto (si cargaste `PEDERNAL_CLAVE_CONTEXTO`). |
-| Instalar la clave de contexto                  | `npm run instalar-clave`                                                | Instala en la base la clave con la que se firma el contexto. Idempotente. Lo usa el workflow y también sirve en tu terminal.                                                                                                                                         |
-| Migrar / dar LOGIN a los roles / cargar Vercel | `npm run migrar -- --ver \| --aplicar \| --preparar-roles [--vercel …]` | Ya existía (tanda 4/5). Ver la sección B.4.                                                                                                                                                                                                                          |
-| Un freno contra encender el despliegue de paso | `test/arquitectura/vercel-json.test.ts`                                 | Falla si `deploymentEnabled` deja de ser `false` sin cambiar a propósito la constante `DESPLIEGUE_APROBADO_POR_EL_DUENO` del mismo archivo.                                                                                                                          |
+| Pieza                                               | Dónde                                                                   | Qué hace                                                                                                                                                                                                                                                             |
+| --------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Configuración de Vercel                             | `apps/web/vercel.json`                                                  | Región `gru1`, despliegue automático apagado, un cron diario. Vercel la lee desde la carpeta raíz del proyecto (`apps/web`).                                                                                                                                         |
+| Cron de trabajos                                    | `app/api/trabajos/cron`                                                 | Una vez por día (06:17 UTC): encola la reconciliación fiscal, despacha la cola (mails, reintentos) y barre las sesiones. Solo responde con `CRON_SECRET`; sin él, 401 sin cuerpo.                                                                                    |
+| Despacho inmediato                                  | `servidor/despacho-inmediato.ts`                                        | `despacharDespuesDeConfirmar(ids)` y `despacharPorClavesDespuesDeConfirmar` (con `after()` de Next): las acciones que encolan los usan para que salga en segundos; el cron es el respaldo. Hoy solo lo llama emitir un comprobante.                                  |
+| Salud                                               | `app/api/salud`                                                         | `{"ok":true}` (200) o `{"ok":false}` (503), sin ningún detalle. Hace un `SELECT 1` con el rol limitado de la aplicación.                                                                                                                                             |
+| Guarda de migración                                 | `src/composicion/guarda-de-migracion.ts`                                | Si la base no tiene la migración que el código necesita (`MIGRACION_REQUERIDA`), toda la app responde «En mantenimiento» (503 con una referencia `PD-…`) en vez de fallar a mitad de una factura. Vuelve sola, a los pocos segundos, apenas se migra.                |
+| Migrar la base                                      | `.github/workflows/migrar.yml`                                          | Workflow manual. `produccion` pide tu aprobación; antes de aplicar en producción crea la rama de respaldo `antes-de-<NNNN>` en Neon (si cargaste `NEON_API_KEY` y `NEON_PROJECT_ID`) y después instala la clave de contexto (si cargaste `PEDERNAL_CLAVE_CONTEXTO`). |
+| Cargar el entorno de Vercel (lo que se genera solo) | `.github/workflows/cargar-entorno.yml`, `npm run cargar-entorno`        | Workflow manual. Genera y carga en Vercel, como sensibles y sin sobrescribir nada, los secretos que no dependen de vos (sección B.4 bis). `produccion` pide tu aprobación.                                                                                           |
+| Instalar la clave de contexto                       | `npm run instalar-clave`                                                | Instala en la base la clave con la que se firma el contexto. Idempotente. Lo usa el workflow y también sirve en tu terminal.                                                                                                                                         |
+| Migrar / dar LOGIN a los roles / cargar Vercel      | `npm run migrar -- --ver \| --aplicar \| --preparar-roles [--vercel …]` | Ya existía (tanda 4/5). Ver la sección B.4.                                                                                                                                                                                                                          |
+| Un freno contra encender el despliegue de paso      | `test/arquitectura/vercel-json.test.ts`                                 | Falla si `deploymentEnabled` deja de ser `false` sin cambiar a propósito la constante `DESPLIEGUE_APROBADO_POR_EL_DUENO` del mismo archivo.                                                                                                                          |
 
-**Todavía NO está** (y por eso el primer cliente no puede entrar aún; ver la sección E): los scripts `crear-primer-admin` y
-`ejecutar-caso-de-plataforma`, los casos de uso de marca/plan/alta de empresa que usarían, y el enchufe de la resolución
-de hosts a la base (`apps/web/servidor/fuente-de-puertas.ts` sigue siendo un falso: todo host responde la página neutra).
+**Ya está** (verificado contra `main`, 2026-10-22): los scripts `npm run plataforma:primer-admin` y
+`npm run plataforma:caso` (más `plataforma:baja-admin` y `plataforma:resetear-segundo-factor`), los casos de uso de
+plataforma de marca, plan y alta de empresa (M5/M6) y el enchufe de la resolución de hosts a la base
+(`apps/web/servidor/fuente-de-puertas.ts` usa la puerta pública REAL: si falta la cadena `PEDERNAL_DB_PUBLICO` el pedido
+falla cerrado y la puerta muestra la neutra).
+
+**Todavía NO está** (y por eso el primer cliente no puede entrar aún; ver la sección E): lo que depende de vos (rama
+`preview` de Neon, Environments de GitHub, proyecto y variables de Vercel, cliente de Google, dominios) y, para facturar, las
+pantallas del facturador y el cableado de lo fiscal (composición, cola de trabajos y claves de certificados).
 
 ---
 
@@ -48,7 +55,7 @@ Settings → Environments → New environment. Dos, con estos nombres exactos:
 | Environment  | Revisores obligatorios | Ramas permitidas | Secretos (Environment secrets)                                                                                                  |
 | ------------ | ---------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `produccion` | **Vos** (obligatorio)  | solo `main`      | `PEDERNAL_DB_DUENO_DIRECTA` (obligatorio); `PEDERNAL_CLAVE_CONTEXTO`, `NEON_API_KEY`, `NEON_PROJECT_ID` (opcionales, ver abajo) |
-| `preview`    | ninguno                | solo `main`      | `PEDERNAL_DB_DUENO_DIRECTA` (obligatorio, de la rama `preview` de Neon); `PEDERNAL_CLAVE_CONTEXTO` (opcional, la de Preview)    |
+| `preview`    | **Vos** (obligatorio)  | solo `main`      | `PEDERNAL_DB_DUENO_DIRECTA` (obligatorio, de la rama `preview` de Neon); `PEDERNAL_CLAVE_CONTEXTO` (opcional, la de Preview)    |
 
 - `PEDERNAL_DB_DUENO_DIRECTA`: la cadena de conexión del **dueño** de esa base, **directa** (en Neon: Connect, y apagar
   «Connection pooling» antes de copiarla). Con el host del pooler (`-pooler`) el workflow se niega a migrar.
@@ -56,8 +63,8 @@ Settings → Environments → New environment. Dos, con estos nombres exactos:
   Si el Environment no la tiene, el workflow no instala ninguna clave.
 - `NEON_API_KEY` y `NEON_PROJECT_ID` (solo `produccion`): para la rama de respaldo `antes-de-<NNNN>` antes de migrar. Sin
   ellos se migra **sin respaldo** y el workflow lo avisa. Si los cargaste y el respaldo falla, **no se migra**.
-- Revisá que «Required reviewers» de `produccion` sea solo vos y que «Deployment branches» sea solo `main`: eso es lo que
-  protege el secreto de verdad.
+- Revisá que «Required reviewers» de `produccion` **y de `preview`** sea solo vos (decisión del dueño, 2026-11-04) y que
+  «Deployment branches» sea solo `main` en los dos: eso es lo que protege el secreto de verdad.
 - Ya existe otro workflow, `migrar-base.yml`, con sus propios Environments (`neon-preview`, `neon-production`) y su
   secreto `PEDERNAL_DB_MIGRACIONES`. Hacen lo mismo que `migrar.yml` sin respaldo ni clave de contexto. Cuando confirmes que
   `migrar.yml` anda, conviene borrar `migrar-base.yml` y esos dos Environments para que haya una sola puerta.
@@ -99,7 +106,7 @@ Dos avisos importantes:
 
 - `--preparar-roles` **también aplica las migraciones pendientes** (es parte de lo que hace). En producción, corré primero el
   workflow (B.3: aprobación y respaldo) y recién después este comando, que ya no va a encontrar nada pendiente.
-- **No uses `--secretos` para la clave de contexto.** Ese modo genera `PEDERNAL_CLAVE_CONTEXTO` y la carga en Vercel como
+- **No uses `--secretos` para la clave de contexto** (el workflow de B.4 bis sí la instala bien). Ese modo genera `PEDERNAL_CLAVE_CONTEXTO` y la carga en Vercel como
   sensible (no se puede volver a leer) y **no la instala en la base**: sin la clave instalada en `contexto_clave`, la base
   rechaza todo contexto firmado. En su lugar, generá la clave vos y usala en los dos lados:
   1. En tu terminal: `node -e "console.log('1:' + require('node:crypto').randomBytes(32).toString('hex'))"` (formato
@@ -109,6 +116,52 @@ Dos avisos importantes:
   3. Corré `migrar.yml` con `aplicar`: instala esa clave en la base de esa rama. Para rotarla, se genera una con otro `kid`
      (`2:…`) y se repite; la anterior queda instalada hasta que se la retire.
 
+### B.4 bis Cargar de una vez las variables que se generan solas (workflow, sin terminal)
+
+El workflow **Cargar entorno (preview y producción)** genera al azar y carga en Vercel (como **sensibles**, solo en el entorno
+elegido) las variables que no dependen de vos: `PEDERNAL_SECRETO_INVITACIONES`, `PEDERNAL_AUTH_SECRETO_EMPRESA`, `CRON_SECRET`,
+`PEDERNAL_CLAVE_CERTIFICADOS` y `PEDERNAL_CLAVE_CONTEXTO`. No muestra ningún valor: ni en el registro, ni en el informe, ni a vos.
+
+- **Lo que cargás UNA vez** (Settings → Environments → cada Environment → Secrets): `PEDERNAL_VERCEL_TOKEN`, un token de Vercel con
+  alcance al equipo `alepozod` y vencimiento corto. `PEDERNAL_DB_DUENO_DIRECTA` ya lo cargaste en B.1. El proyecto y el equipo de
+  Vercel no son secretos y están en el código: no hay variables que cargar.
+- **Cómo se corre**: Actions → Cargar entorno (preview y producción) → Run workflow (siempre desde `main`). Elegís el ambiente y
+  escribís `CARGAR PREVIEW` o `CARGAR PRODUCCION`. En producción te llega el pedido de aprobación, igual que en `migrar.yml`.
+  La casilla opcional «dar LOGIN a los roles» **cambia y BORRA cosas**: hace antes lo de B.4 (`--preparar-roles
+--con-autenticacion --vercel`) sin mostrar contraseñas, y eso (1) da LOGIN a los roles con contraseñas **nuevas**, (2) **borra**
+  de Vercel, en ese entorno, `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, todo `POSTGRES_*`, todo `BETTER_AUTH_*`, `AUTH_SECRET`,
+  `AUTH_URL` y `PEDERNAL_DB_MIGRACIONES` (si una vale también para el otro entorno, solo se le quita este) y (3) el comando
+  **aplica las migraciones pendientes**, sin la rama de respaldo de `migrar.yml`. Por eso el workflow se corta antes si hay
+  migraciones pendientes (corré primero `migrar.yml`); una que apareciera justo en el medio se aplicaría igual. Si una carga de
+  contraseñas falla a la mitad, las que no llegaron a Vercel **no se muestran**: hay que repetir con `--rotar` desde tu terminal.
+  El workflow comparte el grupo de concurrencia `migrar-<ambiente>` con `migrar.yml`: no corren a la vez para el mismo entorno
+  (GitHub guarda una sola corrida en espera por grupo).
+- **Nunca sobrescribe.** Si una variable ya existe en Vercel para ese entorno (se mira por nombre), la saltea y dice «ya existía».
+  Repetir el workflow es seguro. `PEDERNAL_CLAVE_CERTIFICADOS` **no se puede rotar** (cambiarla deja ilegibles los certificados
+  cargados) y, como nadie la ve, **no queda copia** (decisión del dueño, 2026-11-04): si se borra de Vercel, se repite el trámite
+  del certificado.
+- **La clave de contexto** se instala primero en la base de esa rama y recién después se carga en Vercel; si la instalación falla,
+  no se carga. Si la base **ya tiene** una clave y Vercel no tiene `PEDERNAL_CLAVE_CONTEXTO`, el workflow **se detiene sin cambiar
+  nada**: no la copia a Vercel ni genera otra (reemplazarla dejaría a la aplicación sin poder firmar). Lo decidís vos (cargar a mano la que tengas guardada, o
+  rotar con otro `kid`, como en B.4). Sin `PEDERNAL_DB_DUENO_DIRECTA` en el Environment, esta clave queda para vos y las otras se cargan igual.
+  Si la clave quedó instalada en la base pero Vercel no la aceptó, el informe lo dice y la corrida siguiente se detiene por lo
+  mismo: también lo decidís vos.
+  Con este flujo el secreto `PEDERNAL_CLAVE_CONTEXTO` del Environment de GitHub (B.1) no hace falta: si lo tenés, borralo,
+  porque `migrar.yml` intentaría instalar ese valor con el mismo `kid 1` y fallaría.
+- **Lo que sigue siendo a mano** (el workflow solo dice si ya está o falta, por nombre): `PEDERNAL_RESEND_API_KEY`,
+  `PEDERNAL_CORREO_REMITENTE`, `PEDERNAL_NOMBRE_DE_MARCA`, `PEDERNAL_URL_BASE`, `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`.
+- **Lo que informa**: una lista de nombres con «creada» o «ya existía», las de arriba, y cuáles de «Lo que NO debe existir» (B.5)
+  están en el entorno. El flujo no borra nada de eso (la casilla de los roles sí, porque es lo que hace el comando de B.4). La
+  corrida termina en rojo mientras quede algo sin cargar o algo prohibido en el entorno.
+- **La protección real de los secretos es configuración de GitHub que el código no puede verificar.** Revisala en Settings →
+  Environments: **«Deployment branches: solo `main`» en AMBOS Environments** (`preview` y `produccion`) y **revisor obligatorio
+  (vos) en AMBOS** (decisión del dueño, 2026-11-04: `preview` también lleva revisor). Sin ese revisor, quien tenga permiso de
+  escritura en el repositorio y corra el workflow desde `main` lo dispararía sin aprobación, con el token de Vercel y la cadena
+  del dueño de la base de ese Environment. El token de Vercel es **de equipo** (alcance a `alepozod`): un token cargado en `preview` también puede escribir en Production; por eso conviene
+  vencimiento corto y revisar quién tiene acceso al repositorio.
+- **NO VERIFICADO**: que Vercel rechace (409) crear una variable que ya existe cuando no se pide `upsert`. El Vercel de las
+  pruebas lo hace; en el primer uso real, el informe lo va a decir si no.
+
 ### B.5 Variables de entorno de Vercel (solo nombres)
 
 Settings del proyecto `pedernal-erp` → Environment Variables. **Production** y **Preview** con valores distintos. La lista
@@ -116,8 +169,9 @@ sale de `src/composicion/entorno.ts` (la verificó W6; coincide con la del plan 
 
 | Nombre                          | Para qué                                                                                        | Quién la carga                                  |
 | ------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `PEDERNAL_CLAVE_CONTEXTO`       | Firmar el contexto; la misma clave se instala en `contexto_clave` de esa rama                   | Vos (B.4, a mano)                               |
-| `PEDERNAL_SECRETO_INVITACIONES` | Firmar los enlaces de invitación                                                                | `--secretos` o a mano                           |
+| `PEDERNAL_CLAVE_CONTEXTO`       | Firmar el contexto; la misma clave se instala en `contexto_clave` de esa rama                   | Vos (B.4, a mano) o workflow (B.4 bis)          |
+| `PEDERNAL_SECRETO_INVITACIONES` | Firmar los enlaces de invitación                                                                | Workflow (B.4 bis), `--secretos` o a mano       |
+| `PEDERNAL_CLAVE_CERTIFICADOS`   | Cifrar claves de ARCA (`<kid>:<64 hex>`, distinta de la de contexto). Solo la pide lo fiscal    | Vos (B.4, a mano) o workflow (B.4 bis)          |
 | `PEDERNAL_RESEND_API_KEY`       | Mandar mails (Resend)                                                                           | Vos                                             |
 | `PEDERNAL_CORREO_REMITENTE`     | Remitente de los mails                                                                          | Vos                                             |
 | `PEDERNAL_NOMBRE_DE_MARCA`      | Nombre que firma el mail hasta que existan los mails por marca                                  | Vos                                             |
@@ -126,17 +180,41 @@ sale de `src/composicion/entorno.ts` (la verificó W6; coincide con la del plan 
 | `PEDERNAL_DB_TRABAJOS`          | Cadena con pooler del rol `pedernal_trabajos`                                                   | `--preparar-roles --vercel`                     |
 | `PEDERNAL_DB_PUBLICO`           | Cadena con pooler del rol `pedernal_publico` (resolver la marca por host)                       | `--preparar-roles --vercel`                     |
 | `PEDERNAL_DB_AUTENTICACION`     | Cadena con pooler del rol `pedernal_autenticacion`                                              | `--preparar-roles --con-autenticacion --vercel` |
-| `PEDERNAL_AUTH_SECRETO_EMPRESA` | Secreto de la sesión de la app de empresa (texto largo al azar)                                 | Vos                                             |
+| `PEDERNAL_AUTH_SECRETO_EMPRESA` | Secreto de la sesión de la app de empresa (texto largo al azar)                                 | Workflow (B.4 bis) o vos                        |
 | `GOOGLE_CLIENT_ID`              | Cliente OAuth de Google (uno para Production y otro para Preview)                               | Vos                                             |
 | `GOOGLE_CLIENT_SECRET`          | Ídem                                                                                            | Vos                                             |
-| `CRON_SECRET`                   | Autoriza la llamada del cron de Vercel. **Al menos 16 caracteres y 10 distintos**, sin espacios | Vos (al azar, largo)                            |
+| `CRON_SECRET`                   | Autoriza la llamada del cron de Vercel. **Al menos 16 caracteres y 10 distintos**, sin espacios | Workflow (B.4 bis) o vos (al azar, largo)       |
 
 Las de sistema (`VERCEL_ENV`, `VERCEL_GIT_COMMIT_SHA`) las pone Vercel; no las cargues.
 
 Diferencias con el plan, para que no te sorprendan: (1) `CRON_SECRET` no estaba declarada en el código; W6 la sumó a
 `entorno.ts` con su validación (≥ 16 caracteres) y su prueba. (2) `PEDERNAL_CLAVE_CERTIFICADOS` (cifrado de las claves de
-ARCA) la declara la facturación fiscal, no esta lista; se carga cuando ese tramo llegue. (3) La cadena de `pedernal_captacion`
+ARCA y de sus tickets) la declara el cableado fiscal. Solo hace falta cuando se use la facturación (el módulo es «disponible»
+desde 2026-11-04, pero no nace activo: lo activa la plataforma empresa por empresa): sin ella la web arranca y lo fiscal falla cerrado. Se genera con SU PROPIO comando (abajo), una por entorno, y **no
+puede ser la de contexto** (ni tener sus mismos bytes): la composición la rechaza. (3) La cadena de `pedernal_captacion`
 (`PEDERNAL_DB_CAPTACION`) la crea el comando con un nombre provisorio pero la aplicación todavía no la usa: no la cargues.
+
+#### La clave de los certificados (`PEDERNAL_CLAVE_CERTIFICADOS`)
+
+- **Decisión del dueño, 2026-11-04: se genera por el workflow de B.4 bis, sin copia.** Nadie la ve, así que no hay copia posible
+  (ver «Si la perdés»). Si alguna vez se prefiere generarla a mano, con su propio comando, distinto del de la de contexto, y
+  cargarla solo en Vercel (el entorno que corresponda) guardando la copia:
+  `node -e "console.log('c1:' + require('node:crypto').randomBytes(32).toString('hex'))"` (formato `<kid>:<64 dígitos
+hexadecimales>`; el `kid` es un texto corto de letras o números). Es un secreto: no lo pegues en ningún chat ni archivo.
+- **No puede ser la de contexto.** `PEDERNAL_CLAVE_CONTEXTO` se instala en la base (`contexto_clave`): si la de los
+  certificados fuera la misma, quien lea esa tabla descifraría las claves de ARCA y el cifrado en reposo no serviría. La
+  composición rechaza una clave con los mismos bytes que la de contexto, y también una con muy pocos caracteres distintos
+  (la misma exigencia que `CRON_SECRET`: 10), como `000…0`.
+- **Todavía NO se puede rotar.** La composición pasa solo la clave activa, sin claves anteriores: cambiar el valor (o el
+  `kid`) deja ilegibles los certificados y los tickets ya guardados, y hay que volver a cargarlos.
+- **Si la perdés, perdés los certificados cargados.** No hay forma de recuperarlos sin la clave: si la generaste a mano,
+  guardá una copia en tu gestor de secretos antes de cargar el primer certificado. Con el workflow no hay copia (decisión del
+  dueño, 2026-11-04): si se borra de Vercel se repite el trámite del certificado. Rotarla (aceptar claves anteriores para descifrar) es una tarea
+  pendiente.
+- **El despacho inmediato (`after()`) espera el trabajo completo** (una autorización de ARCA puede tardar hasta 25 s, más
+  el login de WSAA de hasta 20 s). Para que la plataforma no lo corte antes, la página que aloje las acciones de facturación
+  tiene que declarar `maxDuration` (Next: «se fija a nivel de página para todas las Server Actions de esa página»). Hoy no
+  hay ninguna pantalla que las use, así que no se declaró ninguno, y el valor depende del plan de Vercel: ver G.11.
 
 #### Lo que NO debe existir (ni en Production ni en Preview)
 
@@ -247,19 +325,18 @@ Orden, cuando todo lo anterior ande:
 3. `ejecutar-caso-de-plataforma`: crear el plan por defecto y publicarlo; confirmar la versión 1 de la marca Pedernal; registrar
    `pedernal.com.ar` (landing) y `app.pedernal.com.ar` (app, canónico).
 4. Abrir `https://app.pedernal.com.ar`: tiene que mostrar el ingreso con la marca, y un host inventado la página neutra.
-5. `altaDeEmpresa` con los datos del cliente → sale el mail al gerente; `activarModuloDeEmpresa` con `facturacion`.
+5. `altaDeEmpresa` con los datos del cliente → sale el mail al gerente; `activarModuloDeEmpresa` con `facturacion` (el plan de la empresa tiene que incluirla, si no da `MODULO_FUERA_DEL_PLAN`).
 6. El gerente sigue el camino de la §1.3 del plan.
 
 Esos scripts se corren en **tu computadora**, no en un workflow de GitHub: los datos del cliente (CUIT, razón social, email)
 no tienen que quedar en el registro de una ejecución.
 
-**Estado hoy (honesto):** los pasos 2, 3 y 5 **no se pueden ejecutar todavía**. Los scripts no existen porque faltan sus
-cimientos: el caso de uso del primer administrador (H5 P7) y los casos de plataforma de marca, plan y alta de empresa (M5/M6)
-no están en el código; solo existen sus dominios y su persistencia. Además, los scripts propuestos usaban `tsx`, que **no está
-instalado** ni fue aprobado como dependencia: el plan lo condicionaba a que `node archivo.ts` fallara, y falla (la
-mayoría del código importa sin extensión `.ts`, que Node no resuelve). Para el script de la clave de contexto no hizo falta
-(se agregó la extensión `.ts` a dos importaciones, igual que ya se hizo con las migraciones); para los otros dos, cuando
-existan sus casos de uso, hay que decidir entre aprobar `tsx` o repetir ese arreglo en toda la cadena de importaciones.
+**Estado hoy (honesto, 2026-10-22):** los scripts del paso 2 y 3 **existen** y se corren con
+`npm run plataforma:primer-admin` y `npm run plataforma:caso` (con `node --import ./scripts/cargador-de-ts.mjs`; no hace
+falta `tsx`). Los casos de uso de marca, plan y alta de empresa (M5/M6) están en `main`, y la resolución de hosts ya lee la
+base. Lo que **sigue sin poder ejecutarse** es todo lo que depende de tus pasos de la sección B (rama `preview`, migraciones
+aplicadas por `migrar.yml`, variables y dominios) y, para el paso 6, las pantallas del facturador: el backend fiscal
+(emisión, certificados, adaptador de ARCA, casos de uso del gerente) está en `main` pero no está cableado a la web.
 
 ---
 
@@ -289,3 +366,6 @@ existan sus casos de uso, hay que decidir entre aprobar `tsx` o repetir ese arre
    no, la clave del límite de intentos de ingreso es una sola para todos y un poco de tráfico bloquea a todos: no se
    enciende el despliegue hasta resolverlo (plan: `x-real-ip` o `x-forwarded-for`).
 10. Que el ingreso con Google sin JavaScript no lo bloquee Chrome por `form-action 'self'` (chequeo 15).
+11. El `maxDuration` de la página que aloje las acciones de facturación (el despacho con `after()` espera hasta que ARCA
+    responda: autorizar tiene un tiempo límite de 25 s, WSAA de 20 s y WSFE de 15 s). Qué valor admite el plan de Vercel
+    no se pudo verificar: queda como pregunta pendiente, con 60 (como el cron) como opción recomendada si el plan lo admite.

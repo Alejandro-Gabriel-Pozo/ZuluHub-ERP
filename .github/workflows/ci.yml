@@ -76,6 +76,17 @@ jobs:
           else
             echo "::notice::La rama base no trae no-debilitar.cjs: no hay versión anterior que vigile."
           fi
+      # La deuda técnica (§10): todo marcador está registrado, las excepciones valen ≤ 60 días y no pasan del tope, y,
+      # con la rama base extraída en `base/`, la deuda no crece y un archivo tocado no conserva la que ya tenía. Sin
+      # `if`: en un push a `main` no hay `base/` y corre la forma sin `--base`. Es la misma versión nueva del control;
+      # la vigilancia de arriba (la versión anterior) cuida que este paso, el registro y el tope no se aflojen.
+      - name: Deuda técnica (no crece y se paga al tocar el archivo)
+        run: |
+          if [ -d base ]; then
+            node arquitectura/deuda/deuda.cjs --base=base
+          else
+            node arquitectura/deuda/deuda.cjs
+          fi
 
   pruebas:
     name: Pruebas (con Postgres real)

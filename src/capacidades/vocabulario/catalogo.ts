@@ -17,6 +17,12 @@
  *    caracteres de control; los marcadores van entre llaves (`{limite}`) y se insertan como texto.
  */
 
+import { TEXTOS_DE_FISCAL } from "./catalogo-fiscal";
+import { TEXTOS_DE_FISCAL_CONFIGURACION } from "./catalogo-fiscal-configuracion";
+import { TEXTOS_DE_FISCAL_EMITIR } from "./catalogo-fiscal-emitir";
+import { TEXTOS_DE_FISCAL_IMPRIMIR } from "./catalogo-fiscal-imprimir";
+import { TEXTOS_DE_FISCAL_PANTALLAS } from "./catalogo-fiscal-pantallas";
+
 /** El largo máximo de un texto que no declara otro (la base admite hasta 200 en cualquier caso). */
 export const LARGO_MAXIMO_DE_TEXTO = 80;
 
@@ -110,35 +116,35 @@ export const CATALOGO_DE_TEXTOS = {
     marcadores: ["referencia"],
   },
   // Carta pública (C-2): lo que lee el comensal. La interfaz recibe estos textos ya resueltos.
-  "carta.letra.etiqueta": { porDefecto: "Letra" },
-  "carta.letra.grupo": { porDefecto: "Tamaño de la letra" },
-  "carta.letra.normal": { porDefecto: "Letra normal" },
-  "carta.letra.grande": { porDefecto: "Letra grande" },
-  "carta.letra.muy_grande": { porDefecto: "Letra muy grande" },
-  "carta.buscar.etiqueta": { porDefecto: "Buscar en la carta" },
-  "carta.buscar.un_resultado": { porDefecto: "1 resultado" },
-  "carta.buscar.resultados": { porDefecto: "{cantidad} resultados", marcadores: ["cantidad"] },
-  "carta.buscar.sin_resultados": {
+  "vidriera.letra.etiqueta": { porDefecto: "Letra" },
+  "vidriera.letra.grupo": { porDefecto: "Tamaño de la letra" },
+  "vidriera.letra.normal": { porDefecto: "Letra normal" },
+  "vidriera.letra.grande": { porDefecto: "Letra grande" },
+  "vidriera.letra.muy_grande": { porDefecto: "Letra muy grande" },
+  "vidriera.buscar.etiqueta": { porDefecto: "Buscar en la carta" },
+  "vidriera.buscar.un_resultado": { porDefecto: "1 resultado" },
+  "vidriera.buscar.resultados": { porDefecto: "{cantidad} resultados", marcadores: ["cantidad"] },
+  "vidriera.buscar.sin_resultados": {
     porDefecto: "No hay nada que diga «{texto}».",
     largoMaximo: 120,
     marcadores: ["texto"],
   },
-  "carta.buscar.limpiar": { porDefecto: "Limpiar búsqueda" },
-  "carta.indice.titulo": { porDefecto: "Secciones" },
-  "carta.indice.ir": { porDefecto: "Ir al índice de secciones" },
-  "carta.producto.agotado": { porDefecto: "Agotado" },
-  "carta.producto.precios": { porDefecto: "Precios" },
-  "carta.producto.cerrar": { porDefecto: "Cerrar" },
-  "carta.producto.volver": { porDefecto: "Volver a la carta" },
-  "carta.producto.ver_toda": { porDefecto: "Ver toda la carta" },
-  "carta.producto.compartir": { porDefecto: "Compartir" },
-  "carta.producto.enlace_copiado": { porDefecto: "Enlace copiado" },
-  "carta.producto.enlace_no_copiado": {
+  "vidriera.buscar.limpiar": { porDefecto: "Limpiar búsqueda" },
+  "vidriera.indice.titulo": { porDefecto: "Secciones" },
+  "vidriera.indice.ir": { porDefecto: "Ir al índice de secciones" },
+  "vidriera.producto.agotado": { porDefecto: "Agotado" },
+  "vidriera.producto.precios": { porDefecto: "Precios" },
+  "vidriera.producto.cerrar": { porDefecto: "Cerrar" },
+  "vidriera.producto.volver": { porDefecto: "Volver a la carta" },
+  "vidriera.producto.ver_toda": { porDefecto: "Ver toda la carta" },
+  "vidriera.producto.compartir": { porDefecto: "Compartir" },
+  "vidriera.producto.enlace_copiado": { porDefecto: "Enlace copiado" },
+  "vidriera.producto.enlace_no_copiado": {
     porDefecto: "No se pudo copiar el enlace. Probá de nuevo.",
     largoMaximo: 120,
   },
-  "carta.producto.no_esta": { porDefecto: "Este producto ya no está en la carta." },
-  "carta.pie.iva": { porDefecto: "Los precios incluyen IVA." },
+  "vidriera.producto.no_esta": { porDefecto: "Este producto ya no está en la carta." },
+  "vidriera.pie.iva": { porDefecto: "Los precios incluyen IVA." },
   // Sesión y empresa (W5): ingreso, invitación, elegir empresa, shell y estados. La interfaz recibe estos
   // textos ya resueltos; cada código de error público (`experiencia/respuesta.ts`) tiene el suyo.
   "ingreso.titulo": { porDefecto: "Ingresá a {marca}", marcadores: ["marca"] },
@@ -311,6 +317,12 @@ export const CATALOGO_DE_TEXTOS = {
     porDefecto: "La empresa no está operando en este momento.",
     largoMaximo: 160,
   },
+  // Facturador (H7 facturación): sus errores de negocio y lo que informa ARCA, traducido (`catalogo-fiscal.ts`).
+  ...TEXTOS_DE_FISCAL,
+  ...TEXTOS_DE_FISCAL_PANTALLAS,
+  ...TEXTOS_DE_FISCAL_CONFIGURACION,
+  ...TEXTOS_DE_FISCAL_EMITIR,
+  ...TEXTOS_DE_FISCAL_IMPRIMIR,
 } as const satisfies Record<string, DefinicionDeTexto>;
 
 export type ClaveDeTexto = keyof typeof CATALOGO_DE_TEXTOS;

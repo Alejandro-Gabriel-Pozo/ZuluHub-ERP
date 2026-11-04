@@ -48,6 +48,7 @@ export type Informe = {
       exclusionPorClase: string | null;
       analizadasPorDetectores: number;
       binariasOmitidas: number;
+      noAnalizables: number;
       sinUnidad: number;
       listaDeRutas: string[];
     }
@@ -77,6 +78,7 @@ export type Entradas = {
   contratos: unknown;
   excepciones: unknown;
   exclusiones: unknown;
+  evasiones?: unknown;
   ahora?: Date;
   niveles?: { nombre: string; reglas: { clase: string; glob: string }[] }[];
   clasesEsperadas?: string[];
@@ -109,7 +111,7 @@ export const { ejecutar, cargarDelRepo, formatearFalla } =
   require("../../arquitectura/contratos/guardian.cjs") as {
     ejecutar: (entradas: Entradas) => Resultado;
     cargarDelRepo: (raiz: string) => Required<
-      Pick<Entradas, "rutas" | "leer" | "contratos" | "excepciones" | "exclusiones">
+      Pick<Entradas, "rutas" | "leer" | "contratos" | "excepciones" | "exclusiones" | "evasiones">
     > & {
       previas: { fallas: unknown[]; avisos: unknown[] };
     };
@@ -436,6 +438,8 @@ export function repoSanoEnDisco(): string {
     }
   }
   for (const [ruta, texto] of Object.entries(BASE)) escribirEn(carpeta, ruta, texto);
+  // El catálogo de la batería de evasión del repositorio sano está vacío: no hereda los avisos del real.
+  escribirEn(carpeta, "arquitectura/contratos/evasiones.json", "[]\n");
   const hoy = new Date();
   const dia = (desplazamiento: number): string =>
     new Date(hoy.getTime() + desplazamiento * 86_400_000).toISOString().slice(0, 10);

@@ -273,10 +273,10 @@ describe("la auditoría de un plan", () => {
 
   it("las perillas van como lista ordenada por nombre, nunca como un objeto cuyos campos son los nombres", () => {
     const lista = listaDePerillas({
-      carta_por_qr: { tipo: "INTERRUPTOR", encendida: false },
+      vidriera_por_qr: { tipo: "INTERRUPTOR", encendida: false },
       cajas_por_sucursal: { tipo: "LIMITE", limite: 2 },
     });
-    expect(lista.map((p) => p["perilla"])).toEqual(["cajas_por_sucursal", "carta_por_qr"]);
+    expect(lista.map((p) => p["perilla"])).toEqual(["cajas_por_sucursal", "vidriera_por_qr"]);
     expect(listaDePerillas({})).toEqual([]);
   });
 

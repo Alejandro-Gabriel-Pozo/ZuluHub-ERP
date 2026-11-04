@@ -113,7 +113,8 @@ describe("la nota hereda la letra del asociado y es positiva", () => {
             asociado,
             {
               clase,
-              motivo: null,
+              // La nota de crédito exige motivo (D-17); acá no se prueba el motivo.
+              motivo: "Devolución",
               modoDePrecio,
               concepto: "PRODUCTOS",
               servicio: null,
@@ -137,6 +138,42 @@ describe("la nota hereda la letra del asociado y es positiva", () => {
           expect(r.valor.neto.unidades >= 0n && r.valor.iva.unidades >= 0n).toBe(true);
         },
       ),
+    );
+  });
+});
+
+describe("el bloque de transparencia fiscal de la B cuadra con el total (RG 5614)", () => {
+  it("IVA contenido + neto + exento + no gravado = total, en centavos exactos, y el bloque es el de los totales", () => {
+    fc.assert(
+      fc.property(renglones, fc.constantFrom(...MODOS_DE_PRECIO), (rs, modoDePrecio) => {
+        const contenido = facturaOSinTotal(consumidorFinal, rs, { modoDePrecio });
+        if (contenido === null) return;
+        const m = modeloDeImpresion(imprimibleDe(contenido, { numero: 1n }), {
+          nombreDeFantasia: null,
+          logoUrl: null,
+          colorPrincipal: null,
+        });
+        expect(m.ok).toBe(true);
+        if (!m.ok) return;
+        const { transparenciaFiscal, totales } = m.valor;
+        expect(totales.letra).toBe("B");
+        expect(transparenciaFiscal).toBeDefined();
+        if (transparenciaFiscal === undefined || totales.letra !== "B") return;
+        const i = importesParaArca(contenido);
+        const iva = transparenciaFiscal.ivaContenido.porAlicuota.reduce(
+          (suma, a) => sumar(suma, importeDesdeTexto(ARS, a.iva)),
+          importeDesdeTexto(ARS, "0.00"),
+        );
+        const alicuotas = transparenciaFiscal.ivaContenido.porAlicuota.map((a) => a.alicuota);
+        expect(new Set(alicuotas).size).toBe(alicuotas.length);
+        expect(transparenciaFiscal.ivaContenido.porAlicuota).toEqual(totales.ivaContenido);
+        expect(iva.unidades).toBe(i.iva.unidades);
+        expect(iva.unidades + i.neto.unidades + i.exento.unidades + i.noGravado.unidades).toBe(
+          importeDesdeTexto(ARS, totales.total).unidades,
+        );
+        expect(importeDesdeTexto(ARS, totales.total).unidades).toBe(contenido.total.unidades);
+        expect(transparenciaFiscal.otrosImpuestosNacionalesIndirectos.valor).toBe("0.00");
+      }),
     );
   });
 });

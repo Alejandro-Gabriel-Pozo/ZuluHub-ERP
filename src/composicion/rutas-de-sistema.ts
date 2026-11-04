@@ -54,6 +54,11 @@ export type DependenciasDelCron = Readonly<{
   secreto: () => string;
   procesador: () => ProcesadorDeTrabajos;
   barrido: () => BarridoDeAutenticacion;
+  /**
+   * Encola la reconciliación de fiscal de cada empresa que factura (`fiscal.reconciliar`, §B.4.7). Va ANTES del despacho,
+   * para que esta misma pasada la tome. Si falta, no se encola nada (la facturación no está cableada).
+   */
+  reconciliaciones?: (ahora: Date) => Promise<unknown>;
   ahora: () => Date;
   /** Registro del servidor: recibe el detalle de un fallo. Nunca sale en una respuesta ni lleva datos personales. */
   registrar: (detalle: string) => void;
@@ -68,6 +73,7 @@ function sinAutorizar(): Response {
 
 /**
  * Qué hace el cron de Vercel (una vez por día mientras sea Hobby). Autorizado con `CRON_SECRET`:
+ *  0. Encola la reconciliación de fiscal de cada empresa que factura (si está cableada), antes del despacho.
  *  1. El despacho de la cola de trabajos: toma y ejecuta los pendientes o vencidos (reintentos incluidos).
  *     Dos llamadas a la vez no duplican nada: el procesador toma cada trabajo con un `UPDATE` condicionado,
  *     y quien pierde la carrera no ejecuta (ADR-007).
@@ -107,6 +113,10 @@ export async function atenderCron(
       return null;
     }
   };
+  // Primero encolar: el despacho de esta pasada ya toma lo recién encolado. Una falla acá no frena lo demás.
+  const encolar = dependencias.reconciliaciones;
+  const reconciliaciones =
+    encolar === undefined ? null : await tarea("reconciliaciones", () => encolar(ahora));
   const [despacho, barrido] = await Promise.all([
     tarea("despacho", () =>
       dependencias
@@ -118,10 +128,15 @@ export async function atenderCron(
   if (fallas.length > 0) {
     return respuestaDeFallaInterna(`[cron] ${fallas.join(" | ")}`, dependencias.registrar, azar);
   }
-  return new Response(JSON.stringify({ ok: true, despacho, barrido }), {
-    status: 200,
-    headers: JSON_SIN_CACHE,
-  });
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      despacho,
+      barrido,
+      ...(dependencias.reconciliaciones === undefined ? {} : { reconciliaciones }),
+    }),
+    { status: 200, headers: JSON_SIN_CACHE },
+  );
 }
 
 // ---------------------------------------------------------------------------------------------------------

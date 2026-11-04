@@ -152,6 +152,11 @@ export const COLUMNAS_DE_FISCAL = {
     "creado_en",
     "actualizado_en",
     "version",
+    "sucursal_id",
+    // 0019: el contacto de la sucursal al emitir; lo copia la base, la aplicación no lo manda.
+    "sucursal_telefono",
+    "sucursal_correo",
+    "sucursal_web",
   ],
   comprobante_linea: [
     "empresa_id",
@@ -393,6 +398,7 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   comprobante_id_empresa_emisor_uk: "NO_TRADUCIDA",
   comprobante_emisor_fkey: "EMISOR_NO_ENCONTRADO",
   comprobante_pv_fkey: "PUNTO_DE_VENTA_NO_ENCONTRADO",
+  comprobante_sucursal_fkey: "NO_TRADUCIDA", // la copia el disparador de alta del punto de venta, que ya apunta a una sucursal de la empresa
   comprobante_datos_fiscales_fkey: "DATOS_FISCALES_NO_ENCONTRADOS",
   comprobante_asociado_fkey: "COMPROBANTE_ASOCIADO_NO_ENCONTRADO",
   comprobante_identidad_uk: "COMPROBANTE_YA_EXISTE", // el alta del repositorio lo absorbe y devuelve el existente
@@ -402,6 +408,8 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   comprobante_alta_invalida: "COMPROBANTE_ALTA_INVALIDA", // lo lanza un disparador
   comprobante_asociado_invalido: "COMPROBANTE_ASOCIADO_INVALIDO", // lo lanza un disparador
   comprobante_inmutable: "COMPROBANTE_INMUTABLE", // lo lanza un disparador
+  comprobante_sin_sucursal: "COMPROBANTE_ALTA_INVALIDA", // lo lanza un disparador (diferido): el alta siempre copia la del punto de venta
+  comprobante_sucursal_cerrada: "SUCURSAL_CERRADA", // lo lanza un disparador (0017, D-50): el punto de venta es de una sucursal cerrada
   comprobante_transicion_invalida: "COMPROBANTE_TRANSICION_INVALIDA", // lo lanza un disparador
   comprobante_sin_reserva: "COMPROBANTE_SIN_RESERVA", // lo lanza un disparador (diferido)
   comprobante_serie_sin_reserva: "SERIE_CON_COMPROBANTE_EN_VUELO", // lo lanza un disparador (diferido)
@@ -446,6 +454,7 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   certificado_cifrado_ck: "NO_TRADUCIDA",
   certificado_cargado_ck: "NO_TRADUCIDA", // el dominio de los certificados decide antes (cargado <=> con huella)
   certificado_vigente_uk: "CERTIFICADO_VIGENTE_YA_EXISTE", // el repositorio reemplaza al vigente antes de activar
+  certificado_pendiente_uk: "NO_TRADUCIDA", // 0018 (D-92): el caso de uso descarta al pendiente anterior antes de crear el nuevo; si dos se cruzan, el perdedor sale como `Unicidad` tipada (pregunta pendiente: ningún error de negocio existente le corresponde)
   certificado_huella_uk: "CERTIFICADO_YA_CARGADO",
   certificado_transicion_invalida: "CERTIFICADO_TRANSICION_INVALIDA", // lo lanza un disparador
   certificado_inmutable: "CERTIFICADO_INMUTABLE", // lo lanza un disparador
@@ -472,9 +481,10 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
 } as const satisfies Readonly<Record<string, string>>;
 
 /**
- * Los 35 nombres que lanzan los disparadores con `ERRCODE '23514'`: 21 de 0006 (spec H7 §B.10) y 14 de 0009:
- * 3 sobre las tablas viejas (`punto_de_venta_ambiente_con_serie_en_curso`, `punto_de_venta_ambiente_no_vuelve`,
- * `serie_ambiente_invalido`) y 11 de la facturación (comprobante, renglones, desglose y certificados).
+ * Los 37 nombres que lanzan los disparadores con `ERRCODE '23514'`: 21 de 0006 (spec H7 §B.10), 14 de 0009 y 2 de la sucursal del
+ * comprobante (`comprobante_sin_sucursal` de 0016 y `comprobante_sucursal_cerrada` de 0017). Los de 0009: 3 sobre las tablas viejas
+ * (`punto_de_venta_ambiente_con_serie_en_curso`, `punto_de_venta_ambiente_no_vuelve`, `serie_ambiente_invalido`) y 11 de la
+ * facturación (comprobante, renglones, desglose y certificados).
  */
 export const RESTRICCIONES_DE_DISPARADORES_DE_FISCAL = [
   "empresa_cuit_es_emisor",
@@ -504,6 +514,8 @@ export const RESTRICCIONES_DE_DISPARADORES_DE_FISCAL = [
   "comprobante_alta_invalida",
   "comprobante_asociado_invalido",
   "comprobante_inmutable",
+  "comprobante_sin_sucursal",
+  "comprobante_sucursal_cerrada",
   "comprobante_transicion_invalida",
   "comprobante_sin_reserva",
   "comprobante_serie_sin_reserva",

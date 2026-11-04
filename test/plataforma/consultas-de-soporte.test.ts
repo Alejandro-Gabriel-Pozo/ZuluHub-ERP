@@ -704,10 +704,10 @@ describe("verConfiguracion", () => {
     if (!r.ok) return;
     expect(r.valor.modulos.map((m) => m.clave)).toEqual([
       "administracion",
-      "carta",
       "catalogo",
       "facturacion",
       "stock",
+      "vidriera",
     ]);
     const modulo = r.valor.modulos.find((m) => m.clave === "administracion");
     const facturacion = r.valor.modulos.find((m) => m.clave === "facturacion");
@@ -723,7 +723,7 @@ describe("verConfiguracion", () => {
     );
     expect(facturacion).toMatchObject({
       clave: "facturacion",
-      estado: "en_desarrollo",
+      estado: "disponible",
       obligatorio: false,
       requiere: ["administracion"],
       acciones: [

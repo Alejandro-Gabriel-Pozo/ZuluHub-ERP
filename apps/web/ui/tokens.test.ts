@@ -65,11 +65,11 @@ const ESTADOS = ["peligro", "exito", "aviso", "info"] as const;
 /** Solo los estados con un fondo SÓLIDO tienen un «sobre-» (texto encima): hoy, peligro (el botón «Anular»). */
 const ESTADOS_CON_FONDO_SOLIDO = ["peligro"] as const;
 
-const fuentesCss = import.meta.glob("./**/*.css", {
+const fuentesCss = import.meta.glob<string>("./**/*.css", {
   query: "?raw",
   import: "default",
   eager: true,
-}) as Record<string, string>;
+});
 const cssDeComponentes = Object.entries(fuentesCss).filter(
   ([archivo]) => archivo !== "./tokens.css",
 );
@@ -234,10 +234,10 @@ describe("tokens: ninguno sin consumidor", () => {
       "puente reservado: hoy sin consumidores; borrarlo cambiaría el contrato de los cuatro puentes de la marca",
   };
 
-  const fuentes = import.meta.glob(
+  const fuentes = import.meta.glob<string>(
     ["../**/*.{css,ts,tsx}", "!../.next/**", "!../**/*.test.{ts,tsx}"],
     { query: "?raw", import: "default", eager: true },
-  ) as Record<string, string>;
+  );
 
   const usos = (nombre: string): number =>
     Object.values(fuentes).reduce(

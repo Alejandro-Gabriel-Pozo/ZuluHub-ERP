@@ -194,7 +194,7 @@ describe("coincideConLoRegistrado", () => {
       autorizada,
       {
         clase: "NOTA_CREDITO",
-        motivo: null,
+        motivo: "Devolución",
         modoDePrecio: "IVA_INCLUIDO",
         concepto: "PRODUCTOS",
         servicio: null,

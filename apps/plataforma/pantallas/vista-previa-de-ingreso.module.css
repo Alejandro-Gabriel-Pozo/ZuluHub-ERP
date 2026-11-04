@@ -1,0 +1,158 @@
+.envoltura {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+/* Las variables `--vp-*` las pone el componente por CSSOM; sin ellas valen los colores neutros de la interfaz. */
+.vista {
+  --vp-radio: var(--radio-base);
+  --vp-borde: var(--borde-grosor-fuerte) solid var(--color-borde);
+  --vp-sombra: none;
+  --vp-espaciado-titulo: 0;
+  --vp-familia-titulos: var(--tipo-familia-titulos);
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--espacio-4);
+  padding: var(--espacio-4);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--vp-radio);
+  background: var(--vp-fondo, var(--color-fondo));
+  color: var(--color-texto);
+  overflow: hidden;
+}
+
+/* Esquinas: ninguna pasa del tope de la interfaz (sin píldoras). */
+.vista[data-esquinas="RECTA"] {
+  --vp-radio: 0;
+}
+
+.vista[data-esquinas="SUAVE"] {
+  --vp-radio: var(--radio-base);
+}
+
+.vista[data-esquinas="REDONDEADA"] {
+  --vp-radio: var(--radio-grande);
+}
+
+/* Títulos. */
+.vista[data-titulos="SERIF"] {
+  --vp-familia-titulos: Georgia, "Times New Roman", Times, serif;
+}
+
+/* Estilo. */
+.vista[data-estilo="CLARO_CON_BORDES"] {
+  --vp-borde: var(--borde-grosor-fuerte) solid var(--color-borde);
+  --vp-sombra: none;
+}
+
+.vista[data-estilo="MODERNO"] {
+  --vp-borde: 0 solid transparent;
+  --vp-sombra: var(--sombra-elevada);
+}
+
+.vista[data-estilo="CLASICO"] {
+  --vp-borde: var(--borde-grosor) solid var(--color-borde);
+  --vp-espaciado-titulo: 0.08em;
+}
+
+.vista[data-estilo="LUDICO"] {
+  --vp-borde: calc(var(--borde-grosor-fuerte) * 2) solid var(--color-borde);
+}
+
+/* Ingreso dividido o con imagen: el panel de la marca y el formulario, lado a lado cuando hay lugar. */
+@media (min-width: 30rem) {
+  .vista[data-ingreso="DIVIDIDO"],
+  .vista[data-ingreso="CON_IMAGEN"] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+  }
+}
+
+.panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 8rem;
+  padding: var(--espacio-4);
+  border: var(--vp-borde);
+  border-radius: var(--vp-radio);
+  background: var(--vp-primary, var(--brand-primary));
+  color: var(--vp-on-primary, var(--brand-on-primary));
+  box-shadow: var(--vp-sombra);
+  text-align: center;
+}
+
+.panelNombre {
+  font-family: var(--vp-familia-titulos);
+  font-size: var(--tipo-tamano-grande);
+  font-weight: var(--tipo-peso-fuerte);
+  letter-spacing: var(--vp-espaciado-titulo);
+  overflow-wrap: anywhere;
+}
+
+.imagen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  width: 100%;
+  min-height: 7rem;
+  padding: var(--espacio-3);
+  border: var(--borde-grosor-fuerte) dashed currentcolor;
+  border-radius: var(--vp-radio);
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  width: 100%;
+  max-width: 24rem;
+  margin: 0 auto;
+  padding: var(--espacio-4);
+  border: var(--vp-borde);
+  border-radius: var(--vp-radio);
+  background: var(--vp-superficie, var(--color-superficie));
+  box-shadow: var(--vp-sombra);
+}
+
+.nombre {
+  font-family: var(--vp-familia-titulos);
+  font-size: var(--tipo-tamano-grande);
+  font-weight: var(--tipo-peso-fuerte);
+  letter-spacing: var(--vp-espaciado-titulo);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.acento {
+  width: 3rem;
+  height: var(--espacio-1);
+  background: var(--vp-accent, var(--brand-accent));
+}
+
+.etiqueta {
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.campo {
+  padding: var(--espacio-2) var(--espacio-3);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--vp-radio);
+  background: var(--color-fondo);
+  color: var(--color-texto-suave);
+  overflow-wrap: anywhere;
+}
+
+.boton {
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--vp-borde);
+  border-radius: var(--vp-radio);
+  background: var(--vp-primary, var(--brand-primary));
+  color: var(--vp-on-primary, var(--brand-on-primary));
+  font-weight: var(--tipo-peso-fuerte);
+  text-align: center;
+}

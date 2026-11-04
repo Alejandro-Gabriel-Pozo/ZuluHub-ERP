@@ -21,6 +21,40 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
 - Todo cambio de datos: transacción, idempotencia, aislamiento por empresa, auditoría en la misma transacción.
 - Migraciones: SQL revisado; avisar antes de cualquier cambio destructivo.
 - No hacer commit de `.env`, claves ni cadenas de conexión.
+- **Todo nace cerrado (denegar por defecto).** Nada se habilita sin declararlo, autorizarlo y dejar rastro; ante un error o una duda el
+  sistema cierra (fail closed). Las capacidades son opt-in, con el mínimo privilegio y lista blanca: solo pasa lo declarado. Ejemplos: un
+  módulo «en desarrollo» no da permisos a nadie; sin sucursal elegida nunca se asume «todas»; la barra que no puede leer permisos no
+  muestra la entrada.
+- **Interfaz sobria (dueño, 2026-10-30).** No agregues textos, etiquetas, avisos ni ayudas visuales por iniciativa propia: usá primero textos ya
+  aprobados y, si el control comunica el motivo con su estado y un texto existente, no dupliques la indicación. Ante la ambigüedad, el cambio mínimo,
+  reversible y con menos texto, con el supuesto asentado y confirmación antes de ampliar. Una pantalla terminada no se modifica porque muestre una
+  acción que el servidor rechazará: mientras valide bien, devuelve el motivo al intentarla, sin replicar reglas del backend ni trabajo por cada
+  combinación de estado, sucursal y permiso; solo se toca ante confusión importante, acción peligrosa o mejora explícita de la entrega. Mensaje genérico
+  («esta acción no está permitida», «algo ocurrió») antes que uno por acción; lo específico solo si importa.
+
+## Cómo trabajan los agentes: no suponer y alcance cerrado
+
+Decisión del dueño, 2026-10-28. Previene que se construya algo que nadie pidió o que se decida en su nombre. Caso real: un proyecto
+anterior cargó funciones y campos de más porque la necesidad y el alcance no estaban definidos, y otro caso acá: la consola de
+plataforma tuvo en el menú «Dominios» y «Soporte» sin pantalla aprobada.
+
+- **No supongas.** Si el pedido es ambiguo o falta información, no decidas: devolvé la lista de **preguntas pendientes** al orquestador,
+  que se las traduce al dueño. Frená esa parte y seguí solo con lo que no depende de la respuesta.
+- **Se pregunta lo que cambia** qué se construye, cómo se comporta, los datos, el dinero, los permisos, los textos que ve el cliente o la
+  prioridad. Lo puramente interno (nombre de una función privada, en qué archivo va) sigue la convención que ya existe; si no hay
+  convención y la elección tiene consecuencias, se pregunta.
+- **Alcance cerrado.** Se hace solo lo pedido. Lo que no está en la lista no se hace: si ves algo más (mejora, riesgo, deuda), anotalo
+  en «Hallazgos aparte» sin tocarlo. Entre quedarse corto y agrandar, quedarse corto.
+- **Una regla, un lugar.** Antes de crear una función, una regla o una constante, buscá si ya tiene dueño (registro de contratos,
+  `primitivas/`, el `publico.ts` del módulo). Un mismo límite o cálculo no se escribe en dos lugares.
+- **Lo que el dueño no aprobó lleva su fuente.** Todo texto, rótulo, regla o dato que ve el cliente y que el dueño no aprobó se agrega
+  solo si tiene una **fuente verificable** y se cita junto a la clave o la regla (comentario del catálogo o del código) y en la descripción del
+  PR: archivo y línea o sección (documento, manual de ARCA, grabación, código) o el mensaje con su fecha, y quién lo decidió. «Lo aprobó el
+  backend» o «lo aprobó el orquestador» no es una fuente. Sin fuente verificable no se agrega: va a preguntas pendientes. Caso real: los
+  textos de tipos de documento de la pantalla del detalle del facturador figuraban como «aprobados por el backend»; la fuente real era la
+  grabación de ARCA (`test/utilidades/arca-grabaciones/corrida1/012-FEParamGetTiposDoc-respuesta-http200.xml`) y hubo que buscarla después.
+- Si no podés frenar porque el resto depende de la respuesta, elegí la opción más chica y reversible, marcala **SUPUESTO** en el informe
+  con cuánto cuesta revertirla, y no la entregues como definitiva: el orquestador la trata como pregunta pendiente.
 
 ## Justificar cada regla, abstracción y convención
 

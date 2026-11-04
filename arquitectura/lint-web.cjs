@@ -117,8 +117,8 @@ const bloques = [
 const MENSAJE_DE_LETRA_EN_PX =
   "Ningún tamaño de letra en px dentro de la plantilla de la carta (D10): se usa rem o em.";
 bloques.push({
-  name: "web/carta-sin-px-de-letra",
-  files: ["apps/web/ui/plantillas/carta/**/*.{ts,tsx}"],
+  name: "web/vidriera-sin-px-de-letra",
+  files: ["apps/web/ui/plantillas/vidriera/**/*.{ts,tsx}"],
   rules: {
     "no-restricted-syntax": [
       "error",

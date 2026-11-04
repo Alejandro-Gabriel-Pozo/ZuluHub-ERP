@@ -6,6 +6,7 @@ import type { AccionDePlataforma } from "../../puertos/auditoria-de-plataforma";
 import { exigirSinSecretos } from "../../puertos/sin-secretos";
 import { ACTOR_DE_SISTEMA } from "./contexto-firmado";
 import { esReintentable } from "./errores";
+import { esperaDelReintento } from "./espera-del-reintento";
 
 /**
  * Siembra al primer administrador de plataforma (H5 §B.2 y P7). Se corre con la cadena DIRECTA del dueño
@@ -45,24 +46,11 @@ const ORIGEN_DE_LA_CONSTANCIA = "script crear-primer-admin";
 const REINTENTOS = 12;
 const UNICIDAD_DEL_EMAIL = "admin_plataforma_email_uk";
 const BARRERA_DE_MEMBRESIAS = "admin_plataforma_sin_membresia";
-const ESPERA_BASE_EN_MS = 40;
-const ESPERA_TOPE_EN_MS = 1000;
 
 type FilaDeAdmin = { id: string; rol: string; activo: boolean };
 type Hechos = { tiene_membresia: boolean; tiene_invitacion_pendiente: boolean };
 
 const esperar = (ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms));
-
-/**
- * Cuánto esperar antes del reintento número `intento` (0 es el primero): espera exponencial con «jitter completo»
- * (un valor al azar entre 0 y el techo del intento). Bajo SERIALIZABLE los chequeos de existencia toman bloqueos de
- * lectura gruesos, así que varias siembras simultáneas (aunque sean de emails distintos) se cancelan entre sí al
- * confirmar (40001); una espera fija y corta las hace chocar otra vez en bloque y agota los reintentos. El techo
- * crece con cada intento y se corta en `ESPERA_TOPE_EN_MS`.
- */
-export function esperaDelReintento(intento: number, azar: () => number = Math.random): number {
-  return azar() * Math.min(ESPERA_TOPE_EN_MS, ESPERA_BASE_EN_MS * 2 ** intento);
-}
 
 /** Un choque de unicidad del email: lo causó una siembra simultánea del mismo email. Se repite y ve al ganador. */
 function esChoqueDelEmail(falla: unknown): boolean {

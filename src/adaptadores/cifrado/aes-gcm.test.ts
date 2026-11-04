@@ -194,6 +194,8 @@ describe("parsearClaveMaestra", () => {
       mensaje = (e as Error).message;
     }
     expect(mensaje).not.toBe("");
+    // Nombra la variable (el dueño sabe cuál corregir) y nunca su valor.
+    expect(mensaje).toContain("PEDERNAL_CLAVE_CERTIFICADOS");
     expect(mensaje).not.toContain(HEX);
     expect(mensaje).not.toContain(HEX.slice(0, 16));
   });

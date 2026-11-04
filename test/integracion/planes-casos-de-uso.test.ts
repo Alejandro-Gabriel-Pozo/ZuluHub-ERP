@@ -149,7 +149,7 @@ describe.skipIf(base === null)("planes de plataforma: casos de uso contra Postgr
           modulos: ["ventas", "caja", "ventas"],
           perillas: {
             cajas_por_sucursal: { tipo: "LIMITE", limite: 3 },
-            carta_por_qr: { tipo: "INTERRUPTOR", encendida: true },
+            vidriera_por_qr: { tipo: "INTERRUPTOR", encendida: true },
           },
         }),
       );
@@ -162,7 +162,7 @@ describe.skipIf(base === null)("planes de plataforma: casos de uso contra Postgr
         modulos: ["caja", "ventas"],
         perillas: {
           cajas_por_sucursal: { tipo: "LIMITE", limite: 3 },
-          carta_por_qr: { tipo: "INTERRUPTOR", encendida: true },
+          vidriera_por_qr: { tipo: "INTERRUPTOR", encendida: true },
         },
       });
       const [constancia] = await auditoriaDePlataformaDe(dueno, "version_de_plan", r.borradorId);
@@ -178,7 +178,7 @@ describe.skipIf(base === null)("planes de plataforma: casos de uso contra Postgr
           modulos: ["caja", "ventas"],
           perillas: [
             { perilla: "cajas_por_sucursal", tipo: "LIMITE", encendida: null, limite: 3 },
-            { perilla: "carta_por_qr", tipo: "INTERRUPTOR", encendida: true, limite: null },
+            { perilla: "vidriera_por_qr", tipo: "INTERRUPTOR", encendida: true, limite: null },
           ],
         },
       });
@@ -189,7 +189,7 @@ describe.skipIf(base === null)("planes de plataforma: casos de uso contra Postgr
       const primero = exito(
         await guardar(plan, null, {
           modulos: ["caja", "ventas"],
-          perillas: { carta_por_qr: { tipo: "INTERRUPTOR", encendida: true } },
+          perillas: { vidriera_por_qr: { tipo: "INTERRUPTOR", encendida: true } },
         }),
       );
       const segundo = exito(
@@ -226,7 +226,7 @@ describe.skipIf(base === null)("planes de plataforma: casos de uso contra Postgr
         await guardar(plan, null, {
           modulos: ["caja", "ventas"],
           perillas: {
-            carta_por_qr: { tipo: "INTERRUPTOR", encendida: true },
+            vidriera_por_qr: { tipo: "INTERRUPTOR", encendida: true },
             cajas_por_sucursal: { tipo: "LIMITE", limite: 2 },
           },
         }),
@@ -237,7 +237,7 @@ describe.skipIf(base === null)("planes de plataforma: casos de uso contra Postgr
           modulos: ["ventas", "caja"],
           perillas: {
             cajas_por_sucursal: { tipo: "LIMITE", limite: 2 },
-            carta_por_qr: { tipo: "INTERRUPTOR", encendida: true },
+            vidriera_por_qr: { tipo: "INTERRUPTOR", encendida: true },
           },
         }),
       );
@@ -304,8 +304,8 @@ describe.skipIf(base === null)("planes de plataforma: casos de uso contra Postgr
         ],
         [
           "valor del tipo equivocado",
-          { perillas: { carta_por_qr: { tipo: "LIMITE", limite: 1 } } },
-          { codigo: "VALOR_DE_PERILLA_INVALIDO", perilla: "carta_por_qr" },
+          { perillas: { vidriera_por_qr: { tipo: "LIMITE", limite: 1 } } },
+          { codigo: "VALOR_DE_PERILLA_INVALIDO", perilla: "vidriera_por_qr" },
         ],
         [
           "límite fuera de rango",

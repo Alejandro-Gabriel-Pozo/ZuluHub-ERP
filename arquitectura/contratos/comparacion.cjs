@@ -15,12 +15,17 @@
  * Límite general: los detectores son de texto (ver `detectores.cjs`); lo que ningún detector reconoce
  * no se ve, y cada contrato dice en `limites` cómo se cubre.
  */
+const { Buffer, isUtf8 } = require("node:buffer");
 const { huellaDeLinea } = require("./excepciones.cjs");
 const { unidadDe } = require("./declaraciones.cjs");
 const { ARCHIVO_DEL_REGISTRO } = require("./registro.cjs");
 const { enArchivo, enContrato, enJson } = require("./ubicacion.cjs");
 
-/** Archivos que no son texto: se clasifican pero un detector de texto no los lee. */
+/**
+ * Extensiones de archivos que son binarios: se clasifican pero un detector de texto no los lee. La extensión
+ * sola no alcanza: un «.png» que es texto UTF-8 sin bytes nulos se analiza como texto (un detector tiene que
+ * verlo), y un archivo que NO es texto y no tiene una de estas extensiones no se puede leer: falla.
+ */
 const EXTENSIONES_BINARIAS = /\.(png|jpe?g|webp|gif|ico|heic|woff2?|ttf|otf|pdf|zip)$/i;
 const LARGO_MAXIMO_DEL_TEXTO = 120;
 
@@ -73,6 +78,7 @@ function comparar(datos) {
   const fallas = [];
   const escaneadasPorClase = {};
   const omitidasPorClase = {};
+  const noAnalizablesPorClase = {};
   const usosFueraDeUnidades = [];
 
   // (e) La fuente de verdad tiene que existir.
@@ -127,23 +133,39 @@ function comparar(datos) {
     if (clasesExcluidas.has(clase) || rutasExcluidas.has(ruta)) continue;
     const pares = paresPorClase.get(clase) ?? [];
     if (pares.length === 0) continue;
-    if (EXTENSIONES_BINARIAS.test(ruta)) {
-      omitidasPorClase[clase] = (omitidasPorClase[clase] ?? 0) + 1;
-      continue;
-    }
-    const contenido = rutas.has(ruta) ? leer(ruta) : null;
-    if (contenido === null) {
+    // Lo que un detector tiene que leer y no se puede leer FALLA: nunca se omite en silencio.
+    const noAnalizable = (motivo, correccion) => {
+      noAnalizablesPorClase[clase] = (noAnalizablesPorClase[clase] ?? 0) + 1;
       fallas.push({
         codigo: "ruta-ilegible",
         archivo: ruta,
         contrato: null,
-        motivo: "No se pudo leer el archivo para analizarlo.",
-        correccion: "Verificá que el archivo exista en el árbol de trabajo.",
+        motivo,
+        correccion,
         donde: enArchivo(),
       });
+    };
+    const contenido = rutas.has(ruta) ? leer(ruta) : null;
+    if (contenido === null) {
+      noAnalizable(
+        "No se pudo leer el archivo para analizarlo.",
+        "Verificá que el archivo exista en el árbol de trabajo.",
+      );
       continue;
     }
-    const texto = contenido.toString();
+    const bytes = Buffer.from(contenido);
+    if (!isUtf8(bytes) || bytes.includes(0)) {
+      if (EXTENSIONES_BINARIAS.test(ruta)) {
+        omitidasPorClase[clase] = (omitidasPorClase[clase] ?? 0) + 1;
+      } else {
+        noAnalizable(
+          "El archivo no es texto UTF-8 (tiene bytes nulos o secuencias que no decodifican) y su extensión no es la de un binario conocido: ningún detector lo puede leer.",
+          "Guardalo como UTF-8 (un archivo en UTF-16 o en otra codificación no se analiza) o, si de verdad es un binario, usá una extensión de binario conocida.",
+        );
+      }
+      continue;
+    }
+    const texto = bytes.toString();
     const lineas = texto.split(/\r\n|\n/);
     escaneadasPorClase[clase] = (escaneadasPorClase[clase] ?? 0) + 1;
     const unidad = unidadDe(ruta);
@@ -260,6 +282,7 @@ function comparar(datos) {
     reglas,
     escaneadasPorClase,
     omitidasPorClase,
+    noAnalizablesPorClase,
     usosFueraDeUnidades,
   };
 }

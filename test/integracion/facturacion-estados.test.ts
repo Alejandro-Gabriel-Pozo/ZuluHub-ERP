@@ -393,7 +393,8 @@ describe.skipIf(base === null)(
         ];
         const contenido = columnas.rows.filter((c) => !DE_ESTADO.includes(c.column_name));
         // Una columna nueva tiene que decidir a propósito de qué lado está: este número cambia con ella.
-        expect(contenido).toHaveLength(42);
+        // 43 hasta 0018; 0019 suma el contacto congelado de la sucursal (teléfono, correo y web): contenido, inmutable.
+        expect(contenido).toHaveLength(46);
         const otroValor = (c: { column_name: string; data_type: string }): string => {
           const n = c.column_name;
           switch (c.data_type) {

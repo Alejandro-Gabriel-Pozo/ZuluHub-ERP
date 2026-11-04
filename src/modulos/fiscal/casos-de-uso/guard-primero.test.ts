@@ -118,6 +118,9 @@ const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
   }
 };
 
+/** La declaración de repetición no es lo que se mira acá, pero que no sobren claves sí. */
+const UNA_REPETICION: unknown = expect.any(Object);
+
 describe("P7: el guard va primero en cada caso de uso de numeración", () => {
   it("hay dos casos de uso con acción, y los dos de sistema no pasan por el guard", () => {
     expect([...NOMBRES].sort()).toEqual(["cerrarReservaDeNumero", "reservarNumeroDeComprobante"]);
@@ -130,7 +133,10 @@ describe("P7: el guard va primero en cada caso de uso de numeración", () => {
   });
 
   it.each(NOMBRES)("%s exige comprobantes.emitir", (nombre) => {
-    expect(DECLARACIONES[nombre]).toEqual({ accion: "comprobantes.emitir" });
+    expect(DECLARACIONES[nombre]).toEqual({
+      accion: "comprobantes.emitir",
+      repeticion: UNA_REPETICION,
+    });
   });
 
   it.each(NOMBRES)("%s: sin rol da SIN_PERMISO sin leer ni escribir nada más", async (nombre) => {
@@ -152,15 +158,19 @@ describe("P7: el guard va primero en cada caso de uso de numeración", () => {
   );
 
   it.each(NOMBRES)(
-    "%s con el catálogo REAL da MODULO_EN_DESARROLLO a todos: todavía no se puede emitir (H7, §D)",
+    "%s con el catálogo REAL (facturación disponible): sin activar en la empresa sigue cerrado, y activa los tres roles pasan",
     async (nombre) => {
       for (const rol of ROLES_DE_EMPRESA) {
-        const vigilada = vigilar(actor(rol));
-        expect(await LLAMADAS[nombre](casosCon(vigilada, REGLAS_DE_EMPRESA)), rol).toEqual({
+        const sinActivar = vigilar({ rol, modulosActivados: [], modulosHabilitados: [] });
+        expect(await LLAMADAS[nombre](casosCon(sinActivar, REGLAS_DE_EMPRESA)), rol).toEqual({
           ok: false,
-          error: "MODULO_EN_DESARROLLO",
+          error: "MODULO_NO_ACTIVO",
         });
-        expect(vigilada.accesos).toEqual(["autorizacion"]);
+        expect(sinActivar.accesos).toEqual(["autorizacion"]);
+        const activa = vigilar(actor(rol));
+        expect(await pasoElGuard(LLAMADAS[nombre](casosCon(activa, REGLAS_DE_EMPRESA))), rol).toBe(
+          true,
+        );
       }
     },
   );

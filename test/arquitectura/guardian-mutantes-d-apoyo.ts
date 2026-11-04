@@ -26,6 +26,8 @@ export interface Paso {
   desde: number;
   hasta: number;
   ejecutaGuardian: boolean;
+  deudaSola: boolean;
+  deudaConBase: boolean;
   si: { valor: string; linea: number } | undefined;
 }
 export interface Job {
@@ -43,6 +45,9 @@ export type ResultadoDeCi = { valor: Map<string, Job>; lineaDeJobs: number } | {
 export const nd = require("../../arquitectura/contratos/no-debilitar.cjs") as {
   ARCHIVOS: Record<string, string>;
   CHEQUEOS: readonly unknown[];
+  CODIGOS_DE_FALLA: readonly string[];
+  CODIGOS_DE_AVISO: readonly string[];
+  DESCRIPCION_DE_CODIGOS: Record<string, string>;
   capturar: (raiz: string) => Instantanea;
   chequearRetiros: (b: Instantanea, p: Instantanea, c: { ahora: Date }) => Hallazgo[];
   chequearContratos: (b: Instantanea, p: Instantanea) => Hallazgo[];
@@ -53,6 +58,7 @@ export const nd = require("../../arquitectura/contratos/no-debilitar.cjs") as {
   chequearGate: (b: Instantanea, p: Instantanea) => Hallazgo[];
   chequearPaquete: (b: Instantanea, p: Instantanea) => Hallazgo[];
   chequearInvariantes: (b: Instantanea, p: Instantanea) => Hallazgo[];
+  chequearEvasiones: (b: Instantanea, p: Instantanea) => Hallazgo[];
   chequearLectura: (b: Instantanea, p: Instantanea) => Hallazgo[];
   ejecutaElGuardian: (linea: string) => boolean;
   extraerInvariantes: (modulo: unknown) => {
@@ -62,6 +68,7 @@ export const nd = require("../../arquitectura/contratos/no-debilitar.cjs") as {
   formatear: (h: Partial<Hallazgo>) => string;
   leerCi: (texto: string) => ResultadoDeCi;
   leerConstante: (texto: string | null, nombre: string) => Seccion;
+  leerEvasiones: (catalogo: string | null, externos: string | null) => Seccion;
   leerPaquete: (texto: string | null) => Seccion;
   leerRetiros: (texto: string | null) => Seccion;
   limites: readonly string[];
@@ -86,6 +93,8 @@ export const A = nd.ARCHIVOS as Record<string, string> & {
   excepciones: string;
   retiros: string;
   invariantes: string;
+  evasiones: string;
+  evasionesExternas: string;
   evaluarGate: string;
   ci: string;
   paquete: string;
@@ -142,6 +151,8 @@ export function instantanea(cambios: Instantanea = {}): Instantanea {
       },
     },
     invariantes: { valor: { ids: [], mutaciones: [] } },
+    evasiones: { valor: [] },
+    deuda: { valor: { entradas: [], tope: 10, bloquea: true } },
     ...cambios,
   };
 }
@@ -205,6 +216,14 @@ export const ARBOL_SANO: Record<string, string> = {
     },
   })}\n`,
   "arquitectura/contratos/invariantes.cjs": 'module.exports = [{ id: "I1", mutaciones: [] }];\n',
+  "arquitectura/contratos/evasiones.json": "[]\n",
+  "arquitectura/deuda/registro.json": "[]\n",
+  "arquitectura/deuda/configuracion.json": `${JSON.stringify({
+    topeDeExcepciones: 10,
+    bloqueaDeudaEnArchivoTocado: true,
+    topeDeLineasPorArchivo: 400,
+    excluidosDelTope: [],
+  })}\n`,
 };
 
 /** Un árbol temporal con `ARBOL_SANO` pisado por `archivos` (`null` borra el archivo). */
@@ -218,15 +237,23 @@ export function arbol(archivos: Record<string, string | null> = {}, prefijo = "m
 
 const VERIFICADOR = "arquitectura/contratos/no-debilitar.cjs";
 const UBICACION = "arquitectura/contratos/ubicacion.cjs";
+/** El detector de marcadores de la deuda y lo que carga. */
+const DETECTOR = [
+  "arquitectura/deuda/marcadores.cjs",
+  "arquitectura/deuda/archivos-de-datos.cjs",
+  "arquitectura/deuda/tamano.cjs",
+];
 
 /**
  * Un árbol que sirve de BASE: el verificador instrumentado (el del sandbox, copiado tal cual junto con su
- * `ubicacion.cjs`) y los archivos sanos. Se corre desde ahí, que es como lo corre la CI.
+ * `ubicacion.cjs` y el detector de marcadores de la deuda que carga) y los archivos sanos. Se corre desde ahí, que es como lo corre la CI.
  */
 export function baseConVerificador(archivos: Record<string, string | null> = {}): string {
   const raiz = arbol(archivos, "mutd-base-");
-  mkdirSync(join(raiz, dirname(VERIFICADOR)), { recursive: true });
-  for (const ruta of [VERIFICADOR, UBICACION]) copyFileSync(join(RAIZ, ruta), join(raiz, ruta));
+  for (const ruta of [VERIFICADOR, UBICACION, ...DETECTOR]) {
+    mkdirSync(join(raiz, dirname(ruta)), { recursive: true });
+    copyFileSync(join(RAIZ, ruta), join(raiz, ruta));
+  }
   return raiz;
 }
 export const verificadorDe = (base: string): string => join(base, VERIFICADOR);

@@ -255,3 +255,22 @@ export async function instalarClaveDeContexto(
     await cliente.end();
   }
 }
+
+/**
+ * ¿Hay ALGUNA clave en `contexto_clave` (vigente o revocada)? Lectura con la conexión del DUEÑO de la base, para que
+ * `cargar-entorno` no genere una clave nueva cuando la base ya tiene una: la que está en la base solo se recupera
+ * de donde la cargó el dueño, y reemplazarla sin rotación (otro `kid`) dejaría a la aplicación sin poder firmar.
+ * Ante la duda, «hay» (cualquier fila cuenta).
+ */
+export async function hayClavesDeContextoInstaladas(urlDueno: string): Promise<boolean> {
+  const cliente = new pg.Client({ connectionString: urlDueno });
+  await cliente.connect();
+  try {
+    const { rows } = await cliente.query<{ hay: boolean }>(
+      "SELECT EXISTS (SELECT 1 FROM contexto_clave) AS hay",
+    );
+    return rows[0]?.hay !== false;
+  } finally {
+    await cliente.end();
+  }
+}

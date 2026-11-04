@@ -1,0 +1,68 @@
+.raiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  min-width: 0;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie-elevada);
+  color: var(--color-texto);
+  text-decoration: none;
+}
+
+.datos {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.numero {
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.sucursal {
+  color: var(--color-texto-suave);
+  overflow-wrap: anywhere;
+}
+
+.marcas {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--espacio-1);
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.rotulo {
+  color: var(--color-texto-suave);
+}
+
+.aviso {
+  color: var(--color-texto);
+  overflow-wrap: anywhere;
+}

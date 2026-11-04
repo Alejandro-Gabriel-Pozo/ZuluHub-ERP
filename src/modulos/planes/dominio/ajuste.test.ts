@@ -50,7 +50,9 @@ describe("decidirAjuste: lo que se inserta", () => {
 
   it("un ajuste de empresa para una perilla de ámbito empresa o sucursal", () => {
     expect(decidir([], { empresaId: E1 }).ok).toBe(true);
-    expect(decidir([], { perilla: "carta_por_qr", valor: encendida, empresaId: E1 }).ok).toBe(true);
+    expect(decidir([], { perilla: "vidriera_por_qr", valor: encendida, empresaId: E1 }).ok).toBe(
+      true,
+    );
   });
 
   it("ILIMITADO y 0 se aceptan", () => {
@@ -96,7 +98,7 @@ describe("decidirAjuste: los errores, en su orden", () => {
   });
 
   it.each([
-    ["tipo equivocado", limite(1), "carta_por_qr"],
+    ["tipo equivocado", limite(1), "vidriera_por_qr"],
     ["negativo", limite(-1), "cajas_por_sucursal"],
     ["decimal", limite(0.5), "cajas_por_sucursal"],
     ["sin etiqueta", { limite: 3 }, "cajas_por_sucursal"],
@@ -151,7 +153,7 @@ describe("decidirAjuste: los errores, en su orden", () => {
   });
 
   it("una perilla sin requerida no mira nada más", () => {
-    expect(decidir([], { perilla: "carta_por_qr", valor: encendida }).ok).toBe(true);
+    expect(decidir([], { perilla: "vidriera_por_qr", valor: encendida }).ok).toBe(true);
   });
 
   it("los errores de vigencia: retroactiva, desactualizada, programada pendiente", () => {

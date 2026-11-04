@@ -1,0 +1,34 @@
+.domicilio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.leyenda {
+  padding: 0;
+  margin-bottom: var(--espacio-3);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+/* Dos campos cortos en una fila (calle y número, piso y departamento); `minmax(0, …)` deja que cedan sin desbordar. */
+.par {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--espacio-3);
+}
+
+.parParejo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--espacio-3);
+}
+
+.botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+}

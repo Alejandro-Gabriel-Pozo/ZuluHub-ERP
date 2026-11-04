@@ -9,12 +9,17 @@ import { sistema, trabajos, web } from "./composicion";
  * está en `src/composicion/rutas-de-sistema.ts` y se prueba sin levantar Next.
  */
 
-/** El cron de Vercel: autorizado con `CRON_SECRET`, despacha la cola y barre lo vencido de la autenticación. */
+/**
+ * El cron de Vercel: autorizado con `CRON_SECRET`, encola las reconciliaciones de fiscal, despacha la cola y barre lo
+ * vencido de la autenticación.
+ */
 export function atenderElCron(pedido: Request): Promise<Response> {
   return atenderCron(pedido, {
     secreto: sistema.secretoDeCron,
     procesador: trabajos.procesador,
     barrido: web.barridoDeAutenticacion,
+    // Antes de despachar, encola la reconciliación de fiscal de cada empresa que factura (fiscal.reconciliar).
+    reconciliaciones: (ahora) => trabajos.encolarReconciliaciones(ahora),
     ahora: () => new Date(),
     // El detalle ya viene con su referencia y filtrado de secretos: solo al registro del servidor.
     registrar: (detalle) => {

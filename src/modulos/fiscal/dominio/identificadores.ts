@@ -27,6 +27,11 @@ export type CertificadoId = Marca<string, "CertificadoId">;
 /** Una llamada a ARCA por un comprobante (la fila de solo inserción de `intento_arca`). */
 export type IntentoId = Marca<string, "IntentoId">;
 
+/** La forma de un uuid en minúscula: el `id` que genera la pantalla y que es la clave de idempotencia de las altas. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+export const esUuid = (texto: string): boolean => UUID.test(texto);
+
 function crear<Id extends string>(nombre: string, valor: string): Id {
   if (!esTextoDeIdentificador(valor)) {
     throw new RangeError(`${nombre} inválido`);

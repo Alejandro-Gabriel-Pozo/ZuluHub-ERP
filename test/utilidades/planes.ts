@@ -32,7 +32,7 @@ const comun = { modulo: "administracion" } as const;
 export const PERILLAS_DE_PRUEBA = {
   empresas_por_tenant: { ...comun, ambito: "TENANT", tipo: "LIMITE", base: { limite: 1 } },
   cajas_por_sucursal: { ...comun, ambito: "SUCURSAL", tipo: "LIMITE", base: { limite: 1 } },
-  carta_por_qr: { ...comun, ambito: "EMPRESA", tipo: "INTERRUPTOR", base: { encendida: false } },
+  vidriera_por_qr: { ...comun, ambito: "EMPRESA", tipo: "INTERRUPTOR", base: { encendida: false } },
   con_sello: { ...comun, ambito: "EMPRESA", tipo: "INTERRUPTOR", base: { encendida: true } },
   reserva_provisoria: {
     ...comun,

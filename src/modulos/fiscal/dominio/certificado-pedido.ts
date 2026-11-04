@@ -1,7 +1,7 @@
 import { cuitDesdeTexto, type Cuit } from "../../../primitivas/identificacion-fiscal/cuit";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { Ambiente } from "./comprobante-nuevo";
-import { certificadoId, type CertificadoId, type EmisorId } from "./identificadores";
+import { certificadoId, esUuid, type CertificadoId, type EmisorId } from "./identificadores";
 
 /**
  * El pedido de un certificado de ARCA (spec H7 facturación §B.4 y §B.6, tramo F7): lo que la persona pide y las
@@ -11,8 +11,6 @@ import { certificadoId, type CertificadoId, type EmisorId } from "./identificado
 
 /** El alias del certificado (`CN`): letras y dígitos, de 1 a 30. Es la regla de la base (`certificado_alias_ck`). */
 const ALIAS = /^[A-Za-z0-9]{1,30}$/;
-/** La forma de un uuid en minúscula: el `id` es el que genera la pantalla y es la clave de la idempotencia. */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 /** La organización (`O`): hasta 64 caracteres (el tope de X.520) y sin caracteres de control. */
 const ORGANIZACION = /^[^\p{Cc}]{1,64}$/u;
 
@@ -22,7 +20,7 @@ export type EntradaDePedidoDeCertificado = Readonly<{
   emisorId: EmisorId;
   ambiente: Ambiente;
   alias: string;
-  /** El CUIT del titular (de 11 dígitos, con o sin guiones). */
+  /** El CUIT del titular (de 11 dígitos, con o sin guiones): la persona física que saca el certificado, no el emisor. */
   cuitTitular: string;
   organizacion: string;
 }>;
@@ -41,13 +39,13 @@ export type ErrorDePedidoDeCertificado =
   "ID_INVALIDO" | "ALIAS_INVALIDO" | "CUIT_INVALIDO" | "ORGANIZACION_INVALIDA";
 
 /**
- * Valida la forma del pedido. Orden de los errores: el `id`, el alias, el CUIT y la organización. Que el CUIT sea
- * el del emisor lo decide el caso de uso (el dominio no conoce al emisor).
+ * Valida la forma del pedido. Orden de los errores: el `id`, el alias, el CUIT y la organización. El CUIT es el del
+ * TITULAR (la persona física que saca el certificado, D-42) y no tiene por qué ser el del emisor.
  */
 export function armarPedidoDeCertificado(
   entrada: EntradaDePedidoDeCertificado,
 ): Resultado<PedidoDeCertificadoValido, ErrorDePedidoDeCertificado> {
-  if (!UUID.test(entrada.id)) return err("ID_INVALIDO");
+  if (!esUuid(entrada.id)) return err("ID_INVALIDO");
   if (!ALIAS.test(entrada.alias)) return err("ALIAS_INVALIDO");
   const cuit = cuitDesdeTexto(entrada.cuitTitular);
   if (!cuit.ok) return err("CUIT_INVALIDO");

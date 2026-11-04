@@ -2,7 +2,9 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["src/**/*.ts", "test/**/*.test.ts", "neon.ts"],
+      // `arquitectura/deuda/*.cjs`: el control de deuda lo lanzan el CLI y la prueba por `require` (que knip no
+      // sigue): sus funciones exportadas son su interfaz de prueba, no código muerto.
+      "entry": ["src/**/*.ts", "test/**/*.test.ts", "neon.ts", "arquitectura/deuda/*.cjs"],
       "project": ["src/**/*.ts", "test/**/*.ts", "arquitectura/**/*.cjs"],
       // @axe-core/playwright y @playwright/test: autorizadas en el spec de la web (§2.2) para el e2e del
       // ingreso (W5, P-10: axe sobre la página real contra `next start`); sin uso hasta ese tramo.
@@ -34,6 +36,9 @@
     "arquitectura/contratos/clasificacion.cjs": ["exports"],
     // `segmentoARegexp` se exporta solo para probar el escapado directo (la prueba la lee por `createRequire`;
     // `@public` no alcanza en un módulo CommonJS).
-    "arquitectura/contratos/globs.cjs": ["exports"]
+    "arquitectura/contratos/globs.cjs": ["exports"],
+    // La batería de evasión y las pruebas del guardián leen sus constantes y `evaluarResultado` por `require`,
+    // que knip no sigue (misma razón que `detectores.cjs`).
+    "arquitectura/contratos/evasiones.cjs": ["exports"]
   }
 }

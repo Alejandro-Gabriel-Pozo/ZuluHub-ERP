@@ -13,7 +13,10 @@ const cuit = (texto: string): Cuit => {
   if (!r.ok) throw new Error("CUIT de prueba inválido");
   return r.valor;
 };
-const EMISOR = cuit("20123456786");
+/** La persona física que sacó el certificado (el titular). */
+const TITULAR = cuit("20123456786");
+/** La sociedad que factura (el emisor, representada): NO es el titular y su CUIT nunca decide si el certificado sirve. */
+const EMISOR_SOCIEDAD = cuit("30703088534");
 const AHORA = new Date("2026-10-14T12:00:00.000Z");
 
 /** Un base64 de `n` caracteres (múltiplo de 4) que usa los 64 símbolos y termina en `==` si se pide. */
@@ -110,10 +113,28 @@ describe("evaluarCertificado", () => {
     noDespues: new Date("2028-10-14T12:00:00.000Z"),
   };
   const evaluar = (cambios: Partial<HallazgosDelCertificado> = {}, ahora = AHORA) =>
-    evaluarCertificado(EMISOR, { ...sano, ...cambios }, ahora);
+    evaluarCertificado(TITULAR, { ...sano, ...cambios }, ahora);
 
-  it("un certificado del emisor, de la clave, con cadena y vigente sirve, y vence en su noDespues", () => {
+  it("un certificado del titular, de la clave, con cadena y vigente sirve, y vence en su noDespues", () => {
     expect(evaluar()).toEqual({ ok: true, valor: { vence: sano.noDespues } });
+  });
+
+  it("D-42: el titular es una persona y la empresa que factura otra; el certificado sirve por el titular y NO por el emisor", () => {
+    // El `serialNumber` es el del titular (20…): sirve aunque la empresa representada sea 30… (nunca se le pasa el emisor).
+    expect(evaluar({ numeroDeSerieDelSujeto: `CUIT ${TITULAR}` }).ok).toBe(true);
+    // Un certificado con el `serialNumber` del emisor (la sociedad) no es del titular declarado.
+    expect(evaluar({ numeroDeSerieDelSujeto: `CUIT ${EMISOR_SOCIEDAD}` })).toEqual({
+      ok: false,
+      error: "NO_CORRESPONDE_AL_TITULAR",
+    });
+    // Y si el titular declarado ES la sociedad (otro caso), compara contra ese.
+    expect(
+      evaluarCertificado(
+        EMISOR_SOCIEDAD,
+        { ...sano, numeroDeSerieDelSujeto: `CUIT ${EMISOR_SOCIEDAD}` },
+        AHORA,
+      ).ok,
+    ).toBe(true);
   });
 
   it("no corresponde a la clave guardada → NO_CORRESPONDE_A_LA_CLAVE", () => {
@@ -123,7 +144,7 @@ describe("evaluarCertificado", () => {
     });
   });
 
-  describe("el titular tiene que ser el CUIT del emisor", () => {
+  describe("el `serialNumber` tiene que ser el CUIT del titular declarado", () => {
     it.each([
       ["sin serialNumber", null],
       ["de otro CUIT", "CUIT 30703088534"],
@@ -133,8 +154,11 @@ describe("evaluarCertificado", () => {
       ["con un espacio al final", "CUIT 20123456786 "],
       ["con más texto", "CUIT 20123456786 SA"],
       ["vacío", ""],
-    ])("%s → TITULAR_DISTINTO", (_nombre, numeroDeSerieDelSujeto) => {
-      expect(evaluar({ numeroDeSerieDelSujeto })).toEqual({ ok: false, error: "TITULAR_DISTINTO" });
+    ])("%s → NO_CORRESPONDE_AL_TITULAR", (_nombre, numeroDeSerieDelSujeto) => {
+      expect(evaluar({ numeroDeSerieDelSujeto })).toEqual({
+        ok: false,
+        error: "NO_CORRESPONDE_AL_TITULAR",
+      });
     });
   });
 
@@ -161,7 +185,7 @@ describe("evaluarCertificado", () => {
     expect(evaluar(todoMal)).toEqual({ ok: false, error: "NO_CORRESPONDE_A_LA_CLAVE" });
     expect(evaluar({ ...todoMal, correspondeALaClave: true })).toEqual({
       ok: false,
-      error: "TITULAR_DISTINTO",
+      error: "NO_CORRESPONDE_AL_TITULAR",
     });
     expect(
       evaluar({

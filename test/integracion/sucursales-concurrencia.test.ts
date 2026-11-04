@@ -384,6 +384,79 @@ describe.skipIf(base === null)("sucursales: concurrencia de los casos de uso (S1
     }
   });
 
+  it("S15: dos ediciones simultáneas del contacto con la misma versión: gana una, la otra da VERSION_DESACTUALIZADA y el contacto es el del ganador", async () => {
+    for (let n = 0; n < RONDAS; n++) {
+      const e = await escenario();
+      ronda(2);
+      const edicion = (telefono: string) =>
+        casos.editarSucursal(e.ctx, {
+          sucursalId: e.sucursal,
+          versionEsperada: 1,
+          nombre: "Casa central",
+          telefono,
+        });
+      const [x, y] = await Promise.all([edicion("1111-1111"), edicion("2222-2222")]);
+      expect([x.ok, y.ok].sort(), `ronda ${n}`).toEqual([false, true]);
+      expect(x.ok ? y : x, `ronda ${n}`).toEqual({ ok: false, error: "VERSION_DESACTUALIZADA" });
+      expect(
+        (await filas("select telefono, version from sucursal where id = $1", [e.sucursal]))[0],
+      ).toEqual({ telefono: x.ok ? "1111-1111" : "2222-2222", version: 2 });
+      expect(await auditorias(e.empresa, "SUCURSAL_EDITADA")).toBe(1);
+    }
+  });
+
+  it("S16: dos ediciones simultáneas con el mismo contacto: las dos terminan bien y se escribe una vez", async () => {
+    for (let n = 0; n < RONDAS; n++) {
+      const e = await escenario();
+      ronda(2);
+      const entrada = {
+        sucursalId: e.sucursal,
+        versionEsperada: 1,
+        nombre: "Casa central",
+        correo: "centro@hotel.com",
+        web: "https://hotel.com",
+      };
+      const [x, y] = await Promise.all([
+        casos.editarSucursal(e.ctx, entrada),
+        casos.editarSucursal(e.ctx, entrada),
+      ]);
+      expect([x, y], `ronda ${n}`).toEqual([
+        { ok: true, valor: { version: 2 } },
+        { ok: true, valor: { version: 2 } },
+      ]);
+      expect(await auditorias(e.empresa, "SUCURSAL_EDITADA")).toBe(1);
+    }
+  });
+
+  it("S17: editar el contacto y el nombre a la vez, cada uno desde la misma versión: no se pisan (una gana, la otra ve la versión nueva)", async () => {
+    for (let n = 0; n < RONDAS; n++) {
+      const e = await escenario();
+      ronda(2);
+      const [contacto, renombre] = await Promise.all([
+        casos.editarSucursal(e.ctx, {
+          sucursalId: e.sucursal,
+          versionEsperada: 1,
+          nombre: "Casa central",
+          telefono: "1111-1111",
+        }),
+        casos.editarSucursal(e.ctx, {
+          sucursalId: e.sucursal,
+          versionEsperada: 1,
+          nombre: "Matriz",
+        }),
+      ]);
+      expect([contacto.ok, renombre.ok].sort(), `ronda ${n}`).toEqual([false, true]);
+      const fila = (
+        await filas("select nombre, telefono from sucursal where id = $1", [e.sucursal])
+      )[0];
+      expect(fila, `ronda ${n}`).toEqual(
+        contacto.ok
+          ? { nombre: "Casa central", telefono: "1111-1111" }
+          : { nombre: "Matriz", telefono: null },
+      );
+    }
+  });
+
   it("S14: dos empresas distintas operan a la vez sin pisarse (mismo nombre, mismas operaciones)", async () => {
     for (let n = 0; n < RONDAS; n++) {
       const a = await escenario();

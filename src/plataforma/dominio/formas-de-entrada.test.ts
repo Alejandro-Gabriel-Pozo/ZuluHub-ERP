@@ -4,6 +4,7 @@ import {
   validarLargoDelMotivo,
   validarNumeroEsperado,
   validarVersionEsperada,
+  validarVersionVista,
   validarVigencia,
 } from "./formas-de-entrada";
 
@@ -36,6 +37,25 @@ describe("validarVersionEsperada", () => {
   it.each([0, -1, 1.5, MAXIMO + 1, Number.NaN, Number.POSITIVE_INFINITY])("rechaza %s", (n) => {
     expect(validarVersionEsperada(n)).toEqual({ ok: false, error: "VERSION_ESPERADA_INVALIDA" });
   });
+});
+
+describe("validarVersionVista", () => {
+  it("acepta todo entero de 1 al máximo de la base", () => {
+    for (const n of [1, 2, 41, MAXIMO]) {
+      expect(validarVersionVista(n), String(n)).toEqual({ ok: true, valor: n });
+    }
+  });
+
+  // A diferencia de `validarVersionEsperada`, `null` no vale: confirmar exige un borrador que se haya visto.
+  it.each([0, -1, 1.5, MAXIMO + 1, Number.NaN, Number.POSITIVE_INFINITY, null, undefined, "1"])(
+    "rechaza %s",
+    (n) => {
+      expect(validarVersionVista(n as unknown as number)).toEqual({
+        ok: false,
+        error: "VERSION_ESPERADA_INVALIDA",
+      });
+    },
+  );
 });
 
 describe("validarVigencia", () => {

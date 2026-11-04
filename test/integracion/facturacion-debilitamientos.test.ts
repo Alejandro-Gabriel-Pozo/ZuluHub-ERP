@@ -711,13 +711,46 @@ describe.skipIf(base === null)("facturación: debilitamientos propios de la migr
         );
       const homologacion = await alta("HOMOLOGACION");
       const produccion = await alta("PRODUCCION");
+      // uno vigente por ambiente: los dos ambientes conviven, dos del mismo no. El segundo pedido de homologación se pide recién
+      // cuando el primero ya es vigente: dos pendientes del mismo ambiente no entran (0018).
+      const cargados = (await cargar(homologacion)).ok && (await cargar(produccion)).ok;
       const otraHomologacion = await alta("HOMOLOGACION");
-      // uno vigente por ambiente: los dos ambientes conviven, dos del mismo no
-      return (
-        (await cargar(homologacion)).ok &&
-        (await cargar(produccion)).ok &&
-        !(await cargar(otraHomologacion)).ok
-      );
+      return cargados && !(await cargar(otraHomologacion)).ok;
+    },
+    /** A lo sumo un pedido PENDIENTE (`PEDIDO_GENERADO`) por emisor y ambiente (0018, D-92). */
+    unPendientePorAmbiente: async (c) => {
+      const alta = async (ambiente: string) => {
+        await c.query(
+          `insert into certificado_arca (id, empresa_id, emisor_id, ambiente, alias, cuit_titular, pedido_pem, clave_cifrada, clave_nonce, clave_etiqueta, clave_kid, creado_por)
+           values ($1, $2, $3, $9, 'abc', $4, 'P', $5, $6, $7, 'k', $8)`,
+          [
+            randomUUID(),
+            e.empresa,
+            e.emisor,
+            e.cuit,
+            Buffer.alloc(8),
+            Buffer.alloc(12),
+            Buffer.alloc(16),
+            e.persona,
+            ambiente,
+          ],
+        );
+      };
+      const entra = async (ambiente: string) => {
+        await c.query("savepoint s");
+        try {
+          await alta(ambiente);
+          return true;
+        } catch {
+          await c.query("rollback to savepoint s");
+          return false;
+        } finally {
+          await c.query("release savepoint s");
+        }
+      };
+      // Uno por ambiente conviven; un segundo del mismo ambiente no entra, en ninguno de los dos.
+      const conviven = (await entra("HOMOLOGACION")) && (await entra("PRODUCCION"));
+      return conviven && !(await entra("HOMOLOGACION")) && !(await entra("PRODUCCION"));
     },
     /** Un certificado cargado no cambia. */
     certificadoCargadoInmutable: async (c) => {
@@ -1349,6 +1382,28 @@ describe.skipIf(base === null)("facturación: debilitamientos propios de la migr
       sonda: "unVigentePorAmbiente",
       debilitar: sql(
         "drop index certificado_vigente_uk; create unique index certificado_vigente_uk on certificado_arca (empresa_id) where estado = 'VIGENTE'",
+      ),
+    },
+    {
+      regla: "certificados",
+      nombre: "quitar certificado_pendiente_uk",
+      sonda: "unPendientePorAmbiente",
+      debilitar: sql("drop index certificado_pendiente_uk"),
+    },
+    {
+      regla: "certificados",
+      nombre: "sacar el ambiente de certificado_pendiente_uk",
+      sonda: "unPendientePorAmbiente",
+      debilitar: sql(
+        "drop index certificado_pendiente_uk; create unique index certificado_pendiente_uk on certificado_arca (empresa_id, emisor_id) where estado = 'PEDIDO_GENERADO'",
+      ),
+    },
+    {
+      regla: "certificados",
+      nombre: "limitar el índice de pendientes a homologación",
+      sonda: "unPendientePorAmbiente",
+      debilitar: sql(
+        "drop index certificado_pendiente_uk; create unique index certificado_pendiente_uk on certificado_arca (empresa_id, emisor_id, ambiente) where estado = 'PEDIDO_GENERADO' and ambiente = 'HOMOLOGACION'",
       ),
     },
     {

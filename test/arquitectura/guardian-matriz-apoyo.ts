@@ -30,6 +30,19 @@ import {
   type Entradas,
   type Informe,
 } from "./guardian-apoyo";
+import {
+  AHORA as AHORA_DE_LA_DEUDA,
+  CONFIGURACION as CONFIGURACION_DE_DEUDA,
+  REGISTRO as REGISTRO_DE_DEUDA,
+  SIN_DEUDA,
+  arbolDe,
+  conMarcadores,
+  deuda as controlDeDeuda,
+  entrada as entradaDeDeuda,
+  excepcion as excepcionDeDeuda,
+  lineas as juntarLineas,
+  mundo as mundoDeDeuda,
+} from "./guardian-deuda-apoyo";
 
 /**
  * Apoyo de la matriz de invariantes (`guardian-matriz.test.ts`): el repositorio sintético SANO, los
@@ -148,6 +161,18 @@ const vigilancia = require("../../arquitectura/contratos/no-debilitar.cjs") as {
     ahora?: Date;
     leerPr: (ruta: string) => Buffer | null;
   }) => { fallas: Salida[]; avisos: Salida[] };
+};
+
+/** La batería de evasión: el catálogo y la evaluación de un caso contra lo que pasó al correrlo. */
+const { evaluarResultado } = require("../../arquitectura/contratos/evasiones.cjs") as {
+  evaluarResultado: (
+    caso: Record<string, unknown>,
+    indice: number,
+    observado: { resultado: string; fallas: { codigo: string; archivo: string; linea?: number }[] },
+  ) => (Salida & { donde: unknown }) | null;
+};
+const { crearUbicador } = require("../../arquitectura/contratos/ubicacion.cjs") as {
+  crearUbicador: (leer: (ruta: string) => Buffer | string | null) => (hallazgo: object) => Salida;
 };
 
 type Regla = { clase: string; glob: string };
@@ -297,6 +322,10 @@ export type Mundo = {
   reglasExtras: Regla[];
   sinRutas: boolean;
   ilegibles: Set<string>;
+  /** Archivos que no son texto (o que no se decodifican como UTF-8): ruta → bytes. */
+  binarios: Record<string, Buffer>;
+  /** El catálogo de la batería de evasión (`evasiones.json`) que valida el guardián. */
+  evasiones: unknown;
   previas: { fallas: unknown[]; avisos: unknown[] };
   ahora: Date;
 };
@@ -334,6 +363,8 @@ export function mundoSano(): Mundo {
     reglasExtras: [],
     sinRutas: false,
     ilegibles: new Set(),
+    binarios: {},
+    evasiones: [],
     previas: { fallas: [], avisos: [] },
     ahora: AHORA,
   };
@@ -375,13 +406,15 @@ export function ejecutarMundo(m: Mundo): ReturnType<typeof ejecutar> & {
     "arquitectura/contratos/clasificacion.cjs": clasificacionComoTexto(m.reglasExtras),
     "arquitectura/contratos/excepciones.json": json(m.excepciones),
     "arquitectura/contratos/exclusiones.json": json(m.exclusiones),
+    "arquitectura/contratos/evasiones.json": json(m.evasiones),
   };
   const entradas: Entradas = {
-    rutas: m.sinRutas ? [] : Object.keys(textos),
-    leer: (ruta) => (m.ilegibles.has(ruta) ? null : (textos[ruta] ?? null)),
+    rutas: m.sinRutas ? [] : [...Object.keys(textos), ...Object.keys(m.binarios)],
+    leer: (ruta) => (m.ilegibles.has(ruta) ? null : (m.binarios[ruta] ?? textos[ruta] ?? null)),
     contratos: m.contratos,
     excepciones: m.excepciones,
     exclusiones: m.exclusiones,
+    evasiones: m.evasiones,
     niveles: m.niveles,
     previas: m.previas,
     ahora: m.ahora,
@@ -772,6 +805,143 @@ export function evaluarHueco(
   return { abierto: !resultado.cumple, detalle: resultado.detalle };
 }
 
+// --- La batería de evasión (I11) ------------------------------------------------------------------------
+
+const CATALOGO_REAL = "arquitectura/contratos/evasiones.json";
+const EXTERNOS_REAL = "arquitectura/contratos/evasiones-github.json";
+type CasoJson = Record<string, unknown>;
+
+/** Un caso del catálogo, válido y exigido; `cambios` lo rompe de a una cosa. */
+const casoDeEvasion = (cambios: CasoJson = {}): CasoJson => ({
+  id: "EV-001",
+  via: "filtros",
+  titulo: "Carpeta nueva sin regla de clasificación",
+  construccion: [],
+  controlEsperado: "ruta-sin-clase",
+  esperado: { tipo: "bloquea", codigo: "ruta-sin-clase", archivo: "carpeta-nueva/x.ts" },
+  estado: "exigido",
+  ...cambios,
+});
+const brechaDeEvasion = (cambios: CasoJson = {}): CasoJson =>
+  casoDeEvasion({
+    estado: "brecha-abierta",
+    responsable: "agente (a pedido del dueño)",
+    severidad: "media",
+    justificacion: "Hoy el cambio pasa sin detección.",
+    mitigacion: "Revisión manual hasta cerrarla.",
+    creada: "2026-10-01",
+    vence: "2026-11-30",
+    ...cambios,
+  });
+const riesgoDeEvasion = (cambios: CasoJson = {}): CasoJson =>
+  casoDeEvasion({
+    estado: "riesgo-aceptado",
+    aprobadoPor: "Dueño del producto (§11.1)",
+    motivo: "Exige editar la maquinaria.",
+    creada: "2026-10-01",
+    revisar: "2027-03-01",
+    ...cambios,
+  });
+
+const leerCasos = (raiz: string, archivo = CATALOGO_REAL): CasoJson[] =>
+  JSON.parse(readFileSync(join(raiz, archivo), "utf8")) as CasoJson[];
+const escribirCasos = (raiz: string, casos: CasoJson[], archivo = CATALOGO_REAL): void =>
+  escribirEn(raiz, archivo, json(casos));
+/** Cambia el caso `id` del catálogo de un árbol (lo reescribe con dos espacios de sangría). */
+function cambiarCaso(raiz: string, id: string, cambiar: (caso: CasoJson) => void): void {
+  const casos = leerCasos(raiz);
+  const caso = casos.find((c) => c["id"] === id);
+  if (caso === undefined) throw new Error(`el catálogo real no tiene el caso ${id}`);
+  cambiar(caso);
+  escribirCasos(raiz, casos);
+}
+/** Quita casos del catálogo de un árbol y registra su retiro en `retiros.json` (si `conRetiro`). */
+function retirarCasos(raiz: string, cuales: (caso: CasoJson) => boolean, conRetiro: boolean): void {
+  const casos = leerCasos(raiz);
+  escribirCasos(
+    raiz,
+    casos.filter((c) => !cuales(c)),
+  );
+  if (conRetiro) {
+    const retiros = casos.filter(cuales).map((c) => retiroCompleto(String(c["id"])));
+    escribirEn(raiz, RETIROS_REAL, json(retiros));
+  }
+}
+
+/** Un caso corrido con el resultado que se simula: lo que dice `evaluarResultado` y el catálogo para ubicar la línea. */
+const enEvasion =
+  (
+    caso: CasoJson,
+    observado: { resultado: string; fallas: { codigo: string; archivo: string; linea?: number }[] },
+  ): Aplicador =>
+  () => {
+    const hallazgo = evaluarResultado(caso, 0, observado);
+    const texto = json([caso]);
+    const ubicar = crearUbicador((ruta) => (ruta === CATALOGO_REAL ? texto : null));
+    return {
+      salidas: hallazgo === null ? [] : [ubicar(hallazgo)],
+      textos: { [CATALOGO_REAL]: texto },
+    };
+  };
+
+const enCatalogo =
+  (casos: CasoJson[]): Aplicador =>
+  () =>
+    correrMundo({ ...mundoSano(), evasiones: casos });
+
+// --- La deuda técnica (I12) ------------------------------------------------------------------------------------
+
+type ArbolesDeDeuda = Record<string, string>;
+
+/** El mundo sano de la deuda: `a.ts` con dos `@ts-expect-error` registrados, `b.ts` sin deuda, bloqueo activo. */
+const deudaSana = (entradas: unknown[] = [entradaDeDeuda()]): ArbolesDeDeuda =>
+  mundoDeDeuda({ "a.ts": conMarcadores(2), "b.ts": SIN_DEUDA }, entradas, {
+    bloqueaDeudaEnArchivoTocado: true,
+  });
+/** Lo que dice el control de deuda sobre el cambio (y, si hay, la base), con los textos del cambio para ubicar líneas. */
+const enDeuda =
+  (cambio: ArbolesDeDeuda, base: ArbolesDeDeuda | null = null): Aplicador =>
+  () => {
+    const resultado = controlDeDeuda.ejecutar({
+      pr: arbolDe(cambio),
+      base: base === null ? null : arbolDe(base),
+      ahora: AHORA_DE_LA_DEUDA,
+    });
+    return { salidas: resultado.fallas.map((f) => ({ ...f })), textos: cambio };
+  };
+/** El mundo sano con esos archivos cambiados (y, si se pasa, otro registro). */
+const deudaCon = (
+  archivos: Record<string, string>,
+  entradas: unknown[] = [entradaDeDeuda()],
+): ArbolesDeDeuda => ({ ...deudaSana(entradas), ...archivos });
+
+const CONFIGURACION_REAL = "arquitectura/deuda/configuracion.json";
+const PAQUETE_REAL = "package.json";
+const PASO_DE_LA_DEUDA = "      - name: Deuda técnica (no crece y se paga al tocar el archivo)\n";
+/** Quita del ci.yml de un árbol el paso de la deuda técnica (su comentario y su `run`). */
+const sinElPasoDeLaDeuda = (texto: string): string => {
+  const inicio = texto.indexOf("      # La deuda técnica (§10)");
+  const fin =
+    texto.indexOf("          fi\n", texto.indexOf(PASO_DE_LA_DEUDA)) + "          fi\n".length;
+  if (inicio < 0 || fin < inicio) throw new Error("el ci.yml real no tiene el paso de la deuda");
+  return texto.slice(0, inicio) + texto.slice(fin);
+};
+/** Un archivo de código de `n` líneas. */
+const archivoDeLineas = (n: number): string =>
+  juntarLineas(
+    ...Array.from({ length: n }, (_, i) => `export const x${String(i)} = ${String(i)};`),
+  );
+/** La entrada de un archivo sobre el tope, con el tamaño que registra. */
+const entradaDeUnArchivoGrande = (tamano: number) =>
+  entradaDeDeuda({
+    id: "archivo-grande--src-grande-ts",
+    tipo: "archivo-grande",
+    archivos: ["src/grande.ts"],
+    tamano,
+  });
+/** Una entrada del registro para un TODO en `x.ts`, que la base conoce. */
+const entradaDeX = entradaDeDeuda({ id: "todo--x-ts", tipo: "todo", archivos: ["x.ts"] });
+
 /** Aplicadores por id de mutación: la otra mitad del catálogo (M5: ninguna mutación sin aplicador). */
 export const APLICADORES: Record<string, Aplicador> = {
   // I1 · Toda ruta versionada tiene exactamente una clase.
@@ -912,6 +1082,9 @@ export const APLICADORES: Record<string, Aplicador> = {
       variable: "--color-separador",
     };
   }),
+  "I4-definicion-escondida-en-un-archivo-con-extension-de-binario": enRepo((m) =>
+    poner(m, "apps/web/ui/paleta.png", "--color-separador: #000000;\n"),
+  ),
   "I4-quitar-el-detector-de-definicion": enRepo((m) => {
     const registro = contratoDe(m, CONTRATO_A);
     registro.deteccion = registro.deteccion.filter((d) => d.tipo !== "definicion");
@@ -1060,10 +1233,14 @@ export const APLICADORES: Record<string, Aplicador> = {
   "I7-archivo-ilegible": enRepo((m) => {
     m.ilegibles.add("apps/web/ui/Caja.module.css");
   }),
+  "I7-archivo-que-no-es-texto-utf8": enRepo((m) => {
+    quitar(m, "apps/web/ui/Linea.module.css");
+    m.binarios["apps/web/ui/Linea.module.css"] = Buffer.from(`${LINEA_DE_USO}\n`, "utf16le");
+  }),
   "I7-detector-sobre-clase-sin-texto": enRepo((m) => {
     detectorDe(m, CONTRATO_A, 0).clases = ["pruebas"];
     quitar(m, "test/una.test.ts");
-    poner(m, "test/una.png", "binario");
+    m.binarios["test/una.png"] = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x00]);
   }),
   "I7-excluir-todos-los-archivos-del-detector": enRepo((m) => {
     const frontend = Object.keys(m.archivos).filter(
@@ -1345,7 +1522,7 @@ export const APLICADORES: Record<string, Aplicador> = {
       ),
   }),
   "I9-el-script-arquitectura-deja-de-encadenar-el-guardian-respecto-de-la-base": enArboles({
-    pr: (raiz) => alterar(raiz, "package.json", ' && npm run guardian",', '",'),
+    pr: (raiz) => alterar(raiz, "package.json", " && npm run guardian", ""),
   }),
   "I9-el-script-guardian-se-desvia-respecto-de-la-base": enArboles({
     pr: (raiz) =>
@@ -1478,4 +1655,280 @@ export const APLICADORES: Record<string, Aplicador> = {
   "I10-saltar-la-matriz": enPruebas((archivos) =>
     agregarAlFinal(archivos, "guardian-matriz.test.ts", 'it.skip("marca-de-la-matriz", () => {});'),
   ),
+
+  // I11 · La batería de evasión conserva sus casos, no se afloja en silencio y corre en el Gate.
+  "I11-borrar-un-caso-del-catalogo": enArboles({
+    pr: (raiz) => retirarCasos(raiz, (c) => c["id"] === "EV-001", false),
+  }),
+  "I11-retirar-un-caso-con-su-entrada-en-retiros": enArboles({
+    pr: (raiz) => retirarCasos(raiz, (c) => c["id"] === "EV-001", true),
+  }),
+  "I11-borrar-el-catalogo-entero": enArboles({
+    pr: (raiz) => rmSync(join(raiz, CATALOGO_REAL)),
+  }),
+  // Un caso de una vía que ningún otro tiene (EV-951), en los dos árboles: el pull request lo retira con su retiro.
+  "I11-vaciar-una-via": enArboles({
+    ambos: (raiz) =>
+      escribirCasos(raiz, [
+        ...leerCasos(raiz),
+        casoDeEvasion({ id: "EV-951", via: "renombrar-mover" }),
+      ]),
+    pr: (raiz) => retirarCasos(raiz, (c) => c["via"] === "renombrar-mover", true),
+  }),
+  "I11-cambiar-lo-que-un-caso-espera": enArboles({
+    pr: (raiz) =>
+      cambiarCaso(raiz, "EV-001", (caso) => {
+        caso["esperado"] = { tipo: "bloquea", codigo: "otro-codigo", archivo: "x.ts" };
+      }),
+  }),
+  "I11-aflojar-un-caso-exigido": enArboles({
+    pr: (raiz) =>
+      cambiarCaso(raiz, "EV-001", (caso) => {
+        Object.assign(caso, riesgoDeEvasion({ id: "EV-001" }), { via: caso["via"] });
+      }),
+  }),
+  "I11-extender-una-brecha": enArboles({
+    ambos: (raiz) =>
+      escribirCasos(raiz, [
+        ...leerCasos(raiz),
+        brechaDeEvasion({ id: "EV-950", vence: "2026-12-20" }),
+      ]),
+    pr: (raiz) =>
+      cambiarCaso(raiz, "EV-950", (caso) => {
+        caso["vence"] = "2026-12-21";
+      }),
+  }),
+  "I11-mover-un-caso-a-los-externos": enArboles({
+    pr: (raiz) => {
+      const casos = leerCasos(raiz);
+      const caso = casos.find((c) => c["id"] === "EV-001");
+      if (caso === undefined) throw new Error("el catálogo real no tiene el caso EV-001");
+      escribirCasos(
+        raiz,
+        casos.filter((c) => c !== caso),
+      );
+      escribirCasos(
+        raiz,
+        [...leerCasos(raiz, EXTERNOS_REAL), { ...caso, tipo: "externo", estado: "externo" }],
+        EXTERNOS_REAL,
+      );
+    },
+  }),
+  "I11-id-repetido-en-el-catalogo": enCatalogo([casoDeEvasion(), casoDeEvasion()]),
+  "I11-caso-exigido-con-campos-de-brecha": enCatalogo([casoDeEvasion({ vence: "2026-12-20" })]),
+  "I11-brecha-con-mas-de-60-dias": enCatalogo([brechaDeEvasion({ vence: "2026-12-30" })]),
+  "I11-brecha-vencida": enCatalogo([brechaDeEvasion({ vence: "2026-10-20" })]),
+  "I11-riesgo-con-revision-a-mas-de-180-dias": enCatalogo([
+    riesgoDeEvasion({ revisar: "2027-04-19" }),
+  ]),
+  "I11-riesgo-con-revision-vencida": enCatalogo([
+    riesgoDeEvasion({ creada: "2026-09-01", revisar: "2026-10-20" }),
+  ]),
+  "I11-caso-exigido-que-pasa-sin-deteccion": enEvasion(casoDeEvasion(), {
+    resultado: "pasa",
+    fallas: [],
+  }),
+  "I11-brecha-cerrada-sin-pasarla-a-exigido": enEvasion(brechaDeEvasion(), {
+    resultado: "bloquea",
+    fallas: [],
+  }),
+  "I11-riesgo-que-dejo-de-existir": enEvasion(riesgoDeEvasion(), {
+    resultado: "bloquea",
+    fallas: [{ codigo: "ruta-sin-clase", archivo: "carpeta-nueva/x.ts", linea: 1 }],
+  }),
+  "I11-desconectar-la-prueba-de-evasion": enPruebas((archivos) => {
+    delete archivos["guardian-evasion.test.ts"];
+  }),
+  "I11-excluir-la-bateria-en-vitest": enVitest((t) =>
+    reemplazar(
+      t,
+      'include: ["src/**/*.test.ts", "test/**/*.test.ts"],',
+      'include: ["src/**/*.test.ts", "test/**/*.test.ts"],\n          exclude: ["test/arquitectura/guardian-evasion*"],',
+    ),
+  ),
+  "I11-saltar-la-bateria": enPruebas((archivos) =>
+    agregarAlFinal(
+      archivos,
+      "guardian-evasion.test.ts",
+      'it.skip("marca-de-la-matriz", () => {});',
+    ),
+  ),
+  // I12 · La deuda técnica conocida no crece ni se esconde.
+  "I12-pagar-la-deuda-y-borrar-su-entrada": enDeuda(
+    deudaCon({ "a.ts": SIN_DEUDA }, []),
+    deudaSana(),
+  ),
+  "I12-borrar-el-paso-de-deuda-del-ci": enArboles({
+    pr: (raiz) => alterarCi(raiz, sinElPasoDeLaDeuda),
+  }),
+  "I12-borrar-el-registro-de-deuda": () => {
+    const cambio = deudaSana();
+    delete cambio[REGISTRO_DE_DEUDA];
+    return enDeuda(cambio)();
+  },
+  "I12-borrar-una-entrada-sin-pagar": enDeuda(deudaCon({}, []), deudaSana()),
+  "I12-la-base-ve-la-entrada-borrada-sin-pagar": enArboles({
+    ambos: (raiz) => escribirEn(raiz, "x.ts", "// TODO: arreglar\n"),
+    base: (raiz) => escribirEn(raiz, REGISTRO_DE_DEUDA, json([entradaDeX])),
+    pr: (raiz) => escribirEn(raiz, REGISTRO_DE_DEUDA, json([])),
+  }),
+  "I12-la-base-deja-pagar-la-deuda": enArboles({
+    base: (raiz) => {
+      escribirEn(raiz, "x.ts", "// TODO: arreglar\n");
+      escribirEn(raiz, REGISTRO_DE_DEUDA, json([entradaDeX]));
+    },
+    pr: (raiz) => {
+      escribirEn(raiz, "x.ts", "export {};\n");
+      escribirEn(raiz, REGISTRO_DE_DEUDA, json([]));
+    },
+  }),
+  "I12-marcador-sin-registrar": enDeuda(deudaCon({ "a.ts": conMarcadores(1) }, [])),
+  "I12-marcador-nuevo-sin-excepcion": enDeuda(
+    deudaCon({ "b.ts": "// @ts-expect-error motivo\n" }, [
+      entradaDeDeuda(),
+      entradaDeDeuda({ id: "ts-expect-error--b-ts", archivos: ["b.ts"] }),
+    ]),
+    deudaSana(),
+  ),
+  "I12-el-total-sube-sin-excepcion": enDeuda(deudaCon({ "a.ts": conMarcadores(3) }), deudaSana()),
+  "I12-tocar-un-archivo-con-deuda": enDeuda(
+    deudaCon({ "a.ts": `${conMarcadores(2)}export const nuevo = 1;\n` }),
+    deudaSana(),
+  ),
+  "I12-entrada-con-un-campo-faltante": enDeuda(deudaCon({}, [entradaDeDeuda({ descripcion: "" })])),
+  "I12-archivo-que-no-existe": enDeuda(
+    deudaCon({}, [
+      entradaDeDeuda(),
+      entradaDeDeuda({ id: "h", tipo: "backlog", archivos: ["x.ts"] }),
+    ]),
+  ),
+  "I12-configuracion-invalida": () => {
+    const cambio = deudaSana();
+    cambio[CONFIGURACION_DE_DEUDA] = json({
+      topeDeExcepciones: "diez",
+      bloqueaDeudaEnArchivoTocado: true,
+    });
+    return enDeuda(cambio)();
+  },
+  "I12-excepcion-vencida": enDeuda(
+    deudaCon({}, [
+      entradaDeDeuda(),
+      excepcionDeDeuda({ id: "exc", tipo: "backlog", creada: "2026-08-01", vence: "2026-09-01" }),
+    ]),
+  ),
+  "I12-excepcion-de-mas-de-60-dias": enDeuda(
+    deudaCon({}, [
+      entradaDeDeuda(),
+      excepcionDeDeuda({ id: "exc", tipo: "backlog", creada: "2026-10-22", vence: "2027-01-20" }),
+    ]),
+  ),
+  "I12-excepcion-que-no-cubre-nada": enDeuda(
+    deudaCon({}, [
+      excepcionDeDeuda({ id: "exc", tipo: "todo", archivos: ["b.ts"] }),
+      entradaDeDeuda(),
+    ]),
+  ),
+  "I12-pasar-el-tope-de-excepciones": () => {
+    const cambio = deudaCon({}, [
+      entradaDeDeuda(),
+      excepcionDeDeuda({ id: "exc-1", tipo: "backlog" }),
+      excepcionDeDeuda({ id: "exc-2", tipo: "backlog" }),
+    ]);
+    cambio[CONFIGURACION_DE_DEUDA] = json({
+      topeDeExcepciones: 1,
+      bloqueaDeudaEnArchivoTocado: true,
+    });
+    return enDeuda(cambio)();
+  },
+  "I12-archivo-de-datos-que-no-se-puede-leer": enDeuda(
+    deudaCon({ "knip.json": '{\n  "ignore": [\n' }),
+  ),
+  "I12-subir-el-tope-de-excepciones": enArboles({
+    pr: (raiz) =>
+      alterar(raiz, CONFIGURACION_REAL, '"topeDeExcepciones": 10', '"topeDeExcepciones": 11'),
+  }),
+  "I12-bajar-el-bloqueo-a-false": enArboles({
+    base: (raiz) =>
+      alterar(
+        raiz,
+        CONFIGURACION_REAL,
+        '"bloqueaDeudaEnArchivoTocado": false',
+        '"bloqueaDeudaEnArchivoTocado": true',
+      ),
+  }),
+  "I12-archivo-grande-sin-registrar": enDeuda(deudaCon({ "src/grande.ts": archivoDeLineas(450) })),
+  "I12-archivo-grande-crece-sobre-lo-registrado": enDeuda(
+    deudaCon({ "src/grande.ts": archivoDeLineas(460) }, [
+      entradaDeDeuda(),
+      entradaDeUnArchivoGrande(450),
+    ]),
+  ),
+  "I12-archivo-grande-crece-contra-la-base": enDeuda(
+    deudaCon({ "src/grande.ts": archivoDeLineas(460) }, [
+      entradaDeDeuda(),
+      entradaDeUnArchivoGrande(460),
+    ]),
+    deudaCon({ "src/grande.ts": archivoDeLineas(450) }, [
+      entradaDeDeuda(),
+      entradaDeUnArchivoGrande(450),
+    ]),
+  ),
+  "I12-subir-el-tope-de-lineas": enArboles({
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        CONFIGURACION_REAL,
+        '"topeDeLineasPorArchivo": 400',
+        '"topeDeLineasPorArchivo": 401',
+      ),
+  }),
+  "I12-excluir-un-archivo-del-tope": enArboles({
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        CONFIGURACION_REAL,
+        '"excluidosDelTope": [',
+        '"excluidosDelTope": [\n    { "ruta": "src/otro.ts", "motivo": "Datos." },',
+      ),
+  }),
+  "I12-duplicar-el-id-de-una-entrada": enDeuda(
+    deudaCon({}, [entradaDeDeuda(), entradaDeDeuda({ tipo: "backlog" })]),
+  ),
+  "I12-duplicar-un-marcador": enDeuda(deudaCon({ "a.ts": conMarcadores(3) }), deudaSana()),
+  "I12-desconectar-el-script-deuda": enArboles({
+    pr: (raiz) =>
+      alterar(
+        raiz,
+        PAQUETE_REAL,
+        '"deuda": "node arquitectura/deuda/deuda.cjs"',
+        '"deuda": "node arquitectura/deuda/deuda.cjs || true"',
+      ),
+  }),
+  "I12-quitar-la-deuda-del-script-arquitectura": enArboles({
+    pr: (raiz) => alterar(raiz, PAQUETE_REAL, " && npm run deuda", ""),
+  }),
+  "I12-continue-on-error-en-el-paso-de-deuda": enArboles({
+    pr: (raiz) =>
+      alterarCi(raiz, (t) =>
+        reemplazar(
+          t,
+          `${PASO_DE_LA_DEUDA}        run: |`,
+          `${PASO_DE_LA_DEUDA}        continue-on-error: true\n        run: |`,
+        ),
+      ),
+  }),
+  "I12-if-en-el-paso-de-deuda": enArboles({
+    pr: (raiz) =>
+      alterarCi(raiz, (t) =>
+        reemplazar(
+          t,
+          `${PASO_DE_LA_DEUDA}        run: |`,
+          `${PASO_DE_LA_DEUDA}        if: false\n        run: |`,
+        ),
+      ),
+  }),
+  "I12-borrar-las-pruebas-de-la-deuda": enPruebas((archivos) => {
+    delete archivos["guardian-deuda-libro.test.ts"];
+  }),
+  "I12-marcador-con-otra-capitalizacion": enDeuda(deudaCon({ "b.ts": "// ToDo: arreglar\n" })),
 };

@@ -5,6 +5,7 @@ import { DEFINICION_VACIA, type DefinicionDeMarca } from "./definicion";
 import {
   decidirConfirmacionDeMarca,
   decidirGuardadoDeBorrador,
+  definicionDeLaUltimaDecision,
   validarCambiosDeBorrador,
   type PlanPorDefecto,
 } from "./version";
@@ -179,23 +180,23 @@ describe("decidirGuardadoDeBorrador", () => {
   };
 
   it("sin borrador y sin versión esperada, nace uno nuevo partiendo de una definición vacía", () => {
-    expect(decidirGuardadoDeBorrador(null, null, { nombreVisible: "Nuevo" })).toEqual({
+    expect(decidirGuardadoDeBorrador(null, null, null, { nombreVisible: "Nuevo" })).toEqual({
       ok: true,
       valor: { esNuevo: true, definicion: { ...DEFINICION_VACIA, nombreVisible: "Nuevo" } },
     });
-    expect(decidirGuardadoDeBorrador(null, null, {})).toEqual({
+    expect(decidirGuardadoDeBorrador(null, null, null, {})).toEqual({
       ok: true,
       valor: { esNuevo: true, definicion: DEFINICION_VACIA },
     });
   });
 
   it("con borrador y la versión que se vio, se actualiza: lo ausente se conserva", () => {
-    expect(decidirGuardadoDeBorrador({ definicion: existente, version: 3 }, 3, {})).toEqual({
+    expect(decidirGuardadoDeBorrador({ definicion: existente, version: 3 }, null, 3, {})).toEqual({
       ok: true,
       valor: { esNuevo: false, definicion: existente },
     });
     expect(
-      decidirGuardadoDeBorrador({ definicion: existente, version: 3 }, 3, {
+      decidirGuardadoDeBorrador({ definicion: existente, version: 3 }, null, 3, {
         nombreVisible: "Nuevo",
       }),
     ).toEqual({
@@ -206,8 +207,8 @@ describe("decidirGuardadoDeBorrador", () => {
 
   it("cada campo se cambia por separado, sin tocar los otros", () => {
     const guardado = { definicion: existente, version: 1 };
-    const cambiado = (cambios: Parameters<typeof decidirGuardadoDeBorrador>[2]) => {
-      const r = decidirGuardadoDeBorrador(guardado, 1, cambios);
+    const cambiado = (cambios: Parameters<typeof decidirGuardadoDeBorrador>[3]) => {
+      const r = decidirGuardadoDeBorrador(guardado, null, 1, cambios);
       return r.ok ? r.valor.definicion : null;
     };
     expect(cambiado({ logo: "/marcas/mc/nuevo.webp" })).toEqual({
@@ -238,8 +239,8 @@ describe("decidirGuardadoDeBorrador", () => {
 
   it("null vacía el campo, [] y {} también (pero no es lo mismo que ausente)", () => {
     const guardado = { definicion: existente, version: 1 };
-    const cambiado = (cambios: Parameters<typeof decidirGuardadoDeBorrador>[2]) => {
-      const r = decidirGuardadoDeBorrador(guardado, 1, cambios);
+    const cambiado = (cambios: Parameters<typeof decidirGuardadoDeBorrador>[3]) => {
+      const r = decidirGuardadoDeBorrador(guardado, null, 1, cambios);
       return r.ok ? r.valor.definicion : null;
     };
     expect(cambiado({ nombreVisible: null })?.nombreVisible).toBeNull();
@@ -253,7 +254,7 @@ describe("decidirGuardadoDeBorrador", () => {
   });
 
   it("el tema, el aspecto y el vocabulario se reemplazan enteros, no se mezclan", () => {
-    const r = decidirGuardadoDeBorrador({ definicion: existente, version: 1 }, 1, {
+    const r = decidirGuardadoDeBorrador({ definicion: existente, version: 1 }, null, 1, {
       tema: { secondary: "#444444" },
       aspecto: { titulos: "SERIF" },
     });
@@ -262,9 +263,9 @@ describe("decidirGuardadoDeBorrador", () => {
   });
 
   it("un borrador nuevo parte con el aspecto vacío (hereda) y guardar otro campo no lo toca", () => {
-    const nuevo = decidirGuardadoDeBorrador(null, null, { nombreVisible: "Nuevo" });
+    const nuevo = decidirGuardadoDeBorrador(null, null, null, { nombreVisible: "Nuevo" });
     expect(nuevo.ok && nuevo.valor.definicion.aspecto).toEqual({});
-    const otro = decidirGuardadoDeBorrador({ definicion: existente, version: 1 }, 1, {
+    const otro = decidirGuardadoDeBorrador({ definicion: existente, version: 1 }, null, 1, {
       logo: "/marcas/mc/otro.png",
     });
     expect(otro.ok && otro.valor.definicion.aspecto).toEqual({
@@ -275,37 +276,158 @@ describe("decidirGuardadoDeBorrador", () => {
 
   it("si lo que el cliente vio no es lo que hay, VERSION_DESACTUALIZADA", () => {
     // Pensaba que no había borrador, pero hay uno.
-    expect(decidirGuardadoDeBorrador({ definicion: existente, version: 1 }, null, {})).toEqual({
+    expect(
+      decidirGuardadoDeBorrador({ definicion: existente, version: 1 }, null, null, {}),
+    ).toEqual({
       ok: false,
       error: "VERSION_DESACTUALIZADA",
     });
     // Pensaba que había uno (versión 2), pero no hay ninguno.
-    expect(decidirGuardadoDeBorrador(null, 2, {})).toEqual({
+    expect(decidirGuardadoDeBorrador(null, null, 2, {})).toEqual({
       ok: false,
       error: "VERSION_DESACTUALIZADA",
     });
-    expect(decidirGuardadoDeBorrador(null, 0, {})).toEqual({
+    expect(decidirGuardadoDeBorrador(null, null, 0, {})).toEqual({
       ok: false,
       error: "VERSION_DESACTUALIZADA",
     });
     // Vio una versión vieja o una futura.
-    expect(decidirGuardadoDeBorrador({ definicion: existente, version: 3 }, 2, {})).toEqual({
+    expect(decidirGuardadoDeBorrador({ definicion: existente, version: 3 }, null, 2, {})).toEqual({
       ok: false,
       error: "VERSION_DESACTUALIZADA",
     });
-    expect(decidirGuardadoDeBorrador({ definicion: existente, version: 3 }, 4, {})).toEqual({
+    expect(decidirGuardadoDeBorrador({ definicion: existente, version: 3 }, null, 4, {})).toEqual({
       ok: false,
       error: "VERSION_DESACTUALIZADA",
     });
-    expect(decidirGuardadoDeBorrador({ definicion: existente, version: 0 }, null, {}).ok).toBe(
-      false,
-    );
+    expect(
+      decidirGuardadoDeBorrador({ definicion: existente, version: 0 }, null, null, {}).ok,
+    ).toBe(false);
   });
 
   it("no modifica el borrador que recibe", () => {
     const copia = structuredClone(existente);
-    decidirGuardadoDeBorrador({ definicion: existente, version: 1 }, 1, { nombreVisible: "Otro" });
+    decidirGuardadoDeBorrador({ definicion: existente, version: 1 }, null, 1, {
+      nombreVisible: "Otro",
+    });
     expect(existente).toEqual(copia);
+  });
+});
+
+describe("el primer borrador parte de la última versión confirmada", () => {
+  const CONFIRMADA: DefinicionDeMarca = {
+    nombreVisible: "Mi Calendario",
+    tema: {
+      primary: "#1d4ed8",
+      "on-primary": "#ffffff",
+      secondary: "#475569",
+      accent: "#0f766e",
+    },
+    aspecto: { estilo: "MODERNO", titulos: "SERIF" },
+    logo: "/marcas/mc/logo.png",
+    vocabulario: { "rol.gerente.nombre": "Encargado" },
+    modulosIniciales: ["reservas", "stock"],
+    planPorDefectoId: PLAN_A,
+  };
+
+  it("cambiar solo el color de acento deja todo lo demás como estaba confirmado", () => {
+    const r = decidirGuardadoDeBorrador(null, CONFIRMADA, null, {
+      tema: { ...CONFIRMADA.tema, accent: "#b91c1c" },
+    });
+    expect(r).toEqual({
+      ok: true,
+      valor: {
+        esNuevo: true,
+        definicion: { ...CONFIRMADA, tema: { ...CONFIRMADA.tema, accent: "#b91c1c" } },
+      },
+    });
+  });
+
+  it("sin cambios, o con cambios iguales a lo confirmado, el primer borrador es igual a la confirmada (se crea igual)", () => {
+    expect(decidirGuardadoDeBorrador(null, CONFIRMADA, null, {})).toEqual({
+      ok: true,
+      valor: { esNuevo: true, definicion: CONFIRMADA },
+    });
+    expect(
+      decidirGuardadoDeBorrador(null, CONFIRMADA, null, { nombreVisible: "Mi Calendario" }),
+    ).toEqual({ ok: true, valor: { esNuevo: true, definicion: CONFIRMADA } });
+  });
+
+  it("null vacía un campo de la confirmada (vuelve a heredar), distinto de no mandarlo", () => {
+    const r = decidirGuardadoDeBorrador(null, CONFIRMADA, null, {
+      logo: null,
+      modulosIniciales: null,
+    });
+    expect(r.ok && r.valor.definicion).toEqual({
+      ...CONFIRMADA,
+      logo: null,
+      modulosIniciales: null,
+    });
+  });
+
+  it("sin ninguna confirmada (base null), parte de la definición vacía", () => {
+    expect(decidirGuardadoDeBorrador(null, null, null, { nombreVisible: "Nuevo" })).toEqual({
+      ok: true,
+      valor: { esNuevo: true, definicion: { ...DEFINICION_VACIA, nombreVisible: "Nuevo" } },
+    });
+  });
+
+  it("con borrador, la base confirmada se ignora: manda el borrador", () => {
+    const borrador: DefinicionDeMarca = { ...DEFINICION_VACIA, nombreVisible: "Borrador" };
+    expect(
+      decidirGuardadoDeBorrador({ definicion: borrador, version: 2 }, CONFIRMADA, 2, {
+        logo: "/marcas/mc/otro.png",
+      }),
+    ).toEqual({
+      ok: true,
+      valor: { esNuevo: false, definicion: { ...borrador, logo: "/marcas/mc/otro.png" } },
+    });
+  });
+
+  it("la desactualización se decide antes que la base: con confirmada y sin borrador, esperar una versión es VERSION_DESACTUALIZADA", () => {
+    expect(decidirGuardadoDeBorrador(null, CONFIRMADA, 1, {})).toEqual({
+      ok: false,
+      error: "VERSION_DESACTUALIZADA",
+    });
+  });
+
+  it("no modifica la confirmada que recibe", () => {
+    const copia = structuredClone(CONFIRMADA);
+    decidirGuardadoDeBorrador(null, CONFIRMADA, null, { tema: { primary: "#000000" } });
+    expect(CONFIRMADA).toEqual(copia);
+  });
+});
+
+describe("definicionDeLaUltimaDecision", () => {
+  const def = (nombre: string): DefinicionDeMarca => ({
+    ...DEFINICION_VACIA,
+    nombreVisible: nombre,
+  });
+
+  it("sin confirmadas no hay decisión", () => {
+    expect(definicionDeLaUltimaDecision([])).toBeNull();
+  });
+
+  it("es la de mayor número, sin importar el orden en que vengan ni cuándo rija (una programada a futuro también es la última decisión)", () => {
+    const v1 = { numero: 1, definicion: def("uno") };
+    const v2 = { numero: 2, definicion: def("dos") };
+    const v3 = { numero: 3, definicion: def("tres (programada)") };
+    expect(definicionDeLaUltimaDecision([v1, v2, v3])).toBe(v3.definicion);
+    expect(definicionDeLaUltimaDecision([v3, v1, v2])).toBe(v3.definicion);
+    expect(definicionDeLaUltimaDecision([v2, v3, v1])).toBe(v3.definicion);
+    expect(definicionDeLaUltimaDecision([v1])).toBe(v1.definicion);
+  });
+
+  // La base lo impide (`version_de_marca_numero_uk`), pero el desempate queda fijado: ante dos versiones con el
+  // mismo número gana la primera de la lista, en cualquier orden, y no la última por casualidad.
+  it("con el mismo número en dos versiones gana la primera de la lista (desempate fijo)", () => {
+    const a = { numero: 2, definicion: def("a") };
+    const b = { numero: 2, definicion: def("b") };
+    expect(definicionDeLaUltimaDecision([a, b])).toBe(a.definicion);
+    expect(definicionDeLaUltimaDecision([b, a])).toBe(b.definicion);
+    // Y un número mayor posterior sigue ganando sobre el empate.
+    const c = { numero: 3, definicion: def("c") };
+    expect(definicionDeLaUltimaDecision([a, b, c])).toBe(c.definicion);
   });
 });
 

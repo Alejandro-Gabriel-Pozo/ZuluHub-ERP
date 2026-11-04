@@ -9,6 +9,7 @@ import {
 import { err, ok } from "../../src/primitivas/resultado/resultado";
 import { EmisionFalsa, guionAlAzar } from "../utilidades/emision-falsa";
 import { fecha } from "../utilidades/facturacion";
+import { correrEnParalelo, esConcurrenciaAgotada } from "./concurrencia-apoyo";
 import { crearBarrera, crearBaseAparte } from "./entorno";
 import {
   casosDeNumeracion,
@@ -95,12 +96,15 @@ describe.skipIf(base === null)("fiscal T6: concurrencia de la numeración", () =
     llamada: (i: number) => Promise<T>,
     conBarrera = true,
   ): Promise<T[]> {
-    barrera = conBarrera ? crearBarrera(n) : null;
-    try {
-      return await Promise.all(Array.from({ length: n }, (_, i) => llamada(i)));
-    } finally {
-      barrera = null;
-    }
+    return correrEnParalelo(
+      n,
+      llamada,
+      conBarrera
+        ? (esperar) => {
+            barrera = esperar;
+          }
+        : undefined,
+    );
   }
 
   /** Dos llamadas de distinto tipo a la vez, con la misma barrera. */
@@ -355,11 +359,7 @@ describe.skipIf(base === null)("fiscal T6: concurrencia de la numeración", () =
             return;
           }
           const motivo = r.error;
-          const reintentable =
-            motivo === "SERIE_OCUPADA" ||
-            (typeof motivo === "object" &&
-              "tipo" in motivo &&
-              motivo.tipo === "ConcurrenciaAgotada");
+          const reintentable = motivo === "SERIE_OCUPADA" || esConcurrenciaAgotada(motivo);
           if (
             typeof motivo === "object" &&
             "codigo" in motivo &&

@@ -4,6 +4,7 @@ import type {
   ManejadorDeTrabajo,
   TrabajoTomado,
 } from "../../puertos/cola-de-trabajos";
+import { empresaId } from "../../primitivas/identificadores/marca";
 import type { Transacciones } from "../../puertos/transacciones";
 import { crearProcesadorDeTrabajos, type ProblemaDelProcesador, type TxDeCola } from "./procesador";
 import type { PoliticaDeReintentos } from "./reintentos";
@@ -31,7 +32,13 @@ type Fila = {
   ultimoError: string | null;
 };
 
-function colaEnMemoria(filas: Fila[], opciones: { rechazarCierres?: boolean } = {}) {
+function colaEnMemoria(
+  filas: Fila[],
+  opciones: {
+    rechazarCierres?: boolean;
+    porClaves?: ColaDeTrabajos["idsPorClaves"];
+  } = {},
+) {
   const cola: ColaDeTrabajos = {
     candidatos: (ahora, limite) =>
       Promise.resolve(
@@ -104,7 +111,8 @@ function colaEnMemoria(filas: Fila[], opciones: { rechazarCierres?: boolean } = 
       Object.assign(f, { estado: "FALLIDO", tomadoHasta: null, ultimoError: error });
       return Promise.resolve(true);
     },
-    idsPorClaves: () => Promise.resolve([]),
+    idsPorClaves: opciones.porClaves ?? (() => Promise.resolve([])),
+    empresasConTrabajosDe: () => Promise.resolve([]),
   };
   const transacciones: Transacciones<TxDeCola> = {
     ejecutar: async (opcionesDeTx, trabajo) => {
@@ -134,10 +142,12 @@ function procesadorCon(
     problemas?: ProblemaDelProcesador[];
     rechazarCierres?: boolean;
     tope?: number;
+    porClaves?: ColaDeTrabajos["idsPorClaves"];
   } = {},
 ) {
   const { transacciones } = colaEnMemoria(filas, {
     ...(extras.rechazarCierres === undefined ? {} : { rechazarCierres: extras.rechazarCierres }),
+    ...(extras.porClaves === undefined ? {} : { porClaves: extras.porClaves }),
   });
   return crearProcesadorDeTrabajos({
     transacciones,
@@ -551,6 +561,23 @@ describe("despacharAhora", () => {
     expect(filas[0]).toMatchObject({ estado: "EN_CURSO", intentos: 1 });
   });
 
+  it("con esperarHastaTerminar no corta a los 5 s: espera a un manejador más lento que el tope y el trabajo queda HECHO", async () => {
+    const filas = [fila("a")];
+    const lento: ManejadorDeTrabajo = async () => {
+      await new Promise((resolver) => setTimeout(resolver, 120));
+      return { tipo: "HECHO" };
+    };
+    // El tope (20 ms) vence mucho antes de que el manejador termine.
+    await procesadorCon(filas, lento, { tope: 20 }).despacharAhora(["a"], T0, {
+      esperarHastaTerminar: true,
+    });
+    expect(filas[0]).toMatchObject({ estado: "HECHO", intentos: 1 });
+    // Sin la opción, el mismo caso devuelve el control a los 20 ms y el trabajo sigue EN_CURSO.
+    const otras = [fila("b")];
+    await procesadorCon(otras, lento, { tope: 20 }).despacharAhora(["b"], T0);
+    expect(otras[0]).toMatchObject({ estado: "EN_CURSO" });
+  });
+
   it("un trabajo que otro ya tomó no se ejecuta de nuevo", async () => {
     const filas = [fila("a")];
     let ejecuciones = 0;
@@ -561,5 +588,72 @@ describe("despacharAhora", () => {
     const p = procesadorCon(filas, contar);
     await Promise.all([p.despacharAhora(["a"], T0), p.despacharAhora(["a"], T0)]);
     expect(ejecuciones).toBe(1);
+  });
+});
+
+describe("despacharPorClaves", () => {
+  const empresa = empresaId("11111111-1111-4111-8111-111111111111");
+
+  it("busca los trabajos de ESA empresa con esas claves y despacha solo esos", async () => {
+    const filas = [fila("a"), fila("b"), fila("c")];
+    const pedidos: { empresa: string; claves: readonly string[] }[] = [];
+    const p = procesadorCon(filas, hecho, {
+      porClaves: (e, claves) => {
+        pedidos.push({ empresa: e, claves });
+        return Promise.resolve(["b"]);
+      },
+    });
+    await p.despacharPorClaves(empresa, ["fiscal.validar:x:1"], T0);
+    expect(pedidos).toEqual([{ empresa, claves: ["fiscal.validar:x:1"] }]);
+    expect(filas.map((f) => f.estado)).toEqual(["PENDIENTE", "HECHO", "PENDIENTE"]);
+  });
+
+  it("con esperarHastaTerminar pasa la opción al despacho: espera a un manejador más lento que el tope", async () => {
+    const filas = [fila("a")];
+    const lento: ManejadorDeTrabajo = async () => {
+      await new Promise((resolver) => setTimeout(resolver, 120));
+      return { tipo: "HECHO" };
+    };
+    const p = procesadorCon(filas, lento, { tope: 20, porClaves: () => Promise.resolve(["a"]) });
+    await p.despacharPorClaves(empresa, ["k"], T0, { esperarHastaTerminar: true });
+    expect(filas[0]).toMatchObject({ estado: "HECHO" });
+  });
+
+  it("sin claves no consulta la cola ni ejecuta nada", async () => {
+    const filas = [fila("a")];
+    let consultas = 0;
+    const p = procesadorCon(filas, hecho, {
+      porClaves: () => {
+        consultas += 1;
+        return Promise.resolve(["a"]);
+      },
+    });
+    await p.despacharPorClaves(empresa, [], T0);
+    expect(consultas).toBe(0);
+    expect(filas[0]?.estado).toBe("PENDIENTE");
+  });
+
+  it("una clave sin trabajo (otra empresa, o uno que ya no existe) no ejecuta nada", async () => {
+    const filas = [fila("a")];
+    await procesadorCon(filas, hecho, { porClaves: () => Promise.resolve([]) }).despacharPorClaves(
+      empresa,
+      ["fiscal.validar:x:1"],
+      T0,
+    );
+    expect(filas[0]?.estado).toBe("PENDIENTE");
+  });
+
+  it("si la cola no responde al buscar, no lanza: lo informa y queda para el cron", async () => {
+    const filas = [fila("a")];
+    const problemas: ProblemaDelProcesador[] = [];
+    const p = procesadorCon(filas, hecho, {
+      problemas,
+      porClaves: () => Promise.reject(new Error("falló postgres://usuario:clave@host/base")),
+    });
+    await expect(p.despacharPorClaves(empresa, ["k"], T0)).resolves.toBeUndefined();
+    expect(filas[0]?.estado).toBe("PENDIENTE");
+    expect(problemas).toHaveLength(1);
+    expect(problemas[0]).toMatchObject({ trabajoId: null, fase: "despachar" });
+    expect(problemas[0]?.mensaje).not.toContain("clave@");
   });
 });

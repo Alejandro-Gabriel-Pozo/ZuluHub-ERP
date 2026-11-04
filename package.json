@@ -17,11 +17,13 @@
     "format:check": "prettier --check .",
     "test": "vitest run --project node",
     "test:componentes": "vitest run --project componentes",
-    "arquitectura": "depcruise src apps scripts --config .dependency-cruiser.cjs && npm run guardian",
+    "arquitectura": "depcruise src apps scripts --config .dependency-cruiser.cjs && npm run guardian && npm run deuda",
     "guardian": "node arquitectura/contratos/guardian.cjs",
+    "deuda": "node arquitectura/deuda/deuda.cjs",
     "analizar:muerto": "knip",
     "mutacion": "stryker run",
     "migrar": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/migrar-base.ts",
+    "cargar-entorno": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/cargar-entorno.ts",
     "instalar-clave": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/instalar-clave-de-contexto.ts",
     "build:web": "npm run build --workspace @pedernal/web",
     "build:plataforma": "npm run build --workspace @pedernal/plataforma",
@@ -64,7 +66,7 @@
     "pg": "^8.23.1",
     "pkijs": "3.4.1",
     "qrcode-generator": "2.0.4",
-    "zod": "4.6.5"
+    "zod": "4.6.7"
   },
   "overrides": {
     "qs": "6.16.0"

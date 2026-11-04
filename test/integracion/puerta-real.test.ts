@@ -62,7 +62,7 @@ type Marca = Readonly<{
   dominio: string;
   app: string;
   landing: string;
-  carta: string;
+  vidriera: string;
   consola: string;
   retirado: string;
   pendiente: string;
@@ -72,7 +72,7 @@ const hostsDe = (dominio: string) => ({
   dominio,
   app: `app.${dominio}`,
   landing: dominio,
-  carta: `carta.${dominio}`,
+  vidriera: `carta.${dominio}`,
   consola: `consola.${dominio}`,
   retirado: `viejo.${dominio}`,
   pendiente: `pendiente.${dominio}`,
@@ -124,7 +124,7 @@ describe.skipIf(base === null)("la puerta real contra la base con el rol públic
     const h = hostsDe(dominio);
     await crearDominio(dueno, id, { host: h.app, superficie: "APP", canonico: true });
     await crearDominio(dueno, id, { host: h.landing, superficie: "LANDING" });
-    await crearDominio(dueno, id, { host: h.carta, superficie: "CARTA" });
+    await crearDominio(dueno, id, { host: h.vidriera, superficie: "CARTA" });
     await crearDominio(dueno, id, { host: h.consola, superficie: "CONSOLA" });
     await crearDominio(dueno, id, { host: h.retirado, superficie: "APP", estado: "RETIRADO" });
     await crearDominio(dueno, id, {
@@ -350,7 +350,7 @@ describe.skipIf(base === null)("la puerta real contra la base con el rol públic
       for (const [host, destino] of [
         [A.app, "/s/app"],
         [A.landing, "/s/landing"],
-        [A.carta, "/s/carta"],
+        [A.vidriera, "/s/carta"],
         [B.app, "/s/app"],
       ] as const) {
         const r = await proxy(pedido(host));
@@ -507,10 +507,10 @@ describe.skipIf(base === null)("la puerta real contra la base con el rol públic
       const casos: readonly (readonly [string, string])[] = [
         [A.app, A.nombre],
         [A.landing, A.nombre],
-        [A.carta, A.nombre],
+        [A.vidriera, A.nombre],
         [B.app, B.nombre],
         [B.landing, B.nombre],
-        [B.carta, B.nombre],
+        [B.vidriera, B.nombre],
         [A.retirado, "DESCONOCIDO"],
         [B.pendiente, "DESCONOCIDO"],
         [sinVersion, "DESCONOCIDO"],

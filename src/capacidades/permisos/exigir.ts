@@ -1,6 +1,11 @@
 import { ok, type Resultado } from "../../primitivas/resultado/resultado";
-import { estadoDeModulos } from "../modulos/activos";
-import { evaluarGuard, type MotivoDeRechazo, type ReglasDelGuard } from "./guard";
+import { clavesDe, estadoDeModulos } from "../modulos/activos";
+import {
+  evaluarGuard,
+  type DatosDelGuard,
+  type MotivoDeRechazo,
+  type ReglasDelGuard,
+} from "./guard";
 import type { RolDeEmpresa } from "./roles";
 
 /**
@@ -26,6 +31,24 @@ export type ActorCargado<R extends string = RolDeEmpresa> = Readonly<{
 
 /** Carga del actor, leída dentro de la transacción en curso y sin caché. */
 export type CargaDelActor<R extends string = RolDeEmpresa> = () => Promise<ActorCargado<R>>;
+
+/**
+ * Lo que el guard evalúa de un actor ya cargado: su rol y el estado de los módulos de su empresa. Es el ÚNICO lugar donde se arma,
+ * para que `exigirAcciones` y `accionesPermitidas` no puedan entender distinto «qué módulos están activos». No es de una sucursal:
+ * `capacidadesDeSucursal` queda en `null`.
+ */
+function datosDelActor<
+  M extends string,
+  A extends string,
+  C extends string,
+  R extends string = RolDeEmpresa,
+>(reglas: ReglasDelGuard<M, A, C, R>, actor: ActorCargado<NoInfer<R>>): DatosDelGuard<M, C, R> {
+  return {
+    rol: actor.rol,
+    ...estadoDeModulos(reglas.catalogo, actor.modulosActivados, actor.modulosHabilitados),
+    capacidadesDeSucursal: null,
+  };
+}
 
 /**
  * El guard de permisos como primer paso de cada caso de uso y de cada consulta (ADR-003): el actor
@@ -74,15 +97,29 @@ export async function exigirAcciones<
 ): Promise<Resultado<null, MotivoDeRechazo>> {
   // El tipo ya lo impide; esto cubre una lista vacía que llegue por un `as` o por datos.
   if (acciones.length === 0) throw new RangeError("exigirAcciones sin ninguna acción");
-  const actor = await cargar();
-  const datos = {
-    rol: actor.rol,
-    ...estadoDeModulos(reglas.catalogo, actor.modulosActivados, actor.modulosHabilitados),
-    capacidadesDeSucursal: null,
-  };
+  const datos = datosDelActor(reglas, await cargar());
   for (const accion of acciones) {
     const permiso = evaluarGuard(reglas, accion, datos);
     if (!permiso.ok) return permiso;
   }
   return ok(null);
+}
+
+/**
+ * Todas las acciones que el guard deja hacer HOY a un actor ya cargado (ordenadas): el mismo veredicto que `exigirAccion` da una por
+ * una (módulo activo, rol), calculado de una vez para mostrar u ocultar en una pantalla. No autoriza nada por sí mismo: cada caso de
+ * uso y cada consulta vuelve a pasar por el guard dentro de su transacción. Las acciones que exigen una capacidad de sucursal no
+ * figuran (sin sucursal no hay capacidad); hoy ninguna la exige (lo vigila `catalogo.test.ts`: si una la declara, esa prueba falla y hay que pasarle la sucursal a esta función). Previene: que la pantalla ofrezca lo que el rol permite pero el
+ * módulo no (apagado, en desarrollo o fuera del plan), si la lista saliera solo de la matriz de roles. Chequeo: `exigir.test.ts`.
+ */
+export function accionesPermitidas<
+  M extends string,
+  A extends string,
+  C extends string,
+  R extends string = RolDeEmpresa,
+>(reglas: ReglasDelGuard<M, A, C, R>, actor: ActorCargado<NoInfer<R>>): readonly A[] {
+  const datos = datosDelActor(reglas, actor);
+  return clavesDe(reglas.permisos)
+    .filter((accion) => evaluarGuard(reglas, accion, datos).ok)
+    .sort();
 }

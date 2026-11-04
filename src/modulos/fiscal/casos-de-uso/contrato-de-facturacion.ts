@@ -1,12 +1,13 @@
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { EstadoDeEmpresa } from "../../../contexto/estados";
-import type { EmpresaId, TenantId } from "../../../primitivas/identificadores/marca";
+import type { EmpresaId, SucursalId, TenantId } from "../../../primitivas/identificadores/marca";
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { TrabajosReencolables } from "../../../puertos/trabajos";
 import type { Ambiente } from "../dominio/comprobante-nuevo";
 import type { ComprobanteId, EmisorId } from "../dominio/identificadores";
 import { OPCIONES_DE_NUMERACION, type OpcionesDeNumeracion } from "../dominio/numeracion";
+import type { LecturasDeComprobantes } from "../persistencia/lecturas-de-comprobantes";
 import type { RepositorioDeCertificados } from "../persistencia/repositorio-de-certificados";
 import type { RepositorioDeComprobantes } from "../persistencia/repositorio-de-comprobantes";
 import type { RepositorioDeIntentos } from "../persistencia/repositorio-de-intentos";
@@ -17,6 +18,7 @@ import type {
   RepositorioDeSeries,
 } from "../persistencia/repositorios";
 import type { TxDeNumeracion } from "./contrato";
+import type { TxDeConfiguracionFiscal } from "./contrato-de-configuracion";
 import type { EmisionElectronica } from "./emision-electronica";
 
 /**
@@ -36,6 +38,23 @@ export type TxDeFacturacion = Omit<TxDeNumeracion, "empresas" | "puntosDeVenta" 
       }> | null>;
     }>;
     tenants: TxDeNumeracion["tenants"];
+    /**
+     * La sucursal de un comprobante guardado: lo único que se lee para decidir si la persona lo alcanza (D-39) antes de leer el
+     * resto (`consultas/comprobante-en-alcance.ts`), y la de la factura que una nota corrige (D-51).
+     */
+    lecturas: Pick<LecturasDeComprobantes, "sucursalDelComprobante">;
+    /**
+     * Una sucursal de la empresa, abierta o cerrada (la composición pasa el repositorio de empresas, que ya cumple esto): emitir
+     * exige la del punto de venta abierta (D-50).
+     */
+    sucursales: Readonly<{
+      obtener(empresa: EmpresaId, id: SucursalId): Promise<Readonly<{ activa: boolean }> | null>;
+    }>;
+    /**
+     * La sucursal del punto de venta que pasa a producción, leída con `FOR SHARE` (la misma lectura que usan activar y mudar un punto de
+     * venta): el cierre de esa sucursal espera a que termine el pasaje, o el pasaje la ve cerrada. Solo dentro de una transacción.
+     */
+    sucursalBloqueada: TxDeConfiguracionFiscal["sucursalBloqueada"];
     puntosDeVenta: Pick<RepositorioDePuntosDeVenta, "obtener" | "cambiarAmbiente">;
     series: Pick<
       RepositorioDeSeries,
@@ -64,13 +83,15 @@ export type ProveedorDeEmision = Readonly<{
 /**
  * Tiempos límite PROPIOS de cada llamada al servicio de emisión, en milisegundos (§B.5.4). Son el respaldo del
  * caso de uso por encima de los del adaptador: una llamada que no vuelve a tiempo es `INCIERTO` (autorizar, que
- * NUNCA se reenvía), `CONSULTA_FALLIDA` (consultar) o `SERVICIO_NO_DISPONIBLE` (último autorizado). ASUMIDOS:
+ * NUNCA se reenvía), `CONSULTA_FALLIDA` (consultar) o `SERVICIO_NO_DISPONIBLE` (último autorizado y puntos de venta). ASUMIDOS:
  * un poco más que los del adaptador (20 s y 10 s) y bastante menos que la reserva de la serie (5 minutos).
  */
 export type TiemposLimite = Readonly<{
   autorizarEnMs: number;
   consultarEnMs: number;
   ultimoAutorizadoEnMs: number;
+  /** Listar los puntos de venta de ARCA (`FEParamGetPtosVenta`, D-77): una lectura, igual que el último autorizado. */
+  puntosDeVentaEnMs: number;
 }>;
 
 export type OpcionesDeFacturacion = Readonly<{
@@ -84,7 +105,12 @@ export type OpcionesDeFacturacion = Readonly<{
 
 export const OPCIONES_DE_FACTURACION: OpcionesDeFacturacion = {
   numeracion: OPCIONES_DE_NUMERACION,
-  tiempos: { autorizarEnMs: 25_000, consultarEnMs: 15_000, ultimoAutorizadoEnMs: 15_000 },
+  tiempos: {
+    autorizarEnMs: 25_000,
+    consultarEnMs: 15_000,
+    ultimoAutorizadoEnMs: 15_000,
+    puntosDeVentaEnMs: 15_000,
+  },
   pendienteHuerfanoEnMs: 10 * 60_000,
   limitePorCorrida: 50,
 };

@@ -248,10 +248,10 @@ const reglas = [
     from: { path: "^src/modulos/[^/]+/consultas/" },
     to: {
       path: "^src/modulos/[^/]+/dominio/",
-      // Única excepción: el modelo de impresión del facturador (H7 facturación §B.7), un valor puro sin reglas
-      // de emisión que la consulta de impresión solo arma con lo guardado. Previene: abrir la puerta a todo el
-      // dominio de fiscal desde las consultas. Chequeo: las violaciones inyectadas de reglas.test.ts.
-      pathNot: "^src/modulos/fiscal/dominio/modelo-de-impresion\\.ts$",
+      // Únicas excepciones (fiscal, funciones puras): el modelo de impresión (§B.7), la acreditación (D-16) y la vigencia
+      // de una versión (`versionVigente`, D-43), que consultas y casos de uso calculan con UNA regla. Previene: abrir todo
+      // el dominio de fiscal a las consultas. Chequeo: las violaciones inyectadas de reglas.test.ts.
+      pathNot: "^src/modulos/fiscal/dominio/(modelo-de-impresion|acreditacion|vigencia)\\.ts$",
     },
   },
   {
@@ -439,18 +439,18 @@ const reglas = [
     to: { path: "^(node_modules/)?(better-auth(/|$)|@better-auth/)" },
   },
   {
-    // P8a (h5-p8 §2.4 ter; dependencia aprobada por el dueño: `qrcode-generator` 2.0.4 exacta). Previene: que el generador del
-    // QR, que recibe la dirección `otpauth://` con el SECRETO del segundo factor, se importe desde cualquier otro lugar y
-    // el secreto termine dibujado, registrado o mandado donde nadie lo revisó. Solo lo importa el adaptador de la
-    // autenticación de plataforma (`src/adaptadores/autenticacion/plataforma/`): el resto pide el alta del segundo factor
-    // por el puerto `AutenticacionDePlataforma`. Chequeo: la violación inyectada de reglas.test.ts.
-    name: "qr-solo-en-la-autenticacion-de-plataforma",
+    // P8a y F9 (h5-p8 §2.4 ter; `qrcode-generator` 2.0.4 exacta, aprobada por el dueño, también para la factura, 2026-11-03).
+    // Previene: que el generador del QR, que recibe textos sensibles (la dirección `otpauth://` con el SECRETO del segundo
+    // factor, la URL de una factura), se importe desde otro lugar y el texto termine dibujado, registrado o mandado donde
+    // nadie lo revisó, o que el dibujo se copie en cada uso. Lo importa UN solo lugar, `src/adaptadores/qr/` (ADR-014: dos
+    // usos reales). Chequeo: la violación inyectada de reglas.test.ts.
+    name: "qr-solo-en-su-adaptador",
     severity: "error",
     comment:
-      "`qrcode-generator` solo se importa en src/adaptadores/autenticacion/plataforma/: dibuja el QR de la dirección otpauth (que lleva el secreto TOTP) y esa dirección no sale de ahí (h5-p8 §2.4 ter).",
+      "`qrcode-generator` solo se importa en src/adaptadores/qr/: dibuja el QR de textos sensibles (la dirección otpauth con el secreto TOTP, la URL de la factura) y es el único lugar que lo hace (h5-p8 §2.4 ter).",
     from: {
       path: "^(src|apps|scripts)/",
-      pathNot: "^src/adaptadores/autenticacion/plataforma/",
+      pathNot: "^src/adaptadores/qr/",
     },
     to: { path: "^(node_modules/)?qrcode-generator(/|$)" },
   },

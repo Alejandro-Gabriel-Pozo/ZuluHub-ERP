@@ -1,0 +1,24 @@
+.migas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+}
+
+.tramo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.separador {
+  color: var(--color-texto-suave);
+}
+
+.enlace {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--objetivo-minimo);
+  color: var(--color-info);
+  font-weight: var(--tipo-peso-fuerte);
+}

@@ -1,0 +1,197 @@
+.raiz {
+  /*
+   * Decisión del dueño: la consola usa objetivos táctiles de 48 px (3rem). Es un token LOCAL de la consola: no se
+   * toca el de administración (44 px) de los tokens compartidos. Los botones, campos y enlaces de `web/ui` leen
+   * `--objetivo-minimo`, y esta definición baja por la herencia a todo lo que se pinta dentro de la consola.
+   */
+  --objetivo-consola: 3rem;
+  --objetivo-minimo: var(--objetivo-consola);
+
+  min-height: 100dvh;
+}
+
+.salto {
+  position: absolute;
+  left: var(--espacio-2);
+  top: -4rem;
+  z-index: var(--capa-salto-de-teclado);
+  padding: var(--espacio-2) var(--espacio-4);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+}
+
+.salto:focus {
+  top: var(--espacio-2);
+}
+
+.zona {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  padding: var(--espacio-4);
+  border-bottom: var(--borde-grosor) solid var(--color-borde);
+}
+
+.titulo {
+  margin: 0;
+  font-family: var(--tipo-familia-titulos);
+  font-size: var(--tipo-tamano-titulo);
+  font-weight: var(--tipo-peso-fuerte);
+  line-height: 1.25;
+}
+
+.principal {
+  flex: 1;
+  padding: var(--espacio-4);
+}
+
+.principal:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Menú lateral: oscuro, con los colores de texto y de fondo invertidos. */
+.lateral {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-5);
+  padding: var(--espacio-4);
+  background: var(--color-texto);
+  color: var(--color-fondo);
+}
+
+.lateral :focus-visible {
+  outline-color: var(--color-fondo);
+  box-shadow: 0 0 0 2px var(--color-texto);
+}
+
+.marca {
+  margin: 0;
+  font-size: var(--tipo-tamano-medio);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.enlace {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: var(--objetivo-minimo);
+  padding: 0 var(--espacio-3);
+  border: var(--borde-grosor-fuerte) solid transparent;
+  border-radius: var(--radio-base);
+  color: var(--color-fondo);
+  text-decoration: none;
+}
+
+.enlace:hover {
+  background: var(--color-texto-suave);
+}
+
+.enlace[aria-current="page"] {
+  border-color: var(--color-fondo);
+  background: var(--accion-primaria-fondo);
+  color: var(--accion-primaria-texto);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.salida {
+  margin-top: auto;
+}
+
+/* Celular: barra de arriba con el botón «Menú» y cajón que se abre sobre el contenido. */
+.barra {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-2) var(--espacio-4);
+  background: var(--color-texto);
+  color: var(--color-fondo);
+}
+
+.barra :focus-visible {
+  outline-color: var(--color-fondo);
+  box-shadow: 0 0 0 2px var(--color-texto);
+}
+
+.botonDeMenu {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-width: var(--objetivo-minimo);
+  min-height: var(--objetivo-minimo);
+  padding: 0 var(--espacio-3);
+  border: var(--borde-grosor-fuerte) solid var(--color-fondo);
+  border-radius: var(--radio-base);
+  background: transparent;
+  color: var(--color-fondo);
+  font: inherit;
+  font-weight: var(--tipo-peso-fuerte);
+  cursor: pointer;
+}
+
+.nombreEnBarra {
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.velo {
+  position: fixed;
+  inset: 0;
+  z-index: var(--capa-franja-de-aviso);
+  background: var(--color-velo);
+}
+
+@media (max-width: 47.99rem) {
+  .lateral {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: var(--capa-salto-de-teclado);
+    width: min(20rem, 85vw);
+    overflow-y: auto;
+  }
+
+  /* Sin JavaScript el menú queda a la vista; con JavaScript se esconde hasta tocar «Menú». */
+  .lateral[data-listo="true"][data-abierto="false"] {
+    display: none;
+  }
+}
+
+@media (min-width: 48rem) {
+  .raiz {
+    display: grid;
+    grid-template-columns: 16rem minmax(0, 1fr);
+  }
+
+  .barra,
+  .velo {
+    display: none;
+  }
+
+  .lateral {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .cabecera,
+  .principal {
+    padding-inline: var(--espacio-6);
+  }
+}

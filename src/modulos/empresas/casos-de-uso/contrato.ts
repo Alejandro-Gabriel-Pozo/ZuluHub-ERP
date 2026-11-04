@@ -4,7 +4,8 @@ import type { TenantId } from "../../../primitivas/identificadores/marca";
 import type { Auditoria } from "../../../puertos/auditoria";
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
-import type { RepositorioDeEmpresas, RepositorioDeSucursales } from "../persistencia/repositorios";
+import type { RepositorioDeEmpresas } from "../persistencia/repositorios";
+import type { RepositorioDeSucursales } from "../persistencia/repositorio-de-sucursales";
 
 /**
  * Lo que necesita un caso de uso para saber si la empresa opera: su estado y el de su tenant. El

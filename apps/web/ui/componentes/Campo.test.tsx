@@ -88,6 +88,17 @@ matrizDeEstados("Campo", {
   },
 });
 
+describe("Campo: fecha", () => {
+  it("con tipo date es un campo de fecha con su etiqueta", async () => {
+    await render(
+      <Campo etiqueta="Vigente desde" tipo="date" valor="2026-11-01" alCambiar={() => undefined} />,
+    );
+    const campo = page.getByLabelText("Vigente desde");
+    await expect.element(campo).toHaveAttribute("type", "date");
+    await expect.element(campo).toHaveValue("2026-11-01");
+  });
+});
+
 describe("Campo: códigos que distinguen mayúsculas", () => {
   it("con autoCapitalize apagado el teclado no capitaliza ni corrige", async () => {
     await render(

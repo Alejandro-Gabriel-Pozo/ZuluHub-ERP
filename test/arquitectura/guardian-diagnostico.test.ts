@@ -51,7 +51,18 @@ const require = createRequire(import.meta.url);
 const { NIVELES } = require("../../arquitectura/contratos/clasificacion.cjs") as {
   NIVELES: { nombre: string; reglas: { clase: string; glob: string }[] }[];
 };
+const { evaluarResultado } = require("../../arquitectura/contratos/evasiones.cjs") as {
+  evaluarResultado: (
+    caso: Objeto,
+    indice: number,
+    observado: { resultado: string; fallas: { codigo: string; archivo: string; linea?: number }[] },
+  ) => Falla;
+};
+const { crearUbicador } = require("../../arquitectura/contratos/ubicacion.cjs") as {
+  crearUbicador: (leer: (ruta: string) => string | null) => (hallazgo: Falla) => Falla;
+};
 
+const EVASIONES = "arquitectura/contratos/evasiones.json";
 const EXCEPCIONES = "arquitectura/contratos/excepciones.json";
 const EXCLUSIONES = "arquitectura/contratos/exclusiones.json";
 const REGISTRO = "arquitectura/contratos/contratos.cjs";
@@ -103,6 +114,59 @@ const excepcion = (cambios: Objeto = {}): Objeto => ({
   vence: "2026-12-20",
   ...cambios,
 });
+
+/** Un repositorio sintético sobre `BASE` con el catálogo de la batería de evasión dado (texto = el JSON). */
+function conEvasiones(lista: unknown, extra: Opciones = {}): Resultado {
+  return correr({
+    ...extra,
+    evasiones: lista,
+    archivos: { [EVASIONES]: json(lista), ...extra.archivos },
+  });
+}
+/** Un caso del catálogo de evasión, exigido y válido (`cambios` lo pisa). */
+const casoDeEvasion = (cambios: Objeto = {}): Objeto => ({
+  id: "EV-001",
+  via: "filtros",
+  titulo: "Carpeta nueva sin regla",
+  construccion: [],
+  controlEsperado: "ruta-sin-clase",
+  esperado: { tipo: "bloquea", codigo: "ruta-sin-clase", archivo: "x.ts" },
+  estado: "exigido",
+  ...cambios,
+});
+const brechaDeEvasion = (cambios: Objeto = {}): Objeto =>
+  casoDeEvasion({
+    estado: "brecha-abierta",
+    responsable: "agente (a pedido del dueño)",
+    severidad: "alta",
+    justificacion: "Pasa sin detección.",
+    mitigacion: "Revisión manual.",
+    creada: "2026-10-01",
+    vence: "2026-11-30",
+    ...cambios,
+  });
+const riesgoDeEvasion = (cambios: Objeto = {}): Objeto =>
+  casoDeEvasion({
+    estado: "riesgo-aceptado",
+    aprobadoPor: "Dueño",
+    motivo: "Exige editar la maquinaria.",
+    creada: "2026-10-01",
+    revisar: "2027-03-01",
+    ...cambios,
+  });
+/** La línea (desde 1) de la primera aparición de la clave en el JSON de dos espacios; después de `desde`. */
+const lineaDeClave = (lista: unknown, clave: string, desde = 0): number =>
+  json(lista)
+    .split("\n")
+    .findIndex((linea, i) => i >= desde && linea.includes(`"${clave}"`)) + 1;
+/** El resultado de correr un caso con lo que pasó, ubicado en el JSON del catálogo (como lo hace la batería). */
+function evaluandoCaso(caso: Objeto, observado: { resultado: string; fallas: [] }): Resultado {
+  const texto = json([caso]);
+  const hallazgo = crearUbicador((ruta) => (ruta === EVASIONES ? texto : null))(
+    evaluarResultado(caso, 0, observado),
+  );
+  return { fallas: [hallazgo], avisos: [], informe: {} } as unknown as Resultado;
+}
 
 /** Las exclusiones de siempre (generado en la entrada 0, docs en la 1) con la de docs modificada. */
 function conExclusiones(lista: unknown, extra: Opciones = {}): Resultado {
@@ -961,6 +1025,144 @@ function casos(): Caso[] {
       armar: () => conExclusiones(docsCon({ vence: "2026-11-01" })),
       esperado: [[EXCLUSIONES, 13]],
     },
+
+    // ---- (a) batería de evasión: evasiones.json (la línea de la clave ofensora o de la entrada)
+    {
+      nombre: "el catálogo no es una lista: la línea 1",
+      codigo: "evasion-invalida",
+      armar: () => conEvasiones({ casos: [] }),
+      esperado: [[EVASIONES, 1]],
+    },
+    {
+      nombre: "un caso exigido con un campo de brecha: la línea de ese campo",
+      codigo: "evasion-invalida",
+      armar: () => conEvasiones([casoDeEvasion({ vence: "2026-12-20" })]),
+      esperado: [[EVASIONES, lineaDeClave([casoDeEvasion({ vence: "2026-12-20" })], "vence")]],
+    },
+    {
+      nombre: "el estado de un caso no es uno de los tres: la línea del estado",
+      codigo: "evasion-invalida",
+      armar: () => conEvasiones([casoDeEvasion({ estado: "tal vez" })]),
+      esperado: [[EVASIONES, lineaDeClave([casoDeEvasion({ estado: "tal vez" })], "estado")]],
+    },
+    {
+      nombre: "un id repetido: la línea del segundo id",
+      codigo: "evasion-invalida",
+      armar: () => conEvasiones([casoDeEvasion(), casoDeEvasion()]),
+      esperado: [
+        [
+          EVASIONES,
+          lineaDeClave(
+            [casoDeEvasion(), casoDeEvasion()],
+            "id",
+            lineaDeClave([casoDeEvasion(), casoDeEvasion()], "id"),
+          ),
+        ],
+      ],
+    },
+    {
+      nombre: "una brecha con una fecha que no existe: la línea de «vence»",
+      codigo: "evasion-invalida",
+      armar: () => conEvasiones([brechaDeEvasion({ vence: "2026-13-45" })]),
+      esperado: [[EVASIONES, lineaDeClave([brechaDeEvasion({ vence: "2026-13-45" })], "vence")]],
+    },
+    {
+      nombre: "un evasiones.json que no es JSON: la línea del error",
+      codigo: "evasion-invalida",
+      armar: () =>
+        enRepoTemporal({ [EVASIONES]: '[\n  {\n    "id": "x",\n  }\n]\n' }, (carpeta) =>
+          ejecutar({ ...cargarDelRepo(carpeta), ahora: AHORA }),
+        ),
+      esperado: [[EVASIONES, 4]],
+    },
+    {
+      nombre: "sin evasiones.json en el repositorio: la línea 1",
+      codigo: "evasion-invalida",
+      armar: () =>
+        enRepoTemporal({}, (carpeta) => {
+          rmSync(join(carpeta, EVASIONES));
+          return ejecutar({ ...cargarDelRepo(carpeta), ahora: AHORA });
+        }),
+      esperado: [[EVASIONES, 1]],
+    },
+    {
+      nombre: "una brecha a más de 60 días de su creación: la línea de «vence»",
+      codigo: "brecha-plazo-excesivo",
+      armar: () => conEvasiones([brechaDeEvasion({ vence: "2026-12-30" })]),
+      esperado: [[EVASIONES, lineaDeClave([brechaDeEvasion({ vence: "2026-12-30" })], "vence")]],
+    },
+    {
+      nombre: "una brecha vencida: la línea de «vence»",
+      codigo: "brecha-vencida",
+      armar: () => conEvasiones([brechaDeEvasion({ vence: "2026-10-20" })]),
+      esperado: [[EVASIONES, lineaDeClave([brechaDeEvasion({ vence: "2026-10-20" })], "vence")]],
+    },
+    {
+      nombre: "un riesgo aceptado a más de 180 días de su creación: la línea de «revisar»",
+      codigo: "riesgo-plazo-excesivo",
+      armar: () => conEvasiones([riesgoDeEvasion({ revisar: "2027-04-19" })]),
+      esperado: [
+        [EVASIONES, lineaDeClave([riesgoDeEvasion({ revisar: "2027-04-19" })], "revisar")],
+      ],
+    },
+    {
+      nombre: "un riesgo aceptado con la revisión vencida: la línea de «revisar»",
+      codigo: "riesgo-vencido",
+      armar: () => conEvasiones([riesgoDeEvasion({ creada: "2026-09-01", revisar: "2026-10-20" })]),
+      esperado: [
+        [
+          EVASIONES,
+          lineaDeClave(
+            [riesgoDeEvasion({ creada: "2026-09-01", revisar: "2026-10-20" })],
+            "revisar",
+          ),
+        ],
+      ],
+    },
+    {
+      nombre: "un caso exigido que PASÓ sin detección: la línea de su estado",
+      codigo: "evasion-no-bloqueada",
+      armar: () => evaluandoCaso(casoDeEvasion(), { resultado: "pasa", fallas: [] }),
+      esperado: [[EVASIONES, lineaDeClave([casoDeEvasion()], "estado")]],
+    },
+    {
+      nombre: "una brecha abierta que se cerró (el cambio se bloquea): la línea de su estado",
+      codigo: "brecha-cerrada",
+      armar: () => evaluandoCaso(brechaDeEvasion(), { resultado: "bloquea", fallas: [] }),
+      esperado: [[EVASIONES, lineaDeClave([brechaDeEvasion()], "estado")]],
+    },
+    {
+      nombre:
+        "un riesgo aceptado que dejó de existir (el cambio se bloquea): la línea de su estado",
+      codigo: "riesgo-cerrado",
+      armar: () => evaluandoCaso(riesgoDeEvasion(), { resultado: "bloquea", fallas: [] }),
+      esperado: [[EVASIONES, lineaDeClave([riesgoDeEvasion()], "estado")]],
+    },
+
+    // ---- avisos de la batería de evasión: lo registrado se reporta en cada corrida
+    {
+      nombre: "una brecha abierta se reporta con la línea de «vence»",
+      codigo: "brecha-abierta",
+      lista: "avisos",
+      armar: () => conEvasiones([brechaDeEvasion()]),
+      esperado: [[EVASIONES, lineaDeClave([brechaDeEvasion()], "vence")]],
+    },
+    {
+      nombre: "una brecha que vence en 14 días tiene el aviso especial",
+      codigo: "brecha-por-vencer",
+      lista: "avisos",
+      armar: () => conEvasiones([brechaDeEvasion({ vence: "2026-11-04" })]),
+      esperado: [[EVASIONES, lineaDeClave([brechaDeEvasion({ vence: "2026-11-04" })], "vence")]],
+    },
+    {
+      nombre: "un riesgo aceptado que se revisa en 30 días avisa en la línea de «revisar»",
+      codigo: "riesgo-por-revisar",
+      lista: "avisos",
+      armar: () => conEvasiones([riesgoDeEvasion({ revisar: "2026-11-20" })]),
+      esperado: [
+        [EVASIONES, lineaDeClave([riesgoDeEvasion({ revisar: "2026-11-20" })], "revisar")],
+      ],
+    },
   ];
 }
 
@@ -972,6 +1174,7 @@ function enRepoTemporal<T>(archivos: Record<string, string>, accion: (carpeta: s
       ...BASE,
       [EXCEPCIONES]: "[]\n",
       [EXCLUSIONES]: json(EXCLUSIONES_BASE),
+      [EVASIONES]: "[]\n",
       ...archivos,
     };
     for (const [ruta, contenido] of Object.entries(todos)) {
@@ -1007,8 +1210,11 @@ describe("la lista cerrada de códigos", () => {
 
   it("los avisos son una lista cerrada que no se repite", () => {
     expect([...CODIGOS_DE_AVISO].sort()).toEqual([
+      "brecha-abierta",
+      "brecha-por-vencer",
       "declaracion-falsa",
       "excepcion-por-vencer",
+      "riesgo-por-revisar",
       "ruta-ausente-en-disco",
     ]);
   });

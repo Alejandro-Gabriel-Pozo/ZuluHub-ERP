@@ -166,7 +166,8 @@ describe.skipIf(base === null)("facturación F3: certificados, accesos e intento
       const uno = pedidoDe(e);
       const dos = pedidoDe(e);
       const homo2 = pedidoDe(e, { ambiente: "PRODUCCION" });
-      for (const p of [uno, dos, homo2])
+      // Un solo pendiente por emisor y ambiente (0018): el segundo pedido de homologación se pide cuando el primero ya es vigente.
+      for (const p of [uno, homo2])
         await correr(comoPersonaDe(e), (tx) => tx.certificados.crearPedido(p));
       const carga1 = cargaDe();
       const a1 = await correr(comoPersonaDe(e), (tx) =>
@@ -184,6 +185,7 @@ describe.skipIf(base === null)("facturación F3: certificados, accesos e intento
       await correr(comoPersonaDe(e), (tx) =>
         tx.certificados.activar(empresaId(e.empresa), homo2.id, 1, cargaDe()),
       );
+      await correr(comoPersonaDe(e), (tx) => tx.certificados.crearPedido(dos));
       const a2 = await correr(comoPersonaDe(e), (tx) =>
         tx.certificados.activar(empresaId(e.empresa), dos.id, 1, cargaDe()),
       );
@@ -211,11 +213,12 @@ describe.skipIf(base === null)("facturación F3: certificados, accesos e intento
       const e = await escenario();
       const vigente = pedidoDe(e);
       const nuevo = pedidoDe(e);
-      for (const p of [vigente, nuevo])
-        await correr(comoPersonaDe(e), (tx) => tx.certificados.crearPedido(p));
+      await correr(comoPersonaDe(e), (tx) => tx.certificados.crearPedido(vigente));
       await correr(comoPersonaDe(e), (tx) =>
         tx.certificados.activar(empresaId(e.empresa), vigente.id, 1, cargaDe()),
       );
+      // Recién con el anterior vigente puede haber otro pendiente del mismo ambiente (0018).
+      await correr(comoPersonaDe(e), (tx) => tx.certificados.crearPedido(nuevo));
       expect(
         await correr(comoPersonaDe(e), (tx) =>
           tx.certificados.activar(empresaId(e.empresa), nuevo.id, 9, cargaDe()),
@@ -239,12 +242,12 @@ describe.skipIf(base === null)("facturación F3: certificados, accesos e intento
       const e = await escenario();
       const uno = pedidoDe(e);
       const dos = pedidoDe(e);
-      for (const p of [uno, dos])
-        await correr(comoPersonaDe(e), (tx) => tx.certificados.crearPedido(p));
+      await correr(comoPersonaDe(e), (tx) => tx.certificados.crearPedido(uno));
       const carga = cargaDe();
       await correr(comoPersonaDe(e), (tx) =>
         tx.certificados.activar(empresaId(e.empresa), uno.id, 1, carga),
       );
+      await correr(comoPersonaDe(e), (tx) => tx.certificados.crearPedido(dos));
       // `porHuella` es lo que consulta el caso de uso para decir «ya estaba».
       expect(
         (
@@ -269,8 +272,7 @@ describe.skipIf(base === null)("facturación F3: certificados, accesos e intento
       const b = await escenario();
       const pedido = pedidoDe(a);
       const otro = pedidoDe(a);
-      for (const p of [pedido, otro])
-        await correr(comoPersonaDe(a), (tx) => tx.certificados.crearPedido(p));
+      await correr(comoPersonaDe(a), (tx) => tx.certificados.crearPedido(pedido));
       expect(
         await correr(comoPersonaDe(a), (tx) =>
           tx.certificados.descartar(empresaId(a.empresa), pedido.id, 7),
@@ -291,7 +293,8 @@ describe.skipIf(base === null)("facturación F3: certificados, accesos e intento
           tx.certificados.descartar(empresaId(a.empresa), pedido.id, 2),
         ),
       ).toBeNull();
-      // Un vigente tampoco se descarta.
+      // Un vigente tampoco se descarta (el otro pedido entra recién ahora: con el primero descartado ya no hay pendiente, 0018).
+      await correr(comoPersonaDe(a), (tx) => tx.certificados.crearPedido(otro));
       await correr(comoPersonaDe(a), (tx) =>
         tx.certificados.activar(empresaId(a.empresa), otro.id, 1, cargaDe()),
       );

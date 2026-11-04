@@ -7,7 +7,7 @@ import {
   type SalidaDeGenerarPedido,
 } from "../../src/modulos/fiscal/publico";
 import { crearCifradorAesGcm } from "../../src/adaptadores/cifrado/aes-gcm";
-import { empresaId } from "../../src/primitivas/identificadores/marca";
+import { emisorId, empresaId } from "../../src/primitivas/identificadores/marca";
 import { campoConPosibleSecreto, type Dato } from "../../src/puertos/sin-secretos";
 import { crearBaseAparte } from "./entorno";
 import {
@@ -16,6 +16,8 @@ import {
   clavesMaestrasDePrueba,
   crearEntornoDeCertificados,
   crearServicios,
+  cuitConPrefijo,
+  escenarioDeSociedad,
   pedidoDeCertificado,
   type ServiciosDePrueba,
 } from "./certificados-apoyo";
@@ -35,6 +37,8 @@ vi.setConfig({ testTimeout: 120_000 });
 type Fila = Record<string, unknown>;
 const DIA = 86_400_000;
 const OTRO_CUIT_VALIDO = "30703088534";
+/** El `serialNumber` del sujeto como lo escribe ARCA en el certificado. */
+const SERIE_DE = (cuit: string) => `CUIT ${cuit}`;
 
 describe.skipIf(base === null)("certificados F7: casos de uso contra una base real", () => {
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
@@ -119,8 +123,14 @@ describe.skipIf(base === null)("certificados F7: casos de uso contra una base re
     }
   };
 
-  async function preparar(opciones: { rol?: "GERENTE" | "ADMINISTRADOR" | "OPERADOR" } = {}) {
-    const e = await crearEscenarioDeCasosConRol(opciones.rol ?? "GERENTE");
+  async function preparar(
+    opciones: { rol?: "GERENTE" | "ADMINISTRADOR" | "OPERADOR"; sociedad?: boolean } = {},
+  ) {
+    // `sociedad`: la empresa que factura tiene CUIT 30-… y el certificado lo saca una persona física (D-42).
+    const e =
+      opciones.sociedad === true
+        ? await escenarioDeSociedad(dueno, propia.base)
+        : await crearEscenarioDeCasosConRol(opciones.rol ?? "GERENTE");
     return {
       e,
       como: () => e.como(new Date()),
@@ -294,7 +304,6 @@ describe.skipIf(base === null)("certificados F7: casos de uso contra una base re
         ["ALIAS_INVALIDO", { alias: "con espacio" }],
         ["CUIT_INVALIDO", { cuitTitular: "20123456787" }],
         ["ORGANIZACION_INVALIDA", { organizacion: "   " }],
-        ["TITULAR_DISTINTO", { cuitTitular: OTRO_CUIT_VALIDO }],
         ["EMISOR_NO_ENCONTRADO", { emisorId: randomUUID() as never }],
       ];
       for (const [error, cambios] of casosMalos) {
@@ -394,6 +403,181 @@ describe.skipIf(base === null)("certificados F7: casos de uso contra una base re
       } finally {
         await roto.cerrar();
       }
+    });
+  });
+
+  // ===============================================================================================
+  describe("D-92: un pedido nuevo anula al pendiente anterior del mismo emisor y ambiente", () => {
+    const certificadoValido = (pedido: SalidaDeGenerarPedido) =>
+      certificadoDeArca(servicios, "HOMOLOGACION", pedido.pedidoPem);
+    const estadoDe = async (id: string) => (await certificado(id))?.estado;
+    const totalDeAuditorias = async (empresa: string) =>
+      (await filas("select 1 from auditoria_empresa where empresa_id = $1", [empresa])).length;
+    const descartes = async (empresa: string) =>
+      (
+        await filas(
+          "select 1 from auditoria_empresa where empresa_id = $1 and accion = 'CERTIFICADO_PEDIDO_DESCARTADO'",
+          [empresa],
+        )
+      ).length;
+
+    it("generar A y luego B: A queda DESCARTADO (no se borra ni se toca su clave) y B pendiente; la auditoría dice quién, cuándo y por cuál, nunca la clave", async () => {
+      const p = await preparar();
+      const a = await p.pedir();
+      const claveDeA = (await claveCifrada(a.entrada.id))?.toString("hex");
+      const b = await p.pedir();
+
+      expect(await estadoDe(a.entrada.id)).toBe("DESCARTADO");
+      expect(await estadoDe(b.entrada.id)).toBe("PEDIDO_GENERADO");
+      expect(
+        await filas("select 1 from certificado_arca where empresa_id = $1", [p.e.empresa]),
+      ).toHaveLength(2);
+      expect((await claveCifrada(a.entrada.id))?.toString("hex")).toBe(claveDeA);
+
+      const deA = await auditorias(p.e.empresa, a.entrada.id);
+      expect(deA.map((x) => x.accion)).toEqual([
+        "CERTIFICADO_PEDIDO_GENERADO",
+        "CERTIFICADO_PEDIDO_DESCARTADO",
+      ]);
+      expect(deA[1]).toMatchObject({
+        actor: p.e.persona,
+        antes: { estado: "PEDIDO_GENERADO" },
+        despues: { estado: "DESCARTADO", reemplazadoPor: b.entrada.id },
+      });
+      sinLaClave(deA);
+      expect(campoConPosibleSecreto(deA[1]?.despues ?? null)).toBeNull();
+      // Cuándo: la auditoría del descarte quedó fechada en la misma transacción que el pedido nuevo.
+      expect(
+        await filas(
+          `select 1 from auditoria_empresa d join auditoria_empresa g on g.entidad_id = $2 and g.accion = 'CERTIFICADO_PEDIDO_GENERADO'
+            where d.entidad_id = $1 and d.accion = 'CERTIFICADO_PEDIDO_DESCARTADO' and d.creado_en = g.creado_en`,
+          [a.entrada.id, b.entrada.id],
+        ),
+      ).toHaveLength(1);
+      expect((await auditorias(p.e.empresa, b.entrada.id)).map((x) => x.accion)).toEqual([
+        "CERTIFICADO_PEDIDO_GENERADO",
+      ]);
+    });
+
+    it("repetir B (mismo id y mismos datos) sigue siendo «ya existía» sin anular ni escribir nada más; un pedido malo no anula al pendiente", async () => {
+      const p = await preparar();
+      await p.pedir();
+      const b = await p.pedir();
+      const claves = servicios.clavesGeneradas.length;
+      const version = (await certificado(b.entrada.id))?.version;
+      const auditadas = await totalDeAuditorias(p.e.empresa);
+
+      expect(await casos.generarPedidoDeCertificado(p.como(), b.entrada)).toEqual({
+        ok: true,
+        valor: { certificadoId: b.entrada.id, pedidoPem: b.salida.pedidoPem, yaExistia: true },
+      });
+      expect(servicios.clavesGeneradas).toHaveLength(claves);
+      expect((await certificado(b.entrada.id))?.version).toBe(version);
+      expect(await estadoDe(b.entrada.id)).toBe("PEDIDO_GENERADO");
+      expect(await totalDeAuditorias(p.e.empresa)).toBe(auditadas);
+
+      // Un pedido que no se pudo armar no anula al pendiente.
+      const malo = await p.generar({ alias: "con espacios" });
+      expect(malo.r.ok).toBe(false);
+      expect(await estadoDe(b.entrada.id)).toBe("PEDIDO_GENERADO");
+      expect(await totalDeAuditorias(p.e.empresa)).toBe(auditadas);
+    });
+
+    it("HOY: repetir el id de un pedido que ya fue anulado devuelve ese pedido («ya existía») sin anular ni escribir nada (a confirmar con el dueño)", async () => {
+      const p = await preparar();
+      const a = await p.pedir();
+      const b = await p.pedir();
+      const auditadas = await totalDeAuditorias(p.e.empresa);
+
+      expect(await casos.generarPedidoDeCertificado(p.como(), a.entrada)).toEqual({
+        ok: true,
+        valor: { certificadoId: a.entrada.id, pedidoPem: a.salida.pedidoPem, yaExistia: true },
+      });
+      expect(await estadoDe(a.entrada.id)).toBe("DESCARTADO");
+      expect(await estadoDe(b.entrada.id)).toBe("PEDIDO_GENERADO");
+      expect(await totalDeAuditorias(p.e.empresa)).toBe(auditadas);
+    });
+
+    it("no anula a otro ambiente, a otro emisor ni a otra empresa: solo al pendiente del mismo emisor y ambiente", async () => {
+      const p = await preparar();
+      const q = await preparar();
+      const otroEmisor = (
+        await dueno.query<{ id: string }>(
+          "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
+          [p.e.empresa, cuitConPrefijo("20")],
+        )
+      ).rows[0]?.id;
+      if (otroEmisor === undefined) throw new Error("no se creó el emisor");
+      const a = await p.pedir();
+      const deProduccion = await p.pedir({ ambiente: "PRODUCCION" });
+      const deOtroEmisor = await p.pedir({ emisorId: emisorId(otroEmisor) });
+      const deOtraEmpresa = await q.pedir();
+
+      const b = await p.pedir();
+
+      expect(await estadoDe(a.entrada.id)).toBe("DESCARTADO");
+      expect(await estadoDe(b.entrada.id)).toBe("PEDIDO_GENERADO");
+      for (const intacto of [deProduccion, deOtroEmisor, deOtraEmpresa]) {
+        expect(await estadoDe(intacto.entrada.id)).toBe("PEDIDO_GENERADO");
+        expect((await certificado(intacto.entrada.id))?.version).toBe(1);
+      }
+      expect(await descartes(p.e.empresa)).toBe(1);
+      expect(await descartes(q.e.empresa)).toBe(0);
+    });
+
+    it("cargar el certificado del pedido anulado es PEDIDO_NO_PENDIENTE y no cambia nada; el del pedido nuevo sí carga", async () => {
+      const p = await preparar();
+      const a = await p.pedir();
+      const b = await p.pedir();
+      const auditadas = await totalDeAuditorias(p.e.empresa);
+
+      expect(await p.cargar(a.entrada.id, await certificadoValido(a.salida))).toEqual({
+        ok: false,
+        error: "PEDIDO_NO_PENDIENTE",
+      });
+      expect(await certificado(a.entrada.id)).toMatchObject({
+        estado: "DESCARTADO",
+        huella: null,
+        pem: null,
+        vence: null,
+      });
+      expect(await vigentes(p.e)).toBe(0);
+      expect(await totalDeAuditorias(p.e.empresa)).toBe(auditadas);
+
+      expect((await p.cargar(b.entrada.id, await certificadoValido(b.salida))).ok).toBe(true);
+      expect(await vigentes(p.e)).toBe(1);
+    });
+
+    it("con un vigente (y un reemplazado) más un pedido pendiente, generar otro anula solo al pendiente: el vigente y el reemplazado no se tocan", async () => {
+      const p = await preparar();
+      const primero = await p.pedir();
+      await p.cargar(primero.entrada.id, await certificadoValido(primero.salida));
+      const vigente = await p.pedir();
+      await p.cargar(vigente.entrada.id, await certificadoValido(vigente.salida));
+      expect(await estadoDe(primero.entrada.id)).toBe("REEMPLAZADO");
+      const pendiente = await p.pedir();
+      const versiones = [
+        (await certificado(primero.entrada.id))?.version,
+        (await certificado(vigente.entrada.id))?.version,
+      ];
+
+      const nuevo = await p.pedir();
+
+      expect(await estadoDe(pendiente.entrada.id)).toBe("DESCARTADO");
+      expect(await estadoDe(nuevo.entrada.id)).toBe("PEDIDO_GENERADO");
+      expect(await estadoDe(vigente.entrada.id)).toBe("VIGENTE");
+      expect(await estadoDe(primero.entrada.id)).toBe("REEMPLAZADO");
+      expect([
+        (await certificado(primero.entrada.id))?.version,
+        (await certificado(vigente.entrada.id))?.version,
+      ]).toEqual(versiones);
+      expect(await descartes(p.e.empresa)).toBe(1);
+      expect((await auditorias(p.e.empresa, pendiente.entrada.id)).map((x) => x.accion)).toContain(
+        "CERTIFICADO_PEDIDO_DESCARTADO",
+      );
+      expect(
+        (await auditorias(p.e.empresa, vigente.entrada.id)).map((x) => x.accion),
+      ).not.toContain("CERTIFICADO_PEDIDO_DESCARTADO");
     });
   });
 
@@ -542,7 +726,8 @@ describe.skipIf(base === null)("certificados F7: casos de uso contra una base re
           "",
           "basura",
           clavePegada,
-          `${clavePegada}\n${await certificadoValido((await p.pedir()).salida)}`,
+          // El segundo pedido va a producción: uno nuevo del mismo ambiente anularía al primero (D-92).
+          `${clavePegada}\n${await certificadoValido((await p.pedir({ ambiente: "PRODUCCION" })).salida, {}, "PRODUCCION")}`,
         ]) {
           const r = await p.cargar(entrada.id, texto);
           expect(r).toEqual({ ok: false, error: "CERTIFICADO_ILEGIBLE" });
@@ -552,9 +737,10 @@ describe.skipIf(base === null)("certificados F7: casos de uso contra una base re
 
       it("el certificado de OTRO pedido: NO_CORRESPONDE_A_LA_CLAVE (el mismo alias no lo ata)", async () => {
         const p = await preparar();
+        // El otro pedido va a producción: uno nuevo del mismo ambiente anularía al primero (D-92).
         const a = await p.pedir({ alias: "mismoalias" });
-        const b = await p.pedir({ alias: "mismoalias" });
-        const deB = await certificadoValido(b.salida);
+        const b = await p.pedir({ alias: "mismoalias", ambiente: "PRODUCCION" });
+        const deB = await certificadoValido(b.salida, {}, "PRODUCCION");
         expect(await p.cargar(a.entrada.id, deB)).toEqual({
           ok: false,
           error: "NO_CORRESPONDE_A_LA_CLAVE",
@@ -565,14 +751,17 @@ describe.skipIf(base === null)("certificados F7: casos de uso contra una base re
       });
 
       it.each([
-        ["de otro CUIT", "CUIT 30703088534"],
+        ["de otro CUIT", `CUIT ${OTRO_CUIT_VALIDO}`],
         ["sin CUIT en el sujeto", null],
         ["con el CUIT con guiones", "CUIT 20-12345678-6"],
-      ])("un certificado %s: TITULAR_DISTINTO", async (_nombre, numeroDeSerie) => {
+      ])("un certificado %s: NO_CORRESPONDE_AL_TITULAR", async (_nombre, numeroDeSerie) => {
         const p = await preparar();
         const { entrada, salida } = await p.pedir();
         const pem = await certificadoValido(salida, { numeroDeSerie });
-        expect(await p.cargar(entrada.id, pem)).toEqual({ ok: false, error: "TITULAR_DISTINTO" });
+        expect(await p.cargar(entrada.id, pem)).toEqual({
+          ok: false,
+          error: "NO_CORRESPONDE_AL_TITULAR",
+        });
         await intacto(p, entrada.id);
       });
 
@@ -673,6 +862,243 @@ describe.skipIf(base === null)("certificados F7: casos de uso contra una base re
         });
         expect(r).toEqual({ ok: false, error: "CLAVE_ILEGIBLE" });
         await intacto(p, entrada.id);
+      });
+    });
+
+    // ===========================================================================================
+    describe("D-42: el titular es una persona física y la empresa que factura, otra (una sociedad)", () => {
+      const verificacion = async (id: string) =>
+        (
+          await filas<{ en: Date | null }>(
+            "select autorizacion_verificada_en as en from certificado_arca where id = $1",
+            [id],
+          )
+        )[0]?.en;
+
+      it("el pedido guarda al titular aparte del emisor, lo escribe en el CSR y lo audita; repetirlo es el mismo pedido", async () => {
+        const p = await preparar({ sociedad: true });
+        const titular = cuitConPrefijo("20");
+        expect(p.e.cuit.startsWith("30")).toBe(true);
+        expect(titular).not.toBe(p.e.cuit);
+
+        const { entrada, salida } = await p.pedir({ cuitTitular: titular });
+        expect(await certificado(entrada.id)).toMatchObject({
+          estado: "PEDIDO_GENERADO",
+          cuit_titular: titular,
+        });
+        // El CSR (y el certificado que ARCA emite a partir de él) lleva el CUIT del TITULAR, no el de la sociedad.
+        const sujeto = new X509Certificate(await certificadoValido(salida)).subject;
+        expect(sujeto).toContain(SERIE_DE(titular));
+        expect(sujeto).not.toContain(SERIE_DE(p.e.cuit));
+        const aud = await auditorias(p.e.empresa, entrada.id);
+        expect(aud.map((a) => a.accion)).toEqual(["CERTIFICADO_PEDIDO_GENERADO"]);
+        expect(aud[0]?.despues).toMatchObject({ emisorId: p.e.emisor, cuitTitular: titular });
+        // La clave privada del pedido no está en la respuesta ni en la auditoría.
+        sinLaClave([salida, aud]);
+
+        const claves = servicios.clavesGeneradas.length;
+        const conGuiones = `${titular.slice(0, 2)}-${titular.slice(2, 10)}-${titular.slice(10)}`;
+        for (const repetido of [titular, conGuiones]) {
+          expect(
+            await casos.generarPedidoDeCertificado(p.como(), { ...entrada, cuitTitular: repetido }),
+          ).toEqual({
+            ok: true,
+            valor: { certificadoId: entrada.id, pedidoPem: salida.pedidoPem, yaExistia: true },
+          });
+        }
+        expect(servicios.clavesGeneradas).toHaveLength(claves);
+        // Con otro titular (por ejemplo el de la sociedad) ya es otro pedido con la misma clave.
+        expect(
+          await casos.generarPedidoDeCertificado(p.como(), { ...entrada, cuitTitular: p.e.cuit }),
+        ).toEqual({ ok: false, error: "CLAVE_REUTILIZADA" });
+        expect((await certificado(entrada.id))?.cuit_titular).toBe(titular);
+        // Un titular que no es un CUIT válido sigue siendo CUIT_INVALIDO (la validación del CUIT es la de siempre).
+        expect(
+          await casos.generarPedidoDeCertificado(
+            p.como(),
+            pedidoDeCertificado(p.e, { cuitTitular: "20123456787" }),
+          ),
+        ).toEqual({ ok: false, error: "CUIT_INVALIDO" });
+      });
+
+      it("un certificado del titular, de la clave, con la cadena de su ambiente y vigente carga: queda VIGENTE y «autorización sin verificar»", async () => {
+        const p = await preparar({ sociedad: true });
+        const titular = cuitConPrefijo("20");
+        const { entrada, salida } = await p.pedir({ cuitTitular: titular });
+        const noDespues = new Date(Date.now() + 700 * DIA);
+        noDespues.setMilliseconds(0);
+        const pem = await certificadoValido(salida, { noDespues });
+
+        const r = await p.cargar(entrada.id, pem);
+        expect(r).toEqual({
+          ok: true,
+          valor: { vence: noDespues, reemplazoA: null, yaEstaba: false },
+        });
+        expect(await certificado(entrada.id)).toMatchObject({
+          estado: "VIGENTE",
+          cuit_titular: titular,
+        });
+        // La autorización de la sociedad no se puede ver en el certificado: queda sin verificar, y NO se llamó a ARCA.
+        expect(await verificacion(entrada.id)).toBeNull();
+        const auditadas = await auditorias(p.e.empresa, entrada.id);
+        expect(auditadas.map((a) => a.accion)).toEqual([
+          "CERTIFICADO_PEDIDO_GENERADO",
+          "CERTIFICADO_CARGADO",
+        ]);
+        sinLaClave(auditadas);
+        expect(campoConPosibleSecreto(auditadas[1]?.despues ?? null)).toBeNull();
+
+        // Repetir la carga (aunque llegue con otro formato) devuelve lo mismo y no escribe ni audita.
+        const version = (await certificado(entrada.id))?.version;
+        for (const texto of [pem, `\r\n ${pem.replace(/\n/g, "\r\n")} \r\n`]) {
+          expect(await p.cargar(entrada.id, texto)).toEqual({
+            ok: true,
+            valor: { vence: noDespues, reemplazoA: null, yaEstaba: true },
+          });
+        }
+        expect((await certificado(entrada.id))?.version).toBe(version);
+        expect(await auditorias(p.e.empresa, entrada.id)).toHaveLength(2);
+        expect(await verificacion(entrada.id)).toBeNull();
+      });
+
+      it("si el emisor es una persona física que se factura a sí misma, ambos CUIT coinciden y carga igual", async () => {
+        const p = await preparar();
+        const { entrada, salida } = await p.pedir({ cuitTitular: p.e.cuit });
+        expect((await p.cargar(entrada.id, await certificadoValido(salida))).ok).toBe(true);
+        expect((await certificado(entrada.id))?.cuit_titular).toBe(p.e.cuit);
+      });
+
+      it("con el titular declarado, lo que no sirve da su error y no cambia nada: otro serialNumber, vencido, cadena ajena y clave ajena", async () => {
+        const p = await preparar({ sociedad: true });
+        const titular = cuitConPrefijo("20");
+        const { entrada, salida } = await p.pedir({ cuitTitular: titular });
+        const intacto = async () => {
+          expect(await certificado(entrada.id)).toMatchObject({
+            estado: "PEDIDO_GENERADO",
+            huella: null,
+            pem: null,
+            vence: null,
+            version: 1,
+          });
+          expect(await auditorias(p.e.empresa, entrada.id)).toHaveLength(1);
+          expect(await vigentes(p.e)).toBe(0);
+        };
+
+        // 1. El certificado lleva el CUIT de la SOCIEDAD (la empresa representada), no el del titular declarado.
+        expect(
+          await p.cargar(
+            entrada.id,
+            await certificadoValido(salida, { numeroDeSerie: SERIE_DE(p.e.cuit) }),
+          ),
+        ).toEqual({ ok: false, error: "NO_CORRESPONDE_AL_TITULAR" });
+        // 2. Lleva el CUIT de otra persona física.
+        expect(
+          await p.cargar(
+            entrada.id,
+            await certificadoValido(salida, { numeroDeSerie: SERIE_DE(cuitConPrefijo("27")) }),
+          ),
+        ).toEqual({ ok: false, error: "NO_CORRESPONDE_AL_TITULAR" });
+        await intacto();
+        // 3. Vencido.
+        expect(
+          await p.cargar(
+            entrada.id,
+            await certificadoValido(salida, {
+              noAntes: new Date(Date.now() - 800 * DIA),
+              noDespues: new Date(Date.now() - DIA),
+            }),
+          ),
+        ).toEqual({ ok: false, error: "CERTIFICADO_VENCIDO" });
+        // 4. De la cadena del otro ambiente.
+        expect(
+          await p.cargar(entrada.id, await certificadoValido(salida, {}, "PRODUCCION")),
+        ).toEqual({ ok: false, error: "CADENA_NO_CONFIABLE" });
+        // 5. De otra clave (el de otro pedido del mismo titular y el mismo alias).
+        // (En producción: uno nuevo del mismo ambiente anularía al pedido de esta prueba, D-92.)
+        const otro = await p.pedir({
+          cuitTitular: titular,
+          alias: entrada.alias,
+          ambiente: "PRODUCCION",
+        });
+        expect(
+          await p.cargar(entrada.id, await certificadoValido(otro.salida, {}, "PRODUCCION")),
+        ).toEqual({
+          ok: false,
+          error: "NO_CORRESPONDE_A_LA_CLAVE",
+        });
+        await intacto();
+        // Y el certificado bueno, ahora sí.
+        expect((await p.cargar(entrada.id, await certificadoValido(salida))).ok).toBe(true);
+      });
+
+      it("con varios defectos manda el error del orden documentado (§B.6.2): clave, titular, cadena, vencimiento", async () => {
+        const p = await preparar({ sociedad: true });
+        const titular = cuitConPrefijo("20");
+        const a = await p.pedir({ cuitTitular: titular });
+        const b = await p.pedir({ cuitTitular: titular, ambiente: "PRODUCCION" });
+        const todoMal = {
+          numeroDeSerie: SERIE_DE(p.e.cuit),
+          noAntes: new Date(Date.now() - 800 * DIA),
+          noDespues: new Date(Date.now() - DIA),
+        };
+        // De la cadena ajena, con otro serialNumber y vencido, y además de OTRA clave: manda la clave.
+        const deB = await certificadoValido(b.salida, todoMal, "PRODUCCION");
+        expect(await p.cargar(a.entrada.id, deB)).toEqual({
+          ok: false,
+          error: "NO_CORRESPONDE_A_LA_CLAVE",
+        });
+        // De la clave: manda el titular.
+        const deA = await certificadoValido(a.salida, todoMal, "PRODUCCION");
+        expect(await p.cargar(a.entrada.id, deA)).toEqual({
+          ok: false,
+          error: "NO_CORRESPONDE_AL_TITULAR",
+        });
+        // Con el titular bien: manda la cadena.
+        const conTitular = { ...todoMal, numeroDeSerie: SERIE_DE(titular) };
+        expect(
+          await p.cargar(a.entrada.id, await certificadoValido(a.salida, conTitular, "PRODUCCION")),
+        ).toEqual({ ok: false, error: "CADENA_NO_CONFIABLE" });
+        // Con la cadena bien: el vencimiento.
+        expect(await p.cargar(a.entrada.id, await certificadoValido(a.salida, conTitular))).toEqual(
+          {
+            ok: false,
+            error: "CERTIFICADO_VENCIDO",
+          },
+        );
+      });
+
+      it("aislamiento: el mismo titular en dos empresas no mezcla nada; cada certificado carga solo en el pedido de su empresa", async () => {
+        const titular = cuitConPrefijo("20");
+        const a = await preparar({ sociedad: true });
+        const b = await preparar({ sociedad: true });
+        const pa = await a.pedir({ cuitTitular: titular, alias: "mismoalias" });
+        const pb = await b.pedir({ cuitTitular: titular, alias: "mismoalias" });
+        const deA = await certificadoValido(pa.salida);
+        const deB = await certificadoValido(pb.salida);
+        // Aunque el titular, el alias y el ambiente sean iguales, la clave de cada pedido es la suya.
+        expect(await b.cargar(pb.entrada.id, deA)).toEqual({
+          ok: false,
+          error: "NO_CORRESPONDE_A_LA_CLAVE",
+        });
+        // Y el pedido de otra empresa no existe para esta.
+        expect(await b.cargar(pa.entrada.id, deA)).toEqual({
+          ok: false,
+          error: "CERTIFICADO_NO_ENCONTRADO",
+        });
+        expect((await a.cargar(pa.entrada.id, deA)).ok).toBe(true);
+        expect((await b.cargar(pb.entrada.id, deB)).ok).toBe(true);
+        expect(await vigentes(a.e)).toBe(1);
+        expect(await vigentes(b.e)).toBe(1);
+        expect(await auditorias(a.e.empresa, pb.entrada.id)).toHaveLength(0);
+      });
+
+      it("un administrador no puede declarar un titular ni cargar su certificado (SIN_PERMISO)", async () => {
+        const p = await preparar({ rol: "ADMINISTRADOR" });
+        const r = await casos.generarPedidoDeCertificado(
+          p.como(),
+          pedidoDeCertificado(p.e, { cuitTitular: cuitConPrefijo("20") }),
+        );
+        expect(r).toEqual({ ok: false, error: "SIN_PERMISO" });
       });
     });
 

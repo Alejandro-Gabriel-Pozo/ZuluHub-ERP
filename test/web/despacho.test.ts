@@ -8,8 +8,24 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vite
 vi.mock("server-only", () => ({}));
 const mundo = vi.hoisted(() => ({
   programadas: [] as (() => Promise<void> | void)[],
-  despachar: undefined as unknown as Mock<(ids: readonly string[], ahora: Date) => Promise<void>>,
-  procesador: undefined as unknown as Mock<() => { despacharAhora: unknown }>,
+  despachar: undefined as unknown as Mock<
+    (
+      ids: readonly string[],
+      ahora: Date,
+      opciones?: { esperarHastaTerminar?: boolean },
+    ) => Promise<void>
+  >,
+  procesador: undefined as unknown as Mock<
+    () => { despacharAhora: unknown; despacharPorClaves: unknown }
+  >,
+  porClaves: undefined as unknown as Mock<
+    (
+      empresa: string,
+      claves: readonly string[],
+      ahora: Date,
+      opciones?: { esperarHastaTerminar?: boolean },
+    ) => Promise<void>
+  >,
 }));
 vi.mock("next/server", () => ({
   after: (tarea: () => Promise<void> | void) => {
@@ -18,15 +34,24 @@ vi.mock("next/server", () => ({
 }));
 vi.mock("../../apps/web/servidor/composicion", () => {
   mundo.despachar = vi.fn(() => Promise.resolve());
-  mundo.procesador = vi.fn(() => ({ despacharAhora: mundo.despachar }));
+  mundo.porClaves = vi.fn(() => Promise.resolve());
+  mundo.procesador = vi.fn(() => ({
+    despacharAhora: mundo.despachar,
+    despacharPorClaves: mundo.porClaves,
+  }));
   return { trabajos: { procesador: mundo.procesador } };
 });
 
-import { despacharDespuesDeConfirmar } from "../../apps/web/servidor/despacho-inmediato";
+import {
+  despacharDespuesDeConfirmar,
+  despacharPorClavesDespuesDeConfirmar,
+} from "../../apps/web/servidor/despacho-inmediato";
+import { empresaId } from "../../src/primitivas/identificadores/marca";
 
 beforeEach(() => {
   mundo.programadas.length = 0;
   mundo.despachar.mockClear();
+  mundo.porClaves.mockClear();
   mundo.procesador.mockClear();
   mundo.despachar.mockImplementation(() => Promise.resolve());
   vi.useFakeTimers();
@@ -53,6 +78,8 @@ describe("despacharDespuesDeConfirmar", () => {
     expect(mundo.despachar).toHaveBeenCalledWith(
       ["t1", "t2"],
       new Date("2026-10-14T12:00:07.000Z"),
+      // `after()` corre con la respuesta ya enviada: espera a que termine (el tope de 5 s no aplica).
+      { esperarHastaTerminar: true },
     );
   });
 
@@ -77,6 +104,49 @@ describe("despacharDespuesDeConfirmar", () => {
     expect(registro.mock.calls.map((c) => c.join(" "))).toEqual([
       "[despacho] no se pudo despachar de inmediato (ErrorDeEntorno); queda para el cron",
       "[despacho] no se pudo despachar de inmediato (falla que no es un Error); queda para el cron",
+    ]);
+  });
+});
+
+describe("despacharPorClavesDespuesDeConfirmar", () => {
+  const empresa = empresaId("11111111-1111-4111-8111-111111111111");
+
+  it("programa UN intento con after() y no ejecuta nada todavía", () => {
+    despacharPorClavesDespuesDeConfirmar(empresa, ["fiscal.validar:x:1"]);
+    expect(mundo.programadas).toHaveLength(1);
+    expect(mundo.procesador).not.toHaveBeenCalled();
+    expect(mundo.porClaves).not.toHaveBeenCalled();
+  });
+
+  it("al correr, despacha las claves de ESA empresa con el reloj de ese momento", async () => {
+    despacharPorClavesDespuesDeConfirmar(empresa, ["fiscal.validar:x:1"]);
+    vi.setSystemTime(new Date("2026-10-14T12:00:09.000Z"));
+    await mundo.programadas[0]?.();
+    expect(mundo.porClaves).toHaveBeenCalledTimes(1);
+    expect(mundo.porClaves).toHaveBeenCalledWith(
+      empresa,
+      ["fiscal.validar:x:1"],
+      new Date("2026-10-14T12:00:09.000Z"),
+      { esperarHastaTerminar: true },
+    );
+  });
+
+  it("sin claves no programa nada", () => {
+    despacharPorClavesDespuesDeConfirmar(empresa, []);
+    expect(mundo.programadas).toEqual([]);
+  });
+
+  it("si no se puede armar el procesador, no lanza y deja registro por tipo, sin mensaje", async () => {
+    const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mundo.procesador.mockImplementationOnce(() => {
+      throw Object.assign(new Error("falta PEDERNAL_CLAVE_CERTIFICADOS clave=zzz"), {
+        name: "ErrorDeEntorno",
+      });
+    });
+    despacharPorClavesDespuesDeConfirmar(empresa, ["k"]);
+    await expect(mundo.programadas[0]?.()).resolves.toBeUndefined();
+    expect(registro.mock.calls.map((c) => c.join(" "))).toEqual([
+      "[despacho] no se pudo despachar de inmediato (ErrorDeEntorno); queda para el cron",
     ]);
   });
 });

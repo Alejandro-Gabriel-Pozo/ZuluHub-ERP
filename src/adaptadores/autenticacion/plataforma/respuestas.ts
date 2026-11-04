@@ -20,7 +20,12 @@ import {
   type LimitesDeSesion,
 } from "../../../capacidades/autenticacion/vigencia-de-sesion";
 import { esObjeto, leerJson } from "../../../capacidades/autenticacion/json-seguro";
-import { qrComoSvg } from "./qr-svg";
+import { qrComoSvg, type NivelDeCorreccion } from "../../qr/qr-svg";
+
+/** Corrección de errores «M» (15 %): el habitual de las direcciones `otpauth`. */
+const CORRECCION_DEL_QR_DEL_SEGUNDO_FACTOR: NivelDeCorreccion = "M";
+/** La etiqueta de accesibilidad del QR del alta del segundo factor (el texto que ya llevaba el SVG). */
+const ETIQUETA_DEL_QR_DEL_SEGUNDO_FACTOR = "Código QR para la aplicación autenticadora";
 
 /**
  * Cómo se ve la consola de plataforma desde afuera (h5-p8 §3): qué cuerpos acepta cada ruta, qué devuelve cada una
@@ -143,7 +148,11 @@ export function politicaDePlataforma(d: {
         if (alta === null) throw new Error("el alta del segundo factor no tiene la forma esperada");
         return json(
           {
-            qrSvg: qrComoSvg(alta.direccion),
+            qrSvg: qrComoSvg(
+              alta.direccion,
+              CORRECCION_DEL_QR_DEL_SEGUNDO_FACTOR,
+              ETIQUETA_DEL_QR_DEL_SEGUNDO_FACTOR,
+            ),
             secreto: alta.secreto,
             codigosDeRecuperacion: alta.codigos,
           },
