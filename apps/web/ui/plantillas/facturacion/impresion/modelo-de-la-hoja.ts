@@ -91,7 +91,7 @@ export type ComprobanteParaLaHoja = Readonly<{
   }>;
   asociado: Readonly<{ rotulo: string; letra: string; numero: string; fecha: string }> | null;
   /**
-   * Cómo se cargaron los precios unitarios (`ModeloImpreso.modoDePrecio`; versión 2 en adelante, ausente en la 1). Solo decide el
+   * Cómo se cargaron los precios unitarios (`ModeloImpreso.modoDePrecio`; la vista solo imprime la versión 2 en adelante, ver `verElModeloDeImpresion`). Solo decide el
    * encabezado de la columna de precio de la factura A: «Precio con IVA» si `IVA_INCLUIDO`, «Precio» si `IVA_DISCRIMINADO`.
    * Previene: rotular con IVA un precio que va sin IVA (o al revés). Chequeo: `test/web/impresion-modelo.test.ts`.
    */

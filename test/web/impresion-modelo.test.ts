@@ -168,13 +168,6 @@ describe("armarLaHoja: encabezado del precio de la A según el modo de precio", 
     const m = modelo(imprimibleDe(facturaA, { contacto: SIN_CONTACTO }));
     expect(armarLaHoja({}, paraLaHoja(m), "A4").columnas.map((c) => c.clave)).toContain("iva");
   });
-
-  it("sin modo (versión 1) la A conserva «Precio con IVA»", () => {
-    const m = { ...modelo(imprimibleDe(facturaA, { contacto: SIN_CONTACTO })) };
-    delete (m as { modoDePrecio?: unknown }).modoDePrecio;
-    const titulo = armarLaHoja({}, paraLaHoja(m), "A4").columnas.find((c) => c.clave === "precio");
-    expect(titulo?.titulo).toBe("Precio con IVA");
-  });
 });
 
 describe("armarLaHoja: nota con comprobante asociado, homologación, contacto e ingresos brutos", () => {

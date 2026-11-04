@@ -36,6 +36,8 @@ vi.mock("../../src/composicion/sesion-y-empresa", () => ({
   resolverEmpresa: () =>
     Promise.resolve({ ok: true, dato: { tipo: "ENTRA", contexto: { empresaId: "empresa-1" } } }),
 }));
+// La consulta se mockea a propósito: acá se ve solo el cableado de la función de servidor. Que el guard real exija `comprobantes.ver`
+// dentro de la transacción lo prueba #157 (consulta del modelo de impresión), no este archivo.
 vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
     casosDeUsoDeFacturacion: () => ({}),
@@ -51,7 +53,11 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
 import { verElModeloDeImpresion } from "../../apps/web/servidor/facturacion";
 
 const URL_DEL_QR = "https://www.arca.gob.ar/fe/qr/?p=eyJ2ZXIiOjF9";
-const MODELO = { qr: { url: URL_DEL_QR }, fiscal: { numero: "00001-00000011" } };
+const MODELO = {
+  versionDeRepresentacion: 2,
+  qr: { url: URL_DEL_QR },
+  fiscal: { numero: "00001-00000011" },
+};
 
 beforeEach(() => {
   mundo.pedidos = [];
@@ -104,5 +110,16 @@ describe("verElModeloDeImpresion", () => {
       ok: false,
       error: errorDeCodigo("FISCAL_COMPROBANTE_NO_ENCONTRADO"),
     });
+  });
+
+  it("un modelo de versión 1 se rechaza con el error genérico y su referencia, sin dibujar nada", async () => {
+    mundo.resultado = ok({ ...MODELO, versionDeRepresentacion: 1 });
+    const r = await verElModeloDeImpresion({ comprobanteId: ID });
+    expect(r).toMatchObject({ ok: false, error: { codigo: "ERROR_INTERNO" } });
+    expect(r.ok ? "" : (r.error.referencia ?? "")).toMatch(/^PD-/);
+  });
+
+  it("un modelo de versión 2 sale bien", async () => {
+    expect(await verElModeloDeImpresion({ comprobanteId: ID })).toMatchObject({ ok: true });
   });
 });

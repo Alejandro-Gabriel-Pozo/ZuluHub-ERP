@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { comprobanteParaLaHoja } from "../../apps/web/pantallas/modelo-de-impresion";
 import { armarLaHoja } from "../../apps/web/ui/plantillas/facturacion/impresion/modelo-de-la-hoja";
 import type { ModeloDeImpresionParaLaPantalla } from "../../src/composicion/modelo-de-impresion-web";
+import { webDesdeTexto, type SitioWeb } from "../../src/primitivas/contacto/web";
 import { modeloDeImpresion } from "../../src/modulos/fiscal/dominio/modelo-de-impresion";
 import {
   consumidorFinal,
@@ -68,6 +69,81 @@ describe("comprobanteParaLaHoja: lista blanca", () => {
     expect(Object.keys(c.renglones[0] ?? {}).sort()).toEqual(
       ["alicuota", "cantidad", "descripcion", "importe", "precioUnitario"].sort(),
     );
+  });
+});
+
+const sitio = (texto: string): SitioWeb => {
+  const r = webDesdeTexto(texto);
+  if (!r.ok) throw new Error(texto);
+  return r.valor;
+};
+const CONTACTO = { telefono: "011 4444-5555", correo: "hola@zulu.test", web: sitio("zulu.test") };
+
+describe("comprobanteParaLaHoja: la lista blanca es profunda", () => {
+  const INTRUSA = "claveNuevaDelDominio";
+  const conIntrusa = <T extends object>(o: T): T => ({ ...o, [INTRUSA]: "x" });
+
+  it("una clave nueva en los objetos anidados del modelo no llega al resultado", () => {
+    const m = modelo(imprimibleDe(facturaB, { contacto: CONTACTO }));
+    const asociado = {
+      tipo: "FACTURA_B" as const,
+      puntoDeVenta: 1,
+      numero: 7n,
+      cuit: facturaB.emisor.cuit,
+      fecha: facturaB.asociado?.fecha ?? imprimibleDe(facturaB).fechaEmision,
+    };
+    const nota = modelo(imprimibleDe({ ...facturaB, tipo: "NOTA_CREDITO_B" as const, asociado }));
+    const a = modelo(imprimibleDe(facturaA("IVA_INCLUIDO")));
+    const sucio = (x: typeof m): typeof m => ({
+      ...x,
+      fiscal: { ...x.fiscal, emisor: conIntrusa(x.fiscal.emisor) },
+      receptor: { ...x.receptor, documento: conIntrusa(x.receptor.documento) },
+      totales:
+        x.totales.letra === "A"
+          ? {
+              ...x.totales,
+              netoPorAlicuota: x.totales.netoPorAlicuota.map((n) => conIntrusa(n)),
+            }
+          : x.totales,
+      ...(x.transparenciaFiscal === undefined
+        ? {}
+        : {
+            transparenciaFiscal: {
+              ...conIntrusa(x.transparenciaFiscal),
+              titulo: conIntrusa(x.transparenciaFiscal.titulo),
+              ivaContenido: {
+                ...conIntrusa(x.transparenciaFiscal.ivaContenido),
+                porAlicuota: x.transparenciaFiscal.ivaContenido.porAlicuota.map((p) =>
+                  conIntrusa(p),
+                ),
+              },
+              otrosImpuestosNacionalesIndirectos: conIntrusa(
+                x.transparenciaFiscal.otrosImpuestosNacionalesIndirectos,
+              ),
+            },
+          }),
+      ...(x.contacto === undefined
+        ? {}
+        : {
+            contacto: {
+              ...conIntrusa(x.contacto),
+              web: x.contacto.web === null ? null : conIntrusa(x.contacto.web),
+            },
+          }),
+      asociado: x.asociado === null ? null : conIntrusa(x.asociado),
+    });
+    for (const original of [m, nota, a]) {
+      const limpio = JSON.stringify(comprobanteParaLaHoja(original));
+      const conClave = JSON.stringify(comprobanteParaLaHoja(sucio(original)));
+      expect(conClave).not.toContain(INTRUSA);
+      expect(conClave).toBe(limpio);
+    }
+    // Que la prueba no sea vacía: el modelo sucio sí trae la clave, y se ejercitaron los anidados.
+    expect(JSON.stringify(sucio(m))).toContain(INTRUSA);
+    expect(m.transparenciaFiscal).toBeDefined();
+    expect(m.contacto).toBeDefined();
+    expect(nota.asociado).not.toBeNull();
+    expect(a.totales.letra).toBe("A");
   });
 });
 

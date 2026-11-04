@@ -282,15 +282,33 @@ export function verElComprobante(entrada: unknown): Promise<Respuesta<DetallePar
   return conLaEmpresa((contexto) => verComprobante(dependencias, contexto, entrada));
 }
 
+/** Primera versión de representación que dibuja la vista (la 1 no trae el modo de precio). */
+const VERSION_MINIMA_QUE_SE_IMPRIME = 2;
+
 /** El modelo de impresión que recibe la ruta: lo reexporta el servidor para que las pantallas no importen la composición. */
 export type { ModeloDeImpresionParaLaPantalla };
 
 /**
  * El modelo de impresión de un comprobante Autorizado, con el QR ya dibujado (D-97). Como `verElComprobante`: solo el id viene del
  * pedido; la empresa, el permiso (`comprobantes.ver`) y la versión de representación (la sella el comprobante) las decide el servidor.
+ * La vista imprime desde la versión 2: un modelo de versión 1 no trae `modoDePrecio` y una A sellada en 1 pudo ser IVA discriminado,
+ * así que se rechaza con el error genérico y su referencia (sin texto nuevo) en vez de rotular el precio por suposición.
+ * Previene: «Precio con IVA» sobre un precio sin IVA. Chequeo: `test/web/servidor-modelo-de-impresion.test.ts`.
  */
 export function verElModeloDeImpresion(
   entrada: unknown,
 ): Promise<Respuesta<ModeloDeImpresionParaLaPantalla>> {
-  return conLaEmpresa((contexto) => verModeloDeImpresion(dependencias, contexto, entrada));
+  return conLaEmpresa(async (contexto) => {
+    const respuesta = await verModeloDeImpresion(dependencias, contexto, entrada);
+    if (
+      respuesta.ok &&
+      respuesta.dato.modelo.versionDeRepresentacion < VERSION_MINIMA_QUE_SE_IMPRIME
+    ) {
+      return aRespuestaDeExcepcion(
+        new Error("El modelo de impresión es de una versión que la vista no imprime"),
+        dependenciasDeSesion.respuesta,
+      );
+    }
+    return respuesta;
+  });
 }
