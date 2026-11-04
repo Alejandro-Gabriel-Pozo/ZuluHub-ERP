@@ -22,6 +22,8 @@ describe("prueba de contrato: lo que está y lo que no está", () => {
     /enviar/i,
     /mail/i,
     /exportar/i,
+    // Sin la prop `imprimir` la página no lo ofrece: el texto no aparece (con la acción, solo en el bloque de D-97 de abajo).
+    /imprimir/i,
     /\bQR\b/,
     /anular/i,
     /descartar/i,
