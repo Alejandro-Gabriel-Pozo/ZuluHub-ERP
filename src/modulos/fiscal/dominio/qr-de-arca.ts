@@ -20,11 +20,17 @@ import { numeroDeDocumentoParaArca, type DocumentoDelReceptor } from "./receptor
  * salgan como texto exacto en el JSON (nunca por `number`): `importe` sin ceros de más (`12100`,
  * `12100.5`, `12100.55`), `cuit`, `nroDocRec` y `codAut` como enteros.
  *
- * NO VERIFICADO (el spec lo deja abierto; se sigue la especificación del QR):
- * - la URL base: la especificación dice `www.arca.gob.ar` en el texto y `www.afip.gob.ar` en su
- *   ejemplo; se usa la del ejemplo, que es la que usan los SDK y la que resuelve hoy. Es un
- *   parámetro para cambiarla sin tocar el armado;
- * - `importe` va en decimal (no multiplicado por 100) y `ctz` en 1 para pesos.
+ * VERIFICADO (fuente: el dueño, 2026-11-04; Pedernal-docs `11-especificaciones/h7-facturacion.md` §B.7,
+ * «Actualización 2026-11-04»): el dueño subió la especificación oficial de ARCA «Especificaciones del QR incluido
+ * en las facturas electrónicas» (`12-referencias-externas/arca-manuales-del-dueno/QR_especificaciones.md`, SHA-256
+ * 51853e35…). El orden y los tipos de los campos coinciden con `jsonDelQr`, el ejemplo oficial se reproduce byte a
+ * byte (ver la prueba) y el dueño PROBÓ ese ejemplo (`https://www.afip.gob.ar/fe/qr/?p=…`) y funciona.
+ * - la URL base queda `afip`: el texto del documento dice `arca.gob.ar` pero su ejemplo usa `afip.gob.ar`, y la
+ *   probada es esta. `arca.gob.ar` NO se probó. Es un parámetro para cambiarla sin tocar el armado;
+ * - `importe` en decimal (no multiplicado por 100) y `ctz` en 1 para pesos coinciden con ese ejemplo.
+ *
+ * NO VERIFICADO: `tipoDocRec` y `nroDocRec` figuran en el documento «de corresponder» y acá siempre se emiten (consumidor
+ * final sin identificar: `99` y `0`); no está comprobado que el QR así emitido sea el correcto para ese caso.
  */
 export const URL_BASE_DEL_QR = "https://www.afip.gob.ar/fe/qr/";
 
