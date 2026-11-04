@@ -151,8 +151,13 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       expect(CATALOGO_DE_TEXTOS[`fiscal.arca.${generico}`].marcadores).toEqual(["codigo"]);
     }
     // Nada del facturador habla en voseo: los textos de ARCA y de los errores van en castellano neutro. Salvo los dos del
-    // listado que el dueño aprobó tal cual (CONTRATO del listado: «Probá con otro período…» y «Probá de nuevo.»).
-    const APROBADOS_EN_VOSEO = ["fiscal.pantalla.listado_vacio", "fiscal.pantalla.listado_error"];
+    // listado que el dueño aprobó tal cual (CONTRATO del listado: «Probá con otro período…» y «Probá de nuevo.») y el aviso de
+    // conflicto de versión (voseo aprobado, 2026-11-04, D-113).
+    const APROBADOS_EN_VOSEO = [
+      "fiscal.pantalla.listado_vacio",
+      "fiscal.pantalla.listado_error",
+      "error.fiscal_version_desactualizada",
+    ];
     for (const clave of claves.filter(
       (c) =>
         (c.startsWith("error.fiscal_") || c.startsWith("fiscal.")) &&
@@ -193,6 +198,27 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     }
     expect(CATALOGO_DE_TEXTOS["error.fiscal_comprobante_no_encontrado"].porDefecto).toBe(
       "No encontramos ese comprobante.",
+    );
+  });
+
+  it("los textos del contacto de la sucursal y el aviso de conflicto en voseo son exactamente los que el dueño aprobó el 2026-11-04 (D-113)", () => {
+    expect(
+      Object.fromEntries(
+        claves
+          .filter(
+            (c) =>
+              c.startsWith("sucursal.contacto_") || /^sucursal\.(telefono|correo|web)$/.test(c),
+          )
+          .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
+      ),
+    ).toEqual({
+      "sucursal.contacto_titulo": "Contacto de la sucursal",
+      "sucursal.telefono": "Teléfono",
+      "sucursal.correo": "Correo",
+      "sucursal.web": "Web",
+    });
+    expect(CATALOGO_DE_TEXTOS["error.fiscal_version_desactualizada"].porDefecto).toBe(
+      "Los datos cambiaron mientras los mirabas. Actualizá la pantalla e intentá de nuevo.",
     );
   });
 
