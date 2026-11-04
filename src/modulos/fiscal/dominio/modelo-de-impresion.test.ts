@@ -401,8 +401,11 @@ describe("modeloDeImpresion: errores", () => {
  *   Apartado B, inciso g) 1.), `12-referencias-externas/arca-normas-de-comprobantes/norma_5614_2024.html` del
  *   repositorio de docs.
  * - «A CONSUMIDOR FINAL»: RG 5866/2026 art. 1 f) (Anexo II, Apartado A, Título II, d) 1.), `rg5866.html`.
+ * - Título del rollo de 80 mm (el «ticket» de D-108): D-108 (`11-especificaciones/facturador-contratos-de-pantalla.md` del repositorio de docs; dueño,
+ *   2026-11-04).
  */
 const TITULO_DE_LA_NORMA = "Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)";
+const TITULO_DEL_ROLLO_D108 = "TRANSPARENCIA FISCAL";
 const IVA_CONTENIDO_DE_LA_NORMA = "IVA Contenido";
 const OTROS_DE_LA_NORMA = "Otros Impuestos Nacionales Indirectos";
 const LEYENDA_DE_LA_NORMA = "A CONSUMIDOR FINAL";
@@ -413,7 +416,7 @@ const IVA_CONTENIDO_DE_FACTURA_B = [
 ];
 
 const BLOQUE_DE_FACTURA_B = {
-  titulo: TITULO_DE_LA_NORMA,
+  titulo: { a4: TITULO_DE_LA_NORMA, rollo80mm: TITULO_DEL_ROLLO_D108 },
   ivaContenido: { rotulo: IVA_CONTENIDO_DE_LA_NORMA, porAlicuota: IVA_CONTENIDO_DE_FACTURA_B },
   otrosImpuestosNacionalesIndirectos: { rotulo: OTROS_DE_LA_NORMA, valor: "0.00" },
 };
@@ -497,7 +500,7 @@ describe("modeloDeImpresion: bloque de transparencia fiscal (RG 5614)", () => {
   it("la factura B a consumidor final lleva el título, «IVA Contenido» y «Otros Impuestos Nacionales Indirectos» con su valor", () => {
     const m = modelo(imprimible(facturaB));
     expect(m.transparenciaFiscal).toEqual(BLOQUE_DE_FACTURA_B);
-    expect(m.transparenciaFiscal?.titulo).toBe(
+    expect(m.transparenciaFiscal?.titulo.a4).toBe(
       "Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)",
     );
     expect(m.transparenciaFiscal?.ivaContenido.rotulo).toBe("IVA Contenido");
@@ -506,7 +509,20 @@ describe("modeloDeImpresion: bloque de transparencia fiscal (RG 5614)", () => {
     );
   });
 
-  it("«IVA Contenido» es el mismo valor, por alícuota, que ya mostraban los totales (decisión 9)", () => {
+  it("D-108: el título depende del formato: A4 el de la norma, rollo de 80 mm «TRANSPARENCIA FISCAL»; la nota de crédito y la de débito B traen los mismos dos", () => {
+    for (const comprobante of [
+      imprimible(facturaB),
+      notaSobreFacturaB("NOTA_CREDITO"),
+      notaSobreFacturaB("NOTA_DEBITO"),
+    ]) {
+      expect(modelo(comprobante).transparenciaFiscal?.titulo).toEqual({
+        a4: "Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)",
+        rollo80mm: "TRANSPARENCIA FISCAL",
+      });
+    }
+  });
+
+  it("D-106: «IVA Contenido» es el mismo valor, una cifra por alícuota, que ya mostraban los totales (decisión 9)", () => {
     const m = modelo(imprimible(facturaB));
     expect(m.totales).toEqual({
       letra: "B",
@@ -518,11 +534,15 @@ describe("modeloDeImpresion: bloque de transparencia fiscal (RG 5614)", () => {
     );
   });
 
-  it("SUPUESTO: «Otros Impuestos Nacionales Indirectos» vale 0.00 hasta que el producto tenga el dato (C23)", () => {
-    for (const comprobante of [imprimible(facturaB), notaSobreFacturaB("NOTA_CREDITO")]) {
-      expect(
-        modelo(comprobante).transparenciaFiscal?.otrosImpuestosNacionalesIndirectos.valor,
-      ).toBe("0.00");
+  it("D-107: «Otros Impuestos Nacionales Indirectos» se imprime siempre y vale 0.00 cuando no hay impuestos", () => {
+    const exenta = facturaArmada(consumidorFinal, [renglon("500.00", "1", "EXENTO")]);
+    for (const comprobante of [
+      imprimible(facturaB),
+      notaSobreFacturaB("NOTA_CREDITO"),
+      imprimible(exenta),
+    ]) {
+      const otros = modelo(comprobante).transparenciaFiscal?.otrosImpuestosNacionalesIndirectos;
+      expect(otros).toEqual({ rotulo: OTROS_DE_LA_NORMA, valor: "0.00" });
     }
   });
 
@@ -564,7 +584,7 @@ describe("modeloDeImpresion: bloque de transparencia fiscal (RG 5614)", () => {
     expect(modelo(imprimible(exenta)).transparenciaFiscal?.ivaContenido.porAlicuota).toEqual([]);
   });
 
-  it("la C y la A no llevan el bloque (el contador decide, C23), ni la B a un receptor que no es consumidor final", () => {
+  it("D-101: la C no lleva el bloque; tampoco la A (el contador decide, C23) ni la B a un receptor que no es consumidor final", () => {
     for (const comprobante of [facturaCConsumidorFinal, facturaAInscripto, facturaBAExento]) {
       const m = modelo(imprimible(comprobante));
       expect(m.transparenciaFiscal, m.fiscal.letra).toBeUndefined();

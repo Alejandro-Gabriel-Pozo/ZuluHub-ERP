@@ -68,7 +68,10 @@
     ]
   },
   "transparenciaFiscal": {
-    "titulo": "Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)",
+    "titulo": {
+      "a4": "Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)",
+      "rollo80mm": "TRANSPARENCIA FISCAL"
+    },
     "ivaContenido": {
       "rotulo": "IVA Contenido",
       "porAlicuota": [

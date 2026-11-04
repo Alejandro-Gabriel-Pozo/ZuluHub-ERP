@@ -16,18 +16,33 @@ import type { Receptor } from "./receptor";
  * Apartado B, inciso g) 1.
  */
 const TITULO_DE_TRANSPARENCIA_FISCAL = "Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)";
+/**
+ * Título del comprobante en rollo de 80 mm (factura electrónica). FUENTE: D-108 (repositorio de docs, `11-especificaciones/
+ * facturador-contratos-de-pantalla.md`, fila D-108; dueño, 2026-11-04, aprobó el prototipo v8). La norma pide
+ * «TRANSPARENCIA FISCAL» solo para controladores fiscales; el dueño decidió que el rollo de 80 mm de factura
+ * electrónica también lo lleva.
+ */
+const TITULO_DE_TRANSPARENCIA_FISCAL_EN_ROLLO = "TRANSPARENCIA FISCAL";
 const ROTULO_DE_IVA_CONTENIDO = "IVA Contenido";
 const ROTULO_DE_OTROS_IMPUESTOS_INDIRECTOS = "Otros Impuestos Nacionales Indirectos";
 
 /**
  * Bloque «espacio inferior izquierdo» de la B a consumidor final (versión 2 en adelante). Los textos son los de la
- * norma (ver la fuente arriba); los valores salen de los mismos importes que `totales`.
+ * norma y los de D-108 (ver las fuentes arriba); los valores salen de los mismos importes que `totales`.
  */
 export type TransparenciaFiscalImpresa = Readonly<{
-  titulo: string;
+  /**
+   * Un título por formato (D-108); la vista dibuja el que corresponde al formato que imprime (D-100). El modelo no
+   * depende del formato: el mismo comprobante da siempre el mismo modelo.
+   * `rollo80mm` es el formato de 80 mm de D-100; su nombre esquiva la palabra de ventas que fiscal no usa (`sin-ventas.test.ts`).
+   */
+  titulo: Readonly<{ a4: string; rollo80mm: string }>;
   ivaContenido: Readonly<{
     rotulo: string;
-    /** Por alícuota, como `totales.ivaContenido` (decisión 9 del dueño; el contador debe ratificarla, C23). */
+    /**
+     * Una cifra por alícuota, como `totales.ivaContenido` (D-106; dueño, 2026-11-04; decisión 9 del dueño). El contador
+     * todavía puede observarlo (brechas, pregunta 1).
+     */
     porAlicuota: readonly { alicuota: string; iva: string }[];
   }>;
   otrosImpuestosNacionalesIndirectos: Readonly<{ rotulo: string; valor: string }>;
@@ -43,9 +58,10 @@ type TotalesParaTransparencia =
 
 /**
  * «Otros Impuestos Nacionales Indirectos» que inciden en el precio (RG 5614 art. 2 punto 4: Anexo II A.III.f; art. 6
- * a): los impuestos internos). SUPUESTO: el producto no tiene hoy ese dato (no hay impuestos internos ni otros
- * tributos en el comprobante: `ImpTrib` es cero), así que el valor es siempre cero. Lo confirma el contador (C23).
- * ÚNICO lugar para cambiarlo cuando el producto tenga el dato.
+ * a): los impuestos internos). Se imprime SIEMPRE, y vale 0.00 cuando no hay (D-107; dueño, 2026-11-04). Hoy no hay
+ * dato (no hay impuestos internos ni otros tributos en el comprobante: `ImpTrib` es cero), así que el valor es siempre
+ * cero. El contador todavía puede observarlo (brechas, pregunta 7). ÚNICO lugar para cambiarlo cuando el producto
+ * tenga el dato.
  */
 function otrosImpuestosNacionalesIndirectos(moneda: Moneda): Importe {
   return importeCero(moneda);
@@ -53,7 +69,7 @@ function otrosImpuestosNacionalesIndirectos(moneda: Moneda): Importe {
 
 /**
  * El bloque de transparencia fiscal, o `null` si no corresponde: letra B (sus `totales` traen el IVA contenido) y
- * receptor consumidor final, según la autorización del dueño del 2026-11-04. PREGUNTAS PENDIENTES (contador, C23),
+ * receptor consumidor final, según la autorización del dueño del 2026-11-04; la C no lo lleva (D-101). PREGUNTAS PENDIENTES (contador, C23),
  * por eso NO se agrega fuera de este caso: ¿lleva el bloque la C a consumidor final (monotributo o exento; la RG 5614
  * art. 2 punto 7 no limita la letra y el art. 99 de la Ley 27.743 no está en el repo)? ¿La A? ¿La B a exento o no
  * alcanzado (Anexo II A.IV.a punto 2 manda discriminar el IVA también a ellos)?
@@ -65,7 +81,10 @@ export function transparenciaFiscal(
 ): TransparenciaFiscalImpresa | null {
   if (totales.letra !== "B" || receptor.condicionIva !== "CONSUMIDOR_FINAL") return null;
   return {
-    titulo: TITULO_DE_TRANSPARENCIA_FISCAL,
+    titulo: {
+      a4: TITULO_DE_TRANSPARENCIA_FISCAL,
+      rollo80mm: TITULO_DE_TRANSPARENCIA_FISCAL_EN_ROLLO,
+    },
     ivaContenido: { rotulo: ROTULO_DE_IVA_CONTENIDO, porAlicuota: totales.ivaContenido },
     otrosImpuestosNacionalesIndirectos: {
       rotulo: ROTULO_DE_OTROS_IMPUESTOS_INDIRECTOS,
