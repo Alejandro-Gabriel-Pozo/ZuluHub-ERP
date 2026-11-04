@@ -4,6 +4,7 @@ import {
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import type { PropsDeInsignia, TonoDeEstado } from "../../componentes/Insignia";
+import { direccionDeImprimir } from "./filtros-del-listado";
 import {
   formatearAlicuota,
   formatearCantidad,
@@ -292,6 +293,25 @@ export function anulacionDe(
   if (estado !== "AUTORIZADO") return null;
   if (acreditacion === "PARCIAL") return texto(d, "fiscal.pantalla.anulacion_parcial");
   return acreditacion === "TOTAL" ? texto(d, "fiscal.pantalla.anulacion_total") : null;
+}
+
+/** El botón «Imprimir» del Detalle: un enlace a la vista previa. */
+export type AccionDeImprimirDelDetalle = Readonly<{ etiqueta: string; href: string }>;
+
+/**
+ * «Imprimir» (D-97): solo se ofrece en un comprobante Autorizado; en cualquier otro estado no se ofrece nada (ni apagado: no hay
+ * motivo aprobado). El permiso y la sucursal los vuelve a decidir el servidor al pedir el modelo de impresión: la pantalla no valida.
+ * Previene: ofrecer imprimir lo que no tiene número ni CAE. Chequeo: `test/web/detalle-contrato.test.ts` (solo en Autorizado).
+ */
+export function accionDeImprimirDelDetalle(
+  d: DiccionarioResuelto,
+  comprobante: Readonly<{ id: string }> & Pick<DetalleParaMostrar, "estado">,
+): AccionDeImprimirDelDetalle | null {
+  if (comprobante.estado !== "AUTORIZADO") return null;
+  return {
+    etiqueta: texto(d, "fiscal.pantalla.imprimir_boton"),
+    href: direccionDeImprimir(comprobante.id),
+  };
 }
 
 export function armarElDetalle(
