@@ -39,18 +39,18 @@ const DIRECCION =
 
 describe("matrizDelQr", () => {
   it("el vector conocido: «A» da la matriz de la versión 1, y un lector independiente la decodifica como «A»", () => {
-    expect(comoTexto(matrizDelQr("A"))).toEqual(VECTOR_DE_A);
+    expect(comoTexto(matrizDelQr("A", "M"))).toEqual(VECTOR_DE_A);
   });
 
   it("es determinista: el mismo texto da la misma matriz, y otro texto, otra", () => {
-    expect(comoTexto(matrizDelQr(DIRECCION))).toEqual(comoTexto(matrizDelQr(DIRECCION)));
-    expect(comoTexto(matrizDelQr("A"))).not.toEqual(comoTexto(matrizDelQr("B")));
+    expect(comoTexto(matrizDelQr(DIRECCION, "M"))).toEqual(comoTexto(matrizDelQr(DIRECCION, "M")));
+    expect(comoTexto(matrizDelQr("A", "M"))).not.toEqual(comoTexto(matrizDelQr("B", "M")));
   });
 
   it.each([["A"], ["otpauth://totp/x:y?secret=ABCDEFGHIJKLMNOP"], [DIRECCION]])(
     "la matriz de %j es cuadrada, de lado 17 + 4 × versión, con los patrones de posición y de sincronía del estándar",
     (texto) => {
-      const m = matrizDelQr(texto);
+      const m = matrizDelQr(texto, "M");
       const n = m.length;
       expect((n - 17) % 4).toBe(0);
       expect(n).toBeGreaterThanOrEqual(21);
@@ -91,14 +91,14 @@ describe("matrizDelQr", () => {
   );
 
   it("una dirección más larga usa una versión mayor (más módulos)", () => {
-    expect(matrizDelQr(DIRECCION).length).toBeGreaterThan(matrizDelQr("A").length);
+    expect(matrizDelQr(DIRECCION, "M").length).toBeGreaterThan(matrizDelQr("A", "M").length);
   });
 });
 
 describe("svgDeLaMatriz", () => {
   it("la matriz ida y vuelta: el dibujo (tramos horizontales) reconstruye EXACTAMENTE la matriz, con 4 módulos de margen", () => {
     for (const texto of ["A", DIRECCION]) {
-      const m = matrizDelQr(texto);
+      const m = matrizDelQr(texto, "M");
       const svg = svgDeLaMatriz(m);
       const lado = m.length + 8;
       expect(svg).toContain(`viewBox="0 0 ${lado} ${lado}"`);
@@ -136,7 +136,7 @@ describe("svgDeLaMatriz", () => {
   });
 
   it("es solo dibujo: fondo blanco, módulos negros y una etiqueta fija; ningún texto codificado ni elemento activo", () => {
-    const svg = qrComoSvg(DIRECCION);
+    const svg = qrComoSvg(DIRECCION, "M", "Código QR para la aplicación autenticadora");
     expect(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg" ')).toBe(true);
     expect(svg.endsWith("</svg>")).toBe(true);
     expect(svg).toContain('role="img"');
@@ -165,8 +165,31 @@ describe("svgDeLaMatriz", () => {
     ]);
   });
 
-  it("qrComoSvg es la matriz dibujada", () => {
-    expect(qrComoSvg("A")).toBe(svgDeLaMatriz(matrizDelQr("A")));
-    expect(qrComoSvg("A")).not.toBe(qrComoSvg("B"));
+  it("sin etiqueta el SVG es exactamente el dibujo, sin nada entre el último atributo y el cierre; con etiqueta, sale exactamente la esperada", () => {
+    const base =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 9" shape-rendering="crispEdges"';
+    const dibujo =
+      '><rect width="9" height="9" fill="#ffffff"/><path d="M4 4h1v1h-1z" fill="#000000"/></svg>';
+    expect(svgDeLaMatriz([[true]])).toBe(`${base}${dibujo}`);
+    expect(svgDeLaMatriz([[true]], "Etiqueta")).toBe(
+      `${base} role="img" aria-label="Etiqueta"${dibujo}`,
+    );
+  });
+
+  it("sin etiqueta no lleva role ni aria-label; con etiqueta, la escapa", () => {
+    expect(qrComoSvg("A", "M")).not.toMatch(/role=|aria-label=/);
+    const svg = qrComoSvg("A", "M", `a"<b>&c`);
+    expect(svg).toContain(' role="img" aria-label="a&quot;&lt;b&gt;&amp;c"');
+    expect([...new Set([...svg.matchAll(/<([a-zA-Z]+)/g)].map((m) => m[1]))].sort()).toEqual([
+      "path",
+      "rect",
+      "svg",
+    ]);
+  });
+
+  it("qrComoSvg es la matriz dibujada, y el nivel de corrección que se pide cambia el dibujo", () => {
+    expect(qrComoSvg("A", "M")).toBe(svgDeLaMatriz(matrizDelQr("A", "M")));
+    expect(qrComoSvg("A", "M")).not.toBe(qrComoSvg("B", "M"));
+    expect(qrComoSvg("A", "L")).not.toBe(qrComoSvg("A", "H"));
   });
 });

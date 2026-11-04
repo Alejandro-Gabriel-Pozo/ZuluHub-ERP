@@ -658,7 +658,8 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
       tipo: "Check",
       provocar: async () => {
         const id = randomUUID();
-        await dueno.query(certificadoSql, certificado(e, { id }));
+        // Un escenario propio: dos pedidos pendientes del mismo emisor y ambiente no conviven (0018).
+        await dueno.query(certificadoSql, certificado(await crearEscenario(dueno), { id }));
         return provocar(async (ej) => {
           await ej(
             `update certificado_arca set estado = 'VIGENTE', certificado_pem = $2, huella_sha256 = $3, vence_en = now() where id = $1`,
@@ -672,10 +673,13 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
       tipo: "Unicidad",
       provocar: async () => {
         const x = await crearEscenario(dueno);
-        const ids = [randomUUID(), randomUUID()];
-        for (const id of ids) await dueno.query(certificadoSql, certificado(x, { id }));
+        const [primero, segundo] = [randomUUID(), randomUUID()];
+        // El segundo pedido se pide con el primero ya vigente: dos pendientes del mismo ambiente no conviven (0018).
+        await dueno.query(certificadoSql, certificado(x, { id: primero }));
+        await dueno.query(cargarSql, [primero, huellaAlAzar()]);
+        await dueno.query(certificadoSql, certificado(x, { id: segundo }));
         return provocar(async (ej) => {
-          for (const id of ids) await ej(cargarSql, [id, huellaAlAzar()]);
+          await ej(cargarSql, [segundo, huellaAlAzar()]);
         });
       },
     },
@@ -703,7 +707,7 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
       tipo: "Check",
       provocar: async () => {
         const id = randomUUID();
-        await dueno.query(certificadoSql, certificado(e, { id }));
+        await dueno.query(certificadoSql, certificado(await crearEscenario(dueno), { id }));
         return provocar(async (ej) => {
           await ej("update certificado_arca set estado = 'REEMPLAZADO' where id = $1", [id]);
         });
@@ -714,7 +718,7 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
       tipo: "Check",
       provocar: async () => {
         const id = randomUUID();
-        await dueno.query(certificadoSql, certificado(e, { id }));
+        await dueno.query(certificadoSql, certificado(await crearEscenario(dueno), { id }));
         return provocar(async (ej) => {
           await ej("update certificado_arca set alias = 'otro' where id = $1", [id]);
         });

@@ -54,6 +54,7 @@ export const CLAVES_DE_ERRORES_FISCALES = {
   FISCAL_ARCA_ACCESO_EN_CURSO: "error.fiscal_arca_acceso_en_curso",
   FISCAL_SERIE_EN_CURSO: "error.fiscal_serie_en_curso",
   FISCAL_AMBIENTE_NO_VUELVE: "error.fiscal_ambiente_no_vuelve",
+  FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA: "error.fiscal_punto_de_venta_no_habilitado_en_arca",
   FISCAL_YA_EMITIO_EN_PRODUCCION: "error.fiscal_ya_emitio_en_produccion",
   FISCAL_FILTRO_INVALIDO: "error.fiscal_filtro_invalido",
   FISCAL_SUCURSAL_NO_ELEGIDA: "error.fiscal_sucursal_no_elegida",

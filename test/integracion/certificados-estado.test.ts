@@ -120,10 +120,17 @@ describe.skipIf(base === null)("certificados D-42: consulta del estado de los ce
     expect(de(lista, "PRODUCCION")).toEqual({ ambiente: "PRODUCCION", situacion: "FALTA_CARGAR" });
   });
 
-  it("con varios pedidos pendientes muestra el último", async () => {
+  it("con varios pedidos seguidos queda pendiente solo el último: los anteriores quedaron descartados (D-92)", async () => {
     const e = await escenarioDeSociedad(dueno, propia.base);
-    await pedir(e);
+    const primero = await pedir(e);
     const ultimo = await pedir(e);
+    expect(
+      (
+        await dueno.query<{ estado: string }>("select estado from certificado_arca where id = $1", [
+          primero.entrada.id,
+        ])
+      ).rows[0]?.estado,
+    ).toBe("DESCARTADO");
     expect(de(await situaciones(e), "HOMOLOGACION")).toMatchObject({
       situacion: "PEDIDO_GENERADO",
       certificadoId: ultimo.entrada.id,
@@ -228,15 +235,12 @@ describe.skipIf(base === null)("certificados D-42: consulta del estado de los ce
     });
   });
 
-  it("de varios pedidos pendientes junto a un vigente muestra el último; los descartados no cuentan", async () => {
+  it("de varios pedidos junto a un vigente muestra el último; los anteriores quedaron descartados y no cuentan", async () => {
     const e = await escenarioDeSociedad(dueno, propia.base);
     await cargar(e, await pedir(e));
-    const descartado = await pedir(e);
+    await pedir(e);
     await pedir(e);
     const ultimo = await pedir(e);
-    await dueno.query("update certificado_arca set estado = 'DESCARTADO' where id = $1", [
-      descartado.entrada.id,
-    ]);
     expect(de(await situaciones(e), "HOMOLOGACION")).toMatchObject({
       pedidoPendiente: { certificadoId: ultimo.entrada.id },
     });
@@ -404,13 +408,13 @@ describe.skipIf(base === null)("certificados D-42: consulta del estado de los ce
     it("trae el vigente y el último pedido pendiente a la vez; un reemplazado o un descartado no cuentan", async () => {
       const e = await escenarioDeSociedad(dueno, propia.base);
       const viejo = await pedir(e);
-      const nuevo = await pedir(e);
-      // Sin vigente: el último pedido (el de creación más reciente).
-      expect((await actual(e, "HOMOLOGACION"))?.pendiente?.id).toBe(nuevo.entrada.id);
+      // Sin vigente: el pedido pendiente (D-92: hay uno solo por emisor y ambiente).
+      expect((await actual(e, "HOMOLOGACION"))?.pendiente?.id).toBe(viejo.entrada.id);
       expect((await actual(e, "HOMOLOGACION"))?.vigente).toBeNull();
       expect(await actual(e, "PRODUCCION")).toMatchObject({ vigente: null, pendiente: null });
 
       await cargar(e, viejo);
+      const nuevo = await pedir(e);
       const conVigente = await actual(e, "HOMOLOGACION");
       expect(conVigente?.vigente).toMatchObject({ id: viejo.entrada.id, estado: "VIGENTE" });
       expect(conVigente?.pendiente?.id).toBe(nuevo.entrada.id);

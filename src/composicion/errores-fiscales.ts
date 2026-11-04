@@ -173,6 +173,7 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<
   DATOS_FISCALES_NO_ENCONTRADOS: SIN_TEXTO_APROBADO,
   DOMICILIO_NO_ENCONTRADO: SIN_TEXTO_APROBADO,
   ID_EN_USO: SIN_TEXTO_APROBADO,
+  PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA", // D-77: texto del 10005 (catalogo-fiscal.ts)
   // La pantalla solo ofrece las sucursales de la empresa: un id ajeno es un pedido armado a mano, y decir que existe en otra
   // empresa sería un oráculo. La base lo rechaza por la referencia, no por una regla que la persona pueda corregir.
   SUCURSAL_DE_OTRA_EMPRESA: null,
@@ -185,7 +186,6 @@ export const CODIGOS_DE_CONFIGURACION_SIN_TEXTO: readonly string[] = Object.entr
 )
   .filter(([, codigo]) => codigo === SIN_TEXTO_APROBADO)
   .map(([error]) => error);
-
 /** El campo del formulario al que apunta cada error de dato (el nombre que usa el pedido, no uno interno). */
 const CAMPO_DE_CRITERIO: Readonly<Partial<Record<ErrorTextual, string>>> = {
   LIMITE_INVALIDO: "limite",

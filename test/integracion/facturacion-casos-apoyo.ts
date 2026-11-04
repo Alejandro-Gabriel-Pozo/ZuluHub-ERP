@@ -18,6 +18,7 @@ import {
 import type { ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import {
+  crearLecturaDeSucursalBloqueada,
   crearRepositorioDeEmpresas,
   crearRepositorioDeSucursales,
   type EmpresasDb,
@@ -47,7 +48,10 @@ import {
   type TxDeFacturacion,
 } from "../../src/modulos/fiscal/publico";
 import { crearRepositorioDeTenants, type TenantsDb } from "../../src/modulos/tenants/publico";
+import { cuitDesdeTexto } from "../../src/primitivas/identificacion-fiscal/cuit";
 import { empresaId, personaId } from "../../src/primitivas/identificadores/marca";
+import type { PuntoDeVentaDeArca } from "../../src/modulos/fiscal/dominio/habilitacion-en-arca";
+import type { EmisionFalsa } from "../utilidades/emision-falsa";
 import { consumidorFinal, renglon } from "../utilidades/facturacion";
 import { comoEmpresa } from "./entorno";
 import { crearEscenario as crearEscenarioDeFacturacion, type Escenario } from "./facturacion-apoyo";
@@ -81,6 +85,7 @@ export function crearEntornoDeFacturacion(
         db,
         empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
         sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
+        sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
         lecturas: crearLecturasDeComprobantes(fiscal),
         tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
         puntosDeVenta: crearRepositorioDePuntosDeVenta(fiscal),
@@ -193,6 +198,22 @@ export async function cargarCertificado(
   } finally {
     await entorno.cerrar();
   }
+}
+
+/**
+ * ARCA (el falso) tiene dado de alta el punto de venta del escenario: lo que D-77 pide para pasarlo a producción. Con `cambios`, se lo
+ * ve bloqueado o dado de baja. (La CUIT es la del emisor del escenario; el falso la guarda por CUIT.)
+ */
+export function darDeAltaEnArca(
+  falsa: EmisionFalsa,
+  e: Pick<Escenario, "cuit" | "pvNumero">,
+  cambios: Partial<PuntoDeVentaDeArca> = {},
+): void {
+  const cuit = cuitDesdeTexto(e.cuit);
+  if (!cuit.ok) throw new Error("el CUIT del escenario de prueba no es válido");
+  falsa.declararPuntosDeVenta(cuit.valor, [
+    { numero: e.pvNumero, bloqueado: false, dadoDeBaja: false, ...cambios },
+  ]);
 }
 
 /** Un pedido de factura B a consumidor final por $121,00 (o lo que se cambie), con una clave nueva. */

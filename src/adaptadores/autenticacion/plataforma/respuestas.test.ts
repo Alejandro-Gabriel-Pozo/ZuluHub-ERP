@@ -289,6 +289,7 @@ describe("moldearExito", () => {
     expect(cuerpo.secreto).toBe(SECRETO);
     expect(cuerpo.codigosDeRecuperacion).toEqual(CODIGOS);
     expect(cuerpo.qrSvg.startsWith("<svg ")).toBe(true);
+    expect(cuerpo.qrSvg).toContain('aria-label="Código QR para la aplicación autenticadora"');
     expect(texto).not.toContain("otpauth");
     expect(texto).not.toContain("token-secreto");
     expect(texto).not.toContain("ana");
