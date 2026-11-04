@@ -435,6 +435,10 @@ describe.skipIf(base === null)("comprobante en sucursal abierta: la migración 0
       await c.connect();
       try {
         const x = await conSucursalDelSegundoPuntoDeVenta(c);
+        // Desde 0019 el disparador de copia del contacto también toma un FOR SHARE sobre esa sucursal, DESPUÉS de mirar si está
+        // abierta: no cubre la carrera de 0017 (un cierre que confirma entre la lectura y ese bloqueo), pero taparía esta sonda. Se
+        // quita para probar solo el bloqueo de 0017.
+        await c.query("drop trigger if exists comprobante_alta_contacto on comprobante");
         await reescribirAlta(
           c,
           BLOQUEA,

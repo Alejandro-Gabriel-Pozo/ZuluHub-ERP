@@ -5,13 +5,16 @@ import type { HoraDelDia } from "../../../primitivas/tiempo/hora-del-dia";
  * Una sucursal tal como la ve una pantalla (ADR-005): objeto plano, sin texto de marca. La sucursal
  * no tiene zona horaria propia: `zonaHoraria` es la de la empresa, para que la pantalla formatee las
  * fechas (que viajan en UTC). Si algún día tiene una propia, el contrato no cambia. `horaDeCorte` es la
- * `HH:MM` desde la que rige su jornada (`00:00` por defecto).
+ * `HH:MM` desde la que rige su jornada (`00:00` por defecto). `contacto` es su teléfono, correo y web
+ * (D-98), `null` en el que no tiene; solo lo ven quienes tienen `sucursales.ver` (no `sucursalesElegibles`).
  */
 export type SucursalDeLista = Readonly<{
   id: SucursalId;
   nombre: string;
   activa: boolean;
   horaDeCorte: HoraDelDia;
+  /** Teléfono, correo y web; `null` el que no tiene. Misma forma que `ContactoDeSucursal` del dominio (las consultas no lo importan). */
+  contacto: Readonly<{ telefono: string | null; correo: string | null; web: string | null }>;
   version: number;
   zonaHoraria: string;
 }>;

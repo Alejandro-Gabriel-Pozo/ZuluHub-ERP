@@ -1,7 +1,7 @@
 import type { SucursalId } from "../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
 import type { DatosDeJornada } from "./dominio/sucursal";
-import type { RepositorioDeSucursales } from "./persistencia/repositorios";
+import type { RepositorioDeSucursales } from "./persistencia/repositorio-de-sucursales";
 
 /**
  * Puerto `datosDeJornada` de empresas (conciliación §2 y §3.2): la zona horaria de la empresa y la hora

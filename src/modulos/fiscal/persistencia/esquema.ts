@@ -153,6 +153,10 @@ export const COLUMNAS_DE_FISCAL = {
     "actualizado_en",
     "version",
     "sucursal_id",
+    // 0019: el contacto de la sucursal al emitir; lo copia la base, la aplicación no lo manda.
+    "sucursal_telefono",
+    "sucursal_correo",
+    "sucursal_web",
   ],
   comprobante_linea: [
     "empresa_id",

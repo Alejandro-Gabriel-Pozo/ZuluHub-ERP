@@ -87,6 +87,7 @@ describe("empresa: transiciones de estado", () => {
       nombre: "x",
       activa: true,
       horaDeCorte: HORA_DE_CORTE_POR_DEFECTO,
+      contacto: { telefono: null, correo: null, web: null },
       version: 1,
     };
     expect(s.activa).toBe(true);
