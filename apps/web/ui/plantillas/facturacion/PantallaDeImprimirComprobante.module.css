@@ -43,6 +43,13 @@
   box-shadow: inset 0 0 0 1px var(--color-texto);
 }
 
+/* El radio es transparente y el foco del teclado se dibujaría sobre él: sin esto no se vería qué formato lo tiene. Mismo anillo que el
+   global (`tokens.css`, `:focus-visible`), puesto en el tramo visible. */
+.formato:has(.radio:focus-visible) {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
 /* El radio cubre el tramo entero y no se ve: el tramo es el control. */
 .radio {
   position: absolute;

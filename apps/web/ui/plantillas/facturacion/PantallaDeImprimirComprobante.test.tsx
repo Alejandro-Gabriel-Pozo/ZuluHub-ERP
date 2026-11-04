@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { violacionesDeAccesibilidad } from "../../pruebas/ayudas";
 import { comprobanteDePrueba, QR_DE_PRUEBA } from "./impresion/ayudas-de-impresion";
 import { PantallaDeImprimirComprobante } from "./PantallaDeImprimirComprobante.cliente";
@@ -35,6 +35,30 @@ const radio = (nombre: string): HTMLInputElement => {
   return control;
 };
 
+const etiquetaDe = (nombre: string): HTMLElement => {
+  const etiqueta = radio(nombre).closest("label");
+  if (!etiqueta) throw new Error(`no hay etiqueta de ${nombre}`);
+  return etiqueta;
+};
+
+const luminancia = (rgb: string): number => {
+  const [r = 0, g = 0, b = 0] = (rgb.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+  const lineal = [r, g, b].map((c) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * (lineal[0] ?? 0) + 0.7152 * (lineal[1] ?? 0) + 0.0722 * (lineal[2] ?? 0);
+};
+
+/** Hay anillo de foco sobre la etiqueta: contorno con estilo y ancho, y contraste de 3:1 o más con el fondo de la página. */
+const anilloVisible = (nombre: string): boolean => {
+  const estilo = getComputedStyle(etiquetaDe(nombre));
+  if (estilo.outlineStyle === "none" || Number.parseFloat(estilo.outlineWidth) <= 0) return false;
+  const a = luminancia(estilo.outlineColor);
+  const b = luminancia(getComputedStyle(document.body).backgroundColor);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) >= 3;
+};
+
 afterEach(async () => {
   await page.viewport(390, 844);
 });
@@ -56,6 +80,19 @@ describe("vista previa para imprimir", () => {
     await expect.poll(() => document.querySelectorAll("[data-hoja]").length).toBeGreaterThan(0);
     expect(document.querySelector("[data-ticket]")).toBeNull();
     marca.remove();
+  });
+
+  it("con teclado el foco se ve sobre la etiqueta del formato (el radio es transparente) y se mueve con las flechas", async () => {
+    await dibujar();
+    document.body.focus();
+    await userEvent.tab();
+    expect(document.activeElement).toBe(radio("A4"));
+    expect(anilloVisible("A4")).toBe(true);
+    expect(anilloVisible("Ticket")).toBe(false);
+    await userEvent.keyboard("{ArrowRight}");
+    expect(document.activeElement).toBe(radio("Ticket"));
+    expect(anilloVisible("Ticket")).toBe(true);
+    expect(anilloVisible("A4")).toBe(false);
   });
 
   it("«Imprimir» abre el diálogo de impresión del navegador (window.print) y no hace otra cosa", async () => {
