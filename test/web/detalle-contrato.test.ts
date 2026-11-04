@@ -1,15 +1,24 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { DetalleParaMostrar } from "../../apps/web/ui/plantillas/facturacion/modelo-del-detalle";
+import {
+  accionDeImprimirDelDetalle,
+  type DetalleParaMostrar,
+} from "../../apps/web/ui/plantillas/facturacion/modelo-del-detalle";
+import { PantallaDeDetalleDeComprobante } from "../../apps/web/ui/plantillas/facturacion/PantallaDeDetalleDeComprobante";
 import { base, con, nota, pintar, visible } from "../utilidades/detalle-de-comprobante";
 
 /**
  * Contrato de la pantalla 2 (detalle de un comprobante), en las dos direcciones: está todo lo que el contrato pide y no
  * aparece nada de lo que quedó afuera (acciones, origen, ambiente, «acreditad», reserva y folio, QR…).
+ *
+ * «Imprimir» entra en el Detalle por D-97 (el dueño, 2026-11-04; contratos de pantalla, Pedernal-docs): solo en un comprobante Autorizado,
+ * como enlace a la vista previa. Sigue afuera todo lo demás que ofrecía otra acción: «Enviar por mail» (D-97), «Exportar» y el alta de
+ * cliente. La página decide si ofrece «Imprimir» (`accionDeImprimirDelDetalle`); sin esa acción la pantalla no lleva ningún botón ni enlace.
  */
 
 describe("prueba de contrato: lo que está y lo que no está", () => {
   const PROHIBIDOS = [
-    /imprimir/i,
     /enviar/i,
     /mail/i,
     /exportar/i,
@@ -98,5 +107,43 @@ describe("prueba de contrato: lo que está y lo que no está", () => {
   it("no autorizado: ni CAE ni su rótulo", () => {
     const texto = visible(con({ estado: "RECHAZADO", numero: null }));
     expect(texto).not.toMatch(/CAE|vence|74123456789012/);
+  });
+});
+
+describe("«Imprimir» en el Detalle (D-97): solo en un comprobante Autorizado", () => {
+  const ESTADOS = [
+    "AUTORIZADO",
+    "PENDIENTE",
+    "EN_VALIDACION",
+    "RECHAZADO",
+    "INCIERTO",
+    "CONFLICTO",
+    "DESCARTADO",
+  ] as const;
+  const conLaAccion = (v: DetalleParaMostrar): string =>
+    renderToStaticMarkup(
+      createElement(PantallaDeDetalleDeComprobante, {
+        detalle: v,
+        imprimir: accionDeImprimirDelDetalle({}, { id: "c1", estado: v.estado }),
+      }),
+    );
+  const ofrecido = (html: string): boolean => /<a\b[^>]*>Imprimir<\/a>/.test(html);
+
+  it.each(ESTADOS)("%s: se ofrece solo si está Autorizado", (estado) => {
+    const html = conLaAccion(con({ estado }));
+    expect(ofrecido(html), estado).toBe(estado === "AUTORIZADO");
+  });
+
+  it("en un Autorizado es un enlace a la vista previa del comprobante, y sigue sin haber mail, exportar ni alta de cliente", () => {
+    const html = conLaAccion(base);
+    expect(html).toContain('href="/facturacion/comprobantes/c1/imprimir"');
+    const texto = html.replace(/<[^>]+>/g, " ");
+    for (const prohibido of [/mail/i, /enviar/i, /exportar/i, /nuevo cliente|alta de cliente/i])
+      expect(texto).not.toMatch(prohibido);
+    expect(html).not.toMatch(/<(button|form|input|select|textarea)\b/);
+  });
+
+  it("una nota de crédito Autorizada también se imprime", () => {
+    expect(ofrecido(conLaAccion(con({ tipo: "NOTA_CREDITO_B" })))).toBe(true);
   });
 });

@@ -5,7 +5,11 @@ import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../componentes/Insignia";
 import estilos from "./PantallaDeDetalleDeComprobante.module.css";
 import type { AccionDeAnularDelDetalle } from "./modelo-de-anulacion";
-import { armarElDetalle, type DetalleParaMostrar } from "./modelo-del-detalle";
+import {
+  armarElDetalle,
+  type AccionDeImprimirDelDetalle,
+  type DetalleParaMostrar,
+} from "./modelo-del-detalle";
 
 export type PropsDePantallaDeDetalleDeComprobante = Readonly<{
   detalle: DetalleParaMostrar;
@@ -15,16 +19,19 @@ export type PropsDePantallaDeDetalleDeComprobante = Readonly<{
    * activo y comprobante autorizado): la pantalla solo la pinta.
    */
   anular?: AccionDeAnularDelDetalle | null;
+  /** «Imprimir» (D-97), o `null`/ausente si no se ofrece. Lo decide la página con `accionDeImprimirDelDetalle` (solo Autorizado). */
+  imprimir?: AccionDeImprimirDelDetalle | null;
 }>;
 
 /**
- * El detalle de un comprobante (contrato de la pantalla 2): una columna, solo lectura, con una única acción: «Anular con nota de
- * crédito» cuando la página la ofrece (`anular`). Todo texto sale del modelo (`modelo-del-detalle.ts`), que ya lo resolvió del catálogo.
+ * El detalle de un comprobante (contrato de la pantalla 2): una columna, solo lectura, con sus acciones, solo si la página las ofrece: «Imprimir» (`imprimir`, D-97) y «Anular con nota de
+ * crédito» (`anular`). Todo texto sale del modelo (`modelo-del-detalle.ts`), que ya lo resolvió del catálogo.
  */
 export function PantallaDeDetalleDeComprobante({
   detalle,
   diccionario = {},
   anular = null,
+  imprimir = null,
 }: PropsDePantallaDeDetalleDeComprobante) {
   const m = armarElDetalle(detalle, diccionario);
   return (
@@ -108,9 +115,12 @@ export function PantallaDeDetalleDeComprobante({
         </section>
       )}
 
-      {anular === null ? null : (
+      {anular === null && imprimir === null ? null : (
         <div className={estilos["acciones"]}>
-          {anular.href === null ? (
+          {imprimir === null ? null : (
+            <EnlaceDeAccion href={imprimir.href}>{imprimir.etiqueta}</EnlaceDeAccion>
+          )}
+          {anular === null ? null : anular.href === null ? (
             // Apagado con su motivo visible y asociado (`aria-describedby`), como el botón sin conexión.
             <Boton deshabilitado motivo={anular.motivo ?? undefined}>
               {anular.etiqueta}
