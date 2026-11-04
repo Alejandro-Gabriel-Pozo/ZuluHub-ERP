@@ -115,6 +115,19 @@ export async function puedeVerLaConfiguracionFiscal(contexto: ContextoOperativo)
   return permisos !== null && permisos.acciones.includes(ACCION_DE_CONFIGURACION_FISCAL);
 }
 
+/**
+ * ¿La persona puede editar el contacto de la sucursal (D-113)? Es la oferta de `sucursales.editar` (gerente y administrador) que el
+ * servidor calcula con `ofertaDe`: con el módulo en solo lectura o sin el rol, no. Si no se pudieron leer los permisos, `false`
+ * (cierra, no abre). Ocultar no es autorizar: la ficha y el guardado vuelven a pasar por el guard. Chequeo:
+ * `test/web/contacto-de-sucursal-acceso.test.ts`.
+ */
+export async function puedeEditarElContactoDeLaSucursal(
+  contexto: ContextoOperativo,
+): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe("sucursales.editar", permisos).permitida;
+}
+
 type PermisosLeidos = NonNullable<Awaited<ReturnType<typeof permisosDeLaPersona>>>;
 
 /** De una acción, su módulo, el estado de construcción de ese módulo y su efecto: el catálogo es el único dueño de esos datos. */
