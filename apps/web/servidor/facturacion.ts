@@ -25,6 +25,10 @@ import {
   type DiscriminaIvaParaLaPantalla,
   type PuntosDeVentaParaEmitirEnLaPantalla,
 } from "../../../src/composicion/lecturas-para-emitir-web";
+import {
+  verModeloDeImpresion,
+  type ModeloDeImpresionParaLaPantalla,
+} from "../../../src/composicion/modelo-de-impresion-web";
 import { resolverEmpresa } from "../../../src/composicion/sesion-y-empresa";
 import type { PaginaDeComprobantes } from "../../../src/modulos/fiscal/publico";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
@@ -276,4 +280,14 @@ export async function elegirLaSucursal(datos: FormData): Promise<ResultadoDeAcci
 
 export function verElComprobante(entrada: unknown): Promise<Respuesta<DetalleParaLaPantalla>> {
   return conLaEmpresa((contexto) => verComprobante(dependencias, contexto, entrada));
+}
+
+/**
+ * El modelo de impresión de un comprobante Autorizado, con el QR ya dibujado (D-97). Como `verElComprobante`: solo el id viene del
+ * pedido; la empresa, el permiso (`comprobantes.ver`) y la versión de representación (la sella el comprobante) las decide el servidor.
+ */
+export function verElModeloDeImpresion(
+  entrada: unknown,
+): Promise<Respuesta<ModeloDeImpresionParaLaPantalla>> {
+  return conLaEmpresa((contexto) => verModeloDeImpresion(dependencias, contexto, entrada));
 }

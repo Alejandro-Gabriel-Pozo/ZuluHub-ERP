@@ -147,6 +147,36 @@ describe("armarLaHoja: letras A y C", () => {
   });
 });
 
+describe("armarLaHoja: encabezado del precio de la A según el modo de precio", () => {
+  const renglones = [renglon("1000.00", "2", "21", null, "Torta")];
+  const precio = (modoDePrecio: "IVA_INCLUIDO" | "IVA_DISCRIMINADO") => {
+    const m = modelo(
+      imprimibleDe(facturaArmada(receptorInscripto, renglones, { modoDePrecio }), {
+        contacto: SIN_CONTACTO,
+      }),
+    );
+    expect(m.modoDePrecio).toBe(modoDePrecio);
+    return armarLaHoja({}, paraLaHoja(m), "A4").columnas.find((c) => c.clave === "precio")?.titulo;
+  };
+
+  it("IVA incluido: «Precio con IVA»", () => {
+    expect(precio("IVA_INCLUIDO")).toBe("Precio con IVA");
+  });
+
+  it("IVA discriminado: «Precio» (y la columna de IVA se mantiene)", () => {
+    expect(precio("IVA_DISCRIMINADO")).toBe("Precio");
+    const m = modelo(imprimibleDe(facturaA, { contacto: SIN_CONTACTO }));
+    expect(armarLaHoja({}, paraLaHoja(m), "A4").columnas.map((c) => c.clave)).toContain("iva");
+  });
+
+  it("sin modo (versión 1) la A conserva «Precio con IVA»", () => {
+    const m = { ...modelo(imprimibleDe(facturaA, { contacto: SIN_CONTACTO })) };
+    delete (m as { modoDePrecio?: unknown }).modoDePrecio;
+    const titulo = armarLaHoja({}, paraLaHoja(m), "A4").columnas.find((c) => c.clave === "precio");
+    expect(titulo?.titulo).toBe("Precio con IVA");
+  });
+});
+
 describe("armarLaHoja: nota con comprobante asociado, homologación, contacto e ingresos brutos", () => {
   const nota = { ...facturaB, tipo: "NOTA_CREDITO_B" as const };
   it("«Corresponde a …» con el comprobante y la fecha del asociado", () => {
