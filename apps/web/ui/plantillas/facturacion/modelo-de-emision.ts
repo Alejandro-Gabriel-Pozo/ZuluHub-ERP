@@ -54,7 +54,7 @@ const CLAVE_DE_DOCUMENTO = {
 } as const satisfies Record<TipoDeDocumentoVisible, ClaveDeTexto>;
 
 /** Una por valor de `CONDICIONES_DE_IVA`: sumar una condición al dominio no compila hasta que tenga su texto. */
-const CLAVE_DE_CONDICION = {
+export const CLAVE_DE_CONDICION = {
   RESPONSABLE_INSCRIPTO: "fiscal.pantalla.emitir_condicion_responsable_inscripto",
   EXENTO: "fiscal.pantalla.emitir_condicion_exento",
   CONSUMIDOR_FINAL: "fiscal.pantalla.emitir_condicion_consumidor_final",
