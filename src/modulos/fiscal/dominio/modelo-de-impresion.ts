@@ -44,7 +44,8 @@ import type { DocumentoDelReceptor, Receptor } from "./receptor";
  * Las versiones que este código sabe dibujar; cualquier otra se rechaza (`VERSION_DE_REPRESENTACION_DESCONOCIDA`):
  * lista cerrada, no «todo lo menor o igual a la actual», para que subir la versión sea una decisión explícita.
  * - 1: el formato anterior a los textos legales de la RG 5614/2024. Se conserva SIN CAMBIOS: lo sellado con 1
- *   reimprime idéntico (golden `modelo-factura-b-marca-*` y `modelo-nota-de-credito-a-produccion`).
+ *   reimprime idéntico (golden `modelo-factura-b-marca-*` y `modelo-nota-de-credito-a-produccion`). No incluía la
+ *   leyenda «A CONSUMIDOR FINAL» aunque la norma la pedía antes; no se corrige por diseño.
  * - 2: suma la leyenda del receptor consumidor final y el bloque de transparencia fiscal de la B.
  * Previene que reimprimir un AUTORIZADO muestre textos que su original no tenía. Sin migración: la columna es
  * `smallint` con `CHECK (>= 1)` (0009) y `emitir-comprobante` sella `VERSION_DE_REPRESENTACION_ACTUAL`. Chequeo:
@@ -66,8 +67,7 @@ const PRIMERA_VERSION_CON_TEXTOS_LEGALES = 2;
  *   del Anexo II de la RG 1415; subpunto 1, «espacio inferior izquierdo»), art. 5 (la representación gráfica de la
  *   RG 4291 debe incluirlos) y art. 6 b) (obligatorio desde el 01/04/2025). Texto vigente: `rg1415_dcp.html`,
  *   «Anexo II - Texto vigente según Resolución General Nº 5866/2026 ARCA», Apartado B, inciso g) 1.
- * - Leyenda: `rg5866.html`, RG 5866/2026 art. 1 f) (sustituye el inciso d) del Título II del Apartado A del
- *   Anexo II; punto 1; vigente desde el 01/07/2026); está en `rg1415_dcp.html`, Anexo II, Apartado A, Título II, d) 1.
+ * - Leyenda: Anexo II, Apartado A, Título II, d) 1. (`rg1415_dcp.html`, texto vigente; `rg5866.html`, art. 1 f)).
  */
 const TITULO_DE_TRANSPARENCIA_FISCAL = "Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)";
 const ROTULO_DE_IVA_CONTENIDO = "IVA Contenido";
