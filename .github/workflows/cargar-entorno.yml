@@ -10,11 +10,20 @@ name: Cargar entorno (preview y producción)
 #  - NUNCA SOBRESCRIBE: lo que ya existe en Vercel para ese entorno se saltea («ya existía»). Si la base ya tiene una clave de
 #    contexto y Vercel no, la corrida PARA antes de cambiar nada y lo decide el dueño.
 #  - El informe final lleva solo NOMBRES con su resultado, las variables que tiene que cargar el dueño a mano y las que no
-#    deben existir en Vercel (se informan; no se borra nada).
-#  - Opcional (`dar_login_a_los_roles`): antes, hace lo que ya hace `npm run migrar -- --preparar-roles --con-autenticacion
-#    --vercel <destino>`: da LOGIN a los roles de la base y carga sus cadenas en Vercel, sin mostrar contraseñas. Exige que la
-#    base esté al día (no aplica migraciones: eso es de `migrar.yml`, con su respaldo y su aprobación).
-#
+#    deben existir en Vercel. SIN la casilla de los roles no se borra ni se cambia nada en Vercel: solo se CREAN las que faltan.
+#  - Opcional (`dar_login_a_los_roles`): antes de lo anterior corre lo que ya hace `npm run migrar -- --preparar-roles
+#    --con-autenticacion --vercel <destino>`, sin mostrar contraseñas. ESTA CASILLA CAMBIA Y BORRA:
+#      * da LOGIN a los roles de la aplicación con contraseñas NUEVAS y las escribe en Vercel (sensibles);
+#      * BORRA de Vercel, en ese entorno, lo que la aplicación prohíbe: DATABASE_URL, DATABASE_URL_UNPOOLED, POSTGRES_*,
+#        BETTER_AUTH_*, AUTH_SECRET, AUTH_URL y PEDERNAL_DB_MIGRACIONES (si una variable vale también para el otro
+#        entorno, solo se le quita este y se conserva en el otro);
+#      * el comando APLICA las migraciones pendientes (sin la rama de respaldo de `migrar.yml`): por eso este flujo se corta
+#        antes si hay alguna pendiente. Una que apareciera entre ese chequeo y el comando se aplicaría igual.
+#    Lo que no llega a Vercel nunca se muestra: se repite con `--rotar` desde la terminal.
+#  - Concurrencia: comparte el grupo `migrar-<ambiente>` con `migrar.yml` (mismos Environments y mismas bases), así una carga
+#    y una migración del mismo entorno no corren a la vez. GitHub guarda UNA corrida en espera por grupo: una tercera
+#    reemplaza a la que esperaba. `migrar-base.yml` tiene sus propios Environments y su propio grupo (`migrar-base-…`); la
+#    base se protege además con el bloqueo de sesión de las migraciones y de la carga de roles.
 #  - El Environment `produccion` exige la APROBACIÓN DEL DUEÑO (revisores obligatorios y solo `main`, PRIMER-DESPLIEGUE.md, B.1).
 #    El Environment `preview` no pide aprobación. Los secretos viven en cada Environment, nunca en el repositorio:
 #      PEDERNAL_DB_DUENO_DIRECTA  cadena DIRECTA (nunca la del pooler) del dueño de la base de ese entorno (la misma de `migrar.yml`).
@@ -40,7 +49,7 @@ on:
         type: string
         required: true
       dar_login_a_los_roles:
-        description: "Además, dar LOGIN a los roles de la base y cargar sus cadenas en Vercel (la base tiene que estar al día)"
+        description: "Además: dar LOGIN a los roles de la base con contraseñas nuevas y BORRAR de Vercel lo que la aplicación prohíbe (DATABASE_URL*, POSTGRES_*, BETTER_AUTH_*, AUTH_*, PEDERNAL_DB_MIGRACIONES). Aplica migraciones pendientes: se corta si hay"
         type: boolean
         required: false
         default: false
@@ -49,8 +58,9 @@ permissions:
   contents: read
 
 concurrency:
-  # Una carga por entorno a la vez. Una que ya está corriendo nunca se cancela: la nueva espera.
-  group: cargar-entorno-${{ inputs.ambiente }}
+  # El MISMO grupo que `migrar.yml`: una carga o una migración por entorno a la vez. Una que ya está corriendo nunca se
+  # cancela: la nueva espera.
+  group: migrar-${{ inputs.ambiente }}
   cancel-in-progress: false
 
 jobs:
@@ -141,7 +151,7 @@ jobs:
         env:
           PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
 
-      - name: Dar LOGIN a los roles y cargar sus cadenas en Vercel (sin mostrar contraseñas)
+      - name: Dar LOGIN a los roles, cargar sus cadenas y BORRAR lo prohibido en Vercel (sin mostrar contraseñas)
         if: needs.validar.outputs.roles == 'true'
         run: |
           set -eu

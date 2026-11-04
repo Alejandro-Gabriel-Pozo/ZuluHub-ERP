@@ -47,6 +47,9 @@ type Opciones = {
   bytesAlAzar?: (cuantos: number) => Uint8Array;
   /** Como en el workflow `cargar-entorno`: sin dónde mostrar contraseñas (el registro de GitHub queda guardado). */
   sinDondeMostrar?: boolean;
+  /** Dónde cae lo que el comando le entrega al runner (`::add-mask::`). */
+  comandos?: string[];
+  alComando?: (linea: string) => void;
 };
 
 describe.skipIf(base === null)("migrar-base --vercel", () => {
@@ -78,6 +81,10 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
       info: (l) => info.push(l),
       error: (l) => error.push(l),
       ...(o.sinDondeMostrar === true ? {} : { secreto: (l: string) => secreto.push(l) }),
+      comando: (l: string) => {
+        o.comandos?.push(l);
+        o.alComando?.(l);
+      },
       roles: (conAutenticacion) => (conAutenticacion ? [...ROLES, ...AUTENTICACION] : ROLES),
       fetch: o.fetch ?? falso.fetch,
       esperarEntreLecturas: () => Promise.resolve(),
@@ -313,6 +320,40 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
         expect(salida.todo).not.toContain(claveDe(guardada?.valor ?? ""));
         expect(salida.todo).not.toContain(guardada?.valor ?? "");
       }
+    });
+
+    it("cada contraseña se entrega al runner con ::add-mask:: antes de cualquier escritura en Vercel; fuera de Actions, no", async () => {
+      const eventos: string[] = [];
+      const comandos: string[] = [];
+      let n = 0;
+      const generarClave = () => `Contrasena${String((n += 1)).padStart(2, "0")}DePrueba0123456789`;
+      const interceptor: Interceptor = (p) => {
+        if (p.metodo === "POST") eventos.push("POST");
+        return undefined;
+      };
+      const url = await nuevaBase();
+      const salida = await correr(url, ["--vercel", "preview"], {
+        falso: crearVercelFalso([], interceptor),
+        entorno: EN_ACTIONS,
+        sinDondeMostrar: true,
+        generarClave,
+        comandos,
+        alComando: () => eventos.push("mascara"),
+      });
+      expect(salida.codigo).toBe(0);
+      const claves = [1, 2, 3].map(
+        (i) => `Contrasena${String(i).padStart(2, "0")}DePrueba0123456789`,
+      );
+      for (const clave of claves) expect(comandos).toContain(`::add-mask::${clave}`);
+      expect(comandos.every((c) => c.startsWith("::add-mask::"))).toBe(true);
+      expect(eventos.lastIndexOf("mascara")).toBeLessThan(eventos.indexOf("POST"));
+      // Y no salen por ningún otro canal.
+      for (const clave of claves) expect(salida.todo).not.toContain(clave);
+
+      const fuera: string[] = [];
+      const otraBase = await nuevaBase();
+      await correr(otraBase, ["--vercel", "preview"], { comandos: fuera });
+      expect(fuera).toEqual([]);
     });
 
     it("sin dónde mostrar y sin --vercel se niega (no hay forma de mostrarlas) y no toca la base", async () => {

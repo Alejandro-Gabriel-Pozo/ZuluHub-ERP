@@ -27,8 +27,8 @@ import {
  *   genera, antes de cualquier otra cosa, para que el que llama lo tape en toda salida.
  * - La clave de contexto se INSTALA en la base ANTES de cargarse en Vercel, y si la instalación falla no se carga:
  *   una clave en Vercel que la base no tiene hace que la base rechace todo contexto firmado. Si la base YA tiene
- *   alguna clave y Vercel no tiene `PEDERNAL_CLAVE_CONTEXTO`, no hay forma de recuperarla y generar otra la
- *   reemplazaría: la corrida PARA antes de cambiar nada y lo decide el dueño.
+ *   alguna clave y Vercel no tiene `PEDERNAL_CLAVE_CONTEXTO`, este flujo no la copia ni genera otra (generar otra
+ *   la reemplazaría y la aplicación dejaría de poder firmar): la corrida PARA antes de cambiar nada y lo decide el dueño.
  * - Todo lo que se puede comprobar sin cambiar nada (leer Vercel, mirar la base, generar los valores) se hace ANTES
  *   de la primera escritura. Después se frena en la primera falla de Vercel; repetir el flujo es seguro (lo ya
  *   cargado figura como «ya existía»).
@@ -100,7 +100,7 @@ function mensajeDeClaveSinRecuperar(destino: Destino): string {
   const lugar = destino.toUpperCase();
   return (
     `la base de ${lugar} ya tiene una clave de contexto instalada y Vercel (${lugar}) no tiene ${VARIABLE_CLAVE_CONTEXTO}. ` +
-    "Esa clave no se puede recuperar desde acá, y generar otra la reemplazaría. No se cargó nada. " +
+    "Este flujo no la copia a Vercel ni genera otra (reemplazarla dejaría a la aplicación sin poder firmar). No se cargó nada. " +
     "Lo decide el dueño: cargar a mano la clave que tenga guardada, o rotarla con otro kid (PRIMER-DESPLIEGUE.md, B.4)."
   );
 }
@@ -321,9 +321,11 @@ async function cargarLaClaveDeContexto(
   }
   const pasos: Paso[] = [{ tipo: "escribir", key: nombre, value: clave, sinPisar: true }];
   let carga = await cargarEnVercel(cliente, destino, pasos);
-  if (carga.falla !== null) {
-    // Ya está instalada en la base: perderla en Vercel la dejaría sin dueño. Se relee (puede haberse aplicado aunque
-    // la respuesta se perdiera) y, si no está, se intenta una vez más.
+  if (carga.falla?.incierta === true) {
+    // Ya está instalada en la base: perderla en Vercel la dejaría sin dueño. Solo si no se sabe si Vercel la aplicó
+    // (red, tiempo, 429, 5xx) se relee —puede haberse aplicado aunque la respuesta se perdiera— y, si no figura, se
+    // intenta una vez más. Una falla DEFINITIVA (por ejemplo, que ya existía otra con ese nombre) se informa tal cual:
+    // una variable ajena con ese nombre no es la clave que quedó instalada.
     const relectura = await cliente.listar();
     if (
       relectura.ok &&
@@ -338,7 +340,7 @@ async function cargarLaClaveDeContexto(
   return fila(
     nombre,
     "no se pudo cargar",
-    `quedó instalada en la base pero NO en Vercel (${motivo}). Su valor no se puede recuperar: ` +
+    `quedó instalada en la base pero NO en Vercel (${motivo}). Este flujo no la copia a Vercel: ` +
       "repetir el flujo se va a detener porque la base ya tiene una clave. Lo decide el dueño (PRIMER-DESPLIEGUE.md, B.4)",
   );
 }

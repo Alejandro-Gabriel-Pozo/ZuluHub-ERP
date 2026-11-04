@@ -408,6 +408,8 @@ describe("cargarEntorno: la clave de contexto", () => {
     expect(r.detenido).toContain("ya tiene una clave de contexto instalada");
     expect(r.detenido).toContain("no tiene PEDERNAL_CLAVE_CONTEXTO");
     expect(r.detenido).toContain("Lo decide el dueño");
+    expect(r.detenido).toContain("Este flujo no la copia a Vercel ni genera otra");
+    expect(r.detenido).not.toContain("no se puede recuperar");
     expect(r.detenido).toContain("No se cargó nada");
     expect(vercel.llamadas).toEqual([]);
     expect(instaladasAhora).toEqual([]);
@@ -456,9 +458,10 @@ describe("cargarEntorno: la clave de contexto", () => {
     );
   });
 
-  it("tras instalarla, si Vercel falla antes de aplicar, relee, reintenta UNA vez y queda cargada", async () => {
+  it("tras instalarla, si Vercel falla sin saberse si aplicó (incierta) y no la aplicó, relee, reintenta UNA vez y queda cargada", async () => {
     const vercel = vercelEnMemoria([], {
-      escribir: (clave, n) => (clave === VARIABLE_CLAVE_CONTEXTO && n === 1 ? "falla" : "ok"),
+      escribir: (clave, n) =>
+        clave === VARIABLE_CLAVE_CONTEXTO && n === 1 ? "falla-incierta" : "ok",
     });
     const { base } = baseEnMemoria(vercel.eventos);
     const r = await correr(vercel, base).informe;
@@ -482,7 +485,7 @@ describe("cargarEntorno: la clave de contexto", () => {
     expect(vercel.llamadas.filter((l) => l.clave === VARIABLE_CLAVE_CONTEXTO)).toHaveLength(1);
   });
 
-  it("instalada pero imposible de cargar en Vercel: lo dice sin rodeos (quedó huérfana) y la corrida falla", async () => {
+  it("instalada pero imposible de cargar en Vercel (falla definitiva): lo dice sin rodeos, sin releer ni reintentar, y la corrida falla", async () => {
     const vercel = vercelEnMemoria([], {
       escribir: (clave) => (clave === VARIABLE_CLAVE_CONTEXTO ? "falla" : "ok"),
     });
@@ -491,8 +494,34 @@ describe("cargarEntorno: la clave de contexto", () => {
     const fila = r.generables.find((f) => f.nombre === VARIABLE_CLAVE_CONTEXTO);
     expect(fila?.estado).toBe("no se pudo cargar");
     expect(fila?.nota).toContain("quedó instalada en la base pero NO en Vercel");
+    expect(fila?.nota).toContain("Este flujo no la copia a Vercel");
     expect(fila?.nota).toContain("Lo decide el dueño");
+    expect(fila?.nota).not.toContain("no se puede recuperar");
     expect(instaladas()).toBe(1);
+    expect(vercel.llamadas.filter((l) => l.clave === VARIABLE_CLAVE_CONTEXTO)).toHaveLength(1);
+    // Lecturas: la inicial y la verificación de las otras cuatro; ninguna más después de la falla definitiva.
+    expect(vercel.eventos.filter((e) => e === "listar")).toHaveLength(2);
+    expect(r.ok).toBe(false);
+  });
+
+  it("una variable AJENA con ese nombre que apareció entre la lectura y la escritura (409 definitivo) NO se da por la clave instalada", async () => {
+    const ajena = remota(VARIABLE_CLAVE_CONTEXTO);
+    const vercel = vercelEnMemoria([ajena], {
+      // La lectura inicial no la ve (apareció después); las siguientes sí.
+      alListar: (n, variables) =>
+        n === 1 ? variables.filter((v) => v.key !== VARIABLE_CLAVE_CONTEXTO) : variables,
+    });
+    const { base, instaladas } = baseEnMemoria(vercel.eventos);
+    const r = await correr(vercel, base).informe;
+    const fila = r.generables.find((f) => f.nombre === VARIABLE_CLAVE_CONTEXTO);
+    expect(fila?.estado).toBe("no se pudo cargar");
+    expect(fila?.nota).toContain(
+      "quedó instalada en la base pero NO en Vercel (Vercel rechazó el pedido (ENV_CONFLICT))",
+    );
+    expect(fila?.nota).not.toContain("confirmada");
+    expect(instaladas()).toBe(1);
+    expect(vercel.llamadas.filter((l) => l.clave === VARIABLE_CLAVE_CONTEXTO)).toHaveLength(1);
+    expect(vercel.variables.filter((v) => v.key === VARIABLE_CLAVE_CONTEXTO)).toEqual([ajena]);
     expect(r.ok).toBe(false);
   });
 
@@ -874,7 +903,7 @@ describe("cargarEntorno: el detalle exacto del informe", () => {
     const fila = r.generables.find((f) => f.nombre === VARIABLE_CLAVE_CONTEXTO);
     expect(fila?.nota).toBe(
       "quedó instalada en la base pero NO en Vercel (Vercel no contestó a tiempo (no se sabe si Vercel llegó a aplicarlo: repetir el flujo es seguro)). " +
-        "Su valor no se puede recuperar: repetir el flujo se va a detener porque la base ya tiene una clave. Lo decide el dueño (PRIMER-DESPLIEGUE.md, B.4)",
+        "Este flujo no la copia a Vercel: repetir el flujo se va a detener porque la base ya tiene una clave. Lo decide el dueño (PRIMER-DESPLIEGUE.md, B.4)",
     );
     expect(
       todasLasEscrituras(vercel).filter((l) => l.clave === VARIABLE_CLAVE_CONTEXTO),

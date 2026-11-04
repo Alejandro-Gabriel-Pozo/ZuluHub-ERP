@@ -127,16 +127,24 @@ elegido) las variables que no dependen de vos: `PEDERNAL_SECRETO_INVITACIONES`, 
   Vercel no son secretos y están en el código: no hay variables que cargar.
 - **Cómo se corre**: Actions → Cargar entorno (preview y producción) → Run workflow (siempre desde `main`). Elegís el ambiente y
   escribís `CARGAR PREVIEW` o `CARGAR PRODUCCION`. En producción te llega el pedido de aprobación, igual que en `migrar.yml`.
-  La casilla opcional «dar LOGIN a los roles» hace antes lo de B.4 (`--preparar-roles --con-autenticacion --vercel`) sin mostrar
-  contraseñas; exige la base al día (si hay migraciones pendientes se corta: corré primero `migrar.yml`). Si una carga de
+  La casilla opcional «dar LOGIN a los roles» **cambia y BORRA cosas**: hace antes lo de B.4 (`--preparar-roles
+--con-autenticacion --vercel`) sin mostrar contraseñas, y eso (1) da LOGIN a los roles con contraseñas **nuevas**, (2) **borra**
+  de Vercel, en ese entorno, `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, todo `POSTGRES_*`, todo `BETTER_AUTH_*`, `AUTH_SECRET`,
+  `AUTH_URL` y `PEDERNAL_DB_MIGRACIONES` (si una vale también para el otro entorno, solo se le quita este) y (3) el comando
+  **aplica las migraciones pendientes**, sin la rama de respaldo de `migrar.yml`. Por eso el workflow se corta antes si hay
+  migraciones pendientes (corré primero `migrar.yml`); una que apareciera justo en el medio se aplicaría igual. Si una carga de
   contraseñas falla a la mitad, las que no llegaron a Vercel **no se muestran**: hay que repetir con `--rotar` desde tu terminal.
+  El workflow comparte el grupo de concurrencia `migrar-<ambiente>` con `migrar.yml`: no corren a la vez para el mismo entorno
+  (GitHub guarda una sola corrida en espera por grupo).
 - **Nunca sobrescribe.** Si una variable ya existe en Vercel para ese entorno (se mira por nombre), la saltea y dice «ya existía».
   Repetir el workflow es seguro. `PEDERNAL_CLAVE_CERTIFICADOS` **no se puede rotar** (cambiarla deja ilegibles los certificados
   cargados) y, como nadie la ve, **no queda copia**: si se borra de Vercel, los certificados hay que volver a cargarlos.
 - **La clave de contexto** se instala primero en la base de esa rama y recién después se carga en Vercel; si la instalación falla,
   no se carga. Si la base **ya tiene** una clave y Vercel no tiene `PEDERNAL_CLAVE_CONTEXTO`, el workflow **se detiene sin cambiar
-  nada**: esa clave no se puede recuperar y generar otra la reemplazaría. Lo decidís vos (cargar a mano la que tengas guardada, o
+  nada**: no la copia a Vercel ni genera otra (reemplazarla dejaría a la aplicación sin poder firmar). Lo decidís vos (cargar a mano la que tengas guardada, o
   rotar con otro `kid`, como en B.4). Sin `PEDERNAL_DB_DUENO_DIRECTA` en el Environment, esta clave queda para vos y las otras se cargan igual.
+  Si la clave quedó instalada en la base pero Vercel no la aceptó, el informe lo dice y la corrida siguiente se detiene por lo
+  mismo: también lo decidís vos.
   Con este flujo el secreto `PEDERNAL_CLAVE_CONTEXTO` del Environment de GitHub (B.1) no hace falta: si lo tenés, borralo,
   porque `migrar.yml` intentaría instalar ese valor con el mismo `kid 1` y fallaría.
 - **Lo que sigue siendo a mano** (el workflow solo dice si ya está o falta, por nombre): `PEDERNAL_RESEND_API_KEY`,
@@ -144,6 +152,12 @@ elegido) las variables que no dependen de vos: `PEDERNAL_SECRETO_INVITACIONES`, 
 - **Lo que informa**: una lista de nombres con «creada» o «ya existía», las de arriba, y cuáles de «Lo que NO debe existir» (B.5)
   están en el entorno. El flujo no borra nada de eso (la casilla de los roles sí, porque es lo que hace el comando de B.4). La
   corrida termina en rojo mientras quede algo sin cargar o algo prohibido en el entorno.
+- **La protección real de los secretos es configuración de GitHub que el código no puede verificar.** Revisala en Settings →
+  Environments: **«Deployment branches: solo `main`» en AMBOS Environments** (`preview` y `produccion`) y **revisor obligatorio
+  (vos) en `produccion`**. El Environment `preview` **no tiene revisor**: quien tenga permiso de escritura en el repositorio y corra el workflow desde `main`
+  lo dispara sin aprobación, con el token de Vercel y la cadena del dueño de la base de `preview`. Y el token de Vercel es **de
+  equipo** (alcance a `alepozod`): un token cargado en `preview` también puede escribir en Production; por eso conviene
+  vencimiento corto y revisar quién tiene acceso al repositorio.
 - **NO VERIFICADO**: que Vercel rechace (409) crear una variable que ya existe cuando no se pide `upsert`. El Vercel de las
   pruebas lo hace; en el primer uso real, el informe lo va a decir si no.
 
@@ -181,7 +195,9 @@ puede ser la de contexto** (ni tener sus mismos bytes): la composición la recha
 
 #### La clave de los certificados (`PEDERNAL_CLAVE_CERTIFICADOS`)
 
-- **Generala con su propio comando**, distinto del de la de contexto, y cargala solo en Vercel (el entorno que corresponda):
+- **Dos caminos** (el primero está **pendiente de que lo ratifique el dueño**): (a) el workflow de B.4 bis la genera y la carga
+  sin que nadie la vea, y entonces **no hay copia posible** (ver «Si la perdés»); (b) generala vos con su propio comando, distinto
+  del de la de contexto, y cargala solo en Vercel (el entorno que corresponda), guardando la copia:
   `node -e "console.log('c1:' + require('node:crypto').randomBytes(32).toString('hex'))"` (formato `<kid>:<64 dígitos
 hexadecimales>`; el `kid` es un texto corto de letras o números). Es un secreto: no lo pegues en ningún chat ni archivo.
 - **No puede ser la de contexto.** `PEDERNAL_CLAVE_CONTEXTO` se instala en la base (`contexto_clave`): si la de los
@@ -190,8 +206,9 @@ hexadecimales>`; el `kid` es un texto corto de letras o números). Es un secreto
   (la misma exigencia que `CRON_SECRET`: 10), como `000…0`.
 - **Todavía NO se puede rotar.** La composición pasa solo la clave activa, sin claves anteriores: cambiar el valor (o el
   `kid`) deja ilegibles los certificados y los tickets ya guardados, y hay que volver a cargarlos.
-- **Si la perdés, perdés los certificados cargados.** No hay forma de recuperarlos sin la clave: guardá una copia en tu
-  gestor de secretos antes de cargar el primer certificado. Rotarla (aceptar claves anteriores para descifrar) es una tarea
+- **Si la perdés, perdés los certificados cargados.** No hay forma de recuperarlos sin la clave: con el camino (b), guardá una
+  copia en tu gestor de secretos antes de cargar el primer certificado; con el workflow (a) no hay copia, y si se borra de
+  Vercel hay que volver a cargar los certificados. Rotarla (aceptar claves anteriores para descifrar) es una tarea
   pendiente.
 - **El despacho inmediato (`after()`) espera el trabajo completo** (una autorización de ARCA puede tardar hasta 25 s, más
   el login de WSAA de hasta 20 s). Para que la plataforma no lo corte antes, la página que aloje las acciones de facturación

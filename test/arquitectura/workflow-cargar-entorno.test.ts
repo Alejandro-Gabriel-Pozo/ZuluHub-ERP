@@ -12,6 +12,10 @@ import { describe, expect, it } from "vitest";
 
 const RUTA = join(import.meta.dirname, "../../.github/workflows/cargar-entorno.yml");
 const TEXTO = readFileSync(RUTA, "utf8");
+const MIGRAR = readFileSync(
+  join(import.meta.dirname, "../../.github/workflows/migrar.yml"),
+  "utf8",
+);
 
 const SECRETOS_PERMITIDOS = ["PEDERNAL_DB_DUENO_DIRECTA", "PEDERNAL_VERCEL_TOKEN"];
 
@@ -101,7 +105,7 @@ function problemasDelWorkflow(texto: string): string[] {
     "inputs-solo-en-validar",
     JSON.stringify(conInputs) ===
       JSON.stringify([
-        "group: cargar-entorno-${{ inputs.ambiente }}",
+        "group: migrar-${{ inputs.ambiente }}",
         "AMBIENTE: ${{ inputs.ambiente }}",
         "CONFIRMACION: ${{ inputs.confirmacion }}",
         "ROLES: ${{ inputs.dar_login_a_los_roles }}",
@@ -251,11 +255,31 @@ function problemasDelWorkflow(texto: string): string[] {
     texto.includes("run: npm ci --omit=dev --ignore-scripts") && !/cache:\s*npm/.test(texto),
   );
 
-  // Dos cargas a la vez no se pisan, y la que corre nunca se cancela.
+  // Una carga y una migración del mismo entorno no corren a la vez: el MISMO grupo que `migrar.yml`; nunca se cancela la que corre.
+  const grupoDeMigrar = /^ {2}group: (migrar-\$\{\{ inputs\.ambiente \}\})$/m.exec(MIGRAR)?.[1];
   exigir(
-    "una-carga-por-entorno",
-    texto.includes("group: cargar-entorno-${{ inputs.ambiente }}") &&
+    "grupo-compartido-con-migrar",
+    grupoDeMigrar !== undefined &&
+      texto.includes(`group: ${grupoDeMigrar}`) &&
       texto.includes("cancel-in-progress: false"),
+  );
+
+  // Dice sin rodeos que la casilla de los roles BORRA y que el comando aplica migraciones pendientes (el dueño avisa
+  // antes de cualquier cambio destructivo): en el encabezado, en la descripción de la entrada y en el nombre del paso.
+  const descripcionDeRoles =
+    /dar_login_a_los_roles:\n\s+description: "([^"]+)"/.exec(texto)?.[1] ?? "";
+  exigir(
+    "avisa-lo-que-borra",
+    texto.includes("ESTA CASILLA CAMBIA Y BORRA") &&
+      texto.includes("BORRA de Vercel, en ese entorno, lo que la aplicación prohíbe") &&
+      texto.includes("el comando APLICA las migraciones pendientes") &&
+      !texto.includes("no se borra nada\n") &&
+      /BORRAR de Vercel/.test(descripcionDeRoles) &&
+      /DATABASE_URL\*, POSTGRES_\*, BETTER_AUTH_\*, AUTH_\*, PEDERNAL_DB_MIGRACIONES/.test(
+        descripcionDeRoles,
+      ) &&
+      /Aplica migraciones pendientes/.test(descripcionDeRoles) &&
+      roles?.nombre.includes("BORRAR") === true,
   );
   return problemas;
 }
@@ -277,7 +301,7 @@ describe("workflow cargar-entorno.yml", () => {
       "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1",
       "Dependencias (solo las de producción, sin scripts de instalación)",
       "La base tiene que estar al día (solo con los roles)",
-      "Dar LOGIN a los roles y cargar sus cadenas en Vercel (sin mostrar contraseñas)",
+      "Dar LOGIN a los roles, cargar sus cadenas y BORRAR lo prohibido en Vercel (sin mostrar contraseñas)",
       "Generar y cargar en Vercel lo que se puede generar (sin sobrescribir nada)",
     ]);
   });
@@ -479,9 +503,43 @@ describe("workflow cargar-entorno.yml", () => {
         reemplazar("name: Generar y cargar en Vercel", "name: Otra cosa en Vercel"),
       ],
       [
-        "una-carga-por-entorno",
+        "grupo-compartido-con-migrar",
+        "un grupo propio, aparte del de migrar.yml",
+        reemplazar(
+          "group: migrar-${{ inputs.ambiente }}",
+          "group: cargar-entorno-${{ inputs.ambiente }}",
+        ),
+      ],
+      [
+        "grupo-compartido-con-migrar",
         "cancelar la carga en curso",
         reemplazar("cancel-in-progress: false", "cancel-in-progress: true"),
+      ],
+      [
+        "avisa-lo-que-borra",
+        "el encabezado vuelve a decir que no se borra nada",
+        reemplazar("ESTA CASILLA CAMBIA Y BORRA", "esta casilla no borra nada"),
+      ],
+      [
+        "avisa-lo-que-borra",
+        "la descripción de la casilla sin el aviso de lo que borra",
+        reemplazar("y BORRAR de Vercel lo que la aplicación prohíbe", "y cargar sus cadenas"),
+      ],
+      [
+        "avisa-lo-que-borra",
+        "la descripción de la casilla sin el aviso de las migraciones",
+        reemplazar(
+          "Aplica migraciones pendientes: se corta si hay",
+          "La base tiene que estar al día",
+        ),
+      ],
+      [
+        "avisa-lo-que-borra",
+        "el paso de los roles sin decir que borra",
+        reemplazar(
+          "cargar sus cadenas y BORRAR lo prohibido en Vercel",
+          "cargar sus cadenas en Vercel",
+        ),
       ],
     ];
 
@@ -493,7 +551,9 @@ describe("workflow cargar-entorno.yml", () => {
 
     it("hay una violación inyectada por cada propiedad que se mira (y ninguna de más)", () => {
       problemasDelWorkflow(TEXTO);
-      expect([...CODIGOS_EVALUADOS].sort()).toEqual(casos.map(([codigo]) => codigo).sort());
+      expect([...CODIGOS_EVALUADOS].sort()).toEqual(
+        [...new Set(casos.map(([codigo]) => codigo))].sort(),
+      );
     });
   });
 });

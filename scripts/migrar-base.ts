@@ -34,6 +34,7 @@ process.exitCode = await ejecutarMigracion({
   carpeta: join(import.meta.dirname, "..", "migraciones"),
   info: (linea) => console.log(linea),
   error: (linea) => console.error(linea),
+  comando: (linea) => console.log(linea),
   // En GitHub Actions el registro queda guardado: ahí no hay dónde mostrar contraseñas (ver `ejecutar-migracion.ts`).
   ...(process.env["GITHUB_ACTIONS"] === "true" ? {} : { secreto: (linea) => console.log(linea) }),
 });

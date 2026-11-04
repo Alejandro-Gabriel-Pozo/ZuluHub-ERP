@@ -15,6 +15,7 @@ import {
 } from "../src/adaptadores/postgres/preparar-roles.ts";
 import {
   cadenaDeRol,
+  claveAlAzar,
   esVariableDeRespaldo,
   esVariableProvisoria,
   rolesPorPreparar,
@@ -85,6 +86,11 @@ export type EntradaDeMigracion = Readonly<{
    * guardado) las contraseñas NO se muestran nunca, ni siquiera cuando no llegan a Vercel: se repite con `--rotar`.
    */
   secreto?: (linea: string) => void;
+  /**
+   * Una línea tal cual, sin tapar: el `::add-mask::` que lee el runner de GitHub. Solo se usa en Actions
+   * (`GITHUB_ACTIONS=true`): cada contraseña generada se entrega acá apenas nace, antes de cualquier salida o escritura.
+   */
+  comando?: (linea: string) => void;
   /** Se inyectan en las pruebas (roles propios, contraseñas conocidas); por defecto, los reales. */
   roles?: (conAutenticacion: boolean, conRespaldo: boolean) => readonly RolPorPreparar[];
   generarClave?: () => string;
@@ -233,6 +239,20 @@ export async function ejecutarMigracion(entrada: EntradaDeMigracion): Promise<nu
     );
   const info = (linea: string) => entrada.info(tapar(linea));
   const error = (linea: string) => entrada.error(tapar(linea));
+  // Cada contraseña o secreto generado se tapa en toda salida posterior y, en Actions, se le entrega al runner con
+  // `::add-mask::` ANTES de cualquier salida o escritura (la contraseña es solo letras y números: no cambia al codificarla).
+  const enmascarar = (secreto: string) => {
+    tapados.push(secreto);
+    if (entorno["GITHUB_ACTIONS"] === "true") entrada.comando?.(`::add-mask::${secreto}`);
+  };
+  const conClavesEnmascaradas: EntradaDeMigracion = {
+    ...entrada,
+    generarClave: () => {
+      const clave = (entrada.generarClave ?? claveAlAzar)();
+      enmascarar(clave);
+      return clave;
+    },
+  };
 
   const pedido = leerPedido(argumentos);
   if (typeof pedido === "string") {
@@ -348,15 +368,15 @@ export async function ejecutarMigracion(entrada: EntradaDeMigracion): Promise<nu
 
     fase = "roles";
     if (vercel !== null) {
-      return await prepararYCargar(cadena, pedido, entrada, {
+      return await prepararYCargar(cadena, pedido, conClavesEnmascaradas, {
         info,
         error,
-        tapar: (secreto) => tapados.push(secreto),
+        tapar: enmascarar,
         ...vercel,
         migracionesAplicadas: resultado.aplicadas.length,
       });
     }
-    await prepararYMostrar(cadena, pedido, entrada, info);
+    await prepararYMostrar(cadena, pedido, conClavesEnmascaradas, info);
     return 0;
   } catch (falla) {
     error(`ERROR: ${describirFallaDeBase(falla, cadena)}`);
