@@ -4,87 +4,100 @@
  * como a todos. Lo que la pantalla ya podía decir con un texto existente NO tiene clave nueva (una regla, un lugar): «Cliente»,
  * «Renglones», «Total», «Punto de venta», «Documento», «Consumidor final», los nombres de los tipos de documento, «Condición frente al
  * IVA», «Siguiente», «Volver», «Enviando…», «IVA {alicuota} %», «Exento», «No gravado», «Pruebas» y su aviso (D-87) y «Ninguno activo».
+ * Fuente de esos textos: figuran en PROTO-8B «Cliente», «Renglones», «Total» y «Volver» (el prototipo dibuja solo el paso 3; los textos
+ * de los pasos 1 y 2 los cubre D-93); «Verificando si se registró…» es texto ya aprobado (D-93; el del contrato era una propuesta);
+ * sin puntos de venta activos se usa «Ninguno activo» (D-64), aprobado por el dueño el 2026-11-03 (pregunta «Sin puntos»), sin texto nuevo.
+ * Decisiones del dueño (2026-11-03, cuestionario «Emitir», registradas por el backend como D-93): la sucursal es la del Listado
+ * («Sucursal»); el error del servidor se ve en el paso final y se vuelve con «Volver», sin marcar campos («Errores»); «Verificando…» no tiene
+ * salida («Verificando»).
  *
  * Una línea de fuente por texto. Siglas (repositorio de documentos (Pedernal-docs), salvo ARCA-016):
  *   PROTO-8B   = artefacto «Facturador: detalle y emitir» (`claude.ai/artifact/JpPY2SLKmaeZddVx6t1BRb`, `project/Emitir.dc.html`), opción B,
  *                aprobada por el dueño: «Si 7C y 8B» (2026-10-14 22:45Z, según el contrato, pantalla 3).
  *   CONTRATO   = `11-especificaciones/facturador-contratos-de-pantalla.md`.
- *   EMITIR-HTML, RECEPTOR-HTML = `10-ux-ui/prototipos-facturador/emitir.html` y `receptor.html`: fuente verificable del rótulo, pero NO son
- *                el prototipo que el dueño aprobó (el 8B): el rótulo espera su confirmación.
+ *   EMITIR-HTML, RECEPTOR-HTML = `10-ux-ui/prototipos-facturador/emitir.html` y `receptor.html`: de donde salen los rótulos (no son el
+ *                prototipo 8B; los rótulos los aprobó el dueño: ver DUEÑO-EMITIR).
+ *   DUEÑO-EMITIR = respuesta del dueño al cuestionario «Emitir», 2026-11-03; cada texto cita su pregunta.
  *   ARCA-016   = `test/utilidades/arca-grabaciones/corrida1/016-FEParamGetCondicionIvaReceptor-respuesta-http200.xml` (los textos de la
  *                condición frente al IVA; la misma fuente que D-44 para los del emisor).
- *   SUPUESTO   = del ingeniero, sin fuente: el dueño no lo aprobó ni figura en un documento. Va en las preguntas pendientes del PR.
+ *   SUPUESTO   = del ingeniero, sin fuente: el dueño no lo aprobó ni figura en un documento. Va en las preguntas pendientes del PR (hoy ninguno).
  */
 export const TEXTOS_DE_FISCAL_EMITIR = {
-  // PROTO-8B: el encabezado «Emitir factura»; CONTRATO, pantalla 3: el botón final «Emitir factura» (el mismo texto).
+  // PROTO-8B (figura en el prototipo aprobado, artboard «8 · Emitir una factura», columna «B · Por pasos»): el encabezado «Emitir factura»; CONTRATO, pantalla 3: el botón final «Emitir factura» (el mismo texto).
   "fiscal.pantalla.emitir_titulo": { porDefecto: "Emitir factura" },
-  // PROTO-8B: el tercer paso, «3 Revisar» (los pasos 1 y 2 son «Cliente» y «Renglones», que ya existen).
+  // PROTO-8B (figura en el prototipo aprobado; no cambiar «Revisar»): el tercer paso, «3 Revisar» (los pasos 1 y 2 son «Cliente» y «Renglones», que ya existen).
   "fiscal.pantalla.emitir_paso_revisar": { porDefecto: "Revisar" },
-  // PROTO-8B: el título del último paso, «Revisá y emití».
+  // PROTO-8B (figura en el prototipo aprobado; no cambiar «Revisá y emití»): el título del último paso, «Revisá y emití».
   "fiscal.pantalla.emitir_revisa_y_emiti": { porDefecto: "Revisá y emití" },
   // PROTO-8B: «+ Agregar renglón» (también EMITIR-HTML, línea 37).
   "fiscal.pantalla.emitir_agregar_renglon": { porDefecto: "+ Agregar renglón" },
   // CONTRATO, pantalla 1, «Acciones»: «+ Emitir» abre Emitir (`comprobantes.emitir_manual`).
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «+ Emitir»: NO se muestra cuando la persona no puede emitir.
   "fiscal.pantalla.listado_emitir": { porDefecto: "+ Emitir" },
 
   // EMITIR-HTML, línea 29: «Descripción».
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Rótulos».
   "fiscal.pantalla.emitir_descripcion": { porDefecto: "Descripción" },
   // EMITIR-HTML, línea 31: «Cantidad».
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Rótulos».
   "fiscal.pantalla.emitir_cantidad": { porDefecto: "Cantidad" },
   // EMITIR-HTML, línea 32: «Precio con IVA» (D-85: el precio de cada renglón es con IVA incluido).
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Rótulos».
   "fiscal.pantalla.emitir_precio_con_iva": { porDefecto: "Precio con IVA" },
   // EMITIR-HTML, línea 34: «IVA» (la alícuota del renglón).
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Rótulos».
   "fiscal.pantalla.emitir_iva": { porDefecto: "IVA" },
   // RECEPTOR-HTML, línea 20: «Nombre o razón social» (D-24: el receptor se escribe a mano).
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Rótulos».
   "fiscal.pantalla.emitir_nombre": { porDefecto: "Nombre o razón social" },
 
-  // SUPUESTO: «Precio» donde la empresa no discrimina IVA (D-85: en letra C solo vale IVA incluido); como «Importe a anular» de D-75. Revertir: borrar la clave y usar siempre `emitir_precio_con_iva`.
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Renglones»: «Precio» donde la empresa no discrimina IVA (D-85: en letra C solo vale IVA incluido); como «Importe a anular» de D-75.
   "fiscal.pantalla.emitir_precio": { porDefecto: "Precio" },
-  // SUPUESTO: «Renglón {numero}» nombra cada grupo de campos (el lector de pantalla los distingue); la palabra es la de la guía `06-facturador-pantallas-y-mensajes.md`, §4.2, líneas 153 a 156.
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Renglones»: «Renglón {numero}» nombra cada grupo de campos (el lector de pantalla los distingue); la palabra es la de la guía `06-facturador-pantallas-y-mensajes.md`, §4.2, líneas 153 a 156.
   "fiscal.pantalla.emitir_renglon_numero": {
     porDefecto: "Renglón {numero}",
     marcadores: ["numero"],
   },
-  // SUPUESTO: nada dice cómo se quita un renglón (el prototipo solo tiene «+ Agregar renglón»); sin quitarlo, uno agregado por error obliga a recargar.
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Renglones»: se pueden quitar renglones («Quitar renglón {numero}»).
   "fiscal.pantalla.emitir_quitar_renglon": {
     porDefecto: "Quitar renglón {numero}",
     marcadores: ["numero"],
   },
-  // SUPUESTO: la opción de un punto de venta de pruebas, «00002 · Pruebas» (D-87 pide marcarlo con `config_pv_pruebas`); el formato «número · marca» es el de «00003 · No activo» (D-58, aprobado el 2026-10-29).
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Renglones»: la opción de un punto de venta de pruebas, «00002 · Pruebas» (D-87 pide marcarlo con `config_pv_pruebas`); el formato «número · marca» es el de «00003 · No activo» (D-58, aprobado el 2026-10-29).
   "fiscal.pantalla.emitir_punto_de_venta_con_marca": {
     porDefecto: "{numero} · {marca}",
     marcadores: ["marca", "numero"],
   },
 
-  // ARCA-016, Id 1: «IVA Responsable Inscripto» (igual a D-44, `opciones-de-datos-fiscales.ts`, en `composicion/`, que esta pantalla no puede importar).
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Cond. IVA» (se ofrecen las 11). ARCA-016, Id 1: «IVA Responsable Inscripto» (igual a D-44, `opciones-de-datos-fiscales.ts`, en `composicion/`, que esta pantalla no puede importar).
   "fiscal.pantalla.emitir_condicion_responsable_inscripto": {
     porDefecto: "IVA Responsable Inscripto",
   },
-  // ARCA-016, Id 6: «Responsable Monotributo» (igual a D-44).
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Cond. IVA» (se ofrecen las 11). ARCA-016, Id 6: «Responsable Monotributo» (igual a D-44).
   "fiscal.pantalla.emitir_condicion_monotributo": { porDefecto: "Responsable Monotributo" },
-  // ARCA-016, Id 13: «Monotributista Social».
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Cond. IVA» (se ofrecen las 11). ARCA-016, Id 13: «Monotributista Social».
   "fiscal.pantalla.emitir_condicion_monotributista_social": {
     porDefecto: "Monotributista Social",
   },
-  // ARCA-016, Id 16: «Monotributo Trabajador Independiente Promovido».
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Cond. IVA» (se ofrecen las 11). ARCA-016, Id 16: «Monotributo Trabajador Independiente Promovido».
   "fiscal.pantalla.emitir_condicion_monotributo_promovido": {
     porDefecto: "Monotributo Trabajador Independiente Promovido",
     largoMaximo: 120,
   },
-  // ARCA-016, Id 4: «IVA Sujeto Exento» (igual a D-44).
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Cond. IVA» (se ofrecen las 11). ARCA-016, Id 4: «IVA Sujeto Exento» (igual a D-44).
   "fiscal.pantalla.emitir_condicion_exento": { porDefecto: "IVA Sujeto Exento" },
-  // ARCA-016, Id 7: «Sujeto No Categorizado».
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Cond. IVA» (se ofrecen las 11). ARCA-016, Id 7: «Sujeto No Categorizado».
   "fiscal.pantalla.emitir_condicion_no_categorizado": { porDefecto: "Sujeto No Categorizado" },
-  // ARCA-016, Id 8: «Proveedor del Exterior».
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Cond. IVA» (se ofrecen las 11). ARCA-016, Id 8: «Proveedor del Exterior».
   "fiscal.pantalla.emitir_condicion_proveedor_del_exterior": {
     porDefecto: "Proveedor del Exterior",
   },
-  // ARCA-016, Id 9: «Cliente del Exterior».
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Cond. IVA» (se ofrecen las 11). ARCA-016, Id 9: «Cliente del Exterior».
   "fiscal.pantalla.emitir_condicion_cliente_del_exterior": { porDefecto: "Cliente del Exterior" },
-  // ARCA-016, Id 10: «IVA Liberado – Ley N° 19.640».
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Cond. IVA» (se ofrecen las 11). ARCA-016, Id 10: «IVA Liberado – Ley N° 19.640».
   "fiscal.pantalla.emitir_condicion_iva_liberado": { porDefecto: "IVA Liberado – Ley N° 19.640" },
-  // ARCA-016, Id 15: «IVA No Alcanzado».
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Cond. IVA» (se ofrecen las 11). ARCA-016, Id 15: «IVA No Alcanzado».
   "fiscal.pantalla.emitir_condicion_iva_no_alcanzado": { porDefecto: "IVA No Alcanzado" },
-  // ARCA-016, Id 5: «Consumidor Final».
+  // Dueño, 2026-11-03, cuestionario “Emitir”, «Cond. IVA» (se ofrecen las 11). ARCA-016, Id 5: «Consumidor Final».
   "fiscal.pantalla.emitir_condicion_consumidor_final": { porDefecto: "Consumidor Final" },
 } as const;

@@ -302,7 +302,7 @@ export function vistaDeLaRevision(
     puntoDeVenta: {
       rotulo: texto(d, "fiscal.pantalla.rotulo_punto_de_venta"),
       modo: modoDelPunto(puntos),
-      // Sin punto de venta activo, el cartel que ya existe (D-64): la pregunta de qué texto usar queda pendiente.
+      // Sin punto de venta activo, el cartel ya aprobado «Ninguno activo» (D-64); sin texto nuevo. Dueño, 2026-11-03, cuestionario “Emitir”, «Sin puntos».
       texto: puntos.length === 0 ? texto(d, "fiscal.pantalla.config_cartel_ninguno_activo") : unico,
       opciones: puntos.map((p) => ({ valor: p.id, etiqueta: etiquetaDelPunto(d, p) })),
       avisoDePruebas:

@@ -14,7 +14,7 @@ const OPCIONES = { titulo: "fiscal.pantalla.emitir_titulo", actual: "comprobante
 // del listado solo lo ve quien puede): las dos lecturas que necesita, si la empresa discrimina IVA y los puntos de venta activos de la
 // sucursal, las valida el servidor con su propio permiso y módulo, y si las rechaza se ve su motivo (módulo en desarrollo, sin permiso,
 // sucursal sin elegir o cerrada). La sucursal sale de la que la persona eligió en el listado (cookie validada por el servidor), nunca de
-// la dirección. La emisión vuelve a validar todo dentro de la transacción de la acción.
+// la dirección (dueño, 2026-11-03, cuestionario “Emitir”, «Sucursal»: la del Listado). La emisión vuelve a validar todo dentro de la transacción de la acción.
 export default async function PaginaDeEmitirFactura() {
   return pantallaDeOperacion(OPCIONES, async ({ contexto }) => {
     const discrimina = await discriminaIvaParaEmitir(contexto);

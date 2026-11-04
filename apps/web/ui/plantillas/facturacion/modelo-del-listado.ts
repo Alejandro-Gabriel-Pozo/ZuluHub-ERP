@@ -209,7 +209,8 @@ export function errorParaElListado(error: ErrorPublico): ErrorPublico {
 
 /**
  * El enlace «+ Emitir» del listado (contrato, pantalla 1, «Acciones»: «+ Emitir» abre Emitir): la página lo arma solo para quien puede
- * emitir (`puedeEmitirFacturas`); el servidor vuelve a validar al abrir y al emitir.
+ * emitir (`puedeEmitirFacturas`); el servidor vuelve a validar al abrir y al emitir. Dueño, 2026-11-03, cuestionario “Emitir”, «+ Emitir»:
+ * no se muestra cuando la persona no puede emitir.
  */
 export const enlaceDeEmitir = (
   d: DiccionarioResuelto,

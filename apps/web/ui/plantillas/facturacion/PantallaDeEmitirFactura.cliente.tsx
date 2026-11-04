@@ -192,6 +192,7 @@ export function PantallaDeEmitirFactura({
               }}
               deshabilitado={!editable}
             />
+            {/* Dueño, 2026-11-03, cuestionario “Emitir”, «Errores»: el error del servidor se ve en el paso final, se vuelve con «Volver» y no se marcan campos. */}
             {estado.tipo === "rechazado" ? (
               <ErrorDelDetalle error={estado.rechazo} diccionario={diccionario} />
             ) : null}
@@ -241,7 +242,7 @@ export function PantallaDeEmitirFactura({
                 enviando={envio.enCurso || hecho}
                 textoEnviando={pasos.botones.enviando}
                 deshabilitado={!envio.enCurso && !hecho && (elegido === null || envio.bloqueado)}
-                // Con el resultado incierto el aviso de arriba ya dice «Verificando…»: no se repite junto al botón.
+                // Con el resultado incierto el aviso de arriba ya dice «Verificando…»: no se repite junto al botón (dueño, 2026-11-03, cuestionario “Emitir”, «Verificando»: sin salida de «Verificando si se registró…», texto ya aprobado: D-93).
                 motivo={incierto ? undefined : envio.motivoQueNoPuede}
               >
                 {pasos.botones.emitir}
