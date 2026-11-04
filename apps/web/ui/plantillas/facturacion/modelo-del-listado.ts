@@ -179,7 +179,7 @@ export function armarLaEleccionDeSucursal(
 
 /**
  * El error de la lista como lo ve la persona. Lo inesperado dice «No pudimos cargar la lista. Probá de nuevo.» (CONTRATO), con su
- * referencia `PD-…`; el resto (sin permiso, módulo en desarrollo, sesión vencida, filtros inválidos, sucursal fuera de alcance)
+ * referencia `PD-…`; el resto (sin permiso, módulo no activo, sesión vencida, filtros inválidos, sucursal fuera de alcance)
  * conserva su texto del catálogo. `NO_DISPONIBLE` también es inesperado pero tiene su texto propio («probá en unos minutos»).
  */
 export function errorParaElListado(error: ErrorPublico): ErrorPublico {
