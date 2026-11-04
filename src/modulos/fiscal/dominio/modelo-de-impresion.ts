@@ -15,6 +15,7 @@ import {
   type TipoDeComprobante,
 } from "./comprobante-emitido";
 import type { Ambiente, RenglonCalculado } from "./comprobante-nuevo";
+import { contactoImpreso, type ContactoCongelado, type ContactoImpreso } from "./contacto-impreso";
 import type { CondicionIibb } from "./datos-fiscales";
 import { importesParaArca } from "./importes-para-arca";
 import { urlDelQr, type ErrorDeQr } from "./qr-de-arca";
@@ -46,7 +47,8 @@ import { transparenciaFiscal, type TransparenciaFiscalImpresa } from "./transpar
  * - 1: el formato anterior a los textos legales de la RG 5614/2024. Se conserva SIN CAMBIOS: lo sellado con 1
  *   reimprime idéntico (golden `modelo-factura-b-marca-*` y `modelo-nota-de-credito-a-produccion`). No incluía la
  *   leyenda «A CONSUMIDOR FINAL» aunque la norma la pedía antes; no se corrige por diseño.
- * - 2: suma la leyenda del receptor consumidor final y el bloque de transparencia fiscal de la B.
+ * - 2: suma la leyenda del receptor consumidor final, el bloque de transparencia fiscal de la B y el contacto congelado
+ *   de la sucursal (D-98).
  * Previene que reimprimir un AUTORIZADO muestre textos que su original no tenía. Sin migración: la columna es
  * `smallint` con `CHECK (>= 1)` (0009) y `emitir-comprobante` sella `VERSION_DE_REPRESENTACION_ACTUAL`. Chequeo:
  * los golden de la 1 y de la 2 y la prueba de versiones desconocidas de `modelo-de-impresion.test.ts`.
@@ -58,6 +60,12 @@ export const VERSION_DE_REPRESENTACION_ACTUAL = 2;
 
 /** Primera versión que lleva los textos legales de la norma; las anteriores no los llevan. */
 const PRIMERA_VERSION_CON_TEXTOS_LEGALES = 2;
+
+/**
+ * Primera versión que lleva el contacto de la sucursal (D-98). Aparte de los textos legales: el contacto no es un texto de la
+ * norma y una versión futura puede cambiar uno sin tocar el otro. La 1 no lo lleva y reimprime idéntica.
+ */
+const PRIMERA_VERSION_CON_CONTACTO = 2;
 
 /**
  * Leyenda del receptor (versión 2), copiada de la norma sin parafrasear; si ARCA la cambia, es una versión nueva.
@@ -120,6 +128,8 @@ export type ComprobanteParaImprimir = Readonly<{
   cae: string;
   caeVence: FechaCivil;
   versionDeRepresentacion: number;
+  /** El contacto de la sucursal congelado al nacer el comprobante; NUNCA el de la sucursal de hoy (D-98). */
+  contacto: ContactoCongelado;
 }>;
 
 /**
@@ -204,6 +214,11 @@ export type ModeloImpreso = Readonly<{
    * débito B). Ausente en la versión 1 y en todo lo demás.
    */
   transparenciaFiscal?: TransparenciaFiscalImpresa;
+  /**
+   * Versión 2 en adelante y solo si la sucursal tenía al menos un dato de contacto al emitir (D-98): el que congeló el
+   * comprobante, no el vigente. Ausente en la versión 1 y sin contacto. Cada dato va solo si existe; sin rótulos.
+   */
+  contacto?: ContactoImpreso;
   /** Solo en notas: el comprobante que corrigen. */
   asociado: Readonly<{
     rotulo: string;
@@ -286,6 +301,10 @@ export function modeloDeImpresion(
   const totales = totalesImpresos(comprobante, letra);
   const conTextosLegales =
     comprobante.versionDeRepresentacion >= PRIMERA_VERSION_CON_TEXTOS_LEGALES;
+  const contacto =
+    comprobante.versionDeRepresentacion >= PRIMERA_VERSION_CON_CONTACTO
+      ? contactoImpreso(comprobante.contacto)
+      : null;
   const bloqueDeTransparencia = conTextosLegales
     ? transparenciaFiscal(totales, comprobante.receptor, comprobante.total.moneda)
     : null;
@@ -331,6 +350,7 @@ export function modeloDeImpresion(
     })),
     totales,
     ...(bloqueDeTransparencia === null ? {} : { transparenciaFiscal: bloqueDeTransparencia }),
+    ...(contacto === null ? {} : { contacto }),
     asociado:
       asociado === null
         ? null

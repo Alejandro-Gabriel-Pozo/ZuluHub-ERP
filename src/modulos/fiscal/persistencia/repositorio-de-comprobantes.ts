@@ -17,6 +17,7 @@ import {
 } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
+import type { SitioWeb } from "../../../primitivas/contacto/web";
 import { CODIGOS_DE_ALICUOTA } from "../dominio/alicuota";
 import type { DesgloseDeAlicuota } from "../dominio/comprobante";
 import {
@@ -57,9 +58,11 @@ import {
   type PuntoDeVentaId,
   type VersionId,
 } from "../dominio/identificadores";
+import type { ContactoCongelado } from "../dominio/contacto-impreso";
 import { importesParaArca } from "../dominio/importes-para-arca";
 import type { Receptor } from "../dominio/receptor";
 import { documentoDelReceptorDeLaBase } from "./documento-del-receptor";
+import type { FilaDeComprobante } from "./fila-de-comprobante";
 import { deLaLista, exigir, type ErrorDeAlta, type ResultadoDeAlta } from "./repositorios";
 import type { FiscalDb } from "./tablas";
 
@@ -162,6 +165,8 @@ export type ComprobanteGuardado = Readonly<{
   /** SHA-256 del pedido canónico: con ella el caso de uso distingue una repetición de una clave reutilizada. */
   huella: string;
   versionDeRepresentacion: number;
+  /** El contacto de la sucursal al nacer el comprobante (0019, D-98): lo copia la base y no cambia nunca. */
+  contacto: ContactoCongelado;
   creadoPor: PersonaId;
   creadoEn: Date;
   version: number;
@@ -346,65 +351,13 @@ const COLUMNAS_DE_COMPROBANTE = [
   "motivo_descarte",
   "huella",
   "version_de_representacion",
+  "sucursal_telefono",
+  "sucursal_correo",
+  "sucursal_web",
   "creado_por",
   "creado_en",
   "version",
 ] as const;
-
-type FilaDeComprobante = Readonly<{
-  id: string;
-  empresa_id: string;
-  emisor_id: string;
-  punto_de_venta_id: string;
-  ambiente: string;
-  origen_tipo: string;
-  origen_id: string;
-  clase: string;
-  tipo_comprobante: string;
-  concepto: string;
-  servicio_desde: string | null;
-  servicio_hasta: string | null;
-  vencimiento_pago: string | null;
-  moneda: string;
-  modo_de_precio: string;
-  total: string;
-  neto_gravado: string;
-  iva: string;
-  exento: string;
-  no_gravado: string;
-  datos_fiscales_id: string;
-  emisor_cuit: string;
-  emisor_razon_social: string;
-  emisor_condicion_iva: string;
-  emisor_domicilio_fiscal: string;
-  emisor_inicio_actividades: string;
-  emisor_iibb_numero: string | null;
-  emisor_iibb_condicion: string | null;
-  punto_de_venta_numero: number;
-  punto_de_venta_domicilio: string;
-  receptor_nombre: string | null;
-  receptor_documento_tipo: string;
-  receptor_documento_numero: string | null;
-  receptor_condicion_iva: string;
-  receptor_domicilio: string | null;
-  comprobante_asociado_id: string | null;
-  motivo: string | null;
-  estado: string;
-  envios: number;
-  numero_reservado: string | null;
-  fecha_emision: string | null;
-  numero: string | null;
-  cae: string | null;
-  cae_vence: string | null;
-  autorizado_en: Date | null;
-  resuelto_por: string | null;
-  motivo_descarte: string | null;
-  huella: string;
-  version_de_representacion: number;
-  creado_por: string;
-  creado_en: Date;
-  version: number;
-}>;
 
 type FilaDeRenglon = Readonly<{
   posicion: number;
@@ -549,6 +502,12 @@ function aComprobante(
     motivoDeDescarte: fila.motivo_descarte,
     huella: fila.huella,
     versionDeRepresentacion: fila.version_de_representacion,
+    contacto: {
+      telefono: fila.sucursal_telefono,
+      correo: fila.sucursal_correo,
+      // El CHECK `sucursal_web_ck` (0019) asegura la forma canónica: acá no se vuelve a validar (como el CUIT del emisor).
+      web: fila.sucursal_web as SitioWeb | null,
+    },
     creadoPor: personaId(fila.creado_por),
     creadoEn: fila.creado_en,
     version: fila.version,

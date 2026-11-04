@@ -14,6 +14,7 @@ import {
   type CodigoDeAlicuota,
 } from "../../src/modulos/fiscal/dominio/alicuota";
 import type { InstantaneaDeEmisor } from "../../src/modulos/fiscal/dominio/comprobante-emitido";
+import type { ContactoCongelado } from "../../src/modulos/fiscal/dominio/contacto-impreso";
 import {
   armarComprobanteNuevo,
   type ComprobanteNuevo,
@@ -183,6 +184,9 @@ export function facturaOSinTotal(
  * Lo que se imprime de un comprobante autorizado, armado desde el contenido de prueba: el número, la fecha y el
  * CAE los fijó ARCA, y el emisor se congela con los domicilios como TEXTO (como los guarda la base).
  */
+/** Una sucursal sin ningún dato de contacto (lo que congela un comprobante de una sucursal que no los cargó). */
+export const SIN_CONTACTO: ContactoCongelado = { telefono: null, correo: null, web: null };
+
 export const imprimibleDe = (
   contenido: ComprobanteNuevo,
   cambios: Partial<ComprobanteParaImprimir> = {},
@@ -210,5 +214,6 @@ export const imprimibleDe = (
   cae: "70417054367476",
   caeVence: fecha("2026-10-23"),
   versionDeRepresentacion: VERSION_DE_REPRESENTACION_ACTUAL,
+  contacto: SIN_CONTACTO,
   ...cambios,
 });

@@ -22,7 +22,7 @@ import { formatearDomicilio } from "../../src/primitivas/domicilio/domicilio";
 import { empresaId, personaId, sucursalId } from "../../src/primitivas/identificadores/marca";
 import { ok, type Resultado } from "../../src/primitivas/resultado/resultado";
 import { CUIT_C } from "../utilidades/fiscal";
-import { receptorInscripto } from "../utilidades/facturacion";
+import { receptorInscripto, SIN_CONTACTO } from "../utilidades/facturacion";
 import {
   RENGLON_DE_100_SIN_ALICUOTA,
   crearComprobante,
@@ -1465,6 +1465,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
           cae: CAE_DE_PRUEBA,
           caeVence: diaDe(new Date(AHORA.getTime() + 10 * 86_400_000)),
           versionDeRepresentacion: VERSION_DE_REPRESENTACION_ACTUAL,
+          contacto: SIN_CONTACTO,
         },
         MARCA_UNO,
       );
@@ -1477,6 +1478,46 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
       });
       expect(m.leyendas).toEqual(["HOMOLOGACIÓN — SIN VALIDEZ FISCAL"]);
       expect(m.qr.url).toMatch(/^https:\/\/.+\/fe\/qr\/\?p=/);
+    });
+
+    it("reimprimir después de editar la sucursal conserva el contacto congelado (D-98); un comprobante nuevo toma el vigente", async () => {
+      const a = await crearEmpresa();
+      const editar = (telefono: string | null, correo: string | null, web: string | null) =>
+        dueno.query("update sucursal set telefono = $2, correo = $3, web = $4 where id = $1", [
+          a.x.sucursal,
+          telefono,
+          correo,
+          web,
+        ]);
+      const contactoDe = async (id: ComprobanteGuardado["id"]) =>
+        exito(await consultas.modeloDeImpresion(mira(a), { comprobanteId: id }));
+      // Sin contacto cargado: el modelo no trae el bloque.
+      const sinContacto = await crearAutorizado(a.x);
+      expect("contacto" in (await contactoDe(sinContacto.id))).toBe(false);
+
+      await editar("011 4555-1234", "reservas@hotelcentro.com", "www.hotelcentro.com");
+      const congelado = await crearAutorizado(a.x);
+      const antes = await contactoDe(congelado.id);
+      expect(antes.contacto).toEqual({
+        telefono: "011 4555-1234",
+        correo: "reservas@hotelcentro.com",
+        web: { texto: "www.hotelcentro.com", enlace: "https://www.hotelcentro.com" },
+      });
+
+      // La sucursal cambia (y le quitan datos): el comprobante ya emitido se reimprime igual.
+      await editar("0800-999-0000", null, "otra.com");
+      expect(JSON.stringify(await contactoDe(congelado.id))).toBe(JSON.stringify(antes));
+      expect("contacto" in (await contactoDe(sinContacto.id))).toBe(false);
+
+      // Un comprobante nuevo congela el contacto vigente al nacer.
+      const nueva = await crearAutorizado(a.x);
+      expect((await contactoDe(nueva.id)).contacto).toEqual({
+        telefono: "0800-999-0000",
+        correo: null,
+        web: { texto: "otra.com", enlace: "https://otra.com" },
+      });
+      // Y lo ya emitido sigue sin tocarse.
+      expect(JSON.stringify(await contactoDe(congelado.id))).toBe(JSON.stringify(antes));
     });
 
     it("la nota de crédito se imprime con el número impreso de la factura que corrige", async () => {

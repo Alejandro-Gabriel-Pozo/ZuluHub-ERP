@@ -9,9 +9,12 @@ import {
   imprimibleDe as imprimible,
   receptorInscripto,
   renglon,
+  SIN_CONTACTO,
 } from "../../../../test/utilidades/facturacion";
 import { EMPRESA } from "../../../../test/utilidades/fiscal";
+import { webDesdeTexto, type SitioWeb } from "../../../primitivas/contacto/web";
 import { TIPOS_DE_COMPROBANTE } from "./comprobante-emitido";
+import type { ContactoCongelado } from "./contacto-impreso";
 import {
   LEYENDA_DE_HOMOLOGACION,
   modeloDeImpresion,
@@ -683,5 +686,133 @@ describe("modeloDeImpresion: la versión 1 sigue imprimiendo lo de antes", () =>
         MARCA_UNO,
       ),
     ).toEqual({ ok: false, error: "VERSION_DE_REPRESENTACION_DESCONOCIDA" });
+  });
+});
+
+/**
+ * Contacto de la sucursal (D-98 y D-99; dueño, 2026-11-04; `11-especificaciones/facturador-contratos-de-pantalla.md` del
+ * repositorio de docs). Los valores de abajo son lo que congeló el comprobante: la web ya viene canónica, sin esquema.
+ */
+const web = (texto: string): SitioWeb => {
+  const r = webDesdeTexto(texto);
+  if (!r.ok) throw new Error(`web de prueba inválida: ${texto}`);
+  return r.valor;
+};
+const CONTACTO_COMPLETO: ContactoCongelado = {
+  telefono: "011 4555-1234",
+  correo: "reservas@hotelcentro.com",
+  web: web("www.hotelcentro.com"),
+};
+const SOLO_TELEFONO_Y_WEB: ContactoCongelado = {
+  telefono: "011 4555-1234",
+  correo: null,
+  web: web("www.hotelcentro.com"),
+};
+
+describe("modeloDeImpresion: contacto congelado de la sucursal (D-98, D-99)", () => {
+  const casos: readonly (readonly [string, ContactoCongelado])[] = [
+    ["factura-b-con-contacto-completo", CONTACTO_COMPLETO],
+    ["factura-b-con-telefono-y-web", SOLO_TELEFONO_Y_WEB],
+  ];
+  for (const [nombre, contacto] of casos) {
+    it(`golden ${nombre}`, async () => {
+      const m = modelo(imprimible(facturaB, { contacto }));
+      expect(m.versionDeRepresentacion).toBe(2);
+      await expect(JSON.stringify(m, null, 2)).toMatchFileSnapshot(
+        `./golden/modelo-v2-${nombre}.golden.txt`,
+      );
+    });
+  }
+
+  it("con los tres datos: cada uno tal cual se congeló y la web como texto para el papel y enlace https", () => {
+    expect(modelo(imprimible(facturaB, { contacto: CONTACTO_COMPLETO })).contacto).toEqual({
+      telefono: "011 4555-1234",
+      correo: "reservas@hotelcentro.com",
+      web: { texto: "www.hotelcentro.com", enlace: "https://www.hotelcentro.com" },
+    });
+  });
+
+  it("cada dato va solo si existe: lo que falta es null y la web no inventa un enlace", () => {
+    expect(modelo(imprimible(facturaB, { contacto: SOLO_TELEFONO_Y_WEB })).contacto).toEqual({
+      telefono: "011 4555-1234",
+      correo: null,
+      web: { texto: "www.hotelcentro.com", enlace: "https://www.hotelcentro.com" },
+    });
+    expect(
+      modelo(imprimible(facturaB, { contacto: { ...SIN_CONTACTO, correo: "a@hotel.com" } }))
+        .contacto,
+    ).toEqual({ telefono: null, correo: "a@hotel.com", web: null });
+    expect(
+      modelo(imprimible(facturaB, { contacto: { ...SIN_CONTACTO, telefono: "4555-1234" } }))
+        .contacto,
+    ).toEqual({ telefono: "4555-1234", correo: null, web: null });
+  });
+
+  it("la web con ruta y consulta conserva todo en el texto y el enlace sale de anteponerle https://", () => {
+    const m = modelo(
+      imprimible(facturaB, {
+        contacto: { ...SIN_CONTACTO, web: web("Hotel.com:8080/Centro?x=1") },
+      }),
+    );
+    expect(m.contacto?.web).toEqual({
+      texto: "hotel.com:8080/Centro?x=1",
+      enlace: "https://hotel.com:8080/Centro?x=1",
+    });
+  });
+
+  it("sin ningún dato no hay bloque: la clave ni existe (es el caso de los golden v2 anteriores)", () => {
+    const m = modelo(imprimible(facturaB, { contacto: SIN_CONTACTO }));
+    expect(m.contacto).toBeUndefined();
+    expect("contacto" in m).toBe(false);
+  });
+
+  it("sin rótulos: su texto no está decidido, el bloque trae solo los tres datos", () => {
+    const m = modelo(imprimible(facturaB, { contacto: CONTACTO_COMPLETO }));
+    expect(Object.keys(m.contacto ?? {}).sort()).toEqual(["correo", "telefono", "web"]);
+    expect(Object.keys(m.contacto?.web ?? {}).sort()).toEqual(["enlace", "texto"]);
+  });
+
+  it("lo lleva todo tipo de comprobante: las notas y las letras A y C llevan el contacto que congelaron", () => {
+    for (const comprobante of [
+      notaSobreFacturaB("NOTA_CREDITO"),
+      notaSobreFacturaB("NOTA_DEBITO"),
+      imprimible(facturaCConsumidorFinal),
+      imprimible(facturaAInscripto),
+    ]) {
+      const m = modelo({ ...comprobante, contacto: CONTACTO_COMPLETO });
+      expect(m.contacto, m.fiscal.rotulo + m.fiscal.letra).toEqual({
+        telefono: "011 4555-1234",
+        correo: "reservas@hotelcentro.com",
+        web: { texto: "www.hotelcentro.com", enlace: "https://www.hotelcentro.com" },
+      });
+    }
+  });
+
+  it("la versión 1 no lo lleva aunque el comprobante lo tenga congelado: reimprime idéntica", () => {
+    for (const comprobante of [
+      facturaB,
+      facturaCConsumidorFinal,
+      facturaAInscripto,
+      facturaBAExento,
+    ]) {
+      const sinContacto = modelo(imprimible(comprobante, V1));
+      const conContacto = modelo(imprimible(comprobante, { ...V1, contacto: CONTACTO_COMPLETO }));
+      expect("contacto" in conContacto).toBe(false);
+      expect(JSON.stringify(conContacto)).toBe(JSON.stringify(sinContacto));
+    }
+  });
+
+  it("la versión 2 con contacto es la 1 más los textos legales y el contacto, y nada más", () => {
+    const comprobante = imprimible(facturaB, { contacto: CONTACTO_COMPLETO });
+    const v1 = modelo({ ...comprobante, versionDeRepresentacion: 1 });
+    const v2 = modelo(comprobante);
+    const sinLoNuevo = {
+      ...Object.fromEntries(
+        Object.entries(v2).filter(([c]) => c !== "transparenciaFiscal" && c !== "contacto"),
+      ),
+      receptor: Object.fromEntries(Object.entries(v2.receptor).filter(([c]) => c !== "leyenda")),
+      versionDeRepresentacion: 1,
+    };
+    expect(sinLoNuevo).toEqual(v1);
   });
 });
