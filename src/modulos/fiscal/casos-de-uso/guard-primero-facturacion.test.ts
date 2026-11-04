@@ -232,14 +232,24 @@ describe("P7: el guard va primero en cada caso de uso de facturación", () => {
     },
   );
 
-  it.each(NOMBRES)("%s con el catálogo REAL da MODULO_EN_DESARROLLO", async (nombre) => {
-    const vigilada = vigilar(actor("GERENTE"));
-    expect(await LLAMADAS[nombre](casosCon(vigilada, REGLAS_DE_EMPRESA))).toEqual({
-      ok: false,
-      error: "MODULO_EN_DESARROLLO",
-    });
-    expect(vigilada.accesos).toEqual(["autorizacion"]);
-  });
+  it.each(NOMBRES)(
+    "%s con el catálogo REAL (facturación disponible): sin activar en la empresa sigue cerrado, y activa pasa quien la matriz dice",
+    async (nombre) => {
+      for (const rol of ROLES_DE_EMPRESA) {
+        const sinActivar = vigilar({ rol, modulosActivados: [], modulosHabilitados: [] });
+        expect(await LLAMADAS[nombre](casosCon(sinActivar, REGLAS_DE_EMPRESA)), rol).toEqual({
+          ok: false,
+          error: "MODULO_NO_ACTIVO",
+        });
+        expect(sinActivar.accesos).toEqual(["autorizacion"]);
+        const activa = vigilar(actor(rol));
+        const resultado = LLAMADAS[nombre](casosCon(activa, REGLAS_DE_EMPRESA));
+        if (ROLES_ESPERADOS[nombre].includes(rol))
+          expect(await pasoElGuard(resultado), rol).toBe(true);
+        else expect(await resultado, rol).toEqual({ ok: false, error: "SIN_PERMISO" });
+      }
+    },
+  );
 
   it.each(NOMBRES)(
     "%s en solo lectura: solo pasa lo que cierra lo existente (§C)",

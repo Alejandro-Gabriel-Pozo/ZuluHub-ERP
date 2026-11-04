@@ -57,7 +57,12 @@ async function ejecutar(
 ): Promise<{ ok: true } | { ok: false; falla: FallaDeVercel }> {
   const respuesta =
     paso.tipo === "escribir"
-      ? await cliente.escribir(paso.key, paso.value, destino)
+      ? await cliente.escribir(
+          paso.key,
+          paso.value,
+          destino,
+          paso.sinPisar === true ? { pisar: false } : undefined,
+        )
       : paso.tipo === "borrar"
         ? await cliente.borrar(paso.id)
         : await cliente.quitarDestinos(paso.id, paso.target);

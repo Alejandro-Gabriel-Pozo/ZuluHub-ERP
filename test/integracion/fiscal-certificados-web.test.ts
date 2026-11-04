@@ -697,13 +697,20 @@ describe.skipIf(base === null)(
         expect((await auditorias(g.mundo.empresa)).length).toBe(antes.auditorias);
       });
 
-      it("con las reglas reales de empresa la facturación todavía no se puede usar: «módulo en desarrollo» y nada se escribe", async () => {
+      it("con las reglas reales de empresa (facturación disponible): sin activarla en la empresa es MODULO_NO_ACTIVO y nada se escribe; activada, se genera el pedido", async () => {
+        const sinActivar = await crearEscenarioDeConfiguracion(dueno, { rol: "GERENTE" });
+        expect(
+          await generarPedidoDeCertificado(dReales, como(sinActivar), pedido(sinActivar)),
+        ).toMatchObject({
+          ok: false,
+          error: { codigo: "MODULO_NO_ACTIVO" },
+        });
+        expect(await certificados(sinActivar.mundo.empresa)).toHaveLength(0);
         const e = await nuevo();
         expect(await generarPedidoDeCertificado(dReales, como(e), pedido(e))).toMatchObject({
-          ok: false,
-          error: { codigo: "MODULO_EN_DESARROLLO" },
+          ok: true,
         });
-        expect(await certificados(e.mundo.empresa)).toHaveLength(0);
+        expect(await certificados(e.mundo.empresa)).toHaveLength(1);
       });
     });
   },

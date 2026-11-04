@@ -3,7 +3,13 @@ import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { verificarFoco, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
-import { PERMITIDO, enArmazon, legibleYTocable, ventana } from "./ayudas-de-pruebas";
+import {
+  DOMICILIO_DE_PRUEBA,
+  PERMITIDO,
+  enArmazon,
+  legibleYTocable,
+  ventana,
+} from "./ayudas-de-pruebas";
 import { armarLaLista, type EstadoParaLaLista } from "./lista-de-lo-que-falta";
 import { MigasDeConfiguracion } from "./MigasDeConfiguracion";
 import {
@@ -36,6 +42,7 @@ const punto = (id: string, numero: number, cambios: Partial<PuntoParaConfigurar>
   ambiente: "HOMOLOGACION" as const,
   sucursal: { id: "s", nombre: "Casa central", activa: true },
   tieneDomicilio: true,
+  domicilio: DOMICILIO_DE_PRUEBA,
   hayNumerosUsados: false,
   version: 1,
   ...cambios,
@@ -66,7 +73,7 @@ const puntos = (items = PUNTOS, oferta: OfertaDeAccion = PERMITIDO) => (
     vacio="Todavía no hay puntos de venta."
     ayuda="Tocá un punto de venta para editarlo, activarlo o desactivarlo."
     agregar={{
-      texto: "Agregar punto de venta",
+      texto: "Nuevo punto de venta",
       href: "/configuracion-fiscal/puntos-de-venta/nuevo",
       oferta,
     }}
@@ -114,7 +121,7 @@ describe("las filas y el teclado", () => {
     await verificarFoco(enlace);
   });
 
-  it("cada punto de venta es un enlace a su pantalla y «Agregar punto de venta» al alta; el foco se ve en ambos", async () => {
+  it("cada punto de venta es un enlace a su pantalla y «Nuevo punto de venta» al alta; el foco se ve en ambos", async () => {
     await render(puntos());
     const enlaces = [...document.querySelectorAll("a[href]")].map((a) => a.getAttribute("href"));
     expect(enlaces).toEqual([
@@ -132,17 +139,17 @@ describe("las filas y el teclado", () => {
     );
     expect(getComputedStyle(document.activeElement as Element).outlineStyle).toBe("solid");
     const agregar = page
-      .getByRole("link", { name: "Agregar punto de venta" })
+      .getByRole("link", { name: "Nuevo punto de venta" })
       .element() as HTMLElement;
     agregar.focus();
     expect(getComputedStyle(agregar).outlineStyle).toBe("solid");
   });
 
-  it("sin puntos de venta: «Todavía no hay puntos de venta.» y «Agregar punto de venta» debajo, sin la ayuda de tocar uno", async () => {
+  it("sin puntos de venta: «Todavía no hay puntos de venta.» y «Nuevo punto de venta» debajo, sin la ayuda de tocar uno", async () => {
     await render(puntos([]));
     const vacio = page.getByText("Todavía no hay puntos de venta.");
     await expect.element(vacio).toBeVisible();
-    const agregar = page.getByRole("link", { name: "Agregar punto de venta" });
+    const agregar = page.getByRole("link", { name: "Nuevo punto de venta" });
     await expect.element(agregar).toBeVisible();
     expect(
       vacio.element().compareDocumentPosition(agregar.element()) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -150,7 +157,7 @@ describe("las filas y el teclado", () => {
     expect(document.body.textContent).not.toContain("Tocá un punto de venta");
   });
 
-  it("si el servidor no deja agregar: «Agregar punto de venta» sale apagado con su motivo a la vista, sin enlace al alta", async () => {
+  it("si el servidor no deja agregar: «Nuevo punto de venta» sale apagado con su motivo a la vista, sin enlace al alta", async () => {
     await ventana(390);
     await render(
       enArmazon(
@@ -158,10 +165,10 @@ describe("las filas y el teclado", () => {
         puntos(PUNTOS, { permitida: false, motivo: "No tiene permiso para hacer esto." }),
       ),
     );
-    const agregar = page.getByRole("button", { name: "Agregar punto de venta" });
+    const agregar = page.getByRole("button", { name: "Nuevo punto de venta" });
     await expect.element(agregar).toBeDisabled();
     await expect.element(page.getByText("No tiene permiso para hacer esto.")).toBeVisible();
-    expect(page.getByRole("link", { name: "Agregar punto de venta" }).elements()).toHaveLength(0);
+    expect(page.getByRole("link", { name: "Nuevo punto de venta" }).elements()).toHaveLength(0);
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
   });
 

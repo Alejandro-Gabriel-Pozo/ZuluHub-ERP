@@ -369,23 +369,80 @@ describe("el guard con las reglas reales", () => {
     }
   });
 
-  it("emitir un comprobante da MODULO_EN_DESARROLLO a todos mientras la facturación no exista (H7, §D)", () => {
-    // También con el módulo «activado» y «habilitado» por el plan, y también sin rol: el guard mira
-    // primero el estado de construcción del módulo.
+  // `facturacion` es `disponible` (dueño, 2026-11-04) pero no nace activa: la empresa la tiene que activar (la plataforma) y la acción
+  // tiene que estar en su rol. Estas tres pruebas fijan que ser «disponible» no abre nada por sí solo.
+  const accionesDeFacturacion = Object.keys(
+    CATALOGO_DE_MODULOS.facturacion.acciones,
+  ) as (keyof typeof CATALOGO_DE_MODULOS.facturacion.acciones)[];
+
+  it("facturacion sin activar da MODULO_NO_ACTIVO a todos, también al gerente, también sin rol y también si el plan la incluye", () => {
+    // El plan solo fija el techo: sin la activación de la empresa `estadoDeModulos` no la deja activa.
+    const { modulosActivos } = estadoDeModulos(CATALOGO_DE_MODULOS, [], ["facturacion"]);
+    expect(modulosActivos.has("facturacion")).toBe(false);
+    for (const rol of [...ROLES_DE_EMPRESA, null]) {
+      for (const accion of accionesDeFacturacion) {
+        expect(
+          evaluarGuard(REGLAS_DE_EMPRESA, accion, {
+            rol,
+            modulosActivos,
+            capacidadesDeSucursal: null,
+          }),
+          `${rol} ${accion}`,
+        ).toEqual({ ok: false, error: "MODULO_NO_ACTIVO" });
+      }
+    }
+  });
+
+  it("facturacion activa: cada rol puede exactamente lo que dice la tabla y no puede, SIN_PERMISO (sin rol, tampoco)", () => {
     const { modulosActivos } = estadoDeModulos(
       CATALOGO_DE_MODULOS,
       ["facturacion"],
       ["facturacion"],
     );
-    for (const rol of [...ROLES_DE_EMPRESA, null]) {
+    const tabla = tablaDePermisos(PERMISOS_DE_EMPRESA);
+    for (const rol of ROLES_DE_EMPRESA) {
+      for (const accion of accionesDeFacturacion) {
+        const puede = (tabla[rol] as readonly string[]).includes(accion);
+        expect(
+          evaluarGuard(REGLAS_DE_EMPRESA, accion, {
+            rol,
+            modulosActivos,
+            capacidadesDeSucursal: null,
+          }),
+          `${rol} ${accion}`,
+        ).toEqual(puede ? { ok: true, valor: null } : { ok: false, error: "SIN_PERMISO" });
+      }
+    }
+    for (const accion of accionesDeFacturacion) {
       expect(
-        evaluarGuard(REGLAS_DE_EMPRESA, "comprobantes.emitir", {
-          rol,
+        evaluarGuard(REGLAS_DE_EMPRESA, accion, {
+          rol: null,
           modulosActivos,
           capacidadesDeSucursal: null,
         }),
-        `${rol}`,
-      ).toEqual({ ok: false, error: "MODULO_EN_DESARROLLO" });
+        `sin rol ${accion}`,
+      ).toEqual({ ok: false, error: "SIN_PERMISO" });
+    }
+  });
+
+  it("facturacion en solo lectura (baja de plan): el gerente pierde lo que crea o amplía y conserva lo que mira o cierra", () => {
+    const estado = estadoDeModulos(CATALOGO_DE_MODULOS, ["facturacion"], []);
+    expect([...estado.modulosEnSoloLectura]).toEqual(["facturacion"]);
+    for (const accion of accionesDeFacturacion) {
+      const { efecto } = CATALOGO_DE_MODULOS.facturacion.acciones[accion];
+      expect(
+        evaluarGuard(REGLAS_DE_EMPRESA, accion, {
+          rol: "GERENTE",
+          modulosActivos: estado.modulosActivos,
+          modulosEnSoloLectura: estado.modulosEnSoloLectura,
+          capacidadesDeSucursal: null,
+        }),
+        `${accion} (${efecto})`,
+      ).toEqual(
+        efecto === "CREA_AMPLIA"
+          ? { ok: false, error: "MODULO_EN_SOLO_LECTURA" }
+          : { ok: true, valor: null },
+      );
     }
   });
 

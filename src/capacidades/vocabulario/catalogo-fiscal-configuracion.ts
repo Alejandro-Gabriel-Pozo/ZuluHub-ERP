@@ -44,8 +44,10 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
   // CONTRATO-CONFIG D-64; cuestionario de las 17:45Z, pregunta 2.
   "fiscal.pantalla.config_cartel_ninguno_activo": { porDefecto: "Ninguno activo" },
 
-  // Dueño, 2026-10-29, cuestionario de las 17:45Z, pregunta 3.
-  "fiscal.pantalla.config_pv_agregar": { porDefecto: "Agregar punto de venta" },
+  // Dueño, 2026-11-03, D-82, Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md (botón único «Nuevo punto de venta», no «Agregar punto de venta»); también titula la pantalla del alta: título del alta confirmado por el dueño, 2026-11-04, D-96.
+  "fiscal.pantalla.config_pv_agregar": { porDefecto: "Nuevo punto de venta" },
+  // Dueño, 2026-11-03, D-82, Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md (cuando no se pueden verificar los permisos, los botones de Puntos de venta salen apagados con este genérico).
+  "fiscal.pantalla.config_pv_accion_no_permitida": { porDefecto: "Esta acción no está permitida." },
   // Dueño, 2026-10-29, cuestionario de las 17:45Z, pregunta 3.
   "fiscal.pantalla.config_pv_activo": { porDefecto: "Activo" },
   // SUPUESTO del ingeniero: «No activo» suelto, derivado de «00003 · No activo» (`listado_punto_de_venta_no_activo`), que el dueño

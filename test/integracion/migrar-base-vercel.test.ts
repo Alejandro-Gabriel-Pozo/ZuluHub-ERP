@@ -45,6 +45,11 @@ type Opciones = {
   entorno?: Record<string, string | undefined>;
   generarClave?: () => string;
   bytesAlAzar?: (cuantos: number) => Uint8Array;
+  /** Como en el workflow `cargar-entorno`: sin dónde mostrar contraseñas (el registro de GitHub queda guardado). */
+  sinDondeMostrar?: boolean;
+  /** Dónde cae lo que el comando le entrega al runner (`::add-mask::`). */
+  comandos?: string[];
+  alComando?: (linea: string) => void;
 };
 
 describe.skipIf(base === null)("migrar-base --vercel", () => {
@@ -75,7 +80,11 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
       carpeta: CARPETA_REAL,
       info: (l) => info.push(l),
       error: (l) => error.push(l),
-      secreto: (l) => secreto.push(l),
+      ...(o.sinDondeMostrar === true ? {} : { secreto: (l: string) => secreto.push(l) }),
+      comando: (l: string) => {
+        o.comandos?.push(l);
+        o.alComando?.(l);
+      },
       roles: (conAutenticacion) => (conAutenticacion ? [...ROLES, ...AUTENTICACION] : ROLES),
       fetch: o.fetch ?? falso.fetch,
       esperarEntreLecturas: () => Promise.resolve(),
@@ -288,6 +297,134 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     expect(salida.error).toContain("no se corre en GitHub Actions");
     expect(falso.pedidos).toEqual([]);
     expect(await puedeEntrar(ROLES[0]?.rol as string)).toBe(false);
+  });
+
+  describe("en GitHub Actions (cargar-entorno): solo con --vercel y sin mostrar nunca una contraseña", () => {
+    const EN_ACTIONS = { GITHUB_ACTIONS: "true" };
+
+    it("--vercel sin dónde mostrar corre y carga las contraseñas en Vercel; nada se imprime", async () => {
+      const url = await nuevaBase();
+      const falso = crearVercelFalso();
+      const salida = await correr(url, ["--vercel", "preview"], {
+        falso,
+        entorno: EN_ACTIONS,
+        sinDondeMostrar: true,
+      });
+      expect(salida.error).toBe("");
+      expect(salida.codigo).toBe(0);
+      expect(salida.secreto).toBe("");
+      for (const { rol, variable } of ROLES) {
+        const guardada = falso.de(variable)[0];
+        expect(guardada).toMatchObject({ type: "sensitive", target: ["preview"] });
+        expect(await entraComo(guardada?.valor ?? "", rol)).toBe(true);
+        expect(salida.todo).not.toContain(claveDe(guardada?.valor ?? ""));
+        expect(salida.todo).not.toContain(guardada?.valor ?? "");
+      }
+    });
+
+    it("cada contraseña se entrega al runner con ::add-mask:: antes de cualquier escritura en Vercel; fuera de Actions, no", async () => {
+      const eventos: string[] = [];
+      const comandos: string[] = [];
+      let n = 0;
+      const generarClave = () => `Contrasena${String((n += 1)).padStart(2, "0")}DePrueba0123456789`;
+      const interceptor: Interceptor = (p) => {
+        if (p.metodo === "POST") eventos.push("POST");
+        return undefined;
+      };
+      const url = await nuevaBase();
+      const salida = await correr(url, ["--vercel", "preview"], {
+        falso: crearVercelFalso([], interceptor),
+        entorno: EN_ACTIONS,
+        sinDondeMostrar: true,
+        generarClave,
+        comandos,
+        alComando: () => eventos.push("mascara"),
+      });
+      expect(salida.codigo).toBe(0);
+      const claves = [1, 2, 3].map(
+        (i) => `Contrasena${String(i).padStart(2, "0")}DePrueba0123456789`,
+      );
+      for (const clave of claves) expect(comandos).toContain(`::add-mask::${clave}`);
+      expect(comandos.every((c) => c.startsWith("::add-mask::"))).toBe(true);
+      expect(eventos.lastIndexOf("mascara")).toBeLessThan(eventos.indexOf("POST"));
+      // Y no salen por ningún otro canal.
+      for (const clave of claves) expect(salida.todo).not.toContain(clave);
+
+      const fuera: string[] = [];
+      const otraBase = await nuevaBase();
+      await correr(otraBase, ["--vercel", "preview"], { comandos: fuera });
+      expect(fuera).toEqual([]);
+    });
+
+    it("sin dónde mostrar y sin --vercel se niega (no hay forma de mostrarlas) y no toca la base", async () => {
+      const url = await nuevaBase();
+      for (const entorno of [EN_ACTIONS, {}]) {
+        const salida = await correr(url, [], { entorno, sinDondeMostrar: true });
+        expect(salida.codigo).toBe(2);
+        expect(salida.error).toContain("no se corre en GitHub Actions");
+        expect(await puedeEntrar(ROLES[0]?.rol as string)).toBe(false);
+      }
+    });
+
+    it("con dónde mostrar sigue negándose, con o sin --vercel (un sumidero en Actions es un error de cableado)", async () => {
+      const url = await nuevaBase();
+      for (const argumentos of [[], ["--vercel", "preview"]]) {
+        const salida = await correr(url, argumentos, { entorno: EN_ACTIONS });
+        expect(salida.codigo).toBe(2);
+        expect(salida.secreto).toBe("");
+      }
+      expect(await puedeEntrar(ROLES[0]?.rol as string)).toBe(false);
+    });
+
+    it("si Vercel falla a la mitad, las contraseñas que no llegaron NO se imprimen: el aviso nombra las variables y manda a --rotar desde la terminal", async () => {
+      const url = await nuevaBase();
+      let enviado = "";
+      const falso = crearVercelFalso([], (p) => {
+        if (p.metodo === "POST" && (p.cuerpo as { key: string }).key === "PEDERNAL_DB_TRABAJOS") {
+          enviado = (p.cuerpo as { value: string }).value;
+          return new Response(JSON.stringify({ error: { code: "internal", message: "caída" } }), {
+            status: 500,
+          });
+        }
+        return undefined;
+      });
+      const salida = await correr(url, ["--vercel", "preview"], {
+        falso,
+        entorno: EN_ACTIONS,
+        sinDondeMostrar: true,
+      });
+      expect(salida.codigo).toBe(1);
+      expect(salida.secreto).toBe("");
+      expect(salida.error).toContain(
+        "Las contraseñas de PEDERNAL_DB_TRABAJOS, PEDERNAL_DB_PUBLICO YA están cambiadas en la base y NO quedaron cargadas en Vercel (PREVIEW); acá no se muestran",
+      );
+      expect(salida.error).toContain("desde tu terminal con --rotar");
+      expect(salida.error).not.toContain("de abajo");
+      expect(enviado).not.toBe("");
+      expect(salida.todo).not.toContain(enviado);
+      expect(salida.todo).not.toContain(claveDe(enviado));
+      expect(salida.todo).not.toContain("PEDERNAL_DB_TRABAJOS=");
+    });
+
+    it("una excepción que nadie previó tampoco imprime las contraseñas: nombra las variables y manda a --rotar", async () => {
+      const url = await nuevaBase();
+      const falso = crearVercelFalso();
+      // Un `fetch` que contesta algo que no es una respuesta: el cliente no lo espera y la excepción se escapa.
+      const fetchRoto = ((direccion: string, init?: RequestInit) =>
+        init?.method === "POST"
+          ? Promise.resolve(undefined)
+          : falso.fetch(direccion, init)) as unknown as typeof fetch;
+      const salida = await correr(url, ["--vercel", "preview"], {
+        fetch: fetchRoto,
+        entorno: EN_ACTIONS,
+        sinDondeMostrar: true,
+      });
+      expect(salida.secreto).toBe("");
+      expect(salida.error).toContain("Se cortó la carga en Vercel antes de terminar");
+      expect(salida.error).toContain("acá no se muestran");
+      expect(salida.error).not.toContain("de abajo");
+      expect(salida.todo).not.toMatch(/PEDERNAL_DB_[A-Z]+=postgres/);
+    });
   });
 
   it("sin token explica cómo crearlo y no toca la base ni Vercel", async () => {

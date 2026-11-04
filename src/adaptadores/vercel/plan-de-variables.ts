@@ -22,6 +22,30 @@ export const EQUIPO_DE_VERCEL = "alepozod";
 /** El NOMBRE de la variable de entorno de la terminal con el token de la API de Vercel. */
 export const VARIABLE_DEL_TOKEN = "PEDERNAL_VERCEL_TOKEN";
 
+const SIN_TOKEN =
+  `falta la variable ${VARIABLE_DEL_TOKEN}: es el token con el que este comando escribe en Vercel. ` +
+  `Para crearlo: entrá a vercel.com, abrí Settings de tu cuenta > Tokens, creá uno con alcance limitado ` +
+  `al equipo «${EQUIPO_DE_VERCEL}» y vencimiento corto, y ponelo en esa variable de entorno de la terminal ` +
+  "(no lo pegues en ningún archivo ni en un chat).";
+
+/**
+ * El token de la API de Vercel de un entorno, o el texto del problema. Una sola definición para los dos comandos que
+ * escriben en Vercel (`migrar-base --vercel` y `cargar-entorno`): que no falte y que no traiga espacios ni letras raras
+ * (un token pegado con un salto de línea se rechaza en Vercel con un error que no dice por qué).
+ */
+export function leerTokenDeVercel(
+  entorno: Readonly<Record<string, string | undefined>>,
+): Readonly<{ token: string }> | Readonly<{ problema: string }> {
+  const token = entorno[VARIABLE_DEL_TOKEN]?.trim();
+  if (token === undefined || token === "") return { problema: SIN_TOKEN };
+  if (!/^[\x21-\x7e]+$/.test(token)) {
+    return {
+      problema: `${VARIABLE_DEL_TOKEN} tiene espacios, saltos de línea o letras raras: copialo de nuevo.`,
+    };
+  }
+  return { token };
+}
+
 /**
  * El nombre de la variable con la cadena DIRECTA (de dueño) de la base. Vive en la terminal del dueño
  * y NUNCA debe existir en Vercel: se borra del destino si el dueño la dejó ahí.
@@ -64,6 +88,22 @@ export function sobraEnVercel(nombre: string): boolean {
     nombre.startsWith(PREFIJO_PROHIBIDO_EN_VERCEL) ||
     nombre === NOMBRE_DE_LA_CADENA_DE_DUENO
   );
+}
+
+/**
+ * Lo que la guía (`apps/web/PRIMER-DESPLIEGUE.md`, B.5, «Lo que NO debe existir») también pide fuera de Vercel pero que
+ * `--vercel` NO borra: la cadena del dueño con su nombre de GitHub y los roles que la web no recibe. Solo el chequeo de
+ * `cargar-entorno` los INFORMA (por nombre); no se suman a `sobraEnVercel` para no cambiar lo que borra el otro comando.
+ */
+export const SOLO_AVISAR_SI_ESTAN_EN_VERCEL: readonly string[] = [
+  "PEDERNAL_DB_DUENO_DIRECTA",
+  "PEDERNAL_DB_PLATAFORMA",
+  "PEDERNAL_DB_GRUPO",
+];
+
+/** Lo que `cargar-entorno` informa si existe en el destino: todo lo que sobra más lo que la guía pide fuera. */
+export function noDebeEstarEnVercel(nombre: string): boolean {
+  return sobraEnVercel(nombre) || SOLO_AVISAR_SI_ESTAN_EN_VERCEL.includes(nombre);
 }
 
 /** Una variable del proyecto tal como la lista Vercel (sin su valor: las sensibles no lo devuelven). */
@@ -119,22 +159,68 @@ export function leerVariablesRemotas(cuerpo: unknown): VariableRemota[] | null {
 }
 
 /**
- * Los dos secretos de la aplicación, al azar: `PEDERNAL_CLAVE_CONTEXTO` (`1:` + 64 dígitos hexadecimales,
- * la forma `<kid>:<hex>` de `contexto-firmado.ts`) y `PEDERNAL_SECRETO_INVITACIONES` (64 dígitos
- * hexadecimales, `tokens-hmac.ts`). 32 bytes cada uno; `bytesAlAzar` se inyecta para probar.
+ * Los secretos que se pueden generar sin intervención, al azar, cada uno con la forma que exige el validador de la
+ * aplicación (se comprueba en `cargar-entorno.test.ts` con los validadores reales; los nombres, en
+ * `test/arquitectura/cargar-entorno-nombres.test.ts`). 32 bytes cada uno; `bytesAlAzar` se inyecta para probar.
+ *
+ * - `PEDERNAL_CLAVE_CONTEXTO`: `1:` + 64 dígitos hexadecimales, la forma `<kid>:<hex>` de `contexto-firmado.ts`.
+ * - `PEDERNAL_CLAVE_CERTIFICADOS`: `c1:` + 64 hexadecimales (`parsearClaveMaestra`, más variedad y distinta de la de contexto).
+ * - `PEDERNAL_SECRETO_INVITACIONES`, `PEDERNAL_AUTH_SECRETO_EMPRESA` (≥ 32 caracteres) y `CRON_SECRET` (≥ 16): 64 hexadecimales.
  */
 export const VARIABLE_CLAVE_CONTEXTO = "PEDERNAL_CLAVE_CONTEXTO";
 export const VARIABLE_SECRETO_INVITACIONES = "PEDERNAL_SECRETO_INVITACIONES";
+export const VARIABLE_CLAVE_CERTIFICADOS = "PEDERNAL_CLAVE_CERTIFICADOS";
+export const VARIABLE_SECRETO_DE_AUTENTICACION = "PEDERNAL_AUTH_SECRETO_EMPRESA";
+export const VARIABLE_SECRETO_DEL_CRON = "CRON_SECRET";
 const BYTES_DE_SECRETO = 32;
 
-export function generarSecretos(
+/** El mismo piso de variedad que `CARACTERES_DISTINTOS_MINIMOS` (autenticación, cron y certificados). */
+export const CARACTERES_DISTINTOS_PEDIDOS = 10;
+const PREFIJO_DEL_CONTEXTO = "1:";
+const PREFIJO_DE_CERTIFICADOS = "c1:";
+
+export const VARIABLES_GENERABLES = [
+  VARIABLE_SECRETO_INVITACIONES,
+  VARIABLE_SECRETO_DE_AUTENTICACION,
+  VARIABLE_SECRETO_DEL_CRON,
+  VARIABLE_CLAVE_CERTIFICADOS,
+  VARIABLE_CLAVE_CONTEXTO,
+] as const;
+export type VariableGenerable = (typeof VARIABLES_GENERABLES)[number];
+
+/**
+ * El valor al azar de una variable generable. Falla (sin devolver nada) si lo sorteado no tiene la variedad que
+ * pide su validador: no se carga un secreto que la aplicación rechazaría al arrancar.
+ */
+export function generarValor(
+  variable: VariableGenerable,
   bytesAlAzar: (cuantos: number) => Uint8Array = (cuantos) => randomBytes(cuantos),
+): string {
+  const hex = Buffer.from(bytesAlAzar(BYTES_DE_SECRETO)).toString("hex");
+  if (
+    variable !== VARIABLE_CLAVE_CONTEXTO &&
+    variable !== VARIABLE_SECRETO_INVITACIONES &&
+    new Set(hex).size < CARACTERES_DISTINTOS_PEDIDOS
+  ) {
+    throw new RangeError(`no se pudo generar ${variable}: lo sorteado tiene muy poca variedad`);
+  }
+  if (variable === VARIABLE_CLAVE_CONTEXTO) return `${PREFIJO_DEL_CONTEXTO}${hex}`;
+  if (variable === VARIABLE_CLAVE_CERTIFICADOS) return `${PREFIJO_DE_CERTIFICADOS}${hex}`;
+  return hex;
+}
+
+/** Los dos de `migrar-base --secretos`, en este orden. */
+export function generarSecretos(
+  bytesAlAzar?: (cuantos: number) => Uint8Array,
 ): readonly ValorACargar[] {
-  const hex = () => Buffer.from(bytesAlAzar(BYTES_DE_SECRETO)).toString("hex");
-  return [
-    { key: VARIABLE_CLAVE_CONTEXTO, value: `1:${hex()}` },
-    { key: VARIABLE_SECRETO_INVITACIONES, value: hex() },
+  const claves: readonly VariableGenerable[] = [
+    VARIABLE_CLAVE_CONTEXTO,
+    VARIABLE_SECRETO_INVITACIONES,
   ];
+  return claves.map((key) => ({
+    key,
+    value: generarValor(key, bytesAlAzar),
+  }));
 }
 
 export type ValorACargar = Readonly<{ key: string; value: string }>;
@@ -144,7 +230,13 @@ export type Paso =
   | Readonly<{ tipo: "borrar"; id: string; key: string }>
   /** La variable vale también para otros destinos: se le quita el pedido y se conservan `target`. */
   | Readonly<{ tipo: "recortar"; id: string; key: string; target: readonly string[] }>
-  | Readonly<{ tipo: "escribir"; key: string; value: string }>;
+  | Readonly<{
+      tipo: "escribir";
+      key: string;
+      value: string;
+      /** Crear y nada más: si la variable ya existe en el destino, Vercel rechaza y no se pisa (`cargar-entorno`). */
+      sinPisar?: boolean;
+    }>;
 
 export type Plan = Readonly<{
   pasos: readonly Paso[];
