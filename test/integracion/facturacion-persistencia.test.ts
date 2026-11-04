@@ -13,6 +13,7 @@ import {
   type FiscalDb,
 } from "../../src/modulos/fiscal/publico";
 import { importesParaArca } from "../../src/modulos/fiscal/dominio/importes-para-arca";
+import { VERSION_DE_REPRESENTACION_ACTUAL } from "../../src/modulos/fiscal/dominio/modelo-de-impresion";
 import type { Contexto } from "../../src/contexto/contexto";
 import { importeATexto, importeDesdeTexto, sumar } from "../../src/primitivas/dinero/importe";
 import { ARS } from "../../src/primitivas/dinero/moneda";
@@ -157,7 +158,7 @@ describe.skipIf(base === null)("facturación F3: el repositorio de comprobantes"
         resueltoPor: null,
         motivoDeDescarte: null,
         huella: alta.huella,
-        versionDeRepresentacion: 1,
+        versionDeRepresentacion: VERSION_DE_REPRESENTACION_ACTUAL,
         creadoPor: personaId(e.persona),
         version: 1,
       });

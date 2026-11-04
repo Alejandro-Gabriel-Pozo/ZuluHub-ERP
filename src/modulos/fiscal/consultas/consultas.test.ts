@@ -4,6 +4,7 @@ import {
   facturaArmada,
   fecha,
   renglon,
+  SIN_CONTACTO,
 } from "../../../../test/utilidades/facturacion";
 import { CUIT_B, EMPRESA, OTRA_EMPRESA } from "../../../../test/utilidades/fiscal";
 import { MARCA_PRINCIPAL_DE_PRUEBA } from "../../../../test/utilidades/marcas";
@@ -119,6 +120,7 @@ function guardado(cambios: Partial<ComprobanteGuardado> = {}): ComprobanteGuarda
     motivoDeDescarte: null,
     huella: "huella-interna",
     versionDeRepresentacion: 1,
+    contacto: SIN_CONTACTO,
     creadoPor: personaId("p-1"),
     creadoEn: new Date("2026-10-13T14:59:00.000Z"),
     version: 4,
@@ -1236,7 +1238,7 @@ describe("modeloDeImpresion (la consulta)", () => {
   });
 
   it("una versión de representación que no se sabe dibujar sale como error del modelo", async () => {
-    const { consultas } = armar({ comprobante: guardado({ versionDeRepresentacion: 2 }) });
+    const { consultas } = armar({ comprobante: guardado({ versionDeRepresentacion: 3 }) });
     expect(await consultas.modeloDeImpresion(contexto(), { comprobanteId: ID })).toEqual({
       ok: false,
       error: "VERSION_DE_REPRESENTACION_DESCONOCIDA",

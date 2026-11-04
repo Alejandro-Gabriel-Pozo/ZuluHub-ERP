@@ -15,11 +15,13 @@ import {
   type TipoDeComprobante,
 } from "./comprobante-emitido";
 import type { Ambiente, RenglonCalculado } from "./comprobante-nuevo";
+import { contactoImpreso, type ContactoCongelado, type ContactoImpreso } from "./contacto-impreso";
 import type { CondicionIibb } from "./datos-fiscales";
 import { importesParaArca } from "./importes-para-arca";
 import { urlDelQr, type ErrorDeQr } from "./qr-de-arca";
 import type { CondicionIva } from "./emisor";
 import type { DocumentoDelReceptor, Receptor } from "./receptor";
+import { transparenciaFiscal, type TransparenciaFiscalImpresa } from "./transparencia-fiscal";
 
 /**
  * Modelo de impresión de un comprobante autorizado (spec H7 facturación §B.7): un valor puro, sin
@@ -32,14 +34,46 @@ import type { DocumentoDelReceptor, Receptor } from "./receptor";
  * - Totales según la letra: A discrimina neto e IVA por alícuota; B muestra el total y el IVA
  *   CONTENIDO por alícuota (decisión 9 del dueño); C muestra solo el total.
  * - `versionDeRepresentacion` la sella el comprobante al nacer: reimprimir da lo mismo aunque el
- *   formato cambie después. Hoy existe la versión 1.
+ *   formato cambie después. Existen la versión 1 y la 2 (ver `VERSIONES_SOPORTADAS`).
  * - Todo importe, cantidad y precio sale como texto decimal.
  *
- * NO VERIFICADO (preguntas C8 y C23 al contador): qué leyendas legales deben figurar (por ejemplo,
- * la del IVA contenido). `leyendas` solo trae la de homologación; el modelo admite más sin tocar la
- * base.
+ * NO VERIFICADO (preguntas C8 y C23 al contador): qué otras leyendas legales deben figurar. `leyendas`
+ * trae la de homologación; el modelo admite más sin tocar la base.
  */
-export const VERSION_DE_REPRESENTACION_ACTUAL = 1;
+
+/**
+ * Las versiones que este código sabe dibujar; cualquier otra se rechaza (`VERSION_DE_REPRESENTACION_DESCONOCIDA`):
+ * lista cerrada, no «todo lo menor o igual a la actual», para que subir la versión sea una decisión explícita.
+ * - 1: el formato anterior a los textos legales de la RG 5614/2024. Se conserva SIN CAMBIOS: lo sellado con 1
+ *   reimprime idéntico (golden `modelo-factura-b-marca-*` y `modelo-nota-de-credito-a-produccion`). No incluía la
+ *   leyenda «A CONSUMIDOR FINAL» aunque la norma la pedía antes; no se corrige por diseño.
+ * - 2: suma la leyenda del receptor consumidor final, el bloque de transparencia fiscal de la B y el contacto congelado
+ *   de la sucursal (D-98).
+ * Previene que reimprimir un AUTORIZADO muestre textos que su original no tenía. Sin migración: la columna es
+ * `smallint` con `CHECK (>= 1)` (0009) y `emitir-comprobante` sella `VERSION_DE_REPRESENTACION_ACTUAL`. Chequeo:
+ * los golden de la 1 y de la 2 y la prueba de versiones desconocidas de `modelo-de-impresion.test.ts`.
+ */
+const VERSIONES_SOPORTADAS: readonly number[] = [1, 2];
+
+/** La que sellan los comprobantes nuevos. */
+export const VERSION_DE_REPRESENTACION_ACTUAL = 2;
+
+/** Primera versión que lleva los textos legales de la norma; las anteriores no los llevan. */
+const PRIMERA_VERSION_CON_TEXTOS_LEGALES = 2;
+
+/**
+ * Primera versión que lleva el contacto de la sucursal (D-98). Aparte de los textos legales: el contacto no es un texto de la
+ * norma y una versión futura puede cambiar uno sin tocar el otro. La 1 no lo lleva y reimprime idéntica.
+ */
+const PRIMERA_VERSION_CON_CONTACTO = 2;
+
+/**
+ * Leyenda del receptor (versión 2), copiada de la norma sin parafrasear; si ARCA la cambia, es una versión nueva.
+ * FUENTE (repositorio de docs, `12-referencias-externas/arca-normas-de-comprobantes/`, rama `web/especificaciones-del-qr`,
+ * PR #3): Anexo II, Apartado A, Título II, d) 1. (`rg1415_dcp.html`, texto vigente; `rg5866.html`, art. 1 f)). Los textos
+ * del bloque de transparencia fiscal están en `transparencia-fiscal.ts`.
+ */
+const LEYENDA_A_CONSUMIDOR_FINAL = "A CONSUMIDOR FINAL";
 
 export const LEYENDA_DE_HOMOLOGACION = "HOMOLOGACIÓN — SIN VALIDEZ FISCAL";
 
@@ -94,6 +128,8 @@ export type ComprobanteParaImprimir = Readonly<{
   cae: string;
   caeVence: FechaCivil;
   versionDeRepresentacion: number;
+  /** El contacto de la sucursal congelado al nacer el comprobante; NUNCA el de la sucursal de hoy (D-98). */
+  contacto: ContactoCongelado;
 }>;
 
 /**
@@ -152,6 +188,11 @@ export type ModeloImpreso = Readonly<{
     documento: DocumentoDelReceptor;
     condicionIva: string;
     domicilio: string | null;
+    /**
+     * Versión 2 en adelante y solo si el receptor es consumidor final: «A CONSUMIDOR FINAL» (RG 5866 art. 1 f).
+     * Ausente en la versión 1 y en cualquier otra condición.
+     */
+    leyenda?: string;
   }>;
   renglones: readonly Readonly<{
     descripcion: string;
@@ -168,6 +209,16 @@ export type ModeloImpreso = Readonly<{
     referencias: readonly ReferenciaImpresa[];
   }>[];
   totales: TotalesImpresos;
+  /**
+   * Versión 2 en adelante y solo en la letra B con receptor consumidor final (factura, nota de crédito y de
+   * débito B). Ausente en la versión 1 y en todo lo demás.
+   */
+  transparenciaFiscal?: TransparenciaFiscalImpresa;
+  /**
+   * Versión 2 en adelante y solo si la sucursal tenía al menos un dato de contacto al emitir (D-98): el que congeló el
+   * comprobante, no el vigente. Ausente en la versión 1 y sin contacto. Cada dato va solo si existe; sin rótulos.
+   */
+  contacto?: ContactoImpreso;
   /** Solo en notas: el comprobante que corrigen. */
   asociado: Readonly<{
     rotulo: string;
@@ -225,12 +276,13 @@ function totalesImpresos(
 /**
  * Arma el modelo. `VERSION_DE_REPRESENTACION_DESCONOCIDA` si el comprobante sella una versión que
  * este código no sabe dibujar; `CAE_INVALIDO` si el CAE no tiene 14 dígitos (no hay QR posible).
+ * La versión 1 sale como siempre; los textos legales de la norma son de la versión 2 en adelante.
  */
 export function modeloDeImpresion(
   comprobante: ComprobanteParaImprimir,
   marca: MarcaParaImprimir,
 ): Resultado<ModeloImpreso, ErrorDeImpresion> {
-  if (comprobante.versionDeRepresentacion !== VERSION_DE_REPRESENTACION_ACTUAL) {
+  if (!VERSIONES_SOPORTADAS.includes(comprobante.versionDeRepresentacion)) {
     return err("VERSION_DE_REPRESENTACION_DESCONOCIDA");
   }
   const { emisor, asociado } = comprobante;
@@ -246,6 +298,16 @@ export function modeloDeImpresion(
     cae: comprobante.cae,
   });
   if (!qr.ok) return qr;
+  const totales = totalesImpresos(comprobante, letra);
+  const conTextosLegales =
+    comprobante.versionDeRepresentacion >= PRIMERA_VERSION_CON_TEXTOS_LEGALES;
+  const contacto =
+    comprobante.versionDeRepresentacion >= PRIMERA_VERSION_CON_CONTACTO
+      ? contactoImpreso(comprobante.contacto)
+      : null;
+  const bloqueDeTransparencia = conTextosLegales
+    ? transparenciaFiscal(totales, comprobante.receptor, comprobante.total.moneda)
+    : null;
   return ok({
     versionDeRepresentacion: comprobante.versionDeRepresentacion,
     marca,
@@ -273,6 +335,9 @@ export function modeloDeImpresion(
       documento: comprobante.receptor.documento,
       condicionIva: comprobante.receptor.condicionIva,
       domicilio: comprobante.receptor.domicilio,
+      ...(conTextosLegales && comprobante.receptor.condicionIva === "CONSUMIDOR_FINAL"
+        ? { leyenda: LEYENDA_A_CONSUMIDOR_FINAL }
+        : {}),
     },
     renglones: comprobante.renglones.map((r) => ({
       descripcion: r.descripcion,
@@ -283,7 +348,9 @@ export function modeloDeImpresion(
       importe: importeATexto(r.importe),
       referencias: [],
     })),
-    totales: totalesImpresos(comprobante, letra),
+    totales,
+    ...(bloqueDeTransparencia === null ? {} : { transparenciaFiscal: bloqueDeTransparencia }),
+    ...(contacto === null ? {} : { contacto }),
     asociado:
       asociado === null
         ? null
