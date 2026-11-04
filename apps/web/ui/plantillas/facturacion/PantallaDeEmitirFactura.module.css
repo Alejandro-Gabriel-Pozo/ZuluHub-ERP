@@ -128,13 +128,6 @@
   margin: 0;
 }
 
-.marca {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--espacio-2);
-}
-
 .acciones {
   display: flex;
   gap: var(--espacio-3);

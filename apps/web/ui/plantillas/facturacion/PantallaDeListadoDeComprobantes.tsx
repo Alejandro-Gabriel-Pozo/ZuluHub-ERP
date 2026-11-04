@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Aviso } from "../../componentes/Aviso";
+import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../componentes/Insignia";
 import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
 import { EleccionDeSucursal } from "./EleccionDeSucursal.cliente";
@@ -116,9 +117,10 @@ export function PantallaDeListadoDeComprobantes({
   return (
     <div className={estilos["raiz"]}>
       {emitir === null ? null : (
-        <a className={estilos["emitir"]} href={emitir.href}>
-          {emitir.texto}
-        </a>
+        // El `div` evita que la columna estire el enlace a todo el ancho (sin CSS propio).
+        <div>
+          <EnlaceDeAccion href={emitir.href}>{emitir.texto}</EnlaceDeAccion>
+        </div>
       )}
       {eleccionDeSucursal === null ? null : (
         // Con nombre («Sucursal»): el grupo de la elección de sucursal se anuncia aparte del formulario de filtros.
