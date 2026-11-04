@@ -21,9 +21,10 @@ vi.mock("../../apps/web/servidor/facturacion", () => ({
 const composicion = vi.hoisted(
   (): {
     llamadas: { nombre: string; contexto: unknown; entrada: unknown }[];
+    resultado: unknown;
     estado: unknown;
     certificados: unknown;
-  } => ({ llamadas: [], estado: null, certificados: null }),
+  } => ({ llamadas: [], resultado: null, estado: null, certificados: null }),
 );
 vi.mock("../../apps/web/servidor/configuracion-fiscal", () => ({
   cargarElEstadoDeLaConfiguracion: (contexto: unknown) => {
@@ -34,7 +35,7 @@ vi.mock("../../apps/web/servidor/configuracion-fiscal", () => ({
 vi.mock("../../src/composicion/certificado-de-arca-web", () => {
   const delegada = (nombre: string) => (_d: unknown, contexto: unknown, entrada?: unknown) => {
     composicion.llamadas.push({ nombre, contexto, entrada });
-    return Promise.resolve({ ok: true, dato: nombre });
+    return Promise.resolve(composicion.resultado ?? { ok: true, dato: nombre });
   };
   return {
     generarPedidoDeCertificado: delegada("generarPedidoDeCertificado"),
@@ -54,6 +55,7 @@ import {
 
 beforeEach(() => {
   composicion.llamadas = [];
+  composicion.resultado = null;
   registro.registrado = [];
 });
 
@@ -69,6 +71,35 @@ describe("las acciones del certificado de ARCA del servidor", () => {
       expect(composicion.llamadas).toEqual([{ nombre, contexto: CONTEXTO, entrada: pedido }]);
     },
   );
+});
+
+describe("el mismo id con otros datos en las acciones del certificado", () => {
+  it.each([
+    ["generarPedidoDeCertificado", generarElPedidoDeCertificado],
+    ["cargarCertificado", cargarElCertificado],
+  ] as const)(
+    "%s: sale el mensaje genérico con su referencia, no el de «comprobante»",
+    async (_nombre, accion) => {
+      composicion.resultado = { ok: false, error: errorDeCodigo("FISCAL_PEDIDO_REPETIDO") };
+      const r = await accion({ id: "x" });
+      expect(r).toMatchObject({
+        ok: false,
+        error: {
+          codigo: "ERROR_INTERNO",
+          presentacion: "INESPERADO",
+          referencia: expect.stringMatching(/^PD-/) as string,
+        },
+      });
+      expect(JSON.stringify(r)).not.toContain("pedido_repetido");
+      expect(registro.registrado).toHaveLength(1);
+    },
+  );
+
+  it("otros errores de la acción pasan tal cual", async () => {
+    composicion.resultado = { ok: false, error: errorDeCodigo("SIN_PERMISO") };
+    expect(await cargarElCertificado({})).toEqual(composicion.resultado);
+    expect(registro.registrado).toHaveLength(0);
+  });
 });
 
 describe("la lectura del certificado de ARCA", () => {

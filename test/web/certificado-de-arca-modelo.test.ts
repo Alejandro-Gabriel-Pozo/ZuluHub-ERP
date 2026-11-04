@@ -25,6 +25,7 @@ const vigente = (cambios: Record<string, unknown> = {}): CertificadoParaMostrar 
   cuitTitular: CUIT,
   vence: "2028-10-12",
   vencido: false,
+  pedidoPendiente: null,
   ...cambios,
 });
 const pendiente: CertificadoParaMostrar = {
@@ -91,6 +92,25 @@ describe("desde qué paso arranca cada estado", () => {
     });
   });
 
+  it("vigente con una renovación en curso (D-94): lleva el pedido pendiente para cargar su certificado, con alias y titular", () => {
+    const pedido = {
+      certificadoId: "id-de-la-renovacion",
+      alias: "pedernalprueba",
+      cuitTitular: CUIT,
+    };
+    expect(armarElAmbiente(vigente({ pedidoPendiente: pedido }))).toMatchObject({
+      vista: "detalle",
+      pedidoPendiente: {
+        certificadoId: "id-de-la-renovacion",
+        datos: [
+          { rotulo: "Alias", valor: "pedernalprueba" },
+          { rotulo: "Titular", valor: "20-12345678-6" },
+        ],
+      },
+    });
+    expect(armarElAmbiente(vigente())).toMatchObject({ pedidoPendiente: null });
+  });
+
   it("vencido: el cartel «Vencido»", () => {
     expect(armarElAmbiente(vigente({ vencido: true }))).toMatchObject({
       cartel: { texto: "Vencido" },
@@ -107,6 +127,7 @@ describe("el vencimiento sale como fecha civil de Argentina", () => {
       cuitTitular: CUIT,
       venceEn,
       vencido: false,
+      pedidoPendiente: null,
     });
 
   it("un instante a las 02:00 UTC es todavía el día anterior en Argentina (UTC-3)", () => {
@@ -116,6 +137,21 @@ describe("el vencimiento sale como fecha civil de Argentina", () => {
   it("a las 03:00 UTC ya es el día siguiente; en fin de año también", () => {
     expect(delServidor("2028-10-13T03:00:00.000Z")).toMatchObject({ vence: "2028-10-13" });
     expect(delServidor("2029-01-01T01:59:59.000Z")).toMatchObject({ vence: "2028-12-31" });
+  });
+
+  it("el pedido pendiente del vigente pasa con su id, alias y titular", () => {
+    const m = aCertificadoParaMostrar({
+      ambiente: "PRODUCCION",
+      situacion: "VIGENTE",
+      alias: "a",
+      cuitTitular: CUIT,
+      venceEn: "2028-10-13T12:00:00.000Z",
+      vencido: false,
+      pedidoPendiente: { certificadoId: "id-2", alias: "b", cuitTitular: CUIT },
+    });
+    expect(m).toMatchObject({
+      pedidoPendiente: { certificadoId: "id-2", alias: "b", cuitTitular: CUIT },
+    });
   });
 
   it("lo que no es vigente pasa tal cual", () => {

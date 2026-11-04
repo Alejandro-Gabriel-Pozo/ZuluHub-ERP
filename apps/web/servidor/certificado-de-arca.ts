@@ -1,6 +1,6 @@
 import "server-only";
 import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
-import { aRespuestaDeExcepcion } from "../../../src/composicion/a-respuesta";
+import { aRespuestaDeExcepcion, respuestaDeFalla } from "../../../src/composicion/a-respuesta";
 import {
   cargarCertificado,
   estadoDeCertificados,
@@ -28,12 +28,36 @@ const dependencias = {
   respuesta: dependenciasDeSesion.respuesta,
 };
 
+/**
+ * `CLAVE_REUTILIZADA` (el mismo `id` con otros datos) llega como `FISCAL_PEDIDO_REPETIDO`, cuyo texto compartido habla de «comprobante».
+ * En estas dos acciones sale el mensaje genérico con su referencia (dueño: mensajes genéricos) y el catálogo no se toca, porque ese
+ * texto sigue sirviendo a las otras pantallas. Previene: decirle «comprobante» a quien está cargando un certificado.
+ * Chequeo: `test/web/servidor-certificado-de-arca.test.ts`.
+ */
+async function conMensajeGenericoSiSeRepite<T>(
+  respuesta: Promise<Respuesta<T>>,
+): Promise<Respuesta<T>> {
+  const r = await respuesta;
+  if (r.ok || r.error.codigo !== "FISCAL_PEDIDO_REPETIDO") return r;
+  return {
+    ok: false,
+    error: respuestaDeFalla(
+      "FISCAL_PEDIDO_REPETIDO en una acción del certificado de ARCA (el mismo id con otros datos)",
+      dependenciasDeSesion.respuesta,
+    ),
+  };
+}
+
 export function generarElPedidoDeCertificado(entrada: unknown) {
-  return conLaEmpresa((contexto) => generarPedidoDeCertificado(dependencias, contexto, entrada));
+  return conMensajeGenericoSiSeRepite(
+    conLaEmpresa((contexto) => generarPedidoDeCertificado(dependencias, contexto, entrada)),
+  );
 }
 
 export function cargarElCertificado(entrada: unknown) {
-  return conLaEmpresa((contexto) => cargarCertificado(dependencias, contexto, entrada));
+  return conMensajeGenericoSiSeRepite(
+    conLaEmpresa((contexto) => cargarCertificado(dependencias, contexto, entrada)),
+  );
 }
 
 export type CertificadosParaLaPantalla = Readonly<{

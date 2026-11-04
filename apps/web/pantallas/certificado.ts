@@ -1,4 +1,7 @@
-import type { CertificadoParaMostrar } from "../ui/plantillas/configuracion-fiscal/modelo-de-certificado";
+import type {
+  CertificadoParaMostrar,
+  PedidoPendienteParaMostrar,
+} from "../ui/plantillas/configuracion-fiscal/modelo-de-certificado";
 import { hoyEnArgentina } from "./entrada-del-listado";
 
 /** Lo que entrega `estadoDeCertificados` de cada ambiente, con la forma que la pantalla lee (sin importar la composición). */
@@ -19,6 +22,7 @@ type CertificadoDelServidor =
       /** Un instante ISO 8601 en UTC. */
       venceEn: string;
       vencido: boolean;
+      pedidoPendiente: PedidoPendienteParaMostrar | null;
     }>;
 
 /**
@@ -35,5 +39,13 @@ export function aCertificadoParaMostrar(c: CertificadoDelServidor): CertificadoP
     cuitTitular: c.cuitTitular,
     vence: hoyEnArgentina(new Date(c.venceEn)),
     vencido: c.vencido,
+    pedidoPendiente:
+      c.pedidoPendiente === null
+        ? null
+        : {
+            certificadoId: c.pedidoPendiente.certificadoId,
+            alias: c.pedidoPendiente.alias,
+            cuitTitular: c.pedidoPendiente.cuitTitular,
+          },
   };
 }

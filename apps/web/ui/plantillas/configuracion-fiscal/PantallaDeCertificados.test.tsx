@@ -23,6 +23,7 @@ const VIGENTE: CertificadoParaMostrar = {
   cuitTitular: CUIT,
   vence: "2028-10-12",
   vencido: false,
+  pedidoPendiente: null,
 };
 const filas = (certificados: readonly CertificadoParaMostrar[]) =>
   armarLaListaDeAmbientes(certificados);

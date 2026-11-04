@@ -64,7 +64,3 @@
   background: var(--color-deshabilitado);
   color: var(--color-sobre-deshabilitado);
 }
-
-.sub {
-  color: var(--color-texto-suave);
-}

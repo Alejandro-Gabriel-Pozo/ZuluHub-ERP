@@ -12,11 +12,10 @@ import type { ArranqueDelAmbiente } from "./modelo-de-certificado";
 import type { PedidoGenerado } from "./PasoGenerarPedido.cliente";
 
 /**
- * El asistente del certificado de ARCA en Chromium (opción B): los tres pasos, el detalle del vigente y los errores. Lo que se verifica:
- * idempotencia (el `id` del pedido se genera al abrir el paso 1 y un reintento lo reenvía idéntico; doble toque = un solo envío),
- * «Guardando…», el pedido que se ve UNA vez (con «Copiar» y «Descargar»), el pegado del certificado contra el pedido del estado, el
- * error por la vía común (genérico con referencia) que deja volver a intentar, «Revisá los datos marcados.» en su campo, el alias del
- * reemplazo, axe y foco a 390 y 1280, y que nada del pedido ni del certificado llegue a la consola. Las acciones van simuladas.
+ * El asistente del certificado de ARCA en Chromium (opción B): los tres pasos, el detalle del vigente y los errores. Se verifica: el `id`
+ * del pedido es idempotente (un reintento lo reenvía idéntico; doble toque = un solo envío), «Guardando…», el pedido que se ve UNA vez
+ * («Copiar» y «Descargar»), el pegado contra el pedido del estado, el error genérico con referencia que deja reintentar, «Revisá los
+ * datos marcados.», el alias del reemplazo, axe y foco a 390 y 1280, y la consola limpia. La renovación en curso (D-94): `.pendiente.test.tsx`.
  */
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
@@ -63,6 +62,7 @@ const DETALLE: ArranqueDelAmbiente = {
     { rotulo: "Vence", valor: "12/10/2028" },
   ],
   cartel: { texto: "Vencido", tono: "peligro" },
+  pedidoPendiente: null,
 };
 
 const asistente = (arranque: ArranqueDelAmbiente) =>

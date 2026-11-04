@@ -237,6 +237,7 @@ describe.skipIf(base === null)(
         cuitTitular: "20123456786",
         venceEn: "2028-10-13T02:30:00.000Z",
         vencido: false,
+        pedidoPendiente: null,
       });
       expect(vigente).toMatchObject({ vence: "2028-10-12" });
     });

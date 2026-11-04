@@ -66,7 +66,8 @@ function PasosNumerados({ actual }: Readonly<{ actual: 1 | 2 | 3 }>) {
  * La pantalla de un ambiente del certificado de ARCA (opción B: asistente de 3 pasos por ambiente; dueño, 2026-11-03, cuestionario
  * «Certificado»): 1 generar el pedido, 2 el pedido para subir a ARCA (se ve UNA sola vez) y 3 cargar el certificado que devolvió ARCA.
  *  - Falta cargar: arranca en el paso 1. Pedido generado (pendiente): arranca en el paso 3, porque el pedido no se vuelve a ver.
- *    Vigente (o vencido): el detalle con «Reemplazar», que lleva al paso 1 con el alias del certificado actual.
+ *    Vigente (o vencido): el detalle con «Reemplazar», que lleva al paso 1 con el alias del certificado actual, y con una renovación en curso
+ *    (D-94) también «Cargar certificado», que lleva al paso 3 contra ese pedido.
  *  - El estado de cada ambiente viene del servidor; lo que se ve acá solo se mueve con lo que la persona hace en esta pantalla.
  *  - El certificado se carga contra el pedido que el estado informa como pendiente (o el que se acaba de generar), nunca otro.
  */
@@ -109,6 +110,14 @@ export function AsistenteDeCertificado({
     else router.push(rutaALaLista);
   }, [arranque.vista, router, rutaALaLista]);
 
+  // El pedido contra el que se carga el certificado: el del estado (D-94, también con un certificado vigente), nunca otro.
+  const pendiente =
+    arranque.vista === "detalle"
+      ? arranque.pedidoPendiente
+      : arranque.vista === "cargar"
+        ? arranque
+        : null;
+
   if (vista.paso === "detalle") {
     if (arranque.vista !== "detalle") return null;
     return (
@@ -128,6 +137,15 @@ export function AsistenteDeCertificado({
           >
             {texto({}, "fiscal.pantalla.config_cert_reemplazar")}
           </Boton>
+          {pendiente === null ? null : (
+            <Boton
+              alTocar={() => {
+                setVista({ paso: 3, certificadoId: pendiente.certificadoId });
+              }}
+            >
+              {texto({}, "fiscal.pantalla.config_cert_cargar")}
+            </Boton>
+          )}
         </div>
       </Pila>
     );
@@ -163,8 +181,8 @@ export function AsistenteDeCertificado({
       ) : null}
       {vista.paso === 3 ? (
         <>
-          {arranque.vista === "cargar" && arranque.certificadoId === vista.certificadoId ? (
-            <DatosParaLeer filas={arranque.datos} />
+          {pendiente?.certificadoId === vista.certificadoId ? (
+            <DatosParaLeer filas={pendiente.datos} />
           ) : null}
           <PasoCargarCertificado
             certificadoId={vista.certificadoId}

@@ -29,7 +29,16 @@ export type CertificadoParaMostrar =
       cuitTitular: string;
       vence: string;
       vencido: boolean;
+      /** La renovación en curso (D-94): el último pedido sin certificado, aunque ya haya uno vigente. */
+      pedidoPendiente: PedidoPendienteParaMostrar | null;
     }>;
+
+/** El pedido pendiente que informa el estado: lo que hace falta para cargar su certificado y para reconocerlo. */
+export type PedidoPendienteParaMostrar = Readonly<{
+  certificadoId: string;
+  alias: string;
+  cuitTitular: string;
+}>;
 
 /**
  * SUPUESTO del ingeniero (el prototipo B lo muestra así): Pruebas primero, Producción segundo. Sin cuestionario que lo nombre.
@@ -104,13 +113,17 @@ export type ArranqueDelAmbiente =
   | Readonly<{ vista: "generar"; aliasInicial: string }>
   /** Pedido generado: el paso 3 (el pedido no se vuelve a ver). */
   | Readonly<{ vista: "cargar"; certificadoId: string; datos: readonly DatoParaLeer[] }>
-  /** Vigente: el detalle, con «Reemplazar». */
+  /** Vigente: el detalle, con «Reemplazar» y, si hay una renovación en curso (D-94), «Cargar certificado» contra ese pedido. */
   | Readonly<{
       vista: "detalle";
       aliasInicial: string;
       datos: readonly DatoParaLeer[];
       cartel: ReturnType<typeof conCartel>;
+      pedidoPendiente: PedidoParaCargar | null;
     }>;
+
+/** El pedido contra el que se carga el certificado, con los datos que se leen en el paso 3. */
+type PedidoParaCargar = Readonly<{ certificadoId: string; datos: readonly DatoParaLeer[] }>;
 
 const dato = (clave: "alias" | "titular" | "vence", valor: string): DatoParaLeer => ({
   rotulo: texto(
@@ -126,16 +139,17 @@ const dato = (clave: "alias" | "titular" | "vence", valor: string): DatoParaLeer
 
 const cuit = (numero: string): string => formatearNumeroDeDocumento("CUIT", numero);
 
+const pedidoParaCargar = (p: PedidoPendienteParaMostrar): PedidoParaCargar => ({
+  certificadoId: p.certificadoId,
+  datos: [dato("alias", p.alias), dato("titular", cuit(p.cuitTitular))],
+});
+
 export function armarElAmbiente(c: CertificadoParaMostrar): ArranqueDelAmbiente {
   switch (c.situacion) {
     case "FALTA_CARGAR":
       return { vista: "generar", aliasInicial: "" };
     case "PEDIDO_GENERADO":
-      return {
-        vista: "cargar",
-        certificadoId: c.certificadoId,
-        datos: [dato("alias", c.alias), dato("titular", cuit(c.cuitTitular))],
-      };
+      return { vista: "cargar", ...pedidoParaCargar(c) };
     case "VIGENTE":
       return {
         vista: "detalle",
@@ -148,6 +162,7 @@ export function armarElAmbiente(c: CertificadoParaMostrar): ArranqueDelAmbiente 
           dato("vence", formatearFecha(c.vence)),
         ],
         cartel: conCartel(cartelDeUnCertificado({ ...c, vencido: c.vencido })),
+        pedidoPendiente: c.pedidoPendiente === null ? null : pedidoParaCargar(c.pedidoPendiente),
       };
   }
 }

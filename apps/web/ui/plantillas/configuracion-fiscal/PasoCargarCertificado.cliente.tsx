@@ -26,6 +26,10 @@ export type PropsDePasoCargarCertificado = Readonly<{
  * dos veces no escribe nada (`yaEstaba`), así que un reintento tras un corte es seguro y el primer envío fija lo pegado
  * (`useEnvioFijado`). Cada rechazo (no es el del pedido, venció, no se lee…) sale con el mensaje genérico y su referencia, y se puede
  * volver a pegar. Lo pegado vive solo en la pantalla: no se guarda en el navegador ni se registra.
+ *
+ * El campo NO lleva `name` a propósito: `leerCamposDeLaPagina` guarda en `sessionStorage` todo `main textarea[name]` al vencer la sesión,
+ * y un envío nativo antes de hidratar pondría el texto en la URL. Previene: que el certificado pegado se guarde o viaje en la URL.
+ * Chequeo: `PasoCargarCertificado.test.tsx` (falla si se le vuelve a poner `name`).
  */
 export function PasoCargarCertificado({
   certificadoId,
@@ -73,7 +77,6 @@ export function PasoCargarCertificado({
         />
         <textarea
           className={estilos["area"]}
-          name="certificado"
           rows={10}
           aria-labelledby={idDelTitulo}
           aria-invalid={marcado ? true : undefined}

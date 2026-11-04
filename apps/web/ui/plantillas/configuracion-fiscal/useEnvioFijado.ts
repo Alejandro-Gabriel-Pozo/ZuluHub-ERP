@@ -33,7 +33,8 @@ export type EnvioFijado<P, D> = Readonly<{
  * `inesperadoEsDefinitivo`: un INESPERADO devuelto como valor se dice como rechazo (con su referencia) y la pantalla queda libre para
  * reintentar, en vez de quedar «incierto». Solo para acciones idempotentes por `id` cuyos rechazos de negocio sin texto aprobado salen
  * como INESPERADO (las del certificado de ARCA): sin esto, un alias o un certificado mal pegados dejarían la pantalla en «Verificando…»
- * y bloqueada tras 3 reintentos. Chequeo: `PasoDelCertificado.test.tsx` (el error del servidor deja volver a intentar).
+ * y bloqueada tras 3 reintentos. Chequeo: `AsistenteDeCertificado.test.tsx`, líneas 350 (paso 3) y 380 (paso 1): el rechazo del servidor
+ * sin texto propio deja volver a intentar.
  */
 export type OpcionesDeEnvioFijado = Readonly<{ inesperadoEsDefinitivo?: boolean }>;
 
