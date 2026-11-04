@@ -43,6 +43,32 @@ describe("formaDeCrearSucursal", () => {
   });
 });
 
+describe("el contacto opcional (D-98) en las formas de crear y editar", () => {
+  const base = { sucursalId: ID, versionEsperada: 1, nombre: "Sur" };
+
+  it("viaja tal cual: ausente queda ausente, null borra y un texto malo pasa (validarlo es del dominio)", () => {
+    expect(formaDeCrearSucursal.parse({ nombre: "Sur" })).toEqual({ nombre: "Sur" });
+    expect(
+      formaDeCrearSucursal.parse({
+        nombre: "Sur",
+        telefono: "4321-0000",
+        correo: null,
+        web: "www",
+      }),
+    ).toEqual({ nombre: "Sur", telefono: "4321-0000", correo: null, web: "www" });
+    const editada = formaDeEditarSucursal.parse({ ...base, telefono: "", correo: null });
+    expect(editada).toEqual({ ...base, telefono: "", correo: null });
+    expect("web" in editada).toBe(false);
+  });
+
+  it("rechaza lo que no es texto ni null", () => {
+    for (const dato of ["telefono", "correo", "web"]) {
+      expect(formaDeEditarSucursal.safeParse({ ...base, [dato]: 5 }).success).toBe(false);
+      expect(formaDeCrearSucursal.safeParse({ nombre: "Sur", [dato]: true }).success).toBe(false);
+    }
+  });
+});
+
 describe("formaDeEditarSucursal", () => {
   it("devuelve la entrada del caso de uso", () => {
     const r = formaDeEditarSucursal.safeParse({

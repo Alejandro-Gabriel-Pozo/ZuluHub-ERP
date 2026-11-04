@@ -42,6 +42,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0016_comprobante_con_sucursal.sql",
         "0017_comprobante_sucursal_abierta.sql",
         "0018_pedido_de_certificado_unico.sql",
+        "0019_contacto_de_la_sucursal.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -65,6 +66,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0016_comprobante_con_sucursal.sql",
           "0017_comprobante_sucursal_abierta.sql",
           "0018_pedido_de_certificado_unico.sql",
+          "0019_contacto_de_la_sucursal.sql",
         ],
       });
     } finally {
@@ -193,6 +195,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0016_comprobante_con_sucursal.sql",
         "0017_comprobante_sucursal_abierta.sql",
         "0018_pedido_de_certificado_unico.sql",
+        "0019_contacto_de_la_sucursal.sql",
       ]);
     } finally {
       await aparte.destruir();

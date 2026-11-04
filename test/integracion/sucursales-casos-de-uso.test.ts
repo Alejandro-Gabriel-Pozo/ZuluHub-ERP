@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { LARGO_MAXIMO_DEL_EMAIL_DE_CONTACTO } from "../../src/primitivas/contacto/email";
+import { LARGO_MAXIMO_DEL_TELEFONO } from "../../src/primitivas/contacto/telefono";
+import { LARGO_MAXIMO_DE_LA_WEB } from "../../src/primitivas/contacto/web";
 import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import {
@@ -45,6 +48,12 @@ const base = inject("baseDePruebas");
 
 type Fila = Record<string, unknown>;
 const cualquierTexto = expect.any(String) as string;
+const SIN_CONTACTO = { telefono: null, correo: null, web: null };
+const CONTACTO = {
+  telefono: "+54 11 4321-0000",
+  correo: "centro@hotel.com",
+  web: "hotel.com",
+};
 
 describe.skipIf(base === null)(
   "sucursales: los casos de uso y las consultas contra una base real",
@@ -243,6 +252,76 @@ describe.skipIf(base === null)(
         expect(await sucursal(primera.valor.sucursalId)).toMatchObject({ version: 1 });
       });
 
+      it("con contacto: queda en la sucursal nueva, limpio, y la auditoría lo registra; sin contacto, la auditoría es la de siempre", async () => {
+        const e = await escenario();
+        const r = await casos.crearSucursal(e.ctx, {
+          nombre: "Sucursal norte",
+          telefono: " +54 11 4321-0000 ",
+          correo: "Centro@Hotel.com",
+          web: "https://hotel.com",
+        });
+        if (!r.ok) throw new Error("tenía que salir bien");
+        expect(await sucursal(r.valor.sucursalId)).toMatchObject({
+          telefono: CONTACTO.telefono,
+          correo: CONTACTO.correo,
+          web: CONTACTO.web,
+          version: 1,
+        });
+        // Solo el teléfono, y los otros dos en blanco o nulos: lo vacío no se registra.
+        const parcial = await casos.crearSucursal(e.ctx, {
+          nombre: "Sucursal sur",
+          telefono: "4000-1111",
+          correo: "  ",
+          web: null,
+        });
+        if (!parcial.ok) throw new Error("tenía que salir bien");
+        expect(await sucursal(parcial.valor.sucursalId)).toMatchObject({
+          telefono: "4000-1111",
+          correo: null,
+          web: null,
+        });
+        expect((await auditoria(e.empresa, "SUCURSAL_CREADA")).map((a) => a["despues"])).toEqual([
+          { nombre: "Sucursal norte", activa: true, ...CONTACTO },
+          { nombre: "Sucursal sur", activa: true, telefono: "4000-1111" },
+        ]);
+      });
+
+      it("un teléfono, un correo o una web inválidos no crean nada ni dejan auditoría", async () => {
+        const e = await escenario();
+        const antes = await foto(e.empresa);
+        for (const [dato, malo, error] of [
+          ["telefono", "x".repeat(41), "TELEFONO_DE_SUCURSAL_INVALIDO"],
+          ["telefono", "43\n21", "TELEFONO_DE_SUCURSAL_INVALIDO"],
+          ["correo", "sin-arroba", "CORREO_DE_SUCURSAL_INVALIDO"],
+          ["web", "javascript:alert(1)", "WEB_DE_SUCURSAL_INVALIDA"],
+        ] as const) {
+          expect(
+            await casos.crearSucursal(e.ctx, { nombre: "Sucursal norte", [dato]: malo }),
+            `${dato}: ${malo}`,
+          ).toEqual({ ok: false, error });
+        }
+        expect(await foto(e.empresa)).toBe(antes);
+      });
+
+      it("si ya había una sucursal con ese nombre, el contacto pedido NO la pisa ni se compara", async () => {
+        const e = await escenario();
+        const primera = await casos.crearSucursal(e.ctx, { nombre: "Sucursal norte", ...CONTACTO });
+        const segunda = await casos.crearSucursal(e.ctx, {
+          nombre: "sucursal NORTE",
+          telefono: "9999-9999",
+          correo: "otro@hotel.com",
+          web: "https://otro.com",
+        });
+        if (!primera.ok || !segunda.ok) throw new Error("tenían que salir bien");
+        expect(segunda.valor).toEqual({ sucursalId: primera.valor.sucursalId, yaExistia: true });
+        expect(await sucursal(primera.valor.sucursalId)).toMatchObject({ ...CONTACTO, version: 1 });
+        expect(await auditoria(e.empresa, "SUCURSAL_CREADA")).toHaveLength(1);
+        // Con un contacto inválido, el alta repetida se rechaza igual que la primera vez (se valida antes de mirar si existe).
+        expect(
+          await casos.crearSucursal(e.ctx, { nombre: "Sucursal norte", correo: "sin-arroba" }),
+        ).toEqual({ ok: false, error: "CORREO_DE_SUCURSAL_INVALIDO" });
+      });
+
       it("el nombre repetido no distingue mayúsculas ni cómo se escribe la letra con acento", async () => {
         const e = await escenario();
         const primera = await casos.crearSucursal(e.ctx, { nombre: "Café Norte" });
@@ -351,9 +430,14 @@ describe.skipIf(base === null)(
         expect(r).toEqual({ ok: true, valor: { version: 2 } });
       });
 
-      it("idempotente: repetir la edición ya aplicada devuelve la versión vigente y no escribe ni audita", async () => {
+      it("idempotente: repetir la edición ya aplicada (nombre y contacto) devuelve la versión vigente y no escribe ni audita", async () => {
         const e = await escenario();
-        const entrada = { sucursalId: e.sucursal, versionEsperada: 1, nombre: "Casa matriz" };
+        const entrada = {
+          sucursalId: e.sucursal,
+          versionEsperada: 1,
+          nombre: "Casa matriz",
+          ...CONTACTO,
+        };
         expect(await casos.editarSucursal(e.ctx, entrada)).toEqual({
           ok: true,
           valor: { version: 2 },
@@ -368,8 +452,255 @@ describe.skipIf(base === null)(
           ok: true,
           valor: { version: 2 },
         });
+        // El mismo contacto escrito de otro modo (blancos, mayúsculas) o sin pedirlo tampoco cambia nada.
+        expect(
+          await casos.editarSucursal(e.ctx, {
+            ...entrada,
+            telefono: ` ${CONTACTO.telefono} `,
+            correo: CONTACTO.correo.toUpperCase(),
+            web: "HTTPS://Hotel.com/",
+          }),
+        ).toEqual({ ok: true, valor: { version: 2 } });
+        expect(
+          await casos.editarSucursal(e.ctx, {
+            sucursalId: e.sucursal,
+            versionEsperada: 1,
+            nombre: "Casa matriz",
+          }),
+        ).toEqual({ ok: true, valor: { version: 2 } });
         expect(await foto(e.empresa)).toBe(antes);
         expect(await auditoria(e.empresa, "SUCURSAL_EDITADA")).toHaveLength(1);
+      });
+
+      it("carga el contacto: sube una sola versión, lo deja limpio y audita el antes (vacío) y el después", async () => {
+        const e = await escenario();
+        const r = await casos.editarSucursal(e.ctx, {
+          sucursalId: e.sucursal,
+          versionEsperada: 1,
+          nombre: "Casa central",
+          telefono: " +54 11 4321-0000 ",
+          correo: "Centro@Hotel.com",
+          web: "https://hotel.com",
+        });
+        expect(r).toEqual({ ok: true, valor: { version: 2 } });
+        expect(await sucursal(e.sucursal)).toMatchObject({
+          ...CONTACTO,
+          nombre: "Casa central",
+          version: 2,
+        });
+        expect(await auditoria(e.empresa, "SUCURSAL_EDITADA")).toEqual([
+          {
+            accion: "SUCURSAL_EDITADA",
+            actor_persona_id: e.gerente,
+            entidad: "sucursal",
+            entidad_id: e.sucursal,
+            antes: SIN_CONTACTO,
+            despues: CONTACTO,
+          },
+        ]);
+      });
+
+      it("la web se guarda sin esquema (D-99): con o sin http(s)://, en mayúsculas o con barra final, queda igual", async () => {
+        const e = await escenario();
+        let version = 1;
+        for (const escrito of [
+          "https://WWW.HotelCentro.com/",
+          "www.hotelcentro.com",
+          "HTTP://www.hotelcentro.com/",
+        ]) {
+          const r = await casos.editarSucursal(e.ctx, {
+            sucursalId: e.sucursal,
+            versionEsperada: version,
+            nombre: "Casa central",
+            web: escrito,
+          });
+          expect(r.ok, escrito).toBe(true);
+          if (r.ok) version = r.valor.version;
+          expect((await sucursal(e.sucursal))?.["web"], escrito).toBe("www.hotelcentro.com");
+        }
+        // Escribirla de tres maneras fue una sola edición: lo demás era lo mismo.
+        expect(version).toBe(2);
+        expect((await auditoria(e.empresa, "SUCURSAL_EDITADA")).map((a) => a["despues"])).toEqual([
+          { web: "www.hotelcentro.com" },
+        ]);
+      });
+
+      it("lo que no se pide no se toca (ni se audita); lo que se pide vacío o null se borra, con su antes y su después", async () => {
+        const e = await escenario();
+        await casos.editarSucursal(e.ctx, {
+          sucursalId: e.sucursal,
+          versionEsperada: 1,
+          nombre: "Casa central",
+          ...CONTACTO,
+        });
+        // Solo el nombre: el contacto sigue como estaba y la auditoría solo trae el nombre.
+        await casos.editarSucursal(e.ctx, {
+          sucursalId: e.sucursal,
+          versionEsperada: 2,
+          nombre: "Matriz",
+        });
+        expect(await sucursal(e.sucursal)).toMatchObject({
+          ...CONTACTO,
+          nombre: "Matriz",
+          version: 3,
+        });
+        // Solo el teléfono: los otros dos siguen.
+        await casos.editarSucursal(e.ctx, {
+          sucursalId: e.sucursal,
+          versionEsperada: 3,
+          nombre: "Matriz",
+          telefono: "4000-1111",
+        });
+        expect(await sucursal(e.sucursal)).toMatchObject({
+          ...CONTACTO,
+          telefono: "4000-1111",
+          version: 4,
+        });
+        // Vacío (texto en blanco) y null borran; el que ya estaba vacío no cuenta como cambio.
+        const borrar = await casos.editarSucursal(e.ctx, {
+          sucursalId: e.sucursal,
+          versionEsperada: 4,
+          nombre: "Matriz",
+          telefono: "   ",
+          correo: null,
+        });
+        expect(borrar).toEqual({ ok: true, valor: { version: 5 } });
+        expect(await sucursal(e.sucursal)).toMatchObject({
+          telefono: null,
+          correo: null,
+          web: CONTACTO.web,
+          version: 5,
+        });
+        expect(
+          (await auditoria(e.empresa, "SUCURSAL_EDITADA")).map((a) => [a["antes"], a["despues"]]),
+        ).toEqual([
+          [{ ...SIN_CONTACTO }, CONTACTO],
+          [{ nombre: "Casa central" }, { nombre: "Matriz" }],
+          [{ telefono: CONTACTO.telefono }, { telefono: "4000-1111" }],
+          [
+            { telefono: "4000-1111", correo: CONTACTO.correo },
+            { telefono: null, correo: null },
+          ],
+        ]);
+      });
+
+      it("un teléfono, un correo o una web inválidos dan su error y no escriben ni auditan nada", async () => {
+        const e = await escenario();
+        const antes = await foto(e.empresa);
+        for (const [dato, malo, error] of [
+          ["telefono", "x".repeat(41), "TELEFONO_DE_SUCURSAL_INVALIDO"],
+          ["telefono", "43\t21", "TELEFONO_DE_SUCURSAL_INVALIDO"],
+          ["correo", "sin-arroba", "CORREO_DE_SUCURSAL_INVALIDO"],
+          ["correo", "con espacio@hotel.com", "CORREO_DE_SUCURSAL_INVALIDO"],
+          ["web", "javascript:alert(1)", "WEB_DE_SUCURSAL_INVALIDA"],
+          ["web", "ftp://hotel.com", "WEB_DE_SUCURSAL_INVALIDA"],
+        ] as const) {
+          expect(
+            await casos.editarSucursal(e.ctx, {
+              sucursalId: e.sucursal,
+              versionEsperada: 1,
+              nombre: "Casa central",
+              [dato]: malo,
+            }),
+            `${dato}: ${malo}`,
+          ).toEqual({ ok: false, error });
+        }
+        expect(await foto(e.empresa)).toBe(antes);
+      });
+
+      it("los largos máximos entran y un carácter más no", async () => {
+        const e = await escenario();
+        const maximos = {
+          telefono: "9".repeat(LARGO_MAXIMO_DEL_TELEFONO),
+          correo: `${"a".repeat(LARGO_MAXIMO_DEL_EMAIL_DE_CONTACTO - 6)}@b.com`,
+          web: `${"a".repeat(LARGO_MAXIMO_DE_LA_WEB - 4)}.com`,
+        };
+        const base = { sucursalId: e.sucursal, nombre: "Casa central" };
+        expect(
+          await casos.editarSucursal(e.ctx, { ...base, versionEsperada: 1, ...maximos }),
+        ).toEqual({
+          ok: true,
+          valor: { version: 2 },
+        });
+        expect(await sucursal(e.sucursal)).toMatchObject(maximos);
+        for (const [dato, error] of [
+          ["telefono", "TELEFONO_DE_SUCURSAL_INVALIDO"],
+          ["correo", "CORREO_DE_SUCURSAL_INVALIDO"],
+          ["web", "WEB_DE_SUCURSAL_INVALIDA"],
+        ] as const) {
+          expect(
+            await casos.editarSucursal(e.ctx, {
+              ...base,
+              versionEsperada: 2,
+              [dato]: `${maximos[dato]}x`,
+            }),
+          ).toEqual({ ok: false, error });
+        }
+      });
+
+      it("con una versión desactualizada, el contacto no se guarda: VERSION_DESACTUALIZADA", async () => {
+        const e = await escenario();
+        await casos.editarSucursal(e.ctx, {
+          sucursalId: e.sucursal,
+          versionEsperada: 1,
+          nombre: "Matriz",
+        });
+        const antes = await foto(e.empresa);
+        expect(
+          await casos.editarSucursal(e.ctx, {
+            sucursalId: e.sucursal,
+            versionEsperada: 1,
+            nombre: "Matriz",
+            ...CONTACTO,
+          }),
+        ).toEqual({ ok: false, error: "VERSION_DESACTUALIZADA" });
+        expect(await foto(e.empresa)).toBe(antes);
+      });
+
+      it("aislamiento: editar el contacto de una sucursal de otra empresa da SUCURSAL_NO_ENCONTRADA y no la toca; cada empresa ve solo el suyo", async () => {
+        const e = await escenario();
+        const otra = await escenario(e.tenant);
+        await casos.editarSucursal(otra.ctx, {
+          sucursalId: otra.sucursal,
+          versionEsperada: 1,
+          nombre: "Casa central",
+          telefono: "1111-1111",
+        });
+        const antes = await foto(otra.empresa);
+        expect(
+          await casos.editarSucursal(e.ctx, {
+            sucursalId: otra.sucursal,
+            versionEsperada: 2,
+            nombre: "Casa central",
+            ...CONTACTO,
+          }),
+        ).toEqual({ ok: false, error: "SUCURSAL_NO_ENCONTRADA" });
+        expect(await foto(otra.empresa)).toBe(antes);
+        await casos.editarSucursal(e.ctx, {
+          sucursalId: e.sucursal,
+          versionEsperada: 1,
+          nombre: "Casa central",
+          ...CONTACTO,
+        });
+        const suyo = await consultas.fichaDeSucursal(e.ctx, { sucursalId: e.sucursal });
+        expect(suyo.ok && suyo.valor?.contacto).toEqual(CONTACTO);
+        const deLaOtra = await consultas.listarSucursales(otra.ctx, { incluirInactivas: true });
+        expect(deLaOtra.ok && deLaOtra.valor.map((s) => s.contacto)).toEqual([
+          { ...SIN_CONTACTO, telefono: "1111-1111" },
+        ]);
+      });
+
+      it("el administrador también carga el contacto", async () => {
+        const e = await escenario();
+        const admin = await miembro(e, "ADMINISTRADOR");
+        expect(
+          await casos.editarSucursal(admin.ctx, {
+            sucursalId: e.sucursal,
+            versionEsperada: 1,
+            nombre: "Casa central",
+            ...CONTACTO,
+          }),
+        ).toEqual({ ok: true, valor: { version: 2 } });
       });
 
       it("con una versión desactualizada da VERSION_DESACTUALIZADA y no cambia nada", async () => {
@@ -744,12 +1075,15 @@ describe.skipIf(base === null)(
           const antes = await foto(e.empresa);
           const sinPermisoEsperado = { ok: false, error: "SIN_PERMISO" };
 
-          expect(await casos.crearSucursal(ctx, { nombre: "Otra" })).toEqual(sinPermisoEsperado);
+          expect(await casos.crearSucursal(ctx, { nombre: "Otra", ...CONTACTO })).toEqual(
+            sinPermisoEsperado,
+          );
           expect(
             await casos.editarSucursal(ctx, {
               sucursalId: norte,
               versionEsperada: 1,
               nombre: "Cambiada",
+              ...CONTACTO,
             }),
           ).toEqual(sinPermisoEsperado);
           expect(await casos.desactivarSucursal(ctx, { sucursalId: norte })).toEqual(
@@ -908,6 +1242,7 @@ describe.skipIf(base === null)(
               activa: true,
               version: 1,
               horaDeCorte: "00:00",
+              contacto: SIN_CONTACTO,
               zonaHoraria: "America/Argentina/Buenos_Aires",
             },
             {
@@ -916,6 +1251,7 @@ describe.skipIf(base === null)(
               activa: true,
               version: 1,
               horaDeCorte: "00:00",
+              contacto: SIN_CONTACTO,
               zonaHoraria: "America/Argentina/Buenos_Aires",
             },
             {
@@ -924,10 +1260,38 @@ describe.skipIf(base === null)(
               activa: true,
               version: 1,
               horaDeCorte: "00:00",
+              contacto: SIN_CONTACTO,
               zonaHoraria: "America/Argentina/Buenos_Aires",
             },
           ],
         });
+      });
+
+      it("trae el contacto de cada sucursal (null en el dato que no tiene); el selector de sucursal (sucursalesElegibles) NO lo trae", async () => {
+        const e = await escenario();
+        const norte = await sucursalNueva(e, "Norte");
+        await casos.editarSucursal(e.ctx, {
+          sucursalId: norte,
+          versionEsperada: 1,
+          nombre: "Norte",
+          telefono: CONTACTO.telefono,
+          web: CONTACTO.web,
+        });
+        const r = await consultas.listarSucursales(e.ctx, { incluirInactivas: true });
+        expect(r.ok && r.valor.map((s) => [s.nombre, s.contacto])).toEqual([
+          ["Casa central", SIN_CONTACTO],
+          ["Norte", { telefono: CONTACTO.telefono, correo: null, web: CONTACTO.web }],
+        ]);
+        const admin = await miembro(e, "ADMINISTRADOR");
+        for (const ctx of [e.ctx, admin.ctx]) {
+          expect(await consultas.sucursalesElegibles(ctx)).toEqual({
+            ok: true,
+            valor: [
+              { id: e.sucursal, nombre: "Casa central", activa: true },
+              { id: norte, nombre: "Norte", activa: true },
+            ],
+          });
+        }
       });
 
       it("devuelve la zona horaria que tenga la empresa", async () => {
@@ -1007,6 +1371,7 @@ describe.skipIf(base === null)(
             activa: true,
             version: 1,
             horaDeCorte: "00:00",
+            contacto: SIN_CONTACTO,
             zonaHoraria: "America/Argentina/Buenos_Aires",
           },
         });
@@ -1024,6 +1389,7 @@ describe.skipIf(base === null)(
             activa: false,
             version: 2,
             horaDeCorte: "00:00",
+            contacto: SIN_CONTACTO,
             zonaHoraria: "America/Argentina/Buenos_Aires",
           },
         });

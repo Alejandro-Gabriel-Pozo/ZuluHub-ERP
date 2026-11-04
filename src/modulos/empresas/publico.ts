@@ -11,6 +11,11 @@ export { datosDeJornada } from "./datos-de-jornada";
 export { DECLARACIONES as DECLARACIONES_DE_EMPRESAS } from "./casos-de-uso/declaraciones";
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS } from "./consultas/declaraciones";
 export {
+  type CambiosDeContacto,
+  type ContactoDeSucursal,
+  type ErrorDeContactoDeSucursal,
+} from "./dominio/contacto-de-sucursal";
+export {
   LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL,
   decidirAltaConNombreOcupado,
   decidirDesactivacion,
@@ -76,16 +81,18 @@ export {
   COLUMNAS_DE_EMPRESAS,
   ERRORES_DE_EMPRESAS_POR_RESTRICCION,
   crearRepositorioDeEmpresas,
-  crearRepositorioDeSucursales,
-  type AltaDeSucursal,
   type AltaVencida,
   type EmpresaConCreadoEn,
   type EmpresasDb,
   type ErrorDeRepositorioDeEmpresas,
   type NuevaEmpresa,
   type RepositorioDeEmpresas,
-  type RepositorioDeSucursales,
 } from "./persistencia/repositorios";
+export {
+  crearRepositorioDeSucursales,
+  type AltaDeSucursal,
+  type RepositorioDeSucursales,
+} from "./persistencia/repositorio-de-sucursales";
 export {
   crearLecturaDeSucursalBloqueada,
   type LecturaDeSucursalBloqueada,
