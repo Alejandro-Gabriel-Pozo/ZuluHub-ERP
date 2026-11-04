@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   LARGO_MAXIMO_DE_LA_WEB,
+  PATRON_DE_HOST_CON_BARRA,
   enlaceDeLaWeb,
   webDesdeTexto,
   webParaImprimir,
@@ -45,6 +46,36 @@ describe("web: la forma canónica (sin esquema)", () => {
     for (const entrada of ["HTTPS://Hotel.com/", "hotel.com/Centro", "x.y.z:81/a?b#c"]) {
       const una = guardada(entrada);
       expect(guardada(una)).toBe(una);
+    }
+  });
+});
+
+describe("web: el esquema solo se quita al principio", () => {
+  it("un «https://» en la ruta o la consulta es parte del texto y se conserva", () => {
+    expect(guardada("hotel.com/ir?u=https://otra.com")).toBe("hotel.com/ir?u=https://otra.com");
+    expect(guardada("HTTPS://hotel.com/http://x")).toBe("hotel.com/http://x");
+    expect(guardada("hotel.com#https://")).toBe("hotel.com#https://");
+  });
+});
+
+describe("web: el patrón «solo el host y una barra» que la base repite negado", () => {
+  it("calza con host (y puerto) más una única barra final, o con la barra sola", () => {
+    for (const calza of ["hotel.com/", "hotel.com:8080/", "a/", "/"]) {
+      expect(PATRON_DE_HOST_CON_BARRA.test(calza), calza).toBe(true);
+    }
+  });
+
+  it("no calza si hay algo más: otra barra, ruta, consulta, fragmento, o ninguna barra", () => {
+    for (const nocalza of [
+      "hotel.com",
+      "hotel.com//",
+      "hotel.com/a/",
+      "hotel.com/?x",
+      "hotel.com?x/",
+      "hotel.com#/",
+      "",
+    ]) {
+      expect(PATRON_DE_HOST_CON_BARRA.test(nocalza), nocalza).toBe(false);
     }
   });
 });

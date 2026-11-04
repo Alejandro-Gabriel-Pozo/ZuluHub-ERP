@@ -30,7 +30,7 @@
  * - Código de error: `WEB_INVALIDA` (la sucursal lo expone como `WEB_DE_SUCURSAL_INVALIDA`).
  * - Ejemplos válidos (entrada → se guarda): "www.hotelcentro.com" → "www.hotelcentro.com"; " HTTPS://WWW.Hotel.COM/ " → "www.hotel.com";
  *   "http://hotel.com/Centro" → "hotel.com/Centro"; "hotel.com:8080/x?y=1" → igual. Inválidos: "", "https://", "ftp://hotel.com",
- *   "javascript:alert(1)", "hotel", "ho tel.com", "https://hotel.com\n", 201 caracteres sin el esquema.
+ *   "javascript:alert(1)", "hotel", "ho tel.com", "hotel.com/a\nb" (salto de línea adentro; en los extremos se recorta), 201 caracteres sin el esquema.
  *
  * Lo que repite el CHECK `sucursal_web_ck` (0019): el patrón de `PATRON_DE_LA_WEB`, la regla de la barra final, el tope y la clase
  * de control; un test de integración compara los dos (`contacto-check.test.ts`).

@@ -105,6 +105,8 @@ describe("contactoQueCambia y contactoDeLosDatos", () => {
       correo: null,
       web: "hotel.com",
     });
+    expect(contactoDeLosDatos(actual, { telefono: "otro" })).toEqual({ telefono: "4321-0000" });
+    expect(contactoDeLosDatos(actual, { telefono: null, correo: null, web: null })).toEqual(actual);
     expect(contactoDeLosDatos(actual, {})).toEqual({});
   });
 });
