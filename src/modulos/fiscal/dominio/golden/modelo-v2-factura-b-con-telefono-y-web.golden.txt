@@ -33,6 +33,7 @@
     "domicilio": null,
     "leyenda": "A CONSUMIDOR FINAL"
   },
+  "modoDePrecio": "IVA_INCLUIDO",
   "renglones": [
     {
       "descripcion": "Torta",

@@ -14,6 +14,7 @@ import {
   type LetraDeComprobante,
   type TipoDeComprobante,
 } from "./comprobante-emitido";
+import type { ModoDePrecio } from "./calculo-de-renglones";
 import type { Ambiente, RenglonCalculado } from "./comprobante-nuevo";
 import { contactoImpreso, type ContactoCongelado, type ContactoImpreso } from "./contacto-impreso";
 import type { CondicionIibb } from "./datos-fiscales";
@@ -47,8 +48,8 @@ import { transparenciaFiscal, type TransparenciaFiscalImpresa } from "./transpar
  * - 1: el formato anterior a los textos legales de la RG 5614/2024. Se conserva SIN CAMBIOS: lo sellado con 1
  *   reimprime idéntico (golden `modelo-factura-b-marca-*` y `modelo-nota-de-credito-a-produccion`). No incluía la
  *   leyenda «A CONSUMIDOR FINAL» aunque la norma la pedía antes; no se corrige por diseño.
- * - 2: suma la leyenda del receptor consumidor final, el bloque de transparencia fiscal de la B y el contacto congelado
- *   de la sucursal (D-98).
+ * - 2: suma la leyenda del receptor consumidor final, el bloque de transparencia fiscal de la B, el contacto congelado
+ *   de la sucursal (D-98) y el modo de precio.
  * Previene que reimprimir un AUTORIZADO muestre textos que su original no tenía. Sin migración: la columna es
  * `smallint` con `CHECK (>= 1)` (0009) y `emitir-comprobante` sella `VERSION_DE_REPRESENTACION_ACTUAL`. Chequeo:
  * los golden de la 1 y de la 2 y la prueba de versiones desconocidas de `modelo-de-impresion.test.ts`.
@@ -66,6 +67,12 @@ const PRIMERA_VERSION_CON_TEXTOS_LEGALES = 2;
  * norma y una versión futura puede cambiar uno sin tocar el otro. La 1 no lo lleva y reimprime idéntica.
  */
 const PRIMERA_VERSION_CON_CONTACTO = 2;
+
+/**
+ * Primera versión que expone el modo de precio, para que la vista elija el encabezado de la columna de precio. Aparte de las
+ * otras dos por la misma razón que el contacto: una versión futura puede cambiar una sin tocar las demás. La 1 no lo lleva.
+ */
+const PRIMERA_VERSION_CON_MODO_DE_PRECIO = 2;
 
 /**
  * Leyenda del receptor (versión 2), copiada de la norma sin parafrasear; si ARCA la cambia, es una versión nueva.
@@ -128,6 +135,8 @@ export type ComprobanteParaImprimir = Readonly<{
   cae: string;
   caeVence: FechaCivil;
   versionDeRepresentacion: number;
+  /** Cómo se cargaron los precios unitarios, tal como se guardó (la C siempre es `IVA_INCLUIDO`). */
+  modoDePrecio: ModoDePrecio;
   /** El contacto de la sucursal congelado al nacer el comprobante; NUNCA el de la sucursal de hoy (D-98). */
   contacto: ContactoCongelado;
 }>;
@@ -194,6 +203,11 @@ export type ModeloImpreso = Readonly<{
      */
     leyenda?: string;
   }>;
+  /**
+   * Versión 2 en adelante: si los precios unitarios de los renglones llevan el IVA incluido o van sin IVA. Lo guardó el
+   * comprobante; la C siempre es `IVA_INCLUIDO`. Sin rótulos: el texto del encabezado lo elige la vista. Ausente en la versión 1.
+   */
+  modoDePrecio?: ModoDePrecio;
   renglones: readonly Readonly<{
     descripcion: string;
     cantidad: string;
@@ -305,6 +319,7 @@ export function modeloDeImpresion(
     comprobante.versionDeRepresentacion >= PRIMERA_VERSION_CON_CONTACTO
       ? contactoImpreso(comprobante.contacto)
       : null;
+  const conModoDePrecio = comprobante.versionDeRepresentacion >= PRIMERA_VERSION_CON_MODO_DE_PRECIO;
   const bloqueDeTransparencia = conTextosLegales
     ? transparenciaFiscal(totales, comprobante.receptor, comprobante.total.moneda)
     : null;
@@ -339,6 +354,7 @@ export function modeloDeImpresion(
         ? { leyenda: LEYENDA_A_CONSUMIDOR_FINAL }
         : {}),
     },
+    ...(conModoDePrecio ? { modoDePrecio: comprobante.modoDePrecio } : {}),
     renglones: comprobante.renglones.map((r) => ({
       descripcion: r.descripcion,
       cantidad: cantidadATexto(r.cantidad),

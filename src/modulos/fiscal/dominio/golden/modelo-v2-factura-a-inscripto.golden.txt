@@ -33,6 +33,7 @@
     "condicionIva": "RESPONSABLE_INSCRIPTO",
     "domicilio": "Av. Siempreviva 742"
   },
+  "modoDePrecio": "IVA_DISCRIMINADO",
   "renglones": [
     {
       "descripcion": "Pan",
