@@ -12,6 +12,7 @@ import {
 } from "../../../test/utilidades/arca";
 import { credencialDePrueba } from "../../../test/utilidades/arca-credencial";
 import { servidorFalso } from "../../../test/utilidades/arca-servidor";
+import { respuestaDePtosVentaDelManual } from "../../../test/utilidades/arca-del-manual";
 import { solicitudDeAutorizacion } from "../../../test/utilidades/emision-falsa";
 import { crearTransporteHttp } from "./transporte-http";
 import {
@@ -213,6 +214,7 @@ function armar(
     ultimoAutorizado: async (...a) => sinSecretos(await real.ultimoAutorizado(...a)),
     autorizar: async (...a) => sinSecretos(await real.autorizar(...a)),
     consultar: async (...a) => sinSecretos(await real.consultar(...a)),
+    puntosDeVenta: async (...a) => sinSecretos(await real.puntosDeVenta(...a)),
     estadoDelServicio: async () => sinSecretos(await real.estadoDelServicio()),
     parametros: async (...a) => sinSecretos(await real.parametros(...a)),
   };
@@ -411,6 +413,78 @@ describe("las operaciones del puerto, con las respuestas reales", () => {
       },
     });
     expect(transporte.pedidos).toEqual([]);
+  });
+
+  describe("FEParamGetPtosVenta (D-77): la respuesta está CONSTRUIDA DEL MANUAL, no grabada; SIN VERIFICAR contra ARCA real", () => {
+    const delManual = respuestaHttp(
+      respuestaDePtosVentaDelManual({
+        puntos: [
+          { Nro: "1", EmisionTipo: "CAE", Bloqueado: "N" },
+          { Nro: "2", EmisionTipo: "CAE", Bloqueado: "S", FchBaja: "20260131" },
+        ],
+      }),
+    );
+
+    it("pide la operación al WSFE de PRODUCCIÓN con el ticket guardado y la CUIT que se le pasa, y devuelve los puntos de venta", async () => {
+      const { adaptador, transporte } = armar({
+        ambiente: "PRODUCCION",
+        transporte: wsfe(["FEParamGetPtosVenta", delManual]),
+      });
+      expect(await adaptador.puntosDeVenta(CUIT)).toEqual({
+        ok: true,
+        valor: [
+          { numero: 1, bloqueado: false, dadoDeBaja: false },
+          { numero: 2, bloqueado: true, dadoDeBaja: true },
+        ],
+      });
+      expect(transporte.pedidos).toEqual([
+        {
+          url: "https://servicios1.afip.gov.ar/wsfev1/service.asmx",
+          accionSoap: "http://ar.gov.afip.dif.FEV1/FEParamGetPtosVenta",
+          cuerpo: conSecretos(grabacion(1, "011", "pedido").replaceAll("TiposDoc", "PtosVenta")),
+          limiteEnMs: 15_000,
+        },
+      ]);
+    });
+
+    it("se manda UNA vez: sin reintento ni reenvío, sea cual sea la respuesta", async () => {
+      for (const respuesta of [
+        delManual,
+        respuestaHttp("no es xml", 500),
+        respuestaHttp(respuestaDePtosVentaDelManual({ errores: [{ codigo: 500, texto: "m" }] })),
+      ]) {
+        const { adaptador, transporte } = armar({
+          transporte: wsfe(["FEParamGetPtosVenta", respuesta]),
+        });
+        await adaptador.puntosDeVenta(CUIT);
+        expect(transporte.veces("FEParamGetPtosVenta")).toBe(1);
+      }
+    });
+
+    it("sin ticket ni certificado: el error de emisión, sin llamar a WSFE", async () => {
+      const { adaptador, transporte } = armar({ ticket: null, credencial: null });
+      expect(await adaptador.puntosDeVenta(CUIT)).toEqual({
+        ok: false,
+        error: {
+          codigo: "SIN_CREDENCIAL",
+          detalle: "el emisor no tiene un certificado vigente en este ambiente",
+        },
+      });
+      expect(transporte.pedidos).toEqual([]);
+    });
+
+    it("sin respuesta del transporte (tiempo agotado, conexión que no sale): servicio no disponible, no una lista vacía", async () => {
+      for (const respuesta of [
+        { tipo: "SIN_RESPUESTA", motivo: "TIEMPO_AGOTADO" },
+        { tipo: "NO_SALIO", motivo: "ECONNREFUSED" },
+      ] as const) {
+        const { adaptador } = armar({ transporte: wsfe(["FEParamGetPtosVenta", respuesta]) });
+        expect(await adaptador.puntosDeVenta(CUIT)).toMatchObject({
+          ok: false,
+          error: { codigo: "SERVICIO_NO_DISPONIBLE" },
+        });
+      }
+    });
   });
 
   it("cumple el puerto de emisión", () => {
@@ -1136,6 +1210,17 @@ describe("la primera llamada exitosa verifica la autorización del certificado (
       expect((await m.adaptador.parametros(cuit, "TiposDoc")).ok).toBe(true);
       expect(m.verificacion.anotadas).toEqual([]);
     }
+  });
+
+  it("los puntos de venta de ARCA tampoco verifican: es otra consulta de parámetros con la CUIT de quien llama", async () => {
+    const m = armar({
+      transporte: wsfe([
+        "FEParamGetPtosVenta",
+        respuestaHttp(respuestaDePtosVentaDelManual({ puntos: [] })),
+      ]),
+    });
+    expect((await m.adaptador.puntosDeVenta(CUIT)).ok).toBe(true);
+    expect(m.verificacion.anotadas).toEqual([]);
   });
 
   it("la verificación usa el certificado del ticket que se pidió a WSAA, no otro", async () => {

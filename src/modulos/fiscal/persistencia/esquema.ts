@@ -450,6 +450,7 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   certificado_cifrado_ck: "NO_TRADUCIDA",
   certificado_cargado_ck: "NO_TRADUCIDA", // el dominio de los certificados decide antes (cargado <=> con huella)
   certificado_vigente_uk: "CERTIFICADO_VIGENTE_YA_EXISTE", // el repositorio reemplaza al vigente antes de activar
+  certificado_pendiente_uk: "NO_TRADUCIDA", // 0018 (D-92): el caso de uso descarta al pendiente anterior antes de crear el nuevo; si dos se cruzan, el perdedor sale como `Unicidad` tipada (pregunta pendiente: ningún error de negocio existente le corresponde)
   certificado_huella_uk: "CERTIFICADO_YA_CARGADO",
   certificado_transicion_invalida: "CERTIFICADO_TRANSICION_INVALIDA", // lo lanza un disparador
   certificado_inmutable: "CERTIFICADO_INMUTABLE", // lo lanza un disparador

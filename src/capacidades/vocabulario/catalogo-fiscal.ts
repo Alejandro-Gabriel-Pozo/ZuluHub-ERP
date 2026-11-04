@@ -183,6 +183,13 @@ export const TEXTOS_DE_FISCAL = {
     porDefecto: "Un punto de venta que pasó a producción no vuelve al ambiente de pruebas.",
     largoMaximo: 160,
   },
+  // Pasar un punto de venta a producción que ARCA no tiene habilitado (D-77). Fuente del texto: el MISMO, palabra por palabra, que el dueño
+  // aprobó para el rechazo 10005 de una factura, `fiscal.arca.punto_de_venta_no_habilitado` (este archivo, más abajo). D-77 pide un aviso
+  // cuyo texto no estaba aprobado: se reutiliza el existente (decisión del ingeniero, a confirmar por el dueño).
+  "error.fiscal_punto_de_venta_no_habilitado_en_arca": {
+    porDefecto: "El punto de venta no está habilitado en ARCA para facturar con web service.",
+    largoMaximo: 160,
+  },
   "error.fiscal_ya_emitio_en_produccion": {
     porDefecto: "Este punto de venta ya emitió en producción: no se puede cambiar de ambiente.",
     largoMaximo: 160,

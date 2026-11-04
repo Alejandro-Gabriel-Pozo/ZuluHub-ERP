@@ -118,6 +118,9 @@ const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
   }
 };
 
+/** La declaración de repetición no es lo que se mira acá, pero que no sobren claves sí. */
+const UNA_REPETICION: unknown = expect.any(Object);
+
 describe("P7: el guard va primero en cada caso de uso de numeración", () => {
   it("hay dos casos de uso con acción, y los dos de sistema no pasan por el guard", () => {
     expect([...NOMBRES].sort()).toEqual(["cerrarReservaDeNumero", "reservarNumeroDeComprobante"]);
@@ -130,7 +133,10 @@ describe("P7: el guard va primero en cada caso de uso de numeración", () => {
   });
 
   it.each(NOMBRES)("%s exige comprobantes.emitir", (nombre) => {
-    expect(DECLARACIONES[nombre]).toEqual({ accion: "comprobantes.emitir" });
+    expect(DECLARACIONES[nombre]).toEqual({
+      accion: "comprobantes.emitir",
+      repeticion: UNA_REPETICION,
+    });
   });
 
   it.each(NOMBRES)("%s: sin rol da SIN_PERMISO sin leer ni escribir nada más", async (nombre) => {

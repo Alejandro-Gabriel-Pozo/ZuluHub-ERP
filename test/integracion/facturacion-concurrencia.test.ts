@@ -11,7 +11,6 @@ import {
   crearEscenario,
   datosDeComprobante,
   entrarEnValidacion,
-  huellaAlAzar,
   insertarComprobante,
   leerSerie,
   marcarAutorizado,
@@ -638,26 +637,10 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
       }
     });
 
-    it("dos cargas de certificado para el mismo emisor y ambiente a la vez: uno queda VIGENTE y el otro recibe la violación de certificado_vigente_uk", async () => {
+    it("dos pedidos de certificado para el mismo emisor y ambiente a la vez: uno queda pendiente y el otro recibe la violación de certificado_pendiente_uk (0018: no hay dos pendientes, así que ya no hay dos cargas para el mismo ambiente a la vez)", async () => {
       const x = await crearEscenario(dueno);
       const ids = [randomUUID(), randomUUID()];
-      for (const id of ids) {
-        await dueno.query(
-          `insert into certificado_arca (id, empresa_id, emisor_id, ambiente, alias, cuit_titular, pedido_pem, clave_cifrada,
-                                         clave_nonce, clave_etiqueta, clave_kid, creado_por)
-           values ($1, $2, $3, 'HOMOLOGACION', 'abc', $4, 'P', $5, $6, $7, 'k', $8)`,
-          [
-            id,
-            x.empresa,
-            x.emisor,
-            x.cuit,
-            Buffer.alloc(8),
-            Buffer.alloc(12),
-            Buffer.alloc(16),
-            x.persona,
-          ],
-        );
-      }
+      // Cada conexión inserta el suyo (de uno por conexión, como dos pestañas): entra uno, el otro espera y recibe la unicidad.
       const barrera = crearBarrera(2);
       const resultados = await Promise.all(
         ids.map(async (id) => {
@@ -665,8 +648,19 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
           try {
             await barrera();
             const r = await s.intentar(
-              `update certificado_arca set estado = 'VIGENTE', certificado_pem = 'PEM', huella_sha256 = $2, vence_en = now() + interval '1 year' where id = $1`,
-              [id, huellaAlAzar()],
+              `insert into certificado_arca (id, empresa_id, emisor_id, ambiente, alias, cuit_titular, pedido_pem, clave_cifrada,
+                                             clave_nonce, clave_etiqueta, clave_kid, creado_por)
+               values ($1, $2, $3, 'HOMOLOGACION', 'abc', $4, 'P', $5, $6, $7, 'k', $8)`,
+              [
+                id,
+                x.empresa,
+                x.emisor,
+                x.cuit,
+                Buffer.alloc(8),
+                Buffer.alloc(12),
+                Buffer.alloc(16),
+                x.persona,
+              ],
             );
             if (!r.ok) return r;
             return await s.confirmar();
@@ -677,11 +671,11 @@ describe.skipIf(base === null)("facturación: concurrencia", () => {
       );
       expect(resultados.filter((r) => r.ok)).toHaveLength(1);
       const perdedor = resultados.find((r) => !r.ok);
-      if (perdedor !== undefined && !perdedor.ok) clave(perdedor, "certificado_vigente_uk");
+      if (perdedor !== undefined && !perdedor.ok) clave(perdedor, "certificado_pendiente_uk");
       expect(
         (
           await dueno.query(
-            "select count(*)::int as n from certificado_arca where empresa_id = $1 and estado = 'VIGENTE'",
+            "select count(*)::int as n from certificado_arca where empresa_id = $1 and estado = 'PEDIDO_GENERADO'",
             [x.empresa],
           )
         ).rows[0],

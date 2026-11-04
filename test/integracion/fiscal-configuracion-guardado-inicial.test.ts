@@ -2,7 +2,8 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { emisorId } from "../../src/primitivas/identificadores/marca";
 import { err, type Resultado } from "../../src/primitivas/resultado/resultado";
-import { crearBarrera, crearBaseAparte } from "./entorno";
+import { codigoDe, correrEnParalelo, perdedorAceptable } from "./concurrencia-apoyo";
+import { crearBaseAparte } from "./entorno";
 import {
   casosDeConfiguracion,
   crearEntornoDeConfiguracion,
@@ -27,20 +28,13 @@ const DESPUES = new Date(AHORA.getTime() + 86_400_000);
 type Fila = Record<string, unknown>;
 type Cualquiera = Resultado<unknown, unknown>;
 
-const codigoDe = (r: Cualquiera): string => {
-  if (r.ok) return "ok";
-  if (typeof r.error === "string") return r.error;
-  const tipo = (r.error as { tipo?: unknown }).tipo;
-  return typeof tipo === "string" ? tipo : "otro";
-};
-
 describe.skipIf(base === null)("fiscal T5: primer guardado con datos vigentes", () => {
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let dueno: pg.Client;
   let entorno: ReturnType<typeof crearEntornoDeConfiguracion>;
   let casos: ReturnType<typeof casosDeConfiguracion>;
   /** Mientras haya una barrera, toda transacción espera en ella tras leer el borrador del emisor. */
-  let barrera: { esperar: () => Promise<void> } | null = null;
+  let barrera: (() => Promise<void>) | null = null;
 
   beforeAll(async () => {
     if (base === null) return;
@@ -51,7 +45,7 @@ describe.skipIf(base === null)("fiscal T5: primer guardado con datos vigentes", 
         ...tx.datosFiscales,
         obtenerBorrador: async (...args) => {
           const r = await tx.datosFiscales.obtenerBorrador(...args);
-          if (barrera !== null) await barrera.esperar();
+          if (barrera !== null) await barrera();
           return r;
         },
       },
@@ -208,18 +202,14 @@ describe.skipIf(base === null)("fiscal T5: primer guardado con datos vigentes", 
     for (let ronda = 0; ronda < 3; ronda++) {
       const { e } = await conVigenteConIibb();
       const borradorId = nuevoUuid();
-      barrera = { esperar: crearBarrera(2) };
-      let rs: Cualquiera[];
-      try {
-        rs = await Promise.all([
-          guardar(e, { borradorId, cambios: { razonSocial: "Coop Pampa SRL" } }, DESPUES),
-          guardar(e, { borradorId, cambios: { razonSocial: "Coop Pampa SRL" } }, DESPUES),
-        ]);
-      } finally {
-        barrera = null;
-      }
-      for (const r of rs)
-        expect(["ok", "ConcurrenciaAgotada"], `ronda ${ronda}`).toContain(codigoDe(r));
+      const rs: Cualquiera[] = await correrEnParalelo(
+        2,
+        () => guardar(e, { borradorId, cambios: { razonSocial: "Coop Pampa SRL" } }, DESPUES),
+        (esperar) => {
+          barrera = esperar;
+        },
+      );
+      perdedorAceptable(rs, { esperados: [], contexto: `ronda ${ronda}` });
       const creados = rs.filter(
         (r) => r.ok && (r.valor as { yaEstaba: boolean }).yaEstaba === false,
       );
@@ -237,23 +227,20 @@ describe.skipIf(base === null)("fiscal T5: primer guardado con datos vigentes", 
     for (let ronda = 0; ronda < 3; ronda++) {
       const { e } = await conVigenteConIibb();
       const ids = [nuevoUuid(), nuevoUuid()];
-      barrera = { esperar: crearBarrera(2) };
-      let rs: Cualquiera[];
-      try {
-        rs = await Promise.all(
-          ids.map((borradorId) =>
-            guardar(e, { borradorId, cambios: { razonSocial: "Coop Pampa SRL" } }, DESPUES),
+      const rs: Cualquiera[] = await correrEnParalelo(
+        2,
+        (i) =>
+          guardar(
+            e,
+            { borradorId: ids[i] as string, cambios: { razonSocial: "Coop Pampa SRL" } },
+            DESPUES,
           ),
-        );
-      } finally {
-        barrera = null;
-      }
+        (esperar) => {
+          barrera = esperar;
+        },
+      );
       expect(rs.filter((r) => r.ok).length, `ronda ${ronda}`).toBeLessThanOrEqual(1);
-      for (const r of rs) {
-        expect(["ok", "YA_HAY_BORRADOR", "ConcurrenciaAgotada"], `ronda ${ronda}`).toContain(
-          codigoDe(r),
-        );
-      }
+      perdedorAceptable(rs, { esperados: ["YA_HAY_BORRADOR"], contexto: `ronda ${ronda}` });
       const borradores = await filas<{ id: string; iibb_numero: string | null }>(
         "select id, iibb_numero from datos_fiscales where emisor_id = $1 and estado = 'BORRADOR'",
         [e.mundo.emisor],

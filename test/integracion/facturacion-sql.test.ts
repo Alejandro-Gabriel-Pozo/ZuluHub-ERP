@@ -434,6 +434,7 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "certificado_arca.certificado_arca_pkey",
         "certificado_arca.certificado_huella_uk",
         "certificado_arca.certificado_id_empresa_uk",
+        "certificado_arca.certificado_pendiente_uk",
         "certificado_arca.certificado_vigente_uk",
         "comprobante.comprobante_asociado_ix",
         "comprobante.comprobante_en_vuelo_uk",
@@ -466,6 +467,9 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
       );
       expect(def("certificado_vigente_uk")).toMatch(
         /UNIQUE INDEX .*\(empresa_id, emisor_id, ambiente\) WHERE \(estado = 'VIGENTE'::text\)/,
+      );
+      expect(def("certificado_pendiente_uk")).toMatch(
+        /UNIQUE INDEX .*\(empresa_id, emisor_id, ambiente\) WHERE \(estado = 'PEDIDO_GENERADO'::text\)/,
       );
       expect(def("certificado_huella_uk")).toMatch(
         /UNIQUE INDEX .*\(empresa_id, huella_sha256\) WHERE \(huella_sha256 IS NOT NULL\)/,

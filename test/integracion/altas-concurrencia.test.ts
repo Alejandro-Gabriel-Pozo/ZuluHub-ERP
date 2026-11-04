@@ -12,6 +12,7 @@ import {
   crearTenantConPlan,
   type TxDeAltaDePrueba,
 } from "./altas-apoyo";
+import { esConcurrenciaAgotada } from "./concurrencia-apoyo";
 import { crearBarrera, crearBaseAparte, cuitAlAzar } from "./entorno";
 import { emailAlAzar } from "./fixtures-identidad";
 import { claveAlAzar } from "./plataforma-apoyo";
@@ -30,6 +31,13 @@ const valores = <T>(rs: ReadonlyArray<Resultado<T, unknown>>) =>
   rs.flatMap((r) => (r.ok ? [r.valor] : []));
 const errores = (rs: ReadonlyArray<Resultado<unknown, unknown>>) =>
   rs.flatMap((r) => (r.ok ? [] : [r.error]));
+
+// `ConcurrenciaAgotada` es una respuesta legítima («reintentá»), ver `concurrencia-apoyo.ts`: lo que estas pruebas
+// garantizan es la regla de negocio (el tope, la unicidad), no que nadie pierda nunca la carrera por agotamiento.
+const esLimiteDelPlan = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  (error as { codigo?: unknown }).codigo === "LIMITE_DEL_PLAN";
 
 describe.skipIf(base === null)("alta de empresa: concurrencia", () => {
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
@@ -76,6 +84,30 @@ describe.skipIf(base === null)("alta de empresa: concurrencia", () => {
       }),
     );
     return { entorno, casos: crearCasosDeAlta(entorno) };
+  }
+
+  type AltaDeEmpresa = ReturnType<typeof crearCasosDeAlta>["altaDeEmpresa"];
+
+  /**
+   * Las altas de una ronda a la vez, cada una con SU entrada (y su clave de idempotencia). A quien recibe
+   * `ConcurrenciaAgotada` se lo reintenta ya sin carrera y con la MISMA entrada: el reintento es seguro por la clave
+   * y tiene que dar el resultado de negocio.
+   */
+  async function altasALaVezYReintentadas(
+    alta: AltaDeEmpresa,
+    entradas: ReadonlyArray<Parameters<AltaDeEmpresa>[1]>,
+  ) {
+    const rs = await Promise.all(entradas.map((entrada) => alta(comoAdminAhora(), entrada)));
+    const reintentadas: Awaited<ReturnType<AltaDeEmpresa>>[] = [];
+    for (const [i, r] of rs.entries()) {
+      const entrada = entradas[i];
+      reintentadas.push(
+        !r.ok && esConcurrenciaAgotada(r.error) && entrada !== undefined
+          ? await alta(comoAdminAhora(), entrada)
+          : r,
+      );
+    }
+    return { rs, reintentadas };
   }
 
   const cuenta = async (texto: string, parametros: unknown[] = []) =>
@@ -185,12 +217,18 @@ describe.skipIf(base === null)("alta de empresa: concurrencia", () => {
         try {
           const m = await crearMarcaLista(dueno);
           const mundo = await crearTenantConPlan(dueno, m, { empresasPorTenant: "2" });
-          const rs = await Promise.all([
-            casos.altaDeEmpresa(comoAdminAhora(), altaEnTenant(mundo.tenant)),
-            casos.altaDeEmpresa(comoAdminAhora(), altaEnTenant(mundo.tenant)),
+          const { rs, reintentadas } = await altasALaVezYReintentadas(casos.altaDeEmpresa, [
+            altaEnTenant(mundo.tenant),
+            altaEnTenant(mundo.tenant),
           ]);
-          expect(valores(rs), `vuelta ${vuelta}`).toHaveLength(1);
-          expect(errores(rs)).toEqual([
+          // En la carrera nunca se supera el tope; quien pierde recibe el límite del plan o `ConcurrenciaAgotada`.
+          expect(valores(rs).length, `vuelta ${vuelta}`).toBeLessThanOrEqual(1);
+          for (const e of errores(rs)) {
+            expect(esLimiteDelPlan(e) || esConcurrenciaAgotada(e), JSON.stringify(e)).toBe(true);
+          }
+          // Reintentadas sin carrera: entra exactamente una y la otra es LIMITE_DEL_PLAN; quedan exactamente 2.
+          expect(valores(reintentadas), `vuelta ${vuelta}`).toHaveLength(1);
+          expect(errores(reintentadas)).toEqual([
             { codigo: "LIMITE_DEL_PLAN", perilla: "empresas_por_tenant", limite: 2, usoActual: 2 },
           ]);
           expect(await empresasVivas(mundo.tenant)).toBe(2);
@@ -209,14 +247,20 @@ describe.skipIf(base === null)("alta de empresa: concurrencia", () => {
           const m = await crearMarcaLista(dueno);
           // El tenant ya tiene una empresa: con tope 3 caben 2 más.
           const mundo = await crearTenantConPlan(dueno, m, { empresasPorTenant: "3" });
-          const rs = await Promise.all(
-            Array.from({ length: participantes }, () =>
-              casos.altaDeEmpresa(comoAdminAhora(), altaEnTenant(mundo.tenant)),
-            ),
+          const { rs, reintentadas } = await altasALaVezYReintentadas(
+            casos.altaDeEmpresa,
+            Array.from({ length: participantes }, () => altaEnTenant(mundo.tenant)),
           );
-          expect(valores(rs), `vuelta ${vuelta}`).toHaveLength(lugares);
-          expect(errores(rs)).toHaveLength(participantes - lugares);
-          for (const e of errores(rs)) expect(e).toMatchObject({ codigo: "LIMITE_DEL_PLAN" });
+          // En la carrera nunca se supera el tope; quien pierde recibe el límite del plan o `ConcurrenciaAgotada`.
+          expect(valores(rs).length, `vuelta ${vuelta}`).toBeLessThanOrEqual(lugares);
+          for (const e of errores(rs)) {
+            expect(esLimiteDelPlan(e) || esConcurrenciaAgotada(e), JSON.stringify(e)).toBe(true);
+          }
+          // Reintentadas sin carrera: entran exactamente K y las demás son LIMITE_DEL_PLAN.
+          expect(valores(reintentadas), `vuelta ${vuelta}`).toHaveLength(lugares);
+          expect(errores(reintentadas)).toHaveLength(participantes - lugares);
+          for (const e of errores(reintentadas))
+            expect(e).toMatchObject({ codigo: "LIMITE_DEL_PLAN" });
           expect(await empresasVivas(mundo.tenant)).toBe(3);
         } finally {
           await entorno.cerrar();

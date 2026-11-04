@@ -126,12 +126,18 @@ const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
   }
 };
 
+/** La declaración de repetición no es lo que se mira acá, pero que no sobren claves sí. */
+const UNA_REPETICION: unknown = expect.any(Object);
+
 describe("P7: el guard va primero en cada caso de uso de certificados", () => {
   it("hay dos casos y los dos exigen certificados.gestionar (CA, solo el gerente)", () => {
     expect(NOMBRES).toHaveLength(2);
     expect(DECLARACIONES_DE_CERTIFICADOS).toEqual({
-      generarPedidoDeCertificado: { accion: "certificados.gestionar" },
-      cargarCertificado: { accion: "certificados.gestionar" },
+      generarPedidoDeCertificado: {
+        accion: "certificados.gestionar",
+        repeticion: UNA_REPETICION,
+      },
+      cargarCertificado: { accion: "certificados.gestionar", repeticion: UNA_REPETICION },
     });
     expect(PERMISOS_DE_EMPRESA["certificados.gestionar"]).toEqual(["GERENTE"]);
     expect(CATALOGO_DE_MODULOS.facturacion.acciones["certificados.gestionar"]).toEqual({
