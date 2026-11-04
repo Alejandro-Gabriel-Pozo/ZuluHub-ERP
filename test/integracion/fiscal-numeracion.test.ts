@@ -1,6 +1,10 @@
 import { sql } from "kysely";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import {
+  crearAutorizacionDePostgres,
+  type AutorizacionDb,
+} from "../../src/adaptadores/postgres/autorizacion";
 import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import type { Contexto, ContextoOperativo } from "../../src/contexto/contexto";
 import {
@@ -149,22 +153,42 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
     casosDeNumeracion(entorno, emision, undefined, reglas);
 
   // ===============================================================================================
-  describe("el guard: con el catálogo real todavía no se puede emitir", () => {
-    it("reservar, cerrar y numerar dan MODULO_EN_DESARROLLO a los tres roles y no escriben nada ni llaman a ARCA", async () => {
+  describe("el guard: con el catálogo real la facturación es disponible, pero cada empresa la tiene que activar", () => {
+    it("sin activar en la empresa, reservar, cerrar y numerar dan MODULO_NO_ACTIVO a los tres roles y no escriben nada ni llaman a ARCA", async () => {
+      // La autorización REAL de la base (sin el módulo inyectado como activo): la empresa de prueba no lo activó.
+      ajuste = (tx) => ({
+        ...tx,
+        autorizacion: crearAutorizacionDePostgres(tx.db.withTables<AutorizacionDb>()),
+      });
+      try {
+        for (const rol of ["GERENTE", "ADMINISTRADOR", "OPERADOR"] as const) {
+          const e = await escenario({ rol });
+          const arca = new EmisionVigilada();
+          const real = casos(arca, REGLAS_DE_EMPRESA);
+          const en = { ...entradaDe(e), numero: 1n, resultado: INCIERTO };
+          const motivo = err("MODULO_NO_ACTIVO");
+          expect(await real.reservarNumeroDeComprobante(e.como(T0), entradaDe(e)), rol).toEqual(
+            motivo,
+          );
+          expect(await real.cerrarReservaDeNumero(e.como(T0), en), rol).toEqual(motivo);
+          expect(await real.numerarComprobante(e.como(T0), entradaDe(e)), rol).toEqual(motivo);
+          expect(await serie(e), rol).toMatchObject({ estado: "LIBRE", ultimo: "0", version: 1 });
+          expect(await auditoria(e), rol).toEqual([]);
+          expect(arca.transaccionesDuranteLosPedidos, rol).toEqual([]);
+        }
+      } finally {
+        ajuste = (tx) => tx;
+      }
+    });
+
+    it("con el catálogo real y la facturación activa en la empresa, los tres roles reservan", async () => {
       for (const rol of ["GERENTE", "ADMINISTRADOR", "OPERADOR"] as const) {
         const e = await escenario({ rol });
-        const arca = new EmisionVigilada();
-        const real = casos(arca, REGLAS_DE_EMPRESA);
-        const en = { ...entradaDe(e), numero: 1n, resultado: INCIERTO };
-        const motivo = err("MODULO_EN_DESARROLLO");
-        expect(await real.reservarNumeroDeComprobante(e.como(T0), entradaDe(e)), rol).toEqual(
-          motivo,
+        const r = await casos(new EmisionFalsa(), REGLAS_DE_EMPRESA).reservarNumeroDeComprobante(
+          e.como(T0),
+          entradaDe(e),
         );
-        expect(await real.cerrarReservaDeNumero(e.como(T0), en), rol).toEqual(motivo);
-        expect(await real.numerarComprobante(e.como(T0), entradaDe(e)), rol).toEqual(motivo);
-        expect(await serie(e), rol).toMatchObject({ estado: "LIBRE", ultimo: "0", version: 1 });
-        expect(await auditoria(e), rol).toEqual([]);
-        expect(arca.transaccionesDuranteLosPedidos, rol).toEqual([]);
+        expect(r.ok && r.valor.numero, rol).toBe(1n);
       }
     });
 

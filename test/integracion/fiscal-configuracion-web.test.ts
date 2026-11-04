@@ -81,14 +81,14 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
     };
     conexiones = armarConexiones({ fuente: () => fuente, registrar: (x) => registrados.push(x) });
     const respuesta = { registrar: (x: string) => registrados.push(x) };
-    // Las reglas REALES: la facturación todavía no se puede usar y la configuración igual funciona.
+    // Las reglas REALES: la facturación es disponible pero no nace activa, y la configuración funciona sin activarla.
     const web = armarWeb(conexiones);
     d = {
       casosDeUso: web.casosDeUsoDeConfiguracionFiscal,
       consultas: web.consultasDeFacturacion,
       respuesta,
     };
-    // Con el módulo construido, para lo que SÍ es de facturación (el estado de los certificados).
+    // Las mismas reglas (el catálogo real ya trae la facturación disponible), para lo que SÍ es de facturación (el estado de los certificados).
     const webConFacturacion = armarWeb(conexiones, { reglas: REGLAS_CON_FACTURACION });
     dConFacturacion = {
       casosDeUso: webConFacturacion.casosDeUsoDeConfiguracionFiscal,
@@ -1590,7 +1590,7 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
       }
     });
 
-    it("el emisor de otra empresa no existe para quien pregunta, y con las reglas reales la facturación todavía no se puede usar", async () => {
+    it("el emisor de otra empresa no existe para quien pregunta, y con las reglas reales la facturación sin activar en la empresa es MODULO_NO_ACTIVO", async () => {
       const a = await nuevoConFacturacion();
       const b = await nuevoConFacturacion();
       expect(
@@ -1599,12 +1599,15 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
         ok: false,
         error: { codigo: "ERROR_INTERNO" },
       });
-      // Con las reglas reales (módulo en desarrollo) el certificado se ve en la lista (administracion), no por su consulta propia.
+      // Sin activar la facturación en la empresa, el certificado se ve en la lista (administracion), no por su consulta propia.
+      const sinActivar = await nuevo();
       expect(
-        await estadoDeCertificados(d, a.como(ahora()), { emisorId: a.mundo.emisor }),
+        await estadoDeCertificados(d, sinActivar.como(ahora()), {
+          emisorId: sinActivar.mundo.emisor,
+        }),
       ).toMatchObject({
         ok: false,
-        error: { codigo: "MODULO_EN_DESARROLLO" },
+        error: { codigo: "MODULO_NO_ACTIVO" },
       });
     });
   });

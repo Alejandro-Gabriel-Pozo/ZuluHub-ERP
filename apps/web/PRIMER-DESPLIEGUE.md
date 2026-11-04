@@ -142,8 +142,8 @@ Las de sistema (`VERCEL_ENV`, `VERCEL_GIT_COMMIT_SHA`) las pone Vercel; no las c
 
 Diferencias con el plan, para que no te sorprendan: (1) `CRON_SECRET` no estaba declarada en el código; W6 la sumó a
 `entorno.ts` con su validación (≥ 16 caracteres) y su prueba. (2) `PEDERNAL_CLAVE_CERTIFICADOS` (cifrado de las claves de
-ARCA y de sus tickets) la declara el cableado fiscal. Solo hace falta cuando se use la facturación (el módulo sigue «en
-desarrollo»): sin ella la web arranca y lo fiscal falla cerrado. Se genera con SU PROPIO comando (abajo), una por entorno, y **no
+ARCA y de sus tickets) la declara el cableado fiscal. Solo hace falta cuando se use la facturación (el módulo es «disponible»
+desde 2026-11-04, pero no nace activo: lo activa la plataforma empresa por empresa): sin ella la web arranca y lo fiscal falla cerrado. Se genera con SU PROPIO comando (abajo), una por entorno, y **no
 puede ser la de contexto** (ni tener sus mismos bytes): la composición la rechaza. (3) La cadena de `pedernal_captacion`
 (`PEDERNAL_DB_CAPTACION`) la crea el comando con un nombre provisorio pero la aplicación todavía no la usa: no la cargues.
 
@@ -275,7 +275,7 @@ Orden, cuando todo lo anterior ande:
 3. `ejecutar-caso-de-plataforma`: crear el plan por defecto y publicarlo; confirmar la versión 1 de la marca Pedernal; registrar
    `pedernal.com.ar` (landing) y `app.pedernal.com.ar` (app, canónico).
 4. Abrir `https://app.pedernal.com.ar`: tiene que mostrar el ingreso con la marca, y un host inventado la página neutra.
-5. `altaDeEmpresa` con los datos del cliente → sale el mail al gerente; `activarModuloDeEmpresa` con `facturacion`.
+5. `altaDeEmpresa` con los datos del cliente → sale el mail al gerente; `activarModuloDeEmpresa` con `facturacion` (el plan de la empresa tiene que incluirla, si no da `MODULO_FUERA_DEL_PLAN`).
 6. El gerente sigue el camino de la §1.3 del plan.
 
 Esos scripts se corren en **tu computadora**, no en un workflow de GitHub: los datos del cliente (CUIT, razón social, email)
