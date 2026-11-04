@@ -14,7 +14,10 @@ import {
   type TipoDeOrigen,
 } from "../../src/modulos/fiscal/publico";
 import { criteriosDeListado } from "../../src/modulos/fiscal/consultas/criterios-de-listado";
-import { modeloDeImpresion } from "../../src/modulos/fiscal/dominio/modelo-de-impresion";
+import {
+  modeloDeImpresion,
+  VERSION_DE_REPRESENTACION_ACTUAL,
+} from "../../src/modulos/fiscal/dominio/modelo-de-impresion";
 import { formatearDomicilio } from "../../src/primitivas/domicilio/domicilio";
 import { empresaId, personaId, sucursalId } from "../../src/primitivas/identificadores/marca";
 import { ok, type Resultado } from "../../src/primitivas/resultado/resultado";
@@ -1462,7 +1465,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
           fechaEmision: diaDe(AHORA),
           cae: CAE_DE_PRUEBA,
           caeVence: diaDe(new Date(AHORA.getTime() + 10 * 86_400_000)),
-          versionDeRepresentacion: 1,
+          versionDeRepresentacion: VERSION_DE_REPRESENTACION_ACTUAL,
         },
         MARCA_UNO,
       );

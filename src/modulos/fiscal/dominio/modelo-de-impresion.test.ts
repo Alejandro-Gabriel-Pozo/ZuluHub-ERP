@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   consumidorFinal,
+  receptorMonotributista,
   contextoDeEmision,
   emisorInstantaneo,
   facturaArmada,
@@ -15,11 +16,14 @@ import {
   LEYENDA_DE_HOMOLOGACION,
   modeloDeImpresion,
   numeroImpreso,
+  VERSION_DE_REPRESENTACION_ACTUAL,
   type ComprobanteParaImprimir,
   type MarcaParaImprimir,
   type ModeloImpreso,
 } from "./modelo-de-impresion";
 import { armarNotaAsociada } from "./nota-asociada";
+import { CONDICIONES_DE_IVA_DEL_RECEPTOR } from "./condicion-iva-receptor";
+import type { Receptor } from "./receptor";
 
 const MARCA_UNO: MarcaParaImprimir = {
   nombreDeFantasia: "La Panadería de Zulu",
@@ -47,10 +51,16 @@ const monotributo = contextoDeEmision({
   emisor: emisorInstantaneo({ condicionIva: "MONOTRIBUTO" }),
 });
 
-describe("modeloDeImpresion: golden", () => {
+/**
+ * Los golden de la versión 1 son los de antes de los textos legales de la RG 5614 y NO se regeneran: un comprobante
+ * sellado con la versión 1 reimprime idéntico. Por eso piden la versión 1 de forma explícita y no la «actual».
+ */
+const V1 = { versionDeRepresentacion: 1 } as const;
+
+describe("modeloDeImpresion: golden de la versión 1 (intactos)", () => {
   it("factura B con dos marcas: solo cambia el bloque marca", async () => {
-    const uno = modelo(imprimible(facturaB), MARCA_UNO);
-    const dos = modelo(imprimible(facturaB), MARCA_DOS);
+    const uno = modelo(imprimible(facturaB, V1), MARCA_UNO);
+    const dos = modelo(imprimible(facturaB, V1), MARCA_DOS);
     expect(dos.fiscal).toEqual(uno.fiscal);
     expect({ ...dos, marca: uno.marca }).toEqual(uno);
     expect(dos.marca).toEqual(MARCA_DOS);
@@ -63,7 +73,7 @@ describe("modeloDeImpresion: golden", () => {
   });
 });
 
-describe("modeloDeImpresion: golden de una nota de crédito A en producción", () => {
+describe("modeloDeImpresion: golden de una nota de crédito A en producción (versión 1)", () => {
   it("totales discriminados, comprobante asociado y sin leyenda de homologación", async () => {
     const nota = armarNotaAsociada(
       {
@@ -88,7 +98,7 @@ describe("modeloDeImpresion: golden de una nota de crédito A en producción", (
       contextoDeEmision({ ambiente: "PRODUCCION" }),
     );
     if (!nota.ok) throw new Error("nota de prueba inválida");
-    const m = modelo(imprimible(nota.valor, { numero: 12n }));
+    const m = modelo(imprimible(nota.valor, { numero: 12n, ...V1 }));
     expect(m.leyendas).toEqual([]);
     expect(m.fiscal.rotulo).toBe("NOTA DE CRÉDITO");
     await expect(JSON.stringify(m, null, 2)).toMatchFileSnapshot(
@@ -130,7 +140,9 @@ describe("modeloDeImpresion: bloque fiscal", () => {
       cae: "70417054367476",
       caeVence: "2026-10-23",
     });
-    expect(m.versionDeRepresentacion).toBe(1);
+    expect(m.versionDeRepresentacion).toBe(VERSION_DE_REPRESENTACION_ACTUAL);
+    expect(VERSION_DE_REPRESENTACION_ACTUAL).toBe(2);
+    expect(modelo(imprimible(facturaB, V1)).versionDeRepresentacion).toBe(1);
   });
 
   it("los datos del emisor son los congelados, con el CUIT con guiones", () => {
@@ -232,6 +244,13 @@ describe("modeloDeImpresion: receptor, renglones y totales", () => {
   it("receptor y renglones como texto decimal", () => {
     const m = modelo(imprimible(facturaB));
     expect(m.receptor).toEqual({
+      nombre: null,
+      documento: { tipo: "SIN_IDENTIFICAR" },
+      condicionIva: "CONSUMIDOR_FINAL",
+      domicilio: null,
+      leyenda: "A CONSUMIDOR FINAL",
+    });
+    expect(modelo(imprimible(facturaB, V1)).receptor).toEqual({
       nombre: null,
       documento: { tipo: "SIN_IDENTIFICAR" },
       condicionIva: "CONSUMIDOR_FINAL",
@@ -357,7 +376,7 @@ describe("modeloDeImpresion: notas, QR y leyendas", () => {
 
 describe("modeloDeImpresion: errores", () => {
   it("una versión de representación desconocida no se dibuja", () => {
-    for (const versionDeRepresentacion of [0, 2, -1]) {
+    for (const versionDeRepresentacion of [0, 3, -1, 1.5, Number.NaN]) {
       expect(
         modeloDeImpresion(imprimible(facturaB, { versionDeRepresentacion }), MARCA_UNO),
       ).toEqual({
@@ -372,5 +391,277 @@ describe("modeloDeImpresion: errores", () => {
       ok: false,
       error: "CAE_INVALIDO",
     });
+  });
+});
+
+/**
+ * Versión 2: los textos legales de la norma de comprobantes. Las cadenas de abajo se copiaron LETRA POR LETRA de la
+ * norma (no de la constante del modelo), para que un cambio del modelo no las arrastre:
+ * - Título, «IVA Contenido» y «Otros Impuestos Nacionales Indirectos»: RG 5614/2024 art. 2 punto 7 (Anexo II,
+ *   Apartado B, inciso g) 1.), `12-referencias-externas/arca-normas-de-comprobantes/norma_5614_2024.html` del
+ *   repositorio de docs.
+ * - «A CONSUMIDOR FINAL»: RG 5866/2026 art. 1 f) (Anexo II, Apartado A, Título II, d) 1.), `rg5866.html`.
+ */
+const TITULO_DE_LA_NORMA = "Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)";
+const IVA_CONTENIDO_DE_LA_NORMA = "IVA Contenido";
+const OTROS_DE_LA_NORMA = "Otros Impuestos Nacionales Indirectos";
+const LEYENDA_DE_LA_NORMA = "A CONSUMIDOR FINAL";
+
+const IVA_CONTENIDO_DE_FACTURA_B = [
+  { alicuota: "10.5", iva: "99.77" },
+  { alicuota: "21", iva: "210.00" },
+];
+
+const BLOQUE_DE_FACTURA_B = {
+  titulo: TITULO_DE_LA_NORMA,
+  ivaContenido: { rotulo: IVA_CONTENIDO_DE_LA_NORMA, porAlicuota: IVA_CONTENIDO_DE_FACTURA_B },
+  otrosImpuestosNacionalesIndirectos: { rotulo: OTROS_DE_LA_NORMA, valor: "0.00" },
+};
+
+const consumidorFinalConDni: Receptor = {
+  nombre: "Juan Gómez",
+  documento: { tipo: "DNI", numero: "30123456" },
+  condicionIva: "CONSUMIDOR_FINAL",
+  domicilio: null,
+};
+const receptorExento: Receptor = { ...receptorInscripto, condicionIva: "EXENTO" };
+
+const facturaBConsumidorFinalIdentificado = facturaArmada(consumidorFinalConDni, [
+  renglon("1210.00", "1", "21", null, "Torta"),
+]);
+const facturaBAExento = facturaArmada(receptorExento, [
+  renglon("1210.00", "1", "21", null, "Torta"),
+]);
+const facturaAInscripto = facturaArmada(
+  receptorInscripto,
+  [renglon("1000.00", "1", "21"), renglon("100.00", "1", "EXENTO")],
+  { modoDePrecio: "IVA_DISCRIMINADO" },
+);
+const facturaCConsumidorFinal = facturaArmada(
+  consumidorFinal,
+  [renglon("100.00", "3", null)],
+  {},
+  monotributo,
+);
+
+/** Una nota sobre una factura B a consumidor final (la factura B de los golden, número 94, punto de venta 7). */
+function notaSobreFacturaB(clase: "NOTA_CREDITO" | "NOTA_DEBITO"): ComprobanteParaImprimir {
+  const nota = armarNotaAsociada(
+    {
+      empresaId: EMPRESA,
+      emisorId: contextoDeEmision().emisorId,
+      ambiente: "PRODUCCION",
+      tipo: "FACTURA_B",
+      estado: "AUTORIZADO",
+      numero: 94n,
+      fechaEmision: fecha("2026-10-01"),
+      emisor: emisorInstantaneo({ puntoDeVentaNumero: 7 }),
+      receptor: consumidorFinal,
+    },
+    {
+      clase,
+      motivo: "Devolución parcial",
+      modoDePrecio: "IVA_INCLUIDO",
+      concepto: "PRODUCTOS",
+      servicio: null,
+      renglones: [renglon("605.00", "1", "21", null, "Torta"), renglon("105.00", "1", "10.5")],
+    },
+    contextoDeEmision({ ambiente: "PRODUCCION" }),
+  );
+  if (!nota.ok) throw new Error("nota de prueba inválida");
+  return imprimible(nota.valor, { numero: 12n });
+}
+
+describe("modeloDeImpresion: golden de la versión 2 (textos legales)", () => {
+  const casos: readonly (readonly [string, ComprobanteParaImprimir])[] = [
+    ["factura-b-consumidor-final", imprimible(facturaB)],
+    ["factura-b-consumidor-final-identificado", imprimible(facturaBConsumidorFinalIdentificado)],
+    ["factura-b-a-exento", imprimible(facturaBAExento)],
+    ["nota-de-credito-b-consumidor-final", notaSobreFacturaB("NOTA_CREDITO")],
+    ["nota-de-debito-b-consumidor-final", notaSobreFacturaB("NOTA_DEBITO")],
+    ["factura-c-consumidor-final", imprimible(facturaCConsumidorFinal)],
+    ["factura-a-inscripto", imprimible(facturaAInscripto)],
+  ];
+  for (const [nombre, comprobante] of casos) {
+    it(`golden ${nombre}`, async () => {
+      const m = modelo(comprobante);
+      expect(m.versionDeRepresentacion).toBe(2);
+      await expect(JSON.stringify(m, null, 2)).toMatchFileSnapshot(
+        `./golden/modelo-v2-${nombre}.golden.txt`,
+      );
+    });
+  }
+});
+
+describe("modeloDeImpresion: bloque de transparencia fiscal (RG 5614)", () => {
+  it("la factura B a consumidor final lleva el título, «IVA Contenido» y «Otros Impuestos Nacionales Indirectos» con su valor", () => {
+    const m = modelo(imprimible(facturaB));
+    expect(m.transparenciaFiscal).toEqual(BLOQUE_DE_FACTURA_B);
+    expect(m.transparenciaFiscal?.titulo).toBe(
+      "Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)",
+    );
+    expect(m.transparenciaFiscal?.ivaContenido.rotulo).toBe("IVA Contenido");
+    expect(m.transparenciaFiscal?.otrosImpuestosNacionalesIndirectos.rotulo).toBe(
+      "Otros Impuestos Nacionales Indirectos",
+    );
+  });
+
+  it("«IVA Contenido» es el mismo valor, por alícuota, que ya mostraban los totales (decisión 9)", () => {
+    const m = modelo(imprimible(facturaB));
+    expect(m.totales).toEqual({
+      letra: "B",
+      total: "2260.00",
+      ivaContenido: IVA_CONTENIDO_DE_FACTURA_B,
+    });
+    expect(m.transparenciaFiscal?.ivaContenido.porAlicuota).toEqual(
+      m.totales.letra === "B" ? m.totales.ivaContenido : null,
+    );
+  });
+
+  it("SUPUESTO: «Otros Impuestos Nacionales Indirectos» vale 0.00 hasta que el producto tenga el dato (C23)", () => {
+    for (const comprobante of [imprimible(facturaB), notaSobreFacturaB("NOTA_CREDITO")]) {
+      expect(
+        modelo(comprobante).transparenciaFiscal?.otrosImpuestosNacionalesIndirectos.valor,
+      ).toBe("0.00");
+    }
+  });
+
+  it("un consumidor final identificado con DNI sigue siendo consumidor final: lleva el bloque", () => {
+    const m = modelo(imprimible(facturaBConsumidorFinalIdentificado));
+    expect(m.receptor.documento).toEqual({ tipo: "DNI", numero: "30123456" });
+    expect(m.transparenciaFiscal).toEqual({
+      ...BLOQUE_DE_FACTURA_B,
+      ivaContenido: {
+        rotulo: IVA_CONTENIDO_DE_LA_NORMA,
+        porAlicuota: [{ alicuota: "21", iva: "210.00" }],
+      },
+    });
+  });
+
+  it("la nota de crédito y la de débito B heredan el bloque del original (Anexo IV A.2)", () => {
+    for (const clase of ["NOTA_CREDITO", "NOTA_DEBITO"] as const) {
+      const m = modelo(notaSobreFacturaB(clase));
+      expect(m.fiscal.letra, clase).toBe("B");
+      expect(m.fiscal.rotulo, clase).toBe(
+        clase === "NOTA_CREDITO" ? "NOTA DE CRÉDITO" : "NOTA DE DÉBITO",
+      );
+      expect(m.transparenciaFiscal, clase).toEqual({
+        ...BLOQUE_DE_FACTURA_B,
+        ivaContenido: {
+          rotulo: IVA_CONTENIDO_DE_LA_NORMA,
+          porAlicuota: [
+            { alicuota: "10.5", iva: "9.98" },
+            { alicuota: "21", iva: "105.00" },
+          ],
+        },
+      });
+      expect(m.receptor.leyenda, clase).toBe(LEYENDA_DE_LA_NORMA);
+    }
+  });
+
+  it("sin renglones gravados el bloque no inventa un valor: la lista queda vacía (pregunta pendiente al contador)", () => {
+    const exenta = facturaArmada(consumidorFinal, [renglon("500.00", "1", "EXENTO")]);
+    expect(modelo(imprimible(exenta)).transparenciaFiscal?.ivaContenido.porAlicuota).toEqual([]);
+  });
+
+  it("la C y la A no llevan el bloque (el contador decide, C23), ni la B a un receptor que no es consumidor final", () => {
+    for (const comprobante of [facturaCConsumidorFinal, facturaAInscripto, facturaBAExento]) {
+      const m = modelo(imprimible(comprobante));
+      expect(m.transparenciaFiscal, m.fiscal.letra).toBeUndefined();
+      expect("transparenciaFiscal" in m, m.fiscal.letra).toBe(false);
+    }
+  });
+
+  it("con cualquier condición del receptor, solo el consumidor final lleva el bloque y la leyenda (en la B)", () => {
+    for (const condicionIva of CONDICIONES_DE_IVA_DEL_RECEPTOR) {
+      const m = modelo(imprimible(facturaB, { receptor: { ...consumidorFinal, condicionIva } }));
+      const esConsumidorFinal = condicionIva === "CONSUMIDOR_FINAL";
+      expect("transparenciaFiscal" in m, condicionIva).toBe(esConsumidorFinal);
+      expect(m.receptor.leyenda, condicionIva).toBe(
+        esConsumidorFinal ? LEYENDA_DE_LA_NORMA : undefined,
+      );
+    }
+  });
+});
+
+describe("modeloDeImpresion: leyenda «A CONSUMIDOR FINAL» (RG 5866)", () => {
+  it("el receptor consumidor final la lleva, identificado o no", () => {
+    expect(modelo(imprimible(facturaB)).receptor.leyenda).toBe("A CONSUMIDOR FINAL");
+    expect(modelo(imprimible(facturaBConsumidorFinalIdentificado)).receptor.leyenda).toBe(
+      "A CONSUMIDOR FINAL",
+    );
+  });
+
+  it("la norma la pide a todo consumidor final de las clases A, B, C y E: la C a consumidor final la lleva, sin el bloque", () => {
+    const m = modelo(imprimible(facturaCConsumidorFinal));
+    expect(m.fiscal.letra).toBe("C");
+    expect(m.receptor.leyenda).toBe("A CONSUMIDOR FINAL");
+    expect(m.transparenciaFiscal).toBeUndefined();
+  });
+
+  it("un receptor que no es consumidor final no la lleva: ni exento ni inscripto", () => {
+    expect("leyenda" in modelo(imprimible(facturaBAExento)).receptor).toBe(false);
+    expect("leyenda" in modelo(imprimible(facturaAInscripto)).receptor).toBe(false);
+    expect(
+      "leyenda" in
+        modelo(imprimible({ ...facturaAInscripto, receptor: receptorMonotributista })).receptor,
+    ).toBe(false);
+  });
+
+  it("no toca las leyendas del comprobante: la de homologación sigue sola", () => {
+    expect(modelo(imprimible(facturaB)).leyendas).toEqual([LEYENDA_DE_HOMOLOGACION]);
+  });
+});
+
+describe("modeloDeImpresion: la versión 1 sigue imprimiendo lo de antes", () => {
+  it("la versión 1 no lleva ni el bloque ni la leyenda, sea cual sea el tipo y el receptor", () => {
+    for (const tipo of TIPOS_DE_COMPROBANTE) {
+      const m = modelo(imprimible({ ...facturaB, tipo, asociado: null }, V1));
+      expect("transparenciaFiscal" in m, tipo).toBe(false);
+      expect("leyenda" in m.receptor, tipo).toBe(false);
+      expect(m.versionDeRepresentacion, tipo).toBe(1);
+    }
+    for (const comprobante of [facturaBConsumidorFinalIdentificado, facturaCConsumidorFinal]) {
+      const m = modelo(imprimible(comprobante, V1));
+      expect("transparenciaFiscal" in m).toBe(false);
+      expect("leyenda" in m.receptor).toBe(false);
+    }
+  });
+
+  it("la versión 2 es la 1 más los textos legales y nada más: se sella la versión y se suman las dos claves", () => {
+    for (const comprobante of [
+      imprimible(facturaB),
+      notaSobreFacturaB("NOTA_CREDITO"),
+      imprimible(facturaCConsumidorFinal),
+      imprimible(facturaAInscripto),
+      imprimible(facturaBAExento),
+    ]) {
+      const v1 = modelo({ ...comprobante, versionDeRepresentacion: 1 });
+      const v2 = modelo(comprobante);
+      const sinLosTextosLegales = {
+        ...Object.fromEntries(
+          Object.entries(v2).filter(([clave]) => clave !== "transparenciaFiscal"),
+        ),
+        receptor: Object.fromEntries(
+          Object.entries(v2.receptor).filter(([clave]) => clave !== "leyenda"),
+        ),
+        versionDeRepresentacion: 1,
+      };
+      expect(sinLosTextosLegales).toEqual(v1);
+    }
+  });
+
+  it("solo existen la versión 1 y la 2: la siguiente a la actual no se dibuja", () => {
+    for (const versionDeRepresentacion of [1, VERSION_DE_REPRESENTACION_ACTUAL]) {
+      expect(
+        modeloDeImpresion(imprimible(facturaB, { versionDeRepresentacion }), MARCA_UNO).ok,
+      ).toBe(true);
+    }
+    expect(
+      modeloDeImpresion(
+        imprimible(facturaB, { versionDeRepresentacion: VERSION_DE_REPRESENTACION_ACTUAL + 1 }),
+        MARCA_UNO,
+      ),
+    ).toEqual({ ok: false, error: "VERSION_DE_REPRESENTACION_DESCONOCIDA" });
   });
 });
