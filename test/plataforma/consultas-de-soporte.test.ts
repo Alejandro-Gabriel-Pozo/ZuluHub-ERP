@@ -723,7 +723,7 @@ describe("verConfiguracion", () => {
     );
     expect(facturacion).toMatchObject({
       clave: "facturacion",
-      estado: "en_desarrollo",
+      estado: "disponible",
       obligatorio: false,
       requiere: ["administracion"],
       acciones: [

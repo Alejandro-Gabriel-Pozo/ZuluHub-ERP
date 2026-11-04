@@ -185,10 +185,12 @@ describe("puedeEmitirFacturas", () => {
   });
 
   describe("coincide con el guard, con los permisos que calcula el servidor de verdad", () => {
-    const DISPONIBLE: ReglasDeEmpresa = {
+    // El catálogo real ya trae la facturación disponible (dueño, 2026-11-04). Esta variante la fuerza «en desarrollo» para
+    // seguir probando que un módulo sin construir no ofrece nada aunque esté activo y en el plan (nace cerrado).
+    const EN_DESARROLLO: ReglasDeEmpresa = {
       catalogo: {
         ...CATALOGO_DE_MODULOS,
-        facturacion: { ...CATALOGO_DE_MODULOS.facturacion, estado: "disponible" },
+        facturacion: { ...CATALOGO_DE_MODULOS.facturacion, estado: "en_desarrollo" },
       },
       permisos: PERMISOS_DE_EMPRESA,
     };
@@ -206,18 +208,18 @@ describe("puedeEmitirFacturas", () => {
       ...ROLES_DE_EMPRESA.flatMap((rol) =>
         Object.entries(ESTADOS).map(([estado, m]) => ({
           nombre: `${rol}, ${estado}`,
-          reglas: DISPONIBLE,
+          reglas: REGLAS_DE_EMPRESA,
           actor: { rol, ...m },
         })),
       ),
       {
         nombre: "sin membresía",
-        reglas: DISPONIBLE,
+        reglas: REGLAS_DE_EMPRESA,
         actor: { rol: null, ...ESTADOS["módulo activo"] },
       },
       ...ROLES_DE_EMPRESA.map((rol) => ({
-        nombre: `${rol}, catálogo real (facturación en desarrollo)`,
-        reglas: REGLAS_DE_EMPRESA,
+        nombre: `${rol}, facturación en desarrollo`,
+        reglas: EN_DESARROLLO,
         actor: { rol, ...ESTADOS["módulo activo"] },
       })),
     ];

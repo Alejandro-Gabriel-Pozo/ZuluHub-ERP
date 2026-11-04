@@ -16,7 +16,7 @@ describe("el catálogo comercial de módulos", () => {
     expect(conCapacidad).toEqual([]);
   });
 
-  it("tiene cinco módulos: administracion (obligatorio y disponible) y facturacion, catalogo, carta y stock (en desarrollo)", () => {
+  it("tiene cinco módulos: administracion (obligatorio y disponible) y facturacion (disponible, sin activar para nadie) y catalogo, carta y stock (en desarrollo)", () => {
     expect(CATALOGO_DE_MODULOS).toEqual({
       administracion: {
         estado: "disponible",
@@ -54,7 +54,7 @@ describe("el catálogo comercial de módulos", () => {
         },
       },
       facturacion: {
-        estado: "en_desarrollo",
+        estado: "disponible",
         obligatorio: false,
         requiere: ["administracion"],
         usaSiExiste: [],
@@ -177,10 +177,18 @@ describe("el catálogo comercial de módulos", () => {
     ]);
   });
 
-  it("facturacion no se puede activar mientras esté en desarrollo, ni aunque el plan la incluya", () => {
-    const estado = estadoDeModulos(CATALOGO_DE_MODULOS, ["facturacion"], ["facturacion"]);
-    expect([...estado.modulosActivos]).toEqual(["administracion"]);
-    expect([...estado.modulosEnSoloLectura]).toEqual([]);
+  it("facturacion es disponible pero NO nace activa: sin activarla la empresa no la tiene, ni aunque el plan la incluya", () => {
+    const sinActivar = estadoDeModulos(CATALOGO_DE_MODULOS, [], ["facturacion"]);
+    expect([...sinActivar.modulosActivos]).toEqual(["administracion"]);
+    expect([...sinActivar.modulosEnSoloLectura]).toEqual([]);
+  });
+
+  it("facturacion activada y dentro del plan opera; activada y fuera del plan queda en solo lectura", () => {
+    const activa = estadoDeModulos(CATALOGO_DE_MODULOS, ["facturacion"], ["facturacion"]);
+    expect([...activa.modulosActivos].sort()).toEqual(["administracion", "facturacion"]);
+    const bajaDePlan = estadoDeModulos(CATALOGO_DE_MODULOS, ["facturacion"], []);
+    expect([...bajaDePlan.modulosActivos]).toEqual(["administracion"]);
+    expect([...bajaDePlan.modulosEnSoloLectura]).toEqual(["facturacion"]);
   });
 
   it("catalogo, carta y stock nacen en desarrollo: no se activan ni aunque se activen todos y el plan los incluya (el cierre es T12)", () => {

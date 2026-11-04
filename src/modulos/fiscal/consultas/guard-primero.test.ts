@@ -198,16 +198,20 @@ describe("P7: el guard va primero en cada consulta del facturador", () => {
   );
 
   it.each(NOMBRES_DE_FACTURACION)(
-    "%s con el catálogo REAL da MODULO_EN_DESARROLLO a todos: todavía no se puede usar (H7, §D)",
+    "%s con el catálogo REAL (facturación disponible): sin activar en la empresa sigue cerrado, y activa pasa el gerente",
     async (nombre) => {
       for (const rol of ROLES_DE_EMPRESA) {
-        const vigilada = vigilar(actor(rol));
-        expect(await LLAMADAS[nombre](consultasCon(vigilada, REGLAS_DE_EMPRESA)), rol).toEqual({
+        const sinActivar = vigilar({ rol, modulosActivados: [], modulosHabilitados: [] });
+        expect(await LLAMADAS[nombre](consultasCon(sinActivar, REGLAS_DE_EMPRESA)), rol).toEqual({
           ok: false,
-          error: "MODULO_EN_DESARROLLO",
+          error: "MODULO_NO_ACTIVO",
         });
-        expect(vigilada.accesos).toEqual(["autorizacion"]);
+        expect(sinActivar.accesos).toEqual(["autorizacion"]);
       }
+      const activa = vigilar(actor("GERENTE"));
+      expect(await pasoElGuard(LLAMADAS[nombre](consultasCon(activa, REGLAS_DE_EMPRESA)))).toBe(
+        true,
+      );
     },
   );
 

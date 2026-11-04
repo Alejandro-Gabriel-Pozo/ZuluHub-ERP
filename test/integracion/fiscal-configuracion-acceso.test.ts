@@ -178,9 +178,13 @@ describe.skipIf(base === null)("fiscal T5: permisos, estado de la empresa y aisl
   ] as const;
 
   describe("permisos", () => {
-    it("la facturación sigue en desarrollo y aun así el gerente configura: las ocho acciones son de administracion", async () => {
-      expect(REGLAS_DE_EMPRESA.catalogo.facturacion.estado).toBe("en_desarrollo");
+    it("la empresa no activó la facturación y aun así el gerente configura: las ocho acciones son de administracion", async () => {
+      expect(REGLAS_DE_EMPRESA.catalogo.facturacion.estado).toBe("disponible");
       const c = await conConfiguracion();
+      const activados = await dueno.query("select 1 from modulo_de_empresa where empresa_id = $1", [
+        c.e.mundo.empresa,
+      ]);
+      expect(activados.rowCount).toBe(0);
       const llamadas = llamadasSobre(c, c.e);
       expect((await llamadas.empezarCorreccionDeDatosFiscales()).ok).toBe(true);
       expect((await llamadas.confirmarDatosFiscales()).ok).toBe(true);

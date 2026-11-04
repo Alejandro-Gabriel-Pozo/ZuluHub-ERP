@@ -28,10 +28,12 @@ const contexto: ContextoOperativo = {
   ahora: new Date(0),
 };
 
-const CON_FACTURACION: ReglasDeEmpresa = {
+// El catálogo real ya trae la facturación disponible (dueño, 2026-11-04): esta variante la fuerza «en desarrollo» para seguir
+// probando que un módulo sin construir no da permisos a nadie (nace cerrado).
+const EN_DESARROLLO: ReglasDeEmpresa = {
   catalogo: {
     ...CATALOGO_DE_MODULOS,
-    facturacion: { ...CATALOGO_DE_MODULOS.facturacion, estado: "disponible" },
+    facturacion: { ...CATALOGO_DE_MODULOS.facturacion, estado: "en_desarrollo" },
   },
   permisos: PERMISOS_DE_EMPRESA,
 };
@@ -75,7 +77,7 @@ const conFacturacionEnElPlan = (rol: DatosDelActor["rol"]): DatosDelActor => ({
 describe("permisosDelActor", () => {
   it("los tres roles la pueden pedir y ven si pueden mirar los comprobantes (comprobantes.ver)", async () => {
     for (const rol of ROLES_DE_EMPRESA) {
-      const { consultas } = armar(() => conFacturacionEnElPlan(rol), CON_FACTURACION);
+      const { consultas } = armar(() => conFacturacionEnElPlan(rol), REGLAS_DE_EMPRESA);
       const permisos = exito(await consultas.permisosDelActor(contexto));
       expect(permisos.acciones, rol).toContain("comprobantes.ver");
       expect(permisos.acciones, rol).toContain("permisos.ver_propios");
@@ -86,13 +88,13 @@ describe("permisosDelActor", () => {
     const operador = exito(
       await armar(
         () => conFacturacionEnElPlan("OPERADOR"),
-        CON_FACTURACION,
+        REGLAS_DE_EMPRESA,
       ).consultas.permisosDelActor(contexto),
     );
     const gerente = exito(
       await armar(
         () => conFacturacionEnElPlan("GERENTE"),
-        CON_FACTURACION,
+        REGLAS_DE_EMPRESA,
       ).consultas.permisosDelActor(contexto),
     );
     for (const soloDelGerente of ["certificados.gestionar", "series.resincronizar"] as const) {
@@ -101,8 +103,8 @@ describe("permisosDelActor", () => {
     }
   });
 
-  it("el módulo manda: con facturación en desarrollo (el catálogo real) nadie ve comprobantes.ver aunque el rol alcance", async () => {
-    const { consultas } = armar(() => conFacturacionEnElPlan("GERENTE"));
+  it("el módulo manda: con facturación en desarrollo nadie ve comprobantes.ver aunque el rol alcance, esté activa y en el plan", async () => {
+    const { consultas } = armar(() => conFacturacionEnElPlan("GERENTE"), EN_DESARROLLO);
     const permisos = exito(await consultas.permisosDelActor(contexto));
     expect(permisos.acciones).not.toContain("comprobantes.ver");
     expect(permisos.acciones).toContain("usuarios.invitar");
@@ -112,13 +114,13 @@ describe("permisosDelActor", () => {
   it("sin activar el módulo no figura; con el módulo activo y en el plan, sí, y se ve en los módulos", async () => {
     const sinActivar = armar(
       () => ({ rol: "GERENTE", modulosActivados: [], modulosHabilitados: [] }),
-      CON_FACTURACION,
+      REGLAS_DE_EMPRESA,
     );
     const a = exito(await sinActivar.consultas.permisosDelActor(contexto));
     expect(a.acciones).not.toContain("comprobantes.ver");
     expect(a.modulos).toEqual({ activos: ["administracion"], enSoloLectura: [] });
 
-    const activo = armar(() => conFacturacionEnElPlan("GERENTE"), CON_FACTURACION);
+    const activo = armar(() => conFacturacionEnElPlan("GERENTE"), REGLAS_DE_EMPRESA);
     const b = exito(await activo.consultas.permisosDelActor(contexto));
     expect(b.modulos).toEqual({ activos: ["administracion", "facturacion"], enSoloLectura: [] });
   });
@@ -126,7 +128,7 @@ describe("permisosDelActor", () => {
   it("un módulo fuera del plan queda en solo lectura: se puede mirar y cerrar, no crear", async () => {
     const { consultas } = armar(
       () => ({ rol: "GERENTE", modulosActivados: ["facturacion"], modulosHabilitados: [] }),
-      CON_FACTURACION,
+      REGLAS_DE_EMPRESA,
     );
     const permisos = exito(await consultas.permisosDelActor(contexto));
     expect(permisos.modulos).toEqual({
@@ -141,12 +143,13 @@ describe("permisosDelActor", () => {
   it("dice lo mismo que el guard acción por acción: lo que figura pasa exigirAccion y lo que no figura, no", async () => {
     for (const rol of ROLES_DE_EMPRESA) {
       const actor = conFacturacionEnElPlan(rol);
-      const { consultas } = armar(() => actor, CON_FACTURACION);
+      const { consultas } = armar(() => actor, REGLAS_DE_EMPRESA);
       const { acciones } = exito(await consultas.permisosDelActor(contexto));
       for (const accion of Object.keys(
         PERMISOS_DE_EMPRESA,
       ) as (keyof typeof PERMISOS_DE_EMPRESA)[]) {
-        const pasa = (await exigirAccion(CON_FACTURACION, accion, () => Promise.resolve(actor))).ok;
+        const pasa = (await exigirAccion(REGLAS_DE_EMPRESA, accion, () => Promise.resolve(actor)))
+          .ok;
         expect(acciones.includes(accion), `${rol} ${accion}`).toBe(pasa);
       }
     }
@@ -163,7 +166,7 @@ describe("permisosDelActor", () => {
 
   it("se calcula en cada pedido, en una transacción de solo lectura, leyendo al actor una sola vez (sin caché)", async () => {
     let actor: DatosDelActor = conFacturacionEnElPlan("GERENTE");
-    const { consultas, aperturas, lecturasDelActor } = armar(() => actor, CON_FACTURACION);
+    const { consultas, aperturas, lecturasDelActor } = armar(() => actor, REGLAS_DE_EMPRESA);
     expect(exito(await consultas.permisosDelActor(contexto)).acciones).toContain("usuarios.apagar");
     expect(lecturasDelActor()).toBe(1);
     // Lo apagaron entre un pedido y el siguiente: el segundo ya no lo ve.
@@ -179,7 +182,7 @@ describe("permisosDelActor", () => {
   it("D-59: el operador también recibe los módulos, incluso el que quedó solo para consultar", async () => {
     const { consultas } = armar(
       () => ({ rol: "OPERADOR", modulosActivados: ["facturacion"], modulosHabilitados: [] }),
-      CON_FACTURACION,
+      REGLAS_DE_EMPRESA,
     );
     const permisos = exito(await consultas.permisosDelActor(contexto));
     expect(permisos.modulos).toEqual({

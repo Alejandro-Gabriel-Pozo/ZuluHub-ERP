@@ -76,7 +76,7 @@ describe.skipIf(base === null)("las lecturas de Emitir: discrimina IVA y puntos 
       consultas: web.consultasDeFacturacion,
       respuesta,
     };
-    // El catálogo REAL: la facturación sigue en desarrollo.
+    // El catálogo REAL: la facturación es `disponible`, pero cada empresa tiene que activarla.
     const real = armarWeb(conexiones, { reglas: REGLAS_DE_EMPRESA });
     dReales = {
       casosDeUso: real.casosDeUsoDeFacturacion,
@@ -112,6 +112,11 @@ describe.skipIf(base === null)("las lecturas de Emitir: discrimina IVA y puntos 
       [e.empresa],
     );
     return e;
+  }
+
+  /** Una empresa con sus datos fiscales y un gerente, pero SIN activar la facturación ni plan que la incluya. */
+  async function empresaSinActivar(): Promise<EscenarioDeCasos> {
+    return crearEscenarioDeCasos(dueno, propia.base, { rol: "GERENTE" });
   }
 
   /** Otra persona de esa empresa con ese rol y esas sucursales asignadas (el operador las necesita). */
@@ -235,7 +240,7 @@ describe.skipIf(base === null)("las lecturas de Emitir: discrimina IVA y puntos 
       });
     });
 
-    it("sin membresía, con la membresía apagada o sin persona: rechazado; con el catálogo REAL, módulo en desarrollo", async () => {
+    it("sin membresía, con la membresía apagada o sin persona: rechazado; con el catálogo REAL, activa pasa y sin activar es MODULO_NO_ACTIVO", async () => {
       const e = await empresa();
       const sinMembresia = {
         ...comoEmpresa(empresaId(e.empresa), personaId((await crearPersonaDeBase(dueno)).id)),
@@ -250,9 +255,12 @@ describe.skipIf(base === null)("las lecturas de Emitir: discrimina IVA y puntos 
       ]) {
         expect(await discriminaIvaAlEmitir(d, ctx)).toMatchObject(RECHAZADO);
       }
-      expect(await discriminaIvaAlEmitir(dReales, comoGerente(e))).toMatchObject({
+      expect((await discriminaIvaAlEmitir(dReales, comoGerente(e))).ok).toBe(true);
+      expect(
+        await discriminaIvaAlEmitir(dReales, comoGerente(await empresaSinActivar())),
+      ).toMatchObject({
         ok: false,
-        error: { codigo: "MODULO_EN_DESARROLLO" },
+        error: { codigo: "MODULO_NO_ACTIVO" },
       });
     });
 
@@ -416,7 +424,7 @@ describe.skipIf(base === null)("las lecturas de Emitir: discrimina IVA y puntos 
       expect(await pvs(a, b.sucursal)).toMatchObject(FUERA);
     });
 
-    it("sin membresía, con la membresía apagada o sin persona: rechazado antes de mirar la sucursal; con el catálogo REAL, en desarrollo", async () => {
+    it("sin membresía, con la membresía apagada o sin persona: rechazado antes de mirar la sucursal; con el catálogo REAL, activa pasa y sin activar es MODULO_NO_ACTIVO", async () => {
       const e = await empresa();
       const apagada = await crearPersonaDeBase(dueno);
       await crearMembresiaDeBase(dueno, e.empresa, apagada.id, "OPERADOR", false);
@@ -428,9 +436,13 @@ describe.skipIf(base === null)("las lecturas de Emitir: discrimina IVA y puntos 
       ]) {
         expect(await pvs(e, e.sucursal, ctx)).toMatchObject(RECHAZADO);
       }
-      expect(await pvs(e, e.sucursal, comoGerente(e), dReales)).toMatchObject({
+      expect((await pvs(e, e.sucursal, comoGerente(e), dReales)).ok).toBe(true);
+      const sinActivar = await empresaSinActivar();
+      expect(
+        await pvs(sinActivar, sinActivar.sucursal, comoGerente(sinActivar), dReales),
+      ).toMatchObject({
         ok: false,
-        error: { codigo: "MODULO_EN_DESARROLLO" },
+        error: { codigo: "MODULO_NO_ACTIVO" },
       });
     });
 
