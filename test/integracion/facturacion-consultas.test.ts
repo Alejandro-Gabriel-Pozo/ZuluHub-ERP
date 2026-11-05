@@ -1467,6 +1467,8 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
           versionDeRepresentacion: VERSION_DE_REPRESENTACION_ACTUAL,
           modoDePrecio: c.modoDePrecio,
           contacto: SIN_CONTACTO,
+          // 0022: la base congeló el nombre con que se creó la sucursal del escenario.
+          sucursalNombre: "Casa central",
         },
         MARCA_UNO,
       );
@@ -1519,6 +1521,28 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
       });
       // Y lo ya emitido sigue sin tocarse.
       expect(JSON.stringify(await contactoDe(congelado.id))).toBe(JSON.stringify(antes));
+    });
+
+    it("reimprimir después de renombrar la sucursal conserva el nombre congelado (D-114); un comprobante nuevo toma el vigente", async () => {
+      const a = await crearEmpresa();
+      const renombrar = (nombre: string) =>
+        dueno.query("update sucursal set nombre = $2 where id = $1", [a.x.sucursal, nombre]);
+      const modeloDe = async (id: ComprobanteGuardado["id"]) =>
+        exito(await consultas.modeloDeImpresion(mira(a), { comprobanteId: id }));
+
+      const congelado = await crearAutorizado(a.x);
+      const antes = await modeloDe(congelado.id);
+      expect(antes.sucursal).toEqual({ nombre: "Casa central" });
+
+      // La sucursal se renombra: lo ya emitido se reimprime igual. (El comprobante anterior a 0022, con la columna nula, no trae el
+      // bloque: lo prueban el modelo puro y la migración; acá no se apaga el disparador en una base que comparten otras pruebas.)
+      await renombrar("Hotel Centro");
+      expect(JSON.stringify(await modeloDe(congelado.id))).toBe(JSON.stringify(antes));
+
+      // Un comprobante nuevo congela el nombre vigente al nacer, y lo anterior sigue sin tocarse.
+      const nuevo = await crearAutorizado(a.x);
+      expect((await modeloDe(nuevo.id)).sucursal).toEqual({ nombre: "Hotel Centro" });
+      expect(JSON.stringify(await modeloDe(congelado.id))).toBe(JSON.stringify(antes));
     });
 
     it("la nota de crédito se imprime con el número impreso de la factura que corrige", async () => {

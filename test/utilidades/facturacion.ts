@@ -216,5 +216,6 @@ export const imprimibleDe = (
   versionDeRepresentacion: VERSION_DE_REPRESENTACION_ACTUAL,
   modoDePrecio: contenido.modoDePrecio,
   contacto: SIN_CONTACTO,
+  sucursalNombre: null,
   ...cambios,
 });

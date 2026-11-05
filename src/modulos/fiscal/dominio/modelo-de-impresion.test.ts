@@ -1037,3 +1037,83 @@ describe("modeloDeImpresion: modo de precio (versión 2 en adelante)", () => {
     }
   });
 });
+
+/**
+ * Nombre de la sucursal (D-114; dueño, 2026-11-05; `11-especificaciones/facturador-contratos-de-pantalla.md` del repositorio de
+ * docs): lo que congeló el comprobante al emitirse, solo de la versión 2 en adelante, sin rótulo. «Con una sola sucursal, solo la
+ * razón social» NO se decide acá (pregunta pendiente): el modelo expone el nombre si hay y la vista decidirá.
+ */
+describe("modeloDeImpresion: nombre de la sucursal congelado (D-114)", () => {
+  it("golden: la factura B con el nombre congelado", async () => {
+    const m = modelo(imprimible(facturaB, { sucursalNombre: "Hotel Centro" }));
+    expect(m.versionDeRepresentacion).toBe(2);
+    await expect(JSON.stringify(m, null, 2)).toMatchFileSnapshot(
+      "./golden/modelo-v2-factura-b-con-nombre-de-sucursal.golden.txt",
+    );
+  });
+
+  it("golden: el nombre convive con el contacto (cada bloque en su clave, sin mezclarse)", async () => {
+    const m = modelo(
+      imprimible(facturaB, { sucursalNombre: "Hotel Centro", contacto: CONTACTO_COMPLETO }),
+    );
+    await expect(JSON.stringify(m, null, 2)).toMatchFileSnapshot(
+      "./golden/modelo-v2-factura-b-con-nombre-y-contacto.golden.txt",
+    );
+  });
+
+  it("expone solo el nombre, tal cual se congeló, y sin rótulos", () => {
+    const m = modelo(imprimible(facturaB, { sucursalNombre: "Sucursal Ñandú — Güemes" }));
+    expect(m.sucursal).toEqual({ nombre: "Sucursal Ñandú — Güemes" });
+    expect(Object.keys(m.sucursal ?? {})).toEqual(["nombre"]);
+  });
+
+  it("sin nombre congelado (comprobante anterior a 0022) no hay bloque: la clave ni existe", () => {
+    const m = modelo(imprimible(facturaB, { sucursalNombre: null }));
+    expect(m.sucursal).toBeUndefined();
+    expect("sucursal" in m).toBe(false);
+  });
+
+  it("un texto vacío no se imprime: no sale un renglón en blanco", () => {
+    expect("sucursal" in modelo(imprimible(facturaB, { sucursalNombre: "" }))).toBe(false);
+  });
+
+  it("lo lleva todo tipo de comprobante: las notas y las letras A y C llevan el nombre que congelaron", () => {
+    for (const comprobante of [
+      notaSobreFacturaB("NOTA_CREDITO"),
+      notaSobreFacturaB("NOTA_DEBITO"),
+      imprimible(facturaCConsumidorFinal),
+      imprimible(facturaAInscripto),
+    ]) {
+      const m = modelo({ ...comprobante, sucursalNombre: "Hotel Centro" });
+      expect(m.sucursal, m.fiscal.rotulo + m.fiscal.letra).toEqual({ nombre: "Hotel Centro" });
+    }
+  });
+
+  it("la versión 1 no lo lleva aunque el comprobante lo tenga congelado: reimprime idéntica", () => {
+    for (const comprobante of [
+      facturaB,
+      facturaCConsumidorFinal,
+      facturaAInscripto,
+      facturaBAExento,
+    ]) {
+      const sin = modelo(imprimible(comprobante, V1));
+      const con = modelo(imprimible(comprobante, { ...V1, sucursalNombre: "Hotel Centro" }));
+      expect("sucursal" in con).toBe(false);
+      expect(JSON.stringify(con)).toBe(JSON.stringify(sin));
+    }
+  });
+
+  it("la versión 2 con nombre es la misma sin nombre más la clave `sucursal`, y nada más", () => {
+    const sin = modelo(imprimible(facturaB));
+    const con = modelo(imprimible(facturaB, { sucursalNombre: "Hotel Centro" }));
+    const { sucursal, ...resto } = con;
+    expect(sucursal).toEqual({ nombre: "Hotel Centro" });
+    expect(resto).toEqual(sin);
+  });
+
+  it("es del comprobante congelado: renombrar la sucursal después no entra en el modelo (el modelo no recibe la sucursal vigente)", () => {
+    const congelado = imprimible(facturaB, { sucursalNombre: "Hotel Centro" });
+    expect(JSON.stringify(modelo(congelado))).toBe(JSON.stringify(modelo({ ...congelado })));
+    expect(modelo(congelado).sucursal?.nombre).toBe("Hotel Centro");
+  });
+});

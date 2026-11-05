@@ -171,6 +171,8 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "sucursal_telefono",
         "sucursal_correo",
         "sucursal_web",
+        // 0022: el nombre de la sucursal al darse de alta el comprobante (lo copia la base)
+        "sucursal_nombre",
       ]);
       expect(await columnasDe("comprobante_linea")).toEqual([
         "empresa_id",
@@ -335,6 +337,7 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "comprobante_reserva_ck:c",
         "comprobante_servicio_ck:c",
         "comprobante_sucursal_fkey:f",
+        "comprobante_sucursal_nombre_ck:c", // 0022
         "comprobante_tipo_ck:c",
       ]);
       expect(de("comprobante_linea")).toEqual([
@@ -499,6 +502,7 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "certificado_arca.certificado_arca_version",
         "comprobante.comprobante_alta",
         "comprobante.comprobante_alta_contacto", // 0019
+        "comprobante.comprobante_alta_sucursal_nombre", // 0022
         "comprobante.comprobante_cambio",
         "comprobante.comprobante_coherente_con_serie",
         "comprobante.comprobante_con_sucursal",
