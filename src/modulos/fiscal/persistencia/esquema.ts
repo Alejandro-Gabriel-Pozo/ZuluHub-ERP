@@ -157,7 +157,7 @@ export const COLUMNAS_DE_FISCAL = {
     "sucursal_telefono",
     "sucursal_correo",
     "sucursal_web",
-    "sucursal_nombre", // 0020: el nombre de la sucursal al emitir; lo copia la base.
+    "sucursal_nombre", // 0022: el nombre de la sucursal al emitir; lo copia la base.
   ],
   comprobante_linea: [
     "empresa_id",
@@ -293,6 +293,7 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   datos_fiscales_inicio_actividades_ck: "INICIO_DE_ACTIVIDADES_INVALIDO",
   datos_fiscales_iibb_numero_ck: "IIBB_NUMERO_INVALIDO",
   datos_fiscales_iibb_condicion_ck: "IIBB_CONDICION_INVALIDA",
+  datos_fiscales_iibb_eleccion_ck: "IIBB_CONDICION_INVALIDA", // 0021: número y «No contribuyente» a la vez; el dominio decide antes
   datos_fiscales_motivo_ck: "MOTIVO_OBLIGATORIO",
   datos_fiscales_confirmada_ck: "NO_TRADUCIDA", // el dominio decide antes (incompleta, vigencia retroactiva)
   datos_fiscales_id_empresa_emisor_uk: "NO_TRADUCIDA", // 0009: para la clave foránea compuesta del comprobante
@@ -377,6 +378,7 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   comprobante_emisor_inicio_ck: "INICIO_DE_ACTIVIDADES_INVALIDO",
   comprobante_emisor_iibb_numero_ck: "IIBB_NUMERO_INVALIDO",
   comprobante_emisor_iibb_condicion_ck: "IIBB_CONDICION_INVALIDA",
+  comprobante_emisor_iibb_eleccion_ck: "IIBB_CONDICION_INVALIDA", // 0021: número y «No contribuyente» a la vez
   comprobante_pv_numero_ck: "PUNTO_DE_VENTA_NUMERO_INVALIDO",
   comprobante_pv_domicilio_ck: "NO_TRADUCIDA",
   comprobante_receptor_nombre_ck: "RECEPTOR_NOMBRE_INVALIDO",
@@ -399,7 +401,7 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   comprobante_id_empresa_emisor_uk: "NO_TRADUCIDA",
   comprobante_emisor_fkey: "EMISOR_NO_ENCONTRADO",
   comprobante_pv_fkey: "PUNTO_DE_VENTA_NO_ENCONTRADO",
-  comprobante_sucursal_nombre_ck: "NO_TRADUCIDA", // 0020: lo copia el disparador de alta desde una sucursal que ya cumple el mismo CHECK
+  comprobante_sucursal_nombre_ck: "NO_TRADUCIDA", // 0022: lo copia el disparador de alta desde una sucursal que ya cumple el mismo CHECK
   comprobante_sucursal_fkey: "NO_TRADUCIDA", // la copia el disparador de alta del punto de venta, que ya apunta a una sucursal de la empresa
   comprobante_datos_fiscales_fkey: "DATOS_FISCALES_NO_ENCONTRADOS",
   comprobante_asociado_fkey: "COMPROBANTE_ASOCIADO_NO_ENCONTRADO",

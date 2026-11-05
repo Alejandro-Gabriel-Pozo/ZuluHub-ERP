@@ -65,7 +65,7 @@ export type FilaDeComprobante = Readonly<{
 }>;
 
 /**
- * Lo que la sucursal tenía al nacer el comprobante y la base copió: el contacto (0019, D-98) y el nombre (0020, D-114). Nulo = no
+ * Lo que la sucursal tenía al nacer el comprobante y la base copió: el contacto (0019, D-98) y el nombre (0022, D-114). Nulo = no
  * existe o es anterior a la migración. La web ya viene canónica: el CHECK `sucursal_web_ck` lo asegura, acá no se vuelve a validar.
  */
 export function sucursalCongeladaDeLaFila(

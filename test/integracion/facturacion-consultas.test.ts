@@ -1467,7 +1467,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
           versionDeRepresentacion: VERSION_DE_REPRESENTACION_ACTUAL,
           modoDePrecio: c.modoDePrecio,
           contacto: SIN_CONTACTO,
-          // 0020: la base congeló el nombre con que se creó la sucursal del escenario.
+          // 0022: la base congeló el nombre con que se creó la sucursal del escenario.
           sucursalNombre: "Casa central",
         },
         MARCA_UNO,
@@ -1534,7 +1534,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
       const antes = await modeloDe(congelado.id);
       expect(antes.sucursal).toEqual({ nombre: "Casa central" });
 
-      // La sucursal se renombra: lo ya emitido se reimprime igual. (El comprobante anterior a 0020, con la columna nula, no trae el
+      // La sucursal se renombra: lo ya emitido se reimprime igual. (El comprobante anterior a 0022, con la columna nula, no trae el
       // bloque: lo prueban el modelo puro y la migración; acá no se apaga el disparador en una base que comparten otras pruebas.)
       await renombrar("Hotel Centro");
       expect(JSON.stringify(await modeloDe(congelado.id))).toBe(JSON.stringify(antes));

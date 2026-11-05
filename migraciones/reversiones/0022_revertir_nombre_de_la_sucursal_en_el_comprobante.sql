@@ -1,7 +1,7 @@
--- 0020_revertir_nombre_de_la_sucursal_en_el_comprobante: deshace la migración 0020_nombre_de_la_sucursal_en_el_comprobante (la columna
+-- 0022_revertir_nombre_de_la_sucursal_en_el_comprobante: deshace la migración 0022_nombre_de_la_sucursal_en_el_comprobante (la columna
 -- `sucursal_nombre` de `comprobante` con su CHECK, el disparador `comprobante_alta_sucursal_nombre` y su función).
 --
--- DESTRUCTIVA en lo único que agregó 0020: BORRA el nombre de sucursal que cada comprobante congeló, y eso NO SE RECUPERA (no se puede
+-- DESTRUCTIVA en lo único que agregó 0022: BORRA el nombre de sucursal que cada comprobante congeló, y eso NO SE RECUPERA (no se puede
 -- recomputar: es el que la sucursal tenía al emitir, y pudo renombrarse después). No toca ninguna otra columna ni fila, ni nada de 0019.
 -- Hay que AVISAR AL DUEÑO antes de correrla si hay algún comprobante con nombre congelado. Ojo con el código: las consultas del
 -- comprobante (y la impresión) leen esa columna; sin ella fallan, así que conviene bajar primero ese código.
@@ -11,10 +11,10 @@
 --
 --     BEGIN;
 --     SET LOCAL pedernal.confirmar_reversion = 'SI';   -- solo si hay algún nombre congelado
---     \i migraciones/reversiones/0020_revertir_nombre_de_la_sucursal_en_el_comprobante.sql
+--     \i migraciones/reversiones/0022_revertir_nombre_de_la_sucursal_en_el_comprobante.sql
 --     COMMIT;
 --
--- Deja el catálogo como estaba después de 0019. No usa CASCADE: si otro objeto depende de la columna (una vista o una restricción de una
+-- Deja el catálogo como estaba después de 0021. No usa CASCADE: si otro objeto depende de la columna (una vista o una restricción de una
 -- migración posterior), el DROP falla y no se pierde nada. Se puede repetir sin que cambie nada.
 
 DO $$

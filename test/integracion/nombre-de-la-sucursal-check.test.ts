@@ -6,7 +6,7 @@ import {
 } from "../../src/modulos/empresas/publico";
 
 /**
- * El CHECK `comprobante_sucursal_nombre_ck` (0020) es el ESPEJO de los tres CHECK que ya tiene `sucursal.nombre` (0001 y 0005) y repite
+ * El CHECK `comprobante_sucursal_nombre_ck` (0022) es el ESPEJO de los tres CHECK que ya tiene `sucursal.nombre` (0001 y 0005) y repite
  * el tope del dominio (`LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL`). Esta prueba lee las definiciones del CATÁLOGO de la base real y las
  * compara. Previene: que el CHECK del comprobante sea más estricto que el de la sucursal (un nombre válido de sucursal haría fallar el
  * alta de todos sus comprobantes: la sucursal no podría emitir) o más laxo (un texto sin regla impreso en la factura), y que el tope

@@ -202,7 +202,7 @@ export type FiscalDb = {
     sucursal_correo: Generated<string | null>;
     sucursal_web: Generated<string | null>;
     /**
-     * 0020: el NOMBRE de la sucursal vigente al darse de alta el comprobante (D-114). Nulo = comprobante anterior a 0020. Lo copia la base
+     * 0022: el NOMBRE de la sucursal vigente al darse de alta el comprobante (D-114). Nulo = comprobante anterior a 0022. Lo copia la base
      * (la aplicación no lo manda, no tiene privilegio para escribirlo) y no cambia nunca.
      */
     sucursal_nombre: Generated<string | null>;

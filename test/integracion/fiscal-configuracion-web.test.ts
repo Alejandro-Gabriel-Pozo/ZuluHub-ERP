@@ -169,6 +169,7 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
     razonSocial: "Panadería Zulu SA",
     condicionIva: "RESPONSABLE_INSCRIPTO",
     inicioActividades: "2020-03-01",
+    iibbNumero: "901-123456-7",
     domicilio: domicilioNuevo(),
     ...cambios,
   });
@@ -361,12 +362,9 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
       });
     });
 
-    it("D-45: Ingresos Brutos se descarta aunque el pedido lo traiga: la base lo guarda vacío y nada lo muestra", async () => {
+    it("D-115/D-116: el pedido trae el número de Ingresos Brutos o «No contribuyente»; el servidor lo guarda y lo confirma y la lectura de la pantalla lo devuelve", async () => {
       const e = await nuevo();
-      const { borradorId, r } = await guardar(e, {
-        iibbNumero: "902-123456-7",
-        iibbCondicion: "LOCAL",
-      });
+      const { borradorId, r } = await guardar(e, { iibbNumero: "902-123456-7" });
       const { version } = dato(r) as { version: number };
       dato(
         await confirmarDatosFiscales(d, e.como(ahora()), {
@@ -380,11 +378,78 @@ describe.skipIf(base === null)("fiscal: pantalla de Configuración fiscal (web)"
         "select iibb_numero, iibb_condicion from datos_fiscales where id = $1",
         [borradorId],
       );
-      expect(fila).toEqual({ iibb_numero: null, iibb_condicion: null });
-      const leido = await datosFiscalesDelEmisor(d, e.como(ahora()), { emisorId: e.mundo.emisor });
-      expect(JSON.stringify(leido)).not.toMatch(/[iI]ibb|902-123456/);
-      const audit = JSON.stringify(await auditorias(e.mundo.empresa));
-      expect(audit).not.toContain("902-123456");
+      expect(fila).toEqual({ iibb_numero: "902-123456-7", iibb_condicion: null });
+      const leido = dato(
+        await datosFiscalesDelEmisor(d, e.como(ahora()), { emisorId: e.mundo.emisor }),
+      );
+      expect(leido.vigente).toMatchObject({ iibbNumero: "902-123456-7", iibbCondicion: null });
+      // Un «No contribuyente» confirmado se lee sin número.
+      const nc = await guardar(e, { iibbNumero: null, iibbCondicion: "NO_CONTRIBUYENTE" });
+      const leidoNc = dato(
+        await datosFiscalesDelEmisor(d, e.como(ahora()), { emisorId: e.mundo.emisor }),
+      );
+      expect(leidoNc.borrador).toMatchObject({
+        id: nc.borradorId,
+        iibbNumero: null,
+        iibbCondicion: "NO_CONTRIBUYENTE",
+      });
+    });
+
+    it("D-115/D-116: sin número ni «No contribuyente» no se confirma, y el error marca el campo; con «No contribuyente» se confirma", async () => {
+      const e = await nuevo();
+      const sin = await guardar(e, { iibbNumero: undefined });
+      const { version } = dato(sin.r) as { version: number };
+      expect(
+        await confirmarDatosFiscales(d, e.como(ahora()), {
+          emisorId: e.mundo.emisor,
+          borradorId: sin.borradorId,
+          versionEsperada: version,
+          motivo: "Alta",
+        }),
+      ).toMatchObject({
+        ok: false,
+        error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo: "ingresosBrutos" },
+      });
+      const nc = await guardar(e, {
+        borradorId: sin.borradorId,
+        versionEsperada: version,
+        iibbCondicion: "NO_CONTRIBUYENTE",
+        iibbNumero: undefined,
+      });
+      dato(nc.r);
+      const { version: v2 } = dato(nc.r) as { version: number };
+      dato(
+        await confirmarDatosFiscales(d, e.como(ahora()), {
+          emisorId: e.mundo.emisor,
+          borradorId: sin.borradorId,
+          versionEsperada: v2,
+          motivo: "Alta",
+        }),
+      );
+      const [fila] = await filas<{ iibb_numero: string | null; iibb_condicion: string | null }>(
+        "select iibb_numero, iibb_condicion from datos_fiscales where id = $1",
+        [sin.borradorId],
+      );
+      expect(fila).toEqual({ iibb_numero: null, iibb_condicion: "NO_CONTRIBUYENTE" });
+    });
+
+    it("D-115/D-116: una condición anterior o un número con «No contribuyente» dan error de datos con el campo, y no guardan nada", async () => {
+      const e = await nuevo();
+      const malos = [
+        [{ iibbCondicion: "LOCAL" }, "iibbCondicion"],
+        [{ iibbNumero: "55", iibbCondicion: "NO_CONTRIBUYENTE" }, "iibbCondicion"],
+        [{ iibbNumero: "9".repeat(31) }, "iibbNumero"],
+      ] as const;
+      for (const [cambios, campo] of malos) {
+        const { r } = await guardar(e, cambios);
+        expect(r).toMatchObject({
+          ok: false,
+          error: { codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS", campo },
+        });
+      }
+      expect(
+        await filas("select id from datos_fiscales where emisor_id = $1", [e.mundo.emisor]),
+      ).toEqual([]);
     });
 
     it("repetir el guardado (doble clic, reintento de red): «ya estaba», sin escribir ni auditar otra vez", async () => {

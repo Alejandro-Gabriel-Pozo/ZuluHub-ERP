@@ -439,7 +439,7 @@ describe.skipIf(base === null)("comprobante en sucursal abierta: la migración 0
         // abierta: no cubre la carrera de 0017 (un cierre que confirma entre la lectura y ese bloqueo), pero taparía esta sonda. Se
         // quita para probar solo el bloqueo de 0017.
         await c.query("drop trigger if exists comprobante_alta_contacto on comprobante");
-        // Lo mismo con el del nombre (0020): también toma un FOR SHARE sobre esa sucursal.
+        // Lo mismo con el del nombre (0022): también toma un FOR SHARE sobre esa sucursal.
         await c.query("drop trigger if exists comprobante_alta_sucursal_nombre on comprobante");
         await reescribirAlta(
           c,

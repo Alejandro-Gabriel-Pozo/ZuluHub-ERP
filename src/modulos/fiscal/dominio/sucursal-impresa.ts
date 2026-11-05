@@ -1,7 +1,7 @@
 /**
  * El nombre de la sucursal tal como lo congeló el comprobante al nacer (D-114): lo que copió la base de la sucursal VIGENTE en ese
  * momento; nunca se lee de la sucursal de hoy, así reimprimir da lo mismo aunque la sucursal se renombre. Nulo = el comprobante es
- * anterior a 0020.
+ * anterior a 0022.
  */
 export type NombreDeSucursalCongelado = string | null;
 

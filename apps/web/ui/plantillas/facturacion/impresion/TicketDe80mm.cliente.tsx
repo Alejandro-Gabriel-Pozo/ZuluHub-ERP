@@ -56,6 +56,11 @@ export function TicketDe80mm({ a, qrSvg, alMedirElAlto }: PropsDelTicket) {
           {leyenda}
         </div>
       ))}
+      {a.leyendasLegales.map((leyenda, i) => (
+        <div key={i} className={estilos["leyendaLegal"]} data-leyenda-legal="">
+          {leyenda}
+        </div>
+      ))}
       <div className={estilos["centrado"]}>
         {a.nombreDeFantasia === null ? null : (
           <div className={estilos["nombre"]}>{a.nombreDeFantasia}</div>

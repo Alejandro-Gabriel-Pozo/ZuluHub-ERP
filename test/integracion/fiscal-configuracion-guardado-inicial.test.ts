@@ -92,6 +92,7 @@ describe.skipIf(base === null)("fiscal T5: primer guardado con datos vigentes", 
     razonSocial: "Coop Pampa SA",
     condicionIva: "RESPONSABLE_INSCRIPTO",
     inicioActividades: "2020-03-01",
+    iibbNumero: "901-123456-7",
   } as const;
 
   const nuevo = () => crearEscenarioDeConfiguracion(dueno, { rol: "GERENTE" });
@@ -126,7 +127,7 @@ describe.skipIf(base === null)("fiscal T5: primer guardado con datos vigentes", 
     const borradorId = nuevoUuid();
     const guardado = await guardar(e, {
       borradorId,
-      cambios: { ...COMPLETOS, iibbNumero: "901-123456-7", iibbCondicion: "LOCAL" },
+      cambios: { ...COMPLETOS },
       domicilio,
     });
     if (!guardado.ok) throw new Error("no se guardó el borrador de partida");
@@ -148,7 +149,7 @@ describe.skipIf(base === null)("fiscal T5: primer guardado con datos vigentes", 
       domicilio_fiscal_id: domicilioId,
       inicio_actividades: "2020-03-01",
       iibb_numero: "901-123456-7",
-      iibb_condicion: "LOCAL",
+      iibb_condicion: null,
     });
     const auditoria = await filas<{ despues: Record<string, unknown> }>(
       "select despues from auditoria_empresa where entidad_id = $1 and accion = 'DATOS_FISCALES_BORRADOR_GUARDADO'",
@@ -164,7 +165,34 @@ describe.skipIf(base === null)("fiscal T5: primer guardado con datos vigentes", 
       numero: 2,
       razon_social: "Coop Pampa SRL",
       iibb_numero: "901-123456-7",
-      iibb_condicion: "LOCAL",
+      iibb_condicion: null,
+    });
+  });
+
+  it("con una vigente «No contribuyente», el primer guardado la conserva (sin número) y confirmar la lleva a la versión nueva", async () => {
+    const e = await nuevo();
+    const vigenteId = nuevoUuid();
+    const guardado = await guardar(e, {
+      borradorId: vigenteId,
+      cambios: { ...COMPLETOS, iibbNumero: null, iibbCondicion: "NO_CONTRIBUYENTE" },
+      domicilio: domicilioNuevo(),
+    });
+    if (!guardado.ok) throw new Error("no se guardó el borrador de partida");
+    const primera = await confirmar(e, vigenteId, guardado.valor.version);
+    if (!primera.ok) throw new Error("no se confirmó la versión de partida");
+
+    const borradorId = nuevoUuid();
+    const r = await guardar(e, { borradorId, cambios: { razonSocial: "Coop Pampa SRL" } }, DESPUES);
+    if (!r.ok) throw new Error(`no se guardó: ${JSON.stringify(r.error)}`);
+    expect(await porId(borradorId)).toMatchObject({
+      iibb_numero: null,
+      iibb_condicion: "NO_CONTRIBUYENTE",
+    });
+    expect((await confirmar(e, borradorId, r.valor.version, DESPUES)).ok).toBe(true);
+    expect(await porId(borradorId)).toMatchObject({
+      estado: "CONFIRMADA",
+      iibb_numero: null,
+      iibb_condicion: "NO_CONTRIBUYENTE",
     });
   });
 
@@ -176,7 +204,7 @@ describe.skipIf(base === null)("fiscal T5: primer guardado con datos vigentes", 
     const segundo = await guardar(e, pedido, DESPUES);
     expect(primero.ok && primero.valor.yaEstaba).toBe(false);
     expect(segundo.ok && segundo.valor.yaEstaba).toBe(true);
-    expect(await porId(borradorId)).toMatchObject({ iibb_numero: "555", iibb_condicion: "LOCAL" });
+    expect(await porId(borradorId)).toMatchObject({ iibb_numero: "555", iibb_condicion: null });
     expect(
       await filas("select id from auditoria_empresa where entidad_id = $1", [borradorId]),
     ).toHaveLength(1);
@@ -217,7 +245,7 @@ describe.skipIf(base === null)("fiscal T5: primer guardado con datos vigentes", 
       expect(await porId(borradorId), `ronda ${ronda}`).toMatchObject({
         estado: "BORRADOR",
         iibb_numero: "901-123456-7",
-        iibb_condicion: "LOCAL",
+        iibb_condicion: null,
       });
       expect(await cuantas(e.mundo.emisor)).toBe(2);
     }

@@ -1,16 +1,16 @@
--- 0020_nombre_de_la_sucursal_en_el_comprobante: el COMPROBANTE congela el NOMBRE de la sucursal que tenía al darse de alta
+-- 0022_nombre_de_la_sucursal_en_el_comprobante: el COMPROBANTE congela el NOMBRE de la sucursal que tenía al darse de alta
 -- (decisión del dueño, D-114, 2026-11-05: «la factura impresa muestra el nombre de la sucursal arriba y la razón social debajo; el
 -- nombre se congela en cada comprobante al emitirse: si después se renombra la sucursal, una reimpresión sale igual»). Texto en
 -- Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md. Mismo patrón que 0019 (contacto de la sucursal).
 --
--- Reglas de esta migración (las mismas de 0001 a 0019):
+-- Reglas de esta migración (las mismas de 0001 a 0021):
 --  * Es ADITIVA: una columna nula en `comprobante`, una función, un disparador y un CHECK sobre esa columna (espejo de los de `sucursal.nombre`). No toca ninguna fila
 --    existente, ninguna función existente ni nada de 0019 (que queda INTACTA, también donde ya está aplicada: esto se aplica encima).
 --    Una columna nula SIN default no reescribe la tabla ni dispara nada.
 --  * Los comprobantes que ya existen (emitidos o en vuelo) quedan con `sucursal_nombre` NULO y se reimprimen igual que hoy. Nada se
 --    rellena: el nombre que tenía la sucursal al emitir no se puede reconstruir (pudo renombrarse).
 --  * Su reversión es un script aparte, revisado y DESTRUCTIVO en lo único que agrega (borra el nombre que cada comprobante congeló, y
---    eso no se puede recomputar): `migraciones/reversiones/0020_revertir_nombre_de_la_sucursal_en_el_comprobante.sql`. El ejecutor no
+--    eso no se puede recomputar): `migraciones/reversiones/0022_revertir_nombre_de_la_sucursal_en_el_comprobante.sql`. El ejecutor no
 --    lo aplica.
 --  * No agrega ninguna función SECURITY DEFINER ni usa nada que pida superusuario: la corre el rol dueño de la base de Neon
 --    (`neondb_owner`, CREATEROLE, sin ser superusuario). Una prueba la corre con ese rol.

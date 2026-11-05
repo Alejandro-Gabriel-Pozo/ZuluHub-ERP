@@ -164,7 +164,7 @@ export type ComprobanteGuardado = Readonly<{
   /** SHA-256 del pedido canónico: con ella el caso de uso distingue una repetición de una clave reutilizada. */
   huella: string;
   versionDeRepresentacion: number;
-  /** Lo que la sucursal tenía al nacer el comprobante: el contacto (0019, D-98) y el nombre (0020, D-114, nulo si es anterior). Lo copia la base. */
+  /** Lo que la sucursal tenía al nacer el comprobante: el contacto (0019, D-98) y el nombre (0022, D-114, nulo si es anterior). Lo copia la base. */
   contacto: ContactoCongelado;
   sucursalNombre: string | null;
   creadoPor: PersonaId;

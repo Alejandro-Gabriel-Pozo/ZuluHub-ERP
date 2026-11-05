@@ -201,6 +201,20 @@ describe("comprobanteParaLaHoja: cada comprobante", () => {
     expect(comprobanteParaLaHoja(m).leyendas).toEqual(m.leyendas);
   });
 
+  it("las leyendas legales: sin la clave si el modelo no la trae; con ella, copia profunda y tal cual", () => {
+    const m = modelo(imprimibleDe(facturaB, { contacto: SIN_CONTACTO }));
+    expect("leyendasLegales" in comprobanteParaLaHoja(m)).toBe(false);
+    expect(hoja(m).leyendasLegales).toEqual([]);
+    const legales = ["  Texto legal de prueba, tal cual.  "];
+    const conLegales = { ...m, leyendasLegales: legales, claveAjena: "x" };
+    const c = comprobanteParaLaHoja(conLegales);
+    expect(c.leyendasLegales).toEqual(legales);
+    expect(c.leyendasLegales).not.toBe(legales);
+    expect(JSON.stringify(c)).not.toContain("claveAjena");
+    expect(hoja(conLegales).leyendasLegales).toEqual(legales);
+    expect(hoja(conLegales).leyendas).toEqual(m.leyendas);
+  });
+
   it("el contacto congelado llega y se dibuja", () => {
     const contacto = { telefono: "341 555 1234", correo: null, web: null };
     const m = modelo(imprimibleDe(facturaB, { contacto }));

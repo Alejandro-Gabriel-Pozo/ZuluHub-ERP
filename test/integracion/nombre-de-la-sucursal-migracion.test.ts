@@ -32,7 +32,7 @@ import {
 import { sembrarMarcaPrincipalDePrueba } from "./marcas-de-prueba";
 
 /**
- * La migración 0020 (D-114: el NOMBRE de la sucursal, congelado en el comprobante al darse de alta; mismo patrón que el contacto de
+ * La migración 0022 (D-114: el NOMBRE de la sucursal, congelado en el comprobante al darse de alta; mismo patrón que el contacto de
  * 0019). Se prueba: que es ADITIVA (una columna nula, una función y un disparador; sobre una base con datos no cambia ni una fila),
  * que 0019 queda intacta, que la BASE copia el nombre vigente y los comprobantes anteriores quedan en nulo, que renombrar la sucursal
  * no toca lo emitido, que la aplicación no puede escribir la columna, la nota, el aislamiento por empresa, la espera entre renombrar y
@@ -140,7 +140,7 @@ async function insertarConDisparadores(
   );
 }
 
-describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migración 0020", () => {
+describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migración 0022", () => {
   const b = () => base as BaseDePruebas;
 
   it("la cabecera declara lo que es (aditiva, sin SECURITY DEFINER ni superusuario, 0019 intacta, reversión aparte) y el código solo agrega una columna con su CHECK, una función y un disparador", async () => {
@@ -213,7 +213,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
       for (const id of viejos) expect(await congelado(c, id)).toBeNull();
       expect(await funcionDe0019()).toBe(f0019Antes);
 
-      // Del catálogo solo cambia lo que 0020 agrega: una columna, su CHECK, la función y el disparador; ningún privilegio.
+      // Del catálogo solo cambia lo que 0022 agrega: una columna, su CHECK, la función y el disparador; ningún privilegio.
       const despues = await huellaDeCatalogo(c);
       const distintos = Object.keys(despues).filter(
         (k) => JSON.stringify(despues[k]) !== JSON.stringify(catalogoAntes[k]),
@@ -462,7 +462,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
       );
     });
 
-    it("el contacto de 0019 y el nombre de 0020 se congelan juntos, del mismo estado de la sucursal", async () => {
+    it("el contacto de 0019 y el nombre de 0022 se congelan juntos, del mismo estado de la sucursal", async () => {
       const e = await crearEscenario(c);
       await c.query(
         "update sucursal set nombre = 'Hotel Centro', telefono = '4321-0000' where id = $1",
@@ -852,7 +852,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
   // Reversión
   // ===============================================================================================================
   describe("la reversión (script aparte, DESTRUCTIVA en el nombre congelado)", () => {
-    it("sin nombre congelado se aplica sola; con alguno exige confirmar y, confirmada, deja el catálogo como antes de 0020 (0019 intacta), se puede repetir y la migración se vuelve a aplicar", async () => {
+    it("sin nombre congelado se aplica sola; con alguno exige confirmar y, confirmada, deja el catálogo como antes de 0022 (0019 intacta), se puede repetir y la migración se vuelve a aplicar", async () => {
       const previa = await baseConMigraciones(b(), await migracionesPrevias());
       await sembrarMarcaPrincipalDePrueba(previa.aparte.base.dueno);
       const conMia = await carpetaCon([
@@ -870,7 +870,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
           ).rows;
         const reversion = await textoDeLaReversion();
 
-        // Sin ningún nombre congelado (solo comprobantes de antes de 0020): no pide nada.
+        // Sin ningún nombre congelado (solo comprobantes de antes de 0022): no pide nada.
         const e = await crearEscenario(c);
         const viejo = await crearComprobante(c, e);
         await aplicarMigraciones(previa.aparte.base.dueno, conMia);

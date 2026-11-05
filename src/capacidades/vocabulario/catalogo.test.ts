@@ -201,6 +201,10 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     );
   });
 
+  it("el único texto nuevo de «Elegir sucursal al ingresar» es «Continuar» (dueño, 2026-11-05, prototipo B)", () => {
+    expect(CATALOGO_DE_TEXTOS["sucursal.continuar"].porDefecto).toBe("Continuar");
+  });
+
   it("los textos del contacto de la sucursal y el aviso de conflicto en voseo son exactamente los que el dueño aprobó el 2026-11-04 (D-113)", () => {
     expect(
       Object.fromEntries(

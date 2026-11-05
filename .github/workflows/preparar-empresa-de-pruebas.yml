@@ -1,0 +1,159 @@
+name: Preparar la empresa de pruebas (preview)
+
+# Deja lista, en la base `preview`, la empresa de pruebas: Actions → «Preparar la empresa de pruebas (preview)» → Run workflow.
+# Solo se dispara a mano, solo desde main, solo para `preview` (producción no existe en este flujo a propósito).
+#
+#  - Ejecuta en orden lo que YA existe, sin reescribirlo (`npm run plataforma:preparar-prueba`, que llama a los mismos
+#    casos que `plataforma:primer-admin` y `plataforma:caso`): primer administrador de plataforma, plan (crear, borrador,
+#    publicar), marca (crear, borrador, confirmar), dominio (agregar, verificar, activar), alta de la empresa con la
+#    invitación a su primer gerente y el módulo `facturacion`. Cada paso lleva una clave de idempotencia fija: repetir el
+#    flujo con los MISMOS datos no duplica nada; con datos distintos el paso rechaza y no cambia nada.
+#  - Antes del alta espera (hasta 10 minutos) a que la marca empiece a regir: el alta exige la marca VIGENTE y la confirmación no
+#    admite fecha pasada, así que `vigenteDesde` es un instante futuro cercano.
+#  - Al final, y solo si todo salió bien, pega UNA vez a `https://<host del dominio>/api/trabajos/cron` con el `CRON_SECRET`
+#    para que se procese la cola y salga el mail de la invitación (en Preview no corre el cron de Vercel). Si eso falla, lo
+#    avisa sin fallar lo ya sembrado.
+#  - Los datos (emails, CUIT, razón social, nombre de la marca…) NO se escriben en el formulario: las entradas de un
+#    `workflow_dispatch` se ven en la página de la corrida. Los pega el dueño UNA vez en el secreto
+#    `PEDERNAL_PREPARAR_PREVIEW` del Environment `preview` (un JSON en UNA línea; forma en `ejecutar-preparar-empresa-de-pruebas.ts`).
+#    Cada dato personal se tapa en lo que sale y se entrega al runner con `::add-mask::`. Falla que previene: que un CUIT o un
+#    email queden en el registro de la corrida (PRIMER-DESPLIEGUE.md §E).
+#  - LOGIN TEMPORAL del rol `pedernal_plataforma` (decisión del dueño, 2026-11-05): ese rol no tiene login y `--preparar-roles`
+#    no lo toca. El paso «Abrir» le da login con una clave al azar que vive solo en el runner (enmascarada) y le instala a
+#    la base una clave de contexto PROPIA de la corrida (kid al azar de 5 dígitos, secreto al azar, solo en memoria: queda
+#    VIGENTE en `contexto_clave` pero nadie la conoce). El login vence solo a los 30 minutos (`VALID UNTIL`) por si el runner muere. El paso «Cerrar» corre SIEMPRE (`if: always()`, también si un paso
+#    intermedio falla o se cancela), deja el rol `NOLOGIN` y sin clave, VERIFICA el estado final y falla fuerte si no quedó cerrado.
+#    Solo existe para `preview`; no toca `--preparar-roles`.
+#  - NO aplica migraciones: se corta si hay pendientes (eso es de `migrar.yml`).
+#  - Concurrencia: comparte el grupo `migrar-preview` con `migrar.yml` y `cargar-entorno.yml` (misma base).
+#  - El Environment `preview` exige la APROBACIÓN DEL DUEÑO (revisores obligatorios y solo `main`, PRIMER-DESPLIEGUE.md, B.1).
+#    Secretos del Environment `preview` (nunca en el repositorio):
+#      PEDERNAL_DB_DUENO_DIRECTA        cadena DIRECTA del dueño de la base `preview` (la de `migrar.yml`).
+#      PEDERNAL_SECRETO_INVITACIONES    el MISMO secreto de invitaciones que tiene la web en Vercel Preview (hexadecimal, 64 o más dígitos).
+#      CRON_SECRET                      el MISMO secreto del cron que tiene Vercel Preview (24 o más caracteres).
+#      PEDERNAL_PREPARAR_PREVIEW        los datos de la preparación (JSON en una línea).
+#    Los dos del medio los FIJA el dueño con valores conocidos, en Vercel Preview y acá, y después hace un Redeploy de preview.
+#
+# Ningún paso imprime una cadena, una clave ni un dato del paquete.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmacion:
+        description: "Escribir PREPARAR PREVIEW"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  # El MISMO grupo que `migrar.yml` y `cargar-entorno.yml` para `preview`: uno a la vez sobre la misma base. Lo que ya
+  # corre nunca se cancela: el nuevo espera.
+  group: migrar-preview
+  cancel-in-progress: false
+
+jobs:
+  validar:
+    # Todo lo que se puede rechazar sin los secretos se rechaza ACÁ, antes del Environment.
+    name: Validar la corrida
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Validar la rama y la frase
+        run: |
+          set -eu
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Solo se prepara la empresa de pruebas desde la rama main (esta corrida es de $REF). Volvé a correrlo eligiendo main en «Use workflow from»."
+            exit 1
+          fi
+          if [ "$CONFIRMACION" != "PREPARAR PREVIEW" ]; then
+            echo "::error::Para preparar la empresa de pruebas hay que escribir exactamente «PREPARAR PREVIEW» en el campo de confirmación."
+            exit 1
+          fi
+        env:
+          REF: ${{ github.ref }}
+          CONFIRMACION: ${{ inputs.confirmacion }}
+
+  preparar:
+    name: Preparar la empresa de pruebas
+    needs: validar
+    runs-on: ubuntu-latest
+    # Hasta 10 minutos de espera a que la marca empiece a regir (vigenteDesde) más los pasos.
+    timeout-minutes: 25
+    # Los revisores obligatorios (el dueño) aprueban ANTES de que arranque cualquier paso de este job.
+    environment: preview
+    permissions:
+      contents: read
+    steps:
+      - name: Comprobar que el Environment tiene todo lo necesario (solo se nombran las que faltan)
+        run: |
+          set -eu
+          faltan=""
+          [ -n "${PEDERNAL_DB_MIGRACIONES:-}" ] || faltan="$faltan PEDERNAL_DB_DUENO_DIRECTA"
+          [ -n "${PEDERNAL_SECRETO_INVITACIONES:-}" ] || faltan="$faltan PEDERNAL_SECRETO_INVITACIONES"
+          [ -n "${CRON_SECRET:-}" ] || faltan="$faltan CRON_SECRET"
+          [ -n "${PEDERNAL_PREPARAR_PREVIEW:-}" ] || faltan="$faltan PEDERNAL_PREPARAR_PREVIEW"
+          if [ -n "$faltan" ]; then
+            echo "::error::Faltan estos secretos en el Environment preview (Settings → Environments → Secrets):$faltan"
+            exit 1
+          fi
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_SECRETO_INVITACIONES: ${{ secrets.PEDERNAL_SECRETO_INVITACIONES }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          PEDERNAL_PREPARAR_PREVIEW: ${{ secrets.PEDERNAL_PREPARAR_PREVIEW }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # Sin caché de npm: este job tiene los secretos y no restaura nada que no sea el lockfile.
+      - name: Dependencias (solo las de producción, sin scripts de instalación)
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: Validar los datos y los secretos (no toca la base)
+        # Antes de abrir nada: la forma de los secretos y de los datos de TODOS los pasos. Un dato mal escrito corta acá.
+        run: npm run plataforma:preparar-prueba -- --validar
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_SECRETO_INVITACIONES: ${{ secrets.PEDERNAL_SECRETO_INVITACIONES }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          PEDERNAL_PREPARAR_PREVIEW: ${{ secrets.PEDERNAL_PREPARAR_PREVIEW }}
+
+      - name: La base tiene que estar al día
+        # Este flujo no migra: eso es de `migrar.yml`. `shell: bash` activa `pipefail`.
+        shell: bash
+        run: |
+          set -eu
+          npm run migrar -- --ver | tee "$RUNNER_TEMP/estado.txt"
+          if grep -q "faltan aplicar" "$RUNNER_TEMP/estado.txt"; then
+            echo "::error::Hay migraciones pendientes. Corré antes «Migrar (preview y producción)» y volvé a preparar la empresa de pruebas."
+            exit 1
+          fi
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+
+      - name: Abrir el login temporal del rol de plataforma (clave al azar de esta corrida)
+        id: abrir
+        run: npm run plataforma:login-temporal -- abrir
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+
+      - name: Preparar la empresa de pruebas (sin mostrar secretos ni datos personales)
+        run: npm run plataforma:preparar-prueba
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_SECRETO_INVITACIONES: ${{ secrets.PEDERNAL_SECRETO_INVITACIONES }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          PEDERNAL_PREPARAR_PREVIEW: ${{ secrets.PEDERNAL_PREPARAR_PREVIEW }}
+
+      - name: Cerrar el login temporal del rol de plataforma (siempre; falla si no queda cerrado)
+        # Corre aunque un paso anterior haya fallado o la corrida se cancele. Solo se saltea si «Abrir» nunca llegó a correr.
+        if: always() && steps.abrir.conclusion != 'skipped'
+        run: npm run plataforma:login-temporal -- cerrar
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
