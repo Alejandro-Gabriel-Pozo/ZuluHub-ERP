@@ -4,7 +4,7 @@ import { crearAlmacenDeTickets } from "../../../src/adaptadores/certificados/alm
 import { emisorId, empresaId } from "../../../src/primitivas/identificadores/marca";
 import { Secreto } from "../../../src/primitivas/secreto/secreto";
 import type { BaseDePruebas } from "../../integracion/global";
-import { crearEscenario } from "../../integracion/facturacion-apoyo";
+import type { Escenario } from "../../integracion/facturacion-apoyo";
 import { cargarCertificado } from "../../integracion/facturacion-casos-apoyo";
 import { crearMembresiaDeBase } from "../../integracion/fixtures-identidad";
 import {
@@ -21,6 +21,7 @@ import {
   type MundoWeb,
 } from "../../integracion/web-apoyo";
 import { levantarAppReal, type AppReal } from "./app-real";
+import { levantarFachadaHttps, type FachadaHttps } from "./fachada-https";
 import { levantarArcaSimulada, type ArcaSimulada } from "./arca-simulada";
 
 /**
@@ -36,6 +37,10 @@ export const HOST_DEL_RECORRIDO = "app.zulupan.localhost";
 
 export type MundoDelRecorrido = Readonly<{
   app: AppReal;
+  /** Por donde entra el navegador: https, con el host de la marca. */
+  fachada: FachadaHttps;
+  /** La dirección de la app para el navegador (sin barra final). */
+  url: string;
   arca: ArcaSimulada;
   mundo: MundoWeb;
   /** Las cookies de la persona ya ingresada, listas para el contexto de Playwright. */
@@ -86,9 +91,22 @@ export async function armarMundoDelRecorrido(base: BaseDePruebas): Promise<Mundo
       [m.empresa],
     )
   ).rows[0] as { id: string };
-  const e = await crearEscenario(mundo.dueno, {
-    mundo: { tenant: m.tenant, empresa: m.empresa, cuit, sucursal: m.sucursal, persona, emisor },
-  });
+  // La empresa nace SIN datos fiscales ni punto de venta: eso lo carga la persona en el recorrido. Lo único sembrado
+  // es el certificado de homologación (cargarlo exige una cadena de ARCA real) y el ticket de más abajo.
+  const e: Escenario = {
+    tenant: m.tenant,
+    empresa: m.empresa,
+    cuit,
+    sucursal: m.sucursal,
+    persona,
+    emisor,
+    domicilio: "",
+    datosFiscales: "",
+    pv: "",
+    pvNumero: 0,
+    razonSocial: "",
+    condicionIva: "RESPONSABLE_INSCRIPTO",
+  };
   await cargarCertificado(propia, e, "HOMOLOGACION");
   const { version } = await crearPlanPublicado(mundo.dueno, { modulos: ["facturacion"] });
   await asignarPlan(mundo.dueno, m.tenant, version);
@@ -135,6 +153,7 @@ export async function armarMundoDelRecorrido(base: BaseDePruebas): Promise<Mundo
 
   const arca = await levantarArcaSimulada();
   const app = await levantarAppReal(entorno, arca.puerto);
+  const fachada = await levantarFachadaHttps(HOST_DEL_RECORRIDO, app.puerto);
   const cookies = yo.navegador.cookiesDe(HOST_DEL_RECORRIDO).map((c) => ({
     name: c.nombre,
     value: c.valor,
@@ -146,11 +165,14 @@ export async function armarMundoDelRecorrido(base: BaseDePruebas): Promise<Mundo
   }));
   return {
     app,
+    fachada,
+    url: `https://${HOST_DEL_RECORRIDO}:${fachada.puerto}`,
     arca,
     mundo,
     cookies,
     empresa: e.empresa,
     async cerrar() {
+      await fachada.cerrar();
       await app.detener();
       await arca.cerrar();
       await mundo.cerrar();
