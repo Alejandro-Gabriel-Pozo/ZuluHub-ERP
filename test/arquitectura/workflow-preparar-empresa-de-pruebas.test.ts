@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { ESPERA_MAXIMA_DE_VIGENCIA_EN_MS } from "../../scripts/ejecutar-preparar-empresa-de-pruebas";
 
 /**
  * `.github/workflows/preparar-empresa-de-pruebas.yml`: siembra datos en la base `preview` con la cadena del dueño y la
@@ -217,6 +218,10 @@ function problemasDelWorkflow(texto: string): string[] {
       orden.every((n, i) => i === 0 || pos(n) > pos(orden[i - 1] as string)),
   );
 
+  // El job tiene que durar más que la espera máxima de la vigencia (más los pasos): si no, GitHub lo corta con el login abierto.
+  const minutos = Number(/ {2}preparar:(?:.*\n)*? {4}timeout-minutes: (\d+)\n/.exec(texto)?.[1]);
+  exigir("timeout-cubre-la-espera", minutos >= ESPERA_MAXIMA_DE_VIGENCIA_EN_MS / 60_000 + 10);
+
   // Acciones fijadas por SHA, sin credenciales persistentes; instala lo mínimo.
   const usos = lineas.filter((l) => l.includes("uses:") && !l.trim().startsWith("#"));
   exigir(
@@ -417,6 +422,11 @@ describe("workflow preparar-empresa-de-pruebas.yml", () => {
           "        if: always() && steps.abrir.conclusion != 'skipped'\n",
           "        if: always() && steps.abrir.conclusion != 'skipped'\n        continue-on-error: true\n",
         ),
+      ],
+      [
+        "timeout-cubre-la-espera",
+        "un tiempo máximo menor que la espera",
+        reemplazar("    timeout-minutes: 25\n", "    timeout-minutes: 15\n"),
       ],
       [
         "acciones-por-sha",

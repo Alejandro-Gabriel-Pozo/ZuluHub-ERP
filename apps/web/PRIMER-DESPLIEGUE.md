@@ -375,7 +375,7 @@ _Excepción para la empresa de PRUEBAS en Preview (2026-11-05, pedido del dueño
 preview— y `PEDERNAL_PREPARAR_PREVIEW`, un JSON en UNA línea. Plantilla con valores FICTICIOS (`adminEmail` y `emailGerente` tienen que ser
 DISTINTOS: el administrador de plataforma no puede ser miembro de ninguna empresa; `vigenteDesde` es un instante FUTURO de 5 a 8 minutos desde la
 corrida —la confirmación de la marca no admite una fecha pasada y el alta exige la marca ya vigente, así que el flujo espera a que llegue— y
-`verificadoEn`, uno pasado):
+`verificadoEn`, uno pasado; si el Environment tarda en aprobarse y `vigenteDesde` queda en el pasado, el flujo cierra bien el login y rechaza: se edita el JSON y se repite):
 
 ```json
 {

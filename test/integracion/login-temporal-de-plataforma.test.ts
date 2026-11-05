@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import pg from "pg";
-import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import {
   abrirLoginDePlataforma,
   cerrarLoginDePlataforma,
@@ -29,6 +29,11 @@ describe.skipIf(base === null)("login temporal del rol de plataforma (base real)
   afterAll(async () => {
     await admin.query(`DROP ROLE IF EXISTS ${ROL}`);
     await admin.end();
+  });
+
+  // Pase lo que pase en una prueba, el rol de la siguiente arranca cerrado (una falla no arrastra a las demás).
+  afterEach(async () => {
+    await cerrarLoginDePlataforma(base?.dueno as string, { rol: ROL });
   });
 
   const entra = async (cadena: string): Promise<boolean> => {
@@ -83,7 +88,18 @@ describe.skipIf(base === null)("login temporal del rol de plataforma (base real)
     // El runner «murió»: pasa el plazo y nadie cerró. El rol sigue marcado con login, pero la clave venció.
     await admin.query(`ALTER ROLE ${ROL} VALID UNTIL '2000-01-01'`);
     expect(await puede()).toBe(true);
-    expect(await entra(abierto.cadena)).toBe(false);
+    const vencido = await admin.query<{ vencido: boolean }>(
+      "SELECT rolvaliduntil < now() AS vencido FROM pg_roles WHERE rolname = $1",
+      [ROL],
+    );
+    expect(vencido.rows[0]?.vencido).toBe(true);
+    // Que una clave vencida no entre lo hace Postgres, y SOLO si el servidor verifica claves: con `trust` (el CI) nunca las pide.
+    // Se detecta con una clave equivocada: si entra, el servidor no verifica claves y esta parte no se puede comprobar acá.
+    const conClaveEquivocada = new URL(abierto.cadena);
+    conClaveEquivocada.password = "clave-equivocada";
+    if (!(await entra(conClaveEquivocada.toString()))) {
+      expect(await entra(abierto.cadena)).toBe(false);
+    }
 
     await cerrarLoginDePlataforma(dueno, { rol: ROL });
     await cerrarLoginDePlataforma(dueno, { rol: ROL });
