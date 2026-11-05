@@ -108,5 +108,6 @@ export function comprobanteParaLaHoja(m: Modelo): ComprobanteParaLaHoja {
             fecha: m.asociado.fecha,
           },
     leyendas: [...m.leyendas],
+    ...(m.leyendasLegales === undefined ? {} : { leyendasLegales: [...m.leyendasLegales] }),
   };
 }

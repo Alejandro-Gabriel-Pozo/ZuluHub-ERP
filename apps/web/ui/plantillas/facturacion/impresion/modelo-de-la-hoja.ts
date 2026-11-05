@@ -101,6 +101,12 @@ export type ComprobanteParaLaHoja = Readonly<{
    * la vista no tiene clave propia. Previene: que el texto de la leyenda diverja entre el modelo y la hoja.
    */
   leyendas: readonly string[];
+  /**
+   * Los textos legales de la norma (`ModeloImpreso.leyendasLegales`, versión 2 en adelante; ausente si no aplica), tal cual: se dibujan
+   * como texto normal del comprobante, sin recuadro de aviso. La fuente única es fiscal; la vista no tiene clave de catálogo.
+   * Previene: que un texto legal se dibuje como aviso de pruebas, o que su texto diverja entre el modelo y la hoja.
+   */
+  leyendasLegales?: readonly string[];
 }>;
 
 export type FilaArmada = Readonly<{ rotulo: string | null; valor: string }>;
@@ -127,6 +133,8 @@ type TotalArmado = Readonly<{ rotulo: string; valor: string; fuerte: boolean }>;
 export type HojaArmada = Readonly<{
   formato: FormatoDeImpresion;
   leyendas: readonly string[];
+  /** Los textos legales del modelo, tal cual; vacío si no hay. */
+  leyendasLegales: readonly string[];
   nombreDeFantasia: string | null;
   emisor: readonly FilaArmada[];
   /** Teléfono, correo y web sueltos, sin rótulos, separados por « · »; `null` si no hay ninguno. */
@@ -317,6 +325,7 @@ export function armarLaHoja(
   return {
     formato,
     leyendas: c.leyendas,
+    leyendasLegales: c.leyendasLegales ?? [],
     nombreDeFantasia: c.marca.nombreDeFantasia,
     emisor: [
       { rotulo: texto(d, "fiscal.pantalla.config_df_razon_social"), valor: e.razonSocial },
