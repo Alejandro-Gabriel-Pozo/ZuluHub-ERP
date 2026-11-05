@@ -400,6 +400,18 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "pdf-solo-en-su-adaptador",
+      archivos: {
+        "src/adaptadores/qr/qr-svg.ts": importa("pdfkit"),
+      },
+    },
+    {
+      regla: "lectores-de-pdf-solo-en-pruebas",
+      archivos: {
+        "src/composicion/pdf-de-la-factura-web.ts": importa("pdfjs-dist/legacy/build/pdf.mjs"),
+      },
+    },
+    {
       regla: "adaptador-arca-solo-con-fiscal",
       archivos: {
         "src/adaptadores/arca/a.ts": importa("../../modulos/identidad/publico"),
@@ -1952,6 +1964,75 @@ describe("P8c: el ingreso de la consola solo lo importa el servidor de la consol
  * adaptador de QR, la carpeta `src/adaptadores/qr/`, y nada más (ni siquiera el adaptador de autenticación, que ahora
  * le pide el dibujo como cualquier otro).
  */
+describe("PDF de la factura: la librería de PDF solo entra por su adaptador y los lectores de PDF solo en pruebas", () => {
+  it("lo importa el adaptador de PDF (y sus pruebas), y nadie más puede", async () => {
+    const v = await violacionesDe({
+      "src/adaptadores/pdf/pincel-del-pdf.ts": importa("pdfkit"),
+      "src/adaptadores/pdf/pdf-de-la-factura.test.ts": importa("pdfkit"),
+      "src/adaptadores/pdf/otro/archivo.ts": importa("pdfkit/js/pdfkit.js"),
+    });
+    expect(v).not.toContain("pdf-solo-en-su-adaptador");
+  });
+
+  it.each([
+    ["otro adaptador", "src/adaptadores/qr/qr-svg.ts"],
+    ["la composición", "src/composicion/pdf-de-la-factura-web.ts"],
+    ["un módulo de negocio", "src/modulos/fiscal/dominio/modelo-de-impresion.ts"],
+    ["la web", "apps/web/servidor/pdf-de-la-factura.ts"],
+    ["una pantalla de la web", "apps/web/pantallas/pdf-de-la-factura.ts"],
+    ["una ruta de la web", "apps/web/app/api/salud/route.ts"],
+    ["un script", "scripts/crear-pdf.ts"],
+  ])("%s no puede importar pdfkit (%s)", async (_nombre, origen) => {
+    const v = await violacionesDe({ [origen]: importa("pdfkit") });
+    expect(v).toContain("pdf-solo-en-su-adaptador");
+  });
+
+  it("también se ve el import de un archivo interno del paquete, y desde una carpeta que solo se parece", async () => {
+    expect(
+      await violacionesDe({ "src/adaptadores/qr/a.ts": importa("pdfkit/js/pdfkit.node.mjs") }),
+    ).toContain("pdf-solo-en-su-adaptador");
+    expect(await violacionesDe({ "src/adaptadores/pdfs/a.ts": importa("pdfkit") })).toContain(
+      "pdf-solo-en-su-adaptador",
+    );
+    expect(await violacionesDe({ "src/adaptadores/otra/pdf/a.ts": importa("pdfkit") })).toContain(
+      "pdf-solo-en-su-adaptador",
+    );
+  });
+
+  it.each(["pdfjs-dist", "pdfjs-dist/legacy/build/pdf.mjs", "jsqr"])(
+    "%s lo importan las pruebas, no el código de producción",
+    async (paquete) => {
+      expect(
+        await violacionesDe({ "src/adaptadores/pdf/pdf-de-la-factura.test.ts": importa(paquete) }),
+      ).not.toContain("lectores-de-pdf-solo-en-pruebas");
+      for (const origen of [
+        "src/adaptadores/pdf/pdf-de-la-factura.ts",
+        "src/composicion/pdf-de-la-factura-web.ts",
+        "apps/web/servidor/pdf-de-la-factura.ts",
+        "scripts/leer-pdf.ts",
+      ]) {
+        expect(await violacionesDe({ [origen]: importa(paquete) })).toContain(
+          "lectores-de-pdf-solo-en-pruebas",
+        );
+      }
+    },
+  );
+
+  it("las dependencias están fijadas en la versión exacta aprobada, sin rango; los lectores, solo en desarrollo", () => {
+    const paquete = JSON.parse(readFileSync("package.json", "utf8")) as {
+      dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
+    };
+    expect(paquete.dependencies["pdfkit"]).toBe("0.20.2");
+    expect(paquete.devDependencies["pdfjs-dist"]).toBe("6.5.438");
+    expect(paquete.devDependencies["jsqr"]).toBe("1.4.0");
+    for (const lector of ["pdfjs-dist", "jsqr"]) {
+      expect(paquete.dependencies[lector]).toBeUndefined();
+    }
+    expect(paquete.devDependencies["pdfkit"]).toBeUndefined();
+  });
+});
+
 describe("P8a y F9: el generador de QR solo entra por el adaptador de QR", () => {
   it("lo importa el adaptador de QR (y sus pruebas), y nadie más puede", async () => {
     const v = await violacionesDe({
