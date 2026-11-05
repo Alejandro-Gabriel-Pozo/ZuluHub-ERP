@@ -242,7 +242,7 @@ export const CATALOGO_DE_TEXTOS = {
   "cuenta.cerrando": { porDefecto: "Cerrando sesión…" },
   "sucursal.etiqueta": { porDefecto: "Sucursal" },
   "sucursal.elegir": { porDefecto: "Elegí una sucursal" },
-  // Fuente: Dueño, 2026-11-05: prototipo B de «Elegir sucursal al ingresar» (decisión registrada por el orquestador del backend; texto «Continuar» como el de invitacion.continuar).
+  // Fuente: Dueño, 2026-11-05: prototipo B de «Elegir sucursal al ingresar» (https://claude.ai/artifact/EjPJnzT6Ai6iZnXARXqqij), que trae el botón «Continuar» textual.
   "sucursal.continuar": { porDefecto: "Continuar" },
   "sucursal.ayuda": { porDefecto: "Se recuerda en este dispositivo.", largoMaximo: 120 },
   // Contacto de la sucursal (D-98, alcance A de D-113). El contacto es de la sucursal, no fiscal: familia `sucursal.*`.
