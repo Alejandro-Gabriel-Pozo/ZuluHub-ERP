@@ -23,8 +23,7 @@ const dibujar = () =>
   );
 
 const formatoMostrado = (): string | null =>
-  document.querySelector("style[data-estilo-de-pagina]")?.getAttribute("data-estilo-de-pagina") ??
-  null;
+  document.querySelector("[data-zona-de-impresion]")?.getAttribute("data-formato") ?? null;
 
 const radio = (nombre: string): HTMLInputElement => {
   const etiqueta = [...document.querySelectorAll("label")].find(

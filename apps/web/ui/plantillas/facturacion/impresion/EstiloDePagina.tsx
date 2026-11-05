@@ -1,29 +1,6 @@
-import { ANCHO_TICKET_MM } from "./geometria";
+import { useLayoutEffect } from "react";
 import type { FormatoDeImpresion } from "./modelo-de-la-hoja";
-
-export const MARCA_DE_LA_ZONA = "data-zona-de-impresion";
-
-/**
- * Oculta, al imprimir, todo lo que no sea la zona de impresión ni contenga a la zona (la navegación, la barra, los botones). Con `display:
- * none` y no con `visibility: hidden`: lo oculto con `visibility` sigue ocupando lugar y el papel sale con hojas en blanco.
- * Lo que SÍ contiene a la zona (la plantilla, `<main>`, el contenedor de la pantalla) pierde relleno, margen, borde, separación y alto
- * mínimo: si no, el `padding` de la plantilla corre la hoja y el A4 de 210 mm sale cortado. Chequeo: `hoja-en-la-plantilla.test.tsx`.
- */
-const SOLO_LA_HOJA =
-  `@media print{html,body{margin:0;background:none}` +
-  `body *:not(:has([${MARCA_DE_LA_ZONA}])):not([${MARCA_DE_LA_ZONA}]):not([${MARCA_DE_LA_ZONA}] *){display:none!important}` +
-  `body *:has([${MARCA_DE_LA_ZONA}]){display:block!important;margin:0!important;padding:0!important;border:0!important;gap:0!important;min-height:0!important}}`;
-
-/** El texto de `@page` del formato elegido; `null` si todavía no se puede decir (el ticket, sin su largo medido). */
-export function reglaDePagina(
-  formato: FormatoDeImpresion,
-  altoDelTicketEnMm: number | null,
-): string | null {
-  if (formato === "A4") return "@page{size:A4;margin:0}";
-  return altoDelTicketEnMm === null
-    ? null
-    : `@page{size:${ANCHO_TICKET_MM}mm ${altoDelTicketEnMm}mm;margin:0}`;
-}
+import { reglaDePagina, SOLO_LA_HOJA } from "./regla-de-pagina";
 
 export type PropsDelEstiloDePagina = Readonly<{
   formato: FormatoDeImpresion;
@@ -31,12 +8,24 @@ export type PropsDelEstiloDePagina = Readonly<{
 }>;
 
 /**
- * El `<style>` de la página que se imprime: `@page` SOLO del formato elegido (el A4 usa `size: A4`; el ticket, su largo medido, porque
- * Chromium no respeta `size: 80mm auto`) más la regla que deja solo la hoja. Se dibuja solo mientras la vista está montada: al
- * desmontarla React lo quita y la impresión de las demás pantallas queda como estaba (una `@page` con el tamaño del ticket quedaría
- * pegada a todo lo que se imprima después).
+ * Las reglas de la página que se imprime: `@page` SOLO del formato elegido (el A4 usa `size: A4`; el ticket, su largo medido, porque
+ * Chromium no respeta `size: 80mm auto`) más la regla que deja solo la hoja. Van en una hoja de estilos CONSTRUIDA desde JavaScript
+ * (`new CSSStyleSheet()` + `adoptedStyleSheets`), no en un `<style>`: un `<style>` sin nonce lo bloquea la CSP y el nonce del
+ * documento no sirve en una navegación del cliente (el pedido de datos de Next trae otro nonce que el del documento). Una hoja
+ * construida no depende del nonce, y la `@page` de una hoja adoptada rige al imprimir (spike en Chromium con la CSP real).
+ * Se adopta mientras la vista está montada y se quita al desmontarla: una `@page` con el tamaño del ticket quedaría pegada a todo lo
+ * que se imprima después. Previene: `@page` y «solo la hoja» sin aplicar en producción (A4 y ticket impresos con el tamaño del navegador).
+ * Chequeo: `sin-estilos-en-linea.test.tsx` (nada de `<style>` ni `style=` en el HTML) y `ticket.test.tsx`/`hoja-a4.test.tsx`.
  */
 export function EstiloDePagina({ formato, altoDelTicketEnMm }: PropsDelEstiloDePagina) {
-  const pagina = reglaDePagina(formato, altoDelTicketEnMm);
-  return <style data-estilo-de-pagina={formato}>{`${pagina ?? ""}${SOLO_LA_HOJA}`}</style>;
+  const reglas = `${reglaDePagina(formato, altoDelTicketEnMm) ?? ""}${SOLO_LA_HOJA}`;
+  useLayoutEffect(() => {
+    const hoja = new CSSStyleSheet();
+    hoja.replaceSync(reglas);
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, hoja];
+    return () => {
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter((h) => h !== hoja);
+    };
+  }, [reglas]);
+  return null;
 }
