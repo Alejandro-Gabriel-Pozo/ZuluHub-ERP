@@ -85,7 +85,7 @@ describe("lo que muestra", () => {
     expect(document.body.textContent).not.toMatch(/\d+\s*\/\s*\d+/);
   });
 
-  it("el teclado y el autocompletado son los del dato: teléfono, correo y web (texto, sin forzar el esquema)", async () => {
+  it("el teclado es el del dato (teléfono, correo y web como texto, sin forzar el esquema) y el autocompletado está apagado: es un dato de la sucursal, no del usuario", async () => {
     await render(pantalla());
     const tel = campo("Teléfono").element();
     const correo = campo("Correo").element();
@@ -94,17 +94,17 @@ describe("lo que muestra", () => {
       tel.getAttribute("type"),
       tel.getAttribute("inputmode"),
       tel.getAttribute("autocomplete"),
-    ]).toEqual(["tel", "tel", "tel"]);
+    ]).toEqual(["tel", "tel", "off"]);
     expect([
       correo.getAttribute("type"),
       correo.getAttribute("inputmode"),
       correo.getAttribute("autocomplete"),
-    ]).toEqual(["email", "email", "email"]);
+    ]).toEqual(["email", "email", "off"]);
     expect([
       web.getAttribute("type"),
       web.getAttribute("inputmode"),
       web.getAttribute("autocomplete"),
-    ]).toEqual(["text", "url", "url"]);
+    ]).toEqual(["text", "url", "off"]);
   });
 });
 

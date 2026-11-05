@@ -46,8 +46,11 @@ export function armarElPedidoDeContacto(
   const antes = valoresDelContacto(original);
   const cambios: Partial<Record<CampoDeContacto, string | null>> = {};
   for (const campo of CAMPOS_DE_CONTACTO) {
-    const ahora = v[campo].trim();
-    if (ahora === antes[campo].trim()) continue;
+    // Sin recortar: el recorte de espacios es una regla del contacto (`src/primitivas/contacto/`) y la aplica el servidor; acá solo se
+    // distingue «igual», «vaciado» (texto vacío → `null`, borra) y «otro valor» (viaja tal cual). Un valor que solo difiere en espacios
+    // viaja y el servidor responde «sin cambios» (éxito).
+    const ahora = v[campo];
+    if (ahora === antes[campo]) continue;
     cambios[campo] = ahora === "" ? null : ahora;
   }
   if (Object.keys(cambios).length === 0) return null;
