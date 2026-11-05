@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import type { Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { Boton } from "../../componentes/Boton";
+import { Boton } from "../../componentes/Boton.cliente";
 import { Pila } from "../../primitivas/Pila";
 import estilos from "./AsistenteDeCertificado.module.css";
 import { AvisosDelEnvio } from "./AvisosDelEnvio";

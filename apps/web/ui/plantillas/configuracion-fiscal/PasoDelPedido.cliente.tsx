@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { Boton } from "../../componentes/Boton";
+import { Boton } from "../../componentes/Boton.cliente";
 import { Pila } from "../../primitivas/Pila";
 import estilos from "./AsistenteDeCertificado.module.css";
 import { nombreDelArchivoDelPedido } from "./modelo-de-certificado";

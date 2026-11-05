@@ -5,7 +5,7 @@ import {
   texto,
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { Boton } from "../../componentes/Boton";
+import { Boton } from "../../componentes/Boton.cliente";
 import { ComprobanteImpreso } from "./impresion/ComprobanteImpreso.cliente";
 import type { ComprobanteParaLaHoja, FormatoDeImpresion } from "./impresion/modelo-de-la-hoja";
 import estilos from "./PantallaDeImprimirComprobante.module.css";

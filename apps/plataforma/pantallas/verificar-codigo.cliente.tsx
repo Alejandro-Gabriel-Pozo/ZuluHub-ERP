@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Aviso } from "../../web/ui/componentes/Aviso";
-import { Boton } from "../../web/ui/componentes/Boton";
+import { Boton } from "../../web/ui/componentes/Boton.cliente";
 import { Campo } from "../../web/ui/componentes/Campo";
 import { CampoDeCodigo } from "../../web/ui/componentes/CampoDeCodigo";
 import { Pila } from "../../web/ui/primitivas/Pila";

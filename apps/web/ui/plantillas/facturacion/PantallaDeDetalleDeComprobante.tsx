@@ -1,6 +1,6 @@
 import type { DiccionarioResuelto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { Aviso } from "../../componentes/Aviso";
-import { Boton } from "../../componentes/Boton";
+import { Boton } from "../../componentes/Boton.cliente";
 import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../componentes/Insignia";
 import estilos from "./PantallaDeDetalleDeComprobante.module.css";

@@ -1,4 +1,4 @@
-import { Boton } from "../../componentes/Boton";
+import { Boton } from "../../componentes/Boton.cliente";
 import { Campo } from "../../componentes/Campo";
 import { CampoImporte } from "../../componentes/CampoImporte";
 import { Selector } from "../../componentes/Selector";

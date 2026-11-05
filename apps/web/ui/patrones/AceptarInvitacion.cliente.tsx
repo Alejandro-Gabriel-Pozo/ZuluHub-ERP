@@ -6,7 +6,7 @@ import {
   type DiccionarioResuelto,
 } from "../../../../src/capacidades/vocabulario/vocabulario";
 import { Aviso } from "../componentes/Aviso";
-import { Boton } from "../componentes/Boton";
+import { Boton } from "../componentes/Boton.cliente";
 import { EnlaceDeAccion } from "../componentes/EnlaceDeAccion";
 import { Pila } from "../primitivas/Pila";
 import { Texto } from "../primitivas/Texto";

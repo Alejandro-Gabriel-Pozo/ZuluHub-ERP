@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Aviso } from "../../web/ui/componentes/Aviso";
-import { Boton } from "../../web/ui/componentes/Boton";
+import { Boton } from "../../web/ui/componentes/Boton.cliente";
 import { Campo } from "../../web/ui/componentes/Campo";
 import { Selector } from "../../web/ui/componentes/Selector";
 import { useEnvioConClave } from "../../web/ui/patrones/useEnvioConClave";
