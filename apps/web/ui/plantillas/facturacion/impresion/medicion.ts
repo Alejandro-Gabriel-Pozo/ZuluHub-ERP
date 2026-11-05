@@ -19,8 +19,12 @@ export type Medidas = Readonly<{
 const alto = (e: Element | null): number | null =>
   e === null ? null : e.getBoundingClientRect().height;
 
-/** Lee las medidas de la tabla de medición; `null` si todavía no tiene todas sus piezas. */
+/**
+ * Lee las medidas de la tabla de medición; `null` si todavía no tiene todas sus piezas o si no tiene layout (`display: none`, p. ej.
+ * en `@media print`): ahí todos los altos dan 0 y el paginador repartiría todo en UNA hoja. Previene: hojas colapsadas al pasar a imprimir.
+ */
 export function leerLasMedidas(raiz: Element): Medidas | null {
+  if (raiz.getClientRects().length === 0) return null;
   const encabezadoDeLaHoja = alto(raiz.querySelector('[data-medida="encabezado"]'));
   const encabezadoDeLaTabla = alto(raiz.querySelector("thead"));
   const filaDeTransporte = alto(raiz.querySelector("tr[data-transporte]"));
