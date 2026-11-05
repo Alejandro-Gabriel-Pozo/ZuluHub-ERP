@@ -354,20 +354,28 @@ describe("hoja A4: accesibilidad, @page e impresión", () => {
       await expect
         .poll(
           () => {
-            const [primera, segunda] = hojas.map((h) => h.getBoundingClientRect());
-            return Math.abs((segunda?.top ?? 0) - (primera?.bottom ?? 0));
+            // Se relee el DOM en cada lectura (no las referencias de antes de emular) y se exigen al menos 2 hojas: si colapsaran en una,
+            // no pasa en vacío.
+            const actuales = [...document.querySelectorAll<HTMLElement>("[data-hoja]")];
+            const [primera, segunda] = actuales.map((h) => h.getBoundingClientRect());
+            if (actuales.length < 2 || primera === undefined || segunda === undefined) {
+              return Number.POSITIVE_INFINITY;
+            }
+            return Math.abs(segunda.top - primera.bottom);
           },
           { timeout: 5000 },
         )
         .toBeLessThanOrEqual(1);
       const contenido = document.querySelector<HTMLElement>("[data-escala]");
       expect(getComputedStyle(contenido as Element).transform).toBe("none");
-      const primera = hojas[0]?.getBoundingClientRect();
+      const primera = document.querySelector("[data-hoja]")?.getBoundingClientRect();
       expect(Math.abs((primera?.width ?? 0) - mmAPx(ANCHO_A4_MM))).toBeLessThanOrEqual(1);
       expect(getComputedStyle(document.querySelector("[data-ajeno]") as Element).display).toBe(
         "none",
       );
-      expect(getComputedStyle(hojas[0] as Element).display).not.toBe("none");
+      expect(getComputedStyle(document.querySelector("[data-hoja]") as Element).display).not.toBe(
+        "none",
+      );
       expect(getComputedStyle(document.querySelector("[data-medidor]") as Element).display).toBe(
         "none",
       );
