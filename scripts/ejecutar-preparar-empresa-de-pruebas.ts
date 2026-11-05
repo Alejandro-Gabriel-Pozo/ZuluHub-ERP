@@ -1,6 +1,10 @@
 import { ocultarSecretos } from "../src/adaptadores/postgres/describir-falla-de-base";
 import { PEDERNAL_CLAVE_CONTEXTO } from "../src/adaptadores/postgres/contexto-firmado";
-import { PEDERNAL_SECRETO_INVITACIONES } from "../src/adaptadores/tokens/tokens-hmac";
+import {
+  PEDERNAL_SECRETO_INVITACIONES,
+  leerSecretoDeInvitaciones,
+} from "../src/adaptadores/tokens/tokens-hmac";
+import { valoresDeLaPieza } from "../src/composicion/entorno";
 import { PEDERNAL_DB_PLATAFORMA } from "../src/composicion/entorno-de-plataforma";
 import { armarEntradaDelCaso, type NombreDeCaso } from "../src/plataforma/dominio/pedido-de-caso";
 import { emailDesdeTexto } from "../src/modulos/identidad/publico";
@@ -38,14 +42,32 @@ export const MODULO_A_ACTIVAR = "facturacion";
 /** El texto que queda en la auditoría de plataforma como motivo de los pasos que lo piden. */
 const MOTIVO = "Preparación del entorno de pruebas (preview)";
 
-/** Los nombres de variable que el flujo exige (solo NOMBRES: los valores nunca se muestran). */
-export const VARIABLES_OBLIGATORIAS = [
+/** El secreto del cron de Vercel: lo fija el dueño (valor conocido) en Vercel Preview y en el Environment. */
+export const VARIABLE_DEL_CRON = "CRON_SECRET";
+
+/** El largo mínimo que el dueño pidió para el secreto del cron (la aplicación exige menos: 16). */
+const LARGO_MINIMO_DEL_CRON = 24;
+
+/**
+ * Los nombres de variable que el flujo exige (solo NOMBRES: los valores nunca se muestran). Antes de abrir el login
+ * temporal ya tienen que estar el paquete, la cadena del dueño y los dos secretos que fija el dueño; las dos del rol de
+ * plataforma las entrega el paso que abre el login (`ejecutar-login-temporal-de-plataforma.ts`).
+ */
+export const VARIABLES_ANTES_DEL_LOGIN = [
   VARIABLE_DEL_PAQUETE,
   VARIABLE_DE_LA_CADENA,
+  PEDERNAL_SECRETO_INVITACIONES,
+  VARIABLE_DEL_CRON,
+] as const;
+export const VARIABLES_OBLIGATORIAS = [
+  ...VARIABLES_ANTES_DEL_LOGIN,
   PEDERNAL_DB_PLATAFORMA,
   PEDERNAL_CLAVE_CONTEXTO,
-  PEDERNAL_SECRETO_INVITACIONES,
 ] as const;
+
+/** Un administrador de plataforma no puede ser miembro de ninguna empresa (decisión F5): el dueño necesita DOS cuentas de Google. */
+const MENSAJE_ADMIN_Y_GERENTE =
+  "adminEmail y empresa.emailGerente tienen que ser DISTINTOS: el administrador de plataforma no puede ser gerente ni miembro de ninguna empresa (hacen falta dos cuentas de correo)";
 
 type Objeto = Readonly<Record<string, unknown>>;
 
@@ -64,7 +86,7 @@ export type Paquete = Readonly<{
     perillas: Objeto;
   }>;
   vigenteDesde: string;
-  dominio: Readonly<{ host: string; titular: string }>;
+  dominio: Readonly<{ host: string; titular: string; verificadoEn: string }>;
   empresa: Readonly<{
     nombreDeTenant: string;
     cuit: string;
@@ -163,7 +185,13 @@ export function leerPaquete(
     [],
     problemas,
   );
-  const dominio = leerSeccion(json["dominio"], "dominio", ["host", "titular"], [], problemas);
+  const dominio = leerSeccion(
+    json["dominio"],
+    "dominio",
+    ["host", "titular", "verificadoEn"],
+    [],
+    problemas,
+  );
   const empresa = leerSeccion(
     json["empresa"],
     "empresa",
@@ -185,6 +213,15 @@ export function leerPaquete(
     if (!["codigo", "nombreComercial", "modulos", "perillas"].includes(campo)) {
       problemas.push(`plan.${campo}: no se esperaba este campo`);
     }
+  }
+
+  const normal = (valor: unknown) =>
+    typeof valor === "string" ? valor.trim().toLowerCase() : null;
+  if (
+    normal(raiz["adminEmail"]) !== null &&
+    normal(raiz["adminEmail"]) === normal(empresa["emailGerente"])
+  ) {
+    problemas.push(MENSAJE_ADMIN_Y_GERENTE);
   }
 
   if (problemas.length > 0) return { ok: false, problemas };
@@ -214,6 +251,7 @@ type Contexto = {
   planId: string;
   marcaId: string;
   versionDelBorradorDeMarca: number;
+  dominioId: string;
   empresaId: string;
 };
 
@@ -320,6 +358,30 @@ function pasosDe(p: Paquete): readonly Paso[] {
         esCanonico: true,
         duenio: { tipo: "MARCA", marcaId: c.marcaId },
       }),
+      leer: (d, c) => {
+        const id = d.get("dominioId");
+        if (id === undefined || !UUID.test(id)) return false;
+        c.dominioId = id;
+        return true;
+      },
+    },
+    // El alta exige un host canónico ACTIVO de la aplicación: hay que verificar y activar el dominio antes.
+    {
+      nombre: "verificar-dominio",
+      caso: "verificarDominio",
+      json: (c) => ({
+        claveDeIdempotencia: clave("verificar-dominio"),
+        dominioId: c.dominioId,
+        verificadoEn: p.dominio.verificadoEn,
+      }),
+    },
+    {
+      nombre: "activar-dominio",
+      caso: "activarDominio",
+      json: (c) => ({
+        claveDeIdempotencia: clave("activar-dominio"),
+        dominioId: c.dominioId,
+      }),
     },
     {
       nombre: "alta-de-empresa",
@@ -403,7 +465,29 @@ export type EntradaDePreparacion = Readonly<{
   error: (linea: string) => void;
   /** Una línea tal cual, sin tapar (el `::add-mask::` que lee el runner de GitHub). Solo en Actions. */
   comando: (linea: string) => void;
+  /**
+   * Solo revisa (variables, forma de los secretos y de los pasos) y no toca ninguna base: es el paso que corre ANTES de abrir
+   * el login temporal del rol de plataforma. Sin él se exigen también las dos variables que entrega ese login.
+   */
+  soloValidar?: boolean;
+  /**
+   * Pega UNA vez al cron de la app (`GET <url>` con `Authorization: Bearer <secreto>`) para que se procese la cola y salga el
+   * mail de la invitación. Devuelve el código HTTP, o `null` si no hubo respuesta. Nunca lanza.
+   */
+  despacharCola: (url: string, secreto: string) => Promise<number | null>;
 }>;
+
+/** La dirección del cron de la app, solo si el host es un nombre de host de verdad (nada de rutas, puertos ni usuarios). */
+export function urlDelCron(host: string): string | null {
+  try {
+    const url = new URL(`https://${host}/api/trabajos/cron`);
+    return url.hostname === host.toLowerCase() && url.port === "" && url.username === ""
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 const ID_DE_RELLENO = "00000000-0000-4000-8000-000000000000";
 
@@ -415,6 +499,7 @@ export async function prepararEmpresaDePruebas(entrada: EntradaDePreparacion): P
     entorno[PEDERNAL_DB_PLATAFORMA]?.trim(),
     entorno[PEDERNAL_CLAVE_CONTEXTO]?.trim().split(":")[1],
     entorno[PEDERNAL_SECRETO_INVITACIONES]?.trim(),
+    entorno[VARIABLE_DEL_CRON]?.trim(),
     entorno[VARIABLE_DEL_PAQUETE]?.trim(),
   ];
   const tapar = (linea: string) =>
@@ -423,11 +508,35 @@ export async function prepararEmpresaDePruebas(entrada: EntradaDePreparacion): P
   const error = (linea: string) => entrada.error(tapar(linea));
   const salida = { info, error };
 
-  const faltan = VARIABLES_OBLIGATORIAS.filter((n) => (entorno[n] ?? "").trim() === "");
+  const exigidas =
+    entrada.soloValidar === true ? VARIABLES_ANTES_DEL_LOGIN : VARIABLES_OBLIGATORIAS;
+  const faltan = exigidas.filter((n) => (entorno[n] ?? "").trim() === "");
   if (faltan.length > 0) {
     error(
       `ERROR: faltan estas variables (solo se nombran): ${faltan.join(", ")}. No se hizo nada.`,
     );
+    return 2;
+  }
+  // La forma de los dos secretos que fija el dueño, antes de empezar (los mensajes nombran la variable, nunca el valor).
+  const malos: string[] = [];
+  try {
+    leerSecretoDeInvitaciones(entorno[PEDERNAL_SECRETO_INVITACIONES]);
+  } catch {
+    malos.push(`${PEDERNAL_SECRETO_INVITACIONES}: tiene que ser hexadecimal de 64 o más dígitos`);
+  }
+  const cron = entorno[VARIABLE_DEL_CRON]?.trim() ?? "";
+  try {
+    valoresDeLaPieza({ [VARIABLE_DEL_CRON]: cron }, "cron");
+    if (cron.length < LARGO_MINIMO_DEL_CRON) throw new RangeError("corto");
+  } catch {
+    malos.push(
+      `${VARIABLE_DEL_CRON}: tiene que tener al menos ${LARGO_MINIMO_DEL_CRON} caracteres y variedad (letras y números distintos)`,
+    );
+  }
+  if (malos.length > 0) {
+    error("ERROR: estos secretos no tienen la forma pedida (no se repite ningún valor):");
+    for (const problema of malos) error(`  - ${problema}`);
+    error("No se hizo nada.");
     return 2;
   }
 
@@ -458,6 +567,7 @@ export async function prepararEmpresaDePruebas(entrada: EntradaDePreparacion): P
     planId: ID_DE_RELLENO,
     marcaId: ID_DE_RELLENO,
     versionDelBorradorDeMarca: 1,
+    dominioId: ID_DE_RELLENO,
     empresaId: ID_DE_RELLENO,
   };
   const email = emailDesdeTexto(paquete.adminEmail);
@@ -476,6 +586,11 @@ export async function prepararEmpresaDePruebas(entrada: EntradaDePreparacion): P
     for (const problema of problemasDeForma) error(`  - ${problema}`);
     error("No se hizo nada.");
     return 2;
+  }
+
+  if (entrada.soloValidar === true) {
+    info("VALIDADO: variables, secretos y datos de los pasos están bien. No se tocó ninguna base.");
+    return 0;
   }
 
   const total = pasos.length + 1;
@@ -511,8 +626,26 @@ export async function prepararEmpresaDePruebas(entrada: EntradaDePreparacion): P
   }
 
   info(`LISTO: se prepararon los ${total} pasos.`);
-  info(
-    "Recordá: el mail con la invitación al gerente queda ENCOLADO; este flujo no lo despacha. El dominio queda a verificar y activar aparte.",
-  );
+
+  // La cola se procesa UNA vez, recién cuando todo salió bien. Si falla, lo ya sembrado queda y solo se avisa.
+  const url = urlDelCron(paquete.dominio.host);
+  if (url === null) {
+    error(
+      "AVISO: el host del dominio no sirve para armar la dirección del cron; el mail NO se despachó.",
+    );
+    return 0;
+  }
+  const estado = await entrada.despacharCola(url, cron);
+  if (estado !== null && estado >= 200 && estado < 300) {
+    info(
+      "Cola despachada: el cron respondió bien; el mail con la invitación al gerente sale en unos instantes.",
+    );
+  } else {
+    error(
+      estado === null
+        ? "AVISO: el cron no respondió; el mail con la invitación quedó ENCOLADO y NO se despachó. Lo ya sembrado está bien: repetí el flujo para reintentar."
+        : `AVISO: el cron respondió ${estado}; el mail con la invitación quedó ENCOLADO. Si es 401, el ${VARIABLE_DEL_CRON} de Vercel Preview no coincide con el del Environment (¿falta el Redeploy de preview?). Lo ya sembrado está bien: repetí el flujo para reintentar.`,
+    );
+  }
   return 0;
 }

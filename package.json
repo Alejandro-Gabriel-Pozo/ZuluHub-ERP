@@ -31,6 +31,7 @@
     "plataforma:primer-admin": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/crear-primer-admin.ts",
     "plataforma:caso": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/ejecutar-caso-de-plataforma.ts",
     "plataforma:preparar-prueba": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/preparar-empresa-de-pruebas.ts",
+    "plataforma:login-temporal": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/login-temporal-de-plataforma.ts",
     "plataforma:baja-admin": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/baja-de-admin.ts",
     "plataforma:resetear-segundo-factor": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/resetear-segundo-factor.ts"
   },

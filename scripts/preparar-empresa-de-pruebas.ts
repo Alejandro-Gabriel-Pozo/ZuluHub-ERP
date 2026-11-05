@@ -46,6 +46,22 @@ try {
     info: (linea) => console.log(linea),
     error: (linea) => console.error(linea),
     comando: (linea) => console.log(linea),
+    // `--validar`: solo revisa, antes de abrir el login temporal del rol de plataforma.
+    soloValidar: process.argv[2] === "--validar",
+    despacharCola: async (url, secreto) => {
+      try {
+        // Sin seguir redirecciones: el secreto no puede viajar a otro host.
+        const respuesta = await fetch(url, {
+          method: "GET",
+          headers: { authorization: `Bearer ${secreto}` },
+          redirect: "manual",
+          signal: AbortSignal.timeout(60_000),
+        });
+        return respuesta.status;
+      } catch {
+        return null;
+      }
+    },
   });
 } finally {
   await plataforma.cerrar();

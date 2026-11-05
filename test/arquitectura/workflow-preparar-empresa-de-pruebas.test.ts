@@ -20,9 +20,8 @@ const MIGRAR = readFileSync(
 );
 
 const SECRETOS_PERMITIDOS = [
-  "PEDERNAL_CLAVE_CONTEXTO",
+  "CRON_SECRET",
   "PEDERNAL_DB_DUENO_DIRECTA",
-  "PEDERNAL_DB_PLATAFORMA",
   "PEDERNAL_PREPARAR_PREVIEW",
   "PEDERNAL_SECRETO_INVITACIONES",
 ];
@@ -146,26 +145,30 @@ function problemasDelWorkflow(texto: string): string[] {
 
   // Qué paso ve qué secreto y qué comando corre.
   const comprobar = paso("Comprobar que el Environment");
+  const validar = paso("Validar los datos y los secretos");
   const alDia = paso("La base tiene que estar al día");
+  const abrir = paso("Abrir el login temporal");
   const preparar = paso("Preparar la empresa de pruebas");
+  const cerrar = paso("Cerrar el login temporal");
   exigir(
     "pasos-presentes",
-    [comprobar, alDia, preparar].every((p) => p !== undefined),
+    [comprobar, validar, alDia, abrir, preparar, cerrar].every((p) => p !== undefined),
   );
   exigir(
     "paquete-solo-donde-se-usa",
-    comprobar?.texto.includes("secrets.PEDERNAL_PREPARAR_PREVIEW") === true &&
-      preparar?.texto.includes("secrets.PEDERNAL_PREPARAR_PREVIEW") === true &&
-      alDia?.texto.includes("PEDERNAL_PREPARAR_PREVIEW") === false &&
-      alDia.texto.includes("PEDERNAL_DB_PLATAFORMA") === false,
+    [comprobar, validar, preparar].every(
+      (p) => p?.texto.includes("secrets.PEDERNAL_PREPARAR_PREVIEW") === true,
+    ) &&
+      [alDia, abrir, cerrar].every((p) => p?.texto.includes("PEDERNAL_PREPARAR_PREVIEW") === false),
   );
   exigir(
     "comando-de-preparacion",
-    preparar?.texto.includes("run: npm run plataforma:preparar-prueba\n") === true,
+    preparar?.texto.includes("run: npm run plataforma:preparar-prueba\n") === true &&
+      validar?.texto.includes("run: npm run plataforma:preparar-prueba -- --validar\n") === true,
   );
   exigir(
     "cadena-directa-del-dueno",
-    [comprobar, alDia, preparar].every(
+    [comprobar, validar, alDia, abrir, preparar, cerrar].every(
       (p) =>
         p?.texto.includes("PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}") ===
         true,
@@ -179,9 +182,35 @@ function problemasDelWorkflow(texto: string): string[] {
       alDia.texto.includes("shell: bash") &&
       alDia.texto.includes("exit 1"),
   );
+
+  // El login temporal del rol de plataforma: se abre con su comando, solo ve la cadena del dueño, y el cierre corre SIEMPRE,
+  // es el último paso, y nada puede esconder su falla.
+  exigir(
+    "abrir-solo-con-la-cadena-del-dueno",
+    abrir?.texto.includes("id: abrir") === true &&
+      abrir.texto.includes("run: npm run plataforma:login-temporal -- abrir\n") &&
+      !abrir.texto.includes("if:") &&
+      [abrir, cerrar].every((p) => (p?.texto.match(/secrets\./g) ?? []).length === 1),
+  );
+  exigir(
+    "cierre-siempre",
+    cerrar?.texto.includes("if: always() && steps.abrir.conclusion != 'skipped'") === true &&
+      cerrar.texto.includes("run: npm run plataforma:login-temporal -- cerrar\n"),
+  );
+  exigir("cierre-al-final", pasos.at(-1)?.nombre.includes("Cerrar el login temporal") === true);
+  exigir("sin-continue-on-error", !/continue-on-error/.test(limpio));
+
   const nombres = pasos.map((p) => p.nombre);
   const pos = (parte: string) => nombres.findIndex((n) => n.includes(parte));
-  const orden = ["Comprobar que", "Dependencias", "La base tiene que estar al día", "Preparar la"];
+  const orden = [
+    "Comprobar que",
+    "Dependencias",
+    "Validar los datos",
+    "La base tiene que estar al día",
+    "Abrir el login temporal",
+    "Preparar la",
+    "Cerrar el login temporal",
+  ];
   exigir(
     "orden",
     pos("Comprobar que") >= 0 &&
@@ -226,8 +255,11 @@ describe("workflow preparar-empresa-de-pruebas.yml", () => {
       "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
       "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1",
       "Dependencias (solo las de producción, sin scripts de instalación)",
+      "Validar los datos y los secretos (no toca la base)",
       "La base tiene que estar al día",
+      "Abrir el login temporal del rol de plataforma (clave al azar de esta corrida)",
       "Preparar la empresa de pruebas (sin mostrar secretos ni datos personales)",
+      "Cerrar el login temporal del rol de plataforma (siempre; falla si no queda cerrado)",
     ]);
   });
 
@@ -359,6 +391,32 @@ describe("workflow preparar-empresa-de-pruebas.yml", () => {
           const j = t.indexOf("      - name: Preparar la empresa de pruebas");
           return t.slice(0, i) + t.slice(j) + "\n" + t.slice(i, j);
         },
+      ],
+      [
+        "abrir-solo-con-la-cadena-del-dueno",
+        "el paso que abre el login con un secreto de más",
+        reemplazar(
+          "        id: abrir\n        run: npm run plataforma:login-temporal -- abrir\n        env:\n",
+          "        id: abrir\n        run: npm run plataforma:login-temporal -- abrir\n        env:\n          CRON_SECRET: ${{ secrets.CRON_SECRET }}\n",
+        ),
+      ],
+      [
+        "cierre-siempre",
+        "el cierre sin always()",
+        reemplazar("        if: always() && steps.abrir.conclusion != 'skipped'\n", ""),
+      ],
+      [
+        "cierre-al-final",
+        "un paso después del cierre",
+        (t) => `${t}\n      - name: Otro paso\n        run: echo listo\n`,
+      ],
+      [
+        "sin-continue-on-error",
+        "el cierre que ignora su falla",
+        reemplazar(
+          "        if: always() && steps.abrir.conclusion != 'skipped'\n",
+          "        if: always() && steps.abrir.conclusion != 'skipped'\n        continue-on-error: true\n",
+        ),
       ],
       [
         "acciones-por-sha",

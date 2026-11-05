@@ -5,6 +5,7 @@ import {
   ejecutorDeCasos,
   leerPaquete,
   prepararEmpresaDePruebas,
+  urlDelCron,
   type EntradaDePreparacion,
 } from "../../scripts/ejecutar-preparar-empresa-de-pruebas";
 import {
@@ -25,6 +26,7 @@ import { err, ok } from "../../src/primitivas/resultado/resultado";
 const ID_ADMIN = adminPlataformaId("aaaaaaaa-0000-4000-8000-000000000001");
 const PLAN = "11111111-1111-4111-8111-111111111111";
 const MARCA = "22222222-2222-4222-8222-222222222222";
+const DOMINIO = "44444444-4444-4444-8444-444444444444";
 const EMPRESA = "33333333-3333-4333-8333-333333333333";
 
 // Valores inventados y reconocibles: ninguno puede aparecer en lo que se imprime.
@@ -35,12 +37,15 @@ const PERSONALES = {
   razonSocial: "Razon Centinela SRL",
   nombreDeTenant: "Tenant Centinela",
 };
+// 64 dígitos hexadecimales (la forma que exige el secreto de invitaciones) y reconocibles.
+const HEX_CENTINELA = "c0ffee".repeat(10) + "abcd";
 const SECRETOS = {
   PEDERNAL_DB_MIGRACIONES:
     "postgres://dueno-centinela:clave-dueno-centinela@host-centinela.test/base",
   PEDERNAL_DB_PLATAFORMA: "postgres://plat-centinela:clave-plat-centinela@host-centinela.test/base",
   PEDERNAL_CLAVE_CONTEXTO: "1:secreto-contexto-centinela",
-  PEDERNAL_SECRETO_INVITACIONES: "secreto-invitaciones-centinela",
+  PEDERNAL_SECRETO_INVITACIONES: HEX_CENTINELA,
+  CRON_SECRET: "cron-centinela-0123456789abcdef",
 };
 const PROHIBIDOS = [
   ...Object.values(PERSONALES),
@@ -49,7 +54,8 @@ const PROHIBIDOS = [
   "plat-centinela",
   "clave-plat-centinela",
   "secreto-contexto-centinela",
-  "secreto-invitaciones-centinela",
+  HEX_CENTINELA,
+  "cron-centinela-0123456789abcdef",
 ];
 
 const PAQUETE = {
@@ -62,7 +68,11 @@ const PAQUETE = {
     modulos: ["administracion", "facturacion"],
     perillas: { empresas_por_tenant: { tipo: "LIMITE", limite: 1 } },
   },
-  dominio: { host: "app-prueba.pedernal.com.ar", titular: "OPERADOR" },
+  dominio: {
+    host: "app-prueba.pedernal.com.ar",
+    titular: "OPERADOR",
+    verificadoEn: "2026-11-05T09:00:00-03:00",
+  },
   empresa: {
     nombreDeTenant: PERSONALES.nombreDeTenant,
     cuit: PERSONALES.cuit,
@@ -84,7 +94,9 @@ function casosFalsos(cambios: Partial<Record<string, Respuesta>> = {}) {
     crearMarca: ok({ marcaId: MARCA, yaExistia: false }),
     guardarBorradorDeMarca: ok({ borradorId: "b-2", version: 4 }),
     confirmarVersionDeMarca: ok({ numero: 1 }),
-    agregarDominio: ok({ dominioId: "d-1", yaExistia: false }),
+    agregarDominio: ok({ dominioId: DOMINIO, yaExistia: false }),
+    verificarDominio: ok({ dominioId: DOMINIO, estado: "VERIFICADO", yaEstaba: false }),
+    activarDominio: ok({ dominioId: DOMINIO, estado: "ACTIVO", yaEstaba: false }),
     altaDeEmpresa: ok({
       tenantId: "t-1",
       empresaId: EMPRESA,
@@ -112,6 +124,8 @@ function armar(
     entorno?: Record<string, string | undefined>;
     casos?: Partial<Record<string, Respuesta>>;
     admin?: number;
+    soloValidar?: boolean;
+    cola?: number | null;
   } = {},
 ) {
   const salida: string[] = [];
@@ -124,6 +138,11 @@ function armar(
     );
     return Promise.resolve(opciones.admin ?? 0);
   });
+  const despachos: Array<{ url: string; secreto: string }> = [];
+  const despachar: EntradaDePreparacion["despacharCola"] = (url, secreto) => {
+    despachos.push({ url, secreto });
+    return Promise.resolve(opciones.cola === undefined ? 200 : opciones.cola);
+  };
   const entrada: EntradaDePreparacion = {
     entorno: {
       ...SECRETOS,
@@ -144,12 +163,15 @@ function armar(
     info: (l) => salida.push(l),
     error: (l) => errores.push(l),
     comando: (l) => comandos.push(l),
+    despacharCola: despachar,
+    ...(opciones.soloValidar === true ? { soloValidar: true } : {}),
   };
   return {
     entrada,
     llamadas,
     sembrar,
     comandos,
+    despachos,
     salida,
     errores,
     texto: () =>
@@ -171,6 +193,8 @@ describe("preparar la empresa de pruebas: el camino feliz", () => {
       "guardarBorradorDeMarca",
       "confirmarVersionDeMarca",
       "agregarDominio",
+      "verificarDominio",
+      "activarDominio",
       "altaDeEmpresa",
       "activarModuloDeEmpresa",
     ]);
@@ -202,7 +226,7 @@ describe("preparar la empresa de pruebas: el camino feliz", () => {
     const t = armar();
     await prepararEmpresaDePruebas(t.entrada);
     const claves = t.llamadas.map((l) => l.entrada["claveDeIdempotencia"]);
-    expect(new Set(claves).size).toBe(9);
+    expect(new Set(claves).size).toBe(11);
     expect(
       claves.every((c) => typeof c === "string" && /^preparar-prueba-v1-[a-z-]+$/.test(c)),
     ).toBe(true);
@@ -237,7 +261,7 @@ describe("preparar la empresa de pruebas: cierra ante la duda", () => {
     expect(t.errores.join("\n")).toContain("PEDERNAL_DB_PLATAFORMA, PEDERNAL_CLAVE_CONTEXTO");
     expect(t.sembrar).not.toHaveBeenCalled();
     expect(t.llamadas).toEqual([]);
-    expect(VARIABLES_OBLIGATORIAS).toHaveLength(5);
+    expect(VARIABLES_OBLIGATORIAS).toHaveLength(6);
   });
 
   it("un dato mal escrito se rechaza ANTES de sembrar nada, sin repetir el valor", async () => {
@@ -288,7 +312,7 @@ describe("preparar la empresa de pruebas: cierra ante la duda", () => {
     const t = armar({ casos: { altaDeEmpresa: err("CUIT_DUPLICADO") } });
     expect(await prepararEmpresaDePruebas(t.entrada)).toBe(1);
     expect(t.llamadas.map((l) => l.caso).at(-1)).toBe("altaDeEmpresa");
-    expect(t.errores.join("\n")).toContain("Se detuvo en el paso 9");
+    expect(t.errores.join("\n")).toContain("Se detuvo en el paso 11");
     expect(t.texto()).not.toContain(PERSONALES.cuit);
   });
 
@@ -338,5 +362,112 @@ describe("preparar la empresa de pruebas: nada sensible sale", () => {
     const local = armar();
     await prepararEmpresaDePruebas(local.entrada);
     expect(local.comandos).toEqual([]);
+  });
+});
+
+describe("preparar la empresa de pruebas: secretos del dueño, validación previa y cola", () => {
+  it("--validar revisa todo sin tocar ninguna base y sin exigir las variables del rol de plataforma", async () => {
+    const t = armar({
+      soloValidar: true,
+      entorno: { PEDERNAL_DB_PLATAFORMA: undefined, PEDERNAL_CLAVE_CONTEXTO: undefined },
+    });
+    expect(await prepararEmpresaDePruebas(t.entrada)).toBe(0);
+    expect(t.sembrar).not.toHaveBeenCalled();
+    expect(t.llamadas).toEqual([]);
+    expect(t.despachos).toEqual([]);
+  });
+
+  it("--validar también rechaza un dato mal escrito", async () => {
+    const t = armar({
+      soloValidar: true,
+      paquete: { ...PAQUETE, empresa: { ...PAQUETE.empresa, cuit: "20123456785" } },
+    });
+    expect(await prepararEmpresaDePruebas(t.entrada)).toBe(2);
+  });
+
+  it.each([
+    [
+      "el secreto de invitaciones no es hexadecimal",
+      { PEDERNAL_SECRETO_INVITACIONES: "no-es-hexa" },
+      "PEDERNAL_SECRETO_INVITACIONES",
+    ],
+    [
+      "el secreto de invitaciones es corto",
+      { PEDERNAL_SECRETO_INVITACIONES: "abcd" },
+      "PEDERNAL_SECRETO_INVITACIONES",
+    ],
+    ["el CRON_SECRET es corto", { CRON_SECRET: "corto-pero-variado-123" }, "CRON_SECRET"],
+    ["el CRON_SECRET repite un solo carácter", { CRON_SECRET: "a".repeat(40) }, "CRON_SECRET"],
+    ["falta el CRON_SECRET", { CRON_SECRET: undefined }, "CRON_SECRET"],
+  ])("%s: se rechaza antes de empezar, sin repetir el valor", async (_nombre, entorno, nombre) => {
+    const t = armar({ entorno });
+    expect(await prepararEmpresaDePruebas(t.entrada)).toBe(2);
+    expect(t.errores.join("\n")).toContain(nombre);
+    expect(t.sembrar).not.toHaveBeenCalled();
+    expect(t.llamadas).toEqual([]);
+    for (const valor of Object.values(entorno)) {
+      if (valor !== undefined) expect(t.texto()).not.toContain(valor);
+    }
+  });
+
+  it("el administrador y el gerente con el mismo email se rechazan, y el mensaje lo explica", async () => {
+    const t = armar({
+      paquete: {
+        ...PAQUETE,
+        empresa: { ...PAQUETE.empresa, emailGerente: PERSONALES.adminEmail.toUpperCase() },
+      },
+    });
+    expect(await prepararEmpresaDePruebas(t.entrada)).toBe(2);
+    expect(t.errores.join("\n")).toContain("DISTINTOS");
+    expect(t.llamadas).toEqual([]);
+  });
+
+  it("al terminar bien pega UNA vez al cron de la app con el secreto, y el secreto no se imprime", async () => {
+    const t = armar();
+    expect(await prepararEmpresaDePruebas(t.entrada)).toBe(0);
+    expect(t.despachos).toEqual([
+      {
+        url: "https://app-prueba.pedernal.com.ar/api/trabajos/cron",
+        secreto: "cron-centinela-0123456789abcdef",
+      },
+    ]);
+    expect(t.texto()).toContain("Cola despachada");
+  });
+
+  it.each([
+    ["responde 401", 401, "401"],
+    ["no responde", null, "no respondió"],
+    ["responde 500", 500, "500"],
+  ])(
+    "si el cron %s, lo avisa y NO falla lo ya sembrado (código 0)",
+    async (_nombre, cola, texto) => {
+      const t = armar({ cola });
+      expect(await prepararEmpresaDePruebas(t.entrada)).toBe(0);
+      expect(t.errores.join("\n")).toContain(texto);
+      expect(t.errores.join("\n")).toContain("ENCOLADO");
+    },
+  );
+
+  it("si un paso falla, NO se pega al cron", async () => {
+    const t = armar({ casos: { altaDeEmpresa: err("CUIT_DUPLICADO") } });
+    expect(await prepararEmpresaDePruebas(t.entrada)).toBe(1);
+    expect(t.despachos).toEqual([]);
+  });
+
+  it("la dirección del cron solo se arma con un host de verdad", () => {
+    expect(urlDelCron("app-prueba.pedernal.com.ar")).toBe(
+      "https://app-prueba.pedernal.com.ar/api/trabajos/cron",
+    );
+    for (const malo of [
+      "",
+      "a.com/x",
+      "a.com:8080",
+      "u@a.com",
+      "a.com?x=1",
+      "a b.com",
+      "otro.com#",
+    ]) {
+      expect(urlDelCron(malo)).toBeNull();
+    }
   });
 });

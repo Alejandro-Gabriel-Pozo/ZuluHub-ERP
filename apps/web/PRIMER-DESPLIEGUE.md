@@ -368,7 +368,7 @@ no tienen que quedar en el registro de una ejecución.
 
 _Excepción para la empresa de PRUEBAS en Preview (2026-11-05, pedido del dueño que no usa terminal)_: el workflow manual
 `preparar-empresa-de-pruebas.yml` corre estos pasos sin que los datos pasen por el formulario: salen de un secreto del Environment
-`preview` (`PEDERNAL_PREPARAR_PREVIEW`) y se tapan en el registro. Está en borrador: ver las preguntas pendientes de su PR.
+`preview` (`PEDERNAL_PREPARAR_PREVIEW`) y se tapan en el registro. Le da login al rol de plataforma solo durante la corrida y lo cierra siempre. Está en borrador: ver su PR.
 
 **Estado hoy (honesto, 2026-10-22; el último párrafo se actualizó el 2026-11-04):** los scripts del paso 2 y 3 **existen** y se corren con
 `npm run plataforma:primer-admin` y `npm run plataforma:caso` (con `node --import ./scripts/cargador-de-ts.mjs`; no hace
