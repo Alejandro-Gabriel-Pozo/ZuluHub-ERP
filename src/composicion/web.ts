@@ -3,6 +3,7 @@ import {
   crearLectorDeCertificados,
   type CadenasDeConfianza,
 } from "../adaptadores/certificados/lector-x509";
+import { CADENAS_DE_CONFIANZA_DE_ARCA } from "./cadenas-de-confianza-de-arca";
 import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../capacidades/permisos/empresa";
 import { crearCasosDeUsoDeEmpresas, crearConsultasDeEmpresas } from "../modulos/empresas/publico";
 import {
@@ -40,8 +41,8 @@ import { perezoso } from "./perezoso";
  * de impresión sale en `consultasDeFacturacion` (`comprobantes.ver`) con la marca vacía de la primera entrega
  * (`conexiones.ts`, `MARCA_DE_IMPRESION_VACIA`, D-112). Las acciones de certificados (generar el pedido y cargar el certificado que
  * devolvió ARCA, `certificados.gestionar`) salen en `casosDeUsoDeCertificados`; su ESTADO, en `consultasDeFacturacion`. Las cadenas de
- * confianza de ARCA con las que se valida un certificado cargado NO están en el repositorio (su autenticidad la confirma el dueño
- * comparando huellas, D-F7): por defecto no hay ninguna y la carga falla cerrado (`CADENA_NO_CONFIABLE`). `consultasDeSesion` (la
+ * confianza de ARCA con las que se valida un certificado cargado salen de `cadenas-de-confianza-de-arca.ts`: solo la de
+ * HOMOLOGACIÓN (verificada por el dueño); la de PRODUCCIÓN está vacía y la carga falla cerrado (`CADENA_NO_CONFIABLE`). `consultasDeSesion` (la
  * persona del usuario y sus empresas, puerta `SESION`) llegó con W3a. La autenticación (W3b) es otra
  * puerta: `autenticacion()` dice QUIÉN es (usuario y email verificado, por host) y `barridoDeAutenticacion()`
  * es lo que llama el cron; la persona y las empresas salen después, con el contexto `SESION`.
@@ -54,8 +55,8 @@ export type OpcionesDeWeb = Readonly<{
   /** La hora de lo que sigue a una llamada a ARCA; por defecto, el reloj del sistema. */
   reloj?: Readonly<{ ahora(): Date }>;
   /**
-   * Las autoridades (PEM) de ARCA contra las que cierra la cadena de un certificado cargado, por ambiente. Por defecto, ninguna: sin
-   * autoridades la cadena no cierra y cargar un certificado falla cerrado. En pruebas, las que nacen en la propia prueba.
+   * Las autoridades (PEM) de ARCA contra las que cierra la cadena de un certificado cargado, por ambiente. Por defecto, las verificadas de
+   * `cadenas-de-confianza-de-arca.ts` (homologación; producción vacía y falla cerrado). En pruebas, las que nacen en la propia prueba.
    */
   cadenasDeConfianza?: CadenasDeConfianza;
 }>;
@@ -65,7 +66,7 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
   const reloj = opciones.reloj ?? { ahora: () => new Date() };
   // Armarlo no lee ninguna variable: el proveedor pide la clave de los certificados recién al hablar con ARCA.
   const emision = opciones.emision ?? armarEmisionFiscal(conexiones, { reloj });
-  const cadenasDeConfianza = opciones.cadenasDeConfianza ?? { HOMOLOGACION: [], PRODUCCION: [] };
+  const cadenasDeConfianza = opciones.cadenasDeConfianza ?? CADENAS_DE_CONFIANZA_DE_ARCA;
   return {
     resolucionDeHost: () => conexiones.resolucionDeHost(),
     configuracionPublicaDeHost: () => conexiones.configuracionPublicaDeHost(),
