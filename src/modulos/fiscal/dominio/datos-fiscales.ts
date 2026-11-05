@@ -173,13 +173,15 @@ export function fechaCivilValida(texto: string): boolean {
   return dia <= (diasDelMes[mes - 1] ?? 0);
 }
 
-/** `undefined`: no viene; `null`: se borra; el texto limpio; o `INVALIDO`. */
+const NUMERO_INVALIDO = Symbol("numero de IIBB invalido");
+
+/** `undefined`: no viene; `null`: se borra; el texto limpio; o `NUMERO_INVALIDO`. */
 function limpiarNumeroDeIibb(
   valor: string | null | undefined,
-): string | null | undefined | "INVALIDO" {
+): string | null | undefined | typeof NUMERO_INVALIDO {
   if (valor === undefined) return undefined;
   if (valor === null || valor.trim() === "") return null;
-  return textoLimpio(valor, LIMITES_DE_DATOS_FISCALES.iibbNumero) ?? "INVALIDO";
+  return textoLimpio(valor, LIMITES_DE_DATOS_FISCALES.iibbNumero) ?? NUMERO_INVALIDO;
 }
 
 /** Solo «No contribuyente» se acepta al editar (las otras tres ya no se piden). Mismas salidas que el número. */
@@ -232,7 +234,7 @@ export function editarBorrador(
   let iibbNumero = borrador.iibbNumero;
   let iibbCondicion = condicionVigente(borrador.iibbCondicion);
   const numeroNuevo = limpiarNumeroDeIibb(cambios.iibbNumero);
-  if (numeroNuevo === "INVALIDO") return err("IIBB_NUMERO_INVALIDO");
+  if (numeroNuevo === NUMERO_INVALIDO) return err("IIBB_NUMERO_INVALIDO");
   const condicionNueva = limpiarCondicionDeIibb(cambios.iibbCondicion);
   if (condicionNueva === "INVALIDA") return err("IIBB_CONDICION_INVALIDA");
   if (

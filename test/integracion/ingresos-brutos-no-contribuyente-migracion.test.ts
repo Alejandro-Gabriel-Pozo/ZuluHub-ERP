@@ -220,9 +220,12 @@ describe.skipIf(base === null)("Ingresos Brutos «No contribuyente»: la migraci
       const c = previa.cliente;
       const antes = await huellaDeCatalogo(c);
       const reversion = await texto(["reversiones", await archivoDeLaReversion()]);
-      const registro = async () =>
-        (await c.query("select 1 from migracion where nombre = $1", [await archivoDeLaMigracion()]))
-          .rows;
+      const registro = async (): Promise<unknown[]> => {
+        const r = await c.query<{ n: number }>("select 1 as n from migracion where nombre = $1", [
+          await archivoDeLaMigracion(),
+        ]);
+        return r.rows;
+      };
 
       await aplicarMigraciones(previa.aparte.base.dueno, conMia);
       const e = await crearEscenario(c);
