@@ -1432,6 +1432,10 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
 
     it("el modelo de impresión sale de lo guardado: es el mismo que el del dominio puro sobre el contenido emitido", async () => {
       const a = await crearEmpresa();
+      // Desde 0023 el nombre se congela solo si la empresa tiene más de una sucursal abierta.
+      await dueno.query("insert into sucursal (empresa_id, nombre) values ($1, 'Playa')", [
+        a.x.empresa,
+      ]);
       const alta = altaDe(a.x, { receptor: receptorInscripto });
       const autorizado = await escribir(a.x, async (tx) => {
         const c = exito(await tx.comprobantes.crear(alta)).valor;
@@ -1525,6 +1529,10 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
 
     it("reimprimir después de renombrar la sucursal conserva el nombre congelado (D-114); un comprobante nuevo toma el vigente", async () => {
       const a = await crearEmpresa();
+      // Desde 0023 el nombre se congela solo si la empresa tiene más de una sucursal abierta.
+      await dueno.query("insert into sucursal (empresa_id, nombre) values ($1, 'Playa')", [
+        a.x.empresa,
+      ]);
       const renombrar = (nombre: string) =>
         dueno.query("update sucursal set nombre = $2 where id = $1", [a.x.sucursal, nombre]);
       const modeloDe = async (id: ComprobanteGuardado["id"]) =>
