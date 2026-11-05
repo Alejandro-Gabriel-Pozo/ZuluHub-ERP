@@ -353,8 +353,12 @@ describe("el archivo «use server» que la expone", () => {
   it("la directiva va primero y solo exporta una función asíncrona", async () => {
     expect(readFileSync(ARCHIVO, "utf8").startsWith('"use server";')).toBe(true);
     const acciones = await import("../../apps/web/app/s/app/acciones-de-sucursal");
-    expect(Object.keys(acciones)).toEqual(["elegirSucursalAccion"]);
+    expect(Object.keys(acciones)).toEqual([
+      "elegirSucursalAccion",
+      "elegirSucursalAlIngresarAccion",
+    ]);
     expect(acciones.elegirSucursalAccion.constructor.name).toBe("AsyncFunction");
+    expect(acciones.elegirSucursalAlIngresarAccion.constructor.name).toBe("AsyncFunction");
   });
 
   it("delega en la acción del servidor con el formulario tal cual", async () => {
@@ -362,6 +366,44 @@ describe("el archivo «use server» que la expone", () => {
     expect(await elegirSucursalAccion({ error: null }, formulario(AJENA))).toEqual({
       error: conCodigo("FISCAL_SUCURSAL_FUERA_DE_ALCANCE"),
     });
+  });
+});
+
+describe("elegir la sucursal al ingresar (la acción)", () => {
+  const accion = async () =>
+    (await import("../../apps/web/app/s/app/acciones-de-sucursal")).elegirSucursalAlIngresarAccion;
+
+  it("una sucursal de las que puede elegir: guarda la cookie y vuelve al Inicio", async () => {
+    await expect((await accion())({ error: null }, formulario(CENTRO))).rejects.toMatchObject({
+      digest: conDigest(/^NEXT_REDIRECT;[a-z]+;\/;/),
+    });
+    expect(mundo.escrituras.map((e) => [e.nombre, e.valor])).toEqual([[COOKIE, CENTRO]]);
+  });
+
+  it("una ajena o inventada es «fuera de alcance» y no escribe la cookie", async () => {
+    for (const id of [AJENA, "todas"]) {
+      expect(await (await accion())({ error: null }, formulario(id))).toEqual({
+        error: conCodigo("FISCAL_SUCURSAL_FUERA_DE_ALCANCE"),
+      });
+    }
+    expect(mundo.escrituras).toEqual([]);
+  });
+
+  it("sin elegir es «sucursal no elegida» y no escribe la cookie", async () => {
+    for (const id of ["", undefined]) {
+      expect(await (await accion())({ error: null }, formulario(id))).toEqual({
+        error: conCodigo("FISCAL_SUCURSAL_NO_ELEGIDA"),
+      });
+    }
+    expect(mundo.escrituras).toEqual([]);
+  });
+
+  it("se repite sin duplicar: elegir la misma otra vez deja la misma cookie", async () => {
+    for (let i = 0; i < 2; i += 1) {
+      await expect((await accion())({ error: null }, formulario(CENTRO))).rejects.toBeDefined();
+    }
+    expect(mundo.cookies.get(COOKIE)).toBe(CENTRO);
+    expect(mundo.cookies.size).toBe(1);
   });
 });
 
