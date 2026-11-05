@@ -27,8 +27,15 @@ import { textoDeUnaLineaDesdeTexto, tieneUnaLetra } from "./texto-de-una-linea";
  * - Quién lo cambia: el nombre del receptor no se cambia: se congela en el comprobante.
  * - Verificado o declarado: solo DECLARADO. Queda compatible con comparar contra la razón social que devuelva ARCA por CUIT; esa
  *   consulta NO está construida.
+ * - Dato personal (qué se audita): SÍ puede serlo (el nombre de una persona). La auditoría `COMPROBANTE_CREADO` NO lo guarda: registra
+ *   clase, tipo, total, punto de venta, ambiente, origen y asociado (`emitir-comprobante.ts`). El nombre queda solo en el comprobante,
+ *   que no se cambia ni se borra. Si alguna norma de datos personales lo alcanza: SIN DECIDIR.
+ * - Cómo se compara: por igualdad exacta del texto ya normalizado (sin cambiar mayúsculas ni tildes). La búsqueda del listado de
+ *   comprobantes es otra cosa: busca el texto sin distinguir mayúsculas dentro del nombre guardado (`lecturas-de-comprobantes.ts`).
  * - Se congela: sí, en el comprobante (`receptor_nombre`, 0009).
  * - Qué ve el público: se imprime tal cual se guardó.
+ * - Cómo se imprime: tal cual se guardó. El rótulo y el lugar en la hoja los fija el modelo de impresión (`modelo-de-impresion.ts`),
+ *   no esta primitiva.
  * - Código de error: el motivo corto de esta primitiva; el receptor lo traduce a `RECEPTOR_INVALIDO` con `campo: "nombre"`.
  * - Ejemplos válidos: "Distribuidora Sur SA", "Pérez & Hijos S.A.", "D'Angelo", "La 5ta. SRL", "  Juan   Pérez " (queda "Juan Pérez").
  *   Inválidos: "12345678", "30-71234567-1", "", "Juan\nPérez", "<b>Juan</b>", "Juan 😀", "小林商事", "Łódź SA".

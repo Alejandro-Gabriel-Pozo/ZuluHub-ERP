@@ -19,6 +19,11 @@ import { textoDeUnaLineaDesdeTexto } from "../texto/texto-de-una-linea";
  * - Único: no. Quién lo cambia: nadie, se congela en el comprobante (`receptor_domicilio`, 0009).
  * - Verificado o declarado: solo DECLARADO; no hay fuente oficial contra la que verificarlo.
  * - Qué ve el público: se imprime tal cual se guardó. Hoy la pantalla de Emitir no tiene este campo y manda `null`.
+ * - Dato personal (qué se audita): SÍ puede serlo (el domicilio de una persona). La auditoría `COMPROBANTE_CREADO` registra clase,
+ *   tipo, total, punto de venta, ambiente, origen y asociado, y NO incluye el domicilio (`emitir-comprobante.ts`); queda solo en el
+ *   comprobante. Si alguna norma de datos personales lo alcanza: SIN DECIDIR.
+ * - Cómo se compara y cómo se imprime: no se compara ni se busca por domicilio. Se imprime tal cual se guardó; el rótulo y el lugar
+ *   en la hoja los fija el modelo de impresión (`modelo-de-impresion.ts`).
  * - Código de error: el motivo corto de `texto-de-una-linea.ts`; el receptor lo traduce a `RECEPTOR_INVALIDO` con `campo: "domicilio"`.
  *
  * Lo que repite la base: el CHECK `comprobante_receptor_domicilio_ck` (0009) pide 1 a 300 caracteres, sin blancos en los extremos y

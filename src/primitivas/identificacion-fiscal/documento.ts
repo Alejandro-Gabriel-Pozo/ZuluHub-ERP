@@ -20,6 +20,11 @@ import { cuitDesdeTexto } from "./cuit";
  * - Único: el del receptor no. Quién lo cambia: nadie, se congela en el comprobante.
  * - Verificado o declarado: de CUIT/CUIL/CDI se verifica el dígito verificador; el resto es solo DECLARADO. Compatible con
  *   verificar contra ARCA por CUIT; esa consulta NO está construida.
+ * - Dato personal (qué se audita): SÍ puede serlo (el DNI, CUIL o CDI de una persona). La auditoría `COMPROBANTE_CREADO` NO guarda el
+ *   documento (`emitir-comprobante.ts`: «sin nombre ni documento del receptor»); queda solo en el comprobante. Si alguna norma de
+ *   datos personales lo alcanza: SIN DECIDIR.
+ * - Cómo se compara: por igualdad exacta de la forma canónica (solo dígitos); por eso «30-71234567-1» y «30712345671» son el mismo.
+ *   La búsqueda del listado de comprobantes por documento es por prefijo (`lecturas-de-comprobantes.ts`).
  * - Código de error: `DOCUMENTO_INVALIDO`; el receptor lo traduce a `RECEPTOR_INVALIDO` con `campo: "documento"`.
  * - Ejemplos válidos: CUIT "30-71234567-1" (queda "30712345671"), DNI "12345678", pasaporte "123456". Inválidos: un nombre en el
  *   campo del documento, CUIT con dígito verificador mal, DNI "012345678".
