@@ -133,6 +133,54 @@ describe("validarReceptor: forma", () => {
     ).toEqual(invalido("domicilio"));
   });
 
+  it("el nombre tiene que tener al menos una letra: solo números o un documento se rechazan (campo nombre)", () => {
+    for (const nombre of ["12345678", "30-71234567-1", "30712345671", "-", "&&&"]) {
+      expect(validarReceptor({ ...inscripto, nombre }, contexto("A")), nombre).toEqual(
+        invalido("nombre"),
+      );
+    }
+    // También sin identificar: si se escribe un nombre, tiene que ser un nombre.
+    expect(validarReceptor({ ...consumidorFinal, nombre: "12345678" }, contexto("B"))).toEqual(
+      invalido("nombre"),
+    );
+  });
+
+  it("el nombre y el domicilio sin saltos de línea, invisibles, etiquetas ni emojis (la base los rechaza)", () => {
+    for (const texto of ["Juan\nPérez", "Ju\u200ban", "Ju\u202ean", "<b>Juan</b>", "Juan 😀"]) {
+      expect(validarReceptor({ ...inscripto, nombre: texto }, contexto("A")), texto).toEqual(
+        invalido("nombre"),
+      );
+      expect(validarReceptor({ ...inscripto, domicilio: texto }, contexto("A")), texto).toEqual(
+        invalido("domicilio"),
+      );
+    }
+  });
+
+  it("el nombre y el domicilio quedan en su forma canónica (blancos repetidos, NFC)", () => {
+    const r = validarReceptor(
+      { ...inscripto, nombre: "  Pérez   e  Hijos ", domicilio: "Av.  Siempreviva   742" },
+      contexto("A"),
+    );
+    expect(r).toEqual({
+      ok: true,
+      valor: { ...inscripto, nombre: "Pérez e Hijos", domicilio: "Av. Siempreviva 742" },
+    });
+  });
+
+  it("un nombre en el campo del documento y un documento en el campo del nombre (el caso real del dueño)", () => {
+    // Al revés: el CUIT en el nombre y el nombre en el documento. El documento se mira primero.
+    const alReves: Receptor = {
+      ...inscripto,
+      nombre: "30712345671",
+      documento: { tipo: "CUIT", numero: "Distribuidora Sur SA" },
+    };
+    expect(validarReceptor(alReves, contexto("A"))).toEqual(invalido("documento"));
+    // Con el documento bien y el CUIT todavía en el nombre, el error marca el nombre.
+    expect(validarReceptor({ ...inscripto, nombre: "30712345671" }, contexto("A"))).toEqual(
+      invalido("nombre"),
+    );
+  });
+
   it("CUIT, CUIL y CDI con dígito verificador inválido o mal formados", () => {
     for (const tipo of ["CUIT", "CUIL", "CDI"] as const) {
       for (const numero of ["30712345672", "123", "", "3071234567a", " 30712345671"]) {
