@@ -121,6 +121,7 @@ describe.skipIf(base === null)("fiscal T5: datos fiscales y regla del emisor", (
     razonSocial: "Coop Pampa SA",
     condicionIva: "RESPONSABLE_INSCRIPTO",
     inicioActividades: "2020-03-01",
+    iibbNumero: "901-123456-7",
   } as const;
 
   async function guardar(
@@ -166,7 +167,7 @@ describe.skipIf(base === null)("fiscal T5: datos fiscales y regla del emisor", (
       const r = await guardar(e, {
         borradorId,
         domicilio,
-        cambios: { ...COMPLETOS, iibbNumero: "901-123456-7", iibbCondicion: "LOCAL" },
+        cambios: { ...COMPLETOS },
       });
       expect(r).toEqual(ok({ borradorId, version: 1, yaEstaba: false }));
 
@@ -182,7 +183,7 @@ describe.skipIf(base === null)("fiscal T5: datos fiscales y regla del emisor", (
         domicilio_fiscal_id: domicilio.id,
         inicio_actividades: "2020-03-01",
         iibb_numero: "901-123456-7",
-        iibb_condicion: "LOCAL",
+        iibb_condicion: null,
         confirmada_por: null,
         creado_por: e.persona,
       });
@@ -201,8 +202,50 @@ describe.skipIf(base === null)("fiscal T5: datos fiscales y regla del emisor", (
         domicilioFiscalId: domicilio.id,
         inicioActividades: "2020-03-01",
         iibbNumero: "901-123456-7",
-        iibbCondicion: "LOCAL",
+        iibbCondicion: null,
       });
+    });
+
+    it("«No contribuyente» se guarda sin número, y elegir el número después lo descarta (D-115/D-116)", async () => {
+      const e = await nuevo();
+      const borradorId = nuevoUuid();
+      const primero = await guardar(e, {
+        borradorId,
+        cambios: { ...COMPLETOS, iibbNumero: null, iibbCondicion: "NO_CONTRIBUYENTE" },
+      });
+      if (!primero.ok) throw new Error(`no se guardó: ${JSON.stringify(primero.error)}`);
+      expect((await borradores(e.mundo.emisor))[0]).toMatchObject({
+        iibb_numero: null,
+        iibb_condicion: "NO_CONTRIBUYENTE",
+      });
+      const segundo = await guardar(e, {
+        borradorId,
+        versionEsperada: primero.valor.version,
+        cambios: { iibbNumero: "777" },
+        domicilio: undefined,
+      });
+      expect(segundo.ok).toBe(true);
+      expect((await borradores(e.mundo.emisor))[0]).toMatchObject({
+        iibb_numero: "777",
+        iibb_condicion: null,
+      });
+    });
+
+    it("las tres condiciones anteriores y un número con «No contribuyente» a la vez se rechazan sin guardar nada", async () => {
+      for (const iibbCondicion of ["LOCAL", "CONVENIO_MULTILATERAL", "EXENTO"]) {
+        const e = await nuevo();
+        expect(await guardar(e, { cambios: { ...COMPLETOS, iibbCondicion } })).toEqual(
+          err("IIBB_CONDICION_INVALIDA"),
+        );
+        expect(await borradores(e.mundo.emisor)).toEqual([]);
+      }
+      const e = await nuevo();
+      expect(
+        await guardar(e, {
+          cambios: { ...COMPLETOS, iibbNumero: "55", iibbCondicion: "NO_CONTRIBUYENTE" },
+        }),
+      ).toEqual(err("IIBB_CONDICION_INVALIDA"));
+      expect(await borradores(e.mundo.emisor)).toEqual([]);
     });
 
     it("un borrador puede quedar incompleto: solo se pide lo obligatorio al confirmar", async () => {
@@ -256,7 +299,7 @@ describe.skipIf(base === null)("fiscal T5: datos fiscales y regla del emisor", (
       expect(auditoria[1]?.antes).toEqual({
         emisorId: e.mundo.emisor,
         razonSocial: "Coop Pampa SA",
-        iibbNumero: null,
+        iibbNumero: "901-123456-7",
       });
       expect(auditoria[1]?.despues).toEqual({
         emisorId: e.mundo.emisor,
@@ -646,7 +689,7 @@ describe.skipIf(base === null)("fiscal T5: datos fiscales y regla del emisor", (
       expect(r).toEqual(
         err({
           codigo: "DATOS_FISCALES_INCOMPLETOS",
-          faltantes: ["razonSocial", "condicionIva", "domicilioFiscalId"],
+          faltantes: ["razonSocial", "condicionIva", "domicilioFiscalId", "ingresosBrutos"],
         }),
       );
       expect((await borradores(e.mundo.emisor))[0]).toMatchObject({
@@ -654,6 +697,41 @@ describe.skipIf(base === null)("fiscal T5: datos fiscales y regla del emisor", (
         numero: null,
       });
       expect(await auditorias(e.mundo.empresa, "DATOS_FISCALES_CONFIRMADOS")).toEqual([]);
+    });
+
+    it("confirmar sin número ni «No contribuyente» falla con lo único que falta: Ingresos Brutos (D-115/D-116)", async () => {
+      const e = await nuevo();
+      const borradorId = nuevoUuid();
+      const guardado = await guardar(e, {
+        borradorId,
+        cambios: { ...COMPLETOS, iibbNumero: null },
+      });
+      if (!guardado.ok) throw new Error("no se guardó");
+      expect(await confirmar(e, borradorId, guardado.valor.version)).toEqual(
+        err({ codigo: "DATOS_FISCALES_INCOMPLETOS", faltantes: ["ingresosBrutos"] }),
+      );
+      expect(await auditorias(e.mundo.empresa, "DATOS_FISCALES_CONFIRMADOS")).toEqual([]);
+    });
+
+    it("confirmar con «No contribuyente» lo lleva a la versión confirmada y a la auditoría, sin número", async () => {
+      const e = await nuevo();
+      const borradorId = nuevoUuid();
+      const guardado = await guardar(e, {
+        borradorId,
+        cambios: { ...COMPLETOS, iibbNumero: null, iibbCondicion: "NO_CONTRIBUYENTE" },
+      });
+      if (!guardado.ok) throw new Error("no se guardó");
+      expect((await confirmar(e, borradorId, guardado.valor.version)).ok).toBe(true);
+      expect((await borradores(e.mundo.emisor))[0]).toMatchObject({
+        estado: "CONFIRMADA",
+        iibb_numero: null,
+        iibb_condicion: "NO_CONTRIBUYENTE",
+      });
+      const [auditoria] = await auditorias(e.mundo.empresa, "DATOS_FISCALES_CONFIRMADOS");
+      expect(auditoria?.despues).toMatchObject({
+        iibbNumero: null,
+        iibbCondicion: "NO_CONTRIBUYENTE",
+      });
     });
 
     it("motivo vacío, vigencia retroactiva e instante inválido se rechazan y el borrador sigue abierto", async () => {

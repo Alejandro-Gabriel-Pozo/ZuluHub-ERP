@@ -17,7 +17,7 @@ import type { TxDeConsultasDeFacturacion } from "./contrato";
 
 /**
  * Las tres consultas de la pantalla de Configuración fiscal (D-43) sin base de datos: cómo arman lo que la pantalla necesita a
- * partir de lo que devuelven los repositorios, que no sacan nada secreto ni de Ingresos Brutos (D-45), y que un emisor de otra empresa
+ * partir de lo que devuelven los repositorios, que no sacan nada secreto, y que un emisor de otra empresa
  * no existe para ellas. Que el guard va primero, en `guard-primero.test.ts`; contra una base real, en
  * `test/integracion/fiscal-configuracion-web.test.ts`.
  */
@@ -75,9 +75,9 @@ const confirmada = (cambios: Partial<DatosFiscalesConfirmados> = {}): DatosFisca
   condicionIva: "RESPONSABLE_INSCRIPTO",
   domicilioFiscalId: domicilioId("d-1"),
   inicioActividades: "2020-03-01",
-  // Si algún día llegaran con Ingresos Brutos, la consulta no los puede dejar salir (D-45).
+  // D-115/D-116: Ingresos Brutos es el número o «No contribuyente»; la consulta los devuelve tal cual están guardados.
   iibbNumero: "902-123456-7",
-  iibbCondicion: "LOCAL",
+  iibbCondicion: null,
   vigenteDesde: new Date(AHORA.getTime() - DIA),
   confirmadaEn: new Date(AHORA.getTime() - DIA),
   confirmadaPor: personaId("p-1"),
@@ -94,8 +94,8 @@ const borrador = (cambios: Partial<DatosFiscalesBorrador> = {}): DatosFiscalesBo
   condicionIva: null,
   domicilioFiscalId: null,
   inicioActividades: null,
-  iibbNumero: "902-123456-7",
-  iibbCondicion: "LOCAL",
+  iibbNumero: null,
+  iibbCondicion: "NO_CONTRIBUYENTE",
   creadoPor: personaId("p-1"),
   version: 3,
   ...cambios,
@@ -416,7 +416,7 @@ describe("datosFiscalesDelEmisor: lo que la pantalla de Datos fiscales muestra y
     expect(Object.keys(conVersion.vigente ?? {})).not.toContain("cuit");
   });
 
-  it("la versión que rige, con su domicilio y sin Ingresos Brutos; las futuras no cuentan", async () => {
+  it("la versión que rige, con su domicilio y su Ingresos Brutos; las futuras no cuentan", async () => {
     const r = await datos({
       confirmadas: [
         confirmada(),
@@ -444,10 +444,10 @@ describe("datosFiscalesDelEmisor: lo que la pantalla de Datos fiscales muestra y
         codigoPostal: "S2000",
       },
       inicioActividades: "2020-03-01",
+      iibbNumero: "902-123456-7",
+      iibbCondicion: null,
     });
-    expect(JSON.stringify(r)).not.toMatch(
-      /[iI]ibb|902-123456|"LOCAL"|confirmadaPor|creadoPor|empresaId/,
-    );
+    expect(JSON.stringify(r)).not.toMatch(/confirmadaPor|creadoPor|empresaId/);
   });
 
   it("el borrador dice su versión y lo que ya tiene cargado; lo que falta queda en nulo", async () => {
@@ -459,6 +459,8 @@ describe("datosFiscalesDelEmisor: lo que la pantalla de Datos fiscales muestra y
       condicionIva: null,
       domicilio: null,
       inicioActividades: null,
+      iibbNumero: null,
+      iibbCondicion: "NO_CONTRIBUYENTE",
     });
     const parcial = (
       await datos({
@@ -485,7 +487,7 @@ describe("datosFiscalesDelEmisor: lo que la pantalla de Datos fiscales muestra y
       })
     ).borrador;
     expect(completo).toMatchObject({ razonSocial: "Zulu", inicioActividades: "2021-01-01" });
-    expect(JSON.stringify([vacio, parcial, completo])).not.toMatch(/[iI]ibb|902-123456|"LOCAL"/);
+    expect(JSON.stringify([vacio, parcial, completo])).not.toMatch(/creadoPor|empresaId/);
   });
 
   it("un emisor que la empresa no ve (otra empresa o inexistente) no existe: no lee nada más", async () => {

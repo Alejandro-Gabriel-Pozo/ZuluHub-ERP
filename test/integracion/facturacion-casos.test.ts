@@ -271,6 +271,65 @@ describe.skipIf(base === null)("facturación F5: casos de uso contra una base re
       });
     });
 
+    it("D-115: la versión vigente sin número de IIBB ni «No contribuyente» no emite (también con solo una condición anterior), y no escribe nada", async () => {
+      for (const iibb of [
+        { numero: null, condicion: null },
+        { numero: null, condicion: "LOCAL" },
+        { numero: null, condicion: "CONVENIO_MULTILATERAL" },
+        { numero: null, condicion: "EXENTO" },
+      ]) {
+        const p = await preparar({ iibb });
+        expect(await p.casos.emitirComprobanteManual(p.como(), facturaManual(p.e))).toEqual({
+          ok: false,
+          error: "INGRESOS_BRUTOS_SIN_DECLARAR",
+        });
+        expect(
+          await filas("select id from comprobante where empresa_id = $1", [p.e.empresa]),
+        ).toEqual([]);
+        expect(
+          await filas(
+            "select id from auditoria_empresa where empresa_id = $1 and accion = 'COMPROBANTE_CREADO'",
+            [p.e.empresa],
+          ),
+        ).toEqual([]);
+      }
+    });
+
+    it("D-115/D-116: con «No contribuyente» (sin número) o con el número emite, y el comprobante congela exactamente eso", async () => {
+      for (const [iibb, esperado] of [
+        [
+          { numero: null, condicion: "NO_CONTRIBUYENTE" },
+          { emisor_iibb_numero: null, emisor_iibb_condicion: "NO_CONTRIBUYENTE" },
+        ],
+        [
+          { numero: "901-123456-7", condicion: null },
+          { emisor_iibb_numero: "901-123456-7", emisor_iibb_condicion: null },
+        ],
+      ] as const) {
+        const p = await preparar({ iibb });
+        const salida = await p.emitir();
+        expect(
+          await filas(
+            "select emisor_iibb_numero, emisor_iibb_condicion from comprobante where id = $1",
+            [salida.comprobanteId],
+          ),
+        ).toEqual([esperado]);
+      }
+    });
+
+    it("D-115: repetir el pedido rechazado devuelve lo mismo y la misma clave sigue libre (nada quedó a medias)", async () => {
+      const p = await preparar({ iibb: { numero: null, condicion: null } });
+      const pedido = facturaManual(p.e);
+      const rs = await Promise.all([
+        p.casos.emitirComprobanteManual(p.como(), pedido),
+        p.casos.emitirComprobanteManual(p.como(), pedido),
+      ]);
+      for (const r of rs) expect(r).toEqual({ ok: false, error: "INGRESOS_BRUTOS_SIN_DECLARAR" });
+      expect(
+        await filas("select id from comprobante where empresa_id = $1", [p.e.empresa]),
+      ).toEqual([]);
+    });
+
     it("punto de venta inexistente, inactivo o de otra empresa; errores del dominio; nada se escribe", async () => {
       const p = await preparar();
       const otra = await preparar();

@@ -498,7 +498,6 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
           domicilioFiscalId: await conDomicilio(m),
           inicioActividades: "2020-01-01",
           iibbNumero: "901-123456-7",
-          iibbCondicion: "CONVENIO_MULTILATERAL",
         }),
       );
 
@@ -621,6 +620,31 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       ).toEqual(err("ID_EN_USO"));
     });
 
+    it("«No contribuyente» (D-115/D-116) se guarda sin número, se confirma y se lee igual; una condición anterior se lee tal cual la dejó la base", async () => {
+      const m = await mundo();
+      const principal = await correr(app(m), (tx) => elPrincipal(tx, m));
+      const completo = await borradorCompleto(m, principal);
+      const b = exito(editarBorrador(completo, { iibbCondicion: "NO_CONTRIBUYENTE" }));
+      expect(b).toMatchObject({ iibbNumero: null, iibbCondicion: "NO_CONTRIBUYENTE" });
+      await correr(app(m), (tx) => tx.datosFiscales.crearBorrador(unBorrador(m, principal, b.id)));
+      const guardado = (await correr(app(m), (tx) => tx.datosFiscales.guardarBorrador(b)))!;
+      expect(guardado).toMatchObject({ iibbNumero: null, iibbCondicion: "NO_CONTRIBUYENTE" });
+      const confirmada = exito(
+        confirmarDatosFiscales(guardado, [], {
+          ahora: AHORA,
+          vigenteDesde: MAS_TARDE,
+          motivo: "Alta inicial",
+          confirmadaPor: personaId(m.persona),
+        }),
+      );
+      const resultado = (await correr(app(m), (tx) => tx.datosFiscales.confirmar(confirmada)))!;
+      expect(resultado).toMatchObject({ iibbNumero: null, iibbCondicion: "NO_CONTRIBUYENTE" });
+      const leida = await correr(app(m), (tx) =>
+        tx.datosFiscales.obtener(empresaDe(m), versionId(b.id)),
+      );
+      expect(leida).toEqual({ estado: "CONFIRMADA", confirmada: resultado });
+    });
+
     it("las versiones se numeran 1, 2 y la vigente se calcula con el dominio sobre lo que devuelve el repositorio", async () => {
       const m = await mundo();
       const principal = await correr(app(m), (tx) => elPrincipal(tx, m));
@@ -637,6 +661,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
             condicionIva: "MONOTRIBUTO",
             domicilioFiscalId: dom,
             inicioActividades: "2021-05-04",
+            iibbNumero: "901-123456-7",
           }),
         );
         const guardado = (await correr(app(m), (tx) => tx.datosFiscales.guardarBorrador(b)))!;
@@ -1533,6 +1558,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
               condicionIva: "EXENTO",
               domicilioFiscalId: dom,
               inicioActividades: "2020-01-01",
+              iibbNumero: "901-123456-7",
             }),
           );
           const guardado = (await correr(app(m), (tx) =>

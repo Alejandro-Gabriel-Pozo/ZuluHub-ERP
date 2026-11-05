@@ -37,6 +37,7 @@ import {
 } from "../dominio/nota-asociada";
 import type { Receptor } from "../dominio/receptor";
 import type { ErrorDeSucursalCerrada } from "../dominio/sucursales-de-la-emision";
+import { ingresosBrutosDeclarados } from "../dominio/datos-fiscales";
 import { versionVigente } from "../dominio/vigencia";
 import type { ComprobanteGuardado } from "../persistencia/repositorio-de-comprobantes";
 import { traducirErroresDeFiscal } from "../persistencia/traducir";
@@ -54,28 +55,25 @@ import {
 } from "./sucursales-al-emitir";
 
 /**
- * Emitir a mano (spec H7 facturación §B.4.1 y §B.4.3): una factura (`emitirComprobanteManual`), una nota de
- * crédito (`emitirNotaDeCredito`) o una de débito (`emitirNotaDeDebito`). Cada uno exige SU acción al guard
- * (§C: la NC es `notas_de_credito.emitir`; la factura y la ND, `comprobantes.emitir_manual`), y comparten el
- * cuerpo, en UNA transacción SERIALIZABLE:
+ * Emitir a mano (spec H7 facturación §B.4.1 y §B.4.3): una factura (`emitirComprobanteManual`), una nota de crédito
+ * (`emitirNotaDeCredito`) o una de débito (`emitirNotaDeDebito`). Cada uno exige SU acción al guard (§C: la NC es
+ * `notas_de_credito.emitir`; la factura y la ND, `comprobantes.emitir_manual`), y comparten el cuerpo, en UNA transacción SERIALIZABLE:
  *
- *  1. Guard. 2. La empresa opera. 3. Repetición: un comprobante con origen `(MANUAL, clave)` en CUALQUIER estado
- *     con la misma huella del pedido devuelve ese (`yaExistia`, sin escribir ni auditar); con otra huella,
- *     `CLAVE_REUTILIZADA`. 4. El punto de venta (activo, emisor activo), los datos fiscales VIGENTES del emisor,
- *     sus domicilios y un certificado `VIGENTE` y no vencido para (emisor, ambiente del punto de venta).
- *     5. El dominio arma el contenido (letra, receptor, cálculo). 6. Alta `PENDIENTE` con renglones y alícuotas.
- *     7. Auditoría `COMPROBANTE_CREADO` (sin nombre ni documento del receptor). 8. Encola
+ *  1. Guard. 2. La empresa opera. 3. Repetición: un comprobante con origen `(MANUAL, clave)` en CUALQUIER estado con la misma
+ *     huella del pedido devuelve ese (`yaExistia`, sin escribir ni auditar); con otra huella, `CLAVE_REUTILIZADA`. 4. El punto de
+ *     venta (activo, emisor activo), los datos fiscales VIGENTES del emisor, sus domicilios y un certificado `VIGENTE` y no vencido
+ *     para (emisor, ambiente del punto de venta). 5. El dominio arma el contenido (letra, receptor, cálculo). 6. Alta `PENDIENTE`
+ *     con renglones y alícuotas. 7. Auditoría `COMPROBANTE_CREADO` (sin nombre ni documento del receptor). 8. Encola
  *     `fiscal.validar_comprobante` (`fiscal.validar:<id>:1`).
  *
  * Las sucursales (D-41, D-50 y D-51): el alcance de la persona se mira ANTES de la repetición y que la del punto de venta esté
  * abierta DESPUÉS, junto al punto de venta activo (repetir da lo mismo aunque se cierre); la base lo impone con bloqueo (0017).
+ * Los datos fiscales vigentes tienen que declarar Ingresos Brutos, el número o «No contribuyente» (D-115): si no, no se emite.
+ * El `id` del comprobante ES la clave de la pantalla (un uuid): una clave nunca da dos comprobantes, ni después de un rechazo
+ * (corregir es otro pedido con otra clave). Dos emisiones simultáneas con la misma clave: SERIALIZABLE y las únicas de la base
+ * dejan pasar una; la otra repite, la encuentra y devuelve `yaExistia`.
  *
- * El `id` del comprobante ES la clave de la pantalla (un uuid): una clave nunca da dos comprobantes, ni siquiera
- * después de un rechazo (corregir es otro pedido con otra clave). Dos emisiones simultáneas con la misma clave:
- * SERIALIZABLE y las únicas de la base dejan pasar una; la otra repite, la encuentra y devuelve `yaExistia`.
- *
- * Nada se pide a ARCA acá (ADR-007): lo hace el trabajo de validación después de confirmar.
- */
+ * Nada se pide a ARCA acá (ADR-007): lo hace el trabajo de validación después de confirmar. */
 
 export type EntradaDeComprobanteManual = Readonly<{
   /** La clave de idempotencia que generó la pantalla (uuid); es también el id del comprobante. */
@@ -120,6 +118,7 @@ export type ErrorPropioAlEmitir =
   | ErrorDeAlcance
   | "EMISOR_INACTIVO"
   | "SIN_DATOS_FISCALES_VIGENTES"
+  | "INGRESOS_BRUTOS_SIN_DECLARAR"
   | "SIN_CERTIFICADO_VIGENTE"
   | "COMPROBANTE_ASOCIADO_NO_ENCONTRADO"
   | "COMPROBANTE_ALTA_INVALIDA"
@@ -222,6 +221,7 @@ async function emitirEnTx(
   if (!emisor.activo) return err("EMISOR_INACTIVO");
   const datos = versionVigente(await tx.datosFiscales.confirmadas(empresaId, emisor.id), ahora);
   if (datos === null) return err("SIN_DATOS_FISCALES_VIGENTES");
+  if (!ingresosBrutosDeclarados(datos)) return err("INGRESOS_BRUTOS_SIN_DECLARAR");
   const domicilioFiscal = await tx.domicilios.obtener(empresaId, datos.domicilioFiscalId);
   if (domicilioFiscal === null) throw new Error("el domicilio fiscal confirmado no es visible");
   // Un punto de venta sin domicilio propio emite con el fiscal (ASUMIDO; la base pide un texto siempre).
