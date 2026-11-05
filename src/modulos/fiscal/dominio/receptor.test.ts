@@ -74,6 +74,22 @@ describe("validarReceptor: lo que acepta", () => {
     expect(sinDomicilio).toEqual({ ok: true, valor: { ...inscripto, domicilio: null } });
   });
 
+  it("un nombre en blanco es «sin nombre»: el consumidor final lo admite y un documento identificado lo exige", () => {
+    for (const nombre of ["", "   ", " \t "]) {
+      expect(
+        validarReceptor({ ...consumidorFinal, nombre }, contexto("B")),
+        JSON.stringify(nombre),
+      ).toEqual({
+        ok: true,
+        valor: consumidorFinal,
+      });
+      expect(
+        validarReceptor({ ...inscripto, nombre }, contexto("A")),
+        JSON.stringify(nombre),
+      ).toEqual(invalido("nombre"));
+    }
+  });
+
   it("un CUIT con guiones queda en su forma canónica", () => {
     const r = validarReceptor(
       { ...inscripto, documento: { tipo: "CUIT", numero: "30-71234567-1" } },
