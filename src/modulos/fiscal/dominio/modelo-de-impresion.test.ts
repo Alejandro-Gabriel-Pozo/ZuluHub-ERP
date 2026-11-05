@@ -685,18 +685,20 @@ describe("modeloDeImpresion: leyenda de crédito fiscal de la A a monotributista
   });
 
   it("la factura A a un monotributista la lleva; a un inscripto, no", () => {
-    expect(modelo(imprimible(facturaAMonotributista)).leyendas).toEqual([
-      LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA,
-      LEYENDA_DE_HOMOLOGACION,
-    ]);
-    expect(modelo(imprimible(facturaAInscripto)).leyendas).toEqual([LEYENDA_DE_HOMOLOGACION]);
+    const conLeyenda = modelo(imprimible(facturaAMonotributista));
+    expect(conLeyenda.leyendasLegales).toEqual([LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA]);
+    expect(conLeyenda.leyendas).toEqual([LEYENDA_DE_HOMOLOGACION]);
+    const inscripto = modelo(imprimible(facturaAInscripto));
+    expect("leyendasLegales" in inscripto).toBe(false);
+    expect(inscripto.leyendas).toEqual([LEYENDA_DE_HOMOLOGACION]);
   });
 
   it("la nota de crédito A a un monotributista la lleva, también en producción (sin la de homologación)", () => {
     const m = modelo(notaSobreFacturaAMonotributista());
     expect(m.fiscal.letra).toBe("A");
     expect(m.fiscal.rotulo).toBe("NOTA DE CRÉDITO");
-    expect(m.leyendas).toEqual([LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA]);
+    expect(m.leyendasLegales).toEqual([LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA]);
+    expect(m.leyendas).toEqual([]);
   });
 
   it("la B y la C a un monotributista no la llevan", () => {
@@ -704,6 +706,7 @@ describe("modeloDeImpresion: leyenda de crédito fiscal de la A a monotributista
       const m = modelo(imprimible({ ...base, receptor: receptorMonotributista }));
       expect(m.fiscal.letra).not.toBe("A");
       expect(m.leyendas).toEqual([LEYENDA_DE_HOMOLOGACION]);
+      expect("leyendasLegales" in m).toBe(false);
     }
   });
 
@@ -725,7 +728,17 @@ describe("modeloDeImpresion: leyenda de crédito fiscal de la A a monotributista
             versionDeRepresentacion >= 2 &&
             m.fiscal.letra === "A" &&
             condicionIva === "MONOTRIBUTO";
-          expect(m.leyendas.includes(LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA)).toBe(esperada);
+          expect(
+            (m.leyendasLegales ?? []).includes(LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA),
+          ).toBe(esperada);
+          // Nunca se mezclan: el texto legal no va en `leyendas` y el aviso de homologación no va en `leyendasLegales`.
+          expect(m.leyendas).not.toContain(LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA);
+          expect(m.leyendasLegales ?? []).not.toContain(LEYENDA_DE_HOMOLOGACION);
+          expect(m.leyendas).toEqual(
+            imprimible(base, { versionDeRepresentacion }).ambiente === "HOMOLOGACION"
+              ? [LEYENDA_DE_HOMOLOGACION]
+              : [],
+          );
         },
       ),
     );
@@ -742,9 +755,9 @@ describe("modeloDeImpresion: leyenda de crédito fiscal de la A a monotributista
   });
 
   it("la versión 1 no la lleva aunque la letra sea A y el receptor monotributista", () => {
-    expect(modelo(imprimible(facturaAMonotributista, V1)).leyendas).toEqual([
-      LEYENDA_DE_HOMOLOGACION,
-    ]);
+    const m = modelo(imprimible(facturaAMonotributista, V1));
+    expect(m.leyendas).toEqual([LEYENDA_DE_HOMOLOGACION]);
+    expect("leyendasLegales" in m).toBe(false);
   });
 });
 
