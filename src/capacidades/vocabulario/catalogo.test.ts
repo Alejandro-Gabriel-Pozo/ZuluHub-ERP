@@ -303,6 +303,22 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.imprimir_hoja"].marcadores).toEqual(["k", "n"]);
   });
 
+  it("Ingresos Brutos en Datos fiscales (D-116): los dos textos nuevos y la etiqueta reutiliza la de la hoja impresa", () => {
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.config_df_iibb_numero"].porDefecto).toBe(
+      "Número de inscripción",
+    );
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.config_df_iibb_no_contribuyente"].porDefecto).toBe(
+      "No contribuyente",
+    );
+    expect(
+      claves.filter((c) => c.includes("iibb") || c.includes("ingresos_brutos")).sort(),
+    ).toEqual([
+      "fiscal.pantalla.config_df_iibb_no_contribuyente",
+      "fiscal.pantalla.config_df_iibb_numero",
+      "fiscal.pantalla.imprimir_ingresos_brutos",
+    ]);
+  });
+
   it("los textos de los errores con datos declaran su marcador", () => {
     expect(CATALOGO_DE_TEXTOS["error.limite_del_plan"].marcadores).toEqual(["limite"]);
     expect(CATALOGO_DE_TEXTOS["error.limite_del_plan"].porDefecto).toContain("{limite}");

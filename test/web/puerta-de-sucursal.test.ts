@@ -24,7 +24,10 @@ type Del = {
     efectiva: string;
   };
 };
-const mundo = vi.hoisted((): { del: Del } => ({ del: { ok: false } }));
+const mundo = vi.hoisted((): { del: Del; sinSesion: boolean } => ({
+  del: { ok: false },
+  sinSesion: false,
+}));
 vi.mock("../../apps/web/servidor/sucursal-elegida", () => ({
   sucursalDelPedido: () => Promise.resolve(mundo.del),
 }));
@@ -37,19 +40,22 @@ vi.mock("../../apps/web/servidor/sesion", () => ({
   empresaDelPedido: () =>
     Promise.resolve({
       puerta: { marca: { nombre: "Marca de prueba" } },
-      entrada: {
-        ok: true,
-        dato: {
-          tipo: "ENTRA",
-          empresa: {
-            empresaId: "e",
-            nombre: "Empresa de prueba",
-            rol: "GERENTE",
-            estadoEfectivo: "OPERA",
+      // Sin sesión, la entrada a la empresa es el error `SESION_VENCIDA` (el traductor único): la pantalla manda a ingresar.
+      entrada: mundo.sinSesion
+        ? { ok: false, error: { codigo: "SESION_VENCIDA" } }
+        : {
+            ok: true,
+            dato: {
+              tipo: "ENTRA",
+              empresa: {
+                empresaId: "e",
+                nombre: "Empresa de prueba",
+                rol: "GERENTE",
+                estadoEfectivo: "OPERA",
+              },
+              contexto: { id: "c" },
+            },
           },
-          contexto: { id: "c" },
-        },
-      },
     }),
 }));
 
@@ -67,6 +73,7 @@ const entrar = async (ruta: string): Promise<string> => {
 
 beforeEach(() => {
   mundo.del = { ok: false };
+  mundo.sinSesion = false;
 });
 
 describe("la función pura de la puerta", () => {
@@ -117,6 +124,12 @@ describe("la pantalla «Elegir sucursal»", () => {
     expect(await entrar(ELEGIR)).toMatch(
       /<option[^>]*value="b"[^>]*selected|<option[^>]*selected[^>]*value="b"/,
     );
+  });
+
+  it("sin sesión: va a /ingreso (y no consulta las sucursales)", async () => {
+    mundo.sinSesion = true;
+    mundo.del = { ok: true, dato: { elegibles: [A, B], elegida: null, efectiva: "" } };
+    await expect(entrar(ELEGIR)).rejects.toThrow("REDIRECT:/ingreso");
   });
 
   it("sin sucursales para elegir: vuelve al Inicio", async () => {

@@ -25,6 +25,9 @@ export type VigenteDeDatosFiscales = Readonly<{
   domicilio: DomicilioDeDatosFiscales;
   /** `AAAA-MM-DD`. */
   inicioActividades: string;
+  /** Ingresos Brutos (D-116): el número de inscripción o `iibbCondicion`. Las condiciones anteriores llegan como `null`. */
+  iibbNumero: string | null;
+  iibbCondicion: CondicionDeIibb | null;
 }>;
 
 export type BorradorDeDatosFiscales = Readonly<{
@@ -36,7 +39,12 @@ export type BorradorDeDatosFiscales = Readonly<{
   condicionIva: string | null;
   domicilio: DomicilioDeDatosFiscales | null;
   inicioActividades: string | null;
+  iibbNumero: string | null;
+  iibbCondicion: CondicionDeIibb | null;
 }>;
+
+/** La única condición de Ingresos Brutos que sale a la pantalla (D-116). */
+export type CondicionDeIibb = "NO_CONTRIBUYENTE";
 
 export type OpcionDeCondicionDeIva = Readonly<{ valor: string; etiqueta: string }>;
 
@@ -56,6 +64,10 @@ export type ValoresDeDatosFiscales = ValoresDelDomicilio &
     razonSocial: string;
     /** El valor de la condición (`RESPONSABLE_INSCRIPTO`), o vacío si no eligió. */
     condicionIva: string;
+    /** Ingresos Brutos (D-116): `NUMERO`, `NO_CONTRIBUYENTE` o vacío si no eligió. */
+    ingresosBrutos: string;
+    /** El número de inscripción: solo cuenta con `ingresosBrutos` en `NUMERO`. */
+    iibbNumero: string;
     /** `dd/mm/aaaa`, como se lee en pantalla. */
     inicioActividades: string;
   }>;
@@ -65,6 +77,8 @@ export type CampoDeDatosFiscales = keyof ValoresDeDatosFiscales;
 const VALORES_EN_BLANCO: ValoresDeDatosFiscales = {
   razonSocial: "",
   condicionIva: "",
+  ingresosBrutos: "",
+  iibbNumero: "",
   inicioActividades: "",
   calle: "",
   numeroDeCalle: "",
@@ -75,11 +89,35 @@ const VALORES_EN_BLANCO: ValoresDeDatosFiscales = {
   codigoPostal: "",
 };
 
+export const MODO_NUMERO = "NUMERO";
+export const MODO_NO_CONTRIBUYENTE: CondicionDeIibb = "NO_CONTRIBUYENTE";
+
+/** Lo guardado (número o condición) en los dos campos del formulario: el modo y el número escrito. */
+const iibbEnPantalla = (
+  numero: string | null,
+  condicion: CondicionDeIibb | null,
+): Pick<ValoresDeDatosFiscales, "ingresosBrutos" | "iibbNumero"> =>
+  condicion !== null
+    ? { ingresosBrutos: condicion, iibbNumero: "" }
+    : numero !== null
+      ? { ingresosBrutos: MODO_NUMERO, iibbNumero: numero }
+      : { ingresosBrutos: "", iibbNumero: "" };
+
+/** Lo que el formulario declara de Ingresos Brutos: el número solo con «Número de inscripción» y con texto; la condición solo con «No contribuyente». */
+const iibbDeLosValores = (
+  v: Pick<ValoresDeDatosFiscales, "ingresosBrutos" | "iibbNumero">,
+): Readonly<{ numero: string | null; condicion: CondicionDeIibb | null }> => ({
+  numero:
+    v.ingresosBrutos === MODO_NUMERO && v.iibbNumero.trim() !== "" ? v.iibbNumero.trim() : null,
+  condicion: v.ingresosBrutos === MODO_NO_CONTRIBUYENTE ? MODO_NO_CONTRIBUYENTE : null,
+});
+
 /** Lo vigente en los campos del formulario (D-88: sin borrador se abre con lo que rige; no se guarda nada hasta Guardar borrador o Confirmar). */
 function valoresDeLoVigente(v: VigenteDeDatosFiscales): ValoresDeDatosFiscales {
   return {
     razonSocial: v.razonSocial,
     condicionIva: v.condicionIva,
+    ...iibbEnPantalla(v.iibbNumero, v.iibbCondicion),
     inicioActividades: formatearFecha(v.inicioActividades),
     ...valoresDelDomicilio(v.domicilio),
   };
@@ -94,6 +132,7 @@ export function valoresDelBorrador(
   return {
     razonSocial: b.razonSocial ?? "",
     condicionIva: b.condicionIva ?? "",
+    ...iibbEnPantalla(b.iibbNumero, b.iibbCondicion),
     inicioActividades: b.inicioActividades === null ? "" : formatearFecha(b.inicioActividades),
     ...valoresDelDomicilio(b.domicilio),
   };
@@ -133,12 +172,20 @@ export function armarElPedidoDeGuardado(
   const dato = (clave: "razonSocial" | "condicionIva", valor: string) =>
     valor.trim() !== "" || base[clave] !== "" ? { [clave]: valor.trim() } : {};
   const inicio = aFechaCivil(v.inicioActividades);
+  // Ingresos Brutos: igual que el resto, solo se manda lo que tiene valor o lo que antes lo tenía (entonces va `null` y el servidor lo
+  // borra). Elegir uno limpia el otro en el servidor; el pedido nunca lleva los dos con valor (sería error de `iibbCondicion`).
+  const iibb = iibbDeLosValores(v);
+  const antes = iibbDeLosValores(base);
   return {
     emisorId,
     borradorId: ids.borradorId,
     ...(version === null ? {} : { versionEsperada: version }),
     ...dato("razonSocial", v.razonSocial),
     ...dato("condicionIva", v.condicionIva),
+    ...(iibb.numero !== null || antes.numero !== null ? { iibbNumero: iibb.numero } : {}),
+    ...(iibb.condicion !== null || antes.condicion !== null
+      ? { iibbCondicion: iibb.condicion }
+      : {}),
     ...(inicio !== "" || base.inicioActividades !== "" ? { inicioActividades: inicio } : {}),
     ...(cambioElDomicilio(v, original?.domicilio ?? null)
       ? { domicilio: domicilioNuevo(v, ids.domicilioId) }
@@ -163,6 +210,8 @@ export function borradorTrasGuardar(
     id: ids.borradorId,
     razonSocial: opcional(v.razonSocial),
     condicionIva: opcional(v.condicionIva),
+    iibbNumero: iibbDeLosValores(v).numero,
+    iibbCondicion: iibbDeLosValores(v).condicion,
     inicioActividades: opcional(aFechaCivil(v.inicioActividades)),
     domicilio: cambioElDomicilio(v, original?.domicilio ?? null)
       ? {
@@ -208,6 +257,10 @@ const CAMPO_DEL_SERVIDOR: Readonly<Record<string, CampoDeDatosFiscales>> = {
   razonSocial: "razonSocial",
   condicionIva: "condicionIva",
   inicioActividades: "inicioActividades",
+  // Ingresos Brutos (D-116): «falta elegir» y un valor de condición inválido marcan el desplegable; el número inválido, su campo.
+  ingresosBrutos: "ingresosBrutos",
+  iibbCondicion: "ingresosBrutos",
+  iibbNumero: "iibbNumero",
   "domicilio.calle": "calle",
   "domicilio.numero": "numeroDeCalle",
   "domicilio.piso": "piso",

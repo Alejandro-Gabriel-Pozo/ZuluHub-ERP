@@ -96,6 +96,8 @@ const VIGENTE = {
   condicionIva: "RESPONSABLE_INSCRIPTO",
   domicilio: DOMICILIO,
   inicioActividades: "2018-03-01",
+  iibbNumero: null,
+  iibbCondicion: null,
 };
 const BORRADOR = {
   id: "b1",
@@ -104,6 +106,8 @@ const BORRADOR = {
   condicionIva: "MONOTRIBUTO",
   domicilio: { ...DOMICILIO, calle: "Av. Corrientes" },
   inicioActividades: "2018-03-02",
+  iibbNumero: "901-123456-7",
+  iibbCondicion: null,
 };
 const datos = (cambios: Record<string, unknown> = {}): Respuesta<unknown> => ({
   ok: true,
@@ -138,12 +142,15 @@ describe("la página «Datos fiscales» abre directo el formulario (D-88)", () =
     expect(marcado).toMatch(
       /<option value="AR-C" selected="">Ciudad Autónoma de Buenos Aires<\/option>/,
     );
+    // Ingresos Brutos (D-116): el desplegable con «Número de inscripción» elegido y su campo con el número del borrador.
+    expect(marcado).toMatch(/<option value="NUMERO" selected="">Número de inscripción<\/option>/);
+    expect(marcado).toContain('value="901-123456-7"');
     for (const boton of ["Cancelar", "Guardar borrador", "Confirmar"]) {
       expect(marcado).toMatch(new RegExp(`<button[^>]*>${boton}</button>`));
     }
-    // Sin pantalla de lectura, ni avisos, ni «Rige desde», ni Ingresos Brutos (D-45), ni fecha de vigencia (D-61), ni motivo (D-89).
+    // Sin pantalla de lectura, ni avisos, ni «Rige desde», ni fecha de vigencia (D-61), ni motivo (D-89).
     expect(t).not.toMatch(
-      /Corregir|Seguir con el borrador|Hay un borrador|Rige desde|Ingresos Brutos|Vigencia|Motivo/i,
+      /Corregir|Seguir con el borrador|Hay un borrador|Rige desde|Vigencia|Motivo/i,
     );
     expect(redirigido.hacia).toEqual([]);
   });

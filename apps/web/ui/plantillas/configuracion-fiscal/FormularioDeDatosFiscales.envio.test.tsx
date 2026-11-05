@@ -39,6 +39,8 @@ const BORRADOR: BorradorDeDatosFiscales = {
     codigoPostal: "1000",
   },
   inicioActividades: "2018-03-01",
+  iibbNumero: null,
+  iibbCondicion: null,
 };
 const OTRO: BorradorDeDatosFiscales = {
   ...BORRADOR,
@@ -69,6 +71,8 @@ const VIGENTE: VigenteDeDatosFiscales = {
   condicionIva: "RESPONSABLE_INSCRIPTO",
   domicilio: BORRADOR.domicilio!,
   inicioActividades: "2018-03-01",
+  iibbNumero: null,
+  iibbCondicion: null,
 };
 const OTRA_VIGENTE: VigenteDeDatosFiscales = {
   ...VIGENTE,
@@ -160,6 +164,8 @@ describe("idempotencia del intento", () => {
     await render(formulario(null));
     await page.getByLabelText("Razón social").fill("Mi Empresa SRL");
     await page.getByLabelText("Calle").fill("Mitre");
+    await page.getByLabelText("Ingresos Brutos", { exact: true }).selectOptions("NUMERO");
+    await page.getByLabelText("Número de inscripción").fill("901-123456-7");
     tocar(boton("Confirmar"));
     await vi.waitFor(() => expect(guardar).toHaveBeenCalledTimes(2), { timeout: 5000 });
     await expect.element(page.getByRole("status")).toHaveTextContent("Verificando si se registró…");
@@ -169,6 +175,8 @@ describe("idempotencia del intento", () => {
     await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
     expect(guardar).toHaveBeenCalledTimes(2);
     expect(pedidos()[1]).toEqual(pedidos()[0]);
+    // Ingresos Brutos viaja fijado igual que el resto (D-116).
+    expect(pedidos()[0]).toMatchObject({ iibbNumero: "901-123456-7" });
     // Empezando de cero el id del borrador lo puso el formulario: una vez, y sin versión.
     expect(pedidos()[0]?.["borradorId"]).toMatch(/^[0-9a-f-]{36}$/);
     expect(pedidos()[0]).not.toHaveProperty("versionEsperada");
