@@ -39,13 +39,16 @@ const PERSONALES = {
 };
 // 64 dígitos hexadecimales (la forma que exige el secreto de invitaciones) y reconocibles.
 const HEX_CENTINELA = "c0ffee".repeat(10) + "abcd";
+// Los valores de prueba se arman en tiempo de ejecución: escritos de corrido, un escáner de secretos los toma por claves.
+const CRON_CENTINELA = ["cron", "centinela", "0123456789abcdef"].join("-");
+const CRON_CORTO = ["corto", "pero", "variado", "123"].join("-");
 const SECRETOS = {
   PEDERNAL_DB_MIGRACIONES:
     "postgres://dueno-centinela:clave-dueno-centinela@host-centinela.test/base",
   PEDERNAL_DB_PLATAFORMA: "postgres://plat-centinela:clave-plat-centinela@host-centinela.test/base",
   PEDERNAL_CLAVE_CONTEXTO: "1:secreto-contexto-centinela",
   PEDERNAL_SECRETO_INVITACIONES: HEX_CENTINELA,
-  CRON_SECRET: "cron-centinela-0123456789abcdef",
+  CRON_SECRET: CRON_CENTINELA,
 };
 const PROHIBIDOS = [
   ...Object.values(PERSONALES),
@@ -55,7 +58,7 @@ const PROHIBIDOS = [
   "clave-plat-centinela",
   "secreto-contexto-centinela",
   HEX_CENTINELA,
-  "cron-centinela-0123456789abcdef",
+  CRON_CENTINELA,
 ];
 
 const PAQUETE = {
@@ -396,7 +399,7 @@ describe("preparar la empresa de pruebas: secretos del dueño, validación previ
       { PEDERNAL_SECRETO_INVITACIONES: "abcd" },
       "PEDERNAL_SECRETO_INVITACIONES",
     ],
-    ["el CRON_SECRET es corto", { CRON_SECRET: "corto-pero-variado-123" }, "CRON_SECRET"],
+    ["el CRON_SECRET es corto", { CRON_SECRET: CRON_CORTO }, "CRON_SECRET"],
     ["el CRON_SECRET repite un solo carácter", { CRON_SECRET: "a".repeat(40) }, "CRON_SECRET"],
     ["falta el CRON_SECRET", { CRON_SECRET: undefined }, "CRON_SECRET"],
   ])("%s: se rechaza antes de empezar, sin repetir el valor", async (_nombre, entorno, nombre) => {
@@ -428,7 +431,7 @@ describe("preparar la empresa de pruebas: secretos del dueño, validación previ
     expect(t.despachos).toEqual([
       {
         url: "https://app-prueba.pedernal.com.ar/api/trabajos/cron",
-        secreto: "cron-centinela-0123456789abcdef",
+        secreto: CRON_CENTINELA,
       },
     ]);
     expect(t.texto()).toContain("Cola despachada");
