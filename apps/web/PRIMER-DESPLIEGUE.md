@@ -3,9 +3,9 @@
 Esta guía es la §6.3 del plan (`Pedernal-docs/11-especificaciones/web-armazon-y-despliegue.md`) completada con lo que
 quedó construido en W6 y puesta al día contra `main` el 2026-11-04 (migración requerida `0019`, facturación `disponible`,
 flujo «Cargar entorno»). Lo que sigue sin poder comprobarse leyendo código está marcado **NO VERIFICADO**.
-**El despliegue está APAGADO** (`git.deploymentEnabled: false` en `apps/web/vercel.json`) y
-**solo el dueño lo enciende**: es el ÚLTIMO paso de esta guía (más abajo, marcado). Hasta entonces, ninguna rama ni
-ningún merge publica nada.
+**El despliegue automático está encendido SOLO para la rama de Git `preview`** (`git.deploymentEnabled` por rama en
+`apps/web/vercel.json`; decisión del dueño, 2026-11-05). `main` (producción) y cualquier otra rama quedan APAGADAS: un push
+ahí no publica nada. Encender producción es otra decisión del dueño y el ÚLTIMO paso de esta guía (más abajo, marcado).
 
 **Reglas que valen en todos los pasos**
 
@@ -31,7 +31,7 @@ ningún merge publica nada.
 | Cargar el entorno de Vercel (lo que se genera solo) | `.github/workflows/cargar-entorno.yml`, `npm run cargar-entorno`        | Workflow manual. Genera y carga en Vercel, como sensibles y sin sobrescribir nada, los secretos que no dependen de vos (sección B.4 bis). `produccion` y `preview` piden tu aprobación.                                                                                           |
 | Instalar la clave de contexto                       | `npm run instalar-clave`                                                | Instala en la base la clave con la que se firma el contexto. Idempotente. Lo usa el workflow y también sirve en tu terminal.                                                                                                                                                      |
 | Migrar / dar LOGIN a los roles / cargar Vercel      | `npm run migrar -- --ver \| --aplicar \| --preparar-roles [--vercel …]` | Ya existía (tanda 4/5). Ver la sección B.4.                                                                                                                                                                                                                                       |
-| Un freno contra encender el despliegue de paso      | `test/arquitectura/vercel-json.test.ts`                                 | Falla si `deploymentEnabled` deja de ser `false` sin cambiar a propósito la constante `DESPLIEGUE_APROBADO_POR_EL_DUENO` del mismo archivo.                                                                                                                                       |
+| Un freno contra encender el despliegue de paso      | `test/arquitectura/vercel-json.test.ts`                                 | Falla si `deploymentEnabled` enciende `main` o cualquier rama que no sea `preview` sin cambiar a propósito la constante `RAMAS_CON_DESPLIEGUE_APROBADO_POR_EL_DUENO` del mismo archivo.                                                                                           |
 
 **Ya está** (verificado contra `main`, 2026-10-22; la facturación, al 2026-11-04): los scripts `npm run plataforma:primer-admin` y
 `npm run plataforma:caso` (más `plataforma:baja-admin` y `plataforma:resetear-segundo-factor`), los casos de uso de
@@ -288,8 +288,8 @@ Production y `https://app-prueba.pedernal.com.ar/api/auth/callback/google` en Pr
 
 ### B.9 Un despliegue de prueba, sin encender el automático
 
-Con `deploymentEnabled: false`, un push no publica nada. Para tener una URL contra la que correr los chequeos de la sección C
-sin encender nada, se crea **a mano** un despliegue de _preview_ (no de producción) con la CLI de Vercel, desde la raíz del
+Un push a `preview` publica un despliegue de _preview_ solo (es la única rama encendida); un push a `main` o a cualquier otra no
+publica nada. Para una URL de prueba sin tocar `preview`, también se puede crear **a mano** un despliegue de _preview_ (no de producción) con la CLI de Vercel, desde la raíz del
 repositorio: `npx vercel deploy` (usa el Root Directory del proyecto). **NO VERIFICADO**: es la forma esperada; si Vercel pide
 otra cosa, el chequeo 1 de la sección C lo dirá. Después, la sección C.
 
@@ -297,9 +297,9 @@ otra cosa, el chequeo 1 de la sección C lo dirá. Después, la sección C.
 
 > **No hagas este paso hasta que todos los chequeos de la sección C estén bien y la sección E esté resuelta.**
 >
-> Se le pide a quien mantiene el código que cambie `git.deploymentEnabled` a `true` en `apps/web/vercel.json`, y a la vez la
-> constante `DESPLIEGUE_APROBADO_POR_EL_DUENO` a `true` en `test/arquitectura/vercel-json.test.ts` (si no, el CI no deja pasar
-> el cambio). Ese cambio es **tuyo** de aprobar: sin tu visto bueno explícito, no se hace. Después, el primer push a `main`
+> Se le pide a quien mantiene el código que sume `main` a `git.deploymentEnabled` (con valor `true`) en `apps/web/vercel.json`, y a
+> la vez `"main"` a la constante `RAMAS_CON_DESPLIEGUE_APROBADO_POR_EL_DUENO` en `test/arquitectura/vercel-json.test.ts` (si no,
+> el CI no deja pasar el cambio). Ese cambio es **tuyo** de aprobar: sin tu visto bueno explícito, no se hace. Después, el primer push a `main`
 > publica en producción.
 
 ---
