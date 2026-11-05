@@ -221,4 +221,26 @@ describe("comprobanteParaLaHoja: cada comprobante", () => {
     expect(comprobanteParaLaHoja(m).contacto).toEqual(m.contacto);
     expect(hoja(m).contacto).toContain("341 555 1234");
   });
+
+  it("la sucursal congelada: sin la clave si el modelo no la trae; con ella, copia campo por campo, tal cual y sin claves ajenas", () => {
+    const m = modelo(imprimibleDe(facturaB));
+    expect("sucursal" in comprobanteParaLaHoja(m)).toBe(false);
+    expect(hoja(m).nombreDeLaSucursal).toBeNull();
+    const nombre = "  Sucursal  Ñandú   Centro ".padEnd(100, "é");
+    expect(nombre).toHaveLength(100);
+    const sucursal = { nombre, claveAjena: "x" };
+    const conSucursal = { ...m, sucursal };
+    const c = comprobanteParaLaHoja(conSucursal);
+    expect(c.sucursal).toEqual({ nombre });
+    expect(c.sucursal).not.toBe(sucursal);
+    expect(Object.keys(c.sucursal ?? {})).toEqual(["nombre"]);
+    expect(JSON.stringify(c)).not.toContain("claveAjena");
+    expect(hoja(conSucursal).nombreDeLaSucursal).toBe(nombre);
+  });
+
+  it("con el modelo real, el nombre que congeló el comprobante llega a la hoja", () => {
+    const m = modelo(imprimibleDe(facturaB, { sucursalNombre: "Sucursal Centro" }));
+    expect(m.sucursal).toEqual({ nombre: "Sucursal Centro" });
+    expect(hoja(m).nombreDeLaSucursal).toBe("Sucursal Centro");
+  });
 });
