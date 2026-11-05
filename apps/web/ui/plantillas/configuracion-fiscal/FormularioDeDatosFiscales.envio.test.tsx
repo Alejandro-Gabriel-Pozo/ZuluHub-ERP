@@ -283,7 +283,7 @@ describe("concurrencia (D-68): el borrador es de la empresa, no de la pestaña",
     await expect
       .element(
         page.getByText(
-          "Los datos cambiaron mientras los miraba. Actualice la pantalla e intente de nuevo.",
+          "Los datos cambiaron mientras los mirabas. Actualizá la pantalla e intentá de nuevo.",
         ),
       )
       .toBeVisible();

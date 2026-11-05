@@ -32,6 +32,10 @@ export function esConcurrenciaAgotada(error: unknown): boolean {
   );
 }
 
+/** El `esAgotada` de `repetirSiAgotada` para un `Resultado` del núcleo: perdió la carrera si su error es el agotamiento. */
+export const agotadaEnElResultado = (r: Cualquiera): boolean =>
+  !r.ok && esConcurrenciaAgotada(r.error);
+
 /** El código de un resultado: `ok`, el propio error si es texto, su `tipo` si es un objeto tipado, o `otro`. */
 export function codigoDe(r: Cualquiera): string {
   if (r.ok) return "ok";
@@ -103,6 +107,57 @@ export function perdedorAceptable(
 }
 
 /**
+ * Repite `trabajo` (con la MISMA entrada: es el mismo pedido, seguro por su clave de idempotencia) mientras
+ * `esAgotada` diga que perdió la carrera, hasta `tope` reintentos, y devuelve el resultado que NO es de agotamiento:
+ * un éxito o un error de negocio, que juzga quien llama. Sirve para cualquier forma de resultado (el `Resultado` del
+ * núcleo o la `Respuesta` de la web, donde el agotamiento sale como `ERROR_INTERNO`: ver `agotadaSegunElRegistro`).
+ * Si el agotamiento persiste, falla diciéndolo: un error persistente no queda disfrazado de «carga».
+ */
+export async function repetirSiAgotada<R extends { readonly ok: boolean }>(
+  trabajo: () => Promise<R>,
+  opciones: {
+    readonly esAgotada: (resultado: R) => boolean;
+    readonly tope?: number;
+    readonly contexto?: string;
+  },
+): Promise<R> {
+  const tope = opciones.tope ?? TOPE_DE_REINTENTOS;
+  for (let reintento = 0; ; reintento++) {
+    const r = await trabajo();
+    if (!opciones.esAgotada(r)) return r;
+    if (reintento >= tope) {
+      throw new Error(
+        con(opciones.contexto, `ConcurrenciaAgotada persistió tras ${tope} reintentos seguidos`),
+      );
+    }
+  }
+}
+
+/** Lo mínimo que se mira de una `Respuesta` de la web. */
+type RespuestaDeLaWeb = Readonly<{
+  ok: boolean;
+  error?: Readonly<{ codigo?: unknown; referencia?: unknown }>;
+}>;
+
+/**
+ * Cómo reconocer el agotamiento en la capa web: la respuesta lo muestra como `ERROR_INTERNO` con una referencia `PD-…`
+ * (no distingue la causa, a propósito), y el detalle `ConcurrenciaAgotada` queda en el registro del servidor como
+ * `<referencia> ConcurrenciaAgotada`. Solo ese par cuenta: cualquier otro `ERROR_INTERNO` NO se reintenta y se ve.
+ * `registro` es la lista viva donde la prueba recoge lo que el servidor registra.
+ */
+export function agotadaSegunElRegistro(registro: readonly string[]) {
+  return (respuesta: RespuestaDeLaWeb): boolean => {
+    if (respuesta.ok) return false;
+    const error = respuesta.error;
+    return (
+      error?.codigo === "ERROR_INTERNO" &&
+      typeof error.referencia === "string" &&
+      registro.includes(`${error.referencia} ConcurrenciaAgotada`)
+    );
+  };
+}
+
+/**
  * Repite `trabajo` (con la MISMA entrada: es el mismo cierre, seguro por su clave) SOLO ante `ConcurrenciaAgotada`,
  * hasta `tope` reintentos. Devuelve el valor del éxito. Ante cualquier otro error falla mostrando el error real, y si
  * el agotamiento persiste, falla diciéndolo: un error persistente no queda disfrazado de «carga».
@@ -111,17 +166,10 @@ export async function reintentarSiAgotada<T, E>(
   trabajo: () => Promise<Resultado<T, E>>,
   opciones: { readonly tope?: number; readonly contexto?: string } = {},
 ): Promise<T> {
-  const tope = opciones.tope ?? TOPE_DE_REINTENTOS;
-  for (let reintento = 0; ; reintento++) {
-    const r = await trabajo();
-    if (r.ok) return r.valor;
-    if (!esConcurrenciaAgotada(r.error)) {
-      throw new Error(con(opciones.contexto, `falló: ${comoTexto(r.error)}`));
-    }
-    if (reintento >= tope) {
-      throw new Error(
-        con(opciones.contexto, `ConcurrenciaAgotada persistió tras ${tope} reintentos seguidos`),
-      );
-    }
-  }
+  const r = await repetirSiAgotada(trabajo, {
+    esAgotada: agotadaEnElResultado,
+    ...opciones,
+  });
+  if (!r.ok) throw new Error(con(opciones.contexto, `falló: ${comoTexto(r.error)}`));
+  return r.valor;
 }

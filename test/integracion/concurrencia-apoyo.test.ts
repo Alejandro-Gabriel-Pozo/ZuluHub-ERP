@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { err, ok, type Resultado } from "../../src/primitivas/resultado/resultado";
 import {
+  agotadaEnElResultado,
+  agotadaSegunElRegistro,
   codigoDe,
   correrEnParalelo,
   esConcurrenciaAgotada,
   perdedorAceptable,
   reintentarSiAgotada,
+  repetirSiAgotada,
 } from "./concurrencia-apoyo";
 
 const AGOTADA = err({ tipo: "ConcurrenciaAgotada" as const });
@@ -32,6 +35,15 @@ describe("concurrencia-apoyo: esConcurrenciaAgotada y codigoDe", () => {
     expect(codigoDe(AGOTADA)).toBe("ConcurrenciaAgotada");
     expect(codigoDe(err({ codigo: "X" }))).toBe("otro");
     expect(codigoDe(err(null))).toBe("otro");
+  });
+});
+
+describe("concurrencia-apoyo: agotadaEnElResultado", () => {
+  it("solo el error tipado de agotamiento; un éxito o un error de negocio no", () => {
+    expect(agotadaEnElResultado(AGOTADA)).toBe(true);
+    expect(agotadaEnElResultado(ok(1))).toBe(false);
+    expect(agotadaEnElResultado(err("ConcurrenciaAgotada"))).toBe(false);
+    expect(agotadaEnElResultado(err({ tipo: "Unicidad" }))).toBe(false);
   });
 });
 
@@ -152,6 +164,85 @@ describe("concurrencia-apoyo: reintentarSiAgotada", () => {
       ),
     ).rejects.toThrow(/persistió/);
     expect(llamadas).toBe(1);
+  });
+});
+
+describe("concurrencia-apoyo: repetirSiAgotada y agotadaSegunElRegistro", () => {
+  it("repite con la misma entrada mientras agota y devuelve el resultado, éxito o error de negocio", async () => {
+    let llamadas = 0;
+    const r = await repetirSiAgotada(
+      () => {
+        llamadas += 1;
+        return Promise.resolve<Cualquiera>(llamadas < 3 ? AGOTADA : err("YA_HAY_BORRADOR"));
+      },
+      { esAgotada: agotadaEnElResultado },
+    );
+    expect(r).toEqual(err("YA_HAY_BORRADOR"));
+    expect(llamadas).toBe(3);
+    expect(
+      await repetirSiAgotada(() => Promise.resolve(ok(7)), { esAgotada: agotadaEnElResultado }),
+    ).toEqual(ok(7));
+  });
+
+  it("si el agotamiento persiste falla al llegar al tope, con el contexto", async () => {
+    let llamadas = 0;
+    await expect(
+      repetirSiAgotada(
+        () => {
+          llamadas += 1;
+          return Promise.resolve<Cualquiera>(AGOTADA);
+        },
+        { esAgotada: agotadaEnElResultado, tope: 2, contexto: "ronda 1" },
+      ),
+    ).rejects.toThrow(/^ronda 1: ConcurrenciaAgotada persistió tras 2 reintentos/);
+    expect(llamadas).toBe(3);
+  });
+
+  describe("en la web: el agotamiento sale como ERROR_INTERNO y solo lo delata el registro", () => {
+    const interno = (referencia: string | undefined) => ({
+      ok: false,
+      error: { codigo: "ERROR_INTERNO", ...(referencia === undefined ? {} : { referencia }) },
+    });
+
+    it("reconoce ERROR_INTERNO cuya referencia está registrada con ConcurrenciaAgotada", () => {
+      const registro = ["PD-AAAA ConcurrenciaAgotada"];
+      const esAgotada = agotadaSegunElRegistro(registro);
+      expect(esAgotada(interno("PD-AAAA"))).toBe(true);
+      // El registro es una lista viva: lo que se registra después también cuenta.
+      registro.push("PD-BBBB ConcurrenciaAgotada");
+      expect(esAgotada(interno("PD-BBBB"))).toBe(true);
+    });
+
+    it("NO reconoce otro error interno, otra referencia, otro código, un éxito ni una respuesta sin referencia", () => {
+      const esAgotada = agotadaSegunElRegistro([
+        "PD-AAAA ConcurrenciaAgotada",
+        "PD-CCCC Error: se cayó la base",
+        "PD-DDDD ConcurrenciaAgotada con detalle de más",
+      ]);
+      expect(esAgotada(interno("PD-CCCC"))).toBe(false);
+      expect(esAgotada(interno("PD-DDDD"))).toBe(false);
+      expect(esAgotada(interno("PD-ZZZZ"))).toBe(false);
+      expect(esAgotada(interno(undefined))).toBe(false);
+      expect(esAgotada({ ok: false, error: { codigo: "FISCAL_PEDIDO_REPETIDO" } })).toBe(false);
+      expect(
+        esAgotada({ ok: false, error: { codigo: "NO_DISPONIBLE", referencia: "PD-AAAA" } }),
+      ).toBe(false);
+      expect(esAgotada({ ok: true })).toBe(false);
+    });
+
+    it("con repetirSiAgotada: repite el agotamiento y deja pasar un error interno real", async () => {
+      const registro = ["PD-AAAA ConcurrenciaAgotada", "PD-CCCC Error: se cayó la base"];
+      let llamadas = 0;
+      const r = await repetirSiAgotada(
+        () => {
+          llamadas += 1;
+          return Promise.resolve(llamadas === 1 ? interno("PD-AAAA") : interno("PD-CCCC"));
+        },
+        { esAgotada: agotadaSegunElRegistro(registro) },
+      );
+      expect(r).toEqual(interno("PD-CCCC"));
+      expect(llamadas).toBe(2);
+    });
   });
 });
 

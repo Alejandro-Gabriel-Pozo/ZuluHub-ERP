@@ -39,7 +39,7 @@ export type PuntoParaConfigurar = Readonly<{
  * Lo que el servidor deja hacer HOY con una acción de Puntos de venta, para la pantalla: si el botón va activo o apagado y, apagado,
  * el motivo ya escrito (del catálogo `motivo.*`). Solo una ayuda: el guard del servidor vuelve a decidir al enviar. Lo arma
  * `servidor/modulos.ts` con `permisosDelActor`. Previene: que la persona abra una ventana, confirme y recién ahí reciba el rechazo
- * del módulo en desarrollo. Chequeo: `test/web/configuracion-fiscal-acciones.test.ts`.
+ * del módulo (no activo en la empresa o sin permiso). Chequeo: `test/web/configuracion-fiscal-acciones.test.ts`.
  */
 export type OfertaDeAccion = Readonly<{ permitida: boolean; motivo: string | null }>;
 

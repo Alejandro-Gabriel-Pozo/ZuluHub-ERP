@@ -301,10 +301,21 @@ describe("hoja A4: accesibilidad, @page e impresión", () => {
     const sesion = cdp();
     await sesion.send("Emulation.setEmulatedMedia", { media: "print" });
     try {
+      // La emulación de `print` se aplica de forma asíncrona (otro proceso del navegador): en un CI más lento la primera lectura aún ve el
+      // estilo de pantalla, con las hojas lado a lado (`segunda.top - primera.bottom` da una hoja entera). Se espera a que el estilo de
+      // impresión rija; las demás aserciones valen recién entonces. Previene: un rojo intermitente por leer la geometría antes de tiempo.
+      await expect
+        .poll(
+          () => {
+            const [primera, segunda] = hojas.map((h) => h.getBoundingClientRect());
+            return Math.abs((segunda?.top ?? 0) - (primera?.bottom ?? 0));
+          },
+          { timeout: 5000 },
+        )
+        .toBeLessThanOrEqual(1);
       const contenido = document.querySelector<HTMLElement>("[data-escala]");
       expect(getComputedStyle(contenido as Element).transform).toBe("none");
-      const [primera, segunda] = hojas.map((h) => h.getBoundingClientRect());
-      expect(Math.abs((segunda?.top ?? 0) - (primera?.bottom ?? 0))).toBeLessThanOrEqual(1);
+      const primera = hojas[0]?.getBoundingClientRect();
       expect(Math.abs((primera?.width ?? 0) - mmAPx(ANCHO_A4_MM))).toBeLessThanOrEqual(1);
       expect(getComputedStyle(document.querySelector("[data-ajeno]") as Element).display).toBe(
         "none",
