@@ -16,6 +16,8 @@ import {
   borradorTrasGuardar,
   filaDelCuit,
   lugarDelError,
+  MODO_NO_CONTRIBUYENTE,
+  MODO_NUMERO,
   valoresDelBorrador,
   type BorradorDeDatosFiscales,
   type CampoDeDatosFiscales,
@@ -252,6 +254,27 @@ export function FormularioDeDatosFiscales({
             autoComplete: "postal-code",
           })}
         </fieldset>
+        <Selector
+          etiqueta={texto({}, "fiscal.pantalla.imprimir_ingresos_brutos")}
+          nombre="ingresosBrutos"
+          valor={valores.ingresosBrutos}
+          alCambiar={(v) => {
+            poner("ingresosBrutos", v);
+          }}
+          opciones={[
+            { valor: MODO_NUMERO, etiqueta: texto({}, "fiscal.pantalla.config_df_iibb_numero") },
+            {
+              valor: MODO_NO_CONTRIBUYENTE,
+              etiqueta: texto({}, "fiscal.pantalla.config_df_iibb_no_contribuyente"),
+            },
+          ]}
+          textoDeElegir={texto({}, "fiscal.pantalla.imprimir_ingresos_brutos")}
+          error={errorEn("ingresosBrutos")}
+          deshabilitado={bloqueado}
+        />
+        {valores.ingresosBrutos === MODO_NUMERO
+          ? campo("iibbNumero", "fiscal.pantalla.config_df_iibb_numero")
+          : null}
         {campo("inicioActividades", "fiscal.pantalla.config_df_inicio_actividades", {
           inputMode: "numeric",
         })}

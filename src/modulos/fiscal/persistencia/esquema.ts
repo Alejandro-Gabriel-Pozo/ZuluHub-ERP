@@ -292,6 +292,7 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   datos_fiscales_inicio_actividades_ck: "INICIO_DE_ACTIVIDADES_INVALIDO",
   datos_fiscales_iibb_numero_ck: "IIBB_NUMERO_INVALIDO",
   datos_fiscales_iibb_condicion_ck: "IIBB_CONDICION_INVALIDA",
+  datos_fiscales_iibb_eleccion_ck: "IIBB_CONDICION_INVALIDA", // 0021: número y «No contribuyente» a la vez; el dominio decide antes
   datos_fiscales_motivo_ck: "MOTIVO_OBLIGATORIO",
   datos_fiscales_confirmada_ck: "NO_TRADUCIDA", // el dominio decide antes (incompleta, vigencia retroactiva)
   datos_fiscales_id_empresa_emisor_uk: "NO_TRADUCIDA", // 0009: para la clave foránea compuesta del comprobante
@@ -376,6 +377,7 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   comprobante_emisor_inicio_ck: "INICIO_DE_ACTIVIDADES_INVALIDO",
   comprobante_emisor_iibb_numero_ck: "IIBB_NUMERO_INVALIDO",
   comprobante_emisor_iibb_condicion_ck: "IIBB_CONDICION_INVALIDA",
+  comprobante_emisor_iibb_eleccion_ck: "IIBB_CONDICION_INVALIDA", // 0021: número y «No contribuyente» a la vez
   comprobante_pv_numero_ck: "PUNTO_DE_VENTA_NUMERO_INVALIDO",
   comprobante_pv_domicilio_ck: "NO_TRADUCIDA",
   comprobante_receptor_nombre_ck: "RECEPTOR_NOMBRE_INVALIDO",

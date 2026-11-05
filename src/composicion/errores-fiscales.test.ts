@@ -57,10 +57,7 @@ describe("las tablas de traducción", () => {
       "COMPROBANTE_ASOCIADO_INVALIDO",
       // El modelo de impresión: pedir uno que no está autorizado es un pedido armado a mano (la pantalla solo ofrece imprimir los autorizados).
       "COMPROBANTE_NO_AUTORIZADO",
-      // Configuración fiscal: Ingresos Brutos no lo puede provocar nadie (D-45), la base no repite el número de versión, y una
-      // sucursal ajena es un pedido armado a mano (sin oráculo).
-      "IIBB_CONDICION_INVALIDA",
-      "IIBB_NUMERO_INVALIDO",
+      // Configuración fiscal: la base no repite el número de versión, y una sucursal ajena es un pedido armado a mano (sin oráculo).
       "NUMERO_DE_VERSION_INVALIDO",
       "SUCURSAL_DE_OTRA_EMPRESA",
       // El modelo de impresión: una versión de representación que este código no sabe dibujar (lista cerrada, `modelo-de-impresion.ts`).
@@ -132,8 +129,29 @@ describe("la configuración fiscal (D-43)", () => {
       codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
       campo: "inicioActividades",
     });
+    expect(faltan(["ingresosBrutos"])).toEqual({
+      codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
+      campo: "ingresosBrutos",
+    });
     // Sin faltantes (no pasa: el dominio siempre informa uno): el código sin campo.
     expect(faltan([])).toEqual({ codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS" });
+  });
+
+  it("D-115/D-116: errores de Ingresos Brutos al guardar marcan su campo; emitir sin declararlo sale con el texto ya aprobado de «faltan los datos fiscales»", () => {
+    expect(traducirErrorFiscal("IIBB_NUMERO_INVALIDO")).toEqual({
+      codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
+      campo: "iibbNumero",
+    });
+    expect(traducirErrorFiscal("IIBB_CONDICION_INVALIDA")).toEqual({
+      codigo: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
+      campo: "iibbCondicion",
+    });
+    expect(traducirErrorFiscal("INGRESOS_BRUTOS_SIN_DECLARAR")).toEqual({
+      codigo: "FISCAL_SIN_DATOS_FISCALES",
+    });
+    expect(CATALOGO_DE_TEXTOS["error.fiscal_sin_datos_fiscales"].porDefecto).toBe(
+      "Faltan los datos fiscales confirmados de la empresa.",
+    );
   });
 
   it("D-77: pasar a producción un punto de venta que ARCA no habilita sale con SU código y el texto ya aprobado del rechazo 10005", () => {

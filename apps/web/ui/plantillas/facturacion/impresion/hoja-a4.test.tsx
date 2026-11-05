@@ -198,6 +198,53 @@ describe("hoja A4: el reparto en hojas con 8, 26 y 60 renglones", () => {
 describe("hoja A4: lo que dibuja según el comprobante", () => {
   const textoDe = (hoja: HTMLElement | undefined): string => hoja?.textContent ?? "";
 
+  const LEGAL = "  Texto legal de prueba (ficticio).  ";
+
+  it("leyenda legal: texto normal en el encabezado de cada hoja, fuera del recuadro de homologación y tal cual", async () => {
+    const pruebas = await dibujar({
+      leyendas: ["HOMOLOGACIÓN — SIN VALIDEZ FISCAL"],
+      leyendasLegales: [LEGAL],
+      renglones: 60,
+    });
+    expect(pruebas.hojas.length).toBeGreaterThan(1);
+    for (const hoja of pruebas.hojas) {
+      const legal = hoja.querySelector<HTMLElement>("[data-leyenda-legal]");
+      const encabezado = hoja.querySelector<HTMLElement>('[data-medida="encabezado"]');
+      expect(legal?.textContent).toBe(LEGAL);
+      expect(encabezado?.contains(legal ?? null)).toBe(true);
+      // Solo la de homologación va enmarcada: la legal no está dentro de su recuadro ni tiene borde ni negrita.
+      const recuadro = [...(encabezado?.children ?? [])].find((e) =>
+        (e.textContent ?? "").includes("HOMOLOGACIÓN"),
+      );
+      expect(recuadro?.contains(legal ?? null)).toBe(false);
+      expect(recuadro?.textContent).not.toContain("Texto legal");
+      const estilo = getComputedStyle(legal as Element);
+      expect(estilo.borderTopWidth).toBe("0px");
+      expect(Number(estilo.fontWeight)).toBeLessThan(600);
+      // Va justo después del aviso.
+      expect(recuadro?.nextElementSibling).toBe(legal);
+      // Está dentro del encabezado medido.
+      const rE = (encabezado as Element).getBoundingClientRect();
+      const rL = (legal as Element).getBoundingClientRect();
+      expect(rL.top).toBeGreaterThanOrEqual(rE.top - 0.5);
+      expect(rL.bottom).toBeLessThanOrEqual(rE.bottom + 0.5);
+    }
+    await pruebas.pantalla.unmount();
+  });
+
+  it("leyenda legal sin homologación: aparece y no hay recuadro; sin leyendas legales no hay nada extra", async () => {
+    const solaLegal = await dibujar({ leyendasLegales: [LEGAL], renglones: 8 });
+    expect(solaLegal.hojas[0]?.querySelectorAll("[data-leyenda-legal]")).toHaveLength(1);
+    expect(textoDe(solaLegal.hojas[0])).not.toContain("HOMOLOGACIÓN");
+    const altoConLegal = solaLegal.hojas[0]?.querySelector("header")?.offsetHeight ?? 0;
+    await solaLegal.pantalla.unmount();
+    const sin = await dibujar({ renglones: 8 });
+    expect(sin.hojas[0]?.querySelectorAll("[data-leyenda-legal]")).toHaveLength(0);
+    const altoSin = sin.hojas[0]?.querySelector("header")?.offsetHeight ?? 0;
+    expect(altoConLegal).toBeGreaterThan(altoSin);
+    await sin.pantalla.unmount();
+  });
+
   it("factura B a consumidor final: transparencia fiscal solo en la hoja final, abajo a la izquierda", async () => {
     const { hojas } = await dibujar({ letra: "B", renglones: 60 });
     expect(hojas.length).toBeGreaterThan(1);
@@ -307,20 +354,28 @@ describe("hoja A4: accesibilidad, @page e impresión", () => {
       await expect
         .poll(
           () => {
-            const [primera, segunda] = hojas.map((h) => h.getBoundingClientRect());
-            return Math.abs((segunda?.top ?? 0) - (primera?.bottom ?? 0));
+            // Se relee el DOM en cada lectura (no las referencias de antes de emular) y se exigen al menos 2 hojas: si colapsaran en una,
+            // no pasa en vacío.
+            const actuales = [...document.querySelectorAll<HTMLElement>("[data-hoja]")];
+            const [primera, segunda] = actuales.map((h) => h.getBoundingClientRect());
+            if (actuales.length < 2 || primera === undefined || segunda === undefined) {
+              return Number.POSITIVE_INFINITY;
+            }
+            return Math.abs(segunda.top - primera.bottom);
           },
           { timeout: 5000 },
         )
         .toBeLessThanOrEqual(1);
       const contenido = document.querySelector<HTMLElement>("[data-escala]");
       expect(getComputedStyle(contenido as Element).transform).toBe("none");
-      const primera = hojas[0]?.getBoundingClientRect();
+      const primera = document.querySelector("[data-hoja]")?.getBoundingClientRect();
       expect(Math.abs((primera?.width ?? 0) - mmAPx(ANCHO_A4_MM))).toBeLessThanOrEqual(1);
       expect(getComputedStyle(document.querySelector("[data-ajeno]") as Element).display).toBe(
         "none",
       );
-      expect(getComputedStyle(hojas[0] as Element).display).not.toBe("none");
+      expect(getComputedStyle(document.querySelector("[data-hoja]") as Element).display).not.toBe(
+        "none",
+      );
       expect(getComputedStyle(document.querySelector("[data-medidor]") as Element).display).toBe(
         "none",
       );

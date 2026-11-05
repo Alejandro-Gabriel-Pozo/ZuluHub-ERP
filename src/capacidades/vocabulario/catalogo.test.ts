@@ -201,6 +201,10 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     );
   });
 
+  it("el único texto nuevo de «Elegir sucursal al ingresar» es «Continuar» (dueño, 2026-11-05, prototipo B)", () => {
+    expect(CATALOGO_DE_TEXTOS["sucursal.continuar"].porDefecto).toBe("Continuar");
+  });
+
   it("los textos del contacto de la sucursal y el aviso de conflicto en voseo son exactamente los que el dueño aprobó el 2026-11-04 (D-113)", () => {
     expect(
       Object.fromEntries(
@@ -297,6 +301,22 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "fiscal.pantalla.imprimir_ingresos_brutos": "Ingresos Brutos",
     });
     expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.imprimir_hoja"].marcadores).toEqual(["k", "n"]);
+  });
+
+  it("Ingresos Brutos en Datos fiscales (D-116): los dos textos nuevos y la etiqueta reutiliza la de la hoja impresa", () => {
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.config_df_iibb_numero"].porDefecto).toBe(
+      "Número de inscripción",
+    );
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.config_df_iibb_no_contribuyente"].porDefecto).toBe(
+      "No contribuyente",
+    );
+    expect(
+      claves.filter((c) => c.includes("iibb") || c.includes("ingresos_brutos")).sort(),
+    ).toEqual([
+      "fiscal.pantalla.config_df_iibb_no_contribuyente",
+      "fiscal.pantalla.config_df_iibb_numero",
+      "fiscal.pantalla.imprimir_ingresos_brutos",
+    ]);
   });
 
   it("los textos de los errores con datos declaran su marcador", () => {

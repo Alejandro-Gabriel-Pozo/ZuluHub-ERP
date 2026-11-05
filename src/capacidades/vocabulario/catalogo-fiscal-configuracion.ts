@@ -143,6 +143,11 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
   "fiscal.pantalla.config_df_domicilio_fiscal": { porDefecto: "Domicilio" },
   // Dueño, 2026-10-29, Q17 pregunta 4.
   "fiscal.pantalla.config_df_inicio_actividades": { porDefecto: "Inicio de actividades" },
+  // Dueño, 2026-11-05: opción B del prototipo de Ingresos Brutos en Datos fiscales (https://claude.ai/artifact/75NVoKCZYz4GXvCMnoRG6y); texto de la norma: RG 1415, Anexo II, A.I.a punto 4 (Pedernal-docs/12-referencias-externas/arca-normas-de-comprobantes/rg1415_dcp.html), D-116.
+  // La etiqueta del desplegable es «Ingresos Brutos», que ya existe como `imprimir_ingresos_brutos` (una regla, un lugar).
+  "fiscal.pantalla.config_df_iibb_numero": { porDefecto: "Número de inscripción" },
+  // Dueño, 2026-11-05: opción B del prototipo de Ingresos Brutos en Datos fiscales (https://claude.ai/artifact/75NVoKCZYz4GXvCMnoRG6y); texto de la norma: RG 1415, Anexo II, A.I.a punto 4 (Pedernal-docs/12-referencias-externas/arca-normas-de-comprobantes/rg1415_dcp.html), D-116.
+  "fiscal.pantalla.config_df_iibb_no_contribuyente": { porDefecto: "No contribuyente" },
   // Certificado de ARCA (opción B, asistente de 3 pasos por ambiente): los 13 textos nuevos los aprobó el dueño el 2026-11-03 en el
   // cuestionario «Certificado»; «Guardando…» del certificado reutiliza `config_pv_guardando` (mismo cuestionario). Las claves no dicen
   // «clave» ni «firma»: el catálogo rechaza como secreto todo nombre que las contenga (`NOMBRE_DE_SECRETO`).

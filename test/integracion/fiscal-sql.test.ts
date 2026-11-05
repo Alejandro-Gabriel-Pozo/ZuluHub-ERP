@@ -321,6 +321,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         "datos_fiscales_estado_ck:c",
         "datos_fiscales_id_empresa_emisor_uk:u", // 0009: para la clave foránea del comprobante
         "datos_fiscales_iibb_condicion_ck:c",
+        "datos_fiscales_iibb_eleccion_ck:c", // 0021: número y «No contribuyente» a la vez
         "datos_fiscales_iibb_numero_ck:c",
         "datos_fiscales_inicio_actividades_ck:c",
         "datos_fiscales_motivo_ck:c",
@@ -1670,6 +1671,31 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       });
     });
 
+    it("0021: «No contribuyente» entra sin número; con número a la vez lo rechaza la base; el valor anterior sigue siendo legible", async () => {
+      const m = await crearMundo(dueno);
+      await deshacible(async () => {
+        const ins = (numero: string | null, condicion: string | null) =>
+          intento(
+            `insert into datos_fiscales (empresa_id, emisor_id, razon_social, iibb_numero, iibb_condicion, creado_por)
+             values ($1, $2, 'Mi SA', $3, $4, $5)`,
+            [m.empresa, m.emisor, numero, condicion, m.persona],
+          );
+        for (const [numero, condicion] of [
+          [null, "NO_CONTRIBUYENTE"],
+          ["901-1", null],
+          [null, null],
+          // Las filas viejas (número con una condición anterior) siguen siendo válidas: la migración no las toca.
+          ["901-1", "LOCAL"],
+        ] as const) {
+          await dueno.query("savepoint combinacion");
+          acepta(await ins(numero, condicion));
+          await dueno.query("rollback to savepoint combinacion");
+        }
+        check(await ins("901-1", "NO_CONTRIBUYENTE"), "datos_fiscales_iibb_eleccion_ck");
+        check(await ins(null, "no_contribuyente"), "datos_fiscales_iibb_condicion_ck");
+      });
+    });
+
     it("las claves foráneas compuestas: ni el emisor ni el domicilio fiscal pueden ser de otra empresa", async () => {
       const m = await crearMundo(dueno);
       const otra = await crearMundo(dueno);
@@ -1754,7 +1780,6 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         domicilioFiscalId: domicilioId(domicilio),
         inicioActividades: "2019-02-28",
         iibbNumero: "901-123456-7",
-        iibbCondicion: "CONVENIO_MULTILATERAL",
       });
       expect(editado.ok).toBe(true);
       if (!editado.ok) return;

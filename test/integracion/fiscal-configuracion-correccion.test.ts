@@ -38,6 +38,7 @@ const COMPLETOS = {
   razonSocial: "Coop Pampa SA",
   condicionIva: "RESPONSABLE_INSCRIPTO",
   inicioActividades: "2020-03-01",
+  iibbNumero: "901-123456-7",
 } as const;
 
 describe.skipIf(base === null)(
