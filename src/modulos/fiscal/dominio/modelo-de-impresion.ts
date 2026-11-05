@@ -17,7 +17,8 @@ import {
 import type { ModoDePrecio } from "./calculo-de-renglones";
 import type { Ambiente, RenglonCalculado } from "./comprobante-nuevo";
 import { contactoImpreso, type ContactoCongelado, type ContactoImpreso } from "./contacto-impreso";
-import { condicionVigente, type CondicionIibb } from "./datos-fiscales";
+import type { CondicionIibb } from "./datos-fiscales";
+import { condicionDeIibbImpresa } from "./iibb-impreso";
 import { importesParaArca } from "./importes-para-arca";
 import { leyendaDeCreditoFiscal } from "./leyenda-de-credito-fiscal";
 import { urlDelQr, type ErrorDeQr } from "./qr-de-arca";
@@ -74,14 +75,6 @@ const PRIMERA_VERSION_CON_CONTACTO = 2;
  * otras dos por la misma razón que el contacto: una versión futura puede cambiar una sin tocar las demás. La 1 no lo lleva.
  */
 const PRIMERA_VERSION_CON_MODO_DE_PRECIO = 2;
-
-/**
- * Primera versión que expone de Ingresos Brutos solo lo vigente (D-115/D-116, RG 1415 Anexo II A.I.a punto 4): el número de
- * inscripción (`iibbNumero`) o `iibbCondicion: "NO_CONTRIBUYENTE"`. Las tres condiciones anteriores (local, convenio multilateral,
- * exento) llegan como `null`: la vista no las imprime ni tiene que conocerlas. La 1 las trae tal cual se guardaron y reimprime
- * idéntica. Sin textos: el modelo trae el dato y la vista pone los rótulos.
- */
-const PRIMERA_VERSION_CON_IIBB_VIGENTE = 2;
 
 /**
  * Leyenda del receptor (versión 2), copiada de la norma sin parafrasear; si ARCA la cambia, es una versión nueva.
@@ -363,10 +356,7 @@ export function modeloDeImpresion(
         domicilioFiscal: emisor.domicilioFiscal,
         domicilioDelPuntoDeVenta: emisor.domicilioDelPuntoDeVenta,
         iibbNumero: emisor.iibbNumero,
-        iibbCondicion:
-          comprobante.versionDeRepresentacion >= PRIMERA_VERSION_CON_IIBB_VIGENTE
-            ? condicionVigente(emisor.iibbCondicion)
-            : emisor.iibbCondicion,
+        iibbCondicion: condicionDeIibbImpresa(comprobante),
         inicioDeActividades: emisor.inicioDeActividades,
       },
     },

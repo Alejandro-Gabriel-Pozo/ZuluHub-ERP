@@ -22,6 +22,7 @@ import type {
 import { err, type Resultado } from "../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../puertos/transacciones";
 import { aRespuesta, type DependenciasDeRespuesta } from "./a-respuesta";
+import { CAMPOS_DE_IIBB, ERRORES_DE_IIBB } from "./errores-fiscales-de-ingresos-brutos";
 import { ERRORES_DE_IMPRESION, type ErrorAlLeerComprobantes } from "./errores-fiscales-de-lectura";
 import {
   ERRORES_DE_CERTIFICADO,
@@ -93,9 +94,6 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<
   PUNTO_DE_VENTA_INACTIVO: "FISCAL_PUNTO_DE_VENTA_INACTIVO",
   EMISOR_INACTIVO: "FISCAL_EMISOR_INACTIVO",
   SIN_DATOS_FISCALES_VIGENTES: "FISCAL_SIN_DATOS_FISCALES",
-  // D-115: la versión vigente no declara Ingresos Brutos (ni número ni «No contribuyente»): mismo código y mismo texto aprobado que
-  // «faltan los datos fiscales confirmados» (la solución es la misma: corregir y confirmar de nuevo); no se agrega texto.
-  INGRESOS_BRUTOS_SIN_DECLARAR: "FISCAL_SIN_DATOS_FISCALES",
   SIN_CERTIFICADO_VIGENTE: "FISCAL_SIN_CERTIFICADO",
   COMPROBANTE_ASOCIADO_NO_ENCONTRADO: "FISCAL_COMPROBANTE_NO_ENCONTRADO",
   // La base rechazó el alta o el asociado por una restricción: la persona no pudo evitarlo, es un defecto.
@@ -136,13 +134,10 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<
   // Datos fiscales y puntos de venta (D-43): lo que la persona escribió mal sale como `FISCAL_CONFIGURACION_DATOS_INVALIDOS` con el campo
   // (el formulario lo marca). Su texto, «Revisá los datos marcados.», es el de D-67 y reemplaza acá al «Revise los datos del comprobante»,
   // que es de las facturas (`FISCAL_DATOS_INVALIDOS`). Un identificador de la pantalla mal armado es «no se pudo identificar el
-  // pedido». Los de Ingresos Brutos (D-115/D-116: el número o «No contribuyente») sí los puede provocar la persona: mismo código y mismo
-  // texto, con el campo. La base no deja un número de versión repetido: defecto.
+  // pedido». Ingresos Brutos (D-115/D-116): `errores-fiscales-de-ingresos-brutos.ts`. Un número de versión repetido es defecto.
   RAZON_SOCIAL_INVALIDA: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
   CONDICION_IVA_INVALIDA: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
   INICIO_DE_ACTIVIDADES_INVALIDO: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
-  IIBB_NUMERO_INVALIDO: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
-  IIBB_CONDICION_INVALIDA: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
   NUMERO_DE_VERSION_INVALIDO: null,
   MOTIVO_OBLIGATORIO: "FISCAL_MOTIVO_INVALIDO",
   VIGENCIA_RETROACTIVA: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
@@ -180,6 +175,7 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<
   SUCURSAL_DE_OTRA_EMPRESA: null,
   ...ERRORES_DE_CERTIFICADO,
   ...ERRORES_DE_IMPRESION,
+  ...ERRORES_DE_IIBB,
 };
 
 /** Los códigos de la configuración fiscal que todavía salen sin texto propio: lo que hay que preguntarle al dueño. */
@@ -202,8 +198,7 @@ const CAMPO_DE_CRITERIO: Readonly<Partial<Record<ErrorTextual, string>>> = {
   RAZON_SOCIAL_INVALIDA: "razonSocial",
   CONDICION_IVA_INVALIDA: "condicionIva",
   INICIO_DE_ACTIVIDADES_INVALIDO: "inicioActividades",
-  IIBB_NUMERO_INVALIDO: "iibbNumero",
-  IIBB_CONDICION_INVALIDA: "iibbCondicion",
+  ...CAMPOS_DE_IIBB,
   VIGENCIA_RETROACTIVA: "vigenteDesde",
   INSTANTE_INVALIDO: "vigenteDesde",
   CALLE_INVALIDA: "domicilio.calle",
@@ -260,8 +255,6 @@ const CAMPO_DE_OBLIGATORIO: Readonly<Record<string, string>> = {
   condicionIva: "condicionIva",
   domicilioFiscalId: "domicilio",
   inicioActividades: "inicioActividades",
-  // D-115/D-116: falta elegir entre el número de IIBB y «No contribuyente». El nombre del campo es la convención de los otros tres
-  // (clave del dato en el formulario); la pantalla lo marca con el texto D-67 que ya existe, sin texto nuevo.
   ingresosBrutos: "ingresosBrutos",
 };
 
