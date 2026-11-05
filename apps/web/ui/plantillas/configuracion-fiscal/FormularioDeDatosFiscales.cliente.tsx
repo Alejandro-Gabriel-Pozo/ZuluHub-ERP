@@ -268,7 +268,7 @@ export function FormularioDeDatosFiscales({
               etiqueta: texto({}, "fiscal.pantalla.config_df_iibb_no_contribuyente"),
             },
           ]}
-          textoDeElegir={texto({}, "fiscal.pantalla.imprimir_ingresos_brutos")}
+          textoDeElegir={texto({}, "selector.elegir_una_opcion")}
           error={errorEn("ingresosBrutos")}
           deshabilitado={bloqueado}
         />
