@@ -370,6 +370,39 @@ _Excepción para la empresa de PRUEBAS en Preview (2026-11-05, pedido del dueño
 `preparar-empresa-de-pruebas.yml` corre estos pasos sin que los datos pasen por el formulario: salen de un secreto del Environment
 `preview` (`PEDERNAL_PREPARAR_PREVIEW`) y se tapan en el registro. Le da login al rol de plataforma solo durante la corrida y lo cierra siempre. Está en borrador: ver su PR.
 
+**Secretos del Environment `preview`** para ese workflow: `PEDERNAL_DB_DUENO_DIRECTA`, `PEDERNAL_SECRETO_INVITACIONES` (hexadecimal, 64 o más dígitos) y
+`CRON_SECRET` (24 o más caracteres) —los dos últimos con el MISMO valor que en Vercel Preview, fijados por el dueño, y después un Redeploy de
+preview— y `PEDERNAL_PREPARAR_PREVIEW`, un JSON en UNA línea. Plantilla con valores FICTICIOS (`adminEmail` y `emailGerente` tienen que ser
+DISTINTOS: el administrador de plataforma no puede ser miembro de ninguna empresa; `vigenteDesde` es un instante futuro cercano a la corrida y
+`verificadoEn`, uno pasado):
+
+```json
+{
+  "adminEmail": "admin.ficticio@ejemplo.test",
+  "vigenteDesde": "2026-11-06T12:00:00-03:00",
+  "marca": { "codigo": "marca-ficticia", "nombreVisible": "Marca Ficticia" },
+  "plan": {
+    "codigo": "plan-ficticio",
+    "nombreComercial": "Plan Ficticio",
+    "modulos": ["administracion", "facturacion"],
+    "perillas": { "empresas_por_tenant": { "tipo": "LIMITE", "limite": 1 } }
+  },
+  "dominio": {
+    "host": "app-prueba.pedernal.com.ar",
+    "titular": "OPERADOR",
+    "verificadoEn": "2026-11-05T09:00:00-03:00"
+  },
+  "empresa": {
+    "nombreDeTenant": "Cliente Ficticio",
+    "cuit": "20123456786",
+    "razonSocial": "Empresa Ficticia SRL",
+    "zonaHoraria": "America/Argentina/Buenos_Aires",
+    "moneda": "ARS",
+    "emailGerente": "gerente.ficticio@ejemplo.test"
+  }
+}
+```
+
 **Estado hoy (honesto, 2026-10-22; el último párrafo se actualizó el 2026-11-04):** los scripts del paso 2 y 3 **existen** y se corren con
 `npm run plataforma:primer-admin` y `npm run plataforma:caso` (con `node --import ./scripts/cargador-de-ts.mjs`; no hace
 falta `tsx`). Los casos de uso de marca, plan y alta de empresa (M5/M6) están en `main`, y la resolución de hosts ya lee la
