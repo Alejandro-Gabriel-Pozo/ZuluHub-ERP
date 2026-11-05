@@ -10,7 +10,7 @@ import type {
   VistaDeVidriera,
   VistaDeProducto,
 } from "../../../../../src/capacidades/experiencia/vidriera/vista";
-import { Boton } from "../../componentes/Boton";
+import { Boton } from "../../componentes/Boton.cliente";
 import { BuscarEnVidriera } from "./BuscarEnVidriera";
 import { ControlDeLetra } from "./ControlDeLetra";
 import escala from "./EscalaDeLetra.module.css";

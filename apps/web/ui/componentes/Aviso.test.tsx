@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import { violacionesDeAccesibilidad } from "../pruebas/ayudas";
-import { Boton } from "./Boton";
+import { Boton } from "./Boton.cliente";
 import { Aviso } from "./Aviso";
 
 describe("Aviso", () => {

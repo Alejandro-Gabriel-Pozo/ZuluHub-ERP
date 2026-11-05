@@ -3,7 +3,7 @@
 import { bytesDeDigest } from "../../../../src/capacidades/experiencia/referencia-web";
 import { texto } from "../../../../src/capacidades/vocabulario/vocabulario";
 import { referenciaDeError } from "../../../../src/plataforma/dominio/referencia";
-import { Boton } from "../componentes/Boton";
+import { Boton } from "../componentes/Boton.cliente";
 import { PlantillaNeutra } from "../plantillas/PlantillaNeutra";
 import { ErrorConReferencia } from "./ErrorConReferencia";
 
