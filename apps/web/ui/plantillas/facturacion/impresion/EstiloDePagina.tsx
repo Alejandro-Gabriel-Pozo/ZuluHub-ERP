@@ -20,6 +20,13 @@ export type PropsDelEstiloDePagina = Readonly<{
 export function EstiloDePagina({ formato, altoDelTicketEnMm }: PropsDelEstiloDePagina) {
   const reglas = `${reglaDePagina(formato, altoDelTicketEnMm) ?? ""}${SOLO_LA_HOJA}`;
   useLayoutEffect(() => {
+    // Previene: vista en blanco (TypeError) en navegadores sin hojas constructables; sin ellas se imprime con el tamaño del navegador.
+    if (
+      !("adoptedStyleSheets" in document) ||
+      typeof CSSStyleSheet !== "function" ||
+      typeof CSSStyleSheet.prototype.replaceSync !== "function"
+    )
+      return undefined;
     const hoja = new CSSStyleSheet();
     hoja.replaceSync(reglas);
     document.adoptedStyleSheets = [...document.adoptedStyleSheets, hoja];
