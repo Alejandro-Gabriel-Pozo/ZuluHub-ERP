@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { TextosDeVidriera } from "../../../../../src/capacidades/experiencia/vidriera/textos";
-import { Boton } from "../../componentes/Boton";
+import { Boton } from "../../componentes/Boton.cliente";
 import { Icono } from "../../iconos/Icono";
 import { RegionDeEstado } from "../../patrones/RegionDeEstado";
 import estilos from "./Compartir.module.css";

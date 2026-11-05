@@ -2,7 +2,7 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { Boton } from "../componentes/Boton";
+import { Boton } from "../componentes/Boton.cliente";
 import { Campo } from "../componentes/Campo";
 import { violacionesDeAccesibilidad } from "../pruebas/ayudas";
 import { Superposicion, type PropositoDeSuperposicion } from "./Superposicion";
