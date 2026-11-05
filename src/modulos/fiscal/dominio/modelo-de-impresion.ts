@@ -18,6 +18,7 @@ import type { ModoDePrecio } from "./calculo-de-renglones";
 import type { Ambiente, RenglonCalculado } from "./comprobante-nuevo";
 import { contactoImpreso, type ContactoCongelado, type ContactoImpreso } from "./contacto-impreso";
 import type { CondicionIibb } from "./datos-fiscales";
+import { condicionDeIibbImpresa } from "./iibb-impreso";
 import { importesParaArca } from "./importes-para-arca";
 import { leyendaDeCreditoFiscal } from "./leyenda-de-credito-fiscal";
 import { urlDelQr, type ErrorDeQr } from "./qr-de-arca";
@@ -355,7 +356,7 @@ export function modeloDeImpresion(
         domicilioFiscal: emisor.domicilioFiscal,
         domicilioDelPuntoDeVenta: emisor.domicilioDelPuntoDeVenta,
         iibbNumero: emisor.iibbNumero,
-        iibbCondicion: emisor.iibbCondicion,
+        iibbCondicion: condicionDeIibbImpresa(comprobante),
         inicioDeActividades: emisor.inicioDeActividades,
       },
     },

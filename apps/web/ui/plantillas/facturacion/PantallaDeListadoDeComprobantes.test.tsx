@@ -5,9 +5,11 @@ import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { violacionesDeAccesibilidad, verificarFoco } from "../../pruebas/ayudas";
 import { ArmazonDeOperacion } from "../sesion/ArmazonDeOperacion";
 import { FILTROS_POR_DEFECTO, armarLosFiltros } from "./filtros-del-listado";
+import { EleccionDeSucursal } from "./EleccionDeSucursal.cliente";
 import {
   armarElListado,
   armarLaEleccionDeSucursal,
+  type EleccionDeSucursalArmada,
   type PaginaParaMostrar,
 } from "./modelo-del-listado";
 import {
@@ -308,6 +310,22 @@ describe("listado de comprobantes en el celular (6A, tarjetas)", () => {
       "Centro",
       "Norte · Cerrada",
     ]);
+  });
+});
+
+describe("elegir la sucursal al ingresar (mismo componente, botón «Continuar»)", () => {
+  it("sin elegida: selector en blanco, botón «Continuar» y sin invitación", async () => {
+    await ventana(390);
+    await render(
+      <EleccionDeSucursal
+        eleccion={armarLaEleccionDeSucursal(sucursales, "", {}, true) as EleccionDeSucursalArmada}
+        accion={() => Promise.resolve({ error: null })}
+      />,
+    );
+    const selector = page.getByRole("combobox", { name: "Sucursal" });
+    expect((selector.element() as HTMLSelectElement).value).toBe("");
+    await expect.element(page.getByRole("button", { name: "Continuar" })).toBeVisible();
+    expect(document.body.textContent).not.toContain("para ver sus comprobantes");
   });
 });
 

@@ -15,6 +15,7 @@ import {
 import { EMPRESA } from "../../../../test/utilidades/fiscal";
 import { webDesdeTexto, type SitioWeb } from "../../../primitivas/contacto/web";
 import { TIPOS_DE_COMPROBANTE } from "./comprobante-emitido";
+import type { CondicionIibb } from "./datos-fiscales";
 import type { ContactoCongelado } from "./contacto-impreso";
 import {
   LEYENDA_DE_HOMOLOGACION,
@@ -164,7 +165,7 @@ describe("modeloDeImpresion: bloque fiscal", () => {
       domicilioDelPuntoDeVenta:
         "Calle Falsa 123, Ciudad Autónoma de Buenos Aires, Ciudad Autónoma de Buenos Aires (CP C1043)",
       iibbNumero: "901-123456-7",
-      iibbCondicion: "LOCAL",
+      iibbCondicion: null,
       inicioDeActividades: "2019-03-01",
     });
   });
@@ -540,6 +541,63 @@ describe("modeloDeImpresion: golden de la versión 2 (textos legales)", () => {
   }
 });
 
+/**
+ * Sin la condición de IIBB anterior del fixture (LOCAL): la versión 2 la entrega como `null` (D-115/D-116) y la 1 tal cual, así que
+ * las pruebas «la 2 es la 1 más lo nuevo» comparan sin ese campo; su diferencia se prueba aparte, más abajo.
+ */
+const sinCondicionDeIibb = (c: ComprobanteParaImprimir): ComprobanteParaImprimir => ({
+  ...c,
+  emisor: { ...c.emisor, iibbCondicion: null },
+});
+
+/** El emisor con Ingresos Brutos como lo guarda hoy la base: el número, o «No contribuyente» sin número (D-115/D-116). */
+const conIibb = (iibbNumero: string | null, iibbCondicion: CondicionIibb | null) => {
+  const base = imprimible(facturaB);
+  return imprimible(facturaB, { emisor: { ...base.emisor, iibbNumero, iibbCondicion } });
+};
+
+describe("modeloDeImpresion: Ingresos Brutos, número o «No contribuyente» (D-115/D-116)", () => {
+  const casos: readonly (readonly [string, ComprobanteParaImprimir])[] = [
+    ["factura-b-iibb-numero", conIibb("901-123456-7", null)],
+    ["factura-b-iibb-no-contribuyente", conIibb(null, "NO_CONTRIBUYENTE")],
+  ];
+  for (const [nombre, comprobante] of casos) {
+    it(`golden ${nombre}`, async () => {
+      const m = modelo(comprobante);
+      expect(m.versionDeRepresentacion).toBe(2);
+      await expect(JSON.stringify(m, null, 2)).toMatchFileSnapshot(
+        `./golden/modelo-v2-${nombre}.golden.txt`,
+      );
+    });
+  }
+
+  it("la versión 2 trae el número o «No contribuyente», y las tres condiciones anteriores llegan como null", () => {
+    expect(modelo(conIibb("55", null)).fiscal.emisor).toMatchObject({
+      iibbNumero: "55",
+      iibbCondicion: null,
+    });
+    expect(modelo(conIibb(null, "NO_CONTRIBUYENTE")).fiscal.emisor).toMatchObject({
+      iibbNumero: null,
+      iibbCondicion: "NO_CONTRIBUYENTE",
+    });
+    for (const vieja of ["LOCAL", "CONVENIO_MULTILATERAL", "EXENTO"] as const) {
+      expect(modelo(conIibb("55", vieja)).fiscal.emisor.iibbCondicion).toBeNull();
+      expect(modelo(conIibb(null, vieja)).fiscal.emisor.iibbCondicion).toBeNull();
+    }
+  });
+
+  it("la versión 1 no cambia: trae lo guardado tal cual, incluso las condiciones anteriores", () => {
+    const base = imprimible(facturaB, V1);
+    const m = modelo({
+      ...base,
+      emisor: { ...base.emisor, iibbCondicion: "CONVENIO_MULTILATERAL" },
+    });
+    expect(m.versionDeRepresentacion).toBe(1);
+    expect(m.fiscal.emisor.iibbCondicion).toBe("CONVENIO_MULTILATERAL");
+    expect(m.fiscal.emisor.iibbNumero).toBe("901-123456-7");
+  });
+});
+
 describe("modeloDeImpresion: bloque de transparencia fiscal (RG 5614)", () => {
   it("la factura B a consumidor final lleva el título, «IVA Contenido» y «Otros Impuestos Nacionales Indirectos» con su valor", () => {
     const m = modelo(imprimible(facturaB));
@@ -783,7 +841,7 @@ describe("modeloDeImpresion: la versión 1 sigue imprimiendo lo de antes", () =>
       imprimible(facturaCConsumidorFinal),
       imprimible(facturaAInscripto),
       imprimible(facturaBAExento),
-    ]) {
+    ].map(sinCondicionDeIibb)) {
       const v1 = modelo({ ...comprobante, versionDeRepresentacion: 1 });
       const v2 = modelo(comprobante);
       const sinLosTextosLegales = {
@@ -930,7 +988,7 @@ describe("modeloDeImpresion: contacto congelado de la sucursal (D-98, D-99)", ()
   });
 
   it("la versión 2 con contacto es la 1 más los textos legales, el modo de precio y el contacto, y nada más", () => {
-    const comprobante = imprimible(facturaB, { contacto: CONTACTO_COMPLETO });
+    const comprobante = sinCondicionDeIibb(imprimible(facturaB, { contacto: CONTACTO_COMPLETO }));
     const v1 = modelo({ ...comprobante, versionDeRepresentacion: 1 });
     const v2 = modelo(comprobante);
     const sinLoNuevo = {

@@ -33,6 +33,42 @@ async function dibujar(opciones: OpcionesDelComprobante = {}) {
 }
 
 describe("ticket de 80 mm", () => {
+  it("leyenda legal: texto normal después del aviso de homologación, fuera de su recuadro, tal cual y dentro del alto medido; sin ella no hay nada extra", async () => {
+    const LEGAL = "  Texto legal de prueba (ficticio).  ";
+    const medido = () =>
+      Number(
+        /size:80mm (\d+)mm/.exec(
+          document.querySelector("style[data-estilo-de-pagina]")?.textContent ?? "",
+        )?.[1],
+      );
+    const sin = await dibujar({ leyendas: ["HOMOLOGACIÓN — SIN VALIDEZ FISCAL"] });
+    expect(sin.ticket.querySelectorAll("[data-leyenda-legal]")).toHaveLength(0);
+    const altoSin = medido();
+    const pxSin = sin.ticket.offsetHeight;
+    await sin.pantalla.unmount();
+    const { ticket, pantalla } = await dibujar({
+      leyendas: ["HOMOLOGACIÓN — SIN VALIDEZ FISCAL"],
+      leyendasLegales: [LEGAL],
+    });
+    const legal = ticket.querySelector<HTMLElement>("[data-leyenda-legal]");
+    expect(legal?.textContent).toBe(LEGAL);
+    const recuadro = [...ticket.children].find((e) =>
+      (e.textContent ?? "").includes("HOMOLOGACIÓN"),
+    );
+    expect(recuadro?.contains(legal ?? null)).toBe(false);
+    expect(recuadro?.nextElementSibling).toBe(legal);
+    const estilo = getComputedStyle(legal as Element);
+    expect(estilo.borderTopWidth).toBe("0px");
+    expect(Number(estilo.fontWeight)).toBeLessThan(600);
+    expect(ticket.offsetHeight).toBeGreaterThan(pxSin);
+    const rT = ticket.getBoundingClientRect();
+    const rL = (legal as Element).getBoundingClientRect();
+    expect(rL.bottom).toBeLessThanOrEqual(rT.bottom);
+    await expect.poll(medido).toBeGreaterThanOrEqual(pxAMm(ticket.offsetHeight));
+    expect(medido()).toBeGreaterThanOrEqual(altoSin);
+    await pantalla.unmount();
+  });
+
   it("sin hojas, de 80 mm de ancho y con su alto medido en @page (más largo que el contenido, nunca `auto`)", async () => {
     const { ticket, pantalla } = await dibujar({ renglones: 40, descripcionesLargas: true });
     expect(document.querySelectorAll("[data-hoja]")).toHaveLength(0);

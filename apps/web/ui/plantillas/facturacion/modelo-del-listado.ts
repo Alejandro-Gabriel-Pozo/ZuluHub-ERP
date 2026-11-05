@@ -156,6 +156,8 @@ export function armarLaEleccionDeSucursal(
   sucursales: readonly SucursalParaMostrar[],
   elegida: string,
   d: DiccionarioResuelto = {},
+  /** Al ingresar (pantalla «Elegir sucursal»): el botón dice «Continuar» y no hay invitación. Por defecto, el del listado. */
+  alIngresar = false,
 ): EleccionDeSucursalArmada | null {
   // Una sola ABIERTA y ya en uso: nada que elegir. Una sola CERRADA sigue mostrándose: el selector es lo que lleva la marca «Cerrada» (D-37).
   if (sucursales.length === 0) return null;
@@ -163,10 +165,14 @@ export function armarLaEleccionDeSucursal(
   if (sucursales.length === 1 && unica?.activa === true && elegida !== "") return null;
   return {
     rotulo: texto(d, "fiscal.pantalla.listado_rotulo_sucursal"),
-    aplicar: texto(d, "fiscal.pantalla.listado_ver_comprobantes"),
+    aplicar: texto(
+      d,
+      alIngresar ? "sucursal.continuar" : "fiscal.pantalla.listado_ver_comprobantes",
+    ),
     enviando: texto(d, "conexion.enviando"),
     elegir: texto(d, "sucursal.elegir"),
-    invitacion: elegida === "" ? texto(d, "fiscal.pantalla.listado_elegir_sucursal") : null,
+    invitacion:
+      elegida === "" && !alIngresar ? texto(d, "fiscal.pantalla.listado_elegir_sucursal") : null,
     elegida,
     opciones: sucursales.map((s) => ({
       valor: s.id,
