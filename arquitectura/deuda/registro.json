@@ -286,17 +286,6 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "e2e-sin-playwright-cableado",
-    "archivos": ["knip.json"],
-    "descripcion": "No hay pruebas e2e: @playwright/test y @axe-core/playwright están instalados pero sin uso (knip los ignora) hasta el e2e de la web (W5). Falta cablear Playwright en el CI (informe de CI §4 y §5); `continue-on-error` está prohibido en ci.yml, así que un modo «reporte» necesita otro diseño.",
-    "tipo": "backlog",
-    "responsable": "dueño",
-    "creada": "2026-10-22",
-    "verificacion": {
-      "contiene": "@playwright/test"
-    }
-  },
-  {
     "id": "sondeo-ast-pendiente",
     "archivos": ["arquitectura/contratos/detectores.cjs"],
     "descripcion": "El sondeo de primitivas con análisis AST (contratos-arquitectonicos.md §12, G7) no se hizo: los detectores del guardián son texto línea por línea. Se hace en modo reporte, regla por regla.",

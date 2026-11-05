@@ -68,8 +68,6 @@ const LECTURAS_DE_APPS = {
   "test/web/acciones-de-config-fiscal.test.ts": ["apps/web/app/s/app/acciones-de-config-fiscal.ts"],
   "test/web/sucursal-elegida.test.ts": ["apps/web/app/s/app/acciones-de-sucursal.ts"],
   "test/arquitectura/vercel-json.test.ts": ["apps/web/**"],
-  // Lee todo `apps/` como texto para comprobar que ningún archivo de producción nombra el módulo de ARCA simulada.
-  "test/arquitectura/recorrido-sin-puerta-trasera.test.ts": ["apps/**"],
   "test/arquitectura/cargar-entorno-nombres.test.ts": ["apps/web/PRIMER-DESPLIEGUE.md"],
   "test/arquitectura/reglas.test.ts": ["apps/**"],
   "test/arquitectura/lint.test.ts": ["apps/**"],
