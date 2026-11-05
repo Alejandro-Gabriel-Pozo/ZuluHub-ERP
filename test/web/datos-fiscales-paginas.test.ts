@@ -135,7 +135,7 @@ describe("la página «Datos fiscales» abre directo el formulario (D-88)", () =
     expect(marcado).not.toMatch(/<input[^>]*30-71234567-8/);
     expect(marcado).toContain('value="Distribuidora Sur SRL"');
     expect(marcado).toContain('value="Av. Corrientes"');
-    expect(marcado).toContain('value="02/03/2018"');
+    expect(marcado).toContain('value="2018-03-02"');
     expect(marcado).toMatch(
       /<option value="MONOTRIBUTO" selected="">Responsable Monotributo<\/option>/,
     );
@@ -161,7 +161,7 @@ describe("la página «Datos fiscales» abre directo el formulario (D-88)", () =
     expect(titulos(marcado)).toEqual(["Datos fiscales"]);
     expect(marcado).toContain('value="Distribuidora Sur SA"');
     expect(marcado).toContain('value="Av. Rivadavia"');
-    expect(marcado).toContain('value="01/03/2018"');
+    expect(marcado).toContain('value="2018-03-01"');
     expect(marcado).toMatch(
       /<option value="RESPONSABLE_INSCRIPTO" selected="">IVA Responsable Inscripto<\/option>/,
     );
