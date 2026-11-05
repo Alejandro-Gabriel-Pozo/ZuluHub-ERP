@@ -304,6 +304,7 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "comprobante_emisor_domicilio_ck:c",
         "comprobante_emisor_fkey:f",
         "comprobante_emisor_iibb_condicion_ck:c",
+        "comprobante_emisor_iibb_eleccion_ck:c", // 0021: número y «No contribuyente» a la vez
         "comprobante_emisor_iibb_numero_ck:c",
         "comprobante_emisor_inicio_ck:c",
         "comprobante_emisor_razon_social_ck:c",

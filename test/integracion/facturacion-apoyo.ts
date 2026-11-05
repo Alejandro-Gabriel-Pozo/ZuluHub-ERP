@@ -85,6 +85,8 @@ export async function crearEscenario(
     condicionIva?: CondicionDelEmisor;
     pvNumero?: number;
     razonSocial?: string;
+    /** Ingresos Brutos de los datos fiscales vigentes (por omisión, un número con la condición anterior LOCAL). */
+    iibb?: Readonly<{ numero: string | null; condicion: string | null }>;
   } = {},
 ): Promise<Escenario> {
   const m = opciones.mundo ?? (await crearMundo(c));
@@ -95,8 +97,18 @@ export async function crearEscenario(
   await c.query(
     `insert into datos_fiscales (id, empresa_id, emisor_id, razon_social, condicion_iva, domicilio_fiscal_id,
                                  inicio_actividades, iibb_numero, iibb_condicion, creado_por)
-     values ($1, $2, $3, $4, $5, $6, '2020-01-01', '901-123456-7', 'LOCAL', $7)`,
-    [datosFiscales, m.empresa, m.emisor, razonSocial, condicionIva, domicilio, m.persona],
+     values ($1, $2, $3, $4, $5, $6, '2020-01-01', $7, $8, $9)`,
+    [
+      datosFiscales,
+      m.empresa,
+      m.emisor,
+      razonSocial,
+      condicionIva,
+      domicilio,
+      opciones.iibb === undefined ? "901-123456-7" : opciones.iibb.numero,
+      opciones.iibb === undefined ? "LOCAL" : opciones.iibb.condicion,
+      m.persona,
+    ],
   );
   await c.query(
     `update datos_fiscales set estado = 'CONFIRMADA', numero = 1, vigente_desde = now(), confirmada_en = now(),

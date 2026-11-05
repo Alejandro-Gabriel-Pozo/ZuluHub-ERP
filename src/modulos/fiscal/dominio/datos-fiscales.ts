@@ -14,16 +14,36 @@ import { confirmarVersion, type ErrorDeConfirmacion } from "./vigencia";
  *
  * Valores configurables, todos SUPUESTOS (no son requisitos verificados de ARCA):
  * - `LIMITES_DE_DATOS_FISCALES`: largo máximo de la razón social y del número de IIBB;
- * - `CONDICIONES_DE_IIBB`: NO VERIFICADO, supuesto del diseño (local, convenio multilateral, exento).
+ * - `CONDICIONES_DE_IIBB`: lo que la base puede tener guardado. Desde D-115/D-116 (dueño, 2026-11-05) lo único que se
+ *   pide y se imprime es el número de inscripción O «No contribuyente» (RG 1415 Anexo II A.I.a punto 4: el comprobante lleva
+ *   el número de inscripción en Ingresos Brutos o la condición de no contribuyente). Las tres condiciones anteriores (local,
+ *   convenio multilateral, exento: supuesto del diseño, sin fuente) quedan solo para LEER filas viejas: no se aceptan al
+ *   editar, no se copian a una versión nueva y el modelo de impresión nuevo no las imprime.
  */
 export const LIMITES_DE_DATOS_FISCALES = { razonSocial: 200, iibbNumero: 30 } as const;
 
-export const CONDICIONES_DE_IIBB = ["LOCAL", "CONVENIO_MULTILATERAL", "EXENTO"] as const;
+export const CONDICION_NO_CONTRIBUYENTE = "NO_CONTRIBUYENTE" as const;
+
+export const CONDICIONES_DE_IIBB = [
+  "LOCAL",
+  "CONVENIO_MULTILATERAL",
+  "EXENTO",
+  CONDICION_NO_CONTRIBUYENTE,
+] as const;
 
 export type CondicionIibb = (typeof CONDICIONES_DE_IIBB)[number];
 
 export function esCondicionDeIibb(texto: string): texto is CondicionIibb {
   return (CONDICIONES_DE_IIBB as readonly string[]).includes(texto);
+}
+
+/**
+ * De una condición guardada, la única que sigue vigente: «No contribuyente». Las tres anteriores se descartan al armar un
+ * borrador o confirmar, para que ninguna versión nueva las arrastre. Previene: que una versión confirmada de hoy lleve una
+ * condición que ya no se pide ni se imprime.
+ */
+export function condicionVigente(condicion: CondicionIibb | null): CondicionIibb | null {
+  return condicion === CONDICION_NO_CONTRIBUYENTE ? condicion : null;
 }
 
 type Identidad = Readonly<{ id: VersionId; empresaId: EmpresaId; emisorId: EmisorId }>;
@@ -59,14 +79,7 @@ export type DatosFiscalesConfirmados = Identidad &
 
 /** Los campos que hay que tener para confirmar, en el orden en que se informan los faltantes. */
 export type CampoObligatorio =
-  "razonSocial" | "condicionIva" | "domicilioFiscalId" | "inicioActividades";
-
-const CAMPOS_OBLIGATORIOS: readonly CampoObligatorio[] = [
-  "razonSocial",
-  "condicionIva",
-  "domicilioFiscalId",
-  "inicioActividades",
-];
+  "razonSocial" | "condicionIva" | "domicilioFiscalId" | "inicioActividades" | "ingresosBrutos";
 
 export type DatosFiscalesIncompletos = Readonly<{
   codigo: "DATOS_FISCALES_INCOMPLETOS";
@@ -83,8 +96,9 @@ export type ErrorDeDatosFiscales =
   | DatosFiscalesIncompletos;
 
 /**
- * Cambios a un borrador. Un campo ausente no se toca; en los opcionales (`iibb*`) `null` o el texto
- * en blanco lo borran. Los obligatorios no se pueden borrar: se reemplazan.
+ * Cambios a un borrador. Un campo ausente no se toca; `null` o el texto en blanco borran `iibbNumero` e `iibbCondicion`. Los
+ * obligatorios no se pueden borrar: se reemplazan. Ingresos Brutos se elige entre el número o `NO_CONTRIBUYENTE` (D-115/D-116):
+ * elegir uno borra el otro, y mandar los dos a la vez es un error. Que haya uno de los dos se exige al confirmar, no acá.
  */
 export type CambiosDeBorrador = Readonly<{
   razonSocial?: string;
@@ -128,7 +142,7 @@ export function borradorDesdeConfirmada(
     domicilioFiscalId: confirmada.domicilioFiscalId,
     inicioActividades: confirmada.inicioActividades,
     iibbNumero: confirmada.iibbNumero,
-    iibbCondicion: confirmada.iibbCondicion,
+    iibbCondicion: condicionVigente(confirmada.iibbCondicion),
     creadoPor: datos.creadoPor,
     version: 1,
   };
@@ -159,6 +173,35 @@ export function fechaCivilValida(texto: string): boolean {
   return dia <= (diasDelMes[mes - 1] ?? 0);
 }
 
+/** `undefined`: no viene; `null`: se borra; el texto limpio; o `INVALIDO`. */
+function limpiarNumeroDeIibb(
+  valor: string | null | undefined,
+): string | null | undefined | "INVALIDO" {
+  if (valor === undefined) return undefined;
+  if (valor === null || valor.trim() === "") return null;
+  return textoLimpio(valor, LIMITES_DE_DATOS_FISCALES.iibbNumero) ?? "INVALIDO";
+}
+
+/** Solo «No contribuyente» se acepta al editar (las otras tres ya no se piden). Mismas salidas que el número. */
+function limpiarCondicionDeIibb(
+  valor: string | null | undefined,
+): CondicionIibb | null | undefined | "INVALIDA" {
+  if (valor === undefined) return undefined;
+  if (valor === null || valor.trim() === "") return null;
+  return valor === CONDICION_NO_CONTRIBUYENTE ? valor : "INVALIDA";
+}
+
+/**
+ * Si de Ingresos Brutos hay UNA elección: el número de inscripción o «No contribuyente», no las dos ni ninguna (D-115/D-116, RG 1415
+ * Anexo II A.I.a punto 4). Una sola regla para confirmar y para emitir. Previene: una factura emitida sin el dato que ARCA exige, o
+ * con dos que se contradicen. Una condición anterior (local, convenio multilateral, exento) no cuenta como elección.
+ */
+export function ingresosBrutosDeclarados(
+  datos: Readonly<{ iibbNumero: string | null; iibbCondicion: CondicionIibb | null }>,
+): boolean {
+  return (datos.iibbNumero !== null) !== (condicionVigente(datos.iibbCondicion) !== null);
+}
+
 /**
  * Aplica `cambios` a un borrador y valida cada valor que llega. Devuelve el PRIMER error, en el orden
  * razón social, condición de IVA, inicio de actividades, número de IIBB, condición de IIBB. No
@@ -187,23 +230,27 @@ export function editarBorrador(
   }
 
   let iibbNumero = borrador.iibbNumero;
-  if (cambios.iibbNumero !== undefined) {
-    if (cambios.iibbNumero === null || cambios.iibbNumero.trim() === "") {
-      iibbNumero = null;
-    } else {
-      iibbNumero = textoLimpio(cambios.iibbNumero, LIMITES_DE_DATOS_FISCALES.iibbNumero);
-      if (iibbNumero === null) return err("IIBB_NUMERO_INVALIDO");
-    }
+  let iibbCondicion = condicionVigente(borrador.iibbCondicion);
+  const numeroNuevo = limpiarNumeroDeIibb(cambios.iibbNumero);
+  if (numeroNuevo === "INVALIDO") return err("IIBB_NUMERO_INVALIDO");
+  const condicionNueva = limpiarCondicionDeIibb(cambios.iibbCondicion);
+  if (condicionNueva === "INVALIDA") return err("IIBB_CONDICION_INVALIDA");
+  if (
+    numeroNuevo !== undefined &&
+    numeroNuevo !== null &&
+    condicionNueva === CONDICION_NO_CONTRIBUYENTE
+  ) {
+    return err("IIBB_CONDICION_INVALIDA");
   }
-
-  let iibbCondicion = borrador.iibbCondicion;
-  if (cambios.iibbCondicion !== undefined) {
-    if (cambios.iibbCondicion === null || cambios.iibbCondicion.trim() === "") {
-      iibbCondicion = null;
-    } else {
-      if (!esCondicionDeIibb(cambios.iibbCondicion)) return err("IIBB_CONDICION_INVALIDA");
-      iibbCondicion = cambios.iibbCondicion;
-    }
+  if (numeroNuevo !== undefined) {
+    iibbNumero = numeroNuevo;
+    // Elegir el número descarta «No contribuyente»; borrarlo no toca la condición (se puede estar cambiando de una a otro).
+    if (numeroNuevo !== null) iibbCondicion = null;
+  }
+  if (condicionNueva !== undefined) {
+    iibbCondicion = condicionNueva;
+    // Elegir «No contribuyente» descarta el número; borrar la condición no lo toca.
+    if (condicionNueva !== null) iibbNumero = null;
   }
 
   return ok({
@@ -240,13 +287,22 @@ export function confirmarDatosFiscales(
     throw new RangeError("las versiones confirmadas son de otro emisor");
   }
   const { razonSocial, condicionIva, domicilioFiscalId, inicioActividades } = borrador;
+  const iibbCondicion = condicionVigente(borrador.iibbCondicion);
+  // D-115/D-116: el comprobante lleva el número de inscripción O «No contribuyente», uno solo. Ninguno (o los dos) no se confirma.
+  const eligioIngresosBrutos = ingresosBrutosDeclarados(borrador);
   if (
     razonSocial === null ||
     condicionIva === null ||
     domicilioFiscalId === null ||
-    inicioActividades === null
+    inicioActividades === null ||
+    !eligioIngresosBrutos
   ) {
-    const faltantes = CAMPOS_OBLIGATORIOS.filter((campo) => borrador[campo] === null);
+    const faltantes: CampoObligatorio[] = [];
+    if (razonSocial === null) faltantes.push("razonSocial");
+    if (condicionIva === null) faltantes.push("condicionIva");
+    if (domicilioFiscalId === null) faltantes.push("domicilioFiscalId");
+    if (inicioActividades === null) faltantes.push("inicioActividades");
+    if (!eligioIngresosBrutos) faltantes.push("ingresosBrutos");
     return err({ codigo: "DATOS_FISCALES_INCOMPLETOS", faltantes });
   }
   const confirmacion = confirmarVersion(existentes, datos);
@@ -261,7 +317,7 @@ export function confirmarDatosFiscales(
     domicilioFiscalId,
     inicioActividades,
     iibbNumero: borrador.iibbNumero,
-    iibbCondicion: borrador.iibbCondicion,
+    iibbCondicion,
     vigenteDesde: confirmacion.valor.vigenteDesde,
     confirmadaEn: confirmacion.valor.confirmadaEn,
     confirmadaPor: datos.confirmadaPor,

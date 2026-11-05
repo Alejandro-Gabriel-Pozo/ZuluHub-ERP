@@ -37,6 +37,7 @@ import {
 } from "../dominio/nota-asociada";
 import type { Receptor } from "../dominio/receptor";
 import type { ErrorDeSucursalCerrada } from "../dominio/sucursales-de-la-emision";
+import { ingresosBrutosDeclarados } from "../dominio/datos-fiscales";
 import { versionVigente } from "../dominio/vigencia";
 import type { ComprobanteGuardado } from "../persistencia/repositorio-de-comprobantes";
 import { traducirErroresDeFiscal } from "../persistencia/traducir";
@@ -120,6 +121,7 @@ export type ErrorPropioAlEmitir =
   | ErrorDeAlcance
   | "EMISOR_INACTIVO"
   | "SIN_DATOS_FISCALES_VIGENTES"
+  | "INGRESOS_BRUTOS_SIN_DECLARAR"
   | "SIN_CERTIFICADO_VIGENTE"
   | "COMPROBANTE_ASOCIADO_NO_ENCONTRADO"
   | "COMPROBANTE_ALTA_INVALIDA"
@@ -222,6 +224,8 @@ async function emitirEnTx(
   if (!emisor.activo) return err("EMISOR_INACTIVO");
   const datos = versionVigente(await tx.datosFiscales.confirmadas(empresaId, emisor.id), ahora);
   if (datos === null) return err("SIN_DATOS_FISCALES_VIGENTES");
+  // D-115 («lo que ARCA exige se cumple»): la versión vigente sin el número de IIBB ni «No contribuyente» no emite. Falla cerrado.
+  if (!ingresosBrutosDeclarados(datos)) return err("INGRESOS_BRUTOS_SIN_DECLARAR");
   const domicilioFiscal = await tx.domicilios.obtener(empresaId, datos.domicilioFiscalId);
   if (domicilioFiscal === null) throw new Error("el domicilio fiscal confirmado no es visible");
   // Un punto de venta sin domicilio propio emite con el fiscal (ASUMIDO; la base pide un texto siempre).

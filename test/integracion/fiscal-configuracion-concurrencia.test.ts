@@ -170,6 +170,7 @@ describe.skipIf(base === null)("fiscal T5: concurrencia de la configuración fis
     razonSocial: "Coop Pampa SA",
     condicionIva: "RESPONSABLE_INSCRIPTO",
     inicioActividades: "2020-03-01",
+    iibbNumero: "901-123456-7",
   } as const;
   const guardar = (
     e: EscenarioDeConfiguracion,

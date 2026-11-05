@@ -305,6 +305,10 @@ describe.skipIf(base === null)("facturación F3: la traducción de las restricci
         ["comprobante_emisor_inicio_ck", { emisor_inicio_actividades: "0001-12-31 BC" }],
         ["comprobante_emisor_iibb_numero_ck", { emisor_iibb_numero: "  " }],
         ["comprobante_emisor_iibb_condicion_ck", { emisor_iibb_condicion: "OTRA" }],
+        [
+          "comprobante_emisor_iibb_eleccion_ck",
+          { emisor_iibb_numero: "55", emisor_iibb_condicion: "NO_CONTRIBUYENTE" },
+        ],
         ["comprobante_pv_numero_ck", { punto_de_venta_numero: 0 }],
         [
           "comprobante_receptor_nombre_ck",

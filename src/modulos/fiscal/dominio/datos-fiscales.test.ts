@@ -42,8 +42,10 @@ const completo = editado({
   domicilioFiscalId: DOMICILIO_1,
   inicioActividades: "2015-03-01",
   iibbNumero: "901-123456-7",
-  iibbCondicion: "LOCAL",
 });
+
+/** Lo mismo pero «No contribuyente» (D-115/D-116): sin número. */
+const completoNoContribuyente = editado({ iibbCondicion: "NO_CONTRIBUYENTE" }, completo);
 
 const t = (ms: number) => new Date(ms);
 
@@ -72,7 +74,6 @@ describe("borradores", () => {
         domicilioFiscalId: DOMICILIO_2,
         inicioActividades: "2020-02-29",
         iibbNumero: " 123 ",
-        iibbCondicion: "CONVENIO_MULTILATERAL",
       }),
     ).toEqual({
       ...vacio,
@@ -81,7 +82,6 @@ describe("borradores", () => {
       domicilioFiscalId: DOMICILIO_2,
       inicioActividades: "2020-02-29",
       iibbNumero: "123",
-      iibbCondicion: "CONVENIO_MULTILATERAL",
     });
   });
 
@@ -108,9 +108,44 @@ describe("borradores", () => {
     }
   });
 
-  it("el número de IIBB no toca la condición y viceversa", () => {
-    expect(editado({ iibbNumero: null }, completo).iibbCondicion).toBe("LOCAL");
+  it("elegir el número descarta «No contribuyente» y elegir «No contribuyente» descarta el número", () => {
+    const sinNumero = editado({ iibbNumero: "55" }, completoNoContribuyente);
+    expect(sinNumero.iibbNumero).toBe("55");
+    expect(sinNumero.iibbCondicion).toBeNull();
+    const sinCondicion = editado({ iibbCondicion: "NO_CONTRIBUYENTE" }, completo);
+    expect(sinCondicion.iibbNumero).toBeNull();
+    expect(sinCondicion.iibbCondicion).toBe("NO_CONTRIBUYENTE");
+  });
+
+  it("borrar uno no toca el otro", () => {
+    expect(editado({ iibbNumero: null }, completoNoContribuyente).iibbCondicion).toBe(
+      "NO_CONTRIBUYENTE",
+    );
     expect(editado({ iibbCondicion: null }, completo).iibbNumero).toBe("901-123456-7");
+  });
+
+  it("mandar un número y «No contribuyente» juntos es un error y no cambia nada", () => {
+    expect(
+      editarBorrador(completo, { iibbNumero: "55", iibbCondicion: "NO_CONTRIBUYENTE" }),
+    ).toEqual({ ok: false, error: "IIBB_CONDICION_INVALIDA" });
+    // Número vacío más «No contribuyente» no son dos elecciones: es borrar el número y elegir la condición.
+    expect(editado({ iibbNumero: " ", iibbCondicion: "NO_CONTRIBUYENTE" }, completo)).toMatchObject(
+      {
+        iibbNumero: null,
+        iibbCondicion: "NO_CONTRIBUYENTE",
+      },
+    );
+  });
+
+  it("las tres condiciones anteriores ya no se aceptan al editar, y un borrador que las trae las pierde", () => {
+    for (const vieja of ["LOCAL", "CONVENIO_MULTILATERAL", "EXENTO"]) {
+      expect(editarBorrador(vacio, { iibbCondicion: vieja })).toEqual({
+        ok: false,
+        error: "IIBB_CONDICION_INVALIDA",
+      });
+      const heredado = { ...completo, iibbCondicion: vieja } as DatosFiscalesBorrador;
+      expect(editado({}, heredado).iibbCondicion).toBeNull();
+    }
   });
 
   it("un borrador desde una versión confirmada copia los valores y arranca en la versión 1", () => {
@@ -151,6 +186,11 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
     ["número de IIBB demasiado largo", { iibbNumero: "1".repeat(31) }, "IIBB_NUMERO_INVALIDO"],
     ["condición de IIBB desconocida", { iibbCondicion: "TOTAL" }, "IIBB_CONDICION_INVALIDA"],
     ["condición de IIBB en minúsculas", { iibbCondicion: "local" }, "IIBB_CONDICION_INVALIDA"],
+    [
+      "«No contribuyente» en minúsculas",
+      { iibbCondicion: "no_contribuyente" },
+      "IIBB_CONDICION_INVALIDA",
+    ],
   ];
 
   it.each(casos)("%s", (_nombre, cambios, error) => {
@@ -196,9 +236,14 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
   });
 });
 
-describe("condiciones de IIBB (valores NO VERIFICADOS, configurables)", () => {
-  it("son las del supuesto del diseño", () => {
-    expect(CONDICIONES_DE_IIBB).toEqual(["LOCAL", "CONVENIO_MULTILATERAL", "EXENTO"]);
+describe("condiciones de IIBB", () => {
+  it("son las que la base puede tener: las tres anteriores (solo para leer) y «No contribuyente»", () => {
+    expect(CONDICIONES_DE_IIBB).toEqual([
+      "LOCAL",
+      "CONVENIO_MULTILATERAL",
+      "EXENTO",
+      "NO_CONTRIBUYENTE",
+    ]);
     for (const c of CONDICIONES_DE_IIBB) expect(esCondicionDeIibb(c)).toBe(true);
     expect(esCondicionDeIibb("local")).toBe(false);
     expect(esCondicionDeIibb("")).toBe(false);
@@ -287,7 +332,7 @@ describe("confirmarDatosFiscales", () => {
       domicilioFiscalId: DOMICILIO_1,
       inicioActividades: "2015-03-01",
       iibbNumero: "901-123456-7",
-      iibbCondicion: "LOCAL",
+      iibbCondicion: null,
       vigenteDesde: t(5000),
       confirmadaEn: t(1000),
       confirmadaPor: GERENTE,
@@ -296,11 +341,60 @@ describe("confirmarDatosFiscales", () => {
     });
   });
 
-  it("los datos de IIBB son opcionales", () => {
+  it("Ingresos Brutos es obligatorio: el número o «No contribuyente» (D-115/D-116)", () => {
+    const porNumero = confirmar(completo, []);
+    expect(porNumero.iibbNumero).toBe("901-123456-7");
+    expect(porNumero.iibbCondicion).toBeNull();
+    const porCondicion = confirmar(completoNoContribuyente, []);
+    expect(porCondicion.iibbNumero).toBeNull();
+    expect(porCondicion.iibbCondicion).toBe("NO_CONTRIBUYENTE");
+  });
+
+  it("sin número ni «No contribuyente» no se confirma, y lo único que falta es Ingresos Brutos", () => {
     const sinIibb = editado({ iibbNumero: null, iibbCondicion: null }, completo);
-    const c = confirmar(sinIibb, []);
-    expect(c.iibbNumero).toBeNull();
-    expect(c.iibbCondicion).toBeNull();
+    expect(
+      confirmarDatosFiscales(sinIibb, [], {
+        ahora: t(1),
+        vigenteDesde: t(1),
+        motivo: "x",
+        confirmadaPor: GERENTE,
+      }),
+    ).toEqual({
+      ok: false,
+      error: { codigo: "DATOS_FISCALES_INCOMPLETOS", faltantes: ["ingresosBrutos"] },
+    });
+  });
+
+  it("un borrador con las dos elecciones (armado a mano) no se confirma: falla cerrado", () => {
+    const ambos = { ...completo, iibbCondicion: "NO_CONTRIBUYENTE" } as DatosFiscalesBorrador;
+    expect(
+      confirmarDatosFiscales(ambos, [], {
+        ahora: t(1),
+        vigenteDesde: t(1),
+        motivo: "x",
+        confirmadaPor: GERENTE,
+      }),
+    ).toMatchObject({ ok: false, error: { faltantes: ["ingresosBrutos"] } });
+  });
+
+  it("una condición anterior (LOCAL, CONVENIO_MULTILATERAL, EXENTO) no cuenta como elección ni se confirma", () => {
+    for (const vieja of ["LOCAL", "CONVENIO_MULTILATERAL", "EXENTO"]) {
+      const sinNumero = {
+        ...completo,
+        iibbNumero: null,
+        iibbCondicion: vieja,
+      } as DatosFiscalesBorrador;
+      expect(
+        confirmarDatosFiscales(sinNumero, [], {
+          ahora: t(1),
+          vigenteDesde: t(1),
+          motivo: "x",
+          confirmadaPor: GERENTE,
+        }),
+      ).toMatchObject({ ok: false, error: { faltantes: ["ingresosBrutos"] } });
+      const conNumero = { ...completo, iibbCondicion: vieja } as DatosFiscalesBorrador;
+      expect(confirmar(conNumero, []).iibbCondicion).toBeNull();
+    }
   });
 
   it("el número es el máximo + 1 de las versiones del emisor", () => {
@@ -315,7 +409,8 @@ describe("confirmarDatosFiscales", () => {
   });
 
   it("sin datos obligatorios informa cuáles faltan, en orden", () => {
-    const todos = ["razonSocial", "condicionIva", "domicilioFiscalId", "inicioActividades"];
+    const obligatorios = ["razonSocial", "condicionIva", "domicilioFiscalId", "inicioActividades"];
+    const todos = [...obligatorios, "ingresosBrutos"];
     const inc = (b: DatosFiscalesBorrador) =>
       confirmarDatosFiscales(b, [], {
         ahora: t(1),
@@ -327,11 +422,11 @@ describe("confirmarDatosFiscales", () => {
       ok: false,
       error: { codigo: "DATOS_FISCALES_INCOMPLETOS", faltantes: todos },
     });
-    for (const [i, campo] of todos.entries()) {
+    for (const [i, campo] of obligatorios.entries()) {
       const borrador = { ...completo, [campo]: null } as DatosFiscalesBorrador;
       expect(inc(borrador)).toEqual({
         ok: false,
-        error: { codigo: "DATOS_FISCALES_INCOMPLETOS", faltantes: [todos[i]] },
+        error: { codigo: "DATOS_FISCALES_INCOMPLETOS", faltantes: [obligatorios[i]] },
       });
     }
   });
