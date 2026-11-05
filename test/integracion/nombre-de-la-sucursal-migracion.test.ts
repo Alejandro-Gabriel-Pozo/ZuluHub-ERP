@@ -68,6 +68,16 @@ const textoDeLaMigracion = async (): Promise<string> =>
 const textoDeLaReversion = async (): Promise<string> =>
   readFile(join(CARPETA_DE_MIGRACIONES, "reversiones", await archivoDeLaReversion()), "utf8");
 
+/**
+ * Un escenario con DOS sucursales abiertas: desde 0023 el nombre solo se congela si la empresa tiene más de una abierta (si no, queda
+ * nulo), y estas pruebas son de la copia del nombre. La segunda no tiene punto de venta: no emite nada.
+ */
+async function escenarioConVarias(c: pg.Client): Promise<Escenario> {
+  const e = await crearEscenario(c);
+  await c.query("insert into sucursal (empresa_id, nombre) values ($1, 'Segunda')", [e.empresa]);
+  return e;
+}
+
 /** Renombra la sucursal (como el dueño de la base: evade RLS). */
 const renombrar = (c: pg.Client, sucursal: string, nombre: string) =>
   c.query("update sucursal set nombre = $2 where id = $1", [sucursal, nombre]);
@@ -174,7 +184,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
     ]);
     try {
       const c = previa.cliente;
-      const e = await crearEscenario(c);
+      const e = await escenarioConVarias(c);
       const norte = await sucursalConPuntoDeVenta(c, e, "Norte", 2);
       const viejos = [
         await crearComprobante(c, e),
@@ -263,7 +273,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
     const c = new pg.Client({ connectionString: propia.base.dueno });
     await c.connect();
     try {
-      const e = await crearEscenario(c);
+      const e = await escenarioConVarias(c);
       const candidatos = [
         "Centro",
         "x",
@@ -318,7 +328,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
       );
 
     it("el comprobante congela el nombre VIGENTE al nacer; renombrar la sucursal después no toca lo ya emitido (pendiente ni autorizado)", async () => {
-      const e = await crearEscenario(c);
+      const e = await escenarioConVarias(c);
       const original = await nombreVigente(c, e);
       const pendiente = await crearComprobante(c, e);
       const emitido = await autorizado(c, e);
@@ -342,7 +352,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
     });
 
     it("el nombre del comprobante es inmutable (ni el dueño de la base lo cambia o lo borra) y, si el dueño manda otro al insertar, la base lo pisa con el de la sucursal", async () => {
-      const e = await crearEscenario(c);
+      const e = await escenarioConVarias(c);
       const id = await crearComprobante(c, e);
       for (const valor of ["Otro", null]) {
         expect(
@@ -356,7 +366,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
     });
 
     it("una nota lleva el nombre VIGENTE de la sucursal del comprobante que corrige: ni el que la factura congeló, ni el de la sucursal de su punto de venta", async () => {
-      const e = await crearEscenario(c);
+      const e = await escenarioConVarias(c);
       const norte = await sucursalConPuntoDeVenta(c, e, "Norte", 2);
       await renombrar(c, e.sucursal, "Central");
       const factura = await autorizado(c, e);
@@ -373,8 +383,8 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
     });
 
     it("aislamiento por empresa: cada comprobante lleva el nombre de la sucursal de SU empresa; con el alta y las claves apagadas, un sucursal_id ajeno no trae nada", async () => {
-      const a = await crearEscenario(c);
-      const z = await crearEscenario(c);
+      const a = await escenarioConVarias(c);
+      const z = await escenarioConVarias(c);
       await renombrar(c, a.sucursal, "Sucursal de A");
       await renombrar(c, z.sucursal, "Sucursal de Z");
       expect(await congelado(c, await crearComprobante(c, a))).toBe("Sucursal de A");
@@ -401,8 +411,8 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
     });
 
     it("con el rol de la APLICACIÓN (RLS y privilegios de columna): renombra su sucursal, el alta posterior congela el nombre, lo lee, y no puede mandarlo ni cambiarlo; tampoco toca la de otra empresa", async () => {
-      const e = await crearEscenario(c);
-      const otra = await crearEscenario(c);
+      const e = await escenarioConVarias(c);
+      const otra = await escenarioConVarias(c);
       const deLaOtra = await nombreVigente(c, otra);
       await conAppDe(propia.base, e, async (s) => {
         const ej = viaSesion(s);
@@ -463,7 +473,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
     });
 
     it("el contacto de 0019 y el nombre de 0022 se congelan juntos, del mismo estado de la sucursal", async () => {
-      const e = await crearEscenario(c);
+      const e = await escenarioConVarias(c);
       await c.query(
         "update sucursal set nombre = 'Hotel Centro', telefono = '4321-0000' where id = $1",
         [e.sucursal],
@@ -510,7 +520,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
       };
 
       it("el alta primero: el renombre ESPERA hasta que el alta confirma y el comprobante congela el nombre de ANTES", async () => {
-        const e = await crearEscenario(c);
+        const e = await escenarioConVarias(c);
         await renombrar(c, e.sucursal, "Antes");
         const alta = await unaConexion();
         const edicion = await unaConexion();
@@ -539,7 +549,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
       });
 
       it("el renombre primero: el alta ESPERA y, confirmado el renombre, congela el nombre de DESPUÉS", async () => {
-        const e = await crearEscenario(c);
+        const e = await escenarioConVarias(c);
         await renombrar(c, e.sucursal, "Antes");
         const alta = await unaConexion();
         const edicion = await unaConexion();
@@ -565,7 +575,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
       });
 
       it("dos altas a la vez de la misma sucursal congelan el mismo nombre (el FOR SHARE no las serializa entre sí)", async () => {
-        const e = await crearEscenario(c);
+        const e = await escenarioConVarias(c);
         await renombrar(c, e.sucursal, "Hotel Centro");
         const uno = await unaConexion();
         const dos = await unaConexion();
@@ -605,7 +615,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
       propia = await crearBaseAparte(b());
       c = new pg.Client({ connectionString: propia.base.dueno });
       await c.connect();
-      e = await crearEscenario(c);
+      e = await escenarioConVarias(c);
     });
     afterAll(async () => {
       await c.end();
@@ -663,7 +673,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
     };
     /** Sonda: aun sin `comprobante_alta` ni claves foráneas, un `sucursal_id` de otra empresa no trae su nombre. */
     const noTraeLoAjeno = async (): Promise<boolean> => {
-      const otra = await crearEscenario(c);
+      const otra = await escenarioConVarias(c);
       await renombrar(c, otra.sucursal, "De otra empresa");
       const datos = datosDeComprobante(e, { sucursal_id: otra.sucursal });
       await insertarConDisparadores(c, datos, ["comprobante_alta_sucursal_nombre"]);
@@ -801,7 +811,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
         await alta.connect();
         await edicion.connect();
         try {
-          const x = await crearEscenario(admin);
+          const x = await escenarioConVarias(admin);
           const norte = await sucursalConPuntoDeVenta(admin, x, "Norte", 2);
           const factura = await autorizado(admin, x);
           await renombrar(admin, x.sucursal, "Antes");
@@ -871,7 +881,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
         const reversion = await textoDeLaReversion();
 
         // Sin ningún nombre congelado (solo comprobantes de antes de 0022): no pide nada.
-        const e = await crearEscenario(c);
+        const e = await escenarioConVarias(c);
         const viejo = await crearComprobante(c, e);
         await aplicarMigraciones(previa.aparte.base.dueno, conMia);
         expect(await filaDeLaMigracion()).toHaveLength(1);

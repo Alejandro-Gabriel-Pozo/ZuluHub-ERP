@@ -85,6 +85,7 @@ const formulario = (
     cuit="30712345678"
     borrador={borrador}
     vigente={vigente}
+    hoy="2026-11-05"
     condicionesDeIva={CONDICIONES}
     guardar={guardar}
     confirmar={confirmar}
@@ -193,14 +194,21 @@ describe("lo que muestra", () => {
     expect(valor("Calle")).toBe("Av. Rivadavia");
     expect(valor("Número")).toBe("1234");
     expect((page.getByLabelText("Provincia").element() as HTMLSelectElement).value).toBe("AR-C");
-    expect(valor("Inicio de actividades")).toBe("01/03/2018");
+    expect(valor("Inicio de actividades")).toBe("2018-03-01");
+  });
+
+  it("«Inicio de actividades» es una entrada de fecha con su etiqueta, sin fechas futuras (tope: hoy en Argentina)", async () => {
+    await render(formulario());
+    const campo = page.getByLabelText("Inicio de actividades", { exact: true });
+    await expect.element(campo).toHaveAttribute("type", "date");
+    await expect.element(campo).toHaveAttribute("max", "2026-11-05");
   });
 
   it("sin borrador y con algo vigente (D-88): se abre con lo vigente, sin escribir nada", async () => {
     await render(formulario(null, VIGENTE));
     expect(valor("Razón social")).toBe("Distribuidora Sur SA");
     expect(valor("Calle")).toBe("Av. Rivadavia");
-    expect(valor("Inicio de actividades")).toBe("01/03/2018");
+    expect(valor("Inicio de actividades")).toBe("2018-03-01");
     expect((page.getByLabelText("Provincia").element() as HTMLSelectElement).value).toBe("AR-C");
     expect(guardar).not.toHaveBeenCalled();
     expect(confirmar).not.toHaveBeenCalled();
@@ -296,7 +304,7 @@ describe("«Guardar borrador», «Confirmar» y «Cancelar»", () => {
     await expect
       .element(page.getByLabelText("Inicio de actividades"))
       .toHaveAttribute("aria-invalid", "true");
-    await page.getByLabelText("Inicio de actividades").fill("02/03/2018");
+    await page.getByLabelText("Inicio de actividades").fill("2018-03-02");
     tocar(boton("Confirmar"));
     await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
     expect(pedidoGuardado(1)).toMatchObject({

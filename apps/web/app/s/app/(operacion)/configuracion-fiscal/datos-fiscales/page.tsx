@@ -1,4 +1,5 @@
 import { texto } from "../../../../../../../../src/capacidades/vocabulario/vocabulario";
+import { hoyEnArgentina } from "../../../../../../pantallas/entrada-del-listado";
 import { pantallaDeOperacion } from "../../../../../../pantallas/operacion";
 import {
   cargarLosDatosFiscales,
@@ -36,6 +37,7 @@ export default async function PaginaDeDatosFiscales() {
             cuit={datos.dato.cuit}
             borrador={datos.dato.borrador}
             vigente={datos.dato.vigente}
+            hoy={hoyEnArgentina(new Date())}
             condicionesDeIva={opcionesDeDatosFiscales().condicionesDeIva.map((c) => ({
               valor: c.valor,
               etiqueta: c.texto,

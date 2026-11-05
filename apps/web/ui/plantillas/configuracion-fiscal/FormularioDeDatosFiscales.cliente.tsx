@@ -41,6 +41,8 @@ export type PropsDeFormularioDeDatosFiscales = Readonly<{
   /** Lo que rige hoy (D-88): sin borrador, el formulario se abre con esto. `null` (y sin borrador): se empieza en blanco. */
   vigente: VigenteDeDatosFiscales | null;
   condicionesDeIva: readonly OpcionDeCondicionDeIva[];
+  /** La fecha de hoy en Argentina (`aaaa-mm-dd`): el tope del selector de «Inicio de actividades». Ayuda, no validación. */
+  hoy: string;
   /** `guardarBorradorDeDatosFiscalesAccion`: devuelve la versión que quedó guardada. */
   guardar: (pedido: unknown) => Promise<Respuesta<Readonly<{ version: number }>>>;
   /** `confirmarDatosFiscalesAccion`. */
@@ -84,6 +86,7 @@ export function FormularioDeDatosFiscales({
   borrador,
   vigente,
   condicionesDeIva,
+  hoy,
   guardar,
   confirmar,
   rutaAlGuardar,
@@ -268,7 +271,7 @@ export function FormularioDeDatosFiscales({
               etiqueta: texto({}, "fiscal.pantalla.config_df_iibb_no_contribuyente"),
             },
           ]}
-          textoDeElegir={texto({}, "fiscal.pantalla.imprimir_ingresos_brutos")}
+          textoDeElegir={texto({}, "selector.elegir_una_opcion")}
           error={errorEn("ingresosBrutos")}
           deshabilitado={bloqueado}
         />
@@ -276,7 +279,8 @@ export function FormularioDeDatosFiscales({
           ? campo("iibbNumero", "fiscal.pantalla.config_df_iibb_numero")
           : null}
         {campo("inicioActividades", "fiscal.pantalla.config_df_inicio_actividades", {
-          inputMode: "numeric",
+          tipo: "date",
+          maximo: hoy,
         })}
         <div className={estilos["botones"]}>
           <Boton
