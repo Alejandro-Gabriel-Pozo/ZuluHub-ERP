@@ -242,6 +242,8 @@ export const CATALOGO_DE_TEXTOS = {
   "cuenta.cerrando": { porDefecto: "Cerrando sesión…" },
   "sucursal.etiqueta": { porDefecto: "Sucursal" },
   "sucursal.elegir": { porDefecto: "Elegí una sucursal" },
+  // Fuente: Dueño, 2026-11-05: primera prueba real en Preview (el desplegable de Ingresos Brutos arrancaba sin invitar a elegir); texto aprobado «Elegí una opción».
+  "selector.elegir_una_opcion": { porDefecto: "Elegí una opción" },
   // Fuente: Dueño, 2026-11-05: prototipo B de «Elegir sucursal al ingresar» (https://claude.ai/artifact/EjPJnzT6Ai6iZnXARXqqij), que trae el botón «Continuar» textual.
   "sucursal.continuar": { porDefecto: "Continuar" },
   "sucursal.ayuda": { porDefecto: "Se recuerda en este dispositivo.", largoMaximo: 120 },

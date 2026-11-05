@@ -205,6 +205,10 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     expect(CATALOGO_DE_TEXTOS["sucursal.continuar"].porDefecto).toBe("Continuar");
   });
 
+  it("la opción vacía genérica de un desplegable es «Elegí una opción» (dueño, 2026-11-05, primera prueba real en Preview)", () => {
+    expect(CATALOGO_DE_TEXTOS["selector.elegir_una_opcion"].porDefecto).toBe("Elegí una opción");
+  });
+
   it("los textos del contacto de la sucursal y el aviso de conflicto en voseo son exactamente los que el dueño aprobó el 2026-11-04 (D-113)", () => {
     expect(
       Object.fromEntries(
