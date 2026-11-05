@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { entradaDelPdf } from "../../apps/web/pantallas/pdf-de-la-factura";
+import { entradaDelPdf, nombreDelArchivoPdf } from "../../apps/web/pantallas/pdf-de-la-factura";
 import {
   formatearFecha,
   formatearImporte,
@@ -529,4 +529,35 @@ describe("texto del cliente: raro, largo, hostil", () => {
       CaracterNoSoportadoEnElPdf,
     );
   });
+});
+
+describe("el nombre del archivo", () => {
+  it.each([
+    [facturaB, {}, "Factura-B-00001-00000011.pdf"],
+    [facturaA, {}, "Factura-A-00001-00000011.pdf"],
+    [facturaC, {}, "Factura-C-00001-00000011.pdf"],
+    [
+      facturaB,
+      {
+        tipo: "NOTA_CREDITO_B",
+        asociado: { tipo: "FACTURA_B", puntoDeVenta: 1, numero: 5n, fecha: fecha("2026-10-01") },
+      },
+      "Nota-de-credito-B-00001-00000011.pdf",
+    ],
+    [
+      facturaB,
+      {
+        tipo: "NOTA_DEBITO_B",
+        asociado: { tipo: "FACTURA_B", puntoDeVenta: 1, numero: 5n, fecha: fecha("2026-10-01") },
+      },
+      "Nota-de-debito-B-00001-00000011.pdf",
+    ],
+  ] as const)(
+    "sale del tipo, la letra y el número, sin datos del cliente (%#)",
+    (c, cambios, esperado) => {
+      const nombre = nombreDelArchivoPdf(modeloDe(c, cambios));
+      expect(nombre).toBe(esperado);
+      expect(nombre).toMatch(/^[A-Za-z]+(-[a-z]+)*-[ABC]-\d{5}-\d{8}\.pdf$/);
+    },
+  );
 });

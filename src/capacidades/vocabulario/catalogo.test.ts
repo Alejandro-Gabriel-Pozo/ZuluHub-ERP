@@ -303,6 +303,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "fiscal.pantalla.imprimir_transporte": "Transporte",
       "fiscal.pantalla.imprimir_hoja": "Hoja {k} de {n}",
       "fiscal.pantalla.imprimir_ingresos_brutos": "Ingresos Brutos",
+      "fiscal.pantalla.imprimir_descargar_pdf": "Descargar PDF",
     });
     expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.imprimir_hoja"].marcadores).toEqual(["k", "n"]);
   });
