@@ -51,9 +51,37 @@ describe("nombreODenominacionDesdeTexto", () => {
     }
   });
 
-  it("una letra de cualquier alfabeto alcanza", () => {
-    for (const nombre of ["1 ñ", "123 ü", "9 ж"]) {
+  it("una letra latina con tilde, ñ o diéresis alcanza; º y ª no cuentan como letra", () => {
+    for (const nombre of ["1 ñ", "123 ü", "9 É"]) {
       expect(nombreODenominacionDesdeTexto(nombre).ok, nombre).toBe(true);
+    }
+    for (const nombre of ["5º", "1ª"]) {
+      expect(nombreODenominacionDesdeTexto(nombre), nombre).toEqual({
+        ok: false,
+        error: "SIN_LETRAS",
+      });
+    }
+  });
+
+  it("otros alfabetos y letras fuera de WinAnsi se rechazan (el PDF no las dibuja)", () => {
+    for (const nombre of ["Łódź Importaciones", "小林商事", "בנק", "Иван"]) {
+      expect(nombreODenominacionDesdeTexto(nombre), nombre).toEqual({
+        ok: false,
+        error: "CARACTER_PROHIBIDO",
+      });
+    }
+  });
+
+  it("razones sociales argentinas reales con tilde, ñ, comillas y signos", () => {
+    for (const nombre of [
+      "Ñandú S.R.L.",
+      "Hnos. O'Higgins y Cía.",
+      "Ferretería «La Esquina»",
+      "Gómez y/o Sosa",
+      "Coca-Cola® Argentina",
+      "Nº 5 — Turismo (Mendoza)",
+    ]) {
+      expect(nombreODenominacionDesdeTexto(nombre), nombre).toEqual({ ok: true, valor: nombre });
     }
   });
 

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { textoDeUnaLineaDesdeTexto } from "./texto-de-una-linea";
+import {
+  soloCaracteresPermitidos,
+  textoDeUnaLineaDesdeTexto,
+  tieneUnaLetra,
+} from "./texto-de-una-linea";
 
 const valido = (texto: string, esperado: string) =>
   expect(textoDeUnaLineaDesdeTexto(texto, 200), JSON.stringify(texto)).toEqual({
@@ -38,17 +42,75 @@ describe("textoDeUnaLineaDesdeTexto: lo que acepta", () => {
     valido("José", "José");
   });
 
-  it("el largo cuenta caracteres, no unidades de UTF-16, y el tope exacto entra", () => {
+  it("el tope exacto entra y uno más no", () => {
     valido("a".repeat(200), "a".repeat(200));
     invalido("a".repeat(201), "DEMASIADO_LARGO");
     expect(textoDeUnaLineaDesdeTexto("ñ".repeat(5), 5).ok).toBe(true);
-    // Mil caracteres de 2 unidades de UTF-16 no son mil caracteres de más: se cuentan por carácter.
-    expect(textoDeUnaLineaDesdeTexto("𠀀".repeat(3), 3).ok).toBe(true);
-    invalido("𠀀".repeat(4), "DEMASIADO_LARGO", 3);
+    invalido("ñ".repeat(6), "DEMASIADO_LARGO", 5);
   });
 
   it("el largo se mide después de normalizar y colapsar", () => {
     expect(textoDeUnaLineaDesdeTexto("a    b", 3).ok).toBe(true);
+  });
+});
+
+describe("la lista de permitidos", () => {
+  it("cada carácter declarado entra, uno por uno", () => {
+    const permitidos =
+      "ABCXYZabcxyz0123456789 .,&-'/()°+:;\"#ºª’“”–—«»®™ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿŠšŒœŽžŸ";
+    for (const caracter of permitidos) {
+      expect(soloCaracteresPermitidos(`a${caracter}b`), caracter).toBe(true);
+    }
+  });
+
+  it("lo que no está declarado se rechaza: otros alfabetos, letras latinas extendidas, símbolos y números de otros sistemas", () => {
+    for (const texto of [
+      "Łódź Importaciones",
+      "Ørsted\u0141",
+      "小林商事",
+      "בנק",
+      "مصرف",
+      "Иван",
+      "Αθήνα",
+      "Juan ١٢٣",
+      "Juan ×2",
+      "Juan ÷2",
+      "5 € ",
+      "Juan @ casa",
+      "Juan = 3",
+      "50% off",
+      "$ 100",
+      "¿Qué tal?",
+      "a_b",
+      "a|b",
+      "a\\b",
+      "a[b]",
+      "a{b}",
+      "a~b",
+      "a`b",
+      "a^b",
+      "a!b",
+      "a?b",
+      "a*b",
+    ]) {
+      invalido(texto, "CARACTER_PROHIBIDO");
+    }
+  });
+
+  it("los signos que se pegan desde un procesador de texto entran: comillas y guiones tipográficos", () => {
+    valido("Hnos. O’Higgins – “Cía.” —", "Hnos. O’Higgins – “Cía.” —");
+  });
+
+  it("los espacios tipográficos y de no corte son espacio; los de control no", () => {
+    valido("a\u2003b\u202fc\u3000d", "a b c d");
+    invalido("a\u0009b", "CARACTER_PROHIBIDO");
+  });
+
+  it("`tieneUnaLetra`: solo cuentan las letras latinas; dígitos, signos, º y ª no", () => {
+    for (const texto of ["a", "Ñ", "1 ü", "Œ"]) expect(tieneUnaLetra(texto), texto).toBe(true);
+    for (const texto of ["", "123", "5º", "1ª", "-", "×", "€", "ж", "小"]) {
+      expect(tieneUnaLetra(texto), texto).toBe(false);
+    }
   });
 });
 
