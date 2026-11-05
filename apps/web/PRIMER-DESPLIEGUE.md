@@ -309,9 +309,7 @@ otra cosa, el chequeo 1 de la sección C lo dirá. Después, la sección C.
    `"**": false` no se está respetando.
 2. Un push a `preview` sí debe crear un despliegue de _preview_.
 3. Recomendado: proteger la rama `preview` en GitHub (regla de rama o conjunto de reglas) para que nadie la borre ni la
-   reemplace. Es la única rama que publica: quien pueda empujar a `preview` publica en `app-prueba.pedernal.com.ar`. Un _fork_
-   no puede crear una rama con ese nombre dentro de este repositorio, pero una rama `preview` en un fork no debe aceptarse
-   como código a desplegar sin revisión: los despliegues de forks piden aprobación en Vercel.
+   reemplace. Es la única rama que publica: quien pueda empujar a `preview` publica en `app-prueba.pedernal.com.ar`.
 
 ---
 
