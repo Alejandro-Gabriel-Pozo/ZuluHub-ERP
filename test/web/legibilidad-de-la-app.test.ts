@@ -240,6 +240,7 @@ describe("la vista imprimible: importes y fechas solo como texto (ADR-006)", () 
   const MIDEN_PIXELES = [
     "geometria.ts",
     "medicion.ts",
+    "medidas-de-la-hoja.ts",
     "TicketDe80mm.cliente.tsx",
     "VistaPrevia.cliente.tsx",
   ];
