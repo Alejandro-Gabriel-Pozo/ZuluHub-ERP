@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Boton } from "../../componentes/Boton";
+import { Boton } from "../../componentes/Boton.cliente";
 import { Campo } from "../../componentes/Campo";
 import { Selector } from "../../componentes/Selector";
 import estilos from "./FormularioDeFiltros.module.css";

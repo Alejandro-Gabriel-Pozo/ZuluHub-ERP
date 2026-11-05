@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Boton } from "../componentes/Boton";
+import { Boton } from "../componentes/Boton.cliente";
 import { Icono } from "../iconos/Icono";
 import { Texto } from "../primitivas/Texto";
 import { Pila } from "../primitivas/Pila";

@@ -157,6 +157,7 @@ export const COLUMNAS_DE_FISCAL = {
     "sucursal_telefono",
     "sucursal_correo",
     "sucursal_web",
+    "sucursal_nombre", // 0022: el nombre de la sucursal al emitir; lo copia la base.
   ],
   comprobante_linea: [
     "empresa_id",
@@ -400,6 +401,7 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   comprobante_id_empresa_emisor_uk: "NO_TRADUCIDA",
   comprobante_emisor_fkey: "EMISOR_NO_ENCONTRADO",
   comprobante_pv_fkey: "PUNTO_DE_VENTA_NO_ENCONTRADO",
+  comprobante_sucursal_nombre_ck: "NO_TRADUCIDA", // 0022: lo copia el disparador de alta desde una sucursal que ya cumple el mismo CHECK
   comprobante_sucursal_fkey: "NO_TRADUCIDA", // la copia el disparador de alta del punto de venta, que ya apunta a una sucursal de la empresa
   comprobante_datos_fiscales_fkey: "DATOS_FISCALES_NO_ENCONTRADOS",
   comprobante_asociado_fkey: "COMPROBANTE_ASOCIADO_NO_ENCONTRADO",

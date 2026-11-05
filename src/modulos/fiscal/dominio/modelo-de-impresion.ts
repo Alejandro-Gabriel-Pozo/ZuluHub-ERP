@@ -17,6 +17,11 @@ import {
 import type { ModoDePrecio } from "./calculo-de-renglones";
 import type { Ambiente, RenglonCalculado } from "./comprobante-nuevo";
 import { contactoImpreso, type ContactoCongelado, type ContactoImpreso } from "./contacto-impreso";
+import {
+  sucursalImpresa,
+  type NombreDeSucursalCongelado,
+  type SucursalImpresa,
+} from "./sucursal-impresa";
 import type { CondicionIibb } from "./datos-fiscales";
 import { condicionDeIibbImpresa } from "./iibb-impreso";
 import { importesParaArca } from "./importes-para-arca";
@@ -25,6 +30,13 @@ import { urlDelQr, type ErrorDeQr } from "./qr-de-arca";
 import type { CondicionIva } from "./emisor";
 import type { DocumentoDelReceptor, Receptor } from "./receptor";
 import { transparenciaFiscal, type TransparenciaFiscalImpresa } from "./transparencia-fiscal";
+import {
+  PRIMERA_VERSION_CON_CONTACTO,
+  PRIMERA_VERSION_CON_MODO_DE_PRECIO,
+  PRIMERA_VERSION_CON_SUCURSAL,
+  PRIMERA_VERSION_CON_TEXTOS_LEGALES,
+  VERSIONES_SOPORTADAS,
+} from "./versiones-de-representacion";
 
 /**
  * Modelo de impresión de un comprobante autorizado (spec H7 facturación §B.7): un valor puro, sin
@@ -44,37 +56,7 @@ import { transparenciaFiscal, type TransparenciaFiscalImpresa } from "./transpar
  * trae la de homologación; el modelo admite más sin tocar la base.
  */
 
-/**
- * Las versiones que este código sabe dibujar; cualquier otra se rechaza (`VERSION_DE_REPRESENTACION_DESCONOCIDA`):
- * lista cerrada, no «todo lo menor o igual a la actual», para que subir la versión sea una decisión explícita.
- * - 1: el formato anterior a los textos legales de la RG 5614/2024. Se conserva SIN CAMBIOS: lo sellado con 1
- *   reimprime idéntico (golden `modelo-factura-b-marca-*` y `modelo-nota-de-credito-a-produccion`). No incluía la
- *   leyenda «A CONSUMIDOR FINAL» aunque la norma la pedía antes; no se corrige por diseño.
- * - 2: suma la leyenda del receptor consumidor final, la de crédito fiscal de la A a monotributista, el bloque de transparencia fiscal de la B, el contacto congelado
- *   de la sucursal (D-98) y el modo de precio.
- * Previene que reimprimir un AUTORIZADO muestre textos que su original no tenía. Sin migración: la columna es
- * `smallint` con `CHECK (>= 1)` (0009) y `emitir-comprobante` sella `VERSION_DE_REPRESENTACION_ACTUAL`. Chequeo:
- * los golden de la 1 y de la 2 y la prueba de versiones desconocidas de `modelo-de-impresion.test.ts`.
- */
-const VERSIONES_SOPORTADAS: readonly number[] = [1, 2];
-
-/** La que sellan los comprobantes nuevos. */
-export const VERSION_DE_REPRESENTACION_ACTUAL = 2;
-
-/** Primera versión que lleva los textos legales de la norma; las anteriores no los llevan. */
-const PRIMERA_VERSION_CON_TEXTOS_LEGALES = 2;
-
-/**
- * Primera versión que lleva el contacto de la sucursal (D-98). Aparte de los textos legales: el contacto no es un texto de la
- * norma y una versión futura puede cambiar uno sin tocar el otro. La 1 no lo lleva y reimprime idéntica.
- */
-const PRIMERA_VERSION_CON_CONTACTO = 2;
-
-/**
- * Primera versión que expone el modo de precio, para que la vista elija el encabezado de la columna de precio. Aparte de las
- * otras dos por la misma razón que el contacto: una versión futura puede cambiar una sin tocar las demás. La 1 no lo lleva.
- */
-const PRIMERA_VERSION_CON_MODO_DE_PRECIO = 2;
+export { VERSION_DE_REPRESENTACION_ACTUAL } from "./versiones-de-representacion";
 
 /**
  * Leyenda del receptor (versión 2), copiada de la norma sin parafrasear; si ARCA la cambia, es una versión nueva.
@@ -141,6 +123,8 @@ export type ComprobanteParaImprimir = Readonly<{
   modoDePrecio: ModoDePrecio;
   /** El contacto de la sucursal congelado al nacer el comprobante; NUNCA el de la sucursal de hoy (D-98). */
   contacto: ContactoCongelado;
+  /** El nombre de la sucursal congelado al nacer el comprobante, NUNCA el de hoy (D-114); nulo si es anterior a 0022. */
+  sucursalNombre: NombreDeSucursalCongelado;
 }>;
 
 /**
@@ -235,6 +219,8 @@ export type ModeloImpreso = Readonly<{
    * comprobante, no el vigente. Ausente en la versión 1 y sin contacto. Cada dato va solo si existe; sin rótulos.
    */
   contacto?: ContactoImpreso;
+  /** Versión 2 en adelante y solo si el comprobante congeló el nombre de su sucursal (D-114), no el vigente. Sin rótulo. */
+  sucursal?: SucursalImpresa;
   /** Solo en notas: el comprobante que corrigen. */
   asociado: Readonly<{
     rotulo: string;
@@ -331,6 +317,10 @@ export function modeloDeImpresion(
     comprobante.versionDeRepresentacion >= PRIMERA_VERSION_CON_CONTACTO
       ? contactoImpreso(comprobante.contacto)
       : null;
+  const sucursal =
+    comprobante.versionDeRepresentacion >= PRIMERA_VERSION_CON_SUCURSAL
+      ? sucursalImpresa(comprobante.sucursalNombre)
+      : null;
   const conModoDePrecio = comprobante.versionDeRepresentacion >= PRIMERA_VERSION_CON_MODO_DE_PRECIO;
   const leyendaDeCredito = conTextosLegales
     ? leyendaDeCreditoFiscal(letra, comprobante.receptor.condicionIva)
@@ -382,6 +372,7 @@ export function modeloDeImpresion(
     totales,
     ...(bloqueDeTransparencia === null ? {} : { transparenciaFiscal: bloqueDeTransparencia }),
     ...(contacto === null ? {} : { contacto }),
+    ...(sucursal === null ? {} : { sucursal }),
     asociado:
       asociado === null
         ? null

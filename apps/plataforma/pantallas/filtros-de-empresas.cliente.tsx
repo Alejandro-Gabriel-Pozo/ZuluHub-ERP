@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Boton } from "../../web/ui/componentes/Boton";
+import { Boton } from "../../web/ui/componentes/Boton.cliente";
 import { Campo } from "../../web/ui/componentes/Campo";
 import { Selector } from "../../web/ui/componentes/Selector";
 import { ESTADOS_EFECTIVOS, ROTULO_DE_ESTADO } from "../logica/filtros-de-empresas";

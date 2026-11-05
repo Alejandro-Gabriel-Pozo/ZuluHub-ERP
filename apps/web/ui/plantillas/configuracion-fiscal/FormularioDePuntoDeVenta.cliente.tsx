@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import type { Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { Boton } from "../../componentes/Boton";
+import { Boton } from "../../componentes/Boton.cliente";
 import { Campo } from "../../componentes/Campo";
 import { Selector } from "../../componentes/Selector";
 import { RegionDeEstado } from "../../patrones/RegionDeEstado";

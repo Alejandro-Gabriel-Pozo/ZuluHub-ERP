@@ -1,6 +1,6 @@
 "use client";
 
-import { Boton, type PropsDeBoton } from "../componentes/Boton";
+import { Boton, type PropsDeBoton } from "../componentes/Boton.cliente";
 import { useEnvioDeFormulario } from "./EnvioDeFormulario.cliente";
 
 export type PropsDeBotonDeEnvio = Readonly<
