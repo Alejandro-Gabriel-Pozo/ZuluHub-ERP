@@ -7,7 +7,9 @@ import {
   crearCasosDeUsoDeIdentidad,
   type CasosDeUsoDeIdentidad,
 } from "../../src/modulos/identidad/publico";
+import { type Resultado } from "../../src/primitivas/resultado/resultado";
 import type { SucursalId } from "../../src/primitivas/identificadores/marca";
+import { agotadaEnElResultado, repetirSiAgotada } from "./concurrencia-apoyo";
 import { crearBarrera, crearBaseAparte, crearEntornoDePrueba, type TxDePrueba } from "./entorno";
 import { crearApoyoDeTraspaso, type Escenario } from "./traspaso-apoyo";
 
@@ -25,6 +27,21 @@ const RONDAS = 12;
 /** El invariante «nunca dos gerentes ni ninguno» es el más serio: se repite más. */
 const RONDAS_CRITICAS = 40;
 
+/**
+ * Quien pierde una carrera SERIALIZABLE puede agotar los reintentos del motor y recibir `ConcurrenciaAgotada` (el
+ * servidor revierte y falla cerrado: es una respuesta legítima, no un defecto; ver `concurrencia-apoyo.ts`). Cada
+ * caso de uso que estas pruebas lanzan en paralelo repite el MISMO pedido solo ante ese error, hasta un tope, y
+ * devuelve el resultado real (éxito o error de negocio) que juzga cada prueba. Cualquier otro error no se reintenta.
+ * Causa probable (no reproducida en local) de la intermitencia de T8 en CI («ronda 10: expected false to be true» sobre `apagado.ok`).
+ */
+const reintentandoSiAgotada = <A extends unknown[], E, V>(
+  caso: (...args: A) => Promise<Resultado<V, E>>,
+  nombre: string,
+): ((...args: A) => Promise<Resultado<V, E>>) => {
+  return (...args) =>
+    repetirSiAgotada(() => caso(...args), { esAgotada: agotadaEnElResultado, contexto: nombre });
+};
+
 type Gancho = (tx: TxDePrueba, esperar: () => Promise<void>) => TxDePrueba;
 type Repositorio = "traspasos" | "membresias" | "asignaciones";
 
@@ -39,7 +56,15 @@ describe.skipIf(base === null)(
     let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
     let entorno: ReturnType<typeof crearEntornoDePrueba>;
     let dueno: pg.Client;
-    let casos: CasosDeUsoDeIdentidad;
+    let casos: Pick<
+      CasosDeUsoDeIdentidad,
+      | "aceptarTraspaso"
+      | "apagarMembresia"
+      | "asignarSucursales"
+      | "cancelarTraspaso"
+      | "proponerTraspaso"
+      | "rechazarTraspaso"
+    >;
     let apoyo: ReturnType<typeof crearApoyoDeTraspaso>;
     // La barrera de la ronda en curso: cada ronda arma una nueva (una barrera se usa una vez).
     let barrera: () => Promise<void> = () => Promise.resolve();
@@ -52,11 +77,19 @@ describe.skipIf(base === null)(
       dueno = new pg.Client({ connectionString: propia.base.dueno });
       await dueno.connect();
       apoyo = crearApoyoDeTraspaso(entorno, dueno);
-      casos = crearCasosDeUsoDeIdentidad({
+      const crudos = crearCasosDeUsoDeIdentidad({
         transacciones: entorno,
         tokens: crearTokensHmac(randomBytes(32)),
         reglas: REGLAS_DE_EMPRESA,
       });
+      casos = {
+        aceptarTraspaso: reintentandoSiAgotada(crudos.aceptarTraspaso, "aceptarTraspaso"),
+        apagarMembresia: reintentandoSiAgotada(crudos.apagarMembresia, "apagarMembresia"),
+        asignarSucursales: reintentandoSiAgotada(crudos.asignarSucursales, "asignarSucursales"),
+        cancelarTraspaso: reintentandoSiAgotada(crudos.cancelarTraspaso, "cancelarTraspaso"),
+        proponerTraspaso: reintentandoSiAgotada(crudos.proponerTraspaso, "proponerTraspaso"),
+        rechazarTraspaso: reintentandoSiAgotada(crudos.rechazarTraspaso, "rechazarTraspaso"),
+      };
     }, LIMITE_EN_MS);
     afterAll(async () => {
       await dueno.end();
