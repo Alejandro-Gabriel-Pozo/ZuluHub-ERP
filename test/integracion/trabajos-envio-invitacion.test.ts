@@ -242,14 +242,14 @@ describe.skipIf(base === null)("enviar_invitacion: el trabajo contra una base re
       claveDeIdempotencia: `invitacion:${id}:envio`,
       mensaje: { para: email },
     });
-    expect(enviados[0]!.mensaje.texto).toContain(`${URL_BASE}/invitaciones/${token}`);
+    expect(enviados[0]!.mensaje.texto).toContain(`${URL_BASE}/invitacion?t=${token}`);
     expect(await trabajo(id)).toMatchObject({ estado: "HECHO", intentos: 1, ultimo_error: null });
     expect(await auditoria(e.empresa, "INVITACION_ENVIADA")).toEqual([
       { actor_persona_id: null, entidad_id: id, despues: { email, proveedor: "falso-1" } },
     ]);
 
     // El enlace del mail alcanza para aceptar la invitación.
-    const enlace = /\/invitaciones\/(\S+)/.exec(enviados[0]!.mensaje.texto);
+    const enlace = /\/invitacion\?t=(\S+)/.exec(enviados[0]!.mensaje.texto);
     const aceptada = await casos.aceptarInvitacion({
       token: enlace![1]!,
       emailAutenticado: email,
@@ -285,7 +285,7 @@ describe.skipIf(base === null)("enviar_invitacion: el trabajo contra una base re
       expect(tabla).not.toContain(secreto);
       expect(tabla).not.toContain(tokens.hash(secreto));
     }
-    expect(tabla).not.toContain("/invitaciones/");
+    expect(tabla).not.toContain("/invitacion?t=");
     expect((await trabajo(falla.id)).ultimo_error).toMatch(/^Error: no pude mandar:/);
   });
 

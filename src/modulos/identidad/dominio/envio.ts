@@ -48,12 +48,13 @@ export function decidirEnvioDeInvitacion(
 }
 
 /**
- * El enlace que recibe el invitado: el token derivado, en la ruta de aceptación de la aplicación.
- * `urlBase` es el origen público validado (sin barra final). El token solo vive en el cuerpo del
+ * El enlace que recibe el invitado: el token derivado, en la pantalla de aceptación de la web (`/invitacion?t=<token>`, la que
+ * lee `apps/web/app/s/app/(entrada)/invitacion/page.tsx`; la prueba `enlace-de-invitacion` ata ambos lados).
+ * `urlBase` es el origen público validado (se toleran barras finales). El token solo vive en el cuerpo del
  * mail: nunca se guarda ni se registra.
  */
 export function armarEnlaceDeInvitacion(urlBase: string, token: string): string {
-  return `${urlBase.replace(/\/+$/, "")}/invitaciones/${encodeURIComponent(token)}`;
+  return `${urlBase.replace(/\/+$/, "")}/invitacion?t=${encodeURIComponent(token)}`;
 }
 
 export type MensajeDeInvitacion = Readonly<{ asunto: string; texto: string }>;
