@@ -49,6 +49,7 @@ const formulario = (borrador: BorradorDeDatosFiscales | null = BORRADOR) => (
     cuit="30712345678"
     borrador={borrador}
     vigente={null}
+    hoy="2026-11-05"
     condicionesDeIva={[{ valor: "RESPONSABLE_INSCRIPTO", etiqueta: "IVA Responsable Inscripto" }]}
     guardar={guardar}
     confirmar={confirmar}
