@@ -123,9 +123,11 @@ export const TEXTOS_DE_FISCAL = {
     porDefecto: "Este comprobante ya no se puede descartar.",
     largoMaximo: 160,
   },
+  // Voseo aprobado por el dueño, 2026-11-04, D-113 (Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md):
+  // antes «Los datos cambiaron mientras los miraba. Actualice la pantalla e intente de nuevo.».
   "error.fiscal_version_desactualizada": {
     porDefecto:
-      "Los datos cambiaron mientras los miraba. Actualice la pantalla e intente de nuevo.",
+      "Los datos cambiaron mientras los mirabas. Actualizá la pantalla e intentá de nuevo.",
     largoMaximo: 160,
   },
   "error.fiscal_serie_bloqueada": {

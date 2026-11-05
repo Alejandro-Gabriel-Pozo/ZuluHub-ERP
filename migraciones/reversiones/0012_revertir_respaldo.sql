@@ -14,6 +14,10 @@
 -- NO borra el rol `pedernal_respaldo`: los roles son del clúster y otras bases (por ejemplo una rama restaurada)
 -- pueden usarlo. Le quita todo acceso a esta base y su LOGIN; si hace falta eliminarlo, se hace a mano cuando
 -- ninguna otra base lo use (`DROP OWNED BY pedernal_respaldo; DROP ROLE pedernal_respaldo;`).
+--
+-- Con un dueño no superusuario (Neon, PostgreSQL 16 o más) el rol de respaldo conserva la pertenencia automática del
+-- creador (admin_option, sin inherit ni SET): no es un privilegio sobre los datos y la migración 0012 la tolera al
+-- repetirse. `DROP ROLE` la elimina junto con el rol; no hace falta revocarla antes.
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA public, autenticacion REVOKE SELECT ON TABLES FROM pedernal_respaldo;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public, autenticacion REVOKE SELECT ON SEQUENCES FROM pedernal_respaldo;

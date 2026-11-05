@@ -30,6 +30,8 @@
     "gate": "npm run typecheck && npm run lint && npm run format:check && npm run arquitectura && npm run analizar:muerto && npm test",
     "plataforma:primer-admin": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/crear-primer-admin.ts",
     "plataforma:caso": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/ejecutar-caso-de-plataforma.ts",
+    "plataforma:preparar-prueba": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/preparar-empresa-de-pruebas.ts",
+    "plataforma:login-temporal": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/login-temporal-de-plataforma.ts",
     "plataforma:baja-admin": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/baja-de-admin.ts",
     "plataforma:resetear-segundo-factor": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/resetear-segundo-factor.ts"
   },
@@ -43,7 +45,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "@vitest/browser-playwright": "5.0.3",
+    "@vitest/browser-playwright": "5.0.5",
     "axe-core": "4.14.0",
     "dependency-cruiser": "^18.5.0",
     "eslint": "^10.12.0",
@@ -55,7 +57,7 @@
     "prettier": "^3.9.10",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.1",
-    "vitest": "^5.0.3",
+    "vitest": "^5.0.5",
     "vitest-browser-react": "2.3.0"
   },
   "dependencies": {

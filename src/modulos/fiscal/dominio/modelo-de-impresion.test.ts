@@ -1,3 +1,4 @@
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
   consumidorFinal,
@@ -24,6 +25,10 @@ import {
   type MarcaParaImprimir,
   type ModeloImpreso,
 } from "./modelo-de-impresion";
+import {
+  LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA,
+  leyendaDeCreditoFiscal,
+} from "./leyenda-de-credito-fiscal";
 import { armarNotaAsociada } from "./nota-asociada";
 import { CONDICIONES_DE_IVA_DEL_RECEPTOR } from "./condicion-iva-receptor";
 import type { Receptor } from "./receptor";
@@ -450,6 +455,40 @@ const facturaCConsumidorFinal = facturaArmada(
   monotributo,
 );
 
+const facturaAMonotributista = facturaArmada(
+  receptorMonotributista,
+  [renglon("1000.00", "1", "21"), renglon("100.00", "1", "EXENTO")],
+  { modoDePrecio: "IVA_DISCRIMINADO" },
+);
+
+/** Una nota de crédito sobre una factura A a un monotributista (número 94, punto de venta 7): el receptor es el del original. */
+function notaSobreFacturaAMonotributista(): ComprobanteParaImprimir {
+  const nota = armarNotaAsociada(
+    {
+      empresaId: EMPRESA,
+      emisorId: contextoDeEmision().emisorId,
+      ambiente: "PRODUCCION",
+      tipo: "FACTURA_A",
+      estado: "AUTORIZADO",
+      numero: 94n,
+      fechaEmision: fecha("2026-10-01"),
+      emisor: emisorInstantaneo({ puntoDeVentaNumero: 7 }),
+      receptor: receptorMonotributista,
+    },
+    {
+      clase: "NOTA_CREDITO",
+      motivo: "Devolución parcial",
+      modoDePrecio: "IVA_DISCRIMINADO",
+      concepto: "PRODUCTOS",
+      servicio: null,
+      renglones: [renglon("1000.00", "1", "21", null, "Torta")],
+    },
+    contextoDeEmision({ ambiente: "PRODUCCION" }),
+  );
+  if (!nota.ok) throw new Error("nota de prueba inválida");
+  return imprimible(nota.valor, { numero: 12n });
+}
+
 /** Una nota sobre una factura B a consumidor final (la factura B de los golden, número 94, punto de venta 7). */
 function notaSobreFacturaB(clase: "NOTA_CREDITO" | "NOTA_DEBITO"): ComprobanteParaImprimir {
   const nota = armarNotaAsociada(
@@ -487,6 +526,8 @@ describe("modeloDeImpresion: golden de la versión 2 (textos legales)", () => {
     ["nota-de-debito-b-consumidor-final", notaSobreFacturaB("NOTA_DEBITO")],
     ["factura-c-consumidor-final", imprimible(facturaCConsumidorFinal)],
     ["factura-a-inscripto", imprimible(facturaAInscripto)],
+    ["factura-a-monotributista", imprimible(facturaAMonotributista)],
+    ["nota-de-credito-a-monotributista", notaSobreFacturaAMonotributista()],
   ];
   for (const [nombre, comprobante] of casos) {
     it(`golden ${nombre}`, async () => {
@@ -633,6 +674,90 @@ describe("modeloDeImpresion: leyenda «A CONSUMIDOR FINAL» (RG 5866)", () => {
 
   it("no toca las leyendas del comprobante: la de homologación sigue sola", () => {
     expect(modelo(imprimible(facturaB)).leyendas).toEqual([LEYENDA_DE_HOMOLOGACION]);
+  });
+});
+
+describe("modeloDeImpresion: leyenda de crédito fiscal de la A a monotributista (RG 1415 art. 15 a)", () => {
+  it("el texto es el de la norma, sin parafrasear", () => {
+    expect(LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA).toBe(
+      "El crédito fiscal discriminado en el presente comprobante, sólo podrá ser computado a efectos del Régimen de Sostenimiento e Inclusión Fiscal para Pequeños Contribuyentes de la Ley Nº 27.618",
+    );
+  });
+
+  it("la factura A a un monotributista la lleva; a un inscripto, no", () => {
+    const conLeyenda = modelo(imprimible(facturaAMonotributista));
+    expect(conLeyenda.leyendasLegales).toEqual([LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA]);
+    expect(conLeyenda.leyendas).toEqual([LEYENDA_DE_HOMOLOGACION]);
+    const inscripto = modelo(imprimible(facturaAInscripto));
+    expect("leyendasLegales" in inscripto).toBe(false);
+    expect(inscripto.leyendas).toEqual([LEYENDA_DE_HOMOLOGACION]);
+  });
+
+  it("la nota de crédito A a un monotributista la lleva, también en producción (sin la de homologación)", () => {
+    const m = modelo(notaSobreFacturaAMonotributista());
+    expect(m.fiscal.letra).toBe("A");
+    expect(m.fiscal.rotulo).toBe("NOTA DE CRÉDITO");
+    expect(m.leyendasLegales).toEqual([LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA]);
+    expect(m.leyendas).toEqual([]);
+  });
+
+  it("la B y la C a un monotributista no la llevan", () => {
+    for (const base of [facturaB, facturaCConsumidorFinal]) {
+      const m = modelo(imprimible({ ...base, receptor: receptorMonotributista }));
+      expect(m.fiscal.letra).not.toBe("A");
+      expect(m.leyendas).toEqual([LEYENDA_DE_HOMOLOGACION]);
+      expect("leyendasLegales" in m).toBe(false);
+    }
+  });
+
+  it("propiedad: sale si y solo si la versión es 2 o más, la letra es A y el receptor es monotributo", () => {
+    const bases = [facturaAInscripto, facturaB, facturaCConsumidorFinal];
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...bases),
+        fc.constantFrom(...CONDICIONES_DE_IVA_DEL_RECEPTOR),
+        fc.constantFrom(1, 2),
+        (base, condicionIva, versionDeRepresentacion) => {
+          const m = modelo(
+            imprimible(
+              { ...base, receptor: { ...base.receptor, condicionIva } },
+              { versionDeRepresentacion },
+            ),
+          );
+          const esperada =
+            versionDeRepresentacion >= 2 &&
+            m.fiscal.letra === "A" &&
+            condicionIva === "MONOTRIBUTO";
+          expect(
+            (m.leyendasLegales ?? []).includes(LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA),
+          ).toBe(esperada);
+          // Nunca se mezclan: el texto legal no va en `leyendas` y el aviso de homologación no va en `leyendasLegales`.
+          expect(m.leyendas).not.toContain(LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA);
+          expect(m.leyendasLegales ?? []).not.toContain(LEYENDA_DE_HOMOLOGACION);
+          expect(m.leyendas).toEqual(
+            imprimible(base, { versionDeRepresentacion }).ambiente === "HOMOLOGACION"
+              ? [LEYENDA_DE_HOMOLOGACION]
+              : [],
+          );
+        },
+      ),
+    );
+  });
+
+  it("la regla pura: solo la letra A con MONOTRIBUTO", () => {
+    for (const letra of ["A", "B", "C"] as const) {
+      for (const c of CONDICIONES_DE_IVA_DEL_RECEPTOR) {
+        expect(leyendaDeCreditoFiscal(letra, c) !== null).toBe(
+          letra === "A" && c === "MONOTRIBUTO",
+        );
+      }
+    }
+  });
+
+  it("la versión 1 no la lleva aunque la letra sea A y el receptor monotributista", () => {
+    const m = modelo(imprimible(facturaAMonotributista, V1));
+    expect(m.leyendas).toEqual([LEYENDA_DE_HOMOLOGACION]);
+    expect("leyendasLegales" in m).toBe(false);
   });
 });
 

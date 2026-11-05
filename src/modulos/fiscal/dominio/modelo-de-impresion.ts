@@ -19,6 +19,7 @@ import type { Ambiente, RenglonCalculado } from "./comprobante-nuevo";
 import { contactoImpreso, type ContactoCongelado, type ContactoImpreso } from "./contacto-impreso";
 import type { CondicionIibb } from "./datos-fiscales";
 import { importesParaArca } from "./importes-para-arca";
+import { leyendaDeCreditoFiscal } from "./leyenda-de-credito-fiscal";
 import { urlDelQr, type ErrorDeQr } from "./qr-de-arca";
 import type { CondicionIva } from "./emisor";
 import type { DocumentoDelReceptor, Receptor } from "./receptor";
@@ -48,7 +49,7 @@ import { transparenciaFiscal, type TransparenciaFiscalImpresa } from "./transpar
  * - 1: el formato anterior a los textos legales de la RG 5614/2024. Se conserva SIN CAMBIOS: lo sellado con 1
  *   reimprime idéntico (golden `modelo-factura-b-marca-*` y `modelo-nota-de-credito-a-produccion`). No incluía la
  *   leyenda «A CONSUMIDOR FINAL» aunque la norma la pedía antes; no se corrige por diseño.
- * - 2: suma la leyenda del receptor consumidor final, el bloque de transparencia fiscal de la B, el contacto congelado
+ * - 2: suma la leyenda del receptor consumidor final, la de crédito fiscal de la A a monotributista, el bloque de transparencia fiscal de la B, el contacto congelado
  *   de la sucursal (D-98) y el modo de precio.
  * Previene que reimprimir un AUTORIZADO muestre textos que su original no tenía. Sin migración: la columna es
  * `smallint` con `CHECK (>= 1)` (0009) y `emitir-comprobante` sella `VERSION_DE_REPRESENTACION_ACTUAL`. Chequeo:
@@ -241,7 +242,17 @@ export type ModeloImpreso = Readonly<{
     fecha: FechaCivil;
   }> | null;
   qr: Readonly<{ url: string }>;
+  /**
+   * Solo avisos del sistema, que la vista dibuja destacados: hoy la de homologación. NUNCA un texto legal de la norma (van en
+   * `leyendasLegales`).
+   */
   leyendas: readonly string[];
+  /**
+   * Versión 2 en adelante: textos legales de la norma, tal cual, para dibujarlos como texto del comprobante y no como aviso.
+   * Hoy 0 o 1: la de crédito fiscal de la A a monotributista (`LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA`). Ausente si no hay
+   * y en la versión 1. Separada de `leyendas` para que un texto legal no se muestre como aviso de pruebas.
+   */
+  leyendasLegales?: readonly string[];
 }>;
 
 const ROTULOS: Readonly<Record<ClaseDeComprobante, ModeloImpreso["fiscal"]["rotulo"]>> = {
@@ -320,6 +331,9 @@ export function modeloDeImpresion(
       ? contactoImpreso(comprobante.contacto)
       : null;
   const conModoDePrecio = comprobante.versionDeRepresentacion >= PRIMERA_VERSION_CON_MODO_DE_PRECIO;
+  const leyendaDeCredito = conTextosLegales
+    ? leyendaDeCreditoFiscal(letra, comprobante.receptor.condicionIva)
+    : null;
   const bloqueDeTransparencia = conTextosLegales
     ? transparenciaFiscal(totales, comprobante.receptor, comprobante.total.moneda)
     : null;
@@ -378,5 +392,6 @@ export function modeloDeImpresion(
           },
     qr: { url: qr.valor },
     leyendas: comprobante.ambiente === "HOMOLOGACION" ? [LEYENDA_DE_HOMOLOGACION] : [],
+    ...(leyendaDeCredito === null ? {} : { leyendasLegales: [leyendaDeCredito] }),
   });
 }

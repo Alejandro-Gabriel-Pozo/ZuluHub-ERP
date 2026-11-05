@@ -243,6 +243,12 @@ export const CATALOGO_DE_TEXTOS = {
   "sucursal.etiqueta": { porDefecto: "Sucursal" },
   "sucursal.elegir": { porDefecto: "Elegí una sucursal" },
   "sucursal.ayuda": { porDefecto: "Se recuerda en este dispositivo.", largoMaximo: 120 },
+  // Contacto de la sucursal (D-98, alcance A de D-113). El contacto es de la sucursal, no fiscal: familia `sucursal.*`.
+  // Fuente de las cuatro claves: Dueño, 2026-11-04, D-113, Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md.
+  "sucursal.contacto_titulo": { porDefecto: "Contacto de la sucursal" },
+  "sucursal.telefono": { porDefecto: "Teléfono" },
+  "sucursal.correo": { porDefecto: "Correo" },
+  "sucursal.web": { porDefecto: "Web" },
   "sesion.estado_activa": { porDefecto: "Sesión activa" },
   "sesion.estado_por_vencer": { porDefecto: "Sesión por vencer" },
   "sesion.estado_vencida": { porDefecto: "Sesión vencida" },
