@@ -50,6 +50,8 @@ const BORRADOR: BorradorDeDatosFiscales = {
     codigoPostal: "1000",
   },
   inicioActividades: "2018-03-01",
+  iibbNumero: null,
+  iibbCondicion: null,
 };
 
 const VIGENTE: VigenteDeDatosFiscales = {
@@ -60,6 +62,8 @@ const VIGENTE: VigenteDeDatosFiscales = {
   condicionIva: "RESPONSABLE_INSCRIPTO",
   domicilio: BORRADOR.domicilio!,
   inicioActividades: "2018-03-01",
+  iibbNumero: null,
+  iibbCondicion: null,
 };
 
 const GUARDADO = (version: number): Respuesta<{ version: number }> => ({
@@ -133,6 +137,7 @@ describe("accesibilidad y medidas", () => {
     for (const etiqueta of [
       "Razón social",
       "Condición frente al IVA",
+      "Ingresos Brutos",
       "Calle",
       "Número",
       "Piso",
@@ -157,8 +162,8 @@ describe("accesibilidad y medidas", () => {
     const provincias = (page.getByLabelText("Provincia").element() as HTMLSelectElement).options;
     expect(provincias).toHaveLength(25);
     expect(provincias[0]?.textContent).toBe("Provincia");
-    // Ni Ingresos Brutos (D-45) ni fecha de vigencia (D-61).
-    expect(document.body.textContent).not.toMatch(/Ingresos Brutos|vigencia|Rige/i);
+    // Sin fecha de vigencia (D-61).
+    expect(document.body.textContent).not.toMatch(/vigencia|Rige/i);
   });
 
   it("con teclado: Tab recorre en orden con el foco visible y Enter guarda el borrador (nunca confirma)", async () => {
