@@ -245,7 +245,7 @@ describe("procesarUno", () => {
     const filas = [fila("a")];
     const token = "Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MGFiY2RlZmdoaWo";
     const r = await procesadorCon(filas, () => {
-      throw new Error(`falló https://app.ejemplo.com/invitaciones/${token} con ${token}`);
+      throw new Error(`falló https://app.ejemplo.com/invitacion?t=${token} con ${token}`);
     }).procesarUno("a", T0);
     expect(r).toBe("REPROGRAMADO");
     const guardado = filas[0]?.ultimoError ?? "";
