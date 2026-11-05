@@ -121,6 +121,7 @@ function guardado(cambios: Partial<ComprobanteGuardado> = {}): ComprobanteGuarda
     huella: "huella-interna",
     versionDeRepresentacion: 1,
     contacto: SIN_CONTACTO,
+    sucursalNombre: null,
     creadoPor: personaId("p-1"),
     creadoEn: new Date("2026-10-13T14:59:00.000Z"),
     version: 4,

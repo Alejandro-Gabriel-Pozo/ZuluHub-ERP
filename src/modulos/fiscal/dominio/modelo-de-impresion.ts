@@ -17,6 +17,11 @@ import {
 import type { ModoDePrecio } from "./calculo-de-renglones";
 import type { Ambiente, RenglonCalculado } from "./comprobante-nuevo";
 import { contactoImpreso, type ContactoCongelado, type ContactoImpreso } from "./contacto-impreso";
+import {
+  sucursalImpresa,
+  type NombreDeSucursalCongelado,
+  type SucursalImpresa,
+} from "./sucursal-impresa";
 import type { CondicionIibb } from "./datos-fiscales";
 import { importesParaArca } from "./importes-para-arca";
 import { urlDelQr, type ErrorDeQr } from "./qr-de-arca";
@@ -67,6 +72,9 @@ const PRIMERA_VERSION_CON_TEXTOS_LEGALES = 2;
  * norma y una versión futura puede cambiar uno sin tocar el otro. La 1 no lo lleva y reimprime idéntica.
  */
 const PRIMERA_VERSION_CON_CONTACTO = 2;
+
+/** Primera versión que lleva el nombre de la sucursal (D-114). Constante propia, por la misma razón que el contacto. La 1 no lo lleva. */
+const PRIMERA_VERSION_CON_SUCURSAL = 2;
 
 /**
  * Primera versión que expone el modo de precio, para que la vista elija el encabezado de la columna de precio. Aparte de las
@@ -139,6 +147,8 @@ export type ComprobanteParaImprimir = Readonly<{
   modoDePrecio: ModoDePrecio;
   /** El contacto de la sucursal congelado al nacer el comprobante; NUNCA el de la sucursal de hoy (D-98). */
   contacto: ContactoCongelado;
+  /** El nombre de la sucursal congelado al nacer el comprobante, NUNCA el de hoy (D-114); nulo si es anterior a 0020. */
+  sucursalNombre: NombreDeSucursalCongelado;
 }>;
 
 /**
@@ -233,6 +243,8 @@ export type ModeloImpreso = Readonly<{
    * comprobante, no el vigente. Ausente en la versión 1 y sin contacto. Cada dato va solo si existe; sin rótulos.
    */
   contacto?: ContactoImpreso;
+  /** Versión 2 en adelante y solo si el comprobante congeló el nombre de su sucursal (D-114), no el vigente. Sin rótulo. */
+  sucursal?: SucursalImpresa;
   /** Solo en notas: el comprobante que corrigen. */
   asociado: Readonly<{
     rotulo: string;
@@ -319,6 +331,10 @@ export function modeloDeImpresion(
     comprobante.versionDeRepresentacion >= PRIMERA_VERSION_CON_CONTACTO
       ? contactoImpreso(comprobante.contacto)
       : null;
+  const sucursal =
+    comprobante.versionDeRepresentacion >= PRIMERA_VERSION_CON_SUCURSAL
+      ? sucursalImpresa(comprobante.sucursalNombre)
+      : null;
   const conModoDePrecio = comprobante.versionDeRepresentacion >= PRIMERA_VERSION_CON_MODO_DE_PRECIO;
   const bloqueDeTransparencia = conTextosLegales
     ? transparenciaFiscal(totales, comprobante.receptor, comprobante.total.moneda)
@@ -367,6 +383,7 @@ export function modeloDeImpresion(
     totales,
     ...(bloqueDeTransparencia === null ? {} : { transparenciaFiscal: bloqueDeTransparencia }),
     ...(contacto === null ? {} : { contacto }),
+    ...(sucursal === null ? {} : { sucursal }),
     asociado:
       asociado === null
         ? null

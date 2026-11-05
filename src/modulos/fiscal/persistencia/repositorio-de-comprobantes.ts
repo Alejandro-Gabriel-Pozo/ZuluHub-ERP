@@ -17,7 +17,6 @@ import {
 } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
-import type { SitioWeb } from "../../../primitivas/contacto/web";
 import { CODIGOS_DE_ALICUOTA } from "../dominio/alicuota";
 import type { DesgloseDeAlicuota } from "../dominio/comprobante";
 import {
@@ -62,7 +61,7 @@ import type { ContactoCongelado } from "../dominio/contacto-impreso";
 import { importesParaArca } from "../dominio/importes-para-arca";
 import type { Receptor } from "../dominio/receptor";
 import { documentoDelReceptorDeLaBase } from "./documento-del-receptor";
-import type { FilaDeComprobante } from "./fila-de-comprobante";
+import { sucursalCongeladaDeLaFila, type FilaDeComprobante } from "./fila-de-comprobante";
 import { deLaLista, exigir, type ErrorDeAlta, type ResultadoDeAlta } from "./repositorios";
 import type { FiscalDb } from "./tablas";
 
@@ -165,8 +164,9 @@ export type ComprobanteGuardado = Readonly<{
   /** SHA-256 del pedido canónico: con ella el caso de uso distingue una repetición de una clave reutilizada. */
   huella: string;
   versionDeRepresentacion: number;
-  /** El contacto de la sucursal al nacer el comprobante (0019, D-98): lo copia la base y no cambia nunca. */
+  /** Lo que la sucursal tenía al nacer el comprobante: el contacto (0019, D-98) y el nombre (0020, D-114, nulo si es anterior). Lo copia la base. */
   contacto: ContactoCongelado;
+  sucursalNombre: string | null;
   creadoPor: PersonaId;
   creadoEn: Date;
   version: number;
@@ -354,6 +354,7 @@ const COLUMNAS_DE_COMPROBANTE = [
   "sucursal_telefono",
   "sucursal_correo",
   "sucursal_web",
+  "sucursal_nombre",
   "creado_por",
   "creado_en",
   "version",
@@ -502,12 +503,7 @@ function aComprobante(
     motivoDeDescarte: fila.motivo_descarte,
     huella: fila.huella,
     versionDeRepresentacion: fila.version_de_representacion,
-    contacto: {
-      telefono: fila.sucursal_telefono,
-      correo: fila.sucursal_correo,
-      // El CHECK `sucursal_web_ck` (0019) asegura la forma canónica: acá no se vuelve a validar (como el CUIT del emisor).
-      web: fila.sucursal_web as SitioWeb | null,
-    },
+    ...sucursalCongeladaDeLaFila(fila),
     creadoPor: personaId(fila.creado_por),
     creadoEn: fila.creado_en,
     version: fila.version,
