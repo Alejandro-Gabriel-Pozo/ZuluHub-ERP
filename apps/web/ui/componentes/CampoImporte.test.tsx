@@ -17,6 +17,7 @@ function Probado({
   return (
     <>
       <CampoImporte
+        dato="pendiente"
         etiqueta="Importe"
         nombre="importe"
         valor={valor}
@@ -96,6 +97,7 @@ describe("CampoImporte", () => {
     expect(await violacionesDeAccesibilidad()).toEqual([]);
     await rerender(
       <CampoImporte
+        dato="pendiente"
         etiqueta="Importe"
         valor=""
         alCambiar={() => undefined}
@@ -136,6 +138,7 @@ matrizDeEstados("CampoImporte", {
   error: async () => {
     await render(
       <CampoImporte
+        dato="pendiente"
         etiqueta="Importe"
         valor=""
         alCambiar={() => undefined}
@@ -149,7 +152,13 @@ matrizDeEstados("CampoImporte", {
   },
   deshabilitado: async () => {
     await render(
-      <CampoImporte etiqueta="Importe" valor="" alCambiar={() => undefined} deshabilitado />,
+      <CampoImporte
+        dato="pendiente"
+        etiqueta="Importe"
+        valor=""
+        alCambiar={() => undefined}
+        deshabilitado
+      />,
     );
     await expect.element(page.getByLabelText("Importe")).toBeDisabled();
     expect(await violacionesDeAccesibilidad()).toEqual([]);

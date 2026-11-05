@@ -57,8 +57,7 @@ const ARCHIVO_DE_CI = ".github/workflows/ci.yml";
 const CONFIGURACION_DE_APPS = /^apps\/[^/]+\/(package\.json|tsconfig[^/]*\.json)$/;
 
 /**
- * Pruebas que LEEN archivos de `apps/` como texto (el grafo no ve ese vínculo, no es un `import`), con los patrones que leen. Un cambio en uno de esos archivos alcanza a la prueba y, por su cierre de importaciones,
- * a lo que ella ejercita. Hoy solo `contraste-de-superficies` ejerce código que se muta (el contraste); el resto se declara igual por si mañana importa algo mutado. Una prueba nueva que lea `apps/` se declara acá (`planificar-mutacion.test.ts` lo exige).
+ * Pruebas que LEEN archivos de `apps/` como texto (el grafo no ve ese vínculo, no es un `import`), con los patrones que leen. Un cambio en uno de esos archivos alcanza a la prueba y, por su cierre de importaciones, a lo que ella ejercita. Hoy solo `contraste-de-superficies` ejerce código que se muta (el contraste); el resto se declara igual por si mañana importa algo mutado. Una prueba nueva que lea `apps/` se declara acá (`planificar-mutacion.test.ts` lo exige).
  */
 const LECTURAS_DE_APPS = {
   "test/web/contraste-de-superficies.test.ts": ["apps/web/ui/tokens.css"],
@@ -71,6 +70,7 @@ const LECTURAS_DE_APPS = {
   "test/arquitectura/cargar-entorno-nombres.test.ts": ["apps/web/PRIMER-DESPLIEGUE.md"],
   "test/arquitectura/reglas.test.ts": ["apps/**"],
   "test/arquitectura/lint.test.ts": ["apps/**"],
+  "test/arquitectura/campos-con-dato.test.ts": ["apps/**"],
 };
 
 /**

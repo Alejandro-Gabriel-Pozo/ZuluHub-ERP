@@ -12,7 +12,7 @@ function Controlado(props: {
   deshabilitado?: boolean;
 }) {
   const [valor, setValor] = useState("");
-  return <Campo etiqueta="Nombre" valor={valor} alCambiar={setValor} {...props} />;
+  return <Campo dato="pendiente" etiqueta="Nombre" valor={valor} alCambiar={setValor} {...props} />;
 }
 
 describe("Campo", () => {
@@ -91,7 +91,13 @@ matrizDeEstados("Campo", {
 describe("Campo: fecha", () => {
   it("con tipo date es un campo de fecha con su etiqueta", async () => {
     await render(
-      <Campo etiqueta="Vigente desde" tipo="date" valor="2026-11-01" alCambiar={() => undefined} />,
+      <Campo
+        dato="pendiente"
+        etiqueta="Vigente desde"
+        tipo="date"
+        valor="2026-11-01"
+        alCambiar={() => undefined}
+      />,
     );
     const campo = page.getByLabelText("Vigente desde");
     await expect.element(campo).toHaveAttribute("type", "date");
@@ -102,7 +108,13 @@ describe("Campo: fecha", () => {
 describe("Campo: códigos que distinguen mayúsculas", () => {
   it("con autoCapitalize apagado el teclado no capitaliza ni corrige", async () => {
     await render(
-      <Campo etiqueta="Código" valor="" alCambiar={() => undefined} autoCapitalize="off" />,
+      <Campo
+        dato="pendiente"
+        etiqueta="Código"
+        valor=""
+        alCambiar={() => undefined}
+        autoCapitalize="off"
+      />,
     );
     const campo = page.getByLabelText("Código");
     await expect.element(campo).toHaveAttribute("autocapitalize", "off");
@@ -111,7 +123,7 @@ describe("Campo: códigos que distinguen mayúsculas", () => {
   });
 
   it("sin la opción no se toca el comportamiento del teclado", async () => {
-    await render(<Campo etiqueta="Nombre" valor="" alCambiar={() => undefined} />);
+    await render(<Campo dato="pendiente" etiqueta="Nombre" valor="" alCambiar={() => undefined} />);
     const campo = page.getByLabelText("Nombre");
     await expect.element(campo).not.toHaveAttribute("autocorrect");
     await expect.element(campo).not.toHaveAttribute("spellcheck");

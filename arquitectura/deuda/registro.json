@@ -572,5 +572,58 @@
     "tamano": 622,
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
+  },
+  {
+    "id": "campos-sin-dato--web",
+    "archivos": [
+      "apps/web/ui/patrones/SelectorDeSucursal.cliente.tsx",
+      "apps/web/ui/plantillas/configuracion-fiscal/FormularioDeDatosFiscales.cliente.tsx",
+      "apps/web/ui/plantillas/configuracion-fiscal/FormularioDePuntoDeVenta.cliente.tsx",
+      "apps/web/ui/plantillas/configuracion-fiscal/PasoCargarCertificado.cliente.tsx",
+      "apps/web/ui/plantillas/configuracion-fiscal/PasoDelPedido.cliente.tsx",
+      "apps/web/ui/plantillas/configuracion-fiscal/PasoGenerarPedido.cliente.tsx",
+      "apps/web/ui/plantillas/facturacion/EleccionDeSucursal.cliente.tsx",
+      "apps/web/ui/plantillas/facturacion/FormularioDeFiltros.cliente.tsx",
+      "apps/web/ui/plantillas/facturacion/PantallaDeAnularComprobante.cliente.tsx",
+      "apps/web/ui/plantillas/facturacion/PantallaDeImprimirComprobante.cliente.tsx",
+      "apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx",
+      "apps/web/ui/plantillas/vidriera/BuscarEnVidriera.tsx"
+    ],
+    "descripcion": "Campos de entrada de la web sin dato registrado: usos de componentes de campo con dato=\"pendiente\" y controles crudos (input, textarea, select) que todavía no pasan por el registro de datos (src/capacidades/datos/registro.ts). Se saldan por módulo ligando cada campo a su dato; un archivo que ya no tiene deuda se saca de la lista (el chequeo test/arquitectura/campos-con-dato.test.ts falla si no).",
+    "tipo": "backlog",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-11-05",
+    "verificacion": {
+      "contiene": "pendiente"
+    },
+    "motivo": "Introducir el registro de datos (regla 5, C1) sin reescribir de una vez todas las pantallas existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento.",
+    "aprobadoPor": "orquestador (decisión del dueño 2026-11-05)",
+    "vence": "2027-01-04"
+  },
+  {
+    "id": "campos-sin-dato--plataforma",
+    "archivos": [
+      "apps/plataforma/pantallas/alta-segundo-factor.cliente.tsx",
+      "apps/plataforma/pantallas/cambio-de-plan.cliente.tsx",
+      "apps/plataforma/pantallas/campo-de-color.cliente.tsx",
+      "apps/plataforma/pantallas/casilla-de-programada.cliente.tsx",
+      "apps/plataforma/pantallas/desplegables-de-aspecto.cliente.tsx",
+      "apps/plataforma/pantallas/editor-de-submarca.cliente.tsx",
+      "apps/plataforma/pantallas/filtros-de-empresas.cliente.tsx",
+      "apps/plataforma/pantallas/formulario-de-alta.cliente.tsx",
+      "apps/plataforma/pantallas/ventana-de-codigo.cliente.tsx",
+      "apps/plataforma/pantallas/ventana-de-confirmacion.cliente.tsx",
+      "apps/plataforma/pantallas/verificar-codigo.cliente.tsx"
+    ],
+    "descripcion": "Campos de entrada de la consola de plataforma sin dato registrado: usos de componentes de campo con dato=\"pendiente\" y controles crudos (input, textarea, select) que todavía no pasan por el registro de datos (src/capacidades/datos/registro.ts). Se saldan por módulo ligando cada campo a su dato; un archivo que ya no tiene deuda se saca de la lista (el chequeo test/arquitectura/campos-con-dato.test.ts falla si no).",
+    "tipo": "backlog",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-11-05",
+    "verificacion": {
+      "contiene": "pendiente"
+    },
+    "motivo": "Introducir el registro de datos (regla 5, C1) sin reescribir de una vez todas las pantallas existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento.",
+    "aprobadoPor": "orquestador (decisión del dueño 2026-11-05)",
+    "vence": "2027-01-04"
   }
 ]
