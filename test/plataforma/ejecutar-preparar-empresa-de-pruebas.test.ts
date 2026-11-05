@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  MARCA_NEUTRA,
   VARIABLES_OBLIGATORIAS,
   VARIABLE_DEL_PAQUETE,
   ejecutorDeCasos,
@@ -12,6 +13,13 @@ import {
   armarCasosDeLaLista,
   type CasosDeLaLista,
 } from "../../scripts/ejecutar-caso-desde-archivo";
+import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
+import {
+  contrastesDelTema,
+  validarLogo,
+  validarModulosIniciales,
+  validarTema,
+} from "../../src/modulos/marcas/publico";
 import { CASOS_DE_PLATAFORMA } from "../../src/plataforma/dominio/pedido-de-caso";
 import { adminPlataformaId } from "../../src/primitivas/identificadores/marca";
 import { err, ok } from "../../src/primitivas/resultado/resultado";
@@ -26,6 +34,8 @@ import { err, ok } from "../../src/primitivas/resultado/resultado";
 const ID_ADMIN = adminPlataformaId("aaaaaaaa-0000-4000-8000-000000000001");
 const PLAN = "11111111-1111-4111-8111-111111111111";
 const MARCA = "22222222-2222-4222-8222-222222222222";
+// Un minuto antes de que la marca empiece a regir (`vigenteDesde` del paquete): la corrida tiene que esperar.
+const AHORA_DE_LA_CORRIDA = new Date("2026-11-06T11:59:00-03:00");
 const DOMINIO = "44444444-4444-4444-8444-444444444444";
 const EMPRESA = "33333333-3333-4333-8333-333333333333";
 
@@ -129,6 +139,7 @@ function armar(
     admin?: number;
     soloValidar?: boolean;
     cola?: number | null;
+    ahora?: Date;
   } = {},
 ) {
   const salida: string[] = [];
@@ -141,6 +152,7 @@ function armar(
     );
     return Promise.resolve(opciones.admin ?? 0);
   });
+  const esperas: number[] = [];
   const despachos: Array<{ url: string; secreto: string }> = [];
   const despachar: EntradaDePreparacion["despacharCola"] = (url, secreto) => {
     despachos.push({ url, secreto });
@@ -167,6 +179,11 @@ function armar(
     error: (l) => errores.push(l),
     comando: (l) => comandos.push(l),
     despacharCola: despachar,
+    ahora: () => opciones.ahora ?? AHORA_DE_LA_CORRIDA,
+    esperar: (ms) => {
+      esperas.push(ms);
+      return Promise.resolve();
+    },
     ...(opciones.soloValidar === true ? { soloValidar: true } : {}),
   };
   return {
@@ -175,6 +192,7 @@ function armar(
     sembrar,
     comandos,
     despachos,
+    esperas,
     salida,
     errores,
     texto: () =>
@@ -472,5 +490,105 @@ describe("preparar la empresa de pruebas: secretos del dueño, validación previ
     ]) {
       expect(urlDelCron(malo)).toBeNull();
     }
+  });
+});
+
+describe("la marca neutra por defecto", () => {
+  it("el tema es válido y pasa el contraste contra la superficie por defecto (medido con la función de la confirmación)", () => {
+    expect(validarTema(MARCA_NEUTRA.tema).ok).toBe(true);
+    expect(Object.keys(MARCA_NEUTRA.tema).sort()).toEqual([
+      "accent",
+      "on-primary",
+      "primary",
+      "secondary",
+    ]);
+    for (const par of contrastesDelTema(MARCA_NEUTRA.tema, "NEUTRA")) {
+      expect(par.cumple, par.par).toBe(true);
+    }
+  });
+
+  it("el logo tiene la forma que exige la marca", () => {
+    expect(validarLogo(MARCA_NEUTRA.logo).ok).toBe(true);
+  });
+
+  it("los módulos iniciales son del catálogo, disponibles y no obligatorios", () => {
+    expect(validarModulosIniciales(CATALOGO_DE_MODULOS, MARCA_NEUTRA.modulosIniciales).ok).toBe(
+      true,
+    );
+  });
+
+  it("sin tema, logo ni módulos en el paquete, el borrador de la marca lleva los de la marca neutra", async () => {
+    const t = armar();
+    await prepararEmpresaDePruebas(t.entrada);
+    const borrador = t.llamadas.find((l) => l.caso === "guardarBorradorDeMarca")?.entrada;
+    expect(borrador).toMatchObject({
+      tema: MARCA_NEUTRA.tema,
+      logo: MARCA_NEUTRA.logo,
+      modulosIniciales: MARCA_NEUTRA.modulosIniciales,
+    });
+    expect(borrador).not.toHaveProperty("aspecto");
+  });
+
+  it("lo que el paquete manda se respeta (tema, logo y módulos iniciales)", async () => {
+    const tema = { ...MARCA_NEUTRA.tema, accent: "#000000" };
+    const t = armar({
+      paquete: {
+        ...PAQUETE,
+        marca: {
+          ...PAQUETE.marca,
+          tema,
+          logo: "/marcas/otra/logo-propio.png",
+          modulosIniciales: [],
+        },
+      },
+    });
+    expect(await prepararEmpresaDePruebas(t.entrada)).toBe(0);
+    expect(t.llamadas.find((l) => l.caso === "guardarBorradorDeMarca")?.entrada).toMatchObject({
+      tema,
+      logo: "/marcas/otra/logo-propio.png",
+      modulosIniciales: [],
+    });
+  });
+
+  it("un logo o unos módulos con mala forma en el paquete se rechazan nombrando el campo", () => {
+    const leido = leerPaquete(
+      JSON.stringify({
+        ...PAQUETE,
+        marca: { ...PAQUETE.marca, logo: 5, modulosIniciales: "facturacion" },
+      }),
+    );
+    expect(leido.ok).toBe(false);
+    if (!leido.ok) {
+      expect(leido.problemas).toContain("marca.logo: tiene que ser un texto");
+      expect(leido.problemas).toContain(
+        "marca.modulosIniciales: tiene que ser una lista de textos",
+      );
+    }
+  });
+});
+
+describe("preparar la empresa de pruebas: espera a que la marca rija", () => {
+  it("antes del alta espera hasta vigenteDesde (más un margen), una sola vez", async () => {
+    const t = armar();
+    expect(await prepararEmpresaDePruebas(t.entrada)).toBe(0);
+    expect(t.esperas).toEqual([62_000]);
+    // La espera es justo antes del alta: los pasos de la marca y del dominio ya corrieron.
+    expect(t.salida.findIndex((l) => l.includes("Esperando 62 s"))).toBeGreaterThan(
+      t.salida.findIndex((l) => l.includes("activarDominio")),
+    );
+  });
+
+  it("si la marca ya rige (repetir el flujo después), no espera", async () => {
+    const t = armar({ ahora: new Date("2026-11-06T13:00:00-03:00") });
+    expect(await prepararEmpresaDePruebas(t.entrada)).toBe(0);
+    expect(t.esperas).toEqual([]);
+  });
+
+  it("un vigenteDesde a más de 10 minutos se rechaza antes de empezar", async () => {
+    const t = armar({ ahora: new Date("2026-11-06T11:00:00-03:00") });
+    expect(await prepararEmpresaDePruebas(t.entrada)).toBe(2);
+    expect(t.errores.join("\n")).toContain("vigenteDesde");
+    expect(t.sembrar).not.toHaveBeenCalled();
+    expect(t.esperas).toEqual([]);
   });
 });

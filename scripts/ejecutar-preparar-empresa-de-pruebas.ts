@@ -39,6 +39,24 @@ export const VARIABLE_DEL_PAQUETE = "PEDERNAL_PREPARAR_PREVIEW";
 /** El módulo que se activa en la empresa de pruebas. */
 export const MODULO_A_ACTIVAR = "facturacion";
 
+/**
+ * La marca NEUTRA de las pruebas (decisión del dueño, 2026-11-05: «neutra, sin logo propio»), definida en UN solo lugar: lo
+ * que el paquete no manda se completa con esto, porque confirmar una versión de marca exige tema (4 colores), logo y módulos
+ * iniciales. Los colores son blanco/negro/grises que pasan el contraste de `contrastesDelTema` contra la superficie NEUTRA
+ * (la del aspecto por defecto); el logo es un PNG liso de 1×1 que viaja con el despliegue (`apps/web/public/marcas/neutra/`).
+ * Reversible: una versión nueva de la marca lo cambia. Una prueba recorre el flujo real con estos valores.
+ */
+export const MARCA_NEUTRA = {
+  tema: {
+    primary: "#262626",
+    "on-primary": "#ffffff",
+    secondary: "#737373",
+    accent: "#595959",
+  },
+  logo: "/marcas/neutra/logo-neutro.png",
+  modulosIniciales: [MODULO_A_ACTIVAR],
+} as const;
+
 /** El texto que queda en la auditoría de plataforma como motivo de los pasos que lo piden. */
 const MOTIVO = "Preparación del entorno de pruebas (preview)";
 
@@ -78,6 +96,8 @@ export type Paquete = Readonly<{
     nombreVisible: string;
     tema?: Objeto;
     aspecto?: Objeto;
+    logo?: string;
+    modulosIniciales?: readonly string[];
   }>;
   plan: Readonly<{
     codigo: string;
@@ -107,6 +127,8 @@ function leerSeccion(
   textos: readonly string[],
   opcionalesObjeto: readonly string[],
   problemas: string[],
+  opcionalesTexto: readonly string[] = [],
+  opcionalesLista: readonly string[] = [],
 ): Record<string, unknown> {
   if (!esObjeto(valor)) {
     problemas.push(`${ruta}: tiene que ser un objeto`);
@@ -126,8 +148,25 @@ function leerSeccion(
     if (esObjeto(valor[campo])) salida[campo] = valor[campo];
     else problemas.push(`${ruta}.${campo}: tiene que ser un objeto`);
   }
+  for (const campo of opcionalesTexto) {
+    if (!Object.hasOwn(valor, campo)) continue;
+    const dato = valor[campo];
+    if (typeof dato === "string" && dato.trim() !== "") salida[campo] = dato.trim();
+    else problemas.push(`${ruta}.${campo}: tiene que ser un texto`);
+  }
+  for (const campo of opcionalesLista) {
+    if (!Object.hasOwn(valor, campo)) continue;
+    const dato = valor[campo];
+    if (Array.isArray(dato) && dato.every((d) => typeof d === "string")) salida[campo] = dato;
+    else problemas.push(`${ruta}.${campo}: tiene que ser una lista de textos`);
+  }
   for (const campo of Object.keys(valor)) {
-    if (!textos.includes(campo) && !opcionalesObjeto.includes(campo)) {
+    if (
+      !textos.includes(campo) &&
+      !opcionalesObjeto.includes(campo) &&
+      !opcionalesTexto.includes(campo) &&
+      !opcionalesLista.includes(campo)
+    ) {
       problemas.push(`${ruta}.${campo}: no se esperaba este campo`);
     }
   }
@@ -173,6 +212,8 @@ export function leerPaquete(
     ["codigo", "nombreVisible"],
     ["tema", "aspecto"],
     problemas,
+    ["logo"],
+    ["modulosIniciales"],
   );
   // Del plan se leen acá los dos textos; la lista de módulos y las perillas, más abajo (los que sobran también).
   const planCrudo = esObjeto(json["plan"]) ? json["plan"] : null;
@@ -325,7 +366,10 @@ function pasosDe(p: Paquete): readonly Paso[] {
         versionEsperada: null,
         nombreVisible: p.marca.nombreVisible,
         planPorDefectoId: c.planId,
-        ...(p.marca.tema === undefined ? {} : { tema: p.marca.tema }),
+        // Lo que el paquete no manda, la marca NEUTRA (`MARCA_NEUTRA`); lo que manda se respeta y lo valida el caso.
+        tema: p.marca.tema ?? MARCA_NEUTRA.tema,
+        logo: p.marca.logo ?? MARCA_NEUTRA.logo,
+        modulosIniciales: p.marca.modulosIniciales ?? MARCA_NEUTRA.modulosIniciales,
         ...(p.marca.aspecto === undefined ? {} : { aspecto: p.marca.aspecto }),
       }),
       leer: (d, c) => {
@@ -475,7 +519,19 @@ export type EntradaDePreparacion = Readonly<{
    * mail de la invitación. Devuelve el código HTTP, o `null` si no hubo respuesta. Nunca lanza.
    */
   despacharCola: (url: string, secreto: string) => Promise<number | null>;
+  /** Para las pruebas: el reloj (por defecto, el del sistema). */
+  ahora?: () => Date;
+  /** Para las pruebas: la espera (por defecto, un temporizador real). */
+  esperar?: (milisegundos: number) => Promise<void>;
 }>;
+
+/**
+ * Lo máximo que el flujo espera a que la marca empiece a regir. El alta de una empresa exige una versión de marca ya VIGENTE y la
+ * confirmación no admite una fecha pasada: `vigenteDesde` es un instante futuro cercano, y antes del alta se espera a que llegue.
+ */
+export const ESPERA_MAXIMA_DE_VIGENCIA_EN_MS = 10 * 60_000;
+/** Un margen sobre `vigenteDesde`: el reloj del servidor de la base y el del runner no coinciden al segundo. */
+const MARGEN_DE_VIGENCIA_EN_MS = 2_000;
 
 /** La dirección del cron de la app, solo si el host es un nombre de host de verdad (nada de rutas, puertos ni usuarios). */
 export function urlDelCron(host: string): string | null {
@@ -581,6 +637,15 @@ export async function prepararEmpresaDePruebas(entrada: EntradaDePreparacion): P
       }
     }
   }
+  const vigencia = new Date(paquete.vigenteDesde).getTime();
+  if (
+    !Number.isNaN(vigencia) &&
+    vigencia - (entrada.ahora ?? (() => new Date()))().getTime() > ESPERA_MAXIMA_DE_VIGENCIA_EN_MS
+  ) {
+    problemasDeForma.push(
+      "vigenteDesde: está a más de 10 minutos del momento de la corrida; el flujo espera a que rija antes del alta. Poné un instante de 5 a 8 minutos desde ahora",
+    );
+  }
   if (problemasDeForma.length > 0) {
     error("ERROR: los datos no sirven para estos pasos (no se repite ningún valor):");
     for (const problema of problemasDeForma) error(`  - ${problema}`);
@@ -600,10 +665,24 @@ export async function prepararEmpresaDePruebas(entrada: EntradaDePreparacion): P
     return 1;
   }
 
+  const ahora = entrada.ahora ?? (() => new Date());
+  const esperar =
+    entrada.esperar ?? ((ms: number) => new Promise<void>((listo) => setTimeout(listo, ms)));
   const contexto: Contexto = { ...relleno };
   let numero = 1;
   for (const paso of pasos) {
     numero += 1;
+    if (paso.caso === "altaDeEmpresa") {
+      // El alta exige la marca VIGENTE: se espera a que llegue `vigenteDesde` (ya validado: no está más lejos que el tope).
+      const falta =
+        new Date(paquete.vigenteDesde).getTime() + MARGEN_DE_VIGENCIA_EN_MS - ahora().getTime();
+      if (falta > 0) {
+        info(
+          `Esperando ${Math.ceil(falta / 1000)} s a que la marca empiece a regir (vigenteDesde).`,
+        );
+        await esperar(falta);
+      }
+    }
     info(`Paso ${numero} de ${total}: ${paso.caso}.`);
     const { codigo, datos } = await entrada.ejecutarCaso(
       paso.caso,

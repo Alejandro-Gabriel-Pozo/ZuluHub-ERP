@@ -25,6 +25,8 @@ type Estado = {
 
 function falso(estado: Estado) {
   const consultas: string[] = [];
+  const textosDeFormato: string[] = [];
+  const parametros: unknown[][] = [];
   let terminado = false;
   let conectado = false;
   const cliente: ClienteDeBase = {
@@ -37,6 +39,10 @@ function falso(estado: Estado) {
       return Promise.resolve();
     },
     query: (texto, valores) => {
+      if (texto.startsWith("SELECT format")) {
+        textosDeFormato.push(texto);
+        parametros.push(valores ?? []);
+      }
       consultas.push(texto.startsWith("SELECT format") ? `format:${String(valores?.[0])}` : texto);
       if (texto.startsWith("SELECT rolcanlogin")) {
         return Promise.resolve({ rows: estado.existe ? [{ puede: estado.puede }] : [] });
@@ -64,6 +70,8 @@ function falso(estado: Estado) {
   return {
     cliente,
     consultas,
+    textosDeFormato,
+    parametros,
     estado: () => ({ terminado, conectado }),
   };
 }
@@ -90,6 +98,13 @@ describe("abrirLoginDePlataforma", () => {
       "COMMIT",
     ]);
     expect(f.estado().terminado).toBe(true);
+  });
+
+  it("el login vence solo a los 30 minutos (VALID UNTIL), por si el runner muere antes del cierre", async () => {
+    const f = falso({ existe: true, puede: false });
+    await abrirLoginDePlataforma(DUENO, opciones(f));
+    expect(f.textosDeFormato[0]).toContain("VALID UNTIL");
+    expect(f.parametros[0]).toEqual(["pedernal_plataforma", CLAVE, 30]);
   });
 
   it("si el rol YA tiene login no lo toca y falla (el cierre lo deja cerrado)", async () => {
@@ -127,6 +142,12 @@ describe("cerrarLoginDePlataforma", () => {
     expect(await cerrarLoginDePlataforma(DUENO, opciones(f))).toEqual({ claveVerificada: true });
     expect(f.consultas).toContain("CERRAR pedernal_plataforma");
     expect(f.estado().terminado).toBe(true);
+  });
+
+  it("el cierre limpia el vencimiento (VALID UNTIL 'infinity')", async () => {
+    const f = falso({ existe: true, puede: true });
+    await cerrarLoginDePlataforma(DUENO, opciones(f));
+    expect(f.textosDeFormato.at(-1)).toContain("NOLOGIN PASSWORD NULL VALID UNTIL");
   });
 
   it("es idempotente: cerrar lo cerrado también termina bien", async () => {

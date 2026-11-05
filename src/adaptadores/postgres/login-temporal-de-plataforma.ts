@@ -14,6 +14,12 @@ import { cadenaDeRol, claveAlAzar } from "./roles-de-la-aplicacion";
 
 export const ROL_DE_PLATAFORMA = "pedernal_plataforma";
 
+/**
+ * El login vence solo a los 30 minutos (`VALID UNTIL`): si el runner muere antes del cierre, pasado ese plazo la clave deja de
+ * servir aunque el rol siga marcado con login. El cierre lo limpia (`VALID UNTIL 'infinity'`, sin clave, `NOLOGIN`).
+ */
+export const VIGENCIA_DEL_LOGIN_EN_MINUTOS = 30;
+
 /** Lo mínimo del cliente de `pg` que se usa: se inyecta en las pruebas. */
 export type ClienteDeBase = Readonly<{
   connect: () => Promise<unknown>;
@@ -76,8 +82,8 @@ export async function abrirLoginDePlataforma(
       );
     }
     const { rows } = await cliente.query(
-      "SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L', $1::text, $2::text) AS sentencia",
-      [rol, clave],
+      "SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L VALID UNTIL %L', $1::text, $2::text, (now() + make_interval(mins => $3::int))::text) AS sentencia",
+      [rol, clave, VIGENCIA_DEL_LOGIN_EN_MINUTOS],
     );
     const sentencia = rows[0]?.["sentencia"];
     if (typeof sentencia !== "string") {
@@ -118,7 +124,7 @@ export async function cerrarLoginDePlataforma(
     // El rol tiene que existir (si no, no hay nada que cerrar y algo anda mal).
     await estaAbierto(cliente, rol);
     const { rows } = await cliente.query(
-      "SELECT format('ALTER ROLE %I WITH NOLOGIN PASSWORD NULL', $1::text) AS sentencia",
+      "SELECT format('ALTER ROLE %I WITH NOLOGIN PASSWORD NULL VALID UNTIL %L', $1::text, 'infinity') AS sentencia",
       [rol],
     );
     const sentencia = rows[0]?.["sentencia"];

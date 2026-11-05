@@ -8,6 +8,8 @@ name: Preparar la empresa de pruebas (preview)
 #    publicar), marca (crear, borrador, confirmar), dominio (agregar, verificar, activar), alta de la empresa con la
 #    invitación a su primer gerente y el módulo `facturacion`. Cada paso lleva una clave de idempotencia fija: repetir el
 #    flujo con los MISMOS datos no duplica nada; con datos distintos el paso rechaza y no cambia nada.
+#  - Antes del alta espera (hasta 10 minutos) a que la marca empiece a regir: el alta exige la marca VIGENTE y la confirmación no
+#    admite fecha pasada, así que `vigenteDesde` es un instante futuro cercano.
 #  - Al final, y solo si todo salió bien, pega UNA vez a `https://<host del dominio>/api/trabajos/cron` con el `CRON_SECRET`
 #    para que se procese la cola y salga el mail de la invitación (en Preview no corre el cron de Vercel). Si eso falla, lo
 #    avisa sin fallar lo ya sembrado.
@@ -19,7 +21,7 @@ name: Preparar la empresa de pruebas (preview)
 #  - LOGIN TEMPORAL del rol `pedernal_plataforma` (decisión del dueño, 2026-11-05): ese rol no tiene login y `--preparar-roles`
 #    no lo toca. El paso «Abrir» le da login con una clave al azar que vive solo en el runner (enmascarada) y le instala a
 #    la base una clave de contexto PROPIA de la corrida (kid al azar de 5 dígitos, secreto al azar, solo en memoria: queda
-#    VIGENTE en `contexto_clave` pero nadie la conoce). El paso «Cerrar» corre SIEMPRE (`if: always()`, también si un paso
+#    VIGENTE en `contexto_clave` pero nadie la conoce). El login vence solo a los 30 minutos (`VALID UNTIL`) por si el runner muere. El paso «Cerrar» corre SIEMPRE (`if: always()`, también si un paso
 #    intermedio falla o se cancela), deja el rol `NOLOGIN` y sin clave, VERIFICA el estado final y falla fuerte si no quedó cerrado.
 #    Solo existe para `preview`; no toca `--preparar-roles`.
 #  - NO aplica migraciones: se corta si hay pendientes (eso es de `migrar.yml`).
@@ -78,7 +80,8 @@ jobs:
     name: Preparar la empresa de pruebas
     needs: validar
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Hasta 10 minutos de espera a que la marca empiece a regir (vigenteDesde) más los pasos.
+    timeout-minutes: 25
     # Los revisores obligatorios (el dueño) aprueban ANTES de que arranque cualquier paso de este job.
     environment: preview
     permissions:

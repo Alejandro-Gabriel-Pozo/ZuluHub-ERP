@@ -70,6 +70,31 @@ describe.skipIf(base === null)("login temporal del rol de plataforma (base real)
     expect(typeof cierre.claveVerificada).toBe("boolean");
   });
 
+  it("el login vence solo (~30 minutos); vencido, la clave ya no sirve aunque el cierre no haya corrido; el cierre sigue siendo idempotente", async () => {
+    const abierto = await abrirLoginDePlataforma(dueno, { rol: ROL });
+    const { rows } = await admin.query<{ minutos: number }>(
+      "SELECT extract(epoch FROM (rolvaliduntil - now())) / 60 AS minutos FROM pg_roles WHERE rolname = $1",
+      [ROL],
+    );
+    expect(Number(rows[0]?.minutos)).toBeGreaterThan(28);
+    expect(Number(rows[0]?.minutos)).toBeLessThanOrEqual(30);
+    expect(await entra(abierto.cadena)).toBe(true);
+
+    // El runner «murió»: pasa el plazo y nadie cerró. El rol sigue marcado con login, pero la clave venció.
+    await admin.query(`ALTER ROLE ${ROL} VALID UNTIL '2000-01-01'`);
+    expect(await puede()).toBe(true);
+    expect(await entra(abierto.cadena)).toBe(false);
+
+    await cerrarLoginDePlataforma(dueno, { rol: ROL });
+    await cerrarLoginDePlataforma(dueno, { rol: ROL });
+    expect(await puede()).toBe(false);
+    const cerrado = await admin.query<{ vence: string | null }>(
+      "SELECT rolvaliduntil::text AS vence FROM pg_roles WHERE rolname = $1",
+      [ROL],
+    );
+    expect(cerrado.rows[0]?.vence).toBe("infinity");
+  });
+
   it("si la corrida falla a mitad de camino, el cierre igual lo deja cerrado (y se puede repetir)", async () => {
     await abrirLoginDePlataforma(dueno, { rol: ROL });
     // …aquí un paso intermedio habría fallado: el paso de cierre corre igual.
