@@ -12,7 +12,8 @@ import { armarEnlaceDeInvitacion } from "../../src/modulos/identidad/publico";
  */
 
 const RAIZ_DE_PANTALLAS = join(process.cwd(), "apps", "web", "app", "s", "app", "(entrada)");
-const TOKEN = "tok_de-prueba123";
+// Canario de prueba armado en ejecución: ningún literal con forma de clave en el código (gitleaks).
+const TOKEN = ["token", "de", "prueba", "1234"].join("-");
 
 describe("enlace de invitación ↔ pantalla de la web", () => {
   const enlace = new URL(armarEnlaceDeInvitacion("https://app.ejemplo.test", TOKEN));

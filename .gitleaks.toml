@@ -82,3 +82,20 @@ regexes = [
   '''^cron-centinela-0123456789abcdef$''',
   '''^corto-pero-variado-123$''',
 ]
+
+# Enlace de invitación (#182): el canario del token de la prueba de contrato `enlace-de-invitacion` ("tok_de-prueba123", inventado,
+# no es un secreto) que el commit 1b5991f escribió de corrido. Ahora se arma en tiempo de ejecución, pero el escaneo del historial
+# completo sigue viendo ese commit y, sin esta excepción, daría un falso positivo para siempre. Falla que previene: un escaneo
+# del historial rojo permanente por un valor que no es secreto. Angosta: el commit exacto, el archivo exacto, la regla
+# `generic-api-key` y solo este valor.
+[[allowlists]]
+description = "Canario del token de la prueba de contrato del enlace de invitación (commit 1b5991f)"
+condition = "AND"
+targetRules = ["generic-api-key"]
+commits = ["1b5991f08b9286bc11f9aed4345577cc4dac02d2"]
+paths = [
+  '''^test/arquitectura/enlace-de-invitacion\.test\.ts$''',
+]
+regexes = [
+  '''^tok_de-prueba123$''',
+]
