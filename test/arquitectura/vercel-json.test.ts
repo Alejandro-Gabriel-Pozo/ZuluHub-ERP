@@ -18,8 +18,14 @@ import { describe, expect, it } from "vitest";
  *    si coincide con varias reglas, se despliega si AL MENOS UNA es `true`. Por eso lo no declarado se apaga
  *    con la regla `"**": false` y `preview` la supera con su regla exacta `true`.
  *  - El archivo no vuelve a la raíz del repositorio (Vercel lo ignoraría y quedaría una segunda fuente).
- *  - Lo que el archivo declara es exactamente lo justificado en PRIMER-DESPLIEGUE.md: ni un campo más
- *    (por ejemplo, un `installCommand` inventado sin haberlo probado en Vercel).
+ *  - Lo que el archivo declara es exactamente lo justificado en PRIMER-DESPLIEGUE.md: ni un campo más.
+ *  - `installCommand` (hecho real del primer despliegue, 2026-11-05): con Root Directory `apps/web` Vercel instaló
+ *    SOLO las dependencias del workspace («added 33 packages») y `next build` falló con «Module not found»
+ *    (asn1js, better-auth, kysely, pg, pkijs, zod, qrcode-generator, fast-xml-parser viven en la raíz). El dueño
+ *    lo arregló a mano en el panel y compiló; acá queda en el repositorio para que no dependa de un campo
+ *    escondido. Fuente: https://vercel.com/docs/project-configuration/vercel-json — `installCommand` «overrides
+ *    the Install Command in Project Settings». `--ignore-scripts`: ninguna dependencia necesaria para compilar
+ *    tiene script de instalación (en el lockfile solo `fsevents`, opcional de desarrollo para macOS).
  */
 
 /** Ramas con el despliegue automático aprobado por el dueño (2026-11-05): solo `preview`. Nombres exactos, sin globs. */
@@ -35,6 +41,9 @@ function seDespliega(rama: string, reglas: Record<string, boolean>): boolean {
   );
   return coinciden.length === 0 || coinciden.some(([, valor]) => valor);
 }
+
+/** Instala desde la raíz del repositorio (workspaces) y sin scripts de instalación de terceros. */
+const COMANDO_DE_INSTALACION = "cd ../.. && npm ci --ignore-scripts";
 
 const RAIZ = join(import.meta.dirname, "../..");
 const ARCHIVO = join(RAIZ, "apps/web/vercel.json");
@@ -72,8 +81,18 @@ describe("apps/web/vercel.json", () => {
     expect(existsSync(ARCHIVO)).toBe(true);
   });
 
-  it("declara solo esquema, región, git y crons: nada de comandos de instalación o de compilación", () => {
-    expect(Object.keys(configuracion).sort()).toEqual(["$schema", "crons", "git", "regions"]);
+  it("instala desde la raíz del repositorio: sin esto Vercel solo instala el workspace y la compilación falla", () => {
+    expect(configuracion["installCommand"]).toBe(COMANDO_DE_INSTALACION);
+  });
+
+  it("declara solo esquema, instalación, región, git y crons: ningún comando de compilación", () => {
+    expect(Object.keys(configuracion).sort()).toEqual([
+      "$schema",
+      "crons",
+      "git",
+      "installCommand",
+      "regions",
+    ]);
     expect(configuracion["$schema"]).toBe("https://openapi.vercel.sh/vercel.json");
   });
 

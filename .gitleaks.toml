@@ -64,3 +64,21 @@ regexes = [
   '''^\s*0123456789abcdef0123456789abcdef-plat\s*$''',
   '''^choque-vecinos-2882103$''',
 ]
+
+# Preparar la empresa de pruebas (#172): dos canarios de prueba del secreto del cron ("cron-centinela-…" y un valor corto
+# para probar que se rechaza) que el commit 74972b6 escribió de corrido. Ya se arman en tiempo de ejecución, pero el escaneo
+# del historial completo sigue viendo ese commit y, sin esta excepción, daría un falso positivo para siempre. Falla que
+# previene: un escaneo del historial rojo permanente por valores que no son secretos. Angosta: el commit exacto, el archivo
+# exacto, la regla `generic-api-key` y solo estos dos valores.
+[[allowlists]]
+description = "Canarios del secreto del cron de la prueba de preparar la empresa de pruebas (commit 74972b6)"
+condition = "AND"
+targetRules = ["generic-api-key"]
+commits = ["74972b6dcc9320a3f9a387d65c80d222ca195ede"]
+paths = [
+  '''^test/plataforma/ejecutar-preparar-empresa-de-pruebas\.test\.ts$''',
+]
+regexes = [
+  '''^cron-centinela-0123456789abcdef$''',
+  '''^corto-pero-variado-123$''',
+]

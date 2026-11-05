@@ -261,8 +261,10 @@ Proyecto `pedernal-erp` (equipo `alepozod`):
 2. **Node.js Version = 24** (Settings → Build and Deployment).
 3. **Región de funciones = `gru1`** (también la declara `vercel.json`).
 4. **Deployment Protection**: «Vercel Authentication» (Standard) para los previews.
-5. No se cambia el comando de instalación ni el de compilación: queda el predeterminado. Si en el primer despliegue Vercel no
-   instala o no compila el workspace, ver el plan B (sección D). **NO VERIFICADO.**
+5. El comando de instalación lo fija `apps/web/vercel.json` (`cd ../.. && npm ci --ignore-scripts`, desde la raíz del
+   repositorio): con Root Directory `apps/web` Vercel instalaba solo el workspace y la compilación fallaba con «Module not
+   found» (primer despliegue, 2026-11-05). **No lo cargues a mano en el panel** (Install Command): el archivo lo pisa y el
+   panel puede quedar en el predeterminado. El de compilación queda el predeterminado. Si esto dejara de funcionar, ver el plan B (sección D).
 6. Las variables de B.5 cargadas. **Ninguna** de la lista «no debe existir».
 
 ### B.7 Dominios y DNS
@@ -332,7 +334,7 @@ mostrarlo** (por ejemplo `read -rs CRON_SECRET; export CRON_SECRET`) y no lo cop
 | 10  | **Cron autorizado**                                                                            | `curl -si -H "Authorization: Bearer $CRON_SECRET" <URL>/api/trabajos/cron`                                                                                                                                                                                                                                  | **200** con cuentas (`despacho`, `barrido`). **NO VERIFICADO**: que _Vercel_ mande el secreto así cuando corre solo. Mirá el registro del primer cron (Vercel → Logs → Cron) y confirmá un 200, no un 401                                                                                                                                                                                                                                                                   |
 | 11  | **Mantenimiento**                                                                              | Con la base sin la migración requerida (por ejemplo, el despliegue antes de aplicar una migración nueva): abrí `/`                                                                                                                                                                                          | «En mantenimiento» (503) con una referencia `PD-XXXX-XXXX`; la referencia aparece en el registro del servidor. Apenas migrás, vuelve sola                                                                                                                                                                                                                                                                                                                                   |
 | 12  | **La salud y el cron siguen en mantenimiento**                                                 | Con la base atrasada: `/api/salud` y el cron                                                                                                                                                                                                                                                                | Responden igual que siempre (no quedan atrás del mantenimiento)                                                                                                                                                                                                                                                                                                                                                                                                             |
-| 13  | **Ningún otro `/api/**` se abrió**                                                             | `curl -si -H 'Host: otro.com' <URL>/api/otra` y `<URL>/api/trabajos/cron/x`                                                                                                                                                                                                                                 | 404 neutro                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 13  | **Ningún otro `/api/**` se abrió\*\*                                                           | `curl -si -H 'Host: otro.com' <URL>/api/otra` y `<URL>/api/trabajos/cron/x`                                                                                                                                                                                                                                 | 404 neutro                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 14  | **La IP de confianza llega y no se deja falsificar** (`x-vercel-forwarded-for`, NO VERIFICADO) | Pedí el inicio de sesión de dos maneras y mirá el registro de la función (Vercel → Logs): (a) normal, `curl -si -X POST -H 'content-type: application/json' -d '{"provider":"google","callbackURL":"/"}' <URL>/api/auth/sign-in/social`; (b) igual pero con `-H 'x-vercel-forwarded-for: 1.1.1.1, 2.2.2.2'` | En (a) y en (b) **no** aparece el aviso «falling back to a single shared per-path bucket». Si aparece en (a), el encabezado no llega; si aparece en (b), Vercel **no** lo pisa y un cliente lo falsifica. En cualquiera de los dos casos NO se enciende: se pasa a `x-real-ip` o `x-forwarded-for` (Vercel documenta que los pisa) cambiando `ENCABEZADO_DE_IP`. Nunca se registra ni se copia el valor de la IP; solo se anota si el encabezado llegó y con un único valor |
 | 15  | **Ingreso con Google sin JavaScript** (`form-action 'self'`, NO VERIFICADO)                    | En Chrome con JavaScript desactivado (Configuración → Privacidad y seguridad → Configuración de sitios → JavaScript → No permitir), tocá «Ingresar con Google» en el despliegue de prueba                                                                                                                   | Te lleva a `accounts.google.com`. Si Chrome lo bloquea por la política `form-action 'self'` (consola: «Refused to send form data»), se anota y se ajusta la política en un cambio aparte; con JavaScript el ingreso anda igual                                                                                                                                                                                                                                              |
 
@@ -340,7 +342,8 @@ mostrarlo** (por ejemplo `read -rs CRON_SECRET; export CRON_SECRET`) y no lo cop
 
 ## D. Plan B si Vercel no entiende el workspace
 
-Si el chequeo 1 falla porque Vercel no instala desde la raíz o no resuelve `src/` fuera de `apps/web` (plan B del plan,
+El chequeo 1 se resuelve con `installCommand` desde la raíz (B.6 punto 5). Este plan B queda solo como alternativa si eso dejara de
+funcionar: si el chequeo 1 falla porque Vercel no instala desde la raíz o no resuelve `src/` fuera de `apps/web` (plan B del plan,
 §5.1): sin Root Directory propio. En Vercel, Root Directory = `.` (la raíz); `vercel.json` vuelve a la raíz **y** el comando de
 compilación pasa a `next build apps/web` (con `installCommand` el predeterminado). Es un cambio chico de `vercel.json` y de la
 prueba `vercel-json.test.ts` (que hoy exige el archivo en `apps/web`). **NO se hizo por adelantado** porque no se pudo probar
@@ -362,6 +365,44 @@ Orden, cuando todo lo anterior ande:
 
 Esos scripts se corren en **tu computadora**, no en un workflow de GitHub: los datos del cliente (CUIT, razón social, email)
 no tienen que quedar en el registro de una ejecución.
+
+_Excepción para la empresa de PRUEBAS en Preview (2026-11-05, pedido del dueño que no usa terminal)_: el workflow manual
+`preparar-empresa-de-pruebas.yml` corre estos pasos sin que los datos pasen por el formulario: salen de un secreto del Environment
+`preview` (`PEDERNAL_PREPARAR_PREVIEW`) y se tapan en el registro. Le da login al rol de plataforma solo durante la corrida y lo cierra siempre. Está en borrador: ver su PR.
+
+**Secretos del Environment `preview`** para ese workflow: `PEDERNAL_DB_DUENO_DIRECTA`, `PEDERNAL_SECRETO_INVITACIONES` (hexadecimal, 64 o más dígitos) y
+`CRON_SECRET` (24 o más caracteres) —los dos últimos con el MISMO valor que en Vercel Preview, fijados por el dueño, y después un Redeploy de
+preview— y `PEDERNAL_PREPARAR_PREVIEW`, un JSON en UNA línea. Plantilla con valores FICTICIOS (`adminEmail` y `emailGerente` tienen que ser
+DISTINTOS: el administrador de plataforma no puede ser miembro de ninguna empresa; `vigenteDesde` es un instante FUTURO de 5 a 8 minutos desde la
+corrida —la confirmación de la marca no admite una fecha pasada y el alta exige la marca ya vigente, así que el flujo espera a que llegue— y
+`verificadoEn`, uno pasado; si el Environment tarda en aprobarse y `vigenteDesde` queda en el pasado, el flujo cierra bien el login y rechaza: se edita el JSON y se repite):
+
+```json
+{
+  "adminEmail": "admin.ficticio@ejemplo.test",
+  "vigenteDesde": "2026-11-06T12:00:00-03:00",
+  "marca": { "codigo": "marca-ficticia", "nombreVisible": "Marca Ficticia" },
+  "plan": {
+    "codigo": "plan-ficticio",
+    "nombreComercial": "Plan Ficticio",
+    "modulos": ["administracion", "facturacion"],
+    "perillas": { "empresas_por_tenant": { "tipo": "LIMITE", "limite": 1 } }
+  },
+  "dominio": {
+    "host": "app-prueba.pedernal.com.ar",
+    "titular": "OPERADOR",
+    "verificadoEn": "2026-11-05T09:00:00-03:00"
+  },
+  "empresa": {
+    "nombreDeTenant": "Cliente Ficticio",
+    "cuit": "20123456786",
+    "razonSocial": "Empresa Ficticia SRL",
+    "zonaHoraria": "America/Argentina/Buenos_Aires",
+    "moneda": "ARS",
+    "emailGerente": "gerente.ficticio@ejemplo.test"
+  }
+}
+```
 
 **Estado hoy (honesto, 2026-10-22; el último párrafo se actualizó el 2026-11-04):** los scripts del paso 2 y 3 **existen** y se corren con
 `npm run plataforma:primer-admin` y `npm run plataforma:caso` (con `node --import ./scripts/cargador-de-ts.mjs`; no hace
@@ -386,7 +427,8 @@ ARCA ni contra una base real: **NO VERIFICADO** hasta la prueba de homologación
 
 ## G. Lo que no se pudo verificar sin Vercel
 
-1. Que Vercel instale y compile el workspace con Root Directory `apps/web` (chequeo 1; plan B en la sección D).
+1. Que Vercel instale y compile el workspace con Root Directory `apps/web` (chequeo 1): la rama `preview` compiló el 2026-11-05 con el
+   `installCommand` cargado a mano en el panel; falta confirmar el mismo resultado leyéndolo desde `vercel.json` (plan B en la sección D).
 2. Que el despliegue de prueba de B.9 se pueda crear con la CLI sin depender del automático (que solo cubre la rama `preview`).
 3. La versión de Node por defecto, y que `regions` en `vercel.json` valga en el plan Hobby (chequeo 2).
 4. Que Vercel mande `Authorization: Bearer <CRON_SECRET>` a la ruta del cron (chequeo 10) y que Hobby acepte el cron diario.
