@@ -22,7 +22,7 @@ ahí no publica nada. Encender producción es otra decisión del dueño y el ÚL
 
 | Pieza                                               | Dónde                                                                   | Qué hace                                                                                                                                                                                                                                                                          |
 | --------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Configuración de Vercel                             | `apps/web/vercel.json`                                                  | Región `gru1`, despliegue automático apagado, un cron diario. Vercel la lee desde la carpeta raíz del proyecto (`apps/web`).                                                                                                                                                      |
+| Configuración de Vercel                             | `apps/web/vercel.json`                                                  | Región `gru1`, despliegue automático encendido solo para la rama `preview` (`main` y el resto apagadas), un cron diario. Vercel la lee desde la carpeta raíz del proyecto (`apps/web`).                                                                                           |
 | Cron de trabajos                                    | `app/api/trabajos/cron`                                                 | Una vez por día (06:17 UTC): encola la reconciliación fiscal, despacha la cola (mails, reintentos) y barre las sesiones. Solo responde con `CRON_SECRET`; sin él, 401 sin cuerpo.                                                                                                 |
 | Despacho inmediato                                  | `servidor/despacho-inmediato.ts`                                        | `despacharDespuesDeConfirmar(ids)` y `despacharPorClavesDespuesDeConfirmar` (con `after()` de Next): las acciones que encolan los usan para que salga en segundos; el cron es el respaldo. Hoy solo lo llama emitir un comprobante.                                               |
 | Salud                                               | `app/api/salud`                                                         | `{"ok":true}` (200) o `{"ok":false}` (503), sin ningún detalle. Hace un `SELECT 1` con el rol limitado de la aplicación.                                                                                                                                                          |
@@ -256,7 +256,7 @@ las avisa por nombre. El comando de B.4 (y la casilla de roles) borra de Vercel 
 Proyecto `pedernal-erp` (equipo `alepozod`):
 
 1. **Root Directory = `apps/web`** (el dueño lo confirma **antes** del merge a `main`: es lo que hace que Vercel lea
-   `apps/web/vercel.json` y que el despliegue apagado de verdad no publique nada) y activado «Include source files outside of the Root Directory in the Build Step»
+   `apps/web/vercel.json` y que `main` y las demás ramas, apagadas de verdad, no publiquen nada) y activado «Include source files outside of the Root Directory in the Build Step»
    (la función necesita `src/` y `migraciones/`, que viven afuera). Vercel lee `apps/web/vercel.json` desde ahí.
 2. **Node.js Version = 24** (Settings → Build and Deployment).
 3. **Región de funciones = `gru1`** (también la declara `vercel.json`).
@@ -301,6 +301,17 @@ otra cosa, el chequeo 1 de la sección C lo dirá. Después, la sección C.
 > la vez `"main"` a la constante `RAMAS_CON_DESPLIEGUE_APROBADO_POR_EL_DUENO` en `test/arquitectura/vercel-json.test.ts` (si no,
 > el CI no deja pasar el cambio). Ese cambio es **tuyo** de aprobar: sin tu visto bueno explícito, no se hace. Después, el primer push a `main`
 > publica en producción.
+
+### B.11 Verificación después de mergear el cambio que enciende solo `preview`
+
+1. Tras el merge a `main`, entrá a Vercel → proyecto `pedernal-erp` → Deployments y comprobá que **NO aparezca un despliegue
+   nuevo de `main`**. Si aparece, apagá el despliegue automático desde Settings (Git) y avisá antes de seguir: la regla
+   `"**": false` no se está respetando.
+2. Un push a `preview` sí debe crear un despliegue de _preview_.
+3. Recomendado: proteger la rama `preview` en GitHub (regla de rama o conjunto de reglas) para que nadie la borre ni la
+   reemplace. Es la única rama que publica: quien pueda empujar a `preview` publica en `app-prueba.pedernal.com.ar`. Un _fork_
+   no puede crear una rama con ese nombre dentro de este repositorio, pero una rama `preview` en un fork no debe aceptarse
+   como código a desplegar sin revisión: los despliegues de forks piden aprobación en Vercel.
 
 ---
 
@@ -378,7 +389,7 @@ ARCA ni contra una base real: **NO VERIFICADO** hasta la prueba de homologación
 ## G. Lo que no se pudo verificar sin Vercel
 
 1. Que Vercel instale y compile el workspace con Root Directory `apps/web` (chequeo 1; plan B en la sección D).
-2. Que el despliegue de prueba de B.9 se pueda crear con la CLI estando el automático apagado.
+2. Que el despliegue de prueba de B.9 se pueda crear con la CLI sin depender del automático (que solo cubre la rama `preview`).
 3. La versión de Node por defecto, y que `regions` en `vercel.json` valga en el plan Hobby (chequeo 2).
 4. Que Vercel mande `Authorization: Bearer <CRON_SECRET>` a la ruta del cron (chequeo 10) y que Hobby acepte el cron diario.
 5. Que `maxDuration = 60` de la ruta del cron entre en el límite del plan (si Vercel lo rechaza, se baja).
