@@ -366,6 +366,10 @@ Orden, cuando todo lo anterior ande:
 Esos scripts se corren en **tu computadora**, no en un workflow de GitHub: los datos del cliente (CUIT, razón social, email)
 no tienen que quedar en el registro de una ejecución.
 
+_Excepción para la empresa de PRUEBAS en Preview (2026-11-05, pedido del dueño que no usa terminal)_: el workflow manual
+`preparar-empresa-de-pruebas.yml` corre estos pasos sin que los datos pasen por el formulario: salen de un secreto del Environment
+`preview` (`PEDERNAL_PREPARAR_PREVIEW`) y se tapan en el registro. Está en borrador: ver las preguntas pendientes de su PR.
+
 **Estado hoy (honesto, 2026-10-22; el último párrafo se actualizó el 2026-11-04):** los scripts del paso 2 y 3 **existen** y se corren con
 `npm run plataforma:primer-admin` y `npm run plataforma:caso` (con `node --import ./scripts/cargador-de-ts.mjs`; no hace
 falta `tsx`). Los casos de uso de marca, plan y alta de empresa (M5/M6) están en `main`, y la resolución de hosts ya lee la

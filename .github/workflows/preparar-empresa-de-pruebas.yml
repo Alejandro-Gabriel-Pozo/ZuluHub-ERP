@@ -1,0 +1,130 @@
+name: Preparar la empresa de pruebas (preview)
+
+# Deja lista, en la base `preview`, la empresa de pruebas: Actions → «Preparar la empresa de pruebas (preview)» → Run workflow.
+# Solo se dispara a mano, solo desde main, solo para `preview` (producción no existe en este flujo a propósito).
+#
+#  - Ejecuta en orden lo que YA existe, sin reescribirlo (`npm run plataforma:preparar-prueba`, que llama a los mismos
+#    casos que `plataforma:primer-admin` y `plataforma:caso`): primer administrador de plataforma, plan (crear, borrador,
+#    publicar), marca (crear, borrador, confirmar), dominio, alta de la empresa con la invitación a su primer gerente y
+#    el módulo `facturacion`. Cada paso lleva una clave de idempotencia fija: repetir el flujo con los MISMOS datos no
+#    duplica nada; con datos distintos el paso rechaza y no cambia nada.
+#  - Los datos (emails, CUIT, razón social, nombre de la marca…) NO se escriben en el formulario: las entradas de un
+#    `workflow_dispatch` se ven en la página de la corrida. Los pega el dueño UNA vez en el secreto
+#    `PEDERNAL_PREPARAR_PREVIEW` del Environment `preview` (un JSON en UNA línea; forma en `ejecutar-preparar-empresa-de-pruebas.ts`).
+#    Cada dato personal se tapa en lo que sale y se entrega al runner con `::add-mask::`. Falla que previene: que un CUIT o un
+#    email queden en el registro de la corrida (PRIMER-DESPLIEGUE.md §E).
+#  - NO aplica migraciones: se corta si hay pendientes (eso es de `migrar.yml`). NO despacha el mail de la invitación: queda
+#    encolado (en Preview no corre el cron de Vercel). NO verifica ni activa el dominio: queda pendiente de verificación.
+#  - Concurrencia: comparte el grupo `migrar-preview` con `migrar.yml` y `cargar-entorno.yml` (misma base).
+#  - El Environment `preview` exige la APROBACIÓN DEL DUEÑO (revisores obligatorios y solo `main`, PRIMER-DESPLIEGUE.md, B.1).
+#    Secretos del Environment `preview` (nunca en el repositorio):
+#      PEDERNAL_DB_DUENO_DIRECTA        cadena DIRECTA del dueño de la base `preview` (la de `migrar.yml`).
+#      PEDERNAL_DB_PLATAFORMA           cadena del rol `pedernal_plataforma` de la base `preview`.
+#      PEDERNAL_CLAVE_CONTEXTO          la clave de contexto instalada en esa base (`<kid>:<hex>`).
+#      PEDERNAL_SECRETO_INVITACIONES    el MISMO secreto de invitaciones que tiene la web en Vercel Preview.
+#      PEDERNAL_PREPARAR_PREVIEW        los datos de la preparación (JSON en una línea).
+#    Cómo se obtienen las tres del medio es una decisión pendiente (están en Vercel como sensibles, que no se pueden leer).
+#
+# Ningún paso imprime una cadena, una clave ni un dato del paquete.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmacion:
+        description: "Escribir PREPARAR PREVIEW"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  # El MISMO grupo que `migrar.yml` y `cargar-entorno.yml` para `preview`: uno a la vez sobre la misma base. Lo que ya
+  # corre nunca se cancela: el nuevo espera.
+  group: migrar-preview
+  cancel-in-progress: false
+
+jobs:
+  validar:
+    # Todo lo que se puede rechazar sin los secretos se rechaza ACÁ, antes del Environment.
+    name: Validar la corrida
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Validar la rama y la frase
+        run: |
+          set -eu
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Solo se prepara la empresa de pruebas desde la rama main (esta corrida es de $REF). Volvé a correrlo eligiendo main en «Use workflow from»."
+            exit 1
+          fi
+          if [ "$CONFIRMACION" != "PREPARAR PREVIEW" ]; then
+            echo "::error::Para preparar la empresa de pruebas hay que escribir exactamente «PREPARAR PREVIEW» en el campo de confirmación."
+            exit 1
+          fi
+        env:
+          REF: ${{ github.ref }}
+          CONFIRMACION: ${{ inputs.confirmacion }}
+
+  preparar:
+    name: Preparar la empresa de pruebas
+    needs: validar
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Los revisores obligatorios (el dueño) aprueban ANTES de que arranque cualquier paso de este job.
+    environment: preview
+    permissions:
+      contents: read
+    steps:
+      - name: Comprobar que el Environment tiene todo lo necesario (solo se nombran las que faltan)
+        run: |
+          set -eu
+          faltan=""
+          [ -n "${PEDERNAL_DB_MIGRACIONES:-}" ] || faltan="$faltan PEDERNAL_DB_DUENO_DIRECTA"
+          [ -n "${PEDERNAL_DB_PLATAFORMA:-}" ] || faltan="$faltan PEDERNAL_DB_PLATAFORMA"
+          [ -n "${PEDERNAL_CLAVE_CONTEXTO:-}" ] || faltan="$faltan PEDERNAL_CLAVE_CONTEXTO"
+          [ -n "${PEDERNAL_SECRETO_INVITACIONES:-}" ] || faltan="$faltan PEDERNAL_SECRETO_INVITACIONES"
+          [ -n "${PEDERNAL_PREPARAR_PREVIEW:-}" ] || faltan="$faltan PEDERNAL_PREPARAR_PREVIEW"
+          if [ -n "$faltan" ]; then
+            echo "::error::Faltan estos secretos en el Environment preview (Settings → Environments → Secrets):$faltan"
+            exit 1
+          fi
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_DB_PLATAFORMA: ${{ secrets.PEDERNAL_DB_PLATAFORMA }}
+          PEDERNAL_CLAVE_CONTEXTO: ${{ secrets.PEDERNAL_CLAVE_CONTEXTO }}
+          PEDERNAL_SECRETO_INVITACIONES: ${{ secrets.PEDERNAL_SECRETO_INVITACIONES }}
+          PEDERNAL_PREPARAR_PREVIEW: ${{ secrets.PEDERNAL_PREPARAR_PREVIEW }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # Sin caché de npm: este job tiene los secretos y no restaura nada que no sea el lockfile.
+      - name: Dependencias (solo las de producción, sin scripts de instalación)
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: La base tiene que estar al día
+        # Este flujo no migra: eso es de `migrar.yml`. `shell: bash` activa `pipefail`.
+        shell: bash
+        run: |
+          set -eu
+          npm run migrar -- --ver | tee "$RUNNER_TEMP/estado.txt"
+          if grep -q "faltan aplicar" "$RUNNER_TEMP/estado.txt"; then
+            echo "::error::Hay migraciones pendientes. Corré antes «Migrar (preview y producción)» y volvé a preparar la empresa de pruebas."
+            exit 1
+          fi
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+
+      - name: Preparar la empresa de pruebas (sin mostrar secretos ni datos personales)
+        run: npm run plataforma:preparar-prueba
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_DB_PLATAFORMA: ${{ secrets.PEDERNAL_DB_PLATAFORMA }}
+          PEDERNAL_CLAVE_CONTEXTO: ${{ secrets.PEDERNAL_CLAVE_CONTEXTO }}
+          PEDERNAL_SECRETO_INVITACIONES: ${{ secrets.PEDERNAL_SECRETO_INVITACIONES }}
+          PEDERNAL_PREPARAR_PREVIEW: ${{ secrets.PEDERNAL_PREPARAR_PREVIEW }}
