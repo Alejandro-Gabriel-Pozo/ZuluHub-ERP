@@ -367,6 +367,33 @@
     "creada": "2026-10-22"
   },
   {
+    "id": "archivo-grande--src-composicion-configuracion-fiscal-web-ts",
+    "archivos": ["src/composicion/configuracion-fiscal-web.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas: no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 413,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-11-05"
+  },
+  {
+    "id": "archivo-grande--src-composicion-errores-fiscales-ts",
+    "archivos": ["src/composicion/errores-fiscales.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas: no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 407,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-11-05"
+  },
+  {
+    "id": "archivo-grande--src-modulos-fiscal-casos-de-uso-emitir-comprobante-ts",
+    "archivos": ["src/modulos/fiscal/casos-de-uso/emitir-comprobante.ts"],
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas: no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "tipo": "archivo-grande",
+    "tamano": 404,
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-11-05"
+  },
+  {
     "id": "archivo-grande--arquitectura-contratos-evasiones-cjs",
     "archivos": ["arquitectura/contratos/evasiones.cjs"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
