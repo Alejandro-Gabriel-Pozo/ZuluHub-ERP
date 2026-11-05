@@ -243,10 +243,16 @@ export type ModeloImpreso = Readonly<{
   }> | null;
   qr: Readonly<{ url: string }>;
   /**
-   * Textos legales del comprobante, tal cual. Primero la de crédito fiscal (versión 2 en adelante, solo letra A a receptor
-   * monotributista: `LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA`), después la de homologación.
+   * Solo avisos del sistema, que la vista dibuja destacados: hoy la de homologación. NUNCA un texto legal de la norma (van en
+   * `leyendasLegales`).
    */
   leyendas: readonly string[];
+  /**
+   * Versión 2 en adelante: textos legales de la norma, tal cual, para dibujarlos como texto del comprobante y no como aviso.
+   * Hoy 0 o 1: la de crédito fiscal de la A a monotributista (`LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA`). Ausente si no hay
+   * y en la versión 1. Separada de `leyendas` para que un texto legal no se muestre como aviso de pruebas.
+   */
+  leyendasLegales?: readonly string[];
 }>;
 
 const ROTULOS: Readonly<Record<ClaseDeComprobante, ModeloImpreso["fiscal"]["rotulo"]>> = {
@@ -385,9 +391,7 @@ export function modeloDeImpresion(
             fecha: asociado.fecha,
           },
     qr: { url: qr.valor },
-    leyendas: [
-      ...(leyendaDeCredito === null ? [] : [leyendaDeCredito]),
-      ...(comprobante.ambiente === "HOMOLOGACION" ? [LEYENDA_DE_HOMOLOGACION] : []),
-    ],
+    leyendas: comprobante.ambiente === "HOMOLOGACION" ? [LEYENDA_DE_HOMOLOGACION] : [],
+    ...(leyendaDeCredito === null ? {} : { leyendasLegales: [leyendaDeCredito] }),
   });
 }
