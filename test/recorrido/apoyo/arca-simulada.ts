@@ -8,7 +8,7 @@ import type { AddressInfo } from "node:net";
  * real: autoriza el siguiente y rechaza cualquier otro (error 10016). Todo lo demás (incluido WSAA) responde 500: el recorrido
  * siembra un ticket vigente y un pedido de login sería un defecto del armado.
  */
-export type PedidoRecibido = Readonly<{ operacion: string; cuerpo: string; hostDeArca: string }>;
+type PedidoRecibido = Readonly<{ operacion: string; cuerpo: string; hostDeArca: string }>;
 
 export type ArcaSimulada = Readonly<{
   puerto: number;

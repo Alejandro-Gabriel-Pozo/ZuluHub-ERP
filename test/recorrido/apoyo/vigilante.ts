@@ -9,10 +9,8 @@ import type { Page } from "playwright";
  * cabeceras de la app real.
  */
 export type Vigilante = Readonly<{
-  /** Todo lo anotado hasta ahora. Vacío = el recorrido va limpio. */
-  hallazgos(): readonly string[];
-  /** Falla si algún paso dejó un hallazgo. */
-  verificar(): void;
+  /** Entrega lo anotado desde la última vez y lo vacía: cada paso responde por lo suyo. */
+  tomar(): readonly string[];
 }>;
 
 // Se instala antes de que corra cualquier script de la página: convierte el evento de seguridad en un error de consola.
@@ -46,10 +44,8 @@ export async function vigilar(pagina: Page, hostPropio: string): Promise<Vigilan
     }
   });
   return {
-    hallazgos: () => hallazgos,
-    verificar() {
-      if (hallazgos.length > 0)
-        throw new Error(`el recorrido dejó hallazgos:\n${hallazgos.join("\n")}`);
+    tomar() {
+      return hallazgos.splice(0, hallazgos.length);
     },
   };
 }
