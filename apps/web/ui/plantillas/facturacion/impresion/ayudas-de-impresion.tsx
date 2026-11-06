@@ -29,6 +29,8 @@ export type OpcionesDelComprobante = Readonly<{
   /** Los textos legales del modelo, tal cual; sin esto, el comprobante no trae la clave. */
   leyendasLegales?: readonly string[];
   contacto?: boolean;
+  /** El nombre de la sucursal del modelo, tal cual; sin esto, el comprobante no trae la clave. */
+  sucursal?: string;
 }>;
 
 /** Un comprobante de prueba con importes que suman el total (como los de fiscal): se arma a mano, sin pasar por el dominio. */
@@ -131,6 +133,7 @@ export function comprobanteDePrueba(o: OpcionesDelComprobante = {}): Comprobante
         : null,
     leyendas: o.leyendas ?? [],
     ...(o.leyendasLegales === undefined ? {} : { leyendasLegales: o.leyendasLegales }),
+    ...(o.sucursal === undefined ? {} : { sucursal: { nombre: o.sucursal } }),
   };
 }
 

@@ -65,6 +65,11 @@ export function TicketDe80mm({ a, qrSvg, alMedirElAlto }: PropsDelTicket) {
         {a.nombreDeFantasia === null ? null : (
           <div className={estilos["nombre"]}>{a.nombreDeFantasia}</div>
         )}
+        {a.nombreDeLaSucursal === null ? null : (
+          <div className={estilos["nombre"]} data-sucursal="">
+            {a.nombreDeLaSucursal}
+          </div>
+        )}
         {a.contacto === null ? null : <div>{a.contacto}</div>}
         {a.emisor.map((fila) => (
           <Fila key={fila.rotulo ?? fila.valor} fila={fila} />

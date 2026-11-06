@@ -42,6 +42,7 @@
 .nombre {
   font-size: 13pt;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .rotulo {
