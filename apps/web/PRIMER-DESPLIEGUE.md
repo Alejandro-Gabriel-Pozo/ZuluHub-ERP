@@ -71,9 +71,9 @@ Settings → Environments → New environment. Dos, con estos nombres exactos:
   ellos se migra **sin respaldo** y el workflow lo avisa. Si los cargaste y el respaldo falla, **no se migra**.
 - Revisá que «Required reviewers» de `produccion` **y de `preview`** sea solo vos (decisión del dueño, 2026-11-04) y que
   «Deployment branches» sea solo `main` en los dos: eso es lo que protege el secreto de verdad.
-- Ya existe otro workflow, `migrar-base.yml`, con sus propios Environments (`neon-preview`, `neon-production`) y su
-  secreto `PEDERNAL_DB_MIGRACIONES`. Hacen lo mismo que `migrar.yml` sin respaldo ni clave de contexto. Cuando confirmes que
-  `migrar.yml` anda, conviene borrar `migrar-base.yml` y esos dos Environments para que haya una sola puerta.
+- El workflow `migrar-base.yml` se retiró (decisión del dueño, 2026-11-06, por mensaje directo al orquestador): `migrar.yml`
+  corrió 11 veces con éxito y `migrar-base.yml` nunca corrió. En GitHub quedan sus Environments `neon-preview` y
+  `neon-production` y su secreto `PEDERNAL_DB_MIGRACIONES`: borralos vos (Settings → Environments) para que haya una sola puerta.
 
 ### B.2 Neon: las ramas
 
