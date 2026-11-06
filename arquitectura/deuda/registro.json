@@ -753,8 +753,8 @@
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-11-06",
-    "motivo": "Introducir los chequeos de lista de permitidos y de fuente única (PR 2 de C1) sin reescribir de una vez todas las validaciones existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento (las migraciones ya aplicadas no se editan: se corrigen con una migración nueva). La cuenta por archivo (que solo baja) está en arquitectura/deuda/validacion-de-datos.json.",
-    "aprobadoPor": "orquestador (PR 2 de C1 autorizado el 2026-11-06 por mensaje entre sesiones; decisión del dueño 2026-11-05)",
+    "motivo": "Introducir los chequeos de lista de permitidos y de fuente única (PR 2 de C1) sin reescribir de una vez todas las validaciones existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento (las migraciones ya aplicadas no se editan: se corrigen con una migración nueva). La cuenta por archivo (que solo baja) está en arquitectura/deuda/validacion-de-datos.json. Esos tres archivos (correo/configuracion, puerta y ruta-de-retorno) se reescriben con lista de permitidos en el PR de Deuda 4 (rama fix/lista-de-permitidos-correo-puerta-retorno), que baja el presupuesto al entrar.",
+    "aprobadoPor": "orquestador (PR 2 de C1 autorizado el 2026-11-06 por mensaje entre sesiones; decisión del dueño 2026-11-05). Para adaptadores/correo/configuracion.ts, capacidades/experiencia/puerta.ts y capacidades/experiencia/ruta-de-retorno.ts: el dueño, 2026-11-06, mensaje directo al orquestador (confirmó que entran como deuda).",
     "vence": "2027-01-05"
   }
 ]
