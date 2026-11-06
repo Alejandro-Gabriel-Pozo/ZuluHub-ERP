@@ -1,13 +1,9 @@
 import type { ValorDePerilla } from "../../../capacidades/planes/valores";
-import {
-  empresaId,
-  planId,
-  tenantId,
-  versionDePlanId,
-  type EmpresaId,
-  type PlanId,
-  type TenantId,
-  type VersionDePlanId,
+import type {
+  EmpresaId,
+  PlanId,
+  TenantId,
+  VersionDePlanId,
 } from "../../../primitivas/identificadores/marca";
 import type { OrigenDeAsignacion } from "../dominio/asignacion";
 
