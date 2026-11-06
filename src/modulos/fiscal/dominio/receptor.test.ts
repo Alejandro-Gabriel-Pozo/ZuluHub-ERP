@@ -215,6 +215,19 @@ describe("validarReceptor: forma", () => {
     }
   });
 
+  it("DNI con puntos de miles: se guarda en su forma canónica y con otros separadores se rechaza (Q6)", () => {
+    const r = validarReceptor(conDocumento({ tipo: "DNI", numero: "12.345.678" }), contexto("B"));
+    expect(r).toMatchObject({
+      ok: true,
+      valor: { documento: { tipo: "DNI", numero: "12345678" } },
+    });
+    for (const numero of ["12 345 678", "12,345,678", "12.345.67"]) {
+      expect(validarReceptor(conDocumento({ tipo: "DNI", numero }), contexto("B"))).toEqual(
+        invalido("documento"),
+      );
+    }
+  });
+
   it("pasaporte: solo dígitos, de 1 a 11 (DocNro es un Long de 11)", () => {
     for (const numero of ["", "123456789012", "AAB123456", "-1", "1.5"]) {
       expect(validarReceptor(conDocumento({ tipo: "PASAPORTE", numero }), contexto("B"))).toEqual(

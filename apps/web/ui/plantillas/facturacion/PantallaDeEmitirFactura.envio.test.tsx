@@ -258,7 +258,7 @@ describe("emitir: lo que rechaza el servidor se ve por la vía común", () => {
     await llegarARevisar("dni");
     tocar(boton("Emitir factura"));
     await expect
-      .element(page.getByText("Revise los datos del cliente", { exact: false }))
+      .element(page.getByText("Revisá los datos del cliente", { exact: false }))
       .toBeVisible();
     expect(document.body.textContent).not.toContain("FISCAL_RECEPTOR_INVALIDO");
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
@@ -271,7 +271,7 @@ describe("emitir: lo que rechaza el servidor se ve por la vía común", () => {
     await userEvent.click(boton("Siguiente"));
     await userEvent.click(boton("Siguiente"));
     // El error anterior ya no está.
-    expect(document.body.textContent).not.toContain("Revise los datos del cliente");
+    expect(document.body.textContent).not.toContain("Revisá los datos del cliente");
     tocar(boton("Emitir factura"));
     await vi.waitFor(() => expect(servidor.pedidos).toHaveLength(2));
     expect(servidor.pedidos[1]?.["clave"]).not.toBe(servidor.pedidos[0]?.["clave"]);
