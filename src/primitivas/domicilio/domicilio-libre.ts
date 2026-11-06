@@ -39,6 +39,9 @@ export function domicilioLibreDesdeTexto(
   texto: string | null,
 ): Resultado<string | null, ErrorDeDomicilioLibre> {
   if (texto === null || texto.trim() === "") return ok(null);
-  const limpio = textoDeUnaLineaDesdeTexto(texto, LARGO_MAXIMO_DEL_DOMICILIO_LIBRE);
+  const limpio = textoDeUnaLineaDesdeTexto(texto, {
+    maximo: LARGO_MAXIMO_DEL_DOMICILIO_LIBRE,
+    exigirUnaLetra: false,
+  });
   return limpio.ok ? limpio : err("DOMICILIO_INVALIDO");
 }

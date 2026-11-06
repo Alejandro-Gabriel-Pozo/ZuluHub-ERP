@@ -1,5 +1,5 @@
-import { err, type Resultado } from "../resultado/resultado";
-import { textoDeUnaLineaDesdeTexto, tieneUnaLetra } from "./texto-de-una-linea";
+import type { Resultado } from "../resultado/resultado";
+import { textoDeUnaLineaDesdeTexto } from "./texto-de-una-linea";
 
 /**
  * FICHA DEL DATO: NOMBRE O RAZÓN SOCIAL. (DECIDIDO = lo dijo el dueño o ya está implementado; SUPUESTO = del ingeniero, revertible;
@@ -10,7 +10,8 @@ import { textoDeUnaLineaDesdeTexto, tieneUnaLetra } from "./texto-de-una-linea";
  *   No es un texto libre tipo motivo o descripción.
  * - Cómo se escribe: se recortan los blancos de los extremos, los espacios repetidos pasan a uno solo y el texto queda en NFC.
  *   Se conservan las mayúsculas y los acentos que escribió la persona (SUPUESTO). Entre 1 y `LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL`
- *   (200: el valor que ya tenía el sistema, sin fuente de ARCA, porque WSFE no recibe el nombre del receptor; SUPUESTO, Q9)
+ *   (200: el valor que ya tenía el sistema; ARCA no lo fija, porque WSFE no recibe el nombre del receptor. DECIDIDO por el dueño,
+ *   2026-11-05, mensaje directo al orquestador: «En el receptor, 200»; Q9)
  *   caracteres, contados por carácter.
  *   · SOLO LOS CARACTERES PERMITIDOS (lista cerrada, SUPUESTO, Q25/Q26): letras latinas con tilde, ñ y diéresis (Latin-1/WinAnsi),
  *     dígitos, espacio y `. , & - ' / ( ) ° + : ; " # º ª ’ “ ” – — « » ® ™`. Todo lo demás se rechaza (control, invisibles, bidi,
@@ -51,7 +52,8 @@ export type MotivoDeNombreInvalido =
 export function nombreODenominacionDesdeTexto(
   texto: string,
 ): Resultado<string, MotivoDeNombreInvalido> {
-  const limpio = textoDeUnaLineaDesdeTexto(texto, LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL);
-  if (!limpio.ok) return limpio;
-  return tieneUnaLetra(limpio.valor) ? limpio : err("SIN_LETRAS");
+  return textoDeUnaLineaDesdeTexto(texto, {
+    maximo: LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL,
+    exigirUnaLetra: true,
+  });
 }

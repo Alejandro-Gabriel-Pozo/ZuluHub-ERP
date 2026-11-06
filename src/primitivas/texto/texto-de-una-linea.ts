@@ -21,7 +21,8 @@ import { err, ok, type Resultado } from "../resultado/resultado";
  * esta rama): hay que cotejarlo con la sesión del PDF antes de darlo por bueno. Costo de revertir: cambiar las constantes de abajo.
  * Pendiente de decisión del dueño: Q25 (conjunto permitido) y Q26 (® y ™).
  */
-export type MotivoDeTextoInvalido = "VACIO" | "DEMASIADO_LARGO" | "CARACTER_PROHIBIDO";
+export type MotivoDeTextoInvalido =
+  "VACIO" | "DEMASIADO_LARGO" | "CARACTER_PROHIBIDO" | "SIN_LETRAS";
 
 /** Letras latinas con tilde, ñ y diéresis: Latin-1 sin `×` ni `÷`, más las letras extra de WinAnsi (Š š Œ œ Ž ž Ÿ). */
 const LETRAS = "A-Za-zÀ-ÖØ-öø-ÿŠšŒœŽžŸ";
@@ -30,8 +31,10 @@ const DIGITOS = "0-9";
 const SIGNOS = ".,&\\-'/()°+:;\"#ºª’“”–—«»®™";
 
 const CARACTER_PERMITIDO = `[${LETRAS}${DIGITOS} ${SIGNOS}]`;
-const SOLO_PERMITIDOS = new RegExp(`^${CARACTER_PERMITIDO}+$`, "u");
-const UNA_LETRA = new RegExp(`[${LETRAS}]`, "u");
+// Sin la bandera `u` a propósito: todo lo permitido es del plano básico, así que un carácter de otro plano (un emoji) se rechaza igual, porque
+// sus dos mitades no están en la lista. Con la bandera el resultado sería el mismo; sin ella no queda una opción que ninguna prueba distingue.
+const SOLO_PERMITIDOS = new RegExp(`^${CARACTER_PERMITIDO}+$`);
+const UNA_LETRA = new RegExp(`[${LETRAS}]`);
 const ESPACIOS = /\p{Zs}+/gu;
 
 /** ¿Todo el texto está hecho de caracteres permitidos? Es la lista que el PDF y la pantalla tienen que respetar (una sola fuente). */
@@ -39,24 +42,24 @@ export function soloCaracteresPermitidos(texto: string): boolean {
   return SOLO_PERMITIDOS.test(texto);
 }
 
-/** ¿Trae al menos una letra latina? Los dígitos, los signos, `º` y `ª` no cuentan como letra. */
-export function tieneUnaLetra(texto: string): boolean {
-  return UNA_LETRA.test(texto);
-}
+/** Lo que cambia de un dato a otro: el largo máximo y si exige al menos una letra (el nombre sí; un domicilio puede ser solo números). */
+export type ReglasDelTexto = Readonly<{ maximo: number; exigirUnaLetra: boolean }>;
 
 /**
  * Deja el texto en su forma canónica o dice por qué no sirve. En este orden: recorta los extremos; pasa a NFC; colapsa los
  * espacios repetidos (también el de no corte y los tipográficos) a un solo espacio; rechaza todo lo que no esté en la lista de
- * permitidos; y exige de 1 a `maximo` caracteres, contados por carácter. Se conservan las mayúsculas y los acentos tal cual.
- * Un carácter no permitido se informa antes que el largo.
+ * permitidos; exige de 1 a `maximo` caracteres, contados por carácter; y, si `exigirUnaLetra`, al menos una letra latina (los
+ * dígitos, los signos, `º` y `ª` no cuentan como letra). Se conservan las mayúsculas y los acentos tal cual. Un carácter no
+ * permitido se informa antes que el largo, y el largo antes que la falta de letras.
  */
 export function textoDeUnaLineaDesdeTexto(
   texto: string,
-  maximo: number,
+  reglas: ReglasDelTexto,
 ): Resultado<string, MotivoDeTextoInvalido> {
   const canonico = texto.trim().normalize("NFC").replace(ESPACIOS, " ");
   if (canonico === "") return err("VACIO");
   if (!soloCaracteresPermitidos(canonico)) return err("CARACTER_PROHIBIDO");
-  if (largoEnCaracteres(canonico) > maximo) return err("DEMASIADO_LARGO");
+  if (largoEnCaracteres(canonico) > reglas.maximo) return err("DEMASIADO_LARGO");
+  if (reglas.exigirUnaLetra && !UNA_LETRA.test(canonico)) return err("SIN_LETRAS");
   return ok(canonico);
 }

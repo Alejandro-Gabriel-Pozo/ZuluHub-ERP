@@ -1,17 +1,16 @@
 import { describe, expect, it } from "vitest";
-import {
-  soloCaracteresPermitidos,
-  textoDeUnaLineaDesdeTexto,
-  tieneUnaLetra,
-} from "./texto-de-una-linea";
+import { soloCaracteresPermitidos, textoDeUnaLineaDesdeTexto } from "./texto-de-una-linea";
+
+/** Las reglas de un dato que no exige letra (como el domicilio): lo que se prueba acá es la regla común. */
+const con = (maximo: number) => ({ maximo, exigirUnaLetra: false });
 
 const valido = (texto: string, esperado: string) =>
-  expect(textoDeUnaLineaDesdeTexto(texto, 200), JSON.stringify(texto)).toEqual({
+  expect(textoDeUnaLineaDesdeTexto(texto, con(200)), JSON.stringify(texto)).toEqual({
     ok: true,
     valor: esperado,
   });
 const invalido = (texto: string, motivo: string, maximo = 200) =>
-  expect(textoDeUnaLineaDesdeTexto(texto, maximo), JSON.stringify(texto)).toEqual({
+  expect(textoDeUnaLineaDesdeTexto(texto, con(maximo)), JSON.stringify(texto)).toEqual({
     ok: false,
     error: motivo,
   });
@@ -45,12 +44,12 @@ describe("textoDeUnaLineaDesdeTexto: lo que acepta", () => {
   it("el tope exacto entra y uno más no", () => {
     valido("a".repeat(200), "a".repeat(200));
     invalido("a".repeat(201), "DEMASIADO_LARGO");
-    expect(textoDeUnaLineaDesdeTexto("ñ".repeat(5), 5).ok).toBe(true);
+    expect(textoDeUnaLineaDesdeTexto("ñ".repeat(5), con(5)).ok).toBe(true);
     invalido("ñ".repeat(6), "DEMASIADO_LARGO", 5);
   });
 
   it("el largo se mide después de normalizar y colapsar", () => {
-    expect(textoDeUnaLineaDesdeTexto("a    b", 3).ok).toBe(true);
+    expect(textoDeUnaLineaDesdeTexto("a    b", con(3)).ok).toBe(true);
   });
 });
 
@@ -106,11 +105,36 @@ describe("la lista de permitidos", () => {
     invalido("a\u0009b", "CARACTER_PROHIBIDO");
   });
 
-  it("`tieneUnaLetra`: solo cuentan las letras latinas; dígitos, signos, º y ª no", () => {
-    for (const texto of ["a", "Ñ", "1 ü", "Œ"]) expect(tieneUnaLetra(texto), texto).toBe(true);
-    for (const texto of ["", "123", "5º", "1ª", "-", "×", "€", "ж", "小"]) {
-      expect(tieneUnaLetra(texto), texto).toBe(false);
+  it("exigirUnaLetra: solo cuentan las letras latinas; dígitos, signos, º y ª no", () => {
+    const exige = { maximo: 200, exigirUnaLetra: true };
+    for (const texto of ["a", "Ñ", "1 ü", "Œ", "5º A"]) {
+      expect(textoDeUnaLineaDesdeTexto(texto, exige), texto).toEqual({ ok: true, valor: texto });
     }
+    for (const texto of ["123", "5º", "1ª", "-", "20-12345678-6", "&&&"]) {
+      expect(textoDeUnaLineaDesdeTexto(texto, exige), texto).toEqual({
+        ok: false,
+        error: "SIN_LETRAS",
+      });
+    }
+  });
+
+  it("sin exigirUnaLetra un texto de solo números entra (un domicilio como «1234»)", () => {
+    valido("1234", "1234");
+    valido("9 de Julio 1234", "9 de Julio 1234");
+  });
+
+  it("el orden de los motivos: vacío, carácter prohibido, largo y, al final, la falta de letras", () => {
+    const exige = { maximo: 5, exigirUnaLetra: true };
+    expect(textoDeUnaLineaDesdeTexto("  ", exige)).toEqual({ ok: false, error: "VACIO" });
+    expect(textoDeUnaLineaDesdeTexto("😀😀😀😀😀😀", exige)).toEqual({
+      ok: false,
+      error: "CARACTER_PROHIBIDO",
+    });
+    expect(textoDeUnaLineaDesdeTexto("123456", exige)).toEqual({
+      ok: false,
+      error: "DEMASIADO_LARGO",
+    });
+    expect(textoDeUnaLineaDesdeTexto("12345", exige)).toEqual({ ok: false, error: "SIN_LETRAS" });
   });
 });
 
