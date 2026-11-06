@@ -8,8 +8,8 @@ import type { CertificadoGuardado } from "../../src/modulos/fiscal/persistencia/
  * «Nunca se muestra» (spec H7 facturación §B.6.3 y §B.9): la clave privada de un certificado y el ticket de acceso
  * solo los toca quien los cifra y quien los descifra. Dos reglas, cada una con su violación inyectada:
  *
- *  1. Solo el repositorio de certificados y el de accesos (que salió de él al partir el archivo; y sus dos archivos de forma, `tablas.ts` y `esquema.ts`) nombra las columnas
- *     cifradas (`clave_*` de `certificado_arca` y `credencial_*` de `acceso_arca`). Previene que una consulta, una
+ *  1. Solo los repositorios de certificados y de accesos, y los archivos de forma `tablas.ts` y `esquema.ts`, nombran las
+ *     columnas cifradas (`clave_*` de `certificado_arca` y `credencial_*` de `acceso_arca`). Previene que una consulta, una
  *     pantalla o un informe seleccione la clave (aun cifrada) por su cuenta. El adaptador de ARCA (F8) también puede
  *     (§B.9), por si necesita leerlas.
  *  2. Solo quien descifra llama a `obtenerClave` y `obtenerCredencial` (que devuelven el texto cifrado): el caso de

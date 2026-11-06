@@ -14,8 +14,9 @@ import { cuitDesdeTexto } from "./cuit";
  *   dígitos, sin cero a la izquierda (DECIDIDO en el código; sin fuente de ARCA). Pasaporte: de 1 a 11 dígitos, porque `DocNro` es
  *   un `Long (11)` en WSFE v4.8 (l. 577); NO VERIFICADO que ARCA acepte el tipo 94 con ese formato, ni que no haya pasaportes con
  *   letras (SIN DECIDIR, Q5). Al escribir el DNI se aceptan los puntos de miles (`12.345.678`) y se guarda sin ellos (DECIDIDO, dueño, 2026-11-06, Q6: guiones en CUIT/CUIL/CDI, puntos en DNI, cualquier otro carácter se rechaza). El pasaporte no acepta separadores (Q5 lo cambia en otro PR).
- * - Cómo se muestra: con guiones (CUIT/CUIL/CDI) y con puntos (DNI). Hoy lo hace la web por su cuenta (`formato-fiscal.ts`) y la
- *   consola otra vez (`formato-de-cuit.ts`); unificarlo es otro paso, NO este.
+ * - Cómo se muestra: con guiones (CUIT/CUIL/CDI) y con puntos (DNI). El CUIT con guiones lo arma una sola función
+ *   (`cuit.ts`: `cuitParaMostrar`), que importan la web y la consola; los puntos del DNI siguen en la web (`formato-fiscal.ts`) y
+ *   pasarlos acá es otro paso.
  * - Obligatorio/opcional: lo decide quien la usa. Con el consumidor final sin identificar no hay documento (tipo `SIN_IDENTIFICAR`).
  * - Único: el del receptor no. Quién lo cambia: nadie, se congela en el comprobante.
  * - Verificado o declarado: de CUIT/CUIL/CDI se verifica el dígito verificador; el resto es solo DECLARADO. Compatible con
