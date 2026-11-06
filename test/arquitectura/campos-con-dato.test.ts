@@ -28,9 +28,11 @@ import {
 const RAIZ = join(import.meta.dirname, "../..");
 const require = createRequire(import.meta.url);
 const presupuestoCjs = require("../../arquitectura/deuda/campos-sin-dato.cjs") as {
-  ARCHIVO: string;
-  problemasDeForma: (p: unknown) => string[];
+  PRESUPUESTOS: { archivo: string; claves: string[]; deQue: string }[];
+  problemasDeForma: (p: unknown, presupuesto: unknown) => string[];
 };
+const PRESUPUESTO_DE_CAMPOS = presupuestoCjs
+  .PRESUPUESTOS[0] as (typeof presupuestoCjs.PRESUPUESTOS)[number];
 const PREFIJO_DE_DEUDA = "campos-sin-dato--";
 const CONTEXTO: Contexto = { componentes: COMPONENTES_DE_CAMPO, registro: REGISTRO_DE_DATOS };
 
@@ -122,11 +124,11 @@ describe("campos con dato: el código real", () => {
   });
 
   const presupuesto = JSON.parse(
-    readFileSync(join(RAIZ, presupuestoCjs.ARCHIVO), "utf8"),
+    readFileSync(join(RAIZ, PRESUPUESTO_DE_CAMPOS.archivo), "utf8"),
   ) as Record<string, Cuenta>;
 
   it("el presupuesto de deuda tiene buena forma y coincide EXACTO con el código", () => {
-    expect(presupuestoCjs.problemasDeForma(presupuesto)).toEqual([]);
+    expect(presupuestoCjs.problemasDeForma(presupuesto, PRESUPUESTO_DE_CAMPOS)).toEqual([]);
     const reales = new Map(
       [...resultados].map(([r, v]) => [
         r,
