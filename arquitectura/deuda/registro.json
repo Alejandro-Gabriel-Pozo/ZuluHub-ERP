@@ -34,7 +34,7 @@
   {
     "id": "knip-ignora--knip-json",
     "archivos": ["knip.json"],
-    "descripcion": "Entradas de `ignore*` de knip.json (dependencias sin uso hasta el e2e de W5, exports que las pruebas leen por createRequire): cada una lleva su motivo en el archivo.",
+    "descripcion": "Entradas de `ignore*` de knip.json (exports que las pruebas leen por createRequire, el binario `openssl` de la fachada https del recorrido): cada una lleva su motivo en el archivo.",
     "tipo": "knip-ignora",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
@@ -284,17 +284,6 @@
     "tipo": "backlog",
     "responsable": "dueño",
     "creada": "2026-10-22"
-  },
-  {
-    "id": "e2e-sin-playwright-cableado",
-    "archivos": ["knip.json"],
-    "descripcion": "No hay pruebas e2e: @playwright/test y @axe-core/playwright están instalados pero sin uso (knip los ignora) hasta el e2e de la web (W5). Falta cablear Playwright en el CI (informe de CI §4 y §5); `continue-on-error` está prohibido en ci.yml, así que un modo «reporte» necesita otro diseño.",
-    "tipo": "backlog",
-    "responsable": "dueño",
-    "creada": "2026-10-22",
-    "verificacion": {
-      "contiene": "@playwright/test"
-    }
   },
   {
     "id": "sondeo-ast-pendiente",

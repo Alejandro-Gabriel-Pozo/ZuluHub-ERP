@@ -4,16 +4,18 @@
     ".": {
       // `arquitectura/deuda/*.cjs`: el control de deuda lo lanzan el CLI y la prueba por `require` (que knip no
       // sigue): sus funciones exportadas son su interfaz de prueba, no código muerto.
-      "entry": ["src/**/*.ts", "test/**/*.test.ts", "neon.ts", "arquitectura/deuda/*.cjs"],
+      "entry": [
+        "src/**/*.ts",
+        "test/**/*.test.ts",
+        "test/**/*.recorrido.ts",
+        "neon.ts",
+        "arquitectura/deuda/*.cjs"
+      ],
       "project": ["src/**/*.ts", "test/**/*.ts", "arquitectura/**/*.cjs"],
-      // @axe-core/playwright y @playwright/test: autorizadas en el spec de la web (§2.2) para el e2e del
-      // ingreso (W5, P-10: axe sobre la página real contra `next start`); sin uso hasta ese tramo.
-      "ignoreDependencies": [
-        "@stryker-mutator/command-runner",
-        "next",
-        "@axe-core/playwright",
-        "@playwright/test"
-      ]
+      "ignoreDependencies": ["@stryker-mutator/command-runner"],
+      // `openssl`: lo llama la fachada https del recorrido (`test/recorrido/apoyo/fachada-https.ts`) para generar su certificado
+      // autofirmado; viene con el sistema de cualquier runner de Ubuntu y no es una dependencia del proyecto.
+      "ignoreBinaries": ["openssl"]
     },
     "apps/web": {
       "entry": ["servidor/**/*.ts"],
