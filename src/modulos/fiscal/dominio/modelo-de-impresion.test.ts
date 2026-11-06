@@ -289,6 +289,22 @@ describe("modeloDeImpresion: receptor, renglones y totales", () => {
     expect(modelo(imprimible(conDescuento)).renglones[0]?.descuento).toBe("10.0000");
   });
 
+  it("un pasaporte con letras sale TAL CUAL en el modelo (v1 y v2, sin versión nueva); a ARCA va solo la parte numérica pero lo impreso no la cambia", () => {
+    const turista = facturaArmada(
+      {
+        nombre: "Jane Doe",
+        documento: { tipo: "PASAPORTE", numero: "ABC123456" },
+        condicionIva: "CONSUMIDOR_FINAL",
+        domicilio: "5th Avenue 1",
+      },
+      [renglon("121.00", "1", "21")],
+    );
+    for (const m of [modelo(imprimible(turista)), modelo(imprimible(turista, V1))]) {
+      expect(m.receptor.documento).toEqual({ tipo: "PASAPORTE", numero: "ABC123456" });
+    }
+    expect(VERSION_DE_REPRESENTACION_ACTUAL).toBe(2);
+  });
+
   it("A discrimina neto e IVA por alícuota", () => {
     const a = facturaArmada(
       receptorInscripto,

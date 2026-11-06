@@ -7,6 +7,7 @@ import {
   TIPOS_DE_DOCUMENTO_DE_IDENTIDAD,
   numeroDeDocumentoDesdeTexto,
 } from "../../../primitivas/identificacion-fiscal/documento";
+import { numeroDeDocumentoInformadoAArca } from "../../../primitivas/identificacion-fiscal/numero-de-documento-para-arca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import {
   LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL,
@@ -77,11 +78,14 @@ function documentoValido(documento: DocumentoDelReceptor): DocumentoDelReceptor 
 }
 
 /**
- * El número de documento como lo manda ARCA (`DocNro`, un entero): el del documento, o cero para el
- * consumidor final sin identificar. Nunca pasa por `number`.
+ * El número de documento como lo manda ARCA (`DocNro`, un entero): la parte numérica del documento (ficha en
+ * `numero-de-documento-para-arca.ts`; para un documento de solo dígitos, él mismo), o cero para el consumidor final sin identificar.
+ * Nunca pasa por `number`. Es la ÚNICA fuente: el pedido a ARCA, la reconciliación y el QR la usan.
  */
 export function numeroDeDocumentoParaArca(documento: DocumentoDelReceptor): bigint {
-  return documento.tipo === "SIN_IDENTIFICAR" ? 0n : BigInt(documento.numero);
+  return documento.tipo === "SIN_IDENTIFICAR"
+    ? 0n
+    : numeroDeDocumentoInformadoAArca(documento.numero);
 }
 
 export type ContextoDeReceptor = Readonly<{

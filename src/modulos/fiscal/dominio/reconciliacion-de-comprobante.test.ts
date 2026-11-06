@@ -178,6 +178,21 @@ describe("coincideConLoRegistrado", () => {
     );
   });
 
+  it("un pasaporte con letras se compara por su parte numérica: lo que ARCA registró es 123456", () => {
+    const turista = {
+      nombre: "Jane Doe",
+      documento: { tipo: "PASAPORTE", numero: "ABC123456" },
+      condicionIva: "CONSUMIDOR_FINAL",
+      domicilio: "5th Avenue 1",
+    } as const;
+    const a = enVueloDe(facturaArmada(turista, [renglon("121.00", "1", "21")]));
+    const registrado = registradoDe(a);
+    expect(registrado.tipoDeDocumento).toBe(94);
+    expect(registrado.numeroDeDocumento).toBe(123456n);
+    expect(coincideConLoRegistrado(a, registrado)).toBe(true);
+    expect(coincideConLoRegistrado(a, { ...registrado, numeroDeDocumento: 0n })).toBe(false);
+  });
+
   describe("notas: también el comprobante asociado", () => {
     const autorizada = {
       empresaId: EMPRESA,

@@ -67,8 +67,23 @@ describe("numeroDeDocumentoDesdeTexto", () => {
     ok("DNI", "123.456.789", "123456789");
   });
 
-  it("pasaporte: solo dígitos, de 1 a 11", () => {
-    for (const numero of ["0", "007", "12345678901"]) ok("PASAPORTE", numero);
-    for (const numero of ["", "123456789012", "AAB123456", "-1", "1.5"]) mal("PASAPORTE", numero);
+  it("pasaporte: letras y números, de 6 a 9, con una cifra distinta de cero; minúsculas a mayúsculas", () => {
+    for (const numero of ["ABC123456", "AAB000123", "A1B2C3D4", "123456", "0001234", "123456789"])
+      ok("PASAPORTE", numero);
+    ok("PASAPORTE", "abc123456", "ABC123456");
+    for (const numero of [
+      "",
+      "ABCDEF",
+      "ABC000000",
+      "000000",
+      "ABC12",
+      "12345",
+      "ABC1234567",
+      "-1",
+      "1.5",
+      "0",
+      "007",
+    ])
+      mal("PASAPORTE", numero);
   });
 });

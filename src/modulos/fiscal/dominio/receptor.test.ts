@@ -123,8 +123,9 @@ describe("validarReceptor: lo que acepta", () => {
       { tipo: "DNI", numero: "12345678" },
       { tipo: "DNI", numero: "123456" },
       { tipo: "DNI", numero: "123456789" },
-      { tipo: "PASAPORTE", numero: "12345678901" },
-      { tipo: "PASAPORTE", numero: "0" },
+      { tipo: "PASAPORTE", numero: "123456" },
+      { tipo: "PASAPORTE", numero: "ABC123456" },
+      { tipo: "PASAPORTE", numero: "A1B2C3D4" },
     ] as const) {
       const r = validarReceptor(conDocumento(documento), contexto("B"));
       expect(r, JSON.stringify(documento)).toEqual({ ok: true, valor: conDocumento(documento) });
@@ -259,12 +260,42 @@ describe("validarReceptor: forma", () => {
     }
   });
 
-  it("pasaporte: solo dígitos, de 1 a 11 (DocNro es un Long de 11)", () => {
-    for (const numero of ["", "123456789012", "AAB123456", "-1", "1.5"]) {
-      expect(validarReceptor(conDocumento({ tipo: "PASAPORTE", numero }), contexto("B"))).toEqual(
-        invalido("documento"),
-      );
+  it("pasaporte: letras y números de 6 a 9; sin cifra, solo ceros, de 5 o de 10 caracteres o con otro carácter se rechaza marcando el documento", () => {
+    for (const numero of [
+      "",
+      "ABCDEF",
+      "ABCDEFGHI",
+      "ABC000000",
+      "000000",
+      "ABC12",
+      "12345",
+      "ABC1234567",
+      "1234567890",
+      "ABC-12345",
+      "ABC 12345",
+      " ABC12345",
+      "ÑBC123456",
+      "-123456",
+      "1.5",
+      "0",
+      "12345678901",
+    ]) {
+      expect(
+        validarReceptor(conDocumento({ tipo: "PASAPORTE", numero }), contexto("B")),
+        JSON.stringify(numero),
+      ).toEqual(invalido("documento"));
     }
+  });
+
+  it("pasaporte: las minúsculas se guardan en mayúsculas y el resto queda tal cual", () => {
+    const r = validarReceptor(
+      conDocumento({ tipo: "PASAPORTE", numero: "abc123456" }),
+      contexto("B"),
+    );
+    expect(r).toEqual({
+      ok: true,
+      valor: conDocumento({ tipo: "PASAPORTE", numero: "ABC123456" }),
+    });
   });
 });
 
@@ -361,6 +392,15 @@ describe("numeroDeDocumentoParaArca", () => {
     expect(numeroDeDocumentoParaArca({ tipo: "SIN_IDENTIFICAR" })).toBe(0n);
     expect(numeroDeDocumentoParaArca({ tipo: "CUIT", numero: CUIT_C })).toBe(30712345671n);
     expect(numeroDeDocumentoParaArca({ tipo: "DNI", numero: "12345678" })).toBe(12345678n);
+    // Un pasaporte ya guardado antes de las letras (solo dígitos, de cualquier largo de 1 a 11) da el mismo número que siempre.
     expect(numeroDeDocumentoParaArca({ tipo: "PASAPORTE", numero: "007" })).toBe(7n);
+    expect(numeroDeDocumentoParaArca({ tipo: "PASAPORTE", numero: "0" })).toBe(0n);
+  });
+
+  it("un pasaporte con letras informa solo la parte numérica, en orden y sin los ceros de la izquierda", () => {
+    const de = (numero: string) => numeroDeDocumentoParaArca({ tipo: "PASAPORTE", numero });
+    expect(de("ABC123456")).toBe(123456n);
+    expect(de("AAB000123")).toBe(123n);
+    expect(de("A1B2C3D4")).toBe(1234n);
   });
 });

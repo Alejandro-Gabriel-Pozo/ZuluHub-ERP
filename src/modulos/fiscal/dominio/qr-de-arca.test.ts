@@ -94,7 +94,13 @@ describe("QR de ARCA: el JSON", () => {
     ]).toEqual([96, 12345678]);
     expect(j({ tipo: "CUIL", numero: CUIT_C })["tipoDocRec"]).toBe(86);
     expect(j({ tipo: "CDI", numero: CUIT_C })["tipoDocRec"]).toBe(87);
-    expect(j({ tipo: "PASAPORTE", numero: "123" })["tipoDocRec"]).toBe(94);
+    expect(j({ tipo: "PASAPORTE", numero: "123456" })["tipoDocRec"]).toBe(94);
+    // Con letras, el QR lleva solo la parte numérica, igual que el pedido a ARCA (una sola cuenta).
+    expect([
+      j({ tipo: "PASAPORTE", numero: "ABC123456" })["tipoDocRec"],
+      j({ tipo: "PASAPORTE", numero: "ABC123456" })["nroDocRec"],
+      j({ tipo: "PASAPORTE", numero: "AAB000123" })["nroDocRec"],
+    ]).toEqual([94, 123456, 123]);
   });
 
   it("los números largos salen sin ceros a la izquierda (un entero con ceros no es JSON)", () => {

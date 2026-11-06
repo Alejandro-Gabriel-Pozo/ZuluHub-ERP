@@ -102,6 +102,12 @@ describe("de la solicitud del dominio a los valores de WSFE", () => {
       condicionIva: 6,
     });
     expect(documento("PASAPORTE", "123456789")).toMatchObject({ tipoDeDocumento: 94 });
+    // Con letras: a ARCA va solo la parte numérica (`DocNro` es un Long de 11; Q5, 2026-11-06).
+    expect(documento("PASAPORTE", "ABC123456")).toMatchObject({
+      tipoDeDocumento: 94,
+      numeroDeDocumento: "123456",
+    });
+    expect(documento("PASAPORTE", "AAB000123")).toMatchObject({ numeroDeDocumento: "123" });
     expect(documento("CUIL", "20111111112")).toMatchObject({ tipoDeDocumento: 86 });
     expect(documento("CDI", "20111111112")).toMatchObject({ tipoDeDocumento: 87 });
   });
