@@ -712,5 +712,35 @@
     "motivo": "Introducir el registro de datos (regla 5, C1) sin reescribir de una vez todas las pantallas existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento. La cuenta por archivo (que solo baja) está en arquitectura/deuda/campos-sin-dato.json.",
     "aprobadoPor": "orquestador (decisión del dueño 2026-11-05)",
     "vence": "2027-01-04"
+  },
+  {
+    "id": "validacion-de-datos--prohibidos-y-duplicados",
+    "archivos": [
+      "apps/plataforma/logica/entrada-del-plan.ts",
+      "migraciones/0005_administracion.sql",
+      "migraciones/0006_fiscal.sql",
+      "migraciones/0009_facturacion.sql",
+      "migraciones/0019_contacto_de_la_sucursal.sql",
+      "migraciones/0022_nombre_de_la_sucursal_en_el_comprobante.sql",
+      "src/adaptadores/correo/configuracion.ts",
+      "src/capacidades/experiencia/puerta.ts",
+      "src/capacidades/experiencia/ruta-de-retorno.ts",
+      "src/capacidades/planes/version-de-plan.ts",
+      "src/capacidades/vocabulario/texto-visible.ts",
+      "src/modulos/empresas/dominio/sucursal.ts",
+      "src/modulos/fiscal/dominio/certificado-pedido.ts",
+      "src/modulos/fiscal/dominio/datos-fiscales.ts",
+      "src/plataforma/captacion/dominio/atribucion.ts",
+      "src/plataforma/captacion/dominio/formulario.ts",
+      "src/primitivas/contacto/una-linea.ts",
+      "src/primitivas/domicilio/domicilio.ts"
+    ],
+    "descripcion": "Validaciones de datos por lista de prohibidos (controles, invisibles, marcado, «todo menos esto»; en código y en migraciones SQL) y topes de largo escritos dos veces: todavía no declaran lo que se PERMITE ni toman el límite de su única fuente. No hay un texto común para verificarlas: las cubre el presupuesto exacto por archivo, que solo baja.",
+    "tipo": "backlog",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-11-06",
+    "motivo": "Introducir los chequeos de lista de permitidos y de fuente única (PR 2 de C1) sin reescribir de una vez todas las validaciones existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento (las migraciones ya aplicadas no se editan: se corrigen con una migración nueva). La cuenta por archivo (que solo baja) está en arquitectura/deuda/validacion-de-datos.json.",
+    "aprobadoPor": "orquestador (PR 2 de C1 autorizado el 2026-11-06 por mensaje entre sesiones; decisión del dueño 2026-11-05)",
+    "vence": "2027-01-05"
   }
 ]

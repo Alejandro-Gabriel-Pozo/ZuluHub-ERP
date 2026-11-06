@@ -11,6 +11,11 @@ import { DATO_PENDIENTE, type DefinicionDeDato } from "../../src/capacidades/dat
  *    alias) de `NOMBRES_PROHIBIDOS`, `document.write` y `role="textbox"` cuenta como control crudo (deuda que solo baja);
  *  - un tag que viene de una variable o un parámetro cuenta como tag dinámico; el `<input type="hidden">` solo se exime con `type` y
  *    `name` literales y ningún spread; un campo con alias, sin `dato` o con `{...props}` después del `dato` es un problema;
+ *  - cualquier cadena que nombre `react/jsx-runtime` o `react/jsx-dev-runtime` (import, `require`, `import()`, `export … from`) es un
+ *    problema; un `role` que no es un literal (o una condición de literales) y `setAttribute("role"|"contenteditable", …)` cuentan como
+ *    control crudo; `document.write` cuenta con cualquier receptor que contenga `document`;
+ *  - un acceso con clave calculada a React o a `document` (`R["create" + "Element"]`, `R[k]`, `Reflect.get(React, …)`, `const { [k]: f } =
+ *    React`) es un problema: no se puede saber qué elemento arma;
  *  - se analizan todas las extensiones de código (`EXTENSIONES_DE_CODIGO`); un archivo con error de sintaxis es un problema.
  * Límites declarados: HTML armado como texto fuera de JSX (un `route.ts` que devuelva `"<input>"`, un MDX) y componentes importados de
  * paquetes externos que rendericen un control por dentro (sumar una dependencia ya exige aviso, CLAUDE.md).
@@ -30,8 +35,11 @@ export type ResultadoDeArchivo = Readonly<{
 }>;
 
 const CONTROLES_CRUDOS = new Set(["input", "textarea", "select"]);
-/** Con estos nombres se arman elementos o HTML sin pasar por JSX: se prohíbe el nombre, en cualquier forma en que aparezca. */
-const NOMBRES_PROHIBIDOS = new Set([
+/**
+ * Con estos nombres se arman elementos, HTML o código sin pasar por JSX: se prohíbe el nombre, en cualquier forma en que aparezca y sin
+ * distinguir mayúsculas (`Createelement` o `CREATEELEMENT` no esquivan nada). Se guardan tal cual y se comparan en minúscula.
+ */
+const NOMBRES_PROHIBIDOS_ESCRITOS = [
   "createElement",
   "createElementNS",
   "cloneElement",
@@ -48,7 +56,13 @@ const NOMBRES_PROHIBIDOS = new Set([
   "DOMParser",
   "createContextualFragment",
   "contentEditable",
-]);
+  "setHTMLUnsafe",
+  "parseHTMLUnsafe",
+  "eval",
+  "designMode",
+  "execCommand",
+];
+const NOMBRES_PROHIBIDOS = new Set(NOMBRES_PROHIBIDOS_ESCRITOS.map((n) => n.toLowerCase()));
 /** Elementos HTML y SVG no interactivos (o de estructura) que pueden usarse sin pasar por el registro: la lista de permitidos. */
 const ETIQUETAS_PERMITIDAS = new Set(
   (
@@ -105,6 +119,29 @@ function literalDe(attr: ts.JsxAttribute | undefined): string | undefined {
   return undefined;
 }
 
+/** Todos los valores literales que puede tomar una expresión (literal, condición de literales, con paréntesis o `as const`); `undefined` si alguno no lo es. */
+function literalesDe(e: ts.Expression): string[] | undefined {
+  if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) return [e.text];
+  if (ts.isParenthesizedExpression(e) || ts.isAsExpression(e) || ts.isSatisfiesExpression(e))
+    return literalesDe(e.expression);
+  if (ts.isConditionalExpression(e)) {
+    const a = literalesDe(e.whenTrue);
+    const b = literalesDe(e.whenFalse);
+    return a === undefined || b === undefined ? undefined : [...a, ...b];
+  }
+  return undefined;
+}
+
+/** Los valores literales de un atributo JSX (`x="a"`, `x={"a"}`, `x={c ? "a" : "b"}`), o `undefined` si alguno es dinámico. */
+function literalesDeAtributo(attr: ts.JsxAttribute): string[] | undefined {
+  const valor = attr.initializer;
+  if (valor === undefined) return undefined;
+  if (ts.isStringLiteral(valor)) return [valor.text];
+  return ts.isJsxExpression(valor) && valor.expression !== undefined
+    ? literalesDe(valor.expression)
+    : undefined;
+}
+
 const esDeTipos = (nodo: ts.Node): boolean => {
   for (let p: ts.Node | undefined = nodo.parent; p !== undefined; p = p.parent) {
     if (ts.isTypeNode(p) || ts.isTypeAliasDeclaration(p) || ts.isInterfaceDeclaration(p))
@@ -146,8 +183,8 @@ function componentesDeclarados(fuente: ts.SourceFile): Set<string> {
   return declarados;
 }
 
-const DOCUMENTO = /^(window\.|globalThis\.)?document$/;
-/** `document.write(...)`, `document.writeln(...)` y sus formas con corchetes. */
+const DOCUMENTO = /document(?!o)/i; // «documento» (el dato fiscal) no es el `document` del navegador
+/** `X.write(...)`, `X.writeln(...)` y sus formas con corchetes, con cualquier receptor X que contenga `document` (`ownerDocument`, `frame.contentDocument`, …). */
 function esEscrituraDeDocumento(nodo: ts.Node): boolean {
   const fuente = nodo.getSourceFile();
   if (ts.isPropertyAccessExpression(nodo)) {
@@ -162,6 +199,38 @@ function esEscrituraDeDocumento(nodo: ts.Node): boolean {
   return false;
 }
 
+const SOLO_REACT = /^react$/;
+/** Los nombres que en este archivo son React (`React`, el alias de un import o de un `require("react")`). */
+function receptoresDeReact(fuente: ts.SourceFile): Set<string> {
+  const nombres = new Set(["React"]);
+  const mirar = (n: ts.Node): void => {
+    if (
+      ts.isImportDeclaration(n) &&
+      ts.isStringLiteral(n.moduleSpecifier) &&
+      SOLO_REACT.test(n.moduleSpecifier.text)
+    ) {
+      const c = n.importClause;
+      if (c?.name !== undefined) nombres.add(c.name.text);
+      if (c?.namedBindings !== undefined && ts.isNamespaceImport(c.namedBindings))
+        nombres.add(c.namedBindings.name.text);
+    }
+    if (
+      ts.isVariableDeclaration(n) &&
+      ts.isIdentifier(n.name) &&
+      n.initializer !== undefined &&
+      ts.isCallExpression(n.initializer) &&
+      n.initializer.expression.getText(fuente) === "require" &&
+      n.initializer.arguments[0] !== undefined &&
+      ts.isStringLiteralLike(n.initializer.arguments[0]) &&
+      SOLO_REACT.test(n.initializer.arguments[0].text)
+    )
+      nombres.add(n.name.text);
+    ts.forEachChild(n, mirar);
+  };
+  mirar(fuente);
+  return nombres;
+}
+
 /** Problemas, deuda y usos de un archivo de aplicación (no de un componente de campo). */
 export function analizarArchivo(
   ruta: string,
@@ -172,6 +241,7 @@ export function analizarArchivo(
   const fuente = ts.createSourceFile(ruta, texto, ts.ScriptTarget.Latest, true, tipoDeArchivo);
   const campos = new Set(contexto.componentes.map(nombreDeComponente));
   const declarados = componentesDeclarados(fuente);
+  const reactNombres = receptoresDeReact(fuente);
   const problemas: string[] = [];
   // `parseDiagnostics` no es API pública: si desaparece (o hay un error de sintaxis) el archivo no se pudo analizar y se falla cerrado.
   const sintaxis = (fuente as unknown as { parseDiagnostics?: readonly unknown[] })
@@ -253,12 +323,69 @@ export function analizarArchivo(
       (ts.isIdentifier(nodo) ||
         ts.isStringLiteral(nodo) ||
         ts.isNoSubstitutionTemplateLiteral(nodo)) &&
-      NOMBRES_PROHIBIDOS.has(nodo.text)
+      NOMBRES_PROHIBIDOS.has(nodo.text.toLowerCase())
     ) {
       sumarCrudo("nombre-prohibido");
     }
     if (ts.isJsxAttribute(nodo) && nodo.name.getText(fuente) === "role") {
-      if ((literalDe(nodo) ?? "").split(/\s+/).includes("textbox")) sumarCrudo("role-textbox");
+      const valores = literalesDeAtributo(nodo);
+      if (valores === undefined) sumarCrudo("role-dinamico");
+      else if (valores.some((v) => v.split(/\s+/).includes("textbox"))) sumarCrudo("role-textbox");
+    }
+    if (
+      ts.isCallExpression(nodo) &&
+      ((ts.isPropertyAccessExpression(nodo.expression) &&
+        /^setAttribute(NS)?$/.test(nodo.expression.name.text)) ||
+        (ts.isElementAccessExpression(nodo.expression) &&
+          ts.isStringLiteralLike(nodo.expression.argumentExpression) &&
+          /^setAttribute(NS)?$/.test(nodo.expression.argumentExpression.text)))
+    ) {
+      const nombre = nodo.arguments[nodo.expression.getText(fuente).includes("NS") ? 1 : 0];
+      if (
+        nombre !== undefined &&
+        ts.isStringLiteralLike(nombre) &&
+        /^(role|contenteditable)$/i.test(nombre.text)
+      )
+        sumarCrudo("setAttribute");
+    }
+    if (
+      ts.isStringLiteralLike(nodo) &&
+      /react\/jsx(-dev)?-runtime/.test(nodo.text) &&
+      !(ts.isImportDeclaration(nodo.parent) && nodo.parent.moduleSpecifier === nodo)
+    ) {
+      problemas.push(
+        `${donde(nodo)} nombra el runtime de JSX: arma elementos sin pasar por el chequeo`,
+      );
+    }
+    const esReact = (e: ts.Expression): boolean =>
+      (ts.isIdentifier(e) && reactNombres.has(e.text)) || DOCUMENTO.test(e.getText(fuente));
+    if (
+      ts.isElementAccessExpression(nodo) &&
+      esReact(nodo.expression) &&
+      !ts.isStringLiteralLike(nodo.argumentExpression)
+    ) {
+      problemas.push(
+        `${donde(nodo)} accede a React o a document con una clave calculada: no se puede saber qué arma`,
+      );
+    }
+    if (
+      ts.isCallExpression(nodo) &&
+      /^Reflect\.(get|getOwnPropertyDescriptor)$/.test(nodo.expression.getText(fuente)) &&
+      nodo.arguments[0] !== undefined &&
+      esReact(nodo.arguments[0])
+    ) {
+      problemas.push(`${donde(nodo)} lee React o document con Reflect: no se puede saber qué arma`);
+    }
+    if (
+      ts.isVariableDeclaration(nodo) &&
+      ts.isObjectBindingPattern(nodo.name) &&
+      nodo.initializer !== undefined &&
+      esReact(nodo.initializer) &&
+      nodo.name.elements.some(
+        (e) => e.propertyName !== undefined && ts.isComputedPropertyName(e.propertyName),
+      )
+    ) {
+      problemas.push(`${donde(nodo)} desestructura React o document con una clave calculada`);
     }
     if (esEscrituraDeDocumento(nodo)) sumarCrudo("document.write");
     if (
@@ -301,4 +428,64 @@ export function analizarArchivo(
   mirar(fuente);
   const crudos = [...crudosPorEtiqueta.values()].reduce((a, b) => a + b, 0);
   return { problemas, pendientes, crudos, dinamicos, crudosPorEtiqueta, usos };
+}
+
+/** Las extensiones de `src/` (y de los paquetes que importa una app) que pueden armar un control: las de JSX y las de JavaScript. */
+export const EXTENSIONES_FUERA_DE_LAS_APPS = ["tsx", "jsx", "js", "mjs", "cjs"] as const;
+
+/**
+ * Fuera de las aplicaciones no hay deuda: el código de `src/` (y de un paquete que una app importa) con JSX o JavaScript no puede
+ * tener un campo sin dato, un control crudo ni un tag dinámico, ni una evasión. Previene: un `.tsx` en `src/` o en un paquete
+ * compartido que pinta un `<input>` y queda fuera de lo que el chequeo mira (CLAUDE.md «Sin dato registrado no hay campo»).
+ */
+export function problemasFueraDeLasApps(
+  archivos: ReadonlyMap<string, string>,
+  contexto: Contexto,
+): string[] {
+  return [...archivos].flatMap(([ruta, texto]) => {
+    const r = analizarArchivo(ruta, texto, contexto);
+    const suma = r.pendientes + r.crudos + r.dinamicos;
+    return [
+      ...r.problemas,
+      ...(suma > 0
+        ? [`${ruta} tiene ${suma} campos o controles sin dato: fuera de las apps no hay deuda`]
+        : []),
+    ];
+  });
+}
+
+/**
+ * Los destinos de los imports relativos de un archivo que salen de su carpeta de base (`apps/web`, …), como rutas desde la raíz y sin
+ * extensión resuelta. Sirve para encontrar los paquetes que una app importa por fuera de `apps/` y de `src/`.
+ */
+export function importadosFueraDe(ruta: string, texto: string, base: string): string[] {
+  const fuente = ts.createSourceFile(ruta, texto, ts.ScriptTarget.Latest, true);
+  const carpeta = ruta.split("/").slice(0, -1);
+  const salida = new Set<string>();
+  const mirar = (n: ts.Node): void => {
+    const especificador =
+      (ts.isImportDeclaration(n) || ts.isExportDeclaration(n)) && n.moduleSpecifier !== undefined
+        ? n.moduleSpecifier
+        : ts.isCallExpression(n) &&
+            (n.expression.kind === ts.SyntaxKind.ImportKeyword ||
+              n.expression.getText(fuente) === "require")
+          ? n.arguments[0]
+          : undefined;
+    if (
+      especificador !== undefined &&
+      ts.isStringLiteralLike(especificador) &&
+      especificador.text.startsWith(".")
+    ) {
+      const partes: string[] = [...carpeta];
+      for (const p of especificador.text.split("/")) {
+        if (p === "..") partes.pop();
+        else if (p !== "." && p !== "") partes.push(p);
+      }
+      const destino = partes.join("/");
+      if (!destino.startsWith(`${base}/`)) salida.add(destino);
+    }
+    ts.forEachChild(n, mirar);
+  };
+  mirar(fuente);
+  return [...salida].sort();
 }

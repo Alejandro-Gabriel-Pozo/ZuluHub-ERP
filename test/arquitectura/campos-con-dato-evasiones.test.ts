@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { analizarArchivo, type Contexto, type Registro } from "./campos-con-dato-apoyo";
+import {
+  analizarArchivo,
+  importadosFueraDe,
+  problemasFueraDeLasApps,
+  type Contexto,
+  type Registro,
+} from "./campos-con-dato-apoyo";
 import {
   problemasDeComponente,
   problemasDeDeuda,
@@ -363,5 +369,166 @@ describe("campos con dato: el registro, la deuda y el componente", () => {
     expect(
       problemasDeComponente("x/Campo.tsx", `export type P = Readonly<{ dato: string }>;`),
     ).toHaveLength(1);
+  });
+});
+
+describe("campos con dato: evasiones baratas cerradas (PR 2 de C1)", () => {
+  const raw = (texto: string) => analizar(texto);
+
+  it("el runtime de JSX en cualquier forma es un problema", () => {
+    for (const texto of [
+      `import { jsx as h } from "react/jsx-runtime";`,
+      `import { jsxDEV as h } from "react/jsx-dev-runtime";`,
+      `const r = require("react/jsx-runtime");`,
+      `const r = await import("react/jsx-dev-runtime");`,
+      `export { jsx } from "react/jsx-runtime";`,
+      "const r = require(`react/jsx-runtime`);",
+    ]) {
+      expect(raw(texto).problemas.length, texto).toBeGreaterThan(0);
+    }
+  });
+
+  it("los nombres nuevos y sin distinguir mayúsculas cuentan como control crudo", () => {
+    for (const nombre of [
+      "setHTMLUnsafe",
+      "parseHTMLUnsafe",
+      "eval",
+      "designMode",
+      "execCommand",
+      "Createelement",
+      "CREATEELEMENT",
+      "InnerHtml",
+      "dangerouslysetinnerhtml",
+      "contenteditable",
+    ]) {
+      expect(raw(`const f = x.${nombre};`).crudosPorEtiqueta.get("nombre-prohibido"), nombre).toBe(
+        1,
+      );
+      expect(
+        raw(`const f = x["${nombre}"];`).crudosPorEtiqueta.get("nombre-prohibido"),
+        nombre,
+      ).toBe(1);
+    }
+    expect(raw(pantalla(`<div contentEditable />`)).crudosPorEtiqueta.get("nombre-prohibido")).toBe(
+      1,
+    );
+    expect(raw(pantalla(`<div contenteditable />`)).crudosPorEtiqueta.get("nombre-prohibido")).toBe(
+      1,
+    );
+  });
+
+  it("un role que no es un literal cuenta como control crudo; una condición de literales no", () => {
+    expect(raw(pantalla(`<div role={rol} />`)).crudosPorEtiqueta.get("role-dinamico")).toBe(1);
+    expect(
+      raw(pantalla(`<div role={c ? "a" : rol} />`)).crudosPorEtiqueta.get("role-dinamico"),
+    ).toBe(1);
+    expect(raw(pantalla("<div role={`a${x}`} />")).crudosPorEtiqueta.get("role-dinamico")).toBe(1);
+    expect(raw(pantalla(`<div role />`)).crudosPorEtiqueta.get("role-dinamico")).toBe(1);
+    expect(raw(pantalla(`<div role={c ? "alert" : "status"} />`)).crudos).toBe(0);
+    expect(raw(pantalla(`<div role="alert" />`)).crudos).toBe(0);
+    expect(
+      raw(pantalla(`<div role={c ? "alert" : "textbox"} />`)).crudosPorEtiqueta.get("role-textbox"),
+    ).toBe(1);
+  });
+
+  it("setAttribute de role o contenteditable cuenta como control crudo", () => {
+    for (const texto of [
+      `el.setAttribute("role", "textbox");`,
+      `el.setAttribute("contenteditable", "true");`,
+      `el.setAttribute("ContentEditable", "true");`,
+      `el["setAttribute"]("role", x);`,
+      `el.setAttributeNS(null, "role", "textbox");`,
+    ]) {
+      expect(raw(texto).crudosPorEtiqueta.get("setAttribute"), texto).toBe(1);
+    }
+    expect(
+      raw(`el.setAttribute("id", "a");`).crudosPorEtiqueta.get("setAttribute"),
+    ).toBeUndefined();
+  });
+
+  it("document.write con cualquier receptor que contenga document cuenta; «documento» (el dato fiscal) no", () => {
+    for (const texto of [
+      `document.write("<input>");`,
+      `window.document.write("x");`,
+      `frame.contentDocument.write("x");`,
+      `el.ownerDocument["writeln"]("x");`,
+      `top.documentElement.write("x");`,
+    ]) {
+      expect(raw(texto).crudosPorEtiqueta.get("document.write"), texto).toBe(1);
+    }
+    expect(raw(`const t = CLAVE_DE_DOCUMENTO[documento.tipo];`).problemas).toEqual([]);
+  });
+
+  it("las claves calculadas sobre React o document fallan", () => {
+    for (const texto of [
+      `import React from "react";\nconst f = React["create" + "Element"];`,
+      `import React from "react";\nconst f = React[k];`,
+      `import * as R from "react";\nconst f = R[k];`,
+      `import R from "react";\nconst f = R[k];`,
+      `const R = require("react");\nconst f = R[k];`,
+      `const f = document[k];`,
+      `const f = window.document[k];`,
+      `import React from "react";\nconst f = Reflect.get(React, k);`,
+      `import R from "react";\nconst f = Reflect.get(R, "x" + "y");`,
+      `const f = Reflect.getOwnPropertyDescriptor(document, k);`,
+      `import React from "react";\nconst { [k]: f } = React;`,
+    ]) {
+      expect(raw(texto).problemas.length, texto).toBeGreaterThan(0);
+    }
+  });
+
+  it("las claves literales sobre otras cosas no fallan", () => {
+    for (const texto of [
+      `const f = datos[k];`,
+      `const f = CLAVE[documento.tipo];`,
+      `import React from "react";\nconst f = React.useState;`,
+      `const f = Reflect.get(objeto, k);`,
+    ]) {
+      expect(raw(texto).problemas, texto).toEqual([]);
+    }
+  });
+});
+
+describe("campos con dato: fuera de las apps no hay deuda", () => {
+  const fuera = (archivos: Record<string, string>) =>
+    problemasFueraDeLasApps(new Map(Object.entries(archivos)), contexto);
+
+  it("un control crudo, un tag dinámico, un pendiente o una evasión en src/ fallan", () => {
+    for (const cuerpo of [
+      `export const X = () => <input />;`,
+      `export const X = ({ T }: { T: unknown }) => <T />;`,
+      `export const X = () => <Campo dato="pendiente" />;`,
+      `export const X = () => <Campo />;`,
+      `export const X = () => createElement("input");`,
+    ]) {
+      const texto = `import { Campo } from "x/Campo";\n${cuerpo}`;
+      expect(fuera({ "src/x.tsx": texto }).length, cuerpo).toBeGreaterThan(0);
+      expect(fuera({ "packages/ui/x.js": texto }).length, cuerpo).toBeGreaterThan(0);
+    }
+  });
+
+  it("lo que no pinta controles pasa", () => {
+    expect(fuera({ "src/x.tsx": "export const X = () => <div>hola</div>;" })).toEqual([]);
+    expect(fuera({ "src/x.js": "export const x = 1;" })).toEqual([]);
+    expect(fuera({})).toEqual([]);
+  });
+
+  it("los imports relativos que salen de la app se siguen (import, export from, import() y require)", () => {
+    const texto = [
+      'import { a } from "../../packages/ui/boton";',
+      'export { b } from "../../packages/ui/otro";',
+      'const c = await import("../../packages/ui/lazy");',
+      'const d = require("../../packages/ui/viejo");',
+      'import { e } from "./propio";',
+      'import { f } from "../../../src/primitivas/x";',
+      'import { g } from "react";',
+    ].join("\n");
+    expect(importadosFueraDe("apps/web/ui/p.tsx", texto, "apps/web")).toEqual([
+      "apps/packages/ui/boton",
+      "apps/packages/ui/lazy",
+      "apps/packages/ui/otro",
+      "apps/packages/ui/viejo",
+      "src/primitivas/x",
+    ]);
   });
 });

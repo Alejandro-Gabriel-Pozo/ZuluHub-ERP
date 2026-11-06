@@ -10,5 +10,7 @@
   "test/arquitectura/cargar-entorno-nombres.test.ts": ["apps/web/PRIMER-DESPLIEGUE.md"],
   "test/arquitectura/reglas.test.ts": ["apps/**"],
   "test/arquitectura/lint.test.ts": ["apps/**"],
-  "test/arquitectura/campos-con-dato.test.ts": ["apps/**"]
+  "test/arquitectura/campos-con-dato.test.ts": ["apps/**"],
+  "test/arquitectura/lista-de-permitidos.test.ts": ["apps/**"],
+  "test/arquitectura/fuente-unica.test.ts": ["apps/**"]
 }
