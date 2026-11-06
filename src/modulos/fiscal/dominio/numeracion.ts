@@ -1,12 +1,17 @@
-import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import type { TipoDeComprobante } from "./comprobante-emitido";
-import type { Ambiente } from "./comprobante-nuevo";
 import type {
   DesenlaceDeAutorizacion,
   ResultadoDeAutorizacionArca,
 } from "./estados-de-comprobante";
-import type { EmisorId, PuntoDeVentaId, SolicitudId } from "./identificadores";
+import type {
+  EstadoDeSerie,
+  IdentidadDeSerie,
+  Serie,
+  SerieBloqueada,
+  SerieEnCurso,
+  SerieLibre,
+} from "./numeracion-modelo";
+import type { SolicitudId } from "./identificadores";
 
 /**
  * Numeración de comprobantes sin huecos ni duplicados (spec H7 §B.8). Una serie por (punto de
@@ -22,7 +27,6 @@ import type { EmisorId, PuntoDeVentaId, SolicitudId } from "./identificadores";
  * I/O. La transacción serializable y el disparador de la base imponen lo mismo (un test compara
  * ambos); acá están las reglas para probarlas sin base.
  */
-export type EstadoDeSerie = "LIBRE" | "EN_CURSO" | "BLOQUEADA";
 
 /**
  * Transiciones de estado permitidas. Una serie `EN_CURSO` que sigue `EN_CURSO` (autorización
@@ -33,39 +37,6 @@ export const TRANSICIONES_DE_SERIE: Readonly<Record<EstadoDeSerie, readonly Esta
   EN_CURSO: ["LIBRE", "BLOQUEADA"],
   BLOQUEADA: ["LIBRE"],
 };
-
-type IdentidadDeSerie = Readonly<{
-  empresaId: EmpresaId;
-  puntoDeVentaId: PuntoDeVentaId;
-  /** Atado al punto de venta por clave compuesta: una serie no mezcla emisor y punto de venta. */
-  emisorId: EmisorId;
-  tipo: TipoDeComprobante;
-  /**
-   * Parte de la clave (0009): homologación y producción son otro ARCA y numeran por separado. Sin esto,
-   * los números de prueba avanzarían la serie real y ARCA rechazaría el siguiente número verdadero por
-   * fuera de secuencia (error 10016).
-   */
-  ambiente: Ambiente;
-  version: number;
-}>;
-
-export type SerieLibre = IdentidadDeSerie & Readonly<{ estado: "LIBRE"; ultimoNumero: bigint }>;
-
-export type SerieEnCurso = IdentidadDeSerie &
-  Readonly<{
-    estado: "EN_CURSO";
-    ultimoNumero: bigint;
-    /** Siempre `ultimoNumero + 1`. */
-    numeroEnCurso: bigint;
-    solicitud: SolicitudId;
-    /** Pasado este instante la reserva se considera vencida y se reconcilia. */
-    enCursoHasta: Date;
-  }>;
-
-export type SerieBloqueada = IdentidadDeSerie &
-  Readonly<{ estado: "BLOQUEADA"; ultimoNumero: bigint; motivoBloqueo: string }>;
-
-export type Serie = SerieLibre | SerieEnCurso | SerieBloqueada;
 
 export type ErrorDeNumeracion =
   | "SERIE_OCUPADA"
@@ -338,89 +309,17 @@ export function resincronizarSerie(
   return ok(serieLibreDesde(serie, ultimoDeArca));
 }
 
-/**
- * Coherencia interna de una serie (las restricciones `CHECK` de la tabla): el último número no es
- * negativo, la reserva es exactamente el siguiente número y trae solicitud, y el bloqueo trae motivo.
- */
-export function serieEsConsistente(serie: Serie): boolean {
-  if (serie.ultimoNumero < 0n) return false;
-  if (serie.estado === "EN_CURSO") {
-    return (
-      serie.numeroEnCurso === serie.ultimoNumero + 1n &&
-      serie.solicitud.trim() !== "" &&
-      !Number.isNaN(serie.enCursoHasta.getTime())
-    );
-  }
-  return serie.estado === "BLOQUEADA" ? serie.motivoBloqueo.trim() !== "" : true;
-}
+export {
+  serieEsConsistente,
+  transicionDeSerieValida,
+  verificarSecuencia,
+  type ErrorDeSecuencia,
+} from "./numeracion-invariantes";
 
-/**
- * ¿Es válido pasar de `antes` a `despues`? Es la regla del disparador de la base, escrita como
- * función (coincide con `TRANSICIONES_DE_SERIE`, más quedarse en el mismo estado sin cambios): la
- * identidad (con el ambiente) no cambia; `ultimoNumero` nunca baja y solo sube de a uno, cerrando una
- * `EN_CURSO` con su número, o saltando al resincronizar una `BLOQUEADA`; `LIBRE` solo pasa a `EN_CURSO`
- * (con el siguiente número); `EN_CURSO` a `LIBRE` (liberada o autorizada) o a `BLOQUEADA` (sin
- * avanzar), o se queda igual; `BLOQUEADA` solo sale hacia `LIBRE` (sin bajar el último número) o se
- * queda igual. Un cambio de `version` no cuenta (lo fija la base).
- */
-export function transicionDeSerieValida(antes: Serie, despues: Serie): boolean {
-  if (
-    antes.empresaId !== despues.empresaId ||
-    antes.puntoDeVentaId !== despues.puntoDeVentaId ||
-    antes.emisorId !== despues.emisorId ||
-    antes.ambiente !== despues.ambiente ||
-    antes.tipo !== despues.tipo
-  ) {
-    return false;
-  }
-  if (!serieEsConsistente(despues)) return false;
-  switch (antes.estado) {
-    case "LIBRE":
-      // Se queda libre o pasa a en curso, sin tocar el último número.
-      return despues.estado !== "BLOQUEADA" && despues.ultimoNumero === antes.ultimoNumero;
-    case "EN_CURSO":
-      if (despues.estado === "LIBRE") {
-        // Liberada (sin avanzar) o cerrada como autorizada (avanza exactamente al número reservado).
-        return (
-          despues.ultimoNumero === antes.ultimoNumero ||
-          despues.ultimoNumero === antes.numeroEnCurso
-        );
-      }
-      if (despues.estado === "EN_CURSO") {
-        return (
-          despues.ultimoNumero === antes.ultimoNumero &&
-          despues.solicitud === antes.solicitud &&
-          despues.enCursoHasta.getTime() === antes.enCursoHasta.getTime()
-        );
-      }
-      return despues.ultimoNumero === antes.ultimoNumero; // bloqueada: no avanza
-    case "BLOQUEADA":
-      if (despues.estado === "LIBRE") return despues.ultimoNumero >= antes.ultimoNumero;
-      return (
-        despues.estado === "BLOQUEADA" &&
-        despues.ultimoNumero === antes.ultimoNumero &&
-        despues.motivoBloqueo === antes.motivoBloqueo
-      );
-  }
-}
-
-export type ErrorDeSecuencia = "NUMERO_DUPLICADO" | "NUMERO_SALTEADO";
-
-/**
- * Verifica que los números autorizados (en cualquier orden) sean exactamente
- * `ultimoInicial + 1 … ultimoInicial + n`: sin repetidos y sin huecos. Devuelve el último número.
- * Sirve de auditoría de una serie y de oráculo de las pruebas de concurrencia.
- */
-export function verificarSecuencia(
-  ultimoInicial: bigint,
-  autorizados: readonly bigint[],
-): Resultado<bigint, ErrorDeSecuencia> {
-  const ordenados = [...autorizados].sort((a, b) => Number(a - b));
-  let ultimo = ultimoInicial;
-  for (const numero of ordenados) {
-    if (numero <= ultimo) return err("NUMERO_DUPLICADO");
-    if (numero > ultimo + 1n) return err("NUMERO_SALTEADO");
-    ultimo = numero;
-  }
-  return ok(ultimo);
-}
+export type {
+  EstadoDeSerie,
+  Serie,
+  SerieBloqueada,
+  SerieEnCurso,
+  SerieLibre,
+} from "./numeracion-modelo";
