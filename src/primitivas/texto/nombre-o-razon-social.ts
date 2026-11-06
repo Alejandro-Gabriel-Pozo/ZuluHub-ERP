@@ -13,15 +13,16 @@ import { textoDeUnaLineaDesdeTexto } from "./texto-de-una-linea";
  *   (200: el valor que ya tenía el sistema; ARCA no lo fija, porque WSFE no recibe el nombre del receptor. DECIDIDO por el dueño,
  *   2026-11-05, mensaje directo al orquestador: «En el receptor, 200»; Q9)
  *   caracteres, contados por carácter.
- *   · SOLO LOS CARACTERES PERMITIDOS (lista cerrada, SUPUESTO, Q25/Q26): letras latinas con tilde, ñ y diéresis (Latin-1/WinAnsi),
- *     dígitos, espacio y `. , & - ' / ( ) ° + : ; " # º ª ’ “ ” – — « » ® ™`. Todo lo demás se rechaza (control, invisibles, bidi,
- *     `<` `>`, emojis, otros alfabetos): ver `texto-de-una-linea.ts`, que además explica de dónde sale cada parte de la lista.
- *   · AL MENOS UNA LETRA (SUPUESTO, Q2: el dueño, 2026-11-05, por el canal del orquestador, vio que se cargaba un «nombre» formado
- *     solo por números; la regla concreta es del ingeniero y el dueño no la aprobó tal cual). Eso también rechaza un CUIT escrito en
- *     el campo del nombre («30-71234567-1» no tiene letras), sin una regla aparte. Admite números junto a las letras («La 5ta.
- *     SRL», «Hotel 9 de Julio»).
- *   SIN DECIDIR todavía (Q3, Q7) y por eso NO se aplican: un tope de dígitos seguidos y el rechazo de un texto que empiece con
- *   `=`, `+`, `-` o `@`.
+ *   · SOLO LOS CARACTERES PERMITIDOS (lista cerrada; cotejada con el PDF; Q25 cubierta y Q26 decidida por el dueño, ver
+ *     `texto-de-una-linea.ts`): letras latinas con tilde, ñ y diéresis (Latin-1/WinAnsi), dígitos, espacio y
+ *     `. , & - ' / ( ) ° + : ; " # º ª ’ “ ” – — « » ® ™`. Todo lo demás se rechaza (control, invisibles, bidi, `<` `>`, emojis, otros
+ *     alfabetos). No puede empezar con `+` ni `-` (Q7, DECIDIDO por el dueño, 2026-11-06: «Mantener», mensaje directo al orquestador). Los saltos de línea y
+ *     tabuladores en los extremos se recortan: «Juan\n» queda «Juan» (decisión del orquestador, 2026-11-06).
+ *   · AL MENOS UNA LETRA (Q2, DECIDIDO por el dueño, 2026-11-06: «Q2 lo recomendado», mensaje directo al orquestador; el dueño
+ *     había visto el 2026-11-05 que se cargaba un «nombre» formado solo por números). Eso también rechaza un CUIT escrito en el
+ *     campo del nombre («30-71234567-1» no tiene letras), sin una regla aparte. Admite números junto a las letras («La 5ta. SRL»,
+ *     «Hotel 9 de Julio»).
+ *   · Sin tope de dígitos seguidos (Q3, decisión técnica del orquestador, 2026-11-06: alcanza con «al menos una letra»).
  * - Obligatorio/opcional: lo decide quien la usa. El receptor lo exige salvo con el consumidor final sin identificar; vacío = no se
  *   informa y se guarda `NULL`, nunca un texto vacío (eso lo resuelve el llamador antes de llegar acá).
  * - Único: no. Dos clientes pueden llamarse igual; lo que identifica es el documento.
