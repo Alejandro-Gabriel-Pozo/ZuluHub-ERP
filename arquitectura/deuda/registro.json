@@ -461,24 +461,6 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "archivo-grande--src-modulos-fiscal-casos-de-uso-numeracion-en-tx-ts",
-    "archivos": ["src/modulos/fiscal/casos-de-uso/numeracion-en-tx.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 453,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "archivo-grande--src-modulos-fiscal-casos-de-uso-validar-comprobante-ts",
-    "archivos": ["src/modulos/fiscal/casos-de-uso/validar-comprobante.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 546,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "archivo-grande--src-modulos-fiscal-dominio-numeracion-ts",
     "archivos": ["src/modulos/fiscal/dominio/numeracion.ts"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
