@@ -1,5 +1,9 @@
 import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import {
+  LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL,
+  nombreODenominacionDesdeTexto,
+} from "../../../primitivas/texto/nombre-o-razon-social";
 import { esCondicionDeIva, type CondicionIva } from "./emisor";
 import type { DomicilioId, EmisorId, VersionId } from "./identificadores";
 import { confirmarVersion, type ErrorDeConfirmacion } from "./vigencia";
@@ -13,14 +17,18 @@ import { confirmarVersion, type ErrorDeConfirmacion } from "./vigencia";
  * se normalizan (se recortan los blancos) y los vacíos opcionales quedan en `null`.
  *
  * Valores configurables, todos SUPUESTOS (no son requisitos verificados de ARCA):
- * - `LIMITES_DE_DATOS_FISCALES`: largo máximo de la razón social y del número de IIBB;
+ * - `LIMITES_DE_DATOS_FISCALES`: largo máximo de la razón social y del número de IIBB. La razón social NO se define acá: es el dato
+ *   «nombre o razón social» y su tope y sus caracteres permitidos viven en su primitiva (P2, dueño, 2026-11-05: una sola fuente);
  * - `CONDICIONES_DE_IIBB`: lo que la base puede tener guardado. Desde D-115/D-116 (dueño, 2026-11-05) lo único que se
  *   pide y se imprime es el número de inscripción O «No contribuyente» (RG 1415 Anexo II A.I.a punto 4: el comprobante lleva
  *   el número de inscripción en Ingresos Brutos o la condición de no contribuyente). Las tres condiciones anteriores (local,
  *   convenio multilateral, exento: supuesto del diseño, sin fuente) quedan solo para LEER filas viejas: no se aceptan al
  *   editar, no se copian a una versión nueva y el modelo de impresión nuevo no las imprime.
  */
-export const LIMITES_DE_DATOS_FISCALES = { razonSocial: 200, iibbNumero: 30 } as const;
+export const LIMITES_DE_DATOS_FISCALES = {
+  razonSocial: LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL,
+  iibbNumero: 30,
+} as const;
 
 export const CONDICION_NO_CONTRIBUYENTE = "NO_CONTRIBUYENTE" as const;
 
@@ -151,7 +159,10 @@ export function borradorDesdeConfirmada(
 const CARACTERES_DE_CONTROL = /\p{Cc}/u;
 const FECHA_CIVIL = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/;
 
-/** Texto recortado, no vacío, sin caracteres de control y de hasta `maximo`; `null` si no sirve. */
+/**
+ * Texto recortado, no vacío, sin caracteres de control y de hasta `maximo`; `null` si no sirve. Hoy solo lo usa el número de IIBB (sin
+ * primitiva: Q6, texto corto de 30 sin formato); sigue siendo lista de prohibidos (deuda, ver «Hallazgos aparte»).
+ */
 function textoLimpio(valor: string, maximo: number): string | null {
   const limpio = valor.trim();
   if (limpio === "" || limpio.length > maximo || CARACTERES_DE_CONTROL.test(limpio)) return null;
@@ -215,8 +226,10 @@ export function editarBorrador(
 ): Resultado<DatosFiscalesBorrador, ErrorDeDatosFiscales> {
   let razonSocial = borrador.razonSocial;
   if (cambios.razonSocial !== undefined) {
-    razonSocial = textoLimpio(cambios.razonSocial, LIMITES_DE_DATOS_FISCALES.razonSocial);
-    if (razonSocial === null) return err("RAZON_SOCIAL_INVALIDA");
+    // Las MISMAS reglas que el nombre del receptor (lista de permitidos, al menos una letra): Q10, dueño, 2026-11-05 (respuesta 4 de la auditoría).
+    const valida = nombreODenominacionDesdeTexto(cambios.razonSocial);
+    if (!valida.ok) return err("RAZON_SOCIAL_INVALIDA");
+    razonSocial = valida.valor;
   }
 
   let condicionIva = borrador.condicionIva;

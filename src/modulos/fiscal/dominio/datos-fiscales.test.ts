@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL } from "../../../primitivas/texto/nombre-o-razon-social";
 import {
   DOMICILIO_1,
   DOMICILIO_2,
@@ -164,6 +165,12 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
     ["razón social en blanco", { razonSocial: "   " }, "RAZON_SOCIAL_INVALIDA"],
     ["razón social con salto de línea", { razonSocial: "Sur\nSA" }, "RAZON_SOCIAL_INVALIDA"],
     ["razón social demasiado larga", { razonSocial: "a".repeat(201) }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social con arroba", { razonSocial: "Kiosco @ Mendoza" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social con emoji", { razonSocial: "Hotel & Spa ✨" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social con porcentaje", { razonSocial: "50% Off SRL" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social sin ninguna letra", { razonSocial: "30-71234567-1" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social que empieza con guion", { razonSocial: "-Norte SA" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social de otro alfabeto", { razonSocial: "小林商事" }, "RAZON_SOCIAL_INVALIDA"],
     [
       "condición de IVA desconocida",
       { condicionIva: "CONSUMIDOR_FINAL" },
@@ -201,6 +208,16 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
     expect(LIMITES_DE_DATOS_FISCALES).toEqual({ razonSocial: 200, iibbNumero: 30 });
     expect(editado({ razonSocial: "a".repeat(200) }).razonSocial).toHaveLength(200);
     expect(editado({ iibbNumero: "1".repeat(30) }).iibbNumero).toHaveLength(30);
+  });
+
+  it("la razón social usa la regla del dato «nombre o razón social» (Q10): una sola fuente para tope y caracteres", () => {
+    expect(LIMITES_DE_DATOS_FISCALES.razonSocial).toBe(LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL);
+    expect(editado({ razonSocial: "  Pérez   &  Hijos S.A. " }).razonSocial).toBe(
+      "Pérez & Hijos S.A.",
+    );
+    expect(editado({ razonSocial: "Cafe\u0301 Ñandú S.R.L." }).razonSocial).toBe(
+      "Café Ñandú S.R.L.",
+    );
   });
 
   it("gana el primer error: razón social, condición de IVA, inicio, número de IIBB, condición de IIBB", () => {
