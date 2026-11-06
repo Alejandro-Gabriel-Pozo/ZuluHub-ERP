@@ -77,6 +77,8 @@ export function PantallaDeEmitirFactura({
   const [pasoElegido, setPaso] = useState<1 | 2 | 3>(1);
   // Se prende al tocar «Siguiente» con el cliente mal escrito: desde ahí los campos inválidos se marcan y la marca se va al corregirlos.
   const [intentoElCliente, setIntentoElCliente] = useState(false);
+  // Cuenta los toques de «Siguiente» que quedaron bloqueados: cada uno lleva el foco al primer campo con error.
+  const [bloqueos, setBloqueos] = useState(0);
   const [cliente, setCliente] = useState<ClienteEscrito>(clienteInicial);
   const [renglones, setRenglones] = useState<readonly RenglonEscrito[]>([renglonVacio(1)]);
   const [puntoElegido, setPuntoElegido] = useState("");
@@ -133,6 +135,14 @@ export function PantallaDeEmitirFactura({
     seccion.current?.focus();
   }, [paso]);
 
+  // Con un campo del cliente marcado (rechazo del servidor o «Siguiente» bloqueado) el foco va al primero y su aviso se anuncia al
+  // enfocarlo (`aria-describedby` de `CajaDeCampo`, el mismo mecanismo que los errores de Datos fiscales y Puntos de venta, D-67). Previene dejar el foco en un botón sin decir qué corregir.
+  useEffect(() => {
+    if (rechazoDelCliente || bloqueos > 0) {
+      seccion.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+    }
+  }, [rechazoDelCliente, bloqueos]);
+
   /** Cualquier cambio de lo escrito descarta el resultado anterior (un rechazo): el próximo toque es otro intento. */
   function editado(): void {
     envio.reiniciar();
@@ -142,6 +152,7 @@ export function PantallaDeEmitirFactura({
   function seguirDelCliente(): void {
     if (Object.values(camposDelClienteInvalidos(cliente)).some(Boolean)) {
       setIntentoElCliente(true);
+      setBloqueos((n) => n + 1);
       return;
     }
     irAlPaso(2);

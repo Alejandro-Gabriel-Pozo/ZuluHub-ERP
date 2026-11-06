@@ -215,7 +215,7 @@ export function vistaDelCliente(d: DiccionarioResuelto, c: ClienteEscrito): Vist
         : {
             numero: texto(d, CLAVE_DE_DOCUMENTO[c.documento]),
             nombre: texto(d, "fiscal.pantalla.emitir_nombre"),
-            // «Domicilio»: el rótulo ya aprobado de Datos fiscales (D-82, dueño, 2026-11-03), sin texto nuevo.
+            // «Domicilio»: el rótulo ya aprobado de Datos fiscales (D-82, dueño, 2026-11-03; `Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md`, fila D-82), sin texto nuevo.
             domicilio: texto(d, "fiscal.pantalla.config_df_domicilio_fiscal"),
             condicion: {
               etiqueta: etiquetaDeCondicion,
