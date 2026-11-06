@@ -35,7 +35,7 @@ export type PedidoDeEmision = Readonly<{
     nombre: string | null;
     documento: DocumentoDelPedido;
     condicionIva: string;
-    domicilio: null;
+    domicilio: string | null;
   }>;
   renglones: readonly RenglonDelPedido[];
 }>;
@@ -54,10 +54,10 @@ function receptorDe(cliente: ClienteEscrito): PedidoDeEmision["receptor"] {
   }
   return {
     nombre: cliente.nombre.trim(),
-    // Solo dígitos: el número se puede escribir con puntos o guiones («27.345.678», «30-71234567-8»).
-    documento: { tipo: cliente.documento, numero: cliente.numero.replace(/\D/g, "") },
+    // El número va como se escribió (con los puntos o guiones que admite su tipo): el servidor lo valida y lo guarda canónico (Q6).
+    documento: { tipo: cliente.documento, numero: cliente.numero.trim() },
     condicionIva: cliente.condicionIva,
-    domicilio: null,
+    domicilio: cliente.domicilio.trim() === "" ? null : cliente.domicilio.trim(),
   };
 }
 

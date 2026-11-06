@@ -169,7 +169,11 @@ describe("armarComprobanteNuevo: errores", () => {
       documento: { tipo: "CUIT", numero: "30708533935" },
     } as const;
     expect(error(entradaDeFactura(mismoCuit, uno))).toEqual({ codigo: "RECEPTOR_IGUAL_AL_EMISOR" });
-    const noCategorizado = { ...consumidorFinal, condicionIva: "NO_CATEGORIZADO" } as const;
+    const noCategorizado = {
+      ...consumidorFinal,
+      condicionIva: "NO_CATEGORIZADO",
+      domicilio: "Av. Siempreviva 742",
+    } as const;
     expect(error(entradaDeFactura(noCategorizado, uno))).toEqual({
       codigo: "RECEPTOR_NO_CATEGORIZADO_NO_SOPORTADO",
     });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL } from "../../../primitivas/texto/nombre-o-razon-social";
 import {
   DOMICILIO_1,
   DOMICILIO_2,
@@ -18,6 +19,7 @@ import {
   esCondicionDeIibb,
   fechaCivilValida,
   nuevoBorrador,
+  pedidoNoCambiaLoGuardado,
   type CambiosDeBorrador,
   type DatosFiscalesBorrador,
   type DatosFiscalesConfirmados,
@@ -164,6 +166,12 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
     ["razón social en blanco", { razonSocial: "   " }, "RAZON_SOCIAL_INVALIDA"],
     ["razón social con salto de línea", { razonSocial: "Sur\nSA" }, "RAZON_SOCIAL_INVALIDA"],
     ["razón social demasiado larga", { razonSocial: "a".repeat(201) }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social con arroba", { razonSocial: "Kiosco @ Mendoza" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social con emoji", { razonSocial: "Hotel & Spa ✨" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social con porcentaje", { razonSocial: "50% Off SRL" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social sin ninguna letra", { razonSocial: "30-71234567-1" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social que empieza con guion", { razonSocial: "-Norte SA" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social de otro alfabeto", { razonSocial: "小林商事" }, "RAZON_SOCIAL_INVALIDA"],
     [
       "condición de IVA desconocida",
       { condicionIva: "CONSUMIDOR_FINAL" },
@@ -201,6 +209,16 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
     expect(LIMITES_DE_DATOS_FISCALES).toEqual({ razonSocial: 200, iibbNumero: 30 });
     expect(editado({ razonSocial: "a".repeat(200) }).razonSocial).toHaveLength(200);
     expect(editado({ iibbNumero: "1".repeat(30) }).iibbNumero).toHaveLength(30);
+  });
+
+  it("la razón social usa la regla del dato «nombre o razón social» (Q10): una sola fuente para tope y caracteres", () => {
+    expect(LIMITES_DE_DATOS_FISCALES.razonSocial).toBe(LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL);
+    expect(editado({ razonSocial: "  Pérez   &  Hijos S.A. " }).razonSocial).toBe(
+      "Pérez & Hijos S.A.",
+    );
+    expect(editado({ razonSocial: "Cafe\u0301 Ñandú S.R.L." }).razonSocial).toBe(
+      "Café Ñandú S.R.L.",
+    );
   });
 
   it("gana el primer error: razón social, condición de IVA, inicio, número de IIBB, condición de IIBB", () => {
@@ -469,5 +487,62 @@ describe("confirmarDatosFiscales", () => {
     expect(() => confirmar(completo, [ajena])).toThrow(
       new RangeError("las versiones confirmadas son de otro emisor"),
     );
+  });
+});
+
+describe("pedidoNoCambiaLoGuardado: el reintento sobre lo ya confirmado compara contra lo guardado", () => {
+  // Una razón social que se aceptó con reglas anteriores (doble espacio y arroba): hoy no pasaría la lista de permitidos.
+  const legado = { ...completo, razonSocial: "Kiosco  @ Mendoza" };
+
+  it("el valor guardado (recortado) es «no cambia», aunque hoy no se aceptaría", () => {
+    expect(editarBorrador(legado, { razonSocial: "Kiosco  @ Mendoza" }).ok).toBe(false);
+    expect(pedidoNoCambiaLoGuardado(legado, { razonSocial: "Kiosco  @ Mendoza" })).toBe(true);
+    expect(pedidoNoCambiaLoGuardado(legado, { razonSocial: "  Kiosco  @ Mendoza\n" })).toBe(true);
+  });
+
+  it("un pedido vacío o con todo igual a lo guardado no cambia nada", () => {
+    expect(pedidoNoCambiaLoGuardado(completo, {})).toBe(true);
+    expect(
+      pedidoNoCambiaLoGuardado(completo, {
+        razonSocial: "Hotel Sur SA",
+        condicionIva: "RESPONSABLE_INSCRIPTO",
+        domicilioFiscalId: DOMICILIO_1,
+        inicioActividades: "2015-03-01",
+        iibbNumero: " 901-123456-7 ",
+      }),
+    ).toBe(true);
+  });
+
+  it.each([
+    ["otra razón social", { razonSocial: "Otra SA" }],
+    ["razón social en blanco", { razonSocial: "   " }],
+    ["otra condición de IVA", { condicionIva: "MONOTRIBUTO" }],
+    ["otro domicilio", { domicilioFiscalId: DOMICILIO_2 }],
+    ["otro inicio de actividades", { inicioActividades: "2015-03-02" }],
+    ["otro número de IIBB", { iibbNumero: "1" }],
+    ["borrar el número de IIBB que hay", { iibbNumero: null }],
+    ["borrar el número de IIBB con un blanco", { iibbNumero: "  " }],
+    ["elegir «No contribuyente» habiendo número", { iibbCondicion: "NO_CONTRIBUYENTE" }],
+  ])("%s sí cambia", (_nombre, cambios) => {
+    expect(pedidoNoCambiaLoGuardado(completo, cambios)).toBe(false);
+  });
+
+  it("borrar lo que ya no hay no cambia nada; poner lo que hay, tampoco", () => {
+    expect(pedidoNoCambiaLoGuardado(completo, { iibbCondicion: null })).toBe(true);
+    expect(pedidoNoCambiaLoGuardado(completo, { iibbCondicion: " " })).toBe(true);
+    expect(pedidoNoCambiaLoGuardado(completoNoContribuyente, { iibbNumero: null })).toBe(true);
+    expect(
+      pedidoNoCambiaLoGuardado(completoNoContribuyente, { iibbCondicion: "NO_CONTRIBUYENTE" }),
+    ).toBe(true);
+    expect(pedidoNoCambiaLoGuardado(completoNoContribuyente, { iibbNumero: "5" })).toBe(false);
+  });
+
+  it("basta que un campo cambie para que el pedido cambie", () => {
+    expect(
+      pedidoNoCambiaLoGuardado(completo, {
+        razonSocial: "Hotel Sur SA",
+        inicioActividades: "2016-01-01",
+      }),
+    ).toBe(false);
   });
 });

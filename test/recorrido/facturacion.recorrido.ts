@@ -9,8 +9,8 @@ import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilan
  * la simulada (`apoyo/arca-simulada.ts`). Los pasos son SECUENCIALES a propósito: cada uno parte de lo que dejó el anterior, como la
  * persona real. Cada paso responde por lo que el vigilante vio en SU pantalla (consola, 5xx, CSP, pedidos a otros hosts) y por axe.
  *
- * FALLAS CONOCIDAS (`it.fails`): hechos reales que esta prueba encontró y que NO se arreglan acá (los arregla la sesión web). Cada una
- * lleva su motivo; cuando alguien la arregla la prueba se pone roja y obliga a pasarla a `it` común (como pasó con la CSP de la impresión).
+ * FALLAS CONOCIDAS (`it.fails`): hechos reales que esta prueba encuentra y que todavía no se arreglan. Cada una lleva su motivo; cuando alguien la
+ * arregla la prueba se pone roja y obliga a pasarla a `it` común (como pasó con la CSP de la impresión y con el error de campo de «Emitir»).
  */
 const base = inject("baseDePruebas");
 
@@ -25,18 +25,6 @@ describe.skipIf(base === null)(
     /** Lo que el vigilante anotó en las pantallas de impresión (ver la falla conocida de CSP). */
     const deLaImpresion: string[] = [];
 
-    /**
-     * Para `it.fails`: solo cuenta como «falla conocida» una AFIRMACIÓN que no se cumple (`AssertionError`). Cualquier otro error (un
-     * timeout, un selector que ya no existe, la app caída) se traga acá, el caso pasa y `it.fails` se pone rojo: una falla conocida no
-     * puede esconder un recorrido roto por otro motivo.
-     */
-    const soloSiFallaUnaAfirmacion = async (cuerpo: () => Promise<void>): Promise<void> => {
-      try {
-        await cuerpo();
-      } catch (error) {
-        if (error instanceof Error && error.name === "AssertionError") throw error;
-      }
-    };
     const ir = async (ruta: string) => {
       const respuesta = await pagina.goto(`${mundo.url}${ruta}`);
       await pagina.waitForLoadState("networkidle");
@@ -111,25 +99,32 @@ describe.skipIf(base === null)(
       pantallaLimpia();
     });
 
-    // FALLA CONOCIDA (2026-11-05, verificada en la app real): «Emitir» deja avanzar con un DNI no numérico y un nombre numérico; el único
-    // aviso es genérico y llega al final. Lo esperado es un error de campo en el paso 1. Lo arregla la sesión web; no hay cuestión
-    // abierta por decisión del dueño (2026-11-05: «hay que solucionarla y ya»).
-    it.fails("Emitir: un documento no numérico y un nombre numérico dan error de campo", () =>
-      soloSiFallaUnaAfirmacion(async () => {
-        await ir("/facturacion/comprobantes/emitir");
-        await pagina.getByLabel("Documento").selectOption({ label: "DNI" });
-        await pagina.getByRole("textbox", { name: "DNI" }).fill("abc");
-        await pagina.getByRole("textbox", { name: "Nombre o razón social" }).fill("12345");
+    // Era una falla conocida (2026-11-05, verificada en la app real): «Emitir» dejaba avanzar con un DNI no numérico y un nombre numérico, y el
+    // único aviso era genérico y llegaba al final. Lo arregla el marcado de campos (dueño, 2026-11-06, Q21): con el cliente mal escrito
+    // la persona no pasa al paso 2 y los campos inválidos se marcan.
+    it("Emitir: un documento no numérico y un nombre numérico dan error de campo", async () => {
+      await ir("/facturacion/comprobantes/emitir");
+      await pagina.getByLabel("Documento").selectOption({ label: "DNI" });
+      await pagina.getByRole("textbox", { name: "DNI" }).fill("abc");
+      await pagina.getByRole("textbox", { name: "Nombre o razón social" }).fill("12345");
+      await pagina
+        .getByLabel("Condición frente al IVA")
+        .selectOption({ label: "Consumidor Final" });
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      // Con error de campo la persona sigue en el paso 1 (Cliente), con el documento y el nombre marcados.
+      await pagina.getByText("Revisá los datos marcados.").first().waitFor();
+      expect(await pagina.getByRole("region", { name: "Renglones" }).count()).toBe(0);
+      expect(await pagina.getByRole("textbox", { name: "DNI" }).getAttribute("aria-invalid")).toBe(
+        "true",
+      );
+      expect(
         await pagina
-          .getByLabel("Condición frente al IVA")
-          .selectOption({ label: "Consumidor Final" });
-        await pagina.getByRole("button", { name: "Siguiente" }).click();
-        await pagina.waitForTimeout(500);
-        // Con error de campo la persona sigue en el paso 1 (Cliente).
-        expect(await pagina.getByRole("region", { name: "Renglones" }).count()).toBe(0);
-        vigilante.tomar();
-      }),
-    );
+          .getByRole("textbox", { name: "Nombre o razón social" })
+          .getAttribute("aria-invalid"),
+      ).toBe("true");
+      await sinViolacionesDeAxe();
+      vigilante.tomar();
+    });
 
     it("Emitir: una Factura B de consumidor final termina AUTORIZADA con el CAE de ARCA", async () => {
       await ir("/facturacion/comprobantes/emitir");
@@ -244,6 +239,47 @@ describe.skipIf(base === null)(
     // arregló y esto pasó de falla conocida a prueba común.
     it("Imprimir: la política de contenido no bloquea ningún estilo ni imagen", () => {
       expect(deLaImpresion.filter((h) => /CSP|Content Security Policy/.test(h))).toEqual([]);
+    });
+
+    it("Emitir: una Factura A a un responsable inscripto sin domicilio marca el domicilio y con domicilio termina AUTORIZADA", async () => {
+      await ir("/facturacion/comprobantes/emitir");
+      await pagina.getByLabel("Documento").selectOption({ label: "CUIT" });
+      await pagina.getByRole("textbox", { name: "CUIT" }).fill("30-71234567-1");
+      await pagina
+        .getByRole("textbox", { name: "Nombre o razón social" })
+        .fill("Distribuidora Sur SA");
+      await pagina
+        .getByLabel("Condición frente al IVA")
+        .selectOption({ label: "IVA Responsable Inscripto" });
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByLabel("Descripción").fill("Harina x50");
+      await pagina.getByLabel("Precio con IVA").fill("121,00");
+      await pagina.getByLabel("IVA", { exact: true }).selectOption({ label: "IVA 21 %" });
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByRole("button", { name: "Emitir factura" }).click();
+      // El servidor exige el domicilio (RG 1415 Anexo II A.II): vuelve al paso del cliente con ese campo marcado.
+      await pagina.getByText("Revisá los datos marcados.").first().waitFor();
+      expect(
+        await pagina.getByRole("textbox", { name: "Domicilio" }).getAttribute("aria-invalid"),
+      ).toBe("true");
+      await sinViolacionesDeAxe();
+      await pagina.getByRole("textbox", { name: "Domicilio" }).fill("Av. Siempreviva 742, Rosario");
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByRole("button", { name: "Emitir factura" }).click();
+      await pagina.waitForURL(/\/facturacion\/comprobantes\/[0-9a-f-]{36}$/);
+      const limite = Date.now() + 30_000;
+      while ((await pagina.getByText("Autorizada", { exact: true }).count()) === 0) {
+        if (Date.now() > limite) throw new Error("la factura A no llegó a Autorizada en 30 s");
+        await pagina.waitForTimeout(1000);
+        await pagina.reload();
+        await pagina.waitForLoadState("networkidle");
+      }
+      // ARCA simulada vio una Factura A (tipo 1) al CUIT del cliente.
+      const solicitud = mundo.arca.pedidos.filter((p) => p.operacion === "FECAESolicitar").at(-1);
+      expect(solicitud?.cuerpo).toContain("<ar:CbteTipo>1</ar:CbteTipo>");
+      expect(solicitud?.cuerpo).toContain("<ar:DocNro>30712345671</ar:DocNro>");
+      pantallaLimpia();
     });
 
     it("el enlace del mail de invitación apunta a una pantalla que existe", async () => {

@@ -18,21 +18,34 @@ import type { VistaDeLaRevision, VistaDeLosRenglones, VistaDelCliente } from "./
  * revisión. Los textos llegan ya resueltos en la vista (`modelo-de-emision.ts`).
  */
 
+/** Qué campos del cliente marcar como rechazados por el servidor. */
+export type CamposConError = Readonly<{
+  numero?: boolean;
+  nombre?: boolean;
+  domicilio?: boolean;
+  condicion?: boolean;
+}>;
+
 /** Paso 1: el cliente. El consumidor final no pide nada más; con un documento, se pide su número, su nombre y su condición ante el IVA (D-24). */
 export function PasoDelCliente({
   vista,
   cliente,
   alCambiar,
+  conError = {},
 }: Readonly<{
   vista: VistaDelCliente;
   cliente: ClienteEscrito;
   alCambiar: (nuevo: ClienteEscrito) => void;
+  /** Los campos que el servidor rechazó: se marcan con el aviso genérico de la vista (`campoInvalido`). */
+  conError?: CamposConError;
 }>) {
-  const { identificacion } = vista;
+  const { identificacion, campoInvalido } = vista;
+  const avisoDe = (marcado: boolean | undefined): string | undefined =>
+    marcado === true ? campoInvalido : undefined;
   return (
     <>
       <Selector
-        dato="pendiente"
+        dato="documento-de-identidad"
         etiqueta={vista.documento.etiqueta}
         valor={cliente.documento}
         opciones={vista.documento.opciones}
@@ -44,30 +57,43 @@ export function PasoDelCliente({
       {identificacion === null ? null : (
         <>
           <Campo
-            dato="pendiente"
+            dato="documento-de-identidad"
             etiqueta={identificacion.numero}
             valor={cliente.numero}
             inputMode="numeric"
             autoComplete="off"
+            error={avisoDe(conError.numero)}
             alCambiar={(numero) => {
               alCambiar({ ...cliente, numero });
             }}
           />
           <Campo
-            dato="pendiente"
+            dato="nombre-o-razon-social"
             etiqueta={identificacion.nombre}
             valor={cliente.nombre}
             autoComplete="off"
+            error={avisoDe(conError.nombre)}
             alCambiar={(nombre) => {
               alCambiar({ ...cliente, nombre });
             }}
           />
+          <Campo
+            dato="domicilio-libre"
+            etiqueta={identificacion.domicilio}
+            valor={cliente.domicilio}
+            autoComplete="off"
+            error={avisoDe(conError.domicilio)}
+            alCambiar={(domicilio) => {
+              alCambiar({ ...cliente, domicilio });
+            }}
+          />
           <Selector
-            dato="pendiente"
+            dato="condicion-iva"
             etiqueta={identificacion.condicion.etiqueta}
             textoDeElegir={identificacion.condicion.etiqueta}
             valor={cliente.condicionIva}
             opciones={identificacion.condicion.opciones}
+            error={avisoDe(conError.condicion)}
             alCambiar={(condicionIva) => {
               alCambiar({ ...cliente, condicionIva });
             }}

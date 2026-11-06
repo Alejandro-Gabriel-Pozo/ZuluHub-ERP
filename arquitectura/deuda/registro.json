@@ -443,15 +443,6 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "archivo-grande--src-adaptadores-postgres-soporte-de-plataforma-ts",
-    "archivos": ["src/adaptadores/postgres/soporte-de-plataforma.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 738,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "archivo-grande--src-capacidades-activos-cabeceras-ts",
     "archivos": ["src/capacidades/activos/cabeceras.ts"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
@@ -466,24 +457,6 @@
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
     "tamano": 405,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "archivo-grande--src-modulos-fiscal-casos-de-uso-numeracion-en-tx-ts",
-    "archivos": ["src/modulos/fiscal/casos-de-uso/numeracion-en-tx.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 453,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "archivo-grande--src-modulos-fiscal-casos-de-uso-validar-comprobante-ts",
-    "archivos": ["src/modulos/fiscal/casos-de-uso/validar-comprobante.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 546,
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
   },
@@ -538,33 +511,6 @@
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
     "tamano": 410,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "archivo-grande--src-modulos-identidad-persistencia-repositorios-ts",
-    "archivos": ["src/modulos/identidad/persistencia/repositorios.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 912,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "archivo-grande--src-modulos-planes-persistencia-repositorio-de-planes-ts",
-    "archivos": ["src/modulos/planes/persistencia/repositorio-de-planes.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 757,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "archivo-grande--src-plataforma-consultas-consultas-de-planes-ts",
-    "archivos": ["src/plataforma/consultas/consultas-de-planes.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 622,
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
   },
