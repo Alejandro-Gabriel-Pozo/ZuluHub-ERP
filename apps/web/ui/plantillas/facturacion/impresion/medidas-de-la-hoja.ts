@@ -5,6 +5,11 @@ import type { EntradaDelPaginador } from "./paginador";
  * Las alturas medidas de las piezas de la hoja (en px) y cómo se vuelven la entrada del paginador. Sin DOM: la hoja de pantalla las mide con
  * el navegador (`medicion.ts`) y el PDF las mide con su propia tipografía (`src/adaptadores/pdf`), y las dos reparten con la MISMA función.
  * Previene: que el PDF y la pantalla corten la hoja con fórmulas distintas.
+ *
+ * OJO: lo que NO se comparte es el dibujo. Los anchos de columna (cantidad 18 mm, precio 30 mm, IVA 22 mm, importe 30 mm), el ancho de la letra
+ * (24 mm), el del QR (28 mm) y los tamaños de letra de la hoja se REPITEN en `HojaA4.module.css` (pantalla) y en
+ * `src/adaptadores/pdf/medidas-del-papel.ts` (PDF): el adaptador no puede importar la web. Si cambiás una medida en el CSS, cambiala también
+ * allá: `src/adaptadores/pdf/medidas-del-papel.test.ts` compara las dos y falla si difieren.
  */
 
 export type Medidas = Readonly<{

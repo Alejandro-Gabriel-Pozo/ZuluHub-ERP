@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import { describe, expect, it } from "vitest";
 import { leerElPdf } from "../../../test/utilidades/pdf";
+import { soloCaracteresPermitidos } from "../../primitivas/texto/texto-de-una-linea";
 import {
   CARACTERES_DEL_PDF,
   CaracterNoSoportadoEnElPdf,
@@ -35,6 +36,19 @@ describe("los caracteres que el PDF puede dibujar", () => {
       // El lector junta los blancos de los extremos: se prueba con una letra a cada lado.
       expect(await dibujarYLeer(`x${tanda}x`)).toBe(`x${tanda}x`);
     }
+  }, 60000);
+
+  it("todo carácter que admite la primitiva del nombre del receptor se puede dibujar en el PDF (la lista de la primitiva ⊆ la del PDF)", () => {
+    const admitidos: number[] = [];
+    for (let punto = 0; punto <= 0x10ffff; punto += 1) {
+      // Los sustitutos sueltos no son caracteres; el resto se prueba solo, con una letra a cada lado.
+      if (punto >= 0xd800 && punto <= 0xdfff) continue;
+      if (soloCaracteresPermitidos(`a${String.fromCodePoint(punto)}a`)) admitidos.push(punto);
+    }
+    // La prueba no es trivial: la primitiva admite un puñado de caracteres y no todo el plano.
+    expect(admitidos.length).toBeGreaterThan(100);
+    expect(admitidos.length).toBeLessThan(400);
+    expect(admitidos.filter((punto) => !CARACTERES_DEL_PDF.has(punto))).toEqual([]);
   }, 60000);
 
   it("incluye las tildes, la ñ, la ü, los signos de apertura y el euro; excluye el emoji y la escritura de derecha a izquierda", () => {

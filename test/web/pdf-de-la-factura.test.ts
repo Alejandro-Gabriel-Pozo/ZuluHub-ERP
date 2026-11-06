@@ -27,6 +27,7 @@ import {
 import {
   decodificarElQr,
   decodificarElSvgDelQr,
+  fechaDeCreacionDelPdf,
   leerElPdf,
   normalizar,
   type PaginaLeida,
@@ -43,7 +44,6 @@ const MARCA = {
   logoUrl: "https://x.test/logo.png",
   colorPrincipal: "#ff0000",
 };
-const CREADO = new Date("2026-11-05T15:00:00.000Z");
 const MM = 72 / 25.4;
 
 type Modelo = Parameters<typeof entradaDelPdf>[0];
@@ -58,14 +58,14 @@ function modeloDe(
 }
 
 const generar = (m: Modelo, alterar?: (e: ReturnType<typeof entradaDelPdf>) => unknown) => {
-  const entrada = entradaDelPdf(m, CREADO);
+  const entrada = entradaDelPdf(m);
   return generarPdfDeLaFactura((alterar?.(entrada) as typeof entrada | undefined) ?? entrada);
 };
 const entradaCon = (
   m: Modelo,
   cambios: Partial<HojaParaElPdf>,
 ): Parameters<typeof generarPdfDeLaFactura>[0] => {
-  const e = entradaDelPdf(m, CREADO);
+  const e = entradaDelPdf(m);
   return { ...e, hoja: { ...e.hoja, ...cambios } };
 };
 
@@ -199,7 +199,7 @@ describe("el PDF trae cada dato obligatorio del modelo", () => {
     expect(faltantes(m, pdf)).toEqual([]);
     // Cada texto de la hoja armada (los mismos de la pantalla) está en el PDF.
     const texto = normalizar(pdf[0]?.texto ?? "");
-    for (const t of textosDeLaHoja(entradaDelPdf(m, CREADO).hoja)) {
+    for (const t of textosDeLaHoja(entradaDelPdf(m).hoja)) {
       expect(texto, `«${t}»`).toContain(normalizar(t));
     }
   });
@@ -242,14 +242,18 @@ describe("el PDF trae cada dato obligatorio del modelo", () => {
     expect(conLeyenda?.texto).toContain("HOMOLOGACIÓN — SIN VALIDEZ FISCAL");
   });
 
-  it("la misma factura da los mismos bytes (reimprimir da lo mismo) y otra fecha de creación cambia solo los metadatos", async () => {
+  it("la misma factura da los mismos bytes, byte a byte (reimprimir da lo mismo), y la fecha de creación es la de emisión, no la de la descarga", async () => {
     const m = modeloDe(facturaB);
     const a = await generar(m);
     const b = await generar(m);
     expect(Buffer.from(a).equals(Buffer.from(b))).toBe(true);
-    const otra = await generarPdfDeLaFactura(
-      entradaDelPdf(m, new Date("2026-11-06T15:00:00.000Z")),
-    );
+    // Emitida el 2026-10-13: las 00:00 de Argentina (UTC-3) son las 03:00 UTC.
+    expect(await fechaDeCreacionDelPdf(a)).toMatch(/^D:20261013030000/);
+    // Otra fecha de creación cambia los metadatos y nada de lo que se ve.
+    const otra = await generarPdfDeLaFactura({
+      ...entradaDelPdf(m),
+      creadoEn: new Date("2026-11-06T15:00:00.000Z"),
+    });
     expect(Buffer.from(a).equals(Buffer.from(otra))).toBe(false);
     expect((await leerElPdf(otra))[0]?.texto).toBe((await leerElPdf(a))[0]?.texto);
   });
@@ -342,7 +346,7 @@ describe("mutaciones: si el PDF pierde un dato, la comprobación lo detecta", ()
       // La comprobación cuenta con el comprobante real: si no, la mutación no tendría con qué compararse.
       expect(faltantes(modelo, await leerElPdf(await generar(modelo)))).toEqual([]);
       const mutado = await generarPdfDeLaFactura(
-        entradaCon(modelo, mutar(entradaDelPdf(modelo, CREADO).hoja)),
+        entradaCon(modelo, mutar(entradaDelPdf(modelo).hoja)),
       );
       expect(faltantes(modelo, await leerElPdf(mutado))).toContain(esperado);
     },
@@ -417,15 +421,33 @@ describe("hojas de un comprobante largo", () => {
       expect(p.texto).toContain(m.fiscal.emisor.razonSocial);
       expect(p.texto).toContain(m.fiscal.cae);
     });
-    // Los parciales encadenan: lo que cierra la hoja k es lo que abre la hoja k+1.
+    // Los parciales encadenan Y son la SUMA de los renglones que ya salieron, con el formato de la pantalla: lo que cierra la hoja k es lo que
+    // abre la hoja k+1, y es la suma (en centavos enteros, sin `number`) de los importes de los renglones de las hojas 1 a k.
+    const centavos = (importe: string): bigint => {
+      expect(importe).toMatch(/^\d+\.\d{2}$/);
+      return BigInt(importe.replace(".", ""));
+    };
+    const comoImporte = (c: bigint): string =>
+      `${c / 100n}.${(c % 100n).toString().padStart(2, "0")}`;
     const importeDespues = (texto: string, rotulo: string): string | undefined =>
       new RegExp(`${rotulo} (\\$ [\\d.,]+)`).exec(texto)?.[1];
-    for (let i = 0; i < n - 1; i += 1) {
-      const cierra = importeDespues(paginas[i]?.texto ?? "", "A transportar");
-      const abre = importeDespues(paginas[i + 1]?.texto ?? "", "Transporte");
-      expect(cierra).toBeDefined();
-      expect(abre).toBe(cierra);
+    let acumulado = 0n;
+    for (let i = 0; i < n; i += 1) {
+      const texto = paginas[i]?.texto ?? "";
+      for (const r of m.renglones.keys()) {
+        const numero = r + 1;
+        if (new RegExp(`Producto número ${numero} con`).test(texto)) {
+          acumulado += centavos(m.renglones[r]?.importe ?? "");
+        }
+      }
+      if (i < n - 1) {
+        const esperado = formatearImporte(comoImporte(acumulado));
+        expect(importeDespues(texto, "A transportar")).toBe(esperado);
+        expect(importeDespues(paginas[i + 1]?.texto ?? "", "Transporte")).toBe(esperado);
+      }
     }
+    // Al final, la suma de todos los renglones es el total que informó ARCA (y es el que muestra la última hoja).
+    expect(comoImporte(acumulado)).toBe(m.totales.total);
     // Cada renglón sale exactamente una vez, y el total solo en la última hoja.
     const todo = paginas.map((p) => p.texto).join(" ");
     for (let i = 1; i <= 60; i += 1) {
@@ -457,13 +479,62 @@ describe("hojas de un comprobante largo", () => {
   }, 60000);
 });
 
+describe("las guardas: fallan cerrado, sin dibujar un PDF a medias", () => {
+  const m = modeloDe(facturaB);
+
+  it("un renglón que no entra ni solo en una hoja vacía corta con RangeError (no se dibuja encima del pie)", async () => {
+    const e = entradaDelPdf(m);
+    const r = e.hoja.renglones[0];
+    if (r === undefined) throw new Error("la factura de prueba no tiene renglones");
+    const desmedido = {
+      ...e,
+      hoja: { ...e.hoja, renglones: [{ ...r, descripcion: "W".repeat(30000) }] },
+    };
+    const error = await generarPdfDeLaFactura(desmedido).then(
+      () => null,
+      (x: unknown) => x,
+    );
+    expect(error).toBeInstanceOf(RangeError);
+    expect((error as Error).message).toBe("un renglón no entra en una hoja del PDF");
+    // El mismo comprobante con una descripción normal sí se genera: lo que corta es el tamaño, no el comprobante.
+    await expect(generar(m)).resolves.toBeInstanceOf(Uint8Array);
+  }, 60000);
+
+  it.each([
+    ["ninguno", [] as string[]],
+    ["uno de menos en un comprobante de dos renglones", ["1.00"]],
+    ["uno de más", ["1210.00", "1.00"]],
+  ])(
+    "importes que no coinciden con los renglones (%s) cortan con RangeError: el reparto no puede sumar lo que no es de los renglones",
+    async (_n, importes) => {
+      const dosRenglones = modeloDe(
+        facturaArmada(consumidorFinal, [
+          renglon("1210.00", "1", "21", null, "Torta"),
+          renglon("100.00", "1", "21", null, "Pan"),
+        ]),
+      );
+      const base = entradaDelPdf(importes.length === 1 ? dosRenglones : m);
+      const error = await generarPdfDeLaFactura({ ...base, importes }).then(
+        () => null,
+        (x: unknown) => x,
+      );
+      expect(error).toBeInstanceOf(RangeError);
+      expect((error as Error).message).toBe("tiene que haber un importe por cada renglón");
+    },
+  );
+});
+
 describe("texto del cliente: raro, largo, hostil", () => {
-  const conReceptor = (nombre: string) =>
-    modeloDe(
-      facturaArmada({ ...receptorInscripto, nombre }, [
+  // La primitiva de nombre (`nombre-o-razon-social.ts`) ya rechaza estos caracteres al armar el comprobante. El PDF NO confía en eso: se
+  // arma el modelo con un nombre válido y se pisa después, como un comprobante viejo guardado antes de la primitiva (defensa en profundidad).
+  const conReceptor = (nombre: string): Modelo => {
+    const base = modeloDe(
+      facturaArmada({ ...receptorInscripto, nombre: "Cliente de prueba" }, [
         renglon("1000.00", "1", "21", null, "Torta"),
       ]),
     );
+    return { ...base, receptor: { ...base.receptor, nombre } };
+  };
   const conDescripcion = (descripcion: string) =>
     modeloDe(facturaArmada(consumidorFinal, [renglon("1000.00", "1", "21", null, descripcion)]));
 
