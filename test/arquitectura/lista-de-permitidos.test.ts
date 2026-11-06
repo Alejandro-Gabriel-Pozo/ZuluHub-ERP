@@ -24,6 +24,17 @@ const { PRESUPUESTOS, problemasDeForma } =
   };
 const PRESUPUESTO = PRESUPUESTOS.find((p) => p.archivo.endsWith("validacion-de-datos.json"));
 const PREFIJO_DE_DEUDA = "validacion-de-datos--";
+/**
+ * Alcance (orquestador, 2026-11-06; el dueño puede revertirlo): la regla mira el código que VALIDA un dato que escribe una persona o que
+ * se guarda en una columna. Estos archivos leen un formato de MÁQUINAS definido por un tercero, no un dato escrito por una persona: no
+ * entran a la deuda. Hallazgo: validación de datos que vienen de terceros (cookies de la librería de ingreso y respuestas de ARCA);
+ * revisar con lista de permitidos del formato en una sesión posterior. Cada exención tiene que seguir teniendo lo que exime.
+ */
+const FORMATOS_DE_TERCEROS: Readonly<Record<string, string>> = {
+  "src/capacidades/experiencia/set-cookie.ts":
+    "parsea el encabezado Set-Cookie que genera la librería de ingreso",
+  "src/adaptadores/arca/saneamiento.ts": "limpia el texto con que responde ARCA",
+};
 const EXTENSIONES = ["ts", "tsx", "js", "mjs", "cjs"];
 
 function archivos(carpeta: string, extensiones: string[]): string[] {
@@ -40,7 +51,7 @@ function prohibidosReales(): Map<string, number> {
     .filter((r) => !/\.test\.[a-z]+$/.test(r) && !r.includes("/test/"));
   for (const ruta of codigo) {
     const n = contarProhibidosEnCodigo(ruta, readFileSync(join(RAIZ, ruta), "utf8"));
-    if (n > 0) mapa.set(ruta, n);
+    if (n > 0 && !(ruta in FORMATOS_DE_TERCEROS)) mapa.set(ruta, n);
   }
   for (const ruta of archivos("migraciones", ["sql"])) {
     const n = contarProhibidosEnSql(readFileSync(join(RAIZ, ruta), "utf8"));
@@ -61,6 +72,14 @@ describe("lista de permitidos: el código real", () => {
     expect(PRESUPUESTO).toBeDefined();
     expect([...reales.keys()].some((r) => r.startsWith("src/"))).toBe(true);
     expect([...reales.keys()].some((r) => r.startsWith("migraciones/"))).toBe(true);
+  });
+
+  it("cada exención por formato de terceros sigue eximiendo algo (si no, se saca)", () => {
+    for (const ruta of Object.keys(FORMATOS_DE_TERCEROS)) {
+      const n = contarProhibidosEnCodigo(ruta, readFileSync(join(RAIZ, ruta), "utf8"));
+      expect(n, ruta).toBeGreaterThan(0);
+      expect(presupuesto[ruta], ruta).toBeUndefined();
+    }
   });
 
   it("el presupuesto tiene buena forma", () => {

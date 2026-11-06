@@ -39,10 +39,6 @@
     "prohibidos": 1,
     "duplicados": 0
   },
-  "src/adaptadores/arca/saneamiento.ts": {
-    "prohibidos": 1,
-    "duplicados": 0
-  },
   "src/adaptadores/correo/configuracion.ts": {
     "prohibidos": 3,
     "duplicados": 0
@@ -56,10 +52,6 @@
     "duplicados": 0
   },
   "src/capacidades/experiencia/ruta-de-retorno.ts": {
-    "prohibidos": 1,
-    "duplicados": 0
-  },
-  "src/capacidades/experiencia/set-cookie.ts": {
     "prohibidos": 1,
     "duplicados": 0
   },
