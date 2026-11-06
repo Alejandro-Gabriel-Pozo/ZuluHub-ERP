@@ -70,7 +70,6 @@ export {
   confirmarDatosFiscales,
   editarBorrador,
   esCondicionDeIibb,
-  fechaCivilValida,
   nuevoBorrador,
   type CambiosDeBorrador,
   type CampoObligatorio,

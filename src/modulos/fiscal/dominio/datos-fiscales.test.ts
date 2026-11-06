@@ -17,12 +17,15 @@ import {
   confirmarDatosFiscales,
   editarBorrador,
   esCondicionDeIibb,
-  fechaCivilValida,
   nuevoBorrador,
   type CambiosDeBorrador,
   type DatosFiscalesBorrador,
   type DatosFiscalesConfirmados,
 } from "./datos-fiscales";
+
+// 2026-10-12 12:00 en Argentina (UTC-3 = 15:00Z): el reloj del contexto que se le pasa al dominio.
+const AHORA = new Date("2026-10-12T15:00:00Z");
+const HOY = "2026-10-12";
 
 const vacio = nuevoBorrador({
   id: VERSION_1,
@@ -32,7 +35,7 @@ const vacio = nuevoBorrador({
 });
 
 function editado(cambios: CambiosDeBorrador, desde: DatosFiscalesBorrador = vacio) {
-  const r = editarBorrador(desde, cambios);
+  const r = editarBorrador(desde, cambios, AHORA);
   if (!r.ok) throw new Error(`se esperaba un borrador válido y dio ${JSON.stringify(r.error)}`);
   return r.valor;
 }
@@ -127,7 +130,7 @@ describe("borradores", () => {
 
   it("mandar un número y «No contribuyente» juntos es un error y no cambia nada", () => {
     expect(
-      editarBorrador(completo, { iibbNumero: "55", iibbCondicion: "NO_CONTRIBUYENTE" }),
+      editarBorrador(completo, { iibbNumero: "55", iibbCondicion: "NO_CONTRIBUYENTE" }, AHORA),
     ).toEqual({ ok: false, error: "IIBB_CONDICION_INVALIDA" });
     // Número vacío más «No contribuyente» no son dos elecciones: es borrar el número y elegir la condición.
     expect(editado({ iibbNumero: " ", iibbCondicion: "NO_CONTRIBUYENTE" }, completo)).toMatchObject(
@@ -140,7 +143,7 @@ describe("borradores", () => {
 
   it("las tres condiciones anteriores ya no se aceptan al editar, y un borrador que las trae las pierde", () => {
     for (const vieja of ["LOCAL", "CONVENIO_MULTILATERAL", "EXENTO"]) {
-      expect(editarBorrador(vacio, { iibbCondicion: vieja })).toEqual({
+      expect(editarBorrador(vacio, { iibbCondicion: vieja }, AHORA)).toEqual({
         ok: false,
         error: "IIBB_CONDICION_INVALIDA",
       });
@@ -201,7 +204,7 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
   ];
 
   it.each(casos)("%s", (_nombre, cambios, error) => {
-    expect(editarBorrador(vacio, cambios)).toEqual({ ok: false, error });
+    expect(editarBorrador(vacio, cambios, AHORA)).toEqual({ ok: false, error });
   });
 
   it("los límites exactos entran", () => {
@@ -242,13 +245,13 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
       { iibbNumero: "1" },
     ];
     for (const [i, error] of esperados.entries()) {
-      expect(editarBorrador(vacio, cambios)).toEqual({ ok: false, error });
+      expect(editarBorrador(vacio, cambios, AHORA)).toEqual({ ok: false, error });
       cambios = { ...cambios, ...arreglos[i] };
     }
   });
 
   it("un error no modifica el borrador original", () => {
-    editarBorrador(completo, { razonSocial: "" });
+    editarBorrador(completo, { razonSocial: "" }, AHORA);
     expect(completo.razonSocial).toBe("Hotel Sur SA");
   });
 });
@@ -267,57 +270,35 @@ describe("condiciones de IIBB", () => {
   });
 });
 
-describe("fechaCivilValida", () => {
-  it.each([
-    "2015-03-01",
-    "2024-02-29",
-    "2000-02-29",
-    "1999-12-31",
-    "2023-01-31",
-    "2023-04-30",
-    "0001-01-01",
-    "9999-12-31",
-  ])("%s es válida", (f) => {
-    expect(fechaCivilValida(f)).toBe(true);
+describe("inicio de actividades: entre 1900 y hoy en Argentina (Q17, Q18, Q20)", () => {
+  // Reemplaza a la copia de `fechaCivilValida` que vivía acá: el calendario lo prueba `fecha-civil.test.ts`.
+  it.each(["1900-01-01", "2015-03-01", "2024-02-29", "2026-10-11", HOY])("%s entra", (f) => {
+    expect(editado({ inicioActividades: f }).inicioActividades).toBe(f);
   });
 
   it.each([
-    "2023-02-29",
-    "1900-02-29",
-    "2100-02-29",
-    "2023-04-31",
-    "2023-06-31",
-    "2023-09-31",
-    "2023-11-31",
-    "2023-01-32",
-    "2023-13-01",
-    "2023-00-10",
-    "2023-01-00",
-    "0000-01-01",
-    "2023-1-01",
-    "2023-01-1",
-    "23-01-01",
-    "2023/01/01",
-    "2023-01-01 ",
-    " 2023-01-01",
-    "2023-01-01T00:00:00Z",
-    "",
-    "abc",
-  ])("%j no es válida", (f) => {
-    expect(fechaCivilValida(f)).toBe(false);
+    ["mañana", "2026-10-13"],
+    ["un año adelante", "2027-10-12"],
+    ["anterior a 1900", "1899-12-31"],
+    ["año 0001", "0001-01-01"],
+    ["29 de febrero que no existe", "2023-02-29"],
+  ])("%s se rechaza", (_nombre, f) => {
+    expect(editarBorrador(vacio, { inicioActividades: f }, AHORA)).toEqual({
+      ok: false,
+      error: "INICIO_DE_ACTIVIDADES_INVALIDO",
+    });
   });
 
-  it("los meses de 31 días llegan a 31 y febrero bisiesto a 29", () => {
-    for (const mes of ["01", "03", "05", "07", "08", "10", "12"]) {
-      expect(fechaCivilValida(`2023-${mes}-31`)).toBe(true);
-    }
-    for (const mes of ["04", "06", "09", "11"]) {
-      expect(fechaCivilValida(`2023-${mes}-30`)).toBe(true);
-      expect(fechaCivilValida(`2023-${mes}-31`)).toBe(false);
-    }
-    expect(fechaCivilValida("2023-02-28")).toBe(true);
-    expect(fechaCivilValida("2024-02-29")).toBe(true);
-    expect(fechaCivilValida("2024-02-30")).toBe(false);
+  it("el «hoy» es el de Argentina: pasada la medianoche de Buenos Aires el día nuevo ya entra", () => {
+    const antes = new Date("2026-10-13T02:59:00Z");
+    const despues = new Date("2026-10-13T03:00:00Z");
+    expect(editarBorrador(vacio, { inicioActividades: "2026-10-13" }, antes).ok).toBe(false);
+    expect(editarBorrador(vacio, { inicioActividades: "2026-10-13" }, despues).ok).toBe(true);
+  });
+
+  it("sin reloj válido no se acepta ninguna fecha (cierra)", () => {
+    const r = editarBorrador(vacio, { inicioActividades: "2015-03-01" }, new Date(Number.NaN));
+    expect(r).toEqual({ ok: false, error: "INICIO_DE_ACTIVIDADES_INVALIDO" });
   });
 });
 

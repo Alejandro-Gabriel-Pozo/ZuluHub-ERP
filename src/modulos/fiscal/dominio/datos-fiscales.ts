@@ -1,5 +1,6 @@
 import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { fechaCivilHastaHoyDesdeTexto } from "../../../primitivas/tiempo/fecha-civil-hasta-hoy";
 import {
   LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL,
   nombreODenominacionDesdeTexto,
@@ -157,7 +158,6 @@ export function borradorDesdeConfirmada(
 }
 
 const CARACTERES_DE_CONTROL = /\p{Cc}/u;
-const FECHA_CIVIL = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/;
 
 /**
  * Texto recortado, no vacío, sin caracteres de control y de hasta `maximo`; `null` si no sirve. Hoy solo lo usa el número de IIBB (sin
@@ -167,21 +167,6 @@ function textoLimpio(valor: string, maximo: number): string | null {
   const limpio = valor.trim();
   if (limpio === "" || limpio.length > maximo || CARACTERES_DE_CONTROL.test(limpio)) return null;
   return limpio;
-}
-
-function esBisiesto(anio: number): boolean {
-  return anio % 4 === 0 && (anio % 100 !== 0 || anio % 400 === 0);
-}
-
-/** Una fecha civil real `YYYY-MM-DD` (calendario gregoriano, año 0001 en adelante). Sin reloj ni zona. */
-export function fechaCivilValida(texto: string): boolean {
-  const partes = FECHA_CIVIL.exec(texto);
-  if (partes === null) return false;
-  const [anio, mes, dia] = [Number(partes[1]), Number(partes[2]), Number(partes[3])] as const;
-  if (anio < 1 || dia < 1) return false;
-  const diasDelMes = [31, esBisiesto(anio) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  // Un mes fuera de 1 a 12 no tiene entrada en la tabla: 0 días, así que ningún día entra.
-  return dia <= (diasDelMes[mes - 1] ?? 0);
 }
 
 const NUMERO_INVALIDO = Symbol("numero de IIBB invalido");
@@ -218,11 +203,13 @@ export function ingresosBrutosDeclarados(
 /**
  * Aplica `cambios` a un borrador y valida cada valor que llega. Devuelve el PRIMER error, en el orden
  * razón social, condición de IVA, inicio de actividades, número de IIBB, condición de IIBB. No
- * exige que el borrador esté completo (eso se pide al confirmar).
+ * exige que el borrador esté completo (eso se pide al confirmar). `ahora` es el reloj del contexto: de ahí sale el «hoy» de Argentina
+ * contra el que se compara el inicio de actividades (obligatorio, nunca el reloj de la máquina).
  */
 export function editarBorrador(
   borrador: DatosFiscalesBorrador,
   cambios: CambiosDeBorrador,
+  ahora: Date,
 ): Resultado<DatosFiscalesBorrador, ErrorDeDatosFiscales> {
   let razonSocial = borrador.razonSocial;
   if (cambios.razonSocial !== undefined) {
@@ -240,8 +227,10 @@ export function editarBorrador(
 
   let inicioActividades = borrador.inicioActividades;
   if (cambios.inicioActividades !== undefined) {
-    if (!fechaCivilValida(cambios.inicioActividades)) return err("INICIO_DE_ACTIVIDADES_INVALIDO");
-    inicioActividades = cambios.inicioActividades;
+    // Entre 1900 y hoy en Argentina (Q17, Q18, Q20): un inicio de actividades futuro se rechaza. El «hoy» sale de `ahora`, el reloj del contexto.
+    const fecha = fechaCivilHastaHoyDesdeTexto(cambios.inicioActividades, ahora);
+    if (!fecha.ok) return err("INICIO_DE_ACTIVIDADES_INVALIDO");
+    inicioActividades = fecha.valor;
   }
 
   let iibbNumero = borrador.iibbNumero;
