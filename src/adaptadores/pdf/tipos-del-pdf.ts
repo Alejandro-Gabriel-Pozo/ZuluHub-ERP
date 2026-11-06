@@ -27,6 +27,8 @@ export type HojaParaElPdf = Readonly<{
   leyendas: readonly string[];
   leyendasLegales: readonly string[];
   nombreDeFantasia: string | null;
+  /** El nombre de la sucursal congelado al emitir (D-114), tal cual y sin rótulo, entre el nombre de fantasía y la razón social; `null` si no se imprime. */
+  nombreDeLaSucursal: string | null;
   emisor: readonly FilaDelPdf[];
   contacto: string | null;
   letra: string;
