@@ -31,8 +31,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 /**
- * Cambios que ninguna prueba lee de un modo que cambie un resultado: ni la mutación ni la integración los
- * notan. Los dos workflows de acá no los lee ninguna prueba salvo el escaneo de nombres, que no ejerce código mutado.
+ * Cambios que ninguna prueba lee de un modo que cambie un resultado: ni la mutación ni la integración los notan. Los dos workflows de acá no los lee ninguna prueba salvo el escaneo de nombres, que no ejerce código mutado.
  */
 const DOCUMENTACION_Y_AJENOS = [
   /\.md$/,
@@ -71,6 +70,7 @@ const LECTURAS_DE_APPS = {
   "test/arquitectura/cargar-entorno-nombres.test.ts": ["apps/web/PRIMER-DESPLIEGUE.md"],
   "test/arquitectura/reglas.test.ts": ["apps/**"],
   "test/arquitectura/lint.test.ts": ["apps/**"],
+  "test/arquitectura/campos-con-dato.test.ts": ["apps/**"],
 };
 
 /**

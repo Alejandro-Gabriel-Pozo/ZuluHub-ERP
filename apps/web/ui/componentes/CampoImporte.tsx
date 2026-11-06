@@ -1,3 +1,4 @@
+import type { DatoDeCampo } from "../../../../src/capacidades/datos/registro";
 import { useState } from "react";
 import {
   interpretarImporteTipeado,
@@ -7,6 +8,8 @@ import { CajaDeCampo } from "./CajaDeCampo";
 import estilos from "./CampoImporte.module.css";
 
 export type PropsDeCampoImporte = Readonly<{
+  /** Qué dato pide el campo: un `IdDeDato` del registro de datos o `"pendiente"` (deuda registrada). Obligatorio: sin dato no hay campo. */
+  dato: DatoDeCampo;
   etiqueta: string;
   /**
    * El importe como TEXTO decimal canónico (`"1234.50"`), o `""` si no hay nada. Nunca un `number`:

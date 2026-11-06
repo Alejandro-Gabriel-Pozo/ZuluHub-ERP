@@ -39,6 +39,7 @@ export function FiltrosDeEmpresas({
   return (
     <form method="get" action="/empresas" className={estilos["filtros"]} role="search">
       <Selector
+        dato="pendiente"
         etiqueta="Estado"
         nombre="estado"
         valor={estado}
@@ -47,6 +48,7 @@ export function FiltrosDeEmpresas({
         opciones={OPCIONES_DE_ESTADO}
       />
       <Selector
+        dato="pendiente"
         etiqueta="Submarca"
         nombre="submarca"
         valor={submarca}
@@ -55,6 +57,7 @@ export function FiltrosDeEmpresas({
         opciones={submarcas.map((s) => ({ valor: s.id, etiqueta: s.nombre }))}
       />
       <Selector
+        dato="pendiente"
         etiqueta="Plan"
         nombre="plan"
         valor={plan}
@@ -63,6 +66,7 @@ export function FiltrosDeEmpresas({
         opciones={planes.map((p) => ({ valor: p.id, etiqueta: p.nombre }))}
       />
       <Campo
+        dato="pendiente"
         etiqueta="Buscar por nombre o CUIT"
         nombre="buscar"
         tipo="search"

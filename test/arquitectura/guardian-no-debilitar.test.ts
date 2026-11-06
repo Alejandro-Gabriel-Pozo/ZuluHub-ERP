@@ -1771,6 +1771,110 @@ const CON_DEUDA: Estado = [
 ].reduce((estado, [archivo, texto]) => conTexto(estado, archivo as string, texto as string), SANO);
 const LINEA_DEL_JOB_GUARDIAN = 12;
 
+const PASO_DE_LOS_CAMPOS = [
+  "      - name: Campos sin dato", //                                   34
+  "        run: |", //                                                  35
+  "          if [ -d base ]; then", //                                  36
+  "            node arquitectura/deuda/campos-sin-dato.cjs --base=base", // 37
+  "          else", //                                                 38
+  "            node arquitectura/deuda/campos-sin-dato.cjs", //         39
+  "          fi", //                                                   40
+];
+/** El ci.yml con la deuda y, después, el paso del presupuesto de campos sin dato (el gate pasa a la línea 42). */
+const TEXTO_DE_CI_CON_CAMPOS = lineas(
+  ...TEXTO_DE_CI_CON_DEUDA.split("\n").slice(0, 33),
+  ...PASO_DE_LOS_CAMPOS,
+  ...TEXTO_DE_CI_CON_DEUDA.split("\n").slice(33, -1),
+);
+const CON_CAMPOS = conTexto(CON_DEUDA, ARCHIVO_CI, TEXTO_DE_CI_CON_CAMPOS);
+
+const CASOS_J_CAMPOS: Caso[] = [
+  {
+    nombre: "(j) estado sano: con el paso de los campos y el de la deuda no hay nada que reclamar",
+    base: CON_CAMPOS,
+    pr: CON_CAMPOS,
+    esperado: [],
+  },
+  {
+    nombre:
+      "(j) LEGÍTIMO: la base todavía no tenía el paso de los campos (la primera vez que se incorpora)",
+    base: CON_DEUDA,
+    pr: CON_CAMPOS,
+    esperado: [],
+  },
+  {
+    nombre:
+      "(j) el job guardian ya no ejecuta el paso de los campos: debilita, en la línea del job",
+    base: CON_CAMPOS,
+    pr: CON_DEUDA,
+    esperado: [["ci-sin-paso-de-campos", ARCHIVO_CI, LINEA_DEL_JOB_GUARDIAN]],
+  },
+  {
+    nombre: "(j) el paso de los campos solo ejecuta una de las dos formas: ya no es el paso",
+    base: CON_CAMPOS,
+    pr: reemplazando(
+      CON_CAMPOS,
+      ARCHIVO_CI,
+      "            node arquitectura/deuda/campos-sin-dato.cjs --base=base\n",
+      "            echo base\n",
+    ),
+    esperado: [["ci-sin-paso-de-campos", ARCHIVO_CI, LINEA_DEL_JOB_GUARDIAN]],
+  },
+  {
+    nombre:
+      "(j) quitar el paso de la deuda con el de los campos presente sigue reclamando la deuda",
+    base: CON_CAMPOS,
+    pr: conTexto(
+      CON_CAMPOS,
+      ARCHIVO_CI,
+      lineas(
+        ...TEXTO_DE_CI_CON_CAMPOS.split("\n").slice(0, 26),
+        ...TEXTO_DE_CI_CON_CAMPOS.split("\n").slice(33, -1),
+      ),
+    ),
+    esperado: [["ci-sin-paso-de-deuda", ARCHIVO_CI, LINEA_DEL_JOB_GUARDIAN]],
+  },
+  {
+    nombre: "(j) el paso de los campos gana un continue-on-error: debilita, en esa línea",
+    base: CON_CAMPOS,
+    pr: reemplazando(
+      CON_CAMPOS,
+      ARCHIVO_CI,
+      "      - name: Campos sin dato\n",
+      "      - name: Campos sin dato\n        continue-on-error: true\n",
+    ),
+    esperado: [["ci-campos-con-salto", ARCHIVO_CI, 35]],
+  },
+  {
+    nombre: "(j) el paso de los campos gana un if: debilita, en la línea del if",
+    base: CON_CAMPOS,
+    pr: reemplazando(
+      CON_CAMPOS,
+      ARCHIVO_CI,
+      "      - name: Campos sin dato\n",
+      "      - name: Campos sin dato\n        if: false\n",
+    ),
+    esperado: [["ci-campos-con-salto", ARCHIVO_CI, 35]],
+  },
+  {
+    nombre:
+      "(j) un continue-on-error o un if que la base ya tenía en el paso de los campos no se reclama",
+    base: reemplazando(
+      CON_CAMPOS,
+      ARCHIVO_CI,
+      "      - name: Campos sin dato\n",
+      "      - name: Campos sin dato\n        if: false\n        continue-on-error: true\n",
+    ),
+    pr: reemplazando(
+      CON_CAMPOS,
+      ARCHIVO_CI,
+      "      - name: Campos sin dato\n",
+      "      - name: Campos sin dato\n        if: false\n        continue-on-error: true\n",
+    ),
+    esperado: [],
+  },
+];
+
 const CASOS_J: Caso[] = [
   {
     nombre: "(j) estado sano: con el paso, los scripts y las entradas no hay nada que reclamar",
@@ -2033,6 +2137,7 @@ const TABLAS: [string, Caso[]][] = [
   ["h: matriz de invariantes y mutaciones", CASOS_H],
   ["i: batería de evasión", CASOS_I],
   ["j: deuda técnica", CASOS_J],
+  ["j: presupuesto de campos sin dato", CASOS_J_CAMPOS],
 ];
 
 describe.each(TABLAS)("chequeo %s", (_titulo, casos) => {
@@ -2267,14 +2372,32 @@ describe("funciones de apoyo", () => {
     const guardianJob = ci.valor.get("guardian");
     expect(guardianJob?.["linea"]).toBe(12);
     expect(guardianJob?.["pasos"]).toEqual([
-      { desde: 17, hasta: 17, ejecutaGuardian: false, deudaSola: false, deudaConBase: false },
-      { desde: 18, hasta: 18, ejecutaGuardian: true, deudaSola: false, deudaConBase: false },
+      {
+        desde: 17,
+        hasta: 17,
+        ejecutaGuardian: false,
+        deudaSola: false,
+        deudaConBase: false,
+        camposSola: false,
+        camposConBase: false,
+      },
+      {
+        desde: 18,
+        hasta: 18,
+        ejecutaGuardian: true,
+        deudaSola: false,
+        deudaConBase: false,
+        camposSola: false,
+        camposConBase: false,
+      },
       {
         desde: 19,
         hasta: 23,
         ejecutaGuardian: false,
         deudaSola: false,
         deudaConBase: false,
+        camposSola: false,
+        camposConBase: false,
         si: { valor: "github.event_name == 'pull_request'", linea: 20 },
       },
       {
@@ -2283,6 +2406,8 @@ describe("funciones de apoyo", () => {
         ejecutaGuardian: false,
         deudaSola: false,
         deudaConBase: false,
+        camposSola: false,
+        camposConBase: false,
         si: { valor: "github.event_name == 'pull_request'", linea: 25 },
       },
     ]);
