@@ -11,6 +11,8 @@ import { PantallaDeImprimirComprobante } from "./PantallaDeImprimirComprobante.c
  * de toque de 44 px y letra legible. Se corre a 390 px (celular) y a 1280 px (escritorio) con el tamaño de la ventana de cada proyecto.
  */
 
+const URL_DEL_PDF = "/facturacion/comprobantes/0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b/pdf";
+
 const dibujar = () =>
   render(
     <>
@@ -18,6 +20,7 @@ const dibujar = () =>
       <PantallaDeImprimirComprobante
         comprobante={comprobanteDePrueba({ renglones: 3 })}
         qrSvg={QR_DE_PRUEBA}
+        urlDelPdf={URL_DEL_PDF}
       />
     </>,
   );
@@ -109,6 +112,41 @@ describe("vista previa para imprimir", () => {
     }
   });
 
+  it("«Descargar PDF» es un enlace a la ruta del PDF del comprobante, fuera de la zona de impresión, y no abre el diálogo de impresión", async () => {
+    const imprimir = vi.spyOn(window, "print").mockImplementation(() => undefined);
+    try {
+      await dibujar();
+      const enlaces = [...document.querySelectorAll("a")].filter(
+        (a) => a.textContent === "Descargar PDF",
+      );
+      expect(enlaces).toHaveLength(1);
+      expect(enlaces[0]?.getAttribute("href")).toBe(URL_DEL_PDF);
+      expect(enlaces[0]?.closest("[data-zona-de-impresion]")).toBeNull();
+      // Es un enlace que navega (la descarga la sirve el servidor): tocarlo no llama a `window.print`.
+      enlaces[0]?.addEventListener("click", (evento) => evento.preventDefault());
+      enlaces[0]?.click();
+      expect(imprimir).not.toHaveBeenCalled();
+    } finally {
+      imprimir.mockRestore();
+    }
+  });
+
+  it("con teclado «Descargar PDF» se alcanza después de «Imprimir» y muestra su foco", async () => {
+    await dibujar();
+    const enlace = [...document.querySelectorAll("a")].find(
+      (a) => a.textContent === "Descargar PDF",
+    );
+    const imprimirBoton = [...document.querySelectorAll("button")].find(
+      (b) => b.textContent === "Imprimir",
+    );
+    expect(enlace).toBeDefined();
+    imprimirBoton?.focus();
+    await userEvent.tab();
+    expect(document.activeElement).toBe(enlace);
+    const estilo = getComputedStyle(enlace as HTMLElement);
+    expect(estilo.outlineStyle === "none" && estilo.boxShadow === "none").toBe(false);
+  });
+
   it("los controles quedan fuera de la zona de impresión", async () => {
     await dibujar();
     const zona = document.querySelector("[data-zona-de-impresion]");
@@ -135,10 +173,11 @@ describe("vista previa para imprimir", () => {
         )
         .toBeGreaterThan(0);
       expect(await violacionesDeAccesibilidad(document.body)).toEqual([]);
-      const controles = [...document.querySelectorAll<HTMLElement>("button, label")].filter(
+      const controles = [...document.querySelectorAll<HTMLElement>("button, label, a")].filter(
         (el) => !el.closest("[data-zona-de-impresion]"),
       );
-      expect(controles.length).toBe(3);
+      // Los dos formatos, «Imprimir» y «Descargar PDF».
+      expect(controles.length).toBe(4);
       for (const el of controles) {
         const caja = el.getBoundingClientRect();
         expect(caja.height, el.textContent ?? "").toBeGreaterThanOrEqual(44);

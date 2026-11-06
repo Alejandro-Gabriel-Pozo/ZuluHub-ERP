@@ -172,6 +172,17 @@ describe("validarReceptor: forma", () => {
     }
   });
 
+  it("un nombre o un domicilio que empieza con `=`, `+`, `-` o `@` se rechaza con su campo", () => {
+    for (const texto of ["=SUMA(A1)", "+Juan", "-Juan", "@Juan"]) {
+      expect(validarReceptor({ ...inscripto, nombre: texto }, contexto("A")), texto).toEqual(
+        invalido("nombre"),
+      );
+      expect(validarReceptor({ ...inscripto, domicilio: texto }, contexto("A")), texto).toEqual(
+        invalido("domicilio"),
+      );
+    }
+  });
+
   it("el nombre y el domicilio quedan en su forma canónica (blancos repetidos, NFC)", () => {
     const r = validarReceptor(
       { ...inscripto, nombre: "  Pérez   e  Hijos ", domicilio: "Av.  Siempreviva   742" },
@@ -209,6 +220,19 @@ describe("validarReceptor: forma", () => {
 
   it("DNI: de 6 a 9 dígitos y sin ceros a la izquierda", () => {
     for (const numero of ["12345", "1234567890", "012345678", "1234567a", "", "12 345 678"]) {
+      expect(validarReceptor(conDocumento({ tipo: "DNI", numero }), contexto("B"))).toEqual(
+        invalido("documento"),
+      );
+    }
+  });
+
+  it("DNI con puntos de miles: se guarda en su forma canónica y con otros separadores se rechaza (Q6)", () => {
+    const r = validarReceptor(conDocumento({ tipo: "DNI", numero: "12.345.678" }), contexto("B"));
+    expect(r).toMatchObject({
+      ok: true,
+      valor: { documento: { tipo: "DNI", numero: "12345678" } },
+    });
+    for (const numero of ["12 345 678", "12,345,678", "12.345.67"]) {
       expect(validarReceptor(conDocumento({ tipo: "DNI", numero }), contexto("B"))).toEqual(
         invalido("documento"),
       );

@@ -41,3 +41,17 @@ export function entradaDelPdf(m: Modelo) {
     creadoEn: new Date(`${m.fiscal.fecha}T00:00:00-03:00`),
   };
 }
+
+/** El rótulo del comprobante, sin tildes ni espacios, para el nombre del archivo (la lista cerrada del modelo; nada del cliente). */
+const ROTULO_DEL_ARCHIVO = {
+  FACTURA: "Factura",
+  "NOTA DE CRÉDITO": "Nota-de-credito",
+  "NOTA DE DÉBITO": "Nota-de-debito",
+} as const satisfies Record<Modelo["fiscal"]["rotulo"], string>;
+
+/**
+ * `Factura-B-00001-00000012.pdf`: tipo, letra y número (punto de venta y número). Sin CUIT, sin nombre del cliente ni id interno: el nombre
+ * viaja en una cabecera y queda en la carpeta de descargas. Todo sale de listas cerradas del modelo. Chequeo: `test/web/pdf-de-la-factura.test.ts`.
+ */
+export const nombreDelArchivoPdf = (m: Modelo): string =>
+  `${ROTULO_DEL_ARCHIVO[m.fiscal.rotulo]}-${m.fiscal.letra}-${m.fiscal.numero}.pdf`;

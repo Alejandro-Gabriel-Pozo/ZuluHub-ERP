@@ -3,6 +3,7 @@ import { FORMA_DE_ID } from "../../../../../../../../pantallas/comprobante-por-i
 import { comprobanteParaLaHoja } from "../../../../../../../../pantallas/modelo-de-impresion";
 import { pantallaDeOperacion } from "../../../../../../../../pantallas/operacion";
 import { verElModeloDeImpresion } from "../../../../../../../../servidor/facturacion";
+import { direccionDelPdf } from "../../../../../../../../ui/plantillas/facturacion/filtros-del-listado";
 import { ErrorDelDetalle } from "../../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
 import { PantallaDeImprimirComprobante } from "../../../../../../../../ui/plantillas/facturacion/PantallaDeImprimirComprobante.cliente";
 
@@ -27,6 +28,7 @@ export default async function PaginaDeImprimirComprobante({
       <PantallaDeImprimirComprobante
         comprobante={comprobanteParaLaHoja(respuesta.dato.modelo)}
         qrSvg={respuesta.dato.qrSvg}
+        urlDelPdf={direccionDelPdf(id)}
       />
     );
   });
