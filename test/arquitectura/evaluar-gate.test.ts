@@ -20,6 +20,7 @@ const VERDE: Needs = {
   flujos: { result: "success" },
   web: { result: "success" },
   componentes: { result: "success" },
+  recorrido: { result: "success" },
   dependencias: { result: "success" },
   estabilidad: { result: "success" },
   "mutacion-plan": { result: "success", outputs: { hay: "true", estabilidad: "true" } },
@@ -76,13 +77,19 @@ describe("Gate: veredicto sobre los jobs", () => {
     expect(evaluarGate(sinPlan)).toEqual(["mutacion-plan: failure", "mutacion: skipped"]);
   });
 
-  it.each(["estatico", "guardian", "pruebas", "seguridad", "flujos", "web", "componentes"])(
-    "%s fallido o saltado falla",
-    (job) => {
-      expect(evaluarGate(con({ [job]: { result: "failure" } }))).toEqual([`${job}: failure`]);
-      expect(evaluarGate(con({ [job]: { result: "skipped" } }))).toEqual([`${job}: skipped`]);
-    },
-  );
+  it.each([
+    "estatico",
+    "guardian",
+    "pruebas",
+    "seguridad",
+    "flujos",
+    "web",
+    "componentes",
+    "recorrido",
+  ])("%s fallido o saltado falla", (job) => {
+    expect(evaluarGate(con({ [job]: { result: "failure" } }))).toEqual([`${job}: failure`]);
+    expect(evaluarGate(con({ [job]: { result: "skipped" } }))).toEqual([`${job}: skipped`]);
+  });
 
   it.each(["dependencias", "estabilidad"])("%s fallido o cancelado falla", (job) => {
     expect(evaluarGate(con({ [job]: { result: "failure" } }), "pull_request")).toEqual([
