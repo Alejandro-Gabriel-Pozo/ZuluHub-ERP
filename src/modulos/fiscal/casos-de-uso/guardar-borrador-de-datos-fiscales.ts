@@ -8,6 +8,7 @@ import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import {
   borradorDesdeConfirmada,
   editarBorrador,
+  pedidoNoCambiaLoGuardado,
   nuevoBorrador,
   type CambiosDeBorrador,
   type DatosFiscalesBorrador,
@@ -133,8 +134,12 @@ async function guardarSobreLoConfirmado(
     id: confirmada.id,
     creadoPor: confirmada.confirmadaPor,
   });
+  // Es la repetición si el pedido, normalizado con las reglas de hoy, no cambia nada, o si es igual a lo guardado tal cual (una
+  // versión confirmada con reglas anteriores no se vuelve a validar: su reintento sigue siendo «ya estaba»).
   const editado = editarBorrador(base, entrada.cambios, ahora);
-  if (!editado.ok || Object.keys(diferenciaDe(base, editado.valor).despues).length > 0) {
+  const igualConLasReglasDeHoy =
+    editado.ok && Object.keys(diferenciaDe(base, editado.valor).despues).length === 0;
+  if (!igualConLasReglasDeHoy && !pedidoNoCambiaLoGuardado(base, entrada.cambios)) {
     return cambiaLaVersion;
   }
   return ok({ borradorId: confirmada.id, version: confirmada.version, yaEstaba: true });

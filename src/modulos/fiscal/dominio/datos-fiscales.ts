@@ -201,6 +201,36 @@ export function ingresosBrutosDeclarados(
 }
 
 /**
+ * ¿El pedido deja `guardado` tal cual está? Compara lo pedido CONTRA LO GUARDADO, sin volver a validar con las reglas de hoy: una
+ * versión confirmada es inmutable y se validó cuando se confirmó. Sirve para el reintento de un guardado cuya confirmación ya se
+ * hizo (se cortó la red al volver la respuesta): si la razón social guardada se aceptó con reglas anteriores (doble espacio, un `@`),
+ * el mismo pedido sigue siendo «ya estaba» y no `VERSION_CONFIRMADA_INMUTABLE`. Previene: que endurecer una regla convierta el
+ * reintento idempotente de un dato ya confirmado en un error. Chequeo: las pruebas de este archivo y de `guardar-borrador`.
+ * Los textos se comparan recortados (lo único que hacía la validación anterior); `null` o en blanco en Ingresos Brutos pide que no
+ * haya valor, como en `editarBorrador`. Un campo ausente no se mira.
+ */
+export function pedidoNoCambiaLoGuardado(
+  guardado: DatosFiscalesBorrador,
+  cambios: CambiosDeBorrador,
+): boolean {
+  const iguales = (pedido: string | null | undefined, valor: string | null): boolean =>
+    pedido === undefined ||
+    (pedido === null || pedido.trim() === "" ? valor === null : pedido.trim() === valor);
+  const textoPedido = (pedido: string | undefined, valor: string | null): boolean =>
+    pedido === undefined || pedido.trim() === valor;
+  return (
+    textoPedido(cambios.razonSocial, guardado.razonSocial) &&
+    (cambios.condicionIva === undefined || cambios.condicionIva === guardado.condicionIva) &&
+    (cambios.domicilioFiscalId === undefined ||
+      cambios.domicilioFiscalId === guardado.domicilioFiscalId) &&
+    (cambios.inicioActividades === undefined ||
+      cambios.inicioActividades === guardado.inicioActividades) &&
+    iguales(cambios.iibbNumero, guardado.iibbNumero) &&
+    iguales(cambios.iibbCondicion, guardado.iibbCondicion)
+  );
+}
+
+/**
  * Aplica `cambios` a un borrador y valida cada valor que llega. Devuelve el PRIMER error, en el orden
  * razón social, condición de IVA, inicio de actividades, número de IIBB, condición de IIBB. No
  * exige que el borrador esté completo (eso se pide al confirmar). `ahora` es el reloj del contexto: de ahí sale el «hoy» de Argentina
