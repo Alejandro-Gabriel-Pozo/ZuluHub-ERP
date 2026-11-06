@@ -1,7 +1,5 @@
-import type { CSSProperties } from "react";
-
 /**
- * Las medidas del papel de la vista imprimible, en UN solo lugar: el CSS las recibe como variables (`estiloDeLaGeometria`) y la
+ * Las medidas del papel de la vista imprimible, en UN solo lugar: el CSS las recibe como variables (`variablesDeLaGeometria`, aplicadas con `aplicarEstilos`) y la
  * medición y el paginador las leen de acá. Previene que el alto que calcula el paginador no sea el de la hoja que se dibuja (un
  * renglón cortado al borde o una hoja de más). Chequeo: `hoja-a4.test.tsx` mide en Chromium que nada de cada hoja se pase de su
  * alto y `test/web/impresion-geometria.test.ts` fija las constantes.
@@ -29,16 +27,17 @@ export const HOLGURA_DEL_TICKET_MM = 2;
 export const escalaPara = (disponible: number, anchoNatural: number): number =>
   disponible <= 0 ? 1 : Math.min(1, disponible / anchoNatural);
 
-/** Las variables que lee el CSS de la hoja (`HojaA4.module.css`); React no tipa las variables CSS, de ahí el cast. */
-export function estiloDeLaGeometria(altoDelPieEnPx: number | null): CSSProperties {
+/** Las variables que lee el CSS de la hoja (`HojaA4.module.css`); se ponen con `aplicarEstilos`, nunca como atributo `style=`. */
+export function variablesDeLaGeometria(altoDelPieEnPx: number | null): Record<string, string> {
   return {
     "--hoja-ancho": `${ANCHO_A4_MM}mm`,
     "--hoja-alto": `${ALTO_A4_MM}mm`,
     "--hoja-margen": `${MARGEN_A4_MM}mm`,
     ...(altoDelPieEnPx === null ? {} : { "--pie-alto": `${altoDelPieEnPx}px` }),
-  } as CSSProperties;
+  };
 }
 
 /** La variable que lee el CSS del ticket (`Ticket.module.css`). */
-export const estiloDelTicket = (): CSSProperties =>
-  ({ "--ticket-ancho": `${ANCHO_TICKET_MM}mm` }) as CSSProperties;
+export const variablesDelTicket = (): Record<string, string> => ({
+  "--ticket-ancho": `${ANCHO_TICKET_MM}mm`,
+});

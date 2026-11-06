@@ -69,6 +69,12 @@ function cabecera(p: Pincel, h: HojaParaElPdf, x: number, y: number, ancho: numb
       negrita: true,
     });
   }
+  if (h.nombreDeLaSucursal !== null) {
+    yIzquierda += p.texto(h.nombreDeLaSucursal, x + RELLENO, yIzquierda, interior, {
+      tam: 13,
+      negrita: true,
+    });
+  }
   for (const fila of h.emisor) yIzquierda += p.fila(fila, x + RELLENO, yIzquierda, interior, TAM);
   if (h.contacto !== null)
     yIzquierda += p.texto(h.contacto, x + RELLENO, yIzquierda, interior, { tam: TAM });

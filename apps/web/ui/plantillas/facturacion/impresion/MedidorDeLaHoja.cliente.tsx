@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
+import { aplicarEstilos } from "../../../primitivas/aplicar-estilos";
 import { formatearImporte } from "../formato-fiscal";
 import estilos from "./HojaA4.module.css";
-import { estiloDeLaGeometria } from "./geometria";
+import { variablesDeLaGeometria } from "./geometria";
 import type { Medidas } from "./medidas-de-la-hoja";
 import { leerLasMedidas } from "./medicion";
 import { textoDeLaHoja, type HojaArmada } from "./modelo-de-la-hoja";
@@ -26,6 +27,10 @@ export type PropsDelMedidor = Readonly<{
  */
 export function MedidorDeLaHoja({ a, qrSvg, diccionario, alMedir }: PropsDelMedidor) {
   const raiz = useRef<HTMLDivElement>(null);
+  // Las variables van ANTES de medir: el efecto de abajo corre después de este (los de layout corren primero) y el ancho útil sale de ellas.
+  useLayoutEffect(() => {
+    aplicarEstilos(raiz.current, variablesDeLaGeometria(null));
+  }, []);
   useEffect(() => {
     const elemento = raiz.current;
     if (elemento === null) return;
@@ -48,13 +53,7 @@ export function MedidorDeLaHoja({ a, qrSvg, diccionario, alMedir }: PropsDelMedi
     };
   }, [a, alMedir]);
   return (
-    <div
-      ref={raiz}
-      className={estilos["medidor"]}
-      style={estiloDeLaGeometria(null)}
-      aria-hidden="true"
-      data-medidor=""
-    >
+    <div ref={raiz} className={estilos["medidor"]} aria-hidden="true" data-medidor="">
       <EncabezadoDeHoja a={a} />
       <TablaDeRenglones
         a={a}

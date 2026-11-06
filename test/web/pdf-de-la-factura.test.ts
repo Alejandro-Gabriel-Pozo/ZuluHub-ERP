@@ -112,6 +112,7 @@ function datosObligatorios(m: Modelo): readonly (readonly [string, string])[] {
     ["total", `Total ${formatearImporte(m.totales.total)}`],
   ];
   if (e.iibbNumero !== null) datos.push(["ingresos brutos", e.iibbNumero]);
+  if (m.sucursal !== undefined) datos.push(["nombre de la sucursal", m.sucursal.nombre]);
   m.renglones.forEach((r, i) => {
     datos.push([`renglón ${i + 1}: descripción`, r.descripcion]);
     datos.push([`renglón ${i + 1}: importe`, formatearImporte(r.importe)]);
@@ -174,6 +175,11 @@ describe("el PDF trae cada dato obligatorio del modelo", () => {
   it.each([
     ["factura B a consumidor final, homologación, con transparencia fiscal e IIBB", facturaB, {}],
     ["factura B con contacto de la sucursal", facturaB, { contacto: CONTACTO }],
+    [
+      "factura B con el nombre de la sucursal congelado",
+      facturaB,
+      { sucursalNombre: "Sucursal Centro" },
+    ],
     ["factura A a responsable inscripto", facturaA, {}],
     ["factura A a monotributista (leyenda legal de crédito fiscal)", facturaAMonotributo, {}],
     ["factura C de un emisor monotributista", facturaC, {}],
@@ -203,6 +209,21 @@ describe("el PDF trae cada dato obligatorio del modelo", () => {
     expect(modeloDe(facturaB).transparenciaFiscal).toBeDefined();
     expect(modeloDe(facturaEnProduccion).leyendas).toEqual([]);
     expect(modeloDe(facturaA).transparenciaFiscal).toBeUndefined();
+  });
+
+  it("el nombre de la sucursal sale como en la hoja: sin rótulo, arriba de la razón social, y sin nombre no se imprime ni deja un hueco", async () => {
+    const con = await leerElPdf(
+      await generar(modeloDe(facturaB, { sucursalNombre: "Sucursal Centro" })),
+    );
+    const trozo = (texto: string) => con[0]?.trozos.find((t) => t.texto === texto);
+    const sucursal = trozo("Sucursal Centro");
+    const razon = con[0]?.trozos.find((t) => t.texto === "Razón social");
+    expect(sucursal).toBeDefined();
+    // Misma columna y más arriba (en el PDF `y` crece hacia arriba).
+    expect(sucursal?.x).toBeCloseTo(razon?.x ?? -1, 0);
+    expect(sucursal?.y ?? 0).toBeGreaterThan(razon?.y ?? 0);
+    const sin = await leerElPdf(await generar(modeloDe(facturaB)));
+    expect(sin[0]?.texto).not.toContain("Sucursal");
   });
 
   it("la hoja es A4 y no trae lo que la pantalla tampoco imprime (nombre de fantasía del modelo)", async () => {
@@ -239,6 +260,7 @@ type Mutacion = (h: HojaParaElPdf) => Partial<HojaParaElPdf>;
 describe("mutaciones: si el PDF pierde un dato, la comprobación lo detecta", () => {
   const m = modeloDe(facturaB, { contacto: CONTACTO });
   const mA = modeloDe(facturaAMonotributo);
+  const mConSucursal = modeloDe(facturaB, { sucursalNombre: "Sucursal Centro" });
 
   const sin = (valor: string) => (f: { rotulo: string | null; valor: string }) => f.valor !== valor;
 
@@ -300,6 +322,12 @@ describe("mutaciones: si el PDF pierde un dato, la comprobación lo detecta", ()
     ["leyenda legal", mA, () => ({ leyendasLegales: [] }), "leyenda legal"],
     ["total", m, (h: HojaParaElPdf) => ({ totales: h.totales.filter((t) => !t.fuerte) }), "total"],
     ["contacto", m, () => ({ contacto: null }), "teléfono de contacto"],
+    [
+      "nombre de la sucursal",
+      mConSucursal,
+      () => ({ nombreDeLaSucursal: null }),
+      "nombre de la sucursal",
+    ],
     [
       "renglón",
       m,
