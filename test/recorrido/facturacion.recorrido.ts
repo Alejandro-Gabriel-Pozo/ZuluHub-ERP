@@ -25,6 +25,18 @@ describe.skipIf(base === null)(
     /** Lo que el vigilante anotó en las pantallas de impresión (ver la falla conocida de CSP). */
     const deLaImpresion: string[] = [];
 
+    /**
+     * Para `it.fails`: solo cuenta como «falla conocida» una AFIRMACIÓN que no se cumple (`AssertionError`). Cualquier otro error (un
+     * timeout, un selector que ya no existe, la app caída) se traga acá, el caso pasa y `it.fails` se pone rojo: una falla conocida no
+     * puede esconder un recorrido roto por otro motivo.
+     */
+    const soloSiFallaUnaAfirmacion = async (cuerpo: () => Promise<void>): Promise<void> => {
+      try {
+        await cuerpo();
+      } catch (error) {
+        if (error instanceof Error && error.name === "AssertionError") throw error;
+      }
+    };
     const ir = async (ruta: string) => {
       const respuesta = await pagina.goto(`${mundo.url}${ruta}`);
       await pagina.waitForLoadState("networkidle");
@@ -102,9 +114,8 @@ describe.skipIf(base === null)(
     // FALLA CONOCIDA (2026-11-05, verificada en la app real): «Emitir» deja avanzar con un DNI no numérico y un nombre numérico; el único
     // aviso es genérico y llega al final. Lo esperado es un error de campo en el paso 1. Lo arregla la sesión web; no hay cuestión
     // abierta por decisión del dueño (2026-11-05: «hay que solucionarla y ya»).
-    it.fails(
-      "Emitir: un documento no numérico y un nombre numérico dan error de campo",
-      async () => {
+    it.fails("Emitir: un documento no numérico y un nombre numérico dan error de campo", () =>
+      soloSiFallaUnaAfirmacion(async () => {
         await ir("/facturacion/comprobantes/emitir");
         await pagina.getByLabel("Documento").selectOption({ label: "DNI" });
         await pagina.getByRole("textbox", { name: "DNI" }).fill("abc");
@@ -117,7 +128,7 @@ describe.skipIf(base === null)(
         // Con error de campo la persona sigue en el paso 1 (Cliente).
         expect(await pagina.getByRole("region", { name: "Renglones" }).count()).toBe(0);
         vigilante.tomar();
-      },
+      }),
     );
 
     it("Emitir: una Factura B de consumidor final termina AUTORIZADA con el CAE de ARCA", async () => {
@@ -175,7 +186,13 @@ describe.skipIf(base === null)(
     });
 
     it("Imprimir A4: una hoja con paginador, sin desborde y con el QR cargado", async () => {
-      await ir(`/facturacion/comprobantes/${idDelComprobante()}/imprimir`);
+      const respuesta = await ir(`/facturacion/comprobantes/${idDelComprobante()}/imprimir`);
+      // La CSP real tiene que llegar con la respuesta y admitir el QR (`data:`); sin la cabecera, el navegador no bloquea nada y el
+      // resto de las pruebas de esta pantalla pasaría por la razón equivocada. Solo se afirma que existe y lo contiene (la regla vive
+      // en `src/capacidades/experiencia/cabeceras.ts`).
+      expect((await respuesta?.headerValue("content-security-policy")) ?? "").toContain(
+        "img-src 'self' data:",
+      );
       expect(await pagina.getByRole("radio", { name: "A4" }).isChecked()).toBe(true);
       // Hay una copia oculta (el medidor de la hoja): se espera la visible.
       await pagina.getByText("Hoja 1 de 1").locator("visible=true").first().waitFor();
@@ -225,7 +242,7 @@ describe.skipIf(base === null)(
 
     // Antes de #193 la vista de impresión usaba estilos en línea que la CSP real bloqueaba (hallazgo de este recorrido, 2026-11-05); #193 lo
     // arregló y esto pasó de falla conocida a prueba común.
-    it("Imprimir: la política de contenido no bloquea ningún estilo", () => {
+    it("Imprimir: la política de contenido no bloquea ningún estilo ni imagen", () => {
       expect(deLaImpresion.filter((h) => /CSP|Content Security Policy/.test(h))).toEqual([]);
     });
 

@@ -1,5 +1,5 @@
 // SOLO DE PRUEBAS. Lo carga el recorrido con NODE_OPTIONS=--import al lanzar `next start`; ningún archivo de `src/`, de `apps/` ni de
-// `vercel.json` lo nombra (lo vigila `test/arquitectura/recorrido-sin-puerta-trasera.test.ts`), así que un despliegue real nunca lo ejecuta.
+// `vercel.json` lo nombra (lo vigila `test/arquitectura/reglas.test.ts`, el bloque «el módulo de ARCA simulada del recorrido no puede llegar a producción»), así que un despliegue real nunca lo ejecuta.
 // Qué hace: los dos hosts de homologación de ARCA (los únicos que el transporte conoce) se atienden en un servidor local en 127.0.0.1;
 // cualquier otro `https.request` falla cerrado, para que una salida a internet de la app se vea en vez de pasar.
 import http from "node:http";

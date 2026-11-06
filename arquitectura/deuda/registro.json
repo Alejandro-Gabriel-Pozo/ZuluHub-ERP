@@ -34,7 +34,7 @@
   {
     "id": "knip-ignora--knip-json",
     "archivos": ["knip.json"],
-    "descripcion": "Entradas de `ignore*` de knip.json (dependencias sin uso hasta el e2e de W5, exports que las pruebas leen por createRequire): cada una lleva su motivo en el archivo.",
+    "descripcion": "Entradas de `ignore*` de knip.json (exports que las pruebas leen por createRequire, el binario `openssl` de la fachada https del recorrido): cada una lleva su motivo en el archivo.",
     "tipo": "knip-ignora",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
