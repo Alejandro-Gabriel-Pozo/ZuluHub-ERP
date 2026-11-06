@@ -78,6 +78,27 @@ describe("las tablas de traducción", () => {
   });
 });
 
+describe("el receptor de una factura: qué campo marcar (Q21)", () => {
+  it("cada error del receptor trae el campo que hay que corregir", () => {
+    expect(traducirErrorFiscal({ codigo: "RECEPTOR_INVALIDO", campo: "domicilio" })).toEqual({
+      codigo: "FISCAL_RECEPTOR_INVALIDO",
+      campo: "receptor.domicilio",
+    });
+    expect(traducirErrorFiscal({ codigo: "RECEPTOR_INVALIDO_PARA_A" })).toEqual({
+      codigo: "FISCAL_RECEPTOR_INVALIDO_PARA_A",
+      campo: "receptor.documento",
+    });
+    expect(traducirErrorFiscal({ codigo: "RECEPTOR_IGUAL_AL_EMISOR" })).toEqual({
+      codigo: "FISCAL_RECEPTOR_IGUAL_AL_EMISOR",
+      campo: "receptor.documento",
+    });
+    expect(traducirErrorFiscal({ codigo: "RECEPTOR_NO_CATEGORIZADO_NO_SOPORTADO" })).toEqual({
+      codigo: "FISCAL_RECEPTOR_NO_CATEGORIZADO",
+      campo: "receptor.condicionIva",
+    });
+  });
+});
+
 describe("la configuración fiscal (D-43)", () => {
   it("los errores de datos salen como «Revisá los datos marcados» (D-67) con el campo del formulario, y NO como los datos de las facturas", () => {
     const campos: Record<string, string> = {

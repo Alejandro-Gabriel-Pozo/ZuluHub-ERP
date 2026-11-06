@@ -335,6 +335,7 @@ describe.skipIf(base === null)("Emitir (8B): la página y la acción contra el b
           documento: "CUIT",
           numero: CUIT_DEL_CLIENTE,
           nombre: "Distribuidora Sur SA",
+          domicilio: "Av. Siempreviva 742",
           condicionIva: "RESPONSABLE_INSCRIPTO",
         }),
         [renglon({})],
@@ -344,6 +345,26 @@ describe.skipIf(base === null)("Emitir (8B): la página y la acción contra el b
       clave: randomUUID(),
     });
     expect(conCuit).toMatchObject({ ok: true, dato: { tipo: "FACTURA_A" } });
+    // Sin domicilio, un receptor que no es consumidor final se rechaza marcando el campo (RG 1415 Anexo II A.II).
+    expect(
+      await acciones.emitirLaFactura({
+        ...armarElPedido(
+          cliente({
+            documento: "CUIT",
+            numero: CUIT_DEL_CLIENTE,
+            nombre: "Distribuidora Sur SA",
+            condicionIva: "RESPONSABLE_INSCRIPTO",
+          }),
+          [renglon({})],
+          ri.pv,
+          true,
+        ),
+        clave: randomUUID(),
+      }),
+    ).toMatchObject({
+      ok: false,
+      error: { codigo: "FISCAL_RECEPTOR_INVALIDO", campo: "receptor.domicilio" },
+    });
 
     const mono = await empresaFacturadora(persona, { condicionIva: "MONOTRIBUTO" });
     comoNavegador(yo, mono.empresa);

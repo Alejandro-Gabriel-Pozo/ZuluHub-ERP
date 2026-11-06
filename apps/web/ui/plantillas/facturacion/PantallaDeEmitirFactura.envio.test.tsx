@@ -278,6 +278,51 @@ describe("emitir: lo que rechaza el servidor se ve por la vía común", () => {
     expect(servidor.pedidos[1]).toMatchObject({ receptor: { nombre: "Juana Pérez" } });
   });
 
+  it("un rechazo con el campo del cliente vuelve al paso del cliente y lo marca; al corregirlo la marca se va y el nuevo intento lleva otra clave y el domicilio escrito", async () => {
+    const servidor = servidorFalso((n) =>
+      Promise.resolve(
+        n === 1
+          ? {
+              ok: false,
+              error: { ...errorDeCodigo("FISCAL_RECEPTOR_INVALIDO"), campo: "receptor.domicilio" },
+            }
+          : listo,
+      ),
+    );
+    await render(enArmazon({ emitir: servidor.emitir }));
+    await llegarARevisar("dni");
+    tocar(boton("Emitir factura"));
+    // Vuelve al paso del cliente (ya no se ve «Revisá y emití») con SOLO el domicilio marcado, con el aviso genérico.
+    await expect.element(campo("Domicilio")).toHaveAttribute("aria-invalid", "true");
+    await expect.element(page.getByText("Revisá este dato.")).toBeVisible();
+    await expect.element(campo("Nombre o razón social")).not.toHaveAttribute("aria-invalid");
+    await expect.element(campo("DNI")).not.toHaveAttribute("aria-invalid");
+    expect(document.body.textContent).not.toContain("Revisá y emití");
+    expect(document.body.textContent).not.toContain("FISCAL_RECEPTOR_INVALIDO");
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    await userEvent.type(campo("Domicilio"), "Av. Siempreviva 742");
+    await expect.element(campo("Domicilio")).not.toHaveAttribute("aria-invalid");
+    await userEvent.click(boton("Siguiente"));
+    await userEvent.click(boton("Siguiente"));
+    tocar(boton("Emitir factura"));
+    await vi.waitFor(() => expect(servidor.pedidos).toHaveLength(2));
+    expect(servidor.pedidos[1]?.["clave"]).not.toBe(servidor.pedidos[0]?.["clave"]);
+    expect(servidor.pedidos[1]).toMatchObject({ receptor: { domicilio: "Av. Siempreviva 742" } });
+  });
+
+  it("un rechazo del cliente sin campo se ve en el paso final, como siempre", async () => {
+    const servidor = servidorFalso(() =>
+      Promise.resolve({ ok: false, error: errorDeCodigo("FISCAL_RECEPTOR_INVALIDO") }),
+    );
+    await render(enArmazon({ emitir: servidor.emitir }));
+    await llegarARevisar("dni");
+    tocar(boton("Emitir factura"));
+    await expect
+      .element(page.getByText("Revisá los datos del cliente", { exact: false }))
+      .toBeVisible();
+    await expect.element(page.getByText("Revisá y emití")).toBeVisible();
+  });
+
   it.each([
     ["MODULO_EN_DESARROLLO", "Esta función todavía está en desarrollo."],
     ["MODULO_EN_SOLO_LECTURA", "Esta función quedó en solo lectura"],

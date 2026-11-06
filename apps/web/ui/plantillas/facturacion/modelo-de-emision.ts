@@ -7,6 +7,7 @@ import {
   CONDICIONES_DE_IVA,
   type CondicionIva,
 } from "../../../../../src/primitivas/identificacion-fiscal/condicion-iva";
+import { numeroDeDocumentoDesdeTexto } from "../../../../../src/primitivas/identificacion-fiscal/documento";
 import {
   cantidadCanonica,
   DOCUMENTOS_PARA_ELEGIR,
@@ -130,8 +131,11 @@ export type VistaDelCliente = Readonly<{
   identificacion: Readonly<{
     numero: string;
     nombre: string;
+    domicilio: string;
     condicion: Readonly<{ etiqueta: string; opciones: readonly OpcionDeLista[] }>;
   }> | null;
+  /** El aviso que se ve debajo del campo con error: uno solo, genérico, para todos los campos del cliente. */
+  campoInvalido: string;
 }>;
 
 export type VistaDeLosRenglones = Readonly<{
@@ -211,6 +215,8 @@ export function vistaDelCliente(d: DiccionarioResuelto, c: ClienteEscrito): Vist
         : {
             numero: texto(d, CLAVE_DE_DOCUMENTO[c.documento]),
             nombre: texto(d, "fiscal.pantalla.emitir_nombre"),
+            // «Domicilio»: el rótulo ya aprobado de Datos fiscales (D-82, dueño, 2026-11-03), sin texto nuevo.
+            domicilio: texto(d, "fiscal.pantalla.config_df_domicilio_fiscal"),
             condicion: {
               etiqueta: etiquetaDeCondicion,
               opciones: CONDICIONES_DE_IVA.map((valor) => ({
@@ -219,6 +225,7 @@ export function vistaDelCliente(d: DiccionarioResuelto, c: ClienteEscrito): Vist
               })),
             },
           },
+    campoInvalido: texto(d, "fiscal.pantalla.emitir_revisar_dato"),
   };
 }
 
@@ -256,7 +263,12 @@ function clienteDeLaRevision(
   if (c.documento === "SIN_IDENTIFICAR") {
     return { rotulo, principal: texto(d, "fiscal.pantalla.consumidor_final"), secundario: null };
   }
-  const documento = documentoDe(d, { tipo: c.documento, numero: c.numero.replace(/\D/g, "") });
+  // El número como lo va a guardar el servidor (la misma primitiva); si no vale, se muestra lo escrito y el servidor lo rechaza marcando el campo.
+  const canonico = numeroDeDocumentoDesdeTexto(c.documento, c.numero.trim());
+  const documento = documentoDe(d, {
+    tipo: c.documento,
+    numero: canonico.ok ? canonico.valor : c.numero.trim(),
+  });
   return { rotulo, principal: c.nombre.trim(), secundario: documento };
 }
 
