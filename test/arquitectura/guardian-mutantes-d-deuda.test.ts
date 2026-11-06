@@ -180,6 +180,16 @@ describe("leerDeuda: el registro y la configuración, resumidos", () => {
     });
   });
 
+  it("trae el tope de entradas por diseño y la ampliación única del tope tal como están escritos", () => {
+    const ampliacionDelTope = { desde: 4, aprobadoPor: "Dueño", fecha: "2026-11-06" };
+    const leida = nuevas.leerDeuda(
+      registro,
+      JSON.stringify({ ...JSON.parse(configuracion), topeDePorDiseno: 27, ampliacionDelTope }),
+    ) as { valor: { topePorDiseno: unknown; ampliacion: unknown } };
+    expect(leida.valor.topePorDiseno).toBe(27);
+    expect(leida.valor.ampliacion).toStrictEqual(ampliacionDelTope);
+  });
+
   it("lo que no es de la forma esperada queda en null o vacío, sin romper", () => {
     const rara = JSON.stringify([
       6,
@@ -331,6 +341,26 @@ describe("(j) chequearDeuda: el tope, el bloqueo y las entradas", () => {
       expect(chequear(rota, deuda())).toEqual([]);
       expect(chequear(deuda(), rota)).toEqual([]);
     }
+  });
+
+  it("el tope de excepciones puede subir UNA vez con la ampliación aprobada, y el de entradas por diseño nunca sube", () => {
+    const ampliacion = { desde: 10, aprobadoPor: "Dueño, 2026-11-06", fecha: "2026-11-06" };
+    expect(chequear(deuda({ tope: 10 }), deuda({ tope: 41, ampliacion }))).toEqual([]);
+    expect(chequear(deuda({ tope: 10 }), deuda({ tope: 41 })).map((h) => h.codigo)).toEqual([
+      "deuda-tope-subio",
+    ]);
+    const subido = chequear(deuda({ topePorDiseno: 27 }), deuda({ topePorDiseno: 28 }));
+    expect(subido).toStrictEqual([
+      {
+        codigo: "deuda-tope-subio",
+        archivo: CONFIGURACION,
+        contrato: null,
+        motivo:
+          "El tope de entradas por diseño subió de 27 a 28: «por diseño» se volvería un comodín.",
+        correccion: "Dejá el tope como estaba (solo baja).",
+        donde: ubicacion.enJson("topeDePorDiseno"),
+      },
+    ]);
   });
 
   it("el tope sube: falla en la clave, diciendo de cuánto a cuánto", () => {

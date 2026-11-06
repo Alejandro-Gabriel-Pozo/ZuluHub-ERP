@@ -484,8 +484,11 @@ describe("la configuración: ampliacionDelTope y topeDePorDiseno", () => {
 
   it("topeDePorDiseno es un entero ≥ 0 (0 y ausente valen)", () => {
     for (const malo of [-1, 1.5, "5", null, true]) {
-      expect(leer({ topeDePorDiseno: malo }).fallas.map((f) => f.motivo)).toEqual([
-        "`topeDePorDiseno` tiene que ser un entero mayor o igual que 0.",
+      expect(leer({ topeDePorDiseno: malo }).fallas).toMatchObject([
+        {
+          motivo: "`topeDePorDiseno` tiene que ser un entero mayor o igual que 0.",
+          donde: { tipo: "json", camino: ["topeDePorDiseno"] },
+        },
       ]);
     }
     expect(leer({ topeDePorDiseno: 0 }).fallas).toEqual([]);
