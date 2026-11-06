@@ -11,7 +11,7 @@ import { textoDeUnaLineaDesdeTexto } from "../texto/texto-de-una-linea";
  *   Entre 1 y `LARGO_MAXIMO_DEL_DOMICILIO_LIBRE` (300: el valor que ya tenía el sistema, sin fuente de ARCA; SUPUESTO) caracteres,
  *   contados por carácter. Solo los caracteres permitidos de `texto-de-una-linea.ts` (letras latinas, dígitos, espacio y una lista corta
  *   de signos; cotejada con el PDF y cubierta por la decisión del dueño de «una sola lista», 2026-11-05); lo demás se rechaza. No
- *   puede empezar con `+` ni `-` (Q7, decisión técnica del orquestador, 2026-11-06). Puede ser todo números o llevar pocas letras («9 de Julio 1234»): la regla de
+ *   puede empezar con `+` ni `-` (Q7, DECIDIDO por el dueño, 2026-11-06: «Mantener», mensaje directo al orquestador). Puede ser todo números o llevar pocas letras («9 de Julio 1234»): la regla de
  *   «al menos una letra» NO le aplica (SUPUESTO).
  * - Obligatorio/opcional: hoy OPCIONAL y así lo trata este código (era el comportamiento que ya había). Vacío o en blanco = «no
  *   tiene» y es `null`; en la base es NULL, nunca un texto vacío. PENDIENTE (Q24): la norma (RG 1415, Anexo II, A.II, leída

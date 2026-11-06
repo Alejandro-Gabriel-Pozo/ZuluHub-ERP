@@ -16,7 +16,7 @@ import { textoDeUnaLineaDesdeTexto } from "./texto-de-una-linea";
  *   · SOLO LOS CARACTERES PERMITIDOS (lista cerrada; cotejada con el PDF; Q25 cubierta y Q26 decidida por el dueño, ver
  *     `texto-de-una-linea.ts`): letras latinas con tilde, ñ y diéresis (Latin-1/WinAnsi), dígitos, espacio y
  *     `. , & - ' / ( ) ° + : ; " # º ª ’ “ ” – — « » ® ™`. Todo lo demás se rechaza (control, invisibles, bidi, `<` `>`, emojis, otros
- *     alfabetos). No puede empezar con `+` ni `-` (Q7, decisión técnica del orquestador, 2026-11-06). Los saltos de línea y
+ *     alfabetos). No puede empezar con `+` ni `-` (Q7, DECIDIDO por el dueño, 2026-11-06: «Mantener», mensaje directo al orquestador). Los saltos de línea y
  *     tabuladores en los extremos se recortan: «Juan\n» queda «Juan» (decisión del orquestador, 2026-11-06).
  *   · AL MENOS UNA LETRA (Q2, DECIDIDO por el dueño, 2026-11-06: «Q2 lo recomendado», mensaje directo al orquestador; el dueño
  *     había visto el 2026-11-05 que se cargaba un «nombre» formado solo por números). Eso también rechaza un CUIT escrito en el

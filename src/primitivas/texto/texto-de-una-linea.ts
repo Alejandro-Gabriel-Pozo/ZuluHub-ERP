@@ -27,7 +27,7 @@ import { err, ok, type Resultado } from "../resultado/resultado";
  *
  * Un texto no puede EMPEZAR con `+` ni `-`: abierto en una hoja de cálculo se tomaría por una fórmula (inyección de fórmulas, si
  * algún día se exporta). `=` y `@` ya quedan afuera por no estar en la lista, en cualquier posición; una prueba fija que sigan
- * afuera. Fuente: Q7, decisión técnica del orquestador, 2026-11-06 («el dueño no objetó»); no es una decisión del dueño.
+ * afuera. Fuente: Q7, DECIDIDO por el dueño, 2026-11-06 (mensaje directo al orquestador, ante la pregunta de si se mantiene el rechazo aunque no deje cargar un comercio como «+Kota»: «Mantener»). Costo asumido: un nombre que empieza con `+` o `-` no se puede cargar tal cual.
  *
  * Los saltos de línea y los tabuladores en los EXTREMOS se recortan y el texto pasa («Juan\n» y «Juan\t» quedan «Juan»): es la
  * normalización de los extremos (`trim`), no un carácter permitido. Adentro del texto se rechazan. Decisión del orquestador,
