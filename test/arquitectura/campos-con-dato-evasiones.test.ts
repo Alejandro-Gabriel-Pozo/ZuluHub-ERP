@@ -532,3 +532,69 @@ describe("campos con dato: fuera de las apps no hay deuda", () => {
     ]);
   });
 });
+
+describe("campos con dato: más evasiones cerradas (revisión independiente, PR 2 de C1)", () => {
+  it("role en mayúsculas o mezclado cuenta como textbox", () => {
+    for (const rol of ["TEXTBOX", "TextBox", "alert TEXTBOX"]) {
+      expect(
+        analizar(pantalla(`<div role="${rol}" />`)).crudosPorEtiqueta.get("role-textbox"),
+        rol,
+      ).toBe(1);
+    }
+    expect(
+      analizar(pantalla(`<div role={c ? "ALERT" : "TEXTBOX"} />`)).crudosPorEtiqueta.get(
+        "role-textbox",
+      ),
+    ).toBe(1);
+  });
+
+  it("new Function y Function(…) cuentan como control crudo", () => {
+    expect(analizar(`const f = new Function("return 1");`).crudosPorEtiqueta.get("function")).toBe(
+      1,
+    );
+    expect(analizar(`const f = Function("return 1");`).crudosPorEtiqueta.get("function")).toBe(1);
+    expect(analizar(`const t: Function = () => 1;`).crudos).toBe(0);
+  });
+
+  it("setAttribute con una clave que no es un literal cuenta; con otro atributo literal, no", () => {
+    for (const texto of [
+      `el.setAttribute(clave, "textbox");`,
+      "el.setAttribute(`r${x}`, y);",
+      `el.setAttribute("ro" + "le", "textbox");`,
+      `el.setAttributeNS(null, clave, "x");`,
+    ]) {
+      expect(analizar(texto).crudosPorEtiqueta.get("setAttribute"), texto).toBe(1);
+    }
+    expect(analizar(`el.setAttribute("id", "a");`).crudos).toBe(0);
+  });
+
+  it("un spread con un objeto literal que trae role o contentEditable cuenta", () => {
+    for (const atributo of [
+      `{...{ role: "textbox" }}`,
+      `{...{ role }}`,
+      `{...({ "role": "textbox" })}`,
+      `{...{ Role: "textbox" }}`,
+      `{...{ contentEditable: true }}`,
+    ]) {
+      const r = analizar(pantalla(`<div ${atributo} />`));
+      expect(
+        r.crudosPorEtiqueta.get("spread-con-role") ?? r.crudosPorEtiqueta.get("nombre-prohibido"),
+        atributo,
+      ).toBeGreaterThan(0);
+    }
+    expect(analizar(pantalla(`<div {...props} />`)).crudos).toBe(0);
+    expect(analizar(pantalla(`<div {...{ className: "a" }} />`)).crudos).toBe(0);
+  });
+
+  it("un .ts de src/ que arma un control con document.createElement falla fuera de las apps", () => {
+    const fuera = (archivos: Record<string, string>) =>
+      problemasFueraDeLasApps(new Map(Object.entries(archivos)), contexto);
+    expect(
+      fuera({ "src/x.ts": `export const f = () => document.createElement("input");` }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      fuera({ "src/x.ts": `export const f = (e: HTMLElement) => e.innerHTML;` }).length,
+    ).toBeGreaterThan(0);
+    expect(fuera({ "src/x.ts": `export const f = () => 1;` })).toEqual([]);
+  });
+});

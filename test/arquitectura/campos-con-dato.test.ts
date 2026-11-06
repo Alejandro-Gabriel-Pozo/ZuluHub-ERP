@@ -6,7 +6,6 @@ import { COMPONENTES_DE_CAMPO, REGISTRO_DE_DATOS } from "../../src/capacidades/d
 import {
   analizarArchivo,
   EXTENSIONES_DE_CODIGO,
-  EXTENSIONES_FUERA_DE_LAS_APPS,
   importadosFueraDe,
   problemasFueraDeLasApps,
   type Contexto,
@@ -88,15 +87,14 @@ function resolver(destino: string): string | undefined {
 }
 
 /**
- * El código fuera de las apps que el chequeo también mira: los `.tsx/.jsx/.js/.mjs/.cjs` de `src/` y todo archivo que una app importa
+ * El código fuera de las apps que el chequeo también mira: todo el código de `src/` (todas las extensiones) y todo archivo que una app importa
  * por ruta relativa y que no está en `apps/` ni en `src/` (un paquete compartido), con lo que ese archivo importa a su vez.
  */
 function archivosFueraDeLasApps(deLasApps: ReadonlyMap<string, string>): Map<string, string> {
   const mapa = new Map<string, string>();
   for (const r of readdirSync(join(RAIZ, "src"), { recursive: true, encoding: "utf8" })) {
     if (r.split("/").includes("node_modules")) continue;
-    if (!(EXTENSIONES_FUERA_DE_LAS_APPS as readonly string[]).includes(r.split(".").pop() ?? ""))
-      continue;
+    if (!(EXTENSIONES_DE_CODIGO as readonly string[]).includes(r.split(".").pop() ?? "")) continue;
     mapa.set(`src/${r}`, readFileSync(join(RAIZ, "src", r), "utf8"));
   }
   const pendientes = [...deLasApps].flatMap(([ruta, texto]) =>

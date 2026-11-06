@@ -14,6 +14,8 @@ import { DATO_PENDIENTE, type DefinicionDeDato } from "../../src/capacidades/dat
  *  - cualquier cadena que nombre `react/jsx-runtime` o `react/jsx-dev-runtime` (import, `require`, `import()`, `export … from`) es un
  *    problema; un `role` que no es un literal (o una condición de literales) y `setAttribute("role"|"contenteditable", …)` cuentan como
  *    control crudo; `document.write` cuenta con cualquier receptor que contenga `document`;
+ *  - `role` en mayúsculas (`TEXTBOX`), `new Function(…)`/`Function(…)`, `setAttribute(clave, …)` con una clave que no es un literal y
+ *    `{...{ role: "textbox" }}` (un spread con un objeto literal que trae `role` o `contentEditable`) cuentan como control crudo;
  *  - un acceso con clave calculada a React o a `document` (`R["create" + "Element"]`, `R[k]`, `Reflect.get(React, …)`, `const { [k]: f } =
  *    React`) es un problema: no se puede saber qué elemento arma;
  *  - se analizan todas las extensiones de código (`EXTENSIONES_DE_CODIGO`); un archivo con error de sintaxis es un problema.
@@ -330,7 +332,8 @@ export function analizarArchivo(
     if (ts.isJsxAttribute(nodo) && nodo.name.getText(fuente) === "role") {
       const valores = literalesDeAtributo(nodo);
       if (valores === undefined) sumarCrudo("role-dinamico");
-      else if (valores.some((v) => v.split(/\s+/).includes("textbox"))) sumarCrudo("role-textbox");
+      else if (valores.some((v) => v.toLowerCase().split(/\s+/).includes("textbox")))
+        sumarCrudo("role-textbox");
     }
     if (
       ts.isCallExpression(nodo) &&
@@ -341,12 +344,33 @@ export function analizarArchivo(
           /^setAttribute(NS)?$/.test(nodo.expression.argumentExpression.text)))
     ) {
       const nombre = nodo.arguments[nodo.expression.getText(fuente).includes("NS") ? 1 : 0];
+      // con una clave que no es un literal no se sabe qué atributo pone: cuenta igual
       if (
         nombre !== undefined &&
-        ts.isStringLiteralLike(nombre) &&
-        /^(role|contenteditable)$/i.test(nombre.text)
+        (!ts.isStringLiteralLike(nombre) || /^(role|contenteditable)$/i.test(nombre.text))
       )
         sumarCrudo("setAttribute");
+    }
+    if (
+      (ts.isNewExpression(nodo) || ts.isCallExpression(nodo)) &&
+      ts.isIdentifier(nodo.expression) &&
+      nodo.expression.text === "Function"
+    ) {
+      sumarCrudo("function");
+    }
+    if (ts.isJsxSpreadAttribute(nodo)) {
+      let e: ts.Expression = nodo.expression;
+      while (ts.isParenthesizedExpression(e)) e = e.expression;
+      if (
+        ts.isObjectLiteralExpression(e) &&
+        e.properties.some(
+          (p) =>
+            p.name !== undefined &&
+            (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
+            /^(role|contenteditable)$/i.test(p.name.text),
+        )
+      )
+        sumarCrudo("spread-con-role");
     }
     if (
       ts.isStringLiteralLike(nodo) &&
@@ -430,11 +454,8 @@ export function analizarArchivo(
   return { problemas, pendientes, crudos, dinamicos, crudosPorEtiqueta, usos };
 }
 
-/** Las extensiones de `src/` (y de los paquetes que importa una app) que pueden armar un control: las de JSX y las de JavaScript. */
-export const EXTENSIONES_FUERA_DE_LAS_APPS = ["tsx", "jsx", "js", "mjs", "cjs"] as const;
-
 /**
- * Fuera de las aplicaciones no hay deuda: el código de `src/` (y de un paquete que una app importa) con JSX o JavaScript no puede
+ * Fuera de las aplicaciones no hay deuda: el código de `src/` (todas las extensiones, también los `.ts` que llamen `document.createElement`) y de un paquete que una app importa no puede
  * tener un campo sin dato, un control crudo ni un tag dinámico, ni una evasión. Previene: un `.tsx` en `src/` o en un paquete
  * compartido que pinta un `<input>` y queda fuera de lo que el chequeo mira (CLAUDE.md «Sin dato registrado no hay campo»).
  */

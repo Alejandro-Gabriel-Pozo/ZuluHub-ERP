@@ -87,3 +87,75 @@ describe("fuente única: un número a mano en un archivo que tiene la constante 
     });
   });
 });
+
+describe("fuente única: el límite de una primitiva escrito en otro lado (revisión independiente, PR 2 de C1)", () => {
+  const PRIMITIVA = "export const LARGO_MAXIMO_DEL_EMAIL_DE_CONTACTO = 254;\n";
+
+  it.each([
+    ["max sin nombrar la constante", "z.string().max(254)"],
+    ["min", "z.string().min(254)"],
+    ["length(N)", "z.string().length(254)"],
+    ["slice(0, N)", "t.slice(0, 254)"],
+    ["substring(0, N)", "t.substring(0, 254)"],
+    ["maxLength en JSX", "const x = <input maxLength={254} />;"],
+    ["maxLength en un objeto", "const x = { maxLength: 254 };"],
+    ["largo comparado", "if (t.length > 254) throw new Error('x');"],
+    ["cantidad máxima de una expresión regular", "const R = /^[a-z]{1,254}$/;"],
+  ])("%s, en un archivo que no nombra la constante", (_, uso) => {
+    expect(
+      cuenta({ "src/primitivas/contacto/email.ts": PRIMITIVA, "apps/web/p.tsx": `${uso}\n` }),
+    ).toEqual({
+      "apps/web/p.tsx": 1,
+    });
+  });
+
+  it("una constante PRIVADA con otro nombre y el mismo valor, fuera de la primitiva, cuenta", () => {
+    for (const declaracion of [
+      "const LARGO_MAXIMO_DEL_CORREO = 254;",
+      "export const LARGO_MAXIMO_DEL_CORREO = 254;",
+      "const LONGITUD_DEL_MAIL = 254;",
+      "const largoMaximoDelCorreo = 254;",
+    ]) {
+      expect(
+        cuenta({
+          "src/primitivas/contacto/email.ts": PRIMITIVA,
+          "src/plataforma/f.ts": `${declaracion}\n`,
+        }),
+        declaracion,
+      ).toEqual({ "src/plataforma/f.ts": 1 });
+    }
+  });
+
+  it("no cuenta la primitiva misma, otros valores, otros nombres ni una constante que no es un largo", () => {
+    expect(cuenta({ "src/primitivas/contacto/email.ts": PRIMITIVA })).toEqual({});
+    expect(
+      cuenta({
+        "src/primitivas/contacto/email.ts": PRIMITIVA,
+        "src/f.ts": "const LARGO_MAXIMO_X = 255;\nz.string().max(255);\n",
+      }),
+    ).toEqual({});
+    expect(
+      cuenta({
+        "src/primitivas/contacto/email.ts": PRIMITIVA,
+        "src/f.ts": "const LADO_MAXIMO = 254;\nconst PUERTO = 254;\n",
+      }),
+    ).toEqual({});
+  });
+
+  it("una constante duplicada exacta se cuenta una sola vez", () => {
+    expect(
+      cuenta({
+        "src/primitivas/contacto/email.ts": PRIMITIVA,
+        "src/f.ts": PRIMITIVA,
+      }),
+    ).toEqual({ "src/f.ts": 1 });
+  });
+
+  it("la dueña es la primitiva aunque esté en otra carpeta que la copia", () => {
+    expect(
+      cuenta({ "src/a/f.ts": PRIMITIVA, "src/primitivas/contacto/email.ts": PRIMITIVA }),
+    ).toEqual({
+      "src/a/f.ts": 1,
+    });
+  });
+});
