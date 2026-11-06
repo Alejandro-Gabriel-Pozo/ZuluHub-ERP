@@ -70,6 +70,31 @@ describe("recorte de extremos y arranque con signo de fórmula", () => {
     }
   });
 
+  it("un `+` o `-` inicial se informa como carácter prohibido, no como falta de letras, aunque se exija una letra", () => {
+    const exige = { maximo: 200, exigirUnaLetra: true };
+    for (const texto of ["-", "+", "-1234", "+54 11", "- 9"]) {
+      expect(textoDeUnaLineaDesdeTexto(texto, exige), texto).toEqual({
+        ok: false,
+        error: "CARACTER_PROHIBIDO",
+      });
+    }
+  });
+
+  it("un `+` o `-` inicial se informa antes que el largo, también con exceso de largo", () => {
+    const corto = { maximo: 5, exigirUnaLetra: false };
+    for (const texto of ["+123456", "-abcdefg", "+" + "a".repeat(300)]) {
+      expect(textoDeUnaLineaDesdeTexto(texto, corto), texto).toEqual({
+        ok: false,
+        error: "CARACTER_PROHIBIDO",
+      });
+    }
+    // Sin el signo inicial, el mismo exceso de largo sí se informa como largo.
+    expect(textoDeUnaLineaDesdeTexto("123456", corto)).toEqual({
+      ok: false,
+      error: "DEMASIADO_LARGO",
+    });
+  });
+
   it("`=` y `@` quedan afuera en cualquier posición, también al principio (los frena la lista de permitidos)", () => {
     for (const texto of ["=SUMA(A1)", "@usuario", "a=b", "a@b", "Juan =1"]) {
       invalido(texto, "CARACTER_PROHIBIDO");
