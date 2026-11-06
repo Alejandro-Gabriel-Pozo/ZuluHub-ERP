@@ -5,7 +5,12 @@ import type { DiccionarioResuelto } from "../../../../../../src/capacidades/voca
 import { EstiloDePagina } from "./EstiloDePagina";
 import { ANCHO_A4_MM, ANCHO_TICKET_MM, mmAPx } from "./geometria";
 import { HojasA4 } from "./HojasA4";
-import { altoFijoDelPie, entradaDelPaginador, medidasIguales, type Medidas } from "./medicion";
+import {
+  altoFijoDelPie,
+  entradaDelPaginador,
+  medidasIguales,
+  type Medidas,
+} from "./medidas-de-la-hoja";
 import { MedidorDeLaHoja } from "./MedidorDeLaHoja.cliente";
 import {
   armarLaHoja,

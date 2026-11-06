@@ -129,6 +129,10 @@ const DESCRIPCION_DE_CODIGOS = Object.freeze({
     "(j) el job guardian ya no ejecuta deuda.cjs (sola y con --base=base) en un mismo paso, y la base sí",
   "ci-deuda-con-salto":
     "(j) el paso que ejecuta deuda.cjs tiene continue-on-error o un if que la base no tenía",
+  "ci-sin-paso-de-campos":
+    "(j) el job guardian ya no ejecuta campos-sin-dato.cjs (sola y con --base=base) en un mismo paso, y la base sí",
+  "ci-campos-con-salto":
+    "(j) el paso que ejecuta campos-sin-dato.cjs tiene continue-on-error o un if que la base no tenía",
   "script-arquitectura-sin-deuda":
     "(j) el script arquitectura ya no encadena npm run deuda y la base sí",
   "script-deuda-desviado": "(j) el script deuda ya no ejecuta el control de deuda y la base sí",
@@ -195,6 +199,7 @@ const escalar = (valor) => sinComillas(sinComentario(valor));
 
 const COMANDO_DEL_GUARDIAN = ["node", "arquitectura/contratos/guardian.cjs"];
 const COMANDO_DE_LA_DEUDA = ["node", "arquitectura/deuda/deuda.cjs"];
+const COMANDO_DE_LOS_CAMPOS = ["node", "arquitectura/deuda/campos-sin-dato.cjs"];
 /** La opción con que el paso de CI compara con la rama base extraída en `base/`. */
 const OPCION_DE_LA_BASE = "--base=base";
 /** Una opción suelta (`--base`, `-v`, `--base=x`): un solo cuantificador y sin repetición externa. */
@@ -230,13 +235,15 @@ function ejecutaElGuardian(linea) {
   return esComandoDelGuardian(tokensDeLaLinea(linea));
 }
 
-/** La línea corre `deuda.cjs` tal cual: `"sola"`, o `"con-base"` si lleva exactamente `--base=base`; si no, `null`. */
-function formaDeLaDeuda(linea) {
+/** La línea corre ese comando tal cual: `"sola"`, o `"con-base"` si lleva exactamente `--base=base`; si no, `null`. */
+function formaDelComando(comandoBuscado, linea) {
   const comando = tokensDeLaLinea(linea).join(" ");
-  const sola = COMANDO_DE_LA_DEUDA.join(" ");
+  const sola = comandoBuscado.join(" ");
   if (comando === sola) return "sola";
   return comando === `${sola} ${OPCION_DE_LA_BASE}` ? "con-base" : null;
 }
+const formaDeLaDeuda = (linea) => formaDelComando(COMANDO_DE_LA_DEUDA, linea);
+const formaDeLosCampos = (linea) => formaDelComando(COMANDO_DE_LOS_CAMPOS, linea);
 
 /**
  * Lee los jobs de un `ci.yml` con la línea de cada cosa que interesa. Es un análisis de TEXTO que entiende
@@ -327,6 +334,8 @@ function leerPasos(cuerpo) {
         ejecutaGuardian: false,
         deudaSola: false,
         deudaConBase: false,
+        camposSola: false,
+        camposConBase: false,
         si: undefined,
       };
       pasos.push(paso);
@@ -337,6 +346,9 @@ function leerPasos(cuerpo) {
     const deuda = formaDeLaDeuda(l.t);
     if (deuda === "sola") paso.deudaSola = true;
     if (deuda === "con-base") paso.deudaConBase = true;
+    const campos = formaDeLosCampos(l.t);
+    if (campos === "sola") paso.camposSola = true;
+    if (campos === "con-base") paso.camposConBase = true;
     const si = /^ {6}-\s+if:\s*(.*)|^ {8}if:\s*(.*)/.exec(l.t);
     if (si !== null && paso.si === undefined) {
       paso.si = { valor: escalar(si[1] ?? si[2]), linea: l.n };
@@ -1086,23 +1098,26 @@ function saltos(job) {
 
 /** Un paso que ejecuta `deuda.cjs` sola y con `--base=base`: el paso de la deuda técnica. */
 const esPasoDeLaDeuda = (paso) => paso.deudaSola && paso.deudaConBase;
+/** Un paso que ejecuta `campos-sin-dato.cjs` sola y con `--base=base`: el paso del presupuesto de campos sin dato. */
+const esPasoDeLosCampos = (paso) => paso.camposSola && paso.camposConBase;
 
 /**
- * (j) Si la base ejecutaba `deuda.cjs` (sola y con `--base=base`) en un paso del job `guardian`, el PR lo sigue
- * haciendo, y ese paso no gana `continue-on-error` ni un `if` que el de la base no tenía. Agrega sus hallazgos a
- * `hallazgos`. Sin paso en la base no hay nada que no se pueda quitar (la primera vez que se incorpora).
+ * (j) Si la base ejecutaba un control de deuda (`deuda.cjs` o `campos-sin-dato.cjs`, sola y con `--base=base`) en un paso del
+ * job `guardian`, el PR lo sigue haciendo, y ese paso no gana `continue-on-error` ni un `if` que el de la base no tenía. Agrega
+ * sus hallazgos a `hallazgos`. Sin paso en la base no hay nada que no se pueda quitar (la primera vez que se incorpora).
+ * `control` dice cuál es el paso (`esPaso`), cómo se llama en los mensajes (`nombre`, `comando`) y con qué códigos se informa.
  */
-function chequearElPasoDeLaDeuda(deLaBase, guardian, hallazgos) {
-  const antes = deLaBase?.pasos.find(esPasoDeLaDeuda);
+function chequearUnPasoDeControl(control, deLaBase, guardian, hallazgos) {
+  const antes = deLaBase?.pasos.find(control.esPaso);
   if (antes === undefined) return;
-  const paso = guardian.pasos.find(esPasoDeLaDeuda);
+  const paso = guardian.pasos.find(control.esPaso);
   if (paso === undefined) {
     hallazgos.push(
       hallazgo(
-        "ci-sin-paso-de-deuda",
+        control.codigoSinPaso,
         ARCHIVOS.ci,
-        "El job guardian ya no ejecuta `node arquitectura/deuda/deuda.cjs` y `node arquitectura/deuda/deuda.cjs --base=base` tal cual en un mismo paso, y la base sí: la deuda técnica no se controlaría en la CI.",
-        "Devolvé el paso de la deuda al job guardian.",
+        `El job guardian ya no ejecuta \`node ${control.comando}\` y \`node ${control.comando} --base=base\` tal cual en un mismo paso, y la base sí: ${control.consecuencia}`,
+        `Devolvé el paso ${control.deQue} al job guardian.`,
         { linea: guardian.linea },
       ),
     );
@@ -1111,10 +1126,10 @@ function chequearElPasoDeLaDeuda(deLaBase, guardian, hallazgos) {
   const salto = (motivo, linea) =>
     hallazgos.push(
       hallazgo(
-        "ci-deuda-con-salto",
+        control.codigoConSalto,
         ARCHIVOS.ci,
-        `El paso de la deuda ${motivo}, que la base no tenía: un fallo suyo se podría saltear.`,
-        "Sacá la línea: el control de deuda tiene que correr siempre y su fallo tiene que frenar el Gate.",
+        `El paso ${control.deQue} ${motivo}, que la base no tenía: un fallo suyo se podría saltear.`,
+        `Sacá la línea: ${control.sacar} tiene que correr siempre y su fallo tiene que frenar el Gate.`,
         { linea },
       ),
     );
@@ -1126,6 +1141,31 @@ function chequearElPasoDeLaDeuda(deLaBase, guardian, hallazgos) {
   if (paso.si !== undefined && paso.si.valor !== antes.si?.valor) {
     salto(`tiene \`if: ${paso.si.valor}\``, paso.si.linea);
   }
+}
+
+const CONTROL_DE_LA_DEUDA = Object.freeze({
+  esPaso: esPasoDeLaDeuda,
+  comando: "arquitectura/deuda/deuda.cjs",
+  codigoSinPaso: "ci-sin-paso-de-deuda",
+  codigoConSalto: "ci-deuda-con-salto",
+  consecuencia: "la deuda técnica no se controlaría en la CI.",
+  deQue: "de la deuda",
+  sacar: "el control de deuda",
+});
+const CONTROL_DE_LOS_CAMPOS = Object.freeze({
+  esPaso: esPasoDeLosCampos,
+  comando: "arquitectura/deuda/campos-sin-dato.cjs",
+  codigoSinPaso: "ci-sin-paso-de-campos",
+  codigoConSalto: "ci-campos-con-salto",
+  consecuencia: "el presupuesto de campos sin dato podría subir sin que la CI lo note.",
+  deQue: "del presupuesto de campos sin dato",
+  sacar: "el control del presupuesto de campos sin dato",
+});
+
+/** (j) Los pasos de control de deuda del job `guardian` (la deuda técnica y el presupuesto de campos sin dato). */
+function chequearElPasoDeLaDeuda(deLaBase, guardian, hallazgos) {
+  chequearUnPasoDeControl(CONTROL_DE_LA_DEUDA, deLaBase, guardian, hallazgos);
+  chequearUnPasoDeControl(CONTROL_DE_LOS_CAMPOS, deLaBase, guardian, hallazgos);
 }
 
 /** (f) El job `guardian` existe, el Gate lo espera y lo exige, y no se puede saltear. */
@@ -1746,6 +1786,7 @@ module.exports = {
   chequearLectura,
   ejecutaElGuardian,
   formaDeLaDeuda,
+  formaDeLosCampos,
   leerDeuda,
   extraerInvariantes,
   formatear,

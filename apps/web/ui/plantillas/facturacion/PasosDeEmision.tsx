@@ -32,6 +32,7 @@ export function PasoDelCliente({
   return (
     <>
       <Selector
+        dato="pendiente"
         etiqueta={vista.documento.etiqueta}
         valor={cliente.documento}
         opciones={vista.documento.opciones}
@@ -43,6 +44,7 @@ export function PasoDelCliente({
       {identificacion === null ? null : (
         <>
           <Campo
+            dato="pendiente"
             etiqueta={identificacion.numero}
             valor={cliente.numero}
             inputMode="numeric"
@@ -52,6 +54,7 @@ export function PasoDelCliente({
             }}
           />
           <Campo
+            dato="pendiente"
             etiqueta={identificacion.nombre}
             valor={cliente.nombre}
             autoComplete="off"
@@ -60,6 +63,7 @@ export function PasoDelCliente({
             }}
           />
           <Selector
+            dato="pendiente"
             etiqueta={identificacion.condicion.etiqueta}
             textoDeElegir={identificacion.condicion.etiqueta}
             valor={cliente.condicionIva}
@@ -95,6 +99,7 @@ export function PasoDeLosRenglones({
         <fieldset key={r.id} className={estilos["renglon"]}>
           <legend className={estilos["nombre"]}>{vista.grupo(i + 1)}</legend>
           <Campo
+            dato="pendiente"
             etiqueta={etiquetas.descripcion}
             valor={r.descripcion}
             autoComplete="off"
@@ -103,6 +108,7 @@ export function PasoDeLosRenglones({
             }}
           />
           <Campo
+            dato="cantidad"
             etiqueta={etiquetas.cantidad}
             valor={r.cantidad}
             inputMode="decimal"
@@ -112,6 +118,7 @@ export function PasoDeLosRenglones({
             }}
           />
           <CampoImporte
+            dato="importe"
             etiqueta={etiquetas.precio}
             valor={r.precio}
             alCambiar={(precio) => {
@@ -120,6 +127,7 @@ export function PasoDeLosRenglones({
           />
           {etiquetas.iva === null ? null : (
             <Selector
+              dato="pendiente"
               etiqueta={etiquetas.iva}
               textoDeElegir={etiquetas.iva}
               valor={r.alicuota}
@@ -196,6 +204,7 @@ export function PasoDeRevisar({
       <section className={estilos["tarjeta"]} aria-label={puntoDeVenta.rotulo}>
         {puntoDeVenta.modo === "varios" ? (
           <Selector
+            dato="pendiente"
             etiqueta={puntoDeVenta.rotulo}
             textoDeElegir={puntoDeVenta.rotulo}
             valor={puntoElegido}
