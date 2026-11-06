@@ -95,7 +95,7 @@ export const receptorMonotributista: Receptor = {
   nombre: "Ana Pérez",
   documento: { tipo: "CUIT", numero: CUIT_A },
   condicionIva: "MONOTRIBUTO",
-  domicilio: null,
+  domicilio: "Calle Falsa 123",
 };
 
 export function renglon(

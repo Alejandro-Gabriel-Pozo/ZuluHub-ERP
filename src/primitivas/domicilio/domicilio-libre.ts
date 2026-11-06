@@ -13,13 +13,14 @@ import { textoDeUnaLineaDesdeTexto } from "../texto/texto-de-una-linea";
  *   de signos; cotejada con el PDF y cubierta por la decisión del dueño de «una sola lista», 2026-11-05); lo demás se rechaza. No
  *   puede empezar con `+` ni `-` (Q7, DECIDIDO por el dueño, 2026-11-06: «Mantener», mensaje directo al orquestador). Puede ser todo números o llevar pocas letras («9 de Julio 1234»): la regla de
  *   «al menos una letra» NO le aplica (SUPUESTO).
- * - Obligatorio/opcional: hoy OPCIONAL y así lo trata este código (era el comportamiento que ya había). Vacío o en blanco = «no
- *   tiene» y es `null`; en la base es NULL, nunca un texto vacío. PENDIENTE (Q24): la norma (RG 1415, Anexo II, A.II, leída
- *   directamente el 2026-11-05) pide el domicilio comercial de todo receptor que no sea consumidor final; no se aplica acá porque
- *   la pantalla de Emitir todavía no tiene el campo. Lo lleva la sesión «Emitir: campo marcado, domicilio, leyendas y Factura A».
+ * - Obligatorio/opcional: lo decide quien la usa. Esta regla solo dice qué es un domicilio válido: vacío o en blanco = «no tiene» y es
+ *   `null`; en la base es NULL, nunca un texto vacío. En un comprobante es OBLIGATORIO salvo con el consumidor final (DECIDIDO, dueño,
+ *   2026-11-06, conversación directa con la sesión «Emitir», `Pedernal-docs/11-especificaciones/emitir-plan-factura-a.md` §1,
+ *   decisión 3; norma: RG 1415, Anexo II, A.II, que pide el domicilio comercial de todo receptor que no sea consumidor final): esa
+ *   exigencia vive en `modulos/fiscal/dominio/receptor.ts`, no acá.
  * - Único: no. Quién lo cambia: nadie, se congela en el comprobante (`receptor_domicilio`, 0009).
  * - Verificado o declarado: solo DECLARADO; no hay fuente oficial contra la que verificarlo.
- * - Qué ve el público: se imprime tal cual se guardó. Hoy la pantalla de Emitir no tiene este campo y manda `null`.
+ * - Qué ve el público: se imprime tal cual se guardó. «Emitir» lo pide en el paso del cliente, en una línea libre (dueño, 2026-11-06, decisión 4 del plan).
  * - Dato personal (qué se audita): SÍ puede serlo (el domicilio de una persona). La auditoría `COMPROBANTE_CREADO` registra clase,
  *   tipo, total, punto de venta, ambiente, origen y asociado, y NO incluye el domicilio (`emitir-comprobante.ts`); queda solo en el
  *   comprobante. Si alguna norma de datos personales lo alcanza: SIN DECIDIR.

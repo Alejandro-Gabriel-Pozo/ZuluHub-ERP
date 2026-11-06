@@ -45,7 +45,7 @@ export type Receptor = Readonly<{
   nombre: string | null;
   documento: DocumentoDelReceptor;
   condicionIva: CondicionIvaReceptor;
-  /** Texto libre y opcional. */
+  /** Texto libre: obligatorio salvo con el consumidor final, donde puede faltar. */
   domicilio: string | null;
 }>;
 
@@ -115,6 +115,11 @@ export function validarReceptor(
   const domicilioValido = domicilioLibreDesdeTexto(entrada.domicilio);
   if (!domicilioValido.ok) return err({ codigo: "RECEPTOR_INVALIDO", campo: "domicilio" });
   const domicilio = domicilioValido.valor;
+  // La norma pide el domicilio comercial de todo receptor que no sea consumidor final (RG 1415 Anexo II A.II a, c, e, f, g;
+  // dueño, 2026-11-06, Q24). Previene una factura A o B a un cliente identificado que sale sin domicilio.
+  if (domicilio === null && entrada.condicionIva !== "CONSUMIDOR_FINAL") {
+    return err({ codigo: "RECEPTOR_INVALIDO", campo: "domicilio" });
+  }
   if (!condicionAdmiteLetra(entrada.condicionIva, contexto.letra)) {
     return err({ codigo: "RECEPTOR_INVALIDO", campo: "condicionIva" });
   }
