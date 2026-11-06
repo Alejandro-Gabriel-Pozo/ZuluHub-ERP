@@ -44,10 +44,24 @@ describe("numeroDeDocumentoDesdeTexto", () => {
       "1234567a",
       "",
       "12 345 678",
-      "12.345.678",
+      "12.345.67",
+      "12..345.678",
+      "12345.678",
+      ".12.345.678",
+      "012.345.678",
+      "1.234",
+      "12.345.678.9",
+      "12.345.678 ",
     ]) {
       mal("DNI", numero);
     }
+  });
+
+  it("DNI: con puntos de miles se acepta y se guarda en su forma canónica (Q6)", () => {
+    ok("DNI", "12.345.678", "12345678");
+    ok("DNI", "1.234.567", "1234567");
+    ok("DNI", "123.456", "123456");
+    ok("DNI", "123.456.789", "123456789");
   });
 
   it("pasaporte: solo dígitos, de 1 a 11", () => {

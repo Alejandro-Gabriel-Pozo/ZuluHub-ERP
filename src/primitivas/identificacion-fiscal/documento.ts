@@ -13,7 +13,7 @@ import { cuitDesdeTexto } from "./cuit";
  *   dígito verificador; se acepta también con guiones `XX-XXXXXXXX-X` y se guarda sin ellos (DECIDIDO, `cuit.ts`). DNI: de 6 a 9
  *   dígitos, sin cero a la izquierda (DECIDIDO en el código; sin fuente de ARCA). Pasaporte: de 1 a 11 dígitos, porque `DocNro` es
  *   un `Long (11)` en WSFE v4.8 (l. 577); NO VERIFICADO que ARCA acepte el tipo 94 con ese formato, ni que no haya pasaportes con
- *   letras (SIN DECIDIR, Q5). Con puntos o espacios el DNI y el pasaporte se rechazan (SIN DECIDIR si se aceptan al escribir, Q6).
+ *   letras (SIN DECIDIR, Q5). Al escribir el DNI se aceptan los puntos de miles (`12.345.678`) y se guarda sin ellos (DECIDIDO, dueño, 2026-11-06, Q6: guiones en CUIT/CUIL/CDI, puntos en DNI, cualquier otro carácter se rechaza). El pasaporte no acepta separadores (Q5 lo cambia en otro PR).
  * - Cómo se muestra: con guiones (CUIT/CUIL/CDI) y con puntos (DNI). Hoy lo hace la web por su cuenta (`formato-fiscal.ts`) y la
  *   consola otra vez (`formato-de-cuit.ts`); unificarlo es otro paso, NO este.
  * - Obligatorio/opcional: lo decide quien la usa. Con el consumidor final sin identificar no hay documento (tipo `SIN_IDENTIFICAR`).
@@ -40,6 +40,11 @@ export type ErrorDeDocumento = "DOCUMENTO_INVALIDO";
 
 /** DNI: sin ceros a la izquierda, de 6 a 9 dígitos. */
 export const FORMATO_DE_DNI = /^[1-9][0-9]{5,8}$/;
+/**
+ * DNI escrito con puntos de miles: un primer grupo de 1 a 3 dígitos y uno o dos grupos de 3 (`1.234.567`, `12.345.678`).
+ * Es la lista de lo PERMITIDO (P1): cualquier otro uso del punto o cualquier espacio no entra. Después se exige la forma canónica.
+ */
+export const FORMATO_DE_DNI_CON_PUNTOS = /^[1-9][0-9]{0,2}(\.[0-9]{3}){1,2}$/;
 /** Pasaporte: de 1 a 11 dígitos (`DocNro` es un `Long (11)` en WSFE v4.8). */
 export const FORMATO_DE_PASAPORTE = /^[0-9]{1,11}$/;
 
@@ -55,8 +60,10 @@ export function numeroDeDocumentoDesdeTexto(
       const cuit = cuitDesdeTexto(texto);
       return cuit.ok ? ok(cuit.valor) : err("DOCUMENTO_INVALIDO");
     }
-    case "DNI":
-      return FORMATO_DE_DNI.test(texto) ? ok(texto) : err("DOCUMENTO_INVALIDO");
+    case "DNI": {
+      const canonico = FORMATO_DE_DNI_CON_PUNTOS.test(texto) ? texto.replaceAll(".", "") : texto;
+      return FORMATO_DE_DNI.test(canonico) ? ok(canonico) : err("DOCUMENTO_INVALIDO");
+    }
     case "PASAPORTE":
       return FORMATO_DE_PASAPORTE.test(texto) ? ok(texto) : err("DOCUMENTO_INVALIDO");
   }
