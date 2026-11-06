@@ -868,11 +868,7 @@ describe("planificador de mutación: ci.yml", () => {
       ]) {
         expect(plan([ignorable]), ignorable).toMatchObject({ completo: false, grupos: [] });
       }
-      for (const archivo of [
-        ".github/workflows/migrar.yml",
-        ".github/workflows/migrar-base.yml",
-        ".github/CODEOWNERS",
-      ]) {
+      for (const archivo of [".github/workflows/migrar.yml", ".github/CODEOWNERS"]) {
         expect(plan([archivo]).completo, archivo).toBe(true);
       }
     });
@@ -996,7 +992,7 @@ describe("planificador: cuándo se repite la integración (Estabilidad x12)", ()
     ["la configuración de una app", "apps/web/package.json"],
     ["un archivo cualquiera fuera del grafo", "neon.ts"],
     ["el CODEOWNERS", ".github/CODEOWNERS"],
-    ["los workflows de migración", ".github/workflows/migrar-base.yml"],
+    ["el workflow de migración", ".github/workflows/migrar.yml"],
   ])("corre si cambia %s", (_nombre, archivo) => {
     expect(e([archivo]).corre, archivo).toBe(CORRE);
   });
