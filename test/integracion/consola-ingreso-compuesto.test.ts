@@ -21,6 +21,7 @@ import {
   codigoDeLaAplicacion,
   otroNavegadorConLaSesion,
   type AdminDePrueba,
+  usarFechaQuietaDeTotp,
 } from "./autenticacion-plataforma-apoyo";
 import { crearBaseAparte } from "./entorno";
 import { claveAlAzar } from "./plataforma-apoyo";
@@ -44,6 +45,7 @@ const MINUTO = 60_000;
 type Alta = Readonly<{ qrSvg: string; secreto: string; codigosDeRecuperacion: string[] }>;
 
 describe.skipIf(base === null)("el ingreso de la consola compuesto, de punta a punta", () => {
+  usarFechaQuietaDeTotp();
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let dueno: pg.Client;
   let proveedor: ProveedorLocal;
@@ -134,10 +136,10 @@ describe.skipIf(base === null)("el ingreso de la consola compuesto, de punta a p
   const cuenta = (tabla: string) => n(`select count(*) as n from autenticacion."${tabla}"`);
   const envejecerElSegundoFactor = (admin: AdminDePrueba, ms: number) =>
     dueno.query(
-      `update autenticacion.session set segundo_factor_en = now() - ($2 || ' milliseconds')::interval
+      `update autenticacion.session set segundo_factor_en = $3::timestamptz - ($2 || ' milliseconds')::interval
         where segundo_factor_en is not null
           and "userId" in (select id from autenticacion."user" where email = $1)`,
-      [admin.email, String(ms)],
+      [admin.email, String(ms), new Date()],
     );
   async function personaParaSuspender() {
     const p = await personaConUsuario(dueno);

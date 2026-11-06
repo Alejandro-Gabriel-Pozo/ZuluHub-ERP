@@ -264,14 +264,22 @@ describe("emitir: lo que rechaza el servidor se ve por la vía común", () => {
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
     // Se vuelve al cliente, se corrige el nombre y se emite de nuevo.
     await expect.element(boton("Volver")).toBeEnabled();
+    // Cada cambio de paso se espera antes del clic siguiente: con la máquina cargada, un clic sobre el paso anterior (todavía
+    // montado) o una afirmación inmediata sobre el texto viejo hacía fallar la prueba una de cada tantas corridas.
     await userEvent.click(boton("Volver"));
+    await expect.element(page.getByRole("region", { name: "Renglones" })).toBeVisible();
     await userEvent.click(boton("Volver"));
+    await expect.element(campo("Nombre o razón social")).toBeVisible();
     await userEvent.clear(campo("Nombre o razón social"));
     await userEvent.type(campo("Nombre o razón social"), "Juana Pérez");
     await userEvent.click(boton("Siguiente"));
+    await expect.element(page.getByRole("region", { name: "Renglones" })).toBeVisible();
     await userEvent.click(boton("Siguiente"));
+    await expect.element(page.getByText("Revisá y emití")).toBeVisible();
     // El error anterior ya no está.
-    expect(document.body.textContent).not.toContain("Revisá los datos del cliente");
+    await vi.waitFor(() =>
+      expect(document.body.textContent).not.toContain("Revisá los datos del cliente"),
+    );
     tocar(boton("Emitir factura"));
     await vi.waitFor(() => expect(servidor.pedidos).toHaveLength(2));
     expect(servidor.pedidos[1]?.["clave"]).not.toBe(servidor.pedidos[0]?.["clave"]);
