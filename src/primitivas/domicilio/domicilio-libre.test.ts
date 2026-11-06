@@ -35,6 +35,16 @@ describe("domicilioLibreDesdeTexto", () => {
     }
   });
 
+  it("no puede empezar con `+`, `-`, `=` ni `@` (inyección de fórmulas)", () => {
+    for (const texto of ["+54 11 4321", "-Av. X 742", "=Av. X", "@Av. X"]) {
+      expect(domicilioLibreDesdeTexto(texto), texto).toEqual({
+        ok: false,
+        error: "DOMICILIO_INVALIDO",
+      });
+    }
+    expect(domicilioLibreDesdeTexto("Av. 9-A 742").ok).toBe(true);
+  });
+
   it("el largo exacto entra y uno más no; se cuenta por carácter", () => {
     expect(domicilioLibreDesdeTexto("d".repeat(LARGO_MAXIMO_DEL_DOMICILIO_LIBRE)).ok).toBe(true);
     expect(domicilioLibreDesdeTexto("d".repeat(LARGO_MAXIMO_DEL_DOMICILIO_LIBRE + 1))).toEqual({

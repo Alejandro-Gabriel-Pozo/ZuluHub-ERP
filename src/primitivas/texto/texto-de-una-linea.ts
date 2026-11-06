@@ -13,13 +13,25 @@ import { err, ok, type Resultado } from "../resultado/resultado";
  * (`texto_fiscal_valido`) solo rechazan control y largo: esta regla es más estricta a propósito y la base queda como defensa en
  * profundidad. Puro: sin reloj ni azar.
  *
- * SUPUESTO (del ingeniero, revertible; NO aprobado por el dueño): el conjunto exacto de caracteres. Fuente de las intenciones, no de
- * la lista: pedido del dueño, 2026-11-05 («cuáles son peligrosos», y que el límite del dato no pase de lo que el PDF puede dibujar),
- * por el canal del orquestador; la lista base de signos (`. , & - ' / ( ) ° + :`) es la que propuso el orquestador ese día, y el
- * resto (`º ª " ; # « » ® ™` y las comillas y guiones tipográficos) lo sumé yo por ser comunes en razones sociales y estar en
- * WinAnsi. El conjunto de letras es el de Latin-1 (WinAnsi) y NO se pudo contrastar con la tipografía del PDF (su código no está en
- * esta rama): hay que cotejarlo con la sesión del PDF antes de darlo por bueno. Costo de revertir: cambiar las constantes de abajo.
- * Pendiente de decisión del dueño: Q25 (conjunto permitido) y Q26 (® y ™).
+ * El conjunto de caracteres, de dónde sale y qué está decidido:
+ *  · La lista base de signos (`. , & - ' / ( ) ° + :`) la propuso el orquestador el 2026-11-05 (pedido del dueño: «cuáles son
+ *    peligrosos», y que el límite del dato no pase de lo que el PDF puede dibujar). El resto (`º ª " ; # « » ® ™` y las comillas y
+ *    guiones tipográficos) lo sumó el ingeniero por ser comunes en razones sociales y estar en WinAnsi.
+ *  · COTEJADO con el PDF (`src/adaptadores/pdf/caracteres-del-pdf.ts`, PR #191): todo lo permitido está contenido en lo que el PDF
+ *    dibuja (ASCII imprimible; Latin-1 salvo U+00A0, U+00AD y U+00B5; signos de Windows-1252). La revisión independiente de #197
+ *    lo confirmó con un barrido del plano básico (informe del orquestador, 2026-11-06).
+ *  · Q26 (® y ™ se admiten): DECIDIDO por el dueño, 2026-11-06 («Q26 ok», mensaje directo al orquestador).
+ *  · Q25 (el conjunto): cubierta por la decisión del dueño del 2026-11-05 de «una sola lista de caracteres para lo que se imprime»
+ *    (tablero del catálogo de datos, respuesta 1 de la auditoría de columnas). La lista exacta es la de este archivo.
+ *  Costo de revertir cualquier parte: cambiar las constantes de abajo.
+ *
+ * Un texto no puede EMPEZAR con `+` ni `-`: abierto en una hoja de cálculo se tomaría por una fórmula (inyección de fórmulas, si
+ * algún día se exporta). `=` y `@` ya quedan afuera por no estar en la lista, en cualquier posición; una prueba fija que sigan
+ * afuera. Fuente: Q7, DECIDIDO por el dueño, 2026-11-06 (mensaje directo al orquestador, ante la pregunta de si se mantiene el rechazo aunque no deje cargar un comercio como «+Kota»: «Mantener»). Costo asumido: un nombre que empieza con `+` o `-` no se puede cargar tal cual.
+ *
+ * Los saltos de línea y los tabuladores en los EXTREMOS se recortan y el texto pasa («Juan\n» y «Juan\t» quedan «Juan»): es la
+ * normalización de los extremos (`trim`), no un carácter permitido. Adentro del texto se rechazan. Decisión del orquestador,
+ * 2026-11-06.
  */
 export type MotivoDeTextoInvalido =
   "VACIO" | "DEMASIADO_LARGO" | "CARACTER_PROHIBIDO" | "SIN_LETRAS";
@@ -36,6 +48,8 @@ const CARACTER_PERMITIDO = `[${LETRAS}${DIGITOS} ${SIGNOS}]`;
 const SOLO_PERMITIDOS = new RegExp(`^${CARACTER_PERMITIDO}+$`);
 const UNA_LETRA = new RegExp(`[${LETRAS}]`);
 const ESPACIOS = /\p{Zs}+/gu;
+// Solo `+` y `-`: `=` y `@` ya los rechaza la lista de permitidos (si no, serían una opción que ninguna prueba distingue).
+const EMPIEZA_COMO_FORMULA = /^[+-]/;
 
 /** ¿Todo el texto está hecho de caracteres permitidos? Es la lista que el PDF y la pantalla tienen que respetar (una sola fuente). */
 export function soloCaracteresPermitidos(texto: string): boolean {
@@ -50,7 +64,7 @@ export type ReglasDelTexto = Readonly<{ maximo: number; exigirUnaLetra: boolean 
  * espacios repetidos (también el de no corte y los tipográficos) a un solo espacio; rechaza todo lo que no esté en la lista de
  * permitidos; exige de 1 a `maximo` caracteres, contados por carácter; y, si `exigirUnaLetra`, al menos una letra latina (los
  * dígitos, los signos, `º` y `ª` no cuentan como letra). Se conservan las mayúsculas y los acentos tal cual. Un carácter no
- * permitido se informa antes que el largo, y el largo antes que la falta de letras.
+ * permitido (o un `+` o `-` al principio) se informa antes que el largo, y el largo antes que la falta de letras.
  */
 export function textoDeUnaLineaDesdeTexto(
   texto: string,
@@ -59,6 +73,7 @@ export function textoDeUnaLineaDesdeTexto(
   const canonico = texto.trim().normalize("NFC").replace(ESPACIOS, " ");
   if (canonico === "") return err("VACIO");
   if (!soloCaracteresPermitidos(canonico)) return err("CARACTER_PROHIBIDO");
+  if (EMPIEZA_COMO_FORMULA.test(canonico)) return err("CARACTER_PROHIBIDO");
   if (largoEnCaracteres(canonico) > reglas.maximo) return err("DEMASIADO_LARGO");
   if (reglas.exigirUnaLetra && !UNA_LETRA.test(canonico)) return err("SIN_LETRAS");
   return ok(canonico);

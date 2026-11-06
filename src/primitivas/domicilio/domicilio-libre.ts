@@ -9,13 +9,14 @@ import { textoDeUnaLineaDesdeTexto } from "../texto/texto-de-una-linea";
  * - Qué es: dónde queda el receptor, escrito a mano. Se imprime en la factura.
  * - Cómo se escribe: una sola línea; se recortan los blancos de los extremos, los espacios repetidos pasan a uno solo y queda en NFC.
  *   Entre 1 y `LARGO_MAXIMO_DEL_DOMICILIO_LIBRE` (300: el valor que ya tenía el sistema, sin fuente de ARCA; SUPUESTO) caracteres,
- *   contados por carácter. Solo los caracteres permitidos de `texto-de-una-linea.ts` (SUPUESTO, Q25: letras latinas, dígitos, espacio
- *   y una lista corta de signos); lo demás se rechaza. Puede ser todo números o llevar pocas letras («9 de Julio 1234»): la regla de
+ *   contados por carácter. Solo los caracteres permitidos de `texto-de-una-linea.ts` (letras latinas, dígitos, espacio y una lista corta
+ *   de signos; cotejada con el PDF y cubierta por la decisión del dueño de «una sola lista», 2026-11-05); lo demás se rechaza. No
+ *   puede empezar con `+` ni `-` (Q7, DECIDIDO por el dueño, 2026-11-06: «Mantener», mensaje directo al orquestador). Puede ser todo números o llevar pocas letras («9 de Julio 1234»): la regla de
  *   «al menos una letra» NO le aplica (SUPUESTO).
  * - Obligatorio/opcional: hoy OPCIONAL y así lo trata este código (era el comportamiento que ya había). Vacío o en blanco = «no
- *   tiene» y es `null`; en la base es NULL, nunca un texto vacío. PENDIENTE, SIN DECIDIR (Q24): la norma (RG 1415, Anexo II, A.II,
- *   según el orquestador, 2026-11-05; el texto de la norma NO se pudo leer desde esta rama) pediría el domicilio de todo receptor
- *   que no sea consumidor final; no se aplica en este cambio porque la pantalla de Emitir todavía no tiene el campo.
+ *   tiene» y es `null`; en la base es NULL, nunca un texto vacío. PENDIENTE (Q24): la norma (RG 1415, Anexo II, A.II, leída
+ *   directamente el 2026-11-05) pide el domicilio comercial de todo receptor que no sea consumidor final; no se aplica acá porque
+ *   la pantalla de Emitir todavía no tiene el campo. Lo lleva la sesión «Emitir: campo marcado, domicilio, leyendas y Factura A».
  * - Único: no. Quién lo cambia: nadie, se congela en el comprobante (`receptor_domicilio`, 0009).
  * - Verificado o declarado: solo DECLARADO; no hay fuente oficial contra la que verificarlo.
  * - Qué ve el público: se imprime tal cual se guardó. Hoy la pantalla de Emitir no tiene este campo y manda `null`.
