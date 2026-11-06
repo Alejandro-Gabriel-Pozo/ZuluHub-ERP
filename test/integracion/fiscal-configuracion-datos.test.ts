@@ -457,6 +457,16 @@ describe.skipIf(base === null)("fiscal T5: datos fiscales y regla del emisor", (
         "INICIO_DE_ACTIVIDADES_INVALIDO",
       ],
       [
+        "inicio de actividades futuro (Q17)",
+        { inicioActividades: "2099-01-01" },
+        "INICIO_DE_ACTIVIDADES_INVALIDO",
+      ],
+      [
+        "inicio de actividades anterior a 1900 (Q18)",
+        { inicioActividades: "1899-12-31" },
+        "INICIO_DE_ACTIVIDADES_INVALIDO",
+      ],
+      [
         "inicio de actividades con otro formato",
         { inicioActividades: "01/03/2020" },
         "INICIO_DE_ACTIVIDADES_INVALIDO",
