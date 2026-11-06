@@ -83,12 +83,25 @@ describe("modelo de impresión v3: leyenda de la condición del receptor (RG 141
       "factura-b-no-categorizado",
       imprimible(facturaB, { receptor: conCondicion(receptorInscripto, "NO_CATEGORIZADO") }),
     ],
-    // P1 pendiente: el exento no imprime leyenda hasta que el dueño responda.
     [
       "factura-b-a-exento",
       imprimible(facturaB, { receptor: conCondicion(receptorInscripto, "EXENTO") }),
     ],
     ["factura-b-consumidor-final", imprimible(facturaB)],
+    [
+      "factura-b-consumidor-final-identificado",
+      imprimible(facturaB, {
+        receptor: {
+          ...consumidorFinal,
+          nombre: "Juan Gómez",
+          documento: { tipo: "DNI", numero: "30123456" },
+        },
+      }),
+    ],
+    [
+      "factura-b-no-alcanzado",
+      imprimible(facturaB, { receptor: conCondicion(receptorInscripto, "IVA_NO_ALCANZADO") }),
+    ],
   ];
   for (const [nombre, comprobante] of casos) {
     it(`golden ${nombre}`, async () => {
@@ -106,13 +119,11 @@ describe("modelo de impresión v3: leyenda de la condición del receptor (RG 141
         imprimible(facturaB, { receptor: conCondicion(receptorInscripto, condicion) }),
       );
       const esperada = LEYENDAS_DE_CONDICION[condicion];
-      if (condicion === "CONSUMIDOR_FINAL") {
-        expect(m.receptor.leyenda, condicion).toBe("A CONSUMIDOR FINAL");
-        expect(m.receptor.leyendaDeCondicion, condicion).toBeUndefined();
-      } else {
-        expect(m.receptor.leyenda, condicion).toBeUndefined();
-        expect(m.receptor.leyendaDeCondicion, condicion).toBe(esperada ?? undefined);
-      }
+      expect(m.receptor.leyendaDeCondicion, condicion).toBe(esperada ?? undefined);
+      // El campo de la versión 2 sigue siendo solo del consumidor final.
+      expect(m.receptor.leyenda, condicion).toBe(
+        condicion === "CONSUMIDOR_FINAL" ? "A CONSUMIDOR FINAL" : undefined,
+      );
     }
   });
 
@@ -148,8 +159,8 @@ describe("leyendas de condición: textos de la norma", () => {
   it("cada texto es el de la norma, tal cual (RG 1415 Anexo II A.II a.4, e.4, f.4)", () => {
     expect(LEYENDAS_DE_CONDICION).toEqual({
       RESPONSABLE_INSCRIPTO: "IVA RESPONSABLE INSCRITO",
-      EXENTO: null,
-      IVA_NO_ALCANZADO: null,
+      EXENTO: "IVA EXENTO",
+      IVA_NO_ALCANZADO: "NO RESPONSABLE IVA",
       CONSUMIDOR_FINAL: "A CONSUMIDOR FINAL",
       MONOTRIBUTO: "RESPONSABLE MONOTRIBUTO",
       MONOTRIBUTISTA_SOCIAL: "MONOTRIBUTISTA SOCIAL",
@@ -160,7 +171,8 @@ describe("leyendas de condición: textos de la norma", () => {
       PROVEEDOR_DEL_EXTERIOR: null,
       IVA_LIBERADO_LEY_19640: null,
     });
-    expect(leyendaDeCondicionDelReceptor("CONSUMIDOR_FINAL")).toBeNull();
+    expect(leyendaDeCondicionDelReceptor("CONSUMIDOR_FINAL")).toBe("A CONSUMIDOR FINAL");
+    expect(leyendaDeCondicionDelReceptor("CLIENTE_DEL_EXTERIOR")).toBeNull();
   });
 });
 

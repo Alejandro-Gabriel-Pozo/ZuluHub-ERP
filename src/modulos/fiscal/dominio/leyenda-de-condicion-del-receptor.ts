@@ -18,11 +18,11 @@ export const LEYENDA_A_CONSUMIDOR_FINAL = "A CONSUMIDOR FINAL";
 export const LEYENDAS_DE_CONDICION: Readonly<Record<CondicionIvaReceptor, string | null>> = {
   // A.II a) 4
   RESPONSABLE_INSCRIPTO: "IVA RESPONSABLE INSCRITO",
-  // A.II c) 4 admite «NO RESPONSABLE IVA» o «IVA EXENTO, según corresponda» sin decir cuál va con cuál. SIN LEYENDA POR DECIDIR
-  // (pregunta P1 al dueño, 2026-11-06): hasta su respuesta ni el exento ni el no alcanzado imprimen leyenda.
-  EXENTO: null,
-  IVA_NO_ALCANZADO: null,
-  // A.II d) 1
+  // A.II c) 4: «"NO RESPONSABLE IVA" o "IVA EXENTO", según corresponda». La norma no dice cuál va con cuál: el dueño decidió que va por
+  // nombre (P1; dueño, 2026-11-06, conversación con el orquestador): el exento lleva «IVA EXENTO» y el no alcanzado «NO RESPONSABLE IVA».
+  EXENTO: "IVA EXENTO",
+  IVA_NO_ALCANZADO: "NO RESPONSABLE IVA",
+  // A.II d) 1. El dueño decidió que se imprima SIEMPRE, con o sin nombre (P4; dueño, 2026-11-06, conversación con el orquestador).
   CONSUMIDOR_FINAL: LEYENDA_A_CONSUMIDOR_FINAL,
   // A.II e) 4
   MONOTRIBUTO: "RESPONSABLE MONOTRIBUTO",
@@ -40,10 +40,7 @@ export const LEYENDAS_DE_CONDICION: Readonly<Record<CondicionIvaReceptor, string
   IVA_LIBERADO_LEY_19640: null,
 };
 
-/**
- * La leyenda de la condición de un receptor que NO es consumidor final (versión 3 en adelante); `null` si la norma no da una
- * aplicable o está por decidir. El consumidor final tiene su propio campo (`receptor.leyenda`, versión 2) y NO se repite acá.
- */
+/** La leyenda de la condición del receptor (versión 3 en adelante); `null` si la norma no da una aplicable. */
 export function leyendaDeCondicionDelReceptor(condicion: CondicionIvaReceptor): string | null {
-  return condicion === "CONSUMIDOR_FINAL" ? null : LEYENDAS_DE_CONDICION[condicion];
+  return LEYENDAS_DE_CONDICION[condicion];
 }

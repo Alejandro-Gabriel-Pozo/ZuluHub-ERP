@@ -31,7 +31,8 @@
     },
     "condicionIva": "CONSUMIDOR_FINAL",
     "domicilio": null,
-    "leyenda": "A CONSUMIDOR FINAL"
+    "leyenda": "A CONSUMIDOR FINAL",
+    "leyendaDeCondicion": "A CONSUMIDOR FINAL"
   },
   "modoDePrecio": "IVA_INCLUIDO",
   "renglones": [

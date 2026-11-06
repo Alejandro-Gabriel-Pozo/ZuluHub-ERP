@@ -267,6 +267,7 @@ describe("modeloDeImpresion: receptor, renglones y totales", () => {
       condicionIva: "CONSUMIDOR_FINAL",
       domicilio: null,
       leyenda: "A CONSUMIDOR FINAL",
+      leyendaDeCondicion: "A CONSUMIDOR FINAL",
     });
     expect(modelo(imprimible(facturaB, V1)).receptor).toEqual({
       nombre: null,

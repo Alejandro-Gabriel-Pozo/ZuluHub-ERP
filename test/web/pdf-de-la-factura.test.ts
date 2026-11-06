@@ -212,7 +212,7 @@ describe("el PDF trae cada dato obligatorio del modelo", () => {
     const mMonotributo = modeloDe(facturaAMonotributo);
     expect(mInscripto.receptor.leyendaDeCondicion).toBe("IVA RESPONSABLE INSCRITO");
     expect(mMonotributo.receptor.leyendaDeCondicion).toBe("RESPONSABLE MONOTRIBUTO");
-    expect(modeloDe(facturaB).receptor.leyendaDeCondicion).toBeUndefined();
+    expect(modeloDe(facturaB).receptor.leyendaDeCondicion).toBe("A CONSUMIDOR FINAL");
     for (const modelo of [mInscripto, mMonotributo]) {
       const pdf = await leerElPdf(await generar(modelo));
       expect(faltantes(modelo, pdf)).toEqual([]);

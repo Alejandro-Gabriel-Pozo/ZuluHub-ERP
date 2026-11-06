@@ -186,8 +186,9 @@ export type ModeloImpreso = Readonly<{
      */
     leyenda?: string;
     /**
-     * Versión 3 en adelante y solo si el receptor NO es consumidor final y la norma da una leyenda para su condición (RG 1415 Anexo II
-     * A.II; `leyenda-de-condicion-del-receptor.ts`). Ausente en las versiones 1 y 2 y en las condiciones sin leyenda.
+     * Versión 3 en adelante y solo si la norma da una leyenda para la condición del receptor (RG 1415 Anexo II A.II;
+     * `leyenda-de-condicion-del-receptor.ts`), consumidor final incluido: se imprime siempre, con o sin nombre. Ausente en las
+     * versiones 1 y 2 y en las condiciones sin leyenda.
      */
     leyendaDeCondicion?: string;
   }>;

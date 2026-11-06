@@ -31,7 +31,8 @@
       "numero": "30712345671"
     },
     "condicionIva": "EXENTO",
-    "domicilio": "Av. Siempreviva 742"
+    "domicilio": "Av. Siempreviva 742",
+    "leyendaDeCondicion": "IVA EXENTO"
   },
   "modoDePrecio": "IVA_INCLUIDO",
   "renglones": [
