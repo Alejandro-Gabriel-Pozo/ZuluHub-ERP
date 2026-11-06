@@ -107,6 +107,8 @@ export type ComprobanteParaLaHoja = Readonly<{
    * Previene: que un texto legal se dibuje como aviso de pruebas, o que su texto diverja entre el modelo y la hoja.
    */
   leyendasLegales?: readonly string[];
+  /** La sucursal congelada al emitir (`ModeloImpreso.sucursal`; ausente si no la congeló): tal cual, sin rótulo, arriba de la razón social (D-114). */
+  sucursal?: Readonly<{ nombre: string }>;
 }>;
 
 export type FilaArmada = Readonly<{ rotulo: string | null; valor: string }>;
@@ -136,6 +138,8 @@ export type HojaArmada = Readonly<{
   /** Los textos legales del modelo, tal cual; vacío si no hay. */
   leyendasLegales: readonly string[];
   nombreDeFantasia: string | null;
+  /** El nombre de la sucursal, tal cual (sin trim ni reformateo); `null` si el comprobante no lo trae o la regla de abajo dice que no se imprime. */
+  nombreDeLaSucursal: string | null;
   emisor: readonly FilaArmada[];
   /** Teléfono, correo y web sueltos, sin rótulos, separados por « · »; `null` si no hay ninguno. */
   contacto: string | null;
@@ -315,6 +319,15 @@ export function textoDeLaHoja(d: DiccionarioResuelto, k: number, n: number): str
   return texto(d, "fiscal.pantalla.imprimir_hoja", { k: String(k), n: String(n) });
 }
 
+/**
+ * Se imprime SIEMPRE que el modelo traiga `sucursal` (D-114, opción B del dueño, 2026-11-05): la «regla de una sola sucursal» la aplica
+ * el backend al congelar (solo congela el nombre con más de una sucursal abierta al emitir); acá no se repite. Una regla, un lugar.
+ * Chequeo: `hoja-a4-sucursal.test.tsx`.
+ */
+function nombreDeLaSucursalAImprimir(sucursal: ComprobanteParaLaHoja["sucursal"]): string | null {
+  return sucursal === undefined ? null : sucursal.nombre;
+}
+
 export function armarLaHoja(
   d: DiccionarioResuelto,
   c: ComprobanteParaLaHoja,
@@ -327,6 +340,7 @@ export function armarLaHoja(
     leyendas: c.leyendas,
     leyendasLegales: c.leyendasLegales ?? [],
     nombreDeFantasia: c.marca.nombreDeFantasia,
+    nombreDeLaSucursal: nombreDeLaSucursalAImprimir(c.sucursal),
     emisor: [
       { rotulo: texto(d, "fiscal.pantalla.config_df_razon_social"), valor: e.razonSocial },
       { rotulo: texto(d, "fiscal.pantalla.config_df_domicilio_fiscal"), valor: e.domicilioFiscal },

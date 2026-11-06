@@ -47,11 +47,11 @@ const CLAVE_DEL_TITULO = {
 } as const;
 
 /** Los tres pasos, numerados: los números no son un texto. El actual lleva `aria-current="step"`. */
-function PasosNumerados({ actual }: Readonly<{ actual: 1 | 2 | 3 }>) {
+export function PasosNumerados({ actual }: Readonly<{ actual: 1 | 2 | 3 }>) {
   return (
     <ol className={estilos["pasos"]}>
       {([1, 2, 3] as const).map((numero) => (
-        <li key={numero} style={{ display: "contents" }}>
+        <li key={numero} className={estilos["pasoEnvoltura"]}>
           {numero === 1 ? null : <span aria-hidden="true" className={estilos["linea"]} />}
           <span className={estilos["paso"]} aria-current={numero === actual ? "step" : undefined}>
             {numero}

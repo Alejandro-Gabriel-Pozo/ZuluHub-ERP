@@ -108,6 +108,7 @@ export function comprobanteParaLaHoja(m: Modelo): ComprobanteParaLaHoja {
             fecha: m.asociado.fecha,
           },
     leyendas: [...m.leyendas],
+    ...(m.sucursal === undefined ? {} : { sucursal: { nombre: m.sucursal.nombre } }),
     ...(m.leyendasLegales === undefined ? {} : { leyendasLegales: [...m.leyendasLegales] }),
   };
 }

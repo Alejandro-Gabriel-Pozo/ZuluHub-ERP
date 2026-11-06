@@ -4,6 +4,8 @@ import { violacionesDeAccesibilidad } from "../../../pruebas/ayudas";
 import {
   comprobanteDePrueba,
   QR_DE_PRUEBA,
+  reglaDePaginaAdoptada,
+  reglasAdoptadas,
   type OpcionesDelComprobante,
 } from "./ayudas-de-impresion";
 import { ComprobanteImpreso } from "./ComprobanteImpreso.cliente";
@@ -24,9 +26,7 @@ async function dibujar(opciones: OpcionesDelComprobante = {}) {
       />
     </div>,
   );
-  await expect
-    .poll(() => document.querySelector("style[data-estilo-de-pagina]")?.textContent)
-    .toMatch(/@page\{size:80mm \d+mm;margin:0\}/);
+  await expect.poll(reglaDePaginaAdoptada).toMatch(/@page \{ size: 80mm \d+mm; margin: 0px; \}/);
   const ticket = document.querySelector<HTMLElement>("[data-ticket]");
   if (ticket === null) throw new Error("no hay ticket");
   return { ticket, pantalla };
@@ -35,12 +35,7 @@ async function dibujar(opciones: OpcionesDelComprobante = {}) {
 describe("ticket de 80 mm", () => {
   it("leyenda legal: texto normal después del aviso de homologación, fuera de su recuadro, tal cual y dentro del alto medido; sin ella no hay nada extra", async () => {
     const LEGAL = "  Texto legal de prueba (ficticio).  ";
-    const medido = () =>
-      Number(
-        /size:80mm (\d+)mm/.exec(
-          document.querySelector("style[data-estilo-de-pagina]")?.textContent ?? "",
-        )?.[1],
-      );
+    const medido = () => Number(/size: 80mm (\d+)mm/.exec(reglaDePaginaAdoptada())?.[1]);
     const sin = await dibujar({ leyendas: ["HOMOLOGACIÓN — SIN VALIDEZ FISCAL"] });
     expect(sin.ticket.querySelectorAll("[data-leyenda-legal]")).toHaveLength(0);
     const altoSin = medido();
@@ -74,20 +69,16 @@ describe("ticket de 80 mm", () => {
     expect(document.querySelectorAll("[data-hoja]")).toHaveLength(0);
     expect(document.querySelector("[data-medidor]")).toBeNull();
     expect(Math.abs(ticket.offsetWidth - mmAPx(ANCHO_TICKET_MM))).toBeLessThanOrEqual(1);
-    const regla = document.querySelector("style[data-estilo-de-pagina]")?.textContent ?? "";
+    const regla = reglaDePaginaAdoptada();
     expect(regla).not.toContain("auto");
     expect(regla).not.toContain("A4");
-    const alto = Number(/size:80mm (\d+)mm/.exec(regla)?.[1]);
+    const alto = Number(/size: 80mm (\d+)mm/.exec(regla)?.[1]);
     expect(alto).toBeGreaterThanOrEqual(pxAMm(ticket.offsetHeight));
     expect(alto).toBeLessThanOrEqual(pxAMm(ticket.offsetHeight) + 4);
     // El contenido crece con los renglones: el alto de @page también.
     await pantalla.unmount();
     const corto = await dibujar({ renglones: 2 });
-    const altoCorto = Number(
-      /size:80mm (\d+)mm/.exec(
-        document.querySelector("style[data-estilo-de-pagina]")?.textContent ?? "",
-      )?.[1],
-    );
+    const altoCorto = Number(/size: 80mm (\d+)mm/.exec(reglaDePaginaAdoptada())?.[1]);
     expect(altoCorto).toBeLessThan(alto);
     await corto.pantalla.unmount();
   });
@@ -132,10 +123,11 @@ describe("ticket de 80 mm", () => {
     expect(ticket.textContent).toContain("011 5555-0100 · hola@zulu.example · www.zulu.example");
   });
 
-  it("axe sin violaciones y el <style> de @page se quita al desmontar", async () => {
+  it("axe sin violaciones y la hoja de estilos de @page se quita al desmontar", async () => {
     const { pantalla } = await dibujar({ renglones: 10 });
     expect(await violacionesDeAccesibilidad(document.body)).toEqual([]);
     await pantalla.unmount();
-    expect(document.querySelectorAll("style[data-estilo-de-pagina]")).toHaveLength(0);
+    expect(reglasAdoptadas()).toBe("");
+    expect(document.adoptedStyleSheets).toHaveLength(0);
   });
 });

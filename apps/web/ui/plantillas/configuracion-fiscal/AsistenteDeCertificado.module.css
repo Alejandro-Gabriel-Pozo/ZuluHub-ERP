@@ -7,6 +7,11 @@
   list-style: none;
 }
 
+/* El `<li>` no dibuja caja: sus hijos (línea y número) se acomodan en el flex del `<ol>`. Va en clase y no en `style=`: la CSP lo bloquea. */
+.pasoEnvoltura {
+  display: contents;
+}
+
 .paso {
   display: flex;
   flex: none;
