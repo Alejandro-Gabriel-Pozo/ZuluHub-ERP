@@ -101,7 +101,7 @@ export const REGISTRO_DE_DATOS = {
       {
         para: "Importe a anular por alícuota en la anulación parcial (D-69).",
         fuente:
-          "Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md «Contrato de la pantalla 3» y registro de decisiones D-69",
+          "Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md «Contrato de la pantalla 2: Detalle de un comprobante» (anulación por importe) y registro de decisiones D-69",
       },
     ],
     consumidores: [
