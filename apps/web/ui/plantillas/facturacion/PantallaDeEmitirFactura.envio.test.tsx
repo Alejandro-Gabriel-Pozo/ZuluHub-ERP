@@ -258,7 +258,7 @@ describe("emitir: lo que rechaza el servidor se ve por la vía común", () => {
     await llegarARevisar("dni");
     tocar(boton("Emitir factura"));
     await expect
-      .element(page.getByText("Revisá los datos del cliente", { exact: false }))
+      .element(page.getByText("Revisá los datos del cliente.", { exact: true }))
       .toBeVisible();
     expect(document.body.textContent).not.toContain("FISCAL_RECEPTOR_INVALIDO");
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
@@ -318,7 +318,7 @@ describe("emitir: lo que rechaza el servidor se ve por la vía común", () => {
     await llegarARevisar("dni");
     tocar(boton("Emitir factura"));
     await expect
-      .element(page.getByText("Revisá los datos del cliente", { exact: false }))
+      .element(page.getByText("Revisá los datos del cliente.", { exact: true }))
       .toBeVisible();
     await expect.element(page.getByText("Revisá y emití")).toBeVisible();
   });

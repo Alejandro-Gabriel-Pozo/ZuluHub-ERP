@@ -239,6 +239,8 @@ describe("validarReceptor: forma", () => {
       ok: true,
       valor: { documento: { tipo: "DNI", numero: "12345678" } },
     });
+    // Lo que se le informa a ARCA (`DocNro`) es lo mismo con o sin puntos.
+    if (r.ok) expect(numeroDeDocumentoParaArca(r.valor.documento)).toBe(12345678n);
     for (const numero of ["12 345 678", "12,345,678", "12.345.67"]) {
       expect(validarReceptor(conDocumento({ tipo: "DNI", numero }), contexto("B"))).toEqual(
         invalido("documento"),
