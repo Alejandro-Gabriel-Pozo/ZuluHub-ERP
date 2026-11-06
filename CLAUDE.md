@@ -35,8 +35,8 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
   `CONTROLES` importado: el texto fijo no trae nada), `x.constructor(…)`, `<` fuera de una clase, `split`/`replace`/`Set` contra `<`,
   comparaciones de texto (`c < " "`), códigos de carácter por variable y tablas de búsqueda: es una alarma para errores honestos, no un
   límite de seguridad. No mira las pruebas (`*.test.*`, `test/`): usan estas expresiones como ejemplo. Los formatos de máquinas de terceros
-  (`set-cookie.ts`, `saneamiento.ts` de ARCA) están eximidos con lista exacta y cuenta exacta en la prueba (propuesta del orquestador; el dueño
-  puede revertirla).
+  (`set-cookie.ts`, `saneamiento.ts` de ARCA) están eximidos con lista exacta y cuenta exacta en la prueba (dueño, 2026-11-06, pregunta directa al orquestador; un
+  archivo nuevo en esa categoría requiere aprobación del dueño).
 - **Sin dato registrado no hay campo (dueño, 2026-11-05).** Todo campo de entrada de `apps/web` y `apps/plataforma` es un componente de
   campo con la prop `dato`, y ese dato está en `src/capacidades/datos/registro.ts` (primitiva, propósitos con fuente, consumidores, quién
   lo pone, qué necesita). Un `<input>`, `<textarea>` o `<select>` crudo, un campo sin dato o con un dato no registrado, un consumidor no

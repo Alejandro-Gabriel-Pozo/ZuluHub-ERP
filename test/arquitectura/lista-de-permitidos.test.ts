@@ -31,10 +31,11 @@ const { PRESUPUESTOS, problemasDeForma } =
 const PRESUPUESTO = PRESUPUESTOS.find((p) => p.archivo.endsWith("validacion-de-datos.json"));
 const PREFIJO_DE_DEUDA = "validacion-de-datos--";
 /**
- * Alcance (orquestador, 2026-11-06; el dueño puede revertirlo): la regla mira el código que VALIDA un dato que escribe una persona o que
+ * Alcance (dueño, 2026-11-06, pregunta directa al orquestador: «sí, exentos», categoría cerrada de dos archivos): la regla mira el código que VALIDA un dato que escribe una persona o que
  * se guarda en una columna. Estos archivos leen un formato de MÁQUINAS definido por un tercero, no un dato escrito por una persona: no
  * entran a la deuda. Hallazgo: validación de datos que vienen de terceros (cookies de la librería de ingreso y respuestas de ARCA);
- * revisar con lista de permitidos del formato en una sesión posterior. Cada exención tiene que seguir teniendo lo que exime.
+ * revisar con lista de permitidos del formato en una sesión posterior. Ruta exacta, cuenta exacta y lista fija en dos: un archivo nuevo en
+ * esta categoría requiere aprobación del dueño. Cada exención tiene que seguir teniendo lo que exime.
  */
 const FORMATOS_DE_TERCEROS: Readonly<Record<string, Exencion>> = {
   "src/capacidades/experiencia/set-cookie.ts": {
