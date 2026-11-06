@@ -224,6 +224,37 @@ describe.skipIf(base === null)(
     });
 
     // ===============================================================================================
+    describe("una versión confirmada con reglas anteriores (Q10: la razón social pasó a la lista de permitidos)", () => {
+      it("el reintento con el valor guardado sigue siendo «ya estaba» aunque hoy no pasaría la regla; con otro valor, el error de siempre", async () => {
+        const e = await nuevo();
+        const { mandado, version } = await guardadoYConfirmado(e);
+        // Una versión confirmada ANTES de endurecer la regla: doble espacio y arroba. Se la deja así tocando la fila directamente
+        // (el disparador de cambios la protege en uso normal; esta base es descartable y solo de esta prueba).
+        await dueno.query("alter table datos_fiscales disable trigger user");
+        await dueno.query("update datos_fiscales set razon_social = $2 where id = $1", [
+          mandado.borradorId,
+          "Kiosco  @ Mendoza",
+        ]);
+        await dueno.query("alter table datos_fiscales enable trigger user");
+        const antes = await foto(e.mundo.empresa);
+        const yaEstaba = ok({ borradorId: mandado.borradorId, version, yaEstaba: true });
+        const { borradorId } = mandado;
+
+        for (const razonSocial of ["Kiosco  @ Mendoza", "  Kiosco  @ Mendoza  "]) {
+          expect(
+            await guardar(e, { borradorId, cambios: { ...COMPLETOS, razonSocial } }),
+            razonSocial,
+          ).toEqual(yaEstaba);
+        }
+        // Otro valor que tampoco pasa la regla de hoy no es la repetición de nada.
+        expect(
+          await guardar(e, { borradorId, cambios: { ...COMPLETOS, razonSocial: "Kiosco @ Sur" } }),
+        ).toEqual(err("VERSION_CONFIRMADA_INMUTABLE"));
+        expect(await foto(e.mundo.empresa)).toEqual(antes);
+      });
+    });
+
+    // ===============================================================================================
     describe("datos distintos: el error de siempre", () => {
       it("otra razón social, otro domicilio (nuevo o existente), o datos que no valen son VERSION_CONFIRMADA_INMUTABLE y no escriben nada", async () => {
         const e = await nuevo();

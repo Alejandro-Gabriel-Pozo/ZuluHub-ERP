@@ -23,6 +23,7 @@ import { err, type Resultado } from "../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../puertos/transacciones";
 import { aRespuesta, type DependenciasDeRespuesta } from "./a-respuesta";
 import { CAMPOS_DE_IIBB, ERRORES_DE_IIBB } from "./errores-fiscales-de-ingresos-brutos";
+import { campoDelReceptor } from "./errores-fiscales-del-receptor";
 import { ERRORES_DE_IMPRESION, type ErrorAlLeerComprobantes } from "./errores-fiscales-de-lectura";
 import {
   ERRORES_DE_CERTIFICADO,
@@ -269,8 +270,6 @@ const campoDeRenglon = (posicion: unknown, campo: string): string | undefined =>
 
 function campoDeError(error: Readonly<Record<string, unknown>>): string | undefined {
   switch (error["codigo"]) {
-    case "RECEPTOR_INVALIDO":
-      return typeof error["campo"] === "string" ? `receptor.${error["campo"]}` : "receptor";
     case "RENGLON_INVALIDO":
       return typeof error["campo"] === "string"
         ? campoDeRenglon(error["posicion"], error["campo"])
@@ -287,7 +286,7 @@ function campoDeError(error: Readonly<Record<string, unknown>>): string | undefi
       return typeof primero === "string" ? (CAMPO_DE_OBLIGATORIO[primero] ?? undefined) : undefined;
     }
     default:
-      return undefined;
+      return campoDelReceptor(error);
   }
 }
 
