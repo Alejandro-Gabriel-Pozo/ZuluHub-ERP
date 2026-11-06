@@ -31,8 +31,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 /**
- * Cambios que ninguna prueba lee de un modo que cambie un resultado: ni la mutación ni la integración los
- * notan. Los dos workflows de acá no los lee ninguna prueba salvo el escaneo de nombres, que no ejerce código mutado.
+ * Cambios que ninguna prueba lee de un modo que cambie un resultado: ni la mutación ni la integración los notan. Los dos workflows de acá no los lee ninguna prueba salvo el escaneo de nombres, que no ejerce código mutado.
  */
 const DOCUMENTACION_Y_AJENOS = [
   /\.md$/,
