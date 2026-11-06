@@ -918,6 +918,15 @@ const deudaCon = (
 const CONFIGURACION_REAL = "arquitectura/deuda/configuracion.json";
 const PAQUETE_REAL = "package.json";
 const PASO_DE_LA_DEUDA = "      - name: Deuda técnica (no crece y se paga al tocar el archivo)\n";
+const PASO_DE_LOS_CAMPOS = "      - name: Deuda de campos sin dato (el presupuesto solo baja)\n";
+/** Quita del ci.yml de un árbol el paso del presupuesto de campos sin dato (su comentario y su `run`). */
+const sinElPasoDeLosCampos = (texto: string): string => {
+  const inicio = texto.indexOf("      # El presupuesto de campos sin dato");
+  const fin =
+    texto.indexOf("          fi\n", texto.indexOf(PASO_DE_LOS_CAMPOS)) + "          fi\n".length;
+  if (inicio < 0 || fin < inicio) throw new Error("el ci.yml real no tiene el paso de los campos");
+  return texto.slice(0, inicio) + texto.slice(fin);
+};
 /** Quita del ci.yml de un árbol el paso de la deuda técnica (su comentario y su `run`). */
 const sinElPasoDeLaDeuda = (texto: string): string => {
   const inicio = texto.indexOf("      # La deuda técnica (§10)");
@@ -1760,6 +1769,29 @@ export const APLICADORES: Record<string, Aplicador> = {
   ),
   "I12-borrar-el-paso-de-deuda-del-ci": enArboles({
     pr: (raiz) => alterarCi(raiz, sinElPasoDeLaDeuda),
+  }),
+  "I12-borrar-el-paso-de-campos-del-ci": enArboles({
+    pr: (raiz) => alterarCi(raiz, sinElPasoDeLosCampos),
+  }),
+  "I12-continue-on-error-en-el-paso-de-campos": enArboles({
+    pr: (raiz) =>
+      alterarCi(raiz, (t) =>
+        reemplazar(
+          t,
+          `${PASO_DE_LOS_CAMPOS}        run: |`,
+          `${PASO_DE_LOS_CAMPOS}        continue-on-error: true\n        run: |`,
+        ),
+      ),
+  }),
+  "I12-if-en-el-paso-de-campos": enArboles({
+    pr: (raiz) =>
+      alterarCi(raiz, (t) =>
+        reemplazar(
+          t,
+          `${PASO_DE_LOS_CAMPOS}        run: |`,
+          `${PASO_DE_LOS_CAMPOS}        if: false\n        run: |`,
+        ),
+      ),
   }),
   "I12-borrar-el-registro-de-deuda": () => {
     const cambio = deudaSana();

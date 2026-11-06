@@ -39,7 +39,7 @@ function Ejemplo({
           setAbierta(false);
         }}
       >
-        <Campo etiqueta="Nombre" valor={nombre} alCambiar={setNombre} />
+        <Campo dato="pendiente" etiqueta="Nombre" valor={nombre} alCambiar={setNombre} />
         <Boton>Cobrar $ 100,00</Boton>
         <Boton variante="secundaria">Volver</Boton>
       </Superposicion>

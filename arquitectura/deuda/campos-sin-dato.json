@@ -1,0 +1,197 @@
+{
+  "apps/plataforma/pantallas/alta-segundo-factor.cliente.tsx": {
+    "pendientes": 1,
+    "crudos": 1,
+    "dinamicos": 0
+  },
+  "apps/plataforma/pantallas/cambio-de-plan.cliente.tsx": {
+    "pendientes": 3,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/plataforma/pantallas/campo-de-color.cliente.tsx": {
+    "pendientes": 1,
+    "crudos": 1,
+    "dinamicos": 0
+  },
+  "apps/plataforma/pantallas/casilla-de-programada.cliente.tsx": {
+    "pendientes": 0,
+    "crudos": 1,
+    "dinamicos": 0
+  },
+  "apps/plataforma/pantallas/desplegables-de-aspecto.cliente.tsx": {
+    "pendientes": 5,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/plataforma/pantallas/editor-de-submarca.cliente.tsx": {
+    "pendientes": 1,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/plataforma/pantallas/filtros-de-empresas.cliente.tsx": {
+    "pendientes": 4,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/plataforma/pantallas/formulario-de-alta.cliente.tsx": {
+    "pendientes": 6,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/plataforma/pantallas/ventana-de-codigo.cliente.tsx": {
+    "pendientes": 2,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/plataforma/pantallas/ventana-de-confirmacion.cliente.tsx": {
+    "pendientes": 2,
+    "crudos": 1,
+    "dinamicos": 0
+  },
+  "apps/plataforma/pantallas/verificar-codigo.cliente.tsx": {
+    "pendientes": 2,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/componentes/Campo.test.tsx": {
+    "pendientes": 4,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/componentes/CampoDeCodigo.test.tsx": {
+    "pendientes": 1,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/componentes/CampoImporte.test.tsx": {
+    "pendientes": 4,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/componentes/Selector.test.tsx": {
+    "pendientes": 2,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/iconos/Icono.tsx": {
+    "pendientes": 0,
+    "crudos": 0,
+    "dinamicos": 2
+  },
+  "apps/web/ui/patrones/ProveedorDeSesion.test.tsx": {
+    "pendientes": 0,
+    "crudos": 3,
+    "dinamicos": 0
+  },
+  "apps/web/ui/patrones/SelectorDeSucursal.cliente.tsx": {
+    "pendientes": 1,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/patrones/Superposicion.test.tsx": {
+    "pendientes": 1,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/patrones/borrador-de-pagina.test.tsx": {
+    "pendientes": 0,
+    "crudos": 10,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/configuracion-fiscal/FormularioDeDatosFiscales.cliente.tsx": {
+    "pendientes": 4,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/configuracion-fiscal/FormularioDePuntoDeVenta.cliente.tsx": {
+    "pendientes": 3,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/configuracion-fiscal/PasoCargarCertificado.cliente.tsx": {
+    "pendientes": 0,
+    "crudos": 1,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/configuracion-fiscal/PasoDelPedido.cliente.tsx": {
+    "pendientes": 0,
+    "crudos": 2,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/configuracion-fiscal/PasoGenerarPedido.cliente.tsx": {
+    "pendientes": 1,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/facturacion/EleccionDeSucursal.cliente.tsx": {
+    "pendientes": 1,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/facturacion/FormularioDeFiltros.cliente.tsx": {
+    "pendientes": 5,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/facturacion/PantallaDeAnularComprobante.cliente.tsx": {
+    "pendientes": 0,
+    "crudos": 1,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/facturacion/PantallaDeImprimirComprobante.cliente.tsx": {
+    "pendientes": 0,
+    "crudos": 1,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/facturacion/PantallaDeImprimirComprobante.test.tsx": {
+    "pendientes": 0,
+    "crudos": 1,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx": {
+    "pendientes": 7,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/facturacion/impresion/hoja-a4.test.tsx": {
+    "pendientes": 0,
+    "crudos": 1,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/facturacion/impresion/medicion.test.tsx": {
+    "pendientes": 0,
+    "crudos": 3,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/facturacion/impresion/sin-estilos-en-linea.test.tsx": {
+    "pendientes": 0,
+    "crudos": 10,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/vidriera/BuscarEnVidriera.tsx": {
+    "pendientes": 0,
+    "crudos": 1,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/vidriera/DetalleDeProducto.tsx": {
+    "pendientes": 0,
+    "crudos": 0,
+    "dinamicos": 2
+  },
+  "apps/web/ui/plantillas/vidriera/PlantillaDeVidriera.test.tsx": {
+    "pendientes": 0,
+    "crudos": 3,
+    "dinamicos": 0
+  },
+  "apps/web/ui/primitivas/Texto.tsx": {
+    "pendientes": 0,
+    "crudos": 0,
+    "dinamicos": 1
+  },
+  "apps/web/ui/pruebas/ayudas.test.tsx": {
+    "pendientes": 0,
+    "crudos": 2,
+    "dinamicos": 0
+  }
+}

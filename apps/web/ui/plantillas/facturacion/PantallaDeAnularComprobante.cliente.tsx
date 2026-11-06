@@ -153,6 +153,7 @@ export function PantallaDeAnularComprobante({
                     <span className={estilos["importe"]}>{fila.facturado.importe}</span>
                   </p>
                   <CampoImporte
+                    dato="importe"
                     etiqueta={fila.etiquetaDelCampo}
                     valor={fila.valor}
                     alCambiar={(canonico) => {

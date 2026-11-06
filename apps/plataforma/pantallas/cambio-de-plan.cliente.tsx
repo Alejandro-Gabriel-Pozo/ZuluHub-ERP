@@ -142,6 +142,7 @@ export function CambioDePlan({ plan }: PropsDeCambioDePlan) {
   return (
     <div className={propios["cambio"]}>
       <Selector
+        dato="pendiente"
         etiqueta="Cambiar a"
         nombre="versionDePlanId"
         textoDeElegir="Elegí un plan"
@@ -235,6 +236,7 @@ export function CambioDePlan({ plan }: PropsDeCambioDePlan) {
                 </Aviso>
               ) : null}
               <Campo
+                dato="pendiente"
                 etiqueta="Vigente desde"
                 nombre="vigenteDesde"
                 tipo="date"
@@ -250,6 +252,7 @@ export function CambioDePlan({ plan }: PropsDeCambioDePlan) {
                 deshabilitado={bloqueada}
               />
               <Campo
+                dato="pendiente"
                 etiqueta="Motivo del cambio"
                 nombre="motivo"
                 obligatorio="obligatorio"
