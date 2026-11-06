@@ -225,7 +225,9 @@ export function vistaDelCliente(d: DiccionarioResuelto, c: ClienteEscrito): Vist
               })),
             },
           },
-    campoInvalido: texto(d, "fiscal.pantalla.emitir_revisar_dato"),
+    // El texto ya aprobado de los errores marcados en su campo (D-67, «Revisá los datos marcados.»; clave de Datos fiscales). El dueño eligió
+    // usarlo y NO agregar «Revisá este dato.» (2026-11-06, mensaje directo al orquestador tras ver las capturas de #204: «Apruebo B. Seguir usando el texto que ya está»).
+    campoInvalido: texto(d, "error.fiscal_configuracion_datos_invalidos"),
   };
 }
 

@@ -112,7 +112,7 @@ describe.skipIf(base === null)(
         .selectOption({ label: "Consumidor Final" });
       await pagina.getByRole("button", { name: "Siguiente" }).click();
       // Con error de campo la persona sigue en el paso 1 (Cliente), con el documento y el nombre marcados.
-      await pagina.getByText("Revisá este dato.").first().waitFor();
+      await pagina.getByText("Revisá los datos marcados.").first().waitFor();
       expect(await pagina.getByRole("region", { name: "Renglones" }).count()).toBe(0);
       expect(await pagina.getByRole("textbox", { name: "DNI" }).getAttribute("aria-invalid")).toBe(
         "true",
@@ -258,7 +258,7 @@ describe.skipIf(base === null)(
       await pagina.getByRole("button", { name: "Siguiente" }).click();
       await pagina.getByRole("button", { name: "Emitir factura" }).click();
       // El servidor exige el domicilio (RG 1415 Anexo II A.II): vuelve al paso del cliente con ese campo marcado.
-      await pagina.getByText("Revisá este dato.").first().waitFor();
+      await pagina.getByText("Revisá los datos marcados.").first().waitFor();
       expect(
         await pagina.getByRole("textbox", { name: "Domicilio" }).getAttribute("aria-invalid"),
       ).toBe("true");

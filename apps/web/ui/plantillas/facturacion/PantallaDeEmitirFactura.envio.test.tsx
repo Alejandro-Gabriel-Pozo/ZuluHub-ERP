@@ -294,10 +294,12 @@ describe("emitir: lo que rechaza el servidor se ve por la vía común", () => {
     tocar(boton("Emitir factura"));
     // Vuelve al paso del cliente (ya no se ve «Revisá y emití») con SOLO el domicilio marcado, con el aviso genérico.
     await expect.element(campo("Domicilio")).toHaveAttribute("aria-invalid", "true");
-    await expect.element(page.getByText("Revisá este dato.")).toBeVisible();
+    await expect.element(page.getByText("Revisá los datos marcados.")).toBeVisible();
     // El foco va al campo marcado y su aviso se anuncia al enfocarlo (descripción del campo, como en Datos fiscales): no queda en un botón que ya no está.
     await expect.element(campo("Domicilio")).toHaveFocus();
-    await expect.element(campo("Domicilio")).toHaveAccessibleDescription("Revisá este dato.");
+    await expect
+      .element(campo("Domicilio"))
+      .toHaveAccessibleDescription("Revisá los datos marcados.");
     await expect.element(campo("Nombre o razón social")).not.toHaveAttribute("aria-invalid");
     await expect.element(campo("DNI")).not.toHaveAttribute("aria-invalid");
     expect(document.body.textContent).not.toContain("Revisá y emití");
@@ -324,7 +326,7 @@ describe("emitir: lo que rechaza el servidor se ve por la vía común", () => {
     await expect.element(campo("Nombre o razón social")).toHaveAttribute("aria-invalid", "true");
     await expect.element(campo("Domicilio")).not.toHaveAttribute("aria-invalid");
     await expect.element(campo("CUIT")).toHaveFocus();
-    await expect.element(campo("CUIT")).toHaveAccessibleDescription("Revisá este dato.");
+    await expect.element(campo("CUIT")).toHaveAccessibleDescription("Revisá los datos marcados.");
     expect(document.body.textContent).not.toContain("Cliente Renglones");
     // Con dos avisos el botón queda debajo de la barra fija de abajo hasta que se baja la página: axe mide el botón ya a la vista.
     boton("Siguiente").element().scrollIntoView({ block: "center" });

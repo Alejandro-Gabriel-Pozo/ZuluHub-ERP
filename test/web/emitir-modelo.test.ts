@@ -316,7 +316,6 @@ describe("los textos de Emitir: exactamente estos (cada uno con su fuente en el 
       emitir_precio_con_iva: "Precio con IVA",
       emitir_iva: "IVA",
       emitir_nombre: "Nombre o razón social",
-      emitir_revisar_dato: "Revisá este dato.",
       emitir_precio: "Precio",
       emitir_renglon_numero: "Renglón {numero}",
       emitir_quitar_renglon: "Quitar renglón {numero}",

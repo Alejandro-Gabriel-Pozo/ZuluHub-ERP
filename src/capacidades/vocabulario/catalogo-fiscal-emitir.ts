@@ -50,10 +50,6 @@ export const TEXTOS_DE_FISCAL_EMITIR = {
   // RECEPTOR-HTML, línea 20: «Nombre o razón social» (D-24: el receptor se escribe a mano).
   // D-93 / D-95 (Pedernal-docs, `11-especificaciones/facturador-contratos-de-pantalla.md`, 2026-11-03), punto 2: rótulos aprobados tal cual.
   "fiscal.pantalla.emitir_nombre": { porDefecto: "Nombre o razón social" },
-  // Aviso genérico debajo del campo del cliente que el servidor rechazó (dueño, 2026-11-06, conversación directa con la sesión «Emitir»,
-  // `11-especificaciones/emitir-plan-factura-a.md` §1, decisiones 1 y 2: «borde rojo + texto debajo», «uno genérico, en voseo»; el ejemplo
-  // «Revisá este dato.» es suyo). Redacción PROVISORIA: el dueño la aprueba con la pantalla armada. Previene un texto distinto por campo sin aprobar.
-  "fiscal.pantalla.emitir_revisar_dato": { porDefecto: "Revisá este dato." },
 
   // D-93 / D-95 (Pedernal-docs, `11-especificaciones/facturador-contratos-de-pantalla.md`, 2026-11-03), punto 4: «Precio» donde la empresa no discrimina IVA (D-85: en letra C solo vale IVA incluido); como «Importe a anular» de D-75.
   "fiscal.pantalla.emitir_precio": { porDefecto: "Precio" },
