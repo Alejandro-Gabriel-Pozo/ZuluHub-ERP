@@ -10,7 +10,7 @@ import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilan
  * persona real. Cada paso responde por lo que el vigilante vio en SU pantalla (consola, 5xx, CSP, pedidos a otros hosts) y por axe.
  *
  * FALLAS CONOCIDAS (`it.fails`): hechos reales que esta prueba encontró y que NO se arreglan acá (los arregla la sesión web). Cada una
- * lleva su motivo; cuando alguien la arregla la prueba se pone roja y obliga a pasarla a `it` común.
+ * lleva su motivo; cuando alguien la arregla la prueba se pone roja y obliga a pasarla a `it` común (como pasó con la CSP de la impresión).
  */
 const base = inject("baseDePruebas");
 
@@ -223,10 +223,9 @@ describe.skipIf(base === null)(
       expect(deLaImpresion.filter((h) => !/CSP|Content Security Policy/.test(h))).toEqual([]);
     });
 
-    // FALLA CONOCIDA (2026-11-05, verificada en la app real): la vista de impresión usa estilos EN LÍNEA (`<style>` sin nonce en
-    // `impresion/EstiloDePagina.tsx` y atributos `style=` en `HojasA4`, `MedidorDeLaHoja`, `TicketDe80mm` y `VistaPrevia`) y la CSP real
-    // (`style-src 'self' 'nonce-…'`, sin `unsafe-inline`) los bloquea: la geometría de la hoja no se aplica en Vercel. Lo arregla la sesión web.
-    it.fails("Imprimir: la política de contenido no bloquea ningún estilo", () => {
+    // Antes de #193 la vista de impresión usaba estilos en línea que la CSP real bloqueaba (hallazgo de este recorrido, 2026-11-05); #193 lo
+    // arregló y esto pasó de falla conocida a prueba común.
+    it("Imprimir: la política de contenido no bloquea ningún estilo", () => {
       expect(deLaImpresion.filter((h) => /CSP|Content Security Policy/.test(h))).toEqual([]);
     });
 
