@@ -24,7 +24,11 @@ import {
   crearTransacciones,
   type TransaccionesDePostgres,
 } from "../../src/adaptadores/postgres/transacciones";
-import { codigoDeTotp, pasoDeTotp } from "../../src/capacidades/autenticacion/totp";
+import {
+  codigoDeTotp,
+  pasoDeTotp,
+  PERIODO_DE_TOTP_EN_SEGUNDOS,
+} from "../../src/capacidades/autenticacion/totp";
 import type {
   AutenticacionDePlataforma,
   PersonalHabilitado,
@@ -173,7 +177,7 @@ export const codigoDeLaAplicacion = (
   desvioEnPasos = 0,
 ): string => codigoDeTotp(decodificarBase32(secretoBase32), pasoDeTotp(instante) + desvioEnPasos);
 
-const PASO_DE_TOTP_EN_MS = 30_000;
+const PASO_DE_TOTP_EN_MS = PERIODO_DE_TOTP_EN_SEGUNDOS * 1000;
 
 /**
  * La FECHA quieta en la mitad de un paso de TOTP (30 s), para cada prueba del bloque donde se llama. La librería verifica el
