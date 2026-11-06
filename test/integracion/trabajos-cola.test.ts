@@ -616,7 +616,7 @@ describe.skipIf(base === null)("cola de trabajos: el procesador contra una base 
     it("una excepción cuenta como error reintentable y no deja pasar un token ni un enlace", async () => {
       const id = await encolar();
       const token = "Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MGFiY2RlZmdoaWo";
-      const enlace = `https://app.ejemplo.test/invitaciones/${token}`;
+      const enlace = `https://app.ejemplo.test/invitacion?t=${token}`;
       const r = await procesador(() => {
         throw new Error(`no pude mandar ${enlace}`);
       }).procesarUno(id, T0);

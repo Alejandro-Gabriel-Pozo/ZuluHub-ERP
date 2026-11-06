@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { Aviso } from "../../web/ui/componentes/Aviso";
-import { Boton } from "../../web/ui/componentes/Boton";
+import { Boton } from "../../web/ui/componentes/Boton.cliente";
 import { Campo } from "../../web/ui/componentes/Campo";
 import { Icono } from "../../web/ui/iconos/Icono";
 import { Superposicion } from "../../web/ui/patrones/Superposicion";
@@ -277,6 +277,7 @@ export function VentanaDeConfirmacion({
                 </Aviso>
               ) : null}
               <Campo
+                dato="pendiente"
                 etiqueta="Vigente desde"
                 nombre="vigenteDesde"
                 tipo="date"
@@ -292,6 +293,7 @@ export function VentanaDeConfirmacion({
                 deshabilitado={bloqueada}
               />
               <Campo
+                dato="pendiente"
                 etiqueta="Motivo del cambio"
                 nombre="motivo"
                 obligatorio="obligatorio"

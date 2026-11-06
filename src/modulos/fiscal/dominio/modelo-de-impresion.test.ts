@@ -1,3 +1,4 @@
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
   consumidorFinal,
@@ -14,6 +15,7 @@ import {
 import { EMPRESA } from "../../../../test/utilidades/fiscal";
 import { webDesdeTexto, type SitioWeb } from "../../../primitivas/contacto/web";
 import { TIPOS_DE_COMPROBANTE } from "./comprobante-emitido";
+import type { CondicionIibb } from "./datos-fiscales";
 import type { ContactoCongelado } from "./contacto-impreso";
 import {
   LEYENDA_DE_HOMOLOGACION,
@@ -24,6 +26,10 @@ import {
   type MarcaParaImprimir,
   type ModeloImpreso,
 } from "./modelo-de-impresion";
+import {
+  LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA,
+  leyendaDeCreditoFiscal,
+} from "./leyenda-de-credito-fiscal";
 import { armarNotaAsociada } from "./nota-asociada";
 import { CONDICIONES_DE_IVA_DEL_RECEPTOR } from "./condicion-iva-receptor";
 import type { Receptor } from "./receptor";
@@ -159,7 +165,7 @@ describe("modeloDeImpresion: bloque fiscal", () => {
       domicilioDelPuntoDeVenta:
         "Calle Falsa 123, Ciudad Autónoma de Buenos Aires, Ciudad Autónoma de Buenos Aires (CP C1043)",
       iibbNumero: "901-123456-7",
-      iibbCondicion: "LOCAL",
+      iibbCondicion: null,
       inicioDeActividades: "2019-03-01",
     });
   });
@@ -450,6 +456,40 @@ const facturaCConsumidorFinal = facturaArmada(
   monotributo,
 );
 
+const facturaAMonotributista = facturaArmada(
+  receptorMonotributista,
+  [renglon("1000.00", "1", "21"), renglon("100.00", "1", "EXENTO")],
+  { modoDePrecio: "IVA_DISCRIMINADO" },
+);
+
+/** Una nota de crédito sobre una factura A a un monotributista (número 94, punto de venta 7): el receptor es el del original. */
+function notaSobreFacturaAMonotributista(): ComprobanteParaImprimir {
+  const nota = armarNotaAsociada(
+    {
+      empresaId: EMPRESA,
+      emisorId: contextoDeEmision().emisorId,
+      ambiente: "PRODUCCION",
+      tipo: "FACTURA_A",
+      estado: "AUTORIZADO",
+      numero: 94n,
+      fechaEmision: fecha("2026-10-01"),
+      emisor: emisorInstantaneo({ puntoDeVentaNumero: 7 }),
+      receptor: receptorMonotributista,
+    },
+    {
+      clase: "NOTA_CREDITO",
+      motivo: "Devolución parcial",
+      modoDePrecio: "IVA_DISCRIMINADO",
+      concepto: "PRODUCTOS",
+      servicio: null,
+      renglones: [renglon("1000.00", "1", "21", null, "Torta")],
+    },
+    contextoDeEmision({ ambiente: "PRODUCCION" }),
+  );
+  if (!nota.ok) throw new Error("nota de prueba inválida");
+  return imprimible(nota.valor, { numero: 12n });
+}
+
 /** Una nota sobre una factura B a consumidor final (la factura B de los golden, número 94, punto de venta 7). */
 function notaSobreFacturaB(clase: "NOTA_CREDITO" | "NOTA_DEBITO"): ComprobanteParaImprimir {
   const nota = armarNotaAsociada(
@@ -487,6 +527,8 @@ describe("modeloDeImpresion: golden de la versión 2 (textos legales)", () => {
     ["nota-de-debito-b-consumidor-final", notaSobreFacturaB("NOTA_DEBITO")],
     ["factura-c-consumidor-final", imprimible(facturaCConsumidorFinal)],
     ["factura-a-inscripto", imprimible(facturaAInscripto)],
+    ["factura-a-monotributista", imprimible(facturaAMonotributista)],
+    ["nota-de-credito-a-monotributista", notaSobreFacturaAMonotributista()],
   ];
   for (const [nombre, comprobante] of casos) {
     it(`golden ${nombre}`, async () => {
@@ -497,6 +539,63 @@ describe("modeloDeImpresion: golden de la versión 2 (textos legales)", () => {
       );
     });
   }
+});
+
+/**
+ * Sin la condición de IIBB anterior del fixture (LOCAL): la versión 2 la entrega como `null` (D-115/D-116) y la 1 tal cual, así que
+ * las pruebas «la 2 es la 1 más lo nuevo» comparan sin ese campo; su diferencia se prueba aparte, más abajo.
+ */
+const sinCondicionDeIibb = (c: ComprobanteParaImprimir): ComprobanteParaImprimir => ({
+  ...c,
+  emisor: { ...c.emisor, iibbCondicion: null },
+});
+
+/** El emisor con Ingresos Brutos como lo guarda hoy la base: el número, o «No contribuyente» sin número (D-115/D-116). */
+const conIibb = (iibbNumero: string | null, iibbCondicion: CondicionIibb | null) => {
+  const base = imprimible(facturaB);
+  return imprimible(facturaB, { emisor: { ...base.emisor, iibbNumero, iibbCondicion } });
+};
+
+describe("modeloDeImpresion: Ingresos Brutos, número o «No contribuyente» (D-115/D-116)", () => {
+  const casos: readonly (readonly [string, ComprobanteParaImprimir])[] = [
+    ["factura-b-iibb-numero", conIibb("901-123456-7", null)],
+    ["factura-b-iibb-no-contribuyente", conIibb(null, "NO_CONTRIBUYENTE")],
+  ];
+  for (const [nombre, comprobante] of casos) {
+    it(`golden ${nombre}`, async () => {
+      const m = modelo(comprobante);
+      expect(m.versionDeRepresentacion).toBe(2);
+      await expect(JSON.stringify(m, null, 2)).toMatchFileSnapshot(
+        `./golden/modelo-v2-${nombre}.golden.txt`,
+      );
+    });
+  }
+
+  it("la versión 2 trae el número o «No contribuyente», y las tres condiciones anteriores llegan como null", () => {
+    expect(modelo(conIibb("55", null)).fiscal.emisor).toMatchObject({
+      iibbNumero: "55",
+      iibbCondicion: null,
+    });
+    expect(modelo(conIibb(null, "NO_CONTRIBUYENTE")).fiscal.emisor).toMatchObject({
+      iibbNumero: null,
+      iibbCondicion: "NO_CONTRIBUYENTE",
+    });
+    for (const vieja of ["LOCAL", "CONVENIO_MULTILATERAL", "EXENTO"] as const) {
+      expect(modelo(conIibb("55", vieja)).fiscal.emisor.iibbCondicion).toBeNull();
+      expect(modelo(conIibb(null, vieja)).fiscal.emisor.iibbCondicion).toBeNull();
+    }
+  });
+
+  it("la versión 1 no cambia: trae lo guardado tal cual, incluso las condiciones anteriores", () => {
+    const base = imprimible(facturaB, V1);
+    const m = modelo({
+      ...base,
+      emisor: { ...base.emisor, iibbCondicion: "CONVENIO_MULTILATERAL" },
+    });
+    expect(m.versionDeRepresentacion).toBe(1);
+    expect(m.fiscal.emisor.iibbCondicion).toBe("CONVENIO_MULTILATERAL");
+    expect(m.fiscal.emisor.iibbNumero).toBe("901-123456-7");
+  });
 });
 
 describe("modeloDeImpresion: bloque de transparencia fiscal (RG 5614)", () => {
@@ -636,6 +735,90 @@ describe("modeloDeImpresion: leyenda «A CONSUMIDOR FINAL» (RG 5866)", () => {
   });
 });
 
+describe("modeloDeImpresion: leyenda de crédito fiscal de la A a monotributista (RG 1415 art. 15 a)", () => {
+  it("el texto es el de la norma, sin parafrasear", () => {
+    expect(LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA).toBe(
+      "El crédito fiscal discriminado en el presente comprobante, sólo podrá ser computado a efectos del Régimen de Sostenimiento e Inclusión Fiscal para Pequeños Contribuyentes de la Ley Nº 27.618",
+    );
+  });
+
+  it("la factura A a un monotributista la lleva; a un inscripto, no", () => {
+    const conLeyenda = modelo(imprimible(facturaAMonotributista));
+    expect(conLeyenda.leyendasLegales).toEqual([LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA]);
+    expect(conLeyenda.leyendas).toEqual([LEYENDA_DE_HOMOLOGACION]);
+    const inscripto = modelo(imprimible(facturaAInscripto));
+    expect("leyendasLegales" in inscripto).toBe(false);
+    expect(inscripto.leyendas).toEqual([LEYENDA_DE_HOMOLOGACION]);
+  });
+
+  it("la nota de crédito A a un monotributista la lleva, también en producción (sin la de homologación)", () => {
+    const m = modelo(notaSobreFacturaAMonotributista());
+    expect(m.fiscal.letra).toBe("A");
+    expect(m.fiscal.rotulo).toBe("NOTA DE CRÉDITO");
+    expect(m.leyendasLegales).toEqual([LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA]);
+    expect(m.leyendas).toEqual([]);
+  });
+
+  it("la B y la C a un monotributista no la llevan", () => {
+    for (const base of [facturaB, facturaCConsumidorFinal]) {
+      const m = modelo(imprimible({ ...base, receptor: receptorMonotributista }));
+      expect(m.fiscal.letra).not.toBe("A");
+      expect(m.leyendas).toEqual([LEYENDA_DE_HOMOLOGACION]);
+      expect("leyendasLegales" in m).toBe(false);
+    }
+  });
+
+  it("propiedad: sale si y solo si la versión es 2 o más, la letra es A y el receptor es monotributo", () => {
+    const bases = [facturaAInscripto, facturaB, facturaCConsumidorFinal];
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...bases),
+        fc.constantFrom(...CONDICIONES_DE_IVA_DEL_RECEPTOR),
+        fc.constantFrom(1, 2),
+        (base, condicionIva, versionDeRepresentacion) => {
+          const m = modelo(
+            imprimible(
+              { ...base, receptor: { ...base.receptor, condicionIva } },
+              { versionDeRepresentacion },
+            ),
+          );
+          const esperada =
+            versionDeRepresentacion >= 2 &&
+            m.fiscal.letra === "A" &&
+            condicionIva === "MONOTRIBUTO";
+          expect(
+            (m.leyendasLegales ?? []).includes(LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA),
+          ).toBe(esperada);
+          // Nunca se mezclan: el texto legal no va en `leyendas` y el aviso de homologación no va en `leyendasLegales`.
+          expect(m.leyendas).not.toContain(LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA);
+          expect(m.leyendasLegales ?? []).not.toContain(LEYENDA_DE_HOMOLOGACION);
+          expect(m.leyendas).toEqual(
+            imprimible(base, { versionDeRepresentacion }).ambiente === "HOMOLOGACION"
+              ? [LEYENDA_DE_HOMOLOGACION]
+              : [],
+          );
+        },
+      ),
+    );
+  });
+
+  it("la regla pura: solo la letra A con MONOTRIBUTO", () => {
+    for (const letra of ["A", "B", "C"] as const) {
+      for (const c of CONDICIONES_DE_IVA_DEL_RECEPTOR) {
+        expect(leyendaDeCreditoFiscal(letra, c) !== null).toBe(
+          letra === "A" && c === "MONOTRIBUTO",
+        );
+      }
+    }
+  });
+
+  it("la versión 1 no la lleva aunque la letra sea A y el receptor monotributista", () => {
+    const m = modelo(imprimible(facturaAMonotributista, V1));
+    expect(m.leyendas).toEqual([LEYENDA_DE_HOMOLOGACION]);
+    expect("leyendasLegales" in m).toBe(false);
+  });
+});
+
 describe("modeloDeImpresion: la versión 1 sigue imprimiendo lo de antes", () => {
   it("la versión 1 no lleva ni el bloque ni la leyenda, sea cual sea el tipo y el receptor", () => {
     for (const tipo of TIPOS_DE_COMPROBANTE) {
@@ -658,7 +841,7 @@ describe("modeloDeImpresion: la versión 1 sigue imprimiendo lo de antes", () =>
       imprimible(facturaCConsumidorFinal),
       imprimible(facturaAInscripto),
       imprimible(facturaBAExento),
-    ]) {
+    ].map(sinCondicionDeIibb)) {
       const v1 = modelo({ ...comprobante, versionDeRepresentacion: 1 });
       const v2 = modelo(comprobante);
       const sinLosTextosLegales = {
@@ -805,7 +988,7 @@ describe("modeloDeImpresion: contacto congelado de la sucursal (D-98, D-99)", ()
   });
 
   it("la versión 2 con contacto es la 1 más los textos legales, el modo de precio y el contacto, y nada más", () => {
-    const comprobante = imprimible(facturaB, { contacto: CONTACTO_COMPLETO });
+    const comprobante = sinCondicionDeIibb(imprimible(facturaB, { contacto: CONTACTO_COMPLETO }));
     const v1 = modelo({ ...comprobante, versionDeRepresentacion: 1 });
     const v2 = modelo(comprobante);
     const sinLoNuevo = {
@@ -852,5 +1035,85 @@ describe("modeloDeImpresion: modo de precio (versión 2 en adelante)", () => {
       expect("modoDePrecio" in m).toBe(false);
       expect(JSON.stringify(m)).not.toContain("modoDePrecio");
     }
+  });
+});
+
+/**
+ * Nombre de la sucursal (D-114; dueño, 2026-11-05; `11-especificaciones/facturador-contratos-de-pantalla.md` del repositorio de
+ * docs): lo que congeló el comprobante al emitirse, solo de la versión 2 en adelante, sin rótulo. «Con una sola sucursal, solo la
+ * razón social» NO se decide acá (pregunta pendiente): el modelo expone el nombre si hay y la vista decidirá.
+ */
+describe("modeloDeImpresion: nombre de la sucursal congelado (D-114)", () => {
+  it("golden: la factura B con el nombre congelado", async () => {
+    const m = modelo(imprimible(facturaB, { sucursalNombre: "Hotel Centro" }));
+    expect(m.versionDeRepresentacion).toBe(2);
+    await expect(JSON.stringify(m, null, 2)).toMatchFileSnapshot(
+      "./golden/modelo-v2-factura-b-con-nombre-de-sucursal.golden.txt",
+    );
+  });
+
+  it("golden: el nombre convive con el contacto (cada bloque en su clave, sin mezclarse)", async () => {
+    const m = modelo(
+      imprimible(facturaB, { sucursalNombre: "Hotel Centro", contacto: CONTACTO_COMPLETO }),
+    );
+    await expect(JSON.stringify(m, null, 2)).toMatchFileSnapshot(
+      "./golden/modelo-v2-factura-b-con-nombre-y-contacto.golden.txt",
+    );
+  });
+
+  it("expone solo el nombre, tal cual se congeló, y sin rótulos", () => {
+    const m = modelo(imprimible(facturaB, { sucursalNombre: "Sucursal Ñandú — Güemes" }));
+    expect(m.sucursal).toEqual({ nombre: "Sucursal Ñandú — Güemes" });
+    expect(Object.keys(m.sucursal ?? {})).toEqual(["nombre"]);
+  });
+
+  it("sin nombre congelado (comprobante anterior a 0022) no hay bloque: la clave ni existe", () => {
+    const m = modelo(imprimible(facturaB, { sucursalNombre: null }));
+    expect(m.sucursal).toBeUndefined();
+    expect("sucursal" in m).toBe(false);
+  });
+
+  it("un texto vacío no se imprime: no sale un renglón en blanco", () => {
+    expect("sucursal" in modelo(imprimible(facturaB, { sucursalNombre: "" }))).toBe(false);
+  });
+
+  it("lo lleva todo tipo de comprobante: las notas y las letras A y C llevan el nombre que congelaron", () => {
+    for (const comprobante of [
+      notaSobreFacturaB("NOTA_CREDITO"),
+      notaSobreFacturaB("NOTA_DEBITO"),
+      imprimible(facturaCConsumidorFinal),
+      imprimible(facturaAInscripto),
+    ]) {
+      const m = modelo({ ...comprobante, sucursalNombre: "Hotel Centro" });
+      expect(m.sucursal, m.fiscal.rotulo + m.fiscal.letra).toEqual({ nombre: "Hotel Centro" });
+    }
+  });
+
+  it("la versión 1 no lo lleva aunque el comprobante lo tenga congelado: reimprime idéntica", () => {
+    for (const comprobante of [
+      facturaB,
+      facturaCConsumidorFinal,
+      facturaAInscripto,
+      facturaBAExento,
+    ]) {
+      const sin = modelo(imprimible(comprobante, V1));
+      const con = modelo(imprimible(comprobante, { ...V1, sucursalNombre: "Hotel Centro" }));
+      expect("sucursal" in con).toBe(false);
+      expect(JSON.stringify(con)).toBe(JSON.stringify(sin));
+    }
+  });
+
+  it("la versión 2 con nombre es la misma sin nombre más la clave `sucursal`, y nada más", () => {
+    const sin = modelo(imprimible(facturaB));
+    const con = modelo(imprimible(facturaB, { sucursalNombre: "Hotel Centro" }));
+    const { sucursal, ...resto } = con;
+    expect(sucursal).toEqual({ nombre: "Hotel Centro" });
+    expect(resto).toEqual(sin);
+  });
+
+  it("es del comprobante congelado: renombrar la sucursal después no entra en el modelo (el modelo no recibe la sucursal vigente)", () => {
+    const congelado = imprimible(facturaB, { sucursalNombre: "Hotel Centro" });
+    expect(JSON.stringify(modelo(congelado))).toBe(JSON.stringify(modelo({ ...congelado })));
+    expect(modelo(congelado).sucursal?.nombre).toBe("Hotel Centro");
   });
 });

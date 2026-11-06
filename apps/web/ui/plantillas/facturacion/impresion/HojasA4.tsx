@@ -1,7 +1,8 @@
 import type { DiccionarioResuelto } from "../../../../../../src/capacidades/vocabulario/vocabulario";
 import { formatearImporte } from "../formato-fiscal";
+import { aplicarEstilos } from "../../../primitivas/aplicar-estilos";
 import estilos from "./HojaA4.module.css";
-import { estiloDeLaGeometria } from "./geometria";
+import { variablesDeLaGeometria } from "./geometria";
 import { textoDeLaHoja, type HojaArmada } from "./modelo-de-la-hoja";
 import type { Paginacion } from "./paginador";
 import { EncabezadoDeHoja, PieDeHoja, TablaDeRenglones } from "./PiezasDeLaHoja";
@@ -29,7 +30,9 @@ export function HojasA4({ a, paginacion, altoDelPie, qrSvg, diccionario }: Props
           // La hoja k es la k-ésima del reparto: el orden no cambia mientras se dibuja.
           key={k}
           className={estilos["hoja"]}
-          style={estiloDeLaGeometria(altoDelPie)}
+          ref={(hoja) => {
+            aplicarEstilos(hoja, variablesDeLaGeometria(altoDelPie));
+          }}
           data-hoja={k + 1}
         >
           <EncabezadoDeHoja a={a} />

@@ -29,8 +29,6 @@ const SECRETOS = {
   pedidoPem: "PEDIDO-SECRETO",
   certificadoPem: "PEM-SECRETO",
   huellaSha256: "HUELLA-SECRETA",
-  iibbNumero: "IIBB-902-123456",
-  iibbCondicion: "CONVENIO_MULTILATERAL",
   creadoPor: "PERSONA-INTERNA",
   empresaId: "EMPRESA-INTERNA",
 };
@@ -132,7 +130,7 @@ describe("la lista de lo que falta deja pasar solo lo suyo", () => {
   });
 });
 
-describe("los datos fiscales y los puntos de venta dejan pasar solo lo suyo (sin Ingresos Brutos, D-45)", () => {
+describe("los datos fiscales y los puntos de venta dejan pasar solo lo suyo (Ingresos Brutos, D-115/D-116: el número o «No contribuyente»)", () => {
   it("datos fiscales: la versión que rige y el borrador, con su domicilio y los instantes como texto", async () => {
     const r = await datosFiscalesDelEmisor(
       con({
@@ -149,6 +147,9 @@ describe("los datos fiscales y los puntos de venta dejan pasar solo lo suyo (sin
               condicionIva: "MONOTRIBUTO",
               domicilio: DOMICILIO,
               inicioActividades: "2020-03-01",
+              // Una condición anterior (ya no se pide ni se imprime) no sale a la pantalla.
+              iibbNumero: "902-123456-7",
+              iibbCondicion: "CONVENIO_MULTILATERAL",
               ...SECRETOS,
             },
             borrador: {
@@ -158,6 +159,8 @@ describe("los datos fiscales y los puntos de venta dejan pasar solo lo suyo (sin
               condicionIva: null,
               domicilio: DOMICILIO,
               inicioActividades: null,
+              iibbNumero: null,
+              iibbCondicion: "NO_CONTRIBUYENTE",
               ...SECRETOS,
             },
           }),
@@ -189,6 +192,8 @@ describe("los datos fiscales y los puntos de venta dejan pasar solo lo suyo (sin
           condicionIva: "MONOTRIBUTO",
           domicilio,
           inicioActividades: "2020-03-01",
+          iibbNumero: "902-123456-7",
+          iibbCondicion: null,
         },
         borrador: {
           id: "b-1",
@@ -197,6 +202,8 @@ describe("los datos fiscales y los puntos de venta dejan pasar solo lo suyo (sin
           condicionIva: null,
           domicilio,
           inicioActividades: null,
+          iibbNumero: null,
+          iibbCondicion: "NO_CONTRIBUYENTE",
         },
       },
     });

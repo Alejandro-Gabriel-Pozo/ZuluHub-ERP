@@ -32,10 +32,20 @@ export function EncabezadoDeHoja({ a }: Readonly<{ a: HojaArmada }>) {
           {leyenda}
         </div>
       ))}
+      {a.leyendasLegales.map((leyenda, i) => (
+        <div key={i} className={estilos["leyendaLegal"]} data-leyenda-legal="">
+          {leyenda}
+        </div>
+      ))}
       <div className={estilos["cabecera"]}>
         <div>
           {a.nombreDeFantasia === null ? null : (
             <div className={estilos["nombre"]}>{a.nombreDeFantasia}</div>
+          )}
+          {a.nombreDeLaSucursal === null ? null : (
+            <div className={estilos["nombre"]} data-sucursal="">
+              {a.nombreDeLaSucursal}
+            </div>
           )}
           {a.emisor.map((fila) => (
             <Fila key={fila.rotulo ?? fila.valor} fila={fila} />

@@ -1,4 +1,4 @@
-import { qrComoSvg, type NivelDeCorreccion } from "./qr-svg";
+import { matrizDelQr, qrComoSvg, type NivelDeCorreccion } from "./qr-svg";
 
 /**
  * El QR de una factura YA DIBUJADO como SVG: recibe el texto del QR (la URL de ARCA que arma `urlDelQr` en
@@ -16,3 +16,12 @@ export const qrDeFacturaComoSvg = (
   url: string,
   correccion: NivelDeCorreccion = CORRECCION_DEL_QR_DE_FACTURA,
 ): string => qrComoSvg(url, correccion);
+
+/**
+ * La MISMA matriz de módulos que dibuja `qrDeFacturaComoSvg` (mismo texto, mismo nivel de corrección), para quien la dibuja de otra
+ * forma: el PDF la traza como vector. Un solo lugar elige el nivel; así el QR del PDF y el de la pantalla no pueden diferir.
+ */
+export const qrDeFacturaComoMatriz = (
+  url: string,
+  correccion: NivelDeCorreccion = CORRECCION_DEL_QR_DE_FACTURA,
+): readonly (readonly boolean[])[] => matrizDelQr(url, correccion);

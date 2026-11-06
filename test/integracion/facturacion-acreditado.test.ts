@@ -12,6 +12,7 @@ import {
 import { empresaId } from "../../src/primitivas/identificadores/marca";
 import { EmisionFalsa } from "../utilidades/emision-falsa";
 import { renglon } from "../utilidades/facturacion";
+import { reintentarSiAgotada } from "./concurrencia-apoyo";
 import { crearBarrera, crearBaseAparte } from "./entorno";
 import {
   RelojDePrueba,
@@ -458,16 +459,20 @@ describe.skipIf(base === null)(
         const factura = await p.facturaAutorizada();
         const pedido = p.pedidoDeNota(factura, "40.00");
         barrera = crearBarrera(2);
-        let rs;
+        let salidas;
         try {
-          rs = await Promise.all([
-            p.casos.emitirNotaDeCredito(p.como(), pedido),
-            p.casos.emitirNotaDeCredito(p.como(), pedido),
-          ]);
+          // Ante `ConcurrenciaAgotada` se repite el MISMO pedido (misma clave): reintentar no duplica la nota.
+          salidas = await Promise.all(
+            [0, 1].map(() =>
+              reintentarSiAgotada(() => p.casos.emitirNotaDeCredito(p.como(), pedido), {
+                contexto: "emitir la misma nota",
+              }),
+            ),
+          );
         } finally {
           barrera = null;
         }
-        const [a, b] = rs.map((r) => p.exito(r));
+        const [a, b] = salidas;
         expect(a?.comprobanteId).toBe(b?.comprobanteId);
         expect([a?.yaExistia, b?.yaExistia].sort()).toEqual([false, true]);
         expect(await p.detalle(factura)).toMatchObject({
@@ -484,18 +489,22 @@ describe.skipIf(base === null)(
           const p = await preparar();
           const factura = await p.facturaAutorizada();
           const importes = ["40.00", "40.00", "40.01", "0.99"];
+          // Un pedido por nota, armado una sola vez: si una pierde todas las rondas SERIALIZABLE (`ConcurrenciaAgotada`)
+          // se repite con la misma clave y no puede quedar duplicada.
+          const pedidos = importes.map((total) => p.pedidoDeNota(factura, total));
           barrera = crearBarrera(importes.length);
-          let rs;
+          let salidas;
           try {
-            rs = await Promise.all(
-              importes.map((total) =>
-                p.casos.emitirNotaDeCredito(p.como(), p.pedidoDeNota(factura, total)),
+            salidas = await Promise.all(
+              pedidos.map((pedido, i) =>
+                reintentarSiAgotada(() => p.casos.emitirNotaDeCredito(p.como(), pedido), {
+                  contexto: `nota ${i} de la ronda ${ronda}`,
+                }),
               ),
             );
           } finally {
             barrera = null;
           }
-          const salidas = rs.map((r) => p.exito(r));
           expect(new Set(salidas.map((s) => s.comprobanteId)).size, `ronda ${ronda}`).toBe(4);
           expect(salidas.every((s) => !s.yaExistia)).toBe(true);
           const d = await p.detalle(factura);
@@ -513,17 +522,20 @@ describe.skipIf(base === null)(
       it("sin tope: dos notas por el total completo a la vez quedan las dos y se pasa del total", async () => {
         const p = await preparar();
         const factura = await p.facturaAutorizada();
+        // Dos pedidos distintos (claves distintas), cada uno armado una vez para que el reintento repita su clave.
+        const pedidos = [p.pedidoDeNota(factura, "121.00"), p.pedidoDeNota(factura, "121.00")];
         barrera = crearBarrera(2);
-        let rs;
         try {
-          rs = await Promise.all([
-            p.casos.emitirNotaDeCredito(p.como(), p.pedidoDeNota(factura, "121.00")),
-            p.casos.emitirNotaDeCredito(p.como(), p.pedidoDeNota(factura, "121.00")),
-          ]);
+          await Promise.all(
+            pedidos.map((pedido, i) =>
+              reintentarSiAgotada(() => p.casos.emitirNotaDeCredito(p.como(), pedido), {
+                contexto: `nota ${i} por el total`,
+              }),
+            ),
+          );
         } finally {
           barrera = null;
         }
-        rs.forEach((r) => p.exito(r));
         expect(await p.detalle(factura)).toMatchObject({
           acreditado: "242.00",
           acreditacion: "TOTAL",

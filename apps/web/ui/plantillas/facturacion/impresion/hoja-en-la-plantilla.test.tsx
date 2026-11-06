@@ -22,6 +22,7 @@ describe("hoja A4 dentro de la plantilla de operación, al imprimir", () => {
         <PantallaDeImprimirComprobante
           comprobante={comprobanteDePrueba({ renglones: 3 })}
           qrSvg={QR_DE_PRUEBA}
+          urlDelPdf="/facturacion/comprobantes/x/pdf"
         />
       </ArmazonDeOperacion>,
     );
@@ -29,10 +30,19 @@ describe("hoja A4 dentro de la plantilla de operación, al imprimir", () => {
     const sesion = cdp();
     await sesion.send("Emulation.setEmulatedMedia", { media: "print" });
     try {
+      // La emulación de `print` se aplica de forma asíncrona (como en `hoja-a4.test.tsx`): se espera a que la hoja quede pegada al borde
+      // (el estilo de impresión ya rige) antes de medir lo demás. Previene: un rojo intermitente por leer la geometría antes de tiempo.
+      await expect
+        .poll(
+          () => {
+            const c = hojas[0]?.getBoundingClientRect();
+            return Math.max(Math.abs(c?.left ?? 99), Math.abs(c?.top ?? 99));
+          },
+          { timeout: 5000 },
+        )
+        .toBeLessThanOrEqual(1);
       const caja = hojas[0]?.getBoundingClientRect();
       expect(Math.abs((caja?.width ?? 0) - mmAPx(ANCHO_A4_MM))).toBeLessThanOrEqual(1);
-      expect(Math.abs(caja?.left ?? 99)).toBeLessThanOrEqual(1);
-      expect(Math.abs(caja?.top ?? 99)).toBeLessThanOrEqual(1);
       for (const ajeno of ["header", "footer", "fieldset", "button"]) {
         for (const el of document.querySelectorAll(ajeno)) {
           if (el.closest("[data-zona-de-impresion]")) continue;

@@ -445,6 +445,7 @@ describe.skipIf(base === null)("fiscal T4: concurrencia de los repositorios", ()
               condicionIva: "MONOTRIBUTO",
               domicilioFiscalId: dom,
               inicioActividades: "2020-01-01",
+              iibbCondicion: "NO_CONTRIBUYENTE",
             });
             if (!r.ok) throw new Error("borrador inválido");
             return r.valor;

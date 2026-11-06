@@ -1,3 +1,6 @@
+import type { SitioWeb } from "../../../primitivas/contacto/web";
+import type { ContactoCongelado } from "../dominio/contacto-impreso";
+
 /**
  * La fila de `comprobante` tal como la lee `seleccionar` (las fechas `date` ya como texto `YYYY-MM-DD`). Aparte del repositorio,
  * que está en el tope de líneas de la deuda técnica: el tipo no tiene lógica.
@@ -55,7 +58,28 @@ export type FilaDeComprobante = Readonly<{
   sucursal_telefono: string | null;
   sucursal_correo: string | null;
   sucursal_web: string | null;
+  sucursal_nombre: string | null;
   creado_por: string;
   creado_en: Date;
   version: number;
 }>;
+
+/**
+ * Lo que la sucursal tenía al nacer el comprobante y la base copió: el contacto (0019, D-98) y el nombre (0022, D-114). Nulo = no
+ * existe o es anterior a la migración. La web ya viene canónica: el CHECK `sucursal_web_ck` lo asegura, acá no se vuelve a validar.
+ */
+export function sucursalCongeladaDeLaFila(
+  fila: Pick<
+    FilaDeComprobante,
+    "sucursal_telefono" | "sucursal_correo" | "sucursal_web" | "sucursal_nombre"
+  >,
+): Readonly<{ contacto: ContactoCongelado; sucursalNombre: string | null }> {
+  return {
+    contacto: {
+      telefono: fila.sucursal_telefono,
+      correo: fila.sucursal_correo,
+      web: fila.sucursal_web as SitioWeb | null,
+    },
+    sucursalNombre: fila.sucursal_nombre,
+  };
+}

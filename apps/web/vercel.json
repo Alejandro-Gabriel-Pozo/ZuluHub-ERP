@@ -1,8 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd ../.. && npm ci --ignore-scripts",
   "regions": ["gru1"],
   "git": {
-    "deploymentEnabled": false
+    "deploymentEnabled": { "**": false, "preview": true }
   },
   "crons": [{ "path": "/api/trabajos/cron", "schedule": "17 6 * * *" }]
 }

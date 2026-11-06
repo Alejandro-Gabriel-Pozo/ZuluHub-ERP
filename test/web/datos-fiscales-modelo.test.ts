@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   MOTIVO_DE_LA_CONFIRMACION,
-  aFechaCivil,
   armarElPedidoDeConfirmacion,
   armarElPedidoDeGuardado,
   borradorTrasGuardar,
@@ -36,6 +35,8 @@ const VIGENTE: VigenteDeDatosFiscales = {
   condicionIva: "RESPONSABLE_INSCRIPTO",
   domicilio: DOMICILIO,
   inicioActividades: "2018-03-01",
+  iibbNumero: "901-123456-7",
+  iibbCondicion: null,
 };
 const BORRADOR: BorradorDeDatosFiscales = {
   id: "b1",
@@ -44,6 +45,8 @@ const BORRADOR: BorradorDeDatosFiscales = {
   condicionIva: VIGENTE.condicionIva,
   domicilio: DOMICILIO,
   inicioActividades: VIGENTE.inicioActividades,
+  iibbNumero: VIGENTE.iibbNumero,
+  iibbCondicion: VIGENTE.iibbCondicion,
 };
 const IDS = { borradorId: "nuevo-b", domicilioId: "nuevo-d" };
 const EMISOR = "e1";
@@ -53,7 +56,9 @@ describe("el formulario se abre con el borrador, con lo vigente o en blanco (D-8
     expect(valoresDelBorrador(BORRADOR)).toEqual({
       razonSocial: "Distribuidora Sur SA",
       condicionIva: "RESPONSABLE_INSCRIPTO",
-      inicioActividades: "01/03/2018",
+      ingresosBrutos: "NUMERO",
+      iibbNumero: "901-123456-7",
+      inicioActividades: "2018-03-01",
       calle: "Av. Rivadavia",
       numeroDeCalle: "1234",
       piso: "",
@@ -98,23 +103,15 @@ describe("el formulario se abre con el borrador, con lo vigente o en blanco (D-8
   });
 });
 
-describe("la fecha de inicio de actividades: dd/mm/aaaa a aaaa-mm-dd, solo con texto", () => {
-  it.each([
-    ["01/03/2018", "2018-03-01"],
-    ["  29/02/2024 ", "2024-02-29"],
-    ["31/12/1999", "1999-12-31"],
-    // La forma la acomoda la pantalla; si el día existe lo decide el servidor (`fechaCivilValida`), una sola regla.
-    ["31/02/2026", "2026-02-31"],
-  ])("%s → %s", (escrita, esperada) => {
-    expect(aFechaCivil(escrita)).toBe(esperada);
+describe("la fecha de inicio de actividades: aaaa-mm-dd tal cual, sin conversión", () => {
+  it("viaja como la entrega la entrada de fecha (recortada)", () => {
+    expect(PIDE({ inicioActividades: "2020-08-15" })).toMatchObject({
+      inicioActividades: "2020-08-15",
+    });
+    expect(PIDE({ inicioActividades: " 2020-08-15 " })).toMatchObject({
+      inicioActividades: "2020-08-15",
+    });
   });
-
-  it.each(["2018-03-01", "1/3/2018", "01-03-2018", "01/03/18", "abc", "01/03/2018 10:00"])(
-    "«%s» no tiene la forma: viaja tal cual y el servidor la rechaza marcando el campo",
-    (escrita) => {
-      expect(aFechaCivil(escrita)).toBe(escrita.trim());
-    },
-  );
 });
 
 const PIDE = (
@@ -139,6 +136,7 @@ describe("el pedido de «Guardar borrador»", () => {
       razonSocial: "Distribuidora Sur SA",
       condicionIva: "RESPONSABLE_INSCRIPTO",
       inicioActividades: "2018-03-01",
+      iibbNumero: "901-123456-7",
     });
   });
 
@@ -190,15 +188,81 @@ describe("el pedido de «Guardar borrador»", () => {
   });
 
   it("la fecha escrita va en aaaa-mm-dd", () => {
-    expect(PIDE({ inicioActividades: "15/08/2020" })).toMatchObject({
+    expect(PIDE({ inicioActividades: "2020-08-15" })).toMatchObject({
       inicioActividades: "2020-08-15",
     });
   });
 
-  it("nunca pide Ingresos Brutos (D-45) ni fecha de vigencia (D-61)", () => {
-    const claves = Object.keys(PIDE({ calle: "x" }));
-    expect(claves.join(" ")).not.toMatch(/iibb|ingresos|vigente/i);
+  it("nunca pide fecha de vigencia (D-61)", () => {
+    expect(Object.keys(PIDE({ calle: "x" })).join(" ")).not.toMatch(/vigente/i);
   });
+});
+
+describe("Ingresos Brutos en el pedido de guardado (D-116)", () => {
+  const SIN_IIBB = { ...BORRADOR, iibbNumero: null, iibbCondicion: null };
+  const NO_CONTRIBUYENTE = {
+    ...BORRADOR,
+    iibbNumero: null,
+    iibbCondicion: "NO_CONTRIBUYENTE",
+  } as const;
+
+  it("con «Número de inscripción»: el número recortado y, como antes no había condición, no viaja la condición", () => {
+    const pedido = PIDE({ ingresosBrutos: "NUMERO", iibbNumero: " 901-123456-7 " }, SIN_IIBB);
+    expect(pedido).toMatchObject({ iibbNumero: "901-123456-7" });
+    expect(pedido).not.toHaveProperty("iibbCondicion");
+  });
+
+  it("con «No contribuyente»: la condición y sin número (aunque haya texto escrito de antes)", () => {
+    const pedido = PIDE({ ingresosBrutos: "NO_CONTRIBUYENTE", iibbNumero: "123" }, SIN_IIBB);
+    expect(pedido).toMatchObject({ iibbCondicion: "NO_CONTRIBUYENTE" });
+    expect(pedido).not.toHaveProperty("iibbNumero");
+  });
+
+  it("sin elegir (y sin nada antes): no se manda ninguno de los dos", () => {
+    const pedido = PIDE({}, SIN_IIBB);
+    expect(pedido).not.toHaveProperty("iibbNumero");
+    expect(pedido).not.toHaveProperty("iibbCondicion");
+  });
+
+  it("pasar de número a «No contribuyente»: manda la condición y borra el número (null); nunca los dos con valor", () => {
+    const pedido = PIDE({ ingresosBrutos: "NO_CONTRIBUYENTE" });
+    expect(pedido).toMatchObject({ iibbCondicion: "NO_CONTRIBUYENTE", iibbNumero: null });
+  });
+
+  it("pasar de «No contribuyente» a un número: manda el número y borra la condición (null)", () => {
+    const pedido = PIDE({ ingresosBrutos: "NUMERO", iibbNumero: "20-1" }, NO_CONTRIBUYENTE);
+    expect(pedido).toMatchObject({ iibbNumero: "20-1", iibbCondicion: null });
+  });
+
+  it("borrar lo que antes tenía valor: viaja null (el servidor lo borra)", () => {
+    expect(PIDE({ ingresosBrutos: "", iibbNumero: "" })).toMatchObject({ iibbNumero: null });
+    expect(PIDE({ ingresosBrutos: "" }, NO_CONTRIBUYENTE)).toMatchObject({ iibbCondicion: null });
+    expect(PIDE({ iibbNumero: "   " })).toMatchObject({ iibbNumero: null });
+  });
+
+  it("sin cambios: el borrador reenvía lo mismo que tenía", () => {
+    expect(PIDE({}, NO_CONTRIBUYENTE)).toMatchObject({ iibbCondicion: "NO_CONTRIBUYENTE" });
+  });
+});
+
+describe("Ingresos Brutos al abrir el formulario (D-116)", () => {
+  it.each([
+    [{ iibbNumero: "901-123456-7", iibbCondicion: null }, "NUMERO", "901-123456-7"],
+    [{ iibbNumero: null, iibbCondicion: "NO_CONTRIBUYENTE" }, "NO_CONTRIBUYENTE", ""],
+    [{ iibbNumero: null, iibbCondicion: null }, "", ""],
+  ] as const)(
+    "%j: modo «%s» y número «%s», en el borrador y en lo vigente",
+    (iibb, modo, numero) => {
+      expect(valoresDelBorrador({ ...BORRADOR, ...iibb })).toMatchObject({
+        ingresosBrutos: modo,
+        iibbNumero: numero,
+      });
+      expect(valoresDelBorrador(null, { ...VIGENTE, ...iibb })).toMatchObject({
+        ingresosBrutos: modo,
+        iibbNumero: numero,
+      });
+    },
+  );
 });
 
 describe("tras un guardado exitoso el borrador es el guardado (confirmación rechazada y corrección)", () => {
@@ -214,6 +278,8 @@ describe("tras un guardado exitoso el borrador es el guardado (confirmación rec
       id: "nuevo-b",
       razonSocial: "Mi Empresa SRL",
       condicionIva: null,
+      iibbNumero: null,
+      iibbCondicion: null,
       inicioActividades: null,
       domicilio: {
         id: "nuevo-d",
@@ -230,7 +296,7 @@ describe("tras un guardado exitoso el borrador es el guardado (confirmación rec
 
   it("el segundo guardado sale con la versión devuelta, el mismo borrador y, si el domicilio cambió, con un id de domicilio NUEVO (nunca el mismo id con otro contenido)", () => {
     const tras = { ...borradorTrasGuardar(ESCRITO, IDS, null), version: 1 };
-    const corregido = { ...ESCRITO, calle: "Belgrano", inicioActividades: "01/03/2018" };
+    const corregido = { ...ESCRITO, calle: "Belgrano", inicioActividades: "2018-03-01" };
     const pedido = armarElPedidoDeGuardado(
       corregido,
       { borradorId: IDS.borradorId, domicilioId: "otro-d" },
@@ -249,7 +315,7 @@ describe("tras un guardado exitoso el borrador es el guardado (confirmación rec
   it("si solo se completó otra cosa, el domicilio ya guardado NO viaja de nuevo", () => {
     const tras = { ...borradorTrasGuardar(ESCRITO, IDS, null), version: 1 };
     const pedido = armarElPedidoDeGuardado(
-      { ...ESCRITO, inicioActividades: "01/03/2018" },
+      { ...ESCRITO, inicioActividades: "2018-03-01" },
       { borradorId: IDS.borradorId, domicilioId: "otro-d" },
       EMISOR,
       tras.version,
@@ -257,8 +323,44 @@ describe("tras un guardado exitoso el borrador es el guardado (confirmación rec
     );
     expect(pedido).not.toHaveProperty("domicilio");
     expect(
-      borradorTrasGuardar({ ...ESCRITO, inicioActividades: "01/03/2018" }, IDS, tras).domicilio,
+      borradorTrasGuardar({ ...ESCRITO, inicioActividades: "2018-03-01" }, IDS, tras).domicilio,
     ).toEqual(tras.domicilio);
+  });
+});
+
+describe("Ingresos Brutos en lo que queda guardado tras guardar", () => {
+  const BASE = valoresDelBorrador(null);
+
+  it("el número escrito queda recortado, sin condición", () => {
+    expect(
+      borradorTrasGuardar(
+        { ...BASE, ingresosBrutos: "NUMERO", iibbNumero: " 901-123456-7 " },
+        IDS,
+        null,
+      ),
+    ).toMatchObject({ iibbNumero: "901-123456-7", iibbCondicion: null });
+  });
+
+  it("«No contribuyente» queda sin número, y el siguiente guardado se compara con eso (no reenvía nada)", () => {
+    const tras = {
+      ...borradorTrasGuardar(
+        { ...BASE, ingresosBrutos: "NO_CONTRIBUYENTE", iibbNumero: "x" },
+        IDS,
+        null,
+      ),
+      version: 1,
+    };
+    expect(tras).toMatchObject({ iibbNumero: null, iibbCondicion: "NO_CONTRIBUYENTE" });
+    const pedido = armarElPedidoDeGuardado(valoresDelBorrador(tras), IDS, EMISOR, 1, tras);
+    expect(pedido).toMatchObject({ iibbCondicion: "NO_CONTRIBUYENTE" });
+    expect(pedido).not.toHaveProperty("iibbNumero");
+  });
+
+  it("«Número de inscripción» sin texto no declara nada", () => {
+    expect(borradorTrasGuardar({ ...BASE, ingresosBrutos: "NUMERO" }, IDS, null)).toMatchObject({
+      iibbNumero: null,
+      iibbCondicion: null,
+    });
   });
 });
 
@@ -281,6 +383,10 @@ describe("dónde se marca un error del servidor", () => {
     ["razonSocial", "razonSocial"],
     ["condicionIva", "condicionIva"],
     ["inicioActividades", "inicioActividades"],
+    // Ingresos Brutos (D-116): «falta elegir» y la condición inválida marcan el desplegable; el número inválido, su campo.
+    ["ingresosBrutos", "ingresosBrutos"],
+    ["iibbCondicion", "ingresosBrutos"],
+    ["iibbNumero", "iibbNumero"],
     ["domicilio.calle", "calle"],
     ["domicilio.numero", "numeroDeCalle"],
     ["domicilio.piso", "piso"],

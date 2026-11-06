@@ -9,6 +9,8 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
 - Cambios mínimos y enfocados; no inventar librerías ni APIs; avisar antes de sumar una dependencia.
 - Si tocás `apps/web/ui`, corré también `npm run test:componentes` (Chromium real: axe, foco y envío; el CI lo corre en el job
   `componentes`). Un entorno que ya trae su propio Chromium lo indica con `PEDERNAL_NAVEGADOR=<ruta del ejecutable>`.
+- Si tocás `apps/web`, corré también `npm run test:recorrido` (app real, Chromium y Postgres; necesita `npm run build:web` hecho). Previene: un `Boton`
+  sin `"use client"` rompe «Emitir» en el navegador (React #441) y ninguna prueba unitaria lo ve; lo cubre el job `recorrido` del Gate.
 - Una regla nueva de arquitectura trae su violación inyectada en `test/arquitectura/reglas.test.ts`.
 
 ## Reglas que no se negocian
@@ -24,7 +26,17 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
 - **Todo nace cerrado (denegar por defecto).** Nada se habilita sin declararlo, autorizarlo y dejar rastro; ante un error o una duda el
   sistema cierra (fail closed). Las capacidades son opt-in, con el mínimo privilegio y lista blanca: solo pasa lo declarado. Ejemplos: un
   módulo «en desarrollo» no da permisos a nadie; sin sucursal elegida nunca se asume «todas»; la barra que no puede leer permisos no
-  muestra la entrada.
+  muestra la entrada. La validación de un dato declara lo que se PERMITE (conjunto, largo, forma), nunca lo que se prohíbe: lo que nadie pensó en
+  prohibir pasa (caso real: `/\p{Cc}/u` en `datos-fiscales.ts` solo rechaza controles y deja pasar invisibles y `<>`). Chequeo:
+  `test/arquitectura/lista-de-permitidos.test.ts` (PR 2 de C1, todavía no existe: hasta que entre se cumple por revisión).
+- **Sin dato registrado no hay campo (dueño, 2026-11-05).** Todo campo de entrada de `apps/web` y `apps/plataforma` es un componente de
+  campo con la prop `dato`, y ese dato está en `src/capacidades/datos/registro.ts` (primitiva, propósitos con fuente, consumidores, quién
+  lo pone, qué necesita). Un `<input>`, `<textarea>` o `<select>` crudo, un campo sin dato o con un dato no registrado, un consumidor no
+  declarado, un dato sin consumidor y sus evasiones (cualquier aparición de `createElement`/`jsx`/`innerHTML`/`dangerouslySetInnerHTML` y afines, alias del componente, tag dinámico o fuera de la lista de permitidos) fallan, en todo el código de las apps, tests incluidos; lo
+  existente que no cumple es deuda con vencimiento (`campos-sin-dato--*` en `arquitectura/deuda/registro.json`) y con presupuesto por archivo que
+  solo baja (`arquitectura/deuda/campos-sin-dato.json`), no una excepción silenciosa. Previene: la primitiva del CUIT existía y el campo de documento de
+  «Emitir» no la usaba (el CUIT quedó escrito como nombre). Chequeo: `test/arquitectura/campos-con-dato.test.ts`, con una violación
+  inyectada por cada caso.
 - **Interfaz sobria (dueño, 2026-10-30).** No agregues textos, etiquetas, avisos ni ayudas visuales por iniciativa propia: usá primero textos ya
   aprobados y, si el control comunica el motivo con su estado y un texto existente, no dupliques la indicación. Ante la ambigüedad, el cambio mínimo,
   reversible y con menos texto, con el supuesto asentado y confirmación antes de ampliar. Una pantalla terminada no se modifica porque muestre una
@@ -46,7 +58,10 @@ plataforma tuvo en el menú «Dominios» y «Soporte» sin pantalla aprobada.
 - **Alcance cerrado.** Se hace solo lo pedido. Lo que no está en la lista no se hace: si ves algo más (mejora, riesgo, deuda), anotalo
   en «Hallazgos aparte» sin tocarlo. Entre quedarse corto y agrandar, quedarse corto.
 - **Una regla, un lugar.** Antes de crear una función, una regla o una constante, buscá si ya tiene dueño (registro de contratos,
-  `primitivas/`, el `publico.ts` del módulo). Un mismo límite o cálculo no se escribe en dos lugares.
+  `primitivas/`, el `publico.ts` del módulo). Un mismo límite o cálculo no se escribe en dos lugares. El largo máximo y el conjunto permitido de un dato viven una
+  vez, en su primitiva; dominio, esquemas, pantallas y PDF los importan, y la base solo los copia con una prueba que falla si difieren (caso real: la
+  auditoría de columnas halló 37 con la regla en dos lugares y 6 que ya no coincidían). Chequeo: `test/arquitectura/fuente-unica.test.ts` (PR 2 de
+  C1, todavía no existe: hasta que entre se cumple por revisión).
 - **Lo que el dueño no aprobó lleva su fuente.** Todo texto, rótulo, regla o dato que ve el cliente y que el dueño no aprobó se agrega
   solo si tiene una **fuente verificable** y se cita junto a la clave o la regla (comentario del catálogo o del código) y en la descripción del
   PR: archivo y línea o sección (documento, manual de ARCA, grabación, código) o el mensaje con su fecha, y quién lo decidió. «Lo aprobó el

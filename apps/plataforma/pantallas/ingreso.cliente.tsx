@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Aviso } from "../../web/ui/componentes/Aviso";
-import { Boton } from "../../web/ui/componentes/Boton";
+import { Boton } from "../../web/ui/componentes/Boton.cliente";
 import { Texto } from "../../web/ui/primitivas/Texto";
 import { TEXTO_NEUTRO_DE_INGRESO } from "../logica/ingreso";
 

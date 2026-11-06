@@ -3,7 +3,11 @@ import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { darDeBajaAlAdmin } from "../../src/adaptadores/postgres/baja-de-admin";
 import { ejecutarBajaDeAdmin } from "../../scripts/ejecutar-baja-de-admin";
 import { VARIABLE_DE_LA_CADENA } from "../../scripts/entrada-del-dueno";
-import { altaDeAdmin, type AdminDePrueba } from "./autenticacion-plataforma-apoyo";
+import {
+  altaDeAdmin,
+  type AdminDePrueba,
+  usarFechaQuietaDeTotp,
+} from "./autenticacion-plataforma-apoyo";
 import { crearBaseAparte } from "./entorno";
 
 /**
@@ -16,6 +20,7 @@ const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 120_000, hookTimeout: 120_000 });
 
 describe.skipIf(base === null)("la guarda del último ADMIN en la baja", () => {
+  usarFechaQuietaDeTotp();
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let dueno: pg.Client;
 

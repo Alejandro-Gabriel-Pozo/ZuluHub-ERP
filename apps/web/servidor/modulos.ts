@@ -115,6 +115,19 @@ export async function puedeVerLaConfiguracionFiscal(contexto: ContextoOperativo)
   return permisos !== null && permisos.acciones.includes(ACCION_DE_CONFIGURACION_FISCAL);
 }
 
+/**
+ * ¿La persona puede editar el contacto de la sucursal (D-113)? Es la oferta de `sucursales.editar` (gerente y administrador) que el
+ * servidor calcula con `ofertaDe`: con el módulo en solo lectura o sin el rol, no. Si no se pudieron leer los permisos, `false`
+ * (cierra, no abre). Ocultar no es autorizar: la ficha y el guardado vuelven a pasar por el guard. Chequeo:
+ * `test/web/contacto-de-sucursal-acceso.test.ts`.
+ */
+export async function puedeEditarElContactoDeLaSucursal(
+  contexto: ContextoOperativo,
+): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe("sucursales.editar", permisos).permitida;
+}
+
 type PermisosLeidos = NonNullable<Awaited<ReturnType<typeof permisosDeLaPersona>>>;
 
 /** De una acción, su módulo, el estado de construcción de ese módulo y su efecto: el catálogo es el único dueño de esos datos. */
@@ -160,8 +173,9 @@ function ofertaDe(accion: ClaveAccion, permisos: PermisosLeidos): OfertaDeAccion
 
 /**
  * Qué botones de Puntos de venta se ofrecen activos hoy, según lo que el SERVIDOR deja hacer (`permisosDelActor`, una lectura por
- * pedido). «Pasar a producción» (`puntos_de_venta.cambiar_ambiente`) es del módulo `facturacion`, en desarrollo: sale apagado con
- * «Esta función todavía está en desarrollo.»; las demás son de `administracion`. Si no se pudieron leer los permisos, TODO sale apagado
+ * pedido). «Pasar a producción» (`puntos_de_venta.cambiar_ambiente`) es del módulo `facturacion` (`disponible` desde 2026-11-04, pero
+ * activo solo en las empresas donde la plataforma lo activó): sale apagado, con el motivo que da el servidor, si el módulo no está activo
+ * para la empresa o el rol no alcanza; las demás son de `administracion`. Si no se pudieron leer los permisos, TODO sale apagado
  * con el genérico de D-82, «Esta acción no está permitida.» (ante un error o una duda el sistema cierra, `CLAUDE.md`; igual que
  * `puedeEmitirNotasDeCredito` y la barra).
  * Previene: ofrecer un botón que el guard va a rechazar sin saber si la persona puede. Es solo una ayuda: ocultar o apagar no es

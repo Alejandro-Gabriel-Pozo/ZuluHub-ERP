@@ -1,5 +1,5 @@
 import { Aviso } from "../../web/ui/componentes/Aviso";
-import { Boton } from "../../web/ui/componentes/Boton";
+import { Boton } from "../../web/ui/componentes/Boton.cliente";
 import { Texto } from "../../web/ui/primitivas/Texto";
 import type { ErrorParaLaPantalla } from "../logica/errores-de-plataforma";
 import type { FichaDeSubmarca } from "../logica/ficha-de-submarca";

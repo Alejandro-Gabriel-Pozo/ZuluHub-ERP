@@ -46,6 +46,7 @@ export function paraImprimir(c: ComprobanteGuardado): ComprobanteParaImprimir {
     versionDeRepresentacion: c.versionDeRepresentacion,
     modoDePrecio: c.modoDePrecio,
     contacto: c.contacto,
+    sucursalNombre: c.sucursalNombre,
   };
 }
 

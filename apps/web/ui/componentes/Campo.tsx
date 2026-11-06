@@ -1,12 +1,17 @@
+import type { DatoDeCampo } from "../../../../src/capacidades/datos/registro";
 import { CajaDeCampo } from "./CajaDeCampo";
 import estilos from "./Campo.module.css";
 
 export type PropsDeCampo = Readonly<{
+  /** Qué dato pide el campo: un `IdDeDato` del registro de datos o `"pendiente"` (deuda registrada). Obligatorio: sin dato no hay campo. */
+  dato: DatoDeCampo;
   etiqueta: string;
   valor: string;
   alCambiar: (valor: string) => void;
   nombre?: string | undefined;
   tipo?: "text" | "email" | "search" | "tel" | "url" | "date";
+  /** Con `tipo="date"`: la última fecha `aaaa-mm-dd` que ofrece el selector. Es ayuda, no validación (la regla es del servidor). */
+  maximo?: string | undefined;
   autoComplete?: string | undefined;
   /** `"off"` para códigos que distinguen mayúsculas: el teclado del celular no debe corregirlos ni capitalizarlos. */
   autoCapitalize?: "off" | undefined;
@@ -24,6 +29,7 @@ export function Campo({
   alCambiar,
   nombre,
   tipo = "text",
+  maximo,
   autoComplete,
   autoCapitalize,
   inputMode,
@@ -43,6 +49,7 @@ export function Campo({
           {...datos}
           className={estilos["entrada"]}
           type={tipo}
+          max={maximo}
           name={nombre}
           value={valor}
           autoComplete={autoComplete}

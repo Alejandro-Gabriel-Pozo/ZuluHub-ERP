@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Aviso } from "../../web/ui/componentes/Aviso";
-import { Boton } from "../../web/ui/componentes/Boton";
+import { Boton } from "../../web/ui/componentes/Boton.cliente";
 import { CampoDeCodigo } from "../../web/ui/componentes/CampoDeCodigo";
 import { Pila } from "../../web/ui/primitivas/Pila";
 import { Texto } from "../../web/ui/primitivas/Texto";
@@ -182,6 +182,7 @@ export function AltaDelSegundoFactor() {
             3. Confirmá con un código
           </Texto>
           <CampoDeCodigo
+            dato="pendiente"
             etiqueta="Código de la aplicación"
             valor={codigo}
             alCambiar={setCodigo}
