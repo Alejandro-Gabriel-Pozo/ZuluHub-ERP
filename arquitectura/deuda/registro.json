@@ -470,24 +470,6 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "archivo-grande--src-modulos-fiscal-persistencia-repositorio-de-comprobantes-ts",
-    "archivos": ["src/modulos/fiscal/persistencia/repositorio-de-comprobantes.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 833,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "archivo-grande--src-modulos-fiscal-persistencia-repositorios-ts",
-    "archivos": ["src/modulos/fiscal/persistencia/repositorios.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 1228,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "archivo-grande--src-modulos-identidad-dominio-invitacion-ts",
     "archivos": ["src/modulos/identidad/dominio/invitacion.ts"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
