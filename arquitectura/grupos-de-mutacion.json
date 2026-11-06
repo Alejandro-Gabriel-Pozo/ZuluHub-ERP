@@ -385,19 +385,19 @@
   },
   {
     "grupo": "guardián (vigilancia de la versión anterior, parte 1)",
-    "archivos": "arquitectura/contratos/no-debilitar.cjs:1-597",
+    "archivos": "arquitectura/contratos/no-debilitar.cjs:1-600",
     "minutos": 17.7,
     "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-deuda.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-mutantes-g-vigilancia.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
   },
   {
     "grupo": "guardián (vigilancia de la versión anterior, parte 2)",
-    "archivos": "arquitectura/contratos/no-debilitar.cjs:598-1252",
+    "archivos": "arquitectura/contratos/no-debilitar.cjs:601-1255",
     "minutos": 17.4,
     "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-deuda.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-mutantes-g-vigilancia.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
   },
   {
     "grupo": "guardián (vigilancia de la versión anterior, parte 3)",
-    "archivos": "arquitectura/contratos/no-debilitar.cjs:1253-1804",
+    "archivos": "arquitectura/contratos/no-debilitar.cjs:1256-1798",
     "minutos": 13.5,
     "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-deuda.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-mutantes-g-vigilancia.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
   },
@@ -415,7 +415,7 @@
   },
   {
     "grupo": "guardián (deuda técnica, libro y comparación con la base)",
-    "archivos": "arquitectura/deuda/libro.cjs,arquitectura/deuda/entradas.cjs,arquitectura/deuda/antes-y-despues.cjs",
+    "archivos": "arquitectura/deuda/libro.cjs,arquitectura/deuda/entradas.cjs,arquitectura/deuda/antes-y-despues.cjs,arquitectura/deuda/por-diseno.cjs",
     "minutos": 7.2,
     "pruebas": "test/arquitectura/guardian-deuda-comparacion.test.ts test/arquitectura/guardian-deuda-libro.test.ts"
   },

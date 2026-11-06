@@ -317,6 +317,7 @@ describe("el informe de cada corrida", () => {
     expect(informe.resultado).toBe("pasa");
     expect(informe.configuracion).toEqual({
       topeDeExcepciones: 4,
+      topeDePorDiseno: 0,
       bloqueaDeudaEnArchivoTocado: true,
       topeDeLineasPorArchivo: 400,
       excluidosDelTope: [],

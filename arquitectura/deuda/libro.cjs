@@ -36,6 +36,7 @@ const {
   leerJson,
 } = require("./entradas.cjs");
 const { TIPOS_DE_MARCADOR, detectar, familiaDe } = require("./marcadores.cjs");
+const { controlesDeConjunto, revisionDe } = require("./por-diseno.cjs");
 const { OPCIONES_POR_DEFECTO } = require("./tamano.cjs");
 
 /** Las opciones de medición (tope y exclusiones de tamaño) de una configuración leída. */
@@ -181,6 +182,7 @@ function evaluarArbol({ arbol, ahora }) {
         );
       }
       const excepcion = CAMPOS_DE_EXCEPCION.some((campo) => crudo[campo] !== undefined);
+      const porDiseno = crudo.porDiseno !== undefined;
       const vista = Object.fromEntries(
         ["id", "responsable", "creada", ...(excepcion ? CAMPOS_DE_EXCEPCION : [])].map((campo) => [
           campo,
@@ -213,6 +215,14 @@ function evaluarArbol({ arbol, ahora }) {
         indice,
       );
       if (aviso !== null) avisos.push(aviso);
+      const revision = revisionDe(crudo, hoy, ARCHIVO_DEL_REGISTRO, CONTRATO, indice);
+      if (revision.aviso !== undefined) avisos.push(revision.aviso);
+      if (revision.falla !== undefined) {
+        const { motivo, correccion } = revision.falla;
+        fallas.push(
+          delRegistro("excepcion-vencida", motivo, correccion, enJson(indice, "porDiseno")),
+        );
+      }
       if (registra) {
         entradas.push({
           indice,
@@ -220,7 +230,14 @@ function evaluarArbol({ arbol, ahora }) {
           tipo: crudo.tipo,
           archivos: crudo.archivos,
           excepcion,
-          vigente: excepcion && problemas.length === 0 && delControl.length === 0,
+          porDiseno,
+          cantidad: Number.isInteger(crudo.cantidad) ? crudo.cantidad : null,
+          origen: crudo.origen ?? null,
+          vigente:
+            (excepcion || porDiseno) &&
+            problemas.length === 0 &&
+            delControl.length === 0 &&
+            revision.falla === undefined,
           verificacion: crudo.verificacion?.contiene ?? null,
           tamano: crudo.tipo === "archivo-grande" && esTamano(crudo.tamano) ? crudo.tamano : null,
           creada: crudo.creada,
@@ -308,6 +325,13 @@ function evaluarArbol({ arbol, ahora }) {
         enJson(sobra.indice, "id"),
       ),
     );
+  }
+
+  const lineasDe = (entrada) =>
+    medicion.porClave.get(claveDe(entrada.tipo, entrada.archivos[0]))?.lineas.length ?? null;
+  for (const hallazgo of controlesDeConjunto({ entradas, configuracion, lineasDe })) {
+    const { aviso, campo, codigo, correccion, indice, motivo } = hallazgo;
+    (aviso ? avisos : fallas).push(delRegistro(codigo, motivo, correccion, enJson(indice, campo)));
   }
 
   for (const { tipo, archivo, lineas } of medicion.lista) {

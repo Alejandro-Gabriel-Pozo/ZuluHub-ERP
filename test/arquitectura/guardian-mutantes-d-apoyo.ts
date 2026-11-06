@@ -244,6 +244,7 @@ const DETECTOR = [
   "arquitectura/deuda/marcadores.cjs",
   "arquitectura/deuda/archivos-de-datos.cjs",
   "arquitectura/deuda/tamano.cjs",
+  "arquitectura/deuda/por-diseno.cjs",
 ];
 
 /**

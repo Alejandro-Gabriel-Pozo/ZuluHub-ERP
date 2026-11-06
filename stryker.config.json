@@ -87,6 +87,7 @@
     "arquitectura/deuda/marcadores.cjs",
     "arquitectura/deuda/archivos-de-datos.cjs",
     "arquitectura/deuda/tamano.cjs",
+    "arquitectura/deuda/por-diseno.cjs",
     "arquitectura/deuda/entradas.cjs",
     "arquitectura/deuda/libro.cjs",
     "arquitectura/deuda/antes-y-despues.cjs",

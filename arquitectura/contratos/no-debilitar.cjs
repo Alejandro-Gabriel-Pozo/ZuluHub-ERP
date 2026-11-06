@@ -63,6 +63,7 @@ const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const { detectar } = require("../deuda/marcadores.cjs");
+const { hallazgosDeTopes } = require("../deuda/por-diseno.cjs");
 const { OPCIONES_POR_DEFECTO } = require("../deuda/tamano.cjs");
 const { crearUbicador, enArchivo, enContrato, enJson, enTexto } = require("./ubicacion.cjs");
 
@@ -526,6 +527,8 @@ function leerDeuda(textoDelRegistro, textoDeLaConfiguracion) {
       valor: {
         entradas: entradas.map(resumirEntradaDeDeuda),
         tope: configuracion.topeDeExcepciones,
+        topePorDiseno: configuracion.topeDePorDiseno,
+        ampliacion: configuracion.ampliacionDelTope,
         bloquea: configuracion.bloqueaDeudaEnArchivoTocado,
         topeDeLineas: configuracion.topeDeLineasPorArchivo,
         // una por exclusión, en su posición (`null` si no es un { ruta } legible)
@@ -1366,17 +1369,8 @@ function chequearDeuda(base, pr, { leerPr }) {
   const hallazgos = [];
   const antes = base.deuda.valor;
   const ahora = pr.deuda.valor;
-  if (ahora.tope > antes.tope) {
-    hallazgos.push(
-      hallazgo(
-        "deuda-tope-subio",
-        ARCHIVOS.deudaConfiguracion,
-        `El tope de excepciones de deuda subió de ${antes.tope} a ${ahora.tope}: la excepción se volvería la norma.`,
-        "Dejá el tope como estaba (puede bajar, no subir).",
-        { donde: enJson("topeDeExcepciones") },
-      ),
-    );
-  }
+  const ayudas = { archivo: ARCHIVOS.deudaConfiguracion, enJson, esObjeto, esTexto, hallazgo };
+  hallazgos.push(...hallazgosDeTopes(antes, ahora, ayudas));
   if (antes.bloquea === true && ahora.bloquea !== true) {
     hallazgos.push(
       hallazgo(

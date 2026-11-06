@@ -10,6 +10,7 @@ const { esRutaExacta } = require("../contratos/globs.cjs");
 const { TIPOS_DE_MARCADOR } = require("./marcadores.cjs");
 const { enJson } = require("../contratos/ubicacion.cjs");
 const { TOPE_DE_LINEAS } = require("./tamano.cjs");
+const { formaDePorDiseno, problemaDeAmpliacion } = require("./por-diseno.cjs");
 
 const ARCHIVO_DEL_REGISTRO = "arquitectura/deuda/registro.json";
 const ARCHIVO_DE_LA_CONFIGURACION = "arquitectura/deuda/configuracion.json";
@@ -33,10 +34,15 @@ const CAMPOS_PERMITIDOS = Object.freeze([
   "creada",
   "verificacion",
   "tamano",
+  "origen",
+  "cantidad",
+  "porDiseno",
   ...CAMPOS_DE_EXCEPCION,
 ]);
 const CLAVES_DE_LA_CONFIGURACION = Object.freeze([
   "topeDeExcepciones",
+  "topeDePorDiseno",
+  "ampliacionDelTope",
   "bloqueaDeudaEnArchivoTocado",
   "topeDeLineasPorArchivo",
   "excluidosDelTope",
@@ -44,6 +50,7 @@ const CLAVES_DE_LA_CONFIGURACION = Object.freeze([
 /** Con una configuración inválida el control falla igual: se sigue con estos valores para no sumar ruido. */
 const CONFIGURACION_POR_DEFECTO = Object.freeze({
   topeDeExcepciones: 10,
+  topeDePorDiseno: 0,
   bloqueaDeudaEnArchivoTocado: false,
   topeDeLineasPorArchivo: TOPE_DE_LINEAS,
   excluidosDelTope: Object.freeze([]),
@@ -124,7 +131,7 @@ function leerConfiguracion(leer) {
       contrato: CONTRATO,
       motivo,
       correccion:
-        "Dejá un objeto con `topeDeExcepciones` (entero ≥ 0), `bloqueaDeudaEnArchivoTocado` (true o false), `topeDeLineasPorArchivo` (entero ≥ 1) y `excluidosDelTope` (lista de { ruta, motivo }).",
+        "Dejá un objeto con `topeDeExcepciones` (entero ≥ 0), `topeDePorDiseno` (entero ≥ 0), `bloqueaDeudaEnArchivoTocado` (true o false), `topeDeLineasPorArchivo` (entero ≥ 1) y `excluidosDelTope` (lista de { ruta, motivo }).",
       donde,
     });
   if (leida.ausente === true) {
@@ -150,10 +157,14 @@ function leerConfiguracion(leer) {
   }
   const {
     topeDeExcepciones: tope,
+    topeDePorDiseno: topePorDiseno,
     bloqueaDeudaEnArchivoTocado: bloquea,
     topeDeLineasPorArchivo: lineas,
   } = valor;
   const topeValido = Number.isInteger(tope) && tope >= 0;
+  // (sin la clave vale 0: nada es «por diseño» hasta que se declare)
+  const topePorDisenoValido =
+    topePorDiseno === undefined || (Number.isInteger(topePorDiseno) && topePorDiseno >= 0);
   const bloqueaValido = typeof bloquea === "boolean";
   const lineasValido = Number.isInteger(lineas) && lineas >= 1;
   if (!topeValido) {
@@ -161,6 +172,18 @@ function leerConfiguracion(leer) {
       "`topeDeExcepciones` tiene que ser un entero mayor o igual que 0.",
       enJson("topeDeExcepciones"),
     );
+  }
+  if (!topePorDisenoValido) {
+    invalida(
+      "`topeDePorDiseno` tiene que ser un entero mayor o igual que 0.",
+      enJson("topeDePorDiseno"),
+    );
+  }
+  const ampliacion = valor.ampliacionDelTope;
+  const problemaDeLaAmpliacion =
+    ampliacion === undefined ? null : problemaDeAmpliacion(ampliacion, { esObjeto, esTexto });
+  if (problemaDeLaAmpliacion !== null) {
+    invalida(problemaDeLaAmpliacion, enJson("ampliacionDelTope"));
   }
   if (!bloqueaValido) {
     invalida(
@@ -182,6 +205,9 @@ function leerConfiguracion(leer) {
         : CONFIGURACION_POR_DEFECTO.topeDeLineasPorArchivo,
       excluidosDelTope: excluidos,
       topeDeExcepciones: topeValido ? tope : CONFIGURACION_POR_DEFECTO.topeDeExcepciones,
+      topeDePorDiseno: topePorDisenoValido
+        ? (topePorDiseno ?? CONFIGURACION_POR_DEFECTO.topeDePorDiseno)
+        : CONFIGURACION_POR_DEFECTO.topeDePorDiseno,
       bloqueaDeudaEnArchivoTocado: bloqueaValido
         ? bloquea
         : CONFIGURACION_POR_DEFECTO.bloqueaDeudaEnArchivoTocado,
@@ -269,6 +295,9 @@ function formaDeLaEntrada(entrada, idsVistos) {
     }
   } else if (tamano !== undefined) {
     nuevo("tamano", "solo un «archivo-grande» lleva «tamano».", "Sacalo.");
+  }
+  for (const { campo, motivo, correccion } of formaDePorDiseno(entrada, { esObjeto, esTexto })) {
+    nuevo(campo, motivo, correccion);
   }
   if (esTexto(entrada.id)) {
     if (idsVistos.has(entrada.id))

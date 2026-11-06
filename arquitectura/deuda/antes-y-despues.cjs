@@ -146,7 +146,8 @@ function compararConLaBase({ base, pr, bloquea }) {
     if (
       TIPOS_DE_HALLAZGO.includes(entrada.tipo) &&
       !idsDeLaBase.has(entrada.id) &&
-      !entrada.excepcion
+      !entrada.excepcion &&
+      !(entrada.porDiseno && entrada.vigente)
     ) {
       fallas.push(
         delRegistro(

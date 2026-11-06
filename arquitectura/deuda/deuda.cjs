@@ -132,7 +132,7 @@ function ejecutar({ pr, base = null, ahora = new Date() }) {
   const abiertas = delCambio.entradas.filter((entrada) => entrada.excepcion);
   const edades = delCambio.entradas.map((entrada) => ({
     id: entrada.id,
-    dias: diasEntre(entrada.creada, hoy),
+    dias: diasEntre(entrada.origen ?? entrada.creada, hoy),
   }));
   const masVieja = edades.reduce(
     (vieja, e) => (vieja === null || e.dias > vieja.dias ? e : vieja),

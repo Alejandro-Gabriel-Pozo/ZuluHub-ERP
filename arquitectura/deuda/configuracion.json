@@ -1,5 +1,6 @@
 {
   "topeDeExcepciones": 10,
+  "topeDePorDiseno": 0,
   "bloqueaDeudaEnArchivoTocado": false,
   "topeDeLineasPorArchivo": 400,
   "excluidosDelTope": [

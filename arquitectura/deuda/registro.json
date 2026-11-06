@@ -399,7 +399,7 @@
     "archivos": ["arquitectura/contratos/no-debilitar.cjs"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
-    "tamano": 1803,
+    "tamano": 1797,
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22",
     "motivo": "No es crecimiento libre: son las líneas que protegen el paso nuevo del guardián (presupuesto de campos sin dato) en no-debilitar.cjs y las mutaciones que lo prueban en invariantes.cjs, pedidas en la segunda revisión independiente de #198 (2026-11-06). Se paga partiendo el archivo (renovación a los 60 días, Q16 del dueño).",

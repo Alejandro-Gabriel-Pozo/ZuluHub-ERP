@@ -182,9 +182,10 @@ describe("la configuración (configuracion.json)", () => {
   const leerConfiguracion = (texto: string | null) =>
     libro.leerConfiguracion((ruta) => (ruta === CONFIGURACION ? texto : null));
   const CORRECCION =
-    "Dejá un objeto con `topeDeExcepciones` (entero ≥ 0), `bloqueaDeudaEnArchivoTocado` (true o false), `topeDeLineasPorArchivo` (entero ≥ 1) y `excluidosDelTope` (lista de { ruta, motivo }).";
+    "Dejá un objeto con `topeDeExcepciones` (entero ≥ 0), `topeDePorDiseno` (entero ≥ 0), `bloqueaDeudaEnArchivoTocado` (true o false), `topeDeLineasPorArchivo` (entero ≥ 1) y `excluidosDelTope` (lista de { ruta, motivo }).";
   const POR_DEFECTO = {
     topeDeExcepciones: 10,
+    topeDePorDiseno: 0,
     bloqueaDeudaEnArchivoTocado: false,
     topeDeLineasPorArchivo: 400,
     excluidosDelTope: [],
@@ -192,6 +193,7 @@ describe("la configuración (configuracion.json)", () => {
   /** Una configuración entera con esos cambios (en el orden de las claves de siempre). */
   const con = (cambios: Record<string, unknown> = {}) => ({
     topeDeExcepciones: 4,
+    topeDePorDiseno: 0,
     bloqueaDeudaEnArchivoTocado: true,
     topeDeLineasPorArchivo: 400,
     excluidosDelTope: [],
@@ -217,6 +219,7 @@ describe("la configuración (configuracion.json)", () => {
     ).toEqual({
       configuracion: {
         topeDeExcepciones: 3,
+        topeDePorDiseno: 0,
         bloqueaDeudaEnArchivoTocado: true,
         topeDeLineasPorArchivo: 250,
         excluidosDelTope: [excluido],
@@ -517,6 +520,9 @@ describe("la forma de cada entrada", () => {
         tamano: null,
         creada: "2026-10-01",
         vence: null,
+        porDiseno: false,
+        cantidad: null,
+        origen: null,
       },
     ]);
   });
@@ -531,7 +537,7 @@ describe("la forma de cada entrada", () => {
       ],
     ]);
     expect(fallas[0]?.correccion).toBe(
-      "Dejá solo: id, archivos, descripcion, tipo, responsable, creada, verificacion, tamano, motivo, aprobadoPor, vence.",
+      "Dejá solo: id, archivos, descripcion, tipo, responsable, creada, verificacion, tamano, origen, cantidad, porDiseno, motivo, aprobadoPor, vence.",
     );
   });
 

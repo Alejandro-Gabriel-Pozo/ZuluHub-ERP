@@ -33,6 +33,8 @@ type Medicion = {
 };
 export type Configuracion = {
   topeDeExcepciones: number;
+  topeDePorDiseno: number;
+  ampliacionDelTope?: { desde: number; aprobadoPor: string; fecha: string };
   bloqueaDeudaEnArchivoTocado: boolean;
   topeDeLineasPorArchivo: number;
   excluidosDelTope: { ruta: string; motivo: string }[];
@@ -218,6 +220,7 @@ export const CONFIGURACION = "arquitectura/deuda/configuracion.json";
 export const INFORME = "arquitectura/deuda/informe.json";
 export const CONFIGURACION_SANA: Configuracion = {
   topeDeExcepciones: 10,
+  topeDePorDiseno: 0,
   bloqueaDeudaEnArchivoTocado: true,
   topeDeLineasPorArchivo: 400,
   excluidosDelTope: [],

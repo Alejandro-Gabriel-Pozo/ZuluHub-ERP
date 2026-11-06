@@ -171,6 +171,8 @@ describe("leerDeuda: el registro y la configuración, resumidos", () => {
           { id: "b", tipo: "backlog", archivos: ["y.ts"], verificacion: null, indice: 1 },
         ],
         tope: 4,
+        topePorDiseno: undefined,
+        ampliacion: undefined,
         bloquea: true,
         topeDeLineas: 250,
         excluidos: ["src/datos.ts", null, null, "src/b.ts"],

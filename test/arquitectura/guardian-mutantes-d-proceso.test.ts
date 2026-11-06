@@ -141,7 +141,15 @@ describe("capturar: lee el árbol y arma una sección por archivo", () => {
       valor: { arquitectura: "a", guardian: "g", deuda: undefined },
     });
     expect(instantanea["deuda"]).toStrictEqual({
-      valor: { entradas: [], tope: 10, bloquea: true, topeDeLineas: 400, excluidos: [] },
+      valor: {
+        entradas: [],
+        tope: 10,
+        topePorDiseno: undefined,
+        ampliacion: undefined,
+        bloquea: true,
+        topeDeLineas: 400,
+        excluidos: [],
+      },
     });
     const ci = instantanea["ci"] as { valor: Map<string, unknown>; lineaDeJobs: number };
     expect([...ci.valor.keys()]).toEqual(["estatico", "mutacion-plan", "guardian", "gate"]);
