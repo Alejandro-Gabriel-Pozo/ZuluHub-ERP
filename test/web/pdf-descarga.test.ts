@@ -51,9 +51,14 @@ const pedir = async (id: string): Promise<Response> =>
     params: Promise.resolve({ id }),
   });
 
+/**
+ * El modelo de un comprobante de prueba. Con `nombre`, el nombre del cliente se PISA después de armar el modelo: la primitiva de nombres
+ * (`nombre-o-razon-social.ts`) ya rechaza emojis y similares al armar el comprobante, pero el PDF no confía en eso (un comprobante viejo,
+ * guardado antes de la primitiva, puede traerlos): la guarda del PDF se prueba con un nombre que la primitiva no dejaría pasar.
+ */
 function modeloDe(nombre?: string) {
   const c = facturaArmada(
-    nombre === undefined ? consumidorFinal : { ...receptorInscripto, nombre },
+    nombre === undefined ? consumidorFinal : { ...receptorInscripto, nombre: "Cliente de prueba" },
     [renglon("1210.00", "1", "21", null, "Torta")],
   );
   const r = modeloDeImpresion(imprimibleDe(c), {
@@ -62,7 +67,7 @@ function modeloDe(nombre?: string) {
     colorPrincipal: null,
   });
   if (!r.ok) throw new Error(r.error);
-  return r.valor;
+  return nombre === undefined ? r.valor : { ...r.valor, receptor: { ...r.valor.receptor, nombre } };
 }
 const conModelo = (modelo: ReturnType<typeof modeloDe>): Respuesta<unknown> => ({
   ok: true,
@@ -90,6 +95,15 @@ describe("la descarga del PDF", () => {
     expect(respuesta.headers.get("Content-Length")).toBe(String(bytes.length));
     expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
     expect((await leerElPdf(bytes))[0]?.texto).toContain("00001-00000011");
+  });
+
+  it("descargar dos veces el mismo comprobante da el mismo PDF byte a byte, aunque pase tiempo entre una descarga y otra (la fecha de creación es la de emisión, no la hora)", async () => {
+    const primera = Buffer.from(await (await pedir(ID)).arrayBuffer());
+    // La fecha de creación de los metadatos tiene resolución de segundos: si dependiera del reloj, 1,1 s alcanza para que cambie.
+    await new Promise((resolver) => setTimeout(resolver, 1100));
+    const segunda = Buffer.from(await (await pedir(ID)).arrayBuffer());
+    expect(primera.length).toBeGreaterThan(1000);
+    expect(segunda.equals(primera)).toBe(true);
   });
 
   it("pide el modelo solo con el id de la URL: la empresa, el permiso y la sucursal los decide el servidor", async () => {
