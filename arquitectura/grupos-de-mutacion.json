@@ -187,7 +187,7 @@
   },
   {
     "grupo": "activos (cabeceras)",
-    "archivos": "src/capacidades/activos/cabeceras.ts",
+    "archivos": "src/capacidades/activos/cabeceras.ts,src/capacidades/activos/cabeceras-png.ts,src/capacidades/activos/cabeceras-webp.ts,src/capacidades/activos/cabeceras-jpeg.ts,src/capacidades/activos/cabeceras-ico.ts,src/capacidades/activos/bytes-de-imagen.ts,src/capacidades/activos/tipos-de-cabecera.ts",
     "minutos": 26.4,
     "pruebas": "src/capacidades/activos/activos.propiedades.test.ts src/capacidades/activos/cabeceras.test.ts src/capacidades/activos/limpieza.test.ts src/capacidades/activos/validacion.test.ts"
   },
