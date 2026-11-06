@@ -160,12 +160,12 @@ const CARACTERES_DE_CONTROL = /\p{Cc}/u;
 const FECHA_CIVIL = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/;
 
 /**
- * Texto recortado, no vacío, sin caracteres de control y de hasta `maximo`; `null` si no sirve. Hoy solo lo usa el número de IIBB (sin
- * primitiva: Q6, texto corto de 30 sin formato); sigue siendo lista de prohibidos (deuda, ver «Hallazgos aparte»).
+ * Texto recortado, sin caracteres de control y de hasta `maximo`; `null` si no sirve. Hoy solo lo usa el número de IIBB (sin
+ * primitiva: Q6, texto corto de 30 sin formato; el en blanco ya lo resolvió quien llama: es «sin número»); sigue siendo lista de prohibidos (deuda, ver «Hallazgos aparte»).
  */
 function textoLimpio(valor: string, maximo: number): string | null {
   const limpio = valor.trim();
-  if (limpio === "" || limpio.length > maximo || CARACTERES_DE_CONTROL.test(limpio)) return null;
+  if (limpio.length > maximo || CARACTERES_DE_CONTROL.test(limpio)) return null;
   return limpio;
 }
 
