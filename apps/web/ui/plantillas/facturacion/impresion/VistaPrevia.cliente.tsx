@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { aplicarEstilos } from "../../../primitivas/aplicar-estilos";
 import { escalaPara } from "./geometria";
 import estilos from "./VistaPrevia.module.css";
 
@@ -17,9 +18,22 @@ export type PropsDeLaVistaPrevia = Readonly<{
  */
 export function VistaPrevia({ anchoNatural, children }: PropsDeLaVistaPrevia) {
   const marco = useRef<HTMLDivElement>(null);
+  const escalado = useRef<HTMLDivElement>(null);
   const contenido = useRef<HTMLDivElement>(null);
   const [disponible, setDisponible] = useState(0);
   const [alto, setAlto] = useState(0);
+  const escala = escalaPara(disponible, anchoNatural);
+  // Va ANTES del efecto que mide: el alto de `contenido` depende del ancho que se le pone acá.
+  useLayoutEffect(() => {
+    aplicarEstilos(escalado.current, {
+      width: `${anchoNatural * escala}px`,
+      height: `${alto * escala}px`,
+    });
+    aplicarEstilos(contenido.current, {
+      width: `${anchoNatural}px`,
+      transform: `scale(${escala})`,
+    });
+  }, [anchoNatural, escala, alto]);
   useLayoutEffect(() => {
     const elMarco = marco.current;
     const elContenido = contenido.current;
@@ -34,19 +48,10 @@ export function VistaPrevia({ anchoNatural, children }: PropsDeLaVistaPrevia) {
     observador.observe(elContenido);
     return () => observador.disconnect();
   }, []);
-  const escala = escalaPara(disponible, anchoNatural);
   return (
     <div ref={marco} className={estilos["marco"]} data-vista-previa="">
-      <div
-        className={estilos["escalado"]}
-        style={{ width: anchoNatural * escala, height: alto * escala }}
-      >
-        <div
-          ref={contenido}
-          className={estilos["contenido"]}
-          style={{ width: anchoNatural, transform: `scale(${escala})` }}
-          data-escala={escala}
-        >
+      <div ref={escalado} className={estilos["escalado"]}>
+        <div ref={contenido} className={estilos["contenido"]} data-escala={escala}>
           {children}
         </div>
       </div>

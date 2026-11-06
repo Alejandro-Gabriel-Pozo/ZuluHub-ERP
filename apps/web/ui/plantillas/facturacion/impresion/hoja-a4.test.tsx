@@ -9,6 +9,7 @@ import {
   comprobanteDePrueba,
   esperarLasHojas,
   QR_DE_PRUEBA,
+  reglaDePaginaAdoptada,
   type OpcionesDelComprobante,
 } from "./ayudas-de-impresion";
 import { ComprobanteImpreso } from "./ComprobanteImpreso.cliente";
@@ -326,13 +327,13 @@ describe("hoja A4: accesibilidad, @page e impresión", () => {
     await pantalla.unmount();
   });
 
-  it("el <style> de @page es del A4 mientras la vista está montada y se quita al desmontarla", async () => {
+  it("la @page es del A4 mientras la vista está montada y su hoja de estilos se quita al desmontarla", async () => {
     const { pantalla } = await dibujar({ renglones: 8 });
-    const estilos = [...document.querySelectorAll("style[data-estilo-de-pagina]")];
-    expect(estilos).toHaveLength(1);
-    expect(estilos[0]?.textContent).toContain("@page{size:A4;margin:0}");
+    expect(document.adoptedStyleSheets).toHaveLength(1);
+    expect(reglaDePaginaAdoptada()).toMatch(/@page \{ size: a4; margin: 0px; \}/i);
+    expect(document.querySelector("style[data-estilo-de-pagina]")).toBeNull();
     await pantalla.unmount();
-    expect(document.querySelectorAll("style[data-estilo-de-pagina]")).toHaveLength(0);
+    expect(document.adoptedStyleSheets).toHaveLength(0);
   });
 
   it("al imprimir: sin escala, sin separación entre hojas y solo la hoja a la vista", async () => {

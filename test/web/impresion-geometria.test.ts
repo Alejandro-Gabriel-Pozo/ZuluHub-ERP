@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { reglaDePagina } from "../../apps/web/ui/plantillas/facturacion/impresion/EstiloDePagina";
+import { reglaDePagina } from "../../apps/web/ui/plantillas/facturacion/impresion/regla-de-pagina";
 import {
   ALTO_A4_MM,
   ANCHO_A4_MM,
