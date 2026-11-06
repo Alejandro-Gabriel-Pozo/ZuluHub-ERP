@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { DiccionarioResuelto } from "../../../../../../src/capacidades/vocabulario/vocabulario";
-import { EstiloDePagina, MARCA_DE_LA_ZONA } from "./EstiloDePagina";
+import { EstiloDePagina } from "./EstiloDePagina";
 import { ANCHO_A4_MM, ANCHO_TICKET_MM, mmAPx } from "./geometria";
 import { HojasA4 } from "./HojasA4";
 import { altoFijoDelPie, entradaDelPaginador, medidasIguales, type Medidas } from "./medicion";
@@ -13,6 +13,7 @@ import {
   type FormatoDeImpresion,
 } from "./modelo-de-la-hoja";
 import { paginar } from "./paginador";
+import { MARCA_DE_LA_ZONA } from "./regla-de-pagina";
 import { TicketDe80mm } from "./TicketDe80mm.cliente";
 import { VistaPrevia } from "./VistaPrevia.cliente";
 
@@ -59,7 +60,7 @@ export function ComprobanteImpreso({
     );
   }, [medidas, comprobante.renglones]);
   return (
-    <div {...{ [MARCA_DE_LA_ZONA]: "" }}>
+    <div {...{ [MARCA_DE_LA_ZONA]: "" }} data-formato={formato}>
       <EstiloDePagina formato={formato} altoDelTicketEnMm={altoDelTicket} />
       {formato === "A4" ? (
         <>

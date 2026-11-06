@@ -1,5 +1,5 @@
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { formatearFecha, formatearNumeroDeDocumento } from "../facturacion/formato-fiscal";
+import { formatearNumeroDeDocumento } from "../facturacion/formato-fiscal";
 import {
   cambioElDomicilio,
   domicilioNuevo,
@@ -68,7 +68,7 @@ export type ValoresDeDatosFiscales = ValoresDelDomicilio &
     ingresosBrutos: string;
     /** El número de inscripción: solo cuenta con `ingresosBrutos` en `NUMERO`. */
     iibbNumero: string;
-    /** `dd/mm/aaaa`, como se lee en pantalla. */
+    /** `aaaa-mm-dd`: lo que entrega la entrada de fecha y lo que entiende el servidor. */
     inicioActividades: string;
   }>;
 
@@ -118,7 +118,7 @@ function valoresDeLoVigente(v: VigenteDeDatosFiscales): ValoresDeDatosFiscales {
     razonSocial: v.razonSocial,
     condicionIva: v.condicionIva,
     ...iibbEnPantalla(v.iibbNumero, v.iibbCondicion),
-    inicioActividades: formatearFecha(v.inicioActividades),
+    inicioActividades: v.inicioActividades,
     ...valoresDelDomicilio(v.domicilio),
   };
 }
@@ -133,26 +133,13 @@ export function valoresDelBorrador(
     razonSocial: b.razonSocial ?? "",
     condicionIva: b.condicionIva ?? "",
     ...iibbEnPantalla(b.iibbNumero, b.iibbCondicion),
-    inicioActividades: b.inicioActividades === null ? "" : formatearFecha(b.inicioActividades),
+    inicioActividades: b.inicioActividades ?? "",
     ...valoresDelDomicilio(b.domicilio),
   };
 }
 
 /** Las claves de idempotencia del formulario: se generan UNA vez al abrirlo y viajan con el pedido. */
 export type IdsDeDatosFiscales = Readonly<{ borradorId: string; domicilioId: string }>;
-
-const FECHA_EN_PANTALLA = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-
-/**
- * `dd/mm/aaaa` pasa a `aaaa-mm-dd`, solo con texto (sin `Date` ni zonas). Lo que no tiene esa forma viaja como está (recortado) y el
- * servidor lo rechaza marcando el campo; si el día existe en el calendario también lo decide el servidor (`fechaCivilValida`):
- * una regla, un lugar.
- */
-export function aFechaCivil(escrita: string): string {
-  const limpia = escrita.trim();
-  const partes = FECHA_EN_PANTALLA.exec(limpia);
-  return partes === null ? limpia : `${partes[3]}-${partes[2]}-${partes[1]}`;
-}
 
 /**
  * El pedido de «Guardar borrador» (`guardarBorradorDeDatosFiscales`): el `borradorId` es el del borrador (o el que generó el
@@ -171,7 +158,7 @@ export function armarElPedidoDeGuardado(
   const base = valoresDelBorrador(original);
   const dato = (clave: "razonSocial" | "condicionIva", valor: string) =>
     valor.trim() !== "" || base[clave] !== "" ? { [clave]: valor.trim() } : {};
-  const inicio = aFechaCivil(v.inicioActividades);
+  const inicio = v.inicioActividades.trim();
   // Ingresos Brutos: igual que el resto, solo se manda lo que tiene valor o lo que antes lo tenía (entonces va `null` y el servidor lo
   // borra). Elegir uno limpia el otro en el servidor; el pedido nunca lleva los dos con valor (sería error de `iibbCondicion`).
   const iibb = iibbDeLosValores(v);
@@ -212,7 +199,7 @@ export function borradorTrasGuardar(
     condicionIva: opcional(v.condicionIva),
     iibbNumero: iibbDeLosValores(v).numero,
     iibbCondicion: iibbDeLosValores(v).condicion,
-    inicioActividades: opcional(aFechaCivil(v.inicioActividades)),
+    inicioActividades: opcional(v.inicioActividades),
     domicilio: cambioElDomicilio(v, original?.domicilio ?? null)
       ? {
           id: ids.domicilioId,

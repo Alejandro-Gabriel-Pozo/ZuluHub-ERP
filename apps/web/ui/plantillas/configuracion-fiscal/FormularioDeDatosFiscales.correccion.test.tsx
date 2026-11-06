@@ -45,6 +45,7 @@ async function abrirYConfirmarSinElInicio() {
       cuit="30712345678"
       borrador={null}
       vigente={null}
+      hoy="2026-11-05"
       condicionesDeIva={[{ valor: "RESPONSABLE_INSCRIPTO", etiqueta: "IVA Responsable Inscripto" }]}
       guardar={guardar}
       confirmar={confirmar}
@@ -69,7 +70,7 @@ describe("corregir después de una confirmación rechazada", () => {
     await abrirYConfirmarSinElInicio();
     expect(router.push).not.toHaveBeenCalled();
 
-    await page.getByLabelText("Inicio de actividades").fill("01/03/2018");
+    await page.getByLabelText("Inicio de actividades").fill("2018-03-01");
     await page.getByLabelText("Calle").fill("Belgrano");
     tocar(boton("Confirmar"));
     await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
@@ -91,7 +92,7 @@ describe("corregir después de una confirmación rechazada", () => {
     confirmar.mockResolvedValueOnce(FALTA_EL_INICIO).mockResolvedValueOnce({ ok: true, dato: {} });
     await abrirYConfirmarSinElInicio();
 
-    await page.getByLabelText("Inicio de actividades").fill("01/03/2018");
+    await page.getByLabelText("Inicio de actividades").fill("2018-03-01");
     tocar(boton("Confirmar"));
     await vi.waitFor(() => expect(router.push).toHaveBeenCalledWith(LISTA));
 

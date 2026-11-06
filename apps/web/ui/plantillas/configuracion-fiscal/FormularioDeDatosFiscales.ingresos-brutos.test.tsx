@@ -49,6 +49,7 @@ const formulario = (borrador: BorradorDeDatosFiscales | null = BORRADOR) => (
     cuit="30712345678"
     borrador={borrador}
     vigente={null}
+    hoy="2026-11-05"
     condicionesDeIva={[{ valor: "RESPONSABLE_INSCRIPTO", etiqueta: "IVA Responsable Inscripto" }]}
     guardar={guardar}
     confirmar={confirmar}
@@ -74,11 +75,11 @@ const conCampo = (campo: string): Respuesta<never> => ({
 });
 
 describe("el desplegable y el campo del número", () => {
-  it("el desplegable se llama «Ingresos Brutos», su opción vacía también y ofrece las dos opciones; sin elegir no hay campo", async () => {
+  it("el desplegable se llama «Ingresos Brutos», su opción vacía invita a elegir y ofrece las dos opciones; sin elegir no hay campo", async () => {
     await render(formulario(null));
     const opciones = (desplegable().element() as HTMLSelectElement).options;
     expect([...opciones].map((o) => o.textContent)).toEqual([
-      "Ingresos Brutos",
+      "Elegí una opción",
       "Número de inscripción",
       "No contribuyente",
     ]);
