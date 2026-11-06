@@ -3,14 +3,13 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { COMPONENTES_DE_CAMPO, REGISTRO_DE_DATOS } from "../../src/capacidades/datos/registro";
+import { analizarArchivo, EXTENSIONES_DE_CODIGO, type Contexto } from "./campos-con-dato-apoyo";
 import {
-  analizarArchivo,
   problemasDeComponente,
   problemasDeDeuda,
   problemasDelRegistro,
-  type Contexto,
   type Cuenta,
-} from "./campos-con-dato-apoyo";
+} from "./campos-con-dato-registro-apoyo";
 
 /**
  * REGLA (regla 5 de `Pedernal-docs/01-vision/primitivas-de-negocio.md`; dueño, 2026-11-05): sin dato registrado no hay campo.
@@ -51,12 +50,18 @@ function aplicaciones(): string[] {
     );
 }
 
-function archivosDeProduccion(): Map<string, string> {
+/** TODO el código de las aplicaciones (todas las extensiones; los tests entran porque el tsconfig los compila). */
+function archivosDeAplicaciones(): Map<string, string> {
   const mapa = new Map<string, string>();
   for (const app of aplicaciones()) {
     for (const r of readdirSync(join(RAIZ, app), { recursive: true, encoding: "utf8" })) {
       if (r.split("/").some((p) => p === "node_modules" || p === ".next")) continue;
-      if (!/\.tsx?$/.test(r) || /\.test\.tsx?$/.test(r) || r.endsWith(".d.ts")) continue;
+      if (
+        !EXTENSIONES_DE_CODIGO.includes(
+          r.split(".").pop() as (typeof EXTENSIONES_DE_CODIGO)[number],
+        )
+      )
+        continue;
       mapa.set(`${app}/${r}`, readFileSync(join(RAIZ, app, r), "utf8"));
     }
   }
@@ -76,7 +81,7 @@ function deudaRegistrada(): Entrada[] {
 }
 
 describe("campos con dato: el código real", () => {
-  const archivos = archivosDeProduccion();
+  const archivos = archivosDeAplicaciones();
   const esComponente = (r: string) => (COMPONENTES_DE_CAMPO as readonly string[]).includes(r);
   const resultados = new Map(
     [...archivos]
@@ -88,6 +93,9 @@ describe("campos con dato: el código real", () => {
     expect(aplicaciones().length).toBeGreaterThanOrEqual(2);
     expect(COMPONENTES_DE_CAMPO.every((c) => archivos.has(c))).toBe(true);
     expect(resultados.size).toBeGreaterThan(20);
+    // también los tests (el tsconfig los compila) y no solo los .tsx
+    expect([...resultados.keys()].some((r) => r.includes(".test."))).toBe(true);
+    expect([...resultados.keys()].some((r) => r.endsWith(".ts"))).toBe(true);
     expect([...resultados.values()].some((r) => r.pendientes > 0)).toBe(true);
     expect([...resultados.values()].some((r) => r.usos.size > 0)).toBe(true);
     expect(new Set([...resultados.keys()].map((r) => r.split("/")[1])).size).toBe(
@@ -136,8 +144,8 @@ describe("campos con dato: el código real", () => {
       expect(e["aprobadoPor"], e.id).toBeTruthy();
       expect(e["vence"], e.id).toBeTruthy();
       // El guardián solo exige que ALGÚN archivo de la entrada tenga el texto: acá, que TODOS lo tengan.
-      // Los tags dinámicos no tienen un texto común: los cubre el presupuesto, que coincide exacto con el código.
-      if (e.id.endsWith("-dinamicos")) continue;
+      // Las formas que el chequeo no analiza no tienen un texto común: los cubre el presupuesto, que coincide exacto con el código.
+      if (e.id.endsWith("-otros")) continue;
       const texto = e.verificacion?.contiene ?? "";
       expect(texto, e.id).not.toBe("");
       for (const archivo of e.archivos)

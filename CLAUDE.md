@@ -30,7 +30,7 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
 - **Sin dato registrado no hay campo (dueño, 2026-11-05).** Todo campo de entrada de `apps/web` y `apps/plataforma` es un componente de
   campo con la prop `dato`, y ese dato está en `src/capacidades/datos/registro.ts` (primitiva, propósitos con fuente, consumidores, quién
   lo pone, qué necesita). Un `<input>`, `<textarea>` o `<select>` crudo, un campo sin dato o con un dato no registrado, un consumidor no
-  declarado, un dato sin consumidor y sus evasiones (alias del componente, `createElement`/`jsx`, tag dinámico, `dangerouslySetInnerHTML`) fallan; lo
+  declarado, un dato sin consumidor y sus evasiones (cualquier aparición de `createElement`/`jsx`/`innerHTML`/`dangerouslySetInnerHTML` y afines, alias del componente, tag dinámico o fuera de la lista de permitidos) fallan, en todo el código de las apps, tests incluidos; lo
   existente que no cumple es deuda con vencimiento (`campos-sin-dato--*` en `arquitectura/deuda/registro.json`) y con presupuesto por archivo que
   solo baja (`arquitectura/deuda/campos-sin-dato.json`), no una excepción silenciosa. Previene: la primitiva del CUIT existía y el campo de documento de
   «Emitir» no la usaba (el CUIT quedó escrito como nombre). Chequeo: `test/arquitectura/campos-con-dato.test.ts`, con una violación

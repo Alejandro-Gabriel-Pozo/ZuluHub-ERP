@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { analizarArchivo, type Contexto, type Registro } from "./campos-con-dato-apoyo";
 import {
-  analizarArchivo,
   problemasDeComponente,
   problemasDeDeuda,
   problemasDelRegistro,
-  type Contexto,
-  type Registro,
-} from "./campos-con-dato-apoyo";
+} from "./campos-con-dato-registro-apoyo";
 
 /**
  * Violaciones inyectadas de `campos-con-dato.test.ts` (regla 5: sin dato registrado no hay campo). Cada caso es una forma de
@@ -90,6 +88,8 @@ describe("campos con dato: el dato del campo", () => {
 });
 
 describe("campos con dato: las evasiones fallan (fail-closed)", () => {
+  const cuenta = (texto: string, ruta = "p/Emitir.tsx") => analizar(texto, ruta).crudos;
+
   it("rechaza el alias del componente de campo (import, constante, referencia suelta)", () => {
     expect(
       analizar(pantalla(`<C dato="cuit" />`, `import { Campo as C } from "x/Campo";`)).problemas,
@@ -113,31 +113,126 @@ describe("campos con dato: las evasiones fallan (fail-closed)", () => {
     ).toEqual([]);
   });
 
-  it("rechaza createElement, jsx y jsxs que arman elementos sin pasar por el chequeo", () => {
+  it("cuenta como control crudo CUALQUIER aparición del nombre de una fábrica de elementos (sin intentar entender alias)", () => {
     const casos = [
       `createElement("input")`,
       `React.createElement("input")`,
       `createElement(Campo, { dato: "cuit" })`,
       `document.createElement("input")`,
-      `document.createElement("textarea")`,
-      `document.createElement(tag)`,
+      `document.createElement("a")`,
+      `document["createElement"]("input")`,
+      `React["createElement"]("input")`,
+      `document.createElementNS("http://www.w3.org/1999/xhtml", "input")`,
+      `createElement("INPUT")`,
+      `React.createElement("Input")`,
+      `h.call(document, "input")`.replace("h.call", "createElement.call"),
+      `Reflect.apply(document.createElement, document, ["input"])`,
+      `createElement.apply(document, ["input"])`,
       `jsx("input", {})`,
       `jsxs("input", {})`,
       `_jsx("input", {})`,
+      `jsxDEV("input", {})`,
       `cloneElement(el, {})`,
     ];
-    for (const caso of casos) {
-      expect(analizar(`${IMPORTA}\nexport const e = ${caso};`).problemas, caso).not.toEqual([]);
-    }
+    for (const caso of casos) expect(cuenta(`export const e = ${caso};`), caso).toBeGreaterThan(0);
+  });
+
+  it("cuenta el alias de la fábrica (import, renombre por desestructuración, constante, require)", () => {
+    const casos = [
+      `import { createElement as h } from "react";\nexport const e = h("input");`,
+      `const h = React.createElement;\nexport const e = h("input");`,
+      `const { createElement: h } = React;\nexport const e = h("input");`,
+      `const { jsx: j } = require("react/jsx-runtime");\nexport const e = j("input", {});`,
+      `import { jsx as j } from "react/jsx-runtime";\nexport const e = j("input", {});`,
+    ];
+    for (const caso of casos) expect(cuenta(caso), caso).toBeGreaterThan(0);
     expect(analizar(`import { jsx } from "react/jsx-runtime";`).problemas).not.toEqual([]);
     expect(analizar(`import { jsxDEV } from "react/jsx-dev-runtime";`).problemas).not.toEqual([]);
   });
 
-  it("acepta document.createElement con un elemento literal que no es un control", () => {
-    expect(analizar(`export const a = document.createElement("a");`).problemas).toEqual([]);
+  it("cuenta dangerouslySetInnerHTML (atributo, propiedad de objeto, spread) y el HTML armado como texto", () => {
+    const casos = [
+      pantalla(`<div dangerouslySetInnerHTML={{ __html: "<input>" }} />`),
+      `const p = { dangerouslySetInnerHTML: { __html: "<input>" } };\nexport const P = () => <div {...p} />;`,
+      `export const P = () => <div {...{ ["dangerouslySetInnerHTML"]: { __html: "x" } }} />;`,
+      `export const f = (el: HTMLElement) => { el.innerHTML = "<input>"; };`,
+      `export const f = (el: HTMLElement) => { el["innerHTML"] = "<input>"; };`,
+      `export const f = (el: HTMLElement) => { el.outerHTML = "<input>"; };`,
+      `export const f = (el: HTMLElement) => el.insertAdjacentHTML("beforeend", "<input>");`,
+      `export const f = (el: HTMLElement, innerHTML: string) => Object.assign(el, { innerHTML });`,
+      `export const f = (t: string) => new DOMParser().parseFromString(t, "text/html");`,
+      `export const f = (r: Range, t: string) => r.createContextualFragment(t);`,
+      pantalla(`<div contentEditable />`),
+      pantalla(`<div contentEditable="true" />`),
+    ];
+    for (const caso of casos) expect(cuenta(caso), caso).toBeGreaterThan(0);
   });
 
-  it("cuenta como deuda un tag dinámico (variable o parámetro) y no el componente declarado", () => {
+  it("cuenta document.write (también por window, globalThis y corchetes) y role=textbox", () => {
+    for (const caso of [
+      `document.write("<input>");`,
+      `document.writeln("<input>");`,
+      `window.document.write("<input>");`,
+      `globalThis.document.write("<input>");`,
+      `document["write"]("<input>");`,
+    ]) {
+      expect(cuenta(`export const f = () => { ${caso} };`), caso).toBeGreaterThan(0);
+    }
+    expect(cuenta(pantalla(`<div role="textbox" />`))).toBe(1);
+    expect(cuenta(pantalla(`<div role={"textbox"} />`))).toBe(1);
+    expect(cuenta(pantalla(`<div role="searchbox textbox" />`))).toBe(1);
+    // lo que no es el rol, o no es de document, no se cuenta
+    expect(cuenta(pantalla(`<div role="group" />`))).toBe(0);
+    expect(cuenta(`export const f = (s: { write: () => void }) => s.write();`)).toBe(0);
+  });
+
+  it("compara los tags sin distinguir mayúsculas y solo deja pasar la lista de permitidos", () => {
+    for (const etiqueta of ["iNput", "sElect", "tEXTAREA", "input", "select", "textarea"]) {
+      const r = analizar(pantalla(`<${etiqueta} />`));
+      expect(r.crudos, etiqueta).toBe(1);
+      expect(r.crudosPorEtiqueta.get(etiqueta.toLowerCase()), etiqueta).toBe(1);
+    }
+    for (const etiqueta of [
+      "datalist",
+      "iframe",
+      "video",
+      "audio",
+      "canvas",
+      "embed",
+      "object",
+      "script",
+      "my-el",
+      "marquee",
+    ]) {
+      expect(
+        analizar(pantalla(`<${etiqueta} />`)).crudosPorEtiqueta.get("etiqueta-no-permitida"),
+        etiqueta,
+      ).toBe(1);
+    }
+    for (const etiqueta of [
+      "div",
+      "span",
+      "p",
+      "h1",
+      "section",
+      "svg",
+      "path",
+      "button",
+      "form",
+      "label",
+      "ul",
+      "li",
+      "table",
+      "td",
+      "option",
+      "dialog",
+    ]) {
+      expect(analizar(pantalla(`<${etiqueta} />`)).crudos, etiqueta).toBe(0);
+    }
+  });
+
+  it("un tag en mayúscula que no es un componente declarado (INPUT, variable o parámetro) cuenta como dinámico", () => {
+    expect(analizar(pantalla(`<INPUT />`)).dinamicos).toBe(1);
     expect(analizar(pantalla(`<T />`, `const T = "input";`)).dinamicos).toBe(1);
     expect(analizar(`export const P = ({ Tag }: { Tag: "p" }) => <Tag />;`).dinamicos).toBe(1);
     expect(
@@ -167,28 +262,23 @@ describe("campos con dato: las evasiones fallan (fail-closed)", () => {
     ).not.toEqual([]);
   });
 
-  it("rechaza dangerouslySetInnerHTML y el HTML armado como texto", () => {
+  it("analiza TODAS las extensiones de código y falla cerrado ante un archivo que no se puede leer", () => {
+    for (const extension of ["tsx", "ts", "jsx", "js", "mjs", "cjs", "mts", "cts"]) {
+      const ruta = `p/x.${extension}`;
+      expect(
+        analizarArchivo(ruta, `export const e = document.createElement("input");`, contexto).crudos,
+        ruta,
+      ).toBeGreaterThan(0);
+    }
+    for (const extension of ["jsx", "js", "tsx"]) {
+      const r = analizarArchivo(`p/x.${extension}`, `export const P = () => <input />;`, contexto);
+      expect(r.crudosPorEtiqueta.get("input"), extension).toBe(1);
+    }
     expect(
-      analizar(pantalla(`<div dangerouslySetInnerHTML={{ __html: "<input>" }} />`)).problemas,
+      analizarArchivo("p/roto.tsx", `export const P = () => <div>;`, contexto).problemas,
     ).not.toEqual([]);
-    expect(
-      analizar(`export const f = (el: HTMLElement) => { el.innerHTML = "<input>"; };`).problemas,
-    ).not.toEqual([]);
-    expect(
-      analizar(`export const f = (el: HTMLElement) => { el.outerHTML = "<input>"; };`).problemas,
-    ).not.toEqual([]);
-    expect(
-      analizar(
-        `export const f = (el: HTMLElement) => el.insertAdjacentHTML("beforeend", "<input>");`,
-      ).problemas,
-    ).not.toEqual([]);
-  });
-
-  it("también mira los .ts (no solo los .tsx)", () => {
-    expect(
-      analizarArchivo("p/ayuda.ts", `export const e = document.createElement("input");`, contexto)
-        .problemas,
-    ).not.toEqual([]);
+    expect(analizarArchivo("p/roto.ts", `export const = ;`, contexto).problemas).not.toEqual([]);
+    expect(analizarArchivo("p/ok.ts", `export const x = 1;`, contexto).problemas).toEqual([]);
   });
 
   it("no juzga lo que no es un componente de campo", () => {

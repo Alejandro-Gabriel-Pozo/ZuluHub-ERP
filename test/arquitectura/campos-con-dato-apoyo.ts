@@ -1,15 +1,19 @@
 import ts from "typescript";
 import { DATO_PENDIENTE, type DefinicionDeDato } from "../../src/capacidades/datos/registro";
-import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 
 /**
  * Analizador de `campos-con-dato.test.ts` (regla 5 de `Pedernal-docs/01-vision/primitivas-de-negocio.md`: sin dato registrado no hay
- * campo). Es puro: recibe rutas y texto, no toca el disco. Fail-closed (dueño: «lo que el chequeo no puede analizar, falla»): además
- * del control crudo y del campo sin dato, se prohíben las formas con las que se esquivaría el chequeo: alias del componente de campo,
- * `createElement`/`jsx`/`jsxs`, tags que no son un literal ni un componente declarado, `dangerouslySetInnerHTML` y HTML armado como
- * texto (`innerHTML`, `outerHTML`, `insertAdjacentHTML`), y el `<input type="hidden">` solo se exime con `type` y `name` literales y sin
- * ningún spread. Límite declarado: no ve un nombre calculado en una expresión (`obj[nombre]`) ni un componente de otro paquete que
- * renderice un `<input>` por dentro.
+ * campo). Es puro: recibe rutas y texto, no toca el disco. Fail-closed por LISTA DE PERMITIDOS (dueño: «lo que el chequeo no puede
+ * analizar, falla»; no se intenta entender alias ni fábricas de elementos: se prohíbe el NOMBRE en cualquier forma):
+ *  - tags JSX: los intrínsecos se comparan sin distinguir mayúsculas y solo pasan los de `ETIQUETAS_PERMITIDAS` (no interactivos o
+ *    estructurales); `input`, `textarea` y `select` son controles crudos; cualquier otro tag minúsculo cuenta como control crudo;
+ *  - cualquier aparición como identificador, propiedad, clave entre corchetes, string literal o especificador de import (con o sin
+ *    alias) de `NOMBRES_PROHIBIDOS`, `document.write` y `role="textbox"` cuenta como control crudo (deuda que solo baja);
+ *  - un tag que viene de una variable o un parámetro cuenta como tag dinámico; el `<input type="hidden">` solo se exime con `type` y
+ *    `name` literales y ningún spread; un campo con alias, sin `dato` o con `{...props}` después del `dato` es un problema;
+ *  - se analizan todas las extensiones de código (`EXTENSIONES_DE_CODIGO`); un archivo con error de sintaxis es un problema.
+ * Límites declarados: HTML armado como texto fuera de JSX (un `route.ts` que devuelva `"<input>"`, un MDX) y componentes importados de
+ * paquetes externos que rendericen un control por dentro (sumar una dependencia ya exige aviso, CLAUDE.md).
  */
 
 export type Registro = Readonly<Record<string, DefinicionDeDato>>;
@@ -20,13 +24,14 @@ export type ResultadoDeArchivo = Readonly<{
   crudos: number;
   /** Tags dinámicos (`<Etiqueta>` que viene de una variable o un parámetro): no se puede saber a qué elemento resuelven. */
   dinamicos: number;
-  /** Controles crudos por etiqueta (`input`, `textarea`, `select`). */
+  /** Controles crudos por clase: `input`, `textarea`, `select`, `etiqueta-no-permitida`, `nombre-prohibido`, `role-textbox`, `document.write`. */
   crudosPorEtiqueta: ReadonlyMap<string, number>;
   usos: ReadonlyMap<string, number>;
 }>;
 
 const CONTROLES_CRUDOS = new Set(["input", "textarea", "select"]);
-const FABRICAS_DE_ELEMENTOS = new Set([
+/** Con estos nombres se arman elementos o HTML sin pasar por JSX: se prohíbe el nombre, en cualquier forma en que aparezca. */
+const NOMBRES_PROHIBIDOS = new Set([
   "createElement",
   "createElementNS",
   "cloneElement",
@@ -36,8 +41,45 @@ const FABRICAS_DE_ELEMENTOS = new Set([
   "_jsx",
   "_jsxs",
   "_jsxDEV",
+  "dangerouslySetInnerHTML",
+  "innerHTML",
+  "outerHTML",
+  "insertAdjacentHTML",
+  "DOMParser",
+  "createContextualFragment",
+  "contentEditable",
 ]);
-const HTML_COMO_TEXTO = new Set(["innerHTML", "outerHTML", "insertAdjacentHTML"]);
+/** Elementos HTML y SVG no interactivos (o de estructura) que pueden usarse sin pasar por el registro: la lista de permitidos. */
+const ETIQUETAS_PERMITIDAS = new Set(
+  (
+    "html body main header footer nav section article aside div span p h1 h2 h3 h4 h5 h6 ul ol li dl dt dd " +
+    "table caption colgroup col thead tbody tfoot tr th td strong em b i u s small mark code pre kbd samp var sub sup abbr " +
+    "time q blockquote cite br hr wbr img picture source figure figcaption address data a button form label fieldset legend " +
+    "details summary dialog output option optgroup style svg g path rect circle ellipse line polyline polygon defs use title desc " +
+    "text tspan lineargradient radialgradient stop clippath mask"
+  ).split(" "),
+);
+/** Las extensiones de código que se analizan en las aplicaciones (los tests entran si el tsconfig los compila). */
+export const EXTENSIONES_DE_CODIGO = [
+  "ts",
+  "tsx",
+  "js",
+  "jsx",
+  "mjs",
+  "cjs",
+  "mts",
+  "cts",
+] as const;
+const TIPOS_DE_SCRIPT: Record<string, ts.ScriptKind> = {
+  ts: ts.ScriptKind.TS,
+  mts: ts.ScriptKind.TS,
+  cts: ts.ScriptKind.TS,
+  tsx: ts.ScriptKind.TSX,
+  js: ts.ScriptKind.JSX,
+  jsx: ts.ScriptKind.JSX,
+  mjs: ts.ScriptKind.JSX,
+  cjs: ts.ScriptKind.JSX,
+};
 const ENVOLTORIOS_DE_COMPONENTE = new Set(["memo", "forwardRef", "lazy", "createContext"]);
 
 const nombreDeComponente = (ruta: string): string =>
@@ -104,19 +146,46 @@ function componentesDeclarados(fuente: ts.SourceFile): Set<string> {
   return declarados;
 }
 
+const DOCUMENTO = /^(window\.|globalThis\.)?document$/;
+/** `document.write(...)`, `document.writeln(...)` y sus formas con corchetes. */
+function esEscrituraDeDocumento(nodo: ts.Node): boolean {
+  const fuente = nodo.getSourceFile();
+  if (ts.isPropertyAccessExpression(nodo)) {
+    return /^write(ln)?$/.test(nodo.name.text) && DOCUMENTO.test(nodo.expression.getText(fuente));
+  }
+  if (ts.isElementAccessExpression(nodo) && ts.isStringLiteralLike(nodo.argumentExpression)) {
+    return (
+      /^write(ln)?$/.test(nodo.argumentExpression.text) &&
+      DOCUMENTO.test(nodo.expression.getText(fuente))
+    );
+  }
+  return false;
+}
+
 /** Problemas, deuda y usos de un archivo de aplicación (no de un componente de campo). */
 export function analizarArchivo(
   ruta: string,
   texto: string,
   contexto: Contexto,
 ): ResultadoDeArchivo {
-  const tipoDeArchivo = ruta.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+  const tipoDeArchivo = TIPOS_DE_SCRIPT[ruta.split(".").pop() ?? ""] ?? ts.ScriptKind.TSX;
   const fuente = ts.createSourceFile(ruta, texto, ts.ScriptTarget.Latest, true, tipoDeArchivo);
   const campos = new Set(contexto.componentes.map(nombreDeComponente));
   const declarados = componentesDeclarados(fuente);
   const problemas: string[] = [];
+  // `parseDiagnostics` no es API pública: si desaparece (o hay un error de sintaxis) el archivo no se pudo analizar y se falla cerrado.
+  const sintaxis = (fuente as unknown as { parseDiagnostics?: readonly unknown[] })
+    .parseDiagnostics;
+  if (sintaxis === undefined || sintaxis.length > 0) {
+    problemas.push(
+      `${ruta} tiene un error de sintaxis (o no se pudo leer): no se puede analizar y el chequeo falla cerrado`,
+    );
+  }
   const usos = new Map<string, number>();
   const crudosPorEtiqueta = new Map<string, number>();
+  const sumarCrudo = (clave: string): void => {
+    crudosPorEtiqueta.set(clave, (crudosPorEtiqueta.get(clave) ?? 0) + 1);
+  };
   let pendientes = 0;
   let dinamicos = 0;
   const donde = (nodo: ts.Node): string =>
@@ -160,7 +229,7 @@ export function analizarArchivo(
       literalDe(atributo(atributos, "type", fuente)) === "hidden" &&
       literalDe(atributo(atributos, "name", fuente)) !== undefined &&
       !atributos.some(ts.isJsxSpreadAttribute);
-    if (!oculto) crudosPorEtiqueta.set(etiqueta, (crudosPorEtiqueta.get(etiqueta) ?? 0) + 1);
+    if (!oculto) sumarCrudo(etiqueta);
   };
 
   const mirar = (nodo: ts.Node): void => {
@@ -171,18 +240,27 @@ export function analizarArchivo(
           `${donde(nodo)} <${tag.getText(fuente)}> tiene un tag que no se puede analizar (compuesto o con espacio de nombres)`,
         );
       } else if (/^[a-z]/.test(tag.text)) {
-        if (CONTROLES_CRUDOS.has(tag.text)) usoDeControlCrudo(nodo, tag.text);
+        const minuscula = tag.text.toLowerCase();
+        if (CONTROLES_CRUDOS.has(minuscula)) usoDeControlCrudo(nodo, minuscula);
+        else if (!ETIQUETAS_PERMITIDAS.has(minuscula)) sumarCrudo("etiqueta-no-permitida");
       } else if (campos.has(tag.text)) {
         usoDeCampo(nodo, tag.text);
       } else if (!declarados.has(tag.text)) {
         dinamicos += 1;
       }
     }
-    if (ts.isJsxAttribute(nodo) && nodo.name.getText(fuente) === "dangerouslySetInnerHTML") {
-      problemas.push(
-        `${donde(nodo)} usa dangerouslySetInnerHTML: puede traer un control que el chequeo no ve`,
-      );
+    if (
+      (ts.isIdentifier(nodo) ||
+        ts.isStringLiteral(nodo) ||
+        ts.isNoSubstitutionTemplateLiteral(nodo)) &&
+      NOMBRES_PROHIBIDOS.has(nodo.text)
+    ) {
+      sumarCrudo("nombre-prohibido");
     }
+    if (ts.isJsxAttribute(nodo) && nodo.name.getText(fuente) === "role") {
+      if ((literalDe(nodo) ?? "").split(/\s+/).includes("textbox")) sumarCrudo("role-textbox");
+    }
+    if (esEscrituraDeDocumento(nodo)) sumarCrudo("document.write");
     if (
       ts.isImportSpecifier(nodo) &&
       nodo.propertyName !== undefined &&
@@ -205,31 +283,6 @@ export function analizarArchivo(
         );
       }
     }
-    if (ts.isCallExpression(nodo)) {
-      const f = nodo.expression;
-      const nombre = ts.isIdentifier(f)
-        ? f.text
-        : ts.isPropertyAccessExpression(f)
-          ? f.name.text
-          : "";
-      const [primero] = nodo.arguments;
-      const deHtmlLiteral =
-        (nombre === "createElement" || nombre === "createElementNS") &&
-        ts.isPropertyAccessExpression(f) &&
-        primero !== undefined &&
-        ts.isStringLiteral(primero) &&
-        !CONTROLES_CRUDOS.has(primero.text);
-      if (FABRICAS_DE_ELEMENTOS.has(nombre) && !deHtmlLiteral) {
-        problemas.push(
-          `${donde(nodo)} llama a ${nombre}(): arma elementos sin pasar por el chequeo`,
-        );
-      }
-    }
-    if (ts.isPropertyAccessExpression(nodo) && HTML_COMO_TEXTO.has(nodo.name.text)) {
-      problemas.push(
-        `${donde(nodo)} usa ${nodo.name.text}: arma HTML como texto sin pasar por el chequeo`,
-      );
-    }
     if (ts.isIdentifier(nodo) && campos.has(nodo.text)) {
       const p = nodo.parent;
       const comoTag =
@@ -248,113 +301,4 @@ export function analizarArchivo(
   mirar(fuente);
   const crudos = [...crudosPorEtiqueta.values()].reduce((a, b) => a + b, 0);
   return { problemas, pendientes, crudos, dinamicos, crudosPorEtiqueta, usos };
-}
-
-/** Un componente de campo declara la prop `dato` tipada como `DatoDeCampo`, obligatoria. */
-export function problemasDeComponente(ruta: string, texto: string): string[] {
-  const fuente = ts.createSourceFile(ruta, texto, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  let correcto = false;
-  const mirar = (nodo: ts.Node): void => {
-    if (
-      ts.isPropertySignature(nodo) &&
-      nodo.name.getText(fuente) === "dato" &&
-      nodo.questionToken === undefined &&
-      nodo.type?.getText(fuente) === "DatoDeCampo"
-    ) {
-      correcto = true;
-    }
-    ts.forEachChild(nodo, mirar);
-  };
-  mirar(fuente);
-  return correcto
-    ? []
-    : [`${ruta} es un componente de campo y no declara «dato: DatoDeCampo» (obligatoria)`];
-}
-
-const accionesDelCatalogo = (): Set<string> =>
-  new Set(Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones)));
-
-/** El registro contra la realidad: fichas, acciones, módulos, fuentes y consumidores que de verdad lo piden. */
-export function problemasDelRegistro(
-  registro: Registro,
-  usosPorArchivo: ReadonlyMap<string, ReadonlyMap<string, number>>,
-  existe: (ruta: string) => boolean,
-): string[] {
-  const problemas: string[] = [];
-  const acciones = accionesDelCatalogo();
-  for (const [id, d] of Object.entries(registro)) {
-    if (!existe(d.ficha)) problemas.push(`${id}: la ficha ${d.ficha} no existe`);
-    if (d.propositos.length === 0) problemas.push(`${id}: no dice para qué existe`);
-    for (const p of d.propositos) {
-      if (p.para.trim() === "" || !/\.md\b/.test(p.fuente)) {
-        problemas.push(
-          `${id}: cada propósito lleva «para» y una fuente verificable (un documento .md)`,
-        );
-      }
-    }
-    if (d.consumidores.length === 0)
-      problemas.push(`${id}: dato huérfano, no tiene consumidores declarados`);
-    for (const c of d.consumidores) {
-      if (!existe(c)) problemas.push(`${id}: el consumidor ${c} no existe`);
-      else if ((usosPorArchivo.get(c)?.get(id) ?? 0) === 0) {
-        problemas.push(
-          `${id}: el consumidor ${c} declarado no pide el dato (huérfano o desactualizado)`,
-        );
-      }
-    }
-    if (d.ponerPor.length === 0) problemas.push(`${id}: no dice quién puede ponerlo`);
-    for (const a of d.ponerPor) {
-      if (!acciones.has(a))
-        problemas.push(`${id}: la acción de permiso «${a}» no existe en el catálogo`);
-    }
-    if (!(d.requiere.modulo in CATALOGO_DE_MODULOS)) {
-      problemas.push(`${id}: el módulo «${d.requiere.modulo}» no existe en el catálogo`);
-    }
-    if (d.requiere.estadoDeEmpresa.length === 0)
-      problemas.push(`${id}: no dice en qué estado de empresa existe`);
-  }
-  return problemas;
-}
-
-export type Cuenta = Readonly<{ pendientes: number; crudos: number; dinamicos: number }>;
-
-const CLAVES_DE_CUENTA = ["pendientes", "crudos", "dinamicos"] as const;
-const hayDeuda = (c: Cuenta | undefined): boolean =>
-  c !== undefined && CLAVES_DE_CUENTA.some((k) => c[k] > 0);
-const resumen = (c: Cuenta): string => CLAVES_DE_CUENTA.map((k) => `${k} ${c[k]}`).join(", ");
-
-/**
- * La deuda real contra el presupuesto por archivo (`arquitectura/deuda/campos-sin-dato.json`): tiene que coincidir EXACTO. Que
- * no suba contra la base lo comprueba `campos-sin-dato.cjs` en el CI; acá se comprueba que el presupuesto no miente.
- */
-export function problemasDeDeuda(
-  reales: ReadonlyMap<string, Cuenta>,
-  presupuesto: Readonly<Record<string, Cuenta>>,
-): string[] {
-  const problemas: string[] = [];
-  for (const [ruta, real] of reales) {
-    if (!hayDeuda(real)) continue;
-    const previsto = presupuesto[ruta];
-    if (previsto === undefined) {
-      problemas.push(
-        `${ruta} tiene deuda de campos (${resumen(real)}) y no está en el presupuesto (deuda nueva)`,
-      );
-    } else if (CLAVES_DE_CUENTA.some((k) => real[k] > previsto[k])) {
-      problemas.push(
-        `${ruta} supera su presupuesto: tiene ${resumen(real)} y el presupuesto dice ${resumen(previsto)}`,
-      );
-    } else if (CLAVES_DE_CUENTA.some((k) => real[k] < previsto[k])) {
-      problemas.push(
-        `${ruta} bajó su deuda (${resumen(real)}): bajá el presupuesto (hoy ${resumen(previsto)}) en arquitectura/deuda/campos-sin-dato.json`,
-      );
-    }
-  }
-  for (const ruta of Object.keys(presupuesto)) {
-    if (!hayDeuda(reales.get(ruta))) {
-      problemas.push(
-        `${ruta} ya no tiene deuda de campos: sacalo de arquitectura/deuda/campos-sin-dato.json y de campos-sin-dato--* en el registro de deuda`,
-      );
-    }
-  }
-  return problemas;
 }

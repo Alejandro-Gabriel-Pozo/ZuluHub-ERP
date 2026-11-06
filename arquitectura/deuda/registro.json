@@ -576,7 +576,12 @@
   {
     "id": "campos-sin-dato--web",
     "archivos": [
+      "apps/web/ui/componentes/Campo.test.tsx",
+      "apps/web/ui/componentes/CampoDeCodigo.test.tsx",
+      "apps/web/ui/componentes/CampoImporte.test.tsx",
+      "apps/web/ui/componentes/Selector.test.tsx",
       "apps/web/ui/patrones/SelectorDeSucursal.cliente.tsx",
+      "apps/web/ui/patrones/Superposicion.test.tsx",
       "apps/web/ui/plantillas/configuracion-fiscal/FormularioDeDatosFiscales.cliente.tsx",
       "apps/web/ui/plantillas/configuracion-fiscal/FormularioDePuntoDeVenta.cliente.tsx",
       "apps/web/ui/plantillas/configuracion-fiscal/PasoGenerarPedido.cliente.tsx",
@@ -584,7 +589,7 @@
       "apps/web/ui/plantillas/facturacion/FormularioDeFiltros.cliente.tsx",
       "apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx"
     ],
-    "descripcion": "Campos de entrada de la web con dato=\"pendiente\": todavía no pasan por el registro de datos (src/capacidades/datos/registro.ts). Se saldan por módulo ligando cada campo a su dato; la cuenta por archivo solo baja.",
+    "descripcion": "Campos de entrada de la web con dato=\"pendiente\" (pantallas y tests): todavía no pasan por el registro de datos (src/capacidades/datos/registro.ts). Se saldan por módulo ligando cada campo a su dato; la cuenta por archivo solo baja.",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-11-05",
@@ -598,10 +603,13 @@
   {
     "id": "campos-sin-dato--web-input",
     "archivos": [
+      "apps/web/ui/patrones/ProveedorDeSesion.test.tsx",
+      "apps/web/ui/patrones/borrador-de-pagina.test.tsx",
       "apps/web/ui/plantillas/facturacion/PantallaDeImprimirComprobante.cliente.tsx",
-      "apps/web/ui/plantillas/vidriera/BuscarEnVidriera.tsx"
+      "apps/web/ui/plantillas/vidriera/BuscarEnVidriera.tsx",
+      "apps/web/ui/pruebas/ayudas.test.tsx"
     ],
-    "descripcion": "Controles crudos <input> de la web fuera de un componente de campo: todavía no pasan por el registro de datos. Se saldan por módulo; la cuenta por archivo solo baja.",
+    "descripcion": "Controles crudos <input> de la web fuera de un componente de campo (pantallas y tests): todavía no pasan por el registro de datos. Se saldan por módulo; la cuenta por archivo solo baja.",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-11-05",
@@ -615,11 +623,12 @@
   {
     "id": "campos-sin-dato--web-textarea",
     "archivos": [
+      "apps/web/ui/patrones/borrador-de-pagina.test.tsx",
       "apps/web/ui/plantillas/configuracion-fiscal/PasoCargarCertificado.cliente.tsx",
       "apps/web/ui/plantillas/configuracion-fiscal/PasoDelPedido.cliente.tsx",
       "apps/web/ui/plantillas/facturacion/PantallaDeAnularComprobante.cliente.tsx"
     ],
-    "descripcion": "Controles crudos <textarea> de la web fuera de un componente de campo: todavía no pasan por el registro de datos. Se saldan por módulo; la cuenta por archivo solo baja.",
+    "descripcion": "Controles crudos <textarea> de la web fuera de un componente de campo (pantallas y tests): todavía no pasan por el registro de datos. Se saldan por módulo; la cuenta por archivo solo baja.",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-11-05",
@@ -631,13 +640,33 @@
     "vence": "2027-01-04"
   },
   {
-    "id": "campos-sin-dato--web-dinamicos",
+    "id": "campos-sin-dato--web-select",
+    "archivos": ["apps/web/ui/patrones/borrador-de-pagina.test.tsx"],
+    "descripcion": "Controles crudos <select> de la web fuera de un componente de campo (pantallas y tests): todavía no pasan por el registro de datos. Se saldan por módulo; la cuenta por archivo solo baja.",
+    "tipo": "backlog",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-11-05",
+    "verificacion": {
+      "contiene": "<select"
+    },
+    "motivo": "Introducir el registro de datos (regla 5, C1) sin reescribir de una vez todas las pantallas existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento. La cuenta por archivo (que solo baja) está en arquitectura/deuda/campos-sin-dato.json.",
+    "aprobadoPor": "orquestador (decisión del dueño 2026-11-05)",
+    "vence": "2027-01-04"
+  },
+  {
+    "id": "campos-sin-dato--web-otros",
     "archivos": [
       "apps/web/ui/iconos/Icono.tsx",
+      "apps/web/ui/plantillas/configuracion-fiscal/PasoDelPedido.cliente.tsx",
+      "apps/web/ui/plantillas/facturacion/PantallaDeImprimirComprobante.test.tsx",
+      "apps/web/ui/plantillas/facturacion/impresion/hoja-a4.test.tsx",
+      "apps/web/ui/plantillas/facturacion/impresion/medicion.test.tsx",
+      "apps/web/ui/plantillas/facturacion/impresion/sin-estilos-en-linea.test.tsx",
       "apps/web/ui/plantillas/vidriera/DetalleDeProducto.tsx",
+      "apps/web/ui/plantillas/vidriera/PlantillaDeVidriera.test.tsx",
       "apps/web/ui/primitivas/Texto.tsx"
     ],
-    "descripcion": "Tags dinámicos de la web (el elemento sale de una variable o un parámetro): el chequeo no puede saber si resuelve a un control crudo. Se saldan tipando el tag con una unión de literales o declarando el componente; la cuenta por archivo solo baja.",
+    "descripcion": "Formas de armar o esconder un control que el chequeo no analiza en la web (tags dinámicos, createElement, innerHTML y similares, tags fuera de la lista de permitidos): no hay un texto común para verificarlas, las cubre el presupuesto exacto por archivo, que solo baja.",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-11-05",
@@ -659,7 +688,7 @@
       "apps/plataforma/pantallas/ventana-de-confirmacion.cliente.tsx",
       "apps/plataforma/pantallas/verificar-codigo.cliente.tsx"
     ],
-    "descripcion": "Campos de entrada de la consola de plataforma con dato=\"pendiente\": todavía no pasan por el registro de datos (src/capacidades/datos/registro.ts). Se saldan por módulo ligando cada campo a su dato; la cuenta por archivo solo baja.",
+    "descripcion": "Campos de entrada de la consola de plataforma con dato=\"pendiente\" (pantallas y tests): todavía no pasan por el registro de datos (src/capacidades/datos/registro.ts). Se saldan por módulo ligando cada campo a su dato; la cuenta por archivo solo baja.",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-11-05",
@@ -678,7 +707,7 @@
       "apps/plataforma/pantallas/casilla-de-programada.cliente.tsx",
       "apps/plataforma/pantallas/ventana-de-confirmacion.cliente.tsx"
     ],
-    "descripcion": "Controles crudos <input> de la consola de plataforma fuera de un componente de campo: todavía no pasan por el registro de datos. Se saldan por módulo; la cuenta por archivo solo baja.",
+    "descripcion": "Controles crudos <input> de la consola de plataforma fuera de un componente de campo (pantallas y tests): todavía no pasan por el registro de datos. Se saldan por módulo; la cuenta por archivo solo baja.",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-11-05",

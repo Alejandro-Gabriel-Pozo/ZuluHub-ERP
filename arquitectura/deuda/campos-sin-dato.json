@@ -54,14 +54,49 @@
     "crudos": 0,
     "dinamicos": 0
   },
+  "apps/web/ui/componentes/Campo.test.tsx": {
+    "pendientes": 4,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/componentes/CampoDeCodigo.test.tsx": {
+    "pendientes": 1,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/componentes/CampoImporte.test.tsx": {
+    "pendientes": 4,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/componentes/Selector.test.tsx": {
+    "pendientes": 2,
+    "crudos": 0,
+    "dinamicos": 0
+  },
   "apps/web/ui/iconos/Icono.tsx": {
     "pendientes": 0,
     "crudos": 0,
     "dinamicos": 2
   },
+  "apps/web/ui/patrones/ProveedorDeSesion.test.tsx": {
+    "pendientes": 0,
+    "crudos": 3,
+    "dinamicos": 0
+  },
   "apps/web/ui/patrones/SelectorDeSucursal.cliente.tsx": {
     "pendientes": 1,
     "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/patrones/Superposicion.test.tsx": {
+    "pendientes": 1,
+    "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/patrones/borrador-de-pagina.test.tsx": {
+    "pendientes": 0,
+    "crudos": 10,
     "dinamicos": 0
   },
   "apps/web/ui/plantillas/configuracion-fiscal/FormularioDeDatosFiscales.cliente.tsx": {
@@ -81,7 +116,7 @@
   },
   "apps/web/ui/plantillas/configuracion-fiscal/PasoDelPedido.cliente.tsx": {
     "pendientes": 0,
-    "crudos": 1,
+    "crudos": 2,
     "dinamicos": 0
   },
   "apps/web/ui/plantillas/configuracion-fiscal/PasoGenerarPedido.cliente.tsx": {
@@ -109,9 +144,29 @@
     "crudos": 1,
     "dinamicos": 0
   },
+  "apps/web/ui/plantillas/facturacion/PantallaDeImprimirComprobante.test.tsx": {
+    "pendientes": 0,
+    "crudos": 1,
+    "dinamicos": 0
+  },
   "apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx": {
     "pendientes": 7,
     "crudos": 0,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/facturacion/impresion/hoja-a4.test.tsx": {
+    "pendientes": 0,
+    "crudos": 1,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/facturacion/impresion/medicion.test.tsx": {
+    "pendientes": 0,
+    "crudos": 3,
+    "dinamicos": 0
+  },
+  "apps/web/ui/plantillas/facturacion/impresion/sin-estilos-en-linea.test.tsx": {
+    "pendientes": 0,
+    "crudos": 10,
     "dinamicos": 0
   },
   "apps/web/ui/plantillas/vidriera/BuscarEnVidriera.tsx": {
@@ -124,9 +179,19 @@
     "crudos": 0,
     "dinamicos": 2
   },
+  "apps/web/ui/plantillas/vidriera/PlantillaDeVidriera.test.tsx": {
+    "pendientes": 0,
+    "crudos": 3,
+    "dinamicos": 0
+  },
   "apps/web/ui/primitivas/Texto.tsx": {
     "pendientes": 0,
     "crudos": 0,
     "dinamicos": 1
+  },
+  "apps/web/ui/pruebas/ayudas.test.tsx": {
+    "pendientes": 0,
+    "crudos": 2,
+    "dinamicos": 0
   }
 }

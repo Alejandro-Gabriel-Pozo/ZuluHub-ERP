@@ -12,7 +12,7 @@ function Controlado(props: {
   deshabilitado?: boolean;
 }) {
   const [valor, setValor] = useState("");
-  return <Campo dato="pendiente" etiqueta="Nombre" valor={valor} alCambiar={setValor} {...props} />;
+  return <Campo etiqueta="Nombre" valor={valor} alCambiar={setValor} {...props} dato="pendiente" />;
 }
 
 describe("Campo", () => {

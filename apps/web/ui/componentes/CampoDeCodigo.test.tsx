@@ -9,11 +9,11 @@ function Controlado(props: { error?: string; ayuda?: string; deshabilitado?: boo
   const [valor, setValor] = useState("");
   return (
     <CampoDeCodigo
-      dato="pendiente"
       etiqueta="Código"
       valor={valor}
       alCambiar={setValor}
       {...props}
+      dato="pendiente"
     />
   );
 }
