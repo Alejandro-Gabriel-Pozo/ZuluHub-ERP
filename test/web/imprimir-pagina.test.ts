@@ -107,6 +107,16 @@ describe("la página de imprimir un comprobante", () => {
     expect(marcado).toContain("A4");
     expect(marcado).toContain("Ticket");
     expect(marcado.match(/<h1\b/g)).toHaveLength(1);
+    // «Descargar PDF»: un enlace a la ruta del PDF de ESTE comprobante, armado con el id ya validado.
+    expect(marcado).toContain(`href="/facturacion/comprobantes/${ID}/pdf"`);
+    expect(marcado).toContain("Descargar PDF");
+  });
+
+  it("si no hay modelo no se ofrece la descarga", async () => {
+    respuesta({ ok: false, error: errorDeCodigo("SIN_PERMISO") });
+    const marcado = await html(`${RUTA}/imprimir/page`, ID);
+    expect(marcado).not.toContain("Descargar PDF");
+    expect(marcado).not.toContain("/pdf");
   });
 
   it.each(["no-es-un-id", "0B9F6A1E-2C3D-4E5F-8A7B-9C0D1E2F3A4B", `${ID}x`, "1; drop table"])(
