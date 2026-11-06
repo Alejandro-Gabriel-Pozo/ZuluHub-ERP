@@ -87,6 +87,15 @@ jobs:
           else
             node arquitectura/deuda/deuda.cjs
           fi
+      # El presupuesto de campos sin dato (regla 5, CLAUDE.md «Sin dato registrado no hay campo»): por archivo, solo baja contra la
+      # base. El guardián de deuda de arriba solo mira «tipo y archivo» y no frena que un archivo ya listado sume un campo crudo.
+      - name: Deuda de campos sin dato (el presupuesto solo baja)
+        run: |
+          if [ -d base ]; then
+            node arquitectura/deuda/campos-sin-dato.cjs --base=base
+          else
+            node arquitectura/deuda/campos-sin-dato.cjs
+          fi
 
   pruebas:
     name: Pruebas (con Postgres real)

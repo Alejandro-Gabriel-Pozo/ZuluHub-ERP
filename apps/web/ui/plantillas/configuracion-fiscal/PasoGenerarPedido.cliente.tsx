@@ -96,6 +96,7 @@ export function PasoGenerarPedido({
       error={rechazo !== null && lugar === clave ? texto({}, rechazo.clave) : undefined}
       deshabilitado={bloqueado}
       {...extra}
+      dato="pendiente"
     />
   );
 

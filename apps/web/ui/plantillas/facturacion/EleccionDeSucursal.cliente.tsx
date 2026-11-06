@@ -36,6 +36,7 @@ export function EleccionDeSucursal({ eleccion, accion }: PropsDeEleccionDeSucurs
         requerido
         // Sin sucursal elegida, el selector arranca en blanco: tiene que elegir una (no se toma la primera).
         {...(eleccion.elegida === "" ? { textoDeElegir: eleccion.elegir } : {})}
+        dato="pendiente"
       />
       <BotonDeEnvio variante="secundaria" textoEnviando={eleccion.enviando}>
         {eleccion.aplicar}

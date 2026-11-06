@@ -35,6 +35,7 @@ export function FormularioDeFiltros({ filtros }: PropsDeFormularioDeFiltros) {
     >
       <div className={estilos["buscar"]}>
         <Campo
+          dato="pendiente"
           etiqueta={textos.buscar}
           nombre="texto"
           tipo="search"
@@ -47,6 +48,7 @@ export function FormularioDeFiltros({ filtros }: PropsDeFormularioDeFiltros) {
         <summary className={estilos["resumen"]}>{textos.filtros}</summary>
         <div className={estilos["campos"]}>
           <Selector
+            dato="pendiente"
             etiqueta={textos.periodo}
             nombre="periodo"
             valor={periodo}
@@ -55,6 +57,7 @@ export function FormularioDeFiltros({ filtros }: PropsDeFormularioDeFiltros) {
           />
           <div className={estilos["fechas"]}>
             <Campo
+              dato="fecha-civil"
               etiqueta={textos.desde}
               nombre="desde"
               tipo="date"
@@ -62,6 +65,7 @@ export function FormularioDeFiltros({ filtros }: PropsDeFormularioDeFiltros) {
               alCambiar={setDesde}
             />
             <Campo
+              dato="fecha-civil"
               etiqueta={textos.hasta}
               nombre="hasta"
               tipo="date"
@@ -70,6 +74,7 @@ export function FormularioDeFiltros({ filtros }: PropsDeFormularioDeFiltros) {
             />
           </div>
           <Selector
+            dato="pendiente"
             etiqueta={textos.estado}
             nombre="estado"
             valor={estado}
@@ -78,6 +83,7 @@ export function FormularioDeFiltros({ filtros }: PropsDeFormularioDeFiltros) {
             opciones={filtros.estados}
           />
           <Selector
+            dato="pendiente"
             etiqueta={textos.letra}
             nombre="letra"
             valor={letra}
@@ -87,6 +93,7 @@ export function FormularioDeFiltros({ filtros }: PropsDeFormularioDeFiltros) {
           />
           {filtros.puntosDeVenta.length === 0 ? null : (
             <Selector
+              dato="pendiente"
               etiqueta={textos.puntoDeVenta}
               nombre="puntoDeVenta"
               valor={puntoDeVenta}

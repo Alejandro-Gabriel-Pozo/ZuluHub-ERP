@@ -19,6 +19,7 @@ import {
 
 const nuevas = nd as unknown as {
   formaDeLaDeuda: (linea: string) => string | null;
+  formaDeLosCampos: (linea: string) => string | null;
   leerDeuda: (registro: string | null, configuracion: string | null) => Record<string, unknown>;
   chequearDeuda: (
     base: Instantanea,
@@ -86,6 +87,8 @@ describe("leerCi: el paso de la deuda se reconoce con sus dos formas en un mismo
         ejecutaGuardian: false,
         deudaSola: true,
         deudaConBase: true,
+        camposSola: false,
+        camposConBase: false,
         si: undefined,
       },
     ]);
@@ -920,5 +923,152 @@ describe("verificar: el chequeo (j) y su aviso de punta a punta", () => {
       expect(nd.DESCRIPCION_DE_CODIGOS[codigo]?.startsWith("(j) "), codigo).toBe(true);
     }
     expect(nd.CODIGOS_DE_AVISO).toContain("deuda-sin-base");
+  });
+});
+
+describe("formaDeLosCampos: la línea que corre campos-sin-dato.cjs tal cual", () => {
+  it.each([
+    ["node arquitectura/deuda/campos-sin-dato.cjs", "sola"],
+    ["  node   arquitectura/deuda/campos-sin-dato.cjs  ", "sola"],
+    ["- run: node arquitectura/deuda/campos-sin-dato.cjs", "sola"],
+    ["node arquitectura/deuda/campos-sin-dato.cjs --base=base", "con-base"],
+    ["    node arquitectura/deuda/campos-sin-dato.cjs   --base=base   ", "con-base"],
+  ])("«%s» es la forma %s", (linea, forma) => {
+    expect(nuevas.formaDeLosCampos(linea)).toBe(forma);
+  });
+
+  it.each([
+    "",
+    "node arquitectura/deuda/deuda.cjs",
+    "node arquitectura/deuda/deuda.cjs --base=base",
+    "node arquitectura/deuda/campos-sin-dato.cjs --base=otra",
+    "node arquitectura/deuda/campos-sin-dato.cjs --base=base --otra",
+    "node arquitectura/deuda/campos-sin-dato.cjs || true",
+    "node arquitectura/deuda/campos-sin-dato.cjs; echo",
+    "echo node arquitectura/deuda/campos-sin-dato.cjs",
+    "# node arquitectura/deuda/campos-sin-dato.cjs",
+    "node arquitectura/deuda/campos-sin-dato.cjs.bak",
+  ])("«%s» no es el comando de los campos", (linea) => {
+    expect(nuevas.formaDeLosCampos(linea)).toBeNull();
+  });
+
+  it("la deuda no es los campos, ni al revés", () => {
+    expect(nuevas.formaDeLaDeuda("node arquitectura/deuda/campos-sin-dato.cjs")).toBeNull();
+    expect(nuevas.formaDeLosCampos("node arquitectura/deuda/deuda.cjs")).toBeNull();
+  });
+});
+
+describe("leerCi: el paso de los campos se reconoce con sus dos formas en un mismo paso", () => {
+  const pasos = (...cuerpo: string[]) =>
+    job(lineas("jobs:", "  guardian:", "    steps:", ...cuerpo), "guardian").pasos;
+
+  it("cada forma se marca por separado, cada paso lleva las suyas y no se mezcla con la deuda", () => {
+    const [sola, conBase, deuda, ambas] = pasos(
+      "      - run: node arquitectura/deuda/campos-sin-dato.cjs",
+      "      - run: node arquitectura/deuda/campos-sin-dato.cjs --base=base",
+      "      - run: node arquitectura/deuda/deuda.cjs --base=base",
+      "      - run: node arquitectura/deuda/campos-sin-dato.cjs --base=base",
+      "        run: node arquitectura/deuda/campos-sin-dato.cjs",
+    ) as unknown as { camposSola: boolean; camposConBase: boolean; deudaConBase: boolean }[];
+    expect([sola?.camposSola, sola?.camposConBase]).toEqual([true, false]);
+    expect([conBase?.camposSola, conBase?.camposConBase]).toEqual([false, true]);
+    expect([deuda?.camposSola, deuda?.camposConBase, deuda?.deudaConBase]).toEqual([
+      false,
+      false,
+      true,
+    ]);
+    expect([ambas?.camposSola, ambas?.camposConBase]).toEqual([true, true]);
+  });
+});
+
+describe("(j) chequearCi: el paso de los campos lo exige la base, y no gana saltos", () => {
+  const PASO = [
+    "      - name: Campos",
+    "        run: |",
+    "          node arquitectura/deuda/campos-sin-dato.cjs --base=base",
+    "          node arquitectura/deuda/campos-sin-dato.cjs",
+  ];
+  const ci = (...pasos: string[]) =>
+    ciLeido(
+      lineas("jobs:", "  guardian:", "    steps:", ...pasos, "  gate:", "    needs: [guardian]"),
+    );
+  const conCi = (valor: ReturnType<typeof ciLeido>): Instantanea => instantanea({ ci: valor });
+  const hallazgos = (base: string[], pr: string[]) =>
+    nd.chequearCi(conCi(ci(...base)), conCi(ci(...pr)));
+  const GUARDIAN = "      - run: node arquitectura/contratos/guardian.cjs";
+
+  it("la base lo tenía y el PR también, o la base no lo tenía: nada", () => {
+    expect(hallazgos([GUARDIAN, ...PASO], [GUARDIAN, ...PASO])).toEqual([]);
+    expect(hallazgos([GUARDIAN], [GUARDIAN, ...PASO])).toEqual([]);
+    expect(hallazgos([GUARDIAN], [GUARDIAN])).toEqual([]);
+  });
+
+  it("el PR lo quitó: falla en la línea del job guardian, con el texto exacto", () => {
+    expect(hallazgos([GUARDIAN, ...PASO], [GUARDIAN])).toStrictEqual([
+      {
+        codigo: "ci-sin-paso-de-campos",
+        archivo: A.ci,
+        contrato: null,
+        motivo:
+          "El job guardian ya no ejecuta `node arquitectura/deuda/campos-sin-dato.cjs` y `node arquitectura/deuda/campos-sin-dato.cjs --base=base` tal cual en un mismo paso, y la base sí: el presupuesto de campos sin dato podría subir sin que la CI lo note.",
+        correccion: "Devolvé el paso del presupuesto de campos sin dato al job guardian.",
+        linea: 2,
+      },
+    ]);
+  });
+
+  it("con una sola de las dos formas, o con las dos en pasos distintos, ya no es el paso", () => {
+    const sola = ["      - run: node arquitectura/deuda/campos-sin-dato.cjs"];
+    const conBase = ["      - run: node arquitectura/deuda/campos-sin-dato.cjs --base=base"];
+    for (const pr of [sola, conBase, [...sola, ...conBase]]) {
+      expect(hallazgos([GUARDIAN, ...PASO], [GUARDIAN, ...pr]).map((h) => h.codigo)).toEqual([
+        "ci-sin-paso-de-campos",
+      ]);
+    }
+  });
+
+  it("un continue-on-error o un if nuevo en el paso falla con el texto exacto; el de otro paso no cuenta", () => {
+    const conSalto = (linea: string) => ["      - name: Campos", linea, ...PASO.slice(1)];
+    expect(
+      hallazgos([GUARDIAN, ...PASO], [GUARDIAN, ...conSalto("        continue-on-error: true")]),
+    ).toStrictEqual([
+      {
+        codigo: "ci-campos-con-salto",
+        archivo: A.ci,
+        contrato: null,
+        motivo:
+          "El paso del presupuesto de campos sin dato tiene `continue-on-error`, que la base no tenía: un fallo suyo se podría saltear.",
+        correccion:
+          "Sacá la línea: el control del presupuesto de campos sin dato tiene que correr siempre y su fallo tiene que frenar el Gate.",
+        linea: 6,
+      },
+    ]);
+    expect(
+      hallazgos([GUARDIAN, ...PASO], [GUARDIAN, ...conSalto("        if: false")]),
+    ).toStrictEqual([
+      {
+        codigo: "ci-campos-con-salto",
+        archivo: A.ci,
+        contrato: null,
+        motivo:
+          "El paso del presupuesto de campos sin dato tiene `if: false`, que la base no tenía: un fallo suyo se podría saltear.",
+        correccion:
+          "Sacá la línea: el control del presupuesto de campos sin dato tiene que correr siempre y su fallo tiene que frenar el Gate.",
+        linea: 6,
+      },
+    ]);
+    expect(
+      hallazgos([GUARDIAN, ...conSalto("        if: a")], [GUARDIAN, ...conSalto("        if: a")]),
+    ).toEqual([]);
+    expect(
+      hallazgos(
+        [GUARDIAN, ...conSalto("        if: a")],
+        [GUARDIAN, ...conSalto("        if: b")],
+      ).map((h) => h.linea),
+    ).toEqual([6]);
+    const deOtro = [GUARDIAN, "        continue-on-error: true", ...PASO];
+    expect(
+      hallazgos([GUARDIAN, ...PASO], deOtro).filter((h) => h.codigo === "ci-campos-con-salto"),
+    ).toEqual([]);
   });
 });
