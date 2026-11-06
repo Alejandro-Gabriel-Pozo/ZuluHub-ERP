@@ -243,16 +243,27 @@ export const comoSesion = (usuarioAuth: UsuarioAuthId): ContextoDeSesion => ({
 /** El `ahora` de las pruebas (el mismo de todos los contextos de este archivo). */
 export const AHORA_DE_PRUEBA = AHORA;
 
-/** CUIT válido al azar (único con altísima probabilidad dentro de una corrida). */
+const CUERPOS_POSIBLES = 100_000_000;
+/** Dónde empieza la secuencia de ESTE proceso: al azar, para que dos procesos (copias de «Estabilidad») no recorran lo mismo. */
+let siguienteCuerpo = randomInt(0, CUERPOS_POSIBLES);
+
+/**
+ * CUIT válido, distinto en cada llamada de este proceso: una secuencia (contador) y no un sorteo, porque dos sorteos pueden
+ * repetirse (cumpleaños) y un CUIT repetido choca con la unicidad de la base (caso real: «Estabilidad» en #191). Entre procesos
+ * distintos la secuencia arranca en un punto al azar de 10^8 cuerpos. El dígito verificador sale de `digitoVerificadorDeCuit`; si
+ * un cuerpo no tiene verificador válido se salta.
+ */
 export function cuitAlAzar(): Cuit {
-  for (;;) {
-    let diez = String(randomInt(20, 34));
-    while (diez.length < 10) diez += String(randomInt(0, 10));
+  for (let intentos = 0; intentos < CUERPOS_POSIBLES; intentos++) {
+    const cuerpo = siguienteCuerpo;
+    siguienteCuerpo = (siguienteCuerpo + 1) % CUERPOS_POSIBLES;
+    const diez = `${20 + (cuerpo % 14)}${String(cuerpo).padStart(8, "0")}`;
     const verificador = digitoVerificadorDeCuit(diez);
     if (verificador === null) continue;
     const resultado = cuitDesdeTexto(`${diez}${verificador}`);
     if (resultado.ok) return resultado.valor;
   }
+  throw new Error("cuitAlAzar: se agotaron los CUIT posibles");
 }
 
 export const nombreAlAzar = (prefijo: string): string =>

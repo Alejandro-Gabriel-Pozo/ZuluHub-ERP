@@ -23,6 +23,7 @@ import {
   codigoDeLaAplicacion,
   otroNavegadorConLaSesion,
   type PlataformaDePrueba,
+  usarFechaQuietaDeTotp,
 } from "./autenticacion-plataforma-apoyo";
 import { crearBaseAparte } from "./entorno";
 
@@ -41,6 +42,7 @@ vi.setConfig({ testTimeout: 120_000, hookTimeout: 120_000 });
 const MINUTO = 60_000;
 
 describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor", () => {
+  usarFechaQuietaDeTotp();
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let dueno: pg.Client;
   let proveedor: ProveedorLocal;

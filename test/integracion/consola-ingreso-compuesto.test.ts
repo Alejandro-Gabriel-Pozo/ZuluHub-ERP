@@ -21,6 +21,7 @@ import {
   codigoDeLaAplicacion,
   otroNavegadorConLaSesion,
   type AdminDePrueba,
+  usarFechaQuietaDeTotp,
 } from "./autenticacion-plataforma-apoyo";
 import { crearBaseAparte } from "./entorno";
 import { claveAlAzar } from "./plataforma-apoyo";
@@ -44,6 +45,7 @@ const MINUTO = 60_000;
 type Alta = Readonly<{ qrSvg: string; secreto: string; codigosDeRecuperacion: string[] }>;
 
 describe.skipIf(base === null)("el ingreso de la consola compuesto, de punta a punta", () => {
+  usarFechaQuietaDeTotp();
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let dueno: pg.Client;
   let proveedor: ProveedorLocal;

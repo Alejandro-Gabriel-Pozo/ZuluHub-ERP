@@ -3,7 +3,7 @@ import { darDeBajaAlAdmin } from "../../src/adaptadores/postgres/baja-de-admin";
 import { armarPuertaDeConsola } from "../../src/composicion/puerta-de-consola";
 import { Navegador } from "./autenticacion-ingreso-apoyo";
 import { empresaConMiembro, personaConUsuario } from "./autenticacion-apoyo";
-import { codigoDeLaAplicacion } from "./autenticacion-plataforma-apoyo";
+import { codigoDeLaAplicacion, usarFechaQuietaDeTotp } from "./autenticacion-plataforma-apoyo";
 import {
   HOST_DE_LA_CONSOLA,
   HOST_DE_LA_WEB,
@@ -36,6 +36,7 @@ vi.setConfig({ testTimeout: 120_000, hookTimeout: 120_000 });
 describe.skipIf(base === null)(
   "la puerta de la consola con la base y la autenticación reales",
   () => {
+    usarFechaQuietaDeTotp();
     let m: Mundo;
 
     beforeAll(async () => {
