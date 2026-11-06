@@ -5,9 +5,11 @@ import {
   comprobanteDePrueba,
   esperarLasHojas,
   QR_DE_PRUEBA,
+  reglaDePaginaAdoptada,
   type OpcionesDelComprobante,
 } from "./ayudas-de-impresion";
 import { ComprobanteImpreso } from "./ComprobanteImpreso.cliente";
+import { ANCHO_TICKET_MM } from "./geometria";
 import { armarLaHoja } from "./modelo-de-la-hoja";
 import { EncabezadoDeHoja } from "./PiezasDeLaHoja";
 
@@ -44,11 +46,13 @@ async function dibujarTicket(opciones: OpcionesDelComprobante) {
     </div>,
   );
   await expect.poll(() => document.querySelector("[data-ticket]")).not.toBeNull();
+  // El `@page` se adopta por hoja constructable y el ancho va por CSSOM (PR #193): se espera ticket medido y con su ancho aplicado.
   await expect
-    .poll(() => document.querySelector("style[data-estilo-de-pagina]")?.textContent)
-    .toMatch(/@page\{size:80mm \d+mm;margin:0\}/);
+    .poll(() => reglaDePaginaAdoptada())
+    .toMatch(new RegExp(`size: ${ANCHO_TICKET_MM}mm \\d+mm`));
   const ticket = document.querySelector<HTMLElement>("[data-ticket]");
   if (ticket === null) throw new Error("no hay ticket");
+  expect(ticket.style.getPropertyValue("--ticket-ancho")).toBe(`${ANCHO_TICKET_MM}mm`);
   return { ticket, pantalla };
 }
 
