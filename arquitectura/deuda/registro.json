@@ -398,18 +398,24 @@
     "archivos": ["arquitectura/contratos/invariantes.cjs"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
-    "tamano": 3051,
+    "tamano": 3083,
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
+    "creada": "2026-10-22",
+    "motivo": "#198 (C1) protege en no-debilitar.cjs el paso del presupuesto de campos sin dato y registra sus mutaciones en invariantes.cjs (segunda revisión independiente, 2026-11-06): suma líneas a un archivo que todavía no se parte. Se paga partiendo el archivo.",
+    "aprobadoPor": "orquestador (segunda revisión independiente de #198, 2026-11-06: pidió proteger el paso en no-debilitar.cjs en este PR)",
+    "vence": "2026-12-21"
   },
   {
     "id": "archivo-grande--arquitectura-contratos-no-debilitar-cjs",
     "archivos": ["arquitectura/contratos/no-debilitar.cjs"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
-    "tamano": 1762,
+    "tamano": 1803,
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
+    "creada": "2026-10-22",
+    "motivo": "#198 (C1) protege en no-debilitar.cjs el paso del presupuesto de campos sin dato y registra sus mutaciones en invariantes.cjs (segunda revisión independiente, 2026-11-06): suma líneas a un archivo que todavía no se parte. Se paga partiendo el archivo.",
+    "aprobadoPor": "orquestador (segunda revisión independiente de #198, 2026-11-06: pidió proteger el paso en no-debilitar.cjs en este PR)",
+    "vence": "2026-12-21"
   },
   {
     "id": "archivo-grande--arquitectura-contratos-verificar-mecanismo-cjs",

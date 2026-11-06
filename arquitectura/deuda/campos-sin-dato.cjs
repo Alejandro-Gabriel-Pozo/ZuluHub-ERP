@@ -36,7 +36,7 @@ function problemasDeForma(presupuesto) {
     const claves = Object.keys(cuenta);
     if (claves.length !== CLAVES.length || !CLAVES.every((c) => claves.includes(c))) {
       problemas.push(`«${ruta}»: lleva exactamente ${CLAVES.join(", ")}.`);
-    } else if (!esEntero(cuenta.pendientes) || !esEntero(cuenta.crudos)) {
+    } else if (!CLAVES.every((c) => esEntero(cuenta[c]))) {
       problemas.push(`«${ruta}»: ${CLAVES.join(", ")} son enteros desde 0.`);
     } else if (CLAVES.every((c) => cuenta[c] === 0)) {
       problemas.push(`«${ruta}»: no tiene deuda; sacalo del presupuesto.`);
@@ -71,7 +71,7 @@ function leer(carpeta) {
   const ruta = path.join(carpeta, ARCHIVO);
   if (!fs.existsSync(ruta)) return { ausente: true };
   try {
-    return { valor: JSON.parse(fs.readFileSync(ruta, "utf8")) };
+    return { valor: JSON.parse(fs.readFileSync(ruta)) };
   } catch (error) {
     return { error: `${ruta}: no se puede leer (${error.message}).` };
   }
