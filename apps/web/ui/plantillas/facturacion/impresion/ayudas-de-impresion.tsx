@@ -148,3 +148,20 @@ export async function esperarLasHojas(): Promise<HTMLElement[]> {
   }
   throw new Error("las hojas no aparecieron o no se estabilizaron");
 }
+
+/**
+ * El texto de las reglas de las hojas de estilo ADOPTADAS del documento (la `@page` y «solo la hoja» de `EstiloDePagina`), tal como las
+ * normaliza el navegador (`@page { size: 80mm 183mm; margin: 0px; }`). Vacío si no hay ninguna.
+ */
+export const reglasAdoptadas = (): string =>
+  document.adoptedStyleSheets
+    .flatMap((hoja) => [...hoja.cssRules].map((regla) => regla.cssText))
+    .join("\n");
+
+/** El `@page` adoptado, o `""` si todavía no hay (el ticket no lo tiene hasta medirse). */
+export const reglaDePaginaAdoptada = (): string =>
+  document.adoptedStyleSheets
+    .flatMap((hoja) => [...hoja.cssRules])
+    .filter((regla) => regla instanceof CSSPageRule)
+    .map((regla) => regla.cssText)
+    .join("\n");

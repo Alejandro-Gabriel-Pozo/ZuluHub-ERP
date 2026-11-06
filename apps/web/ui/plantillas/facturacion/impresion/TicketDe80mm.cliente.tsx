@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { estiloDelTicket, HOLGURA_DEL_TICKET_MM, pxAMm } from "./geometria";
+import { useEffect, useLayoutEffect, useRef } from "react";
+import { aplicarEstilos } from "../../../primitivas/aplicar-estilos";
+import { HOLGURA_DEL_TICKET_MM, pxAMm, variablesDelTicket } from "./geometria";
 import type { FilaArmada, HojaArmada } from "./modelo-de-la-hoja";
 import { Qr } from "./PiezasDeLaHoja";
 import estilos from "./Ticket.module.css";
@@ -29,6 +30,10 @@ function Fila({ fila }: Readonly<{ fila: FilaArmada }>) {
  */
 export function TicketDe80mm({ a, qrSvg, alMedirElAlto }: PropsDelTicket) {
   const raiz = useRef<HTMLDivElement>(null);
+  // El ancho va ANTES de medir el alto (el efecto de abajo corre después: los de layout corren primero).
+  useLayoutEffect(() => {
+    aplicarEstilos(raiz.current, variablesDelTicket());
+  }, []);
   useEffect(() => {
     const elemento = raiz.current;
     if (elemento === null) return;
@@ -50,7 +55,7 @@ export function TicketDe80mm({ a, qrSvg, alMedirElAlto }: PropsDelTicket) {
     };
   }, [a, alMedirElAlto]);
   return (
-    <div ref={raiz} className={estilos["ticket"]} style={estiloDelTicket()} data-ticket="">
+    <div ref={raiz} className={estilos["ticket"]} data-ticket="">
       {a.leyendas.map((leyenda, i) => (
         <div key={i} className={estilos["homologacion"]}>
           {leyenda}
