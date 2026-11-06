@@ -332,14 +332,6 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "dependabot-sin-agrupar",
-    "archivos": [".github/dependabot.yml"],
-    "descripcion": "Dependabot sube `next` y `react` de a un workspace y abre PR rojos (informe de CI §3.2 D14): conviene agruparlos en un solo PR.",
-    "tipo": "backlog",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "workflows-de-migracion-duplicados",
     "archivos": [".github/workflows/migrar.yml", ".github/workflows/migrar-base.yml"],
     "descripcion": "Dos workflows de migración (migrar.yml y migrar-base.yml) duplican la superficie de secretos (informe de CI §3.2 D15). Requiere una decisión del dueño.",
