@@ -26,12 +26,17 @@ import type { CondicionIibb } from "./datos-fiscales";
 import { condicionDeIibbImpresa } from "./iibb-impreso";
 import { importesParaArca } from "./importes-para-arca";
 import { leyendaDeCreditoFiscal } from "./leyenda-de-credito-fiscal";
+import {
+  LEYENDA_A_CONSUMIDOR_FINAL,
+  leyendaDeCondicionDelReceptor,
+} from "./leyenda-de-condicion-del-receptor";
 import { urlDelQr, type ErrorDeQr } from "./qr-de-arca";
 import type { CondicionIva } from "./emisor";
 import type { DocumentoDelReceptor, Receptor } from "./receptor";
 import { transparenciaFiscal, type TransparenciaFiscalImpresa } from "./transparencia-fiscal";
 import {
   PRIMERA_VERSION_CON_CONTACTO,
+  PRIMERA_VERSION_CON_LEYENDA_DE_CONDICION,
   PRIMERA_VERSION_CON_MODO_DE_PRECIO,
   PRIMERA_VERSION_CON_SUCURSAL,
   PRIMERA_VERSION_CON_TEXTOS_LEGALES,
@@ -49,7 +54,7 @@ import {
  * - Totales según la letra: A discrimina neto e IVA por alícuota; B muestra el total y el IVA
  *   CONTENIDO por alícuota (decisión 9 del dueño); C muestra solo el total.
  * - `versionDeRepresentacion` la sella el comprobante al nacer: reimprimir da lo mismo aunque el
- *   formato cambie después. Existen la versión 1 y la 2 (ver `VERSIONES_SOPORTADAS`).
+ *   formato cambie después. Existen las versiones 1, 2 y 3 (ver `VERSIONES_SOPORTADAS`).
  * - Todo importe, cantidad y precio sale como texto decimal.
  *
  * NO VERIFICADO (preguntas C8 y C23 al contador): qué otras leyendas legales deben figurar. `leyendas`
@@ -57,14 +62,6 @@ import {
  */
 
 export { VERSION_DE_REPRESENTACION_ACTUAL } from "./versiones-de-representacion";
-
-/**
- * Leyenda del receptor (versión 2), copiada de la norma sin parafrasear; si ARCA la cambia, es una versión nueva.
- * FUENTE (repositorio de docs, `12-referencias-externas/arca-normas-de-comprobantes/`, rama `web/especificaciones-del-qr`,
- * PR #3): Anexo II, Apartado A, Título II, d) 1. (`rg1415_dcp.html`, texto vigente; `rg5866.html`, art. 1 f)). Los textos
- * del bloque de transparencia fiscal están en `transparencia-fiscal.ts`.
- */
-const LEYENDA_A_CONSUMIDOR_FINAL = "A CONSUMIDOR FINAL";
 
 export const LEYENDA_DE_HOMOLOGACION = "HOMOLOGACIÓN — SIN VALIDEZ FISCAL";
 
@@ -188,6 +185,11 @@ export type ModeloImpreso = Readonly<{
      * Ausente en la versión 1 y en cualquier otra condición.
      */
     leyenda?: string;
+    /**
+     * Versión 3 en adelante y solo si el receptor NO es consumidor final y la norma da una leyenda para su condición (RG 1415 Anexo II
+     * A.II; `leyenda-de-condicion-del-receptor.ts`). Ausente en las versiones 1 y 2 y en las condiciones sin leyenda.
+     */
+    leyendaDeCondicion?: string;
   }>;
   /**
    * Versión 2 en adelante: si los precios unitarios de los renglones llevan el IVA incluido o van sin IVA. Lo guardó el
@@ -325,6 +327,10 @@ export function modeloDeImpresion(
   const leyendaDeCredito = conTextosLegales
     ? leyendaDeCreditoFiscal(letra, comprobante.receptor.condicionIva)
     : null;
+  const leyendaDeCondicion =
+    comprobante.versionDeRepresentacion >= PRIMERA_VERSION_CON_LEYENDA_DE_CONDICION
+      ? leyendaDeCondicionDelReceptor(comprobante.receptor.condicionIva)
+      : null;
   const bloqueDeTransparencia = conTextosLegales
     ? transparenciaFiscal(totales, comprobante.receptor, comprobante.total.moneda)
     : null;
@@ -358,6 +364,7 @@ export function modeloDeImpresion(
       ...(conTextosLegales && comprobante.receptor.condicionIva === "CONSUMIDOR_FINAL"
         ? { leyenda: LEYENDA_A_CONSUMIDOR_FINAL }
         : {}),
+      ...(leyendaDeCondicion === null ? {} : { leyendaDeCondicion }),
     },
     ...(conModoDePrecio ? { modoDePrecio: comprobante.modoDePrecio } : {}),
     renglones: comprobante.renglones.map((r) => ({

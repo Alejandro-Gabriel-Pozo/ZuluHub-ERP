@@ -113,6 +113,9 @@ function datosObligatorios(m: Modelo): readonly (readonly [string, string])[] {
   ];
   if (e.iibbNumero !== null) datos.push(["ingresos brutos", e.iibbNumero]);
   if (m.sucursal !== undefined) datos.push(["nombre de la sucursal", m.sucursal.nombre]);
+  if (m.receptor.leyendaDeCondicion !== undefined) {
+    datos.push(["leyenda de la condición del receptor", m.receptor.leyendaDeCondicion]);
+  }
   m.renglones.forEach((r, i) => {
     datos.push([`renglón ${i + 1}: descripción`, r.descripcion]);
     datos.push([`renglón ${i + 1}: importe`, formatearImporte(r.importe)]);
@@ -201,6 +204,28 @@ describe("el PDF trae cada dato obligatorio del modelo", () => {
     const texto = normalizar(pdf[0]?.texto ?? "");
     for (const t of textosDeLaHoja(entradaDelPdf(m).hoja)) {
       expect(texto, `«${t}»`).toContain(normalizar(t));
+    }
+  });
+
+  it("la leyenda de la condición del receptor (RG 1415 Anexo II A.II) sale en el PDF, y sin ella la comprobación falla", async () => {
+    const mInscripto = modeloDe(facturaA);
+    const mMonotributo = modeloDe(facturaAMonotributo);
+    expect(mInscripto.receptor.leyendaDeCondicion).toBe("IVA RESPONSABLE INSCRITO");
+    expect(mMonotributo.receptor.leyendaDeCondicion).toBe("RESPONSABLE MONOTRIBUTO");
+    expect(modeloDe(facturaB).receptor.leyendaDeCondicion).toBeUndefined();
+    for (const modelo of [mInscripto, mMonotributo]) {
+      const pdf = await leerElPdf(await generar(modelo));
+      expect(faltantes(modelo, pdf)).toEqual([]);
+      const mutado = await leerElPdf(
+        await generarPdfDeLaFactura(
+          entradaCon(modelo, {
+            receptor: entradaDelPdf(modelo).hoja.receptor.filter(
+              (f) => f.valor !== modelo.receptor.leyendaDeCondicion,
+            ),
+          }),
+        ),
+      );
+      expect(faltantes(modelo, mutado)).toEqual(["leyenda de la condición del receptor"]);
     }
   });
 
