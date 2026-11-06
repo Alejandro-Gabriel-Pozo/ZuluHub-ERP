@@ -53,6 +53,36 @@ describe("textoDeUnaLineaDesdeTexto: lo que acepta", () => {
   });
 });
 
+describe("recorte de extremos y arranque con signo de fórmula", () => {
+  it("los saltos de línea y tabuladores en los extremos se recortan: «Juan\\n» queda «Juan»", () => {
+    for (const texto of ["Juan\n", "Juan\t", "\nJuan", "\tJuan", " \r\n Juan \t "]) {
+      valido(texto, "Juan");
+    }
+  });
+
+  it("adentro del texto esos mismos caracteres se rechazan", () => {
+    for (const texto of ["Ju\nan", "Ju\tan", "Ju\ran"]) invalido(texto, "CARACTER_PROHIBIDO");
+  });
+
+  it("no puede empezar con `+` ni `-` (inyección de fórmulas), ni siquiera después del recorte", () => {
+    for (const texto of ["+54 11", "-Juan", "- Juan", "+", "-", "  -Juan", "\n+1"]) {
+      invalido(texto, "CARACTER_PROHIBIDO");
+    }
+  });
+
+  it("`=` y `@` quedan afuera en cualquier posición, también al principio (los frena la lista de permitidos)", () => {
+    for (const texto of ["=SUMA(A1)", "@usuario", "a=b", "a@b", "Juan =1"]) {
+      invalido(texto, "CARACTER_PROHIBIDO");
+    }
+  });
+
+  it("`+` y `-` en el medio o al final entran: «Coca-Cola», «Hotel 9-A», «Juan +»", () => {
+    for (const texto of ["Coca-Cola", "Hotel 9-A", "Pérez-Gómez", "Juan +", "Juan -", "A+B"]) {
+      valido(texto, texto);
+    }
+  });
+});
+
 describe("la lista de permitidos", () => {
   it("cada carácter declarado entra, uno por uno", () => {
     const permitidos =
@@ -110,7 +140,7 @@ describe("la lista de permitidos", () => {
     for (const texto of ["a", "Ñ", "1 ü", "Œ", "5º A"]) {
       expect(textoDeUnaLineaDesdeTexto(texto, exige), texto).toEqual({ ok: true, valor: texto });
     }
-    for (const texto of ["123", "5º", "1ª", "-", "20-12345678-6", "&&&"]) {
+    for (const texto of ["123", "5º", "1ª", "20-12345678-6", "&&&"]) {
       expect(textoDeUnaLineaDesdeTexto(texto, exige), texto).toEqual({
         ok: false,
         error: "SIN_LETRAS",

@@ -172,6 +172,17 @@ describe("validarReceptor: forma", () => {
     }
   });
 
+  it("un nombre o un domicilio que empieza con `=`, `+`, `-` o `@` se rechaza con su campo", () => {
+    for (const texto of ["=SUMA(A1)", "+Juan", "-Juan", "@Juan"]) {
+      expect(validarReceptor({ ...inscripto, nombre: texto }, contexto("A")), texto).toEqual(
+        invalido("nombre"),
+      );
+      expect(validarReceptor({ ...inscripto, domicilio: texto }, contexto("A")), texto).toEqual(
+        invalido("domicilio"),
+      );
+    }
+  });
+
   it("el nombre y el domicilio quedan en su forma canónica (blancos repetidos, NFC)", () => {
     const r = validarReceptor(
       { ...inscripto, nombre: "  Pérez   e  Hijos ", domicilio: "Av.  Siempreviva   742" },
