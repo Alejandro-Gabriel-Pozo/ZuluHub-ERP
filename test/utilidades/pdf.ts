@@ -67,6 +67,15 @@ export async function leerElPdf(bytes: Uint8Array): Promise<readonly PaginaLeida
   return paginas;
 }
 
+/** La fecha de creación de los metadatos del PDF, como la guarda el documento (`D:AAAAMMDDhhmmssZ`). */
+export async function fechaDeCreacionDelPdf(bytes: Uint8Array): Promise<string | undefined> {
+  const tarea = getDocument({ data: new Uint8Array(bytes), verbosity: 0 });
+  const documento = await tarea.promise;
+  const { info } = await documento.getMetadata();
+  await tarea.destroy();
+  return (info as { CreationDate?: string }).CreationDate;
+}
+
 /** La página dibujada como imagen (escala 1 = 72 puntos por pulgada). */
 async function dibujarLaPagina(bytes: Uint8Array, numero: number, escala: number) {
   const tarea = getDocument({ data: new Uint8Array(bytes), verbosity: 0 });

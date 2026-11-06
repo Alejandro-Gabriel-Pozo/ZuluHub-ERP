@@ -36,6 +36,7 @@
     "src/capacidades/activos/**/*.ts",
     "src/capacidades/controles/**/*.ts",
     "src/primitivas/contacto/**/*.ts",
+    "src/primitivas/texto/**/*.ts",
     "src/composicion/entorno.ts",
     "src/composicion/entorno-de-plataforma.ts",
     "src/composicion/perezoso.ts",

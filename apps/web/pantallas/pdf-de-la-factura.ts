@@ -21,9 +21,12 @@ type Modelo = ModeloDeImpresionParaLaPantalla["modelo"];
  * y el formato de la pantalla, y la URL del QR del modelo. Acá no se escribe ningún formato ni texto: se junta lo que ya existe.
  * Previene: que el PDF diga algo distinto de la pantalla. Chequeo: `test/web/pdf-de-la-factura.test.ts`.
  *
+ * La fecha de creación de los metadatos es la FECHA DE EMISIÓN del comprobante (a las 00:00 de Argentina, UTC-3), no la hora de la descarga: así
+ * descargar dos veces el mismo comprobante da el mismo PDF byte a byte (reimprimir da lo mismo).
+ *
  * Solo A4: el ticket de 80 mm queda para una entrega posterior (decisión del dueño, 2026-11-05).
  */
-export function entradaDelPdf(m: Modelo, creadoEn: Date) {
+export function entradaDelPdf(m: Modelo) {
   return {
     hoja: armarLaHoja({}, comprobanteParaLaHoja(m), "A4"),
     importes: m.renglones.map((r) => r.importe),
@@ -35,7 +38,7 @@ export function entradaDelPdf(m: Modelo, creadoEn: Date) {
       formatearImporte,
       textoDeLaHoja: (k: number, n: number) => textoDeLaHoja({}, k, n),
     },
-    creadoEn,
+    creadoEn: new Date(`${m.fiscal.fecha}T00:00:00-03:00`),
   };
 }
 

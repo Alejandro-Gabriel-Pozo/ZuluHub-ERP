@@ -1,3 +1,4 @@
+import { ANCHOS_DE_COLUMNA_MM, LETRA_EN_PT } from "./medidas-del-papel";
 import { GROSOR, mm, type Pincel } from "./pincel-del-pdf";
 import type { ColumnaDelPdf, HojaParaElPdf, RenglonDelPdf } from "./tipos-del-pdf";
 
@@ -7,14 +8,15 @@ import type { ColumnaDelPdf, HojaParaElPdf, RenglonDelPdf } from "./tipos-del-pd
  * el reparto en hojas es del paginador.
  */
 
-const ANCHOS_FIJOS_MM = { cantidad: 18, precio: 30, iva: 22, importe: 30 } as const;
 const RELLENO_HORIZONTAL = mm(1);
 const RELLENO_VERTICAL = mm(1.2);
 const FONDO_DE_TRANSPORTE = "#eeeeee";
-const TAM = 9;
+const TAM = LETRA_EN_PT.base;
 
 export function anchosDeLasColumnas(columnas: readonly ColumnaDelPdf[], ancho: number): number[] {
-  const fijos = columnas.map((c) => (c.clave === "descripcion" ? 0 : mm(ANCHOS_FIJOS_MM[c.clave])));
+  const fijos = columnas.map((c) =>
+    c.clave === "descripcion" ? 0 : mm(ANCHOS_DE_COLUMNA_MM[c.clave]),
+  );
   const resto = ancho - fijos.reduce((suma, a) => suma + a, 0);
   return columnas.map((c, i) => (c.clave === "descripcion" ? resto : (fijos[i] ?? 0)));
 }

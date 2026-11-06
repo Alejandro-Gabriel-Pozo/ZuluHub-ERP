@@ -1,3 +1,4 @@
+import { ANCHO_DE_LA_LETRA_MM, LETRA_EN_PT } from "./medidas-del-papel";
 import { GROSOR, GROSOR_FUERTE, mm, type Pincel } from "./pincel-del-pdf";
 import type { HojaParaElPdf } from "./tipos-del-pdf";
 
@@ -6,8 +7,8 @@ import type { HojaParaElPdf } from "./tipos-del-pdf";
  * vez y sirve para medir (`p.dibujar === false`) y para dibujar. Devuelven el alto que ocupan.
  */
 
-const TAM = 9;
-const ANCHO_DE_LA_LETRA = mm(24);
+const TAM = LETRA_EN_PT.base;
+const ANCHO_DE_LA_LETRA = mm(ANCHO_DE_LA_LETRA_MM);
 const RELLENO = mm(2);
 
 /** Los cuadraditos del QR ya ubicados: `[x, y, ancho, alto]`. */
@@ -32,7 +33,7 @@ export function encabezado(
       x + GROSOR_FUERTE + mm(1),
       cy + GROSOR_FUERTE + mm(1),
       interior,
-      { tam: 12, negrita: true },
+      { tam: LETRA_EN_PT.aviso, negrita: true },
       "center",
     );
     const total = alto + 2 * mm(1) + 2 * GROSOR_FUERTE;
@@ -65,13 +66,13 @@ function cabecera(p: Pincel, h: HojaParaElPdf, x: number, y: number, ancho: numb
   let yIzquierda = y + RELLENO;
   if (h.nombreDeFantasia !== null) {
     yIzquierda += p.texto(h.nombreDeFantasia, x + RELLENO, yIzquierda, interior, {
-      tam: 13,
+      tam: LETRA_EN_PT.nombre,
       negrita: true,
     });
   }
   if (h.nombreDeLaSucursal !== null) {
     yIzquierda += p.texto(h.nombreDeLaSucursal, x + RELLENO, yIzquierda, interior, {
-      tam: 13,
+      tam: LETRA_EN_PT.nombre,
       negrita: true,
     });
   }
@@ -86,14 +87,27 @@ function cabecera(p: Pincel, h: HojaParaElPdf, x: number, y: number, ancho: numb
     xCentro + RELLENO,
     yCentro,
     interiorCentro,
-    { tam: 30, negrita: true, interlineado: 1.1 },
+    { tam: LETRA_EN_PT.letra, negrita: true, interlineado: 1.1 },
     "center",
   );
-  yCentro += p.texto(h.codigo, xCentro + RELLENO, yCentro, interiorCentro, { tam: 8 }, "center");
+  yCentro += p.texto(
+    h.codigo,
+    xCentro + RELLENO,
+    yCentro,
+    interiorCentro,
+    { tam: LETRA_EN_PT.chica },
+    "center",
+  );
 
   let yDerecha = y + RELLENO;
-  yDerecha += p.texto(h.rotulo, xDerecha + RELLENO, yDerecha, interior, { tam: 13, negrita: true });
-  yDerecha += p.texto(h.numero, xDerecha + RELLENO, yDerecha, interior, { tam: 11, negrita: true });
+  yDerecha += p.texto(h.rotulo, xDerecha + RELLENO, yDerecha, interior, {
+    tam: LETRA_EN_PT.nombre,
+    negrita: true,
+  });
+  yDerecha += p.texto(h.numero, xDerecha + RELLENO, yDerecha, interior, {
+    tam: LETRA_EN_PT.numeroDeComprobante,
+    negrita: true,
+  });
   for (const fila of h.datos) yDerecha += p.fila(fila, xDerecha + RELLENO, yDerecha, interior, TAM);
 
   const alto = Math.max(yIzquierda, yCentro, yDerecha) - y + RELLENO;
@@ -176,7 +190,7 @@ function columnaIzquierda(
           x,
           cy,
           ancho,
-          t.fuerte ? { tam: 11, negrita: true } : { tam: TAM },
+          t.fuerte ? { tam: LETRA_EN_PT.totalFuerte, negrita: true } : { tam: TAM },
         ) + mm(1);
     });
     if (h.transparencia !== null) cy += transparencia(p, h.transparencia, x, cy, ancho) + mm(1);
@@ -187,9 +201,9 @@ function columnaIzquierda(
         negrita: true,
       }) + mm(1);
   }
-  const hNumero = p.alto(e.numeroDeHoja, ancho, { tam: 8 });
+  const hNumero = p.alto(e.numeroDeHoja, ancho, { tam: LETRA_EN_PT.chica });
   const yDelNumero = altoReservado === null ? cy : y + altoReservado - hNumero;
-  p.texto(e.numeroDeHoja, x, yDelNumero, ancho, { tam: 8 });
+  p.texto(e.numeroDeHoja, x, yDelNumero, ancho, { tam: LETRA_EN_PT.chica });
   return altoReservado === null ? cy - y + hNumero : altoReservado;
 }
 
@@ -203,10 +217,14 @@ function transparencia(
   const relleno = mm(1.5);
   const interior = ancho - 2 * relleno - 2 * GROSOR;
   let cy = y + GROSOR + relleno;
-  cy += p.texto(t.titulo, x + GROSOR + relleno, cy, interior, { tam: 8, negrita: true }) + mm(0.5);
+  cy +=
+    p.texto(t.titulo, x + GROSOR + relleno, cy, interior, {
+      tam: LETRA_EN_PT.chica,
+      negrita: true,
+    }) + mm(0.5);
   for (const fila of t.filas) {
     cy += filaDeDosLados(p, fila.rotulo ?? "", fila.valor, x + GROSOR + relleno, cy, interior, {
-      tam: 8,
+      tam: LETRA_EN_PT.chica,
     });
   }
   const total = cy - y + relleno + GROSOR;
@@ -238,7 +256,7 @@ export function pie(
   const textoDelCae = `${h.cae.rotulo} ${h.cae.valor}`;
   const derecho = Math.max(
     e.qr.lado,
-    Math.min(p.ancho(textoDelCae, { tam: 8, negrita: true }) + 1, mm(75)),
+    Math.min(p.ancho(textoDelCae, { tam: LETRA_EN_PT.chica, negrita: true }) + 1, mm(75)),
   );
   const izquierdo = ancho - derecho - mm(4);
   const xDerecho = x + ancho - derecho;

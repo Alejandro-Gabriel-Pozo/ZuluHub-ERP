@@ -2,6 +2,7 @@ import PDFDocument from "pdfkit";
 import { qrDeFacturaComoMatriz } from "../qr/qr-de-factura";
 import { encabezado, pie, type DatosDelPie, type QrParaElPdf } from "./bloques-del-pdf";
 import { exigirTextoSoportado } from "./caracteres-del-pdf";
+import { ANCHO_DEL_QR_MM } from "./medidas-del-papel";
 import { crearPincel, mm, PX_POR_PT, type Pincel } from "./pincel-del-pdf";
 import {
   anchosDeLasColumnas,
@@ -50,7 +51,7 @@ export type EntradaDelPdf = Readonly<{
 }>;
 
 /** El QR de la pantalla mide 28 mm de lado con su zona silenciosa (4 módulos por lado) incluida. */
-const LADO_DEL_QR = mm(28);
+const LADO_DEL_QR = mm(ANCHO_DEL_QR_MM);
 const MODULOS_DE_MARGEN = 4;
 
 function qrParaElPdf(url: string): QrParaElPdf {

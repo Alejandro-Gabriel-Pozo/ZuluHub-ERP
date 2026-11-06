@@ -8,8 +8,10 @@
  *
  * El espacio de no separación (U+00A0), el guion blando (U+00AD) y el signo micro (U+00B5, que el lector devuelve como la mu griega
  * U+03BC) quedan afuera a propósito: el lector de PDF los normaliza y el texto leído ya no coincide con el impreso.
- * SIN DECIDIR (pregunta pendiente al dueño, 2026-11-05): si un carácter fuera de la lista debe impedirse al CARGAR el dato (una
- * primitiva común a todo texto que llega a un comprobante) en vez de descubrirse recién al descargar el PDF.
+ * El carácter se impide también al CARGAR el dato: la primitiva `src/primitivas/texto/texto-de-una-linea.ts` (nombre del receptor) admite solo
+ * una lista cerrada, y `caracteres-del-pdf.test.ts` verifica que TODO lo que ella admite está en esta lista (si la primitiva se ensancha y el
+ * PDF no, la prueba falla). Esta guarda queda igual como defensa en profundidad: un comprobante guardado antes de la primitiva, o un texto que
+ * todavía no pasa por ella (descripción de renglón, domicilio), no puede llegar corrupto a un PDF.
  */
 
 const SIGNOS_DE_WINDOWS_1252 = "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ";
