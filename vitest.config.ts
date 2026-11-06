@@ -38,6 +38,19 @@ export default defineConfig({
           },
         },
       },
+      {
+        // Recorrido de punta a punta: la app REAL construida (`next build` + `next start`) con Chromium y un Postgres
+        // real. Corre con `npm run test:recorrido`; no entra en `npm test` (necesita la compilación hecha) ni en la mutación.
+        test: {
+          name: "recorrido",
+          include: ["test/recorrido/**/*.recorrido.ts"],
+          environment: "node",
+          globalSetup: ["./test/integracion/global.ts"],
+          fileParallelism: false,
+          testTimeout: 120_000,
+          hookTimeout: 180_000,
+        },
+      },
     ],
   },
 });
