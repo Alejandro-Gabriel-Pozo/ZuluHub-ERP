@@ -1,7 +1,7 @@
 /*
  * La hoja A4 de un comprobante. Es papel, no pantalla: el tamaño de letra va en `pt` y la hoja mide lo mismo en cualquier celular
  * (la vista previa la escala entera, nunca la achica de a partes). Los colores salen de los tokens: tinta (`--color-texto`) sobre
- * papel (`--color-superficie-elevada`). Las medidas de la hoja las pone `estiloDeLaGeometria` (`geometria.ts`), una sola vez.
+ * papel (`--color-superficie-elevada`). Las medidas de la hoja las pone `variablesDeLaGeometria` (`geometria.ts`) con `aplicarEstilos`, una sola vez.
  */
 
 .hoja,
@@ -95,6 +95,7 @@
 .nombre {
   font-size: 13pt;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .rotulo {

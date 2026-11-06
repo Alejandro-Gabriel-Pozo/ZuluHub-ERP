@@ -87,7 +87,7 @@ describe("politicaDeContenido", () => {
 
   it("todo lo demás solo de la propia casa", () => {
     expect(directivas.get("default-src")).toBe("'self'");
-    expect(directivas.get("img-src")).toBe("'self'");
+    expect(directivas.get("img-src")).toBe("'self' data:");
     expect(directivas.get("font-src")).toBe("'self'");
     expect(directivas.get("connect-src")).toBe("'self'");
     expect(directivas.get("form-action")).toBe("'self'");

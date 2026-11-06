@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   MOTIVO_DE_LA_CONFIRMACION,
-  aFechaCivil,
   armarElPedidoDeConfirmacion,
   armarElPedidoDeGuardado,
   borradorTrasGuardar,
@@ -59,7 +58,7 @@ describe("el formulario se abre con el borrador, con lo vigente o en blanco (D-8
       condicionIva: "RESPONSABLE_INSCRIPTO",
       ingresosBrutos: "NUMERO",
       iibbNumero: "901-123456-7",
-      inicioActividades: "01/03/2018",
+      inicioActividades: "2018-03-01",
       calle: "Av. Rivadavia",
       numeroDeCalle: "1234",
       piso: "",
@@ -104,23 +103,15 @@ describe("el formulario se abre con el borrador, con lo vigente o en blanco (D-8
   });
 });
 
-describe("la fecha de inicio de actividades: dd/mm/aaaa a aaaa-mm-dd, solo con texto", () => {
-  it.each([
-    ["01/03/2018", "2018-03-01"],
-    ["  29/02/2024 ", "2024-02-29"],
-    ["31/12/1999", "1999-12-31"],
-    // La forma la acomoda la pantalla; si el día existe lo decide el servidor (`fechaCivilValida`), una sola regla.
-    ["31/02/2026", "2026-02-31"],
-  ])("%s → %s", (escrita, esperada) => {
-    expect(aFechaCivil(escrita)).toBe(esperada);
+describe("la fecha de inicio de actividades: aaaa-mm-dd tal cual, sin conversión", () => {
+  it("viaja como la entrega la entrada de fecha (recortada)", () => {
+    expect(PIDE({ inicioActividades: "2020-08-15" })).toMatchObject({
+      inicioActividades: "2020-08-15",
+    });
+    expect(PIDE({ inicioActividades: " 2020-08-15 " })).toMatchObject({
+      inicioActividades: "2020-08-15",
+    });
   });
-
-  it.each(["2018-03-01", "1/3/2018", "01-03-2018", "01/03/18", "abc", "01/03/2018 10:00"])(
-    "«%s» no tiene la forma: viaja tal cual y el servidor la rechaza marcando el campo",
-    (escrita) => {
-      expect(aFechaCivil(escrita)).toBe(escrita.trim());
-    },
-  );
 });
 
 const PIDE = (
@@ -197,7 +188,7 @@ describe("el pedido de «Guardar borrador»", () => {
   });
 
   it("la fecha escrita va en aaaa-mm-dd", () => {
-    expect(PIDE({ inicioActividades: "15/08/2020" })).toMatchObject({
+    expect(PIDE({ inicioActividades: "2020-08-15" })).toMatchObject({
       inicioActividades: "2020-08-15",
     });
   });
@@ -305,7 +296,7 @@ describe("tras un guardado exitoso el borrador es el guardado (confirmación rec
 
   it("el segundo guardado sale con la versión devuelta, el mismo borrador y, si el domicilio cambió, con un id de domicilio NUEVO (nunca el mismo id con otro contenido)", () => {
     const tras = { ...borradorTrasGuardar(ESCRITO, IDS, null), version: 1 };
-    const corregido = { ...ESCRITO, calle: "Belgrano", inicioActividades: "01/03/2018" };
+    const corregido = { ...ESCRITO, calle: "Belgrano", inicioActividades: "2018-03-01" };
     const pedido = armarElPedidoDeGuardado(
       corregido,
       { borradorId: IDS.borradorId, domicilioId: "otro-d" },
@@ -324,7 +315,7 @@ describe("tras un guardado exitoso el borrador es el guardado (confirmación rec
   it("si solo se completó otra cosa, el domicilio ya guardado NO viaja de nuevo", () => {
     const tras = { ...borradorTrasGuardar(ESCRITO, IDS, null), version: 1 };
     const pedido = armarElPedidoDeGuardado(
-      { ...ESCRITO, inicioActividades: "01/03/2018" },
+      { ...ESCRITO, inicioActividades: "2018-03-01" },
       { borradorId: IDS.borradorId, domicilioId: "otro-d" },
       EMISOR,
       tras.version,
@@ -332,7 +323,7 @@ describe("tras un guardado exitoso el borrador es el guardado (confirmación rec
     );
     expect(pedido).not.toHaveProperty("domicilio");
     expect(
-      borradorTrasGuardar({ ...ESCRITO, inicioActividades: "01/03/2018" }, IDS, tras).domicilio,
+      borradorTrasGuardar({ ...ESCRITO, inicioActividades: "2018-03-01" }, IDS, tras).domicilio,
     ).toEqual(tras.domicilio);
   });
 });
