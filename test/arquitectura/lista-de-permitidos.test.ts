@@ -2,7 +2,13 @@ import { readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { contarProhibidosEnCodigo, contarProhibidosEnSql } from "./lista-de-permitidos-apoyo";
+import {
+  contarProhibidosEnCodigo,
+  contarProhibidosEnSql,
+  FUNCIONES_SQL_CON_PROHIBIDOS,
+  problemasDeExenciones,
+  type Exencion,
+} from "./lista-de-permitidos-apoyo";
 
 /**
  * REGLA (CLAUDE.md «Todo nace cerrado»; regla 4 de `Pedernal-docs/01-vision/primitivas-de-negocio.md`): la validación de un dato declara
@@ -30,12 +36,22 @@ const PREFIJO_DE_DEUDA = "validacion-de-datos--";
  * entran a la deuda. Hallazgo: validación de datos que vienen de terceros (cookies de la librería de ingreso y respuestas de ARCA);
  * revisar con lista de permitidos del formato en una sesión posterior. Cada exención tiene que seguir teniendo lo que exime.
  */
-const FORMATOS_DE_TERCEROS: Readonly<Record<string, string>> = {
-  "src/capacidades/experiencia/set-cookie.ts":
-    "parsea el encabezado Set-Cookie que genera la librería de ingreso",
-  "src/adaptadores/arca/saneamiento.ts": "limpia el texto con que responde ARCA",
+const FORMATOS_DE_TERCEROS: Readonly<Record<string, Exencion>> = {
+  "src/capacidades/experiencia/set-cookie.ts": {
+    motivo: "parsea el encabezado Set-Cookie que genera la librería de ingreso",
+    prohibidos: 1,
+  },
+  "src/adaptadores/arca/saneamiento.ts": {
+    motivo: "limpia el texto con que responde ARCA",
+    prohibidos: 1,
+  },
 };
-const EXTENSIONES = ["ts", "tsx", "js", "mjs", "cjs"];
+/** La lista EXACTA de exenciones: sumar un archivo obliga a tocar esta línea (y la revisión lo ve). */
+const EXENCIONES_ESPERADAS = [
+  "src/adaptadores/arca/saneamiento.ts",
+  "src/capacidades/experiencia/set-cookie.ts",
+] as const;
+const EXTENSIONES = ["ts", "tsx", "js", "jsx", "mjs", "cjs", "mts", "cts"];
 
 function archivos(carpeta: string, extensiones: string[]): string[] {
   return readdirSync(join(RAIZ, carpeta), { recursive: true, encoding: "utf8" })
@@ -74,11 +90,24 @@ describe("lista de permitidos: el código real", () => {
     expect([...reales.keys()].some((r) => r.startsWith("migraciones/"))).toBe(true);
   });
 
-  it("cada exención por formato de terceros sigue eximiendo algo (si no, se saca)", () => {
-    for (const ruta of Object.keys(FORMATOS_DE_TERCEROS)) {
-      const n = contarProhibidosEnCodigo(ruta, readFileSync(join(RAIZ, ruta), "utf8"));
-      expect(n, ruta).toBeGreaterThan(0);
-      expect(presupuesto[ruta], ruta).toBeUndefined();
+  it("las exenciones por formato de terceros son exactamente las esperadas y cuentan lo mismo que hoy", () => {
+    expect(
+      problemasDeExenciones(
+        FORMATOS_DE_TERCEROS,
+        EXENCIONES_ESPERADAS,
+        (ruta) => contarProhibidosEnCodigo(ruta, readFileSync(join(RAIZ, ruta), "utf8")),
+        presupuesto,
+      ),
+    ).toEqual([]);
+  });
+
+  it("las funciones SQL que heredan prohibidos existen en una migración (y sus usos cuentan)", () => {
+    const sql = archivos("migraciones", ["sql"]).map((r) => readFileSync(join(RAIZ, r), "utf8"));
+    for (const nombre of FUNCIONES_SQL_CON_PROHIBIDOS) {
+      expect(
+        sql.some((t) => new RegExp(`CREATE FUNCTION ${nombre}\\(`).test(t)),
+        nombre,
+      ).toBe(true);
     }
   });
 

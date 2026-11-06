@@ -24,11 +24,11 @@
     "duplicados": 0
   },
   "migraciones/0007_marcas_y_planes.sql": {
-    "prohibidos": 3,
+    "prohibidos": 7,
     "duplicados": 0
   },
   "migraciones/0009_facturacion.sql": {
-    "prohibidos": 1,
+    "prohibidos": 13,
     "duplicados": 0
   },
   "migraciones/0019_contacto_de_la_sucursal.sql": {

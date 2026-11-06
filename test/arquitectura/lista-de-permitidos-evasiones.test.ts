@@ -3,6 +3,7 @@ import {
   contarProhibidosEnCodigo,
   contarProhibidosEnSql,
   esPatronDeProhibicion,
+  problemasDeExenciones,
 } from "./lista-de-permitidos-apoyo";
 
 /**
@@ -215,5 +216,116 @@ describe("lista de permitidos: SQL fail-closed (migración 0007, !~*, NOT, E'…
     expect(sql(r`CHECK (a !~ '^\s|\s$')`)).toBe(0);
     expect(sql(r`CHECK (a IS NOT NULL AND b NOT BETWEEN 1 AND 3)`)).toBe(0);
     expect(sql("-- a !~ '[<>]' en un comentario\nSELECT 1;")).toBe(0);
+  });
+});
+
+describe("lista de permitidos: segunda revisión independiente (O1 a O6, PR 2 de C1)", () => {
+  const r = String.raw;
+
+  it.each([
+    [
+      "String.raw con una categoría",
+      r`export const R = new RegExp(String.raw` + "`" + r`\p{Cc}` + "`" + r`, "u");`,
+    ],
+    [
+      "String.raw con un rango de controles",
+      r`export const R = new RegExp(String.raw` + "`" + r`[\x00-\x1f]` + "`" + r`);`,
+    ],
+    [
+      "String.raw con una parte variable",
+      r`export const R = new RegExp(String.raw` + "`" + r`[\p{Cc}$` + "{x}]" + "`" + r`);`,
+    ],
+    ["globalThis con corchetes", r`export const R = globalThis["RegExp"]("a");`],
+    ["categoría con nombre largo", r`export const R = /\p{General_Category=Control}/u;`],
+    ["categoría abreviada con gc", r`export const R = /\p{gc=Cc}/u;`],
+    ["categoría White_Space", r`export const R = /\p{White_Space}/u;`],
+    ["categoría Control", r`export const R = /\p{Control}/u;`],
+    ["escape con llaves", r`export const R = /\u{1f600}/u;`],
+    ["clase con \r\n\t", r`export const R = /[\r\n\t]/;`],
+    ["clase con \0", r`export const R = /[\0-\37]/;`],
+    ["clase con un escape de control con c", r`export const R = /[\cA-\cZ]/;`],
+  ])("%s cuenta", (_, texto) => {
+    expect(cuenta(texto), texto).toBe(1);
+  });
+
+  it("String.raw con solo lo permitido no cuenta", () => {
+    expect(cuenta("export const R = new RegExp(String.raw`^[a-z]{1,40}$`);")).toBe(0);
+    expect(cuenta(r`export const R = /\p{Script=Latin}+/u;`)).toBe(0);
+    expect(cuenta(r`export const R = /\p{L}+/u;`)).toBe(0);
+  });
+
+  it("los usos de texto_visible_valido y texto_fiscal_valido cuentan; la definición y la baja, no", () => {
+    expect(contarProhibidosEnSql("CHECK (texto_visible_valido(nombre, 60))")).toBe(1);
+    expect(
+      contarProhibidosEnSql("CHECK (texto_fiscal_valido(a, 10) AND texto_fiscal_valido(b, 20))"),
+    ).toBe(2);
+    expect(
+      contarProhibidosEnSql("CHECK (nombre IS NULL OR TEXTO_FISCAL_VALIDO (nombre, 20))"),
+    ).toBe(1);
+    expect(
+      contarProhibidosEnSql(
+        "CREATE FUNCTION texto_visible_valido(t text, p integer) RETURNS boolean AS $$ SELECT true $$;",
+      ),
+    ).toBe(0);
+    expect(
+      contarProhibidosEnSql(
+        "CREATE OR REPLACE FUNCTION texto_fiscal_valido(t text, p integer) RETURNS boolean AS $$ SELECT true $$;",
+      ),
+    ).toBe(0);
+    expect(contarProhibidosEnSql("DROP FUNCTION texto_visible_valido(text, integer);")).toBe(0);
+    expect(
+      contarProhibidosEnSql("DROP FUNCTION IF EXISTS texto_fiscal_valido(text, integer);"),
+    ).toBe(0);
+    expect(contarProhibidosEnSql("-- texto_visible_valido(a, 1) en un comentario\nSELECT 1;")).toBe(
+      0,
+    );
+    expect(contarProhibidosEnSql("CHECK (otra_funcion(nombre, 60))")).toBe(0);
+  });
+});
+
+describe("lista de permitidos: las exenciones por formato de terceros no se ciegan (O1 y O2)", () => {
+  const exenciones = {
+    "src/a.ts": { motivo: "formato de un tercero", prohibidos: 1 },
+    "src/b.ts": { motivo: "otro formato", prohibidos: 2 },
+  };
+  const esperadas = ["src/a.ts", "src/b.ts"];
+  const cuentas: Record<string, number> = { "src/a.ts": 1, "src/b.ts": 2 };
+  const problemas = (
+    ex: Record<string, { motivo: string; prohibidos: number }> = exenciones,
+    esp: readonly string[] = esperadas,
+    real: Record<string, number> = cuentas,
+    presupuesto: Record<string, unknown> = {},
+  ) => problemasDeExenciones(ex, esp, (ruta) => real[ruta] ?? 0, presupuesto);
+
+  it("lo exacto no tiene problemas", () => {
+    expect(problemas()).toEqual([]);
+  });
+
+  it("una prohibición nueva en un archivo eximido obliga a tocar la prueba", () => {
+    expect(problemas(exenciones, esperadas, { ...cuentas, "src/a.ts": 2 })).toEqual([
+      "src/a.ts: tiene 2 prohibiciones y la exención declara 1",
+    ]);
+    expect(problemas(exenciones, esperadas, { ...cuentas, "src/b.ts": 0 })).toEqual([
+      "src/b.ts: tiene 0 prohibiciones y la exención declara 2",
+    ]);
+  });
+
+  it("un tercer archivo eximido, o uno que falta, obliga a tocar la lista exacta", () => {
+    const tres = { ...exenciones, "src/c.ts": { motivo: "otro más", prohibidos: 0 } };
+    expect(problemas(tres)).toEqual([
+      "las exenciones son src/a.ts, src/b.ts, src/c.ts y tienen que ser exactamente src/a.ts, src/b.ts",
+    ]);
+    expect(problemas({ "src/a.ts": exenciones["src/a.ts"] })).toEqual([
+      "las exenciones son src/a.ts y tienen que ser exactamente src/a.ts, src/b.ts",
+    ]);
+  });
+
+  it("una exención sin motivo, o a la vez en el presupuesto, es un problema", () => {
+    expect(problemas({ ...exenciones, "src/a.ts": { motivo: "  ", prohibidos: 1 } })).toEqual([
+      "src/a.ts: la exención no tiene motivo",
+    ]);
+    expect(problemas(exenciones, esperadas, cuentas, { "src/b.ts": { prohibidos: 2 } })).toEqual([
+      "src/b.ts: está eximido y también en el presupuesto de deuda",
+    ]);
   });
 });

@@ -28,11 +28,19 @@ import ts from "typescript";
  *  - en SQL: cada `!~`, `!~*`, `NOT (x ~ …)`, `NOT LIKE`, `NOT ILIKE` y `NOT SIMILAR TO` cuyo patrón (cadenas unidas con `||`) describe una
  *    prohibición; si el patrón es una cadena `E'…'`, una expresión o no se puede leer, cuenta (fail-closed); los `NOT LIKE/ILIKE/SIMILAR TO`
  *    cuentan siempre.
- * LÍMITES conocidos (no se cierran con esta regla; ver «Hallazgos aparte» del PR): una prohibición armada solo con constantes de otro archivo,
- * `x.constructor(…)`, y comparaciones de caracteres hechas con una tabla de búsqueda.
+ * LÍMITES conocidos: esto es una ALARMA para errores honestos, NO un límite de seguridad (quien quiere esquivarlo, lo esquiva). No ve: una
+ * prohibición armada solo con constantes de otro archivo; `x.constructor(…)` y `Function(…)` (el analizador de campos sí cuenta `Function`);
+ * `\s` solo y `<` fuera de una clase; `split`/`replace`/`Set`/`switch` contra `<` o un control; comparaciones de texto (`c < " "`); códigos
+ * de carácter que llegan por una variable; tablas de búsqueda. Cerradas por ser baratas: categorías con nombre largo (`\p{General_Category=…}`,
+ * `\p{gc=…}`, `\p{White_Space}`), escapes `\u{…}`, escapes cortos de control dentro de una clase y `globalThis["RegExp"]`.
+ * No se miran los archivos de prueba (`*.test.*` y `test/`) ni los de `reversiones/`: usan estas expresiones como ejemplos y lo que se
+ * valida es el código de producción y las migraciones que crean las reglas.
  */
 
-const CATEGORIAS = /\\p\{[CZ]/;
+const CATEGORIAS =
+  /\\[pP]\{(?:[CZ][A-Za-z_]*|(?:General_Category|gc)\s*=[^}]*|Control|Format|Surrogate|Private_Use|Unassigned|Other|Separator|Space_Separator|Line_Separator|Paragraph_Separator|White_Space|space)\}/;
+/** Controles escritos con un escape corto dentro de una clase: `[\r\n\t]`, `[\0-\37]`, `[\cA-\cZ]`, y los escapes `\u{…}`. */
+const ESCAPES_CORTOS = /\[[^\]]*\\(?:[rntfv0]|c[A-Za-z]|[0-3][0-7])|\\u\{/;
 const CONTROLES =
   /\\x(?:[01][0-9a-fA-F]|7[fF]|[89][0-9a-fA-F])|\\u(?:00(?:[01][0-9a-fA-F]|7[fF]|[89][0-9a-fA-F]|[aA][dD])|200[b-fB-F]|202[89a-eA-E]|206[0-4]|[fF][eE][fF][fF])/;
 const INVISIBLES_LITERALES = /[\u0080-\u009f\u00ad\u200b-\u200f\u2028-\u202e\u2060-\u2064\ufeff]/;
@@ -57,6 +65,7 @@ export function esPatronDeProhibicion(bruto: string): boolean {
     .replace(/\\u0080-(?:\\uffff|\uffff)/gi, "");
   return (
     CATEGORIAS.test(patron) ||
+    ESCAPES_CORTOS.test(patron) ||
     CONTROLES.test(patron) ||
     INVISIBLES_LITERALES.test(patron) ||
     TODO_MENOS_ESPACIOS.test(patron) ||
@@ -115,8 +124,18 @@ function textoFijo(n: ts.Node): string {
   if (ts.isBinaryExpression(n) && n.operatorToken.kind === ts.SyntaxKind.PlusToken)
     return textoFijo(n.left) + textoFijo(n.right);
   if (ts.isParenthesizedExpression(n)) return textoFijo(n.expression);
-  if (ts.isTaggedTemplateExpression(n)) return textoFijo(n.template);
+  // `String.raw\`…\`` (y cualquier plantilla etiquetada): el texto CRUDO, que es el que llega a la expresión regular (`\p{Cc}` y no su cocción)
+  if (ts.isTaggedTemplateExpression(n)) return textoCrudo(n.template);
   return "";
+}
+
+/** El texto fijo de una plantilla tal como está escrito (sin interpretar las barras invertidas). */
+function textoCrudo(n: ts.TemplateLiteral): string {
+  if (ts.isNoSubstitutionTemplateLiteral(n)) return n.rawText ?? n.text;
+  return [
+    n.head.rawText ?? n.head.text,
+    ...n.templateSpans.map((s) => s.literal.rawText ?? s.literal.text),
+  ].join("");
 }
 
 const esRegExp = (e: ts.Expression): boolean =>
@@ -158,6 +177,12 @@ export function contarProhibidosEnCodigo(ruta: string, texto: string): number {
         const fijo = primero === undefined ? "" : textoFijo(primero);
         if (fijo === "" || esPatronDeProhibicion(fijo)) cuenta += 1;
       }
+    } else if (
+      ts.isElementAccessExpression(n) &&
+      ts.isStringLiteralLike(n.argumentExpression) &&
+      n.argumentExpression.text === "RegExp"
+    ) {
+      cuenta += 1; // globalThis["RegExp"]: esconde la construcción
     } else if (ts.isIdentifier(n) && n.text === "RegExp") {
       const p = n.parent;
       const comoLlamada = (ts.isNewExpression(p) || ts.isCallExpression(p)) && p.expression === n;
@@ -248,10 +273,36 @@ function operandoSql(texto: string, desde: number): string {
   return cadenas?.[0] ?? "";
 }
 
-/** Cuántas condiciones SQL por negación de un patrón describen una prohibición (ver la lista de formas arriba). */
+/**
+ * Las funciones SQL que heredan una lista de prohibidos (su definición ya cuenta): cada USO en un CHECK o una función es una validación por
+ * prohibidos más. `texto_visible_valido` y `texto_fiscal_valido` (migraciones 0007 y 0009); una función nueva con prohibidos se suma acá.
+ */
+export const FUNCIONES_SQL_CON_PROHIBIDOS = [
+  "texto_visible_valido",
+  "texto_fiscal_valido",
+] as const;
+
+/** Cuántos usos (no definiciones ni bajas) de esas funciones tiene un SQL. */
+function usosDeFuncionesConProhibidos(sinComentarios: string): number {
+  let usos = 0;
+  for (const nombre of FUNCIONES_SQL_CON_PROHIBIDOS) {
+    for (const m of sinComentarios.matchAll(new RegExp(`\\b${nombre}\\s*\\(`, "gi"))) {
+      const antes = sinComentarios.slice(Math.max(0, (m.index ?? 0) - 40), m.index);
+      if (
+        !/\b(?:CREATE(?:\s+OR\s+REPLACE)?|DROP|ALTER|COMMENT\s+ON)\s+FUNCTION\s+(?:IF\s+EXISTS\s+)?$/i.test(
+          antes,
+        )
+      )
+        usos += 1;
+    }
+  }
+  return usos;
+}
+
+/** Cuántas condiciones SQL por negación de un patrón describen una prohibición, más los usos de las funciones que las heredan. */
 export function contarProhibidosEnSql(texto: string): number {
   const sinComentarios = texto.replace(/--[^\n]*/g, "");
-  let cuenta = 0;
+  let cuenta = usosDeFuncionesConProhibidos(sinComentarios);
   for (const m of sinComentarios.matchAll(OPERADOR_SQL)) {
     const operador = m[0];
     const fin = (m.index ?? 0) + operador.length;
@@ -271,4 +322,36 @@ export function contarProhibidosEnSql(texto: string): number {
     if (esPatronDeProhibicion(patron) || /\\[uU][0-9a-fA-F]/.test(patron) || noAscii) cuenta += 1;
   }
   return cuenta;
+}
+
+export type Exencion = Readonly<{ motivo: string; prohibidos: number }>;
+
+/**
+ * Problemas de las exenciones por «formato de máquinas de un tercero»: la lista de archivos eximidos es EXACTA (agregar uno obliga a
+ * tocar la prueba), cada uno tiene motivo y su cuenta de prohibiciones es EXACTA (una prohibición nueva en un archivo eximido obliga a
+ * tocar la prueba, no queda ciega), y ninguno figura también en el presupuesto de deuda.
+ */
+export function problemasDeExenciones(
+  exenciones: Readonly<Record<string, Exencion>>,
+  esperadas: readonly string[],
+  cuentaReal: (ruta: string) => number,
+  presupuesto: Readonly<Record<string, unknown>>,
+): string[] {
+  const problemas: string[] = [];
+  const rutas = Object.keys(exenciones).sort();
+  if (JSON.stringify(rutas) !== JSON.stringify([...esperadas].sort())) {
+    problemas.push(
+      `las exenciones son ${rutas.join(", ")} y tienen que ser exactamente ${esperadas.join(", ")}`,
+    );
+  }
+  for (const ruta of rutas) {
+    const e = exenciones[ruta] as Exencion;
+    if (e.motivo.trim() === "") problemas.push(`${ruta}: la exención no tiene motivo`);
+    const real = cuentaReal(ruta);
+    if (real !== e.prohibidos)
+      problemas.push(`${ruta}: tiene ${real} prohibiciones y la exención declara ${e.prohibidos}`);
+    if (ruta in presupuesto)
+      problemas.push(`${ruta}: está eximido y también en el presupuesto de deuda`);
+  }
+  return problemas;
 }

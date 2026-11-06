@@ -27,7 +27,8 @@ function codigo(): Map<string, string> {
   for (const carpeta of ["src", "apps"]) {
     for (const r of readdirSync(join(RAIZ, carpeta), { recursive: true, encoding: "utf8" })) {
       if (r.split("/").some((p) => p === "node_modules" || p === ".next")) continue;
-      if (!/\.tsx?$/.test(r) || /\.test\.tsx?$/.test(r) || r.endsWith(".d.ts")) continue;
+      if (!/\.(tsx?|mts|cts)$/.test(r) || /\.test\.(tsx?|mts|cts)$/.test(r) || r.endsWith(".d.ts"))
+        continue;
       mapa.set(`${carpeta}/${r}`, readFileSync(join(RAIZ, carpeta, r), "utf8"));
     }
   }
