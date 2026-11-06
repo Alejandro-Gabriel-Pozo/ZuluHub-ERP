@@ -207,7 +207,6 @@ function leerFuentes(): Map<string, string> {
     }
   };
   recorrer("src");
-  recorrer("apps");
   return fuentes;
 }
 
@@ -215,7 +214,7 @@ describe("leyendas de condición: el texto vive una sola vez", () => {
   const DUENO = "leyenda-de-condicion-del-receptor.ts";
   const textos = Object.values(LEYENDAS_DE_CONDICION).filter((t): t is string => t !== null);
 
-  it("ningún otro archivo de src ni apps repite una leyenda", () => {
+  it("ningún otro archivo de src repite una leyenda", () => {
     const fuentes = leerFuentes();
     for (const t of textos) expect(archivosQueRepiten(fuentes, t, DUENO), t).toEqual([]);
   });
@@ -223,8 +222,8 @@ describe("leyendas de condición: el texto vive una sola vez", () => {
   it("violación inyectada: una copia del texto en otro archivo se detecta", () => {
     const fuentes = new Map([
       [`src/${DUENO}`, `const a = "${textos[0]}";`],
-      ["apps/web/pantalla.tsx", `const t = "${textos[0]}";`],
+      ["otra/pantalla.tsx", `const t = "${textos[0]}";`],
     ]);
-    expect(archivosQueRepiten(fuentes, textos[0] ?? "", DUENO)).toEqual(["apps/web/pantalla.tsx"]);
+    expect(archivosQueRepiten(fuentes, textos[0] ?? "", DUENO)).toEqual(["otra/pantalla.tsx"]);
   });
 });

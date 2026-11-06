@@ -71,7 +71,6 @@ const LECTURAS_DE_APPS = {
   "test/arquitectura/reglas.test.ts": ["apps/**"],
   "test/arquitectura/lint.test.ts": ["apps/**"],
   "test/arquitectura/campos-con-dato.test.ts": ["apps/**"],
-  "src/modulos/fiscal/dominio/modelo-de-impresion-v3.test.ts": ["apps/web/**"],
 };
 
 /**

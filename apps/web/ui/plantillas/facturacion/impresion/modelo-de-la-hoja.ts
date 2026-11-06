@@ -247,9 +247,7 @@ function receptorDe(d: DiccionarioResuelto, c: ComprobanteParaLaHoja): readonly 
       rotulo: texto(d, "fiscal.pantalla.config_df_condicion_iva"),
       valor: condicionVisible(d, receptor.condicionIva),
     },
-    ...filaDeLeyenda(
-      receptor.leyendaDeCondicion === nombre ? undefined : receptor.leyendaDeCondicion,
-    ),
+    ...filaDeLeyenda(receptor.leyendaDeCondicion, nombre),
     ...(receptor.domicilio === null || receptor.domicilio === ""
       ? []
       : [
