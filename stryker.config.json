@@ -82,6 +82,7 @@
     "arquitectura/contratos/guardian.cjs",
     "arquitectura/contratos/registro.cjs",
     "arquitectura/contratos/ubicacion.cjs",
+    "arquitectura/contratos/codigos.cjs",
     "arquitectura/contratos/detectores.cjs",
     "arquitectura/contratos/verificar-mecanismo.cjs",
     "arquitectura/contratos/no-debilitar.cjs",
