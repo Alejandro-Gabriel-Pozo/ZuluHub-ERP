@@ -5,6 +5,7 @@
   "test/web/logo-neutro.test.ts": ["apps/web/public/**"],
   "test/web/acciones-de-facturacion.test.ts": ["apps/web/app/s/app/acciones-de-facturacion.ts"],
   "test/web/acciones-de-config-fiscal.test.ts": ["apps/web/app/s/app/acciones-de-config-fiscal.ts"],
+  "test/web/max-duration.test.ts": ["apps/web/app/s/app/(operacion)/facturacion/comprobantes/**"],
   "test/web/sucursal-elegida.test.ts": ["apps/web/app/s/app/acciones-de-sucursal.ts"],
   "test/arquitectura/vercel-json.test.ts": ["apps/web/**"],
   "test/arquitectura/cargar-entorno-nombres.test.ts": ["apps/web/PRIMER-DESPLIEGUE.md"],
