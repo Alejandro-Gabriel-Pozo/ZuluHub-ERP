@@ -394,7 +394,25 @@ describe("numeroDeDocumentoParaArca", () => {
     expect(numeroDeDocumentoParaArca({ tipo: "DNI", numero: "12345678" })).toBe(12345678n);
     // Un pasaporte ya guardado antes de las letras (solo dígitos, de cualquier largo de 1 a 11) da el mismo número que siempre.
     expect(numeroDeDocumentoParaArca({ tipo: "PASAPORTE", numero: "007" })).toBe(7n);
-    expect(numeroDeDocumentoParaArca({ tipo: "PASAPORTE", numero: "0" })).toBe(0n);
+    // Un pasaporte en cero nunca llega a ARCA como 0 («sin identificar»): lanza.
+    expect(() => numeroDeDocumentoParaArca({ tipo: "PASAPORTE", numero: "0" })).toThrow(RangeError);
+  });
+
+  it("fail closed: solo el pasaporte extrae cifras; un DNI, CUIT o CUIL con letras lanza como siempre y un pasaporte sin cifra o en cero también", () => {
+    // Violaciones inyectadas: si la cuenta extrajera cifras de cualquier tipo, estos devolverían un número en lugar de lanzar.
+    for (const tipo of ["DNI", "CUIT", "CUIL", "CDI"] as const) {
+      expect(() => numeroDeDocumentoParaArca({ tipo, numero: "ABC123456" }), tipo).toThrow(
+        SyntaxError,
+      );
+    }
+    expect(() => numeroDeDocumentoParaArca({ tipo: "CUIT", numero: "30abc712345671" })).toThrow(
+      SyntaxError,
+    );
+    for (const numero of ["ABC000000", "ABCDEF", "", "000000"]) {
+      expect(() => numeroDeDocumentoParaArca({ tipo: "PASAPORTE", numero }), numero).toThrow(
+        RangeError,
+      );
+    }
   });
 
   it("un pasaporte con letras informa solo la parte numérica, en orden y sin los ceros de la izquierda", () => {

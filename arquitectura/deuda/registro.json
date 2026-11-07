@@ -332,14 +332,6 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "dependabot-sin-agrupar",
-    "archivos": [".github/dependabot.yml"],
-    "descripcion": "Dependabot sube `next` y `react` de a un workspace y abre PR rojos (informe de CI §3.2 D14): conviene agruparlos en un solo PR.",
-    "tipo": "backlog",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "workflows-de-migracion-duplicados",
     "archivos": [".github/workflows/migrar.yml", ".github/workflows/migrar-base.yml"],
     "descripcion": "Dos workflows de migración (migrar.yml y migrar-base.yml) duplican la superficie de secretos (informe de CI §3.2 D15). Requiere una decisión del dueño.",
@@ -350,7 +342,7 @@
   {
     "id": "permisos-y-acciones-menores-del-ci",
     "archivos": [".github/workflows/ci.yml", ".github/workflows/codeql.yml"],
-    "descripcion": "Pendientes menores de permisos y acciones (informe de CI §3.2 D10): la imagen de gitleaks está fijada por tag y no por digest, `codeql.yml` pide `security-events: write` a nivel de workflow en vez de job, y `permissions:` repetido en `guardian` y `dependencias` es redundante.",
+    "descripcion": "Pendiente menor de acciones (informe de CI §3.2 D10): la imagen de gitleaks está fijada por tag y no por digest. Falta un digest verificable (pregunta pendiente al dueño); el resto de D10 se pagó (`security-events: write` por job en `codeql.yml`; `permissions:` redundante quitado de `dependencias`). El de `guardian` se QUEDA a propósito: los casos EV-024, EV-027 y EV-045 de la batería de evasión anclan su texto.",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
@@ -420,7 +412,7 @@
     "archivos": ["arquitectura/planificar-mutacion.cjs"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
-    "tamano": 606,
+    "tamano": 593,
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
   },
@@ -434,15 +426,6 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "archivo-grande--src-adaptadores-arca-clasificar-ts",
-    "archivos": ["src/adaptadores/arca/clasificar.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 476,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "archivo-grande--src-capacidades-activos-cabeceras-ts",
     "archivos": ["src/capacidades/activos/cabeceras.ts"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
@@ -452,29 +435,11 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "archivo-grande--src-composicion-sesion-y-empresa-ts",
-    "archivos": ["src/composicion/sesion-y-empresa.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 405,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "archivo-grande--src-modulos-fiscal-dominio-numeracion-ts",
     "archivos": ["src/modulos/fiscal/dominio/numeracion.ts"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
     "tamano": 426,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "archivo-grande--src-modulos-identidad-dominio-invitacion-ts",
-    "archivos": ["src/modulos/identidad/dominio/invitacion.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 410,
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
   },
@@ -622,5 +587,45 @@
     "motivo": "Introducir el registro de datos (regla 5, C1) sin reescribir de una vez todas las pantallas existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento. La cuenta por archivo (que solo baja) está en arquitectura/deuda/campos-sin-dato.json.",
     "aprobadoPor": "orquestador (decisión del dueño 2026-11-05)",
     "vence": "2027-01-04"
+  },
+  {
+    "id": "validacion-de-datos--prohibidos-y-duplicados",
+    "archivos": [
+      "apps/plataforma/logica/entrada-de-submarca.ts",
+      "apps/plataforma/logica/entrada-del-plan.ts",
+      "apps/plataforma/logica/filtros-de-empresas.ts",
+      "apps/web/ui/plantillas/facturacion/impresion/ayudas-de-impresion.tsx",
+      "migraciones/0005_administracion.sql",
+      "migraciones/0006_fiscal.sql",
+      "migraciones/0007_marcas_y_planes.sql",
+      "migraciones/0009_facturacion.sql",
+      "migraciones/0019_contacto_de_la_sucursal.sql",
+      "migraciones/0022_nombre_de_la_sucursal_en_el_comprobante.sql",
+      "src/adaptadores/correo/configuracion.ts",
+      "src/capacidades/activos/direccion-externa.ts",
+      "src/capacidades/experiencia/vidriera/descripcion.ts",
+      "src/capacidades/planes/version-de-plan.ts",
+      "src/capacidades/vocabulario/texto-visible.ts",
+      "src/composicion/entorno.ts",
+      "src/composicion/entradas-de-facturacion.ts",
+      "src/modulos/empresas/dominio/sucursal.ts",
+      "src/modulos/fiscal/casos-de-uso/resincronizar-y-ambiente.ts",
+      "src/modulos/fiscal/dominio/certificado-pedido.ts",
+      "src/modulos/fiscal/dominio/datos-fiscales.ts",
+      "src/plataforma/captacion/dominio/atribucion.ts",
+      "src/plataforma/captacion/dominio/auditoria.ts",
+      "src/plataforma/captacion/dominio/formulario.ts",
+      "src/plataforma/dominio/soporte/consulta.ts",
+      "src/primitivas/contacto/una-linea.ts",
+      "src/primitivas/contacto/web.ts",
+      "src/primitivas/domicilio/domicilio.ts"
+    ],
+    "descripcion": "Validaciones de datos por lista de prohibidos (controles, invisibles, marcado, «todo menos esto»; en código y en migraciones SQL) y topes de largo escritos dos veces: todavía no declaran lo que se PERMITE ni toman el límite de su única fuente. No hay un texto común para verificarlas: las cubre el presupuesto exacto por archivo, que solo baja.",
+    "tipo": "backlog",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-11-06",
+    "motivo": "Introducir los chequeos de lista de permitidos y de fuente única (PR 2 de C1) sin reescribir de una vez todas las validaciones existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento (las migraciones ya aplicadas no se editan: se corrigen con una migración nueva). La cuenta por archivo (que solo baja) está en arquitectura/deuda/validacion-de-datos.json. puerta.ts y ruta-de-retorno.ts ya se reescribieron con lista de permitidos (Deuda 4, #209 y #214) y salieron del presupuesto; adaptadores/correo/configuracion.ts queda con 2 prohibiciones heredadas de la lista del nombre de marca.",
+    "aprobadoPor": "orquestador (PR 2 de C1 autorizado el 2026-11-06 por mensaje entre sesiones; decisión del dueño 2026-11-05). Para adaptadores/correo/configuracion.ts: el dueño, 2026-11-06, mensaje directo al orquestador (confirmó que entra como deuda y pidió reescribirlo, lo que hizo Deuda 4 con puerta y ruta-de-retorno).",
+    "vence": "2027-01-05"
   }
 ]

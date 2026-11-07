@@ -83,9 +83,16 @@ function documentoValido(documento: DocumentoDelReceptor): DocumentoDelReceptor 
  * Nunca pasa por `number`. Es la ÚNICA fuente: el pedido a ARCA, la reconciliación y el QR la usan.
  */
 export function numeroDeDocumentoParaArca(documento: DocumentoDelReceptor): bigint {
-  return documento.tipo === "SIN_IDENTIFICAR"
-    ? 0n
-    : numeroDeDocumentoInformadoAArca(documento.numero);
+  switch (documento.tipo) {
+    case "SIN_IDENTIFICAR":
+      return 0n;
+    // Solo el pasaporte puede traer letras: se extraen sus cifras. Los demás se leen enteros y un texto que no es un número LANZA
+    // (como antes): extraer cifras de un DNI o un CUIT corrupto mandaría a ARCA un documento que nadie escribió.
+    case "PASAPORTE":
+      return numeroDeDocumentoInformadoAArca(documento.numero);
+    default:
+      return BigInt(documento.numero);
+  }
 }
 
 export type ContextoDeReceptor = Readonly<{
