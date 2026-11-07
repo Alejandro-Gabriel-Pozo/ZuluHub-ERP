@@ -1,0 +1,114 @@
+{
+  "apps/plataforma/logica/entrada-de-submarca.ts": {
+    "prohibidos": 0,
+    "duplicados": 2
+  },
+  "apps/plataforma/logica/entrada-del-plan.ts": {
+    "prohibidos": 0,
+    "duplicados": 1
+  },
+  "apps/plataforma/logica/filtros-de-empresas.ts": {
+    "prohibidos": 0,
+    "duplicados": 1
+  },
+  "apps/web/ui/plantillas/facturacion/impresion/ayudas-de-impresion.tsx": {
+    "prohibidos": 0,
+    "duplicados": 1
+  },
+  "migraciones/0005_administracion.sql": {
+    "prohibidos": 1,
+    "duplicados": 0
+  },
+  "migraciones/0006_fiscal.sql": {
+    "prohibidos": 8,
+    "duplicados": 0
+  },
+  "migraciones/0007_marcas_y_planes.sql": {
+    "prohibidos": 7,
+    "duplicados": 0
+  },
+  "migraciones/0009_facturacion.sql": {
+    "prohibidos": 13,
+    "duplicados": 0
+  },
+  "migraciones/0019_contacto_de_la_sucursal.sql": {
+    "prohibidos": 4,
+    "duplicados": 0
+  },
+  "migraciones/0022_nombre_de_la_sucursal_en_el_comprobante.sql": {
+    "prohibidos": 1,
+    "duplicados": 0
+  },
+  "src/adaptadores/correo/configuracion.ts": {
+    "prohibidos": 2,
+    "duplicados": 0
+  },
+  "src/capacidades/activos/direccion-externa.ts": {
+    "prohibidos": 0,
+    "duplicados": 1
+  },
+  "src/capacidades/experiencia/vidriera/descripcion.ts": {
+    "prohibidos": 0,
+    "duplicados": 1
+  },
+  "src/capacidades/planes/version-de-plan.ts": {
+    "prohibidos": 1,
+    "duplicados": 0
+  },
+  "src/capacidades/vocabulario/texto-visible.ts": {
+    "prohibidos": 1,
+    "duplicados": 0
+  },
+  "src/composicion/entorno.ts": {
+    "prohibidos": 1,
+    "duplicados": 0
+  },
+  "src/composicion/entradas-de-facturacion.ts": {
+    "prohibidos": 0,
+    "duplicados": 2
+  },
+  "src/modulos/empresas/dominio/sucursal.ts": {
+    "prohibidos": 1,
+    "duplicados": 0
+  },
+  "src/modulos/fiscal/casos-de-uso/resincronizar-y-ambiente.ts": {
+    "prohibidos": 0,
+    "duplicados": 1
+  },
+  "src/modulos/fiscal/dominio/certificado-pedido.ts": {
+    "prohibidos": 1,
+    "duplicados": 0
+  },
+  "src/modulos/fiscal/dominio/datos-fiscales.ts": {
+    "prohibidos": 1,
+    "duplicados": 0
+  },
+  "src/plataforma/captacion/dominio/atribucion.ts": {
+    "prohibidos": 0,
+    "duplicados": 2
+  },
+  "src/plataforma/captacion/dominio/auditoria.ts": {
+    "prohibidos": 0,
+    "duplicados": 1
+  },
+  "src/plataforma/captacion/dominio/formulario.ts": {
+    "prohibidos": 1,
+    "duplicados": 1
+  },
+  "src/plataforma/dominio/soporte/consulta.ts": {
+    "prohibidos": 0,
+    "duplicados": 1
+  },
+  "src/primitivas/contacto/una-linea.ts": {
+    "prohibidos": 1,
+    "duplicados": 0
+  },
+  "src/primitivas/contacto/web.ts": {
+    "prohibidos": 2,
+    "duplicados": 0
+  },
+  "src/primitivas/domicilio/domicilio.ts": {
+    "prohibidos": 1,
+    "duplicados": 0
+  }
+}

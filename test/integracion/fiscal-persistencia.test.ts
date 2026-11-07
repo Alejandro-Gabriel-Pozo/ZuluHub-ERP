@@ -492,13 +492,17 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
     /** Un borrador completo (con un domicilio fiscal ya guardado), listo para confirmar. */
     const borradorCompleto = async (m: Mundo, principal: Emisor) =>
       exito(
-        editarBorrador(unBorrador(m, principal), {
-          razonSocial: "Pozo y Asociados SA",
-          condicionIva: "RESPONSABLE_INSCRIPTO",
-          domicilioFiscalId: await conDomicilio(m),
-          inicioActividades: "2020-01-01",
-          iibbNumero: "901-123456-7",
-        }),
+        editarBorrador(
+          unBorrador(m, principal),
+          {
+            razonSocial: "Pozo y Asociados SA",
+            condicionIva: "RESPONSABLE_INSCRIPTO",
+            domicilioFiscalId: await conDomicilio(m),
+            inicioActividades: "2020-01-01",
+            iibbNumero: "901-123456-7",
+          },
+          AHORA,
+        ),
       );
 
     it("el borrador se crea con el id de la aplicación (repetir devuelve el mismo) y se lee por id y por emisor", async () => {
@@ -551,6 +555,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
                 tx.datosFiscales.obtenerBorrador(empresaDe(m), principal.id),
               ))!,
               { inicioActividades: "2020-01-01", domicilioFiscalId: dom },
+              AHORA,
             ),
           );
           const guardado = await correr(app(m), (tx) => tx.datosFiscales.guardarBorrador(editado));
@@ -624,7 +629,7 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
       const m = await mundo();
       const principal = await correr(app(m), (tx) => elPrincipal(tx, m));
       const completo = await borradorCompleto(m, principal);
-      const b = exito(editarBorrador(completo, { iibbCondicion: "NO_CONTRIBUYENTE" }));
+      const b = exito(editarBorrador(completo, { iibbCondicion: "NO_CONTRIBUYENTE" }, AHORA));
       expect(b).toMatchObject({ iibbNumero: null, iibbCondicion: "NO_CONTRIBUYENTE" });
       await correr(app(m), (tx) => tx.datosFiscales.crearBorrador(unBorrador(m, principal, b.id)));
       const guardado = (await correr(app(m), (tx) => tx.datosFiscales.guardarBorrador(b)))!;
@@ -656,13 +661,17 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
         const nuevo = unBorrador(m, principal);
         await correr(app(m), (tx) => tx.datosFiscales.crearBorrador(nuevo));
         const b = exito(
-          editarBorrador(nuevo, {
-            razonSocial: razon,
-            condicionIva: "MONOTRIBUTO",
-            domicilioFiscalId: dom,
-            inicioActividades: "2021-05-04",
-            iibbNumero: "901-123456-7",
-          }),
+          editarBorrador(
+            nuevo,
+            {
+              razonSocial: razon,
+              condicionIva: "MONOTRIBUTO",
+              domicilioFiscalId: dom,
+              inicioActividades: "2021-05-04",
+              iibbNumero: "901-123456-7",
+            },
+            AHORA,
+          ),
         );
         const guardado = (await correr(app(m), (tx) => tx.datosFiscales.guardarBorrador(b)))!;
         const c = exito(
@@ -1553,13 +1562,17 @@ describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real"
           const nuevo = unBorrador(m, principal);
           await correr(app(m), (tx) => tx.datosFiscales.crearBorrador(nuevo));
           const completo = exito(
-            editarBorrador(nuevo, {
-              razonSocial: "Número Mal SA",
-              condicionIva: "EXENTO",
-              domicilioFiscalId: dom,
-              inicioActividades: "2020-01-01",
-              iibbNumero: "901-123456-7",
-            }),
+            editarBorrador(
+              nuevo,
+              {
+                razonSocial: "Número Mal SA",
+                condicionIva: "EXENTO",
+                domicilioFiscalId: dom,
+                inicioActividades: "2020-01-01",
+                iibbNumero: "901-123456-7",
+              },
+              AHORA,
+            ),
           );
           const guardado = (await correr(app(m), (tx) =>
             tx.datosFiscales.guardarBorrador(completo),

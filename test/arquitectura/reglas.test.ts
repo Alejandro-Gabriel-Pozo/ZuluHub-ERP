@@ -14,6 +14,8 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import { afterEach, describe, expect, it } from "vitest";
+import { duplicadosPorArchivo } from "./fuente-unica-apoyo";
+import { contarProhibidosEnCodigo, contarProhibidosEnSql } from "./lista-de-permitidos-apoyo";
 
 /**
  * Cada regla de arquitectura tiene una violación inyectada a propósito que la rompe (ADR-003).
@@ -2183,5 +2185,35 @@ describe("el módulo de ARCA simulada del recorrido no puede llegar a producció
       ]);
     }
     expect(referenciasProhibidas("const todoBien = true;")).toEqual([]);
+  });
+});
+
+describe("validación de datos: lista de permitidos y fuente única (CLAUDE.md «Todo nace cerrado» y «Una regla, un lugar»)", () => {
+  // Las pruebas reales son `lista-de-permitidos.test.ts` y `fuente-unica.test.ts`; acá, la violación inyectada de cada una (el espejo
+  // que pide «una regla nueva trae su violación inyectada en reglas.test.ts»). El detalle de cada forma está en `*-evasiones.test.ts`.
+  it("validar por lista de prohibidos (código y SQL) se cuenta como deuda", () => {
+    expect(
+      contarProhibidosEnCodigo("x.ts", "export const v = (t: string) => !/\\p{Cc}/u.test(t);"),
+    ).toBe(1);
+    expect(contarProhibidosEnSql("CHECK (nombre !~ '[\\x01-\\x1F\\x7F-\\x9F]')")).toBe(1);
+  });
+
+  it("declarar lo permitido no se cuenta", () => {
+    expect(
+      contarProhibidosEnCodigo(
+        "x.ts",
+        "export const v = (t: string) => /^[A-Za-z ]{1,40}$/.test(t);",
+      ),
+    ).toBe(0);
+  });
+
+  it("un tope de largo escrito dos veces se cuenta como deuda", () => {
+    const duena = "export const LARGO_MAXIMO_DEL_NOMBRE = 80;\n";
+    const copia = new Map([
+      ["src/a.ts", duena],
+      ["apps/b.ts", duena],
+    ]);
+    expect([...duplicadosPorArchivo(copia)]).toEqual([["apps/b.ts", 1]]);
+    expect([...duplicadosPorArchivo(new Map([["src/a.ts", duena]]))]).toEqual([]);
   });
 });
