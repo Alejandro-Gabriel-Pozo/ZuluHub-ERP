@@ -56,22 +56,9 @@ const ARCHIVO_DE_CI = ".github/workflows/ci.yml";
 const CONFIGURACION_DE_APPS = /^apps\/[^/]+\/(package\.json|tsconfig[^/]*\.json)$/;
 
 /**
- * Pruebas que LEEN archivos de `apps/` como texto (el grafo no ve ese vínculo, no es un `import`), con los patrones que leen. Un cambio en uno de esos archivos alcanza a la prueba y, por su cierre de importaciones, a lo que ella ejercita. Hoy solo `contraste-de-superficies` ejerce código que se muta (el contraste); el resto se declara igual por si mañana importa algo mutado. Una prueba nueva que lea `apps/` se declara acá (`planificar-mutacion.test.ts` lo exige).
+ * Pruebas que LEEN archivos de `apps/` como texto (el grafo no ve ese vínculo, no es un `import`), con los patrones que leen: están en `lecturas-de-apps.json` (datos, para que declarar una prueba nueva no haga crecer este archivo). Un cambio en uno de esos archivos alcanza a la prueba y, por su cierre de importaciones, a lo que ella ejercita. Hoy solo `contraste-de-superficies` ejerce código que se muta (el contraste); el resto se declara igual por si mañana importa algo mutado. Una prueba nueva que lea `apps/` se declara en ese archivo (`planificar-mutacion.test.ts` lo exige).
  */
-const LECTURAS_DE_APPS = {
-  "test/web/contraste-de-superficies.test.ts": ["apps/web/ui/tokens.css"],
-  "test/web/legibilidad-de-la-app.test.ts": ["apps/web/**"],
-  "src/adaptadores/pdf/medidas-del-papel.test.ts": ["apps/web/ui/**/*.css"],
-  "test/web/logo-neutro.test.ts": ["apps/web/public/**"],
-  "test/web/acciones-de-facturacion.test.ts": ["apps/web/app/s/app/acciones-de-facturacion.ts"],
-  "test/web/acciones-de-config-fiscal.test.ts": ["apps/web/app/s/app/acciones-de-config-fiscal.ts"],
-  "test/web/sucursal-elegida.test.ts": ["apps/web/app/s/app/acciones-de-sucursal.ts"],
-  "test/arquitectura/vercel-json.test.ts": ["apps/web/**"],
-  "test/arquitectura/cargar-entorno-nombres.test.ts": ["apps/web/PRIMER-DESPLIEGUE.md"],
-  "test/arquitectura/reglas.test.ts": ["apps/**"],
-  "test/arquitectura/lint.test.ts": ["apps/**"],
-  "test/arquitectura/campos-con-dato.test.ts": ["apps/**"],
-};
+const LECTURAS_DE_APPS = require("./lecturas-de-apps.json");
 
 /**
  * Lo que vitest ejecuta antes de TODAS las pruebas: entra en el alcance de cada una. Solo el archivo

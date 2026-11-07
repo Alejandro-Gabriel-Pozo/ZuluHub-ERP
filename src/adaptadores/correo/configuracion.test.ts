@@ -5,6 +5,8 @@ import {
   PEDERNAL_NOMBRE_DE_MARCA,
   PEDERNAL_RESEND_API_KEY,
   PEDERNAL_URL_BASE,
+  armarFrom,
+  citarNombreDeRemitente,
   leerConfiguracionDeCorreo,
 } from "./configuracion";
 
@@ -38,7 +40,7 @@ describe("leerConfiguracionDeCorreo", () => {
   it("con las tres variables devuelve la configuración", () => {
     expect(leerConfiguracionDeCorreo(BUENO)).toEqual({
       claveDeApi: CLAVE,
-      remitente: "Pedernal <no-responder@ejemplo.test>",
+      remitente: '"Pedernal" <no-responder@ejemplo.test>',
       urlBase: "https://app.ejemplo.test",
       nombreDeMarca: "Marca de Prueba",
     });
@@ -184,9 +186,9 @@ describe("leerConfiguracionDeCorreo", () => {
     const con = (r: string) =>
       leerConfiguracionDeCorreo({ ...BUENO, [PEDERNAL_CORREO_REMITENTE]: r }).remitente;
     // Un salto de línea en los extremos del nombre se recorta (normalización de la primitiva) y nunca llega al encabezado.
-    expect(con("Nombre\n<a@ejemplo.test>")).toBe("Nombre <a@ejemplo.test>");
-    expect(con("  Pérez  &  Hijos<a@ejemplo.test>")).toBe("Pérez & Hijos <a@ejemplo.test>");
-    expect(con(`${"x".repeat(60)} <a@ejemplo.test>`)).toBe(`${"x".repeat(60)} <a@ejemplo.test>`);
+    expect(con("Nombre\n<a@ejemplo.test>")).toBe('"Nombre" <a@ejemplo.test>');
+    expect(con("  Pérez  &  Hijos<a@ejemplo.test>")).toBe('"Pérez & Hijos" <a@ejemplo.test>');
+    expect(con(`${"x".repeat(60)} <a@ejemplo.test>`)).toBe(`"${"x".repeat(60)}" <a@ejemplo.test>`);
     expect(() => con(`${"x".repeat(61)} <a@ejemplo.test>`)).toThrow(ErrorDeConfiguracion);
   });
 
@@ -199,14 +201,14 @@ describe("leerConfiguracionDeCorreo", () => {
     },
   );
 
-  it.each(["no-responder@ejemplo.test", "Pedernal <no-responder@ejemplo.test>"])(
-    "acepta el remitente %j",
-    (remitente) => {
-      expect(
-        leerConfiguracionDeCorreo({ ...BUENO, [PEDERNAL_CORREO_REMITENTE]: remitente }).remitente,
-      ).toBe(remitente);
-    },
-  );
+  it.each([
+    ["no-responder@ejemplo.test", "no-responder@ejemplo.test"],
+    ["Pedernal <no-responder@ejemplo.test>", '"Pedernal" <no-responder@ejemplo.test>'],
+  ])("acepta el remitente %j y lo deja listo para el encabezado", (remitente, esperado) => {
+    expect(
+      leerConfiguracionDeCorreo({ ...BUENO, [PEDERNAL_CORREO_REMITENTE]: remitente }).remitente,
+    ).toBe(esperado);
+  });
 
   it.each([
     ["no es una URL", "app.ejemplo.test"],
@@ -269,5 +271,67 @@ describe("leerConfiguracionDeCorreo", () => {
       [PEDERNAL_NOMBRE_DE_MARCA]: "a<b",
     });
     expect(mensaje.split("; ")).toHaveLength(4);
+  });
+});
+
+describe("el encabezado From (armarFrom y citarNombreDeRemitente)", () => {
+  const D = "a@ejemplo.test";
+
+  it.each([
+    ["normal", "Pedernal", '"Pedernal" <a@ejemplo.test>'],
+    ["con coma", "Hotel Sol, Spa", '"Hotel Sol, Spa" <a@ejemplo.test>'],
+    ["con punto y coma", "Sol; Luna", '"Sol; Luna" <a@ejemplo.test>'],
+    ["con dos puntos", "Reservas: Hotel", '"Reservas: Hotel" <a@ejemplo.test>'],
+    ["con comillas", 'El "Sol"', '"El \\"Sol\\"" <a@ejemplo.test>'],
+    ["con comilla sin cierre", 'Sol"', '"Sol\\"" <a@ejemplo.test>'],
+    ["con espacios de más", "  Pérez   Hijos ", '"Pérez Hijos" <a@ejemplo.test>'],
+  ])("%s: el nombre sale citado y entero", (_caso, nombre, esperado) => {
+    expect(armarFrom(nombre, D)).toBe(esperado);
+  });
+
+  it("citar escapa la barra invertida y la comilla, en ese orden de lectura (tabla exacta)", () => {
+    expect(citarNombreDeRemitente("Sol")).toBe('"Sol"');
+    expect(citarNombreDeRemitente('a"b')).toBe('"a\\"b"');
+    expect(citarNombreDeRemitente("a\\b")).toBe('"a\\\\b"');
+    expect(citarNombreDeRemitente('\\"')).toBe('"\\\\\\""');
+    expect(citarNombreDeRemitente("")).toBe('""');
+  });
+
+  it("falla cerrado: nombre vacío, o con salto de línea, <, > o @ en el medio nunca llegan al encabezado", () => {
+    for (const nombre of [
+      "",
+      "   ",
+      "Sol\r\nBcc: x@y.test",
+      "Sol\nLuna",
+      "Sol\rLuna",
+      "Sol<Luna",
+      "Sol>Luna",
+      "Sol@Luna",
+      "Sol\\Luna",
+      "😀",
+    ]) {
+      expect(armarFrom(nombre, D), JSON.stringify(nombre)).toBeNull();
+    }
+  });
+
+  it("falla cerrado si la dirección no sirve", () => {
+    expect(armarFrom("Sol", "a@b")).toBeNull();
+    expect(armarFrom("Sol", "a@b.test, c@d.test")).toBeNull();
+    expect(armarFrom("Sol", "a@b.test>\r\nBcc: x@y.test")).toBeNull();
+  });
+
+  it("es idempotente: la misma entrada da la misma salida, y repetir sobre un nombre ya canónico no lo cambia", () => {
+    const una = armarFrom("Hotel Sol, Spa", D);
+    expect(armarFrom("Hotel Sol, Spa", D)).toBe(una);
+    expect(armarFrom("Hotel Sol, Spa", D)).toBe(armarFrom(" Hotel  Sol, Spa ", D));
+  });
+
+  it("por la configuración: un nombre con coma, punto y coma, dos puntos o comillas se acepta y sale citado", () => {
+    const con = (r: string) =>
+      leerConfiguracionDeCorreo({ ...BUENO, [PEDERNAL_CORREO_REMITENTE]: r }).remitente;
+    expect(con("Hotel Sol, Spa <a@ejemplo.test>")).toBe('"Hotel Sol, Spa" <a@ejemplo.test>');
+    expect(con('Sol: "Luna"; Mar <a@ejemplo.test>')).toBe(
+      '"Sol: \\"Luna\\"; Mar" <a@ejemplo.test>',
+    );
   });
 });

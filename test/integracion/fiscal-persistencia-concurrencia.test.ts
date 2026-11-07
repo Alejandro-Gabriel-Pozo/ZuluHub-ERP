@@ -440,13 +440,17 @@ describe.skipIf(base === null)("fiscal T4: concurrencia de los repositorios", ()
             ),
           );
           const completo = (() => {
-            const r = editarBorrador(unBorrador(m, principal), {
-              razonSocial: "Confirmada SA",
-              condicionIva: "MONOTRIBUTO",
-              domicilioFiscalId: dom,
-              inicioActividades: "2020-01-01",
-              iibbCondicion: "NO_CONTRIBUYENTE",
-            });
+            const r = editarBorrador(
+              unBorrador(m, principal),
+              {
+                razonSocial: "Confirmada SA",
+                condicionIva: "MONOTRIBUTO",
+                domicilioFiscalId: dom,
+                inicioActividades: "2020-01-01",
+                iibbCondicion: "NO_CONTRIBUYENTE",
+              },
+              AHORA,
+            );
             if (!r.ok) throw new Error("borrador inválido");
             return r.valor;
           })();
