@@ -3,6 +3,7 @@ import {
   conElPeriodoFijo,
   entradaDelListado,
   hoyEnArgentina,
+  mismoDiaDelAnioAnterior,
   rangoDelPeriodo,
 } from "../../apps/web/pantallas/entrada-del-listado";
 import {
@@ -86,8 +87,29 @@ describe("el rango de cada período", () => {
     });
   });
 
-  it("«Todo»: sin fechas", () => {
+  it("«Todo»: sin fechas (con o sin texto: la ventana de la búsqueda no es de la fecha del comprobante)", () => {
     expect(rangoDelPeriodo(con({ periodo: "todo" }), new Date())).toEqual({});
+    expect(rangoDelPeriodo(con({ periodo: "todo", texto: "x" }), new Date())).toEqual({});
+  });
+
+  it("el 29 de febrero retrocede al 28 de febrero del año anterior (que no es bisiesto); el resto de los días, el mismo día", () => {
+    expect(mismoDiaDelAnioAnterior("2028-02-29")).toBe("2027-02-28");
+    expect(mismoDiaDelAnioAnterior("2028-02-28")).toBe("2027-02-28");
+    expect(mismoDiaDelAnioAnterior("2028-03-01")).toBe("2027-03-01");
+    expect(mismoDiaDelAnioAnterior("2026-11-07")).toBe("2025-11-07");
+  });
+
+  it("«Hoy», «7 días», «Este mes» y «Personalizado» no cambian por tener texto: el período elegido manda", () => {
+    const ahora = enArgentina("2026-10-28", "12:00");
+    expect(rangoDelPeriodo(con({ periodo: "mes", texto: "x" }), ahora)).toEqual(
+      rangoDelPeriodo(con({ periodo: "mes" }), ahora),
+    );
+    expect(
+      rangoDelPeriodo(
+        con({ periodo: "personalizado", desde: "2020-01-01", hasta: "2020-12-31", texto: "x" }),
+        ahora,
+      ),
+    ).toEqual({ desde: "2020-01-01", hasta: "2020-12-31" });
   });
 
   it("«Personalizado»: las fechas que se escribieron, y un lado vacío es sin límite", () => {
@@ -174,6 +196,42 @@ describe("el pedido a la consulta", () => {
       despuesDe: "2026-10-12T10:00:00.000000Z|0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b",
     });
     expect(entradaDeListar(pedido).ok).toBe(true);
+  });
+
+  it("«Todo» con texto pide los comprobantes CREADOS en los últimos 12 meses: la misma fecha del año anterior, inclusive, del día de Argentina", () => {
+    const buscar = (fecha: string, hora = "12:00", filtros: Partial<FiltrosDelListado> = {}) =>
+      entradaDelListado(
+        con({ periodo: "todo", texto: "Aguirre", ...filtros }),
+        enArgentina(fecha, hora),
+        null,
+      );
+    expect(buscar("2026-11-07")).toEqual({ texto: "Aguirre", creadoDesde: "2025-11-07" });
+    expect(buscar("2026-01-01", "00:00")).toEqual({ texto: "Aguirre", creadoDesde: "2025-01-01" });
+    expect(buscar("2026-12-31", "23:59")).toEqual({ texto: "Aguirre", creadoDesde: "2025-12-31" });
+    // 22:30 de Argentina del 7 ya es el 8 en UTC: el corte es el día de Argentina; a las 00:30 del 8 ya es el 8.
+    const noche = enArgentina("2026-11-07", "22:30");
+    expect(noche.toISOString()).toBe("2026-11-08T01:30:00.000Z");
+    expect(buscar("2026-11-07", "22:30").creadoDesde).toBe("2025-11-07");
+    expect(buscar("2026-11-08", "00:30").creadoDesde).toBe("2025-11-08");
+    // Es una entrada que la consulta acepta.
+    expect(entradaDeListar(buscar("2026-11-07")).ok).toBe(true);
+  });
+
+  it("la ventana de 12 meses es SOLO de «Todo» con texto: sin texto, o con otro período, no hay creadoDesde", () => {
+    expect(entradaDelListado(con({ periodo: "todo" }), ahora, null)).toEqual({});
+    for (const periodo of ["hoy", "7dias", "mes"] as const) {
+      expect(
+        entradaDelListado(con({ periodo, texto: "x" }), ahora, null),
+        periodo,
+      ).not.toHaveProperty("creadoDesde");
+    }
+    expect(
+      entradaDelListado(
+        con({ periodo: "personalizado", desde: "2020-01-01", hasta: "2020-12-31", texto: "x" }),
+        ahora,
+        null,
+      ),
+    ).toEqual({ desde: "2020-01-01", hasta: "2020-12-31", texto: "x" });
   });
 
   it("cada uno de los siete estados del filtro (D-52) es un pedido que la consulta acepta", () => {
