@@ -45,15 +45,18 @@ describe("fragmentosSecretos", () => {
     expect(fragmentosSecretos("esto no es una url")).toEqual(["esto no es una url"]);
   });
 
-  it("la cadena entera se tapa desde 3 caracteres; los tramos (clave, usuario, host), solo desde 8", () => {
-    const f = fragmentosSecretos("postgres://ab:xyz@h/b");
-    expect(f).toEqual(["postgres://ab:xyz@h/b"]);
+  it("la cadena entera y la contraseña se tapan desde 3 caracteres; usuario y host, solo desde 8", () => {
+    expect(fragmentosSecretos("postgres://ab:xyz@h/b")).toEqual(
+      expect.arrayContaining(["postgres://ab:xyz@h/b", "xyz"]),
+    );
+    expect(fragmentosSecretos("postgres://ab:xyz@h/b")).not.toContain("ab");
+    expect(fragmentosSecretos("postgres://ab:xyz@h/b")).not.toContain("h");
     const g = fragmentosSecretos("postgres://usuario8:clave123@host-largo.ejemplo/b");
     expect(g).toEqual(expect.arrayContaining(["usuario8", "clave123", "host-largo.ejemplo"]));
     const corto = fragmentosSecretos("postgres://usuar7:clave12@host-l.ejemplo/b");
     expect(corto).not.toContain("usuar7");
-    expect(corto).not.toContain("clave12");
     expect(corto).not.toContain("host-l");
+    expect(corto).toContain("clave12");
     expect(corto).toContain("host-l.ejemplo");
     expect(fragmentosSecretos("abc")).toEqual(["abc"]);
     expect(fragmentosSecretos("ab")).toEqual([]);
@@ -103,15 +106,22 @@ describe("ocultarSecretos: no tapa fragmentos cortos pero sí todo secreto", () 
     expect(ocultarSecretos(`empresaId: ${uuid}`, DE_PRUEBAS)).toBe(`empresaId: ${uuid}`);
   });
 
-  it("ningún UUID sale tapado con la cadena de pruebas (propiedad)", () => {
-    fc.assert(
-      fc.property(
-        fc.uuid(),
-        (uuid) => ocultarSecretos(`empresaId: ${uuid}`, DE_PRUEBAS) === `empresaId: ${uuid}`,
-      ),
-      { numRuns: 2000 },
-    );
-  });
+  // Contraseña corta de prueba con letras que un UUID (solo hexadecimales) no puede contener.
+  const CON_CLAVE_CORTA =
+    "postgresql://pedernal_plataforma:zq7Xy9@127.0.0.1:55432/pedernal_it_ab12cd34ef56";
+
+  it.each([DE_PRUEBAS, CON_CLAVE_CORTA])(
+    "ningún UUID sale tapado con la cadena de pruebas, de clave larga o corta (propiedad)",
+    (cadena) => {
+      fc.assert(
+        fc.property(
+          fc.uuid(),
+          (uuid) => ocultarSecretos(`empresaId: ${uuid}`, cadena) === `empresaId: ${uuid}`,
+        ),
+        { numRuns: 2000 },
+      );
+    },
+  );
 
   it("la cadena entera y sus tramos largos (clave, usuario, host con 8 o más) se tapan donde aparezcan", () => {
     expect(ocultarSecretos(`x ${DE_PRUEBAS} y`, DE_PRUEBAS)).toBe("x *** y");
@@ -122,9 +132,23 @@ describe("ocultarSecretos: no tapa fragmentos cortos pero sí todo secreto", () 
     );
   });
 
-  it("un tramo con exactamente 8 caracteres se tapa y con 7 no (borde del mínimo)", () => {
-    const cadena = "postgresql://abcdefgh:1234567@servidor-x.ejemplo/b";
-    expect(ocultarSecretos("abcdefgh 1234567", cadena)).toBe("*** 1234567");
+  it("un usuario con caracteres codificados se tapa tanto crudo como decodificado", () => {
+    const cadena = "postgresql://due%C3%B1o_zzz:clave-larga-1@servidor-x.ejemplo/b";
+    expect(ocultarSecretos("a due%C3%B1o_zzz b dueño_zzz c", cadena)).toBe("a *** b *** c");
+  });
+
+  it("usuario con exactamente 8 caracteres se tapa y con 7 no (borde del mínimo de los tramos)", () => {
+    const cadena = "postgresql://abcdefgh:clave-larga-1@servidor-x.ejemplo/b";
+    expect(ocultarSecretos("abcdefgh abcdefg", cadena)).toBe("*** abcdefg");
+  });
+
+  it("una contraseña corta (6) y una con especiales (decodificada) se tapan; `127` y fragmentos de UUID, no", () => {
+    const corta = "postgresql://pedernal_app:ab3Xy9@127.0.0.1:5432/b";
+    expect(ocultarSecretos("clave ab3Xy9 y 127 y 7127a3c1", corta)).toBe(
+      "clave *** y 127 y 7127a3c1",
+    );
+    const rara = "postgresql://pedernal_app:p%40s%3Ax@127.0.0.1:5432/b";
+    expect(ocultarSecretos("clave p@s:x y p%40s%3Ax", rara)).toBe("clave *** y ***");
   });
 
   it("un secreto declarado sin forma de URL (token, clave) se tapa entero aunque sea corto", () => {
