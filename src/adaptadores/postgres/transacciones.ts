@@ -205,8 +205,6 @@ export function crearTransacciones<Tx>(
   const almacen = new AsyncLocalStorage<Unidad>();
   /** Marca lo que corre DENTRO de una lectura unida: lo que ella misma pida no se une (se esperaría a sí misma). */
   const dentroDeUnaLectura = new AsyncLocalStorage<true>();
-  /** Lo mismo para lo que corre DENTRO de una transacción propia del pedido (una escritura): lo que ella pida adentro es suyo. */
-  const dentroDeUnaSuelta = new AsyncLocalStorage<true>();
 
   const admite = (unidad: Unidad, opciones: OpcionesDeTransaccion): boolean =>
     unidad.estado === "ABIERTA" &&
@@ -320,26 +318,26 @@ export function crearTransacciones<Tx>(
   return {
     async ejecutar(opciones, trabajo) {
       const unidad = almacen.getStore();
-      const anidada =
-        dentroDeUnaLectura.getStore() !== undefined || dentroDeUnaSuelta.getStore() !== undefined;
-      if (unidad === undefined || unidad.estado !== "ABIERTA" || anidada) {
+      const anidada = dentroDeUnaLectura.getStore() !== undefined;
+      if (unidad === undefined || unidad.estado !== "ABIERTA")
         return ejecutarSolo(opciones, trabajo);
-      }
-      // Un pedido NUNCA sostiene dos conexiones del pozo a la vez desde ramas distintas: con el pozo chico, muchos pedidos así se esperarían
-      // entre sí. Si ya hay una transacción propia del pedido en curso, o una lectura unida y esta no puede unirse, falla cerrado con un
-      // error tipado en vez de abrir una segunda conexión. NO se debe abrir una escritura (ni otra transacción que no pueda unirse) en
-      // paralelo con las lecturas de un `conLecturasCompartidas`, ni dos a la vez: esperá a que la anterior termine.
+      // Dentro de un pedido con lecturas compartidas, una transacción NO abre una segunda conexión del pozo: con el pozo chico, muchos pedidos
+      // así se esperarían entre sí. Falla cerrado con un error tipado (`Inesperado`) si (a) se pide DENTRO de otra transacción del pedido
+      // (anidada: dentro de la lectura unida, o dentro de una propia, que cuenta como «en curso»), o (b) hay otra transacción propia en curso, o una lectura unida y esta no puede unirse
+      // (ramas en paralelo). Sin lugar en el pozo, el pedido espera hasta `PLAZO_PARA_CONSEGUIR_CONEXION_EN_MS` y falla con el error tipado
+      // de pozo agotado. NO abras una escritura (ni otra transacción que no pueda unirse) en paralelo con las lecturas de un
+      // `conLecturasCompartidas`, ni dos a la vez, ni una dentro de otra: esperá a que la anterior termine.
       const fallaCerrado = () => {
         const caso: ErrorInesperado = {
           tipo: "Inesperado",
           sqlstate: null,
           mensaje:
-            "se pidió una transacción en paralelo con otra del mismo pedido: no se abre una segunda conexión",
+            "se pidió una transacción dentro de otra, o en paralelo con otra, del mismo pedido: no se abre una segunda conexión",
         };
         registrar(caso);
         return err(caso);
       };
-      if (unidad.sueltasEnCurso > 0) return fallaCerrado();
+      if (anidada || unidad.sueltasEnCurso > 0) return fallaCerrado();
       if (admite(unidad, opciones)) {
         return ejecutarUnida(unidad, opciones, trabajo, () => ejecutarSolo(opciones, trabajo));
       }
@@ -348,7 +346,7 @@ export function crearTransacciones<Tx>(
       unidad.sueltasEnCurso += 1;
       try {
         if (unidad.abriendo !== null) await cerrarUnidad(unidad);
-        return await dentroDeUnaSuelta.run(true, () => ejecutarSolo(opciones, trabajo));
+        return await ejecutarSolo(opciones, trabajo);
       } finally {
         unidad.sueltasEnCurso -= 1;
       }
