@@ -4,7 +4,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    # Máximo 2 PR abiertos de este ecosistema: cada PR de Dependabot dispara una corrida completa del CI (~94 jobs) y el plan
+    # tiene un tope de unas 40 máquinas simultáneas; 5 PR de golpe llenaban la cola (medido el 2026-11-07).
+    open-pull-requests-limit: 2
     # Espera 7 días antes de ofrecer un paquete recién publicado: frena paquetes maliciosos.
     cooldown:
       default-days: 7
@@ -33,6 +35,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Mismo motivo que arriba.
+    open-pull-requests-limit: 2
     cooldown:
       default-days: 7
     # `init` y `analyze` de CodeQL tienen que subir SIEMPRE juntos: con versiones desparejadas el análisis falla (#130 y #132
