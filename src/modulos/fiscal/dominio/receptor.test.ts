@@ -5,6 +5,7 @@ import type { LetraDeComprobante } from "./comprobante-emitido";
 import {
   LIMITES_DE_RECEPTOR,
   numeroDeDocumentoParaArca,
+  numeroDeDocumentoParaImprimir,
   validarReceptor,
   type DocumentoDelReceptor,
   type Receptor,
@@ -420,5 +421,43 @@ describe("numeroDeDocumentoParaArca", () => {
     expect(de("ABC123456")).toBe(123456n);
     expect(de("AAB000123")).toBe(123n);
     expect(de("A1B2C3D4")).toBe(1234n);
+  });
+});
+
+describe("numeroDeDocumentoParaImprimir (un comprobante ya emitido está congelado: imprimir no valida)", () => {
+  it("para un documento de solo dígitos da lo mismo que la cuenta que se envía a ARCA", () => {
+    for (const documento of [
+      { tipo: "SIN_IDENTIFICAR" },
+      { tipo: "CUIT", numero: CUIT_C },
+      { tipo: "CUIL", numero: CUIT_A },
+      { tipo: "CDI", numero: CUIT_A },
+      { tipo: "DNI", numero: "12345678" },
+      { tipo: "PASAPORTE", numero: "007" },
+      { tipo: "PASAPORTE", numero: "123456789" },
+    ] as const) {
+      expect(numeroDeDocumentoParaImprimir(documento), JSON.stringify(documento)).toBe(
+        numeroDeDocumentoParaArca(documento),
+      );
+    }
+  });
+
+  it("un pasaporte con letras da sus cifras; uno viejo en cero o sin cifras imprime 0 sin lanzar, y la emisión del mismo documento sigue rechazada", () => {
+    expect(numeroDeDocumentoParaImprimir({ tipo: "PASAPORTE", numero: "ABC123456" })).toBe(123456n);
+    for (const numero of ["0", "00", "ABC000000", "ABCDEF"]) {
+      const documento = { tipo: "PASAPORTE", numero } as const;
+      expect(numeroDeDocumentoParaImprimir(documento), numero).toBe(0n);
+      expect(() => numeroDeDocumentoParaArca(documento), numero).toThrow(RangeError);
+      expect(validarReceptor(conDocumento(documento), contexto("B")), numero).toEqual(
+        invalido("documento"),
+      );
+    }
+  });
+
+  it("un DNI o CUIT guardado con letras (dato raro) tampoco lanza al imprimir; al enviar a ARCA sí", () => {
+    for (const tipo of ["DNI", "CUIT"] as const) {
+      const documento = { tipo, numero: "ABC123456" } as const;
+      expect(numeroDeDocumentoParaImprimir(documento)).toBe(123456n);
+      expect(() => numeroDeDocumentoParaArca(documento)).toThrow(SyntaxError);
+    }
   });
 });

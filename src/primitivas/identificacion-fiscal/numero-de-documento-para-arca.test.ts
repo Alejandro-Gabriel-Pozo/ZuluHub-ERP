@@ -1,6 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
+  numeroDeDocumentoGuardado,
   numeroDeDocumentoInformadoAArca,
   tieneNumeroInformableAArca,
 } from "./numero-de-documento-para-arca";
@@ -40,5 +41,25 @@ describe("tieneNumeroInformableAArca", () => {
       expect(tieneNumeroInformableAArca(n)).toBe(true);
     for (const n of ["ABCDEF", "ABC000000", "000000", ""])
       expect(tieneNumeroInformableAArca(n)).toBe(false);
+  });
+});
+
+describe("numeroDeDocumentoGuardado (lectura para imprimir: nunca lanza)", () => {
+  it("para todo documento de solo dígitos, con o sin ceros, es exactamente BigInt (lo que daba main)", () => {
+    fc.assert(
+      fc.property(fc.stringMatching(/^[0-9]{1,11}$/), (digitos) => {
+        expect(numeroDeDocumentoGuardado(digitos)).toBe(BigInt(digitos));
+      }),
+      { numRuns: 2000 },
+    );
+    for (const digitos of ["0", "00", "007", "30712345671", "12345678", "99999999999"])
+      expect(numeroDeDocumentoGuardado(digitos)).toBe(BigInt(digitos));
+  });
+
+  it("con letras toma las cifras en orden; sin cifras o todo en cero da 0 y no lanza", () => {
+    expect(numeroDeDocumentoGuardado("ABC123456")).toBe(123456n);
+    expect(numeroDeDocumentoGuardado("A1B2C3D4")).toBe(1234n);
+    for (const n of ["", "ABCDEF", "ABC000000", "000000"])
+      expect(numeroDeDocumentoGuardado(n)).toBe(0n);
   });
 });

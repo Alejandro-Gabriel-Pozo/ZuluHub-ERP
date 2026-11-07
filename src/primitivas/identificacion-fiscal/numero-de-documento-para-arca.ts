@@ -14,6 +14,8 @@
  * - Qué se rechaza (DECIDIDO, orquestador, 2026-11-06, P2 y revisión del 2026-11-07; fail-closed): ninguna cifra («ABCDEF») o todas en
  *   cero («ABC000000»: ARCA usa `DocNro` 0 para «sin identificar»). Lo decide `tieneNumeroInformableAArca`, al escribir el pasaporte y
  *   también acá, que lanza. Solo para el tipo PASAPORTE; los demás tipos no extraen cifras de un texto (ver `receptor.ts`).
+ * - Imprimir NO valida (dueño, 2026-11-07): la hoja y el QR de un comprobante emitido usan `numeroDeDocumentoGuardado` (nunca
+ *   lanza). Solo lo que se ENVÍA a ARCA es estricto.
  * - NO VERIFICADO contra ARCA: que acepte `DocTipo` 94 con este número (se prueba en homologación antes de darlo por bueno).
  * - Lo que repite la base: `comprobante_receptor_documento_ck` (0024) exige, en un pasaporte con letras, al menos una cifra del 1 al 9
  *   (`[1-9]`); `test/integracion/pasaporte-migracion.test.ts` lo compara con esta regla.
@@ -27,14 +29,25 @@ export function tieneNumeroInformableAArca(numero: string): boolean {
 }
 
 /**
- * El `DocNro` de un PASAPORTE, sin pasar por `number`. Lanza si no hay una cifra distinta de cero: con ninguna cifra no hay número que
+ * LECTURA de un documento ya guardado (hoja y QR de un comprobante YA emitido): sus cifras en orden, sin pasar por `number`, y
+ * NUNCA lanza. Un comprobante emitido está congelado e imprimir no valida ni pide nada a ARCA (dueño, 2026-11-07): sin cifras o todo en
+ * cero da 0, lo mismo que se envió en su momento. Para un documento de solo dígitos es `BigInt(numero)`. El rigor está en
+ * `numeroDeDocumentoInformadoAArca`, que arma lo que se ENVÍA.
+ */
+export function numeroDeDocumentoGuardado(numero: string): bigint {
+  // El «0» de adelante hace que «sin cifras» sea 0 y no una excepción de `BigInt("")`; no cambia ningún otro número.
+  return BigInt(`0${numero.replace(NO_DIGITOS, "")}`);
+}
+
+/**
+ * El `DocNro` de un PASAPORTE que se va a ENVIAR a ARCA. Lanza si no hay una cifra distinta de cero: con ninguna cifra no hay número que
  * informar y con todas en cero `DocNro` valdría 0 («sin identificar» para ARCA); la base y la validación de entrada lo impiden, y esto
  * es la última capa antes de ARCA (fail closed). SOLO se usa con el tipo PASAPORTE: los demás documentos se leen enteros
  * (`numeroDeDocumentoParaArca`, dominio fiscal), nunca extrayendo cifras de un texto que no es un número.
  */
 export function numeroDeDocumentoInformadoAArca(numero: string): bigint {
-  const cifras = numero.replace(NO_DIGITOS, "");
-  if (!tieneNumeroInformableAArca(cifras))
+  const guardado = numeroDeDocumentoGuardado(numero);
+  if (guardado === 0n)
     throw new RangeError("el documento no tiene ninguna cifra que informar a ARCA");
-  return BigInt(cifras);
+  return guardado;
 }
