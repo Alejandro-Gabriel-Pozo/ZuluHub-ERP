@@ -77,7 +77,7 @@ jobs:
       - run: npm test
 
   web:
-    name: Web (next build sin variables PEDERNAL_*)
+    name: Web y consola (next build sin variables PEDERNAL_*)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -96,6 +96,9 @@ jobs:
             exit 1
           fi
       - run: npm run build:web
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      - run: npm run build:plataforma
         env:
           NEXT_TELEMETRY_DISABLED: "1"
 

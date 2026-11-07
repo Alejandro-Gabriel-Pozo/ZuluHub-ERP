@@ -22,8 +22,7 @@ name: Cargar entorno (preview y producción)
 #    Lo que no llega a Vercel nunca se muestra: se repite con `--rotar` desde la terminal.
 #  - Concurrencia: comparte el grupo `migrar-<ambiente>` con `migrar.yml` (mismos Environments y mismas bases), así una carga
 #    y una migración del mismo entorno no corren a la vez. GitHub guarda UNA corrida en espera por grupo: una tercera
-#    reemplaza a la que esperaba. `migrar-base.yml` tiene sus propios Environments y su propio grupo (`migrar-base-…`); la
-#    base se protege además con el bloqueo de sesión de las migraciones y de la carga de roles.
+#    reemplaza a la que esperaba. La base se protege además con el bloqueo de sesión de las migraciones y de la carga de roles.
 #  - Los Environments `produccion` y `preview` exigen la APROBACIÓN DEL DUEÑO (revisores obligatorios y solo `main`, decisión
 #    del dueño 2026-11-04, PRIMER-DESPLIEGUE.md, B.1). Es configuración de GitHub: el código no puede verificarla.
 #    Los secretos viven en cada Environment, nunca en el repositorio:

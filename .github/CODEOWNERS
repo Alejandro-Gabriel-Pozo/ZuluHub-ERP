@@ -11,6 +11,10 @@
 /.github/CODEOWNERS                              @Alejandro-Gabriel-Pozo
 /test/arquitectura/guardian-*                    @Alejandro-Gabriel-Pozo
 /test/arquitectura/gate-coincide-con-ci.test.ts  @Alejandro-Gabriel-Pozo
+/test/arquitectura/gate-rapido-coincide.test.ts  @Alejandro-Gabriel-Pozo
+/test/arquitectura/mutate-hermanos.test.ts       @Alejandro-Gabriel-Pozo
+/arquitectura/mutate-sin-mutar.json              @Alejandro-Gabriel-Pozo
+/arquitectura/grupos-de-mutacion.json            @Alejandro-Gabriel-Pozo
 /package.json                                    @Alejandro-Gabriel-Pozo
 /stryker.config.json                             @Alejandro-Gabriel-Pozo
 /vitest.config.ts                                @Alejandro-Gabriel-Pozo
