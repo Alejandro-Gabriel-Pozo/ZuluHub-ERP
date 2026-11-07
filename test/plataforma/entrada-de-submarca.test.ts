@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LARGO_MAXIMO_DEL_NOMBRE } from "../../src/modulos/marcas/publico";
 import {
   entradaDeLaConfirmacion,
   entradaDelBorrador,
@@ -86,13 +87,21 @@ describe("entradaDelBorrador: la forma de lo que manda el navegador", () => {
   });
 
   it("rechaza nombreVisible vacío, largo o no texto", () => {
-    for (const malo of ["", "a".repeat(201), 5, null]) {
+    for (const malo of ["", "a".repeat(LARGO_MAXIMO_DEL_NOMBRE + 1), 5, null]) {
       expect(entradaDelBorrador({ ...BORRADOR, cambios: { nombreVisible: malo } })).toEqual({
         ok: false,
       });
     }
-    const maximo = "a".repeat(200);
+    const maximo = "a".repeat(LARGO_MAXIMO_DEL_NOMBRE);
     expect(entradaDelBorrador({ ...BORRADOR, cambios: { nombreVisible: maximo } }).ok).toBe(true);
+  });
+
+  it("el nombre de 60 caracteres pasa y el de 61 se rechaza (el tope del dominio, importado y no copiado: si la pantalla vuelve a tener su propio número, falla)", () => {
+    expect(LARGO_MAXIMO_DEL_NOMBRE).toBe(60);
+    const con = (n: number) =>
+      entradaDelBorrador({ ...BORRADOR, cambios: { nombreVisible: "a".repeat(n) } }).ok;
+    expect(con(60)).toBe(true);
+    expect(con(61)).toBe(false);
   });
 
   it("rechaza un tema con valores que no son texto o de más de 20 caracteres, o que no es objeto", () => {

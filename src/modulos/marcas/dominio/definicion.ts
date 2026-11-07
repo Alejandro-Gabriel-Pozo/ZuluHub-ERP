@@ -136,7 +136,8 @@ export function completarDefinicion(
 
 // --- Validación de cada campo al guardar el borrador -------------------------------------------------
 
-const LARGO_MAXIMO_DEL_NOMBRE = 60;
+/** Lo más largo que puede ser el nombre visible de una marca. Vive acá una vez: la consola de plataforma lo importa por `publico.ts`. */
+export const LARGO_MAXIMO_DEL_NOMBRE = 60;
 
 /** Nombre visible: texto visible de 1 a 60 caracteres (NFC, sin control ni formato ni `<` `>`). */
 export function validarNombreVisible(
