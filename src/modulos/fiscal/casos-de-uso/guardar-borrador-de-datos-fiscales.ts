@@ -118,6 +118,7 @@ async function guardarSobreLoConfirmado(
   empresaId: Parameters<typeof dejarListoElDomicilio>[1],
   confirmada: DatosFiscalesConfirmados,
   entrada: EntradaDeGuardarBorradorDeDatosFiscales,
+  ahora: Date,
 ): Promise<Resultado<SalidaDeGuardarBorradorDeDatosFiscales, ErrorPropioAlGuardarElBorrador>> {
   const cambiaLaVersion = err("VERSION_CONFIRMADA_INMUTABLE" as const);
   // Otro domicilio es otro contenido (y no se inserta nada para comprobarlo).
@@ -135,7 +136,7 @@ async function guardarSobreLoConfirmado(
   });
   // Es la repetición si el pedido, normalizado con las reglas de hoy, no cambia nada, o si es igual a lo guardado tal cual (una
   // versión confirmada con reglas anteriores no se vuelve a validar: su reintento sigue siendo «ya estaba»).
-  const editado = editarBorrador(base, entrada.cambios);
+  const editado = editarBorrador(base, entrada.cambios, ahora);
   const igualConLasReglasDeHoy =
     editado.ok && Object.keys(diferenciaDe(base, editado.valor).despues).length === 0;
   if (!igualConLasReglasDeHoy && !pedidoNoCambiaLoGuardado(base, entrada.cambios)) {
@@ -205,7 +206,7 @@ export function armarGuardarBorradorDeDatosFiscales({
           const previa = await tx.datosFiscales.obtener(empresaId, borradorId);
           if (previa?.estado === "CONFIRMADA") {
             return previa.confirmada.emisorId === emisor.id
-              ? guardarSobreLoConfirmado(tx, empresaId, previa.confirmada, entrada)
+              ? guardarSobreLoConfirmado(tx, empresaId, previa.confirmada, entrada, contexto.ahora)
               : err("VERSION_CONFIRMADA_INMUTABLE");
           }
         }
@@ -230,10 +231,14 @@ export function armarGuardarBorradorDeDatosFiscales({
           (vigente === null
             ? nuevoBorrador({ id: borradorId, empresaId, emisorId: emisor.id, creadoPor: persona })
             : borradorDesdeConfirmada(vigente, { id: borradorId, creadoPor: persona }));
-        const editado = editarBorrador(base, {
-          ...entrada.cambios,
-          ...(domicilio === null ? {} : { domicilioFiscalId: domicilio.valor }),
-        });
+        const editado = editarBorrador(
+          base,
+          {
+            ...entrada.cambios,
+            ...(domicilio === null ? {} : { domicilioFiscalId: domicilio.valor }),
+          },
+          contexto.ahora,
+        );
         if (!editado.ok) return editado;
         const nuevo = editado.valor;
 

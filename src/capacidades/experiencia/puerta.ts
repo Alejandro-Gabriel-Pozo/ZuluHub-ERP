@@ -17,6 +17,7 @@
  * Cada página, acción y ruta vuelve a resolver la puerta por su cuenta: nada de esto es la única barrera.
  */
 import { cabecerasDe, politicaDeContenido, type SuperficieDeRespuesta } from "./cabeceras";
+import { caminoDeRutaPropia } from "./ruta-propia";
 
 /** Prefijo de los encabezados que solo pone la puerta. En minúsculas: `Headers` normaliza los nombres. */
 export const PREFIJO_DE_ENCABEZADO_INTERNO = "x-pd-";
@@ -126,35 +127,13 @@ export function sinEncabezadosInternos(entrantes: Headers): Headers {
   return limpios;
 }
 
-/** Decodifica una ruta; si no es una codificación válida, `null` (y se trata como insegura). */
-function decodificada(ruta: string): string | null {
-  try {
-    return decodeURIComponent(ruta);
-  } catch {
-    return null;
-  }
-}
-
 /**
  * ¿Es `/s` o está debajo de `/s/`? Se mira cruda y decodificada, sin distinguir mayúsculas: `/S/app` y
  * `/%73/app` tampoco entran. Las rutas internas solo las alcanza una reescritura de la puerta.
  */
-function esRutaInterna(ruta: string): boolean {
-  const candidatas = [ruta, decodificada(ruta) ?? ruta].map((r) => r.toLowerCase());
+function esRutaInterna(ruta: string, decodificada: string): boolean {
+  const candidatas = [ruta, decodificada].map((r) => r.toLowerCase());
   return candidatas.some((r) => r === "/s" || r.startsWith("/s/"));
-}
-
-/**
- * Una ruta que se puede anteponer a un prefijo sin sorpresas: empieza con `/`, sin barra invertida, sin
- * caracteres de control, sin `//` y sin segmentos `.` o `..` (ni escritos como `%2e`).
- */
-function esRutaSegura(ruta: string): boolean {
-  if (!ruta.startsWith("/") || ruta.includes("\\") || ruta.includes("//")) return false;
-  const real = decodificada(ruta);
-  if (real === null) return false;
-  // eslint-disable-next-line no-control-regex -- justamente se buscan los caracteres de control
-  if (/[\u0000-\u001f\u007f]/.test(real)) return false;
-  return !real.split("/").some((segmento) => segmento === "." || segmento === "..");
 }
 
 const esRutaDeApi = (ruta: string): boolean => ruta === "/api" || ruta.startsWith("/api/");
@@ -187,7 +166,8 @@ export function decidirPuerta(entrada: EntradaDePuerta): DecisionDePuerta {
 
   // Antes que todo lo demás y sin mirar la resolución: ni la marca ni la base de marcas intervienen.
   if (esRutaDeSistema(ruta)) return armar("SEGUIR", null, null, "SISTEMA");
-  if (puerta === null || !esRutaSegura(ruta) || esRutaInterna(ruta)) return aLaNeutra();
+  const real = caminoDeRutaPropia(ruta);
+  if (puerta === null || real === null || esRutaInterna(ruta, real)) return aLaNeutra();
   if (esRutaDeApi(ruta)) {
     return puerta.superficie === "APP" ? armar("SEGUIR", null, null, "APP") : aLaNeutra();
   }
