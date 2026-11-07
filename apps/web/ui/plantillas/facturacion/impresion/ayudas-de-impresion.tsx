@@ -26,7 +26,13 @@ export type OpcionesDelComprobante = Readonly<{
   notaDeCredito?: boolean;
   /** Las leyendas del modelo, tal cual; sin esto, el comprobante no lleva ninguna. */
   leyendas?: readonly string[];
+  /** Los textos legales del modelo, tal cual; sin esto, el comprobante no trae la clave. */
+  leyendasLegales?: readonly string[];
   contacto?: boolean;
+  /** La leyenda de la condición del receptor del modelo (versión 3), tal cual; sin esto, el receptor no trae la clave. */
+  leyendaDeCondicion?: string;
+  /** El nombre de la sucursal del modelo, tal cual; sin esto, el comprobante no trae la clave. */
+  sucursal?: string;
 }>;
 
 /** Un comprobante de prueba con importes que suman el total (como los de fiscal): se arma a mano, sin pasar por el dominio. */
@@ -82,6 +88,9 @@ export function comprobanteDePrueba(o: OpcionesDelComprobante = {}): Comprobante
           documento: { tipo: "CUIT", numero: "30712345678" },
           condicionIva: "RESPONSABLE_INSCRIPTO",
           domicilio: "Av. Siempreviva 742",
+          ...(o.leyendaDeCondicion === undefined
+            ? {}
+            : { leyendaDeCondicion: o.leyendaDeCondicion }),
         },
     renglones,
     totales:
@@ -128,6 +137,8 @@ export function comprobanteDePrueba(o: OpcionesDelComprobante = {}): Comprobante
         ? { rotulo: "FACTURA", letra, numero: "00001-00000007", fecha: "2026-10-01" }
         : null,
     leyendas: o.leyendas ?? [],
+    ...(o.leyendasLegales === undefined ? {} : { leyendasLegales: o.leyendasLegales }),
+    ...(o.sucursal === undefined ? {} : { sucursal: { nombre: o.sucursal } }),
   };
 }
 
@@ -142,3 +153,20 @@ export async function esperarLasHojas(): Promise<HTMLElement[]> {
   }
   throw new Error("las hojas no aparecieron o no se estabilizaron");
 }
+
+/**
+ * El texto de las reglas de las hojas de estilo ADOPTADAS del documento (la `@page` y «solo la hoja» de `EstiloDePagina`), tal como las
+ * normaliza el navegador (`@page { size: 80mm 183mm; margin: 0px; }`). Vacío si no hay ninguna.
+ */
+export const reglasAdoptadas = (): string =>
+  document.adoptedStyleSheets
+    .flatMap((hoja) => [...hoja.cssRules].map((regla) => regla.cssText))
+    .join("\n");
+
+/** El `@page` adoptado, o `""` si todavía no hay (el ticket no lo tiene hasta medirse). */
+export const reglaDePaginaAdoptada = (): string =>
+  document.adoptedStyleSheets
+    .flatMap((hoja) => [...hoja.cssRules])
+    .filter((regla) => regla instanceof CSSPageRule)
+    .map((regla) => regla.cssText)
+    .join("\n");

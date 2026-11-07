@@ -84,6 +84,18 @@ const VALIDOS: Record<NombreDeCaso, { json: unknown; entrada: unknown }> = {
       duenio: { tipo: "MARCA", marcaId: ID_A },
     },
   },
+  verificarDominio: {
+    json: { claveDeIdempotencia: CLAVE, dominioId: ID_A, verificadoEn: "2026-10-20T12:30:00Z" },
+    entrada: {
+      claveDeIdempotencia: CLAVE,
+      dominioId: ID_A,
+      verificadoEn: new Date("2026-10-20T12:30:00Z"),
+    },
+  },
+  activarDominio: {
+    json: { claveDeIdempotencia: CLAVE, dominioId: ID_A },
+    entrada: { claveDeIdempotencia: CLAVE, dominioId: ID_A },
+  },
   crearPlan: {
     json: { claveDeIdempotencia: CLAVE, codigo: "base" },
     entrada: { claveDeIdempotencia: CLAVE, codigo: "base" },
@@ -185,6 +197,8 @@ describe("la lista cerrada de casos", () => {
       "guardarBorradorDeMarca",
       "confirmarVersionDeMarca",
       "agregarDominio",
+      "verificarDominio",
+      "activarDominio",
       "crearPlan",
       "guardarBorradorDePlan",
       "publicarVersionDePlan",

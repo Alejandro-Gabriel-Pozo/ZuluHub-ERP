@@ -14,8 +14,8 @@ import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 
 /**
  * Los datos fiscales de un emisor tal como la pantalla de Datos fiscales los necesita para mostrarlos y editarlos a mano (D-43):
- * la versión que rige hoy y el borrador en curso, cada uno con su domicilio fiscal. Los de Ingresos Brutos NO salen: D-45 los deja
- * fuera de la primera versión de la pantalla y el backend los guarda vacíos. Trae también el CUIT del emisor, solo para mostrarlo
+ * la versión que rige hoy y el borrador en curso, cada uno con su domicilio fiscal y con Ingresos Brutos (D-115/D-116: el número o
+ * «No contribuyente»; la condición viene tal cual está guardada, y quien la entrega a la pantalla deja pasar solo la vigente). Trae también el CUIT del emisor, solo para mostrarlo
  * (D-65, confirmada por el dueño el 2026-10-29: «Datos fiscales muestra el CUIT de la empresa, solo para leer»; el CUIT es del emisor,
  * no de los datos que se versionan): para el principal es el de la empresa (`emisor.cuit`, el repositorio ya lo resuelve). De solo lectura.
  *
@@ -50,6 +50,8 @@ export type DatosFiscalesVigentes = Readonly<{
   domicilio: DomicilioParaLaPantalla;
   /** Fecha civil `AAAA-MM-DD`. */
   inicioActividades: string;
+  iibbNumero: string | null;
+  iibbCondicion: Confirmada["iibbCondicion"];
 }>;
 
 export type BorradorDeDatosFiscales = Readonly<{
@@ -61,6 +63,8 @@ export type BorradorDeDatosFiscales = Readonly<{
   condicionIva: Borrador["condicionIva"];
   domicilio: DomicilioParaLaPantalla | null;
   inicioActividades: string | null;
+  iibbNumero: string | null;
+  iibbCondicion: Borrador["iibbCondicion"];
 }>;
 
 export type DatosFiscalesDelEmisor = Readonly<{
@@ -136,6 +140,8 @@ export function armarDatosFiscalesDelEmisor({
                 condicionIva: regente.condicionIva,
                 domicilio: await domicilioDe(regente.domicilioFiscalId),
                 inicioActividades: regente.inicioActividades,
+                iibbNumero: regente.iibbNumero,
+                iibbCondicion: regente.iibbCondicion,
               };
 
         const enCurso = await tx.datosFiscales.obtenerBorrador(empresaId, entrada.emisorId);
@@ -152,6 +158,8 @@ export function armarDatosFiscalesDelEmisor({
                     ? null
                     : await domicilioDe(enCurso.domicilioFiscalId),
                 inicioActividades: enCurso.inicioActividades,
+                iibbNumero: enCurso.iibbNumero,
+                iibbCondicion: enCurso.iibbCondicion,
               };
         return ok({ emisorId: entrada.emisorId, cuit: emisor.cuit, vigente, borrador });
       },

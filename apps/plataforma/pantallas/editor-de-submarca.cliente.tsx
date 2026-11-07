@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Boton } from "../../web/ui/componentes/Boton";
+import { Boton } from "../../web/ui/componentes/Boton.cliente";
 import { Campo } from "../../web/ui/componentes/Campo";
 import { useEnvioConClave } from "../../web/ui/patrones/useEnvioConClave";
 import { Pila } from "../../web/ui/primitivas/Pila";
@@ -245,6 +245,7 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
           >
             <Pila separacion={5}>
               <Campo
+                dato="pendiente"
                 etiqueta="Nombre visible"
                 nombre="nombreVisible"
                 autoComplete="off"

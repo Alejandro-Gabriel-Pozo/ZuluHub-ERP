@@ -901,6 +901,9 @@ describe.skipIf(base === null)("contacto de la sucursal: la migración 0019", ()
           const x = await crearEscenario(admin);
           const norte = await sucursalConPuntoDeVenta(admin, x, "Norte", 2);
           const factura = await autorizado(admin, x);
+          // Desde 0022 el disparador del nombre también toma un FOR SHARE sobre esa sucursal y taparía esta sonda: se quita para probar solo
+          // el del contacto.
+          await admin.query("drop trigger comprobante_alta_sucursal_nombre on comprobante");
           await debilitar(admin);
           await alta.query("begin");
           const nota = await insertarComprobante(

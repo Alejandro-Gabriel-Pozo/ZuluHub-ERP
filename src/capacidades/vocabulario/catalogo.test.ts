@@ -151,8 +151,13 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       expect(CATALOGO_DE_TEXTOS[`fiscal.arca.${generico}`].marcadores).toEqual(["codigo"]);
     }
     // Nada del facturador habla en voseo: los textos de ARCA y de los errores van en castellano neutro. Salvo los dos del
-    // listado que el dueño aprobó tal cual (CONTRATO del listado: «Probá con otro período…» y «Probá de nuevo.»).
-    const APROBADOS_EN_VOSEO = ["fiscal.pantalla.listado_vacio", "fiscal.pantalla.listado_error"];
+    // listado que el dueño aprobó tal cual (CONTRATO del listado: «Probá con otro período…» y «Probá de nuevo.») y el aviso de
+    // conflicto de versión (voseo aprobado, 2026-11-04, D-113).
+    const APROBADOS_EN_VOSEO = [
+      "fiscal.pantalla.listado_vacio",
+      "fiscal.pantalla.listado_error",
+      "error.fiscal_version_desactualizada",
+    ];
     for (const clave of claves.filter(
       (c) =>
         (c.startsWith("error.fiscal_") || c.startsWith("fiscal.")) &&
@@ -193,6 +198,35 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     }
     expect(CATALOGO_DE_TEXTOS["error.fiscal_comprobante_no_encontrado"].porDefecto).toBe(
       "No encontramos ese comprobante.",
+    );
+  });
+
+  it("el único texto nuevo de «Elegir sucursal al ingresar» es «Continuar» (dueño, 2026-11-05, prototipo B)", () => {
+    expect(CATALOGO_DE_TEXTOS["sucursal.continuar"].porDefecto).toBe("Continuar");
+  });
+
+  it("la opción vacía genérica de un desplegable es «Elegí una opción» (dueño, 2026-11-05, primera prueba real en Preview)", () => {
+    expect(CATALOGO_DE_TEXTOS["selector.elegir_una_opcion"].porDefecto).toBe("Elegí una opción");
+  });
+
+  it("los textos del contacto de la sucursal y el aviso de conflicto en voseo son exactamente los que el dueño aprobó el 2026-11-04 (D-113)", () => {
+    expect(
+      Object.fromEntries(
+        claves
+          .filter(
+            (c) =>
+              c.startsWith("sucursal.contacto_") || /^sucursal\.(telefono|correo|web)$/.test(c),
+          )
+          .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
+      ),
+    ).toEqual({
+      "sucursal.contacto_titulo": "Contacto de la sucursal",
+      "sucursal.telefono": "Teléfono",
+      "sucursal.correo": "Correo",
+      "sucursal.web": "Web",
+    });
+    expect(CATALOGO_DE_TEXTOS["error.fiscal_version_desactualizada"].porDefecto).toBe(
+      "Los datos cambiaron mientras los mirabas. Actualizá la pantalla e intentá de nuevo.",
     );
   });
 
@@ -269,8 +303,25 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "fiscal.pantalla.imprimir_transporte": "Transporte",
       "fiscal.pantalla.imprimir_hoja": "Hoja {k} de {n}",
       "fiscal.pantalla.imprimir_ingresos_brutos": "Ingresos Brutos",
+      "fiscal.pantalla.imprimir_descargar_pdf": "Descargar PDF",
     });
     expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.imprimir_hoja"].marcadores).toEqual(["k", "n"]);
+  });
+
+  it("Ingresos Brutos en Datos fiscales (D-116): los dos textos nuevos y la etiqueta reutiliza la de la hoja impresa", () => {
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.config_df_iibb_numero"].porDefecto).toBe(
+      "Número de inscripción",
+    );
+    expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.config_df_iibb_no_contribuyente"].porDefecto).toBe(
+      "No contribuyente",
+    );
+    expect(
+      claves.filter((c) => c.includes("iibb") || c.includes("ingresos_brutos")).sort(),
+    ).toEqual([
+      "fiscal.pantalla.config_df_iibb_no_contribuyente",
+      "fiscal.pantalla.config_df_iibb_numero",
+      "fiscal.pantalla.imprimir_ingresos_brutos",
+    ]);
   });
 
   it("los textos de los errores con datos declaran su marcador", () => {

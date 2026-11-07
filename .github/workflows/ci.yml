@@ -87,6 +87,15 @@ jobs:
           else
             node arquitectura/deuda/deuda.cjs
           fi
+      # El presupuesto de campos sin dato (regla 5, CLAUDE.md «Sin dato registrado no hay campo»): por archivo, solo baja contra la
+      # base. El guardián de deuda de arriba solo mira «tipo y archivo» y no frena que un archivo ya listado sume un campo crudo.
+      - name: Deuda de campos sin dato (el presupuesto solo baja)
+        run: |
+          if [ -d base ]; then
+            node arquitectura/deuda/campos-sin-dato.cjs --base=base
+          else
+            node arquitectura/deuda/campos-sin-dato.cjs
+          fi
 
   pruebas:
     name: Pruebas (con Postgres real)
@@ -159,7 +168,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+      - uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
         with:
           advanced-security: false
           annotations: true
@@ -170,8 +179,6 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -300,6 +307,7 @@ jobs:
         mutacion,
         web,
         componentes,
+        recorrido,
       ]
     if: always()
     timeout-minutes: 5
@@ -376,3 +384,51 @@ jobs:
         if: steps.navegador.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
       - run: npm run test:componentes
+
+  recorrido:
+    # Recorrido de punta a punta: la app REAL construida (`next build` + `next start`, como Vercel) con Chromium y un Postgres real,
+    # ARCA simulada. Atrapa lo que ninguna otra prueba ve porque no corre la app armada ni aplica sus cabeceras (hechos del 2026-11-05:
+    # un manejador de eventos en un Server Component, el QR bloqueado por la CSP). Compila por su cuenta: el job `web` compila SIN
+    # variables ni base a propósito (P-12) y el build tarda ~30 s, así que reutilizarlo no ahorra nada. El proceso de la app recibe un
+    # entorno cerrado desde la prueba; este job no define ninguna variable PEDERNAL_*.
+    name: Recorrido (app real, Chromium y Postgres)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        # Misma versión mayor que Neon. Sin contraseña: es una base descartable del CI.
+        image: postgres:18
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PRUEBAS_DATABASE_URL: postgres://postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Versión de Playwright (clave del caché del navegador)
+        id: playwright
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      # Sin `if`: con el navegador en el caché solo instala las dependencias del sistema; sin él, lo baja.
+      - name: Chromium de Playwright
+        run: npx playwright install --with-deps chromium
+      - run: npm run build:web
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      - run: npm run test:recorrido

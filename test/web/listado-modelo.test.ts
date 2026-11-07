@@ -149,6 +149,15 @@ describe("la elección de sucursal", () => {
     );
   });
 
+  it("al ingresar: el botón dice «Continuar» y no hay invitación, con o sin elegida", () => {
+    for (const elegida of ["", "s-centro"]) {
+      const e = armarLaEleccionDeSucursal(SUCURSALES, elegida, {}, true);
+      expect(e?.aplicar).toBe("Continuar");
+      expect(e?.invitacion).toBeNull();
+      expect(e?.elegida).toBe(elegida);
+    }
+  });
+
   it("con una sola abierta que el servidor tomó sola no hay nada que elegir: sin selector (D-36)", () => {
     expect(armarLaEleccionDeSucursal([SUCURSALES[0]], "s-centro")).toBeNull();
   });

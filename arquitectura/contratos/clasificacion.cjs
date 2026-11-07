@@ -168,6 +168,8 @@ const NIVELES = [
       { clase: "frontend", glob: "apps/web/app/**" },
       { clase: "frontend", glob: "apps/web/pantallas/**" },
       { clase: "frontend", glob: "apps/web/ui/**" },
+      // Archivos estáticos que sirve la app (hoy, el logo neutro de la marca de pruebas): se entregan tal cual al navegador.
+      { clase: "frontend", glob: "apps/web/public/**" },
       { clase: "config", glob: "apps/web/next.config.ts" },
       { clase: "config", glob: "apps/web/package.json" },
       { clase: "config", glob: "apps/web/tsconfig.json" },

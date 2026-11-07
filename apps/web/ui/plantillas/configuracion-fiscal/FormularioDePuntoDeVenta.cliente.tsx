@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import type { Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { Boton } from "../../componentes/Boton";
+import { Boton } from "../../componentes/Boton.cliente";
 import { Campo } from "../../componentes/Campo";
 import { Selector } from "../../componentes/Selector";
 import { RegionDeEstado } from "../../patrones/RegionDeEstado";
@@ -136,6 +136,7 @@ export function FormularioDePuntoDeVenta({
       error={errorEn(campoDelFormulario)}
       deshabilitado={bloqueado}
       {...extra}
+      dato="pendiente"
     />
   );
 
@@ -186,6 +187,7 @@ export function FormularioDePuntoDeVenta({
             : {})}
           error={errorEn("sucursalId")}
           deshabilitado={bloqueado}
+          dato="pendiente"
         />
         <fieldset className={estilos["domicilio"]} disabled={bloqueado}>
           <legend className={estilos["leyenda"]}>
@@ -203,6 +205,7 @@ export function FormularioDePuntoDeVenta({
             autoComplete: "address-level2",
           })}
           <Selector
+            dato="pendiente"
             etiqueta={texto({}, "fiscal.pantalla.config_pv_provincia")}
             nombre="provincia"
             valor={valores.provincia}

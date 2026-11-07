@@ -68,6 +68,17 @@ const FORMAS = {
     esCanonico: req("booleano"),
     duenio: req("duenio"),
   },
+  // Verificar y activar un dominio (PENDIENTE_VERIFICACION → VERIFICADO → ACTIVO): sin ellos un host agregado sirve la
+  // página neutra para siempre. Decisión del dueño, 2026-11-05 (mensaje del orquestador). Desactivar y retirar NO están.
+  verificarDominio: {
+    claveDeIdempotencia: req("clave"),
+    dominioId: req("id"),
+    verificadoEn: req("vigencia"),
+  },
+  activarDominio: {
+    claveDeIdempotencia: req("clave"),
+    dominioId: req("id"),
+  },
   crearPlan: {
     claveDeIdempotencia: req("clave"),
     codigo: req("texto"),

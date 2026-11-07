@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Aviso } from "../../web/ui/componentes/Aviso";
-import { Boton } from "../../web/ui/componentes/Boton";
+import { Boton } from "../../web/ui/componentes/Boton.cliente";
 import { Campo } from "../../web/ui/componentes/Campo";
 import { Selector } from "../../web/ui/componentes/Selector";
 import { Icono } from "../../web/ui/iconos/Icono";
@@ -142,6 +142,7 @@ export function CambioDePlan({ plan }: PropsDeCambioDePlan) {
   return (
     <div className={propios["cambio"]}>
       <Selector
+        dato="pendiente"
         etiqueta="Cambiar a"
         nombre="versionDePlanId"
         textoDeElegir="Elegí un plan"
@@ -235,6 +236,7 @@ export function CambioDePlan({ plan }: PropsDeCambioDePlan) {
                 </Aviso>
               ) : null}
               <Campo
+                dato="pendiente"
                 etiqueta="Vigente desde"
                 nombre="vigenteDesde"
                 tipo="date"
@@ -250,6 +252,7 @@ export function CambioDePlan({ plan }: PropsDeCambioDePlan) {
                 deshabilitado={bloqueada}
               />
               <Campo
+                dato="pendiente"
                 etiqueta="Motivo del cambio"
                 nombre="motivo"
                 obligatorio="obligatorio"

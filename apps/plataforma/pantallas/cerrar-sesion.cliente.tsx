@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Boton } from "../../web/ui/componentes/Boton";
+import { Boton } from "../../web/ui/componentes/Boton.cliente";
 
 /** Cierra la sesión (`POST sign-out`) y vuelve al ingreso. Aunque el pedido falle, la persona vuelve al ingreso. */
 export function CerrarSesion() {

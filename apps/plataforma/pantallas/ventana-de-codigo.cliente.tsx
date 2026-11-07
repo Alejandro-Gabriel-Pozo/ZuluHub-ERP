@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { Aviso } from "../../web/ui/componentes/Aviso";
-import { Boton } from "../../web/ui/componentes/Boton";
+import { Boton } from "../../web/ui/componentes/Boton.cliente";
 import { Campo } from "../../web/ui/componentes/Campo";
 import { CampoDeCodigo } from "../../web/ui/componentes/CampoDeCodigo";
 import { Superposicion } from "../../web/ui/patrones/Superposicion";
@@ -127,6 +127,7 @@ export function useVentanaDeCodigo(): { pedirCodigo: () => Promise<boolean>; ven
           )}
           {modo === "aplicacion" ? (
             <CampoDeCodigo
+              dato="pendiente"
               etiqueta="Código de la aplicación"
               ayuda="Los seis números que muestra tu aplicación de autenticación."
               valor={codigo}
@@ -135,6 +136,7 @@ export function useVentanaDeCodigo(): { pedirCodigo: () => Promise<boolean>; ven
             />
           ) : (
             <Campo
+              dato="pendiente"
               etiqueta="Código de recuperación"
               ayuda="Uno de los códigos que guardaste al configurar el segundo factor. Sirve una sola vez."
               valor={codigo}

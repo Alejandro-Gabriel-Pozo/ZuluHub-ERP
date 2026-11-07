@@ -1,6 +1,6 @@
 import type { TextosDeVidriera } from "../../../../../src/capacidades/experiencia/vidriera/textos";
 import type { VistaDeProducto } from "../../../../../src/capacidades/experiencia/vidriera/vista";
-import { Boton } from "../../componentes/Boton";
+import { Boton } from "../../componentes/Boton.cliente";
 import { Superposicion } from "../../patrones/Superposicion";
 import { Compartir } from "./Compartir.cliente";
 import { DetalleDeProducto, idDelPrecioDe } from "./DetalleDeProducto";

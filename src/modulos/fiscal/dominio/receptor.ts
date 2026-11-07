@@ -1,5 +1,17 @@
-import { cuitDesdeTexto, type Cuit } from "../../../primitivas/identificacion-fiscal/cuit";
+import {
+  LARGO_MAXIMO_DEL_DOMICILIO_LIBRE,
+  domicilioLibreDesdeTexto,
+} from "../../../primitivas/domicilio/domicilio-libre";
+import type { Cuit } from "../../../primitivas/identificacion-fiscal/cuit";
+import {
+  TIPOS_DE_DOCUMENTO_DE_IDENTIDAD,
+  numeroDeDocumentoDesdeTexto,
+} from "../../../primitivas/identificacion-fiscal/documento";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import {
+  LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL,
+  nombreODenominacionDesdeTexto,
+} from "../../../primitivas/texto/nombre-o-razon-social";
 import type { LetraDeComprobante } from "./comprobante-emitido";
 import { condicionAdmiteLetra, type CondicionIvaReceptor } from "./condicion-iva-receptor";
 
@@ -8,14 +20,19 @@ import { condicionAdmiteLetra, type CondicionIvaReceptor } from "./condicion-iva
  * comprobante al nacer y no cambia. La condición frente al IVA es OBLIGATORIA siempre (RG 5616,
  * WSFE v4.8 l. 90): se pide y se envía aunque ARCA todavía la aceptaría vacía.
  *
- * Las validaciones de forma viven acá y no en `CHECK`, para poder aflojarlas sin migración.
+ * Las validaciones de forma viven acá y no en `CHECK`, para poder aflojarlas sin migración. Las reglas de cada dato
+ * NO se escriben acá: son las primitivas de nombre (`texto/nombre-o-razon-social`), documento
+ * (`identificacion-fiscal/documento`) y domicilio libre (`domicilio/domicilio-libre`), cada una con su ficha.
  *
- * Valores configurables, todos ASUMIDOS (el manual no fija el largo de estos textos; tienen el mismo
- * orden que la razón social de los datos fiscales): `LIMITES_DE_RECEPTOR`.
+ * Los límites de largo son ASUMIDOS (el manual no fija el largo de estos textos) y los fijan esas primitivas:
+ * `LIMITES_DE_RECEPTOR` solo los nombra.
  */
-export const LIMITES_DE_RECEPTOR = { nombre: 200, domicilio: 300 } as const;
+export const LIMITES_DE_RECEPTOR = {
+  nombre: LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL,
+  domicilio: LARGO_MAXIMO_DEL_DOMICILIO_LIBRE,
+} as const;
 
-export const TIPOS_DE_DOCUMENTO = ["CUIT", "CUIL", "CDI", "DNI", "PASAPORTE"] as const;
+export const TIPOS_DE_DOCUMENTO = TIPOS_DE_DOCUMENTO_DE_IDENTIDAD;
 
 export type TipoDeDocumento = (typeof TIPOS_DE_DOCUMENTO)[number];
 
@@ -28,7 +45,7 @@ export type Receptor = Readonly<{
   nombre: string | null;
   documento: DocumentoDelReceptor;
   condicionIva: CondicionIvaReceptor;
-  /** Texto libre y opcional. */
+  /** Texto libre: obligatorio salvo con el consumidor final, donde puede faltar. */
   domicilio: string | null;
 }>;
 
@@ -43,14 +60,6 @@ export type ErrorDeReceptor =
   /** Sujeto no categorizado en la clase B: ARCA exige informar la percepción de IVA (error 10067). */
   | Readonly<{ codigo: "RECEPTOR_NO_CATEGORIZADO_NO_SOPORTADO" }>;
 
-/** DNI: sin ceros a la izquierda, de 6 a 9 dígitos (como `parte_documento_ck` de clientes). */
-const FORMATO_DE_DNI = /^[1-9][0-9]{5,8}$/;
-/**
- * Pasaporte: `DocNro` es un `Long (11)` en WSFE v4.8 (l. 577), así que solo cabe un número de hasta
- * 11 dígitos. NO VERIFICADO que ARCA acepte el tipo 94 con ese formato (lo confirma el espía).
- */
-const FORMATO_DE_PASAPORTE = /^[0-9]{1,11}$/;
-
 function recortarOpcional(texto: string | null): string | null {
   const limpio = texto?.trim() ?? "";
   return limpio === "" ? null : limpio;
@@ -60,16 +69,10 @@ function documentoValido(documento: DocumentoDelReceptor): DocumentoDelReceptor 
   switch (documento.tipo) {
     case "SIN_IDENTIFICAR":
       return { tipo: "SIN_IDENTIFICAR" };
-    case "CUIT":
-    case "CUIL":
-    case "CDI": {
-      const cuit = cuitDesdeTexto(documento.numero);
-      return cuit.ok ? { tipo: documento.tipo, numero: cuit.valor } : null;
+    default: {
+      const numero = numeroDeDocumentoDesdeTexto(documento.tipo, documento.numero);
+      return numero.ok ? { tipo: documento.tipo, numero: numero.valor } : null;
     }
-    case "DNI":
-      return FORMATO_DE_DNI.test(documento.numero) ? documento : null;
-    case "PASAPORTE":
-      return FORMATO_DE_PASAPORTE.test(documento.numero) ? documento : null;
   }
 }
 
@@ -97,17 +100,24 @@ export function validarReceptor(
   entrada: Receptor,
   contexto: ContextoDeReceptor,
 ): Resultado<Receptor, ErrorDeReceptor> {
-  const nombre = recortarOpcional(entrada.nombre);
-  const domicilio = recortarOpcional(entrada.domicilio);
   const documento = documentoValido(entrada.documento);
   if (documento === null) return err({ codigo: "RECEPTOR_INVALIDO", campo: "documento" });
+  // Un nombre ausente o en blanco es «sin nombre»; uno escrito tiene que pasar la regla del dato (al menos una letra, sin invisibles…).
+  const escrito = recortarOpcional(entrada.nombre);
+  const nombreValido = escrito === null ? null : nombreODenominacionDesdeTexto(escrito);
   if (
-    (nombre === null && documento.tipo !== "SIN_IDENTIFICAR") ||
-    (nombre !== null && nombre.length > LIMITES_DE_RECEPTOR.nombre)
+    (escrito === null && documento.tipo !== "SIN_IDENTIFICAR") ||
+    (nombreValido !== null && !nombreValido.ok)
   ) {
     return err({ codigo: "RECEPTOR_INVALIDO", campo: "nombre" });
   }
-  if (domicilio !== null && domicilio.length > LIMITES_DE_RECEPTOR.domicilio) {
+  const nombre = nombreValido?.ok === true ? nombreValido.valor : null;
+  const domicilioValido = domicilioLibreDesdeTexto(entrada.domicilio);
+  if (!domicilioValido.ok) return err({ codigo: "RECEPTOR_INVALIDO", campo: "domicilio" });
+  const domicilio = domicilioValido.valor;
+  // La norma pide el domicilio comercial de todo receptor que no sea consumidor final (RG 1415 Anexo II A.II a, c, e, f, g;
+  // dueño, 2026-11-06, Q24). Previene una factura A o B a un cliente identificado que sale sin domicilio.
+  if (domicilio === null && entrada.condicionIva !== "CONSUMIDOR_FINAL") {
     return err({ codigo: "RECEPTOR_INVALIDO", campo: "domicilio" });
   }
   if (!condicionAdmiteLetra(entrada.condicionIva, contexto.letra)) {

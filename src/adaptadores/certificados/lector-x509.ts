@@ -11,9 +11,9 @@ import { ErrorDeConfiguracion } from "../postgres/errores";
  * certificado sirve (eso es del dominio): mide lo que el dominio necesita.
  *
  * La cadena se arma contra las autoridades que le pasa la composición para cada ambiente (la de homologación y la
- * de producción NO se mezclan: «cada ambiente confía solo en su cadena»). Sus PEM salen de
- * `12-referencias-externas/arca-cadena-de-certificacion-*` y su autenticidad la debe confirmar el dueño comparando
- * huellas (D-F7) antes de producción: por eso no están copiadas acá. Sin autoridades para un ambiente, la cadena
+ * de producción NO se mezclan: «cada ambiente confía solo en su cadena»). Sus PEM viven en
+ * `src/composicion/cadenas-de-confianza-de-arca.ts` (el lector no los conoce; solo la homologación está verificada por el
+ * dueño, D-F7: la de producción espera sus huellas). Sin autoridades para un ambiente, la cadena
  * NO cierra (falla cerrado).
  */
 

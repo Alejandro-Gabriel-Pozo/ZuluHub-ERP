@@ -7,9 +7,16 @@ describe("textoDeErrorSeguro", () => {
   });
 
   it("tapa los enlaces", () => {
-    expect(textoDeErrorSeguro("falló https://app.ejemplo.com/invitaciones/abc?x=1 otra vez")).toBe(
+    expect(textoDeErrorSeguro("falló https://app.ejemplo.com/invitacion?t=abc otra vez")).toBe(
       "falló [enlace] otra vez",
     );
+    // El token va en la consulta (`?t=`): el enlace se tapa entero, consulta incluida.
+    const token = "Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MGFiY2RlZmdoaWo";
+    const tapado = textoDeErrorSeguro(
+      `falló https://app.ejemplo.com/invitacion?t=${token}&x=1 y ${token}`,
+    );
+    expect(tapado).toBe("falló [enlace] y [oculto]");
+    expect(tapado).not.toContain(token);
     expect(textoDeErrorSeguro("http://localhost:3000/x")).toBe("[enlace]");
     expect(textoDeErrorSeguro("postgres://usuario:clave@host/base")).toBe("[enlace]");
   });

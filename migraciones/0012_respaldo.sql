@@ -9,7 +9,8 @@
 --    `npm run migrar -- --preparar-roles --con-respaldo`), BYPASSRLS (sin eso `pg_dump` falla o copia de menos ante
 --    tablas con RLS forzado), sin superusuario, sin crear roles ni bases, sin replicación, sin herencia y con a lo
 --    sumo 2 conexiones. Si ya existía con otros atributos, se le fuerzan estos.
---  * Frena si el rol es miembro de otro rol, o si otro rol es miembro de él (heredaría sus lecturas).
+--  * Frena si el rol es miembro de otro rol, o si otro rol es miembro de él (heredaría sus lecturas). ÚNICA
+--    pertenencia que ignora: la que el servidor le da solo al rol que migra al crearlo (ver el bloque del chequeo).
 --  * Topes por rol: un volcado lee tablas enteras (más que los 30 s de los roles de la aplicación) pero no puede
 --    quedar colgado ni bloquear una migración; y cada sesión arranca de SOLO LECTURA.
 --  * USAGE en los esquemas de Pedernal y SELECT en todas sus tablas y secuencias, también las que creen las
@@ -35,12 +36,38 @@ BEGIN
   END IF;
 
   -- Ni miembro de otro rol (heredaría poderes, el caso de `neon_superuser`), ni con miembros (heredarían su lectura total).
-  SELECT string_agg(format('%s es miembro de %s', m.rolname, g.rolname), ', ' ORDER BY m.rolname, g.rolname)
-    INTO ajenas
-    FROM pg_auth_members am
-    JOIN pg_roles m ON m.oid = am.member
-    JOIN pg_roles g ON g.oid = am.roleid
-   WHERE m.rolname = r OR g.rolname = r;
+  --
+  -- ÚNICA excepción: la pertenencia AUTOMÁTICA del creador. Desde PostgreSQL 16, cuando un rol con CREATEROLE que no es
+  -- superusuario (el `neondb_owner` de Neon) crea un rol, el servidor lo hace miembro del rol creado con
+  -- admin_option = true, inherit_option = false y set_option = false (verificado leyendo `pg_auth_members` en la base
+  -- real de Neon: la tienen todos los roles `pedernal_*`, otorgada por `cloud_admin`). Esa pertenencia no hereda
+  -- ningún privilegio ni permite `SET ROLE`: solo administrarlo. Contarla como «ajena» abortaba esta migración en Neon
+  -- (primer error real, rama `preview`); un superusuario creador (el CI) no recibe ninguna y nunca la vio.
+  -- Se ignora SOLO si es de `current_user` (el rol que migra) hacia el rol de respaldo y no hereda ni permite
+  -- `SET ROLE`; cualquier otra pertenencia (otro rol, con inherit o set, o del rol de respaldo hacia otro) sigue
+  -- frenando. Antes de PostgreSQL 16 `pg_auth_members` no tiene esas columnas (ni existe la pertenencia automática):
+  -- ahí no se ignora nada, es decir, el chequeo no se debilita.
+  IF EXISTS (
+    SELECT 1 FROM pg_attribute
+     WHERE attrelid = 'pg_catalog.pg_auth_members'::regclass AND attname IN ('inherit_option', 'set_option')
+    HAVING count(*) = 2
+  ) THEN
+    EXECUTE $q$
+      SELECT string_agg(format('%s es miembro de %s', m.rolname, g.rolname), ', ' ORDER BY m.rolname, g.rolname)
+        FROM pg_auth_members am
+        JOIN pg_roles m ON m.oid = am.member
+        JOIN pg_roles g ON g.oid = am.roleid
+       WHERE (m.rolname = $1 OR g.rolname = $1)
+         AND NOT (g.rolname = $1 AND m.rolname = current_user AND NOT am.inherit_option AND NOT am.set_option)
+    $q$ INTO ajenas USING r;
+  ELSE
+    SELECT string_agg(format('%s es miembro de %s', m.rolname, g.rolname), ', ' ORDER BY m.rolname, g.rolname)
+      INTO ajenas
+      FROM pg_auth_members am
+      JOIN pg_roles m ON m.oid = am.member
+      JOIN pg_roles g ON g.oid = am.roleid
+     WHERE m.rolname = r OR g.rolname = r;
+  END IF;
   IF ajenas IS NOT NULL THEN
     RAISE EXCEPTION 'el rol de respaldo no puede tener pertenencias (%): revocarlas y repetir', ajenas
       USING ERRCODE = '55000';

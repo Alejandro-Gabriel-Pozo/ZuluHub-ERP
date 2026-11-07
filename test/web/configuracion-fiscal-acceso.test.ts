@@ -38,6 +38,11 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
     }),
   },
 }));
+// El Inicio consulta las sucursales para la puerta de «Elegir sucursal»; acá no hay ninguna.
+vi.mock("../../apps/web/servidor/sucursal-elegida", () => ({
+  sucursalDelPedido: () =>
+    Promise.resolve({ ok: true, dato: { elegibles: [], elegida: null, efectiva: "" } }),
+}));
 vi.mock("../../apps/web/servidor/configuracion-fiscal", () => ({
   cargarElEstadoDeLaConfiguracion: () => {
     mundo.lecturas += 1;

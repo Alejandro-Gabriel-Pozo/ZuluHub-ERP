@@ -64,3 +64,38 @@ regexes = [
   '''^\s*0123456789abcdef0123456789abcdef-plat\s*$''',
   '''^choque-vecinos-2882103$''',
 ]
+
+# Preparar la empresa de pruebas (#172): dos canarios de prueba del secreto del cron ("cron-centinela-…" y un valor corto
+# para probar que se rechaza) que el commit 74972b6 escribió de corrido. Ya se arman en tiempo de ejecución, pero el escaneo
+# del historial completo sigue viendo ese commit y, sin esta excepción, daría un falso positivo para siempre. Falla que
+# previene: un escaneo del historial rojo permanente por valores que no son secretos. Angosta: el commit exacto, el archivo
+# exacto, la regla `generic-api-key` y solo estos dos valores.
+[[allowlists]]
+description = "Canarios del secreto del cron de la prueba de preparar la empresa de pruebas (commit 74972b6)"
+condition = "AND"
+targetRules = ["generic-api-key"]
+commits = ["74972b6dcc9320a3f9a387d65c80d222ca195ede"]
+paths = [
+  '''^test/plataforma/ejecutar-preparar-empresa-de-pruebas\.test\.ts$''',
+]
+regexes = [
+  '''^cron-centinela-0123456789abcdef$''',
+  '''^corto-pero-variado-123$''',
+]
+
+# Enlace de invitación (#182): el canario del token de la prueba de contrato `enlace-de-invitacion` ("tok_de-prueba123", inventado,
+# no es un secreto) que el commit 1b5991f escribió de corrido. Ahora se arma en tiempo de ejecución, pero el escaneo del historial
+# completo sigue viendo ese commit y, sin esta excepción, daría un falso positivo para siempre. Falla que previene: un escaneo
+# del historial rojo permanente por un valor que no es secreto. Angosta: el commit exacto, el archivo exacto, la regla
+# `generic-api-key` y solo este valor.
+[[allowlists]]
+description = "Canario del token de la prueba de contrato del enlace de invitación (commit 1b5991f)"
+condition = "AND"
+targetRules = ["generic-api-key"]
+commits = ["1b5991f08b9286bc11f9aed4345577cc4dac02d2"]
+paths = [
+  '''^test/arquitectura/enlace-de-invitacion\.test\.ts$''',
+]
+regexes = [
+  '''^tok_de-prueba123$''',
+]

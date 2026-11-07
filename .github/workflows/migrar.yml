@@ -4,9 +4,10 @@ name: Migrar (preview y producción)
 # Es la ÚNICA forma en que las migraciones llegan a una base real: la compilación de Vercel nunca migra y Vercel
 # nunca tiene la cadena del dueño de la base (web-armazon §5.7). Solo se dispara a mano.
 #
-#  - El Environment `produccion` exige la APROBACIÓN DEL DUEÑO (revisores obligatorios, configurados en GitHub:
-#    Settings → Environments → produccion → Required reviewers → el dueño; y «Deployment branches» solo `main`).
-#    El Environment `preview` no pide aprobación. Los secretos viven en cada Environment, nunca en el repositorio:
+#  - Los Environments `produccion` y `preview` exigen la APROBACIÓN DEL DUEÑO (revisores obligatorios, configurados en
+#    GitHub: Settings → Environments → cada uno → Required reviewers → el dueño; y «Deployment branches» solo `main`;
+#    decisión del dueño 2026-11-04, PRIMER-DESPLIEGUE.md, B.1). Es configuración de GitHub: el código no la verifica.
+#    Los secretos viven en cada Environment, nunca en el repositorio:
 #      PEDERNAL_DB_DUENO_DIRECTA  (obligatorio) cadena DIRECTA (nunca la del pooler) del dueño de la base de ese entorno
 #      PEDERNAL_CLAVE_CONTEXTO    (opcional)    la clave de firma del contexto de esa rama, la MISMA que está en Vercel
 #      NEON_API_KEY, NEON_PROJECT_ID (opcionales, solo `produccion`) para la rama de respaldo `antes-de-<NNNN>`

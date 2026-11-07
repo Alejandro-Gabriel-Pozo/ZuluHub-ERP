@@ -157,6 +157,22 @@ describe("comprobanteParaLaHoja: cada comprobante", () => {
     expect(precio(m)).toBe("Precio con IVA");
   });
 
+  it("A a responsable inscripto: la leyenda de la condición pasa tal cual y la hoja la dibuja sin rótulo, bajo la condición", () => {
+    const m = modelo(imprimibleDe(facturaA("IVA_DISCRIMINADO")));
+    expect(m.receptor.leyendaDeCondicion).toBe("IVA RESPONSABLE INSCRITO");
+    expect(comprobanteParaLaHoja(m).receptor.leyendaDeCondicion).toBe("IVA RESPONSABLE INSCRITO");
+    const filas = hoja(m).receptor;
+    const i = filas.findIndex((f) => f.valor === "IVA RESPONSABLE INSCRITO");
+    expect(filas[i]?.rotulo).toBeNull();
+    expect(filas[i - 1]?.valor).toBe("IVA Responsable Inscripto");
+  });
+
+  it("v2: no trae leyenda de condición y la hoja no la dibuja (lo sellado con la 2 reimprime igual)", () => {
+    const m = modelo({ ...imprimibleDe(facturaA("IVA_DISCRIMINADO")), versionDeRepresentacion: 2 });
+    expect("leyendaDeCondicion" in m.receptor).toBe(false);
+    expect(hoja(m).receptor.some((f) => f.valor === "IVA RESPONSABLE INSCRITO")).toBe(false);
+  });
+
   it("A: el encabezado del precio sigue al modo de precio, en las dos variantes", () => {
     const incluido = modelo(imprimibleDe(facturaA("IVA_INCLUIDO")));
     const discriminado = modelo(imprimibleDe(facturaA("IVA_DISCRIMINADO")));
@@ -201,10 +217,46 @@ describe("comprobanteParaLaHoja: cada comprobante", () => {
     expect(comprobanteParaLaHoja(m).leyendas).toEqual(m.leyendas);
   });
 
+  it("las leyendas legales: sin la clave si el modelo no la trae; con ella, copia profunda y tal cual", () => {
+    const m = modelo(imprimibleDe(facturaB, { contacto: SIN_CONTACTO }));
+    expect("leyendasLegales" in comprobanteParaLaHoja(m)).toBe(false);
+    expect(hoja(m).leyendasLegales).toEqual([]);
+    const legales = ["  Texto legal de prueba, tal cual.  "];
+    const conLegales = { ...m, leyendasLegales: legales, claveAjena: "x" };
+    const c = comprobanteParaLaHoja(conLegales);
+    expect(c.leyendasLegales).toEqual(legales);
+    expect(c.leyendasLegales).not.toBe(legales);
+    expect(JSON.stringify(c)).not.toContain("claveAjena");
+    expect(hoja(conLegales).leyendasLegales).toEqual(legales);
+    expect(hoja(conLegales).leyendas).toEqual(m.leyendas);
+  });
+
   it("el contacto congelado llega y se dibuja", () => {
     const contacto = { telefono: "341 555 1234", correo: null, web: null };
     const m = modelo(imprimibleDe(facturaB, { contacto }));
     expect(comprobanteParaLaHoja(m).contacto).toEqual(m.contacto);
     expect(hoja(m).contacto).toContain("341 555 1234");
+  });
+
+  it("la sucursal congelada: sin la clave si el modelo no la trae; con ella, copia campo por campo, tal cual y sin claves ajenas", () => {
+    const m = modelo(imprimibleDe(facturaB));
+    expect("sucursal" in comprobanteParaLaHoja(m)).toBe(false);
+    expect(hoja(m).nombreDeLaSucursal).toBeNull();
+    const nombre = "  Sucursal  Ñandú   Centro ".padEnd(100, "é");
+    expect(nombre).toHaveLength(100);
+    const sucursal = { nombre, claveAjena: "x" };
+    const conSucursal = { ...m, sucursal };
+    const c = comprobanteParaLaHoja(conSucursal);
+    expect(c.sucursal).toEqual({ nombre });
+    expect(c.sucursal).not.toBe(sucursal);
+    expect(Object.keys(c.sucursal ?? {})).toEqual(["nombre"]);
+    expect(JSON.stringify(c)).not.toContain("claveAjena");
+    expect(hoja(conSucursal).nombreDeLaSucursal).toBe(nombre);
+  });
+
+  it("con el modelo real, el nombre que congeló el comprobante llega a la hoja", () => {
+    const m = modelo(imprimibleDe(facturaB, { sucursalNombre: "Sucursal Centro" }));
+    expect(m.sucursal).toEqual({ nombre: "Sucursal Centro" });
+    expect(hoja(m).nombreDeLaSucursal).toBe("Sucursal Centro");
   });
 });

@@ -42,7 +42,7 @@ import {
  * «Revisá los datos marcados.», no el «Revise los datos del comprobante» de las facturas). Previene: el texto de las facturas en
  * Datos fiscales y Puntos de venta.
  */
-function leer<S extends z.ZodType>(
+export function leer<S extends z.ZodType>(
   forma: S,
   crudo: unknown,
 ): Resultado<z.output<S>, ErrorDeEntrada> {
@@ -74,6 +74,9 @@ const formaDeBorrador = z.object({
   razonSocial: texto.optional(),
   condicionIva: texto.optional(),
   inicioActividades: texto.optional(),
+  // D-115/D-116: el número de Ingresos Brutos o «No contribuyente», uno solo. El servidor decide qué vale: acá solo pasa el texto.
+  iibbNumero: texto.nullable().optional(),
+  iibbCondicion: texto.nullable().optional(),
   domicilio: domicilio.optional(),
 });
 
@@ -171,6 +174,8 @@ export function entradaDeGuardarBorrador(
       ...si("razonSocial", f.razonSocial),
       ...si("condicionIva", f.condicionIva),
       ...si("inicioActividades", f.inicioActividades),
+      ...si("iibbNumero", f.iibbNumero),
+      ...si("iibbCondicion", f.iibbCondicion),
     },
     ...(f.domicilio === undefined ? {} : { domicilio: aDomicilio(f.domicilio) }),
   });

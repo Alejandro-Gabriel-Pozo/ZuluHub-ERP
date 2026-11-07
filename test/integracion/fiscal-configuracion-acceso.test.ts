@@ -91,6 +91,7 @@ describe.skipIf(base === null)("fiscal T5: permisos, estado de la empresa y aisl
         razonSocial: "Coop Pampa SA",
         condicionIva: "RESPONSABLE_INSCRIPTO",
         inicioActividades: "2020-03-01",
+        iibbNumero: "901-123456-7",
       },
       domicilio: domicilioNuevo(),
     });

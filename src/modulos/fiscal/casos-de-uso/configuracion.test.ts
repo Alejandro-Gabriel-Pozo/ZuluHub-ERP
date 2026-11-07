@@ -230,7 +230,7 @@ describe("empezarCorreccionDeDatosFiscales (D-62): repositorios en memoria", () 
       domicilioFiscalId: DOMICILIO_1,
       inicioActividades: "2020-01-01",
       iibbNumero: "902-1",
-      iibbCondicion: "LOCAL",
+      iibbCondicion: null,
       vigenteDesde: new Date(AHORA.getTime() - 86_400_000),
       confirmadaEn: AHORA,
       confirmadaPor: GERENTE,
@@ -286,7 +286,7 @@ describe("empezarCorreccionDeDatosFiscales (D-62): repositorios en memoria", () 
         domicilioFiscalId: DOMICILIO_1,
         inicioActividades: "2020-01-01",
         iibbNumero: "902-1",
-        iibbCondicion: "LOCAL",
+        iibbCondicion: null,
         creadoPor: GERENTE,
         version: 1,
       },
@@ -431,7 +431,8 @@ describe("confirmarDatosFiscales: lo que la base real no deja armar", () => {
   it("si `confirmar` pierde la versión, es VERSION_DESACTUALIZADA y no audita", async () => {
     const { casos, mundo } = armar({
       datosFiscales: {
-        obtener: () => Promise.resolve({ estado: "BORRADOR", borrador: borrador() }),
+        obtener: () =>
+          Promise.resolve({ estado: "BORRADOR", borrador: borrador({ iibbNumero: "902-1" }) }),
         confirmadas: () => Promise.resolve([]),
         confirmar: () => Promise.resolve(null),
       } as never,
@@ -439,6 +440,25 @@ describe("confirmarDatosFiscales: lo que la base real no deja armar", () => {
     expect(await casos.confirmarDatosFiscales(contexto, entrada)).toEqual(
       err("VERSION_DESACTUALIZADA"),
     );
+    expect(mundo.auditoria).toEqual([]);
+  });
+
+  it("sin número de IIBB ni «No contribuyente» no confirma: lo que falta es Ingresos Brutos, y no escribe ni audita (D-115/D-116)", async () => {
+    let escrituras = 0;
+    const { casos, mundo } = armar({
+      datosFiscales: {
+        obtener: () => Promise.resolve({ estado: "BORRADOR", borrador: borrador() }),
+        confirmadas: () => Promise.resolve([]),
+        confirmar: () => {
+          escrituras += 1;
+          return Promise.resolve(null);
+        },
+      } as never,
+    });
+    expect(await casos.confirmarDatosFiscales(contexto, entrada)).toEqual(
+      err({ codigo: "DATOS_FISCALES_INCOMPLETOS", faltantes: ["ingresosBrutos"] }),
+    );
+    expect(escrituras).toBe(0);
     expect(mundo.auditoria).toEqual([]);
   });
 
