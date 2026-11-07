@@ -64,24 +64,8 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "eslint-disable--src-capacidades-experiencia-puerta-ts",
-    "archivos": ["src/capacidades/experiencia/puerta.ts"],
-    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
-    "tipo": "eslint-disable",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "eslint-disable--src-capacidades-experiencia-ruta-de-retorno-test-ts",
     "archivos": ["src/capacidades/experiencia/ruta-de-retorno.test.ts"],
-    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
-    "tipo": "eslint-disable",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "eslint-disable--src-capacidades-experiencia-ruta-de-retorno-ts",
-    "archivos": ["src/capacidades/experiencia/ruta-de-retorno.ts"],
     "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
     "tipo": "eslint-disable",
     "responsable": "agente (a pedido del dueño)",
@@ -342,7 +326,7 @@
   {
     "id": "permisos-y-acciones-menores-del-ci",
     "archivos": [".github/workflows/ci.yml", ".github/workflows/codeql.yml"],
-    "descripcion": "Pendiente menor de acciones (informe de CI §3.2 D10): la imagen de gitleaks está fijada por tag y no por digest. Falta un digest verificable (pregunta pendiente al dueño); el resto de D10 se pagó (`security-events: write` por job en `codeql.yml`; `permissions:` redundante quitado de `dependencias`). El de `guardian` se QUEDA a propósito: los casos EV-024, EV-027 y EV-045 de la batería de evasión anclan su texto.",
+    "descripcion": "Pendiente menor de acciones (informe de CI §3.2 D10): la imagen de gitleaks está fijada por tag y no por digest. Falta un digest verificable (pregunta pendiente al dueño).",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
@@ -412,7 +396,7 @@
     "archivos": ["arquitectura/planificar-mutacion.cjs"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
-    "tamano": 593,
+    "tamano": 561,
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
   },
@@ -431,15 +415,6 @@
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
     "tamano": 482,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "archivo-grande--src-modulos-fiscal-dominio-numeracion-ts",
-    "archivos": ["src/modulos/fiscal/dominio/numeracion.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 426,
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
   },

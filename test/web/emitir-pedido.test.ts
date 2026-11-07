@@ -60,6 +60,17 @@ describe("el pedido de la factura", () => {
     });
   });
 
+  it("un pasaporte con letras viaja como se escribió (el servidor lo pasa a mayúsculas y lo guarda tal cual)", () => {
+    expect(
+      armarElPedido(
+        cliente({ documento: "PASAPORTE", numero: " abc123456 " }),
+        [renglon()],
+        PUNTO,
+        true,
+      ).receptor.documento,
+    ).toEqual({ tipo: "PASAPORTE", numero: "abc123456" });
+  });
+
   it("un receptor escrito a mano: el número como se escribió (el servidor lo vuelve canónico), el nombre y el domicilio sin los blancos de los bordes y la condición elegida", () => {
     const { receptor } = armarElPedido(cliente(), [renglon()], PUNTO, true);
     expect(receptor).toEqual({

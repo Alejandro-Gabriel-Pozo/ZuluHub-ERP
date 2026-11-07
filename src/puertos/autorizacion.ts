@@ -61,3 +61,9 @@ export interface CargaDeAutorizacion {
     opciones?: OpcionesDeAlcance,
   ): Promise<AlcanceDeSucursales>;
 }
+
+/** La carga que lee de la base cada vez (la de las transacciones que escriben). No puede ser la que memoriza. */
+export type CargaDeAutorizacionSinMemoria = CargaDeAutorizacion & { readonly memoriza?: undefined };
+
+/** La carga que resuelve una sola vez lo que se repite (solo para lectura): lleva la marca `memoriza`. */
+export type CargaDeAutorizacionDeLectura = CargaDeAutorizacion & { readonly memoriza: true };

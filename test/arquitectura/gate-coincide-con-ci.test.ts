@@ -273,16 +273,16 @@ function verificarCI(texto: string, clasificacion: Clasificacion = CLASIFICACION
     }
   }
 
-  // (f) La política de concurrencia: los pull requests se cancelan entre sí, main y la nocturna no.
+  // (f) La política de concurrencia: los pull requests y los push a main se cancelan entre sí; la nocturna no.
   const concurrencia = leerConcurrencia(texto);
   if (concurrencia.grupo !== GRUPO_ESPERADO) {
     problemas.push(
-      `concurrencia: el \`group\` es ${concurrencia.grupo === undefined ? "(ninguno)" : `«${concurrencia.grupo}»`} y debe ser «${GRUPO_ESPERADO}» (push, nocturna y cada pull request en grupos propios)`,
+      `concurrencia: el \`group\` es ${concurrencia.grupo === undefined ? "(ninguno)" : `«${concurrencia.grupo}»`} y debe ser «${GRUPO_ESPERADO}» (push a main, nocturna y cada pull request en grupos propios)`,
     );
   }
   if (concurrencia.cancelar !== CANCELAR_ESPERADO) {
     problemas.push(
-      `concurrencia: \`cancel-in-progress\` es ${concurrencia.cancelar === undefined ? "(ninguno)" : `«${concurrencia.cancelar}»`} y debe ser «${CANCELAR_ESPERADO}» (solo los pull requests cancelan; main no se cancela a sí mismo)`,
+      `concurrencia: \`cancel-in-progress\` es ${concurrencia.cancelar === undefined ? "(ninguno)" : `«${concurrencia.cancelar}»`} y debe ser «${CANCELAR_ESPERADO}» (cancelan los pull requests y los push a main; la nocturna nunca)`,
     );
   }
 
@@ -331,8 +331,8 @@ function verificarCI(texto: string, clasificacion: Clasificacion = CLASIFICACION
 // ---------------------------------------------------------------------------------------------
 
 const GRUPO_ESPERADO =
-  "ci-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}";
-const CANCELAR_ESPERADO = "${{ github.event_name == 'pull_request' }}";
+  "ci-${{ github.event_name }}-${{ github.event_name == 'schedule' && github.sha || github.ref }}";
+const CANCELAR_ESPERADO = "${{ github.event_name != 'schedule' }}";
 
 /** El bloque `concurrency:` de primer nivel (`group` y `cancel-in-progress`), sin comentarios. */
 function leerConcurrencia(texto: string): {
@@ -365,8 +365,8 @@ function decisionDeConcurrencia(e: { evento: string; ref: string; sha: string })
   cancelar: boolean;
 } {
   return {
-    grupo: `ci-${e.evento}-${e.evento === "pull_request" ? e.ref : e.sha}`,
-    cancelar: e.evento === "pull_request",
+    grupo: `ci-${e.evento}-${e.evento === "schedule" ? e.sha : e.ref}`,
+    cancelar: e.evento !== "schedule",
   };
 }
 
@@ -631,17 +631,29 @@ const CASOS: Caso[] = [
     esperado: ["«gate»", "NEEDS"],
   },
   {
-    nombre: "volver a cancelar siempre (un push a main cancelaría al anterior y a la nocturna)",
+    nombre:
+      "cancelar solo los pull requests (un push a main no cancelaría al anterior: ~475 min de máquina en cola por merge)",
     alterar: (t) =>
       reemplazarUnico(
         t,
+        "cancel-in-progress: ${{ github.event_name != 'schedule' }}",
         "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
+      ),
+    esperado: ["concurrencia", "cancel-in-progress"],
+  },
+  {
+    nombre: "cancelar siempre (la corrida nocturna podría cancelarse)",
+    alterar: (t) =>
+      reemplazarUnico(
+        t,
+        "cancel-in-progress: ${{ github.event_name != 'schedule' }}",
         "cancel-in-progress: true",
       ),
     esperado: ["concurrencia", "cancel-in-progress"],
   },
   {
-    nombre: "un grupo único por rama (push y nocturna de main vuelven a compartir cola)",
+    nombre:
+      "un grupo único por rama (push y nocturna de main vuelven a compartir cola, y la nocturna cancelaría o sería cancelada)",
     alterar: (t) => reemplazarUnico(t, /^ {2}group: ci-.*\n/m, "  group: ci-${{ github.ref }}\n"),
     esperado: ["concurrencia", "group"],
   },
@@ -711,7 +723,7 @@ describe("ci.yml y el Gate", () => {
     expect(extrae).toBeGreaterThan(corre);
   });
 
-  it("la concurrencia: los pull requests cancelan a su corrida vieja; main y la nocturna nunca se cancelan entre sí", () => {
+  it("la concurrencia: los pull requests y los push a main cancelan a su corrida vieja; la nocturna nunca se cancela ni cancela", () => {
     const { grupo, cancelar } = leerConcurrencia(CI);
     expect(grupo).toBe(GRUPO_ESPERADO);
     expect(cancelar).toBe(CANCELAR_ESPERADO);
@@ -736,13 +748,15 @@ describe("ci.yml y el Gate", () => {
     expect(pr1.grupo).not.toBe(otroPr.grupo);
     const push1 = decisionDeConcurrencia({ evento: "push", ref: "refs/heads/main", sha: "a" });
     const push2 = decisionDeConcurrencia({ evento: "push", ref: "refs/heads/main", sha: "b" });
-    const noche = decisionDeConcurrencia({ evento: "schedule", ref: "refs/heads/main", sha: "b" });
-    expect(push1.cancelar).toBe(false);
-    expect(push2.cancelar).toBe(false);
-    expect(noche.cancelar).toBe(false);
-    expect(new Set([push1.grupo, push2.grupo, noche.grupo]).size).toBe(3); // ninguno comparte grupo
-    // En ningún grupo de main/nocturna pueden convivir dos corridas de SHA distinto bajo una misma cola con cancelación.
-    expect(push1.grupo).not.toBe(pr1.grupo);
+    expect(push1.grupo).toBe(push2.grupo); // dos merges seguidos: misma cola, la corrida del primero se cancela
+    expect(push1.cancelar).toBe(true);
+    expect(push2.cancelar).toBe(true);
+    const noche1 = decisionDeConcurrencia({ evento: "schedule", ref: "refs/heads/main", sha: "b" });
+    const noche2 = decisionDeConcurrencia({ evento: "schedule", ref: "refs/heads/main", sha: "c" });
+    expect(noche1.cancelar).toBe(false);
+    expect(noche1.grupo).not.toBe(noche2.grupo); // cada nocturna en su propio grupo: nada la reemplaza
+    // Ni un push a main ni un pull request comparten grupo con la nocturna ni entre sí.
+    expect(new Set([push1.grupo, noche1.grupo, pr1.grupo]).size).toBe(3);
   });
 
   it("el Gate recibe el evento (sin él no puede saber si saltar Estabilidad es legítimo)", () => {

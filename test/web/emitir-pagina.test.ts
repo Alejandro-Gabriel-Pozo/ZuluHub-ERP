@@ -49,6 +49,8 @@ vi.mock("../../apps/web/app/s/app/acciones-de-facturacion", () => ({
 }));
 const CONTEXTO = { id: "contexto-de-la-empresa" };
 vi.mock("../../apps/web/servidor/sesion", () => ({
+  // Sin lecturas compartidas: cada consulta abre la suya (la página las pide igual).
+  dependenciasDeSesion: {},
   empresaDelPedido: () =>
     Promise.resolve({
       puerta: { marca: { nombre: "Marca de prueba" } },

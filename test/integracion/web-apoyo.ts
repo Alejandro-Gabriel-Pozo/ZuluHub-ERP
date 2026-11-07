@@ -80,6 +80,8 @@ export async function armarMundoWeb(base: BaseDePruebas): Promise<MundoWeb> {
       crearCasosDeUsoDeIdentidad({ transacciones: entorno, tokens, reglas: REGLAS_DE_EMPRESA }),
     consultasDeEmpresas: () =>
       crearConsultasDeEmpresas({ transacciones: entorno, reglas: REGLAS_DE_EMPRESA }),
+    // Como la web real: las lecturas de un pedido comparten una transacción de solo lectura.
+    lecturasCompartidas: () => entorno,
     ahora: () => new Date(),
     respuesta: { registrar: (d) => registros.push(d) },
   };
