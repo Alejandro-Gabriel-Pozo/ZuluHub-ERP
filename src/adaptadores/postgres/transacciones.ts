@@ -311,8 +311,21 @@ export function crearTransacciones<Tx>(
           return ejecutarUnida(unidad, opciones, trabajo, () => ejecutarSolo(opciones, trabajo));
         }
         // No puede unirse: antes de abrir otra transacción se suelta la de la unidad (nunca dos conexiones del mismo pedido a la vez:
-        // con el pozo chico, muchos pedidos así se esperarían entre sí). Si hay una lectura en curso, no se toca.
+        // con el pozo chico, muchos pedidos así se esperarían entre sí).
         if (unidad.abriendo !== null && unidad.enCurso.size === 0) await cerrarUnidad(unidad);
+        // Con una lectura unida EN CURSO desde otra rama del pedido (no desde adentro de ella) no se puede soltar la conexión: abrir otra
+        // sería sostener dos del mismo pozo a la vez. Falla cerrado, con un error tipado. NO se debe abrir una escritura (ni otra
+        // transacción que no pueda unirse) en paralelo con las lecturas de un `conLecturasCompartidas`: esperá a que terminen.
+        else if (unidad.abriendo !== null && dentroDeUnaLectura.getStore() === undefined) {
+          const caso: ErrorInesperado = {
+            tipo: "Inesperado",
+            sqlstate: null,
+            mensaje:
+              "una transacción que no puede compartirse se pidió en paralelo con las lecturas del pedido: no se abre una segunda conexión",
+          };
+          registrar(caso);
+          return err(caso);
+        }
       }
       return ejecutarSolo(opciones, trabajo);
     },

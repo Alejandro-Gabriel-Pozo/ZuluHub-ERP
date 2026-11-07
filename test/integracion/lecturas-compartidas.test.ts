@@ -266,6 +266,31 @@ describe.skipIf(base === null)("lecturas compartidas por pedido", () => {
     expect((await conectados()).enTransaccion).toBe(0);
   });
 
+  it("una transacción que no puede compartirse, pedida EN PARALELO con una lectura del pedido, falla cerrado (error tipado) en vez de abrir una segunda conexión", async () => {
+    const contexto = nuevoContexto(a);
+    empezar();
+    const [lectura, escritura] = await entorno.conLecturasCompartidas(contexto, () =>
+      Promise.all([
+        entorno.ejecutar(
+          { contexto, aislamiento: "read committed", soloLectura: true },
+          async ({ db }) => {
+            await sql`select pg_sleep(0.1)`.execute(db);
+            return ok(1);
+          },
+        ),
+        // Arranca mientras la lectura de arriba está en curso: no se puede soltar su conexión.
+        new Promise<void>((r) => setTimeout(r, 30)).then(() =>
+          entorno.ejecutar({ contexto }, () => Promise.resolve(ok(2))),
+        ),
+      ]),
+    );
+    expect(lectura).toEqual({ ok: true, valor: 1 });
+    expect(escritura).toMatchObject({ ok: false, error: { tipo: "Inesperado" } });
+    // Una sola conexión del pedido: un solo BEGIN, y no queda nada abierto.
+    expect(cuantas(BEGIN)).toBe(1);
+    expect((await conectados()).enTransaccion).toBe(0);
+  });
+
   it("40 pedidos simultáneos de dos empresas, sobre un pozo de 5 conexiones, no se cruzan y no se traban", async () => {
     empezar();
     const pedidos = Array.from({ length: 40 }, (_, i) => {

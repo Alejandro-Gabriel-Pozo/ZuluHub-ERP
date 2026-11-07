@@ -207,9 +207,10 @@ export function crearAutorizacionDePostgres(
     if (rige !== null && rige.modulos === null) {
       throw new RangeError("la versión de plan vigente del tenant no existe en la base");
     }
+    // Congeladas: con la memoria, todos los consumidores de un pedido reciben las MISMAS listas; ninguno puede cambiarle algo a otro.
     return {
-      modulosActivados: validarNombresDeModulo("activados", activadas),
-      modulosHabilitados: validarNombresDeModulo("plan", rige?.modulos ?? []),
+      modulosActivados: Object.freeze(validarNombresDeModulo("activados", activadas)),
+      modulosHabilitados: Object.freeze(validarNombresDeModulo("plan", rige?.modulos ?? [])),
     };
   }
 
