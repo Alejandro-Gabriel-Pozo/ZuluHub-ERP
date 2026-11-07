@@ -625,7 +625,7 @@
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-11-06",
     "motivo": "Introducir los chequeos de lista de permitidos y de fuente única (PR 2 de C1) sin reescribir de una vez todas las validaciones existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento (las migraciones ya aplicadas no se editan: se corrigen con una migración nueva). La cuenta por archivo (que solo baja) está en arquitectura/deuda/validacion-de-datos.json. puerta.ts y ruta-de-retorno.ts ya se reescribieron con lista de permitidos (Deuda 4, #209 y #214) y salieron del presupuesto; adaptadores/correo/configuracion.ts queda con 2 prohibiciones heredadas de la lista del nombre de marca.",
-    "aprobadoPor": "orquestador (PR 2 de C1 autorizado el 2026-11-06 por mensaje entre sesiones; decisión del dueño 2026-11-05). Para adaptadores/correo/configuracion.ts: el dueño, 2026-11-06, mensaje directo al orquestador (confirmó que entra como deuda y pidió reescribirlo, lo que hizo Deuda 4 con puerta y ruta-de-retorno).",
+    "aprobadoPor": "orquestador (PR 2 de C1 autorizado el 2026-11-06 por mensaje entre sesiones; decisión del dueño 2026-11-05). Reescribir YA lo existente que viola P1 (en vez de dejarlo pasar): el dueño, 2026-11-05 y 2026-11-06, conversación con el orquestador; constancia en `11-especificaciones/decisiones-del-dueno-2026-11.md` del repo de docs, fila «Principios P1 y P2 de validación».",
     "vence": "2027-01-05"
   }
 ]

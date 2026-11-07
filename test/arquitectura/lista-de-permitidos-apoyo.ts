@@ -35,9 +35,10 @@ import ts from "typescript";
  * `\p{gc=…}`, `\p{White_Space}`), escapes `\u{…}`, escapes cortos de control dentro de una clase y `globalThis["RegExp"]`.
  * No se miran los archivos de prueba (`*.test.*` y `test/`): usan estas expresiones como ejemplos. Las migraciones `reversiones/` SÍ se
  * leen (solo traen `DROP`, que no cuenta).
- * Tampoco ve (SQL y TS): `position`/`strpos`/`translate`/`regexp_like`, `!~* '^\\s'` (el recorte de espacios está eximido a propósito),
- * `\\p{…}` con propiedades que no están en la lista, y un nombre de función armado con texto. Cerradas por baratas: `\\x3c`/`\\u003c`
- * (`<` escapado), `\\W`, `\\p{Default_Ignorable_Code_Point}`, `globalThis[clave]`, `NOT a ~ '…'` sin paréntesis y `"nombre"(` entre comillas.
+ * Tampoco ve (SQL y TS): `position`/`strpos`/`translate`/`regexp_like`, `!~* '^\s'` (el recorte de espacios está eximido a propósito),
+ * `\p{…}` con propiedades que no están en la lista, y un nombre de función armado con texto. Cerradas por baratas: `\x3c`/`\u003c`
+ * (`<` escapado), `\W`, `\p{Default_Ignorable_Code_Point}`, `globalThis[clave]` (también `global`, `window`, `self` y con conversión de tipo) y `Reflect.get(globalThis, …)`, `NOT a ~ '…'` sin paréntesis
+ * y con una función (`NOT (lower(a) ~ '…')`, `NOT btrim(a) ~ '…'`) y `"nombre"(` entre comillas.
  */
 
 const CATEGORIAS =
@@ -141,6 +142,26 @@ function textoCrudo(n: ts.TemplateLiteral): string {
   ].join("");
 }
 
+/** La expresión sin paréntesis ni conversiones de tipo (`(globalThis as unknown as Record<string, unknown>)` es `globalThis`). */
+function sinEnvoltorios(e: ts.Expression): ts.Expression {
+  let actual = e;
+  while (
+    ts.isParenthesizedExpression(actual) ||
+    ts.isAsExpression(actual) ||
+    ts.isTypeAssertionExpression(actual) ||
+    ts.isNonNullExpression(actual) ||
+    ts.isSatisfiesExpression(actual)
+  )
+    actual = actual.expression;
+  return actual;
+}
+
+/** ¿Es el objeto global (`globalThis`, `global`, `window`, `self`), con o sin conversión de tipo? */
+const esGlobal = (e: ts.Expression): boolean => {
+  const limpia = sinEnvoltorios(e);
+  return ts.isIdentifier(limpia) && /^(?:globalThis|global|window|self)$/.test(limpia.text);
+};
+
 const esRegExp = (e: ts.Expression): boolean =>
   (ts.isIdentifier(e) && e.text === "RegExp") ||
   (ts.isPropertyAccessExpression(e) && e.name.text === "RegExp");
@@ -183,10 +204,24 @@ export function contarProhibidosEnCodigo(ruta: string, texto: string): number {
     } else if (
       ts.isElementAccessExpression(n) &&
       ((ts.isStringLiteralLike(n.argumentExpression) && n.argumentExpression.text === "RegExp") ||
-        (!ts.isStringLiteralLike(n.argumentExpression) &&
-          /^(?:globalThis|window|self)$/.test(n.expression.getText(f))))
+        (!ts.isStringLiteralLike(n.argumentExpression) && esGlobal(n.expression)))
     ) {
       cuenta += 1; // globalThis["RegExp"] o globalThis[clave]: esconde la construcción
+    } else if (
+      ts.isCallExpression(n) &&
+      ts.isPropertyAccessExpression(n.expression) &&
+      n.expression.name.text === "get" &&
+      ts.isIdentifier(n.expression.expression) &&
+      n.expression.expression.text === "Reflect" &&
+      n.arguments[0] !== undefined &&
+      esGlobal(n.arguments[0]) &&
+      !(
+        n.arguments[1] !== undefined &&
+        ts.isStringLiteralLike(n.arguments[1]) &&
+        n.arguments[1].text !== "RegExp"
+      )
+    ) {
+      cuenta += 1; // Reflect.get(globalThis, "RegExp") o Reflect.get(globalThis, clave): esconde la construcción
     } else if (ts.isIdentifier(n) && n.text === "RegExp") {
       const p = n.parent;
       const comoLlamada = (ts.isNewExpression(p) || ts.isCallExpression(p)) && p.expression === n;
@@ -253,7 +288,7 @@ export function contarProhibidosEnCodigo(ruta: string, texto: string): number {
 }
 
 const OPERADOR_SQL =
-  /!~\*?|\bNOT\s+(?:I?LIKE|SIMILAR\s+TO)\b|\bNOT\s*\(\s*[^()~']*?\s~\*?(?=\s)|\bNOT\s+[\w."]+(?:\s*::\s*\w+)?\s+~\*?(?=\s)/gi;
+  /!~\*?|\bNOT\s+(?:I?LIKE|SIMILAR\s+TO)\b|\bNOT\s*\(\s*(?:[^()~']|\([^()']*\))*?\s~\*?(?=\s)|\bNOT\s+[\w."]+(?:\([^()']*\))?(?:\s*::\s*\w+)?\s+~\*?(?=\s)/gi;
 const CADENA_SQL = /(E?)'((?:[^']|'')*)'/gi;
 
 /** El operando (cadenas unidas con `||`, entre paréntesis o suelto) que sigue a la posición `desde`, o `""` si no se puede leer. */
@@ -294,7 +329,7 @@ function usosDeFuncionesConProhibidos(sinComentarios: string): number {
     for (const m of sinComentarios.matchAll(new RegExp(`\\b"?${nombre}"?\\s*\\(`, "gi"))) {
       const antes = sinComentarios.slice(Math.max(0, (m.index ?? 0) - 40), m.index);
       if (
-        !/\b(?:CREATE(?:\s+OR\s+REPLACE)?|DROP|ALTER|COMMENT\s+ON)\s+FUNCTION\s+(?:IF\s+EXISTS\s+)?$/i.test(
+        !/\b(?:CREATE(?:\s+OR\s+REPLACE)?|DROP|ALTER|COMMENT\s+ON)\s+FUNCTION\s+(?:IF\s+EXISTS\s+)?"?$/i.test(
           antes,
         )
       )

@@ -30,11 +30,9 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
   prohibir pasa (caso real: `/\p{Cc}/u` en `datos-fiscales.ts` solo rechaza controles y deja pasar invisibles y `<>`). Chequeo:
   `test/arquitectura/lista-de-permitidos.test.ts`, con una violación inyectada por cada forma (`lista-de-permitidos-evasiones.test.ts` y
   `reglas.test.ts`); lo existente es deuda con vencimiento (`validacion-de-datos--*` en `arquitectura/deuda/registro.json`) y presupuesto por
-  archivo que solo baja (`arquitectura/deuda/validacion-de-datos.json`). Lo que no puede analizar cuenta (fail-closed). Límites que NO ve
-  (deuda a anotar, con el ejemplo que pasa): una prohibición armada solo con constantes de otro archivo (`new RegExp("[" + CONTROLES + "]")` con
-  `CONTROLES` importado: el texto fijo no trae nada), `x.constructor(…)`, `<` fuera de una clase, `split`/`replace`/`Set` contra `<`,
-  comparaciones de texto (`c < " "`), códigos de carácter por variable, tablas de búsqueda y, en SQL, `position`/`strpos`/`translate`/`regexp_like`: es una alarma para errores honestos, no un
-  límite de seguridad. No mira las pruebas (`*.test.*`, `test/`): usan estas expresiones como ejemplo. Los formatos de máquinas de terceros
+  archivo que solo baja (`arquitectura/deuda/validacion-de-datos.json`). Lo que no puede analizar cuenta (fail-closed). Límites que NO ve: la lista completa, con el ejemplo que pasa
+  de cada uno, vive UNA vez, en el encabezado de `test/arquitectura/lista-de-permitidos-apoyo.ts` (es una alarma para errores honestos, no un
+  límite de seguridad; lo que ahí figura como límite es deuda a anotar si aparece en el código). No mira las pruebas (`*.test.*`, `test/`): usan estas expresiones como ejemplo. Los formatos de máquinas de terceros
   (`set-cookie.ts`, `saneamiento.ts` de ARCA) están eximidos con lista exacta y cuenta exacta en la prueba (dueño, 2026-11-06, pregunta directa al orquestador; constancia en
   `11-especificaciones/decisiones-del-dueno-2026-11.md` del repo de docs; un archivo nuevo en esa categoría requiere aprobación del dueño).
 - **Sin dato registrado no hay campo (dueño, 2026-11-05).** Todo campo de entrada de `apps/web` y `apps/plataforma` es un componente de
