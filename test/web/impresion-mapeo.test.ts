@@ -157,6 +157,22 @@ describe("comprobanteParaLaHoja: cada comprobante", () => {
     expect(precio(m)).toBe("Precio con IVA");
   });
 
+  it("A a responsable inscripto: la leyenda de la condición pasa tal cual y la hoja la dibuja sin rótulo, bajo la condición", () => {
+    const m = modelo(imprimibleDe(facturaA("IVA_DISCRIMINADO")));
+    expect(m.receptor.leyendaDeCondicion).toBe("IVA RESPONSABLE INSCRITO");
+    expect(comprobanteParaLaHoja(m).receptor.leyendaDeCondicion).toBe("IVA RESPONSABLE INSCRITO");
+    const filas = hoja(m).receptor;
+    const i = filas.findIndex((f) => f.valor === "IVA RESPONSABLE INSCRITO");
+    expect(filas[i]?.rotulo).toBeNull();
+    expect(filas[i - 1]?.valor).toBe("IVA Responsable Inscripto");
+  });
+
+  it("v2: no trae leyenda de condición y la hoja no la dibuja (lo sellado con la 2 reimprime igual)", () => {
+    const m = modelo({ ...imprimibleDe(facturaA("IVA_DISCRIMINADO")), versionDeRepresentacion: 2 });
+    expect("leyendaDeCondicion" in m.receptor).toBe(false);
+    expect(hoja(m).receptor.some((f) => f.valor === "IVA RESPONSABLE INSCRITO")).toBe(false);
+  });
+
   it("A: el encabezado del precio sigue al modo de precio, en las dos variantes", () => {
     const incluido = modelo(imprimibleDe(facturaA("IVA_INCLUIDO")));
     const discriminado = modelo(imprimibleDe(facturaA("IVA_DISCRIMINADO")));
