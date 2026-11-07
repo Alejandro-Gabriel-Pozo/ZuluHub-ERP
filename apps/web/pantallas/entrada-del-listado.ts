@@ -1,4 +1,4 @@
-import { fechaDeNegocio } from "../../../src/primitivas/tiempo/fecha-de-negocio";
+import { hoyEnArgentina as hoyDeArgentina } from "../../../src/primitivas/tiempo/fecha-civil-hasta-hoy";
 import type { FiltrosDelListado } from "../ui/plantillas/facturacion/filtros-del-listado";
 
 /**
@@ -14,14 +14,11 @@ import type { FiltrosDelListado } from "../ui/plantillas/facturacion/filtros-del
  * (fin de mes, 1.º de enero, medianoche en UTC-3).
  */
 
-/** La zona de la fecha de un comprobante. Es la misma de `ZONA_DE_ARGENTINA` de `lecturas-de-comprobantes.ts`: lo comprueba la prueba. */
-export const ZONA_DE_ARGENTINA = "America/Argentina/Buenos_Aires";
-
 const UN_DIA_EN_MILISEGUNDOS = 86_400_000;
 
 /** El día civil de Argentina de este instante. */
 export function hoyEnArgentina(ahora: Date): string {
-  const hoy = fechaDeNegocio(ahora, ZONA_DE_ARGENTINA, "00:00");
+  const hoy = hoyDeArgentina(ahora);
   if (!hoy.ok) throw new RangeError(`no hay fecha de hoy: ${hoy.error}`);
   return hoy.valor;
 }
