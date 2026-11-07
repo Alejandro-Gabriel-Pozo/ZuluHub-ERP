@@ -1,3 +1,4 @@
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
   describirFallaDeBase,
@@ -44,11 +45,18 @@ describe("fragmentosSecretos", () => {
     expect(fragmentosSecretos("esto no es una url")).toEqual(["esto no es una url"]);
   });
 
-  it("no incluye fragmentos de menos de 3 caracteres, pero sí de 3", () => {
-    expect(fragmentosSecretos("postgres://ab:xyz@h/b")).toEqual(expect.arrayContaining(["xyz"]));
-    expect(fragmentosSecretos("postgres://ab:xyz@h/b")).not.toContain("ab");
-    expect(fragmentosSecretos("postgres://ab:xyz@h/b")).not.toContain("h");
-    expect(fragmentosSecretos("postgres://ab:xyz@h/b")).not.toContain("");
+  it("la cadena entera se tapa desde 3 caracteres; los tramos (clave, usuario, host), solo desde 8", () => {
+    const f = fragmentosSecretos("postgres://ab:xyz@h/b");
+    expect(f).toEqual(["postgres://ab:xyz@h/b"]);
+    const g = fragmentosSecretos("postgres://usuario8:clave123@host-largo.ejemplo/b");
+    expect(g).toEqual(expect.arrayContaining(["usuario8", "clave123", "host-largo.ejemplo"]));
+    const corto = fragmentosSecretos("postgres://usuar7:clave12@host-l.ejemplo/b");
+    expect(corto).not.toContain("usuar7");
+    expect(corto).not.toContain("clave12");
+    expect(corto).not.toContain("host-l");
+    expect(corto).toContain("host-l.ejemplo");
+    expect(fragmentosSecretos("abc")).toEqual(["abc"]);
+    expect(fragmentosSecretos("ab")).toEqual([]);
   });
 
   it("una cadena que no es URL y viene con espacios o salto de línea se tapa también sin ellos", () => {
@@ -60,8 +68,8 @@ describe("fragmentosSecretos", () => {
   });
 
   it("una contraseña con un % suelto (no decodificable) se tapa tal cual", () => {
-    expect(fragmentosSecretos("postgres://usuario:cla%ve@host-x.ejemplo/b")).toEqual(
-      expect.arrayContaining(["cla%ve"]),
+    expect(fragmentosSecretos("postgres://usuario:cla%ve-larga@host-x.ejemplo/b")).toEqual(
+      expect.arrayContaining(["cla%ve-larga"]),
     );
   });
 });
@@ -78,6 +86,50 @@ describe("ocultarSecretos", () => {
 
   it("deja el texto como está si no hay cadena", () => {
     expect(ocultarSecretos("sin secretos acá", undefined)).toBe("sin secretos acá");
+  });
+});
+
+/**
+ * Forma de la cadena de las pruebas de integración (valores inventados, no de ninguna base): host por IP, rol `pedernal_*`, contraseña de
+ * 36 hexadecimales. Antes el tramo `127` (primera etiqueta del host) tapaba medio UUID de la salida de los scripts, y la prueba de
+ * `ejecutar-caso-de-plataforma` fallaba una de cada tantas corridas.
+ */
+describe("ocultarSecretos: no tapa fragmentos cortos pero sí todo secreto", () => {
+  const CLAVE_DE_PRUEBAS = "0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b";
+  const DE_PRUEBAS = `postgresql://pedernal_plataforma:${CLAVE_DE_PRUEBAS}@127.0.0.1:55432/pedernal_it_ab12cd34ef56`;
+
+  it("un UUID que contiene el tramo corto `127` sale intacto", () => {
+    const uuid = "7127a3c1-0127-4127-8127-127127127127";
+    expect(ocultarSecretos(`empresaId: ${uuid}`, DE_PRUEBAS)).toBe(`empresaId: ${uuid}`);
+  });
+
+  it("ningún UUID sale tapado con la cadena de pruebas (propiedad)", () => {
+    fc.assert(
+      fc.property(
+        fc.uuid(),
+        (uuid) => ocultarSecretos(`empresaId: ${uuid}`, DE_PRUEBAS) === `empresaId: ${uuid}`,
+      ),
+      { numRuns: 2000 },
+    );
+  });
+
+  it("la cadena entera y sus tramos largos (clave, usuario, host con 8 o más) se tapan donde aparezcan", () => {
+    expect(ocultarSecretos(`x ${DE_PRUEBAS} y`, DE_PRUEBAS)).toBe("x *** y");
+    expect(ocultarSecretos(`clave=${CLAVE_DE_PRUEBAS}`, DE_PRUEBAS)).toBe("clave=***");
+    expect(ocultarSecretos("rol pedernal_plataforma", DE_PRUEBAS)).toBe("rol ***");
+    expect(ocultarSecretos("en ep-fria-luna-123456.sa-east-1.aws.ejemplo.tech", CADENA)).toBe(
+      "en ***",
+    );
+  });
+
+  it("un tramo con exactamente 8 caracteres se tapa y con 7 no (borde del mínimo)", () => {
+    const cadena = "postgresql://abcdefgh:1234567@servidor-x.ejemplo/b";
+    expect(ocultarSecretos("abcdefgh 1234567", cadena)).toBe("*** 1234567");
+  });
+
+  it("un secreto declarado sin forma de URL (token, clave) se tapa entero aunque sea corto", () => {
+    expect(ocultarSecretos("token abc12 fin", "abc12")).toBe("token *** fin");
+    expect(ocultarSecretos("token abc12 fin", "abc12\n")).toBe("token *** fin");
   });
 });
 
