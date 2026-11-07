@@ -28,17 +28,19 @@ import ts from "typescript";
  *  - en SQL: cada `!~`, `!~*`, `NOT (x ~ …)`, `NOT LIKE`, `NOT ILIKE` y `NOT SIMILAR TO` cuyo patrón (cadenas unidas con `||`) describe una
  *    prohibición; si el patrón es una cadena `E'…'`, una expresión o no se puede leer, cuenta (fail-closed); los `NOT LIKE/ILIKE/SIMILAR TO`
  *    cuentan siempre.
- * LÍMITES conocidos: esto es una ALARMA para errores honestos, NO un límite de seguridad (quien quiere esquivarlo, lo esquiva). No ve: una
- * prohibición armada solo con constantes de otro archivo; `x.constructor(…)` y `Function(…)` (el analizador de campos sí cuenta `Function`);
- * `\s` solo y `<` fuera de una clase; `split`/`replace`/`Set`/`switch` contra `<` o un control; comparaciones de texto (`c < " "`); códigos
- * de carácter que llegan por una variable; tablas de búsqueda. Cerradas por ser baratas: categorías con nombre largo (`\p{General_Category=…}`,
- * `\p{gc=…}`, `\p{White_Space}`), escapes `\u{…}`, escapes cortos de control dentro de una clase y `globalThis["RegExp"]`.
+ * LÍMITES conocidos: esto es una ALARMA para errores honestos, NO un límite de seguridad (quien quiere esquivarlo, lo esquiva). Este párrafo es
+ * el ÚNICO lugar donde se listan (CLAUDE.md lo cita). No ve: una prohibición armada solo con constantes de otro archivo; `x.constructor(…)` y
+ * `Function(…)` (el analizador de campos sí cuenta `Function`); `\s` solo y `<` fuera de una clase; `split`/`replace`/`Set`/`switch` contra `<` o
+ * un control; comparaciones de texto (`c < " "`); códigos de carácter que llegan por una variable; tablas de búsqueda; en SQL, `position`/
+ * `strpos`/`translate`/`regexp_like`, `!~* '^\s'` (el recorte de espacios está eximido a propósito), funciones anidadas dos niveles
+ * (`NOT (lower(btrim(a)) ~ …)`), funciones con una cadena como argumento (`coalesce(a, '')`, `replace(…)`, `regexp_replace(…)`) y `NOT (a)::text ~ …`;
+ * `\p{…}` con propiedades que no están en la lista, y un nombre de función armado con texto. Cerradas por ser baratas: categorías con nombre
+ * largo (`\p{General_Category=…}`, `\p{gc=…}`, `\p{White_Space}`), `\p{Default_Ignorable_Code_Point}`, escapes `\u{…}`, `\x3c`/`\u003c` (`<` escapado),
+ * `\W`, escapes cortos de control dentro de una clase, `globalThis["RegExp"]`, `globalThis[clave]` (también `global`, `window`, `self` y con
+ * conversión de tipo), `Reflect.get(globalThis, …)`, `NOT a ~ '…'` sin paréntesis y con una función (`NOT (lower(a) ~ '…')`, `NOT btrim(a) ~ '…'`)
+ * y `"nombre"(` entre comillas.
  * No se miran los archivos de prueba (`*.test.*` y `test/`): usan estas expresiones como ejemplos. Las migraciones `reversiones/` SÍ se
  * leen (solo traen `DROP`, que no cuenta).
- * Tampoco ve (SQL y TS): `position`/`strpos`/`translate`/`regexp_like`, `!~* '^\s'` (el recorte de espacios está eximido a propósito),
- * `\p{…}` con propiedades que no están en la lista, y un nombre de función armado con texto. Cerradas por baratas: `\x3c`/`\u003c`
- * (`<` escapado), `\W`, `\p{Default_Ignorable_Code_Point}`, `globalThis[clave]` (también `global`, `window`, `self` y con conversión de tipo) y `Reflect.get(globalThis, …)`, `NOT a ~ '…'` sin paréntesis
- * y con una función (`NOT (lower(a) ~ '…')`, `NOT btrim(a) ~ '…'`) y `"nombre"(` entre comillas.
  */
 
 const CATEGORIAS =

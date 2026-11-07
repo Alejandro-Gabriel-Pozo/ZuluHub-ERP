@@ -341,6 +341,18 @@ describe("lista de permitidos: tercera revisión independiente (evasiones barata
     ["globalThis con una clave calculada", r`export const R = globalThis[nombre]("a");`],
     ["window con una clave calculada", r`export const R = window[nombre];`],
     ["global con una clave calculada", r`export const R = global[nombre];`],
+    ["self con una clave calculada", r`export const R = self[nombre];`],
+    ["globalThis con conversión angular", r`export const R = (<any>globalThis)[nombre];`],
+    ["globalThis con aserción de no nulo", r`export const R = globalThis![nombre];`],
+    ["globalThis con satisfies", r`export const R = (globalThis satisfies object)[nombre];`],
+    [
+      "globalThis con la clave RegExp en una plantilla",
+      "export const R = globalThis[`RegExp`]('a');",
+    ],
+    [
+      "Reflect.get con la clave RegExp en una plantilla",
+      "export const R = Reflect.get(globalThis, `RegExp`);",
+    ],
     [
       "globalThis convertido de tipo con una clave calculada",
       r`export const R = (globalThis as unknown as Record<string, unknown>)[nombre];`,
@@ -360,6 +372,7 @@ describe("lista de permitidos: tercera revisión independiente (evasiones barata
   it("globalThis con una clave literal que no es RegExp no cuenta", () => {
     expect(cuenta(r`export const t = globalThis["setTimeout"];`)).toBe(0);
     expect(cuenta(r`export const t = Reflect.get(globalThis, "setTimeout");`)).toBe(0);
+    expect(cuenta("export const t = globalThis[`setTimeout`];")).toBe(0);
     expect(cuenta(r`export const t = Reflect.get(objeto, "RegExp");`)).toBe(0);
   });
 
