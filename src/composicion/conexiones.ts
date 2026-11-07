@@ -1,4 +1,3 @@
-import type { Kysely } from "kysely";
 import { crearAutenticacionDeBetterAuth } from "../adaptadores/autenticacion/autenticacion-de-better-auth";
 import {
   leerClienteDeGoogle,
@@ -40,7 +39,7 @@ import {
 } from "../adaptadores/postgres/transacciones-publicas";
 import {
   crearTransacciones,
-  type SinTablas,
+  type ConfiguracionDeTransacciones,
   type TransaccionesDePostgres,
 } from "../adaptadores/postgres/transacciones";
 import {
@@ -250,7 +249,9 @@ const marcaDeImpresion: TxDeApp["marca"] = {
  * Lo que recibe el trabajo de una transacción de la puerta de la aplicación, con la carga de autorización que le toca: la que lee cada vez
  * (escritura) o la que resuelve una vez lo que se repite (solo lectura). Es el ÚNICO lugar que arma `TxDeApp`.
  */
-function armarTx(db: Kysely<SinTablas>, autorizacion: CargaDeAutorizacion): TxDeApp {
+type ConexionDeTx = Parameters<ConfiguracionDeTransacciones<TxDeApp>["armar"]>[0];
+
+function armarTx(db: ConexionDeTx, autorizacion: CargaDeAutorizacion): TxDeApp {
   return {
     tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
     empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
