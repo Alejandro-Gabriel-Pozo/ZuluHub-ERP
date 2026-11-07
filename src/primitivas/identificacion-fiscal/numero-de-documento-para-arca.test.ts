@@ -13,14 +13,14 @@ describe("numeroDeDocumentoInformadoAArca", () => {
     expect(numeroDeDocumentoInformadoAArca("1234ABC56")).toBe(123456n);
   });
 
-  it("para todo documento de solo dígitos da exactamente el mismo número que BigInt (nada cambia para lo ya guardado)", () => {
+  it("un pasaporte de solo dígitos con alguna cifra distinta de cero da el mismo número que BigInt", () => {
     fc.assert(
-      fc.property(fc.stringMatching(/^[0-9]{1,11}$/), (digitos) => {
+      fc.property(fc.stringMatching(/^[0-9]{0,10}[1-9][0-9]{0,10}$/), (digitos) => {
         expect(numeroDeDocumentoInformadoAArca(digitos)).toBe(BigInt(digitos));
       }),
       { numRuns: 2000 },
     );
-    for (const digitos of ["0", "00", "007", "30712345671", "12345678", "99999999999"])
+    for (const digitos of ["007", "30712345671", "12345678", "99999999999"])
       expect(numeroDeDocumentoInformadoAArca(digitos)).toBe(BigInt(digitos));
   });
 
@@ -28,6 +28,9 @@ describe("numeroDeDocumentoInformadoAArca", () => {
     const mensaje = "el documento no tiene ninguna cifra que informar a ARCA";
     expect(() => numeroDeDocumentoInformadoAArca("ABCDEF")).toThrow(new RangeError(mensaje));
     expect(() => numeroDeDocumentoInformadoAArca("")).toThrow(new RangeError(mensaje));
+    // Todo en cero daría DocNro 0 («sin identificar» para ARCA): también lanza.
+    for (const n of ["ABC000000", "000000", "0", "00"])
+      expect(() => numeroDeDocumentoInformadoAArca(n), n).toThrow(new RangeError(mensaje));
   });
 });
 
