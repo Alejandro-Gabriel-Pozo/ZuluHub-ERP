@@ -243,25 +243,6 @@
     }
   },
   {
-    "id": "descripciones-de-codigos-sin-prueba",
-    "archivos": ["arquitectura/contratos/codigos.cjs"],
-    "descripcion": "Las descripciones de codigos.cjs (el texto de `reglasEjecutadas.chequeos`) no tienen prueba que las ancle: un cambio de texto no hace fallar nada ni entra a Stryker.",
-    "tipo": "backlog",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "texto-un-falla-en-comprobar-ubicaciones",
-    "archivos": ["arquitectura/contratos/guardian.cjs"],
-    "descripcion": "El motivo de `comprobarUbicaciones` dice «Un falla…» (concordancia): usar «Una falla» y «Un aviso» y ajustar las pruebas que lo citan.",
-    "tipo": "backlog",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22",
-    "verificacion": {
-      "contiene": "Un ${tipo} con código"
-    }
-  },
-  {
     "id": "presupuesto-de-tiempo-del-ci-por-job",
     "archivos": [".github/workflows/ci.yml"],
     "descripcion": "Presupuesto de tiempo del CI por job (informe de CI §3.2 D5, D8, D9 y §7.3): topes de `timeout-minutes` ajustados a lo medido, cancelación al primer rojo y arranque compartido de los grupos de mutación. Decisión de cuánto se acepta por PR: del dueño.",
@@ -280,7 +261,7 @@
   {
     "id": "brecha-ev-094",
     "archivos": ["arquitectura/contratos/evasiones.json"],
-    "descripcion": "Brecha abierta EV-094 de la batería de evasión: un consumidor real del contrato movido a `workers/` sale del alcance del detector sin que nada falle. Vence el 2026-12-20; se cierra con un chequeo del registro que exija cobertura de las clases con código.",
+    "descripcion": "Dos brechas abiertas en la batería de evasión, ambas con vence 2026-12-20 en evasiones.json: EV-094 (un consumidor real del contrato movido a `workers/` sale del alcance del detector sin que nada falle; se cierra con un chequeo del registro que exija cobertura de las clases con código) y EV-106 (un TODO movido a un `.md` deja de verse; el dueño decide si lo acepta como riesgo o si se agrega un chequeo).",
     "tipo": "brecha",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22",
@@ -291,7 +272,7 @@
   {
     "id": "riesgos-aceptados-de-la-bateria-de-evasion",
     "archivos": ["arquitectura/contratos/evasiones.json"],
-    "descripcion": "Los casos `riesgo-aceptado` de la batería de evasión (47 hoy): evasiones que exigen editar la maquinaria o límites declarados de los detectores de texto, aceptados por el dueño (§11.1) y a revisar en la fecha de cada caso.",
+    "descripcion": "Los casos `riesgo-aceptado` de la batería de evasión (44 hoy): evasiones que exigen editar la maquinaria o límites declarados de los detectores de texto, aceptados por el dueño (§11.1) y a revisar en la fecha de cada caso.",
     "tipo": "riesgo-aceptado",
     "responsable": "dueño",
     "creada": "2026-10-22",
@@ -305,22 +286,6 @@
     "descripcion": "`npm run gate` no replica el CI (informe de CI §3.2 D11): faltan componentes (Chromium), builds, seguridad, estabilidad y mutación; y las pruebas de integración se saltean en silencio sin PRUEBAS_DATABASE_URL (`describe.skipIf`), salvo con CI=true.",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "gate-coincide-con-ci-parcial",
-    "archivos": ["test/arquitectura/gate-coincide-con-ci.test.ts"],
-    "descripcion": "`gate-coincide-con-ci` solo compara jobs, needs, if, continue-on-error y timeouts (informe de CI §3.2 D12): no compara los comandos de `estatico` con `npm run gate` ni cubre gate-rapido.yml (una copia de 4 jobs).",
-    "tipo": "backlog",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "workflows-de-migracion-duplicados",
-    "archivos": [".github/workflows/migrar.yml", ".github/workflows/migrar-base.yml"],
-    "descripcion": "Dos workflows de migración (migrar.yml y migrar-base.yml) duplican la superficie de secretos (informe de CI §3.2 D15). Requiere una decisión del dueño.",
-    "tipo": "backlog",
-    "responsable": "dueño",
     "creada": "2026-10-22"
   },
   {

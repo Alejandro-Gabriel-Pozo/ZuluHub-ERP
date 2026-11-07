@@ -10,6 +10,10 @@ import { porQueNoSeAnula } from "../../../../../../../../ui/plantillas/facturaci
 import { PantallaDeAnularComprobante } from "../../../../../../../../ui/plantillas/facturacion/PantallaDeAnularComprobante.cliente";
 import { emitirNotaDeCreditoAccion } from "../../../../../acciones-de-facturacion";
 
+// Tope de la función para la página Y para la Server Action de la nota de crédito (`emitirNotaDeCreditoAccion`): 90 s, el mismo cálculo que
+// emitir (ver `emitir/page.tsx`). Chequeo: `test/web/max-duration.test.ts`.
+export const maxDuration = 90;
+
 // Anular es parte del módulo: «Comprobantes» queda marcado en la barra. El título (el único `h1`) es el de la pantalla.
 const OPCIONES = { titulo: "fiscal.pantalla.anular_titulo", actual: "comprobantes" } as const;
 
