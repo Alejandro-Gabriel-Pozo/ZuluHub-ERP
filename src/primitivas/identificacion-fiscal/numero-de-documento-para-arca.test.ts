@@ -25,8 +25,9 @@ describe("numeroDeDocumentoInformadoAArca", () => {
   });
 
   it("un documento sin ninguna cifra no se informa: lanza en lugar de mandar 0", () => {
-    expect(() => numeroDeDocumentoInformadoAArca("ABCDEF")).toThrow(RangeError);
-    expect(() => numeroDeDocumentoInformadoAArca("")).toThrow(RangeError);
+    const mensaje = "el documento no tiene ninguna cifra que informar a ARCA";
+    expect(() => numeroDeDocumentoInformadoAArca("ABCDEF")).toThrow(new RangeError(mensaje));
+    expect(() => numeroDeDocumentoInformadoAArca("")).toThrow(new RangeError(mensaje));
   });
 });
 

@@ -299,7 +299,7 @@ describe("modeloDeImpresion: receptor, renglones y totales", () => {
     expect(modelo(imprimible(conDescuento)).renglones[0]?.descuento).toBe("10.0000");
   });
 
-  it("un pasaporte con letras sale TAL CUAL en el modelo (v1 y v2, sin versión nueva); a ARCA va solo la parte numérica pero lo impreso no la cambia", () => {
+  it("un pasaporte con letras sale TAL CUAL en el modelo en todas las versiones (v1, v2 y la vigente); lo impreso no es lo que va a ARCA", () => {
     const turista = facturaArmada(
       {
         nombre: "Jane Doe",
@@ -309,10 +309,13 @@ describe("modeloDeImpresion: receptor, renglones y totales", () => {
       },
       [renglon("121.00", "1", "21")],
     );
-    for (const m of [modelo(imprimible(turista)), modelo(imprimible(turista, V1))]) {
-      expect(m.receptor.documento).toEqual({ tipo: "PASAPORTE", numero: "ABC123456" });
+    for (const version of [1, 2, VERSION_DE_REPRESENTACION_ACTUAL] as const) {
+      const m = modelo(imprimible(turista, { versionDeRepresentacion: version }));
+      expect(m.receptor.documento, `v${String(version)}`).toEqual({
+        tipo: "PASAPORTE",
+        numero: "ABC123456",
+      });
     }
-    expect(VERSION_DE_REPRESENTACION_ACTUAL).toBe(2);
   });
 
   it("A discrimina neto e IVA por alícuota", () => {
