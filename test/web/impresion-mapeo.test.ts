@@ -167,6 +167,21 @@ describe("comprobanteParaLaHoja: cada comprobante", () => {
     expect(filas[i - 1]?.valor).toBe("IVA Responsable Inscripto");
   });
 
+  it("consumidor final sin nombre: «A CONSUMIDOR FINAL» sale una sola vez; con nombre, sale como fila propia", () => {
+    const sinNombre = hoja(modelo(imprimibleDe(facturaB, { contacto: SIN_CONTACTO }))).receptor;
+    expect(sinNombre.filter((f) => f.valor === "A CONSUMIDOR FINAL")).toHaveLength(1);
+    const conNombre = hoja(
+      modelo(
+        imprimibleDe(facturaB, {
+          contacto: SIN_CONTACTO,
+          receptor: { ...consumidorFinal, nombre: "Juan Gómez" },
+        }),
+      ),
+    ).receptor;
+    expect(conNombre.filter((f) => f.valor === "A CONSUMIDOR FINAL")).toHaveLength(1);
+    expect(conNombre[0]?.valor).toBe("Juan Gómez");
+  });
+
   it("v2: no trae leyenda de condición y la hoja no la dibuja (lo sellado con la 2 reimprime igual)", () => {
     const m = modelo({ ...imprimibleDe(facturaA("IVA_DISCRIMINADO")), versionDeRepresentacion: 2 });
     expect("leyendaDeCondicion" in m.receptor).toBe(false);

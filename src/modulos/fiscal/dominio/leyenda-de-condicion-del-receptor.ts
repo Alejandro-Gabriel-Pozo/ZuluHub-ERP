@@ -10,7 +10,7 @@ import type { CondicionIvaReceptor } from "./condicion-iva-receptor";
  *
  * Previene: una factura A a un responsable inscripto o monotributista que sale sin la leyenda de su condición, que la norma exige
  * (a.4, e.4). Chequeo: el `Record` es exhaustivo (una condición nueva no compila sin decidir su leyenda) y
- * `leyenda-de-condicion-del-receptor.test.ts` fija cada texto y que ningún otro archivo de `src` ni `apps` lo repite.
+ * `modelo-de-impresion-v3.test.ts` fija cada texto y que ningún otro archivo de `src` (fuera de pruebas) lo repite como literal. `apps` no se escanea: leer sus archivos obliga a declarar la prueba en `LECTURAS_DE_APPS`; lo cubren `test/web/impresion-mapeo.test.ts` y el PDF, que toman el texto del modelo.
  */
 /** «A CONSUMIDOR FINAL» (versión 2 en adelante). */
 export const LEYENDA_A_CONSUMIDOR_FINAL = "A CONSUMIDOR FINAL";
