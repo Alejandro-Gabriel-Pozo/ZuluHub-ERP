@@ -22,7 +22,7 @@
  *  - `.github/workflows/ci.yml`: ver `cambioDeCiAfecta`; solo un cambio en jobs que no son de mutación deja
  *    de correr todo, y aun así alcanza al guardián, cuyas pruebas leen ese archivo.
  *
- * El mismo grafo decide si la integración (`Estabilidad`, 12 copias) tiene que repetirse: ver `planificarEstabilidad`.
+ * El mismo grafo (más una lista de rutas del dueño) decide si la integración (`Estabilidad`, 12 copias) tiene que repetirse: ver `planificarEstabilidad`.
  * El orden de los grupos que sale del plan es el de duración descendente (ver `ordenarPorDuracion`).
  * El chequeo que falla si se quita una de estas decisiones es `test/arquitectura/planificar-mutacion.test.ts`.
  */
@@ -220,23 +220,6 @@ const JOBS_AJENOS_A_LA_MUTACION = [
 ];
 
 /**
- * Jobs de `ci.yml` cuyo cambio NO puede alterar la integración que repite `Estabilidad`. Quedan afuera
- * `pruebas` (misma base y mismo comando), `estabilidad`, `mutacion-plan` (decide si Estabilidad corre) y los
- * desconocidos.
- */
-const JOBS_AJENOS_A_LA_INTEGRACION = [
-  "estatico",
-  "guardian",
-  "seguridad",
-  "flujos",
-  "dependencias",
-  "mutacion",
-  "web",
-  "componentes",
-  "gate",
-];
-
-/**
  * ¿El cambio de `ci.yml` puede afectar lo que decide `ajenos`? Sí (`true`) si no se pueden leer las dos versiones,
  * si cambió la cabecera (eventos, permisos, concurrencia, variables globales) o si cambió, se agregó o se quitó
  * un job que no está en `ajenos`. Lo único que da `false` es un cambio confinado a jobs de `ajenos` (o ninguno).
@@ -372,65 +355,51 @@ function planificar({ cambios, grupos, dependencias, ci, lecturas = LECTURAS_DE_
 }
 
 /**
- * ¿Hay que repetir la integración 12 veces (`Estabilidad`)? Se repite si el cambio puede alterar lo que esas
- * pruebas ejercitan; ante la duda, sí. NO corre solo si todo el cambio es de los tipos que se saben inocuos:
+ * Cambios que obligan a repetir la integración 12 veces en un pull request (decisión del dueño, 2026-11-07: la
+ * repetición cuesta ~78 min de máquina por corrida y solo detecta fallas intermitentes de lo que toca la base).
+ * Previene: gastar 12 máquinas en un cambio de pantalla o de dominio que no puede alterar la integración contra
+ * Postgres. Es una lista de lo que SÍ la dispara; el resto se decide en `planificarEstabilidad`.
+ */
+const DISPARAN_ESTABILIDAD = [
+  /^test\/integracion\//,
+  /^src\/(?:[^/]+\/)*persistencia\//, // src/**/persistencia/**
+  /^src\/adaptadores\/postgres\//,
+  /^migraciones\//,
+  /^\.github\/workflows\//, // los workflows no ignorables (ver DOCUMENTACION_Y_AJENOS): ci.yml, migrar*, etc.
+  // SUPUESTO (el dueño dijo «arquitectura/ de la base» y no hay una carpeta con ese nombre): las reglas SQL.
+  /^arquitectura\/lint-sql\.cjs$/,
+  // Lo que la integración lanza como proceso aparte (no es un `import` que el grafo vea).
+  /^scripts\//,
+];
+
+/**
+ * ¿Hay que repetir la integración 12 veces (`Estabilidad`)? Solo en los casos de `DISPARAN_ESTABILIDAD`, más lo
+ * que no se puede explicar: ante la duda, sí (fail-closed). NO corre solo si todo el cambio es de los tipos que
+ * se saben inocuos:
  *  - documentación y archivos ajenos (`IGNORABLES_DE_INTEGRACION`);
- *  - un archivo de `src/`, `test/` o `apps/` que ninguna prueba de `test/integracion/` alcanza (por importación o
- *    por lectura de texto);
- *  - un `ci.yml` cuyo cambio queda en jobs ajenos a la integración (`JOBS_AJENOS_A_LA_INTEGRACION`).
- * Corre siempre si toca `test/integracion/` (las pruebas, sus auxiliares y lo que vitest carga antes), las
- * migraciones, `scripts/` (algunos los lanza la integración como proceso aparte), la configuración (`package*.json`, `vitest.config.ts`…), un archivo borrado o cualquier otra cosa
- * que el grafo no explique.
+ *  - un archivo que el grafo de importaciones conoce (`src/`, `apps/`, `test/`, el código del guardián) y que no
+ *    está en `DISPARAN_ESTABILIDAD`, aunque alguna prueba de integración lo ejercite.
+ * Corre siempre si no hay cambios que explicar de otra manera: configuración (`package*.json`, `vitest.config.ts`…),
+ * un archivo borrado o cualquier cosa que el grafo no conozca. En push a `main` y en la nocturna corre siempre
+ * (lo decide `principal`, no esta función).
  *
  * @param {{
  *   cambios: readonly string[],
  *   dependencias: Readonly<Record<string, readonly string[]>>,
- *   ci?: { antes: string | null, despues: string | null },
- *   lecturas?: Readonly<Record<string, readonly string[]>>,
  * }} entrada
  * @returns {{ corre: boolean, motivo: string }}
  */
-function planificarEstabilidad({ cambios, dependencias, ci, lecturas = LECTURAS_DE_APPS }) {
-  const corre = (motivo) => ({ corre: true, motivo });
-  const enElGrafo = new Set();
-  const enApps = new Set();
+function planificarEstabilidad({ cambios, dependencias }) {
   for (const cambio of cambios) {
     if (IGNORABLES_DE_INTEGRACION.some((patron) => patron.test(cambio))) continue;
-    if (
-      cambio.startsWith("test/integracion/") ||
-      cambio.startsWith("migraciones/") ||
-      cambio.startsWith("scripts/")
-    ) {
-      // `scripts/`: la integración lanza algunos como proceso aparte (no es un `import` que el grafo vea).
-      return corre(`cambia ${cambio}, parte de la integración`);
+    if (DISPARAN_ESTABILIDAD.some((patron) => patron.test(cambio))) {
+      return { corre: true, motivo: `cambia ${cambio}, parte de lo que toca la base` };
     }
-    if (cambio === ARCHIVO_DE_CI) {
-      if (cambioDeCiAfecta(ci, JOBS_AJENOS_A_LA_INTEGRACION)) {
-        return corre(`cambia ${cambio} en algo que puede afectar a la integración`);
-      }
-      continue;
+    if (CONFIGURACION_DE_APPS.test(cambio) || !(cambio in dependencias)) {
+      return { corre: true, motivo: `cambia ${cambio}, que el grafo de importaciones no explica` };
     }
-    if (cambio.startsWith("apps/") && !CONFIGURACION_DE_APPS.test(cambio)) {
-      enApps.add(cambio);
-      if (cambio in dependencias) enElGrafo.add(cambio);
-      continue;
-    }
-    if (!(cambio in dependencias)) {
-      return corre(`cambia ${cambio}, que el grafo de importaciones no explica`);
-    }
-    enElGrafo.add(cambio);
   }
-  if (enElGrafo.size === 0 && enApps.size === 0) {
-    return { corre: false, motivo: "el PR no cambia nada que afecte a la integración" };
-  }
-  const afectadas = pruebasAfectadas({ enElGrafo, enApps, dependencias, lecturas });
-  const deIntegracion = [...afectadas.keys()].filter((prueba) =>
-    prueba.startsWith("test/integracion/"),
-  );
-  if (deIntegracion.length > 0) {
-    return corre(`${deIntegracion.length} prueba(s) de integración alcanzan lo que cambió`);
-  }
-  return { corre: false, motivo: "ninguna prueba de integración alcanza lo que cambió" };
+  return { corre: false, motivo: "el PR no cambia nada de lo que toca la base" };
 }
 
 /**
@@ -553,7 +522,7 @@ function principal() {
     const dependencias = leerDependencias(raiz);
     const ci = cambios.includes(ARCHIVO_DE_CI) ? leerCi(raiz) : undefined;
     plan = planificar({ cambios, grupos, dependencias, ci });
-    estabilidad = planificarEstabilidad({ cambios, dependencias, ci });
+    estabilidad = planificarEstabilidad({ cambios, dependencias });
   } else {
     const cual = `evento ${evento === "" ? "local" : evento}`;
     plan = todosLosGrupos(grupos, `${cual}: se corre todo`);
@@ -583,7 +552,6 @@ module.exports = {
   partirCi,
   LECTURAS_DE_APPS,
   JOBS_AJENOS_A_LA_MUTACION,
-  JOBS_AJENOS_A_LA_INTEGRACION,
   expandir,
   archivoDe,
   conEnlacesDelGuardian,
