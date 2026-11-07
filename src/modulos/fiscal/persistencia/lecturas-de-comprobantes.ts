@@ -26,7 +26,7 @@ import { comprobanteId, type ComprobanteId } from "../dominio/identificadores";
 import { RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA } from "../dominio/punto-de-venta";
 import type { DocumentoDelReceptor } from "../dominio/receptor";
 import { documentoDelReceptorDeLaBase } from "./documento-del-receptor";
-import { deLaLista } from "./repositorios";
+import { deLaLista } from "./ayudas-de-repositorio";
 import type { FiscalDb } from "./tablas";
 
 /**

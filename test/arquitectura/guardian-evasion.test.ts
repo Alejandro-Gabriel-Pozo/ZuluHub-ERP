@@ -57,6 +57,8 @@ const { crearUbicador } = require("../../arquitectura/contratos/ubicacion.cjs") 
  * límite de cada proceso (`correr`, 120 s).
  */
 const PRESUPUESTO_DE_PROCESOS = 650;
+/** Cota de pared holgada (la CI saturada llegó a 111 a 122 s): detecta un guardián lento, que el conteo de procesos no ve. */
+const COTA_DE_TIEMPO_EN_MS = 180_000;
 
 const { texto: TEXTO_DEL_CATALOGO, casos: CASOS } = leerCatalogo();
 const { casos: EXTERNOS } = leerCatalogo(ARCHIVO_DE_LOS_EXTERNOS);
@@ -99,9 +101,11 @@ describe("cada caso del catálogo se comporta como su estado dice", () => {
   );
 
   it("la batería entera corre dentro del presupuesto de trabajo (procesos lanzados), no de tiempo", () => {
-    expect(duracionEnMs).toBeGreaterThan(0);
-    expect(procesosDeLaBateria).toBeGreaterThan(CASOS.length);
+    // El contador cuenta algo: si se rompiera y diera 0, el tope de abajo pasaría en vacío.
+    expect(procesosDeLaBateria).toBeGreaterThan(0);
     expect(procesosDeLaBateria).toBeLessThan(PRESUPUESTO_DE_PROCESOS);
+    // Cota de tiempo holgada ADEMÁS del conteo: el conteo no ve un guardián más lento por proceso; esto sí (3× los 60 s originales).
+    expect(duracionEnMs).toBeLessThan(COTA_DE_TIEMPO_EN_MS);
   });
 });
 

@@ -6,7 +6,7 @@ import { textoDeUnaLineaDesdeTexto } from "./texto-de-una-linea";
  * SIN DECIDIR = falta la decisión del dueño.)
  *
  * - Qué es: cómo se llama una persona o una empresa, tal como se imprime en un comprobante: el nombre del receptor (el cliente al
- *   que se le factura). La razón social del emisor y la de la empresa se suman cuando pasen a usar esta primitiva (otro paso).
+ *   que se le factura). La razón social fiscal del emisor ya la usa; la de la empresa se suma cuando pase a usarla (otro paso).
  *   No es un texto libre tipo motivo o descripción.
  * - Cómo se escribe: se recortan los blancos de los extremos, los espacios repetidos pasan a uno solo y el texto queda en NFC.
  *   Se conservan las mayúsculas y los acentos que escribió la persona (SUPUESTO). Entre 1 y `LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL`
