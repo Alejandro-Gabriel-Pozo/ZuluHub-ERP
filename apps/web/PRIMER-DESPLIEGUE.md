@@ -228,11 +228,10 @@ hexadecimales>`; el `kid` es un texto corto de letras o números). Es un secreto
   pendiente.
 - **El despacho inmediato (`after()`) espera el trabajo completo** (una autorización de ARCA puede tardar hasta 25 s, más
   el login de WSAA de hasta 20 s). Para que la plataforma no lo corte antes, la página que aloje las acciones de facturación
-  tiene que declarar `maxDuration` (Next: «se fija a nivel de página para todas las Server Actions de esa página»). **Ya hay
-  pantallas que las usan** (`/s/app/facturacion/comprobantes/emitir` y las de anular y configuración fiscal) y hoy **ninguna
-  declara `maxDuration`**: solo lo declara la ruta del cron (`apps/web/app/api/trabajos/cron/route.ts`, 60). Con el límite
-  por defecto del plan de Vercel una autorización lenta de ARCA podría cortarse a mitad de camino: **NO VERIFICADO** (depende
-  del plan; ver G.11). Para la prueba de homologación, mirá el registro si una emisión queda «pendiente».
+  tiene que declarar `maxDuration`. **Declarado** (2026-11-07): `emitir` y `anular` en 90 s (peor caso de un despacho: login de WSAA 20 s +
+  último autorizado 15 s + autorizar 25 s + consulta de validación 15 s = 75 s, más 15 s de margen) y la ruta del PDF en 10 s; el cron
+  sigue en 60. **Qué máximo admite el plan de Vercel NO se verificó**: si rechaza 90, hay que decidir con el dueño (bajar el tope deja de
+  cubrir el peor caso). Las pantallas de configuración fiscal que también llaman a ARCA no lo declaran todavía. Para la prueba de homologación, mirá el registro si una emisión queda «pendiente».
 
 #### Lo que NO debe existir (ni en Production ni en Preview)
 
@@ -442,9 +441,9 @@ ARCA ni contra una base real: **NO VERIFICADO** hasta la prueba de homologación
    enciende el despliegue hasta resolverlo (plan: `x-real-ip` o `x-forwarded-for`).
 10. Que el ingreso con Google sin JavaScript no lo bloquee Chrome por `form-action 'self'` (chequeo 15).
 11. El `maxDuration` de la página que aloje las acciones de facturación (el despacho con `after()` espera hasta que ARCA
-    responda: autorizar tiene un tiempo límite de 25 s, WSAA de 20 s y WSFE de 15 s). Las pantallas ya existen y ninguna lo
-    declara (sección B.5). Qué valor admite el plan de Vercel no se pudo verificar: queda como pregunta pendiente, con 60
-    (como el cron) como opción recomendada si el plan lo admite. No se tocó en este cambio (solo documentación).
+    responda: autorizar tiene un tiempo límite de 25 s, WSAA de 20 s y WSFE de 15 s). Ya está declarado: 90 s en emitir y anular, 10 s
+    en el PDF (sección B.5). Verificar en el primer despliegue que el plan de Vercel admite 90; si no, el despliegue lo rechaza y hay que
+    decidir con el dueño.
 12. Que el Root Directory `apps/web` y «Include source files outside of the Root Directory» alcancen para `src/` y `migraciones/`
     (ya en G.1): la compilación sin secretos en un clon limpio sí se verificó (`npm ci` y `npm run build:web`, 2026-11-04);
     lo de Vercel no.
