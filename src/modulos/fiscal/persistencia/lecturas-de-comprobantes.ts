@@ -76,7 +76,8 @@ export type FiltroDeListado = Readonly<{
   hasta: FechaCivil | null;
   /**
    * La búsqueda de texto: el fragmento del nombre del receptor (sin distinguir mayúsculas) y, si el texto
-   * puede ser un documento, su prefijo de solo dígitos. Basta que coincida uno de los dos.
+   * puede ser un documento (solo dígitos), su prefijo. SUPUESTO (pregunta pendiente al dueño): con prefijo de documento se
+   * busca SOLO por documento, ya no también por nombre; así el índice del prefijo sirve.
    */
   texto: Readonly<{ nombre: string; documento: string | null }> | null;
   /** La letra del tipo (`A`, `B`, `C`): se lee como «el tipo es uno de los de esa letra», sin columna nueva. */
@@ -156,6 +157,17 @@ export interface LecturasDeComprobantes {
     empresa: EmpresaId,
     ids: readonly ComprobanteId[],
   ): Promise<ReadonlyMap<ComprobanteId, readonly NotaParaAcreditar[]>>;
+}
+
+/**
+ * La primera cadena que ya no empieza con `prefijo`: el prefijo con su último carácter subido uno (`4688` → `4689`, `49` → `4:`). Con la
+ * cota inferior (el prefijo mismo) arma el rango `[prefijo, cota)` que cubre exactamente lo que empieza con él. Solo dígitos, no vacío.
+ * Previene: el `LIKE 'x%'` que, bajo RLS, el planificador no convierte en rango (`textlike` no es «leakproof») y recorre toda la sucursal.
+ */
+export function cotaSuperiorDelPrefijo(prefijo: string): string {
+  if (!/^[0-9]+$/.test(prefijo)) throw new RangeError("el prefijo del documento son solo dígitos");
+  const ultimo = prefijo.charCodeAt(prefijo.length - 1);
+  return prefijo.slice(0, -1) + String.fromCharCode(ultimo + 1);
 }
 
 const FECHA_DEL_LISTADO = sql<string>`coalesce(fecha_emision, (creado_en at time zone ${ZONA_DE_ARGENTINA})::date)`;
@@ -260,13 +272,16 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
       }
       if (filtro.texto !== null) {
         const { nombre, documento } = filtro.texto;
-        // `position` y no `LIKE`: el texto del usuario puede traer `%`, `_` o `\` y no hay nada que escapar.
-        const porNombre = sql<boolean>`position(lower(${nombre}) in lower(receptor_nombre)) > 0`;
-        consulta = consulta.where((eb) =>
+        // Un texto que es un número de documento (solo dígitos, con o sin puntos y guiones) busca SOLO por documento, por rango
+        // explícito sobre `comprobante_receptor_doc_pref_ix` (0025); cualquier otro texto busca el fragmento en el nombre. Con un
+        // `OR` entre las dos el planificador no puede usar el índice. `position` y no `LIKE` para el nombre: el texto del usuario
+        // puede traer `%`, `_` o `\` y no hay nada que escapar.
+        consulta =
           documento === null
-            ? porNombre
-            : eb.or([porNombre, sql<boolean>`receptor_documento_numero like ${`${documento}%`}`]),
-        );
+            ? consulta.where(sql<boolean>`position(lower(${nombre}) in lower(receptor_nombre)) > 0`)
+            : consulta.where(
+                sql<boolean>`receptor_documento_numero ~>=~ ${documento} and receptor_documento_numero ~<~ ${cotaSuperiorDelPrefijo(documento)}`,
+              );
       }
       if (filtro.despuesDe !== null) {
         const { creadoEn, id } = filtro.despuesDe;

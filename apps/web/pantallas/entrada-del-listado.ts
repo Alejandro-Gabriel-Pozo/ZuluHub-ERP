@@ -10,6 +10,12 @@ import type { FiltrosDelListado } from "../ui/plantillas/facturacion/filtros-del
  * «Últimos 7 días» incluye hoy: hoy y los 6 anteriores (D-54 de `facturador-contratos-de-pantalla.md`, confirmada por el dueño el
  * 2026-10-29). Los períodos con fechas (Hoy, Últimos 7 días, Este mes) cierran en hoy.
  *
+ * La búsqueda de TEXTO con el período «Todo» mira los ÚLTIMOS 12 MESES (decisión del dueño, 2026-11-07, pregunta directa: para años
+ * anteriores se elige el período «Personalizado»). Definición exacta: desde la MISMA fecha civil del año anterior, inclusive, hasta hoy
+ * (el 29 de febrero retrocede al 28 de febrero del año anterior); la consulta compara por el día civil de Argentina, así que a las 22:00
+ * de Argentina (ya «mañana» en UTC) el límite es el de Argentina. Sin texto, «Todo» sigue sin límite. Previene: la búsqueda que recorre
+ * todos los comprobantes de la sucursal (de 50 ms a más de 1 s con un millón de filas, `rendimiento-medicion-2026-11.md` §4 y §11).
+ *
  * Previene: un día corrido en el filtro de período por usar la hora del servidor. Chequeo: `test/web/listado-entrada.test.ts`
  * (fin de mes, 1.º de enero, medianoche en UTC-3).
  */
@@ -23,6 +29,14 @@ export function hoyEnArgentina(ahora: Date): string {
   return hoy.valor;
 }
 
+/** La misma fecha civil un año antes; el 29 de febrero, que el año anterior no existe, cae el 28. */
+export function mismoDiaDelAnioAnterior(fecha: string): string {
+  const anio = Number(fecha.slice(0, 4)) - 1;
+  const mesYDia = fecha.slice(5);
+  const dia = mesYDia === "02-29" ? "02-28" : mesYDia;
+  return `${String(anio).padStart(4, "0")}-${dia}`;
+}
+
 /** El rango del período; un lado ausente es «sin límite» de ese lado. */
 export function rangoDelPeriodo(
   filtros: FiltrosDelListado,
@@ -30,7 +44,7 @@ export function rangoDelPeriodo(
 ): Readonly<{ desde?: string; hasta?: string }> {
   switch (filtros.periodo) {
     case "todo":
-      return {};
+      return filtros.texto === "" ? {} : { desde: mismoDiaDelAnioAnterior(hoyEnArgentina(ahora)) };
     case "personalizado":
       return {
         ...(filtros.desde === "" ? {} : { desde: filtros.desde }),
@@ -59,7 +73,8 @@ export function rangoDelPeriodo(
  * son fijos. Chequeo: `test/web/listado-entrada.test.ts` y `test/web/listado-pagina.test.ts`.
  */
 export function conElPeriodoFijo(filtros: FiltrosDelListado, ahora: Date): FiltrosDelListado {
-  if (filtros.periodo === "todo" || filtros.periodo === "personalizado") return filtros;
+  if (filtros.periodo === "personalizado" || (filtros.periodo === "todo" && filtros.texto === ""))
+    return filtros;
   const { desde, hasta } = rangoDelPeriodo(filtros, ahora);
   return { ...filtros, periodo: "personalizado", desde: desde ?? "", hasta: hasta ?? "" };
 }

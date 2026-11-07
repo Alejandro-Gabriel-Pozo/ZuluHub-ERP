@@ -3,6 +3,7 @@ import {
   conElPeriodoFijo,
   entradaDelListado,
   hoyEnArgentina,
+  mismoDiaDelAnioAnterior,
   rangoDelPeriodo,
 } from "../../apps/web/pantallas/entrada-del-listado";
 import {
@@ -86,8 +87,49 @@ describe("el rango de cada período", () => {
     });
   });
 
-  it("«Todo»: sin fechas", () => {
+  it("«Todo» sin texto: sin fechas", () => {
     expect(rangoDelPeriodo(con({ periodo: "todo" }), new Date())).toEqual({});
+  });
+
+  it("«Todo» con texto: los últimos 12 meses, desde la misma fecha del año anterior (inclusive) hasta hoy sin tope", () => {
+    const buscar = (fecha: string, hora = "12:00") =>
+      rangoDelPeriodo(con({ periodo: "todo", texto: "Aguirre" }), enArgentina(fecha, hora));
+    expect(buscar("2026-11-07")).toEqual({ desde: "2025-11-07" });
+    expect(buscar("2026-01-01", "00:00")).toEqual({ desde: "2025-01-01" });
+    expect(buscar("2026-12-31", "23:59")).toEqual({ desde: "2025-12-31" });
+  });
+
+  it("«Todo» con texto: el corte es el día de Argentina, no el de UTC (22:00 de Argentina ya es mañana en UTC)", () => {
+    // 2026-11-07 22:30 en Argentina = 2026-11-08 01:30 UTC.
+    const noche = enArgentina("2026-11-07", "22:30");
+    expect(noche.toISOString()).toBe("2026-11-08T01:30:00.000Z");
+    expect(rangoDelPeriodo(con({ periodo: "todo", texto: "x" }), noche)).toEqual({
+      desde: "2025-11-07",
+    });
+    // 00:30 de Argentina del 8 ya es el día siguiente.
+    expect(
+      rangoDelPeriodo(con({ periodo: "todo", texto: "x" }), enArgentina("2026-11-08", "00:30")),
+    ).toEqual({ desde: "2025-11-08" });
+  });
+
+  it("el 29 de febrero retrocede al 28 de febrero del año anterior (que no es bisiesto); el resto de los días, el mismo día", () => {
+    expect(mismoDiaDelAnioAnterior("2028-02-29")).toBe("2027-02-28");
+    expect(mismoDiaDelAnioAnterior("2028-02-28")).toBe("2027-02-28");
+    expect(mismoDiaDelAnioAnterior("2028-03-01")).toBe("2027-03-01");
+    expect(mismoDiaDelAnioAnterior("2026-11-07")).toBe("2025-11-07");
+  });
+
+  it("«Hoy», «7 días», «Este mes» y «Personalizado» no cambian por tener texto: el período elegido manda", () => {
+    const ahora = enArgentina("2026-10-28", "12:00");
+    expect(rangoDelPeriodo(con({ periodo: "mes", texto: "x" }), ahora)).toEqual(
+      rangoDelPeriodo(con({ periodo: "mes" }), ahora),
+    );
+    expect(
+      rangoDelPeriodo(
+        con({ periodo: "personalizado", desde: "2020-01-01", hasta: "2020-12-31", texto: "x" }),
+        ahora,
+      ),
+    ).toEqual({ desde: "2020-01-01", hasta: "2020-12-31" });
   });
 
   it("«Personalizado»: las fechas que se escribieron, y un lado vacío es sin límite", () => {
@@ -126,6 +168,14 @@ describe("el período fijo de «Página siguiente»", () => {
       desde: "2026-10-01",
       hasta: "2026-10-28",
     });
+  });
+
+  it("«Todo» con texto fija los 12 meses en «Personalizado»: la página siguiente no se corre aunque pase la medianoche", () => {
+    const antes = enArgentina("2026-11-07", "23:59");
+    const despues = enArgentina("2026-11-08", "00:01");
+    const fijo = conElPeriodoFijo(con({ periodo: "todo", texto: "Aguirre" }), antes);
+    expect(fijo).toMatchObject({ periodo: "personalizado", desde: "2025-11-07", hasta: "" });
+    expect(rangoDelPeriodo(fijo, despues)).toEqual({ desde: "2025-11-07" });
   });
 
   it("«Todo» y «Personalizado» ya son fijos: no cambian", () => {
