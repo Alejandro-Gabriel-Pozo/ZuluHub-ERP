@@ -1,0 +1,22 @@
+[
+  {
+    "archivo": "arquitectura/contratos/codigos.cjs",
+    "motivo": "Existía antes de este chequeo (2026-11-06) y no estaba en `mutate`: lista cerrada de datos (descripciones de los códigos de falla). Su anclaje pendiente es la entrada de deuda `descripciones-de-codigos-sin-prueba`."
+  },
+  {
+    "archivo": "arquitectura/contratos/contratos.cjs",
+    "motivo": "Existía antes de este chequeo (2026-11-06) y no estaba en `mutate`: registro de contratos que arranca vacío (`module.exports = []`), sin lógica que mutar."
+  },
+  {
+    "archivo": "src/adaptadores/arca/tipos.ts",
+    "motivo": "Existía antes de este chequeo (2026-11-06) y no estaba en `mutate`: solo declaraciones de tipos (`import type` y tipos exportados), sin código ejecutable."
+  },
+  {
+    "archivo": "src/adaptadores/postgres/migraciones.ts",
+    "motivo": "Existía antes de este chequeo (2026-11-06) y no estaba en `mutate`: aplica las migraciones contra Postgres real; la mutación corre con `PEDERNAL_SIN_INTEGRACION=1` (`stryker.config.json`), sin base."
+  },
+  {
+    "archivo": "src/composicion/plataforma.ts",
+    "motivo": "Existía antes de este chequeo (2026-11-06) y no estaba en `mutate`: arma los adaptadores de Postgres de la consola de plataforma (cableado). Mutarlo o justificarlo mejor queda pendiente."
+  }
+]

@@ -29,6 +29,8 @@ export type OpcionesDelComprobante = Readonly<{
   /** Los textos legales del modelo, tal cual; sin esto, el comprobante no trae la clave. */
   leyendasLegales?: readonly string[];
   contacto?: boolean;
+  /** La leyenda de la condición del receptor del modelo (versión 3), tal cual; sin esto, el receptor no trae la clave. */
+  leyendaDeCondicion?: string;
   /** El nombre de la sucursal del modelo, tal cual; sin esto, el comprobante no trae la clave. */
   sucursal?: string;
 }>;
@@ -86,6 +88,9 @@ export function comprobanteDePrueba(o: OpcionesDelComprobante = {}): Comprobante
           documento: { tipo: "CUIT", numero: "30712345678" },
           condicionIva: "RESPONSABLE_INSCRIPTO",
           domicilio: "Av. Siempreviva 742",
+          ...(o.leyendaDeCondicion === undefined
+            ? {}
+            : { leyendaDeCondicion: o.leyendaDeCondicion }),
         },
     renglones,
     totales:
