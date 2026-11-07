@@ -9,8 +9,8 @@ import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilan
  * la simulada (`apoyo/arca-simulada.ts`). Los pasos son SECUENCIALES a propósito: cada uno parte de lo que dejó el anterior, como la
  * persona real. Cada paso responde por lo que el vigilante vio en SU pantalla (consola, 5xx, CSP, pedidos a otros hosts) y por axe.
  *
- * FALLAS CONOCIDAS (`it.fails`): hechos reales que esta prueba encontró y que NO se arreglan acá (los arregla la sesión web). Cada una
- * lleva su motivo; cuando alguien la arregla la prueba se pone roja y obliga a pasarla a `it` común (como pasó con la CSP de la impresión).
+ * FALLAS CONOCIDAS (`it.fails`): hechos reales que esta prueba encuentra y que todavía no se arreglan. Cada una lleva su motivo; cuando alguien la
+ * arregla la prueba se pone roja y obliga a pasarla a `it` común (como pasó con la CSP de la impresión y con el error de campo de «Emitir»).
  */
 const base = inject("baseDePruebas");
 
@@ -25,18 +25,6 @@ describe.skipIf(base === null)(
     /** Lo que el vigilante anotó en las pantallas de impresión (ver la falla conocida de CSP). */
     const deLaImpresion: string[] = [];
 
-    /**
-     * Para `it.fails`: solo cuenta como «falla conocida» una AFIRMACIÓN que no se cumple (`AssertionError`). Cualquier otro error (un
-     * timeout, un selector que ya no existe, la app caída) se traga acá, el caso pasa y `it.fails` se pone rojo: una falla conocida no
-     * puede esconder un recorrido roto por otro motivo.
-     */
-    const soloSiFallaUnaAfirmacion = async (cuerpo: () => Promise<void>): Promise<void> => {
-      try {
-        await cuerpo();
-      } catch (error) {
-        if (error instanceof Error && error.name === "AssertionError") throw error;
-      }
-    };
     const ir = async (ruta: string) => {
       const respuesta = await pagina.goto(`${mundo.url}${ruta}`);
       await pagina.waitForLoadState("networkidle");
@@ -111,25 +99,32 @@ describe.skipIf(base === null)(
       pantallaLimpia();
     });
 
-    // FALLA CONOCIDA (2026-11-05, verificada en la app real): «Emitir» deja avanzar con un DNI no numérico y un nombre numérico; el único
-    // aviso es genérico y llega al final. Lo esperado es un error de campo en el paso 1. Lo arregla la sesión web; no hay cuestión
-    // abierta por decisión del dueño (2026-11-05: «hay que solucionarla y ya»).
-    it.fails("Emitir: un documento no numérico y un nombre numérico dan error de campo", () =>
-      soloSiFallaUnaAfirmacion(async () => {
-        await ir("/facturacion/comprobantes/emitir");
-        await pagina.getByLabel("Documento").selectOption({ label: "DNI" });
-        await pagina.getByRole("textbox", { name: "DNI" }).fill("abc");
-        await pagina.getByRole("textbox", { name: "Nombre o razón social" }).fill("12345");
+    // Era una falla conocida (2026-11-05, verificada en la app real): «Emitir» dejaba avanzar con un DNI no numérico y un nombre numérico, y el
+    // único aviso era genérico y llegaba al final. Lo arregla el marcado de campos (dueño, 2026-11-06, Q21): con el cliente mal escrito
+    // la persona no pasa al paso 2 y los campos inválidos se marcan.
+    it("Emitir: un documento no numérico y un nombre numérico dan error de campo", async () => {
+      await ir("/facturacion/comprobantes/emitir");
+      await pagina.getByLabel("Documento").selectOption({ label: "DNI" });
+      await pagina.getByRole("textbox", { name: "DNI" }).fill("abc");
+      await pagina.getByRole("textbox", { name: "Nombre o razón social" }).fill("12345");
+      await pagina
+        .getByLabel("Condición frente al IVA")
+        .selectOption({ label: "Consumidor Final" });
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      // Con error de campo la persona sigue en el paso 1 (Cliente), con el documento y el nombre marcados.
+      await pagina.getByText("Revisá los datos marcados.").first().waitFor();
+      expect(await pagina.getByRole("region", { name: "Renglones" }).count()).toBe(0);
+      expect(await pagina.getByRole("textbox", { name: "DNI" }).getAttribute("aria-invalid")).toBe(
+        "true",
+      );
+      expect(
         await pagina
-          .getByLabel("Condición frente al IVA")
-          .selectOption({ label: "Consumidor Final" });
-        await pagina.getByRole("button", { name: "Siguiente" }).click();
-        await pagina.waitForTimeout(500);
-        // Con error de campo la persona sigue en el paso 1 (Cliente).
-        expect(await pagina.getByRole("region", { name: "Renglones" }).count()).toBe(0);
-        vigilante.tomar();
-      }),
-    );
+          .getByRole("textbox", { name: "Nombre o razón social" })
+          .getAttribute("aria-invalid"),
+      ).toBe("true");
+      await sinViolacionesDeAxe();
+      vigilante.tomar();
+    });
 
     it("Emitir: una Factura B de consumidor final termina AUTORIZADA con el CAE de ARCA", async () => {
       await ir("/facturacion/comprobantes/emitir");
@@ -155,6 +150,9 @@ describe.skipIf(base === null)(
       const solicitud = mundo.arca.pedidos.find((p) => p.operacion === "FECAESolicitar");
       expect(solicitud?.cuerpo).toContain("<ar:CbteTipo>6</ar:CbteTipo>");
       expect(solicitud?.cuerpo).toContain("<ar:ImpTotal>121.00</ar:ImpTotal>");
+      // Consumidor final sin identificar: DocTipo 99 / DocNro 0, como siempre (lo ya emitido no se rompe).
+      expect(solicitud?.cuerpo).toContain("<ar:DocTipo>99</ar:DocTipo>");
+      expect(solicitud?.cuerpo).toContain("<ar:DocNro>0</ar:DocNro>");
       const { rows } = await mundo.mundo.dueno.query<{ estado: string }>(
         "select estado from comprobante where empresa_id = $1",
         [mundo.empresa],
@@ -244,6 +242,119 @@ describe.skipIf(base === null)(
     // arregló y esto pasó de falla conocida a prueba común.
     it("Imprimir: la política de contenido no bloquea ningún estilo ni imagen", () => {
       expect(deLaImpresion.filter((h) => /CSP|Content Security Policy/.test(h))).toEqual([]);
+    });
+
+    it("Emitir: una Factura A a un responsable inscripto sin domicilio marca el domicilio y con domicilio termina AUTORIZADA", async () => {
+      await ir("/facturacion/comprobantes/emitir");
+      await pagina.getByLabel("Documento").selectOption({ label: "CUIT" });
+      await pagina.getByRole("textbox", { name: "CUIT" }).fill("30-71234567-1");
+      await pagina
+        .getByRole("textbox", { name: "Nombre o razón social" })
+        .fill("Distribuidora Sur SA");
+      await pagina
+        .getByLabel("Condición frente al IVA")
+        .selectOption({ label: "IVA Responsable Inscripto" });
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByLabel("Descripción").fill("Harina x50");
+      await pagina.getByLabel("Precio con IVA").fill("121,00");
+      await pagina.getByLabel("IVA", { exact: true }).selectOption({ label: "IVA 21 %" });
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByRole("button", { name: "Emitir factura" }).click();
+      // El servidor exige el domicilio (RG 1415 Anexo II A.II): vuelve al paso del cliente con ese campo marcado.
+      await pagina.getByText("Revisá los datos marcados.").first().waitFor();
+      expect(
+        await pagina.getByRole("textbox", { name: "Domicilio" }).getAttribute("aria-invalid"),
+      ).toBe("true");
+      await sinViolacionesDeAxe();
+      await pagina.getByRole("textbox", { name: "Domicilio" }).fill("Av. Siempreviva 742, Rosario");
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByRole("button", { name: "Emitir factura" }).click();
+      await pagina.waitForURL(/\/facturacion\/comprobantes\/[0-9a-f-]{36}$/);
+      const limite = Date.now() + 30_000;
+      while ((await pagina.getByText("Autorizada", { exact: true }).count()) === 0) {
+        if (Date.now() > limite) throw new Error("la factura A no llegó a Autorizada en 30 s");
+        await pagina.waitForTimeout(1000);
+        await pagina.reload();
+        await pagina.waitForLoadState("networkidle");
+      }
+      // ARCA simulada vio una Factura A (tipo 1) al CUIT del cliente.
+      const solicitud = mundo.arca.pedidos.filter((p) => p.operacion === "FECAESolicitar").at(-1);
+      expect(solicitud?.cuerpo).toContain("<ar:CbteTipo>1</ar:CbteTipo>");
+      expect(solicitud?.cuerpo).toContain("<ar:DocNro>30712345671</ar:DocNro>");
+      pantallaLimpia();
+    });
+
+    /** Emite una Factura A (domicilio ya cargado) y espera a que ARCA simulada la autorice; deja la pantalla en su detalle. */
+    const emitirFacturaA = async (cliente: {
+      cuit: string;
+      nombre: string;
+      condicion: string;
+      domicilio: string;
+    }) => {
+      await ir("/facturacion/comprobantes/emitir");
+      await pagina.getByLabel("Documento").selectOption({ label: "CUIT" });
+      await pagina.getByRole("textbox", { name: "CUIT" }).fill(cliente.cuit);
+      await pagina.getByRole("textbox", { name: "Nombre o razón social" }).fill(cliente.nombre);
+      await pagina.getByLabel("Condición frente al IVA").selectOption({ label: cliente.condicion });
+      await pagina.getByRole("textbox", { name: "Domicilio" }).fill(cliente.domicilio);
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByLabel("Descripción").fill("Harina x50");
+      await pagina.getByLabel("Precio con IVA").fill("121,00");
+      await pagina.getByLabel("IVA", { exact: true }).selectOption({ label: "IVA 21 %" });
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByRole("button", { name: "Emitir factura" }).click();
+      await pagina.waitForURL(/\/facturacion\/comprobantes\/[0-9a-f-]{36}$/);
+      const limite = Date.now() + 30_000;
+      while ((await pagina.getByText("Autorizada", { exact: true }).count()) === 0) {
+        if (Date.now() > limite) throw new Error("la factura A no llegó a Autorizada en 30 s");
+        await pagina.waitForTimeout(1000);
+        await pagina.reload();
+        await pagina.waitForLoadState("networkidle");
+      }
+    };
+    /** Lo que la hoja A4 visible del comprobante dice (la copia oculta es el medidor). */
+    const textoDeLaHoja = async () => {
+      await ir(`/facturacion/comprobantes/${idDelComprobante()}/imprimir`);
+      await pagina.getByText("Hoja 1 de 1").locator("visible=true").first().waitFor();
+      return pagina.locator("[data-hoja]").locator("visible=true").first().innerText();
+    };
+
+    it("Factura A impresa: CUIT, domicilio, leyenda de la condición e IVA discriminado", async () => {
+      // La Factura A del paso anterior sigue en pantalla (su detalle).
+      const texto = await textoDeLaHoja();
+      expect(texto).toContain("IVA RESPONSABLE INSCRITO");
+      expect(texto).toContain("30-71234567-1");
+      expect(texto).toContain("Av. Siempreviva 742, Rosario");
+      expect(texto).toContain("Neto gravado 21 %");
+      // El IVA se discrimina: 121,00 con IVA incluido = 100,00 neto + 21,00 de IVA, y ARCA simulada recibió lo mismo.
+      expect(texto).toContain("100,00");
+      expect(texto).toContain("21,00");
+      const solicitud = mundo.arca.pedidos.filter((p) => p.operacion === "FECAESolicitar").at(-1);
+      expect(solicitud?.cuerpo).toContain("<ar:ImpNeto>100.00</ar:ImpNeto>");
+      expect(solicitud?.cuerpo).toContain("<ar:ImpIVA>21.00</ar:ImpIVA>");
+      // A un inscripto no corresponde la leyenda de crédito fiscal del monotributo.
+      expect(texto).not.toContain("El crédito fiscal discriminado");
+      await sinViolacionesDeAxe();
+      vigilante.tomar();
+    });
+
+    it("Factura A a un monotributista: sale con la leyenda de su condición y la de crédito fiscal", async () => {
+      await emitirFacturaA({
+        cuit: "20-12345678-6",
+        nombre: "Ana Pérez",
+        condicion: "Responsable Monotributo",
+        domicilio: "Calle Falsa 123, Rosario",
+      });
+      const solicitud = mundo.arca.pedidos.filter((p) => p.operacion === "FECAESolicitar").at(-1);
+      expect(solicitud?.cuerpo).toContain("<ar:CbteTipo>1</ar:CbteTipo>");
+      expect(solicitud?.cuerpo).toContain("<ar:DocNro>20123456786</ar:DocNro>");
+      const texto = await textoDeLaHoja();
+      expect(texto).toContain("RESPONSABLE MONOTRIBUTO");
+      expect(texto).toContain("Calle Falsa 123, Rosario");
+      expect(texto).toContain("El crédito fiscal discriminado en el presente comprobante");
+      await sinViolacionesDeAxe();
+      vigilante.tomar();
     });
 
     it("el enlace del mail de invitación apunta a una pantalla que existe", async () => {

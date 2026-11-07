@@ -114,12 +114,20 @@ type Salida = { estado: number | null; stdout: string; stderr: string };
 /** Variables de entorno de un proceso hijo. */
 type Entorno = Record<string, string | undefined>;
 
+let procesosLanzados = 0;
+/**
+ * Cuántos procesos hijos lanzó la batería hasta ahora (`correr`). Es la medida del TRABAJO de la batería que no depende de la
+ * carga de la máquina: el tiempo de pared sí (17 s sin carga, 39 s con la máquina al doble, 111 a 122 s en la CI saturada).
+ */
+export const cantidadDeProcesosLanzados = (): number => procesosLanzados;
+
 /** Corre un comando sin bloquear el proceso de la prueba; con tope de tiempo (muere por señal: `estado` nulo). */
 function correr(
   comando: string,
   argumentos: string[],
   opciones: { cwd: string; env: Entorno; limiteMs?: number },
 ): Promise<Salida> {
+  procesosLanzados += 1;
   return new Promise((resolver) => {
     const hijo = spawn(comando, argumentos, {
       cwd: opciones.cwd,

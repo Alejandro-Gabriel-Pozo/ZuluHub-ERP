@@ -14,7 +14,7 @@ import { ejecutarReseteoDelSegundoFactor } from "../../scripts/ejecutar-resetear
 import { VARIABLE_DE_LA_CADENA } from "../../scripts/entrada-del-dueno";
 import { empresaConMiembro, personaConUsuario } from "./autenticacion-apoyo";
 import { Navegador } from "./autenticacion-ingreso-apoyo";
-import { codigoDeLaAplicacion } from "./autenticacion-plataforma-apoyo";
+import { codigoDeLaAplicacion, usarFechaQuietaDeTotp } from "./autenticacion-plataforma-apoyo";
 import {
   HOST_DE_LA_CONSOLA,
   HOST_DE_LA_WEB,
@@ -46,6 +46,7 @@ vi.setConfig({ testTimeout: 120_000, hookTimeout: 120_000 });
 const ejecutarArchivo = promisify(execFile);
 
 describe.skipIf(base === null)("la revocación de sesiones", () => {
+  usarFechaQuietaDeTotp();
   let m: Mundo;
 
   beforeAll(async () => {
