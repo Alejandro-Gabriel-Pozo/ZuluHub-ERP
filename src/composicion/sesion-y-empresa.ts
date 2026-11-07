@@ -1,8 +1,6 @@
 import { ENCABEZADO_DE_IP } from "../capacidades/autenticacion/host-de-autenticacion";
 import { decidirEmpresa } from "../capacidades/experiencia/empresa-elegida";
-import { origenEsPropio } from "../capacidades/experiencia/origen";
-import { hostDelPedido } from "../capacidades/experiencia/puerta";
-import { errorDeCodigo, estadoHttpDe, type Respuesta } from "../capacidades/experiencia/respuesta";
+import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
 import type { ConsultasDeEmpresas } from "../modulos/empresas/publico";
 import type {
@@ -13,6 +11,7 @@ import type {
 import type { EmpresaId, MarcaComercialId, PersonaId } from "../primitivas/identificadores/marca";
 import type { RolDeEmpresa } from "../capacidades/permisos/roles";
 import type { Autenticacion, SesionAutenticada } from "../puertos/autenticacion";
+import type { LecturasCompartidas } from "../puertos/transacciones";
 import {
   aRespuesta,
   aRespuestaDeExcepcion,
@@ -43,6 +42,11 @@ export type DependenciasDeSesion = Readonly<{
   consultasDeSesion: () => ConsultasDeSesion;
   casosDeUsoDeIdentidad: () => CasosDeUsoDeIdentidad;
   consultasDeEmpresas: () => ConsultasDeEmpresas;
+  /**
+   * Las lecturas de un mismo pedido que comparten una transacción de solo lectura. Opcional: sin él cada consulta abre la suya (más
+   * viajes a la base, mismo resultado). La web real lo pasa siempre.
+   */
+  lecturasCompartidas?: () => LecturasCompartidas;
   /** El reloj: se toma UNA vez por operación y entra como dato (ADR-004, regla G4). */
   ahora: () => Date;
   respuesta: DependenciasDeRespuesta;
@@ -81,12 +85,19 @@ async function leerEmpresas(
   try {
     const contexto = contextoDeSesion({ usuarioAuth: sesion.usuarioAuth, ahora: d.ahora() });
     const consultas = d.consultasDeSesion();
-    const persona = await consultas.personaDeLaSesion(contexto);
-    if (!persona.ok) return { ok: false, error: errorAPublico(persona.error, d.respuesta) };
-    if (persona.valor === null) return { ok: true, dato: { personaId: null, empresas: [] } };
-    const personaId = persona.valor.personaId;
-    const empresas = await consultas.empresasDeLaSesion(contexto, { marcaId });
-    return aRespuesta(empresas, d.respuesta, (lista) => ({ personaId, empresas: lista }));
+    // La persona y sus empresas se leen en UNA transacción (mismo contexto de sesión): un viaje menos por pedido, sin cambiar qué se lee.
+    const leer = async (): Promise<Respuesta<Interno>> => {
+      const persona = await consultas.personaDeLaSesion(contexto);
+      if (!persona.ok) return { ok: false, error: errorAPublico(persona.error, d.respuesta) };
+      if (persona.valor === null) return { ok: true, dato: { personaId: null, empresas: [] } };
+      const personaId = persona.valor.personaId;
+      const empresas = await consultas.empresasDeLaSesion(contexto, { marcaId });
+      return aRespuesta(empresas, d.respuesta, (lista) => ({ personaId, empresas: lista }));
+    };
+    const compartir = d.lecturasCompartidas?.();
+    return compartir === undefined
+      ? await leer()
+      : await compartir.conLecturasCompartidas(contexto, leer);
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, d.respuesta);
   }
@@ -360,46 +371,5 @@ export async function iniciarIngresoConGoogle(
     return { ok: true, dato: { url, cookies: respuesta.headers.getSetCookie() } };
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, d.respuesta);
-  }
-}
-
-/**
- * Atiende el «Seguir» del aviso de sesión (y la renovación silenciosa mientras se usa la pantalla): lee la
- * sesión del pedido, que con el uso se renueva en la base, y devuelve en la RESPUESTA los `Set-Cookie` que
- * la renuevan en el navegador. Un componente de servidor no puede fijar cookies, así que sin esto la cookie
- * moriría a los 15 minutos del ingreso aunque la persona use la aplicación (requisito de W3b). Solo desde el
- * propio origen (el `POST` lo garantiza la ruta). Sin sesión: 401 con el código `SESION_VENCIDA` y nada más.
- */
-export async function renovarSesion(
-  d: DependenciasDeSesion,
-  pedido: PedidoDeAutenticacion,
-): Promise<Response> {
-  const cabeceras = new Headers({
-    "Cache-Control": "private, no-store",
-    "X-Robots-Tag": "noindex",
-    "Content-Type": "application/json",
-  });
-  const sinPermiso = (codigo: "SIN_PERMISO" | "SESION_VENCIDA") =>
-    new Response(JSON.stringify({ codigo }), { status: estadoHttpDe(codigo), headers: cabeceras });
-  // Una página de otro sitio no puede mantener viva una sesión que no es suya (P-7).
-  if (!origenEsPropio(pedido.encabezados.get("origin"), hostDelPedido(pedido.encabezados))) {
-    return sinPermiso("SIN_PERMISO");
-  }
-  try {
-    const sesion = await d.autenticacion().sesionDe({ headers: pedido.encabezados }, pedido.host);
-    if (sesion === null) return sinPermiso("SESION_VENCIDA");
-    for (const cookie of sesion.cookiesDeRespuesta) cabeceras.append("Set-Cookie", cookie);
-    return new Response(JSON.stringify({ venceEn: sesion.venceEn.toISOString() }), {
-      status: 200,
-      headers: cabeceras,
-    });
-  } catch (excepcion) {
-    const error = aRespuestaDeExcepcion(excepcion, d.respuesta);
-    return new Response(
-      JSON.stringify(
-        error.ok ? {} : { codigo: error.error.codigo, referencia: error.error.referencia },
-      ),
-      { status: 500, headers: cabeceras },
-    );
   }
 }

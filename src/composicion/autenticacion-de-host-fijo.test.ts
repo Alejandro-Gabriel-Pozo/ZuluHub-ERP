@@ -46,7 +46,10 @@ describe("conHostFijo: el host de la consola pasa tal cual", () => {
 
     expect(await fija.sesionDe(pedido, HOST)).toBe(SESION);
     expect(base.sesionDe).toHaveBeenCalledTimes(1);
-    expect(base.sesionDe).toHaveBeenCalledWith(pedido, HOST);
+    expect(base.sesionDe).toHaveBeenCalledWith(pedido, HOST, undefined);
+    // La forma de contar el uso (`renovarYa`) viaja tal cual a la de abajo.
+    await fija.sesionDe(pedido, HOST, { renovarYa: true });
+    expect(base.sesionDe).toHaveBeenLastCalledWith(pedido, HOST, { renovarYa: true });
 
     expect(await fija.manejar(request, HOST)).toBe(respuesta);
     expect(base.manejar).toHaveBeenCalledTimes(1);

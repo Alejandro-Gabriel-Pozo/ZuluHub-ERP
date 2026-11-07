@@ -86,6 +86,7 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
     consultasDeSesion: () => estado.mundo?.dependencias.consultasDeSesion(),
     casosDeUsoDeIdentidad: () => estado.mundo?.dependencias.casosDeUsoDeIdentidad(),
     consultasDeEmpresas: () => estado.mundo?.dependencias.consultasDeEmpresas(),
+    lecturasCompartidas: () => estado.mundo?.dependencias.lecturasCompartidas?.(),
     casosDeUsoDeFacturacion: () =>
       (estado.fiscal?.web as { casosDeUsoDeFacturacion: () => unknown }).casosDeUsoDeFacturacion(),
     consultasDeFacturacion: () =>

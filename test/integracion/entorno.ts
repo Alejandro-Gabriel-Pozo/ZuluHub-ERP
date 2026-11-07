@@ -145,7 +145,7 @@ export function crearEntornoDePrueba(
       PLATAFORMA: base.plataforma,
       TRABAJOS: base.trabajos,
     },
-    armar: (db, contexto) =>
+    armar: (db, contexto, modo) =>
       ajustar({
         db,
         tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
@@ -171,7 +171,9 @@ export function crearEntornoDePrueba(
         referenciasDeError: crearReferenciasDeErrorDePostgres(
           db.withTables<ReferenciasDeErrorDb>(),
         ),
-        autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>()),
+        autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>(), {
+          memorizar: modo.soloLectura,
+        }),
         niveles: crearNivelesDeControlDePostgres<string>(db.withTables<NivelesDeControlDb>()),
         sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
       }),

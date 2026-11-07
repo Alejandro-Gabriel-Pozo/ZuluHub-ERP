@@ -48,6 +48,13 @@ export type SesionAutenticada = Readonly<{
   cookiesDeRespuesta: readonly string[];
 }>;
 
+/**
+ * Cómo se cuenta el uso al leer la sesión. Por omisión (una vista de pantalla) el uso se escribe en la base como máximo una vez por
+ * minuto (`SEGUNDOS_ENTRE_ESCRITURAS_DE_USO`). `renovarYa`: se escribe siempre y devuelve la cookie renovada (el «Seguir» y la renovación
+ * silenciosa de la pantalla: sin esto, un uso escrito hace menos de un minuto no traería cookie nueva y la cookie moriría igual).
+ */
+export type OpcionesDeSesionDe = Readonly<{ renovarYa?: boolean }>;
+
 export interface Autenticacion {
   /**
    * La sesión del pedido en el `host` indicado (el que resolvió la puerta para este mismo pedido), o
@@ -55,7 +62,11 @@ export interface Autenticacion {
    * sesión creada en OTRO host (una cookie copiada de una marca no vale en otra, G4). Si la sesión es
    * válida la renueva (cuenta como uso). Nunca lanza por una sesión mala: lanza solo si la base falla.
    */
-  sesionDe(pedido: PedidoDeSesion, host: string): Promise<SesionAutenticada | null>;
+  sesionDe(
+    pedido: PedidoDeSesion,
+    host: string,
+    opciones?: OpcionesDeSesionDe,
+  ): Promise<SesionAutenticada | null>;
 
   /**
    * Atiende un pedido a `/api/auth/*` (ingreso con Google, retorno, leer sesión, cerrar sesión) para el

@@ -5,10 +5,10 @@ import {
   elegirEmpresa,
   empresasDeLaPersona,
   iniciarIngresoConGoogle,
-  renovarSesion,
   resolverEmpresa,
   sucursalesDeLaEmpresa,
 } from "../../src/composicion/sesion-y-empresa";
+import { renovarSesion } from "../../src/composicion/renovar-sesion";
 import { Navegador } from "./autenticacion-ingreso-apoyo";
 import { perfilAlAzar } from "./autenticacion-ingreso-apoyo";
 import { crearBarrera } from "./entorno";

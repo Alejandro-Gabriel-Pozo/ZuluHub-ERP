@@ -280,7 +280,7 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
       crearTransacciones<TxDeApp>({
         urls: { OPERATIVO: valores.PEDERNAL_DB_APP },
         clave: leerClaveDeContexto(valores[PEDERNAL_CLAVE_CONTEXTO]),
-        armar: (db) => ({
+        armar: (db, _contexto, modo) => ({
           tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
           empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
           sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
@@ -292,7 +292,10 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
           traspasos: crearRepositorioDeTraspasos(db.withTables<IdentidadDb>()),
           trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
           auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
-          autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>()),
+          // En lectura, los permisos se resuelven una vez por transacción (o por pedido, con `conLecturasCompartidas`); al escribir, siempre se leen.
+          autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>(), {
+            memorizar: modo.soloLectura,
+          }),
           // Fiscal sobre la MISMA conexión de la transacción (una operación que cruza módulos es atómica).
           emisores: crearRepositorioDeEmisores(db.withTables<FiscalDb>()),
           domicilios: crearRepositorioDeDomicilios(db.withTables<FiscalDb>()),

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import type { ClaveDeTexto } from "../../../src/capacidades/vocabulario/catalogo";
 import { texto } from "../../../src/capacidades/vocabulario/vocabulario";
-import { empresaDelPedido } from "../servidor/sesion";
+import { dependenciasDeSesion, empresaDelPedido } from "../servidor/sesion";
 import { destinosDeModulos } from "../servidor/modulos";
 import { ArmazonDeOperacion, type DestinoActual } from "../ui/plantillas/sesion/ArmazonDeOperacion";
 import type { EmpresaParaMostrar } from "../ui/plantillas/sesion/textos-de-empresa";
@@ -48,17 +48,24 @@ export async function pantallaDeOperacion(
   if (!entrada.ok) return <PantallaDeErrorDeEntrada error={entrada.error} />;
   if (entrada.dato.tipo !== "ENTRA") redirect("/empresa");
   const { empresa, contexto } = entrada.dato;
-  const resultado = await contenido({ empresa, contexto });
-  const titulado = esConTitulo(resultado);
-  return (
-    <ArmazonDeOperacion
-      titulo={titulado ? resultado.tituloResuelto : texto({}, opciones.titulo)}
-      {...(opciones.actual === undefined ? {} : { actual: opciones.actual })}
-      marca={puerta.marca.nombre}
-      empresa={empresa.nombre}
-      modulos={await destinosDeModulos(contexto)}
-    >
-      {titulado ? resultado.cuerpo : resultado}
-    </ArmazonDeOperacion>
-  );
+  // Todas las lecturas de esta pantalla (la propia y la de la barra) comparten una transacción de solo lectura y los permisos se leen una
+  // vez: lo que antes eran 5 transacciones y 7 lecturas del rol es una de cada. Cada consulta sigue exigiendo su acción al guard. Nada
+  // sobrevive al pedido: el contexto lo armó el servidor para este pedido y la unidad se cierra al terminar de armar la pantalla.
+  const armar = async () => {
+    const resultado = await contenido({ empresa, contexto });
+    const titulado = esConTitulo(resultado);
+    return (
+      <ArmazonDeOperacion
+        titulo={titulado ? resultado.tituloResuelto : texto({}, opciones.titulo)}
+        {...(opciones.actual === undefined ? {} : { actual: opciones.actual })}
+        marca={puerta.marca.nombre}
+        empresa={empresa.nombre}
+        modulos={await destinosDeModulos(contexto)}
+      >
+        {titulado ? resultado.cuerpo : resultado}
+      </ArmazonDeOperacion>
+    );
+  };
+  const compartir = dependenciasDeSesion.lecturasCompartidas?.();
+  return compartir === undefined ? armar() : compartir.conLecturasCompartidas(contexto, armar);
 }
