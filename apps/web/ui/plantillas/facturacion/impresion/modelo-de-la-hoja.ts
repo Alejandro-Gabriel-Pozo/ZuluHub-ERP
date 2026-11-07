@@ -16,8 +16,8 @@ import { filaDeLeyenda } from "./fila-de-leyenda";
 
 /**
  * El modelo de vista de la hoja imprimible: de lo que trae el modelo de impresión (`ModeloImpreso` de fiscal, ya armado por el servidor),
- * TODO lo que la hoja dibuja y NADA más. La UI no importa `src/modulos/**`: el tipo es propio y estructural (importes y fechas son texto).
- * Lista blanca a propósito: `referencias`, `descuento`, la marca de logo y color y la versión no están, así que no se dibujan (D-109).
+ * TODO lo que la hoja dibuja y NADA más. La UI no importa `src/modulos/**`, así que el tipo es propio y estructural: el modelo de impresión lo cumple tal cual (los importes y las fechas son texto).
+ * Es una lista blanca a propósito: `referencias`, `descuento`, la marca de logo y color y la versión de representación no están, así que no se dibujan (D-109: primera entrega sin referencias ni estadía).
  * Previene: imprimir un dato que el dueño no aprobó, o un importe que pasó por `number` (ADR-006). Chequeo: `test/web/impresion-modelo.test.ts`.
  */
 
