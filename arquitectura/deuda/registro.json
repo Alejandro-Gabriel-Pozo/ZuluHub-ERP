@@ -342,7 +342,7 @@
   {
     "id": "permisos-y-acciones-menores-del-ci",
     "archivos": [".github/workflows/ci.yml", ".github/workflows/codeql.yml"],
-    "descripcion": "Pendiente menor de acciones (informe de CI §3.2 D10): la imagen de gitleaks está fijada por tag y no por digest. Falta un digest verificable (pregunta pendiente al dueño); el resto de D10 se pagó (`security-events: write` por job en `codeql.yml`; `permissions:` redundante quitado de `dependencias`). El de `guardian` se QUEDA a propósito: los casos EV-024, EV-027 y EV-045 de la batería de evasión anclan su texto.",
+    "descripcion": "Pendiente menor de acciones (informe de CI §3.2 D10): la imagen de gitleaks está fijada por tag y no por digest. Falta un digest verificable (pregunta pendiente al dueño).",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"

@@ -14,11 +14,16 @@ updates:
     groups:
       marco-web:
         patterns: ["next", "react", "react-dom", "@types/react", "@types/react-dom"]
+      # `@vitest/browser` y `@vitest/browser-playwright` exigen en `peerDependencies` la MISMA versión exacta de `vitest`: si cada uno
+      # llegara en su PR, el de uno rompería al otro. Va ANTES de `playwright`, que ya no nombra a `@vitest/browser-playwright`.
+      vitest:
+        patterns: ["vitest", "@vitest/*"]
       playwright:
-        patterns:
-          ["playwright", "@playwright/*", "@vitest/browser-playwright", "@axe-core/playwright"]
+        patterns: ["playwright", "@playwright/*", "@axe-core/playwright"]
+      # Solo menores y parches: una mayor de desarrollo llega sola, para que se pueda revisar y revertir sin arrastrar lo demás.
       desarrollo:
         dependency-type: development
+        update-types: ["minor", "patch"]
     ignore:
       # Los tipos de Node tienen que coincidir con el Node que corre (24): subir a otra mayor
       # describiría funciones que el entorno de ejecución no tiene.
