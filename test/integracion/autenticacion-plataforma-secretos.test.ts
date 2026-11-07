@@ -14,6 +14,7 @@ import {
   decodificarBase32,
   otroNavegadorConLaSesion,
   type PlataformaDePrueba,
+  usarFechaQuietaDeTotp,
 } from "./autenticacion-plataforma-apoyo";
 import { crearBaseAparte } from "./entorno";
 
@@ -32,6 +33,7 @@ type Alta = Readonly<{ qrSvg: string; secreto: string; codigosDeRecuperacion: st
 type Vista = { ruta: string; estado: number; texto: string; cabeceras: string; esAlta: boolean };
 
 describe.skipIf(base === null)("consola de plataforma: ningún secreto fuera de su lugar", () => {
+  usarFechaQuietaDeTotp();
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let dueno: pg.Client;
   let proveedor: ProveedorLocal;
