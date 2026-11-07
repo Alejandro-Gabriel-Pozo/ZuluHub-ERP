@@ -36,6 +36,13 @@ const { expandir, archivoDe } = require("../../arquitectura/planificar-mutacion.
  *    habitual (barriles `publico.ts`, puertos, tipos) y mirarlos todos son 30 archivos sin relación con una partición;
  *  - un hijo que ningún archivo mutado importa (nadie lo usa o lo usa solo una prueba) no se ve;
  *  - solo se ven los especificadores relativos (`./`, `../`, `.`): un alias de ruta o un paquete no se resuelve.
+ *  - solo se reconocen `require(...)`, `import(...)`, `import … from` y `export … from`; NO se ve una carga con otro nombre o forma:
+ *    `createRequire(...)` (el `require` renombrado), `(0, require)("./x")`, `module.require(...)`, `import.meta.resolve(...)` ni
+ *    `new URL("./x", import.meta.url)`;
+ *  - lo que se descarta por el NOMBRE no se mira por dentro: un hijo llamado `x.json.ts` se toma por dato, un `x.test.ts` que no es
+ *    una prueba se toma por prueba y un `.d.ts` con código ejecutable se toma por tipos;
+ *  - un motivo de la lista solo prueba que es una frase (40 caracteres, 6 palabras): que tenga sentido lo mira quien revisa el
+ *    cambio (el responsable de la lista figura en `.github/CODEOWNERS`).
  */
 
 const RAIZ = join(import.meta.dirname, "../..");
