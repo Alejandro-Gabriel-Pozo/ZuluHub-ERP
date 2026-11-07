@@ -1,9 +1,9 @@
 import { Kysely, PostgresDialect } from "kysely";
-import pg from "pg";
 import { err, ok } from "../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../puertos/transacciones";
 import type { TransaccionesPublicas } from "../../puertos/transacciones-publicas";
 import { ErrorDeConfiguracion, traducirErrorDeBase } from "./errores";
+import { tomarPozo } from "./pozos";
 import type { SinTablas } from "./transacciones";
 
 /**
@@ -48,13 +48,16 @@ export function crearTransaccionesPublicas<Tx>(
 
   function db(): Kysely<SinTablas> {
     if (conexion !== null) return conexion;
-    const pool = new pg.Pool({
-      connectionString: configuracion.url,
-      max: configuracion.maximoDeConexiones ?? 5,
+    const { paraKysely } = tomarPozo({
+      url: configuracion.url,
+      ...(configuracion.maximoDeConexiones === undefined
+        ? {}
+        : { maximoDeConexiones: configuracion.maximoDeConexiones }),
+      ...(configuracion.alCortarseUnaConexionOciosa === undefined
+        ? {}
+        : { alCortarseUnaConexionOciosa: configuracion.alCortarseUnaConexionOciosa }),
     });
-    // Sin este oyente, el corte de una conexión ociosa tira abajo el proceso entero.
-    pool.on("error", (error) => configuracion.alCortarseUnaConexionOciosa?.(error));
-    conexion = new Kysely<SinTablas>({ dialect: new PostgresDialect({ pool }) });
+    conexion = new Kysely<SinTablas>({ dialect: new PostgresDialect({ pool: paraKysely }) });
     return conexion;
   }
 

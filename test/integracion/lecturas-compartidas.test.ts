@@ -253,16 +253,34 @@ describe.skipIf(base === null)("lecturas compartidas por pedido", () => {
     expect(avisos.filter((m) => m.includes("already executing a query"))).toEqual([]);
   });
 
-  it("una lectura que pide otra dentro de su propio trabajo no se traba esperándose a sí misma: la de adentro abre la suya", async () => {
+  it("una lectura que pide otra dentro de su propio trabajo no se traba y falla cerrado (error tipado), con una sola conexión", async () => {
     const contexto = nuevoContexto(a);
     empezar();
     const r = await entorno.conLecturasCompartidas(contexto, () =>
-      entorno.ejecutar({ contexto, aislamiento: "read committed", soloLectura: true }, async () =>
-        ok(await leerEmpresa(contexto)),
-      ),
+      entorno.ejecutar({ contexto, aislamiento: "read committed", soloLectura: true }, async () => {
+        const adentro = await entorno.ejecutar(
+          { contexto, aislamiento: "read committed", soloLectura: true },
+          () => Promise.resolve(ok(1)),
+        );
+        return ok(adentro);
+      }),
     );
-    expect(r).toEqual({ ok: true, valor: a.empresa });
-    expect(cuantas(BEGIN)).toBe(2);
+    expect(r).toMatchObject({ ok: true, valor: { ok: false, error: { tipo: "Inesperado" } } });
+    expect(cuantas(BEGIN)).toBe(1);
+    expect((await conectados()).enTransaccion).toBe(0);
+  });
+
+  it("una escritura que pide otra transacción dentro de su propio trabajo falla cerrado (error tipado): no abre una segunda conexión", async () => {
+    const contexto = nuevoContexto(a);
+    empezar();
+    const r = await entorno.conLecturasCompartidas(contexto, () =>
+      entorno.ejecutar({ contexto }, async () => {
+        const adentro = await entorno.ejecutar({ contexto }, () => Promise.resolve(ok(1)));
+        return ok(adentro);
+      }),
+    );
+    expect(r).toMatchObject({ ok: true, valor: { ok: false, error: { tipo: "Inesperado" } } });
+    expect(cuantas(BEGIN)).toBe(1);
     expect((await conectados()).enTransaccion).toBe(0);
   });
 
@@ -289,6 +307,75 @@ describe.skipIf(base === null)("lecturas compartidas por pedido", () => {
     // Una sola conexión del pedido: un solo BEGIN, y no queda nada abierto.
     expect(cuantas(BEGIN)).toBe(1);
     expect((await conectados()).enTransaccion).toBe(0);
+  });
+
+  it("el orden inverso: una escritura primero y una lectura EN PARALELO dentro de la unidad también falla cerrado (la lectura), con una sola conexión del pedido", async () => {
+    const contexto = nuevoContexto(a);
+    empezar();
+    const [escritura, lectura] = await entorno.conLecturasCompartidas(contexto, () =>
+      Promise.all([
+        entorno.ejecutar({ contexto }, async ({ db }) => {
+          await sql`select pg_sleep(0.1)`.execute(db);
+          return ok(1);
+        }),
+        // Arranca mientras la escritura de arriba está en curso.
+        new Promise<void>((r) => setTimeout(r, 30)).then(() =>
+          entorno.ejecutar({ contexto, aislamiento: "read committed", soloLectura: true }, () =>
+            Promise.resolve(ok(2)),
+          ),
+        ),
+      ]),
+    );
+    expect(escritura).toEqual({ ok: true, valor: 1 });
+    expect(lectura).toMatchObject({ ok: false, error: { tipo: "Inesperado" } });
+    expect(cuantas(BEGIN)).toBe(1);
+    expect((await conectados()).enTransaccion).toBe(0);
+  });
+
+  it("dos escrituras en paralelo dentro del pedido: la segunda falla cerrado (no hay dos conexiones del mismo pedido)", async () => {
+    const contexto = nuevoContexto(a);
+    empezar();
+    const [primera, segunda] = await entorno.conLecturasCompartidas(contexto, () =>
+      Promise.all([
+        entorno.ejecutar({ contexto }, async ({ db }) => {
+          await sql`select pg_sleep(0.1)`.execute(db);
+          return ok(1);
+        }),
+        new Promise<void>((r) => setTimeout(r, 30)).then(() =>
+          entorno.ejecutar({ contexto }, () => Promise.resolve(ok(2))),
+        ),
+      ]),
+    );
+    expect(primera).toEqual({ ok: true, valor: 1 });
+    expect(segunda).toMatchObject({ ok: false, error: { tipo: "Inesperado" } });
+    expect(cuantas(BEGIN)).toBe(1);
+  });
+
+  it("una transacción de escritura con `read committed` (sin solo lectura) NO se une a la de solo lectura: va en la suya y se confirma", async () => {
+    const contexto = nuevoContexto(a);
+    empezar();
+    const nombre = `anexo-${Date.now()}`;
+    const r = await entorno.conLecturasCompartidas(contexto, async () => {
+      await leerEmpresa(contexto);
+      // Escribe con `read committed` pero SIN `soloLectura`: si se uniera, la transacción de solo lectura la rechazaría (25006).
+      const escritura = await entorno.ejecutar(
+        { contexto, aislamiento: "read committed" },
+        async ({ db }) => {
+          await sql`insert into sucursal (empresa_id, nombre) values (${a.empresa}, ${nombre})`.execute(
+            db,
+          );
+          return ok(1);
+        },
+      );
+      return escritura;
+    });
+    expect(r).toEqual({ ok: true, valor: 1 });
+    const { rows } = await dueno.query(
+      "select 1 from sucursal where empresa_id = $1 and nombre = $2",
+      [a.empresa, nombre],
+    );
+    expect(rows).toHaveLength(1);
+    expect(cuantas(BEGIN)).toBe(2);
   });
 
   it("40 pedidos simultáneos de dos empresas, sobre un pozo de 5 conexiones, no se cruzan y no se traban", async () => {

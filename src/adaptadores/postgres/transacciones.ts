@@ -1,6 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { Kysely, PostgresDialect, sql, type ControlledTransaction } from "kysely";
-import pg from "pg";
 import type { Contexto, TipoDeContexto } from "../../contexto/contexto";
 import type {
   ErrorDePersistencia,
@@ -11,6 +10,7 @@ import { err, type Resultado } from "../../primitivas/resultado/resultado";
 import type { LecturasCompartidas } from "../../puertos/transacciones";
 import { firmarContexto, type ClaveDeContexto } from "./contexto-firmado";
 import { ErrorDeConfiguracion, esReintentable, traducirErrorDeBase } from "./errores";
+import { tomarPozo } from "./pozos";
 
 export { ErrorDeConfiguracion };
 
@@ -52,6 +52,8 @@ export type ConfiguracionDeTransacciones<Tx> = Readonly<{
    */
   armarDeLectura?: (db: Kysely<SinTablas>, contexto: Contexto) => Tx;
   maximoDeConexiones?: number;
+  /** Cuánto espera un pedido por una conexión libre (por omisión, `PLAZO_PARA_CONSEGUIR_CONEXION_EN_MS`). Lo fija el primero que arma el pozo. */
+  plazoParaConseguirConexionEnMs?: number;
   /**
    * Se avisa cuando el servidor corta una conexión OCIOSA (por ejemplo, Neon al escalar a cero). No
    * afecta a ninguna operación: el pool descarta la conexión y abre otra. Sirve para registrarlo.
@@ -101,11 +103,10 @@ export function crearTransacciones<Tx>(
   ) {
     throw new ErrorDeConfiguracion("falta la clave de contexto (de 32 bytes o más)");
   }
-  const conexiones = new Map<TipoDeContexto, Kysely<SinTablas>>();
+  // Una conexión por CADENA (es decir, por rol de base), no por puerta: las puertas que entran con el mismo rol comparten pozo.
+  const conexiones = new Map<string, Kysely<SinTablas>>();
 
   function conexionPara(tipo: TipoDeContexto): Kysely<SinTablas> {
-    const existente = conexiones.get(tipo);
-    if (existente !== undefined) return existente;
     // La invitación y la sesión comparten el rol de base de la aplicación: sin cadena propia, usan la operativa.
     const url =
       configuracion.urls[tipo] ??
@@ -113,14 +114,22 @@ export function crearTransacciones<Tx>(
     if (url === undefined || url === "") {
       throw new ErrorDeConfiguracion(`falta la cadena de conexión de la puerta ${tipo}`);
     }
-    const pool = new pg.Pool({
-      connectionString: url,
-      max: configuracion.maximoDeConexiones ?? 5,
+    const existente = conexiones.get(url);
+    if (existente !== undefined) return existente;
+    const { paraKysely } = tomarPozo({
+      url,
+      ...(configuracion.maximoDeConexiones === undefined
+        ? {}
+        : { maximoDeConexiones: configuracion.maximoDeConexiones }),
+      ...(configuracion.plazoParaConseguirConexionEnMs === undefined
+        ? {}
+        : { plazoParaConseguirConexionEnMs: configuracion.plazoParaConseguirConexionEnMs }),
+      ...(configuracion.alCortarseUnaConexionOciosa === undefined
+        ? {}
+        : { alCortarseUnaConexionOciosa: configuracion.alCortarseUnaConexionOciosa }),
     });
-    // Sin este oyente, el corte de una conexión ociosa tira abajo el proceso entero.
-    pool.on("error", (error) => configuracion.alCortarseUnaConexionOciosa?.(error));
-    const db = new Kysely<SinTablas>({ dialect: new PostgresDialect({ pool }) });
-    conexiones.set(tipo, db);
+    const db = new Kysely<SinTablas>({ dialect: new PostgresDialect({ pool: paraKysely }) });
+    conexiones.set(url, db);
     return db;
   }
 
@@ -188,6 +197,8 @@ export function crearTransacciones<Tx>(
     estado: "ABIERTA" | "ROTA" | "CERRADA";
     abriendo: Promise<Readonly<{ trx: ControlledTransaction<SinTablas>; tx: Tx }>> | null;
     readonly enCurso: Set<Promise<unknown>>;
+    /** Cuántas transacciones PROPIAS (que no pudieron unirse) corre este pedido ahora: mientras haya una, no se abre otra ni se une una lectura. */
+    sueltasEnCurso: number;
     /** Las lecturas unidas corren de a una (una conexión no atiende dos consultas a la vez): cada una espera a la anterior. */
     cola: Promise<unknown>;
   };
@@ -307,28 +318,38 @@ export function crearTransacciones<Tx>(
   return {
     async ejecutar(opciones, trabajo) {
       const unidad = almacen.getStore();
-      if (unidad !== undefined && unidad.estado === "ABIERTA") {
-        if (dentroDeUnaLectura.getStore() === undefined && admite(unidad, opciones)) {
-          return ejecutarUnida(unidad, opciones, trabajo, () => ejecutarSolo(opciones, trabajo));
-        }
-        // No puede unirse: antes de abrir otra transacción se suelta la de la unidad (nunca dos conexiones del mismo pedido a la vez:
-        // con el pozo chico, muchos pedidos así se esperarían entre sí).
-        if (unidad.abriendo !== null && unidad.enCurso.size === 0) await cerrarUnidad(unidad);
-        // Con una lectura unida EN CURSO desde otra rama del pedido (no desde adentro de ella) no se puede soltar la conexión: abrir otra
-        // sería sostener dos del mismo pozo a la vez. Falla cerrado, con un error tipado. NO se debe abrir una escritura (ni otra
-        // transacción que no pueda unirse) en paralelo con las lecturas de un `conLecturasCompartidas`: esperá a que terminen.
-        else if (unidad.abriendo !== null && dentroDeUnaLectura.getStore() === undefined) {
-          const caso: ErrorInesperado = {
-            tipo: "Inesperado",
-            sqlstate: null,
-            mensaje:
-              "una transacción que no puede compartirse se pidió en paralelo con las lecturas del pedido: no se abre una segunda conexión",
-          };
-          registrar(caso);
-          return err(caso);
-        }
+      const anidada = dentroDeUnaLectura.getStore() !== undefined;
+      if (unidad === undefined || unidad.estado !== "ABIERTA")
+        return ejecutarSolo(opciones, trabajo);
+      // Dentro de un pedido con lecturas compartidas, una transacción NO abre una segunda conexión del pozo: con el pozo chico, muchos pedidos
+      // así se esperarían entre sí. Falla cerrado con un error tipado (`Inesperado`) si (a) se pide DENTRO de otra transacción del pedido
+      // (anidada: dentro de la lectura unida, o dentro de una propia, que cuenta como «en curso»), o (b) hay otra transacción propia en curso, o una lectura unida y esta no puede unirse
+      // (ramas en paralelo). Sin lugar en el pozo, el pedido espera hasta `PLAZO_PARA_CONSEGUIR_CONEXION_EN_MS` y falla con el error tipado
+      // de pozo agotado. NO abras una escritura (ni otra transacción que no pueda unirse) en paralelo con las lecturas de un
+      // `conLecturasCompartidas`, ni dos a la vez, ni una dentro de otra: esperá a que la anterior termine.
+      const fallaCerrado = () => {
+        const caso: ErrorInesperado = {
+          tipo: "Inesperado",
+          sqlstate: null,
+          mensaje:
+            "se pidió una transacción dentro de otra, o en paralelo con otra, del mismo pedido: no se abre una segunda conexión",
+        };
+        registrar(caso);
+        return err(caso);
+      };
+      if (anidada || unidad.sueltasEnCurso > 0) return fallaCerrado();
+      if (admite(unidad, opciones)) {
+        return ejecutarUnida(unidad, opciones, trabajo, () => ejecutarSolo(opciones, trabajo));
       }
-      return ejecutarSolo(opciones, trabajo);
+      if (unidad.enCurso.size > 0) return fallaCerrado();
+      // No puede unirse y no hay nada en curso: se suelta la conexión de la unidad ANTES de abrir otra.
+      unidad.sueltasEnCurso += 1;
+      try {
+        if (unidad.abriendo !== null) await cerrarUnidad(unidad);
+        return await ejecutarSolo(opciones, trabajo);
+      } finally {
+        unidad.sueltasEnCurso -= 1;
+      }
     },
 
     async conLecturasCompartidas(contexto, trabajo) {
@@ -344,6 +365,7 @@ export function crearTransacciones<Tx>(
         estado: "ABIERTA",
         abriendo: null,
         enCurso: new Set(),
+        sueltasEnCurso: 0,
         cola: Promise.resolve(),
       };
       let resultado: Awaited<ReturnType<typeof trabajo>>;

@@ -139,6 +139,7 @@ export function crearEntornoDePrueba(
   base: BaseDePruebas,
   maximoDeConexiones = 5,
   ajustar: (tx: TxDePrueba) => TxDePrueba = (tx) => tx,
+  plazoParaConseguirConexionEnMs?: number,
 ): TransaccionesDePostgres<TxDePrueba> {
   const armarTx = (
     db: Kysely<SinTablas>,
@@ -185,6 +186,7 @@ export function crearEntornoDePrueba(
     armarDeLectura: (db, contexto) =>
       armarTx(db, contexto, crearAutorizacionDeLecturaDePostgres(db.withTables<AutorizacionDb>())),
     maximoDeConexiones,
+    ...(plazoParaConseguirConexionEnMs === undefined ? {} : { plazoParaConseguirConexionEnMs }),
     clave: base.clave,
   });
 }
