@@ -558,8 +558,6 @@
     "id": "validacion-de-datos--prohibidos-y-duplicados",
     "archivos": [
       "apps/plataforma/logica/entrada-de-submarca.ts",
-      "apps/plataforma/logica/entrada-del-plan.ts",
-      "apps/plataforma/logica/filtros-de-empresas.ts",
       "apps/web/ui/plantillas/facturacion/impresion/ayudas-de-impresion.tsx",
       "migraciones/0005_administracion.sql",
       "migraciones/0006_fiscal.sql",
@@ -567,12 +565,10 @@
       "migraciones/0009_facturacion.sql",
       "migraciones/0019_contacto_de_la_sucursal.sql",
       "migraciones/0022_nombre_de_la_sucursal_en_el_comprobante.sql",
-      "src/adaptadores/correo/configuracion.ts",
       "src/capacidades/activos/direccion-externa.ts",
       "src/capacidades/experiencia/vidriera/descripcion.ts",
       "src/capacidades/planes/version-de-plan.ts",
       "src/capacidades/vocabulario/texto-visible.ts",
-      "src/composicion/entorno.ts",
       "src/composicion/entradas-de-facturacion.ts",
       "src/modulos/empresas/dominio/sucursal.ts",
       "src/modulos/fiscal/casos-de-uso/resincronizar-y-ambiente.ts",
@@ -590,7 +586,7 @@
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-11-06",
-    "motivo": "Introducir los chequeos de lista de permitidos y de fuente única (PR 2 de C1) sin reescribir de una vez todas las validaciones existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento (las migraciones ya aplicadas no se editan: se corrigen con una migración nueva). La cuenta por archivo (que solo baja) está en arquitectura/deuda/validacion-de-datos.json. puerta.ts y ruta-de-retorno.ts ya se reescribieron con lista de permitidos (Deuda 4, #209 y #214) y salieron del presupuesto; adaptadores/correo/configuracion.ts queda con 2 prohibiciones heredadas de la lista del nombre de marca.",
+    "motivo": "Introducir los chequeos de lista de permitidos y de fuente única (PR 2 de C1) sin reescribir de una vez todas las validaciones existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento (las migraciones ya aplicadas no se editan: se corrigen con una migración nueva). La cuenta por archivo (que solo baja) está en arquitectura/deuda/validacion-de-datos.json. puerta.ts y ruta-de-retorno.ts ya se reescribieron con lista de permitidos (Deuda 4, #209 y #214) y salieron del presupuesto; configuracion.ts del correo y entorno.ts se reescribieron con lista de permitidos (Deuda 9) y salieron del presupuesto. entrada-del-plan.ts y filtros-de-empresas.ts salieron por P2 (fuente única: importan su tope del dueño, 500 y 200), no por lista de permitidos.",
     "aprobadoPor": "orquestador (PR 2 de C1 autorizado el 2026-11-06 por mensaje entre sesiones; decisión del dueño 2026-11-05). Reescribir YA lo existente que viola P1 (en vez de dejarlo pasar): el dueño, 2026-11-05 y 2026-11-06, conversación con el orquestador; constancia en `11-especificaciones/decisiones-del-dueno-2026-11.md` del repo de docs, fila «Principios P1 y P2 de validación».",
     "vence": "2027-01-05"
   }

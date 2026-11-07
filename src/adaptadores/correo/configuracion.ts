@@ -51,7 +51,10 @@ const LARGO_MAXIMO_DE_MARCA = 60;
  *   la `@` (ninguna dirección de remitente real las lleva), un nombre con símbolos fuera de la lista, o más de 60 caracteres.
  * Chequeo: `configuracion.test.ts` y la mutación del archivo.
  */
-const DIRECCION_PERMITIDA = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/;
+const DIRECCION = "[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)+";
+const DIRECCION_PERMITIDA = new RegExp(`^${DIRECCION}$`);
+/** El cierre `<direccion>` del final: lo que queda antes es el nombre (lo valida su lista) y lo de adentro, la dirección. */
+const DIRECCION_ENTRE_ANGULOS = new RegExp(`<${DIRECCION}>$`);
 const REGLAS_DEL_NOMBRE = { maximo: LARGO_MAXIMO_DE_MARCA, exigirUnaLetra: false } as const;
 
 function direccionValida(texto: string): boolean {
@@ -81,10 +84,9 @@ export function armarFrom(nombre: string, direccion: string): string | null {
 
 /** El remitente listo para el encabezado `From` (`direccion` o `"Nombre" <direccion>`), o `null` si no sirve. `texto` ya viene sin blancos en los extremos. */
 function remitenteCanonico(texto: string): string | null {
-  if (!texto.endsWith(">")) return direccionValida(texto) ? texto : null;
-  // Sin `<` (`abre` = -1) el «nombre» sería la propia dirección, que tiene `@`: la lista de permitidos del nombre la rechaza.
-  const abre = texto.lastIndexOf("<");
-  return armarFrom(texto.slice(0, abre), texto.slice(abre + 1, -1));
+  const cierre = DIRECCION_ENTRE_ANGULOS.exec(texto);
+  if (cierre === null) return direccionValida(texto) ? texto : null;
+  return armarFrom(texto.slice(0, cierre.index), cierre[0].slice(1, -1));
 }
 
 function motivoDelNombre(motivo: MotivoDeTextoInvalido): string {
