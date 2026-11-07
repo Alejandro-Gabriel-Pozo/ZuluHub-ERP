@@ -66,6 +66,15 @@ const monotributo = contextoDeEmision({
  */
 const V1 = { versionDeRepresentacion: 1 } as const;
 
+/**
+ * Los golden de la versión 2 NO se regeneran (reimprimen idéntico lo sellado con la 2), así que piden la 2 de forma explícita y no la
+ * «actual», que ahora es la 3.
+ */
+const con2 = (c: ComprobanteParaImprimir): ComprobanteParaImprimir => ({
+  ...c,
+  versionDeRepresentacion: 2,
+});
+
 describe("modeloDeImpresion: golden de la versión 1 (intactos)", () => {
   it("factura B con dos marcas: solo cambia el bloque marca", async () => {
     const uno = modelo(imprimible(facturaB, V1), MARCA_UNO);
@@ -150,7 +159,7 @@ describe("modeloDeImpresion: bloque fiscal", () => {
       caeVence: "2026-10-23",
     });
     expect(m.versionDeRepresentacion).toBe(VERSION_DE_REPRESENTACION_ACTUAL);
-    expect(VERSION_DE_REPRESENTACION_ACTUAL).toBe(2);
+    expect(VERSION_DE_REPRESENTACION_ACTUAL).toBe(3);
     expect(modelo(imprimible(facturaB, V1)).versionDeRepresentacion).toBe(1);
   });
 
@@ -258,6 +267,7 @@ describe("modeloDeImpresion: receptor, renglones y totales", () => {
       condicionIva: "CONSUMIDOR_FINAL",
       domicilio: null,
       leyenda: "A CONSUMIDOR FINAL",
+      leyendaDeCondicion: "A CONSUMIDOR FINAL",
     });
     expect(modelo(imprimible(facturaB, V1)).receptor).toEqual({
       nombre: null,
@@ -289,7 +299,7 @@ describe("modeloDeImpresion: receptor, renglones y totales", () => {
     expect(modelo(imprimible(conDescuento)).renglones[0]?.descuento).toBe("10.0000");
   });
 
-  it("un pasaporte con letras sale TAL CUAL en el modelo (v1 y v2, sin versión nueva); a ARCA va solo la parte numérica pero lo impreso no la cambia", () => {
+  it("un pasaporte con letras sale TAL CUAL en el modelo en todas las versiones (v1, v2 y la vigente); lo impreso no es lo que va a ARCA", () => {
     const turista = facturaArmada(
       {
         nombre: "Jane Doe",
@@ -299,10 +309,13 @@ describe("modeloDeImpresion: receptor, renglones y totales", () => {
       },
       [renglon("121.00", "1", "21")],
     );
-    for (const m of [modelo(imprimible(turista)), modelo(imprimible(turista, V1))]) {
-      expect(m.receptor.documento).toEqual({ tipo: "PASAPORTE", numero: "ABC123456" });
+    for (const version of [1, 2, VERSION_DE_REPRESENTACION_ACTUAL] as const) {
+      const m = modelo(imprimible(turista, { versionDeRepresentacion: version }));
+      expect(m.receptor.documento, `v${String(version)}`).toEqual({
+        tipo: "PASAPORTE",
+        numero: "ABC123456",
+      });
     }
-    expect(VERSION_DE_REPRESENTACION_ACTUAL).toBe(2);
   });
 
   it("A discrimina neto e IVA por alícuota", () => {
@@ -401,7 +414,7 @@ describe("modeloDeImpresion: notas, QR y leyendas", () => {
 
 describe("modeloDeImpresion: errores", () => {
   it("una versión de representación desconocida no se dibuja", () => {
-    for (const versionDeRepresentacion of [0, 3, -1, 1.5, Number.NaN]) {
+    for (const versionDeRepresentacion of [0, 4, -1, 1.5, Number.NaN]) {
       expect(
         modeloDeImpresion(imprimible(facturaB, { versionDeRepresentacion }), MARCA_UNO),
       ).toEqual({
@@ -536,15 +549,18 @@ function notaSobreFacturaB(clase: "NOTA_CREDITO" | "NOTA_DEBITO"): ComprobantePa
 
 describe("modeloDeImpresion: golden de la versión 2 (textos legales)", () => {
   const casos: readonly (readonly [string, ComprobanteParaImprimir])[] = [
-    ["factura-b-consumidor-final", imprimible(facturaB)],
-    ["factura-b-consumidor-final-identificado", imprimible(facturaBConsumidorFinalIdentificado)],
-    ["factura-b-a-exento", imprimible(facturaBAExento)],
-    ["nota-de-credito-b-consumidor-final", notaSobreFacturaB("NOTA_CREDITO")],
-    ["nota-de-debito-b-consumidor-final", notaSobreFacturaB("NOTA_DEBITO")],
-    ["factura-c-consumidor-final", imprimible(facturaCConsumidorFinal)],
-    ["factura-a-inscripto", imprimible(facturaAInscripto)],
-    ["factura-a-monotributista", imprimible(facturaAMonotributista)],
-    ["nota-de-credito-a-monotributista", notaSobreFacturaAMonotributista()],
+    ["factura-b-consumidor-final", con2(imprimible(facturaB))],
+    [
+      "factura-b-consumidor-final-identificado",
+      con2(imprimible(facturaBConsumidorFinalIdentificado)),
+    ],
+    ["factura-b-a-exento", con2(imprimible(facturaBAExento))],
+    ["nota-de-credito-b-consumidor-final", con2(notaSobreFacturaB("NOTA_CREDITO"))],
+    ["nota-de-debito-b-consumidor-final", con2(notaSobreFacturaB("NOTA_DEBITO"))],
+    ["factura-c-consumidor-final", con2(imprimible(facturaCConsumidorFinal))],
+    ["factura-a-inscripto", con2(imprimible(facturaAInscripto))],
+    ["factura-a-monotributista", con2(imprimible(facturaAMonotributista))],
+    ["nota-de-credito-a-monotributista", con2(notaSobreFacturaAMonotributista())],
   ];
   for (const [nombre, comprobante] of casos) {
     it(`golden ${nombre}`, async () => {
@@ -574,8 +590,8 @@ const conIibb = (iibbNumero: string | null, iibbCondicion: CondicionIibb | null)
 
 describe("modeloDeImpresion: Ingresos Brutos, número o «No contribuyente» (D-115/D-116)", () => {
   const casos: readonly (readonly [string, ComprobanteParaImprimir])[] = [
-    ["factura-b-iibb-numero", conIibb("901-123456-7", null)],
-    ["factura-b-iibb-no-contribuyente", conIibb(null, "NO_CONTRIBUYENTE")],
+    ["factura-b-iibb-numero", con2(conIibb("901-123456-7", null))],
+    ["factura-b-iibb-no-contribuyente", con2(conIibb(null, "NO_CONTRIBUYENTE"))],
   ];
   for (const [nombre, comprobante] of casos) {
     it(`golden ${nombre}`, async () => {
@@ -857,7 +873,7 @@ describe("modeloDeImpresion: la versión 1 sigue imprimiendo lo de antes", () =>
       imprimible(facturaCConsumidorFinal),
       imprimible(facturaAInscripto),
       imprimible(facturaBAExento),
-    ].map(sinCondicionDeIibb)) {
+    ].map((c) => sinCondicionDeIibb(con2(c)))) {
       const v1 = modelo({ ...comprobante, versionDeRepresentacion: 1 });
       const v2 = modelo(comprobante);
       const sinLosTextosLegales = {
@@ -875,7 +891,7 @@ describe("modeloDeImpresion: la versión 1 sigue imprimiendo lo de antes", () =>
     }
   });
 
-  it("solo existen la versión 1 y la 2: la siguiente a la actual no se dibuja", () => {
+  it("solo existen las versiones 1, 2 y 3: la siguiente a la actual no se dibuja", () => {
     for (const versionDeRepresentacion of [1, VERSION_DE_REPRESENTACION_ACTUAL]) {
       expect(
         modeloDeImpresion(imprimible(facturaB, { versionDeRepresentacion }), MARCA_UNO).ok,
@@ -917,7 +933,7 @@ describe("modeloDeImpresion: contacto congelado de la sucursal (D-98, D-99)", ()
   ];
   for (const [nombre, contacto] of casos) {
     it(`golden ${nombre}`, async () => {
-      const m = modelo(imprimible(facturaB, { contacto }));
+      const m = modelo(con2(imprimible(facturaB, { contacto })));
       expect(m.versionDeRepresentacion).toBe(2);
       await expect(JSON.stringify(m, null, 2)).toMatchFileSnapshot(
         `./golden/modelo-v2-${nombre}.golden.txt`,
@@ -1004,7 +1020,9 @@ describe("modeloDeImpresion: contacto congelado de la sucursal (D-98, D-99)", ()
   });
 
   it("la versión 2 con contacto es la 1 más los textos legales, el modo de precio y el contacto, y nada más", () => {
-    const comprobante = sinCondicionDeIibb(imprimible(facturaB, { contacto: CONTACTO_COMPLETO }));
+    const comprobante = sinCondicionDeIibb(
+      con2(imprimible(facturaB, { contacto: CONTACTO_COMPLETO })),
+    );
     const v1 = modelo({ ...comprobante, versionDeRepresentacion: 1 });
     const v2 = modelo(comprobante);
     const sinLoNuevo = {
@@ -1061,7 +1079,7 @@ describe("modeloDeImpresion: modo de precio (versión 2 en adelante)", () => {
  */
 describe("modeloDeImpresion: nombre de la sucursal congelado (D-114)", () => {
   it("golden: la factura B con el nombre congelado", async () => {
-    const m = modelo(imprimible(facturaB, { sucursalNombre: "Hotel Centro" }));
+    const m = modelo(con2(imprimible(facturaB, { sucursalNombre: "Hotel Centro" })));
     expect(m.versionDeRepresentacion).toBe(2);
     await expect(JSON.stringify(m, null, 2)).toMatchFileSnapshot(
       "./golden/modelo-v2-factura-b-con-nombre-de-sucursal.golden.txt",
@@ -1070,7 +1088,7 @@ describe("modeloDeImpresion: nombre de la sucursal congelado (D-114)", () => {
 
   it("golden: el nombre convive con el contacto (cada bloque en su clave, sin mezclarse)", async () => {
     const m = modelo(
-      imprimible(facturaB, { sucursalNombre: "Hotel Centro", contacto: CONTACTO_COMPLETO }),
+      con2(imprimible(facturaB, { sucursalNombre: "Hotel Centro", contacto: CONTACTO_COMPLETO })),
     );
     await expect(JSON.stringify(m, null, 2)).toMatchFileSnapshot(
       "./golden/modelo-v2-factura-b-con-nombre-y-contacto.golden.txt",

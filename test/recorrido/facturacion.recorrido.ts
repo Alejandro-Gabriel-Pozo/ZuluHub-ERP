@@ -150,6 +150,9 @@ describe.skipIf(base === null)(
       const solicitud = mundo.arca.pedidos.find((p) => p.operacion === "FECAESolicitar");
       expect(solicitud?.cuerpo).toContain("<ar:CbteTipo>6</ar:CbteTipo>");
       expect(solicitud?.cuerpo).toContain("<ar:ImpTotal>121.00</ar:ImpTotal>");
+      // Consumidor final sin identificar: DocTipo 99 / DocNro 0, como siempre (lo ya emitido no se rompe).
+      expect(solicitud?.cuerpo).toContain("<ar:DocTipo>99</ar:DocTipo>");
+      expect(solicitud?.cuerpo).toContain("<ar:DocNro>0</ar:DocNro>");
       const { rows } = await mundo.mundo.dueno.query<{ estado: string }>(
         "select estado from comprobante where empresa_id = $1",
         [mundo.empresa],
@@ -280,6 +283,78 @@ describe.skipIf(base === null)(
       expect(solicitud?.cuerpo).toContain("<ar:CbteTipo>1</ar:CbteTipo>");
       expect(solicitud?.cuerpo).toContain("<ar:DocNro>30712345671</ar:DocNro>");
       pantallaLimpia();
+    });
+
+    /** Emite una Factura A (domicilio ya cargado) y espera a que ARCA simulada la autorice; deja la pantalla en su detalle. */
+    const emitirFacturaA = async (cliente: {
+      cuit: string;
+      nombre: string;
+      condicion: string;
+      domicilio: string;
+    }) => {
+      await ir("/facturacion/comprobantes/emitir");
+      await pagina.getByLabel("Documento").selectOption({ label: "CUIT" });
+      await pagina.getByRole("textbox", { name: "CUIT" }).fill(cliente.cuit);
+      await pagina.getByRole("textbox", { name: "Nombre o razón social" }).fill(cliente.nombre);
+      await pagina.getByLabel("Condición frente al IVA").selectOption({ label: cliente.condicion });
+      await pagina.getByRole("textbox", { name: "Domicilio" }).fill(cliente.domicilio);
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByLabel("Descripción").fill("Harina x50");
+      await pagina.getByLabel("Precio con IVA").fill("121,00");
+      await pagina.getByLabel("IVA", { exact: true }).selectOption({ label: "IVA 21 %" });
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByRole("button", { name: "Emitir factura" }).click();
+      await pagina.waitForURL(/\/facturacion\/comprobantes\/[0-9a-f-]{36}$/);
+      const limite = Date.now() + 30_000;
+      while ((await pagina.getByText("Autorizada", { exact: true }).count()) === 0) {
+        if (Date.now() > limite) throw new Error("la factura A no llegó a Autorizada en 30 s");
+        await pagina.waitForTimeout(1000);
+        await pagina.reload();
+        await pagina.waitForLoadState("networkidle");
+      }
+    };
+    /** Lo que la hoja A4 visible del comprobante dice (la copia oculta es el medidor). */
+    const textoDeLaHoja = async () => {
+      await ir(`/facturacion/comprobantes/${idDelComprobante()}/imprimir`);
+      await pagina.getByText("Hoja 1 de 1").locator("visible=true").first().waitFor();
+      return pagina.locator("[data-hoja]").locator("visible=true").first().innerText();
+    };
+
+    it("Factura A impresa: CUIT, domicilio, leyenda de la condición e IVA discriminado", async () => {
+      // La Factura A del paso anterior sigue en pantalla (su detalle).
+      const texto = await textoDeLaHoja();
+      expect(texto).toContain("IVA RESPONSABLE INSCRITO");
+      expect(texto).toContain("30-71234567-1");
+      expect(texto).toContain("Av. Siempreviva 742, Rosario");
+      expect(texto).toContain("Neto gravado 21 %");
+      // El IVA se discrimina: 121,00 con IVA incluido = 100,00 neto + 21,00 de IVA, y ARCA simulada recibió lo mismo.
+      expect(texto).toContain("100,00");
+      expect(texto).toContain("21,00");
+      const solicitud = mundo.arca.pedidos.filter((p) => p.operacion === "FECAESolicitar").at(-1);
+      expect(solicitud?.cuerpo).toContain("<ar:ImpNeto>100.00</ar:ImpNeto>");
+      expect(solicitud?.cuerpo).toContain("<ar:ImpIVA>21.00</ar:ImpIVA>");
+      // A un inscripto no corresponde la leyenda de crédito fiscal del monotributo.
+      expect(texto).not.toContain("El crédito fiscal discriminado");
+      await sinViolacionesDeAxe();
+      vigilante.tomar();
+    });
+
+    it("Factura A a un monotributista: sale con la leyenda de su condición y la de crédito fiscal", async () => {
+      await emitirFacturaA({
+        cuit: "20-12345678-6",
+        nombre: "Ana Pérez",
+        condicion: "Responsable Monotributo",
+        domicilio: "Calle Falsa 123, Rosario",
+      });
+      const solicitud = mundo.arca.pedidos.filter((p) => p.operacion === "FECAESolicitar").at(-1);
+      expect(solicitud?.cuerpo).toContain("<ar:CbteTipo>1</ar:CbteTipo>");
+      expect(solicitud?.cuerpo).toContain("<ar:DocNro>20123456786</ar:DocNro>");
+      const texto = await textoDeLaHoja();
+      expect(texto).toContain("RESPONSABLE MONOTRIBUTO");
+      expect(texto).toContain("Calle Falsa 123, Rosario");
+      expect(texto).toContain("El crédito fiscal discriminado en el presente comprobante");
+      await sinViolacionesDeAxe();
+      vigilante.tomar();
     });
 
     // Pasaporte con letras (dueño, 2026-11-06, Q5): se escribe en un solo campo, se guarda y se imprime tal cual, y a ARCA (simulada) va
