@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { betterAuth } from "better-auth";
 import type pg from "pg";
+import { afterEach, beforeEach, vi } from "vitest";
 import { opcionesDeInstancia } from "../../src/adaptadores/autenticacion/opciones";
 import { configuracionDeHost } from "../../src/capacidades/autenticacion/host-de-autenticacion";
 import { LIMITES_DE_SESION_DE_PLATAFORMA } from "../../src/capacidades/autenticacion/vigencia-de-sesion";
@@ -171,6 +172,27 @@ export const codigoDeLaAplicacion = (
   instante: Date = new Date(),
   desvioEnPasos = 0,
 ): string => codigoDeTotp(decodificarBase32(secretoBase32), pasoDeTotp(instante) + desvioEnPasos);
+
+const PASO_DE_TOTP_EN_MS = 30_000;
+
+/**
+ * La FECHA quieta en la mitad de un paso de TOTP (30 s), para cada prueba del bloque donde se llama. La librería verifica el
+ * código con `Date.now()`: con el reloj real, un paso que cambia entre «enrolar» y «pedir el código siguiente» hace fallar la
+ * prueba una de cada tantas corridas (caso real: `autenticacion-plataforma-segundo-factor`, arreglado en #90 solo en ese archivo y
+ * repetido en otros ocho). Solo se congela `Date`: los temporizadores siguen reales para la base y la red. Una prueba que
+ * necesita mover la fecha usa `vi.setSystemTime`. Chequeo: `test/arquitectura/totp-con-fecha-quieta.test.ts`.
+ */
+export function usarFechaQuietaDeTotp(): void {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(
+      Math.floor(Date.now() / PASO_DE_TOTP_EN_MS) * PASO_DE_TOTP_EN_MS + PASO_DE_TOTP_EN_MS / 2,
+    );
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+}
 
 /** Un navegador nuevo (otra IP) con las mismas cookies que `n` en `host`: otro «dispositivo» con la misma sesión. */
 export function otroNavegadorConLaSesion(n: Navegador, host: string): Navegador {

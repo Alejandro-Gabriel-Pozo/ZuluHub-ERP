@@ -30,6 +30,7 @@ const cliente = (cambios: Partial<ClienteEscrito> = {}): ClienteEscrito => ({
   ...conDocumento(clienteInicial, "DNI"),
   numero: "27.345.678",
   nombre: "  Juan Pérez ",
+  domicilio: "  Av. Siempreviva 742 ",
   condicionIva: "CONSUMIDOR_FINAL",
   ...cambios,
 });
@@ -59,14 +60,18 @@ describe("el pedido de la factura", () => {
     });
   });
 
-  it("un receptor escrito a mano: solo los dígitos del número, el nombre sin los blancos de los bordes y la condición elegida", () => {
+  it("un receptor escrito a mano: el número como se escribió (el servidor lo vuelve canónico), el nombre y el domicilio sin los blancos de los bordes y la condición elegida", () => {
     const { receptor } = armarElPedido(cliente(), [renglon()], PUNTO, true);
     expect(receptor).toEqual({
       nombre: "Juan Pérez",
-      documento: { tipo: "DNI", numero: "27345678" },
+      documento: { tipo: "DNI", numero: "27.345.678" },
       condicionIva: "CONSUMIDOR_FINAL",
-      domicilio: null,
+      domicilio: "Av. Siempreviva 742",
     });
+    // Un domicilio en blanco viaja como «sin domicilio»: el servidor decide si hace falta.
+    expect(
+      armarElPedido(cliente({ domicilio: "   " }), [renglon()], PUNTO, true).receptor.domicilio,
+    ).toBeNull();
     expect(
       armarElPedido(
         cliente({
@@ -78,7 +83,7 @@ describe("el pedido de la factura", () => {
         PUNTO,
         true,
       ).receptor.documento,
-    ).toEqual({ tipo: "CUIT", numero: "30712345678" });
+    ).toEqual({ tipo: "CUIT", numero: "30-71234567-8" });
   });
 
   it("un cliente identificado que pasó a «Consumidor final» no arrastra lo escrito", () => {

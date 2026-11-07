@@ -17,6 +17,7 @@ import {
   idSiguiente,
   renglonVacio,
   sinRenglon,
+  camposDelClienteInvalidos,
   type ClienteEscrito,
   type RenglonEscrito,
 } from "./eleccion-de-emision";
@@ -31,7 +32,12 @@ import {
   type PuntoParaEmitir,
 } from "./modelo-de-emision";
 import { armarElPedido } from "./pedido-de-emision";
-import { PasoDeLosRenglones, PasoDeRevisar, PasoDelCliente } from "./PasosDeEmision";
+import {
+  PasoDeLosRenglones,
+  PasoDeRevisar,
+  PasoDelCliente,
+  type CamposConError,
+} from "./PasosDeEmision";
 import { useEnvioDeLaEmision, type EmitirLaFactura } from "./useEnvioDeLaEmision.cliente";
 
 export type PropsDePantallaDeEmitirFactura = Readonly<{
@@ -68,7 +74,11 @@ export function PantallaDeEmitirFactura({
   diccionario = {},
 }: PropsDePantallaDeEmitirFactura) {
   const puntos = aPuntosParaEmitir(puntosDeVenta);
-  const [paso, setPaso] = useState<1 | 2 | 3>(1);
+  const [pasoElegido, setPaso] = useState<1 | 2 | 3>(1);
+  // Se prende al tocar «Siguiente» con el cliente mal escrito: desde ahí los campos inválidos se marcan y la marca se va al corregirlos.
+  const [intentoElCliente, setIntentoElCliente] = useState(false);
+  // Cuenta los toques de «Siguiente» que quedaron bloqueados: cada uno lleva el foco al primer campo con error.
+  const [bloqueos, setBloqueos] = useState(0);
   const [cliente, setCliente] = useState<ClienteEscrito>(clienteInicial);
   const [renglones, setRenglones] = useState<readonly RenglonEscrito[]>([renglonVacio(1)]);
   const [puntoElegido, setPuntoElegido] = useState("");
@@ -83,6 +93,23 @@ export function PantallaDeEmitirFactura({
   });
 
   const { estado } = envio;
+  // El campo del cliente que el servidor rechazó (dueño, 2026-11-06, Q21): se marca y la pantalla vuelve al paso del cliente.
+  // Cualquier edición reinicia el envío (`editado`), y con eso se va el rechazo y vuelve el paso elegido.
+  const campoRechazado = estado.tipo === "rechazado" ? (estado.rechazo.campo ?? null) : null;
+  const invalidos = intentoElCliente ? camposDelClienteInvalidos(cliente) : null;
+  const camposConError: CamposConError = {
+    numero: campoRechazado === "receptor.documento" || invalidos?.numero === true,
+    nombre: campoRechazado === "receptor.nombre" || invalidos?.nombre === true,
+    domicilio: campoRechazado === "receptor.domicilio" || invalidos?.domicilio === true,
+    condicion: campoRechazado === "receptor.condicionIva",
+  };
+  const rechazoDelCliente = [
+    campoRechazado === "receptor.documento",
+    campoRechazado === "receptor.nombre",
+    campoRechazado === "receptor.domicilio",
+    campoRechazado === "receptor.condicionIva",
+  ].some(Boolean);
+  const paso: 1 | 2 | 3 = rechazoDelCliente ? 1 : pasoElegido;
   const hecho = estado.tipo === "hecho";
   const incierto = estado.tipo === "incierto";
   // Mientras se envía, hay un resultado incierto o ya se hizo, nada se edita: lo que se ve es lo que salió.
@@ -108,9 +135,27 @@ export function PantallaDeEmitirFactura({
     seccion.current?.focus();
   }, [paso]);
 
+  // Con un campo del cliente marcado (rechazo del servidor o «Siguiente» bloqueado) el foco va al primero y su aviso se anuncia al
+  // enfocarlo (`aria-describedby` de `CajaDeCampo`, el mismo mecanismo que los errores de Datos fiscales y Puntos de venta, D-67). Previene dejar el foco en un botón sin decir qué corregir.
+  useEffect(() => {
+    if (rechazoDelCliente || bloqueos > 0) {
+      seccion.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+    }
+  }, [rechazoDelCliente, bloqueos]);
+
   /** Cualquier cambio de lo escrito descarta el resultado anterior (un rechazo): el próximo toque es otro intento. */
   function editado(): void {
     envio.reiniciar();
+  }
+
+  /** «Siguiente» del paso 1: no sigue si lo escrito no cumple la regla de su dato; marca el campo y se queda. */
+  function seguirDelCliente(): void {
+    if (Object.values(camposDelClienteInvalidos(cliente)).some(Boolean)) {
+      setIntentoElCliente(true);
+      setBloqueos((n) => n + 1);
+      return;
+    }
+    irAlPaso(2);
   }
 
   function irAlPaso(nuevo: 1 | 2 | 3): void {
@@ -150,7 +195,10 @@ export function PantallaDeEmitirFactura({
           <PasoDelCliente
             vista={vistaDelCliente(diccionario, cliente)}
             cliente={cliente}
+            conError={camposConError}
             alCambiar={(nuevo) => {
+              // Al corregir, la persona se queda en el paso del cliente (el rechazo que la trajo acá se va con la edición).
+              if (rechazoDelCliente) setPaso(1);
               setCliente(nuevo);
               editado();
             }}
@@ -192,7 +240,7 @@ export function PantallaDeEmitirFactura({
               }}
               deshabilitado={!editable}
             />
-            {/* Dueño, 2026-11-03, cuestionario “Emitir”, «Errores»: el error del servidor se ve en el paso final, se vuelve con «Volver» y no se marcan campos. */}
+            {/* Dueño, 2026-11-03, cuestionario “Emitir”, «Errores»: el error del servidor se ve en el paso final y se vuelve con «Volver». Lo cambió el dueño el 2026-11-06 (Q21): si el servidor dice qué campo del cliente falló, se vuelve a ese paso y se lo marca; el aviso queda para los errores sin campo. */}
             {estado.tipo === "rechazado" ? (
               <ErrorDelDetalle error={estado.rechazo} diccionario={diccionario} />
             ) : null}
@@ -253,7 +301,8 @@ export function PantallaDeEmitirFactura({
                 // En «Renglones» no se sigue sin un total que mostrar: lo que se revisa en el paso 3 tiene que poder calcularse.
                 deshabilitado={paso === 2 && calculo === null}
                 alTocar={() => {
-                  irAlPaso(paso === 1 ? 2 : 3);
+                  if (paso === 1) seguirDelCliente();
+                  else irAlPaso(3);
                 }}
               >
                 {pasos.botones.siguiente}

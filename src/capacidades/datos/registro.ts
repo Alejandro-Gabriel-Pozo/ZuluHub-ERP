@@ -124,6 +124,58 @@ export const REGISTRO_DE_DATOS = {
     ponerPor: ["comprobantes.emitir"],
     requiere: REQUIERE_FACTURACION,
   },
+  "nombre-o-razon-social": {
+    ficha: "src/primitivas/texto/nombre-o-razon-social.ts",
+    propositos: [
+      {
+        para: "Nombre o razón social del cliente al emitir una factura (RG 1415 Anexo II A.II: se imprime en la factura).",
+        fuente:
+          "Pedernal-docs/11-especificaciones/emitir-plan-factura-a.md §1 (decisiones del dueño, 2026-11-06) y facturador-contratos-de-pantalla.md «Contrato de la pantalla 3: Emitir una factura» (paso 1, cliente)",
+      },
+    ],
+    consumidores: ["apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx"],
+    ponerPor: ["comprobantes.emitir"],
+    requiere: REQUIERE_FACTURACION,
+  },
+  "documento-de-identidad": {
+    ficha: "src/primitivas/identificacion-fiscal/documento.ts",
+    propositos: [
+      {
+        para: "Tipo y número de documento del cliente al emitir una factura (CUIT, CUIL, CDI, DNI o pasaporte; la clase A exige CUIT).",
+        fuente:
+          "Pedernal-docs/11-especificaciones/emitir-plan-factura-a.md §1 (decisiones del dueño, 2026-11-06) y facturador-contratos-de-pantalla.md «Contrato de la pantalla 3: Emitir una factura» (paso 1, cliente)",
+      },
+    ],
+    consumidores: ["apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx"],
+    ponerPor: ["comprobantes.emitir"],
+    requiere: REQUIERE_FACTURACION,
+  },
+  "domicilio-libre": {
+    ficha: "src/primitivas/domicilio/domicilio-libre.ts",
+    propositos: [
+      {
+        para: "Domicilio comercial del cliente al emitir una factura: obligatorio salvo consumidor final (RG 1415 Anexo II A.II).",
+        fuente:
+          "Pedernal-docs/11-especificaciones/emitir-plan-factura-a.md §1 (decisiones del dueño, 2026-11-06) y facturador-contratos-de-pantalla.md «Contrato de la pantalla 3: Emitir una factura» (paso 1, cliente)",
+      },
+    ],
+    consumidores: ["apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx"],
+    ponerPor: ["comprobantes.emitir"],
+    requiere: REQUIERE_FACTURACION,
+  },
+  "condicion-iva": {
+    ficha: "src/primitivas/identificacion-fiscal/condicion-iva.ts",
+    propositos: [
+      {
+        para: "Condición frente al IVA del cliente al emitir una factura (de ella sale la letra A, B o C).",
+        fuente:
+          "Pedernal-docs/11-especificaciones/emitir-plan-factura-a.md §1 (decisiones del dueño, 2026-11-06) y facturador-contratos-de-pantalla.md «Contrato de la pantalla 3: Emitir una factura» (paso 1, cliente)",
+      },
+    ],
+    consumidores: ["apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx"],
+    ponerPor: ["comprobantes.emitir"],
+    requiere: REQUIERE_FACTURACION,
+  },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
 
 export type IdDeDato = keyof typeof REGISTRO_DE_DATOS;

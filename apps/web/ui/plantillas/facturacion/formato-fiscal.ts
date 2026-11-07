@@ -5,6 +5,8 @@
  * (importes enormes sin pérdida y ausencia de `Number`/`Date` en el código: `test/web/legibilidad-de-la-app.test.ts`).
  */
 
+import { cuitParaMostrar } from "../../../../../src/primitivas/identificacion-fiscal/cuit";
+
 const DECIMAL = /^(-?)([0-9]+)(?:\.([0-9]+))?$/;
 const FECHA_CIVIL = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/;
 
@@ -58,9 +60,7 @@ export function formatearFecha(texto: string): string {
 export function formatearNumeroDeDocumento(tipo: string, numero: string): string {
   if (!/^[0-9]+$/.test(numero)) return numero;
   if (tipo === "DNI") return conMiles(numero);
-  if ((tipo === "CUIT" || tipo === "CUIL" || tipo === "CDI") && numero.length === 11) {
-    return `${numero.slice(0, 2)}-${numero.slice(2, 10)}-${numero.slice(10)}`;
-  }
+  if (tipo === "CUIT" || tipo === "CUIL" || tipo === "CDI") return cuitParaMostrar(numero);
   return numero;
 }
 

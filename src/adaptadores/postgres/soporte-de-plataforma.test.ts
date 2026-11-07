@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -8,10 +8,14 @@ import { describe, expect, it } from "vitest";
  * pruebas de integración lo confirman contra la base, pero esta es la barrera que no depende de que
  * alguien se acuerde de sembrar el dato operativo justo en el caso que falla.
  */
-const fuente = readFileSync(
-  fileURLToPath(new URL("soporte-de-plataforma.ts", import.meta.url)),
-  "utf8",
-);
+// El adaptador se parte por responsabilidad (`soporte-de-plataforma-*.ts`): la barrera lee TODAS las partes,
+// para que partirlo no deje un trozo sin vigilar (se toma por prefijo: una parte nueva entra sola).
+const carpeta = fileURLToPath(new URL(".", import.meta.url));
+const fuente = readdirSync(carpeta)
+  .filter((f) => /^soporte-de-plataforma(-[a-z-]+)?\.ts$/.test(f))
+  .sort()
+  .map((f) => readFileSync(`${carpeta}${f}`, "utf8"))
+  .join("\n");
 const codigo = fuente.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 const PERMITIDAS = [

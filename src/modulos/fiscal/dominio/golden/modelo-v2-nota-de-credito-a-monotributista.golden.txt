@@ -31,7 +31,7 @@
       "numero": "20123456786"
     },
     "condicionIva": "MONOTRIBUTO",
-    "domicilio": null
+    "domicilio": "Calle Falsa 123"
   },
   "modoDePrecio": "IVA_DISCRIMINADO",
   "renglones": [

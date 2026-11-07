@@ -52,6 +52,9 @@ describe("numeroDeDocumentoDesdeTexto", () => {
       "1.234",
       "12.345.678.9",
       "12.345.678 ",
+      "1234.567",
+      "12.345678",
+      "1.234567",
     ]) {
       mal("DNI", numero);
     }

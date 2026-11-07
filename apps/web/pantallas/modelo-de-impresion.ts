@@ -45,6 +45,9 @@ export function comprobanteParaLaHoja(m: Modelo): ComprobanteParaLaHoja {
       condicionIva: m.receptor.condicionIva,
       domicilio: m.receptor.domicilio,
       ...(m.receptor.leyenda === undefined ? {} : { leyenda: m.receptor.leyenda }),
+      ...(m.receptor.leyendaDeCondicion === undefined
+        ? {}
+        : { leyendaDeCondicion: m.receptor.leyendaDeCondicion }),
     },
     ...(m.modoDePrecio === undefined ? {} : { modoDePrecio: m.modoDePrecio }),
     renglones: m.renglones.map((r) => ({

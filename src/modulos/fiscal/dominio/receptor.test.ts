@@ -63,15 +63,33 @@ describe("validarReceptor: lo que acepta", () => {
 
   it("recorta los blancos y vuelve null los textos vacíos", () => {
     const r = validarReceptor(
-      { ...inscripto, nombre: "  Distribuidora Sur SA  ", domicilio: "   " },
+      { ...inscripto, nombre: "  Distribuidora Sur SA  ", domicilio: "  Av. Siempreviva 742  " },
       contexto("A"),
     );
     expect(r).toEqual({
       ok: true,
-      valor: { ...inscripto, nombre: "Distribuidora Sur SA", domicilio: null },
+      valor: { ...inscripto, nombre: "Distribuidora Sur SA", domicilio: "Av. Siempreviva 742" },
     });
-    const sinDomicilio = validarReceptor({ ...inscripto, domicilio: null }, contexto("A"));
-    expect(sinDomicilio).toEqual({ ok: true, valor: { ...inscripto, domicilio: null } });
+    // El consumidor final sí admite un domicilio en blanco: queda sin domicilio.
+    const cf = validarReceptor({ ...consumidorFinal, domicilio: "   " }, contexto("B"));
+    expect(cf).toEqual({ ok: true, valor: consumidorFinal });
+  });
+
+  it("el domicilio es obligatorio salvo con el consumidor final (RG 1415 Anexo II A.II)", () => {
+    for (const domicilio of [null, "", "   "]) {
+      expect(
+        validarReceptor({ ...inscripto, domicilio }, contexto("A")),
+        JSON.stringify(domicilio),
+      ).toEqual(invalido("domicilio"));
+    }
+    // También con un consumidor final IDENTIFICADO: el consumidor final nunca lo necesita.
+    const identificado = conDocumento(
+      { tipo: "DNI", numero: "12345678" },
+      { nombre: "Juana Pérez" },
+    );
+    expect(validarReceptor(identificado, contexto("B"))).toMatchObject({ ok: true });
+    const monotributista = { ...inscripto, condicionIva: "MONOTRIBUTO", domicilio: null } as const;
+    expect(validarReceptor(monotributista, contexto("A"))).toEqual(invalido("domicilio"));
   });
 
   it("un nombre en blanco es «sin nombre»: el consumidor final lo admite y un documento identificado lo exige", () => {
@@ -232,6 +250,8 @@ describe("validarReceptor: forma", () => {
       ok: true,
       valor: { documento: { tipo: "DNI", numero: "12345678" } },
     });
+    // Lo que se le informa a ARCA (`DocNro`) es lo mismo con o sin puntos.
+    if (r.ok) expect(numeroDeDocumentoParaArca(r.valor.documento)).toBe(12345678n);
     for (const numero of ["12 345 678", "12,345,678", "12.345.67"]) {
       expect(validarReceptor(conDocumento({ tipo: "DNI", numero }), contexto("B"))).toEqual(
         invalido("documento"),
@@ -320,7 +340,9 @@ describe("validarReceptor: reglas de ARCA", () => {
     expect(validarReceptor(sinDomicilioValido, contexto("A"))).toEqual(invalido("domicilio"));
     const condicion = { ...sinDomicilioValido, domicilio: null };
     expect(validarReceptor(condicion, contexto("A"))).toEqual(invalido("condicionIva"));
-    const para = { ...condicion, condicionIva: "RESPONSABLE_INSCRIPTO" } as const;
+    const inscriptoSinDomicilio = { ...condicion, condicionIva: "RESPONSABLE_INSCRIPTO" } as const;
+    expect(validarReceptor(inscriptoSinDomicilio, contexto("A"))).toEqual(invalido("domicilio"));
+    const para = { ...inscriptoSinDomicilio, domicilio: "Av. Siempreviva 742" } as const;
     expect(
       validarReceptor({ ...para, documento: { tipo: "DNI", numero: "12345678" } }, contexto("A")),
     ).toEqual({
