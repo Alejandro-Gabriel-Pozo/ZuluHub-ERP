@@ -258,24 +258,110 @@ describe("emitir: lo que rechaza el servidor se ve por la vía común", () => {
     await llegarARevisar("dni");
     tocar(boton("Emitir factura"));
     await expect
-      .element(page.getByText("Revise los datos del cliente", { exact: false }))
+      .element(page.getByText("Revisá los datos del cliente.", { exact: true }))
       .toBeVisible();
     expect(document.body.textContent).not.toContain("FISCAL_RECEPTOR_INVALIDO");
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
     // Se vuelve al cliente, se corrige el nombre y se emite de nuevo.
     await expect.element(boton("Volver")).toBeEnabled();
+    // Cada cambio de paso se espera antes del clic siguiente: con la máquina cargada, un clic sobre el paso anterior (todavía
+    // montado) o una afirmación inmediata sobre el texto viejo hacía fallar la prueba una de cada tantas corridas.
     await userEvent.click(boton("Volver"));
+    await expect.element(page.getByRole("region", { name: "Renglones" })).toBeVisible();
     await userEvent.click(boton("Volver"));
+    await expect.element(campo("Nombre o razón social")).toBeVisible();
     await userEvent.clear(campo("Nombre o razón social"));
     await userEvent.type(campo("Nombre o razón social"), "Juana Pérez");
     await userEvent.click(boton("Siguiente"));
+    await expect.element(page.getByRole("region", { name: "Renglones" })).toBeVisible();
     await userEvent.click(boton("Siguiente"));
+    await expect.element(page.getByText("Revisá y emití")).toBeVisible();
     // El error anterior ya no está.
-    expect(document.body.textContent).not.toContain("Revise los datos del cliente");
+    await vi.waitFor(() =>
+      expect(document.body.textContent).not.toContain("Revisá los datos del cliente"),
+    );
     tocar(boton("Emitir factura"));
     await vi.waitFor(() => expect(servidor.pedidos).toHaveLength(2));
     expect(servidor.pedidos[1]?.["clave"]).not.toBe(servidor.pedidos[0]?.["clave"]);
     expect(servidor.pedidos[1]).toMatchObject({ receptor: { nombre: "Juana Pérez" } });
+  });
+
+  it("un rechazo con el campo del cliente vuelve al paso del cliente y lo marca; al corregirlo la marca se va y el nuevo intento lleva otra clave y el domicilio escrito", async () => {
+    const servidor = servidorFalso((n) =>
+      Promise.resolve(
+        n === 1
+          ? {
+              ok: false,
+              error: { ...errorDeCodigo("FISCAL_RECEPTOR_INVALIDO"), campo: "receptor.domicilio" },
+            }
+          : listo,
+      ),
+    );
+    await render(enArmazon({ emitir: servidor.emitir }));
+    await llegarARevisar("dni");
+    tocar(boton("Emitir factura"));
+    // Vuelve al paso del cliente (ya no se ve «Revisá y emití») con SOLO el domicilio marcado, con el aviso genérico.
+    await expect.element(campo("Domicilio")).toHaveAttribute("aria-invalid", "true");
+    await expect.element(page.getByText("Revisá los datos marcados.")).toBeVisible();
+    // El foco va al campo marcado y su aviso se anuncia al enfocarlo (descripción del campo, como en Datos fiscales): no queda en un botón que ya no está.
+    await expect.element(campo("Domicilio")).toHaveFocus();
+    await expect
+      .element(campo("Domicilio"))
+      .toHaveAccessibleDescription("Revisá los datos marcados.");
+    await expect.element(campo("Nombre o razón social")).not.toHaveAttribute("aria-invalid");
+    await expect.element(campo("DNI")).not.toHaveAttribute("aria-invalid");
+    expect(document.body.textContent).not.toContain("Revisá y emití");
+    expect(document.body.textContent).not.toContain("FISCAL_RECEPTOR_INVALIDO");
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    await userEvent.type(campo("Domicilio"), "Av. Siempreviva 742");
+    await expect.element(campo("Domicilio")).not.toHaveAttribute("aria-invalid");
+    await userEvent.click(boton("Siguiente"));
+    await userEvent.click(boton("Siguiente"));
+    tocar(boton("Emitir factura"));
+    await vi.waitFor(() => expect(servidor.pedidos).toHaveLength(2));
+    expect(servidor.pedidos[1]?.["clave"]).not.toBe(servidor.pedidos[0]?.["clave"]);
+    expect(servidor.pedidos[1]).toMatchObject({ receptor: { domicilio: "Av. Siempreviva 742" } });
+  });
+
+  it("«Siguiente» con el cliente mal escrito no avanza: marca los campos, lleva el foco al primero y lo anuncia", async () => {
+    const servidor = servidorFalso();
+    await render(enArmazon({ emitir: servidor.emitir }));
+    await userEvent.selectOptions(campo("Documento"), "CUIT");
+    await userEvent.type(campo("CUIT"), "30-71234567-2");
+    await userEvent.type(campo("Nombre o razón social"), "12345");
+    await userEvent.click(boton("Siguiente"));
+    await expect.element(campo("CUIT")).toHaveAttribute("aria-invalid", "true");
+    await expect.element(campo("Nombre o razón social")).toHaveAttribute("aria-invalid", "true");
+    await expect.element(campo("Domicilio")).not.toHaveAttribute("aria-invalid");
+    await expect.element(campo("CUIT")).toHaveFocus();
+    await expect.element(campo("CUIT")).toHaveAccessibleDescription("Revisá los datos marcados.");
+    expect(document.body.textContent).not.toContain("Cliente Renglones");
+    // Con dos avisos el botón queda debajo de la barra fija de abajo hasta que se baja la página: axe mide el botón ya a la vista.
+    boton("Siguiente").element().scrollIntoView({ block: "center" });
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    expect(servidor.pedidos).toHaveLength(0);
+    // Al corregirlo la marca se va de ese campo y «Siguiente» deja pasar (el domicilio vacío lo decide el servidor).
+    await userEvent.clear(campo("CUIT"));
+    await userEvent.type(campo("CUIT"), "30-71234567-1");
+    await expect.element(campo("CUIT")).not.toHaveAttribute("aria-invalid");
+    await userEvent.clear(campo("Nombre o razón social"));
+    await userEvent.type(campo("Nombre o razón social"), "Distribuidora Sur SA");
+    await userEvent.selectOptions(campo("Condición frente al IVA"), "RESPONSABLE_INSCRIPTO");
+    await userEvent.click(boton("Siguiente"));
+    await expect.element(campo("Descripción")).toBeVisible();
+  });
+
+  it("un rechazo del cliente sin campo se ve en el paso final, como siempre", async () => {
+    const servidor = servidorFalso(() =>
+      Promise.resolve({ ok: false, error: errorDeCodigo("FISCAL_RECEPTOR_INVALIDO") }),
+    );
+    await render(enArmazon({ emitir: servidor.emitir }));
+    await llegarARevisar("dni");
+    tocar(boton("Emitir factura"));
+    await expect
+      .element(page.getByText("Revisá los datos del cliente.", { exact: true }))
+      .toBeVisible();
+    await expect.element(page.getByText("Revisá y emití")).toBeVisible();
   });
 
   it.each([

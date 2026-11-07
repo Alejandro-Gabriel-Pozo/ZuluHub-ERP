@@ -92,6 +92,7 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
     consultasDeSesion: () => estado.mundo?.dependencias.consultasDeSesion(),
     casosDeUsoDeIdentidad: () => estado.mundo?.dependencias.casosDeUsoDeIdentidad(),
     consultasDeEmpresas: () => estado.mundo?.dependencias.consultasDeEmpresas(),
+    lecturasCompartidas: () => estado.mundo?.dependencias.lecturasCompartidas?.(),
   },
 }));
 vi.mock("../../apps/web/servidor/fuente-de-puertas", () => ({

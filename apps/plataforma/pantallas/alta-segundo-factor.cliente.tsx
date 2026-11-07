@@ -182,6 +182,7 @@ export function AltaDelSegundoFactor() {
             3. Confirmá con un código
           </Texto>
           <CampoDeCodigo
+            dato="pendiente"
             etiqueta="Código de la aplicación"
             valor={codigo}
             alCambiar={setCodigo}

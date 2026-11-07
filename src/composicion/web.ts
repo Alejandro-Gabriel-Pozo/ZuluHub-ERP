@@ -18,6 +18,7 @@ import {
   crearConsultasDeIdentidad,
   crearConsultasDeSesion,
 } from "../modulos/identidad/publico";
+import type { LecturasCompartidas } from "../puertos/transacciones";
 import type { Conexiones } from "./conexiones";
 import { armarEmisionFiscal } from "./emision-fiscal";
 import { perezoso } from "./perezoso";
@@ -72,6 +73,8 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
     configuracionPublicaDeHost: () => conexiones.configuracionPublicaDeHost(),
     autenticacion: () => conexiones.autenticacion(),
     barridoDeAutenticacion: () => conexiones.barridoDeAutenticacion(),
+    /** Las lecturas de un pedido que comparten una transacción (ver `LecturasCompartidas`): la misma conexión que usan las consultas. */
+    lecturasCompartidas: (): LecturasCompartidas => conexiones.transaccionesDeApp(),
     casosDeUsoDeEmpresas: perezoso(() =>
       crearCasosDeUsoDeEmpresas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
     ),

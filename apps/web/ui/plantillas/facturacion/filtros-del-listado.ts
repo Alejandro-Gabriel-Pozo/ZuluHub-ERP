@@ -22,6 +22,8 @@ export const direccionDelDetalle = (id: string): string => `${RUTA_DEL_LISTADO}/
 export const direccionDeAnular = (id: string): string => `${direccionDelDetalle(id)}/anular`;
 /** La vista previa para imprimir un comprobante: cuelga de su detalle. */
 export const direccionDeImprimir = (id: string): string => `${direccionDelDetalle(id)}/imprimir`;
+/** La descarga del PDF de un comprobante: cuelga de su detalle. */
+export const direccionDelPdf = (id: string): string => `${direccionDelDetalle(id)}/pdf`;
 /** La pantalla de emitir una factura. Un id de comprobante es un uuid: «emitir» no se confunde con ninguno. */
 export const direccionDeEmitir = (): string => `${RUTA_DEL_LISTADO}/emitir`;
 

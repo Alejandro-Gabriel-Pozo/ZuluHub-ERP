@@ -551,4 +551,4 @@ const reglas = [
   },
 ];
 
-module.exports = { reglas };
+module.exports = { reglas: reglas.concat(require("./reglas-de-pdf.cjs")) };

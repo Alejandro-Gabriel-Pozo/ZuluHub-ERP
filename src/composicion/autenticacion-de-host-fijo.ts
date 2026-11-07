@@ -16,8 +16,8 @@ export function conHostFijo(
   hostFijo: string,
 ): AutenticacionDePlataforma {
   return {
-    sesionDe: (pedido, host) =>
-      host === hostFijo ? base.sesionDe(pedido, host) : Promise.resolve(null),
+    sesionDe: (pedido, host, opciones) =>
+      host === hostFijo ? base.sesionDe(pedido, host, opciones) : Promise.resolve(null),
     manejar: (pedido, host) =>
       host === hostFijo ? base.manejar(pedido, host) : Promise.resolve(respuestaNeutra()),
     estadoDeSesion: (pedido, host) =>

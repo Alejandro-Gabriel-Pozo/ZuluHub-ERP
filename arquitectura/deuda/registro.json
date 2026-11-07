@@ -34,7 +34,7 @@
   {
     "id": "knip-ignora--knip-json",
     "archivos": ["knip.json"],
-    "descripcion": "Entradas de `ignore*` de knip.json (dependencias sin uso hasta el e2e de W5, exports que las pruebas leen por createRequire): cada una lleva su motivo en el archivo.",
+    "descripcion": "Entradas de `ignore*` de knip.json (exports que las pruebas leen por createRequire, el binario `openssl` de la fachada https del recorrido): cada una lleva su motivo en el archivo.",
     "tipo": "knip-ignora",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
@@ -64,24 +64,8 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "eslint-disable--src-capacidades-experiencia-puerta-ts",
-    "archivos": ["src/capacidades/experiencia/puerta.ts"],
-    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
-    "tipo": "eslint-disable",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "eslint-disable--src-capacidades-experiencia-ruta-de-retorno-test-ts",
     "archivos": ["src/capacidades/experiencia/ruta-de-retorno.test.ts"],
-    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
-    "tipo": "eslint-disable",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "eslint-disable--src-capacidades-experiencia-ruta-de-retorno-ts",
-    "archivos": ["src/capacidades/experiencia/ruta-de-retorno.ts"],
     "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
     "tipo": "eslint-disable",
     "responsable": "agente (a pedido del dueño)",
@@ -286,17 +270,6 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "e2e-sin-playwright-cableado",
-    "archivos": ["knip.json"],
-    "descripcion": "No hay pruebas e2e: @playwright/test y @axe-core/playwright están instalados pero sin uso (knip los ignora) hasta el e2e de la web (W5). Falta cablear Playwright en el CI (informe de CI §4 y §5); `continue-on-error` está prohibido en ci.yml, así que un modo «reporte» necesita otro diseño.",
-    "tipo": "backlog",
-    "responsable": "dueño",
-    "creada": "2026-10-22",
-    "verificacion": {
-      "contiene": "@playwright/test"
-    }
-  },
-  {
     "id": "sondeo-ast-pendiente",
     "archivos": ["arquitectura/contratos/detectores.cjs"],
     "descripcion": "El sondeo de primitivas con análisis AST (contratos-arquitectonicos.md §12, G7) no se hizo: los detectores del guardián son texto línea por línea. Se hace en modo reporte, regla por regla.",
@@ -343,14 +316,6 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "dependabot-sin-agrupar",
-    "archivos": [".github/dependabot.yml"],
-    "descripcion": "Dependabot sube `next` y `react` de a un workspace y abre PR rojos (informe de CI §3.2 D14): conviene agruparlos en un solo PR.",
-    "tipo": "backlog",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "workflows-de-migracion-duplicados",
     "archivos": [".github/workflows/migrar.yml", ".github/workflows/migrar-base.yml"],
     "descripcion": "Dos workflows de migración (migrar.yml y migrar-base.yml) duplican la superficie de secretos (informe de CI §3.2 D15). Requiere una decisión del dueño.",
@@ -361,7 +326,7 @@
   {
     "id": "permisos-y-acciones-menores-del-ci",
     "archivos": [".github/workflows/ci.yml", ".github/workflows/codeql.yml"],
-    "descripcion": "Pendientes menores de permisos y acciones (informe de CI §3.2 D10): la imagen de gitleaks está fijada por tag y no por digest, `codeql.yml` pide `security-events: write` a nivel de workflow en vez de job, y `permissions:` repetido en `guardian` y `dependencias` es redundante.",
+    "descripcion": "Pendiente menor de acciones (informe de CI §3.2 D10): la imagen de gitleaks está fijada por tag y no por digest. Falta un digest verificable (pregunta pendiente al dueño).",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
@@ -398,18 +363,24 @@
     "archivos": ["arquitectura/contratos/invariantes.cjs"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
-    "tamano": 3051,
+    "tamano": 3083,
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
+    "creada": "2026-10-22",
+    "motivo": "No es crecimiento libre: son las líneas que protegen el paso nuevo del guardián (presupuesto de campos sin dato) en no-debilitar.cjs y las mutaciones que lo prueban en invariantes.cjs, pedidas en la segunda revisión independiente de #198 (2026-11-06). Se paga partiendo el archivo (renovación a los 60 días, Q16 del dueño).",
+    "aprobadoPor": "orquestador (segunda revisión independiente de #198, 2026-11-06: pidió proteger el paso en no-debilitar.cjs en este PR)",
+    "vence": "2026-12-21"
   },
   {
     "id": "archivo-grande--arquitectura-contratos-no-debilitar-cjs",
     "archivos": ["arquitectura/contratos/no-debilitar.cjs"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
-    "tamano": 1762,
+    "tamano": 1803,
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
+    "creada": "2026-10-22",
+    "motivo": "No es crecimiento libre: son las líneas que protegen el paso nuevo del guardián (presupuesto de campos sin dato) en no-debilitar.cjs y las mutaciones que lo prueban en invariantes.cjs, pedidas en la segunda revisión independiente de #198 (2026-11-06). Se paga partiendo el archivo (renovación a los 60 días, Q16 del dueño).",
+    "aprobadoPor": "orquestador (segunda revisión independiente de #198, 2026-11-06: pidió proteger el paso en no-debilitar.cjs en este PR)",
+    "vence": "2026-12-21"
   },
   {
     "id": "archivo-grande--arquitectura-contratos-verificar-mecanismo-cjs",
@@ -425,7 +396,7 @@
     "archivos": ["arquitectura/planificar-mutacion.cjs"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
-    "tamano": 606,
+    "tamano": 561,
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
   },
@@ -439,24 +410,6 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "archivo-grande--src-adaptadores-arca-clasificar-ts",
-    "archivos": ["src/adaptadores/arca/clasificar.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 476,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "archivo-grande--src-adaptadores-postgres-soporte-de-plataforma-ts",
-    "archivos": ["src/adaptadores/postgres/soporte-de-plataforma.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 738,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "archivo-grande--src-capacidades-activos-cabeceras-ts",
     "archivos": ["src/capacidades/activos/cabeceras.ts"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
@@ -466,111 +419,188 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "archivo-grande--src-composicion-sesion-y-empresa-ts",
-    "archivos": ["src/composicion/sesion-y-empresa.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 405,
+    "id": "campos-sin-dato--web",
+    "archivos": [
+      "apps/web/ui/componentes/Campo.test.tsx",
+      "apps/web/ui/componentes/CampoDeCodigo.test.tsx",
+      "apps/web/ui/componentes/CampoImporte.test.tsx",
+      "apps/web/ui/componentes/Selector.test.tsx",
+      "apps/web/ui/patrones/SelectorDeSucursal.cliente.tsx",
+      "apps/web/ui/patrones/Superposicion.test.tsx",
+      "apps/web/ui/plantillas/configuracion-fiscal/FormularioDeDatosFiscales.cliente.tsx",
+      "apps/web/ui/plantillas/configuracion-fiscal/FormularioDePuntoDeVenta.cliente.tsx",
+      "apps/web/ui/plantillas/configuracion-fiscal/PasoGenerarPedido.cliente.tsx",
+      "apps/web/ui/plantillas/facturacion/EleccionDeSucursal.cliente.tsx",
+      "apps/web/ui/plantillas/facturacion/FormularioDeFiltros.cliente.tsx",
+      "apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx"
+    ],
+    "descripcion": "Campos de entrada de la web con dato=\"pendiente\" (pantallas y tests): todavía no pasan por el registro de datos (src/capacidades/datos/registro.ts). Se saldan por módulo ligando cada campo a su dato; la cuenta por archivo solo baja.",
+    "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
+    "creada": "2026-11-05",
+    "verificacion": {
+      "contiene": "dato=\"pendiente\""
+    },
+    "motivo": "Introducir el registro de datos (regla 5, C1) sin reescribir de una vez todas las pantallas existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento. La cuenta por archivo (que solo baja) está en arquitectura/deuda/campos-sin-dato.json.",
+    "aprobadoPor": "orquestador (decisión del dueño 2026-11-05)",
+    "vence": "2027-01-04"
   },
   {
-    "id": "archivo-grande--src-modulos-fiscal-casos-de-uso-numeracion-en-tx-ts",
-    "archivos": ["src/modulos/fiscal/casos-de-uso/numeracion-en-tx.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 453,
+    "id": "campos-sin-dato--web-input",
+    "archivos": [
+      "apps/web/ui/patrones/ProveedorDeSesion.test.tsx",
+      "apps/web/ui/patrones/borrador-de-pagina.test.tsx",
+      "apps/web/ui/plantillas/facturacion/PantallaDeImprimirComprobante.cliente.tsx",
+      "apps/web/ui/plantillas/vidriera/BuscarEnVidriera.tsx",
+      "apps/web/ui/pruebas/ayudas.test.tsx"
+    ],
+    "descripcion": "Controles crudos <input> de la web fuera de un componente de campo (pantallas y tests): todavía no pasan por el registro de datos. Se saldan por módulo; la cuenta por archivo solo baja.",
+    "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
+    "creada": "2026-11-05",
+    "verificacion": {
+      "contiene": "<input"
+    },
+    "motivo": "Introducir el registro de datos (regla 5, C1) sin reescribir de una vez todas las pantallas existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento. La cuenta por archivo (que solo baja) está en arquitectura/deuda/campos-sin-dato.json.",
+    "aprobadoPor": "orquestador (decisión del dueño 2026-11-05)",
+    "vence": "2027-01-04"
   },
   {
-    "id": "archivo-grande--src-modulos-fiscal-casos-de-uso-validar-comprobante-ts",
-    "archivos": ["src/modulos/fiscal/casos-de-uso/validar-comprobante.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 546,
+    "id": "campos-sin-dato--web-textarea",
+    "archivos": [
+      "apps/web/ui/patrones/borrador-de-pagina.test.tsx",
+      "apps/web/ui/plantillas/configuracion-fiscal/PasoCargarCertificado.cliente.tsx",
+      "apps/web/ui/plantillas/configuracion-fiscal/PasoDelPedido.cliente.tsx",
+      "apps/web/ui/plantillas/facturacion/PantallaDeAnularComprobante.cliente.tsx"
+    ],
+    "descripcion": "Controles crudos <textarea> de la web fuera de un componente de campo (pantallas y tests): todavía no pasan por el registro de datos. Se saldan por módulo; la cuenta por archivo solo baja.",
+    "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
+    "creada": "2026-11-05",
+    "verificacion": {
+      "contiene": "<textarea"
+    },
+    "motivo": "Introducir el registro de datos (regla 5, C1) sin reescribir de una vez todas las pantallas existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento. La cuenta por archivo (que solo baja) está en arquitectura/deuda/campos-sin-dato.json.",
+    "aprobadoPor": "orquestador (decisión del dueño 2026-11-05)",
+    "vence": "2027-01-04"
   },
   {
-    "id": "archivo-grande--src-modulos-fiscal-dominio-numeracion-ts",
-    "archivos": ["src/modulos/fiscal/dominio/numeracion.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 426,
+    "id": "campos-sin-dato--web-select",
+    "archivos": ["apps/web/ui/patrones/borrador-de-pagina.test.tsx"],
+    "descripcion": "Controles crudos <select> de la web fuera de un componente de campo (pantallas y tests): todavía no pasan por el registro de datos. Se saldan por módulo; la cuenta por archivo solo baja.",
+    "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
+    "creada": "2026-11-05",
+    "verificacion": {
+      "contiene": "<select"
+    },
+    "motivo": "Introducir el registro de datos (regla 5, C1) sin reescribir de una vez todas las pantallas existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento. La cuenta por archivo (que solo baja) está en arquitectura/deuda/campos-sin-dato.json.",
+    "aprobadoPor": "orquestador (decisión del dueño 2026-11-05)",
+    "vence": "2027-01-04"
   },
   {
-    "id": "archivo-grande--src-modulos-fiscal-persistencia-repositorio-de-certificados-ts",
-    "archivos": ["src/modulos/fiscal/persistencia/repositorio-de-certificados.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 601,
+    "id": "campos-sin-dato--web-otros",
+    "archivos": [
+      "apps/web/ui/iconos/Icono.tsx",
+      "apps/web/ui/plantillas/configuracion-fiscal/PasoDelPedido.cliente.tsx",
+      "apps/web/ui/plantillas/facturacion/PantallaDeImprimirComprobante.test.tsx",
+      "apps/web/ui/plantillas/facturacion/impresion/hoja-a4.test.tsx",
+      "apps/web/ui/plantillas/facturacion/impresion/medicion.test.tsx",
+      "apps/web/ui/plantillas/facturacion/impresion/sin-estilos-en-linea.test.tsx",
+      "apps/web/ui/plantillas/vidriera/DetalleDeProducto.tsx",
+      "apps/web/ui/plantillas/vidriera/PlantillaDeVidriera.test.tsx",
+      "apps/web/ui/primitivas/Texto.tsx"
+    ],
+    "descripcion": "Formas de armar o esconder un control que el chequeo no analiza en la web (tags dinámicos, createElement, innerHTML y similares, tags fuera de la lista de permitidos): no hay un texto común para verificarlas, las cubre el presupuesto exacto por archivo, que solo baja.",
+    "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
+    "creada": "2026-11-05",
+    "motivo": "Introducir el registro de datos (regla 5, C1) sin reescribir de una vez todas las pantallas existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento. La cuenta por archivo (que solo baja) está en arquitectura/deuda/campos-sin-dato.json.",
+    "aprobadoPor": "orquestador (decisión del dueño 2026-11-05)",
+    "vence": "2027-01-04"
   },
   {
-    "id": "archivo-grande--src-modulos-fiscal-persistencia-repositorio-de-comprobantes-ts",
-    "archivos": ["src/modulos/fiscal/persistencia/repositorio-de-comprobantes.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 833,
+    "id": "campos-sin-dato--plataforma",
+    "archivos": [
+      "apps/plataforma/pantallas/alta-segundo-factor.cliente.tsx",
+      "apps/plataforma/pantallas/cambio-de-plan.cliente.tsx",
+      "apps/plataforma/pantallas/campo-de-color.cliente.tsx",
+      "apps/plataforma/pantallas/desplegables-de-aspecto.cliente.tsx",
+      "apps/plataforma/pantallas/editor-de-submarca.cliente.tsx",
+      "apps/plataforma/pantallas/filtros-de-empresas.cliente.tsx",
+      "apps/plataforma/pantallas/formulario-de-alta.cliente.tsx",
+      "apps/plataforma/pantallas/ventana-de-codigo.cliente.tsx",
+      "apps/plataforma/pantallas/ventana-de-confirmacion.cliente.tsx",
+      "apps/plataforma/pantallas/verificar-codigo.cliente.tsx"
+    ],
+    "descripcion": "Campos de entrada de la consola de plataforma con dato=\"pendiente\" (pantallas y tests): todavía no pasan por el registro de datos (src/capacidades/datos/registro.ts). Se saldan por módulo ligando cada campo a su dato; la cuenta por archivo solo baja.",
+    "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
+    "creada": "2026-11-05",
+    "verificacion": {
+      "contiene": "dato=\"pendiente\""
+    },
+    "motivo": "Introducir el registro de datos (regla 5, C1) sin reescribir de una vez todas las pantallas existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento. La cuenta por archivo (que solo baja) está en arquitectura/deuda/campos-sin-dato.json.",
+    "aprobadoPor": "orquestador (decisión del dueño 2026-11-05)",
+    "vence": "2027-01-04"
   },
   {
-    "id": "archivo-grande--src-modulos-fiscal-persistencia-repositorios-ts",
-    "archivos": ["src/modulos/fiscal/persistencia/repositorios.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 1228,
+    "id": "campos-sin-dato--plataforma-input",
+    "archivos": [
+      "apps/plataforma/pantallas/alta-segundo-factor.cliente.tsx",
+      "apps/plataforma/pantallas/campo-de-color.cliente.tsx",
+      "apps/plataforma/pantallas/casilla-de-programada.cliente.tsx",
+      "apps/plataforma/pantallas/ventana-de-confirmacion.cliente.tsx"
+    ],
+    "descripcion": "Controles crudos <input> de la consola de plataforma fuera de un componente de campo (pantallas y tests): todavía no pasan por el registro de datos. Se saldan por módulo; la cuenta por archivo solo baja.",
+    "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
+    "creada": "2026-11-05",
+    "verificacion": {
+      "contiene": "<input"
+    },
+    "motivo": "Introducir el registro de datos (regla 5, C1) sin reescribir de una vez todas las pantallas existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento. La cuenta por archivo (que solo baja) está en arquitectura/deuda/campos-sin-dato.json.",
+    "aprobadoPor": "orquestador (decisión del dueño 2026-11-05)",
+    "vence": "2027-01-04"
   },
   {
-    "id": "archivo-grande--src-modulos-fiscal-publico-ts",
-    "archivos": ["src/modulos/fiscal/publico.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 493,
+    "id": "validacion-de-datos--prohibidos-y-duplicados",
+    "archivos": [
+      "apps/plataforma/logica/entrada-de-submarca.ts",
+      "apps/plataforma/logica/entrada-del-plan.ts",
+      "apps/plataforma/logica/filtros-de-empresas.ts",
+      "apps/web/ui/plantillas/facturacion/impresion/ayudas-de-impresion.tsx",
+      "migraciones/0005_administracion.sql",
+      "migraciones/0006_fiscal.sql",
+      "migraciones/0007_marcas_y_planes.sql",
+      "migraciones/0009_facturacion.sql",
+      "migraciones/0019_contacto_de_la_sucursal.sql",
+      "migraciones/0022_nombre_de_la_sucursal_en_el_comprobante.sql",
+      "src/adaptadores/correo/configuracion.ts",
+      "src/capacidades/activos/direccion-externa.ts",
+      "src/capacidades/experiencia/vidriera/descripcion.ts",
+      "src/capacidades/planes/version-de-plan.ts",
+      "src/capacidades/vocabulario/texto-visible.ts",
+      "src/composicion/entorno.ts",
+      "src/composicion/entradas-de-facturacion.ts",
+      "src/modulos/empresas/dominio/sucursal.ts",
+      "src/modulos/fiscal/casos-de-uso/resincronizar-y-ambiente.ts",
+      "src/modulos/fiscal/dominio/certificado-pedido.ts",
+      "src/modulos/fiscal/dominio/datos-fiscales.ts",
+      "src/plataforma/captacion/dominio/atribucion.ts",
+      "src/plataforma/captacion/dominio/auditoria.ts",
+      "src/plataforma/captacion/dominio/formulario.ts",
+      "src/plataforma/dominio/soporte/consulta.ts",
+      "src/primitivas/contacto/una-linea.ts",
+      "src/primitivas/contacto/web.ts",
+      "src/primitivas/domicilio/domicilio.ts"
+    ],
+    "descripcion": "Validaciones de datos por lista de prohibidos (controles, invisibles, marcado, «todo menos esto»; en código y en migraciones SQL) y topes de largo escritos dos veces: todavía no declaran lo que se PERMITE ni toman el límite de su única fuente. No hay un texto común para verificarlas: las cubre el presupuesto exacto por archivo, que solo baja.",
+    "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "archivo-grande--src-modulos-identidad-dominio-invitacion-ts",
-    "archivos": ["src/modulos/identidad/dominio/invitacion.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 410,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "archivo-grande--src-modulos-identidad-persistencia-repositorios-ts",
-    "archivos": ["src/modulos/identidad/persistencia/repositorios.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 912,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "archivo-grande--src-modulos-planes-persistencia-repositorio-de-planes-ts",
-    "archivos": ["src/modulos/planes/persistencia/repositorio-de-planes.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 757,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "archivo-grande--src-plataforma-consultas-consultas-de-planes-ts",
-    "archivos": ["src/plataforma/consultas/consultas-de-planes.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 622,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
+    "creada": "2026-11-06",
+    "motivo": "Introducir los chequeos de lista de permitidos y de fuente única (PR 2 de C1) sin reescribir de una vez todas las validaciones existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento (las migraciones ya aplicadas no se editan: se corrigen con una migración nueva). La cuenta por archivo (que solo baja) está en arquitectura/deuda/validacion-de-datos.json. puerta.ts y ruta-de-retorno.ts ya se reescribieron con lista de permitidos (Deuda 4, #209 y #214) y salieron del presupuesto; adaptadores/correo/configuracion.ts queda con 2 prohibiciones heredadas de la lista del nombre de marca.",
+    "aprobadoPor": "orquestador (PR 2 de C1 autorizado el 2026-11-06 por mensaje entre sesiones; decisión del dueño 2026-11-05). Para adaptadores/correo/configuracion.ts: el dueño, 2026-11-06, mensaje directo al orquestador (confirmó que entra como deuda y pidió reescribirlo, lo que hizo Deuda 4 con puerta y ruta-de-retorno).",
+    "vence": "2027-01-05"
   }
 ]

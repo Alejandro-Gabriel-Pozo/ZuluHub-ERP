@@ -1,5 +1,10 @@
 import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { fechaCivilHastaHoyDesdeTexto } from "../../../primitivas/tiempo/fecha-civil-hasta-hoy";
+import {
+  LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL,
+  nombreODenominacionDesdeTexto,
+} from "../../../primitivas/texto/nombre-o-razon-social";
 import { esCondicionDeIva, type CondicionIva } from "./emisor";
 import type { DomicilioId, EmisorId, VersionId } from "./identificadores";
 import { confirmarVersion, type ErrorDeConfirmacion } from "./vigencia";
@@ -13,14 +18,18 @@ import { confirmarVersion, type ErrorDeConfirmacion } from "./vigencia";
  * se normalizan (se recortan los blancos) y los vacíos opcionales quedan en `null`.
  *
  * Valores configurables, todos SUPUESTOS (no son requisitos verificados de ARCA):
- * - `LIMITES_DE_DATOS_FISCALES`: largo máximo de la razón social y del número de IIBB;
+ * - `LIMITES_DE_DATOS_FISCALES`: largo máximo de la razón social y del número de IIBB. La razón social NO se define acá: es el dato
+ *   «nombre o razón social» y su tope y sus caracteres permitidos viven en su primitiva (P2, dueño, 2026-11-05: una sola fuente);
  * - `CONDICIONES_DE_IIBB`: lo que la base puede tener guardado. Desde D-115/D-116 (dueño, 2026-11-05) lo único que se
  *   pide y se imprime es el número de inscripción O «No contribuyente» (RG 1415 Anexo II A.I.a punto 4: el comprobante lleva
  *   el número de inscripción en Ingresos Brutos o la condición de no contribuyente). Las tres condiciones anteriores (local,
  *   convenio multilateral, exento: supuesto del diseño, sin fuente) quedan solo para LEER filas viejas: no se aceptan al
  *   editar, no se copian a una versión nueva y el modelo de impresión nuevo no las imprime.
  */
-export const LIMITES_DE_DATOS_FISCALES = { razonSocial: 200, iibbNumero: 30 } as const;
+export const LIMITES_DE_DATOS_FISCALES = {
+  razonSocial: LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL,
+  iibbNumero: 30,
+} as const;
 
 export const CONDICION_NO_CONTRIBUYENTE = "NO_CONTRIBUYENTE" as const;
 
@@ -149,28 +158,15 @@ export function borradorDesdeConfirmada(
 }
 
 const CARACTERES_DE_CONTROL = /\p{Cc}/u;
-const FECHA_CIVIL = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/;
 
-/** Texto recortado, no vacío, sin caracteres de control y de hasta `maximo`; `null` si no sirve. */
+/**
+ * Texto recortado, sin caracteres de control y de hasta `maximo`; `null` si no sirve. Hoy solo lo usa el número de IIBB (sin
+ * primitiva: Q6, texto corto de 30 sin formato; el en blanco ya lo resolvió quien llama: es «sin número»); sigue siendo lista de prohibidos (deuda, ver «Hallazgos aparte»).
+ */
 function textoLimpio(valor: string, maximo: number): string | null {
   const limpio = valor.trim();
-  if (limpio === "" || limpio.length > maximo || CARACTERES_DE_CONTROL.test(limpio)) return null;
+  if (limpio.length > maximo || CARACTERES_DE_CONTROL.test(limpio)) return null;
   return limpio;
-}
-
-function esBisiesto(anio: number): boolean {
-  return anio % 4 === 0 && (anio % 100 !== 0 || anio % 400 === 0);
-}
-
-/** Una fecha civil real `YYYY-MM-DD` (calendario gregoriano, año 0001 en adelante). Sin reloj ni zona. */
-export function fechaCivilValida(texto: string): boolean {
-  const partes = FECHA_CIVIL.exec(texto);
-  if (partes === null) return false;
-  const [anio, mes, dia] = [Number(partes[1]), Number(partes[2]), Number(partes[3])] as const;
-  if (anio < 1 || dia < 1) return false;
-  const diasDelMes = [31, esBisiesto(anio) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  // Un mes fuera de 1 a 12 no tiene entrada en la tabla: 0 días, así que ningún día entra.
-  return dia <= (diasDelMes[mes - 1] ?? 0);
 }
 
 const NUMERO_INVALIDO = Symbol("numero de IIBB invalido");
@@ -205,18 +201,52 @@ export function ingresosBrutosDeclarados(
 }
 
 /**
+ * ¿El pedido deja `guardado` tal cual está? Compara lo pedido CONTRA LO GUARDADO, sin volver a validar con las reglas de hoy: una
+ * versión confirmada es inmutable y se validó cuando se confirmó. Sirve para el reintento de un guardado cuya confirmación ya se
+ * hizo (se cortó la red al volver la respuesta): si la razón social guardada se aceptó con reglas anteriores (doble espacio, un `@`),
+ * el mismo pedido sigue siendo «ya estaba» y no `VERSION_CONFIRMADA_INMUTABLE`. Previene: que endurecer una regla convierta el
+ * reintento idempotente de un dato ya confirmado en un error. Chequeo: las pruebas de este archivo y de `guardar-borrador`.
+ * Los textos se comparan recortados (lo único que hacía la validación anterior); `null` o en blanco en Ingresos Brutos pide que no
+ * haya valor, como en `editarBorrador`. Un campo ausente no se mira.
+ */
+export function pedidoNoCambiaLoGuardado(
+  guardado: DatosFiscalesBorrador,
+  cambios: CambiosDeBorrador,
+): boolean {
+  const iguales = (pedido: string | null | undefined, valor: string | null): boolean =>
+    pedido === undefined ||
+    (pedido === null || pedido.trim() === "" ? valor === null : pedido.trim() === valor);
+  const textoPedido = (pedido: string | undefined, valor: string | null): boolean =>
+    pedido === undefined || pedido.trim() === valor;
+  return (
+    textoPedido(cambios.razonSocial, guardado.razonSocial) &&
+    (cambios.condicionIva === undefined || cambios.condicionIva === guardado.condicionIva) &&
+    (cambios.domicilioFiscalId === undefined ||
+      cambios.domicilioFiscalId === guardado.domicilioFiscalId) &&
+    (cambios.inicioActividades === undefined ||
+      cambios.inicioActividades === guardado.inicioActividades) &&
+    iguales(cambios.iibbNumero, guardado.iibbNumero) &&
+    iguales(cambios.iibbCondicion, guardado.iibbCondicion)
+  );
+}
+
+/**
  * Aplica `cambios` a un borrador y valida cada valor que llega. Devuelve el PRIMER error, en el orden
  * razón social, condición de IVA, inicio de actividades, número de IIBB, condición de IIBB. No
- * exige que el borrador esté completo (eso se pide al confirmar).
+ * exige que el borrador esté completo (eso se pide al confirmar). `ahora` es el reloj del contexto: de ahí sale el «hoy» de Argentina
+ * contra el que se compara el inicio de actividades (obligatorio, nunca el reloj de la máquina).
  */
 export function editarBorrador(
   borrador: DatosFiscalesBorrador,
   cambios: CambiosDeBorrador,
+  ahora: Date,
 ): Resultado<DatosFiscalesBorrador, ErrorDeDatosFiscales> {
   let razonSocial = borrador.razonSocial;
   if (cambios.razonSocial !== undefined) {
-    razonSocial = textoLimpio(cambios.razonSocial, LIMITES_DE_DATOS_FISCALES.razonSocial);
-    if (razonSocial === null) return err("RAZON_SOCIAL_INVALIDA");
+    // Las MISMAS reglas que el nombre del receptor (lista de permitidos, al menos una letra): Q10, dueño, 2026-11-05 (respuesta 4 de la auditoría).
+    const valida = nombreODenominacionDesdeTexto(cambios.razonSocial);
+    if (!valida.ok) return err("RAZON_SOCIAL_INVALIDA");
+    razonSocial = valida.valor;
   }
 
   let condicionIva = borrador.condicionIva;
@@ -227,8 +257,10 @@ export function editarBorrador(
 
   let inicioActividades = borrador.inicioActividades;
   if (cambios.inicioActividades !== undefined) {
-    if (!fechaCivilValida(cambios.inicioActividades)) return err("INICIO_DE_ACTIVIDADES_INVALIDO");
-    inicioActividades = cambios.inicioActividades;
+    // Entre 1900 y hoy en Argentina (Q17, Q18, Q20): un inicio de actividades futuro se rechaza. El «hoy» sale de `ahora`, el reloj del contexto.
+    const fecha = fechaCivilHastaHoyDesdeTexto(cambios.inicioActividades, ahora);
+    if (!fecha.ok) return err("INICIO_DE_ACTIVIDADES_INVALIDO");
+    inicioActividades = fecha.valor;
   }
 
   let iibbNumero = borrador.iibbNumero;

@@ -31,7 +31,7 @@
   },
   {
     "grupo": "fiscal (numeración)",
-    "archivos": "src/modulos/fiscal/dominio/numeracion.ts",
+    "archivos": "src/modulos/fiscal/dominio/numeracion.ts,src/modulos/fiscal/dominio/numeracion-invariantes.ts,src/modulos/fiscal/dominio/numeracion-modelo.ts",
     "minutos": 3.8,
     "pruebas": "src/modulos/fiscal"
   },
@@ -49,7 +49,7 @@
   },
   {
     "grupo": "fiscal (resto)",
-    "archivos": "src/modulos/fiscal/dominio/**/*.ts,!src/modulos/fiscal/dominio/numeracion.ts,!src/modulos/fiscal/dominio/datos-fiscales.ts,!src/modulos/fiscal/dominio/vigencia.ts,!src/modulos/fiscal/dominio/punto-de-venta.ts,!src/modulos/fiscal/dominio/resolucion-de-emisor.ts,!src/modulos/fiscal/dominio/calculo-de-renglones.ts,!src/modulos/fiscal/dominio/codigos-de-arca.ts,!src/modulos/fiscal/dominio/comprobante-nuevo.ts,!src/modulos/fiscal/dominio/condicion-iva-receptor.ts,!src/modulos/fiscal/dominio/estados-de-comprobante.ts,!src/modulos/fiscal/dominio/importes-para-arca.ts,!src/modulos/fiscal/dominio/letra-de-comprobante.ts,!src/modulos/fiscal/dominio/modelo-de-impresion.ts,!src/modulos/fiscal/dominio/transparencia-fiscal.ts,!src/modulos/fiscal/dominio/contacto-impreso.ts,!src/modulos/fiscal/dominio/leyenda-de-credito-fiscal.ts,!src/modulos/fiscal/dominio/sucursal-impresa.ts,!src/modulos/fiscal/dominio/versiones-de-representacion.ts,!src/modulos/fiscal/dominio/acreditacion.ts,!src/modulos/fiscal/dominio/nota-asociada.ts,!src/modulos/fiscal/dominio/qr-de-arca.ts,!src/modulos/fiscal/dominio/receptor.ts,!src/modulos/fiscal/dominio/reconciliacion-de-comprobante.ts,!src/modulos/fiscal/dominio/certificado-carga.ts,!src/modulos/fiscal/dominio/certificado-pedido.ts,!src/modulos/fiscal/dominio/vencimiento-de-certificados.ts",
+    "archivos": "src/modulos/fiscal/dominio/**/*.ts,!src/modulos/fiscal/dominio/numeracion.ts,!src/modulos/fiscal/dominio/numeracion-invariantes.ts,!src/modulos/fiscal/dominio/numeracion-modelo.ts,!src/modulos/fiscal/dominio/datos-fiscales.ts,!src/modulos/fiscal/dominio/vigencia.ts,!src/modulos/fiscal/dominio/punto-de-venta.ts,!src/modulos/fiscal/dominio/resolucion-de-emisor.ts,!src/modulos/fiscal/dominio/calculo-de-renglones.ts,!src/modulos/fiscal/dominio/codigos-de-arca.ts,!src/modulos/fiscal/dominio/comprobante-nuevo.ts,!src/modulos/fiscal/dominio/condicion-iva-receptor.ts,!src/modulos/fiscal/dominio/estados-de-comprobante.ts,!src/modulos/fiscal/dominio/importes-para-arca.ts,!src/modulos/fiscal/dominio/letra-de-comprobante.ts,!src/modulos/fiscal/dominio/modelo-de-impresion.ts,!src/modulos/fiscal/dominio/transparencia-fiscal.ts,!src/modulos/fiscal/dominio/contacto-impreso.ts,!src/modulos/fiscal/dominio/leyenda-de-credito-fiscal.ts,!src/modulos/fiscal/dominio/sucursal-impresa.ts,!src/modulos/fiscal/dominio/versiones-de-representacion.ts,!src/modulos/fiscal/dominio/acreditacion.ts,!src/modulos/fiscal/dominio/nota-asociada.ts,!src/modulos/fiscal/dominio/qr-de-arca.ts,!src/modulos/fiscal/dominio/receptor.ts,!src/modulos/fiscal/dominio/reconciliacion-de-comprobante.ts,!src/modulos/fiscal/dominio/certificado-carga.ts,!src/modulos/fiscal/dominio/certificado-pedido.ts,!src/modulos/fiscal/dominio/vencimiento-de-certificados.ts",
     "minutos": 4.2,
     "pruebas": "src/modulos/fiscal"
   },
@@ -60,6 +60,12 @@
     "pruebas": "src/primitivas/domicilio"
   },
   {
+    "grupo": "texto (nombre y una línea)",
+    "archivos": "src/primitivas/texto/**/*.ts",
+    "minutos": 0.6,
+    "pruebas": "src/primitivas/texto"
+  },
+  {
     "grupo": "tiempo",
     "archivos": "src/primitivas/tiempo/**/*.ts",
     "minutos": 1.8,
@@ -67,13 +73,13 @@
   },
   {
     "grupo": "identidad (invitación)",
-    "archivos": "src/modulos/identidad/dominio/invitacion.ts",
+    "archivos": "src/modulos/identidad/dominio/invitacion.ts,src/modulos/identidad/dominio/invitacion-tipos.ts",
     "minutos": 4.2,
     "pruebas": "src/modulos/identidad"
   },
   {
     "grupo": "identidad (resto)",
-    "archivos": "src/modulos/identidad/dominio/**/*.ts,!src/modulos/identidad/dominio/invitacion.ts",
+    "archivos": "src/modulos/identidad/dominio/**/*.ts,!src/modulos/identidad/dominio/invitacion.ts,!src/modulos/identidad/dominio/invitacion-tipos.ts",
     "minutos": 4.5,
     "pruebas": "src/modulos/identidad"
   },
@@ -259,7 +265,7 @@
   },
   {
     "grupo": "arca (XML, lectura y clasificación)",
-    "archivos": "src/adaptadores/arca/xml.ts,src/adaptadores/arca/saneamiento.ts,src/adaptadores/arca/errores-de-arca.ts,src/adaptadores/arca/pedidos-de-wsaa.ts,src/adaptadores/arca/pedidos-de-wsfe.ts,src/adaptadores/arca/leer-respuestas.ts,src/adaptadores/arca/clasificar.ts,src/adaptadores/arca/constantes.ts",
+    "archivos": "src/adaptadores/arca/xml.ts,src/adaptadores/arca/saneamiento.ts,src/adaptadores/arca/errores-de-arca.ts,src/adaptadores/arca/pedidos-de-wsaa.ts,src/adaptadores/arca/pedidos-de-wsfe.ts,src/adaptadores/arca/leer-respuestas.ts,src/adaptadores/arca/clasificar.ts,src/adaptadores/arca/clasificar-consulta.ts,src/adaptadores/arca/conversiones-de-arca.ts,src/adaptadores/arca/cuerpo-de-respuesta.ts,src/adaptadores/arca/constantes.ts",
     "minutos": 14.8,
     "pruebas": "src/adaptadores/arca/xml.test.ts src/adaptadores/arca/saneamiento.test.ts src/adaptadores/arca/errores-de-arca.test.ts src/adaptadores/arca/pedidos.test.ts src/adaptadores/arca/leer-respuestas.test.ts src/adaptadores/arca/clasificar.test.ts src/adaptadores/arca/constantes.test.ts"
   },
@@ -379,19 +385,19 @@
   },
   {
     "grupo": "guardián (vigilancia de la versión anterior, parte 1)",
-    "archivos": "arquitectura/contratos/no-debilitar.cjs:1-585",
+    "archivos": "arquitectura/contratos/no-debilitar.cjs:1-597",
     "minutos": 17.7,
     "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-deuda.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-mutantes-g-vigilancia.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
   },
   {
     "grupo": "guardián (vigilancia de la versión anterior, parte 2)",
-    "archivos": "arquitectura/contratos/no-debilitar.cjs:586-1212",
+    "archivos": "arquitectura/contratos/no-debilitar.cjs:598-1252",
     "minutos": 17.4,
     "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-deuda.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-mutantes-g-vigilancia.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
   },
   {
     "grupo": "guardián (vigilancia de la versión anterior, parte 3)",
-    "archivos": "arquitectura/contratos/no-debilitar.cjs:1213-1763",
+    "archivos": "arquitectura/contratos/no-debilitar.cjs:1253-1804",
     "minutos": 13.5,
     "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-deuda.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-mutantes-g-vigilancia.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
   },
@@ -418,5 +424,11 @@
     "archivos": "arquitectura/deuda/deuda.cjs,arquitectura/deuda/codigos.cjs",
     "minutos": 5.5,
     "pruebas": "test/arquitectura/guardian-deuda-control.test.ts"
+  },
+  {
+    "grupo": "guardián (presupuesto de campos sin dato)",
+    "archivos": "arquitectura/deuda/campos-sin-dato.cjs",
+    "minutos": 3,
+    "pruebas": "test/arquitectura/campos-sin-dato-presupuesto.test.ts"
   }
 ]

@@ -66,8 +66,9 @@ export const TEXTOS_DE_FISCAL = {
     largoMaximo: 160,
   },
   "error.fiscal_receptor_invalido": {
-    porDefecto:
-      "Revise los datos del cliente: nombre, documento, condición frente al IVA o domicilio.",
+    // Genérico y sin nombrar campos (dueño, 2026-11-06, conversación directa con la sesión «Emitir»: «uno genérico, en voseo»; Q22).
+    // Redacción provisoria: la aprueba el dueño con la pantalla armada. Previene un aviso que nombra un campo que Emitir no tiene.
+    porDefecto: "Revisá los datos del cliente.",
     largoMaximo: 160,
   },
   "error.fiscal_receptor_invalido_para_a": {

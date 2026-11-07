@@ -18,20 +18,34 @@ import type { VistaDeLaRevision, VistaDeLosRenglones, VistaDelCliente } from "./
  * revisión. Los textos llegan ya resueltos en la vista (`modelo-de-emision.ts`).
  */
 
+/** Qué campos del cliente marcar como rechazados por el servidor. */
+export type CamposConError = Readonly<{
+  numero?: boolean;
+  nombre?: boolean;
+  domicilio?: boolean;
+  condicion?: boolean;
+}>;
+
 /** Paso 1: el cliente. El consumidor final no pide nada más; con un documento, se pide su número, su nombre y su condición ante el IVA (D-24). */
 export function PasoDelCliente({
   vista,
   cliente,
   alCambiar,
+  conError = {},
 }: Readonly<{
   vista: VistaDelCliente;
   cliente: ClienteEscrito;
   alCambiar: (nuevo: ClienteEscrito) => void;
+  /** Los campos que el servidor rechazó: se marcan con el aviso genérico de la vista (`campoInvalido`). */
+  conError?: CamposConError;
 }>) {
-  const { identificacion } = vista;
+  const { identificacion, campoInvalido } = vista;
+  const avisoDe = (marcado: boolean | undefined): string | undefined =>
+    marcado === true ? campoInvalido : undefined;
   return (
     <>
       <Selector
+        dato="documento-de-identidad"
         etiqueta={vista.documento.etiqueta}
         valor={cliente.documento}
         opciones={vista.documento.opciones}
@@ -43,27 +57,44 @@ export function PasoDelCliente({
       {identificacion === null ? null : (
         <>
           <Campo
+            dato="documento-de-identidad"
             etiqueta={identificacion.numero}
             valor={cliente.numero}
-            inputMode="numeric"
+            // El pasaporte lleva letras (ABC123456, Q5, dueño, 2026-11-06): el teclado numérico no las deja escribir.
+            inputMode={cliente.documento === "PASAPORTE" ? "text" : "numeric"}
             autoComplete="off"
+            error={avisoDe(conError.numero)}
             alCambiar={(numero) => {
               alCambiar({ ...cliente, numero });
             }}
           />
           <Campo
+            dato="nombre-o-razon-social"
             etiqueta={identificacion.nombre}
             valor={cliente.nombre}
             autoComplete="off"
+            error={avisoDe(conError.nombre)}
             alCambiar={(nombre) => {
               alCambiar({ ...cliente, nombre });
             }}
           />
+          <Campo
+            dato="domicilio-libre"
+            etiqueta={identificacion.domicilio}
+            valor={cliente.domicilio}
+            autoComplete="off"
+            error={avisoDe(conError.domicilio)}
+            alCambiar={(domicilio) => {
+              alCambiar({ ...cliente, domicilio });
+            }}
+          />
           <Selector
+            dato="condicion-iva"
             etiqueta={identificacion.condicion.etiqueta}
             textoDeElegir={identificacion.condicion.etiqueta}
             valor={cliente.condicionIva}
             opciones={identificacion.condicion.opciones}
+            error={avisoDe(conError.condicion)}
             alCambiar={(condicionIva) => {
               alCambiar({ ...cliente, condicionIva });
             }}
@@ -95,6 +126,7 @@ export function PasoDeLosRenglones({
         <fieldset key={r.id} className={estilos["renglon"]}>
           <legend className={estilos["nombre"]}>{vista.grupo(i + 1)}</legend>
           <Campo
+            dato="pendiente"
             etiqueta={etiquetas.descripcion}
             valor={r.descripcion}
             autoComplete="off"
@@ -103,6 +135,7 @@ export function PasoDeLosRenglones({
             }}
           />
           <Campo
+            dato="cantidad"
             etiqueta={etiquetas.cantidad}
             valor={r.cantidad}
             inputMode="decimal"
@@ -112,6 +145,7 @@ export function PasoDeLosRenglones({
             }}
           />
           <CampoImporte
+            dato="importe"
             etiqueta={etiquetas.precio}
             valor={r.precio}
             alCambiar={(precio) => {
@@ -120,6 +154,7 @@ export function PasoDeLosRenglones({
           />
           {etiquetas.iva === null ? null : (
             <Selector
+              dato="pendiente"
               etiqueta={etiquetas.iva}
               textoDeElegir={etiquetas.iva}
               valor={r.alicuota}
@@ -196,6 +231,7 @@ export function PasoDeRevisar({
       <section className={estilos["tarjeta"]} aria-label={puntoDeVenta.rotulo}>
         {puntoDeVenta.modo === "varios" ? (
           <Selector
+            dato="pendiente"
             etiqueta={puntoDeVenta.rotulo}
             textoDeElegir={puntoDeVenta.rotulo}
             valor={puntoElegido}

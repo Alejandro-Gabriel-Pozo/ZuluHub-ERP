@@ -51,6 +51,7 @@ import {
   type TenantsDb,
 } from "../../src/modulos/tenants/publico";
 import {
+  crearAutorizacionDeLecturaDePostgres,
   crearAutorizacionDePostgres,
   type AutorizacionDb,
 } from "../../src/adaptadores/postgres/autorizacion";
@@ -89,6 +90,7 @@ import {
 import type { AdminsDePlataforma } from "../../src/puertos/admins-de-plataforma";
 import type { AuditoriaDePlataforma } from "../../src/puertos/auditoria-de-plataforma";
 import type { CargaDeAutorizacionDePlataforma } from "../../src/puertos/autorizacion-de-plataforma";
+import type { CargaDeAutorizacion } from "../../src/puertos/autorizacion";
 import type { ColaDeTrabajos } from "../../src/puertos/cola-de-trabajos";
 import type { LecturasDeSesion } from "../../src/puertos/sesion";
 import type { IdempotenciaDePlataforma } from "../../src/puertos/idempotencia";
@@ -138,6 +140,38 @@ export function crearEntornoDePrueba(
   maximoDeConexiones = 5,
   ajustar: (tx: TxDePrueba) => TxDePrueba = (tx) => tx,
 ): TransaccionesDePostgres<TxDePrueba> {
+  const armarTx = (
+    db: Kysely<SinTablas>,
+    contexto: Contexto,
+    autorizacion: CargaDeAutorizacion,
+  ): TxDePrueba =>
+    ajustar({
+      db,
+      tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
+      empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
+      sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
+      personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
+      membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
+      asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
+      invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
+      traspasos: crearRepositorioDeTraspasos(db.withTables<IdentidadDb>()),
+      trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
+      auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
+      cola: crearColaDePostgres(db.withTables<ColaDb>()),
+      auditoriaDePlataforma: crearAuditoriaDePlataformaDePostgres(
+        db.withTables<AuditoriaDePlataformaDb>(),
+        contexto,
+      ),
+      idempotencia: crearIdempotenciaDePostgres(db.withTables<IdempotenciaDb>(), contexto),
+      autorizacionDePlataforma: crearAutorizacionDePlataformaDePostgres(
+        db.withTables<AutorizacionDePlataformaDb>(),
+      ),
+      admins: crearAdminsDePostgres(db.withTables<AdminsDb>()),
+      referenciasDeError: crearReferenciasDeErrorDePostgres(db.withTables<ReferenciasDeErrorDb>()),
+      autorizacion,
+      niveles: crearNivelesDeControlDePostgres<string>(db.withTables<NivelesDeControlDb>()),
+      sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
+    });
   return crearTransacciones<TxDePrueba>({
     urls: {
       OPERATIVO: base.app,
@@ -146,35 +180,10 @@ export function crearEntornoDePrueba(
       TRABAJOS: base.trabajos,
     },
     armar: (db, contexto) =>
-      ajustar({
-        db,
-        tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
-        empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
-        sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
-        personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
-        membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
-        asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
-        invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
-        traspasos: crearRepositorioDeTraspasos(db.withTables<IdentidadDb>()),
-        trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
-        auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
-        cola: crearColaDePostgres(db.withTables<ColaDb>()),
-        auditoriaDePlataforma: crearAuditoriaDePlataformaDePostgres(
-          db.withTables<AuditoriaDePlataformaDb>(),
-          contexto,
-        ),
-        idempotencia: crearIdempotenciaDePostgres(db.withTables<IdempotenciaDb>(), contexto),
-        autorizacionDePlataforma: crearAutorizacionDePlataformaDePostgres(
-          db.withTables<AutorizacionDePlataformaDb>(),
-        ),
-        admins: crearAdminsDePostgres(db.withTables<AdminsDb>()),
-        referenciasDeError: crearReferenciasDeErrorDePostgres(
-          db.withTables<ReferenciasDeErrorDb>(),
-        ),
-        autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>()),
-        niveles: crearNivelesDeControlDePostgres<string>(db.withTables<NivelesDeControlDb>()),
-        sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
-      }),
+      armarTx(db, contexto, crearAutorizacionDePostgres(db.withTables<AutorizacionDb>())),
+    // Como la composición real: en lectura se resuelven una vez los permisos; al escribir, nunca.
+    armarDeLectura: (db, contexto) =>
+      armarTx(db, contexto, crearAutorizacionDeLecturaDePostgres(db.withTables<AutorizacionDb>())),
     maximoDeConexiones,
     clave: base.clave,
   });
@@ -243,16 +252,27 @@ export const comoSesion = (usuarioAuth: UsuarioAuthId): ContextoDeSesion => ({
 /** El `ahora` de las pruebas (el mismo de todos los contextos de este archivo). */
 export const AHORA_DE_PRUEBA = AHORA;
 
-/** CUIT válido al azar (único con altísima probabilidad dentro de una corrida). */
+const CUERPOS_POSIBLES = 100_000_000;
+/** Dónde empieza la secuencia de ESTE proceso: al azar, para que dos procesos (copias de «Estabilidad») no recorran lo mismo. */
+let siguienteCuerpo = randomInt(0, CUERPOS_POSIBLES);
+
+/**
+ * CUIT válido, distinto en cada llamada de este proceso: una secuencia (contador) y no un sorteo, porque dos sorteos pueden
+ * repetirse (cumpleaños) y un CUIT repetido choca con la unicidad de la base (caso real: «Estabilidad» en #191). Entre procesos
+ * distintos la secuencia arranca en un punto al azar de 10^8 cuerpos. El dígito verificador sale de `digitoVerificadorDeCuit`; si
+ * un cuerpo no tiene verificador válido se salta.
+ */
 export function cuitAlAzar(): Cuit {
-  for (;;) {
-    let diez = String(randomInt(20, 34));
-    while (diez.length < 10) diez += String(randomInt(0, 10));
+  for (let intentos = 0; intentos < CUERPOS_POSIBLES; intentos++) {
+    const cuerpo = siguienteCuerpo;
+    siguienteCuerpo = (siguienteCuerpo + 1) % CUERPOS_POSIBLES;
+    const diez = `${20 + (cuerpo % 14)}${String(cuerpo).padStart(8, "0")}`;
     const verificador = digitoVerificadorDeCuit(diez);
     if (verificador === null) continue;
     const resultado = cuitDesdeTexto(`${diez}${verificador}`);
     if (resultado.ok) return resultado.valor;
   }
+  throw new Error("cuitAlAzar: se agotaron los CUIT posibles");
 }
 
 export const nombreAlAzar = (prefijo: string): string =>
