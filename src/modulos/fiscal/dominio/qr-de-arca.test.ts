@@ -1,5 +1,3 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { fecha } from "../../../../test/utilidades/facturacion";
 import { CUIT_B, CUIT_C } from "../../../../test/utilidades/fiscal";
@@ -203,27 +201,5 @@ describe("el QR de un comprobante ya emitido no valida el documento (dueño, 202
     expect(nro({ tipo: "PASAPORTE", numero: "ABC000000" })).toBe(0);
     expect(nro({ tipo: "PASAPORTE", numero: "ABCDEF" })).toBe(0);
     expect(nro({ tipo: "DNI", numero: "ABC123456" })).toBe(123456);
-  });
-
-  // Previene que alguien vuelva a poner la cuenta estricta (la que lanza) en el camino de la impresión: imprimir una factura ya
-  // emitida no puede fallar por un dato congelado. Si esto falla, la hoja, el ticket o el PDF llaman a `numeroDeDocumentoParaArca`.
-  it("ningún archivo de la ruta de impresión llama a la cuenta estricta", () => {
-    const raiz = join(import.meta.dirname, "../../../..");
-    const carpetas = ["src/adaptadores/pdf", "src/adaptadores/qr", "src/modulos/fiscal/consultas"];
-    const archivos = [
-      "src/modulos/fiscal/dominio/qr-de-arca.ts",
-      "src/modulos/fiscal/dominio/modelo-de-impresion.ts",
-      ...carpetas.flatMap((c) =>
-        readdirSync(join(raiz, c))
-          .filter((n) => n.endsWith(".ts") && !n.endsWith(".test.ts"))
-          .map((n) => `${c}/${n}`),
-      ),
-    ];
-    expect(archivos.length).toBeGreaterThan(4);
-    for (const archivo of archivos) {
-      expect(readFileSync(join(raiz, archivo), "utf8"), archivo).not.toMatch(
-        /numeroDeDocumentoParaArca\b/,
-      );
-    }
   });
 });

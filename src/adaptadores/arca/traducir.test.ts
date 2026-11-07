@@ -91,6 +91,25 @@ describe("de la solicitud del dominio a los valores de WSFE", () => {
     });
   });
 
+  // Lo que se ENVÍA a ARCA es estricto (dueño, 2026-11-07): un pasaporte que daría DocNro 0 («sin identificar») no sale. Si alguien
+  // cambia `aSolicitudDeWsfe` por la cuenta de lectura (la que no lanza), esta prueba falla.
+  it("un pasaporte sin cifras o todo en cero NO se traduce: lanza en lugar de mandar DocNro 0", () => {
+    for (const numero of ["ABC000000", "ABCDEF"]) {
+      expect(
+        () =>
+          aSolicitudDeWsfe(
+            base({
+              receptor: {
+                documento: { tipo: "PASAPORTE", numero },
+                condicionIva: "CONSUMIDOR_FINAL",
+              },
+            }),
+          ),
+        numero,
+      ).toThrow(RangeError);
+    }
+  });
+
   it("los demás documentos y condiciones del receptor", () => {
     const documento = (tipo: "DNI" | "PASAPORTE" | "CUIL" | "CDI", numero: string) =>
       aSolicitudDeWsfe(
