@@ -64,24 +64,8 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "eslint-disable--src-capacidades-experiencia-puerta-ts",
-    "archivos": ["src/capacidades/experiencia/puerta.ts"],
-    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
-    "tipo": "eslint-disable",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "eslint-disable--src-capacidades-experiencia-ruta-de-retorno-test-ts",
     "archivos": ["src/capacidades/experiencia/ruta-de-retorno.test.ts"],
-    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
-    "tipo": "eslint-disable",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "eslint-disable--src-capacidades-experiencia-ruta-de-retorno-ts",
-    "archivos": ["src/capacidades/experiencia/ruta-de-retorno.ts"],
     "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
     "tipo": "eslint-disable",
     "responsable": "agente (a pedido del dueño)",
