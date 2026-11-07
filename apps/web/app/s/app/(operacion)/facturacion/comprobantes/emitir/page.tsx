@@ -7,6 +7,12 @@ import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/
 import { PantallaDeEmitirFactura } from "../../../../../../../ui/plantillas/facturacion/PantallaDeEmitirFactura.cliente";
 import { emitirFacturaAccion } from "../../../../acciones-de-facturacion";
 
+// Tope de la función para la página Y para las Server Actions que aloja (`emitirFacturaAccion`): 90 s. El despacho inmediato (`after()`) espera
+// a ARCA: login de WSAA 20 s + último autorizado 15 s + autorizar 25 s + consulta de validación 15 s = 75 s de peor caso, más 15 s de margen.
+// Sin tope propio, una autorización lenta se cortaría con la serie reservada. Next: «se fija a nivel de página para todas las Server Actions
+// de esa página» (maxDuration.md). Chequeo: `test/web/max-duration.test.ts`.
+export const maxDuration = 90;
+
 // Emitir es parte del módulo: «Comprobantes» queda marcado en la barra. El título (el único `h1`) es el de la pantalla.
 const OPCIONES = { titulo: "fiscal.pantalla.emitir_titulo", actual: "comprobantes" } as const;
 
