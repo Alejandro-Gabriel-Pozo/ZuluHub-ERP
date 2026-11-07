@@ -159,7 +159,7 @@ describe("manejador de enviar_invitacion", () => {
     expect(mensaje.para).toBe("ana@ejemplo.test");
     expect(mensaje.asunto).toBe(`Te invitaron a Panadería Sol en ${MARCA}`);
     expect(mensaje.texto).toContain(`en ${MARCA}.`);
-    expect(mensaje.texto).toContain(`${URL_BASE}/invitaciones/${TOKEN}`);
+    expect(mensaje.texto).toContain(`${URL_BASE}/invitacion?t=${TOKEN}`);
     expect(e.auditoria).toEqual([
       {
         empresaId: EMPRESA,
@@ -198,7 +198,7 @@ describe("manejador de enviar_invitacion", () => {
     const r = await e.manejador(trabajo(), AHORA);
     const visible = JSON.stringify({ r, auditoria: e.auditoria });
     expect(visible).not.toContain(TOKEN);
-    expect(visible).not.toContain("/invitaciones/");
+    expect(visible).not.toContain("/invitacion?t=");
   });
 
   it("ejecutarlo dos veces manda la misma clave y el mismo mensaje (el proveedor no duplica)", async () => {

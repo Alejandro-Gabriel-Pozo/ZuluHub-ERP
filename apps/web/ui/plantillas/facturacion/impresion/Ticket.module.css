@@ -34,9 +34,15 @@
   font-weight: 700;
 }
 
+/* Texto legal de la norma: texto normal del comprobante (sin recuadro ni negrita), no el aviso de pruebas. */
+.leyendaLegal {
+  margin-bottom: 2mm;
+}
+
 .nombre {
   font-size: 13pt;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .rotulo {

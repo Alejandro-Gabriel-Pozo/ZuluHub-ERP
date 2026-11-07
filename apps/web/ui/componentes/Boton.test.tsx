@@ -7,7 +7,7 @@ import {
   verificarFoco,
   violacionesDeAccesibilidad,
 } from "../pruebas/ayudas";
-import { Boton } from "./Boton";
+import { Boton } from "./Boton.cliente";
 
 describe("Boton", () => {
   it.each(["primaria", "secundaria", "peligro"] as const)(

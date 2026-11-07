@@ -45,6 +45,9 @@ export function comprobanteParaLaHoja(m: Modelo): ComprobanteParaLaHoja {
       condicionIva: m.receptor.condicionIva,
       domicilio: m.receptor.domicilio,
       ...(m.receptor.leyenda === undefined ? {} : { leyenda: m.receptor.leyenda }),
+      ...(m.receptor.leyendaDeCondicion === undefined
+        ? {}
+        : { leyendaDeCondicion: m.receptor.leyendaDeCondicion }),
     },
     ...(m.modoDePrecio === undefined ? {} : { modoDePrecio: m.modoDePrecio }),
     renglones: m.renglones.map((r) => ({
@@ -108,5 +111,7 @@ export function comprobanteParaLaHoja(m: Modelo): ComprobanteParaLaHoja {
             fecha: m.asociado.fecha,
           },
     leyendas: [...m.leyendas],
+    ...(m.sucursal === undefined ? {} : { sucursal: { nombre: m.sucursal.nombre } }),
+    ...(m.leyendasLegales === undefined ? {} : { leyendasLegales: [...m.leyendasLegales] }),
   };
 }

@@ -278,6 +278,16 @@ export async function elegirLaSucursal(datos: FormData): Promise<ResultadoDeAcci
   redirect(RUTA_DEL_LISTADO);
 }
 
+/**
+ * «Continuar» de la pantalla «Elegir sucursal» al ingresar (dueño, 2026-11-05): la misma validación y la misma cookie que
+ * `elegirLaSucursal` (`fijarLaSucursal`), pero vuelve al Inicio. Los errores salen por el camino común; no escribe nada si falla.
+ */
+export async function elegirLaSucursalAlIngresar(datos: FormData): Promise<ResultadoDeAccion> {
+  const resultado = await fijarLaSucursal(datos);
+  if (!resultado.ok) return { error: resultado.error };
+  redirect("/");
+}
+
 export function verElComprobante(entrada: unknown): Promise<Respuesta<DetalleParaLaPantalla>> {
   return conLaEmpresa((contexto) => verComprobante(dependencias, contexto, entrada));
 }

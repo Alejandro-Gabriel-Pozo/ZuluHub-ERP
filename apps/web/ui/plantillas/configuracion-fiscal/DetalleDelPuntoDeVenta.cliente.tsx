@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import type { Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { Boton } from "../../componentes/Boton";
+import { Boton } from "../../componentes/Boton.cliente";
 import { Insignia } from "../../componentes/Insignia";
 import { RegionDeEstado } from "../../patrones/RegionDeEstado";
 import { Superposicion } from "../../patrones/Superposicion";
@@ -178,9 +178,9 @@ export function DetalleDelPuntoDeVenta({
         </span>
         {armado.puedePasarAProduccion ? (
           <span ref={envolturaDelBoton}>
-            {/* Hoy sale apagado: `puntos_de_venta.cambiar_ambiente` es del módulo `facturacion`, en desarrollo, y el servidor lo rechaza
-                siempre. Aun con el módulo activo el servidor exigirá un certificado de producción vigente (SIN_CERTIFICADO_VIGENTE), y la
-                verificación contra ARCA (D-77) todavía no está construida. La oferta la calcula `accionesDePuntosDeVenta`. */}
+            {/* Sale apagado si el servidor no lo deja: `puntos_de_venta.cambiar_ambiente` es del módulo `facturacion` (`disponible` desde
+                2026-11-04), que además tiene que estar activo en la empresa, y el rol tiene que alcanzar. Aun con eso el servidor exigirá un
+                certificado de producción vigente (SIN_CERTIFICADO_VIGENTE), y la verificación contra ARCA (D-77) todavía no está construida. La oferta la calcula `accionesDePuntosDeVenta`. */}
             <Boton
               variante="secundaria"
               deshabilitado={!acciones.pasarAProduccion.permitida}

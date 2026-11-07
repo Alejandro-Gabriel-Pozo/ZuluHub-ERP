@@ -125,6 +125,7 @@ describe.skipIf(base === null)(
           razonSocial: "Panadería Zulu SA",
           condicionIva: "RESPONSABLE_INSCRIPTO",
           inicioActividades: "2018-03-01",
+          iibbNumero: "901-123456-7",
           domicilio: corregido,
         }),
       ) as { version: number };

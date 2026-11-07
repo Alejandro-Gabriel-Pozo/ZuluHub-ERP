@@ -6,7 +6,7 @@ import {
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { Aviso } from "../../componentes/Aviso";
-import { Boton } from "../../componentes/Boton";
+import { Boton } from "../../componentes/Boton.cliente";
 import { CajaDeCampo } from "../../componentes/CajaDeCampo";
 import { CampoImporte } from "../../componentes/CampoImporte";
 import { Insignia } from "../../componentes/Insignia";
@@ -153,6 +153,7 @@ export function PantallaDeAnularComprobante({
                     <span className={estilos["importe"]}>{fila.facturado.importe}</span>
                   </p>
                   <CampoImporte
+                    dato="importe"
                     etiqueta={fila.etiquetaDelCampo}
                     valor={fila.valor}
                     alCambiar={(canonico) => {

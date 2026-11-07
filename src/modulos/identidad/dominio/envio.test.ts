@@ -142,24 +142,24 @@ describe("decidirEnvioDeInvitacion", () => {
 });
 
 describe("armarEnlaceDeInvitacion", () => {
-  it("une la URL base, la ruta de invitaciones y el token", () => {
+  it("une la URL base, la pantalla de invitación y el token en la consulta", () => {
     expect(armarEnlaceDeInvitacion("https://app.ejemplo.test", "abc_DEF-123")).toBe(
-      "https://app.ejemplo.test/invitaciones/abc_DEF-123",
+      "https://app.ejemplo.test/invitacion?t=abc_DEF-123",
     );
   });
 
   it("conserva una ruta base y no duplica barras", () => {
     expect(armarEnlaceDeInvitacion("https://app.ejemplo.test/zulu/", "t")).toBe(
-      "https://app.ejemplo.test/zulu/invitaciones/t",
+      "https://app.ejemplo.test/zulu/invitacion?t=t",
     );
     expect(armarEnlaceDeInvitacion("https://app.ejemplo.test///", "t")).toBe(
-      "https://app.ejemplo.test/invitaciones/t",
+      "https://app.ejemplo.test/invitacion?t=t",
     );
   });
 
   it("escapa lo que no sea seguro en una URL", () => {
     expect(armarEnlaceDeInvitacion("https://a.test", "a b/c?d#e")).toBe(
-      "https://a.test/invitaciones/a%20b%2Fc%3Fd%23e",
+      "https://a.test/invitacion?t=a%20b%2Fc%3Fd%23e",
     );
   });
 });
@@ -171,7 +171,7 @@ describe("armarMensajeDeInvitacion", () => {
   it("arma el asunto y el texto con la empresa, el enlace y la marca recibida", () => {
     const m = armarMensajeDeInvitacion(
       "Panadería Sol",
-      "https://app.ejemplo.test/invitaciones/t",
+      "https://app.ejemplo.test/invitacion?t=t",
       MARCA,
     );
     expect(m.asunto).toBe("Te invitaron a Panadería Sol en Marca de Prueba");
@@ -182,7 +182,7 @@ describe("armarMensajeDeInvitacion", () => {
         "Te invitaron a sumarte a Panadería Sol en Marca de Prueba.",
         "",
         "Para aceptar la invitación, abrí este enlace e iniciá sesión con este mismo email:",
-        "https://app.ejemplo.test/invitaciones/t",
+        "https://app.ejemplo.test/invitacion?t=t",
         "",
         "El enlace es personal: no lo compartas. Si no esperabas esta invitación, ignorá este mensaje.",
         "",

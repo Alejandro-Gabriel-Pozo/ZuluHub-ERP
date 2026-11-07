@@ -1,4 +1,4 @@
-import { Boton } from "../../componentes/Boton";
+import { Boton } from "../../componentes/Boton.cliente";
 import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../componentes/Insignia";
 import { Texto } from "../../primitivas/Texto";

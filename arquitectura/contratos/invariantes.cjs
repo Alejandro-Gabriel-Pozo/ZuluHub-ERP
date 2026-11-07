@@ -2465,7 +2465,7 @@ const INVARIANTES = [
       ],
       hacePosible: [
         `${PAQUETE} (scripts deuda y arquitectura)`,
-        `${CI} (el paso «Deuda técnica» del job guardian, obligatorio para el Gate)`,
+        `${CI} (los pasos «Deuda técnica» y «Deuda de campos sin dato» del job guardian, obligatorios para el Gate)`,
         `${VIGILANCIA}#chequearCi (el paso no se quita ni se saltea)`,
         `${PRUEBAS}`,
         `${MECANISMO}#PRUEBAS_DEL_GUARDIAN`,
@@ -2488,6 +2488,8 @@ const INVARIANTES = [
       "excepcion-obsoleta",
       "ci-sin-paso-de-deuda",
       "ci-deuda-con-salto",
+      "ci-sin-paso-de-campos",
+      "ci-campos-con-salto",
       "script-arquitectura-sin-deuda",
       "script-deuda-desviado",
       "deuda-tope-subio",
@@ -2780,6 +2782,36 @@ const INVARIANTES = [
           codigo: "ci-deuda-con-salto",
           archivo: CI,
           lineaDe: { texto: "if: false", despuesDe: "Deuda técnica (no crece" },
+        },
+      },
+      {
+        id: "I12-borrar-el-paso-de-campos-del-ci",
+        tipo: "eliminacion",
+        objetivo: "base-y-pr",
+        descripcion:
+          "El pull request quita del job `guardian` el paso «Deuda de campos sin dato» (su presupuesto podría subir sin que la CI lo note).",
+        esperado: { codigo: "ci-sin-paso-de-campos", archivo: CI, lineaDe: "  guardian:" },
+      },
+      {
+        id: "I12-continue-on-error-en-el-paso-de-campos",
+        tipo: "desconexion",
+        objetivo: "base-y-pr",
+        descripcion: "El paso «Deuda de campos sin dato» agrega `continue-on-error: true`.",
+        esperado: {
+          codigo: "ci-campos-con-salto",
+          archivo: CI,
+          lineaDe: { texto: "continue-on-error: true", despuesDe: "Deuda de campos sin dato (" },
+        },
+      },
+      {
+        id: "I12-if-en-el-paso-de-campos",
+        tipo: "desconexion",
+        objetivo: "base-y-pr",
+        descripcion: "El paso «Deuda de campos sin dato» agrega `if: false`.",
+        esperado: {
+          codigo: "ci-campos-con-salto",
+          archivo: CI,
+          lineaDe: { texto: "if: false", despuesDe: "Deuda de campos sin dato (" },
         },
       },
       {

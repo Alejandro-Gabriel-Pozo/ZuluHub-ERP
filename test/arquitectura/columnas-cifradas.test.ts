@@ -1,16 +1,14 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, expectTypeOf, it } from "vitest";
-import type {
-  AccesoGuardado,
-  CertificadoGuardado,
-} from "../../src/modulos/fiscal/persistencia/repositorio-de-certificados";
+import type { AccesoGuardado } from "../../src/modulos/fiscal/persistencia/repositorio-de-accesos";
+import type { CertificadoGuardado } from "../../src/modulos/fiscal/persistencia/repositorio-de-certificados";
 
 /**
  * «Nunca se muestra» (spec H7 facturación §B.6.3 y §B.9): la clave privada de un certificado y el ticket de acceso
  * solo los toca quien los cifra y quien los descifra. Dos reglas, cada una con su violación inyectada:
  *
- *  1. Solo el repositorio de certificados (y sus dos archivos de forma, `tablas.ts` y `esquema.ts`) nombra las columnas
+ *  1. Solo el repositorio de certificados y el de accesos (que salió de él al partir el archivo; y sus dos archivos de forma, `tablas.ts` y `esquema.ts`) nombra las columnas
  *     cifradas (`clave_*` de `certificado_arca` y `credencial_*` de `acceso_arca`). Previene que una consulta, una
  *     pantalla o un informe seleccione la clave (aun cifrada) por su cuenta. El adaptador de ARCA (F8) también puede
  *     (§B.9), por si necesita leerlas.
@@ -26,11 +24,11 @@ const COLUMNAS_CIFRADAS =
 const LECTURA_DE_LO_CIFRADO = /\b(?:obtenerClave|obtenerCredencial)\b/;
 
 const PUEDEN_NOMBRAR_LAS_COLUMNAS = [
-  /^src\/modulos\/fiscal\/persistencia\/(?:repositorio-de-certificados|tablas|esquema)\.ts$/,
+  /^src\/modulos\/fiscal\/persistencia\/(?:repositorio-de-certificados|repositorio-de-accesos|tablas|esquema)\.ts$/,
   /^src\/adaptadores\/arca\//,
 ];
 const PUEDEN_LEER_LO_CIFRADO = [
-  /^src\/modulos\/fiscal\/persistencia\/repositorio-de-certificados\.ts$/,
+  /^src\/modulos\/fiscal\/persistencia\/(?:repositorio-de-certificados|repositorio-de-accesos)\.ts$/,
   /^src\/modulos\/fiscal\/casos-de-uso\/(?:contrato-de-certificados|cargar-certificado)\.ts$/,
   /^src\/adaptadores\/certificados\/(?:credenciales-de-emisor|almacen-de-tickets)\.ts$/,
   /^src\/adaptadores\/arca\//,
@@ -72,9 +70,13 @@ describe("lo cifrado (la clave privada y el ticket de acceso) lo tocan solo quie
   });
 
   it("las listas de permitidos no están muertas: cada archivo permitido nombra lo que se le permite", () => {
-    const repositorio = leer("src/modulos/fiscal/persistencia/repositorio-de-certificados.ts");
-    expect(COLUMNAS_CIFRADAS.test(repositorio)).toBe(true);
-    expect(LECTURA_DE_LO_CIFRADO.test(repositorio)).toBe(true);
+    for (const ruta of [
+      "src/modulos/fiscal/persistencia/repositorio-de-certificados.ts",
+      "src/modulos/fiscal/persistencia/repositorio-de-accesos.ts",
+    ]) {
+      expect(COLUMNAS_CIFRADAS.test(leer(ruta)), ruta).toBe(true);
+      expect(LECTURA_DE_LO_CIFRADO.test(leer(ruta)), ruta).toBe(true);
+    }
     for (const ruta of [
       "src/modulos/fiscal/persistencia/tablas.ts",
       "src/modulos/fiscal/persistencia/esquema.ts",
@@ -149,6 +151,12 @@ describe("lo cifrado (la clave privada y el ticket de acceso) lo tocan solo quie
         violacionesDe(
           "src/modulos/fiscal/persistencia/repositorio-de-certificados.ts",
           'select(["clave_cifrada"]); obtenerClave();',
+        ),
+      ).toEqual([]);
+      expect(
+        violacionesDe(
+          "src/modulos/fiscal/persistencia/repositorio-de-accesos.ts",
+          'select(["credencial_cifrada"]); obtenerCredencial();',
         ),
       ).toEqual([]);
       expect(

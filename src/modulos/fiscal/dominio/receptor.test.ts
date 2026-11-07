@@ -63,15 +63,49 @@ describe("validarReceptor: lo que acepta", () => {
 
   it("recorta los blancos y vuelve null los textos vacíos", () => {
     const r = validarReceptor(
-      { ...inscripto, nombre: "  Distribuidora Sur SA  ", domicilio: "   " },
+      { ...inscripto, nombre: "  Distribuidora Sur SA  ", domicilio: "  Av. Siempreviva 742  " },
       contexto("A"),
     );
     expect(r).toEqual({
       ok: true,
-      valor: { ...inscripto, nombre: "Distribuidora Sur SA", domicilio: null },
+      valor: { ...inscripto, nombre: "Distribuidora Sur SA", domicilio: "Av. Siempreviva 742" },
     });
-    const sinDomicilio = validarReceptor({ ...inscripto, domicilio: null }, contexto("A"));
-    expect(sinDomicilio).toEqual({ ok: true, valor: { ...inscripto, domicilio: null } });
+    // El consumidor final sí admite un domicilio en blanco: queda sin domicilio.
+    const cf = validarReceptor({ ...consumidorFinal, domicilio: "   " }, contexto("B"));
+    expect(cf).toEqual({ ok: true, valor: consumidorFinal });
+  });
+
+  it("el domicilio es obligatorio salvo con el consumidor final (RG 1415 Anexo II A.II)", () => {
+    for (const domicilio of [null, "", "   "]) {
+      expect(
+        validarReceptor({ ...inscripto, domicilio }, contexto("A")),
+        JSON.stringify(domicilio),
+      ).toEqual(invalido("domicilio"));
+    }
+    // También con un consumidor final IDENTIFICADO: el consumidor final nunca lo necesita.
+    const identificado = conDocumento(
+      { tipo: "DNI", numero: "12345678" },
+      { nombre: "Juana Pérez" },
+    );
+    expect(validarReceptor(identificado, contexto("B"))).toMatchObject({ ok: true });
+    const monotributista = { ...inscripto, condicionIva: "MONOTRIBUTO", domicilio: null } as const;
+    expect(validarReceptor(monotributista, contexto("A"))).toEqual(invalido("domicilio"));
+  });
+
+  it("un nombre en blanco es «sin nombre»: el consumidor final lo admite y un documento identificado lo exige", () => {
+    for (const nombre of ["", "   ", " \t "]) {
+      expect(
+        validarReceptor({ ...consumidorFinal, nombre }, contexto("B")),
+        JSON.stringify(nombre),
+      ).toEqual({
+        ok: true,
+        valor: consumidorFinal,
+      });
+      expect(
+        validarReceptor({ ...inscripto, nombre }, contexto("A")),
+        JSON.stringify(nombre),
+      ).toEqual(invalido("nombre"));
+    }
   });
 
   it("un CUIT con guiones queda en su forma canónica", () => {
@@ -133,6 +167,65 @@ describe("validarReceptor: forma", () => {
     ).toEqual(invalido("domicilio"));
   });
 
+  it("el nombre tiene que tener al menos una letra: solo números o un documento se rechazan (campo nombre)", () => {
+    for (const nombre of ["12345678", "30-71234567-1", "30712345671", "-", "&&&"]) {
+      expect(validarReceptor({ ...inscripto, nombre }, contexto("A")), nombre).toEqual(
+        invalido("nombre"),
+      );
+    }
+    // También sin identificar: si se escribe un nombre, tiene que ser un nombre.
+    expect(validarReceptor({ ...consumidorFinal, nombre: "12345678" }, contexto("B"))).toEqual(
+      invalido("nombre"),
+    );
+  });
+
+  it("el nombre y el domicilio sin saltos de línea, invisibles, etiquetas ni emojis (la base los rechaza)", () => {
+    for (const texto of ["Juan\nPérez", "Ju\u200ban", "Ju\u202ean", "<b>Juan</b>", "Juan 😀"]) {
+      expect(validarReceptor({ ...inscripto, nombre: texto }, contexto("A")), texto).toEqual(
+        invalido("nombre"),
+      );
+      expect(validarReceptor({ ...inscripto, domicilio: texto }, contexto("A")), texto).toEqual(
+        invalido("domicilio"),
+      );
+    }
+  });
+
+  it("un nombre o un domicilio que empieza con `=`, `+`, `-` o `@` se rechaza con su campo", () => {
+    for (const texto of ["=SUMA(A1)", "+Juan", "-Juan", "@Juan"]) {
+      expect(validarReceptor({ ...inscripto, nombre: texto }, contexto("A")), texto).toEqual(
+        invalido("nombre"),
+      );
+      expect(validarReceptor({ ...inscripto, domicilio: texto }, contexto("A")), texto).toEqual(
+        invalido("domicilio"),
+      );
+    }
+  });
+
+  it("el nombre y el domicilio quedan en su forma canónica (blancos repetidos, NFC)", () => {
+    const r = validarReceptor(
+      { ...inscripto, nombre: "  Pérez   e  Hijos ", domicilio: "Av.  Siempreviva   742" },
+      contexto("A"),
+    );
+    expect(r).toEqual({
+      ok: true,
+      valor: { ...inscripto, nombre: "Pérez e Hijos", domicilio: "Av. Siempreviva 742" },
+    });
+  });
+
+  it("un nombre en el campo del documento y un documento en el campo del nombre (el caso real del dueño)", () => {
+    // Al revés: el CUIT en el nombre y el nombre en el documento. El documento se mira primero.
+    const alReves: Receptor = {
+      ...inscripto,
+      nombre: "30712345671",
+      documento: { tipo: "CUIT", numero: "Distribuidora Sur SA" },
+    };
+    expect(validarReceptor(alReves, contexto("A"))).toEqual(invalido("documento"));
+    // Con el documento bien y el CUIT todavía en el nombre, el error marca el nombre.
+    expect(validarReceptor({ ...inscripto, nombre: "30712345671" }, contexto("A"))).toEqual(
+      invalido("nombre"),
+    );
+  });
+
   it("CUIT, CUIL y CDI con dígito verificador inválido o mal formados", () => {
     for (const tipo of ["CUIT", "CUIL", "CDI"] as const) {
       for (const numero of ["30712345672", "123", "", "3071234567a", " 30712345671"]) {
@@ -145,6 +238,21 @@ describe("validarReceptor: forma", () => {
 
   it("DNI: de 6 a 9 dígitos y sin ceros a la izquierda", () => {
     for (const numero of ["12345", "1234567890", "012345678", "1234567a", "", "12 345 678"]) {
+      expect(validarReceptor(conDocumento({ tipo: "DNI", numero }), contexto("B"))).toEqual(
+        invalido("documento"),
+      );
+    }
+  });
+
+  it("DNI con puntos de miles: se guarda en su forma canónica y con otros separadores se rechaza (Q6)", () => {
+    const r = validarReceptor(conDocumento({ tipo: "DNI", numero: "12.345.678" }), contexto("B"));
+    expect(r).toMatchObject({
+      ok: true,
+      valor: { documento: { tipo: "DNI", numero: "12345678" } },
+    });
+    // Lo que se le informa a ARCA (`DocNro`) es lo mismo con o sin puntos.
+    if (r.ok) expect(numeroDeDocumentoParaArca(r.valor.documento)).toBe(12345678n);
+    for (const numero of ["12 345 678", "12,345,678", "12.345.67"]) {
       expect(validarReceptor(conDocumento({ tipo: "DNI", numero }), contexto("B"))).toEqual(
         invalido("documento"),
       );
@@ -232,7 +340,9 @@ describe("validarReceptor: reglas de ARCA", () => {
     expect(validarReceptor(sinDomicilioValido, contexto("A"))).toEqual(invalido("domicilio"));
     const condicion = { ...sinDomicilioValido, domicilio: null };
     expect(validarReceptor(condicion, contexto("A"))).toEqual(invalido("condicionIva"));
-    const para = { ...condicion, condicionIva: "RESPONSABLE_INSCRIPTO" } as const;
+    const inscriptoSinDomicilio = { ...condicion, condicionIva: "RESPONSABLE_INSCRIPTO" } as const;
+    expect(validarReceptor(inscriptoSinDomicilio, contexto("A"))).toEqual(invalido("domicilio"));
+    const para = { ...inscriptoSinDomicilio, domicilio: "Av. Siempreviva 742" } as const;
     expect(
       validarReceptor({ ...para, documento: { tipo: "DNI", numero: "12345678" } }, contexto("A")),
     ).toEqual({

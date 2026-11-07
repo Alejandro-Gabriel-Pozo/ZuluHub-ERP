@@ -358,7 +358,7 @@ describe("el cambio de ambiente y su ventana de confirmación (D-48)", () => {
     await expect.element(dialogo()).toBeVisible();
     tocar(enLaVentana("Pasar a producción"));
     await expect
-      .element(dialogo().getByText("Los datos cambiaron mientras los miraba.", { exact: false }))
+      .element(dialogo().getByText("Los datos cambiaron mientras los mirabas.", { exact: false }))
       .toBeVisible();
     await vi.waitFor(() => expect(router.refresh).toHaveBeenCalled());
   });

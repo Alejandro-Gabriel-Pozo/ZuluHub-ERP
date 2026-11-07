@@ -36,6 +36,7 @@
     "src/capacidades/activos/**/*.ts",
     "src/capacidades/controles/**/*.ts",
     "src/primitivas/contacto/**/*.ts",
+    "src/primitivas/texto/**/*.ts",
     "src/composicion/entorno.ts",
     "src/composicion/entorno-de-plataforma.ts",
     "src/composicion/perezoso.ts",
@@ -93,6 +94,7 @@
     "arquitectura/deuda/libro.cjs",
     "arquitectura/deuda/antes-y-despues.cjs",
     "arquitectura/deuda/deuda.cjs",
+    "arquitectura/deuda/campos-sin-dato.cjs",
     "!src/**/*.test.ts"
   ],
   "coverageAnalysis": "off",

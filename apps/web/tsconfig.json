@@ -30,6 +30,7 @@
     "**/*.ts",
     "**/*.tsx",
     "next-env.d.ts",
+    "../../src/adaptadores/pdf/pdfkit.d.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],

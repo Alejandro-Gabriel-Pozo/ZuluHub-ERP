@@ -2,7 +2,7 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { Boton } from "../componentes/Boton";
+import { Boton } from "../componentes/Boton.cliente";
 import { Campo } from "../componentes/Campo";
 import { violacionesDeAccesibilidad } from "../pruebas/ayudas";
 import { Superposicion, type PropositoDeSuperposicion } from "./Superposicion";
@@ -39,7 +39,7 @@ function Ejemplo({
           setAbierta(false);
         }}
       >
-        <Campo etiqueta="Nombre" valor={nombre} alCambiar={setNombre} />
+        <Campo dato="pendiente" etiqueta="Nombre" valor={nombre} alCambiar={setNombre} />
         <Boton>Cobrar $ 100,00</Boton>
         <Boton variante="secundaria">Volver</Boton>
       </Superposicion>

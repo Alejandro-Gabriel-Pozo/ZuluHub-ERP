@@ -21,6 +21,7 @@ const OBLIGATORIOS = [
   "mutacion-plan",
   "web",
   "componentes",
+  "recorrido",
 ];
 /** Jobs que solo corren en pull requests: en push a main quedan `skipped`. */
 const SOLO_EN_PULL_REQUEST = ["dependencias"];

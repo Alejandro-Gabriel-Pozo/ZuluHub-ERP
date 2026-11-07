@@ -121,6 +121,7 @@ function guardado(cambios: Partial<ComprobanteGuardado> = {}): ComprobanteGuarda
     huella: "huella-interna",
     versionDeRepresentacion: 1,
     contacto: SIN_CONTACTO,
+    sucursalNombre: null,
     creadoPor: personaId("p-1"),
     creadoEn: new Date("2026-10-13T14:59:00.000Z"),
     version: 4,
@@ -1238,7 +1239,7 @@ describe("modeloDeImpresion (la consulta)", () => {
   });
 
   it("una versión de representación que no se sabe dibujar sale como error del modelo", async () => {
-    const { consultas } = armar({ comprobante: guardado({ versionDeRepresentacion: 3 }) });
+    const { consultas } = armar({ comprobante: guardado({ versionDeRepresentacion: 4 }) });
     expect(await consultas.modeloDeImpresion(contexto(), { comprobanteId: ID })).toEqual({
       ok: false,
       error: "VERSION_DE_REPRESENTACION_DESCONOCIDA",

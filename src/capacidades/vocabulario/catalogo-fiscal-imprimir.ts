@@ -38,4 +38,7 @@ export const TEXTOS_DE_FISCAL_IMPRIMIR = {
   // impuesto sobre los ingresos brutos o condición de no contribuyente»; la norma no fija el rótulo, lo aprobó el dueño. Sin número, la línea
   // se omite (SUPUESTO D-112).
   "fiscal.pantalla.imprimir_ingresos_brutos": { porDefecto: "Ingresos Brutos" },
+  // Dueño, 2026-11-05, mensaje en la sesión del PDF («Apruebo el botón descargar PDFs»; el texto «Descargar PDF» es el de la propuesta técnica de la
+  // Fase 1 de esa fecha, punto (d)), ratificado por el orquestador el mismo día. Pedido original: «que el usuario pueda DESCARGAR la factura como PDF».
+  "fiscal.pantalla.imprimir_descargar_pdf": { porDefecto: "Descargar PDF" },
 } as const;

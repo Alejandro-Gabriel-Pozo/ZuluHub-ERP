@@ -35,7 +35,21 @@ export function cuitDesdeTexto(texto: string): Resultado<Cuit, ErrorDeCuit> {
   return ok(digitos as Cuit);
 }
 
-/** `30-70308853-4`: para mostrar. La forma canónica es la que se guarda. */
+const ONCE_DIGITOS = /^[0-9]{11}$/;
+
+/**
+ * `30-70308853-4`: para mostrar. La forma canónica es la que se guarda. Es la ÚNICA función que arma el CUIT con guiones (la web y la
+ * consola de plataforma la importan; antes cada una tenía su copia). Previene: tres formatos que se desvían con el tiempo.
+ */
 export function cuitConGuiones(cuit: Cuit): string {
   return `${cuit.slice(0, 2)}-${cuit.slice(2, 10)}-${cuit.slice(10)}`;
+}
+
+/**
+ * Lo mismo para un texto que todavía no es un `Cuit` (lo que muestra una pantalla): 11 dígitos pasan a `XX-XXXXXXXX-X`; cualquier otro
+ * texto (incluido el que ya tiene guiones) vuelve tal cual. Solo es presentación: la validación y el dígito verificador son de
+ * `cuitDesdeTexto`, así que nunca lanza.
+ */
+export function cuitParaMostrar(texto: string): string {
+  return ONCE_DIGITOS.test(texto) ? cuitConGuiones(texto as Cuit) : texto;
 }

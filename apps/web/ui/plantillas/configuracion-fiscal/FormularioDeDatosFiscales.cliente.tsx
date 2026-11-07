@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import type { Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { Boton } from "../../componentes/Boton";
+import { Boton } from "../../componentes/Boton.cliente";
 import { Campo } from "../../componentes/Campo";
 import { Selector } from "../../componentes/Selector";
 import { Pila } from "../../primitivas/Pila";
@@ -16,6 +16,8 @@ import {
   borradorTrasGuardar,
   filaDelCuit,
   lugarDelError,
+  MODO_NO_CONTRIBUYENTE,
+  MODO_NUMERO,
   valoresDelBorrador,
   type BorradorDeDatosFiscales,
   type CampoDeDatosFiscales,
@@ -39,6 +41,8 @@ export type PropsDeFormularioDeDatosFiscales = Readonly<{
   /** Lo que rige hoy (D-88): sin borrador, el formulario se abre con esto. `null` (y sin borrador): se empieza en blanco. */
   vigente: VigenteDeDatosFiscales | null;
   condicionesDeIva: readonly OpcionDeCondicionDeIva[];
+  /** La fecha de hoy en Argentina (`aaaa-mm-dd`): el tope del selector de «Inicio de actividades». Ayuda, no validación. */
+  hoy: string;
   /** `guardarBorradorDeDatosFiscalesAccion`: devuelve la versión que quedó guardada. */
   guardar: (pedido: unknown) => Promise<Respuesta<Readonly<{ version: number }>>>;
   /** `confirmarDatosFiscalesAccion`. */
@@ -82,6 +86,7 @@ export function FormularioDeDatosFiscales({
   borrador,
   vigente,
   condicionesDeIva,
+  hoy,
   guardar,
   confirmar,
   rutaAlGuardar,
@@ -165,6 +170,7 @@ export function FormularioDeDatosFiscales({
       error={errorEn(campoDelFormulario)}
       deshabilitado={bloqueado}
       {...extra}
+      dato="pendiente"
     />
   );
 
@@ -209,6 +215,7 @@ export function FormularioDeDatosFiscales({
         <DatosParaLeer filas={[filaDelCuit(cuit)]} />
         {campo("razonSocial", "fiscal.pantalla.config_df_razon_social")}
         <Selector
+          dato="pendiente"
           etiqueta={texto({}, "fiscal.pantalla.config_df_condicion_iva")}
           nombre="condicionIva"
           valor={valores.condicionIva}
@@ -237,6 +244,7 @@ export function FormularioDeDatosFiscales({
             autoComplete: "address-level2",
           })}
           <Selector
+            dato="pendiente"
             etiqueta={texto({}, "fiscal.pantalla.config_pv_provincia")}
             nombre="provincia"
             valor={valores.provincia}
@@ -252,8 +260,31 @@ export function FormularioDeDatosFiscales({
             autoComplete: "postal-code",
           })}
         </fieldset>
+        <Selector
+          dato="pendiente"
+          etiqueta={texto({}, "fiscal.pantalla.imprimir_ingresos_brutos")}
+          nombre="ingresosBrutos"
+          valor={valores.ingresosBrutos}
+          alCambiar={(v) => {
+            poner("ingresosBrutos", v);
+          }}
+          opciones={[
+            { valor: MODO_NUMERO, etiqueta: texto({}, "fiscal.pantalla.config_df_iibb_numero") },
+            {
+              valor: MODO_NO_CONTRIBUYENTE,
+              etiqueta: texto({}, "fiscal.pantalla.config_df_iibb_no_contribuyente"),
+            },
+          ]}
+          textoDeElegir={texto({}, "selector.elegir_una_opcion")}
+          error={errorEn("ingresosBrutos")}
+          deshabilitado={bloqueado}
+        />
+        {valores.ingresosBrutos === MODO_NUMERO
+          ? campo("iibbNumero", "fiscal.pantalla.config_df_iibb_numero")
+          : null}
         {campo("inicioActividades", "fiscal.pantalla.config_df_inicio_actividades", {
-          inputMode: "numeric",
+          tipo: "date",
+          maximo: hoy,
         })}
         <div className={estilos["botones"]}>
           <Boton

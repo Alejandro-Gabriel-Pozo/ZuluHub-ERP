@@ -12,7 +12,7 @@ const CONFIGURACION = {
 const MENSAJE: MensajeDeCorreo = {
   para: "ana@ejemplo.test",
   asunto: "Te invitaron",
-  texto: "Entrá a https://app.ejemplo.test/invitaciones/abc",
+  texto: "Entrá a https://app.ejemplo.test/invitacion?t=abc",
 };
 
 type Llamada = { url: string; init: RequestInit };

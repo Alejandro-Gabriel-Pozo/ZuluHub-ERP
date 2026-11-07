@@ -7,6 +7,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -397,6 +398,18 @@ describe("reglas de arquitectura (ADR-001)", () => {
       regla: "qr-solo-en-su-adaptador",
       archivos: {
         "src/adaptadores/autenticacion/opciones.ts": importa("qrcode-generator"),
+      },
+    },
+    {
+      regla: "pdf-solo-en-su-adaptador",
+      archivos: {
+        "src/adaptadores/qr/qr-svg.ts": importa("pdfkit"),
+      },
+    },
+    {
+      regla: "lectores-de-pdf-solo-en-pruebas",
+      archivos: {
+        "src/composicion/pdf-de-la-factura-web.ts": importa("pdfjs-dist/legacy/build/pdf.mjs"),
       },
     },
     {
@@ -1952,6 +1965,75 @@ describe("P8c: el ingreso de la consola solo lo importa el servidor de la consol
  * adaptador de QR, la carpeta `src/adaptadores/qr/`, y nada más (ni siquiera el adaptador de autenticación, que ahora
  * le pide el dibujo como cualquier otro).
  */
+describe("PDF de la factura: la librería de PDF solo entra por su adaptador y los lectores de PDF solo en pruebas", () => {
+  it("lo importa el adaptador de PDF (y sus pruebas), y nadie más puede", async () => {
+    const v = await violacionesDe({
+      "src/adaptadores/pdf/pincel-del-pdf.ts": importa("pdfkit"),
+      "src/adaptadores/pdf/pdf-de-la-factura.test.ts": importa("pdfkit"),
+      "src/adaptadores/pdf/otro/archivo.ts": importa("pdfkit/js/pdfkit.js"),
+    });
+    expect(v).not.toContain("pdf-solo-en-su-adaptador");
+  });
+
+  it.each([
+    ["otro adaptador", "src/adaptadores/qr/qr-svg.ts"],
+    ["la composición", "src/composicion/pdf-de-la-factura-web.ts"],
+    ["un módulo de negocio", "src/modulos/fiscal/dominio/modelo-de-impresion.ts"],
+    ["la web", "apps/web/servidor/pdf-de-la-factura.ts"],
+    ["una pantalla de la web", "apps/web/pantallas/pdf-de-la-factura.ts"],
+    ["una ruta de la web", "apps/web/app/api/salud/route.ts"],
+    ["un script", "scripts/crear-pdf.ts"],
+  ])("%s no puede importar pdfkit (%s)", async (_nombre, origen) => {
+    const v = await violacionesDe({ [origen]: importa("pdfkit") });
+    expect(v).toContain("pdf-solo-en-su-adaptador");
+  });
+
+  it("también se ve el import de un archivo interno del paquete, y desde una carpeta que solo se parece", async () => {
+    expect(
+      await violacionesDe({ "src/adaptadores/qr/a.ts": importa("pdfkit/js/pdfkit.node.mjs") }),
+    ).toContain("pdf-solo-en-su-adaptador");
+    expect(await violacionesDe({ "src/adaptadores/pdfs/a.ts": importa("pdfkit") })).toContain(
+      "pdf-solo-en-su-adaptador",
+    );
+    expect(await violacionesDe({ "src/adaptadores/otra/pdf/a.ts": importa("pdfkit") })).toContain(
+      "pdf-solo-en-su-adaptador",
+    );
+  });
+
+  it.each(["pdfjs-dist", "pdfjs-dist/legacy/build/pdf.mjs", "jsqr"])(
+    "%s lo importan las pruebas, no el código de producción",
+    async (paquete) => {
+      expect(
+        await violacionesDe({ "src/adaptadores/pdf/pdf-de-la-factura.test.ts": importa(paquete) }),
+      ).not.toContain("lectores-de-pdf-solo-en-pruebas");
+      for (const origen of [
+        "src/adaptadores/pdf/pdf-de-la-factura.ts",
+        "src/composicion/pdf-de-la-factura-web.ts",
+        "apps/web/servidor/pdf-de-la-factura.ts",
+        "scripts/leer-pdf.ts",
+      ]) {
+        expect(await violacionesDe({ [origen]: importa(paquete) })).toContain(
+          "lectores-de-pdf-solo-en-pruebas",
+        );
+      }
+    },
+  );
+
+  it("las dependencias están fijadas en la versión exacta aprobada, sin rango; los lectores, solo en desarrollo", () => {
+    const paquete = JSON.parse(readFileSync("package.json", "utf8")) as {
+      dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
+    };
+    expect(paquete.dependencies["pdfkit"]).toBe("0.20.2");
+    expect(paquete.devDependencies["pdfjs-dist"]).toBe("6.5.438");
+    expect(paquete.devDependencies["jsqr"]).toBe("1.4.0");
+    for (const lector of ["pdfjs-dist", "jsqr"]) {
+      expect(paquete.dependencies[lector]).toBeUndefined();
+    }
+    expect(paquete.devDependencies["pdfkit"]).toBeUndefined();
+  });
+});
+
 describe("P8a y F9: el generador de QR solo entra por el adaptador de QR", () => {
   it("lo importa el adaptador de QR (y sus pruebas), y nadie más puede", async () => {
     const v = await violacionesDe({
@@ -2048,5 +2130,58 @@ describe("la consola reutiliza solo la interfaz de la web", () => {
       "apps/plataforma/logica/ingreso.ts": exporta,
     });
     expect(v).toContain("apps-independientes");
+  });
+});
+
+/**
+ * El recorrido de punta a punta (`test/recorrido`) reemplaza ARCA con un módulo de pruebas que se carga con `NODE_OPTIONS=--import` solo
+ * en el proceso de `next start` que lanza la prueba. Falla que previene: que algo de producción (código de `src/`, de `apps/` o de los
+ * scripts, o la configuración de Vercel) nombre ese módulo, su variable o `NODE_OPTIONS`; ahí el «modo de prueba» dejaría de ser
+ * imposible en un despliegue real y habría una puerta que desvía las llamadas a ARCA. Todo nace cerrado: la única forma de activarlo es que
+ * la prueba lo cargue desde afuera, y esta regla impide que el código lo cargue por su cuenta.
+ */
+describe("el módulo de ARCA simulada del recorrido no puede llegar a producción", () => {
+  const RAIZ_REAL = join(import.meta.dirname, "../..");
+  const PROHIBIDO_EN_PRODUCCION = [
+    "conectar-arca-simulada",
+    "PEDERNAL_RECORRIDO",
+    "arca-simulada",
+    "NODE_OPTIONS",
+  ];
+  const referenciasProhibidas = (texto: string): string[] =>
+    texto
+      .split("\n")
+      .filter((linea) => PROHIBIDO_EN_PRODUCCION.some((p) => linea.includes(p)))
+      .map((linea) => linea.trim());
+  const IGNORAR = new Set(["node_modules", ".next", ".turbo"]);
+  const archivosDe = (carpeta: string): string[] =>
+    readdirSync(carpeta).flatMap((nombre) => {
+      if (IGNORAR.has(nombre)) return [];
+      const ruta = join(carpeta, nombre);
+      return statSync(ruta).isDirectory() ? archivosDe(ruta) : [ruta];
+    });
+
+  it("ningún archivo de src/, apps/ ni scripts/ lo nombra ni toca NODE_OPTIONS", () => {
+    const produccion = ["src", "apps", "scripts"]
+      .flatMap((carpeta) => archivosDe(join(RAIZ_REAL, carpeta)))
+      .filter((ruta) => !/\.(png|jpe?g|webp|ico|woff2?|svg)$/.test(ruta));
+    const halladas = produccion.flatMap((ruta) =>
+      referenciasProhibidas(readFileSync(ruta, "utf8")).map((linea) => `${ruta}: ${linea}`),
+    );
+    expect(halladas).toEqual([]);
+  });
+
+  it("vercel.json no lo nombra ni define NODE_OPTIONS", () => {
+    const vercel = readFileSync(join(RAIZ_REAL, "apps", "web", "vercel.json"), "utf8");
+    expect(referenciasProhibidas(vercel)).toEqual([]);
+  });
+
+  it("la regla detecta la violación inyectada (las cuatro formas)", () => {
+    for (const prohibido of PROHIBIDO_EN_PRODUCCION) {
+      expect(referenciasProhibidas(`const a = 1;\nimport "${prohibido}";\n`)).toEqual([
+        `import "${prohibido}";`,
+      ]);
+    }
+    expect(referenciasProhibidas("const todoBien = true;")).toEqual([]);
   });
 });

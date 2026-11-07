@@ -13,7 +13,13 @@ import {
   entradaDePuntoDeVenta,
 } from "./entradas-de-configuracion-fiscal";
 import type { ErrorDeEntrada } from "./entradas-de-facturacion";
+import {
+  condicionDeIibb,
+  type DatosFiscalesParaLaPantalla,
+  type DomicilioParaLaPantalla,
+} from "./datos-fiscales-para-la-pantalla";
 import type { Web } from "./web";
+export type { DatosFiscalesParaLaPantalla, DomicilioParaLaPantalla };
 
 /**
  * Lo que hace la web en la pantalla de Configuración fiscal (D-43: «lista de lo que falta + una pantalla por tema»; solo el
@@ -30,7 +36,8 @@ import type { Web } from "./web";
  *    mismo `id`, confirmar dos veces, activar o desactivar dos veces: «ya estaba» o «ya existía», sin escribir ni auditar.
  *  - **Dos a la vez no se pisan.** El borrador y el punto de venta llevan su versión: quien editó con una versión vieja recibe
  *    `FISCAL_VERSION_DESACTUALIZADA` y no pisa lo del otro.
- *  - **Ingresos Brutos no existe para la pantalla (D-45).** Ni se pide ni se muestra: el backend los guarda vacíos.
+ *  - **Ingresos Brutos (D-115/D-116, antes D-45).** El pedido trae el número o `NO_CONTRIBUYENTE` y la lectura los devuelve; el servidor
+ *    decide qué vale y exige uno de los dos al confirmar y al emitir.
  *  - **Nada secreto.** De los certificados solo sale su situación y su vencimiento: nunca la clave, el pedido (CSR), el PEM
  *    ni la huella.
  *  - **Todo resultado sale por `aRespuestaFiscal`** (ADR-016). Los textos de los errores de esta pantalla que el dueño todavía
@@ -120,44 +127,6 @@ export function estadoDeLaConfiguracionFiscal(
 // Datos fiscales
 // ---------------------------------------------------------------------------------------------------------------
 
-export type DomicilioParaLaPantalla = Readonly<{
-  id: string;
-  calle: string;
-  numero: string;
-  piso: string | null;
-  departamento: string | null;
-  localidad: string;
-  /** El código de la provincia (`AR-B`). */
-  provincia: string;
-  codigoPostal: string | null;
-}>;
-
-/** Los datos fiscales de un emisor: la versión que rige y el borrador en curso. Sin Ingresos Brutos (D-45). */
-export type DatosFiscalesParaLaPantalla = Readonly<{
-  emisorId: string;
-  /** El CUIT del emisor (D-65): 11 dígitos sin guiones, solo para leer; no se versiona con los datos. */
-  cuit: string;
-  vigente: Readonly<{
-    id: string;
-    numero: number;
-    vigenteDesde: string;
-    razonSocial: string;
-    condicionIva: string;
-    domicilio: DomicilioParaLaPantalla;
-    inicioActividades: string;
-  }> | null;
-  borrador: Readonly<{
-    /** La clave de idempotencia con la que se sigue guardando. */
-    id: string;
-    /** La versión que la pantalla manda en el próximo guardado. */
-    version: number;
-    razonSocial: string | null;
-    condicionIva: string | null;
-    domicilio: DomicilioParaLaPantalla | null;
-    inicioActividades: string | null;
-  }> | null;
-}>;
-
 const aDomicilio = (d: DomicilioParaLaPantalla): DomicilioParaLaPantalla => ({
   id: d.id,
   calle: d.calle,
@@ -194,6 +163,8 @@ export function datosFiscalesDelEmisor(
               condicionIva: datos.vigente.condicionIva,
               domicilio: aDomicilio(datos.vigente.domicilio),
               inicioActividades: datos.vigente.inicioActividades,
+              iibbNumero: datos.vigente.iibbNumero,
+              iibbCondicion: condicionDeIibb(datos.vigente.iibbCondicion),
             },
       borrador:
         datos.borrador === null
@@ -206,6 +177,8 @@ export function datosFiscalesDelEmisor(
               domicilio:
                 datos.borrador.domicilio === null ? null : aDomicilio(datos.borrador.domicilio),
               inicioActividades: datos.borrador.inicioActividades,
+              iibbNumero: datos.borrador.iibbNumero,
+              iibbCondicion: condicionDeIibb(datos.borrador.iibbCondicion),
             },
     }),
   );
@@ -213,7 +186,7 @@ export function datosFiscalesDelEmisor(
 
 /**
  * Guardar a mano el borrador de los datos fiscales (`datos_fiscales.editar`). `crudo`: `{ emisorId, borradorId, versionEsperada?,
- * razonSocial?, condicionIva?, inicioActividades?, domicilio? }`, con el domicilio `{ tipo: "NUEVO", id, calle, numero, piso?,
+ * razonSocial?, condicionIva?, inicioActividades?, iibbNumero?, iibbCondicion?, domicilio? }`, con el domicilio `{ tipo: "NUEVO", id, calle, numero, piso?,
  * departamento?, localidad, provincia, codigoPostal? }` o `{ tipo: "EXISTENTE", id }`. Un campo ausente no se toca. Al crearlo no
  * hace falta `versionEsperada`; al cambiar uno que ya existe, es la que vio la pantalla.
  */

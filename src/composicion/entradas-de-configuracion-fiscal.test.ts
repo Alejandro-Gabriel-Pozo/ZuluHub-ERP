@@ -13,7 +13,7 @@ import {
 } from "./entradas-de-configuracion-fiscal";
 
 /**
- * La frontera de las acciones de configuración fiscal (D-43): solo la FORMA del pedido. Lo que importa: que Ingresos Brutos no pasa (D-45),
+ * La frontera de las acciones de configuración fiscal (D-43): solo la FORMA del pedido. Lo que importa: que Ingresos Brutos pasa tal cual y lo decide el servidor (D-115/D-116),
  * que un dato de más se descarta (el servidor decide empresa y persona) y que el campo inválido se señala con el nombre del formulario.
  */
 
@@ -89,19 +89,27 @@ describe("entradaDeGuardarBorrador", () => {
     expect(r.ok && r.valor.domicilio).toEqual({ tipo: "EXISTENTE", id: existente });
   });
 
-  it("D-45: Ingresos Brutos NO pasa, venga como venga; tampoco la empresa ni quién lo creó", () => {
+  it("Ingresos Brutos (D-115/D-116) pasa tal cual (el número y la condición, o su borrado); la empresa y quién lo creó, no", () => {
     const r = entradaDeGuardarBorrador({
       emisorId: id(),
       borradorId: id(),
       razonSocial: "Zulu",
       iibbNumero: "902-123456-7",
-      iibbCondicion: "LOCAL",
+      iibbCondicion: null,
       empresaId: id(),
       creadoPor: id(),
     });
     expect(r.ok).toBe(true);
-    const texto = JSON.stringify(r);
-    expect(texto).not.toMatch(/iibb|902-123456|LOCAL|empresaId|creadoPor/);
+    expect(JSON.stringify(r)).not.toMatch(/empresaId|creadoPor/);
+    expect(r.ok && r.valor.cambios).toEqual({
+      razonSocial: "Zulu",
+      iibbNumero: "902-123456-7",
+      iibbCondicion: null,
+    });
+  });
+
+  it("sin Ingresos Brutos en el pedido, el cambio no los trae (no se tocan)", () => {
+    const r = entradaDeGuardarBorrador({ emisorId: id(), borradorId: id(), razonSocial: "Zulu" });
     expect(r.ok && Object.keys(r.valor.cambios)).toEqual(["razonSocial"]);
   });
 
