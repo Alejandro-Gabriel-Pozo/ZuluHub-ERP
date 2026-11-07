@@ -50,10 +50,14 @@ describe("camposDelClienteInvalidos", () => {
     }
   });
 
-  it("pasaporte con letras (ABC123456): se marca hasta que el pasaporte con letras tenga su propio PR", () => {
+  it("pasaporte: letras y números de 6 a 9 pasan (ABC123456); sin cifra, solo ceros, de 5 o de 10 caracteres o con otro carácter se marcan", () => {
     const pasaporte = (numero: string) => con({ documento: "PASAPORTE", numero });
-    expect(camposDelClienteInvalidos(pasaporte("ABC123456")).numero).toBe(true);
-    expect(camposDelClienteInvalidos(pasaporte("123456")).numero).toBe(false);
+    for (const bien of ["ABC123456", "abc123456", "A1B2C3D4", "123456"]) {
+      expect(camposDelClienteInvalidos(pasaporte(bien)).numero, bien).toBe(false);
+    }
+    for (const mal of ["ABCDEF", "ABC000000", "ABC12", "ABC1234567", "ABC-12345", ""]) {
+      expect(camposDelClienteInvalidos(pasaporte(mal)).numero, mal).toBe(true);
+    }
   });
 
   it("nombre: sin letras, vacío o con un CUIT adentro de solo números se marca; uno normal no", () => {
