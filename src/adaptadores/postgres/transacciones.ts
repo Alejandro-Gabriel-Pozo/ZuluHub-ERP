@@ -1,6 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { Kysely, PostgresDialect, sql, type ControlledTransaction } from "kysely";
-import pg from "pg";
 import type { Contexto, TipoDeContexto } from "../../contexto/contexto";
 import type {
   ErrorDePersistencia,
@@ -11,6 +10,7 @@ import { err, type Resultado } from "../../primitivas/resultado/resultado";
 import type { LecturasCompartidas } from "../../puertos/transacciones";
 import { firmarContexto, type ClaveDeContexto } from "./contexto-firmado";
 import { ErrorDeConfiguracion, esReintentable, traducirErrorDeBase } from "./errores";
+import { tomarPozo } from "./pozos";
 
 export { ErrorDeConfiguracion };
 
@@ -103,11 +103,10 @@ export function crearTransacciones<Tx>(
   ) {
     throw new ErrorDeConfiguracion("falta la clave de contexto (de 32 bytes o más)");
   }
-  const conexiones = new Map<TipoDeContexto, Kysely<SinTablas>>();
+  // Una conexión por CADENA (es decir, por rol de base), no por puerta: las puertas que entran con el mismo rol comparten pozo.
+  const conexiones = new Map<string, Kysely<SinTablas>>();
 
   function conexionPara(tipo: TipoDeContexto): Kysely<SinTablas> {
-    const existente = conexiones.get(tipo);
-    if (existente !== undefined) return existente;
     // La invitación y la sesión comparten el rol de base de la aplicación: sin cadena propia, usan la operativa.
     const url =
       configuracion.urls[tipo] ??
@@ -115,14 +114,19 @@ export function crearTransacciones<Tx>(
     if (url === undefined || url === "") {
       throw new ErrorDeConfiguracion(`falta la cadena de conexión de la puerta ${tipo}`);
     }
-    const pool = new pg.Pool({
-      connectionString: url,
-      max: configuracion.maximoDeConexiones ?? 5,
+    const existente = conexiones.get(url);
+    if (existente !== undefined) return existente;
+    const { paraKysely } = tomarPozo({
+      url,
+      ...(configuracion.maximoDeConexiones === undefined
+        ? {}
+        : { maximoDeConexiones: configuracion.maximoDeConexiones }),
+      ...(configuracion.alCortarseUnaConexionOciosa === undefined
+        ? {}
+        : { alCortarseUnaConexionOciosa: configuracion.alCortarseUnaConexionOciosa }),
     });
-    // Sin este oyente, el corte de una conexión ociosa tira abajo el proceso entero.
-    pool.on("error", (error) => configuracion.alCortarseUnaConexionOciosa?.(error));
-    const db = new Kysely<SinTablas>({ dialect: new PostgresDialect({ pool }) });
-    conexiones.set(tipo, db);
+    const db = new Kysely<SinTablas>({ dialect: new PostgresDialect({ pool: paraKysely }) });
+    conexiones.set(url, db);
     return db;
   }
 
