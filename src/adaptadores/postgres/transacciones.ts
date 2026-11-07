@@ -9,7 +9,12 @@ import type {
 import { err, type Resultado } from "../../primitivas/resultado/resultado";
 import type { LecturasCompartidas } from "../../puertos/transacciones";
 import { firmarContexto, type ClaveDeContexto } from "./contexto-firmado";
-import { ErrorDeConfiguracion, esReintentable, traducirErrorDeBase } from "./errores";
+import {
+  ErrorDeConfiguracion,
+  esConexionCortada,
+  esReintentable,
+  traducirErrorDeBase,
+} from "./errores";
 import { tomarPozo } from "./pozos";
 
 export { ErrorDeConfiguracion };
@@ -249,8 +254,14 @@ export function crearTransacciones<Tx>(
     } catch {
       return; // No llegó a abrirse: no hay nada que cerrar.
     }
-    if (rota) await abierta.trx.rollback().execute();
-    else await abierta.trx.commit().execute();
+    try {
+      if (rota) await abierta.trx.rollback().execute();
+      else await abierta.trx.commit().execute();
+    } catch (error) {
+      // La unidad es de SOLO LECTURA: si la conexión se cortó antes de cerrarla no hay nada que confirmar ni que perder (lo leído ya se
+      // devolvió, y el servidor revirtió la transacción al morir el backend). La conexión rota ya la descartó el pozo. Cualquier otra falla sale.
+      if (!esConexionCortada(error)) throw error;
+    }
   }
 
   /** Una lectura que se une a la transacción de la unidad: sin `BEGIN`, sin contexto propio y sin `COMMIT`. */

@@ -1,5 +1,10 @@
 import pg from "pg";
-import { ErrorDeConfiguracion } from "./errores";
+import {
+  ErrorDeConexionDeBase,
+  ErrorDeConfiguracion,
+  causaDeConexion,
+  esConexionCortada,
+} from "./errores";
 
 /**
  * UN pozo de conexiones por cadena de conexión (y por lo tanto por rol de base) en cada proceso. La cadena trae el rol
@@ -52,6 +57,46 @@ export type PozoTomado = Readonly<{
   /** Deja de usar el pozo; con el último uso se cierra. Repetirlo no hace nada. */
   soltar(): Promise<void>;
 }>;
+
+/**
+ * Presta una conexión del pozo a Kysely con dos protecciones que `pg-pool` NO da mientras la conexión está prestada:
+ *
+ *  1. Un oyente de 'error'. `pg-pool` saca el suyo al prestar la conexión; si el servidor la corta a mitad de una transacción
+ *     (`pg_terminate_backend`, Neon reiniciando el cómputo, la red), `pg` emite 'error' sin oyente y Node tira abajo el proceso entero.
+ *  2. La conexión rota se DESTRUYE y se libera en el acto (`release(error)`: el pozo la descarta y abre otra). Si no, dependería de
+ *     que Kysely llame a `release`, y no lo hace cuando falla el `commit`/`rollback` de una transacción controlada (`startTransaction`):
+ *     la conexión quedaba prestada para siempre y, con pozo de 1, todo pedido siguiente esperaba hasta fallar por pozo agotado.
+ *     El `release` queda idempotente (`pg-pool` lanza si se libera dos veces) para que el de Kysely, que llega después, no haga nada.
+ *
+ * La transacción de una conexión cortada NO se confirma: el servidor la revierte al morir el backend, así que el trabajo queda
+ * todo-o-nada. Si se cortó después de enviar el COMMIT y antes de la respuesta, el resultado es incierto: por eso toda escritura
+ * lleva su clave de idempotencia y el reintento es seguro.
+ */
+async function prestar(pozo: pg.Pool): Promise<pg.PoolClient> {
+  let cliente: pg.PoolClient;
+  try {
+    cliente = await pozo.connect();
+  } catch (error) {
+    // El mismo tipo y el mismo mensaje genérico para todo rol (también el de autenticación, que consume la librería de ingreso).
+    const causa = causaDeConexion(error);
+    throw causa === null ? error : new ErrorDeConexionDeBase(causa);
+  }
+  const liberarDelPozo = cliente.release.bind(cliente);
+  let liberado = false;
+  const liberar = (error?: Error | boolean): void => {
+    if (liberado) return;
+    liberado = true;
+    cliente.removeListener("error", alRomperse);
+    liberarDelPozo(error);
+  };
+  function alRomperse(error: Error): void {
+    // `true` descarta la conexión en vez de devolverla al pozo (aunque `pg` ya la dio por no consultable).
+    liberar(esConexionCortada(error) ? error : true);
+  }
+  cliente.on("error", alRomperse);
+  cliente.release = liberar;
+  return cliente;
+}
 
 type Entrada = {
   readonly pozo: pg.Pool;
@@ -110,7 +155,7 @@ export function tomarPozo(opciones: OpcionesDePozo): PozoTomado {
   return {
     pozo: propia.pozo,
     paraKysely: {
-      connect: () => propia.pozo.connect(),
+      connect: () => prestar(propia.pozo),
       end: soltar,
       options: propia.pozo.options,
     },
