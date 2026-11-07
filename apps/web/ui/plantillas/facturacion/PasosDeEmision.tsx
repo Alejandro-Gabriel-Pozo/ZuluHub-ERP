@@ -60,7 +60,8 @@ export function PasoDelCliente({
             dato="documento-de-identidad"
             etiqueta={identificacion.numero}
             valor={cliente.numero}
-            inputMode="numeric"
+            // El pasaporte lleva letras (ABC123456, Q5, dueño, 2026-11-06): el teclado numérico no las deja escribir.
+            inputMode={cliente.documento === "PASAPORTE" ? "text" : "numeric"}
             autoComplete="off"
             error={avisoDe(conError.numero)}
             alCambiar={(numero) => {

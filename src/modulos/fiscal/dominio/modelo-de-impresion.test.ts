@@ -299,6 +299,44 @@ describe("modeloDeImpresion: receptor, renglones y totales", () => {
     expect(modelo(imprimible(conDescuento)).renglones[0]?.descuento).toBe("10.0000");
   });
 
+  it("un pasaporte con letras sale TAL CUAL en el modelo en todas las versiones (v1, v2 y la vigente); lo impreso no es lo que va a ARCA", () => {
+    const turista = facturaArmada(
+      {
+        nombre: "Jane Doe",
+        documento: { tipo: "PASAPORTE", numero: "ABC123456" },
+        condicionIva: "CONSUMIDOR_FINAL",
+        domicilio: "5th Avenue 1",
+      },
+      [renglon("121.00", "1", "21")],
+    );
+    for (const version of [1, 2, VERSION_DE_REPRESENTACION_ACTUAL] as const) {
+      const m = modelo(imprimible(turista, { versionDeRepresentacion: version }));
+      expect(m.receptor.documento, `v${String(version)}`).toEqual({
+        tipo: "PASAPORTE",
+        numero: "ABC123456",
+      });
+    }
+  });
+
+  it("un comprobante ya emitido con un pasaporte viejo en cero se imprime (hoja, ticket y QR con nroDocRec 0) sin lanzar y lo muestra tal cual", () => {
+    const base = facturaArmada(consumidorFinal, [renglon("121.00", "1", "21")]);
+    for (const numero of ["0", "ABC000000"]) {
+      const documento = { tipo: "PASAPORTE", numero } as const;
+      const emitido = imprimible(base, {
+        receptor: {
+          nombre: "Jane Doe",
+          documento,
+          condicionIva: "CONSUMIDOR_FINAL",
+          domicilio: null,
+        },
+      });
+      const m = modelo(emitido);
+      expect(m.receptor.documento).toEqual(documento);
+      const datos = new URL(m.qr.url).searchParams.get("p") ?? "";
+      expect(JSON.parse(atob(datos))).toMatchObject({ tipoDocRec: 94, nroDocRec: 0 });
+    }
+  });
+
   it("A discrimina neto e IVA por alícuota", () => {
     const a = facturaArmada(
       receptorInscripto,

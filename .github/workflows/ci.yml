@@ -43,6 +43,7 @@ jobs:
   guardian:
     # Contratos arquitectónicos (contratos-arquitectonicos.md §5): el guardián del PR y, en pull requests,
     # la VIGILANCIA de la versión anterior. No instala dependencias: solo usa Node y git. Sin secretos.
+    # Su `permissions:` propio se queda a propósito (decisión deliberada): los casos EV-024, EV-027 y EV-045 de la batería de evasión anclan su texto.
     name: Guardián de contratos
     runs-on: ubuntu-latest
     timeout-minutes: 10
