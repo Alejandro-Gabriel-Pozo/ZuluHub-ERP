@@ -233,6 +233,21 @@ describe("hoja A4: lo que dibuja según el comprobante", () => {
     await pruebas.pantalla.unmount();
   });
 
+  it("leyenda de la condición del receptor: una fila sin rótulo, tal cual, justo bajo la condición frente al IVA", async () => {
+    const LEYENDA = "LEYENDA DE CONDICIÓN DE PRUEBA";
+    const pruebas = await dibujar({
+      letra: "A",
+      consumidorFinal: false,
+      leyendaDeCondicion: LEYENDA,
+    });
+    const fila = [...(pruebas.hojas[0]?.querySelectorAll("div") ?? [])].find(
+      (d) => d.textContent === LEYENDA,
+    );
+    expect(fila).toBeDefined();
+    expect(fila?.previousElementSibling?.textContent).toContain("IVA Responsable Inscripto");
+    await pruebas.pantalla.unmount();
+  });
+
   it("leyenda legal sin homologación: aparece y no hay recuadro; sin leyendas legales no hay nada extra", async () => {
     const solaLegal = await dibujar({ leyendasLegales: [LEGAL], renglones: 8 });
     expect(solaLegal.hojas[0]?.querySelectorAll("[data-leyenda-legal]")).toHaveLength(1);
