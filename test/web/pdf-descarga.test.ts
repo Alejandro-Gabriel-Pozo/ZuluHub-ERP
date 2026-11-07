@@ -179,8 +179,10 @@ describe("la descarga del PDF", () => {
 
   it("la ruta solo atiende GET (Next deriva HEAD de él, con la misma autorización y sin cuerpo): cualquier otro método no existe", async () => {
     const ruta = await cargar();
-    expect(Object.keys(ruta).sort()).toEqual(["GET", "dynamic", "runtime"]);
+    expect(Object.keys(ruta).sort()).toEqual(["GET", "dynamic", "maxDuration", "runtime"]);
     expect(ruta["runtime"]).toBe("nodejs");
+    // El tope de duración (10 s; su motivo y su chequeo, en `max-duration.test.ts`).
+    expect(ruta["maxDuration"]).toBe(10);
     // Nunca se genera al compilar ni se sirve de una copia guardada.
     expect(ruta["dynamic"]).toBe("force-dynamic");
   });

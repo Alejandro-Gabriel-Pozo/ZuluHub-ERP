@@ -860,11 +860,7 @@ describe("planificador de mutación: ci.yml", () => {
       ]) {
         expect(plan([ignorable]), ignorable).toMatchObject({ completo: false, grupos: [] });
       }
-      for (const archivo of [
-        ".github/workflows/migrar.yml",
-        ".github/workflows/migrar-base.yml",
-        ".github/CODEOWNERS",
-      ]) {
+      for (const archivo of [".github/workflows/migrar.yml", ".github/CODEOWNERS"]) {
         expect(plan([archivo]).completo, archivo).toBe(true);
       }
     });
@@ -976,7 +972,7 @@ describe("planificador: cuándo se repite la integración (Estabilidad x12)", ()
     "migraciones/0009_algo.sql": [],
     "scripts/migrar-base.ts": [],
     ".github/workflows/ci.yml": [],
-    ".github/workflows/migrar-base.yml": [],
+    ".github/workflows/migrar.yml": [],
     "test/integracion/nuevo-auxiliar.ts": [],
     "test/integracion/borrada.test.ts": [],
     "src/modulos/c/persistencia/nueva.ts": [],
@@ -998,7 +994,7 @@ describe("planificador: cuándo se repite la integración (Estabilidad x12)", ()
     ["las reglas SQL", "arquitectura/lint-sql.cjs"],
     ["un script (algunos los lanza la integración como proceso aparte)", "scripts/migrar-base.ts"],
     ["el workflow principal", ".github/workflows/ci.yml"],
-    ["los workflows de migración", ".github/workflows/migrar-base.yml"],
+    ["el workflow de migración", ".github/workflows/migrar.yml"],
     ["un workflow nuevo", ".github/workflows/nuevo.yml"],
     ["la configuración de vitest (fuera del grafo)", "vitest.config.ts"],
     ["las dependencias", "package.json"],

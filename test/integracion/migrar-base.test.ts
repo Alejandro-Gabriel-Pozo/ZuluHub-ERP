@@ -9,7 +9,7 @@ import { ejecutarMigracion, VARIABLE_DE_LA_CADENA } from "../../scripts/ejecutar
 import { crearBaseAparte } from "./entorno";
 
 /**
- * El comando que migra la base real (`scripts/migrar-base.ts`, lo que corre el workflow «Migrar base»),
+ * El comando que migra la base real (`scripts/migrar-base.ts`, lo que corre el workflow «Migrar (preview y producción)»),
  * contra un Postgres de verdad: «ver» no escribe nada, «aplicar» aplica y repetirlo no hace nada, dos
  * «aplicar» a la vez no se pisan, el pooler se rechaza y NINGÚN mensaje repite la cadena de conexión
  * (ni usuario, ni clave, ni host) aunque la conexión falle.

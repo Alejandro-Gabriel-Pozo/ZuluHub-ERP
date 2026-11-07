@@ -1,22 +1,26 @@
-[
-  {
-    "archivo": "arquitectura/contratos/codigos.cjs",
-    "motivo": "Existía antes de este chequeo (2026-11-06) y no estaba en `mutate`: lista cerrada de datos (descripciones de los códigos de falla). Su anclaje pendiente es la entrada de deuda `descripciones-de-codigos-sin-prueba`."
-  },
-  {
-    "archivo": "arquitectura/contratos/contratos.cjs",
-    "motivo": "Existía antes de este chequeo (2026-11-06) y no estaba en `mutate`: registro de contratos que arranca vacío (`module.exports = []`), sin lógica que mutar."
-  },
-  {
-    "archivo": "src/adaptadores/arca/tipos.ts",
-    "motivo": "Existía antes de este chequeo (2026-11-06) y no estaba en `mutate`: solo declaraciones de tipos (`import type` y tipos exportados), sin código ejecutable."
-  },
-  {
-    "archivo": "src/adaptadores/postgres/migraciones.ts",
-    "motivo": "Existía antes de este chequeo (2026-11-06) y no estaba en `mutate`: aplica las migraciones contra Postgres real; la mutación corre con `PEDERNAL_SIN_INTEGRACION=1` (`stryker.config.json`), sin base."
-  },
-  {
-    "archivo": "src/composicion/plataforma.ts",
-    "motivo": "Existía antes de este chequeo (2026-11-06) y no estaba en `mutate`: arma los adaptadores de Postgres de la consola de plataforma (cableado). Mutarlo o justificarlo mejor queda pendiente."
-  }
-]
+{
+  "hermanosSinMutar": [
+    {
+      "archivo": "arquitectura/contratos/contratos.cjs",
+      "motivo": "Registro de contratos que arranca vacío (`module.exports = []`): es un dato sin lógica, no tiene qué mutar. Existía antes de este chequeo (2026-11-06)."
+    },
+    {
+      "archivo": "src/adaptadores/arca/tipos.ts",
+      "motivo": "Solo declaraciones de tipos (`import type` y tipos exportados), sin código ejecutable: no genera mutantes. Existía antes de este chequeo (2026-11-06)."
+    },
+    {
+      "archivo": "src/adaptadores/postgres/migraciones.ts",
+      "motivo": "Tiene lógica pura sin prueba unitaria propia (hostConPooler, soloEstructura, controlDeTransaccionPropio, milisegundosValidos): solo la ejerce la prueba de integración y la mutación corre con PEDERNAL_SIN_INTEGRACION=1 (stryker.config.json). Entra a mutate cuando esa lógica tenga su prueba unitaria."
+    },
+    {
+      "archivo": "src/composicion/plataforma.ts",
+      "motivo": "Cableado: `armarPlataforma` conecta los adaptadores de Postgres con los casos de uso de la consola; lo ejercen las pruebas de integración (test/integracion/plataforma-consultas-por-la-puerta.test.ts y ejecutar-caso-de-plataforma.test.ts), que la mutación no corre (PEDERNAL_SIN_INTEGRACION=1)."
+    }
+  ],
+  "cargasNoEstaticas": [
+    {
+      "archivo": "arquitectura/contratos/no-debilitar.cjs",
+      "motivo": "Carga a propósito el código de la rama a vigilar (`require(ruta)`) dentro de un proceso hijo que devuelve solo datos; la ruta no puede ser un literal."
+    }
+  ]
+}
