@@ -54,6 +54,9 @@ describe("formato de importes, fechas y documentos (solo cadenas)", () => {
     expect(formatearNumeroDeDocumento("DNI", "12345678")).toBe("12.345.678");
     expect(formatearNumeroDeDocumento("DNI", "123456")).toBe("123.456");
     expect(formatearNumeroDeDocumento("PASAPORTE", "123456789")).toBe("123456789");
+    // Con letras sale tal cual figura (Q5, dueño, 2026-11-06).
+    expect(formatearNumeroDeDocumento("PASAPORTE", "ABC123456")).toBe("ABC123456");
+    expect(formatearNumeroDeDocumento("PASAPORTE", "A1B2C3D4")).toBe("A1B2C3D4");
   });
 
   it("punto de venta en cinco dígitos y alícuotas con coma", () => {

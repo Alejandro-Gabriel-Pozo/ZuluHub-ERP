@@ -58,12 +58,19 @@ async function leerEmpresas(
   try {
     const contexto = contextoDeSesion({ usuarioAuth: sesion.usuarioAuth, ahora: d.ahora() });
     const consultas = d.consultasDeSesion();
-    const persona = await consultas.personaDeLaSesion(contexto);
-    if (!persona.ok) return { ok: false, error: errorAPublico(persona.error, d.respuesta) };
-    if (persona.valor === null) return { ok: true, dato: { personaId: null, empresas: [] } };
-    const personaId = persona.valor.personaId;
-    const empresas = await consultas.empresasDeLaSesion(contexto, { marcaId });
-    return aRespuesta(empresas, d.respuesta, (lista) => ({ personaId, empresas: lista }));
+    // La persona y sus empresas se leen en UNA transacción (mismo contexto de sesión): un viaje menos por pedido, sin cambiar qué se lee.
+    const leer = async (): Promise<Respuesta<Interno>> => {
+      const persona = await consultas.personaDeLaSesion(contexto);
+      if (!persona.ok) return { ok: false, error: errorAPublico(persona.error, d.respuesta) };
+      if (persona.valor === null) return { ok: true, dato: { personaId: null, empresas: [] } };
+      const personaId = persona.valor.personaId;
+      const empresas = await consultas.empresasDeLaSesion(contexto, { marcaId });
+      return aRespuesta(empresas, d.respuesta, (lista) => ({ personaId, empresas: lista }));
+    };
+    const compartir = d.lecturasCompartidas?.();
+    return compartir === undefined
+      ? await leer()
+      : await compartir.conLecturasCompartidas(contexto, leer);
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, d.respuesta);
   }

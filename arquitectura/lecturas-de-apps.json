@@ -12,5 +12,6 @@
   "test/arquitectura/lint.test.ts": ["apps/**"],
   "test/arquitectura/campos-con-dato.test.ts": ["apps/**"],
   "test/arquitectura/lista-de-permitidos.test.ts": ["apps/**"],
-  "test/arquitectura/fuente-unica.test.ts": ["apps/**"]
+  "test/arquitectura/fuente-unica.test.ts": ["apps/**"],
+  "test/arquitectura/cuenta-de-documento.test.ts": ["apps/**"]
 }

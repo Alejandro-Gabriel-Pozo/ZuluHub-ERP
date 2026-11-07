@@ -5,6 +5,7 @@ import type { LetraDeComprobante } from "./comprobante-emitido";
 import {
   LIMITES_DE_RECEPTOR,
   numeroDeDocumentoParaArca,
+  numeroDeDocumentoParaImprimir,
   validarReceptor,
   type DocumentoDelReceptor,
   type Receptor,
@@ -123,8 +124,9 @@ describe("validarReceptor: lo que acepta", () => {
       { tipo: "DNI", numero: "12345678" },
       { tipo: "DNI", numero: "123456" },
       { tipo: "DNI", numero: "123456789" },
-      { tipo: "PASAPORTE", numero: "12345678901" },
-      { tipo: "PASAPORTE", numero: "0" },
+      { tipo: "PASAPORTE", numero: "123456" },
+      { tipo: "PASAPORTE", numero: "ABC123456" },
+      { tipo: "PASAPORTE", numero: "A1B2C3D4" },
     ] as const) {
       const r = validarReceptor(conDocumento(documento), contexto("B"));
       expect(r, JSON.stringify(documento)).toEqual({ ok: true, valor: conDocumento(documento) });
@@ -259,12 +261,42 @@ describe("validarReceptor: forma", () => {
     }
   });
 
-  it("pasaporte: solo dígitos, de 1 a 11 (DocNro es un Long de 11)", () => {
-    for (const numero of ["", "123456789012", "AAB123456", "-1", "1.5"]) {
-      expect(validarReceptor(conDocumento({ tipo: "PASAPORTE", numero }), contexto("B"))).toEqual(
-        invalido("documento"),
-      );
+  it("pasaporte: letras y números de 6 a 9; sin cifra, solo ceros, de 5 o de 10 caracteres o con otro carácter se rechaza marcando el documento", () => {
+    for (const numero of [
+      "",
+      "ABCDEF",
+      "ABCDEFGHI",
+      "ABC000000",
+      "000000",
+      "ABC12",
+      "12345",
+      "ABC1234567",
+      "1234567890",
+      "ABC-12345",
+      "ABC 12345",
+      " ABC12345",
+      "ÑBC123456",
+      "-123456",
+      "1.5",
+      "0",
+      "12345678901",
+    ]) {
+      expect(
+        validarReceptor(conDocumento({ tipo: "PASAPORTE", numero }), contexto("B")),
+        JSON.stringify(numero),
+      ).toEqual(invalido("documento"));
     }
+  });
+
+  it("pasaporte: las minúsculas se guardan en mayúsculas y el resto queda tal cual", () => {
+    const r = validarReceptor(
+      conDocumento({ tipo: "PASAPORTE", numero: "abc123456" }),
+      contexto("B"),
+    );
+    expect(r).toEqual({
+      ok: true,
+      valor: conDocumento({ tipo: "PASAPORTE", numero: "ABC123456" }),
+    });
   });
 });
 
@@ -361,6 +393,71 @@ describe("numeroDeDocumentoParaArca", () => {
     expect(numeroDeDocumentoParaArca({ tipo: "SIN_IDENTIFICAR" })).toBe(0n);
     expect(numeroDeDocumentoParaArca({ tipo: "CUIT", numero: CUIT_C })).toBe(30712345671n);
     expect(numeroDeDocumentoParaArca({ tipo: "DNI", numero: "12345678" })).toBe(12345678n);
+    // Un pasaporte ya guardado antes de las letras (solo dígitos, de cualquier largo de 1 a 11) da el mismo número que siempre.
     expect(numeroDeDocumentoParaArca({ tipo: "PASAPORTE", numero: "007" })).toBe(7n);
+    // Un pasaporte en cero nunca llega a ARCA como 0 («sin identificar»): lanza.
+    expect(() => numeroDeDocumentoParaArca({ tipo: "PASAPORTE", numero: "0" })).toThrow(RangeError);
+  });
+
+  it("fail closed: solo el pasaporte extrae cifras; un DNI, CUIT o CUIL con letras lanza como siempre y un pasaporte sin cifra o en cero también", () => {
+    // Violaciones inyectadas: si la cuenta extrajera cifras de cualquier tipo, estos devolverían un número en lugar de lanzar.
+    for (const tipo of ["DNI", "CUIT", "CUIL", "CDI"] as const) {
+      expect(() => numeroDeDocumentoParaArca({ tipo, numero: "ABC123456" }), tipo).toThrow(
+        SyntaxError,
+      );
+    }
+    expect(() => numeroDeDocumentoParaArca({ tipo: "CUIT", numero: "30abc712345671" })).toThrow(
+      SyntaxError,
+    );
+    for (const numero of ["ABC000000", "ABCDEF", "", "000000"]) {
+      expect(() => numeroDeDocumentoParaArca({ tipo: "PASAPORTE", numero }), numero).toThrow(
+        RangeError,
+      );
+    }
+  });
+
+  it("un pasaporte con letras informa solo la parte numérica, en orden y sin los ceros de la izquierda", () => {
+    const de = (numero: string) => numeroDeDocumentoParaArca({ tipo: "PASAPORTE", numero });
+    expect(de("ABC123456")).toBe(123456n);
+    expect(de("AAB000123")).toBe(123n);
+    expect(de("A1B2C3D4")).toBe(1234n);
+  });
+});
+
+describe("numeroDeDocumentoParaImprimir (un comprobante ya emitido está congelado: imprimir no valida)", () => {
+  it("para un documento de solo dígitos da lo mismo que la cuenta que se envía a ARCA", () => {
+    for (const documento of [
+      { tipo: "SIN_IDENTIFICAR" },
+      { tipo: "CUIT", numero: CUIT_C },
+      { tipo: "CUIL", numero: CUIT_A },
+      { tipo: "CDI", numero: CUIT_A },
+      { tipo: "DNI", numero: "12345678" },
+      { tipo: "PASAPORTE", numero: "007" },
+      { tipo: "PASAPORTE", numero: "123456789" },
+    ] as const) {
+      expect(numeroDeDocumentoParaImprimir(documento), JSON.stringify(documento)).toBe(
+        numeroDeDocumentoParaArca(documento),
+      );
+    }
+  });
+
+  it("un pasaporte con letras da sus cifras; uno viejo en cero o sin cifras imprime 0 sin lanzar, y la emisión del mismo documento sigue rechazada", () => {
+    expect(numeroDeDocumentoParaImprimir({ tipo: "PASAPORTE", numero: "ABC123456" })).toBe(123456n);
+    for (const numero of ["0", "00", "ABC000000", "ABCDEF"]) {
+      const documento = { tipo: "PASAPORTE", numero } as const;
+      expect(numeroDeDocumentoParaImprimir(documento), numero).toBe(0n);
+      expect(() => numeroDeDocumentoParaArca(documento), numero).toThrow(RangeError);
+      expect(validarReceptor(conDocumento(documento), contexto("B")), numero).toEqual(
+        invalido("documento"),
+      );
+    }
+  });
+
+  it("un DNI o CUIT guardado con letras (dato raro) tampoco lanza al imprimir; al enviar a ARCA sí", () => {
+    for (const tipo of ["DNI", "CUIT"] as const) {
+      const documento = { tipo, numero: "ABC123456" } as const;
+      expect(numeroDeDocumentoParaImprimir(documento)).toBe(123456n);
+      expect(() => numeroDeDocumentoParaArca(documento)).toThrow(SyntaxError);
+    }
   });
 });

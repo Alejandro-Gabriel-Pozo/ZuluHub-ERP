@@ -64,24 +64,8 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "eslint-disable--src-capacidades-experiencia-puerta-ts",
-    "archivos": ["src/capacidades/experiencia/puerta.ts"],
-    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
-    "tipo": "eslint-disable",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "eslint-disable--src-capacidades-experiencia-ruta-de-retorno-test-ts",
     "archivos": ["src/capacidades/experiencia/ruta-de-retorno.test.ts"],
-    "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
-    "tipo": "eslint-disable",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "eslint-disable--src-capacidades-experiencia-ruta-de-retorno-ts",
-    "archivos": ["src/capacidades/experiencia/ruta-de-retorno.ts"],
     "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
     "tipo": "eslint-disable",
     "responsable": "agente (a pedido del dueño)",
@@ -342,7 +326,7 @@
   {
     "id": "permisos-y-acciones-menores-del-ci",
     "archivos": [".github/workflows/ci.yml", ".github/workflows/codeql.yml"],
-    "descripcion": "Pendiente menor de acciones (informe de CI §3.2 D10): la imagen de gitleaks está fijada por tag y no por digest. Falta un digest verificable (pregunta pendiente al dueño); el resto de D10 se pagó (`security-events: write` por job en `codeql.yml`; `permissions:` redundante quitado de `dependencias`). El de `guardian` se QUEDA a propósito: los casos EV-024, EV-027 y EV-045 de la batería de evasión anclan su texto.",
+    "descripcion": "Pendiente menor de acciones (informe de CI §3.2 D10): la imagen de gitleaks está fijada por tag y no por digest. Falta un digest verificable (pregunta pendiente al dueño).",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
@@ -412,7 +396,7 @@
     "archivos": ["arquitectura/planificar-mutacion.cjs"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
-    "tamano": 593,
+    "tamano": 561,
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
   },
@@ -431,15 +415,6 @@
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
     "tipo": "archivo-grande",
     "tamano": 482,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
-    "id": "archivo-grande--src-modulos-fiscal-dominio-numeracion-ts",
-    "archivos": ["src/modulos/fiscal/dominio/numeracion.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 426,
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
   },
@@ -620,8 +595,8 @@
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-11-06",
-    "motivo": "Introducir los chequeos de lista de permitidos y de fuente única (PR 2 de C1) sin reescribir de una vez todas las validaciones existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento (las migraciones ya aplicadas no se editan: se corrigen con una migración nueva). La cuenta por archivo (que solo baja) está en arquitectura/deuda/validacion-de-datos.json. puerta.ts y ruta-de-retorno.ts ya se reescribieron con lista de permitidos (Deuda 4, #209 y #214) y salieron del presupuesto; configuracion.ts del correo y entorno.ts se reescribieron con lista de permitidos (Deuda 9) y salieron del presupuesto.",
-    "aprobadoPor": "orquestador (PR 2 de C1 autorizado el 2026-11-06 por mensaje entre sesiones; decisión del dueño 2026-11-05). Para adaptadores/correo/configuracion.ts: el dueño, 2026-11-06, mensaje directo al orquestador (confirmó que entra como deuda y pidió reescribirlo, lo que hizo Deuda 4 con puerta y ruta-de-retorno).",
+    "motivo": "Introducir los chequeos de lista de permitidos y de fuente única (PR 2 de C1) sin reescribir de una vez todas las validaciones existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento (las migraciones ya aplicadas no se editan: se corrigen con una migración nueva). La cuenta por archivo (que solo baja) está en arquitectura/deuda/validacion-de-datos.json. puerta.ts y ruta-de-retorno.ts ya se reescribieron con lista de permitidos (Deuda 4, #209 y #214) y salieron del presupuesto; configuracion.ts del correo y entorno.ts se reescribieron con lista de permitidos (Deuda 9) y salieron del presupuesto. entrada-del-plan.ts y filtros-de-empresas.ts salieron por P2 (fuente única: importan su tope del dueño, 500 y 200), no por lista de permitidos.",
+    "aprobadoPor": "orquestador (PR 2 de C1 autorizado el 2026-11-06 por mensaje entre sesiones; decisión del dueño 2026-11-05). Reescribir YA lo existente que viola P1 (en vez de dejarlo pasar): el dueño, 2026-11-05 y 2026-11-06, conversación con el orquestador; constancia en `11-especificaciones/decisiones-del-dueno-2026-11.md` del repo de docs, fila «Principios P1 y P2 de validación».",
     "vence": "2027-01-05"
   }
 ]
