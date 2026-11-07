@@ -340,12 +340,27 @@ describe("lista de permitidos: tercera revisión independiente (evasiones barata
     ["caracteres ignorables", r`export const R = /\p{Default_Ignorable_Code_Point}/u;`],
     ["globalThis con una clave calculada", r`export const R = globalThis[nombre]("a");`],
     ["window con una clave calculada", r`export const R = window[nombre];`],
+    ["global con una clave calculada", r`export const R = global[nombre];`],
+    [
+      "globalThis convertido de tipo con una clave calculada",
+      r`export const R = (globalThis as unknown as Record<string, unknown>)[nombre];`,
+    ],
+    [
+      "Reflect.get sobre globalThis con RegExp",
+      r`export const R = Reflect.get(globalThis, "RegExp");`,
+    ],
+    [
+      "Reflect.get sobre globalThis con una clave calculada",
+      r`export const R = Reflect.get(globalThis, nombre);`,
+    ],
   ])("%s cuenta", (_, texto) => {
     expect(cuenta(texto), texto).toBe(1);
   });
 
   it("globalThis con una clave literal que no es RegExp no cuenta", () => {
     expect(cuenta(r`export const t = globalThis["setTimeout"];`)).toBe(0);
+    expect(cuenta(r`export const t = Reflect.get(globalThis, "setTimeout");`)).toBe(0);
+    expect(cuenta(r`export const t = Reflect.get(objeto, "RegExp");`)).toBe(0);
   });
 
   it.each([
@@ -353,6 +368,8 @@ describe("lista de permitidos: tercera revisión independiente (evasiones barata
     ["NOT x ~* sin paréntesis", r`CHECK (NOT a.b ~* '[<>]')`],
     ["NOT x::text ~ sin paréntesis", r`CHECK (NOT a::text ~ '[<>]')`],
     ["< escapado en hexadecimal", r`CHECK (a !~ '[\x3c]')`],
+    ["NOT (f(x) ~ …) con una función adentro", r`CHECK (NOT (lower(a) ~ '[<>]'))`],
+    ["NOT f(x) ~ … con una función y sin paréntesis", r`CHECK (NOT btrim(a) ~ '[<>]')`],
   ])("SQL: %s cuenta", (_, texto) => {
     expect(contarProhibidosEnSql(texto), texto).toBe(1);
   });
@@ -360,5 +377,19 @@ describe("lista de permitidos: tercera revisión independiente (evasiones barata
   it("SQL: el uso de la función con el nombre entre comillas cuenta", () => {
     expect(contarProhibidosEnSql(r`CHECK ("texto_visible_valido"(nombre, 60))`)).toBe(1);
     expect(contarProhibidosEnSql(r`CHECK (NOT a ~ '^[0-9]+$')`)).toBe(0);
+    expect(contarProhibidosEnSql(r`CHECK (NOT (lower(a) ~ '^[0-9]+$'))`)).toBe(0);
+    expect(contarProhibidosEnSql(r`CHECK (NOT btrim(a) ~ '^[0-9]+$')`)).toBe(0);
+  });
+
+  it("SQL: crear o borrar la función con el nombre entre comillas no cuenta como un uso", () => {
+    expect(
+      contarProhibidosEnSql(r`DROP FUNCTION IF EXISTS "texto_visible_valido"(text, integer);`),
+    ).toBe(0);
+    expect(contarProhibidosEnSql(r`DROP FUNCTION "texto_fiscal_valido"(text, integer);`)).toBe(0);
+    expect(
+      contarProhibidosEnSql(
+        r`CREATE OR REPLACE FUNCTION "texto_visible_valido"(t text, p integer) RETURNS boolean AS $$ SELECT true $$;`,
+      ),
+    ).toBe(0);
   });
 });
