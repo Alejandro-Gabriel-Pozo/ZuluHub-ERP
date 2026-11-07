@@ -18,8 +18,7 @@ const PROHIBIDO = /[\p{Cc}\p{Cf}\p{Cs}<>]/u;
  * Valida y deja en su forma canónica un texto que ve el usuario (nombre visible de una marca, reemplazo
  * del vocabulario): sin caracteres prohibidos, recortado, en NFC y de 1 a `largoMaximo` caracteres
  * (puntos de código, como cuenta la base). Devuelve el texto canónico: el largo se mide DESPUÉS de
- * normalizar, que puede acortarlo. Es la misma regla que la base repite como defensa en profundidad y
- * que hoy valida `PEDERNAL_NOMBRE_DE_MARCA`.
+ * normalizar, que puede acortarlo. Es la misma regla que la base repite como defensa en profundidad.
  */
 export function validarTextoVisible(
   texto: string,
