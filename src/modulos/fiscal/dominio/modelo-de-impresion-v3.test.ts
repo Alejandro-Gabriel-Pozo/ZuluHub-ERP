@@ -4,12 +4,17 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
   consumidorFinal,
+  contextoDeEmision,
+  emisorInstantaneo,
   facturaArmada,
+  fecha,
   imprimibleDe as imprimible,
   receptorInscripto,
   receptorMonotributista,
   renglon,
 } from "../../../../test/utilidades/facturacion";
+import { EMPRESA } from "../../../../test/utilidades/fiscal";
+import { armarNotaAsociada } from "./nota-asociada";
 import { CONDICIONES_DE_IVA_DEL_RECEPTOR } from "./condicion-iva-receptor";
 import type { CondicionIvaReceptor } from "./condicion-iva-receptor";
 import {
@@ -48,6 +53,34 @@ const conCondicion = (base: Receptor, condicionIva: CondicionIvaReceptor): Recep
 
 const CON_IVA_21 = [renglon("1210.00", "1", "21", null, "Torta")];
 const facturaB = facturaArmada(consumidorFinal, CON_IVA_21);
+/** Una nota de crédito sobre una factura A a un monotributista (número 94, punto de venta 7): lleva el receptor del original. */
+function notaSobreFacturaAMonotributista(): ComprobanteParaImprimir {
+  const nota = armarNotaAsociada(
+    {
+      empresaId: EMPRESA,
+      emisorId: contextoDeEmision().emisorId,
+      ambiente: "PRODUCCION",
+      tipo: "FACTURA_A",
+      estado: "AUTORIZADO",
+      numero: 94n,
+      fechaEmision: fecha("2026-10-01"),
+      emisor: emisorInstantaneo({ puntoDeVentaNumero: 7 }),
+      receptor: receptorMonotributista,
+    },
+    {
+      clase: "NOTA_CREDITO",
+      motivo: "Devolución parcial",
+      modoDePrecio: "IVA_DISCRIMINADO",
+      concepto: "PRODUCTOS",
+      servicio: null,
+      renglones: [renglon("1000.00", "1", "21", null, "Torta")],
+    },
+    contextoDeEmision({ ambiente: "PRODUCCION" }),
+  );
+  if (!nota.ok) throw new Error("nota de prueba inválida");
+  return imprimible(nota.valor, { numero: 12n });
+}
+
 const DISCRIMINADO = { modoDePrecio: "IVA_DISCRIMINADO" } as const;
 
 describe("modelo de impresión v3: leyenda de la condición del receptor (RG 1415 Anexo II A.II)", () => {
@@ -103,7 +136,10 @@ describe("modelo de impresión v3: leyenda de la condición del receptor (RG 141
       imprimible(facturaB, { receptor: conCondicion(receptorInscripto, "IVA_NO_ALCANZADO") }),
     ],
   ];
-  for (const [nombre, comprobante] of casos) {
+  for (const [nombre, comprobante] of [
+    ...casos,
+    ["nota-de-credito-a-monotributista", notaSobreFacturaAMonotributista()] as const,
+  ]) {
     it(`golden ${nombre}`, async () => {
       const m = modelo(comprobante);
       expect(m.versionDeRepresentacion).toBe(3);
@@ -147,11 +183,29 @@ describe("modelo de impresión v3: leyenda de la condición del receptor (RG 141
 });
 
 describe("versiones de representación: cuál se usa al emitir", () => {
-  it("la que sella un comprobante nuevo es la mayor de las soportadas, y cada una tiene sus golden", () => {
+  it("la que sella un comprobante nuevo es la mayor de las soportadas", () => {
     expect(VERSION_DE_REPRESENTACION_ACTUAL).toBe(Math.max(...VERSIONES_SOPORTADAS));
     expect(PRIMERA_VERSION_CON_LEYENDA_DE_CONDICION).toBeLessThanOrEqual(
       VERSION_DE_REPRESENTACION_ACTUAL,
     );
+  });
+});
+
+/**
+ * Cada versión soportada tiene sus golden: subir `VERSIONES_SOPORTADAS` sin dejar sus resultados de referencia falla acá. La 1 conserva los
+ * nombres anteriores a la convención `modelo-v<N>-*`. Previene: una versión nueva que reimprime sin que nadie fije qué dibuja.
+ */
+describe("versiones de representación: golden por versión", () => {
+  const nombres = readdirSync(join(import.meta.dirname, "golden"));
+  it.each(VERSIONES_SOPORTADAS)("la versión %i tiene golden", (version) => {
+    const propios =
+      version === 1
+        ? nombres.filter((n) => /^modelo-(factura-b-marca|nota-de-credito-a-produccion)/.test(n))
+        : nombres.filter((n) => n.startsWith(`modelo-v${version}-`));
+    expect(propios.length).toBeGreaterThan(0);
+  });
+  it("violación inyectada: una versión sin ningún golden se detecta", () => {
+    expect(nombres.filter((n) => n.startsWith("modelo-v99-"))).toEqual([]);
   });
 });
 
@@ -222,8 +276,8 @@ describe("leyendas de condición: el texto vive una sola vez", () => {
   it("violación inyectada: una copia del texto en otro archivo se detecta", () => {
     const fuentes = new Map([
       [`src/${DUENO}`, `const a = "${textos[0]}";`],
-      ["otra/pantalla.tsx", `const t = "${textos[0]}";`],
+      ["src/otro/pantalla.tsx", `const t = "${textos[0]}";`],
     ]);
-    expect(archivosQueRepiten(fuentes, textos[0] ?? "", DUENO)).toEqual(["otra/pantalla.tsx"]);
+    expect(archivosQueRepiten(fuentes, textos[0] ?? "", DUENO)).toEqual(["src/otro/pantalla.tsx"]);
   });
 });

@@ -1,25 +1,13 @@
-import { ENCABEZADO_DE_IP } from "../capacidades/autenticacion/host-de-autenticacion";
 import { decidirEmpresa } from "../capacidades/experiencia/empresa-elegida";
 import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
-import type { ConsultasDeEmpresas } from "../modulos/empresas/publico";
-import type {
-  CasosDeUsoDeIdentidad,
-  ConsultasDeSesion,
-  EmpresaDeLaLista,
-} from "../modulos/identidad/publico";
+import type { EmpresaDeLaLista } from "../modulos/identidad/publico";
 import type { EmpresaId, MarcaComercialId, PersonaId } from "../primitivas/identificadores/marca";
 import type { RolDeEmpresa } from "../capacidades/permisos/roles";
-import type { Autenticacion, SesionAutenticada } from "../puertos/autenticacion";
-import type { LecturasCompartidas } from "../puertos/transacciones";
-import {
-  aRespuesta,
-  aRespuestaDeExcepcion,
-  errorAPublico,
-  respuestaDeFalla,
-  type DependenciasDeRespuesta,
-} from "./a-respuesta";
+import type { SesionAutenticada } from "../puertos/autenticacion";
+import { aRespuesta, aRespuestaDeExcepcion, errorAPublico, respuestaDeFalla } from "./a-respuesta";
 import { contextoOperativo, contextoDeSesion } from "./contextos";
+import type { DependenciasDeSesion } from "./dependencias-de-sesion";
 
 /**
  * El primer flujo real de la web (W5): de una sesión de Google a la empresa en la que se trabaja. Vive acá, y
@@ -36,21 +24,6 @@ import { contextoOperativo, contextoDeSesion } from "./contextos";
  *    validada, la persona de la sesión y la marca del host.
  *  - Todo resultado sale por `aRespuesta` (ADR-016): sin detalle interno, con referencia si es inesperado.
  */
-
-export type DependenciasDeSesion = Readonly<{
-  autenticacion: () => Autenticacion;
-  consultasDeSesion: () => ConsultasDeSesion;
-  casosDeUsoDeIdentidad: () => CasosDeUsoDeIdentidad;
-  consultasDeEmpresas: () => ConsultasDeEmpresas;
-  /**
-   * Las lecturas de un mismo pedido que comparten una transacción de solo lectura. Opcional: sin él cada consulta abre la suya (más
-   * viajes a la base, mismo resultado). La web real lo pasa siempre.
-   */
-  lecturasCompartidas?: () => LecturasCompartidas;
-  /** El reloj: se toma UNA vez por operación y entra como dato (ADR-004, regla G4). */
-  ahora: () => Date;
-  respuesta: DependenciasDeRespuesta;
-}>;
 
 /** Una empresa de la lista de la persona, con lo que la pantalla necesita para elegir y para avisar si no opera. */
 export type EmpresaParaLaPantalla = Pick<
@@ -273,103 +246,12 @@ export async function aceptarInvitacionDeLaSesion(
   }
 }
 
-export type PedidoDeAutenticacion = Readonly<{
-  /** El host que resolvió la puerta (normalizado): el origen de lo que se le pide a la librería. */
-  host: string;
-  /** Los encabezados del pedido de la persona: de ahí salen la cookie y los datos para el límite de pedidos. */
-  encabezados: Headers;
-}>;
-
-/**
- * Los encabezados que la librería necesita de verdad: la cookie y, para su límite de pedidos, la IP y el agente.
- * La IP es SOLO la del encabezado de confianza (`ENCABEZADO_DE_IP`, S3): `x-forwarded-for` ya no se copia. La
- * librería no lo lee (su configuración lista un único encabezado), y copiarlo dejaría a un cambio futuro de
- * configuración confiar sin querer en un valor que el cliente puede mandar.
- */
-function encabezadosParaLaLibreria(p: PedidoDeAutenticacion): Headers {
-  const salida = new Headers({
-    origin: `https://${p.host}`,
-    "content-type": "application/json",
-  });
-  for (const nombre of ["cookie", ENCABEZADO_DE_IP, "user-agent"]) {
-    const valor = p.encabezados.get(nombre);
-    if (valor !== null) salida.set(nombre, valor);
-  }
-  return salida;
-}
-
-export type CookiesParaAplicar = Readonly<{ cookies: readonly string[] }>;
-
-/**
- * Cierra la sesión: la librería borra la fila (revocación inmediata) y devuelve los `Set-Cookie` que borran
- * la cookie en el navegador. Quien llama (la acción del servidor) los APLICA y vuelve al ingreso.
- */
-export async function cerrarSesion(
-  d: DependenciasDeSesion,
-  pedido: PedidoDeAutenticacion,
-): Promise<Respuesta<CookiesParaAplicar>> {
-  try {
-    const respuesta = await d.autenticacion().manejar(
-      new Request(`https://${pedido.host}/api/auth/sign-out`, {
-        method: "POST",
-        headers: encabezadosParaLaLibreria(pedido),
-        body: "{}",
-      }),
-      pedido.host,
-    );
-    return { ok: true, dato: { cookies: respuesta.headers.getSetCookie() } };
-  } catch (excepcion) {
-    return aRespuestaDeExcepcion(excepcion, d.respuesta);
-  }
-}
-
-export type InicioDeIngreso = Readonly<{
-  /** A dónde ir (la pantalla de Google), siempre `https:`. */
-  url: string;
-  /** Las cookies de estado del ingreso (hay que volver con ellas): se aplican antes de redirigir. */
-  cookies: readonly string[];
-}>;
-
-/**
- * Empieza el ingreso con Google: le pide a la librería la dirección de Google y las cookies del estado del
- * ingreso. `volver` es una ruta propia ya validada (`rutaDeRetorno`).
- */
-export async function iniciarIngresoConGoogle(
-  d: DependenciasDeSesion,
-  pedido: PedidoDeAutenticacion & Readonly<{ volver: string }>,
-): Promise<Respuesta<InicioDeIngreso>> {
-  try {
-    const respuesta = await d.autenticacion().manejar(
-      new Request(`https://${pedido.host}/api/auth/sign-in/social`, {
-        method: "POST",
-        headers: encabezadosParaLaLibreria(pedido),
-        body: JSON.stringify({
-          provider: "google",
-          callbackURL: pedido.volver,
-          errorCallbackURL: "/ingreso",
-        }),
-      }),
-      pedido.host,
-    );
-    if (respuesta.status !== 200) {
-      return {
-        ok: false,
-        error: respuestaDeFalla(`el inicio del ingreso respondió ${respuesta.status}`, d.respuesta),
-      };
-    }
-    const cuerpo = (await respuesta.json()) as { url?: unknown };
-    const url = typeof cuerpo.url === "string" ? cuerpo.url : "";
-    if (!url.startsWith("https://")) {
-      return {
-        ok: false,
-        error: respuestaDeFalla(
-          "el inicio del ingreso no devolvió una dirección https",
-          d.respuesta,
-        ),
-      };
-    }
-    return { ok: true, dato: { url, cookies: respuesta.headers.getSetCookie() } };
-  } catch (excepcion) {
-    return aRespuestaDeExcepcion(excepcion, d.respuesta);
-  }
-}
+export type { DependenciasDeSesion } from "./dependencias-de-sesion";
+export {
+  cerrarSesion,
+  iniciarIngresoConGoogle,
+  renovarSesion,
+  type PedidoDeAutenticacion,
+  type CookiesParaAplicar,
+  type InicioDeIngreso,
+} from "./sesion-de-autenticacion";

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ZONA_DE_ARGENTINA } from "../../../src/primitivas/tiempo/fecha-civil-hasta-hoy";
 import { Aviso } from "../../web/ui/componentes/Aviso";
 import { Boton } from "../../web/ui/componentes/Boton.cliente";
 import { Campo } from "../../web/ui/componentes/Campo";
@@ -31,7 +32,7 @@ export type PropsDeFormularioDeAlta = Readonly<{
   planes: readonly PlanDelAlta[];
 }>;
 
-const ZONA_POR_DEFECTO = "America/Argentina/Buenos_Aires";
+const ZONA_POR_DEFECTO = ZONA_DE_ARGENTINA;
 const ZONAS_HORARIAS = [
   { valor: ZONA_POR_DEFECTO, etiqueta: "Buenos Aires (Argentina)" },
   { valor: "America/Argentina/Cordoba", etiqueta: "Córdoba (Argentina)" },
