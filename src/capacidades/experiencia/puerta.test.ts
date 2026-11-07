@@ -221,6 +221,40 @@ describe("decidirPuerta: rutas raras no se anteponen a un prefijo", () => {
   );
 });
 
+describe("decidirPuerta: vectores de redirección y de subida de nivel van a la neutra", () => {
+  it.each([
+    "//evil.com",
+    "///",
+    "/.//evil",
+    "/\\evil.com",
+    "/%2f%2fevil.com",
+    "/%5cevil.com",
+    "/\t/evil.com",
+    "/\n/evil.com",
+    "/a%00b",
+    "/%252f%252fevil.com",
+    "https:evil.com",
+    "javascript:alert(1)",
+    "/／evil.com",
+    "/∕evil.com",
+    "/⁄evil.com",
+    "/․․/x",
+    "/‮evil.com",
+    "/@evil.com",
+    "/a@evil.com",
+    "/a?x=1",
+    "/a#x",
+    "/a b",
+    "/a:b",
+  ])("%j es la neutra en todas las superficies servibles", (ruta) => {
+    for (const s of SUPERFICIES_SERVIBLES) {
+      const d = decidir(ruta, resuelta(s));
+      expect(d.rutaInterna, `${s} ${ruta}`).toBe("/s/neutra");
+      expect(d.estado).toBe(404);
+    }
+  });
+});
+
 describe("decidirPuerta: /api solo en un host APP", () => {
   it.each(["/api", "/api/auth/signin", "/api/auth/callback/google", "/api/salud/detalle"])(
     "%s en APP sigue su camino, con noindex",
