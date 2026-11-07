@@ -604,11 +604,17 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
             HOST_A,
           ),
         ];
-        for (const pedido of pedidos) {
-          const falla = await pedido.then(
-            () => null,
-            (e: unknown) => e,
-          );
+        // Los tres pedidos corren a la vez: se les engancha el manejo de la falla ya, no cuando el bucle llegue a cada uno (el
+        // `get-session` usa la instancia gemela del «Seguir» y puede fallar antes de que se lo espere: sería un rechazo sin manejar).
+        const fallas = await Promise.all(
+          pedidos.map((pedido) =>
+            pedido.then(
+              () => null,
+              (e: unknown) => e,
+            ),
+          ),
+        );
+        for (const falla of fallas) {
           expect(falla).toBeInstanceOf(ErrorInternoDeIngreso);
           const visible = `${(falla as Error).message} ${JSON.stringify(falla)} ${String(falla)}`;
           expect(visible).not.toMatch(

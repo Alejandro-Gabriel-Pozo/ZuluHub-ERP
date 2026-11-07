@@ -46,6 +46,8 @@ vi.mock("../../apps/web/servidor/facturacion", () => ({
 }));
 // La guarda real (`pantallaDeOperacion`) y el armazón real: solo se simula lo externo, la sesión, la puerta y la empresa.
 vi.mock("../../apps/web/servidor/sesion", () => ({
+  // Sin lecturas compartidas: cada consulta abre la suya (la página las pide igual).
+  dependenciasDeSesion: {},
   empresaDelPedido: () =>
     Promise.resolve({
       puerta: { marca: { nombre: "Marca de prueba" } },

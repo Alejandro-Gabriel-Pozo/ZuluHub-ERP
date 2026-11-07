@@ -129,7 +129,11 @@ export async function renovarSesion(
     return sinPermiso("SIN_PERMISO");
   }
   try {
-    const sesion = await d.autenticacion().sesionDe({ headers: pedido.encabezados }, pedido.host);
+    // `renovarYa`: el «Seguir» y la renovación silenciosa escriben el uso aunque se haya anotado hace menos de un minuto; sin eso no
+    // habría cookie nueva que devolver (una vista anota el uso a lo sumo una vez por minuto y no puede fijar cookies).
+    const sesion = await d
+      .autenticacion()
+      .sesionDe({ headers: pedido.encabezados }, pedido.host, { renovarYa: true });
     if (sesion === null) return sinPermiso("SESION_VENCIDA");
     for (const cookie of sesion.cookiesDeRespuesta) cabeceras.append("Set-Cookie", cookie);
     return new Response(JSON.stringify({ venceEn: sesion.venceEn.toISOString() }), {

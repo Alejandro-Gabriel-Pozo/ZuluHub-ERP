@@ -52,6 +52,8 @@ vi.mock("../../apps/web/servidor/facturacion", () => ({
   elegirLaSucursal: () => Promise.resolve({ error: null }),
 }));
 vi.mock("../../apps/web/servidor/sesion", () => ({
+  // Sin lecturas compartidas: cada consulta abre la suya (la página las pide igual).
+  dependenciasDeSesion: {},
   empresaDelPedido: () =>
     Promise.resolve({
       puerta: { marca: { nombre: "Marca de prueba" } },

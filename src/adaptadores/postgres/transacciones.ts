@@ -1,4 +1,5 @@
-import { Kysely, PostgresDialect, sql } from "kysely";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { Kysely, PostgresDialect, sql, type ControlledTransaction } from "kysely";
 import pg from "pg";
 import type { Contexto, TipoDeContexto } from "../../contexto/contexto";
 import type {
@@ -7,6 +8,7 @@ import type {
   Transacciones,
 } from "../../puertos/transacciones";
 import { err, type Resultado } from "../../primitivas/resultado/resultado";
+import type { LecturasCompartidas } from "../../puertos/transacciones";
 import { firmarContexto, type ClaveDeContexto } from "./contexto-firmado";
 import { ErrorDeConfiguracion, esReintentable, traducirErrorDeBase } from "./errores";
 
@@ -44,6 +46,11 @@ export type ConfiguracionDeTransacciones<Tx> = Readonly<{
    * (auditoría e idempotencia de plataforma) para sacar el actor del contexto y no del llamador.
    */
   armar: (db: Kysely<SinTablas>, contexto: Contexto) => Tx;
+  /**
+   * Lo mismo para las transacciones de SOLO LECTURA y las unidades de lecturas compartidas, que pueden resolver una sola vez lo que se
+   * repite (los permisos). Si falta, esas transacciones usan `armar`. Las que escriben usan SIEMPRE `armar`: no tienen cómo memorizar.
+   */
+  armarDeLectura?: (db: Kysely<SinTablas>, contexto: Contexto) => Tx;
   maximoDeConexiones?: number;
   /**
    * Se avisa cuando el servidor corta una conexión OCIOSA (por ejemplo, Neon al escalar a cero). No
@@ -62,10 +69,18 @@ type ErrorInesperado = Extract<ErrorDePersistencia, { tipo: "Inesperado" }>;
 /** Base sin tablas tipadas: cada módulo declara las suyas (`withTables`). */
 export type SinTablas = Record<never, never>;
 
-export type TransaccionesDePostgres<Tx> = Transacciones<Tx> & {
-  /** Cierra todas las conexiones abiertas. */
-  cerrar(): Promise<void>;
-};
+export type TransaccionesDePostgres<Tx> = Transacciones<Tx> &
+  LecturasCompartidas & {
+    /** Cierra todas las conexiones abiertas. */
+    cerrar(): Promise<void>;
+  };
+
+/**
+ * Cuánto puede durar una unidad de lecturas compartidas y seguir sumando llamadas. El contexto firmado vale 5 minutos
+ * (`VIGENCIA_DEL_CONTEXTO_EN_S`): pasado este tope, las llamadas siguientes abren su propia transacción (con su propio token) en vez de
+ * arrastrar uno por vencer. Una pantalla tarda milisegundos; esto es un seguro, no un plazo de uso.
+ */
+export const VIDA_MAXIMA_DE_LA_UNIDAD_EN_MS = 60_000;
 
 // SERIALIZABLE puede abortar transacciones sin conflicto real (falsos positivos del detector, más
 // frecuentes con tablas chicas); por eso se reintenta con espera creciente y al azar (ADR-004).
@@ -130,7 +145,11 @@ export function crearTransacciones<Tx>(
         // dato de negocio). El token fijado vale solo dentro de esta transacción.
         const token = firmarContexto(clave, opciones.contexto, Math.floor(Date.now() / 1000));
         await sql`select set_config('app.ctx', ${token}, true)`.execute(trx);
-        const resultado = await trabajo(configuracion.armar(trx, opciones.contexto));
+        const resultado = await trabajo(
+          (opciones.soloLectura === true
+            ? (configuracion.armarDeLectura ?? configuracion.armar)
+            : configuracion.armar)(trx, opciones.contexto),
+        );
         if (!resultado.ok) throw new Abortar(resultado);
         // Si el trabajo atrapó un error de la base y devolvió `ok`, la transacción quedó abortada y
         // Postgres respondería al COMMIT con un ROLLBACK SIN error: se informaría éxito sin haber
@@ -152,33 +171,192 @@ export function crearTransacciones<Tx>(
     }
   }
 
+  /**
+   * Las lecturas compartidas de UN pedido (`conLecturasCompartidas`). La unidad vive lo que dura el `trabajo` que la abrió y se ve solo
+   * desde ese trabajo (`AsyncLocalStorage`: cada pedido corre en su propia cadena asíncrona, así que un pedido concurrente no la
+   * ve). La transacción se abre al unirse la primera lectura y se cierra al terminar el trabajo; nada de la unidad sobrevive al pedido.
+   *
+   * Previene (cada cosa tiene su prueba en `test/integracion/lecturas-compartidas.test.ts`): que dos pedidos compartan lo leído; que una
+   * escritura o una lectura de otro contexto se cuele en la transacción de solo lectura; que una falla de la base deje a las lecturas
+   * siguientes sobre una transacción abortada (la unidad se da por rota y cada una abre la suya); que un pedido sostenga una conexión del
+   * pozo mientras pide otra (la unidad se cierra antes de abrir cualquier transacción que no pueda unir).
+   */
+  type Unidad = {
+    readonly contexto: Contexto;
+    readonly desde: number;
+    /** `ABIERTA`: admite llamadas. `ROTA`: una llamada falló, no admite más y se revierte al cerrar. `CERRADA`: ya no admite. */
+    estado: "ABIERTA" | "ROTA" | "CERRADA";
+    abriendo: Promise<Readonly<{ trx: ControlledTransaction<SinTablas>; tx: Tx }>> | null;
+    readonly enCurso: Set<Promise<unknown>>;
+    /** Las lecturas unidas corren de a una (una conexión no atiende dos consultas a la vez): cada una espera a la anterior. */
+    cola: Promise<unknown>;
+  };
+  const almacen = new AsyncLocalStorage<Unidad>();
+  /** Marca lo que corre DENTRO de una lectura unida: lo que ella misma pida no se une (se esperaría a sí misma). */
+  const dentroDeUnaLectura = new AsyncLocalStorage<true>();
+
+  const admite = (unidad: Unidad, opciones: OpcionesDeTransaccion): boolean =>
+    unidad.estado === "ABIERTA" &&
+    opciones.contexto === unidad.contexto &&
+    opciones.soloLectura === true &&
+    opciones.aislamiento === "read committed" &&
+    Date.now() - unidad.desde < VIDA_MAXIMA_DE_LA_UNIDAD_EN_MS;
+
+  function abrir(unidad: Unidad) {
+    unidad.abriendo ??= (async () => {
+      const db = conexionPara(unidad.contexto.tipo);
+      const trx = await db
+        .startTransaction()
+        .setIsolationLevel("read committed")
+        .setAccessMode("read only")
+        .execute();
+      try {
+        const token = firmarContexto(clave, unidad.contexto, Math.floor(Date.now() / 1000));
+        await sql`select set_config('app.ctx', ${token}, true)`.execute(trx);
+        return {
+          trx,
+          tx: (configuracion.armarDeLectura ?? configuracion.armar)(trx, unidad.contexto),
+        };
+      } catch (error) {
+        await trx.rollback().execute();
+        throw error;
+      }
+    })();
+    return unidad.abriendo;
+  }
+
+  /** Termina la unidad: confirma (o revierte si se rompió) y suelta la conexión. Repetirla no hace nada. */
+  async function cerrarUnidad(unidad: Unidad): Promise<void> {
+    if (unidad.estado === "CERRADA") return;
+    const rota = unidad.estado === "ROTA";
+    unidad.estado = "CERRADA";
+    await Promise.allSettled([...unidad.enCurso]);
+    if (unidad.abriendo === null) return;
+    let abierta: Awaited<NonNullable<Unidad["abriendo"]>>;
+    try {
+      abierta = await unidad.abriendo;
+    } catch {
+      return; // No llegó a abrirse: no hay nada que cerrar.
+    }
+    if (rota) await abierta.trx.rollback().execute();
+    else await abierta.trx.commit().execute();
+  }
+
+  /** Una lectura que se une a la transacción de la unidad: sin `BEGIN`, sin contexto propio y sin `COMMIT`. */
+  async function ejecutarUnida<T, E>(
+    unidad: Unidad,
+    opciones: OpcionesDeTransaccion,
+    trabajo: (tx: Tx) => Promise<Resultado<T, E>>,
+    solo: () => Promise<Resultado<T, E | ErrorDePersistencia>>,
+  ): Promise<Resultado<T, E | ErrorDePersistencia>> {
+    const curso = unidad.cola.then(async () => {
+      // Si mientras esperaba su turno la unidad se rompió o se cerró, esta lectura abre la suya.
+      if (unidad.estado !== "ABIERTA") return solo();
+      const { tx } = await abrir(unidad);
+      // Una lectura no escribe: si el trabajo devuelve un error de negocio no hay nada que revertir.
+      return dentroDeUnaLectura.run(true, () => trabajo(tx));
+    });
+    unidad.cola = curso.then(
+      () => undefined,
+      () => undefined,
+    );
+    unidad.enCurso.add(curso);
+    try {
+      return await curso;
+    } catch (error) {
+      // La transacción compartida pudo quedar abortada: desde acá nadie más se une, y cada lectura abre la suya.
+      unidad.estado = "ROTA";
+      if (esReintentable(error)) return solo();
+      const traducido = traducirErrorDeBase(error);
+      if (traducido === null) throw error;
+      if (traducido.tipo === "Inesperado") registrar(traducido);
+      return err(traducido);
+    } finally {
+      unidad.enCurso.delete(curso);
+    }
+  }
+
+  async function ejecutarSolo<T, E>(
+    opciones: OpcionesDeTransaccion,
+    trabajo: (tx: Tx) => Promise<Resultado<T, E>>,
+  ): Promise<Resultado<T, E | ErrorDePersistencia>> {
+    const reintentos = opciones.reintentos ?? REINTENTOS_POR_DEFECTO;
+    // Un valor que no sea entero >= 0 (NaN, negativo, 1.5, Infinity) rompe el bucle de reintentos.
+    if (!Number.isInteger(reintentos) || reintentos < 0) {
+      throw new RangeError(`reintentos debe ser un entero mayor o igual a 0 (llegó ${reintentos})`);
+    }
+    for (let intento = 0; ; intento++) {
+      try {
+        return await unIntento(opciones, trabajo);
+      } catch (error) {
+        if (esReintentable(error)) {
+          if (intento >= reintentos) return err({ tipo: "ConcurrenciaAgotada" });
+          await esperar(
+            Math.min(ESPERA_MAXIMA_EN_MS, ESPERA_BASE_EN_MS * 2 ** intento) * (0.5 + Math.random()),
+          );
+          continue;
+        }
+        const traducido = traducirErrorDeBase(error);
+        if (traducido === null) throw error;
+        if (traducido.tipo === "Inesperado") registrar(traducido);
+        return err(traducido);
+      }
+    }
+  }
+
   return {
     async ejecutar(opciones, trabajo) {
-      const reintentos = opciones.reintentos ?? REINTENTOS_POR_DEFECTO;
-      // Un valor que no sea entero >= 0 (NaN, negativo, 1.5, Infinity) rompe el bucle de reintentos.
-      if (!Number.isInteger(reintentos) || reintentos < 0) {
-        throw new RangeError(
-          `reintentos debe ser un entero mayor o igual a 0 (llegó ${reintentos})`,
-        );
-      }
-      for (let intento = 0; ; intento++) {
-        try {
-          return await unIntento(opciones, trabajo);
-        } catch (error) {
-          if (esReintentable(error)) {
-            if (intento >= reintentos) return err({ tipo: "ConcurrenciaAgotada" });
-            await esperar(
-              Math.min(ESPERA_MAXIMA_EN_MS, ESPERA_BASE_EN_MS * 2 ** intento) *
-                (0.5 + Math.random()),
-            );
-            continue;
-          }
-          const traducido = traducirErrorDeBase(error);
-          if (traducido === null) throw error;
-          if (traducido.tipo === "Inesperado") registrar(traducido);
-          return err(traducido);
+      const unidad = almacen.getStore();
+      if (unidad !== undefined && unidad.estado === "ABIERTA") {
+        if (dentroDeUnaLectura.getStore() === undefined && admite(unidad, opciones)) {
+          return ejecutarUnida(unidad, opciones, trabajo, () => ejecutarSolo(opciones, trabajo));
+        }
+        // No puede unirse: antes de abrir otra transacción se suelta la de la unidad (nunca dos conexiones del mismo pedido a la vez:
+        // con el pozo chico, muchos pedidos así se esperarían entre sí).
+        if (unidad.abriendo !== null && unidad.enCurso.size === 0) await cerrarUnidad(unidad);
+        // Con una lectura unida EN CURSO desde otra rama del pedido (no desde adentro de ella) no se puede soltar la conexión: abrir otra
+        // sería sostener dos del mismo pozo a la vez. Falla cerrado, con un error tipado. NO se debe abrir una escritura (ni otra
+        // transacción que no pueda unirse) en paralelo con las lecturas de un `conLecturasCompartidas`: esperá a que terminen.
+        else if (unidad.abriendo !== null && dentroDeUnaLectura.getStore() === undefined) {
+          const caso: ErrorInesperado = {
+            tipo: "Inesperado",
+            sqlstate: null,
+            mensaje:
+              "una transacción que no puede compartirse se pidió en paralelo con las lecturas del pedido: no se abre una segunda conexión",
+          };
+          registrar(caso);
+          return err(caso);
         }
       }
+      return ejecutarSolo(opciones, trabajo);
+    },
+
+    async conLecturasCompartidas(contexto, trabajo) {
+      const actual = almacen.getStore();
+      if (actual !== undefined && actual.estado === "ABIERTA") {
+        // Ya se comparte para este mismo contexto: no se abre otra unidad. Con otro contexto, la de afuera se suelta primero.
+        if (actual.contexto === contexto) return trabajo();
+        if (actual.abriendo !== null && actual.enCurso.size === 0) await cerrarUnidad(actual);
+      }
+      const unidad: Unidad = {
+        contexto,
+        desde: Date.now(),
+        estado: "ABIERTA",
+        abriendo: null,
+        enCurso: new Set(),
+        cola: Promise.resolve(),
+      };
+      let resultado: Awaited<ReturnType<typeof trabajo>>;
+      try {
+        resultado = await almacen.run(unidad, trabajo);
+      } catch (error) {
+        // Si el trabajo falló, la unidad se revierte y se suelta; el error del trabajo es el que sale.
+        unidad.estado = unidad.estado === "CERRADA" ? "CERRADA" : "ROTA";
+        await cerrarUnidad(unidad).catch(() => undefined);
+        throw error;
+      }
+      await cerrarUnidad(unidad);
+      return resultado;
     },
 
     async cerrar() {
