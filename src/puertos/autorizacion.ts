@@ -39,7 +39,7 @@ export interface CargaDeAutorizacion {
    * puerta de otra marca: `marcaDeEntrada` tiene que ser la marca del tenant de la empresa (una
    * marca de entrada `null` con persona tampoco autoriza); si no, `rol: null` y todo da `SIN_PERMISO`.
    *
-   * Con rol, en la misma transacción y sin caché: `modulosActivados` son las filas ACTIVAS de la empresa y
+   * Con rol, en la misma transacción y sin caché entre pedidos (dentro de un pedido de solo lectura se resuelve una vez, ver `CargaDeAutorizacionDeLectura`): `modulosActivados` son las filas ACTIVAS de la empresa y
    * `modulosHabilitados` los módulos de la versión de plan VIGENTE de su tenant (sin asignación vigente,
    * ninguno: lo activado queda en solo lectura). Lo que la base guarda y el catálogo no conoce (un módulo
    * activado o de un plan), o una asignación vigente sin versión visible, es una falla (el adaptador tira
@@ -51,7 +51,7 @@ export interface CargaDeAutorizacion {
    * §3.4). `"TODAS"` para el gerente y el administrador activos; para el operador, las sucursales
    * ACTIVAS donde tiene asignación ACTIVA (ordenadas, sin repetir; vacía si no tiene ninguna). Sin
    * membresía activa, con la persona suspendida globalmente o sin persona: vacía (falla cerrado). Se
-   * lee en cada llamada, sin caché: una asignación apagada un instante antes ya no cuenta. Con la
+   * lee sin caché entre pedidos (en cada llamada al escribir; una vez por pedido al leer): una asignación apagada antes de empezar el pedido ya no cuenta. Con la
    * puerta de otra marca (o sin ella, con persona): vacía, como si no tuviera rol. El caso
    * de uso lo usa con `exigirSucursal`; este puerto no autoriza por sí mismo. Con `incluirDesactivadas`, el operador
    * recibe también las sucursales cerradas que tiene asignadas (solo para mirar historial, D-37).

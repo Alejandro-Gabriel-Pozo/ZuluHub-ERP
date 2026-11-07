@@ -1,5 +1,5 @@
 import pg from "pg";
-import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, inject, it } from "vitest";
 import { armarConexiones } from "../../src/composicion/conexiones";
 import { ok } from "../../src/primitivas/resultado/resultado";
 import { empresaId, personaId } from "../../src/primitivas/identificadores/marca";
@@ -47,6 +47,9 @@ describe.skipIf(base === null)("permisos con la composición real", () => {
       ...comoEmpresa(empresaId(empresa), personaId(persona)),
       marcaDeEntrada: marca as ContextoOperativo["marcaDeEntrada"],
     };
+  });
+  afterEach(async () => {
+    await dueno.query("update membresia set activo = true where empresa_id = $1", [empresa]);
   });
   afterAll(async () => {
     await conexiones.transaccionesDeApp().cerrar();

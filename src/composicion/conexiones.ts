@@ -107,7 +107,11 @@ import {
 } from "../modulos/tenants/publico";
 import type { Auditoria } from "../puertos/auditoria";
 import type { Autenticacion, BarridoDeAutenticacion } from "../puertos/autenticacion";
-import type { CargaDeAutorizacion } from "../puertos/autorizacion";
+import type {
+  CargaDeAutorizacion,
+  CargaDeAutorizacionDeLectura,
+  CargaDeAutorizacionSinMemoria,
+} from "../puertos/autorizacion";
 import type { CifradorDeSecretos } from "../puertos/cifrado-de-secretos";
 import type { Correo } from "../puertos/correo";
 import type { RevocacionDeSesiones } from "../puertos/revocacion-de-sesiones";
@@ -251,6 +255,13 @@ const marcaDeImpresion: TxDeApp["marca"] = {
  */
 type ConexionDeTx = Parameters<ConfiguracionDeTransacciones<TxDeApp>["armar"]>[0];
 
+/** Escritura: solo acepta la carga que lee cada vez; la que memoriza no entra acá (`tsc` falla). */
+const armarTxDeEscritura = (db: ConexionDeTx, a: CargaDeAutorizacionSinMemoria): TxDeApp =>
+  armarTx(db, a);
+/** Lectura: solo acepta la carga que resuelve una vez lo que se repite. */
+const armarTxDeLectura = (db: ConexionDeTx, a: CargaDeAutorizacionDeLectura): TxDeApp =>
+  armarTx(db, a);
+
 function armarTx(db: ConexionDeTx, autorizacion: CargaDeAutorizacion): TxDeApp {
   return {
     tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
@@ -321,11 +332,15 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
       crearTransacciones<TxDeApp>({
         urls: { OPERATIVO: valores.PEDERNAL_DB_APP },
         clave: leerClaveDeContexto(valores[PEDERNAL_CLAVE_CONTEXTO]),
-        armar: (db) => armarTx(db, crearAutorizacionDePostgres(db.withTables<AutorizacionDb>())),
+        armar: (db) =>
+          armarTxDeEscritura(db, crearAutorizacionDePostgres(db.withTables<AutorizacionDb>())),
         // En lectura, los permisos se resuelven una vez por transacción (o por pedido, con `conLecturasCompartidas`); al escribir, la
         // fábrica no tiene cómo memorizar.
         armarDeLectura: (db) =>
-          armarTx(db, crearAutorizacionDeLecturaDePostgres(db.withTables<AutorizacionDb>())),
+          armarTxDeLectura(
+            db,
+            crearAutorizacionDeLecturaDePostgres(db.withTables<AutorizacionDb>()),
+          ),
       }),
     ),
     transaccionesDeTrabajos: armarPieza("transacciones-trabajos", (valores) =>

@@ -17,7 +17,7 @@ import type {
 /**
  * Puerto `autorizacion` sobre `membresia`, `persona`, `asignacion_sucursal`, `sucursal`, `empresa`, `tenant` y,
  * para los módulos, `modulo_de_empresa`, `plan_de_tenant` y `version_de_plan` (SQL propio, ver `modulosDe`). Lee con la MISMA conexión de la transacción
- * del caso de uso (nada se guarda entre llamadas): el rol y los módulos valen para esa transacción y, si se
+ * del caso de uso (nada se guarda entre transacciones ni entre pedidos; solo la fábrica de lectura recuerda DENTRO de un pedido, ver abajo): el rol y los módulos valen para esa transacción y, si se
  * repite por un conflicto de serialización, se vuelven a leer.
  *
  * El actor autoriza solo si hay membresía ACTIVA en la empresa del contexto y la persona está activa
@@ -91,7 +91,7 @@ function validarNombresDeModulo(origen: string, nombres: readonly string[]): rea
  * resuelve una sola vez cada lectura de permisos repetida (rol, módulos y alcance de sucursales) mientras viva el adaptador: una transacción
  * de solo lectura o una unidad de lecturas compartidas de un pedido (`conLecturasCompartidas`). Nunca vive más que esa transacción o ese
  * pedido: se arma de nuevo en cada una. El tipo distingue las dos: la de lectura no entra donde se pide la de escritura (`tsc` falla; caso
- * inyectado en `autorizacion.test.ts`). Chequeo en ejecución: `test/integracion/permisos-con-la-composicion-real.test.ts`.
+ * inyectado en `autorizacion.test.ts`). DECISIÓN DEL DUEÑO (2026-11-07, «mientras el servidor rechace me parece bien»; fila «Permisos leídos una vez por pedido» de `11-especificaciones/decisiones-del-dueno-2026-11.md` del repo de docs): si OTRA persona revoca un permiso mientras un pedido de lectura está en curso, ese pedido termina con lo que leyó al empezar y la revocación se ve en el SIGUIENTE; una escritura siempre autoriza leyendo de nuevo. Chequeo en ejecución: `test/integracion/permisos-con-la-composicion-real.test.ts`.
  */
 function armarAutorizacion(db: Kysely<AutorizacionDb>, memorizar: boolean): CargaDeAutorizacion {
   /**
@@ -148,8 +148,8 @@ function armarAutorizacion(db: Kysely<AutorizacionDb>, memorizar: boolean): Carg
   }
 
   /**
-   * Los módulos de la empresa, en la transacción en curso (sin caché: una baja, una suspensión o un cambio
-   * de plan se ven en la operación siguiente), de una sola lectura consistente:
+   * Los módulos de la empresa, en la transacción en curso (sin caché entre pedidos: una baja, una suspensión o un cambio
+   * de plan se ven en el pedido siguiente), de una sola lectura consistente:
    *  - activados: las filas ACTIVAS de `modulo_de_empresa` de la empresa del contexto (la RLS ya limita a
    *    esa empresa; el filtro se repite como defensa en profundidad). Las apagadas no cuentan;
    *  - habilitados (el techo): los módulos de la versión de plan de la asignación VIGENTE del tenant a

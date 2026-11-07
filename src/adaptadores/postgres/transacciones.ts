@@ -197,12 +197,16 @@ export function crearTransacciones<Tx>(
     estado: "ABIERTA" | "ROTA" | "CERRADA";
     abriendo: Promise<Readonly<{ trx: ControlledTransaction<SinTablas>; tx: Tx }>> | null;
     readonly enCurso: Set<Promise<unknown>>;
+    /** Cuántas transacciones PROPIAS (que no pudieron unirse) corre este pedido ahora: mientras haya una, no se abre otra ni se une una lectura. */
+    sueltasEnCurso: number;
     /** Las lecturas unidas corren de a una (una conexión no atiende dos consultas a la vez): cada una espera a la anterior. */
     cola: Promise<unknown>;
   };
   const almacen = new AsyncLocalStorage<Unidad>();
   /** Marca lo que corre DENTRO de una lectura unida: lo que ella misma pida no se une (se esperaría a sí misma). */
   const dentroDeUnaLectura = new AsyncLocalStorage<true>();
+  /** Lo mismo para lo que corre DENTRO de una transacción propia del pedido (una escritura): lo que ella pida adentro es suyo. */
+  const dentroDeUnaSuelta = new AsyncLocalStorage<true>();
 
   const admite = (unidad: Unidad, opciones: OpcionesDeTransaccion): boolean =>
     unidad.estado === "ABIERTA" &&
@@ -316,28 +320,38 @@ export function crearTransacciones<Tx>(
   return {
     async ejecutar(opciones, trabajo) {
       const unidad = almacen.getStore();
-      if (unidad !== undefined && unidad.estado === "ABIERTA") {
-        if (dentroDeUnaLectura.getStore() === undefined && admite(unidad, opciones)) {
-          return ejecutarUnida(unidad, opciones, trabajo, () => ejecutarSolo(opciones, trabajo));
-        }
-        // No puede unirse: antes de abrir otra transacción se suelta la de la unidad (nunca dos conexiones del mismo pedido a la vez:
-        // con el pozo chico, muchos pedidos así se esperarían entre sí).
-        if (unidad.abriendo !== null && unidad.enCurso.size === 0) await cerrarUnidad(unidad);
-        // Con una lectura unida EN CURSO desde otra rama del pedido (no desde adentro de ella) no se puede soltar la conexión: abrir otra
-        // sería sostener dos del mismo pozo a la vez. Falla cerrado, con un error tipado. NO se debe abrir una escritura (ni otra
-        // transacción que no pueda unirse) en paralelo con las lecturas de un `conLecturasCompartidas`: esperá a que terminen.
-        else if (unidad.abriendo !== null && dentroDeUnaLectura.getStore() === undefined) {
-          const caso: ErrorInesperado = {
-            tipo: "Inesperado",
-            sqlstate: null,
-            mensaje:
-              "una transacción que no puede compartirse se pidió en paralelo con las lecturas del pedido: no se abre una segunda conexión",
-          };
-          registrar(caso);
-          return err(caso);
-        }
+      const anidada =
+        dentroDeUnaLectura.getStore() !== undefined || dentroDeUnaSuelta.getStore() !== undefined;
+      if (unidad === undefined || unidad.estado !== "ABIERTA" || anidada) {
+        return ejecutarSolo(opciones, trabajo);
       }
-      return ejecutarSolo(opciones, trabajo);
+      // Un pedido NUNCA sostiene dos conexiones del pozo a la vez desde ramas distintas: con el pozo chico, muchos pedidos así se esperarían
+      // entre sí. Si ya hay una transacción propia del pedido en curso, o una lectura unida y esta no puede unirse, falla cerrado con un
+      // error tipado en vez de abrir una segunda conexión. NO se debe abrir una escritura (ni otra transacción que no pueda unirse) en
+      // paralelo con las lecturas de un `conLecturasCompartidas`, ni dos a la vez: esperá a que la anterior termine.
+      const fallaCerrado = () => {
+        const caso: ErrorInesperado = {
+          tipo: "Inesperado",
+          sqlstate: null,
+          mensaje:
+            "se pidió una transacción en paralelo con otra del mismo pedido: no se abre una segunda conexión",
+        };
+        registrar(caso);
+        return err(caso);
+      };
+      if (unidad.sueltasEnCurso > 0) return fallaCerrado();
+      if (admite(unidad, opciones)) {
+        return ejecutarUnida(unidad, opciones, trabajo, () => ejecutarSolo(opciones, trabajo));
+      }
+      if (unidad.enCurso.size > 0) return fallaCerrado();
+      // No puede unirse y no hay nada en curso: se suelta la conexión de la unidad ANTES de abrir otra.
+      unidad.sueltasEnCurso += 1;
+      try {
+        if (unidad.abriendo !== null) await cerrarUnidad(unidad);
+        return await dentroDeUnaSuelta.run(true, () => ejecutarSolo(opciones, trabajo));
+      } finally {
+        unidad.sueltasEnCurso -= 1;
+      }
     },
 
     async conLecturasCompartidas(contexto, trabajo) {
@@ -353,6 +367,7 @@ export function crearTransacciones<Tx>(
         estado: "ABIERTA",
         abriendo: null,
         enCurso: new Set(),
+        sueltasEnCurso: 0,
         cola: Promise.resolve(),
       };
       let resultado: Awaited<ReturnType<typeof trabajo>>;
