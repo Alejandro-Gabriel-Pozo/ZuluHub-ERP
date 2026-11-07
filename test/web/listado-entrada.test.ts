@@ -87,29 +87,9 @@ describe("el rango de cada período", () => {
     });
   });
 
-  it("«Todo» sin texto: sin fechas", () => {
+  it("«Todo»: sin fechas (con o sin texto: la ventana de la búsqueda no es de la fecha del comprobante)", () => {
     expect(rangoDelPeriodo(con({ periodo: "todo" }), new Date())).toEqual({});
-  });
-
-  it("«Todo» con texto: los últimos 12 meses, desde la misma fecha del año anterior (inclusive) hasta hoy sin tope", () => {
-    const buscar = (fecha: string, hora = "12:00") =>
-      rangoDelPeriodo(con({ periodo: "todo", texto: "Aguirre" }), enArgentina(fecha, hora));
-    expect(buscar("2026-11-07")).toEqual({ desde: "2025-11-07" });
-    expect(buscar("2026-01-01", "00:00")).toEqual({ desde: "2025-01-01" });
-    expect(buscar("2026-12-31", "23:59")).toEqual({ desde: "2025-12-31" });
-  });
-
-  it("«Todo» con texto: el corte es el día de Argentina, no el de UTC (22:00 de Argentina ya es mañana en UTC)", () => {
-    // 2026-11-07 22:30 en Argentina = 2026-11-08 01:30 UTC.
-    const noche = enArgentina("2026-11-07", "22:30");
-    expect(noche.toISOString()).toBe("2026-11-08T01:30:00.000Z");
-    expect(rangoDelPeriodo(con({ periodo: "todo", texto: "x" }), noche)).toEqual({
-      desde: "2025-11-07",
-    });
-    // 00:30 de Argentina del 8 ya es el día siguiente.
-    expect(
-      rangoDelPeriodo(con({ periodo: "todo", texto: "x" }), enArgentina("2026-11-08", "00:30")),
-    ).toEqual({ desde: "2025-11-08" });
+    expect(rangoDelPeriodo(con({ periodo: "todo", texto: "x" }), new Date())).toEqual({});
   });
 
   it("el 29 de febrero retrocede al 28 de febrero del año anterior (que no es bisiesto); el resto de los días, el mismo día", () => {
@@ -170,14 +150,6 @@ describe("el período fijo de «Página siguiente»", () => {
     });
   });
 
-  it("«Todo» con texto fija los 12 meses en «Personalizado»: la página siguiente no se corre aunque pase la medianoche", () => {
-    const antes = enArgentina("2026-11-07", "23:59");
-    const despues = enArgentina("2026-11-08", "00:01");
-    const fijo = conElPeriodoFijo(con({ periodo: "todo", texto: "Aguirre" }), antes);
-    expect(fijo).toMatchObject({ periodo: "personalizado", desde: "2025-11-07", hasta: "" });
-    expect(rangoDelPeriodo(fijo, despues)).toEqual({ desde: "2025-11-07" });
-  });
-
   it("«Todo» y «Personalizado» ya son fijos: no cambian", () => {
     const ahora = enArgentina("2026-10-28", "12:00");
     const todo = con({ periodo: "todo" });
@@ -224,6 +196,42 @@ describe("el pedido a la consulta", () => {
       despuesDe: "2026-10-12T10:00:00.000000Z|0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b",
     });
     expect(entradaDeListar(pedido).ok).toBe(true);
+  });
+
+  it("«Todo» con texto pide los comprobantes CREADOS en los últimos 12 meses: la misma fecha del año anterior, inclusive, del día de Argentina", () => {
+    const buscar = (fecha: string, hora = "12:00", filtros: Partial<FiltrosDelListado> = {}) =>
+      entradaDelListado(
+        con({ periodo: "todo", texto: "Aguirre", ...filtros }),
+        enArgentina(fecha, hora),
+        null,
+      );
+    expect(buscar("2026-11-07")).toEqual({ texto: "Aguirre", creadoDesde: "2025-11-07" });
+    expect(buscar("2026-01-01", "00:00")).toEqual({ texto: "Aguirre", creadoDesde: "2025-01-01" });
+    expect(buscar("2026-12-31", "23:59")).toEqual({ texto: "Aguirre", creadoDesde: "2025-12-31" });
+    // 22:30 de Argentina del 7 ya es el 8 en UTC: el corte es el día de Argentina; a las 00:30 del 8 ya es el 8.
+    const noche = enArgentina("2026-11-07", "22:30");
+    expect(noche.toISOString()).toBe("2026-11-08T01:30:00.000Z");
+    expect(buscar("2026-11-07", "22:30").creadoDesde).toBe("2025-11-07");
+    expect(buscar("2026-11-08", "00:30").creadoDesde).toBe("2025-11-08");
+    // Es una entrada que la consulta acepta.
+    expect(entradaDeListar(buscar("2026-11-07")).ok).toBe(true);
+  });
+
+  it("la ventana de 12 meses es SOLO de «Todo» con texto: sin texto, o con otro período, no hay creadoDesde", () => {
+    expect(entradaDelListado(con({ periodo: "todo" }), ahora, null)).toEqual({});
+    for (const periodo of ["hoy", "7dias", "mes"] as const) {
+      expect(
+        entradaDelListado(con({ periodo, texto: "x" }), ahora, null),
+        periodo,
+      ).not.toHaveProperty("creadoDesde");
+    }
+    expect(
+      entradaDelListado(
+        con({ periodo: "personalizado", desde: "2020-01-01", hasta: "2020-12-31", texto: "x" }),
+        ahora,
+        null,
+      ),
+    ).toEqual({ desde: "2020-01-01", hasta: "2020-12-31", texto: "x" });
   });
 
   it("cada uno de los siete estados del filtro (D-52) es un pedido que la consulta acepta", () => {

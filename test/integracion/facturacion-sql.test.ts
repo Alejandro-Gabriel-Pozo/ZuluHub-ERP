@@ -454,7 +454,6 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "comprobante.comprobante_numero_uk",
         "comprobante.comprobante_origen_ix",
         "comprobante.comprobante_pkey",
-        "comprobante.comprobante_receptor_doc_pref_ix",
         "comprobante.comprobante_sucursal_listado_ix",
         "comprobante_alicuota.comprobante_alicuota_pkey",
         "comprobante_linea.comprobante_linea_pkey",

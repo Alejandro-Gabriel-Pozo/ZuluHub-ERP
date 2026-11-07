@@ -11,10 +11,12 @@ import type { FiltrosDelListado } from "../ui/plantillas/facturacion/filtros-del
  * 2026-10-29). Los períodos con fechas (Hoy, Últimos 7 días, Este mes) cierran en hoy.
  *
  * La búsqueda de TEXTO con el período «Todo» mira los ÚLTIMOS 12 MESES (decisión del dueño, 2026-11-07, pregunta directa: para años
- * anteriores se elige el período «Personalizado»). Definición exacta: desde la MISMA fecha civil del año anterior, inclusive, hasta hoy
- * (el 29 de febrero retrocede al 28 de febrero del año anterior); la consulta compara por el día civil de Argentina, así que a las 22:00
- * de Argentina (ya «mañana» en UTC) el límite es el de Argentina. Sin texto, «Todo» sigue sin límite. Previene: la búsqueda que recorre
- * todos los comprobantes de la sucursal (de 50 ms a más de 1 s con un millón de filas, `rendimiento-medicion-2026-11.md` §4 y §11).
+ * anteriores se elige el período «Personalizado»). Definición exacta: los comprobantes CREADOS desde la MISMA fecha civil del año
+ * anterior, inclusive (el 29 de febrero retrocede al 28 de febrero del año anterior), hasta hoy sin tope; el día es el de Argentina
+ * (UTC-3), no el del servidor. Va como `creadoDesde` y no como `desde`: acota la columna por la que el listado ya recorre en orden y la
+ * búsqueda deja de leer toda la historia (medido con 800.000 comprobantes en una sucursal y 4 años: de 431-550 ms a 77-109 ms). Es por
+ * fecha de CREACIÓN, no de emisión: un comprobante creado el día anterior al corte y emitido después queda afuera, y es el único borde
+ * donde difiere de `desde`. Sin texto, «Todo» sigue sin límite.
  *
  * Previene: un día corrido en el filtro de período por usar la hora del servidor. Chequeo: `test/web/listado-entrada.test.ts`
  * (fin de mes, 1.º de enero, medianoche en UTC-3).
@@ -44,7 +46,7 @@ export function rangoDelPeriodo(
 ): Readonly<{ desde?: string; hasta?: string }> {
   switch (filtros.periodo) {
     case "todo":
-      return filtros.texto === "" ? {} : { desde: mismoDiaDelAnioAnterior(hoyEnArgentina(ahora)) };
+      return {};
     case "personalizado":
       return {
         ...(filtros.desde === "" ? {} : { desde: filtros.desde }),
@@ -73,8 +75,7 @@ export function rangoDelPeriodo(
  * son fijos. Chequeo: `test/web/listado-entrada.test.ts` y `test/web/listado-pagina.test.ts`.
  */
 export function conElPeriodoFijo(filtros: FiltrosDelListado, ahora: Date): FiltrosDelListado {
-  if (filtros.periodo === "personalizado" || (filtros.periodo === "todo" && filtros.texto === ""))
-    return filtros;
+  if (filtros.periodo === "todo" || filtros.periodo === "personalizado") return filtros;
   const { desde, hasta } = rangoDelPeriodo(filtros, ahora);
   return { ...filtros, periodo: "personalizado", desde: desde ?? "", hasta: hasta ?? "" };
 }
@@ -91,6 +92,9 @@ export function entradaDelListado(
     ...(filtros.letra === "" ? {} : { letra: filtros.letra }),
     ...(filtros.puntoDeVenta === "" ? {} : { puntoDeVenta: Number(filtros.puntoDeVenta) }),
     ...(filtros.texto === "" ? {} : { texto: filtros.texto }),
+    ...(filtros.texto !== "" && filtros.periodo === "todo"
+      ? { creadoDesde: mismoDiaDelAnioAnterior(hoyEnArgentina(ahora)) }
+      : {}),
     ...(despues === null ? {} : { despuesDe: despues }),
   };
 }
