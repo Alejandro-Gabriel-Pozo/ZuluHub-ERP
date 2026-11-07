@@ -426,15 +426,6 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "archivo-grande--src-adaptadores-arca-clasificar-ts",
-    "archivos": ["src/adaptadores/arca/clasificar.ts"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
-    "tipo": "archivo-grande",
-    "tamano": 476,
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "archivo-grande--src-capacidades-activos-cabeceras-ts",
     "archivos": ["src/capacidades/activos/cabeceras.ts"],
     "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
