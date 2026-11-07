@@ -1774,13 +1774,17 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         emisorId: emisorId(m.emisor),
         creadoPor: personaId(m.persona),
       });
-      const editado = editarBorrador(vacio, {
-        razonSocial: "  Mi Empresa SA  ",
-        condicionIva: "MONOTRIBUTO",
-        domicilioFiscalId: domicilioId(domicilio),
-        inicioActividades: "2019-02-28",
-        iibbNumero: "901-123456-7",
-      });
+      const editado = editarBorrador(
+        vacio,
+        {
+          razonSocial: "  Mi Empresa SA  ",
+          condicionIva: "MONOTRIBUTO",
+          domicilioFiscalId: domicilioId(domicilio),
+          inicioActividades: "2019-02-28",
+          iibbNumero: "901-123456-7",
+        },
+        AHORA,
+      );
       expect(editado.ok).toBe(true);
       if (!editado.ok) return;
       const confirmada = confirmarDatosFiscales(editado.valor, [], {
@@ -1847,13 +1851,17 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
               emisorId: emisorId(m.emisor),
               creadoPor: personaId(m.persona),
             });
-            const editado = editarBorrador(base0, {
-              razonSocial: razon,
-              condicionIva: "EXENTO",
-              domicilioFiscalId: domicilioId(domicilio),
-              inicioActividades: "2020-02-29",
-              iibbNumero: iibb,
-            });
+            const editado = editarBorrador(
+              base0,
+              {
+                razonSocial: razon,
+                condicionIva: "EXENTO",
+                domicilioFiscalId: domicilioId(domicilio),
+                inicioActividades: "2020-02-29",
+                iibbNumero: iibb,
+              },
+              AHORA,
+            );
             if (!editado.ok) return;
             aceptados += 1;
             await dueno.query("savepoint propiedad");

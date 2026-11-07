@@ -19,7 +19,7 @@ export const PEDERNAL_NOMBRE_DE_MARCA = "PEDERNAL_NOMBRE_DE_MARCA";
 export type ConfiguracionDeCorreo = Readonly<{
   /** Credencial del proveedor. Es un secreto: no se registra ni se guarda. */
   claveDeApi: string;
-  /** `direccion@dominio` o `Nombre <direccion@dominio>`. */
+  /** Listo para el encabezado `From`: `direccion@dominio` o `"Nombre" <direccion@dominio>` (el nombre va citado, RFC 5322). */
   remitente: string;
   /** Origen público de la aplicación, sin barra final (`https://app.ejemplo.com`). */
   urlBase: string;
@@ -58,14 +58,33 @@ function direccionValida(texto: string): boolean {
   return DIRECCION_PERMITIDA.test(texto) && emailDeContactoDesdeTexto(texto).ok;
 }
 
-/** El remitente en su forma canónica (`direccion` o `Nombre <direccion>`), o `null` si no sirve. `texto` ya viene sin blancos en los extremos. */
+/**
+ * El nombre del remitente como `quoted-string` de RFC 5322 (display-name entre comillas, con `\` y `"` escapados). Sin comillas, un
+ * lector estándar de `From` lee `,` como dos remitentes, `:` como un grupo y `"` como una comilla sin cierre; citado, el nombre es
+ * UN solo texto. Pura: no valida (eso lo hace `armarFrom`, que es la única que la llama).
+ */
+export function citarNombreDeRemitente(nombre: string): string {
+  return `"${nombre.replace(/["\\]/g, "\\$&")}"`;
+}
+
+/**
+ * LA regla que arma el `From` con nombre (`"Nombre" <direccion>`): todo remitente que sale al encabezado pasa por acá. Falla cerrado
+ * (`null`) si el nombre no está en la lista de permitidos (un salto de línea, `<`, `>` o `@` no entran, ni se escapan: se rechazan),
+ * si está vacío o si la dirección no sirve. El nombre se normaliza (NFC, espacios): misma entrada, misma salida, y la salida de
+ * una entrada ya canónica es ella misma.
+ */
+export function armarFrom(nombre: string, direccion: string): string | null {
+  const limpio = textoDeUnaLineaDesdeTexto(nombre, REGLAS_DEL_NOMBRE);
+  if (!limpio.ok || !direccionValida(direccion)) return null;
+  return `${citarNombreDeRemitente(limpio.valor)} <${direccion}>`;
+}
+
+/** El remitente listo para el encabezado `From` (`direccion` o `"Nombre" <direccion>`), o `null` si no sirve. `texto` ya viene sin blancos en los extremos. */
 function remitenteCanonico(texto: string): string | null {
   if (!texto.endsWith(">")) return direccionValida(texto) ? texto : null;
   // Sin `<` (`abre` = -1) el «nombre» sería la propia dirección, que tiene `@`: la lista de permitidos del nombre la rechaza.
   const abre = texto.lastIndexOf("<");
-  const direccion = texto.slice(abre + 1, -1);
-  const nombre = textoDeUnaLineaDesdeTexto(texto.slice(0, abre), REGLAS_DEL_NOMBRE);
-  return nombre.ok && direccionValida(direccion) ? `${nombre.valor} <${direccion}>` : null;
+  return armarFrom(texto.slice(0, abre), texto.slice(abre + 1, -1));
 }
 
 function motivoDelNombre(motivo: MotivoDeTextoInvalido): string {

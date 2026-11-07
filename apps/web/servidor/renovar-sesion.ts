@@ -1,7 +1,7 @@
 import "server-only";
 import { hostDelPedido } from "../../../src/capacidades/experiencia/puerta";
 import { respuestaNeutra } from "../../../src/composicion/ruta-de-ingreso";
-import { renovarSesion } from "../../../src/composicion/renovar-sesion";
+import { renovarSesion } from "../../../src/composicion/sesion-y-empresa";
 import { resolverPuerta } from "./puerta";
 import { dependenciasDeSesion } from "./sesion";
 

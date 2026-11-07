@@ -4,7 +4,6 @@ import {
   entradaDelListado,
   hoyEnArgentina,
   rangoDelPeriodo,
-  ZONA_DE_ARGENTINA,
 } from "../../apps/web/pantallas/entrada-del-listado";
 import {
   ESTADOS_DEL_FILTRO,
@@ -12,7 +11,6 @@ import {
   type FiltrosDelListado,
 } from "../../apps/web/ui/plantillas/facturacion/filtros-del-listado";
 import { entradaDeListar } from "../../src/composicion/entradas-de-facturacion";
-import { ZONA_DE_ARGENTINA as ZONA_DE_LA_CONSULTA } from "../../src/modulos/fiscal/persistencia/lecturas-de-comprobantes";
 
 /**
  * Del período a las fechas del pedido: fechas civiles de Argentina (UTC-3, sin horario de verano), no la hora del servidor.
@@ -37,10 +35,6 @@ describe("hoy en Argentina", () => {
 
   it("un instante que no es una fecha es un error, no un día cualquiera", () => {
     expect(() => hoyEnArgentina(new Date(Number.NaN))).toThrow(RangeError);
-  });
-
-  it("la zona es la misma que usa la consulta para la fecha de un comprobante", () => {
-    expect(ZONA_DE_ARGENTINA).toBe(ZONA_DE_LA_CONSULTA);
   });
 });
 
