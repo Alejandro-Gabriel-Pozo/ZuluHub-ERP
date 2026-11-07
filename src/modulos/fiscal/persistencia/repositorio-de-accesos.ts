@@ -2,8 +2,7 @@ import { sql, type Kysely } from "kysely";
 import { empresaId, type EmpresaId } from "../../../primitivas/identificadores/marca";
 import type { DondeSeGuarda, TextoCifrado } from "../../../puertos/cifrado-de-secretos";
 import { certificadoId, type CertificadoId } from "../dominio/identificadores";
-import { aBytes } from "./repositorio-de-certificados";
-import { deLaLista, exigir } from "./repositorios";
+import { aBytes, deLaLista, exigir } from "./ayudas-de-repositorio";
 import type { FiscalDb } from "./tablas";
 
 /**

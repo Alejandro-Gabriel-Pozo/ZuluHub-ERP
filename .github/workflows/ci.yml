@@ -12,13 +12,14 @@ on:
 permissions:
   contents: read
 
-# Un pull request cancela su corrida anterior cuando recibe un push nuevo (la vieja ya no sirve). Las corridas
-# de `main` NO se cancelan entre sí: cada push a `main` tiene su grupo (por SHA) y la nocturna, el suyo, así
-# que ni un push cancela al anterior ni la nocturna cancela a un push. La prueba
+# Un pull request cancela su corrida anterior cuando recibe un push nuevo, y un push a `main` cancela la corrida
+# anterior de `main` (la última es la que cuenta; sin esto, cada merge dejaba una corrida completa de ~475 min de
+# máquina en cola aunque ya hubiera otra más nueva). La corrida nocturna (`schedule`) NUNCA se cancela y tampoco
+# cancela a nadie: su grupo es propio (por SHA) y su `cancel-in-progress` es falso. La prueba
 # `test/arquitectura/gate-coincide-con-ci.test.ts` fija esta política.
 concurrency:
-  group: ci-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.event_name }}-${{ github.event_name == 'schedule' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
 
 jobs:
   estatico:
@@ -43,6 +44,7 @@ jobs:
   guardian:
     # Contratos arquitectónicos (contratos-arquitectonicos.md §5): el guardián del PR y, en pull requests,
     # la VIGILANCIA de la versión anterior. No instala dependencias: solo usa Node y git. Sin secretos.
+    # Su `permissions:` propio se queda a propósito (decisión deliberada): los casos EV-024, EV-027 y EV-045 de la batería de evasión anclan su texto.
     name: Guardián de contratos
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -179,8 +181,6 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -192,9 +192,10 @@ jobs:
 
   estabilidad:
     # Repite la integración en paralelo (12 copias) para detectar fallas intermitentes. En push a main y en la
-    # corrida nocturna corre SIEMPRE; en un pull request, solo si el cambio puede afectar a la integración (lo
-    # decide `mutacion-plan` con el mismo grafo de importaciones de la mutación: salida `estabilidad`). Saltearlo
-    # por esa salida es válido solo en un pull request y lo verifica `arquitectura/evaluar-gate.cjs`.
+    # corrida nocturna corre SIEMPRE; en un pull request, solo si el cambio toca pruebas de integración, persistencia,
+    # migraciones, las reglas SQL o workflows, o algo que no se puede explicar (decisión del dueño, 2026-11-07; lo decide
+    # `mutacion-plan` en la salida `estabilidad`, ver `planificarEstabilidad`). Saltearlo por esa salida es válido solo en
+    # un pull request y lo verifica `arquitectura/evaluar-gate.cjs`.
     name: Estabilidad (integración, copia ${{ matrix.corrida }})
     needs: mutacion-plan
     if: github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true'

@@ -4,10 +4,28 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    # Máximo 2 PR abiertos de este ecosistema: cada PR de Dependabot dispara una corrida completa del CI (~94 jobs) y el plan
+    # tiene un tope de unas 40 máquinas simultáneas; 5 PR de golpe llenaban la cola (medido el 2026-11-07).
+    open-pull-requests-limit: 2
     # Espera 7 días antes de ofrecer un paquete recién publicado: frena paquetes maliciosos.
     cooldown:
       default-days: 7
+    # Grupos: un PR por grupo en vez de uno por paquete. Un grupo captura cada paquete en el PRIMER grupo que lo nombra, así que el
+    # orden importa. Previenen: `next` y `react` subían de a un workspace y abrían PR en rojo (deuda `dependabot-sin-agrupar`); el
+    # #133 subió `@playwright/test` a 1.64.1 y dejó `playwright` en 1.63.0 (dos versiones del navegador en el mismo árbol).
+    groups:
+      marco-web:
+        patterns: ["next", "react", "react-dom", "@types/react", "@types/react-dom"]
+      # `@vitest/browser` y `@vitest/browser-playwright` exigen en `peerDependencies` la MISMA versión exacta de `vitest`: si cada uno
+      # llegara en su PR, el de uno rompería al otro. Va ANTES de `playwright`, que ya no nombra a `@vitest/browser-playwright`.
+      vitest:
+        patterns: ["vitest", "@vitest/*"]
+      playwright:
+        patterns: ["playwright", "@playwright/*", "@axe-core/playwright"]
+      # Solo menores y parches: una mayor de desarrollo llega sola, para que se pueda revisar y revertir sin arrastrar lo demás.
+      desarrollo:
+        dependency-type: development
+        update-types: ["minor", "patch"]
     ignore:
       # Los tipos de Node tienen que coincidir con el Node que corre (24): subir a otra mayor
       # describiría funciones que el entorno de ejecución no tiene.
@@ -17,5 +35,14 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Mismo motivo que arriba.
+    open-pull-requests-limit: 2
     cooldown:
       default-days: 7
+    # `init` y `analyze` de CodeQL tienen que subir SIEMPRE juntos: con versiones desparejadas el análisis falla (#130 y #132
+    # llegaron como PR separados). Las demás acciones, en un solo PR.
+    groups:
+      codeql:
+        patterns: ["github/codeql-action/*"]
+      acciones:
+        patterns: ["*"]

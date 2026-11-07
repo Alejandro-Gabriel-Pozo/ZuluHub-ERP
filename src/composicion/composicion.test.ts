@@ -613,6 +613,10 @@ const DECISIONES_DE_WEB: Record<keyof ReturnType<typeof armarWeb>, Decision> = {
   configuracionPublicaDeHost: { sinGuard: "puerta pública: sin sesión, solo lectura" },
   autenticacion: { sinGuard: "dice QUIÉN es (usuario y email verificado, por host)" },
   barridoDeAutenticacion: { sinGuard: "lo llama el cron, no una persona" },
+  lecturasCompartidas: {
+    sinGuard:
+      "no es una consulta: junta en una transacción de solo lectura las que ya hace el pedido, y cada una exige SU acción al guard",
+  },
   consultasDeSesion: { sinGuard: "contexto SESION: todavía no hay empresa; acota la base (RLS)" },
 };
 

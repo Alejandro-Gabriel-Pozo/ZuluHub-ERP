@@ -28,7 +28,13 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
   módulo «en desarrollo» no da permisos a nadie; sin sucursal elegida nunca se asume «todas»; la barra que no puede leer permisos no
   muestra la entrada. La validación de un dato declara lo que se PERMITE (conjunto, largo, forma), nunca lo que se prohíbe: lo que nadie pensó en
   prohibir pasa (caso real: `/\p{Cc}/u` en `datos-fiscales.ts` solo rechaza controles y deja pasar invisibles y `<>`). Chequeo:
-  `test/arquitectura/lista-de-permitidos.test.ts` (PR 2 de C1, todavía no existe: hasta que entre se cumple por revisión).
+  `test/arquitectura/lista-de-permitidos.test.ts`, con una violación inyectada por cada forma (`lista-de-permitidos-evasiones.test.ts` y
+  `reglas.test.ts`); lo existente es deuda con vencimiento (`validacion-de-datos--*` en `arquitectura/deuda/registro.json`) y presupuesto por
+  archivo que solo baja (`arquitectura/deuda/validacion-de-datos.json`). Lo que no puede analizar cuenta (fail-closed). Límites que NO ve: la lista completa, con el ejemplo que pasa
+  de cada uno, vive UNA vez, en el encabezado de `test/arquitectura/lista-de-permitidos-apoyo.ts` (es una alarma para errores honestos, no un
+  límite de seguridad; lo que ahí figura como límite es deuda a anotar si aparece en el código). No mira las pruebas (`*.test.*`, `test/`): usan estas expresiones como ejemplo. Los formatos de máquinas de terceros
+  (`set-cookie.ts`, `saneamiento.ts` de ARCA) están eximidos con lista exacta y cuenta exacta en la prueba (dueño, 2026-11-06, pregunta directa al orquestador; constancia en
+  `11-especificaciones/decisiones-del-dueno-2026-11.md` del repo de docs; un archivo nuevo en esa categoría requiere aprobación del dueño).
 - **Sin dato registrado no hay campo (dueño, 2026-11-05).** Todo campo de entrada de `apps/web` y `apps/plataforma` es un componente de
   campo con la prop `dato`, y ese dato está en `src/capacidades/datos/registro.ts` (primitiva, propósitos con fuente, consumidores, quién
   lo pone, qué necesita). Un `<input>`, `<textarea>` o `<select>` crudo, un campo sin dato o con un dato no registrado, un consumidor no
@@ -60,8 +66,12 @@ plataforma tuvo en el menú «Dominios» y «Soporte» sin pantalla aprobada.
 - **Una regla, un lugar.** Antes de crear una función, una regla o una constante, buscá si ya tiene dueño (registro de contratos,
   `primitivas/`, el `publico.ts` del módulo). Un mismo límite o cálculo no se escribe en dos lugares. El largo máximo y el conjunto permitido de un dato viven una
   vez, en su primitiva; dominio, esquemas, pantallas y PDF los importan, y la base solo los copia con una prueba que falla si difieren (caso real: la
-  auditoría de columnas halló 37 con la regla en dos lugares y 6 que ya no coincidían). Chequeo: `test/arquitectura/fuente-unica.test.ts` (PR 2 de
-  C1, todavía no existe: hasta que entre se cumple por revisión).
+  auditoría de columnas halló 37 con la regla en dos lugares y 6 que ya no coincidían). Chequeo: `test/arquitectura/fuente-unica.test.ts` (una
+  constante `LARGO_MAXIMO_…` repetida, o su número escrito a mano donde ya la tiene a mano; lo existente, con el mismo presupuesto y la misma
+  deuda que arriba; la copia en la base la comprobará el espejo de la base, trabajo aparte). Cuenta el número de una constante `LARGO_…` de una
+  primitiva escrito en cualquier archivo (`.max(254)`, `maxLength={254}`, `.slice(0, 254)`, `{1,254}`) y el mismo límite con otro nombre o privado.
+  Límites que NO ve (con ejemplo): el número de una constante que no es de una primitiva en un archivo que no la nombra (`motivo.length > 200`
+  en `resincronizar-y-ambiente.ts`), una lista de caracteres permitidos repetida en dos archivos y un número calculado (`2 * 150`).
 - **Lo que el dueño no aprobó lleva su fuente.** Todo texto, rótulo, regla o dato que ve el cliente y que el dueño no aprobó se agrega
   solo si tiene una **fuente verificable** y se cita junto a la clave o la regla (comentario del catálogo o del código) y en la descripción del
   PR: archivo y línea o sección (documento, manual de ARCA, grabación, código) o el mensaje con su fecha, y quién lo decidió. «Lo aprobó el

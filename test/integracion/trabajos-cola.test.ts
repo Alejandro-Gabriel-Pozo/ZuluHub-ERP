@@ -168,7 +168,9 @@ describe.skipIf(base === null)("cola de trabajos: el procesador contra una base 
 
   /** Un entorno propio cuya toma espera en una barrera: así dos procesadores llegan juntos al UPDATE. */
   const conBarreraEnLaToma = (alcanza: (id: string) => boolean, barrera: () => Promise<void>) => {
-    const nuevo = crearEntornoDePrueba(propia.base, 10, (tx: TxDePrueba) => ({
+    // Dos procesadores son dos PROCESOS: cada uno con su pozo. En este proceso de prueba el pozo es uno por cadena y tope, así que
+    // cada procesador pide un tope distinto (10, 11, ...) para no compartirlo: la barrera necesita todas las tomas abiertas a la vez.
+    const nuevo = crearEntornoDePrueba(propia.base, 10 + aCerrar.length + 1, (tx: TxDePrueba) => ({
       ...tx,
       cola: {
         ...tx.cola,

@@ -10,6 +10,7 @@ import {
   type ConfiguracionDeHost,
 } from "../../capacidades/autenticacion/host-de-autenticacion";
 import {
+  SEGUNDOS_ENTRE_ESCRITURAS_DE_USO,
   segundosDeInactividad,
   vencimientoRenovado,
   vigenciaDeSesion,
@@ -68,6 +69,11 @@ export type ParametrosComunesDeInstancia = Readonly<{
   rutaDeError: string;
   /** Registro del servidor: lo que la librería cuenta de un fallo. Nunca sale en una respuesta. */
   registrar: (detalle: string) => void;
+  /**
+   * Cada cuántos segundos como máximo se escribe el uso de la sesión. `0`: en cada uso (la consola, y la instancia que atiende el
+   * «Seguir»). Por omisión, el valor de la web de empresa (`SEGUNDOS_ENTRE_ESCRITURAS_DE_USO`).
+   */
+  segundosEntreEscrituras?: number;
 }>;
 
 export type ParametrosDeInstancia = ParametrosComunesDeInstancia &
@@ -160,8 +166,10 @@ export function opcionesDeInstancia(p: ParametrosDeInstancia): BetterAuthOptions
     },
     session: {
       expiresIn: segundosDeInactividad(p.limites),
-      // 0: cada uso renueva el vencimiento (la inactividad cuenta desde el último uso).
-      updateAge: 0,
+      // Cada cuánto se escribe el uso (la inactividad cuenta desde el último uso ESCRITO): en la web de empresa, como máximo una vez
+      // por minuto (decisión del dueño, 2026-11-07); en la consola y en la instancia del «Seguir», `0` = en cada uso.
+      updateAge:
+        p.segundosEntreEscrituras ?? (consola === null ? SEGUNDOS_ENTRE_ESCRITURAS_DE_USO : 0),
       // Apagada: con caché la revocación no sería inmediata (y fue un aviso crítico de la librería).
       cookieCache: { enabled: false },
       additionalFields: {

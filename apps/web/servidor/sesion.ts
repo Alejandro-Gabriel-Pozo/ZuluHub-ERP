@@ -25,6 +25,7 @@ export const dependenciasDeSesion: DependenciasDeSesion = {
   consultasDeSesion: web.consultasDeSesion,
   casosDeUsoDeIdentidad: web.casosDeUsoDeIdentidad,
   consultasDeEmpresas: web.consultasDeEmpresas,
+  lecturasCompartidas: web.lecturasCompartidas,
   ahora: () => new Date(),
   // El detalle de lo inesperado va al registro del servidor (los registros de Vercel), nunca a la pantalla.
   respuesta: {

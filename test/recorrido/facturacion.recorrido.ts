@@ -150,6 +150,9 @@ describe.skipIf(base === null)(
       const solicitud = mundo.arca.pedidos.find((p) => p.operacion === "FECAESolicitar");
       expect(solicitud?.cuerpo).toContain("<ar:CbteTipo>6</ar:CbteTipo>");
       expect(solicitud?.cuerpo).toContain("<ar:ImpTotal>121.00</ar:ImpTotal>");
+      // Consumidor final sin identificar: DocTipo 99 / DocNro 0, como siempre (lo ya emitido no se rompe).
+      expect(solicitud?.cuerpo).toContain("<ar:DocTipo>99</ar:DocTipo>");
+      expect(solicitud?.cuerpo).toContain("<ar:DocNro>0</ar:DocNro>");
       const { rows } = await mundo.mundo.dueno.query<{ estado: string }>(
         "select estado from comprobante where empresa_id = $1",
         [mundo.empresa],
@@ -280,6 +283,135 @@ describe.skipIf(base === null)(
       expect(solicitud?.cuerpo).toContain("<ar:CbteTipo>1</ar:CbteTipo>");
       expect(solicitud?.cuerpo).toContain("<ar:DocNro>30712345671</ar:DocNro>");
       pantallaLimpia();
+    });
+
+    /** Emite una Factura A (domicilio ya cargado) y espera a que ARCA simulada la autorice; deja la pantalla en su detalle. */
+    const emitirFacturaA = async (cliente: {
+      cuit: string;
+      nombre: string;
+      condicion: string;
+      domicilio: string;
+    }) => {
+      await ir("/facturacion/comprobantes/emitir");
+      await pagina.getByLabel("Documento").selectOption({ label: "CUIT" });
+      await pagina.getByRole("textbox", { name: "CUIT" }).fill(cliente.cuit);
+      await pagina.getByRole("textbox", { name: "Nombre o razón social" }).fill(cliente.nombre);
+      await pagina.getByLabel("Condición frente al IVA").selectOption({ label: cliente.condicion });
+      await pagina.getByRole("textbox", { name: "Domicilio" }).fill(cliente.domicilio);
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByLabel("Descripción").fill("Harina x50");
+      await pagina.getByLabel("Precio con IVA").fill("121,00");
+      await pagina.getByLabel("IVA", { exact: true }).selectOption({ label: "IVA 21 %" });
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByRole("button", { name: "Emitir factura" }).click();
+      await pagina.waitForURL(/\/facturacion\/comprobantes\/[0-9a-f-]{36}$/);
+      const limite = Date.now() + 30_000;
+      while ((await pagina.getByText("Autorizada", { exact: true }).count()) === 0) {
+        if (Date.now() > limite) throw new Error("la factura A no llegó a Autorizada en 30 s");
+        await pagina.waitForTimeout(1000);
+        await pagina.reload();
+        await pagina.waitForLoadState("networkidle");
+      }
+    };
+    /** Lo que la hoja A4 visible del comprobante dice (la copia oculta es el medidor). */
+    const textoDeLaHoja = async () => {
+      await ir(`/facturacion/comprobantes/${idDelComprobante()}/imprimir`);
+      await pagina.getByText("Hoja 1 de 1").locator("visible=true").first().waitFor();
+      return pagina.locator("[data-hoja]").locator("visible=true").first().innerText();
+    };
+
+    it("Factura A impresa: CUIT, domicilio, leyenda de la condición e IVA discriminado", async () => {
+      // La Factura A del paso anterior sigue en pantalla (su detalle).
+      const texto = await textoDeLaHoja();
+      expect(texto).toContain("IVA RESPONSABLE INSCRITO");
+      expect(texto).toContain("30-71234567-1");
+      expect(texto).toContain("Av. Siempreviva 742, Rosario");
+      expect(texto).toContain("Neto gravado 21 %");
+      // El IVA se discrimina: 121,00 con IVA incluido = 100,00 neto + 21,00 de IVA, y ARCA simulada recibió lo mismo.
+      expect(texto).toContain("100,00");
+      expect(texto).toContain("21,00");
+      const solicitud = mundo.arca.pedidos.filter((p) => p.operacion === "FECAESolicitar").at(-1);
+      expect(solicitud?.cuerpo).toContain("<ar:ImpNeto>100.00</ar:ImpNeto>");
+      expect(solicitud?.cuerpo).toContain("<ar:ImpIVA>21.00</ar:ImpIVA>");
+      // A un inscripto no corresponde la leyenda de crédito fiscal del monotributo.
+      expect(texto).not.toContain("El crédito fiscal discriminado");
+      await sinViolacionesDeAxe();
+      vigilante.tomar();
+    });
+
+    it("Factura A a un monotributista: sale con la leyenda de su condición y la de crédito fiscal", async () => {
+      await emitirFacturaA({
+        cuit: "20-12345678-6",
+        nombre: "Ana Pérez",
+        condicion: "Responsable Monotributo",
+        domicilio: "Calle Falsa 123, Rosario",
+      });
+      const solicitud = mundo.arca.pedidos.filter((p) => p.operacion === "FECAESolicitar").at(-1);
+      expect(solicitud?.cuerpo).toContain("<ar:CbteTipo>1</ar:CbteTipo>");
+      expect(solicitud?.cuerpo).toContain("<ar:DocNro>20123456786</ar:DocNro>");
+      const texto = await textoDeLaHoja();
+      expect(texto).toContain("RESPONSABLE MONOTRIBUTO");
+      expect(texto).toContain("Calle Falsa 123, Rosario");
+      expect(texto).toContain("El crédito fiscal discriminado en el presente comprobante");
+      await sinViolacionesDeAxe();
+      vigilante.tomar();
+    });
+
+    // Pasaporte con letras (dueño, 2026-11-06, Q5): se escribe en un solo campo, se guarda y se imprime tal cual, y a ARCA (simulada) va
+    // solo la parte numérica con el tipo 94. NO VERIFICADO contra ARCA real: eso lo prueba el dueño en homologación.
+    it("Emitir: una Factura B a un turista con pasaporte ABC123456 termina AUTORIZADA, la hoja lo muestra completo y ARCA recibe solo 123456", async () => {
+      await ir("/facturacion/comprobantes/emitir");
+      await pagina.getByLabel("Documento").selectOption({ label: "Pasaporte" });
+      const campo = pagina.getByRole("textbox", { name: "Pasaporte" });
+      expect(await campo.getAttribute("inputmode")).toBe("text");
+      // Un pasaporte sin ninguna cifra se rechaza marcando el campo (no avanza).
+      await campo.fill("ABCDEF");
+      await pagina.getByRole("textbox", { name: "Nombre o razón social" }).fill("Jane Doe");
+      await pagina.getByRole("textbox", { name: "Domicilio" }).fill("5th Avenue 1, New York");
+      await pagina
+        .getByLabel("Condición frente al IVA")
+        .selectOption({ label: "Consumidor Final" });
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByText("Revisá los datos marcados.").first().waitFor();
+      expect(await campo.getAttribute("aria-invalid")).toBe("true");
+      await sinViolacionesDeAxe();
+      // Corregido (en minúsculas: se guarda en mayúsculas), sigue.
+      await campo.fill("abc123456");
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByLabel("Descripción").fill("Souvenir");
+      await pagina.getByLabel("Precio con IVA").fill("121,00");
+      await pagina.getByLabel("IVA", { exact: true }).selectOption({ label: "IVA 21 %" });
+      await pagina.getByRole("button", { name: "Siguiente" }).click();
+      await pagina.getByRole("button", { name: "Emitir factura" }).click();
+      await pagina.waitForURL(/\/facturacion\/comprobantes\/[0-9a-f-]{36}$/);
+      const limite = Date.now() + 30_000;
+      while ((await pagina.getByText("Autorizada", { exact: true }).count()) === 0) {
+        if (Date.now() > limite) throw new Error("la factura no llegó a Autorizada en 30 s");
+        await pagina.waitForTimeout(1000);
+        await pagina.reload();
+        await pagina.waitForLoadState("networkidle");
+      }
+      // El detalle muestra el pasaporte completo, en mayúsculas.
+      expect(await pagina.locator("article").innerText()).toContain("ABC123456");
+      // ARCA simulada: tipo de documento 94 y SOLO la parte numérica.
+      const solicitud = mundo.arca.pedidos.filter((p) => p.operacion === "FECAESolicitar").at(-1);
+      expect(solicitud?.cuerpo).toContain("<ar:DocTipo>94</ar:DocTipo>");
+      expect(solicitud?.cuerpo).toContain("<ar:DocNro>123456</ar:DocNro>");
+      expect(solicitud?.cuerpo).not.toContain("ABC123456");
+      const { rows } = await mundo.mundo.dueno.query<{ receptor_documento_numero: string }>(
+        "select receptor_documento_numero from comprobante where id = $1",
+        [idDelComprobante()],
+      );
+      expect(rows).toEqual([{ receptor_documento_numero: "ABC123456" }]);
+      // La hoja y el ticket lo muestran completo.
+      await ir(`/facturacion/comprobantes/${idDelComprobante()}/imprimir`);
+      await pagina.getByText("Hoja 1 de 1").locator("visible=true").first().waitFor();
+      expect(await pagina.locator("main").innerText()).toContain("ABC123456");
+      await pagina.getByRole("radio", { name: "Ticket" }).check();
+      await pagina.locator("[data-ticket]").waitFor();
+      expect(await pagina.locator("[data-ticket]").innerText()).toContain("ABC123456");
+      await sinViolacionesDeAxe();
+      vigilante.tomar();
     });
 
     it("el enlace del mail de invitación apunta a una pantalla que existe", async () => {

@@ -29,8 +29,11 @@ describe("entradaDelCambioDePlan", () => {
     expect(entradaDelCambioDePlan({ ...buena, numeroEsperado: 1 }).ok).toBe(true);
     expect(entradaDelCambioDePlan({ ...buena, numeroEsperado: 0 }).ok).toBe(false);
   });
-  it("el largo máximo del motivo es el del backend", () => {
+  it("el largo máximo del motivo es el del backend (una sola fuente) y se aplica", () => {
     expect(LARGO_MAXIMO_DEL_MOTIVO).toBe(LARGO_DEL_BACKEND);
+    const justo = "x".repeat(LARGO_DEL_BACKEND);
+    expect(entradaDelCambioDePlan({ ...buena, motivo: justo }).ok).toBe(true);
+    expect(entradaDelCambioDePlan({ ...buena, motivo: `${justo}x` }).ok).toBe(false);
   });
   it.each([null, undefined, [], [buena], "texto", 5])("rechaza %j", (x) => {
     expect(entradaDelCambioDePlan(x)).toEqual({ ok: false });

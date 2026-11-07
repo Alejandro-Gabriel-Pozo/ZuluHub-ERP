@@ -1,11 +1,11 @@
 import { Kysely, PostgresDialect } from "kysely";
-import pg from "pg";
 import { LIMITES_DEL_BARRIDO } from "../../capacidades/autenticacion/vigencia-de-sesion";
 import type { BarridoDeAutenticacion } from "../../puertos/autenticacion";
 import type { RevocacionDeSesiones } from "../../puertos/revocacion-de-sesiones";
 import type { SegundoFactorDeAutenticacion } from "../../puertos/segundo-factor-de-autenticacion";
 import { crearBarridoDeAutenticacion, type AutenticacionDb } from "./barrido-de-autenticacion";
 import { ErrorDeConfiguracion } from "./errores";
+import { tomarPozo } from "./pozos";
 import { crearRevocacionDeSesionesDePostgres, type RevocacionDb } from "./revocacion-de-sesiones";
 import {
   crearSegundoFactorDePostgres,
@@ -50,13 +50,16 @@ export function crearConexionDeAutenticacion(
   if (configuracion.url === "") {
     throw new ErrorDeConfiguracion("falta la cadena de conexión de la autenticación");
   }
-  const pool = new pg.Pool({
-    connectionString: configuracion.url,
-    max: configuracion.maximoDeConexiones ?? 5,
+  const { paraKysely } = tomarPozo({
+    url: configuracion.url,
+    ...(configuracion.maximoDeConexiones === undefined
+      ? {}
+      : { maximoDeConexiones: configuracion.maximoDeConexiones }),
+    ...(configuracion.alCortarseUnaConexionOciosa === undefined
+      ? {}
+      : { alCortarseUnaConexionOciosa: configuracion.alCortarseUnaConexionOciosa }),
   });
-  // Sin este oyente, el corte de una conexión ociosa tira abajo el proceso entero.
-  pool.on("error", (error) => configuracion.alCortarseUnaConexionOciosa?.(error));
-  const db = new Kysely<SinTablas>({ dialect: new PostgresDialect({ pool }) });
+  const db = new Kysely<SinTablas>({ dialect: new PostgresDialect({ pool: paraKysely }) });
   return {
     db,
     barrido: crearBarridoDeAutenticacion(db.withTables<AutenticacionDb>(), LIMITES_DEL_BARRIDO),

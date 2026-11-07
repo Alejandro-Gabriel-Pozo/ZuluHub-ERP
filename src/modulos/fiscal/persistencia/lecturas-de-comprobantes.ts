@@ -7,6 +7,7 @@ import {
   type SucursalId,
 } from "../../../primitivas/identificadores/marca";
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
+import { ZONA_DE_ARGENTINA } from "../../../primitivas/tiempo/fecha-civil-hasta-hoy";
 import {
   TIPOS_DE_COMPROBANTE,
   TIPOS_DE_ORIGEN,
@@ -25,7 +26,7 @@ import { comprobanteId, type ComprobanteId } from "../dominio/identificadores";
 import { RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA } from "../dominio/punto-de-venta";
 import type { DocumentoDelReceptor } from "../dominio/receptor";
 import { documentoDelReceptorDeLaBase } from "./documento-del-receptor";
-import { deLaLista } from "./repositorios";
+import { deLaLista } from "./ayudas-de-repositorio";
 import type { FiscalDb } from "./tablas";
 
 /**
@@ -42,9 +43,6 @@ import type { FiscalDb } from "./tablas";
  *  - La «fecha» de un comprobante es la de su emisión; mientras no tiene (todavía sin numerar), el día de su
  *    creación en Argentina (`ZONA_DE_ARGENTINA`): ARCA es argentina y la fecha de un comprobante es civil.
  */
-
-/** La zona con la que se pasa un instante a día civil cuando el comprobante todavía no tiene fecha de emisión. */
-export const ZONA_DE_ARGENTINA = "America/Argentina/Buenos_Aires";
 
 /**
  * Lo que admiten los criterios de lista cerrada del filtro, tomado del dominio y no repetido a mano: las letras

@@ -40,7 +40,6 @@ const {
   partirCi,
   LECTURAS_DE_APPS,
   JOBS_AJENOS_A_LA_MUTACION,
-  JOBS_AJENOS_A_LA_INTEGRACION,
   expandir,
   archivoDe,
   conEnlacesDelGuardian,
@@ -53,18 +52,15 @@ const {
     ci?: Ci;
     lecturas?: Record<string, string[]>;
   }) => Plan;
-  planificarEstabilidad: (e: {
-    cambios: string[];
-    dependencias: Record<string, string[]>;
-    ci?: Ci;
-    lecturas?: Record<string, string[]>;
-  }) => { corre: boolean; motivo: string };
+  planificarEstabilidad: (e: { cambios: string[]; dependencias: Record<string, string[]> }) => {
+    corre: boolean;
+    motivo: string;
+  };
   ordenarPorDuracion: <G extends { minutos?: number }>(grupos: readonly G[]) => G[];
   cambioDeCiAfecta: (ci: Ci | undefined, ajenos: readonly string[]) => boolean;
   partirCi: (texto: string) => { cabecera: string; jobs: Map<string, string> } | null;
   LECTURAS_DE_APPS: Record<string, string[]>;
   JOBS_AJENOS_A_LA_MUTACION: string[];
-  JOBS_AJENOS_A_LA_INTEGRACION: string[];
   expandir: (patrones: string, raiz: string) => string[];
   archivoDe: (entrada: string) => string;
   conEnlacesDelGuardian: (
@@ -630,7 +626,7 @@ describe("planificador de mutación: apps/** (las aplicaciones importan de src, 
     );
     expect(
       sinDeclarar,
-      "estas pruebas mencionan `apps/` y leen archivos: si leen archivos de apps/ como texto, declaralas en LECTURAS_DE_APPS (arquitectura/planificar-mutacion.cjs)",
+      "estas pruebas mencionan `apps/` y leen archivos: si leen archivos de apps/ como texto, declaralas en LECTURAS_DE_APPS (arquitectura/lecturas-de-apps.json)",
     ).toEqual([]);
   });
 });
@@ -798,10 +794,6 @@ describe("planificador de mutación: ci.yml", () => {
       }
       // todo job ajeno existe de verdad (la lista no queda vieja) y el real es entendible por el planificador
       for (const id of JOBS_AJENOS_A_LA_MUTACION) expect(ids, id).toContain(id);
-      for (const id of JOBS_AJENOS_A_LA_INTEGRACION) expect(ids, id).toContain(id);
-      expect(JOBS_AJENOS_A_LA_INTEGRACION).not.toContain("estabilidad");
-      expect(JOBS_AJENOS_A_LA_INTEGRACION).not.toContain("pruebas");
-      expect(JOBS_AJENOS_A_LA_INTEGRACION).not.toContain("mutacion-plan");
     });
   });
 
@@ -950,41 +942,61 @@ describe("planificador de mutación: orden por duración descendente", () => {
 });
 
 describe("planificador: cuándo se repite la integración (Estabilidad x12)", () => {
+  // Regla del dueño (2026-11-07): en un PR corre SOLO si el cambio toca pruebas de integración, persistencia,
+  // migraciones, las reglas SQL o workflows; ante lo que no se puede explicar, corre (fail-closed).
   const dependencias: Record<string, string[]> = {
     "src/a/dominio/a.ts": [],
     "src/a/dominio/a.test.ts": ["src/a/dominio/a.ts"],
-    "src/b/persistencia/b.ts": ["src/a/dominio/a.ts"],
+    "src/modulos/b/persistencia/b.ts": ["src/a/dominio/a.ts"],
+    "src/modulos/b/aplicacion/servicio.ts": ["src/modulos/b/persistencia/b.ts"],
+    "src/adaptadores/postgres/pool.ts": [],
+    "src/adaptadores/pdf/pdf.ts": [],
     "src/solo-unidad/s.ts": [],
     "src/solo-unidad/s.test.ts": ["src/solo-unidad/s.ts"],
     "src/huerfano.ts": [],
-    "scripts/migrar-base.ts": [],
     "test/integracion/global.ts": [],
-    "test/integracion/topes.ts": [],
-    "test/integracion/b.test.ts": ["src/b/persistencia/b.ts", "test/integracion/global.ts"],
-    "test/web/contraste.test.ts": [],
+    "test/integracion/b.test.ts": [
+      "src/modulos/b/aplicacion/servicio.ts",
+      "src/a/dominio/a.ts",
+      "apps/web/app/importada.tsx",
+    ],
     "test/web/pantalla.test.ts": ["apps/web/app/pagina.tsx"],
     "apps/web/app/pagina.tsx": ["src/solo-unidad/s.ts"],
-    "apps/web/app/suelta.tsx": [],
-    "apps/web/ui/tokens.css": [],
-    "test/integracion/web.test.ts": ["apps/web/app/importada.tsx"],
     "apps/web/app/importada.tsx": [],
+    "apps/web/app/suelta.tsx": [],
+    "arquitectura/contratos/guardian.cjs": [],
+    "arquitectura/lint-sql.cjs": [],
+    "arquitectura/lint-web.cjs": [],
+    // Conocidos por el grafo a propósito: así solo la lista DISPARAN_ESTABILIDAD (y no el «desconocido corre») los hace correr,
+    // y quitar un patrón de la lista hace fallar su caso.
+    "migraciones/0009_algo.sql": [],
+    "scripts/migrar-base.ts": [],
+    ".github/workflows/ci.yml": [],
+    ".github/workflows/migrar.yml": [],
+    "test/integracion/nuevo-auxiliar.ts": [],
+    "test/integracion/borrada.test.ts": [],
+    "src/modulos/c/persistencia/nueva.ts": [],
   };
-  const lecturas = { "test/web/contraste.test.ts": ["apps/web/ui/tokens.css"] };
-  const e = (cambios: string[], ci?: Ci) =>
-    planificarEstabilidad({ cambios, dependencias, lecturas, ...(ci ? { ci } : {}) });
-  const CORRE = true;
+  const e = (cambios: string[]) => planificarEstabilidad({ cambios, dependencias });
 
   it.each([
     ["una prueba de integración", "test/integracion/b.test.ts"],
     ["lo que vitest carga antes de todo", "test/integracion/global.ts"],
-    ["los topes de la integración", "test/integracion/topes.ts"],
     ["un auxiliar nuevo de la integración", "test/integracion/nuevo-auxiliar.ts"],
+    ["una prueba de integración borrada", "test/integracion/borrada.test.ts"],
+    ["la persistencia de un módulo", "src/modulos/b/persistencia/b.ts"],
+    [
+      "la persistencia de un módulo (archivo nuevo, fuera del grafo)",
+      "src/modulos/c/persistencia/nueva.ts",
+    ],
+    ["el adaptador de Postgres", "src/adaptadores/postgres/pool.ts"],
     ["una migración", "migraciones/0009_algo.sql"],
+    ["las reglas SQL", "arquitectura/lint-sql.cjs"],
     ["un script (algunos los lanza la integración como proceso aparte)", "scripts/migrar-base.ts"],
-    ["un archivo de src/ que importa una prueba de integración", "src/b/persistencia/b.ts"],
-    ["lo que importa lo anterior (por cierre)", "src/a/dominio/a.ts"],
-    ["una pantalla que importa una prueba de integración", "apps/web/app/importada.tsx"],
-    ["la configuración de vitest", "vitest.config.ts"],
+    ["el workflow principal", ".github/workflows/ci.yml"],
+    ["el workflow de migración", ".github/workflows/migrar.yml"],
+    ["un workflow nuevo", ".github/workflows/nuevo.yml"],
+    ["la configuración de vitest (fuera del grafo)", "vitest.config.ts"],
     ["las dependencias", "package.json"],
     ["el lockfile", "package-lock.json"],
     ["el tsconfig", "tsconfig.json"],
@@ -992,31 +1004,33 @@ describe("planificador: cuándo se repite la integración (Estabilidad x12)", ()
     ["la configuración de una app", "apps/web/package.json"],
     ["un archivo cualquiera fuera del grafo", "neon.ts"],
     ["el CODEOWNERS", ".github/CODEOWNERS"],
-    ["el workflow de migración", ".github/workflows/migrar.yml"],
   ])("corre si cambia %s", (_nombre, archivo) => {
-    expect(e([archivo]).corre, archivo).toBe(CORRE);
+    expect(e([archivo]).corre, archivo).toBe(true);
   });
 
   it.each([
     ["documentación", "README.md"],
     ["dependabot", ".github/dependabot.yml"],
     ["otros workflows (codeql, gate rápido)", ".github/workflows/codeql.yml"],
+    [
+      "un servicio de aplicación que una prueba de integración ejercita",
+      "src/modulos/b/aplicacion/servicio.ts",
+    ],
+    ["un dominio que una prueba de integración ejercita", "src/a/dominio/a.ts"],
+    ["otro adaptador (no es el de Postgres)", "src/adaptadores/pdf/pdf.ts"],
+    ["una pantalla que una prueba de integración importa", "apps/web/app/importada.tsx"],
     ["una pantalla que ninguna prueba alcanza", "apps/web/app/suelta.tsx"],
-    ["una pantalla que solo importan pruebas que no son de integración", "apps/web/app/pagina.tsx"],
     ["un archivo de src/ que solo alcanzan pruebas de unidad", "src/solo-unidad/s.ts"],
     ["una prueba de unidad", "src/solo-unidad/s.test.ts"],
     ["un archivo de src/ que nadie importa", "src/huerfano.ts"],
-    [
-      "un archivo de apps/ que una prueba que no es de integración lee como texto",
-      "apps/web/ui/tokens.css",
-    ],
-    ["un vercel.json de una app", "apps/web/vercel.json"],
+    ["el código del guardián", "arquitectura/contratos/guardian.cjs"],
+    ["otra regla de arquitectura (no la de SQL)", "arquitectura/lint-web.cjs"],
   ])("NO corre si solo cambia %s", (_nombre, archivo) => {
     expect(e([archivo]).corre, archivo).toBe(false);
   });
 
-  it("lo desconocido gana: un cambio inocuo junto a uno que afecta, o a uno desconocido, corre", () => {
-    expect(e(["README.md", "src/b/persistencia/b.ts"]).corre).toBe(true);
+  it("lo desconocido gana: un cambio inocuo junto a uno que dispara, o a uno desconocido, corre", () => {
+    expect(e(["README.md", "src/modulos/b/persistencia/b.ts"]).corre).toBe(true);
     expect(e(["apps/web/app/suelta.tsx", "tsconfig.json"]).corre).toBe(true);
     expect(e(["src/solo-unidad/s.ts", "migraciones/0009_algo.sql"]).corre).toBe(true);
   });
@@ -1024,56 +1038,5 @@ describe("planificador: cuándo se repite la integración (Estabilidad x12)", ()
   it("un PR sin ningún cambio (por ejemplo, solo ignorables) no la repite", () => {
     expect(e([]).corre).toBe(false);
     expect(e(["README.md", ".gitleaks.toml", "skills-lock.json"]).corre).toBe(false);
-  });
-
-  describe("con cambios en ci.yml", () => {
-    const CI = [
-      "name: CI",
-      "jobs:",
-      "  estatico:",
-      "    steps:",
-      "      - run: npm run lint",
-      "  pruebas:",
-      "    steps:",
-      "      - run: npm test",
-      "  estabilidad:",
-      "    steps:",
-      "      - run: npx vitest run test/integracion",
-      "  mutacion:",
-      "    steps:",
-      "      - run: npx stryker run",
-      "",
-    ].join("\n");
-    const cambiando = (de: string, a: string): Ci => ({ antes: CI, despues: CI.replace(de, a) });
-    const ci = ".github/workflows/ci.yml";
-
-    it.each([
-      ["el job estabilidad", "test/integracion", "test/integracion --bail"],
-      ["el job pruebas (misma base y comando)", "npm test", "npm test -- --x"],
-      ["la cabecera", "name: CI", "name: CI2"],
-    ])("corre si cambia %s", (_nombre, de, a) => {
-      expect(e([ci], cambiando(de, a)).corre).toBe(true);
-    });
-
-    it.each([
-      ["el job estatico", "npm run lint", "npm run lint && x"],
-      ["el job de mutación", "npx stryker run", "npx stryker run --concurrency 2"],
-    ])("NO corre si solo cambia %s", (_nombre, de, a) => {
-      expect(e([ci], cambiando(de, a)).corre).toBe(false);
-    });
-
-    it("sin las dos versiones, o con un job nuevo desconocido, corre (fail-closed)", () => {
-      expect(e([ci]).corre).toBe(true);
-      expect(e([ci], { antes: null, despues: CI }).corre).toBe(true);
-      expect(
-        e([ci], { antes: CI, despues: `${CI}  nuevo:\n    steps:\n      - run: x\n` }).corre,
-      ).toBe(true);
-    });
-  });
-
-  it("los workflows del repo real: las listas de jobs ajenos a la integración no incluyen a los que la ejecutan", () => {
-    for (const id of ["estabilidad", "pruebas", "mutacion-plan"]) {
-      expect(JOBS_AJENOS_A_LA_INTEGRACION, id).not.toContain(id);
-    }
   });
 });

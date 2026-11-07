@@ -1,9 +1,15 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { COMPONENTES_DE_CAMPO, REGISTRO_DE_DATOS } from "../../src/capacidades/datos/registro";
-import { analizarArchivo, EXTENSIONES_DE_CODIGO, type Contexto } from "./campos-con-dato-apoyo";
+import {
+  analizarArchivo,
+  EXTENSIONES_DE_CODIGO,
+  importadosFueraDe,
+  problemasFueraDeLasApps,
+  type Contexto,
+} from "./campos-con-dato-apoyo";
 import {
   problemasDeComponente,
   problemasDeDeuda,
@@ -28,9 +34,11 @@ import {
 const RAIZ = join(import.meta.dirname, "../..");
 const require = createRequire(import.meta.url);
 const presupuestoCjs = require("../../arquitectura/deuda/campos-sin-dato.cjs") as {
-  ARCHIVO: string;
-  problemasDeForma: (p: unknown) => string[];
+  PRESUPUESTOS: { archivo: string; claves: string[]; deQue: string }[];
+  problemasDeForma: (p: unknown, presupuesto: unknown) => string[];
 };
+const PRESUPUESTO_DE_CAMPOS = presupuestoCjs
+  .PRESUPUESTOS[0] as (typeof presupuestoCjs.PRESUPUESTOS)[number];
 const PREFIJO_DE_DEUDA = "campos-sin-dato--";
 const CONTEXTO: Contexto = { componentes: COMPONENTES_DE_CAMPO, registro: REGISTRO_DE_DATOS };
 
@@ -64,6 +72,43 @@ function archivosDeAplicaciones(): Map<string, string> {
         continue;
       mapa.set(`${app}/${r}`, readFileSync(join(RAIZ, app, r), "utf8"));
     }
+  }
+  return mapa;
+}
+
+/** Un archivo existente para un destino de import sin extensión (probando extensiones y `index`), o `undefined`. */
+function resolver(destino: string): string | undefined {
+  const candidatos = [
+    destino,
+    ...EXTENSIONES_DE_CODIGO.map((e) => `${destino}.${e}`),
+    ...EXTENSIONES_DE_CODIGO.map((e) => `${destino}/index.${e}`),
+  ];
+  return candidatos.find((c) => existsSync(join(RAIZ, c)) && statSync(join(RAIZ, c)).isFile());
+}
+
+/**
+ * El código fuera de las apps que el chequeo también mira: todo el código de `src/` (todas las extensiones) y todo archivo que una app importa
+ * por ruta relativa y que no está en `apps/` ni en `src/` (un paquete compartido), con lo que ese archivo importa a su vez.
+ */
+function archivosFueraDeLasApps(deLasApps: ReadonlyMap<string, string>): Map<string, string> {
+  const mapa = new Map<string, string>();
+  for (const r of readdirSync(join(RAIZ, "src"), { recursive: true, encoding: "utf8" })) {
+    if (r.split("/").includes("node_modules")) continue;
+    if (!(EXTENSIONES_DE_CODIGO as readonly string[]).includes(r.split(".").pop() ?? "")) continue;
+    mapa.set(`src/${r}`, readFileSync(join(RAIZ, "src", r), "utf8"));
+  }
+  const pendientes = [...deLasApps].flatMap(([ruta, texto]) =>
+    importadosFueraDe(ruta, texto, ruta.split("/").slice(0, 2).join("/")),
+  );
+  while (pendientes.length > 0) {
+    const destino = pendientes.pop() as string;
+    const archivo = resolver(destino);
+    if (archivo === undefined || archivo.startsWith("src/") || archivo.startsWith("apps/"))
+      continue;
+    if (mapa.has(archivo)) continue;
+    const texto = readFileSync(join(RAIZ, archivo), "utf8");
+    mapa.set(archivo, texto);
+    pendientes.push(...importadosFueraDe(archivo, texto, archivo.split("/").slice(0, 2).join("/")));
   }
   return mapa;
 }
@@ -107,6 +152,12 @@ describe("campos con dato: el código real", () => {
     expect([...resultados.values()].flatMap((r) => r.problemas)).toEqual([]);
   });
 
+  it("el código de src/ y de los paquetes que una app importa tampoco tiene campos sin dato ni evasiones", () => {
+    const fuera = archivosFueraDeLasApps(archivos);
+    expect(problemasFueraDeLasApps(fuera, CONTEXTO)).toEqual([]);
+    // lee y analiza todo `src/` (más de mil archivos): en el CI, con la base de datos al lado, tarda más que los 5 s por defecto
+  }, 30_000);
+
   it("todo componente de campo declara la prop dato", () => {
     const problemas = COMPONENTES_DE_CAMPO.flatMap((c) =>
       problemasDeComponente(c, archivos.get(c) ?? ""),
@@ -122,11 +173,11 @@ describe("campos con dato: el código real", () => {
   });
 
   const presupuesto = JSON.parse(
-    readFileSync(join(RAIZ, presupuestoCjs.ARCHIVO), "utf8"),
+    readFileSync(join(RAIZ, PRESUPUESTO_DE_CAMPOS.archivo), "utf8"),
   ) as Record<string, Cuenta>;
 
   it("el presupuesto de deuda tiene buena forma y coincide EXACTO con el código", () => {
-    expect(presupuestoCjs.problemasDeForma(presupuesto)).toEqual([]);
+    expect(presupuestoCjs.problemasDeForma(presupuesto, PRESUPUESTO_DE_CAMPOS)).toEqual([]);
     const reales = new Map(
       [...resultados].map(([r, v]) => [
         r,

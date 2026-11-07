@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import { usarFechaQuietaDeTotp } from "./autenticacion-plataforma-apoyo";
 import { opcionesDeInstancia } from "../../src/adaptadores/autenticacion/opciones";
 import { ErrorInternoDeIngreso } from "../../src/adaptadores/autenticacion/autenticacion-de-better-auth";
 import {
@@ -38,6 +39,7 @@ const HOST_A = "app.marca-a.test";
 const HOST_B = "app.marca-b.test";
 
 describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor local)", () => {
+  usarFechaQuietaDeTotp();
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let proveedor: ProveedorLocal;
   let a: AutenticacionDePrueba;
@@ -604,11 +606,17 @@ describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor lo
             HOST_A,
           ),
         ];
-        for (const pedido of pedidos) {
-          const falla = await pedido.then(
-            () => null,
-            (e: unknown) => e,
-          );
+        // Los tres pedidos corren a la vez: se les engancha el manejo de la falla ya, no cuando el bucle llegue a cada uno (el
+        // `get-session` usa la instancia gemela del «Seguir» y puede fallar antes de que se lo espere: sería un rechazo sin manejar).
+        const fallas = await Promise.all(
+          pedidos.map((pedido) =>
+            pedido.then(
+              () => null,
+              (e: unknown) => e,
+            ),
+          ),
+        );
+        for (const falla of fallas) {
           expect(falla).toBeInstanceOf(ErrorInternoDeIngreso);
           const visible = `${(falla as Error).message} ${JSON.stringify(falla)} ${String(falla)}`;
           expect(visible).not.toMatch(

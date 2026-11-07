@@ -6,12 +6,18 @@ import type { AlcanceDeSucursales } from "../../capacidades/permisos/alcance";
 import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "../../capacidades/permisos/roles";
 import { sucursalId } from "../../primitivas/identificadores/marca";
 import type { ContextoOperativo } from "../../contexto/contexto";
-import type { CargaDeAutorizacion, DatosDelActor } from "../../puertos/autorizacion";
+import type {
+  CargaDeAutorizacion,
+  CargaDeAutorizacionDeLectura,
+  CargaDeAutorizacionSinMemoria,
+  DatosDelActor,
+  OpcionesDeAlcance,
+} from "../../puertos/autorizacion";
 
 /**
  * Puerto `autorizacion` sobre `membresia`, `persona`, `asignacion_sucursal`, `sucursal`, `empresa`, `tenant` y,
  * para los módulos, `modulo_de_empresa`, `plan_de_tenant` y `version_de_plan` (SQL propio, ver `modulosDe`). Lee con la MISMA conexión de la transacción
- * del caso de uso (nada se guarda entre llamadas): el rol y los módulos valen para esa transacción y, si se
+ * del caso de uso (nada se guarda entre transacciones ni entre pedidos; solo la fábrica de lectura recuerda DENTRO de un pedido, ver abajo): el rol y los módulos valen para esa transacción y, si se
  * repite por un conflicto de serialización, se vuelven a leer.
  *
  * El actor autoriza solo si hay membresía ACTIVA en la empresa del contexto y la persona está activa
@@ -78,13 +84,50 @@ function validarNombresDeModulo(origen: string, nombres: readonly string[]): rea
   return [...nombres].sort();
 }
 
-export function crearAutorizacionDePostgres(db: Kysely<AutorizacionDb>): CargaDeAutorizacion {
+/**
+ * Dos fábricas, a propósito, y no una con una opción: la de ESCRITURA (`crearAutorizacionDePostgres`) no tiene cómo memorizar, así que
+ * no existe una línea que alguien pueda cambiar por `memorizar: true` para una transacción que escribe (ahí un permiso puede cambiar dentro de
+ * ella, un traspaso de gerente por ejemplo, y la lectura siguiente tiene que verlo). La de LECTURA (`crearAutorizacionDeLecturaDePostgres`)
+ * resuelve una sola vez cada lectura de permisos repetida (rol, módulos y alcance de sucursales) mientras viva el adaptador: una transacción
+ * de solo lectura o una unidad de lecturas compartidas de un pedido (`conLecturasCompartidas`). Nunca vive más que esa transacción o ese
+ * pedido: se arma de nuevo en cada una. El tipo distingue las dos: la de lectura no entra donde se pide la de escritura (`tsc` falla; caso
+ * inyectado en `autorizacion.test.ts`). DECISIÓN DEL DUEÑO (2026-11-07, «mientras el servidor rechace me parece bien»; fila «Permisos leídos una vez por pedido» de `11-especificaciones/decisiones-del-dueno-2026-11.md` del repo de docs): si OTRA persona revoca un permiso mientras un pedido de lectura está en curso, ese pedido termina con lo que leyó al empezar y la revocación se ve en el SIGUIENTE; una escritura siempre autoriza leyendo de nuevo. Chequeo en ejecución: `test/integracion/permisos-con-la-composicion-real.test.ts`.
+ */
+function armarAutorizacion(db: Kysely<AutorizacionDb>, memorizar: boolean): CargaDeAutorizacion {
+  /**
+   * La memoria de este adaptador: por contexto (el mismo objeto) y por clave. Un contexto distinto no comparte nada (si por error se
+   * usara el mismo adaptador con otro contexto, lee de nuevo). Guarda la PROMESA, así que dos lecturas a la vez comparten la consulta;
+   * una promesa rechazada se olvida para que la siguiente lea de nuevo.
+   */
+  let contextoMemorizado: ContextoOperativo | null = null;
+  const memoria = new Map<string, Promise<unknown>>();
+  function memorizada<T>(
+    contexto: ContextoOperativo,
+    clave: string,
+    leer: () => Promise<T>,
+  ): Promise<T> {
+    if (!memorizar) return leer();
+    if (contextoMemorizado !== null && contextoMemorizado !== contexto) return leer();
+    contextoMemorizado = contexto;
+    const guardada = memoria.get(clave);
+    if (guardada !== undefined) return guardada as Promise<T>;
+    const lectura = leer();
+    memoria.set(clave, lectura);
+    lectura.catch(() => memoria.delete(clave));
+    return lectura;
+  }
+
   /**
    * El rol de la membresía ACTIVA con la persona activa globalmente que entró por la marca del tenant de
    * la empresa, con el tenant de esa empresa (de la MISMA fila: el plan se busca con él); `null` si no hay
    * (ver arriba). Una marca de entrada `null` con persona no autoriza: ni siquiera se consulta.
    */
-  async function membresiaDelActor(contexto: ContextoOperativo): Promise<MembresiaDelActor | null> {
+  function membresiaDelActor(contexto: ContextoOperativo): Promise<MembresiaDelActor | null> {
+    return memorizada(contexto, "membresia", () => leerMembresiaDelActor(contexto));
+  }
+  async function leerMembresiaDelActor(
+    contexto: ContextoOperativo,
+  ): Promise<MembresiaDelActor | null> {
     if (contexto.personaId === null || contexto.marcaDeEntrada === null) return null;
     const fila = await db
       .selectFrom("membresia as m")
@@ -105,8 +148,8 @@ export function crearAutorizacionDePostgres(db: Kysely<AutorizacionDb>): CargaDe
   }
 
   /**
-   * Los módulos de la empresa, en la transacción en curso (sin caché: una baja, una suspensión o un cambio
-   * de plan se ven en la operación siguiente), de una sola lectura consistente:
+   * Los módulos de la empresa, en la transacción en curso (sin caché entre pedidos: una baja, una suspensión o un cambio
+   * de plan se ven en el pedido siguiente), de una sola lectura consistente:
    *  - activados: las filas ACTIVAS de `modulo_de_empresa` de la empresa del contexto (la RLS ya limita a
    *    esa empresa; el filtro se repite como defensa en profundidad). Las apagadas no cuentan;
    *  - habilitados (el techo): los módulos de la versión de plan de la asignación VIGENTE del tenant a
@@ -123,7 +166,13 @@ export function crearAutorizacionDePostgres(db: Kysely<AutorizacionDb>): CargaDe
    * Un módulo activado que no figura en el plan NO es una falla: es el solo lectura (corrección 16), que
    * decide `estadoDeModulos` a partir de estas dos listas.
    */
-  async function modulosDe(
+  function modulosDe(
+    contexto: ContextoOperativo,
+    tenantId: string,
+  ): Promise<Pick<DatosDelActor, "modulosActivados" | "modulosHabilitados">> {
+    return memorizada(contexto, `modulos:${tenantId}`, () => leerModulosDe(contexto, tenantId));
+  }
+  async function leerModulosDe(
     contexto: ContextoOperativo,
     tenantId: string,
   ): Promise<Pick<DatosDelActor, "modulosActivados" | "modulosHabilitados">> {
@@ -156,9 +205,10 @@ export function crearAutorizacionDePostgres(db: Kysely<AutorizacionDb>): CargaDe
     if (rige !== null && rige.modulos === null) {
       throw new RangeError("la versión de plan vigente del tenant no existe en la base");
     }
+    // Congeladas: con la memoria, todos los consumidores de un pedido reciben las MISMAS listas; ninguno puede cambiarle algo a otro.
     return {
-      modulosActivados: validarNombresDeModulo("activados", activadas),
-      modulosHabilitados: validarNombresDeModulo("plan", rige?.modulos ?? []),
+      modulosActivados: Object.freeze(validarNombresDeModulo("activados", activadas)),
+      modulosHabilitados: Object.freeze(validarNombresDeModulo("plan", rige?.modulos ?? [])),
     };
   }
 
@@ -175,26 +225,51 @@ export function crearAutorizacionDePostgres(db: Kysely<AutorizacionDb>): CargaDe
       return { rol: membresia.rol, ...(await modulosDe(contexto, membresia.tenantId)) };
     },
 
-    async sucursalesDelActor(contexto, opciones): Promise<AlcanceDeSucursales> {
-      const rol = await rolDelActor(contexto);
-      // Sin rol vigente no hay alcance alguno: falla cerrado, nunca «todas» por omisión.
-      if (rol === null || contexto.personaId === null) return [];
-      // Gerente y administrador operan en todas las sucursales (decisión de H6). Cualquier otro rol
-      // que se agregue algún día cae acá en la lista asignada, la opción más restrictiva.
-      if (rol === "GERENTE" || rol === "ADMINISTRADOR") return "TODAS";
-      let consulta = db
-        .selectFrom("asignacion_sucursal as a")
-        .innerJoin("sucursal as s", (unir) =>
-          unir.onRef("s.id", "=", "a.sucursal_id").onRef("s.empresa_id", "=", "a.empresa_id"),
-        )
-        .select("a.sucursal_id")
-        .where("a.empresa_id", "=", contexto.empresaId)
-        .where("a.persona_id", "=", contexto.personaId)
-        .where("a.activa", "=", true);
-      // Por defecto solo las sucursales abiertas; quien mira historial pide también las cerradas (la asignación sigue activa).
-      if (opciones?.incluirDesactivadas !== true) consulta = consulta.where("s.activa", "=", true);
-      const filas = await consulta.orderBy("a.sucursal_id").execute();
-      return filas.map((fila) => sucursalId(fila.sucursal_id));
+    sucursalesDelActor(contexto, opcionesDeAlcance): Promise<AlcanceDeSucursales> {
+      return memorizada(
+        contexto,
+        `alcance:${opcionesDeAlcance?.incluirDesactivadas === true}`,
+        () => leerSucursalesDelActor(contexto, opcionesDeAlcance),
+      );
     },
   };
+
+  async function leerSucursalesDelActor(
+    contexto: ContextoOperativo,
+    opciones: OpcionesDeAlcance | undefined,
+  ): Promise<AlcanceDeSucursales> {
+    const rol = await rolDelActor(contexto);
+    // Sin rol vigente no hay alcance alguno: falla cerrado, nunca «todas» por omisión.
+    if (rol === null || contexto.personaId === null) return [];
+    // Gerente y administrador operan en todas las sucursales (decisión de H6). Cualquier otro rol
+    // que se agregue algún día cae acá en la lista asignada, la opción más restrictiva.
+    if (rol === "GERENTE" || rol === "ADMINISTRADOR") return "TODAS";
+    let consulta = db
+      .selectFrom("asignacion_sucursal as a")
+      .innerJoin("sucursal as s", (unir) =>
+        unir.onRef("s.id", "=", "a.sucursal_id").onRef("s.empresa_id", "=", "a.empresa_id"),
+      )
+      .select("a.sucursal_id")
+      .where("a.empresa_id", "=", contexto.empresaId)
+      .where("a.persona_id", "=", contexto.personaId)
+      .where("a.activa", "=", true);
+    // Por defecto solo las sucursales abiertas; quien mira historial pide también las cerradas (la asignación sigue activa).
+    if (opciones?.incluirDesactivadas !== true) consulta = consulta.where("s.activa", "=", true);
+    const filas = await consulta.orderBy("a.sucursal_id").execute();
+    return filas.map((fila) => sucursalId(fila.sucursal_id));
+  }
+}
+
+/** Para transacciones que ESCRIBEN: lee los permisos de la base cada vez que se le pregunta. */
+export function crearAutorizacionDePostgres(
+  db: Kysely<AutorizacionDb>,
+): CargaDeAutorizacionSinMemoria {
+  return armarAutorizacion(db, false);
+}
+
+/** Para transacciones de SOLO LECTURA y unidades de lecturas compartidas: resuelve una vez lo que se repite. */
+export function crearAutorizacionDeLecturaDePostgres(
+  db: Kysely<AutorizacionDb>,
+): CargaDeAutorizacionDeLectura {
+  return Object.assign(armarAutorizacion(db, true), { memoriza: true as const });
 }

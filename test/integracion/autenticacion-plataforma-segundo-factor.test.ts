@@ -1,4 +1,5 @@
 import pg from "pg";
+import { PERIODO_DE_TOTP_EN_SEGUNDOS } from "../../src/capacidades/autenticacion/totp";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import {
   Navegador,
@@ -34,7 +35,7 @@ const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 120_000, hookTimeout: 120_000 });
 
 const MINUTO = 60_000;
-const PASO = 30_000;
+const PASO = PERIODO_DE_TOTP_EN_SEGUNDOS * 1000;
 /** El comienzo del paso de TOTP en que cae `instante` (milisegundos). */
 const comienzoDelPaso = (instante: number): number => Math.floor(instante / PASO) * PASO;
 type Alta = Readonly<{ qrSvg: string; secreto: string; codigosDeRecuperacion: string[] }>;

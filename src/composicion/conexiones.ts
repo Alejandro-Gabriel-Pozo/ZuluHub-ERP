@@ -11,6 +11,7 @@ import {
 } from "../adaptadores/correo/configuracion";
 import { crearAuditoriaDePostgres, type AuditoriaDb } from "../adaptadores/postgres/auditoria";
 import {
+  crearAutorizacionDeLecturaDePostgres,
   crearAutorizacionDePostgres,
   type AutorizacionDb,
 } from "../adaptadores/postgres/autorizacion";
@@ -38,6 +39,7 @@ import {
 } from "../adaptadores/postgres/transacciones-publicas";
 import {
   crearTransacciones,
+  type ConfiguracionDeTransacciones,
   type TransaccionesDePostgres,
 } from "../adaptadores/postgres/transacciones";
 import {
@@ -105,7 +107,11 @@ import {
 } from "../modulos/tenants/publico";
 import type { Auditoria } from "../puertos/auditoria";
 import type { Autenticacion, BarridoDeAutenticacion } from "../puertos/autenticacion";
-import type { CargaDeAutorizacion } from "../puertos/autorizacion";
+import type {
+  CargaDeAutorizacion,
+  CargaDeAutorizacionDeLectura,
+  CargaDeAutorizacionSinMemoria,
+} from "../puertos/autorizacion";
 import type { CifradorDeSecretos } from "../puertos/cifrado-de-secretos";
 import type { Correo } from "../puertos/correo";
 import type { RevocacionDeSesiones } from "../puertos/revocacion-de-sesiones";
@@ -243,6 +249,52 @@ const marcaDeImpresion: TxDeApp["marca"] = {
   deLaEmpresa: () => Promise.resolve(MARCA_DE_IMPRESION_VACIA),
 };
 
+/**
+ * Lo que recibe el trabajo de una transacción de la puerta de la aplicación, con la carga de autorización que le toca: la que lee cada vez
+ * (escritura) o la que resuelve una vez lo que se repite (solo lectura). Es el ÚNICO lugar que arma `TxDeApp`.
+ */
+type ConexionDeTx = Parameters<ConfiguracionDeTransacciones<TxDeApp>["armar"]>[0];
+
+/** Escritura: solo acepta la carga que lee cada vez; la que memoriza no entra acá (`tsc` falla). */
+const armarTxDeEscritura = (db: ConexionDeTx, a: CargaDeAutorizacionSinMemoria): TxDeApp =>
+  armarTx(db, a);
+/** Lectura: solo acepta la carga que resuelve una vez lo que se repite. */
+const armarTxDeLectura = (db: ConexionDeTx, a: CargaDeAutorizacionDeLectura): TxDeApp =>
+  armarTx(db, a);
+
+function armarTx(db: ConexionDeTx, autorizacion: CargaDeAutorizacion): TxDeApp {
+  return {
+    tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
+    empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
+    sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
+    sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
+    personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
+    membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
+    asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
+    invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
+    traspasos: crearRepositorioDeTraspasos(db.withTables<IdentidadDb>()),
+    trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
+    auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
+    autorizacion,
+    // Fiscal sobre la MISMA conexión de la transacción (una operación que cruza módulos es atómica).
+    emisores: crearRepositorioDeEmisores(db.withTables<FiscalDb>()),
+    domicilios: crearRepositorioDeDomicilios(db.withTables<FiscalDb>()),
+    datosFiscales: crearRepositorioDeDatosFiscales(db.withTables<FiscalDb>()),
+    reglasDeEmisor: crearRepositorioDeReglasDeEmisor(db.withTables<FiscalDb>()),
+    puntosDeVenta: crearRepositorioDePuntosDeVenta(db.withTables<FiscalDb>()),
+    series: crearRepositorioDeSeries(db.withTables<FiscalDb>()),
+    comprobantes: crearRepositorioDeComprobantes(db.withTables<FiscalDb>()),
+    intentos: crearRepositorioDeIntentos(db.withTables<FiscalDb>()),
+    lecturas: crearLecturasDeComprobantes(db.withTables<FiscalDb>()),
+    lecturasDeCertificados: crearLecturasDeCertificados(db.withTables<FiscalDb>()),
+    certificados: crearRepositorioDeCertificados(db.withTables<FiscalDb>()),
+    accesos: crearRepositorioDeAccesos(db.withTables<FiscalDb>()),
+    marca: marcaDeImpresion,
+    niveles: crearNivelesDeControlDePostgres(db.withTables<NivelesDeControlDb>()),
+    sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
+  };
+}
+
 export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones {
   const fuente = opciones.fuente ?? entornoDelProceso;
   const registrar = opciones.registrar ?? (() => undefined);
@@ -280,36 +332,15 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
       crearTransacciones<TxDeApp>({
         urls: { OPERATIVO: valores.PEDERNAL_DB_APP },
         clave: leerClaveDeContexto(valores[PEDERNAL_CLAVE_CONTEXTO]),
-        armar: (db) => ({
-          tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
-          empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
-          sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
-          sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
-          personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
-          membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
-          asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
-          invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
-          traspasos: crearRepositorioDeTraspasos(db.withTables<IdentidadDb>()),
-          trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
-          auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
-          autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>()),
-          // Fiscal sobre la MISMA conexión de la transacción (una operación que cruza módulos es atómica).
-          emisores: crearRepositorioDeEmisores(db.withTables<FiscalDb>()),
-          domicilios: crearRepositorioDeDomicilios(db.withTables<FiscalDb>()),
-          datosFiscales: crearRepositorioDeDatosFiscales(db.withTables<FiscalDb>()),
-          reglasDeEmisor: crearRepositorioDeReglasDeEmisor(db.withTables<FiscalDb>()),
-          puntosDeVenta: crearRepositorioDePuntosDeVenta(db.withTables<FiscalDb>()),
-          series: crearRepositorioDeSeries(db.withTables<FiscalDb>()),
-          comprobantes: crearRepositorioDeComprobantes(db.withTables<FiscalDb>()),
-          intentos: crearRepositorioDeIntentos(db.withTables<FiscalDb>()),
-          lecturas: crearLecturasDeComprobantes(db.withTables<FiscalDb>()),
-          lecturasDeCertificados: crearLecturasDeCertificados(db.withTables<FiscalDb>()),
-          certificados: crearRepositorioDeCertificados(db.withTables<FiscalDb>()),
-          accesos: crearRepositorioDeAccesos(db.withTables<FiscalDb>()),
-          marca: marcaDeImpresion,
-          niveles: crearNivelesDeControlDePostgres(db.withTables<NivelesDeControlDb>()),
-          sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
-        }),
+        armar: (db) =>
+          armarTxDeEscritura(db, crearAutorizacionDePostgres(db.withTables<AutorizacionDb>())),
+        // En lectura, los permisos se resuelven una vez por transacción (o por pedido, con `conLecturasCompartidas`); al escribir, la
+        // fábrica no tiene cómo memorizar.
+        armarDeLectura: (db) =>
+          armarTxDeLectura(
+            db,
+            crearAutorizacionDeLecturaDePostgres(db.withTables<AutorizacionDb>()),
+          ),
       }),
     ),
     transaccionesDeTrabajos: armarPieza("transacciones-trabajos", (valores) =>

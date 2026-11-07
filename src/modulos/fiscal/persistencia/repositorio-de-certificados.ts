@@ -11,11 +11,12 @@ import {
   type EmisorId,
 } from "../dominio/identificadores";
 import {
+  aBytes,
   deLaLista,
   serializarAltaDeId,
   type ErrorDeAlta,
   type ResultadoDeAlta,
-} from "./repositorios";
+} from "./ayudas-de-repositorio";
 import type { FiscalDb } from "./tablas";
 import {
   ESTADOS_DE_CERTIFICADO,
@@ -135,7 +136,6 @@ export interface RepositorioDeCertificados {
   ): Promise<CertificadoGuardado | null>;
 }
 
-/** Lo que se sabe de la credencial de acceso sin mostrarla. */
 // =================================================================================================
 // Certificados
 // =================================================================================================
@@ -196,9 +196,6 @@ export function aCertificado(fila: FilaDeCertificado): CertificadoGuardado {
     version: fila.version,
   };
 }
-
-/** Los bytes cifrados como `Buffer` para la base (también los usa `repositorio-de-accesos.ts`). */
-export const aBytes = (b: Uint8Array) => Buffer.from(b);
 
 function mismoPedido(guardado: CertificadoGuardado, pedido: PedidoDeCertificado): boolean {
   return (

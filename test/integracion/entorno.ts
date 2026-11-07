@@ -51,6 +51,7 @@ import {
   type TenantsDb,
 } from "../../src/modulos/tenants/publico";
 import {
+  crearAutorizacionDeLecturaDePostgres,
   crearAutorizacionDePostgres,
   type AutorizacionDb,
 } from "../../src/adaptadores/postgres/autorizacion";
@@ -89,6 +90,7 @@ import {
 import type { AdminsDePlataforma } from "../../src/puertos/admins-de-plataforma";
 import type { AuditoriaDePlataforma } from "../../src/puertos/auditoria-de-plataforma";
 import type { CargaDeAutorizacionDePlataforma } from "../../src/puertos/autorizacion-de-plataforma";
+import type { CargaDeAutorizacion } from "../../src/puertos/autorizacion";
 import type { ColaDeTrabajos } from "../../src/puertos/cola-de-trabajos";
 import type { LecturasDeSesion } from "../../src/puertos/sesion";
 import type { IdempotenciaDePlataforma } from "../../src/puertos/idempotencia";
@@ -137,7 +139,40 @@ export function crearEntornoDePrueba(
   base: BaseDePruebas,
   maximoDeConexiones = 5,
   ajustar: (tx: TxDePrueba) => TxDePrueba = (tx) => tx,
+  plazoParaConseguirConexionEnMs?: number,
 ): TransaccionesDePostgres<TxDePrueba> {
+  const armarTx = (
+    db: Kysely<SinTablas>,
+    contexto: Contexto,
+    autorizacion: CargaDeAutorizacion,
+  ): TxDePrueba =>
+    ajustar({
+      db,
+      tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
+      empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
+      sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
+      personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
+      membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
+      asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
+      invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
+      traspasos: crearRepositorioDeTraspasos(db.withTables<IdentidadDb>()),
+      trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
+      auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
+      cola: crearColaDePostgres(db.withTables<ColaDb>()),
+      auditoriaDePlataforma: crearAuditoriaDePlataformaDePostgres(
+        db.withTables<AuditoriaDePlataformaDb>(),
+        contexto,
+      ),
+      idempotencia: crearIdempotenciaDePostgres(db.withTables<IdempotenciaDb>(), contexto),
+      autorizacionDePlataforma: crearAutorizacionDePlataformaDePostgres(
+        db.withTables<AutorizacionDePlataformaDb>(),
+      ),
+      admins: crearAdminsDePostgres(db.withTables<AdminsDb>()),
+      referenciasDeError: crearReferenciasDeErrorDePostgres(db.withTables<ReferenciasDeErrorDb>()),
+      autorizacion,
+      niveles: crearNivelesDeControlDePostgres<string>(db.withTables<NivelesDeControlDb>()),
+      sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
+    });
   return crearTransacciones<TxDePrueba>({
     urls: {
       OPERATIVO: base.app,
@@ -146,36 +181,12 @@ export function crearEntornoDePrueba(
       TRABAJOS: base.trabajos,
     },
     armar: (db, contexto) =>
-      ajustar({
-        db,
-        tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
-        empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
-        sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
-        personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
-        membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
-        asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
-        invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
-        traspasos: crearRepositorioDeTraspasos(db.withTables<IdentidadDb>()),
-        trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
-        auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
-        cola: crearColaDePostgres(db.withTables<ColaDb>()),
-        auditoriaDePlataforma: crearAuditoriaDePlataformaDePostgres(
-          db.withTables<AuditoriaDePlataformaDb>(),
-          contexto,
-        ),
-        idempotencia: crearIdempotenciaDePostgres(db.withTables<IdempotenciaDb>(), contexto),
-        autorizacionDePlataforma: crearAutorizacionDePlataformaDePostgres(
-          db.withTables<AutorizacionDePlataformaDb>(),
-        ),
-        admins: crearAdminsDePostgres(db.withTables<AdminsDb>()),
-        referenciasDeError: crearReferenciasDeErrorDePostgres(
-          db.withTables<ReferenciasDeErrorDb>(),
-        ),
-        autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>()),
-        niveles: crearNivelesDeControlDePostgres<string>(db.withTables<NivelesDeControlDb>()),
-        sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
-      }),
+      armarTx(db, contexto, crearAutorizacionDePostgres(db.withTables<AutorizacionDb>())),
+    // Como la composición real: en lectura se resuelven una vez los permisos; al escribir, nunca.
+    armarDeLectura: (db, contexto) =>
+      armarTx(db, contexto, crearAutorizacionDeLecturaDePostgres(db.withTables<AutorizacionDb>())),
     maximoDeConexiones,
+    ...(plazoParaConseguirConexionEnMs === undefined ? {} : { plazoParaConseguirConexionEnMs }),
     clave: base.clave,
   });
 }
@@ -250,7 +261,7 @@ let siguienteCuerpo = randomInt(0, CUERPOS_POSIBLES);
 /**
  * CUIT válido, distinto en cada llamada de este proceso: una secuencia (contador) y no un sorteo, porque dos sorteos pueden
  * repetirse (cumpleaños) y un CUIT repetido choca con la unicidad de la base (caso real: «Estabilidad» en #191). Entre procesos
- * distintos la secuencia arranca en un punto al azar de 10^8 cuerpos. El dígito verificador sale de `digitoVerificadorDeCuit`; si
+ * distintos la secuencia arranca en un punto al azar de 10^8 cuerpos: la unicidad entre procesos es PROBABILÍSTICA (≈1,7e-3 de que dos se pisen con 6 000 llamadas), no una garantía. El dígito verificador sale de `digitoVerificadorDeCuit`; si
  * un cuerpo no tiene verificador válido se salta.
  */
 export function cuitAlAzar(): Cuit {
