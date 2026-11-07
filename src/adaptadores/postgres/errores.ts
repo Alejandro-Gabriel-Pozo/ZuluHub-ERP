@@ -103,7 +103,9 @@ export function traducirErrorDeBase(error: unknown): ErrorDePersistencia | null 
   // traductor único los vuelve el error genérico con referencia), no como una excepción cruda que rompería la pantalla.
   const causa = causaDeConexion(error);
   if (causa !== null) {
-    return { tipo: "Inesperado", sqlstate: null, mensaje: MENSAJES_DE_CONEXION[causa] };
+    // El SQLSTATE del servidor (p. ej. 57P01) queda en el REGISTRO para diagnosticar; el mensaje que ve el usuario es fijo y genérico.
+    const sqlstate = error instanceof pg.DatabaseError ? (error.code ?? null) : null;
+    return { tipo: "Inesperado", sqlstate, mensaje: MENSAJES_DE_CONEXION[causa] };
   }
   if (!(error instanceof pg.DatabaseError)) return null;
   const restriccion = error.constraint ?? null;

@@ -13,7 +13,7 @@ import {
 } from "vitest";
 import { crearConexionDeAutenticacion } from "../../src/adaptadores/postgres/conexion-de-autenticacion";
 import { ErrorDeConexionDeBase } from "../../src/adaptadores/postgres/errores";
-import { cantidadDePozosAbiertos } from "../../src/adaptadores/postgres/pozos";
+import { cantidadDePozosAbiertos, tomarPozo } from "../../src/adaptadores/postgres/pozos";
 import {
   crearTransacciones,
   type SinTablas,
@@ -28,11 +28,13 @@ import { crearBaseAparte } from "./entorno";
  * Un CORTE de la conexión a mitad de una transacción (el servidor mata el backend: `pg_terminate_backend`, que es lo mismo que ve la app
  * cuando Neon reinicia el cómputo o se cae la red), contra Postgres real y con pozo de 1 y de varias conexiones.
  *
- * Previene (cada protección tiene su violación inyectada en este archivo o en `pozos.test.ts` / `errores.test.ts`):
+ * Previene (cada protección tiene su violación inyectada en este archivo o en `errores.test.ts`):
  *  - que el 'error' del cliente prestado, sin oyente (pg-pool lo saca mientras la conexión está prestada), tire abajo el proceso;
  *  - que el corte salga como excepción cruda (con host y detalle) en vez de un error tipado y genérico;
  *  - que la conexión rota vuelva al pozo y el siguiente pedido la reciba muerta, o que quede una transacción «idle in transaction»;
  *  - que la transacción quede a medias (atomicidad) o que reintentar con la misma clave duplique el efecto (idempotencia);
+ *  - que cada préstamo de la conexión deje un oyente de 'error' más en ella (fuga: con el pozo reutilizando la conexión se acumulan
+ *    cientos y Node avisa MaxListenersExceededWarning);
  *  - que el pozo agotado del rol de autenticación (la librería de ingreso) salga como excepción cruda y no tipada como el de la app.
  */
 
@@ -246,6 +248,27 @@ describe.skipIf(base === null)("corte de conexión a mitad de una transacción",
     expect(sana).toEqual(ok("sana"));
     expect(await sinTransaccionesAbiertas()).toBe(true);
     expect(noCapturadas).toEqual([]);
+  });
+
+  it("prestar y devolver la misma conexión muchas veces no acumula oyentes de 'error'", async () => {
+    const { paraKysely, soltar } = tomarPozo({ url: propia.base.dueno, maximoDeConexiones: 1 });
+    try {
+      const primera = await paraKysely.connect();
+      // Prestada: el oyente del pozo ya no está y el nuestro es uno solo.
+      expect(primera.listenerCount("error")).toBe(1);
+      primera.release();
+      const devuelta = primera.listenerCount("error");
+      for (let i = 0; i < 50; i += 1) {
+        const c = await paraKysely.connect();
+        expect(c).toBe(primera);
+        expect(c.listenerCount("error")).toBe(1);
+        c.release();
+        // Devuelta al pozo: vuelve el oyente de la conexión ociosa y se va el nuestro; el número no crece con los préstamos.
+        expect(c.listenerCount("error")).toBe(devuelta);
+      }
+    } finally {
+      await soltar();
+    }
   });
 
   describe("el pozo del rol de autenticación (la librería de ingreso)", () => {

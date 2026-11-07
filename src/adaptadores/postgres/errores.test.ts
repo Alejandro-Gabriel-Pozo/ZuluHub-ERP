@@ -77,7 +77,8 @@ describe("conexión cortada", () => {
     (code) => {
       const error = delServidor(code, "terminating connection due to administrator command");
       expect(esConexionCortada(error)).toBe(true);
-      expect(traducirErrorDeBase(error)).toEqual(GENERICO);
+      // El SQLSTATE queda para el registro; el mensaje sigue genérico y sin el texto del servidor.
+      expect(traducirErrorDeBase(error)).toEqual({ ...GENERICO, sqlstate: code });
     },
   );
 
