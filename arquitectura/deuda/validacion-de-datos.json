@@ -40,20 +40,12 @@
     "duplicados": 0
   },
   "src/adaptadores/correo/configuracion.ts": {
-    "prohibidos": 3,
+    "prohibidos": 2,
     "duplicados": 0
   },
   "src/capacidades/activos/direccion-externa.ts": {
     "prohibidos": 0,
     "duplicados": 1
-  },
-  "src/capacidades/experiencia/puerta.ts": {
-    "prohibidos": 1,
-    "duplicados": 0
-  },
-  "src/capacidades/experiencia/ruta-de-retorno.ts": {
-    "prohibidos": 1,
-    "duplicados": 0
   },
   "src/capacidades/experiencia/vidriera/descripcion.ts": {
     "prohibidos": 0,

@@ -329,3 +329,36 @@ describe("lista de permitidos: las exenciones por formato de terceros no se cieg
     ]);
   });
 });
+
+describe("lista de permitidos: tercera revisión independiente (evasiones baratas cerradas)", () => {
+  const r = String.raw;
+
+  it.each([
+    ["< escapado en hexadecimal", r`export const R = /[\x3c\x3e]/;`],
+    ["< escapado en unicode", "export const R = /" + String.fromCharCode(92) + "u003c/;"],
+    ["todo menos letras y dígitos", r`export const R = /^\W+$/;`],
+    ["caracteres ignorables", r`export const R = /\p{Default_Ignorable_Code_Point}/u;`],
+    ["globalThis con una clave calculada", r`export const R = globalThis[nombre]("a");`],
+    ["window con una clave calculada", r`export const R = window[nombre];`],
+  ])("%s cuenta", (_, texto) => {
+    expect(cuenta(texto), texto).toBe(1);
+  });
+
+  it("globalThis con una clave literal que no es RegExp no cuenta", () => {
+    expect(cuenta(r`export const t = globalThis["setTimeout"];`)).toBe(0);
+  });
+
+  it.each([
+    ["NOT x ~ sin paréntesis", r`CHECK (NOT a ~ '[<>]')`],
+    ["NOT x ~* sin paréntesis", r`CHECK (NOT a.b ~* '[<>]')`],
+    ["NOT x::text ~ sin paréntesis", r`CHECK (NOT a::text ~ '[<>]')`],
+    ["< escapado en hexadecimal", r`CHECK (a !~ '[\x3c]')`],
+  ])("SQL: %s cuenta", (_, texto) => {
+    expect(contarProhibidosEnSql(texto), texto).toBe(1);
+  });
+
+  it("SQL: el uso de la función con el nombre entre comillas cuenta", () => {
+    expect(contarProhibidosEnSql(r`CHECK ("texto_visible_valido"(nombre, 60))`)).toBe(1);
+    expect(contarProhibidosEnSql(r`CHECK (NOT a ~ '^[0-9]+$')`)).toBe(0);
+  });
+});

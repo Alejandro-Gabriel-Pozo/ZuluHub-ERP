@@ -33,7 +33,7 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
   archivo que solo baja (`arquitectura/deuda/validacion-de-datos.json`). Lo que no puede analizar cuenta (fail-closed). Límites que NO ve
   (deuda a anotar, con el ejemplo que pasa): una prohibición armada solo con constantes de otro archivo (`new RegExp("[" + CONTROLES + "]")` con
   `CONTROLES` importado: el texto fijo no trae nada), `x.constructor(…)`, `<` fuera de una clase, `split`/`replace`/`Set` contra `<`,
-  comparaciones de texto (`c < " "`), códigos de carácter por variable y tablas de búsqueda: es una alarma para errores honestos, no un
+  comparaciones de texto (`c < " "`), códigos de carácter por variable, tablas de búsqueda y, en SQL, `position`/`strpos`/`translate`/`regexp_like`: es una alarma para errores honestos, no un
   límite de seguridad. No mira las pruebas (`*.test.*`, `test/`): usan estas expresiones como ejemplo. Los formatos de máquinas de terceros
   (`set-cookie.ts`, `saneamiento.ts` de ARCA) están eximidos con lista exacta y cuenta exacta en la prueba (dueño, 2026-11-06, pregunta directa al orquestador; un
   archivo nuevo en esa categoría requiere aprobación del dueño).

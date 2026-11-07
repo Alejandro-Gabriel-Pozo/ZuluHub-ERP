@@ -33,19 +33,22 @@ import ts from "typescript";
  * `\s` solo y `<` fuera de una clase; `split`/`replace`/`Set`/`switch` contra `<` o un control; comparaciones de texto (`c < " "`); códigos
  * de carácter que llegan por una variable; tablas de búsqueda. Cerradas por ser baratas: categorías con nombre largo (`\p{General_Category=…}`,
  * `\p{gc=…}`, `\p{White_Space}`), escapes `\u{…}`, escapes cortos de control dentro de una clase y `globalThis["RegExp"]`.
- * No se miran los archivos de prueba (`*.test.*` y `test/`) ni los de `reversiones/`: usan estas expresiones como ejemplos y lo que se
- * valida es el código de producción y las migraciones que crean las reglas.
+ * No se miran los archivos de prueba (`*.test.*` y `test/`): usan estas expresiones como ejemplos. Las migraciones `reversiones/` SÍ se
+ * leen (solo traen `DROP`, que no cuenta).
+ * Tampoco ve (SQL y TS): `position`/`strpos`/`translate`/`regexp_like`, `!~* '^\\s'` (el recorte de espacios está eximido a propósito),
+ * `\\p{…}` con propiedades que no están en la lista, y un nombre de función armado con texto. Cerradas por baratas: `\\x3c`/`\\u003c`
+ * (`<` escapado), `\\W`, `\\p{Default_Ignorable_Code_Point}`, `globalThis[clave]`, `NOT a ~ '…'` sin paréntesis y `"nombre"(` entre comillas.
  */
 
 const CATEGORIAS =
-  /\\[pP]\{(?:[CZ][A-Za-z_]*|(?:General_Category|gc)\s*=[^}]*|Control|Format|Surrogate|Private_Use|Unassigned|Other|Separator|Space_Separator|Line_Separator|Paragraph_Separator|White_Space|space)\}/;
+  /\\[pP]\{(?:[CZ][A-Za-z_]*|(?:General_Category|gc)\s*=[^}]*|Control|Format|Surrogate|Private_Use|Unassigned|Other|Separator|Space_Separator|Line_Separator|Paragraph_Separator|White_Space|space|Default_Ignorable_Code_Point|DI|Variation_Selector|Join_Control|Noncharacter_Code_Point)\}/;
 /** Controles escritos con un escape corto dentro de una clase: `[\r\n\t]`, `[\0-\37]`, `[\cA-\cZ]`, y los escapes `\u{…}`. */
 const ESCAPES_CORTOS = /\[[^\]]*\\(?:[rntfv0]|c[A-Za-z]|[0-3][0-7])|\\u\{/;
 const CONTROLES =
-  /\\x(?:[01][0-9a-fA-F]|7[fF]|[89][0-9a-fA-F])|\\u(?:00(?:[01][0-9a-fA-F]|7[fF]|[89][0-9a-fA-F]|[aA][dD])|200[b-fB-F]|202[89a-eA-E]|206[0-4]|[fF][eE][fF][fF])/;
+  /\\x(?:3[cCeE]|[01][0-9a-fA-F]|7[fF]|[89][0-9a-fA-F])|\\u(?:00(?:3[cCeE]|[01][0-9a-fA-F]|7[fF]|[89][0-9a-fA-F]|[aA][dD])|200[b-fB-F]|202[89a-eA-E]|206[0-4]|[fF][eE][fF][fF])/;
 const INVISIBLES_LITERALES = /[\u0080-\u009f\u00ad\u200b-\u200f\u2028-\u202e\u2060-\u2064\ufeff]/;
 const CLASE_CON_MARCADO = /\[[^\]]*[<>]/;
-const TODO_MENOS_ESPACIOS = /\\S/;
+const TODO_MENOS_ESPACIOS = /\\[SW]/;
 const CLASE_NEGADA = /\[\^((?:\\.|[^\]\\])*)\]/g;
 /** Lo que una clase negada puede listar sin ser una prohibición: letras, dígitos, `. _ -` y el ASCII visible `!-~` (el reverso de una lista de permitidos). */
 const MIEMBROS_DE_PERMITIDOS = /!-~|[A-Za-z0-9]-[A-Za-z0-9]|\\d|\\w|\\\.|\\-|[A-Za-z0-9._-]/g;
@@ -179,10 +182,11 @@ export function contarProhibidosEnCodigo(ruta: string, texto: string): number {
       }
     } else if (
       ts.isElementAccessExpression(n) &&
-      ts.isStringLiteralLike(n.argumentExpression) &&
-      n.argumentExpression.text === "RegExp"
+      ((ts.isStringLiteralLike(n.argumentExpression) && n.argumentExpression.text === "RegExp") ||
+        (!ts.isStringLiteralLike(n.argumentExpression) &&
+          /^(?:globalThis|window|self)$/.test(n.expression.getText(f))))
     ) {
-      cuenta += 1; // globalThis["RegExp"]: esconde la construcción
+      cuenta += 1; // globalThis["RegExp"] o globalThis[clave]: esconde la construcción
     } else if (ts.isIdentifier(n) && n.text === "RegExp") {
       const p = n.parent;
       const comoLlamada = (ts.isNewExpression(p) || ts.isCallExpression(p)) && p.expression === n;
@@ -248,7 +252,8 @@ export function contarProhibidosEnCodigo(ruta: string, texto: string): number {
   return cuenta;
 }
 
-const OPERADOR_SQL = /!~\*?|\bNOT\s+(?:I?LIKE|SIMILAR\s+TO)\b|\bNOT\s*\(\s*[^()~']*?\s~\*?(?=\s)/gi;
+const OPERADOR_SQL =
+  /!~\*?|\bNOT\s+(?:I?LIKE|SIMILAR\s+TO)\b|\bNOT\s*\(\s*[^()~']*?\s~\*?(?=\s)|\bNOT\s+[\w."]+(?:\s*::\s*\w+)?\s+~\*?(?=\s)/gi;
 const CADENA_SQL = /(E?)'((?:[^']|'')*)'/gi;
 
 /** El operando (cadenas unidas con `||`, entre paréntesis o suelto) que sigue a la posición `desde`, o `""` si no se puede leer. */
@@ -286,7 +291,7 @@ export const FUNCIONES_SQL_CON_PROHIBIDOS = [
 function usosDeFuncionesConProhibidos(sinComentarios: string): number {
   let usos = 0;
   for (const nombre of FUNCIONES_SQL_CON_PROHIBIDOS) {
-    for (const m of sinComentarios.matchAll(new RegExp(`\\b${nombre}\\s*\\(`, "gi"))) {
+    for (const m of sinComentarios.matchAll(new RegExp(`\\b"?${nombre}"?\\s*\\(`, "gi"))) {
       const antes = sinComentarios.slice(Math.max(0, (m.index ?? 0) - 40), m.index);
       if (
         !/\b(?:CREATE(?:\s+OR\s+REPLACE)?|DROP|ALTER|COMMENT\s+ON)\s+FUNCTION\s+(?:IF\s+EXISTS\s+)?$/i.test(
