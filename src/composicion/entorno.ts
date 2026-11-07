@@ -36,10 +36,16 @@ import { PEDERNAL_SECRETO_INVITACIONES } from "../adaptadores/tokens/tokens-hmac
  */
 
 const texto = z.string().trim().min(1);
+/**
+ * Cadena de conexión: esquema `postgres://` o `postgresql://` y después SOLO ASCII visible (`!` a `~`; los caracteres especiales de una
+ * contraseña viajan escritos con `%`). Lista de permitidos (dueño, 2026-11-06): antes era «todo menos espacios» (`\S+`) y dejaba pasar
+ * invisibles y marcas de dirección de texto. Efecto: una variable ya cargada con un carácter no ASCII ahora se rechaza al leer el
+ * entorno (las cadenas de Neon son ASCII); nada que ya esté guardado en la base se toca. Chequeo: `entorno.test.ts`.
+ */
 const cadenaDePostgres = z
   .string()
   .trim()
-  .regex(/^postgres(?:ql)?:\/\/\S+$/);
+  .regex(/^postgres(?:ql)?:\/\/[!-~]+$/);
 
 /** Las dos formas gruesas, para la lista de la puerta de plataforma (`entorno-de-plataforma.ts`). */
 export const FORMA_DE_TEXTO = texto;

@@ -3,14 +3,6 @@
     "prohibidos": 0,
     "duplicados": 2
   },
-  "apps/plataforma/logica/entrada-del-plan.ts": {
-    "prohibidos": 0,
-    "duplicados": 1
-  },
-  "apps/plataforma/logica/filtros-de-empresas.ts": {
-    "prohibidos": 0,
-    "duplicados": 1
-  },
   "apps/web/ui/plantillas/facturacion/impresion/ayudas-de-impresion.tsx": {
     "prohibidos": 0,
     "duplicados": 1
@@ -39,10 +31,6 @@
     "prohibidos": 1,
     "duplicados": 0
   },
-  "src/adaptadores/correo/configuracion.ts": {
-    "prohibidos": 2,
-    "duplicados": 0
-  },
   "src/capacidades/activos/direccion-externa.ts": {
     "prohibidos": 0,
     "duplicados": 1
@@ -56,10 +44,6 @@
     "duplicados": 0
   },
   "src/capacidades/vocabulario/texto-visible.ts": {
-    "prohibidos": 1,
-    "duplicados": 0
-  },
-  "src/composicion/entorno.ts": {
     "prohibidos": 1,
     "duplicados": 0
   },

@@ -2,7 +2,11 @@
  * Forma de lo que manda el navegador al cambiar el plan de una empresa. Puro y sin librerías: solo la
  * FORMA; las reglas de negocio las valida el backend. Las claves que sobran se descartan sin copiarse.
  */
+import { LARGO_MAXIMO_DEL_MOTIVO } from "../../../src/plataforma/dominio/formas-de-entrada";
 import { instanteDeVigencia } from "./vigencia";
+
+/** El tope del motivo vive una vez, en el dominio de plataforma; acá solo se vuelve a ofrecer a las pantallas. */
+export { LARGO_MAXIMO_DEL_MOTIVO };
 
 export type EntradaDelCambioDePlan = Readonly<{
   claveDeIdempotencia: string;
@@ -15,8 +19,6 @@ export type EntradaDelCambioDePlan = Readonly<{
 }>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-/** Espejo de `LARGO_MAXIMO_DEL_MOTIVO` del backend (`formas-de-entrada.ts`); una prueba los compara. */
-export const LARGO_MAXIMO_DEL_MOTIVO = 500;
 
 const esRegistro = (valor: unknown): valor is Record<string, unknown> =>
   typeof valor === "object" && valor !== null && !Array.isArray(valor);
