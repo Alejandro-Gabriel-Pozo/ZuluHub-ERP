@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { fecha } from "../../../../test/utilidades/facturacion";
 import { CUIT_B, CUIT_C } from "../../../../test/utilidades/fiscal";
@@ -186,5 +188,42 @@ describe("QR de ARCA: la URL", () => {
 
   it("un CAE inválido no arma URL", () => {
     expect(urlDelQr({ ...EJEMPLO, cae: "123" })).toEqual({ ok: false, error: "CAE_INVALIDO" });
+  });
+});
+
+describe("el QR de un comprobante ya emitido no valida el documento (dueño, 2026-11-07)", () => {
+  const nro = (documento: DatosParaQr["documento"]) => {
+    const r = jsonDelQr({ ...EJEMPLO, documento });
+    if (!r.ok) throw new Error("el QR de prueba no se armó");
+    return (JSON.parse(r.valor) as Record<string, unknown>)["nroDocRec"];
+  };
+
+  it("un pasaporte viejo en cero, sin cifras o un dato raro imprime 0 o sus cifras sin lanzar", () => {
+    expect(nro({ tipo: "PASAPORTE", numero: "0" })).toBe(0);
+    expect(nro({ tipo: "PASAPORTE", numero: "ABC000000" })).toBe(0);
+    expect(nro({ tipo: "PASAPORTE", numero: "ABCDEF" })).toBe(0);
+    expect(nro({ tipo: "DNI", numero: "ABC123456" })).toBe(123456);
+  });
+
+  // Previene que alguien vuelva a poner la cuenta estricta (la que lanza) en el camino de la impresión: imprimir una factura ya
+  // emitida no puede fallar por un dato congelado. Si esto falla, la hoja, el ticket o el PDF llaman a `numeroDeDocumentoParaArca`.
+  it("ningún archivo de la ruta de impresión llama a la cuenta estricta", () => {
+    const raiz = join(import.meta.dirname, "../../../..");
+    const carpetas = ["src/adaptadores/pdf", "src/adaptadores/qr", "src/modulos/fiscal/consultas"];
+    const archivos = [
+      "src/modulos/fiscal/dominio/qr-de-arca.ts",
+      "src/modulos/fiscal/dominio/modelo-de-impresion.ts",
+      ...carpetas.flatMap((c) =>
+        readdirSync(join(raiz, c))
+          .filter((n) => n.endsWith(".ts") && !n.endsWith(".test.ts"))
+          .map((n) => `${c}/${n}`),
+      ),
+    ];
+    expect(archivos.length).toBeGreaterThan(4);
+    for (const archivo of archivos) {
+      expect(readFileSync(join(raiz, archivo), "utf8"), archivo).not.toMatch(
+        /numeroDeDocumentoParaArca\b/,
+      );
+    }
   });
 });

@@ -318,6 +318,25 @@ describe("modeloDeImpresion: receptor, renglones y totales", () => {
     }
   });
 
+  it("un comprobante ya emitido con un pasaporte viejo en cero se imprime (hoja, ticket y QR con nroDocRec 0) sin lanzar y lo muestra tal cual", () => {
+    const base = facturaArmada(consumidorFinal, [renglon("121.00", "1", "21")]);
+    for (const numero of ["0", "ABC000000"]) {
+      const documento = { tipo: "PASAPORTE", numero } as const;
+      const emitido = imprimible(base, {
+        receptor: {
+          nombre: "Jane Doe",
+          documento,
+          condicionIva: "CONSUMIDOR_FINAL",
+          domicilio: null,
+        },
+      });
+      const m = modelo(emitido);
+      expect(m.receptor.documento).toEqual(documento);
+      const datos = new URL(m.qr.url).searchParams.get("p") ?? "";
+      expect(JSON.parse(atob(datos))).toMatchObject({ tipoDocRec: 94, nroDocRec: 0 });
+    }
+  });
+
   it("A discrimina neto e IVA por alícuota", () => {
     const a = facturaArmada(
       receptorInscripto,

@@ -8,7 +8,7 @@ import {
   CODIGO_DE_TIPO_DE_DOCUMENTO,
 } from "./codigos-de-arca";
 import type { TipoDeComprobante } from "./comprobante-emitido";
-import { numeroDeDocumentoParaArca, type DocumentoDelReceptor } from "./receptor";
+import { numeroDeDocumentoParaImprimir, type DocumentoDelReceptor } from "./receptor";
 
 /**
  * URL del QR de ARCA (spec H7 facturación §B.7): `{URL}?p={JSON en base64}`, con el JSON de la
@@ -76,7 +76,7 @@ export function jsonDelQr(datos: DatosParaQr): Resultado<string, ErrorDeQr> {
     `"moneda":"${CODIGO_DE_MONEDA[datos.total.moneda]}"`,
     `"ctz":1`,
     `"tipoDocRec":${CODIGO_DE_TIPO_DE_DOCUMENTO[datos.documento.tipo]}`,
-    `"nroDocRec":${numeroDeDocumentoParaArca(datos.documento)}`,
+    `"nroDocRec":${numeroDeDocumentoParaImprimir(datos.documento)}`,
     `"tipoCodAut":"${TIPO_DE_CODIGO_DE_AUTORIZACION}"`,
     `"codAut":${BigInt(datos.cae)}`,
   ];

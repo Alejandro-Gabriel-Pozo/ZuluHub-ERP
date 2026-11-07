@@ -7,7 +7,10 @@ import {
   TIPOS_DE_DOCUMENTO_DE_IDENTIDAD,
   numeroDeDocumentoDesdeTexto,
 } from "../../../primitivas/identificacion-fiscal/documento";
-import { numeroDeDocumentoInformadoAArca } from "../../../primitivas/identificacion-fiscal/numero-de-documento-para-arca";
+import {
+  numeroDeDocumentoGuardado,
+  numeroDeDocumentoInformadoAArca,
+} from "../../../primitivas/identificacion-fiscal/numero-de-documento-para-arca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import {
   LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL,
@@ -93,6 +96,16 @@ export function numeroDeDocumentoParaArca(documento: DocumentoDelReceptor): bigi
     default:
       return BigInt(documento.numero);
   }
+}
+
+/**
+ * El número de documento de un comprobante YA EMITIDO, para imprimir (el `nroDocRec` del QR de la hoja y el PDF). NUNCA
+ * lanza: un comprobante emitido está congelado e imprimir no valida ni pide nada a ARCA (dueño, 2026-11-07). Para un documento de solo
+ * dígitos da lo mismo que `numeroDeDocumentoParaArca`; la diferencia es solo ante un dato raro (sin cifras o en cero: 0, lo que se
+ * envió en su momento). Quien arma lo que se ENVÍA a ARCA usa `numeroDeDocumentoParaArca`.
+ */
+export function numeroDeDocumentoParaImprimir(documento: DocumentoDelReceptor): bigint {
+  return documento.tipo === "SIN_IDENTIFICAR" ? 0n : numeroDeDocumentoGuardado(documento.numero);
 }
 
 export type ContextoDeReceptor = Readonly<{
