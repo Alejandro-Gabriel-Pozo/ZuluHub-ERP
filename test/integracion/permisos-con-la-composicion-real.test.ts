@@ -11,7 +11,7 @@ import { crearMundoDeMarca } from "./marcas-apoyo";
 /**
  * Con la composición REAL (`armarConexiones().transaccionesDeApp()`, la que usa la web): los permisos se memorizan SOLO en lectura. En
  * una transacción que escribe, un cambio propio se ve en la lectura siguiente; en las de lectura, las listas de módulos que se reparten
- * entre los consumidores del pedido están congeladas. Previene: que `memorizar` quede en `true` (o se cablee distinto) y una operación
+ * entre los consumidores del pedido están congeladas. Previene: que la transacción que escribe reciba la carga que memoriza (la barrera de tipos está en `autorizacion.test.ts`) y una operación
  * que cambia un permiso decida con el viejo. Las pruebas de `lecturas-compartidas` usan el cableado del entorno de prueba y no lo ven.
  */
 

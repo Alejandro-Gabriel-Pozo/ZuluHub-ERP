@@ -51,6 +51,7 @@ import {
   type TenantsDb,
 } from "../../src/modulos/tenants/publico";
 import {
+  crearAutorizacionDeLecturaDePostgres,
   crearAutorizacionDePostgres,
   type AutorizacionDb,
 } from "../../src/adaptadores/postgres/autorizacion";
@@ -89,6 +90,7 @@ import {
 import type { AdminsDePlataforma } from "../../src/puertos/admins-de-plataforma";
 import type { AuditoriaDePlataforma } from "../../src/puertos/auditoria-de-plataforma";
 import type { CargaDeAutorizacionDePlataforma } from "../../src/puertos/autorizacion-de-plataforma";
+import type { CargaDeAutorizacion } from "../../src/puertos/autorizacion";
 import type { ColaDeTrabajos } from "../../src/puertos/cola-de-trabajos";
 import type { LecturasDeSesion } from "../../src/puertos/sesion";
 import type { IdempotenciaDePlataforma } from "../../src/puertos/idempotencia";
@@ -138,6 +140,38 @@ export function crearEntornoDePrueba(
   maximoDeConexiones = 5,
   ajustar: (tx: TxDePrueba) => TxDePrueba = (tx) => tx,
 ): TransaccionesDePostgres<TxDePrueba> {
+  const armarTx = (
+    db: Kysely<SinTablas>,
+    contexto: Contexto,
+    autorizacion: CargaDeAutorizacion,
+  ): TxDePrueba =>
+    ajustar({
+      db,
+      tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
+      empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
+      sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
+      personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
+      membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
+      asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
+      invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
+      traspasos: crearRepositorioDeTraspasos(db.withTables<IdentidadDb>()),
+      trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
+      auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
+      cola: crearColaDePostgres(db.withTables<ColaDb>()),
+      auditoriaDePlataforma: crearAuditoriaDePlataformaDePostgres(
+        db.withTables<AuditoriaDePlataformaDb>(),
+        contexto,
+      ),
+      idempotencia: crearIdempotenciaDePostgres(db.withTables<IdempotenciaDb>(), contexto),
+      autorizacionDePlataforma: crearAutorizacionDePlataformaDePostgres(
+        db.withTables<AutorizacionDePlataformaDb>(),
+      ),
+      admins: crearAdminsDePostgres(db.withTables<AdminsDb>()),
+      referenciasDeError: crearReferenciasDeErrorDePostgres(db.withTables<ReferenciasDeErrorDb>()),
+      autorizacion,
+      niveles: crearNivelesDeControlDePostgres<string>(db.withTables<NivelesDeControlDb>()),
+      sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
+    });
   return crearTransacciones<TxDePrueba>({
     urls: {
       OPERATIVO: base.app,
@@ -145,38 +179,11 @@ export function crearEntornoDePrueba(
       PLATAFORMA: base.plataforma,
       TRABAJOS: base.trabajos,
     },
-    armar: (db, contexto, modo) =>
-      ajustar({
-        db,
-        tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
-        empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
-        sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
-        personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
-        membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
-        asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
-        invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
-        traspasos: crearRepositorioDeTraspasos(db.withTables<IdentidadDb>()),
-        trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
-        auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
-        cola: crearColaDePostgres(db.withTables<ColaDb>()),
-        auditoriaDePlataforma: crearAuditoriaDePlataformaDePostgres(
-          db.withTables<AuditoriaDePlataformaDb>(),
-          contexto,
-        ),
-        idempotencia: crearIdempotenciaDePostgres(db.withTables<IdempotenciaDb>(), contexto),
-        autorizacionDePlataforma: crearAutorizacionDePlataformaDePostgres(
-          db.withTables<AutorizacionDePlataformaDb>(),
-        ),
-        admins: crearAdminsDePostgres(db.withTables<AdminsDb>()),
-        referenciasDeError: crearReferenciasDeErrorDePostgres(
-          db.withTables<ReferenciasDeErrorDb>(),
-        ),
-        autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>(), {
-          memorizar: modo.soloLectura,
-        }),
-        niveles: crearNivelesDeControlDePostgres<string>(db.withTables<NivelesDeControlDb>()),
-        sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
-      }),
+    armar: (db, contexto) =>
+      armarTx(db, contexto, crearAutorizacionDePostgres(db.withTables<AutorizacionDb>())),
+    // Como la composición real: en lectura se resuelven una vez los permisos; al escribir, nunca.
+    armarDeLectura: (db, contexto) =>
+      armarTx(db, contexto, crearAutorizacionDeLecturaDePostgres(db.withTables<AutorizacionDb>())),
     maximoDeConexiones,
     clave: base.clave,
   });

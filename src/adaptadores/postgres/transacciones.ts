@@ -26,13 +26,6 @@ export { ErrorDeConfiguracion };
  * - Ante 40001 o 40P01 repite el trabajo completo, con espera creciente y al azar.
  */
 
-/**
- * Cómo se arma lo que recibe el trabajo. `soloLectura`: la transacción no puede escribir (lo hace cumplir Postgres), así que las lecturas
- * repetidas dentro de ella (los permisos, por ejemplo) pueden resolverse una sola vez sin ocultar un cambio propio. En una de escritura
- * nunca se memoriza: el trabajo puede leer, escribir y volver a leer lo que él mismo cambió.
- */
-export type ModoDeArmado = Readonly<{ soloLectura: boolean }>;
-
 export type ConfiguracionDeTransacciones<Tx> = Readonly<{
   /**
    * Cadena de conexión por puerta. Los valores los carga el dueño en el entorno; acá solo se usan.
@@ -52,7 +45,12 @@ export type ConfiguracionDeTransacciones<Tx> = Readonly<{
    * de la transacción (el mismo que se firma): lo usan los adaptadores que escriben quién actuó
    * (auditoría e idempotencia de plataforma) para sacar el actor del contexto y no del llamador.
    */
-  armar: (db: Kysely<SinTablas>, contexto: Contexto, modo: ModoDeArmado) => Tx;
+  armar: (db: Kysely<SinTablas>, contexto: Contexto) => Tx;
+  /**
+   * Lo mismo para las transacciones de SOLO LECTURA y las unidades de lecturas compartidas, que pueden resolver una sola vez lo que se
+   * repite (los permisos). Si falta, esas transacciones usan `armar`. Las que escriben usan SIEMPRE `armar`: no tienen cómo memorizar.
+   */
+  armarDeLectura?: (db: Kysely<SinTablas>, contexto: Contexto) => Tx;
   maximoDeConexiones?: number;
   /**
    * Se avisa cuando el servidor corta una conexión OCIOSA (por ejemplo, Neon al escalar a cero). No
@@ -148,9 +146,9 @@ export function crearTransacciones<Tx>(
         const token = firmarContexto(clave, opciones.contexto, Math.floor(Date.now() / 1000));
         await sql`select set_config('app.ctx', ${token}, true)`.execute(trx);
         const resultado = await trabajo(
-          configuracion.armar(trx, opciones.contexto, {
-            soloLectura: opciones.soloLectura === true,
-          }),
+          (opciones.soloLectura === true
+            ? (configuracion.armarDeLectura ?? configuracion.armar)
+            : configuracion.armar)(trx, opciones.contexto),
         );
         if (!resultado.ok) throw new Abortar(resultado);
         // Si el trabajo atrapó un error de la base y devolvió `ok`, la transacción quedó abortada y
@@ -215,7 +213,10 @@ export function crearTransacciones<Tx>(
       try {
         const token = firmarContexto(clave, unidad.contexto, Math.floor(Date.now() / 1000));
         await sql`select set_config('app.ctx', ${token}, true)`.execute(trx);
-        return { trx, tx: configuracion.armar(trx, unidad.contexto, { soloLectura: true }) };
+        return {
+          trx,
+          tx: (configuracion.armarDeLectura ?? configuracion.armar)(trx, unidad.contexto),
+        };
       } catch (error) {
         await trx.rollback().execute();
         throw error;
