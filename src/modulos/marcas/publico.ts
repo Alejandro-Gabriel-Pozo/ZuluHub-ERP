@@ -44,6 +44,7 @@ export {
 } from "./dominio/tema";
 export {
   DEFINICION_VACIA,
+  LARGO_MAXIMO_DEL_NOMBRE,
   completarDefinicion,
   resolverDefinicion,
   validarLogo,

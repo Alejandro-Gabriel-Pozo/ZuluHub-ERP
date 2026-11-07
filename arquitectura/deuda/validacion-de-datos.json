@@ -1,7 +1,7 @@
 {
   "apps/plataforma/logica/entrada-de-submarca.ts": {
     "prohibidos": 0,
-    "duplicados": 2
+    "duplicados": 1
   },
   "apps/plataforma/logica/entrada-del-plan.ts": {
     "prohibidos": 0,
