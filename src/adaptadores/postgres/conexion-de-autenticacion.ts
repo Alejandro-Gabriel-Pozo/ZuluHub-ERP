@@ -28,6 +28,8 @@ export type ConfiguracionDeConexionDeAutenticacion = Readonly<{
   /** Cadena de conexión del rol de autenticación. El valor lo carga el dueño en el entorno; acá solo se usa. */
   url: string;
   maximoDeConexiones?: number;
+  /** Cuánto espera un pedido por una conexión libre (por omisión, `PLAZO_PARA_CONSEGUIR_CONEXION_EN_MS`). Lo fija el primero que arma el pozo. */
+  plazoParaConseguirConexionEnMs?: number;
   /** Se avisa cuando el servidor corta una conexión OCIOSA (el pool la descarta y abre otra). */
   alCortarseUnaConexionOciosa?: (error: Error) => void;
 }>;
@@ -55,6 +57,9 @@ export function crearConexionDeAutenticacion(
     ...(configuracion.maximoDeConexiones === undefined
       ? {}
       : { maximoDeConexiones: configuracion.maximoDeConexiones }),
+    ...(configuracion.plazoParaConseguirConexionEnMs === undefined
+      ? {}
+      : { plazoParaConseguirConexionEnMs: configuracion.plazoParaConseguirConexionEnMs }),
     ...(configuracion.alCortarseUnaConexionOciosa === undefined
       ? {}
       : { alCortarseUnaConexionOciosa: configuracion.alCortarseUnaConexionOciosa }),
