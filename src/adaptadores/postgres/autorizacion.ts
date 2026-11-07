@@ -8,6 +8,8 @@ import { sucursalId } from "../../primitivas/identificadores/marca";
 import type { ContextoOperativo } from "../../contexto/contexto";
 import type {
   CargaDeAutorizacion,
+  CargaDeAutorizacionDeLectura,
+  CargaDeAutorizacionSinMemoria,
   DatosDelActor,
   OpcionesDeAlcance,
 } from "../../puertos/autorizacion";
@@ -82,20 +84,16 @@ function validarNombresDeModulo(origen: string, nombres: readonly string[]): rea
   return [...nombres].sort();
 }
 
-export type OpcionesDeAutorizacion = Readonly<{
-  /**
-   * Resuelve una sola vez cada lectura de permisos repetida (el rol, los módulos y el alcance de sucursales) mientras viva este adaptador:
-   * lo que vive una transacción de SOLO LECTURA o una unidad de lecturas compartidas de un pedido (`conLecturasCompartidas`). Solo para
-   * lectura: en una transacción que escribe, un permiso puede cambiar dentro de ella (un traspaso de gerente, por ejemplo) y la lectura
-   * siguiente tiene que verlo. Nunca vive más que esa transacción o ese pedido: se arma de nuevo en cada una. Por omisión, no memoriza.
-   */
-  memorizar?: boolean;
-}>;
-
-export function crearAutorizacionDePostgres(
-  db: Kysely<AutorizacionDb>,
-  opciones: OpcionesDeAutorizacion = {},
-): CargaDeAutorizacion {
+/**
+ * Dos fábricas, a propósito, y no una con una opción: la de ESCRITURA (`crearAutorizacionDePostgres`) no tiene cómo memorizar, así que
+ * no existe una línea que alguien pueda cambiar por `memorizar: true` para una transacción que escribe (ahí un permiso puede cambiar dentro de
+ * ella, un traspaso de gerente por ejemplo, y la lectura siguiente tiene que verlo). La de LECTURA (`crearAutorizacionDeLecturaDePostgres`)
+ * resuelve una sola vez cada lectura de permisos repetida (rol, módulos y alcance de sucursales) mientras viva el adaptador: una transacción
+ * de solo lectura o una unidad de lecturas compartidas de un pedido (`conLecturasCompartidas`). Nunca vive más que esa transacción o ese
+ * pedido: se arma de nuevo en cada una. El tipo distingue las dos: la de lectura no entra donde se pide la de escritura (`tsc` falla; caso
+ * inyectado en `autorizacion.test.ts`). Chequeo en ejecución: `test/integracion/permisos-con-la-composicion-real.test.ts`.
+ */
+function armarAutorizacion(db: Kysely<AutorizacionDb>, memorizar: boolean): CargaDeAutorizacion {
   /**
    * La memoria de este adaptador: por contexto (el mismo objeto) y por clave. Un contexto distinto no comparte nada (si por error se
    * usara el mismo adaptador con otro contexto, lee de nuevo). Guarda la PROMESA, así que dos lecturas a la vez comparten la consulta;
@@ -108,7 +106,7 @@ export function crearAutorizacionDePostgres(
     clave: string,
     leer: () => Promise<T>,
   ): Promise<T> {
-    if (opciones.memorizar !== true) return leer();
+    if (!memorizar) return leer();
     if (contextoMemorizado !== null && contextoMemorizado !== contexto) return leer();
     contextoMemorizado = contexto;
     const guardada = memoria.get(clave);
@@ -207,9 +205,10 @@ export function crearAutorizacionDePostgres(
     if (rige !== null && rige.modulos === null) {
       throw new RangeError("la versión de plan vigente del tenant no existe en la base");
     }
+    // Congeladas: con la memoria, todos los consumidores de un pedido reciben las MISMAS listas; ninguno puede cambiarle algo a otro.
     return {
-      modulosActivados: validarNombresDeModulo("activados", activadas),
-      modulosHabilitados: validarNombresDeModulo("plan", rige?.modulos ?? []),
+      modulosActivados: Object.freeze(validarNombresDeModulo("activados", activadas)),
+      modulosHabilitados: Object.freeze(validarNombresDeModulo("plan", rige?.modulos ?? [])),
     };
   }
 
@@ -259,4 +258,18 @@ export function crearAutorizacionDePostgres(
     const filas = await consulta.orderBy("a.sucursal_id").execute();
     return filas.map((fila) => sucursalId(fila.sucursal_id));
   }
+}
+
+/** Para transacciones que ESCRIBEN: lee los permisos de la base cada vez que se le pregunta. */
+export function crearAutorizacionDePostgres(
+  db: Kysely<AutorizacionDb>,
+): CargaDeAutorizacionSinMemoria {
+  return armarAutorizacion(db, false);
+}
+
+/** Para transacciones de SOLO LECTURA y unidades de lecturas compartidas: resuelve una vez lo que se repite. */
+export function crearAutorizacionDeLecturaDePostgres(
+  db: Kysely<AutorizacionDb>,
+): CargaDeAutorizacionDeLectura {
+  return Object.assign(armarAutorizacion(db, true), { memoriza: true as const });
 }

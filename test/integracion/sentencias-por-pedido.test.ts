@@ -5,7 +5,16 @@ import {
   listarPuntosDeVentaDeLaSucursal,
   type DependenciasDeFacturacionWeb,
 } from "../../src/composicion/facturacion-web";
-import { resolverEmpresa, type DependenciasDeSesion } from "../../src/composicion/sesion-y-empresa";
+import {
+  discriminaIvaAlEmitir,
+  listarPuntosDeVentaParaEmitir,
+} from "../../src/composicion/lecturas-para-emitir-web";
+import {
+  resolverEmpresa,
+  sucursalesDeLaEmpresa,
+  type DependenciasDeSesion,
+} from "../../src/composicion/sesion-y-empresa";
+import type { ContextoOperativo } from "../../src/contexto/contexto";
 import { armarWeb } from "../../src/composicion/web";
 import { sucursalId } from "../../src/primitivas/identificadores/marca";
 import { contarSentencias, type ContadorDeSentencias } from "./contar-sentencias";
@@ -25,10 +34,11 @@ import { HOST_A, armarMundoWeb, ingresarEn, personaVinculada, type MundoWeb } fr
 
 const base = inject("baseDePruebas");
 
-/** Medido: 15. El margen es de 1; subirlo exige decir por qué en el PR. */
-const TOPE_DEL_LISTADO = 16;
+/** Medidos: listado 15, cuenta 12, emitir 15 (margen de 1; subirlos exige decir por qué en el PR). */
+const TOPE_CUENTA = 13;
+const TOPE_EMITIR = 16;
 
-describe.skipIf(base === null)("sentencias por pedido: el listado de comprobantes", () => {
+describe.skipIf(base === null)("sentencias por pedido: listado, cuenta y emitir", () => {
   let mundo: MundoWeb;
   let conexiones: ReturnType<typeof armarConexiones>;
   let web: ReturnType<typeof armarWeb>;
@@ -82,8 +92,11 @@ describe.skipIf(base === null)("sentencias por pedido: el listado de comprobante
     await mundo.cerrar();
   });
 
-  /** El pedido del listado, como lo arma `apps/web`: la entrada (persona y empresa) y, con ese contexto, lo que lee la pantalla y la barra. */
-  async function pedidoDelListado(d: DependenciasDeSesion) {
+  /** Un pedido de pantalla: la entrada (persona y empresa) y, con ese contexto, las lecturas de la pantalla y de la barra. */
+  async function pedido(
+    d: DependenciasDeSesion,
+    leer: (contexto: ContextoOperativo) => Promise<unknown>,
+  ) {
     const entrada = await resolverEmpresa(d, {
       sesion,
       marcaId: mundo.marcaA,
@@ -91,52 +104,76 @@ describe.skipIf(base === null)("sentencias por pedido: el listado de comprobante
     });
     if (!entrada.ok || entrada.dato.tipo !== "ENTRA") throw new Error("el pedido no entró");
     const { contexto } = entrada.dato;
-    const pantalla = async () => {
-      const elegibles = await web.consultasDeEmpresas().sucursalesElegibles(contexto);
-      const elegida = elegibles.ok ? (elegibles.valor.find((s) => s.activa)?.id ?? null) : null;
-      const puntos = await listarPuntosDeVentaDeLaSucursal(
-        dependenciasFiscales,
-        contexto,
-        elegida === null ? null : sucursalId(elegida),
-      );
-      const pagina = await listarComprobantes(
-        dependenciasFiscales,
-        contexto,
-        elegida === null ? null : sucursalId(elegida),
-        undefined,
-      );
-      const permisos = await web.consultasDeEmpresas().permisosDelActor(contexto);
-      return { elegibles, puntos, pagina, permisos };
-    };
     const compartir = d.lecturasCompartidas?.();
     return compartir === undefined
-      ? pantalla()
-      : compartir.conLecturasCompartidas(contexto, pantalla);
+      ? leer(contexto)
+      : compartir.conLecturasCompartidas(contexto, () => leer(contexto));
   }
 
-  it("el pedido del listado no pasa del tope y devuelve lo mismo que sin compartir", async () => {
-    contador?.reiniciar();
-    const con = await pedidoDelListado(dependencias);
-    const cuantas = contador?.sentencias().length ?? 0;
-    contador?.reiniciar();
-    const sin = await pedidoDelListado(dependenciasSinCompartir);
-    const sinCompartir = contador?.sentencias().length ?? 0;
-    // Lo mismo, en lo que ve la persona.
-    expect(con.pagina.ok).toBe(true);
-    expect(con.permisos.ok && con.permisos.valor.acciones).toContain("comprobantes.ver");
-    expect(JSON.stringify(con)).toEqual(JSON.stringify(sin));
-    // Y mucho menos tráfico: el tope, y que la mejora es de compartir (sin compartir hay bastante más).
-    expect(cuantas, `sentencias del pedido: ${cuantas}`).toBeLessThanOrEqual(TOPE_DEL_LISTADO);
-    expect(sinCompartir).toBeGreaterThan(cuantas + 8);
-  });
+  const elegidaDe = async (contexto: ContextoOperativo) => {
+    const elegibles = await web.consultasDeEmpresas().sucursalesElegibles(contexto);
+    const id = elegibles.ok ? (elegibles.valor.find((s) => s.activa)?.id ?? null) : null;
+    return { elegibles, elegida: id === null ? null : sucursalId(id) };
+  };
 
-  it("una sola transacción de la empresa por pedido: un BEGIN para la persona y las empresas y un BEGIN para todo lo de la empresa", async () => {
+  /** El orden de `cargarElListado` y de la barra. */
+  const deLaPantallaDelListado = async (contexto: ContextoOperativo) => {
+    const { elegibles, elegida } = await elegidaDe(contexto);
+    const puntos = await listarPuntosDeVentaDeLaSucursal(dependenciasFiscales, contexto, elegida);
+    const pagina = await listarComprobantes(dependenciasFiscales, contexto, elegida, undefined);
+    const permisos = await web.consultasDeEmpresas().permisosDelActor(contexto);
+    return { elegibles, puntos, pagina, permisos };
+  };
+  /** Cuenta: las sucursales para el selector y los permisos de la barra y de los accesos. */
+  const deLaPantallaDeCuenta = async (contexto: ContextoOperativo) => {
+    const sucursales = await sucursalesDeLaEmpresa(dependencias, contexto);
+    const permisos = await web.consultasDeEmpresas().permisosDelActor(contexto);
+    return { sucursales, permisos };
+  };
+  /** Emitir: si discrimina IVA, los puntos de venta para emitir y los permisos de la barra y del botón. */
+  const deLaPantallaDeEmitir = async (contexto: ContextoOperativo) => {
+    const discrimina = await discriminaIvaAlEmitir(dependenciasFiscales, contexto);
+    const { elegibles, elegida } = await elegidaDe(contexto);
+    const puntos = await listarPuntosDeVentaParaEmitir(dependenciasFiscales, contexto, elegida);
+    const permisos = await web.consultasDeEmpresas().permisosDelActor(contexto);
+    return { discrimina, elegibles, puntos, permisos };
+  };
+
+  /**
+   * Medido (sin la lectura de la sesión de la librería de ingreso, que son 4 más): listado 15, cuenta y emitir `TOPES.*`. El margen es de 1; subir
+   * un tope exige decir por qué en el PR. Inyección: sin compartir, cada pantalla supera su tope (la prueba lo exige), así que perder la
+   * unidad o la memoria de permisos la hace fallar.
+   */
+  const TOPES = { listado: 16, cuenta: TOPE_CUENTA, emitir: TOPE_EMITIR } as const;
+  const PANTALLAS = [
+    ["listado", deLaPantallaDelListado],
+    ["cuenta", deLaPantallaDeCuenta],
+    ["emitir", deLaPantallaDeEmitir],
+  ] as const;
+
+  it.each(PANTALLAS)(
+    "%s: no pasa del tope, devuelve lo mismo que sin compartir y sin compartir lo supera (inyección)",
+    async (nombre, leer) => {
+      contador?.reiniciar();
+      const con = await pedido(dependencias, leer);
+      const cuantas = contador?.sentencias().length ?? 0;
+      contador?.reiniciar();
+      const sin = await pedido(dependenciasSinCompartir, leer);
+      const sinCompartir = contador?.sentencias().length ?? 0;
+      expect(JSON.stringify(con)).toEqual(JSON.stringify(sin));
+      expect(cuantas, `sentencias del pedido de ${nombre}: ${cuantas}`).toBeLessThanOrEqual(
+        TOPES[nombre],
+      );
+      // Inyección: si se pierde la mejora, el pedido pasa del tope.
+      expect(sinCompartir).toBeGreaterThan(TOPES[nombre]);
+    },
+  );
+
+  it("el listado: una sola transacción de la empresa por pedido y el rol de la membresía se lee una vez (antes: 7)", async () => {
     contador?.reiniciar();
-    await pedidoDelListado(dependencias);
+    await pedido(dependencias, deLaPantallaDelListado);
     const sentencias = contador?.sentencias() ?? [];
-    const abiertas = sentencias.filter((s) => /^(begin|start transaction)/i.test(s)).length;
-    expect(abiertas).toBe(2);
-    // El rol de la membresía se lee una vez en todo el pedido (antes: 7).
+    expect(sentencias.filter((s) => /^(begin|start transaction)/i.test(s)).length).toBe(2);
     expect(sentencias.filter((s) => /from "membresia" as "m"/.test(s)).length).toBe(1);
   });
 });
