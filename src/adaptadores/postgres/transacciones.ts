@@ -54,6 +54,8 @@ export type ConfiguracionDeTransacciones<Tx> = Readonly<{
    */
   armar: (db: Kysely<SinTablas>, contexto: Contexto, modo: ModoDeArmado) => Tx;
   maximoDeConexiones?: number;
+  /** Cuánto espera un pedido por una conexión libre (por omisión, `PLAZO_PARA_CONSEGUIR_CONEXION_EN_MS`). Lo fija el primero que arma el pozo. */
+  plazoParaConseguirConexionEnMs?: number;
   /**
    * Se avisa cuando el servidor corta una conexión OCIOSA (por ejemplo, Neon al escalar a cero). No
    * afecta a ninguna operación: el pool descarta la conexión y abre otra. Sirve para registrarlo.
@@ -121,6 +123,9 @@ export function crearTransacciones<Tx>(
       ...(configuracion.maximoDeConexiones === undefined
         ? {}
         : { maximoDeConexiones: configuracion.maximoDeConexiones }),
+      ...(configuracion.plazoParaConseguirConexionEnMs === undefined
+        ? {}
+        : { plazoParaConseguirConexionEnMs: configuracion.plazoParaConseguirConexionEnMs }),
       ...(configuracion.alCortarseUnaConexionOciosa === undefined
         ? {}
         : { alCortarseUnaConexionOciosa: configuracion.alCortarseUnaConexionOciosa }),

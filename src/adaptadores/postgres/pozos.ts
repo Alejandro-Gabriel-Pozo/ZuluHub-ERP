@@ -22,10 +22,11 @@ import { ErrorDeConfiguracion } from "./errores";
 export const CONEXIONES_POR_POZO = 3;
 
 /**
- * Cuánto espera un pedido por una conexión libre cuando el pozo está agotado, antes de fallar. SUPUESTO: 10 s (cubre el arranque de una
- * base que estaba en reposo; revertirlo es cambiar este número).
+ * Cuánto espera un pedido por una conexión libre cuando el pozo está agotado, antes de fallar con un error controlado. 5 s (decisión del
+ * orquestador): el plan de Vercel Hobby corta la función a los 10 s, y esperar 10 s por una conexión se comería todo el pedido y dejaría una
+ * pantalla rota en vez del error genérico. Única fuente: las demás esperas de la base (las lecturas del sistema) usan este mismo plazo.
  */
-export const PLAZO_PARA_CONSEGUIR_CONEXION_EN_MS = 10_000;
+export const PLAZO_PARA_CONSEGUIR_CONEXION_EN_MS = 5_000;
 
 export type OpcionesDePozo = Readonly<{
   /** La cadena de conexión del rol. El valor lo carga el dueño en el entorno; acá solo se usa (y de clave del registro). */

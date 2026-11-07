@@ -4,13 +4,17 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { crearLecturasDeSistema } from "../../src/adaptadores/postgres/lecturas-de-sistema";
 import {
   CONEXIONES_POR_POZO,
+  PLAZO_PARA_CONSEGUIR_CONEXION_EN_MS,
   cantidadDePozosAbiertos,
   tomarPozo,
 } from "../../src/adaptadores/postgres/pozos";
 import { crearTransaccionesPublicas } from "../../src/adaptadores/postgres/transacciones-publicas";
 import { armarConexiones } from "../../src/composicion/conexiones";
+import { resolverEmpresa, type DependenciasDeSesion } from "../../src/composicion/sesion-y-empresa";
+import { crearConsultasDeSesion } from "../../src/modulos/identidad/publico";
+import type { SesionAutenticada } from "../../src/puertos/autenticacion";
 import { ok } from "../../src/primitivas/resultado/resultado";
-import { usuarioAuthId } from "../../src/primitivas/identificadores/marca";
+import { marcaComercialId, usuarioAuthId } from "../../src/primitivas/identificadores/marca";
 import {
   comoEmpresa,
   comoInvitacion,
@@ -329,6 +333,151 @@ describe.skipIf(base === null)("un pozo por rol", () => {
       await publico.cerrar();
       expect(cantidadDePozosAbiertos()).toBe(antes);
       expect(await hastaQue(async () => (await conexionesDe(rol)) === 0)).toBe(true);
+    });
+  });
+
+  describe("con el tope de producción (3) y el pozo agotado", () => {
+    it("el plazo de espera por una conexión es de 5 s (el plan Hobby de Vercel corta a los 10 s)", () => {
+      expect(PLAZO_PARA_CONSEGUIR_CONEXION_EN_MS).toBe(5_000);
+    });
+
+    it("un pozo agotado sale como error TIPADO de la persistencia y la capa web lo muestra como el error genérico con referencia, no como excepción cruda", async () => {
+      const entorno = crearEntornoDePrueba(propia.base, 1, undefined, 150);
+      const ocupante = tomarPozo({ url: propia.base.app, maximoDeConexiones: 1 });
+      const conexionOcupada = await ocupante.pozo.connect();
+      try {
+        const directo = await entorno.ejecutar(
+          { contexto: comoEmpresa(a.empresa), aislamiento: "read committed", soloLectura: true },
+          () => Promise.resolve(ok(1)),
+        );
+        expect(directo).toMatchObject({ ok: false, error: { tipo: "Inesperado" } });
+        const dentroDelPedido = await entorno.conLecturasCompartidas(comoEmpresa(b.empresa), () =>
+          Promise.resolve("sigue"),
+        );
+        expect(dentroDelPedido).toBe("sigue");
+        const registros: string[] = [];
+        const dependencias: DependenciasDeSesion = {
+          autenticacion: () => {
+            throw new Error("no se usa");
+          },
+          consultasDeSesion: () => crearConsultasDeSesion({ transacciones: entorno }),
+          casosDeUsoDeIdentidad: () => {
+            throw new Error("no se usa");
+          },
+          consultasDeEmpresas: () => {
+            throw new Error("no se usa");
+          },
+          lecturasCompartidas: () => entorno,
+          ahora: () => new Date(),
+          respuesta: { registrar: (d) => registros.push(d) },
+        };
+        const sesion = {
+          usuarioAuth: usuarioAuthId("33333333-3333-4333-8333-333333333333"),
+        } as unknown as SesionAutenticada;
+        const web = await resolverEmpresa(dependencias, {
+          sesion,
+          marcaId: marcaComercialId("44444444-4444-4444-8444-444444444444"),
+          cookieDeEmpresa: null,
+        });
+        expect(web).toMatchObject({ ok: false, error: { codigo: "ERROR_INTERNO" } });
+        expect(JSON.stringify(web)).not.toMatch(/timeout|pozo|conexi/i);
+      } finally {
+        conexionOcupada.release();
+        await ocupante.soltar();
+        await entorno.cerrar();
+      }
+    });
+
+    it("12 pedidos a la vez sobre un pozo de 3, donde cada uno sostiene una conexión y pide OTRA transacción, terminan todos sin trabarse", async () => {
+      const entorno = crearEntornoDePrueba(propia.base, CONEXIONES_POR_POZO);
+      try {
+        const desde = performance.now();
+        const resultados = await picoDurante(async () => {
+          const r = await Promise.all(
+            Array.from({ length: 12 }, async (_, i) => {
+              const e = [a, b, c][i % 3] as EmpresaDePrueba;
+              const contexto = comoEmpresa(e.empresa);
+              return entorno.conLecturasCompartidas(contexto, async () => {
+                const antes = await empresaQueVe(entorno, contexto, 0.01);
+                // Una transacción que no puede unirse: la unidad suelta su conexión ANTES de pedir otra.
+                const escritura = await entorno.ejecutar({ contexto }, () =>
+                  Promise.resolve(ok(1)),
+                );
+                const despues = await empresaQueVe(entorno, contexto, 0.01);
+                return {
+                  esperada: e.empresa,
+                  antes: antes.e,
+                  despues: despues.e,
+                  ok: escritura.ok,
+                };
+              });
+            }),
+          );
+          return r;
+        });
+        void resultados;
+        expect(performance.now() - desde).toBeLessThan(PLAZO_PARA_CONSEGUIR_CONEXION_EN_MS);
+      } finally {
+        await entorno.cerrar();
+      }
+    });
+
+    it("si una lectura del pedido pide otra DENTRO de su propio trabajo (espera cruzada), con el pozo de producción termina bien o falla cerrado: nunca queda colgado, y el pozo sigue andando", async () => {
+      const entorno = crearEntornoDePrueba(propia.base, CONEXIONES_POR_POZO, undefined, 400);
+      try {
+        const desde = performance.now();
+        const resultados = await Promise.all(
+          Array.from({ length: 12 }, (_, i) => {
+            const contexto = comoEmpresa(([a, b, c][i % 3] as EmpresaDePrueba).empresa);
+            return entorno.conLecturasCompartidas(contexto, () =>
+              entorno.ejecutar(
+                { contexto, aislamiento: "read committed", soloLectura: true },
+                async () => {
+                  // Sostiene la conexión de la unidad y pide otra transacción.
+                  const adentro = await entorno.ejecutar(
+                    { contexto, aislamiento: "read committed", soloLectura: true },
+                    () => Promise.resolve(ok(1)),
+                  );
+                  return ok(adentro.ok ? "salio" : "fallo-cerrado");
+                },
+              ),
+            );
+          }),
+        );
+        // Cada pedido terminó: o bien salió, o bien falló cerrado (error tipado de pozo agotado), pero ninguno se quedó esperando.
+        for (const r of resultados) {
+          expect(r.ok || r.error.tipo === "Inesperado").toBe(true);
+          if (r.ok) expect(["salio", "fallo-cerrado"]).toContain(r.valor);
+        }
+        expect(performance.now() - desde).toBeLessThan(5_000);
+        expect(await empresaQueVe(entorno, comoEmpresa(a.empresa))).toMatchObject({ e: a.empresa });
+      } finally {
+        await entorno.cerrar();
+      }
+    });
+
+    it("el `ping` de las lecturas del sistema con el pozo agotado falla a su plazo y la consulta que quedó esperando se descarta sola (no queda cola)", async () => {
+      // El pozo de producción (3) y su espera de 200 ms; el `ping` espera 100 ms.
+      const ocupante = tomarPozo({ url: propia.base.app, plazoParaConseguirConexionEnMs: 200 });
+      const ocupadas = await Promise.all(
+        Array.from({ length: CONEXIONES_POR_POZO }, () => ocupante.pozo.connect()),
+      );
+      const sistema = crearLecturasDeSistema({ url: propia.base.app, plazoEnMs: 100 });
+      try {
+        const desde = performance.now();
+        await expect(sistema.ping()).rejects.toThrow(/a tiempo|timeout/i);
+        expect(performance.now() - desde).toBeLessThan(180);
+        // El ping ya falló pero su consulta sigue en la cola del pozo hasta que el pozo la descarte por su propio plazo.
+        expect(ocupante.pozo.waitingCount).toBeLessThanOrEqual(1);
+        expect(await hastaQue(() => Promise.resolve(ocupante.pozo.waitingCount === 0), 1000)).toBe(
+          true,
+        );
+        expect(ocupante.pozo.totalCount).toBe(CONEXIONES_POR_POZO);
+      } finally {
+        for (const conexion of ocupadas) conexion.release();
+        await sistema.cerrar();
+        await ocupante.soltar();
+      }
     });
   });
 

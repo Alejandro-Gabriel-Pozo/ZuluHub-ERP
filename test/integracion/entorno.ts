@@ -137,6 +137,7 @@ export function crearEntornoDePrueba(
   base: BaseDePruebas,
   maximoDeConexiones = 5,
   ajustar: (tx: TxDePrueba) => TxDePrueba = (tx) => tx,
+  plazoParaConseguirConexionEnMs?: number,
 ): TransaccionesDePostgres<TxDePrueba> {
   return crearTransacciones<TxDePrueba>({
     urls: {
@@ -178,6 +179,7 @@ export function crearEntornoDePrueba(
         sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
       }),
     maximoDeConexiones,
+    ...(plazoParaConseguirConexionEnMs === undefined ? {} : { plazoParaConseguirConexionEnMs }),
     clave: base.clave,
   });
 }
