@@ -101,6 +101,8 @@ describe("cada caso del catálogo se comporta como su estado dice", () => {
   );
 
   it("la batería entera corre dentro del presupuesto de trabajo (procesos lanzados), no de tiempo", () => {
+    // El contador cuenta algo: si se rompiera y diera 0, el tope de abajo pasaría en vacío.
+    expect(procesosDeLaBateria).toBeGreaterThan(0);
     expect(procesosDeLaBateria).toBeLessThan(PRESUPUESTO_DE_PROCESOS);
     // Cota de tiempo holgada ADEMÁS del conteo: el conteo no ve un guardián más lento por proceso; esto sí (3× los 60 s originales).
     expect(duracionEnMs).toBeLessThan(COTA_DE_TIEMPO_EN_MS);

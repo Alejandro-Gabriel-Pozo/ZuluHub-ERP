@@ -18,11 +18,19 @@ const CARPETA = join(process.cwd(), "test", "integracion");
 const USA_TOTP =
   /\b(?:codigoDeTotp|codigoDeLaAplicacion)\b|two-factor\/|from "\.\/(?:autenticacion-plataforma-apoyo|consola-apoyo)"/;
 const FECHA_QUIETA = /^[ \t]*usarFechaQuietaDeTotp\(\);/m;
-const TOCA_EL_RELOJ = /\bvi\.(?:useRealTimers|useFakeTimers)\s*\(/;
+// Por NOMBRE y no por forma de llamada: `vi.useRealTimers()`, `vi["useRealTimers"]()` y `const { useRealTimers } = vi` nombran lo mismo.
+const TOCA_EL_RELOJ = /\b(?:useRealTimers|useFakeTimers)\b/;
 
-/** Sin comentarios de bloque ni líneas comentadas (lo que sigue a `//` en medio de una línea no se toca: puede ser una URL). */
+/**
+ * Sin comentarios de bloque ni líneas comentadas (lo que sigue a `//` en medio de una línea no se toca: puede ser una URL). Los
+ * textos entre comillas se saltean enteros: un `"src/**"` dentro de un string no abre un comentario que se coma el código siguiente.
+ * Límite: no entiende `${}` anidados con backticks ni literales de expresión regular con comillas.
+ */
 const sinComentarios = (texto: string): string =>
-  texto.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
+  texto.replace(
+    /("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`)|\/\*[\s\S]*?\*\/|^[ \t]*\/\/.*$/gm,
+    (_coincidencia, cadena: string | undefined) => cadena ?? "",
+  );
 
 /** Por archivo, qué incumple (vacío si cumple). */
 function incumplimientos(archivos: ReadonlyMap<string, string>): string[] {
@@ -64,6 +72,11 @@ describe("TOTP con la fecha quieta", () => {
       "roto-llamada-al-final-de-una-linea.test.ts": `const c = codigoDeTotp(s); // usarFechaQuietaDeTotp();`,
       "roto-reloj-real.test.ts": `const c = codigoDeTotp(s);\n${llamada}\nafterEach(() => { vi.useRealTimers(); });`,
       "roto-reloj-propio.test.ts": `const c = codigoDeTotp(s);\n${llamada}\nvi.useFakeTimers();`,
+      "roto-reloj-desestructurado.test.ts": `const c = codigoDeTotp(s);\n${llamada}\nconst { useRealTimers } = vi;`,
+      "roto-reloj-con-corchetes.test.ts": `const c = codigoDeTotp(s);\n${llamada}\nvi["useRealTimers"]();`,
+      "roto-comentario-falso-en-un-texto.test.ts":
+        'const g = "src/**";\nconst c = codigoDeTotp(s);\n/* fin */',
+      "sano-texto-con-barras.test.ts": `const g = "src/**/*.ts";\nconst c = codigoDeTotp(s);\n${llamada}`,
       "ajeno.test.ts": 'import { x } from "./entorno";',
       "uso-solo-comentado.test.ts": "// codigoDeTotp(s) y two-factor/ en un comentario",
     };
@@ -76,6 +89,9 @@ describe("TOTP con la fecha quieta", () => {
         "roto-llamada-en-comentario-de-bloque.test.ts: falta usarFechaQuietaDeTotp()",
         "roto-llamada-en-comentario-de-linea.test.ts: falta usarFechaQuietaDeTotp()",
         "roto-reloj-propio.test.ts: llama a vi.useRealTimers/useFakeTimers",
+        "roto-reloj-desestructurado.test.ts: llama a vi.useRealTimers/useFakeTimers",
+        "roto-reloj-con-corchetes.test.ts: llama a vi.useRealTimers/useFakeTimers",
+        "roto-comentario-falso-en-un-texto.test.ts: falta usarFechaQuietaDeTotp()",
         "roto-reloj-real.test.ts: llama a vi.useRealTimers/useFakeTimers",
       ].sort(),
     );

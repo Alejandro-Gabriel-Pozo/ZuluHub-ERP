@@ -43,7 +43,8 @@ const OPERATIVAS = [
   "auditoria_acceso_grupo",
 ];
 
-/** Las tablas que el código lee: la primera palabra de cada `selectFrom`/`innerJoin`/`leftJoin`. */
+/** Las tablas que el código lee: la primera palabra de cada `selectFrom`/`innerJoin`/`leftJoin`.
+ * Límite: no ve las tablas de un SQL crudo con sql``; esas se revisan a mano. */
 const tablasLeidas = [
   ...codigo.matchAll(/\.(?:selectFrom|innerJoin|leftJoin)\(\s*"([a-z_]+)(?: as \w+)?"/g),
 ].map((m) => m[1]);
