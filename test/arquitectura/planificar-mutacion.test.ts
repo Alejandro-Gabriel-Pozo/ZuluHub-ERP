@@ -630,7 +630,7 @@ describe("planificador de mutación: apps/** (las aplicaciones importan de src, 
     );
     expect(
       sinDeclarar,
-      "estas pruebas mencionan `apps/` y leen archivos: si leen archivos de apps/ como texto, declaralas en LECTURAS_DE_APPS (arquitectura/planificar-mutacion.cjs)",
+      "estas pruebas mencionan `apps/` y leen archivos: si leen archivos de apps/ como texto, declaralas en LECTURAS_DE_APPS (arquitectura/lecturas-de-apps.json)",
     ).toEqual([]);
   });
 });
