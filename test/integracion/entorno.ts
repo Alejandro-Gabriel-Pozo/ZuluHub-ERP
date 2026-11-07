@@ -259,7 +259,7 @@ let siguienteCuerpo = randomInt(0, CUERPOS_POSIBLES);
 /**
  * CUIT válido, distinto en cada llamada de este proceso: una secuencia (contador) y no un sorteo, porque dos sorteos pueden
  * repetirse (cumpleaños) y un CUIT repetido choca con la unicidad de la base (caso real: «Estabilidad» en #191). Entre procesos
- * distintos la secuencia arranca en un punto al azar de 10^8 cuerpos. El dígito verificador sale de `digitoVerificadorDeCuit`; si
+ * distintos la secuencia arranca en un punto al azar de 10^8 cuerpos: la unicidad entre procesos es PROBABILÍSTICA (≈1,7e-3 de que dos se pisen con 6 000 llamadas), no una garantía. El dígito verificador sale de `digitoVerificadorDeCuit`; si
  * un cuerpo no tiene verificador válido se salta.
  */
 export function cuitAlAzar(): Cuit {

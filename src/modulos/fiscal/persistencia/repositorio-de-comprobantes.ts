@@ -9,7 +9,7 @@ import { err, ok } from "../../../primitivas/resultado/resultado";
 import { TIPOS_DE_COMPROBANTE, claseDeComprobante } from "../dominio/comprobante-emitido";
 import { comprobanteId, type ComprobanteId } from "../dominio/identificadores";
 import { type FilaDeComprobante } from "./fila-de-comprobante";
-import { deLaLista, exigir } from "./repositorios";
+import { deLaLista, exigir } from "./ayudas-de-repositorio";
 import type { FiscalDb } from "./tablas";
 
 import {

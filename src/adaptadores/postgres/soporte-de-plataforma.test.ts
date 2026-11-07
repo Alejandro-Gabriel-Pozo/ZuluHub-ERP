@@ -11,11 +11,10 @@ import { describe, expect, it } from "vitest";
 // El adaptador se parte por responsabilidad (`soporte-de-plataforma-*.ts`): la barrera lee TODAS las partes,
 // para que partirlo no deje un trozo sin vigilar (se toma por prefijo: una parte nueva entra sola).
 const carpeta = fileURLToPath(new URL(".", import.meta.url));
-const fuente = readdirSync(carpeta)
-  .filter((f) => /^soporte-de-plataforma(-[a-z-]+)?\.ts$/.test(f))
-  .sort()
-  .map((f) => readFileSync(`${carpeta}${f}`, "utf8"))
-  .join("\n");
+const archivos = readdirSync(carpeta)
+  .filter((f) => /^soporte-de-plataforma(-[A-Za-z0-9_-]+)?\.ts$/.test(f))
+  .sort();
+const fuente = archivos.map((f) => readFileSync(`${carpeta}${f}`, "utf8")).join("\n");
 const codigo = fuente.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 const PERMITIDAS = [
@@ -44,12 +43,28 @@ const OPERATIVAS = [
   "auditoria_acceso_grupo",
 ];
 
-/** Las tablas que el código lee: la primera palabra de cada `selectFrom`/`innerJoin`/`leftJoin`. */
+/** Las tablas que el código lee: la primera palabra de cada `selectFrom`/`innerJoin`/`leftJoin`.
+ * Límite: no ve las tablas de un SQL crudo con sql``; esas se revisan a mano. */
 const tablasLeidas = [
   ...codigo.matchAll(/\.(?:selectFrom|innerJoin|leftJoin)\(\s*"([a-z_]+)(?: as \w+)?"/g),
 ].map((m) => m[1]);
 
 describe("el adaptador de lectura de soporte", () => {
+  it("vigila exactamente las partes esperadas y ninguna importa algo fuera de ellas", () => {
+    // Un hijo que se mude fuera del prefijo, o uno nuevo, no puede escaparse de la barrera: lo que
+    // las partes importan de la carpeta tiene que estar dentro del conjunto que se lee.
+    expect(archivos).toEqual([
+      "soporte-de-plataforma-comunes.ts",
+      "soporte-de-plataforma-db.ts",
+      "soporte-de-plataforma-listas.ts",
+      "soporte-de-plataforma.ts",
+    ]);
+    const importados = [...fuente.matchAll(/from "(\.\/[^"]+)"/g)].map((m) =>
+      `${m[1]}.ts`.slice(2),
+    );
+    for (const f of importados) expect(archivos, f).toContain(f);
+  });
+
   it("lee tablas (hay algo que revisar)", () => {
     expect(new Set(tablasLeidas)).toEqual(new Set(PERMITIDAS));
   });

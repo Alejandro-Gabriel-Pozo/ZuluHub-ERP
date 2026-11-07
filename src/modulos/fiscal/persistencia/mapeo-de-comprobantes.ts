@@ -32,7 +32,7 @@ import { importesParaArca } from "../dominio/importes-para-arca";
 import type { Receptor } from "../dominio/receptor";
 import { documentoDelReceptorDeLaBase } from "./documento-del-receptor";
 import { sucursalCongeladaDeLaFila, type FilaDeComprobante } from "./fila-de-comprobante";
-import { deLaLista, exigir } from "./repositorios";
+import { deLaLista, exigir } from "./ayudas-de-repositorio";
 
 import type {
   AltaDeComprobante,

@@ -24,6 +24,9 @@ export function deLaLista<T extends string>(lista: readonly T[], valor: string, 
   return encontrado;
 }
 
+/** Los bytes cifrados como `Buffer` para la base (certificados y accesos). */
+export const aBytes = (b: Uint8Array) => Buffer.from(b);
+
 /**
  * Serializa dos altas con el MISMO `id` (`pg_advisory_xact_lock`, se libera al terminar la
  * transacción). `ON CONFLICT (id) DO NOTHING` solo absorbe el conflicto del `id`: dos altas

@@ -19,8 +19,9 @@ import { pasaporteDesdeTexto } from "./pasaporte";
  *   informar a ARCA: son dos datos con ficha propia, `pasaporte.ts` (la figura) y `numero-de-documento-para-arca.ts` (lo que se manda).
  *   NO VERIFICADO que ARCA acepte el tipo 94 con esa parte numérica (se prueba en homologación). Salvo el pasaporte, la forma
  *   canónica son solo dígitos.
- * - Cómo se muestra: con guiones (CUIT/CUIL/CDI) y con puntos (DNI). Hoy lo hace la web por su cuenta (`formato-fiscal.ts`) y la
- *   consola otra vez (`formato-de-cuit.ts`); unificarlo es otro paso, NO este.
+ * - Cómo se muestra: con guiones (CUIT/CUIL/CDI) y con puntos (DNI). El CUIT con guiones lo arma una sola función
+ *   (`cuit.ts`: `cuitParaMostrar`), que importan la web y la consola; los puntos del DNI siguen en la web (`formato-fiscal.ts`) y
+ *   pasarlos acá es otro paso.
  * - Obligatorio/opcional: lo decide quien la usa. Con el consumidor final sin identificar no hay documento (tipo `SIN_IDENTIFICAR`).
  * - Único: el del receptor no. Quién lo cambia: nadie, se congela en el comprobante.
  * - Verificado o declarado: de CUIT/CUIL/CDI se verifica el dígito verificador; el resto es solo DECLARADO. Compatible con

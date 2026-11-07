@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import { usarFechaQuietaDeTotp } from "./autenticacion-plataforma-apoyo";
 import { opcionesDeInstancia } from "../../src/adaptadores/autenticacion/opciones";
 import { ErrorInternoDeIngreso } from "../../src/adaptadores/autenticacion/autenticacion-de-better-auth";
 import {
@@ -38,6 +39,7 @@ const HOST_A = "app.marca-a.test";
 const HOST_B = "app.marca-b.test";
 
 describe.skipIf(base === null)("autenticación: ingreso con Google (proveedor local)", () => {
+  usarFechaQuietaDeTotp();
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let proveedor: ProveedorLocal;
   let a: AutenticacionDePrueba;
