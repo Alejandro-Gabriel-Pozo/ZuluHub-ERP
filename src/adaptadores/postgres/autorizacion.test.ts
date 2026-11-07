@@ -1,6 +1,9 @@
 import type { Kysely } from "kysely";
 import { describe, expect, it } from "vitest";
-import type { CargaDeAutorizacionSinMemoria } from "../../puertos/autorizacion";
+import type {
+  CargaDeAutorizacionDeLectura,
+  CargaDeAutorizacionSinMemoria,
+} from "../../puertos/autorizacion";
 import {
   crearAutorizacionDeLecturaDePostgres,
   crearAutorizacionDePostgres,
@@ -19,11 +22,19 @@ describe("las dos fábricas de la carga de autorización", () => {
     expect(crearAutorizacionDeLecturaDePostgres(SIN_BASE).memoriza).toBe(true);
   });
 
-  it("caso inyectado: la de lectura NO entra donde se pide la de escritura (si `tsc` deja de fallar acá, se perdió la barrera)", () => {
-    // @ts-expect-error la carga que memoriza no es asignable a la que no memoriza
-    const mal: CargaDeAutorizacionSinMemoria = crearAutorizacionDeLecturaDePostgres(SIN_BASE);
-    expect(mal.memoriza).toBe(true);
-    const bien: CargaDeAutorizacionSinMemoria = crearAutorizacionDePostgres(SIN_BASE);
-    expect(bien.memoriza).toBeUndefined();
+  it("la de lectura NO entra donde se pide la de escritura (si `tsc` falla acá, se perdió o cambió la barrera de tipos)", () => {
+    // Prueba de tipos: el tipo `Asignable<...>` tiene que ser exactamente `false` para la de lectura y `true` para la de escritura.
+    const lecturaEnEscritura: Asignable<
+      CargaDeAutorizacionDeLectura,
+      CargaDeAutorizacionSinMemoria
+    > = false;
+    const escrituraEnEscritura: Asignable<
+      ReturnType<typeof crearAutorizacionDePostgres>,
+      CargaDeAutorizacionSinMemoria
+    > = true;
+    expect(lecturaEnEscritura).toBe(false);
+    expect(escrituraEnEscritura).toBe(true);
   });
 });
+
+type Asignable<A, B> = [A] extends [B] ? true : false;
