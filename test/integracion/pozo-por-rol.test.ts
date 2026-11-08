@@ -1,6 +1,6 @@
 import { sql } from "kysely";
 import pg from "pg";
-import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from "vitest";
 import { crearLecturasDeSistema } from "../../src/adaptadores/postgres/lecturas-de-sistema";
 import {
   CONEXIONES_POR_POZO,
@@ -80,6 +80,30 @@ describe.skipIf(base === null)("un pozo por rol", () => {
     }
     return condicion();
   };
+
+  /** Cuántas conexiones de OTRAS sesiones (cualquier rol, menos la del observador) tiene la base propia de este archivo, según el SERVIDOR. */
+  async function conexionesAjenas(): Promise<number> {
+    const { rows } = await observador.query<{ n: string }>(
+      `select count(*)::text as n from pg_stat_activity where datname = $1 and pid <> pg_backend_pid()`,
+      [nombreDeLaBase],
+    );
+    return Number(rows[0]?.n ?? 0);
+  }
+
+  /**
+   * Cada prueba arranca con la base propia SIN conexiones ajenas. Por qué: el servidor tarda unos milisegundos en cerrar el backend de una
+   * conexión que la prueba anterior ya cerró del lado de la aplicación (`pozo.end()`); si el muestreo de la siguiente la alcanza, suma una
+   * conexión de más y falla de forma intermitente (`expected 3 to be less than or equal to 2`). La base es propia de este archivo (nombre
+   * único), así que no la comparte ninguna otra suite: lo único que puede sumar son restos de las pruebas de este mismo archivo.
+   */
+  beforeEach(async () => {
+    if (base === null) return;
+    const limite = Date.now() + 10_000;
+    while ((await conexionesAjenas()) > 0 && Date.now() < limite) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    expect(await conexionesAjenas()).toBe(0);
+  });
 
   beforeAll(async () => {
     if (base === null) return;
@@ -251,6 +275,17 @@ describe.skipIf(base === null)("un pozo por rol", () => {
   });
 
   describe("pozo agotado", () => {
+    it("un resto de conexión de la prueba anterior que tarda en irse NO cuenta: la siguiente prueba espera a que desaparezca", async () => {
+      // Simula el resto: una conexión del mismo rol y la misma base que se cierra 200 ms después de empezar la prueba.
+      const resto = new pg.Client({ connectionString: propia.base.app });
+      await resto.connect();
+      setTimeout(() => void resto.end(), 200);
+      expect(await conexionesDe()).toBe(1);
+      // Lo que hace el `beforeEach` de cada prueba: esperar a que el servidor ya no vea conexiones ajenas.
+      expect(await hastaQue(async () => (await conexionesAjenas()) === 0)).toBe(true);
+      expect(await conexionesDe()).toBe(0);
+    });
+
     it("los pedidos de más ESPERAN su turno: terminan todos, tardan lo que toca y el servidor no ve más conexiones que el tope", async () => {
       const entorno = crearEntornoDePrueba(propia.base, 2);
       try {
