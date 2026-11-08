@@ -359,6 +359,27 @@ describe("resincronizar y cambiar de ambiente", () => {
 });
 
 describe("entradaDeListar", () => {
+  it("la ventana de creación (`creadoDesde`) llega al pedido de la consulta, sola o con el texto, y sin ella no hay clave", () => {
+    expect(entradaDeListar({ creadoDesde: "2025-11-07" })).toEqual({
+      ok: true,
+      valor: { creadoDesde: "2025-11-07" },
+    });
+    expect(entradaDeListar({ texto: "Sur", creadoDesde: "2025-11-07" })).toEqual({
+      ok: true,
+      valor: { texto: "Sur", creadoDesde: "2025-11-07" },
+    });
+    expect(entradaDeListar({ texto: "Sur" })).toEqual({ ok: true, valor: { texto: "Sur" } });
+  });
+
+  it("una ventana que no es fecha (con forma o sin ella) se rechaza señalando el campo `creadoDesde`", () => {
+    for (const mala of ["2026-02-31", "ayer", "2025-1-7", 20251107, null]) {
+      expect(mal(entradaDeListar({ creadoDesde: mala })).error, JSON.stringify(mala)).toEqual({
+        codigo: "FISCAL_DATOS_INVALIDOS",
+        campo: "creadoDesde",
+      });
+    }
+  });
+
   it("sin pedido, o con uno vacío, son los valores por defecto", () => {
     expect(entradaDeListar(undefined)).toEqual({ ok: true, valor: {} });
     expect(entradaDeListar({})).toEqual({ ok: true, valor: {} });
@@ -372,6 +393,7 @@ describe("entradaDeListar", () => {
         ambiente: "HOMOLOGACION",
         desde: "2026-10-01",
         hasta: "2026-10-31",
+        creadoDesde: "2025-11-07",
         texto: "panadería",
         letra: "B",
         puntoDeVenta: "1",
@@ -389,6 +411,7 @@ describe("entradaDeListar", () => {
         ambiente: "HOMOLOGACION",
         desde: "2026-10-01",
         hasta: "2026-10-31",
+        creadoDesde: "2025-11-07",
         texto: "panadería",
         letra: "B",
         puntoDeVenta: 1,

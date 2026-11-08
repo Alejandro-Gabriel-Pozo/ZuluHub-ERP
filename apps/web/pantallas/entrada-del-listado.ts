@@ -10,6 +10,14 @@ import type { FiltrosDelListado } from "../ui/plantillas/facturacion/filtros-del
  * «Últimos 7 días» incluye hoy: hoy y los 6 anteriores (D-54 de `facturador-contratos-de-pantalla.md`, confirmada por el dueño el
  * 2026-10-29). Los períodos con fechas (Hoy, Últimos 7 días, Este mes) cierran en hoy.
  *
+ * La búsqueda de TEXTO con el período «Todo» mira los ÚLTIMOS 12 MESES (decisión del dueño, 2026-11-07, pregunta directa: para años
+ * anteriores se elige el período «Personalizado»). Definición exacta: los comprobantes CREADOS desde la MISMA fecha civil del año
+ * anterior, inclusive (el 29 de febrero retrocede al 28 de febrero del año anterior), hasta hoy sin tope; el día es el de Argentina
+ * (UTC-3), no el del servidor. Va como `creadoDesde` y no como `desde`: acota la columna por la que el listado ya recorre en orden y la
+ * búsqueda deja de leer toda la historia (medido con 800.000 comprobantes en una sucursal y 4 años: de 431-550 ms a 77-109 ms). Es por
+ * fecha de CREACIÓN, no de emisión: un comprobante creado el día anterior al corte y emitido después queda afuera, y es el único borde
+ * donde difiere de `desde`. Sin texto, «Todo» sigue sin límite.
+ *
  * Previene: un día corrido en el filtro de período por usar la hora del servidor. Chequeo: `test/web/listado-entrada.test.ts`
  * (fin de mes, 1.º de enero, medianoche en UTC-3).
  */
@@ -21,6 +29,14 @@ export function hoyEnArgentina(ahora: Date): string {
   const hoy = hoyDeArgentina(ahora);
   if (!hoy.ok) throw new RangeError(`no hay fecha de hoy: ${hoy.error}`);
   return hoy.valor;
+}
+
+/** La misma fecha civil un año antes; el 29 de febrero, que el año anterior no existe, cae el 28. */
+export function mismoDiaDelAnioAnterior(fecha: string): string {
+  const anio = Number(fecha.slice(0, 4)) - 1;
+  const mesYDia = fecha.slice(5);
+  const dia = mesYDia === "02-29" ? "02-28" : mesYDia;
+  return `${String(anio).padStart(4, "0")}-${dia}`;
 }
 
 /** El rango del período; un lado ausente es «sin límite» de ese lado. */
@@ -76,6 +92,9 @@ export function entradaDelListado(
     ...(filtros.letra === "" ? {} : { letra: filtros.letra }),
     ...(filtros.puntoDeVenta === "" ? {} : { puntoDeVenta: Number(filtros.puntoDeVenta) }),
     ...(filtros.texto === "" ? {} : { texto: filtros.texto }),
+    ...(filtros.texto !== "" && filtros.periodo === "todo"
+      ? { creadoDesde: mismoDiaDelAnioAnterior(hoyEnArgentina(ahora)) }
+      : {}),
     ...(despues === null ? {} : { despuesDe: despues }),
   };
 }

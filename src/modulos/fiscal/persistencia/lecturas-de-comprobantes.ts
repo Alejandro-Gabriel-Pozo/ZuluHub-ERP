@@ -75,6 +75,12 @@ export type FiltroDeListado = Readonly<{
   desde: FechaCivil | null;
   hasta: FechaCivil | null;
   /**
+   * Solo los creados desde ese día civil de Argentina (inclusive): `creado_en >=` la medianoche de Argentina de ese día. Es una cota
+   * sobre la columna del índice de orden del listado, así que el recorrido empieza y TERMINA en la ventana (a diferencia de `desde`,
+   * que filtra una expresión y no acota el recorrido).
+   */
+  creadoDesde: FechaCivil | null;
+  /**
    * La búsqueda de texto: el fragmento del nombre del receptor (sin distinguir mayúsculas) y, si el texto
    * puede ser un documento, su prefijo de solo dígitos. Basta que coincida uno de los dos.
    */
@@ -257,6 +263,12 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
       }
       if (filtro.hasta !== null) {
         consulta = consulta.where(sql<boolean>`${FECHA_DEL_LISTADO} <= ${filtro.hasta}::date`);
+      }
+      if (filtro.creadoDesde !== null) {
+        // La zona va como literal y el día como parámetro: la cota se calcula una vez y el planificador la usa como condición del índice.
+        consulta = consulta.where(
+          sql<boolean>`creado_en >= (${filtro.creadoDesde}::date::timestamp at time zone ${sql.lit(ZONA_DE_ARGENTINA)})`,
+        );
       }
       if (filtro.texto !== null) {
         const { nombre, documento } = filtro.texto;

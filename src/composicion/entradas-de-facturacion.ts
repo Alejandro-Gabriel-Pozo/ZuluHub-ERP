@@ -143,6 +143,7 @@ const formaDeListar = z.object({
   ambiente: z.enum(AMBIENTES).optional(),
   desde: fecha.optional(),
   hasta: fecha.optional(),
+  creadoDesde: fecha.optional(),
   texto: texto.optional(),
   letra: z.enum(["A", "B", "C"]).optional(),
   puntoDeVenta: entero.optional(),
@@ -373,6 +374,9 @@ export function entradaDeListar(crudo: unknown): Resultado<PedidoDeListado, Erro
   if (!desde.ok) return desde;
   const hasta = l.hasta === undefined ? ok(undefined) : aFecha("hasta", l.hasta);
   if (!hasta.ok) return hasta;
+  const creadoDesde =
+    l.creadoDesde === undefined ? ok(undefined) : aFecha("creadoDesde", l.creadoDesde);
+  if (!creadoDesde.ok) return creadoDesde;
   // Solo se pasan las claves con valor: las opcionales del pedido no admiten `undefined` explícito.
   return ok({
     ...(l.estado === undefined ? {} : { estado: l.estado }),
@@ -380,6 +384,7 @@ export function entradaDeListar(crudo: unknown): Resultado<PedidoDeListado, Erro
     ...(l.ambiente === undefined ? {} : { ambiente: l.ambiente }),
     ...(desde.valor === undefined ? {} : { desde: desde.valor }),
     ...(hasta.valor === undefined ? {} : { hasta: hasta.valor }),
+    ...(creadoDesde.valor === undefined ? {} : { creadoDesde: creadoDesde.valor }),
     ...(l.texto === undefined ? {} : { texto: l.texto }),
     ...(l.letra === undefined ? {} : { letra: l.letra }),
     ...(l.puntoDeVenta === undefined ? {} : { puntoDeVenta: l.puntoDeVenta }),
