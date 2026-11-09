@@ -101,7 +101,8 @@ export function interpretarImportePegado(crudo: string): ImportePegado {
   if (!/^[\d.,]+$/.test(texto)) return { ok: false, motivo: "FORMA_INVALIDA" };
   const partes = texto.split(",");
   if (partes.length > 2) return { ok: false, motivo: "FORMA_INVALIDA" };
-  const [entera = "", decimal] = partes;
+  // `split` siempre entrega al menos un elemento y aquí no más de dos: la entera existe, la decimal puede faltar.
+  const [entera, decimal] = partes as [string, string | undefined];
   if (!ENTERA_PEGADA.test(entera)) {
     return { ok: false, motivo: entera.includes(".") ? "PUNTO_MAL_PUESTO" : "FORMA_INVALIDA" };
   }
