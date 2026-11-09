@@ -17,11 +17,14 @@
  *    caracteres de control; los marcadores van entre llaves (`{limite}`) y se insertan como texto.
  */
 
+import { TEXTOS_DE_CAJA } from "./catalogo-caja";
+import { TEXTOS_DE_CATALOGO } from "./catalogo-catalogo";
 import { TEXTOS_DE_FISCAL } from "./catalogo-fiscal";
 import { TEXTOS_DE_FISCAL_CONFIGURACION } from "./catalogo-fiscal-configuracion";
 import { TEXTOS_DE_FISCAL_EMITIR } from "./catalogo-fiscal-emitir";
 import { TEXTOS_DE_FISCAL_IMPRIMIR } from "./catalogo-fiscal-imprimir";
 import { TEXTOS_DE_FISCAL_PANTALLAS } from "./catalogo-fiscal-pantallas";
+import { TEXTOS_DE_VENTAS } from "./catalogo-ventas";
 
 /** El largo máximo de un texto que no declara otro (la base admite hasta 200 en cualquier caso). */
 export const LARGO_MAXIMO_DE_TEXTO = 80;
@@ -333,6 +336,10 @@ export const CATALOGO_DE_TEXTOS = {
   ...TEXTOS_DE_FISCAL_CONFIGURACION,
   ...TEXTOS_DE_FISCAL_EMITIR,
   ...TEXTOS_DE_FISCAL_IMPRIMIR,
+  // Módulos de E2, E3 y E4: nacen vacíos y cada etapa suma los suyos en su archivo (E0-T4).
+  ...TEXTOS_DE_CATALOGO,
+  ...TEXTOS_DE_CAJA,
+  ...TEXTOS_DE_VENTAS,
 } as const satisfies Record<string, DefinicionDeTexto>;
 
 export type ClaveDeTexto = keyof typeof CATALOGO_DE_TEXTOS;
