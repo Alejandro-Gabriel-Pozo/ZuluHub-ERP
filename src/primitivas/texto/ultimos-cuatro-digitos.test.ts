@@ -13,7 +13,21 @@ describe("últimos cuatro dígitos", () => {
   });
 
   it("rechaza 3 y 5 dígitos, letras, espacios, signos y vacío", () => {
-    for (const malo of ["", "123", "12345", "12a4", "12 4", " 123", "123 ", "1234\n", "-123", "+123", "1.23", "１２３４", "١٢٣٤"]) {
+    for (const malo of [
+      "",
+      "123",
+      "12345",
+      "12a4",
+      "12 4",
+      " 123",
+      "123 ",
+      "1234\n",
+      "-123",
+      "+123",
+      "1.23",
+      "１２３４",
+      "١٢٣٤",
+    ]) {
       expect(ultimosCuatroDigitosDesdeTexto(malo), JSON.stringify(malo)).toEqual(MALO);
     }
   });

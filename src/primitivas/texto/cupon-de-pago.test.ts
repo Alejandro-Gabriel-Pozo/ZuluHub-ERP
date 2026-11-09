@@ -33,6 +33,30 @@ describe("cupón de pago", () => {
     }
   });
 
+  it("el control de Luhn cubre de 13 a 19 dígitos: 19 se rechaza, 20 separados no son una tarjeta", () => {
+    const de19 = "4511 1111 1111 1111 111";
+    const de20 = "4511 1111 1111 1111 1111";
+    expect(cuponDePagoDesdeTexto(de19)).toEqual(MALO);
+    expect(cuponDePagoDesdeTexto(de20).ok).toBe(true);
+  });
+
+  it("el Luhn de cada dígito pesa: un error en un dígito duplicado o no duplicado lo invalida", () => {
+    for (const casi of [
+      "4111 1111 1111 1113",
+      "4111 1111 1111 1121",
+      "4111 1111 1111 1211",
+      "4111 1111 1111 2111",
+      "4111 1111 1111 1110",
+    ]) {
+      expect(cuponDePagoDesdeTexto(casi).ok, casi).toBe(true);
+    }
+    // Dígito duplicado mayor que 4 (el doble pasa de 9): 5 y 9 en posición duplicada.
+    expect(cuponDePagoDesdeTexto("4111 1111 1111 1111").ok).toBe(false);
+    expect(cuponDePagoDesdeTexto("5555 5555 5555 4444").ok).toBe(false);
+    expect(cuponDePagoDesdeTexto("5555 5555 5555 4445").ok).toBe(true);
+    expect(cuponDePagoDesdeTexto("3782 8224 6310 005").ok).toBe(false);
+  });
+
   it("acepta dígitos separados que no son una tarjeta (Luhn inválido)", () => {
     expect(cuponDePagoDesdeTexto("4111 1111 1111 1112").ok).toBe(true);
   });
@@ -43,7 +67,19 @@ describe("cupón de pago", () => {
   });
 
   it("rechaza vacío, `<`, `>`, control, emoji, tildes y otros símbolos", () => {
-    for (const malo of ["", "a<b", "a>b", "a\nb", "a\tb", "a\u0000", "a😀", "ñ", "a,b", "a;b", "a​b"]) {
+    for (const malo of [
+      "",
+      "a<b",
+      "a>b",
+      "a\nb",
+      "a\tb",
+      "a\u0000",
+      "a😀",
+      "ñ",
+      "a,b",
+      "a;b",
+      "a​b",
+    ]) {
       expect(cuponDePagoDesdeTexto(malo), JSON.stringify(malo)).toEqual(MALO);
     }
   });

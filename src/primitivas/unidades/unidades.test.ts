@@ -32,11 +32,13 @@ describe("UNIDADES", () => {
       const { dimension, factor } = UNIDADES[codigo];
       expect(typeof factor).toBe("bigint");
       expect(factor > 0n).toBe(true);
-      if (factor === 1n) basesPorDimension.set(dimension, (basesPorDimension.get(dimension) ?? 0) + 1);
+      if (factor === 1n)
+        basesPorDimension.set(dimension, (basesPorDimension.get(dimension) ?? 0) + 1);
     }
     const dimensiones = new Set(CODIGOS.map((c) => UNIDADES[c].dimension));
     expect(dimensiones.size).toBe(6);
-    for (const dimension of dimensiones) expect(basesPorDimension.get(dimension), dimension).toBe(1);
+    for (const dimension of dimensiones)
+      expect(basesPorDimension.get(dimension), dimension).toBe(1);
   });
 
   it("los valores concretos de cada dimensión", () => {

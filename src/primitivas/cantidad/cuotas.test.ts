@@ -15,7 +15,21 @@ describe("cuotas", () => {
   });
 
   it("rechaza 0, 37, decimales, negativos, ceros a la izquierda y texto", () => {
-    for (const malo of ["0", "37", "1.5", "-1", "01", "", " 3", "3 ", "doce", "1e1", "+3", "100", "٣"]) {
+    for (const malo of [
+      "0",
+      "37",
+      "1.5",
+      "-1",
+      "01",
+      "",
+      " 3",
+      "3 ",
+      "doce",
+      "1e1",
+      "+3",
+      "100",
+      "٣",
+    ]) {
       expect(cuotasDesdeTexto(malo), JSON.stringify(malo)).toEqual(MALO);
     }
   });

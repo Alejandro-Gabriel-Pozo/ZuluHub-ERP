@@ -15,12 +15,15 @@ export type Cuotas = Marca<number, "Cuotas">;
 export const MINIMO_DE_CUOTAS = 1;
 export const MAXIMO_DE_CUOTAS = 36;
 
-/** Entero sin ceros a la izquierda ni signo; el largo (2 dígitos) lo acota el rango que sigue. */
-const ENTERO_CANONICO = /^[1-9][0-9]?$/;
+/** Lista permitida: el texto canónico de cada entero del rango. Sin `Number` ni parseo (ADR-006): lo que no está en la tabla no entra. */
+const CUOTAS_POR_TEXTO: ReadonlyMap<string, Cuotas> = new Map(
+  Array.from({ length: MAXIMO_DE_CUOTAS - MINIMO_DE_CUOTAS + 1 }, (_, i) => {
+    const valor = MINIMO_DE_CUOTAS + i;
+    return [String(valor), valor as Cuotas] as const;
+  }),
+);
 
 export function cuotasDesdeTexto(texto: string): Resultado<Cuotas, "CUOTAS_INVALIDAS"> {
-  if (!ENTERO_CANONICO.test(texto)) return err("CUOTAS_INVALIDAS");
-  const valor = Number(texto);
-  if (valor < MINIMO_DE_CUOTAS || valor > MAXIMO_DE_CUOTAS) return err("CUOTAS_INVALIDAS");
-  return ok(valor as Cuotas);
+  const valor = CUOTAS_POR_TEXTO.get(texto);
+  return valor === undefined ? err("CUOTAS_INVALIDAS") : ok(valor);
 }

@@ -23,17 +23,17 @@ const TRECE_DIGITOS_SEGUIDOS = /[0-9]{13}/;
 const LARGO_MINIMO_DE_TARJETA = 13;
 const LARGO_MAXIMO_DE_TARJETA = 19;
 
+/** Suma de los dígitos de un dígito duplicado (control de Luhn): 0→0, 1→2, …, 5→1, …, 9→9. */
+const DIGITO_DUPLICADO = [0, 2, 4, 6, 8, 1, 3, 5, 7, 9] as const;
+
 /** Control de Luhn sobre una cadena de dígitos. */
 function pasaLuhn(digitos: string): boolean {
   let suma = 0;
   let duplicar = false;
   for (let i = digitos.length - 1; i >= 0; i -= 1) {
-    let valor = digitos.charCodeAt(i) - 48;
-    if (duplicar) {
-      valor *= 2;
-      if (valor > 9) valor -= 9;
-    }
-    suma += valor;
+    const valor = digitos.charCodeAt(i) - 48;
+    // Stryker disable next-line AssignmentOperator: equivalente, -suma es múltiplo de 10 si y solo si suma lo es
+    suma += duplicar ? (DIGITO_DUPLICADO[valor] ?? 0) : valor;
     duplicar = !duplicar;
   }
   return suma % 10 === 0;
@@ -50,7 +50,11 @@ function parecePanDeTarjeta(texto: string): boolean {
 }
 
 export function cuponDePagoDesdeTexto(texto: string): Resultado<CuponDePago, "CUPON_INVALIDO"> {
-  if (texto.length > LARGO_MAXIMO_DEL_CUPON || !PERMITIDO.test(texto) || parecePanDeTarjeta(texto)) {
+  if (
+    texto.length > LARGO_MAXIMO_DEL_CUPON ||
+    !PERMITIDO.test(texto) ||
+    parecePanDeTarjeta(texto)
+  ) {
     return err("CUPON_INVALIDO");
   }
   return ok(texto as CuponDePago);
