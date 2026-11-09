@@ -8,7 +8,9 @@ import { usosProhibidos } from "../../../test/utilidades/reloj-y-azar";
  * como dato en el contexto. Los casos de uso corren dentro de la transacción, que el adaptador repite entera ante un conflicto de
  * serialización (ADR-004, G4), y los aportes de los módulos tienen que recalcular LO MISMO para que la huella del día sea estable.
  */
-const carpetas = ["./", "dominio/"].map((c) => fileURLToPath(new URL(c, import.meta.url)));
+const carpetas = ["./", "dominio/", "casos-de-uso/", "consultas/", "persistencia/"].map((c) =>
+  fileURLToPath(new URL(c, import.meta.url)),
+);
 const fuentes = carpetas.flatMap((carpeta) =>
   readdirSync(carpeta)
     .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))

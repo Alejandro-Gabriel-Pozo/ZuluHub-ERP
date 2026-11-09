@@ -1,6 +1,6 @@
 import { err, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
-import { ERRORES_DE_CIERRE_POR_RESTRICCION } from "../persistencia/repositorio-de-jornadas";
+import { ERRORES_DE_CIERRE_POR_RESTRICCION } from "../persistencia/esquema";
 
 /**
  * Traducción de las restricciones de la base a errores de negocio (ADR-004), con el mapa del cierre. Cada caso de uso declara cuáles

@@ -45,8 +45,10 @@ export {
 export {
   COLUMNAS_DE_CIERRE,
   ERRORES_DE_CIERRE_POR_RESTRICCION,
-  crearRepositorioDeJornadas,
   type CierreDb,
+} from "./persistencia/esquema";
+export {
+  crearRepositorioDeJornadas,
   type ClaveDeJornada,
   type ControlAGuardar,
   type ControlGuardado,
