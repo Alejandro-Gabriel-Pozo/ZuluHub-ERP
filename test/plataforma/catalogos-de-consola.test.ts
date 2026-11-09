@@ -190,6 +190,14 @@ describe("catalogoDePerillas", () => {
     const r = await plataforma(CATALOGO_DE_PERILLAS).catalogoDePerillas(comoAdministrador);
     expect(r.ok && r.valor.perillas).toEqual([
       {
+        perilla: "cajas_por_sucursal",
+        tipo: "LIMITE",
+        ambito: "SUCURSAL",
+        valorBase: { tipo: "LIMITE", limite: 1 },
+        requiere: null,
+        modulo: "caja",
+      },
+      {
         perilla: "composiciones_con_perdida",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",
@@ -214,14 +222,6 @@ describe("catalogoDePerillas", () => {
         modulo: "catalogo",
       },
       {
-        perilla: "elecciones_reutilizables",
-        tipo: "INTERRUPTOR",
-        ambito: "EMPRESA",
-        valorBase: { tipo: "INTERRUPTOR", encendida: false },
-        requiere: null,
-        modulo: "catalogo",
-      },
-      {
         perilla: "empresas_por_tenant",
         tipo: "LIMITE",
         ambito: "TENANT",
@@ -236,14 +236,6 @@ describe("catalogoDePerillas", () => {
         valorBase: { tipo: "INTERRUPTOR", encendida: false },
         requiere: null,
         modulo: "stock",
-      },
-      {
-        perilla: "variantes_y_grupos_de_precio",
-        tipo: "INTERRUPTOR",
-        ambito: "EMPRESA",
-        valorBase: { tipo: "INTERRUPTOR", encendida: false },
-        requiere: null,
-        modulo: "catalogo",
       },
     ]);
   });

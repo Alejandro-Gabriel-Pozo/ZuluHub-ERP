@@ -6,12 +6,12 @@
 /** Las claves con rótulo propio: una prueba exige que todas existan en los catálogos reales. */
 export const ROTULO_DE_PERILLA: Readonly<Record<string, string>> = {
   empresas_por_tenant: "Empresas por cliente",
-  variantes_y_grupos_de_precio: "Variantes y grupos de precio",
-  elecciones_reutilizables: "Elecciones reutilizables",
   composiciones_con_perdida: "Composiciones con pérdida",
   subcomposiciones: "Subcomposiciones",
   conjuntos: "Conjuntos",
   composiciones_por_tamano: "Composiciones por tamaño",
+  // Decisión 175 (09/11/2026, textos delegados: lo más corto) + clave de la perilla (decisión 124).
+  cajas_por_sucursal: "Cajas por sucursal",
 };
 
 export const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {
