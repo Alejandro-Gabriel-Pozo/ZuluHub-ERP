@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { campoConPosibleSecreto, type Dato } from "../../puertos/sin-secretos";
 import type { EstadoEfectivo } from "../../contexto/estados";
@@ -313,5 +314,91 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     // @ts-expect-error esa clave no está en el catálogo
     const inventada: ClaveDeTexto = "reservas.estadia.singular";
     expect(inventada in CATALOGO_DE_TEXTOS).toBe(false);
+  });
+});
+
+/**
+ * El cableado de los textos por módulo (E0-T4): cada `catalogo-*.ts` se incluye en `catalogo.ts` una sola vez, sin pisar claves de otro, y
+ * los archivos de los módulos de E2, E3 y E4 nacen vacíos sin romper nada. Previene: un archivo de módulo que nadie importa (sus textos no
+ * se resuelven y la pantalla muestra la clave) o dos archivos con la misma clave (el último pisa al primero sin avisar).
+ */
+const CARPETA = new URL(".", import.meta.url);
+const ARCHIVOS_DE_MODULO = readdirSync(CARPETA)
+  .filter((nombre) => /^catalogo-.+\.ts$/.test(nombre) && !nombre.endsWith(".test.ts"))
+  .sort();
+const FUENTE_DE_CATALOGO = readFileSync(new URL("catalogo.ts", CARPETA), "utf8");
+
+const partes = await Promise.all(
+  ARCHIVOS_DE_MODULO.map(async (archivo) => {
+    const modulo = (await import(/* @vite-ignore */ `./${archivo}`)) as Record<string, unknown>;
+    const exportados = Object.entries(modulo);
+    return { archivo, exportados };
+  }),
+);
+
+describe("el catálogo de textos: cableado de los archivos por módulo", () => {
+  it("encuentra los archivos de módulo (fiscal y los tres vacíos de E2, E3 y E4)", () => {
+    for (const esperado of [
+      "catalogo-catalogo.ts",
+      "catalogo-caja.ts",
+      "catalogo-ventas.ts",
+      "catalogo-fiscal.ts",
+    ]) {
+      expect(ARCHIVOS_DE_MODULO).toContain(esperado);
+    }
+  });
+
+  it.each(ARCHIVOS_DE_MODULO)("%s: exporta un único objeto de textos", (archivo) => {
+    const parte = partes.find((p) => p.archivo === archivo);
+    expect(parte?.exportados).toHaveLength(1);
+  });
+
+  it.each(ARCHIVOS_DE_MODULO)(
+    "%s: se importa y se expande una sola vez en catalogo.ts",
+    (archivo) => {
+      const parte = partes.find((p) => p.archivo === archivo);
+      const nombre = parte?.exportados[0]?.[0] ?? "";
+      const base = archivo.replace(/\.ts$/, "");
+      expect(FUENTE_DE_CATALOGO.match(new RegExp(`from "\\./${base}";`, "g")) ?? []).toHaveLength(
+        1,
+      );
+      expect(FUENTE_DE_CATALOGO.match(new RegExp(`\\.\\.\\.${nombre},`, "g")) ?? []).toHaveLength(
+        1,
+      );
+    },
+  );
+
+  it("ninguna clave está en dos archivos y el catálogo tiene exactamente la suma de los suyos y de los propios", () => {
+    const vistas = new Map<string, string>();
+    for (const { archivo, exportados } of partes) {
+      for (const clave of Object.keys(exportados[0]?.[1] ?? {})) {
+        expect(vistas.get(clave), `${clave} repetida en ${archivo}`).toBeUndefined();
+        vistas.set(clave, archivo);
+      }
+    }
+    for (const clave of vistas.keys()) {
+      expect(Object.keys(CATALOGO_DE_TEXTOS)).toContain(clave);
+    }
+    const propias = Object.keys(CATALOGO_DE_TEXTOS).filter((clave) => !vistas.has(clave));
+    expect(Object.keys(CATALOGO_DE_TEXTOS)).toHaveLength(vistas.size + propias.length);
+  });
+
+  it.each([
+    ["catalogo-catalogo.ts", "catalogo"],
+    ["catalogo-caja.ts", "caja"],
+    ["catalogo-ventas.ts", "ventas"],
+  ])("%s: toda clave lleva el prefijo de su módulo (%s.)", (archivo, modulo) => {
+    const parte = partes.find((p) => p.archivo === archivo);
+    for (const clave of Object.keys(parte?.exportados[0]?.[1] ?? {})) {
+      expect(clave.startsWith(`${modulo}.`)).toBe(true);
+    }
+  });
+
+  it("los archivos de módulo nacen vacíos: un archivo sin textos no rompe el catálogo ni agrega claves", () => {
+    for (const archivo of ["catalogo-catalogo.ts", "catalogo-caja.ts", "catalogo-ventas.ts"]) {
+      const parte = partes.find((p) => p.archivo === archivo);
+      expect(Object.keys(parte?.exportados[0]?.[1] ?? {})).toHaveLength(0);
+    }
+    expect(entradas.length).toBeGreaterThan(0);
   });
 });
