@@ -9,7 +9,7 @@ import {
   type AporteNoDisponible,
   type EntradaDeJornada,
 } from "../comun";
-import type { EstadoConsultado } from "../dominio/jornada";
+import type { EstadoConsultado } from "../estados";
 import { prepararConsulta, type ErrorDeConsulta } from "./comun";
 import type { DependenciasDeConsultasDeCierre } from "./contrato";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";

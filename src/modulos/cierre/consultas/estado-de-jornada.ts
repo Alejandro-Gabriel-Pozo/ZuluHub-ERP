@@ -2,7 +2,7 @@ import type { ContextoOperativo } from "../../../contexto/contexto";
 import { ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { EntradaDeJornada } from "../comun";
-import type { EstadoConsultado } from "../dominio/jornada";
+import type { EstadoConsultado } from "../estados";
 import { prepararConsulta, type ErrorDeConsulta } from "./comun";
 import type { DependenciasDeConsultasDeCierre, TxDeConsultasDeCierre } from "./contrato";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";

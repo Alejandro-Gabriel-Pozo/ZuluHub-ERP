@@ -1,4 +1,5 @@
 import type { EmpresaId, PersonaId, SucursalId } from "../../../primitivas/identificadores/marca";
+import { ESTADOS_DE_JORNADA, type EstadoConsultado, type EstadoDeJornada } from "../estados";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 
@@ -7,11 +8,6 @@ import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
  * negocio)`: `ABIERTA → EN_AUDITORIA ⇄ ABIERTA` y `EN_AUDITORIA → CERRADA`; nada sale de `CERRADA`. Los nombres técnicos conservan
  * «auditoría» (decisión 160); en pantalla es «Cierre del día». Puro: sin reloj ni azar.
  */
-export const ESTADOS_DE_JORNADA = ["ABIERTA", "EN_AUDITORIA", "CERRADA"] as const;
-export type EstadoDeJornada = (typeof ESTADOS_DE_JORNADA)[number];
-
-/** `SIN_ACTIVIDAD`: nadie registró nada ese día, así que la jornada todavía no existe (la crea quien tiene la primera actividad). */
-export type EstadoConsultado = EstadoDeJornada | "SIN_ACTIVIDAD";
 
 /**
  * Las transiciones que permite el dominio. La base impone EXACTAMENTE las mismas (`jornada_validar_cambio`, 0026): una prueba de
@@ -61,3 +57,5 @@ export function decidirCancelar(
   if (estado === "CERRADA") return err("JORNADA_CERRADA");
   return ok(estado === "EN_AUDITORIA" ? "CANCELAR" : "YA_ESTABA");
 }
+
+export { ESTADOS_DE_JORNADA, type EstadoConsultado, type EstadoDeJornada };

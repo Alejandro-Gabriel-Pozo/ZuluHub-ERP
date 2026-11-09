@@ -3,7 +3,7 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 import { fechaCivilDesdeTexto } from "../../../primitivas/tiempo/fecha-civil";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { ErrorDeClaveDeJornada } from "../comun";
-import type { EstadoDeJornada } from "../dominio/jornada";
+import type { EstadoDeJornada } from "../estados";
 import { prepararConsulta, type ErrorDeConsulta } from "./comun";
 import type { DependenciasDeConsultasDeCierre, TxDeConsultasDeCierre } from "./contrato";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
