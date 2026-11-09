@@ -74,6 +74,7 @@ export const COLUMNAS_DE_CIERRE = {
 /** Restricción de la base → error de negocio (ADR-004). Un test exige que no falte ninguna. */
 export const ERRORES_DE_CIERRE_POR_RESTRICCION: Readonly<Record<string, string>> = {
   jornada_de_sucursal_pkey: "NO_TRADUCIDA",
+  jornada_empresa_fkey: "NO_TRADUCIDA",
   jornada_sucursal_fkey: "SUCURSAL_NO_ENCONTRADA",
   jornada_iniciada_por_fkey: "NO_TRADUCIDA",
   jornada_cerrada_por_fkey: "NO_TRADUCIDA",
@@ -88,6 +89,7 @@ export const ERRORES_DE_CIERRE_POR_RESTRICCION: Readonly<Record<string, string>>
   jornada_persona_del_contexto: "NO_TRADUCIDA",
   jornada_transicion_invalida: "NO_TRADUCIDA",
   control_de_jornada_cerrada_pkey: "NO_TRADUCIDA",
+  control_empresa_fkey: "NO_TRADUCIDA",
   control_jornada_fkey: "NO_TRADUCIDA",
   control_reconocido_por_fkey: "NO_TRADUCIDA",
   control_modulo_ck: "NO_TRADUCIDA",

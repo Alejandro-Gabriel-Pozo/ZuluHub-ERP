@@ -60,6 +60,7 @@ CREATE TABLE jornada_de_sucursal (
   actualizado_en         timestamptz NOT NULL DEFAULT now(),
   version                integer NOT NULL DEFAULT 1,
   CONSTRAINT jornada_de_sucursal_pkey PRIMARY KEY (empresa_id, sucursal_id, fecha_negocio),
+  CONSTRAINT jornada_empresa_fkey FOREIGN KEY (empresa_id) REFERENCES empresa (id),
   CONSTRAINT jornada_sucursal_fkey FOREIGN KEY (sucursal_id, empresa_id) REFERENCES sucursal (id, empresa_id),
   CONSTRAINT jornada_iniciada_por_fkey FOREIGN KEY (auditoria_iniciada_por) REFERENCES persona (id),
   CONSTRAINT jornada_cerrada_por_fkey FOREIGN KEY (cerrada_por) REFERENCES persona (id),
@@ -173,6 +174,7 @@ CREATE TABLE control_de_jornada_cerrada (
   texto          text,                  -- explicación opcional de quien reconoce (decisión 160)
   creado_en      timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT control_de_jornada_cerrada_pkey PRIMARY KEY (empresa_id, sucursal_id, fecha_negocio, modulo, clave),
+  CONSTRAINT control_empresa_fkey FOREIGN KEY (empresa_id) REFERENCES empresa (id),
   CONSTRAINT control_jornada_fkey FOREIGN KEY (empresa_id, sucursal_id, fecha_negocio)
     REFERENCES jornada_de_sucursal (empresa_id, sucursal_id, fecha_negocio),
   CONSTRAINT control_reconocido_por_fkey FOREIGN KEY (reconocido_por) REFERENCES persona (id),

@@ -556,7 +556,7 @@ describe.skipIf(base === null)("migración 0026: el cierre del día", () => {
         where contype = 'f' and conrelid in ('jornada_de_sucursal'::regclass, 'control_de_jornada_cerrada'::regclass)
         order by 1`,
     );
-    expect(rows.map((r) => r.destino)).toEqual(["jornada_de_sucursal", "persona", "sucursal"]);
+    expect(rows.map((r) => r.destino)).toEqual(["empresa", "jornada_de_sucursal", "persona", "sucursal"]);
   });
 
   it("la base permite exactamente las transiciones del dominio (los nueve pares de estados)", async () => {

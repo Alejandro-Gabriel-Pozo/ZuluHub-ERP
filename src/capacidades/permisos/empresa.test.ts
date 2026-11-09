@@ -605,18 +605,18 @@ describe("el guard con las reglas reales", () => {
     (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
   );
 
-  it("todo módulo en desarrollo del catálogo incluye catalogo, vidriera, stock, caja, cierre y ventas", () => {
+  it("todo módulo en desarrollo del catálogo incluye catalogo, vidriera, stock, caja y ventas (cierre ya es disponible, E3b)", () => {
     expect([...ENDESARROLLO].sort()).toEqual(
-      ["caja", "catalogo", "cierre", "stock", "ventas", "vidriera"].sort(),
+      ["caja", "catalogo", "stock", "ventas", "vidriera"].sort(),
     );
   });
 
-  it("las 77 acciones sin construir (42 de catálogo, carta y stock y 35 de caja, cierre y ventas) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  it("las 73 acciones sin construir (42 de catálogo, carta y stock y 31 de caja y ventas) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
     const sinConstruir = ENDESARROLLO.flatMap(
       (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
     );
-    expect(sinConstruir).toHaveLength(77);
+    expect(sinConstruir).toHaveLength(73);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
       for (const accion of sinConstruir) {
         expect(
@@ -656,8 +656,8 @@ describe("el guard con las reglas reales", () => {
     );
   });
 
-  it("activar caja, cierre o ventas por empresa y plan no los deja activos: sigue sin habilitarse nada", () => {
-    const todos = ["caja", "cierre", "ventas", "catalogo"];
+  it("activar caja o ventas por empresa y plan no los deja activos: sigue sin habilitarse nada", () => {
+    const todos = ["caja", "ventas", "catalogo"];
     const estado = estadoDeModulos(CATALOGO_DE_MODULOS, todos, todos);
     expect([...estado.modulosActivos]).toEqual(["administracion"]);
   });

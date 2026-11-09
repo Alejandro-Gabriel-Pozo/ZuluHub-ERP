@@ -634,8 +634,14 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
         estado: "disponible",
         obligatorio: false,
       });
+      // `cierre` es disponible desde E3b (no obligatorio: cada empresa lo activa).
+      expect(modulos[3]).toMatchObject({
+        clave: "cierre",
+        estado: "disponible",
+        obligatorio: false,
+      });
       for (const modulo of modulos.filter(
-        (m) => m.clave !== "administracion" && m.clave !== "facturacion",
+        (m) => !["administracion", "facturacion", "cierre"].includes(m.clave),
       )) {
         expect(modulo, modulo.clave).toMatchObject({ estado: "en_desarrollo", obligatorio: false });
       }
