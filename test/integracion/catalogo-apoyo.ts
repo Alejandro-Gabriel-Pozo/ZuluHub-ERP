@@ -17,7 +17,13 @@ import {
   type PersonaId,
   type SucursalId,
 } from "../../src/primitivas/identificadores/marca";
-import { comoEmpresa, crearBaseAparte, crearEmpresaActiva, crearEntornoDePrueba } from "./entorno";
+import {
+  comoEmpresa,
+  crearBarrera,
+  crearBaseAparte,
+  crearEmpresaActiva,
+  crearEntornoDePrueba,
+} from "./entorno";
 import type { BaseDePruebas } from "./global";
 import {
   crearAsignacionDeBase,
@@ -243,26 +249,38 @@ export async function montarCatalogo(
    * alcance restringido de un administrador (cuando los permisos se puedan configurar, después del piloto) una prueba lo fija acá.
    */
   const alcances = new Map<string, readonly SucursalId[]>();
-  const entorno = crearEntornoDePrueba(propia.base, opciones.conexiones ?? 12, (tx) => ({
-    ...tx,
-    autorizacion: {
-      ...tx.autorizacion,
-      sucursalesDelActor: async (contexto, opcionesDeAlcance) => {
-        const fijado = contexto.personaId === null ? undefined : alcances.get(contexto.personaId);
-        return fijado ?? tx.autorizacion.sucursalesDelActor(contexto, opcionesDeAlcance);
+  /**
+   * La barrera de la ronda en curso (`armarBarrera`): cada transacción espera tras leer su autorización hasta que llegaron todas, para
+   * forzar que las dos hayan EMPEZADO antes de que cualquiera escriba. Vacía por defecto.
+   */
+  let barrera: () => Promise<void> = () => Promise.resolve();
+  const entorno = crearEntornoDePrueba(propia.base, opciones.conexiones ?? 12, (tx) => {
+    let primera = true;
+    return {
+      ...tx,
+      autorizacion: {
+        ...tx.autorizacion,
+        sucursalesDelActor: async (contexto, opcionesDeAlcance) => {
+          const fijado = contexto.personaId === null ? undefined : alcances.get(contexto.personaId);
+          return fijado ?? tx.autorizacion.sucursalesDelActor(contexto, opcionesDeAlcance);
+        },
+        delActor: async (contexto) => {
+          const datos = await tx.autorizacion.delActor(contexto);
+          if (primera) {
+            primera = false;
+            await barrera();
+          }
+          return datos.rol === null
+            ? datos
+            : {
+                ...datos,
+                modulosActivados: [...datos.modulosActivados, "catalogo"],
+                modulosHabilitados: [...datos.modulosHabilitados, "catalogo"],
+              };
+        },
       },
-      delActor: async (contexto) => {
-        const datos = await tx.autorizacion.delActor(contexto);
-        return datos.rol === null
-          ? datos
-          : {
-              ...datos,
-              modulosActivados: [...datos.modulosActivados, "catalogo"],
-              modulosHabilitados: [...datos.modulosHabilitados, "catalogo"],
-            };
-      },
-    },
-  }));
+    };
+  });
   const dueno = new pg.Client({ connectionString: propia.base.dueno });
   await dueno.connect();
   const reglas = opciones.reglas ?? REGLAS_DE_PRUEBA;
@@ -328,6 +346,12 @@ export async function montarCatalogo(
     entorno,
     dueno,
     alcances,
+    armarBarrera: (participantes: number) => {
+      barrera = crearBarrera(participantes);
+    },
+    soltarBarrera: () => {
+      barrera = () => Promise.resolve();
+    },
     casos,
     consultas,
     escenario,

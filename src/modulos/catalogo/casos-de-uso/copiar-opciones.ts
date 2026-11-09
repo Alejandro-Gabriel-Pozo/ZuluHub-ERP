@@ -155,7 +155,7 @@ export function armarCopiarOpciones(dependencias: DependenciasDeCatalogo) {
                 contexto.ahora,
               );
               if (precio !== null && precio.precio !== null) {
-                await tx.precios.insertar(empresaId, {
+                const insertado = await tx.precios.insertar(empresaId, {
                   productoId: destino.id,
                   opcionId: nueva,
                   sucursalId: null,
@@ -165,19 +165,29 @@ export function armarCopiarOpciones(dependencias: DependenciasDeCatalogo) {
                   ahora: contexto.ahora,
                   cargadoPor: contexto.personaId,
                 });
+                if (insertado === null)
+                  throw new Error(
+                    "la base devolvió un precio nuevo sin fila: el id lo genera ella",
+                  );
                 preciosCopiados += 1;
               }
             }
           }
         }
         if (gruposCopiados === 0) return err("NADA_PARA_COPIAR");
-        await tx.opciones.registrarCopia(
+        const registrada = await tx.opciones.registrarCopia(
           empresaId,
           copiaId,
           origen.id,
           destino.id,
           contexto.personaId,
         );
+        // Un `copiaId` que otra transacción registró desde la lectura de arriba aborta por serialización y se repite como repetición.
+        if (!registrada) {
+          throw new Error(
+            "la copia ya estaba registrada sin haberse visto: debió abortar por serialización",
+          );
+        }
         const subido = await tx.productos.subirVersionDeOpciones(empresaId, destino.id);
         if (subido === null) return err("PRODUCTO_NO_ENCONTRADO");
         await tx.auditoria.registrar({

@@ -255,6 +255,9 @@ export function armarCambiarFormaDeVenta(dependencias: DependenciasDeCatalogo) {
             ahora: contexto.ahora,
             cargadoPor: contexto.personaId,
           });
+          if (nueva === null) {
+            throw new Error("la base devolvió un precio nuevo sin fila: el id lo genera ella");
+          }
           filasCreadas.push({
             precioId: nueva.id,
             opcionId: fila.opcionId,

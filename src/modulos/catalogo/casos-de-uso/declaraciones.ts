@@ -14,7 +14,7 @@ export const DECLARACIONES = {
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
-        archivo: ARCHIVO_DE_FORMA,
+        archivo: ARCHIVO,
         it: "I2: repetir crearProducto con el mismo id deja un producto y devuelve yaExistia; con otro contenido, ID_REUTILIZADO",
       },
     },
@@ -24,7 +24,7 @@ export const DECLARACIONES = {
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
-        archivo: ARCHIVO_DE_FORMA,
+        archivo: ARCHIVO,
         it: "I2: repetir crearProductoRapido con el mismo id deja un producto y devuelve yaExistia; con otro contenido, ID_REUTILIZADO",
       },
     },
@@ -34,7 +34,7 @@ export const DECLARACIONES = {
     repeticion: {
       regla: "SIN_CAMBIOS",
       prueba: {
-        archivo: ARCHIVO_DE_FORMA,
+        archivo: ARCHIVO,
         it: "idempotente: repetir editarProducto ya aplicado devuelve lo vigente aunque la versión esperada sea vieja, sin escribir ni auditar",
       },
     },
@@ -44,7 +44,7 @@ export const DECLARACIONES = {
     repeticion: {
       regla: "YA_ESTABA",
       prueba: {
-        archivo: ARCHIVO_DE_FORMA,
+        archivo: ARCHIVO,
         it: "I5: desactivar dos veces es ok, no escribe ni audita la segunda",
       },
     },
@@ -54,7 +54,7 @@ export const DECLARACIONES = {
     repeticion: {
       regla: "YA_ESTABA",
       prueba: {
-        archivo: ARCHIVO_DE_FORMA,
+        archivo: ARCHIVO,
         it: "I5: reactivar dos veces es ok, no escribe ni audita la segunda",
       },
     },
@@ -135,7 +135,7 @@ export const DECLARACIONES = {
       regla: "YA_ESTABA",
       prueba: {
         archivo: ARCHIVO,
-        it: "secciones: desactivar dos veces es ok y no audita la segunda",
+        it: "secciones: desactivar dos veces es ok y no audita la segunda; el producto elige una sección activa y desactivarla no lo toca",
       },
     },
   },

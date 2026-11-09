@@ -47,7 +47,11 @@ export interface RepositorioDePrecios {
     empresa: EmpresaId,
     producto: ProductoId,
   ): Promise<Array<FilaDePrecio & Readonly<{ cargadoPor: string | null }>>>;
-  insertar(empresa: EmpresaId, nuevo: NuevoPrecio): Promise<FilaDePrecio>;
+  /**
+   * Inserta la fila (`ON CONFLICT (id) DO NOTHING`) y la devuelve; `null` si ya había una con ese `id`. Si la que ya está la escribió una
+   * transacción concurrente que esta no ve, la base aborta por serialización y el motor repite el pedido, que entonces la ve como repetición.
+   */
+  insertar(empresa: EmpresaId, nuevo: NuevoPrecio): Promise<FilaDePrecio | null>;
 }
 
 export function crearRepositorioDePrecios(db: Kysely<CatalogoDb>): RepositorioDePrecios {
@@ -134,9 +138,10 @@ export function crearRepositorioDePrecios(db: Kysely<CatalogoDb>): RepositorioDe
             ${n.ahora}::timestamptz))`,
           cargado_por: n.cargadoPor,
         })
+        .onConflict((oc) => oc.column("id").doNothing())
         .returningAll()
-        .executeTakeFirstOrThrow();
-      return aFilaDePrecio(fila);
+        .executeTakeFirst();
+      return fila === undefined ? null : aFilaDePrecio(fila);
     },
   };
 }

@@ -163,6 +163,16 @@ export function armarCambiarPrecio(dependencias: DependenciasDeCatalogo) {
           ahora: contexto.ahora,
           cargadoPor: contexto.personaId,
         });
+        if (nueva === null) {
+          // Alguien escribió ese `precioId` entre la lectura de arriba y ahora: se vuelve a mirar (repetición o id ajeno).
+          const repetida = await tx.precios.obtener(empresaId, entrada.precioId);
+          const igual =
+            repetida !== null &&
+            mismoContenido(repetida, { producto: producto.id, opcion, sucursal, precio });
+          return igual
+            ? ok({ precioId: repetida.id, vigenteDesde: null, yaExistia: true })
+            : err("ID_REUTILIZADO");
+        }
         await tx.auditoria.registrar({
           empresaId,
           actorPersonaId: contexto.personaId,
