@@ -74,6 +74,52 @@ describe("reconocimientos pedidos: se validan antes de mirar los controles", () 
     });
   });
 
+  /** Un nombre de control distinto por número (solo letras minúsculas). */
+  const nombreDe = (n: number) => String.fromCharCode(97 + Math.floor(n / 26), 97 + (n % 26));
+
+  it("el tope es de 100 reconocimientos distintos: 100 entran y 101 no (por la cantidad, no por repetidos)", () => {
+    const distintos = (cuantos: number) =>
+      Array.from({ length: cuantos }, (_, i) => ({
+        modulo: "caja",
+        clave: `caja.${nombreDe(i)}`,
+        texto: null,
+      }));
+    expect(MAXIMO_DE_RECONOCIMIENTOS).toBe(100);
+    expect(reconocimientosValidos(distintos(100)).ok).toBe(true);
+    expect(reconocimientosValidos(distintos(101))).toEqual({
+      ok: false,
+      error: "RECONOCIMIENTO_INVALIDO",
+    });
+  });
+
+  it("lo que no es texto (un número, un arreglo que se vería como texto) es RECONOCIMIENTO_INVALIDO y nunca lanza", () => {
+    const malos = [
+      { modulo: 5, clave: "caja.x", texto: null },
+      { modulo: "caja", clave: 5, texto: null },
+      { modulo: ["caja"], clave: "caja.x", texto: null },
+      { modulo: "caja", clave: ["caja.x"], texto: null },
+      { modulo: null, clave: null, texto: null },
+    ];
+    for (const malo of malos) {
+      expect(reconocimientosValidos([malo as never]), JSON.stringify(malo)).toEqual({
+        ok: false,
+        error: "RECONOCIMIENTO_INVALIDO",
+      });
+    }
+  });
+
+  it("un módulo de más de 40 letras es inválido aunque su clave tenga la forma (el módulo se valida por sí mismo)", () => {
+    const modulo = "a".repeat(41);
+    expect(reconocimientosValidos([{ modulo, clave: `${modulo}.x`, texto: null }])).toEqual({
+      ok: false,
+      error: "RECONOCIMIENTO_INVALIDO",
+    });
+    const justo = "a".repeat(40);
+    expect(reconocimientosValidos([{ modulo: justo, clave: `${justo}.x`, texto: null }]).ok).toBe(
+      true,
+    );
+  });
+
   it("rechaza el mismo control reconocido dos veces y pasarse del tope", () => {
     const uno = { modulo: "caja", clave: "caja.x", texto: null };
     expect(reconocimientosValidos([uno, uno])).toEqual({

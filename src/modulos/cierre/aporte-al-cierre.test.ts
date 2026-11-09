@@ -13,6 +13,7 @@ import {
   pideReconocimiento,
   MAXIMO_DE_REFERENCIAS,
   type ControlDelDia,
+  SEVERIDADES,
   type Severidad,
 } from "./aporte-al-cierre";
 
@@ -141,6 +142,19 @@ describe("controles de un aporte: se comprueban contra el contrato (fail-closed)
     });
   });
 
+  it("las severidades son exactamente BLOQUEA, RECONOCIBLE e INFORMA, y las tres se aceptan", () => {
+    expect([...SEVERIDADES]).toEqual(["BLOQUEA", "RECONOCIBLE", "INFORMA"]);
+    for (const severidad of SEVERIDADES) {
+      expect(controlesDelAporte("caja", [control({ severidad })]).ok, severidad).toBe(true);
+    }
+    expect(controlesDelAporte("caja", [control({ severidad: "" as Severidad })]).ok).toBe(false);
+  });
+
+  it("la cantidad máxima es la de un integer de Postgres: 2.147.483.647 entra y uno más no", () => {
+    expect(controlesDelAporte("caja", [control({ cantidad: 2_147_483_647 })]).ok).toBe(true);
+    expect(controlesDelAporte("caja", [control({ cantidad: 2_147_483_648 })]).ok).toBe(false);
+  });
+
   it("acepta exactamente el máximo de referencias y rechaza una clave repetida", () => {
     const justo = control({
       referencias: Array.from({ length: MAXIMO_DE_REFERENCIAS }, (_, i) => `r${i}`),
@@ -213,6 +227,24 @@ describe("la huella del día", () => {
         expect(huellaDeControles(a) === huellaDeControles(b)).toBe(iguales);
       }),
     );
+  });
+
+  it("(propiedad) ordena de menor a mayor por módulo y clave, en cualquier orden de entrada", () => {
+    fc.assert(
+      fc.property(controlesAzar, (controles) => {
+        const ordenados = ordenarControles(controles);
+        for (let i = 1; i < ordenados.length; i++) {
+          const antes = ordenados[i - 1] as ControlDelDia;
+          const ahora = ordenados[i] as ControlDelDia;
+          expect(
+            `${antes.modulo}\u0000${antes.clave}` < `${ahora.modulo}\u0000${ahora.clave}`,
+          ).toBe(true);
+        }
+        expect(ordenados).toHaveLength(controles.length);
+      }),
+    );
+    const invertido = [control({ clave: "caja.b" }), control({ clave: "caja.a" })];
+    expect(ordenarControles(invertido).map((c) => c.clave)).toEqual(["caja.a", "caja.b"]);
   });
 
   it("ordena por módulo y por clave por unidades de código, sin tocar la lista original", () => {
