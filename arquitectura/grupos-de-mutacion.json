@@ -222,6 +222,12 @@
     "pruebas": "src/primitivas/contacto"
   },
   {
+    "grupo": "unidades y datos de texto",
+    "archivos": "src/primitivas/unidades/**/*.ts,src/primitivas/texto/**/*.ts",
+    "minutos": 1.1,
+    "pruebas": "src/primitivas/unidades src/primitivas/texto"
+  },
+  {
     "grupo": "fiscal (modelo de impresión)",
     "archivos": "src/modulos/fiscal/dominio/modelo-de-impresion.ts,src/modulos/fiscal/dominio/transparencia-fiscal.ts,src/modulos/fiscal/dominio/contacto-impreso.ts",
     "minutos": 0.9,
