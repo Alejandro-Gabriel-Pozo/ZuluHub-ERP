@@ -5,6 +5,7 @@ import {
 } from "../adaptadores/certificados/lector-x509";
 import { CADENAS_DE_CONFIANZA_DE_ARCA } from "./cadenas-de-confianza-de-arca";
 import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../capacidades/permisos/empresa";
+import { crearCasosDeUsoDeCierre, crearConsultasDeCierre } from "../modulos/cierre/publico";
 import { crearCasosDeUsoDeEmpresas, crearConsultasDeEmpresas } from "../modulos/empresas/publico";
 import {
   crearCasosDeUsoDeCertificados,
@@ -85,6 +86,24 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
     ),
     consultasDeEmpresas: perezoso(() =>
       crearConsultasDeEmpresas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /**
+     * El cierre del día (E3b): iniciar y cancelar la auditoría y cerrar la jornada, cada uno con su acción de `cierre`. Los aportes de los
+     * módulos que tienen algo que revisar (caja, ventas) los registra cada etapa en `aportes`: vacío mientras no existan.
+     */
+    casosDeUsoDeCierre: perezoso(() =>
+      crearCasosDeUsoDeCierre({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        aportes: [],
+      }),
+    ),
+    consultasDeCierre: perezoso(() =>
+      crearConsultasDeCierre({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        aportes: [],
+      }),
     ),
     casosDeUsoDeIdentidad: perezoso(() =>
       crearCasosDeUsoDeIdentidad({

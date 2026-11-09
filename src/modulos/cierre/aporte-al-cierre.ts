@@ -80,6 +80,7 @@ export type RegistroDeAportes<
 > = readonly AporteAlCierreDelDia<TLectura, TEscritura>[];
 
 // Listas de permitidos: la forma de cada nombre y de la huella. Las repite la base (CHECK `control_modulo_ck`, `control_clave_ck`).
+// fuente-unica: ajeno — coincide con el 40 del teléfono; es el largo máximo del nombre de un módulo del cierre, dato sin relación
 const FORMA_DEL_MODULO = /^[a-z_]{1,40}$/;
 const FORMA_DE_LA_CLAVE = /^[a-z_]+\.[a-z_]+$/;
 const LARGO_MAXIMO_DE_LA_CLAVE = 81;

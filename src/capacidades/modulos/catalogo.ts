@@ -281,11 +281,12 @@ export const CATALOGO_DE_MODULOS = {
   },
   /**
    * Cierre del día (E3b; decisión 163; `e0-cimientos-especificacion.md` §3.1.2b, `e3b-cierre-del-dia-especificacion.md`
-   * §3.1 y §3.6). Módulo propio, separado de la caja: no importa ningún módulo comercial. Nace `en_desarrollo`.
+   * §3.1 y §3.6). Módulo propio, separado de la caja: no importa ningún módulo comercial. `disponible` desde E3b: la jornada, los tres
+   * casos de uso (iniciar y cancelar la auditoría, cerrar) y las tres consultas existen; los aportes de caja y ventas los suman sus etapas.
    * Iniciar y cancelar la auditoría y cerrar la jornada completan o cierran lo ya iniciado, y se permiten en solo lectura.
    */
   cierre: {
-    estado: "en_desarrollo",
+    estado: "disponible",
     obligatorio: false,
     requiere: ["administracion"],
     usaSiExiste: [],

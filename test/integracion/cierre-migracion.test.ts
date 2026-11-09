@@ -2,6 +2,12 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import {
+  ESTADOS_DE_JORNADA,
+  explicacionDesdeTexto,
+  transicionPermitida,
+  type EstadoDeJornada,
+} from "../../src/modulos/cierre/publico";
 import { crearBaseAparte } from "./entorno";
 import { check, conAppDe, crearMundo, denegado, filas, acepta, type Mundo } from "./fiscal-apoyo";
 import { CARPETA_DE_MIGRACIONES } from "./marcas-apoyo";
@@ -17,7 +23,6 @@ import type { SesionDePrueba } from "./sesiones";
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 180_000 });
 
-const FECHA = "2026-11-09";
 const AHORA = "2026-11-09T22:00:00Z";
 const DESPUES = "2026-11-10T02:00:00Z";
 
@@ -552,6 +557,71 @@ describe.skipIf(base === null)("migración 0026: el cierre del día", () => {
         order by 1`,
     );
     expect(rows.map((r) => r.destino)).toEqual(["jornada_de_sucursal", "persona", "sucursal"]);
+  });
+
+  it("la base permite exactamente las transiciones del dominio (los nueve pares de estados)", async () => {
+    const llegar = async (s: SesionDePrueba, fecha: string, a: EstadoDeJornada) => {
+      filas(await crear(s, fecha), 1);
+      if (a === "ABIERTA") return;
+      filas(await iniciar(s, fecha), 1);
+      if (a === "CERRADA") filas(await cerrar(s, fecha), 1);
+    };
+    const intentar = (s: SesionDePrueba, fecha: string, hacia: EstadoDeJornada) => {
+      if (hacia === "ABIERTA") return cancelar(s, fecha);
+      if (hacia === "EN_AUDITORIA") return iniciar(s, fecha);
+      return cerrar(s, fecha);
+    };
+    for (const desde of ESTADOS_DE_JORNADA) {
+      for (const hacia of ESTADOS_DE_JORNADA) {
+        const fecha = fechaNueva();
+        await conAppDe(b(), m, async (s) => {
+          await llegar(s, fecha, desde);
+          const r = await intentar(s, fecha, hacia);
+          expect(r.ok, `${desde} → ${hacia}`).toBe(transicionPermitida(desde, hacia));
+        });
+      }
+    }
+  });
+
+  it("la lista de permitidos de la base y la de TypeScript (`explicacion.ts`) aceptan exactamente los mismos caracteres", async () => {
+    const texto = await readFile(join(CARPETA_DE_MIGRACIONES, "0026_cierre.sql"), "utf8");
+    const literales = [...texto.matchAll(/(?:observacion|texto) ~ '([^\n]*)'\n/g)].map(
+      (m) => m[1] as string,
+    );
+    // Los dos CHECK (observación y texto) usan la misma lista.
+    expect(literales).toHaveLength(2);
+    expect(new Set(literales).size).toBe(1);
+    const patron = (literales[0] as string).replaceAll("''", "'");
+    // Todos los caracteres del plano básico hasta U+024F, más tipográficos y de otros alfabetos, que la lista no debe admitir.
+    const candidatos = [
+      ...Array.from({ length: 0x250 }, (_, i) => String.fromCharCode(i)),
+      "\u2013",
+      "\u2014",
+      "\u2018",
+      "\u2019",
+      "\u201C",
+      "\u201D",
+      "\u20AC",
+      "\u0301",
+      "\u200B",
+      "\u202E",
+      "\u3042",
+      "\u05D0",
+      "\u0627",
+      "\uFFFD",
+    ].filter((c) => c !== " " && c !== "\u0000");
+    const dudosos: string[] = [];
+    for (const c of candidatos) {
+      const ts = explicacionDesdeTexto(`a${c}a`);
+      // La forma canónica de TypeScript recorta y compone; para comparar, solo importa si el carácter del medio entra o no.
+      const enTs = ts.ok && ts.valor === `a${c}a`;
+      const { rows } = await dueno.query<{ ok: boolean }>("select $1::text ~ $2::text as ok", [
+        `a${c}a`,
+        patron,
+      ]);
+      if (enTs !== rows[0]?.ok) dudosos.push(`U+${c.charCodeAt(0).toString(16).padStart(4, "0")}`);
+    }
+    expect(dudosos).toEqual([]);
   });
 
   describe("reversión", () => {

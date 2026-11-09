@@ -35,7 +35,12 @@ export {
   type Sucursal,
 } from "./dominio/sucursal";
 export { crearCasosDeUsoDeEmpresas, type CasosDeUsoDeEmpresas } from "./casos-de-uso/casos-de-uso";
-export type { DependenciasDeEmpresas, TxDeEmpresas } from "./casos-de-uso/contrato";
+export type {
+  DependenciasDeEmpresas,
+  LecturaDeEstados,
+  TxDeEmpresas,
+} from "./casos-de-uso/contrato";
+export { cargarEstadosDeLaEmpresa } from "./casos-de-uso/comun";
 export type {
   EntradaDeCrearSucursal,
   ErrorAlCrearSucursal,

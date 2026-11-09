@@ -51,6 +51,11 @@ import type { TxDeCola } from "../adaptadores/trabajos/procesador";
 import type { NivelesDeControl } from "../capacidades/controles/niveles";
 import type { EmpresaId } from "../primitivas/identificadores/marca";
 import {
+  crearRepositorioDeJornadas,
+  type CierreDb,
+  type RepositorioDeJornadas,
+} from "../modulos/cierre/publico";
+import {
   crearLecturaDeSucursalBloqueada,
   crearRepositorioDeEmpresas,
   crearRepositorioDeSucursales,
@@ -153,6 +158,8 @@ export type TxDeApp = Readonly<{
   tenants: RepositorioDeTenants;
   empresas: RepositorioDeEmpresas;
   sucursales: RepositorioDeSucursales;
+  /** La jornada de la sucursal y la foto de sus controles (cierre del día, E3b). */
+  jornadas: RepositorioDeJornadas;
   /** La sucursal leída con `FOR SHARE`: dar de alta un punto de venta exige que siga abierta (el cierre concurrente espera). */
   sucursalBloqueada: LecturaDeSucursalBloqueada;
   personas: RepositorioDePersonas;
@@ -267,6 +274,7 @@ function armarTx(db: ConexionDeTx, autorizacion: CargaDeAutorizacion): TxDeApp {
     tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
     empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
     sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
+    jornadas: crearRepositorioDeJornadas(db.withTables<CierreDb>()),
     sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
     personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
     membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),

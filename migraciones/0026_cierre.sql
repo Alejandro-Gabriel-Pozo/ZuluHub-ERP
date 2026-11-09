@@ -76,11 +76,12 @@ CREATE TABLE jornada_de_sucursal (
     AND (cerrada_en IS NULL OR cerrada_en >= auditoria_iniciada_en)
   ),
   CONSTRAINT jornada_huella_ck CHECK (huella_de_cierre IS NULL OR huella_de_cierre ~ '^[0-9a-f]{64}$'),
-  -- Opcional (decisión 160), solo al cerrar, una línea de hasta 500 caracteres sin control.
+  -- Opcional (decisión 160), solo al cerrar: una línea de 1 a 500 caracteres de la LISTA DE PERMITIDOS de la explicación (la repite
+  -- `src/modulos/cierre/dominio/explicacion.ts`: letras latinas, dígitos, espacio y los signos de una frase), sin blancos en los extremos.
   CONSTRAINT jornada_observacion_ck CHECK (
     observacion IS NULL OR (
-      estado = 'CERRADA' AND observacion = btrim(observacion) AND char_length(observacion) BETWEEN 1 AND 500
-      AND observacion !~ '[\x01-\x1F\x7F-\x9F]'
+      estado = 'CERRADA' AND observacion = btrim(observacion) AND char_length(observacion) <= 500
+      AND observacion ~ '^[A-Za-zÀ-ÖØ-öø-ÿ0-9 .,;:!?¿¡()/%$#&''"°ºª+*_-]+$'
     )
   )
 );
@@ -188,10 +189,11 @@ CREATE TABLE control_de_jornada_cerrada (
     AND (reconocido_por IS NULL) = (reconocido_en IS NULL)
     AND (NOT reconocido OR (severidad = 'RECONOCIBLE' AND cantidad > 0))
   ),
+  -- La misma lista de permitidos que `jornada_observacion_ck`; el texto solo existe en un control reconocido.
   CONSTRAINT control_texto_ck CHECK (
     texto IS NULL OR (
-      reconocido AND texto = btrim(texto) AND char_length(texto) BETWEEN 1 AND 500
-      AND texto !~ '[\x01-\x1F\x7F-\x9F]'
+      reconocido AND texto = btrim(texto) AND char_length(texto) <= 500
+      AND texto ~ '^[A-Za-zÀ-ÖØ-öø-ÿ0-9 .,;:!?¿¡()/%$#&''"°ºª+*_-]+$'
     )
   )
 );

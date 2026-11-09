@@ -3,6 +3,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  DECLARACIONES_DE_CIERRE,
+  DECLARACIONES_DE_CONSULTAS_DE_CIERRE,
+} from "../modulos/cierre/publico";
+import {
   DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS,
   DECLARACIONES_DE_EMPRESAS,
 } from "../modulos/empresas/publico";
@@ -596,6 +600,8 @@ function incumplimientosDeLaWeb(
 const DECISIONES_DE_WEB: Record<keyof ReturnType<typeof armarWeb>, Decision> = {
   casosDeUsoDeEmpresas: { conGuard: DECLARACIONES_DE_EMPRESAS },
   consultasDeEmpresas: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS },
+  casosDeUsoDeCierre: { conGuard: DECLARACIONES_DE_CIERRE },
+  consultasDeCierre: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CIERRE },
   casosDeUsoDeIdentidad: {
     conGuard: DECLARACIONES_DE_IDENTIDAD,
     exentos: {
