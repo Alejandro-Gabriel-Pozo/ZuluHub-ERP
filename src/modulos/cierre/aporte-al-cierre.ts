@@ -143,7 +143,7 @@ export function controlesDelAporte(
 export function ordenarControles<T extends Readonly<{ modulo: string; clave: string }>>(
   controles: readonly T[],
 ): T[] {
-  const comparar = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+  const comparar = (a: string, b: string): number => (a === b ? 0 : a < b ? -1 : 1);
   return [...controles].sort((a, b) => comparar(a.modulo, b.modulo) || comparar(a.clave, b.clave));
 }
 
