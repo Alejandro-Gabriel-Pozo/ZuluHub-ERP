@@ -56,12 +56,65 @@ export function partirTipeado(crudo: string): { entera: string; decimal: string 
 export function interpretarImporteTipeado(crudo: string): ImporteTipeado {
   const { entera: cruda, decimal } = partirTipeado(crudo);
   if (cruda === "" && decimal === null) return { texto: "", canonico: "" };
+  return armarTipeado(cruda, decimal);
+}
+
+/** Acota la parte entera y los decimales a lo que admite la moneda y arma el texto del campo y el canónico. Una regla, un lugar. */
+function armarTipeado(cruda: string, decimal: string | null): ImporteTipeado {
   const entera = cruda.replace(/^0+(?=\d)/, "").slice(0, DIGITOS_ENTEROS_MAXIMOS) || "0";
   const fraccion = (decimal ?? "").slice(0, DECIMALES);
   const canonico = importeATexto(
     importeDesdeTexto(ARS, `${entera}.${fraccion.padEnd(DECIMALES, "0")}`),
   );
   return { texto: decimal === null ? entera : `${entera},${fraccion}`, canonico };
+}
+
+/**
+ * Lo que queda en el campo al ESCRIBIR (decisión 153): solo dígitos y una coma con hasta dos decimales. El
+ * punto no se puede escribir: se ignora (el de miles lo agrega `mostrarImporte` al salir del campo). Una
+ * segunda coma se ignora y no se parte el número; la tercera cifra decimal se ignora al tipearla.
+ */
+export function filtrarImporteEscrito(crudo: string): ImporteTipeado {
+  const limpio = crudo.replace(/[^\d,]/g, "");
+  const coma = limpio.indexOf(",");
+  if (coma === -1) return limpio === "" ? { texto: "", canonico: "" } : armarTipeado(limpio, null);
+  return armarTipeado(limpio.slice(0, coma), limpio.slice(coma + 1).replace(/\D/g, ""));
+}
+
+/** Por qué se rechaza un pegado (decisión 153; supuesto S-6: más de dos decimales se rechaza, no se recorta). */
+export type MotivoDePegadoRechazado = "PUNTO_MAL_PUESTO" | "DECIMALES_DE_MAS" | "FORMA_INVALIDA";
+
+export type ImportePegado =
+  | Readonly<{ ok: true; texto: string; canonico: string }>
+  | Readonly<{ ok: false; motivo: MotivoDePegadoRechazado }>;
+
+/** Sin puntos, o con cada punto separando miles bien (grupos de tres dígitos). Cero y sin ceros a la izquierda. */
+const ENTERA_PEGADA = /^(?:0|[1-9]\d*|[1-9]\d{0,2}(?:\.\d{3})+)$/;
+
+/**
+ * Interpreta lo PEGADO con la misma regla del campo (decisión 153): `14.000,50`, `1234,5` y `0,5` entran;
+ * si un punto no separa miles bien, si hay más de dos decimales o si no tiene la forma de un importe, se
+ * rechaza y el campo no cambia. Los espacios de los extremos se ignoran (SUPUESTO: lo copiado suele traerlos).
+ */
+export function interpretarImportePegado(crudo: string): ImportePegado {
+  const texto = crudo.trim();
+  if (!/^[\d.,]+$/.test(texto)) return { ok: false, motivo: "FORMA_INVALIDA" };
+  const partes = texto.split(",");
+  if (partes.length > 2) return { ok: false, motivo: "FORMA_INVALIDA" };
+  // `split` siempre entrega al menos un elemento y aquí no más de dos: la entera existe, la decimal puede faltar.
+  const [entera, decimal] = partes as [string, string | undefined];
+  if (!ENTERA_PEGADA.test(entera)) {
+    return { ok: false, motivo: entera.includes(".") ? "PUNTO_MAL_PUESTO" : "FORMA_INVALIDA" };
+  }
+  const digitos = entera.replace(/\./g, "");
+  if (digitos.length > DIGITOS_ENTEROS_MAXIMOS) return { ok: false, motivo: "FORMA_INVALIDA" };
+  if (decimal !== undefined) {
+    if (decimal.includes(".")) return { ok: false, motivo: "PUNTO_MAL_PUESTO" };
+    if (decimal === "") return { ok: false, motivo: "FORMA_INVALIDA" };
+    if (decimal.length > DECIMALES) return { ok: false, motivo: "DECIMALES_DE_MAS" };
+  }
+  const armado = armarTipeado(digitos, decimal ?? null);
+  return { ok: true, ...armado };
 }
 
 /** El texto canónico con puntos de miles y coma decimal (`1234.5` → `1.234,50`). Vacío si no es un importe. */

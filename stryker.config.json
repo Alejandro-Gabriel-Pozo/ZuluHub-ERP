@@ -7,6 +7,7 @@
   "mutate": [
     "src/primitivas/dinero/**/*.ts",
     "src/primitivas/cantidad/**/*.ts",
+    "src/primitivas/unidades/**/*.ts",
     "src/primitivas/identificacion-fiscal/**/*.ts",
     "src/primitivas/domicilio/**/*.ts",
     "src/primitivas/tiempo/**/*.ts",

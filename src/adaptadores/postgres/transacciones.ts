@@ -104,7 +104,7 @@ export function crearTransacciones<Tx>(
   const clave: ClaveDeContexto = configuracion.clave;
   if (
     !Buffer.isBuffer((clave as Partial<ClaveDeContexto> | undefined)?.secreto) ||
-    clave.secreto.length < 32
+    clave.secreto.length < 32 // fuente-unica: ajeno — coincide con el 32 del cupón; bytes mínimos de la clave de contexto, dato sin relación
   ) {
     throw new ErrorDeConfiguracion("falta la clave de contexto (de 32 bytes o más)");
   }

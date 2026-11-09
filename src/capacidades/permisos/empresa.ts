@@ -101,15 +101,9 @@ export const PERMISOS_DE_EMPRESA = {
   "depositos.asignar_emisor": ["GERENTE"],
   "stock.verificar_saldos": ["GERENTE"],
   // CE0 (catalogo-carta-niveles-y-elecciones §7.2): quien carga productos y opciones también edita las
-  // variantes, arma la biblioteca de elecciones, los grupos de precio y los combos (F6, opción A). El
-  // operador no.
+  // variantes y los combos (F6, opción A). El operador no. Sin acciones de grupos de precio ni
+  // `opciones.asignar` (decisiones 138 y 133).
   "variantes.editar": ["GERENTE", "ADMINISTRADOR"],
-  "opciones.asignar": ["GERENTE", "ADMINISTRADOR"],
-  "grupos_de_precio.crear": ["GERENTE", "ADMINISTRADOR"],
-  "grupos_de_precio.editar": ["GERENTE", "ADMINISTRADOR"],
-  "grupos_de_precio.asignar": ["GERENTE", "ADMINISTRADOR"],
-  "grupos_de_precio.desactivar": ["GERENTE", "ADMINISTRADOR"],
-  "grupos_de_precio.reactivar": ["GERENTE", "ADMINISTRADOR"],
   "conjuntos.editar_contenido": ["GERENTE", "ADMINISTRADOR"],
   // H7 facturación §C (F5). Emitir a mano (P10, DECIDIDO), la nota de crédito (P9, recomendada A), descartar y
   // reintentar (ASUMIDO): los tres roles. Resincronizar una serie (QF1) y cambiar el ambiente de un punto de venta
@@ -122,6 +116,56 @@ export const PERMISOS_DE_EMPRESA = {
   "puntos_de_venta.cambiar_ambiente": ["GERENTE"],
   // H7 facturación §C (F7), DECIDIDO: solo el gerente genera el pedido y carga el certificado de ARCA.
   "certificados.gestionar": ["GERENTE"],
+  // E0-T1 (e0-cimientos-especificacion §3.1). Los tres módulos están `en_desarrollo`: el guard rechaza todo antes de
+  // mirar esta tabla, así que estas filas no dan permiso a nadie hasta que E3, E3b y E4 los construyan. Roles fijos
+  // (decisión 18); el operador hace el cierre del día (161) y anula y corrige con todo auditado (155).
+  // Caja (e3 §3.8 y e3b §4.7; fuente de cada fila: `e0-cimientos-especificacion.md` §3.1.1). Las cajas adicionales las
+  // habilita el plan y las crea el gerente (decisión 124).
+  "cajas.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "cajas.crear": ["GERENTE"],
+  "cajas.reactivar": ["GERENTE"],
+  "cajas.desactivar": ["GERENTE"],
+  "cajas.editar": ["GERENTE", "ADMINISTRADOR"],
+  // Medios de pago y cuentas de cobro (decisión 124); `medios_de_pago.editar` cubre elegir qué datos opcionales
+  // pide cada medio (decisión 129, SUPUESTO S-2).
+  "medios_de_pago.crear": ["GERENTE", "ADMINISTRADOR"],
+  "medios_de_pago.editar": ["GERENTE", "ADMINISTRADOR"],
+  "medios_de_pago.reactivar": ["GERENTE", "ADMINISTRADOR"],
+  "medios_de_pago.desactivar": ["GERENTE", "ADMINISTRADOR"],
+  "cuentas_de_cobro.crear": ["GERENTE", "ADMINISTRADOR"],
+  "cuentas_de_cobro.editar": ["GERENTE", "ADMINISTRADOR"],
+  "cuentas_de_cobro.reactivar": ["GERENTE", "ADMINISTRADOR"],
+  "cuentas_de_cobro.desactivar": ["GERENTE", "ADMINISTRADOR"],
+  // Sesiones de caja: decisión 123 (fondo declarado) y 145 (el operador debe poder abrirla). Iniciar y cancelar el
+  // cierre: la 123 no los menciona, lo confirma E3.
+  "sesiones_caja.abrir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "sesiones_caja.iniciar_cierre": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "sesiones_caja.cancelar_cierre": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "sesiones_caja.cerrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  // Movimientos manuales (decisión 123): el ajuste es de quien administra o gerencia; el operador anula solo lo suyo
+  // (lo valida el caso de uso).
+  "movimientos_caja.registrar_manual": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "movimientos_caja.ajustar": ["GERENTE", "ADMINISTRADOR"],
+  "movimientos_caja.anular": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "movimientos_caja.anular_de_otros": ["GERENTE", "ADMINISTRADOR"],
+  // e3b §4.7 y decisión 161: los tres roles.
+  "cobros.corregir_medio": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "declaraciones_de_total.registrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  // Cierre del día (e3b §3.6, decisión 161): los tres roles, en solo lectura se permiten las que cierran.
+  "jornadas.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "jornadas.iniciar_auditoria": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "jornadas.cancelar_auditoria": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "jornadas.cerrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  // Ventas (e4 §3.14, tabla exacta de S4). Anular línea, anular cuenta y corregir ticket: decisión 155, el operador
+  // puede, todo auditado.
+  "ventas.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "cuentas.abrir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "cuentas.agregar_linea": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "cuentas.cerrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "cuentas.anular_linea": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "cuentas.anular": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "tickets.cobrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "tickets.corregir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
 } as const satisfies Record<ClaveAccion, readonly RolDeEmpresa[]>;
 
 export type ReglasDeEmpresa = ReglasDelGuard<ClaveModulo, ClaveAccion, ClaveCapacidad>;

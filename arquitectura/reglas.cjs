@@ -8,7 +8,6 @@
 const ORM =
   "^(node_modules/)?(kysely|drizzle-orm|drizzle-kit|@prisma/|prisma|pg|pg-pool|postgres|@neondatabase/)(/|$)";
 const FRAMEWORK = "^(node_modules/)?(zod|react|react-dom|next)(/|$)";
-
 const CAPAS_SUPERIORES_A_CAPACIDADES =
   "^src/(modulos|plataforma|consultas-de-grupo|composicion|adaptadores)/";
 
@@ -550,5 +549,6 @@ const reglas = [
     to: { path: "^apps/", pathNot: "^apps/(plataforma/|web/ui/)" },
   },
 ];
-
-module.exports = { reglas: reglas.concat(require("./reglas-de-pdf.cjs")) };
+module.exports = {
+  reglas: reglas.concat(require("./reglas-de-pdf.cjs"), require("./reglas-de-modulos.cjs")),
+};

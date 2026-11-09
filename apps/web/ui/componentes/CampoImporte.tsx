@@ -1,7 +1,9 @@
 import type { DatoDeCampo } from "../../../../src/capacidades/datos/registro";
 import { useState } from "react";
 import {
+  filtrarImporteEscrito,
   interpretarImporteTipeado,
+  interpretarImportePegado,
   mostrarImporte,
 } from "../../../../src/capacidades/experiencia/importe-tipeado";
 import { CajaDeCampo } from "./CajaDeCampo";
@@ -28,8 +30,8 @@ export type PropsDeCampoImporte = Readonly<{
 }>;
 
 /**
- * Importe en pesos para tipear en el celular: teclado decimal, coma al tipear (es-AR) y miles con punto
- * al salir del campo. El campo muestra `1.234,50`; la frontera entrega `"1234.50"`. La limpieza y el
+ * Importe en pesos para tipear en el celular: teclado decimal, solo dígitos y una coma con hasta dos decimales (es-AR,
+ * el punto escrito no entra) y miles con punto que agrega el sistema al salir del campo. El campo muestra `1.234,50`; la frontera entrega `"1234.50"`. La limpieza y el
  * formato viven en `capacidades/experiencia` (sin React, con mutación al 100 %).
  */
 export function CampoImporte({
@@ -77,8 +79,14 @@ export function CampoImporte({
             onBlur={() => {
               setTipeado(mostrarImporte(interpretarImporteTipeado(visible).canonico));
             }}
+            onPaste={(evento) => {
+              // Lo pegado se valida con la regla del campo; si no cumple, no entra nada (decisión 153).
+              if (!interpretarImportePegado(evento.clipboardData.getData("text")).ok) {
+                evento.preventDefault();
+              }
+            }}
             onChange={(evento) => {
-              const interpretado = interpretarImporteTipeado(evento.target.value);
+              const interpretado = filtrarImporteEscrito(evento.target.value);
               setTipeado(interpretado.texto);
               if (interpretado.canonico !== valor) alCambiar(interpretado.canonico);
             }}

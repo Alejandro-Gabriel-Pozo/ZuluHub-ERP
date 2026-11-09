@@ -1,9 +1,25 @@
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
-import { page, userEvent } from "vitest/browser";
+import { page, userEvent, type Locator } from "vitest/browser";
 import { matrizDeEstados, verificarFoco, violacionesDeAccesibilidad } from "../pruebas/ayudas";
 import { CampoImporte } from "./CampoImporte";
+
+/**
+ * Pega `texto` en el campo sin tocar el portapapeles real (el Chromium del CI no da permiso de escritura): lanza el evento `paste`
+ * con su `clipboardData` y, si el campo no lo cancela, el navegador inserta el texto (`fill`), como en un pegado de verdad.
+ */
+async function pegar(campo: Locator, texto: string): Promise<void> {
+  const datos = new DataTransfer();
+  datos.setData("text/plain", texto);
+  const evento = new ClipboardEvent("paste", {
+    clipboardData: datos,
+    bubbles: true,
+    cancelable: true,
+  });
+  campo.element().dispatchEvent(evento);
+  if (!evento.defaultPrevented) await userEvent.fill(campo, texto);
+}
 
 /** Registra todo lo que el campo entrega a quien lo usa: el contrato es que SIEMPRE es texto. */
 function Probado({
@@ -59,6 +75,36 @@ describe("CampoImporte", () => {
     await userEvent.type(page.getByLabelText("Importe"), "ab$-1x2,345");
     await expect.element(page.getByLabelText("Importe")).toHaveValue("12,34");
     expect(alEntregar).toHaveBeenLastCalledWith("12.34");
+  });
+
+  it("el punto escrito a mano no entra: ni como miles ni como decimal", async () => {
+    const alEntregar = vi.fn();
+    await render(<Probado alEntregar={alEntregar} />);
+    const campo = page.getByLabelText("Importe");
+    await userEvent.type(campo, "1.234.5");
+    await expect.element(campo).toHaveValue("12345");
+    expect(alEntregar).toHaveBeenLastCalledWith("12345.00");
+    await userEvent.clear(campo);
+    await userEvent.type(campo, "14000,50");
+    await userEvent.tab();
+    await expect.element(campo).toHaveValue("14.000,50");
+  });
+
+  it("un pegado con miles bien puestos entra; con punto mal puesto o más de dos decimales se rechaza y el campo no cambia", async () => {
+    const alEntregar = vi.fn();
+    await render(<Probado alEntregar={alEntregar} />);
+    const campo = page.getByLabelText("Importe");
+    await userEvent.click(campo);
+    await pegar(campo, "14.000,50");
+    await expect.element(campo).toHaveValue("14000,50");
+    expect(alEntregar).toHaveBeenLastCalledWith("14000.50");
+    await userEvent.clear(campo);
+    alEntregar.mockClear();
+    for (const rechazado of ["1234.50", "1.5", "12,345", "abc"]) {
+      await pegar(campo, rechazado);
+      await expect.element(campo).toHaveValue("");
+    }
+    expect(alEntregar).not.toHaveBeenCalled();
   });
 
   it("al salir muestra los miles con punto; al volver, los saca para editar", async () => {

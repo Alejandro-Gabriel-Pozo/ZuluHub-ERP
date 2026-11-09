@@ -619,14 +619,17 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
       const { modulos } = esperar(await consultas.verConfiguracion(soporte));
       expect(modulos.map((m) => m.clave)).toEqual([
         "administracion",
+        "caja",
         "catalogo",
+        "cierre",
         "facturacion",
         "stock",
+        "ventas",
         "vidriera",
       ]);
       expect(modulos[0]).toMatchObject({ estado: "disponible", obligatorio: true });
       // `facturacion` es disponible desde 2026-11-04 (no obligatoria: cada empresa la activa); el resto sigue en desarrollo.
-      expect(modulos[2]).toMatchObject({
+      expect(modulos[4]).toMatchObject({
         clave: "facturacion",
         estado: "disponible",
         obligatorio: false,

@@ -228,6 +228,12 @@
     "pruebas": "src/primitivas/contacto"
   },
   {
+    "grupo": "unidades",
+    "archivos": "src/primitivas/unidades/**/*.ts",
+    "minutos": 1.1,
+    "pruebas": "src/primitivas/unidades"
+  },
+  {
     "grupo": "fiscal (modelo de impresión)",
     "archivos": "src/modulos/fiscal/dominio/modelo-de-impresion.ts,src/modulos/fiscal/dominio/transparencia-fiscal.ts,src/modulos/fiscal/dominio/contacto-impreso.ts,src/modulos/fiscal/dominio/leyenda-de-credito-fiscal.ts,src/modulos/fiscal/dominio/sucursal-impresa.ts,src/modulos/fiscal/dominio/versiones-de-representacion.ts",
     "minutos": 0.9,

@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { duplicadosPorArchivo } from "./fuente-unica-apoyo";
+import { duplicadosPorArchivo, marcasInvalidas } from "./fuente-unica-apoyo";
 
 /**
  * REGLA (CLAUDE.md «Una regla, un lugar»; regla 4 de `Pedernal-docs/01-vision/primitivas-de-negocio.md`): el largo máximo de un dato
@@ -69,6 +69,10 @@ describe("fuente única: el código real", () => {
     }
     const cubiertos = new Set(entradas.flatMap((e) => e.archivos));
     for (const ruta of reales.keys()) expect(cubiertos.has(ruta), ruta).toBe(true);
+  });
+
+  it("ninguna marca de «valor ajeno» del código real está sin motivo", () => {
+    expect(marcasInvalidas(archivos)).toEqual([]);
   });
 
   it("la regla está escrita en CLAUDE.md (quitarla hace fallar la prueba)", () => {
