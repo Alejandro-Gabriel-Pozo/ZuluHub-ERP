@@ -14,6 +14,9 @@ export type ErrorDeGancho = "GANCHO_DE_SUCURSAL_FALLIDO";
  * error aborta la creación entera. Previene que cada camino que crea sucursales tenga que acordarse de
  * crear lo que la acompaña, y que una sucursal quede sin ello si algo falla a mitad. Es genérico en la
  * transacción (`TxDeEmpresas` en la práctica) para no formar un ciclo con el contrato de los casos de uso.
+ *
+ * Cubre solo las sucursales creadas con `crearSucursal`; la primera sucursal del alta de empresa la cubre el
+ * disparador de E3 (decisión PP-7, opción 1, 09/11/2026).
  */
 export type GanchoDeSucursal<Tx> = Readonly<{
   alCrearSucursalEnTx(
