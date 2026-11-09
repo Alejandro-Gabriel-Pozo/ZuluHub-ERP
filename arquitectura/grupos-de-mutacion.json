@@ -228,10 +228,10 @@
     "pruebas": "src/primitivas/contacto"
   },
   {
-    "grupo": "unidades y datos de texto",
-    "archivos": "src/primitivas/unidades/**/*.ts,src/primitivas/texto/**/*.ts",
+    "grupo": "unidades",
+    "archivos": "src/primitivas/unidades/**/*.ts",
     "minutos": 1.1,
-    "pruebas": "src/primitivas/unidades src/primitivas/texto"
+    "pruebas": "src/primitivas/unidades"
   },
   {
     "grupo": "fiscal (modelo de impresión)",
