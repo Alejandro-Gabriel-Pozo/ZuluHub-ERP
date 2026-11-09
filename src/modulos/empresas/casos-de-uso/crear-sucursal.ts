@@ -15,6 +15,7 @@ import {
   nombreDeSucursalValido,
   type ErrorDeSucursal,
 } from "../dominio/sucursal";
+import type { ErrorDeGancho } from "../ganchos-de-sucursal";
 import { cargarEstadosDeLaEmpresa } from "./comun";
 import type { DependenciasDeEmpresas } from "./contrato";
 import { DECLARACIONES } from "./declaraciones";
@@ -47,7 +48,11 @@ type ErrorPropioAlCrearSucursal = Extract<
 >;
 
 export type ErrorAlCrearSucursal =
-  ErrorPropioAlCrearSucursal | MotivoDeRechazo | EmpresaNoOpera | ErrorDePersistencia;
+  | ErrorPropioAlCrearSucursal
+  | MotivoDeRechazo
+  | EmpresaNoOpera
+  | ErrorDeGancho
+  | ErrorDePersistencia;
 
 /** Errores de restricciones que forman parte del contrato de este caso de uso. */
 const RESTRICCIONES_ADMITIDAS = [
@@ -76,10 +81,17 @@ function contactoCargado(contacto: ContactoDeSucursal): CambiosDeContacto {
  *    (`yaExistia: true`) sin escribir: un doble clic o un reintento deja una sola sucursal;
  *  - ya había una desactivada con ese nombre → `SUCURSAL_INACTIVA_CON_ESE_NOMBRE` (se la reactiva).
  *
+ * Si se insertó, después de la auditoría corren los ganchos de sucursal (decisión 165), en orden y en la
+ * misma transacción: el primero que falla revierte todo (no queda la sucursal). Una repetición no los invoca.
+ *
  * Dos altas simultáneas del mismo nombre: la que espera ve la otra al reintentar (serializable) y
  * devuelve `yaExistia`. El id lo genera la base.
  */
-export function armarCrearSucursal({ transacciones, reglas }: DependenciasDeEmpresas) {
+export function armarCrearSucursal({
+  transacciones,
+  reglas,
+  ganchosDeSucursal = [],
+}: DependenciasDeEmpresas) {
   return async function crearSucursal(
     contexto: ContextoOperativo,
     entrada: EntradaDeCrearSucursal,
@@ -92,7 +104,7 @@ export function armarCrearSucursal({ transacciones, reglas }: DependenciasDeEmpr
       ): Promise<
         Resultado<
           SalidaDeCrearSucursal,
-          ErrorPropioAlCrearSucursal | MotivoDeRechazo | EmpresaNoOpera
+          ErrorPropioAlCrearSucursal | MotivoDeRechazo | EmpresaNoOpera | ErrorDeGancho
         >
       > => {
         const permiso = await exigirAccion(reglas, DECLARACIONES.crearSucursal.accion, () =>
@@ -124,6 +136,13 @@ export function armarCrearSucursal({ transacciones, reglas }: DependenciasDeEmpr
             ...contactoCargado(alta.sucursal.contacto),
           },
         });
+        for (const gancho of ganchosDeSucursal) {
+          const resultadoDelGancho = await gancho.alCrearSucursalEnTx(tx, contexto, {
+            sucursalId: alta.sucursal.id,
+            nombre: alta.sucursal.nombre,
+          });
+          if (!resultadoDelGancho.ok) return resultadoDelGancho;
+        }
         return ok({ sucursalId: alta.sucursal.id, yaExistia: false });
       },
     );

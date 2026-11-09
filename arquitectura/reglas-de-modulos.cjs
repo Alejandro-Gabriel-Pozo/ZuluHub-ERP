@@ -31,4 +31,12 @@ module.exports = [
     from: { path: "^src/modulos/cierre/" },
     to: { path: "^src/modulos/(catalogo|caja|ventas|stock|fiscal|clientes|reservas)/" },
   },
+  {
+    name: "empresas-sin-negocio",
+    severity: "error",
+    comment:
+      "E0-T7 (e0 §3.6.2; decisión 165, e3 §3.2.1). empresas no importa caja, ni por su publico.ts: declara el puerto GanchosDeSucursal y caja lo implementa y la composición lo registra. Previene que crear una sucursal dependa del módulo de dinero (ciclo: caja ya depende de empresas); si se elimina, falla la violación inyectada de esta regla.",
+    from: { path: "^src/modulos/empresas/" },
+    to: { path: "^src/modulos/caja/" },
+  },
 ];

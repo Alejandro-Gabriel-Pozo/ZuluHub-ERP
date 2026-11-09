@@ -4,6 +4,7 @@ import type { TenantId } from "../../../primitivas/identificadores/marca";
 import type { Auditoria } from "../../../puertos/auditoria";
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
+import type { GanchosDeSucursal } from "../ganchos-de-sucursal";
 import type { RepositorioDeEmpresas } from "../persistencia/repositorios";
 import type { RepositorioDeSucursales } from "../persistencia/repositorio-de-sucursales";
 
@@ -35,4 +36,9 @@ export type DependenciasDeEmpresas = Readonly<{
   transacciones: Transacciones<TxDeEmpresas>;
   /** El catálogo y la matriz rol → acciones con los que el guard autoriza (los pasa la composición). */
   reglas: ReglasDeEmpresa;
+  /**
+   * Lo que nace junto con una sucursal (decisión 165). La composición lo registra; ausente = ninguno.
+   * Los ganchos corren en el orden de la lista y el primer error aborta todo.
+   */
+  ganchosDeSucursal?: GanchosDeSucursal<TxDeEmpresas>;
 }>;

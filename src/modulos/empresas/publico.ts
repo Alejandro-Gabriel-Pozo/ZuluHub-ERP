@@ -8,6 +8,7 @@ export {
   type ErrorDeEmpresa,
 } from "./dominio/empresa";
 export { datosDeJornada } from "./datos-de-jornada";
+export type { ErrorDeGancho, GanchoDeSucursal, GanchosDeSucursal } from "./ganchos-de-sucursal";
 export { DECLARACIONES as DECLARACIONES_DE_EMPRESAS } from "./casos-de-uso/declaraciones";
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS } from "./consultas/declaraciones";
 export {

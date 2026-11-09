@@ -72,7 +72,12 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
     autenticacion: () => conexiones.autenticacion(),
     barridoDeAutenticacion: () => conexiones.barridoDeAutenticacion(),
     casosDeUsoDeEmpresas: perezoso(() =>
-      crearCasosDeUsoDeEmpresas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+      crearCasosDeUsoDeEmpresas({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        // Lo que nace con cada sucursal (decisión 165). Vacío mientras `caja` no exista: ahí se registra su gancho.
+        ganchosDeSucursal: [],
+      }),
     ),
     consultasDeEmpresas: perezoso(() =>
       crearConsultasDeEmpresas({ transacciones: conexiones.transaccionesDeApp(), reglas }),

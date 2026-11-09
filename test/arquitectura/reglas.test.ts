@@ -409,6 +409,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "empresas-sin-negocio",
+      archivos: {
+        "src/modulos/empresas/casos-de-uso/c.ts": importa("../../caja/publico"),
+        "src/modulos/caja/publico.ts": exporta,
+      },
+    },
+    {
       regla: "arca-solo-en-su-adaptador",
       archivos: {
         "src/modulos/fiscal/dominio/d.ts": importa("pkijs"),
@@ -1433,6 +1440,19 @@ describe("E0-T5: sentido de las dependencias entre módulos de base, ventas y ci
       });
       expect(v, modulo).toContain("cierre-sin-negocio");
     }
+  });
+
+  it("caja sí importa los tipos del puerto de empresas por su publico.ts; empresas no importa caja", async () => {
+    const permitido = await violacionesDe({
+      "src/modulos/empresas/publico.ts": exporta,
+      "src/modulos/caja/casos-de-uso/c.ts": importa("../../empresas/publico"),
+    });
+    expect(permitido).not.toContain("empresas-sin-negocio");
+    const prohibido = await violacionesDe({
+      "src/modulos/empresas/publico.ts": importa("../caja/publico"),
+      "src/modulos/caja/publico.ts": exporta,
+    });
+    expect(prohibido).toContain("empresas-sin-negocio");
   });
 
   it("cierre sí usa empresas y los módulos de negocio sí usan cierre por su publico.ts", async () => {
