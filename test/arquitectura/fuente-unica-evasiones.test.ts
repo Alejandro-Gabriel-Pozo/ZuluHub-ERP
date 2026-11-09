@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { constantesDeLargo, duplicadosPorArchivo } from "./fuente-unica-apoyo";
+import { constantesDeLargo, duplicadosPorArchivo, marcasInvalidas } from "./fuente-unica-apoyo";
 
 /**
  * Violaciones inyectadas de `fuente-unica.test.ts`: cada forma de escribir un tope de largo dos veces tiene su caso. Si se debilita el
@@ -157,5 +157,53 @@ describe("fuente única: el límite de una primitiva escrito en otro lado (revis
     ).toEqual({
       "src/a/f.ts": 1,
     });
+  });
+});
+
+describe("fuente única: marca de «valor ajeno»", () => {
+  const CUPON = "export const LARGO_MAXIMO_DEL_CUPON = 32;\n";
+  const MOTIVO = "es el largo de una clave de otro dato, sin relación";
+  const rutas = (texto: string) => new Map([["src/f.ts", texto]]);
+
+  it("un duplicado real sin marca falla (se cuenta)", () => {
+    expect(
+      cuenta({ "src/primitivas/texto/c.ts": CUPON, "src/f.ts": "if (t.length < 32) x();\n" }),
+    ).toEqual({
+      "src/f.ts": 1,
+    });
+  });
+
+  it("un duplicado con marca y motivo, en la misma línea o en la anterior, pasa", () => {
+    for (const uso of [
+      `if (t.length < 32) x(); // fuente-unica: ajeno — ${MOTIVO}\n`,
+      `// fuente-unica: ajeno — ${MOTIVO}\nif (t.length < 32) x();\n`,
+      `// fuente-unica: ajeno - ${MOTIVO}\nconst LARGO_DE_CLAVE = 32;\n`,
+    ])
+      expect(cuenta({ "src/primitivas/texto/c.ts": CUPON, "src/f.ts": uso })).toEqual({});
+  });
+
+  it("la marca cubre solo su línea y la siguiente", () => {
+    const uso = `// fuente-unica: ajeno — ${MOTIVO}\nconst a = 1;\nif (t.length < 32) x();\n`;
+    expect(cuenta({ "src/primitivas/texto/c.ts": CUPON, "src/f.ts": uso })).toEqual({
+      "src/f.ts": 1,
+    });
+  });
+
+  it("una marca sin motivo, vacía o con motivo corto falla y no exime", () => {
+    for (const marca of [
+      "// fuente-unica: ajeno",
+      "// fuente-unica: ajeno —",
+      "// fuente-unica: ajeno — no",
+    ]) {
+      const uso = `${marca}\nif (t.length < 32) x();\n`;
+      expect(marcasInvalidas(rutas(uso))).toEqual(["src/f.ts:1"]);
+      expect(cuenta({ "src/primitivas/texto/c.ts": CUPON, "src/f.ts": uso })).toEqual({
+        "src/f.ts": 1,
+      });
+    }
+  });
+
+  it("una marca con motivo no es inválida", () => {
+    expect(marcasInvalidas(rutas(`// fuente-unica: ajeno — ${MOTIVO}\n`))).toEqual([]);
   });
 });

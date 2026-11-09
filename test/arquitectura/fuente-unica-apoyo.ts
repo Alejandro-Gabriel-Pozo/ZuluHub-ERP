@@ -60,41 +60,47 @@ const OPERADORES = new Set([
 const numero = (e: ts.Expression | undefined): number | undefined =>
   e !== undefined && ts.isNumericLiteral(e) ? Number(e.text) : undefined;
 
-/** Los números escritos a mano en un lugar de límite de largo. */
-function limitesEscritos(ruta: string, texto: string): number[] {
+/** Los números escritos a mano en un lugar de límite de largo, con su línea (0-based). */
+function limitesEscritos(ruta: string, texto: string): { valor: number; linea: number }[] {
   const f = fuente(ruta, texto);
-  const numeros: number[] = [];
-  const sumar = (n: number | undefined) => {
-    if (n !== undefined) numeros.push(n);
+  const numeros: { valor: number; linea: number }[] = [];
+  const sumar = (e: ts.Expression | undefined) => {
+    const valor = numero(e);
+    if (e !== undefined && valor !== undefined)
+      numeros.push({ valor, linea: f.getLineAndCharacterOfPosition(e.getStart(f)).line });
   };
   const ir = (n: ts.Node): void => {
     if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression)) {
       const metodo = n.expression.name.text;
       if (["max", "min", "length"].includes(metodo) && n.arguments.length === 1)
-        sumar(numero(n.arguments[0]));
+        sumar(n.arguments[0]);
       if (["slice", "substring", "substr"].includes(metodo) && n.arguments.length === 2)
-        sumar(numero(n.arguments[1]));
+        sumar(n.arguments[1]);
     } else if (ts.isBinaryExpression(n) && OPERADORES.has(n.operatorToken.kind)) {
       for (const [a, b] of [
         [n.left, n.right],
         [n.right, n.left],
       ] as const)
-        if (ts.isPropertyAccessExpression(a) && a.name.text === "length") sumar(numero(b));
+        if (ts.isPropertyAccessExpression(a) && a.name.text === "length") sumar(b);
     } else if (ts.isRegularExpressionLiteral(n)) {
-      for (const m of n.text.matchAll(/\{(?:\d+,)?(\d+)\}/g)) sumar(Number(m[1]));
+      for (const m of n.text.matchAll(/\{(?:\d+,)?(\d+)\}/g))
+        numeros.push({
+          valor: Number(m[1]),
+          linea: f.getLineAndCharacterOfPosition(n.getStart(f)).line,
+        });
     } else if (
       ts.isJsxAttribute(n) &&
       n.name.getText(f) === "maxLength" &&
       n.initializer !== undefined &&
       ts.isJsxExpression(n.initializer)
     ) {
-      sumar(numero(n.initializer.expression));
+      sumar(n.initializer.expression);
     } else if (
       ts.isPropertyAssignment(n) &&
       (ts.isIdentifier(n.name) || ts.isStringLiteral(n.name)) &&
       n.name.text === "maxLength"
     ) {
-      sumar(numero(n.initializer));
+      sumar(n.initializer);
     }
     ts.forEachChild(n, ir);
   };
@@ -103,14 +109,20 @@ function limitesEscritos(ruta: string, texto: string): number[] {
 }
 
 /** Las constantes de límite (por su nombre, exportadas o no) con valor numérico literal declaradas en el nivel superior de un archivo. */
-function constantesDeLimite(ruta: string, texto: string): Constante[] {
-  const salida: Constante[] = [];
-  for (const s of fuente(ruta, texto).statements) {
+function constantesDeLimite(ruta: string, texto: string): (Constante & { linea: number })[] {
+  const salida: (Constante & { linea: number })[] = [];
+  const f = fuente(ruta, texto);
+  for (const s of f.statements) {
     if (!ts.isVariableStatement(s)) continue;
     for (const d of s.declarationList.declarations) {
       const valor = numero(d.initializer);
       if (ts.isIdentifier(d.name) && valor !== undefined && /LARGO|LONGITUD/i.test(d.name.text))
-        salida.push({ nombre: d.name.text, valor, ruta });
+        salida.push({
+          nombre: d.name.text,
+          valor,
+          ruta,
+          linea: f.getLineAndCharacterOfPosition(d.getStart(f)).line,
+        });
     }
   }
   return salida;
@@ -128,6 +140,45 @@ function nombresUsados(ruta: string, texto: string): Set<string> {
 }
 
 const esPrimitiva = (ruta: string) => ruta.startsWith("src/primitivas/");
+
+/**
+ * Marca de «valor ajeno»: `// fuente-unica: ajeno — <motivo>` en la línea del número o en la anterior declara que un número coincide
+ * por casualidad con el límite de una primitiva y es otro dato. El motivo es obligatorio (mínimo `LARGO_MINIMO_DEL_MOTIVO` caracteres).
+ * Previene: falsos positivos por coincidencia numérica que empujan a registrar deuda falsa en archivos ajenos (caso real: el 32 del
+ * cupón contra el secreto, la clave de rol y un UUID). Una marca sin motivo es un error (`marcasInvalidas`), no una excepción gratis.
+ */
+const LARGO_MINIMO_DEL_MOTIVO = 15;
+const MARCA = /\/\/\s*fuente-unica:\s*ajeno\b(?:\s*[—-]\s*(.*))?$/;
+
+/** Las líneas (0-based) con marca y su motivo. */
+function marcasDe(texto: string): { linea: number; motivo: string }[] {
+  const salida: { linea: number; motivo: string }[] = [];
+  texto.split("\n").forEach((l, linea) => {
+    const m = MARCA.exec(l);
+    if (m) salida.push({ linea, motivo: (m[1] ?? "").trim() });
+  });
+  return salida;
+}
+
+/** Las líneas cubiertas por una marca válida: la suya y la siguiente. */
+function lineasMarcadas(texto: string): Set<number> {
+  const cubiertas = new Set<number>();
+  for (const m of marcasDe(texto))
+    if (m.motivo.length >= LARGO_MINIMO_DEL_MOTIVO) {
+      cubiertas.add(m.linea);
+      cubiertas.add(m.linea + 1);
+    }
+  return cubiertas;
+}
+
+/** Las marcas de «valor ajeno» sin motivo (o con uno demasiado corto): `ruta:línea`. */
+export function marcasInvalidas(archivos: ReadonlyMap<string, string>): string[] {
+  return [...archivos].flatMap(([ruta, texto]) =>
+    marcasDe(texto)
+      .filter((m) => m.motivo.length < LARGO_MINIMO_DEL_MOTIVO)
+      .map((m) => `${ruta}:${m.linea + 1}`),
+  );
+}
 
 /** Cuántos topes de largo escritos dos veces tiene cada archivo (solo los que tienen alguno). */
 export function duplicadosPorArchivo(archivos: ReadonlyMap<string, string>): Map<string, number> {
@@ -158,8 +209,14 @@ export function duplicadosPorArchivo(archivos: ReadonlyMap<string, string>): Map
   // 3. el mismo límite que una primitiva, con otro nombre o privado, fuera de la primitiva
   for (const ruta of rutas) {
     if (esPrimitiva(ruta)) continue;
+    const ajenas = lineasMarcadas(archivos.get(ruta) ?? "");
     for (const c of constantesDeLimite(ruta, archivos.get(ruta) ?? ""))
-      if (delasPrimitivas.has(c.valor) && !yaContadas.has(`${ruta}:${c.nombre}`)) sumar(ruta);
+      if (
+        delasPrimitivas.has(c.valor) &&
+        !yaContadas.has(`${ruta}:${c.nombre}`) &&
+        !ajenas.has(c.linea)
+      )
+        sumar(ruta);
   }
 
   // 2. un número a mano igual al de una primitiva, o al de una constante de largo que el archivo declara o nombra
@@ -170,7 +227,9 @@ export function duplicadosPorArchivo(archivos: ReadonlyMap<string, string>): Map
       ...delasPrimitivas,
       ...todas.filter((c) => nombres.has(c.nombre)).map((c) => c.valor),
     ]);
-    for (const n of limitesEscritos(ruta, texto)) if (valores.has(n)) sumar(ruta);
+    const ajenas = lineasMarcadas(texto);
+    for (const n of limitesEscritos(ruta, texto))
+      if (valores.has(n.valor) && !ajenas.has(n.linea)) sumar(ruta);
   }
   return cuenta;
 }
