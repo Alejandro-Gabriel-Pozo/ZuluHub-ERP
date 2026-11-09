@@ -1,5 +1,31 @@
 import { randomUUID } from "node:crypto";
-import type pg from "pg";
+import pg from "pg";
+import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
+import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
+import type { ContextoOperativo } from "../../src/contexto/contexto";
+import {
+  crearCasosDeUsoDeCatalogo,
+  cotizarParaVender,
+  crearConsultasDeCatalogo,
+  type DependenciasDeCatalogo,
+} from "../../src/modulos/catalogo/publico";
+import {
+  empresaId,
+  personaId,
+  sucursalId,
+  type EmpresaId,
+  type PersonaId,
+  type SucursalId,
+} from "../../src/primitivas/identificadores/marca";
+import { comoEmpresa, crearBaseAparte, crearEmpresaActiva, crearEntornoDePrueba } from "./entorno";
+import type { BaseDePruebas } from "./global";
+import {
+  crearAsignacionDeBase,
+  crearMembresiaDeBase,
+  crearPersonaDeBase,
+  sucursalDe,
+  type RolDePrueba,
+} from "./fixtures-identidad";
 
 /**
  * Apoyo de las pruebas de integración del catálogo (E2): armar con SQL directo del dueño de la base (que evade RLS: es solo para montar
@@ -171,4 +197,188 @@ export async function precioDeBase(
     ],
   );
   return id;
+}
+
+// ---- el escenario de los casos de uso -----------------------------------------------------------------------------------------
+
+export const REGLAS_DE_PRUEBA: ReglasDeEmpresa = {
+  catalogo: {
+    ...CATALOGO_DE_MODULOS,
+    catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "disponible" },
+  },
+  permisos: PERMISOS_DE_EMPRESA,
+};
+
+export type EscenarioDeCatalogo = Readonly<{
+  empresa: string;
+  empresaId: EmpresaId;
+  /** La sucursal que trae la empresa de prueba («Casa central») y otra más. */
+  sucursal: SucursalId;
+  otraSucursal: SucursalId;
+  gerente: ContextoOperativo;
+  administrador: ContextoOperativo;
+  /** Un administrador cuyo alcance se FIJA en «Casa central» (`alcances`): hoy el rol administrador tiene TODAS; ver `montarCatalogo`. */
+  administradorDeUnaSucursal: ContextoOperativo;
+  operador: ContextoOperativo;
+  personaDelGerente: PersonaId;
+}>;
+
+/**
+ * Lo que arma una prueba de casos de uso: una base propia (SERIALIZABLE aborta por falsos positivos cuando otros archivos escriben las
+ * mismas tablas), el entorno con el catálogo ACTIVO para la empresa (el módulo real está `en_desarrollo`: se inyectan `reglas` con
+ * `catalogo` disponible y la autorización suma el módulo a los activados; el ROL y el ALCANCE salen de la base, como siempre) y los
+ * casos de uso y consultas.
+ */
+export async function montarCatalogo(
+  base: BaseDePruebas,
+  opciones: Readonly<{
+    reglas?: ReglasDeEmpresa;
+    formaDeVentaHabilitada?: DependenciasDeCatalogo["formaDeVentaHabilitada"];
+    conexiones?: number;
+  }> = {},
+) {
+  const propia = await crearBaseAparte(base);
+  /**
+   * El alcance de sucursales que la base le da a cada rol: TODAS a gerente y administrador (decisión 18, roles fijos). Para probar el
+   * alcance restringido de un administrador (cuando los permisos se puedan configurar, después del piloto) una prueba lo fija acá.
+   */
+  const alcances = new Map<string, readonly SucursalId[]>();
+  const entorno = crearEntornoDePrueba(propia.base, opciones.conexiones ?? 12, (tx) => ({
+    ...tx,
+    autorizacion: {
+      ...tx.autorizacion,
+      sucursalesDelActor: async (contexto, opcionesDeAlcance) => {
+        const fijado = contexto.personaId === null ? undefined : alcances.get(contexto.personaId);
+        return fijado ?? tx.autorizacion.sucursalesDelActor(contexto, opcionesDeAlcance);
+      },
+      delActor: async (contexto) => {
+        const datos = await tx.autorizacion.delActor(contexto);
+        return datos.rol === null
+          ? datos
+          : {
+              ...datos,
+              modulosActivados: [...datos.modulosActivados, "catalogo"],
+              modulosHabilitados: [...datos.modulosHabilitados, "catalogo"],
+            };
+      },
+    },
+  }));
+  const dueno = new pg.Client({ connectionString: propia.base.dueno });
+  await dueno.connect();
+  const reglas = opciones.reglas ?? REGLAS_DE_PRUEBA;
+  const dependencias = {
+    transacciones: entorno,
+    reglas,
+    ...(opciones.formaDeVentaHabilitada === undefined
+      ? {}
+      : { formaDeVentaHabilitada: opciones.formaDeVentaHabilitada }),
+  } as DependenciasDeCatalogo;
+  const casos = crearCasosDeUsoDeCatalogo(dependencias);
+  const consultas = crearConsultasDeCatalogo({ transacciones: entorno, reglas });
+
+  const miembro = async (empresa: string, rol: RolDePrueba) => {
+    const p = await crearPersonaDeBase(dueno);
+    await crearMembresiaDeBase(dueno, empresa, p.id, rol);
+    return p.id;
+  };
+
+  const escenario = async (): Promise<EscenarioDeCatalogo> => {
+    const e = await crearEmpresaActiva(entorno);
+    const sucursal = sucursalId(await sucursalDe(dueno, e.empresa));
+    const { rows } = await dueno.query<{ id: string }>(
+      "insert into sucursal (empresa_id, nombre) values ($1, 'Norte') returning id",
+      [e.empresa],
+    );
+    const otraSucursal = sucursalId(rows[0]?.id as string);
+    const gerente = personaId(await miembro(e.empresa, "GERENTE"));
+    const administrador = personaId(await miembro(e.empresa, "ADMINISTRADOR"));
+    const unico = personaId(await miembro(e.empresa, "ADMINISTRADOR"));
+    await crearAsignacionDeBase(dueno, e.empresa, unico, sucursal);
+    alcances.set(unico, [sucursal]);
+    const operador = personaId(await miembro(e.empresa, "OPERADOR"));
+    await crearAsignacionDeBase(dueno, e.empresa, operador, sucursal);
+    return {
+      empresa: e.empresa,
+      empresaId: e.empresa,
+      sucursal,
+      otraSucursal,
+      gerente: comoEmpresa(e.empresa, gerente),
+      administrador: comoEmpresa(e.empresa, administrador),
+      administradorDeUnaSucursal: comoEmpresa(e.empresa, unico),
+      operador: comoEmpresa(e.empresa, operador),
+      personaDelGerente: gerente,
+    };
+  };
+
+  const filas = async <T extends Record<string, unknown> = Record<string, unknown>>(
+    texto: string,
+    p: unknown[] = [],
+  ) => (await dueno.query<T>(texto, p)).rows;
+  const contar = async (texto: string, p: unknown[] = []) =>
+    Number((await filas<{ n: string }>(texto, p))[0]?.n);
+  const auditoria = (empresa: string, accion?: string) =>
+    filas(
+      `select accion, actor_persona_id, entidad, entidad_id, antes, despues from auditoria_empresa
+        where empresa_id = $1 and ($2::text is null or accion = $2) order by id`,
+      [empresa, accion ?? null],
+    );
+
+  return {
+    propia,
+    entorno,
+    dueno,
+    alcances,
+    casos,
+    consultas,
+    escenario,
+    filas,
+    contar,
+    auditoria,
+    cerrar: async () => {
+      await dueno.end();
+      await entorno.cerrar();
+      await propia.destruir();
+    },
+  };
+}
+
+/** Un `ok` esperado: si falla, el mensaje dice por qué (los errores son datos, no excepciones). */
+export function valorDe<T, E>(r: Readonly<{ ok: true; valor: T } | { ok: false; error: E }>): T {
+  if (!r.ok) throw new Error(`se esperaba ok y vino ${JSON.stringify(r.error)}`);
+  return r.valor;
+}
+
+/** Un id nuevo: lo que manda la pantalla (idempotencia) al crear algo. */
+export const nuevoId = (): string => randomUUID();
+
+export type { ContextoOperativo };
+export const CONTEXTO_CON_AHORA = (
+  contexto: ContextoOperativo,
+  ahora: string,
+): ContextoOperativo => ({ ...contexto, ahora: new Date(ahora) });
+
+/** `cotizarParaVender` dentro de una transacción de solo lectura, como lo llamaría ventas. */
+export async function cotizarEnTx(
+  c: Awaited<ReturnType<typeof montarCatalogo>>,
+  contexto: ContextoOperativo,
+  entrada: Readonly<{
+    sucursalId: string;
+    productoId: string;
+    opcionIds?: readonly string[];
+    cantidad?: string;
+    ahora?: Date;
+    /** Cotizar «como» otra empresa (el catálogo filtra por la que le pasan y la RLS por la del contexto). */
+    empresaId?: string;
+  }>,
+) {
+  return c.entorno.ejecutar({ contexto, aislamiento: "read committed", soloLectura: true }, (tx) =>
+    cotizarParaVender(tx, {
+      empresaId: empresaId(entrada.empresaId ?? contexto.empresaId),
+      sucursalId: sucursalId(entrada.sucursalId),
+      productoId: entrada.productoId,
+      opcionIds: entrada.opcionIds ?? [],
+      cantidad: entrada.cantidad ?? "1",
+      ahora: entrada.ahora ?? new Date("2026-10-12T00:00:00Z"),
+    }),
+  );
 }

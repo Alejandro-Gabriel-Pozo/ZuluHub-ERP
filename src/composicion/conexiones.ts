@@ -51,6 +51,15 @@ import type { TxDeCola } from "../adaptadores/trabajos/procesador";
 import type { NivelesDeControl } from "../capacidades/controles/niveles";
 import type { EmpresaId } from "../primitivas/identificadores/marca";
 import {
+  crearRepositorioDeOpciones,
+  crearRepositorioDePrecios,
+  crearRepositorioDeProductos,
+  type CatalogoDb,
+  type RepositorioDeOpciones,
+  type RepositorioDePrecios,
+  type RepositorioDeProductos,
+} from "../modulos/catalogo/publico";
+import {
   crearLecturaDeSucursalBloqueada,
   crearRepositorioDeEmpresas,
   crearRepositorioDeSucursales,
@@ -185,6 +194,10 @@ export type TxDeApp = Readonly<{
    * empresas (D-112); ver la constante.
    */
   marca: Readonly<{ deLaEmpresa(empresa: EmpresaId): Promise<MarcaParaImprimir> }>;
+  /** Catálogo (E2 mínimo): productos y secciones, grupos y opciones con su versión y consumo, y precios de venta. */
+  productos: RepositorioDeProductos;
+  opciones: RepositorioDeOpciones;
+  precios: RepositorioDePrecios;
   /** El nivel vigente de cada control (permitir, avisar, bloquear), leído en la misma transacción. */
   niveles: NivelesDeControl;
   /** Lo que lee la puerta `SESION` (la persona del usuario y sus empresas). */
@@ -290,6 +303,9 @@ function armarTx(db: ConexionDeTx, autorizacion: CargaDeAutorizacion): TxDeApp {
     certificados: crearRepositorioDeCertificados(db.withTables<FiscalDb>()),
     accesos: crearRepositorioDeAccesos(db.withTables<FiscalDb>()),
     marca: marcaDeImpresion,
+    productos: crearRepositorioDeProductos(db.withTables<CatalogoDb>()),
+    opciones: crearRepositorioDeOpciones(db.withTables<CatalogoDb>()),
+    precios: crearRepositorioDePrecios(db.withTables<CatalogoDb>()),
     niveles: crearNivelesDeControlDePostgres(db.withTables<NivelesDeControlDb>()),
     sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
   };

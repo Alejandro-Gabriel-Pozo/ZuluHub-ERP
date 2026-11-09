@@ -666,7 +666,7 @@ GRANT UPDATE (nombre, nombre_clave, nombre_de_cocina, descripcion_en_carta, codi
   ON producto TO pedernal_app;
 
 GRANT INSERT (id, empresa_id, producto_id, clase, es_tamano, nombre, nombre_clave, es_obligatorio, admite_varias,
-              se_muestra_en_carta, orden)
+              se_muestra_en_carta, orden, activo)
   ON grupo_de_elecciones TO pedernal_app;
 GRANT UPDATE (es_tamano, nombre, nombre_clave, es_obligatorio, admite_varias, se_muestra_en_carta, orden, activo)
   ON grupo_de_elecciones TO pedernal_app;
