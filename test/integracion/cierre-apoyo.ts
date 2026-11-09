@@ -42,10 +42,10 @@ import { asignarPlan, crearPlanPublicado } from "./marcas-apoyo";
  */
 
 export const FECHA = "2026-11-09";
-export const H = (caracter: string) => caracter.repeat(64);
+const H = (caracter: string) => caracter.repeat(64);
 
 /** Una fecha de negocio ya validada (las pruebas pasan texto literal). */
-export function fechaDe(texto: string): FechaCivil {
+function fechaDe(texto: string): FechaCivil {
   const fecha = fechaCivilDesdeTexto(texto);
   if (!fecha.ok) throw new Error(`fecha de prueba inválida: ${texto}`);
   return fecha.valor;
