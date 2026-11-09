@@ -42,10 +42,9 @@ export type DefinicionDePerilla = ComunDeUnaPerilla &
  * la verifica (§B.5.1, catálogo consolidado). Catálogo y stock (T0 y CE0) declaran las suyas por
  * adelantado, antes de que existan los casos de uso que las verifican, para que ningún otro tramo
  * toque este archivo (catalogo-y-stock §E.2): son los extras de recetas (mermas, sub-recetas y factor
- * por tamaño) y los niveles de elecciones del catálogo (variantes con precio y grupos de precio,
- * combos, biblioteca). Cada tramo que las verifica con `exigirPerilla` las cubre; hasta entonces
- * ningún caso de uso las nombra (no existe todavía la prueba «toda perilla tiene un uso»). Todas son
- * interruptores de empresa con base apagada: si el plan no las nombra, no vienen. `vidriera_por_qr` y las
+ * por tamaño) y el nivel de combos del catálogo. Cada tramo que las verifica con `exigirPerilla` las
+ * cubre; hasta entonces ningún caso de uso las nombra (no existe todavía la prueba «toda perilla tiene
+ * un uso»). Esas son interruptores de empresa con base apagada: si el plan no las nombra, no vienen. `vidriera_por_qr` y las
  * de la carta (fotos, modelos, estadísticas) se declaran cuando se construya la carta.
  */
 export const CATALOGO_DE_PERILLAS = {
@@ -72,22 +71,9 @@ export const CATALOGO_DE_PERILLAS = {
   },
   // CE0 (catalogo-carta-niveles-y-elecciones §2.1): un interruptor por nivel extra de la escalera de
   // elecciones. El de stock (`composiciones_por_tamano`, N4) escala la receta por tamaño y suma la excepción
-  // por variante; los de catálogo (N1 a N3) habilitan precio por variante y grupos de precio, combos y
-  // la biblioteca de guarniciones y adicionales compartidos. N0 (la vidriera, con ejes por base más
-  // agregado) es estándar y no tiene perilla.
-  variantes_y_grupos_de_precio: {
-    ambito: "EMPRESA",
-    tipo: "INTERRUPTOR",
-    base: { encendida: false },
-    modulo: "catalogo",
-  },
+  // por variante; el de catálogo (`conjuntos`, combos) habilita los conjuntos. Las de variantes con grupos de
+  // precio y la biblioteca de elecciones compartidas se retiraron (decisiones 138 y 133: ya no existen).
   conjuntos: {
-    ambito: "EMPRESA",
-    tipo: "INTERRUPTOR",
-    base: { encendida: false },
-    modulo: "catalogo",
-  },
-  elecciones_reutilizables: {
     ambito: "EMPRESA",
     tipo: "INTERRUPTOR",
     base: { encendida: false },
@@ -98,6 +84,15 @@ export const CATALOGO_DE_PERILLAS = {
     tipo: "INTERRUPTOR",
     base: { encendida: false },
     modulo: "stock",
+  },
+  // Caja (decisión 124; caja-y-cobros.md:43, 69; registro de contratos :778; supuesto S-5 de E0: nombre y base 1 del
+  // registro de octubre): cuántas cajas activas puede tener una sucursal. Base 1 («Caja 1» nace con la sucursal, decisión
+  // 165); la sube la plataforma. Declara el tipo; `crearCaja` y `reactivarCaja` la verifican con `exigirPerilla` en E3.
+  cajas_por_sucursal: {
+    ambito: "SUCURSAL",
+    tipo: "LIMITE",
+    base: { limite: 1 },
+    modulo: "caja",
   },
 } as const satisfies Record<string, DefinicionDePerilla>;
 

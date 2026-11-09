@@ -388,6 +388,27 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "base-sin-ventas",
+      archivos: {
+        "src/modulos/caja/dominio/d.ts": importa("../../ventas/publico"),
+        "src/modulos/ventas/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "catalogo-sin-caja-ni-stock",
+      archivos: {
+        "src/modulos/catalogo/dominio/d.ts": importa("../../caja/publico"),
+        "src/modulos/caja/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "cierre-sin-negocio",
+      archivos: {
+        "src/modulos/cierre/dominio/d.ts": importa("../../caja/publico"),
+        "src/modulos/caja/publico.ts": exporta,
+      },
+    },
+    {
       regla: "arca-solo-en-su-adaptador",
       archivos: {
         "src/modulos/fiscal/dominio/d.ts": importa("pkijs"),
@@ -1357,6 +1378,73 @@ describe("facturación F1: el facturador funciona solo (spec H7 facturación §B
       "src/modulos/ventas/casos-de-uso/v.ts": importa("../../fiscal/publico"),
     });
     expect(v).not.toContain("fiscal-sin-negocio-ajeno");
+  });
+});
+
+describe("E0-T5: sentido de las dependencias entre módulos de base, ventas y cierre (e0 §3.6.2)", () => {
+  it("catalogo, caja y stock no importan ventas, ni por su publico.ts", async () => {
+    for (const modulo of ["catalogo", "caja", "stock"]) {
+      const v = await violacionesDe({
+        [`src/modulos/${modulo}/casos-de-uso/c.ts`]: importa("../../ventas/publico"),
+        "src/modulos/ventas/publico.ts": exporta,
+      });
+      expect(v, modulo).toContain("base-sin-ventas");
+    }
+  });
+
+  it("ventas sí usa catalogo, caja y stock por su publico.ts", async () => {
+    const v = await violacionesDe({
+      "src/modulos/catalogo/publico.ts": exporta,
+      "src/modulos/caja/publico.ts": exporta,
+      "src/modulos/stock/publico.ts": exporta,
+      "src/modulos/ventas/casos-de-uso/v.ts": [
+        importa("../../catalogo/publico"),
+        importa("../../caja/publico"),
+        importa("../../stock/publico"),
+      ].join(""),
+    });
+    expect(v).not.toContain("base-sin-ventas");
+    expect(v).not.toContain("catalogo-sin-caja-ni-stock");
+  });
+
+  it("catalogo no importa caja ni stock, ni por su publico.ts", async () => {
+    for (const modulo of ["caja", "stock"]) {
+      const v = await violacionesDe({
+        "src/modulos/catalogo/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+      });
+      expect(v, modulo).toContain("catalogo-sin-caja-ni-stock");
+    }
+  });
+
+  it("cierre no importa ningún módulo de negocio, ni por su publico.ts", async () => {
+    for (const modulo of [
+      "catalogo",
+      "caja",
+      "ventas",
+      "stock",
+      "fiscal",
+      "clientes",
+      "reservas",
+    ]) {
+      const v = await violacionesDe({
+        "src/modulos/cierre/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+      });
+      expect(v, modulo).toContain("cierre-sin-negocio");
+    }
+  });
+
+  it("cierre sí usa empresas y los módulos de negocio sí usan cierre por su publico.ts", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/publico.ts": exporta,
+      "src/modulos/cierre/casos-de-uso/c.ts": importa("../../empresas/publico"),
+      "src/modulos/cierre/publico.ts": exporta,
+      "src/modulos/caja/casos-de-uso/c.ts": importa("../../cierre/publico"),
+      "src/modulos/ventas/casos-de-uso/v.ts": importa("../../cierre/publico"),
+    });
+    expect(v).not.toContain("cierre-sin-negocio");
+    expect(v).not.toContain("base-sin-ventas");
   });
 });
 

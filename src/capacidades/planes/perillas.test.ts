@@ -60,7 +60,7 @@ const entradas = Object.entries(CATALOGO_DE_PERILLAS) as [string, DefinicionDePe
 const catalogoComoTabla: Readonly<Record<string, DefinicionDePerilla>> = CATALOGO_DE_PERILLAS;
 
 describe("el catálogo de perillas real", () => {
-  it("trae siete perillas: empresas_por_tenant (de administración) y seis de catálogo y stock, todas interruptores de empresa apagados", () => {
+  it("trae seis perillas: empresas_por_tenant (de administración), cuatro de catálogo y stock (interruptores de empresa apagados) y cajas_por_sucursal (de caja, límite por sucursal con base 1)", () => {
     expect(CATALOGO_DE_PERILLAS).toEqual({
       empresas_por_tenant: {
         ambito: "TENANT",
@@ -80,19 +80,7 @@ describe("el catálogo de perillas real", () => {
         base: { encendida: false },
         modulo: "stock",
       },
-      variantes_y_grupos_de_precio: {
-        ambito: "EMPRESA",
-        tipo: "INTERRUPTOR",
-        base: { encendida: false },
-        modulo: "catalogo",
-      },
       conjuntos: {
-        ambito: "EMPRESA",
-        tipo: "INTERRUPTOR",
-        base: { encendida: false },
-        modulo: "catalogo",
-      },
-      elecciones_reutilizables: {
         ambito: "EMPRESA",
         tipo: "INTERRUPTOR",
         base: { encendida: false },
@@ -104,6 +92,12 @@ describe("el catálogo de perillas real", () => {
         base: { encendida: false },
         modulo: "stock",
       },
+      cajas_por_sucursal: {
+        ambito: "SUCURSAL",
+        tipo: "LIMITE",
+        base: { limite: 1 },
+        modulo: "caja",
+      },
     });
   });
 
@@ -112,14 +106,24 @@ describe("el catálogo de perillas real", () => {
       | "empresas_por_tenant"
       | "composiciones_con_perdida"
       | "subcomposiciones"
-      | "variantes_y_grupos_de_precio"
       | "conjuntos"
-      | "elecciones_reutilizables"
       | "composiciones_por_tamano"
+      | "cajas_por_sucursal"
     >();
     // @ts-expect-error esa perilla no está declarada (la registra el módulo que la verifica)
-    const inventada: ClavePerilla = "cajas_por_sucursal";
+    const inventada: ClavePerilla = "terminal_compartida";
     expect(inventada in CATALOGO_DE_PERILLAS).toBe(false);
+  });
+
+  it("las retiradas (decisiones 138 y 133) y las diferidas o descartadas (terminal_compartida; ventas_excedentes, decisión 152) no se declaran", () => {
+    for (const clave of [
+      "variantes_y_grupos_de_precio",
+      "elecciones_reutilizables",
+      "terminal_compartida",
+      "ventas_excedentes",
+    ]) {
+      expect(Object.hasOwn(CATALOGO_DE_PERILLAS, clave), clave).toBe(false);
+    }
   });
 
   it("las de la carta no se declaran hasta construir la carta: ni vidriera_por_qr ni las de fotos, modelos y estadísticas", () => {
@@ -136,7 +140,7 @@ describe("el catálogo de perillas real", () => {
     }
   });
 
-  it("cada perilla la verifica el módulo que la nombra: las de recetas, stock; las de elecciones, catálogo", () => {
+  it("cada perilla la verifica el módulo que la nombra: las de recetas, stock; la de combos, catálogo; la de cajas, caja", () => {
     const duenos = Object.fromEntries(
       Object.entries(catalogoComoTabla).map(([clave, d]) => [clave, d.modulo]),
     );
@@ -144,10 +148,9 @@ describe("el catálogo de perillas real", () => {
       empresas_por_tenant: "administracion",
       composiciones_con_perdida: "stock",
       subcomposiciones: "stock",
-      variantes_y_grupos_de_precio: "catalogo",
       conjuntos: "catalogo",
-      elecciones_reutilizables: "catalogo",
       composiciones_por_tamano: "stock",
+      cajas_por_sucursal: "caja",
     });
   });
 
