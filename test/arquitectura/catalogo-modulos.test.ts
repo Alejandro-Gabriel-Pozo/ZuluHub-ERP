@@ -37,8 +37,9 @@ import {
  *  Además: una acción pertenece a un solo módulo; un módulo obligatorio está disponible y solo
  *  requiere obligatorios.
  *
- *  Módulos sin construir (T0 de catálogo y stock): `catalogo`, `carta` y `stock` declaran sus acciones
- *  antes de que existan sus carpetas y sus casos de uso (los traen T2 a T10). Mientras figuren en
+ *  Módulos sin construir (T0 de catálogo y stock; E0-T1 de caja, cierre y ventas): `catalogo`, `carta`, `stock`,
+ *  `caja`, `cierre` y `ventas` declaran sus acciones antes de que existan sus carpetas y sus casos de uso (los
+ *  traen T2 a T10 y las etapas E3, E3b y E4). Mientras figuren en
  *  `SIN_CONSTRUIR` se les perdonan DOS cosas, y solo esas: que ningún caso de uso exija todavía una
  *  acción (X1 inverso) y que su carpeta no exista (X4). Todo lo demás rige igual. Previene: tener que
  *  inventar casos de uso falsos para pasar el gate, o aflojar X1 y X4 para todos los módulos. Lo
@@ -56,7 +57,14 @@ const carpetaExiste = (carpeta: string): boolean => {
 type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 
 /** Los módulos declarados en el catálogo cuyas carpetas y casos de uso todavía no existen (T0). */
-const SIN_CONSTRUIR: readonly string[] = ["catalogo", "vidriera", "stock"];
+const SIN_CONSTRUIR: readonly string[] = [
+  "catalogo",
+  "vidriera",
+  "stock",
+  "caja",
+  "cierre",
+  "ventas",
+];
 
 function crucesDelCatalogo(
   catalogo: CatalogoComercial,
@@ -320,13 +328,45 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ).toEqual([]);
   });
 
-  it("catálogo, carta y stock son los únicos módulos sin construir, y siguen en desarrollo (T0)", () => {
-    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "vidriera", "stock"]);
+  it("catálogo, carta, stock, caja, cierre y ventas son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1)", () => {
+    expect([...SIN_CONSTRUIR]).toEqual([
+      "catalogo",
+      "vidriera",
+      "stock",
+      "caja",
+      "cierre",
+      "ventas",
+    ]);
     for (const clave of SIN_CONSTRUIR) {
       expect(CATALOGO_DE_MODULOS[clave as keyof typeof CATALOGO_DE_MODULOS].estado, clave).toBe(
         "en_desarrollo",
       );
     }
+  });
+
+  it("todo módulo en desarrollo del catálogo real figura en SIN_CONSTRUIR: uno nuevo olvidado hace fallar esta prueba (E0-T1)", () => {
+    const enDesarrollo = Object.entries(CATALOGO_DE_MODULOS)
+      .filter(([, definicion]) => definicion.estado === "en_desarrollo")
+      .map(([clave]) => clave);
+    expect(enDesarrollo.filter((clave) => !SIN_CONSTRUIR.includes(clave))).toEqual([]);
+  });
+
+  it("violación inyectada: un módulo en desarrollo fuera de SIN_CONSTRUIR rompe X4 (su carpeta no existe) y X1 (ningún caso de uso exige sus acciones)", () => {
+    const sinCaja = SIN_CONSTRUIR.filter((clave) => clave !== "caja");
+    const problemas = crucesDelCatalogo(CATALOGO_DE_MODULOS, declaradas, carpetaExiste, sinCaja);
+    expect(problemas).toContain(
+      "X4: caja dice que lo implementa modulos/caja, que no existe en src/",
+    );
+    expect(problemas).toContain("X1: la acción cajas.ver no la exige ningún caso de uso");
+  });
+
+  it("X3: ventas requiere catalogo y caja, y usa facturacion y stock, que existen; cierre no depende de ningún módulo comercial (E0-T1)", () => {
+    expect(CATALOGO_DE_MODULOS.ventas.requiere).toEqual(["administracion", "catalogo", "caja"]);
+    expect(CATALOGO_DE_MODULOS.ventas.usaSiExiste).toEqual(["facturacion", "stock"]);
+    expect(CATALOGO_DE_MODULOS.caja.requiere).toEqual(["administracion"]);
+    expect(CATALOGO_DE_MODULOS.caja.usaSiExiste).toEqual(["facturacion"]);
+    expect(CATALOGO_DE_MODULOS.cierre.requiere).toEqual(["administracion"]);
+    expect(CATALOGO_DE_MODULOS.cierre.usaSiExiste).toEqual([]);
   });
 
   it("sin la lista de módulos sin construir, X1 SÍ reclama sus acciones (el perdón es solo de ellos)", () => {

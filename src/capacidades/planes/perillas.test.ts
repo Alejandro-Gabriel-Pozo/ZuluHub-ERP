@@ -196,9 +196,9 @@ describe("las reglas del catálogo de perillas (con la violación inyectada)", (
     expect(problemasDe("x_x", { ...sana, ambito: "PLANETA" } as never, conOtras())).toEqual([
       "ámbito desconocido",
     ]);
-    expect(problemasDe("x_x", { ...sana, modulo: "ventas" } as never, conOtras())).toEqual([
-      "módulo inexistente",
-    ]);
+    expect(
+      problemasDe("x_x", { ...sana, modulo: "modulo_que_no_existe" } as never, conOtras()),
+    ).toEqual(["módulo inexistente"]);
   });
 
   it.each([[-1], [1.5], [LIMITE_MAXIMO + 1], [Number.NaN], ["muchos"]])(

@@ -183,6 +183,9 @@ describe("exigirAccion", () => {
       "catalogo",
       "vidriera",
       "stock",
+      "caja",
+      "cierre",
+      "ventas",
     ];
     expect(claves).toEqual(Object.keys(CATALOGO_DE_MODULOS));
   });
