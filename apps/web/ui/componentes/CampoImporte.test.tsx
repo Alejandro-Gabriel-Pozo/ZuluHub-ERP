@@ -5,6 +5,12 @@ import { page, userEvent } from "vitest/browser";
 import { matrizDeEstados, verificarFoco, violacionesDeAccesibilidad } from "../pruebas/ayudas";
 import { CampoImporte } from "./CampoImporte";
 
+/** Deja `texto` en el portapapeles del navegador y lo pega en el campo enfocado. */
+async function pegar(texto: string): Promise<void> {
+  await navigator.clipboard.writeText(texto);
+  await userEvent.paste();
+}
+
 /** Registra todo lo que el campo entrega a quien lo usa: el contrato es que SIEMPRE es texto. */
 function Probado({
   inicial = "",
@@ -59,6 +65,36 @@ describe("CampoImporte", () => {
     await userEvent.type(page.getByLabelText("Importe"), "ab$-1x2,345");
     await expect.element(page.getByLabelText("Importe")).toHaveValue("12,34");
     expect(alEntregar).toHaveBeenLastCalledWith("12.34");
+  });
+
+  it("el punto escrito a mano no entra: ni como miles ni como decimal", async () => {
+    const alEntregar = vi.fn();
+    await render(<Probado alEntregar={alEntregar} />);
+    const campo = page.getByLabelText("Importe");
+    await userEvent.type(campo, "1.234.5");
+    await expect.element(campo).toHaveValue("12345");
+    expect(alEntregar).toHaveBeenLastCalledWith("12345.00");
+    await userEvent.clear(campo);
+    await userEvent.type(campo, "14000,50");
+    await userEvent.tab();
+    await expect.element(campo).toHaveValue("14.000,50");
+  });
+
+  it("un pegado con miles bien puestos entra; con punto mal puesto o más de dos decimales se rechaza y el campo no cambia", async () => {
+    const alEntregar = vi.fn();
+    await render(<Probado alEntregar={alEntregar} />);
+    const campo = page.getByLabelText("Importe");
+    await userEvent.click(campo);
+    await pegar("14.000,50");
+    await expect.element(campo).toHaveValue("14000,50");
+    expect(alEntregar).toHaveBeenLastCalledWith("14000.50");
+    await userEvent.clear(campo);
+    alEntregar.mockClear();
+    for (const rechazado of ["1234.50", "1.5", "12,345", "abc"]) {
+      await pegar(rechazado);
+      await expect.element(campo).toHaveValue("");
+    }
+    expect(alEntregar).not.toHaveBeenCalled();
   });
 
   it("al salir muestra los miles con punto; al volver, los saca para editar", async () => {
