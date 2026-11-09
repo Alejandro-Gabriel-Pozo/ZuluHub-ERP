@@ -403,6 +403,7 @@ const reglas = [
     from: { path: "^src/modulos/fiscal/" },
     to: { path: "^src/modulos/(ventas|caja|catalogo|clientes|stock)/" },
   },
+  ...require("./reglas-de-modulos.cjs"),
   {
     // F8. Previene: que la firma CMS (que maneja la clave privada del cliente) y la lectura de XML que viene de un
     // servicio externo (entidades, DOCTYPE) se repartan por el producto: cada uso afuera del adaptador sería otra

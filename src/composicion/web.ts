@@ -76,7 +76,12 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
     /** Las lecturas de un pedido que comparten una transacción (ver `LecturasCompartidas`): la misma conexión que usan las consultas. */
     lecturasCompartidas: (): LecturasCompartidas => conexiones.transaccionesDeApp(),
     casosDeUsoDeEmpresas: perezoso(() =>
-      crearCasosDeUsoDeEmpresas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+      crearCasosDeUsoDeEmpresas({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        // Lo que nace con cada sucursal (decisión 165). Vacío mientras `caja` no exista: ahí se registra su gancho.
+        ganchosDeSucursal: [],
+      }),
     ),
     consultasDeEmpresas: perezoso(() =>
       crearConsultasDeEmpresas({ transacciones: conexiones.transaccionesDeApp(), reglas }),

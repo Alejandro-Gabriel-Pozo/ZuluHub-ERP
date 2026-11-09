@@ -368,9 +368,9 @@
   {
     "id": "archivo-grande--arquitectura-reglas-cjs",
     "archivos": ["arquitectura/reglas.cjs"],
-    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra.",
+    "descripcion": "Archivo de código que pasa del tope de 400 líneas (línea base de G5): no se parte ahora, pero no puede crecer; `tamano` baja con él y, al bajar del tope, la entrada se borra. Sube de 554 a 555 por la línea que reparte las tres reglas nuevas de E0-T5 (viven en reglas-de-modulos.cjs).",
     "tipo": "archivo-grande",
-    "tamano": 554,
+    "tamano": 555,
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22"
   },

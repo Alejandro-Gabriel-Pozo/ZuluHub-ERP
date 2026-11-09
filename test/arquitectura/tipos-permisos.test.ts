@@ -42,7 +42,14 @@ import {
 describe("tipos cerrados derivados del catálogo", () => {
   it("las claves salen del catálogo real", () => {
     expectTypeOf<ClaveModulo>().toEqualTypeOf<
-      "administracion" | "facturacion" | "catalogo" | "vidriera" | "stock"
+      | "administracion"
+      | "facturacion"
+      | "catalogo"
+      | "vidriera"
+      | "stock"
+      | "caja"
+      | "cierre"
+      | "ventas"
     >();
     expectTypeOf<ClaveAccion>().toEqualTypeOf<
       | "usuarios.invitar"
@@ -92,12 +99,6 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "categorias.reactivar"
       | "categorias.desactivar"
       | "variantes.editar"
-      | "opciones.asignar"
-      | "grupos_de_precio.crear"
-      | "grupos_de_precio.editar"
-      | "grupos_de_precio.asignar"
-      | "grupos_de_precio.reactivar"
-      | "grupos_de_precio.desactivar"
       | "conjuntos.editar_contenido"
       | "vidrieras.ver"
       | "vidrieras.marcar_disponibilidad"
@@ -127,6 +128,41 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "conteos.registrar"
       | "conteos.aplicar"
       | "conteos.cancelar"
+      | "cajas.ver"
+      | "cajas.crear"
+      | "cajas.editar"
+      | "cajas.reactivar"
+      | "cajas.desactivar"
+      | "medios_de_pago.crear"
+      | "medios_de_pago.editar"
+      | "medios_de_pago.reactivar"
+      | "medios_de_pago.desactivar"
+      | "cuentas_de_cobro.crear"
+      | "cuentas_de_cobro.editar"
+      | "cuentas_de_cobro.reactivar"
+      | "cuentas_de_cobro.desactivar"
+      | "sesiones_caja.abrir"
+      | "sesiones_caja.iniciar_cierre"
+      | "sesiones_caja.cancelar_cierre"
+      | "sesiones_caja.cerrar"
+      | "movimientos_caja.registrar_manual"
+      | "movimientos_caja.ajustar"
+      | "movimientos_caja.anular"
+      | "movimientos_caja.anular_de_otros"
+      | "cobros.corregir_medio"
+      | "declaraciones_de_total.registrar"
+      | "jornadas.ver"
+      | "jornadas.iniciar_auditoria"
+      | "jornadas.cancelar_auditoria"
+      | "jornadas.cerrar"
+      | "ventas.ver"
+      | "cuentas.abrir"
+      | "cuentas.agregar_linea"
+      | "cuentas.cerrar"
+      | "cuentas.anular_linea"
+      | "cuentas.anular"
+      | "tickets.cobrar"
+      | "tickets.corregir"
     >();
     // Hoy ninguna acción exige una capacidad de sucursal.
     expectTypeOf<ClaveCapacidad>().toEqualTypeOf<never>();
@@ -186,6 +222,9 @@ describe("tipos cerrados derivados del catálogo", () => {
       "catalogo",
       "vidriera",
       "stock",
+      "caja",
+      "cierre",
+      "ventas",
     ]);
   });
 });
