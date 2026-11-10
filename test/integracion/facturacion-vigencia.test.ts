@@ -284,7 +284,7 @@ describe.skipIf(base === null)("facturación E1-T2: la vigencia de los comproban
         total: "121.00",
       });
       p.falsa.programar("INCIERTO");
-      exito(await p.validar(salida.comprobanteId as ComprobanteId));
+      exito(await p.validar(salida.comprobanteId));
       expect(await preguntar()).toMatchObject({ estado: "INCIERTO" });
       // El otro tipo de origen con el mismo id es otro origen.
       expect(await preguntar("REEMISION_DE_TICKET")).toBeNull();
@@ -297,7 +297,7 @@ describe.skipIf(base === null)("facturación E1-T2: la vigencia de los comproban
         await p.casos.emitirFacturaDeOrigen(p.como(), entradaDe(p.e, "EJEMPLAR_DE_TICKET", origen)),
       );
       p.falsa.programar("RECHAZA");
-      exito(await p.validar(salida.comprobanteId as ComprobanteId));
+      exito(await p.validar(salida.comprobanteId));
       expect(
         exito(
           await p.consultas.comprobanteVigenteDeUnOrigen(p.como(), {
@@ -314,8 +314,8 @@ describe.skipIf(base === null)("facturación E1-T2: la vigencia de los comproban
       const primera = exito(
         await p.casos.emitirFacturaDeOrigen(p.como(), entradaDe(p.e, "EJEMPLAR_DE_TICKET", origen)),
       );
-      exito(await p.validar(primera.comprobanteId as ComprobanteId));
-      exito(await p.validar(await p.nota(primera.comprobanteId as ComprobanteId, "121.00")));
+      exito(await p.validar(primera.comprobanteId));
+      exito(await p.validar(await p.nota(primera.comprobanteId, "121.00")));
       const reemisionId = randomUUID();
       const nueva = exito(
         await p.casos.emitirFacturaDeOrigen(
