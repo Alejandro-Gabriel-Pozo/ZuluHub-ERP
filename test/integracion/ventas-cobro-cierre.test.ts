@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { ticketsPorCobranzaDeLaComposicion } from "../../src/composicion/cierre-de-caja";
+import { aporteDeVentas } from "../../src/modulos/ventas/publico";
+import { empresaId, type SucursalId } from "../../src/primitivas/identificadores/marca";
 import { crearConsultasDeCaja } from "../../src/modulos/caja/publico";
 import { ok } from "../../src/primitivas/resultado/resultado";
 import {
@@ -188,5 +190,32 @@ describe.skipIf(base === null)("ventas: el cobro y el cierre del día de caja", 
         );
       }),
     ).rejects.toThrow("las lecturas de ventas");
+  });
+
+  it("hayMovimiento (decisión 178): sin cuentas, tickets, anulaciones ni correcciones en la jornada no hay; una cuenta abierta o una venta cobrada, sí; una venta de otra jornada, no", async () => {
+    const e = await m.escenario();
+    const caja = await m.cajaAbierta(e);
+    const hay = async (sucursal: SucursalId, fecha: string) =>
+      valorDe(
+        await m.entorno.ejecutar({ contexto: e.gerente }, (tx) =>
+          aporteDeVentas.hayMovimiento(tx, {
+            empresaId: empresaId(e.empresa),
+            sucursalId: sucursal,
+            fechaDeNegocio: fecha as never,
+          }),
+        ),
+      );
+    expect(await hay(e.sucursal, FECHA_DE_NEGOCIO)).toBe(false);
+    expect(await hay(e.otraSucursal, FECHA_DE_NEGOCIO)).toBe(false);
+    // Una cuenta abierta en la otra sucursal.
+    valorDe(
+      await m.casos.abrirCuenta(e.gerente, { cuentaId: nuevoId(), sucursalId: e.otraSucursal }),
+    );
+    expect(await hay(e.otraSucursal, FECHA_DE_NEGOCIO)).toBe(true);
+    expect(await hay(e.sucursal, FECHA_DE_NEGOCIO)).toBe(false);
+    // Una venta cobrada del 09 en la sucursal principal: hay movimiento el 09 y no el 10.
+    await vender(e, caja);
+    expect(await hay(e.sucursal, FECHA_DE_NEGOCIO)).toBe(true);
+    expect(await hay(e.sucursal, "2026-11-10")).toBe(false);
   });
 });

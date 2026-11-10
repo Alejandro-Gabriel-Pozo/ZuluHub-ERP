@@ -342,7 +342,12 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
     cuenta: string,
     numero: number,
     total: string,
-    extra: Partial<{ estado: string; sesion: string | null; id: string }> = {},
+    extra: Partial<{
+      estado: string;
+      sesion: string | null;
+      id: string;
+      emitidoEn: string;
+    }> = {},
   ) =>
     s.directo(
       `insert into ticket (id, empresa_id, sucursal_id, cuenta_id, numero, estado, total, sesion_de_caja_id, emitido_por, emitido_en)
@@ -357,7 +362,7 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
         total,
         extra.sesion ?? null,
         w.persona,
-        AHORA,
+        extra.emitidoEn ?? AHORA,
       ],
     );
   const ejemplarSql = (
@@ -1195,20 +1200,67 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
     }
   });
 
-  it("fase B: un ticket con sesion_de_caja_id informado se rechaza (ticket_fecha_de_sesion_invalida): falla cerrado hasta que exista la caja", async () => {
+  it("fase B: un ticket con sesión de caja toma la fecha de ESA sesión (también pasada la hora de corte); la sesión tiene que existir, ser de su empresa y sucursal y no de una jornada futura", async () => {
     const e = await m.escenario();
     const w = mundoDe(e);
-    await conAppDe(b0(), w, async (s) => {
+    const otraEmpresa = await m.escenario();
+    const propia = await m.cajaAbierta(e); // sesión del 2026-11-09
+    const deOtraSucursal = await m.cajaAbierta(e, { sucursal: e.otraSucursal });
+    const deOtraEmpresa = await m.cajaAbierta(otraEmpresa);
+    const futura = await m.cajaAbierta(e, {
+      contexto: { ...e.gerente, ahora: new Date("2026-11-10T15:00:00Z") },
+    });
+    expect(futura.fechaDeNegocio).toBe("2026-11-10");
+    const armar = async (s: SesionDePrueba) => {
       const cuenta = await cuentaSql(s, w);
       await lineaSql(s, w, cuenta, { unitario: "100", cantidad: "1" });
       await totalSql(s, cuenta, "100.00");
       await cerrarSql(s, w, cuenta);
-      const numero = await numeroSql(s, w);
-      check(
-        await ticketSql(s, w, cuenta, numero, "100.00", { sesion: randomUUID() }),
-        "ticket_fecha_de_sesion_invalida",
+      return { cuenta, numero: await numeroSql(s, w) };
+    };
+    // Pasada la hora de corte (00:30 del 10 en Argentina) el reloj dice el 10, pero la sesión es del 09: el ticket es del 09.
+    await conAppDe(b0(), w, async (s) => {
+      const { cuenta, numero } = await armar(s);
+      const id = randomUUID();
+      acepta(
+        await ticketSql(s, w, cuenta, numero, "100.00", {
+          id,
+          sesion: propia.sesionId,
+          emitidoEn: "2026-11-10T03:30:00Z",
+        }),
       );
+      expect(
+        await paso(s, "select fecha_negocio::text as f from ticket where id = $1", [id]),
+      ).toEqual([{ f: "2026-11-09" }]);
     });
+    // Sin sesión, a la misma hora, rige el reloj: el 10.
+    await conAppDe(b0(), w, async (s) => {
+      const { cuenta, numero } = await armar(s);
+      const id = randomUUID();
+      acepta(
+        await ticketSql(s, w, cuenta, numero, "100.00", { id, emitidoEn: "2026-11-10T03:30:00Z" }),
+      );
+      expect(
+        await paso(s, "select fecha_negocio::text as f from ticket where id = $1", [id]),
+      ).toEqual([{ f: "2026-11-10" }]);
+    });
+    // Una sesión que no existe, de otra sucursal, de otra empresa o de una jornada posterior a la del reloj: se rechaza.
+    for (const [nombre, sesion] of [
+      ["inexistente", randomUUID()],
+      ["de otra sucursal", deOtraSucursal.sesionId],
+      ["de otra empresa", deOtraEmpresa.sesionId],
+      ["de una jornada futura", futura.sesionId],
+    ] as const) {
+      await conAppDe(b0(), w, async (s) => {
+        const { cuenta, numero } = await armar(s);
+        check(
+          await ticketSql(s, w, cuenta, numero, "100.00", { sesion }),
+          "ticket_fecha_de_sesion_invalida",
+        );
+      }).catch((error: unknown) => {
+        throw new Error(`sesión ${nombre}: ${String(error)}`);
+      });
+    }
   });
 
   // ---- cuadres diferidos ------------------------------------------------------------------------------------------------------

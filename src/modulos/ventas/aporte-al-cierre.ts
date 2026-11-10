@@ -130,15 +130,13 @@ export const aporteDeVentas: AporteAlCierreDelDia<TxDeAporteDeVentas> = {
     );
   },
   /**
-   * ¿Hay movimiento de ventas en la jornada? (decisión 178): una cuenta abierta de la sucursal, un ticket de la jornada, una anulación o
-   * una corrección. Sin nada de eso, desactivar la sucursal no pierde ninguna venta sin revisar. Un fallo de lectura es `APORTE_NO_DISPONIBLE`.
+   * ¿Hay movimiento de ventas en la jornada? (decisión 178): una cuenta abierta de la sucursal, un ticket de la jornada (por cobrar, cobrado,
+   * cortesía o anulado), una anulación o una corrección. Cualquier control con filas cuenta, también el de tickets cobrados que esperan su
+   * comprobante: una venta cobrada es una venta sin revisar. Sin nada de eso, desactivar la sucursal no pierde ninguna venta. Un fallo de
+   * lectura es `APORTE_NO_DISPONIBLE`.
    */
   async hayMovimiento(tx, jornada) {
-    return protegido(async () =>
-      (await leerControles(tx, jornada)).some(
-        (c) => c.clave !== "ventas.pendientes_de_facturar" && c.cantidad > 0,
-      ),
-    );
+    return protegido(async () => (await leerControles(tx, jornada)).some((c) => c.cantidad > 0));
   },
   async controles(tx, jornada) {
     return protegido(() => leerControles(tx, jornada));

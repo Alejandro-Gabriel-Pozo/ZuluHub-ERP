@@ -953,10 +953,7 @@ describe.skipIf(base === null)("ventas: cobrar y venderYCobrar", () => {
     const anonimo: ContextoOperativo = { ...e.gerente, personaId: null };
     expect(falla(await m.casos.venderYCobrar(anonimo, pedido(e, caja)))).toBe("MODULO_NO_ACTIVO");
     // Un ticket de la otra sucursal, con la caja de la otra sucursal, no lo cobra el operador de la primera.
-    const t = await ticketPorCobrar(
-      { ...e, sucursal: e.otraSucursal } as EscenarioDeVentas,
-      e.gerente,
-    );
+    const t = await ticketPorCobrar({ ...e, sucursal: e.otraSucursal }, e.gerente);
     expect(
       falla(
         await m.casos.cobrar(
