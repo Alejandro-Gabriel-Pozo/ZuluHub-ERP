@@ -10,8 +10,8 @@ export function idDerivado(proposito: string, ...partes: readonly string[]): str
     .update(JSON.stringify([proposito, ...partes]))
     .digest();
   const b = Buffer.from(h.subarray(0, 16));
-  b[6] = ((b[6] ?? 0) & 0x0f) | 0x50;
-  b[8] = ((b[8] ?? 0) & 0x3f) | 0x80;
+  b.writeUInt8((b.readUInt8(6) & 0x0f) | 0x50, 6);
+  b.writeUInt8((b.readUInt8(8) & 0x3f) | 0x80, 8);
   const x = b.toString("hex");
   return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
 }

@@ -78,9 +78,10 @@ export function cuadrarCobros(
 ): Resultado<null, ErrorDeCuadre> {
   const suma = cobros.reduce((a, c) => sumar(a, c.importe), importeCero(ARS));
   if (suma.unidades === total.unidades) return ok(null);
-  return suma.unidades < total.unidades
-    ? err({ error: "COBRO_NO_CUADRA", falta: importeATexto(restar(total, suma)) })
-    : err({ error: "COBRO_NO_CUADRA", sobra: importeATexto(restar(suma, total)) });
+  if (suma.unidades < total.unidades) {
+    return err({ error: "COBRO_NO_CUADRA", falta: importeATexto(restar(total, suma)) });
+  }
+  return err({ error: "COBRO_NO_CUADRA", sobra: importeATexto(restar(suma, total)) });
 }
 
 export type PedidoDeCobranza = Readonly<{
