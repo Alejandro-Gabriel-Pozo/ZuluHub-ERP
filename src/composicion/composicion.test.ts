@@ -1,3 +1,7 @@
+import {
+  DECLARACIONES_DE_CATALOGO,
+  DECLARACIONES_DE_CONSULTAS_DE_CATALOGO,
+} from "../modulos/catalogo/publico";
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -598,6 +602,8 @@ function incumplimientosDeLaWeb(
 
 /** Una entrada nueva de `armarWeb` no compila hasta que se la decide acá. */
 const DECISIONES_DE_WEB: Record<keyof ReturnType<typeof armarWeb>, Decision> = {
+  casosDeUsoDeCatalogo: { conGuard: DECLARACIONES_DE_CATALOGO },
+  consultasDeCatalogo: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CATALOGO },
   casosDeUsoDeEmpresas: { conGuard: DECLARACIONES_DE_EMPRESAS },
   consultasDeEmpresas: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS },
   casosDeUsoDeCierre: { conGuard: DECLARACIONES_DE_CIERRE },

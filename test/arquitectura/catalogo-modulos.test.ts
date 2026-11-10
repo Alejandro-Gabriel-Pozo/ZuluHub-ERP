@@ -10,6 +10,10 @@ import {
 } from "../../src/capacidades/modulos/catalogo";
 import { CATALOGO_DE_PLATAFORMA } from "../../src/capacidades/permisos/plataforma";
 import {
+  DECLARACIONES_DE_CATALOGO,
+  DECLARACIONES_DE_CONSULTAS_DE_CATALOGO,
+} from "../../src/modulos/catalogo/publico";
+import {
   DECLARACIONES_DE_CIERRE,
   DECLARACIONES_DE_CONSULTAS_DE_CIERRE,
 } from "../../src/modulos/cierre/publico";
@@ -224,6 +228,10 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     "modulos/empresas": accionesDe(
       DECLARACIONES_DE_EMPRESAS,
       DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS,
+    ),
+    "modulos/catalogo": accionesDe(
+      DECLARACIONES_DE_CATALOGO,
+      DECLARACIONES_DE_CONSULTAS_DE_CATALOGO,
     ),
     "modulos/cierre": accionesDe(DECLARACIONES_DE_CIERRE, DECLARACIONES_DE_CONSULTAS_DE_CIERRE),
     "modulos/fiscal": accionesDe(

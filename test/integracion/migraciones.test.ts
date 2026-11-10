@@ -47,6 +47,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0022_nombre_de_la_sucursal_en_el_comprobante.sql",
         "0023_nombre_solo_con_varias_sucursales_abiertas.sql",
         "0024_pasaporte_con_letras.sql",
+        "0025_catalogo.sql",
         "0026_cierre.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
@@ -76,6 +77,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0022_nombre_de_la_sucursal_en_el_comprobante.sql",
           "0023_nombre_solo_con_varias_sucursales_abiertas.sql",
           "0024_pasaporte_con_letras.sql",
+          "0025_catalogo.sql",
           "0026_cierre.sql",
         ],
       });
@@ -210,6 +212,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0022_nombre_de_la_sucursal_en_el_comprobante.sql",
         "0023_nombre_solo_con_varias_sucursales_abiertas.sql",
         "0024_pasaporte_con_letras.sql",
+        "0025_catalogo.sql",
         "0026_cierre.sql",
       ]);
     } finally {

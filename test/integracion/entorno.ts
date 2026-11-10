@@ -97,6 +97,15 @@ import type { AuditoriaDePlataforma } from "../../src/puertos/auditoria-de-plata
 import type { CargaDeAutorizacionDePlataforma } from "../../src/puertos/autorizacion-de-plataforma";
 import type { CargaDeAutorizacion } from "../../src/puertos/autorizacion";
 import type { ColaDeTrabajos } from "../../src/puertos/cola-de-trabajos";
+import {
+  crearRepositorioDeOpciones,
+  crearRepositorioDePrecios,
+  crearRepositorioDeProductos,
+  type CatalogoDb,
+  type RepositorioDeOpciones,
+  type RepositorioDePrecios,
+  type RepositorioDeProductos,
+} from "../../src/modulos/catalogo/publico";
 import type { LecturasDeSesion } from "../../src/puertos/sesion";
 import type { IdempotenciaDePlataforma } from "../../src/puertos/idempotencia";
 import type { ReferenciasDeError } from "../../src/puertos/referencias-de-error";
@@ -135,6 +144,10 @@ export type TxDePrueba = Readonly<{
   niveles: NivelesDeControl<string>;
   /** Lo que lee la puerta `SESION` (W3a): la persona del usuario y sus empresas. */
   sesion: LecturasDeSesion;
+  /** Catálogo (E2): los repositorios que arma la composición. */
+  productos: RepositorioDeProductos;
+  opciones: RepositorioDeOpciones;
+  precios: RepositorioDePrecios;
 }> &
   TxDeIdentidad;
 
@@ -180,6 +193,9 @@ export function crearEntornoDePrueba(
       autorizacion,
       niveles: crearNivelesDeControlDePostgres<string>(db.withTables<NivelesDeControlDb>()),
       sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
+      productos: crearRepositorioDeProductos(db.withTables<CatalogoDb>()),
+      opciones: crearRepositorioDeOpciones(db.withTables<CatalogoDb>()),
+      precios: crearRepositorioDePrecios(db.withTables<CatalogoDb>()),
     });
   return crearTransacciones<TxDePrueba>({
     urls: {
