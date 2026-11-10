@@ -14,6 +14,10 @@ import {
   DECLARACIONES_DE_CONSULTAS_DE_CATALOGO,
 } from "../../src/modulos/catalogo/publico";
 import {
+  DECLARACIONES_DE_CONSULTAS_DE_STOCK,
+  DECLARACIONES_DE_STOCK,
+} from "../../src/modulos/stock/publico";
+import {
   DECLARACIONES_DE_CONSULTAS_DE_VENTAS,
   DECLARACIONES_DE_VENTAS,
 } from "../../src/modulos/ventas/publico";
@@ -49,9 +53,9 @@ import {
  *  Además: una acción pertenece a un solo módulo; un módulo obligatorio está disponible y solo
  *  requiere obligatorios.
  *
- *  Módulos sin construir (T0 de catálogo y stock; E0-T1 de caja, cierre y ventas): `catalogo`, `carta`, `stock`,
- *  `caja`, `cierre` y `ventas` declaran sus acciones antes de que existan sus carpetas y sus casos de uso (los
- *  traen T2 a T10 y las etapas E3, E3b y E4). Mientras figuren en
+ *  Módulos sin construir (T0 de catálogo; E0-T1 de caja y ventas): `catalogo`, `carta`, `caja` y `ventas` declaran
+ *  sus acciones antes de que existan sus casos de uso (los traen el cierre de catálogo y las etapas E3 y E4;
+ *  `cierre` salió de la lista con E3b y `stock` con E5: D-E5-4). Mientras figuren en
  *  `SIN_CONSTRUIR` se les perdonan DOS cosas, y solo esas: que ningún caso de uso exija todavía una
  *  acción (X1 inverso) y que su carpeta no exista (X4). Todo lo demás rige igual. Previene: tener que
  *  inventar casos de uso falsos para pasar el gate, o aflojar X1 y X4 para todos los módulos. Lo
@@ -69,7 +73,7 @@ const carpetaExiste = (carpeta: string): boolean => {
 type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 
 /** Los módulos declarados en el catálogo cuyas carpetas y casos de uso todavía no existen (T0). */
-const SIN_CONSTRUIR: readonly string[] = ["catalogo", "vidriera", "stock", "caja", "ventas"];
+const SIN_CONSTRUIR: readonly string[] = ["catalogo", "vidriera", "caja", "ventas"];
 
 function crucesDelCatalogo(
   catalogo: CatalogoComercial,
@@ -239,6 +243,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ),
     "modulos/cierre": accionesDe(DECLARACIONES_DE_CIERRE, DECLARACIONES_DE_CONSULTAS_DE_CIERRE),
     "modulos/ventas": accionesDe(DECLARACIONES_DE_VENTAS, DECLARACIONES_DE_CONSULTAS_DE_VENTAS),
+    "modulos/stock": accionesDe(DECLARACIONES_DE_STOCK, DECLARACIONES_DE_CONSULTAS_DE_STOCK),
     "modulos/fiscal": accionesDe(
       DECLARACIONES_DE_FISCAL,
       DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
@@ -339,8 +344,10 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ).toEqual([]);
   });
 
-  it("catálogo, carta, stock, caja y ventas son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1)", () => {
-    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "vidriera", "stock", "caja", "ventas"]);
+  it("catálogo, carta, caja y ventas son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1); stock salió con E5 y es disponible", () => {
+    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "vidriera", "caja", "ventas"]);
+    expect(SIN_CONSTRUIR).not.toContain("stock");
+    expect(CATALOGO_DE_MODULOS.stock.estado).toBe("disponible");
     for (const clave of SIN_CONSTRUIR) {
       expect(CATALOGO_DE_MODULOS[clave as keyof typeof CATALOGO_DE_MODULOS].estado, clave).toBe(
         "en_desarrollo",
@@ -355,21 +362,37 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     expect(enDesarrollo.filter((clave) => !SIN_CONSTRUIR.includes(clave))).toEqual([]);
   });
 
-  it("violación inyectada: un módulo en desarrollo fuera de SIN_CONSTRUIR rompe X4 (su carpeta no existe) y X1 (ningún caso de uso exige sus acciones)", () => {
-    const sinStock = SIN_CONSTRUIR.filter((clave) => clave !== "stock");
-    // La carpeta de stock existe desde E5-T1 (dominio): la violación inyectada simula que no, sin depender del disco.
+  it("violación inyectada: un módulo en desarrollo fuera de SIN_CONSTRUIR rompe X1 (ningún caso de uso exige sus acciones)", () => {
+    const sinCarta = SIN_CONSTRUIR.filter((clave) => clave !== "vidriera");
+    const problemas = crucesDelCatalogo(CATALOGO_DE_MODULOS, declaradas, carpetaExiste, sinCarta);
+    expect(problemas).toContain("X1: la acción vidrieras.ver no la exige ningún caso de uso");
+  });
+
+  it("violación inyectada: stock, ya disponible, rompe X4 (su carpeta no existe) y X1 (ningún caso de uso exige sus acciones) si se le quita lo que lo implementa (E5-T8)", () => {
     const sinCarpetaDeStock = (carpeta: string): boolean =>
       carpeta !== "modulos/stock" && carpetaExiste(carpeta);
+    const sinCasosDeUsoDeStock: AccionesPorCarpeta = { ...declaradas, "modulos/stock": [] };
     const problemas = crucesDelCatalogo(
       CATALOGO_DE_MODULOS,
-      declaradas,
+      sinCasosDeUsoDeStock,
       sinCarpetaDeStock,
-      sinStock,
+      SIN_CONSTRUIR,
     );
     expect(problemas).toContain(
       "X4: stock dice que lo implementa modulos/stock, que no existe en src/",
     );
     expect(problemas).toContain("X1: la acción stock.ver no la exige ningún caso de uso");
+    expect(problemas).toContain(
+      "X1: la acción composiciones.editar no la exige ningún caso de uso",
+    );
+  });
+
+  it("stock exige todas sus acciones con casos de uso y consultas reales: ninguna del módulo queda sin quien la use (E5-T8)", () => {
+    const exigidas = new Set(declaradas["modulos/stock"]);
+    expect(Object.keys(CATALOGO_DE_MODULOS.stock.acciones).filter((a) => !exigidas.has(a))).toEqual(
+      [],
+    );
+    expect([...exigidas].filter((a) => !(a in CATALOGO_DE_MODULOS.stock.acciones))).toEqual([]);
   });
 
   it("X3: ventas requiere catalogo y caja, y usa facturacion y stock, que existen; cierre no depende de ningún módulo comercial (E0-T1)", () => {

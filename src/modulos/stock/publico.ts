@@ -1,8 +1,10 @@
 /**
- * Entrada pública del módulo de stock (ADR-001; E5): los demás módulos (ventas, cierre, la composición) solo importan de acá. Crece por
- * tramos: hoy trae los depósitos y los artículos (T4), los movimientos (T5) y la persistencia (T3); el registro en la composición y los
- * puertos de ventas llegan con T7 y T8.
+ * Entrada pública del módulo de stock (ADR-001; E5): los demás módulos (ventas, cierre, la composición) solo importan de acá. Trae los casos de uso
+ * y las consultas con sus declaraciones (X1), los puertos que ofrece a ventas y a compras (`puertos.ts`), el aporte al cierre del día, el núcleo que
+ * escribe un movimiento en la transacción de otro módulo y la persistencia que la composición arma sobre la conexión de cada transacción.
  */
+// Lo que stock revisa al cierre del día: el puerto de `cierre` que la composición registra (E5-T8).
+export { aporteDeStock, CONTROLES_DE_STOCK, type TxDeAporteDeStock } from "./aporte-al-cierre";
 export { DECLARACIONES as DECLARACIONES_DE_STOCK } from "./casos-de-uso/declaraciones";
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_STOCK } from "./consultas/declaraciones";
 export { crearCasosDeUsoDeStock, type CasosDeUsoDeStock } from "./casos-de-uso/casos-de-uso";

@@ -161,7 +161,7 @@ export const DECLARACIONES = {
       regla: "YA_ESTABA",
       prueba: {
         archivo: ARCHIVO_DE_CONTEOS,
-        it: "I10: cancelar dos veces es ok y no audita la segunda",
+        it: "I10: cancelar dos veces es ok y no audita la segunda; un conteo aplicado no se cancela (CONTEO_CERRADO)",
       },
     },
   },

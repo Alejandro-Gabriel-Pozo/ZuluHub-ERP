@@ -206,7 +206,7 @@ export const CATALOGO_DE_MODULOS = {
     },
   },
   stock: {
-    estado: "en_desarrollo",
+    estado: "disponible",
     obligatorio: false,
     requiere: ["catalogo"],
     usaSiExiste: [],
@@ -225,7 +225,6 @@ export const CATALOGO_DE_MODULOS = {
       "depositos.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "depositos.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "depositos.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "depositos.asignar_emisor": { capacidad: null, efecto: "CREA_AMPLIA" },
       "articulos.controlar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "articulos.dejar_de_controlar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "composiciones.editar": { capacidad: null, efecto: "CREA_AMPLIA" },

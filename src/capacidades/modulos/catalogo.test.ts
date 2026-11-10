@@ -16,7 +16,7 @@ describe("el catálogo comercial de módulos", () => {
     expect(conCapacidad).toEqual([]);
   });
 
-  it("tiene ocho módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie) y catalogo, carta, stock, caja y ventas (en desarrollo) y cierre (disponible desde E3b)", () => {
+  it("tiene ocho módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, carta, caja y ventas (en desarrollo), cierre (disponible desde E3b) y stock (disponible desde E5)", () => {
     expect(CATALOGO_DE_MODULOS).toEqual({
       administracion: {
         estado: "disponible",
@@ -116,7 +116,7 @@ describe("el catálogo comercial de módulos", () => {
         },
       },
       stock: {
-        estado: "en_desarrollo",
+        estado: "disponible",
         obligatorio: false,
         requiere: ["catalogo"],
         usaSiExiste: [],
@@ -134,7 +134,6 @@ describe("el catálogo comercial de módulos", () => {
           "depositos.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "depositos.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "depositos.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-          "depositos.asignar_emisor": { capacidad: null, efecto: "CREA_AMPLIA" },
           "articulos.controlar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "articulos.dejar_de_controlar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "composiciones.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -219,16 +218,17 @@ describe("el catálogo comercial de módulos", () => {
     expect(carpetas).toEqual([["modulos/catalogo"], ["modulos/catalogo"], ["modulos/stock"]]);
   });
 
-  it("el catálogo tiene 42 acciones de catálogo, carta y stock (14 + 9 + 19) y 35 de caja, cierre y ventas (23 + 4 + 8), sin repetir ninguna", () => {
+  it("el catálogo tiene 41 acciones de catálogo, carta y stock (14 + 9 + 18) y 35 de caja, cierre y ventas (23 + 4 + 8), sin repetir ninguna", () => {
     const cuantas = (m: "catalogo" | "vidriera" | "stock" | "caja" | "cierre" | "ventas") =>
       Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
-    expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([14, 9, 19]);
+    expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([14, 9, 18]);
     expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
     // 25 de administración (18 de usuarios, sucursales, gerencia y permisos, y 7 de la configuración fiscal de H7 T5),
-    // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 42 de catálogo, carta y stock (48 menos las 6 retiradas por las
-    // decisiones 138 y 133) y 35 de caja, cierre y ventas (E0-T1): 111 en total.
-    expect(todas).toHaveLength(25 + 9 + 42 + 35);
+    // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 41 de catálogo, carta y stock (48 menos las 6 retiradas por las
+    // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156) y 35 de caja,
+    // cierre y ventas (E0-T1): 110 en total.
+    expect(todas).toHaveLength(25 + 9 + 41 + 35);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -252,11 +252,29 @@ describe("el catálogo comercial de módulos", () => {
     expect([...bajaDePlan.modulosEnSoloLectura]).toEqual(["facturacion"]);
   });
 
-  it("catalogo, carta, stock, caja y ventas nacen en desarrollo: no se activan ni aunque se activen todos y el plan los incluya (el cierre de catálogo y stock es T12)", () => {
-    const todos = ["catalogo", "vidriera", "stock", "caja", "ventas"];
+  it("catalogo, carta, caja y ventas siguen en desarrollo: no se activan ni aunque se activen todos y el plan los incluya", () => {
+    const todos = ["catalogo", "vidriera", "caja", "ventas"];
     const estado = estadoDeModulos(CATALOGO_DE_MODULOS, todos, todos);
     expect([...estado.modulosActivos]).toEqual(["administracion"]);
     expect([...estado.modulosEnSoloLectura]).toEqual([]);
+  });
+
+  it("stock es disponible desde E5 (D-E5-4) pero NO nace activo: sin activarlo la empresa no lo tiene, y activado y dentro del plan opera (fuera del plan, solo lectura)", () => {
+    expect(CATALOGO_DE_MODULOS.stock.estado).toBe("disponible");
+    expect([...estadoDeModulos(CATALOGO_DE_MODULOS, [], ["stock"]).modulosActivos]).toEqual([
+      "administracion",
+    ]);
+    expect(
+      [...estadoDeModulos(CATALOGO_DE_MODULOS, ["stock"], ["stock"]).modulosActivos].sort(),
+    ).toEqual(["administracion", "stock"]);
+    const bajaDePlan = estadoDeModulos(CATALOGO_DE_MODULOS, ["stock"], []);
+    expect([...bajaDePlan.modulosActivos]).toEqual(["administracion"]);
+    expect([...bajaDePlan.modulosEnSoloLectura]).toEqual(["stock"]);
+  });
+
+  it("depositos.asignar_emisor ya no existe (E5-T8, S-5): el piloto no exige emisor y la tabla de depósitos no tiene la columna", () => {
+    const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
+    expect(todas).not.toContain("depositos.asignar_emisor");
   });
 });
 
@@ -340,7 +358,6 @@ const EFECTOS_DE_EMPRESA = {
     "cuentas_de_cobro.editar",
     "cuentas_de_cobro.reactivar",
     "datos_fiscales.editar",
-    "depositos.asignar_emisor",
     "depositos.crear",
     "depositos.editar",
     "depositos.reactivar",

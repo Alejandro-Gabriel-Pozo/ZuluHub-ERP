@@ -98,7 +98,6 @@ export const PERMISOS_DE_EMPRESA = {
   "vidrieras.renovar_enlace": ["GERENTE", "ADMINISTRADOR"],
   "vidrieras.retirar_de_linea": ["GERENTE", "ADMINISTRADOR"],
   "productos.asignar_emisor": ["GERENTE"],
-  "depositos.asignar_emisor": ["GERENTE"],
   "stock.verificar_saldos": ["GERENTE"],
   // CE0 (catalogo-carta-niveles-y-elecciones §7.2): quien carga productos y opciones también edita las
   // variantes y los combos (F6, opción A). El operador no. Sin acciones de grupos de precio ni

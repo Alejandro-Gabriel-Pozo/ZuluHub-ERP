@@ -628,7 +628,7 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
         "vidriera",
       ]);
       expect(modulos[0]).toMatchObject({ estado: "disponible", obligatorio: true });
-      // `facturacion` es disponible desde 2026-11-04 (no obligatoria: cada empresa la activa); el resto sigue en desarrollo.
+      // `facturacion` es disponible desde 2026-11-04 (no obligatoria: cada empresa la activa); stock desde E5; el resto sigue en desarrollo.
       expect(modulos[4]).toMatchObject({
         clave: "facturacion",
         estado: "disponible",
@@ -640,8 +640,13 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
         estado: "disponible",
         obligatorio: false,
       });
+      // `stock` es disponible desde E5 (no obligatorio: cada empresa lo activa).
+      expect(modulos.find((m) => m.clave === "stock")).toMatchObject({
+        estado: "disponible",
+        obligatorio: false,
+      });
       for (const modulo of modulos.filter(
-        (m) => !["administracion", "facturacion", "cierre"].includes(m.clave),
+        (m) => !["administracion", "facturacion", "cierre", "stock"].includes(m.clave),
       )) {
         expect(modulo, modulo.clave).toMatchObject({ estado: "en_desarrollo", obligatorio: false });
       }

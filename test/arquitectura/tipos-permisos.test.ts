@@ -120,7 +120,6 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "depositos.editar"
       | "depositos.reactivar"
       | "depositos.desactivar"
-      | "depositos.asignar_emisor"
       | "articulos.controlar"
       | "articulos.dejar_de_controlar"
       | "composiciones.editar"
