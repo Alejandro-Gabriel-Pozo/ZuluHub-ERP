@@ -86,6 +86,9 @@ const TABLAS_DE_NEGOCIO = [
   "consumo_de_opcion",
   "precio_de_venta",
   "copia_de_opciones",
+  // Cierre del día (0026_cierre)
+  "jornada_de_sucursal",
+  "control_de_jornada_cerrada",
 ] as const;
 const TABLAS_DE_AUDITORIA = ["auditoria_empresa", "auditoria_plataforma", "auditoria_acceso_grupo"];
 
@@ -304,6 +307,8 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "punto_de_venta:SELECT", // 0006
           "regla_emisor:SELECT", // 0006
           "serie_comprobante:SELECT", // 0006
+          "jornada_de_sucursal:SELECT", // 0026
+          "control_de_jornada_cerrada:SELECT", // 0026
           "sucursal:SELECT",
           "tenant:SELECT",
           "trabajo:SELECT",
@@ -481,6 +486,16 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             (c) => `pedernal_app:seccion_de_carta.${c}`,
           ),
           "pedernal_app:persona.usuario_auth_id", // 0010: solo el vínculo con el usuario, y solo en INVITACION
+          // 0026: la jornada del cierre del día cambia de estado y de marcas (la máquina de estados la impone el disparador)
+          ...[
+            "estado",
+            "auditoria_iniciada_en",
+            "auditoria_iniciada_por",
+            "cerrada_en",
+            "cerrada_por",
+            "huella_de_cierre",
+            "observacion",
+          ].map((c) => `pedernal_app:jornada_de_sucursal.${c}`),
           "pedernal_app:sucursal.activa",
           "pedernal_app:sucursal.hora_de_corte", // 0007
           "pedernal_app:sucursal.nombre",
@@ -905,6 +920,21 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "sucursal.empresa_id",
           "sucursal.nombre",
           ...["telefono", "correo", "web"].map((c) => `sucursal.${c}`), // 0019
+          // 0026: la jornada nace ABIERTA y sin marcas; la foto de controles entra completa al cerrar
+          ...["empresa_id", "sucursal_id", "fecha_negocio"].map((c) => `jornada_de_sucursal.${c}`),
+          ...[
+            "empresa_id",
+            "sucursal_id",
+            "fecha_negocio",
+            "modulo",
+            "clave",
+            "severidad",
+            "cantidad",
+            "reconocido",
+            "reconocido_en",
+            "reconocido_por",
+            "texto",
+          ].map((c) => `control_de_jornada_cerrada.${c}`),
           "trabajo.empresa_id",
           "trabajo.tipo",
           "trabajo.datos",

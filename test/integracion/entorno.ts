@@ -30,6 +30,11 @@ import {
   type UsuarioAuthId,
 } from "../../src/primitivas/identificadores/marca";
 import {
+  crearRepositorioDeJornadas,
+  type CierreDb,
+  type RepositorioDeJornadas,
+} from "../../src/modulos/cierre/publico";
+import {
   crearRepositorioDeEmpresas,
   crearRepositorioDeSucursales,
   type EmpresasDb,
@@ -122,6 +127,8 @@ export type TxDePrueba = Readonly<{
   tenants: RepositorioDeTenants;
   empresas: RepositorioDeEmpresas;
   sucursales: RepositorioDeSucursales;
+  /** La jornada de la sucursal y la foto de sus controles (E3b, 0026). */
+  jornadas: RepositorioDeJornadas;
   /** La cola de trabajos del procesador (H5); se usa con el contexto `TRABAJOS`. */
   cola: ColaDeTrabajos;
   /** Puertos de plataforma (H5 P4): el actor sale del contexto de la transacción. */
@@ -164,6 +171,7 @@ export function crearEntornoDePrueba(
       tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
       empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
       sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
+      jornadas: crearRepositorioDeJornadas(db.withTables<CierreDb>()),
       personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
       membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
       asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),

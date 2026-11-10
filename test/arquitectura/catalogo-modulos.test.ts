@@ -14,6 +14,10 @@ import {
   DECLARACIONES_DE_CONSULTAS_DE_CATALOGO,
 } from "../../src/modulos/catalogo/publico";
 import {
+  DECLARACIONES_DE_CIERRE,
+  DECLARACIONES_DE_CONSULTAS_DE_CIERRE,
+} from "../../src/modulos/cierre/publico";
+import {
   DECLARACIONES_DE_EMPRESAS,
   DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS,
 } from "../../src/modulos/empresas/publico";
@@ -61,14 +65,7 @@ const carpetaExiste = (carpeta: string): boolean => {
 type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 
 /** Los módulos declarados en el catálogo cuyas carpetas y casos de uso todavía no existen (T0). */
-const SIN_CONSTRUIR: readonly string[] = [
-  "catalogo",
-  "vidriera",
-  "stock",
-  "caja",
-  "cierre",
-  "ventas",
-];
+const SIN_CONSTRUIR: readonly string[] = ["catalogo", "vidriera", "stock", "caja", "ventas"];
 
 function crucesDelCatalogo(
   catalogo: CatalogoComercial,
@@ -236,6 +233,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       DECLARACIONES_DE_CATALOGO,
       DECLARACIONES_DE_CONSULTAS_DE_CATALOGO,
     ),
+    "modulos/cierre": accionesDe(DECLARACIONES_DE_CIERRE, DECLARACIONES_DE_CONSULTAS_DE_CIERRE),
     "modulos/fiscal": accionesDe(
       DECLARACIONES_DE_FISCAL,
       DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
@@ -336,15 +334,8 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ).toEqual([]);
   });
 
-  it("catálogo, carta, stock, caja, cierre y ventas son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1)", () => {
-    expect([...SIN_CONSTRUIR]).toEqual([
-      "catalogo",
-      "vidriera",
-      "stock",
-      "caja",
-      "cierre",
-      "ventas",
-    ]);
+  it("catálogo, carta, stock, caja y ventas son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1)", () => {
+    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "vidriera", "stock", "caja", "ventas"]);
     for (const clave of SIN_CONSTRUIR) {
       expect(CATALOGO_DE_MODULOS[clave as keyof typeof CATALOGO_DE_MODULOS].estado, clave).toBe(
         "en_desarrollo",

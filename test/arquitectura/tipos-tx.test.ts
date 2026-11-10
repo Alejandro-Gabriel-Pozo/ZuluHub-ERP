@@ -5,6 +5,11 @@ import type { TxDeCredenciales } from "../../src/adaptadores/certificados/creden
 import type { TxDeTickets } from "../../src/adaptadores/certificados/almacen-de-tickets";
 import type { TxDeVerificacion } from "../../src/adaptadores/certificados/verificacion-de-autorizacion";
 import type { TxDeCatalogo, TxDeConsultasDeCatalogo } from "../../src/modulos/catalogo/publico";
+import type {
+  TxDeCierre,
+  TxDeConsultasDeCierre,
+  TxDeJornadas,
+} from "../../src/modulos/cierre/publico";
 import type { TxDeConsultasDeEmpresas, TxDeEmpresas } from "../../src/modulos/empresas/publico";
 import type {
   TxDeCertificados,
@@ -39,6 +44,14 @@ describe("la Tx compuesta de la composición contiene la Tx angosta de cada mód
     expectTypeOf<TxDeApp>().toExtend<TxDeIdentidad>();
     expectTypeOf<TxDeApp>().toExtend<TxDeConsultasDeIdentidad>();
     expectTypeOf<TxDeApp>().toExtend<Readonly<{ niveles: NivelesDeControl }>>();
+  });
+
+  it("cierre del día: casos de uso, consultas y el puerto de la jornada que usan los otros módulos", () => {
+    expectTypeOf<TxDeApp>().toExtend<TxDeCierre>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeConsultasDeCierre>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeJornadas>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeCierre>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConsultasDeCierre>>();
   });
 
   it("fiscal: facturación, consultas, configuración, certificados y lo que descifra el adaptador de ARCA", () => {

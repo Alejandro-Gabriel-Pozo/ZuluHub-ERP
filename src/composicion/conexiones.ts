@@ -50,10 +50,8 @@ import {
 import type { TxDeCola } from "../adaptadores/trabajos/procesador";
 import type { NivelesDeControl } from "../capacidades/controles/niveles";
 import type { EmpresaId } from "../primitivas/identificadores/marca";
-import {
-  crearRepositoriosDeCatalogo,
-  type RepositoriosDeCatalogo,
-} from "../modulos/catalogo/publico";
+import { crearRepositoriosDeCatalogo } from "../modulos/catalogo/publico";
+import { crearRepositorioDeJornadas, type CierreDb } from "../modulos/cierre/publico";
 import {
   crearLecturaDeSucursalBloqueada,
   crearRepositorioDeEmpresas,
@@ -154,11 +152,12 @@ import { perezoso } from "./perezoso";
  * contenga cada `Tx` angosta lo comprueba el compilador (`test/arquitectura/tipos-tx.test.ts`).
  */
 /** Incluye los repositorios del catálogo (E2 mínimo: `productos`, `opciones` y `precios`). */
-export type TxDeApp = RepositoriosDeCatalogo &
+export type TxDeApp = ReturnType<typeof crearRepositoriosDeCatalogo> &
   Readonly<{
     tenants: RepositorioDeTenants;
     empresas: RepositorioDeEmpresas;
     sucursales: RepositorioDeSucursales;
+    jornadas: ReturnType<typeof crearRepositorioDeJornadas>;
     /** La sucursal leída con `FOR SHARE`: dar de alta un punto de venta exige que siga abierta (el cierre concurrente espera). */
     sucursalBloqueada: LecturaDeSucursalBloqueada;
     personas: RepositorioDePersonas;
@@ -273,6 +272,7 @@ function armarTx(db: ConexionDeTx, autorizacion: CargaDeAutorizacion): TxDeApp {
     tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
     empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
     sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
+    jornadas: crearRepositorioDeJornadas(db.withTables<CierreDb>()),
     sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
     personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
     membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
