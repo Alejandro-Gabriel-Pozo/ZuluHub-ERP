@@ -78,6 +78,59 @@ describe("el total se redondea una sola vez, la mitad sube (decisiones 8 y 9)", 
   });
 });
 
+describe("el total de un documento ya cobrado: lo que se cobró es lo que se factura (E1-P7, mitad fiscal)", () => {
+  /** Un documento como el de una venta: de 1 a 30 renglones, cantidades de 4 decimales, alícuotas 21, 10,5, 0 y exento, sin descuento. */
+  const alicuotasDeUnaVenta = fc.constantFrom<RenglonAFacturar["alicuota"]>(
+    "21",
+    "10.5",
+    "0",
+    "EXENTO",
+  );
+  const documento = fc.array(
+    renglonArbitrario(alicuotasDeUnaVenta).map((r): RenglonAFacturar => ({
+      ...r,
+      descuento: null,
+    })),
+    { minLength: 1, maxLength: 30 },
+  );
+
+  it("con IVA incluido el total es el redondeo único de Σ cantidad × precio, igual para cualquier alícuota y sin alícuota (letra C)", () => {
+    fc.assert(
+      fc.property(documento, (rs) => {
+        const esperado = totalDeReferencia(rs, "IVA_INCLUIDO");
+        const con = calcularRenglones(ARS, rs, "IVA_INCLUIDO", POLITICA_VIGENTE);
+        const sin = calcularRenglones(
+          ARS,
+          rs.map((r) => ({ ...r, alicuota: null })),
+          "IVA_INCLUIDO",
+          POLITICA_VIGENTE,
+        );
+        if (esperado === 0n) {
+          expect(con.ok).toBe(false);
+          expect(sin.ok).toBe(false);
+          return;
+        }
+        expect(con.ok && con.valor.total.unidades).toBe(esperado);
+        expect(sin.ok && sin.valor.total.unidades).toBe(esperado);
+      }),
+    );
+  });
+
+  it("los importes de los renglones suman exactamente el total (ni un centavo de más ni de menos)", () => {
+    fc.assert(
+      fc.property(documento, (rs) => {
+        const r = calcularRenglones(ARS, rs, "IVA_INCLUIDO", POLITICA_VIGENTE);
+        if (!r.ok) return;
+        const suma = r.valor.renglones.reduce(
+          (a, x) => sumar(a, x),
+          importeDesdeTexto(ARS, "0.00"),
+        );
+        expect(suma.unidades).toBe(r.valor.total.unidades);
+      }),
+    );
+  });
+});
+
 describe("la nota hereda la letra del asociado y es positiva", () => {
   const tipoAsociable = fc.constantFrom<TipoDeComprobante>(
     "FACTURA_A",

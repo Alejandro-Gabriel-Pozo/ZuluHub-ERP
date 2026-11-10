@@ -7,6 +7,20 @@ import type { EstadoDeCuenta, EstadoDeLinea, EstadoDeTicket } from "../dominio/e
  * siempre como texto (`::text`, `YYYY-MM-DD`). Un test compara estas columnas con el catálogo de la base (`ventas-persistencia.test.ts`).
  */
 export type VentasDb = {
+  /** 0029 (E1): el puntero de cada ticket al comprobante que lo facturó. Solo `vigente` y `no_vigente_en` se actualizan. */
+  documento_de_ticket: {
+    id: string;
+    empresa_id: string;
+    ticket_id: string;
+    ejemplar_id: string;
+    intento: number;
+    clave: string;
+    comprobante_id: string;
+    vigente: Generated<boolean>;
+    creado_en: Date;
+    creado_por: string;
+    no_vigente_en: Date | null;
+  };
   aplicacion_de_cobro: {
     empresa_id: string;
     cobranza_id: string;
@@ -166,6 +180,19 @@ export type VentasDb = {
 
 /** Tablas y columnas del módulo, en el orden de la base; un test las compara con el catálogo. */
 export const COLUMNAS_DE_VENTAS = {
+  documento_de_ticket: [
+    "id",
+    "empresa_id",
+    "ticket_id",
+    "ejemplar_id",
+    "intento",
+    "clave",
+    "comprobante_id",
+    "vigente",
+    "creado_en",
+    "creado_por",
+    "no_vigente_en",
+  ],
   aplicacion_de_cobro: [
     "empresa_id",
     "cobranza_id",

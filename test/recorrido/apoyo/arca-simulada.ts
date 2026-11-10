@@ -10,9 +10,18 @@ import type { AddressInfo } from "node:net";
  */
 type PedidoRecibido = Readonly<{ operacion: string; cuerpo: string; hostDeArca: string }>;
 
+/**
+ * Cómo responde a `FECAESolicitar` (lo único que se puede cambiar en caliente): `AUTORIZA` es lo normal; `SIN_RESPUESTA_DEFINITIVA` contesta HTTP 500, que
+ * para el adaptador es «no sé si ARCA lo registró» (`INCIERTO`, «Confirmando»): una escritura que no se sabe si llegó NUNCA se reenvía (ADR-007,
+ * `clasificar.ts`). Lo que ARCA haría con un HTTP 500 está en las grabaciones 053 a 056 de `corrida1`; ningún pedido nuevo se inventa.
+ */
+type ModoDeLaSolicitud = "AUTORIZA" | "SIN_RESPUESTA_DEFINITIVA";
+
 export type ArcaSimulada = Readonly<{
   puerto: number;
   pedidos: PedidoRecibido[];
+  /** Cambia cómo responde de ahora en más a `FECAESolicitar` (el modo por defecto es `AUTORIZA`). */
+  responderALaSolicitud(modo: ModoDeLaSolicitud): void;
   cerrar(): Promise<void>;
 }>;
 
@@ -27,6 +36,7 @@ export async function levantarArcaSimulada(): Promise<ArcaSimulada> {
   const pedidos: PedidoRecibido[] = [];
   const ultimos = new Map<string, number>();
   let contadorDeCae = 0;
+  let modo: ModoDeLaSolicitud = "AUTORIZA";
 
   const responder = (res: ServerResponse, estado: number, cuerpo: string): void => {
     res.writeHead(estado, { "Content-Type": "text/xml; charset=utf-8" });
@@ -46,6 +56,10 @@ export async function levantarArcaSimulada(): Promise<ArcaSimulada> {
       return;
     }
     if (operacion === "FECAESolicitar") {
+      if (modo === "SIN_RESPUESTA_DEFINITIVA") {
+        responder(res, 500, "recorrido: ARCA simulada sin respuesta definitiva");
+        return;
+      }
       const numero = Number(dato(cuerpo, "CbteDesde"));
       if (numero !== (ultimos.get(clave) ?? 0) + 1) {
         responder(
@@ -78,6 +92,9 @@ export async function levantarArcaSimulada(): Promise<ArcaSimulada> {
   return {
     puerto: port,
     pedidos,
+    responderALaSolicitud(nuevo) {
+      modo = nuevo;
+    },
     cerrar: () =>
       new Promise<void>((resolver) => {
         servidor.closeAllConnections();

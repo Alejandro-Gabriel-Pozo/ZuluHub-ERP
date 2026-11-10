@@ -30,7 +30,11 @@ const MARGEN_EN_MS = 15_000;
 describe("maxDuration de las rutas de facturación", () => {
   it("emitir y anular (alojan las acciones que esperan a ARCA) cubren el peor caso de un despacho más un margen", () => {
     expect(PEOR_CASO_EN_MS).toBe(75_000);
-    for (const ruta of ["emitir/page.tsx", "[id]/anular/page.tsx"]) {
+    for (const ruta of [
+      "emitir/page.tsx",
+      "emitir/venta/[ticketId]/page.tsx",
+      "[id]/anular/page.tsx",
+    ]) {
       const segundos = maxDuration(ruta);
       expect(segundos, ruta).not.toBeNull();
       expect((segundos as number) * 1000, ruta).toBeGreaterThanOrEqual(
@@ -39,8 +43,9 @@ describe("maxDuration de las rutas de facturación", () => {
     }
   });
 
-  it("emitir y anular declaran el mismo tope (un solo cálculo)", () => {
+  it("emitir, emitir desde un ticket y anular declaran el mismo tope (un solo cálculo)", () => {
     expect(maxDuration("emitir/page.tsx")).toBe(maxDuration("[id]/anular/page.tsx"));
+    expect(maxDuration("emitir/venta/[ticketId]/page.tsx")).toBe(maxDuration("emitir/page.tsx"));
   });
 
   it("el PDF no llama a ARCA: tope corto (10 s), muy por encima de lo medido (p99 106 ms, frío ~270 ms)", () => {

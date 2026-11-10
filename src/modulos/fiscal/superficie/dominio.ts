@@ -49,7 +49,12 @@ export {
   type SolicitudId,
   type VersionId,
 } from "../dominio/identificadores";
-export { AMBIENTES, CONCEPTOS, LIMITES_DE_COMPROBANTE } from "../dominio/comprobante-nuevo";
+export {
+  AMBIENTES,
+  CONCEPTOS,
+  FORMA_DEL_SIMBOLO_DE_UNIDAD,
+  LIMITES_DE_COMPROBANTE,
+} from "../dominio/comprobante-nuevo";
 export type { Ambiente } from "../dominio/comprobante-nuevo";
 export { MODOS_DE_PRECIO } from "../dominio/calculo-de-renglones";
 export {

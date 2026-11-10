@@ -5,6 +5,7 @@ import { armarAnularLinea } from "./anular-linea";
 import { armarAnularTicket } from "./anular-ticket";
 import { armarCerrarCuenta } from "./cerrar-cuenta";
 import { armarCobrar } from "./cobrar";
+import { armarEmitirComprobanteDeTicket } from "./emitir-comprobante-de-ticket";
 import type { DependenciasDeVentas } from "./contrato";
 import type { DECLARACIONES } from "./declaraciones";
 import { armarVenderYCobrar } from "./vender-y-cobrar";
@@ -22,6 +23,7 @@ export function crearCasosDeUsoDeVentas(dependencias: DependenciasDeVentas) {
     cerrarCuenta: armarCerrarCuenta(dependencias),
     anularTicket: armarAnularTicket(dependencias),
     cobrar: armarCobrar(dependencias),
+    emitirComprobanteDeTicket: armarEmitirComprobanteDeTicket(dependencias),
     venderYCobrar: armarVenderYCobrar(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }

@@ -245,6 +245,9 @@ function armar(datos: Datos = {}) {
         llamadas.puntosDeVenta.push(args);
         return Promise.resolve(datos.puntosDeVenta ?? []);
       },
+      // La vigencia tiene sus pruebas en `vigencia-de-comprobantes.test.ts`: acá nadie la toca.
+      paraVigencia: () => Promise.resolve([]),
+      paraVigenciaDelOrigen: () => Promise.resolve([]),
     },
     // El estado de los certificados tiene sus pruebas en `estado-de-certificados.test.ts`: acá nadie lo toca.
     emisores: {
@@ -874,6 +877,7 @@ describe("verComprobante", () => {
       {
         posicion: 1,
         descripcion: "Torta",
+        unidad: null,
         cantidad: "1.0000",
         precioUnitario: "1210.000000",
         descuento: null,
@@ -883,6 +887,7 @@ describe("verComprobante", () => {
       {
         posicion: 2,
         descripcion: "Medialunas",
+        unidad: null,
         cantidad: "1.0000",
         precioUnitario: "1050.000000",
         descuento: null,
@@ -1239,7 +1244,7 @@ describe("modeloDeImpresion (la consulta)", () => {
   });
 
   it("una versión de representación que no se sabe dibujar sale como error del modelo", async () => {
-    const { consultas } = armar({ comprobante: guardado({ versionDeRepresentacion: 4 }) });
+    const { consultas } = armar({ comprobante: guardado({ versionDeRepresentacion: 5 }) });
     expect(await consultas.modeloDeImpresion(contexto(), { comprobanteId: ID })).toEqual({
       ok: false,
       error: "VERSION_DE_REPRESENTACION_DESCONOCIDA",

@@ -169,6 +169,7 @@ export const COLUMNAS_DE_FISCAL = {
     "descuento",
     "alicuota",
     "importe",
+    "unidad", // 0029
   ],
   comprobante_alicuota: ["empresa_id", "comprobante_id", "alicuota", "total", "neto", "iva"],
   certificado_arca: [
@@ -430,6 +431,7 @@ export const ERRORES_DE_FISCAL_POR_RESTRICCION = {
   comprobante_linea_descuento_ck: "NO_TRADUCIDA", // `Porcentaje` ya es de 0 a 100
   comprobante_linea_alicuota_ck: "NO_TRADUCIDA", // `CODIGOS_DE_ALICUOTA` es un catálogo cerrado
   comprobante_linea_importe_ck: "NO_TRADUCIDA",
+  comprobante_linea_unidad_ck: "NO_TRADUCIDA", // 0029: el dominio valida la forma del símbolo antes (`FORMA_DEL_SIMBOLO_DE_UNIDAD`)
   comprobante_linea_tardia: "COMPROBANTE_LINEA_TARDIA", // lo lanza un disparador
 
   // comprobante_alicuota (0009, solo inserción)

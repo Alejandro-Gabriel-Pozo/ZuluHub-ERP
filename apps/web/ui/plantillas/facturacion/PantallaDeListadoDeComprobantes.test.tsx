@@ -179,6 +179,31 @@ describe("listado de comprobantes en el celular (6A, tarjetas)", () => {
     legibleYTocable();
   });
 
+  it("«Pendientes de facturar» (con el mismo permiso que «+ Emitir»): un enlace a la lista de ventas cobradas, accesible y tocable", async () => {
+    await ventana(390);
+    await render(
+      enArmazon(
+        props({
+          emitir: { href: "/facturacion/comprobantes/emitir", texto: "+ Emitir" },
+          pendientes: {
+            href: "/facturacion/comprobantes/pendientes",
+            texto: "Pendientes de facturar",
+          },
+        }),
+      ),
+    );
+    await expect
+      .element(page.getByRole("link", { name: "Pendientes de facturar" }))
+      .toHaveAttribute("href", "/facturacion/comprobantes/pendientes");
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    legibleYTocable();
+  });
+
+  it("sin permiso para emitir no hay enlace a pendientes", async () => {
+    await render(enArmazon(props()));
+    expect(page.getByRole("link", { name: "Pendientes de facturar" }).elements()).toHaveLength(0);
+  });
+
   it("los importes, también el enorme, no desbordan y se leen a 18 px con peso fuerte", async () => {
     await render(enArmazon(props()));
     const importes = [...(tarjetas() as HTMLElement).querySelectorAll<HTMLElement>("span")].filter(

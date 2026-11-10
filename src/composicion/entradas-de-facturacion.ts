@@ -221,6 +221,7 @@ function aRenglones(renglones: readonly FormaDeRenglon[]) {
       precioUnitario: precio.valor,
       descuento: descuento.valor,
       alicuota: r.alicuota,
+      unidad: null, // lo manual no lleva unidad: la trae quien factura un documento ya armado
     });
   }
   return ok(salida);
@@ -240,6 +241,9 @@ function aServicio(
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+
+/** El receptor de una factura tal como lo escribe la pantalla (`receptor` del formulario de emisión): la misma forma y los mismos límites. */
+export const receptorDeEntrada = (crudo: unknown) => leer(receptor, crudo);
 
 export function entradaDeFactura(
   crudo: unknown,

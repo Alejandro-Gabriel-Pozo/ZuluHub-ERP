@@ -31,10 +31,12 @@ import {
 } from "../../src/primitivas/identificadores/marca";
 import {
   crearRepositorioDeCuentas,
+  crearRepositorioDeDocumentos,
   crearRepositorioDeLecturas,
   crearRepositorioDeTickets,
   type LecturasDeVentas,
   type RepositorioDeCuentas,
+  type RepositorioDeDocumentos,
   type RepositorioDeTickets,
   type VentasDb,
 } from "../../src/modulos/ventas/publico";
@@ -148,6 +150,8 @@ export type TxDePrueba = Readonly<{
   /** Ventas (E4, 0028). */
   cuentas: RepositorioDeCuentas;
   tickets: RepositorioDeTickets;
+  /** El puntero ticket → comprobante (E1, 0029). */
+  documentos: RepositorioDeDocumentos;
   lecturasDeVentas: LecturasDeVentas;
   /** La cola de trabajos del procesador (H5); se usa con el contexto `TRABAJOS`. */
   cola: ColaDeTrabajos;
@@ -197,6 +201,7 @@ export function crearEntornoDePrueba(
       ...armarPiezasDeCajaEnTx(db),
       cuentas: crearRepositorioDeCuentas(db.withTables<VentasDb>()),
       tickets: crearRepositorioDeTickets(db.withTables<VentasDb>()),
+      documentos: crearRepositorioDeDocumentos(db.withTables<VentasDb>()),
       lecturasDeVentas: crearRepositorioDeLecturas(db.withTables<VentasDb>()),
       personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
       membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),

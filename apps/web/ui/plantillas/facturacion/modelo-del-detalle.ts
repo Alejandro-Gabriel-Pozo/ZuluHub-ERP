@@ -7,7 +7,7 @@ import type { PropsDeInsignia, TonoDeEstado } from "../../componentes/Insignia";
 import { direccionDeImprimir } from "./filtros-del-listado";
 import {
   formatearAlicuota,
-  formatearCantidad,
+  formatearCantidadConUnidad,
   formatearFecha,
   formatearImporte,
   formatearNumeroDeDocumento,
@@ -57,6 +57,7 @@ export type DetalleParaMostrar = Readonly<{
   renglones: readonly Readonly<{
     descripcion: string;
     cantidad: string;
+    unidad?: string | null; // el símbolo congelado al emitir («kg»); sin unidad, solo la cantidad
     precioUnitario: string;
     alicuota: string | null;
     importe: string;
@@ -337,7 +338,7 @@ export function armarElDetalle(
       return {
         descripcion: r.descripcion,
         cuenta: texto(d, "fiscal.pantalla.renglon_cuenta", {
-          cantidad: formatearCantidad(r.cantidad),
+          cantidad: formatearCantidadConUnidad(r.cantidad, r.unidad),
           precio: formatearImporte(r.precioUnitario),
         }),
         iva: alicuota === null ? null : texto(d, "fiscal.pantalla.renglon_iva", { alicuota }),

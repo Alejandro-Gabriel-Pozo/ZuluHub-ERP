@@ -48,10 +48,13 @@ describe.skipIf(base === null)("ventas: la persistencia contra el esquema real",
        select indexname from pg_indexes where schemaname = 'public' and tablename = any($1) and indexdef like 'CREATE UNIQUE%'`,
       [TABLAS],
     );
-    const migracion = await readFile(
-      join(import.meta.dirname, "../../migraciones/0028_ventas.sql"),
-      "utf8",
-    );
+    const migracion = (
+      await Promise.all(
+        ["0028_ventas.sql", "0029_facturacion.sql"].map((n) =>
+          readFile(join(import.meta.dirname, "../../migraciones", n), "utf8"),
+        ),
+      )
+    ).join("\n");
     const deDisparadores = [...migracion.matchAll(/CONSTRAINT = '(\w+)'/g)].map(
       (m) => m[1] as string,
     );

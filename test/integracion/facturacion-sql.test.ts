@@ -184,6 +184,8 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "descuento",
         "alicuota",
         "importe",
+        // 0029: el símbolo de la unidad que se imprime junto a la cantidad (opcional)
+        "unidad",
       ]);
       expect(await columnasDe("comprobante_alicuota")).toEqual([
         "empresa_id",
@@ -351,6 +353,7 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "comprobante_linea_pkey:p",
         "comprobante_linea_posicion_ck:c",
         "comprobante_linea_precio_ck:c",
+        "comprobante_linea_unidad_ck:c", // 0029
       ]);
       expect(de("comprobante_alicuota")).toEqual([
         "comprobante_alicuota_ck:c",

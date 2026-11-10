@@ -338,6 +338,7 @@ describe("los textos de Emitir: exactamente estos (cada uno con su fuente en el 
       emitir_condicion_iva_liberado: "IVA Liberado – Ley N° 19.640",
       emitir_condicion_iva_no_alcanzado: "IVA No Alcanzado",
       emitir_condicion_consumidor_final: "Consumidor Final",
+      emitir_venta_numero: "Venta N.º {numero}",
     });
   });
 

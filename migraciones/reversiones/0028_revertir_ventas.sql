@@ -5,7 +5,8 @@
 -- DESTRUCTIVA si hay datos: BORRA todas las cuentas, líneas, tickets, ejemplares, cobranzas y el numerador de cada sucursal, y eso NO SE
 -- RECUPERA (un ticket emitido es un comprobante interno que el cliente pudo recibir, y reiniciar el numerador repetiría números). Hay que
 -- AVISAR AL DUEÑO antes de correrla si hay alguna fila. Ojo con el código: el módulo `ventas` y su aporte al cierre del día leen esas
--- tablas; sin ellas fallan, así que conviene bajar primero ese código.
+-- tablas; sin ellas fallan, así que conviene bajar primero ese código. Con 0029 aplicada, revertir ANTES 0029 (reversiones/
+-- 0029_revertir_facturacion.sql): su puntero `documento_de_ticket` apunta a ticket y ejemplar, y sin CASCADE esta reversión falla.
 --
 -- Este script NO lo aplica el ejecutor de migraciones (que solo toma los archivos `NNNN_nombre.sql` de la carpeta `migraciones/`): se
 -- corre a mano, revisado, en una sola transacción y con el rol dueño de la base (que evade RLS, o el conteo de abajo no vería nada):

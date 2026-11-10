@@ -18,8 +18,8 @@ import {
 /**
  * Facturación F2: la migración 0009 sobre una base CON DATOS (aditiva sobre los datos: no cambia ni una fila
  * existente), sus guardas (exige 0006 y 0007), su atomicidad, lo que el texto del archivo promete y su reversión
- * (un script aparte, destructivo, que deja el catálogo como estaba antes). El número del archivo no importa: se
- * lo encuentra por su nombre, así que el orquestador puede renumerarlo al integrar.
+ * (un script aparte, destructivo, que deja el catálogo como estaba antes). Se lo encuentra por su nombre entero
+ * (`0009_…`): la 0029 (E1) también se llama «facturación» y tiene su propia prueba.
  */
 
 const base = inject("baseDePruebas");
@@ -54,15 +54,16 @@ const TABLAS_NUEVAS = [
 
 async function archivoDeFacturacion(): Promise<string> {
   const archivos = (await readdir(CARPETA_DE_MIGRACIONES)).filter((n) =>
-    /^\d{4}_facturacion\.sql$/.test(n),
+    /^0009_facturacion\.sql$/.test(n),
   );
+  // `0029_facturacion.sql` (E1) también termina en `_facturacion.sql`: esta prueba es de la 0009 y la nombra entera.
   if (archivos.length !== 1)
     throw new Error(`tenía que haber una migración de facturación y hay ${archivos.length}`);
   return archivos[0] as string;
 }
 async function archivoDeReversion(): Promise<string> {
   const archivos = (await readdir(join(CARPETA_DE_MIGRACIONES, "reversiones"))).filter((n) =>
-    /^\d{4}_revertir_facturacion\.sql$/.test(n),
+    /^0009_revertir_facturacion\.sql$/.test(n),
   );
   if (archivos.length !== 1)
     throw new Error(`tenía que haber una reversión de facturación y hay ${archivos.length}`);
@@ -497,7 +498,7 @@ describe.skipIf(base === null)(
           expect(
             (
               await previa.cliente.query(
-                "select nombre from migracion where nombre like '%\\_facturacion.sql'",
+                "select nombre from migracion where nombre = '0009_facturacion.sql'",
               )
             ).rows,
           ).toEqual([]);
@@ -627,7 +628,7 @@ describe.skipIf(base === null)(
           expect(
             (
               await previa.cliente.query(
-                "select nombre from migracion where nombre like '%\\_facturacion.sql'",
+                "select nombre from migracion where nombre = '0009_facturacion.sql'",
               )
             ).rowCount,
           ).toBe(1);

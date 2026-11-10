@@ -2,7 +2,20 @@ import { randomUUID } from "node:crypto";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
+import { crearFacturadorDeTickets } from "../../src/composicion/facturacion-de-tickets";
 import { crearCasosDeUsoDeCaja } from "../../src/modulos/caja/publico";
+import {
+  crearLecturasDeComprobantes,
+  crearRepositorioDeCertificados,
+  crearRepositorioDeComprobantes,
+  crearRepositorioDeDatosFiscales,
+  crearRepositorioDeDomicilios,
+  crearRepositorioDeEmisores,
+  crearRepositorioDeIntentos,
+  crearRepositorioDePuntosDeVenta,
+  crearRepositorioDeSeries,
+  type FiscalDb,
+} from "../../src/modulos/fiscal/publico";
 import { crearCasosDeUsoDeCierre, crearConsultasDeCierre } from "../../src/modulos/cierre/publico";
 import {
   aporteDeVentas,
@@ -16,6 +29,7 @@ import {
   crearBaseAparte,
   crearEmpresaActiva,
   crearEntornoDePrueba,
+  type TxDePrueba,
 } from "./entorno";
 import { opcionDeBase, grupoDeBase, precioDeBase, productoDeBase } from "./catalogo-apoyo";
 import {
@@ -44,6 +58,7 @@ export const REGLAS_DE_PRUEBA: ReglasDeEmpresa = {
     catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "disponible" },
     caja: { ...CATALOGO_DE_MODULOS.caja, estado: "disponible" },
     ventas: { ...CATALOGO_DE_MODULOS.ventas, estado: "disponible" },
+    facturacion: { ...CATALOGO_DE_MODULOS.facturacion, estado: "disponible" },
   },
   permisos: PERMISOS_DE_EMPRESA,
 };
@@ -63,11 +78,37 @@ export type EscenarioDeVentas = Readonly<{
 
 export async function montarVentas(
   base: BaseDePruebas,
-  opciones: Readonly<{ conexiones?: number }> = {},
+  opciones: Readonly<{
+    conexiones?: number;
+    /**
+     * E1-T3: arma también los repositorios de fiscal sobre la MISMA conexión (como la `TxDeApp` real) y le da a ventas el facturador real de
+     * la composición. Sin esto, ventas queda sin facturador (`FACTURACION_NO_DISPONIBLE`).
+     */
+    facturacion?: boolean;
+    /** Envuelve la transacción compuesta (para inyectar una falla después de fiscal). */
+    ajustarTx?: (tx: TxDePrueba) => TxDePrueba;
+  }> = {},
 ) {
   const propia = await crearBaseAparte(base);
   let barrera: () => Promise<void> = () => Promise.resolve();
-  const entorno = crearEntornoDePrueba(propia.base, opciones.conexiones ?? 12, (tx) => {
+  const conFiscal = (tx: TxDePrueba): TxDePrueba => {
+    if (opciones.facturacion !== true) return tx;
+    const fiscal = tx.db.withTables<FiscalDb>();
+    return {
+      ...tx,
+      emisores: crearRepositorioDeEmisores(fiscal),
+      domicilios: crearRepositorioDeDomicilios(fiscal),
+      datosFiscales: crearRepositorioDeDatosFiscales(fiscal),
+      puntosDeVenta: crearRepositorioDePuntosDeVenta(fiscal),
+      series: crearRepositorioDeSeries(fiscal),
+      comprobantes: crearRepositorioDeComprobantes(fiscal),
+      intentos: crearRepositorioDeIntentos(fiscal),
+      lecturas: crearLecturasDeComprobantes(fiscal),
+      certificados: crearRepositorioDeCertificados(fiscal),
+    } as TxDePrueba;
+  };
+  const entorno = crearEntornoDePrueba(propia.base, opciones.conexiones ?? 12, (base0) => {
+    const tx = (opciones.ajustarTx ?? ((t: TxDePrueba) => t))(conFiscal(base0));
     let primera = true;
     return {
       ...tx,
@@ -89,6 +130,7 @@ export async function montarVentas(
                   "ventas",
                   "cierre",
                   "caja",
+                  "facturacion",
                 ],
                 modulosHabilitados: [
                   ...datos.modulosHabilitados,
@@ -96,6 +138,7 @@ export async function montarVentas(
                   "ventas",
                   "cierre",
                   "caja",
+                  "facturacion",
                 ],
               };
         },
@@ -105,8 +148,17 @@ export async function montarVentas(
   const dueno = new pg.Client({ connectionString: propia.base.dueno });
   await dueno.connect();
   const reglas = REGLAS_DE_PRUEBA;
-  const casos = crearCasosDeUsoDeVentas({ transacciones: entorno, reglas });
-  const consultas = crearConsultasDeVentas({ transacciones: entorno, reglas });
+  const facturador = opciones.facturacion === true ? crearFacturadorDeTickets(reglas) : undefined;
+  const casos = crearCasosDeUsoDeVentas({
+    transacciones: entorno,
+    reglas,
+    ...(facturador === undefined ? {} : { facturador }),
+  });
+  const consultas = crearConsultasDeVentas({
+    transacciones: entorno,
+    reglas,
+    ...(facturador === undefined ? {} : { facturador }),
+  });
   const caja = crearCasosDeUsoDeCaja({ transacciones: entorno, reglas });
   const cierre = crearCasosDeUsoDeCierre({
     transacciones: entorno,

@@ -20,6 +20,13 @@ export {
   type TiemposLimite,
   type TxDeFacturacion,
 } from "../casos-de-uso/contrato-de-facturacion";
+export { huellaDelPedido } from "../casos-de-uso/emitir-comprobante";
+export {
+  emitirFacturaDeOrigenEnTx,
+  type EntradaDeFacturaDeOrigen,
+  type ErrorAlEmitirFacturaDeOrigen,
+  type RenglonDeOrigen,
+} from "../casos-de-uso/emitir-factura-de-origen";
 export type {
   EntradaDeComprobanteManual,
   EntradaDeNotaManual,

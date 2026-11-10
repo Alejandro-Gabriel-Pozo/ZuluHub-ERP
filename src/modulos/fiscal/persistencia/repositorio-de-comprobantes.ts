@@ -77,6 +77,7 @@ export function crearRepositorioDeComprobantes(db: Kysely<FiscalDb>): Repositori
         "descuento",
         "alicuota",
         "importe",
+        "unidad",
       ])
       .where("empresa_id", "=", fila.empresa_id)
       .where("comprobante_id", "=", fila.id)
@@ -214,6 +215,7 @@ export function crearRepositorioDeComprobantes(db: Kysely<FiscalDb>): Repositori
             descuento: r.descuento === null ? null : porcentajeATexto(r.descuento),
             alicuota: r.alicuota,
             importe: importeATexto(r.importe),
+            unidad: r.unidad,
           })),
         )
         .execute();
