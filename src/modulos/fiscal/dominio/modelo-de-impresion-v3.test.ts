@@ -141,7 +141,8 @@ describe("modelo de impresión v3: leyenda de la condición del receptor (RG 141
     ["nota-de-credito-a-monotributista", notaSobreFacturaAMonotributista()] as const,
   ]) {
     it(`golden ${nombre}`, async () => {
-      const m = modelo(comprobante);
+      // La 3 se fija a propósito: la versión actual ya es otra y la 3 reimprime idéntica.
+      const m = modelo({ ...comprobante, versionDeRepresentacion: 3 });
       expect(m.versionDeRepresentacion).toBe(3);
       await expect(JSON.stringify(m, null, 2)).toMatchFileSnapshot(
         `./golden/modelo-v3-${nombre}.golden.txt`,

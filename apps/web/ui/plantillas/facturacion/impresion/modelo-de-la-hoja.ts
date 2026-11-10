@@ -6,7 +6,7 @@ import {
 import { esCondicionIva } from "../../../../../../src/primitivas/identificacion-fiscal/condicion-iva";
 import {
   formatearAlicuota,
-  formatearCantidad,
+  formatearCantidadConUnidad,
   formatearFecha,
   formatearImporte,
 } from "../formato-fiscal";
@@ -63,6 +63,7 @@ export type ComprobanteParaLaHoja = Readonly<{
   renglones: readonly Readonly<{
     descripcion: string;
     cantidad: string;
+    unidad?: string; // versión 4 del modelo en adelante: «kg» junto a la cantidad
     precioUnitario: string;
     alicuota: string | null;
     importe: string;
@@ -302,13 +303,11 @@ function renglonDe(d: DiccionarioResuelto, r: ComprobanteParaLaHoja["renglones"]
   const alicuota = r.alicuota === null ? null : formatearAlicuota(r.alicuota);
   const iva = alicuota === null ? null : texto(d, "fiscal.pantalla.renglon_iva", { alicuota });
   const precio = formatearImporte(r.precioUnitario);
-  const cuenta = texto(d, "fiscal.pantalla.renglon_cuenta", {
-    cantidad: formatearCantidad(r.cantidad),
-    precio,
-  });
+  const cantidad = formatearCantidadConUnidad(r.cantidad, r.unidad);
+  const cuenta = texto(d, "fiscal.pantalla.renglon_cuenta", { cantidad, precio });
   return {
     descripcion: r.descripcion,
-    cantidad: formatearCantidad(r.cantidad),
+    cantidad,
     precio,
     iva,
     importe: formatearImporte(r.importe),

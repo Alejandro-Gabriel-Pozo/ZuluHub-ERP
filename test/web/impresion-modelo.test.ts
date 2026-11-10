@@ -242,6 +242,31 @@ describe("armarLaHoja: nota con comprobante asociado, homologación, contacto e 
   });
 });
 
+describe("armarLaHoja: la unidad del renglón (versión 4)", () => {
+  const conPeso = [
+    { ...renglon("400.00", "1.2500", "21", null, "Pan de campo"), unidad: "kg" },
+    renglon("121.00", "1", "21", null, "Medialuna"),
+  ];
+  const peso = imprimibleDe(facturaArmada(consumidorFinal, conPeso));
+
+  it("el renglón de peso muestra «1,25 kg» junto a la cantidad y el de unidad base, solo la cantidad, en A4 y en 80 mm", () => {
+    for (const formato of ["A4", "80mm"] as const) {
+      const h = armarLaHoja({}, paraLaHoja(modelo(peso)), formato);
+      expect(h.renglones[0]?.cantidad, formato).toBe("1,25 kg");
+      expect(h.renglones[0]?.cuenta, formato).toMatch(/^1,25 kg × /);
+      expect(h.renglones[1]?.cantidad, formato).toBe("1");
+      expect(h.renglones[1]?.cuenta, formato).toMatch(/^1 × /);
+    }
+  });
+
+  it("una versión anterior a la 4 reimprime sin unidad, aunque el renglón guardado la tenga", () => {
+    for (const versionDeRepresentacion of [1, 2, 3]) {
+      const h = armarLaHoja({}, paraLaHoja(modelo({ ...peso, versionDeRepresentacion })), "A4");
+      expect(h.renglones[0]?.cantidad, `versión ${versionDeRepresentacion}`).toBe("1,25");
+    }
+  });
+});
+
 describe("los renglones suman el total del comprobante (A, B y C)", () => {
   const sumaYTotal = (m: ModeloImpreso): [string, string] => {
     const importes = m.renglones.map((r) => r.importe);

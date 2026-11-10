@@ -50,6 +50,12 @@ export function formatearCantidad(texto: string): string {
   return formatearDecimal(texto, 0);
 }
 
+/** «1.2500» y «kg» pasan a «1,25 kg»; sin unidad (o con `null`), solo la cantidad. El símbolo se imprime tal como está guardado. */
+export function formatearCantidadConUnidad(texto: string, unidad?: string | null): string {
+  const cantidad = formatearCantidad(texto);
+  return unidad === undefined || unidad === null ? cantidad : `${cantidad} ${unidad}`;
+}
+
 /** «2026-10-14» pasa a «14/10/2026», sin pasar por `Date`. */
 export function formatearFecha(texto: string): string {
   const partes = FECHA_CIVIL.exec(texto);

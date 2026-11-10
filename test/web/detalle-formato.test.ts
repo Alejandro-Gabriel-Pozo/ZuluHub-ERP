@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatearAlicuota,
   formatearCantidad,
+  formatearCantidadConUnidad,
   formatearFecha,
   formatearImporte,
   formatearNumeroDeDocumento,
@@ -39,6 +40,14 @@ describe("formato de importes, fechas y documentos (solo cadenas)", () => {
     ["1000.0000", "1.000"],
   ])("la cantidad %s se ve %s", (entrada, salida) => {
     expect(formatearCantidad(entrada)).toBe(salida);
+  });
+
+  it("la cantidad con unidad lleva el símbolo tal cual; sin unidad, solo la cantidad", () => {
+    expect(formatearCantidadConUnidad("1.2500", "kg")).toBe("1,25 kg");
+    expect(formatearCantidadConUnidad("1.2500", "kg")).toBe(`${formatearCantidad("1.2500")} kg`);
+    expect(formatearCantidadConUnidad("2.0000", "ml")).toBe("2 ml");
+    expect(formatearCantidadConUnidad("2.0000", null)).toBe("2");
+    expect(formatearCantidadConUnidad("2.0000")).toBe("2");
   });
 
   it("las fechas se dan vuelta como texto, sin correr el día", () => {

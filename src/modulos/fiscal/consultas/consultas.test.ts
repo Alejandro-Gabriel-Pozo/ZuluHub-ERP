@@ -1242,7 +1242,7 @@ describe("modeloDeImpresion (la consulta)", () => {
   });
 
   it("una versión de representación que no se sabe dibujar sale como error del modelo", async () => {
-    const { consultas } = armar({ comprobante: guardado({ versionDeRepresentacion: 4 }) });
+    const { consultas } = armar({ comprobante: guardado({ versionDeRepresentacion: 5 }) });
     expect(await consultas.modeloDeImpresion(contexto(), { comprobanteId: ID })).toEqual({
       ok: false,
       error: "VERSION_DE_REPRESENTACION_DESCONOCIDA",

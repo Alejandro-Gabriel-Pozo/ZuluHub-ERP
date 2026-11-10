@@ -170,6 +170,8 @@ export type DetalleDeComprobante = Readonly<{
     posicion: number;
     descripcion: string;
     cantidad: string;
+    /** El símbolo de la unidad congelado al emitir («kg»); `null` si no se imprime. */
+    unidad: string | null;
     precioUnitario: string;
     descuento: string | null;
     alicuota: ComprobanteGuardado["renglones"][number]["alicuota"];
@@ -254,6 +256,7 @@ export function detalleDe(
       posicion: r.posicion,
       descripcion: r.descripcion,
       cantidad: cantidadATexto(r.cantidad),
+      unidad: r.unidad,
       precioUnitario: precioUnitarioATexto(r.precioUnitario),
       descuento: r.descuento === null ? null : porcentajeATexto(r.descuento),
       alicuota: r.alicuota,

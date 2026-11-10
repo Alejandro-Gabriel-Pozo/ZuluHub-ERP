@@ -13,14 +13,16 @@
  *   de la sucursal (D-98) y el modo de precio.
  * - 3: suma la leyenda de la condición del receptor frente al IVA (RG 1415 Anexo II A.II a.4, e.4, f.4). La 2 no la lleva y
  *   reimprime idéntica.
+ * - 4: suma la unidad del renglón («1,250 kg»): el símbolo congelado al emitir (`comprobante_linea.unidad`) se imprime junto a la cantidad
+ *   cuando hay (ventas pasa `null` para la unidad base, que no se imprime). Las versiones 1 a 3 no la llevan y reimprimen idéntico.
  * Previene que reimprimir un AUTORIZADO muestre textos que su original no tenía. Sin migración: la columna es
  * `smallint` con `CHECK (>= 1)` (0009) y `emitir-comprobante` sella `VERSION_DE_REPRESENTACION_ACTUAL`. Chequeo:
- * los golden de la 1, la 2 y la 3 y la prueba de versiones desconocidas de `modelo-de-impresion.test.ts`.
+ * los golden de la 1, la 2, la 3 y la 4 y la prueba de versiones desconocidas de `modelo-de-impresion.test.ts`.
  */
-export const VERSIONES_SOPORTADAS: readonly number[] = [1, 2, 3];
+export const VERSIONES_SOPORTADAS: readonly number[] = [1, 2, 3, 4];
 
 /** La que sellan los comprobantes nuevos. */
-export const VERSION_DE_REPRESENTACION_ACTUAL = 3;
+export const VERSION_DE_REPRESENTACION_ACTUAL = 4;
 
 /** Primera versión que lleva los textos legales de la norma; las anteriores no los llevan. */
 export const PRIMERA_VERSION_CON_TEXTOS_LEGALES = 2;
@@ -46,3 +48,16 @@ export const PRIMERA_VERSION_CON_MODO_DE_PRECIO = 2;
  * (`versiones-de-representacion.test.ts` lo exige); un comprobante emitido conserva la que selló.
  */
 export const PRIMERA_VERSION_CON_LEYENDA_DE_CONDICION = 3;
+
+/**
+ * Primera versión que lleva la unidad del renglón («kg» junto a la cantidad). Constante propia por la misma razón que el contacto: una versión
+ * futura puede cambiar una sin tocar las demás. Las versiones 1 a 3 reimprimen idéntico, aunque el renglón guardado tenga unidad.
+ */
+export const PRIMERA_VERSION_CON_UNIDAD = 4;
+
+/** La unidad que se imprime en un renglón de un comprobante de esa versión: nada si la versión no la lleva o el renglón no tiene. */
+export const unidadSegunLaVersion = (
+  version: number,
+  unidad: string | null,
+): Readonly<{ unidad?: string }> =>
+  version >= PRIMERA_VERSION_CON_UNIDAD && unidad !== null ? { unidad } : {};
