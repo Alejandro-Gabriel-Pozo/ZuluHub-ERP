@@ -38,7 +38,7 @@ import { personaId } from "../../src/primitivas/identificadores/marca";
 const AHORA = "2026-11-09T15:00:00Z"; // 12:00 en Argentina: jornada del 2026-11-09
 export const FECHA_DE_NEGOCIO = "2026-11-09";
 
-const REGLAS_DE_PRUEBA: ReglasDeEmpresa = {
+export const REGLAS_DE_PRUEBA: ReglasDeEmpresa = {
   catalogo: {
     ...CATALOGO_DE_MODULOS,
     catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "disponible" },
