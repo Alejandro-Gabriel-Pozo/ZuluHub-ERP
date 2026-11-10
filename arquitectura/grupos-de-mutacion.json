@@ -54,6 +54,12 @@
     "pruebas": "src/modulos/ventas/dominio"
   },
   {
+    "grupo": "stock (dominio)",
+    "archivos": "src/modulos/stock/dominio/**/*.ts",
+    "minutos": 10,
+    "pruebas": "src/modulos/stock"
+  },
+  {
     "grupo": "fiscal (numeración)",
     "archivos": "src/modulos/fiscal/dominio/numeracion.ts,src/modulos/fiscal/dominio/numeracion-invariantes.ts,src/modulos/fiscal/dominio/numeracion-modelo.ts",
     "minutos": 3.8,

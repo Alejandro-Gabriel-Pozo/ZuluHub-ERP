@@ -357,7 +357,15 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
 
   it("violación inyectada: un módulo en desarrollo fuera de SIN_CONSTRUIR rompe X4 (su carpeta no existe) y X1 (ningún caso de uso exige sus acciones)", () => {
     const sinStock = SIN_CONSTRUIR.filter((clave) => clave !== "stock");
-    const problemas = crucesDelCatalogo(CATALOGO_DE_MODULOS, declaradas, carpetaExiste, sinStock);
+    // La carpeta de stock existe desde E5-T1 (dominio): la violación inyectada simula que no, sin depender del disco.
+    const sinCarpetaDeStock = (carpeta: string): boolean =>
+      carpeta !== "modulos/stock" && carpetaExiste(carpeta);
+    const problemas = crucesDelCatalogo(
+      CATALOGO_DE_MODULOS,
+      declaradas,
+      sinCarpetaDeStock,
+      sinStock,
+    );
     expect(problemas).toContain(
       "X4: stock dice que lo implementa modulos/stock, que no existe en src/",
     );
