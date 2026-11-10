@@ -1,4 +1,7 @@
-/** Entrada pública del módulo de caja (ADR-001; e3 §3). Por ahora, solo su dominio puro (E3, tramo 2). */
+/**
+ * Entrada pública del módulo de caja (ADR-001; e3 §3). Hoy: el dominio puro (E3, tramo 2) y la configuración (tramo 3: cajas, medios de
+ * pago y cuentas de cobro, con su persistencia, casos de uso y consultas). El módulo sigue «en desarrollo» en el catálogo.
+ */
 export {
   ESTADOS_DE_SESION,
   CLASES_DE_MOVIMIENTO,
@@ -137,3 +140,128 @@ export {
 } from "./dominio/cobrado-contra-ticket";
 export { CONTROLES_DE_CAJA, type DefinicionDeControl } from "./dominio/controles";
 export { jornadaVencida } from "./dominio/jornada-de-caja";
+export {
+  LARGO_MAXIMO_DEL_IDENTIFICADOR_EXTERNO,
+  LARGO_MAXIMO_DEL_NOMBRE_DE_CAJA,
+  LARGO_MAXIMO_DEL_NOMBRE_DE_CUENTA,
+  LARGO_MAXIMO_DEL_NOMBRE_DE_MEDIO,
+  decidirAltaDeCaja,
+  decidirAltaDeCuenta,
+  decidirAltaDeMedio,
+  decidirCambioDeEstado,
+  decidirDesactivacionDeMedio,
+  decidirEdicionDeCaja,
+  decidirEdicionDeCuenta,
+  decidirEdicionDeMedio,
+  identificadorExternoValido,
+  nombreDeCajaValido,
+  nombreDeCuentaValido,
+  nombreDeMedioValido,
+  tipoDeCuentaValido,
+  tipoDeMedioValido,
+  type Caja,
+  type CuentaDeCobro,
+  type DecisionDeAlta,
+  type DecisionDeCambioDeEstado,
+  type DecisionDeEdicion,
+  type ErrorDeAltaDeMedio,
+  type ErrorDeEdicionDeMedio,
+  type MedioDePago,
+} from "./dominio/configuracion";
+export {
+  COLUMNAS_DE_CAJA,
+  ERRORES_DE_CAJA_POR_RESTRICCION,
+  type CajaDb,
+} from "./persistencia/esquema";
+export {
+  crearRepositorioDeCajas,
+  type OpcionesDeListadoDeCajas,
+  type RepositorioDeCajas,
+} from "./persistencia/repositorio-de-cajas";
+export {
+  crearRepositorioDeMediosDePago,
+  type CambiosPersistidosDeMedio,
+  type OpcionesDeListadoDeMedios,
+  type RepositorioDeMediosDePago,
+} from "./persistencia/repositorio-de-medios";
+export {
+  crearRepositorioDeCuentasDeCobro,
+  type CambiosPersistidosDeCuenta,
+  type NuevaCuentaDeCobro,
+  type OpcionesDeListadoDeCuentas,
+  type RepositorioDeCuentasDeCobro,
+} from "./persistencia/repositorio-de-cuentas";
+export { DECLARACIONES as DECLARACIONES_DE_CAJA } from "./casos-de-uso/declaraciones";
+export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_CAJA } from "./consultas/declaraciones";
+export { crearCasosDeUsoDeCaja, type CasosDeUsoDeCaja } from "./casos-de-uso/casos-de-uso";
+export type { DependenciasDeCaja, TxDeCaja } from "./casos-de-uso/contrato";
+export type {
+  EntradaDeCrearCaja,
+  ErrorAlCrearCaja,
+  SalidaDeCrearCaja,
+} from "./casos-de-uso/crear-caja";
+export type {
+  EntradaDeEditarCaja,
+  ErrorAlEditarCaja,
+  SalidaDeEditarCaja,
+} from "./casos-de-uso/editar-caja";
+export type {
+  EntradaDeCambiarEstadoDeCaja,
+  ErrorAlDesactivarCaja,
+  ErrorAlReactivarCaja,
+  SalidaDeDesactivarCaja,
+  SalidaDeReactivarCaja,
+} from "./casos-de-uso/cambiar-estado-de-caja";
+export type {
+  EntradaDeCrearMedioDePago,
+  ErrorAlCrearMedioDePago,
+  SalidaDeCrearMedioDePago,
+} from "./casos-de-uso/crear-medio-de-pago";
+export type {
+  EntradaDeEditarMedioDePago,
+  ErrorAlEditarMedioDePago,
+  SalidaDeEditarMedioDePago,
+} from "./casos-de-uso/editar-medio-de-pago";
+export type {
+  EntradaDeCambiarEstadoDeMedioDePago,
+  ErrorAlDesactivarMedioDePago,
+  ErrorAlReactivarMedioDePago,
+  SalidaDeDesactivarMedioDePago,
+  SalidaDeReactivarMedioDePago,
+} from "./casos-de-uso/cambiar-estado-de-medio-de-pago";
+export type {
+  EntradaDeCrearCuentaDeCobro,
+  ErrorAlCrearCuentaDeCobro,
+  SalidaDeCrearCuentaDeCobro,
+} from "./casos-de-uso/crear-cuenta-de-cobro";
+export type {
+  EntradaDeEditarCuentaDeCobro,
+  ErrorAlEditarCuentaDeCobro,
+  SalidaDeEditarCuentaDeCobro,
+} from "./casos-de-uso/editar-cuenta-de-cobro";
+export type {
+  EntradaDeCambiarEstadoDeCuentaDeCobro,
+  ErrorAlCambiarElEstadoDeUnaCuentaDeCobro,
+  SalidaDeDesactivarCuentaDeCobro,
+  SalidaDeReactivarCuentaDeCobro,
+} from "./casos-de-uso/cambiar-estado-de-cuenta-de-cobro";
+export { crearConsultasDeCaja, type ConsultasDeCaja } from "./consultas/consultas";
+export type { DependenciasDeConsultasDeCaja, TxDeConsultasDeCaja } from "./consultas/contrato";
+export type {
+  CajaDeLista,
+  CajasDeLaSucursal,
+  EntradaDeListarCajas,
+  ErrorAlListarCajas,
+} from "./consultas/listar-cajas";
+export type {
+  EntradaDeListarMediosDePago,
+  ErrorAlListarMediosDePago,
+  MedioDeLista,
+  MediosDePagoDeLaEmpresa,
+} from "./consultas/listar-medios-de-pago";
+export type {
+  CuentaDeLista,
+  CuentasDeCobroDeLaEmpresa,
+  EntradaDeListarCuentasDeCobro,
+  ErrorAlListarCuentasDeCobro,
+} from "./consultas/listar-cuentas-de-cobro";

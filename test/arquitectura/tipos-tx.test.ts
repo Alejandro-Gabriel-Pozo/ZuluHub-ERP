@@ -4,6 +4,7 @@ import type { TxDeApp } from "../../src/composicion/conexiones";
 import type { TxDeCredenciales } from "../../src/adaptadores/certificados/credenciales-de-emisor";
 import type { TxDeTickets } from "../../src/adaptadores/certificados/almacen-de-tickets";
 import type { TxDeVerificacion } from "../../src/adaptadores/certificados/verificacion-de-autorizacion";
+import type { TxDeCaja, TxDeConsultasDeCaja } from "../../src/modulos/caja/publico";
 import type {
   TxDeCierre,
   TxDeConsultasDeCierre,
@@ -49,6 +50,13 @@ describe("la Tx compuesta de la composición contiene la Tx angosta de cada mód
     expectTypeOf<TxDeApp>().toExtend<TxDeJornadas>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeCierre>>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConsultasDeCierre>>();
+  });
+
+  it("caja: la configuración (casos de uso y consultas)", () => {
+    expectTypeOf<TxDeApp>().toExtend<TxDeCaja>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeConsultasDeCaja>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeCaja>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConsultasDeCaja>>();
   });
 
   it("fiscal: facturación, consultas, configuración, certificados y lo que descifra el adaptador de ARCA", () => {

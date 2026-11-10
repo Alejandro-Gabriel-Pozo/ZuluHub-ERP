@@ -5,6 +5,7 @@ import {
 } from "../adaptadores/certificados/lector-x509";
 import { CADENAS_DE_CONFIANZA_DE_ARCA } from "./cadenas-de-confianza-de-arca";
 import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../capacidades/permisos/empresa";
+import { crearCasosDeUsoDeCaja, crearConsultasDeCaja } from "../modulos/caja/publico";
 import { crearCasosDeUsoDeCierre, crearConsultasDeCierre } from "../modulos/cierre/publico";
 import { crearCasosDeUsoDeEmpresas, crearConsultasDeEmpresas } from "../modulos/empresas/publico";
 import {
@@ -104,6 +105,17 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
         reglas,
         aportes: [],
       }),
+    ),
+    /**
+     * La configuración de caja (E3): cajas, medios de pago y cuentas de cobro, cada caso con su acción de `caja`. El módulo sigue «en
+     * desarrollo» en el catálogo: el guard lo rechaza con `MODULO_EN_DESARROLLO` hasta que el tramo final lo declare disponible.
+     * La operación (sesiones, movimientos, cobro) y el gancho de la caja por defecto los suman los tramos siguientes.
+     */
+    casosDeUsoDeCaja: perezoso(() =>
+      crearCasosDeUsoDeCaja({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    consultasDeCaja: perezoso(() =>
+      crearConsultasDeCaja({ transacciones: conexiones.transaccionesDeApp(), reglas }),
     ),
     casosDeUsoDeIdentidad: perezoso(() =>
       crearCasosDeUsoDeIdentidad({
