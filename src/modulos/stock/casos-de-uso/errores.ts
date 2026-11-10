@@ -1,10 +1,11 @@
+import type { ClaveDeControl } from "../../../capacidades/controles/catalogo";
 import type { ErrorDeAlcance } from "../../../capacidades/permisos/alcance";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { EmpresaNoOpera } from "../../../contexto/estados";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 
-/** El control que mira una salida: lo que declara `capacidades/controles` cuando se registre (E5-T5, D-E5-4). */
-export type ControlDeStock = "stock.existencia_negativa";
+/** El control que mira una salida (declarado en `capacidades/controles`, D-E5-4): el tipo falla si alguien lo quita del catálogo. */
+export type ControlDeStock = Extract<ClaveDeControl, "stock.existencia_negativa">;
 
 /** Un saldo que quedaría negativo: lo que informan los errores del control (E5 §3.2, `registrarSalida`). */
 export type DetalleDeNegativo = Readonly<{
@@ -55,6 +56,9 @@ export type ErrorDeStock =
   | "MOTIVO_NO_PERMITIDO"
   | "COSTO_INVALIDO"
   | "FECHA_PASADA_NO_ADMITIDA"
+  | "FECHA_FUTURA_NO_ADMITIDA"
+  | "RENGLONES_INVALIDOS"
+  | "RENGLON_REPETIDO"
   | "TRANSFERENCIA_AL_MISMO_DEPOSITO"
   | "DETALLE_REQUERIDO"
   | "MOVIMIENTO_NO_ENCONTRADO"

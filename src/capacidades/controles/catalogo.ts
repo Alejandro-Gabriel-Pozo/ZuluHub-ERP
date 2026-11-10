@@ -3,7 +3,7 @@
  * `ClaveDeControl`, así que un control mal escrito o sin catalogar no compila. Como las perillas, un
  * control que nadie verifica no se declara: cada módulo registra el suyo en el tramo que lo evalúa
  * (caja: `caja.cierre_con_diferencia`, `caja.devolucion_supera_cobro`, `caja.cobro_en_jornada_vencida`;
- * stock: `stock.existencia_negativa`; reservas y facturación, los suyos). Hoy está vacío a propósito.
+ * stock: `stock.existencia_negativa`; reservas y facturación, los suyos). Cada módulo suma SUS claves en líneas separadas.
  *
  * La clave es `modulo.nombre_del_control`, con la forma que exige el CHECK `nivel_de_control_control_ck`
  * de la base: una clave que no la cumpla no podría guardar nunca su nivel (la prueba de este archivo la
@@ -19,6 +19,11 @@ export type CatalogoDeControles = Readonly<Record<string, DefinicionDeControl>>;
 /** Misma forma que el CHECK `nivel_de_control_control_ck` (0007): minúsculas, un punto y guion bajo. */
 export const FORMA_DE_CLAVE_DE_CONTROL = /^[a-z]+\.[a-z_]+$/;
 
-export const CATALOGO_DE_CONTROLES = {} as const satisfies CatalogoDeControles;
+export const CATALOGO_DE_CONTROLES = {
+  // stock (E5-T5, D-E5-4): lo que mira una salida o la pata de origen de una transferencia que deja la existencia en negativo (D125).
+  "stock.existencia_negativa": {
+    descripcion: "Una salida o una transferencia que deja la existencia de un artículo en negativo",
+  },
+} as const satisfies CatalogoDeControles;
 
 export type ClaveDeControl = keyof typeof CATALOGO_DE_CONTROLES;

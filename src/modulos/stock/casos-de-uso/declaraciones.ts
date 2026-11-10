@@ -1,6 +1,7 @@
 import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/declaracion";
 
 const ARCHIVO_DE_DEPOSITOS = "test/integracion/stock-depositos.test.ts";
+const ARCHIVO_DE_IDEMPOTENCIA = "test/integracion/stock-idempotencia.test.ts";
 
 /**
  * Los casos de uso de stock (E5 §3.2) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar
@@ -67,6 +68,57 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_DEPOSITOS,
         it: "I4: dejar de controlar dos veces es ok y no audita la segunda",
+      },
+    },
+  },
+  // ---- movimientos (E5-T5): la clave de la pantalla (UUID) con la huella del contenido; la misma clave con otra huella, CLAVE_REUTILIZADA ----
+  registrarEntrada: {
+    accion: "stock.registrar_entrada",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_IDEMPOTENCIA,
+        it: "P7: la misma entrada dos veces (clic doble, misma clave) deja una sola entrada, devuelve yaExistia y el saldo sube una vez",
+      },
+    },
+  },
+  registrarSalida: {
+    accion: "stock.registrar_salida",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_IDEMPOTENCIA,
+        it: "I5: repetir registrarSalida con la misma clave devuelve yaExistia sin escribir ni volver a auditar la excepción",
+      },
+    },
+  },
+  transferir: {
+    accion: "stock.transferir",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_IDEMPOTENCIA,
+        it: "I6: repetir transferir con la misma clave mueve una sola vez",
+      },
+    },
+  },
+  ajustar: {
+    accion: "stock.ajustar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_IDEMPOTENCIA,
+        it: "I7: repetir ajustar con la misma clave ajusta una sola vez",
+      },
+    },
+  },
+  anularMovimiento: {
+    accion: "stock.anular",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_IDEMPOTENCIA,
+        it: "P11: anular dos veces el mismo movimiento deja un solo espejo, y anular una anulación se rechaza",
       },
     },
   },

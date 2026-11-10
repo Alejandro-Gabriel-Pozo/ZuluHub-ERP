@@ -11,6 +11,8 @@ import {
   type RepositoriosDeStock,
 } from "../../src/modulos/stock/publico";
 import { huellaDeComando } from "../../src/modulos/stock/dominio/huella";
+import { agotadaEnElResultado, repetirSiAgotada } from "./concurrencia-apoyo";
+import { articuloDeBase, depositoDeBase, escribirMovimiento, existenciaDe } from "./stock-apoyo";
 import {
   personaId,
   sucursalId,
@@ -214,10 +216,83 @@ export async function montarStock(
     });
   };
 
+  /** Un depósito de la empresa de prueba armado con SQL del dueño (el escenario, no lo que se prueba). */
+  const deposito = (
+    e: Pick<EscenarioDeStock, "empresa" | "sucursal">,
+    datos: Parameters<typeof depositoDeBase>[2] = {},
+  ) => depositoDeBase(dueno, e, datos);
+  /** Un producto controlado con su artículo (materia prima en unidades, salvo que se pida otra cosa), armado con SQL del dueño. */
+  const articulo = (
+    e: Pick<EscenarioDeStock, "empresa">,
+    datos: Parameters<typeof articuloDeBase>[2] = {},
+  ) => articuloDeBase(dueno, e, datos);
+  const existencia = (depositoId: string, articuloId: string) =>
+    existenciaDe(dueno, depositoId, articuloId);
+  /** El nivel del control `stock.existencia_negativa` de la empresa (o de una sucursal): no admite borrado, así que se cambia con UPSERT. */
+  const fijarNivel = async (
+    empresa: string,
+    nivel: "PERMITIR" | "AVISAR" | "BLOQUEAR",
+    sucursal: string | null = null,
+  ) => {
+    await dueno.query(
+      `insert into nivel_de_control (empresa_id, sucursal_id, control, nivel) values ($1, $2, 'stock.existencia_negativa', $3)
+       on conflict on constraint nivel_de_control_uk do update set nivel = excluded.nivel`,
+      [empresa, sucursal, nivel],
+    );
+  };
+
+  /**
+   * Una salida por venta escrita por SQL del dueño (la escribirá el puerto de ventas, E5-T7): deja un movimiento de otro módulo (origen
+   * `EJEMPLAR_DE_TICKET`) para probar lo que depende del origen. Devuelve el id del movimiento.
+   */
+  const ventaPorSql = async (
+    datos: Readonly<{
+      empresa: string;
+      depositoId: string;
+      articuloId: string;
+      persona: string;
+      ejemplarId?: string;
+      /** Positiva: el renglón de una salida resta. */
+      cantidad?: string;
+    }>,
+  ): Promise<{ movimientoId: string; ejemplarId: string }> => {
+    const ejemplarId = datos.ejemplarId ?? randomUUID();
+    await dueno.query("begin");
+    try {
+      const escrito = await escribirMovimiento(
+        async (texto, parametros) => {
+          const r = await dueno.query(texto, parametros);
+          return { ok: true, filas: r.rowCount ?? 0, rows: r.rows as Record<string, unknown>[] };
+        },
+        datos.empresa,
+        {
+          clase: "SALIDA",
+          motivo: "VENTA",
+          deposito: datos.depositoId,
+          persona: datos.persona,
+          accion: "cuentas.cerrar",
+          origen: { tipo: "EJEMPLAR_DE_TICKET", id: ejemplarId },
+          fechaDeNegocio: "2026-10-11",
+          renglones: [{ articulo: datos.articuloId, cantidad: `-${datos.cantidad ?? "1"}` }],
+        },
+      );
+      await dueno.query("commit");
+      return { movimientoId: escrito.id, ejemplarId };
+    } catch (error) {
+      await dueno.query("rollback");
+      throw error;
+    }
+  };
+
   return {
     propia,
     entorno,
     dueno,
+    ventaPorSql,
+    deposito,
+    articulo,
+    existencia,
+    fijarNivel,
     alcances,
     armarBarrera: (participantes: number) => {
       barrera = crearBarrera(participantes);
@@ -265,3 +340,33 @@ export const nombreDeDeposito = (prefijo = "Deposito"): string =>
   `${prefijo} ${randomUUID()
     .slice(0, 8)
     .replace(/[0-9]/g, (d) => "abcdefghij"[Number(d)] ?? "x")}`;
+
+/** Las rondas de las pruebas de concurrencia (`PEDERNAL_RONDAS`, 3 por defecto: el CI tiene un tope de tiempo ajustado). */
+export const RONDAS = (() => {
+  const crudo = process.env["PEDERNAL_RONDAS"];
+  const n = crudo === undefined ? 3 : Number(crudo);
+  return Number.isInteger(n) && n >= 1 ? n : 3;
+})();
+
+/** El pedido se repite si pierde por agotamiento de reintentos: es el mismo pedido, seguro por su identidad (clave o id). */
+export const firme = <R extends { readonly ok: boolean }>(trabajo: () => Promise<R>) =>
+  repetirSiAgotada(trabajo, { esAgotada: (r) => agotadaEnElResultado(r as never) });
+
+/** Pedidos a la vez, con la barrera armada: todos leyeron su autorización antes de que cualquiera escriba. Se alterna cuál sale primero. */
+export async function aLaVez<T>(
+  c: MontajeDeStock,
+  pedidos: ReadonlyArray<() => Promise<T>>,
+  ronda: number,
+): Promise<T[]> {
+  c.armarBarrera(pedidos.length);
+  try {
+    const orden = ronda % 2 === 0 ? [...pedidos] : [...pedidos].reverse();
+    return await Promise.all(orden.map((p) => p()));
+  } finally {
+    c.soltarBarrera();
+  }
+}
+
+/** Cuántos resultados fueron `ok`. */
+export const soloOk = <R extends { readonly ok: boolean }>(resultados: readonly R[]): number =>
+  resultados.filter((r) => r.ok).length;

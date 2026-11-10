@@ -75,7 +75,8 @@ export const ERRORES_DE_STOCK_POR_RESTRICCION: Readonly<Record<string, string>> 
   movimiento_de_stock_transferencia_no_suma_cero: "NO_TRADUCIDA",
   movimiento_de_stock_conteo_no_aplicado: "NO_TRADUCIDA",
   movimiento_de_stock_anulacion_no_es_espejo: "NO_TRADUCIDA",
-  // renglon_de_movimiento. Los dos de existencia negativa y la cuarentena los resuelve el tramo de movimientos (con el detalle de los saldos).
+  // renglon_de_movimiento. Los dos de existencia negativa NO se traducen acá: los resuelve `traducirMovimiento` (casos-de-uso/movimientos-comun.ts) con el
+  // error del control, que lleva `control` y `detalle` y no es un código de texto.
   renglon_de_movimiento_pkey: "NO_TRADUCIDA",
   renglon_de_movimiento_empresa_id_fkey: "NO_TRADUCIDA",
   renglon_de_movimiento_unico_uk: "NO_TRADUCIDA",
@@ -88,7 +89,7 @@ export const ERRORES_DE_STOCK_POR_RESTRICCION: Readonly<Record<string, string>> 
   renglon_movimiento_confirmado: "NO_TRADUCIDA",
   renglon_deposito_distinto_del_acto: "NO_TRADUCIDA",
   renglon_deposito_inactivo: "DEPOSITO_INACTIVO",
-  renglon_deposito_de_uso_restringido: "NO_TRADUCIDA",
+  renglon_deposito_de_uso_restringido: "MOTIVO_NO_PERMITIDO",
   renglon_articulo_inactivo: "ARTICULO_NO_CONTROLADO",
   stock_existencia_negativa_bloqueada: "NO_TRADUCIDA",
   stock_existencia_negativa_sin_confirmar: "NO_TRADUCIDA",

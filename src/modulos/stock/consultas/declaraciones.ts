@@ -7,4 +7,10 @@ import type { DeclaracionDeCaso } from "../../../capacidades/permisos/declaracio
  */
 export const DECLARACIONES_DE_CONSULTAS = {
   listarDepositos: { accion: "stock.ver" },
+  existencias: { accion: "stock.ver" },
+  existenciasNegativas: { accion: "stock.ver" },
+  libroDeArticulo: { accion: "stock.ver" },
+  fichaDeMovimiento: { accion: "stock.ver" },
+  movimientosPorOrigen: { accion: "stock.ver" },
+  verificarSaldos: { accion: "stock.verificar_saldos" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

@@ -126,9 +126,8 @@ function crearMovimientosYSaldos(db: Kysely<StockDb>): MovimientosYSaldos {
 
   return {
     async registrar(empresa, alta, renglones) {
-      const insertada = await db
-        .insertInto("movimiento_de_stock")
-        .values({
+      const alta_ = () =>
+        db.insertInto("movimiento_de_stock").values({
           empresa_id: empresa,
           clase: alta.clase,
           motivo: alta.motivo,
@@ -145,9 +144,16 @@ function crearMovimientosYSaldos(db: Kysely<StockDb>): MovimientosYSaldos {
           fecha_negocio:
             alta.fechaDeNegocio === null ? null : sql<string>`${alta.fechaDeNegocio}::date`,
           registrado_por: alta.registradoPor,
-        })
-        .returning("id")
-        .executeTakeFirstOrThrow();
+        });
+      // `ON CONFLICT DO NOTHING` sin objetivo: bajo serializable, un choque (misma clave, mismo ejemplar, ya anulado) con una fila que esta
+      // transacción todavía no ve aborta por serialización y el adaptador repite el pedido, que ya la ve y contesta «ya existía». Sin esto,
+      // dos pedidos iguales a la vez devolvían un error de unicidad en vez de repetirse. Si el choque es con una fila ya visible no inserta
+      // nada y se repite sin `ON CONFLICT` para que la base lance la restricción tal cual (la traduce el caso de uso).
+      const insertada =
+        (await alta_()
+          .onConflict((oc) => oc.doNothing())
+          .returning("id")
+          .executeTakeFirst()) ?? (await alta_().returning("id").executeTakeFirstOrThrow());
       if (renglones.length > 0) {
         await db
           .insertInto("renglon_de_movimiento")
