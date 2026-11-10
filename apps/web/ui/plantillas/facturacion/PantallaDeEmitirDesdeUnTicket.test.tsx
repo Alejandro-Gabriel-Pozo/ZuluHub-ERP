@@ -124,8 +124,13 @@ describe("emitir desde un ticket: lo que se ve", () => {
   });
 
   it("axe, tamaños y sin desborde en 390 y 1280 px, en los dos pasos", async () => {
-    for (const ancho of [390, 1280]) {
-      await page.viewport(ancho, 900);
+    // Alto suficiente para ver todo sin scroll, como las pruebas de Emitir (`enLosDosAnchos`): con un alto menor la barra inferior fija
+    // queda sobre los botones del final y axe (`target-size`) los mide solapados, según el alto del contenido en esa máquina.
+    for (const [ancho, alto] of [
+      [390, 1600],
+      [1280, 1100],
+    ] as const) {
+      await page.viewport(ancho, alto);
       const { unmount } = await render(enArmazon());
       expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
       legibleYTocable();

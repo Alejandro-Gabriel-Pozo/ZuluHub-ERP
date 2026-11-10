@@ -91,8 +91,12 @@ describe("pendientes de facturar", () => {
   });
 
   it("axe, tamaños y sin desborde en 390 y 1280 px (también con un total enorme)", async () => {
-    for (const ancho of [390, 1280]) {
-      await page.viewport(ancho, 900);
+    // Alto suficiente para ver todo sin scroll (la barra inferior fija no tapa nada), como las demás pruebas del facturador.
+    for (const [ancho, alto] of [
+      [390, 1600],
+      [1280, 1100],
+    ] as const) {
+      await page.viewport(ancho, alto);
       const { unmount } = await render(
         enArmazon(<PantallaDePendientesDeFacturar pendientes={lista} />),
       );

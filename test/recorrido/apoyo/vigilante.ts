@@ -52,6 +52,12 @@ export async function vigilar(pagina: Page, hostPropio: string): Promise<Vigilan
 
 /** axe sobre la pantalla actual: devuelve las violaciones graves o críticas (las leves no frenan el recorrido). */
 export async function violacionesGravesDeAxe(pagina: Page): Promise<string[]> {
+  // El botón que se acaba de tocar sigue con el mouse encima y su color está en transición (`transition: background-color`): axe medía el contraste
+  // a mitad de camino (falla intermitente en «Anular»). Se saca el mouse y se espera a un estado observable: que no quede ninguna animación corriendo.
+  await pagina.mouse.move(0, 0);
+  await pagina.evaluate(
+    "Promise.all(document.getAnimations().map((a) => a.finished)).then(() => undefined)",
+  );
   const resultado = await new AxeBuilder({ page: pagina }).analyze();
   return resultado.violations
     .filter((v) => v.impact === "serious" || v.impact === "critical")
