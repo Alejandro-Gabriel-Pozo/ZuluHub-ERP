@@ -8,6 +8,14 @@
 /** @type {import("dependency-cruiser").IForbiddenRuleType[]} */
 module.exports = [
   {
+    name: "ventas-sin-fiscal",
+    severity: "error",
+    comment:
+      "E1 §3.4. ventas no importa fiscal, ni siquiera por su publico.ts: para facturar un ticket declara su propio puerto (`FacturadorDeTickets`, con tipos de ventas) y la composición (src/composicion) lo implementa; es el único lugar donde se tocan los dos módulos. Previene que ventas dependa de los tipos y errores de fiscal (cada cambio del facturador rompería ventas) y el ciclo de módulos; si se elimina, falla la violación inyectada de esta regla.",
+    from: { path: "^src/modulos/ventas/" },
+    to: { path: "^src/modulos/fiscal/" },
+  },
+  {
     name: "base-sin-ventas",
     severity: "error",
     comment:

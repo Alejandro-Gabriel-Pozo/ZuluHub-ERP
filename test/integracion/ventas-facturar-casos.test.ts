@@ -339,4 +339,25 @@ describe.skipIf(base === null)("ventas: facturar un ticket cobrado", () => {
     expect((await escrituras(a.e.empresa)).comprobantes).toBe(0);
     expect((await escrituras(b.empresa)).comprobantes).toBe(0);
   });
+
+  // ---- barrido: lo que facturó ventas y lo que apunta ventas coinciden --------------------------------------------------------
+
+  it("barrido (corre al final, sobre todo lo que dejaron las pruebas): cada factura de un ticket tiene su puntero, y cada puntero su factura", async () => {
+    const sinPuntero = await m.filas<Fila>(
+      `select c.id from comprobante c
+        where c.origen_tipo in ('EJEMPLAR_DE_TICKET', 'REEMISION_DE_TICKET')
+          and not exists (select 1 from documento_de_ticket d where d.comprobante_id = c.id and d.empresa_id = c.empresa_id)`,
+    );
+    expect(sinPuntero, "facturas de ticket sin puntero").toEqual([]);
+    const sinFactura = await m.filas<Fila>(
+      `select d.id from documento_de_ticket d
+        where not exists (select 1 from comprobante c where c.id = d.comprobante_id and c.empresa_id = d.empresa_id)`,
+    );
+    expect(sinFactura, "punteros sin factura").toEqual([]);
+    // Un ticket nunca tiene dos punteros vigentes.
+    const dobles = await m.filas<Fila>(
+      "select ticket_id from documento_de_ticket where vigente group by ticket_id having count(*) > 1",
+    );
+    expect(dobles, "tickets con dos punteros vigentes").toEqual([]);
+  });
 });
