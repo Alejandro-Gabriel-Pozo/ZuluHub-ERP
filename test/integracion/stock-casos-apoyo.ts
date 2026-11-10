@@ -5,6 +5,8 @@ import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import type { TransaccionesDePostgres } from "../../src/adaptadores/postgres/transacciones";
 import {
+  crearCasosDeUsoDeStock,
+  crearConsultasDeStock,
   crearRepositoriosDeStock,
   type RepositoriosDeStock,
 } from "../../src/modulos/stock/publico";
@@ -110,6 +112,11 @@ export async function montarStock(
   const dueno = new pg.Client({ connectionString: propia.base.dueno });
   await dueno.connect();
   const reglas = opciones.reglas ?? REGLAS_DE_PRUEBA;
+  const casos = crearCasosDeUsoDeStock({ transacciones: entorno, reglas });
+  const consultas = crearConsultasDeStock({
+    transacciones: entorno,
+    reglas,
+  });
 
   const miembro = async (empresa: string, rol: RolDePrueba) => {
     const p = await crearPersonaDeBase(dueno);
@@ -210,8 +217,6 @@ export async function montarStock(
   return {
     propia,
     entorno,
-    /** Las reglas con que autoriza el guard en esta base (stock disponible): las usan los casos de uso y las consultas de los tramos siguientes. */
-    reglas,
     dueno,
     alcances,
     armarBarrera: (participantes: number) => {
@@ -229,6 +234,8 @@ export async function montarStock(
     encenderModulos: () => {
       sinModulos.clear();
     },
+    casos,
+    consultas,
     escenario,
     filas,
     contar,
