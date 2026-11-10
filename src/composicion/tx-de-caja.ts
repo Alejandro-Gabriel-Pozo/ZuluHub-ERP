@@ -1,6 +1,5 @@
-import type { Kysely } from "kysely";
 import { crearLecturaDeDerechosDeUso } from "../adaptadores/postgres/derechos-de-uso";
-import type { SinTablas } from "../adaptadores/postgres/transacciones";
+import type { ConfiguracionDeTransacciones } from "../adaptadores/postgres/transacciones";
 import { CATALOGO_DE_MODULOS } from "../capacidades/modulos/catalogo";
 import { CATALOGO_DE_PERILLAS } from "../capacidades/planes/perillas";
 import {
@@ -29,7 +28,9 @@ export type PiezasDeCajaEnTx = Readonly<{
   derechos: LecturaDeDerechosDeUso;
 }>;
 
-export function armarPiezasDeCajaEnTx(db: Pick<Kysely<SinTablas>, "withTables">): PiezasDeCajaEnTx {
+export function armarPiezasDeCajaEnTx(
+  db: Parameters<ConfiguracionDeTransacciones<unknown>["armar"]>[0],
+): PiezasDeCajaEnTx {
   return {
     cajas: crearRepositorioDeCajas(db.withTables<CajaDb>()),
     mediosDePago: crearRepositorioDeMediosDePago(db.withTables<CajaDb>()),
