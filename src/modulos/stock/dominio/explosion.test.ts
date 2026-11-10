@@ -446,7 +446,7 @@ describe("explotarConsumo: opciones (la versión sellada)", () => {
       });
     });
 
-    it("una opción sin consumo no molesta, y por unidad o por volumen sí se admite", () => {
+    it("una opción sin consumo no molesta; por unidad se admite y por volumen se rechaza (nace cerrado)", () => {
       const sinConsumo = [{ versionDeOpcionId: "v1", consumos: [] }];
       expect(
         explotar(
@@ -462,12 +462,14 @@ describe("explotarConsumo: opciones (la versión sellada)", () => {
         ).ok,
       ).toBe(true);
       expect(
-        explotar(
-          [linea(1, "p", "1", { unidadDeVentaId: "LITRO", opciones: op })],
-          { p: producto("REVENTA", { unidadBaseId: "MILILITRO" }) },
-          { sal: art("S") },
-        ).ok,
-      ).toBe(true);
+        falla(
+          explotar(
+            [linea(1, "p", "1", { unidadDeVentaId: "LITRO", opciones: op })],
+            { p: producto("REVENTA", { unidadBaseId: "MILILITRO" }) },
+            { sal: art("S") },
+          ),
+        ),
+      ).toEqual({ codigo: "OPCION_CON_CONSUMO_EN_VENTA_POR_PESO", posicion: 1 });
     });
   });
 });

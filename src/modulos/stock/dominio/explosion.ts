@@ -212,8 +212,8 @@ export function explotarConsumo(
     }
 
     const consumos = linea.opciones.flatMap((opcion) => opcion.consumos);
-    // S-9: el consumo de una opción se multiplica por la cantidad en la unidad base: correcto para unidades y fracciones; por peso no está definido.
-    if (consumos.length > 0 && UNIDADES[linea.unidadDeVentaId].dimension === "MASA") {
+    // S-9: el consumo de una opción se multiplica por la cantidad en la unidad base: correcto para unidades y fracciones; peso, volumen y otras medidas no están definidos (nace cerrado, decisión de la sesión padre 10/11).
+    if (consumos.length > 0 && UNIDADES[linea.unidadDeVentaId].dimension !== "CONTEO") {
       return err(falla("OPCION_CON_CONSUMO_EN_VENTA_POR_PESO", linea.posicion));
     }
     for (const consumo of consumos) {
