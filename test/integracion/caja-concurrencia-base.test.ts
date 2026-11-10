@@ -721,7 +721,12 @@ describe.skipIf(base === null)(
           };
           const [a, b] = await Promise.all([corregirA("TARJETA_DEBITO"), corregirA("QR")]);
           expect([a.confirmo, b.confirmo].filter(Boolean), `ronda ${i}`).toHaveLength(1);
-          expect((a.confirmo ? b : a).restriccion, `ronda ${i}`).toBe("correccion_de_medio_pkey");
+          // Quien pierde choca con la clave primaria `(cobro, secuencia)` si las dos llegaron antes de que la otra confirmara, o con el disparador
+          // de la secuencia si la otra ya había confirmado cuando el disparador leyó (dos desenlaces válidos de la misma carrera; fallaba 1 de 20).
+          expect(
+            ["correccion_de_medio_pkey", "correccion_de_medio_secuencia_invalida"],
+            `ronda ${i}`,
+          ).toContain((a.confirmo ? b : a).restriccion);
           const secuencias = (
             await dueno.query<{ secuencia: number }>(
               "select secuencia from correccion_de_medio where cobro_id = $1",
