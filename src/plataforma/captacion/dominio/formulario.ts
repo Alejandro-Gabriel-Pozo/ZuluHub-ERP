@@ -66,7 +66,7 @@ export type ErrorDeFormulario =
   | Readonly<{ tipo: "PAGINA_VENCIDA" }>
   | Readonly<{ tipo: "FORMA_INVALIDA"; campos: readonly CampoDeFormulario[] }>;
 
-export const LARGO_MAXIMO_DEL_NOMBRE_DE_CONTACTO = 80;
+export const LARGO_MAXIMO_DEL_NOMBRE_DE_CONTACTO = 80; // fuente-unica: ajeno — el nombre de contacto de captación es otro dato que el nombre de elección del catálogo
 export const LARGO_MAXIMO_DEL_NOMBRE_DEL_NEGOCIO = 100;
 export const LARGO_MAXIMO_DEL_CORREO = 254;
 const LARGO_MAXIMO_DE_LA_PARTE_LOCAL = 64;

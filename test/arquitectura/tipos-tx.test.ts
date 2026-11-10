@@ -4,6 +4,7 @@ import type { TxDeApp } from "../../src/composicion/conexiones";
 import type { TxDeCredenciales } from "../../src/adaptadores/certificados/credenciales-de-emisor";
 import type { TxDeTickets } from "../../src/adaptadores/certificados/almacen-de-tickets";
 import type { TxDeVerificacion } from "../../src/adaptadores/certificados/verificacion-de-autorizacion";
+import type { TxDeCatalogo, TxDeConsultasDeCatalogo } from "../../src/modulos/catalogo/publico";
 import type {
   TxDeCaja,
   TxDeConsultasDeCaja,
@@ -48,6 +49,8 @@ import type { Transacciones } from "../../src/puertos/transacciones";
 describe("la Tx compuesta de la composición contiene la Tx angosta de cada módulo", () => {
   it("empresas, identidad y controles", () => {
     expectTypeOf<TxDeApp>().toExtend<TxDeEmpresas>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeCatalogo>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeConsultasDeCatalogo>();
     expectTypeOf<TxDeApp>().toExtend<TxDeConsultasDeEmpresas>();
     expectTypeOf<TxDeApp>().toExtend<TxDeIdentidad>();
     expectTypeOf<TxDeApp>().toExtend<TxDeConsultasDeIdentidad>();
@@ -97,6 +100,8 @@ describe("la Tx compuesta de la composición contiene la Tx angosta de cada mód
 
   it("las Transacciones de la composición sirven donde un módulo pide las suyas", () => {
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeEmpresas>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeCatalogo>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConsultasDeCatalogo>>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeIdentidad>>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeFacturacion>>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConsultasDeFacturacion>>();

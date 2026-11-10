@@ -21,7 +21,7 @@ export const LIMITE_POR_DEFECTO = 20;
 /** El tope del spec: 50 comprobantes por página. */
 export const LIMITE_MAXIMO = 50;
 /** Largo máximo del texto de búsqueda (ASUMIDO): el nombre de un receptor y un CUIT con guiones entran de sobra. */
-export const LARGO_MAXIMO_DEL_TEXTO = 80;
+export const LARGO_MAXIMO_DEL_TEXTO = 80; // fuente-unica: ajeno — el texto de búsqueda del listado fiscal es otro dato que el nombre de cocina
 
 /** Largo máximo del identificador de origen: el del CHECK `comprobante_origen_id_ck` de la base (en caracteres). */
 export const LARGO_MAXIMO_DEL_ORIGEN_ID = 100;

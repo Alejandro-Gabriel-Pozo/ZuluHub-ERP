@@ -83,6 +83,7 @@ const CLASES_ESPERADAS = Object.freeze([
 
 const MODULOS_DE_NEGOCIO = [
   "caja",
+  "catalogo",
   "cierre",
   "empresas",
   "fiscal",

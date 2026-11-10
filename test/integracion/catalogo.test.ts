@@ -76,6 +76,16 @@ const TABLAS_DE_NEGOCIO = [
   "certificado_arca",
   "acceso_arca",
   "intento_arca",
+  // Catálogo (0025_catalogo)
+  "unidad_de_medida",
+  "seccion_de_carta",
+  "producto",
+  "grupo_de_elecciones",
+  "opcion",
+  "version_de_opcion",
+  "consumo_de_opcion",
+  "precio_de_venta",
+  "copia_de_opciones",
   // Cierre del día (0026_cierre)
   "jornada_de_sucursal",
   "control_de_jornada_cerrada",
@@ -337,6 +347,17 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "tenant:SELECT",
           "trabajo:SELECT",
           "traspaso_gerencia:SELECT",
+          ...[
+            "consumo_de_opcion",
+            "copia_de_opciones",
+            "grupo_de_elecciones",
+            "opcion",
+            "precio_de_venta",
+            "producto",
+            "seccion_de_carta",
+            "unidad_de_medida",
+            "version_de_opcion",
+          ].map((t) => `${t}:SELECT`), // 0025
         ].sort(),
       );
       expect(porRol("pedernal_grupo")).toEqual(
@@ -469,6 +490,36 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "motivo_bloqueo",
           ].map((c) => `pedernal_app:serie_comprobante.${c}`),
           "pedernal_app:nivel_de_control.nivel", // 0007
+          // 0025: el catálogo. Quedan afuera id, empresa_id, version, creado_en y los contadores (los fija la base)
+          ...[
+            "activo",
+            "alicuota_iva",
+            "codigo",
+            "codigo_de_barras",
+            "descripcion_en_carta",
+            "falta_completar",
+            "nombre",
+            "nombre_clave",
+            "nombre_de_cocina",
+            "paso_minimo",
+            "seccion_de_carta_id",
+            "unidad_de_venta_id",
+            "version_de_opciones",
+          ].map((c) => `pedernal_app:producto.${c}`),
+          ...[
+            "activo",
+            "admite_varias",
+            "es_obligatorio",
+            "es_tamano",
+            "nombre",
+            "nombre_clave",
+            "orden",
+            "se_muestra_en_carta",
+          ].map((c) => `pedernal_app:grupo_de_elecciones.${c}`),
+          ...["activa", "orden"].map((c) => `pedernal_app:opcion.${c}`),
+          ...["activa", "nombre", "nombre_clave", "orden"].map(
+            (c) => `pedernal_app:seccion_de_carta.${c}`,
+          ),
           "pedernal_app:persona.usuario_auth_id", // 0010: solo el vínculo con el usuario, y solo en INVITACION
           // 0026: la jornada del cierre del día cambia de estado y de marcas (la máquina de estados la impone el disparador)
           ...[
@@ -834,6 +885,87 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         ...["empresa_id", "modulo"].map((c) => `modulo_de_empresa.${c}`),
         "tenant.marca_id",
       ];
+      const catalogo = [
+        // 0025: el catálogo (la base fija version, creado_en, y el resto de los contadores)
+        ...[
+          "cantidad",
+          "empresa_id",
+          "escala_con_tamano",
+          "insumo_id",
+          "numero",
+          "version_de_opcion_id",
+        ].map((c) => `consumo_de_opcion.${c}`),
+        ...["creado_por", "empresa_id", "id", "producto_destino_id", "producto_origen_id"].map(
+          (c) => `copia_de_opciones.${c}`,
+        ),
+        ...[
+          "activo",
+          "admite_varias",
+          "clase",
+          "empresa_id",
+          "es_obligatorio",
+          "es_tamano",
+          "id",
+          "nombre",
+          "nombre_clave",
+          "orden",
+          "producto_id",
+          "se_muestra_en_carta",
+        ].map((c) => `grupo_de_elecciones.${c}`),
+        ...["empresa_id", "grupo_id", "id", "nombre_clave", "orden", "producto_id"].map(
+          (c) => `opcion.${c}`,
+        ),
+        ...[
+          "cargado_por",
+          "empresa_id",
+          "id",
+          "iva_incluido",
+          "moneda",
+          "opcion_id",
+          "paso_minimo",
+          "precio",
+          "producto_id",
+          "sucursal_id",
+          "unidad_id",
+          "vigente_desde",
+        ].map((c) => `precio_de_venta.${c}`),
+        ...[
+          "alicuota_iva",
+          "clase_de_uso",
+          "codigo",
+          "codigo_de_barras",
+          "creado_por",
+          "descripcion_en_carta",
+          "dimension",
+          "empresa_id",
+          "falta_completar",
+          "id",
+          "nombre",
+          "nombre_clave",
+          "nombre_de_cocina",
+          "paso_minimo",
+          "seccion_de_carta_id",
+          "tipo",
+          "unidad_base_id",
+          "unidad_de_venta_id",
+        ].map((c) => `producto.${c}`),
+        ...["empresa_id", "id", "nombre", "nombre_clave", "orden"].map(
+          (c) => `seccion_de_carta.${c}`,
+        ),
+        ...[
+          "cargada_por",
+          "creado_en",
+          "empresa_id",
+          "factor_de_tamano",
+          "id",
+          "iva_incluido",
+          "moneda",
+          "nombre",
+          "numero",
+          "opcion_id",
+          "recargo",
+        ].map((c) => `version_de_opcion.${c}`),
+      ];
       expect(porRol("pedernal_app")).toEqual(
         [
           ...auditoriaDeEmpresa,
@@ -1000,6 +1132,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...traspasoDeLaEmpresa,
           ...fiscalDeLaEmpresa,
           ...facturacion,
+          ...catalogo,
         ].sort(),
       );
       expect(porRol("pedernal_grupo")).toEqual(
