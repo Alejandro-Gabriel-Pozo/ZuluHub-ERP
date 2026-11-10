@@ -45,6 +45,7 @@ describe("nombre de producto", () => {
     expect(claveDeNombre("Café")).toBe(claveDeNombre("CAFÉ"));
     expect(claveDeNombre("Café")).toBe(claveDeNombre("CAFÉ"));
     expect(claveDeNombre("Café")).not.toBe(claveDeNombre("Cafe"));
+    expect(claveDeNombre("CAFÉ")).toBe("café");
   });
   it("D7 (propiedad): la clave no cambia al mayusculizar ni al re-normalizar", () => {
     fc.assert(
@@ -69,6 +70,7 @@ describe("las demás fichas del catálogo", () => {
   it("descripción: no exige letra y respeta su largo", () => {
     expect(descripcionDeCartaDesdeTexto("Con salsa").ok).toBe(true);
     expect(descripcionDeCartaDesdeTexto("2 x 1").ok).toBe(true);
+    expect(descripcionDeCartaDesdeTexto("123 456")).toEqual({ ok: true, valor: "123 456" });
     expect(
       descripcionDeCartaDesdeTexto("a".repeat(LARGO_MAXIMO_DE_LA_DESCRIPCION_EN_CARTA + 1)).ok,
     ).toBe(false);
@@ -90,6 +92,14 @@ describe("las demás fichas del catálogo", () => {
     ]) {
       expect(codigoDeProductoDesdeTexto(malo).ok, malo).toBe(false);
     }
+    expect(codigoDeProductoDesdeTexto("con espacio")).toEqual({
+      ok: false,
+      error: "CODIGO_INVALIDO",
+    });
+    expect(codigoDeBarrasDesdeTexto("123")).toEqual({
+      ok: false,
+      error: "CODIGO_DE_BARRAS_INVALIDO",
+    });
     expect(codigoDeBarrasDesdeTexto("7790001234567").ok).toBe(true);
     for (const malo of ["1234567", "123456789012345", "12345abc", ""]) {
       expect(codigoDeBarrasDesdeTexto(malo).ok, malo).toBe(false);

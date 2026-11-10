@@ -44,6 +44,10 @@ describe("precio de venta", () => {
     // gramo → kilo: × 1000
     expect(precioPorFactor(precio("3"), 1000n, 1n)).toEqual(precio("3000"));
     expect(precioPorFactor(precio("999999999999.999999"), 1000n, 1n)).toBeNull(); // fuera de rango
-    expect(() => precioPorFactor(precio("1"), 1n, 0n)).toThrow(RangeError);
+    expect(() => precioPorFactor(precio("1"), 1n, 0n)).toThrow("factor inválido");
+    expect(() => precioPorFactor(precio("1"), 1n, -1n)).toThrow("factor inválido");
+    expect(() => precioPorFactor(precio("1"), -1n, 1n)).toThrow("factor inválido");
+    expect(() => precioPorFactor(precio("1"), -1n, 0n)).toThrow("factor inválido");
+    expect(precioPorFactor(precio("5"), 0n, 1n)).toEqual(precio("0")); // factor cero: válido, da cero
   });
 });

@@ -15,6 +15,7 @@ export function precioDeVentaDesdeTexto(texto: string): Resultado<PrecioUnitario
   try {
     return ok(precioUnitarioDesdeTexto(texto));
   } catch (error) {
+    // Stryker disable next-line ConditionalExpression: `precioUnitarioDesdeTexto` solo lanza `ErrorDeValor`; la guarda existe para no tragar un fallo ajeno y ese camino no se puede provocar.
     if (error instanceof ErrorDeValor) return err("PRECIO_INVALIDO");
     throw error;
   }
@@ -43,6 +44,7 @@ export function precioPorFactor(
   try {
     return crearPrecioUnitario(producto / denominador);
   } catch (error) {
+    // Stryker disable next-line ConditionalExpression: `crearPrecioUnitario` solo lanza `ErrorDeValor`; la guarda existe para no tragar un fallo ajeno y ese camino no se puede provocar.
     if (error instanceof ErrorDeValor) return null;
     throw error;
   }
