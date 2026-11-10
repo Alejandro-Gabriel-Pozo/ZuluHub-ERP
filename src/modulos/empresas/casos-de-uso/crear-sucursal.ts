@@ -90,7 +90,7 @@ function contactoCargado(contacto: ContactoDeSucursal): CambiosDeContacto {
 export function armarCrearSucursal({
   transacciones,
   reglas,
-  ganchosDeSucursal = [],
+  ganchosDeSucursal,
 }: DependenciasDeEmpresas) {
   return async function crearSucursal(
     contexto: ContextoOperativo,

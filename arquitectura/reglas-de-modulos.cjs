@@ -24,6 +24,14 @@ module.exports = [
     to: { path: "^src/modulos/(caja|stock)/" },
   },
   {
+    name: "caja-sin-negocio-ajeno",
+    severity: "error",
+    comment:
+      "E3 (e3 §5.3). caja no importa fiscal, reservas, clientes, catalogo ni stock, ni por su publico.ts (ventas ya lo cubre base-sin-ventas): caja registra el dinero que entró y no conoce lo que se vendió; lo que necesita de afuera (el total de un ticket) lo declara como puerto y la composición lo implementa. Previene que el dinero dependa de los módulos que lo usan (ciclo) y que un cobro se arme con datos de otro dominio; si se elimina, falla la violación inyectada de esta regla.",
+    from: { path: "^src/modulos/caja/" },
+    to: { path: "^src/modulos/(fiscal|reservas|clientes|catalogo|stock)/" },
+  },
+  {
     name: "cierre-sin-negocio",
     severity: "error",
     comment:

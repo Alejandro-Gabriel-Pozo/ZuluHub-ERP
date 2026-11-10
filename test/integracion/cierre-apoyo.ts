@@ -162,6 +162,10 @@ export function aporteFalso(modulo: string, controles: ControlDelDia[] = []): Ap
     falla: "NINGUNA",
     congelaciones: [],
     alCongelar: null,
+    hayMovimiento() {
+      if (aporte.falla === "AL_LEER") return Promise.resolve(err("APORTE_NO_DISPONIBLE" as const));
+      return Promise.resolve(ok(aporte.controlesActuales.some((c) => c.cantidad > 0)));
+    },
     impedimentos() {
       if (aporte.falla === "AL_LEER") return Promise.resolve(err("APORTE_NO_DISPONIBLE" as const));
       return Promise.resolve(ok(aporte.impedimentosActuales));
@@ -233,6 +237,11 @@ export function aporteDeActividad(modulo: string): AporteAlCierreDelDia<TxDePrue
     modulo,
     async impedimentos(tx, j) {
       return ok([await sesiones(tx, j)]);
+    },
+    async hayMovimiento(tx, j) {
+      return ok(
+        (await contarActividad(tx, j, "sesion")) + (await contarActividad(tx, j, "correccion")) > 0,
+      );
     },
     async controles(tx, j) {
       return ok([

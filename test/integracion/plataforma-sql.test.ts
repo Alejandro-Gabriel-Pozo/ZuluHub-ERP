@@ -92,6 +92,7 @@ const TABLAS_LEGIBLES = [
   "ajuste_de_perilla",
   "modulo_de_empresa",
   "solicitud_de_alta", // captación: la plataforma revisa y decide las solicitudes
+  "valor_de_lista", // 0027 (caja y cobros): las listas del sistema (marcas de tarjeta y motivos de rechazo) las administra la plataforma
 ] as const;
 
 /** Datos operativos: la plataforma no los lee, con ningún actor. */
@@ -109,6 +110,21 @@ const TABLAS_OPERATIVAS = [
   "intento_arca",
   "certificado_arca",
   "acceso_arca",
+  // 0027 (caja y cobros): el dinero y sus registros son de la empresa; la plataforma no toca nada de esto (solo las listas del sistema).
+  "caja",
+  "medio_de_pago",
+  "cuenta_de_cobro",
+  "sesion_caja",
+  "movimiento_caja",
+  "cobro",
+  "arqueo_caja",
+  "arqueo_billete",
+  "correccion_de_medio",
+  "declaracion_de_total",
+  "conforme_de_jornada",
+  "cierre_de_caja_de_jornada",
+  "conciliacion_de_jornada",
+  "conciliacion_de_cobro_por_origen",
 ] as const;
 
 const ahoraEnS = () => Math.floor(Date.now() / 1000);
@@ -470,6 +486,13 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           "ajuste_de_perilla.ajuste_de_perilla_plataforma_leer:SELECT:PERMISSIVE",
           "ajuste_de_perilla.ajuste_de_perilla_plataforma_admin_alta:INSERT:RESTRICTIVE",
           "ajuste_de_perilla.ajuste_de_perilla_plataforma_con_actor:SELECT:RESTRICTIVE",
+          // 0027 (caja y cobros): las listas del sistema, con sus restrictivas del actor (solo un ADMIN escribe)
+          "valor_de_lista.valor_de_lista_plataforma_alta:INSERT:PERMISSIVE",
+          "valor_de_lista.valor_de_lista_plataforma_cambiar:UPDATE:PERMISSIVE",
+          "valor_de_lista.valor_de_lista_plataforma_leer:SELECT:PERMISSIVE",
+          "valor_de_lista.valor_de_lista_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "valor_de_lista.valor_de_lista_plataforma_admin_cambiar:UPDATE:RESTRICTIVE",
+          "valor_de_lista.valor_de_lista_plataforma_con_actor:SELECT:RESTRICTIVE",
           // captación: la solicitud de alta (la landing escribe con otro rol; la plataforma decide)
           "solicitud_de_alta.solicitud_plataforma_leer:SELECT:PERMISSIVE",
           "solicitud_de_alta.solicitud_plataforma_cambiar:UPDATE:PERMISSIVE",
