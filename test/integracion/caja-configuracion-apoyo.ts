@@ -27,6 +27,7 @@ import type { ContextoOperativo } from "../../src/contexto/contexto";
 import {
   crearRepositorioDeArqueos,
   crearRepositorioDeCajas,
+  crearRepositorioDeCobros,
   crearRepositorioDeCuentasDeCobro,
   crearRepositorioDeMediosDePago,
   crearRepositorioDeMovimientos,
@@ -109,6 +110,7 @@ export function crearEntornoDeCaja(
       cuentasDeCobro: crearRepositorioDeCuentasDeCobro(db.withTables<CajaDb>()),
       sesiones: crearRepositorioDeSesiones(db.withTables<CajaDb>()),
       movimientos: crearRepositorioDeMovimientos(db.withTables<CajaDb>()),
+      cobros: crearRepositorioDeCobros(db.withTables<CajaDb>()),
       arqueos: crearRepositorioDeArqueos(db.withTables<CajaDb>()),
       jornadas: crearRepositorioDeJornadas(db.withTables<CierreDb>()),
       sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),

@@ -11,6 +11,7 @@ import type {
 } from "../../empresas/publico";
 import type { RepositorioDeArqueos } from "../persistencia/repositorio-de-arqueos";
 import type { RepositorioDeCajas } from "../persistencia/repositorio-de-cajas";
+import type { RepositorioDeCobros } from "../persistencia/repositorio-de-cobros";
 import type { RepositorioDeCuentasDeCobro } from "../persistencia/repositorio-de-cuentas";
 import type { RepositorioDeMediosDePago } from "../persistencia/repositorio-de-medios";
 import type { RepositorioDeMovimientos } from "../persistencia/repositorio-de-movimientos";
@@ -22,7 +23,7 @@ import type { RepositorioDeSesiones } from "../persistencia/repositorio-de-sesio
  * de uso (el límite de cajas del plan, leído en esta transacción y sin caché) y los puertos de auditoría y autorización. La operación
  * suma las sesiones, los movimientos y el arqueo, la jornada de la sucursal (de `cierre`: abrir una sesión la exige abierta) y los datos
  * de jornada de la sucursal (zona y hora de corte, de `empresas`). La composición lo arma a partir de la conexión de la transacción;
- * los casos de uso solo ven estas interfaces. El tramo del puerto de cobrar suma acá lo suyo.
+ * los casos de uso solo ven estas interfaces. El puerto de cobrar (`cobrar/`) usa esta misma transacción, que es la de ventas.
  */
 export type TxDeCaja = LecturaDeEstados &
   TxDeJornadas &
@@ -30,6 +31,8 @@ export type TxDeCaja = LecturaDeEstados &
     sucursales: Pick<RepositorioDeSucursales, "jornadaDe">;
     sesiones: RepositorioDeSesiones;
     movimientos: RepositorioDeMovimientos;
+    /** El cobro (puerto de cobrar): su fila con el origen y los datos, y las marcas de tarjeta. */
+    cobros: RepositorioDeCobros;
     arqueos: RepositorioDeArqueos;
     cajas: RepositorioDeCajas;
     mediosDePago: RepositorioDeMediosDePago;

@@ -60,9 +60,28 @@ const RESTRICCIONES_DE_DISPARADORES = [
   "arqueo_caja_efectivo_sin_contar",
   "arqueo_caja_monedas_solo_efectivo",
   "arqueo_caja_sesion_invalida",
+  // El cobro (tramo 6): `cobro_validar_alta`.
+  "cobro_clase_invalida",
+  "cobro_dato_no_habilitado",
+  "cobro_marca_invalida",
 ];
 
-/** Las tablas cuyas columnas declara el esquema (`cobro` se declara para leer el origen de un cobro; sus restricciones las traduce el tramo del cobro). */
+/**
+ * Los errores de `par_de_cobro_validar` (la regla medio ↔ cuenta de la base) llevan el nombre de la tabla de quien llama más un sufijo
+ * (`p_tabla || '_cuenta_inactiva'`): no existen en el catálogo ni aparecen escritos enteros en el cuerpo de la función. Se verifica el
+ * sufijo y que cada tabla que llama a la función con su nombre (`movimiento_caja`) tenga la traducción.
+ */
+const SUFIJOS_DEL_PAR_DE_COBRO = [
+  "medio_inexistente",
+  "medio_inactivo",
+  "cuenta_no_admitida",
+  "cuenta_inexistente",
+  "cuenta_de_otra_sucursal",
+  "cuenta_inactiva",
+  "cuenta_incompatible",
+];
+
+/** Las tablas cuyas columnas declara el esquema (`valor_de_lista` y `correccion_de_medio` solo se leen: sus restricciones las traducen la plataforma y el tramo de la corrección). */
 const TABLAS = [
   "caja",
   "medio_de_pago",
@@ -72,6 +91,8 @@ const TABLAS = [
   "cobro",
   "arqueo_caja",
   "arqueo_billete",
+  "valor_de_lista",
+  "correccion_de_medio",
 ] as const;
 /** Las tablas cuyas restricciones tienen su traducción a un error de negocio. */
 const TABLAS_CON_TRADUCCION = [
@@ -80,6 +101,7 @@ const TABLAS_CON_TRADUCCION = [
   "cuenta_de_cobro",
   "sesion_caja",
   "movimiento_caja",
+  "cobro",
   "arqueo_caja",
   "arqueo_billete",
 ] as const;
@@ -141,7 +163,12 @@ describe.skipIf(base === null)(
       ).toEqual([]);
       expect(
         [...declaradas]
-          .filter((n) => !existentes.has(n) && !RESTRICCIONES_DE_DISPARADORES.includes(n))
+          .filter(
+            (n) =>
+              !existentes.has(n) &&
+              !RESTRICCIONES_DE_DISPARADORES.includes(n) &&
+              !SUFIJOS_DEL_PAR_DE_COBRO.some((sufijo) => n === `movimiento_caja_${sufijo}`),
+          )
           .sort(),
         "traducciones de restricciones que no existen",
       ).toEqual([]);
@@ -150,9 +177,19 @@ describe.skipIf(base === null)(
         `select pg_get_functiondef(p.oid) as cuerpo from pg_proc p
         where p.proname in ('caja_validar_cambio', 'medio_de_pago_validar_cambio', 'cuenta_de_cobro_validar_cambio',
                             'sesion_caja_validar_alta', 'sesion_caja_validar_cambio', 'sesion_caja_verificar_cierre',
-                            'movimiento_caja_validar_alta', 'movimiento_caja_verificar_documento',
+                            'movimiento_caja_validar_alta', 'movimiento_caja_verificar_documento', 'cobro_validar_alta',
                             'arqueo_caja_validar_alta', 'arqueo_billete_validar_alta', 'arqueo_verificar_sesion_cerrada')`,
       );
+      const { rows: par } = await dueno.query<{ cuerpo: string }>(
+        "select pg_get_functiondef(p.oid) as cuerpo from pg_proc p where p.proname = 'par_de_cobro_validar'",
+      );
+      for (const sufijo of SUFIJOS_DEL_PAR_DE_COBRO) {
+        expect(par[0]?.cuerpo.includes(`p_tabla || '_${sufijo}'`), sufijo).toBe(true);
+        expect(
+          ERRORES_DE_CAJA_POR_RESTRICCION[`movimiento_caja_${sufijo}`],
+          `movimiento_caja_${sufijo}`,
+        ).toBeDefined();
+      }
       for (const nombre of RESTRICCIONES_DE_DISPARADORES) {
         expect(
           funciones.some((f) => f.cuerpo.includes(`CONSTRAINT = '${nombre}'`)),

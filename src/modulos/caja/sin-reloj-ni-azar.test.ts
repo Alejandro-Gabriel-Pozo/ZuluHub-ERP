@@ -4,12 +4,12 @@ import { describe, expect, it } from "vitest";
 import { usosProhibidos } from "../../../test/utilidades/reloj-y-azar";
 
 /**
- * El dominio de caja, sus casos de uso, sus consultas y su persistencia no usan reloj ni aleatoriedad: la hora (`ahora`) entra como dato en el contexto. Los casos de uso corren dentro de
+ * El dominio de caja, sus casos de uso, sus consultas, su persistencia y el puerto de cobrar no usan reloj ni aleatoriedad: la hora (`ahora`) entra como dato en el contexto. Los casos de uso corren dentro de
  * la transacción, que el adaptador repite entera ante un conflicto de serialización (ADR-004, G4): lo que se recalcula (arqueo,
  * conciliación, huella del cobro) tiene que dar LO MISMO cada vez, o un reintento no sería el mismo pedido.
  */
-const carpetas = ["./", "dominio/", "casos-de-uso/", "consultas/", "persistencia/"].map((c) =>
-  fileURLToPath(new URL(c, import.meta.url)),
+const carpetas = ["./", "dominio/", "casos-de-uso/", "consultas/", "persistencia/", "cobrar/"].map(
+  (c) => fileURLToPath(new URL(c, import.meta.url)),
 );
 const fuentes = carpetas.flatMap((carpeta) =>
   readdirSync(carpeta)

@@ -44,6 +44,17 @@ export function importeDeEntrada(
     if (!(error instanceof ErrorDeValor)) throw error;
     return err(error.codigo === "MONEDA_NO_SOPORTADA" ? "MONEDA_NO_SOPORTADA" : "IMPORTE_INVALIDO");
   }
+  return importeConRegla(importe, regla);
+}
+
+/**
+ * Un `Importe` ya construido contra el tope y el signo de la regla: lo que valida `importeDeEntrada` tras leer el texto y lo que el puerto
+ * de cobrar exige a un importe que ya llega tipado (e3 §3.5: > 0 y ≤ tope; cero y negativo se rechazan siempre).
+ */
+export function importeConRegla(
+  importe: Importe,
+  regla: ReglaDeImporte,
+): Resultado<Importe, "IMPORTE_INVALIDO"> {
   const centavos = importe.unidades;
   const fueraDelTope =
     centavos > TOPE_DE_IMPORTE_EN_CENTAVOS || centavos < -TOPE_DE_IMPORTE_EN_CENTAVOS;

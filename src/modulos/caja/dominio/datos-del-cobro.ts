@@ -30,8 +30,11 @@ export type DatosDelCobroValidos = Readonly<{
   dni: string | null;
 }>;
 
-/** `NUMERO_DE_TARJETA`: el cupón parece el número de una tarjeta. `FORMA`: cualquier otra forma que no es la del dato. */
-export type MotivoDeDatoInvalido = "FORMA" | "NUMERO_DE_TARJETA";
+/**
+ * `NUMERO_DE_TARJETA`: el cupón parece el número de una tarjeta. `FORMA`: cualquier otra forma que no es la del dato. `NO_DISPONIBLE`: la
+ * marca de tarjeta no existe o ya está desactivada (los cobros viejos la conservan, un cobro nuevo no la elige).
+ */
+export type MotivoDeDatoInvalido = "FORMA" | "NUMERO_DE_TARJETA" | "NO_DISPONIBLE";
 
 export type ErrorDeDatoDelCobro =
   | Readonly<{ codigo: "DATO_DE_COBRO_NO_HABILITADO"; dato: DatoDelCobro }>
@@ -102,11 +105,19 @@ export function validarDatosDelCobro(
     const motivo = VALIDADORES[dato](valor);
     if (motivo !== null) return err({ codigo: "DATO_DE_COBRO_INVALIDO", dato, motivo });
   }
-  return ok({
+  return ok(datosEnFormaCompleta(datos));
+}
+
+/**
+ * Los datos en su forma completa (lo que no vino es `null`), SIN juzgarlos: la huella de un cobro se arma antes de leer qué habilita el
+ * medio (la búsqueda por clave va primero), y una repetición tiene que dar la misma huella que el pedido original.
+ */
+export function datosEnFormaCompleta(datos: DatosDelCobro): DatosDelCobroValidos {
+  return {
     cupon: datos.cupon ?? null,
     ultimos4: datos.ultimos4 ?? null,
     marcaDeTarjetaId: datos.marcaDeTarjetaId ?? null,
     cuotas: datos.cuotas ?? null,
     dni: datos.dni ?? null,
-  });
+  };
 }

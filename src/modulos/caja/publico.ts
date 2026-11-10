@@ -1,7 +1,8 @@
 /**
  * Entrada pública del módulo de caja (ADR-001; e3 §3). Hoy: el dominio puro (E3, tramo 2), la configuración (tramo 3: cajas, medios de
  * pago y cuentas de cobro, con su persistencia, casos de uso y consultas) y la operación de la caja (tramo 5: sesión, cierre, movimientos
- * manuales, ajustes y anulaciones). El módulo sigue «en desarrollo» en el catálogo.
+ * manuales, ajustes y anulaciones) y el puerto de cobrar para ventas (tramo 6: `CajaParaVentas`). El módulo sigue «en desarrollo» en el
+ * catálogo.
  */
 export {
   ESTADOS_DE_SESION,
@@ -178,11 +179,8 @@ export {
   type ErrorDeEdicionDeMedio,
   type MedioDePago,
 } from "./dominio/configuracion";
-export {
-  COLUMNAS_DE_CAJA,
-  ERRORES_DE_CAJA_POR_RESTRICCION,
-  type CajaDb,
-} from "./persistencia/esquema";
+export { COLUMNAS_DE_CAJA, type CajaDb } from "./persistencia/esquema";
+export { ERRORES_DE_CAJA_POR_RESTRICCION } from "./persistencia/errores-por-restriccion";
 export {
   crearRepositorioDeCajas,
   type OpcionesDeListadoDeCajas,
@@ -219,6 +217,10 @@ export {
   type MovimientoParaSumar,
   type RepositorioDeMovimientos,
 } from "./persistencia/repositorio-de-movimientos";
+export {
+  crearRepositorioDeCobros,
+  type RepositorioDeCobros,
+} from "./persistencia/repositorio-de-cobros";
 export {
   crearRepositorioDeArqueos,
   type ArqueoGuardado,
@@ -324,6 +326,20 @@ export type {
   ErrorAlAnularMovimientoDeCaja,
   SalidaDeAnularMovimientoDeCaja,
 } from "./casos-de-uso/anular-movimiento";
+export { cajaParaVentas } from "./cobrar/caja-para-ventas";
+export { traducirErroresDelCobro } from "./cobrar/traducir-errores-del-cobro";
+export type {
+  CajaParaVentas,
+  CobrosDeUnOrigen,
+  EntradaDeRegistrarCobro,
+  ErrorAlCobrar,
+  ErrorAlConsultarCajasParaCobrar,
+  ErrorAlConsultarOpcionesDeCobro,
+  EstadoDeCajasParaCobrar,
+  OpcionesDeCobro,
+  SalidaDeRegistrarCobro,
+  TxDeLecturaDeCaja,
+} from "./cobrar/contrato";
 export { crearConsultasDeCaja, type ConsultasDeCaja } from "./consultas/consultas";
 export type { DependenciasDeConsultasDeCaja, TxDeConsultasDeCaja } from "./consultas/contrato";
 export type {

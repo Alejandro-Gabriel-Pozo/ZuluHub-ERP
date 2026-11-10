@@ -92,10 +92,25 @@ export interface RepositorioDeMovimientos {
   obtener(empresa: EmpresaId, id: string): Promise<MovimientoConSesion | null>;
   /** El movimiento que se registró con esa clave de idempotencia (de cualquier sesión de la empresa), si hay. */
   obtenerPorClave(empresa: EmpresaId, clave: string): Promise<MovimientoGuardado | null>;
+  /**
+   * Lo mínimo de un movimiento por su clave (id, sesión y huella), leyendo SOLO `movimiento_caja`: el puerto de cobrar lo usa en cada cobro
+   * y, bajo `SERIALIZABLE`, cada tabla que se lee entera es un conflicto con cualquier alta de otro cobro.
+   */
+  obtenerHuellaPorClave(
+    empresa: EmpresaId,
+    clave: string,
+  ): Promise<Readonly<{ id: string; sesionId: string; huella: string | null }> | null>;
   /** El id de la anulación de ese movimiento, si ya se anuló. */
   anulacionDe(empresa: EmpresaId, movimientoId: string): Promise<string | null>;
   /** Alta de un movimiento. Devuelve el id que genera la base. */
   insertar(nuevo: MovimientoNuevo): Promise<string>;
+  /**
+   * Alta idempotente: `INSERT ... ON CONFLICT DO NOTHING` SIN objetivo, así que cubre cualquier unicidad (la clave de idempotencia, el id, la
+   * anulación). `null` si no insertó porque otro pedido se adelantó: quien llama relee por clave. Es para quien corre en la transacción de
+   * OTRO (el puerto de cobrar) y no puede repetirse solo: un error de unicidad dejaría esa transacción abortada. Bajo `SERIALIZABLE`, un
+   * choque con una fila que esta transacción no ve aborta por serialización y el adaptador repite todo; en `read committed` devuelve `null`.
+   */
+  insertarSiNoExiste(nuevo: MovimientoNuevo): Promise<string | null>;
   /** Todos los movimientos de la sesión, reducidos a lo que suman: con ellos se calcula el arqueo. */
   paraSumar(empresa: EmpresaId, sesionId: string): Promise<MovimientoParaSumar[]>;
   /** El esperado de cada línea (medio, cuenta) de la sesión, ordenado por medio y cuenta. Solo lectura. */
@@ -148,6 +163,24 @@ function aMovimiento(fila: FilaDeMovimiento): MovimientoGuardado {
 }
 
 export function crearRepositorioDeMovimientos(db: Kysely<CajaDb>): RepositorioDeMovimientos {
+  const altaDe = (nuevo: MovimientoNuevo) =>
+    db.insertInto("movimiento_caja").values({
+      empresa_id: nuevo.empresa,
+      sesion_id: nuevo.sesionId,
+      clase: nuevo.clase,
+      medio_de_pago_id: nuevo.medioDePagoId,
+      cuenta_de_cobro_id: nuevo.cuentaDeCobroId,
+      moneda: nuevo.importe.moneda,
+      importe: importeATexto(nuevo.importe),
+      motivo: nuevo.motivo,
+      anula_a: nuevo.anulaA,
+      corrige_jornada: nuevo.corrigeJornada,
+      registrado_en: nuevo.registradoEn,
+      registrado_por: nuevo.registradoPor,
+      clave_idempotencia: nuevo.claveDeIdempotencia,
+      huella: nuevo.huella,
+    });
+
   const seleccionar = () =>
     db
       .selectFrom("movimiento_caja as m")
@@ -202,6 +235,18 @@ export function crearRepositorioDeMovimientos(db: Kysely<CajaDb>): RepositorioDe
       return fila === undefined ? null : aMovimiento(fila);
     },
 
+    async obtenerHuellaPorClave(empresa, clave) {
+      const fila = await db
+        .selectFrom("movimiento_caja")
+        .select(["id", "sesion_id", "huella"])
+        .where("empresa_id", "=", empresa)
+        .where("clave_idempotencia", "=", clave)
+        .executeTakeFirst();
+      return fila === undefined
+        ? null
+        : { id: fila.id, sesionId: fila.sesion_id, huella: fila.huella };
+    },
+
     async anulacionDe(empresa, movimientoId) {
       const fila = await db
         .selectFrom("movimiento_caja")
@@ -213,27 +258,16 @@ export function crearRepositorioDeMovimientos(db: Kysely<CajaDb>): RepositorioDe
     },
 
     async insertar(nuevo) {
-      const fila = await db
-        .insertInto("movimiento_caja")
-        .values({
-          empresa_id: nuevo.empresa,
-          sesion_id: nuevo.sesionId,
-          clase: nuevo.clase,
-          medio_de_pago_id: nuevo.medioDePagoId,
-          cuenta_de_cobro_id: nuevo.cuentaDeCobroId,
-          moneda: nuevo.importe.moneda,
-          importe: importeATexto(nuevo.importe),
-          motivo: nuevo.motivo,
-          anula_a: nuevo.anulaA,
-          corrige_jornada: nuevo.corrigeJornada,
-          registrado_en: nuevo.registradoEn,
-          registrado_por: nuevo.registradoPor,
-          clave_idempotencia: nuevo.claveDeIdempotencia,
-          huella: nuevo.huella,
-        })
-        .returning("id")
-        .executeTakeFirstOrThrow();
+      const fila = await altaDe(nuevo).returning("id").executeTakeFirstOrThrow();
       return fila.id;
+    },
+
+    async insertarSiNoExiste(nuevo) {
+      const fila = await altaDe(nuevo)
+        .onConflict((oc) => oc.doNothing())
+        .returning("id")
+        .executeTakeFirst();
+      return fila === undefined ? null : fila.id;
     },
 
     async paraSumar(empresa, sesionId) {

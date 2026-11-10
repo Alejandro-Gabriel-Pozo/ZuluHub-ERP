@@ -66,6 +66,11 @@ export interface RepositorioDeSesiones {
   obtenerPorClave(empresa: EmpresaId, clave: string): Promise<SesionGuardada | null>;
   /** La sesión no cerrada (abierta o en cierre) de la caja, si hay. */
   vigenteDeLaCaja(empresa: EmpresaId, cajaId: string): Promise<SesionGuardada | null>;
+  /**
+   * Lo mismo, tomando la fila de la sesión con `FOR SHARE` hasta el fin de la transacción (e3 §3.5, paso 3): `iniciarCierre` y `cerrar`
+   * (UPDATE) esperan al cobro en vuelo, y el cobro que llega después los ve. Solo la sesión: la caja no se bloquea.
+   */
+  vigenteDeLaCajaCompartida(empresa: EmpresaId, cajaId: string): Promise<SesionGuardada | null>;
   /** Alta de una sesión `ABIERTA` con su sello. Devuelve el id que genera la base. */
   abrir(nueva: SesionNueva): Promise<string>;
   /** `ABIERTA → EN_CIERRE`; `false` si no cambió ninguna fila (no estaba abierta). */
@@ -179,6 +184,16 @@ export function crearRepositorioDeSesiones(db: Kysely<CajaDb>): RepositorioDeSes
         .where("s.empresa_id", "=", empresa)
         .where("s.caja_id", "=", cajaId)
         .where("s.estado", "<>", "CERRADA")
+        .executeTakeFirst();
+      return fila === undefined ? null : aSesion(fila);
+    },
+
+    async vigenteDeLaCajaCompartida(empresa, cajaId) {
+      const fila = await seleccionar()
+        .where("s.empresa_id", "=", empresa)
+        .where("s.caja_id", "=", cajaId)
+        .where("s.estado", "<>", "CERRADA")
+        .forShare("s")
         .executeTakeFirst();
       return fila === undefined ? null : aSesion(fila);
     },

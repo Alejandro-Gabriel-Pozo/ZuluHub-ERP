@@ -8,6 +8,7 @@ import type { TxDeCatalogo, TxDeConsultasDeCatalogo } from "../../src/modulos/ca
 import type {
   TxDeCaja,
   TxDeConsultasDeCaja,
+  TxDeLecturaDeCaja,
   TxParaCajaPorDefecto,
 } from "../../src/modulos/caja/publico";
 import { ganchoDeSucursalDeCaja } from "../../src/modulos/caja/publico";
@@ -68,6 +69,10 @@ describe("la Tx compuesta de la composición contiene la Tx angosta de cada mód
   it("caja: la configuración (casos de uso y consultas)", () => {
     expectTypeOf<TxDeApp>().toExtend<TxDeCaja>();
     expectTypeOf<TxDeApp>().toExtend<TxDeConsultasDeCaja>();
+    // El puerto de cobrar de ventas: lo que lee (lectura previa, opciones, cobros de un origen) y lo que escribe (la misma Tx de caja).
+    expectTypeOf<TxDeApp>().toExtend<TxDeLecturaDeCaja>();
+    expectTypeOf<TxDeCaja>().toExtend<TxDeLecturaDeCaja>();
+    expectTypeOf<TxDeLecturaDeCaja>().not.toExtend<TxDeCaja>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeCaja>>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConsultasDeCaja>>();
   });

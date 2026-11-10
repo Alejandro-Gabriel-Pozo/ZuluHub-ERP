@@ -3,6 +3,7 @@ import { importeDesdeTexto } from "../../../primitivas/dinero/importe";
 import { ARS } from "../../../primitivas/dinero/moneda";
 import {
   TOPE_DE_IMPORTE_EN_CENTAVOS,
+  importeConRegla,
   importeDeEntrada,
   negarImporte,
   sumarImportes,
@@ -113,5 +114,45 @@ describe("importes de caja: sumar y negar", () => {
     expect(negarImporte(valor("12.34"))).toEqual(valor("-12.34"));
     expect(negarImporte(valor("-12.34"))).toEqual(valor("12.34"));
     expect(negarImporte(valor("0")).unidades).toBe(0n);
+  });
+});
+
+describe("importeConRegla: un importe ya construido contra el tope y el signo", () => {
+  it("cada regla admite lo suyo y rechaza el resto, en los bordes", () => {
+    const tope = TOPE_DE_IMPORTE_EN_CENTAVOS;
+    const casos: Readonly<Record<ReglaDeImporte, readonly [string, boolean][]>> = {
+      POSITIVO: [
+        ["0.00", false],
+        ["0.01", true],
+        ["-0.01", false],
+        ["999999999.99", true],
+        ["1000000000.00", false],
+      ],
+      NO_NEGATIVO: [
+        ["0.00", true],
+        ["-0.01", false],
+        ["999999999.99", true],
+        ["1000000000.00", false],
+      ],
+      CON_SIGNO_NO_CERO: [
+        ["0.00", false],
+        ["-0.01", true],
+        ["0.01", true],
+        ["-999999999.99", true],
+        ["-1000000000.00", false],
+        ["1000000000.00", false],
+      ],
+    };
+    expect(tope).toBe(99_999_999_999n);
+    for (const [regla, filas] of Object.entries(casos) as [ReglaDeImporte, [string, boolean][]][]) {
+      for (const [monto, admite] of filas) {
+        expect(importeConRegla(valor(monto), regla).ok, `${regla} ${monto}`).toBe(admite);
+      }
+    }
+    expect(importeConRegla(valor("0.00"), "POSITIVO")).toEqual({
+      ok: false,
+      error: "IMPORTE_INVALIDO",
+    });
+    expect(importeConRegla(valor("5.00"), "POSITIVO")).toEqual({ ok: true, valor: valor("5.00") });
   });
 });

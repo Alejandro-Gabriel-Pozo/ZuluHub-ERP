@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { DatoDelCobro } from "../estados";
-import { datosCompletados, validarDatosDelCobro, type DatosDelCobro } from "./datos-del-cobro";
+import {
+  datosCompletados,
+  datosEnFormaCompleta,
+  validarDatosDelCobro,
+  type DatosDelCobro,
+} from "./datos-del-cobro";
 import type { DatosQuePideElMedio } from "./medios";
 
 const TODOS: DatosQuePideElMedio = {
@@ -221,5 +226,28 @@ describe("datos opcionales del cobro (e3 §3.6)", () => {
       "ultimos4",
       "marca",
     ]);
+  });
+});
+
+describe("datosEnFormaCompleta: la forma completa sin juzgar", () => {
+  it("lo que no vino es null y lo que vino se conserva tal cual, sin validarlo", () => {
+    expect(datosEnFormaCompleta({})).toEqual(VACIOS);
+    expect(
+      datosEnFormaCompleta({
+        cupon: "con espacio",
+        ultimos4: "12",
+        marcaDeTarjetaId: "x",
+        cuotas: 99,
+        dni: "a.b",
+      }),
+    ).toEqual({
+      cupon: "con espacio",
+      ultimos4: "12",
+      marcaDeTarjetaId: "x",
+      cuotas: 99,
+      dni: "a.b",
+    });
+    expect(datosEnFormaCompleta({ cuotas: 0 }).cuotas).toBe(0);
+    expect(datosEnFormaCompleta({ cupon: "" }).cupon).toBe("");
   });
 });

@@ -1,6 +1,6 @@
 import { err, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
-import { ERRORES_DE_CAJA_POR_RESTRICCION } from "../persistencia/esquema";
+import { ERRORES_DE_CAJA_POR_RESTRICCION } from "../persistencia/errores-por-restriccion";
 
 /**
  * Traducción de las restricciones de la base a errores de negocio (ADR-004), con el mapa de caja. Cada caso de uso declara cuáles de
