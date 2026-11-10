@@ -117,7 +117,7 @@ async function emitir(
     sucursalId: ticket.sucursalId,
     receptor: entrada.receptor,
     renglones: datos.renglones.map((r) => ({
-      descripcion: descripcionDelRenglon(r),
+      descripcion: descripcionDelRenglon(r, facturador.largoMaximoDeLaDescripcion),
       cantidad: r.cantidad,
       unidad: unidadDelRenglon(r),
       precioUnitario: r.precioUnitario,

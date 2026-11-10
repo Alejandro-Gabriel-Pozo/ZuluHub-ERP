@@ -162,7 +162,7 @@ describe.skipIf(base === null)("ventas: facturar un ticket cobrado", () => {
 
   // ---- P1: doble clic ---------------------------------------------------------------------------------------------------------
 
-  it("P1: la misma clave dos veces seguidas devuelve el mismo comprobante y no escribe de más", async () => {
+  it("P1: repetir emitirComprobanteDeTicket con la misma clave deja una factura, un puntero y un trabajo, y devuelve yaExistia", async () => {
     const { e, t } = await preparar();
     const clave = nuevaClave();
     const primera = valorDe(await facturar(e, t.ticketId, { clave }));

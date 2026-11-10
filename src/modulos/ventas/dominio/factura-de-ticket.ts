@@ -1,5 +1,4 @@
 import { uuidV5DeLista } from "../../../primitivas/identificadores/uuid-determinista";
-import type { RenglonParaFacturar } from "../persistencia/tipos-de-lecturas";
 
 /**
  * Lo puro de facturar un ticket (E1 §3.3): los identificadores DETERMINÍSTICOS de cada intento y cómo se arma cada renglón de la factura.
@@ -8,11 +7,17 @@ import type { RenglonParaFacturar } from "../persistencia/tipos-de-lecturas";
  * Chequeo: `factura-de-ticket.test.ts`.
  */
 
+/** Lo que el dominio necesita saber de un renglón (el de persistencia lo cumple por forma: el dominio no importa la persistencia). */
+export type RenglonParaFacturar = Readonly<{
+  descripcion: string;
+  varianteNombre: string | null;
+  opciones: readonly Readonly<{ nombre: string }>[];
+  unidadDeVenta: string;
+  unidadSimbolo: string;
+}>;
+
 /** El espacio de nombres (uuid v5) de todo lo que ventas deriva al facturar: fijo para siempre, cambiarlo rompería la reconstrucción. */
 const ESPACIO_DE_FACTURAS = "7c1e4a9e-5b2d-4f6a-9d38-0e1f2a3b4c5d";
-
-/** Lo más largo que fiscal admite en la descripción de un renglón (`LIMITES_DE_COMPROBANTE.descripcion`). */
-export const LARGO_MAXIMO_DE_LA_DESCRIPCION = 200;
 
 export type TipoDeOrigenDeFactura = "EJEMPLAR_DE_TICKET" | "REEMISION_DE_TICKET";
 
@@ -43,19 +48,18 @@ export const documentoIdDeLaFactura = (ticket: string, intento: number): string 
   uuidV5DeLista(ESPACIO_DE_FACTURAS, ["documento", ticket, String(intento)]);
 
 /**
- * «Producto · tamaño · opción · opción» (separador « · » de `venta-rapida.html:421`). Si pasa de 200 caracteres se recorta a 199 y termina en
+ * «Producto · tamaño · opción · opción» (separador « · » de `venta-rapida.html:421`). `maximo` es lo más largo que fiscal admite en la descripción
+ * de un renglón: lo da el puerto del facturador (una sola fuente, la de fiscal). Si se pasa se recorta a `maximo - 1` y termina en
  * «…» (SUPUESTO S-4 de E1: fiscal rechazaría el renglón y la persona no podría facturar; el detalle completo queda en el ticket).
  */
-export function descripcionDelRenglon(r: RenglonParaFacturar): string {
+export function descripcionDelRenglon(r: RenglonParaFacturar, maximo: number): string {
   const partes = [
     r.descripcion,
     ...(r.varianteNombre === null ? [] : [r.varianteNombre]),
     ...r.opciones.map((o) => o.nombre),
   ];
   const texto = partes.join(" · ");
-  return texto.length <= LARGO_MAXIMO_DE_LA_DESCRIPCION
-    ? texto
-    : `${texto.slice(0, LARGO_MAXIMO_DE_LA_DESCRIPCION - 1)}…`;
+  return texto.length <= maximo ? texto : `${texto.slice(0, maximo - 1)}…`;
 }
 
 /** Fiscal imprime la unidad de todo lo que no sea «unidad»: quien conoce la unidad base (ventas) decide cuál es la implícita. */

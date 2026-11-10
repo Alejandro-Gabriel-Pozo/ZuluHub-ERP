@@ -80,8 +80,9 @@ export const DECLARACIONES = {
     },
   },
   emitirComprobanteDeTicket: {
-    // La declaración admite UNA acción; el caso exige además `ventas.ver` (ver `emitir-comprobante-de-ticket.ts`) y fiscal pide la suya otra vez.
-    accion: "comprobantes.emitir",
+    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `ventas.ver`; el caso exige además
+    // `comprobantes.emitir` (ver `emitir-comprobante-de-ticket.ts`) y fiscal pide la suya otra vez.
+    accion: "ventas.ver",
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {

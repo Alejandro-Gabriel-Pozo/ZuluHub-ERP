@@ -55,6 +55,8 @@ export type ErrorDelFacturador = string | Readonly<Record<string, unknown>>;
  * sus consultas): son parámetros para que este archivo no importe los contratos que lo usan (sería un ciclo).
  */
 export type FacturadorDeTickets<TxEscritura = never, TxLectura = TxEscritura> = Readonly<{
+  /** Lo más largo que fiscal admite en la descripción de un renglón: ventas recorta a esto, sin repetir el número. */
+  largoMaximoDeLaDescripcion: number;
   emitirEnTx(
     tx: TxEscritura,
     contexto: ContextoOperativo,

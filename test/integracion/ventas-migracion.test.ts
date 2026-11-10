@@ -609,8 +609,12 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
         if (!vaciado.ok)
           expect(["42501", "0A000"], `${tabla}: ${vaciado.mensaje}`).toContain(vaciado.codigo);
       }
-      // Las once juntas sí pasan el control de claves foráneas: ahí es el disparador de cada tabla el que frena.
-      const todas = await intentoDelDueno(dueno, `truncate ${TABLAS.join(", ")}`);
+      // Las once juntas (y el puntero de facturación que apunta a ellas, 0029) sí pasan el control de claves foráneas: ahí es el disparador
+      // de cada tabla el que frena.
+      const todas = await intentoDelDueno(
+        dueno,
+        `truncate ${[...TABLAS, "documento_de_ticket"].join(", ")}`,
+      );
       denegado(todas);
       if (!todas.ok) expect(todas.mensaje).toMatch(/no admite borrados|solo inserción/);
     } finally {
@@ -2613,6 +2617,8 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
 
   describe("reversión", () => {
     const ruta = join(CARPETA_DE_MIGRACIONES, "reversiones", "0028_revertir_ventas.sql");
+    // Con 0029 aplicada (el puntero `documento_de_ticket` apunta a ticket y ejemplar) hay que revertirla ANTES: las reversiones se hacen en orden inverso.
+    const rutaDe0029 = join(CARPETA_DE_MIGRACIONES, "reversiones", "0029_revertir_facturacion.sql");
 
     it("se niega con filas guardadas (sin confirmar), no cambia nada y avisa cuántas son", async () => {
       const sql = await readFile(ruta, "utf8");
@@ -2675,6 +2681,7 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
         // Con la confirmación: borra las once tablas.
         await c.query("begin");
         await c.query("set local pedernal.confirmar_reversion = 'SI'");
+        await c.query(await readFile(rutaDe0029, "utf8"));
         await c.query(sql);
         const { rows } = await c.query<{ n: string }>(
           "select count(*)::text as n from pg_class where relname = any($1) and relnamespace = 'public'::regnamespace",
@@ -2705,6 +2712,7 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
         );
         expect(antes[0]?.n).toBe("1");
         await c.query("begin");
+        await c.query(await readFile(rutaDe0029, "utf8"));
         await c.query(sql);
         await c.query(sql); // repetirla no cambia nada
         const { rows } = await c.query<{ n: string }>(

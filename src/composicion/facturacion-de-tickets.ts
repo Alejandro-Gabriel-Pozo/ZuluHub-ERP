@@ -7,7 +7,11 @@ import { ARS } from "../primitivas/dinero/moneda";
 import { precioUnitarioDesdeTexto } from "../primitivas/dinero/precio-unitario";
 import { sucursalId } from "../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
-import { CODIGOS_DE_ALICUOTA, puntoDeVentaId } from "../modulos/fiscal/publico";
+import {
+  CODIGOS_DE_ALICUOTA,
+  LIMITES_DE_COMPROBANTE,
+  puntoDeVentaId,
+} from "../modulos/fiscal/publico";
 import {
   emitirFacturaDeOrigenEnTx,
   vigenciaDeComprobantesEnTx,
@@ -103,6 +107,7 @@ export function crearFacturadorDeTickets(reglas: ReglasDeEmpresa): FacturadorDeT
     return { ...contexto, personaId };
   };
   return {
+    largoMaximoDeLaDescripcion: LIMITES_DE_COMPROBANTE.descripcion,
     async emitirEnTx(tx, contexto, entrada) {
       const deFiscal = aEntradaDeFiscal(entrada);
       if (!deFiscal.ok) return deFiscal;

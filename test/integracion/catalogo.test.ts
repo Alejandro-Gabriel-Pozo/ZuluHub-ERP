@@ -117,6 +117,8 @@ const TABLAS_DE_NEGOCIO = [
   "cobranza_de_ticket",
   "aplicacion_de_cobro",
   "ticket_correccion",
+  // Facturación de tickets (0029_facturacion)
+  "documento_de_ticket",
 ] as const;
 const TABLAS_DE_AUDITORIA = ["auditoria_empresa", "auditoria_plataforma", "auditoria_acceso_grupo"];
 
@@ -358,6 +360,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "cuenta_consumo:SELECT", // 0028
           "linea_cuenta:SELECT", // 0028
           "linea_cuenta_opcion:SELECT", // 0028
+          "documento_de_ticket:SELECT", // 0029
           "numerador_ticket:SELECT", // 0028
           "ticket:SELECT", // 0028
           "ticket_ejemplar:SELECT", // 0028
@@ -588,6 +591,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...["estado", "anulada_por", "anulada_en", "motivo_de_anulacion"].map(
             (c) => `pedernal_app:linea_cuenta.${c}`,
           ),
+          ...["vigente", "no_vigente_en"].map((c) => `pedernal_app:documento_de_ticket.${c}`),
           ...["ultimo"].map((c) => `pedernal_app:numerador_ticket.${c}`),
           ...["estado", "ejemplar_vigente"].map((c) => `pedernal_app:ticket.${c}`),
           ...["resultado"].map((c) => `pedernal_app:cobranza_de_ticket.${c}`),
@@ -1209,6 +1213,17 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "recargo",
             "origen_del_recargo",
           ].map((c) => `linea_cuenta_opcion.${c}`),
+          ...[
+            "id",
+            "empresa_id",
+            "ticket_id",
+            "ejemplar_id",
+            "intento",
+            "clave",
+            "comprobante_id",
+            "creado_por",
+            "creado_en",
+          ].map((c) => `documento_de_ticket.${c}`),
           ...["empresa_id", "sucursal_id"].map((c) => `numerador_ticket.${c}`),
           ...[
             "id",

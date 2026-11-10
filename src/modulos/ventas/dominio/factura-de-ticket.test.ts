@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { RenglonParaFacturar } from "../persistencia/tipos-de-lecturas";
 import {
-  LARGO_MAXIMO_DE_LA_DESCRIPCION,
   comprobanteIdDeLaFactura,
   descripcionDelRenglon,
   documentoIdDeLaFactura,
   origenDeLaFactura,
+  type RenglonParaFacturar,
   unidadDelRenglon,
 } from "./factura-de-ticket";
 
@@ -13,16 +12,11 @@ const TICKET = "11111111-1111-4111-8111-111111111111";
 const EJEMPLAR = "22222222-2222-4222-8222-222222222222";
 
 const renglon = (cambios: Partial<RenglonParaFacturar> = {}): RenglonParaFacturar => ({
-  lineaCuentaId: "33333333-3333-4333-8333-333333333333",
   descripcion: "Pan de campo",
   varianteNombre: null,
   opciones: [],
-  cantidad: "1",
   unidadDeVenta: "UNIDAD",
   unidadSimbolo: "u",
-  precioUnitario: "1000.00",
-  alicuota: "21",
-  importe: "1000.00",
   ...cambios,
 });
 
@@ -69,22 +63,22 @@ describe("descripcionDelRenglon", () => {
       descripcionDelRenglon(
         renglon({
           varianteNombre: "Grande",
-          opciones: [
-            { grupo: "Extra", nombre: "Queso", recargo: "0.00" },
-            { grupo: "Extra", nombre: "Jamón", recargo: "0.00" },
-          ],
+          opciones: [{ nombre: "Queso" }, { nombre: "Jamón" }],
         }),
+        200,
       ),
     ).toBe("Pan de campo · Grande · Queso · Jamón");
-    expect(descripcionDelRenglon(renglon())).toBe("Pan de campo");
+    expect(descripcionDelRenglon(renglon(), 200)).toBe("Pan de campo");
   });
 
   it("de hasta 200 caracteres no se toca; de más se recorta a 199 y termina en «…»", () => {
-    const justo = "a".repeat(LARGO_MAXIMO_DE_LA_DESCRIPCION);
-    expect(descripcionDelRenglon(renglon({ descripcion: justo }))).toBe(justo);
-    const largo = descripcionDelRenglon(renglon({ descripcion: "a".repeat(201) }));
+    const justo = "a".repeat(200);
+    expect(descripcionDelRenglon(renglon({ descripcion: justo }), 200)).toBe(justo);
+    const largo = descripcionDelRenglon(renglon({ descripcion: "a".repeat(201) }), 200);
     expect(largo).toBe(`${"a".repeat(199)}…`);
-    expect(largo).toHaveLength(LARGO_MAXIMO_DE_LA_DESCRIPCION);
+    expect(largo).toHaveLength(200);
+    // El máximo lo manda quien llama: con otro máximo, otro recorte.
+    expect(descripcionDelRenglon(renglon({ descripcion: "abcdef" }), 4)).toBe("abc…");
   });
 });
 
