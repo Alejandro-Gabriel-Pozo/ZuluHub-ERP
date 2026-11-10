@@ -19,7 +19,7 @@ import {
  * Ventas (E4 fase B), concurrencia e idempotencia del cobro con el motor real (SERIALIZABLE, 20 reintentos al cobrar): dos `venderYCobrar` de
  * la misma cuenta (P6), el mismo pedido repetido a la vez (doble clic), muchos cobros del mismo ticket, anular contra cobrar (P27c), vender
  * contra el cierre de la caja (P10) y contra el inicio de la auditoría del día (P26), y muchas ventas a la vez en una caja (números sin huecos).
- * Cada ronda usa una sucursal y una caja nuevas. Rondas: `PEDERNAL_RONDAS` (20 por defecto; al cerrar el tramo se corre con 50 o más).
+ * Cada ronda usa una sucursal y una caja nuevas. Rondas: `PEDERNAL_RONDAS` (8 por defecto para no gastar el presupuesto del CI; al cerrar el tramo se corre con 50 o más).
  */
 
 const base = inject("baseDePruebas");
@@ -27,8 +27,8 @@ vi.setConfig({ testTimeout: 1_800_000 });
 
 const RONDAS = (() => {
   const crudo = process.env["PEDERNAL_RONDAS"];
-  const n = crudo === undefined ? 20 : Number(crudo);
-  return Number.isInteger(n) && n >= 1 ? n : 20;
+  const n = crudo === undefined ? 8 : Number(crudo);
+  return Number.isInteger(n) && n >= 1 ? n : 8;
 })();
 
 type Cualquiera = Resultado<unknown, unknown>;

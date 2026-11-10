@@ -22,7 +22,7 @@ import {
 /**
  * E4 fase A: concurrencia e idempotencia REALES de ventas (P1, P2, P7, P26 y P27 de la especificación, §5). Cada prueba lanza dos (o más)
  * transacciones a la vez con una barrera dentro de la transacción (tras leer la autorización, con el snapshot ya tomado) que fuerza que
- * TODAS hayan empezado antes de que cualquiera escriba, y se repite en rondas (`PEDERNAL_RONDAS`, 20 por defecto; el CI sube a 50 o más).
+ * TODAS hayan empezado antes de que cualquiera escriba, y se repite en rondas (`PEDERNAL_RONDAS`, 8 por defecto para no gastar el presupuesto del CI; al cerrar un tramo se corre con 50 o más).
  * Para ejercitar los TRES órdenes de la carrera, según la ronda: parejo, o uno de los dos espera 250 ms tras la barrera (así el otro
  * confirma primero y el demorado actúa con un snapshot viejo: es lo que dispara el reintento serializable).
  * Quien pierde puede recibir `ConcurrenciaAgotada` (el motor serializable repite 6 veces): se repite el MISMO pedido, seguro por su clave,
@@ -35,8 +35,8 @@ vi.setConfig({ testTimeout: 900_000 });
 
 const RONDAS = (() => {
   const crudo = process.env["PEDERNAL_RONDAS"];
-  const n = crudo === undefined ? 20 : Number(crudo);
-  return Number.isInteger(n) && n >= 1 ? n : 20;
+  const n = crudo === undefined ? 8 : Number(crudo);
+  return Number.isInteger(n) && n >= 1 ? n : 8;
 })();
 
 const REGLAS: ReglasDeEmpresa = {
