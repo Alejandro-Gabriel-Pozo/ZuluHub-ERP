@@ -3,6 +3,7 @@ import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/decla
 const ARCHIVO_DE_DEPOSITOS = "test/integracion/stock-depositos.test.ts";
 const ARCHIVO_DE_IDEMPOTENCIA = "test/integracion/stock-idempotencia.test.ts";
 const ARCHIVO_DE_CONTEOS = "test/integracion/stock-conteos.test.ts";
+const ARCHIVO_DE_COMPOSICIONES = "test/integracion/stock-composiciones.test.ts";
 
 /**
  * Los casos de uso de stock (E5 §3.2) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar
@@ -161,6 +162,27 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_CONTEOS,
         it: "I10: cancelar dos veces es ok y no audita la segunda",
+      },
+    },
+  },
+  // ---- composiciones (E5-T7): el pedido fija el conjunto final; el mismo contenido (o la receta ya retirada) se repite sin escribir ----
+  guardarComposicion: {
+    accion: "composiciones.editar",
+    repeticion: {
+      regla: "SIN_CAMBIOS",
+      prueba: {
+        archivo: ARCHIVO_DE_COMPOSICIONES,
+        it: "I11: repetir guardarComposicion con el mismo contenido devuelve la versión vigente con yaExistia, sin versión nueva ni auditoría, aunque la versión esperada sea vieja",
+      },
+    },
+  },
+  retirarComposicion: {
+    accion: "composiciones.editar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_COMPOSICIONES,
+        it: "I12: retirar dos veces la receta es ok y no escribe ni audita la segunda",
       },
     },
   },

@@ -81,6 +81,9 @@ export type ErrorDeStock =
   | "CONTEO_CANCELADO"
   | "CONTEO_SIN_REGISTROS"
   | "MOTIVO_REQUERIDO"
+  // puertos de venta (E5-T7): lo que la explosión de una línea vendida rechaza
+  | "OPCION_CON_CONSUMO_EN_VENTA_POR_PESO"
+  | "VERSION_DE_OPCION_NO_ENCONTRADA"
   // composiciones
   | "PRODUCTO_NO_ES_VENDIBLE"
   | "COMPOSICION_VACIA"

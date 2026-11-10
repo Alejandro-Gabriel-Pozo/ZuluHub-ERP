@@ -16,4 +16,6 @@ export const DECLARACIONES_DE_CONSULTAS = {
   // La existencia teórica y la diferencia de un conteo solo viajan con `conteos.aplicar` (a ciegas): lo decide la consulta, no la pantalla.
   fichaDeConteo: { accion: "stock.ver" },
   listarConteos: { accion: "stock.ver" },
+  // La receta es de la empresa, no de una sucursal: la ve quien puede mirar stock (E5-T7).
+  composicionDeProducto: { accion: "stock.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

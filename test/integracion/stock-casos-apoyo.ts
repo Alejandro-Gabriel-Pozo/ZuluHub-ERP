@@ -7,6 +7,7 @@ import type { TransaccionesDePostgres } from "../../src/adaptadores/postgres/tra
 import {
   crearCasosDeUsoDeStock,
   crearConsultasDeStock,
+  crearPuertosDeStock,
   crearRepositoriosDeStock,
   type RepositoriosDeStock,
 } from "../../src/modulos/stock/publico";
@@ -81,6 +82,8 @@ export async function montarStock(
   const alcances = new Map<string, readonly SucursalId[]>();
   /** Módulos que la autorización deja de sumar (para probar el módulo apagado). */
   const sinModulos = new Set<string>();
+  /** Perillas que los derechos de uso muestran ENCENDIDAS (el plan de las pruebas no las enciende: ninguna empresa tiene extras). */
+  const perillasEncendidas = new Set<string>();
   /** La barrera de la ronda en curso: cada transacción espera tras leer su autorización hasta que llegaron todas. */
   let barrera: () => Promise<void> = () => Promise.resolve();
   const entorno = crearEntornoDePrueba(propia.base, opciones.conexiones ?? 12, (tx) => {
@@ -88,6 +91,24 @@ export async function montarStock(
     return {
       ...tx,
       ...crearRepositoriosDeStock(tx.db),
+      derechos: {
+        ...tx.derechos,
+        deLaEmpresa: async (contexto) => {
+          const reales = await tx.derechos.deLaEmpresa(contexto);
+          if (perillasEncendidas.size === 0) return reales;
+          return {
+            ...reales,
+            perillas: new Map(
+              [...reales.perillas].map(([perilla, valor]) => [
+                perilla,
+                perillasEncendidas.has(perilla) && valor.tipo === "INTERRUPTOR"
+                  ? { ...valor, encendida: true }
+                  : valor,
+              ]),
+            ),
+          };
+        },
+      },
       autorizacion: {
         ...tx.autorizacion,
         sucursalesDelActor: async (contexto, opcionesDeAlcance) => {
@@ -115,6 +136,8 @@ export async function montarStock(
   await dueno.connect();
   const reglas = opciones.reglas ?? REGLAS_DE_PRUEBA;
   const casos = crearCasosDeUsoDeStock({ transacciones: entorno, reglas });
+  /** Los puertos de stock tal como los recibiría ventas de la composición (T12), y la transacción del llamador sobre la que corren. */
+  const puertos = crearPuertosDeStock({ reglas });
   const consultas = crearConsultasDeStock({
     transacciones: entorno,
     reglas,
@@ -311,6 +334,13 @@ export async function montarStock(
     },
     casos,
     consultas,
+    puertos,
+    encenderPerilla: (perilla: "composiciones_con_perdida" | "subcomposiciones") => {
+      perillasEncendidas.add(perilla);
+    },
+    apagarPerillas: () => {
+      perillasEncendidas.clear();
+    },
     escenario,
     filas,
     contar,

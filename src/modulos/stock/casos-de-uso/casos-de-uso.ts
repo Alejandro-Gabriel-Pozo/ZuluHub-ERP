@@ -5,6 +5,7 @@ import {
   armarCancelarConteo,
   armarRegistrarConteo,
 } from "./conteos";
+import { armarGuardarComposicion, armarRetirarComposicion } from "./composiciones";
 import type { DependenciasDeStock } from "./contrato";
 import type { DECLARACIONES } from "./declaraciones";
 import { armarAnularMovimiento } from "./anulaciones";
@@ -45,6 +46,9 @@ export function crearCasosDeUsoDeStock(dependencias: DependenciasDeStock) {
     registrarConteo: armarRegistrarConteo(dependencias),
     aplicarConteo: armarAplicarConteo(dependencias),
     cancelarConteo: armarCancelarConteo(dependencias),
+    // composiciones (E5-T7)
+    guardarComposicion: armarGuardarComposicion(dependencias),
+    retirarComposicion: armarRetirarComposicion(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

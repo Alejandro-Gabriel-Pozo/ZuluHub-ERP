@@ -2,6 +2,7 @@ import type { NivelesDeControl } from "../../../capacidades/controles/niveles";
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { Auditoria } from "../../../puertos/auditoria";
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
+import type { LecturaDeDerechosDeUso } from "../../../puertos/derechos-de-uso";
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { LecturaDeEstados, RepositorioDeSucursales } from "../../empresas/publico";
 import type { RepositoriosDeStock } from "../persistencia/repositorios-de-stock";
@@ -21,6 +22,8 @@ export type TxDeStock = LecturaDeEstados &
     auditoria: Auditoria;
     /** Quién es el actor, qué módulos tiene la empresa y en qué sucursales opera, leído dentro de la transacción (sin caché). */
     autorizacion: CargaDeAutorizacion;
+    /** Lo que el plan deja usar (las perillas de pérdida y subcomposiciones de la receta), leído en esta transacción y sin caché. */
+    derechos: Pick<LecturaDeDerechosDeUso, "deLaEmpresa">;
   }>;
 
 export type DependenciasDeStock = Readonly<{

@@ -53,6 +53,13 @@ export type {
   SalidaDeCancelarConteo,
   SalidaDeRegistrarConteo,
 } from "./casos-de-uso/conteos";
+export type {
+  ComponenteDeEntrada,
+  EntradaDeGuardarComposicion,
+  EntradaDeRetirarComposicion,
+  SalidaDeGuardarComposicion,
+  SalidaDeRetirarComposicion,
+} from "./casos-de-uso/composiciones";
 export type { RenglonPedido } from "./casos-de-uso/movimientos-comun";
 // El núcleo que escribe un movimiento en la transacción de OTRO módulo (salida por venta, reversión y entrada por origen: E5-T7 y E12).
 export {
@@ -62,6 +69,42 @@ export {
   type PedidoDeMovimiento,
 } from "./casos-de-uso/movimiento-en-tx";
 export { traducirMovimiento } from "./casos-de-uso/movimientos-comun";
+// Los puertos que stock ofrece a ventas y a compras (E5-T7): contratos, fábricas y los tipos de lo que entra y sale de cada uno.
+export {
+  crearArticulosDeVenta,
+  crearConsumoDeStock,
+  crearDepositoDeVenta,
+  crearEntradaPorOrigen,
+  crearExistenciaParaMostrar,
+  crearPuertosDeStock,
+  crearReversionDeStock,
+  type ArticulosDeVenta,
+  type ConsumoDeStock,
+  type DepositoDeVenta,
+  type DependenciasDePuertosDeStock,
+  type EntradaPorOrigen,
+  type ExistenciaParaMostrar,
+  type PuertosDeStock,
+  type ReversionDeStock,
+} from "./puertos";
+export type {
+  AvisoDeSalidaPorVenta,
+  ControlDeUnProducto,
+  EntradaDeEntradaPorOrigen,
+  EntradaDeReversionPorOrigen,
+  EntradaDeSalidaPorVenta,
+  ExistenciaDeProducto,
+  OpcionVendida,
+  OrigenDeRecepcion,
+  OrigenDeVenta,
+  RenglonDeEntradaPorOrigen,
+  RenglonDeVenta,
+  SalidaDeEntradaPorOrigen,
+  SalidaDeReversionPorOrigen,
+  SalidaDeSalidaPorVenta,
+  TxDeLecturaDeStock,
+} from "./casos-de-uso/tipos-de-puertos";
+export type { ComponenteDeLaReceta, ComposicionDeProducto } from "./consultas/composiciones";
 export type { DepositoDeLista } from "./consultas/depositos";
 export type {
   CursorDeExistencias,
