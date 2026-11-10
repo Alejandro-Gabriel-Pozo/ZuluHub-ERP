@@ -22,6 +22,7 @@ export const DECLARACIONES_DE_CONSULTAS = {
   listarPuntosDeVentaParaEmitir: { accion: "comprobantes.emitir_manual" },
   verComprobante: { accion: "comprobantes.ver" },
   vigenciaDeComprobantes: { accion: "comprobantes.ver" },
+  comprobanteVigenteDeUnOrigen: { accion: "comprobantes.ver" },
   modeloDeImpresion: { accion: "comprobantes.ver" },
   estadoDeCertificados: { accion: "certificados.gestionar" },
   estadoDeLaConfiguracionFiscal: { accion: "datos_fiscales.editar" },

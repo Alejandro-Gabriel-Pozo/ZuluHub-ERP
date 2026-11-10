@@ -11,6 +11,11 @@ export type {
   ErrorAlListarComprobantes,
 } from "../consultas/listar-comprobantes";
 export type { EntradaDeVerComprobante, ErrorAlVerComprobante } from "../consultas/ver-comprobante";
+export type {
+  ComprobanteVigenteDeUnOrigen,
+  EntradaDeComprobanteVigenteDeUnOrigen,
+  ErrorAlPedirElComprobanteDeUnOrigen,
+} from "../consultas/comprobante-vigente-de-un-origen";
 export {
   LIMITE_DE_IDS_DE_VIGENCIA,
   type EntradaDeVigenciaDeComprobantes,

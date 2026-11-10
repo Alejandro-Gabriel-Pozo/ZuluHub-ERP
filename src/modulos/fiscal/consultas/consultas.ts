@@ -10,6 +10,7 @@ import { armarListarPuntosDeVentaDeLaSucursal } from "./puntos-de-venta-de-la-su
 import { armarPuntosDeVentaDelEmisor } from "./puntos-de-venta-del-emisor";
 import { armarListarPuntosDeVentaParaEmitir } from "./puntos-de-venta-para-emitir";
 import { armarVerComprobante } from "./ver-comprobante";
+import { armarComprobanteVigenteDeUnOrigen } from "./comprobante-vigente-de-un-origen";
 import { armarVigenciaDeComprobantes } from "./vigencia-de-comprobantes";
 
 /**
@@ -25,6 +26,7 @@ export function crearConsultasDeFacturacion(dependencias: DependenciasDeConsulta
     listarPuntosDeVentaParaEmitir: armarListarPuntosDeVentaParaEmitir(dependencias),
     verComprobante: armarVerComprobante(dependencias),
     vigenciaDeComprobantes: armarVigenciaDeComprobantes(dependencias),
+    comprobanteVigenteDeUnOrigen: armarComprobanteVigenteDeUnOrigen(dependencias),
     modeloDeImpresion: armarModeloDeImpresion(dependencias),
     estadoDeCertificados: armarEstadoDeCertificados(dependencias),
     estadoDeLaConfiguracionFiscal: armarEstadoDeLaConfiguracionFiscal(dependencias),

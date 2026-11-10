@@ -1,7 +1,18 @@
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
-import { comprobanteId, type ComprobanteId } from "../../src/modulos/fiscal/publico";
+import {
+  comprobanteId,
+  puntoDeVentaId,
+  type ComprobanteId,
+  type EntradaDeFacturaDeOrigen,
+} from "../../src/modulos/fiscal/publico";
+import { cantidadDesdeTexto } from "../../src/primitivas/cantidad/cantidad";
+import { importeDesdeTexto } from "../../src/primitivas/dinero/importe";
+import { ARS } from "../../src/primitivas/dinero/moneda";
+import { precioUnitarioDesdeTexto } from "../../src/primitivas/dinero/precio-unitario";
+import { sucursalId } from "../../src/primitivas/identificadores/marca";
+import { consumidorFinal } from "../utilidades/facturacion";
 import { EmisionFalsa } from "../utilidades/emision-falsa";
 import { renglon } from "../utilidades/facturacion";
 import { crearBaseAparte } from "./entorno";
@@ -226,5 +237,121 @@ describe.skipIf(base === null)("facturación E1-T2: la vigencia de los comproban
     expect(await p.vigencia(nota)).toEqual([
       { comprobanteId: nota, vigente: true, motivoNoVigente: null },
     ]);
+  });
+
+  // ===========================================================================================================
+  describe("comprobanteVigenteDeUnOrigen: la lectura con la que quien factura verifica si ya está facturado, sin puntero propio", () => {
+    const entradaDe = (
+      e: Awaited<ReturnType<typeof preparar>>["e"],
+      tipo: "EJEMPLAR_DE_TICKET" | "REEMISION_DE_TICKET",
+      origen: string,
+    ): EntradaDeFacturaDeOrigen => ({
+      origen: { tipo, id: origen },
+      comprobanteId: randomUUID(),
+      puntoDeVentaId: puntoDeVentaId(e.pv),
+      sucursalEsperadaId: sucursalId(e.sucursal),
+      receptor: consumidorFinal,
+      renglones: [
+        {
+          descripcion: "Pan",
+          cantidad: cantidadDesdeTexto("1"),
+          unidad: null,
+          precioUnitario: precioUnitarioDesdeTexto("121.00"),
+          alicuota: "21",
+        },
+      ],
+      totalEsperado: importeDesdeTexto(ARS, "121.00"),
+    });
+
+    it("nunca facturado: null; recién emitido (Validando), incierto (Confirmando) o autorizado: es el vigente; rechazado: null otra vez", async () => {
+      const p = await preparar();
+      const origen = randomUUID();
+      const preguntar = async (tipo = "EJEMPLAR_DE_TICKET", id = origen) =>
+        exito(
+          await p.consultas.comprobanteVigenteDeUnOrigen(p.como(), {
+            origenTipo: tipo,
+            origenId: id,
+          }),
+        );
+      expect(await preguntar()).toBeNull();
+      const salida = exito(
+        await p.casos.emitirFacturaDeOrigen(p.como(), entradaDe(p.e, "EJEMPLAR_DE_TICKET", origen)),
+      );
+      expect(await preguntar()).toEqual({
+        comprobanteId: salida.comprobanteId,
+        tipo: "FACTURA_B",
+        estado: "PENDIENTE",
+        total: "121.00",
+      });
+      p.falsa.programar("INCIERTO");
+      exito(await p.validar(salida.comprobanteId as ComprobanteId));
+      expect(await preguntar()).toMatchObject({ estado: "INCIERTO" });
+      // El otro tipo de origen con el mismo id es otro origen.
+      expect(await preguntar("REEMISION_DE_TICKET")).toBeNull();
+    });
+
+    it("rechazado por ARCA: el origen queda libre (null) y el mismo origen se puede preguntar de nuevo", async () => {
+      const p = await preparar();
+      const origen = randomUUID();
+      const salida = exito(
+        await p.casos.emitirFacturaDeOrigen(p.como(), entradaDe(p.e, "EJEMPLAR_DE_TICKET", origen)),
+      );
+      p.falsa.programar("RECHAZA");
+      exito(await p.validar(salida.comprobanteId as ComprobanteId));
+      expect(
+        exito(
+          await p.consultas.comprobanteVigenteDeUnOrigen(p.como(), {
+            origenTipo: "EJEMPLAR_DE_TICKET",
+            origenId: origen,
+          }),
+        ),
+      ).toBeNull();
+    });
+
+    it("acreditado por completo: el origen viejo da null y el de reemisión devuelve la factura nueva", async () => {
+      const p = await preparar();
+      const origen = randomUUID();
+      const primera = exito(
+        await p.casos.emitirFacturaDeOrigen(p.como(), entradaDe(p.e, "EJEMPLAR_DE_TICKET", origen)),
+      );
+      exito(await p.validar(primera.comprobanteId as ComprobanteId));
+      exito(await p.validar(await p.nota(primera.comprobanteId as ComprobanteId, "121.00")));
+      const reemisionId = randomUUID();
+      const nueva = exito(
+        await p.casos.emitirFacturaDeOrigen(
+          p.como(),
+          entradaDe(p.e, "REEMISION_DE_TICKET", reemisionId),
+        ),
+      );
+      const preguntar = async (origenTipo: string, origenId: string) =>
+        exito(await p.consultas.comprobanteVigenteDeUnOrigen(p.como(), { origenTipo, origenId }));
+      expect(await preguntar("EJEMPLAR_DE_TICKET", origen)).toBeNull();
+      expect(await preguntar("REEMISION_DE_TICKET", reemisionId)).toMatchObject({
+        comprobanteId: nueva.comprobanteId,
+      });
+    });
+
+    it("aislamiento: el origen de otra empresa no existe; un origen mal formado se rechaza", async () => {
+      const a = await preparar();
+      const b = await preparar();
+      const origen = randomUUID();
+      exito(
+        await a.casos.emitirFacturaDeOrigen(a.como(), entradaDe(a.e, "EJEMPLAR_DE_TICKET", origen)),
+      );
+      expect(
+        exito(
+          await b.consultas.comprobanteVigenteDeUnOrigen(b.como(), {
+            origenTipo: "EJEMPLAR_DE_TICKET",
+            origenId: origen,
+          }),
+        ),
+      ).toBeNull();
+      expect(
+        await a.consultas.comprobanteVigenteDeUnOrigen(a.como(), {
+          origenTipo: "MANUAL",
+          origenId: origen,
+        }),
+      ).toEqual({ ok: false, error: "ORIGEN_INVALIDO" });
+    });
   });
 });

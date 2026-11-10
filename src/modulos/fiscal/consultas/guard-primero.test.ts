@@ -98,6 +98,11 @@ const LLAMADAS: Record<ConAccion, (consultas: ConsultasDeFacturacion) => Promise
     c.listarPuntosDeVentaParaEmitir(contexto, { sucursalElegida: sucursalId("s-1") }),
   verComprobante: (c) => c.verComprobante(contexto, { comprobanteId: ID }),
   vigenciaDeComprobantes: (c) => c.vigenciaDeComprobantes(contexto, { comprobanteIds: [ID] }),
+  comprobanteVigenteDeUnOrigen: (c) =>
+    c.comprobanteVigenteDeUnOrigen(contexto, {
+      origenTipo: "EJEMPLAR_DE_TICKET",
+      origenId: "0b3a0c5e-8f7d-4c1b-9a2e-1d2c3b4a5f61",
+    }),
   modeloDeImpresion: (c) => c.modeloDeImpresion(contexto, { comprobanteId: ID }),
   estadoDeCertificados: (c) => c.estadoDeCertificados(contexto, { emisorId: emisorId("x-1") }),
   estadoDeLaConfiguracionFiscal: (c) => c.estadoDeLaConfiguracionFiscal(contexto),
@@ -145,8 +150,9 @@ const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
 };
 
 describe("P7: el guard va primero en cada consulta del facturador", () => {
-  it("hay once consultas, todas con acción: cinco de comprobantes, dos de emitir, el estado de los certificados y tres de configuración fiscal", () => {
+  it("hay doce consultas, todas con acción: seis de comprobantes, dos de emitir, el estado de los certificados y tres de configuración fiscal", () => {
     expect([...NOMBRES].sort()).toEqual([
+      "comprobanteVigenteDeUnOrigen",
       "datosFiscalesDelEmisor",
       "discriminaIvaAlEmitir",
       "estadoDeCertificados",
@@ -160,7 +166,7 @@ describe("P7: el guard va primero en cada consulta del facturador", () => {
       "vigenciaDeComprobantes",
     ]);
     expect(Object.keys(DECLARACIONES_DE_CONSULTAS).sort()).toEqual([...NOMBRES].sort());
-    expect(NOMBRES_DE_COMPROBANTES).toHaveLength(5);
+    expect(NOMBRES_DE_COMPROBANTES).toHaveLength(6);
     expect(NOMBRES_DE_EMITIR).toHaveLength(2);
     expect([...NOMBRES_DE_FACTURACION, ...NOMBRES_DE_CONFIGURACION].sort()).toEqual(
       [...NOMBRES].sort(),
