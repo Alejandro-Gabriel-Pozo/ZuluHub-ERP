@@ -249,8 +249,8 @@ describe("armarLaHoja: la unidad del renglón (versión 4)", () => {
   ];
   const peso = imprimibleDe(facturaArmada(consumidorFinal, conPeso));
 
-  it("el renglón de peso muestra «1,25 kg» junto a la cantidad y el de unidad base, solo la cantidad, en A4 y en 80 mm", () => {
-    for (const formato of ["A4", "80mm"] as const) {
+  it("el renglón de peso muestra «1,25 kg» junto a la cantidad y el de unidad base, solo la cantidad, en A4 y en el ticket de 80 mm", () => {
+    for (const formato of ["A4", "TICKET"] as const) {
       const h = armarLaHoja({}, paraLaHoja(modelo(peso)), formato);
       expect(h.renglones[0]?.cantidad, formato).toBe("1,25 kg");
       expect(h.renglones[0]?.cuenta, formato).toMatch(/^1,25 kg × /);
