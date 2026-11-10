@@ -24,13 +24,14 @@ export interface LecturasDeTicket {
 export function crearLecturasDeTicket(db: Kysely<VentasDb>): LecturasDeTicket {
   async function renglonesDe(empresa: EmpresaId, ejemplar: string): Promise<RenglonParaFacturar[]> {
     const filas = await sql<Fila>`
-      select l.id as linea_cuenta_id, l.descripcion, l.variante_nombre, el.cantidad::text as cantidad, l.unidad_de_venta,
+      select l.id as linea_cuenta_id, l.descripcion, l.variante_nombre, el.cantidad::text as cantidad, l.unidad_de_venta, um.simbolo as unidad_simbolo,
              l.precio_unitario::text as precio_unitario, l.alicuota, el.importe::text as importe,
              coalesce((select json_agg(json_build_object('grupo', o.nombre_de_grupo, 'nombre', o.nombre, 'recargo', o.recargo::text)
                                        order by o.orden)
                          from linea_cuenta_opcion o where o.empresa_id = l.empresa_id and o.linea_id = l.id), '[]'::json) as opciones
         from ejemplar_linea el
         join linea_cuenta l on l.id = el.linea_cuenta_id and l.empresa_id = el.empresa_id
+        join unidad_de_medida um on um.id = l.unidad_de_venta
        where el.empresa_id = ${empresa} and el.ejemplar_id = ${ejemplar}
        order by l.posicion`.execute(db);
     return filas.rows.map((f) => ({
@@ -40,6 +41,7 @@ export function crearLecturasDeTicket(db: Kysely<VentasDb>): LecturasDeTicket {
       opciones: f["opciones"] as RenglonParaFacturar["opciones"],
       cantidad: texto(f["cantidad"]),
       unidadDeVenta: texto(f["unidad_de_venta"]),
+      unidadSimbolo: texto(f["unidad_simbolo"]),
       precioUnitario: texto(f["precio_unitario"]),
       alicuota: texto(f["alicuota"]),
       importe: texto(f["importe"]),

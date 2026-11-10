@@ -34,7 +34,7 @@ import { personaId } from "../../src/primitivas/identificadores/marca";
  * módulos; el ROL y el ALCANCE salen de la base, como siempre), los casos de uso y consultas de ventas, los del cierre con el aporte de
  * ventas registrado, y atajos del dueño de la base (que evade RLS) solo para armar el escenario. Lo que se prueba pasa por el rol real.
  */
-export const AHORA = "2026-11-09T15:00:00Z"; // 12:00 en Argentina: jornada del 2026-11-09
+const AHORA = "2026-11-09T15:00:00Z"; // 12:00 en Argentina: jornada del 2026-11-09
 export const FECHA_DE_NEGOCIO = "2026-11-09";
 
 const REGLAS_DE_PRUEBA: ReglasDeEmpresa = {

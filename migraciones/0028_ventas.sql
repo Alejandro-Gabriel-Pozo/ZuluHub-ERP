@@ -91,7 +91,7 @@ GRANT EXECUTE ON FUNCTION fecha_de_negocio_de(uuid, uuid, timestamptz) TO pedern
 -- La cuenta
 -- ---------------------------------------------------------------------------------------------
 CREATE TABLE cuenta_consumo (
-  id               uuid PRIMARY KEY,                                   -- lo manda la app: es la idempotencia del alta
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),         -- lo manda la app: es la idempotencia del alta
   empresa_id       uuid NOT NULL REFERENCES empresa (id),
   sucursal_id      uuid NOT NULL,
   ancla_tipo       text CONSTRAINT cuenta_ancla_tipo_ck CHECK (ancla_tipo ~ '^[a-z_]+(\.[a-z_]+)?$' AND char_length(ancla_tipo) <= 40),
@@ -131,7 +131,7 @@ CREATE INDEX cuenta_abiertas_ix ON cuenta_consumo (empresa_id, sucursal_id) WHER
 -- La línea (precio, cantidad, unidad y paso congelados) y la foto de sus opciones
 -- ---------------------------------------------------------------------------------------------
 CREATE TABLE linea_cuenta (
-  id                  uuid PRIMARY KEY,                                -- lo manda la app
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),      -- lo manda la app
   empresa_id          uuid NOT NULL REFERENCES empresa (id),
   cuenta_id           uuid NOT NULL,
   posicion            integer NOT NULL CONSTRAINT linea_posicion_ck CHECK (posicion >= 1 AND posicion < 10000),
@@ -167,7 +167,7 @@ CREATE TABLE linea_cuenta (
   CONSTRAINT linea_variante_completa_ck CHECK ((variante_opcion_id IS NULL) = (variante_nombre IS NULL)),
   CONSTRAINT linea_precio_unitario_minimo_ck CHECK (precio_unitario >= precio_base),
   -- La cantidad es múltiplo EXACTO del paso congelado (decisión 162): `numeric` exacto; un `NaN` no da 0.
-  CONSTRAINT linea_cantidad_multiplo_ck CHECK (cantidad % paso_de_cantidad = 0),
+  CONSTRAINT linea_cantidad_multiplo_ck CHECK (cantidad % NULLIF(paso_de_cantidad, 0) = 0),
   CONSTRAINT linea_anulada_ck CHECK (
     (estado = 'ANULADA') = (anulada_en IS NOT NULL)
     AND (anulada_en IS NULL) = (anulada_por IS NULL)
@@ -190,7 +190,7 @@ CREATE TABLE linea_cuenta_opcion (                                     -- solo i
   recargo              numeric(18,6) NOT NULL CONSTRAINT linea_opcion_recargo_ck CHECK (recargo >= 0 AND recargo < 1000000000),
   origen_del_recargo   text NOT NULL CONSTRAINT linea_opcion_origen_ck CHECK (origen_del_recargo IN ('SUCURSAL', 'EMPRESA')),
   creado_en            timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT linea_opcion_pkey PRIMARY KEY (linea_id, orden),
+  CONSTRAINT linea_opcion_pkey PRIMARY KEY (empresa_id, linea_id, orden),
   CONSTRAINT linea_opcion_opcion_uk UNIQUE (empresa_id, linea_id, opcion_id),
   CONSTRAINT linea_opcion_linea_fkey FOREIGN KEY (linea_id, empresa_id) REFERENCES linea_cuenta (id, empresa_id)
 );
@@ -241,7 +241,7 @@ CREATE INDEX ticket_pendientes_ix ON ticket (empresa_id, sucursal_id, fecha_nego
 -- Los ejemplares del ticket (solo inserción): el original nace al cerrar; cada corrección o anulación agrega uno
 -- ---------------------------------------------------------------------------------------------
 CREATE TABLE ticket_ejemplar (
-  id                uuid PRIMARY KEY,                                  -- lo manda la app (`ejemplarId`)
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),        -- lo manda la app (`ejemplarId`)
   empresa_id        uuid NOT NULL REFERENCES empresa (id),
   ticket_id         uuid NOT NULL,
   numero_de_ejemplar integer NOT NULL CONSTRAINT ejemplar_numero_ck CHECK (numero_de_ejemplar >= 1 AND numero_de_ejemplar < 10000),
@@ -265,7 +265,8 @@ CREATE TABLE ejemplar_grupo (
   orden       integer NOT NULL CONSTRAINT grupo_orden_ck CHECK (orden = 1),   -- E4 tiene un solo grupo por ticket
   total       numeric(18,2) NOT NULL CONSTRAINT grupo_total_ck CHECK (total >= 0 AND total < 1000000000),
   emisor_id   uuid,                                                           -- anulable: NULL en E4 (decisión 156)
-  CONSTRAINT ejemplar_grupo_pkey PRIMARY KEY (ejemplar_id, orden),
+  CONSTRAINT ejemplar_grupo_pkey PRIMARY KEY (empresa_id, ejemplar_id, orden),
+  CONSTRAINT ejemplar_grupo_empresa_uk UNIQUE (ejemplar_id, orden, empresa_id),
   CONSTRAINT grupo_ejemplar_fkey FOREIGN KEY (ejemplar_id, empresa_id) REFERENCES ticket_ejemplar (id, empresa_id)
 );
 
@@ -276,8 +277,8 @@ CREATE TABLE ejemplar_linea (
   linea_cuenta_id uuid NOT NULL,
   cantidad        numeric(18,4) NOT NULL CONSTRAINT ejemplar_linea_cantidad_ck CHECK (cantidad > 0 AND cantidad <= 9999),
   importe         numeric(18,2) NOT NULL CONSTRAINT ejemplar_linea_importe_ck CHECK (importe >= 0 AND importe < 1000000000),
-  CONSTRAINT ejemplar_linea_pkey PRIMARY KEY (ejemplar_id, linea_cuenta_id),
-  CONSTRAINT ejemplar_linea_grupo_fkey FOREIGN KEY (ejemplar_id, grupo_orden) REFERENCES ejemplar_grupo (ejemplar_id, orden),
+  CONSTRAINT ejemplar_linea_pkey PRIMARY KEY (empresa_id, ejemplar_id, linea_cuenta_id),
+  CONSTRAINT ejemplar_linea_grupo_fkey FOREIGN KEY (ejemplar_id, grupo_orden, empresa_id) REFERENCES ejemplar_grupo (ejemplar_id, orden, empresa_id),
   CONSTRAINT ejemplar_linea_ejemplar_fkey FOREIGN KEY (ejemplar_id, empresa_id) REFERENCES ticket_ejemplar (id, empresa_id),
   CONSTRAINT ejemplar_linea_linea_fkey FOREIGN KEY (linea_cuenta_id, empresa_id) REFERENCES linea_cuenta (id, empresa_id)
 );
@@ -286,7 +287,7 @@ CREATE TABLE ejemplar_linea (
 -- Cómo se saldó el ticket (V7). Los ids de caja son opacos (sin clave foránea: los valida el puerto en la transacción).
 -- ---------------------------------------------------------------------------------------------
 CREATE TABLE cobranza_de_ticket (
-  id            uuid PRIMARY KEY,
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id    uuid NOT NULL REFERENCES empresa (id),
   ticket_id     uuid NOT NULL,
   ejemplar_id   uuid NOT NULL,                                         -- el ejemplar que se cobró
@@ -313,7 +314,7 @@ CREATE TABLE aplicacion_de_cobro (                                     -- solo i
   cuenta_de_cobro_id  uuid,                                            -- opaco; opcional (decisión 151)
   importe             numeric(18,2) NOT NULL CONSTRAINT aplicacion_importe_ck CHECK (importe > 0 AND importe < 1000000000),
   creado_en           timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT aplicacion_de_cobro_pkey PRIMARY KEY (cobranza_id, orden),
+  CONSTRAINT aplicacion_de_cobro_pkey PRIMARY KEY (empresa_id, cobranza_id, orden),
   CONSTRAINT aplicacion_cobro_uk UNIQUE (empresa_id, cobro_id),
   CONSTRAINT aplicacion_cobranza_fkey FOREIGN KEY (cobranza_id, empresa_id) REFERENCES cobranza_de_ticket (id, empresa_id)
 );
@@ -322,7 +323,7 @@ CREATE TABLE aplicacion_de_cobro (                                     -- solo i
 -- El registro de cada anulación o corrección (V8)
 -- ---------------------------------------------------------------------------------------------
 CREATE TABLE ticket_correccion (                                       -- solo inserción
-  id                 uuid PRIMARY KEY,
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id         uuid NOT NULL REFERENCES empresa (id),
   ticket_id          uuid NOT NULL,
   ejemplar_base_id   uuid NOT NULL,
@@ -785,6 +786,11 @@ BEGIN
     RAISE EXCEPTION 'el ejemplar original no refleja las líneas vigentes de la cuenta'
       USING ERRCODE = '23514', CONSTRAINT = 'ejemplar_original_no_refleja_la_cuenta';
   END IF;
+  -- El original lleva el total del ticket (que es el de la cuenta, `ticket_cuenta_invalida`): el ticket no puede decir una cosa y su original otra.
+  IF e.tipo = 'ORIGINAL' AND e.total IS DISTINCT FROM (SELECT t.total FROM public.ticket t WHERE t.id = e.ticket_id AND t.empresa_id = e.empresa_id) THEN
+    RAISE EXCEPTION 'el total del ejemplar original no es el del ticket'
+      USING ERRCODE = '23514', CONSTRAINT = 'ejemplar_cuadra';
+  END IF;
   RETURN NULL;
 END
 $$;
@@ -800,7 +806,8 @@ DECLARE
 BEGIN
   SELECT * INTO v_ticket FROM public.ticket t WHERE t.id = NEW.ticket_id AND t.empresa_id = NEW.empresa_id;
   IF NOT FOUND OR v_ticket.estado <> 'EMITIDO' OR v_ticket.ejemplar_vigente IS DISTINCT FROM
-     (SELECT e.numero_de_ejemplar FROM public.ticket_ejemplar e WHERE e.id = NEW.ejemplar_id AND e.empresa_id = NEW.empresa_id) THEN
+     (SELECT e.numero_de_ejemplar FROM public.ticket_ejemplar e
+       WHERE e.id = NEW.ejemplar_id AND e.empresa_id = NEW.empresa_id AND e.ticket_id = NEW.ticket_id) THEN
     RAISE EXCEPTION 'solo se cobra un ticket emitido, con su ejemplar vigente'
       USING ERRCODE = '23514', CONSTRAINT = 'cobranza_ticket_no_cobrable';
   END IF;

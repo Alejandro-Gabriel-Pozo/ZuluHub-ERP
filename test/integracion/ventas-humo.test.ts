@@ -30,6 +30,18 @@ describe.skipIf(base === null)("ventas: humo", () => {
       await m.consultas.fichaDeTicket(e.gerente, { ticketId: cierre.ticketId }),
     );
     expect(ficha.numeroDeCorreccion).toBe(0);
+    // Un ticket emitido y todavía no cobrado no tiene nada cobrado que explicar: la diferencia es 0.
+    const dia = valorDe(
+      await m.consultas.ticketsDeLaJornada(e.gerente, {
+        sucursalId: e.sucursal,
+        fechaNegocio: "2026-11-09",
+      }),
+    );
+    expect(dia[0]).toMatchObject({
+      totalVigente: "2000.00",
+      totalCobrado: "0.00",
+      diferencia: "0.00",
+    });
     const anulado = valorDe(
       await m.casos.anularTicket(e.gerente, {
         claveIdempotencia: nuevaClave(),

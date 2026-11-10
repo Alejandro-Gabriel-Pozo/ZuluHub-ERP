@@ -335,8 +335,10 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
           ticketId: t.ticket.id,
           numero: t.ticket.numero,
           numeroDeCorreccion: numeroDeCorreccion(t.ticket.ejemplarVigente),
+          sucursalId: t.ticket.sucursalId,
           ejemplarVigenteId: t.ejemplarVigenteId,
           total: importe(t.total),
+          totalVigente: importe(t.total),
           lineas: t.renglones satisfies readonly RenglonParaFacturar[],
         });
       }),

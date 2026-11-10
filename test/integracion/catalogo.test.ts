@@ -89,6 +89,18 @@ const TABLAS_DE_NEGOCIO = [
   // Cierre del día (0026_cierre)
   "jornada_de_sucursal",
   "control_de_jornada_cerrada",
+  // Ventas (0028_ventas)
+  "cuenta_consumo",
+  "linea_cuenta",
+  "linea_cuenta_opcion",
+  "numerador_ticket",
+  "ticket",
+  "ticket_ejemplar",
+  "ejemplar_grupo",
+  "ejemplar_linea",
+  "cobranza_de_ticket",
+  "aplicacion_de_cobro",
+  "ticket_correccion",
 ] as const;
 const TABLAS_DE_AUDITORIA = ["auditoria_empresa", "auditoria_plataforma", "auditoria_acceso_grupo"];
 
@@ -309,6 +321,17 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "serie_comprobante:SELECT", // 0006
           "jornada_de_sucursal:SELECT", // 0026
           "control_de_jornada_cerrada:SELECT", // 0026
+          "cuenta_consumo:SELECT", // 0028
+          "linea_cuenta:SELECT", // 0028
+          "linea_cuenta_opcion:SELECT", // 0028
+          "numerador_ticket:SELECT", // 0028
+          "ticket:SELECT", // 0028
+          "ticket_ejemplar:SELECT", // 0028
+          "ejemplar_grupo:SELECT", // 0028
+          "ejemplar_linea:SELECT", // 0028
+          "cobranza_de_ticket:SELECT", // 0028
+          "aplicacion_de_cobro:SELECT", // 0028
+          "ticket_correccion:SELECT", // 0028
           "sucursal:SELECT",
           "tenant:SELECT",
           "trabajo:SELECT",
@@ -496,6 +519,21 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "huella_de_cierre",
             "observacion",
           ].map((c) => `pedernal_app:jornada_de_sucursal.${c}`),
+          // 0028: la cuenta, la línea, el numerador, el ticket y la cobranza cambian solo lo que sus disparadores permiten
+          ...[
+            "estado",
+            "total_provisorio",
+            "ultima_posicion",
+            "resuelta_por",
+            "resuelta_en",
+            "motivo",
+          ].map((c) => `pedernal_app:cuenta_consumo.${c}`),
+          ...["estado", "anulada_por", "anulada_en", "motivo_de_anulacion"].map(
+            (c) => `pedernal_app:linea_cuenta.${c}`,
+          ),
+          ...["ultimo"].map((c) => `pedernal_app:numerador_ticket.${c}`),
+          ...["estado", "ejemplar_vigente"].map((c) => `pedernal_app:ticket.${c}`),
+          ...["resultado"].map((c) => `pedernal_app:cobranza_de_ticket.${c}`),
           "pedernal_app:sucursal.activa",
           "pedernal_app:sucursal.hora_de_corte", // 0007
           "pedernal_app:sucursal.nombre",
@@ -935,6 +973,120 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "reconocido_por",
             "texto",
           ].map((c) => `control_de_jornada_cerrada.${c}`),
+          // 0028: ventas nace sin valores a mano (`fecha_negocio` la fija un disparador; `version`, `creado_en` y los contadores, la base)
+          ...[
+            "id",
+            "empresa_id",
+            "sucursal_id",
+            "ancla_tipo",
+            "ancla_id",
+            "etiqueta",
+            "abierta_por",
+            "abierta_en",
+          ].map((c) => `cuenta_consumo.${c}`),
+          ...[
+            "id",
+            "empresa_id",
+            "cuenta_id",
+            "posicion",
+            "producto_id",
+            "descripcion",
+            "variante_opcion_id",
+            "variante_nombre",
+            "precio_id",
+            "origen_del_precio",
+            "precio_base",
+            "precio_unitario",
+            "cantidad",
+            "unidad_de_venta",
+            "paso_de_cantidad",
+            "alicuota",
+            "controla_stock",
+            "creada_por",
+            "creada_en",
+          ].map((c) => `linea_cuenta.${c}`),
+          ...[
+            "empresa_id",
+            "linea_id",
+            "orden",
+            "opcion_id",
+            "version_de_opcion_id",
+            "grupo_id",
+            "nombre_de_grupo",
+            "nombre",
+            "clase",
+            "recargo",
+            "origen_del_recargo",
+          ].map((c) => `linea_cuenta_opcion.${c}`),
+          ...["empresa_id", "sucursal_id"].map((c) => `numerador_ticket.${c}`),
+          ...[
+            "id",
+            "empresa_id",
+            "sucursal_id",
+            "cuenta_id",
+            "numero",
+            "estado",
+            "total",
+            "sesion_de_caja_id",
+            "emitido_por",
+            "emitido_en",
+          ].map((c) => `ticket.${c}`),
+          ...[
+            "id",
+            "empresa_id",
+            "ticket_id",
+            "numero_de_ejemplar",
+            "tipo",
+            "total",
+            "ejemplar_base_id",
+            "creado_por",
+            "creado_en",
+          ].map((c) => `ticket_ejemplar.${c}`),
+          ...["empresa_id", "ejemplar_id", "orden", "total", "emisor_id"].map(
+            (c) => `ejemplar_grupo.${c}`,
+          ),
+          ...[
+            "empresa_id",
+            "ejemplar_id",
+            "grupo_orden",
+            "linea_cuenta_id",
+            "cantidad",
+            "importe",
+          ].map((c) => `ejemplar_linea.${c}`),
+          ...[
+            "id",
+            "empresa_id",
+            "ticket_id",
+            "ejemplar_id",
+            "caja_id",
+            "clave",
+            "huella",
+            "destino",
+            "creada_por",
+            "creada_en",
+          ].map((c) => `cobranza_de_ticket.${c}`),
+          ...[
+            "empresa_id",
+            "cobranza_id",
+            "orden",
+            "cobro_id",
+            "cuenta_de_cobro_id",
+            "importe",
+          ].map((c) => `aplicacion_de_cobro.${c}`),
+          ...[
+            "id",
+            "empresa_id",
+            "ticket_id",
+            "ejemplar_base_id",
+            "ejemplar_nuevo_id",
+            "tipo",
+            "motivo",
+            "clave",
+            "huella",
+            "resultado",
+            "hecha_por",
+            "hecha_en",
+          ].map((c) => `ticket_correccion.${c}`),
           "trabajo.empresa_id",
           "trabajo.tipo",
           "trabajo.datos",

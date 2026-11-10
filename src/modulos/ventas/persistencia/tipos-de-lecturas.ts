@@ -116,6 +116,8 @@ export type RenglonParaFacturar = Readonly<{
   opciones: readonly Readonly<{ grupo: string; nombre: string; recargo: string }>[];
   cantidad: string;
   unidadDeVenta: string;
+  /** El símbolo de la unidad de venta (`unidad_de_medida.simbolo`, E2): lo que imprime el facturador. */
+  unidadSimbolo: string;
   precioUnitario: string;
   alicuota: string;
   importe: string;

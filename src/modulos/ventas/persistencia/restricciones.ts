@@ -80,6 +80,7 @@ export const ERRORES_DE_VENTAS_POR_RESTRICCION: Readonly<Record<string, string>>
   ejemplar_cuadra_del_renglon: "NO_TRADUCIDA",
   ejemplar_grupo_empresa_id_fkey: "NO_TRADUCIDA",
   ejemplar_grupo_pkey: "NO_TRADUCIDA",
+  ejemplar_grupo_empresa_uk: "NO_TRADUCIDA",
   ejemplar_id_empresa_uk: "NO_TRADUCIDA",
   ejemplar_linea_ajena: "INVARIANTE_DE_VENTAS",
   ejemplar_linea_cantidad_ck: "NO_TRADUCIDA",
