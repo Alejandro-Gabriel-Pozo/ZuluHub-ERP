@@ -436,9 +436,9 @@ describe.skipIf(base === null)("facturación E1-T2: facturar un documento de ori
 
   // ===============================================================================================
   describe("repetición, en secuencia y en paralelo (P1)", () => {
-    it("30 rondas de dos emisiones simultáneas del mismo origen: una sola factura, un solo trabajo, una sola auditoría", async () => {
+    it("50 rondas de dos emisiones simultáneas del mismo origen: una sola factura, un solo trabajo, una sola auditoría", async () => {
       const p = await preparar();
-      for (let ronda = 0; ronda < 30; ronda++) {
+      for (let ronda = 0; ronda < 50; ronda++) {
         const entrada = entradaDe(p.e);
         const [a, b] = await Promise.all([
           p.casos.emitirFacturaDeOrigen(p.como(), entrada),
@@ -458,12 +458,12 @@ describe.skipIf(base === null)("facturación E1-T2: facturar un documento de ori
         ).toEqual([{ n: 1 }]);
       }
       const total = await escrituras(p.e);
-      expect(total).toEqual({ comprobantes: 30, trabajos: 30, auditorias: 30 });
+      expect(total).toEqual({ comprobantes: 50, trabajos: 50, auditorias: 50 });
     });
 
-    it("30 rondas con DOS ids de comprobante distintos para el mismo origen (los reintentos de dos pantallas): una sola factura y los dos reciben la misma", async () => {
+    it("50 rondas con DOS ids de comprobante distintos para el mismo origen (los reintentos de dos pantallas): una sola factura y los dos reciben la misma", async () => {
       const p = await preparar();
-      for (let ronda = 0; ronda < 30; ronda++) {
+      for (let ronda = 0; ronda < 50; ronda++) {
         const entrada = entradaDe(p.e);
         const [a, b] = await Promise.all([
           p.casos.emitirFacturaDeOrigen(p.como(), { ...entrada, comprobanteId: randomUUID() }),
@@ -474,7 +474,7 @@ describe.skipIf(base === null)("facturación E1-T2: facturar un documento de ori
         expect(salidas.filter((s) => !s.yaExistia)).toHaveLength(1);
         expect(await delOrigen(p.e, "EJEMPLAR_DE_TICKET", entrada.origen.id)).toHaveLength(1);
       }
-      expect(await escrituras(p.e)).toEqual({ comprobantes: 30, trabajos: 30, auditorias: 30 });
+      expect(await escrituras(p.e)).toEqual({ comprobantes: 50, trabajos: 50, auditorias: 50 });
     });
 
     it("dos orígenes distintos a la vez no se pisan: dos facturas, sin hueco de numeración", async () => {
