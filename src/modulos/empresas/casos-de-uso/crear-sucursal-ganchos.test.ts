@@ -129,6 +129,7 @@ const casosCon = (
     transacciones: entorno.transacciones,
     reglas: REGLAS_DE_EMPRESA,
     ganchosDeSucursal: ganchos,
+    ganchosAlDesactivarSucursal: [],
   });
 
 describe("crearSucursal invoca los ganchos de sucursal (decisión 165)", () => {

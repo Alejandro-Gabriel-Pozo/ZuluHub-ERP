@@ -30,10 +30,28 @@
     "pruebas": "src/modulos/tenants/dominio src/modulos/empresas/dominio src/consultas-de-grupo"
   },
   {
+    "grupo": "caja (dominio)",
+    "archivos": "src/modulos/caja/dominio/**/*.ts,src/modulos/caja/estados.ts",
+    "minutos": 4,
+    "pruebas": "src/modulos/caja"
+  },
+  {
     "grupo": "cierre del día (dominio y puerto)",
     "archivos": "src/modulos/cierre/dominio/**/*.ts,src/modulos/cierre/aporte-al-cierre.ts,src/modulos/cierre/estados.ts",
     "minutos": 2,
     "pruebas": "src/modulos/cierre"
+  },
+  {
+    "grupo": "listas del sistema (dominio)",
+    "archivos": "src/modulos/listas/dominio/**/*.ts",
+    "minutos": 1,
+    "pruebas": "src/modulos/listas"
+  },
+  {
+    "grupo": "ventas (dominio)",
+    "archivos": "src/modulos/ventas/dominio/**/*.ts",
+    "minutos": 3,
+    "pruebas": "src/modulos/ventas/dominio"
   },
   {
     "grupo": "fiscal (numeración)",

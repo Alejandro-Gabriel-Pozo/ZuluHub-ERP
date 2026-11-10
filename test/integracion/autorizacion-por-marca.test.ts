@@ -293,7 +293,12 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
           transacciones: entorno,
           reglas: REGLAS_DE_EMPRESA,
         }),
-        empresas: crearCasosDeUsoDeEmpresas({ transacciones: entorno, reglas: REGLAS_DE_EMPRESA }),
+        empresas: crearCasosDeUsoDeEmpresas({
+          transacciones: entorno,
+          reglas: REGLAS_DE_EMPRESA,
+          ganchosDeSucursal: [],
+          ganchosAlDesactivarSucursal: [],
+        }),
         consultasDeEmpresas: crearConsultasDeEmpresas({
           transacciones: entorno,
           reglas: REGLAS_DE_EMPRESA,

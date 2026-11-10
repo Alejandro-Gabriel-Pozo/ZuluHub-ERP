@@ -6,11 +6,30 @@ import type { TxDeTickets } from "../../src/adaptadores/certificados/almacen-de-
 import type { TxDeVerificacion } from "../../src/adaptadores/certificados/verificacion-de-autorizacion";
 import type { TxDeCatalogo, TxDeConsultasDeCatalogo } from "../../src/modulos/catalogo/publico";
 import type {
+  TxDeAporteDeCaja,
+  TxDeCaja,
+  TxDeConsultasDeCaja,
+  TxDeLecturaDeCaja,
+  TxDeLecturaDeLaJornada,
+  TxParaCajaPorDefecto,
+} from "../../src/modulos/caja/publico";
+import { ganchoDeSucursalDeCaja } from "../../src/modulos/caja/publico";
+import type {
   TxDeCierre,
   TxDeConsultasDeCierre,
   TxDeJornadas,
 } from "../../src/modulos/cierre/publico";
-import type { TxDeConsultasDeEmpresas, TxDeEmpresas } from "../../src/modulos/empresas/publico";
+import type {
+  DependenciasDeEmpresas,
+  GanchoDeSucursal,
+  TxDeConsultasDeEmpresas,
+  TxDeEmpresas,
+} from "../../src/modulos/empresas/publico";
+import type {
+  TxDeAporteDeVentas,
+  TxDeConsultasDeVentas,
+  TxDeVentas,
+} from "../../src/modulos/ventas/publico";
 import type {
   TxDeCertificados,
   TxDeConfiguracionFiscal,
@@ -52,6 +71,50 @@ describe("la Tx compuesta de la composición contiene la Tx angosta de cada mód
     expectTypeOf<TxDeApp>().toExtend<TxDeJornadas>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeCierre>>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConsultasDeCierre>>();
+  });
+
+  it("caja: la configuración (casos de uso y consultas)", () => {
+    expectTypeOf<TxDeApp>().toExtend<TxDeCaja>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeConsultasDeCaja>();
+    // El puerto de cobrar de ventas: lo que lee (lectura previa, opciones, cobros de un origen) y lo que escribe (la misma Tx de caja).
+    expectTypeOf<TxDeApp>().toExtend<TxDeLecturaDeCaja>();
+    expectTypeOf<TxDeCaja>().toExtend<TxDeLecturaDeCaja>();
+    expectTypeOf<TxDeLecturaDeCaja>().not.toExtend<TxDeCaja>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeCaja>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConsultasDeCaja>>();
+  });
+
+  it("caja en el cierre del día: el aporte (leer y congelar) y la lectura de la jornada salen de la compuesta, y la lectura no alcanza para congelar", () => {
+    expectTypeOf<TxDeApp>().toExtend<TxDeAporteDeCaja>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeLecturaDeLaJornada>();
+    expectTypeOf<TxDeAporteDeCaja>().toExtend<TxDeLecturaDeLaJornada>();
+    expectTypeOf<TxDeLecturaDeLaJornada>().not.toExtend<TxDeAporteDeCaja>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeCierre & TxDeAporteDeCaja>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<
+      Transacciones<TxDeConsultasDeCierre & TxDeAporteDeCaja>
+    >();
+  });
+
+  it("caja por defecto: la Tx compuesta sirve al gancho de sucursal de caja y los ganchos de empresas son obligatorios", () => {
+    expectTypeOf<TxDeApp>().toExtend<TxParaCajaPorDefecto>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeEmpresas & TxParaCajaPorDefecto>();
+    // El gancho de caja entra en la lista que arma la composición (`GanchosDeSucursal<TxDeEmpresas>`).
+    expectTypeOf(ganchoDeSucursalDeCaja).toExtend<GanchoDeSucursal<TxDeEmpresas>>();
+    // Obligatorio (e3 §3.2.1): `[]` explícito si no hay ninguno; omitirlo no compila.
+    expectTypeOf<DependenciasDeEmpresas>().toHaveProperty("ganchosDeSucursal");
+    expectTypeOf<undefined>().not.toExtend<DependenciasDeEmpresas["ganchosDeSucursal"]>();
+    // Sin `ganchosDeSucursal` no son unas dependencias de empresas (sin marcador de supresión: no suma deuda).
+    expectTypeOf<
+      Omit<DependenciasDeEmpresas, "ganchosDeSucursal">
+    >().not.toExtend<DependenciasDeEmpresas>();
+  });
+
+  it("ventas: casos de uso, consultas y lo que lee el aporte al cierre del día", () => {
+    expectTypeOf<TxDeApp>().toExtend<TxDeVentas>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeConsultasDeVentas>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeAporteDeVentas>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeVentas>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConsultasDeVentas>>();
   });
 
   it("fiscal: facturación, consultas, configuración, certificados y lo que descifra el adaptador de ARCA", () => {

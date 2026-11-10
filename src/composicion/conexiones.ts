@@ -51,6 +51,7 @@ import type { TxDeCola } from "../adaptadores/trabajos/procesador";
 import type { NivelesDeControl } from "../capacidades/controles/niveles";
 import type { EmpresaId } from "../primitivas/identificadores/marca";
 import { crearRepositoriosDeCatalogo } from "../modulos/catalogo/publico";
+import { crearRepositoriosDeVentas } from "../modulos/ventas/publico";
 import { crearRepositorioDeJornadas, type CierreDb } from "../modulos/cierre/publico";
 import {
   crearLecturaDeSucursalBloqueada,
@@ -131,6 +132,7 @@ import {
 } from "./entorno";
 import { leerClaveDeCertificados } from "./clave-de-certificados";
 import { perezoso } from "./perezoso";
+import { armarPiezasDeCajaEnTx, type PiezasDeCajaEnTx } from "./tx-de-caja";
 
 /**
  * Las piezas que necesitan entorno: transacciones por puerta, tokens y correo. Cada una se arma la
@@ -145,14 +147,11 @@ import { perezoso } from "./perezoso";
  * consultas de empresas e identidad. Cada caso de uso declara solo lo que usa (su `Tx` angosta), y este
  * tipo los contiene a todos.
  *
- * Es la `Tx` COMPUESTA (conciliación §3.3): los repositorios de varios módulos se arman sobre la MISMA
- * transacción de la base, así una operación que cruza módulos (cobrar: ventas, caja, stock, fiscal) es
- * atómica con un solo `ejecutar`. Un puerto `*EnTx` de otro módulo recibe esta misma `Tx` (que contiene
- * la suya, angosta) y nunca abre una propia. Cada módulo nuevo suma sus repositorios acá; que este tipo
- * contenga cada `Tx` angosta lo comprueba el compilador (`test/arquitectura/tipos-tx.test.ts`).
+ * Es la `Tx` COMPUESTA (conciliación §3.3): los repositorios de varios módulos se arman sobre la MISMA transacción, así una operación que
+ * cruza módulos (cobrar) es atómica con un solo `ejecutar`; un puerto `*EnTx` de otro módulo recibe esta misma `Tx`, nunca abre una propia. Cada módulo suma sus repositorios acá (los de caja, en `tx-de-caja.ts`, por el tope de líneas); `tipos-tx.test.ts` lo comprueba.
  */
-/** Incluye los repositorios del catálogo (E2 mínimo: `productos`, `opciones` y `precios`). */
 export type TxDeApp = ReturnType<typeof crearRepositoriosDeCatalogo> &
+  ReturnType<typeof crearRepositoriosDeVentas> &
   Readonly<{
     tenants: RepositorioDeTenants;
     empresas: RepositorioDeEmpresas;
@@ -194,7 +193,8 @@ export type TxDeApp = ReturnType<typeof crearRepositoriosDeCatalogo> &
     niveles: NivelesDeControl;
     /** Lo que lee la puerta `SESION` (la persona del usuario y sus empresas). */
     sesion: LecturasDeSesion;
-  }>;
+  }> &
+  PiezasDeCajaEnTx;
 
 export type Conexiones = Readonly<{
   /** Puertas `OPERATIVO`, `INVITACION` y `SESION` (`PEDERNAL_DB_APP`). */
@@ -274,6 +274,7 @@ function armarTx(db: ConexionDeTx, autorizacion: CargaDeAutorizacion): TxDeApp {
     sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
     jornadas: crearRepositorioDeJornadas(db.withTables<CierreDb>()),
     sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
+    ...armarPiezasDeCajaEnTx(db),
     personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
     membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
     asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
@@ -297,6 +298,7 @@ function armarTx(db: ConexionDeTx, autorizacion: CargaDeAutorizacion): TxDeApp {
     accesos: crearRepositorioDeAccesos(db.withTables<FiscalDb>()),
     marca: marcaDeImpresion,
     ...crearRepositoriosDeCatalogo(db),
+    ...crearRepositoriosDeVentas(db),
     niveles: crearNivelesDeControlDePostgres(db.withTables<NivelesDeControlDb>()),
     sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
   };

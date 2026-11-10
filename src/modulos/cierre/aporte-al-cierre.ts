@@ -58,6 +58,14 @@ export interface AporteAlCierreDelDia<TLectura, TEscritura extends TLectura = TL
     tx: TLectura,
     jornada: JornadaRef,
   ): Promise<Resultado<readonly ControlDelDia[], ErrorDeAporte>>;
+  /**
+   * ¿El módulo tiene movimiento en la jornada? (decisión 178): `true` si hay algo que el cierre del día tendría que revisar (hoy, caja:
+   * una sesión de la jornada, y con ella sus cobros). `empresas` lo pregunta al desactivar una sucursal: sin movimiento en ningún módulo la
+   * jornada abierta se cierra sola; con movimiento se pide hacer antes el cierre. Solo lectura. Un módulo que no puede responder devuelve
+   * `APORTE_NO_DISPONIBLE` y la sucursal no se desactiva (falla cerrado: nunca se asume «sin movimiento»). Es obligatorio: un aporte
+   * nuevo que no lo declare no compila. Previene desactivar una sucursal con dinero o ventas sin cerrar.
+   */
+  hayMovimiento(tx: TLectura, jornada: JornadaRef): Promise<Resultado<boolean, ErrorDeAporte>>;
   /** Todos los controles del módulo para la jornada. Solo lectura, determinista (sin reloj ni azar) y recalculable. */
   controles(
     tx: TLectura,

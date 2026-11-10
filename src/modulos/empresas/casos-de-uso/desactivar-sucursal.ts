@@ -5,7 +5,9 @@ import { comprobarQueOpera, type EmpresaNoOpera } from "../../../contexto/estado
 import type { SucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
+import { datosDeJornada } from "../datos-de-jornada";
 import { decidirDesactivacion, type ErrorDeSucursal } from "../dominio/sucursal";
+import type { ErrorDeGanchoAlDesactivar } from "../ganchos-de-sucursal";
 import { cargarEstadosDeLaEmpresa } from "./comun";
 import type { DependenciasDeEmpresas } from "./contrato";
 import { DECLARACIONES } from "./declaraciones";
@@ -23,7 +25,11 @@ type ErrorPropioAlDesactivarSucursal = Extract<
 >;
 
 export type ErrorAlDesactivarSucursal =
-  ErrorPropioAlDesactivarSucursal | MotivoDeRechazo | EmpresaNoOpera | ErrorDePersistencia;
+  | ErrorPropioAlDesactivarSucursal
+  | ErrorDeGanchoAlDesactivar
+  | MotivoDeRechazo
+  | EmpresaNoOpera
+  | ErrorDePersistencia;
 
 /**
  * Desactivar una sucursal de la empresa del contexto (H6, §B.1). Solo el gerente
@@ -36,11 +42,19 @@ export type ErrorAlDesactivarSucursal =
  * gente vuelve como estaba. La auditoría `SUCURSAL_DESACTIVADA` va en la misma transacción. Desactivar
  * dos veces es ok y no escribe ni audita la segunda.
  *
+ * Antes de cambiar nada corren los ganchos de desactivación (decisión 178; el del cierre del día): con la jornada en auditoría, o con
+ * movimiento, la sucursal no se desactiva; una jornada abierta sin movimiento se cierra sola, en esta misma transacción (si algo falla
+ * después, se revierte todo). Desactivar de nuevo no los invoca.
+ *
  * Las dos últimas activas desactivadas a la vez: ambas transacciones leen a las dos y escriben filas
  * distintas (sesgo de escritura); la serializable aborta una y su reintento ve a la otra ya
  * inactiva, así que devuelve `ULTIMA_SUCURSAL_ACTIVA`.
  */
-export function armarDesactivarSucursal({ transacciones, reglas }: DependenciasDeEmpresas) {
+export function armarDesactivarSucursal({
+  transacciones,
+  reglas,
+  ganchosAlDesactivarSucursal,
+}: DependenciasDeEmpresas) {
   return async function desactivarSucursal(
     contexto: ContextoOperativo,
     entrada: EntradaDeDesactivarSucursal,
@@ -53,7 +67,10 @@ export function armarDesactivarSucursal({ transacciones, reglas }: DependenciasD
       ): Promise<
         Resultado<
           SalidaDeDesactivarSucursal,
-          ErrorPropioAlDesactivarSucursal | MotivoDeRechazo | EmpresaNoOpera
+          | ErrorPropioAlDesactivarSucursal
+          | ErrorDeGanchoAlDesactivar
+          | MotivoDeRechazo
+          | EmpresaNoOpera
         >
       > => {
         const permiso = await exigirAccion(reglas, DECLARACIONES.desactivarSucursal.accion, () =>
@@ -71,6 +88,18 @@ export function armarDesactivarSucursal({ transacciones, reglas }: DependenciasD
           throw new Error("invariante rota: se decidió desactivar una sucursal nula");
         }
         if (decision.valor === "YA_INACTIVA") return ok({ yaEstabaInactiva: true });
+
+        const jornada = await datosDeJornada(tx, objetivo.id);
+        if (!jornada.ok) return jornada;
+        for (const gancho of ganchosAlDesactivarSucursal) {
+          const delGancho = await gancho.alDesactivarSucursalEnTx(
+            tx,
+            contexto,
+            { sucursalId: objetivo.id, nombre: objetivo.nombre },
+            jornada.valor,
+          );
+          if (!delGancho.ok) return delGancho;
+        }
 
         const cambiada = await tx.sucursales.cambiarActiva(
           empresaId,

@@ -405,6 +405,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "caja-sin-negocio-ajeno",
+      archivos: {
+        "src/modulos/caja/dominio/d.ts": importa("../../fiscal/publico"),
+        "src/modulos/fiscal/publico.ts": exporta,
+      },
+    },
+    {
       regla: "cierre-sin-negocio",
       archivos: {
         "src/modulos/cierre/dominio/d.ts": importa("../../caja/publico"),
@@ -1439,6 +1446,23 @@ describe("E0-T5: sentido de las dependencias entre módulos de base, ventas y ci
     }
   });
 
+  it("caja no importa fiscal, reservas, clientes, catalogo ni stock, ni por su publico.ts; sí usa cierre y empresas", async () => {
+    for (const modulo of ["fiscal", "reservas", "clientes", "catalogo", "stock"]) {
+      const v = await violacionesDe({
+        "src/modulos/caja/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+      });
+      expect(v, modulo).toContain("caja-sin-negocio-ajeno");
+    }
+    const permitido = await violacionesDe({
+      "src/modulos/cierre/publico.ts": exporta,
+      "src/modulos/empresas/publico.ts": exporta,
+      "src/modulos/caja/dominio/d.ts":
+        'import "../../cierre/publico";\nimport "../../empresas/publico";\nexport const d = 1;\n',
+    });
+    expect(permitido).not.toContain("caja-sin-negocio-ajeno");
+  });
+
   it("cierre no importa ningún módulo de negocio, ni por su publico.ts", async () => {
     for (const modulo of [
       "catalogo",
@@ -1468,6 +1492,19 @@ describe("E0-T5: sentido de las dependencias entre módulos de base, ventas y ci
       "src/modulos/caja/publico.ts": exporta,
     });
     expect(prohibido).toContain("empresas-sin-negocio");
+  });
+
+  it("el puerto de ganchos de sucursal (`ganchos-de-sucursal.ts`) tampoco puede importar caja: caja implementa el puerto, empresas no lo conoce", async () => {
+    const prohibido = await violacionesDe({
+      "src/modulos/empresas/ganchos-de-sucursal.ts": importa("./../caja/publico"),
+      "src/modulos/caja/publico.ts": exporta,
+    });
+    expect(prohibido).toContain("empresas-sin-negocio");
+    const permitido = await violacionesDe({
+      "src/modulos/empresas/publico.ts": exporta,
+      "src/modulos/caja/gancho-de-sucursal.ts": importa("../empresas/publico"),
+    });
+    expect(permitido).not.toContain("empresas-sin-negocio");
   });
 
   it("cierre sí usa empresas y los módulos de negocio sí usan cierre por su publico.ts", async () => {
@@ -1524,6 +1561,27 @@ describe("facturación F6: las consultas del facturador (spec H7 facturación §
       });
       expect(prohibido, otro).toContain("consultas-sin-dominio");
     }
+  });
+
+  it("una consulta de caja importa la anulación (e3 §3.10), pero ningún otro archivo del dominio ni la anulación de otro módulo", async () => {
+    const permitido = await violacionesDe({
+      "src/modulos/caja/dominio/anulacion.ts": exporta,
+      "src/modulos/caja/consultas/c.ts": importa("../dominio/anulacion"),
+    });
+    expect(permitido).not.toContain("consultas-sin-dominio");
+    // Lo vecino no entra por parecerse: ni otro archivo de la anulación, ni el arqueo o el movimiento, que son del dominio.
+    for (const otro of ["anulacion-de-otra-cosa", "arqueo", "movimiento", "sesion"]) {
+      const prohibido = await violacionesDe({
+        [`src/modulos/caja/dominio/${otro}.ts`]: exporta,
+        "src/modulos/caja/consultas/c.ts": importa(`../dominio/${otro}`),
+      });
+      expect(prohibido, otro).toContain("consultas-sin-dominio");
+    }
+    const ajena = await violacionesDe({
+      "src/modulos/empresas/dominio/anulacion.ts": exporta,
+      "src/modulos/empresas/consultas/c.ts": importa("../dominio/anulacion"),
+    });
+    expect(ajena).toContain("consultas-sin-dominio");
   });
 
   it("la excepción es solo de fiscal: el modelo de impresión, la acreditación y la vigencia de otro módulo siguen prohibidos", async () => {

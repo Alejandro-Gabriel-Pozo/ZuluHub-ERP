@@ -104,6 +104,7 @@ export {
   type RepositorioDePrecios,
 } from "./persistencia/repositorio-de-precios";
 
+export { insertarIdempotente } from "./persistencia/insertar-idempotente";
 export {
   crearRepositoriosDeCatalogo,
   type RepositoriosDeCatalogo,
