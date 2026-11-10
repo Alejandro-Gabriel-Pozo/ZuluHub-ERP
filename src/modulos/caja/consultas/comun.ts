@@ -11,6 +11,7 @@ import {
   type SucursalId,
 } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import type { SesionGuardada } from "../persistencia/repositorio-de-sesiones";
 import type { TxDeConsultasDeCaja } from "./contrato";
 
 export type ErrorDeConsulta = MotivoDeRechazo | ErrorDeAlcance | "SUCURSAL_NO_ENCONTRADA";
@@ -48,4 +49,52 @@ export function sucursalElegida(
   const sucursal = sucursalId(texto);
   const dentro = exigirSucursal(alcance, sucursal);
   return dentro.ok ? ok(sucursal) : dentro;
+}
+
+export type ErrorDeConsultaDeSesion = ErrorDeConsulta | "SESION_NO_ENCONTRADA";
+
+/**
+ * La sesión elegida en la pantalla, para MIRAR: existe (si no, o si es de otra empresa, `SESION_NO_ENCONTRADA`) y su sucursal es del
+ * alcance de quien mira (`SUCURSAL_FUERA_DE_ALCANCE`). La sucursal sale de la caja de la sesión, nunca de un dato de la pantalla.
+ */
+export async function sesionParaMirar(
+  tx: TxDeConsultasDeCaja,
+  contexto: ContextoOperativo,
+  id: string,
+): Promise<Resultado<SesionGuardada, ErrorDeConsultaDeSesion>> {
+  const sesion = await tx.sesiones.obtener(contexto.empresaId, id);
+  if (sesion === null) return err("SESION_NO_ENCONTRADA");
+  const dentro = exigirSucursal(await alcanceParaMirar(tx, contexto), sesion.sucursalId);
+  return dentro.ok ? ok(sesion) : dentro;
+}
+
+/** Los datos de una sesión tal como los muestran las consultas: fechas en ISO UTC con la zona con que se abrió. */
+export type SesionDeConsulta = Readonly<{
+  id: string;
+  cajaId: string;
+  cajaNombre: string;
+  sucursalId: string;
+  estado: SesionGuardada["estado"];
+  fechaDeNegocio: string;
+  zonaHoraria: string;
+  abiertaEn: string;
+  abiertaPor: string;
+  cerradaEn: string | null;
+  cerradaPor: string | null;
+}>;
+
+export function sesionDeConsulta(sesion: SesionGuardada): SesionDeConsulta {
+  return {
+    id: sesion.id,
+    cajaId: sesion.cajaId,
+    cajaNombre: sesion.cajaNombre,
+    sucursalId: sesion.sucursalId,
+    estado: sesion.estado,
+    fechaDeNegocio: sesion.fechaDeNegocio,
+    zonaHoraria: sesion.zonaHoraria,
+    abiertaEn: sesion.abiertaEn.toISOString(),
+    abiertaPor: sesion.abiertaPor,
+    cerradaEn: sesion.cerradaEn === null ? null : sesion.cerradaEn.toISOString(),
+    cerradaPor: sesion.cerradaPor,
+  };
 }

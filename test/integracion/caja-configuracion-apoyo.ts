@@ -18,11 +18,19 @@ import {
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import { CATALOGO_DE_PERILLAS } from "../../src/capacidades/planes/perillas";
+import {
+  crearRepositorioDeJornadas,
+  type CierreDb,
+  type TxDeCierre,
+} from "../../src/modulos/cierre/publico";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import {
+  crearRepositorioDeArqueos,
   crearRepositorioDeCajas,
   crearRepositorioDeCuentasDeCobro,
   crearRepositorioDeMediosDePago,
+  crearRepositorioDeMovimientos,
+  crearRepositorioDeSesiones,
   crearConsultasDeCaja,
   crearCasosDeUsoDeCaja,
   type CajaDb,
@@ -75,6 +83,7 @@ export const REGLAS_DE_CAJA: ReglasDeEmpresa = {
 export type TxDeCajaDePrueba = TxDeCaja &
   TxDeConsultasDeCaja &
   TxDeEmpresas &
+  TxDeCierre &
   Readonly<{ db: Kysely<SinTablas> }>;
 
 /**
@@ -98,6 +107,10 @@ export function crearEntornoDeCaja(
       cajas: crearRepositorioDeCajas(db.withTables<CajaDb>()),
       mediosDePago: crearRepositorioDeMediosDePago(db.withTables<CajaDb>()),
       cuentasDeCobro: crearRepositorioDeCuentasDeCobro(db.withTables<CajaDb>()),
+      sesiones: crearRepositorioDeSesiones(db.withTables<CajaDb>()),
+      movimientos: crearRepositorioDeMovimientos(db.withTables<CajaDb>()),
+      arqueos: crearRepositorioDeArqueos(db.withTables<CajaDb>()),
+      jornadas: crearRepositorioDeJornadas(db.withTables<CierreDb>()),
       sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
       derechos: crearLecturaDeDerechosDeUso(crearLecturaDePlanes(db.withTables<PlanesDb>()), {
         catalogoDeModulos: CATALOGO_DE_MODULOS,

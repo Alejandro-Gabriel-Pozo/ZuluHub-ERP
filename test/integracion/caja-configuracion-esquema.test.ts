@@ -7,6 +7,7 @@ import {
   LARGO_MAXIMO_DEL_NOMBRE_DE_CAJA,
   LARGO_MAXIMO_DEL_NOMBRE_DE_CUENTA,
   LARGO_MAXIMO_DEL_NOMBRE_DE_MEDIO,
+  exigirClave,
   identificadorExternoValido,
   nombreDeCajaValido,
   nombreDeCuentaValido,
@@ -30,9 +31,58 @@ const RESTRICCIONES_DE_DISPARADORES = [
   "caja_con_sesion_vigente",
   "medio_de_pago_tipo_inmutable",
   "cuenta_de_cobro_tipo_inmutable",
+  // La operación (tramo 5): sesión, movimiento y arqueo.
+  "sesion_caja_actor_invalido",
+  "sesion_caja_caja_inactiva",
+  "sesion_caja_sucursal_inactiva",
+  "sesion_caja_sello_invalido",
+  "sesion_caja_fecha_negocio_invalida",
+  "sesion_caja_jornada_no_abierta",
+  "sesion_caja_inmutable",
+  "sesion_caja_cerrada_congelada",
+  "sesion_caja_transicion_invalida",
+  "sesion_caja_arqueo_incompleto",
+  "sesion_caja_arqueo_no_cuadra",
+  "sesion_caja_conteo_no_cuadra",
+  "sesion_caja_conforme_invalido",
+  "movimiento_caja_actor_invalido",
+  "movimiento_caja_sesion_no_abierta",
+  "movimiento_caja_jornada_no_abierta",
+  "movimiento_caja_anulacion_con_origen",
+  "movimiento_caja_anulacion_invalida",
+  "movimiento_caja_solo_efectivo",
+  "movimiento_caja_corrige_jornada_inexistente",
+  "movimiento_caja_corrige_jornada_no_cerrada",
+  "movimiento_caja_corrige_jornada_no_anterior",
+  "movimiento_caja_sin_documento",
+  "arqueo_caja_actor_invalido",
+  "arqueo_caja_efectivo_conforme",
+  "arqueo_caja_efectivo_sin_contar",
+  "arqueo_caja_monedas_solo_efectivo",
+  "arqueo_caja_sesion_invalida",
 ];
 
-const TABLAS = ["caja", "medio_de_pago", "cuenta_de_cobro"] as const;
+/** Las tablas cuyas columnas declara el esquema (`cobro` se declara para leer el origen de un cobro; sus restricciones las traduce el tramo del cobro). */
+const TABLAS = [
+  "caja",
+  "medio_de_pago",
+  "cuenta_de_cobro",
+  "sesion_caja",
+  "movimiento_caja",
+  "cobro",
+  "arqueo_caja",
+  "arqueo_billete",
+] as const;
+/** Las tablas cuyas restricciones tienen su traducción a un error de negocio. */
+const TABLAS_CON_TRADUCCION = [
+  "caja",
+  "medio_de_pago",
+  "cuenta_de_cobro",
+  "sesion_caja",
+  "movimiento_caja",
+  "arqueo_caja",
+  "arqueo_billete",
+] as const;
 
 describe.skipIf(base === null)(
   "configuración de caja: la base y el TypeScript dicen lo mismo",
@@ -58,7 +108,7 @@ describe.skipIf(base === null)(
       await propia.destruir();
     });
 
-    it("las columnas de las tres tablas son las que declara el esquema, en el orden de la base", async () => {
+    it("las columnas de las tablas de caja son las que declara el esquema, en el orden de la base", async () => {
       for (const tabla of TABLAS) {
         const { rows } = await dueno.query<{ column_name: string }>(
           `select column_name from information_schema.columns
@@ -72,15 +122,16 @@ describe.skipIf(base === null)(
       }
     });
 
-    it("toda restricción de las tres tablas tiene su traducción declarada, y no sobra ninguna", async () => {
+    it("toda restricción de las tablas de caja tiene su traducción declarada, y no sobra ninguna", async () => {
       const { rows } = await dueno.query<{ nombre: string }>(
         `select conname as nombre from pg_constraint
-        where conrelid = any(array['public.caja','public.medio_de_pago','public.cuenta_de_cobro']::regclass[])
+        where conrelid = any($1::text[]::regclass[])
           and contype in ('p', 'u', 'c', 'f', 'x')
        union
        select indexname as nombre from pg_indexes
-        where schemaname = 'public' and tablename in ('caja', 'medio_de_pago', 'cuenta_de_cobro')
+        where schemaname = 'public' and tablename = any($2::text[])
           and indexdef like 'CREATE UNIQUE INDEX%' and indexname not like '%pkey' and indexname not like '%_key'`,
+        [TABLAS_CON_TRADUCCION.map((t) => `public.${t}`), [...TABLAS_CON_TRADUCCION]],
       );
       const existentes = new Set(rows.map((r) => r.nombre));
       const declaradas = new Set(Object.keys(ERRORES_DE_CAJA_POR_RESTRICCION));
@@ -97,13 +148,46 @@ describe.skipIf(base === null)(
       // Los nombres de los disparadores son los que lanza la migración (si cambian ahí, esta prueba lo dice).
       const { rows: funciones } = await dueno.query<{ cuerpo: string }>(
         `select pg_get_functiondef(p.oid) as cuerpo from pg_proc p
-        where p.proname in ('caja_validar_cambio', 'medio_de_pago_validar_cambio', 'cuenta_de_cobro_validar_cambio')`,
+        where p.proname in ('caja_validar_cambio', 'medio_de_pago_validar_cambio', 'cuenta_de_cobro_validar_cambio',
+                            'sesion_caja_validar_alta', 'sesion_caja_validar_cambio', 'sesion_caja_verificar_cierre',
+                            'movimiento_caja_validar_alta', 'movimiento_caja_verificar_documento',
+                            'arqueo_caja_validar_alta', 'arqueo_billete_validar_alta', 'arqueo_verificar_sesion_cerrada')`,
       );
       for (const nombre of RESTRICCIONES_DE_DISPARADORES) {
         expect(
           funciones.some((f) => f.cuerpo.includes(`CONSTRAINT = '${nombre}'`)),
           nombre,
         ).toBe(true);
+      }
+    });
+
+    it("la forma de la clave de idempotencia es la de los CHECK de sesion_caja y movimiento_caja: cada muestra la acepta o rechaza igual el TypeScript y la base", async () => {
+      const muestras = [
+        "a".repeat(15),
+        "a".repeat(16),
+        "A".repeat(128),
+        "a".repeat(129),
+        "abc-DEF_123-456_xyz",
+        "con espacio 1234567",
+        "con.punto.12345678",
+        "ñandú-ñandú-ñandú-ñandú",
+        "abcdefghijklmnop\n",
+        "",
+      ];
+      for (const check of ["sesion_caja_clave_ck", "movimiento_caja_clave_ck"]) {
+        const { rows } = await dueno.query<{ def: string }>(
+          "select pg_get_constraintdef(oid) as def from pg_constraint where conname = $1",
+          [check],
+        );
+        const patron = /'(\^[^']*\$)'::text/.exec(rows[0]?.def ?? "")?.[1];
+        expect(patron, check).toBeDefined();
+        for (const muestra of muestras) {
+          const { rows: r } = await dueno.query<{ ok: boolean }>(
+            "select $1::text ~ $2::text as ok",
+            [muestra, patron],
+          );
+          expect(exigirClave(muestra).ok, `${check}: ${JSON.stringify(muestra)}`).toBe(r[0]?.ok);
+        }
       }
     });
 

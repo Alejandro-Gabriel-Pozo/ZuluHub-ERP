@@ -13,7 +13,9 @@ import {
 } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { Dato } from "../../../puertos/sin-secretos";
+import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import { cargarEstadosDeLaEmpresa } from "../../empresas/publico";
+import type { SesionGuardada } from "../persistencia/repositorio-de-sesiones";
 import type { TxDeCaja } from "./contrato";
 
 export type ErrorPrevio = MotivoDeRechazo | EmpresaNoOpera;
@@ -58,7 +60,7 @@ export async function exigirAlcance(
 
 type Constancia = Readonly<{
   accion: string;
-  entidad: "caja" | "medio_de_pago" | "cuenta_de_cobro";
+  entidad: "caja" | "medio_de_pago" | "cuenta_de_cobro" | "sesion_caja" | "movimiento_caja";
   entidadId: string;
   antes?: Readonly<Record<string, Dato>>;
   despues?: Readonly<Record<string, Dato>>;
@@ -77,3 +79,54 @@ export async function dejarConstancia(
     ...constancia,
   });
 }
+
+/**
+ * La sesión de la entrada, ya dentro del alcance de la persona: no existe (o es de otra empresa) → `SESION_NO_ENCONTRADA`; es de una
+ * sucursal que el operador no tiene asignada → `SUCURSAL_FUERA_DE_ALCANCE`. La sucursal sale de la caja de la sesión, nunca de un dato
+ * que mande la pantalla.
+ */
+export async function cargarSesion(
+  tx: TxDeCaja,
+  contexto: ContextoOperativo,
+  id: string,
+): Promise<Resultado<SesionGuardada, "SESION_NO_ENCONTRADA" | ErrorDeAlcance>> {
+  const sesion = await tx.sesiones.obtener(contexto.empresaId, id);
+  if (sesion === null) return err("SESION_NO_ENCONTRADA");
+  const alcance = await exigirAlcance(tx, contexto, sesion.sucursalId);
+  return alcance.ok ? ok(sesion) : alcance;
+}
+
+/**
+ * Dos pedidos iguales a la vez (el doble clic, dos pestañas) chocan en una restricción única de la base: la clave de idempotencia, una
+ * sola sesión sin cerrar por caja, una sola anulación por movimiento. Bajo `SERIALIZABLE` la base lo informa como conflicto de
+ * serialización (y el adaptador repite todo) cuando la transacción había LEÍDO esa clave por un índice; con una tabla chica el plan lee
+ * la tabla entera, no el índice, y el choque sale como un error de unicidad. En los dos casos lo que corresponde es lo mismo: el otro
+ * pedido ya ganó, así que se vuelve a correr UNA vez el caso completo, que ahora ve lo hecho (`yaExistia`, `CAJA_YA_ABIERTA`,
+ * `MOVIMIENTO_YA_ANULADO`, `CLAVE_REUTILIZADA`). Una segunda unicidad no se vuelve a repetir: sale como el error tipado que es.
+ * Previene que el doble clic devuelva un error de persistencia en vez de «ya estaba» (caso real: lo midió la prueba de dos ingresos con la
+ * misma clave a la vez). Chequeo: `test/integracion/caja-operacion-concurrencia.test.ts`.
+ */
+export async function repetirSiOtroGano<T, E>(
+  correr: () => Promise<Resultado<T, E | ErrorDePersistencia>>,
+  restricciones: readonly string[],
+): Promise<Resultado<T, E | ErrorDePersistencia>> {
+  const primera = await correr();
+  if (primera.ok) return primera;
+  const error = primera.error as ErrorDePersistencia;
+  const chocoConOtro =
+    typeof error === "object" &&
+    "tipo" in error &&
+    error.tipo === "Unicidad" &&
+    error.restriccion !== null &&
+    restricciones.includes(error.restriccion);
+  return chocoConOtro ? correr() : primera;
+}
+
+/** Las restricciones únicas con las que chocan dos aperturas de la misma caja o con la misma clave. */
+export const UNICAS_DE_LA_APERTURA = ["sesion_caja_clave_uk", "sesion_caja_vigente_uk"] as const;
+/** Y las de un movimiento: la clave y, en la anulación, el movimiento que se anula (una sola vez). */
+export const UNICAS_DEL_MOVIMIENTO = ["movimiento_caja_clave_uk"] as const;
+export const UNICAS_DE_LA_ANULACION = [
+  "movimiento_caja_clave_uk",
+  "movimiento_caja_anula_uk",
+] as const;

@@ -5,4 +5,10 @@ export const DECLARACIONES_DE_CONSULTAS = {
   listarCajas: { accion: "cajas.ver" },
   listarMediosDePago: { accion: "cajas.ver" },
   listarCuentasDeCobro: { accion: "cajas.ver" },
+  opcionesDeApertura: { accion: "cajas.ver" },
+  resumenDeSesion: { accion: "cajas.ver" },
+  movimientosDeSesion: { accion: "cajas.ver" },
+  prepararCierre: { accion: "cajas.ver" },
+  listarSesiones: { accion: "cajas.ver" },
+  fichaDeSesion: { accion: "cajas.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

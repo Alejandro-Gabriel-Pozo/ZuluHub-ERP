@@ -1563,6 +1563,27 @@ describe("facturación F6: las consultas del facturador (spec H7 facturación §
     }
   });
 
+  it("una consulta de caja importa la anulación (e3 §3.10), pero ningún otro archivo del dominio ni la anulación de otro módulo", async () => {
+    const permitido = await violacionesDe({
+      "src/modulos/caja/dominio/anulacion.ts": exporta,
+      "src/modulos/caja/consultas/c.ts": importa("../dominio/anulacion"),
+    });
+    expect(permitido).not.toContain("consultas-sin-dominio");
+    // Lo vecino no entra por parecerse: ni otro archivo de la anulación, ni el arqueo o el movimiento, que son del dominio.
+    for (const otro of ["anulacion-de-otra-cosa", "arqueo", "movimiento", "sesion"]) {
+      const prohibido = await violacionesDe({
+        [`src/modulos/caja/dominio/${otro}.ts`]: exporta,
+        "src/modulos/caja/consultas/c.ts": importa(`../dominio/${otro}`),
+      });
+      expect(prohibido, otro).toContain("consultas-sin-dominio");
+    }
+    const ajena = await violacionesDe({
+      "src/modulos/empresas/dominio/anulacion.ts": exporta,
+      "src/modulos/empresas/consultas/c.ts": importa("../dominio/anulacion"),
+    });
+    expect(ajena).toContain("consultas-sin-dominio");
+  });
+
   it("la excepción es solo de fiscal: el modelo de impresión, la acreditación y la vigencia de otro módulo siguen prohibidos", async () => {
     for (const archivo of ["modelo-de-impresion", "acreditacion", "vigencia"]) {
       const v = await violacionesDe({

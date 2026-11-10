@@ -8,6 +8,10 @@ import {
   armarReactivarMedioDePago,
 } from "./cambiar-estado-de-medio-de-pago";
 import type { DependenciasDeCaja } from "./contrato";
+import { armarAbrirSesion } from "./abrir-sesion";
+import { armarAnularMovimientoDeCaja } from "./anular-movimiento";
+import { armarCancelarCierre } from "./cancelar-cierre";
+import { armarCerrarSesion } from "./cerrar-sesion";
 import { armarCrearCaja } from "./crear-caja";
 import { armarCrearCuentaDeCobro } from "./crear-cuenta-de-cobro";
 import { armarCrearMedioDePago } from "./crear-medio-de-pago";
@@ -16,11 +20,15 @@ import { armarAsegurarCajaPorDefecto } from "./caja-por-defecto";
 import { armarEditarCaja } from "./editar-caja";
 import { armarEditarCuentaDeCobro } from "./editar-cuenta-de-cobro";
 import { armarEditarMedioDePago } from "./editar-medio-de-pago";
+import { armarIniciarCierre } from "./iniciar-cierre";
+import { armarRegistrarAjuste } from "./registrar-ajuste";
+import { armarRegistrarMovimientoManual } from "./registrar-movimiento-manual";
 
 /**
  * Los casos de uso de la caja, listos para que la composición los ofrezca. El `satisfies` exige que sean EXACTAMENTE los que declara
  * `DECLARACIONES` (qué acción exige cada uno y cómo se repite): uno nuevo sin declarar, o una declaración sin caso de uso, no compila.
- * Hoy, la configuración (cajas, medios de pago y cuentas de cobro); la operación la suman los tramos siguientes.
+ * La configuración (cajas, medios de pago y cuentas de cobro) y la operación de la caja (sesión, cierre, movimientos manuales, ajustes y
+ * anulaciones); el cobro lo suma el tramo siguiente.
  */
 export function crearCasosDeUsoDeCaja(dependencias: DependenciasDeCaja) {
   return {
@@ -37,6 +45,13 @@ export function crearCasosDeUsoDeCaja(dependencias: DependenciasDeCaja) {
     editarCuentaDeCobro: armarEditarCuentaDeCobro(dependencias),
     desactivarCuentaDeCobro: armarDesactivarCuentaDeCobro(dependencias),
     reactivarCuentaDeCobro: armarReactivarCuentaDeCobro(dependencias),
+    abrirSesion: armarAbrirSesion(dependencias),
+    iniciarCierre: armarIniciarCierre(dependencias),
+    cancelarCierre: armarCancelarCierre(dependencias),
+    cerrarSesion: armarCerrarSesion(dependencias),
+    registrarMovimientoManual: armarRegistrarMovimientoManual(dependencias),
+    registrarAjuste: armarRegistrarAjuste(dependencias),
+    anularMovimientoDeCaja: armarAnularMovimientoDeCaja(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

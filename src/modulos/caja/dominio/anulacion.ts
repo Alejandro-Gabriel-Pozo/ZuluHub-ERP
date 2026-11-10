@@ -23,6 +23,20 @@ export type MovimientoAnulable =
   | (BaseDeMovimiento & Readonly<{ clase: "COBRO"; origen: ReferenciaOpaca }>)
   | (BaseDeMovimiento & Readonly<{ clase: Exclude<ClaseDeMovimiento, "COBRO"> }>);
 
+/**
+ * Arma el movimiento que decide la anulación a partir de lo guardado: un cobro siempre trae su origen (la base lo garantiza con
+ * `movimiento_caja_sin_documento`); si no lo trae, la base está rota y se lanza en vez de seguir con un dato inventado.
+ */
+export function movimientoAnulableDe(
+  guardado: BaseDeMovimiento &
+    Readonly<{ clase: ClaseDeMovimiento; origen: ReferenciaOpaca | null }>,
+): MovimientoAnulable {
+  const { clase, origen, ...base } = guardado;
+  if (clase !== "COBRO") return { ...base, clase };
+  if (origen === null) throw new Error("invariante rota: un cobro sin origen");
+  return { ...base, clase, origen };
+}
+
 export type EntradaDeAnulacion = Readonly<{
   movimiento: MovimientoAnulable;
   /** Ya existe una anulación de este movimiento. */

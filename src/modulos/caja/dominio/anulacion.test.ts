@@ -5,6 +5,7 @@ import { CLASES_DE_MOVIMIENTO, type EstadoDeSesion } from "../estados";
 import {
   decidirAnulacion,
   motivoNoAnulable,
+  movimientoAnulableDe,
   type EntradaDeAnulacion,
   type MovimientoAnulable,
 } from "./anulacion";
@@ -208,5 +209,40 @@ describe("motivoNoAnulable (lo que muestra la consulta, con la misma regla)", ()
         }
       }
     }
+  });
+});
+
+describe("armar el movimiento anulable a partir de lo guardado", () => {
+  const guardado = {
+    medioDePagoId: "efectivo",
+    cuentaDeCobroId: null,
+    importe: valor("-10.25"),
+    registradoPor: OPERADOR,
+  };
+
+  it("un movimiento que no es cobro se arma sin origen, aunque el guardado lo traiga vacío", () => {
+    for (const clase of CLASES_DE_MOVIMIENTO.filter((c) => c !== "COBRO")) {
+      const armado = movimientoAnulableDe({ ...guardado, clase, origen: null });
+      expect(armado).toEqual({ ...guardado, clase });
+      expect(Object.keys(armado)).not.toContain("origen");
+    }
+  });
+
+  it("un cobro se arma con su origen", () => {
+    const origen = {
+      tipo: "ventas.cobranza_de_ticket",
+      id: "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+    };
+    expect(movimientoAnulableDe({ ...guardado, clase: "COBRO", origen })).toEqual({
+      ...guardado,
+      clase: "COBRO",
+      origen,
+    });
+  });
+
+  it("un cobro sin origen es una base rota: se lanza, no se inventa un origen", () => {
+    expect(() => movimientoAnulableDe({ ...guardado, clase: "COBRO", origen: null })).toThrow(
+      "invariante rota: un cobro sin origen",
+    );
   });
 });

@@ -1,6 +1,7 @@
 /**
- * Entrada pública del módulo de caja (ADR-001; e3 §3). Hoy: el dominio puro (E3, tramo 2) y la configuración (tramo 3: cajas, medios de
- * pago y cuentas de cobro, con su persistencia, casos de uso y consultas). El módulo sigue «en desarrollo» en el catálogo.
+ * Entrada pública del módulo de caja (ADR-001; e3 §3). Hoy: el dominio puro (E3, tramo 2), la configuración (tramo 3: cajas, medios de
+ * pago y cuentas de cobro, con su persistencia, casos de uso y consultas) y la operación de la caja (tramo 5: sesión, cierre, movimientos
+ * manuales, ajustes y anulaciones). El módulo sigue «en desarrollo» en el catálogo.
  */
 export {
   ESTADOS_DE_SESION,
@@ -83,8 +84,17 @@ export {
   type MovimientoManualArmado,
 } from "./dominio/movimiento";
 export {
+  exigirClave,
+  huellaDeAjuste,
+  huellaDeAnulacion,
+  huellaDeApertura,
+  huellaDeMovimientoManual,
+  type ErrorDeClave,
+} from "./dominio/idempotencia-de-operacion";
+export {
   decidirAnulacion,
   motivoNoAnulable,
+  movimientoAnulableDe,
   type EntradaDeAnulacion,
   type ErrorDeAnulacion,
   type EspejoDeAnulacion,
@@ -191,6 +201,30 @@ export {
   type OpcionesDeListadoDeCuentas,
   type RepositorioDeCuentasDeCobro,
 } from "./persistencia/repositorio-de-cuentas";
+export {
+  crearRepositorioDeSesiones,
+  type FiltroDeSesiones,
+  type RepositorioDeSesiones,
+  type SesionGuardada,
+  type SesionNueva,
+} from "./persistencia/repositorio-de-sesiones";
+export {
+  crearRepositorioDeMovimientos,
+  type CursorDeMovimientos,
+  type EsperadoDeLinea,
+  type MovimientoConSesion,
+  type MovimientoDeLista,
+  type MovimientoGuardado,
+  type MovimientoNuevo,
+  type MovimientoParaSumar,
+  type RepositorioDeMovimientos,
+} from "./persistencia/repositorio-de-movimientos";
+export {
+  crearRepositorioDeArqueos,
+  type ArqueoGuardado,
+  type LineaDeArqueoGuardada,
+  type RepositorioDeArqueos,
+} from "./persistencia/repositorio-de-arqueos";
 export { DECLARACIONES as DECLARACIONES_DE_CAJA } from "./casos-de-uso/declaraciones";
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_CAJA } from "./consultas/declaraciones";
 export { crearCasosDeUsoDeCaja, type CasosDeUsoDeCaja } from "./casos-de-uso/casos-de-uso";
@@ -254,6 +288,42 @@ export type {
   SalidaDeDesactivarCuentaDeCobro,
   SalidaDeReactivarCuentaDeCobro,
 } from "./casos-de-uso/cambiar-estado-de-cuenta-de-cobro";
+export type {
+  EntradaDeAbrirSesion,
+  ErrorAlAbrirSesion,
+  SalidaDeAbrirSesion,
+} from "./casos-de-uso/abrir-sesion";
+export type {
+  EntradaDeIniciarCierre,
+  ErrorAlIniciarCierre,
+  SalidaDeIniciarCierre,
+} from "./casos-de-uso/iniciar-cierre";
+export type {
+  EntradaDeCancelarCierre,
+  ErrorAlCancelarCierre,
+  SalidaDeCancelarCierre,
+} from "./casos-de-uso/cancelar-cierre";
+export type {
+  EntradaDeCerrarSesion,
+  ErrorAlCerrarSesion,
+  LineaDeArqueoDeSalida,
+  SalidaDeCerrarSesion,
+} from "./casos-de-uso/cerrar-sesion";
+export type {
+  EntradaDeRegistrarMovimientoManual,
+  ErrorAlRegistrarMovimientoManual,
+  SalidaDeRegistrarMovimientoManual,
+} from "./casos-de-uso/registrar-movimiento-manual";
+export type {
+  EntradaDeRegistrarAjuste,
+  ErrorAlRegistrarAjuste,
+  SalidaDeRegistrarAjuste,
+} from "./casos-de-uso/registrar-ajuste";
+export type {
+  EntradaDeAnularMovimientoDeCaja,
+  ErrorAlAnularMovimientoDeCaja,
+  SalidaDeAnularMovimientoDeCaja,
+} from "./casos-de-uso/anular-movimiento";
 export { crearConsultasDeCaja, type ConsultasDeCaja } from "./consultas/consultas";
 export type { DependenciasDeConsultasDeCaja, TxDeConsultasDeCaja } from "./consultas/contrato";
 export type {
@@ -274,3 +344,40 @@ export type {
   EntradaDeListarCuentasDeCobro,
   ErrorAlListarCuentasDeCobro,
 } from "./consultas/listar-cuentas-de-cobro";
+export type {
+  EntradaDeOpcionesDeApertura,
+  ErrorAlConsultarOpcionesDeApertura,
+  OpcionesDeApertura,
+} from "./consultas/opciones-de-apertura";
+export type {
+  EntradaDeResumenDeSesion,
+  ErrorAlResumirSesion,
+  LineaEsperadaDeSesion,
+  ResumenDeSesion,
+} from "./consultas/resumen-de-sesion";
+export {
+  MAXIMO_DE_MOVIMIENTOS_POR_PAGINA,
+  type CursorDeLaLista,
+  type EntradaDeMovimientosDeSesion,
+  type ErrorAlListarMovimientos,
+  type MovimientoDeLaSesion,
+  type PaginaDeMovimientos,
+} from "./consultas/movimientos-de-sesion";
+export type {
+  CierrePreparado,
+  EntradaDePrepararCierre,
+  ErrorAlPrepararCierre,
+  LineaParaCerrar,
+} from "./consultas/preparar-cierre";
+export {
+  MAXIMO_DE_SESIONES_POR_PEDIDO,
+  type EntradaDeListarSesiones,
+  type ErrorAlListarSesiones,
+} from "./consultas/listar-sesiones";
+export type {
+  EntradaDeFichaDeSesion,
+  ErrorAlVerLaFicha,
+  FichaDeSesion,
+  LineaDeArqueoDeLaFicha,
+} from "./consultas/ficha-de-sesion";
+export type { SesionDeConsulta } from "./consultas/comun";
