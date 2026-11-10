@@ -89,7 +89,12 @@ describe.skipIf(base === null)(
       await dueno.connect();
       bajaId = (await crearAdminDeBase(dueno, { activo: false })).id;
       tokens = crearTokensHmac(randomBytes(32));
-      reales = crearCasosDeUsoDeEmpresas({ transacciones: entorno, reglas: REGLAS_DE_EMPRESA });
+      reales = crearCasosDeUsoDeEmpresas({
+        transacciones: entorno,
+        reglas: REGLAS_DE_EMPRESA,
+        ganchosDeSucursal: [],
+        ganchosAlDesactivarSucursal: [],
+      });
       identidad = crearCasosDeUsoDeIdentidad({
         transacciones: entorno,
         tokens,

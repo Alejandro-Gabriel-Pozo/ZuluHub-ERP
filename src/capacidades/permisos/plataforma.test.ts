@@ -29,6 +29,7 @@ const DE_SOPORTE = [
   "configuracion.ver",
   "empresas.ver",
   "invitaciones.ver",
+  "listas.ver",
   "marcas.ver",
   "planes.ver",
   "soporte.buscar_referencia",
@@ -52,6 +53,7 @@ const SOLO_DE_ADMIN = [
   "dominios.verificar",
   "dominios.activar",
   "dominios.desactivar",
+  "listas.editar",
   "marcas.confirmar_version",
   "marcas.crear",
   "marcas.editar_borrador",
@@ -63,6 +65,9 @@ const SOLO_DE_ADMIN = [
   "planes.editar_borrador",
   "planes.publicar_version",
 ] as const;
+
+/** Las 2 de listas del sistema (e3 §3.7), declaradas al final del catálogo. */
+const ACCIONES_DE_LISTAS = ["listas.ver", "listas.editar"] as const;
 
 const TODAS = Object.keys(PERMISOS_DE_PLATAFORMA) as ClaveAccionDePlataforma[];
 
@@ -121,6 +126,7 @@ const ORDEN_DESDE_MARCAS_Y_PLANES = [
   ...ACCIONES_DE_MARCAS_Y_PLANES.slice(0, 7),
   ...ACCIONES_DE_DOMINIOS_DE_M4A,
   ...ACCIONES_DE_MARCAS_Y_PLANES.slice(7),
+  ...ACCIONES_DE_LISTAS,
 ] as const;
 
 describe("los roles de plataforma", () => {
@@ -267,6 +273,8 @@ describe("el catálogo de plataforma", () => {
             efecto: "COMPLETA_CIERRA",
             segundoFactorReciente: true,
           },
+          "listas.ver": { capacidad: null, efecto: "LECTURA", segundoFactorReciente: false },
+          "listas.editar": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
         },
       },
     });
@@ -278,10 +286,10 @@ describe("el catálogo de plataforma", () => {
     ]);
   });
 
-  it("las acciones son las 35: 12 que hacen los dos roles y 23 que solo hace ADMIN", () => {
-    expect(TODAS).toHaveLength(35);
-    expect(DE_SOPORTE).toHaveLength(12);
-    expect(SOLO_DE_ADMIN).toHaveLength(23);
+  it("las acciones son las 37: 13 que hacen los dos roles y 24 que solo hace ADMIN", () => {
+    expect(TODAS).toHaveLength(37);
+    expect(DE_SOPORTE).toHaveLength(13);
+    expect(SOLO_DE_ADMIN).toHaveLength(24);
   });
 
   it("las 14 de marcas y planes se agregaron juntas tras las 18 de H5, sin reordenarlas, y las 3 de M4a van justo después de dominios.retirar", () => {
@@ -337,7 +345,7 @@ describe("la matriz rol → acciones de plataforma (F3)", () => {
     ).toEqual([]);
   });
 
-  it("marcas y planes (§C) y los dominios de M4a: SOPORTE solo ve; ADMIN hace las 17; SOPORTE tiene 12 en total (las 10 de H5 más marcas.ver y planes.ver)", () => {
+  it("marcas y planes (§C) y los dominios de M4a: SOPORTE solo ve; ADMIN hace las 17; SOPORTE tiene 13 en total (las 10 de H5 más marcas.ver, planes.ver y listas.ver)", () => {
     const tabla = tablaDePermisosDePlataforma(PERMISOS_DE_PLATAFORMA);
     for (const accion of [...ACCIONES_DE_MARCAS_Y_PLANES, ...ACCIONES_DE_DOMINIOS_DE_M4A]) {
       const soloVer = accion === "marcas.ver" || accion === "planes.ver";
@@ -346,17 +354,17 @@ describe("la matriz rol → acciones de plataforma (F3)", () => {
       );
       expect(tabla.ADMIN, accion).toContain(accion);
     }
-    expect(tabla.SOPORTE).toHaveLength(12);
+    expect(tabla.SOPORTE).toHaveLength(13);
     expect(
       tabla.SOPORTE.filter((a) => (ACCIONES_DE_H5 as readonly string[]).includes(a)),
     ).toHaveLength(10);
-    expect(tabla.ADMIN).toHaveLength(35);
+    expect(tabla.ADMIN).toHaveLength(37);
   });
 
   it("piso jerárquico: lo que puede SOPORTE lo puede ADMIN", () => {
     const tabla = tablaDePermisosDePlataforma(PERMISOS_DE_PLATAFORMA);
     for (const accion of tabla.SOPORTE) expect(tabla.ADMIN).toContain(accion);
-    expect(tabla.ADMIN).toHaveLength(35);
+    expect(tabla.ADMIN).toHaveLength(37);
   });
 
   it("cada acción del catálogo tiene su fila en la matriz, y no hay filas de más", () => {
@@ -482,6 +490,7 @@ const EFECTOS_DE_PLATAFORMA = {
     "configuracion.ver",
     "empresas.ver",
     "invitaciones.ver",
+    "listas.ver",
     "marcas.ver",
     "planes.ver",
     "soporte.buscar_referencia",
@@ -495,6 +504,7 @@ const EFECTOS_DE_PLATAFORMA = {
     "dominios.verificar",
     "empresas.alta",
     "empresas.reactivar",
+    "listas.editar",
     "marcas.confirmar_version",
     "marcas.crear",
     "marcas.editar_borrador",
@@ -536,7 +546,7 @@ describe("el efecto de cada acción de plataforma", () => {
     }).toEqual(EFECTOS_DE_PLATAFORMA);
   });
 
-  it("las 35 acciones tienen exactamente un efecto, y ninguna queda sin clasificar", () => {
+  it("las 37 acciones tienen exactamente un efecto, y ninguna queda sin clasificar", () => {
     const clasificadas = Object.values(EFECTOS_DE_PLATAFORMA).flat().sort();
     expect(clasificadas).toEqual(TODAS.slice().sort());
   });

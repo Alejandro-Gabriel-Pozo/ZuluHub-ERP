@@ -6,6 +6,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DECLARACIONES_DE_CAJA, DECLARACIONES_DE_CONSULTAS_DE_CAJA } from "../modulos/caja/publico";
 import {
   DECLARACIONES_DE_CIERRE,
   DECLARACIONES_DE_CONSULTAS_DE_CIERRE,
@@ -606,6 +607,8 @@ const DECISIONES_DE_WEB: Record<keyof ReturnType<typeof armarWeb>, Decision> = {
   consultasDeCatalogo: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CATALOGO },
   casosDeUsoDeEmpresas: { conGuard: DECLARACIONES_DE_EMPRESAS },
   consultasDeEmpresas: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS },
+  casosDeUsoDeCaja: { conGuard: DECLARACIONES_DE_CAJA },
+  consultasDeCaja: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CAJA },
   casosDeUsoDeCierre: { conGuard: DECLARACIONES_DE_CIERRE },
   consultasDeCierre: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CIERRE },
   casosDeUsoDeIdentidad: {

@@ -1,6 +1,7 @@
 import type { ContextoOperativo } from "../../contexto/contexto";
 import type { SucursalId } from "../../primitivas/identificadores/marca";
 import type { Resultado } from "../../primitivas/resultado/resultado";
+import type { DatosDeJornada } from "./dominio/sucursal";
 
 /** El gancho no pudo completar lo suyo: `crearSucursal` aborta entera (ni sucursal ni lo que el gancho iba a crear). */
 export type ErrorDeGancho = "GANCHO_DE_SUCURSAL_FALLIDO";
@@ -27,3 +28,32 @@ export type GanchoDeSucursal<Tx> = Readonly<{
 }>;
 
 export type GanchosDeSucursal<Tx> = readonly GanchoDeSucursal<Tx>[];
+
+/**
+ * Por qué un gancho no deja desactivar la sucursal (decisión 178): su jornada está en auditoría, tiene movimiento (hay que hacer antes el
+ * cierre del día) o no se pudo comprobar (un módulo no respondió: falla cerrado, nunca se asume «sin movimiento»). Códigos tipados, sin texto.
+ */
+export type ErrorDeGanchoAlDesactivar =
+  | "SUCURSAL_CON_JORNADA_EN_AUDITORIA"
+  | "SUCURSAL_CON_MOVIMIENTO_EN_LA_JORNADA"
+  | "JORNADA_NO_VERIFICABLE";
+
+/**
+ * Puerto de empresas para lo que otro módulo decide ANTES de desactivar una sucursal (decisión 178; hoy, el cierre del día: no se desactiva
+ * con la jornada en auditoría, y una jornada abierta sin movimiento se cierra sola). Mismo molde que `GanchoDeSucursal`: empresas solo
+ * declara el puerto, el módulo dueño lo implementa y la composición lo registra. Corre DENTRO de la transacción serializable de
+ * `desactivarSucursal`, después del guard y de decidir que hay que desactivar y ANTES de cambiar la sucursal; solo si la sucursal estaba
+ * activa (desactivar de nuevo no lo invoca). Sin guard propio (es el de `sucursales.desactivar`). Un error aborta todo: la sucursal sigue
+ * activa y lo que el gancho hubiera escrito se revierte. Recibe la zona y el corte de la sucursal para que fechar la jornada sea una sola
+ * regla. Previene desactivar una sucursal en medio de un cierre del día o con ventas y dinero sin cerrar.
+ */
+export type GanchoAlDesactivarSucursal<Tx> = Readonly<{
+  alDesactivarSucursalEnTx(
+    tx: Tx,
+    contexto: ContextoOperativo,
+    sucursal: Readonly<{ sucursalId: SucursalId; nombre: string }>,
+    jornada: DatosDeJornada,
+  ): Promise<Resultado<null, ErrorDeGanchoAlDesactivar>>;
+}>;
+
+export type GanchosAlDesactivarSucursal<Tx> = readonly GanchoAlDesactivarSucursal<Tx>[];

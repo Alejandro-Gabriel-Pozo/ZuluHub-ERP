@@ -5,8 +5,17 @@ import {
 } from "../adaptadores/certificados/lector-x509";
 import { CADENAS_DE_CONFIANZA_DE_ARCA } from "./cadenas-de-confianza-de-arca";
 import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../capacidades/permisos/empresa";
+import {
+  crearCasosDeUsoDeCaja,
+  crearConsultasDeCaja,
+  ganchoDeSucursalDeCaja,
+} from "../modulos/caja/publico";
 import { crearCasosDeUsoDeCatalogo, crearConsultasDeCatalogo } from "../modulos/catalogo/publico";
-import { crearCasosDeUsoDeCierre, crearConsultasDeCierre } from "../modulos/cierre/publico";
+import {
+  crearCasosDeUsoDeCierre,
+  crearConsultasDeCierre,
+  crearGanchoDeCierreAlDesactivar,
+} from "../modulos/cierre/publico";
 import { crearCasosDeUsoDeEmpresas, crearConsultasDeEmpresas } from "../modulos/empresas/publico";
 import {
   crearCasosDeUsoDeCertificados,
@@ -21,6 +30,7 @@ import {
   crearConsultasDeSesion,
 } from "../modulos/identidad/publico";
 import type { LecturasCompartidas } from "../puertos/transacciones";
+import { aporteDeCaja, ticketsPorCobranzaDeLaComposicion } from "./cierre-de-caja";
 import type { Conexiones } from "./conexiones";
 import { armarEmisionFiscal } from "./emision-fiscal";
 import { perezoso } from "./perezoso";
@@ -81,8 +91,13 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
       crearCasosDeUsoDeEmpresas({
         transacciones: conexiones.transaccionesDeApp(),
         reglas,
-        // Lo que nace con cada sucursal (decisión 165). Vacío mientras `caja` no exista: ahí se registra su gancho.
-        ganchosDeSucursal: [],
+        // Lo que nace con cada sucursal (decisión 165): «Caja 1», en la misma transacción que la sucursal.
+        ganchosDeSucursal: [ganchoDeSucursalDeCaja],
+        // Desactivar una sucursal (decisión 178): no con la jornada en auditoría; abierta sin movimiento se cierra sola; con movimiento
+        // se pide el cierre del día. Pregunta a los mismos aportes que el cierre (hoy, caja; ventas lo suma E4).
+        ganchosAlDesactivarSucursal: [
+          crearGanchoDeCierreAlDesactivar({ reglas, aportes: [aporteDeCaja] }),
+        ],
       }),
     ),
     consultasDeEmpresas: perezoso(() =>
@@ -101,20 +116,37 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
     ),
     /**
      * El cierre del día (E3b): iniciar y cancelar la auditoría y cerrar la jornada, cada uno con su acción de `cierre`. Los aportes de los
-     * módulos que tienen algo que revisar (caja, ventas) los registra cada etapa en `aportes`: vacío mientras no existan.
+     * módulos que tienen algo que revisar los registra cada etapa en `aportes`: hoy el de caja (E3, tramo 8; solo cuenta si la empresa tiene
+     * `caja` activo); el de ventas lo suma E4.
      */
     casosDeUsoDeCierre: perezoso(() =>
       crearCasosDeUsoDeCierre({
         transacciones: conexiones.transaccionesDeApp(),
         reglas,
-        aportes: [],
+        aportes: [aporteDeCaja],
       }),
     ),
     consultasDeCierre: perezoso(() =>
       crearConsultasDeCierre({
         transacciones: conexiones.transaccionesDeApp(),
         reglas,
-        aportes: [],
+        aportes: [aporteDeCaja],
+      }),
+    ),
+    /**
+     * La configuración de caja (E3): cajas, medios de pago y cuentas de cobro, cada caso con su acción de `caja`. El módulo sigue «en
+     * desarrollo» en el catálogo: el guard lo rechaza con `MODULO_EN_DESARROLLO` hasta que el tramo final lo declare disponible.
+     * La operación (sesiones, movimientos, cobro) y el cierre del día de caja (corregir un medio, declarar totales, la conciliación) salen por acá.
+     */
+    casosDeUsoDeCaja: perezoso(() =>
+      crearCasosDeUsoDeCaja({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    consultasDeCaja: perezoso(() =>
+      crearConsultasDeCaja({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        // El total vigente de los tickets, que ventas informará cuando exista (E4): hoy, fail-closed (`cierre-de-caja.ts`).
+        tickets: ticketsPorCobranzaDeLaComposicion,
       }),
     ),
     casosDeUsoDeIdentidad: perezoso(() =>

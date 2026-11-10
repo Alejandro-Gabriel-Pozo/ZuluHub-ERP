@@ -46,6 +46,7 @@ describe("apps/web/servidor/composicion.ts", () => {
     expect(Object.keys(web).sort()).toEqual([
       "autenticacion",
       "barridoDeAutenticacion",
+      "casosDeUsoDeCaja",
       "casosDeUsoDeCatalogo",
       "casosDeUsoDeCertificados",
       "casosDeUsoDeCierre",
@@ -54,6 +55,7 @@ describe("apps/web/servidor/composicion.ts", () => {
       "casosDeUsoDeFacturacion",
       "casosDeUsoDeIdentidad",
       "configuracionPublicaDeHost",
+      "consultasDeCaja",
       "consultasDeCatalogo",
       "consultasDeCierre",
       "consultasDeEmpresas",

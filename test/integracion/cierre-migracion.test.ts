@@ -663,7 +663,13 @@ describe.skipIf(base === null)("migración 0026: el cierre del día", () => {
       await c.connect();
       try {
         const sql = await readFile(await rutaDeReversion(), "utf8");
+        // 0027 (caja) depende de estas tablas: se baja primero, como avisa la reversión de 0026.
+        const deCaja = await readFile(
+          join(CARPETA_DE_MIGRACIONES, "reversiones", "0027_revertir_caja.sql"),
+          "utf8",
+        );
         await c.query("begin");
+        await c.query(deCaja);
         await c.query(sql);
         await c.query(sql); // repetirla no cambia nada
         const { rows } = await c.query<{ n: string }>(
