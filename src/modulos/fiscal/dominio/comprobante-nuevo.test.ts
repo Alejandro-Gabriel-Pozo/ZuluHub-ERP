@@ -15,6 +15,7 @@ import { origenId } from "./identificadores";
 import {
   AMBIENTES,
   CONCEPTOS,
+  FORMA_DEL_SIMBOLO_DE_UNIDAD,
   LIMITES_DE_COMPROBANTE,
   armarComprobanteNuevo,
   type EntradaDeComprobante,
@@ -206,6 +207,29 @@ describe("armarComprobanteNuevo: errores", () => {
           entradaDeFactura(consumidorFinal, [...uno, renglon("1", "1", "21", null, descripcion)]),
         ),
       ).toEqual({ codigo: "RENGLON_INVALIDO", posicion: 1, campo: "descripcion" });
+    }
+  });
+
+  it("la unidad se guarda tal cual en el renglón: null, o de 1 a 8 letras o dígitos", () => {
+    for (const unidad of [null, "kg", "u", "m2", "ABCDEFGH"]) {
+      const r = armar(entradaDeFactura(consumidorFinal, [{ ...renglon("1", "1", "21"), unidad }]));
+      expect(r.ok && r.valor.renglones[0]?.unidad).toBe(unidad);
+    }
+  });
+
+  it("una unidad con otra forma (vacía, de 9, con espacio, signo, salto de línea o fuera de lugar) se rechaza con la posición y el campo", () => {
+    for (const unidad of ["", "ABCDEFGHI", "k g", "k-g", "kg\n", "!kg", "kg!", "ñ", " kg"]) {
+      expect(
+        error(entradaDeFactura(consumidorFinal, [...uno, { ...renglon("1", "1", "21"), unidad }])),
+        JSON.stringify(unidad),
+      ).toEqual({ codigo: "RENGLON_INVALIDO", posicion: 1, campo: "unidad" });
+    }
+  });
+
+  it("la forma permitida de la unidad es de 1 a 8 letras o dígitos, anclada", () => {
+    expect(FORMA_DEL_SIMBOLO_DE_UNIDAD.test("kg")).toBe(true);
+    for (const mala of ["", "123456789", "x!", "!x", "x\ny"]) {
+      expect(FORMA_DEL_SIMBOLO_DE_UNIDAD.test(mala), mala).toBe(false);
     }
   });
 

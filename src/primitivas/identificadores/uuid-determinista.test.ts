@@ -31,8 +31,14 @@ describe("uuidV5", () => {
     "rechaza un espacio de nombres que no es un uuid en minúscula: %j",
     (espacio) => {
       expect(() => uuidV5(espacio, "x")).toThrow(RangeError);
+      expect(() => uuidV5(espacio, "x")).toThrow("uuid en minúscula");
     },
   );
+
+  it("un espacio con algo antes del uuid también se rechaza (la forma está anclada al principio)", () => {
+    expect(() => uuidV5(`x${ESPACIO}`, "x")).toThrow(RangeError);
+    expect(() => uuidV5(`${ESPACIO}x`, "x")).toThrow(RangeError);
+  });
 });
 
 describe("uuidV5DeLista (el origen de cada intento: mismo ticket e intento = mismo origen)", () => {

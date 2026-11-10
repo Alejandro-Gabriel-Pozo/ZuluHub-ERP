@@ -16,7 +16,7 @@ export function uuidV5(espacio: string, nombre: string): string {
   }
   const hash = createHash("sha1")
     .update(Buffer.from(espacio.replaceAll("-", ""), "hex"))
-    .update(nombre, "utf8")
+    .update(nombre) // un string se hashea en UTF-8 por defecto
     .digest();
   hash.writeUInt8((hash.readUInt8(6) & 0x0f) | 0x50, 6); // versión 5
   hash.writeUInt8((hash.readUInt8(8) & 0x3f) | 0x80, 8); // variante RFC 4122
