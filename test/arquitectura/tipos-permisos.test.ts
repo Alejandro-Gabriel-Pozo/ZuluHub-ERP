@@ -333,6 +333,8 @@ describe("H5 P1: los tipos de plataforma salen de su catálogo y no se mezclan c
       | "perillas.ajustar"
       | "modulos_de_empresa.activar"
       | "modulos_de_empresa.desactivar"
+      | "listas.ver"
+      | "listas.editar"
     >();
     expectTypeOf<ClaveCapacidadDePlataforma>().toEqualTypeOf<never>();
     expectTypeOf<RolDePlataforma>().toEqualTypeOf<"ADMIN" | "SOPORTE">();

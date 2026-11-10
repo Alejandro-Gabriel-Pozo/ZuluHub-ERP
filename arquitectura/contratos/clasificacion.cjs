@@ -88,6 +88,7 @@ const MODULOS_DE_NEGOCIO = [
   "empresas",
   "fiscal",
   "identidad",
+  "listas",
   "marcas",
   "planes",
   "tenants",

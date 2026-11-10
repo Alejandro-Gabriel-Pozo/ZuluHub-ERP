@@ -21,6 +21,7 @@
     "src/modulos/cierre/dominio/**/*.ts",
     "src/modulos/cierre/aporte-al-cierre.ts",
     "src/modulos/cierre/estados.ts",
+    "src/modulos/listas/dominio/**/*.ts",
     "src/modulos/identidad/dominio/**/*.ts",
     "src/plataforma/dominio/**/*.ts",
     "src/consultas-de-grupo/vista-de-grupo.ts",

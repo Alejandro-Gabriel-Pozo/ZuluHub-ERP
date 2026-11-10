@@ -7,8 +7,10 @@ import {
 import type { ContextoDePlataforma } from "../contexto/contexto";
 import { DECLARACIONES_DE_ALTAS } from "../plataforma/casos-de-uso/altas";
 import { DECLARACIONES_DE_DOMINIOS } from "../plataforma/casos-de-uso/dominios";
+import { DECLARACIONES_DE_LISTAS } from "../plataforma/casos-de-uso/listas-del-sistema";
 import { DECLARACIONES_DE_MARCAS_Y_PLANES } from "../plataforma/casos-de-uso/marcas-y-planes";
 import { DECLARACIONES_DE_SOPORTE } from "../plataforma/casos-de-uso/soporte";
+import { DECLARACIONES_DE_CONSULTAS_DE_LISTAS } from "../plataforma/consultas/consultas-de-listas";
 import { DECLARACIONES_DE_CONSULTAS_DE_PLATAFORMA } from "../plataforma/consultas/declaraciones";
 import { DECLARACIONES_DE_CONSULTAS_DE_MARCAS_Y_PLANES } from "../plataforma/consultas/declaraciones-de-marcas-y-planes";
 import { ok, type Resultado } from "../primitivas/resultado/resultado";
@@ -70,6 +72,7 @@ export type CasosDeConsola = Expuestas<
   typeof DECLARACIONES_DE_ALTAS
 > &
   Expuestas<ReturnType<Plataforma["casosDeUsoDeDominios"]>, typeof DECLARACIONES_DE_DOMINIOS> &
+  Expuestas<ReturnType<Plataforma["casosDeUsoDeListas"]>, typeof DECLARACIONES_DE_LISTAS> &
   Expuestas<
     ReturnType<Plataforma["casosDeUsoDeMarcasYPlanes"]>,
     typeof DECLARACIONES_DE_MARCAS_Y_PLANES
@@ -84,6 +87,10 @@ export type ConsultasDeConsola = Expuestas<
   Expuestas<
     ReturnType<Plataforma["consultasDeMarcasYPlanes"]>,
     typeof DECLARACIONES_DE_CONSULTAS_DE_MARCAS_Y_PLANES
+  > &
+  Expuestas<
+    ReturnType<Plataforma["consultasDeListas"]>,
+    typeof DECLARACIONES_DE_CONSULTAS_DE_LISTAS
   >;
 
 type Grupo = Readonly<{
@@ -100,6 +107,11 @@ const GRUPOS: readonly Grupo[] = [
     clase: "casos",
     declaraciones: DECLARACIONES_DE_DOMINIOS,
     armar: (p) => p.casosDeUsoDeDominios(),
+  },
+  {
+    clase: "casos",
+    declaraciones: DECLARACIONES_DE_LISTAS,
+    armar: (p) => p.casosDeUsoDeListas(),
   },
   {
     clase: "casos",
@@ -120,6 +132,11 @@ const GRUPOS: readonly Grupo[] = [
     clase: "consultas",
     declaraciones: DECLARACIONES_DE_CONSULTAS_DE_MARCAS_Y_PLANES,
     armar: (p) => p.consultasDeMarcasYPlanes(),
+  },
+  {
+    clase: "consultas",
+    declaraciones: DECLARACIONES_DE_CONSULTAS_DE_LISTAS,
+    armar: (p) => p.consultasDeListas(),
   },
 ];
 
@@ -178,10 +195,12 @@ export type PlataformaParaLaConsola = Pick<
   | "buscarAdmin"
   | "casosDeUsoDeAltas"
   | "casosDeUsoDeDominios"
+  | "casosDeUsoDeListas"
   | "casosDeUsoDeMarcasYPlanes"
   | "casosDeUsoDeSoporte"
   | "consultasDePlataforma"
   | "consultasDeMarcasYPlanes"
+  | "consultasDeListas"
   | "cerrar"
 >;
 

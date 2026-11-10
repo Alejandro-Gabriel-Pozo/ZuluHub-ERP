@@ -32,6 +32,7 @@ const EXIGEN = [
   "empresas.alta", // alta de empresa
   "empresas.reactivar", // reactivar empresa
   "empresas.suspender", // suspender empresa
+  "listas.editar", // agregar, corregir, desactivar y reactivar un valor de las listas (criterio del ingeniero: lo ven todas las empresas)
   "marcas.confirmar_version", // confirmar versión de marca
   "modulos_de_empresa.activar", // activar módulo de empresa
   "modulos_de_empresa.desactivar", // desactivar módulo de empresa
@@ -52,6 +53,7 @@ const NO_EXIGEN = [
   "configuracion.ver",
   "empresas.ver",
   "invitaciones.ver",
+  "listas.ver",
   "marcas.crear", // criterio del ingeniero: sin efecto sobre clientes hasta confirmar la versión
   "marcas.editar_borrador", // guardar borrador de marca
   "marcas.ver",
@@ -68,7 +70,7 @@ const TODAS = Object.keys(CATALOGO_DE_PLATAFORMA.plataforma.acciones) as ClaveAc
 
 describe("el catálogo declara el indicador en TODAS las acciones", () => {
   it("cada acción del catálogo tiene `segundoFactorReciente` declarado (true o false), ninguna sin declarar", () => {
-    expect(TODAS.length).toBe(35);
+    expect(TODAS.length).toBe(37);
     for (const accion of TODAS) {
       const definicion = CATALOGO_DE_PLATAFORMA.plataforma.acciones[accion] as Record<
         string,
@@ -84,13 +86,13 @@ describe("el catálogo declara el indicador en TODAS las acciones", () => {
     expect(new Set([...EXIGEN, ...NO_EXIGEN]).size).toBe(TODAS.length);
   });
 
-  it("las que lo exigen son EXACTAMENTE las que dijo el dueño (19), ni una más ni una menos", () => {
-    expect(EXIGEN).toHaveLength(19);
+  it("las que lo exigen son EXACTAMENTE las 19 que dijo el dueño más `listas.editar` (criterio del ingeniero), ni una más ni una menos", () => {
+    expect(EXIGEN).toHaveLength(20);
     expect(accionesConSegundoFactorReciente()).toEqual([...EXIGEN].sort());
   });
 
-  it("las que NO lo exigen son las 16 restantes", () => {
-    expect(NO_EXIGEN).toHaveLength(16);
+  it("las que NO lo exigen son las 17 restantes", () => {
+    expect(NO_EXIGEN).toHaveLength(17);
     expect(TODAS.filter((a) => !exigeSegundoFactorReciente(a)).sort()).toEqual(
       [...NO_EXIGEN].sort(),
     );

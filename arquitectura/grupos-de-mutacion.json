@@ -42,6 +42,12 @@
     "pruebas": "src/modulos/cierre"
   },
   {
+    "grupo": "listas del sistema (dominio)",
+    "archivos": "src/modulos/listas/dominio/**/*.ts",
+    "minutos": 1,
+    "pruebas": "src/modulos/listas"
+  },
+  {
     "grupo": "fiscal (numeración)",
     "archivos": "src/modulos/fiscal/dominio/numeracion.ts,src/modulos/fiscal/dominio/numeracion-invariantes.ts,src/modulos/fiscal/dominio/numeracion-modelo.ts",
     "minutos": 3.8,
