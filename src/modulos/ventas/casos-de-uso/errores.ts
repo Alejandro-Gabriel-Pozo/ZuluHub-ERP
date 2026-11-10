@@ -2,7 +2,9 @@ import type { ErrorDeAlcance } from "../../../capacidades/permisos/alcance";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { EmpresaNoOpera } from "../../../contexto/estados";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
+import type { ErrorAlCobrar } from "../../caja/publico";
 import type { ErrorDeCotizacion } from "../../catalogo/publico";
+import type { ErrorDeCuadre, ErrorAlDecidirCobrar, ErrorDeCobros } from "../dominio/cobranza";
 import type { ErrorDeJornadaNoAbierta } from "../../cierre/publico";
 import type {
   ErrorDeCierre,
@@ -26,6 +28,14 @@ export type ErrorDeVentas =
   | ErrorDeAnularTicket
   | ErrorDeConfirmacion
   | ErrorDeMotivo
+  | ErrorAlCobrar
+  | ErrorAlDecidirCobrar
+  | ErrorDeCobros
+  | ErrorDeCuadre
+  | "PRECIO_CAMBIO"
+  | "SESION_DE_CAJA_CAMBIO"
+  | "CAJA_NO_ENCONTRADA_PARA_COBRAR"
+  | Readonly<{ error: "TICKET_YA_COBRADO"; cobranzaId: string }>
   | "IDENTIFICADOR_INVALIDO"
   | "CLAVE_INVALIDA"
   | "CLAVE_REUTILIZADA"

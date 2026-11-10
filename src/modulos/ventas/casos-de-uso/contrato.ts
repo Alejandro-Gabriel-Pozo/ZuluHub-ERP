@@ -2,6 +2,7 @@ import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { Auditoria } from "../../../puertos/auditoria";
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
+import type { TxDeCaja } from "../../caja/publico";
 import type { LecturasDeCatalogo } from "../../catalogo/publico";
 import type { TxDeJornadas } from "../../cierre/publico";
 import type { LecturaDeEstados, RepositorioDeSucursales } from "../../empresas/publico";
@@ -16,6 +17,7 @@ import type { RepositorioDeTickets } from "../persistencia/repositorio-de-ticket
  */
 export type TxDeVentas = LecturaDeEstados &
   LecturasDeCatalogo &
+  TxDeCaja &
   TxDeJornadas &
   Readonly<{
     cuentas: RepositorioDeCuentas;

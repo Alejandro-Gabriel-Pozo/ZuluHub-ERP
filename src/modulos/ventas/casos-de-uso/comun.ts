@@ -97,11 +97,22 @@ export async function exigirJornadaAbierta(
   tx: TxDeVentas,
   contexto: ContextoOperativo,
   sucursal: SucursalId,
+  /** La jornada de la sesión de caja (venta y cobro en un paso, §3.15); sin ella, la del reloj. */
+  jornada?: FechaCivil,
 ): Promise<R<null>> {
-  const fecha = await jornadaPorReloj(tx, contexto, sucursal);
+  const fecha = jornada === undefined ? await jornadaPorReloj(tx, contexto, sucursal) : ok(jornada);
   if (!fecha.ok) return fecha;
   return jornadaDeSucursal.asegurarAbiertaEnTx(tx, contexto.empresaId, sucursal, fecha.valor);
 }
+
+/**
+ * Lo que cambia cuando abrir, agregar y cerrar corren DENTRO de `venderYCobrar` (E4 §3.7): la jornada que se mira es la de la sesión de caja y
+ * el ticket toma su fecha de esa sesión. Sin opciones (el salón y `cerrarCuenta` suelto) rige el reloj.
+ */
+export type OpcionesDeLaVenta = Readonly<{
+  jornada?: FechaCivil | undefined;
+  sesionDeCajaId?: string | undefined;
+}>;
 
 /** Un uuid que manda la aplicación: lo demás nunca puede ser el id de nada. */
 export function exigirUuid(...ids: readonly string[]): Resultado<null, "IDENTIFICADOR_INVALIDO"> {

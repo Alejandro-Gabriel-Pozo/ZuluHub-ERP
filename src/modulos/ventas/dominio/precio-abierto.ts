@@ -1,3 +1,4 @@
+import { FORMA_DEL_IMPORTE } from "./forma-del-importe";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import {
   precioUnitarioDesdeTexto,
@@ -12,9 +13,6 @@ import {
  * 0 es válido y pasa por la confirmación de venta a $0 (decisión 155).
  * Códigos: `IMPORTE_INVALIDO`, `PRECIO_ABIERTO_NO_PERMITIDO`, `PRODUCTO_SIN_PRECIO`.
  */
-// fuente-unica: ajeno — coincide con un largo de 9 de otra primitiva; son los enteros máximos de un importe (cota 1.000.000.000 de la base), dato sin relación
-const FORMA_DEL_IMPORTE = /^[0-9]{1,9}(\.[0-9]{1,2})?$/;
-
 export type ErrorDePrecioAbierto =
   "IMPORTE_INVALIDO" | "PRECIO_ABIERTO_NO_PERMITIDO" | "PRODUCTO_SIN_PRECIO";
 

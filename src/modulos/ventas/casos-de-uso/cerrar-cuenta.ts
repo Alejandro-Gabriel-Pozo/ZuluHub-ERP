@@ -1,4 +1,5 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
+import type { PersonaId } from "../../../primitivas/identificadores/marca";
 import { importeAJson, type ImporteJson } from "../../../primitivas/dinero/importe";
 import { cantidadATexto, cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
 import { precioUnitarioDesdeTexto } from "../../../primitivas/dinero/precio-unitario";
@@ -13,6 +14,7 @@ import { calcularLasLineas } from "./calculo";
 import {
   exigirAlcance,
   exigirJornadaAbierta,
+  type OpcionesDeLaVenta,
   exigirUuid,
   prepararComando,
   traducir,
@@ -69,15 +71,14 @@ async function salidaDelTicketExistente(
  * redondeado UNA vez y repartido por restos mayores. Total 0 exige `VENTA_A_CERO` y el ticket nace `CORTESIA`. Repetir devuelve el
  * mismo ticket. Audita `CUENTA_CERRADA` y `TICKET_EMITIDO` (y `CORTESIA_REGISTRADA` si hay una línea o un total a $0).
  */
-async function cerrar(
+export async function cerrarCuentaEnTx(
   tx: TxDeVentas,
-  dependencias: DependenciasDeVentas,
   contexto: ContextoOperativo,
+  persona: PersonaId,
   entrada: EntradaDeCerrarCuenta,
+  opciones: OpcionesDeLaVenta = {},
 ): Promise<R<SalidaDeCerrarCuenta>> {
   const { empresaId } = contexto;
-  const persona = await prepararComando(tx, contexto, dependencias.reglas, ["cuentas.cerrar"]);
-  if (!persona.ok) return persona;
   const ids = exigirUuid(entrada.cuentaId, entrada.ejemplarId);
   if (!ids.ok) return ids;
 
@@ -85,7 +86,7 @@ async function cerrar(
   if (cuenta === null) return err("CUENTA_NO_ENCONTRADA");
   const alcance = await exigirAlcance(tx, contexto, cuenta.sucursalId);
   if (!alcance.ok) return alcance;
-  const jornada = await exigirJornadaAbierta(tx, contexto, cuenta.sucursalId);
+  const jornada = await exigirJornadaAbierta(tx, contexto, cuenta.sucursalId, opciones.jornada);
   if (!jornada.ok) return jornada;
   const confirmaciones = confirmacionesDesdeTexto(entrada.confirmaciones);
   if (!confirmaciones.ok) return confirmaciones;
@@ -114,7 +115,7 @@ async function cerrar(
   if (decision.valor.tipo === "YA_CERRADA") return yaEmitido();
   const { estadoDelTicket, cortesia } = decision.valor;
 
-  const cerrada = await tx.cuentas.cerrar(empresaId, cuenta.id, persona.valor, contexto.ahora);
+  const cerrada = await tx.cuentas.cerrar(empresaId, cuenta.id, persona, contexto.ahora);
   if (!cerrada) return yaEmitido();
   const numero = await tx.tickets.siguienteNumero(empresaId, cuenta.sucursalId);
   const total = importeAJson(calculado.total).monto;
@@ -124,8 +125,9 @@ async function cerrar(
     numero,
     estado: estadoDelTicket,
     total,
-    emitidoPor: persona.valor,
+    emitidoPor: persona,
     emitidoEn: contexto.ahora,
+    sesionDeCajaId: opciones.sesionDeCajaId,
   });
   const original = ejemplarId(entrada.ejemplarId);
   await tx.tickets.insertarEjemplar(empresaId, {
@@ -135,7 +137,7 @@ async function cerrar(
     tipo: "ORIGINAL",
     total,
     ejemplarBaseId: null,
-    creadoPor: persona.valor,
+    creadoPor: persona,
     creadoEn: contexto.ahora,
     renglones: calculado.renglones.map((r) => {
       const linea = vigentes.find((l) => l.id === r.id);
@@ -149,7 +151,7 @@ async function cerrar(
   });
   await tx.auditoria.registrar({
     empresaId,
-    actorPersonaId: persona.valor,
+    actorPersonaId: persona,
     accion: "CUENTA_CERRADA",
     entidad: "cuenta_consumo",
     entidadId: cuenta.id,
@@ -158,7 +160,7 @@ async function cerrar(
   });
   await tx.auditoria.registrar({
     empresaId,
-    actorPersonaId: persona.valor,
+    actorPersonaId: persona,
     accion: "TICKET_EMITIDO",
     entidad: "ticket",
     entidadId: ticket.id,
@@ -175,7 +177,7 @@ async function cerrar(
   if (cortesia !== null) {
     await tx.auditoria.registrar({
       empresaId,
-      actorPersonaId: persona.valor,
+      actorPersonaId: persona,
       accion: "CORTESIA_REGISTRADA",
       entidad: "ticket",
       entidadId: ticket.id,
@@ -198,6 +200,17 @@ async function cerrar(
     total: { moneda: "ARS", monto: total },
     yaEstabaCerrada: false,
   });
+}
+
+async function cerrar(
+  tx: TxDeVentas,
+  dependencias: DependenciasDeVentas,
+  contexto: ContextoOperativo,
+  entrada: EntradaDeCerrarCuenta,
+): Promise<R<SalidaDeCerrarCuenta>> {
+  const persona = await prepararComando(tx, contexto, dependencias.reglas, ["cuentas.cerrar"]);
+  if (!persona.ok) return persona;
+  return cerrarCuentaEnTx(tx, contexto, persona.valor, entrada);
 }
 
 export function armarCerrarCuenta(dependencias: DependenciasDeVentas) {

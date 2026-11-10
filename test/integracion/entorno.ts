@@ -115,6 +115,11 @@ import {
   type RepositorioDePrecios,
   type RepositorioDeProductos,
 } from "../../src/modulos/catalogo/publico";
+import { armarPiezasDeCajaEnTx, type PiezasDeCajaEnTx } from "../../src/composicion/tx-de-caja";
+import {
+  crearLecturaDeSucursalBloqueada,
+  type LecturaDeSucursalBloqueada,
+} from "../../src/modulos/empresas/publico";
 import type { LecturasDeSesion } from "../../src/puertos/sesion";
 import type { IdempotenciaDePlataforma } from "../../src/puertos/idempotencia";
 import type { ReferenciasDeError } from "../../src/puertos/referencias-de-error";
@@ -138,6 +143,8 @@ export type TxDePrueba = Readonly<{
   sucursales: RepositorioDeSucursales;
   /** La jornada de la sucursal y la foto de sus controles (E3b, 0026). */
   jornadas: RepositorioDeJornadas;
+  /** Lo de caja (E3) que necesita ventas para cobrar sobre la misma transacción. */
+  sucursalBloqueada: LecturaDeSucursalBloqueada;
   /** Ventas (E4, 0028). */
   cuentas: RepositorioDeCuentas;
   tickets: RepositorioDeTickets;
@@ -162,6 +169,7 @@ export type TxDePrueba = Readonly<{
   opciones: RepositorioDeOpciones;
   precios: RepositorioDePrecios;
 }> &
+  PiezasDeCajaEnTx &
   TxDeIdentidad;
 
 /**
@@ -185,6 +193,8 @@ export function crearEntornoDePrueba(
       empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
       sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
       jornadas: crearRepositorioDeJornadas(db.withTables<CierreDb>()),
+      sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
+      ...armarPiezasDeCajaEnTx(db),
       cuentas: crearRepositorioDeCuentas(db.withTables<VentasDb>()),
       tickets: crearRepositorioDeTickets(db.withTables<VentasDb>()),
       lecturasDeVentas: crearRepositorioDeLecturas(db.withTables<VentasDb>()),

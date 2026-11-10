@@ -1,4 +1,5 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
+import type { PersonaId } from "../../../primitivas/identificadores/marca";
 import {
   cantidadATexto,
   cantidadDesdeTexto,
@@ -22,6 +23,7 @@ import { aJson, calcularLasLineas } from "./calculo";
 import {
   exigirAlcance,
   exigirJornadaAbierta,
+  type OpcionesDeLaVenta,
   exigirUuid,
   prepararComando,
   traducir,
@@ -98,17 +100,14 @@ function cantidadIgual(a: string, b: Cantidad): boolean {
  * contenido es `LINEA_ID_EN_USO`. Un producto en «precio abierto» (sin precio cargado) se vende con el importe que escribe quien vende (`precioAbierto`, decisión 179); sin él, `PRODUCTO_SIN_PRECIO`; con precio de catálogo, un importe del cliente se rechaza. Una línea
  * a $0 pide la confirmación `VENTA_A_CERO`. Audita `LINEA_AGREGADA` en la misma transacción.
  */
-async function agregar(
+export async function agregarLineaEnTx(
   tx: TxDeVentas,
-  dependencias: DependenciasDeVentas,
   contexto: ContextoOperativo,
+  persona: PersonaId,
   entrada: EntradaDeAgregarLinea,
+  ventaOpciones: OpcionesDeLaVenta = {},
 ): Promise<R<SalidaDeAgregarLinea>> {
   const { empresaId } = contexto;
-  const persona = await prepararComando(tx, contexto, dependencias.reglas, [
-    "cuentas.agregar_linea",
-  ]);
-  if (!persona.ok) return persona;
   const ids = exigirUuid(
     entrada.cuentaId,
     entrada.lineaId,
@@ -122,7 +121,12 @@ async function agregar(
   if (cuenta === null) return err("CUENTA_NO_ENCONTRADA");
   const alcance = await exigirAlcance(tx, contexto, cuenta.sucursalId);
   if (!alcance.ok) return alcance;
-  const jornada = await exigirJornadaAbierta(tx, contexto, cuenta.sucursalId);
+  const jornada = await exigirJornadaAbierta(
+    tx,
+    contexto,
+    cuenta.sucursalId,
+    ventaOpciones.jornada,
+  );
   if (!jornada.ok) return jornada;
 
   const confirmaciones = confirmacionesDesdeTexto(entrada.confirmaciones);
@@ -230,7 +234,7 @@ async function agregar(
     alicuota: instantanea.alicuota,
     // El stock está apagado en E4 (decisión 132): ninguna línea controla stock mientras el módulo no esté activo.
     controlaStock: false,
-    creadaPor: persona.valor,
+    creadaPor: persona,
     creadaEn: contexto.ahora,
     opciones,
   });
@@ -241,7 +245,7 @@ async function agregar(
   await tx.cuentas.fijarTotal(empresaId, cuenta.id, importeAJson(calculado.total).monto);
   await tx.auditoria.registrar({
     empresaId,
-    actorPersonaId: persona.valor,
+    actorPersonaId: persona,
     accion: "LINEA_AGREGADA",
     entidad: "linea_cuenta",
     entidadId: entrada.lineaId,
@@ -262,6 +266,19 @@ async function agregar(
     totalProvisorio: importeAJson(calculado.total),
     yaExistia: false,
   });
+}
+
+async function agregar(
+  tx: TxDeVentas,
+  dependencias: DependenciasDeVentas,
+  contexto: ContextoOperativo,
+  entrada: EntradaDeAgregarLinea,
+): Promise<R<SalidaDeAgregarLinea>> {
+  const persona = await prepararComando(tx, contexto, dependencias.reglas, [
+    "cuentas.agregar_linea",
+  ]);
+  if (!persona.ok) return persona;
+  return agregarLineaEnTx(tx, contexto, persona.valor, entrada);
 }
 
 export function armarAgregarLinea(dependencias: DependenciasDeVentas) {

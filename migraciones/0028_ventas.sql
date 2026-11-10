@@ -4,7 +4,7 @@
 -- (`ticket_ejemplar`, `ejemplar_grupo`, `ejemplar_linea`), cómo se saldó (`cobranza_de_ticket`, `aplicacion_de_cobro`) y el registro de
 -- cada anulación o corrección (`ticket_correccion`). Diseño: Pedernal-docs/11-especificaciones/e4-venta-rapida-especificacion.md §3.2,
 -- §3.3, §3.5, §3.8 y §3.15. Va DESPUÉS de 0025 (catálogo: usa `texto_de_catalogo_valido`) y de 0026 (cierre); es independiente de la
--- migración de caja (0027): las columnas que apuntan a caja (`sesion_de_caja_id`, `caja_id`, `cobro_id`, `cuenta_de_cobro_id`) son
+-- migración de caja (0027, que debe estar aplicada antes: el ticket lee `sesion_caja`): las columnas que apuntan a caja (`sesion_de_caja_id`, `caja_id`, `cobro_id`, `cuenta_de_cobro_id`) son
 -- OPACAS, sin clave foránea (la especificación §3.3: ventas no tiene FK hacia módulos paralelos; los valida el puerto en la transacción).
 --
 -- Reglas de esta migración (las mismas de 0001 a 0026):
@@ -38,7 +38,8 @@
 --      las líneas vigentes de la cuenta (`ejemplar_original_no_refleja_la_cuenta`).
 --  V5. `fecha_negocio` del ticket: con `sesion_de_caja_id` NULL la fija LA BASE con la fórmula por reloj (zona de la empresa y corte de la
 --      sucursal, la misma de `primitivas/tiempo/fecha-de-negocio.ts`) y no se puede cambiar. Con `sesion_de_caja_id` informado (el ticket
---      que nace con su cobro, E4 fase B) el disparador RECHAZA mientras no exista la tabla de sesiones de caja (0027): falla cerrado.
+--      que nace con su cobro) la fija con la fecha de ESA sesión (`sesion_caja`, 0027) si existe, es de la misma empresa y sucursal y no es
+--      posterior a la fecha por reloj; si no, `ticket_fecha_de_sesion_invalida`.
 --  V6. `CORTESIA`: ticket de total 0 cerrado sin cobro. Un ticket de total 0 solo puede ser CORTESIA o ANULADO (una cortesía anulada
 --      conserva su total 0): es la lectura del CHECK de la especificación que deja anular una cortesía (§3.8).
 --  V7. Cobrar: `cobranza_de_ticket` (clave de idempotencia y huella únicas por empresa; una por ticket) y `aplicacion_de_cobro` (qué cobro
@@ -59,6 +60,10 @@ BEGIN
   END IF;
   IF to_regprocedure('public.sin_borrado()') IS NULL THEN
     RAISE EXCEPTION 'ventas requiere 0007_marcas_y_planes aplicada antes (falta sin_borrado())'
+      USING ERRCODE = '55000';
+  END IF;
+  IF to_regclass('public.sesion_caja') IS NULL OR to_regclass('public.caja') IS NULL THEN
+    RAISE EXCEPTION 'ventas requiere 0027_caja aplicada antes (el ticket toma la fecha de negocio de la sesión de caja)'
       USING ERRCODE = '55000';
   END IF;
   IF to_regprocedure('public.texto_de_catalogo_valido(text, integer)') IS NULL THEN
@@ -584,6 +589,8 @@ $$
 DECLARE
   v_ultimo integer;
   v_cuenta public.cuenta_consumo%ROWTYPE;
+  v_fecha_sesion date;
+  v_sucursal_sesion uuid;
 BEGIN
   -- El ticket toma exactamente el número que el numerador acaba de dar (V3).
   SELECT n.ultimo INTO v_ultimo FROM public.numerador_ticket n
@@ -602,11 +609,20 @@ BEGIN
     RAISE EXCEPTION 'un ticket nace emitido o cortesía, con su ejemplar original'
       USING ERRCODE = '23514', CONSTRAINT = 'ticket_alta_invalida';
   END IF;
-  -- V5: la fecha de negocio.
+  -- V5: la fecha de negocio. Con sesión de caja (el ticket que nace con su cobro) es la de ESA sesión, así ticket y cobro caen siempre en la
+  -- misma jornada, también con la caja abierta pasada la hora de corte; la sesión tiene que existir, ser de la misma empresa y sucursal y su
+  -- fecha no puede ser posterior a la del reloj (un hecho no está en el futuro). Sin sesión, la fórmula por reloj.
   IF NEW.sesion_de_caja_id IS NOT NULL THEN
-    -- Falla cerrado: la fecha de la sesión de caja se acepta cuando exista la tabla de sesiones (0027, E4 fase B).
-    RAISE EXCEPTION 'la fecha de negocio por sesión de caja todavía no está habilitada'
-      USING ERRCODE = '23514', CONSTRAINT = 'ticket_fecha_de_sesion_invalida';
+    SELECT s.fecha_negocio, c.sucursal_id INTO v_fecha_sesion, v_sucursal_sesion
+      FROM public.sesion_caja s JOIN public.caja c ON c.id = s.caja_id AND c.empresa_id = s.empresa_id
+     WHERE s.id = NEW.sesion_de_caja_id AND s.empresa_id = NEW.empresa_id;
+    IF NOT FOUND OR v_sucursal_sesion <> NEW.sucursal_id
+       OR v_fecha_sesion > public.fecha_de_negocio_de(NEW.empresa_id, NEW.sucursal_id, NEW.emitido_en) THEN
+      RAISE EXCEPTION 'la sesión de caja del ticket no existe, no es de su sucursal o es de una jornada futura'
+        USING ERRCODE = '23514', CONSTRAINT = 'ticket_fecha_de_sesion_invalida';
+    END IF;
+    NEW.fecha_negocio := v_fecha_sesion;
+    RETURN NEW;
   END IF;
   NEW.fecha_negocio := public.fecha_de_negocio_de(NEW.empresa_id, NEW.sucursal_id, NEW.emitido_en);
   IF NEW.fecha_negocio IS NULL THEN

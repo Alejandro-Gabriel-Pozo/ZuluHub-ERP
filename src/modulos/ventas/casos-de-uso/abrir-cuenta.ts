@@ -1,4 +1,5 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
+import type { PersonaId } from "../../../primitivas/identificadores/marca";
 import { sucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { anclaValida, etiquetaDeCuenta, type Ancla } from "../dominio/ancla";
@@ -7,6 +8,7 @@ import type { Cuenta } from "../persistencia/repositorio-de-cuentas";
 import {
   exigirAlcance,
   exigirJornadaAbierta,
+  type OpcionesDeLaVenta,
   exigirUuid,
   prepararComando,
   traducir,
@@ -49,15 +51,14 @@ function esLoMismo(
  * `CUENTA_ID_EN_USO`. Con el ancla ocupada por otra cuenta abierta devuelve ESA cuenta (a lo sumo una abierta por ancla). Audita
  * `CUENTA_ABIERTA` en la misma transacción.
  */
-async function abrir(
+export async function abrirCuentaEnTx(
   tx: TxDeVentas,
-  dependencias: DependenciasDeVentas,
   contexto: ContextoOperativo,
+  persona: PersonaId,
   entrada: EntradaDeAbrirCuenta,
+  opciones: OpcionesDeLaVenta = {},
 ): Promise<R<SalidaDeAbrirCuenta>> {
   const { empresaId } = contexto;
-  const persona = await prepararComando(tx, contexto, dependencias.reglas, ["cuentas.abrir"]);
-  if (!persona.ok) return persona;
   const ids = exigirUuid(entrada.cuentaId, entrada.sucursalId);
   if (!ids.ok) return ids;
   const sucursal = sucursalId(entrada.sucursalId);
@@ -66,7 +67,7 @@ async function abrir(
   const fila = await tx.sucursales.obtener(empresaId, sucursal);
   if (fila === null) return err("SUCURSAL_NO_ENCONTRADA");
   if (!fila.activa) return err("SUCURSAL_INACTIVA");
-  const jornada = await exigirJornadaAbierta(tx, contexto, sucursal);
+  const jornada = await exigirJornadaAbierta(tx, contexto, sucursal, opciones.jornada);
   if (!jornada.ok) return jornada;
 
   const ancla = entrada.ancla === undefined ? null : anclaValida(entrada.ancla);
@@ -95,7 +96,7 @@ async function abrir(
     sucursalId: sucursal,
     ancla: pedido.ancla,
     etiqueta: pedido.etiqueta,
-    abiertaPor: persona.valor,
+    abiertaPor: persona,
     abiertaEn: contexto.ahora,
   });
   if (!insertada) {
@@ -106,7 +107,7 @@ async function abrir(
   }
   await tx.auditoria.registrar({
     empresaId,
-    actorPersonaId: persona.valor,
+    actorPersonaId: persona,
     accion: "CUENTA_ABIERTA",
     entidad: "cuenta_consumo",
     entidadId: id,
@@ -118,6 +119,17 @@ async function abrir(
     },
   });
   return ok({ cuentaId: id, yaExistia: false });
+}
+
+async function abrir(
+  tx: TxDeVentas,
+  dependencias: DependenciasDeVentas,
+  contexto: ContextoOperativo,
+  entrada: EntradaDeAbrirCuenta,
+): Promise<R<SalidaDeAbrirCuenta>> {
+  const persona = await prepararComando(tx, contexto, dependencias.reglas, ["cuentas.abrir"]);
+  if (!persona.ok) return persona;
+  return abrirCuentaEnTx(tx, contexto, persona.valor, entrada);
 }
 
 export function armarAbrirCuenta(dependencias: DependenciasDeVentas) {
