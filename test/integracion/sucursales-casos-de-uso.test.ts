@@ -78,6 +78,7 @@ describe.skipIf(base === null)(
         transacciones: entorno,
         reglas: REGLAS_DE_EMPRESA,
         ganchosDeSucursal: [],
+        ganchosAlDesactivarSucursal: [],
       });
       const espia: Transacciones<TxDePrueba> = {
         ejecutar: (opciones, trabajo) => {
@@ -388,6 +389,7 @@ describe.skipIf(base === null)(
             transacciones: falla,
             reglas: REGLAS_DE_EMPRESA,
             ganchosDeSucursal: [],
+            ganchosAlDesactivarSucursal: [],
           });
           const antes = await foto(e.empresa);
           await expect(roto.crearSucursal(e.ctx, { nombre: "Sucursal norte" })).rejects.toThrow(

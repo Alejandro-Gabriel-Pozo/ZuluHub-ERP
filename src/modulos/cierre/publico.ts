@@ -54,6 +54,7 @@ export {
   type ControlGuardado,
   type RepositorioDeJornadas,
 } from "./persistencia/repositorio-de-jornadas";
+export { crearGanchoDeCierreAlDesactivar } from "./gancho-de-sucursal";
 export { DECLARACIONES as DECLARACIONES_DE_CIERRE } from "./casos-de-uso/declaraciones";
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_CIERRE } from "./consultas/declaraciones";
 export { crearCasosDeUsoDeCierre, type CasosDeUsoDeCierre } from "./casos-de-uso/casos-de-uso";

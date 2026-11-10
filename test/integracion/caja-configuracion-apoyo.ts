@@ -51,6 +51,7 @@ import {
   crearRepositorioDeEmpresas,
   crearRepositorioDeSucursales,
   type EmpresasDb,
+  type GanchosAlDesactivarSucursal,
   type GanchosDeSucursal,
   type TxDeEmpresas,
 } from "../../src/modulos/empresas/publico";
@@ -159,13 +160,22 @@ export function armarCaja(
   };
 }
 
-/** Los casos de uso de empresas sobre las mismas transacciones, con los ganchos de sucursal dados (la composición registra el de caja). */
+/**
+ * Los casos de uso de empresas sobre las mismas transacciones, con los ganchos de sucursal dados (la composición registra el de caja) y,
+ * si se piden, los de desactivación (decisión 178; por defecto, ninguno).
+ */
 export function armarEmpresasConGanchos(
   entorno: TransaccionesDePostgres<TxDeCajaDePrueba>,
   ganchosDeSucursal: GanchosDeSucursal<TxDeEmpresas>,
   reglas: ReglasDeEmpresa = REGLAS_DE_CAJA,
+  ganchosAlDesactivarSucursal: GanchosAlDesactivarSucursal<TxDeEmpresas> = [],
 ) {
-  return crearCasosDeUsoDeEmpresas({ transacciones: entorno, reglas, ganchosDeSucursal });
+  return crearCasosDeUsoDeEmpresas({
+    transacciones: entorno,
+    reglas,
+    ganchosDeSucursal,
+    ganchosAlDesactivarSucursal,
+  });
 }
 
 export type MundoDeCaja = Readonly<{

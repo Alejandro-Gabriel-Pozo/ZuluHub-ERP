@@ -11,7 +11,11 @@ import {
   ganchoDeSucursalDeCaja,
 } from "../modulos/caja/publico";
 import { crearCasosDeUsoDeCatalogo, crearConsultasDeCatalogo } from "../modulos/catalogo/publico";
-import { crearCasosDeUsoDeCierre, crearConsultasDeCierre } from "../modulos/cierre/publico";
+import {
+  crearCasosDeUsoDeCierre,
+  crearConsultasDeCierre,
+  crearGanchoDeCierreAlDesactivar,
+} from "../modulos/cierre/publico";
 import { crearCasosDeUsoDeEmpresas, crearConsultasDeEmpresas } from "../modulos/empresas/publico";
 import {
   crearCasosDeUsoDeCertificados,
@@ -89,6 +93,11 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
         reglas,
         // Lo que nace con cada sucursal (decisión 165): «Caja 1», en la misma transacción que la sucursal.
         ganchosDeSucursal: [ganchoDeSucursalDeCaja],
+        // Desactivar una sucursal (decisión 178): no con la jornada en auditoría; abierta sin movimiento se cierra sola; con movimiento
+        // se pide el cierre del día. Pregunta a los mismos aportes que el cierre (hoy, caja; ventas lo suma E4).
+        ganchosAlDesactivarSucursal: [
+          crearGanchoDeCierreAlDesactivar({ reglas, aportes: [aporteDeCaja] }),
+        ],
       }),
     ),
     consultasDeEmpresas: perezoso(() =>

@@ -60,6 +60,7 @@ describe.skipIf(base === null)("jornada de la sucursal: hora de corte y datosDeJ
       transacciones: entorno,
       reglas: REGLAS_DE_EMPRESA,
       ganchosDeSucursal: [],
+      ganchosAlDesactivarSucursal: [],
     });
     consultas = crearConsultasDeEmpresas({ transacciones: entorno, reglas: REGLAS_DE_EMPRESA });
   });
@@ -291,6 +292,7 @@ describe.skipIf(base === null)("jornada de la sucursal: hora de corte y datosDeJ
           transacciones: falla,
           reglas: REGLAS_DE_EMPRESA,
           ganchosDeSucursal: [],
+          ganchosAlDesactivarSucursal: [],
         });
         await expect(
           roto.editarSucursal(e.ctx, {

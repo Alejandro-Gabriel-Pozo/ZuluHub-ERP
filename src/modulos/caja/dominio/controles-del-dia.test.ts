@@ -8,6 +8,7 @@ import { huellaDeCampos } from "./huella";
 import {
   controlesDeCaja,
   explicacionDelReconocimiento,
+  hayMovimientoDeCaja,
   impedimentosDeCaja,
   referenciaDelPar,
   type AjusteParaControles,
@@ -449,5 +450,13 @@ describe("la explicación opcional de un reconocimiento (decisión 160)", () => 
       explicacionDelReconocimiento(reconocidos, CONTROLES_DE_CAJA.DIFERENCIA_DE_ARQUEO),
     ).toBeNull();
     expect(explicacionDelReconocimiento([], CONTROLES_DE_CAJA.CONCILIACION_POR_MEDIO)).toBeNull();
+  });
+});
+
+describe("¿caja tiene movimiento en la jornada? (decisión 178)", () => {
+  it("sin sesiones no hay movimiento; con una sesión, del estado que sea, sí", () => {
+    expect(hayMovimientoDeCaja([])).toBe(false);
+    expect(hayMovimientoDeCaja([sesion("s1", "ABIERTA")])).toBe(true);
+    expect(hayMovimientoDeCaja([sesion("s1", "CERRADA"), sesion("s2", "CERRADA")])).toBe(true);
   });
 });

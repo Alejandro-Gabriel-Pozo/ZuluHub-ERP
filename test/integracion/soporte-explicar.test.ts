@@ -93,6 +93,7 @@ describe.skipIf(base === null)(
         transacciones: entorno,
         reglas: REGLAS_DE_EMPRESA,
         ganchosDeSucursal: [],
+        ganchosAlDesactivarSucursal: [],
       });
       identidad = crearCasosDeUsoDeIdentidad({
         transacciones: entorno,

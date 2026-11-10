@@ -4,7 +4,7 @@ import type { TenantId } from "../../../primitivas/identificadores/marca";
 import type { Auditoria } from "../../../puertos/auditoria";
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
-import type { GanchosDeSucursal } from "../ganchos-de-sucursal";
+import type { GanchosAlDesactivarSucursal, GanchosDeSucursal } from "../ganchos-de-sucursal";
 import type { RepositorioDeEmpresas } from "../persistencia/repositorios";
 import type { RepositorioDeSucursales } from "../persistencia/repositorio-de-sucursales";
 
@@ -42,4 +42,9 @@ export type DependenciasDeEmpresas = Readonly<{
    * Los ganchos corren en el orden de la lista y el primer error aborta todo.
    */
   ganchosDeSucursal: GanchosDeSucursal<TxDeEmpresas>;
+  /**
+   * Lo que se decide antes de desactivar una sucursal (decisión 178: el cierre del día). OBLIGATORIO por la misma razón: sin él, quien arma
+   * los casos de uso y se olvida del cierre deja desactivar una sucursal con la jornada en auditoría o con movimiento. `[]` si no hay ninguno.
+   */
+  ganchosAlDesactivarSucursal: GanchosAlDesactivarSucursal<TxDeEmpresas>;
 }>;

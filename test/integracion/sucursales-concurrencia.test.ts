@@ -58,6 +58,7 @@ describe.skipIf(base === null)("sucursales: concurrencia de los casos de uso (S1
       transacciones: entorno,
       reglas: REGLAS_DE_EMPRESA,
       ganchosDeSucursal: [],
+      ganchosAlDesactivarSucursal: [],
     });
   });
   afterAll(async () => {

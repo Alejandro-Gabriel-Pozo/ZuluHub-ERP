@@ -9,6 +9,7 @@ import { CONTROLES_DE_CAJA } from "../dominio/controles";
 import {
   controlesDeCaja,
   explicacionDelReconocimiento,
+  hayMovimientoDeCaja,
   impedimentosDeCaja,
 } from "../dominio/controles-del-dia";
 import type { LineaDeFoto, OrigenDeFoto } from "../persistencia/repositorio-de-fotos";
@@ -21,6 +22,7 @@ import type { TicketsPorCobranza } from "./tickets-por-cobranza";
  * conoce a caja. Los seis controles y sus severidades son del dominio (`controlesDeCaja`); acá se lee la jornada (una sola regla, la misma
  * que muestra `conciliacionDeLaJornada`) y se congela la foto en la transacción del cierre.
  *  - `impedimentos`: las sesiones sin cerrar (impiden EMPEZAR a contar el día).
+ *  - `hayMovimiento`: ¿hay una sesión en la jornada? (decisión 178: desactivar la sucursal). Solo lectura.
  *  - `controles`: solo lectura, sin reloj ni azar: con los mismos datos, la misma huella. Cualquier dato que no se pueda leer (ventas no
  *    informó un ticket, una línea de arqueo rota) es `APORTE_NO_DISPONIBLE`: el día no se cierra con un dato que no se leyó.
  *  - `congelarEnTx`: recalcula TODO en esta transacción (con la jornada todavía `EN_AUDITORIA`: la cierra `cierre` después, en la misma
@@ -43,6 +45,11 @@ export function crearAporteDeCaja({
       return ok(
         impedimentosDeCaja(sesiones.map((s) => ({ id: s.id, estado: s.estado, arqueo: [] }))),
       );
+    },
+
+    async hayMovimiento(tx, j) {
+      const sesiones = await tx.sesiones.deLaJornada(j.empresaId, j.sucursalId, j.fechaDeNegocio);
+      return ok(hayMovimientoDeCaja(sesiones));
     },
 
     async controles(tx, j) {

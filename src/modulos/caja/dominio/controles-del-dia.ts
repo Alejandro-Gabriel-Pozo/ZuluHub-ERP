@@ -103,6 +103,15 @@ export function impedimentosDeCaja(
   return [sesionesSinCerrar(sesiones)];
 }
 
+/**
+ * ¿Caja tiene movimiento en la jornada? (decisión 178). Toda sesión nace con su fondo y todo cobro, ingreso, egreso o ajuste cuelga de una
+ * sesión: con UNA sesión de la jornada (abierta, en cierre o cerrada) hay algo que contar, y sin ninguna no hay nada. Es lo más
+ * conservador: una sesión ya cerrada también pide el cierre del día antes de desactivar la sucursal.
+ */
+export function hayMovimientoDeCaja(sesiones: readonly Readonly<{ id: string }>[]): boolean {
+  return sesiones.length > 0;
+}
+
 function diferenciasDeArqueo(sesiones: readonly SesionParaControles[]): ControlDelDia {
   const conDiferencia = sesiones.filter((s) => hayDiferenciaDeArqueo(s.arqueo));
   const filas = conDiferencia.flatMap((s) =>
