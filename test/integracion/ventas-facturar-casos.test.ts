@@ -172,7 +172,9 @@ describe.skipIf(base === null)("ventas: facturar un ticket cobrado", () => {
   // ---- P2: dos cajeros a la vez -----------------------------------------------------------------------------------------------
 
   it("P2: dos cajeros con claves distintas sobre el mismo ticket: uno factura y el otro ve TICKET_YA_FACTURADO", async () => {
-    for (let vuelta = 0; vuelta < 3; vuelta++) {
+    // Pocas vueltas de rutina; al cerrar el tramo se corre con `PEDERNAL_VUELTAS_DE_FACTURAR=50`.
+    const vueltas = Number(process.env["PEDERNAL_VUELTAS_DE_FACTURAR"] ?? "3");
+    for (let vuelta = 0; vuelta < vueltas; vuelta++) {
       const { e, t } = await preparar();
       const [a, b] = await Promise.all([
         facturar(e, t.ticketId),
