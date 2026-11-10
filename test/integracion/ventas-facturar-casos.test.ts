@@ -1,18 +1,9 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
-import type { ComprobanteId } from "../../src/modulos/fiscal/publico";
-import { EmisionFalsa } from "../utilidades/emision-falsa";
-import { renglon } from "../utilidades/facturacion";
-import { empresaId } from "../../src/primitivas/identificadores/marca";
-import { comoEmpresa, type TxDePrueba } from "./entorno";
-import {
-  RelojDePrueba,
-  casosDeFacturacion,
-  crearEntornoDeFacturacion,
-  notaManual,
-} from "./facturacion-casos-apoyo";
+import type { TxDePrueba } from "./entorno";
 import { montarVentas, valorDe, type MundoDeVentas } from "./ventas-apoyo";
 import {
+  crearFiscalDePrueba,
   escenarioFacturable,
   nuevaClaveDeFactura as nuevaClave,
   receptorConsumidorFinal,
@@ -41,9 +32,7 @@ function falla<E>(r: Readonly<{ ok: true; valor: unknown } | { ok: false; error:
 
 describe.skipIf(base === null)("ventas: facturar un ticket cobrado", () => {
   let m: MundoDeVentas;
-  let entornoFiscal: ReturnType<typeof crearEntornoDeFacturacion>;
-  const reloj = new RelojDePrueba(new Date());
-  const falsa = new EmisionFalsa();
+  let fiscal: ReturnType<typeof crearFiscalDePrueba>;
   /** Cuando es `true`, guardar el puntero falla: simula una caída DESPUÉS de que fiscal ya escribió la factura. */
   let fallarAlGuardarElPuntero = false;
 
@@ -63,27 +52,12 @@ describe.skipIf(base === null)("ventas: facturar un ticket cobrado", () => {
         },
       }),
     });
-    entornoFiscal = crearEntornoDeFacturacion(m.propia.base, 8);
+    fiscal = crearFiscalDePrueba(m);
   });
   afterAll(async () => {
-    await entornoFiscal.cerrar();
+    await fiscal.cerrar();
     await m.cerrar();
   });
-
-  const fiscal = () =>
-    casosDeFacturacion(
-      entornoFiscal,
-      { HOMOLOGACION: falsa, PRODUCCION: new EmisionFalsa() },
-      reloj,
-    );
-  const comoGerente = (e: EscenarioDeFacturacionDeTickets): ContextoOperativo => ({
-    ...e.gerente,
-    ahora: reloj.ahora(),
-  });
-  const exito = <T>(r: { ok: true; valor: T } | { ok: false; error: unknown }): T => {
-    if (!r.ok) throw new Error(`tenía que ser un éxito: ${JSON.stringify(r.error)}`);
-    return r.valor;
-  };
 
   /** Una empresa facturable, su caja abierta y un ticket cobrado de $1000. */
   async function preparar() {
@@ -92,7 +66,7 @@ describe.skipIf(base === null)("ventas: facturar un ticket cobrado", () => {
     const t = await ticketCobrado(m, e, caja);
     // Los datos fiscales de la empresa rigen desde que se armó el escenario: facturar es siempre un instante después (el cobro, en cambio,
     // quedó en la jornada fija de ventas).
-    reloj.actual = new Date(Date.now() + 60_000);
+    fiscal.adelantar();
     return { e, caja, t };
   }
 
@@ -106,7 +80,7 @@ describe.skipIf(base === null)("ventas: facturar un ticket cobrado", () => {
     }> = {},
   ) =>
     m.casos.emitirComprobanteDeTicket(
-      { ...(cambios.contexto ?? e.gerente), ahora: reloj.ahora() },
+      { ...(cambios.contexto ?? e.gerente), ahora: fiscal.reloj.ahora() },
       {
         ticketId,
         receptor: receptorConsumidorFinal(),
@@ -286,44 +260,15 @@ describe.skipIf(base === null)("ventas: facturar un ticket cobrado", () => {
 
   // ---- P4, P5, P6: vigencia ---------------------------------------------------------------------------------------------------
 
-  /** ARCA valida el comprobante (el trabajo que corre fuera de la transacción): con el contexto de sistema de la empresa. */
-  async function autorizar(e: EscenarioDeFacturacionDeTickets, id: string) {
-    exito(
-      await fiscal().validarComprobante(
-        {
-          ...comoEmpresa(empresaId(e.empresa), null),
-          personaId: null,
-          marcaDeEntrada: null,
-          ahora: reloj.ahora(),
-        },
-        { comprobanteId: id as ComprobanteId },
-      ),
-    );
-  }
-
   async function facturaAutorizada() {
     const p = await preparar();
     const r = valorDe(await facturar(p.e, p.t.ticketId));
     return { ...p, comprobanteId: r.comprobanteId };
   }
-  async function notaDeCredito(
-    e: EscenarioDeFacturacionDeTickets,
-    id: string,
-    total: string,
-  ): Promise<string> {
-    const r = exito(
-      await fiscal().emitirNotaDeCredito(
-        comoGerente(e),
-        notaManual(id as ComprobanteId, { renglones: [renglon(total, "1", "21")] }),
-      ),
-    );
-    return r.comprobanteId;
-  }
-
   it("P4: acreditada por completo con una nota AUTORIZADA, el ticket se puede volver a facturar (intento 2, otro origen)", async () => {
     const f = await facturaAutorizada();
-    await autorizar(f.e, f.comprobanteId);
-    await autorizar(f.e, await notaDeCredito(f.e, f.comprobanteId, "1000.00"));
+    await fiscal.autorizar(f.e, f.comprobanteId);
+    await fiscal.autorizar(f.e, await fiscal.notaDeCredito(f.e, f.comprobanteId, "1000.00"));
     const nueva = valorDe(await facturar(f.e, f.t.ticketId));
     expect(nueva.comprobanteId).not.toBe(f.comprobanteId);
     const ps = await punteros(f.t.ticketId);
@@ -339,14 +284,14 @@ describe.skipIf(base === null)("ventas: facturar un ticket cobrado", () => {
 
   it("P5: una nota parcial, o total pero todavía sin autorizar, no habilita otra factura (TICKET_YA_FACTURADO)", async () => {
     const f = await facturaAutorizada();
-    await autorizar(f.e, f.comprobanteId);
-    await autorizar(f.e, await notaDeCredito(f.e, f.comprobanteId, "400.00"));
+    await fiscal.autorizar(f.e, f.comprobanteId);
+    await fiscal.autorizar(f.e, await fiscal.notaDeCredito(f.e, f.comprobanteId, "400.00"));
     expect(falla(await facturar(f.e, f.t.ticketId))).toMatchObject({
       error: "TICKET_YA_FACTURADO",
       comprobanteId: f.comprobanteId,
     });
     // El resto de la factura, acreditado, pero la nota queda «Validando»: sigue valiendo hasta que ARCA la autorice.
-    await notaDeCredito(f.e, f.comprobanteId, "600.00");
+    await fiscal.notaDeCredito(f.e, f.comprobanteId, "600.00");
     expect(falla(await facturar(f.e, f.t.ticketId))).toMatchObject({
       error: "TICKET_YA_FACTURADO",
     });
@@ -355,8 +300,8 @@ describe.skipIf(base === null)("ventas: facturar un ticket cobrado", () => {
 
   it("P6: si ARCA rechaza la factura, el ticket se vuelve a facturar y el puntero anterior queda no vigente", async () => {
     const f = await facturaAutorizada();
-    falsa.programar("RECHAZA");
-    await autorizar(f.e, f.comprobanteId);
+    fiscal.falsa.programar("RECHAZA");
+    await fiscal.autorizar(f.e, f.comprobanteId);
     const nueva = valorDe(await facturar(f.e, f.t.ticketId));
     expect(nueva.comprobanteId).not.toBe(f.comprobanteId);
     expect((await punteros(f.t.ticketId)).map((p) => [p["intento"], p["vigente"]])).toEqual([
@@ -367,8 +312,8 @@ describe.skipIf(base === null)("ventas: facturar un ticket cobrado", () => {
 
   it("una reemisión repetida con la misma clave no emite una tercera factura", async () => {
     const f = await facturaAutorizada();
-    falsa.programar("RECHAZA");
-    await autorizar(f.e, f.comprobanteId);
+    fiscal.falsa.programar("RECHAZA");
+    await fiscal.autorizar(f.e, f.comprobanteId);
     const clave = nuevaClave();
     const a = valorDe(await facturar(f.e, f.t.ticketId, { clave }));
     const b = valorDe(await facturar(f.e, f.t.ticketId, { clave }));

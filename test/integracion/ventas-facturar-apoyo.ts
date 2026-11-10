@@ -1,5 +1,16 @@
 import { randomUUID } from "node:crypto";
-import { cargarCertificado } from "./facturacion-casos-apoyo";
+import type { ComprobanteId } from "../../src/modulos/fiscal/publico";
+import { empresaId } from "../../src/primitivas/identificadores/marca";
+import { EmisionFalsa } from "../utilidades/emision-falsa";
+import { renglon } from "../utilidades/facturacion";
+import { comoEmpresa } from "./entorno";
+import {
+  RelojDePrueba,
+  cargarCertificado,
+  casosDeFacturacion,
+  crearEntornoDeFacturacion,
+  notaManual,
+} from "./facturacion-casos-apoyo";
 import {
   crearEscenario as crearEscenarioDeFacturacion,
   type Escenario as EscenarioFiscal,
@@ -98,3 +109,52 @@ export const receptorConsumidorFinal = (): Record<string, unknown> => ({
 });
 
 export const nuevaClaveDeFactura = (): string => randomUUID();
+
+/**
+ * Lo que hace ARCA y la persona en fiscal sobre los comprobantes que ventas emitió, con los casos de uso reales de fiscal y ARCA falsa:
+ * validar (autorizar o rechazar, según lo programado) y emitir notas de crédito. Usa la misma base que ventas.
+ */
+export function crearFiscalDePrueba(m: MundoDeVentas) {
+  const entorno = crearEntornoDeFacturacion(m.propia.base, 8);
+  const reloj = new RelojDePrueba(new Date(Date.now() + 60_000));
+  const falsa = new EmisionFalsa();
+  const casos = casosDeFacturacion(
+    entorno,
+    { HOMOLOGACION: falsa, PRODUCCION: new EmisionFalsa() },
+    reloj,
+  );
+  const exito = <T>(r: { ok: true; valor: T } | { ok: false; error: unknown }): T => {
+    if (!r.ok) throw new Error(`tenía que ser un éxito: ${JSON.stringify(r.error)}`);
+    return r.valor;
+  };
+  return {
+    reloj,
+    falsa,
+    /** Facturar es siempre un instante después de armar el escenario (los datos fiscales rigen desde entonces). */
+    adelantar: () => {
+      reloj.actual = new Date(Date.now() + 60_000);
+    },
+    /** ARCA valida el comprobante (el trabajo que corre fuera de la transacción). */
+    autorizar: async (e: EscenarioDeVentas, id: string) => {
+      exito(
+        await casos.validarComprobante(
+          {
+            ...comoEmpresa(empresaId(e.empresa), null),
+            personaId: null,
+            marcaDeEntrada: null,
+            ahora: reloj.ahora(),
+          },
+          { comprobanteId: id as ComprobanteId },
+        ),
+      );
+    },
+    notaDeCredito: async (e: EscenarioDeVentas, id: string, total: string): Promise<string> =>
+      exito(
+        await casos.emitirNotaDeCredito(
+          { ...e.gerente, ahora: reloj.ahora() },
+          notaManual(id as ComprobanteId, { renglones: [renglon(total, "1", "21")] }),
+        ),
+      ).comprobanteId,
+    cerrar: () => entorno.cerrar(),
+  };
+}
