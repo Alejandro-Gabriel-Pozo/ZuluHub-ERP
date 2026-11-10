@@ -171,6 +171,7 @@ function validarRenglones(
     if (renglon.cantidad.unidades === 0n) {
       return err({ codigo: "RENGLON_INVALIDO", posicion, campo: "cantidad" });
     }
+    // Stryker disable next-line ConditionalExpression: mutante equivalente: sin la guarda `!== null`, `null` se convierte en el texto «null», que cumple la forma
     if (renglon.unidad !== null && !FORMA_DEL_SIMBOLO_DE_UNIDAD.test(renglon.unidad)) {
       return err({ codigo: "RENGLON_INVALIDO", posicion, campo: "unidad" });
     }
