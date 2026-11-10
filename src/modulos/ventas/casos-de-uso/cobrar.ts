@@ -19,7 +19,7 @@ import {
 } from "../dominio/cobranza";
 import { idDerivado } from "../dominio/id-derivado";
 import { ticketId, type EjemplarId, type TicketId } from "../dominio/identificadores";
-import type { CobranzaGuardada } from "../persistencia/repositorio-de-tickets";
+import type { CobranzaGuardada } from "../persistencia/repositorio-de-cobranzas";
 import { exigirAlcance, exigirClave, exigirUuid, prepararComando, traducir } from "./comun";
 import type { DependenciasDeVentas, TxDeVentas } from "./contrato";
 import type { ErrorDeVentas } from "./errores";

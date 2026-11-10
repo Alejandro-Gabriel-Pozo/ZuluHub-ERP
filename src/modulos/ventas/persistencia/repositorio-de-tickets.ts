@@ -18,6 +18,10 @@ import {
   type TicketId,
 } from "../dominio/identificadores";
 import type { VentasDb } from "./esquema";
+import {
+  crearRepositorioDeCobranzas,
+  type RepositorioDeCobranzas,
+} from "./repositorio-de-cobranzas";
 
 /** Un ticket tal como está guardado. `fechaNegocio` es `YYYY-MM-DD`; los importes, texto decimal exacto. */
 export type Ticket = Readonly<{
@@ -93,32 +97,6 @@ export type AltaDeCorreccion = Readonly<{
   hechaEn: Date;
 }>;
 
-export type AltaDeCobranza = Readonly<{
-  id: string;
-  ticketId: TicketId;
-  ejemplarId: EjemplarId;
-  cajaId: string;
-  clave: string;
-  huella: string;
-  creadaPor: PersonaId;
-  creadaEn: Date;
-}>;
-
-export type AplicacionDeCobro = Readonly<{
-  orden: number;
-  cobroId: string;
-  cuentaDeCobroId: string | null;
-  importe: string;
-}>;
-
-export type CobranzaGuardada = Readonly<{
-  id: string;
-  ticketId: TicketId;
-  huella: string;
-  /** Lo que se devolvió la primera vez; `null` hasta que termina la transacción que la creó. */
-  resultado: Readonly<Record<string, unknown>> | null;
-}>;
-
 export type CorreccionGuardada = Readonly<{
   ticketId: TicketId;
   ejemplarBaseId: EjemplarId;
@@ -131,7 +109,7 @@ export type CorreccionGuardada = Readonly<{
  * Persistencia del numerador, el ticket, sus ejemplares y el registro de correcciones (E4 §3.3, §3.5 y §3.8). Todo corre dentro de la
  * transacción del caso de uso, filtra SIEMPRE por la empresa (y la RLS lo repite) y no usa caché.
  */
-export interface RepositorioDeTickets {
+interface RepositorioDeTicketsSolos {
   /**
    * El próximo número de la sucursal, sin huecos: `INSERT ... ON CONFLICT DO NOTHING` de la fila del numerador y `UPDATE ... SET ultimo =
    * ultimo + 1 RETURNING`. El `UPDATE` bloquea la fila hasta el fin de la transacción: N cierres en la sucursal se serializan. Si la
@@ -158,31 +136,6 @@ export interface RepositorioDeTickets {
    * contra otra anulación, una corrección y un cobro). `false` si no cambió nada: el caso de uso relee y dice por qué.
    */
   anular(empresa: EmpresaId, id: TicketId, ejemplarVigenteVisto: number): Promise<boolean>;
-  /**
-   * `EMITIDO → COBRADO` solo si el ejemplar vigente sigue siendo el visto (árbitro contra otro cobro, una anulación y una corrección).
-   * `false` si no cambió nada: el caso de uso relee y dice por qué.
-   */
-  marcarCobrado(empresa: EmpresaId, id: TicketId, ejemplarVigenteVisto: number): Promise<boolean>;
-  cobranzaPorClave(empresa: EmpresaId, clave: string): Promise<CobranzaGuardada | null>;
-  cobranzaDeTicket(empresa: EmpresaId, ticket: TicketId): Promise<CobranzaGuardada | null>;
-  /**
-   * Inserta la cobranza (clave y ticket únicos por empresa; el disparador exige ticket EMITIDO con su ejemplar vigente). `ON CONFLICT DO NOTHING`
-   * sin objetivo: `false` si ya había una con esa clave o para ese ticket (el caso de uso relee y dice cuál); bajo SERIALIZABLE, chocar con una
-   * que esta transacción todavía no ve aborta por serialización y se repite entero.
-   */
-  insertarCobranza(empresa: EmpresaId, alta: AltaDeCobranza): Promise<boolean>;
-  /** Una fila por cobro de caja, en la misma transacción de la cobranza. */
-  insertarAplicaciones(
-    empresa: EmpresaId,
-    cobranza: string,
-    aplicaciones: readonly AplicacionDeCobro[],
-  ): Promise<void>;
-  /** Guarda lo que devolvió el cobro (una sola vez): una repetición con la misma clave lo devuelve tal cual. */
-  fijarResultadoDeCobranza(
-    empresa: EmpresaId,
-    cobranza: string,
-    resultado: Readonly<Record<string, unknown>>,
-  ): Promise<void>;
   insertarCorreccion(empresa: EmpresaId, alta: AltaDeCorreccion): Promise<void>;
   correccionPorClave(empresa: EmpresaId, clave: string): Promise<CorreccionGuardada | null>;
 }
@@ -219,6 +172,8 @@ function aTicket(f: FilaDeTicket): Ticket {
   };
 }
 
+export type RepositorioDeTickets = RepositorioDeTicketsSolos & RepositorioDeCobranzas;
+
 export function crearRepositorioDeTickets(db: Kysely<VentasDb>): RepositorioDeTickets {
   const seleccionarTicket = () =>
     db
@@ -239,6 +194,7 @@ export function crearRepositorioDeTickets(db: Kysely<VentasDb>): RepositorioDeTi
       ]);
 
   return {
+    ...crearRepositorioDeCobranzas(db),
     async siguienteNumero(empresa, sucursal) {
       await db
         .insertInto("numerador_ticket")
@@ -370,88 +326,6 @@ export function crearRepositorioDeTickets(db: Kysely<VentasDb>): RepositorioDeTi
         .where("estado", "<>", "ANULADO")
         .executeTakeFirst();
       return r.numUpdatedRows === 1n;
-    },
-
-    async marcarCobrado(empresa, id, ejemplarVigenteVisto) {
-      const r = await db
-        .updateTable("ticket")
-        .set({ estado: "COBRADO" })
-        .where("empresa_id", "=", empresa)
-        .where("id", "=", id)
-        .where("estado", "=", "EMITIDO")
-        .where("ejemplar_vigente", "=", ejemplarVigenteVisto)
-        .executeTakeFirst();
-      return r.numUpdatedRows === 1n;
-    },
-
-    async cobranzaPorClave(empresa, clave) {
-      const f = await db
-        .selectFrom("cobranza_de_ticket")
-        .select(["id", "ticket_id", "huella", "resultado"])
-        .where("empresa_id", "=", empresa)
-        .where("clave", "=", clave)
-        .executeTakeFirst();
-      return f === undefined
-        ? null
-        : { id: f.id, ticketId: ticketId(f.ticket_id), huella: f.huella, resultado: f.resultado };
-    },
-
-    async cobranzaDeTicket(empresa, ticket) {
-      if (!esUuid(ticket)) return null;
-      const f = await db
-        .selectFrom("cobranza_de_ticket")
-        .select(["id", "ticket_id", "huella", "resultado"])
-        .where("empresa_id", "=", empresa)
-        .where("ticket_id", "=", ticket)
-        .executeTakeFirst();
-      return f === undefined
-        ? null
-        : { id: f.id, ticketId: ticketId(f.ticket_id), huella: f.huella, resultado: f.resultado };
-    },
-
-    async insertarCobranza(empresa, alta) {
-      const fila = await db
-        .insertInto("cobranza_de_ticket")
-        .values({
-          id: alta.id,
-          empresa_id: empresa,
-          ticket_id: alta.ticketId,
-          ejemplar_id: alta.ejemplarId,
-          caja_id: alta.cajaId,
-          clave: alta.clave,
-          huella: alta.huella,
-          creada_por: alta.creadaPor,
-          creada_en: alta.creadaEn,
-        })
-        .onConflict((oc) => oc.doNothing())
-        .returning("id")
-        .executeTakeFirst();
-      return fila !== undefined;
-    },
-
-    async insertarAplicaciones(empresa, cobranza, aplicaciones) {
-      await db
-        .insertInto("aplicacion_de_cobro")
-        .values(
-          aplicaciones.map((a) => ({
-            empresa_id: empresa,
-            cobranza_id: cobranza,
-            orden: a.orden,
-            cobro_id: a.cobroId,
-            cuenta_de_cobro_id: a.cuentaDeCobroId,
-            importe: a.importe,
-          })),
-        )
-        .execute();
-    },
-
-    async fijarResultadoDeCobranza(empresa, cobranza, resultado) {
-      await db
-        .updateTable("cobranza_de_ticket")
-        .set({ resultado })
-        .where("empresa_id", "=", empresa)
-        .where("id", "=", cobranza)
-        .execute();
     },
 
     async insertarCorreccion(empresa, alta) {
