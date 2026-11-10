@@ -48,6 +48,24 @@ describe.skipIf(base === null)(
       }
     };
 
+    /**
+     * La etiqueta «Anulación …» cuenta también la nota que todavía está «Validando» (D-15): se espera además a que ARCA simulada la autorice,
+     * que es lo que estos pasos afirman.
+     */
+    const esperarQueLaNotaSeAutorice = async (factura: string) => {
+      const limite = Date.now() + 30_000;
+      for (;;) {
+        const { rows } = await dueno().query<{ estado: string }>(
+          "select estado from comprobante where comprobante_asociado_id = $1",
+          [factura],
+        );
+        if (rows.length > 0 && rows.every((r) => r.estado === "AUTORIZADO")) return;
+        if (Date.now() > limite)
+          throw new Error("la nota de crédito no llegó a AUTORIZADO en 30 s");
+        await pagina.waitForTimeout(500);
+      }
+    };
+
     /** Emite una Factura C de consumidor final por `precio` (empresa monotributista: sin selector de IVA) y espera a que quede en `estado`. */
     const emitirFacturaC = async (precio: string, estado: "Autorizada" | "Confirmando") => {
       await ir("/facturacion/comprobantes/emitir");
@@ -146,6 +164,7 @@ describe.skipIf(base === null)(
         await pagina.reload();
         await pagina.waitForLoadState("networkidle");
       }
+      await esperarQueLaNotaSeAutorice(factura);
       expect(await pagina.locator("article").innerText()).toContain(
         "Ya anulado con notas de crédito",
       );
@@ -192,6 +211,7 @@ describe.skipIf(base === null)(
         await pagina.reload();
         await pagina.waitForLoadState("networkidle");
       }
+      await esperarQueLaNotaSeAutorice(factura);
       const pedido = solicitudes().at(-1)?.cuerpo ?? "";
       expect(pedido).toContain("<ar:CbteTipo>13</ar:CbteTipo>");
       expect(pedido).toContain("<ar:ImpTotal>50.00</ar:ImpTotal>");
