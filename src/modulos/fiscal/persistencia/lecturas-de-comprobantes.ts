@@ -130,6 +130,14 @@ export type NotaQueCita = Readonly<{
   estado: EstadoDeComprobanteArca;
 }>;
 
+/** Lo mínimo de un comprobante para saber si sigue valiendo (`vigenciaDeComprobantes`): su tipo, su estado y su total. */
+export type ComprobanteParaVigencia = Readonly<{
+  id: ComprobanteId;
+  tipo: TipoDeComprobante;
+  estado: EstadoDeComprobanteArca;
+  total: Importe;
+}>;
+
 export interface LecturasDeComprobantes {
   /** Una página del listado de la empresa, los más nuevos primero; `hayMas` si queda algo después de ella. */
   listar(empresa: EmpresaId, filtro: FiltroDeListado): Promise<PaginaDeFilas>;
@@ -162,6 +170,14 @@ export interface LecturasDeComprobantes {
     empresa: EmpresaId,
     ids: readonly ComprobanteId[],
   ): Promise<ReadonlyMap<ComprobanteId, readonly NotaParaAcreditar[]>>;
+  /**
+   * Con UNA consulta: el tipo, el estado y el total de los comprobantes de la empresa que están en `ids`. Un id inexistente o de otra empresa
+   * NO figura en la salida (no se distingue uno del otro). Va con `ids` de forma uuid: quien arma la entrada lo valida, como con el detalle.
+   */
+  paraVigencia(
+    empresa: EmpresaId,
+    ids: readonly ComprobanteId[],
+  ): Promise<readonly ComprobanteParaVigencia[]>;
 }
 
 const FECHA_DEL_LISTADO = sql<string>`coalesce(fecha_emision, (creado_en at time zone ${ZONA_DE_ARGENTINA})::date)`;
@@ -386,6 +402,22 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
         ]);
       }
       return porId;
+    },
+
+    async paraVigencia(empresa, ids) {
+      if (ids.length === 0) return [];
+      const filas = await db
+        .selectFrom("comprobante")
+        .select(["id", "tipo_comprobante", "estado", "moneda", "total"])
+        .where("empresa_id", "=", empresa)
+        .where("id", "in", ids)
+        .execute();
+      return filas.map((f) => ({
+        id: comprobanteId(f.id),
+        tipo: deLaLista(TIPOS_DE_COMPROBANTE, f.tipo_comprobante, "tipo de comprobante"),
+        estado: deLaLista(ESTADOS_DE_COMPROBANTE_ARCA, f.estado, "estado de comprobante"),
+        total: importeDesdeTexto(moneda(f.moneda), f.total),
+      }));
     },
   };
 }

@@ -10,6 +10,7 @@ import { armarListarPuntosDeVentaDeLaSucursal } from "./puntos-de-venta-de-la-su
 import { armarPuntosDeVentaDelEmisor } from "./puntos-de-venta-del-emisor";
 import { armarListarPuntosDeVentaParaEmitir } from "./puntos-de-venta-para-emitir";
 import { armarVerComprobante } from "./ver-comprobante";
+import { armarVigenciaDeComprobantes } from "./vigencia-de-comprobantes";
 
 /**
  * Las consultas por pantalla del facturador (ADR-005). El `satisfies` exige que sean EXACTAMENTE las que declara
@@ -23,6 +24,7 @@ export function crearConsultasDeFacturacion(dependencias: DependenciasDeConsulta
     discriminaIvaAlEmitir: armarDiscriminaIvaAlEmitir(dependencias),
     listarPuntosDeVentaParaEmitir: armarListarPuntosDeVentaParaEmitir(dependencias),
     verComprobante: armarVerComprobante(dependencias),
+    vigenciaDeComprobantes: armarVigenciaDeComprobantes(dependencias),
     modeloDeImpresion: armarModeloDeImpresion(dependencias),
     estadoDeCertificados: armarEstadoDeCertificados(dependencias),
     estadoDeLaConfiguracionFiscal: armarEstadoDeLaConfiguracionFiscal(dependencias),

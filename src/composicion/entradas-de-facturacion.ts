@@ -221,6 +221,8 @@ function aRenglones(renglones: readonly FormaDeRenglon[]) {
       precioUnitario: precio.valor,
       descuento: descuento.valor,
       alicuota: r.alicuota,
+      // Lo manual no lleva unidad: la cantidad se imprime sola (la unidad viene de quien factura un documento ya armado).
+      unidad: null,
     });
   }
   return ok(salida);

@@ -111,6 +111,7 @@ export function renglon(
     precioUnitario: precioUnitarioDesdeTexto(precio),
     descuento: descuento === null ? null : porcentajeDesdeTexto(descuento),
     alicuota,
+    unidad: null,
   };
 }
 
@@ -162,6 +163,7 @@ export const renglonArbitrario = (
       { nil: null },
     ),
     alicuota: alicuotas,
+    unidad: fc.option(fc.constantFrom("kg", "g", "l", "ml", "m", "u", "cm2"), { nil: null }),
   });
 
 /**

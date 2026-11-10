@@ -21,6 +21,7 @@ export const DECLARACIONES_DE_CONSULTAS = {
   discriminaIvaAlEmitir: { accion: "comprobantes.emitir_manual" },
   listarPuntosDeVentaParaEmitir: { accion: "comprobantes.emitir_manual" },
   verComprobante: { accion: "comprobantes.ver" },
+  vigenciaDeComprobantes: { accion: "comprobantes.ver" },
   modeloDeImpresion: { accion: "comprobantes.ver" },
   estadoDeCertificados: { accion: "certificados.gestionar" },
   estadoDeLaConfiguracionFiscal: { accion: "datos_fiscales.editar" },

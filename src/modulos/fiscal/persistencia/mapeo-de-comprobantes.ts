@@ -128,6 +128,7 @@ type FilaDeRenglon = Readonly<{
   descuento: string | null;
   alicuota: string | null;
   importe: string;
+  unidad: string | null;
 }>;
 
 type FilaDeDesglose = Readonly<{ alicuota: string; total: string; neto: string; iva: string }>;
@@ -236,6 +237,7 @@ export function aComprobante(
       descuento: r.descuento === null ? null : porcentajeDesdeTexto(r.descuento),
       alicuota: r.alicuota === null ? null : codigo(r.alicuota),
       importe: importe(r.importe),
+      unidad: r.unidad,
     })),
     desglose: [...desglose]
       .map((d) => ({

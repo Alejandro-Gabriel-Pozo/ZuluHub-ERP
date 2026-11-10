@@ -5,6 +5,7 @@ import { precioUnitarioATexto } from "../../../primitivas/dinero/precio-unitario
 import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import {
   acreditacionDe,
+  CUENTA_COMO_ACREDITADA,
   type EtiquetaDeAcreditacion,
   type NotaParaAcreditar,
 } from "../dominio/acreditacion";
@@ -75,7 +76,8 @@ export function resumenDe(
     total: importeATexto(fila.total),
     estado: fila.estado,
     ambiente: fila.ambiente,
-    acreditacion: acreditacionDe(fila.tipo, fila.total, notas)?.etiqueta ?? null,
+    acreditacion:
+      acreditacionDe(fila.tipo, fila.total, notas, CUENTA_COMO_ACREDITADA)?.etiqueta ?? null,
   };
 }
 
@@ -210,7 +212,12 @@ export function detalleDe(
     serie: SerieGuardada | null;
   }>,
 ): DetalleDeComprobante {
-  const acreditacion = acreditacionDe(c.tipo, c.importes.total, adicionales.notasQueLoCitan);
+  const acreditacion = acreditacionDe(
+    c.tipo,
+    c.importes.total,
+    adicionales.notasQueLoCitan,
+    CUENTA_COMO_ACREDITADA,
+  );
   return {
     id: c.id,
     emisorId: c.emisorId,

@@ -6,13 +6,14 @@ import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { EmpresaNoOpera } from "../../../contexto/estados";
 import { cantidadATexto } from "../../../primitivas/cantidad/cantidad";
 import { porcentajeATexto } from "../../../primitivas/cantidad/porcentaje";
-import { importeATexto } from "../../../primitivas/dinero/importe";
+import { importeATexto, importesIguales, type Importe } from "../../../primitivas/dinero/importe";
 import { precioUnitarioATexto } from "../../../primitivas/dinero/precio-unitario";
+import type { SucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { fechaCivilDesdeTexto } from "../../../primitivas/tiempo/fecha-civil";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { ModoDePrecio } from "../dominio/calculo-de-renglones";
-import type { TipoDeComprobante } from "../dominio/comprobante-emitido";
+import type { OrigenDeComprobante, TipoDeComprobante } from "../dominio/comprobante-emitido";
 import {
   armarComprobanteNuevo,
   type Concepto,
@@ -35,6 +36,8 @@ import {
   type ComprobanteAAsociar,
   type ErrorDeNota,
 } from "../dominio/nota-asociada";
+import type { CondicionIva } from "../dominio/emisor";
+import { letraParaFactura } from "../dominio/letra-de-comprobante";
 import type { Receptor } from "../dominio/receptor";
 import type { ErrorDeSucursalCerrada } from "../dominio/sucursales-de-la-emision";
 import { ingresosBrutosDeclarados } from "../dominio/datos-fiscales";
@@ -137,12 +140,18 @@ type Pedido =
   | Readonly<{ clase: "FACTURA"; entrada: EntradaDeComprobanteManual }>
   | Readonly<{ clase: "NOTA_CREDITO" | "NOTA_DEBITO"; entrada: EntradaDeNotaManual }>;
 
+/**
+ * El renglón como entra a la huella. La unidad se suma SOLO si no es `null`: si se sumara siempre, cambiaría la huella de todos los
+ * pedidos manuales ya guardados (no llevan unidad) y repetir uno después del despliegue daría `CLAVE_REUTILIZADA` en vez de `yaExistia`.
+ * Chequeo: `test/integracion/facturacion-huella-de-origen.test.ts` (la huella de un pedido manual no cambió) y los debilitamientos.
+ */
 const renglonCanonico = (r: RenglonAFacturar) => ({
   descripcion: r.descripcion,
   cantidad: cantidadATexto(r.cantidad),
   precioUnitario: precioUnitarioATexto(r.precioUnitario),
   descuento: r.descuento === null ? null : porcentajeATexto(r.descuento),
   alicuota: r.alicuota,
+  ...(r.unidad === null ? {} : { unidad: r.unidad }),
 });
 
 /**
@@ -168,6 +177,27 @@ export function huellaDelPedido(pedido: Pedido): string {
       });
 }
 
+/**
+ * La huella de una factura que nace de un origen (`emitirFacturaDeOrigenEnTx`): la del pedido manual más el origen (tipo e id), que es lo que
+ * la identifica. Lo que no cambia el contenido del comprobante (la sucursal y el total esperados, que solo se verifican) no entra.
+ */
+export function huellaDeLaFacturaDeOrigen(
+  origen: OrigenDeComprobante,
+  entrada: EntradaDeComprobanteManual,
+): string {
+  const { renglones, puntoDeVentaId, concepto, servicio, modoDePrecio, receptor } = entrada;
+  return huellaDe({
+    clase: "FACTURA",
+    puntoDeVentaId,
+    concepto,
+    servicio,
+    modoDePrecio,
+    renglones: renglones.map(renglonCanonico),
+    receptor,
+    origen: { tipo: origen.tipo, id: origen.id },
+  });
+}
+
 const salidaDe = (c: ComprobanteGuardado, yaExistia: boolean): SalidaDeEmitir => ({
   comprobanteId: c.id,
   estado: c.estado,
@@ -177,7 +207,7 @@ const salidaDe = (c: ComprobanteGuardado, yaExistia: boolean): SalidaDeEmitir =>
 });
 
 /** Lo que la base puede rechazar al dar de alta y que es parte del contrato de emitir. */
-const ADMITIDOS_AL_EMITIR = [
+export const ADMITIDOS_AL_EMITIR = [
   "COMPROBANTE_ALTA_INVALIDA",
   "COMPROBANTE_ASOCIADO_INVALIDO",
   "COMPROBANTE_ASOCIADO_NO_ENCONTRADO",
@@ -185,13 +215,55 @@ const ADMITIDOS_AL_EMITIR = [
   "SUCURSAL_CERRADA",
 ] as const;
 
+/**
+ * Lo que cambia cuando la factura no es un pedido manual sino un documento de otro módulo (`emitirFacturaDeOrigenEnTx`): el origen (que da la
+ * identidad y la repetición), el id que eligió quien llama (estable entre reintentos), la sucursal a la que tiene que pertenecer el punto de
+ * venta y el total que se cobró, que el cálculo de fiscal tiene que igualar al centavo.
+ */
+export type DeOrigen = Readonly<{
+  origen: OrigenDeComprobante;
+  comprobanteId: ComprobanteId;
+  huella: string;
+  sucursalEsperadaId: SucursalId;
+  totalEsperado: Importe;
+}>;
+
+/** Lo que solo puede dar una factura de origen. */
+export type ErrorDeOrigen = "PUNTO_DE_VENTA_DE_OTRA_SUCURSAL" | "TOTAL_NO_COINCIDE";
+
+type Contexto = ContextoOperativo &
+  Readonly<{ personaId: NonNullable<ContextoOperativo["personaId"]> }>;
+
+/**
+ * La letra C no discrimina IVA: ningún renglón lleva alícuota (`ALICUOTA_EN_LETRA_C`). Quien factura un documento ya armado (que trae la
+ * alícuota de cada renglón) no sabe qué letra va a salir; la descarta fiscal, que sí lo sabe (SUPUESTO S-2 de E1).
+ */
+function sinAlicuotaEnLetraC(
+  entrada: EntradaDeComprobanteManual,
+  emisor: CondicionIva,
+): EntradaDeComprobanteManual {
+  if (letraParaFactura(emisor, entrada.receptor.condicionIva) !== "C") return entrada;
+  return { ...entrada, renglones: entrada.renglones.map((r) => ({ ...r, alicuota: null })) };
+}
+
 /** El cuerpo común, dentro de la transacción y DESPUÉS del guard. */
-async function emitirEnTx(
+export async function emitirEnTx(
   tx: TxDeFacturacion,
-  contexto: ContextoOperativo &
-    Readonly<{ personaId: NonNullable<ContextoOperativo["personaId"]> }>,
+  contexto: Contexto,
   pedido: Pedido,
-): Promise<Resultado<SalidaDeEmitir, ErrorPropioAlEmitir | EmpresaNoOpera>> {
+): Promise<Resultado<SalidaDeEmitir, ErrorPropioAlEmitir | EmpresaNoOpera>>;
+export async function emitirEnTx(
+  tx: TxDeFacturacion,
+  contexto: Contexto,
+  pedido: Pedido,
+  deOrigen: DeOrigen,
+): Promise<Resultado<SalidaDeEmitir, ErrorPropioAlEmitir | ErrorDeOrigen | EmpresaNoOpera>>;
+export async function emitirEnTx(
+  tx: TxDeFacturacion,
+  contexto: Contexto,
+  pedido: Pedido,
+  deOrigen: DeOrigen | null = null,
+): Promise<Resultado<SalidaDeEmitir, ErrorPropioAlEmitir | ErrorDeOrigen | EmpresaNoOpera>> {
   const { empresaId, ahora } = contexto;
   const { entrada } = pedido;
   const opera = await empresaOpera(tx, empresaId);
@@ -201,9 +273,10 @@ async function emitirEnTx(
   const sucursales = await puntoDeVentaYSucursalesDelPedido(tx, contexto, entrada);
   if (!sucursales.ok) return sucursales;
   const { pv, asociado } = sucursales.valor;
-  // 3. Repetición: la clave de la pantalla, en cualquier estado y de cualquier clase.
-  const origen = { tipo: "MANUAL" as const, id: origenId(entrada.clave) };
-  const huella = huellaDelPedido(pedido);
+  // 3. Repetición: la clave de la pantalla (o el origen del documento), en cualquier estado y de cualquier clase.
+  const origen: OrigenDeComprobante =
+    deOrigen === null ? { tipo: "MANUAL", id: origenId(entrada.clave) } : deOrigen.origen;
+  const huella = deOrigen === null ? huellaDelPedido(pedido) : deOrigen.huella;
   const previos = await tx.comprobantes.delOrigen(empresaId, origen.tipo, origen.id);
   const previo = previos[0];
   if (previo !== undefined) {
@@ -212,6 +285,10 @@ async function emitirEnTx(
 
   // 4. El punto de venta (activo, de una sucursal abierta), el emisor, sus datos y su certificado.
   if (pv.estado !== "ACTIVO") return err("PUNTO_DE_VENTA_INACTIVO");
+  // PP-E1-1 (decisión 175): el punto de venta de un documento de origen es de la sucursal de ese documento, nunca la que pida el navegador.
+  if (deOrigen !== null && pv.sucursalId !== deOrigen.sucursalEsperadaId) {
+    return err("PUNTO_DE_VENTA_DE_OTRA_SUCURSAL");
+  }
   // D-50 (la base lo vuelve a imponer, con bloqueo, al dar de alta).
   const abierta = await sucursalDelPuntoDeVentaAbierta(tx, empresaId, pv);
   if (!abierta.ok) return abierta;
@@ -259,7 +336,12 @@ async function emitirEnTx(
   };
   let contenido: Resultado<ComprobanteNuevo, ErrorDeComprobanteNuevo | ErrorDeNota>;
   if (pedido.clase === "FACTURA") {
-    contenido = armarComprobanteNuevo(pedido.entrada, contextoDeEmision);
+    contenido = armarComprobanteNuevo(
+      deOrigen === null
+        ? pedido.entrada
+        : sinAlicuotaEnLetraC(pedido.entrada, contextoDeEmision.emisor.condicionIva),
+      contextoDeEmision,
+    );
   } else {
     if (asociado === null) return err("COMPROBANTE_ASOCIADO_NO_ENCONTRADO");
     const base = {
@@ -302,10 +384,15 @@ async function emitirEnTx(
     );
   }
   if (!contenido.ok) return contenido;
+  // Guarda de integridad: se cobró X, no se factura Y. Dos implementaciones de la misma regla (la de quien cobra y esta) no pueden diferir
+  // ni un centavo; si difieren, no se escribe nada.
+  if (deOrigen !== null && !importesIguales(contenido.valor.total, deOrigen.totalEsperado)) {
+    return err("TOTAL_NO_COINCIDE");
+  }
 
   // 6. Alta.
   const alta = await tx.comprobantes.crear({
-    id: comprobanteId(entrada.clave),
+    id: deOrigen === null ? comprobanteId(entrada.clave) : deOrigen.comprobanteId,
     contenido: contenido.valor,
     datosFiscales: {
       id: datos.id,

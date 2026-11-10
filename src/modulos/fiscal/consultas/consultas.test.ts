@@ -245,6 +245,8 @@ function armar(datos: Datos = {}) {
         llamadas.puntosDeVenta.push(args);
         return Promise.resolve(datos.puntosDeVenta ?? []);
       },
+      // La vigencia tiene sus pruebas en `vigencia-de-comprobantes.test.ts`: acá nadie la toca.
+      paraVigencia: () => Promise.resolve([]),
     },
     // El estado de los certificados tiene sus pruebas en `estado-de-certificados.test.ts`: acá nadie lo toca.
     emisores: {
