@@ -98,12 +98,10 @@ describe("la Tx compuesta de la composición contiene la Tx angosta de cada mód
     // Obligatorio (e3 §3.2.1): `[]` explícito si no hay ninguno; omitirlo no compila.
     expectTypeOf<DependenciasDeEmpresas>().toHaveProperty("ganchosDeSucursal");
     expectTypeOf<undefined>().not.toExtend<DependenciasDeEmpresas["ganchosDeSucursal"]>();
-    // @ts-expect-error sin `ganchosDeSucursal` no son unas dependencias de empresas
-    const sinGanchos: DependenciasDeEmpresas = {
-      transacciones: {} as DependenciasDeEmpresas["transacciones"],
-      reglas: {} as DependenciasDeEmpresas["reglas"],
-    };
-    expect(sinGanchos).toBeDefined();
+    // Sin `ganchosDeSucursal` no son unas dependencias de empresas (sin marcador de supresión: no suma deuda).
+    expectTypeOf<
+      Omit<DependenciasDeEmpresas, "ganchosDeSucursal">
+    >().not.toExtend<DependenciasDeEmpresas>();
   });
 
   it("fiscal: facturación, consultas, configuración, certificados y lo que descifra el adaptador de ARCA", () => {
