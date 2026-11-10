@@ -6,6 +6,7 @@ import type { Producto } from "../dominio/modelo";
 import type { FichaValida } from "../dominio/producto";
 import type { CatalogoDb } from "./esquema";
 import { aProducto, FORMA_DE_UUID } from "./filas";
+import { insertarIdempotente } from "./insertar-idempotente";
 
 export type SeccionDeCarta = Readonly<{
   id: SeccionDeCartaId;
@@ -148,9 +149,8 @@ export function crearRepositorioDeProductos(db: Kysely<CatalogoDb>): Repositorio
     },
     async insertar(empresa, alta) {
       const f = alta.ficha;
-      const fila = await db
-        .insertInto("producto")
-        .values({
+      const alta_ = () =>
+        db.insertInto("producto").values({
           id: alta.id,
           empresa_id: empresa,
           ...comunes(f),
@@ -162,10 +162,22 @@ export function crearRepositorioDeProductos(db: Kysely<CatalogoDb>): Repositorio
           paso_minimo: alta.pasoMinimo,
           falta_completar: alta.faltaCompletar,
           creado_por: alta.creadoPor,
-        })
-        .onConflict((oc) => oc.column("id").doNothing())
-        .returning("id")
-        .executeTakeFirst();
+        });
+      const fila = await insertarIdempotente(
+        () =>
+          alta_()
+            .onConflict((oc) => oc.doNothing())
+            .returning("id")
+            .executeTakeFirst(),
+        async () =>
+          (await db
+            .selectFrom("producto")
+            .select("id")
+            .where("empresa_id", "=", empresa)
+            .where("id", "=", alta.id)
+            .executeTakeFirst()) !== undefined,
+        () => alta_().returning("id").executeTakeFirstOrThrow(),
+      );
       return fila !== undefined;
     },
     async actualizarFicha(empresa, id, versionEsperada, ficha) {
@@ -279,12 +291,25 @@ export function crearRepositorioDeProductos(db: Kysely<CatalogoDb>): Repositorio
       return f === undefined ? null : aSeccion(f);
     },
     async insertarSeccion(empresa, id, nombre, nombreClave, orden) {
-      const f = await db
-        .insertInto("seccion_de_carta")
-        .values({ id, empresa_id: empresa, nombre, nombre_clave: nombreClave, orden })
-        .onConflict((oc) => oc.column("id").doNothing())
-        .returning("id")
-        .executeTakeFirst();
+      const alta = () =>
+        db
+          .insertInto("seccion_de_carta")
+          .values({ id, empresa_id: empresa, nombre, nombre_clave: nombreClave, orden });
+      const f = await insertarIdempotente(
+        () =>
+          alta()
+            .onConflict((oc) => oc.doNothing())
+            .returning("id")
+            .executeTakeFirst(),
+        async () =>
+          (await db
+            .selectFrom("seccion_de_carta")
+            .select("id")
+            .where("empresa_id", "=", empresa)
+            .where("id", "=", id)
+            .executeTakeFirst()) !== undefined,
+        () => alta().returning("id").executeTakeFirstOrThrow(),
+      );
       return f !== undefined;
     },
     async actualizarSeccion(empresa, id, versionEsperada, cambios) {

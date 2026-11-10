@@ -466,7 +466,7 @@ describe.skipIf(base === null)("catálogo: concurrencia de los casos de uso", ()
     }
   });
 
-  it("I1/I2/I4 a la vez: el mismo precioId, el mismo id de producto y el mismo copiaId lanzados dos veces simultáneas dejan UNA fila y devuelven yaExistia", async () => {
+  it("I1/I2/I4 a la vez: el mismo precioId, el mismo id de producto, el mismo id de sección y el mismo copiaId lanzados dos veces simultáneas dejan UNA fila y devuelven yaExistia", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda += 1) {
       const id = await crear();
       const precioId = nuevoId();
@@ -502,9 +502,32 @@ describe.skipIf(base === null)("catálogo: concurrencia de los casos de uso", ()
           }),
         );
       const [q1, q2] = await aLaVez([pedidoDeProducto, pedidoDeProducto], ronda);
-      expect([q1, q2].every((r) => r.ok)).toBe(true);
+      expect(
+        [q1, q2].every((r) => r.ok),
+        `producto ronda ${ronda}: ${JSON.stringify([q1, q2])}`,
+      ).toBe(true);
       expect([q1, q2].filter((r) => r.ok && r.valor.yaExistia)).toHaveLength(1);
       expect(await c.contar("select count(*) as n from producto where id = $1", [nuevo])).toBe(1);
+
+      const seccionId = nuevoId();
+      const seccionNombre = nombreAlAzarDeProducto("Entradas");
+      const pedidoDeSeccion = () =>
+        firme(() =>
+          c.casos.crearSeccionDeCarta(e.gerente, {
+            id: seccionId,
+            nombre: seccionNombre,
+            orden: 1,
+          }),
+        );
+      const [s1, s2] = await aLaVez([pedidoDeSeccion, pedidoDeSeccion], ronda);
+      expect(
+        [s1, s2].every((r) => r.ok),
+        `sección ronda ${ronda}: ${JSON.stringify([s1, s2])}`,
+      ).toBe(true);
+      expect([s1, s2].filter((r) => r.ok && r.valor.yaExistia)).toHaveLength(1);
+      expect(
+        await c.contar("select count(*) as n from seccion_de_carta where id = $1", [seccionId]),
+      ).toBe(1);
 
       const origen = await crear();
       const destino = await crear();

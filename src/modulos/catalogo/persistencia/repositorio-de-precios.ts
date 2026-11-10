@@ -4,6 +4,7 @@ import type { OpcionId, PrecioDeVentaId, ProductoId } from "../dominio/identific
 import type { FilaDePrecio } from "../dominio/modelo";
 import type { CatalogoDb } from "./esquema";
 import { aFilaDePrecio, FORMA_DE_UUID } from "./filas";
+import { insertarIdempotente } from "./insertar-idempotente";
 
 export type NuevoPrecio = Readonly<{
   /** El que manda la aplicación (idempotencia del cambio); sin él lo genera la base (lo que escribe `cambiarFormaDeVenta`). */
@@ -118,9 +119,8 @@ export function crearRepositorioDePrecios(db: Kysely<CatalogoDb>): RepositorioDe
     },
 
     async insertar(empresa, n) {
-      const fila = await db
-        .insertInto("precio_de_venta")
-        .values({
+      const alta = () =>
+        db.insertInto("precio_de_venta").values({
           ...(n.id === undefined ? {} : { id: n.id }),
           empresa_id: empresa,
           producto_id: n.productoId,
@@ -137,10 +137,23 @@ export function crearRepositorioDePrecios(db: Kysely<CatalogoDb>): RepositorioDe
                 and p.opcion_id is not distinct from ${n.opcionId}::uuid and p.sucursal_id is not distinct from ${n.sucursalId}::uuid),
             ${n.ahora}::timestamptz))`,
           cargado_por: n.cargadoPor,
-        })
-        .onConflict((oc) => oc.column("id").doNothing())
-        .returningAll()
-        .executeTakeFirst();
+        });
+      const fila = await insertarIdempotente(
+        () =>
+          alta()
+            .onConflict((oc) => oc.doNothing())
+            .returningAll()
+            .executeTakeFirst(),
+        async () =>
+          n.id !== undefined &&
+          (await db
+            .selectFrom("precio_de_venta")
+            .select("id")
+            .where("empresa_id", "=", empresa)
+            .where("id", "=", n.id)
+            .executeTakeFirst()) !== undefined,
+        () => alta().returningAll().executeTakeFirstOrThrow(),
+      );
       return fila === undefined ? null : aFilaDePrecio(fila);
     },
   };
