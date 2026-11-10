@@ -40,8 +40,8 @@ export type Linea = Readonly<{
   descripcion: string;
   varianteOpcionId: string | null;
   varianteNombre: string | null;
-  precioId: string;
-  origenDelPrecio: "SUCURSAL" | "EMPRESA";
+  precioId: string | null;
+  origenDelPrecio: "SUCURSAL" | "EMPRESA" | "ABIERTO";
   precioBase: string;
   precioUnitario: string;
   cantidad: string;
@@ -75,8 +75,8 @@ export type AltaDeLinea = Readonly<{
   descripcion: string;
   varianteOpcionId: string | null;
   varianteNombre: string | null;
-  precioId: string;
-  origenDelPrecio: "SUCURSAL" | "EMPRESA";
+  precioId: string | null;
+  origenDelPrecio: "SUCURSAL" | "EMPRESA" | "ABIERTO";
   precioBase: string;
   precioUnitario: string;
   cantidad: string;

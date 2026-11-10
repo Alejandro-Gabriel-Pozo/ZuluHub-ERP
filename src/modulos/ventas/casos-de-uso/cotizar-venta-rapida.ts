@@ -14,6 +14,7 @@ import {
 import { calcularTicket, type LineaACalcular } from "../dominio/calcular-ticket";
 import { comprobarCantidadDeLinea } from "../dominio/cantidad-de-linea";
 import { esUuid } from "../dominio/identificadores";
+import { decidirPrecioDeLaLinea, type ErrorDePrecioAbierto } from "../dominio/precio-abierto";
 
 export type EntradaDeCotizarVentaRapida = Readonly<{
   sucursalId: string;
@@ -22,6 +23,8 @@ export type EntradaDeCotizarVentaRapida = Readonly<{
     varianteId?: string | undefined;
     opcionIds: readonly string[];
     cantidad: string;
+    /** Solo para un producto en precio abierto (decisión 179). */
+    precioAbierto?: string | undefined;
   }>[];
 }>;
 
@@ -31,7 +34,7 @@ export type SalidaDeCotizarVentaRapida = Readonly<{
 }>;
 
 type Error_ =
-  ErrorDeCotizacion | "IDENTIFICADOR_INVALIDO" | "CANTIDAD_INVALIDA" | "PRODUCTO_SIN_PRECIO";
+  ErrorDeCotizacion | ErrorDePrecioAbierto | "IDENTIFICADOR_INVALIDO" | "CANTIDAD_INVALIDA";
 
 /**
  * `cotizarVentaRapida` (E4 §3.13): el total de un carrito del mostrador con LA MISMA cuenta pura que el cierre (`calcularTicket`), sin
@@ -65,10 +68,17 @@ export async function cotizarVentaRapida(
       ahora: contexto.ahora,
     });
     if (!q.ok) return q;
-    if (q.valor.precioUnitario === null) return err("PRODUCTO_SIN_PRECIO");
-    const precio = precioDeVentaDesdeTexto(q.valor.precioUnitario);
-    if (!precio.ok) throw new Error("el catálogo devolvió un precio que no es un importe exacto");
-    lineas.push({ id: String(i), precioUnitario: precio.valor, cantidad });
+    const cotizado =
+      q.valor.precioUnitario === null ? null : precioDeVentaDesdeTexto(q.valor.precioUnitario);
+    if (cotizado !== null && !cotizado.ok) {
+      throw new Error("el catálogo devolvió un precio que no es un importe exacto");
+    }
+    const precio = decidirPrecioDeLaLinea({
+      precioCotizado: cotizado === null ? null : cotizado.valor,
+      precioAbierto: l.precioAbierto,
+    });
+    if (!precio.ok) return precio;
+    lineas.push({ id: String(i), precioUnitario: precio.valor.precioUnitario, cantidad });
   }
   const calculado = calcularTicket(lineas);
   return ok({

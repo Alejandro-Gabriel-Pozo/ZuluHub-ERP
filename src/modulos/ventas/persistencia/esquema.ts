@@ -75,7 +75,7 @@ export type VentasDb = {
     descripcion: string;
     variante_opcion_id: string | null;
     variante_nombre: string | null;
-    precio_id: string;
+    precio_id: string | null;
     origen_del_precio: string;
     moneda: Generated<string>;
     precio_base: string;

@@ -132,6 +132,7 @@ export const ERRORES_DE_VENTAS_POR_RESTRICCION: Readonly<Record<string, string>>
   linea_opcion_recargo_ck: "NO_TRADUCIDA",
   linea_opcion_solo_con_la_linea: "NO_TRADUCIDA",
   linea_origen_del_precio_ck: "NO_TRADUCIDA",
+  linea_precio_abierto_ck: "NO_TRADUCIDA",
   linea_paso_ck: "CANTIDAD_INVALIDA",
   linea_persona_del_contexto: "NO_TRADUCIDA",
   linea_posicion_ck: "NO_TRADUCIDA",

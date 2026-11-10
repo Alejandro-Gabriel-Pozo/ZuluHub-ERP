@@ -108,7 +108,7 @@ export function crearRepositorioDeLineas(db: Kysely<VentasDb>): RepositorioDeLin
     varianteOpcionId: f.variante_opcion_id,
     varianteNombre: f.variante_nombre,
     precioId: f.precio_id,
-    origenDelPrecio: f.origen_del_precio as "SUCURSAL" | "EMPRESA",
+    origenDelPrecio: f.origen_del_precio as "SUCURSAL" | "EMPRESA" | "ABIERTO",
     precioBase: f.precio_base,
     precioUnitario: f.precio_unitario,
     cantidad: f.cantidad,

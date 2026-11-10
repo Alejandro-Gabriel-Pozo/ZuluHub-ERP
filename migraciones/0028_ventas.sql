@@ -28,6 +28,8 @@
 --  V2. La línea congela precio, cantidad, unidad y paso al agregarla (no se edita: se anula con motivo y se agrega otra). Solo entra y
 --      solo se anula con la cuenta ABIERTA. `precio_unitario = precio_base + Σ recargos` de las opciones fotografiadas (CHECK diferido
 --      `linea_precio_cuadra`). La cantidad es decimal exacto, múltiplo del paso congelado (decisión 162).
+--  V2b. Precio ABIERTO: una línea sin precio de catálogo lleva el importe que escribió quien vende (origen `ABIERTO`, sin `precio_id`); la base
+--      no le exige `base + recargos` (los recargos son informativos). Con otro origen el precio sale del catálogo y la cuenta cuadra como siempre.
 --  V3. El número del ticket sale de `numerador_ticket` (un `UPDATE ... ultimo + 1` que bloquea la fila): `ultimo` solo sube de a uno, el
 --      ticket tiene que tomar exactamente ese número y no puede quedar un número sin ticket (CHECK diferido `numerador_sin_huecos`): si
 --      algo falla después, la transacción revierte el numerador y el número no se consume.
@@ -139,8 +141,8 @@ CREATE TABLE linea_cuenta (
   descripcion         text NOT NULL CONSTRAINT linea_descripcion_ck CHECK (texto_de_catalogo_valido(descripcion, 200)),
   variante_opcion_id  uuid,                                            -- el tamaño elegido (opaco), con su nombre
   variante_nombre     text CONSTRAINT linea_variante_nombre_ck CHECK (variante_nombre IS NULL OR texto_de_catalogo_valido(variante_nombre, 200)),
-  precio_id           uuid NOT NULL,                                   -- el precio de catálogo que se congeló (opaco)
-  origen_del_precio   text NOT NULL CONSTRAINT linea_origen_del_precio_ck CHECK (origen_del_precio IN ('SUCURSAL', 'EMPRESA')),
+  precio_id           uuid,                                            -- el precio de catálogo que se congeló (opaco); NULL con precio abierto
+  origen_del_precio   text NOT NULL CONSTRAINT linea_origen_del_precio_ck CHECK (origen_del_precio IN ('SUCURSAL', 'EMPRESA', 'ABIERTO')),
   moneda              text NOT NULL DEFAULT 'ARS' CONSTRAINT linea_moneda_ck CHECK (moneda = 'ARS'),
   precio_base         numeric(18,6) NOT NULL CONSTRAINT linea_precio_base_ck CHECK (precio_base >= 0 AND precio_base < 1000000000),
   precio_unitario     numeric(18,6) NOT NULL CONSTRAINT linea_precio_unitario_ck CHECK (precio_unitario >= 0 AND precio_unitario < 1000000000),
@@ -166,6 +168,9 @@ CREATE TABLE linea_cuenta (
   CONSTRAINT linea_cuenta_fkey FOREIGN KEY (cuenta_id, empresa_id) REFERENCES cuenta_consumo (id, empresa_id),
   CONSTRAINT linea_variante_completa_ck CHECK ((variante_opcion_id IS NULL) = (variante_nombre IS NULL)),
   CONSTRAINT linea_precio_unitario_minimo_ck CHECK (precio_unitario >= precio_base),
+  -- Precio ABIERTO (decisión 179): lo escribe quien vende, no hay precio de catálogo y el importe escrito es el precio unitario (base = unitario;
+  -- los recargos de las opciones son solo informativos). Con precio de catálogo, el precio sale del catálogo y se congela su id.
+  CONSTRAINT linea_precio_abierto_ck CHECK ((origen_del_precio = 'ABIERTO') = (precio_id IS NULL) AND (origen_del_precio <> 'ABIERTO' OR precio_base = precio_unitario)),
   -- La cantidad es múltiplo EXACTO del paso congelado (decisión 162): `numeric` exacto; un `NaN` no da 0.
   CONSTRAINT linea_cantidad_multiplo_ck CHECK (cantidad % NULLIF(paso_de_cantidad, 0) = 0),
   CONSTRAINT linea_anulada_ck CHECK (
@@ -501,7 +506,7 @@ DECLARE
 BEGIN
   SELECT coalesce(sum(o.recargo), 0) INTO v_recargos
     FROM public.linea_cuenta_opcion o WHERE o.linea_id = NEW.id AND o.empresa_id = NEW.empresa_id;
-  IF NEW.precio_unitario IS DISTINCT FROM NEW.precio_base + v_recargos THEN
+  IF NEW.origen_del_precio <> 'ABIERTO' AND NEW.precio_unitario IS DISTINCT FROM NEW.precio_base + v_recargos THEN
     RAISE EXCEPTION 'el precio de la línea no es el base más los recargos de sus opciones'
       USING ERRCODE = '23514', CONSTRAINT = 'linea_precio_cuadra';
   END IF;

@@ -635,7 +635,7 @@ describe.skipIf(base === null)("ventas: casos de uso", () => {
     expect(grupos).toEqual([{ total: "5.00" }]);
   });
 
-  it("PRODUCTO_SIN_PRECIO: un producto de precio abierto (sin precio cargado) no se vende todavía", async () => {
+  it("PRODUCTO_SIN_PRECIO: un producto de precio abierto sin importe escrito no se vende", async () => {
     const e = await m.escenario();
     const abierto = await m.productoVendible(e.empresa, null);
     const cuenta = await abrir(e);

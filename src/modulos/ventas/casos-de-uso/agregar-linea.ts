@@ -6,12 +6,16 @@ import {
 } from "../../../primitivas/cantidad/cantidad";
 import { ErrorDeValor } from "../../../primitivas/cantidad/errores";
 import { importeAJson, type ImporteJson } from "../../../primitivas/dinero/importe";
-import { precioUnitarioATexto } from "../../../primitivas/dinero/precio-unitario";
+import {
+  precioUnitarioATexto,
+  precioUnitarioDesdeTexto,
+} from "../../../primitivas/dinero/precio-unitario";
 import { precioDeVentaDesdeTexto } from "../../../primitivas/dinero/precio-de-venta";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { cotizarParaVender, type InstantaneaDeProducto } from "../../catalogo/publico";
 import { comprobarCantidadDeLinea } from "../dominio/cantidad-de-linea";
 import { confirmacionesDesdeTexto, decidirAgregarLinea } from "../dominio/decisiones";
+import { decidirPrecioDeLaLinea, importeDePrecioAbierto } from "../dominio/precio-abierto";
 import { cuentaId, lineaId } from "../dominio/identificadores";
 import type { Linea, OpcionDeLinea } from "../persistencia/repositorio-de-cuentas";
 import { aJson, calcularLasLineas } from "./calculo";
@@ -37,6 +41,11 @@ export type EntradaDeAgregarLinea = Readonly<{
   opcionIds: readonly string[];
   /** Texto decimal exacto (`"1"`, `"0.5"`), nunca `number`. */
   cantidad: string;
+  /**
+   * Solo para un producto en «precio abierto» (sin precio cargado; decisiones 169 y 179): el importe que escribe quien vende, texto decimal
+   * con hasta 2 decimales. Con precio de catálogo se rechaza (`PRECIO_ABIERTO_NO_PERMITIDO`): el servidor manda.
+   */
+  precioAbierto?: string | undefined;
   confirmaciones?: readonly string[] | undefined;
 }>;
 
@@ -57,6 +66,18 @@ function eleccionDeLaLinea(linea: Linea): string[] {
   ).sort();
 }
 
+/** Una línea ya guardada con precio abierto repite solo con el mismo importe; una de catálogo, sin importe escrito. */
+function mismoPrecioAbierto(linea: Linea, precioAbierto: string | undefined): boolean {
+  if (linea.origenDelPrecio !== "ABIERTO") return precioAbierto === undefined;
+  if (precioAbierto === undefined) return false;
+  const pedido = importeDePrecioAbierto(precioAbierto);
+  return (
+    pedido.ok &&
+    precioUnitarioATexto(pedido.valor) ===
+      precioUnitarioATexto(precioUnitarioDesdeTexto(linea.precioUnitario))
+  );
+}
+
 function cantidadIgual(a: string, b: Cantidad): boolean {
   try {
     return cantidadDesdeTexto(a).unidades === b.unidades;
@@ -74,7 +95,7 @@ function cantidadIgual(a: string, b: Cantidad): boolean {
  * valida y escribe. `UPDATE cuenta_consumo SET ultima_posicion = ultima_posicion + 1 WHERE estado = 'ABIERTA'` reserva la posición y es el
  * árbitro contra otra alta y contra el cierre: o la línea entra al ticket, o recibe `CUENTA_NO_ABIERTA`; nunca una línea vigente fuera
  * del ticket. El `lineaId` lo manda la pantalla: repetir el pedido devuelve la misma posición (`yaExistia`); el mismo id con otro
- * contenido es `LINEA_ID_EN_USO`. Un precio en «precio abierto» (sin precio cargado) no se vende todavía: `PRODUCTO_SIN_PRECIO`. Una línea
+ * contenido es `LINEA_ID_EN_USO`. Un producto en «precio abierto» (sin precio cargado) se vende con el importe que escribe quien vende (`precioAbierto`, decisión 179); sin él, `PRODUCTO_SIN_PRECIO`; con precio de catálogo, un importe del cliente se rechaza. Una línea
  * a $0 pide la confirmación `VENTA_A_CERO`. Audita `LINEA_AGREGADA` en la misma transacción.
  */
 async function agregar(
@@ -129,7 +150,8 @@ async function agregar(
       existente.cuentaId === cuenta.id &&
       existente.productoId === entrada.productoId &&
       cantidadIgual(existente.cantidad, cantidad.valor) &&
-      JSON.stringify(eleccionDeLaLinea(existente)) === JSON.stringify([...elegidas].sort());
+      JSON.stringify(eleccionDeLaLinea(existente)) === JSON.stringify([...elegidas].sort()) &&
+      mismoPrecioAbierto(existente, entrada.precioAbierto);
     if (!mismoContenido) return err("LINEA_ID_EN_USO");
     const lineas = await tx.cuentas.lineasDeCuenta(empresaId, cuenta.id);
     return ok({
@@ -150,20 +172,23 @@ async function agregar(
   });
   if (!cotizacion.ok) return cotizacion;
   const instantanea: InstantaneaDeProducto = cotizacion.valor;
-  if (
-    instantanea.precioUnitario === null ||
-    instantanea.precioBase === null ||
-    instantanea.precioId === null ||
-    instantanea.origenDelPrecio === "ABIERTO"
-  ) {
-    return err("PRODUCTO_SIN_PRECIO");
-  }
-  const precioUnitario = precioDeVentaDesdeTexto(instantanea.precioUnitario);
-  if (!precioUnitario.ok)
+  const cotizado =
+    instantanea.precioUnitario === null
+      ? null
+      : precioDeVentaDesdeTexto(instantanea.precioUnitario);
+  if (cotizado !== null && !cotizado.ok) {
     throw new Error("el catálogo devolvió un precio que no es un importe exacto");
+  }
+  const precio = decidirPrecioDeLaLinea({
+    precioCotizado: cotizado === null ? null : cotizado.valor,
+    precioAbierto: entrada.precioAbierto,
+  });
+  if (!precio.ok) return precio;
+  const precioUnitario = precio.valor.precioUnitario;
+  const esAbierto = precio.valor.origen === "ABIERTO";
   const decision = decidirAgregarLinea({
     estadoDeLaCuenta: cuenta.estado,
-    precioUnitario: precioUnitario.valor,
+    precioUnitario,
     confirmaciones: confirmaciones.valor,
   });
   if (!decision.ok) return decision;
@@ -189,10 +214,16 @@ async function agregar(
     descripcion: instantanea.descripcion,
     varianteOpcionId: instantanea.variante === null ? null : instantanea.variante.opcionId,
     varianteNombre: instantanea.variante === null ? null : instantanea.variante.nombre,
-    precioId: instantanea.precioId,
-    origenDelPrecio: instantanea.origenDelPrecio,
-    precioBase: instantanea.precioBase,
-    precioUnitario: precioUnitarioATexto(precioUnitario.valor),
+    precioId: esAbierto ? null : instantanea.precioId,
+    origenDelPrecio: esAbierto
+      ? "ABIERTO"
+      : instantanea.origenDelPrecio === "ABIERTO"
+        ? "EMPRESA"
+        : instantanea.origenDelPrecio,
+    precioBase: esAbierto
+      ? precioUnitarioATexto(precioUnitario)
+      : (instantanea.precioBase ?? precioUnitarioATexto(precioUnitario)),
+    precioUnitario: precioUnitarioATexto(precioUnitario),
     cantidad: cantidadATexto(cantidad.valor),
     unidadDeVenta: instantanea.unidadDeVentaId,
     pasoDeCantidad: instantanea.pasoMinimo,
@@ -220,13 +251,14 @@ async function agregar(
       productoId: instantanea.productoId,
       descripcion: instantanea.descripcion,
       cantidad: cantidadATexto(cantidad.valor),
-      precioUnitario: precioUnitarioATexto(precioUnitario.valor),
+      precioUnitario: precioUnitarioATexto(precioUnitario),
+      origenDelPrecio: esAbierto ? "ABIERTO" : "CATALOGO",
       totalProvisorio: importeAJson(calculado.total).monto,
     },
   });
   return ok({
     posicion,
-    precioUnitario: { moneda: ARS, monto: precioUnitarioATexto(precioUnitario.valor) },
+    precioUnitario: { moneda: ARS, monto: precioUnitarioATexto(precioUnitario) },
     totalProvisorio: importeAJson(calculado.total),
     yaExistia: false,
   });

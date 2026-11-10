@@ -36,6 +36,8 @@ export type ErrorDeConsultaDeVentas =
   | "FECHA_INVALIDA"
   | "CANTIDAD_INVALIDA"
   | "PRODUCTO_SIN_PRECIO"
+  | "PRECIO_ABIERTO_NO_PERMITIDO"
+  | "IMPORTE_INVALIDO"
   | "CUENTA_NO_ENCONTRADA"
   | "TICKET_NO_ENCONTRADO"
   | "TICKET_NO_FACTURABLE"
@@ -64,6 +66,8 @@ export type EntradaDeCotizarVentaRapida = Readonly<{
     varianteId?: string | undefined;
     opcionIds: readonly string[];
     cantidad: string;
+    /** Solo para un producto en precio abierto (decisión 179). */
+    precioAbierto?: string | undefined;
   }>[];
 }>;
 
