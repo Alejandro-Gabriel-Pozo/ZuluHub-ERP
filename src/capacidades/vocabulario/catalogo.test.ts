@@ -413,7 +413,7 @@ describe("el catálogo de textos: cableado de los archivos por módulo", () => {
       expect(FUENTE_DE_CATALOGO.match(new RegExp(`from "\\./${base}";`, "g")) ?? []).toHaveLength(
         1,
       );
-      expect(FUENTE_DE_CATALOGO.match(new RegExp(`\\.\\.\\.${nombre},`, "g")) ?? []).toHaveLength(
+      expect(FUENTE_DE_CATALOGO.match(new RegExp(`\\.\\.\\.${nombre}\\b`, "g")) ?? []).toHaveLength(
         1,
       );
     },

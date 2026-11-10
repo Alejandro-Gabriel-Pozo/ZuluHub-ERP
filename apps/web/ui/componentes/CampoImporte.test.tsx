@@ -1,14 +1,24 @@
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
-import { page, userEvent } from "vitest/browser";
+import { page, userEvent, type Locator } from "vitest/browser";
 import { matrizDeEstados, verificarFoco, violacionesDeAccesibilidad } from "../pruebas/ayudas";
 import { CampoImporte } from "./CampoImporte";
 
-/** Deja `texto` en el portapapeles del navegador y lo pega en el campo enfocado. */
-async function pegar(texto: string): Promise<void> {
-  await navigator.clipboard.writeText(texto);
-  await userEvent.paste();
+/**
+ * Pega `texto` en el campo sin tocar el portapapeles real (el Chromium del CI no da permiso de escritura): lanza el evento `paste`
+ * con su `clipboardData` y, si el campo no lo cancela, el navegador inserta el texto (`fill`), como en un pegado de verdad.
+ */
+async function pegar(campo: Locator, texto: string): Promise<void> {
+  const datos = new DataTransfer();
+  datos.setData("text/plain", texto);
+  const evento = new ClipboardEvent("paste", {
+    clipboardData: datos,
+    bubbles: true,
+    cancelable: true,
+  });
+  campo.element().dispatchEvent(evento);
+  if (!evento.defaultPrevented) await userEvent.fill(campo, texto);
 }
 
 /** Registra todo lo que el campo entrega a quien lo usa: el contrato es que SIEMPRE es texto. */
@@ -85,13 +95,13 @@ describe("CampoImporte", () => {
     await render(<Probado alEntregar={alEntregar} />);
     const campo = page.getByLabelText("Importe");
     await userEvent.click(campo);
-    await pegar("14.000,50");
+    await pegar(campo, "14.000,50");
     await expect.element(campo).toHaveValue("14000,50");
     expect(alEntregar).toHaveBeenLastCalledWith("14000.50");
     await userEvent.clear(campo);
     alEntregar.mockClear();
     for (const rechazado of ["1234.50", "1.5", "12,345", "abc"]) {
-      await pegar(rechazado);
+      await pegar(campo, rechazado);
       await expect.element(campo).toHaveValue("");
     }
     expect(alEntregar).not.toHaveBeenCalled();

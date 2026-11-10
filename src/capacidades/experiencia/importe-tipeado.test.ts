@@ -265,6 +265,11 @@ describe("interpretarImportePegado (decisión 153: al pegar)", () => {
     ["$ 1.234,50", "FORMA_INVALIDA"],
     ["-5", "FORMA_INVALIDA"],
     ["1e3", "FORMA_INVALIDA"],
+    // Prefijo de importe válido y sufijo que no lo es: la forma se exige hasta el final del texto.
+    ["12abc", "FORMA_INVALIDA"],
+    ["1.234,50x", "FORMA_INVALIDA"],
+    ["1,5x", "FORMA_INVALIDA"],
+    ["12 34", "FORMA_INVALIDA"],
     [",5", "FORMA_INVALIDA"],
     ["12,", "FORMA_INVALIDA"],
     ["1,2,3", "FORMA_INVALIDA"],
