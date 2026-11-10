@@ -352,6 +352,69 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     );
   });
 
+  it("los textos de stock son exactamente los que el dueño aprobó el 09/11/2026 en stock.html «Textos nuevos» (D125), y ninguno más", () => {
+    expect(
+      Object.fromEntries(
+        claves
+          .filter((c) => c.startsWith("stock."))
+          .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
+      ),
+    ).toEqual({
+      "stock.pantalla.stock": "Stock",
+      "stock.pantalla.existencias": "Existencias",
+      "stock.pantalla.movimientos": "Movimientos",
+      "stock.pantalla.conteo": "Conteo",
+      "stock.pantalla.depositos": "Depósitos",
+      "stock.pantalla.existencia": "Existencia",
+      "stock.pantalla.disponible": "Disponible",
+      "stock.pantalla.negativa": "Negativa",
+      "stock.accion.entrada": "Entrada",
+      "stock.accion.salida": "Salida",
+      "stock.accion.transferir": "Transferir",
+      "stock.accion.ajustar": "Ajustar",
+      "stock.accion.anular": "Anular",
+      "stock.accion.motivo": "Motivo",
+      "stock.accion.detalle": "Detalle",
+      "stock.accion.cantidad": "Cantidad",
+      "stock.accion.costo_por_unidad": "Costo por unidad",
+      "stock.accion.sin_costo": "Sin costo",
+      "stock.accion.origen": "Origen",
+      "stock.accion.destino": "Destino",
+      "stock.accion.registrar": "Registrar",
+      "stock.motivo.compra": "Compra",
+      "stock.motivo.carga_inicial": "Carga inicial",
+      "stock.motivo.devolucion_de_cliente": "Devolución de cliente",
+      "stock.motivo.otra_entrada": "Otra entrada",
+      "stock.motivo.consumo_interno": "Consumo interno",
+      "stock.motivo.merma": "Merma",
+      "stock.motivo.rotura": "Rotura",
+      "stock.motivo.vencimiento": "Vencimiento",
+      "stock.motivo.otra_salida": "Otra salida",
+      "stock.motivo.correccion": "Corrección",
+      "stock.conteo.abrir": "Abrir conteo",
+      "stock.conteo.contado": "Contado",
+      "stock.conteo.aplicar": "Aplicar",
+      "stock.conteo.cancelar": "Cancelar conteo",
+      "stock.conteo.diferencia": "Diferencia",
+      "stock.conteo.aplicado": "Aplicado",
+      "stock.deposito.agregar": "Agregar depósito",
+      "stock.deposito.normal": "Normal",
+      "stock.deposito.cuarentena": "Cuarentena",
+      "stock.deposito.rechazo": "Rechazo",
+      "stock.deposito.de_venta": "De venta",
+      "stock.deposito.uso": "Uso",
+      "stock.error.control_avisa": "Va a quedar en negativo. ¿Confirmás?",
+      "stock.error.control_bloquea": "No hay stock suficiente",
+      "stock.error.transferencia_al_mismo_deposito":
+        "El origen y el destino no pueden ser el mismo",
+      "stock.error.detalle_requerido": "Escribí el detalle",
+      "stock.error.cantidad_invalida": "La cantidad tiene que ser mayor que cero",
+      "stock.error.conteo_en_curso": "Ya hay un conteo abierto en este depósito",
+      "stock.error.nombre_duplicado": "Ya existe un depósito con ese nombre",
+      "stock.error.sin_permiso": "Esta acción no está permitida",
+    });
+  });
+
   it("la referencia del error inesperado lleva su marcador", () => {
     expect(CATALOGO_DE_TEXTOS["error.referencia"].marcadores).toEqual(["referencia"]);
     expect(CATALOGO_DE_TEXTOS["error.referencia"].porDefecto).toContain("{referencia}");
@@ -394,6 +457,7 @@ describe("el catálogo de textos: cableado de los archivos por módulo", () => {
       "catalogo-caja.ts",
       "catalogo-ventas.ts",
       "catalogo-fiscal.ts",
+      "catalogo-stock.ts",
     ]) {
       expect(ARCHIVOS_DE_MODULO).toContain(esperado);
     }
@@ -438,6 +502,7 @@ describe("el catálogo de textos: cableado de los archivos por módulo", () => {
     ["catalogo-catalogo.ts", "catalogo"],
     ["catalogo-caja.ts", "caja"],
     ["catalogo-ventas.ts", "ventas"],
+    ["catalogo-stock.ts", "stock"],
   ])("%s: toda clave lleva el prefijo de su módulo (%s.)", (archivo, modulo) => {
     const parte = partes.find((p) => p.archivo === archivo);
     for (const clave of Object.keys(parte?.exportados[0]?.[1] ?? {})) {
