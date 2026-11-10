@@ -81,7 +81,15 @@ const CLASES_ESPERADAS = Object.freeze([
   "pruebas",
 ]);
 
-const MODULOS_DE_NEGOCIO = ["empresas", "fiscal", "identidad", "marcas", "planes", "tenants"];
+const MODULOS_DE_NEGOCIO = [
+  "catalogo",
+  "empresas",
+  "fiscal",
+  "identidad",
+  "marcas",
+  "planes",
+  "tenants",
+];
 const GRUPOS_DE_SRC = [
   "adaptadores",
   "capacidades",

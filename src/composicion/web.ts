@@ -5,6 +5,7 @@ import {
 } from "../adaptadores/certificados/lector-x509";
 import { CADENAS_DE_CONFIANZA_DE_ARCA } from "./cadenas-de-confianza-de-arca";
 import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../capacidades/permisos/empresa";
+import { crearCasosDeUsoDeCatalogo, crearConsultasDeCatalogo } from "../modulos/catalogo/publico";
 import { crearCasosDeUsoDeEmpresas, crearConsultasDeEmpresas } from "../modulos/empresas/publico";
 import {
   crearCasosDeUsoDeCertificados,
@@ -85,6 +86,17 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
     ),
     consultasDeEmpresas: perezoso(() =>
       crearConsultasDeEmpresas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /**
+     * El catálogo (E2 mínimo): productos, forma de venta, precios, opciones, consumo, copia y secciones de la carta, y sus consultas. Cada
+     * uno exige SU acción al guard dentro de la transacción. El módulo `catalogo` sigue `en_desarrollo`: el guard rechaza todo con
+     * `MODULO_EN_DESARROLLO` hasta que el dueño lo pase a disponible. `cotizarParaVender` no sale por acá: es el puerto de ventas.
+     */
+    casosDeUsoDeCatalogo: perezoso(() =>
+      crearCasosDeUsoDeCatalogo({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    consultasDeCatalogo: perezoso(() =>
+      crearConsultasDeCatalogo({ transacciones: conexiones.transaccionesDeApp(), reglas }),
     ),
     casosDeUsoDeIdentidad: perezoso(() =>
       crearCasosDeUsoDeIdentidad({

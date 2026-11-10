@@ -27,7 +27,7 @@ import { TEXTOS_DE_FISCAL_PANTALLAS } from "./catalogo-fiscal-pantallas";
 import { TEXTOS_DE_VENTAS } from "./catalogo-ventas";
 
 /** El largo máximo de un texto que no declara otro (la base admite hasta 200 en cualquier caso). */
-export const LARGO_MAXIMO_DE_TEXTO = 80;
+export const LARGO_MAXIMO_DE_TEXTO = 80; // fuente-unica: ajeno — el largo de un texto del vocabulario es otro dato que el nombre de cocina
 
 export type DefinicionDeTexto = Readonly<{
   /** El texto por defecto, en es-AR. Es el respaldo de toda la cadena de herencia de la marca. */
@@ -94,7 +94,7 @@ export const CATALOGO_DE_TEXTOS = {
   },
   "conexion.no_se_puede_enviar": {
     porDefecto: "No se puede enviar sin conexión.",
-    largoMaximo: 80,
+    largoMaximo: 80, // fuente-unica: ajeno — el largo de un texto del vocabulario es otro dato que el nombre de cocina
   },
   "conexion.enviando": { porDefecto: "Enviando…" },
   "conexion.verificando": { porDefecto: "Verificando si se registró…" },
