@@ -11,7 +11,9 @@ import { esUuid } from "./identificadores";
  * letras minúsculas y guion bajo, con un punto opcional (`salon.mesa`), de hasta 40; el id es un uuid. La etiqueta es un texto corto para
  * personas (hasta 40, lista de permitidos de `texto-de-una-linea`). La base repite ambas reglas (`cuenta_ancla_tipo_ck`, `cuenta_etiqueta_ck`).
  */
+// fuente-unica: ajeno — coincide con el 40 del teléfono; es el largo máximo del tipo de ancla de una cuenta, dato sin relación
 export const LARGO_MAXIMO_DEL_TIPO_DE_ANCLA = 40;
+// fuente-unica: ajeno — coincide con el 40 del teléfono; es el largo máximo de la etiqueta de una cuenta, dato sin relación
 export const LARGO_MAXIMO_DE_LA_ETIQUETA = 40;
 
 const FORMA_DEL_TIPO_DE_ANCLA = /^[a-z_]+(\.[a-z_]+)?$/;

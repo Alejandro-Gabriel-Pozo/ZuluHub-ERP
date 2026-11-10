@@ -7,6 +7,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  DECLARACIONES_DE_VENTAS,
+  DECLARACIONES_DE_CONSULTAS_DE_VENTAS,
+} from "../modulos/ventas/publico";
+import {
   DECLARACIONES_DE_CIERRE,
   DECLARACIONES_DE_CONSULTAS_DE_CIERRE,
 } from "../modulos/cierre/publico";
@@ -608,6 +612,8 @@ const DECISIONES_DE_WEB: Record<keyof ReturnType<typeof armarWeb>, Decision> = {
   consultasDeEmpresas: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS },
   casosDeUsoDeCierre: { conGuard: DECLARACIONES_DE_CIERRE },
   consultasDeCierre: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CIERRE },
+  casosDeUsoDeVentas: { conGuard: DECLARACIONES_DE_VENTAS },
+  consultasDeVentas: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_VENTAS },
   casosDeUsoDeIdentidad: {
     conGuard: DECLARACIONES_DE_IDENTIDAD,
     exentos: {

@@ -53,6 +53,12 @@ import type { EmpresaId } from "../primitivas/identificadores/marca";
 import { crearRepositoriosDeCatalogo } from "../modulos/catalogo/publico";
 import { crearRepositorioDeJornadas, type CierreDb } from "../modulos/cierre/publico";
 import {
+  crearRepositorioDeCuentas,
+  crearRepositorioDeLecturas,
+  crearRepositorioDeTickets,
+  type VentasDb,
+} from "../modulos/ventas/publico";
+import {
   crearLecturaDeSucursalBloqueada,
   crearRepositorioDeEmpresas,
   crearRepositorioDeSucursales,
@@ -158,6 +164,10 @@ export type TxDeApp = ReturnType<typeof crearRepositoriosDeCatalogo> &
     empresas: RepositorioDeEmpresas;
     sucursales: RepositorioDeSucursales;
     jornadas: ReturnType<typeof crearRepositorioDeJornadas>;
+    /** Ventas (E4, 0028): la cuenta con sus líneas, el ticket con sus ejemplares y las lecturas de solo lectura. */
+    cuentas: ReturnType<typeof crearRepositorioDeCuentas>;
+    tickets: ReturnType<typeof crearRepositorioDeTickets>;
+    lecturasDeVentas: ReturnType<typeof crearRepositorioDeLecturas>;
     /** La sucursal leída con `FOR SHARE`: dar de alta un punto de venta exige que siga abierta (el cierre concurrente espera). */
     sucursalBloqueada: LecturaDeSucursalBloqueada;
     personas: RepositorioDePersonas;
@@ -273,6 +283,9 @@ function armarTx(db: ConexionDeTx, autorizacion: CargaDeAutorizacion): TxDeApp {
     empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
     sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
     jornadas: crearRepositorioDeJornadas(db.withTables<CierreDb>()),
+    cuentas: crearRepositorioDeCuentas(db.withTables<VentasDb>()),
+    tickets: crearRepositorioDeTickets(db.withTables<VentasDb>()),
+    lecturasDeVentas: crearRepositorioDeLecturas(db.withTables<VentasDb>()),
     sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
     personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
     membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),

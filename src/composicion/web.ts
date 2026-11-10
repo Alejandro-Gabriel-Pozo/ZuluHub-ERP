@@ -7,6 +7,11 @@ import { CADENAS_DE_CONFIANZA_DE_ARCA } from "./cadenas-de-confianza-de-arca";
 import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../capacidades/permisos/empresa";
 import { crearCasosDeUsoDeCatalogo, crearConsultasDeCatalogo } from "../modulos/catalogo/publico";
 import { crearCasosDeUsoDeCierre, crearConsultasDeCierre } from "../modulos/cierre/publico";
+import {
+  aporteDeVentas,
+  crearCasosDeUsoDeVentas,
+  crearConsultasDeVentas,
+} from "../modulos/ventas/publico";
 import { crearCasosDeUsoDeEmpresas, crearConsultasDeEmpresas } from "../modulos/empresas/publico";
 import {
   crearCasosDeUsoDeCertificados,
@@ -101,21 +106,32 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
     ),
     /**
      * El cierre del día (E3b): iniciar y cancelar la auditoría y cerrar la jornada, cada uno con su acción de `cierre`. Los aportes de los
-     * módulos que tienen algo que revisar (caja, ventas) los registra cada etapa en `aportes`: vacío mientras no existan.
+     * módulos que tienen algo que revisar los registra cada etapa en `aportes`: hoy el de ventas (E4); el de caja lo suma E3.
      */
     casosDeUsoDeCierre: perezoso(() =>
       crearCasosDeUsoDeCierre({
         transacciones: conexiones.transaccionesDeApp(),
         reglas,
-        aportes: [],
+        aportes: [aporteDeVentas],
       }),
     ),
     consultasDeCierre: perezoso(() =>
       crearConsultasDeCierre({
         transacciones: conexiones.transaccionesDeApp(),
         reglas,
-        aportes: [],
+        aportes: [aporteDeVentas],
       }),
+    ),
+    /**
+     * Ventas (E4, fase A): abrir, cargar, anular y cerrar la cuenta y anular el ticket, cada uno con SU acción. El módulo `ventas` sigue
+     * `en_desarrollo`: el guard rechaza todo con `MODULO_EN_DESARROLLO` hasta que el dueño lo pase a disponible. Cobrar y vender y cobrar
+     * son de la fase B (puerto de caja de E3).
+     */
+    casosDeUsoDeVentas: perezoso(() =>
+      crearCasosDeUsoDeVentas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    consultasDeVentas: perezoso(() =>
+      crearConsultasDeVentas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
     ),
     casosDeUsoDeIdentidad: perezoso(() =>
       crearCasosDeUsoDeIdentidad({

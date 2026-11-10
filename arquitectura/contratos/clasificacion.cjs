@@ -90,6 +90,7 @@ const MODULOS_DE_NEGOCIO = [
   "marcas",
   "planes",
   "tenants",
+  "ventas",
 ];
 const GRUPOS_DE_SRC = [
   "adaptadores",

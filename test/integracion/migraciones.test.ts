@@ -80,7 +80,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0024_pasaporte_con_letras.sql",
           "0025_catalogo.sql",
           "0026_cierre.sql",
-        "0028_ventas.sql",
+          "0028_ventas.sql",
         ],
       });
     } finally {

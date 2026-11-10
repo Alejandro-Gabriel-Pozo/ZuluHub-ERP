@@ -14,6 +14,10 @@ import {
   DECLARACIONES_DE_CONSULTAS_DE_CATALOGO,
 } from "../../src/modulos/catalogo/publico";
 import {
+  DECLARACIONES_DE_CONSULTAS_DE_VENTAS,
+  DECLARACIONES_DE_VENTAS,
+} from "../../src/modulos/ventas/publico";
+import {
   DECLARACIONES_DE_CIERRE,
   DECLARACIONES_DE_CONSULTAS_DE_CIERRE,
 } from "../../src/modulos/cierre/publico";
@@ -234,6 +238,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       DECLARACIONES_DE_CONSULTAS_DE_CATALOGO,
     ),
     "modulos/cierre": accionesDe(DECLARACIONES_DE_CIERRE, DECLARACIONES_DE_CONSULTAS_DE_CIERRE),
+    "modulos/ventas": accionesDe(DECLARACIONES_DE_VENTAS, DECLARACIONES_DE_CONSULTAS_DE_VENTAS),
     "modulos/fiscal": accionesDe(
       DECLARACIONES_DE_FISCAL,
       DECLARACIONES_DE_CONSULTAS_DE_FISCAL,

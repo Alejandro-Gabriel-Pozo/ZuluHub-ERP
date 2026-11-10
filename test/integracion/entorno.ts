@@ -30,6 +30,15 @@ import {
   type UsuarioAuthId,
 } from "../../src/primitivas/identificadores/marca";
 import {
+  crearRepositorioDeCuentas,
+  crearRepositorioDeLecturas,
+  crearRepositorioDeTickets,
+  type LecturasDeVentas,
+  type RepositorioDeCuentas,
+  type RepositorioDeTickets,
+  type VentasDb,
+} from "../../src/modulos/ventas/publico";
+import {
   crearRepositorioDeJornadas,
   type CierreDb,
   type RepositorioDeJornadas,
@@ -129,6 +138,10 @@ export type TxDePrueba = Readonly<{
   sucursales: RepositorioDeSucursales;
   /** La jornada de la sucursal y la foto de sus controles (E3b, 0026). */
   jornadas: RepositorioDeJornadas;
+  /** Ventas (E4, 0028). */
+  cuentas: RepositorioDeCuentas;
+  tickets: RepositorioDeTickets;
+  lecturasDeVentas: LecturasDeVentas;
   /** La cola de trabajos del procesador (H5); se usa con el contexto `TRABAJOS`. */
   cola: ColaDeTrabajos;
   /** Puertos de plataforma (H5 P4): el actor sale del contexto de la transacción. */
@@ -172,6 +185,9 @@ export function crearEntornoDePrueba(
       empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
       sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
       jornadas: crearRepositorioDeJornadas(db.withTables<CierreDb>()),
+      cuentas: crearRepositorioDeCuentas(db.withTables<VentasDb>()),
+      tickets: crearRepositorioDeTickets(db.withTables<VentasDb>()),
+      lecturasDeVentas: crearRepositorioDeLecturas(db.withTables<VentasDb>()),
       personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
       membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
       asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
