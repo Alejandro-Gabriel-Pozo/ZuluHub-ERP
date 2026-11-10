@@ -877,6 +877,7 @@ describe("verComprobante", () => {
       {
         posicion: 1,
         descripcion: "Torta",
+        unidad: null,
         cantidad: "1.0000",
         precioUnitario: "1210.000000",
         descuento: null,
@@ -886,6 +887,7 @@ describe("verComprobante", () => {
       {
         posicion: 2,
         descripcion: "Medialunas",
+        unidad: null,
         cantidad: "1.0000",
         precioUnitario: "1050.000000",
         descuento: null,
