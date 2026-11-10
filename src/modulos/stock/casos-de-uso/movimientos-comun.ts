@@ -15,7 +15,7 @@ import { datosDeJornada } from "../../empresas/publico";
 import { esUnidadConocida } from "../dominio/composicion";
 import { cantidadDeUnidades, type RenglonDeLibro } from "../dominio/movimiento";
 import { esUuid } from "../persistencia/filas";
-import type { Deposito } from "../persistencia/modelo";
+import type { Articulo, Deposito } from "../persistencia/modelo";
 import { exigirAlcanceDeSucursal, traducir } from "./comun";
 import type { TxDeStock } from "./contrato";
 import type { ControlDeStock, ErrorDeStock } from "./errores";
@@ -86,11 +86,14 @@ export function leerConfirmaciones(valor: unknown): R<readonly ControlDeStock[]>
   return ok(confirmaciones);
 }
 
-/** Una cantidad en texto decimal, mayor que cero y con hasta 4 decimales; si no, `CANTIDAD_INVALIDA`. */
-export function leerCantidadPositiva(texto: unknown): Resultado<Cantidad, "CANTIDAD_INVALIDA"> {
+/** Una cantidad en texto decimal con hasta 4 decimales, y mayor que cero (o también cero con `conCero`); si no, `CANTIDAD_INVALIDA`. */
+export function leerCantidad(
+  texto: unknown,
+  conCero = false,
+): Resultado<Cantidad, "CANTIDAD_INVALIDA"> {
   if (typeof texto !== "string") return err("CANTIDAD_INVALIDA");
   const leida = cantidadConSignoDesdeTexto(texto);
-  if (!leida.ok || leida.valor.unidades <= 0n) return err("CANTIDAD_INVALIDA");
+  if (!leida.ok || leida.valor.unidades < (conCero ? 0n : 1n)) return err("CANTIDAD_INVALIDA");
   return ok(cantidadDeUnidades(leida.valor.unidades));
 }
 
@@ -110,7 +113,7 @@ export function leerRenglones(valor: unknown): R<readonly RenglonLeido[]> {
     >;
     const productoId = leerId(renglon["productoId"]);
     if (productoId === null) return err("ARTICULO_NO_CONTROLADO");
-    const cantidad = leerCantidadPositiva(renglon["cantidad"]);
+    const cantidad = leerCantidad(renglon["cantidad"]);
     if (!cantidad.ok) return cantidad;
     const unidadId = renglon["unidadId"];
     if (typeof unidadId !== "string" || !esUnidadConocida(unidadId)) {
@@ -133,6 +136,24 @@ export const renglonesDeHuella = (leidos: readonly RenglonLeido[]) =>
   );
 
 /**
+ * Lleva una cantidad a la unidad de stock de su artículo: la dimensión es la misma (`DIMENSION_DISTINTA`) y la conversión es EXACTA, nunca
+ * redondea (`CONVERSION_NO_EXACTA`, D21); una cantidad que no entra en `numeric(18,4)` es `CANTIDAD_INVALIDA`. Lo usan los renglones de un
+ * movimiento y lo contado en un conteo.
+ */
+export function aUnidadDeStock(
+  cantidad: Cantidad,
+  unidadId: CodigoDeUnidad,
+  articulo: Pick<Articulo, "unidadDeStockId">,
+): R<Cantidad> {
+  if (!esUnidadConocida(articulo.unidadDeStockId)) {
+    throw new RangeError(`unidad de stock desconocida en la base: ${articulo.unidadDeStockId}`);
+  }
+  const convertida = convertirCantidad(cantidad, unidadId, articulo.unidadDeStockId);
+  if (convertida.ok) return convertida;
+  return err(convertida.error === "FUERA_DE_RANGO" ? "CANTIDAD_INVALIDA" : convertida.error);
+}
+
+/**
  * Lleva cada renglón a la unidad de stock de su artículo: el artículo existe y está activo (`ARTICULO_NO_CONTROLADO`), la dimensión es
  * la misma (`DIMENSION_DISTINTA`) y la conversión es EXACTA, nunca redondea (`CONVERSION_NO_EXACTA`, D21); una cantidad que no entra en
  * `numeric(18,4)` es `CANTIDAD_INVALIDA`.
@@ -151,13 +172,8 @@ export async function resolverRenglones(
   for (const r of leidos) {
     const articulo = porProducto.get(r.productoId);
     if (articulo === undefined || !articulo.activo) return err("ARTICULO_NO_CONTROLADO");
-    if (!esUnidadConocida(articulo.unidadDeStockId)) {
-      throw new RangeError(`unidad de stock desconocida en la base: ${articulo.unidadDeStockId}`);
-    }
-    const convertida = convertirCantidad(r.cantidad, r.unidadId, articulo.unidadDeStockId);
-    if (!convertida.ok) {
-      return err(convertida.error === "FUERA_DE_RANGO" ? "CANTIDAD_INVALIDA" : convertida.error);
-    }
+    const convertida = aUnidadDeStock(r.cantidad, r.unidadId, articulo);
+    if (!convertida.ok) return convertida;
     resueltos.push({
       productoId: r.productoId,
       articuloId: articulo.id,

@@ -18,7 +18,7 @@ import {
 } from "./stock-casos-apoyo";
 
 /**
- * E5-T5, concurrencia real (P1 a P4, P6 y P13) con las dependencias reales y varias transacciones a la vez (una barrera hace que todas hayan
+ * E5-T5, concurrencia real (P1 a P4, P5, P6, P7 y P13) con las dependencias reales y varias transacciones a la vez (una barrera hace que todas hayan
  * leído antes de que cualquiera escriba). Rondas: `PEDERNAL_RONDAS` (3 por defecto). Cada nivel del control (`PERMITIR`, `AVISAR`, `BLOQUEAR`)
  * vive en su propia empresa: el nivel no admite borrado.
  */
@@ -266,6 +266,201 @@ describe.skipIf(base === null)("stock: concurrencia de movimientos", () => {
       expect(valores[0]?.movimientoId).toBe(valores[1]?.movimientoId);
       expect(await c.existencia(dep, a.articulo)).toBe("5.0000");
     }
+  });
+
+  describe("conteos (P5 y P6)", () => {
+    /** Un depósito con una existencia de 10 y un conteo abierto en el que ya se contó 6 del artículo. */
+    const conteoAbierto = async (m: EscenarioDeStock) => {
+      const a = await conExistencia(m, "10");
+      const conteoId = valorDe(
+        await c.casos.abrirConteo(m.gerente, { id: nuevoId(), depositoId: a.dep }),
+      ).conteoId;
+      valorDe(
+        await c.casos.registrarConteo(m.gerente, {
+          id: nuevoId(),
+          conteoId,
+          productoId: a.producto,
+          cantidadContada: "6",
+          unidadId: "UNIDAD",
+        }),
+      );
+      return { ...a, conteoId };
+    };
+    const ajustesDe = (conteoId: string) =>
+      c.contar("select count(*) as n from movimiento_de_stock where conteo_id = $1", [conteoId]);
+
+    it("P5: dos aplicaciones del mismo conteo a la vez dejan UN solo ajuste: una aplica y la otra ve yaAplicado con el mismo movimiento", async () => {
+      for (let ronda = 0; ronda < RONDAS; ronda += 1) {
+        const m = permitir;
+        const x = await conteoAbierto(m);
+        const aplicar = () =>
+          firme(() => c.casos.aplicarConteo(m.gerente, { conteoId: x.conteoId }));
+        const resultados = await aLaVez(c, [aplicar, aplicar], ronda);
+        expect(soloOk(resultados), JSON.stringify(resultados)).toBe(2);
+        const valores = resultados.map((r) => valorDe(r));
+        expect(valores.filter((v) => v.yaAplicado)).toHaveLength(1);
+        expect(valores[0]?.movimientoId).not.toBeNull();
+        expect(valores[0]?.movimientoId).toBe(valores[1]?.movimientoId);
+        expect(await ajustesDe(x.conteoId)).toBe(1);
+        expect(await c.existencia(x.dep, x.articulo)).toBe("6.0000");
+        expect(
+          (await c.auditoria(m.empresa, "CONTEO_APLICADO")).filter(
+            (r) => r["entidad_id"] === x.conteoId,
+          ),
+        ).toHaveLength(1);
+      }
+    });
+
+    it("P5: aplicar mientras se cancela: gana uno solo; el otro ve CONTEO_CANCELADO o CONTEO_CERRADO, y nunca quedan las dos cosas", async () => {
+      for (let ronda = 0; ronda < RONDAS; ronda += 1) {
+        const m = permitir;
+        const x = await conteoAbierto(m);
+        let porAplicar: Awaited<ReturnType<typeof c.casos.aplicarConteo>> | undefined;
+        let porCancelar: Awaited<ReturnType<typeof c.casos.cancelarConteo>> | undefined;
+        await aLaVez(
+          c,
+          [
+            async (): Promise<unknown> =>
+              (porAplicar = await firme(() =>
+                c.casos.aplicarConteo(m.gerente, { conteoId: x.conteoId }),
+              )),
+            async (): Promise<unknown> =>
+              (porCancelar = await firme(() =>
+                c.casos.cancelarConteo(m.gerente, { conteoId: x.conteoId, motivo: "Se cancela" }),
+              )),
+          ],
+          ronda,
+        );
+        if (porAplicar === undefined || porCancelar === undefined)
+          throw new Error("faltó un resultado");
+        const estado = (
+          await c.filas<{ estado: string }>("select estado from conteo_fisico where id = $1", [
+            x.conteoId,
+          ])
+        )[0]?.estado;
+        if (porAplicar.ok) {
+          expect(estado).toBe("APLICADO");
+          expect(codigoDe(porCancelar)).toBe("CONTEO_CERRADO");
+          expect(await ajustesDe(x.conteoId)).toBe(1);
+          expect(await c.existencia(x.dep, x.articulo)).toBe("6.0000");
+        } else {
+          expect(estado).toBe("CANCELADO");
+          expect(codigoDe(porAplicar)).toBe("CONTEO_CANCELADO");
+          expect(porCancelar.ok).toBe(true);
+          expect(await ajustesDe(x.conteoId)).toBe(0);
+          expect(await c.existencia(x.dep, x.articulo)).toBe("10.0000");
+        }
+      }
+    });
+
+    it("P5: registrar mientras se aplica: o el registro entra y el ajuste lo cuenta, o el conteo ya estaba cerrado; nunca un registro que el ajuste no vio", async () => {
+      for (let ronda = 0; ronda < RONDAS; ronda += 1) {
+        const m = permitir;
+        const x = await conteoAbierto(m);
+        let porRegistrar: Awaited<ReturnType<typeof c.casos.registrarConteo>> | undefined;
+        let porAplicar: Awaited<ReturnType<typeof c.casos.aplicarConteo>> | undefined;
+        const registro = {
+          id: nuevoId(),
+          conteoId: x.conteoId,
+          productoId: x.producto,
+          cantidadContada: "3",
+          unidadId: "UNIDAD",
+        };
+        await aLaVez(
+          c,
+          [
+            async (): Promise<unknown> =>
+              (porRegistrar = await firme(() => c.casos.registrarConteo(m.gerente, registro))),
+            async (): Promise<unknown> =>
+              (porAplicar = await firme(() =>
+                c.casos.aplicarConteo(m.gerente, { conteoId: x.conteoId }),
+              )),
+          ],
+          ronda,
+        );
+        if (porRegistrar === undefined || porAplicar === undefined)
+          throw new Error("faltó un resultado");
+        expect(porAplicar.ok, JSON.stringify(porAplicar)).toBe(true);
+        const existencia = await c.existencia(x.dep, x.articulo);
+        if (porRegistrar.ok) {
+          // Entró antes de aplicar: el último registro (3) es el que vale.
+          expect(existencia).toBe("3.0000");
+        } else {
+          expect(codigoDe(porRegistrar)).toBe("CONTEO_CERRADO");
+          expect(existencia).toBe("6.0000");
+        }
+        expect(await ajustesDe(x.conteoId)).toBe(1);
+      }
+    });
+
+    it("P6: dos abrirConteo en el mismo depósito a la vez: gana uno, el otro ve CONTEO_EN_CURSO y queda un solo conteo abierto", async () => {
+      for (let ronda = 0; ronda < RONDAS; ronda += 1) {
+        const m = permitir;
+        const dep = await c.deposito(m);
+        const abrir = () =>
+          firme(() => c.casos.abrirConteo(m.gerente, { id: nuevoId(), depositoId: dep }));
+        const resultados = await aLaVez(c, [abrir, abrir], ronda);
+        expect(soloOk(resultados), JSON.stringify(resultados)).toBe(1);
+        expect(resultados.filter((r) => !r.ok).map(codigoDe)).toEqual(["CONTEO_EN_CURSO"]);
+        expect(
+          await c.contar(
+            "select count(*) as n from conteo_fisico where deposito_id = $1 and estado = 'ABIERTO'",
+            [dep],
+          ),
+        ).toBe(1);
+      }
+    });
+
+    it("P6: el mismo abrirConteo dos veces a la vez (doble clic): un solo conteo y los dos responden bien", async () => {
+      for (let ronda = 0; ronda < RONDAS; ronda += 1) {
+        const m = permitir;
+        const dep = await c.deposito(m);
+        const pedido = { id: nuevoId(), depositoId: dep };
+        const abrir = () => firme(() => c.casos.abrirConteo(m.gerente, pedido));
+        const resultados = await aLaVez(c, [abrir, abrir], ronda);
+        expect(soloOk(resultados), JSON.stringify(resultados)).toBe(2);
+        expect(resultados.map((r) => valorDe(r)).filter((v) => v.yaExistia)).toHaveLength(1);
+        expect(
+          await c.contar("select count(*) as n from conteo_fisico where deposito_id = $1", [dep]),
+        ).toBe(1);
+      }
+    });
+
+    it("P6: desactivar un depósito mientras se le abre un conteo: nunca queda inactivo con un conteo abierto", async () => {
+      for (let ronda = 0; ronda < RONDAS; ronda += 1) {
+        const m = permitir;
+        const dep = await c.deposito(m);
+        let porAbrir: Awaited<ReturnType<typeof c.casos.abrirConteo>> | undefined;
+        let porDesactivar: Awaited<ReturnType<typeof c.casos.desactivarDeposito>> | undefined;
+        await aLaVez(
+          c,
+          [
+            async (): Promise<unknown> =>
+              (porAbrir = await firme(() =>
+                c.casos.abrirConteo(m.gerente, { id: nuevoId(), depositoId: dep }),
+              )),
+            async (): Promise<unknown> =>
+              (porDesactivar = await firme(() =>
+                c.casos.desactivarDeposito(m.gerente, { depositoId: dep }),
+              )),
+          ],
+          ronda,
+        );
+        if (porAbrir === undefined || porDesactivar === undefined)
+          throw new Error("faltó un resultado");
+        const activo = (
+          await c.filas<{ activo: boolean }>("select activo from deposito where id = $1", [dep])
+        )[0]?.activo;
+        if (porAbrir.ok) {
+          expect(activo).toBe(true);
+          expect(codigoDe(porDesactivar)).toBe("DEPOSITO_CON_CONTEO_ABIERTO");
+        } else {
+          expect(codigoDe(porAbrir)).toBe("DEPOSITO_INACTIVO");
+          expect(porDesactivar.ok).toBe(true);
+          expect(activo).toBe(false);
+        }
+      }
+    });
   });
 
   describe("P13: una transferencia es atómica", () => {

@@ -1,4 +1,10 @@
 import { armarControlarArticulo, armarDejarDeControlar } from "./articulos";
+import {
+  armarAbrirConteo,
+  armarAplicarConteo,
+  armarCancelarConteo,
+  armarRegistrarConteo,
+} from "./conteos";
 import type { DependenciasDeStock } from "./contrato";
 import type { DECLARACIONES } from "./declaraciones";
 import { armarAnularMovimiento } from "./anulaciones";
@@ -34,6 +40,11 @@ export function crearCasosDeUsoDeStock(dependencias: DependenciasDeStock) {
     transferir: armarTransferir(dependencias),
     ajustar: armarAjustar(dependencias),
     anularMovimiento: armarAnularMovimiento(dependencias),
+    // conteo físico (E5-T6)
+    abrirConteo: armarAbrirConteo(dependencias),
+    registrarConteo: armarRegistrarConteo(dependencias),
+    aplicarConteo: armarAplicarConteo(dependencias),
+    cancelarConteo: armarCancelarConteo(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

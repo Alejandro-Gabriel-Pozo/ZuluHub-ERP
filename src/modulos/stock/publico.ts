@@ -43,6 +43,16 @@ export type {
   EntradaDeAnularMovimiento,
   SalidaDeAnularMovimiento,
 } from "./casos-de-uso/anulaciones";
+export type {
+  EntradaDeAbrirConteo,
+  EntradaDeAplicarConteo,
+  EntradaDeCancelarConteo,
+  EntradaDeRegistrarConteo,
+  SalidaDeAbrirConteo,
+  SalidaDeAplicarConteo,
+  SalidaDeCancelarConteo,
+  SalidaDeRegistrarConteo,
+} from "./casos-de-uso/conteos";
 export type { RenglonPedido } from "./casos-de-uso/movimientos-comun";
 // El núcleo que escribe un movimiento en la transacción de OTRO módulo (salida por venta, reversión y entrada por origen: E5-T7 y E12).
 export {
@@ -67,6 +77,7 @@ export type {
   PaginaDeLibro,
   RenglonDeFicha,
 } from "./consultas/libro";
+export type { ConteoDeLista, FichaDeConteo, RegistroDeFicha } from "./consultas/conteos";
 export type { DiferenciaDeSaldo } from "./persistencia/lecturas-del-libro";
 export { COLUMNAS_DE_STOCK, type StockDb } from "./persistencia/esquema";
 export { ERRORES_DE_STOCK_POR_RESTRICCION } from "./persistencia/errores-por-restriccion";

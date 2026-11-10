@@ -13,4 +13,7 @@ export const DECLARACIONES_DE_CONSULTAS = {
   fichaDeMovimiento: { accion: "stock.ver" },
   movimientosPorOrigen: { accion: "stock.ver" },
   verificarSaldos: { accion: "stock.verificar_saldos" },
+  // La existencia teórica y la diferencia de un conteo solo viajan con `conteos.aplicar` (a ciegas): lo decide la consulta, no la pantalla.
+  fichaDeConteo: { accion: "stock.ver" },
+  listarConteos: { accion: "stock.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

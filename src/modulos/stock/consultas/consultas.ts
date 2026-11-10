@@ -1,5 +1,6 @@
 import type { DependenciasDeConsultasDeStock } from "../casos-de-uso/contrato";
 import { crearLector } from "./comun";
+import { armarConsultasDeConteos } from "./conteos";
 import { armarConsultasDeDepositos } from "./depositos";
 import { armarConsultasDeExistencias } from "./existencias";
 import { armarConsultasDeLibro } from "./libro";
@@ -16,6 +17,8 @@ export function crearConsultasDeStock(d: DependenciasDeConsultasDeStock) {
     // existencias, libro y verificación de saldos (E5-T5)
     ...armarConsultasDeExistencias(leer),
     ...armarConsultasDeLibro(leer),
+    // conteo físico (E5-T6)
+    ...armarConsultasDeConteos(leer, d.reglas),
   };
 }
 

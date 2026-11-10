@@ -9,10 +9,10 @@ import {
 } from "./stock-casos-apoyo";
 
 /**
- * E5-T5, P17 (propiedad): para historias aleatorias de entradas, salidas, transferencias, ajustes y anulaciones (los conteos se suman en
- * `stock-conteos.test.ts`), con cualquiera de los tres niveles del control, en cada depósito el saldo es la suma de los renglones del libro, el
- * saldo coincide con lo que predice un modelo calculado aparte con enteros, y `verificarSaldos()` da vacío. Pocas corridas por defecto (el CI
- * tiene un tope de tiempo ajustado); se suben con `PEDERNAL_CORRIDAS`.
+ * E5-T5 y T6, P17 (propiedad): para historias aleatorias de entradas, salidas, transferencias, ajustes, anulaciones y conteos (abiertos, recontados
+ * y aplicados o cancelados), con cualquiera de los tres niveles del control, en cada depósito el saldo es la suma de los renglones del libro,
+ * coincide con lo que predice un modelo calculado aparte con enteros, y `verificarSaldos()` da vacío. Pocas corridas por defecto (el CI tiene un
+ * tope de tiempo ajustado); se suben con `PEDERNAL_CORRIDAS`.
  */
 
 const base = inject("baseDePruebas");
@@ -31,7 +31,14 @@ type Orden =
   | Readonly<{ t: "salida"; dep: number; art: number; q: number; confirma: boolean }>
   | Readonly<{ t: "transferir"; de: number; a: number; art: number; q: number; confirma: boolean }>
   | Readonly<{ t: "ajustar"; dep: number; art: number; q: number; suma: boolean }>
-  | Readonly<{ t: "anular"; cual: number }>;
+  | Readonly<{ t: "anular"; cual: number }>
+  /** Abre un conteo, cuenta cada artículo (puede recontar) y lo aplica o lo cancela. */
+  | Readonly<{
+      t: "conteo";
+      dep: number;
+      cuentas: readonly { art: number; q: number }[];
+      aplica: boolean;
+    }>;
 
 const cantidad = fc.integer({ min: 1, max: 20 });
 const deposito = fc.integer({ min: 0, max: 2 });
@@ -61,6 +68,15 @@ const orden: fc.Arbitrary<Orden> = fc.oneof(
     suma: fc.boolean(),
   }),
   fc.record({ t: fc.constant("anular" as const), cual: fc.nat({ max: 50 }) }),
+  fc.record({
+    t: fc.constant("conteo" as const),
+    dep: deposito,
+    cuentas: fc.array(fc.record({ art: articulo, q: fc.integer({ min: 0, max: 20 }) }), {
+      minLength: 1,
+      maxLength: 3,
+    }),
+    aplica: fc.boolean(),
+  }),
 );
 
 describe.skipIf(base === null)("stock: propiedad del saldo (P17)", () => {
@@ -170,6 +186,34 @@ describe.skipIf(base === null)("stock: propiedad del saldo (P17)", () => {
               const delta = o.suma ? o.q : -o.q;
               sumar(o.dep, o.art, delta);
               hechos.push({ id: v.movimientoId, efecto: [[o.dep, o.art, delta]], anulado: false });
+            } else if (o.t === "conteo") {
+              const depositoId = depositos[o.dep] as string;
+              const conteoId = valorDe(
+                await c.casos.abrirConteo(e.gerente, { id: nuevoId(), depositoId }),
+              ).conteoId;
+              const contado = new Map<number, number>();
+              for (const cuenta of o.cuentas) {
+                valorDe(
+                  await c.casos.registrarConteo(e.gerente, {
+                    id: nuevoId(),
+                    conteoId,
+                    productoId: (articulos[cuenta.art] as { producto: string }).producto,
+                    cantidadContada: String(cuenta.q),
+                    unidadId: "UNIDAD",
+                  }),
+                );
+                contado.set(cuenta.art, cuenta.q); // vale el último
+              }
+              if (o.aplica) {
+                // Nada se movió entre contar y aplicar: cada artículo contado queda en lo contado, y un ajuste (nunca bloqueado) lo lleva ahí.
+                valorDe(await c.casos.aplicarConteo(e.gerente, { conteoId }));
+                for (const [art, q] of contado)
+                  sumar(o.dep, art, q - (modelo.get(llave(o.dep, art)) ?? 0));
+              } else {
+                valorDe(
+                  await c.casos.cancelarConteo(e.gerente, { conteoId, motivo: "No se aplica" }),
+                );
+              }
             } else {
               const candidatos = hechos.filter((h) => !h.anulado);
               const elegido = candidatos[o.cual % Math.max(candidatos.length, 1)];

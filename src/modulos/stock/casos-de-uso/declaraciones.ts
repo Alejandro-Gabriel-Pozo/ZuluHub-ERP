@@ -2,6 +2,7 @@ import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/decla
 
 const ARCHIVO_DE_DEPOSITOS = "test/integracion/stock-depositos.test.ts";
 const ARCHIVO_DE_IDEMPOTENCIA = "test/integracion/stock-idempotencia.test.ts";
+const ARCHIVO_DE_CONTEOS = "test/integracion/stock-conteos.test.ts";
 
 /**
  * Los casos de uso de stock (E5 §3.2) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar
@@ -119,6 +120,47 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_IDEMPOTENCIA,
         it: "P11: anular dos veces el mismo movimiento deja un solo espejo, y anular una anulación se rechaza",
+      },
+    },
+  },
+  // ---- conteo físico (E5-T6): abrir y registrar llevan el `id` de la pantalla; aplicar y cancelar se repiten por el estado del conteo ----
+  abrirConteo: {
+    accion: "conteos.abrir",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_CONTEOS,
+        it: "I8: repetir abrirConteo con el mismo id devuelve yaExistia y deja un solo conteo; con otro depósito, ID_REUTILIZADO",
+      },
+    },
+  },
+  registrarConteo: {
+    accion: "conteos.registrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_CONTEOS,
+        it: "I9: repetir registrarConteo con el mismo id deja un solo registro y devuelve yaExistia; con otro contenido, ID_REUTILIZADO",
+      },
+    },
+  },
+  aplicarConteo: {
+    accion: "conteos.aplicar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_CONTEOS,
+        it: "P12: aplicar el mismo conteo dos veces deja un solo ajuste y devuelve yaAplicado con el mismo movimiento",
+      },
+    },
+  },
+  cancelarConteo: {
+    accion: "conteos.cancelar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_CONTEOS,
+        it: "I10: cancelar dos veces es ok y no audita la segunda",
       },
     },
   },
