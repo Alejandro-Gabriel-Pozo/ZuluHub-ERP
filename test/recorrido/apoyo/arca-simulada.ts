@@ -15,7 +15,7 @@ type PedidoRecibido = Readonly<{ operacion: string; cuerpo: string; hostDeArca: 
  * para el adaptador es «no sé si ARCA lo registró» (`INCIERTO`, «Confirmando»): una escritura que no se sabe si llegó NUNCA se reenvía (ADR-007,
  * `clasificar.ts`). Lo que ARCA haría con un HTTP 500 está en las grabaciones 053 a 056 de `corrida1`; ningún pedido nuevo se inventa.
  */
-export type ModoDeLaSolicitud = "AUTORIZA" | "SIN_RESPUESTA_DEFINITIVA";
+type ModoDeLaSolicitud = "AUTORIZA" | "SIN_RESPUESTA_DEFINITIVA";
 
 export type ArcaSimulada = Readonly<{
   puerto: number;

@@ -10,7 +10,7 @@ import type { DatosDelActor } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { NotaParaAcreditar } from "../dominio/acreditacion";
 import { comprobanteId } from "../publico";
-import type { ComprobanteParaVigencia } from "../persistencia/lecturas-de-comprobantes";
+import type { ComprobanteParaVigencia } from "../persistencia/lecturas-de-vigencia";
 import type { TxDeConsultasDeFacturacion } from "./contrato";
 import { crearConsultasDeFacturacion } from "./consultas";
 import { LIMITE_DE_IDS_DE_VIGENCIA } from "./vigencia-de-comprobantes";

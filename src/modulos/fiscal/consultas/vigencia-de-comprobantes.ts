@@ -4,7 +4,7 @@ import type { ContextoOperativo } from "../../../contexto/contexto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import { motivoDeNoVigencia, type MotivoDeNoVigencia } from "../dominio/acreditacion";
-import type { ComprobanteParaVigencia } from "../persistencia/lecturas-de-comprobantes";
+import type { ComprobanteParaVigencia } from "../persistencia/lecturas-de-vigencia";
 import type { DependenciasDeConsultasDeFacturacion } from "./contrato";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 
