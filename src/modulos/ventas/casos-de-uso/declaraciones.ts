@@ -1,11 +1,12 @@
 import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/declaracion";
 
 const ARCHIVO = "test/integracion/ventas-casos-de-uso.test.ts";
+const ARCHIVO_DE_COBRO = "test/integracion/ventas-cobro.test.ts";
 
 /**
  * Los casos de uso de ventas (E4 §3.4 y §3.8) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar
  * (ADR-015 §4) y la prueba que lo fija. `corregirTicket` (solo líneas) es contrato sin pantalla y no se construye en el piloto (§3.8);
- * `cobrar` y `venderYCobrar` son de la fase B (dependen del puerto de caja).
+ * `cobrar` y `venderYCobrar` (fase B) cobran por el puerto de caja.
  */
 export const DECLARACIONES = {
   abrirCuenta: {
@@ -65,6 +66,27 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO,
         it: "I6: repetir anularTicket con la misma clave anula una vez; con otra huella, CLAVE_REUTILIZADA",
+      },
+    },
+  },
+  cobrar: {
+    accion: "tickets.cobrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_COBRO,
+        it: "I7: repetir cobrar con la misma clave cobra una vez y devuelve lo hecho; con otra huella, CLAVE_REUTILIZADA",
+      },
+    },
+  },
+  venderYCobrar: {
+    // La declaración admite UNA acción; el caso exige además `cuentas.abrir`, `cuentas.agregar_linea` y `cuentas.cerrar` (ver `vender-y-cobrar.ts`).
+    accion: "tickets.cobrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_COBRO,
+        it: "I8: repetir venderYCobrar con la misma clave deja una venta, un ticket y un cobro, y devuelve yaExistia",
       },
     },
   },

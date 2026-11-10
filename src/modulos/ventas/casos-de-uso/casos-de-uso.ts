@@ -4,8 +4,10 @@ import { armarAnularCuenta } from "./anular-cuenta";
 import { armarAnularLinea } from "./anular-linea";
 import { armarAnularTicket } from "./anular-ticket";
 import { armarCerrarCuenta } from "./cerrar-cuenta";
+import { armarCobrar } from "./cobrar";
 import type { DependenciasDeVentas } from "./contrato";
 import type { DECLARACIONES } from "./declaraciones";
+import { armarVenderYCobrar } from "./vender-y-cobrar";
 
 /**
  * Los casos de uso de ventas (E4 fase A), listos para que la composición los ofrezca. El `satisfies` exige que sean EXACTAMENTE los que
@@ -19,6 +21,8 @@ export function crearCasosDeUsoDeVentas(dependencias: DependenciasDeVentas) {
     anularCuenta: armarAnularCuenta(dependencias),
     cerrarCuenta: armarCerrarCuenta(dependencias),
     anularTicket: armarAnularTicket(dependencias),
+    cobrar: armarCobrar(dependencias),
+    venderYCobrar: armarVenderYCobrar(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

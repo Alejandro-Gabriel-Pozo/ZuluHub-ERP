@@ -1,4 +1,4 @@
-import { sql, type Kysely } from "kysely";
+import { sql, type Kysely, type RawBuilder } from "kysely";
 import type { EmpresaId, SucursalId } from "../../../primitivas/identificadores/marca";
 import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import type { EstadoDeCuenta, EstadoDeTicket } from "../dominio/estados";
@@ -49,6 +49,11 @@ export interface LecturasDeVentas extends LecturasDeTicket {
     empresa: EmpresaId,
     cobranzas: readonly string[],
   ): Promise<TicketPorCobranza[]>;
+  /**
+   * Lo mismo para la empresa DEL CONTEXTO de la transacción (`app_empresa_id()`, la misma que aplica la RLS): para el puerto del cierre del día
+   * de caja, que no recibe la empresa. Ventas conoce la forma de sus tickets; el filtro por empresa sigue siendo explícito.
+   */
+  ticketsPorCobranzaDelContexto(cobranzas: readonly string[]): Promise<TicketPorCobranza[]>;
   anulacionesDeLaJornada(
     empresa: EmpresaId,
     sucursal: SucursalId,
@@ -87,6 +92,34 @@ const fecha = (v: unknown): Date => v as Date;
  */
 const COBRADO = sql`coalesce((select sum(a.importe) from aplicacion_de_cobro a where a.empresa_id = t.empresa_id and a.cobranza_id = c.id), 0::numeric(18,2))`;
 const VIGENTE = sql`(case when t.estado = 'ANULADO' then 0::numeric(18,2) else ev.total end)`;
+
+/** Los tickets de esas cobranzas de UNA empresa (`empresaSql`: su id, o la del contexto), con el total vigente y lo cobrado. */
+async function ticketsPorCobranza(
+  db: Kysely<VentasDb>,
+  empresaSql: RawBuilder<unknown>,
+  cobranzas: readonly string[],
+): Promise<TicketPorCobranza[]> {
+  const validas = cobranzas.filter(esUuid);
+  if (validas.length === 0) return [];
+  const filas = await sql<Fila>`
+    select c.id as cobranza_id, t.id, t.numero, t.estado, t.ejemplar_vigente, ev.id as ejemplar_vigente_id,
+           (${VIGENTE})::text as total_vigente, (${COBRADO})::text as total_cobrado
+      from cobranza_de_ticket c
+      join ticket t on t.empresa_id = c.empresa_id and t.id = c.ticket_id
+      join ticket_ejemplar ev on ev.empresa_id = t.empresa_id and ev.ticket_id = t.id and ev.numero_de_ejemplar = t.ejemplar_vigente
+     where c.empresa_id = ${empresaSql} and c.id = any(${validas}::uuid[])
+     order by c.id`.execute(db);
+  return filas.rows.map((f) => ({
+    cobranzaId: texto(f["cobranza_id"]),
+    ticketId: texto(f["id"]),
+    numero: numero(f["numero"]),
+    estado: f["estado"] as EstadoDeTicket,
+    ejemplarVigente: numero(f["ejemplar_vigente"]),
+    ejemplarVigenteId: texto(f["ejemplar_vigente_id"]),
+    totalVigente: texto(f["total_vigente"]),
+    totalCobrado: texto(f["total_cobrado"]),
+  }));
+}
 
 export function crearRepositorioDeLecturas(db: Kysely<VentasDb>): LecturasDeVentas {
   return {
@@ -140,28 +173,11 @@ export function crearRepositorioDeLecturas(db: Kysely<VentasDb>): LecturasDeVent
       }));
     },
 
-    async ticketsPorCobranza(empresa, cobranzas) {
-      const validas = cobranzas.filter(esUuid);
-      if (validas.length === 0) return [];
-      const filas = await sql<Fila>`
-        select c.id as cobranza_id, t.id, t.numero, t.estado, t.ejemplar_vigente, ev.id as ejemplar_vigente_id,
-               (${VIGENTE})::text as total_vigente, (${COBRADO})::text as total_cobrado
-          from cobranza_de_ticket c
-          join ticket t on t.empresa_id = c.empresa_id and t.id = c.ticket_id
-          join ticket_ejemplar ev on ev.empresa_id = t.empresa_id and ev.ticket_id = t.id and ev.numero_de_ejemplar = t.ejemplar_vigente
-         where c.empresa_id = ${empresa} and c.id = any(${validas}::uuid[])
-         order by c.id`.execute(db);
-      return filas.rows.map((f) => ({
-        cobranzaId: texto(f["cobranza_id"]),
-        ticketId: texto(f["id"]),
-        numero: numero(f["numero"]),
-        estado: f["estado"] as EstadoDeTicket,
-        ejemplarVigente: numero(f["ejemplar_vigente"]),
-        ejemplarVigenteId: texto(f["ejemplar_vigente_id"]),
-        totalVigente: texto(f["total_vigente"]),
-        totalCobrado: texto(f["total_cobrado"]),
-      }));
-    },
+    ticketsPorCobranza: (empresa, cobranzas) =>
+      ticketsPorCobranza(db, sql`${empresa}::uuid`, cobranzas),
+
+    ticketsPorCobranzaDelContexto: (cobranzas) =>
+      ticketsPorCobranza(db, sql`(select app_empresa_id())`, cobranzas),
 
     async anulacionesDeLaJornada(empresa, sucursal, jornada) {
       const filas = await sql<Fila>`

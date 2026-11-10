@@ -1,6 +1,7 @@
 import type { ErrorDeAlcance } from "../../../capacidades/permisos/alcance";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { EmpresaNoOpera } from "../../../contexto/estados";
+import type { ImporteJson } from "../../../primitivas/dinero/importe";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { ErrorAlCobrar } from "../../caja/publico";
 import type { ErrorDeCotizacion } from "../../catalogo/publico";
@@ -32,7 +33,13 @@ export type ErrorDeVentas =
   | ErrorAlDecidirCobrar
   | ErrorDeCobros
   | ErrorDeCuadre
-  | "PRECIO_CAMBIO"
+  | Readonly<{
+      error: "PRECIO_CAMBIO";
+      /** Lo que da la cuenta de ahora: la pantalla muestra el total nuevo y pide confirmar de nuevo. */
+      totalActual: ImporteJson;
+      lineas: readonly Readonly<{ precioUnitario: ImporteJson; importe: ImporteJson }>[];
+    }>
+  | "ENTRADA_INVALIDA"
   | "SESION_DE_CAJA_CAMBIO"
   | "CAJA_NO_ENCONTRADA_PARA_COBRAR"
   | Readonly<{ error: "TICKET_YA_COBRADO"; cobranzaId: string }>

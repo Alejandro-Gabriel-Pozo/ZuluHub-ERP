@@ -9,6 +9,7 @@ import { sucursalId, type SucursalId } from "../../../primitivas/identificadores
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
+import { cajaParaVentas, type ErrorAlConsultarCajasParaCobrar } from "../../caja/publico";
 import type { ErrorDeCotizacion } from "../../catalogo/publico";
 import {
   aJson,
@@ -32,6 +33,7 @@ export type ErrorDeConsultaDeVentas =
   | ErrorDeAlcance
   | ErrorDePersistencia
   | ErrorDeCotizacion
+  | ErrorAlConsultarCajasParaCobrar
   | "IDENTIFICADOR_INVALIDO"
   | "FECHA_INVALIDA"
   | "CANTIDAD_INVALIDA"
@@ -142,6 +144,21 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
         const alcance = exigirSucursal(p.alcance, sucursalId(entrada.sucursalId));
         if (!alcance.ok) return alcance;
         return cotizarVentaRapida(tx, contexto, entrada);
+      }),
+
+    /**
+     * Qué mostrar antes de cobrar (E4 §3.11, decisión 145): las cajas activas de la sucursal con su estado (`SIN_SESION`, `ABIERTA`, `EN_CIERRE`) y la
+     * jornada de hoy. Lo resuelve caja (`estadoDeCajasParaCobrar`); ventas solo exige `ventas.ver` y la sucursal en el alcance. No escribe.
+     */
+    estadoDeCajasParaCobrar: (
+      contexto: ContextoOperativo,
+      entrada: Readonly<{ sucursalId: string }>,
+    ) =>
+      leer(contexto, async (tx, p) => {
+        if (!esUuid(entrada.sucursalId)) return err("IDENTIFICADOR_INVALIDO");
+        const alcance = exigirSucursal(p.alcance, sucursalId(entrada.sucursalId));
+        if (!alcance.ok) return alcance;
+        return cajaParaVentas.estadoDeCajasParaCobrar(tx, contexto, entrada.sucursalId);
       }),
 
     fichaDeCuenta: (contexto: ContextoOperativo, entrada: Readonly<{ cuentaId: string }>) =>

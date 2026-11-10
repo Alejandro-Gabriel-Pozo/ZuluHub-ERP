@@ -14,6 +14,12 @@ export type { EntradaDeAnularLinea, SalidaDeAnularLinea } from "./casos-de-uso/a
 export type { EntradaDeAnularCuenta, SalidaDeAnularCuenta } from "./casos-de-uso/anular-cuenta";
 export type { EntradaDeCerrarCuenta, SalidaDeCerrarCuenta } from "./casos-de-uso/cerrar-cuenta";
 export type { EntradaDeAnularTicket, SalidaDeAnularTicket } from "./casos-de-uso/anular-ticket";
+export type { EntradaDeCobrar, SalidaDeCobrar, CobroHecho } from "./casos-de-uso/cobrar";
+export type {
+  EntradaDeVenderYCobrar,
+  SalidaDeVenderYCobrar,
+  LineaDeLaVenta,
+} from "./casos-de-uso/vender-y-cobrar";
 export { aporteDeVentas, type TxDeAporteDeVentas } from "./aporte-al-cierre";
 export { numeroDeCorreccion } from "./dominio/rotulo";
 export { COLUMNAS_DE_VENTAS, type VentasDb } from "./persistencia/esquema";

@@ -165,8 +165,12 @@ export interface RepositorioDeTickets {
   marcarCobrado(empresa: EmpresaId, id: TicketId, ejemplarVigenteVisto: number): Promise<boolean>;
   cobranzaPorClave(empresa: EmpresaId, clave: string): Promise<CobranzaGuardada | null>;
   cobranzaDeTicket(empresa: EmpresaId, ticket: TicketId): Promise<CobranzaGuardada | null>;
-  /** Inserta la cobranza (clave y ticket únicos por empresa; el disparador exige ticket EMITIDO con su ejemplar vigente). */
-  insertarCobranza(empresa: EmpresaId, alta: AltaDeCobranza): Promise<void>;
+  /**
+   * Inserta la cobranza (clave y ticket únicos por empresa; el disparador exige ticket EMITIDO con su ejemplar vigente). `ON CONFLICT DO NOTHING`
+   * sin objetivo: `false` si ya había una con esa clave o para ese ticket (el caso de uso relee y dice cuál); bajo SERIALIZABLE, chocar con una
+   * que esta transacción todavía no ve aborta por serialización y se repite entero.
+   */
+  insertarCobranza(empresa: EmpresaId, alta: AltaDeCobranza): Promise<boolean>;
   /** Una fila por cobro de caja, en la misma transacción de la cobranza. */
   insertarAplicaciones(
     empresa: EmpresaId,
@@ -406,7 +410,7 @@ export function crearRepositorioDeTickets(db: Kysely<VentasDb>): RepositorioDeTi
     },
 
     async insertarCobranza(empresa, alta) {
-      await db
+      const fila = await db
         .insertInto("cobranza_de_ticket")
         .values({
           id: alta.id,
@@ -419,7 +423,10 @@ export function crearRepositorioDeTickets(db: Kysely<VentasDb>): RepositorioDeTi
           creada_por: alta.creadaPor,
           creada_en: alta.creadaEn,
         })
-        .execute();
+        .onConflict((oc) => oc.doNothing())
+        .returning("id")
+        .executeTakeFirst();
+      return fila !== undefined;
     },
 
     async insertarAplicaciones(empresa, cobranza, aplicaciones) {
