@@ -100,14 +100,13 @@ describe("apps/web/vercel.json", () => {
     expect(configuracion["regions"]).toEqual(["gru1"]);
   });
 
-  it("un solo cron, una vez por día (mientras sea Hobby), contra la ruta autorizada con CRON_SECRET", () => {
+  // PP-E1-2 (resuelta 10/11/2026: el dueño tendrá el plan Pro de Vercel): un comprobante «Confirmando» que el despacho inmediato no resolvió se
+  // reconcilia con ARCA cada 5 minutos y no hasta 24 horas después. El plan Hobby no admite un cron más seguido que una vez por día.
+  it("un solo cron, cada 5 minutos (plan Pro), contra la ruta autorizada con CRON_SECRET", () => {
     const crons = configuracion["crons"] as { path: string; schedule: string }[];
-    expect(crons).toEqual([{ path: "/api/trabajos/cron", schedule: "17 6 * * *" }]);
-    // Cinco campos y los de día, mes y día de la semana fijos «*» salvo la hora y el minuto: una vez por día.
-    const [minuto, hora, dia, mes, semana] = (crons[0]?.schedule ?? "").split(" ");
-    expect([dia, mes, semana]).toEqual(["*", "*", "*"]);
-    expect(minuto).toMatch(/^\d+$/);
-    expect(hora).toMatch(/^\d+$/);
+    expect(crons).toEqual([{ path: "/api/trabajos/cron", schedule: "*/5 * * * *" }]);
+    // Cinco campos: solo el minuto cambia (cada 5); hora, día, mes y día de la semana son «*».
+    expect((crons[0]?.schedule ?? "").split(" ")).toEqual(["*/5", "*", "*", "*", "*"]);
   });
 
   it("la ruta del cron existe en la aplicación", () => {
