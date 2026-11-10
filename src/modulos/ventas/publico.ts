@@ -14,6 +14,24 @@ export type { EntradaDeAnularLinea, SalidaDeAnularLinea } from "./casos-de-uso/a
 export type { EntradaDeAnularCuenta, SalidaDeAnularCuenta } from "./casos-de-uso/anular-cuenta";
 export type { EntradaDeCerrarCuenta, SalidaDeCerrarCuenta } from "./casos-de-uso/cerrar-cuenta";
 export type { EntradaDeAnularTicket, SalidaDeAnularTicket } from "./casos-de-uso/anular-ticket";
+export type {
+  EntradaDeEmitirComprobanteDeTicket,
+  SalidaDeEmitirComprobanteDeTicket,
+} from "./casos-de-uso/emitir-comprobante-de-ticket";
+export type {
+  EntradaDeFacturaDeTicket,
+  ErrorDelFacturador,
+  FacturadorDeTickets,
+  ReceptorDeFactura,
+  RenglonDeFactura,
+  SalidaDeFactura,
+  VigenciaDeFactura,
+} from "./casos-de-uso/puertos-de-facturacion";
+export {
+  comprobanteIdDeLaFactura,
+  documentoIdDeLaFactura,
+  origenDeLaFactura,
+} from "./dominio/factura-de-ticket";
 export type { EntradaDeCobrar, SalidaDeCobrar, CobroHecho } from "./casos-de-uso/cobrar";
 export type {
   EntradaDeVenderYCobrar,
@@ -28,6 +46,11 @@ export {
   crearRepositorioDeCuentas,
   type RepositorioDeCuentas,
 } from "./persistencia/repositorio-de-cuentas";
+export {
+  crearRepositorioDeDocumentos,
+  type DocumentoDeTicket,
+  type RepositorioDeDocumentos,
+} from "./persistencia/repositorio-de-documentos";
 export {
   crearRepositorioDeTickets,
   type RepositorioDeTickets,

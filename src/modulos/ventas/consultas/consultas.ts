@@ -17,14 +17,13 @@ import {
   cuentaId,
   esUuid,
   numeroDeCorreccion,
+  unidadDelRenglon,
 } from "../casos-de-uso/calculo";
 import { cotizarVentaRapida } from "../casos-de-uso/cotizar-venta-rapida";
 import { cargarEstadosDeLaEmpresa } from "../../empresas/publico";
-import type {
-  CursorDePendientes,
-  RenglonParaFacturar,
-} from "../persistencia/repositorio-de-lecturas";
+import type { CursorDePendientes } from "../persistencia/repositorio-de-lecturas";
 import type { DependenciasDeConsultasDeVentas, TxDeConsultasDeVentas } from "./contrato";
+import { reunirPendientes } from "./pendientes-de-facturar";
 import type { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 
 export type ErrorDeConsultaDeVentas =
@@ -43,7 +42,8 @@ export type ErrorDeConsultaDeVentas =
   | "CUENTA_NO_ENCONTRADA"
   | "TICKET_NO_ENCONTRADO"
   | "TICKET_NO_FACTURABLE"
-  | "LIMITE_INVALIDO";
+  | "LIMITE_INVALIDO"
+  | "FACTURACION_NO_DISPONIBLE";
 
 type R<S> = Resultado<S, ErrorDeConsultaDeVentas>;
 
@@ -308,19 +308,15 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
         ) {
           return err("IDENTIFICADOR_INVALIDO");
         }
-        // Sin emisión (E1) no existen comprobantes anulados: ese motivo no tiene nada que listar.
-        if (entrada.motivo === "COMPROBANTE_ANULADO") return ok({ tickets: [], siguiente: null });
-        const filas = await tx.lecturasDeVentas.pendientesDeFacturar(contexto.empresaId, {
+        const base = {
           sucursales,
           fechaDesde: desde === null || !desde.ok ? null : desde.valor,
           fechaHasta: hasta === null || !hasta.ok ? null : hasta.valor,
-          despuesDe: entrada.despuesDe ?? null,
-          limite: limite + 1,
-        });
-        const pagina = filas.slice(0, limite);
-        const ultimo = pagina[pagina.length - 1];
+        };
+        const pagina = await reunirPendientes(tx, contexto, dependencias, base, entrada, limite);
+        if (!pagina.ok) return pagina;
         return ok({
-          tickets: pagina.map((f) => ({
+          tickets: pagina.valor.tickets.map(({ fila: f, motivo }) => ({
             ticketId: f.ticketId,
             numero: f.numero,
             numeroDeCorreccion: numeroDeCorreccion(f.ejemplarVigente),
@@ -328,16 +324,9 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
             fechaNegocio: f.fechaNegocio,
             total: importe(f.total),
             cobradoEn: f.cobradoEn,
-            motivo: "SIN_COMPROBANTE" as const,
+            motivo,
           })),
-          siguiente:
-            filas.length > limite && ultimo !== undefined
-              ? {
-                  fechaNegocio: ultimo.fechaNegocio,
-                  numero: ultimo.numero,
-                  sucursalId: ultimo.sucursalId,
-                }
-              : null,
+          siguiente: pagina.valor.siguiente,
         });
       }),
 
@@ -360,7 +349,8 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
           ejemplarVigenteId: t.ejemplarVigenteId,
           total: importe(t.total),
           totalVigente: importe(t.total),
-          lineas: t.renglones satisfies readonly RenglonParaFacturar[],
+          // `unidadImpresa`: la unidad que se factura (`null` para la unidad base): la misma regla que usa `emitirComprobanteDeTicket`.
+          lineas: t.renglones.map((r) => ({ ...r, unidadImpresa: unidadDelRenglon(r) })),
         });
       }),
   } satisfies Record<keyof typeof DECLARACIONES_DE_CONSULTAS, unknown>;

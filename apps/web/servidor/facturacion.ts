@@ -15,7 +15,6 @@ import {
   reintentarComprobante,
   resincronizarSerie,
   verComprobante,
-  type ComprobanteEmitidoParaLaPantalla,
   type DependenciasDeFacturacionWeb,
   type DetalleParaLaPantalla,
 } from "../../../src/composicion/facturacion-web";
@@ -30,9 +29,9 @@ import {
   type ModeloDeImpresionParaLaPantalla,
 } from "../../../src/composicion/modelo-de-impresion-web";
 import { resolverEmpresa } from "../../../src/composicion/sesion-y-empresa";
-import type { PaginaDeComprobantes } from "../../../src/modulos/fiscal/publico";
+import { comprobanteId, type PaginaDeComprobantes } from "../../../src/modulos/fiscal/publico";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
-import { marcaComercialId } from "../../../src/primitivas/identificadores/marca";
+import { marcaComercialId, sucursalId } from "../../../src/primitivas/identificadores/marca";
 import {
   RUTA_DEL_LISTADO,
   type PuntoDeVentaParaMostrar,
@@ -107,15 +106,15 @@ export async function conLaEmpresa<D>(
   }
 }
 
-/** Pide el intento inmediato de un comprobante recién emitido, sin esperar ni cambiar lo que ve la persona. */
-function conIntentoInmediato(
+/** Pide el intento inmediato de un comprobante recién emitido, sin esperar ni cambiar lo que ve la persona. Exportada: facturar un ticket emite igual. */
+export function conIntentoInmediato<D extends Readonly<{ comprobanteId: string }>>(
   contexto: ContextoOperativo,
-  respuesta: Respuesta<ComprobanteEmitidoParaLaPantalla>,
-): Respuesta<ComprobanteEmitidoParaLaPantalla> {
+  respuesta: Respuesta<D>,
+): Respuesta<D> {
   if (respuesta.ok) {
     despacharPorClavesDespuesDeConfirmar(
       contexto.empresaId,
-      clavesDeLaValidacionInicial(respuesta.dato.comprobanteId),
+      clavesDeLaValidacionInicial(comprobanteId(respuesta.dato.comprobanteId)),
     );
   }
   return respuesta;
@@ -242,6 +241,21 @@ export async function puntosDeVentaParaEmitir(
     const sucursal = await sucursalDelPedido(contexto);
     if (!sucursal.ok) return sucursal;
     return await listarPuntosDeVentaParaEmitir(dependencias, contexto, sucursal.dato.elegida);
+  } catch (excepcion) {
+    return aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta);
+  }
+}
+
+/**
+ * Los puntos de venta activos de UNA sucursal dada (la de un ticket que se va a facturar), para elegir con cuál emitir. La sucursal sale del
+ * ticket guardado que leyó el servidor, nunca del navegador, y la consulta la verifica contra el alcance de la persona antes de leer nada.
+ */
+export async function puntosDeVentaParaEmitirDe(
+  contexto: ContextoOperativo,
+  sucursal: string,
+): Promise<Respuesta<PuntosDeVentaParaEmitirEnLaPantalla>> {
+  try {
+    return await listarPuntosDeVentaParaEmitir(dependencias, contexto, sucursalId(sucursal));
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta);
   }

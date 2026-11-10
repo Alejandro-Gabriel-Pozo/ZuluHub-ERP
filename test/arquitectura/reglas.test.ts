@@ -391,6 +391,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "ventas-sin-fiscal",
+      archivos: {
+        "src/modulos/ventas/casos-de-uso/c.ts": importa("../../fiscal/publico"),
+        "src/modulos/fiscal/publico.ts": exporta,
+      },
+    },
+    {
       regla: "base-sin-ventas",
       archivos: {
         "src/modulos/caja/dominio/d.ts": importa("../../ventas/publico"),
@@ -1404,9 +1411,25 @@ describe("facturación F1: el facturador funciona solo (spec H7 facturación §B
       "src/modulos/fiscal/dominio/d.ts": exporta,
       "src/modulos/fiscal/casos-de-uso/c.ts": importa("../dominio/d"),
       "src/modulos/fiscal/publico.ts": importa("./casos-de-uso/c"),
-      "src/modulos/ventas/casos-de-uso/v.ts": importa("../../fiscal/publico"),
+      "src/composicion/c.ts": importa("../modulos/fiscal/publico"),
     });
     expect(v).not.toContain("fiscal-sin-negocio-ajeno");
+    expect(v).not.toContain("ventas-sin-fiscal");
+  });
+
+  it("ventas no importa fiscal, ni por su publico.ts; la composición sí toca los dos", async () => {
+    const v = await violacionesDe({
+      "src/modulos/ventas/casos-de-uso/c.ts": importa("../../fiscal/publico"),
+      "src/modulos/fiscal/publico.ts": exporta,
+    });
+    expect(v).toContain("ventas-sin-fiscal");
+    const ok = await violacionesDe({
+      "src/composicion/c.ts": importa("../modulos/fiscal/publico"),
+      "src/composicion/d.ts": importa("../modulos/ventas/publico"),
+      "src/modulos/fiscal/publico.ts": exporta,
+      "src/modulos/ventas/publico.ts": exporta,
+    });
+    expect(ok).not.toContain("ventas-sin-fiscal");
   });
 });
 

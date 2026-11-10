@@ -26,4 +26,6 @@ export const aJson = (calculado: TicketCalculado): ImporteJson => importeAJson(c
  * `numeroDeCorreccion` y la forma de un id sean UNA sola regla.
  */
 export { numeroDeCorreccion } from "../dominio/rotulo";
+/** La unidad que se factura de un renglón (`null` para la unidad base): una sola regla, la de `dominio/factura-de-ticket.ts`. */
+export { unidadDelRenglon } from "../dominio/factura-de-ticket";
 export { cuentaId, esUuid } from "../dominio/identificadores";

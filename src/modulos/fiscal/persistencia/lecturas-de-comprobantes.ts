@@ -27,6 +27,7 @@ import { RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA } from "../dominio/punto-de-venta";
 import type { DocumentoDelReceptor } from "../dominio/receptor";
 import { documentoDelReceptorDeLaBase } from "./documento-del-receptor";
 import { deLaLista } from "./ayudas-de-repositorio";
+import { crearLecturaDelOrigen, crearLecturaParaVigencia } from "./lecturas-de-vigencia";
 import type { FiscalDb } from "./tablas";
 
 /**
@@ -162,6 +163,9 @@ export interface LecturasDeComprobantes {
     empresa: EmpresaId,
     ids: readonly ComprobanteId[],
   ): Promise<ReadonlyMap<ComprobanteId, readonly NotaParaAcreditar[]>>;
+  /** Las dos de la vigencia (por ids y por origen): ver `lecturas-de-vigencia.ts`. */
+  paraVigencia: ReturnType<typeof crearLecturaParaVigencia>;
+  paraVigenciaDelOrigen: ReturnType<typeof crearLecturaDelOrigen>;
 }
 
 const FECHA_DEL_LISTADO = sql<string>`coalesce(fecha_emision, (creado_en at time zone ${ZONA_DE_ARGENTINA})::date)`;
@@ -387,5 +391,7 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
       }
       return porId;
     },
+    paraVigencia: crearLecturaParaVigencia(db),
+    paraVigenciaDelOrigen: crearLecturaDelOrigen(db),
   };
 }

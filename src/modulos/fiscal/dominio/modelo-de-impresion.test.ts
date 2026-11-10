@@ -159,7 +159,7 @@ describe("modeloDeImpresion: bloque fiscal", () => {
       caeVence: "2026-10-23",
     });
     expect(m.versionDeRepresentacion).toBe(VERSION_DE_REPRESENTACION_ACTUAL);
-    expect(VERSION_DE_REPRESENTACION_ACTUAL).toBe(3);
+    expect(VERSION_DE_REPRESENTACION_ACTUAL).toBe(4);
     expect(modelo(imprimible(facturaB, V1)).versionDeRepresentacion).toBe(1);
   });
 
@@ -433,7 +433,7 @@ describe("modeloDeImpresion: notas, QR y leyendas", () => {
 
 describe("modeloDeImpresion: errores", () => {
   it("una versión de representación desconocida no se dibuja", () => {
-    for (const versionDeRepresentacion of [0, 4, -1, 1.5, Number.NaN]) {
+    for (const versionDeRepresentacion of [0, 5, -1, 1.5, Number.NaN]) {
       expect(
         modeloDeImpresion(imprimible(facturaB, { versionDeRepresentacion }), MARCA_UNO),
       ).toEqual({

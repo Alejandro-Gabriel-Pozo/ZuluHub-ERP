@@ -1,3 +1,4 @@
+import { CUERPOS_CON_GUARD_PROPIO } from "../../../../test/utilidades/cuerpos-de-fiscal";
 import { describe, expect, it } from "vitest";
 import { clavesDe } from "../../../capacidades/modulos/activos";
 import { CATALOGO_DE_MODULOS, type ClaveAccion } from "../../../capacidades/modulos/catalogo";
@@ -240,6 +241,10 @@ describe("publico.ts: la puerta de la configuración fiscal", () => {
   it("ofrece los casos de uso y las declaraciones, y no exporta cuerpos sin guard", () => {
     expect(typeof publico.crearCasosDeUsoDeConfiguracionFiscal).toBe("function");
     expect(publico.DECLARACIONES_DE_CONFIGURACION_FISCAL).toBe(DECLARACIONES_DE_CONFIGURACION);
-    expect(Object.keys(publico).filter((nombre) => /EnTx$/.test(nombre))).toEqual([]);
+    expect(
+      Object.keys(publico).filter(
+        (nombre) => /EnTx$/.test(nombre) && !CUERPOS_CON_GUARD_PROPIO.includes(nombre),
+      ),
+    ).toEqual([]);
   });
 });

@@ -4,9 +4,12 @@ import { ARS } from "../../../primitivas/dinero/moneda";
 import { TIPOS_DE_COMPROBANTE, claseDeComprobante } from "./comprobante-emitido";
 import {
   CUENTA_COMO_ACREDITADA,
+  CUENTA_COMO_ACREDITADA_FIRME,
+  MOTIVOS_DE_NO_VIGENCIA,
   acreditacionDe,
   acreditadoPor,
   etiquetaDeAcreditacion,
+  motivoDeNoVigencia,
   type NotaParaAcreditar,
 } from "./acreditacion";
 import {
@@ -23,9 +26,9 @@ const nota = (
 ): NotaParaAcreditar => ({ tipo, estado, total: importe(total) });
 
 const etiqueta = (total: string, ...notas: NotaParaAcreditar[]) =>
-  acreditacionDe("FACTURA_B", importe(total), notas)?.etiqueta;
+  acreditacionDe("FACTURA_B", importe(total), notas, CUENTA_COMO_ACREDITADA)?.etiqueta;
 const cifra = (total: string, ...notas: NotaParaAcreditar[]) => {
-  const a = acreditacionDe("FACTURA_B", importe(total), notas);
+  const a = acreditacionDe("FACTURA_B", importe(total), notas, CUENTA_COMO_ACREDITADA);
   return a === null ? null : importeATexto(a.acreditado);
 };
 
@@ -129,7 +132,7 @@ describe("lo acreditado de una factura", () => {
   it("una nota de débito recibe etiqueta como una factura; una nota de crédito en sí, ninguna", () => {
     const notas = [nota("100.00")];
     for (const tipo of TIPOS_DE_COMPROBANTE) {
-      const r = acreditacionDe(tipo, importe("100.00"), notas);
+      const r = acreditacionDe(tipo, importe("100.00"), notas, CUENTA_COMO_ACREDITADA);
       if (claseDeComprobante(tipo) === "NOTA_CREDITO") expect(r, tipo).toBeNull();
       else expect(r?.etiqueta, tipo).toBe("TOTAL");
     }
@@ -139,6 +142,90 @@ describe("lo acreditado de una factura", () => {
     expect(etiquetaDeAcreditacion(importe("10.00"), importe("0.00"))).toBe("NINGUNA");
     expect(etiquetaDeAcreditacion(importe("10.00"), importe("9.99"))).toBe("PARCIAL");
     expect(etiquetaDeAcreditacion(importe("10.00"), importe("10.00"))).toBe("TOTAL");
-    expect(importeATexto(acreditadoPor([], importe("10.00")))).toBe("0.00");
+    expect(importeATexto(acreditadoPor([], importe("10.00"), CUENTA_COMO_ACREDITADA))).toBe("0.00");
+  });
+});
+
+describe("qué estado de una nota cuenta como acreditado FIRME (DD-2 de E1)", () => {
+  it("solo AUTORIZADO cuenta; la otra tabla (D-15) sigue contando las pendientes", () => {
+    for (const estado of ESTADOS_DE_COMPROBANTE_ARCA) {
+      expect(CUENTA_COMO_ACREDITADA_FIRME[estado], estado).toBe(estado === "AUTORIZADO");
+    }
+    expect(CUENTA_COMO_ACREDITADA.EN_VALIDACION).toBe(true);
+    expect(CUENTA_COMO_ACREDITADA.PENDIENTE).toBe(true);
+  });
+
+  it("cada tabla cubre exactamente los estados del comprobante", () => {
+    for (const tabla of [CUENTA_COMO_ACREDITADA, CUENTA_COMO_ACREDITADA_FIRME]) {
+      expect(Object.keys(tabla).sort()).toEqual([...ESTADOS_DE_COMPROBANTE_ARCA].sort());
+    }
+  });
+
+  it("la misma nota total pendiente acredita con una tabla y no con la otra", () => {
+    const notas = [nota("100.00", "EN_VALIDACION")];
+    const con = (cuenta: typeof CUENTA_COMO_ACREDITADA) => cuentaDe(cuenta, notas);
+    expect(con(CUENTA_COMO_ACREDITADA)).toBe("TOTAL");
+    expect(con(CUENTA_COMO_ACREDITADA_FIRME)).toBe("NINGUNA");
+  });
+});
+
+const cuentaDe = (cuenta: typeof CUENTA_COMO_ACREDITADA, notas: readonly NotaParaAcreditar[]) =>
+  acreditacionDe("FACTURA_B", importe("100.00"), notas, cuenta)?.etiqueta;
+
+describe("si un comprobante sigue valiendo (D-F-1)", () => {
+  const vigencia = (
+    estado: EstadoDeComprobanteArca,
+    notas: readonly NotaParaAcreditar[] = [],
+    tipo: NotaParaAcreditar["tipo"] = "FACTURA_B",
+  ) => motivoDeNoVigencia({ tipo, estado, total: importe("100.00") }, notas);
+
+  it("DESCARTADO y RECHAZADO salen del estado, con notas o sin ellas", () => {
+    expect(vigencia("DESCARTADO")).toBe("DESCARTADO");
+    expect(vigencia("RECHAZADO")).toBe("RECHAZADO");
+    expect(vigencia("DESCARTADO", [nota("100.00")])).toBe("DESCARTADO");
+  });
+
+  it("los que están en camino a ARCA y los autorizados sin notas son vigentes", () => {
+    for (const estado of [
+      "PENDIENTE",
+      "EN_VALIDACION",
+      "INCIERTO",
+      "CONFLICTO",
+      "AUTORIZADO",
+    ] as const) {
+      expect(vigencia(estado), estado).toBeNull();
+    }
+  });
+
+  it("una nota de crédito AUTORIZADA por el total la deja no vigente; por un centavo menos, no", () => {
+    expect(vigencia("AUTORIZADO", [nota("100.00")])).toBe("ACREDITADO_TOTAL");
+    expect(vigencia("AUTORIZADO", [nota("100.01")])).toBe("ACREDITADO_TOTAL");
+    expect(vigencia("AUTORIZADO", [nota("99.99")])).toBeNull();
+  });
+
+  it("varias notas autorizadas que suman el total también", () => {
+    expect(vigencia("AUTORIZADO", [nota("60.00"), nota("40.00")])).toBe("ACREDITADO_TOTAL");
+  });
+
+  it("una nota total SIN autorizar no la deja no vigente (si ARCA la rechaza, valdría y se habría emitido otra)", () => {
+    for (const estado of [
+      "PENDIENTE",
+      "EN_VALIDACION",
+      "INCIERTO",
+      "CONFLICTO",
+      "RECHAZADO",
+      "DESCARTADO",
+    ] as const) {
+      expect(vigencia("AUTORIZADO", [nota("100.00", estado)]), estado).toBeNull();
+    }
+  });
+
+  it("una nota de débito citada no acredita; una nota de crédito en sí es vigente", () => {
+    expect(vigencia("AUTORIZADO", [nota("100.00", "AUTORIZADO", "NOTA_DEBITO_B")])).toBeNull();
+    expect(vigencia("AUTORIZADO", [nota("100.00")], "NOTA_CREDITO_B")).toBeNull();
+  });
+
+  it("los motivos son los tres del contrato", () => {
+    expect(MOTIVOS_DE_NO_VIGENCIA).toEqual(["DESCARTADO", "RECHAZADO", "ACREDITADO_TOTAL"]);
   });
 });

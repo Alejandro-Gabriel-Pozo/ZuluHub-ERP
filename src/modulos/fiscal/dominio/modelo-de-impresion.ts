@@ -40,6 +40,7 @@ import {
   PRIMERA_VERSION_CON_MODO_DE_PRECIO,
   PRIMERA_VERSION_CON_SUCURSAL,
   PRIMERA_VERSION_CON_TEXTOS_LEGALES,
+  unidadSegunLaVersion,
   VERSIONES_SOPORTADAS,
 } from "./versiones-de-representacion";
 
@@ -200,6 +201,7 @@ export type ModeloImpreso = Readonly<{
   renglones: readonly Readonly<{
     descripcion: string;
     cantidad: string;
+    unidad?: string; // versión 4 en adelante (`unidadSegunLaVersion`)
     precioUnitario: string;
     descuento: string | null;
     alicuota: string | null;
@@ -371,6 +373,7 @@ export function modeloDeImpresion(
     renglones: comprobante.renglones.map((r) => ({
       descripcion: r.descripcion,
       cantidad: cantidadATexto(r.cantidad),
+      ...unidadSegunLaVersion(comprobante.versionDeRepresentacion, r.unidad),
       precioUnitario: precioUnitarioATexto(r.precioUnitario),
       descuento: r.descuento === null ? null : porcentajeATexto(r.descuento),
       alicuota: r.alicuota,

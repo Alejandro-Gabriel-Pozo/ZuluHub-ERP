@@ -5,5 +5,5 @@
   "git": {
     "deploymentEnabled": { "**": false, "preview": true }
   },
-  "crons": [{ "path": "/api/trabajos/cron", "schedule": "17 6 * * *" }]
+  "crons": [{ "path": "/api/trabajos/cron", "schedule": "*/5 * * * *" }]
 }

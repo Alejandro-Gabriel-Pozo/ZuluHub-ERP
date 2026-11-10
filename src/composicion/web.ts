@@ -12,6 +12,7 @@ import {
 } from "../modulos/caja/publico";
 import { crearCasosDeUsoDeCatalogo, crearConsultasDeCatalogo } from "../modulos/catalogo/publico";
 import { crearCasosDeUsoDeVentas, crearConsultasDeVentas } from "../modulos/ventas/publico";
+import { crearFacturadorDeTickets } from "./facturacion-de-tickets";
 import {
   crearCasosDeUsoDeCierre,
   crearConsultasDeCierre,
@@ -156,10 +157,19 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
      * guard rechaza todo con `MODULO_EN_DESARROLLO` hasta que el dueño lo pase a disponible.
      */
     casosDeUsoDeVentas: perezoso(() =>
-      crearCasosDeUsoDeVentas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+      crearCasosDeUsoDeVentas({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        // Facturar un ticket (E1 §3.4): la composición es el único lugar donde ventas y fiscal se tocan.
+        facturador: crearFacturadorDeTickets(reglas),
+      }),
     ),
     consultasDeVentas: perezoso(() =>
-      crearConsultasDeVentas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+      crearConsultasDeVentas({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        facturador: crearFacturadorDeTickets(reglas),
+      }),
     ),
     casosDeUsoDeIdentidad: perezoso(() =>
       crearCasosDeUsoDeIdentidad({

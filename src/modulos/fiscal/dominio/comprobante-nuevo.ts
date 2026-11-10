@@ -53,6 +53,13 @@ export type PeriodoDeServicio = Readonly<{
  */
 export const LIMITES_DE_COMPROBANTE = { renglones: 200, descripcion: 200, motivo: 200 } as const;
 
+/**
+ * La forma permitida del símbolo de unidad que se imprime junto a la cantidad («kg», «ml», «m2»): de 1 a 8 letras o dígitos, la misma
+ * lista de permitidos que `unidad_de_medida.simbolo` (0025) y `comprobante_linea_unidad_ck` (0029); una prueba de integración las
+ * compara. Fiscal no depende de la tabla del catálogo ni duplica la lista de unidades: solo valida la forma de lo que recibe.
+ */
+export const FORMA_DEL_SIMBOLO_DE_UNIDAD = /^[A-Za-z0-9]{1,8}$/;
+
 export type RenglonAFacturar = Readonly<{
   descripcion: string;
   cantidad: Cantidad;
@@ -60,6 +67,11 @@ export type RenglonAFacturar = Readonly<{
   descuento: Porcentaje | null;
   /** `null` solo en la letra C. */
   alicuota: CodigoDeAlicuota | null;
+  /**
+   * El símbolo de la unidad de la cantidad, congelado al emitir y solo para imprimir («1,250 kg»): ARCA no recibe renglones. `null`: no se
+   * imprime unidad (quien factura decide qué unidad es la implícita; fiscal imprime todo lo que no sea `null`).
+   */
+  unidad: string | null;
 }>;
 
 /** Un renglón con su importe final (con IVA), ya prorrateado: los renglones suman el total. */
@@ -117,7 +129,7 @@ export type EntradaDeComprobante = Readonly<{
   renglones: readonly RenglonAFacturar[];
 }>;
 
-export type CampoDeRenglon = "descripcion" | "cantidad";
+export type CampoDeRenglon = "descripcion" | "cantidad" | "unidad";
 
 export type ErrorDeComprobanteNuevo =
   | ErrorDeReceptor
@@ -158,6 +170,10 @@ function validarRenglones(
     }
     if (renglon.cantidad.unidades === 0n) {
       return err({ codigo: "RENGLON_INVALIDO", posicion, campo: "cantidad" });
+    }
+    // Stryker disable next-line ConditionalExpression: mutante equivalente: sin la guarda `!== null`, `null` se convierte en el texto «null», que cumple la forma
+    if (renglon.unidad !== null && !FORMA_DEL_SIMBOLO_DE_UNIDAD.test(renglon.unidad)) {
+      return err({ codigo: "RENGLON_INVALIDO", posicion, campo: "unidad" });
     }
     if (letra === "C" && renglon.alicuota !== null) {
       return err({ codigo: "ALICUOTA_EN_LETRA_C", posicion });

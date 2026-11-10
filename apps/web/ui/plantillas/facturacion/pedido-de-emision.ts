@@ -43,7 +43,7 @@ export type PedidoDeEmision = Readonly<{
 /** El consumidor final no lleva documento ni nombre; su condición frente al IVA es siempre la misma (D-24). */
 const CONDICION_DEL_CONSUMIDOR_FINAL = "CONSUMIDOR_FINAL";
 
-function receptorDe(cliente: ClienteEscrito): PedidoDeEmision["receptor"] {
+export function receptorDe(cliente: ClienteEscrito): PedidoDeEmision["receptor"] {
   if (esConsumidorFinal(cliente)) {
     return {
       nombre: null,

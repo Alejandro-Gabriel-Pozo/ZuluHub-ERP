@@ -79,6 +79,18 @@ export const DECLARACIONES = {
       },
     },
   },
+  emitirComprobanteDeTicket: {
+    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `ventas.ver`; el caso exige además
+    // `comprobantes.emitir` (ver `emitir-comprobante-de-ticket.ts`) y fiscal pide la suya otra vez.
+    accion: "ventas.ver",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/ventas-facturar-casos.test.ts",
+        it: "P1: repetir emitirComprobanteDeTicket con la misma clave deja una factura, un puntero y un trabajo, y devuelve yaExistia",
+      },
+    },
+  },
   venderYCobrar: {
     // La declaración admite UNA acción; el caso exige además `cuentas.abrir`, `cuentas.agregar_linea` y `cuentas.cerrar` (ver `vender-y-cobrar.ts`).
     accion: "tickets.cobrar",
