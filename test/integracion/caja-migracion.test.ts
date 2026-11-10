@@ -329,7 +329,8 @@ describe.skipIf(base === null)(
               f: "2026-11-09",
               corte: "00:00:00",
               zona_horaria: "America/Argentina/Buenos_Aires",
-              version: 1,
+              // Versión 2: el fondo, cargado en `read committed`, toca la sesión (ver `movimiento_caja_validar_alta`).
+              version: 2,
             },
           ]);
           const claveDuplicada = await s.intentar(
@@ -498,6 +499,8 @@ describe.skipIf(base === null)(
         const PERMITIDAS = new Set([
           "ABIERTA>EN_CIERRE",
           "ABIERTA>CERRADA",
+          // El toque sin cambios que hace un movimiento cargado fuera de `serializable` (hueco de dinero del cierre).
+          "ABIERTA>ABIERTA",
           "EN_CIERRE>ABIERTA",
           "EN_CIERRE>CERRADA",
         ]);
@@ -520,6 +523,23 @@ describe.skipIf(base === null)(
               : `update sesion_caja set estado = 'CERRADA', cerrada_en = $2, cerrada_por = $3 where id = $1`,
             [sesion, DESPUES, m.persona],
           );
+        // El toque de una sesión abierta no admite ningún cambio de datos.
+        await conSesion(async (s, sesion) => {
+          check(
+            await s.intentar(
+              "update sesion_caja set cerrada_en = $2 where id = $1 and estado = 'ABIERTA'",
+              [sesion, DESPUES],
+            ),
+            "sesion_caja_transicion_invalida",
+          );
+          check(
+            await s.intentar(
+              "update sesion_caja set estado = 'ABIERTA', observacion = 'x' where id = $1",
+              [sesion],
+            ),
+            "sesion_caja_transicion_invalida",
+          );
+        });
         for (const desde of ESTADOS) {
           for (const hacia of ESTADOS) {
             await conSesion(async (s, sesion) => {

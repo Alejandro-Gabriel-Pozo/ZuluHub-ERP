@@ -20,6 +20,7 @@
 --      jornada. `iniciar cierre` y `cerrar` hacen UPDATE de la sesión (bloqueo exclusivo) y esperan a los cobros en vuelo; los que
 --      llegan después ven EN_CIERRE/CERRADA y fallan sin escribir. El diferido `sesion_caja_cierre_completo` recalcula el esperado AL
 --      CONFIRMAR: un cobro que se coló entre el cálculo y el cierre hace fallar la confirmación (la falla de Motor2, 1 en 370).
+--      Con SQL directo en READ COMMITTED el movimiento ESCRIBE la sesión (toque sin cambios) para chocar con un cierre serializable.
 --  C2. Movimientos, cobros, arqueos, billetes y todas las tablas de la contribución al cierre son de SOLO INSERCIÓN, también para el
 --      dueño de la base (`solo_insercion()` de 0001). Anular = un movimiento espejo nuevo; corregir un medio = un registro nuevo.
 --  C3. El sello de jornada de la sesión (`fecha_negocio`, `hora_de_corte`, `zona_horaria`) lo verifica la base con la MISMA fórmula que
@@ -447,6 +448,14 @@ BEGIN
       RAISE EXCEPTION 'en un cierre directo el inicio del cierre es el cierre'
         USING ERRCODE = '23514', CONSTRAINT = 'sesion_caja_transicion_invalida';
     END IF;
+  ELSIF OLD.estado = 'ABIERTA' AND NEW.estado = 'ABIERTA' THEN
+    -- El toque que hace un movimiento cargado en un aislamiento no serializable (ver `movimiento_caja_validar_alta`): sin ningún cambio.
+    IF NEW.cierre_iniciado_en IS DISTINCT FROM OLD.cierre_iniciado_en OR NEW.cierre_iniciado_por IS DISTINCT FROM OLD.cierre_iniciado_por
+       OR NEW.cerrada_en IS DISTINCT FROM OLD.cerrada_en OR NEW.cerrada_por IS DISTINCT FROM OLD.cerrada_por
+       OR NEW.observacion IS DISTINCT FROM OLD.observacion THEN
+      RAISE EXCEPTION 'una sesión abierta no cambia de datos'
+        USING ERRCODE = '23514', CONSTRAINT = 'sesion_caja_transicion_invalida';
+    END IF;
   ELSE
     RAISE EXCEPTION 'transición de estado no permitida: % -> %', OLD.estado, NEW.estado
       USING ERRCODE = '23514', CONSTRAINT = 'sesion_caja_transicion_invalida';
@@ -543,10 +552,23 @@ BEGIN
       USING ERRCODE = '23514', CONSTRAINT = 'movimiento_caja_actor_invalido';
   END IF;
 
-  -- C1. `FOR SHARE` de la sesión: `iniciar cierre` y `cerrar` (UPDATE) esperan a los movimientos en vuelo; el que llega después de
-  -- un cierre ve la sesión EN_CIERRE/CERRADA. (Una CERRADA no pasa la política de UPDATE que usa el bloqueo: «no encontrada».)
-  SELECT s.estado, s.caja_id, s.fecha_negocio INTO v_sesion
-    FROM public.sesion_caja s WHERE s.id = NEW.sesion_id AND s.empresa_id = NEW.empresa_id FOR SHARE;
+  -- C1. `iniciar cierre` y `cerrar` (UPDATE de la sesión) esperan a los movimientos en vuelo; el que llega después de un cierre ve la
+  -- sesión EN_CIERRE/CERRADA. (Una CERRADA no pasa la política de UPDATE que usan los dos bloqueos: «no encontrada».)
+  --  * Transacción SERIALIZABLE (la de la aplicación): `FOR SHARE`. Es una lectura de la sesión para el detector de anomalías
+  --    serializables: contra un cierre serializable que ya calculó el esperado, uno de los dos falla con 40001 y se reintenta.
+  --  * Cualquier otro aislamiento (SQL directo en READ COMMITTED): ese detector no ve a esta transacción, y `FOR SHARE` solo bloquea,
+  --    no versiona la fila: el cierre serializable seguía, con su instantánea vieja, y cerraba la sesión sin contar este movimiento
+  --    (hueco de dinero: arqueo 0,00 contra 100,00 cobrados). Por eso ahí se ESCRIBE la sesión (toque sin cambios, ver
+  --    `sesion_caja_validar_cambio`): el cierre serializable choca con una versión posterior a su instantánea y falla con 40001 en vez de
+  --    confirmar; si el cierre llegó primero, esta espera, ve la sesión cerrada y se rechaza.
+  IF current_setting('transaction_isolation') = 'serializable' THEN
+    SELECT s.estado, s.caja_id, s.fecha_negocio INTO v_sesion
+      FROM public.sesion_caja s WHERE s.id = NEW.sesion_id AND s.empresa_id = NEW.empresa_id FOR SHARE;
+  ELSE
+    UPDATE public.sesion_caja s SET estado = s.estado
+     WHERE s.id = NEW.sesion_id AND s.empresa_id = NEW.empresa_id AND s.estado = 'ABIERTA'
+    RETURNING s.estado, s.caja_id, s.fecha_negocio INTO v_sesion;
+  END IF;
   IF NOT FOUND OR v_sesion.estado <> 'ABIERTA' THEN
     RAISE EXCEPTION 'la sesión de caja no está abierta'
       USING ERRCODE = '23514', CONSTRAINT = 'movimiento_caja_sesion_no_abierta';

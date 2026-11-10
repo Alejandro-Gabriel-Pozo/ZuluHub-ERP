@@ -446,13 +446,15 @@ describe.skipIf(base === null)(
           const cobrarIgual = async (): Promise<Resultado> => {
             const s = await abrirTx();
             try {
+              // La barrera va antes del movimiento: en `read committed` el movimiento escribe la sesión (hueco de dinero del cierre) y el
+              // segundo espera al primero; los dos se encuentran en `cobro_origen_uk` cuando el primero ya confirmó.
+              await barrera();
               const mov = await movimiento(s, esc, sesion, {
                 clase: "COBRO",
                 medio: "EFECTIVO",
                 importe: "100.00",
               });
               if (!mov.ok) return deIntento(mov);
-              await barrera();
               const fila = await filaDeCobro(s, esc, textoDe(mov, "id"), origen);
               if (!fila.ok) return deIntento(fila);
               await esperar(20);
@@ -501,7 +503,7 @@ describe.skipIf(base === null)(
         }
       });
 
-      it("muchos cobros distintos a la vez sobre la misma sesión no compiten (no hay fila caliente): todos quedan y la suma es exacta", async () => {
+      it("muchos cobros distintos a la vez sobre la misma sesión: todos quedan y la suma es exacta (en read committed se turnan por la fila de la sesión)", async () => {
         const { sesion } = await sesionNueva("Muchos cobros");
         const trabajadores = 8;
         const porTrabajador = 12;
