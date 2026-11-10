@@ -6,7 +6,10 @@ import type { TxDeCaja } from "../../caja/publico";
 import type { LecturasDeCatalogo } from "../../catalogo/publico";
 import type { TxDeJornadas } from "../../cierre/publico";
 import type { LecturaDeEstados, RepositorioDeSucursales } from "../../empresas/publico";
+import type { FacturadorDeTickets } from "./puertos-de-facturacion";
+import type { LecturasDeVentas } from "../persistencia/repositorio-de-lecturas";
 import type { RepositorioDeCuentas } from "../persistencia/repositorio-de-cuentas";
+import type { RepositorioDeDocumentos } from "../persistencia/repositorio-de-documentos";
 import type { RepositorioDeTickets } from "../persistencia/repositorio-de-tickets";
 
 /**
@@ -22,6 +25,10 @@ export type TxDeVentas = LecturaDeEstados &
   Readonly<{
     cuentas: RepositorioDeCuentas;
     tickets: RepositorioDeTickets;
+    /** El puntero ticket → comprobante (E1, 0029). */
+    documentos: RepositorioDeDocumentos;
+    /** El ticket con los renglones de su ejemplar vigente: lo que se factura (E1). */
+    lecturasDeVentas: Pick<LecturasDeVentas, "ticketParaFacturar">;
     /** La zona de la empresa y el corte de la sucursal (`datosDeJornada`), para fechar por reloj. */
     sucursales: Pick<RepositorioDeSucursales, "jornadaDe">;
     auditoria: Auditoria;
@@ -31,6 +38,8 @@ export type TxDeVentas = LecturaDeEstados &
 
 export type DependenciasDeVentas = Readonly<{
   transacciones: Transacciones<TxDeVentas>;
+  /** Quien factura un ticket (lo arma la composición con fiscal). Sin él, facturar un ticket se rechaza: nace cerrado. */
+  facturador?: FacturadorDeTickets<TxDeVentas> | undefined;
   /** El catálogo y la matriz rol → acciones con los que el guard autoriza (los pasa la composición). */
   reglas: ReglasDeEmpresa;
 }>;

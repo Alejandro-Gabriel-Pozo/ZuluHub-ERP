@@ -1,5 +1,9 @@
 import type { Kysely } from "kysely";
 import type { VentasDb } from "./esquema";
+import {
+  crearRepositorioDeDocumentos,
+  type RepositorioDeDocumentos,
+} from "./repositorio-de-documentos";
 import { crearRepositorioDeCuentas, type RepositorioDeCuentas } from "./repositorio-de-cuentas";
 import { crearRepositorioDeLecturas, type LecturasDeVentas } from "./repositorio-de-lecturas";
 import { crearRepositorioDeTickets, type RepositorioDeTickets } from "./repositorio-de-tickets";
@@ -8,6 +12,7 @@ import { crearRepositorioDeTickets, type RepositorioDeTickets } from "./reposito
 export type RepositoriosDeVentas = Readonly<{
   cuentas: RepositorioDeCuentas;
   tickets: RepositorioDeTickets;
+  documentos: RepositorioDeDocumentos;
   lecturasDeVentas: LecturasDeVentas;
 }>;
 
@@ -18,6 +23,7 @@ export function crearRepositoriosDeVentas(db: {
   return {
     cuentas: crearRepositorioDeCuentas(conexion),
     tickets: crearRepositorioDeTickets(conexion),
+    documentos: crearRepositorioDeDocumentos(conexion),
     lecturasDeVentas: crearRepositorioDeLecturas(conexion),
   };
 }

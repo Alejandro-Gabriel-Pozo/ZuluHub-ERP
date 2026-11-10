@@ -5,6 +5,23 @@
  * de importes o de números): es un defecto del código, no un error del usuario.
  */
 export const ERRORES_DE_VENTAS_POR_RESTRICCION: Readonly<Record<string, string>> = {
+  // documento_de_ticket (0029, E1): el puntero de un ticket al comprobante que lo facturó. Los casos de uso validan antes; si la base salta,
+  // sale el error de persistencia tipado (ninguno se disfraza). `documento_clave_uk` es la repetición de la misma clave de la pantalla.
+  documento_cambio_invalido: "NO_TRADUCIDA",
+  documento_clave_uk: "CLAVE_REUTILIZADA",
+  documento_comprobante_fkey: "NO_TRADUCIDA",
+  documento_comprobante_uk: "NO_TRADUCIDA",
+  documento_de_ticket_creado_por_fkey: "NO_TRADUCIDA",
+  documento_de_ticket_empresa_id_fkey: "NO_TRADUCIDA",
+  documento_de_ticket_pkey: "NO_TRADUCIDA",
+  documento_ejemplar_fkey: "NO_TRADUCIDA",
+  documento_ejemplar_no_vigente: "NO_TRADUCIDA",
+  documento_intento_ck: "NO_TRADUCIDA",
+  documento_intento_uk: "NO_TRADUCIDA",
+  documento_ticket_fkey: "NO_TRADUCIDA",
+  documento_ticket_no_facturable: "TICKET_NO_FACTURABLE",
+  documento_vigencia_ck: "NO_TRADUCIDA",
+  documento_vigente_uk: "NO_TRADUCIDA",
   aplicacion_cobranza_fkey: "NO_TRADUCIDA",
   aplicacion_cobro_uk: "NO_TRADUCIDA",
   aplicacion_de_cobro_empresa_id_fkey: "NO_TRADUCIDA",

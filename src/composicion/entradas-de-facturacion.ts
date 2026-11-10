@@ -243,6 +243,9 @@ function aServicio(
 
 // ---------------------------------------------------------------------------------------------------------------
 
+/** El receptor de una factura tal como lo escribe la pantalla (`receptor` del formulario de emisión): la misma forma y los mismos límites. */
+export const receptorDeEntrada = (crudo: unknown) => leer(receptor, crudo);
+
 export function entradaDeFactura(
   crudo: unknown,
 ): Resultado<EntradaDeComprobanteManual, ErrorDeEntrada> {

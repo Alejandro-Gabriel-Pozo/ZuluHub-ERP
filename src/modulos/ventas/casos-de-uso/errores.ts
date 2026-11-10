@@ -12,6 +12,7 @@ import type {
   ErrorDeAnularTicket,
   ErrorDeConfirmacion,
 } from "../dominio/decisiones";
+import type { ErrorDelFacturador } from "./puertos-de-facturacion";
 import type { ErrorDeMotivo } from "../dominio/motivo";
 
 /**
@@ -43,6 +44,12 @@ export type ErrorDeVentas =
   | "SESION_DE_CAJA_CAMBIO"
   | "CAJA_NO_ENCONTRADA_PARA_COBRAR"
   | Readonly<{ error: "TICKET_YA_COBRADO"; cobranzaId: string }>
+  /** E1: el ticket ya tiene un comprobante vigente en fiscal (la pantalla muestra ese comprobante). */
+  | Readonly<{ error: "TICKET_YA_FACTURADO"; comprobanteId: string }>
+  /** E1: fiscal rechazó facturar (punto de venta, certificado, total, receptor…): `causa` es el error de fiscal ya traducido por la composición. */
+  | Readonly<{ error: "FACTURACION_FALLIDA"; causa: ErrorDelFacturador }>
+  | "FACTURACION_NO_DISPONIBLE"
+  | "TICKET_NO_FACTURABLE"
   | "IDENTIFICADOR_INVALIDO"
   | "CLAVE_INVALIDA"
   | "CLAVE_REUTILIZADA"
