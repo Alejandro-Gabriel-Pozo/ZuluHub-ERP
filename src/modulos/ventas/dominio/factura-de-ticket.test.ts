@@ -51,6 +51,11 @@ describe("identificadores derivados", () => {
     expect(documentoIdDeLaFactura(TICKET, 2)).not.toBe(d);
   });
 
+  it("los valores quedan fijos para siempre (cambiarlos rompería la reconstrucción de lo ya facturado)", () => {
+    expect(comprobanteIdDeLaFactura(TICKET, 1)).toBe("25f90ec1-76a2-5fe3-80a7-4afac3db14f2");
+    expect(documentoIdDeLaFactura(TICKET, 1)).toBe("448f8cfa-7750-53e7-9931-3b47a1badd37");
+  });
+
   it("no coinciden con el origen de la reemisión del mismo intento", () => {
     expect(comprobanteIdDeLaFactura(TICKET, 2)).not.toBe(origenDeLaFactura(TICKET, 2, EJEMPLAR).id);
     expect(documentoIdDeLaFactura(TICKET, 2)).not.toBe(origenDeLaFactura(TICKET, 2, EJEMPLAR).id);

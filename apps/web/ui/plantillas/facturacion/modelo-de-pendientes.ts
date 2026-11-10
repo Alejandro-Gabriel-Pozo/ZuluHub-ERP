@@ -24,7 +24,7 @@ export type PendientesParaMostrar = Readonly<{
   siguiente: Readonly<{ fechaNegocio: string; numero: number; sucursalId: string }> | null;
 }>;
 
-export type FilaDePendiente = Readonly<{
+type FilaDePendiente = Readonly<{
   id: string;
   /** El enlace a Emitir desde ese ticket. */
   href: string;
