@@ -11,6 +11,7 @@ import {
   ganchoDeSucursalDeCaja,
 } from "../modulos/caja/publico";
 import { crearCasosDeUsoDeCatalogo, crearConsultasDeCatalogo } from "../modulos/catalogo/publico";
+import { crearCasosDeUsoDeVentas, crearConsultasDeVentas } from "../modulos/ventas/publico";
 import {
   crearCasosDeUsoDeCierre,
   crearConsultasDeCierre,
@@ -30,7 +31,8 @@ import {
   crearConsultasDeSesion,
 } from "../modulos/identidad/publico";
 import type { LecturasCompartidas } from "../puertos/transacciones";
-import { aporteDeCaja, ticketsPorCobranzaDeLaComposicion } from "./cierre-de-caja";
+import { APORTES_AL_CIERRE } from "./aportes-al-cierre";
+import { ticketsPorCobranzaDeLaComposicion } from "./cierre-de-caja";
 import type { Conexiones } from "./conexiones";
 import { armarEmisionFiscal } from "./emision-fiscal";
 import { perezoso } from "./perezoso";
@@ -96,7 +98,7 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
         // Desactivar una sucursal (decisión 178): no con la jornada en auditoría; abierta sin movimiento se cierra sola; con movimiento
         // se pide el cierre del día. Pregunta a los mismos aportes que el cierre (hoy, caja; ventas lo suma E4).
         ganchosAlDesactivarSucursal: [
-          crearGanchoDeCierreAlDesactivar({ reglas, aportes: [aporteDeCaja] }),
+          crearGanchoDeCierreAlDesactivar({ reglas, aportes: APORTES_AL_CIERRE }),
         ],
       }),
     ),
@@ -123,14 +125,14 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
       crearCasosDeUsoDeCierre({
         transacciones: conexiones.transaccionesDeApp(),
         reglas,
-        aportes: [aporteDeCaja],
+        aportes: APORTES_AL_CIERRE,
       }),
     ),
     consultasDeCierre: perezoso(() =>
       crearConsultasDeCierre({
         transacciones: conexiones.transaccionesDeApp(),
         reglas,
-        aportes: [aporteDeCaja],
+        aportes: APORTES_AL_CIERRE,
       }),
     ),
     /**
@@ -148,6 +150,16 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
         // El total vigente de los tickets, que ventas informará cuando exista (E4): hoy, fail-closed (`cierre-de-caja.ts`).
         tickets: ticketsPorCobranzaDeLaComposicion,
       }),
+    ),
+    /**
+     * Ventas (E4): abrir, cargar, anular y cerrar la cuenta y anular el ticket, cada uno con SU acción. El módulo sigue `en_desarrollo`: el
+     * guard rechaza todo con `MODULO_EN_DESARROLLO` hasta que el dueño lo pase a disponible.
+     */
+    casosDeUsoDeVentas: perezoso(() =>
+      crearCasosDeUsoDeVentas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    consultasDeVentas: perezoso(() =>
+      crearConsultasDeVentas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
     ),
     casosDeUsoDeIdentidad: perezoso(() =>
       crearCasosDeUsoDeIdentidad({

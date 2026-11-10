@@ -26,6 +26,11 @@ import type {
   TxDeEmpresas,
 } from "../../src/modulos/empresas/publico";
 import type {
+  TxDeAporteDeVentas,
+  TxDeConsultasDeVentas,
+  TxDeVentas,
+} from "../../src/modulos/ventas/publico";
+import type {
   TxDeCertificados,
   TxDeConfiguracionFiscal,
   TxDeConsultasDeFacturacion,
@@ -102,6 +107,14 @@ describe("la Tx compuesta de la composición contiene la Tx angosta de cada mód
     expectTypeOf<
       Omit<DependenciasDeEmpresas, "ganchosDeSucursal">
     >().not.toExtend<DependenciasDeEmpresas>();
+  });
+
+  it("ventas: casos de uso, consultas y lo que lee el aporte al cierre del día", () => {
+    expectTypeOf<TxDeApp>().toExtend<TxDeVentas>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeConsultasDeVentas>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeAporteDeVentas>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeVentas>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConsultasDeVentas>>();
   });
 
   it("fiscal: facturación, consultas, configuración, certificados y lo que descifra el adaptador de ARCA", () => {

@@ -54,6 +54,7 @@ describe("apps/web/servidor/composicion.ts", () => {
       "casosDeUsoDeEmpresas",
       "casosDeUsoDeFacturacion",
       "casosDeUsoDeIdentidad",
+      "casosDeUsoDeVentas",
       "configuracionPublicaDeHost",
       "consultasDeCaja",
       "consultasDeCatalogo",
@@ -62,6 +63,7 @@ describe("apps/web/servidor/composicion.ts", () => {
       "consultasDeFacturacion",
       "consultasDeIdentidad",
       "consultasDeSesion",
+      "consultasDeVentas",
       "lecturasCompartidas",
       "resolucionDeHost",
     ]);

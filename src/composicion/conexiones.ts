@@ -51,6 +51,7 @@ import type { TxDeCola } from "../adaptadores/trabajos/procesador";
 import type { NivelesDeControl } from "../capacidades/controles/niveles";
 import type { EmpresaId } from "../primitivas/identificadores/marca";
 import { crearRepositoriosDeCatalogo } from "../modulos/catalogo/publico";
+import { crearRepositoriosDeVentas } from "../modulos/ventas/publico";
 import { crearRepositorioDeJornadas, type CierreDb } from "../modulos/cierre/publico";
 import {
   crearLecturaDeSucursalBloqueada,
@@ -146,12 +147,11 @@ import { armarPiezasDeCajaEnTx, type PiezasDeCajaEnTx } from "./tx-de-caja";
  * consultas de empresas e identidad. Cada caso de uso declara solo lo que usa (su `Tx` angosta), y este
  * tipo los contiene a todos.
  *
- * Es la `Tx` COMPUESTA (conciliación §3.3): los repositorios de varios módulos se arman sobre la MISMA transacción, así una operación
- * que cruza módulos (cobrar) es atómica con un solo `ejecutar`; un puerto `*EnTx` de otro módulo recibe esta misma `Tx` y nunca abre
- * una propia. Cada módulo suma sus repositorios acá (los de caja, en `tx-de-caja.ts`, por el tope de líneas); `tipos-tx.test.ts` lo comprueba.
+ * Es la `Tx` COMPUESTA (conciliación §3.3): los repositorios de varios módulos se arman sobre la MISMA transacción, así una operación que
+ * cruza módulos (cobrar) es atómica con un solo `ejecutar`; un puerto `*EnTx` de otro módulo recibe esta misma `Tx`, nunca abre una propia. Cada módulo suma sus repositorios acá (los de caja, en `tx-de-caja.ts`, por el tope de líneas); `tipos-tx.test.ts` lo comprueba.
  */
-/** Incluye los repositorios del catálogo (E2 mínimo: `productos`, `opciones` y `precios`). */
 export type TxDeApp = ReturnType<typeof crearRepositoriosDeCatalogo> &
+  ReturnType<typeof crearRepositoriosDeVentas> &
   Readonly<{
     tenants: RepositorioDeTenants;
     empresas: RepositorioDeEmpresas;
@@ -298,6 +298,7 @@ function armarTx(db: ConexionDeTx, autorizacion: CargaDeAutorizacion): TxDeApp {
     accesos: crearRepositorioDeAccesos(db.withTables<FiscalDb>()),
     marca: marcaDeImpresion,
     ...crearRepositoriosDeCatalogo(db),
+    ...crearRepositoriosDeVentas(db),
     niveles: crearNivelesDeControlDePostgres(db.withTables<NivelesDeControlDb>()),
     sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
   };
