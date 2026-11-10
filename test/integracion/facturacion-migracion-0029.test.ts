@@ -153,20 +153,61 @@ describe.skipIf(base === null)(
 
     // ===========================================================================================================
     describe("el texto de la migración", () => {
-      it("es aditiva: nada de DELETE, UPDATE, TRUNCATE ni DROP de tablas o columnas; el único DROP es la restricción de orígenes, que se recrea como superconjunto", async () => {
+      it("es aditiva: ninguna sentencia borra ni reescribe filas, y el único DROP es la restricción de orígenes, que se recrea como superconjunto", async () => {
         const texto = (await readFile(join(CARPETA_DE_MIGRACIONES, ARCHIVO), "utf8")).replace(
           /--.*$/gm,
           "",
         );
-        expect(texto).not.toMatch(/\b(DELETE|UPDATE|TRUNCATE)\b/i);
+        expect(texto).not.toMatch(/^\s*(DELETE\s+FROM|UPDATE\s+\w+\s+SET|TRUNCATE)\b/im);
         expect(texto).not.toMatch(/DROP\s+(TABLE|COLUMN|FUNCTION|INDEX|TRIGGER)/i);
         expect(texto.match(/DROP\s+CONSTRAINT\s+(\w+)/gi)).toEqual([
           "DROP CONSTRAINT comprobante_origen_tipo_ck",
         ]);
         expect(texto).not.toMatch(/SECURITY\s+DEFINER|CREATE\s+ROLE|PASSWORD|CASCADE/i);
-        expect(texto.match(/GRANT [^;]+;/gi)).toEqual([
+        // Nadie recibe DELETE, TRUNCATE ni ALL: solo la aplicación, y por columna lo que escribe.
+        expect(texto.match(/GRANT [^;]+;/gi)?.map((g) => g.replace(/\s+/g, " "))).toEqual([
           "GRANT INSERT (unidad) ON comprobante_linea TO pedernal_app;",
+          "GRANT SELECT ON documento_de_ticket TO pedernal_app;",
+          "GRANT INSERT (id, empresa_id, ticket_id, ejemplar_id, intento, clave, comprobante_id, creado_en, creado_por) ON documento_de_ticket TO pedernal_app;",
+          "GRANT UPDATE (vigente, no_vigente_en) ON documento_de_ticket TO pedernal_app;",
         ]);
+      });
+
+      it("la tabla del puntero nace vacía, con RLS activa y forzada, sin DELETE para nadie y sin acceso a otros roles", async () => {
+        const aparte = await baseConMigraciones(b(), [...(await anteriores()), ARCHIVO]);
+        try {
+          const c = aparte.cliente;
+          expect(
+            (await c.query("select count(*)::int as n from documento_de_ticket")).rows,
+          ).toEqual([{ n: 0 }]);
+          expect(
+            (
+              await c.query(
+                "select relrowsecurity as rls, relforcerowsecurity as forzada from pg_class where relname = 'documento_de_ticket'",
+              )
+            ).rows,
+          ).toEqual([{ rls: true, forzada: true }]);
+          for (const rol of [
+            "pedernal_app",
+            "pedernal_plataforma",
+            "pedernal_grupo",
+            "pedernal_trabajos",
+            "pedernal_publico",
+          ]) {
+            const priv = async (p: string) =>
+              (
+                await c.query<{ ok: boolean }>(
+                  "select has_table_privilege($1, 'documento_de_ticket', $2) as ok",
+                  [rol, p],
+                )
+              ).rows[0]?.ok;
+            expect(await priv("DELETE"), `${rol} DELETE`).toBe(false);
+            expect(await priv("TRUNCATE"), `${rol} TRUNCATE`).toBe(false);
+            expect(await priv("SELECT"), `${rol} SELECT`).toBe(rol === "pedernal_app");
+          }
+        } finally {
+          await aparte.cerrar();
+        }
       });
 
       it("la reversión vive fuera de la carpeta que aplica el ejecutor, no usa CASCADE y no se corre sola", async () => {

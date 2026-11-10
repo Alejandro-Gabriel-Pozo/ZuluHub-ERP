@@ -18,6 +18,7 @@ export type {
 } from "../consultas/comprobante-vigente-de-un-origen";
 export {
   LIMITE_DE_IDS_DE_VIGENCIA,
+  vigenciaDeComprobantesEnTx,
   type EntradaDeVigenciaDeComprobantes,
   type ErrorAlPedirLaVigencia,
   type VigenciaDeUnComprobante,

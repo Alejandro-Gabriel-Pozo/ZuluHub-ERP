@@ -1,4 +1,4 @@
-import { CUERPO_CON_GUARD_PROPIO } from "../../../../test/utilidades/cuerpos-de-fiscal";
+import { CUERPOS_CON_GUARD_PROPIO } from "../../../../test/utilidades/cuerpos-de-fiscal";
 import { describe, expect, it } from "vitest";
 import { clavesDe } from "../../../capacidades/modulos/activos";
 import { CATALOGO_DE_MODULOS, type ClaveAccion } from "../../../capacidades/modulos/catalogo";
@@ -393,7 +393,7 @@ describe("facturar un documento de origen: persona, origen y comprobante con for
   });
 });
 
-describe("emitirFacturaDeOrigenEnTx: el único cuerpo de transacción que sale del módulo lleva su guard adentro", () => {
+describe("emitirFacturaDeOrigenEnTx: un cuerpo de transacción que sale del módulo y lleva su guard adentro", () => {
   const llamar = (tx: TxDeFacturacion, reglas: ReglasDeEmpresa = CON_FACTURACION) =>
     publico.emitirFacturaDeOrigenEnTx(
       tx,
@@ -402,10 +402,12 @@ describe("emitirFacturaDeOrigenEnTx: el único cuerpo de transacción que sale d
       reglas,
     );
 
-  it("es el único exportado que termina en EnTx", () => {
-    expect(Object.keys(publico).filter((nombre) => /EnTx$/.test(nombre))).toEqual([
-      CUERPO_CON_GUARD_PROPIO,
-    ]);
+  it("los únicos exportados que terminan en EnTx son los declarados con guard propio", () => {
+    expect(
+      Object.keys(publico)
+        .filter((nombre) => /EnTx$/.test(nombre))
+        .sort(),
+    ).toEqual([...CUERPOS_CON_GUARD_PROPIO].sort());
   });
 
   it("sin rol da SIN_PERMISO sin leer ni escribir nada más", async () => {
@@ -477,7 +479,7 @@ describe("los trabajos de sistema no pasan por el guard y no admiten persona", (
     expect(publico.TRABAJO_RECONCILIAR).toBe("fiscal.reconciliar");
     expect(
       Object.keys(publico).filter(
-        (nombre) => /EnTx$/.test(nombre) && nombre !== CUERPO_CON_GUARD_PROPIO,
+        (nombre) => /EnTx$/.test(nombre) && !CUERPOS_CON_GUARD_PROPIO.includes(nombre),
       ),
     ).toEqual([]);
   });

@@ -13,7 +13,7 @@ import { comprobanteId } from "../publico";
 import type { ComprobanteParaVigencia } from "../persistencia/lecturas-de-vigencia";
 import type { TxDeConsultasDeFacturacion } from "./contrato";
 import { crearConsultasDeFacturacion } from "./consultas";
-import { LIMITE_DE_IDS_DE_VIGENCIA } from "./vigencia-de-comprobantes";
+import { LIMITE_DE_IDS_DE_VIGENCIA, vigenciaDeComprobantesEnTx } from "./vigencia-de-comprobantes";
 
 /**
  * `vigenciaDeComprobantes` (D-F-1) sin base de datos: el contrato de entrada y salida y que NO cuenta como acreditado lo que no está
@@ -173,5 +173,42 @@ describe("vigenciaDeComprobantes", () => {
       ok: true,
       valor: [],
     });
+  });
+});
+
+describe("vigenciaDeComprobantesEnTx: el cuerpo que corre dentro de la transacción de quien llama lleva su guard adentro", () => {
+  const llamar = (rol: DatosDelActor["rol"], ids = [A]) => {
+    const accesos: string[] = [];
+    const tx = {
+      autorizacion: {
+        delActor: () => Promise.resolve({ ...actor, rol }),
+        sucursalesDelActor: () => Promise.resolve("TODAS"),
+      },
+      lecturas: new Proxy(
+        {},
+        {
+          get(_o, propiedad) {
+            accesos.push(String(propiedad));
+            return () => Promise.resolve([]);
+          },
+        },
+      ),
+    } as unknown as Pick<TxDeConsultasDeFacturacion, "autorizacion" | "lecturas">;
+    return {
+      accesos,
+      resultado: vigenciaDeComprobantesEnTx(tx, contexto, { comprobanteIds: ids }, REGLAS),
+    };
+  };
+
+  it("sin rol da SIN_PERMISO sin leer nada", async () => {
+    const { resultado, accesos } = llamar(null);
+    expect(await resultado).toEqual({ ok: false, error: "SIN_PERMISO" });
+    expect(accesos).toEqual([]);
+  });
+
+  it("con rol lee el lote de esa empresa", async () => {
+    const { resultado, accesos } = llamar("OPERADOR");
+    expect(await resultado).toEqual({ ok: true, valor: [] });
+    expect(accesos).toEqual(["paraVigencia", "notasQueCitanA"]);
   });
 });
