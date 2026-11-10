@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
+import { crearCasosDeUsoDeCaja } from "../../src/modulos/caja/publico";
 import { crearCasosDeUsoDeCierre, crearConsultasDeCierre } from "../../src/modulos/cierre/publico";
 import {
   aporteDeVentas,
@@ -41,6 +42,7 @@ const REGLAS_DE_PRUEBA: ReglasDeEmpresa = {
   catalogo: {
     ...CATALOGO_DE_MODULOS,
     catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "disponible" },
+    caja: { ...CATALOGO_DE_MODULOS.caja, estado: "disponible" },
     ventas: { ...CATALOGO_DE_MODULOS.ventas, estado: "disponible" },
   },
   permisos: PERMISOS_DE_EMPRESA,
@@ -81,8 +83,20 @@ export async function montarVentas(
             ? datos
             : {
                 ...datos,
-                modulosActivados: [...datos.modulosActivados, "catalogo", "ventas", "cierre"],
-                modulosHabilitados: [...datos.modulosHabilitados, "catalogo", "ventas", "cierre"],
+                modulosActivados: [
+                  ...datos.modulosActivados,
+                  "catalogo",
+                  "ventas",
+                  "cierre",
+                  "caja",
+                ],
+                modulosHabilitados: [
+                  ...datos.modulosHabilitados,
+                  "catalogo",
+                  "ventas",
+                  "cierre",
+                  "caja",
+                ],
               };
         },
       },
@@ -93,6 +107,7 @@ export async function montarVentas(
   const reglas = REGLAS_DE_PRUEBA;
   const casos = crearCasosDeUsoDeVentas({ transacciones: entorno, reglas });
   const consultas = crearConsultasDeVentas({ transacciones: entorno, reglas });
+  const caja = crearCasosDeUsoDeCaja({ transacciones: entorno, reglas });
   const cierre = crearCasosDeUsoDeCierre({
     transacciones: entorno,
     reglas,
@@ -146,6 +161,48 @@ export async function montarVentas(
     };
   };
 
+  /**
+   * Una caja con sesión ABIERTA en la sucursal (la apertura es el caso de uso real de caja: jornada, sesión y fondo) y los medios de la empresa.
+   * Con la hora de `contexto.ahora` fija la jornada de la sesión.
+   */
+  const cajaAbierta = async (
+    e: EscenarioDeVentas,
+    opciones: Readonly<{
+      sucursal?: SucursalId;
+      contexto?: ContextoOperativo;
+      fondo?: string;
+    }> = {},
+  ) => {
+    const sucursal = opciones.sucursal ?? e.sucursal;
+    const { rows } = await dueno.query<{ id: string }>(
+      "insert into caja (empresa_id, sucursal_id, nombre) values ($1, $2, $3) returning id",
+      [e.empresa, sucursal, `Caja ${randomUUID().slice(0, 8)}`],
+    );
+    const cajaId = rows[0]?.id as string;
+    const medios: Record<string, string> = {};
+    for (const tipo of ["EFECTIVO", "TARJETA_DEBITO", "TRANSFERENCIA", "QR"]) {
+      await dueno.query(
+        "insert into medio_de_pago (empresa_id, tipo) values ($1, $2) on conflict do nothing",
+        [e.empresa, tipo],
+      );
+      medios[tipo] = (
+        await dueno.query<{ id: string }>(
+          "select id from medio_de_pago where empresa_id = $1 and tipo = $2 and nombre is null",
+          [e.empresa, tipo],
+        )
+      ).rows[0]?.id as string;
+    }
+    const sesion = valorDe(
+      await caja.abrirSesion(opciones.contexto ?? e.gerente, {
+        claveDeIdempotencia: nuevaClave(),
+        sucursalId: sucursal,
+        cajaId,
+        fondoInicial: { moneda: "ARS", monto: opciones.fondo ?? "0.00" },
+      }),
+    );
+    return { cajaId, sesionId: sesion.sesionId, fechaDeNegocio: sesion.fechaDeNegocio, medios };
+  };
+
   const filas = async <T extends Record<string, unknown> = Record<string, unknown>>(
     texto: string,
     p: unknown[] = [],
@@ -165,6 +222,8 @@ export async function montarVentas(
     dueno,
     casos,
     consultas,
+    caja,
+    cajaAbierta,
     cierre,
     consultasDeCierre,
     escenario,
