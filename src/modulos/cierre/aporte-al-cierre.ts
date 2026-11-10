@@ -139,12 +139,19 @@ export function controlesDelAporte(
   return ok(controles);
 }
 
-/** Orden total y estable de los controles: por módulo y por clave, comparando unidades de código (sin depender del idioma del servidor). */
+/**
+ * Orden total y estable de los controles: por módulo y por clave, comparando unidades de código (sin depender del idioma del servidor).
+ * Se ordena la llave `modulo + NUL + clave` con el orden por defecto de los textos (unidades de código), sin comparador propio.
+ */
 export function ordenarControles<T extends Readonly<{ modulo: string; clave: string }>>(
   controles: readonly T[],
 ): T[] {
-  const comparar = (a: string, b: string): number => (a < b ? -1 : Number(a !== b));
-  return [...controles].sort((a, b) => comparar(a.modulo, b.modulo) || comparar(a.clave, b.clave));
+  const porLlave = new Map<string, T[]>();
+  for (const control of controles) {
+    const llave = `${control.modulo}\u0000${control.clave}`;
+    porLlave.set(llave, [...(porLlave.get(llave) ?? []), control]);
+  }
+  return [...porLlave.keys()].sort().flatMap((llave) => porLlave.get(llave) as T[]);
 }
 
 /**
