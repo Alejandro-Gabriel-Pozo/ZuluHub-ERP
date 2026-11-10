@@ -207,7 +207,7 @@ export async function precioDeBase(
 
 // ---- el escenario de los casos de uso -----------------------------------------------------------------------------------------
 
-export const REGLAS_DE_PRUEBA: ReglasDeEmpresa = {
+const REGLAS_DE_PRUEBA: ReglasDeEmpresa = {
   catalogo: {
     ...CATALOGO_DE_MODULOS,
     catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "disponible" },

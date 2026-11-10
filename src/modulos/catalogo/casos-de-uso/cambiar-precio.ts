@@ -9,8 +9,8 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 import { vendeLaClase } from "../dominio/clases";
 import {
   esUuid,
-  opcionId,
   precioDeVentaId,
+  type OpcionId,
   type PrecioDeVentaId,
 } from "../dominio/identificadores";
 import type { FilaDePrecio } from "../dominio/modelo";
@@ -114,7 +114,7 @@ export function armarCambiarPrecio(dependencias: DependenciasDeCatalogo) {
         const varianteActiva = grupos.some(
           ({ grupo }) => grupo.clase === "VARIANTE" && grupo.activo,
         );
-        let opcion = null as ReturnType<typeof opcionId> | null;
+        let opcion: OpcionId | null = null;
         if (entrada.opcionId === null) {
           if (varianteActiva) return err("PRECIO_DE_PRODUCTO_CON_VARIANTE");
         } else {

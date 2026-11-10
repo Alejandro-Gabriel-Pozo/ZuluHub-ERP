@@ -51,13 +51,8 @@ import type { TxDeCola } from "../adaptadores/trabajos/procesador";
 import type { NivelesDeControl } from "../capacidades/controles/niveles";
 import type { EmpresaId } from "../primitivas/identificadores/marca";
 import {
-  crearRepositorioDeOpciones,
-  crearRepositorioDePrecios,
-  crearRepositorioDeProductos,
-  type CatalogoDb,
-  type RepositorioDeOpciones,
-  type RepositorioDePrecios,
-  type RepositorioDeProductos,
+  crearRepositoriosDeCatalogo,
+  type RepositoriosDeCatalogo,
 } from "../modulos/catalogo/publico";
 import {
   crearLecturaDeSucursalBloqueada,
@@ -158,51 +153,49 @@ import { perezoso } from "./perezoso";
  * la suya, angosta) y nunca abre una propia. Cada módulo nuevo suma sus repositorios acá; que este tipo
  * contenga cada `Tx` angosta lo comprueba el compilador (`test/arquitectura/tipos-tx.test.ts`).
  */
-export type TxDeApp = Readonly<{
-  tenants: RepositorioDeTenants;
-  empresas: RepositorioDeEmpresas;
-  sucursales: RepositorioDeSucursales;
-  /** La sucursal leída con `FOR SHARE`: dar de alta un punto de venta exige que siga abierta (el cierre concurrente espera). */
-  sucursalBloqueada: LecturaDeSucursalBloqueada;
-  personas: RepositorioDePersonas;
-  membresias: RepositorioDeMembresias;
-  asignaciones: RepositorioDeAsignaciones;
-  invitaciones: RepositorioDeInvitaciones;
-  traspasos: RepositorioDeTraspasos;
-  /** Encola, y mira lo encolado (la validación de un comprobante se reencola con su número de intento). */
-  trabajos: TrabajosReencolables;
-  auditoria: Auditoria;
-  autorizacion: CargaDeAutorizacion;
-  /** Fiscal (H7): emisores, domicilios, datos fiscales, puntos de venta y series, comprobantes e intentos de ARCA. */
-  emisores: RepositorioDeEmisores;
-  domicilios: RepositorioDeDomicilios;
-  datosFiscales: RepositorioDeDatosFiscales;
-  reglasDeEmisor: RepositorioDeReglasDeEmisor;
-  puntosDeVenta: RepositorioDePuntosDeVenta;
-  series: RepositorioDeSeries;
-  comprobantes: RepositorioDeComprobantes;
-  intentos: RepositorioDeIntentos;
-  /** Las lecturas del listado y del detalle de comprobantes (solo `select`). */
-  lecturas: LecturasDeComprobantes;
-  /** Qué certificado cuenta hoy de un emisor en cada ambiente (D-42): solo `select`, sin columnas cifradas. */
-  lecturasDeCertificados: ReturnType<typeof crearLecturasDeCertificados>;
-  /** Certificados de ARCA y su ticket de acceso (columnas cifradas: solo las ve quien descifra, F7/F8). */
-  certificados: RepositorioDeCertificados;
-  accesos: RepositorioDeAccesos;
-  /**
-   * La marca con que se imprime un comprobante (solo la pide `modeloDeImpresion`). Hoy es `MARCA_DE_IMPRESION_VACIA` para todas las
-   * empresas (D-112); ver la constante.
-   */
-  marca: Readonly<{ deLaEmpresa(empresa: EmpresaId): Promise<MarcaParaImprimir> }>;
-  /** Catálogo (E2 mínimo): productos y secciones, grupos y opciones con su versión y consumo, y precios de venta. */
-  productos: RepositorioDeProductos;
-  opciones: RepositorioDeOpciones;
-  precios: RepositorioDePrecios;
-  /** El nivel vigente de cada control (permitir, avisar, bloquear), leído en la misma transacción. */
-  niveles: NivelesDeControl;
-  /** Lo que lee la puerta `SESION` (la persona del usuario y sus empresas). */
-  sesion: LecturasDeSesion;
-}>;
+/** Incluye los repositorios del catálogo (E2 mínimo: `productos`, `opciones` y `precios`). */
+export type TxDeApp = RepositoriosDeCatalogo &
+  Readonly<{
+    tenants: RepositorioDeTenants;
+    empresas: RepositorioDeEmpresas;
+    sucursales: RepositorioDeSucursales;
+    /** La sucursal leída con `FOR SHARE`: dar de alta un punto de venta exige que siga abierta (el cierre concurrente espera). */
+    sucursalBloqueada: LecturaDeSucursalBloqueada;
+    personas: RepositorioDePersonas;
+    membresias: RepositorioDeMembresias;
+    asignaciones: RepositorioDeAsignaciones;
+    invitaciones: RepositorioDeInvitaciones;
+    traspasos: RepositorioDeTraspasos;
+    /** Encola, y mira lo encolado (la validación de un comprobante se reencola con su número de intento). */
+    trabajos: TrabajosReencolables;
+    auditoria: Auditoria;
+    autorizacion: CargaDeAutorizacion;
+    /** Fiscal (H7): emisores, domicilios, datos fiscales, puntos de venta y series, comprobantes e intentos de ARCA. */
+    emisores: RepositorioDeEmisores;
+    domicilios: RepositorioDeDomicilios;
+    datosFiscales: RepositorioDeDatosFiscales;
+    reglasDeEmisor: RepositorioDeReglasDeEmisor;
+    puntosDeVenta: RepositorioDePuntosDeVenta;
+    series: RepositorioDeSeries;
+    comprobantes: RepositorioDeComprobantes;
+    intentos: RepositorioDeIntentos;
+    /** Las lecturas del listado y del detalle de comprobantes (solo `select`). */
+    lecturas: LecturasDeComprobantes;
+    /** Qué certificado cuenta hoy de un emisor en cada ambiente (D-42): solo `select`, sin columnas cifradas. */
+    lecturasDeCertificados: ReturnType<typeof crearLecturasDeCertificados>;
+    /** Certificados de ARCA y su ticket de acceso (columnas cifradas: solo las ve quien descifra, F7/F8). */
+    certificados: RepositorioDeCertificados;
+    accesos: RepositorioDeAccesos;
+    /**
+     * La marca con que se imprime un comprobante (solo la pide `modeloDeImpresion`). Hoy es `MARCA_DE_IMPRESION_VACIA` para todas las
+     * empresas (D-112); ver la constante.
+     */
+    marca: Readonly<{ deLaEmpresa(empresa: EmpresaId): Promise<MarcaParaImprimir> }>;
+    /** El nivel vigente de cada control (permitir, avisar, bloquear), leído en la misma transacción. */
+    niveles: NivelesDeControl;
+    /** Lo que lee la puerta `SESION` (la persona del usuario y sus empresas). */
+    sesion: LecturasDeSesion;
+  }>;
 
 export type Conexiones = Readonly<{
   /** Puertas `OPERATIVO`, `INVITACION` y `SESION` (`PEDERNAL_DB_APP`). */
@@ -303,9 +296,7 @@ function armarTx(db: ConexionDeTx, autorizacion: CargaDeAutorizacion): TxDeApp {
     certificados: crearRepositorioDeCertificados(db.withTables<FiscalDb>()),
     accesos: crearRepositorioDeAccesos(db.withTables<FiscalDb>()),
     marca: marcaDeImpresion,
-    productos: crearRepositorioDeProductos(db.withTables<CatalogoDb>()),
-    opciones: crearRepositorioDeOpciones(db.withTables<CatalogoDb>()),
-    precios: crearRepositorioDePrecios(db.withTables<CatalogoDb>()),
+    ...crearRepositoriosDeCatalogo(db),
     niveles: crearNivelesDeControlDePostgres(db.withTables<NivelesDeControlDb>()),
     sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
   };

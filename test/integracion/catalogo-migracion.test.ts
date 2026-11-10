@@ -93,7 +93,7 @@ describe.skipIf(base === null)("0025 catálogo: la migración contra una base re
   });
 
   const un = async <T extends Record<string, unknown>>(texto: string, p: unknown[] = []) =>
-    ((await dueno.query<T>(texto, p)).rows[0] ?? ({} as T)) as T;
+    (await dueno.query<T>(texto, p)).rows[0] ?? ({} as T);
   /**
    * Una sentencia dentro de un savepoint que SE LIBERA también al fallar: el helper común deja la transacción dentro del savepoint
    * revertido, y lo que se escriba después tendría el `xmin` de una subtransacción (el consumo exige el de la transacción).

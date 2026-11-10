@@ -10,7 +10,7 @@ import {
   type InstantaneaDeProducto,
 } from "../dominio/cotizar";
 import type { FilaDePrecio } from "../dominio/modelo";
-import type { LecturasDeCatalogo } from "../casos-de-uso/contrato";
+import type { LecturasDeCatalogo } from "./contrato";
 
 export type EntradaDeCotizarParaVender = Readonly<{
   /** La empresa del contexto de quien llama: el catálogo filtra siempre por ella (y la RLS lo repite). */

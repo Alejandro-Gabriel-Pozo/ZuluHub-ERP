@@ -19,7 +19,7 @@ export {
   cotizarParaVender,
   tienePrecioParaLaCartaEnSucursal,
   type EntradaDeCotizarParaVender,
-} from "./consultas/cotizar-para-vender";
+} from "./casos-de-uso/cotizar-para-vender";
 export type {
   DependenciasDeCatalogo,
   DependenciasDeConsultasDeCatalogo,
@@ -103,3 +103,8 @@ export {
   crearRepositorioDePrecios,
   type RepositorioDePrecios,
 } from "./persistencia/repositorio-de-precios";
+
+export {
+  crearRepositoriosDeCatalogo,
+  type RepositoriosDeCatalogo,
+} from "./persistencia/repositorios-de-catalogo";

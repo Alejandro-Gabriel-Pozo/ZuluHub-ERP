@@ -239,9 +239,10 @@ export function crearRepositorioDeProductos(db: Kysely<CatalogoDb>): Repositorio
         .where("empresa_id", "=", empresa)
         .where("activo", "=", true)
         .where("id", "<>", excepto)
-        .where(({ exists, selectFrom }) =>
-          exists(
-            selectFrom("grupo_de_elecciones")
+        .where((eb) =>
+          eb.exists(
+            eb
+              .selectFrom("grupo_de_elecciones")
               .select("id")
               .whereRef("grupo_de_elecciones.producto_id", "=", "producto.id")
               .where("grupo_de_elecciones.empresa_id", "=", empresa),

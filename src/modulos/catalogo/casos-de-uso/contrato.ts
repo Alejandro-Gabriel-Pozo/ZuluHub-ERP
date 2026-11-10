@@ -62,3 +62,11 @@ export type DependenciasDeConsultasDeCatalogo = Readonly<{
   transacciones: Transacciones<TxDeConsultasDeCatalogo>;
   reglas: ReglasDeEmpresa;
 }>;
+
+/**
+ * Los tipos planos del modelo que devuelven las consultas. Las consultas por pantalla no importan el dominio (ADR-005): leen y devuelven
+ * objetos planos, y estos tipos son su forma. Solo tipos; ninguna regla.
+ */
+export type { ClaseDeUso } from "../dominio/clases";
+export type { GrupoConOpciones } from "../dominio/cotizar";
+export type { FilaDePrecio, LineaDeConsumo, Producto } from "../dominio/modelo";

@@ -3,11 +3,13 @@ import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
-import type { ClaseDeUso } from "../dominio/clases";
-import type { FilaDePrecio, LineaDeConsumo, Producto } from "../dominio/modelo";
-import type { GrupoConOpciones } from "../dominio/cotizar";
 import type {
+  ClaseDeUso,
   DependenciasDeConsultasDeCatalogo,
+  FilaDePrecio,
+  GrupoConOpciones,
+  LineaDeConsumo,
+  Producto,
   TxDeConsultasDeCatalogo,
 } from "../casos-de-uso/contrato";
 import type { SeccionDeCarta } from "../persistencia/repositorio-de-productos";
