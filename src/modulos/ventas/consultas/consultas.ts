@@ -17,9 +17,9 @@ import {
   cuentaId,
   esUuid,
   numeroDeCorreccion,
+  unidadDelRenglon,
 } from "../casos-de-uso/calculo";
 import { cotizarVentaRapida } from "../casos-de-uso/cotizar-venta-rapida";
-import { unidadDelRenglon } from "../dominio/factura-de-ticket";
 import { cargarEstadosDeLaEmpresa } from "../../empresas/publico";
 import type { CursorDePendientes } from "../persistencia/repositorio-de-lecturas";
 import type { DependenciasDeConsultasDeVentas, TxDeConsultasDeVentas } from "./contrato";
