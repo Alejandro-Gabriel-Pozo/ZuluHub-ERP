@@ -4,13 +4,23 @@ import type { TxDeApp } from "../../src/composicion/conexiones";
 import type { TxDeCredenciales } from "../../src/adaptadores/certificados/credenciales-de-emisor";
 import type { TxDeTickets } from "../../src/adaptadores/certificados/almacen-de-tickets";
 import type { TxDeVerificacion } from "../../src/adaptadores/certificados/verificacion-de-autorizacion";
-import type { TxDeCaja, TxDeConsultasDeCaja } from "../../src/modulos/caja/publico";
+import type {
+  TxDeCaja,
+  TxDeConsultasDeCaja,
+  TxParaCajaPorDefecto,
+} from "../../src/modulos/caja/publico";
+import { ganchoDeSucursalDeCaja } from "../../src/modulos/caja/publico";
 import type {
   TxDeCierre,
   TxDeConsultasDeCierre,
   TxDeJornadas,
 } from "../../src/modulos/cierre/publico";
-import type { TxDeConsultasDeEmpresas, TxDeEmpresas } from "../../src/modulos/empresas/publico";
+import type {
+  DependenciasDeEmpresas,
+  GanchoDeSucursal,
+  TxDeConsultasDeEmpresas,
+  TxDeEmpresas,
+} from "../../src/modulos/empresas/publico";
 import type {
   TxDeCertificados,
   TxDeConfiguracionFiscal,
@@ -57,6 +67,22 @@ describe("la Tx compuesta de la composición contiene la Tx angosta de cada mód
     expectTypeOf<TxDeApp>().toExtend<TxDeConsultasDeCaja>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeCaja>>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConsultasDeCaja>>();
+  });
+
+  it("caja por defecto: la Tx compuesta sirve al gancho de sucursal de caja y los ganchos de empresas son obligatorios", () => {
+    expectTypeOf<TxDeApp>().toExtend<TxParaCajaPorDefecto>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeEmpresas & TxParaCajaPorDefecto>();
+    // El gancho de caja entra en la lista que arma la composición (`GanchosDeSucursal<TxDeEmpresas>`).
+    expectTypeOf(ganchoDeSucursalDeCaja).toExtend<GanchoDeSucursal<TxDeEmpresas>>();
+    // Obligatorio (e3 §3.2.1): `[]` explícito si no hay ninguno; omitirlo no compila.
+    expectTypeOf<DependenciasDeEmpresas>().toHaveProperty("ganchosDeSucursal");
+    expectTypeOf<undefined>().not.toExtend<DependenciasDeEmpresas["ganchosDeSucursal"]>();
+    // @ts-expect-error sin `ganchosDeSucursal` no son unas dependencias de empresas
+    const sinGanchos: DependenciasDeEmpresas = {
+      transacciones: {} as DependenciasDeEmpresas["transacciones"],
+      reglas: {} as DependenciasDeEmpresas["reglas"],
+    };
+    expect(sinGanchos).toBeDefined();
   });
 
   it("fiscal: facturación, consultas, configuración, certificados y lo que descifra el adaptador de ARCA", () => {

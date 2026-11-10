@@ -12,6 +12,7 @@ import { armarCrearCaja } from "./crear-caja";
 import { armarCrearCuentaDeCobro } from "./crear-cuenta-de-cobro";
 import { armarCrearMedioDePago } from "./crear-medio-de-pago";
 import type { DECLARACIONES } from "./declaraciones";
+import { armarAsegurarCajaPorDefecto } from "./caja-por-defecto";
 import { armarEditarCaja } from "./editar-caja";
 import { armarEditarCuentaDeCobro } from "./editar-cuenta-de-cobro";
 import { armarEditarMedioDePago } from "./editar-medio-de-pago";
@@ -24,6 +25,7 @@ import { armarEditarMedioDePago } from "./editar-medio-de-pago";
 export function crearCasosDeUsoDeCaja(dependencias: DependenciasDeCaja) {
   return {
     crearCaja: armarCrearCaja(dependencias),
+    asegurarCajaPorDefecto: armarAsegurarCajaPorDefecto(dependencias),
     editarCaja: armarEditarCaja(dependencias),
     desactivarCaja: armarDesactivarCaja(dependencias),
     reactivarCaja: armarReactivarCaja(dependencias),

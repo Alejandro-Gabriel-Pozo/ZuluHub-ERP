@@ -18,6 +18,16 @@ export const DECLARACIONES = {
       },
     },
   },
+  asegurarCajaPorDefecto: {
+    accion: "sesiones_caja.abrir",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: "test/integracion/caja-por-defecto.test.ts",
+        it: "asegurarCajaPorDefecto dos veces: la segunda devuelve la misma caja con creada false y no escribe ni audita",
+      },
+    },
+  },
   editarCaja: {
     accion: "cajas.editar",
     repeticion: {

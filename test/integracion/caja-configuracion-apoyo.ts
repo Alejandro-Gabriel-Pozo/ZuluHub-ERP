@@ -30,9 +30,13 @@ import {
   type TxDeConsultasDeCaja,
 } from "../../src/modulos/caja/publico";
 import {
+  crearCasosDeUsoDeEmpresas,
   crearLecturaDeSucursalBloqueada,
   crearRepositorioDeEmpresas,
+  crearRepositorioDeSucursales,
   type EmpresasDb,
+  type GanchosDeSucursal,
+  type TxDeEmpresas,
 } from "../../src/modulos/empresas/publico";
 import { crearLecturaDePlanes, type PlanesDb } from "../../src/modulos/planes/publico";
 import { crearRepositorioDeTenants, type TenantsDb } from "../../src/modulos/tenants/publico";
@@ -68,7 +72,10 @@ export const REGLAS_DE_CAJA: ReglasDeEmpresa = {
   permisos: PERMISOS_DE_EMPRESA,
 };
 
-export type TxDeCajaDePrueba = TxDeCaja & TxDeConsultasDeCaja & Readonly<{ db: Kysely<SinTablas> }>;
+export type TxDeCajaDePrueba = TxDeCaja &
+  TxDeConsultasDeCaja &
+  TxDeEmpresas &
+  Readonly<{ db: Kysely<SinTablas> }>;
 
 /**
  * Las transacciones de la puerta de la aplicación con lo que piden los casos de uso y las consultas de caja. `ajustar` envuelve lo que
@@ -87,6 +94,7 @@ export function crearEntornoDeCaja(
       db,
       tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
       empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
+      sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
       cajas: crearRepositorioDeCajas(db.withTables<CajaDb>()),
       mediosDePago: crearRepositorioDeMediosDePago(db.withTables<CajaDb>()),
       cuentasDeCobro: crearRepositorioDeCuentasDeCobro(db.withTables<CajaDb>()),
@@ -117,6 +125,15 @@ export function armarCaja(
     casos: crearCasosDeUsoDeCaja({ transacciones: entorno, reglas }),
     consultas: crearConsultasDeCaja({ transacciones: entorno, reglas }),
   };
+}
+
+/** Los casos de uso de empresas sobre las mismas transacciones, con los ganchos de sucursal dados (la composición registra el de caja). */
+export function armarEmpresasConGanchos(
+  entorno: TransaccionesDePostgres<TxDeCajaDePrueba>,
+  ganchosDeSucursal: GanchosDeSucursal<TxDeEmpresas>,
+  reglas: ReglasDeEmpresa = REGLAS_DE_CAJA,
+) {
+  return crearCasosDeUsoDeEmpresas({ transacciones: entorno, reglas, ganchosDeSucursal });
 }
 
 export type MundoDeCaja = Readonly<{

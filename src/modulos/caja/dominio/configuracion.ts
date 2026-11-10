@@ -55,6 +55,13 @@ export const LARGO_MAXIMO_DEL_NOMBRE_DE_CUENTA = 60;
 // fuente-unica: ajeno — el 40 es el de `cuenta_de_cobro_identificador_ck`, no el del teléfono (`LARGO_MAXIMO_DEL_TELEFONO`): otro dato
 export const LARGO_MAXIMO_DEL_IDENTIFICADOR_EXTERNO = 40;
 
+/**
+ * El nombre de la caja que nace sola con la sucursal (decisión 165; e3 §3.2.1): una sola constante para el gancho de `crearSucursal` y
+ * para el disparador `asegurarCajaPorDefecto`. Previene que los dos caminos la nombren distinto y la sucursal termine con dos cajas.
+ * Chequeo: `configuracion.test.ts` (es un nombre válido) y `caja-por-defecto.test.ts` (los dos caminos dejan «Caja 1»).
+ */
+export const NOMBRE_DE_LA_CAJA_POR_DEFECTO = "Caja 1";
+
 export type ErrorDeNombreDeCaja = "NOMBRE_DE_CAJA_INVALIDO";
 export type ErrorDeNombreDeMedio = "NOMBRE_DE_MEDIO_INVALIDO";
 export type ErrorDeNombreDeCuenta = "NOMBRE_DE_CUENTA_INVALIDO";

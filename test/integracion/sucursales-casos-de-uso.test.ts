@@ -74,7 +74,11 @@ describe.skipIf(base === null)(
       entorno = crearEntornoDePrueba(propia.base, 10);
       dueno = new pg.Client({ connectionString: propia.base.dueno });
       await dueno.connect();
-      casos = crearCasosDeUsoDeEmpresas({ transacciones: entorno, reglas: REGLAS_DE_EMPRESA });
+      casos = crearCasosDeUsoDeEmpresas({
+        transacciones: entorno,
+        reglas: REGLAS_DE_EMPRESA,
+        ganchosDeSucursal: [],
+      });
       const espia: Transacciones<TxDePrueba> = {
         ejecutar: (opciones, trabajo) => {
           opcionesVistas.push(opciones);
@@ -383,6 +387,7 @@ describe.skipIf(base === null)(
           const roto = crearCasosDeUsoDeEmpresas({
             transacciones: falla,
             reglas: REGLAS_DE_EMPRESA,
+            ganchosDeSucursal: [],
           });
           const antes = await foto(e.empresa);
           await expect(roto.crearSucursal(e.ctx, { nombre: "Sucursal norte" })).rejects.toThrow(

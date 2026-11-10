@@ -1494,6 +1494,19 @@ describe("E0-T5: sentido de las dependencias entre módulos de base, ventas y ci
     expect(prohibido).toContain("empresas-sin-negocio");
   });
 
+  it("el puerto de ganchos de sucursal (`ganchos-de-sucursal.ts`) tampoco puede importar caja: caja implementa el puerto, empresas no lo conoce", async () => {
+    const prohibido = await violacionesDe({
+      "src/modulos/empresas/ganchos-de-sucursal.ts": importa("./../caja/publico"),
+      "src/modulos/caja/publico.ts": exporta,
+    });
+    expect(prohibido).toContain("empresas-sin-negocio");
+    const permitido = await violacionesDe({
+      "src/modulos/empresas/publico.ts": exporta,
+      "src/modulos/caja/gancho-de-sucursal.ts": importa("../empresas/publico"),
+    });
+    expect(permitido).not.toContain("empresas-sin-negocio");
+  });
+
   it("cierre sí usa empresas y los módulos de negocio sí usan cierre por su publico.ts", async () => {
     const v = await violacionesDe({
       "src/modulos/empresas/publico.ts": exporta,

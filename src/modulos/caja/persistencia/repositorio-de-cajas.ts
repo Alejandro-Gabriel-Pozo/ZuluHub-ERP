@@ -23,6 +23,16 @@ export interface RepositorioDeCajas {
   contarActivas(empresa: EmpresaId, sucursal: SucursalId): Promise<number>;
   /** Alta de una caja activa. Un nombre repetido sale como error de unicidad (`caja_nombre_uk`). */
   crear(empresa: EmpresaId, sucursal: SucursalId, nombre: string): Promise<Caja>;
+  /**
+   * La primera caja de la sucursal por nombre e id, ACTIVA O NO (con una desactivada o renombrada la sucursal ya tiene caja); `null` si no
+   * tiene ninguna. Es lo que mira la caja por defecto antes de insertar.
+   */
+  primeraDeLaSucursal(empresa: EmpresaId, sucursal: SucursalId): Promise<Caja | null>;
+  /**
+   * Alta de una caja activa con `INSERT ... ON CONFLICT DO NOTHING` sobre la única de nombre: `null` si ya había una con ese nombre en la
+   * sucursal (otra transacción la insertó antes). La usa la caja por defecto, que no debe fallar por un doble ingreso.
+   */
+  crearSiNoExiste(empresa: EmpresaId, sucursal: SucursalId, nombre: string): Promise<Caja | null>;
   /** Las cajas de la sucursal ordenadas por nombre e id; sin las inactivas salvo que se pidan. Solo lectura. */
   listarDeLaSucursal(
     empresa: EmpresaId,
@@ -98,6 +108,29 @@ export function crearRepositorioDeCajas(db: Kysely<CajaDb>): RepositorioDeCajas 
         .returningAll()
         .executeTakeFirstOrThrow();
       return aCaja(fila);
+    },
+
+    async primeraDeLaSucursal(empresa, sucursal) {
+      const fila = await db
+        .selectFrom("caja")
+        .selectAll()
+        .where("empresa_id", "=", empresa)
+        .where("sucursal_id", "=", sucursal)
+        .orderBy("nombre")
+        .orderBy("id")
+        .limit(1)
+        .executeTakeFirst();
+      return fila === undefined ? null : aCaja(fila);
+    },
+
+    async crearSiNoExiste(empresa, sucursal, nombre) {
+      const fila = await db
+        .insertInto("caja")
+        .values({ empresa_id: empresa, sucursal_id: sucursal, nombre })
+        .onConflict((oc) => oc.doNothing())
+        .returningAll()
+        .executeTakeFirst();
+      return fila === undefined ? null : aCaja(fila);
     },
 
     async listarDeLaSucursal(empresa, sucursal, opciones) {

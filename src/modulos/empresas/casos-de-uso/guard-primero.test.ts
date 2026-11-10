@@ -60,7 +60,7 @@ const casosCon = (vigilada: Vigilada, reglas: ReglasDeEmpresa = REGLAS_DE_EMPRES
   const transacciones: Transacciones<TxDeEmpresas> = {
     ejecutar: (_opciones, trabajo) => trabajo(vigilada.tx),
   };
-  return crearCasosDeUsoDeEmpresas({ transacciones, reglas });
+  return crearCasosDeUsoDeEmpresas({ transacciones, reglas, ganchosDeSucursal: [] });
 };
 
 const consultasCon = (vigilada: Vigilada, reglas: ReglasDeEmpresa = REGLAS_DE_EMPRESA) => {

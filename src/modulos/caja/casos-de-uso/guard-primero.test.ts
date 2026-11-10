@@ -89,6 +89,7 @@ const NADA = { cupon: false, ultimos4: false, marca: false, cuotas: false, dni: 
 /** Cómo se llama a cada caso de uso. Un caso de uso nuevo con acción obliga a sumar su fila. */
 const LLAMADAS: Record<ConAccion, (casos: CasosDeUsoDeCaja) => Promise<unknown>> = {
   crearCaja: (c) => c.crearCaja(contexto, { sucursalId: UUID, nombre: "Caja 2" }),
+  asegurarCajaPorDefecto: (c) => c.asegurarCajaPorDefecto(contexto, { sucursalId: UUID }),
   editarCaja: (c) => c.editarCaja(contexto, { cajaId: UUID, versionEsperada: 1, nombre: "Caja 3" }),
   desactivarCaja: (c) => c.desactivarCaja(contexto, { cajaId: UUID }),
   reactivarCaja: (c) => c.reactivarCaja(contexto, { cajaId: UUID }),
@@ -177,7 +178,7 @@ const todos: Entrada[] = [...casos, ...consultas];
 describe("P7: el guard va primero en cada caso de uso y consulta de caja", () => {
   it("hay casos de uso y consultas con acción que probar, uno por cada declarado", () => {
     expect(casos).toHaveLength(Object.keys(DECLARACIONES).length);
-    expect(casos).toHaveLength(12);
+    expect(casos).toHaveLength(13);
     expect(consultas.map((c) => c.nombre).sort()).toEqual([
       "listarCajas",
       "listarCuentasDeCobro",
@@ -265,6 +266,7 @@ describe("cada caso de uso y cada consulta exigen SU acción (no la de otro)", (
     const acciones = Object.fromEntries(casos.map((c) => [c.nombre, c.accion]));
     expect(acciones).toEqual({
       crearCaja: "cajas.crear",
+      asegurarCajaPorDefecto: "sesiones_caja.abrir",
       editarCaja: "cajas.editar",
       desactivarCaja: "cajas.desactivar",
       reactivarCaja: "cajas.reactivar",
@@ -316,6 +318,7 @@ describe("los demás motivos del guard salen tal cual", () => {
       modulosHabilitados: [],
     };
     const creaOAmplia = new Set<ClaveAccion>([
+      "sesiones_caja.abrir",
       "cajas.crear",
       "cajas.editar",
       "cajas.reactivar",

@@ -91,6 +91,7 @@ describe.skipIf(base === null)(
       casosDeEmpresas = crearCasosDeUsoDeEmpresas({
         transacciones: entorno,
         reglas: REGLAS_DE_EMPRESA,
+        ganchosDeSucursal: [],
       });
     }, LIMITE_EN_MS);
     afterAll(async () => {

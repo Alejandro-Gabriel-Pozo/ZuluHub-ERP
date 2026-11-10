@@ -195,6 +195,15 @@ export { DECLARACIONES as DECLARACIONES_DE_CAJA } from "./casos-de-uso/declaraci
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_CAJA } from "./consultas/declaraciones";
 export { crearCasosDeUsoDeCaja, type CasosDeUsoDeCaja } from "./casos-de-uso/casos-de-uso";
 export type { DependenciasDeCaja, TxDeCaja } from "./casos-de-uso/contrato";
+export {
+  asegurarCajaPorDefectoEnTx,
+  type EntradaDeAsegurarCajaPorDefecto,
+  type ErrorAlAsegurarCajaPorDefecto,
+  type SalidaDeAsegurarCaja,
+  type SalidaDeAsegurarCajaPorDefecto,
+  type TxParaCajaPorDefecto,
+} from "./casos-de-uso/caja-por-defecto";
+export { ganchoDeSucursalDeCaja } from "./gancho-de-sucursal";
 export type {
   EntradaDeCrearCaja,
   ErrorAlCrearCaja,

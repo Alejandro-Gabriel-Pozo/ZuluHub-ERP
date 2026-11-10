@@ -56,7 +56,11 @@ describe.skipIf(base === null)("jornada de la sucursal: hora de corte y datosDeJ
     entorno = crearEntornoDePrueba(propia.base, 12, (tx) => gancho(tx, () => barrera()));
     dueno = new pg.Client({ connectionString: propia.base.dueno });
     await dueno.connect();
-    casos = crearCasosDeUsoDeEmpresas({ transacciones: entorno, reglas: REGLAS_DE_EMPRESA });
+    casos = crearCasosDeUsoDeEmpresas({
+      transacciones: entorno,
+      reglas: REGLAS_DE_EMPRESA,
+      ganchosDeSucursal: [],
+    });
     consultas = crearConsultasDeEmpresas({ transacciones: entorno, reglas: REGLAS_DE_EMPRESA });
   });
   afterAll(async () => {
@@ -283,7 +287,11 @@ describe.skipIf(base === null)("jornada de la sucursal: hora de corte y datosDeJ
         },
       }));
       try {
-        const roto = crearCasosDeUsoDeEmpresas({ transacciones: falla, reglas: REGLAS_DE_EMPRESA });
+        const roto = crearCasosDeUsoDeEmpresas({
+          transacciones: falla,
+          reglas: REGLAS_DE_EMPRESA,
+          ganchosDeSucursal: [],
+        });
         await expect(
           roto.editarSucursal(e.ctx, {
             sucursalId: e.sucursal,

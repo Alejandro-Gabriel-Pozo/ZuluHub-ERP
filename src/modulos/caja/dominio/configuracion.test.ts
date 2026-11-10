@@ -15,6 +15,7 @@ import {
   decidirEdicionDeCuenta,
   decidirEdicionDeMedio,
   identificadorExternoValido,
+  NOMBRE_DE_LA_CAJA_POR_DEFECTO,
   nombreDeCajaValido,
   nombreDeCuentaValido,
   nombreDeMedioValido,
@@ -199,6 +200,16 @@ describe("los tipos", () => {
         error: "TIPO_DE_CUENTA_INVALIDO",
       });
     }
+  });
+});
+
+describe("la caja por defecto (decisión 165)", () => {
+  it("se llama «Caja 1» y es un nombre de caja válido tal cual (la base lo acepta igual)", () => {
+    expect(NOMBRE_DE_LA_CAJA_POR_DEFECTO).toBe("Caja 1");
+    expect(nombreDeCajaValido(NOMBRE_DE_LA_CAJA_POR_DEFECTO)).toEqual({
+      ok: true,
+      valor: "Caja 1",
+    });
   });
 });
 

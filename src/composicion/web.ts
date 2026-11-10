@@ -5,7 +5,11 @@ import {
 } from "../adaptadores/certificados/lector-x509";
 import { CADENAS_DE_CONFIANZA_DE_ARCA } from "./cadenas-de-confianza-de-arca";
 import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../capacidades/permisos/empresa";
-import { crearCasosDeUsoDeCaja, crearConsultasDeCaja } from "../modulos/caja/publico";
+import {
+  crearCasosDeUsoDeCaja,
+  crearConsultasDeCaja,
+  ganchoDeSucursalDeCaja,
+} from "../modulos/caja/publico";
 import { crearCasosDeUsoDeCierre, crearConsultasDeCierre } from "../modulos/cierre/publico";
 import { crearCasosDeUsoDeEmpresas, crearConsultasDeEmpresas } from "../modulos/empresas/publico";
 import {
@@ -81,8 +85,8 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
       crearCasosDeUsoDeEmpresas({
         transacciones: conexiones.transaccionesDeApp(),
         reglas,
-        // Lo que nace con cada sucursal (decisión 165). Vacío mientras `caja` no exista: ahí se registra su gancho.
-        ganchosDeSucursal: [],
+        // Lo que nace con cada sucursal (decisión 165): «Caja 1», en la misma transacción que la sucursal.
+        ganchosDeSucursal: [ganchoDeSucursalDeCaja],
       }),
     ),
     consultasDeEmpresas: perezoso(() =>
@@ -109,7 +113,7 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
     /**
      * La configuración de caja (E3): cajas, medios de pago y cuentas de cobro, cada caso con su acción de `caja`. El módulo sigue «en
      * desarrollo» en el catálogo: el guard lo rechaza con `MODULO_EN_DESARROLLO` hasta que el tramo final lo declare disponible.
-     * La operación (sesiones, movimientos, cobro) y el gancho de la caja por defecto los suman los tramos siguientes.
+     * La operación (sesiones, movimientos, cobro) la suman los tramos siguientes.
      */
     casosDeUsoDeCaja: perezoso(() =>
       crearCasosDeUsoDeCaja({ transacciones: conexiones.transaccionesDeApp(), reglas }),

@@ -54,7 +54,11 @@ describe.skipIf(base === null)("sucursales: concurrencia de los casos de uso (S1
     entorno = crearEntornoDePrueba(propia.base, 12, (tx) => gancho(tx, () => barrera()));
     dueno = new pg.Client({ connectionString: propia.base.dueno });
     await dueno.connect();
-    casos = crearCasosDeUsoDeEmpresas({ transacciones: entorno, reglas: REGLAS_DE_EMPRESA });
+    casos = crearCasosDeUsoDeEmpresas({
+      transacciones: entorno,
+      reglas: REGLAS_DE_EMPRESA,
+      ganchosDeSucursal: [],
+    });
   });
   afterAll(async () => {
     await dueno.end();
