@@ -738,6 +738,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "descuento",
           "alicuota",
           "importe",
+          "unidad", // 0029
         ].map((c) => `comprobante_linea.${c}`),
         ...["empresa_id", "comprobante_id", "alicuota", "total", "neto", "iva"].map(
           (c) => `comprobante_alicuota.${c}`,
