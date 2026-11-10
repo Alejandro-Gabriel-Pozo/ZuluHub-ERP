@@ -6,9 +6,11 @@ import type { TxDeTickets } from "../../src/adaptadores/certificados/almacen-de-
 import type { TxDeVerificacion } from "../../src/adaptadores/certificados/verificacion-de-autorizacion";
 import type { TxDeCatalogo, TxDeConsultasDeCatalogo } from "../../src/modulos/catalogo/publico";
 import type {
+  TxDeAporteDeCaja,
   TxDeCaja,
   TxDeConsultasDeCaja,
   TxDeLecturaDeCaja,
+  TxDeLecturaDeLaJornada,
   TxParaCajaPorDefecto,
 } from "../../src/modulos/caja/publico";
 import { ganchoDeSucursalDeCaja } from "../../src/modulos/caja/publico";
@@ -75,6 +77,17 @@ describe("la Tx compuesta de la composición contiene la Tx angosta de cada mód
     expectTypeOf<TxDeLecturaDeCaja>().not.toExtend<TxDeCaja>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeCaja>>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConsultasDeCaja>>();
+  });
+
+  it("caja en el cierre del día: el aporte (leer y congelar) y la lectura de la jornada salen de la compuesta, y la lectura no alcanza para congelar", () => {
+    expectTypeOf<TxDeApp>().toExtend<TxDeAporteDeCaja>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeLecturaDeLaJornada>();
+    expectTypeOf<TxDeAporteDeCaja>().toExtend<TxDeLecturaDeLaJornada>();
+    expectTypeOf<TxDeLecturaDeLaJornada>().not.toExtend<TxDeAporteDeCaja>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeCierre & TxDeAporteDeCaja>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<
+      Transacciones<TxDeConsultasDeCierre & TxDeAporteDeCaja>
+    >();
   });
 
   it("caja por defecto: la Tx compuesta sirve al gancho de sucursal de caja y los ganchos de empresas son obligatorios", () => {

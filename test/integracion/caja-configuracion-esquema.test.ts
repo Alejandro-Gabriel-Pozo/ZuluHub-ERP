@@ -64,6 +64,24 @@ const RESTRICCIONES_DE_DISPARADORES = [
   "cobro_clase_invalida",
   "cobro_dato_no_habilitado",
   "cobro_marca_invalida",
+  // El cierre del día (tramo 8): corrección de medio, declaración, conforme general y la foto que caja congela.
+  "correccion_de_medio_actor_invalido",
+  "correccion_de_medio_cobro_invalido",
+  "correccion_de_medio_jornada_invalida",
+  "correccion_de_medio_jornada_no_en_auditoria",
+  "correccion_de_medio_secuencia_invalida",
+  "correccion_de_medio_antes_no_vigente",
+  "declaracion_de_total_actor_invalido",
+  "declaracion_de_total_jornada_no_en_auditoria",
+  "declaracion_de_total_medio_no_declarable",
+  "declaracion_de_total_secuencia_invalida",
+  "conforme_de_jornada_actor_invalido",
+  "conforme_de_jornada_jornada_no_en_auditoria",
+  "cierre_de_caja_actor_invalido",
+  "cierre_de_caja_solo_al_cerrar",
+  "caja_conciliacion_incompleta",
+  "caja_conciliacion_no_cuadra",
+  "conciliacion_de_jornada_conteo_invalido",
 ];
 
 /**
@@ -81,7 +99,14 @@ const SUFIJOS_DEL_PAR_DE_COBRO = [
   "cuenta_incompatible",
 ];
 
-/** Las tablas cuyas columnas declara el esquema (`valor_de_lista` y `correccion_de_medio` solo se leen: sus restricciones las traducen la plataforma y el tramo de la corrección). */
+/** Las tablas que llaman a `par_de_cobro_validar` con su nombre: el movimiento, la corrección de medio y la declaración de total. */
+const TABLAS_QUE_USAN_EL_PAR_DE_COBRO = [
+  "movimiento_caja",
+  "correccion_de_medio",
+  "declaracion_de_total",
+] as const;
+
+/** Las tablas cuyas columnas declara el esquema (`valor_de_lista` solo se lee: sus restricciones las traduce la plataforma). */
 const TABLAS = [
   "caja",
   "medio_de_pago",
@@ -93,6 +118,11 @@ const TABLAS = [
   "arqueo_billete",
   "valor_de_lista",
   "correccion_de_medio",
+  "declaracion_de_total",
+  "conforme_de_jornada",
+  "cierre_de_caja_de_jornada",
+  "conciliacion_de_jornada",
+  "conciliacion_de_cobro_por_origen",
 ] as const;
 /** Las tablas cuyas restricciones tienen su traducción a un error de negocio. */
 const TABLAS_CON_TRADUCCION = [
@@ -104,6 +134,12 @@ const TABLAS_CON_TRADUCCION = [
   "cobro",
   "arqueo_caja",
   "arqueo_billete",
+  "correccion_de_medio",
+  "declaracion_de_total",
+  "conforme_de_jornada",
+  "cierre_de_caja_de_jornada",
+  "conciliacion_de_jornada",
+  "conciliacion_de_cobro_por_origen",
 ] as const;
 
 describe.skipIf(base === null)(
@@ -167,7 +203,9 @@ describe.skipIf(base === null)(
             (n) =>
               !existentes.has(n) &&
               !RESTRICCIONES_DE_DISPARADORES.includes(n) &&
-              !SUFIJOS_DEL_PAR_DE_COBRO.some((sufijo) => n === `movimiento_caja_${sufijo}`),
+              !TABLAS_QUE_USAN_EL_PAR_DE_COBRO.some((tabla) =>
+                SUFIJOS_DEL_PAR_DE_COBRO.some((sufijo) => n === `${tabla}_${sufijo}`),
+              ),
           )
           .sort(),
         "traducciones de restricciones que no existen",
@@ -178,17 +216,21 @@ describe.skipIf(base === null)(
         where p.proname in ('caja_validar_cambio', 'medio_de_pago_validar_cambio', 'cuenta_de_cobro_validar_cambio',
                             'sesion_caja_validar_alta', 'sesion_caja_validar_cambio', 'sesion_caja_verificar_cierre',
                             'movimiento_caja_validar_alta', 'movimiento_caja_verificar_documento', 'cobro_validar_alta',
-                            'arqueo_caja_validar_alta', 'arqueo_billete_validar_alta', 'arqueo_verificar_sesion_cerrada')`,
+                            'arqueo_caja_validar_alta', 'arqueo_billete_validar_alta', 'arqueo_verificar_sesion_cerrada',
+                            'correccion_de_medio_validar_alta', 'declaracion_de_total_validar_alta', 'conforme_de_jornada_validar_alta',
+                            'cierre_de_caja_validar_alta', 'conciliacion_de_jornada_validar_alta', 'cierre_de_caja_verificar')`,
       );
       const { rows: par } = await dueno.query<{ cuerpo: string }>(
         "select pg_get_functiondef(p.oid) as cuerpo from pg_proc p where p.proname = 'par_de_cobro_validar'",
       );
       for (const sufijo of SUFIJOS_DEL_PAR_DE_COBRO) {
         expect(par[0]?.cuerpo.includes(`p_tabla || '_${sufijo}'`), sufijo).toBe(true);
-        expect(
-          ERRORES_DE_CAJA_POR_RESTRICCION[`movimiento_caja_${sufijo}`],
-          `movimiento_caja_${sufijo}`,
-        ).toBeDefined();
+        // Cada tabla que llama a `par_de_cobro_validar` con su nombre tiene la traducción de cada sufijo, y la misma que el movimiento.
+        for (const tabla of TABLAS_QUE_USAN_EL_PAR_DE_COBRO) {
+          expect(ERRORES_DE_CAJA_POR_RESTRICCION[`${tabla}_${sufijo}`], `${tabla}_${sufijo}`).toBe(
+            ERRORES_DE_CAJA_POR_RESTRICCION[`movimiento_caja_${sufijo}`],
+          );
+        }
       }
       for (const nombre of RESTRICCIONES_DE_DISPARADORES) {
         expect(

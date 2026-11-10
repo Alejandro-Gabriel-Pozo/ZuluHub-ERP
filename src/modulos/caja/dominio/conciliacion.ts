@@ -202,13 +202,16 @@ export function conciliarJornada(entrada: EntradaDeConciliacion): readonly Linea
 }
 
 /**
- * Cuántas líneas hay que explicar en el control `caja.conciliacion_por_medio`: las de diferencia distinta de cero o sin dato. Las
- * `CONFORME` no cuentan (no hay diferencia que explicar).
+ * ¿Hay que explicar esta línea? Sí si no hay dato o si la diferencia es distinta de cero. Las `CONFORME` no (no hay diferencia que
+ * explicar). Es lo que cuenta `caja.conciliacion_por_medio` y a lo que se copia la explicación al congelar.
  */
+export function lineaPorExplicar(l: Pick<LineaDeConciliacion, "estado" | "diferencia">): boolean {
+  return l.estado === "SIN_DATO" || (l.diferencia !== null && l.diferencia.unidades !== 0n);
+}
+
+/** Cuántas líneas hay que explicar en el control `caja.conciliacion_por_medio` (ver `lineaPorExplicar`). */
 export function cantidadDeLineasPorExplicar(
   lineas: readonly Pick<LineaDeConciliacion, "estado" | "diferencia">[],
 ): number {
-  return lineas.filter(
-    (l) => l.estado === "SIN_DATO" || (l.diferencia !== null && l.diferencia.unidades !== 0n),
-  ).length;
+  return lineas.filter(lineaPorExplicar).length;
 }

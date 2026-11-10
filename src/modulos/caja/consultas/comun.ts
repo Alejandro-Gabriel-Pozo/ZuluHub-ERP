@@ -98,3 +98,9 @@ export function sesionDeConsulta(sesion: SesionGuardada): SesionDeConsulta {
     cerradaPor: sesion.cerradaPor,
   };
 }
+
+/**
+ * Tope de filas por pedido de toda lista paginada de caja (e3 §3.10 y e3b §4.5): acota lo que lee y devuelve una consulta. Un solo lugar:
+ * los movimientos de una sesión, los cobros de una jornada y los orígenes cobrados lo toman de acá.
+ */
+export const MAXIMO_DE_UNA_PAGINA = 100;

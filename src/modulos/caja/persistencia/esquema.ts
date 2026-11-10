@@ -1,12 +1,13 @@
 import type { Generated } from "kysely";
 import type { ClaseDeMovimiento, EstadoDeSesion, TipoDeCuenta, TipoDeMedio } from "../estados";
+import { COLUMNAS_DEL_CIERRE_DE_CAJA, type TablasDelCierreDeCaja } from "./esquema-del-cierre";
 
 /**
  * Tablas de caja (0027): la configuración (`caja`, `medio_de_pago`, `cuenta_de_cobro`) y la operación (`sesion_caja`, `movimiento_caja`,
  * `arqueo_caja`, `arqueo_billete` y `cobro`, que escribe el puerto de cobrar) y, de solo lectura para la app, `valor_de_lista` (las marcas de
- * tarjeta) y `correccion_de_medio` (el medio vigente de un cobro; la corrección la escribe el tramo siguiente). Las fechas (`date`) y las horas (`time`) se leen y escriben como texto; los importes (`numeric`) también: nunca `number`.
+ * tarjeta) y `correccion_de_medio` (el medio vigente de un cobro y su corrección) y, en `esquema-del-cierre.ts`, lo de la contribución al cierre del día. Las fechas (`date`) y las horas (`time`) se leen y escriben como texto; los importes (`numeric`) también: nunca `number`.
  */
-export type CajaDb = {
+export type CajaDb = TablasDelCierreDeCaja & {
   caja: {
     id: Generated<string>;
     empresa_id: string;
@@ -284,4 +285,5 @@ export const COLUMNAS_DE_CAJA = {
     "huella",
     "creado_en",
   ],
+  ...COLUMNAS_DEL_CIERRE_DE_CAJA,
 } as const;

@@ -15,6 +15,9 @@ import { armarCerrarSesion } from "./cerrar-sesion";
 import { armarCrearCaja } from "./crear-caja";
 import { armarCrearCuentaDeCobro } from "./crear-cuenta-de-cobro";
 import { armarCrearMedioDePago } from "./crear-medio-de-pago";
+import { armarCorregirMedioDeCobro } from "./corregir-medio-de-cobro";
+import { armarDarConformeGeneral } from "./dar-conforme-general";
+import { armarDeclararTotal } from "./declarar-total";
 import type { DECLARACIONES } from "./declaraciones";
 import { armarAsegurarCajaPorDefecto } from "./caja-por-defecto";
 import { armarEditarCaja } from "./editar-caja";
@@ -28,7 +31,7 @@ import { armarRegistrarMovimientoManual } from "./registrar-movimiento-manual";
  * Los casos de uso de la caja, listos para que la composición los ofrezca. El `satisfies` exige que sean EXACTAMENTE los que declara
  * `DECLARACIONES` (qué acción exige cada uno y cómo se repite): uno nuevo sin declarar, o una declaración sin caso de uso, no compila.
  * La configuración (cajas, medios de pago y cuentas de cobro) y la operación de la caja (sesión, cierre, movimientos manuales, ajustes y
- * anulaciones); el cobro lo suma el tramo siguiente.
+ * anulaciones) y la contribución al cierre del día (corregir el medio de un cobro, declarar un total y el «conforme general»).
  */
 export function crearCasosDeUsoDeCaja(dependencias: DependenciasDeCaja) {
   return {
@@ -52,6 +55,9 @@ export function crearCasosDeUsoDeCaja(dependencias: DependenciasDeCaja) {
     registrarMovimientoManual: armarRegistrarMovimientoManual(dependencias),
     registrarAjuste: armarRegistrarAjuste(dependencias),
     anularMovimientoDeCaja: armarAnularMovimientoDeCaja(dependencias),
+    corregirMedioDeCobro: armarCorregirMedioDeCobro(dependencias),
+    declararTotal: armarDeclararTotal(dependencias),
+    darConformeGeneral: armarDarConformeGeneral(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

@@ -192,3 +192,49 @@ describe("qué datos admite cada tipo de medio (medio_de_pago_datos_ck)", () => 
     expect(DATOS_ADMITIDOS_POR_MEDIO).toEqual(esperada);
   });
 });
+
+describe("validarParDeCobro sin exigir activos (declarar un total: el par pudo tener actividad y desactivarse)", () => {
+  const cuentaInactiva: CuentaVista = { tipo: "TERMINAL", activa: false, sucursalId: "s1" };
+  const validar = (exigirActivos: boolean | undefined, medioActivo: boolean, cuenta: CuentaVista) =>
+    validarParDeCobro({
+      medio: { tipo: "TARJETA_DEBITO", activo: medioActivo },
+      cuentaDeCobroId: "c1",
+      cuenta,
+      sucursalDeLaCaja: "s1",
+      ...(exigirActivos === undefined ? {} : { exigirActivos }),
+    });
+
+  it("por omisión (y con true) exige el medio y la cuenta activos", () => {
+    for (const exigir of [undefined, true]) {
+      expect(validar(exigir, false, { ...cuentaInactiva, activa: true })).toEqual({
+        ok: false,
+        error: "MEDIO_INACTIVO",
+      });
+      expect(validar(exigir, true, cuentaInactiva)).toEqual({
+        ok: false,
+        error: "CUENTA_DE_COBRO_INACTIVA",
+      });
+    }
+  });
+
+  it("con false acepta un medio y una cuenta desactivados, pero el resto de las reglas siguen", () => {
+    expect(validar(false, false, cuentaInactiva)).toEqual({ ok: true, valor: "TARJETA_DEBITO" });
+    expect(validar(false, true, { ...cuentaInactiva, sucursalId: "s2" })).toEqual({
+      ok: false,
+      error: "CUENTA_DE_COBRO_DE_OTRA_SUCURSAL",
+    });
+    expect(validar(false, true, { ...cuentaInactiva, tipo: "QR" })).toEqual({
+      ok: false,
+      error: "CUENTA_DE_COBRO_INCOMPATIBLE",
+    });
+    expect(
+      validarParDeCobro({
+        medio: null,
+        cuentaDeCobroId: null,
+        cuenta: null,
+        sucursalDeLaCaja: "s1",
+        exigirActivos: false,
+      }),
+    ).toEqual({ ok: false, error: "MEDIO_NO_ENCONTRADO" });
+  });
+});

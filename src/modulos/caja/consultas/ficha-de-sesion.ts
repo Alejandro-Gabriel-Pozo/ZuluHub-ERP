@@ -3,6 +3,8 @@ import { importeAJson, type Importe, type ImporteJson } from "../../../primitiva
 import { ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { TipoDeMedio } from "../estados";
+import type { ArqueoGuardado } from "../persistencia/repositorio-de-arqueos";
+import type { SesionGuardada } from "../persistencia/repositorio-de-sesiones";
 import {
   exigirPermisoDeConsulta,
   sesionDeConsulta,
@@ -49,6 +51,31 @@ export type ErrorAlVerLaFicha = ErrorDeConsultaDeSesion | ErrorDePersistencia;
 const jsonONulo = (importe: Importe | null): ImporteJson | null =>
   importe === null ? null : importeAJson(importe);
 
+/** La ficha de una sesión con su arqueo guardado: la de `fichaDeSesion` y la de cada sesión de `sesionesDeLaJornada` (una regla). */
+export function fichaDe(sesion: SesionGuardada, arqueo: ArqueoGuardado): FichaDeSesion {
+  return {
+    sesion: sesionDeConsulta(sesion),
+    zonaHoraria: sesion.zonaHoraria,
+    horaDeCorte: sesion.horaDeCorte,
+    observacion: sesion.observacion,
+    arqueo: arqueo.lineas.map((l) => ({
+      medioDePagoId: l.medioDePagoId,
+      medioTipo: l.medioTipo,
+      medioNombre: l.medioNombre,
+      cuentaDeCobroId: l.cuentaDeCobroId,
+      cuentaNombre: l.cuentaNombre,
+      esperado: importeAJson(l.esperado),
+      contado: jsonONulo(l.contado),
+      monedas: jsonONulo(l.contadoMonedas),
+      conforme: l.conforme,
+      conformePor: l.conformePor,
+      conformeEn: l.conformeEn === null ? null : l.conformeEn.toISOString(),
+      diferencia: jsonONulo(l.diferencia),
+    })),
+    billetes: arqueo.billetes,
+  };
+}
+
 /**
  * La ficha de una sesión (e3 §3.10): sus datos, el sello de la jornada con que se abrió, la observación y, si se cerró, el arqueo línea
  * por línea con el detalle de billetes y las monedas. `cajas.ver`, `read committed`, alcance de la sucursal.
@@ -71,27 +98,7 @@ export function armarFichaDeSesion({ transacciones, reglas }: DependenciasDeCons
         const sesion = await sesionParaMirar(tx, contexto, entrada.sesionId);
         if (!sesion.ok) return sesion;
         const arqueo = await tx.arqueos.deLaSesion(contexto.empresaId, sesion.valor.id);
-        return ok({
-          sesion: sesionDeConsulta(sesion.valor),
-          zonaHoraria: sesion.valor.zonaHoraria,
-          horaDeCorte: sesion.valor.horaDeCorte,
-          observacion: sesion.valor.observacion,
-          arqueo: arqueo.lineas.map((l) => ({
-            medioDePagoId: l.medioDePagoId,
-            medioTipo: l.medioTipo,
-            medioNombre: l.medioNombre,
-            cuentaDeCobroId: l.cuentaDeCobroId,
-            cuentaNombre: l.cuentaNombre,
-            esperado: importeAJson(l.esperado),
-            contado: jsonONulo(l.contado),
-            monedas: jsonONulo(l.contadoMonedas),
-            conforme: l.conforme,
-            conformePor: l.conformePor,
-            conformeEn: l.conformeEn === null ? null : l.conformeEn.toISOString(),
-            diferencia: jsonONulo(l.diferencia),
-          })),
-          billetes: arqueo.billetes,
-        });
+        return ok(fichaDe(sesion.valor, arqueo));
       },
     );
   };

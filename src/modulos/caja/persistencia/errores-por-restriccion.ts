@@ -1,3 +1,25 @@
+/**
+ * Lo que `par_de_cobro_validar` lanza con el nombre de la tabla de quien llama (`<tabla>_medio_inactivo`...): la corrección de medio y la
+ * declaración de total lo repiten con su tabla, igual que el movimiento. Mismo error de negocio para las tres.
+ */
+const ERRORES_DEL_PAR_DE_COBRO = {
+  medio_inexistente: "MEDIO_NO_ENCONTRADO",
+  medio_inactivo: "MEDIO_INACTIVO",
+  cuenta_no_admitida: "CUENTA_DE_COBRO_NO_ADMITIDA",
+  cuenta_inexistente: "CUENTA_DE_COBRO_NO_ENCONTRADA",
+  cuenta_de_otra_sucursal: "CUENTA_DE_COBRO_DE_OTRA_SUCURSAL",
+  cuenta_inactiva: "CUENTA_DE_COBRO_INACTIVA",
+  cuenta_incompatible: "CUENTA_DE_COBRO_INCOMPATIBLE",
+} as const;
+
+const delParDe = (tabla: string): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(ERRORES_DEL_PAR_DE_COBRO).map(([sufijo, error]) => [
+      `${tabla}_${sufijo}`,
+      error,
+    ]),
+  );
+
 /** Restricción de la base → error de negocio (ADR-004). Un test exige que no falte ninguna ni sobre ninguna. */
 export const ERRORES_DE_CAJA_POR_RESTRICCION: Readonly<Record<string, string>> = {
   // caja
@@ -154,4 +176,90 @@ export const ERRORES_DE_CAJA_POR_RESTRICCION: Readonly<Record<string, string>> =
   arqueo_billete_sesion_fkey: "NO_TRADUCIDA",
   arqueo_billete_denominacion_ck: "NO_TRADUCIDA",
   arqueo_billete_cantidad_ck: "NO_TRADUCIDA",
+  // correccion_de_medio (e3b §4.3). Dos correcciones del mismo cobro a la vez chocan en la clave primaria `(cobro, secuencia)` o en la clave:
+  // el caso las resuelve al repetir (`yaExistia` o `MEDIO_DEL_COBRO_CAMBIO { vigente }`), no se traducen desde acá.
+  correccion_de_medio_pkey: "NO_TRADUCIDA",
+  correccion_de_medio_id_uk: "NO_TRADUCIDA",
+  correccion_de_medio_clave_uk: "NO_TRADUCIDA",
+  correccion_de_medio_empresa_fkey: "NO_TRADUCIDA",
+  correccion_de_medio_cobro_fkey: "COBRO_NO_ENCONTRADO",
+  correccion_de_medio_sucursal_fkey: "NO_TRADUCIDA",
+  correccion_de_medio_jornada_fkey: "NO_TRADUCIDA",
+  correccion_de_medio_antes_fkey: "NO_TRADUCIDA",
+  correccion_de_medio_cuenta_antes_fkey: "NO_TRADUCIDA",
+  correccion_de_medio_despues_fkey: "MEDIO_NO_ENCONTRADO",
+  correccion_de_medio_cuenta_despues_fkey: "CUENTA_DE_COBRO_NO_ENCONTRADA",
+  correccion_de_medio_corregido_por_fkey: "NO_TRADUCIDA",
+  correccion_de_medio_secuencia_ck: "NO_TRADUCIDA",
+  correccion_de_medio_cambia_ck: "MEDIO_DEL_COBRO_SIN_CAMBIOS",
+  correccion_de_medio_motivo_ck: "MOTIVO_INVALIDO",
+  correccion_de_medio_clave_ck: "CLAVE_DE_IDEMPOTENCIA_INVALIDA",
+  correccion_de_medio_huella_ck: "NO_TRADUCIDA",
+  // Los lanza `correccion_de_medio_validar_alta`: red de seguridad (el caso decide antes, con el estado de la jornada tomado `FOR SHARE`).
+  correccion_de_medio_actor_invalido: "NO_TRADUCIDA",
+  correccion_de_medio_cobro_invalido: "COBRO_NO_ENCONTRADO",
+  correccion_de_medio_jornada_invalida: "NO_TRADUCIDA",
+  correccion_de_medio_jornada_no_en_auditoria: "NO_TRADUCIDA",
+  correccion_de_medio_secuencia_invalida: "NO_TRADUCIDA",
+  correccion_de_medio_antes_no_vigente: "NO_TRADUCIDA",
+  ...delParDe("correccion_de_medio"),
+  // declaracion_de_total (e3b §4.4).
+  declaracion_de_total_par_uk: "NO_TRADUCIDA",
+  declaracion_de_total_id_uk: "NO_TRADUCIDA",
+  declaracion_de_total_clave_uk: "NO_TRADUCIDA",
+  declaracion_de_total_empresa_fkey: "NO_TRADUCIDA",
+  declaracion_de_total_jornada_fkey: "NO_TRADUCIDA",
+  declaracion_de_total_medio_fkey: "MEDIO_NO_ENCONTRADO",
+  declaracion_de_total_cuenta_fkey: "CUENTA_DE_COBRO_NO_ENCONTRADA",
+  declaracion_de_total_declarado_por_fkey: "NO_TRADUCIDA",
+  declaracion_de_total_secuencia_ck: "NO_TRADUCIDA",
+  declaracion_de_total_moneda_ck: "NO_TRADUCIDA",
+  declaracion_de_total_importe_ck: "IMPORTE_INVALIDO",
+  declaracion_de_total_clave_ck: "CLAVE_DE_IDEMPOTENCIA_INVALIDA",
+  declaracion_de_total_huella_ck: "NO_TRADUCIDA",
+  declaracion_de_total_actor_invalido: "NO_TRADUCIDA",
+  declaracion_de_total_jornada_no_en_auditoria: "NO_TRADUCIDA",
+  declaracion_de_total_medio_no_declarable: "MEDIO_NO_DECLARABLE",
+  declaracion_de_total_secuencia_invalida: "NO_TRADUCIDA",
+  ...delParDe("declaracion_de_total"),
+  // conforme_de_jornada (e3b §4.4, decisión 164): una sola por jornada; dos a la vez chocan en la clave primaria y el caso devuelve `yaExistia`.
+  conforme_de_jornada_pkey: "NO_TRADUCIDA",
+  conforme_de_jornada_id_uk: "NO_TRADUCIDA",
+  conforme_de_jornada_clave_uk: "NO_TRADUCIDA",
+  conforme_de_jornada_empresa_fkey: "NO_TRADUCIDA",
+  conforme_de_jornada_jornada_fkey: "NO_TRADUCIDA",
+  conforme_de_jornada_por_fkey: "NO_TRADUCIDA",
+  conforme_de_jornada_clave_ck: "CLAVE_DE_IDEMPOTENCIA_INVALIDA",
+  conforme_de_jornada_huella_ck: "NO_TRADUCIDA",
+  conforme_de_jornada_actor_invalido: "NO_TRADUCIDA",
+  conforme_de_jornada_jornada_no_en_auditoria: "NO_TRADUCIDA",
+  // La foto que caja congela al cerrar la jornada: cabecera, líneas de la conciliación y cobrado contra el ticket. Nada de esto es un error
+  // de negocio de quien la escribe: es una invariante rota (el cierre falla entero, `APORTE_NO_DISPONIBLE`).
+  cierre_de_caja_de_jornada_pkey: "NO_TRADUCIDA",
+  cierre_de_caja_empresa_fkey: "NO_TRADUCIDA",
+  cierre_de_caja_jornada_fkey: "NO_TRADUCIDA",
+  cierre_de_caja_congelado_por_fkey: "NO_TRADUCIDA",
+  cierre_de_caja_actor_invalido: "NO_TRADUCIDA",
+  cierre_de_caja_solo_al_cerrar: "NO_TRADUCIDA",
+  caja_conciliacion_incompleta: "NO_TRADUCIDA",
+  caja_conciliacion_no_cuadra: "NO_TRADUCIDA",
+  conciliacion_de_jornada_uk: "NO_TRADUCIDA",
+  conciliacion_de_jornada_empresa_fkey: "NO_TRADUCIDA",
+  conciliacion_de_jornada_cabecera_fkey: "NO_TRADUCIDA",
+  conciliacion_de_jornada_medio_fkey: "NO_TRADUCIDA",
+  conciliacion_de_jornada_cuenta_fkey: "NO_TRADUCIDA",
+  conciliacion_de_jornada_conforme_por_fkey: "NO_TRADUCIDA",
+  conciliacion_de_jornada_moneda_ck: "NO_TRADUCIDA",
+  conciliacion_de_jornada_estado_ck: "NO_TRADUCIDA",
+  conciliacion_de_jornada_datos_ck: "NO_TRADUCIDA",
+  conciliacion_de_jornada_explicacion_ck: "NO_TRADUCIDA",
+  conciliacion_de_jornada_conteo_invalido: "NO_TRADUCIDA",
+  conciliacion_de_cobro_por_origen_pkey: "NO_TRADUCIDA",
+  conciliacion_de_cobro_empresa_fkey: "NO_TRADUCIDA",
+  conciliacion_de_cobro_cabecera_fkey: "NO_TRADUCIDA",
+  conciliacion_de_cobro_moneda_ck: "NO_TRADUCIDA",
+  conciliacion_de_cobro_origen_ck: "NO_TRADUCIDA",
+  conciliacion_de_cobro_total_ck: "NO_TRADUCIDA",
+  conciliacion_de_cobro_difiere_ck: "NO_TRADUCIDA",
+  conciliacion_de_cobro_explicacion_ck: "NO_TRADUCIDA",
 };

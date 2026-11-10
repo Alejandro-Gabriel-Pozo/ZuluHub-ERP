@@ -8,9 +8,15 @@ import { usosProhibidos } from "../../../test/utilidades/reloj-y-azar";
  * la transacción, que el adaptador repite entera ante un conflicto de serialización (ADR-004, G4): lo que se recalcula (arqueo,
  * conciliación, huella del cobro) tiene que dar LO MISMO cada vez, o un reintento no sería el mismo pedido.
  */
-const carpetas = ["./", "dominio/", "casos-de-uso/", "consultas/", "persistencia/", "cobrar/"].map(
-  (c) => fileURLToPath(new URL(c, import.meta.url)),
-);
+const carpetas = [
+  "./",
+  "dominio/",
+  "casos-de-uso/",
+  "consultas/",
+  "persistencia/",
+  "cobrar/",
+  "aporte/",
+].map((c) => fileURLToPath(new URL(c, import.meta.url)));
 const fuentes = carpetas.flatMap((carpeta) =>
   readdirSync(carpeta)
     .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))

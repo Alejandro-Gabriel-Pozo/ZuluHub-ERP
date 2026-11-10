@@ -4,6 +4,7 @@ import { ARS } from "../../../primitivas/dinero/moneda";
 import {
   cantidadDeLineasPorExplicar,
   conciliarJornada,
+  lineaPorExplicar,
   type CierreDeCajaDelPar,
   type EntradaDeConciliacion,
 } from "./conciliacion";
@@ -394,5 +395,28 @@ describe("líneas por explicar (control caja.conciliacion_por_medio)", () => {
         l("DECLARADO", "0"),
       ]),
     ).toBe(2);
+  });
+});
+
+describe("lineaPorExplicar: qué línea cuenta y a cuál se le copia la explicación", () => {
+  const cero = valor("0.00");
+  it("SIN_DATO siempre; contada o declarada solo con diferencia distinta de cero; CONFORME nunca", () => {
+    expect(lineaPorExplicar({ estado: "SIN_DATO", diferencia: null })).toBe(true);
+    expect(lineaPorExplicar({ estado: "DECLARADO", diferencia: valor("0.01") })).toBe(true);
+    expect(lineaPorExplicar({ estado: "CONTADO", diferencia: valor("-0.01") })).toBe(true);
+    expect(lineaPorExplicar({ estado: "DECLARADO", diferencia: cero })).toBe(false);
+    expect(lineaPorExplicar({ estado: "CONTADO", diferencia: cero })).toBe(false);
+    expect(lineaPorExplicar({ estado: "CONFORME", diferencia: null })).toBe(false);
+  });
+  it("la cantidad es cuántas líneas cumplen", () => {
+    expect(
+      cantidadDeLineasPorExplicar([
+        { estado: "SIN_DATO", diferencia: null },
+        { estado: "CONFORME", diferencia: null },
+        { estado: "CONTADO", diferencia: valor("5.00") },
+        { estado: "DECLARADO", diferencia: cero },
+      ]),
+    ).toBe(2);
+    expect(cantidadDeLineasPorExplicar([])).toBe(0);
   });
 });

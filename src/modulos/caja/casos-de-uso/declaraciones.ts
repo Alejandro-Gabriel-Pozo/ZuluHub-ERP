@@ -6,7 +6,8 @@ import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/decla
  * pedido ya está hecho) y los de edición por `SIN_CAMBIOS` (ya es lo pedido). Ninguno lleva clave de idempotencia: la identidad natural
  * (el nombre, único sin distinguir mayúsculas) y el estado alcanzan. Los de la operación que crean un registro (abrir la sesión, ingreso o
  * egreso, ajuste y anulación) llevan clave de idempotencia (`CLAVE_DE_IDEMPOTENCIA`: la genera la pantalla al abrir el formulario); iniciar y
- * cancelar el cierre y cerrar son idempotentes por estado. El cobro lo suma el tramo siguiente.
+ * cancelar el cierre y cerrar son idempotentes por estado. Los tres de la contribución al cierre del día (corregir el medio de un cobro,
+ * declarar un total y dar el «conforme general»; e3b §4) llevan clave de idempotencia y solo valen con la jornada en auditoría.
  */
 export const DECLARACIONES = {
   crearCaja: {
@@ -206,6 +207,36 @@ export const DECLARACIONES = {
       prueba: {
         archivo: "test/integracion/caja-operacion-casos-de-uso.test.ts",
         it: "anular el mismo movimiento dos veces con la misma clave: la segunda devuelve yaExistia y no escribe ni audita",
+      },
+    },
+  },
+  corregirMedioDeCobro: {
+    accion: "cobros.corregir_medio",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/caja-cierre-del-dia-casos-de-uso.test.ts",
+        it: "corregir el medio de un cobro dos veces con la misma clave: la segunda devuelve yaExistia y no escribe ni audita",
+      },
+    },
+  },
+  declararTotal: {
+    accion: "declaraciones_de_total.registrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/caja-cierre-del-dia-casos-de-uso.test.ts",
+        it: "declarar el mismo total dos veces con la misma clave: la segunda devuelve yaExistia y no escribe ni audita",
+      },
+    },
+  },
+  darConformeGeneral: {
+    accion: "declaraciones_de_total.registrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/caja-cierre-del-dia-casos-de-uso.test.ts",
+        it: "dar el conforme general dos veces con la misma clave: el segundo devuelve yaExistia y no escribe ni audita",
       },
     },
   },

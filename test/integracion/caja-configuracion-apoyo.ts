@@ -28,13 +28,20 @@ import {
   crearRepositorioDeArqueos,
   crearRepositorioDeCajas,
   crearRepositorioDeCobros,
+  crearRepositorioDeCobrosDeLaJornada,
+  crearRepositorioDeCorrecciones,
   crearRepositorioDeCuentasDeCobro,
+  crearRepositorioDeDeclaraciones,
+  crearRepositorioDeFotos,
+  crearRepositorioDeLaJornada,
   crearRepositorioDeMediosDePago,
   crearRepositorioDeMovimientos,
   crearRepositorioDeSesiones,
   crearConsultasDeCaja,
   crearCasosDeUsoDeCaja,
   type CajaDb,
+  type TicketsPorCobranza,
+  type TxDeAporteDeCaja,
   type TxDeCaja,
   type TxDeConsultasDeCaja,
 } from "../../src/modulos/caja/publico";
@@ -83,6 +90,7 @@ export const REGLAS_DE_CAJA: ReglasDeEmpresa = {
 
 export type TxDeCajaDePrueba = TxDeCaja &
   TxDeConsultasDeCaja &
+  TxDeAporteDeCaja &
   TxDeEmpresas &
   TxDeCierre &
   Readonly<{ db: Kysely<SinTablas> }>;
@@ -112,6 +120,11 @@ export function crearEntornoDeCaja(
       movimientos: crearRepositorioDeMovimientos(db.withTables<CajaDb>()),
       cobros: crearRepositorioDeCobros(db.withTables<CajaDb>()),
       arqueos: crearRepositorioDeArqueos(db.withTables<CajaDb>()),
+      correcciones: crearRepositorioDeCorrecciones(db.withTables<CajaDb>()),
+      declaraciones: crearRepositorioDeDeclaraciones(db.withTables<CajaDb>()),
+      laJornada: crearRepositorioDeLaJornada(db.withTables<CajaDb>()),
+      cobrosDeLaJornada: crearRepositorioDeCobrosDeLaJornada(db.withTables<CajaDb>()),
+      fotos: crearRepositorioDeFotos(db.withTables<CajaDb>()),
       jornadas: crearRepositorioDeJornadas(db.withTables<CierreDb>()),
       sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
       derechos: crearLecturaDeDerechosDeUso(crearLecturaDePlanes(db.withTables<PlanesDb>()), {
@@ -131,14 +144,18 @@ export function crearEntornoDeCaja(
   });
 }
 
-/** Los casos de uso y las consultas sobre unas transacciones dadas, con las reglas dadas (por defecto, `REGLAS_DE_CAJA`). */
+/** Un `TicketsPorCobranza` que no conoce ningún ticket: como la composición hoy, sin ventas (e3b §4.6). */
+export const SIN_TICKETS: TicketsPorCobranza = { ticketsPorCobranza: () => Promise.resolve([]) };
+
+/** Los casos de uso y las consultas sobre unas transacciones dadas, con las reglas dadas (por defecto, `REGLAS_DE_CAJA`) y el puerto de tickets dado. */
 export function armarCaja(
   entorno: TransaccionesDePostgres<TxDeCajaDePrueba>,
   reglas: ReglasDeEmpresa = REGLAS_DE_CAJA,
+  tickets: TicketsPorCobranza = SIN_TICKETS,
 ) {
   return {
     casos: crearCasosDeUsoDeCaja({ transacciones: entorno, reglas }),
-    consultas: crearConsultasDeCaja({ transacciones: entorno, reglas }),
+    consultas: crearConsultasDeCaja({ transacciones: entorno, reglas, tickets }),
   };
 }
 

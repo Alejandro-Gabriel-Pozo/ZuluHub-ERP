@@ -91,6 +91,15 @@ export interface RepositorioDeSesiones {
   ): Promise<boolean>;
   /** Las sesiones de una sucursal entre dos fechas de negocio (inclusive), de la más nueva a la más vieja. Solo lectura. */
   listar(filtro: FiltroDeSesiones): Promise<SesionGuardada[]>;
+  /**
+   * TODAS las sesiones de la jornada `(sucursal, fecha de negocio)`, de la más vieja a la más nueva, sin tope: el cierre del día no puede
+   * ignorar una sesión (una sin cerrar bloquea). Una jornada tiene unas pocas por caja.
+   */
+  deLaJornada(
+    empresa: EmpresaId,
+    sucursal: SucursalId,
+    fecha: FechaCivil,
+  ): Promise<SesionGuardada[]>;
 }
 
 type FilaDeSesion = Readonly<{
@@ -271,6 +280,17 @@ export function crearRepositorioDeSesiones(db: Kysely<CajaDb>): RepositorioDeSes
         .orderBy("s.abierta_en", "desc")
         .orderBy("s.id")
         .limit(filtro.limite)
+        .execute();
+      return filas.map(aSesion);
+    },
+
+    async deLaJornada(empresa, sucursal, fecha) {
+      const filas = await seleccionar()
+        .where("s.empresa_id", "=", empresa)
+        .where("c.sucursal_id", "=", sucursal)
+        .where(sql<boolean>`s.fecha_negocio = ${fecha}::date`)
+        .orderBy("s.abierta_en")
+        .orderBy("s.id")
         .execute();
       return filas.map(aSesion);
     },

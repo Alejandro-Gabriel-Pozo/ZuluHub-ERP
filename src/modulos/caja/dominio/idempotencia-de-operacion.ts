@@ -81,3 +81,52 @@ export function huellaDeAnulacion(
 ): string {
   return huellaDeCampos(["caja.anulacion", entrada.movimientoId, entrada.motivo]);
 }
+
+/**
+ * La huella de una corrección de medio (e3b §4.3): el cobro y el destino con el motivo ya normalizado. El medio de origen NO entra: es el
+ * vigente en el momento de decidir y lo manda el servidor, no la pantalla; lo que la persona pidió es «este cobro, a este medio y cuenta».
+ */
+export function huellaDeCorreccion(
+  entrada: Readonly<{
+    cobroId: string;
+    medioDestinoId: string;
+    cuentaDestinoId: string | null;
+    motivo: string;
+  }>,
+): string {
+  return huellaDeCampos([
+    "caja.correccion_de_medio",
+    entrada.cobroId,
+    entrada.medioDestinoId,
+    entrada.cuentaDestinoId,
+    entrada.motivo,
+  ]);
+}
+
+/** La huella de una declaración de total (e3b §4.4): la jornada, el par (medio, cuenta) y el importe en su texto canónico. */
+export function huellaDeDeclaracion(
+  entrada: Readonly<{
+    sucursalId: string;
+    fechaDeNegocio: FechaCivil;
+    medioDePagoId: string;
+    cuentaDeCobroId: string | null;
+    importe: Importe;
+  }>,
+): string {
+  return huellaDeCampos([
+    "caja.declaracion_de_total",
+    entrada.sucursalId,
+    entrada.fechaDeNegocio,
+    entrada.medioDePagoId,
+    entrada.cuentaDeCobroId,
+    entrada.importe.moneda,
+    importeATexto(entrada.importe),
+  ]);
+}
+
+/** La huella del «conforme general» (e3b §4.4): solo la jornada; no hay nada más que decir. */
+export function huellaDeConforme(
+  entrada: Readonly<{ sucursalId: string; fechaDeNegocio: FechaCivil }>,
+): string {
+  return huellaDeCampos(["caja.conforme_general", entrada.sucursalId, entrada.fechaDeNegocio]);
+}

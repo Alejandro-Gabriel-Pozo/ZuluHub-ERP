@@ -60,7 +60,15 @@ export async function exigirAlcance(
 
 type Constancia = Readonly<{
   accion: string;
-  entidad: "caja" | "medio_de_pago" | "cuenta_de_cobro" | "sesion_caja" | "movimiento_caja";
+  entidad:
+    | "caja"
+    | "medio_de_pago"
+    | "cuenta_de_cobro"
+    | "sesion_caja"
+    | "movimiento_caja"
+    | "correccion_de_medio"
+    | "declaracion_de_total"
+    | "conforme_de_jornada";
   entidadId: string;
   antes?: Readonly<Record<string, Dato>>;
   despues?: Readonly<Record<string, Dato>>;
@@ -129,4 +137,18 @@ export const UNICAS_DEL_MOVIMIENTO = ["movimiento_caja_clave_uk"] as const;
 export const UNICAS_DE_LA_ANULACION = [
   "movimiento_caja_clave_uk",
   "movimiento_caja_anula_uk",
+] as const;
+/** Las restricciones únicas con las que chocan dos correcciones del mismo cobro (la clave primaria `(cobro, secuencia)`) o con la misma clave. */
+export const UNICAS_DE_LA_CORRECCION = [
+  "correccion_de_medio_clave_uk",
+  "correccion_de_medio_pkey",
+] as const;
+/** Y las de una declaración (el mismo par y secuencia, o la misma clave) y del conforme (una sola por jornada, o la misma clave). */
+export const UNICAS_DE_LA_DECLARACION = [
+  "declaracion_de_total_clave_uk",
+  "declaracion_de_total_par_uk",
+] as const;
+export const UNICAS_DEL_CONFORME = [
+  "conforme_de_jornada_clave_uk",
+  "conforme_de_jornada_pkey",
 ] as const;

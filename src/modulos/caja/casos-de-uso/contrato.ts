@@ -12,6 +12,8 @@ import type {
 import type { RepositorioDeArqueos } from "../persistencia/repositorio-de-arqueos";
 import type { RepositorioDeCajas } from "../persistencia/repositorio-de-cajas";
 import type { RepositorioDeCobros } from "../persistencia/repositorio-de-cobros";
+import type { RepositorioDeCorrecciones } from "../persistencia/repositorio-de-correcciones";
+import type { RepositorioDeDeclaraciones } from "../persistencia/repositorio-de-declaraciones";
 import type { RepositorioDeCuentasDeCobro } from "../persistencia/repositorio-de-cuentas";
 import type { RepositorioDeMediosDePago } from "../persistencia/repositorio-de-medios";
 import type { RepositorioDeMovimientos } from "../persistencia/repositorio-de-movimientos";
@@ -21,7 +23,7 @@ import type { RepositorioDeSesiones } from "../persistencia/repositorio-de-sesio
  * Lo que recibe el trabajo de una transacción de la configuración de caja (ADR-004, G5): los repositorios del módulo, la lectura de
  * estados (la empresa opera), la sucursal leída con `FOR SHARE` (una caja o una cuenta nueva exige que siga existiendo), los derechos
  * de uso (el límite de cajas del plan, leído en esta transacción y sin caché) y los puertos de auditoría y autorización. La operación
- * suma las sesiones, los movimientos y el arqueo, la jornada de la sucursal (de `cierre`: abrir una sesión la exige abierta) y los datos
+ * suma las sesiones, los movimientos y el arqueo, las correcciones de medio y las declaraciones del cierre del día, la jornada de la sucursal (de `cierre`: abrir una sesión la exige abierta) y los datos
  * de jornada de la sucursal (zona y hora de corte, de `empresas`). La composición lo arma a partir de la conexión de la transacción;
  * los casos de uso solo ven estas interfaces. El puerto de cobrar (`cobrar/`) usa esta misma transacción, que es la de ventas.
  */
@@ -34,6 +36,9 @@ export type TxDeCaja = LecturaDeEstados &
     /** El cobro (puerto de cobrar): su fila con el origen y los datos, y las marcas de tarjeta. */
     cobros: RepositorioDeCobros;
     arqueos: RepositorioDeArqueos;
+    /** La corrección de medio de un cobro y las declaraciones de total con su «conforme general»: solo valen con la jornada en auditoría. */
+    correcciones: RepositorioDeCorrecciones;
+    declaraciones: RepositorioDeDeclaraciones;
     cajas: RepositorioDeCajas;
     mediosDePago: RepositorioDeMediosDePago;
     cuentasDeCobro: RepositorioDeCuentasDeCobro;

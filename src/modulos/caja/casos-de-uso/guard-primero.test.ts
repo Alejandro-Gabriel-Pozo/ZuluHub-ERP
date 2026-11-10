@@ -75,7 +75,13 @@ const consultasCon = (vigilada: Vigilada, reglas: ReglasDeEmpresa = CAJA_DISPONI
   const transacciones: Transacciones<TxDeConsultasDeCaja> = {
     ejecutar: (_opciones, trabajo) => trabajo(vigilada.tx),
   };
-  return crearConsultasDeCaja({ transacciones, reglas });
+  // Una consulta que toca los tickets tampoco los pide antes del guard: el puerto no debe usarse sin permiso.
+  const tickets = {
+    ticketsPorCobranza: () => {
+      throw new AccesoFueraDelGuard("tickets");
+    },
+  };
+  return crearConsultasDeCaja({ transacciones, reglas, tickets });
 };
 
 type Declaraciones = typeof DECLARACIONES;
@@ -162,6 +168,29 @@ const LLAMADAS: Record<ConAccion, (casos: CasosDeUsoDeCaja) => Promise<unknown>>
       movimientoId: UUID,
       motivo: "Me equivoqué",
     }),
+  corregirMedioDeCobro: (c) =>
+    c.corregirMedioDeCobro(contexto, {
+      claveDeIdempotencia: "clave-de-prueba-0005",
+      cobroId: UUID,
+      medioDestinoId: UUID,
+      cuentaDestinoId: null,
+      motivo: "Era débito",
+    }),
+  declararTotal: (c) =>
+    c.declararTotal(contexto, {
+      claveDeIdempotencia: "clave-de-prueba-0006",
+      sucursalId: UUID,
+      fechaDeNegocio: "2026-11-09",
+      medioDePagoId: UUID,
+      cuentaDeCobroId: null,
+      importe: { moneda: "ARS", monto: "10.00" },
+    }),
+  darConformeGeneral: (c) =>
+    c.darConformeGeneral(contexto, {
+      claveDeIdempotencia: "clave-de-prueba-0007",
+      sucursalId: UUID,
+      fechaDeNegocio: "2026-11-09",
+    }),
 };
 
 type DeclaracionesDeConsultas = typeof DECLARACIONES_DE_CONSULTAS;
@@ -179,6 +208,18 @@ const LLAMADAS_DE_CONSULTAS: Record<
   listarSesiones: (c) =>
     c.listarSesiones(contexto, { sucursalId: UUID, desde: "2026-11-01", hasta: "2026-11-09" }),
   fichaDeSesion: (c) => c.fichaDeSesion(contexto, { sesionId: UUID }),
+  sesionesDeLaJornada: (c) =>
+    c.sesionesDeLaJornada(contexto, { sucursalId: UUID, fechaDeNegocio: "2026-11-09" }),
+  cobrosDeLaJornada: (c) =>
+    c.cobrosDeLaJornada(contexto, { sucursalId: UUID, fechaDeNegocio: "2026-11-09" }),
+  movimientosManualesDeLaJornada: (c) =>
+    c.movimientosManualesDeLaJornada(contexto, { sucursalId: UUID, fechaDeNegocio: "2026-11-09" }),
+  conciliacionDeLaJornada: (c) =>
+    c.conciliacionDeLaJornada(contexto, { sucursalId: UUID, fechaDeNegocio: "2026-11-09" }),
+  cobradoPorOrigenDeLaJornada: (c) =>
+    c.cobradoPorOrigenDeLaJornada(contexto, { sucursalId: UUID, fechaDeNegocio: "2026-11-09" }),
+  informeDeCajaDelDia: (c) =>
+    c.informeDeCajaDelDia(contexto, { sucursalId: UUID, fechaDeNegocio: "2026-11-09" }),
 };
 
 /** Pasar el guard = tocar algo que no es la autorización (la transacción vigilada corta ahí). */
@@ -227,17 +268,23 @@ const todos: Entrada[] = [...casos, ...consultas];
 describe("P7: el guard va primero en cada caso de uso y consulta de caja", () => {
   it("hay casos de uso y consultas con acción que probar, uno por cada declarado", () => {
     expect(casos).toHaveLength(Object.keys(DECLARACIONES).length);
-    expect(casos).toHaveLength(20);
+    expect(casos).toHaveLength(23);
     expect(consultas.map((c) => c.nombre).sort()).toEqual([
+      "cobradoPorOrigenDeLaJornada",
+      "cobrosDeLaJornada",
+      "conciliacionDeLaJornada",
       "fichaDeSesion",
+      "informeDeCajaDelDia",
       "listarCajas",
       "listarCuentasDeCobro",
       "listarMediosDePago",
       "listarSesiones",
       "movimientosDeSesion",
+      "movimientosManualesDeLaJornada",
       "opcionesDeApertura",
       "prepararCierre",
       "resumenDeSesion",
+      "sesionesDeLaJornada",
     ]);
   });
 
@@ -313,11 +360,17 @@ describe("cada caso de uso y cada consulta exigen SU acción (no la de otro)", (
   it("cada caso de uso exige una acción distinta, del módulo caja, y cada consulta cajas.ver", () => {
     const delCatalogo = Object.keys(CATALOGO_DE_MODULOS.caja.acciones);
     for (const { accion } of todos) expect(delCatalogo).toContain(accion);
-    // Única excepción: el disparador de la «Caja 1» comparte `sesiones_caja.abrir` con `abrirSesion` (e3 §3.2.1: «los tres roles con
-    // alcance»; abrir la caja y asegurar que exista son lo mismo para la persona). Previene que dos casos distintos compartan acción sin
-    // que nadie lo haya decidido: cualquier otro par repetido falla.
-    const sinElDisparador = casos.filter((c) => c.nombre !== "asegurarCajaPorDefecto");
-    expect(new Set(sinElDisparador.map((c) => c.accion)).size).toBe(sinElDisparador.length);
+    // Dos excepciones: el disparador de la «Caja 1» comparte `sesiones_caja.abrir` con `abrirSesion` (e3 §3.2.1: «los tres roles con
+    // alcance»; abrir la caja y asegurar que exista son lo mismo para la persona) y «declarar un total» y «dar el conforme general»
+    // comparten `declaraciones_de_total.registrar` (e3b §4.4 y §4.7: una sola acción para los dos). Previene que dos casos distintos
+    // compartan acción sin que nadie lo haya decidido: cualquier otro par repetido falla.
+    const sinLosCompartidos = casos.filter(
+      (c) => c.nombre !== "asegurarCajaPorDefecto" && c.nombre !== "darConformeGeneral",
+    );
+    expect(new Set(sinLosCompartidos.map((c) => c.accion)).size).toBe(sinLosCompartidos.length);
+    expect(casos.find((c) => c.nombre === "darConformeGeneral")?.accion).toBe(
+      "declaraciones_de_total.registrar",
+    );
     expect(casos.find((c) => c.nombre === "asegurarCajaPorDefecto")?.accion).toBe(
       "sesiones_caja.abrir",
     );
@@ -347,6 +400,9 @@ describe("cada caso de uso y cada consulta exigen SU acción (no la de otro)", (
       registrarMovimientoManual: "movimientos_caja.registrar_manual",
       registrarAjuste: "movimientos_caja.ajustar",
       anularMovimientoDeCaja: "movimientos_caja.anular",
+      corregirMedioDeCobro: "cobros.corregir_medio",
+      declararTotal: "declaraciones_de_total.registrar",
+      darConformeGeneral: "declaraciones_de_total.registrar",
     });
   });
 });

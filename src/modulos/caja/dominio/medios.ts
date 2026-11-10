@@ -82,18 +82,21 @@ export function validarParDeCobro(
     cuentaDeCobroId: string | null;
     cuenta: CuentaVista | null;
     sucursalDeLaCaja: string;
+    /** `false` solo para declarar un total (el par pudo tener actividad y desactivarse después): `p_exigir_activos` de la base. Por omisión, `true`. */
+    exigirActivos?: boolean;
   }>,
 ): Resultado<TipoDeMedio, ErrorDeParDeCobro> {
   const { medio, cuentaDeCobroId, cuenta } = entrada;
+  const exigirActivos = entrada.exigirActivos ?? true;
   if (medio === null) return err("MEDIO_NO_ENCONTRADO");
-  if (!medio.activo) return err("MEDIO_INACTIVO");
+  if (exigirActivos && !medio.activo) return err("MEDIO_INACTIVO");
   if (cuentaDeCobroId === null) return ok(medio.tipo);
   if (medio.tipo === "EFECTIVO") return err("CUENTA_DE_COBRO_NO_ADMITIDA");
   if (cuenta === null) return err("CUENTA_DE_COBRO_NO_ENCONTRADA");
   if (cuenta.sucursalId !== entrada.sucursalDeLaCaja) {
     return err("CUENTA_DE_COBRO_DE_OTRA_SUCURSAL");
   }
-  if (!cuenta.activa) return err("CUENTA_DE_COBRO_INACTIVA");
+  if (exigirActivos && !cuenta.activa) return err("CUENTA_DE_COBRO_INACTIVA");
   if (!cuentaAdmitidaPorMedio(medio.tipo, cuenta.tipo)) return err("CUENTA_DE_COBRO_INCOMPATIBLE");
   return ok(medio.tipo);
 }

@@ -8,6 +8,9 @@ import {
   huellaDeAjuste,
   huellaDeAnulacion,
   huellaDeApertura,
+  huellaDeConforme,
+  huellaDeCorreccion,
+  huellaDeDeclaracion,
   huellaDeMovimientoManual,
 } from "./idempotencia-de-operacion";
 
@@ -171,5 +174,82 @@ describe("la huella de una anulación", () => {
     const a = huellaDeAnulacion({ movimientoId: SESION, motivo: "x" });
     const b = huellaDeCampos(["caja.movimiento_manual", SESION, "x"]);
     expect(a).not.toBe(b);
+  });
+});
+
+describe("la huella de las operaciones del cierre del día", () => {
+  const COBRO = "66666666-6666-4666-8666-666666666666";
+  const correccion = {
+    cobroId: COBRO,
+    medioDestinoId: MEDIO,
+    cuentaDestinoId: CUENTA,
+    motivo: "Era débito",
+  };
+  const declaracion = {
+    sucursalId: SUCURSAL,
+    fechaDeNegocio: fecha("2026-11-09"),
+    medioDePagoId: MEDIO,
+    cuentaDeCobroId: CUENTA,
+    importe: importe("18400.00"),
+  };
+
+  it("la de la corrección es una función pura del cobro, el destino y el motivo", () => {
+    const base = huellaDeCorreccion(correccion);
+    expect(huellaDeCorreccion({ ...correccion })).toBe(base);
+    expect(base).toMatch(/^[0-9a-f]{64}$/);
+    expect(base).toBe(
+      huellaDeCampos(["caja.correccion_de_medio", COBRO, MEDIO, CUENTA, "Era débito"]),
+    );
+    const otras = [
+      { ...correccion, cobroId: SESION },
+      { ...correccion, medioDestinoId: CAJA },
+      { ...correccion, cuentaDestinoId: null },
+      { ...correccion, motivo: "Era crédito" },
+    ];
+    for (const otra of otras) expect(huellaDeCorreccion(otra)).not.toBe(base);
+  });
+
+  it("la de la declaración cambia con la jornada, el par o el importe; 18400 y 18400.00 son lo mismo", () => {
+    const base = huellaDeDeclaracion(declaracion);
+    expect(base).toBe(
+      huellaDeCampos([
+        "caja.declaracion_de_total",
+        SUCURSAL,
+        "2026-11-09",
+        MEDIO,
+        CUENTA,
+        "ARS",
+        "18400.00",
+      ]),
+    );
+    expect(huellaDeDeclaracion({ ...declaracion, importe: importe("18400") })).toBe(base);
+    const otras = [
+      { ...declaracion, sucursalId: CAJA },
+      { ...declaracion, fechaDeNegocio: fecha("2026-11-10") },
+      { ...declaracion, medioDePagoId: CAJA },
+      { ...declaracion, cuentaDeCobroId: null },
+      { ...declaracion, importe: importe("18400.01") },
+    ];
+    for (const otra of otras) expect(huellaDeDeclaracion(otra)).not.toBe(base);
+  });
+
+  it("la del conforme general es solo de la jornada", () => {
+    const base = huellaDeConforme({ sucursalId: SUCURSAL, fechaDeNegocio: fecha("2026-11-09") });
+    expect(base).toBe(huellaDeCampos(["caja.conforme_general", SUCURSAL, "2026-11-09"]));
+    expect(huellaDeConforme({ sucursalId: CAJA, fechaDeNegocio: fecha("2026-11-09") })).not.toBe(
+      base,
+    );
+    expect(
+      huellaDeConforme({ sucursalId: SUCURSAL, fechaDeNegocio: fecha("2026-11-10") }),
+    ).not.toBe(base);
+  });
+
+  it("las tres operaciones no se confunden entre sí aunque compartan campos", () => {
+    const huellas = new Set([
+      huellaDeCorreccion(correccion),
+      huellaDeDeclaracion(declaracion),
+      huellaDeConforme({ sucursalId: SUCURSAL, fechaDeNegocio: fecha("2026-11-09") }),
+    ]);
+    expect(huellas.size).toBe(3);
   });
 });

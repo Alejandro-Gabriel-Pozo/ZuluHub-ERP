@@ -1,8 +1,9 @@
 /**
  * Entrada pública del módulo de caja (ADR-001; e3 §3). Hoy: el dominio puro (E3, tramo 2), la configuración (tramo 3: cajas, medios de
  * pago y cuentas de cobro, con su persistencia, casos de uso y consultas) y la operación de la caja (tramo 5: sesión, cierre, movimientos
- * manuales, ajustes y anulaciones) y el puerto de cobrar para ventas (tramo 6: `CajaParaVentas`). El módulo sigue «en desarrollo» en el
- * catálogo.
+ * manuales, ajustes y anulaciones), el puerto de cobrar para ventas (tramo 6: `CajaParaVentas`) y la contribución al cierre del día (tramo 8:
+ * `superficie/cierre-del-dia.ts`). La persistencia sale por `superficie/persistencia.ts`: partido por tema para que ningún archivo pase de 400
+ * líneas (como fiscal); un nombre repetido entre dos partes no compila (TS2308). El módulo sigue «en desarrollo» en el catálogo.
  */
 export {
   ESTADOS_DE_SESION,
@@ -179,54 +180,8 @@ export {
   type ErrorDeEdicionDeMedio,
   type MedioDePago,
 } from "./dominio/configuracion";
-export { COLUMNAS_DE_CAJA, type CajaDb } from "./persistencia/esquema";
-export { ERRORES_DE_CAJA_POR_RESTRICCION } from "./persistencia/errores-por-restriccion";
-export {
-  crearRepositorioDeCajas,
-  type OpcionesDeListadoDeCajas,
-  type RepositorioDeCajas,
-} from "./persistencia/repositorio-de-cajas";
-export {
-  crearRepositorioDeMediosDePago,
-  type CambiosPersistidosDeMedio,
-  type OpcionesDeListadoDeMedios,
-  type RepositorioDeMediosDePago,
-} from "./persistencia/repositorio-de-medios";
-export {
-  crearRepositorioDeCuentasDeCobro,
-  type CambiosPersistidosDeCuenta,
-  type NuevaCuentaDeCobro,
-  type OpcionesDeListadoDeCuentas,
-  type RepositorioDeCuentasDeCobro,
-} from "./persistencia/repositorio-de-cuentas";
-export {
-  crearRepositorioDeSesiones,
-  type FiltroDeSesiones,
-  type RepositorioDeSesiones,
-  type SesionGuardada,
-  type SesionNueva,
-} from "./persistencia/repositorio-de-sesiones";
-export {
-  crearRepositorioDeMovimientos,
-  type CursorDeMovimientos,
-  type EsperadoDeLinea,
-  type MovimientoConSesion,
-  type MovimientoDeLista,
-  type MovimientoGuardado,
-  type MovimientoNuevo,
-  type MovimientoParaSumar,
-  type RepositorioDeMovimientos,
-} from "./persistencia/repositorio-de-movimientos";
-export {
-  crearRepositorioDeCobros,
-  type RepositorioDeCobros,
-} from "./persistencia/repositorio-de-cobros";
-export {
-  crearRepositorioDeArqueos,
-  type ArqueoGuardado,
-  type LineaDeArqueoGuardada,
-  type RepositorioDeArqueos,
-} from "./persistencia/repositorio-de-arqueos";
+export * from "./superficie/persistencia";
+export * from "./superficie/cierre-del-dia";
 export { DECLARACIONES as DECLARACIONES_DE_CAJA } from "./casos-de-uso/declaraciones";
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_CAJA } from "./consultas/declaraciones";
 export { crearCasosDeUsoDeCaja, type CasosDeUsoDeCaja } from "./casos-de-uso/casos-de-uso";

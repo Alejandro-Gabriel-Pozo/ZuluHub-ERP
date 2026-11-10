@@ -11,4 +11,11 @@ export const DECLARACIONES_DE_CONSULTAS = {
   prepararCierre: { accion: "cajas.ver" },
   listarSesiones: { accion: "cajas.ver" },
   fichaDeSesion: { accion: "cajas.ver" },
+  // El cierre del día de caja (e3b §4.5).
+  sesionesDeLaJornada: { accion: "cajas.ver" },
+  cobrosDeLaJornada: { accion: "cajas.ver" },
+  movimientosManualesDeLaJornada: { accion: "cajas.ver" },
+  conciliacionDeLaJornada: { accion: "cajas.ver" },
+  cobradoPorOrigenDeLaJornada: { accion: "cajas.ver" },
+  informeDeCajaDelDia: { accion: "cajas.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

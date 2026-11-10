@@ -10,7 +10,12 @@ import {
   type MotivoNoAnulable,
 } from "../dominio/anulacion";
 import type { ClaseDeMovimiento, EstadoDeSesion, TipoDeMedio } from "../estados";
-import { exigirPermisoDeConsulta, sesionParaMirar, type ErrorDeConsultaDeSesion } from "./comun";
+import {
+  MAXIMO_DE_UNA_PAGINA,
+  exigirPermisoDeConsulta,
+  sesionParaMirar,
+  type ErrorDeConsultaDeSesion,
+} from "./comun";
 import type { DependenciasDeConsultasDeCaja } from "./contrato";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 
@@ -26,7 +31,7 @@ export type EntradaDeMovimientosDeSesion = Readonly<{
 }>;
 
 /** Tope de movimientos por pedido: acota lo que lee y devuelve una consulta (e3 §3.10). */
-export const MAXIMO_DE_MOVIMIENTOS_POR_PAGINA = 100;
+export const MAXIMO_DE_MOVIMIENTOS_POR_PAGINA = MAXIMO_DE_UNA_PAGINA;
 
 export type MovimientoDeLaSesion = Readonly<{
   id: string;

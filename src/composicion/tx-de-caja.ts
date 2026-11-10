@@ -6,7 +6,12 @@ import {
   crearRepositorioDeArqueos,
   crearRepositorioDeCajas,
   crearRepositorioDeCobros,
+  crearRepositorioDeCobrosDeLaJornada,
+  crearRepositorioDeCorrecciones,
   crearRepositorioDeCuentasDeCobro,
+  crearRepositorioDeDeclaraciones,
+  crearRepositorioDeFotos,
+  crearRepositorioDeLaJornada,
   crearRepositorioDeMediosDePago,
   crearRepositorioDeMovimientos,
   crearRepositorioDeSesiones,
@@ -14,7 +19,12 @@ import {
   type RepositorioDeArqueos,
   type RepositorioDeCajas,
   type RepositorioDeCobros,
+  type RepositorioDeCobrosDeLaJornada,
+  type RepositorioDeCorrecciones,
   type RepositorioDeCuentasDeCobro,
+  type RepositorioDeDeclaraciones,
+  type RepositorioDeFotos,
+  type RepositorioDeLaJornada,
   type RepositorioDeMediosDePago,
   type RepositorioDeMovimientos,
   type RepositorioDeSesiones,
@@ -38,6 +48,15 @@ export type PiezasDeCajaEnTx = Readonly<{
   /** El cobro (puerto de cobrar para ventas) y las marcas de tarjeta. */
   cobros: RepositorioDeCobros;
   arqueos: RepositorioDeArqueos;
+  /**
+   * El cierre del día (E3, tramo 8): la corrección de medio, las declaraciones y el «conforme general» (solo con la jornada en auditoría), lo
+   * que cruza las sesiones de una jornada y la foto que caja congela al cerrarla. Todos sobre la misma conexión que el cierre.
+   */
+  correcciones: RepositorioDeCorrecciones;
+  declaraciones: RepositorioDeDeclaraciones;
+  laJornada: RepositorioDeLaJornada;
+  cobrosDeLaJornada: RepositorioDeCobrosDeLaJornada;
+  fotos: RepositorioDeFotos;
   /** Lo que el plan de la empresa le deja usar (el límite de cajas por sucursal), leído en esta transacción y sin caché. */
   derechos: LecturaDeDerechosDeUso;
 }>;
@@ -53,6 +72,11 @@ export function armarPiezasDeCajaEnTx(
     movimientos: crearRepositorioDeMovimientos(db.withTables<CajaDb>()),
     cobros: crearRepositorioDeCobros(db.withTables<CajaDb>()),
     arqueos: crearRepositorioDeArqueos(db.withTables<CajaDb>()),
+    correcciones: crearRepositorioDeCorrecciones(db.withTables<CajaDb>()),
+    declaraciones: crearRepositorioDeDeclaraciones(db.withTables<CajaDb>()),
+    laJornada: crearRepositorioDeLaJornada(db.withTables<CajaDb>()),
+    cobrosDeLaJornada: crearRepositorioDeCobrosDeLaJornada(db.withTables<CajaDb>()),
+    fotos: crearRepositorioDeFotos(db.withTables<CajaDb>()),
     derechos: crearLecturaDeDerechosDeUso(crearLecturaDePlanes(db.withTables<PlanesDb>()), {
       catalogoDeModulos: CATALOGO_DE_MODULOS,
       catalogoDePerillas: CATALOGO_DE_PERILLAS,
