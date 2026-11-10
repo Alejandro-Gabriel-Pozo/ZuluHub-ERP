@@ -4,22 +4,21 @@ import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { comprobarQueOpera, type EmpresaNoOpera } from "../../../contexto/estados";
-import { cantidadATexto, cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
-import { ErrorDeValor } from "../../../primitivas/cantidad/errores";
-import { importeAJson, type ImporteJson } from "../../../primitivas/dinero/importe";
-import { precioDeVentaDesdeTexto } from "../../../primitivas/dinero/precio-de-venta";
+import type { ImporteJson } from "../../../primitivas/dinero/importe";
 import { sucursalId, type SucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
-import { cotizarParaVender, type ErrorDeCotizacion } from "../../catalogo/publico";
+import type { ErrorDeCotizacion } from "../../catalogo/publico";
+import {
+  aJson,
+  calcularLasLineas,
+  cuentaId,
+  esUuid,
+  numeroDeCorreccion,
+} from "../casos-de-uso/calculo";
+import { cotizarVentaRapida } from "../casos-de-uso/cotizar-venta-rapida";
 import { cargarEstadosDeLaEmpresa } from "../../empresas/publico";
-import { comprobarCantidadDeLinea } from "../dominio/cantidad-de-linea";
-import { calcularTicket, type LineaACalcular } from "../dominio/calcular-ticket";
-import { precioUnitarioATexto } from "../../../primitivas/dinero/precio-unitario";
-import { cuentaId, esUuid } from "../dominio/identificadores";
-import { numeroDeCorreccion } from "../dominio/rotulo";
-import { aJson, calcularLasLineas } from "../casos-de-uso/calculo";
 import type {
   CursorDePendientes,
   RenglonParaFacturar,
@@ -95,7 +94,7 @@ function jornadaDe(entrada: EntradaDeJornadaDeVentas, p: Previo) {
   const sucursal = sucursalId(entrada.sucursalId);
   const alcance = exigirSucursal(p.alcance, sucursal);
   if (!alcance.ok) return alcance;
-  return ok({ sucursal, fecha: fecha.valor as FechaCivil });
+  return ok({ sucursal, fecha: fecha.valor });
 }
 
 function importe(monto: string): ImporteJson {
@@ -134,53 +133,11 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
 
   return {
     cotizarVentaRapida: (contexto: ContextoOperativo, entrada: EntradaDeCotizarVentaRapida) =>
-      leer<
-        Readonly<{
-          total: ImporteJson;
-          lineas: readonly Readonly<{ precioUnitario: ImporteJson; importe: ImporteJson }>[];
-        }>
-      >(contexto, async (tx, p) => {
+      leer(contexto, async (tx, p) => {
         if (!esUuid(entrada.sucursalId)) return err("IDENTIFICADOR_INVALIDO");
         const alcance = exigirSucursal(p.alcance, sucursalId(entrada.sucursalId));
         if (!alcance.ok) return alcance;
-        const lineas: LineaACalcular[] = [];
-        for (const [i, l] of entrada.lineas.entries()) {
-          const elegidas = [...(l.varianteId === undefined ? [] : [l.varianteId]), ...l.opcionIds];
-          if (![l.productoId, ...elegidas].every(esUuid)) return err("IDENTIFICADOR_INVALIDO");
-          let cantidad;
-          try {
-            cantidad = cantidadDesdeTexto(l.cantidad);
-          } catch (e) {
-            if (e instanceof ErrorDeValor) return err("CANTIDAD_INVALIDA");
-            throw e;
-          }
-          const cota = comprobarCantidadDeLinea(cantidad);
-          if (!cota.ok) return cota;
-          const q = await cotizarParaVender(tx, {
-            empresaId: contexto.empresaId,
-            sucursalId: sucursalId(entrada.sucursalId),
-            productoId: l.productoId,
-            opcionIds: elegidas,
-            cantidad: cantidadATexto(cantidad),
-            ahora: contexto.ahora,
-          });
-          if (!q.ok) return q;
-          if (q.valor.precioUnitario === null) return err("PRODUCTO_SIN_PRECIO");
-          const precio = precioDeVentaDesdeTexto(q.valor.precioUnitario);
-          if (!precio.ok)
-            throw new Error("el catálogo devolvió un precio que no es un importe exacto");
-          lineas.push({ id: String(i), precioUnitario: precio.valor, cantidad });
-        }
-        const calculado = calcularTicket(lineas);
-        return ok({
-          total: importeAJson(calculado.total),
-          lineas: calculado.renglones.map((r, i) => ({
-            precioUnitario: importe(
-              precioUnitarioATexto((lineas[i] as LineaACalcular).precioUnitario),
-            ),
-            importe: importeAJson(r.importe),
-          })),
-        });
+        return cotizarVentaRapida(tx, contexto, entrada);
       }),
 
     fichaDeCuenta: (contexto: ContextoOperativo, entrada: Readonly<{ cuentaId: string }>) =>

@@ -16,11 +16,8 @@ export type { EntradaDeCerrarCuenta, SalidaDeCerrarCuenta } from "./casos-de-uso
 export type { EntradaDeAnularTicket, SalidaDeAnularTicket } from "./casos-de-uso/anular-ticket";
 export { aporteDeVentas, type TxDeAporteDeVentas } from "./aporte-al-cierre";
 export { numeroDeCorreccion } from "./dominio/rotulo";
-export {
-  COLUMNAS_DE_VENTAS,
-  ERRORES_DE_VENTAS_POR_RESTRICCION,
-  type VentasDb,
-} from "./persistencia/esquema";
+export { COLUMNAS_DE_VENTAS, type VentasDb } from "./persistencia/esquema";
+export { ERRORES_DE_VENTAS_POR_RESTRICCION } from "./persistencia/restricciones";
 export {
   crearRepositorioDeCuentas,
   type RepositorioDeCuentas,
@@ -33,3 +30,7 @@ export {
   crearRepositorioDeLecturas,
   type LecturasDeVentas,
 } from "./persistencia/repositorio-de-lecturas";
+export {
+  crearRepositoriosDeVentas,
+  type RepositoriosDeVentas,
+} from "./persistencia/repositorios-de-ventas";

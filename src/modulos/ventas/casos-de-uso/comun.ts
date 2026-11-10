@@ -13,7 +13,7 @@ import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import { jornadaDeSucursal } from "../../cierre/publico";
 import { cargarEstadosDeLaEmpresa, datosDeJornada } from "../../empresas/publico";
 import { esUuid } from "../dominio/identificadores";
-import { ERRORES_DE_VENTAS_POR_RESTRICCION } from "../persistencia/esquema";
+import { ERRORES_DE_VENTAS_POR_RESTRICCION } from "../persistencia/restricciones";
 import type { TxDeVentas } from "./contrato";
 import type { ErrorDeVentas } from "./errores";
 

@@ -41,6 +41,6 @@ export function calcularTicket(lineas: readonly LineaACalcular[]): TicketCalcula
   const importes = prorratear(total, exactos);
   return {
     total,
-    renglones: lineas.map((l, i) => ({ id: l.id, importe: importes[i] as Importe })),
+    renglones: importes.map((importe, i) => ({ id: (lineas[i] as LineaACalcular).id, importe })),
   };
 }

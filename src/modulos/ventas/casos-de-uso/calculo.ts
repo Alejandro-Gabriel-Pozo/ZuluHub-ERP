@@ -19,3 +19,11 @@ export function calcularLasLineas(lineas: readonly Linea[]): TicketCalculado {
 
 /** Importe de la frontera: texto decimal con moneda. */
 export const aJson = (calculado: TicketCalculado): ImporteJson => importeAJson(calculado.total);
+
+/**
+ * El puente de las consultas hacia las reglas de ventas (ADR-005: una consulta no importa el dominio de su módulo; las reglas viven en los
+ * casos de uso). Re-exporta, sin copiar, el rótulo del ticket (decisión 177), la marca de identificador y la forma de uuid, para que
+ * `numeroDeCorreccion` y la forma de un id sean UNA sola regla.
+ */
+export { numeroDeCorreccion } from "../dominio/rotulo";
+export { cuentaId, esUuid } from "../dominio/identificadores";
