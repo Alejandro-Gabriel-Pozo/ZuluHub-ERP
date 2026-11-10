@@ -5,6 +5,7 @@ import {
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import {
   direccionDeEmitir,
+  direccionDePendientes,
   direccionDelDetalle,
   direccionDelListado,
   type FiltrosDelListado,
@@ -223,4 +224,12 @@ export const enlaceDeEmitir = (
 ): Readonly<{ href: string; texto: string }> => ({
   href: direccionDeEmitir(),
   texto: texto(d, "fiscal.pantalla.listado_emitir"),
+});
+
+/** «Pendientes de facturar»: el enlace a la lista de ventas cobradas sin comprobante. Lo ve quien puede emitir, como «+ Emitir». */
+export const enlaceDePendientes = (
+  d: DiccionarioResuelto,
+): Readonly<{ href: string; texto: string }> => ({
+  href: direccionDePendientes(),
+  texto: texto(d, "fiscal.pantalla.pendientes_titulo"),
 });

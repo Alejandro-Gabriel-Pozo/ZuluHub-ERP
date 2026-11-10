@@ -127,8 +127,11 @@ export type TicketParaEmitirParaLaPantalla = Readonly<{
     varianteNombre: string | null;
     opciones: readonly string[];
     cantidad: string;
-    unidadSimbolo: string;
+    /** El símbolo que se imprime junto a la cantidad («kg»); `null` para la unidad base, que no se imprime. */
+    unidad: string | null;
     precioUnitario: string;
+    /** El código de la alícuota del renglón (`"21"`, `"10.5"`, `"EXENTO"`...): la pantalla lo muestra solo si la empresa discrimina IVA. */
+    alicuota: string;
     importe: string;
   }>[];
 }>;
@@ -154,8 +157,9 @@ export function ticketParaEmitir(
         varianteNombre: l.varianteNombre,
         opciones: l.opciones.map((o) => o.nombre),
         cantidad: l.cantidad,
-        unidadSimbolo: l.unidadSimbolo,
+        unidad: l.unidadImpresa,
         precioUnitario: l.precioUnitario,
+        alicuota: l.alicuota,
         importe: l.importe,
       })),
     }),

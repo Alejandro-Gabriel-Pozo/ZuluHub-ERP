@@ -98,15 +98,15 @@ export function puntoDeVentaElegido(
   return puntos.find((p) => p.id === elegido) ?? null;
 }
 
-const modoDelPunto = (puntos: readonly PuntoParaEmitir[]): "ninguno" | "uno" | "varios" => {
+export const modoDelPunto = (puntos: readonly PuntoParaEmitir[]): "ninguno" | "uno" | "varios" => {
   if (puntos.length === 0) return "ninguno";
   return puntos.length === 1 ? "uno" : "varios";
 };
 
-const esDePruebas = (p: PuntoParaEmitir): boolean => p.ambiente === "HOMOLOGACION";
+export const esDePruebas = (p: PuntoParaEmitir): boolean => p.ambiente === "HOMOLOGACION";
 
 /** «00002», o «00002 · Pruebas» si es de pruebas (D-87). */
-function etiquetaDelPunto(d: DiccionarioResuelto, p: PuntoParaEmitir): string {
+export function etiquetaDelPunto(d: DiccionarioResuelto, p: PuntoParaEmitir): string {
   const numero = formatearPuntoDeVenta(p.numero);
   return esDePruebas(p)
     ? texto(d, "fiscal.pantalla.emitir_punto_de_venta_con_marca", {
@@ -257,7 +257,7 @@ export function vistaDeLosRenglones(
   };
 }
 
-function clienteDeLaRevision(
+export function clienteDeLaRevision(
   d: DiccionarioResuelto,
   c: ClienteEscrito,
 ): VistaDeLaRevision["cliente"] {

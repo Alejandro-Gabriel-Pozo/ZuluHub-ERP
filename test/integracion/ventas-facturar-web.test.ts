@@ -173,12 +173,13 @@ describe.skipIf(base === null)("web: facturar un ticket", () => {
     if (!ficha.ok) throw new Error("tenía que ser un éxito");
     expect(ficha.dato.total).toEqual({ moneda: "ARS", monto: "1000.00" });
     expect(Object.keys(ficha.dato.lineas[0] ?? {}).sort()).toEqual([
+      "alicuota",
       "cantidad",
       "descripcion",
       "importe",
       "opciones",
       "precioUnitario",
-      "unidadSimbolo",
+      "unidad",
       "varianteNombre",
     ]);
   });

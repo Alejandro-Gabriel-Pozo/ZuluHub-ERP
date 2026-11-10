@@ -26,6 +26,11 @@ export const direccionDeImprimir = (id: string): string => `${direccionDelDetall
 export const direccionDelPdf = (id: string): string => `${direccionDelDetalle(id)}/pdf`;
 /** La pantalla de emitir una factura. Un id de comprobante es un uuid: «emitir» no se confunde con ninguno. */
 export const direccionDeEmitir = (): string => `${RUTA_DEL_LISTADO}/emitir`;
+/** La lista de tickets cobrados pendientes de facturar. «pendientes» no es un uuid: no se confunde con el detalle de ningún comprobante. */
+export const direccionDePendientes = (): string => `${RUTA_DEL_LISTADO}/pendientes`;
+/** Emitir desde un ticket: su id es un uuid que sale de la consulta de ventas, nunca de un texto libre. */
+export const direccionDeEmitirDesdeUnTicket = (ticketId: string): string =>
+  `${direccionDeEmitir()}/venta/${ticketId}`;
 
 const PERIODOS = ["hoy", "7dias", "mes", "todo", "personalizado"] as const;
 type Periodo = (typeof PERIODOS)[number];

@@ -72,7 +72,9 @@ describe("modelo de impresión v4: la unidad del renglón", () => {
     const sinUnidad = {
       ...v4,
       versionDeRepresentacion: 3,
-      renglones: v4.renglones.map(({ unidad: _unidad, ...resto }) => resto),
+      renglones: v4.renglones.map((r) =>
+        Object.fromEntries(Object.entries(r).filter(([k]) => k !== "unidad")),
+      ),
     };
     expect(sinUnidad).toEqual(v3);
     expect(v4.qr).toEqual(v3.qr);

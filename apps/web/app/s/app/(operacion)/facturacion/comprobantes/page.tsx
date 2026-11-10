@@ -18,6 +18,7 @@ import {
   armarElListado,
   armarLaEleccionDeSucursal,
   enlaceDeEmitir,
+  enlaceDePendientes,
   errorParaElListado,
 } from "../../../../../../ui/plantillas/facturacion/modelo-del-listado";
 import { PantallaDeListadoDeComprobantes } from "../../../../../../ui/plantillas/facturacion/PantallaDeListadoDeComprobantes";
@@ -57,6 +58,7 @@ export default async function PaginaDeListadoDeComprobantes({ searchParams }: Pr
       return (
         <PantallaDeListadoDeComprobantes
           emitir={puedeEmitir ? enlaceDeEmitir({}) : null}
+          pendientes={puedeEmitir ? enlaceDePendientes({}) : null}
           eleccionDeSucursal={armarLaEleccionDeSucursal(cargado.sucursales, cargado.efectiva)}
           accionDeSucursal={elegirSucursalAccion}
           filtros={sinSucursal ? null : armarLosFiltros(aplicados, cargado.puntosDeVenta)}

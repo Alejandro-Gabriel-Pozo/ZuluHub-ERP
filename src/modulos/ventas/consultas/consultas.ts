@@ -19,11 +19,9 @@ import {
   numeroDeCorreccion,
 } from "../casos-de-uso/calculo";
 import { cotizarVentaRapida } from "../casos-de-uso/cotizar-venta-rapida";
+import { unidadDelRenglon } from "../dominio/factura-de-ticket";
 import { cargarEstadosDeLaEmpresa } from "../../empresas/publico";
-import type {
-  CursorDePendientes,
-  RenglonParaFacturar,
-} from "../persistencia/repositorio-de-lecturas";
+import type { CursorDePendientes } from "../persistencia/repositorio-de-lecturas";
 import type { DependenciasDeConsultasDeVentas, TxDeConsultasDeVentas } from "./contrato";
 import { reunirPendientes } from "./pendientes-de-facturar";
 import type { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
@@ -351,7 +349,8 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
           ejemplarVigenteId: t.ejemplarVigenteId,
           total: importe(t.total),
           totalVigente: importe(t.total),
-          lineas: t.renglones satisfies readonly RenglonParaFacturar[],
+          // `unidadImpresa`: la unidad que se factura (`null` para la unidad base): la misma regla que usa `emitirComprobanteDeTicket`.
+          lineas: t.renglones.map((r) => ({ ...r, unidadImpresa: unidadDelRenglon(r) })),
         });
       }),
   } satisfies Record<keyof typeof DECLARACIONES_DE_CONSULTAS, unknown>;
