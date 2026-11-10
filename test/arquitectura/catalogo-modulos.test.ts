@@ -343,12 +343,12 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
   });
 
   it("violación inyectada: un módulo en desarrollo fuera de SIN_CONSTRUIR rompe X4 (su carpeta no existe) y X1 (ningún caso de uso exige sus acciones)", () => {
-    const sinCaja = SIN_CONSTRUIR.filter((clave) => clave !== "caja");
-    const problemas = crucesDelCatalogo(CATALOGO_DE_MODULOS, declaradas, carpetaExiste, sinCaja);
+    const sinStock = SIN_CONSTRUIR.filter((clave) => clave !== "stock");
+    const problemas = crucesDelCatalogo(CATALOGO_DE_MODULOS, declaradas, carpetaExiste, sinStock);
     expect(problemas).toContain(
-      "X4: caja dice que lo implementa modulos/caja, que no existe en src/",
+      "X4: stock dice que lo implementa modulos/stock, que no existe en src/",
     );
-    expect(problemas).toContain("X1: la acción cajas.ver no la exige ningún caso de uso");
+    expect(problemas).toContain("X1: la acción stock.ver no la exige ningún caso de uso");
   });
 
   it("X3: ventas requiere catalogo y caja, y usa facturacion y stock, que existen; cierre no depende de ningún módulo comercial (E0-T1)", () => {
