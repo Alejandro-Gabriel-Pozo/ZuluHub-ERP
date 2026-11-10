@@ -24,6 +24,7 @@ import { buscarMotivo, origenCoherenteConElMotivo } from "../dominio/motivos";
 import { esUuid } from "../persistencia/filas";
 import type { Movimiento } from "../persistencia/modelo";
 import { llaveDeSaldo } from "../persistencia/repositorio-de-movimientos";
+import { costearMovimiento, type CostosDeclarados } from "./costos";
 import type { TxDeStock } from "./contrato";
 import type { ControlDeStock, DetalleDeNegativo, ErrorDeStock } from "./errores";
 
@@ -62,6 +63,11 @@ export type PedidoDeMovimiento = Readonly<{
   renglones: readonly RenglonDeLibro[];
   /** Los controles que la persona confirmó (`AVISAR`). */
   confirmaciones: readonly ControlDeStock[];
+  /**
+   * El costo unitario que declaró la entrada, por (depósito, artículo) (`llaveDeSaldo`). Solo lo usa una ENTRADA; sin costo declarado el renglón
+   * queda `SIN_COSTO`. El resto de las clases toma su costo del promedio o del original (`costearMovimiento`).
+   */
+  costos?: CostosDeclarados | undefined;
 }>;
 
 export type MovimientoRegistrado = Readonly<{
@@ -191,7 +197,9 @@ async function detalleDeNegativos(
  *     nivel de la base (`PERMITIR` sin fila) con los saldos ya bloqueados: `CONTROL_BLOQUEA` o `CONTROL_REQUIERE_CONFIRMACION` rechazan el
  *     movimiento entero, con el detalle de los saldos;
  *  4. la cabecera y los renglones (el saldo lo aplica el disparador de la base, y el movimiento se verifica entero al confirmar);
- *  5. por cada renglón que quedó en negativo porque el control lo permitió o la persona lo confirmó, un registro de auditoría en la misma
+ *  5. el costo de cada renglón y el promedio de cada par, en la misma transacción (`costearMovimiento`: costo declarado, promedio congelado,
+ *     el de origen en una transferencia, el original en una anulación);
+ *  6. por cada renglón que quedó en negativo porque el control lo permitió o la persona lo confirmó, un registro de auditoría en la misma
  *     transacción. El movimiento en sí NO se audita aparte: es su propio registro (solo inserción, con autor, acción y motivo).
  * Los errores de la base (una clave repetida por una carrera, un depósito inactivo, la cuarentena) salen como excepciones de la
  * transacción: el que arma la transacción las traduce con `traducirMovimiento`.
@@ -286,6 +294,14 @@ export async function registrarMovimientoEnTx(
       confirmoNegativo: confirmados.has(llaveDe(r.depositoId, r.articuloId)),
     })),
   );
+
+  await costearMovimiento(tx, contexto.empresaId, {
+    movimientoId: movimiento.id,
+    clase: pedido.clase,
+    anulaA: pedido.anulaA,
+    renglones: ordenados,
+    declarados: pedido.costos ?? new Map(),
+  });
 
   const excepciones =
     decision.negativos.length === 0 ? [] : await detalleDeNegativos(tx, contexto, decision);

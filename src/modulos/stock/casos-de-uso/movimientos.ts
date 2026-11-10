@@ -4,10 +4,11 @@ import { negarConSigno, type CantidadConSigno } from "../../../primitivas/cantid
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { huellaDeComando } from "../dominio/huella";
 import type { RenglonDeLibro } from "../dominio/movimiento";
-import { motivoExigeAjustar, motivoManualPermitido } from "../dominio/motivos";
+import { buscarMotivo, motivoExigeAjustar, motivoManualPermitido } from "../dominio/motivos";
 import { autorizar } from "./comun";
 import type { DependenciasDeStock } from "./contrato";
 import type { DetalleDeNegativo, ErrorDeStock } from "./errores";
+import { costosDeclaradosDe } from "./costos";
 import { buscarRepeticion, registrarMovimientoEnTx } from "./movimiento-en-tx";
 import {
   cargarDeposito,
@@ -122,7 +123,9 @@ function armarEntradaOSalida<S extends SalidaDeRegistrarEntrada | SalidaDeRegist
         if (!detalle.ok) return detalle;
         const confirmaciones = entrada ? ok([]) : leerConfirmaciones(pedido.confirmaciones);
         if (!confirmaciones.ok) return confirmaciones;
-        const leidos = leerRenglones(pedido.renglones);
+        // Solo una entrada con motivo que declara costo (compra, carga inicial) puede traer `costoUnitario`.
+        const admiteCosto = entrada && buscarMotivo(clase, pedido.motivo)?.entraConCosto === true;
+        const leidos = leerRenglones(pedido.renglones, admiteCosto);
         if (!leidos.ok) return leidos;
         const deposito = await cargarDeposito(tx, contexto, pedido.depositoId);
         if (!deposito.ok) return deposito;
@@ -162,6 +165,7 @@ function armarEntradaOSalida<S extends SalidaDeRegistrarEntrada | SalidaDeRegist
           fechaDeNegocio: null,
           renglones: renglonesDe(deposito.valor.id, resueltos.valor, entrada ? 1 : -1),
           confirmaciones: confirmaciones.valor,
+          costos: costosDeclaradosDe(deposito.valor.id, resueltos.valor),
         });
         if (!registrado.ok) return registrado;
         return ok(
@@ -181,9 +185,11 @@ function armarEntradaOSalida<S extends SalidaDeRegistrarEntrada | SalidaDeRegist
  * Registrar una entrada (E5 §3.2): guard `stock.registrar_entrada`, el depósito en el alcance de quien pide (el operador, solo sus sucursales)
  * y activo, motivo de entrada sembrado (lista de permitidos), cantidades mayores que cero llevadas EXACTAS a la unidad de stock del artículo,
  * `hechoEn` dentro de la jornada vigente. Repetición (`CLAVE_DE_IDEMPOTENCIA`): la `clave` de la pantalla con la misma huella devuelve el
- * movimiento anterior con `yaExistia: true` sin escribir ni auditar; con otro contenido, `CLAVE_REUTILIZADA`. El movimiento es su propio
- * registro de auditoría. La cuarentena y el rechazo no reciben entradas (`MOTIVO_NO_PERMITIDO`: solo por transferencia, ajuste o anulación). El
- * costo de la entrada (`costoUnitario`, `COSTO_INVALIDO`) llega con el tramo de costos (E5-T10).
+ * movimiento anterior con `yaExistia: true` sin escribir ni auditar; con otro contenido (también otro costo), `CLAVE_REUTILIZADA`. El movimiento es
+ * su propio registro de auditoría. La cuarentena y el rechazo no reciben entradas (`MOTIVO_NO_PERMITIDO`: solo por transferencia, ajuste o
+ * anulación). Costo (E5-T10): una entrada con motivo `COMPRA` o `CARGA_INICIAL` puede declarar `costoUnitario` por renglón (texto decimal de hasta
+ * 6 decimales, mayor que cero, por UNIDAD DE STOCK del artículo: con otra unidad, o en otro motivo, o inválido, `COSTO_INVALIDO`); sin él el
+ * renglón queda sin costo y no diluye el promedio. El promedio móvil y el costo del renglón se escriben en la misma transacción.
  */
 export const armarRegistrarEntrada = (d: DependenciasDeStock) =>
   armarEntradaOSalida<SalidaDeRegistrarEntrada>(d, "ENTRADA", (movimientoId, yaExistia) => ({

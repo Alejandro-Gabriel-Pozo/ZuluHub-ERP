@@ -55,7 +55,7 @@ const DEL_OPERADOR_DE_CATALOGO_Y_STOCK = [
   "vidrieras.ver",
 ] as const;
 
-/** Lo que el administrador puede de más que el operador en catálogo, carta y stock (29 acciones). */
+/** Lo que el administrador puede de más que el operador en catálogo, carta y stock (30 acciones). */
 const SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK = [
   "articulos.controlar",
   "articulos.dejar_de_controlar",
@@ -67,6 +67,7 @@ const SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK = [
   "conteos.abrir",
   "conteos.aplicar",
   "conteos.cancelar",
+  "costos.ver",
   "depositos.crear",
   "depositos.desactivar",
   "depositos.editar",
@@ -212,9 +213,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 110 acciones: 34 de empresa, configuración fiscal y facturación, 41 de catálogo, carta y stock (39 de T0 y 2 de CE0) y 35 de caja, cierre y ventas", () => {
+  it("hay 111 acciones: 34 de empresa, configuración fiscal y facturación, 42 de catálogo, carta y stock (39 de T0 y 2 de CE0) y 35 de caja, cierre y ventas", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(110);
+    expect(todas).toHaveLength(111);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -243,7 +244,8 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("articulos"),
       porPrefijo("composiciones"),
       porPrefijo("conteos"),
-    ]).toEqual([7, 4, 1, 1, 0, 1, 9, 7, 4, 2, 1, 4]);
+      porPrefijo("costos"),
+    ]).toEqual([7, 4, 1, 1, 0, 1, 9, 7, 4, 2, 1, 4, 1]);
     expect([
       porPrefijo("cajas"),
       porPrefijo("medios_de_pago"),

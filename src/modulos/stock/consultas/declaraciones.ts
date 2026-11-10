@@ -18,4 +18,8 @@ export const DECLARACIONES_DE_CONSULTAS = {
   listarConteos: { accion: "stock.ver" },
   // La receta es de la empresa, no de una sucursal: la ve quien puede mirar stock (E5-T7).
   composicionDeProducto: { accion: "stock.ver" },
+  // Costos (E5-T10, P-1): quien no puede ver costos no los ve nunca. Solo gerente y administrador (`costos.ver`).
+  existenciaValorizada: { accion: "costos.ver" },
+  costoDeRenglon: { accion: "costos.ver" },
+  ultimoCostoDeCompra: { accion: "costos.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

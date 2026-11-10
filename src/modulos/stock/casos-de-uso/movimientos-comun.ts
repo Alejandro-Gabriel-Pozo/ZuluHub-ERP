@@ -7,6 +7,8 @@ import {
 } from "../../../primitivas/cantidad/con-signo";
 import type { Cantidad } from "../../../primitivas/cantidad/cantidad";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import type { PrecioUnitario } from "../../../primitivas/dinero/precio-unitario";
+import { precioUnitarioATexto } from "../../../primitivas/dinero/precio-unitario";
 import { detalleDeStockDesdeTexto } from "../../../primitivas/texto/detalle-de-stock";
 import { fechaDeNegocio } from "../../../primitivas/tiempo/fecha-de-negocio";
 import { convertirCantidad } from "../../../primitivas/unidades/convertir-cantidad";
@@ -18,6 +20,7 @@ import { esUuid } from "../persistencia/filas";
 import type { Articulo, Deposito } from "../persistencia/modelo";
 import { exigirAlcanceDeSucursal, traducir } from "./comun";
 import type { TxDeStock } from "./contrato";
+import { leerCostoDeclarado } from "./costos";
 import type { ControlDeStock, ErrorDeStock } from "./errores";
 import { CONTROL_DE_NEGATIVO } from "./movimiento-en-tx";
 
@@ -29,14 +32,24 @@ type R<S> = Resultado<S, ErrorDeStock>;
  */
 export const MAXIMO_DE_RENGLONES = 9_999;
 
-/** Un renglón tal como llega de la pantalla: el producto, la cantidad en texto decimal y la unidad en la que la escribió la persona. */
-export type RenglonPedido = Readonly<{ productoId: string; cantidad: string; unidadId: string }>;
+/**
+ * Un renglón tal como llega de la pantalla: el producto, la cantidad en texto decimal y la unidad en la que la escribió la persona. Una ENTRADA
+ * por compra o carga inicial puede traer además `costoUnitario` (texto decimal, por unidad de `unidadId`: ver `leerRenglones`).
+ */
+export type RenglonPedido = Readonly<{
+  productoId: string;
+  cantidad: string;
+  unidadId: string;
+  costoUnitario?: string | undefined;
+}>;
 
 /** Un renglón que ya pasó la lista de permitidos: la cantidad es una `Cantidad` mayor que cero y la unidad una conocida. */
 export type RenglonLeido = Readonly<{
   productoId: string;
   cantidad: Cantidad;
   unidadId: CodigoDeUnidad;
+  /** Lo que declaró la entrada; `null` si no declaró costo (queda `SIN_COSTO`, nunca cero). */
+  costoUnitario: PrecioUnitario | null;
 }>;
 
 /** Un renglón llevado a la unidad de stock de su artículo (conversión exacta o rechazada): el que se escribe en el libro. */
@@ -45,6 +58,8 @@ export type RenglonResuelto = Readonly<{
   articuloId: string;
   /** Mayor que cero, en la unidad de stock. */
   cantidad: CantidadConSigno;
+  /** El costo declarado, por unidad de stock (`null`: sin costo). */
+  costoUnitario: PrecioUnitario | null;
 }>;
 
 /**
@@ -100,8 +115,10 @@ export function leerCantidad(
 /**
  * La lista de renglones que manda la pantalla: de 1 a `MAXIMO_DE_RENGLONES`, cada uno con producto (UUID), cantidad mayor que cero y una
  * unidad conocida. Un producto que no es UUID no tiene artículo (`ARTICULO_NO_CONTROLADO`); una unidad desconocida es un identificador malo.
+ * `admiteCosto`: solo una entrada por compra o carga inicial declara `costoUnitario` (texto decimal, mayor que cero: `leerCostoDeclarado`);
+ * en cualquier otro movimiento un costo mandado es `COSTO_INVALIDO` (el costo de lo que sale lo pone el promedio, no la persona).
  */
-export function leerRenglones(valor: unknown): R<readonly RenglonLeido[]> {
+export function leerRenglones(valor: unknown, admiteCosto = false): R<readonly RenglonLeido[]> {
   if (!Array.isArray(valor) || valor.length === 0 || valor.length > MAXIMO_DE_RENGLONES) {
     return err("RENGLONES_INVALIDOS");
   }
@@ -119,21 +136,33 @@ export function leerRenglones(valor: unknown): R<readonly RenglonLeido[]> {
     if (typeof unidadId !== "string" || !esUnidadConocida(unidadId)) {
       return err("IDENTIFICADOR_INVALIDO");
     }
-    leidos.push({ productoId, cantidad: cantidad.valor, unidadId });
+    const declarado = renglon["costoUnitario"];
+    let costoUnitario: PrecioUnitario | null = null;
+    if (declarado !== undefined) {
+      if (!admiteCosto) return err("COSTO_INVALIDO");
+      const costo = leerCostoDeclarado(declarado);
+      if (!costo.ok) return costo;
+      costoUnitario = costo.valor;
+    }
+    leidos.push({ productoId, cantidad: cantidad.valor, unidadId, costoUnitario });
   }
   return ok(leidos);
 }
 
 /** Los renglones leídos como los entra a la huella: producto, cantidad normalizada y unidad (el orden lo ordena la huella). */
 export const renglonesDeHuella = (leidos: readonly RenglonLeido[]) =>
-  leidos.map(
-    (r) =>
-      [
-        r.productoId,
-        cantidadConSignoATexto(cantidadConSignoDesdeCantidad(r.cantidad)),
-        r.unidadId,
-      ] as const,
-  );
+  leidos.map((r) => {
+    const base = [
+      r.productoId,
+      cantidadConSignoATexto(cantidadConSignoDesdeCantidad(r.cantidad)),
+      r.unidadId,
+    ] as const;
+    // El costo entra a la huella SOLO si se declaró: mismo pedido con otro costo es otro pedido (`CLAVE_REUTILIZADA`), y un pedido sin costo
+    // conserva la huella de siempre.
+    return r.costoUnitario === null
+      ? base
+      : ([...base, precioUnitarioATexto(r.costoUnitario)] as const);
+  });
 
 /**
  * Lleva una cantidad a la unidad de stock de su artículo: la dimensión es la misma (`DIMENSION_DISTINTA`) y la conversión es EXACTA, nunca
@@ -174,10 +203,15 @@ export async function resolverRenglones(
     if (articulo === undefined || !articulo.activo) return err("ARTICULO_NO_CONTROLADO");
     const convertida = aUnidadDeStock(r.cantidad, r.unidadId, articulo);
     if (!convertida.ok) return convertida;
+    // El costo es por unidad de stock (SUPUESTO S-T10-3): con otra unidad habría que convertirlo y redondearlo, y eso es una decisión de dinero.
+    if (r.costoUnitario !== null && r.unidadId !== articulo.unidadDeStockId) {
+      return err("COSTO_INVALIDO");
+    }
     resueltos.push({
       productoId: r.productoId,
       articuloId: articulo.id,
       cantidad: cantidadConSignoDesdeCantidad(convertida.valor),
+      costoUnitario: r.costoUnitario,
     });
   }
   return ok(resueltos);

@@ -111,6 +111,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "vidrieras.retirar_de_linea"
       | "stock.ver"
       | "stock.verificar_saldos"
+      | "costos.ver"
       | "stock.registrar_entrada"
       | "stock.registrar_salida"
       | "stock.transferir"

@@ -1,6 +1,7 @@
 import type { Kysely } from "kysely";
 import type { ProductosParaStock } from "../../catalogo/publico";
 import type { StockDb } from "./esquema";
+import { crearRepositorioDeCostos, type RepositorioDeCostos } from "./costos";
 import { crearProductosParaStock } from "./productos-para-stock";
 import {
   crearRepositorioDeArticulos,
@@ -31,6 +32,7 @@ export type RepositoriosDeStock = Readonly<{
   movimientosDeStock: RepositorioDeMovimientos;
   conteosDeStock: RepositorioDeConteos;
   composicionesDeStock: RepositorioDeComposiciones;
+  costosDeStock: RepositorioDeCostos;
   productosParaStock: ProductosParaStock;
 }>;
 
@@ -44,6 +46,7 @@ export function crearRepositoriosDeStock(db: {
     movimientosDeStock: crearRepositorioDeMovimientos(conexion),
     conteosDeStock: crearRepositorioDeConteos(conexion),
     composicionesDeStock: crearRepositorioDeComposiciones(conexion),
+    costosDeStock: crearRepositorioDeCostos(conexion),
     productosParaStock: crearProductosParaStock(conexion),
   };
 }

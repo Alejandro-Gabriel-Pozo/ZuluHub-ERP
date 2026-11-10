@@ -123,6 +123,14 @@ export type {
   RenglonDeFicha,
 } from "./consultas/libro";
 export type { ConteoDeLista, FichaDeConteo, RegistroDeFicha } from "./consultas/conteos";
+export type {
+  CostoCongeladoDeRenglon,
+  EntradaDeCostoDeRenglon,
+  EntradaDeExistenciaValorizada,
+  EntradaDeUltimoCostoDeCompra,
+  ExistenciaValorizada,
+  UltimoCostoDeCompra,
+} from "./consultas/costos";
 export type { DiferenciaDeSaldo } from "./persistencia/lecturas-del-libro";
 export { COLUMNAS_DE_STOCK, type StockDb } from "./persistencia/esquema";
 export { ERRORES_DE_STOCK_POR_RESTRICCION } from "./persistencia/errores-por-restriccion";

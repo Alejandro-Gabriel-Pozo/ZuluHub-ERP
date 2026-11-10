@@ -128,6 +128,9 @@ const TABLAS_DE_NEGOCIO = [
   "conteo_registro",
   "composicion",
   "componente_de_composicion",
+  // Stock, costos (0031_stock_costos)
+  "costo_de_articulo",
+  "costo_de_renglon",
   // Facturación de tickets (0029_facturacion)
   "documento_de_ticket",
 ] as const;
@@ -390,6 +393,8 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "conteo_registro:SELECT", // 0030
           "composicion:SELECT", // 0030
           "componente_de_composicion:SELECT", // 0030
+          "costo_de_articulo:SELECT", // 0031
+          "costo_de_renglon:SELECT", // 0031
           "sucursal:SELECT",
           "tenant:SELECT",
           "trabajo:SELECT",
@@ -622,6 +627,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ),
           "pedernal_app:articulo_de_stock.activo",
           "pedernal_app:saldo_de_stock.existencia",
+          // 0031: el promedio de costo cambia (el costo congelado de cada renglón no se modifica)
+          "pedernal_app:costo_de_articulo.costo_unitario",
+          "pedernal_app:costo_de_articulo.cantidad_valorizada",
           ...["estado", "resuelto_por", "resuelto_en", "motivo"].map(
             (c) => `pedernal_app:conteo_fisico.${c}`,
           ),
@@ -1387,6 +1395,17 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "dimension",
             "perdida",
           ].map((c) => `componente_de_composicion.${c}`),
+          // 0031: el costo no manda `moneda` (la fija la base)
+          ...[
+            "empresa_id",
+            "deposito_id",
+            "articulo_id",
+            "costo_unitario",
+            "cantidad_valorizada",
+          ].map((c) => `costo_de_articulo.${c}`),
+          ...["empresa_id", "movimiento_id", "numero", "estado", "costo_unitario"].map(
+            (c) => `costo_de_renglon.${c}`,
+          ),
           "trabajo.empresa_id",
           "trabajo.tipo",
           "trabajo.datos",

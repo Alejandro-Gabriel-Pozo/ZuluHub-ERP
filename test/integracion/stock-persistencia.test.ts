@@ -14,7 +14,7 @@ import {
 import type { BaseDePruebas } from "./global";
 
 /**
- * El esquema de stock (0030) contra lo que el código dice de él: las columnas de cada tabla, y que TODA restricción de la base (y cada
+ * El esquema de stock (0030 y los costos de 0031) contra lo que el código dice de él: las columnas de cada tabla, y que TODA restricción de la base (y cada
  * restricción que lanzan sus disparadores) tenga su traducción a un error de negocio, y que ninguna traducción apunte a algo que no existe.
  * Además: toda única de una tabla de empresa incluye `empresa_id`, toda clave foránea entre tablas de empresa es compuesta, las columnas
  * del catálogo que lee stock (`tablas.ts`) existen en el catálogo y en la base con el tipo con que se leen, y las listas cerradas que el
@@ -56,12 +56,14 @@ describe.skipIf(base === null)("stock: la persistencia contra el esquema real", 
        select indexname from pg_indexes where schemaname = 'public' and tablename = any($1) and indexdef like 'CREATE UNIQUE%'`,
       [TABLAS],
     );
-    const migracion = await readFile(
-      join(import.meta.dirname, "../../migraciones/0030_stock.sql"),
-      "utf8",
+    // Los disparadores de 0030 y los de 0031 (costos): las dos migraciones son de stock.
+    const migraciones = await Promise.all(
+      ["0030_stock.sql", "0031_stock_costos.sql"].map((archivo) =>
+        readFile(join(import.meta.dirname, "../../migraciones", archivo), "utf8"),
+      ),
     );
-    const deDisparadores = [...migracion.matchAll(/CONSTRAINT = '(\w+)'/g)].map(
-      (m) => m[1] as string,
+    const deDisparadores = migraciones.flatMap((texto) =>
+      [...texto.matchAll(/CONSTRAINT = '(\w+)'/g)].map((m) => m[1] as string),
     );
     expect(deDisparadores.length).toBeGreaterThan(40);
     const existentes = new Set([...rows.map((r) => r.nombre), ...deDisparadores]);

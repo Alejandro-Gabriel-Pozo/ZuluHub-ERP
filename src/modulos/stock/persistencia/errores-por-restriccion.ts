@@ -153,4 +153,19 @@ export const ERRORES_DE_STOCK_POR_RESTRICCION: Readonly<Record<string, string>> 
   componente_compuesto_cerrado_ck: "NO_TRADUCIDA",
   componente_version_confirmada: "NO_TRADUCIDA",
   componente_articulo_inactivo: "COMPONENTE_NO_CONTROLADO",
+  // costo_de_articulo (0031): lo escribe el caso de uso de costos con valores que ya calculó la función pura; ninguna es un error de la persona
+  costo_de_articulo_pkey: "NO_TRADUCIDA",
+  costo_de_articulo_empresa_id_fkey: "NO_TRADUCIDA",
+  costo_de_articulo_saldo_fkey: "NO_TRADUCIDA",
+  costo_de_articulo_costo_ck: "COSTO_INVALIDO",
+  costo_de_articulo_cantidad_ck: "NO_TRADUCIDA",
+  costo_de_articulo_moneda_ck: "NO_TRADUCIDA",
+  // costo_de_renglon (0031)
+  costo_de_renglon_pkey: "NO_TRADUCIDA",
+  costo_de_renglon_empresa_id_fkey: "NO_TRADUCIDA",
+  costo_de_renglon_renglon_fkey: "NO_TRADUCIDA",
+  costo_de_renglon_estado_ck: "NO_TRADUCIDA",
+  costo_de_renglon_costo_ck: "COSTO_INVALIDO",
+  costo_de_renglon_estado_y_costo_ck: "NO_TRADUCIDA",
+  costo_de_renglon_movimiento_confirmado: "NO_TRADUCIDA",
 };

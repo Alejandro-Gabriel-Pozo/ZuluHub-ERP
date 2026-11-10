@@ -11,6 +11,7 @@ import {
   type RenglonDeLibro,
 } from "../dominio/movimiento";
 import type { TxDeStock } from "./contrato";
+import { costosDeclaradosDe } from "./costos";
 import { buscarRepeticion, registrarMovimientoEnTx } from "./movimiento-en-tx";
 import {
   comprobarFecha,
@@ -36,7 +37,7 @@ type R<S> = Resultado<S, ErrorDeStock>;
 
 /**
  * Revierte la salida de un ejemplar (E5 §3.3, `ReversionDeStock.revertirPorOrigen`): una anulación ESPEJO de la salida (mismo depósito, mismos
- * artículos y versiones de receta, cantidades opuestas; con el costo congelado de la salida cuando exista el tramo de costos), con la clave
+ * artículos y versiones de receta, cantidades opuestas y el MISMO costo congelado de la salida), con la clave
  * derivada `anulacion_venta_<ejemplarId>` y el mismo origen que la salida. Corre en la transacción del llamador y no autoriza. Sin salida
  * previa no hay nada que revertir: `habiaSalida: false`, sin error y sin escribir. Una sola anulación por movimiento: si ya estaba revertida
  * devuelve la existente con `yaExistia`. No mira si el módulo está activo: revertir lo ya descontado siempre se puede. Una anulación nunca se
@@ -108,7 +109,8 @@ export async function revertirPorOrigen(
  * La entrada de mercadería por origen (E5 §3.3, `EntradaPorOrigen.registrarEntrada`): la recepción de una compra (E9). Corre en la transacción del
  * llamador y no autoriza. La IDENTIDAD es el origen (la recepción): una segunda llamada de la misma recepción, aunque traiga otra clave, devuelve la
  * entrada existente con `yaExistia` (la base lo impone con el único de origen). El motivo es `COMPRA`; el depósito es de uso normal y está activo;
- * cantidades exactas en la unidad de stock (conversión exacta o rechazada). Sin costo por ahora: el tramo de costos lo suma. Con el módulo apagado
+ * cantidades exactas en la unidad de stock (conversión exacta o rechazada). Cada renglón puede declarar `costoUnitario` (por unidad de stock, mayor
+ * que cero; `COSTO_INVALIDO` si no): entra al promedio del depósito; sin él queda sin costo. Con el módulo apagado
  * devuelve el motivo y no escribe.
  */
 export async function registrarEntradaPorOrigen(
@@ -130,7 +132,7 @@ export async function registrarEntradaPorOrigen(
     return err("IDENTIFICADOR_INVALIDO");
   }
   if (entrada.motivo !== "COMPRA") return err("MOTIVO_NO_PERMITIDO");
-  const leidos = leerRenglones(entrada.renglones);
+  const leidos = leerRenglones(entrada.renglones, true);
   if (!leidos.ok) return leidos;
   const deposito = await cargarDepositoNormal(tx, contexto, entrada.depositoId);
   if (!deposito.ok) return deposito;
@@ -178,6 +180,7 @@ export async function registrarEntradaPorOrigen(
       cantidad: r.cantidad,
     })),
     confirmaciones: [],
+    costos: costosDeclaradosDe(deposito.valor.id, resueltos.valor),
   });
   if (!registrado.ok) return registrado;
   return ok({

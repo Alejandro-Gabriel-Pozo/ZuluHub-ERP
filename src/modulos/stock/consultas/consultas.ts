@@ -2,6 +2,7 @@ import type { DependenciasDeConsultasDeStock } from "../casos-de-uso/contrato";
 import { crearLector } from "./comun";
 import { armarConsultasDeComposiciones } from "./composiciones";
 import { armarConsultasDeConteos } from "./conteos";
+import { armarConsultasDeCostos } from "./costos";
 import { armarConsultasDeDepositos } from "./depositos";
 import { armarConsultasDeExistencias } from "./existencias";
 import { armarConsultasDeLibro } from "./libro";
@@ -22,6 +23,8 @@ export function crearConsultasDeStock(d: DependenciasDeConsultasDeStock) {
     ...armarConsultasDeConteos(leer, d.reglas),
     // composiciones (E5-T7)
     ...armarConsultasDeComposiciones(leer),
+    // costos (E5-T10)
+    ...armarConsultasDeCostos(leer),
   };
 }
 

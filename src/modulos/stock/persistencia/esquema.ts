@@ -2,7 +2,7 @@ import type { ColumnType, Generated } from "kysely";
 import type { TablasDeCatalogoQueLeeStock } from "./tablas";
 
 /**
- * Las tablas de stock (0030). Los decimales (`numeric`) llegan y se escriben como TEXTO: nunca se pasan por `number` (ADR-006). Las fechas de
+ * Las tablas de stock (0030 y los costos de 0031). Los decimales (`numeric`) llegan y se escriben como TEXTO: nunca se pasan por `number` (ADR-006). Las fechas de
  * negocio (`date`) las devuelve `pg` como `Date` a la medianoche local, que corre un día según el huso: se leen SIEMPRE con `::text` y se
  * escriben como texto con `::date` (los repositorios lo hacen; ninguna lectura usa `selectAll` sobre una tabla con `date`). Un test compara
  * estas columnas con el catálogo de la base (`stock-persistencia.test.ts`).
@@ -138,6 +138,25 @@ export type StockDb = TablasDeCatalogoQueLeeStock & {
     dimension: string;
     perdida: Generated<string>;
   };
+  /** El promedio móvil ponderado por (depósito, artículo) (0031). La moneda la fija la base (`ARS`). */
+  costo_de_articulo: {
+    empresa_id: string;
+    deposito_id: string;
+    articulo_id: string;
+    /** Texto decimal exacto, 6 decimales. */
+    costo_unitario: string;
+    /** Texto decimal exacto, 4 decimales: las unidades que tienen costo. */
+    cantidad_valorizada: string;
+    moneda: Generated<string>;
+  };
+  /** El costo congelado de cada renglón del libro (0031): solo inserción. `costo_unitario` nulo si y solo si `SIN_COSTO`. */
+  costo_de_renglon: {
+    empresa_id: string;
+    movimiento_id: string;
+    numero: number;
+    estado: string;
+    costo_unitario: string | null;
+  };
 };
 
 /** Las columnas de cada tabla propia de stock, en el orden de la base. Lo comprueba `stock-persistencia.test.ts`. */
@@ -245,6 +264,15 @@ export const COLUMNAS_DE_STOCK = {
     "dimension",
     "perdida",
   ],
+  costo_de_articulo: [
+    "empresa_id",
+    "deposito_id",
+    "articulo_id",
+    "costo_unitario",
+    "cantidad_valorizada",
+    "moneda",
+  ],
+  costo_de_renglon: ["empresa_id", "movimiento_id", "numero", "estado", "costo_unitario"],
 } as const satisfies {
   [
     Tabla in keyof Omit<StockDb, keyof TablasDeCatalogoQueLeeStock>
