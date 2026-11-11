@@ -870,5 +870,15 @@
     "decision": "Una mesa que fue destino de una unión puede volver a unirse o dividirse; solo la mesa de reserva (la origen) figura como «unida».",
     "que_cambia": "Qué se puede hacer con una mesa que recibió otra mesa.",
     "donde": "src/modulos/salon/casos-de-uso/unir.ts y src/modulos/salon/dominio/estado-de-mesa.ts"
+  },
+  {
+    "id": "DEC-0088",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El tope de textos del vocabulario por marca sube de 500 a 1000: el catálogo del código ya lo pasó con los textos del salón y de las comandas.",
+    "que_cambia": "Cuántos textos propios puede tener una marca; no cambia ningún texto guardado.",
+    "donde": "migraciones/0038_salon.sql (vocabulario_valido) y test/integracion/marcas-sql.test.ts"
   }
 ]

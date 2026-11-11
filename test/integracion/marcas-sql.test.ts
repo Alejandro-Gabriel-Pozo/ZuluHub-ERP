@@ -1,5 +1,5 @@
 import fc from "fast-check";
-import type pg from "pg";
+import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { CATALOGO_DE_TEXTOS } from "../../src/capacidades/vocabulario/catalogo";
 import { validarTextoVisible } from "../../src/capacidades/vocabulario/texto-visible";
@@ -1201,7 +1201,7 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
       }
     });
 
-    it("a lo sumo 500 textos; vacío vale; solo un objeto", async () => {
+    it("a lo sumo 500 textos (el tope de 0007; 0038 lo sube a 1000); vacío vale; solo un objeto", async () => {
       const con = (n: number) =>
         Object.fromEntries(Array.from({ length: n }, (_, i) => [`a.k${i}`, "t"]));
       const { rows } = await dueno.query<{ v: boolean }>(
@@ -1216,15 +1216,30 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
       expect(otros.map((r) => r.v)).toEqual([false, false, false, false, false]);
     });
 
+    // El catálogo del código pasó de 500 claves: se mide contra la base con TODAS las migraciones (0038 sube el tope a 1000, DEC-0088), no contra la de 0007.
     it("todo el catálogo de textos del código, como diccionario, es un vocabulario válido para la base", async () => {
+      if (base === null) return;
       const diccionario = Object.fromEntries(
         Object.entries(CATALOGO_DE_TEXTOS).map(([clave, d]) => [clave, d.porDefecto]),
       );
-      const { rows } = await dueno.query<{ v: boolean }>(
-        "select vocabulario_valido($1::jsonb) as v",
-        [JSON.stringify(diccionario)],
-      );
-      expect(rows).toEqual([{ v: true }]);
+      const completa = new pg.Client({ connectionString: base.dueno });
+      await completa.connect();
+      try {
+        const { rows } = await completa.query<{ v: boolean }>(
+          "select vocabulario_valido($1::jsonb) as v",
+          [JSON.stringify(diccionario)],
+        );
+        expect(rows).toEqual([{ v: true }]);
+        const con = (n: number) =>
+          Object.fromEntries(Array.from({ length: n }, (_, i) => [`a.k${i}`, "t"]));
+        const { rows: tope } = await completa.query<{ v: boolean }>(
+          `select vocabulario_valido(v::jsonb) as v from unnest($1::text[]) as v`,
+          [[con(1000), con(1001)].map((v) => JSON.stringify(v))],
+        );
+        expect(tope.map((r) => r.v)).toEqual([true, false]);
+      } finally {
+        await completa.end();
+      }
     });
   });
 

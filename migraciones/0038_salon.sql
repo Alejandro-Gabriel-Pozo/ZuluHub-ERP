@@ -1086,3 +1086,24 @@ CREATE POLICY trabajo_de_impresion_app_cambiar ON trabajo_de_impresion FOR UPDAT
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id));
 CREATE POLICY intento_de_impresion_app_alta ON intento_de_impresion FOR INSERT TO pedernal_app
   WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND declarado_por = (SELECT app_persona_id()));
+
+-- ---------------------------------------------------------------------------------------------------------------------------------------------
+-- VOCABULARIO: el tope de claves por marca pasa de 500 a 1000 (DEC-0088). El catálogo de textos del código ya pasó de 500 con los textos del salón y
+-- de las comandas; el diccionario por defecto tiene que seguir siendo un vocabulario válido para la base (marcas-sql.test.ts). Es la misma función de
+-- 0007 con otro tope: no cambia ninguna fila ni ningún permiso, y quien ya tenga un vocabulario de hasta 500 claves lo sigue teniendo válido.
+-- ---------------------------------------------------------------------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION vocabulario_valido(v jsonb) RETURNS boolean LANGUAGE sql IMMUTABLE
+  SET search_path = pg_catalog, public, pg_temp AS
+$$
+  SELECT CASE
+    WHEN v IS NULL OR jsonb_typeof(v) <> 'object' THEN false
+    ELSE (SELECT count(*) FROM jsonb_object_keys(v)) <= 1000
+         AND NOT EXISTS (
+           SELECT 1 FROM jsonb_each(v) AS e (texto, valor)
+            WHERE char_length(e.texto) > 120
+               OR e.texto !~ '^[a-z][a-z0-9_]*(\.[a-z0-9_]+){1,5}$'
+               OR jsonb_typeof(e.valor) <> 'string'
+               OR NOT public.texto_visible_valido(e.valor #>> '{}', 200)
+         )
+  END
+$$;

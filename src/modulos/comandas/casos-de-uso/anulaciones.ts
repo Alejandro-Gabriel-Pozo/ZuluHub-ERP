@@ -1,8 +1,15 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
-import { cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
+import {
+  cantidadATexto,
+  cantidadDesdeTexto,
+  type Cantidad,
+} from "../../../primitivas/cantidad/cantidad";
+import {
+  cantidadConSignoATexto,
+  cantidadConSignoDesdeCantidad,
+  restarConSigno,
+} from "../../../primitivas/cantidad/con-signo";
 import { ErrorDeValor } from "../../../primitivas/cantidad/errores";
-import { ESCALA_DE_CANTIDAD } from "../../../primitivas/cantidad/interno";
-import { formatearDecimalFijo } from "../../../primitivas/cantidad/decimal-fijo";
 import type { PersonaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import {
@@ -58,9 +65,9 @@ export type SalidaDeAnularItemEnviado = Readonly<{
   yaExistia: boolean;
 }>;
 
-const unidades = (texto: string): bigint | null => {
+const leerCantidad = (texto: string): Cantidad | null => {
   try {
-    return cantidadDesdeTexto(texto).unidades;
+    return cantidadDesdeTexto(texto);
   } catch (error) {
     if (error instanceof ErrorDeValor) return null;
     throw error;
@@ -116,12 +123,23 @@ export async function anularItemEnviadoEnTx(
   const fila = await tx.envios.filaDeComanda(empresaId, linea.id);
   if (fila === null || fila.envioId === null) return err("LINEA_NO_ENVIADA");
 
-  const anulada = unidades(entrada.cantidad);
-  const hay = unidades(linea.cantidad);
-  const paso = unidades(linea.pasoDeCantidad);
-  if (anulada === null || hay === null || paso === null) return err("CANTIDAD_INVALIDA");
+  const anuladaLeida = leerCantidad(entrada.cantidad);
+  const hayLeida = leerCantidad(linea.cantidad);
+  const pasoLeido = leerCantidad(linea.pasoDeCantidad);
+  if (anuladaLeida === null || hayLeida === null || pasoLeido === null) {
+    return err("CANTIDAD_INVALIDA");
+  }
+  const anulada = anuladaLeida.unidades;
+  const hay = hayLeida.unidades;
+  const paso = pasoLeido.unidades;
   if (anulada <= 0n || anulada > hay || anulada % paso !== 0n) return err("CANTIDAD_INVALIDA");
-  const queda = hay - anulada;
+  const resto = restarConSigno(
+    cantidadConSignoDesdeCantidad(hayLeida),
+    cantidadConSignoDesdeCantidad(anuladaLeida),
+  );
+  if (!resto.ok) return err("CANTIDAD_INVALIDA");
+  const queda = resto.valor.unidades;
+  const quedaTexto = cantidadConSignoATexto(resto.valor);
   if (queda > 0n) {
     // Lo parcial agrega una línea con el resto: exige la jornada abierta, como agregar.
     const jornada = await exigirJornadaAbierta(tx, contexto, cuenta.sucursalId);
@@ -148,7 +166,7 @@ export async function anularItemEnviadoEnTx(
       lineaOrigenId: linea.id,
       cuentaDestinoId: cuenta.id,
       lineaNuevaId: lineaDelResto,
-      cantidad: formatearDecimalFijo(queda, ESCALA_DE_CANTIDAD),
+      cantidad: quedaTexto,
       modo: "RESTO",
     });
     if (!copia.ok) return copia;
@@ -159,13 +177,13 @@ export async function anularItemEnviadoEnTx(
     });
     if (!estado.ok) return estado;
   }
-  const quedan = formatearDecimalFijo(queda, ESCALA_DE_CANTIDAD);
+  const quedan = quedaTexto;
   await tx.envios.insertarAviso(empresaId, {
     id: entrada.avisoId,
     cuentaId: cuenta.id,
     lineaOrigenId: linea.id,
     envioId: fila.envioId,
-    cantidad: formatearDecimalFijo(anulada, ESCALA_DE_CANTIDAD),
+    cantidad: cantidadATexto(anuladaLeida),
     quedan,
     motivo: entrada.motivo.trim(),
     nombreDeCocina: salida.nombreDeCocina,
