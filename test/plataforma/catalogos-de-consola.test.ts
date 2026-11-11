@@ -246,6 +246,14 @@ describe("catalogoDePerillas", () => {
         modulo: "stock",
       },
       {
+        perilla: "produccion",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "produccion",
+      },
+      {
         perilla: "subcomposiciones",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",
