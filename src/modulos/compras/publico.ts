@@ -21,11 +21,6 @@ export type {
   SalidaDePedirFicha,
   SalidaDeResolverPedido,
 } from "./casos-de-uso/ficha";
-export type {
-  EntradaDeCrearPresentacion,
-  EntradaDeEditarPresentacion,
-  SalidaDeCrearPresentacion,
-} from "./casos-de-uso/presentaciones";
 export type { FichaDelProveedorParaCompras, OfertaDeProducto } from "./consultas/ficha";
 export {
   crearRepositoriosDeCompras,

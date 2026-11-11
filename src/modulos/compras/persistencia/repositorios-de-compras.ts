@@ -7,10 +7,6 @@ import {
 } from "./repositorio-de-configuracion";
 import { crearRepositorioDeFichas, type RepositorioDeFichas } from "./repositorio-de-fichas";
 import { crearRepositorioDeOfertas, type RepositorioDeOfertas } from "./repositorio-de-ofertas";
-import {
-  crearRepositorioDePresentaciones,
-  type RepositorioDePresentaciones,
-} from "./repositorio-de-presentaciones";
 
 /**
  * Los repositorios de compras, armados sobre la MISMA conexión de la transacción. La composición los junta con los de los demás módulos en UNA sola `Tx`:
@@ -18,7 +14,6 @@ import {
  */
 export type RepositoriosDeCompras = Readonly<{
   fichasDeCompra: RepositorioDeFichas;
-  presentacionesDeProducto: RepositorioDePresentaciones;
   ofertasDeProveedor: RepositorioDeOfertas;
   configuracionDeCompras: RepositorioDeConfiguracionDeCompras;
   productosParaCompras: ProductosParaCompras;
@@ -30,7 +25,6 @@ export function crearRepositoriosDeCompras(db: {
   const conexion = db.withTables<ComprasDb>();
   return {
     fichasDeCompra: crearRepositorioDeFichas(conexion),
-    presentacionesDeProducto: crearRepositorioDePresentaciones(conexion),
     ofertasDeProveedor: crearRepositorioDeOfertas(conexion),
     configuracionDeCompras: crearRepositorioDeConfiguracionDeCompras(conexion),
     productosParaCompras: crearProductosParaCompras(conexion),

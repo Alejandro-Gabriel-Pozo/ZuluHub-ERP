@@ -35,7 +35,6 @@ const TABLAS = [
   "comprobante_de_la_ficha",
   "punto_de_venta_de_la_ficha",
   "pedido_de_ficha",
-  "presentacion_de_producto",
   "oferta_de_proveedor",
   "recepcion",
   "linea_de_recepcion",

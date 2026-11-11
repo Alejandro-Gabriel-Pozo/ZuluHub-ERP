@@ -58,17 +58,6 @@ export type ComprasDb = {
     resuelto_en: Date | null;
     version: Generated<number>;
   };
-  presentacion_de_producto: {
-    id: Generated<string>;
-    empresa_id: string;
-    producto_id: string;
-    nombre: string;
-    nombre_clave: string;
-    cantidad: string;
-    de_peso_variable: Generated<boolean>;
-    activa: Generated<boolean>;
-    version: Generated<number>;
-  };
   oferta_de_proveedor: {
     id: Generated<string>;
     empresa_id: string;

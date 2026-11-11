@@ -9,7 +9,6 @@ import {
   armarPedirPuntoDeVenta,
   armarResolverPedido,
 } from "./ficha";
-import { armarCrearPresentacion, armarEditarPresentacion } from "./presentaciones";
 
 /**
  * Los casos de uso de compras, listos para que la composición los ofrezca. El `satisfies` exige que sean EXACTAMENTE los que declara `DECLARACIONES` (qué acción
@@ -24,8 +23,6 @@ export function crearCasosDeUsoDeCompras(dependencias: DependenciasDeCompras) {
     pedirPuntoDeVenta: armarPedirPuntoDeVenta(dependencias),
     pedirComprobante: armarPedirComprobante(dependencias),
     resolverPedido: armarResolverPedido(dependencias),
-    crearPresentacion: armarCrearPresentacion(dependencias),
-    editarPresentacion: armarEditarPresentacion(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

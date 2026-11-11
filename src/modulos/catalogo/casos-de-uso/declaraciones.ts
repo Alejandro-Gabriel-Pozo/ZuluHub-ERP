@@ -1,6 +1,7 @@
 import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/declaracion";
 
 const ARCHIVO = "test/integracion/catalogo-casos-de-uso.test.ts";
+const ARCHIVO_DE_PRESENTACIONES = "test/integracion/catalogo-presentaciones.test.ts";
 const ARCHIVO_DE_FORMA = "test/integracion/catalogo-forma-de-venta.test.ts";
 
 /**
@@ -136,6 +137,26 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO,
         it: "secciones: desactivar dos veces es ok y no audita la segunda; el producto elige una sección activa y desactivarla no lo toca",
+      },
+    },
+  },
+  crearPresentacion: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_PRESENTACIONES,
+        it: "I8: crear dos veces la misma presentación devuelve la existente; con otra cantidad, PRESENTACION_REPETIDA",
+      },
+    },
+  },
+  editarPresentacion: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "SIN_CAMBIOS",
+      prueba: {
+        archivo: ARCHIVO_DE_PRESENTACIONES,
+        it: "I8: editar una presentación con lo que ya tiene devuelve lo vigente aunque la versión esperada sea vieja, sin escribir ni auditar",
       },
     },
   },

@@ -1,7 +1,9 @@
 import type { Kysely } from "kysely";
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
-import type { ComprasDb } from "./esquema";
-import { esUuid } from "./filas";
+import type { CatalogoDb } from "./esquema";
+import { FORMA_DE_UUID } from "./filas";
+
+const esUuid = (texto: string): boolean => FORMA_DE_UUID.test(texto);
 
 export type PresentacionGuardada = Readonly<{
   id: string;
@@ -23,7 +25,7 @@ export type AltaDePresentacion = Readonly<{
   dePesoVariable: boolean;
 }>;
 
-/** Las presentaciones de compra de un producto (E9 §3.2): la cantidad nunca cambia («otra cantidad es otra presentación»); se renombran y se apagan. */
+/** Las presentaciones de un producto (E9 §3.2, X5: dato del producto, dueño el catálogo): la cantidad nunca cambia («otra cantidad es otra presentación»); se renombran y se apagan. */
 export interface RepositorioDePresentaciones {
   obtener(empresa: EmpresaId, id: string): Promise<PresentacionGuardada | null>;
   bloquear(empresa: EmpresaId, id: string): Promise<PresentacionGuardada | null>;
@@ -82,7 +84,7 @@ const aPresentacion = (f: Fila): PresentacionGuardada => ({
 });
 
 export function crearRepositorioDePresentaciones(
-  db: Kysely<ComprasDb>,
+  db: Kysely<CatalogoDb>,
 ): RepositorioDePresentaciones {
   async function leer(empresa: EmpresaId, id: string, bloquear: boolean) {
     if (!esUuid(id)) return null;

@@ -78,24 +78,4 @@ export const DECLARACIONES = {
       },
     },
   },
-  crearPresentacion: {
-    accion: "productos.editar",
-    repeticion: {
-      regla: "YA_ESTABA",
-      prueba: {
-        archivo: ARCHIVO_DE_FICHA,
-        it: "I8: crear dos veces la misma presentación devuelve la existente; con otra cantidad, PRESENTACION_REPETIDA",
-      },
-    },
-  },
-  editarPresentacion: {
-    accion: "productos.editar",
-    repeticion: {
-      regla: "SIN_CAMBIOS",
-      prueba: {
-        archivo: ARCHIVO_DE_FICHA,
-        it: "I8: editar una presentación con lo que ya tiene devuelve lo vigente aunque la versión esperada sea vieja, sin escribir ni auditar",
-      },
-    },
-  },
 } as const satisfies Record<string, DeclaracionDeCasoDeUso>;

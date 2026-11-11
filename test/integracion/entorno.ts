@@ -111,10 +111,12 @@ import type { ColaDeTrabajos } from "../../src/puertos/cola-de-trabajos";
 import {
   crearRepositorioDeOpciones,
   crearRepositorioDePrecios,
+  crearRepositorioDePresentaciones,
   crearRepositorioDeProductos,
   type CatalogoDb,
   type RepositorioDeOpciones,
   type RepositorioDePrecios,
+  type RepositorioDePresentaciones,
   type RepositorioDeProductos,
 } from "../../src/modulos/catalogo/publico";
 import { armarPiezasDeCajaEnTx, type PiezasDeCajaEnTx } from "../../src/composicion/tx-de-caja";
@@ -172,6 +174,7 @@ export type TxDePrueba = Readonly<{
   productos: RepositorioDeProductos;
   opciones: RepositorioDeOpciones;
   precios: RepositorioDePrecios;
+  presentacionesDeProducto: RepositorioDePresentaciones;
 }> &
   PiezasDeCajaEnTx &
   TxDeIdentidad;
@@ -227,6 +230,7 @@ export function crearEntornoDePrueba(
       productos: crearRepositorioDeProductos(db.withTables<CatalogoDb>()),
       opciones: crearRepositorioDeOpciones(db.withTables<CatalogoDb>()),
       precios: crearRepositorioDePrecios(db.withTables<CatalogoDb>()),
+      presentacionesDeProducto: crearRepositorioDePresentaciones(db.withTables<CatalogoDb>()),
     });
   return crearTransacciones<TxDePrueba>({
     urls: {

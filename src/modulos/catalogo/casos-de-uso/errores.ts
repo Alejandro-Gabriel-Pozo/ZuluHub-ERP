@@ -1,3 +1,4 @@
+import type { ErrorDePresentacion } from "../dominio/presentaciones";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ErrorDeAlcance } from "../../../capacidades/permisos/alcance";
 import type { EmpresaNoOpera } from "../../../contexto/estados";
@@ -49,6 +50,10 @@ export type ErrorDeCatalogo =
   | "CANTIDAD_INVALIDA"
   | "ESCALA_SIN_TAMANO"
   | "ERROR_DE_LA_BASE_NO_TRADUCIDO"
+  | "PRODUCTO_NO_COMPRABLE"
+  | "PRESENTACION_NO_ENCONTRADA"
+  | "PRESENTACION_REPETIDA"
+  | ErrorDePresentacion
   | Readonly<{
       error: "PRECIO_DESACTUALIZADO";
       /** Lo que rige ahora en el mismo alcance (null si no hay ninguna fila). */

@@ -2,13 +2,12 @@ import type { ContextoOperativo } from "../../../contexto/contexto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { esClaseComprable } from "../dominio/clase-comprable";
 import { datosDePresentacion, nombreDePresentacionDesdeTexto } from "../dominio/presentaciones";
-import { esUuid } from "../persistencia/filas";
 import type { PresentacionGuardada } from "../persistencia/repositorio-de-presentaciones";
-import { autorizar, traducir } from "./comun";
-import type { DependenciasDeCompras } from "./contrato";
-import type { ErrorDeCompras } from "./errores";
+import { autorizar, exigirAlcanceTotal, traducir } from "./comun";
+import type { DependenciasDeCatalogo } from "./contrato";
+import type { ErrorDeCatalogo } from "./errores";
 
-type R<S> = Resultado<S, ErrorDeCompras>;
+type R<S> = Resultado<S, ErrorDeCatalogo>;
 
 export type EntradaDeCrearPresentacion = Readonly<{
   productoId: string;
@@ -23,12 +22,12 @@ export type SalidaDeCrearPresentacion = Readonly<{
 }>;
 
 /**
- * Crear una presentación de compra de un producto (E9 §3.2; D131: es parte de «Cómo se compra» de la ficha del producto, así que usa la acción que ya existe
- * `productos.editar`). Solo de lo que se compra (materia prima, insumo, reventa) y activo; el producto se bloquea en modo compartido. Repetición
- * (`YA_ESTABA`): el mismo nombre con la misma cantidad y el mismo peso variable devuelve la existente (`yaExistia`); el mismo nombre con otra cantidad es
- * `PRESENTACION_REPETIDA` («otra cantidad es otra presentación»).
+ * Crear una presentación de un producto (E9 §3.2; X5 y D131: dato del PRODUCTO, parte de «Cómo se compra» de su ficha; usa la acción que ya existe
+ * `productos.editar`, con alcance TODAS porque afecta a toda la empresa). Solo de lo que se compra (materia prima, insumo, reventa) y activo.
+ * Repetición (`YA_ESTABA`): el mismo nombre con la misma cantidad y el mismo peso variable devuelve la existente (`yaExistia`); el mismo nombre con
+ * otra cantidad es `PRESENTACION_REPETIDA` («otra cantidad es otra presentación»).
  */
-export function armarCrearPresentacion(dependencias: DependenciasDeCompras) {
+export function armarCrearPresentacion(dependencias: DependenciasDeCatalogo) {
   return async function crearPresentacion(
     contexto: ContextoOperativo,
     entrada: EntradaDeCrearPresentacion,
@@ -42,10 +41,9 @@ export function armarCrearPresentacion(dependencias: DependenciasDeCompras) {
         async (tx): Promise<R<SalidaDeCrearPresentacion>> => {
           const permiso = await autorizar(tx, contexto, dependencias.reglas, ["productos.editar"]);
           if (!permiso.ok) return permiso;
-          const producto = await tx.productosParaCompras.bloquearCompartido(
-            empresaId,
-            entrada.productoId,
-          );
+          const alcance = await exigirAlcanceTotal(tx, contexto);
+          if (!alcance.ok) return alcance;
+          const producto = await tx.productos.obtener(empresaId, entrada.productoId);
           if (producto === null) return err("PRODUCTO_NO_ENCONTRADO");
           if (!producto.activo || !esClaseComprable(producto.claseDeUso)) {
             return err("PRODUCTO_NO_COMPRABLE");
@@ -100,7 +98,7 @@ export type EntradaDeEditarPresentacion = Readonly<{
  * Repetición (`SIN_CAMBIOS`): pedir lo que ya tiene devuelve lo vigente aunque la versión esperada sea vieja, sin escribir ni auditar. Lo ya comprado no
  * cambia: las líneas de compra guardan sus números, no el nombre.
  */
-export function armarEditarPresentacion(dependencias: DependenciasDeCompras) {
+export function armarEditarPresentacion(dependencias: DependenciasDeCatalogo) {
   return async function editarPresentacion(
     contexto: ContextoOperativo,
     entrada: EntradaDeEditarPresentacion,
@@ -108,13 +106,14 @@ export function armarEditarPresentacion(dependencias: DependenciasDeCompras) {
     const { empresaId } = contexto;
     const nombre = nombreDePresentacionDesdeTexto(entrada.nombre);
     if (!nombre.ok) return nombre;
-    if (!esUuid(entrada.presentacionId)) return err("PRESENTACION_NO_ENCONTRADA");
     return traducir(
       await dependencias.transacciones.ejecutar(
         { contexto },
         async (tx): Promise<R<PresentacionGuardada>> => {
           const permiso = await autorizar(tx, contexto, dependencias.reglas, ["productos.editar"]);
           if (!permiso.ok) return permiso;
+          const alcance = await exigirAlcanceTotal(tx, contexto);
+          if (!alcance.ok) return alcance;
           const actual = await tx.presentacionesDeProducto.bloquear(
             empresaId,
             entrada.presentacionId,

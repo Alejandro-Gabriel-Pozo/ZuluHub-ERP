@@ -6,7 +6,6 @@ import type { ErrorDeClientes } from "../../clientes/publico";
 import type { ErrorDeStock } from "../../stock/publico";
 import type { ErrorDeComprobante } from "../dominio/comprobante";
 import type { ErrorDeLinea } from "../dominio/calcular-linea";
-import type { ErrorDePresentacion } from "../dominio/presentaciones";
 
 /**
  * Los errores con nombre de los comandos de compras (E9 §3.2 a §3.6): lista cerrada de TODO el módulo; cada comando devuelve un subconjunto y su contrato
@@ -25,7 +24,6 @@ export const CODIGOS_DE_ERROR_DE_COMPRAS = [
   "PRODUCTO_NO_ENCONTRADO",
   "PRODUCTO_NO_COMPRABLE",
   "PRESENTACION_NO_ENCONTRADA",
-  "PRESENTACION_REPETIDA",
   "RENGLONES_INVALIDOS",
   "PUNTO_DE_VENTA_INVALIDO",
   "PUNTO_DE_VENTA_NO_DECLARADO",
@@ -63,7 +61,6 @@ export type ErrorDeCompras =
   | CodigoDeErrorDeCompras
   | ErrorDeLinea
   | ErrorDeComprobante
-  | ErrorDePresentacion
   | ErrorDeStock
   | ErrorDeClientes
   /** El remito ya está cargado: `recepcionId` es la ganadora (`null` solo si lo dijo la base, que no sabe con quién choca). */

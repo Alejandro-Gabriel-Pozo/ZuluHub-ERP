@@ -1,7 +1,23 @@
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { claveDeNombre } from "../../../primitivas/texto/nombre-de-producto";
 import { textoDeUnaLineaDesdeTexto } from "../../../primitivas/texto/texto-de-una-linea";
-import { leerCantidadPositiva, textoDeCantidad } from "./decimal";
+import {
+  cantidadATexto,
+  cantidadDesdeTexto,
+  type Cantidad,
+} from "../../../primitivas/cantidad/cantidad";
+import { ErrorDeValor } from "../../../primitivas/cantidad/errores";
+
+/** Una cantidad MAYOR que cero, o `null` si el texto no es un decimal canónico de hasta 4 decimales. */
+function cantidadPositiva(texto: string): Cantidad | null {
+  try {
+    const cantidad = cantidadDesdeTexto(texto);
+    return cantidad.unidades > 0n ? cantidad : null;
+  } catch (error) {
+    if (error instanceof ErrorDeValor) return null;
+    throw error;
+  }
+}
 
 /**
  * Una presentación de compra (E9 §3.2; D131): «caja de 12», «bolsa 25 kg», «pieza ≈ 4 kg». La cantidad está en la unidad BASE del producto y no cambia
@@ -38,12 +54,12 @@ export function datosDePresentacion(
 ): Resultado<DatosDePresentacion, ErrorDePresentacion> {
   const nombre = nombreDePresentacionDesdeTexto(entrada.nombre);
   if (!nombre.ok) return nombre;
-  const cantidad = leerCantidadPositiva(entrada.cantidad);
+  const cantidad = cantidadPositiva(entrada.cantidad);
   if (cantidad === null) return err("CANTIDAD_INVALIDA");
   return ok({
     nombre: nombre.valor.nombre,
     nombreClave: nombre.valor.nombreClave,
-    cantidad: textoDeCantidad(cantidad),
+    cantidad: cantidadATexto(cantidad),
     dePesoVariable: entrada.dePesoVariable,
   });
 }
