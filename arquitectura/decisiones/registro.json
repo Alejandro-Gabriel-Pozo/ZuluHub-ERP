@@ -790,5 +790,105 @@
     "que_cambia": "No cambia lo que ve el negocio.",
     "donde": "arquitectura/planificar-mutacion.cjs",
     "motivo": "Es una decisión del CI sobre qué pruebas correr; no toca dinero, permisos ni textos."
+  },
+  {
+    "id": "DEC-0100",
+    "fecha": "2026-11-11",
+    "quien": "padre",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "La merma de un ingrediente se suma al neto (20 % sobre 1 kg son 1,2 kg), como el prototipo aprobado.",
+    "que_cambia": "Cambia el costo y lo que descuenta cada receta con merma; es una sola función.",
+    "donde": "src/modulos/stock/dominio/merma.ts (E6, P-1)"
+  },
+  {
+    "id": "DEC-0101",
+    "fecha": "2026-11-11",
+    "quien": "padre",
+    "tipo": "PERMISOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Abrir y cerrar una orden de producción: los tres roles; cancelar y anular: gerente y administrador; lotes y calidad: gerente y administrador, ver lotes los tres.",
+    "que_cambia": "Quién puede deshacer stock y costo de una producción. Todavía no está cargado en la matriz de roles: va con T8 y T9.",
+    "donde": "Pedernal-docs e6-recetas-produccion-especificacion.md P-2 (E6)"
+  },
+  {
+    "id": "DEC-0102",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Un lote vencido, en cuarentena, en revisión o rechazado no se vende ni se usa; un lote que vence hoy se sigue vendiendo.",
+    "que_cambia": "Qué ve y puede vender el cliente.",
+    "donde": "src/modulos/stock/dominio/disponibilidad.ts (E6, D27, D118)"
+  },
+  {
+    "id": "DEC-0103",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Salida de lotes: primero el que vence antes; si no alcanza, lo que falta va a «sin asignar» y puede quedar negativo según el control de existencia negativa.",
+    "que_cambia": "Qué lote se descuenta y cuándo se permite stock negativo.",
+    "donde": "src/modulos/stock/casos-de-uso/lotes-del-libro.ts (E6)"
+  },
+  {
+    "id": "DEC-0104",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Con el control de lote apagado, los lotes quedan congelados: el libro deja de pedirlos y de tocarlos (la especificación decía que las salidas siguen asignando).",
+    "que_cambia": "Revertirlo rompe «los lotes suman el saldo»; costo bajo, es una rama en lotes-del-libro.ts.",
+    "donde": "src/modulos/stock/casos-de-uso/lotes-del-libro.ts (E6, S-16)"
+  },
+  {
+    "id": "DEC-0105",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Una entrada sin lotes de un artículo con control de lote entra al lote «sin asignar» en lugar de rechazarse.",
+    "que_cambia": "Si la pantalla puede cargar stock sin lote; una línea.",
+    "donde": "src/modulos/stock/casos-de-uso/lotes-del-libro.ts (E6, S-17)"
+  },
+  {
+    "id": "DEC-0106",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El número de orden de producción lo asigna la base, correlativo por empresa; una orden cancelada no libera su número.",
+    "que_cambia": "Numeración visible al cliente.",
+    "donde": "migraciones/0033_produccion.sql (E6, S-18)"
+  },
+  {
+    "id": "DEC-0107",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "COMERCIAL",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "La base ya admite stock propio de un elaborado o vendible y receta de un elaborado; la aplicación lo mantiene cerrado hasta que exista la perilla produccion (todo nace apagado).",
+    "que_cambia": "Quién puede producir; hay que declarar la perilla y el módulo en T9.",
+    "donde": "migraciones/0032_lotes_y_recetas.sql y src/modulos/stock/casos-de-uso/articulos.ts (E6, D146)"
+  },
+  {
+    "id": "DEC-0108",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Los textos de producción, receta y lotes son solo los de los prototipos aprobados el 09/11; los errores sin texto aprobado usan el mensaje genérico.",
+    "que_cambia": "Lo que ve el cliente.",
+    "donde": "src/capacidades/vocabulario/catalogo-produccion.ts y catalogo-lotes.ts (E6, D175)"
+  },
+  {
+    "id": "DEC-0109",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Cerrar una orden exige que la base vea el consumo y el producto en la misma actualización; T8 toma el bloqueo de la fila antes (la spec ponía el UPDATE de estado primero).",
+    "que_cambia": "Orden interna del cierre; sin cambio visible.",
+    "donde": "migraciones/0033_produccion.sql (E6, S-19)"
   }
 ]
