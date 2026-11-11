@@ -1217,20 +1217,14 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
     });
 
     it("todo el catálogo de textos del código, como diccionario, es un vocabulario válido para la base", async () => {
-      // La base admite a lo sumo 500 textos por diccionario (DEC-0315: el catálogo ya tiene más): se valida en tandas de 500, que
-      // comprueba lo mismo para cada texto (clave, largo y forma) sin tocar el tope.
-      const entradas = Object.entries(CATALOGO_DE_TEXTOS).map(
-        ([clave, d]) => [clave, d.porDefecto] as const,
+      const diccionario = Object.fromEntries(
+        Object.entries(CATALOGO_DE_TEXTOS).map(([clave, d]) => [clave, d.porDefecto]),
       );
-      const tandas: string[] = [];
-      for (let i = 0; i < entradas.length; i += 500) {
-        tandas.push(JSON.stringify(Object.fromEntries(entradas.slice(i, i + 500))));
-      }
       const { rows } = await dueno.query<{ v: boolean }>(
-        "select vocabulario_valido(t::jsonb) as v from unnest($1::text[]) as t",
-        [tandas],
+        "select vocabulario_valido($1::jsonb) as v",
+        [JSON.stringify(diccionario)],
       );
-      expect(rows).toEqual(tandas.map(() => ({ v: true })));
+      expect(rows).toEqual([{ v: true }]);
     });
   });
 
