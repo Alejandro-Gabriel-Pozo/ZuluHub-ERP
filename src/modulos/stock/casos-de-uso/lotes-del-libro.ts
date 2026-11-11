@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { cantidadConSignoDesdeTexto } from "../../../primitivas/cantidad/con-signo";
 import { formatearDecimalFijo } from "../../../primitivas/cantidad/decimal-fijo";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
@@ -12,7 +13,6 @@ import { llaveDeSaldo } from "../persistencia/repositorio-de-movimientos";
 import type { ControlDeLote } from "../persistencia/repositorio-de-lotes";
 import type { TxDeStock } from "./contrato";
 import type { ErrorDeStock } from "./errores";
-import { leerCantidad } from "./movimientos-comun";
 
 /**
  * Los lotes en el libro (E6 §3.2, «Asignación de lotes en el libro»), SOLO para los artículos con control de lote ACTIVO: sin control no se
@@ -200,8 +200,11 @@ async function lotesDeUnaEntrada(
   let suma = 0n;
   const vistos = new Set<string>();
   for (const propio of propios) {
-    const cantidad = leerCantidad(propio.cantidad);
-    if (!cantidad.ok) return cantidad;
+    const cantidad =
+      typeof propio.cantidad === "string" ? cantidadConSignoDesdeTexto(propio.cantidad) : null;
+    if (cantidad === null || !cantidad.ok || cantidad.valor.unidades <= 0n) {
+      return err("CANTIDAD_INVALIDA");
+    }
     const vence = propio.fechaDeVencimiento ?? null;
     const elabora = propio.fechaDeElaboracion ?? null;
     if (vence === null && control.modo === "LOTE_Y_VENCIMIENTO")
