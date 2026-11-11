@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { arbolConRegistro, control, entrada, MARCA } from "./decisiones-apoyo";
+import { arbolConRegistro, control, entrada, MARCA, CUOTA } from "./decisiones-apoyo";
 
 /**
  * El control del registro de decisiones (`arquitectura/decisiones/decisiones.cjs`, enchufado en `npm run gate` y en el job del guardián
@@ -296,6 +296,7 @@ describe("la línea de comandos", () => {
     [control.ARCHIVO_DE_LOS_SENSIBLES]: JSON.stringify({
       sensibles: [{ ruta: "src/primitivas/dinero/", que: "el dinero" }],
     }),
+    [control.ARCHIVO_DE_LA_CUOTA]: JSON.stringify(CUOTA),
   });
 
   it("un argumento desconocido o dos --base dan el uso (código 2)", () => {

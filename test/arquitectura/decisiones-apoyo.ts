@@ -17,6 +17,24 @@ export interface Arbol {
   rutas: string[];
   leer: (ruta: string) => Buffer | null;
 }
+interface Excepcion {
+  id: string;
+  fecha: string;
+  fuente: string;
+}
+export interface Cuota {
+  vigente_desde: string;
+  negocio: number;
+  tecnicas: number;
+  excepciones: Excepcion[];
+}
+/** La cuota del repo con una vigencia anterior a las fechas de las entradas de ejemplo (2026-11-11), para que cuenten. */
+export const CUOTA: Cuota = {
+  vigente_desde: "2026-11-01",
+  negocio: 5,
+  tecnicas: 10,
+  excepciones: [],
+};
 export interface Hallazgo {
   archivo: string;
   linea: number;
@@ -37,10 +55,12 @@ export const QUIENES = ["dueño", "padre", "sesión"];
 export const forma = require("../../arquitectura/decisiones/forma.cjs") as {
   problemasDelRegistro: (registro: unknown) => { id: string; problema: string }[];
   problemasDeLosSensibles: (valor: unknown) => string[];
+  problemasDeLaCuota: (valor: unknown) => string[];
 };
 export const control = require("../../arquitectura/decisiones/decisiones.cjs") as {
   ARCHIVO_DEL_REGISTRO: string;
   ARCHIVO_DE_LOS_SENSIBLES: string;
+  ARCHIVO_DE_LA_CUOTA: string;
   EXENTOS: string[];
   COMO_AGREGAR: string;
   ejecutar: (argumentos: string[], raiz: string) => { codigo: number; lineas: string[] };
@@ -91,10 +111,12 @@ export function arbolConRegistro(
   registro: unknown[],
   otros: Record<string, string> = {},
   sensibles: unknown = SENSIBLES,
+  laCuota: unknown = CUOTA,
 ): Arbol {
   return arbol({
     [control.ARCHIVO_DEL_REGISTRO]: JSON.stringify(registro),
     [control.ARCHIVO_DE_LOS_SENSIBLES]: JSON.stringify(sensibles),
+    [control.ARCHIVO_DE_LA_CUOTA]: JSON.stringify(laCuota),
     ...otros,
   });
 }

@@ -3,7 +3,15 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { arbolConRegistro, control, entrada, forma, MARCA, resumen } from "./decisiones-apoyo";
+import {
+  arbolConRegistro,
+  control,
+  entrada,
+  forma,
+  MARCA,
+  resumen,
+  CUOTA,
+} from "./decisiones-apoyo";
 
 /**
  * Casos que fijan los bordes del registro de decisiones (anclas de las expresiones, límites de largo, textos exactos de cada mensaje,
@@ -200,10 +208,11 @@ describe("anclas de los archivos que mira el control", () => {
 
 describe("mensajes exactos de las declaraciones", () => {
   const vacio = { rutas: [], leer: () => null };
-  it("sin registro ni lista, dos fallas con su archivo y sin prefijo", () => {
+  it("sin registro, lista ni cuota, tres fallas con su archivo y sin prefijo", () => {
     expect(evaluar(vacio).fallas).toEqual([
       { archivo: control.ARCHIVO_DEL_REGISTRO, linea: 1, motivo: "no existe." },
       { archivo: control.ARCHIVO_DE_LOS_SENSIBLES, linea: 1, motivo: "no existe." },
+      { archivo: control.ARCHIVO_DE_LA_CUOTA, linea: 1, motivo: "no existe." },
     ]);
   });
   it("JSON roto en el cambio: el mensaje trae el archivo y no el prefijo de la base", () => {
@@ -269,6 +278,7 @@ describe("corrida como programa", () => {
     [control.ARCHIVO_DE_LOS_SENSIBLES]: JSON.stringify({
       sensibles: [{ ruta: "src/primitivas/dinero/", que: "el dinero" }],
     }),
+    [control.ARCHIVO_DE_LA_CUOTA]: JSON.stringify(CUOTA),
   });
   const correr = (script: string, cwd: string, ...args: string[]) =>
     spawnSync(process.execPath, [join(RAIZ, "arquitectura/decisiones", script), ...args], {

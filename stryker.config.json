@@ -110,6 +110,7 @@
     "arquitectura/deuda/deuda.cjs",
     "arquitectura/deuda/campos-sin-dato.cjs",
     "arquitectura/decisiones/forma.cjs",
+    "arquitectura/decisiones/cuota.cjs",
     "arquitectura/decisiones/decisiones.cjs",
     "arquitectura/decisiones/resumen.cjs",
     "!src/**/*.test.ts"
