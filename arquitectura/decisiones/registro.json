@@ -792,7 +792,7 @@
     "motivo": "Es una decisión del CI sobre qué pruebas correr; no toca dinero, permisos ni textos."
   },
   {
-    "id": "DEC-0080",
+    "id": "DEC-0300",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DATOS",
@@ -802,7 +802,7 @@
     "donde": "src/primitivas/identificacion-fiscal/documento-extranjero.ts:6 y pais.ts:6"
   },
   {
-    "id": "DEC-0081",
+    "id": "DEC-0301",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DATOS",
@@ -812,7 +812,7 @@
     "donde": "src/modulos/compras/dominio/comprobante.ts:100"
   },
   {
-    "id": "DEC-0082",
+    "id": "DEC-0302",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DINERO",
@@ -822,7 +822,7 @@
     "donde": "src/modulos/compras/dominio/calcular-linea.ts:34"
   },
   {
-    "id": "DEC-0083",
+    "id": "DEC-0303",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DATOS",
@@ -832,7 +832,7 @@
     "donde": "src/modulos/compras/dominio/factura.ts:18"
   },
   {
-    "id": "DEC-0084",
+    "id": "DEC-0304",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "SIN_DECISION",
@@ -843,7 +843,7 @@
     "motivo": "Es un tope técnico igual al de stock; se corrige cambiando un número."
   },
   {
-    "id": "DEC-0085",
+    "id": "DEC-0305",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "PERMISOS",
@@ -853,7 +853,7 @@
     "donde": "src/capacidades/modulos/catalogo.ts:332"
   },
   {
-    "id": "DEC-0086",
+    "id": "DEC-0306",
     "fecha": "2026-11-11",
     "quien": "padre",
     "tipo": "PERMISOS",
@@ -863,7 +863,7 @@
     "donde": "src/capacidades/permisos/empresa.ts:183"
   },
   {
-    "id": "DEC-0087",
+    "id": "DEC-0307",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DINERO",
@@ -873,7 +873,7 @@
     "donde": "src/modulos/compras/casos-de-uso/pagos.ts"
   },
   {
-    "id": "DEC-0088",
+    "id": "DEC-0308",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DATOS",
@@ -883,7 +883,7 @@
     "donde": "src/modulos/compras/casos-de-uso/registrar-compra.ts"
   },
   {
-    "id": "DEC-0089",
+    "id": "DEC-0309",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DATOS",
@@ -893,7 +893,7 @@
     "donde": "src/modulos/compras/casos-de-uso/anular-compra.ts"
   },
   {
-    "id": "DEC-0090",
+    "id": "DEC-0310",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DATOS",
@@ -903,7 +903,7 @@
     "donde": "src/modulos/compras/dominio/factura.ts y casos-de-uso/registrar-compra.ts"
   },
   {
-    "id": "DEC-0091",
+    "id": "DEC-0311",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "PERMISOS",
@@ -913,7 +913,7 @@
     "donde": "src/modulos/compras/consultas/ficha.ts"
   },
   {
-    "id": "DEC-0092",
+    "id": "DEC-0312",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "PERMISOS",
@@ -923,7 +923,7 @@
     "donde": "src/capacidades/modulos/catalogo.ts"
   },
   {
-    "id": "DEC-0093",
+    "id": "DEC-0313",
     "fecha": "2026-11-11",
     "quien": "padre",
     "tipo": "DATOS",
@@ -933,7 +933,7 @@
     "donde": "src/modulos/catalogo/casos-de-uso/presentaciones.ts"
   },
   {
-    "id": "DEC-0094",
+    "id": "DEC-0314",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "CLIENTE",
@@ -943,7 +943,7 @@
     "donde": "apps/plataforma/logica/plan.ts"
   },
   {
-    "id": "DEC-0095",
+    "id": "DEC-0315",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "COMERCIAL",

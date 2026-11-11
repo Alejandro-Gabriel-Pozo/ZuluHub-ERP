@@ -97,7 +97,7 @@ export const esNumeroDeComprobanteValido = (n: number): boolean =>
 
 /**
  * La letra que se espera de un proveedor según su condición frente al IVA (D110, S-15): inscripto → A, monotributo → C; el resto, `null` («se elige a
- * mano»). SUPUESTO (E9-T5, DEC-0081): solo `MONOTRIBUTO` (no el social ni el promovido) da C; el resto queda a mano. Costo de revertir: bajo (una entrada).
+ * mano»). SUPUESTO (E9-T5, DEC-0301): solo `MONOTRIBUTO` (no el social ni el promovido) da C; el resto queda a mano. Costo de revertir: bajo (una entrada).
  */
 export function letraEsperadaDesdeCondicion(
   condicion: CondicionIva | null,

@@ -329,7 +329,7 @@ export const CATALOGO_DE_MODULOS = {
    * Directorio de clientes y proveedores (E9; `e9-compras-especificacion.md` §3.0 y §3.9, decisiones F1 a F4 de
    * `clientes-y-proveedores.md`). Nació `en_desarrollo` en E9-T1 y E9-T4 lo cerró: `disponible` y `obligatorio` (F5 del 12/10:
    * siempre activo para toda empresa; un módulo obligatorio tiene que estar disponible). Ocho acciones; no hay
-   * `partes.anonimizar` porque ningún caso de uso la usa (SUPUESTO S-3 de E9, DEC-0085). Mirar es `LECTURA`; desactivar cierra; el
+   * `partes.anonimizar` porque ningún caso de uso la usa (SUPUESTO S-3 de E9, DEC-0305). Mirar es `LECTURA`; desactivar cierra; el
    * resto crea o amplía.
    */
   clientes: {

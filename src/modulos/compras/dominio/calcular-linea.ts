@@ -31,7 +31,7 @@ import {
  *    real»). Se parte del exacto y no del importe ya redondeado para no redondear dos veces.
  *  - Sin precio (`precio: null`): importe y costo quedan `null` JUNTOS, nunca cero (D125).
  *
- * SUPUESTO (E9-T5, DEC-0082): un precio de cero se rechaza (`PRECIO_INVALIDO`): un cero se confundiría con «sin precio»; costo de revertir bajo (aflojar un `<=`).
+ * SUPUESTO (E9-T5, DEC-0302): un precio de cero se rechaza (`PRECIO_INVALIDO`): un cero se confundiría con «sin precio»; costo de revertir bajo (aflojar un `<=`).
  */
 export type PresentacionDeLinea = Readonly<{
   /** La cantidad de la presentación en la unidad base del producto, texto decimal (en peso variable es solo el aproximado). */

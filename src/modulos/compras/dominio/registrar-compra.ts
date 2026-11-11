@@ -15,7 +15,7 @@ import { esUuid } from "./identificadores";
 
 /**
  * Cuántos renglones admite una compra como máximo: el mismo tope que stock para un movimiento (`MAXIMO_DE_RENGLONES`), porque cada renglón de la
- * compra es un renglón de su entrada de stock. SUPUESTO (E9-T8, DEC-0084): sin fuente propia; costo de revertir bajo (un número).
+ * compra es un renglón de su entrada de stock. SUPUESTO (E9-T8, DEC-0304): sin fuente propia; costo de revertir bajo (un número).
  */
 export const MAXIMO_DE_RENGLONES_DE_UNA_COMPRA = 9_999;
 

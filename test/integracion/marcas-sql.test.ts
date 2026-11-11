@@ -1217,7 +1217,7 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
     });
 
     it("todo el catálogo de textos del código, como diccionario, es un vocabulario válido para la base", async () => {
-      // La base admite a lo sumo 500 textos por diccionario (DEC-0095: el catálogo ya tiene más): se valida en tandas de 500, que
+      // La base admite a lo sumo 500 textos por diccionario (DEC-0315: el catálogo ya tiene más): se valida en tandas de 500, que
       // comprueba lo mismo para cada texto (clave, largo y forma) sin tocar el tope.
       const entradas = Object.entries(CATALOGO_DE_TEXTOS).map(
         ([clave, d]) => [clave, d.porDefecto] as const,
