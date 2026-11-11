@@ -102,9 +102,10 @@ export type ErrorDeStock =
   | "LOTE_NO_ENCONTRADO"
   | "LOTE_SIN_CALIDAD"
   | "LOTE_DESACTUALIZADO"
+  | "LOTE_SIN_ASIGNAR"
   | "SALDO_DE_LOTE_INSUFICIENTE"
   | "SIN_CAMBIOS"
   | Readonly<{
       error: "FUNCION_NO_INCLUIDA";
-      perilla: "composiciones_con_perdida" | "subcomposiciones";
+      perilla: "composiciones_con_perdida" | "subcomposiciones" | "lotes" | "calidad_de_lote";
     }>;

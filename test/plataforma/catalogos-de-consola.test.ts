@@ -198,6 +198,14 @@ describe("catalogoDePerillas", () => {
         modulo: "caja",
       },
       {
+        perilla: "calidad_de_lote",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "stock",
+      },
+      {
         perilla: "composiciones_con_perdida",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",
@@ -228,6 +236,14 @@ describe("catalogoDePerillas", () => {
         valorBase: { tipo: "LIMITE", limite: 1 },
         requiere: null,
         modulo: "administracion",
+      },
+      {
+        perilla: "lotes",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "stock",
       },
       {
         perilla: "subcomposiciones",

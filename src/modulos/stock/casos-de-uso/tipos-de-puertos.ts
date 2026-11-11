@@ -19,6 +19,10 @@ export type TxDeLecturaDeStock = Pick<
   | "productosParaStock"
   | "depositos"
   | "movimientosDeStock"
+  // E6: lo disponible de un artículo con control de lote (la regla de los lotes y la jornada de la sucursal).
+  | "lotesDeStock"
+  | "sucursales"
+  | "costosDeStock"
 >;
 
 /** Un sello para los orígenes que acepta cada puerto: el ejemplar de un ticket (ventas) y la recepción (compras). */

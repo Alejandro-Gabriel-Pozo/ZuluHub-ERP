@@ -172,10 +172,21 @@ const DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS = [
 /** El nivel de operación de las compras es solo del gerente. */
 const SOLO_DEL_GERENTE_DE_COMPRAS = ["compras.configurar"] as const;
 
+/** E6-T7 (P-2): lotes y calidad. Mirar lo ven los tres roles; el resto, gerente y administrador. */
+const DEL_OPERADOR_DE_LOTES = ["lotes.ver"] as const;
+const SOLO_DEL_ADMINISTRADOR_DE_LOTES = [
+  "lotes.controlar",
+  "lotes.dejar_de_controlar",
+  "lotes.cambiar_calidad",
+  "lotes.corregir",
+  "lotes.reasignar",
+] as const;
+
 const DEL_OPERADOR = [
   ...DEL_OPERADOR_DE_EMPRESA,
   ...DEL_OPERADOR_DE_CLIENTES_Y_COMPRAS,
   ...DEL_OPERADOR_DE_CATALOGO_Y_STOCK,
+  ...DEL_OPERADOR_DE_LOTES,
   ...DEL_OPERADOR_DE_CAJA_CIERRE_Y_VENTAS,
 ] as const;
 
@@ -224,6 +235,7 @@ const DEL_ADMINISTRADOR = [
   "usuarios.revocar_invitacion",
   "usuarios.ver",
   ...SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK,
+  ...SOLO_DEL_ADMINISTRADOR_DE_LOTES,
   ...DE_LA_ESCALERA_DE_ELECCIONES,
   ...DEL_ADMINISTRADOR_DE_CAJA,
   ...DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS,
@@ -247,9 +259,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 129 acciones: 34 de empresa, configuración fiscal y facturación, 42 de catálogo, carta y stock (39 de T0 y 2 de CE0), 35 de caja, cierre y ventas y 18 de clientes y compras", () => {
+  it("hay 135 acciones: 34 de empresa, configuración fiscal y facturación, 48 de catálogo, carta y stock (39 de T0, 2 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas y 18 de clientes y compras", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(129);
+    expect(todas).toHaveLength(135);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),

@@ -1,6 +1,7 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { sucursalId } from "../../../primitivas/identificadores/marca";
 import { LARGO_MAXIMO_DEL_NOMBRE_DE_PRODUCTO } from "../../../primitivas/texto/nombre-de-producto";
+import { claveDePar, disponibleDe } from "../casos-de-uso/lectura-de-lotes";
 import { esUuid } from "../persistencia/filas";
 import type { DiferenciaDeSaldo } from "../persistencia/lecturas-del-libro";
 import type { UsoDeDeposito } from "../persistencia/modelo";
@@ -28,6 +29,11 @@ export type ExistenciaDeLista = Readonly<{
   existencia: string;
   /** «Disponible» es lo que hay en depósitos `NORMAL`: cuarentena y rechazo no suman (D118). */
   uso: UsoDeDeposito;
+  /**
+   * E6: lo que se puede vender o usar ya, texto decimal. Con control de lote, solo los lotes liberados y no vencidos (la misma regla que elige
+   * los lotes de una venta); sin control, la existencia de un depósito `NORMAL`; en cuarentena o rechazo, cero.
+   */
+  disponible: string;
 }>;
 
 export type PaginaDeExistencias = Readonly<{
@@ -88,6 +94,16 @@ export function armarConsultasDeExistencias(leer: Lector) {
       });
       const pagina = filas.slice(0, TAMANO_DE_PAGINA);
       const ultima = pagina[pagina.length - 1];
+      const disponibles = await disponibleDe(
+        tx,
+        contexto,
+        pagina.map((f) => ({
+          depositoId: f.depositoId,
+          articuloId: f.articuloId,
+          uso: f.uso,
+          existencia: f.existencia,
+        })),
+      );
       return {
         existencias: pagina.map((f) => ({
           articuloId: f.articuloId,
@@ -97,6 +113,7 @@ export function armarConsultasDeExistencias(leer: Lector) {
           depositoId: f.depositoId,
           existencia: f.existencia,
           uso: f.uso,
+          disponible: disponibles.get(claveDePar(f.depositoId, f.articuloId)) ?? f.existencia,
         })),
         siguiente:
           filas.length > TAMANO_DE_PAGINA && ultima !== undefined

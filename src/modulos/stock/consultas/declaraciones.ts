@@ -24,6 +24,10 @@ export const DECLARACIONES_DE_CONSULTAS = {
   compararVersiones: { accion: "stock.ver" },
   versionesDeReceta: { accion: "stock.ver" },
   fichaDeCocina: { accion: "stock.ver" },
+  // E6-T7: lotes, lo que vence y la trazabilidad. Mirar es de los tres roles; el importe de lo vencido viaja solo con `costos.ver`.
+  lotesDeArticulo: { accion: "lotes.ver" },
+  vencimientosProximos: { accion: "lotes.ver" },
+  trazabilidadDeLote: { accion: "lotes.ver" },
   // Costos (E5-T10, P-1): quien no puede ver costos no los ve nunca. Solo gerente y administrador (`costos.ver`).
   existenciaValorizada: { accion: "costos.ver" },
   costoDeRenglon: { accion: "costos.ver" },

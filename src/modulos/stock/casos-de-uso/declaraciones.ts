@@ -4,6 +4,7 @@ const ARCHIVO_DE_DEPOSITOS = "test/integracion/stock-depositos.test.ts";
 const ARCHIVO_DE_IDEMPOTENCIA = "test/integracion/stock-idempotencia.test.ts";
 const ARCHIVO_DE_CONTEOS = "test/integracion/stock-conteos.test.ts";
 const ARCHIVO_DE_COMPOSICIONES = "test/integracion/stock-composiciones.test.ts";
+const ARCHIVO_DE_LOTES = "test/integracion/stock-lotes.test.ts";
 
 /**
  * Los casos de uso de stock (E5 §3.2) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar
@@ -183,6 +184,57 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_COMPOSICIONES,
         it: "I12: retirar dos veces la receta es ok y no escribe ni audita la segunda",
+      },
+    },
+  },
+  // ---- lotes y calidad (E6-T7) ----
+  controlarLote: {
+    accion: "lotes.controlar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_LOTES,
+        it: "I7: controlar dos veces el mismo artículo deja una sola apertura del sin asignar, devuelve yaExistia y no audita la segunda",
+      },
+    },
+  },
+  dejarDeControlarLote: {
+    accion: "lotes.dejar_de_controlar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_LOTES,
+        it: "dejar de controlar dos veces es ok, no escribe ni audita la segunda y los lotes siguen consultables",
+      },
+    },
+  },
+  cambiarCalidadDeLote: {
+    accion: "lotes.cambiar_calidad",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_LOTES,
+        it: "I5: cambiar la calidad al mismo estado dos veces deja una sola fila de historia y devuelve yaEstaba",
+      },
+    },
+  },
+  corregirLote: {
+    accion: "lotes.corregir",
+    repeticion: {
+      regla: "SIN_CAMBIOS",
+      prueba: {
+        archivo: ARCHIVO_DE_LOTES,
+        it: "corregir con las mismas fechas devuelve la versión vigente sin escribir ni auditar, aunque la versión esperada sea vieja",
+      },
+    },
+  },
+  reasignarLote: {
+    accion: "lotes.reasignar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_LOTES,
+        it: "I9: repetir reasignarLote con la misma clave hace una sola reasignación; con otro contenido, CLAVE_REUTILIZADA",
       },
     },
   },

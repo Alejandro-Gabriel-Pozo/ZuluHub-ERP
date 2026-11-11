@@ -142,6 +142,12 @@ describe("el catálogo comercial de módulos", () => {
           "conteos.registrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "conteos.aplicar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "conteos.cancelar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "lotes.ver": { capacidad: null, efecto: "LECTURA" },
+          "lotes.controlar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "lotes.dejar_de_controlar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "lotes.cambiar_calidad": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "lotes.corregir": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "lotes.reasignar": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
       caja: {
@@ -257,19 +263,19 @@ describe("el catálogo comercial de módulos", () => {
     expect(carpetas).toEqual([["modulos/catalogo"], ["modulos/catalogo"], ["modulos/stock"]]);
   });
 
-  it("el catálogo tiene 42 acciones de catálogo, carta y stock (14 + 9 + 19), 35 de caja, cierre y ventas (23 + 4 + 8) y 18 de clientes y compras (8 + 10), sin repetir ninguna", () => {
+  it("el catálogo tiene 48 acciones de catálogo, carta y stock (14 + 9 + 25), 35 de caja, cierre y ventas (23 + 4 + 8) y 18 de clientes y compras (8 + 10), sin repetir ninguna", () => {
     const cuantas = (
       m: "catalogo" | "vidriera" | "stock" | "caja" | "cierre" | "ventas" | "clientes" | "compras",
     ) => Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
-    expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([14, 9, 19]);
+    expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([14, 9, 25]);
     expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
     expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 10]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
     // 25 de administración (18 de usuarios, sucursales, gerencia y permisos, y 7 de la configuración fiscal de H7 T5),
-    // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 42 de catálogo, carta y stock (48 menos las 6 retiradas por las
+    // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 48 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
-    // de E5-T10), 35 de caja, cierre y ventas (E0-T1) y 18 de clientes y compras (E9-T1, sin `compras.corregir` hasta E9-T11): 129 en total.
-    expect(todas).toHaveLength(25 + 9 + 42 + 35 + 18);
+    // de E5-T10), 35 de caja, cierre y ventas (E0-T1) y 18 de clientes y compras (E9-T1, sin `compras.corregir` hasta E9-T11) y 6 de lotes de E6-T7: 135 en total.
+    expect(todas).toHaveLength(25 + 9 + 48 + 35 + 18);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -378,6 +384,7 @@ const EFECTOS_DE_EMPRESA = {
     "costos.ver",
     "gerencia.ver_traspaso",
     "jornadas.ver",
+    "lotes.ver",
     "modulos.ver",
     "partes.ver",
     "permisos.ver_propios",
@@ -417,6 +424,9 @@ const EFECTOS_DE_EMPRESA = {
     "depositos.reactivar",
     "emisores.confirmar_regla",
     "gerencia.proponer_traspaso",
+    "lotes.controlar",
+    "lotes.corregir",
+    "lotes.reasignar",
     "medios_de_pago.crear",
     "medios_de_pago.editar",
     "medios_de_pago.reactivar",
@@ -484,6 +494,8 @@ const EFECTOS_DE_EMPRESA = {
     "jornadas.cancelar_auditoria",
     "jornadas.cerrar",
     "jornadas.iniciar_auditoria",
+    "lotes.cambiar_calidad",
+    "lotes.dejar_de_controlar",
     "medios_de_pago.desactivar",
     "movimientos_caja.anular",
     "movimientos_caja.anular_de_otros",

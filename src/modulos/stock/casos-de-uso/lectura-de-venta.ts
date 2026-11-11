@@ -13,6 +13,7 @@ import { esUnidadConocida } from "../dominio/composicion";
 import { MAXIMO_DE_NIVELES_DE_RECETA } from "../dominio/subcomposicion";
 import { esUuid } from "../persistencia/filas";
 import type { TxDeStock } from "./contrato";
+import { claveDePar, disponibleDe } from "./lectura-de-lotes";
 import type {
   TxDeLecturaDeStock,
   ControlDeUnProducto,
@@ -215,7 +216,7 @@ export async function depositoDeVentaDe(
  */
 export async function existenciasParaMostrar(
   tx: TxDeLecturaDeStock,
-  contexto: Pick<ContextoOperativo, "empresaId">,
+  contexto: Pick<ContextoOperativo, "empresaId" | "ahora">,
   productoIds: readonly string[],
   depositoId: string,
 ): Promise<readonly ExistenciaDeProducto[]> {
@@ -231,13 +232,25 @@ export async function existenciasParaMostrar(
     articulos.map((a) => ({ depositoId: deposito.id, articuloId: a.id })),
     false,
   );
-  return articulos.map((a) => {
-    const guardado = cantidadConSignoDesdeTexto(saldos.get(`${deposito.id}|${a.id}`) ?? "0");
+  const existenciaDe = (articuloId: string): string => {
+    const guardado = cantidadConSignoDesdeTexto(saldos.get(`${deposito.id}|${articuloId}`) ?? "0");
     if (!guardado.ok) throw new RangeError("stock: el saldo guardado no es una cantidad");
-    return {
-      productoId: a.productoId,
-      existencia: cantidadConSignoATexto(guardado.valor),
-      unidadId: a.unidadDeStockId,
-    };
-  });
+    return cantidadConSignoATexto(guardado.valor);
+  };
+  // E6: lo que se muestra es lo DISPONIBLE (lotes liberados y no vencidos; el depósito de venta es `NORMAL`): la misma regla que elige los lotes.
+  const disponibles = await disponibleDe(
+    tx,
+    contexto,
+    articulos.map((a) => ({
+      depositoId: deposito.id,
+      articuloId: a.id,
+      uso: deposito.uso,
+      existencia: existenciaDe(a.id),
+    })),
+  );
+  return articulos.map((a) => ({
+    productoId: a.productoId,
+    existencia: disponibles.get(claveDePar(deposito.id, a.id)) ?? existenciaDe(a.id),
+    unidadId: a.unidadDeStockId,
+  }));
 }

@@ -5,6 +5,13 @@ import {
   armarCancelarConteo,
   armarRegistrarConteo,
 } from "./conteos";
+import {
+  armarCambiarCalidadDeLote,
+  armarControlarLote,
+  armarCorregirLote,
+  armarDejarDeControlarLote,
+  armarReasignarLote,
+} from "./lotes";
 import { armarGuardarComposicion, armarRetirarComposicion } from "./composiciones";
 import type { DependenciasDeStock } from "./contrato";
 import type { DECLARACIONES } from "./declaraciones";
@@ -49,6 +56,12 @@ export function crearCasosDeUsoDeStock(dependencias: DependenciasDeStock) {
     // composiciones (E5-T7)
     guardarComposicion: armarGuardarComposicion(dependencias),
     retirarComposicion: armarRetirarComposicion(dependencias),
+    // lotes y calidad (E6-T7)
+    controlarLote: armarControlarLote(dependencias),
+    dejarDeControlarLote: armarDejarDeControlarLote(dependencias),
+    cambiarCalidadDeLote: armarCambiarCalidadDeLote(dependencias),
+    corregirLote: armarCorregirLote(dependencias),
+    reasignarLote: armarReasignarLote(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

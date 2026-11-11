@@ -12,6 +12,9 @@ export const ROTULO_DE_PERILLA: Readonly<Record<string, string>> = {
   composiciones_por_tamano: "Composiciones por tamaño",
   // Decisión 175 (09/11/2026, textos delegados: lo más corto) + clave de la perilla (decisión 124).
   cajas_por_sucursal: "Cajas por sucursal",
+  // E6: decisión 175 (textos delegados: lo más corto) + clave de la perilla (`lotes` y `calidad_de_lote`, e6-recetas-produccion-especificacion §3.7).
+  lotes: "Lotes",
+  calidad_de_lote: "Calidad de lote",
 };
 
 export const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {

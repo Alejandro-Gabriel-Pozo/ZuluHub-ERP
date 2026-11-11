@@ -335,7 +335,9 @@ export async function montarStock(
     casos,
     consultas,
     puertos,
-    encenderPerilla: (perilla: "composiciones_con_perdida" | "subcomposiciones") => {
+    encenderPerilla: (
+      perilla: "composiciones_con_perdida" | "subcomposiciones" | "lotes" | "calidad_de_lote",
+    ) => {
       perillasEncendidas.add(perilla);
     },
     apagarPerillas: () => {

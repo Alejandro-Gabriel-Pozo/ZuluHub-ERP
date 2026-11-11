@@ -87,6 +87,13 @@ export const PERMISOS_DE_EMPRESA = {
   "depositos.reactivar": ["GERENTE", "ADMINISTRADOR"],
   "articulos.controlar": ["GERENTE", "ADMINISTRADOR"],
   "composiciones.editar": ["GERENTE", "ADMINISTRADOR"],
+  // E6 (T7, P-2): lotes y calidad. Mirar lo ven los tres; el resto, gerente y administrador.
+  "lotes.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "lotes.controlar": ["GERENTE", "ADMINISTRADOR"],
+  "lotes.dejar_de_controlar": ["GERENTE", "ADMINISTRADOR"],
+  "lotes.cambiar_calidad": ["GERENTE", "ADMINISTRADOR"],
+  "lotes.corregir": ["GERENTE", "ADMINISTRADOR"],
+  "lotes.reasignar": ["GERENTE", "ADMINISTRADOR"],
   "depositos.desactivar": ["GERENTE", "ADMINISTRADOR"],
   "articulos.dejar_de_controlar": ["GERENTE", "ADMINISTRADOR"],
   "stock.ajustar": ["GERENTE", "ADMINISTRADOR"],

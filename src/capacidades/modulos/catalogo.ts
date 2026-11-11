@@ -4,6 +4,8 @@
  * permiso para una acción que no existe, no compila.
  */
 
+import { ACCIONES_DE_LOTES } from "./catalogo-lotes-y-produccion";
+
 export type EstadoDeConstruccion = "disponible" | "en_desarrollo";
 
 /**
@@ -234,6 +236,8 @@ export const CATALOGO_DE_MODULOS = {
       "conteos.registrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "conteos.aplicar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "conteos.cancelar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      // E6-T7: lotes y calidad (el detalle y los efectos, en su archivo).
+      ...ACCIONES_DE_LOTES,
     },
   },
   /**

@@ -6,6 +6,7 @@ import { armarConsultasDeCostos } from "./costos";
 import { armarConsultasDeDepositos } from "./depositos";
 import { armarConsultasDeExistencias } from "./existencias";
 import { armarConsultasDeLibro } from "./libro";
+import { armarConsultasDeLotes } from "./lotes";
 import { armarConsultasDeRecetas } from "./recetas";
 
 /**
@@ -26,6 +27,8 @@ export function crearConsultasDeStock(d: DependenciasDeConsultasDeStock) {
     ...armarConsultasDeComposiciones(leer),
     // ficha de receta con costo, comparar versiones, ficha de cocina (E6-T6)
     ...armarConsultasDeRecetas(leer, d.reglas),
+    // lotes, vencimientos y trazabilidad (E6-T7)
+    ...armarConsultasDeLotes(leer, d.reglas),
     // costos (E5-T10)
     ...armarConsultasDeCostos(leer),
   };

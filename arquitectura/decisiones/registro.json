@@ -1111,5 +1111,45 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "estado": "PENDIENTE_DE_OK"
+  },
+  {
+    "id": "DEC-0115",
+    "tipo": "DATOS",
+    "decision": "Cambiar la calidad de un lote se repite por estado y versión, sin clave guardada: el mismo estado dice yaEstaba y una versión vieja con otro estado es LOTE_DESACTUALIZADO.",
+    "que_cambia": "La especificación pedía una clave; la historia de calidad no tiene dónde guardarla (agregarla exige migración).",
+    "donde": "src/modulos/stock/casos-de-uso/lotes.ts cambiarCalidadDeLote (E6-T7, I5)",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "estado": "PENDIENTE_DE_OK"
+  },
+  {
+    "id": "DEC-0116",
+    "tipo": "PERMISOS",
+    "decision": "Las seis acciones de lotes se cargan con sus casos de uso: mirar (lotes.ver) los tres roles; controlar, dejar de controlar, cambiar calidad, corregir y reasignar, gerente y administrador.",
+    "que_cambia": "Quién cambia calidad y fechas de lotes; es la parte de lotes de la P-2 (DEC-0101), que quedaba para T9.",
+    "donde": "src/capacidades/permisos/empresa.ts y modulos/catalogo-lotes-y-produccion.ts (E6-T7)",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "estado": "PENDIENTE_DE_OK"
+  },
+  {
+    "id": "DEC-0117",
+    "tipo": "CLIENTE",
+    "decision": "Para un artículo con control de lote, lo que muestra stock y el puerto de ventas es lo disponible (lotes liberados, no vencidos, en depósito normal), nunca negativo; sin control, la existencia de siempre.",
+    "que_cambia": "El «quedan N» que ve el cajero y la columna disponible de existencias.",
+    "donde": "src/modulos/stock/casos-de-uso/lectura-de-lotes.ts disponibleDe (E6-T7, D118)",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "estado": "PENDIENTE_DE_OK"
+  },
+  {
+    "id": "DEC-0118",
+    "tipo": "DATOS",
+    "decision": "Reactivar un control de lote apagado reabre el libro: lo que se movió mientras estuvo congelado entra al lote sin asignar, por depósito, para que los lotes sumen el saldo.",
+    "que_cambia": "Qué lote tiene lo movido en el intervalo apagado; revertirlo exige que reactivar frene si hay deriva.",
+    "donde": "src/modulos/stock/casos-de-uso/lotes.ts controlarLote (E6-T7, S-16)",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "estado": "PENDIENTE_DE_OK"
   }
 ]
