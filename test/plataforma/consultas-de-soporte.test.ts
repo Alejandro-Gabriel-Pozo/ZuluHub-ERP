@@ -707,6 +707,8 @@ describe("verConfiguracion", () => {
       "caja",
       "catalogo",
       "cierre",
+      "clientes",
+      "compras",
       "facturacion",
       "stock",
       "ventas",

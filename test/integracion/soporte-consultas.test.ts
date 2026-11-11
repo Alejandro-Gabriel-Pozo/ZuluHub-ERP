@@ -622,6 +622,8 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
         "caja",
         "catalogo",
         "cierre",
+        "clientes",
+        "compras",
         "facturacion",
         "stock",
         "ventas",
@@ -629,8 +631,17 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
       ]);
       expect(modulos[0]).toMatchObject({ estado: "disponible", obligatorio: true });
       // `facturacion` es disponible desde 2026-11-04 (no obligatoria: cada empresa la activa); stock desde E5; el resto sigue en desarrollo.
-      expect(modulos[4]).toMatchObject({
+      expect(modulos[6]).toMatchObject({
         clave: "facturacion",
+        estado: "disponible",
+        obligatorio: false,
+      });
+      // `clientes` es disponible y obligatorio (lo usan todos los planes); `compras` es disponible y no obligatorio (E9).
+      expect(modulos.find((m) => m.clave === "clientes")).toMatchObject({
+        estado: "disponible",
+        obligatorio: true,
+      });
+      expect(modulos.find((m) => m.clave === "compras")).toMatchObject({
         estado: "disponible",
         obligatorio: false,
       });
@@ -646,7 +657,10 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
         obligatorio: false,
       });
       for (const modulo of modulos.filter(
-        (m) => !["administracion", "facturacion", "cierre", "stock"].includes(m.clave),
+        (m) =>
+          !["administracion", "facturacion", "cierre", "stock", "clientes", "compras"].includes(
+            m.clave,
+          ),
       )) {
         expect(modulo, modulo.clave).toMatchObject({ estado: "en_desarrollo", obligatorio: false });
       }

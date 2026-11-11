@@ -1,0 +1,61 @@
+/**
+ * Restricción de la base → error de negocio (ADR-004). Un test exige que no falte ninguna (ni las que lanzan los disparadores) ni sobre una que no
+ * existe. `NO_TRADUCIDA`: una restricción que ningún caso de uso puede provocar por una razón de negocio (clave, apoyo de una clave foránea, algo que el
+ * caso de uso ya valida antes de escribir): sale como el error de persistencia tipado, nunca disfrazada.
+ */
+export const ERRORES_DE_CLIENTES_POR_RESTRICCION: Readonly<Record<string, string>> = {
+  // rol_de_parte y tipo_de_vinculo (globales y sembradas: nadie las escribe)
+  rol_de_parte_pkey: "NO_TRADUCIDA",
+  rol_de_parte_codigo_ck: "NO_TRADUCIDA",
+  rol_de_parte_descripcion_ck: "NO_TRADUCIDA",
+  tipo_de_vinculo_pkey: "NO_TRADUCIDA",
+  tipo_de_vinculo_codigo_ck: "NO_TRADUCIDA",
+  tipo_de_vinculo_descripcion_ck: "NO_TRADUCIDA",
+  // parte
+  parte_pkey: "NO_TRADUCIDA",
+  parte_empresa_id_fkey: "NO_TRADUCIDA",
+  parte_creado_por_fkey: "NO_TRADUCIDA",
+  parte_id_empresa_uk: "NO_TRADUCIDA",
+  parte_idempotencia_uk: "NO_TRADUCIDA",
+  parte_documento_uk: "DOCUMENTO_YA_REGISTRADO",
+  parte_naturaleza_ck: "NO_TRADUCIDA",
+  parte_nombre_ck: "NO_TRADUCIDA",
+  parte_apellido_ck: "NO_TRADUCIDA",
+  parte_alias_ck: "NO_TRADUCIDA",
+  parte_documento_tipo_ck: "NO_TRADUCIDA",
+  parte_condicion_iva_ck: "NO_TRADUCIDA",
+  parte_email_ck: "NO_TRADUCIDA",
+  parte_telefono_ck: "NO_TRADUCIDA",
+  parte_dom_provincia_fkey: "NO_TRADUCIDA",
+  parte_nota_ck: "NO_TRADUCIDA",
+  parte_estado_ck: "NO_TRADUCIDA",
+  parte_nombre_anonimizada_ck: "NO_TRADUCIDA",
+  parte_documento_ck: "NO_TRADUCIDA",
+  parte_naturaleza_documento_ck: "NO_TRADUCIDA",
+  parte_domicilio_ck: "NO_TRADUCIDA",
+  parte_anonimizada_ck: "NO_TRADUCIDA",
+  parte_anonimizada_inmutable: "NO_TRADUCIDA",
+  parte_identidad_inmutable: "NO_TRADUCIDA",
+  parte_transicion_invalida: "NO_TRADUCIDA",
+  parte_naturaleza_con_vinculos: "PARTE_CON_VINCULOS",
+  parte_anonimizada_con_relaciones: "NO_TRADUCIDA",
+  // parte_rol
+  parte_rol_pkey: "NO_TRADUCIDA",
+  parte_rol_empresa_id_fkey: "NO_TRADUCIDA",
+  parte_rol_rol_fkey: "ROL_DE_PARTE_INVALIDO",
+  parte_rol_parte_fkey: "PARTE_NO_ENCONTRADA",
+  parte_rol_clave_inmutable: "NO_TRADUCIDA",
+  parte_rol_parte_anonimizada: "NO_TRADUCIDA",
+  // parte_vinculo
+  parte_vinculo_pkey: "NO_TRADUCIDA",
+  parte_vinculo_empresa_id_fkey: "NO_TRADUCIDA",
+  parte_vinculo_tipo_fkey: "NO_TRADUCIDA",
+  parte_vinculo_cargo_ck: "CARGO_INVALIDO",
+  parte_vinculo_parte_fkey: "PARTE_NO_ENCONTRADA",
+  parte_vinculo_de_parte_fkey: "PARTE_NO_ENCONTRADA",
+  parte_vinculo_distintas_ck: "VINCULO_CONSIGO_MISMA",
+  parte_vinculo_clave_inmutable: "NO_TRADUCIDA",
+  parte_vinculo_parte_anonimizada: "NO_TRADUCIDA",
+  parte_vinculo_contacto_humana: "CONTACTO_DEBE_SER_HUMANA",
+  parte_vinculo_de_parte_juridica: "VINCULO_DEBE_SER_CON_EMPRESA",
+};

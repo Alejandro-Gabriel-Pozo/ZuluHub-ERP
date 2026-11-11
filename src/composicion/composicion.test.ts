@@ -12,6 +12,14 @@ import {
   DECLARACIONES_DE_CONSULTAS_DE_STOCK,
 } from "../modulos/stock/publico";
 import {
+  DECLARACIONES_DE_CLIENTES,
+  DECLARACIONES_DE_CONSULTAS_DE_CLIENTES,
+} from "../modulos/clientes/publico";
+import {
+  DECLARACIONES_DE_COMPRAS,
+  DECLARACIONES_DE_CONSULTAS_DE_COMPRAS,
+} from "../modulos/compras/publico";
+import {
   DECLARACIONES_DE_VENTAS,
   DECLARACIONES_DE_CONSULTAS_DE_VENTAS,
 } from "../modulos/ventas/publico";
@@ -623,6 +631,10 @@ const DECISIONES_DE_WEB: Record<keyof ReturnType<typeof armarWeb>, Decision> = {
   consultasDeVentas: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_VENTAS },
   casosDeUsoDeStock: { conGuard: DECLARACIONES_DE_STOCK },
   consultasDeStock: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_STOCK },
+  casosDeUsoDeClientes: { conGuard: DECLARACIONES_DE_CLIENTES },
+  consultasDeClientes: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CLIENTES },
+  casosDeUsoDeCompras: { conGuard: DECLARACIONES_DE_COMPRAS },
+  consultasDeCompras: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_COMPRAS },
   casosDeUsoDeIdentidad: {
     conGuard: DECLARACIONES_DE_IDENTIDAD,
     exentos: {

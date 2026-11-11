@@ -352,6 +352,33 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     );
   });
 
+  it("los textos de clientes y de compras son los aprobados el 09/11/2026 en directorio.html, compra.html, control.html y orden.html (E9 §10), con sus errores", () => {
+    const de = (modulo: string) =>
+      Object.fromEntries(
+        claves
+          .filter((c) => c.startsWith(`${modulo}.`))
+          .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
+      );
+    expect(Object.keys(de("clientes"))).toHaveLength(20);
+    expect(Object.keys(de("compras"))).toHaveLength(115);
+    expect(de("clientes")).toMatchObject({
+      "clientes.lista.clientes_y_proveedores": "Clientes y proveedores",
+      "clientes.error.cuit_invalido": "El CUIT no es válido",
+      "clientes.error.documento_ya_registrado": "Ya existe una persona o empresa con ese documento",
+      "clientes.error.parte_inactiva_con_ese_documento": "Ya existe, pero está desactivada",
+    });
+    expect(de("compras")).toMatchObject({
+      "compras.compra.comprar_y_recibir": "Comprar y recibir",
+      "compras.compra.costo_por_unidad_de_stock": "Costo por unidad de stock",
+      "compras.recepcion.validar_recepcion": "Confirmar recepción",
+      "compras.error.remito_ya_registrado": "Ese remito ya está cargado",
+      "compras.error.comprobante_ya_registrado": "Esa factura ya está cargada",
+      "compras.error.punto_de_venta_no_declarado": "Falta declarar los puntos de venta",
+      "compras.error.total_no_coincide": "El total no coincide",
+      "compras.error.sin_permiso": "Esta acción no está permitida",
+    });
+  });
+
   it("los textos de stock son exactamente los que el dueño aprobó el 09/11/2026 en stock.html «Textos nuevos» (D125), y ninguno más", () => {
     expect(
       Object.fromEntries(
@@ -458,6 +485,8 @@ describe("el catálogo de textos: cableado de los archivos por módulo", () => {
       "catalogo-ventas.ts",
       "catalogo-fiscal.ts",
       "catalogo-stock.ts",
+      "catalogo-clientes.ts",
+      "catalogo-compras.ts",
     ]) {
       expect(ARCHIVOS_DE_MODULO).toContain(esperado);
     }
@@ -503,6 +532,8 @@ describe("el catálogo de textos: cableado de los archivos por módulo", () => {
     ["catalogo-caja.ts", "caja"],
     ["catalogo-ventas.ts", "ventas"],
     ["catalogo-stock.ts", "stock"],
+    ["catalogo-clientes.ts", "clientes"],
+    ["catalogo-compras.ts", "compras"],
   ])("%s: toda clave lleva el prefijo de su módulo (%s.)", (archivo, modulo) => {
     const parte = partes.find((p) => p.archivo === archivo);
     for (const clave of Object.keys(parte?.exportados[0]?.[1] ?? {})) {

@@ -26,6 +26,10 @@ export const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {
   caja: "Caja",
   cierre: "Cierre del día",
   ventas: "Ventas",
+  // Fuente de los dos rótulos (DEC-0314): los nombres de los módulos en `e9-compras-especificacion.md` §3.0 y en `clientes-y-proveedores.md` («Clientes y
+  // proveedores», el directorio) y `compras.md` («Compras»); decisión 175 (textos delegados: lo más corto).
+  clientes: "Clientes y proveedores",
+  compras: "Compras",
 };
 
 const buscar = (tabla: Readonly<Record<string, string>>, clave: string): string =>
