@@ -78,7 +78,7 @@ describe("la comanda en el papel", () => {
         "NEGRITA | 2 Milanesa",
         "NORMAL |   Sin aceitunas",
         "NEGRITA | 2 Flan",
-        "NORMAL |   no preparar todavía",
+        "NORMAL |   Sale después",
       ]
     `);
   });

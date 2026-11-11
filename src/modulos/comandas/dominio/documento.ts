@@ -14,7 +14,7 @@ import type { RolDeRenglon, TipoDeEnvio } from "./envio";
  *
  * Textos del papel: los aprobados de E7 §10 («Papel» y «Orden de salida»: COMANDA · COCINA · ANULACIÓN · NO PREPARAR · Tomó · Copia · Envío N · Piden
  * que salga · Quedan · Motivo; fuente `salon.html:312-337` y `imprimir.html:299`, aprobados 09/11/2026; «Copia» en lugar de «REIMPRESIÓN» por la D120)
- * y «no preparar todavía» de E7 §3.5 (rol `ESPERA`). Un cambio de texto es un cambio de esta constante, con su prueba.
+ * y «Sale después» (`salida.html`, aprobado) para el rol `ESPERA`. Un cambio de texto es un cambio de esta constante, con su prueba.
  */
 export const TEXTOS_DEL_PAPEL = {
   comanda: "COMANDA · COCINA",
@@ -25,7 +25,7 @@ export const TEXTOS_DEL_PAPEL = {
   tomo: "Tomó",
   quedan: "Quedan",
   motivo: "Motivo",
-  noPrepararTodavia: "no preparar todavía",
+  saleDespues: "Sale después",
   ticket: "Ticket N.º",
   total: "Total",
 } as const;
@@ -194,7 +194,7 @@ export function documentoDeComanda(
     lineas.push(...envolver(`${cantidad.valor} ${r.nombreDeCocina}`, columnas, "NEGRITA"));
     for (const d of r.detalle) lineas.push(...sangrado(d, columnas));
     if (r.rol === "ESPERA") {
-      lineas.push(...sangrado(TEXTOS_DEL_PAPEL.noPrepararTodavia, columnas));
+      lineas.push(...sangrado(TEXTOS_DEL_PAPEL.saleDespues, columnas));
     }
   }
   return ok({ ancho: opciones.ancho, lineas });

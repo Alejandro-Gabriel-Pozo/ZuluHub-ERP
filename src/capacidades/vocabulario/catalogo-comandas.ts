@@ -1,8 +1,7 @@
 /**
  * Los textos del módulo `comandas` (prefijo `comandas.`, E7 §10). Ninguno es nuevo: todos salen de los prototipos que el dueño aprobó el 09/11/2026
  * (D115) y de la decisión 181 (cantidad en papel, que no es un texto sino una regla del dominio). La fuente de cada grupo está en su comentario
- * (`10-ux-ui/prototipos-gastronomia/`, repositorio de documentos). «Copia» reemplaza a «REIMPRESIÓN» (D120). «no preparar todavía» del papel NO está
- * acá: no figura en la lista aprobada (pregunta pendiente al dueño).
+ * (`10-ux-ui/prototipos-gastronomia/`, repositorio de documentos). «Copia» reemplaza a «REIMPRESIÓN» (D120). Un plato en espera se marca en el papel con «Sale después» (`salida.html`, aprobado), que vive en el dominio del papel.
  */
 
 export const TEXTOS_DE_COMANDAS = {

@@ -806,9 +806,9 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "CLIENTE",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "El papel de la cocina dice «no preparar todavía» para un plato en espera; ese texto no estaba en la lista aprobada de E7 §10.",
-    "que_cambia": "Qué lee la cocina en un plato que espera.",
+    "estado": "CORREGIDA",
+    "decision": "El papel de la cocina marca un plato en espera con «Sale después» (texto aprobado de salida.html), no con «no preparar todavía».",
+    "que_cambia": "Qué lee la cocina en un plato que espera; corregida a pedido de la sesión padre.",
     "donde": "src/capacidades/vocabulario/catalogo-comandas.ts"
   },
   {

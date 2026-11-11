@@ -53,7 +53,7 @@ export function decidirCambiarSalida(
 export type SeleccionDeEnvio = Readonly<{
   /** Las líneas que entran al envío (se les fija el `envio_id`). */
   salen: readonly string[];
-  /** Solo en `ENVIO`: las que van en el papel como «no preparar todavía» y NO se marcan enviadas. */
+  /** Solo en `ENVIO`: las que van en el papel como «Sale después» y NO se marcan enviadas. */
   esperan: readonly string[];
   /** Solo en `SALIDA_PEDIDA`: las pedidas que no estaban esperando (ya enviadas, quitadas o ajenas): se ignoran con aviso, no fallan el resto. */
   ignoradas: readonly string[];

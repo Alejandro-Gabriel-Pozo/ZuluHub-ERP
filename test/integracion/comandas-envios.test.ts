@@ -197,7 +197,7 @@ describe.skipIf(base === null)("comandas: envíos, anulaciones y salida", () => 
         salida: "DESPUES",
       }),
     );
-    // El envío manda solo lo que sale ahora; lo que espera va en el papel como «no preparar todavía».
+    // El envío manda solo lo que sale ahora; lo que espera va en el papel como «Sale después».
     const primero = valorDe(await enviar(cuenta));
     expect(primero).toMatchObject({ numero: 1, lineas: 1 });
     const renglones = await m.filas<{ rol: string }>(

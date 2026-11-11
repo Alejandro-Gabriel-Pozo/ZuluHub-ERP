@@ -93,7 +93,7 @@ describe("documentoDeComanda", () => {
     expect(textos).toContain("1/2 Muzzarella grande");
     expect(textos).toContain("  Sin aceitunas (oculta)");
     expect(textos).toContain("2 Milanesa");
-    expect(textos).toContain("  no preparar todavía");
+    expect(textos).toContain("  Sale después");
     expect(textos).not.toContain("Copia");
     expect(textos.join("\n")).not.toMatch(/[$½]/);
   });
