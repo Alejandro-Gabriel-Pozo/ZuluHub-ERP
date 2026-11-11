@@ -166,21 +166,4 @@ function problemasDeLosSensibles(valor) {
   return problemas;
 }
 
-module.exports = {
-  CLAVES_BASE,
-  CLAVES_DE_SIN_DECISION,
-  ESTADOS,
-  FORMA_DEL_ID,
-  LARGO_MAXIMO_DE_DONDE,
-  LARGO_MAXIMO_DE_LA_DECISION,
-  LARGO_MAXIMO_DE_QUE_CAMBIA,
-  LARGO_MAXIMO_DEL_MOTIVO,
-  QUIENES,
-  TIPOS,
-  TIPO_SIN_DECISION,
-  esFechaReal,
-  problemasDeLosSensibles,
-  problemasDeUnTexto,
-  problemasDeUnaEntrada,
-  problemasDelRegistro,
-};
+module.exports = { TIPOS, TIPO_SIN_DECISION, problemasDeLosSensibles, problemasDelRegistro };

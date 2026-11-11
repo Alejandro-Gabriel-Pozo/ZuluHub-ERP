@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { entrada, forma, SENSIBLES } from "./decisiones-apoyo";
+import { entrada, ESTADOS, forma, QUIENES, SENSIBLES } from "./decisiones-apoyo";
 
 /**
  * La FORMA del registro de decisiones (`arquitectura/decisiones/forma.cjs`). Previene: decisiones de permisos, dinero o lo que ve un cliente
@@ -7,15 +7,15 @@ import { entrada, forma, SENSIBLES } from "./decisiones-apoyo";
  * declara lo PERMITIDO (conjunto, largo, forma): cada caso de abajo es una entrada que no está en esa lista y tiene que fallar.
  */
 const problemas = (cambios: Record<string, unknown>) =>
-  forma.problemasDeUnaEntrada({ ...entrada(), ...cambios });
+  forma.problemasDelRegistro([{ ...entrada(), ...cambios }]).map((p) => p.problema);
 
 describe("una entrada válida", () => {
   it("no tiene problemas, de ningún tipo ni estado de la lista", () => {
     for (const tipo of forma.TIPOS.filter((t) => t !== "SIN_DECISION")) {
       expect(problemas({ tipo })).toEqual([]);
     }
-    for (const estado of forma.ESTADOS) expect(problemas({ estado })).toEqual([]);
-    for (const quien of forma.QUIENES) expect(problemas({ quien })).toEqual([]);
+    for (const estado of ESTADOS) expect(problemas({ estado })).toEqual([]);
+    for (const quien of QUIENES) expect(problemas({ quien })).toEqual([]);
   });
 
   it("acepta los signos de una frase de negocio y los acentos", () => {
@@ -96,7 +96,9 @@ describe("una entrada fuera de lo permitido falla", () => {
 
   it("una entrada que no es un objeto falla", () => {
     for (const rara of [null, "texto", 5, [], undefined]) {
-      expect(forma.problemasDeUnaEntrada(rara)).toEqual(["la entrada tiene que ser un objeto."]);
+      expect(forma.problemasDelRegistro([rara]).map((p) => p.problema)).toEqual([
+        "la entrada tiene que ser un objeto.",
+      ]);
     }
   });
 });
@@ -121,9 +123,9 @@ describe("el registro completo", () => {
   });
 
   it("la fecha tiene que ser un día real", () => {
-    expect(forma.esFechaReal("2026-11-11")).toBe(true);
-    expect(forma.esFechaReal("2026-13-01")).toBe(false);
-    expect(forma.esFechaReal(20261111)).toBe(false);
+    expect(problemas({ fecha: "2026-11-11" })).toEqual([]);
+    expect(problemas({ fecha: "2026-13-01" }).join(" ")).toContain("fecha es un día real");
+    expect(problemas({ fecha: 20261111 }).join(" ")).toContain("fecha es un día real");
   });
 });
 

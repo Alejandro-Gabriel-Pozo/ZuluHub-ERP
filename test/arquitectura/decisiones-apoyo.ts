@@ -23,13 +23,11 @@ export interface Hallazgo {
   motivo: string;
 }
 
+export const ESTADOS = ["PENDIENTE_DE_OK", "CONFIRMADA", "CORREGIDA"];
+export const QUIENES = ["dueño", "padre", "sesión"];
 export const forma = require("../../arquitectura/decisiones/forma.cjs") as {
   TIPOS: string[];
-  ESTADOS: string[];
-  QUIENES: string[];
-  esFechaReal: (fecha: unknown) => boolean;
   problemasDelRegistro: (registro: unknown) => { id: string; problema: string }[];
-  problemasDeUnaEntrada: (entrada: unknown) => string[];
   problemasDeLosSensibles: (valor: unknown) => string[];
 };
 export const control = require("../../arquitectura/decisiones/decisiones.cjs") as {
@@ -71,7 +69,7 @@ export const SENSIBLES = {
 };
 
 /** Un árbol en memoria: `archivos` es { ruta: contenido }. */
-export function arbol(archivos: Record<string, string>): Arbol {
+function arbol(archivos: Record<string, string>): Arbol {
   return {
     rutas: Object.keys(archivos).sort(),
     leer: (ruta) => (ruta in archivos ? Buffer.from(archivos[ruta] as string) : null),
