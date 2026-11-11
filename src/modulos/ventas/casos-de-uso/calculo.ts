@@ -1,5 +1,10 @@
 import { cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
-import { importeAJson, type ImporteJson } from "../../../primitivas/dinero/importe";
+import {
+  importeAJson,
+  importeDesdeTexto,
+  type ImporteJson,
+} from "../../../primitivas/dinero/importe";
+import { ARS } from "../../../primitivas/dinero/moneda";
 import { precioUnitarioDesdeTexto } from "../../../primitivas/dinero/precio-unitario";
 import { calcularTicket, type TicketCalculado } from "../dominio/calcular-ticket";
 import type { Linea } from "../persistencia/repositorio-de-cuentas";
@@ -13,6 +18,7 @@ export function calcularLasLineas(lineas: readonly Linea[]): TicketCalculado {
         id: l.id,
         precioUnitario: precioUnitarioDesdeTexto(l.precioUnitario),
         cantidad: cantidadDesdeTexto(l.cantidad),
+        importeFijo: l.importeFijo === null ? undefined : importeDesdeTexto(ARS, l.importeFijo),
       })),
   );
 }

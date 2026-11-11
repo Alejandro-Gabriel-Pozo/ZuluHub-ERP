@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
-import { importeATexto } from "../../../primitivas/dinero/importe";
+import { importeATexto, importeDesdeTexto } from "../../../primitivas/dinero/importe";
+import { ARS } from "../../../primitivas/dinero/moneda";
 import { precioUnitarioDesdeTexto } from "../../../primitivas/dinero/precio-unitario";
 import { calcularTicket, type LineaACalcular } from "./calcular-ticket";
 
@@ -60,5 +61,25 @@ describe("calcularTicket (E4 §3.2, P3 y P25)", () => {
     expect(
       calcularTicket([linea("x", "1", "1"), linea("y", "2", "1")]).renglones.map((r) => r.id),
     ).toEqual(["x", "y"]);
+  });
+});
+
+describe("calcularTicket: la línea compartida (E7)", () => {
+  it("el importe fijo ES el importe de la línea: no se multiplica por la cantidad y entra a la suma", () => {
+    const r = calcularTicket([
+      {
+        id: "a",
+        precioUnitario: precioUnitarioDesdeTexto("100"),
+        cantidad: cantidadDesdeTexto("1"),
+        importeFijo: importeDesdeTexto(ARS, "33.34"),
+      },
+      {
+        id: "b",
+        precioUnitario: precioUnitarioDesdeTexto("10"),
+        cantidad: cantidadDesdeTexto("2"),
+      },
+    ]);
+    expect(importeATexto(r.total)).toBe("53.34");
+    expect(r.renglones.map((x) => importeATexto(x.importe))).toEqual(["33.34", "20.00"]);
   });
 });

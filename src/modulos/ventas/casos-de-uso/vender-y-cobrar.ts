@@ -1,28 +1,21 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
-import {
-  importeCero,
-  importeDesdeTexto,
-  type ImporteJson,
-} from "../../../primitivas/dinero/importe";
+import { importeCero, importeDesdeTexto } from "../../../primitivas/dinero/importe";
 import { ARS } from "../../../primitivas/dinero/moneda";
 import { sucursalId } from "../../../primitivas/identificadores/marca";
-import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
-import { cajaParaVentas, traducirErroresDelCobro } from "../../caja/publico";
+import { err, type Resultado } from "../../../primitivas/resultado/resultado";
+import { traducirErroresDelCobro } from "../../caja/publico";
 import { cuadrarCobros, decidirPrecioDeLaVenta, normalizarCobros } from "../dominio/cobranza";
 import { FORMA_DEL_IMPORTE } from "../dominio/forma-del-importe";
-import { cuentaId, type EjemplarId, type TicketId } from "../dominio/identificadores";
-import type { EstadoDeTicket } from "../dominio/estados";
-import type { Ticket } from "../persistencia/repositorio-de-tickets";
+import { cuentaId } from "../dominio/identificadores";
 import { abrirCuentaEnTx } from "./abrir-cuenta";
 import { agregarLineaEnTx } from "./agregar-linea";
-import { cerrarCuentaEnTx } from "./cerrar-cuenta";
 import {
-  cobrarTicketEnTx,
-  REINTENTOS_AL_COBRAR,
-  type CobroHecho,
-  type EntradaDeCobrar,
-} from "./cobrar";
+  cajaParaCobrar,
+  cerrarYCobrarCuenta,
+  ventaYaHecha,
+  type SalidaDeVenderYCobrar,
+} from "./cerrar-y-cobrar";
+import { REINTENTOS_AL_COBRAR, type EntradaDeCobrar } from "./cobrar";
 import { cotizarVentaRapida } from "./cotizar-venta-rapida";
 import {
   exigirAlcance,
@@ -49,6 +42,8 @@ export type LineaDeLaVenta = Readonly<{
   precioAbierto?: string | undefined;
 }>;
 
+export type { SalidaDeVenderYCobrar };
+
 export type EntradaDeVenderYCobrar = Readonly<{
   /** `^[A-Za-z0-9_-]{16,128}$`, por intento de cobro (idempotencia). */
   claveIdempotencia: string;
@@ -63,21 +58,6 @@ export type EntradaDeVenderYCobrar = Readonly<{
   confirmaciones?: readonly string[] | undefined;
   /** Con total 0 (cortesía) no se cobra y `cobros` tiene que venir vacío. */
   cobro: Pick<EntradaDeCobrar, "cajaId" | "cobros">;
-}>;
-
-export type SalidaDeVenderYCobrar = Readonly<{
-  ticketId: TicketId;
-  ejemplarId: EjemplarId;
-  numero: number;
-  estado: EstadoDeTicket;
-  /** La jornada de la sesión de caja donde se cobró (la misma del cobro). */
-  fechaNegocio: FechaCivil;
-  total: ImporteJson;
-  cobranzaId: string | null;
-  cobros: readonly CobroHecho[];
-  /** Un ticket cobrado espera su comprobante (E1); una cortesía no se factura. */
-  pendienteDeFacturar: boolean;
-  yaExistia: boolean;
 }>;
 
 const MAXIMO_DE_LINEAS = 200;
@@ -139,27 +119,15 @@ async function vender(
     if (existente === null || (previa !== null && previa.ticketId !== existente.id)) {
       return err("CLAVE_REUTILIZADA");
     }
-    return yaVendida(tx, contexto, persona.valor, entrada, existente);
+    return ventaYaHecha(tx, contexto, persona.valor, entrada, existente);
   }
 
   // La caja y su sesión, leídas dentro de la transacción: la jornada que se mira es la de la sesión (§3.15).
-  const estadoDeCajas = await cajaParaVentas.estadoDeCajasParaCobrar(
-    tx,
-    contexto,
-    entrada.sucursalId,
-  );
-  if (!estadoDeCajas.ok) return estadoDeCajas;
-  const caja = estadoDeCajas.valor.cajas.find((c) => c.cajaId === entrada.cobro.cajaId);
-  if (caja === undefined) return err("CAJA_NO_ENCONTRADA_PARA_COBRAR");
-  if (caja.estado === "SIN_SESION" || caja.sesionId === null || caja.fechaDeNegocio === null) {
-    return err({ codigo: "SIN_SESION_ABIERTA", cajaId: caja.cajaId });
-  }
-  if (caja.estado === "EN_CIERRE") {
-    return err({ codigo: "CAJA_EN_CIERRE", cajaId: caja.cajaId, sesionId: caja.sesionId });
-  }
+  const caja = await cajaParaCobrar(tx, contexto, entrada.sucursalId, entrada.cobro.cajaId);
+  if (!caja.ok) return caja;
   const opciones = {
-    jornada: caja.fechaDeNegocio,
-    sesionDeCajaId: caja.sesionId,
+    jornada: caja.valor.fechaDeNegocio,
+    sesionDeCajaId: caja.valor.sesionId,
     stock: dependencias.stock,
   };
   const jornada = await exigirJornadaAbierta(tx, contexto, sucursal, opciones.jornada);
@@ -222,110 +190,7 @@ async function vender(
     );
     if (!agregada.ok) return agregada;
   }
-  const cerrada = await cerrarCuentaEnTx(
-    tx,
-    contexto,
-    persona.valor,
-    {
-      cuentaId: entrada.cuentaId,
-      ejemplarId: entrada.ejemplarId,
-      confirmaciones: entrada.confirmaciones,
-    },
-    opciones,
-  );
-  if (!cerrada.ok) return cerrada;
-  // La cuenta no tenía ticket al empezar la transacción: cerrarla acá la cierra de verdad.
-  if (cerrada.valor.yaEstabaCerrada) throw new Error("invariante rota: la cuenta ya tenía ticket");
-  if (esCortesia) {
-    return ok({
-      ticketId: cerrada.valor.ticketId,
-      ejemplarId: cerrada.valor.ejemplarId,
-      numero: cerrada.valor.numero,
-      estado: cerrada.valor.estado,
-      fechaNegocio: cerrada.valor.fechaNegocio,
-      total: cerrada.valor.total,
-      cobranzaId: null,
-      cobros: [],
-      pendienteDeFacturar: false,
-      yaExistia: false,
-    });
-  }
-  const cobrada = await cobrarTicketEnTx(
-    tx,
-    contexto,
-    persona.valor,
-    {
-      claveIdempotencia: entrada.claveIdempotencia,
-      ticketId: cerrada.valor.ticketId,
-      ejemplarId: cerrada.valor.ejemplarId,
-      cajaId: entrada.cobro.cajaId,
-      cobros: entrada.cobro.cobros,
-    },
-    { sesionDeCajaEsperada: opciones.sesionDeCajaId },
-  );
-  if (!cobrada.ok) return cobrada;
-  return ok({
-    ticketId: cerrada.valor.ticketId,
-    ejemplarId: cerrada.valor.ejemplarId,
-    numero: cerrada.valor.numero,
-    estado: "COBRADO",
-    fechaNegocio: cerrada.valor.fechaNegocio,
-    total: cerrada.valor.total,
-    cobranzaId: cobrada.valor.cobranzaId,
-    cobros: cobrada.valor.cobros,
-    pendienteDeFacturar: true,
-    yaExistia: false,
-  });
-}
-
-/**
- * La cuenta ya tiene su ticket: es la misma venta repetida (misma clave y mismo contenido → la misma salida, `yaExistia`), o es otra cosa. Un
- * ticket sin cobrar que no es una cortesía de este mismo pedido (salón) no se cobra por esta puerta: `CUENTA_ID_EN_USO`.
- */
-async function yaVendida(
-  tx: TxDeVentas,
-  contexto: ContextoOperativo,
-  persona: Parameters<typeof cobrarTicketEnTx>[2],
-  entrada: EntradaDeVenderYCobrar,
-  ticket: Ticket,
-): Promise<R<SalidaDeVenderYCobrar>> {
-  const original = await tx.tickets.ejemplarDeNumero(contexto.empresaId, ticket.id, 1);
-  if (original === null) throw new Error("el ticket no tiene su ejemplar original");
-  if (original.id !== entrada.ejemplarId) return err("CUENTA_ID_EN_USO");
-  const comun = {
-    ticketId: ticket.id,
-    ejemplarId: original.id,
-    numero: ticket.numero,
-    fechaNegocio: ticket.fechaNegocio,
-    total: { moneda: "ARS", monto: ticket.total } as ImporteJson,
-    yaExistia: true,
-  };
-  if (ticket.estado === "CORTESIA") {
-    return ok({
-      ...comun,
-      estado: ticket.estado,
-      cobranzaId: null,
-      cobros: [],
-      pendienteDeFacturar: false,
-    });
-  }
-  if (ticket.estado === "EMITIDO") return err("CUENTA_ID_EN_USO");
-  // COBRADO o ANULADO: el cobro dice si es la misma clave (lo hecho), otra (`TICKET_YA_COBRADO`) o un ticket anulado.
-  const cobrada = await cobrarTicketEnTx(tx, contexto, persona, {
-    claveIdempotencia: entrada.claveIdempotencia,
-    ticketId: ticket.id,
-    ejemplarId: original.id,
-    cajaId: entrada.cobro.cajaId,
-    cobros: entrada.cobro.cobros,
-  });
-  if (!cobrada.ok) return cobrada;
-  return ok({
-    ...comun,
-    estado: "COBRADO",
-    cobranzaId: cobrada.valor.cobranzaId,
-    cobros: cobrada.valor.cobros,
-    pendienteDeFacturar: true,
-  });
+  return cerrarYCobrarCuenta(tx, contexto, persona.valor, { ...entrada, esCortesia }, opciones);
 }
 
 export function armarVenderYCobrar(dependencias: DependenciasDeVentas) {

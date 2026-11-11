@@ -29,6 +29,20 @@ export interface RepositorioDeCuentasSolas {
   /** La cuenta ABIERTA de un ancla, si hay. */
   abiertaPorAncla(empresa: EmpresaId, ancla: Ancla): Promise<Cuenta | null>;
   /**
+   * Las cuentas ABIERTAS de varias anclas del mismo tipo en UNA lectura (el mapa de mesas no hace una consulta por mesa), por id de ancla.
+   * Una ancla sin cuenta abierta no aparece.
+   */
+  abiertasPorAnclas(
+    empresa: EmpresaId,
+    tipo: string,
+    anclaIds: readonly string[],
+  ): Promise<Cuenta[]>;
+  /**
+   * Mueve el ancla de una cuenta ABIERTA (cambiar de mesa, 0038): `UPDATE … WHERE estado = 'ABIERTA'`; `false` si ya no lo estaba. Si el ancla
+   * nueva ya tiene otra cuenta abierta, la única de la base lo rechaza (error de unicidad que el caso de uso traduce a `ANCLA_OCUPADA`).
+   */
+  reanclar(empresa: EmpresaId, id: CuentaId, ancla: Ancla): Promise<boolean>;
+  /**
    * Reserva la próxima posición: `UPDATE ... SET ultima_posicion = ultima_posicion + 1 WHERE estado = 'ABIERTA'`. Es el árbitro de
    * agregar contra cerrar y contra otro agregar: devuelve la posición, o `null` si la cuenta ya no está abierta (o no existe).
    */
@@ -155,6 +169,31 @@ export function crearRepositorioDeCuentas(db: Kysely<VentasDb>): RepositorioDeCu
         .where("estado", "=", "ABIERTA")
         .executeTakeFirst();
       return fila === undefined ? null : aCuenta(fila);
+    },
+
+    async abiertasPorAnclas(empresa, tipo, anclaIds) {
+      const ids = anclaIds.filter(esUuid);
+      if (ids.length === 0) return [];
+      const filas = await seleccionarCuenta()
+        .where("empresa_id", "=", empresa)
+        .where("ancla_tipo", "=", tipo)
+        .where("ancla_id", "in", ids)
+        .where("estado", "=", "ABIERTA")
+        .orderBy("ancla_id")
+        .execute();
+      return filas.map(aCuenta);
+    },
+
+    async reanclar(empresa, id, ancla) {
+      if (!esUuid(id) || !esUuid(ancla.id)) return false;
+      const r = await db
+        .updateTable("cuenta_consumo")
+        .set({ ancla_tipo: ancla.tipo, ancla_id: ancla.id })
+        .where("empresa_id", "=", empresa)
+        .where("id", "=", id)
+        .where("estado", "=", "ABIERTA")
+        .executeTakeFirst();
+      return r.numUpdatedRows === 1n;
     },
 
     async reservarPosicion(empresa, id) {

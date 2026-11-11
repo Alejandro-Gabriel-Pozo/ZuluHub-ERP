@@ -41,6 +41,13 @@ export type ErrorDeVentas =
       totalActual: ImporteJson;
       lineas: readonly Readonly<{ precioUnitario: ImporteJson; importe: ImporteJson }>[];
     }>
+  /** E7: otro agregó o quitó algo entre medio: el total de la cuenta ya no es el que vio quien cobra. No se cobra nada. */
+  | Readonly<{ error: "TOTAL_CAMBIO"; totalActual: ImporteJson }>
+  /** E7: la línea ya se trasladó o anuló (el `UPDATE … WHERE estado = 'VIGENTE'` es el árbitro de «se traslada una sola vez»). */
+  | "LINEA_YA_MOVIDA"
+  /** E7: se copia una línea que todavía está vigente (quien llama la anula antes) o a otra sucursal. */
+  | "LINEA_NO_ANULADA"
+  | "LINEA_DE_OTRA_SUCURSAL"
   | "ENTRADA_INVALIDA"
   | "SESION_DE_CAJA_CAMBIO"
   | "CAJA_NO_ENCONTRADA_PARA_COBRAR"
