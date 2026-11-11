@@ -26,6 +26,14 @@ import {
   DECLARACIONES_DE_STOCK,
 } from "../../src/modulos/stock/publico";
 import {
+  DECLARACIONES_DE_CLIENTES,
+  DECLARACIONES_DE_CONSULTAS_DE_CLIENTES,
+} from "../../src/modulos/clientes/publico";
+import {
+  DECLARACIONES_DE_COMPRAS,
+  DECLARACIONES_DE_CONSULTAS_DE_COMPRAS,
+} from "../../src/modulos/compras/publico";
+import {
   DECLARACIONES_DE_CONSULTAS_DE_VENTAS,
   DECLARACIONES_DE_VENTAS,
 } from "../../src/modulos/ventas/publico";
@@ -264,6 +272,11 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       DECLARACIONES_DE_CONSULTAS_DE_COMANDAS,
     ),
     "modulos/salon": accionesDe(DECLARACIONES_DE_SALON, DECLARACIONES_DE_CONSULTAS_DE_SALON),
+    "modulos/clientes": accionesDe(
+      DECLARACIONES_DE_CLIENTES,
+      DECLARACIONES_DE_CONSULTAS_DE_CLIENTES,
+    ),
+    "modulos/compras": accionesDe(DECLARACIONES_DE_COMPRAS, DECLARACIONES_DE_CONSULTAS_DE_COMPRAS),
     "modulos/fiscal": accionesDe(
       DECLARACIONES_DE_FISCAL,
       DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
@@ -364,7 +377,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ).toEqual([]);
   });
 
-  it("catálogo, carta, caja, ventas, comandas y salón son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1); stock salió con E5 y es disponible", () => {
+  it("catálogo, carta, caja, ventas, comandas y salón son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1); stock salió con E5, clientes con E9-T4 y compras con E9-T12, y son disponibles", () => {
     expect([...SIN_CONSTRUIR]).toEqual([
       "catalogo",
       "vidriera",
@@ -373,7 +386,11 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       "comandas",
       "salon",
     ]);
+    expect(SIN_CONSTRUIR).not.toContain("compras");
+    expect(CATALOGO_DE_MODULOS.compras.estado).toBe("disponible");
     expect(SIN_CONSTRUIR).not.toContain("stock");
+    expect(SIN_CONSTRUIR).not.toContain("clientes");
+    expect(CATALOGO_DE_MODULOS.clientes.estado).toBe("disponible");
     expect(CATALOGO_DE_MODULOS.stock.estado).toBe("disponible");
     for (const clave of SIN_CONSTRUIR) {
       expect(CATALOGO_DE_MODULOS[clave as keyof typeof CATALOGO_DE_MODULOS].estado, clave).toBe(

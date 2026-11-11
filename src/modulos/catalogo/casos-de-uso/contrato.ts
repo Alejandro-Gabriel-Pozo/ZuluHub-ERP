@@ -6,6 +6,7 @@ import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { RepositorioDeEmpresas, RepositorioDeSucursales } from "../../empresas/publico";
 import type { FormaDeVenta } from "../dominio/forma-de-venta";
+import type { RepositorioDePresentaciones } from "../persistencia/repositorio-de-presentaciones";
 import type { RepositorioDeOpciones } from "../persistencia/repositorio-de-opciones";
 import type { RepositorioDePrecios } from "../persistencia/repositorio-de-precios";
 import type { RepositorioDeProductos } from "../persistencia/repositorio-de-productos";
@@ -35,6 +36,7 @@ export type TxDeCatalogo = LecturaDeEstados &
     productos: RepositorioDeProductos;
     opciones: RepositorioDeOpciones;
     precios: RepositorioDePrecios;
+    presentacionesDeProducto: RepositorioDePresentaciones;
     sucursales: Pick<RepositorioDeSucursales, "obtener">;
     auditoria: Auditoria;
     /** Quién es el actor, qué módulos tiene la empresa y en qué sucursales opera, leído dentro de la transacción (sin caché). */

@@ -108,7 +108,10 @@ describe("permisosDelActor", () => {
     const permisos = exito(await consultas.permisosDelActor(contexto));
     expect(permisos.acciones).not.toContain("comprobantes.ver");
     expect(permisos.acciones).toContain("usuarios.invitar");
-    expect(permisos.modulos).toEqual({ activos: ["administracion"], enSoloLectura: [] });
+    expect(permisos.modulos).toEqual({
+      activos: ["administracion", "clientes"],
+      enSoloLectura: [],
+    });
   });
 
   it("sin activar el módulo no figura; con el módulo activo y en el plan, sí, y se ve en los módulos", async () => {
@@ -118,11 +121,14 @@ describe("permisosDelActor", () => {
     );
     const a = exito(await sinActivar.consultas.permisosDelActor(contexto));
     expect(a.acciones).not.toContain("comprobantes.ver");
-    expect(a.modulos).toEqual({ activos: ["administracion"], enSoloLectura: [] });
+    expect(a.modulos).toEqual({ activos: ["administracion", "clientes"], enSoloLectura: [] });
 
     const activo = armar(() => conFacturacionEnElPlan("GERENTE"), REGLAS_DE_EMPRESA);
     const b = exito(await activo.consultas.permisosDelActor(contexto));
-    expect(b.modulos).toEqual({ activos: ["administracion", "facturacion"], enSoloLectura: [] });
+    expect(b.modulos).toEqual({
+      activos: ["administracion", "clientes", "facturacion"],
+      enSoloLectura: [],
+    });
   });
 
   it("un módulo fuera del plan queda en solo lectura: se puede mirar y cerrar, no crear", async () => {
@@ -132,7 +138,7 @@ describe("permisosDelActor", () => {
     );
     const permisos = exito(await consultas.permisosDelActor(contexto));
     expect(permisos.modulos).toEqual({
-      activos: ["administracion"],
+      activos: ["administracion", "clientes"],
       enSoloLectura: ["facturacion"],
     });
     expect(permisos.acciones).toContain("comprobantes.ver");
@@ -186,7 +192,7 @@ describe("permisosDelActor", () => {
     );
     const permisos = exito(await consultas.permisosDelActor(contexto));
     expect(permisos.modulos).toEqual({
-      activos: ["administracion"],
+      activos: ["administracion", "clientes"],
       enSoloLectura: ["facturacion"],
     });
   });

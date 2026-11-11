@@ -11,6 +11,7 @@ import {
   armarReactivarProducto,
 } from "./editar-producto";
 import { armarGuardarConsumoDeGrupo } from "./guardar-consumo";
+import { armarCrearPresentacion, armarEditarPresentacion } from "./presentaciones";
 import {
   armarCrearSeccionDeCarta,
   armarDesactivarSeccionDeCarta,
@@ -33,6 +34,8 @@ export function crearCasosDeUsoDeCatalogo(dependencias: DependenciasDeCatalogo) 
     editarOpciones: armarEditarOpciones(dependencias),
     guardarConsumoDeGrupo: armarGuardarConsumoDeGrupo(dependencias),
     copiarOpciones: armarCopiarOpciones(dependencias),
+    crearPresentacion: armarCrearPresentacion(dependencias),
+    editarPresentacion: armarEditarPresentacion(dependencias),
     crearSeccionDeCarta: armarCrearSeccionDeCarta(dependencias),
     editarSeccionDeCarta: armarEditarSeccionDeCarta(dependencias),
     desactivarSeccionDeCarta: armarDesactivarSeccionDeCarta(dependencias),

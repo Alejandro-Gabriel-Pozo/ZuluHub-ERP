@@ -13,7 +13,13 @@ import {
 import { crearCasosDeUsoDeCatalogo, crearConsultasDeCatalogo } from "../modulos/catalogo/publico";
 import { crearCasosDeUsoDeComandas, crearConsultasDeComandas } from "../modulos/comandas/publico";
 import { crearCasosDeUsoDeSalon, crearConsultasDeSalon } from "../modulos/salon/publico";
-import { crearCasosDeUsoDeStock, crearConsultasDeStock } from "../modulos/stock/publico";
+import { crearCasosDeUsoDeClientes, crearConsultasDeClientes } from "../modulos/clientes/publico";
+import { crearCasosDeUsoDeCompras, crearConsultasDeCompras } from "../modulos/compras/publico";
+import {
+  crearCasosDeUsoDeStock,
+  crearConsultasDeStock,
+  crearPuertosDeStock,
+} from "../modulos/stock/publico";
 import { crearCasosDeUsoDeVentas, crearConsultasDeVentas } from "../modulos/ventas/publico";
 import { crearFacturadorDeTickets } from "./facturacion-de-tickets";
 import { crearStockDeVentas } from "./stock-de-ventas";
@@ -213,6 +219,32 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
     ),
     consultasDeSalon: perezoso(() =>
       crearConsultasDeSalon({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /**
+     * Clientes y proveedores (E9): el directorio de partes con sus roles y vínculos (casos de uso) y sus consultas, cada uno con SU acción de `partes`. El
+     * módulo es de la empresa, no de una sucursal. Los puertos que ofrece a compras (`crearDirectorioDePartes`, `crearRegistroDePartes`) no salen por acá:
+     * corren en la transacción de quien los llama.
+     */
+    casosDeUsoDeClientes: perezoso(() =>
+      crearCasosDeUsoDeClientes({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    consultasDeClientes: perezoso(() =>
+      crearConsultasDeClientes({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /**
+     * Compras (E9, N1 y N2): la ficha del proveedor, «Comprar y recibir» con su factura y su pago, anular, el nivel y las consultas, cada uno con SU acción de
+     * `compras`. Los puertos de stock (la entrada por origen, los artículos controlados y la existencia) los arma esta composición y compras los recibe:
+     * es el único lugar donde se tocan los dos módulos.
+     */
+    casosDeUsoDeCompras: perezoso(() =>
+      crearCasosDeUsoDeCompras({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        stock: crearPuertosDeStock({ reglas }),
+      }),
+    ),
+    consultasDeCompras: perezoso(() =>
+      crearConsultasDeCompras({ transacciones: conexiones.transaccionesDeApp(), reglas }),
     ),
     casosDeUsoDeIdentidad: perezoso(() =>
       crearCasosDeUsoDeIdentidad({
