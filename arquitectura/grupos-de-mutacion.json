@@ -60,6 +60,12 @@
     "pruebas": "src/modulos/clientes"
   },
   {
+    "grupo": "compras (dominio)",
+    "archivos": "src/modulos/compras/dominio/**/*.ts",
+    "minutos": 6,
+    "pruebas": "src/modulos/compras"
+  },
+  {
     "grupo": "stock (dominio)",
     "archivos": "src/modulos/stock/dominio/**/*.ts",
     "minutos": 10,

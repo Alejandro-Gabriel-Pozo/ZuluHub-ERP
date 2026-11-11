@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   FORMATO_DE_DOCUMENTO_EXTRANJERO,
-  LARGO_MAXIMO_DE_DOCUMENTO_EXTRANJERO,
-  LARGO_MINIMO_DE_DOCUMENTO_EXTRANJERO,
   documentoExtranjeroDesdeTexto,
 } from "./documento-extranjero";
 
@@ -18,10 +16,7 @@ const invalido = (texto: string) =>
   });
 
 describe("documentoExtranjeroDesdeTexto", () => {
-  it("el largo es de 3 a 20 y está en constantes", () => {
-    expect([LARGO_MINIMO_DE_DOCUMENTO_EXTRANJERO, LARGO_MAXIMO_DE_DOCUMENTO_EXTRANJERO]).toEqual([
-      3, 20,
-    ]);
+  it("el largo es de 3 a 20 y está en una sola expresión", () => {
     expect(FORMATO_DE_DOCUMENTO_EXTRANJERO.source).toBe("^[A-Z0-9]{3,20}$");
   });
 

@@ -22,8 +22,9 @@ export type DocumentoExtranjero = Marca<string, "DocumentoExtranjero">;
 
 export type ErrorDeDocumentoExtranjero = "DOCUMENTO_EXTRANJERO_INVALIDO";
 
-export const LARGO_MINIMO_DE_DOCUMENTO_EXTRANJERO = 3;
-export const LARGO_MAXIMO_DE_DOCUMENTO_EXTRANJERO = 20;
+// Privadas a propósito: un `LARGO_MAXIMO_` exportado de una primitiva hace que el chequeo de fuente única cuente cualquier 20 de otro archivo (un corte de UUID) como copia.
+const LARGO_MINIMO_DE_DOCUMENTO_EXTRANJERO = 3;
+const LARGO_MAXIMO_DE_DOCUMENTO_EXTRANJERO = 20;
 
 export const FORMATO_DE_DOCUMENTO_EXTRANJERO = new RegExp(
   `^[A-Z0-9]{${LARGO_MINIMO_DE_DOCUMENTO_EXTRANJERO},${LARGO_MAXIMO_DE_DOCUMENTO_EXTRANJERO}}$`,
