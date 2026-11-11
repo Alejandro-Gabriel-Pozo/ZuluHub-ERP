@@ -92,6 +92,8 @@ export type ErrorDeStock =
   | "COMPOSICION_DESACTUALIZADA"
   | "RINDE_INVALIDO"
   | "SIN_COMPOSICION"
+  // E6: recetas dentro de recetas
+  | "RECETA_DEMASIADO_ANIDADA"
   | Readonly<{
       error: "FUNCION_NO_INCLUIDA";
       perilla: "composiciones_con_perdida" | "subcomposiciones";
