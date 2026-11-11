@@ -135,6 +135,8 @@ export interface RepositorioDeComprobantes {
   bloquear(empresa: EmpresaId, id: string): Promise<ComprobanteGuardado | null>;
   /** El comprobante vigente (registrado si lo hay; si no, el más nuevo) de una recepción, por el puntero de sus líneas. */
   delaRecepcion(empresa: EmpresaId, recepcionId: string): Promise<ComprobanteGuardado | null>;
+  /** La recepción a la que apuntan las líneas del comprobante (en N1 y N2, una sola), o `null` si no apunta a ninguna. */
+  recepcionIdDe(empresa: EmpresaId, comprobanteId: string): Promise<string | null>;
   insertar(empresa: EmpresaId, alta: AltaDeComprobante): Promise<string | undefined>;
   insertarLineas(
     empresa: EmpresaId,
@@ -360,6 +362,19 @@ export function crearRepositorioDeComprobantes(db: Kysely<ComprasDb>): Repositor
         .limit(1)
         .executeTakeFirst();
       return fila === undefined ? null : aComprobante(fila);
+    },
+    async recepcionIdDe(empresa, comprobanteId) {
+      if (!esUuid(comprobanteId)) return null;
+      const fila = await db
+        .selectFrom("linea_de_comprobante")
+        .select("recepcion_id")
+        .where("empresa_id", "=", empresa)
+        .where("comprobante_id", "=", comprobanteId)
+        .where("recepcion_id", "is not", null)
+        .orderBy("numero")
+        .limit(1)
+        .executeTakeFirst();
+      return fila?.recepcion_id ?? null;
     },
     async insertar(empresa, alta) {
       const fila = await db

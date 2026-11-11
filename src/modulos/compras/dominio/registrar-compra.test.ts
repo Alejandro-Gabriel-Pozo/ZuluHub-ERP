@@ -5,6 +5,7 @@ import {
   claveDeLaAnulacionDeLaEntrada,
   claveDeLaConciliacionDeAtajo,
   claveDeLaEntradaDeStock,
+  claveDelPagoDeLaCompra,
   elegirDepositoDeLaCompra,
   huellaDeLaCompra,
   leerRemito,
@@ -357,6 +358,10 @@ describe("los identificadores de la entrada de stock", () => {
     expect(claveDeLaAnulacionDeLaConciliacion(R)).toBe("8fdda9b0-817d-5f55-af1f-9d6eb0044ac2");
     expect(claveDeLaConciliacionDeAtajo(R)).not.toBe(claveDeLaConciliacionDeAtajo(D));
     expect(claveDeLaAnulacionDeLaConciliacion(R)).not.toBe(claveDeLaAnulacionDeLaConciliacion(D));
+  });
+  it("la del pago de la compra también es fija y cambia con la recepción", () => {
+    expect(claveDelPagoDeLaCompra(R)).toBe("659a618b-b9d9-5ef8-a241-48c01ddd115c");
+    expect(claveDelPagoDeLaCompra(R)).not.toBe(claveDelPagoDeLaCompra(D));
   });
   it("cambian con la recepción y con el depósito, y no se confunden entre sí", () => {
     for (const f of [

@@ -24,13 +24,15 @@ import {
   tributosDeLaPantalla,
   type FacturaPedida,
 } from "../dominio/factura";
-import { decidirPorHuella } from "../dominio/huella";
+import { decidirPorHuella, huellaDeComando } from "../dominio/huella";
+import { camposDeHuellaDePago, leerPago, type PagoPedido } from "../dominio/pago";
 import { leerImporte } from "../dominio/decimal";
 import { esUuid } from "../dominio/identificadores";
 import { claseDeComprobante, PERILLA_DEL_NIVEL, type NivelDeCompra } from "../dominio/niveles";
 import {
   claveDeLaConciliacionDeAtajo,
   claveDeLaEntradaDeStock,
+  claveDelPagoDeLaCompra,
   elegirDepositoDeLaCompra,
   huellaDeLaCompra,
   leerRemito,
@@ -74,6 +76,8 @@ export type EntradaDeRegistrarCompra = Readonly<{
    * unidad base del producto (ver `dominio/factura.ts`).
    */
   factura?: unknown;
+  /** El pago de la factura, si ya se pagó (D142): `{ fechaDePago, medio }`. Pide `comprobantes_de_proveedor.pagar` y que la compra traiga factura. No mueve la caja. */
+  pago?: unknown;
 }>;
 
 export type AvisoDeCompra =
@@ -84,6 +88,8 @@ export type SalidaDeRegistrarCompra = Readonly<{
   recepcionId: string;
   /** `null` si la compra no trae factura. */
   comprobanteId: string | null;
+  /** `null` si la compra no se pagó. */
+  pagoId: string | null;
   /** Los movimientos de stock que dejó la compra (uno por depósito); vacío si nada controlaba stock. */
   movimientos: readonly string[];
   /** `true`: la misma compra ya estaba registrada (misma clave y mismo contenido): no se escribió ni se auditó nada. */
@@ -153,6 +159,13 @@ export function armarRegistrarCompra(dependencias: DependenciasDeCompras) {
       if (!leida.ok) return leida;
       factura = leida.valor;
     }
+    let pago: PagoPedido | null = null;
+    if (entrada.pago !== undefined && entrada.pago !== null) {
+      if (factura === null) return err("PAGO_REQUIERE_FACTURA");
+      const leido = leerPago(entrada.pago, contexto.ahora);
+      if (!leido.ok) return leido;
+      pago = leido.valor;
+    }
     const huella = huellaDeLaCompra({
       sucursalId: entrada.sucursalId,
       proveedorId: entrada.proveedorId,
@@ -161,7 +174,7 @@ export function armarRegistrarCompra(dependencias: DependenciasDeCompras) {
       remito,
       renglones: renglones.valor,
       factura: factura === null ? null : camposDeHuellaDeFactura(factura),
-      pago: null,
+      pago: pago === null ? null : [pago.fechaDePago, pago.medio],
     });
 
     return traducir(
@@ -176,6 +189,12 @@ export function armarRegistrarCompra(dependencias: DependenciasDeCompras) {
               "comprobantes_de_proveedor.registrar",
             ]);
             if (!deLaFactura.ok) return deLaFactura;
+          }
+          if (pago !== null) {
+            const dePago = await autorizar(tx, contexto, dependencias.reglas, [
+              "comprobantes_de_proveedor.pagar",
+            ]);
+            if (!dePago.ok) return dePago;
           }
           const sucursal = sucursalId(entrada.sucursalId);
           const alcance = await exigirAlcanceDeSucursal(tx, contexto, sucursal);
@@ -355,6 +374,29 @@ export function armarRegistrarCompra(dependencias: DependenciasDeCompras) {
             });
             comprobanteId = guardado;
           }
+          let pagoId: string | null = null;
+          if (pago !== null && comprobanteId !== null && preparada !== null && preparada.ok) {
+            const importe = preparada.valor.calculado.totalSegunFactura;
+            const nuevo = await tx.pagosDeProveedor.insertar(empresaId, {
+              comprobanteId,
+              fechaDePago: pago.fechaDePago,
+              medio: pago.medio,
+              importe,
+              clave: claveDelPagoDeLaCompra(recepcionId),
+              huella: huellaDeComando(
+                "declarar_pago",
+                [comprobanteId, ...camposDeHuellaDePago(pago, importe)],
+                [],
+              ),
+              registradoPor: persona,
+            });
+            if (nuevo === undefined) {
+              throw new Error(
+                "el pago chocó con una restricción única que no es su clave ni el pago vigente",
+              );
+            }
+            pagoId = nuevo;
+          }
 
           // 6. Lo que cobró el proveedor: la compra más nueva gana.
           for (const l of lineas) {
@@ -384,12 +426,14 @@ export function armarRegistrarCompra(dependencias: DependenciasDeCompras) {
               nivel: configuracion.nivel,
               renglones: lineas.length,
               comprobanteId,
+              pagoId,
               movimientos,
             },
           });
           return ok({
             recepcionId,
             comprobanteId,
+            pagoId,
             movimientos,
             yaExistia: false,
             avisos: preparada !== null && preparada.ok ? preparada.valor.avisos : [],
@@ -423,9 +467,12 @@ async function salidaDeLoYaHecho(
       avisos.push({ tipo: "TOTAL_NO_COINCIDE" });
     }
   }
+  const pago =
+    comprobante === null ? null : await tx.pagosDeProveedor.vigenteDe(empresaId, comprobante.id);
   return {
     recepcionId,
     comprobanteId: comprobante?.id ?? null,
+    pagoId: pago?.id ?? null,
     movimientos,
     yaExistia: true,
     avisos,

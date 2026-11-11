@@ -28,7 +28,7 @@ export type EntradaDeAnularCompra = Readonly<{ recepcionId: string; motivo: stri
 export type SalidaDeAnularCompra = Readonly<{ anulada: true }>;
 
 /**
- * Anular una compra (E9 §3.5): una anulación ESPEJO de su entrada de stock (mismo depósito y renglones con la cantidad opuesta, y el mismo costo congelado), del espejo de la conciliación atajo y de su factura (queda `ANULADO`: libera el número), y la
+ * Anular una compra (E9 §3.5): una anulación ESPEJO de su entrada de stock (mismo depósito y renglones con la cantidad opuesta, y el mismo costo congelado), del espejo de la conciliación atajo, de su factura (queda `ANULADO`: libera el número) y de su pago vigente, y la
  * recepción queda `ANULADA` con quién, cuándo y por qué; nada se borra. Guard `recepciones.anular` (gerente y administrador) y, si hubo entrada, también
  * `stock.anular`. Si lo que entró ya se consumió (la existencia actual del depósito es menor que lo que entró) no se anula: `COMPRA_CONSUMIDA`, se corrige
  * (D143). Todo o nada: si el espejo falla, la compra sigue como estaba. Repetición (`RECHAZA_LA_REPETICION`): anular una compra ya anulada es
@@ -180,6 +180,15 @@ export function armarAnularCompra(dependencias: DependenciasDeCompras) {
                     };
                   }),
                 );
+              }
+              const pagoVigente = await tx.pagosDeProveedor.vigenteDe(empresaId, bloqueado.id);
+              if (pagoVigente !== null) {
+                const pagoAnulado = await tx.pagosDeProveedor.anular(empresaId, pagoVigente.id, {
+                  por: persona,
+                  en: contexto.ahora,
+                  motivo: motivo.valor,
+                });
+                if (!pagoAnulado) throw new Error("el pago ya no estaba vigente bajo bloqueo");
               }
               const comprobanteAnulado = await tx.comprobantesDeProveedor.anular(
                 empresaId,

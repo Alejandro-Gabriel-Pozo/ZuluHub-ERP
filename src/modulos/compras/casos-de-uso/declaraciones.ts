@@ -1,6 +1,7 @@
 import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/declaracion";
 
 const ARCHIVO_DE_FICHA = "test/integracion/compras-ficha.test.ts";
+const ARCHIVO_DE_PAGOS = "test/integracion/compras-pagos.test.ts";
 const ARCHIVO_DE_RECEPCION = "test/integracion/compras-recepcion.test.ts";
 
 /**
@@ -106,6 +107,26 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_RECEPCION,
         it: "configurarCompras con el nivel que ya está devuelve lo vigente aunque la versión esperada sea vieja, sin escribir ni auditar",
+      },
+    },
+  },
+  declararPago: {
+    accion: "comprobantes_de_proveedor.pagar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_PAGOS,
+        it: "I5: el mismo pago dos veces (misma clave) deja un pago y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
+      },
+    },
+  },
+  anularPago: {
+    accion: "comprobantes_de_proveedor.anular_pago",
+    repeticion: {
+      regla: "RECHAZA_LA_REPETICION",
+      prueba: {
+        archivo: ARCHIVO_DE_PAGOS,
+        it: "I5: anular dos veces el mismo pago deja un solo espejo y la segunda da PAGO_YA_ANULADO",
       },
     },
   },

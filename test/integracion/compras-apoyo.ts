@@ -84,7 +84,7 @@ export async function comprobanteDeBase(
     await c.query(
       `insert into comprobante_de_proveedor (id, empresa_id, proveedor_id, clase, tipo, punto_de_venta, numero, fecha_del_comprobante, neto_gravado, no_gravado, exento,
          iva, tributos_total, credito_fiscal_computable, total_calculado, total_segun_factura, proveedor_razon_social, nivel, clave_idempotencia, huella, registrado_por)
-       values ($1, $2, $3, 'FACTURA', $4, $5, $6, '2026-11-10', 1000, 0, 0, 210, 0, 210, 1210, 1210, 'Proveedor Sur', 'CON_COMPROBANTE', $7, $8, $9)`,
+       values ($1, $2, $3, $10, $4, $5, $6, '2026-11-10', 1000, 0, 0, 210, 0, 210, 1210, 1210, 'Proveedor Sur', 'CON_COMPROBANTE', $7, $8, $9)`,
       [
         id,
         m.empresa,
@@ -95,6 +95,7 @@ export async function comprobanteDeBase(
         claveDeCompra(),
         huellaAlAzar(),
         m.persona,
+        tipo.startsWith("NOTA_CREDITO") ? "NOTA_DE_CREDITO" : "FACTURA",
       ],
     );
     await c.query(

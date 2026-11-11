@@ -138,6 +138,33 @@ export type FichaDeCompra = Readonly<{
   motivoDeAnulacion: string | null;
   /** Cada línea con lo que entra a tu stock y el costo por unidad de stock; `null` = «Sin precio». */
   lineas: readonly LineaDeRecepcion[];
+  /** La factura de la compra (la vigente, o la última si se anuló), con los dos totales: el calculado y el que dice el papel. */
+  comprobante: Readonly<{
+    id: string;
+    tipo: string | null;
+    puntoDeVenta: number | null;
+    numero: number | null;
+    fecha: string | null;
+    vencimientoDePago: string | null;
+    netoGravado: string;
+    iva: string;
+    tributosTotal: string;
+    totalCalculado: string;
+    totalSegunFactura: string;
+    letraNoEsperada: boolean;
+    estado: string;
+  }> | null;
+  /** Todos los pagos de la factura, del más viejo al más nuevo (el vigente tiene `estado: "VIGENTE"`). */
+  pagos: readonly Readonly<{
+    id: string;
+    fechaDePago: string;
+    medio: string;
+    importe: string;
+    estado: string;
+    registradoPor: string;
+    anuladoPor: string | null;
+    motivoDeAnulacion: string | null;
+  }>[];
 }>;
 
 export async function fichaDeCompraDentro(
@@ -152,6 +179,9 @@ export async function fichaDeCompraDentro(
   const alcance = await tx.autorizacion.sucursalesDelActor(contexto);
   if (alcance !== "TODAS" && !alcance.some((s) => s === recepcion.sucursalId)) return ok(null);
   const comprobante = await tx.recepciones.estadoDelComprobante(contexto.empresaId, recepcion.id);
+  const factura = await tx.comprobantesDeProveedor.delaRecepcion(contexto.empresaId, recepcion.id);
+  const pagos =
+    factura === null ? [] : await tx.pagosDeProveedor.deComprobante(contexto.empresaId, factura.id);
   return ok({
     recepcionId: recepcion.id,
     numero: recepcion.numero,
@@ -167,6 +197,34 @@ export async function fichaDeCompraDentro(
     anuladaEn: recepcion.anuladaEn?.toISOString() ?? null,
     motivoDeAnulacion: recepcion.motivoDeAnulacion,
     lineas: await tx.recepciones.lineasDe(contexto.empresaId, recepcion.id),
+    comprobante:
+      factura === null
+        ? null
+        : {
+            id: factura.id,
+            tipo: factura.tipo,
+            puntoDeVenta: factura.puntoDeVenta,
+            numero: factura.numero,
+            fecha: factura.fechaDelComprobante,
+            vencimientoDePago: factura.fechaDeVencimientoDePago,
+            netoGravado: factura.netoGravado,
+            iva: factura.iva,
+            tributosTotal: factura.tributosTotal,
+            totalCalculado: factura.totalCalculado,
+            totalSegunFactura: factura.totalSegunFactura,
+            letraNoEsperada: factura.letraNoEsperada,
+            estado: factura.estado,
+          },
+    pagos: pagos.map((p) => ({
+      id: p.id,
+      fechaDePago: p.fechaDePago,
+      medio: p.medio,
+      importe: p.importe,
+      estado: p.estado,
+      registradoPor: p.registradoPor,
+      anuladoPor: p.anuladoPor,
+      motivoDeAnulacion: p.motivoDeAnulacion,
+    })),
   });
 }
 

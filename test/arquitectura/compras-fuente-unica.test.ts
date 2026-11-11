@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { TIPOS_DE_MEDIO } from "../../src/modulos/caja/estados";
+import { MEDIOS_DE_PAGO } from "../../src/modulos/compras/dominio/pago";
 import { CODIGO_DE_TIPO_DE_COMPROBANTE } from "../../src/modulos/fiscal/dominio/codigos-de-arca";
 import { CODIGOS_DE_ALICUOTA } from "../../src/modulos/fiscal/dominio/alicuota";
 import { TIPOS_DE_COMPROBANTE } from "../../src/modulos/fiscal/dominio/comprobante-emitido";
@@ -13,7 +15,7 @@ import {
  * alícuotas. Esta prueba, que SÍ puede importar los dos lados, falla si la copia y el original difieren: una sola fuente de verdad con un
  * chequeo mecánico (E9 §6, H-9). Previene: una letra o una alícuota nueva en el facturador que compras no reconozca, o un código de ARCA distinto.
  */
-describe("compras copia de fiscal los tipos de comprobante y las alícuotas, y la prueba las compara", () => {
+describe("compras copia de fiscal los tipos de comprobante y las alícuotas, y de caja los medios, y la prueba las compara", () => {
   it("los nueve tipos, en el mismo orden", () => {
     expect([...TIPOS_DE_COMPROBANTE_DE_PROVEEDOR]).toEqual([...TIPOS_DE_COMPROBANTE]);
   });
@@ -31,5 +33,8 @@ describe("compras copia de fiscal los tipos de comprobante y las alícuotas, y l
   });
   it("las ocho alícuotas, en el mismo orden", () => {
     expect([...ALICUOTAS_DE_COMPRA]).toEqual([...CODIGOS_DE_ALICUOTA]);
+  });
+  it("los medios de pago son los tipos de medio de caja, en el mismo orden", () => {
+    expect([...MEDIOS_DE_PAGO]).toEqual([...TIPOS_DE_MEDIO]);
   });
 });
