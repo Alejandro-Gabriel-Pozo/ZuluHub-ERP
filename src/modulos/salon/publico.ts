@@ -14,6 +14,30 @@ export type {
   EntradaDeMesaPorId,
   SalidaDeMesa,
 } from "./casos-de-uso/mesas";
+export type { EntradaDeCobrarMesa } from "./casos-de-uso/cobro";
+export type { EntradaDeCambiarDeMesa, SalidaDeCambiarDeMesa } from "./casos-de-uso/cambio-de-mesa";
+export type {
+  EntradaDeAgregarAlPedido,
+  EntradaDeLiberarMesa,
+  EntradaDeTomarPedido,
+  SalidaDeLiberarMesa,
+  SalidaDeTomarPedido,
+} from "./casos-de-uso/pedido";
+export type {
+  EntradaDeAnularItemDeMesa,
+  EntradaDeEnviarMesa,
+  EntradaDePedirQueSalgaMesa,
+} from "./casos-de-uso/envios";
+export type {
+  CuentaDeLaFicha,
+  EntradaDeFichaDeMesa,
+  EntradaDeListarMesas,
+  EntradaDeMapaDeMesas,
+  FichaDeMesa,
+  FiltroDelMapa,
+  LineaDeLaFicha,
+  MesaDelMapa,
+} from "./consultas/consultas";
 export { COLUMNAS_DE_SALON, type SalonDb } from "./persistencia/esquema";
 export { ERRORES_DE_SALON_POR_RESTRICCION } from "./persistencia/restricciones";
 export {

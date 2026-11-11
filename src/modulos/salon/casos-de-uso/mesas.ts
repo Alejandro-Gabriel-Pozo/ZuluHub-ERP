@@ -12,13 +12,11 @@ import {
 } from "../dominio/mesa";
 import type { Mesa } from "../persistencia/repositorio-de-mesas";
 import { exigirAlcance, exigirUuid, prepararComando, traducir } from "./comun";
+import { ANCLA_DE_MESA } from "./cuenta-de-mesa";
 import type { DependenciasDeSalon, TxDeSalon } from "./contrato";
 import type { ErrorDeSalon } from "./errores";
 
 type R<S> = Resultado<S, ErrorDeSalon>;
-
-/** El tipo de ancla de una cuenta de mesa (E7 §3.2): su id es el de la mesa. */
-export const ANCLA_DE_MESA = "salon.mesa";
 
 export type DatosDeMesa = Readonly<{
   numero: number;

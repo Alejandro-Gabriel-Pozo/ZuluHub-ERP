@@ -9,12 +9,19 @@ import type { PersonaId, SucursalId } from "../../../primitivas/identificadores/
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import { cargarEstadosDeLaEmpresa } from "../../empresas/publico";
-import { esUuid } from "../../ventas/publico";
+import {
+  ERRORES_DE_VENTAS_POR_RESTRICCION,
+  esUuid,
+  type StockDeVentas,
+} from "../../ventas/publico";
 import { ERRORES_DE_SALON_POR_RESTRICCION } from "../persistencia/restricciones";
-import type { TxDeSalon } from "./contrato";
+import type { DependenciasDeSalon, TxDeSalon } from "./contrato";
 import type { ErrorDeSalon } from "./errores";
 
 type R<S> = Resultado<S, ErrorDeSalon>;
+
+/** La única de la base de una cuenta abierta por ancla (0028). */
+const RESTRICCION_DE_ANCLA_OCUPADA = "cuenta_ancla_abierta_uk";
 
 const ES_ERROR_DE_PERSISTENCIA = (error: unknown): error is ErrorDePersistencia =>
   typeof error === "object" && error !== null && "tipo" in error;
@@ -23,19 +30,32 @@ const ES_ERROR_DE_PERSISTENCIA = (error: unknown): error is ErrorDePersistencia 
  * Traducción de las restricciones de la base del salón a errores de negocio (ADR-004). Una restricción sin error de negocio (`NO_TRADUCIDA`) o que no
  * figura sale como el `ErrorDePersistencia` tipado que ya es: nunca se traga ni se disfraza.
  */
-export function traducir<T>(resultado: R<T>): R<T> {
+export function traducir<T>(resultado: R<T>, stock?: Pick<StockDeVentas, "traducirFalla">): R<T> {
   if (resultado.ok || !ES_ERROR_DE_PERSISTENCIA(resultado.error)) return resultado;
   const error = resultado.error;
   if (
     (error.tipo !== "Unicidad" && error.tipo !== "Referencia" && error.tipo !== "Check") ||
-    error.restriccion === null ||
-    !Object.hasOwn(ERRORES_DE_SALON_POR_RESTRICCION, error.restriccion)
+    error.restriccion === null
   ) {
     return resultado;
   }
-  const codigo = ERRORES_DE_SALON_POR_RESTRICCION[error.restriccion];
-  if (codigo === undefined || codigo === "NO_TRADUCIDA") return resultado;
-  return err(codigo as ErrorDeSalon);
+  // La carrera por una mesa libre (tomar pedido o cambiar de mesa a la vez) la decide la única de la base: gana uno, el otro ve la mesa ocupada.
+  if (error.restriccion === RESTRICCION_DE_ANCLA_OCUPADA) return err("MESA_NO_LIBRE");
+  if (Object.hasOwn(ERRORES_DE_SALON_POR_RESTRICCION, error.restriccion)) {
+    const codigo = ERRORES_DE_SALON_POR_RESTRICCION[error.restriccion];
+    return codigo === undefined || codigo === "NO_TRADUCIDA"
+      ? resultado
+      : err(codigo as ErrorDeSalon);
+  }
+  // Lo que salón orquesta de ventas (y de stock, que ventas cablea) sale con el nombre que ventas le da.
+  if (Object.hasOwn(ERRORES_DE_VENTAS_POR_RESTRICCION, error.restriccion)) {
+    const codigo = ERRORES_DE_VENTAS_POR_RESTRICCION[error.restriccion];
+    return codigo === undefined || codigo === "NO_TRADUCIDA"
+      ? resultado
+      : err(codigo as ErrorDeSalon);
+  }
+  const deStock = stock?.traducirFalla(error) ?? null;
+  return deStock === null ? resultado : err({ error: "STOCK_FALLIDO", causa: deStock });
 }
 
 /**
@@ -78,4 +98,27 @@ const FORMA_DE_LA_CLAVE = /^[A-Za-z0-9_-]{16,128}$/;
 export function exigirClave(clave: string): Resultado<null, "CLAVE_INVALIDA"> {
   return FORMA_DE_LA_CLAVE.test(clave) ? ok(null) : err("CLAVE_INVALIDA");
 }
-export type { MotivoDeRechazo };
+
+/**
+ * La plantilla de todo comando del salón: UNA transacción serializable, guard de TODAS las acciones que sus pasos usan por dentro (o puede con todas o no
+ * empieza), el cuerpo y la traducción de las restricciones de la base a errores de negocio.
+ */
+export function armarComando(dependencias: DependenciasDeSalon) {
+  return <E, S>(
+    acciones: readonly [ClaveAccion, ...ClaveAccion[]],
+    cuerpo: (
+      tx: TxDeSalon,
+      contexto: ContextoOperativo,
+      persona: PersonaId,
+      entrada: E,
+    ) => Promise<R<S>>,
+  ) =>
+    async function ejecutar(contexto: ContextoOperativo, entrada: E): Promise<R<S>> {
+      const resultado = await dependencias.transacciones.ejecutar({ contexto }, async (tx) => {
+        const persona = await prepararComando(tx, contexto, dependencias.reglas, acciones);
+        if (!persona.ok) return persona;
+        return cuerpo(tx, contexto, persona.valor, entrada);
+      });
+      return traducir(resultado, dependencias.stock);
+    };
+}

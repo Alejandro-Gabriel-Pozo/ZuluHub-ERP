@@ -582,6 +582,9 @@ $$
      AND NOT EXISTS (SELECT 1 FROM unnest(p_detalle) AS t(x) WHERE x IS NULL OR NOT public.texto_de_catalogo_valido(x, 200))
 $$;
 
+REVOKE ALL ON FUNCTION detalle_de_cocina_valido(text[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION detalle_de_cocina_valido(text[]) TO pedernal_app;      -- la usan los CHECK, que corren con los permisos de quien escribe
+
 CREATE TABLE renglon_de_envio (                                        -- solo inserción: la foto de lo que dice el papel (D87)
   empresa_id          uuid NOT NULL REFERENCES empresa (id),
   envio_id            uuid NOT NULL,

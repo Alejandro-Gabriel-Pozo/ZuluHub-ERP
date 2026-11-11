@@ -254,19 +254,38 @@ export function crearRepositorioDeMesas(db: Kysely<SalonDb>): RepositorioDeMesas
 
     async ocuparCasillas(empresa, sucursal, mesaId, casillas) {
       if (casillas.length === 0) return;
+      // Las que la mesa ya tuvo (inactivas) se reactivan; las demás se insertan. Nunca se pisa nada en silencio.
+      const clave = (c: CasillaDeMesa) => `${c.columna},${c.fila}`;
+      const quiere = new Set(casillas.map(clave));
+      const previas = await db
+        .selectFrom("mesa_celda")
+        .select(["columna", "fila"])
+        .where("empresa_id", "=", empresa)
+        .where("mesa_id", "=", mesaId)
+        .execute();
+      const existentes = new Set(previas.map(clave));
+      for (const c of previas.filter((p) => quiere.has(clave(p)))) {
+        await db
+          .updateTable("mesa_celda")
+          .set({ activa: true })
+          .where("empresa_id", "=", empresa)
+          .where("mesa_id", "=", mesaId)
+          .where("columna", "=", c.columna)
+          .where("fila", "=", c.fila)
+          .execute();
+      }
+      const nuevas = casillas.filter((c) => !existentes.has(clave(c)));
+      if (nuevas.length === 0) return;
       await db
         .insertInto("mesa_celda")
         .values(
-          casillas.map((c) => ({
+          nuevas.map((c) => ({
             empresa_id: empresa,
             sucursal_id: sucursal,
             mesa_id: mesaId,
             columna: c.columna,
             fila: c.fila,
           })),
-        )
-        .onConflict((oc) =>
-          oc.columns(["empresa_id", "mesa_id", "columna", "fila"]).doUpdateSet({ activa: true }),
         )
         .execute();
     },

@@ -1,6 +1,10 @@
 import type { DependenciasDeSalon } from "./contrato";
 import type { DECLARACIONES } from "./declaraciones";
+import { armarCambioDeMesa } from "./cambio-de-mesa";
+import { armarCobro } from "./cobro";
+import { armarEnvios } from "./envios";
 import { armarMesas } from "./mesas";
+import { armarPedido } from "./pedido";
 
 /**
  * Los casos de uso del salón, listos para que la composición los ofrezca. El `satisfies` exige que sean EXACTAMENTE los que declara `DECLARACIONES`: uno
@@ -9,6 +13,10 @@ import { armarMesas } from "./mesas";
 export function crearCasosDeUsoDeSalon(dependencias: DependenciasDeSalon) {
   return {
     ...armarMesas(dependencias),
+    ...armarPedido(dependencias),
+    ...armarCambioDeMesa(dependencias),
+    ...armarCobro(dependencias),
+    ...armarEnvios(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

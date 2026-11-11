@@ -45,7 +45,7 @@ export function conSalon(tx: TxDePrueba): TxDePrueba {
             };
       },
     },
-  } as TxDePrueba;
+  };
 }
 
 export async function montarSalon(

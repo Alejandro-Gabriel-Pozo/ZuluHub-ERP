@@ -61,7 +61,12 @@ export {
   documentoIdDeLaFactura,
   origenDeLaFactura,
 } from "./dominio/factura-de-ticket";
-export type { EntradaDeCobrar, SalidaDeCobrar, CobroHecho } from "./casos-de-uso/cobrar";
+export {
+  REINTENTOS_AL_COBRAR,
+  type EntradaDeCobrar,
+  type SalidaDeCobrar,
+  type CobroHecho,
+} from "./casos-de-uso/cobrar";
 export { cerrarYCobrarEnTx, type EntradaDeCerrarYCobrar } from "./casos-de-uso/cerrar-y-cobrar";
 export {
   copiarLineaEnTx,

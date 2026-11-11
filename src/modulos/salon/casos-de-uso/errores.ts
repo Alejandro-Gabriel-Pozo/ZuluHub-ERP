@@ -2,6 +2,7 @@ import type { ErrorDeAlcance } from "../../../capacidades/permisos/alcance";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { EmpresaNoOpera } from "../../../contexto/estados";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
+import type { ErrorDeComandas } from "../../comandas/publico";
 import type { ErrorDeVentas } from "../../ventas/publico";
 import type { ErrorDeMesa } from "../dominio/mesa";
 
@@ -16,6 +17,7 @@ export type ErrorDeSalon =
   | ErrorDePersistencia
   | ErrorDeMesa
   | ErrorDeVentas
+  | ErrorDeComandas
   | "IDENTIFICADOR_INVALIDO"
   | "SUCURSAL_NO_ENCONTRADA"
   | "SUCURSAL_INACTIVA"
@@ -27,6 +29,11 @@ export type ErrorDeSalon =
   | "VERSION_DESACTUALIZADA"
   | "MESA_CON_CUENTA"
   | "MESA_UNIDA"
+  | "MESA_NO_LIBRE"
+  | "MESA_CON_PEDIDO"
+  | "CUENTA_NO_ES_DE_MESA"
+  | "SUCURSAL_DISTINTA"
+  | "HAY_PLATOS_SIN_ENVIAR"
   | "MESA_DIVIDIDA"
   /** Dos administradores guardaron mesas con casillas que se pisan a la vez: la única de la base dejó pasar a uno. */
   | "MESA_SUPERPUESTA_AL_GUARDAR";

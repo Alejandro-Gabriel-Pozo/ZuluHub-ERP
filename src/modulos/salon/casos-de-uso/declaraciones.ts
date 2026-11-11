@@ -1,6 +1,7 @@
 import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/declaracion";
 
 const MESAS = "test/integracion/salon-mesas.test.ts";
+const PEDIDO = "test/integracion/salon-pedido-y-cobro.test.ts";
 
 /**
  * Los casos de uso del salón (E7 §3.4) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar (ADR-015 §4) y la
@@ -44,6 +45,88 @@ export const DECLARACIONES = {
       prueba: {
         archivo: MESAS,
         it: "I4: reactivar dos veces la misma mesa es ok y no audita la segunda",
+      },
+    },
+  },
+  tomarPedido: {
+    accion: "cuentas.abrir",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: PEDIDO,
+        it: "I5: dos mozos que tocan «Tomar pedido» a la vez reciben la misma cuenta (yaExistia); repetir no abre otra",
+      },
+    },
+  },
+  agregarAlPedido: {
+    accion: "cuentas.agregar_linea",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: PEDIDO,
+        it: "I6: repetir agregarAlPedido con el mismo id deja una línea y un estado de comanda, y devuelve yaExistia",
+      },
+    },
+  },
+  liberarMesa: {
+    accion: "cuentas.anular",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: PEDIDO,
+        it: "I7: liberar dos veces la misma mesa es ok y no audita la segunda; con un ítem vigente, MESA_CON_PEDIDO",
+      },
+    },
+  },
+  cambiarDeMesa: {
+    accion: "salon.cambiar_mesa",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: PEDIDO,
+        it: "I8: cambiar dos veces a la misma mesa es ok (yaExistia) y no audita la segunda",
+      },
+    },
+  },
+  cobrarMesa: {
+    // La declaración admite UNA acción; el caso exige además `cuentas.cerrar` y `cuentas.anular` (ver `cobro.ts`).
+    accion: "tickets.cobrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: PEDIDO,
+        it: "I9: doble clic en cobrar la mesa deja un ticket, un cobro y la mesa libre, y devuelve yaExistia",
+      },
+    },
+  },
+  enviarACocina: {
+    accion: "comandas.enviar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: PEDIDO,
+        it: "I10: doble toque en «Enviar a cocina» con el mismo envío deja un envío y un trabajo, y devuelve yaExistia",
+      },
+    },
+  },
+  pedirQueSalga: {
+    accion: "comandas.enviar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: PEDIDO,
+        it: "I11: repetir «Pedir que salga» con el mismo envío no crea otro",
+      },
+    },
+  },
+  anularItemEnviado: {
+    // La declaración admite UNA acción; el caso exige además `cuentas.agregar_linea` (lo parcial crea la línea del resto).
+    accion: "cuentas.anular_linea",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: PEDIDO,
+        it: "I12: doble clic en anular un ítem enviado deja una anulación y un aviso",
       },
     },
   },
