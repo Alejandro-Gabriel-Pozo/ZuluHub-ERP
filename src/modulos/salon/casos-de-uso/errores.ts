@@ -5,6 +5,7 @@ import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { ErrorDeComandas } from "../../comandas/publico";
 import type { ErrorDeVentas } from "../../ventas/publico";
 import type { ErrorDeMesa } from "../dominio/mesa";
+import type { ErrorDeUnion } from "../dominio/union";
 
 /**
  * Los errores con nombre de los casos de uso del salón (E7 §3.4). Los de la base (restricciones) se traducen con `ERRORES_DE_SALON_POR_RESTRICCION`;
@@ -16,6 +17,7 @@ export type ErrorDeSalon =
   | ErrorDeAlcance
   | ErrorDePersistencia
   | ErrorDeMesa
+  | ErrorDeUnion
   | ErrorDeVentas
   | ErrorDeComandas
   | "IDENTIFICADOR_INVALIDO"

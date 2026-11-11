@@ -1,6 +1,7 @@
 import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/declaracion";
 
 const MESAS = "test/integracion/salon-mesas.test.ts";
+const UNION = "test/integracion/salon-union.test.ts";
 const PEDIDO = "test/integracion/salon-pedido-y-cobro.test.ts";
 
 /**
@@ -127,6 +128,17 @@ export const DECLARACIONES = {
       prueba: {
         archivo: PEDIDO,
         it: "I12: doble clic en anular un ítem enviado deja una anulación y un aviso",
+      },
+    },
+  },
+  unirMesas: {
+    // La declaración admite UNA acción; el caso exige además `cuentas.anular_linea` y `cuentas.agregar_linea` (ver `unir.ts`).
+    accion: "salon.unir",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: UNION,
+        it: "I13: repetir unirMesas con la misma unión deja una sola unión, los ítems una vez y devuelve yaExistia",
       },
     },
   },

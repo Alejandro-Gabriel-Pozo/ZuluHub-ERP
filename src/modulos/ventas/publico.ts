@@ -79,6 +79,7 @@ export {
   type SalidaDeReanclarCuenta,
 } from "./casos-de-uso/reanclar";
 export {
+  bloquearCuentas,
   cuentaAbiertaPorAncla,
   cuentaPorId,
   cuentasAbiertasPorAncla,

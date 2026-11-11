@@ -5,6 +5,7 @@ import { armarCobro } from "./cobro";
 import { armarEnvios } from "./envios";
 import { armarMesas } from "./mesas";
 import { armarPedido } from "./pedido";
+import { armarUnion } from "./unir";
 
 /**
  * Los casos de uso del salón, listos para que la composición los ofrezca. El `satisfies` exige que sean EXACTAMENTE los que declara `DECLARACIONES`: uno
@@ -17,6 +18,7 @@ export function crearCasosDeUsoDeSalon(dependencias: DependenciasDeSalon) {
     ...armarCambioDeMesa(dependencias),
     ...armarCobro(dependencias),
     ...armarEnvios(dependencias),
+    ...armarUnion(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

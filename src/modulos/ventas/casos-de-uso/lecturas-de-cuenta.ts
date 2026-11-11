@@ -68,3 +68,13 @@ export async function cuentasAbiertasPorAncla(
         ],
   );
 }
+
+/**
+ * Bloquea estas cuentas en orden de id hasta el fin de la transacción y las devuelve (las que existen en la empresa): lo que evita el deadlock de unir A con
+ * B y B con A a la vez (E7). Quien llama la usa ANTES de leer lo que va a decidir.
+ */
+export const bloquearCuentas = (
+  tx: ConCuentas<"bloquear">,
+  empresa: EmpresaId,
+  ids: readonly string[],
+): Promise<Cuenta[]> => tx.cuentas.bloquear(empresa, ids);

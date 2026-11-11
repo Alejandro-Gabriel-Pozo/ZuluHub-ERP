@@ -9,6 +9,7 @@ export const ANCLA_DE_MESA = "salon.mesa";
 export const ANCLA_DE_PARTE = "salon.parte";
 
 /** Los motivos internos con los que el salón anula (códigos de máquina, no textos de pantalla; E7 S-5). */
+export const MOTIVO_TRASLADADA = "TRASLADADA";
 export const MOTIVO_UNIDA_COBRADA = "UNIDA_COBRADA";
 export const MOTIVO_DIVISION_COBRADA = "DIVISION_COBRADA";
 export const MOTIVO_MESA_LIBERADA = "MESA_LIBERADA";
