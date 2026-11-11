@@ -961,5 +961,35 @@
     "decision": "El tope de 500 textos por marca queda corregido por el padre con la migración 0041 (tope de 2000); el catálogo ya tiene 587.",
     "que_cambia": "Cuántos textos puede redefinir una marca; no se agrega migración propia de compras.",
     "donde": "migraciones/0041_tope_de_textos_por_marca.sql (rama orq/plan8-tope-de-textos)"
+  },
+  {
+    "id": "DEC-0316",
+    "fecha": "2026-11-11",
+    "quien": "padre",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Al pagar una factura en efectivo, la plata puede salir de una caja abierta de esa sucursal, en la misma transacción del pago; sin caja abierta el pago no se declara y se puede pagar por otro medio.",
+    "que_cambia": "El arqueo de la caja baja con el pago; si se corrige, el pago en efectivo vuelve a ser solo una declaración y el egreso se carga a mano en caja.",
+    "donde": "src/modulos/compras/casos-de-uso/pagos.ts y src/modulos/caja/egreso/egreso-por-origen.ts (puerto nuevo de caja, archivo compartido de E3)"
+  },
+  {
+    "id": "DEC-0317",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "PERMISOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Quien puede pagar o anular un pago (gerente y administrador) puede sacar y devolver ese efectivo de la caja sin tener el permiso de movimientos manuales de caja.",
+    "que_cambia": "Si se exigiera además el permiso de caja, el administrador sin ese permiso no podría pagar en efectivo desde la caja; se corrige con una acción más en el guard del pago.",
+    "donde": "src/modulos/compras/casos-de-uso/pagos.ts"
+  },
+  {
+    "id": "DEC-0318",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El efectivo que sale por un pago se registra como un egreso manual de caja (con el motivo que escribe quien paga) y anular el pago lo devuelve con una anulación, solo si la caja sigue abierta.",
+    "que_cambia": "Si la caja ya está en cierre o cerrada el pago no se puede anular y la plata se corrige en caja; si se quisiera permitirlo, haría falta un ajuste de caja.",
+    "donde": "src/modulos/caja/egreso/egreso-por-origen.ts"
   }
 ]

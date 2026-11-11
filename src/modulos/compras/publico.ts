@@ -7,7 +7,9 @@ export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_COMPRAS } f
 export { crearCasosDeUsoDeCompras, type CasosDeUsoDeCompras } from "./casos-de-uso/casos-de-uso";
 export { crearConsultasDeCompras, type ConsultasDeCompras } from "./consultas/consultas";
 export type {
+  CodigoDeEgresoDeCaja,
   DependenciasDeCompras,
+  EgresoDeCaja,
   DependenciasDeConsultasDeCompras,
   TxDeCompras,
   TxDeConsultasDeCompras,

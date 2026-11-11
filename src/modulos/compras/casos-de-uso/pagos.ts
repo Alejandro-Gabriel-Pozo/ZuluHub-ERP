@@ -3,7 +3,7 @@ import { sucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { decidirPorHuella, huellaDeComando } from "../dominio/huella";
 import { esUuid } from "../dominio/identificadores";
-import { camposDeHuellaDePago, esClasePagable, leerPago } from "../dominio/pago";
+import { camposDeHuellaDePago, esClasePagable, leerPago, leerSalidaDeCaja } from "../dominio/pago";
 import { motivoDeAnulacionDesdeTexto } from "../dominio/registrar-compra";
 import { autorizar, exigirAlcanceDeSucursal, traducir } from "./comun";
 import type { DependenciasDeCompras, TxDeCompras } from "./contrato";
@@ -18,18 +18,23 @@ export type EntradaDeDeclararPago = Readonly<{
   /** Fecha civil `YYYY-MM-DD`, no futura (el «hoy» de Argentina). */
   fechaDePago: string;
   medio: string;
+  /**
+   * Solo con el medio `EFECTIVO`: la plata sale de esta caja abierta en la misma transacción (T10b). Ausente, el pago no mueve la caja. Sin sesión abierta
+   * en esa caja, el pago NO se declara (falla con su código) y se puede volver a pedir por otro medio.
+   */
+  salidaDeCaja?: Readonly<{ cajaId: string; motivo: string }>;
 }>;
 export type SalidaDeDeclararPago = Readonly<{ pagoId: string; yaExistia: boolean }>;
 
 /**
  * La sucursal de un comprobante, por la recepción a la que apuntan sus líneas: el alcance de sucursales de quien paga o anula tiene que incluirla. Un
- * comprobante que no apunta a ninguna recepción (no lo hay en N1 y N2) exige alcance sobre TODAS.
+ * comprobante que no apunta a ninguna recepción (no lo hay en N1 y N2) exige alcance sobre TODAS y no tiene sucursal (`null`).
  */
 async function exigirAlcanceDelComprobante(
   tx: TxDeCompras,
   contexto: ContextoOperativo,
   comprobanteId: string,
-): Promise<Resultado<null, "SUCURSAL_FUERA_DE_ALCANCE">> {
+): Promise<Resultado<string | null, "SUCURSAL_FUERA_DE_ALCANCE">> {
   const recepcionId = await tx.comprobantesDeProveedor.recepcionIdDe(
     contexto.empresaId,
     comprobanteId,
@@ -41,12 +46,13 @@ async function exigirAlcanceDelComprobante(
       ? ok(null)
       : err("SUCURSAL_FUERA_DE_ALCANCE");
   }
-  return exigirAlcanceDeSucursal(tx, contexto, sucursalId(recepcion.sucursalId));
+  const alcance = await exigirAlcanceDeSucursal(tx, contexto, sucursalId(recepcion.sucursalId));
+  return alcance.ok ? ok(recepcion.sucursalId) : alcance;
 }
 
 /**
  * Declarar el pago de una factura (E9 §3.6, D142): cuándo y con qué medio. El importe es el total de la factura (el que dice el papel) y se copia en el pago:
- * un pago por factura, sin parciales. NO mueve la caja. Guard `comprobantes_de_proveedor.pagar` (gerente y administrador). El comprobante se bloquea: dos pagos a
+ * un pago por factura, sin parciales. Con `salidaDeCaja` (solo efectivo) la plata sale de la caja abierta indicada, en la misma transacción (DEC-0316). Guard `comprobantes_de_proveedor.pagar` (gerente y administrador). El comprobante se bloquea: dos pagos a
  * la vez de la misma factura dejan uno (el otro, `COMPROBANTE_YA_PAGADO` con el id del vigente). Repetición (`CLAVE_DE_IDEMPOTENCIA`): misma clave y mismo
  * contenido devuelve el pago con `yaExistia` sin escribir ni auditar; misma clave y otro contenido, `CLAVE_REUTILIZADA`.
  */
@@ -63,6 +69,8 @@ export function armarDeclararPago(dependencias: DependenciasDeCompras) {
     }
     const pago = leerPago(entrada, contexto.ahora);
     if (!pago.ok) return pago;
+    const salida = leerSalidaDeCaja(entrada.salidaDeCaja, pago.valor.medio);
+    if (!salida.ok) return salida;
     return traducir(
       await dependencias.transacciones.ejecutar(
         { contexto },
@@ -80,7 +88,10 @@ export function armarDeclararPago(dependencias: DependenciasDeCompras) {
           if (!alcance.ok) return alcance;
           const huella = huellaDeComando(
             "declarar_pago",
-            [comprobante.id, ...camposDeHuellaDePago(pago.valor, comprobante.totalSegunFactura)],
+            [
+              comprobante.id,
+              ...camposDeHuellaDePago(pago.valor, comprobante.totalSegunFactura, salida.valor),
+            ],
             [],
           );
           const previa = await tx.pagosDeProveedor.porClave(empresaId, entrada.clave);
@@ -107,6 +118,18 @@ export function armarDeclararPago(dependencias: DependenciasDeCompras) {
               "el pago chocó con una restricción única que no es la clave ni el pago vigente",
             );
           }
+          if (salida.valor !== null) {
+            // Con salida de caja el alcance siempre trae sucursal: el comprobante sin recepción exige alcance sobre todas y no tiene a qué caja apuntar.
+            if (alcance.valor === null) return err("CAJA_DE_OTRA_SUCURSAL");
+            const egreso = await dependencias.egresoDeCaja.registrar(tx, contexto, {
+              cajaId: salida.valor.cajaId,
+              sucursalId: alcance.valor,
+              pagoId,
+              importe: comprobante.totalSegunFactura,
+              motivo: salida.valor.motivo,
+            });
+            if (!egreso.ok) return err(egreso.error);
+          }
           await tx.auditoria.registrar({
             empresaId,
             actorPersonaId: persona,
@@ -118,6 +141,7 @@ export function armarDeclararPago(dependencias: DependenciasDeCompras) {
               fechaDePago: pago.valor.fechaDePago,
               medio: pago.valor.medio,
               importe: comprobante.totalSegunFactura,
+              salidaDeCajaId: salida.valor?.cajaId ?? null,
             },
           });
           return ok({ pagoId, yaExistia: false });
@@ -132,7 +156,8 @@ export type SalidaDeAnularPago = Readonly<{ anulado: true }>;
 
 /**
  * Anular un pago (E9 §3.6): el pago queda `ANULADO` con quién, cuándo y por qué (nada se borra) y después se puede declarar otro. Guard
- * `comprobantes_de_proveedor.anular_pago`. Repetición (`RECHAZA_LA_REPETICION`): anular un pago ya anulado es `PAGO_YA_ANULADO` y no escribe nada; el estado
+ * `comprobantes_de_proveedor.anular_pago`. Si el pago había sacado efectivo de la caja, la anulación lo devuelve con un registro nuevo de caja en la misma transacción (si la caja
+ * ya no está abierta, `EGRESO_DE_CAJA_NO_ANULABLE` o el error de su sesión y nada se anula: se corrige en caja). Repetición (`RECHAZA_LA_REPETICION`): anular un pago ya anulado es `PAGO_YA_ANULADO` y no escribe nada; el estado
  * bajo bloqueo decide, así que dos anulaciones a la vez dejan una sola.
  */
 export function armarAnularPago(dependencias: DependenciasDeCompras) {
@@ -165,6 +190,11 @@ export function armarAnularPago(dependencias: DependenciasDeCompras) {
             motivo: motivo.valor,
           });
           if (!hecho) throw new Error("el pago ya no estaba vigente bajo bloqueo");
+          const devuelto = await dependencias.egresoDeCaja.anular(tx, contexto, {
+            pagoId: pago.id,
+            motivo: motivo.valor,
+          });
+          if (!devuelto.ok) return err(devuelto.error);
           await tx.auditoria.registrar({
             empresaId,
             actorPersonaId: persona,

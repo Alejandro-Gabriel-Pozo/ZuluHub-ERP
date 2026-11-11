@@ -1,3 +1,5 @@
+import type { ContextoOperativo } from "../../../contexto/contexto";
+import type { Resultado } from "../../../primitivas/resultado/resultado";
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { RepositorioDePresentaciones } from "../../catalogo/publico";
@@ -16,12 +18,54 @@ export type TxDeCompras = TxDeStock &
   /** Las presentaciones son del catálogo (X5): compras las lee por su repositorio, nunca por SQL a la tabla. */
   Readonly<{ presentacionesDeProducto: RepositorioDePresentaciones }>;
 
+/** Los motivos por los que caja no deja sacar o devolver el efectivo de un pago (los que caja distingue, traducidos a los códigos de compras). */
+export type CodigoDeEgresoDeCaja =
+  | "CAJA_NO_ENCONTRADA"
+  | "CAJA_INACTIVA"
+  | "CAJA_DE_OTRA_SUCURSAL"
+  | "SIN_SESION_ABIERTA"
+  | "CAJA_EN_CIERRE"
+  | "JORNADA_DE_CAJA_NO_ABIERTA"
+  | "EGRESO_DE_CAJA_RECHAZADO"
+  | "EGRESO_DE_CAJA_NO_ANULABLE"
+  | "CLAVE_REUTILIZADA"
+  | "SIN_PERMISO";
+
+/**
+ * El puerto de egreso de efectivo que declara compras y IMPLEMENTA la composición con caja (E9 T10b, D-E9-7: compras no importa caja). Corre en la transacción del
+ * pago y NO autoriza (el permiso es el de la acción de compras que paga o anula el pago). `registrar` saca el importe de la caja abierta indicada; `anular` devuelve
+ * lo sacado con un registro nuevo (`anulacionId: null` si el pago no había salido de la caja). Sin sesión abierta falla cerrado con su código: se puede pagar por otro medio.
+ */
+export type EgresoDeCaja = Readonly<{
+  registrar(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{
+      cajaId: string;
+      sucursalId: string;
+      pagoId: string;
+      /** Texto decimal en pesos (`"2420.00"`). */
+      importe: string;
+      motivo: string;
+    }>,
+  ): Promise<
+    Resultado<Readonly<{ movimientoId: string; yaExistia: boolean }>, CodigoDeEgresoDeCaja>
+  >;
+  anular(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{ pagoId: string; motivo: string }>,
+  ): Promise<Resultado<Readonly<{ anulacionId: string | null }>, CodigoDeEgresoDeCaja>>;
+}>;
+
 export type DependenciasDeCompras = Readonly<{
   transacciones: Transacciones<TxDeCompras>;
   /** El catálogo de módulos y la matriz rol → acciones con los que el guard autoriza (los pasa la composición). */
   reglas: ReglasDeEmpresa;
   /** Los puertos de stock que usa «Comprar y recibir»: qué productos se controlan, la entrada por origen y la existencia (la composición los arma). */
   stock: Pick<PuertosDeStock, "articulosDeVenta" | "entradaPorOrigen" | "existenciaParaMostrar">;
+  /** El egreso de efectivo de caja para el pago en efectivo (la composición lo implementa con caja). */
+  egresoDeCaja: EgresoDeCaja;
 }>;
 
 /** Lo que reciben las consultas: transacciones de solo lectura con la autorización y los repositorios (que solo leen). */

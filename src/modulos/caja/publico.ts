@@ -282,6 +282,17 @@ export type {
   SalidaDeAnularMovimientoDeCaja,
 } from "./casos-de-uso/anular-movimiento";
 export { cajaParaVentas } from "./cobrar/caja-para-ventas";
+export { cajaParaCompras } from "./egreso/caja-para-compras";
+export type {
+  CajaParaCompras,
+  EntradaDeAnularEgresoPorOrigen,
+  EntradaDeEgresoPorOrigen,
+  ErrorAlAnularEgreso,
+  ErrorAlEgresar,
+  OrigenDeEgreso,
+  SalidaDeAnularEgresoPorOrigen,
+  SalidaDeEgresoPorOrigen,
+} from "./egreso/contrato";
 export { traducirErroresDelCobro } from "./cobrar/traducir-errores-del-cobro";
 export type {
   CajaParaVentas,

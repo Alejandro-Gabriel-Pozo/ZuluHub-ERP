@@ -4,6 +4,8 @@ import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import type { TransaccionesDePostgres } from "../../src/adaptadores/postgres/transacciones";
+import { crearEgresoDeCaja } from "../../src/composicion/egreso-de-caja";
+import { crearCasosDeUsoDeCaja } from "../../src/modulos/caja/publico";
 import { crearCasosDeUsoDeCatalogo } from "../../src/modulos/catalogo/publico";
 import {
   crearCasosDeUsoDeClientes,
@@ -61,6 +63,7 @@ const REGLAS_DE_PRUEBA: ReglasDeEmpresa = {
     catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "disponible" },
     stock: { ...CATALOGO_DE_MODULOS.stock, estado: "disponible" },
     compras: { ...CATALOGO_DE_MODULOS.compras, estado: "disponible" },
+    caja: { ...CATALOGO_DE_MODULOS.caja, estado: "disponible" },
   },
   permisos: PERMISOS_DE_EMPRESA,
 };
@@ -132,7 +135,9 @@ export async function montarCompras(
             await barrera();
           }
           if (datos.rol === null) return datos;
-          const sumados = ["catalogo", "stock", "compras"].filter((m) => !sinModulos.has(m));
+          const sumados = ["catalogo", "stock", "compras", "caja"].filter(
+            (m) => !sinModulos.has(m),
+          );
           return {
             ...datos,
             modulosActivados: [...datos.modulosActivados, ...sumados],
@@ -149,11 +154,16 @@ export async function montarCompras(
     transacciones: entorno,
     reglas,
     stock: crearPuertosDeStock({ reglas }),
+    egresoDeCaja: crearEgresoDeCaja(),
   });
   const consultas = crearConsultasDeCompras({ transacciones: entorno, reglas });
   const clientes = crearCasosDeUsoDeClientes({ transacciones: entorno, reglas });
   const catalogoCasos = crearCasosDeUsoDeCatalogo({ transacciones: entorno, reglas });
   const stockCasos = crearCasosDeUsoDeStock({ transacciones: entorno, reglas });
+  const cajaCasos = crearCasosDeUsoDeCaja({
+    transacciones: entorno,
+    reglas,
+  });
 
   const miembro = async (empresa: string, rol: RolDePrueba) => {
     const p = await crearPersonaDeBase(dueno);
@@ -198,6 +208,33 @@ export async function montarCompras(
         where empresa_id = $1 and ($2::text is null or accion = $2) order by id`,
       [empresa, accion ?? null],
     );
+
+  /**
+   * Una caja de la sucursal con el medio efectivo y su sesión ABIERTA (con la jornada y el fondo, por el caso de uso de caja, como lo haría la pantalla):
+   * el escenario del pago en efectivo. `cerrarSesion` la deja `CERRADA` por SQL del dueño (solo para probar «caja cerrada»).
+   */
+  const cajaAbierta = async (
+    e: Pick<EscenarioDeCompras, "empresa" | "sucursal" | "gerente">,
+    fondo = "1000.00",
+  ) => {
+    await dueno.query(
+      "insert into medio_de_pago (empresa_id, tipo) values ($1, 'EFECTIVO') on conflict do nothing",
+      [e.empresa],
+    );
+    const { rows } = await dueno.query<{ id: string }>(
+      "insert into caja (empresa_id, sucursal_id, nombre) values ($1, $2, $3) returning id",
+      [e.empresa, e.sucursal, `Caja ${randomUUID().slice(0, 8)}`],
+    );
+    const cajaId = rows[0]?.id as string;
+    const r = await cajaCasos.abrirSesion(e.gerente, {
+      claveDeIdempotencia: randomUUID(),
+      sucursalId: e.sucursal,
+      cajaId,
+      fondoInicial: { moneda: "ARS", monto: fondo },
+    });
+    if (!r.ok) throw new Error(`no se pudo abrir la caja: ${JSON.stringify(r.error)}`);
+    return { cajaId, sesionId: r.valor.sesionId };
+  };
 
   /** Un proveedor (empresa con el rol `PROVEEDOR`) dado de alta con el caso de uso del directorio, como lo haría la pantalla. */
   const proveedor = async (
@@ -247,6 +284,8 @@ export async function montarCompras(
     clientes,
     catalogoCasos,
     stockCasos,
+    cajaCasos,
+    cajaAbierta,
     escenario,
     proveedor,
     producto,
