@@ -1,4 +1,5 @@
 import type { ErrorDeAlcance } from "../../../capacidades/permisos/alcance";
+import type { ErrorDePerilla } from "../../../capacidades/planes/derechos";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { EmpresaNoOpera } from "../../../contexto/estados";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
@@ -16,6 +17,7 @@ export type ErrorDeSalon =
   | MotivoDeRechazo
   | EmpresaNoOpera
   | ErrorDeAlcance
+  | ErrorDePerilla
   | ErrorDePersistencia
   | ErrorDeMesa
   | ErrorDeUnion

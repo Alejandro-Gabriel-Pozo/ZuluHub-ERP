@@ -230,6 +230,14 @@ describe("catalogoDePerillas", () => {
         modulo: "administracion",
       },
       {
+        perilla: "salon",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "salon",
+      },
+      {
         perilla: "subcomposiciones",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",

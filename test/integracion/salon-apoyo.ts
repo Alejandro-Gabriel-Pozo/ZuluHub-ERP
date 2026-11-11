@@ -29,13 +29,31 @@ const REGLAS_DE_SALON: ReglasDeEmpresa = {
 };
 
 /** Suma a la transacción de prueba los repositorios del salón y deja activos `salon` y `comandas` para el actor (lo demás lo deja `montarVentas`). */
-function conSalon(tx: TxDePrueba): TxDePrueba {
+function conSalon(tx: TxDePrueba, plan: { perillaSalon: boolean }): TxDePrueba {
   const salon = crearRepositoriosDeSalon(tx.db);
   const comandas = crearRepositoriosDeComandas(tx.db);
   return {
     ...tx,
     ...salon,
     ...comandas,
+    // El plan de las pruebas no enciende extras: la perilla `salon` se muestra encendida salvo que la prueba la apague.
+    derechos: {
+      ...tx.derechos,
+      deLaEmpresa: async (contexto) => {
+        const reales = await tx.derechos.deLaEmpresa(contexto);
+        return {
+          ...reales,
+          perillas: new Map(
+            [...reales.perillas].map(([perilla, valor]) => [
+              perilla,
+              perilla === "salon" && valor.tipo === "INTERRUPTOR"
+                ? { ...valor, encendida: plan.perillaSalon }
+                : valor,
+            ]),
+          ),
+        };
+      },
+    },
     autorizacion: {
       ...tx.autorizacion,
       delActor: async (contexto) => {
@@ -56,7 +74,8 @@ export async function montarSalon(
   base: BaseDePruebas,
   opciones: Readonly<{ conexiones?: number; stock?: boolean }> = {},
 ) {
-  const m = await montarVentas(base, { ...opciones, ajustarTx: conSalon });
+  const plan = { perillaSalon: true };
+  const m = await montarVentas(base, { ...opciones, ajustarTx: (tx) => conSalon(tx, plan) });
   const reglas: ReglasDeEmpresa =
     opciones.stock === true
       ? {
@@ -72,6 +91,10 @@ export async function montarSalon(
   return {
     ...m,
     reglas,
+    /** Apaga o enciende la perilla `salon` del plan (extra de pago): encendida de entrada. */
+    perillaSalon: (encendida: boolean) => {
+      plan.perillaSalon = encendida;
+    },
     salon: crearCasosDeUsoDeSalon({
       transacciones,
       reglas,

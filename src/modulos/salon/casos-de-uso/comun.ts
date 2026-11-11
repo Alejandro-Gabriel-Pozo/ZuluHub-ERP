@@ -1,6 +1,7 @@
 import type { ClaveAccion } from "../../../capacidades/modulos/catalogo";
 import { exigirSucursal, type ErrorDeAlcance } from "../../../capacidades/permisos/alcance";
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
+import { exigirPerilla, type ErrorDePerilla } from "../../../capacidades/planes/derechos";
 import { exigirAcciones } from "../../../capacidades/permisos/exigir";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
@@ -60,7 +61,7 @@ export function traducir<T>(resultado: R<T>, stock?: Pick<StockDeVentas, "traduc
 
 /**
  * Lo previo común a todo comando, en el orden de siempre (E7 §3.4): el guard con la(s) acción(es) que declara (la persona y los módulos se leen dentro
- * de la transacción, sin caché), que la empresa opere y la persona del contexto (sin persona no hay quién deje constancia: `SIN_PERMISO`). Nada viene
+ * de la transacción, sin caché), que la empresa opere y la perilla `salon` del plan y la persona del contexto (sin persona no hay quién deje constancia: `SIN_PERMISO`). Nada viene
  * del frontend. Quien orquesta ventas pide TODAS las acciones que sus pasos usan por dentro: o puede con todas o no empieza.
  */
 export async function prepararComando(
@@ -68,7 +69,7 @@ export async function prepararComando(
   contexto: ContextoOperativo,
   reglas: ReglasDeEmpresa,
   acciones: readonly [ClaveAccion, ...ClaveAccion[]],
-): Promise<Resultado<PersonaId, MotivoDeRechazo | EmpresaNoOpera>> {
+): Promise<Resultado<PersonaId, MotivoDeRechazo | EmpresaNoOpera | ErrorDePerilla>> {
   const permiso = await exigirAcciones(reglas, acciones, () => tx.autorizacion.delActor(contexto));
   if (!permiso.ok) return permiso;
   const opera = comprobarQueOpera(
@@ -76,6 +77,11 @@ export async function prepararComando(
     await cargarEstadosDeLaEmpresa(tx, contexto.empresaId),
   );
   if (!opera.ok) return opera;
+  // El salón es un extra de pago: sin la perilla `salon` no se opera (las comandas, en cambio, no piden perilla). Se lee del plan vigente en esta transacción.
+  const incluido = exigirPerilla(await tx.derechos.deLaEmpresa(contexto), "salon", {
+    empresaId: contexto.empresaId,
+  });
+  if (!incluido.ok) return incluido;
   return contexto.personaId === null ? err("SIN_PERMISO") : ok(contexto.personaId);
 }
 

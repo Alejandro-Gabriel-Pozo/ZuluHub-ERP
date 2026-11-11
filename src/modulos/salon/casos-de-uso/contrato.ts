@@ -1,5 +1,6 @@
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { Transacciones } from "../../../puertos/transacciones";
+import type { LecturaDeDerechosDeUso } from "../../../puertos/derechos-de-uso";
 import type { TxDeComandas } from "../../comandas/publico";
 import type { StockDeVentas } from "../../ventas/publico";
 import type { RepositoriosDeSalon } from "../persistencia/repositorios-de-salon";
@@ -9,7 +10,12 @@ import type { RepositoriosDeSalon } from "../persistencia/repositorios-de-salon"
  * jornada, auditoría y autorización) más sus repositorios. El salón orquesta ventas y comandas en la MISMA transacción: la composición la arma sobre la
  * conexión de la transacción, la misma que ven catálogo, cierre y caja, así que lo que se lee y se escribe es atómico.
  */
-export type TxDeSalon = TxDeComandas & RepositoriosDeSalon;
+export type TxDeSalon = TxDeComandas &
+  RepositoriosDeSalon &
+  Readonly<{
+    /** Lo que el plan de la empresa le deja usar (la perilla `salon`), leído en esta transacción y sin caché. */
+    derechos: Pick<LecturaDeDerechosDeUso, "deLaEmpresa">;
+  }>;
 
 export type DependenciasDeSalon = Readonly<{
   transacciones: Transacciones<TxDeSalon>;

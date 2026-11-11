@@ -792,17 +792,27 @@
     "motivo": "Es una decisión del CI sobre qué pruebas correr; no toca dinero, permisos ni textos."
   },
   {
-    "id": "DEC-0080",
+    "id": "DEC-0088",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El tope de textos del vocabulario por marca sube de 500 a 1000: el catálogo del código ya lo pasó con los textos del salón y de las comandas.",
+    "que_cambia": "Cuántos textos propios puede tener una marca; no cambia ningún texto guardado.",
+    "donde": "migraciones/0038_salon.sql (vocabulario_valido_ampliado) y test/integracion/marcas-sql.test.ts"
+  },
+  {
+    "id": "DEC-0201",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "PERMISOS",
     "estado": "PENDIENTE_DE_OK",
-    "decision": "Salón y comandas nacen en desarrollo y sin plan: nadie tiene permisos hasta que el dueño los incluya en un plan; acciones como en DEC-0010.",
-    "que_cambia": "Quién puede usar el salón y las comandas, y desde cuándo.",
-    "donde": "src/capacidades/modulos/catalogo.ts y src/capacidades/permisos/empresa.ts"
+    "decision": "Salón es un extra de pago (perilla `salon`, apagada de base) y comandas va en todos los planes; salón requiere comandas. Los módulos siguen en desarrollo y sin plan; permisos como DEC-0010.",
+    "que_cambia": "Qué se cobra aparte: sin la perilla `salon` no se opera el salón; las comandas funcionan igual.",
+    "donde": "src/capacidades/planes/perillas.ts, src/capacidades/modulos/catalogo.ts y src/capacidades/permisos/empresa.ts"
   },
   {
-    "id": "DEC-0081",
+    "id": "DEC-0202",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "CLIENTE",
@@ -812,7 +822,7 @@
     "donde": "src/capacidades/vocabulario/catalogo-comandas.ts"
   },
   {
-    "id": "DEC-0082",
+    "id": "DEC-0203",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "CLIENTE",
@@ -822,7 +832,7 @@
     "donde": "src/capacidades/vocabulario/catalogo-salon.ts y src/capacidades/vocabulario/catalogo-comandas.ts"
   },
   {
-    "id": "DEC-0083",
+    "id": "DEC-0204",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "CLIENTE",
@@ -832,7 +842,7 @@
     "donde": "src/modulos/comandas/consultas"
   },
   {
-    "id": "DEC-0084",
+    "id": "DEC-0205",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DATOS",
@@ -842,7 +852,7 @@
     "donde": "src/modulos/ventas/casos-de-uso/copiar-linea.ts"
   },
   {
-    "id": "DEC-0085",
+    "id": "DEC-0206",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DATOS",
@@ -852,7 +862,7 @@
     "donde": "src/modulos/ventas/consultas y src/modulos/salon/casos-de-uso"
   },
   {
-    "id": "DEC-0086",
+    "id": "DEC-0207",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "CLIENTE",
@@ -862,7 +872,7 @@
     "donde": "src/modulos/comandas/casos-de-uso/anulaciones.ts"
   },
   {
-    "id": "DEC-0087",
+    "id": "DEC-0208",
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "CLIENTE",
@@ -870,15 +880,5 @@
     "decision": "Una mesa que fue destino de una unión puede volver a unirse o dividirse; solo la mesa de reserva (la origen) figura como «unida».",
     "que_cambia": "Qué se puede hacer con una mesa que recibió otra mesa.",
     "donde": "src/modulos/salon/casos-de-uso/unir.ts y src/modulos/salon/dominio/estado-de-mesa.ts"
-  },
-  {
-    "id": "DEC-0088",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "DATOS",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "El tope de textos del vocabulario por marca sube de 500 a 1000: el catálogo del código ya lo pasó con los textos del salón y de las comandas.",
-    "que_cambia": "Cuántos textos propios puede tener una marca; no cambia ningún texto guardado.",
-    "donde": "migraciones/0038_salon.sql (vocabulario_valido_ampliado) y test/integracion/marcas-sql.test.ts"
   }
 ]

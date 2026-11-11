@@ -1,3 +1,4 @@
+import { exigirPerilla, type ErrorDePerilla } from "../../../capacidades/planes/derechos";
 import { exigirSucursal, type ErrorDeAlcance } from "../../../capacidades/permisos/alcance";
 import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
@@ -24,6 +25,7 @@ export type ErrorDeConsultaDeSalon =
   | EmpresaNoOpera
   | ErrorDeAlcance
   | ErrorDePersistencia
+  | ErrorDePerilla
   | "IDENTIFICADOR_INVALIDO"
   | "MESA_NO_ENCONTRADA";
 
@@ -98,12 +100,14 @@ export type EntradaDeListarMesas = Readonly<{
   incluirInactivas?: boolean | undefined;
 }>;
 
-/** El guard (`mesas.ver`), que la empresa opere y el alcance de sucursales de quien pide: lo primero de toda consulta. */
+/** El guard (`mesas.ver`), que la empresa opere, la perilla `salon` del plan y el alcance de sucursales de quien pide: lo primero de toda consulta. */
 async function previo(
   tx: TxDeConsultasDeSalon,
   contexto: ContextoOperativo,
   dependencias: DependenciasDeConsultasDeSalon,
-): Promise<Resultado<"TODAS" | readonly SucursalId[], MotivoDeRechazo | EmpresaNoOpera>> {
+): Promise<
+  Resultado<"TODAS" | readonly SucursalId[], MotivoDeRechazo | EmpresaNoOpera | ErrorDePerilla>
+> {
   const permiso = await exigirAccion(dependencias.reglas, "mesas.ver", () =>
     tx.autorizacion.delActor(contexto),
   );
@@ -113,6 +117,11 @@ async function previo(
     await cargarEstadosDeLaEmpresa(tx, contexto.empresaId),
   );
   if (!opera.ok) return opera;
+  // El salón es un extra de pago: sin la perilla `salon` no se lee nada de él (las comandas, en cambio, no piden perilla).
+  const incluido = exigirPerilla(await tx.derechos.deLaEmpresa(contexto), "salon", {
+    empresaId: contexto.empresaId,
+  });
+  if (!incluido.ok) return incluido;
   return ok(await tx.autorizacion.sucursalesDelActor(contexto));
 }
 
