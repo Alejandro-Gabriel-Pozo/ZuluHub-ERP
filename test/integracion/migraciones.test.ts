@@ -92,7 +92,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0030_stock.sql",
           "0031_stock_costos.sql",
           "0036_ventas_sella_variante.sql",
-        "0041_tope_de_textos_por_marca.sql",
+          "0041_tope_de_textos_por_marca.sql",
         ],
       });
     } finally {
