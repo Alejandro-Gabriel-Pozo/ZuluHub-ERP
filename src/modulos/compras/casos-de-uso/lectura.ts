@@ -3,12 +3,11 @@ import { fechaCivilDesdeTexto } from "../../../primitivas/tiempo/fecha-civil";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { estadoDerivadoDeCompra, type EstadoDeCompra } from "../dominio/niveles";
 import { esUuid } from "../dominio/identificadores";
+import type { LineaDeRecepcion, Recepcion } from "../persistencia/repositorio-de-recepciones";
 import type {
-  FiltroDeCompras,
   FilaDeListaDeCompras,
-  LineaDeRecepcion,
-  Recepcion,
-} from "../persistencia/repositorio-de-recepciones";
+  FiltroDeCompras,
+} from "../persistencia/repositorio-de-lecturas-de-compras";
 import type { TxDeConsultasDeCompras } from "./contrato";
 
 /**
@@ -90,7 +89,7 @@ export async function listarComprasDentro(
     sucursales = [entrada.sucursalId];
   }
   const pedido = entrada.estado;
-  const filas = await tx.recepciones.listar(contexto.empresaId, {
+  const filas = await tx.lecturasDeCompras.listar(contexto.empresaId, {
     sucursales,
     proveedorId: entrada.proveedorId ?? null,
     estado: pedido === undefined ? null : pedido === "ANULADA" ? "ANULADA" : "CONFIRMADA",
@@ -178,7 +177,10 @@ export async function fichaDeCompraDentro(
   // Fuera del alcance de sucursales: es indistinguible de una que no existe.
   const alcance = await tx.autorizacion.sucursalesDelActor(contexto);
   if (alcance !== "TODAS" && !alcance.some((s) => s === recepcion.sucursalId)) return ok(null);
-  const comprobante = await tx.recepciones.estadoDelComprobante(contexto.empresaId, recepcion.id);
+  const comprobante = await tx.lecturasDeCompras.estadoDelComprobante(
+    contexto.empresaId,
+    recepcion.id,
+  );
   const factura = await tx.comprobantesDeProveedor.delaRecepcion(contexto.empresaId, recepcion.id);
   const pagos =
     factura === null ? [] : await tx.pagosDeProveedor.deComprobante(contexto.empresaId, factura.id);
@@ -234,6 +236,6 @@ export async function comprasSinPrecioDentro(
   contexto: ContextoOperativo,
 ): Promise<readonly CompraDeLista[]> {
   const alcance = await tx.autorizacion.sucursalesDelActor(contexto);
-  const filas = await tx.recepciones.sinPrecio(contexto.empresaId, alcance, 200);
+  const filas = await tx.lecturasDeCompras.sinPrecio(contexto.empresaId, alcance, 200);
   return filas.map(aCompraDeLista);
 }

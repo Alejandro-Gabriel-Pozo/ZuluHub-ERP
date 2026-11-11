@@ -931,5 +931,25 @@
     "decision": "Las presentaciones de un producto (caja de 12, pieza de 4 kg) son un dato del catálogo, no de compras; las edita quien edita productos.",
     "que_cambia": "Corrección del padre: la tabla sigue en la migración de compras pero el dato es del catálogo; mover otra vez exige tocar ambos módulos.",
     "donde": "src/modulos/catalogo/casos-de-uso/presentaciones.ts"
+  },
+  {
+    "id": "DEC-0094",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "En la consola de plataforma los módulos nuevos se llaman «Clientes y proveedores» y «Compras».",
+    "que_cambia": "Es el nombre que ve quien administra el plan de una empresa; se corrige cambiando dos rótulos.",
+    "donde": "apps/plataforma/logica/plan.ts"
+  },
+  {
+    "id": "DEC-0095",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "COMERCIAL",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El tope de 500 textos por marca no se toca: el catálogo ya tiene 587 y una marca puede redefinir como máximo 500.",
+    "que_cambia": "Si el dueño quiere que una marca pueda redefinir todos los textos hay que subir el tope en la base con una migración nueva.",
+    "donde": "migraciones/0007_marcas_y_planes.sql (vocabulario_valido) y test/integracion/marcas-sql.test.ts"
   }
 ]

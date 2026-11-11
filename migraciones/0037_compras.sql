@@ -695,7 +695,10 @@ GRANT UPDATE (estado, anulada_por, anulada_en, motivo_de_anulacion) ON recepcion
 GRANT INSERT (empresa_id, recepcion_id, numero, producto_id, presentacion_id, unidad_de_compra_id, cantidad_de_compra, de_peso_variable, peso_real,
   cantidad_en_stock, precio_por_tipo, unidad_de_precio_id, precio, importe, costo_por_unidad_de_stock, deposito_id, movimiento_id)
   ON linea_de_recepcion TO pedernal_app;
-GRANT INSERT, UPDATE ON saldo_de_linea_de_recepcion, saldo_de_linea_de_comprobante TO pedernal_app;
+GRANT INSERT (empresa_id, recepcion_id, numero, cantidad_recibida) ON saldo_de_linea_de_recepcion TO pedernal_app;
+GRANT UPDATE (cantidad_asignada) ON saldo_de_linea_de_recepcion TO pedernal_app;
+GRANT INSERT (empresa_id, comprobante_id, numero, cantidad_facturada) ON saldo_de_linea_de_comprobante TO pedernal_app;
+GRANT UPDATE (cantidad_asignada) ON saldo_de_linea_de_comprobante TO pedernal_app;
 GRANT INSERT (id, empresa_id, proveedor_id, clase, tipo, punto_de_venta, numero, fecha_del_comprobante, fecha_de_vencimiento_de_pago, neto_gravado,
   no_gravado, exento, iva, tributos_total, credito_fiscal_computable, total_calculado, total_segun_factura, proveedor_cuit, proveedor_razon_social,
   letra_no_esperada, nivel, es_atajo, clave_idempotencia, huella, registrado_por) ON comprobante_de_proveedor TO pedernal_app;

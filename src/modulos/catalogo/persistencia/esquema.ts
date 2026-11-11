@@ -1,10 +1,15 @@
 import type { Generated } from "kysely";
+import {
+  COLUMNAS_DE_PRESENTACIONES,
+  ERRORES_DE_PRESENTACIONES_POR_RESTRICCION,
+  type TablasDePresentaciones,
+} from "./esquema-de-presentaciones";
 
 /**
  * Las tablas del catálogo (0025). Los decimales llegan como TEXTO (`numeric` de Postgres): nunca se pasan por `number` (ADR-006). Un test
  * compara estas columnas con el catálogo de la base (`catalogo-persistencia.test.ts`).
  */
-export type CatalogoDb = {
+export type CatalogoDb = TablasDePresentaciones & {
   unidad_de_medida: {
     id: string;
     dimension: string;
@@ -120,31 +125,10 @@ export type CatalogoDb = {
     cargado_por: string | null;
     creado_en: Generated<Date>;
   };
-  /** «Caja de 12», «pieza ≈ 4 kg»: cómo se compra un producto (E9 §3.2, X5). La tabla la crea la migración 0037 (compras la referencia); el dueño del dato es el catálogo. */
-  presentacion_de_producto: {
-    id: Generated<string>;
-    empresa_id: string;
-    producto_id: string;
-    nombre: string;
-    nombre_clave: string;
-    cantidad: string;
-    de_peso_variable: Generated<boolean>;
-    activa: Generated<boolean>;
-    creado_en: Generated<Date>;
-    actualizado_en: Generated<Date>;
-    version: Generated<number>;
-  };
-  copia_de_opciones: {
-    id: string;
-    empresa_id: string;
-    producto_origen_id: string;
-    producto_destino_id: string;
-    creado_por: string | null;
-    creado_en: Generated<Date>;
-  };
 };
 
 export const COLUMNAS_DE_CATALOGO = {
+  ...COLUMNAS_DE_PRESENTACIONES,
   unidad_de_medida: ["id", "dimension", "simbolo", "factor_a_base", "es_base"],
   seccion_de_carta: [
     "id",
@@ -248,19 +232,6 @@ export const COLUMNAS_DE_CATALOGO = {
     "cargado_por",
     "creado_en",
   ],
-  presentacion_de_producto: [
-    "id",
-    "empresa_id",
-    "producto_id",
-    "nombre",
-    "nombre_clave",
-    "cantidad",
-    "de_peso_variable",
-    "activa",
-    "creado_en",
-    "actualizado_en",
-    "version",
-  ],
   copia_de_opciones: [
     "id",
     "empresa_id",
@@ -277,6 +248,7 @@ export const COLUMNAS_DE_CATALOGO = {
  * persistencia tipado, nunca disfrazada.
  */
 export const ERRORES_DE_CATALOGO_POR_RESTRICCION: Readonly<Record<string, string>> = {
+  ...ERRORES_DE_PRESENTACIONES_POR_RESTRICCION,
   // unidad_de_medida (sembrada: nadie la escribe)
   unidad_de_medida_pkey: "NO_TRADUCIDA",
   unidad_id_ck: "NO_TRADUCIDA",
@@ -410,13 +382,4 @@ export const ERRORES_DE_CATALOGO_POR_RESTRICCION: Readonly<Record<string, string
   copia_de_opciones_distintos_ck: "COPIA_A_SI_MISMO",
   copia_de_opciones_origen_fkey: "PRODUCTO_NO_ENCONTRADO",
   copia_de_opciones_destino_fkey: "PRODUCTO_NO_ENCONTRADO",
-  // presentacion_de_producto (0037)
-  presentacion_cantidad_ck: "NO_TRADUCIDA",
-  presentacion_de_producto_empresa_id_fkey: "NO_TRADUCIDA",
-  presentacion_de_producto_pkey: "NO_TRADUCIDA",
-  presentacion_id_empresa_uk: "NO_TRADUCIDA",
-  presentacion_nombre_ck: "NO_TRADUCIDA",
-  presentacion_nombre_clave_ck: "NO_TRADUCIDA",
-  presentacion_nombre_uk: "PRESENTACION_REPETIDA",
-  presentacion_producto_fkey: "PRODUCTO_NO_ENCONTRADO",
 };

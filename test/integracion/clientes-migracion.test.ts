@@ -19,7 +19,12 @@ import { ROLES_DE_PARTE } from "../../src/modulos/clientes/dominio/roles";
 import { REGLAS_DE_VINCULO, TIPOS_DE_VINCULO } from "../../src/modulos/clientes/dominio/vinculos";
 import { acepta, check, clave, conAppDe, crearMundo, denegado, type Mundo } from "./fiscal-apoyo";
 import type { BaseDePruebas } from "./global";
-import { baseConMigraciones, CARPETA_DE_MIGRACIONES, huellaDeCatalogo } from "./marcas-apoyo";
+import {
+  baseConMigraciones,
+  CARPETA_DE_MIGRACIONES,
+  carpetaCon,
+  huellaDeCatalogo,
+} from "./marcas-apoyo";
 import { sembrarMarcaPrincipalDePrueba } from "./marcas-de-prueba";
 import type { SesionDePrueba } from "./sesiones";
 
@@ -631,12 +636,16 @@ describe.skipIf(base === null)("0034 clientes: la migración contra una base rea
   });
 
   describe("reversión", () => {
+    const migracionesPrevias = async () =>
+      (await readdir(CARPETA_DE_MIGRACIONES))
+        .filter((n) => /^\d{4}_[a-z0-9_]+\.sql$/.test(n) && n < ARCHIVO)
+        .sort();
+    // Solo hasta la 0034: las posteriores (compras, 0037) dependen de `parte` y la reversión de esta no las puede cruzar.
+    const carpetaHasta0034 = async () => carpetaCon([...(await migracionesPrevias()), ARCHIVO]);
     async function conPrevias<T>(
       trabajo: (previa: Awaited<ReturnType<typeof baseConMigraciones>>) => Promise<T>,
     ): Promise<T> {
-      const previas = (await readdir(CARPETA_DE_MIGRACIONES))
-        .filter((n) => /^\d{4}_[a-z0-9_]+\.sql$/.test(n) && n < ARCHIVO)
-        .sort();
+      const previas = await migracionesPrevias();
       const previa = await baseConMigraciones(b(), previas);
       try {
         return await trabajo(previa);
@@ -660,11 +669,10 @@ describe.skipIf(base === null)("0034 clientes: la migración contra una base rea
     it("sin datos deja la base como antes y la migración se puede aplicar de nuevo", async () => {
       await conPrevias(async (previa) => {
         const antes = await huellaDeCatalogo(previa.cliente);
-        await aplicarMigraciones(previa.aparte.base.dueno, CARPETA_DE_MIGRACIONES);
+        await aplicarMigraciones(previa.aparte.base.dueno, await carpetaHasta0034());
         expect(await huellaDeCatalogo(previa.cliente)).not.toEqual(antes);
         await revertir(previa.cliente);
         const sin = await huellaDeCatalogo(previa.cliente);
-        // Las migraciones posteriores a la 0034 (si las hay en la carpeta) también se aplicaron: la reversión de esta solo vale con las tablas libres de dependientes.
         expect(Object.keys(sin)).toEqual(Object.keys(antes));
         await revertir(previa.cliente);
       });
@@ -672,7 +680,7 @@ describe.skipIf(base === null)("0034 clientes: la migración contra una base rea
 
     it("con partes se NIEGA sin borrar nada, salvo confirmación expresa", async () => {
       await conPrevias(async (previa) => {
-        await aplicarMigraciones(previa.aparte.base.dueno, CARPETA_DE_MIGRACIONES);
+        await aplicarMigraciones(previa.aparte.base.dueno, await carpetaHasta0034());
         await sembrarMarcaPrincipalDePrueba(previa.aparte.base.dueno);
         const m = await crearMundo(previa.cliente);
         const a = altaDeParte(m.empresa, m.persona);
@@ -686,7 +694,7 @@ describe.skipIf(base === null)("0034 clientes: la migración contra una base rea
 
     it("necesita un rol que evada RLS: si no, rechaza", async () => {
       await conPrevias(async (previa) => {
-        await aplicarMigraciones(previa.aparte.base.dueno, CARPETA_DE_MIGRACIONES);
+        await aplicarMigraciones(previa.aparte.base.dueno, await carpetaHasta0034());
         const c = new pg.Client({ connectionString: previa.aparte.base.plataforma });
         await c.connect();
         try {

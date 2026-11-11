@@ -143,7 +143,7 @@ export function armarAnularCompra(dependencias: DependenciasDeCompras) {
           if (comprobante !== null) {
             const bloqueado = await tx.comprobantesDeProveedor.bloquear(empresaId, comprobante.id);
             if (bloqueado !== null && bloqueado.estado === "REGISTRADO") {
-              const conciliaciones = await tx.comprobantesDeProveedor.conciliacionesDe(
+              const conciliaciones = await tx.conciliacionesDeCompra.conciliacionesDe(
                 empresaId,
                 bloqueado.id,
               );
@@ -151,7 +151,7 @@ export function armarAnularCompra(dependencias: DependenciasDeCompras) {
               for (const conciliacion of conciliaciones) {
                 if (conciliacion.acto !== "CONCILIACION" || yaEspejadas.has(conciliacion.id))
                   continue;
-                const espejo = await tx.comprobantesDeProveedor.insertarConciliacion(empresaId, {
+                const espejo = await tx.conciliacionesDeCompra.insertarConciliacion(empresaId, {
                   acto: "ANULACION",
                   anulaA: conciliacion.id,
                   comprobanteId: bloqueado.id,
@@ -163,11 +163,11 @@ export function armarAnularCompra(dependencias: DependenciasDeCompras) {
                 if (espejo === undefined) {
                   throw new Error("el espejo de la conciliación chocó con una restricción única");
                 }
-                const asignaciones = await tx.comprobantesDeProveedor.asignacionesDe(
+                const asignaciones = await tx.conciliacionesDeCompra.asignacionesDe(
                   empresaId,
                   conciliacion.id,
                 );
-                await tx.comprobantesDeProveedor.insertarAsignaciones(
+                await tx.conciliacionesDeCompra.insertarAsignaciones(
                   empresaId,
                   { id: espejo, acto: "ANULACION", comprobanteId: bloqueado.id },
                   asignaciones.map((a) => {
