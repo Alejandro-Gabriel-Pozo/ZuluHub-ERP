@@ -39,7 +39,7 @@ export type MotivoDeTextoInvalido =
 /** Letras latinas con tilde, ñ y diéresis: Latin-1 sin `×` ni `÷`, más las letras extra de WinAnsi (Š š Œ œ Ž ž Ÿ). */
 const LETRAS = "A-Za-zÀ-ÖØ-öø-ÿŠšŒœŽžŸ";
 const DIGITOS = "0-9";
-/** Los signos admitidos, además del espacio: ver el SUPUESTO de arriba. */
+/** Los signos admitidos, además del espacio: ver el SUPUESTO (DEC-0043) de arriba. */
 const SIGNOS = ".,&\\-'/()°+:;\"#ºª’“”–—«»®™";
 
 const CARACTER_PERMITIDO = `[${LETRAS}${DIGITOS} ${SIGNOS}]`;

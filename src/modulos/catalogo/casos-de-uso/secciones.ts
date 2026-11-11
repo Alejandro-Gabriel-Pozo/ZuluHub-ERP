@@ -27,7 +27,7 @@ export type SalidaDeDesactivarSeccion = Readonly<{ yaEstaba: boolean }>;
 
 /**
  * Secciones de la carta (E2 mínimo §3.5): la lista de la empresa; el producto elige una. Acción `productos.editar` con alcance TODAS
- * (SUPUESTO S10: ninguna pantalla aprobada las crea; pregunta Q5). Crear: el `id` lo manda la aplicación (idempotencia); el nombre es único
+ * (SUPUESTO (DEC-0071) S10: ninguna pantalla aprobada las crea; pregunta Q5). Crear: el `id` lo manda la aplicación (idempotencia); el nombre es único
  * por empresa (por clave). Editar: control de versión; repetir lo ya aplicado devuelve lo vigente. Desactivar no toca los productos que
  * la usan: siguen apuntando a ella.
  */

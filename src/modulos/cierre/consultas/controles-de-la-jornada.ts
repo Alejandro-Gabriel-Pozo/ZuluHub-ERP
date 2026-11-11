@@ -44,7 +44,7 @@ export type ErrorAlPedirLosControlesDeLaJornada =
  * Los controles del día de una sucursal (e3b §3.3). Mientras la jornada no está `CERRADA` se calculan EN VIVO con los aportes de los
  * módulos activos de la empresa (un aporte que no responde → `APORTE_NO_DISPONIBLE`: nunca se muestra un día incompleto como si
  * estuviera bien); cerrada, es la foto que se guardó al cerrar. `SIN_ACTIVIDAD` (la jornada todavía no existe): sin controles, con la
- * huella de la lista vacía (SUPUESTO: no hay nada que revisar ni cerrar). `jornadas.ver`, `read committed`, alcance de sucursal. Los
+ * huella de la lista vacía (SUPUESTO (DEC-0070): no hay nada que revisar ni cerrar). `jornadas.ver`, `read committed`, alcance de sucursal. Los
  * detalles de cada control los dan las consultas de cada módulo con su propio permiso.
  */
 export function armarControlesDeLaJornada<TAportes>({

@@ -2,14 +2,14 @@ import type { Resultado } from "../resultado/resultado";
 import { textoDeUnaLineaDesdeTexto } from "./texto-de-una-linea";
 
 /**
- * FICHA DEL DATO: NOMBRE O RAZÓN SOCIAL. (DECIDIDO = lo dijo el dueño o ya está implementado; SUPUESTO = del ingeniero, revertible;
+ * FICHA DEL DATO: NOMBRE O RAZÓN SOCIAL. (DECIDIDO = lo dijo el dueño o ya está implementado; SUPUESTO (DEC-0043) = del ingeniero, revertible;
  * SIN DECIDIR = falta la decisión del dueño.)
  *
  * - Qué es: cómo se llama una persona o una empresa, tal como se imprime en un comprobante: el nombre del receptor (el cliente al
  *   que se le factura). La razón social fiscal del emisor ya la usa; la de la empresa se suma cuando pase a usarla (otro paso).
  *   No es un texto libre tipo motivo o descripción.
  * - Cómo se escribe: se recortan los blancos de los extremos, los espacios repetidos pasan a uno solo y el texto queda en NFC.
- *   Se conservan las mayúsculas y los acentos que escribió la persona (SUPUESTO). Entre 1 y `LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL`
+ *   Se conservan las mayúsculas y los acentos que escribió la persona (SUPUESTO (DEC-0043)). Entre 1 y `LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL`
  *   (200: el valor que ya tenía el sistema; ARCA no lo fija, porque WSFE no recibe el nombre del receptor. DECIDIDO por el dueño,
  *   2026-11-05, mensaje directo al orquestador: «En el receptor, 200»; Q9)
  *   caracteres, contados por carácter.

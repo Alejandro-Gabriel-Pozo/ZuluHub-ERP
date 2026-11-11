@@ -15,7 +15,7 @@ import type { ClaveAccion, ClaveModulo } from "../modulos/catalogo";
  * deuda registrada con vencimiento en `arquitectura/deuda/registro.json` (entradas `campos-sin-dato--*`), nunca una excepción
  * silenciosa. Solo se registran datos cuya primitiva ya está en `main` y que tienen al menos una pantalla real que los pide.
  *
- * SUPUESTO (a confirmar por el dueño): `estadoDeEmpresa` es solo `ACTIVE` (lo más cerrado); `ponerPor` de un filtro de lectura es la
+ * SUPUESTO (DEC-0062) (a confirmar por el dueño): `estadoDeEmpresa` es solo `ACTIVE` (lo más cerrado); `ponerPor` de un filtro de lectura es la
  * acción que permite mirar.
  */
 

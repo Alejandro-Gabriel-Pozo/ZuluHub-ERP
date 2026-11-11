@@ -82,7 +82,7 @@ const marcaDeAmbiente = (ambiente: PuntoParaConfigurar["ambiente"]): Marca => ({
 
 /**
  * La sucursal de un punto de venta; una cerrada se dice como en el Listado: «{nombre} · Cerrada» (D-37, `listado_sucursal_cerrada`).
- * SUPUESTO del ingeniero: reutilizar ese texto acá. Fuente: cuestionario A (21:08Z), pregunta 4 (solo se crea en sucursales
+ * SUPUESTO (DEC-0050) del ingeniero: reutilizar ese texto acá. Fuente: cuestionario A (21:08Z), pregunta 4 (solo se crea en sucursales
  * abiertas); no se le preguntó al dueño cómo se dice una sucursal cerrada en Puntos de venta. Una regla, un lugar.
  */
 const sucursalParaMostrar = (s: PuntoParaConfigurar["sucursal"]): string =>

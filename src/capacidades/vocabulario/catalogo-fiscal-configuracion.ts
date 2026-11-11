@@ -12,7 +12,7 @@
  *   QA  = cuestionario A (21:08Z): P1 entrada, P2 sin puntos de venta, P3 rótulos y aviso de pruebas, P4 sucursal cerrada.
  *   QB  = cuestionario B (21:11Z): P1 accesos, P2 el certificado solo informa, P3 certificado sin punto de venta, P4 «Guardando…».
  *   CONTRATO-CONFIG = `facturador-contratos-de-pantalla.md` (D-43 a D-49 y D-60 a D-68); PROTO-PV = prototipo de Puntos de venta,
- *   opción A. Un texto marcado SUPUESTO es del ingeniero: el dueño no lo aprobó tal cual. Previene: dar por aprobado en bloque lo
+ *   opción A. Un texto marcado SUPUESTO (DEC-0049) es del ingeniero: el dueño no lo aprobó tal cual. Previene: dar por aprobado en bloque lo
  *   que se preguntó de a uno (o no se preguntó).
  */
 export const TEXTOS_DE_FISCAL_CONFIGURACION = {
@@ -50,7 +50,7 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
   "fiscal.pantalla.config_pv_accion_no_permitida": { porDefecto: "Esta acción no está permitida." },
   // Dueño, 2026-10-29, cuestionario de las 17:45Z, pregunta 3.
   "fiscal.pantalla.config_pv_activo": { porDefecto: "Activo" },
-  // SUPUESTO del ingeniero: «No activo» suelto, derivado de «00003 · No activo» (`listado_punto_de_venta_no_activo`), que el dueño
+  // SUPUESTO (DEC-0049) del ingeniero: «No activo» suelto, derivado de «00003 · No activo» (`listado_punto_de_venta_no_activo`), que el dueño
   // aprobó el 2026-10-29 a las 14:23Z para el filtro del Listado (D-58 y D-60); en Puntos de venta no se le preguntó tal cual.
   // Revertirlo es cambiar este texto.
   "fiscal.pantalla.config_pv_no_activo": { porDefecto: "No activo" },
@@ -108,9 +108,9 @@ export const TEXTOS_DE_FISCAL_CONFIGURACION = {
     largoMaximo: 120,
   },
   // Dueño, 2026-10-29, cuestionario B (21:11Z), pregunta 4 («Guardando…» en alta, edición y cambio de ambiente).
-  // SUPUESTO del ingeniero: el mismo texto también en Activar y Desactivar; el dueño lo aprobó para alta, edición y cambio de
+  // SUPUESTO (DEC-0049) del ingeniero: el mismo texto también en Activar y Desactivar; el dueño lo aprobó para alta, edición y cambio de
   // ambiente, no para estas dos acciones. Revertirlo es quitar `textoEnviando` de ese botón en `DetalleDelPuntoDeVenta.cliente.tsx`.
-  // Datos fiscales reutiliza esta misma clave para «Guardar borrador» y «Confirmar» (sin clave nueva). SUPUESTO del ingeniero: el dueño
+  // Datos fiscales reutiliza esta misma clave para «Guardar borrador» y «Confirmar» (sin clave nueva). SUPUESTO (DEC-0049) del ingeniero: el dueño
   // aprobó «Guardando…» para Puntos de venta, no se le preguntó tal cual para Datos fiscales. Revertirlo es quitar `textoEnviando` de ambos
   // botones en `FormularioDeDatosFiscales.cliente.tsx`.
   "fiscal.pantalla.config_pv_guardando": { porDefecto: "Guardando…" },

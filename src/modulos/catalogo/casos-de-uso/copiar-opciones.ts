@@ -37,8 +37,8 @@ export type SalidaDeCopiarOpciones = Readonly<{
  * destino está activo y se vende, son distintos; compara `versionDeOpcionesEsperada` del destino. Trae del origen los grupos ACTIVOS cuyo nombre
  * (por clave) el destino no tiene, con sus opciones activas y recargos vigentes. Trae la VARIANTE con los precios de la EMPRESA de cada
  * tamaño solo si el destino no tiene variante activa ni precio vigente de la empresa y los dos se venden en la misma unidad y paso (regla del
- * prototipo; SUPUESTO: con otra forma de venta los precios no valen igual y se deja afuera la variante entera). NO trae lo que consume cada
- * opción (139: es propio de cada producto) ni precios de sucursal (SUPUESTO S5). La copia es independiente: ningún vínculo con el origen.
+ * prototipo; SUPUESTO (DEC-0072): con otra forma de venta los precios no valen igual y se deja afuera la variante entera). NO trae lo que consume cada
+ * opción (139: es propio de cada producto) ni precios de sucursal (SUPUESTO (DEC-0072) S5). La copia es independiente: ningún vínculo con el origen.
  * Sin nada que traer, `NADA_PARA_COPIAR`. Todo en una transacción: nunca queda un producto con la mitad de los grupos.
  */
 export function armarCopiarOpciones(dependencias: DependenciasDeCatalogo) {

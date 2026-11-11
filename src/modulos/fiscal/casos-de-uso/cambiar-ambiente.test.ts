@@ -491,7 +491,7 @@ describe("pasar a producción: lo que ya se decidía antes sigue igual y no llam
   });
 });
 
-describe("pasar a producción: sucursal cerrada (SUPUESTO: el criterio de D-79 y D-80)", () => {
+describe("pasar a producción: sucursal cerrada (SUPUESTO (DEC-0069): el criterio de D-79 y D-80)", () => {
   it("con la sucursal del punto de venta cerrada no pasa: SUCURSAL_CERRADA, sin cambiar nada", async () => {
     const { casos, mundo } = armar({ sucursalActiva: false });
     expect(await pasar(casos)).toEqual({ ok: false, error: "SUCURSAL_CERRADA" });

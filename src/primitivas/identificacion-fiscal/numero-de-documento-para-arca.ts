@@ -2,7 +2,7 @@
  * FICHA DEL DATO: NÚMERO DE DOCUMENTO QUE SE INFORMA A ARCA (`DocNro`). Es un dato DISTINTO del documento tal cual figura: el
  * comprobante guarda y muestra el documento completo; a ARCA se le manda solo su parte numérica. Es la ÚNICA función que lo calcula:
  * el pedido a ARCA, la reconciliación con lo que ARCA devuelve y el QR pasan todos por `numeroDeDocumentoParaArca` (dominio fiscal),
- * que la usa. (DECIDIDO = ya implementado; SUPUESTO = del ingeniero, revertible; SIN DECIDIR = falta la decisión del dueño.)
+ * que la usa. (DECIDIDO = ya implementado; SUPUESTO (DEC-0046) = del ingeniero, revertible; SIN DECIDIR = falta la decisión del dueño.)
  *
  * - Qué es: el entero que ARCA recibe en `DocNro`, un `Long (11)` (fuente: manual WSFE v4.8 línea 577,
  *   `12-referencias-externas/arca-manuales-del-dueno/WSFE_manual_RG-4291_v4-8.md` del repositorio de documentación; el manual NO

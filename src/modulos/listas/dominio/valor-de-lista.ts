@@ -14,7 +14,7 @@ import { explicacionDesdeTexto } from "../../cierre/publico";
  * - Una sola «Otra» fija por lista: no se renombra ni se desactiva (`VALOR_FIJO`; la base lo repite en `valor_de_lista_validar_cambio`).
  * - Códigos de error: `LISTA_INVALIDA`, `NOMBRE_INVALIDO`, `VALOR_FIJO`, `VERSION_DESACTUALIZADA`.
  *
- * SUPUESTO (ingeniero, sin fuente del dueño): el tope de 40 caracteres sale de la especificación e3 §3.7 («nombre 1 a 40»), no de una
+ * SUPUESTO (DEC-0043) (ingeniero, sin fuente del dueño): el tope de 40 caracteres sale de la especificación e3 §3.7 («nombre 1 a 40»), no de una
  * decisión del dueño. Costo de revertir: la constante de abajo y el CHECK de la base.
  */
 // fuente-unica: ajeno — el 40 es el de `valor_de_lista_nombre_ck`, no el del teléfono ni el del código de producto: otro dato
