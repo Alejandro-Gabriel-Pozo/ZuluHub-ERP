@@ -117,6 +117,20 @@ const TABLAS_DE_NEGOCIO = [
   "cobranza_de_ticket",
   "aplicacion_de_cobro",
   "ticket_correccion",
+  // Stock (0030_stock): `motivo_de_movimiento` es global y sembrada (sin `empresa_id`)
+  "deposito",
+  "articulo_de_stock",
+  "motivo_de_movimiento",
+  "movimiento_de_stock",
+  "renglon_de_movimiento",
+  "saldo_de_stock",
+  "conteo_fisico",
+  "conteo_registro",
+  "composicion",
+  "componente_de_composicion",
+  // Stock, costos (0031_stock_costos)
+  "costo_de_articulo",
+  "costo_de_renglon",
   // Facturación de tickets (0029_facturacion)
   "documento_de_ticket",
 ] as const;
@@ -369,6 +383,18 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "cobranza_de_ticket:SELECT", // 0028
           "aplicacion_de_cobro:SELECT", // 0028
           "ticket_correccion:SELECT", // 0028
+          "deposito:SELECT", // 0030
+          "articulo_de_stock:SELECT", // 0030
+          "motivo_de_movimiento:SELECT", // 0030
+          "movimiento_de_stock:SELECT", // 0030
+          "renglon_de_movimiento:SELECT", // 0030
+          "saldo_de_stock:SELECT", // 0030
+          "conteo_fisico:SELECT", // 0030
+          "conteo_registro:SELECT", // 0030
+          "composicion:SELECT", // 0030
+          "componente_de_composicion:SELECT", // 0030
+          "costo_de_articulo:SELECT", // 0031
+          "costo_de_renglon:SELECT", // 0031
           "sucursal:SELECT",
           "tenant:SELECT",
           "trabajo:SELECT",
@@ -595,6 +621,18 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...["ultimo"].map((c) => `pedernal_app:numerador_ticket.${c}`),
           ...["estado", "ejemplar_vigente"].map((c) => `pedernal_app:ticket.${c}`),
           ...["resultado"].map((c) => `pedernal_app:cobranza_de_ticket.${c}`),
+          // 0030: el depósito, el artículo y el conteo cambian lo que sus disparadores permiten; el saldo solo lo escribe el libro (disparador)
+          ...["nombre", "nombre_clave", "de_venta", "activo"].map(
+            (c) => `pedernal_app:deposito.${c}`,
+          ),
+          "pedernal_app:articulo_de_stock.activo",
+          "pedernal_app:saldo_de_stock.existencia",
+          // 0031: el promedio de costo cambia (el costo congelado de cada renglón no se modifica)
+          "pedernal_app:costo_de_articulo.costo_unitario",
+          "pedernal_app:costo_de_articulo.cantidad_valorizada",
+          ...["estado", "resuelto_por", "resuelto_en", "motivo"].map(
+            (c) => `pedernal_app:conteo_fisico.${c}`,
+          ),
           "pedernal_app:sucursal.activa",
           "pedernal_app:sucursal.hora_de_corte", // 0007
           "pedernal_app:sucursal.nombre",
@@ -1199,6 +1237,8 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "controla_stock",
             "creada_por",
             "creada_en",
+            // 0036: la versión de la variante se sella al insertar
+            "variante_version_de_opcion_id",
           ].map((c) => `linea_cuenta.${c}`),
           ...[
             "empresa_id",
@@ -1293,6 +1333,81 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "hecha_por",
             "hecha_en",
           ].map((c) => `ticket_correccion.${c}`),
+          // 0030: stock nace sin valores a mano (`registrado_en`, `hecho_en` y `fecha_negocio` de los renglones, `existencia_al_registrar`,
+          // `registrada_en` y `orden` los fija la base; `fecha_negocio` del movimiento solo la manda la salida por venta)
+          ...["id", "empresa_id", "sucursal_id", "nombre", "nombre_clave", "uso", "de_venta"].map(
+            (c) => `deposito.${c}`,
+          ),
+          ...["id", "empresa_id", "producto_id", "unidad_de_stock_id", "dimension"].map(
+            (c) => `articulo_de_stock.${c}`,
+          ),
+          ...[
+            "id",
+            "empresa_id",
+            "clase",
+            "motivo",
+            "detalle",
+            "origen_tipo",
+            "origen_id",
+            "deposito_id",
+            "accion",
+            "anula_a",
+            "conteo_id",
+            "clave_idempotencia",
+            "huella",
+            "hecho_en",
+            "fecha_negocio",
+            "registrado_por",
+          ].map((c) => `movimiento_de_stock.${c}`),
+          ...[
+            "empresa_id",
+            "movimiento_id",
+            "numero",
+            "deposito_id",
+            "articulo_id",
+            "cantidad",
+            "composicion_id",
+            "confirmo_negativo",
+          ].map((c) => `renglon_de_movimiento.${c}`),
+          ...["empresa_id", "deposito_id", "articulo_id", "existencia"].map(
+            (c) => `saldo_de_stock.${c}`,
+          ),
+          ...["id", "empresa_id", "deposito_id", "abierto_por", "abierto_en"].map(
+            (c) => `conteo_fisico.${c}`,
+          ),
+          ...[
+            "id",
+            "empresa_id",
+            "conteo_id",
+            "articulo_id",
+            "cantidad_contada",
+            "registrado_por",
+            "registrado_en",
+          ].map((c) => `conteo_registro.${c}`),
+          ...["id", "empresa_id", "producto_id", "numero", "rinde", "creada_por", "creada_en"].map(
+            (c) => `composicion.${c}`,
+          ),
+          ...[
+            "empresa_id",
+            "composicion_id",
+            "numero",
+            "articulo_id",
+            "cantidad",
+            "unidad_id",
+            "dimension",
+            "perdida",
+          ].map((c) => `componente_de_composicion.${c}`),
+          // 0031: el costo no manda `moneda` (la fija la base)
+          ...[
+            "empresa_id",
+            "deposito_id",
+            "articulo_id",
+            "costo_unitario",
+            "cantidad_valorizada",
+          ].map((c) => `costo_de_articulo.${c}`),
+          ...["empresa_id", "movimiento_id", "numero", "estado", "costo_unitario"].map(
+            (c) => `costo_de_renglon.${c}`,
+          ),
           "trabajo.empresa_id",
           "trabajo.tipo",
           "trabajo.datos",

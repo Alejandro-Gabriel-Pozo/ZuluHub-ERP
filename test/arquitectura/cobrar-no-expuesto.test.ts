@@ -11,6 +11,9 @@ import { describe, expect, it } from "vitest";
  *     import, ni una reexportación, ni un acceso por texto (`caja["registrarCobroEnTx"]`);
  *  2. ningún archivo de `src/` lleva la directiva `"use server"`: todo lo que exporta un archivo así es una acción invocable desde el
  *     navegador, y el puerto vive en `src/modulos/caja`.
+ * Lo mismo vale para los puertos de venta de stock (E5-T7: `ConsumoDeStock`, `ReversionDeStock`, `DepositoDeVenta`, `ArticulosDeVenta`,
+ * `ExistenciaParaMostrar` y `EntradaPorOrigen`): corren en la transacción de ventas o de compras, no tienen acción propia y no pasan por el
+ * guard de stock; llamarlos desde una acción de servidor descontaría, devolvería o mostraría stock sin permiso.
  * Previene: un cobro sin guard. Quien llamara a `registrarCobroEnTx` desde una acción de servidor dejaría cobrar a cualquiera que pueda
  * invocar esa acción, sin permiso de ventas, sin ticket y sin que el módulo `ventas` lo valide. La ventas (E4) lo usa desde su caso de uso,
  * con su propio guard, y la composición lo cablea sin exponerlo.
@@ -27,6 +30,23 @@ const NOMBRES_DEL_PUERTO: ReadonlySet<string> = new Set([
   "opcionesDeCobro",
   "registrarCobroEnTx",
   "cobrosPorOrigen",
+  // Los puertos de venta de stock (fuente: `src/modulos/stock/puertos.ts`). `registrarEntrada` solo, sin `PorOrigen`, es el caso de uso de las pantallas: no va.
+  "PuertosDeStock",
+  "crearPuertosDeStock",
+  "ConsumoDeStock",
+  "crearConsumoDeStock",
+  "registrarSalidaPorVentaEnTx",
+  "ReversionDeStock",
+  "crearReversionDeStock",
+  "revertirPorOrigen",
+  "DepositoDeVenta",
+  "crearDepositoDeVenta",
+  "ArticulosDeVenta",
+  "crearArticulosDeVenta",
+  "ExistenciaParaMostrar",
+  "crearExistenciaParaMostrar",
+  "EntradaPorOrigen",
+  "crearEntradaPorOrigen",
 ]);
 
 const fuenteDe = (nombre: string, texto: string): ts.SourceFile =>
@@ -123,6 +143,36 @@ describe("el puerto «cobrar» de caja no es una acción de servidor ni una ruta
       "apps/web/servidor/acciones-de-cobro.ts:4 nombra «cajaParaVentas»",
       "apps/web/servidor/acciones-de-cobro.ts:4 nombra «registrarCobroEnTx»",
     ]);
+  });
+
+  it("detecta los puertos de venta de stock: una acción de servidor que descuenta, una ruta que revierte y un tipo", () => {
+    expect(
+      problemasDeExposicion({
+        "apps/web/servidor/descontar.ts": [
+          '"use server";',
+          'import { crearConsumoDeStock } from "../../../src/modulos/stock/publico";',
+          "export const descontar = crearConsumoDeStock;",
+        ].join("\n"),
+      }),
+    ).toEqual([
+      "apps/web/servidor/descontar.ts:2 nombra «crearConsumoDeStock»",
+      "apps/web/servidor/descontar.ts:3 nombra «crearConsumoDeStock»",
+    ]);
+    expect(
+      problemasDeExposicion({
+        "apps/web/app/api/revertir/route.ts":
+          'export { revertirPorOrigen as POST } from "../../../../../src/modulos/stock/publico";',
+        "apps/plataforma/servidor/x.ts":
+          'import type { EntradaPorOrigen } from "../../../src/modulos/stock/publico";\nexport type T = EntradaPorOrigen;',
+      }),
+    ).toHaveLength(3);
+    // Lo que sí es de las pantallas de stock no se confunde con el puerto: los casos de uso y las consultas.
+    expect(
+      problemasDeExposicion({
+        "apps/web/servidor/stock.ts":
+          "export const a = (c: { registrarEntrada: unknown; existencias: unknown; transferir: unknown }) => [c.registrarEntrada, c.existencias, c.transferir];",
+      }),
+    ).toEqual([]);
   });
 
   it("detecta una ruta que lo reexporta con otro nombre, con alias y por texto", () => {

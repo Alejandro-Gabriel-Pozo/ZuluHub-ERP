@@ -273,6 +273,9 @@ export const ERRORES_DE_CATALOGO_POR_RESTRICCION: Readonly<Record<string, string
   producto_empresa_id_fkey: "NO_TRADUCIDA",
   producto_creado_por_fkey: "NO_TRADUCIDA",
   producto_id_empresa_uk: "NO_TRADUCIDA",
+  // 0030 (stock): destinos de las claves foráneas del artículo y de los componentes; siempre únicas (incluyen `id`), nadie las dispara
+  producto_id_unidad_base_empresa_uk: "NO_TRADUCIDA",
+  producto_id_dimension_empresa_uk: "NO_TRADUCIDA",
   producto_nombre_ck: "NOMBRE_DE_PRODUCTO_INVALIDO",
   producto_nombre_clave_ck: "NOMBRE_DE_PRODUCTO_INVALIDO",
   producto_nombre_de_cocina_ck: "NOMBRE_DE_COCINA_INVALIDO",

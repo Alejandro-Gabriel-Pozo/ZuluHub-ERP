@@ -24,6 +24,7 @@ import { TEXTOS_DE_FISCAL_CONFIGURACION } from "./catalogo-fiscal-configuracion"
 import { TEXTOS_DE_FISCAL_EMITIR } from "./catalogo-fiscal-emitir";
 import { TEXTOS_DE_FISCAL_IMPRIMIR } from "./catalogo-fiscal-imprimir";
 import { TEXTOS_DE_FISCAL_PANTALLAS } from "./catalogo-fiscal-pantallas";
+import { TEXTOS_DE_STOCK } from "./catalogo-stock";
 import { TEXTOS_DE_VENTAS } from "./catalogo-ventas";
 
 /** El largo máximo de un texto que no declara otro (la base admite hasta 200 en cualquier caso). */
@@ -340,6 +341,7 @@ export const CATALOGO_DE_TEXTOS = {
   ...TEXTOS_DE_CATALOGO,
   ...TEXTOS_DE_CAJA,
   ...TEXTOS_DE_VENTAS,
+  ...TEXTOS_DE_STOCK,
 } as const satisfies Record<string, DefinicionDeTexto>;
 
 export type ClaveDeTexto = keyof typeof CATALOGO_DE_TEXTOS;

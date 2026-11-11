@@ -109,3 +109,4 @@ export {
   crearRepositoriosDeCatalogo,
   type RepositoriosDeCatalogo,
 } from "./persistencia/repositorios-de-catalogo";
+export type { ConsumoDeVersion, ProductoParaStock, ProductosParaStock } from "./lector-para-stock";

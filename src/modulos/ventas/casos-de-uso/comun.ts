@@ -16,6 +16,7 @@ import { esUuid } from "../dominio/identificadores";
 import { ERRORES_DE_VENTAS_POR_RESTRICCION } from "../persistencia/restricciones";
 import type { TxDeVentas } from "./contrato";
 import type { ErrorDeVentas } from "./errores";
+import type { StockDeVentas } from "./puertos-de-stock";
 
 type R<S> = Resultado<S, ErrorDeVentas>;
 
@@ -24,17 +25,22 @@ const ES_ERROR_DE_PERSISTENCIA = (error: unknown): error is ErrorDePersistencia 
 
 /**
  * Traducción de las restricciones de la base a errores de negocio (ADR-004). Una restricción sin error de negocio (`NO_TRADUCIDA`) o que
- * no figura sale como el `ErrorDePersistencia` tipado que ya es: nunca se traga ni se disfraza.
+ * no figura sale como el `ErrorDePersistencia` tipado que ya es: nunca se traga ni se disfraza. Si la que falló no es de ventas y hay stock
+ * cableado, se le pregunta a stock si es suya (una carrera por el único de origen, o el control de existencia negativa que la base repite al
+ * confirmar): sale como `STOCK_FALLIDO` con el error de stock.
  */
-export function traducir<T>(resultado: R<T>): R<T> {
+export function traducir<T>(resultado: R<T>, stock?: Pick<StockDeVentas, "traducirFalla">): R<T> {
   if (resultado.ok || !ES_ERROR_DE_PERSISTENCIA(resultado.error)) return resultado;
   const error = resultado.error;
   if (
     (error.tipo !== "Unicidad" && error.tipo !== "Referencia" && error.tipo !== "Check") ||
-    error.restriccion === null ||
-    !Object.hasOwn(ERRORES_DE_VENTAS_POR_RESTRICCION, error.restriccion)
+    error.restriccion === null
   ) {
     return resultado;
+  }
+  if (!Object.hasOwn(ERRORES_DE_VENTAS_POR_RESTRICCION, error.restriccion)) {
+    const deStock = stock?.traducirFalla(error) ?? null;
+    return deStock === null ? resultado : err({ error: "STOCK_FALLIDO", causa: deStock });
   }
   const codigo = ERRORES_DE_VENTAS_POR_RESTRICCION[error.restriccion];
   if (codigo === undefined || codigo === "NO_TRADUCIDA") return resultado;
@@ -107,11 +113,14 @@ export async function exigirJornadaAbierta(
 
 /**
  * Lo que cambia cuando abrir, agregar y cerrar corren DENTRO de `venderYCobrar` (E4 §3.7): la jornada que se mira es la de la sesión de caja y
- * el ticket toma su fecha de esa sesión. Sin opciones (el salón y `cerrarCuenta` suelto) rige el reloj.
+ * el ticket toma su fecha de esa sesión. Sin opciones (el salón y `cerrarCuenta` suelto) rige el reloj. `stock` no cambia con la venta: es
+ * lo que cada caso de uso toma de sus dependencias para pasárselo a agregar y cerrar.
  */
 export type OpcionesDeLaVenta = Readonly<{
   jornada?: FechaCivil | undefined;
   sesionDeCajaId?: string | undefined;
+  /** El puerto de stock (E5-T12): quien llama lo pasa de sus dependencias; sin él, ninguna línea controla stock y el cierre no descuenta nada. */
+  stock?: StockDeVentas<TxDeVentas> | undefined;
 }>;
 
 /** Un uuid que manda la aplicación: lo demás nunca puede ser el id de nada. */

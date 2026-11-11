@@ -398,6 +398,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "ventas-sin-stock",
+      archivos: {
+        "src/modulos/ventas/casos-de-uso/c.ts": importa("../../stock/publico"),
+        "src/modulos/stock/publico.ts": exporta,
+      },
+    },
+    {
       regla: "base-sin-ventas",
       archivos: {
         "src/modulos/caja/dominio/d.ts": importa("../../ventas/publico"),
@@ -1433,6 +1440,23 @@ describe("facturación F1: el facturador funciona solo (spec H7 facturación §B
   });
 });
 
+describe("E5-T12: ventas y stock solo se tocan en la composición", () => {
+  it("ventas no importa stock, ni por su publico.ts; la composición sí toca los dos", async () => {
+    const v = await violacionesDe({
+      "src/modulos/ventas/casos-de-uso/c.ts": importa("../../stock/publico"),
+      "src/modulos/stock/publico.ts": exporta,
+    });
+    expect(v).toContain("ventas-sin-stock");
+    const ok = await violacionesDe({
+      "src/composicion/c.ts": importa("../modulos/stock/publico"),
+      "src/composicion/d.ts": importa("../modulos/ventas/publico"),
+      "src/modulos/stock/publico.ts": exporta,
+      "src/modulos/ventas/publico.ts": exporta,
+    });
+    expect(ok).not.toContain("ventas-sin-stock");
+  });
+});
+
 describe("E0-T5: sentido de las dependencias entre módulos de base, ventas y cierre (e0 §3.6.2)", () => {
   it("catalogo, caja y stock no importan ventas, ni por su publico.ts", async () => {
     for (const modulo of ["catalogo", "caja", "stock"]) {
@@ -1444,15 +1468,13 @@ describe("E0-T5: sentido de las dependencias entre módulos de base, ventas y ci
     }
   });
 
-  it("ventas sí usa catalogo, caja y stock por su publico.ts", async () => {
+  it("ventas sí usa catalogo y caja por su publico.ts (stock no: lo declara como puerto, ventas-sin-stock)", async () => {
     const v = await violacionesDe({
       "src/modulos/catalogo/publico.ts": exporta,
       "src/modulos/caja/publico.ts": exporta,
-      "src/modulos/stock/publico.ts": exporta,
       "src/modulos/ventas/casos-de-uso/v.ts": [
         importa("../../catalogo/publico"),
         importa("../../caja/publico"),
-        importa("../../stock/publico"),
       ].join(""),
     });
     expect(v).not.toContain("base-sin-ventas");

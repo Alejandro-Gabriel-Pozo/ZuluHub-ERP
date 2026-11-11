@@ -11,8 +11,10 @@ import {
   ganchoDeSucursalDeCaja,
 } from "../modulos/caja/publico";
 import { crearCasosDeUsoDeCatalogo, crearConsultasDeCatalogo } from "../modulos/catalogo/publico";
+import { crearCasosDeUsoDeStock, crearConsultasDeStock } from "../modulos/stock/publico";
 import { crearCasosDeUsoDeVentas, crearConsultasDeVentas } from "../modulos/ventas/publico";
 import { crearFacturadorDeTickets } from "./facturacion-de-tickets";
+import { crearStockDeVentas } from "./stock-de-ventas";
 import {
   crearCasosDeUsoDeCierre,
   crearConsultasDeCierre,
@@ -162,6 +164,8 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
         reglas,
         // Facturar un ticket (E1 §3.4): la composición es el único lugar donde ventas y fiscal se tocan.
         facturador: crearFacturadorDeTickets(reglas),
+        // Descontar y devolver stock al cerrar y anular un ticket (E5-T12): la composición es el único lugar donde ventas y stock se tocan.
+        stock: crearStockDeVentas(reglas),
       }),
     ),
     consultasDeVentas: perezoso(() =>
@@ -170,6 +174,17 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
         reglas,
         facturador: crearFacturadorDeTickets(reglas),
       }),
+    ),
+    /**
+     * Stock (E5): depósitos, artículos, movimientos, conteos y composiciones (casos de uso) y sus consultas, cada uno con SU acción de `stock`. El
+     * módulo sigue `en_desarrollo` hasta que el dueño lo pase a disponible: el guard rechaza todo con `MODULO_EN_DESARROLLO`. Los puertos que
+     * ofrece a ventas y a compras (`crearPuertosDeStock`) no salen por acá: corren en la transacción de quien los llama y no tienen acción propia.
+     */
+    casosDeUsoDeStock: perezoso(() =>
+      crearCasosDeUsoDeStock({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    consultasDeStock: perezoso(() =>
+      crearConsultasDeStock({ transacciones: conexiones.transaccionesDeApp(), reglas }),
     ),
     casosDeUsoDeIdentidad: perezoso(() =>
       crearCasosDeUsoDeIdentidad({

@@ -455,6 +455,8 @@ describe.skipIf(base === null)("ventas: casos de uso", () => {
     expect(linea).toMatchObject({
       variante_opcion_id: chico.opcion,
       variante_nombre: "Chico",
+      // E5-T12: la versión del tamaño que se vendió queda sellada (de ella sale el factor del consumo de stock).
+      variante_version_de_opcion_id: chico.version,
       origen_del_precio: "EMPRESA",
       alicuota: "21",
       unidad_de_venta: "UNIDAD",

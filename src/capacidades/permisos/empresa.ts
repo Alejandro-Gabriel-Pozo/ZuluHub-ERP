@@ -98,8 +98,9 @@ export const PERMISOS_DE_EMPRESA = {
   "vidrieras.renovar_enlace": ["GERENTE", "ADMINISTRADOR"],
   "vidrieras.retirar_de_linea": ["GERENTE", "ADMINISTRADOR"],
   "productos.asignar_emisor": ["GERENTE"],
-  "depositos.asignar_emisor": ["GERENTE"],
   "stock.verificar_saldos": ["GERENTE"],
+  // E5-T10 (P-1, DECIDIDO: e5-stock-especificacion §8): ver costos, de gerente y administrador; el operador no los ve nunca.
+  "costos.ver": ["GERENTE", "ADMINISTRADOR"],
   // CE0 (catalogo-carta-niveles-y-elecciones §7.2): quien carga productos y opciones también edita las
   // variantes y los combos (F6, opción A). El operador no. Sin acciones de grupos de precio ni
   // `opciones.asignar` (decisiones 138 y 133).

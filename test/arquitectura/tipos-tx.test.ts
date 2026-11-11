@@ -31,6 +31,12 @@ import type {
   TxDeVentas,
 } from "../../src/modulos/ventas/publico";
 import type {
+  TxDeAporteDeStock,
+  TxDeConsultasDeStock,
+  TxDeLecturaDeStock,
+  TxDeStock,
+} from "../../src/modulos/stock/publico";
+import type {
   TxDeCertificados,
   TxDeConfiguracionFiscal,
   TxDeConsultasDeFacturacion,
@@ -115,6 +121,16 @@ describe("la Tx compuesta de la composición contiene la Tx angosta de cada mód
     expectTypeOf<TxDeApp>().toExtend<TxDeAporteDeVentas>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeVentas>>();
     expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConsultasDeVentas>>();
+  });
+
+  it("stock: casos de uso, consultas, lo que leen los puertos de venta y lo que lee el aporte al cierre del día", () => {
+    expectTypeOf<TxDeApp>().toExtend<TxDeStock>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeConsultasDeStock>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeLecturaDeStock>();
+    expectTypeOf<TxDeStock>().toExtend<TxDeLecturaDeStock>();
+    expectTypeOf<TxDeApp>().toExtend<TxDeAporteDeStock>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeStock>>();
+    expectTypeOf<Transacciones<TxDeApp>>().toExtend<Transacciones<TxDeConsultasDeStock>>();
   });
 
   it("fiscal: facturación, consultas, configuración, certificados y lo que descifra el adaptador de ARCA", () => {

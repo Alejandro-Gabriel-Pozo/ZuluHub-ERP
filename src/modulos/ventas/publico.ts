@@ -27,6 +27,15 @@ export type {
   SalidaDeFactura,
   VigenciaDeFactura,
 } from "./casos-de-uso/puertos-de-facturacion";
+export type {
+  EntradaDeReversionDeStock,
+  EntradaDeSalidaDeStock,
+  ErrorDelStock,
+  SalidaDeReversionDeStock,
+  SalidaDeStockDeVenta,
+  StockDeVentas,
+} from "./casos-de-uso/puertos-de-stock";
+export type { RenglonDeSalidaDeStock } from "./dominio/stock-de-la-venta";
 export {
   comprobanteIdDeLaFactura,
   documentoIdDeLaFactura,

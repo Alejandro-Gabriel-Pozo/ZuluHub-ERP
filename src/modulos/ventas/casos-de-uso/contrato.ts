@@ -7,6 +7,7 @@ import type { LecturasDeCatalogo } from "../../catalogo/publico";
 import type { TxDeJornadas } from "../../cierre/publico";
 import type { LecturaDeEstados, RepositorioDeSucursales } from "../../empresas/publico";
 import type { FacturadorDeTickets } from "./puertos-de-facturacion";
+import type { StockDeVentas } from "./puertos-de-stock";
 import type { LecturasDeVentas } from "../persistencia/repositorio-de-lecturas";
 import type { RepositorioDeCuentas } from "../persistencia/repositorio-de-cuentas";
 import type { RepositorioDeDocumentos } from "../persistencia/repositorio-de-documentos";
@@ -40,6 +41,11 @@ export type DependenciasDeVentas = Readonly<{
   transacciones: Transacciones<TxDeVentas>;
   /** Quien factura un ticket (lo arma la composición con fiscal). Sin él, facturar un ticket se rechaza: nace cerrado. */
   facturador?: FacturadorDeTickets<TxDeVentas> | undefined;
+  /**
+   * Quien descuenta y devuelve stock (lo arma la composición con stock; E5-T12). Sin él (`usaSiExiste: stock`) ninguna línea controla stock y ventas no
+   * llama a nada: la empresa con stock apagado vende como antes (D146).
+   */
+  stock?: StockDeVentas<TxDeVentas> | undefined;
   /** El catálogo y la matriz rol → acciones con los que el guard autoriza (los pasa la composición). */
   reglas: ReglasDeEmpresa;
 }>;

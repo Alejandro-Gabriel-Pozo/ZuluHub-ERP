@@ -206,7 +206,7 @@ export const CATALOGO_DE_MODULOS = {
     },
   },
   stock: {
-    estado: "en_desarrollo",
+    estado: "disponible",
     obligatorio: false,
     requiere: ["catalogo"],
     usaSiExiste: [],
@@ -216,6 +216,8 @@ export const CATALOGO_DE_MODULOS = {
     acciones: {
       "stock.ver": { capacidad: null, efecto: "LECTURA" },
       "stock.verificar_saldos": { capacidad: null, efecto: "LECTURA" },
+      // E5-T10 (P-1, DECIDIDO): quien puede ver costos es el gerente y el administrador; sin esta acción cualquiera con `stock.ver` los vería.
+      "costos.ver": { capacidad: null, efecto: "LECTURA" },
       "stock.registrar_entrada": { capacidad: null, efecto: "CREA_AMPLIA" },
       "stock.registrar_salida": { capacidad: null, efecto: "CREA_AMPLIA" },
       "stock.transferir": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -225,7 +227,6 @@ export const CATALOGO_DE_MODULOS = {
       "depositos.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "depositos.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "depositos.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "depositos.asignar_emisor": { capacidad: null, efecto: "CREA_AMPLIA" },
       "articulos.controlar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "articulos.dejar_de_controlar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "composiciones.editar": { capacidad: null, efecto: "CREA_AMPLIA" },

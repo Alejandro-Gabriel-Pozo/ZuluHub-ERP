@@ -5,6 +5,7 @@ import { huellaDeAnulacion } from "../dominio/huella-de-anulacion";
 import { ejemplarId, ticketId, type EjemplarId, type TicketId } from "../dominio/identificadores";
 import { motivoDeAnulacion } from "../dominio/motivo";
 import { numeroDeCorreccion } from "../dominio/rotulo";
+import { detalleDeLaDevolucionDeStock } from "../dominio/stock-de-la-venta";
 import {
   exigirAlcance,
   exigirClave,
@@ -46,7 +47,8 @@ export type SalidaDeAnularTicket = Readonly<{
  * La jornada de HOY (por reloj) tiene que estar abierta o en auditoría (lo hace quien audita, decisión 170): cerrada es `JORNADA_CERRADA`.
  * `UPDATE ticket … WHERE ejemplar_vigente = <visto> AND estado <> 'ANULADO'` es el árbitro contra otra anulación, una corrección y un cobro:
  * pierde con `EJEMPLAR_DESACTUALIZADO` o `TICKET_ANULADO`. NO toca caja ni fiscal: el cobro no se anula y lo cobrado queda como diferencia a
- * explicar en el cierre del día. Audita `TICKET_ANULADO`.
+ * explicar en el cierre del día. Con stock cableado, devuelve en la MISMA transacción la salida de stock del ejemplar original (`revertirSalidaEnTx`:
+ * una sola vez, sin exigir el módulo activo; sin salida previa no hace nada); un error de stock revierte la anulación entera. Audita `TICKET_ANULADO`.
  */
 async function anular(
   tx: TxDeVentas,
@@ -141,6 +143,16 @@ async function anular(
     hechaPor: persona.valor,
     hechaEn: contexto.ahora,
   });
+  if (dependencias.stock !== undefined) {
+    const original = await tx.tickets.ejemplarDeNumero(empresaId, ticket.id, 1);
+    if (original === null) throw new Error("el ticket no tiene su ejemplar original");
+    const devuelto = await dependencias.stock.revertirSalidaEnTx(tx, contexto, {
+      origen: { tipo: "EJEMPLAR_DE_TICKET", id: original.id },
+      accion: "tickets.corregir",
+      detalle: detalleDeLaDevolucionDeStock(ticket.numero),
+    });
+    if (!devuelto.ok) return err({ error: "STOCK_FALLIDO", causa: devuelto.error });
+  }
   await tx.auditoria.registrar({
     empresaId,
     actorPersonaId: persona.valor,
@@ -174,6 +186,6 @@ export function armarAnularTicket(dependencias: DependenciasDeVentas) {
     const resultado = await dependencias.transacciones.ejecutar({ contexto }, (tx) =>
       anular(tx, dependencias, contexto, entrada),
     );
-    return traducir(resultado);
+    return traducir(resultado, dependencias.stock);
   };
 }

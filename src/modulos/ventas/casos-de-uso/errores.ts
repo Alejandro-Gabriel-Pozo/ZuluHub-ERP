@@ -13,6 +13,7 @@ import type {
   ErrorDeConfirmacion,
 } from "../dominio/decisiones";
 import type { ErrorDelFacturador } from "./puertos-de-facturacion";
+import type { ErrorDelStock } from "./puertos-de-stock";
 import type { ErrorDeMotivo } from "../dominio/motivo";
 
 /**
@@ -49,6 +50,10 @@ export type ErrorDeVentas =
   /** E1: fiscal rechazó facturar (punto de venta, certificado, total, receptor…): `causa` es el error de fiscal ya traducido por la composición. */
   | Readonly<{ error: "FACTURACION_FALLIDA"; causa: ErrorDelFacturador }>
   | "FACTURACION_NO_DISPONIBLE"
+  /** E5 (P-3): con stock activo y líneas que descuentan, la sucursal no tiene depósito de venta: el cierre falla cerrado (una venta que pasa sin descontar es un descuadre silencioso). */
+  | "STOCK_SIN_DEPOSITO_DE_VENTA"
+  /** E5: stock rechazó la salida o la devolución (existencia, depósito, producto…): `causa` es el error de stock ya traducido por la composición. Revierte todo el cierre. */
+  | Readonly<{ error: "STOCK_FALLIDO"; causa: ErrorDelStock }>
   | "TICKET_NO_FACTURABLE"
   | "IDENTIFICADOR_INVALIDO"
   | "CLAVE_INVALIDA"

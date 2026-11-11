@@ -8,7 +8,9 @@ import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import { confirmacionesDesdeTexto, decidirCierre } from "../dominio/decisiones";
 import { cuentaId, ejemplarId, type EjemplarId, type TicketId } from "../dominio/identificadores";
 import { numeroDeCorreccion } from "../dominio/rotulo";
+import { renglonesParaStock } from "../dominio/stock-de-la-venta";
 import type { EstadoDeTicket } from "../dominio/estados";
+import type { Linea } from "../persistencia/modelo-de-cuentas";
 import type { Ticket } from "../persistencia/repositorio-de-tickets";
 import { calcularLasLineas } from "./calculo";
 import {
@@ -21,6 +23,7 @@ import {
 } from "./comun";
 import type { DependenciasDeVentas, TxDeVentas } from "./contrato";
 import type { ErrorDeVentas } from "./errores";
+import type { StockDeVentas } from "./puertos-de-stock";
 
 type R<S> = Resultado<S, ErrorDeVentas>;
 
@@ -63,13 +66,63 @@ async function salidaDelTicketExistente(
 }
 
 /**
+ * El paso 7 del cierre (E4 §3.10, decisión 132): la salida de stock de lo vendido, en la MISMA transacción que el número y el ticket. Solo si hay
+ * puerto de stock y alguna línea vigente descuenta (`controla_stock`, sellado al agregarla) Y sigue descontando ahora: si el módulo se apagó con la
+ * cuenta abierta, stock dice que nada controla y no se llama a nada (D146). El origen es el ejemplar original (una salida por ticket, aunque se
+ * repita el cierre), la fecha de negocio es la del TICKET y la acción es la de ventas. Con stock activo y sin depósito de venta en la sucursal el cierre
+ * falla cerrado (`STOCK_SIN_DEPOSITO_DE_VENTA`, P-3); un error de stock (existencia, depósito, producto) se devuelve y revierte todo el cierre.
+ * La excepción `FALTA_RECETA` no sale de acá: una línea que descuenta tiene artículo o receta (si perdió la receta entre medio, la venta pasa, D140).
+ */
+async function descontarStock(
+  tx: TxDeVentas,
+  contexto: ContextoOperativo,
+  stock: StockDeVentas<TxDeVentas> | undefined,
+  datos: Readonly<{
+    sucursalId: string;
+    vigentes: readonly Linea[];
+    ejemplarId: EjemplarId;
+    fechaDeNegocio: FechaCivil;
+  }>,
+): Promise<R<null>> {
+  const marcadas = datos.vigentes.filter((l) => l.controlaStock);
+  if (stock === undefined || marcadas.length === 0) return ok(null);
+  const hoy = await stock.controla(tx, contexto, [...new Set(marcadas.map((l) => l.productoId))]);
+  const aDescontar = marcadas.filter((l) => hoy.get(l.productoId)?.controla === true);
+  if (aDescontar.length === 0) return ok(null);
+  const deposito = await stock.depositoDeVenta(tx, contexto, datos.sucursalId);
+  if (deposito === null) return err("STOCK_SIN_DEPOSITO_DE_VENTA");
+  const renglones = renglonesParaStock(
+    aDescontar.map((l) => ({
+      posicion: l.posicion,
+      productoId: l.productoId,
+      cantidad: l.cantidad,
+      unidadDeVenta: l.unidadDeVenta,
+      varianteOpcionId: l.varianteOpcionId,
+      varianteVersionDeOpcionId: l.varianteVersionDeOpcionId,
+      opciones: l.opciones,
+    })),
+  );
+  if (!renglones.ok) return err("INVARIANTE_DE_VENTAS");
+  const salida = await stock.registrarSalidaEnTx(tx, contexto, {
+    origen: { tipo: "EJEMPLAR_DE_TICKET", id: datos.ejemplarId },
+    accion: "cuentas.cerrar",
+    depositoId: deposito.depositoId,
+    hechoEn: contexto.ahora,
+    fechaDeNegocio: datos.fechaDeNegocio,
+    renglones: renglones.valor,
+  });
+  return salida.ok ? ok(null) : err({ error: "STOCK_FALLIDO", causa: salida.error });
+}
+
+/**
  * `cerrarCuenta` (E4 §3.4 y §3.5): cierra la cuenta y emite el ticket interno SIN cobro (queda `EMITIDO`; en el mostrador, cerrar y cobrar
  * es un solo acto de la fase B). Orden: guard (`cuentas.cerrar`), la empresa opera, la cuenta existe, la sucursal está en el alcance, la
  * jornada está abierta; entonces la decisión pura (`decidirCierre`) y, en la MISMA transacción: `UPDATE cuenta … WHERE estado = 'ABIERTA'`
  * (0 filas → otro la cerró: se devuelve su ticket), el número de la sucursal (`numerador_ticket`, sin huecos: si algo falla después se
  * revierte y el número no se consume), el ticket (la base fija la fecha de negocio por reloj) y su ejemplar original con el total
  * redondeado UNA vez y repartido por restos mayores. Total 0 exige `VENTA_A_CERO` y el ticket nace `CORTESIA`. Repetir devuelve el
- * mismo ticket. Audita `CUENTA_CERRADA` y `TICKET_EMITIDO` (y `CORTESIA_REGISTRADA` si hay una línea o un total a $0).
+ * mismo ticket. Audita `CUENTA_CERRADA` y `TICKET_EMITIDO` (y `CORTESIA_REGISTRADA` si hay una línea o un total a $0). Con stock cableado y
+ * líneas que descuentan, escribe además la salida de stock del ejemplar (`descontarStock`), todo o nada.
  */
 export async function cerrarCuentaEnTx(
   tx: TxDeVentas,
@@ -149,6 +202,13 @@ export async function cerrarCuentaEnTx(
       };
     }),
   });
+  const descontado = await descontarStock(tx, contexto, opciones.stock, {
+    sucursalId: cuenta.sucursalId,
+    vigentes,
+    ejemplarId: original,
+    fechaDeNegocio: ticket.fechaNegocio,
+  });
+  if (!descontado.ok) return descontado;
   await tx.auditoria.registrar({
     empresaId,
     actorPersonaId: persona,
@@ -210,7 +270,7 @@ async function cerrar(
 ): Promise<R<SalidaDeCerrarCuenta>> {
   const persona = await prepararComando(tx, contexto, dependencias.reglas, ["cuentas.cerrar"]);
   if (!persona.ok) return persona;
-  return cerrarCuentaEnTx(tx, contexto, persona.valor, entrada);
+  return cerrarCuentaEnTx(tx, contexto, persona.valor, entrada, { stock: dependencias.stock });
 }
 
 export function armarCerrarCuenta(dependencias: DependenciasDeVentas) {
@@ -221,6 +281,6 @@ export function armarCerrarCuenta(dependencias: DependenciasDeVentas) {
     const resultado = await dependencias.transacciones.ejecutar({ contexto }, (tx) =>
       cerrar(tx, dependencias, contexto, entrada),
     );
-    return traducir(resultado);
+    return traducir(resultado, dependencias.stock);
   };
 }

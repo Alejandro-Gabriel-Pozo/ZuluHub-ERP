@@ -40,6 +40,8 @@ export type Linea = Readonly<{
   descripcion: string;
   varianteOpcionId: string | null;
   varianteNombre: string | null;
+  /** La versión de la opción de la variante que se vendió (0036); `null` en una línea sin variante o anterior a 0036. */
+  varianteVersionDeOpcionId: string | null;
   precioId: string | null;
   origenDelPrecio: "SUCURSAL" | "EMPRESA" | "ABIERTO";
   precioBase: string;
@@ -75,6 +77,8 @@ export type AltaDeLinea = Readonly<{
   descripcion: string;
   varianteOpcionId: string | null;
   varianteNombre: string | null;
+  /** La versión de la opción de la variante que se vendió (0036); `null` en una línea sin variante o anterior a 0036. */
+  varianteVersionDeOpcionId: string | null;
   precioId: string | null;
   origenDelPrecio: "SUCURSAL" | "EMPRESA" | "ABIERTO";
   precioBase: string;
