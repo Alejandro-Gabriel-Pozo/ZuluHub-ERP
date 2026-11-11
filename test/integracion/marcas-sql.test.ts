@@ -1,5 +1,5 @@
 import fc from "fast-check";
-import type pg from "pg";
+import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { CATALOGO_DE_TEXTOS } from "../../src/capacidades/vocabulario/catalogo";
 import { validarTextoVisible } from "../../src/capacidades/vocabulario/texto-visible";
@@ -1216,15 +1216,25 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
       expect(otros.map((r) => r.v)).toEqual([false, false, false, false, false]);
     });
 
+    // Se mide contra la base con TODAS las migraciones: 0041 sube el tope a 2000 (DEC-0200); la base de 0007 tiene el viejo de 500.
     it("todo el catálogo de textos del código, como diccionario, es un vocabulario válido para la base", async () => {
+      if (base === null) return;
       const diccionario = Object.fromEntries(
         Object.entries(CATALOGO_DE_TEXTOS).map(([clave, d]) => [clave, d.porDefecto]),
       );
-      const { rows } = await dueno.query<{ v: boolean }>(
-        "select vocabulario_valido($1::jsonb) as v",
-        [JSON.stringify(diccionario)],
-      );
-      expect(rows).toEqual([{ v: true }]);
+      const completa = new pg.Client({ connectionString: base.dueno });
+      await completa.connect();
+      try {
+        const { rows } = await completa.query<{ v: boolean }>(
+          "select vocabulario_valido_ampliado($1::jsonb) as v",
+          [JSON.stringify(diccionario)],
+        );
+        expect(rows, `el catálogo tiene ${Object.keys(diccionario).length} textos`).toEqual([
+          { v: true },
+        ]);
+      } finally {
+        await completa.end();
+      }
     });
   });
 
