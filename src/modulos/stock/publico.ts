@@ -70,6 +70,8 @@ export {
   type MovimientoRegistrado,
   type PedidoDeMovimiento,
 } from "./casos-de-uso/movimiento-en-tx";
+// E6: lo que la producción reutiliza del dominio de stock (una regla, un lugar).
+export { huellaDeComando, type CampoDeHuella, type RenglonDeHuella } from "./dominio/huella";
 export { traducirMovimiento } from "./casos-de-uso/movimientos-comun";
 // Los puertos que stock ofrece a ventas y a compras (E5-T7): contratos, fábricas y los tipos de lo que entra y sale de cada uno.
 export {

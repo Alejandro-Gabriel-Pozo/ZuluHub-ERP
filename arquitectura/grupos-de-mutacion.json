@@ -478,5 +478,11 @@
     "archivos": "arquitectura/deuda/campos-sin-dato.cjs",
     "minutos": 3,
     "pruebas": "test/arquitectura/campos-sin-dato-presupuesto.test.ts"
+  },
+  {
+    "grupo": "produccion (dominio)",
+    "archivos": "src/modulos/produccion/dominio/**/*.ts",
+    "minutos": 2,
+    "pruebas": "src/modulos/produccion"
   }
 ]

@@ -55,6 +55,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0030_stock.sql",
         "0031_stock_costos.sql",
         "0032_lotes_y_recetas.sql",
+        "0033_produccion.sql",
         "0036_ventas_sella_variante.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
@@ -92,6 +93,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0030_stock.sql",
           "0031_stock_costos.sql",
           "0032_lotes_y_recetas.sql",
+          "0033_produccion.sql",
           "0036_ventas_sella_variante.sql",
         ],
       });
@@ -234,6 +236,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0030_stock.sql",
         "0031_stock_costos.sql",
         "0032_lotes_y_recetas.sql",
+        "0033_produccion.sql",
         "0036_ventas_sella_variante.sql",
       ]);
     } finally {
