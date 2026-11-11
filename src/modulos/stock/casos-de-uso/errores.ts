@@ -92,8 +92,19 @@ export type ErrorDeStock =
   | "COMPOSICION_DESACTUALIZADA"
   | "RINDE_INVALIDO"
   | "SIN_COMPOSICION"
-  // E6: recetas dentro de recetas
+  // E6: recetas dentro de recetas, lotes y calidad
   | "RECETA_DEMASIADO_ANIDADA"
+  | "CICLO_EN_LA_RECETA"
+  | "COMPUESTO_NO_ES_ELABORADO"
+  | "PRODUCTO_NO_LLEVA_RECETA"
+  | "PERDIDA_INVALIDA"
+  | "VENCIMIENTO_REQUERIDO"
+  | "VENCIMIENTO_PASADO"
+  | "LOTE_NO_ENCONTRADO"
+  | "LOTE_SIN_CALIDAD"
+  | "LOTE_DESACTUALIZADO"
+  | "SALDO_DE_LOTE_INSUFICIENTE"
+  | "SIN_CAMBIOS"
   | Readonly<{
       error: "FUNCION_NO_INCLUIDA";
       perilla: "composiciones_con_perdida" | "subcomposiciones";

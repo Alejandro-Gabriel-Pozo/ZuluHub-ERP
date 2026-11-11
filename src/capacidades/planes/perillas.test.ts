@@ -60,7 +60,7 @@ const entradas = Object.entries(CATALOGO_DE_PERILLAS) as [string, DefinicionDePe
 const catalogoComoTabla: Readonly<Record<string, DefinicionDePerilla>> = CATALOGO_DE_PERILLAS;
 
 describe("el catálogo de perillas real", () => {
-  it("trae seis perillas: empresas_por_tenant (de administración), cuatro de catálogo y stock (interruptores de empresa apagados) y cajas_por_sucursal (de caja, límite por sucursal con base 1)", () => {
+  it("trae ocho perillas: empresas_por_tenant (de administración), cuatro de catálogo y stock y dos de E6 (lotes y calidad de lote), interruptores de empresa apagados, y cajas_por_sucursal (de caja, límite por sucursal con base 1)", () => {
     expect(CATALOGO_DE_PERILLAS).toEqual({
       empresas_por_tenant: {
         ambito: "TENANT",
@@ -92,6 +92,18 @@ describe("el catálogo de perillas real", () => {
         base: { encendida: false },
         modulo: "stock",
       },
+      lotes: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "stock",
+      },
+      calidad_de_lote: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "stock",
+      },
       cajas_por_sucursal: {
         ambito: "SUCURSAL",
         tipo: "LIMITE",
@@ -109,6 +121,8 @@ describe("el catálogo de perillas real", () => {
       | "conjuntos"
       | "composiciones_por_tamano"
       | "cajas_por_sucursal"
+      | "lotes"
+      | "calidad_de_lote"
     >();
     // @ts-expect-error esa perilla no está declarada (la registra el módulo que la verifica)
     const inventada: ClavePerilla = "terminal_compartida";
@@ -150,6 +164,8 @@ describe("el catálogo de perillas real", () => {
       subcomposiciones: "stock",
       conjuntos: "catalogo",
       composiciones_por_tamano: "stock",
+      lotes: "stock",
+      calidad_de_lote: "stock",
       cajas_por_sucursal: "caja",
     });
   });

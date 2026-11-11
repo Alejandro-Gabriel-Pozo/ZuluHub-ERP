@@ -327,7 +327,7 @@ describe.skipIf(base === null)("stock: repositorios de la persistencia", () => {
       ).toBeNull();
     });
 
-    it("un segundo artículo del mismo producto choca con la única, y la clase no controlable y la unidad que no es la base las frena la base", async () => {
+    it("un segundo artículo del mismo producto choca con la única, y la unidad que no es la base la frena la base (la clase no controlable la frena el caso de uso desde E6)", async () => {
       const { producto } = await nuevoArticulo();
       expect(
         await enTx((tx) =>
@@ -350,10 +350,7 @@ describe.skipIf(base === null)("stock: repositorios de la persistencia", () => {
             dimension: "CONTEO",
           }),
         ),
-      ).toEqual({
-        ok: false,
-        error: { tipo: "Check", restriccion: "articulo_de_stock_clase_no_controlable" },
-      });
+      ).toMatchObject({ ok: true }); // E6 (0032): la base admite el vendible; lo cierra el caso de uso (`CLASE_NO_CONTROLABLE`)
       const kilos = await productoDeBase(c.dueno, e.empresa, {
         clase: "INSUMO",
         unidadBase: "KILOGRAMO",

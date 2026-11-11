@@ -56,9 +56,9 @@ describe.skipIf(base === null)("stock: la persistencia contra el esquema real", 
        select indexname from pg_indexes where schemaname = 'public' and tablename = any($1) and indexdef like 'CREATE UNIQUE%'`,
       [TABLAS],
     );
-    // Los disparadores de 0030 y los de 0031 (costos): las dos migraciones son de stock.
+    // Los disparadores de 0030, los de 0031 (costos) y los de 0032 (lotes y recetas): las tres migraciones son de stock.
     const migraciones = await Promise.all(
-      ["0030_stock.sql", "0031_stock_costos.sql"].map((archivo) =>
+      ["0030_stock.sql", "0031_stock_costos.sql", "0032_lotes_y_recetas.sql"].map((archivo) =>
         readFile(join(import.meta.dirname, "../../migraciones", archivo), "utf8"),
       ),
     );

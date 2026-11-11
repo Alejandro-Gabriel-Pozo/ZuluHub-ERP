@@ -69,6 +69,20 @@ export const CATALOGO_DE_PERILLAS = {
     base: { encendida: false },
     modulo: "stock",
   },
+  // E6 (e6-recetas-produccion-especificacion §3.7, D146: la cafetería no usa producción): todo nace apagado (`produccion` se declara con su módulo). `lotes` y `calidad_de_lote` dejan controlar lotes y su calidad. Lo ya guardado se sigue aplicando si se apagan
+  // (baja de plan): lo que se rechaza es crear controles u órdenes nuevos.
+  lotes: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "stock",
+  },
+  calidad_de_lote: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "stock",
+  },
   // CE0 (catalogo-carta-niveles-y-elecciones §2.1): un interruptor por nivel extra de la escalera de
   // elecciones. El de stock (`composiciones_por_tamano`, N4) escala la receta por tamaño y suma la excepción
   // por variante; el de catálogo (`conjuntos`, combos) habilita los conjuntos. Las de variantes con grupos de

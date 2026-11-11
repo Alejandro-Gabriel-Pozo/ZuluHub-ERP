@@ -1,5 +1,6 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { seConsumeLaClase } from "../../catalogo/publico";
 import { esUuid } from "../persistencia/filas";
 import { autorizar, exigirAlcanceTotal, traducir } from "./comun";
 import type { DependenciasDeStock } from "./contrato";
@@ -44,6 +45,9 @@ export function armarControlarArticulo(dependencias: DependenciasDeStock) {
           return ok({ articuloId: existente.id, yaExistia: true });
         }
         if (!producto.activo) return err("PRODUCTO_INACTIVO");
+        // La base admite también el elaborado y el vendible (0032, E6: stock propio, D94); este caso de uso solo los controla cuando la empresa
+        // enciende la producción (T9). Hasta entonces nace cerrado: lo que no se declara no se habilita.
+        if (!seConsumeLaClase(producto.claseDeUso)) return err("CLASE_NO_CONTROLABLE");
         const articulo =
           existente === null
             ? await tx.articulosDeStock.insertar(empresaId, {
