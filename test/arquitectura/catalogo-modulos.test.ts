@@ -18,6 +18,10 @@ import {
   DECLARACIONES_DE_STOCK,
 } from "../../src/modulos/stock/publico";
 import {
+  DECLARACIONES_DE_CLIENTES,
+  DECLARACIONES_DE_CONSULTAS_DE_CLIENTES,
+} from "../../src/modulos/clientes/publico";
+import {
   DECLARACIONES_DE_CONSULTAS_DE_VENTAS,
   DECLARACIONES_DE_VENTAS,
 } from "../../src/modulos/ventas/publico";
@@ -73,14 +77,7 @@ const carpetaExiste = (carpeta: string): boolean => {
 type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 
 /** Los módulos declarados en el catálogo cuyas carpetas y casos de uso todavía no existen (T0). */
-const SIN_CONSTRUIR: readonly string[] = [
-  "catalogo",
-  "vidriera",
-  "caja",
-  "ventas",
-  "clientes",
-  "compras",
-];
+const SIN_CONSTRUIR: readonly string[] = ["catalogo", "vidriera", "caja", "ventas", "compras"];
 
 function crucesDelCatalogo(
   catalogo: CatalogoComercial,
@@ -251,6 +248,10 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     "modulos/cierre": accionesDe(DECLARACIONES_DE_CIERRE, DECLARACIONES_DE_CONSULTAS_DE_CIERRE),
     "modulos/ventas": accionesDe(DECLARACIONES_DE_VENTAS, DECLARACIONES_DE_CONSULTAS_DE_VENTAS),
     "modulos/stock": accionesDe(DECLARACIONES_DE_STOCK, DECLARACIONES_DE_CONSULTAS_DE_STOCK),
+    "modulos/clientes": accionesDe(
+      DECLARACIONES_DE_CLIENTES,
+      DECLARACIONES_DE_CONSULTAS_DE_CLIENTES,
+    ),
     "modulos/fiscal": accionesDe(
       DECLARACIONES_DE_FISCAL,
       DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
@@ -351,16 +352,11 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ).toEqual([]);
   });
 
-  it("catálogo, carta, caja y ventas son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1); stock salió con E5 y es disponible", () => {
-    expect([...SIN_CONSTRUIR]).toEqual([
-      "catalogo",
-      "vidriera",
-      "caja",
-      "ventas",
-      "clientes",
-      "compras",
-    ]);
+  it("catálogo, carta, caja, ventas y compras son los únicos módulos sin construir, y siguen en desarrollo (T0, E0-T1 y E9-T1); stock salió con E5 y clientes con E9-T4, y son disponibles", () => {
+    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "vidriera", "caja", "ventas", "compras"]);
     expect(SIN_CONSTRUIR).not.toContain("stock");
+    expect(SIN_CONSTRUIR).not.toContain("clientes");
+    expect(CATALOGO_DE_MODULOS.clientes.estado).toBe("disponible");
     expect(CATALOGO_DE_MODULOS.stock.estado).toBe("disponible");
     for (const clave of SIN_CONSTRUIR) {
       expect(CATALOGO_DE_MODULOS[clave as keyof typeof CATALOGO_DE_MODULOS].estado, clave).toBe(

@@ -15,7 +15,7 @@
 --  * Un documento, una parte por empresa, también entre las desactivadas (`parte_documento_uk`): se reactiva, no se duplica.
 --  * Su reversión es un script aparte, revisado y DESTRUCTIVO si hay datos: `migraciones/reversiones/0034_revertir_clientes.sql`.
 --  * DEPENDE de 0001 (empresa, persona, `app_empresa_id`, `app_persona_id`, `empresa_operable`, `cuit_valido`, `fijar_version_y_fecha`,
---    `solo_insercion`), de 0006 (provincia), de 0007 (`sin_borrado`) y de 0009 (`texto_fiscal_valido`); se comprueba al empezar.
+--    `solo_insercion`), de 0006 (provincia), de 0007 (`sin_borrado`) y de 0025 (`texto_de_catalogo_valido`, la LISTA DE PERMITIDOS de los textos de una línea: la misma de `texto-de-una-linea.ts`); se comprueba al empezar.
 
 DO $$
 DECLARE
@@ -32,8 +32,8 @@ BEGIN
     RAISE EXCEPTION 'clientes requiere 0006_fiscal y 0007_marcas_y_planes aplicadas antes (faltan provincia o sin_borrado())'
       USING ERRCODE = '55000';
   END IF;
-  IF to_regprocedure('public.texto_fiscal_valido(text, integer)') IS NULL THEN
-    RAISE EXCEPTION 'clientes requiere 0009_facturacion aplicada antes (falta texto_fiscal_valido)'
+  IF to_regprocedure('public.texto_de_catalogo_valido(text, integer)') IS NULL THEN
+    RAISE EXCEPTION 'clientes requiere 0025_catalogo aplicada antes (falta texto_de_catalogo_valido)'
       USING ERRCODE = '55000';
   END IF;
   FOREACH v_tabla IN ARRAY ARRAY['rol_de_parte', 'tipo_de_vinculo', 'parte', 'parte_rol', 'parte_vinculo'] LOOP
@@ -52,7 +52,7 @@ $$;
 -- Qué es una parte para el negocio. EMPLEADO queda fuera de v1 (decisión F6): entra con un INSERT en una extensión, sin tocar `parte_rol`.
 CREATE TABLE rol_de_parte (
   codigo      text PRIMARY KEY CONSTRAINT rol_de_parte_codigo_ck CHECK (codigo ~ '^[A-Z][A-Z_]{1,29}$'),
-  descripcion text NOT NULL CONSTRAINT rol_de_parte_descripcion_ck CHECK (texto_fiscal_valido(descripcion, 100))
+  descripcion text NOT NULL CONSTRAINT rol_de_parte_descripcion_ck CHECK (texto_de_catalogo_valido(descripcion, 100))
 );
 INSERT INTO rol_de_parte (codigo, descripcion) VALUES
   ('CUSTOMER', 'A quien el negocio le vende o presta servicios'),
@@ -61,7 +61,7 @@ INSERT INTO rol_de_parte (codigo, descripcion) VALUES
 -- Qué relación hay entre dos partes. Dos banderas dicen qué naturaleza exige cada punta; un tipo nuevo es una fila, no un CHECK.
 CREATE TABLE tipo_de_vinculo (
   codigo            text PRIMARY KEY CONSTRAINT tipo_de_vinculo_codigo_ck CHECK (codigo ~ '^[A-Z][A-Z_]{1,29}$'),
-  descripcion       text NOT NULL CONSTRAINT tipo_de_vinculo_descripcion_ck CHECK (texto_fiscal_valido(descripcion, 200)),
+  descripcion       text NOT NULL CONSTRAINT tipo_de_vinculo_descripcion_ck CHECK (texto_de_catalogo_valido(descripcion, 200)),
   contacto_humana   boolean NOT NULL,   -- la parte que es contacto o agente tiene que ser HUMANA
   de_parte_juridica boolean NOT NULL    -- la parte de la que es contacto o agente tiene que ser JURIDICA
 );
@@ -77,9 +77,9 @@ CREATE TABLE parte (
   empresa_id         uuid NOT NULL REFERENCES empresa (id),
   idempotencia_alta  uuid NOT NULL,                 -- la manda la pantalla; única por empresa (sin oráculo de existencia entre empresas)
   naturaleza         text NOT NULL CONSTRAINT parte_naturaleza_ck CHECK (naturaleza IN ('HUMANA', 'JURIDICA')),
-  nombre             text CONSTRAINT parte_nombre_ck CHECK (nombre IS NULL OR texto_fiscal_valido(nombre, 200)),  -- razón social si es jurídica; NULL solo si está anonimizada
-  apellido           text CONSTRAINT parte_apellido_ck CHECK (apellido IS NULL OR (naturaleza = 'HUMANA' AND texto_fiscal_valido(apellido, 100))),
-  alias              text CONSTRAINT parte_alias_ck CHECK (alias IS NULL OR texto_fiscal_valido(alias, 100)),
+  nombre             text CONSTRAINT parte_nombre_ck CHECK (nombre IS NULL OR texto_de_catalogo_valido(nombre, 200)),  -- razón social si es jurídica; NULL solo si está anonimizada
+  apellido           text CONSTRAINT parte_apellido_ck CHECK (apellido IS NULL OR (naturaleza = 'HUMANA' AND texto_de_catalogo_valido(apellido, 100))),
+  alias              text CONSTRAINT parte_alias_ck CHECK (alias IS NULL OR texto_de_catalogo_valido(alias, 100)),
   documento_tipo     text CONSTRAINT parte_documento_tipo_ck
                      CHECK (documento_tipo IN ('CUIT', 'CUIL', 'CDI', 'DNI', 'PASAPORTE', 'ID_EXTRANJERO')),
   documento_pais     char(2),
@@ -89,9 +89,9 @@ CREATE TABLE parte (
                        'PROVEEDOR_DEL_EXTERIOR', 'CLIENTE_DEL_EXTERIOR', 'IVA_LIBERADO_LEY_19640',
                        'MONOTRIBUTISTA_SOCIAL', 'IVA_NO_ALCANZADO', 'MONOTRIBUTO_TRABAJADOR_INDEPENDIENTE_PROMOVIDO')),  -- las once de WSFE v4.8 (0009)
   email              text CONSTRAINT parte_email_ck CHECK (email IS NULL OR (email = lower(btrim(email)) AND email LIKE '%_@_%'
-                       AND email !~ '\s' AND char_length(email) <= 254)),
+                       AND email ~ '^[[:graph:]]+$' AND char_length(email) <= 254)),
   telefono           text CONSTRAINT parte_telefono_ck CHECK (telefono IS NULL OR (telefono = btrim(telefono)
-                       AND char_length(telefono) BETWEEN 1 AND 40 AND telefono !~ '[\x01-\x1F\x7F-\x9F]')),
+                       AND char_length(telefono) BETWEEN 1 AND 40 AND telefono ~ '^[[:print:]]+$')),
   dom_pais           char(2),
   dom_calle text, dom_numero text, dom_piso text, dom_departamento text,
   dom_localidad text,
@@ -136,13 +136,13 @@ CREATE TABLE parte (
   CONSTRAINT parte_domicilio_ck CHECK (coalesce(
     (dom_pais IS NULL AND num_nonnulls(dom_calle, dom_numero, dom_piso, dom_departamento, dom_localidad,
        dom_provincia, dom_codigo_postal, dom_texto) = 0)
-    OR (dom_pais = 'AR' AND dom_texto IS NULL AND texto_fiscal_valido(dom_calle, 100)
+    OR (dom_pais = 'AR' AND dom_texto IS NULL AND texto_de_catalogo_valido(dom_calle, 100)
         AND (dom_numero ~ '^[0-9]{1,6}$' OR dom_numero = 'S/N')
-        AND (dom_piso IS NULL OR texto_fiscal_valido(dom_piso, 20))
-        AND (dom_departamento IS NULL OR texto_fiscal_valido(dom_departamento, 20))
-        AND texto_fiscal_valido(dom_localidad, 100) AND dom_provincia IS NOT NULL
+        AND (dom_piso IS NULL OR texto_de_catalogo_valido(dom_piso, 20))
+        AND (dom_departamento IS NULL OR texto_de_catalogo_valido(dom_departamento, 20))
+        AND texto_de_catalogo_valido(dom_localidad, 100) AND dom_provincia IS NOT NULL
         AND (dom_codigo_postal IS NULL OR dom_codigo_postal ~ '^[A-Z0-9]{4,8}$'))      -- las mismas reglas que `domicilio` de 0006
-    OR (dom_pais <> 'AR' AND dom_pais ~ '^[A-Z]{2}$' AND texto_fiscal_valido(dom_texto, 300)
+    OR (dom_pais <> 'AR' AND dom_pais ~ '^[A-Z]{2}$' AND texto_de_catalogo_valido(dom_texto, 300)
         AND num_nonnulls(dom_calle, dom_numero, dom_piso, dom_departamento, dom_localidad,
           dom_provincia, dom_codigo_postal) = 0), false)),
   CONSTRAINT parte_anonimizada_ck CHECK ((estado = 'ANONIMIZADA') = (anonimizada_en IS NOT NULL)
@@ -184,7 +184,7 @@ CREATE TABLE parte_vinculo (
   parte_id       uuid NOT NULL,                    -- el contacto o el agente
   de_parte_id    uuid NOT NULL,                    -- de quién es contacto o agente
   tipo           text NOT NULL CONSTRAINT parte_vinculo_tipo_fkey REFERENCES tipo_de_vinculo (codigo),
-  cargo          text CONSTRAINT parte_vinculo_cargo_ck CHECK (cargo IS NULL OR texto_fiscal_valido(cargo, 100)),
+  cargo          text CONSTRAINT parte_vinculo_cargo_ck CHECK (cargo IS NULL OR texto_de_catalogo_valido(cargo, 100)),
   activo         boolean NOT NULL DEFAULT true,
   creado_en      timestamptz NOT NULL DEFAULT now(),
   actualizado_en timestamptz NOT NULL DEFAULT now(),

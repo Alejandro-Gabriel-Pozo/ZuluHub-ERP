@@ -160,9 +160,7 @@ describe.skipIf(base === null)("0034 clientes: la migración contra una base rea
         acepta(await s.confirmar());
       });
       const otra = altaDeParte(m.empresa, m.persona);
-      const id2 = String(
-        (await dueno.query<Fila>(otra.texto, otra.parametros)).rows[0]?.id,
-      );
+      const id2 = String((await dueno.query<Fila>(otra.texto, otra.parametros)).rows[0]?.id);
       const id1 = String(
         (
           await dueno.query<Fila>("select id from parte where empresa_id = $1 and id <> $2", [

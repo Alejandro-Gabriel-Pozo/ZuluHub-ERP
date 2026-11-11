@@ -113,3 +113,16 @@ export function documentoNormalizado(documento: DocumentoDeParte): string {
       return `${documento.tipo.charAt(0)}${documento.pais}:${documento.numero}`;
   }
 }
+
+/**
+ * Si lo que se escribió en el buscador es un documento, su clave en la forma de `documento_normalizado` (para buscar «documento idéntico» primero):
+ * un CUIT válido (con o sin guiones) o un DNI válido (con o sin puntos). Cualquier otro texto no es un documento (`null`): se busca solo por nombre.
+ */
+export function documentoBuscadoDesdeTexto(texto: string): string | null {
+  const limpio = texto.trim();
+  const cuit = numeroDeDocumentoDesdeTexto("CUIT", limpio);
+  if (cuit.ok) return documentoNormalizado({ tipo: "CUIT", pais: null, numero: cuit.valor });
+  const dni = numeroDeDocumentoDesdeTexto("DNI", limpio);
+  if (dni.ok) return documentoNormalizado({ tipo: "DNI", pais: null, numero: dni.valor });
+  return null;
+}

@@ -1,6 +1,5 @@
 import { sql, type Kysely } from "kysely";
 import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
-import { insertarIdempotente } from "../../catalogo/publico";
 import type { DatosDeParte } from "../dominio/datos-de-parte";
 import type { EstadoDeParte } from "../dominio/estados";
 import type { RolDeParte } from "../dominio/roles";
@@ -72,8 +71,8 @@ export interface RepositorioDePartes {
   /** La parte de la empresa con ese documento (activa o no), o `null`. */
   porDocumento(empresa: EmpresaId, normalizado: string): Promise<Parte | null>;
   /**
-   * `INSERT … ON CONFLICT (empresa, idempotencia) DO NOTHING`: el id si insertó, `null` si ya había una parte con esa idempotencia. Un documento repetido
-   * NO es un conflicto de la idempotencia: sale como error de unicidad (`parte_documento_uk`).
+   * `INSERT … ON CONFLICT DO NOTHING`: el id si insertó, `null` si alguna única ya estaba ocupada (la idempotencia del alta o el documento): el caso de uso
+   * busca cuál con `porIdempotencia` y `porDocumento`.
    */
   insertar(empresa: EmpresaId, alta: AltaDeParte): Promise<string | null>;
   /** Cambia los datos con control de versión (la base la sube); `null` si la versión ya no es esa. */
@@ -160,29 +159,20 @@ export function crearRepositorioDePartes(db: Kysely<ClientesDb>): RepositorioDeP
       return fila === undefined ? null : aParte(fila);
     },
     async insertar(empresa, alta) {
-      const alta_ = () =>
-        db.insertInto("parte").values({
+      // Sin objetivo de conflicto: cualquier única violada (la idempotencia del alta o el documento) devuelve `null` y el caso de uso mira cuál fue.
+      // Así la parte que perdió una carrera por el documento puede decir CON QUIÉN choca (una excepción dejaría la transacción abortada).
+      const fila = await db
+        .insertInto("parte")
+        .values({
           empresa_id: empresa,
           idempotencia_alta: alta.idempotencia,
           es_atajo: alta.esAtajo,
           creado_por: alta.creadoPor,
           ...columnasDeDatos(alta.datos),
-        });
-      const fila = await insertarIdempotente(
-        () =>
-          alta_()
-            .onConflict((oc) => oc.columns(["empresa_id", "idempotencia_alta"]).doNothing())
-            .returning("id")
-            .executeTakeFirst(),
-        async () =>
-          (await db
-            .selectFrom("parte")
-            .select("id")
-            .where("empresa_id", "=", empresa)
-            .where("idempotencia_alta", "=", alta.idempotencia)
-            .executeTakeFirst()) !== undefined,
-        () => alta_().returning("id").executeTakeFirstOrThrow(),
-      );
+        })
+        .onConflict((oc) => oc.doNothing())
+        .returning("id")
+        .executeTakeFirst();
       return fila === undefined ? null : fila.id;
     },
     async actualizar(empresa, id, versionEsperada, datos) {

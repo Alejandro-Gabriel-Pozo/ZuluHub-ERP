@@ -11,6 +11,7 @@ import {
   ganchoDeSucursalDeCaja,
 } from "../modulos/caja/publico";
 import { crearCasosDeUsoDeCatalogo, crearConsultasDeCatalogo } from "../modulos/catalogo/publico";
+import { crearCasosDeUsoDeClientes, crearConsultasDeClientes } from "../modulos/clientes/publico";
 import { crearCasosDeUsoDeStock, crearConsultasDeStock } from "../modulos/stock/publico";
 import { crearCasosDeUsoDeVentas, crearConsultasDeVentas } from "../modulos/ventas/publico";
 import { crearFacturadorDeTickets } from "./facturacion-de-tickets";
@@ -185,6 +186,17 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
     ),
     consultasDeStock: perezoso(() =>
       crearConsultasDeStock({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /**
+     * Clientes y proveedores (E9): el directorio de partes con sus roles y vínculos (casos de uso) y sus consultas, cada uno con SU acción de `partes`. El
+     * módulo es de la empresa, no de una sucursal. Los puertos que ofrece a compras (`crearDirectorioDePartes`, `crearRegistroDePartes`) no salen por acá:
+     * corren en la transacción de quien los llama.
+     */
+    casosDeUsoDeClientes: perezoso(() =>
+      crearCasosDeUsoDeClientes({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    consultasDeClientes: perezoso(() =>
+      crearConsultasDeClientes({ transacciones: conexiones.transaccionesDeApp(), reglas }),
     ),
     casosDeUsoDeIdentidad: perezoso(() =>
       crearCasosDeUsoDeIdentidad({

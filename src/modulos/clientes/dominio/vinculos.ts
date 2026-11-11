@@ -1,4 +1,5 @@
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { textoDeUnaLineaDesdeTexto } from "../../../primitivas/texto/texto-de-una-linea";
 import type { NaturalezaDeParte } from "./estados";
 
 /**
@@ -39,4 +40,19 @@ export function validarVinculo(
     return err("VINCULO_DEBE_SER_CON_EMPRESA");
   }
   return ok(null);
+}
+
+/** El cargo de un contacto («Compras», «Encargado de cocina»): el largo del DDL de `parte_vinculo.cargo` (`parte_vinculo_cargo_ck`, 0034). */
+export const LARGO_MAXIMO_DEL_CARGO_DE_VINCULO = 100;
+
+/** El cargo es opcional: ausente, `null` o en blanco queda `null`; si viene, una línea de la lista de permitidos con al menos una letra. */
+export function cargoDeVinculoDesdeTexto(
+  texto: string | null | undefined,
+): Resultado<string | null, "CARGO_INVALIDO"> {
+  if (texto === undefined || texto === null || texto.trim() === "") return ok(null);
+  const valido = textoDeUnaLineaDesdeTexto(texto, {
+    maximo: LARGO_MAXIMO_DEL_CARGO_DE_VINCULO,
+    exigirUnaLetra: true,
+  });
+  return valido.ok ? valido : err("CARGO_INVALIDO");
 }

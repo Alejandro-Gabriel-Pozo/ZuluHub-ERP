@@ -3,6 +3,7 @@ import {
   TIPOS_DE_DOCUMENTO_DE_EMPRESA,
   TIPOS_DE_DOCUMENTO_DE_PARTE,
   documentoDeParteDesdeDatos,
+  documentoBuscadoDesdeTexto,
   documentoNormalizado,
   esTipoDeDocumentoDeParte,
 } from "./documento";
@@ -168,5 +169,19 @@ describe("documentoNormalizado (la columna generada de la base)", () => {
     expect(documentoNormalizado({ tipo: "PASAPORTE", pais: "AR", numero: "ABC123456" })).not.toBe(
       documentoNormalizado({ tipo: "PASAPORTE", pais: "UY", numero: "ABC123456" }),
     );
+  });
+});
+
+describe("documentoBuscadoDesdeTexto", () => {
+  it("un CUIT válido (con o sin guiones) y un DNI válido (con o sin puntos) son documentos", () => {
+    expect(documentoBuscadoDesdeTexto("30-71234567-1")).toBe("T30712345671");
+    expect(documentoBuscadoDesdeTexto(" 30712345671 ")).toBe("T30712345671");
+    expect(documentoBuscadoDesdeTexto("12.345.678")).toBe("D12345678");
+    expect(documentoBuscadoDesdeTexto("12345678")).toBe("D12345678");
+  });
+  it("cualquier otro texto no es un documento", () => {
+    for (const texto of ["", "juan", "30712345672", "012345678", "123", "Pérez 12345678"]) {
+      expect(documentoBuscadoDesdeTexto(texto), texto).toBeNull();
+    }
   });
 });

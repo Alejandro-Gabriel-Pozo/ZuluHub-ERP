@@ -224,6 +224,46 @@ describe("validarDatosDeParte: domicilio", () => {
     expect(r.ok && r.valor.domicilio).toEqual({ pais: "BR", texto: "Rua Augusta 100" });
   });
 
+  it("los textos del domicilio también tienen que estar en la lista de permitidos de la base", () => {
+    for (const campo of ["calle", "localidad"] as const) {
+      expect(
+        errores({
+          ...persona,
+          domicilio: { pais: "AR", estructurado: { ...domicilioAr, [campo]: "Av. <Sur>" } },
+        }),
+        campo,
+      ).toEqual([{ campo: "domicilio", codigo: "DOMICILIO_INVALIDO" }]);
+    }
+    expect(
+      errores({
+        ...persona,
+        domicilio: { pais: "AR", estructurado: { ...domicilioAr, piso: "5*", departamento: "B" } },
+      }),
+    ).toEqual([{ campo: "domicilio", codigo: "DOMICILIO_INVALIDO" }]);
+    // El primer carácter no puede ser `+` ni `-` (la base lo rechaza); adentro del texto sí.
+    for (const calle of ["+Av. Sur", "-Av. Sur"]) {
+      expect(
+        errores({ ...persona, domicilio: { pais: "AR", estructurado: { ...domicilioAr, calle } } }),
+        calle,
+      ).toEqual([{ campo: "domicilio", codigo: "DOMICILIO_INVALIDO" }]);
+    }
+    expect(
+      errores({
+        ...persona,
+        domicilio: {
+          pais: "AR",
+          estructurado: { ...domicilioAr, calle: "Av. 9 de Julio - Norte" },
+        },
+      }),
+    ).toEqual([]);
+    expect(
+      errores({
+        ...persona,
+        domicilio: { pais: "AR", estructurado: { ...domicilioAr, piso: "5", departamento: "B/2" } },
+      }),
+    ).toEqual([]);
+  });
+
   it("se rechaza el país inválido, el argentino sin estructura o con texto, el del exterior sin texto o con estructura", () => {
     const malo = [
       { pais: "AR" },

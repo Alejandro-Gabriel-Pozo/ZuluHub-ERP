@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { REGLAS_DE_VINCULO, TIPOS_DE_VINCULO, esTipoDeVinculo, validarVinculo } from "./vinculos";
+import {
+  LARGO_MAXIMO_DEL_CARGO_DE_VINCULO,
+  REGLAS_DE_VINCULO,
+  TIPOS_DE_VINCULO,
+  cargoDeVinculoDesdeTexto,
+  esTipoDeVinculo,
+  validarVinculo,
+} from "./vinculos";
 
 const persona = { id: "a", naturaleza: "HUMANA" } as const;
 const empresa = { id: "b", naturaleza: "JURIDICA" } as const;
@@ -48,5 +55,35 @@ describe("vínculos entre partes", () => {
       ok: false,
       error: "VINCULO_CONSIGO_MISMA",
     });
+  });
+});
+
+describe("cargoDeVinculoDesdeTexto", () => {
+  it("es opcional: ausente, nulo o en blanco queda null", () => {
+    for (const texto of [undefined, null, "", "   "]) {
+      expect(cargoDeVinculoDesdeTexto(texto), String(texto)).toEqual({ ok: true, valor: null });
+    }
+  });
+
+  it("una línea con letras, recortada, hasta 100 caracteres", () => {
+    expect(cargoDeVinculoDesdeTexto("  Encargado de cocina ")).toEqual({
+      ok: true,
+      valor: "Encargado de cocina",
+    });
+    expect(LARGO_MAXIMO_DEL_CARGO_DE_VINCULO).toBe(100);
+    expect(cargoDeVinculoDesdeTexto("C".repeat(100)).ok).toBe(true);
+    expect(cargoDeVinculoDesdeTexto("C".repeat(101))).toEqual({
+      ok: false,
+      error: "CARGO_INVALIDO",
+    });
+  });
+
+  it("rechaza lo que no es una línea de texto con letras", () => {
+    for (const texto of ["123", "<b>", "Ventas\nCompras"]) {
+      expect(cargoDeVinculoDesdeTexto(texto), texto).toEqual({
+        ok: false,
+        error: "CARGO_INVALIDO",
+      });
+    }
   });
 });

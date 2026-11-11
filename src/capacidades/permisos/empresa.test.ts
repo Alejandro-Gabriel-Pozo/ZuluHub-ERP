@@ -532,7 +532,7 @@ describe("el guard con las reglas reales", () => {
   const acciones = ACCIONES_DE_ADMINISTRACION;
 
   it("administracion es obligatorio: está activo aunque no se haya activado nada", () => {
-    expect([...activos]).toEqual(["administracion"]);
+    expect([...activos]).toEqual(["administracion", "clientes"]);
   });
 
   it("cada rol puede exactamente lo que dice la tabla, y no puede, SIN_PERMISO", () => {
@@ -648,18 +648,18 @@ describe("el guard con las reglas reales", () => {
     (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
   );
 
-  it("todo módulo en desarrollo del catálogo incluye catalogo, vidriera, caja, ventas, clientes y compras (cierre ya es disponible desde E3b y stock desde E5)", () => {
+  it("todo módulo en desarrollo del catálogo incluye catalogo, vidriera, caja, ventas y compras (cierre ya es disponible desde E3b, stock desde E5 y clientes desde E9-T4)", () => {
     expect([...ENDESARROLLO].sort()).toEqual(
-      ["caja", "catalogo", "clientes", "compras", "ventas", "vidriera"].sort(),
+      ["caja", "catalogo", "compras", "ventas", "vidriera"].sort(),
     );
   });
 
-  it("las 73 acciones sin construir (23 de catálogo y carta, 31 de caja y ventas y 19 de clientes y compras) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  it("las 65 acciones sin construir (23 de catálogo y carta, 31 de caja y ventas y 11 de compras) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
     const sinConstruir = ENDESARROLLO.flatMap(
       (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
     );
-    expect(sinConstruir).toHaveLength(73);
+    expect(sinConstruir).toHaveLength(65);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
       for (const accion of sinConstruir) {
         expect(
@@ -702,7 +702,7 @@ describe("el guard con las reglas reales", () => {
   it("activar caja o ventas por empresa y plan no los deja activos: sigue sin habilitarse nada", () => {
     const todos = ["caja", "ventas", "catalogo"];
     const estado = estadoDeModulos(CATALOGO_DE_MODULOS, todos, todos);
-    expect([...estado.modulosActivos]).toEqual(["administracion"]);
+    expect([...estado.modulosActivos]).toEqual(["administracion", "clientes"]);
   });
 
   it("si el módulo no figura entre los activos, MODULO_NO_ACTIVO (el guard no lo da por hecho)", () => {

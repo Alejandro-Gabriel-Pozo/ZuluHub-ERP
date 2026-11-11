@@ -16,7 +16,7 @@ describe("el catálogo comercial de módulos", () => {
     expect(conCapacidad).toEqual([]);
   });
 
-  it("tiene diez módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, carta, caja, ventas, clientes y compras (en desarrollo), cierre (disponible desde E3b) y stock (disponible desde E5)", () => {
+  it("tiene diez módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, carta, caja, ventas, compras (en desarrollo), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4)", () => {
     expect(CATALOGO_DE_MODULOS).toEqual({
       administracion: {
         estado: "disponible",
@@ -210,8 +210,8 @@ describe("el catálogo comercial de módulos", () => {
         },
       },
       clientes: {
-        estado: "en_desarrollo",
-        obligatorio: false,
+        estado: "disponible",
+        obligatorio: true,
         requiere: ["administracion"],
         usaSiExiste: [],
         datosRequeridos: [],
@@ -274,30 +274,35 @@ describe("el catálogo comercial de módulos", () => {
     expect(new Set(todas).size).toBe(todas.length);
   });
 
-  it("administracion está activo sin guardar nada por empresa", () => {
+  it("administracion y clientes (los obligatorios) están activos sin guardar nada por empresa", () => {
     expect([...estadoDeModulos(CATALOGO_DE_MODULOS, [], []).modulosActivos]).toEqual([
       "administracion",
+      "clientes",
     ]);
   });
 
   it("facturacion es disponible pero NO nace activa: sin activarla la empresa no la tiene, ni aunque el plan la incluya", () => {
     const sinActivar = estadoDeModulos(CATALOGO_DE_MODULOS, [], ["facturacion"]);
-    expect([...sinActivar.modulosActivos]).toEqual(["administracion"]);
+    expect([...sinActivar.modulosActivos]).toEqual(["administracion", "clientes"]);
     expect([...sinActivar.modulosEnSoloLectura]).toEqual([]);
   });
 
   it("facturacion activada y dentro del plan opera; activada y fuera del plan queda en solo lectura", () => {
     const activa = estadoDeModulos(CATALOGO_DE_MODULOS, ["facturacion"], ["facturacion"]);
-    expect([...activa.modulosActivos].sort()).toEqual(["administracion", "facturacion"]);
+    expect([...activa.modulosActivos].sort()).toEqual([
+      "administracion",
+      "clientes",
+      "facturacion",
+    ]);
     const bajaDePlan = estadoDeModulos(CATALOGO_DE_MODULOS, ["facturacion"], []);
-    expect([...bajaDePlan.modulosActivos]).toEqual(["administracion"]);
+    expect([...bajaDePlan.modulosActivos]).toEqual(["administracion", "clientes"]);
     expect([...bajaDePlan.modulosEnSoloLectura]).toEqual(["facturacion"]);
   });
 
   it("catalogo, carta, caja y ventas siguen en desarrollo: no se activan ni aunque se activen todos y el plan los incluya", () => {
     const todos = ["catalogo", "vidriera", "caja", "ventas"];
     const estado = estadoDeModulos(CATALOGO_DE_MODULOS, todos, todos);
-    expect([...estado.modulosActivos]).toEqual(["administracion"]);
+    expect([...estado.modulosActivos]).toEqual(["administracion", "clientes"]);
     expect([...estado.modulosEnSoloLectura]).toEqual([]);
   });
 
@@ -305,12 +310,13 @@ describe("el catálogo comercial de módulos", () => {
     expect(CATALOGO_DE_MODULOS.stock.estado).toBe("disponible");
     expect([...estadoDeModulos(CATALOGO_DE_MODULOS, [], ["stock"]).modulosActivos]).toEqual([
       "administracion",
+      "clientes",
     ]);
     expect(
       [...estadoDeModulos(CATALOGO_DE_MODULOS, ["stock"], ["stock"]).modulosActivos].sort(),
-    ).toEqual(["administracion", "stock"]);
+    ).toEqual(["administracion", "clientes", "stock"]);
     const bajaDePlan = estadoDeModulos(CATALOGO_DE_MODULOS, ["stock"], []);
-    expect([...bajaDePlan.modulosActivos]).toEqual(["administracion"]);
+    expect([...bajaDePlan.modulosActivos]).toEqual(["administracion", "clientes"]);
     expect([...bajaDePlan.modulosEnSoloLectura]).toEqual(["stock"]);
   });
 

@@ -433,6 +433,13 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "clientes-sin-negocio",
+      archivos: {
+        "src/modulos/clientes/dominio/d.ts": importa("../../compras/publico"),
+        "src/modulos/compras/publico.ts": exporta,
+      },
+    },
+    {
       regla: "empresas-sin-negocio",
       archivos: {
         "src/modulos/empresas/casos-de-uso/c.ts": importa("../../caja/publico"),
@@ -1506,6 +1513,31 @@ describe("E0-T5: sentido de las dependencias entre módulos de base, ventas y ci
         'import "../../cierre/publico";\nimport "../../empresas/publico";\nexport const d = 1;\n',
     });
     expect(permitido).not.toContain("caja-sin-negocio-ajeno");
+  });
+
+  it("clientes no importa compras ni ningún otro módulo de negocio, ni por su publico.ts; sí usa empresas", async () => {
+    for (const modulo of [
+      "caja",
+      "catalogo",
+      "cierre",
+      "compras",
+      "fiscal",
+      "reservas",
+      "stock",
+      "ventas",
+    ]) {
+      const v = await violacionesDe({
+        "src/modulos/clientes/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+      });
+      expect(v, modulo).toContain("clientes-sin-negocio");
+    }
+    const permitido = await violacionesDe({
+      "src/modulos/empresas/publico.ts": exporta,
+      "src/modulos/clientes/casos-de-uso/c.ts":
+        'import "../../empresas/publico";\nexport const d = 1;\n',
+    });
+    expect(permitido).not.toContain("clientes-sin-negocio");
   });
 
   it("cierre no importa ningún módulo de negocio, ni por su publico.ts", async () => {

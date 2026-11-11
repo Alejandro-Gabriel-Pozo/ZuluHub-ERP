@@ -962,7 +962,7 @@ export const APLICADORES: Record<string, Aplicador> = {
   "I1-renombrar-una-carpeta": enRepo((m) => {
     for (const ruta of Object.keys(m.archivos)) {
       if (ruta.startsWith("src/modulos/empresas/")) {
-        mover(m, ruta, ruta.replace("src/modulos/empresas/", "src/modulos/clientes/"));
+        mover(m, ruta, ruta.replace("src/modulos/empresas/", "src/modulos/reservas/"));
       }
     }
   }),

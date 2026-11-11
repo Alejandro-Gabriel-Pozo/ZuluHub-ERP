@@ -12,7 +12,10 @@ import {
 } from "../../../primitivas/identificacion-fiscal/condicion-iva";
 import { paisDesdeTexto } from "../../../primitivas/identificacion-fiscal/pais";
 import { nombreODenominacionDesdeTexto } from "../../../primitivas/texto/nombre-o-razon-social";
-import { textoDeUnaLineaDesdeTexto } from "../../../primitivas/texto/texto-de-una-linea";
+import {
+  soloCaracteresPermitidos,
+  textoDeUnaLineaDesdeTexto,
+} from "../../../primitivas/texto/texto-de-una-linea";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import {
   documentoDeParteDesdeDatos,
@@ -193,6 +196,18 @@ export function validarDatosDeParte(
   });
 }
 
+/**
+ * La base valida los textos del domicilio con la LISTA DE PERMITIDOS de los textos de una línea (`texto_de_catalogo_valido`, 0034): el domicilio de la
+ * primitiva solo rechaza controles, así que acá se exige además lo que la base exige (si no, un domicilio válido para el dominio saldría como un error
+ * de la base). La lista es `soloCaracteresPermitidos` de la primitiva y el primer carácter no es `+` ni `-` (como `texto_de_catalogo_valido`).
+ */
+function textosDelDomicilioPermitidos(d: Domicilio): boolean {
+  return [d.calle, d.piso, d.departamento, d.localidad].every(
+    (texto) =>
+      texto === null || (soloCaracteresPermitidos(texto) && !"+-".includes(texto.charAt(0))),
+  );
+}
+
 function domicilioDeEntrada(
   entrada: DomicilioDeParteEntrada,
   falla: (campo: CampoDeParte, codigo: string) => null,
@@ -208,7 +223,7 @@ function domicilioDeEntrada(
       return falla("domicilio", "DOMICILIO_INVALIDO");
     }
     const valido = domicilioDesdeDatos(entrada.estructurado);
-    return valido.ok
+    return valido.ok && textosDelDomicilioPermitidos(valido.valor)
       ? { pais: "AR", estructurado: valido.valor }
       : falla("domicilio", "DOMICILIO_INVALIDO");
   }

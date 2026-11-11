@@ -56,6 +56,14 @@ module.exports = [
     to: { path: "^src/modulos/(catalogo|caja|ventas|stock|fiscal|clientes|reservas)/" },
   },
   {
+    name: "clientes-sin-negocio",
+    severity: "error",
+    comment:
+      "E9 (e9 §3.11). clientes (el directorio de partes) no importa compras ni ningún otro módulo de negocio (caja, catalogo, cierre, fiscal, reservas, stock, ventas), ni por su publico.ts: compras, ventas y facturación dependen del directorio de arriba hacia abajo y nunca al revés. Previene el ciclo de módulos (que modulos-solo-por-publico no ve porque alcanza publico.ts para cruzar) y que el directorio se arme con datos de otro dominio; si se elimina, falla la violación inyectada de esta regla.",
+    from: { path: "^src/modulos/clientes/" },
+    to: { path: "^src/modulos/(caja|catalogo|cierre|compras|fiscal|reservas|stock|ventas)/" },
+  },
+  {
     name: "empresas-sin-negocio",
     severity: "error",
     comment:

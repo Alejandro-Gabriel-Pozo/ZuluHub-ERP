@@ -116,7 +116,7 @@ describe("derechosDeUso: módulos habilitados", () => {
       ajustes: [],
       ahora,
     });
-    expect([...d.modulosHabilitados]).toEqual(["administracion"]);
+    expect([...d.modulosHabilitados]).toEqual(["administracion", "clientes"]);
     expect(valorDePerilla(d, "empresas_por_tenant")).toEqual({
       tipo: "LIMITE",
       limite: 1,
