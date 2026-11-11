@@ -186,6 +186,8 @@ describe("exigirAccion", () => {
       "caja",
       "cierre",
       "ventas",
+      "comandas",
+      "salon",
     ];
     expect(claves).toEqual(Object.keys(CATALOGO_DE_MODULOS));
   });

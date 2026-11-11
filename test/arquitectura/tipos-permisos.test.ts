@@ -50,6 +50,8 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "caja"
       | "cierre"
       | "ventas"
+      | "comandas"
+      | "salon"
     >();
     expectTypeOf<ClaveAccion>().toEqualTypeOf<
       | "usuarios.invitar"
@@ -163,6 +165,22 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "cuentas.anular"
       | "tickets.cobrar"
       | "tickets.corregir"
+      | "comandas.ver"
+      | "comandas.enviar"
+      | "impresiones.imprimir"
+      | "impresiones.reimprimir"
+      | "impresoras.ver"
+      | "impresoras.crear"
+      | "impresoras.editar"
+      | "impresoras.desactivar"
+      | "mesas.ver"
+      | "mesas.crear"
+      | "mesas.editar"
+      | "mesas.reactivar"
+      | "mesas.desactivar"
+      | "salon.cambiar_mesa"
+      | "salon.unir"
+      | "salon.dividir"
     >();
     // Hoy ninguna acción exige una capacidad de sucursal.
     expectTypeOf<ClaveCapacidad>().toEqualTypeOf<never>();
@@ -225,6 +243,8 @@ describe("tipos cerrados derivados del catálogo", () => {
       "caja",
       "cierre",
       "ventas",
+      "comandas",
+      "salon",
     ]);
   });
 });
