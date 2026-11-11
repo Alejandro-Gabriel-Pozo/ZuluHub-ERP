@@ -27,6 +27,10 @@ import {
   crearRepositorioDeRecepciones,
   type RepositorioDeRecepciones,
 } from "./repositorio-de-recepciones";
+import {
+  crearRepositorioDeCorrecciones,
+  type RepositorioDeCorrecciones,
+} from "./repositorio-de-correcciones";
 import { crearRepositorioDeOfertas, type RepositorioDeOfertas } from "./repositorio-de-ofertas";
 
 /**
@@ -43,6 +47,7 @@ export type RepositoriosDeCompras = Readonly<{
   detalleDeComprobantes: RepositorioDeDetalleDeComprobantes;
   conciliacionesDeCompra: RepositorioDeConciliaciones;
   pagosDeProveedor: RepositorioDePagos;
+  correccionesDeCompra: RepositorioDeCorrecciones;
   productosParaCompras: ProductosParaCompras;
 }>;
 
@@ -60,6 +65,7 @@ export function crearRepositoriosDeCompras(db: {
     detalleDeComprobantes: crearRepositorioDeDetalleDeComprobantes(conexion),
     conciliacionesDeCompra: crearRepositorioDeConciliaciones(conexion),
     pagosDeProveedor: crearRepositorioDePagos(conexion),
+    correccionesDeCompra: crearRepositorioDeCorrecciones(conexion),
     productosParaCompras: crearProductosParaCompras(conexion),
   };
 }

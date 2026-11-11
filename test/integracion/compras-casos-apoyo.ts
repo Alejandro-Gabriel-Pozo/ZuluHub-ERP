@@ -278,6 +278,7 @@ export async function montarCompras(
   return {
     propia,
     entorno,
+    reglas,
     dueno,
     casos,
     consultas,

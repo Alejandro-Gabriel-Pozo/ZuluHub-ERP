@@ -991,5 +991,35 @@
     "decision": "El efectivo que sale por un pago se registra como un egreso manual de caja (con el motivo que escribe quien paga) y anular el pago lo devuelve con una anulación, solo si la caja sigue abierta.",
     "que_cambia": "Si la caja ya está en cierre o cerrada el pago no se puede anular y la plata se corrige en caja; si se quisiera permitirlo, haría falta un ajuste de caja.",
     "donde": "src/modulos/caja/egreso/egreso-por-origen.ts"
+  },
+  {
+    "id": "DEC-0319",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Se puede corregir el precio de una línea de una compra; corregir cantidad o peso real y completar el precio de una compra que entró sin precio quedan para después.",
+    "que_cambia": "Quien se equivocó de cantidad o peso anula la compra (si no se consumió) o la corrige a mano; si se quiere cubrir, se suma la corrección de cantidad y el «precio por» del precio completado.",
+    "donde": "src/modulos/compras/casos-de-uso/correcciones.ts y src/modulos/compras/dominio/correccion.ts"
+  },
+  {
+    "id": "DEC-0320",
+    "fecha": "2026-11-11",
+    "quien": "padre",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Al corregir el precio de una compra, el costo promedio del depósito se corrige por la diferencia sobre lo que queda de esa compra; lo ya consumido conserva su costo.",
+    "que_cambia": "Cuánto vale el stock y cuánto cuestan las recetas; es una aproximación (supone que lo que queda es lo más reciente): si se corrige, el promedio no se toca y la diferencia queda como ajuste de valorización.",
+    "donde": "src/modulos/stock/dominio/costo.ts (corregirPromedio) y src/modulos/stock/casos-de-uso/ajuste-de-costo.ts"
+  },
+  {
+    "id": "DEC-0321",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "PERMISOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Corregir una compra lo hacen el gerente y el administrador, y además necesitan el permiso de ajustar stock si la compra entró a stock.",
+    "que_cambia": "Quién puede cambiar el costo del stock; se corrige en la matriz de permisos o sacando el permiso de stock del caso de uso.",
+    "donde": "src/capacidades/permisos/empresa.ts (compras.corregir) y src/modulos/compras/casos-de-uso/correcciones.ts"
   }
 ]

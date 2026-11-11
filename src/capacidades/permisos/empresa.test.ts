@@ -163,6 +163,7 @@ const DEL_OPERADOR_DE_CLIENTES_Y_COMPRAS = [
 const DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS = [
   "comprobantes_de_proveedor.anular_pago",
   "comprobantes_de_proveedor.pagar",
+  "compras.corregir",
   "partes.desactivar",
   "partes.reactivar",
   "proveedores.editar_ficha",
@@ -247,9 +248,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 129 acciones: 34 de empresa, configuración fiscal y facturación, 42 de catálogo, carta y stock (39 de T0 y 2 de CE0), 35 de caja, cierre y ventas y 18 de clientes y compras", () => {
+  it("hay 130 acciones: 34 de empresa, configuración fiscal y facturación, 42 de catálogo, carta y stock (39 de T0 y 2 de CE0), 35 de caja, cierre y ventas y 19 de clientes y compras", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(129);
+    expect(todas).toHaveLength(130);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -299,7 +300,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("recepciones"),
       porPrefijo("comprobantes_de_proveedor"),
       porPrefijo("compras"),
-    ]).toEqual([8, 2, 3, 4, 1]);
+    ]).toEqual([8, 2, 3, 4, 2]);
   });
 
   it("las acciones retiradas por las decisiones 138 y 133 ya no existen: ni en la matriz ni en el catálogo", () => {

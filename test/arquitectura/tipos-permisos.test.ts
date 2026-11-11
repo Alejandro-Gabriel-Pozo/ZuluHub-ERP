@@ -183,6 +183,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "comprobantes_de_proveedor.pagar"
       | "comprobantes_de_proveedor.anular_pago"
       | "compras.configurar"
+      | "compras.corregir"
     >();
     // Hoy ninguna acción exige una capacidad de sucursal.
     expectTypeOf<ClaveCapacidad>().toEqualTypeOf<never>();

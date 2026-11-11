@@ -6,6 +6,7 @@ import type { ErrorDeClientes } from "../../clientes/publico";
 import type { ErrorDeStock } from "../../stock/publico";
 import type { ErrorDeComprobante } from "../dominio/comprobante";
 import type { ErrorDeFactura } from "../dominio/factura";
+import type { ErrorDeCorreccion } from "../dominio/correccion";
 import type { ErrorDePago, ErrorDeSalidaDeCaja } from "../dominio/pago";
 import type { ErrorDeLinea } from "../dominio/calcular-linea";
 
@@ -60,6 +61,8 @@ export const CODIGOS_DE_ERROR_DE_COMPRAS = [
   "JORNADA_DE_CAJA_NO_ABIERTA",
   "EGRESO_DE_CAJA_RECHAZADO",
   "EGRESO_DE_CAJA_NO_ANULABLE",
+  "LINEA_SIN_PRECIO",
+  "SIN_CAMBIOS",
   "PAGO_NO_ENCONTRADO",
   "PAGO_YA_ANULADO",
   "CONCILIACION_YA_ANULADA",
@@ -79,6 +82,7 @@ export type ErrorDeCompras =
   | ErrorDeFactura
   | ErrorDePago
   | ErrorDeSalidaDeCaja
+  | ErrorDeCorreccion
   | ErrorDeStock
   | ErrorDeClientes
   /** El remito ya está cargado: `recepcionId` es la ganadora (`null` solo si lo dijo la base, que no sabe con quién choca). */

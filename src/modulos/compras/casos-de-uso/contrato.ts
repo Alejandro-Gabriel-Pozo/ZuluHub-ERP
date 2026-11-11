@@ -63,7 +63,10 @@ export type DependenciasDeCompras = Readonly<{
   /** El catálogo de módulos y la matriz rol → acciones con los que el guard autoriza (los pasa la composición). */
   reglas: ReglasDeEmpresa;
   /** Los puertos de stock que usa «Comprar y recibir»: qué productos se controlan, la entrada por origen y la existencia (la composición los arma). */
-  stock: Pick<PuertosDeStock, "articulosDeVenta" | "entradaPorOrigen" | "existenciaParaMostrar">;
+  stock: Pick<
+    PuertosDeStock,
+    "articulosDeVenta" | "entradaPorOrigen" | "existenciaParaMostrar" | "ajusteDeCostoPorOrigen"
+  >;
   /** El egreso de efectivo de caja para el pago en efectivo (la composición lo implementa con caja). */
   egresoDeCaja: EgresoDeCaja;
 }>;
