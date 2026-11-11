@@ -7,6 +7,10 @@ import {
 } from "./repositorio-de-configuracion";
 import { crearRepositorioDeFichas, type RepositorioDeFichas } from "./repositorio-de-fichas";
 import {
+  crearRepositorioDeComprobantes,
+  type RepositorioDeComprobantes,
+} from "./repositorio-de-comprobantes";
+import {
   crearRepositorioDeRecepciones,
   type RepositorioDeRecepciones,
 } from "./repositorio-de-recepciones";
@@ -21,6 +25,7 @@ export type RepositoriosDeCompras = Readonly<{
   ofertasDeProveedor: RepositorioDeOfertas;
   configuracionDeCompras: RepositorioDeConfiguracionDeCompras;
   recepciones: RepositorioDeRecepciones;
+  comprobantesDeProveedor: RepositorioDeComprobantes;
   productosParaCompras: ProductosParaCompras;
 }>;
 
@@ -33,6 +38,7 @@ export function crearRepositoriosDeCompras(db: {
     ofertasDeProveedor: crearRepositorioDeOfertas(conexion),
     configuracionDeCompras: crearRepositorioDeConfiguracionDeCompras(conexion),
     recepciones: crearRepositorioDeRecepciones(conexion),
+    comprobantesDeProveedor: crearRepositorioDeComprobantes(conexion),
     productosParaCompras: crearProductosParaCompras(conexion),
   };
 }

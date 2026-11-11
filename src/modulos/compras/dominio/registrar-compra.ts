@@ -183,6 +183,8 @@ export function huellaDeLaCompra(pedido: PedidoDeCompra): string {
 const ESPACIO_DEL_ORIGEN_DE_ENTRADA = "87d185ca-c698-4554-80df-bda1043f757c";
 const ESPACIO_DE_LA_CLAVE_DE_ENTRADA = "3f15b9d6-3d3b-4414-96ce-9204dd1352f2";
 const ESPACIO_DE_LA_CLAVE_DE_ANULACION = "ce71df41-27be-494a-ba5a-9c8c1172aa29";
+const ESPACIO_DE_LA_CLAVE_DE_CONCILIACION = "b2b4f0a6-6f0b-4f4e-9d52-7c3a1e8d5a10";
+const ESPACIO_DE_LA_CLAVE_DE_ANULACION_DE_CONCILIACION = "0e9c7a31-5d8b-4c62-8a47-2b6f3d1c9e55";
 
 /**
  * El origen de la entrada de stock de una recepción en un depósito: determinista de `(recepción, depósito)`. Un mismo gesto con depósitos distintos no choca
@@ -212,3 +214,11 @@ export function motivoDeAnulacionDesdeTexto(texto: unknown): Resultado<string, "
   });
   return motivo.ok ? ok(motivo.valor) : err("MOTIVO_REQUERIDO");
 }
+
+/** La clave de la conciliación atajo de una recepción (una por compra): determinista, para que un reintento repita el mismo pedido. */
+export const claveDeLaConciliacionDeAtajo = (recepcionId: string): string =>
+  uuidV5DeLista(ESPACIO_DE_LA_CLAVE_DE_CONCILIACION, [recepcionId]);
+
+/** La clave del espejo de una conciliación (una sola por conciliación: además la impone el único `(empresa, anula_a)`). */
+export const claveDeLaAnulacionDeLaConciliacion = (conciliacionId: string): string =>
+  uuidV5DeLista(ESPACIO_DE_LA_CLAVE_DE_ANULACION_DE_CONCILIACION, [conciliacionId]);

@@ -5,6 +5,7 @@ import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { ErrorDeClientes } from "../../clientes/publico";
 import type { ErrorDeStock } from "../../stock/publico";
 import type { ErrorDeComprobante } from "../dominio/comprobante";
+import type { ErrorDeFactura } from "../dominio/factura";
 import type { ErrorDeLinea } from "../dominio/calcular-linea";
 
 /**
@@ -27,6 +28,7 @@ export const CODIGOS_DE_ERROR_DE_COMPRAS = [
   "RENGLONES_INVALIDOS",
   "PUNTO_DE_VENTA_INVALIDO",
   "PUNTO_DE_VENTA_NO_DECLARADO",
+  "FACTURA_NO_CORRESPONDE_AL_NIVEL",
   "TIPO_DE_COMPROBANTE_INVALIDO",
   "NUMERO_DE_COMPROBANTE_INVALIDO",
   "FECHA_INVALIDA",
@@ -61,6 +63,7 @@ export type ErrorDeCompras =
   | CodigoDeErrorDeCompras
   | ErrorDeLinea
   | ErrorDeComprobante
+  | ErrorDeFactura
   | ErrorDeStock
   | ErrorDeClientes
   /** El remito ya está cargado: `recepcionId` es la ganadora (`null` solo si lo dijo la base, que no sabe con quién choca). */

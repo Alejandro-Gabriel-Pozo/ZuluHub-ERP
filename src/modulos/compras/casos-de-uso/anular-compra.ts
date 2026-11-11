@@ -1,6 +1,7 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { sucursalId } from "../../../primitivas/identificadores/marca";
 import {
+  cantidadConSignoATexto,
   cantidadConSignoDesdeTexto,
   compararConSigno,
   negarConSigno,
@@ -12,6 +13,7 @@ import { registrarMovimientoEnTx } from "../../stock/publico";
 import { huellaDeComando } from "../dominio/huella";
 import { esUuid } from "../dominio/identificadores";
 import {
+  claveDeLaAnulacionDeLaConciliacion,
   claveDeLaAnulacionDeLaEntrada,
   motivoDeAnulacionDesdeTexto,
   origenDeLaEntradaDeStock,
@@ -26,7 +28,7 @@ export type EntradaDeAnularCompra = Readonly<{ recepcionId: string; motivo: stri
 export type SalidaDeAnularCompra = Readonly<{ anulada: true }>;
 
 /**
- * Anular una compra (E9 §3.5): una anulación ESPEJO de su entrada de stock (mismo depósito y renglones con la cantidad opuesta, y el mismo costo congelado), y la
+ * Anular una compra (E9 §3.5): una anulación ESPEJO de su entrada de stock (mismo depósito y renglones con la cantidad opuesta, y el mismo costo congelado), del espejo de la conciliación atajo y de su factura (queda `ANULADO`: libera el número), y la
  * recepción queda `ANULADA` con quién, cuándo y por qué; nada se borra. Guard `recepciones.anular` (gerente y administrador) y, si hubo entrada, también
  * `stock.anular`. Si lo que entró ya se consumió (la existencia actual del depósito es menor que lo que entró) no se anula: `COMPRA_CONSUMIDA`, se corrige
  * (D143). Todo o nada: si el espejo falla, la compra sigue como estaba. Repetición (`RECHAZA_LA_REPETICION`): anular una compra ya anulada es
@@ -131,6 +133,66 @@ export function armarAnularCompra(dependencias: DependenciasDeCompras) {
               confirmaciones: [],
             });
             if (!registrado.ok) return registrado;
+          }
+
+          // La factura de la compra y su conciliación atajo: espejo de la conciliación (cantidades opuestas, una sola vez) y comprobante ANULADO.
+          const comprobante = await tx.comprobantesDeProveedor.delaRecepcion(
+            empresaId,
+            recepcion.id,
+          );
+          if (comprobante !== null) {
+            const bloqueado = await tx.comprobantesDeProveedor.bloquear(empresaId, comprobante.id);
+            if (bloqueado !== null && bloqueado.estado === "REGISTRADO") {
+              const conciliaciones = await tx.comprobantesDeProveedor.conciliacionesDe(
+                empresaId,
+                bloqueado.id,
+              );
+              const yaEspejadas = new Set(conciliaciones.map((c) => c.anulaA));
+              for (const conciliacion of conciliaciones) {
+                if (conciliacion.acto !== "CONCILIACION" || yaEspejadas.has(conciliacion.id))
+                  continue;
+                const espejo = await tx.comprobantesDeProveedor.insertarConciliacion(empresaId, {
+                  acto: "ANULACION",
+                  anulaA: conciliacion.id,
+                  comprobanteId: bloqueado.id,
+                  esAtajo: true,
+                  nivel: bloqueado.nivel,
+                  clave: claveDeLaAnulacionDeLaConciliacion(conciliacion.id),
+                  registradoPor: persona,
+                });
+                if (espejo === undefined) {
+                  throw new Error("el espejo de la conciliación chocó con una restricción única");
+                }
+                const asignaciones = await tx.comprobantesDeProveedor.asignacionesDe(
+                  empresaId,
+                  conciliacion.id,
+                );
+                await tx.comprobantesDeProveedor.insertarAsignaciones(
+                  empresaId,
+                  { id: espejo, acto: "ANULACION", comprobanteId: bloqueado.id },
+                  asignaciones.map((a) => {
+                    const cantidad = cantidadConSignoDesdeTexto(a.cantidad);
+                    if (!cantidad.ok)
+                      throw new RangeError("compras: la asignación guardada no es una cantidad");
+                    return {
+                      ...a,
+                      cantidad: cantidadConSignoATexto(negarConSigno(cantidad.valor)),
+                    };
+                  }),
+                );
+              }
+              const comprobanteAnulado = await tx.comprobantesDeProveedor.anular(
+                empresaId,
+                bloqueado.id,
+                {
+                  por: persona,
+                  en: contexto.ahora,
+                  motivo: motivo.valor,
+                },
+              );
+              if (!comprobanteAnulado)
+                throw new Error("el comprobante ya no estaba registrado bajo bloqueo");
+            }
           }
 
           const hecho = await tx.recepciones.anular(empresaId, recepcion.id, {

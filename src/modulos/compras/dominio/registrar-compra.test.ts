@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { huellaDeComando } from "./huella";
 import {
+  claveDeLaAnulacionDeLaConciliacion,
   claveDeLaAnulacionDeLaEntrada,
+  claveDeLaConciliacionDeAtajo,
   claveDeLaEntradaDeStock,
   elegirDepositoDeLaCompra,
   huellaDeLaCompra,
@@ -349,6 +351,12 @@ describe("los identificadores de la entrada de stock", () => {
     expect(origenDeLaEntradaDeStock(R, D)).toBe("0f43f1b5-e628-579b-bced-a03d3f07470b");
     expect(claveDeLaEntradaDeStock(R, D)).toBe("1c82184d-c497-5709-bcea-7b3aa81c5341");
     expect(claveDeLaAnulacionDeLaEntrada(R, D)).toBe("6ccf848d-3547-50cb-95b7-169b7e21658c");
+  });
+  it("las de la conciliación también son fijas y distintas entre sí", () => {
+    expect(claveDeLaConciliacionDeAtajo(R)).toBe("958e1211-0e72-5699-b800-7b9f152e7fe9");
+    expect(claveDeLaAnulacionDeLaConciliacion(R)).toBe("8fdda9b0-817d-5f55-af1f-9d6eb0044ac2");
+    expect(claveDeLaConciliacionDeAtajo(R)).not.toBe(claveDeLaConciliacionDeAtajo(D));
+    expect(claveDeLaAnulacionDeLaConciliacion(R)).not.toBe(claveDeLaAnulacionDeLaConciliacion(D));
   });
   it("cambian con la recepción y con el depósito, y no se confunden entre sí", () => {
     for (const f of [
