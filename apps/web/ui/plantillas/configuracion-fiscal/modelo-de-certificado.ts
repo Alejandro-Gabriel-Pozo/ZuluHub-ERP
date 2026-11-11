@@ -41,7 +41,7 @@ export type PedidoPendienteParaMostrar = Readonly<{
 }>;
 
 /**
- * SUPUESTO del ingeniero (el prototipo B lo muestra así): Pruebas primero, Producción segundo. Sin cuestionario que lo nombre.
+ * SUPUESTO (DEC-0050) del ingeniero (el prototipo B lo muestra así): Pruebas primero, Producción segundo. Sin cuestionario que lo nombre.
  * Revertirlo es invertir esta lista.
  */
 const AMBIENTES_EN_ORDEN: readonly AmbienteDeCertificado[] = ["HOMOLOGACION", "PRODUCCION"];
@@ -209,6 +209,6 @@ export const lugarDelErrorDelPedido = (campo: string | undefined): CampoDelPedid
 export const lugarDelErrorDeLaCarga = (campo: string | undefined): CampoDeLaCarga | null =>
   esDe(["certificadoPem"], campo);
 
-/** El nombre del archivo del pedido que se descarga: el alias (solo letras y dígitos) y `.csr`. SUPUESTO del ingeniero: ningún texto lo nombra. */
+/** El nombre del archivo del pedido que se descarga: el alias (solo letras y dígitos) y `.csr`. SUPUESTO (DEC-0050) del ingeniero: ningún texto lo nombra. */
 export const nombreDelArchivoDelPedido = (alias: string): string =>
   `${alias.replace(/[^A-Za-z0-9]/g, "") || "pedido"}.csr`;

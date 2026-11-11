@@ -49,7 +49,7 @@ const irAPorDefecto = (ruta: string): void => {
  * paso 2 «Motivo y revisar». Los dos pasos viven en una ruta, con el estado en el cliente («Siguiente» no guarda nada). La pantalla
  * arma los renglones de la nota y el servidor valida todo lo demás (permiso, estado, alícuotas). El envío es idempotente por intento
  * y el botón se bloquea al primer toque (`useEnvioDeLaAnulacion`). Al terminar vuelve al detalle, donde ya se ve la etiqueta de
- * anulación. Los botones van al final del contenido (SUPUESTO: ya hay una barra inferior fija; revertirlo es CSS).
+ * anulación. Los botones van al final del contenido (SUPUESTO (DEC-0052): ya hay una barra inferior fija; revertirlo es CSS).
  */
 export function PantallaDeAnularComprobante({
   factura,

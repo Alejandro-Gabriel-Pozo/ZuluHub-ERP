@@ -54,7 +54,7 @@ describe("comprobanteParaLaHoja: lista blanca", () => {
   const m = modelo(imprimibleDe(facturaB, { contacto: SIN_CONTACTO }));
   const c = comprobanteParaLaHoja(m);
 
-  it("no imprime nombre de fantasía aunque el modelo lo traiga (SUPUESTO de la primera entrega)", () => {
+  it("no imprime nombre de fantasía aunque el modelo lo traiga (SUPUESTO (DEC-0051) de la primera entrega)", () => {
     expect(m.marca.nombreDeFantasia).toBe("La Panadería de Zulu");
     expect(c.marca).toEqual({ nombreDeFantasia: null });
     expect(hoja(m).nombreDeFantasia).toBeNull();

@@ -20,7 +20,7 @@
  *   D-93 / D-95 = filas del CONTRATO (Pedernal-docs), confirmadas por el dueño el 2026-11-03 (D-93) y el 2026-11-04 (D-95); cada texto cita su punto.
  *   ARCA-016   = `test/utilidades/arca-grabaciones/corrida1/016-FEParamGetCondicionIvaReceptor-respuesta-http200.xml` (los textos de la
  *                condición frente al IVA; la misma fuente que D-44 para los del emisor).
- *   SUPUESTO   = del ingeniero, sin fuente: el dueño no lo aprobó ni figura en un documento. Va en las preguntas pendientes del PR (hoy ninguno).
+ *   SUPUESTO (DEC-0049)   = del ingeniero, sin fuente: el dueño no lo aprobó ni figura en un documento. Va en las preguntas pendientes del PR (hoy ninguno).
  */
 export const TEXTOS_DE_FISCAL_EMITIR = {
   // PROTO-8B (figura en el prototipo aprobado, artboard «8 · Emitir una factura», columna «B · Por pasos»): el encabezado «Emitir factura»; CONTRATO, pantalla 3: el botón final «Emitir factura» (el mismo texto).

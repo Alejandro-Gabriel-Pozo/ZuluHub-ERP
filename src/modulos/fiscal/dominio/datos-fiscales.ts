@@ -17,7 +17,7 @@ import { confirmarVersion, type ErrorDeConfirmacion } from "./vigencia";
  * versión CONFIRMADA e inmutable, con número, vigencia y quién la confirmó. Los textos que llegan
  * se normalizan (se recortan los blancos) y los vacíos opcionales quedan en `null`.
  *
- * Valores configurables, todos SUPUESTOS (no son requisitos verificados de ARCA):
+ * Valores configurables, todos SUPUESTOS (DEC-0047) (no son requisitos verificados de ARCA):
  * - `LIMITES_DE_DATOS_FISCALES`: largo máximo de la razón social y del número de IIBB. La razón social NO se define acá: es el dato
  *   «nombre o razón social» y su tope y sus caracteres permitidos viven en su primitiva (P2, dueño, 2026-11-05: una sola fuente);
  * - `CONDICIONES_DE_IIBB`: lo que la base puede tener guardado. Desde D-115/D-116 (dueño, 2026-11-05) lo único que se

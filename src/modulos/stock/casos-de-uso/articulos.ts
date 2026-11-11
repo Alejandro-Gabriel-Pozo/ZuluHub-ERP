@@ -14,7 +14,7 @@ export type SalidaDeDejarDeControlar = Readonly<{ yaEstaba: boolean }>;
 
 /**
  * Controlar el stock de un producto (E5 §3.2): crea su artículo de stock, con la unidad base del producto (que no cambia nunca). Guard
- * `articulos.controlar` con alcance TODAS (el artículo es de la empresa, no de una sucursal: SUPUESTO, igual que los datos del producto en
+ * `articulos.controlar` con alcance TODAS (el artículo es de la empresa, no de una sucursal: SUPUESTO (DEC-0077), igual que los datos del producto en
  * el catálogo). El producto existe y está activo (se lee con `FOR SHARE`: desactivarlo a la vez espera a este comando). Solo la materia prima,
  * el insumo y la reventa se controlan (`CLASE_NO_CONTROLABLE`): lo impone la base, una sola vez, y el caso de uso traduce el error. Si el
  * producto ya tuvo artículo y se dejó de controlar, se reactiva el MISMO (su libro sigue). Repetición (`YA_ESTABA`): ya controlado devuelve

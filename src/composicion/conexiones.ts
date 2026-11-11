@@ -236,7 +236,7 @@ export type OpcionesDeConexiones = Readonly<{
 }>;
 
 /**
- * SUPUESTO provisorio (D-112, dueño, 2026-11-04): la primera entrega imprime SIN logo, SIN color y SIN nombre de fantasía (blanco y negro): ese
+ * SUPUESTO (DEC-0051) provisorio (D-112, dueño, 2026-11-04): la primera entrega imprime SIN logo, SIN color y SIN nombre de fantasía (blanco y negro): ese
  * nombre no existe como dato por empresa. La marca de impresión es vacía para todas las empresas y no lee la base (nada de la marca del
  * producto, p. ej. Pedernal, llega a la hoja). Previene: que la ruta de impresión falle siempre mientras el dueño no decide de dónde sale el
  * nombre comercial de la empresa o la sucursal. Chequeo: `test/integracion/fiscal-modelo-de-impresion-web.test.ts`.

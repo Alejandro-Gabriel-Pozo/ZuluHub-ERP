@@ -163,7 +163,7 @@ export const CATALOGO_DE_PLATAFORMA = {
       },
       // Listas del sistema (e3 §3.7, decisión 130): una acción para ver y una para los cuatro cambios (agregar, corregir el nombre,
       // desactivar y reactivar). `listas.editar` es `CREA_AMPLIA` (ante la duda manda la más amplia: agregar crea) y exige el segundo
-      // factor reciente: lo que se cambia lo ven TODAS las empresas. SUPUESTO del ingeniero (la lista del dueño no las nombra): la
+      // factor reciente: lo que se cambia lo ven TODAS las empresas. SUPUESTO (DEC-0055) del ingeniero (la lista del dueño no las nombra): la
       // pregunta Q16 de e3 sigue abierta; costo de revertir: el indicador de esta fila y su renglón en la prueba del segundo factor.
       "listas.ver": { capacidad: null, efecto: "LECTURA", segundoFactorReciente: false },
       "listas.editar": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
@@ -229,7 +229,7 @@ export const PERMISOS_DE_PLATAFORMA = {
   "perillas.ajustar": ["ADMIN"],
   "modulos_de_empresa.activar": ["ADMIN"],
   "modulos_de_empresa.desactivar": ["ADMIN"],
-  // Listas del sistema (e3 §3.7). SUPUESTO de la especificación (pregunta Q16 pendiente): SOPORTE ve, solo ADMIN edita. Una fila.
+  // Listas del sistema (e3 §3.7). SUPUESTO (DEC-0055) de la especificación (pregunta Q16 pendiente): SOPORTE ve, solo ADMIN edita. Una fila.
   "listas.ver": ["ADMIN", "SOPORTE"],
   "listas.editar": ["ADMIN"],
 } as const satisfies Record<ClaveAccionDePlataforma, readonly RolDePlataforma[]>;

@@ -264,7 +264,7 @@ async function revisarElPasaje(
  * mismo punto de venta: los dos preguntan a ARCA, la serializable deja pasar a uno y el otro, al reintentar, lee el ambiente nuevo y
  * da «ya estaba»: un solo cambio y una sola auditoría.
  *
- * Sucursal cerrada (SUPUESTO del ingeniero: D-79 y D-80 hablan de mudar y de activar, no de cambiar el ambiente; se aplica el mismo
+ * Sucursal cerrada (SUPUESTO (DEC-0069) del ingeniero: D-79 y D-80 hablan de mudar y de activar, no de cambiar el ambiente; se aplica el mismo
  * criterio, nace cerrado): un punto de venta de una sucursal cerrada no pasa a producción, `SUCURSAL_CERRADA`. «Ya estaba» va ANTES y no
  * la mira (la repetición da lo mismo aunque se haya cerrado después). Revertirlo es sacar ese bloque.
  * Previene: pasar a producción un número que ARCA no tiene (cada factura real fallaría con la 10005), o hacerlo con la sucursal cerrada

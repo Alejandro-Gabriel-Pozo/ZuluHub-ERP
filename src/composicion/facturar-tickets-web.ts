@@ -180,7 +180,7 @@ export type FacturaDeTicketParaLaPantalla = Readonly<{
 }>;
 
 /**
- * Factura un ticket cobrado. SUPUESTO (sin texto aprobado para «ya facturado»): si otra persona ya facturó el ticket (`TICKET_YA_FACTURADO`),
+ * Factura un ticket cobrado. SUPUESTO (DEC-0022) (sin texto aprobado para «ya facturado»): si otra persona ya facturó el ticket (`TICKET_YA_FACTURADO`),
  * para quien lo pidió el resultado es el mismo que quería, que el ticket quede facturado: se le devuelve ese comprobante con `yaExistia`, sin
  * error. Costo de revertirlo: cambiar esta rama por un código con su texto, apenas el dueño lo apruebe.
  */

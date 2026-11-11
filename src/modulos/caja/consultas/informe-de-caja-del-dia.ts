@@ -39,7 +39,7 @@ export type InformeDeCajaDelDia = Readonly<{
 export type ErrorAlVerElInformeDeCaja = ErrorDeConsultaDeJornada | ErrorDePersistencia;
 
 /**
- * El informe de caja del día (e3b §4.5): lo cobrado por medio con las correcciones de medio ya aplicadas, y la cantidad de cobros. SUPUESTO:
+ * El informe de caja del día (e3b §4.5): lo cobrado por medio con las correcciones de medio ya aplicadas, y la cantidad de cobros. SUPUESTO (DEC-0063):
  * «ingresos» son los COBROS (no los ingresos manuales ni el fondo inicial); costo de sumar los manuales: una consulta más en el repositorio.
  * `cajas.ver`, `read committed`, alcance de la sucursal.
  */

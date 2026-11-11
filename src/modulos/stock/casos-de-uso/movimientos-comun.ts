@@ -203,7 +203,7 @@ export async function resolverRenglones(
     if (articulo === undefined || !articulo.activo) return err("ARTICULO_NO_CONTROLADO");
     const convertida = aUnidadDeStock(r.cantidad, r.unidadId, articulo);
     if (!convertida.ok) return convertida;
-    // El costo es por unidad de stock (SUPUESTO S-T10-3): con otra unidad habría que convertirlo y redondearlo, y eso es una decisión de dinero.
+    // El costo es por unidad de stock (SUPUESTO (DEC-0075) S-T10-3): con otra unidad habría que convertirlo y redondearlo, y eso es una decisión de dinero.
     if (r.costoUnitario !== null && r.unidadId !== articulo.unidadDeStockId) {
       return err("COSTO_INVALIDO");
     }
@@ -245,7 +245,7 @@ export async function cargarDeposito(
 }
 
 /**
- * Cuándo ocurrió: `hechoEn` opcional, por defecto el `ahora` del contexto. No puede ser posterior al `ahora` (SUPUESTO, `FECHA_FUTURA_NO_ADMITIDA`)
+ * Cuándo ocurrió: `hechoEn` opcional, por defecto el `ahora` del contexto. No puede ser posterior al `ahora` (SUPUESTO (DEC-0076), `FECHA_FUTURA_NO_ADMITIDA`)
  * ni anterior al inicio de la jornada vigente de la sucursal del depósito (S-2, `FECHA_PASADA_NO_ADMITIDA`): como las jornadas son tramos
  * seguidos, equivale a que su fecha de negocio sea la de hoy (`fechaDeNegocio` de `primitivas/tiempo` con la zona de la empresa y el corte de la
  * sucursal, la misma fórmula que fija la base). Sin `hechoEn` no hace falta mirar la jornada.

@@ -128,7 +128,7 @@ export const PERMISOS_DE_EMPRESA = {
   "cajas.desactivar": ["GERENTE"],
   "cajas.editar": ["GERENTE", "ADMINISTRADOR"],
   // Medios de pago y cuentas de cobro (decisión 124); `medios_de_pago.editar` cubre elegir qué datos opcionales
-  // pide cada medio (decisión 129, SUPUESTO S-2).
+  // pide cada medio (decisión 129, SUPUESTO (DEC-0056) S-2).
   "medios_de_pago.crear": ["GERENTE", "ADMINISTRADOR"],
   "medios_de_pago.editar": ["GERENTE", "ADMINISTRADOR"],
   "medios_de_pago.reactivar": ["GERENTE", "ADMINISTRADOR"],

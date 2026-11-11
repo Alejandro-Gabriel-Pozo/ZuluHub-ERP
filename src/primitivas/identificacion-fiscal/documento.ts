@@ -4,7 +4,7 @@ import { tieneNumeroInformableAArca } from "./numero-de-documento-para-arca";
 import { pasaporteDesdeTexto } from "./pasaporte";
 
 /**
- * FICHA DEL DATO: DOCUMENTO DE IDENTIDAD (el del receptor de un comprobante). (DECIDIDO = ya implementado; SUPUESTO = del ingeniero,
+ * FICHA DEL DATO: DOCUMENTO DE IDENTIDAD (el del receptor de un comprobante). (DECIDIDO = ya implementado; SUPUESTO (DEC-0046) = del ingeniero,
  * revertible; SIN DECIDIR = falta la decisión del dueño.) El CUIT, CUIL y CDI son el mismo número (`cuit.ts`); acá vive la regla
  * de cada tipo, que antes estaba dentro del módulo fiscal y la web no podía reutilizar.
  *

@@ -32,11 +32,11 @@ export const LEYENDAS_DE_CONDICION: Readonly<Record<CondicionIvaReceptor, string
   MONOTRIBUTO_TRABAJADOR_INDEPENDIENTE_PROMOVIDO: "MONOTRIBUTO TRABAJADOR INDEPENDIENTE PROMOVIDO",
   // A.II f) 4
   NO_CATEGORIZADO: "SUJETO NO CATEGORIZADO",
-  // SUPUESTO del orquestador (P2, 2026-11-06), revertible: sin leyenda. A.II g) 2 («IVA EXENTO OPERACION DE EXPORTACION») es solo de
+  // SUPUESTO (DEC-0048) del orquestador (P2, 2026-11-06), revertible: sin leyenda. A.II g) 2 («IVA EXENTO OPERACION DE EXPORTACION») es solo de
   // operaciones de exportación (clase E), que el sistema no emite; la norma no da otra para un receptor del exterior en A, B o C.
   CLIENTE_DEL_EXTERIOR: null,
   PROVEEDOR_DEL_EXTERIOR: null,
-  // SUPUESTO del orquestador (P3, 2026-11-06), revertible: la norma no trae leyenda para este caso.
+  // SUPUESTO (DEC-0048) del orquestador (P3, 2026-11-06), revertible: la norma no trae leyenda para este caso.
   IVA_LIBERADO_LEY_19640: null,
 };
 

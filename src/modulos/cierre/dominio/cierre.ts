@@ -12,7 +12,7 @@ import { explicacionDesdeTexto } from "./explicacion";
 /**
  * Cuándo se puede cerrar la jornada y qué queda guardado (E3b §3.3 y §3.4; decisiones 160 y 167). «Resuelto o reconocido» =
  * ningún control `BLOQUEA` con hallazgos y todo control `RECONOCIBLE` con hallazgos reconocido (el texto es opcional); un `INFORMA`
- * nunca frena. Reconocer = listar el control en `cerrarJornada` junto con la huella que se vio (SUPUESTO de la especificación: sin
+ * nunca frena. Reconocer = listar el control en `cerrarJornada` junto con la huella que se vio (SUPUESTO (DEC-0070) de la especificación: sin
  * acción aparte). Puro: sin reloj ni azar.
  */
 
