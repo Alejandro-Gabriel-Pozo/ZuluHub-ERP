@@ -7,5 +7,8 @@ import type { DeclaracionDeCaso } from "../../../capacidades/permisos/declaracio
  */
 export const DECLARACIONES_DE_CONSULTAS = {
   fichaDelProveedorParaCompras: { accion: "recepciones.ver" },
+  listarCompras: { accion: "recepciones.ver" },
+  fichaDeCompra: { accion: "recepciones.ver" },
+  comprasSinPrecio: { accion: "recepciones.ver" },
   proveedoresDelProducto: { accion: "costos.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

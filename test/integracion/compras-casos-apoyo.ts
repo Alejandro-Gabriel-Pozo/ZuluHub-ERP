@@ -4,6 +4,7 @@ import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import type { TransaccionesDePostgres } from "../../src/adaptadores/postgres/transacciones";
+import { crearCasosDeUsoDeCatalogo } from "../../src/modulos/catalogo/publico";
 import {
   crearCasosDeUsoDeClientes,
   crearRepositoriosDeClientes,
@@ -16,6 +17,8 @@ import {
   type RepositoriosDeCompras,
 } from "../../src/modulos/compras/publico";
 import {
+  crearCasosDeUsoDeStock,
+  crearPuertosDeStock,
   crearRepositoriosDeStock,
   type RepositoriosDeStock,
 } from "../../src/modulos/stock/publico";
@@ -92,13 +95,30 @@ export async function montarCompras(
   const sinModulos = new Set<string>();
   /** La barrera de la ronda en curso: cada transacción espera tras leer su autorización hasta que llegaron todas. */
   let barrera: () => Promise<void> = () => Promise.resolve();
+  /** Una falla inyectada en un punto de «Comprar y recibir» (para probar que no queda nada a medias). */
+  let falla: "oferta" | "lineas" | null = null;
   const entorno = crearEntornoDePrueba(propia.base, opciones.conexiones ?? 12, (tx) => {
     let primera = true;
+    const repos = crearRepositoriosDeCompras(tx.db);
     return {
       ...tx,
       ...crearRepositoriosDeStock(tx.db),
       ...crearRepositoriosDeClientes(tx.db),
-      ...crearRepositoriosDeCompras(tx.db),
+      ...repos,
+      ofertasDeProveedor: {
+        ...repos.ofertasDeProveedor,
+        registrar: (...argumentos: Parameters<typeof repos.ofertasDeProveedor.registrar>) => {
+          if (falla === "oferta") throw new Error("falla inyectada en la oferta");
+          return repos.ofertasDeProveedor.registrar(...argumentos);
+        },
+      },
+      recepciones: {
+        ...repos.recepciones,
+        insertarLineas: (...argumentos: Parameters<typeof repos.recepciones.insertarLineas>) => {
+          if (falla === "lineas") throw new Error("falla inyectada en las líneas");
+          return repos.recepciones.insertarLineas(...argumentos);
+        },
+      },
       autorizacion: {
         ...tx.autorizacion,
         sucursalesDelActor: async (contexto, opcionesDeAlcance) => {
@@ -125,9 +145,15 @@ export async function montarCompras(
   const dueno = new pg.Client({ connectionString: propia.base.dueno });
   await dueno.connect();
   const reglas = opciones.reglas ?? REGLAS_DE_PRUEBA;
-  const casos = crearCasosDeUsoDeCompras({ transacciones: entorno, reglas });
+  const casos = crearCasosDeUsoDeCompras({
+    transacciones: entorno,
+    reglas,
+    stock: crearPuertosDeStock({ reglas }),
+  });
   const consultas = crearConsultasDeCompras({ transacciones: entorno, reglas });
   const clientes = crearCasosDeUsoDeClientes({ transacciones: entorno, reglas });
+  const catalogoCasos = crearCasosDeUsoDeCatalogo({ transacciones: entorno, reglas });
+  const stockCasos = crearCasosDeUsoDeStock({ transacciones: entorno, reglas });
 
   const miembro = async (empresa: string, rol: RolDePrueba) => {
     const p = await crearPersonaDeBase(dueno);
@@ -219,6 +245,8 @@ export async function montarCompras(
     casos,
     consultas,
     clientes,
+    catalogoCasos,
+    stockCasos,
     escenario,
     proveedor,
     producto,
@@ -229,6 +257,9 @@ export async function montarCompras(
     contar,
     auditoria,
     alcances,
+    inyectarFalla: (punto: "oferta" | "lineas" | null) => {
+      falla = punto;
+    },
     armarBarrera: (participantes: number) => {
       barrera = crearBarrera(participantes);
     },

@@ -65,6 +65,8 @@ export type FiltroDeCompras = Readonly<{
   sucursales: "TODAS" | readonly string[];
   proveedorId: string | null;
   estado: EstadoDeRecepcion | null;
+  /** `true`: solo las que tienen un comprobante registrado; `false`: solo las que no; `null`: todas. */
+  facturada: boolean | null;
   /** Fechas de negocio, `YYYY-MM-DD`, ambas inclusive. */
   desde: string | null;
   hasta: string | null;
@@ -113,7 +115,12 @@ export interface RepositorioDeRecepciones {
     empresa: EmpresaId,
     sucursales: "TODAS" | readonly string[],
     limite: number,
-  ): Promise<readonly Recepcion[]>;
+  ): Promise<readonly FilaDeListaDeCompras[]>;
+  /** El estado del comprobante vigente de la recepción, o `null` si no tiene. */
+  estadoDelComprobante(
+    empresa: EmpresaId,
+    recepcionId: string,
+  ): Promise<"REGISTRADO" | "ANULADO" | null>;
 }
 
 const COLUMNAS = [
@@ -192,6 +199,18 @@ function aRecepcion(f: FilaDeRecepcion): Recepcion {
     version: f.version,
   };
 }
+
+/** El estado del comprobante vigente de la recepción (el registrado si lo hay; si no, el más nuevo), o `null` si no tiene. */
+const ESTADO_DEL_COMPROBANTE = sql<
+  string | null
+>`(select c.estado from linea_de_comprobante l join comprobante_de_proveedor c on c.id = l.comprobante_id and c.empresa_id = l.empresa_id
+    where l.empresa_id = recepcion.empresa_id and l.recepcion_id = recepcion.id
+    order by (c.estado = 'REGISTRADO') desc, c.registrado_en desc limit 1)`.as(
+  "comprobante_estado",
+);
+
+const aEstadoDeComprobante = (texto: string | null): "REGISTRADO" | "ANULADO" | null =>
+  texto === "REGISTRADO" || texto === "ANULADO" ? texto : null;
 
 const COLUMNAS_DE_LINEA = [
   "numero",
@@ -346,16 +365,7 @@ export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): Repositori
       if (filtro.sucursales !== "TODAS" && filtro.sucursales.length === 0) return [];
       let consulta = db
         .selectFrom("recepcion")
-        .select([
-          ...COLUMNAS,
-          sql<
-            string | null
-          >`(select c.estado from linea_de_comprobante l join comprobante_de_proveedor c on c.id = l.comprobante_id and c.empresa_id = l.empresa_id
-              where l.empresa_id = recepcion.empresa_id and l.recepcion_id = recepcion.id
-              order by (c.estado = 'REGISTRADO') desc, c.registrado_en desc limit 1)`.as(
-            "comprobante_estado",
-          ),
-        ])
+        .select([...COLUMNAS, ESTADO_DEL_COMPROBANTE])
         .where("empresa_id", "=", empresa);
       if (filtro.sucursales !== "TODAS") {
         consulta = consulta.where("sucursal_id", "in", [...filtro.sucursales]);
@@ -363,6 +373,13 @@ export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): Repositori
       if (filtro.proveedorId !== null)
         consulta = consulta.where("proveedor_id", "=", filtro.proveedorId);
       if (filtro.estado !== null) consulta = consulta.where("estado", "=", filtro.estado);
+      if (filtro.facturada !== null) {
+        const conComprobante = sql<boolean>`exists (select 1 from linea_de_comprobante l join comprobante_de_proveedor c on c.id = l.comprobante_id and c.empresa_id = l.empresa_id
+              where l.empresa_id = recepcion.empresa_id and l.recepcion_id = recepcion.id and c.estado = 'REGISTRADO')`;
+        consulta = consulta.where(
+          filtro.facturada ? conComprobante : sql<boolean>`not ${conComprobante}`,
+        );
+      }
       if (filtro.desde !== null)
         consulta = consulta.where(sql`fecha_negocio`, ">=", sql`${filtro.desde}::date`);
       if (filtro.hasta !== null)
@@ -380,17 +397,14 @@ export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): Repositori
         .execute();
       return filas.map((f) => ({
         ...aRecepcion(f),
-        comprobanteEstado:
-          f.comprobante_estado === "REGISTRADO" || f.comprobante_estado === "ANULADO"
-            ? f.comprobante_estado
-            : null,
+        comprobanteEstado: aEstadoDeComprobante(f.comprobante_estado),
       }));
     },
     async sinPrecio(empresa, sucursales, limite) {
       if (sucursales !== "TODAS" && sucursales.length === 0) return [];
       let consulta = db
         .selectFrom("recepcion")
-        .select(COLUMNAS)
+        .select([...COLUMNAS, ESTADO_DEL_COMPROBANTE])
         .where("empresa_id", "=", empresa)
         .where("estado", "=", "CONFIRMADA")
         .where(
@@ -402,7 +416,20 @@ export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): Repositori
         .orderBy("id", "desc")
         .limit(limite)
         .execute();
-      return filas.map(aRecepcion);
+      return filas.map((f) => ({
+        ...aRecepcion(f),
+        comprobanteEstado: aEstadoDeComprobante(f.comprobante_estado),
+      }));
+    },
+    async estadoDelComprobante(empresa, recepcionId) {
+      if (!esUuid(recepcionId)) return null;
+      const fila = await db
+        .selectFrom("recepcion")
+        .select([ESTADO_DEL_COMPROBANTE])
+        .where("empresa_id", "=", empresa)
+        .where("id", "=", recepcionId)
+        .executeTakeFirst();
+      return aEstadoDeComprobante(fila?.comprobante_estado ?? null);
     },
   };
 }

@@ -3,6 +3,8 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 import { UNIDADES, type CodigoDeUnidad } from "../../../primitivas/unidades/unidades";
 import { esNumeroDeComprobanteValido, esPuntoDeVentaValido } from "./comprobante";
 import { huellaDeComando, type CampoDeHuella } from "./huella";
+import { textoDeUnaLineaDesdeTexto } from "../../../primitivas/texto/texto-de-una-linea";
+import { uuidV5DeLista } from "../../../primitivas/identificadores/uuid-determinista";
 import { esUuid } from "./identificadores";
 
 /**
@@ -173,4 +175,40 @@ export function huellaDeLaCompra(pedido: PedidoDeCompra): string {
       r.precio,
     ]),
   );
+}
+
+// ---- los identificadores de la entrada de stock de una recepción -------------------------------------------------------------------
+
+/** Espacios de nombres (uuid v5) de lo que se deriva de una recepción: nunca se cambian (cambiarlos reescribiría el origen de lo ya guardado). */
+const ESPACIO_DEL_ORIGEN_DE_ENTRADA = "87d185ca-c698-4554-80df-bda1043f757c";
+const ESPACIO_DE_LA_CLAVE_DE_ENTRADA = "3f15b9d6-3d3b-4414-96ce-9204dd1352f2";
+const ESPACIO_DE_LA_CLAVE_DE_ANULACION = "ce71df41-27be-494a-ba5a-9c8c1172aa29";
+
+/**
+ * El origen de la entrada de stock de una recepción en un depósito: determinista de `(recepción, depósito)`. Un mismo gesto con depósitos distintos no choca
+ * con el único de origen de stock (una entrada por origen) y cada reintento da el mismo id, así que una segunda llamada devuelve la entrada ya hecha (I4).
+ */
+export const origenDeLaEntradaDeStock = (recepcionId: string, depositoId: string): string =>
+  uuidV5DeLista(ESPACIO_DEL_ORIGEN_DE_ENTRADA, [recepcionId, depositoId]);
+
+/** La clave de idempotencia de esa entrada (stock la pide como uuid): también determinista, para que un reintento repita el mismo pedido. */
+export const claveDeLaEntradaDeStock = (recepcionId: string, depositoId: string): string =>
+  uuidV5DeLista(ESPACIO_DE_LA_CLAVE_DE_ENTRADA, [recepcionId, depositoId]);
+
+/** La clave de la anulación espejo de esa entrada (una sola por entrada). */
+export const claveDeLaAnulacionDeLaEntrada = (recepcionId: string, depositoId: string): string =>
+  uuidV5DeLista(ESPACIO_DE_LA_CLAVE_DE_ANULACION, [recepcionId, depositoId]);
+
+/**
+ * El motivo de una anulación (obligatorio, queda en el registro): una línea de texto de hasta 500 caracteres, con la lista de permitidos de siempre. El
+ * mismo límite lo repite la base (`recepcion_motivo_ck` y sus hermanas) y lo compara una prueba de integración.
+ */
+const MAXIMO_DEL_MOTIVO_DE_ANULACION = 500;
+export function motivoDeAnulacionDesdeTexto(texto: unknown): Resultado<string, "MOTIVO_REQUERIDO"> {
+  if (typeof texto !== "string") return err("MOTIVO_REQUERIDO");
+  const motivo = textoDeUnaLineaDesdeTexto(texto, {
+    maximo: MAXIMO_DEL_MOTIVO_DE_ANULACION,
+    exigirUnaLetra: true,
+  });
+  return motivo.ok ? ok(motivo.valor) : err("MOTIVO_REQUERIDO");
 }

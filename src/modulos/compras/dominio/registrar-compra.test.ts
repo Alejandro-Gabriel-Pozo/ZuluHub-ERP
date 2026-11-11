@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { huellaDeComando } from "./huella";
 import {
+  claveDeLaAnulacionDeLaEntrada,
+  claveDeLaEntradaDeStock,
   elegirDepositoDeLaCompra,
   huellaDeLaCompra,
   leerRemito,
+  motivoDeAnulacionDesdeTexto,
   leerRenglonesDeCompra,
   MAXIMO_DE_RENGLONES_DE_UNA_COMPRA,
+  origenDeLaEntradaDeStock,
   type PedidoDeCompra,
   type RenglonDeCompra,
 } from "./registrar-compra";
@@ -333,5 +337,44 @@ describe("huellaDeLaCompra", () => {
     expect(huellaDeLaCompra({ ...base, factura: ["x"], pago: null })).not.toBe(
       huellaDeLaCompra({ ...base, factura: null, pago: ["x"] }),
     );
+  });
+});
+
+describe("los identificadores de la entrada de stock", () => {
+  const R = "11111111-1111-4111-8111-111111111111";
+  const D = "22222222-2222-4222-8222-222222222222";
+  const OTRO = "33333333-3333-4333-8333-333333333333";
+
+  it("son los de siempre (valores fijos: cambiar un espacio de nombres reescribiría el origen de lo ya guardado)", () => {
+    expect(origenDeLaEntradaDeStock(R, D)).toBe("0f43f1b5-e628-579b-bced-a03d3f07470b");
+    expect(claveDeLaEntradaDeStock(R, D)).toBe("1c82184d-c497-5709-bcea-7b3aa81c5341");
+    expect(claveDeLaAnulacionDeLaEntrada(R, D)).toBe("6ccf848d-3547-50cb-95b7-169b7e21658c");
+  });
+  it("cambian con la recepción y con el depósito, y no se confunden entre sí", () => {
+    for (const f of [
+      origenDeLaEntradaDeStock,
+      claveDeLaEntradaDeStock,
+      claveDeLaAnulacionDeLaEntrada,
+    ]) {
+      expect(f(R, D)).toBe(f(R, D));
+      expect(f(R, D)).not.toBe(f(OTRO, D));
+      expect(f(R, D)).not.toBe(f(R, OTRO));
+      expect(f(R, D)).not.toBe(f(D, R));
+    }
+  });
+});
+
+describe("motivoDeAnulacionDesdeTexto", () => {
+  it("acepta un motivo de una línea de hasta 500 caracteres", () => {
+    expect(motivoDeAnulacionDesdeTexto("Se cargó dos veces")).toEqual({
+      ok: true,
+      valor: "Se cargó dos veces",
+    });
+    expect(motivoDeAnulacionDesdeTexto("a".repeat(500)).ok).toBe(true);
+  });
+  it("rechaza vacío, sin letras, con saltos de línea, de más de 500 y lo que no es texto", () => {
+    for (const t of ["", "   ", "123", "a\nb", "a".repeat(501), 5, null, undefined, {}]) {
+      expect(motivoDeAnulacionDesdeTexto(t)).toEqual({ ok: false, error: "MOTIVO_REQUERIDO" });
+    }
   });
 });

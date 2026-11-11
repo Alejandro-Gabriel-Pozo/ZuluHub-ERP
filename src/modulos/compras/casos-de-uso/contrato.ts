@@ -1,7 +1,8 @@
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { Transacciones } from "../../../puertos/transacciones";
+import type { RepositorioDePresentaciones } from "../../catalogo/publico";
 import type { RepositoriosDeClientes } from "../../clientes/publico";
-import type { TxDeStock } from "../../stock/publico";
+import type { PuertosDeStock, TxDeStock } from "../../stock/publico";
 import type { RepositoriosDeCompras } from "../persistencia/repositorios-de-compras";
 
 /**
@@ -9,18 +10,25 @@ import type { RepositoriosDeCompras } from "../persistencia/repositorios-de-comp
  * stock (sucursal, auditoría, autorización, estado de la empresa y los repositorios con que stock registra la entrada: la compra y su entrada de stock son UNA
  * transacción). La composición lo arma sobre la conexión de la transacción.
  */
-export type TxDeCompras = TxDeStock & RepositoriosDeCompras & RepositoriosDeClientes;
+export type TxDeCompras = TxDeStock &
+  RepositoriosDeCompras &
+  RepositoriosDeClientes &
+  /** Las presentaciones son del catálogo (X5): compras las lee por su repositorio, nunca por SQL a la tabla. */
+  Readonly<{ presentacionesDeProducto: RepositorioDePresentaciones }>;
 
 export type DependenciasDeCompras = Readonly<{
   transacciones: Transacciones<TxDeCompras>;
   /** El catálogo de módulos y la matriz rol → acciones con los que el guard autoriza (los pasa la composición). */
   reglas: ReglasDeEmpresa;
+  /** Los puertos de stock que usa «Comprar y recibir»: qué productos se controlan, la entrada por origen y la existencia (la composición los arma). */
+  stock: Pick<PuertosDeStock, "articulosDeVenta" | "entradaPorOrigen" | "existenciaParaMostrar">;
 }>;
 
 /** Lo que reciben las consultas: transacciones de solo lectura con la autorización y los repositorios (que solo leen). */
 export type TxDeConsultasDeCompras = Pick<TxDeStock, "autorizacion"> &
   RepositoriosDeCompras &
-  RepositoriosDeClientes;
+  RepositoriosDeClientes &
+  Readonly<{ presentacionesDeProducto: RepositorioDePresentaciones }>;
 
 export type DependenciasDeConsultasDeCompras = Readonly<{
   transacciones: Transacciones<TxDeConsultasDeCompras>;

@@ -32,17 +32,24 @@ export function crearRepositorioDeConfiguracionDeCompras(
   db: Kysely<ComprasDb>,
 ): RepositorioDeConfiguracionDeCompras {
   async function asegurar(empresa: EmpresaId, bloquear: boolean): Promise<ConfiguracionDeCompras> {
+    const leer = async () => {
+      let consulta = db
+        .selectFrom("configuracion_de_compras")
+        .select(["nivel", "version"])
+        .where("empresa_id", "=", empresa);
+      if (bloquear) consulta = consulta.forUpdate();
+      return consulta.executeTakeFirst();
+    };
+    const existente = await leer();
+    if (existente !== undefined) return aConfiguracion(existente);
     await db
       .insertInto("configuracion_de_compras")
       .values({ empresa_id: empresa, nivel: NIVEL_INICIAL_DE_COMPRA })
       .onConflict((oc) => oc.doNothing())
       .execute();
-    let consulta = db
-      .selectFrom("configuracion_de_compras")
-      .select(["nivel", "version"])
-      .where("empresa_id", "=", empresa);
-    if (bloquear) consulta = consulta.forUpdate();
-    return aConfiguracion(await consulta.executeTakeFirstOrThrow());
+    const creada = await leer();
+    if (creada === undefined) throw new Error("la configuración de compras no se pudo crear");
+    return aConfiguracion(creada);
   }
   return {
     leer: (empresa) => asegurar(empresa, false),

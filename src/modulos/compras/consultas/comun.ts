@@ -11,7 +11,11 @@ import type {
 
 export type RDeConsulta<S> = Resultado<
   S,
-  MotivoDeRechazo | ErrorDePersistencia | "CURSOR_INVALIDO" | "IDENTIFICADOR_INVALIDO"
+  | MotivoDeRechazo
+  | ErrorDePersistencia
+  | "CURSOR_INVALIDO"
+  | "IDENTIFICADOR_INVALIDO"
+  | "SUCURSAL_FUERA_DE_ALCANCE"
 >;
 
 /**

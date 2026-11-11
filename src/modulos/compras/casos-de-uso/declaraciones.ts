@@ -1,6 +1,7 @@
 import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/declaracion";
 
 const ARCHIVO_DE_FICHA = "test/integracion/compras-ficha.test.ts";
+const ARCHIVO_DE_RECEPCION = "test/integracion/compras-recepcion.test.ts";
 
 /**
  * Los casos de uso de compras (E9 §3.2 a §3.6) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar (ADR-015 §4) y la
@@ -75,6 +76,36 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_FICHA,
         it: "I8: aprobar dos veces el mismo pedido es ok y la segunda no escribe ni audita; en sentido contrario, PEDIDO_YA_RESUELTO",
+      },
+    },
+  },
+  registrarCompra: {
+    accion: "recepciones.registrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_RECEPCION,
+        it: "I1: la misma compra dos veces (misma clave) deja una compra y una entrada de stock y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
+      },
+    },
+  },
+  anularCompra: {
+    accion: "recepciones.anular",
+    repeticion: {
+      regla: "RECHAZA_LA_REPETICION",
+      prueba: {
+        archivo: ARCHIVO_DE_RECEPCION,
+        it: "I7: anular dos veces la misma compra deja un solo espejo y la segunda da RECEPCION_YA_ANULADA",
+      },
+    },
+  },
+  configurarCompras: {
+    accion: "compras.configurar",
+    repeticion: {
+      regla: "SIN_CAMBIOS",
+      prueba: {
+        archivo: ARCHIVO_DE_RECEPCION,
+        it: "configurarCompras con el nivel que ya está devuelve lo vigente aunque la versión esperada sea vieja, sin escribir ni auditar",
       },
     },
   },
