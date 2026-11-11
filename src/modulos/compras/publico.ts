@@ -9,11 +9,16 @@ export { crearConsultasDeCompras, type ConsultasDeCompras } from "./consultas/co
 export type {
   CodigoDeEgresoDeCaja,
   DependenciasDeCompras,
-  EgresoDeCaja,
   DependenciasDeConsultasDeCompras,
+  EgresoDeCaja,
+  IvaDeLaEmpresa,
   TxDeCompras,
   TxDeConsultasDeCompras,
 } from "./casos-de-uso/contrato";
+export {
+  CONDICIONES_DE_IVA_DE_LA_EMPRESA,
+  type CondicionDeIvaDeLaEmpresa,
+} from "./dominio/comprobante";
 export type { ErrorDeCompras } from "./casos-de-uso/errores";
 export type {
   EntradaDeComprobanteDeFicha,

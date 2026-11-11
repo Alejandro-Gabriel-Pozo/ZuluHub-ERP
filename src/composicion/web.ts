@@ -5,6 +5,7 @@ import {
 } from "../adaptadores/certificados/lector-x509";
 import { CADENAS_DE_CONFIANZA_DE_ARCA } from "./cadenas-de-confianza-de-arca";
 import { crearEgresoDeCaja } from "./egreso-de-caja";
+import { crearIvaDeLaEmpresa } from "./iva-de-la-empresa";
 import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../capacidades/permisos/empresa";
 import {
   crearCasosDeUsoDeCaja,
@@ -215,6 +216,7 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
         reglas,
         stock: crearPuertosDeStock({ reglas }),
         egresoDeCaja: crearEgresoDeCaja(),
+        ivaDeLaEmpresa: crearIvaDeLaEmpresa(),
       }),
     ),
     consultasDeCompras: perezoso(() =>

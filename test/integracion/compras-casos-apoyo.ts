@@ -6,6 +6,11 @@ import type { ContextoOperativo } from "../../src/contexto/contexto";
 import type { TransaccionesDePostgres } from "../../src/adaptadores/postgres/transacciones";
 import { crearEgresoDeCaja } from "../../src/composicion/egreso-de-caja";
 import { crearCasosDeUsoDeCaja } from "../../src/modulos/caja/publico";
+import {
+  crearRepositorioDeDatosFiscales,
+  crearRepositorioDeEmisores,
+  type FiscalDb,
+} from "../../src/modulos/fiscal/publico";
 import { crearCasosDeUsoDeCatalogo } from "../../src/modulos/catalogo/publico";
 import {
   crearCasosDeUsoDeClientes,
@@ -14,6 +19,7 @@ import {
 } from "../../src/modulos/clientes/publico";
 import {
   crearCasosDeUsoDeCompras,
+  type CondicionDeIvaDeLaEmpresa,
   crearConsultasDeCompras,
   crearRepositoriosDeCompras,
   type RepositoriosDeCompras,
@@ -100,6 +106,7 @@ export async function montarCompras(
   let barrera: () => Promise<void> = () => Promise.resolve();
   /** Una falla inyectada en un punto de «Comprar y recibir» (para probar que no queda nada a medias). */
   let falla: "oferta" | "lineas" | null = null;
+  let condicionDeIva: CondicionDeIvaDeLaEmpresa | null = "RESPONSABLE_INSCRIPTO";
   const entorno = crearEntornoDePrueba(propia.base, opciones.conexiones ?? 12, (tx) => {
     let primera = true;
     const repos = crearRepositoriosDeCompras(tx.db);
@@ -108,6 +115,9 @@ export async function montarCompras(
       ...crearRepositoriosDeStock(tx.db),
       ...crearRepositoriosDeClientes(tx.db),
       ...repos,
+      // Fiscal (solo lectura para compras): el adaptador real de la condición de IVA de la empresa los usa sobre la misma conexión.
+      emisores: crearRepositorioDeEmisores(tx.db.withTables<FiscalDb>()),
+      datosFiscales: crearRepositorioDeDatosFiscales(tx.db.withTables<FiscalDb>()),
       ofertasDeProveedor: {
         ...repos.ofertasDeProveedor,
         registrar: (...argumentos: Parameters<typeof repos.ofertasDeProveedor.registrar>) => {
@@ -155,6 +165,8 @@ export async function montarCompras(
     reglas,
     stock: crearPuertosDeStock({ reglas }),
     egresoDeCaja: crearEgresoDeCaja(),
+    // La condición de la empresa frente al IVA: de entrada, responsable inscripto (el IVA de una Factura A es crédito fiscal); cada prueba la cambia con `fijarCondicionDeIva`.
+    ivaDeLaEmpresa: { condicion: () => Promise.resolve(condicionDeIva) },
   });
   const consultas = crearConsultasDeCompras({ transacciones: entorno, reglas });
   const clientes = crearCasosDeUsoDeClientes({ transacciones: entorno, reglas });
@@ -302,6 +314,10 @@ export async function montarCompras(
     },
     armarBarrera: (participantes: number) => {
       barrera = crearBarrera(participantes);
+    },
+    /** La condición de la empresa frente al IVA que lee compras (`null`: no se puede leer). */
+    fijarCondicionDeIva: (condicion: CondicionDeIvaDeLaEmpresa | null) => {
+      condicionDeIva = condicion;
     },
     soltarBarrera: () => {
       barrera = () => Promise.resolve();

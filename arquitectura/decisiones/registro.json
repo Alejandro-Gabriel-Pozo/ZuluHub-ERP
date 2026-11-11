@@ -1021,5 +1021,35 @@
     "decision": "Corregir una compra lo hacen el gerente y el administrador, y además necesitan el permiso de ajustar stock si la compra entró a stock.",
     "que_cambia": "Quién puede cambiar el costo del stock; se corrige en la matriz de permisos o sacando el permiso de stock del caso de uso.",
     "donde": "src/capacidades/permisos/empresa.ts (compras.corregir) y src/modulos/compras/casos-de-uso/correcciones.ts"
+  },
+  {
+    "id": "DEC-0322",
+    "fecha": "2026-11-11",
+    "quien": "dueño",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El IVA de una compra es costo o crédito fiscal según la condición de la empresa: inscripta, costo neto; monotributista o exenta, costo con IVA; B o C, el importe de la línea.",
+    "que_cambia": "Cuánto cuesta lo comprado, el valor del stock y de las recetas, y cuánto crédito fiscal figura; el contador puede corregirlo (PC-1, PC-4) y las compras ya hechas se ajustan con una corrección de costo, no con una migración.",
+    "donde": "src/modulos/compras/dominio/comprobante.ts (alicuotaQueEntraAlCosto) y calcular-linea.ts"
+  },
+  {
+    "id": "DEC-0323",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "La condición de la empresa frente al IVA es la de los últimos datos fiscales confirmados de su emisor principal; si no se puede leer, una compra con IVA discriminado no se registra.",
+    "que_cambia": "Una empresa sin datos fiscales confirmados no puede cargar facturas A hasta confirmarlos; si hay otro emisor que debe mandar, se cambia de dónde se lee.",
+    "donde": "src/composicion/iva-de-la-empresa.ts"
+  },
+  {
+    "id": "DEC-0324",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Al corregir el precio de una compra con IVA discriminado se usa la condición de la empresa de hoy y, como costo de antes, el que la línea declaró al registrarse.",
+    "que_cambia": "Si la condición cambió entre la compra y la corrección, el promedio se mueve también por ese cambio; si se corrige, habría que guardar la condición con cada compra.",
+    "donde": "src/modulos/compras/casos-de-uso/correcciones.ts"
   }
 ]

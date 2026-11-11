@@ -3,6 +3,8 @@ import { sucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { CodigoDeUnidad } from "../../../primitivas/unidades/unidades";
 import { calcularLinea } from "../dominio/calcular-linea";
+import { alicuotaQueEntraAlCosto } from "../dominio/iva-en-el-costo";
+import { discriminaIva, type AlicuotaDeCompra } from "../dominio/comprobante";
 import {
   camposDeHuellaDeCorreccion,
   cantidadConsumida,
@@ -52,6 +54,7 @@ async function costoDeLaLinea(
   contexto: ContextoOperativo,
   linea: LineaDeRecepcion,
   precio: string,
+  alicuotaDeIvaEnElCosto: AlicuotaDeCompra | null,
 ): Promise<R<string>> {
   const producto = await tx.productosParaCompras.bloquearCompartido(
     contexto.empresaId,
@@ -78,10 +81,36 @@ async function costoDeLaLinea(
     precioPor: linea.precioPorTipo as "PRESENTACION" | "UNIDAD",
     unidadDePrecio: linea.unidadDePrecioId as CodigoDeUnidad | null,
     precio,
+    alicuotaDeIvaEnElCosto,
   });
   if (!cuenta.ok) return cuenta;
   // Con precio, el costo por unidad nunca es `null` (la cuenta devuelve los dos o ninguno).
   return ok(cuenta.valor.costoPorUnidadDeStock as string);
+}
+
+/** El IVA que entra al costo de una línea ya registrada: sale de la línea de la factura VIGENTE de la compra que la cubre; sin factura vigente, ninguno. */
+async function alicuotaDelCosto(
+  tx: TxDeCompras,
+  contexto: ContextoOperativo,
+  dependencias: DependenciasDeCompras,
+  recepcionId: string,
+  numeroDeLinea: number,
+): Promise<R<AlicuotaDeCompra | null>> {
+  const comprobante = await tx.comprobantesDeProveedor.delaRecepcion(
+    contexto.empresaId,
+    recepcionId,
+  );
+  if (comprobante === null || comprobante.estado !== "REGISTRADO" || comprobante.tipo === null) {
+    return ok(null);
+  }
+  const condicion = discriminaIva(comprobante.tipo)
+    ? await dependencias.ivaDeLaEmpresa.condicion(tx, contexto)
+    : null;
+  const lineas = await tx.detalleDeComprobantes.lineasDe(contexto.empresaId, comprobante.id);
+  const cubre = lineas.find(
+    (l) => l.recepcionId === recepcionId && l.lineaDeRecepcion === numeroDeLinea,
+  );
+  return alicuotaQueEntraAlCosto(condicion, comprobante.tipo, cubre?.alicuota ?? null);
 }
 
 /**
@@ -149,9 +178,23 @@ export function armarCorregirCompra(dependencias: DependenciasDeCompras) {
           const precioVigente = ultima?.precioNuevo ?? linea.precio;
           if (esElMismoPrecio(precioVigente, p.precio)) return err("SIN_CAMBIOS");
 
-          const costoAntes = await costoDeLaLinea(tx, contexto, linea, precioVigente);
+          // El IVA que entra al costo: la MISMA regla del registro (`alicuotaQueEntraAlCosto`), con la alícuota de la línea de la factura que cubre esta línea y la condición
+          // de la empresa de hoy (DEC-0324). Sin factura vigente (o una B o C) el costo es el importe de la línea.
+          const alicuota = await alicuotaDelCosto(
+            tx,
+            contexto,
+            dependencias,
+            recepcion.id,
+            linea.numero,
+          );
+          if (!alicuota.ok) return alicuota;
+          // Antes: el costo que la línea declaró al registrarse (el guardado) mientras no se haya corregido; después de una corrección, el de su precio vigente.
+          const costoAntes =
+            ultima === null
+              ? ok(linea.costoPorUnidadDeStock as string)
+              : await costoDeLaLinea(tx, contexto, linea, precioVigente, alicuota.valor);
           if (!costoAntes.ok) return costoAntes;
-          const costoDespues = await costoDeLaLinea(tx, contexto, linea, p.precio);
+          const costoDespues = await costoDeLaLinea(tx, contexto, linea, p.precio, alicuota.valor);
           if (!costoDespues.ok) return costoDespues;
 
           const numero = p.correccionesVistas + 1;

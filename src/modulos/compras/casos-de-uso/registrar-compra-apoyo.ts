@@ -7,6 +7,10 @@ import { crearRegistroDePartes } from "../../clientes/publico";
 import { calcularLinea } from "../dominio/calcular-linea";
 import {
   calcularComprobante,
+  discriminaIva,
+  esAlicuotaDeCompra,
+  type AlicuotaDeCompra,
+  type CondicionDeIvaDeLaEmpresa,
   esLetraNoEsperada,
   totalCoincide,
   type ComprobanteCalculado,
@@ -18,6 +22,7 @@ import {
   tributosDeLaPantalla,
   type FacturaPedida,
 } from "../dominio/factura";
+import { alicuotaQueEntraAlCosto } from "../dominio/iva-en-el-costo";
 import { claseDeComprobante, type NivelDeCompra } from "../dominio/niveles";
 import { claveDeLaConciliacionDeAtajo, type RenglonDeCompra } from "../dominio/registrar-compra";
 import type { DependenciasDeCompras, TxDeCompras } from "./contrato";
@@ -99,6 +104,7 @@ export async function prepararFactura(
   }>,
   factura: FacturaPedida,
   lineas: readonly LineaCalculada[],
+  condicionDeLaEmpresa: CondicionDeIvaDeLaEmpresa | null,
 ): Promise<R<FacturaPreparada>> {
   const { empresaId } = contexto;
   const ficha = await tx.fichasDeCompra.obtener(empresaId, proveedor.id);
@@ -120,6 +126,7 @@ export async function prepararFactura(
     })),
     tributos: tributosDeLaPantalla(factura.percepciones),
     totalSegunFactura: factura.totalSegunFactura,
+    condicionDeLaEmpresa,
   });
   if (!calculado.ok) return calculado;
 
@@ -279,6 +286,7 @@ export async function calcularRenglon(
   tx: TxDeCompras,
   empresaId: EmpresaId,
   renglon: RenglonDeCompra,
+  alicuotaDeIvaEnElCosto: AlicuotaDeCompra | null = null,
 ): Promise<R<LineaCalculada>> {
   const producto = await tx.productosParaCompras.bloquearCompartido(empresaId, renglon.productoId);
   if (producto === null) return err("PRODUCTO_NO_ENCONTRADO");
@@ -303,6 +311,7 @@ export async function calcularRenglon(
     precioPor: renglon.precioPor,
     unidadDePrecio: renglon.unidadDePrecioId,
     precio: renglon.precio,
+    alicuotaDeIvaEnElCosto,
   });
   if (!cuenta.ok) return cuenta;
   return ok({
@@ -313,4 +322,78 @@ export async function calcularRenglon(
     importe: cuenta.valor.importe,
     costoPorUnidadDeStock: cuenta.valor.costoPorUnidadDeStock,
   });
+}
+
+/**
+ * La condición de la empresa frente al IVA, solo cuando hace falta (una factura con IVA discriminado: una A): sin factura o con una B o C no se lee y es `null`.
+ * Si hace falta y no se puede leer, `CONDICION_DE_IVA_NO_DISPONIBLE`: la compra no se registra (cierra, no supone; DEC-0322).
+ */
+export async function leerCondicionDeIva(
+  tx: TxDeCompras,
+  contexto: ContextoOperativo,
+  dependencias: Pick<DependenciasDeCompras, "ivaDeLaEmpresa">,
+  factura: FacturaPedida | null,
+): Promise<R<CondicionDeIvaDeLaEmpresa | null>> {
+  if (factura === null || !discriminaIva(factura.tipo)) return ok(null);
+  const condicion = await dependencias.ivaDeLaEmpresa.condicion(tx, contexto);
+  return condicion === null ? err("CONDICION_DE_IVA_NO_DISPONIBLE") : ok(condicion);
+}
+
+/**
+ * La cuenta de cada renglón (`calcularRenglon`). Si la compra trae factura, el IVA que entra al costo de un renglón sale de la línea de la factura que lo cubre,
+ * por la regla única del dominio (`alicuotaQueEntraAlCosto`): inscripto, neto; monotributista o exento, con IVA incluido; B o C, el importe de la línea.
+ */
+export async function calcularRenglones(
+  tx: TxDeCompras,
+  empresaId: EmpresaId,
+  renglones: readonly RenglonDeCompra[],
+  factura: FacturaPedida | null,
+  condicion: CondicionDeIvaDeLaEmpresa | null,
+): Promise<R<LineaCalculada[]>> {
+  const lineas: LineaCalculada[] = [];
+  for (const [indice, renglon] of renglones.entries()) {
+    const delaFactura = factura?.lineas.find((l) => l.renglon === indice + 1)?.alicuota ?? null;
+    const alicuota =
+      factura === null
+        ? ok(null)
+        : alicuotaQueEntraAlCosto(
+            condicion,
+            factura.tipo,
+            delaFactura !== null && esAlicuotaDeCompra(delaFactura) ? delaFactura : null,
+          );
+    if (!alicuota.ok) return alicuota;
+    const calculada = await calcularRenglon(tx, empresaId, renglon, alicuota.valor);
+    if (!calculada.ok) return calculada;
+    lineas.push(calculada.valor);
+  }
+  return ok(lineas);
+}
+
+/** Cuándo se hizo la compra: ausente es `ahora`; un pedido tiene que ser una fecha válida y no futura (`FECHA_INVALIDA`). */
+export function leerHechoEn(pedido: unknown, ahora: Date): R<Date> {
+  if (pedido === undefined) return ok(ahora);
+  return pedido instanceof Date &&
+    !Number.isNaN(pedido.getTime()) &&
+    pedido.getTime() <= ahora.getTime()
+    ? ok(pedido)
+    : err("FECHA_INVALIDA");
+}
+
+/** El número de la factura no puede estar ya cargado para ese proveedor (duplicado único): `COMPROBANTE_YA_REGISTRADO` con el id del que ganó. */
+export async function exigirFacturaNueva(
+  tx: TxDeCompras,
+  empresaId: EmpresaId,
+  proveedorId: string,
+  factura: FacturaPedida,
+): Promise<R<null>> {
+  const repetida = await tx.comprobantesDeProveedor.porDuplicado(
+    empresaId,
+    proveedorId,
+    factura.tipo,
+    factura.puntoDeVenta,
+    factura.numero,
+  );
+  return repetida === null
+    ? ok(null)
+    : err({ error: "COMPROBANTE_YA_REGISTRADO", comprobanteId: repetida.id });
 }

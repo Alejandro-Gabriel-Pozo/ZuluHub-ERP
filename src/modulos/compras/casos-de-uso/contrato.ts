@@ -1,4 +1,5 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
+import type { CondicionDeIvaDeLaEmpresa } from "../dominio/comprobante";
 import type { Resultado } from "../../../primitivas/resultado/resultado";
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { Transacciones } from "../../../puertos/transacciones";
@@ -58,6 +59,18 @@ export type EgresoDeCaja = Readonly<{
   ): Promise<Resultado<Readonly<{ anulacionId: string | null }>, CodigoDeEgresoDeCaja>>;
 }>;
 
+/**
+ * La condición de la EMPRESA frente al IVA, que declara compras y IMPLEMENTA la composición con fiscal (compras no importa fiscal): de ella depende si el IVA
+ * discriminado de una Factura A es crédito fiscal o costo (DEC-0322). `null` si no se puede leer (la empresa no tiene datos fiscales confirmados): con IVA
+ * discriminado la compra no se registra (cierra, no supone).
+ */
+export type IvaDeLaEmpresa = Readonly<{
+  condicion(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+  ): Promise<CondicionDeIvaDeLaEmpresa | null>;
+}>;
+
 export type DependenciasDeCompras = Readonly<{
   transacciones: Transacciones<TxDeCompras>;
   /** El catálogo de módulos y la matriz rol → acciones con los que el guard autoriza (los pasa la composición). */
@@ -69,6 +82,8 @@ export type DependenciasDeCompras = Readonly<{
   >;
   /** El egreso de efectivo de caja para el pago en efectivo (la composición lo implementa con caja). */
   egresoDeCaja: EgresoDeCaja;
+  /** La condición de la empresa frente al IVA (la composición la lee de los datos fiscales). */
+  ivaDeLaEmpresa: IvaDeLaEmpresa;
 }>;
 
 /** Lo que reciben las consultas: transacciones de solo lectura con la autorización y los repositorios (que solo leen). */
