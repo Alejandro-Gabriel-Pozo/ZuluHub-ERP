@@ -29,6 +29,9 @@ describe("el resumen para el dueño", () => {
       entrada({ id: "DEC-0002", tipo: "COMERCIAL", quien: "dueño" }),
     ]);
     expect(texto.split("\n")[0]).toBe("Decisiones que esperan tu OK: 3.");
+    expect(texto.split("\n")[1]).toBe("");
+    expect(texto).not.toContain("(0)");
+    expect(texto.split("\n").filter((l) => l === "")).toHaveLength(4);
     expect(texto.indexOf("Dinero (1)")).toBeLessThan(
       texto.indexOf("Permisos (quién puede qué) (1)"),
     );

@@ -477,6 +477,6 @@
     "grupo": "guardián (registro de decisiones)",
     "archivos": "arquitectura/decisiones/forma.cjs,arquitectura/decisiones/decisiones.cjs,arquitectura/decisiones/resumen.cjs",
     "minutos": 6,
-    "pruebas": "test/arquitectura/decisiones-forma.test.ts test/arquitectura/decisiones-control.test.ts test/arquitectura/decisiones-resumen.test.ts"
+    "pruebas": "test/arquitectura/decisiones-forma.test.ts test/arquitectura/decisiones-control.test.ts test/arquitectura/decisiones-resumen.test.ts test/arquitectura/decisiones-mutantes.test.ts"
   }
 ]

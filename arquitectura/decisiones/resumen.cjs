@@ -9,7 +9,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { ARCHIVO_DEL_REGISTRO } = require("./decisiones.cjs");
-const { TIPO_SIN_DECISION, TIPOS, problemasDelRegistro } = require("./forma.cjs");
+const { TIPO_SIN_DECISION, problemasDelRegistro } = require("./forma.cjs");
 
 /** Cómo se llama cada tipo para el dueño, en el orden en que se muestran. */
 const TITULOS = Object.freeze({
@@ -33,7 +33,7 @@ function resumir(registro) {
   );
   if (pendientes.length === 0) return "No hay decisiones pendientes de tu OK.\n";
   const lineas = [`Decisiones que esperan tu OK: ${pendientes.length}.`];
-  for (const tipo of TIPOS.filter((t) => t in TITULOS)) {
+  for (const tipo of Object.keys(TITULOS)) {
     const delTipo = pendientes.filter((e) => e.tipo === tipo);
     if (delTipo.length === 0) continue;
     lineas.push("", `${TITULOS[tipo]} (${delTipo.length})`);
@@ -46,22 +46,34 @@ function resumir(registro) {
   return `${lineas.join("\n")}\n`;
 }
 
-if (require.main === module) {
-  const archivo = path.resolve(__dirname, "../..", ARCHIVO_DEL_REGISTRO);
+/** Lee y resume el registro de `raiz`: `{ codigo, salida, errores }` (nada se imprime acá). */
+function ejecutar(raiz) {
   let registro;
   try {
-    registro = JSON.parse(fs.readFileSync(archivo, "utf8"));
+    registro = JSON.parse(fs.readFileSync(path.join(raiz, ARCHIVO_DEL_REGISTRO)));
   } catch (error) {
-    process.stderr.write(`${ARCHIVO_DEL_REGISTRO}: no se puede leer (${error.message}).\n`);
-    process.exit(1);
+    return {
+      codigo: 1,
+      salida: "",
+      errores: [`${ARCHIVO_DEL_REGISTRO}: no se puede leer (${error.message}).`],
+    };
   }
   const problemas = problemasDelRegistro(registro);
   if (problemas.length > 0) {
-    for (const { id, problema } of problemas)
-      process.stderr.write(`${ARCHIVO_DEL_REGISTRO} ${id}: ${problema}\n`);
-    process.exit(1);
+    const errores = problemas.map(
+      ({ id, problema }) => `${ARCHIVO_DEL_REGISTRO} ${id}: ${problema}`,
+    );
+    return { codigo: 1, salida: "", errores };
   }
-  process.stdout.write(resumir(registro));
+  return { codigo: 0, salida: resumir(registro), errores: [] };
 }
 
-module.exports = { QUIEN, TITULOS, resumir };
+// Stryker disable next-line ConditionalExpression: importado como biblioteca solo imprimiría el resumen; ningún resultado que una prueba lea cambia (el caso `false` sí lo mata la corrida como programa).
+if (require.main === module) {
+  const { codigo, salida, errores } = ejecutar(process.cwd());
+  process.stdout.write(salida);
+  for (const error of errores) process.stderr.write(`${error}\n`);
+  process.exitCode = codigo;
+}
+
+module.exports = { ejecutar, resumir };

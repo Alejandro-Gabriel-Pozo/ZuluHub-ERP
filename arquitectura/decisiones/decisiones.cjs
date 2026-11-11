@@ -149,7 +149,9 @@ function leerDeclaraciones(arbol, etiqueta) {
   const delRegistro = leerJson(arbol, ARCHIVO_DEL_REGISTRO);
   const deLosSensibles = leerJson(arbol, ARCHIVO_DE_LOS_SENSIBLES);
   const quien = etiqueta === "" ? "" : `${etiqueta}: `;
+  // Stryker disable next-line ArrayDeclaration: con una falla de forma o de lectura `evaluar` corta antes de usar la lista, así que su contenido no se ve.
   let registro = [];
+  // Stryker disable next-line ArrayDeclaration: ídem registro.
   let sensibles = [];
   if (delRegistro.ausente) fallas.push(enLinea(ARCHIVO_DEL_REGISTRO, 1, `${quien}no existe.`));
   else if (delRegistro.error !== undefined)
@@ -158,7 +160,7 @@ function leerDeclaraciones(arbol, etiqueta) {
     const problemas = problemasDelRegistro(delRegistro.valor);
     for (const { id, problema } of problemas)
       fallas.push(enLinea(ARCHIVO_DEL_REGISTRO, 1, `${quien}${id}: ${problema}`));
-    if (problemas.length === 0) registro = delRegistro.valor;
+    registro = delRegistro.valor;
   }
   if (deLosSensibles.ausente)
     fallas.push(enLinea(ARCHIVO_DE_LOS_SENSIBLES, 1, `${quien}no existe.`));
@@ -240,7 +242,7 @@ function ejecutar(argumentos, raiz) {
 }
 
 if (require.main === module) {
-  const { codigo, lineas } = ejecutar(process.argv.slice(2), path.resolve(__dirname, "../.."));
+  const { codigo, lineas } = ejecutar(process.argv.slice(2), process.cwd());
   for (const linea of lineas) process.stdout.write(`${linea}\n`);
   process.exitCode = codigo;
 }

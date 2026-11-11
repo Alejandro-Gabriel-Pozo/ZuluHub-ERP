@@ -46,7 +46,6 @@ const CLAVES_BASE = Object.freeze([
 const CLAVES_DE_SIN_DECISION = Object.freeze([...CLAVES_BASE, "motivo"]);
 
 const FORMA_DEL_ID = /^DEC-\d{4}$/;
-const FORMA_DE_LA_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 /**
  * Lo PERMITIDO en un texto: palabras de letras, dígitos y los signos de una frase, separadas por UN espacio, sin blancos en los
  * extremos ni saltos de línea ni caracteres de control.
@@ -64,7 +63,7 @@ function problemasDeUnTexto(valor, campo, largoMaximo) {
       `${campo} tiene que tener entre ${LARGO_MINIMO_DE_UN_TEXTO} y ${largoMaximo} caracteres.`,
     ];
   }
-  if (valor.normalize("NFC") !== valor || !FORMA_DE_UN_TEXTO.test(valor)) {
+  if (!FORMA_DE_UN_TEXTO.test(valor)) {
     return [
       `${campo} admite letras, números y los signos de una frase, con un solo espacio entre palabras y sin saltos de línea.`,
     ];
@@ -72,14 +71,13 @@ function problemasDeUnTexto(valor, campo, largoMaximo) {
   return [];
 }
 
-/** Si `fecha` es un día real del calendario con la forma AAAA-MM-DD. */
+/** Si `fecha` es un día real del calendario con la forma AAAA-MM-DD (la ida y vuelta por `Date` solo se repite si la forma es exacta). */
 function esFechaReal(fecha) {
-  if (typeof fecha !== "string" || !FORMA_DE_LA_FECHA.test(fecha)) return false;
   const dia = new Date(`${fecha}T00:00:00Z`);
-  return !Number.isNaN(dia.getTime()) && dia.toISOString().startsWith(fecha);
+  return !Number.isNaN(dia.getTime()) && dia.toISOString().slice(0, 10) === fecha;
 }
 
-const dentroDe = (lista, valor) => typeof valor === "string" && lista.includes(valor);
+const dentroDe = (lista, valor) => lista.includes(valor);
 
 /** Los problemas de UNA entrada del registro (vacío si está bien). */
 function problemasDeUnaEntrada(entrada) {
@@ -96,7 +94,8 @@ function problemasDeUnaEntrada(entrada) {
       `faltan ${faltan.join(", ")}${esSinDecision && faltan.includes("motivo") ? " (un SIN_DECISION explica en `motivo` por qué no es una decisión de negocio)" : ""}.`,
     );
   }
-  if (!FORMA_DEL_ID.test(entrada.id ?? "")) problemas.push("id tiene la forma DEC-0001.");
+  if (typeof entrada.id !== "string" || !FORMA_DEL_ID.test(entrada.id))
+    problemas.push("id tiene la forma DEC-0001.");
   if (!esFechaReal(entrada.fecha)) problemas.push("fecha es un día real con la forma AAAA-MM-DD.");
   if (!dentroDe(QUIENES, entrada.quien)) problemas.push(`quien es uno de: ${QUIENES.join(", ")}.`);
   if (!dentroDe(TIPOS, entrada.tipo)) problemas.push(`tipo es uno de: ${TIPOS.join(", ")}.`);
@@ -166,4 +165,4 @@ function problemasDeLosSensibles(valor) {
   return problemas;
 }
 
-module.exports = { TIPOS, TIPO_SIN_DECISION, problemasDeLosSensibles, problemasDelRegistro };
+module.exports = { TIPO_SIN_DECISION, problemasDeLosSensibles, problemasDelRegistro };

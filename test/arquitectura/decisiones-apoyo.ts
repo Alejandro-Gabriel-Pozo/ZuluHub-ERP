@@ -23,10 +23,18 @@ export interface Hallazgo {
   motivo: string;
 }
 
+export const TIPOS = [
+  "DINERO",
+  "PERMISOS",
+  "CLIENTE",
+  "DATOS",
+  "COMERCIAL",
+  "INFRAESTRUCTURA",
+  "SIN_DECISION",
+];
 export const ESTADOS = ["PENDIENTE_DE_OK", "CONFIRMADA", "CORREGIDA"];
 export const QUIENES = ["dueño", "padre", "sesión"];
 export const forma = require("../../arquitectura/decisiones/forma.cjs") as {
-  TIPOS: string[];
   problemasDelRegistro: (registro: unknown) => { id: string; problema: string }[];
   problemasDeLosSensibles: (valor: unknown) => string[];
 };
@@ -34,6 +42,7 @@ export const control = require("../../arquitectura/decisiones/decisiones.cjs") a
   ARCHIVO_DEL_REGISTRO: string;
   ARCHIVO_DE_LOS_SENSIBLES: string;
   EXENTOS: string[];
+  COMO_AGREGAR: string;
   ejecutar: (argumentos: string[], raiz: string) => { codigo: number; lineas: string[] };
   evaluar: (datos: { pr: Arbol; base?: Arbol | null }) => {
     fallas: Hallazgo[];
@@ -42,6 +51,7 @@ export const control = require("../../arquitectura/decisiones/decisiones.cjs") a
 };
 export const resumen = require("../../arquitectura/decisiones/resumen.cjs") as {
   resumir: (registro: Entrada[]) => string;
+  ejecutar: (raiz: string) => { codigo: number; salida: string; errores: string[] };
 };
 
 /** Una entrada válida (de tipo PERMISOS, pendiente); `cambios` pisa lo que se pida. */

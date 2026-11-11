@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { entrada, ESTADOS, forma, QUIENES, SENSIBLES } from "./decisiones-apoyo";
+import { entrada, ESTADOS, forma, QUIENES, SENSIBLES, TIPOS } from "./decisiones-apoyo";
 
 /**
  * La FORMA del registro de decisiones (`arquitectura/decisiones/forma.cjs`). Previene: decisiones de permisos, dinero o lo que ve un cliente
@@ -11,7 +11,7 @@ const problemas = (cambios: Record<string, unknown>) =>
 
 describe("una entrada válida", () => {
   it("no tiene problemas, de ningún tipo ni estado de la lista", () => {
-    for (const tipo of forma.TIPOS.filter((t) => t !== "SIN_DECISION")) {
+    for (const tipo of TIPOS.filter((t) => t !== "SIN_DECISION")) {
       expect(problemas({ tipo })).toEqual([]);
     }
     for (const estado of ESTADOS) expect(problemas({ estado })).toEqual([]);
