@@ -7,15 +7,19 @@ import {
   type ErrorDeAporte,
   type JornadaRef,
 } from "../cierre/publico";
+import { situacionDeVencimiento } from "./dominio/vencimientos";
+import type { LecturasDeLotes } from "./persistencia/lecturas-de-lotes";
 import type { LecturasDelLibro } from "./persistencia/lecturas-del-libro";
 import type { RepositorioDeConteos } from "./persistencia/repositorio-de-conteos";
 
 /**
- * LO QUE STOCK REVISA AL CIERRE DEL DÍA (E5 §3.3; D163): implementa `AporteAlCierreDelDia` de `cierre`, que la composición registra (`cierre` no
- * conoce a stock). Solo lee y reporta. Dos controles, ambos `INFORMA` (no bloquean ni piden reconocimiento: un conteo a medio hacer o una
+ * LO QUE STOCK REVISA AL CIERRE DEL DÍA (E5 §3.3; D163; E6 §3.5): implementa `AporteAlCierreDelDia` de `cierre`, que la composición registra (`cierre` no
+ * conoce a stock). Solo lee y reporta. Tres controles, todos `INFORMA` (no bloquean ni piden reconocimiento: un conteo a medio hacer o una
  * existencia en negativo son cosas para mirar, no para frenar el día):
  *  - `stock.conteos_abiertos`: los conteos físicos `ABIERTO` de los depósitos de la sucursal;
- *  - `stock.existencias_negativas`: los saldos en negativo de los depósitos de la sucursal (el control `PERMITIR` o la confirmación los dejaron así).
+ *  - `stock.existencias_negativas`: los saldos en negativo de los depósitos de la sucursal (el control `PERMITIR` o la confirmación los dejaron así);
+ *  - `stock.lotes_vencidos_con_existencia` (E6): los lotes cuya fecha de vencimiento es anterior a la fecha de negocio de la jornada y todavía tienen existencia
+ *    en la sucursal (un vencimiento vale hasta el final de su fecha): se dan de baja con motivo, no se venden ni se usan.
  * No tiene impedimentos para empezar a contar el día y `congelarEnTx` no escribe (los movimientos ya son inmutables y con quién y cuándo). Los
  * controles son del estado de la sucursal AHORA (no de una fecha de negocio): la jornada que se cierra solo dice de qué sucursal es. Determinista:
  * con los mismos datos, la misma huella (sin reloj ni azar); el detalle que entra en la huella y en las referencias son hasta
@@ -25,12 +29,14 @@ import type { RepositorioDeConteos } from "./persistencia/repositorio-de-conteos
 export type TxDeAporteDeStock = Readonly<{
   conteosDeStock: Pick<RepositorioDeConteos, "contarAbiertosDe" | "listar">;
   movimientosDeStock: Pick<LecturasDelLibro, "contarNegativasDe" | "existencias">;
+  lotesDeStock: Pick<LecturasDeLotes, "saldosDeLote">;
 }>;
 
 /** Las claves de los controles de stock en el cierre (`modulo.control`): las que ve la pantalla del cierre y guarda `cierre`. */
 export const CONTROLES_DE_STOCK = {
   CONTEOS_ABIERTOS: "stock.conteos_abiertos",
   EXISTENCIAS_NEGATIVAS: "stock.existencias_negativas",
+  LOTES_VENCIDOS_CON_EXISTENCIA: "stock.lotes_vencidos_con_existencia",
 } as const;
 
 type FilaDelDetalle = Readonly<{ referencia: string; datos: string }>;
@@ -54,21 +60,34 @@ function control(clave: string, total: number, filas: readonly FilaDelDetalle[])
 
 async function leerControles(tx: TxDeAporteDeStock, jornada: JornadaRef): Promise<ControlDelDia[]> {
   const { empresaId, sucursalId } = jornada;
-  const [abiertos, cuantosAbiertos, negativas, cuantasNegativas] = await Promise.all([
-    tx.conteosDeStock.listar(empresaId, {
-      alcance: [sucursalId],
-      estado: "ABIERTO",
-      limite: MAXIMO_DE_REFERENCIAS,
-    }),
-    tx.conteosDeStock.contarAbiertosDe(empresaId, sucursalId),
-    tx.movimientosDeStock.existencias(empresaId, {
-      alcance: "TODAS",
-      sucursalId,
-      soloNegativas: true,
-      limite: MAXIMO_DE_REFERENCIAS,
-    }),
-    tx.movimientosDeStock.contarNegativasDe(empresaId, sucursalId),
-  ]);
+  const [abiertos, cuantosAbiertos, negativas, cuantasNegativas, saldosDeLotes] = await Promise.all(
+    [
+      tx.conteosDeStock.listar(empresaId, {
+        alcance: [sucursalId],
+        estado: "ABIERTO",
+        limite: MAXIMO_DE_REFERENCIAS,
+      }),
+      tx.conteosDeStock.contarAbiertosDe(empresaId, sucursalId),
+      tx.movimientosDeStock.existencias(empresaId, {
+        alcance: "TODAS",
+        sucursalId,
+        soloNegativas: true,
+        limite: MAXIMO_DE_REFERENCIAS,
+      }),
+      tx.movimientosDeStock.contarNegativasDe(empresaId, sucursalId),
+      tx.lotesDeStock.saldosDeLote(empresaId, {
+        alcance: "TODAS",
+        sucursalId,
+        conExistencia: true,
+      }),
+    ],
+  );
+  // Vencido = vence antes de la fecha de negocio de la jornada; el sin asignar no vence. Existencia positiva: lo negativo ya lo mira el otro control.
+  const vencidos = saldosDeLotes.filter(
+    (l) =>
+      situacionDeVencimiento(l.lote.fechaDeVencimiento, jornada.fechaDeNegocio, 0)?.tipo ===
+        "VENCIDO" && !l.existencia.startsWith("-"),
+  );
   return [
     control(
       CONTROLES_DE_STOCK.CONTEOS_ABIERTOS,
@@ -81,6 +100,14 @@ async function leerControles(tx: TxDeAporteDeStock, jornada: JornadaRef): Promis
       negativas.map((n) => ({
         referencia: `stock.existencia:${n.depositoId}:${n.articuloId}`,
         datos: n.existencia,
+      })),
+    ),
+    control(
+      CONTROLES_DE_STOCK.LOTES_VENCIDOS_CON_EXISTENCIA,
+      vencidos.length,
+      vencidos.slice(0, MAXIMO_DE_REFERENCIAS).map((l) => ({
+        referencia: `stock.lote:${l.lote.id}:${l.depositoId}`,
+        datos: `${l.lote.fechaDeVencimiento ?? ""}:${l.existencia}`,
       })),
     ),
   ];

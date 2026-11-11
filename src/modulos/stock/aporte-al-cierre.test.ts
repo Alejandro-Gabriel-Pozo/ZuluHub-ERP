@@ -9,6 +9,7 @@ import { fechaCivilDesdeTexto } from "../../primitivas/tiempo/fecha-civil";
 import { controlesDelAporte, MAXIMO_DE_REFERENCIAS, type JornadaRef } from "../cierre/publico";
 import { aporteDeStock, CONTROLES_DE_STOCK, type TxDeAporteDeStock } from "./aporte-al-cierre";
 import type { Conteo } from "./persistencia/modelo";
+import type { LoteGuardado } from "./persistencia/repositorio-de-lotes";
 
 /**
  * El aporte de stock al cierre del día (E5-T8): dos controles `INFORMA`, sin impedimentos y sin escritura. Con repositorios falsos que devuelven
@@ -44,6 +45,8 @@ type Datos = Readonly<{
   /** Si el total es mayor que lo listado (más filas que el tope de referencias). */
   totalDeConteos?: number;
   totalDeNegativas?: number;
+  /** Saldos de lote con existencia: (vencimiento o null, existencia). */
+  lotes?: readonly Readonly<{ vence: string | null; existencia: string }>[];
 }>;
 
 /** Los repositorios falsos y lo que les preguntaron. */
@@ -82,6 +85,23 @@ function conDatos(datos: Datos = {}) {
         return Promise.resolve(datos.totalDeNegativas ?? (datos.negativas ?? []).length);
       },
     },
+    lotesDeStock: {
+      saldosDeLote: (empresa, filtro) => {
+        preguntas.push(["saldosDeLote", empresa, filtro]);
+        return Promise.resolve(
+          (datos.lotes ?? []).map((l, i) => ({
+            lote: {
+              id: `bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb0${i}`,
+              fechaDeVencimiento: l.vence,
+            } as LoteGuardado,
+            depositoId: "d1",
+            sucursalId: SUCURSAL,
+            uso: "NORMAL" as const,
+            existencia: l.existencia,
+          })),
+        );
+      },
+    },
   };
   return { tx, preguntas };
 }
@@ -109,10 +129,12 @@ describe("aporteDeStock", () => {
     expect(controles.map((c) => [c.modulo, c.clave, c.severidad, c.cantidad])).toEqual([
       ["stock", CONTROLES_DE_STOCK.CONTEOS_ABIERTOS, "INFORMA", 0],
       ["stock", CONTROLES_DE_STOCK.EXISTENCIAS_NEGATIVAS, "INFORMA", 0],
+      ["stock", CONTROLES_DE_STOCK.LOTES_VENCIDOS_CON_EXISTENCIA, "INFORMA", 0],
     ]);
     expect(CONTROLES_DE_STOCK).toEqual({
       CONTEOS_ABIERTOS: "stock.conteos_abiertos",
       EXISTENCIAS_NEGATIVAS: "stock.existencias_negativas",
+      LOTES_VENCIDOS_CON_EXISTENCIA: "stock.lotes_vencidos_con_existencia",
     });
     expect(controlesDelAporte("stock", controles).ok).toBe(true);
   });
@@ -138,7 +160,12 @@ describe("aporteDeStock", () => {
       },
     ]);
     expect(preguntas).toContainEqual(["contarNegativasDe", j.empresaId, SUCURSAL]);
-    expect(preguntas).toHaveLength(4);
+    expect(preguntas).toContainEqual([
+      "saldosDeLote",
+      j.empresaId,
+      { alcance: "TODAS", sucursalId: SUCURSAL, conExistencia: true },
+    ]);
+    expect(preguntas).toHaveLength(5);
   });
 
   it("cuenta el total exacto, aunque se muestren menos filas, y las referencias son las del detalle (conteo y existencia)", async () => {
@@ -189,6 +216,47 @@ describe("aporteDeStock", () => {
     expect(masTotal[0]).toBe(igual[0]);
     const masConteos = await huellas({ ...base, totalDeConteos: 2 });
     expect(masConteos[0]).not.toBe(igual[0]);
+  });
+
+  it("lotes vencidos con existencia: vence antes de la fecha de negocio (vence ese día todavía vale), con existencia positiva; sin vencimiento o en negativo no cuenta", async () => {
+    const { tx } = conDatos({
+      lotes: [
+        { vence: "2026-11-09", existencia: "3.0000" },
+        { vence: "2026-11-10", existencia: "5.0000" },
+        { vence: "2026-11-11", existencia: "1.0000" },
+        { vence: null, existencia: "2.0000" },
+        { vence: "2026-11-01", existencia: "-1.0000" },
+        { vence: "2026-10-31", existencia: "4.0000" },
+      ],
+    });
+    const r = await aporteDeStock.controles(tx, jornada());
+    const vencidos = (r.ok ? r.valor : [])[2];
+    expect(vencidos).toMatchObject({
+      clave: CONTROLES_DE_STOCK.LOTES_VENCIDOS_CON_EXISTENCIA,
+      severidad: "INFORMA",
+      cantidad: 2,
+      referencias: [
+        "stock.lote:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb00:d1",
+        "stock.lote:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb05:d1",
+      ],
+    });
+    expect(
+      await aporteDeStock.hayMovimiento(
+        conDatos({ lotes: [{ vence: "2026-11-09", existencia: "3.0000" }] }).tx,
+        jornada(),
+      ),
+    ).toEqual({ ok: true, valor: true });
+  });
+
+  it("lotes vencidos: el total es exacto y las referencias llegan hasta el tope", async () => {
+    const lotes = Array.from({ length: MAXIMO_DE_REFERENCIAS + 5 }, () => ({
+      vence: "2026-11-01",
+      existencia: "1.0000",
+    }));
+    const r = await aporteDeStock.controles(conDatos({ lotes }).tx, jornada());
+    const vencidos = (r.ok ? r.valor : [])[2];
+    expect(vencidos?.cantidad).toBe(MAXIMO_DE_REFERENCIAS + 5);
+    expect(vencidos?.referencias).toHaveLength(MAXIMO_DE_REFERENCIAS);
   });
 
   it("hayMovimiento (decisión 178): hay algo de stock para revisar si algún control tiene filas; sin nada, no", async () => {
