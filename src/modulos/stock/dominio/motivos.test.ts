@@ -21,6 +21,7 @@ describe("los motivos sembrados (E5 §3.1)", () => {
       "CARGA_INICIAL",
       "DEVOLUCION_DE_CLIENTE",
       "OTRA_ENTRADA",
+      "PRODUCTO_DE_TRANSFORMACION",
     ]);
     expect(codigos("SALIDA")).toEqual([
       "VENTA",
@@ -29,12 +30,13 @@ describe("los motivos sembrados (E5 §3.1)", () => {
       "ROTURA",
       "VENCIMIENTO",
       "OTRA_SALIDA",
+      "CONSUMO_DE_TRANSFORMACION",
     ]);
     expect(codigos("TRANSFERENCIA")).toEqual(["TRANSFERENCIA"]);
     expect(codigos("AJUSTE")).toEqual(["CORRECCION"]);
     expect(codigos("AJUSTE_POR_CONTEO")).toEqual(["CONTEO"]);
     expect(codigos("ANULACION")).toEqual(["ANULACION"]);
-    expect(MOTIVOS_DE_MOVIMIENTO).toHaveLength(14);
+    expect(MOTIVOS_DE_MOVIMIENTO).toHaveLength(16);
   });
 
   it("(clase, código) no se repite y toda clase es conocida", () => {
@@ -51,10 +53,12 @@ describe("los motivos sembrados (E5 §3.1)", () => {
     expect(MOTIVOS_DE_MOVIMIENTO.filter((m) => m.entraConCosto).map((m) => m.codigo)).toEqual([
       "COMPRA",
       "CARGA_INICIAL",
+      "PRODUCTO_DE_TRANSFORMACION",
     ]);
     expect(MOTIVOS_DE_MOVIMIENTO.filter((m) => m.entregaMercaderia).map((m) => m.codigo)).toEqual([
       "VENTA",
       "CONSUMO_INTERNO",
+      "CONSUMO_DE_TRANSFORMACION",
     ]);
   });
 
@@ -84,7 +88,10 @@ describe("buscarMotivo", () => {
 describe("motivoManualPermitido: lo que una persona puede elegir", () => {
   it("todas las entradas y salidas sembradas menos VENTA", () => {
     for (const m of MOTIVOS_DE_MOVIMIENTO) {
-      const esperado = (m.clase === "ENTRADA" || m.clase === "SALIDA") && m.codigo !== "VENTA";
+      const esperado =
+        (m.clase === "ENTRADA" || m.clase === "SALIDA") &&
+        m.codigo !== "VENTA" &&
+        !m.codigo.endsWith("_DE_TRANSFORMACION");
       expect(motivoManualPermitido(m.clase, m.codigo)).toBe(esperado);
     }
   });
@@ -125,6 +132,30 @@ describe("origenCoherenteConElMotivo: motivo VENTA ⇔ salida de un ejemplar de 
     expect(origenCoherenteConElMotivo("ENTRADA", "COMPRA", "EJEMPLAR_DE_TICKET")).toBe(true);
     // una clase que no es SALIDA con el motivo VENTA no existe, pero si llegara cierra
     expect(origenCoherenteConElMotivo("ENTRADA", "VENTA", "EJEMPLAR_DE_TICKET")).toBe(false);
+  });
+});
+
+describe("origenCoherenteConElMotivo: los motivos de la producción ⇔ el origen de la orden (E6)", () => {
+  it("consumir y producir llevan el origen TRANSFORMACION y ese origen solo va con ellos", () => {
+    expect(
+      origenCoherenteConElMotivo("SALIDA", "CONSUMO_DE_TRANSFORMACION", "TRANSFORMACION"),
+    ).toBe(true);
+    expect(
+      origenCoherenteConElMotivo("ENTRADA", "PRODUCTO_DE_TRANSFORMACION", "TRANSFORMACION"),
+    ).toBe(true);
+    expect(origenCoherenteConElMotivo("SALIDA", "CONSUMO_DE_TRANSFORMACION", "MANUAL")).toBe(false);
+    expect(origenCoherenteConElMotivo("ENTRADA", "PRODUCTO_DE_TRANSFORMACION", "RECEPCION")).toBe(
+      false,
+    );
+    expect(origenCoherenteConElMotivo("SALIDA", "MERMA", "TRANSFORMACION")).toBe(false);
+    expect(origenCoherenteConElMotivo("ENTRADA", "COMPRA", "TRANSFORMACION")).toBe(false);
+  });
+  it("una anulación puede llevar el origen de la orden que revierte", () => {
+    expect(origenCoherenteConElMotivo("ANULACION", "ANULACION", "TRANSFORMACION")).toBe(true);
+  });
+  it("una persona no elige los motivos de la producción", () => {
+    expect(motivoManualPermitido("SALIDA", "CONSUMO_DE_TRANSFORMACION")).toBe(false);
+    expect(motivoManualPermitido("ENTRADA", "PRODUCTO_DE_TRANSFORMACION")).toBe(false);
   });
 });
 

@@ -16,6 +16,7 @@ import {
   ORIGEN_EJEMPLAR_DE_TICKET,
   ORIGEN_MANUAL,
   ORIGEN_RECEPCION,
+  ORIGEN_TRANSFORMACION,
   ordenarParaBloqueo,
   type ClaseDeMovimiento,
   type RenglonDeLibro,
@@ -31,8 +32,12 @@ import type { ControlDeStock, DetalleDeNegativo, ErrorDeStock } from "./errores"
 /** El único control que mira el libro (D125, declarado en `capacidades/controles`). */
 export const CONTROL_DE_NEGATIVO: ControlDeStock = "stock.existencia_negativa";
 
-/** Lo que identifica un movimiento que viene de otro módulo: el ejemplar de un ticket (ventas) o la recepción (compras). */
-const ORIGENES_DE_OTRO_MODULO: readonly string[] = [ORIGEN_EJEMPLAR_DE_TICKET, ORIGEN_RECEPCION];
+/** Lo que identifica un movimiento que viene de otro módulo: el ejemplar de un ticket (ventas), la recepción (compras) o la orden de producción. */
+const ORIGENES_DE_OTRO_MODULO: readonly string[] = [
+  ORIGEN_EJEMPLAR_DE_TICKET,
+  ORIGEN_RECEPCION,
+  ORIGEN_TRANSFORMACION,
+];
 
 /**
  * Un movimiento ya resuelto, listo para escribir en el libro: lo arma un caso de uso (entrada, salida, transferencia, ajuste, anulación,

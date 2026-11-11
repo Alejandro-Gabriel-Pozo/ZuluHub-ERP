@@ -276,7 +276,6 @@ describe.skipIf(base === null)("0030 stock: la migración contra una base real",
         ["conteo_registro", "existencia_al_registrar", "INSERT"],
         ["conteo_registro", "orden", "INSERT"],
         ["composicion", "registrada_en", "INSERT"],
-        ["componente_de_composicion", "compuesto_id", "INSERT"],
         ["deposito", "uso", "UPDATE"],
         ["deposito", "sucursal_id", "UPDATE"],
         ["deposito", "activo", "INSERT"],
@@ -1432,16 +1431,16 @@ describe.skipIf(base === null)("0030 stock: la migración contra una base real",
   describe("artículos de stock", () => {
     it("solo materia prima, insumo y reventa; la unidad de stock es la base del producto; uno por producto; no cambia nada que lo identifique", async () => {
       const e = await escenario();
+      // E6 (0032) abre el stock propio del elaborado y del vendible (D94: la medialuna se vende y se produce): lo cierra el caso de uso.
       for (const clase of ["ELABORADO", "VENDIBLE"] as const) {
         const producto = await productoDeBase(dueno, e.m.empresa, { clase });
         await sinConfirmar(dueno, async () => {
-          check(
+          acepta(
             await intentoDelDueno(
               dueno,
               `insert into articulo_de_stock (id, empresa_id, producto_id, unidad_de_stock_id, dimension) values ($1, $2, $3, 'UNIDAD', 'CONTEO')`,
               [randomUUID(), e.m.empresa, producto],
             ),
-            "articulo_de_stock_clase_no_controlable",
           );
         });
       }
@@ -2142,10 +2141,8 @@ describe.skipIf(base === null)("0030 stock: la migración contra una base real",
           );
         check(await insertar(3, v1.producto), "composicion_numero_salteado");
         check(await insertar(1, v1.producto), "composicion_numero_salteado");
-        check(
-          await insertar(2, await productoDeBase(dueno, e.m.empresa, { clase: "ELABORADO" })),
-          "composicion_producto_no_vendible",
-        );
+        // E6 (0032): el elaborado también lleva la receta de su tanda.
+        acepta(await insertar(1, await productoDeBase(dueno, e.m.empresa, { clase: "ELABORADO" })));
         check(
           await insertar(1, await productoDeBase(dueno, e.m.empresa, { clase: "REVENTA" })),
           "composicion_producto_no_vendible",
@@ -2263,10 +2260,12 @@ describe.skipIf(base === null)("0030 stock: la migración contra una base real",
           await componente(3, otro.articulo, "1", "UNIDAD", "CONTEO"),
           "componente_articulo_uk",
         );
-        // El destino es un artículo; el compuesto (subcomposición) lo abre E6.
+        // El destino es un artículo o un elaborado (E6, 0032), nunca los dos ni ninguno.
         check(await componente(3, null, "1", "UNIDAD", "CONTEO"), "componente_destino_ck");
-        // Sin permiso sobre `compuesto_id` la aplicación ni lo nombra.
-        denegado(await componente(3, e.articulo, "1", "UNIDAD", "CONTEO", producto));
+        check(
+          await componente(3, e.articulo, "1", "UNIDAD", "CONTEO", producto),
+          "componente_destino_ck",
+        );
       });
       await sinConfirmar(dueno, async () => {
         const nueva = randomUUID();
@@ -2283,7 +2282,7 @@ describe.skipIf(base === null)("0030 stock: la migración contra una base real",
             `insert into componente_de_composicion (empresa_id, composicion_id, numero, compuesto_id, cantidad, unidad_id, dimension) values ($1, $2, 1, $3, 1, 'UNIDAD', 'CONTEO')`,
             [e.m.empresa, nueva, producto],
           ),
-          "componente_compuesto_cerrado_ck",
+          "componente_compuesto_no_elaborado",
         );
       });
     });
