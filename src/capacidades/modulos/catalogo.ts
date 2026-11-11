@@ -4,7 +4,7 @@
  * permiso para una acción que no existe, no compila.
  */
 
-import { ACCIONES_DE_LOTES } from "./catalogo-lotes-y-produccion";
+import { ACCIONES_DE_LOTES, MODULO_DE_PRODUCCION } from "./catalogo-lotes-y-produccion";
 
 export type EstadoDeConstruccion = "disponible" | "en_desarrollo";
 
@@ -60,9 +60,8 @@ export type CatalogoComercial = Readonly<Record<string, DefinicionDeModulo>>;
  * define en `permisos/empresa.ts`.
  *
  * Es el NÚCLEO (empresas, sucursales, identidad y la configuración fiscal del gerente): no depende de un
- * plan, así que nunca queda en solo lectura (el guard ignora ese estado en los módulos obligatorios). Aun
- * así cada acción declara su `efecto`, para que el día que un módulo con plan copie el patrón no haya
- * acciones sin clasificar.
+ * plan, así que nunca queda en solo lectura (el guard ignora ese estado en los módulos obligatorios).
+ * Aun así cada acción declara su `efecto`, para que no haya acciones sin clasificar.
  * Criterio: lo que quita, cierra o responde algo ya iniciado (apagar, revocar o reenviar una
  * invitación, desactivar una sucursal, cancelar, aceptar o rechazar un traspaso) es `COMPLETA_CIERRA`;
  * lo que da de alta, cambia la configuración, reactiva o amplía un alcance (invitar, asignar
@@ -381,6 +380,7 @@ export const CATALOGO_DE_MODULOS = {
       "compras.configurar": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
+  produccion: MODULO_DE_PRODUCCION,
 } as const satisfies CatalogoComercial;
 
 type Catalogo = typeof CATALOGO_DE_MODULOS;

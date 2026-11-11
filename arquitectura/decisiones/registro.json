@@ -1151,5 +1151,35 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "estado": "PENDIENTE_DE_OK"
+  },
+  {
+    "id": "DEC-0119",
+    "tipo": "DATOS",
+    "decision": "El motivo de cancelar o anular una orden de producción es obligatorio y admite hasta 200 caracteres.",
+    "que_cambia": "El largo que acepta el motivo en las pantallas y el servidor.",
+    "donde": "src/primitivas/texto/motivo-de-orden-de-produccion.ts (E6-T8)",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "estado": "PENDIENTE_DE_OK"
+  },
+  {
+    "id": "DEC-0120",
+    "tipo": "DATOS",
+    "decision": "Al cerrar una orden, el consumo real se registra por artículo (insumos repetidos se fusionan) y el costo del producto se congela con ese consumo; el producto entra con lote OP-<número>.",
+    "que_cambia": "Cómo se reparte el costo y el nombre del lote del producto terminado.",
+    "donde": "src/modulos/produccion/casos-de-uso/cerrar-orden.ts (E6-T8)",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "estado": "PENDIENTE_DE_OK"
+  },
+  {
+    "id": "DEC-0121",
+    "tipo": "DATOS",
+    "decision": "Anular una orden cerrada genera movimientos espejo (no borra); si el producto ya se usó, se frena con PRODUCTO_YA_USADO y no se deja saldo negativo.",
+    "que_cambia": "Si se permite anular cuando el producto ya se vendió o consumió.",
+    "donde": "src/modulos/produccion/casos-de-uso/cancelar-y-anular.ts (E6-T8)",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "estado": "PENDIENTE_DE_OK"
   }
 ]

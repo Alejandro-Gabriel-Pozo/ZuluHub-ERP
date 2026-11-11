@@ -52,6 +52,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "ventas"
       | "clientes"
       | "compras"
+      | "produccion"
     >();
     expectTypeOf<ClaveAccion>().toEqualTypeOf<
       | "usuarios.invitar"
@@ -136,6 +137,11 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "lotes.cambiar_calidad"
       | "lotes.corregir"
       | "lotes.reasignar"
+      | "transformaciones.ver"
+      | "transformaciones.abrir"
+      | "transformaciones.cerrar"
+      | "transformaciones.cancelar"
+      | "transformaciones.anular"
       | "cajas.ver"
       | "cajas.crear"
       | "cajas.editar"

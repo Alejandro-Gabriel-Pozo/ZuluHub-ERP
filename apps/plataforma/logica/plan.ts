@@ -15,6 +15,8 @@ export const ROTULO_DE_PERILLA: Readonly<Record<string, string>> = {
   // E6: decisión 175 (textos delegados: lo más corto) + clave de la perilla (`lotes` y `calidad_de_lote`, e6-recetas-produccion-especificacion §3.7).
   lotes: "Lotes",
   calidad_de_lote: "Calidad de lote",
+  // Decisión 175 (lo más corto) + clave de la perilla; el módulo se llama «Producción» en el prototipo aprobado produccion.html.
+  produccion: "Producción",
 };
 
 export const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {
@@ -22,6 +24,7 @@ export const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {
   facturacion: "Facturación",
   catalogo: "Catálogo",
   stock: "Stock",
+  produccion: "Producción",
   vidriera: "Vidriera",
   // Fuente de los tres rótulos: decisión 175 del dueño (09/11/2026, textos delegados: reutilizar lo aprobado, lo más corto).
   // `caja`: nombre del módulo en los prototipos aprobados caja.html y medios.html. `ventas`: palabra del módulo y de las

@@ -75,7 +75,14 @@ type TxDePruebaConStock = TxDePrueba & RepositoriosDeStock;
 
 export async function montarStock(
   base: BaseDePruebas,
-  opciones: Readonly<{ reglas?: ReglasDeEmpresa; conexiones?: number }> = {},
+  opciones: Readonly<{
+    reglas?: ReglasDeEmpresa;
+    conexiones?: number;
+    /** E6: los repositorios de otro módulo que la transacción también lleva (producción), sobre la misma conexión. */
+    repositoriosExtra?: (db: never) => object;
+    /** E6: módulos que la autorización suma a los activados además de `catalogo` y `stock`. */
+    modulosExtra?: readonly string[];
+  }> = {},
 ) {
   const propia = await crearBaseAparte(base);
   /** El alcance de sucursales que la base le da a cada rol (TODAS a gerente y administrador); una prueba lo fija acá para el restringido. */
@@ -91,6 +98,9 @@ export async function montarStock(
     return {
       ...tx,
       ...crearRepositoriosDeStock(tx.db),
+      ...(opciones.repositoriosExtra === undefined
+        ? {}
+        : opciones.repositoriosExtra(tx.db as never)),
       derechos: {
         ...tx.derechos,
         deLaEmpresa: async (contexto) => {
@@ -122,7 +132,9 @@ export async function montarStock(
             await barrera();
           }
           if (datos.rol === null) return datos;
-          const sumados = ["catalogo", "stock"].filter((m) => !sinModulos.has(m));
+          const sumados = ["catalogo", "stock", ...(opciones.modulosExtra ?? [])].filter(
+            (m) => !sinModulos.has(m),
+          );
           return {
             ...datos,
             modulosActivados: [...datos.modulosActivados, ...sumados],
@@ -326,17 +338,23 @@ export async function montarStock(
       barrera = () => Promise.resolve();
     },
     /** Apaga un módulo para la autorización (queda «no activo»): el rol y la base siguen igual. */
-    apagarModulo: (modulo: "stock" | "catalogo") => {
+    apagarModulo: (modulo: "stock" | "catalogo" | "produccion") => {
       sinModulos.add(modulo);
     },
     encenderModulos: () => {
       sinModulos.clear();
     },
+    reglas,
     casos,
     consultas,
     puertos,
     encenderPerilla: (
-      perilla: "composiciones_con_perdida" | "subcomposiciones" | "lotes" | "calidad_de_lote",
+      perilla:
+        | "composiciones_con_perdida"
+        | "subcomposiciones"
+        | "lotes"
+        | "calidad_de_lote"
+        | "produccion",
     ) => {
       perillasEncendidas.add(perilla);
     },

@@ -70,7 +70,26 @@ export {
   type MovimientoRegistrado,
   type PedidoDeMovimiento,
 } from "./casos-de-uso/movimiento-en-tx";
-// E6: lo que la producción reutiliza del dominio de stock (una regla, un lugar).
+// E6: lo que la producción reutiliza de stock (una regla, un lugar): el guard, la explosión, el espejo de un movimiento, los faltantes y las constantes del libro.
+export {
+  autorizar as autorizarEnStock,
+  exigirAlcanceDeSucursal,
+  traducir as traducirDeStock,
+} from "./casos-de-uso/comun";
+export { anularPorEspejoEnTx } from "./casos-de-uso/espejo-de-movimiento";
+export { evaluarFaltantes } from "./casos-de-uso/faltantes";
+export { productosParaExplotar } from "./casos-de-uso/lectura-de-venta";
+export { CONTROL_DE_NEGATIVO } from "./casos-de-uso/movimiento-en-tx";
+export { leerCantidad, leerDetalle } from "./casos-de-uso/movimientos-comun";
+export { fechaValida as fechaCivilValida } from "./casos-de-uso/corregir-lote";
+export { explotarConsumo, type ProductoParaExplotar } from "./dominio/explosion";
+export { ORIGEN_TRANSFORMACION } from "./dominio/movimiento";
+export {
+  MOTIVO_CONSUMO_DE_TRANSFORMACION,
+  MOTIVO_PRODUCTO_DE_TRANSFORMACION,
+} from "./dominio/motivos";
+export type { LoteDeEntrada } from "./casos-de-uso/lotes-del-libro";
+export type { ControlDeStock } from "./casos-de-uso/errores";
 export { huellaDeComando, type CampoDeHuella, type RenglonDeHuella } from "./dominio/huella";
 export { traducirMovimiento } from "./casos-de-uso/movimientos-comun";
 // Los puertos que stock ofrece a ventas y a compras (E5-T7): contratos, fábricas y los tipos de lo que entra y sale de cada uno.

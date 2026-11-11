@@ -107,5 +107,10 @@ export type ErrorDeStock =
   | "SIN_CAMBIOS"
   | Readonly<{
       error: "FUNCION_NO_INCLUIDA";
-      perilla: "composiciones_con_perdida" | "subcomposiciones" | "lotes" | "calidad_de_lote";
+      perilla:
+        | "composiciones_con_perdida"
+        | "subcomposiciones"
+        | "lotes"
+        | "calidad_de_lote"
+        | "produccion";
     }>;

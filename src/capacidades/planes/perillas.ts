@@ -83,6 +83,13 @@ export const CATALOGO_DE_PERILLAS = {
     base: { encendida: false },
     modulo: "stock",
   },
+  // E6-T8: producir en tandas (D146: la cafetería no lo usa). La verifica `abrirOrden`; es del módulo `produccion`.
+  produccion: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "produccion",
+  },
   // CE0 (catalogo-carta-niveles-y-elecciones §2.1): un interruptor por nivel extra de la escalera de
   // elecciones. El de stock (`composiciones_por_tamano`, N4) escala la receta por tamaño y suma la excepción
   // por variante; el de catálogo (`conjuntos`, combos) habilita los conjuntos. Las de variantes con grupos de

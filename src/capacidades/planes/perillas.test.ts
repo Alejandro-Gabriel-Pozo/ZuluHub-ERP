@@ -123,6 +123,7 @@ describe("el catálogo de perillas real", () => {
       | "cajas_por_sucursal"
       | "lotes"
       | "calidad_de_lote"
+      | "produccion"
     >();
     // @ts-expect-error esa perilla no está declarada (la registra el módulo que la verifica)
     const inventada: ClavePerilla = "terminal_compartida";

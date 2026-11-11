@@ -11,3 +11,24 @@ export const ACCIONES_DE_LOTES = {
   "lotes.corregir": { capacidad: null, efecto: "CREA_AMPLIA" },
   "lotes.reasignar": { capacidad: null, efecto: "CREA_AMPLIA" },
 } as const;
+
+/**
+ * Producción (E6, `e6-recetas-produccion-especificacion.md` §3.2 y §3.6): módulo propio, `requiere: [stock]` (decisión del dueño del 26/10: «es bastante
+ * complejo como para ser un módulo propio; eso lo aísla mejor»). Nace `en_desarrollo` hasta que T9 lo abra a las empresas: el guard rechaza todo con
+ * `MODULO_EN_DESARROLLO`. Efectos: mirar es `LECTURA`; abrir crea; cerrar, cancelar y anular cierran lo iniciado (se permiten en solo lectura).
+ */
+export const MODULO_DE_PRODUCCION = {
+  estado: "en_desarrollo",
+  obligatorio: false,
+  requiere: ["stock"],
+  usaSiExiste: ["catalogo"],
+  datosRequeridos: [],
+  implementadoPor: ["modulos/produccion"],
+  acciones: {
+    "transformaciones.ver": { capacidad: null, efecto: "LECTURA" },
+    "transformaciones.abrir": { capacidad: null, efecto: "CREA_AMPLIA" },
+    "transformaciones.cerrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+    "transformaciones.cancelar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+    "transformaciones.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+  },
+} as const;

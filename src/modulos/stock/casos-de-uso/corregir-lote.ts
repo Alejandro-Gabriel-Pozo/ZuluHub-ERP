@@ -10,7 +10,7 @@ import { leerDetalle } from "./movimientos-comun";
 type R<S> = Resultado<S, ErrorDeStock>;
 
 /** Una fecha civil que existe en el calendario y que la base admite (2000 a 2200). */
-function fechaValida(texto: unknown): texto is string {
+export function fechaValida(texto: unknown): texto is string {
   if (typeof texto !== "string" || !esFechaCivil(texto)) return false;
   const fecha = new Date(`${texto}T00:00:00Z`);
   return (

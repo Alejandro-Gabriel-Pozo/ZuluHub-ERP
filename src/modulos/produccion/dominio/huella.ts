@@ -13,6 +13,15 @@ export const huellaDeCerrarOrden = (
 ): string =>
   huellaDeComando("produccion.cerrar_orden", [ordenId, obtenido, unidadId, vence], consumos);
 
+/** La del movimiento del PRODUCTO de un cierre (el consumo lleva la del cierre entero): otra clave, otro contenido. */
+export const huellaDelProductoDeLaOrden = (
+  ordenId: string,
+  obtenido: string,
+  unidadId: string,
+  vence: string | null,
+): string =>
+  huellaDeComando("produccion.producto_de_la_orden", [ordenId, obtenido, unidadId, vence], []);
+
 export const huellaDeAnularOrden = (ordenId: string, motivo: string): string =>
   huellaDeComando("produccion.anular_orden", [ordenId, motivo], []);
 

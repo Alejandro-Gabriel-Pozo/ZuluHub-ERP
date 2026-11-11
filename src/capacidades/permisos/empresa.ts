@@ -94,6 +94,12 @@ export const PERMISOS_DE_EMPRESA = {
   "lotes.cambiar_calidad": ["GERENTE", "ADMINISTRADOR"],
   "lotes.corregir": ["GERENTE", "ADMINISTRADOR"],
   "lotes.reasignar": ["GERENTE", "ADMINISTRADOR"],
+  // E6 (T8, P-2, DEC-0101): producción. Mirar, abrir y cerrar una orden, los tres roles; cancelar y anular (deshacer stock y costo), gerente y administrador.
+  "transformaciones.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "transformaciones.abrir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "transformaciones.cerrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "transformaciones.cancelar": ["GERENTE", "ADMINISTRADOR"],
+  "transformaciones.anular": ["GERENTE", "ADMINISTRADOR"],
   "depositos.desactivar": ["GERENTE", "ADMINISTRADOR"],
   "articulos.dejar_de_controlar": ["GERENTE", "ADMINISTRADOR"],
   "stock.ajustar": ["GERENTE", "ADMINISTRADOR"],
