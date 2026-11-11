@@ -6,6 +6,8 @@ import {
   depositoDeVentaDe,
   existenciasParaMostrar,
 } from "./casos-de-uso/lectura-de-venta";
+import { ajustarCostoPorOrigen } from "./casos-de-uso/ajuste-de-costo";
+import type { EntradaDeAjusteDeCosto, SalidaDeAjusteDeCosto } from "./casos-de-uso/ajuste-de-costo";
 import { registrarEntradaPorOrigen, revertirPorOrigen } from "./casos-de-uso/reversion-y-entrada";
 import { registrarSalidaPorVenta } from "./casos-de-uso/salida-por-venta";
 import type {
@@ -93,6 +95,15 @@ export interface EntradaPorOrigen {
   ): Promise<R<SalidaDeEntradaPorOrigen>>;
 }
 
+/** El ajuste del costo de una compra corregida (E9 T11, D-E9-3): corrige el promedio por la diferencia sobre lo que queda; lo ya consumido conserva su costo. */
+export interface AjusteDeCostoPorOrigen {
+  ajustar(
+    tx: TxDeStock,
+    contexto: ContextoOperativo,
+    entrada: EntradaDeAjusteDeCosto,
+  ): Promise<R<SalidaDeAjusteDeCosto>>;
+}
+
 export type PuertosDeStock = Readonly<{
   consumoDeStock: ConsumoDeStock;
   reversionDeStock: ReversionDeStock;
@@ -100,6 +111,7 @@ export type PuertosDeStock = Readonly<{
   articulosDeVenta: ArticulosDeVenta;
   existenciaParaMostrar: ExistenciaParaMostrar;
   entradaPorOrigen: EntradaPorOrigen;
+  ajusteDeCostoPorOrigen: AjusteDeCostoPorOrigen;
 }>;
 
 export const crearConsumoDeStock = ({ reglas }: DependenciasDePuertosDeStock): ConsumoDeStock => ({
@@ -128,7 +140,13 @@ export const crearEntradaPorOrigen = ({
     registrarEntradaPorOrigen(tx, contexto, reglas, entrada),
 });
 
-/** Los seis puertos juntos: lo que la composición le pasa a ventas y a compras (T12). */
+export const crearAjusteDeCostoPorOrigen = ({
+  reglas,
+}: DependenciasDePuertosDeStock): AjusteDeCostoPorOrigen => ({
+  ajustar: (tx, contexto, entrada) => ajustarCostoPorOrigen(tx, contexto, reglas, entrada),
+});
+
+/** Los siete puertos juntos: lo que la composición le pasa a ventas y a compras (T12). */
 export const crearPuertosDeStock = (
   dependencias: DependenciasDePuertosDeStock,
 ): PuertosDeStock => ({
@@ -138,4 +156,5 @@ export const crearPuertosDeStock = (
   articulosDeVenta: crearArticulosDeVenta(dependencias),
   existenciaParaMostrar: crearExistenciaParaMostrar(),
   entradaPorOrigen: crearEntradaPorOrigen(dependencias),
+  ajusteDeCostoPorOrigen: crearAjusteDeCostoPorOrigen(dependencias),
 });

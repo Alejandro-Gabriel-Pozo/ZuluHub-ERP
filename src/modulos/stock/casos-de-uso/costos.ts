@@ -68,7 +68,7 @@ export function costosDeclaradosDe(
   );
 }
 
-const estadoDesdeGuardado = (guardado: EstadoDeCostoGuardado): EstadoDeCosto => ({
+export const estadoDesdeGuardado = (guardado: EstadoDeCostoGuardado): EstadoDeCosto => ({
   promedio: precioUnitarioDesdeTexto(guardado.costoUnitario),
   cantidadValorizada: cantidadDesdeTexto(guardado.cantidadValorizada),
 });
