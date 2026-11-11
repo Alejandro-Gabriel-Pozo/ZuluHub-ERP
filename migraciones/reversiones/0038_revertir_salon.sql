@@ -201,23 +201,11 @@ DROP FUNCTION IF EXISTS linea_importe_fijo_solo_compartida();
 DROP FUNCTION IF EXISTS copias_cuadran();
 DROP FUNCTION IF EXISTS linea_copiada_validar_alta();
 
--- El tope de claves del vocabulario vuelve a 500 (0007). No toca filas: una versión de marca con más de 500 claves seguiría guardada, pero no se podría
--- volver a guardar hasta recortarla.
-CREATE OR REPLACE FUNCTION vocabulario_valido(v jsonb) RETURNS boolean LANGUAGE sql IMMUTABLE
-  SET search_path = pg_catalog, public, pg_temp AS
-$$
-  SELECT CASE
-    WHEN v IS NULL OR jsonb_typeof(v) <> 'object' THEN false
-    ELSE (SELECT count(*) FROM jsonb_object_keys(v)) <= 500
-         AND NOT EXISTS (
-           SELECT 1 FROM jsonb_each(v) AS e (texto, valor)
-            WHERE char_length(e.texto) > 120
-               OR e.texto !~ '^[a-z][a-z0-9_]*(\.[a-z0-9_]+){1,5}$'
-               OR jsonb_typeof(e.valor) <> 'string'
-               OR NOT public.texto_visible_valido(e.valor #>> '{}', 200)
-         )
-  END
-$$;
+-- El tope de claves del vocabulario vuelve a 500 (0007). No borra filas: si alguna versión de marca ya tiene más de 500 claves, el ADD CONSTRAINT
+-- falla y no se pierde nada (hay que recortar ese vocabulario antes de revertir).
+ALTER TABLE version_de_marca DROP CONSTRAINT IF EXISTS version_de_marca_vocabulario_ck;
+ALTER TABLE version_de_marca ADD CONSTRAINT version_de_marca_vocabulario_ck CHECK (vocabulario_valido(vocabulario));
+DROP FUNCTION IF EXISTS vocabulario_valido_ampliado(jsonb);
 
 -- Sin esta fila, la migración figuraría aplicada y el ejecutor no volvería a correrla.
 DO $$

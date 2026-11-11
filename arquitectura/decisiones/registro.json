@@ -879,6 +879,6 @@
     "estado": "PENDIENTE_DE_OK",
     "decision": "El tope de textos del vocabulario por marca sube de 500 a 1000: el catálogo del código ya lo pasó con los textos del salón y de las comandas.",
     "que_cambia": "Cuántos textos propios puede tener una marca; no cambia ningún texto guardado.",
-    "donde": "migraciones/0038_salon.sql (vocabulario_valido) y test/integracion/marcas-sql.test.ts"
+    "donde": "migraciones/0038_salon.sql (vocabulario_valido_ampliado) y test/integracion/marcas-sql.test.ts"
   }
 ]

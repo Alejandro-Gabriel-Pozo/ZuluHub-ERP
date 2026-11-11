@@ -1089,21 +1089,30 @@ CREATE POLICY intento_de_impresion_app_alta ON intento_de_impresion FOR INSERT T
 
 -- ---------------------------------------------------------------------------------------------------------------------------------------------
 -- VOCABULARIO: el tope de claves por marca pasa de 500 a 1000 (DEC-0088). El catálogo de textos del código ya pasó de 500 con los textos del salón y
--- de las comandas; el diccionario por defecto tiene que seguir siendo un vocabulario válido para la base (marcas-sql.test.ts). Es la misma función de
--- 0007 con otro tope: no cambia ninguna fila ni ningún permiso, y quien ya tenga un vocabulario de hasta 500 claves lo sigue teniendo válido.
+-- de las comandas; el diccionario por defecto tiene que seguir siendo un vocabulario válido para la base (marcas-sql.test.ts). `vocabulario_valido`
+-- (0007) NO se toca: sigue siendo LA regla de cada texto y de cada clave, con su tope de 500. La función nueva parte el vocabulario en tramos de a
+-- 500 claves y le pide a esa misma función que valide cada tramo, así la forma de las claves y de los textos vive en un solo lugar. No cambia
+-- ninguna fila: quien ya tenga un vocabulario de hasta 500 claves lo sigue teniendo válido.
 -- ---------------------------------------------------------------------------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION vocabulario_valido(v jsonb) RETURNS boolean LANGUAGE sql IMMUTABLE
+CREATE FUNCTION vocabulario_valido_ampliado(v jsonb) RETURNS boolean LANGUAGE sql IMMUTABLE
   SET search_path = pg_catalog, public, pg_temp AS
 $$
   SELECT CASE
     WHEN v IS NULL OR jsonb_typeof(v) <> 'object' THEN false
     ELSE (SELECT count(*) FROM jsonb_object_keys(v)) <= 1000
-         AND NOT EXISTS (
-           SELECT 1 FROM jsonb_each(v) AS e (texto, valor)
-            WHERE char_length(e.texto) > 120
-               OR e.texto !~ '^[a-z][a-z0-9_]*(\.[a-z0-9_]+){1,5}$'
-               OR jsonb_typeof(e.valor) <> 'string'
-               OR NOT public.texto_visible_valido(e.valor #>> '{}', 200)
-         )
+         AND coalesce((
+           SELECT bool_and(public.vocabulario_valido(tramos.tramo))
+             FROM (
+               SELECT jsonb_object_agg(numeradas.clave, numeradas.texto) AS tramo
+                 FROM (
+                   SELECT e.key AS clave, e.value AS texto, row_number() OVER (ORDER BY e.key) / 500 AS grupo
+                     FROM jsonb_each(v) AS e
+                 ) AS numeradas
+                GROUP BY numeradas.grupo
+             ) AS tramos
+         ), true)
   END
 $$;
+GRANT EXECUTE ON FUNCTION vocabulario_valido_ampliado(jsonb) TO pedernal_plataforma;   -- como el resto de las validaciones de marcas (0007): las ejecuta quien escribe la columna
+ALTER TABLE version_de_marca DROP CONSTRAINT version_de_marca_vocabulario_ck;
+ALTER TABLE version_de_marca ADD CONSTRAINT version_de_marca_vocabulario_ck CHECK (vocabulario_valido_ampliado(vocabulario));

@@ -1226,14 +1226,14 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
       await completa.connect();
       try {
         const { rows } = await completa.query<{ v: boolean }>(
-          "select vocabulario_valido($1::jsonb) as v",
+          "select vocabulario_valido_ampliado($1::jsonb) as v",
           [JSON.stringify(diccionario)],
         );
         expect(rows).toEqual([{ v: true }]);
         const con = (n: number) =>
           Object.fromEntries(Array.from({ length: n }, (_, i) => [`a.k${i}`, "t"]));
         const { rows: tope } = await completa.query<{ v: boolean }>(
-          `select vocabulario_valido(v::jsonb) as v from unnest($1::text[]) as v`,
+          `select vocabulario_valido_ampliado(v::jsonb) as v from unnest($1::text[]) as v`,
           [[con(1000), con(1001)].map((v) => JSON.stringify(v))],
         );
         expect(tope.map((r) => r.v)).toEqual([true, false]);
