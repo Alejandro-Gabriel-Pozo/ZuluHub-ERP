@@ -5,13 +5,9 @@ import {
   armarCancelarConteo,
   armarRegistrarConteo,
 } from "./conteos";
-import {
-  armarCambiarCalidadDeLote,
-  armarControlarLote,
-  armarCorregirLote,
-  armarDejarDeControlarLote,
-  armarReasignarLote,
-} from "./lotes";
+import { armarCambiarCalidadDeLote, armarControlarLote, armarDejarDeControlarLote } from "./lotes";
+import { armarCorregirLote } from "./corregir-lote";
+import { armarReasignarLote } from "./reasignar-lote";
 import { armarGuardarComposicion, armarRetirarComposicion } from "./composiciones";
 import type { DependenciasDeStock } from "./contrato";
 import type { DECLARACIONES } from "./declaraciones";

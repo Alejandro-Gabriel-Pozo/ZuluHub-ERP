@@ -1135,7 +1135,7 @@
   {
     "id": "DEC-0117",
     "tipo": "CLIENTE",
-    "decision": "Para un artículo con control de lote, lo que muestra stock y el puerto de ventas es lo disponible (lotes liberados, no vencidos, en depósito normal), nunca negativo; sin control, la existencia de siempre.",
+    "decision": "Con control de lote, stock y el puerto de ventas muestran lo disponible (lotes liberados, no vencidos, depósito normal), nunca negativo; sin control, la existencia de siempre.",
     "que_cambia": "El «quedan N» que ve el cajero y la columna disponible de existencias.",
     "donde": "src/modulos/stock/casos-de-uso/lectura-de-lotes.ts disponibleDe (E6-T7, D118)",
     "fecha": "2026-11-11",

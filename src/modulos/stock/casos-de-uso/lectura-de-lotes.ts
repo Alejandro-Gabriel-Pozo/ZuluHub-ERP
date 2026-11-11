@@ -14,11 +14,8 @@ import {
   situacionDeVencimiento,
   type SituacionDeVencimiento,
 } from "../dominio/vencimientos";
-import type {
-  ControlDeLote,
-  MovimientoDeLote,
-  SaldoDeLoteLeido,
-} from "../persistencia/repositorio-de-lotes";
+import type { MovimientoDeLote, SaldoDeLoteLeido } from "../persistencia/lecturas-de-lotes";
+import type { ControlDeLote } from "../persistencia/repositorio-de-lotes";
 import type { TxDeStock } from "./contrato";
 
 /**
