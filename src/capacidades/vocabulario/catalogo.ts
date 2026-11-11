@@ -24,6 +24,8 @@ import { TEXTOS_DE_FISCAL_CONFIGURACION } from "./catalogo-fiscal-configuracion"
 import { TEXTOS_DE_FISCAL_EMITIR } from "./catalogo-fiscal-emitir";
 import { TEXTOS_DE_FISCAL_IMPRIMIR } from "./catalogo-fiscal-imprimir";
 import { TEXTOS_DE_FISCAL_PANTALLAS } from "./catalogo-fiscal-pantallas";
+import { TEXTOS_DE_LOTES } from "./catalogo-lotes";
+import { TEXTOS_DE_PRODUCCION } from "./catalogo-produccion";
 import { TEXTOS_DE_STOCK } from "./catalogo-stock";
 import { TEXTOS_DE_VENTAS } from "./catalogo-ventas";
 
@@ -342,6 +344,8 @@ export const CATALOGO_DE_TEXTOS = {
   ...TEXTOS_DE_CAJA,
   ...TEXTOS_DE_VENTAS,
   ...TEXTOS_DE_STOCK,
+  ...TEXTOS_DE_PRODUCCION,
+  ...TEXTOS_DE_LOTES,
 } as const satisfies Record<string, DefinicionDeTexto>;
 
 export type ClaveDeTexto = keyof typeof CATALOGO_DE_TEXTOS;
