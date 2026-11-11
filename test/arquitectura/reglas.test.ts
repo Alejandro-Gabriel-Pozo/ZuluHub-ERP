@@ -405,6 +405,27 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "ventas-sin-salon-ni-comandas",
+      archivos: {
+        "src/modulos/ventas/casos-de-uso/c.ts": importa("../../salon/publico"),
+        "src/modulos/salon/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "comandas-sin-salon",
+      archivos: {
+        "src/modulos/comandas/casos-de-uso/c.ts": importa("../../salon/publico"),
+        "src/modulos/salon/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "base-sin-salon-ni-comandas",
+      archivos: {
+        "src/modulos/caja/dominio/d.ts": importa("../../comandas/publico"),
+        "src/modulos/comandas/publico.ts": exporta,
+      },
+    },
+    {
       regla: "base-sin-ventas",
       archivos: {
         "src/modulos/caja/dominio/d.ts": importa("../../ventas/publico"),

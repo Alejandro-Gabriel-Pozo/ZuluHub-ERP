@@ -19,7 +19,7 @@ import { montarVentas, REGLAS_DE_PRUEBA } from "./ventas-apoyo";
  * ACTIVOS para la empresa (los módulos reales están en desarrollo: se inyectan `reglas` con ambos disponibles; el ROL y el ALCANCE salen de la base,
  * como siempre) y los repositorios del salón sobre la MISMA conexión de la transacción. Lo que se prueba pasa por el rol real.
  */
-export const REGLAS_DE_SALON: ReglasDeEmpresa = {
+const REGLAS_DE_SALON: ReglasDeEmpresa = {
   ...REGLAS_DE_PRUEBA,
   catalogo: {
     ...REGLAS_DE_PRUEBA.catalogo,
@@ -29,7 +29,7 @@ export const REGLAS_DE_SALON: ReglasDeEmpresa = {
 };
 
 /** Suma a la transacción de prueba los repositorios del salón y deja activos `salon` y `comandas` para el actor (lo demás lo deja `montarVentas`). */
-export function conSalon(tx: TxDePrueba): TxDePrueba {
+function conSalon(tx: TxDePrueba): TxDePrueba {
   const salon = crearRepositoriosDeSalon(tx.db);
   const comandas = crearRepositoriosDeComandas(tx.db);
   return {

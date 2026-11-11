@@ -30,7 +30,8 @@ export const DECLARACIONES = {
     },
   },
   anularItemEnviado: {
-    accion: "cuentas.anular_linea",
+    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `comandas.enviar`; el caso exige la de ventas que usa por dentro (ver su archivo).
+    accion: "comandas.enviar",
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
@@ -40,7 +41,8 @@ export const DECLARACIONES = {
     },
   },
   quitarSinEnviar: {
-    accion: "cuentas.anular_linea",
+    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `comandas.enviar`; el caso exige la de ventas que usa por dentro (ver su archivo).
+    accion: "comandas.enviar",
     repeticion: {
       regla: "YA_ESTABA",
       prueba: {
@@ -50,7 +52,8 @@ export const DECLARACIONES = {
     },
   },
   cambiarSalida: {
-    accion: "cuentas.agregar_linea",
+    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `comandas.enviar`; el caso exige la de ventas que usa por dentro (ver su archivo).
+    accion: "comandas.enviar",
     repeticion: {
       regla: "SIN_CAMBIOS",
       prueba: {

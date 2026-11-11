@@ -54,6 +54,18 @@
     "pruebas": "src/modulos/ventas/dominio"
   },
   {
+    "grupo": "salon (dominio)",
+    "archivos": "src/modulos/salon/dominio/**/*.ts",
+    "minutos": 5,
+    "pruebas": "src/modulos/salon/dominio"
+  },
+  {
+    "grupo": "comandas (dominio)",
+    "archivos": "src/modulos/comandas/dominio/**/*.ts",
+    "minutos": 5,
+    "pruebas": "src/modulos/comandas/dominio"
+  },
+  {
     "grupo": "stock (dominio)",
     "archivos": "src/modulos/stock/dominio/**/*.ts",
     "minutos": 10,

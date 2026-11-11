@@ -126,25 +126,18 @@ const SEPARADOR: LineaDePapel = { texto: "", estilo: "SEPARADOR" };
 function envolver(texto: string, columnas: number, estilo: EstiloDeLinea): LineaDePapel[] {
   const ancho = estilo === "GRANDE" ? Math.max(1, Math.floor(columnas / 2)) : columnas;
   const lineas: string[] = [];
-  let actual = "";
-  for (const palabra of texto.split(" ").filter((p) => p !== "")) {
-    let resto = palabra;
-    while (resto.length > ancho) {
-      if (actual !== "") {
-        lineas.push(actual);
-        actual = "";
+  for (const palabra of texto.split(" ")) {
+    // Los espacios de más dejan palabras vacías, que no dan ningún trozo. Una palabra más larga que el ancho se corta en trozos de a `ancho`; cada trozo se pega al renglón anterior solo si entra con su espacio.
+    for (let desde = 0; desde < palabra.length; desde += ancho) {
+      const trozo = palabra.slice(desde, desde + ancho);
+      const previo = lineas.at(-1);
+      if (previo !== undefined && previo.length + 1 + trozo.length <= ancho) {
+        lineas[lineas.length - 1] = `${previo} ${trozo}`;
+      } else {
+        lineas.push(trozo);
       }
-      lineas.push(resto.slice(0, ancho));
-      resto = resto.slice(ancho);
-    }
-    if (actual === "") actual = resto;
-    else if (actual.length + 1 + resto.length <= ancho) actual = `${actual} ${resto}`;
-    else {
-      lineas.push(actual);
-      actual = resto;
     }
   }
-  if (actual !== "") lineas.push(actual);
   return lineas.map((t) => ({ texto: t, estilo }));
 }
 
@@ -278,7 +271,8 @@ export function documentoDeTicket(
   const columnas = columnasDelPapel(opciones.ancho);
   const dosColumnas = (izquierda: string, derecha: string): LineaDePapel[] => {
     const lugar = columnas - derecha.length - 1;
-    if (lugar >= 1 && izquierda.length <= lugar) {
+    // La descripción siempre trae al menos la cantidad: con lugar 0 o negativo nunca entra y se parte.
+    if (izquierda.length <= lugar) {
       return [{ texto: `${izquierda.padEnd(lugar)} ${derecha}`, estilo: "NORMAL" }];
     }
     return [...envolver(izquierda, columnas, "NORMAL"), ...envolver(derecha, columnas, "NORMAL")];

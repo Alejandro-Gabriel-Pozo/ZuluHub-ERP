@@ -36,7 +36,7 @@ export const DECLARACIONES = {
       regla: "YA_ESTABA",
       prueba: {
         archivo: MESAS,
-        it: "I3: desactivar dos veces la misma mesa es ok y no audita la segunda",
+        it: "I3: desactivar dos veces la misma mesa es ok y no audita la segunda; sus casillas quedan libres",
       },
     },
   },
@@ -46,12 +46,13 @@ export const DECLARACIONES = {
       regla: "YA_ESTABA",
       prueba: {
         archivo: MESAS,
-        it: "I4: reactivar dos veces la misma mesa es ok y no audita la segunda",
+        it: "I4: reactivar dos veces la misma mesa es ok y no audita la segunda; vuelve a validar las casillas",
       },
     },
   },
   tomarPedido: {
-    accion: "cuentas.abrir",
+    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `mesas.ver`; el caso exige las acciones reales de ventas y comandas que usa por dentro (ver su archivo) y la base las valida todas al principio.
+    accion: "mesas.ver",
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
@@ -61,7 +62,8 @@ export const DECLARACIONES = {
     },
   },
   agregarAlPedido: {
-    accion: "cuentas.agregar_linea",
+    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `mesas.ver`; el caso exige las acciones reales de ventas y comandas que usa por dentro (ver su archivo) y la base las valida todas al principio.
+    accion: "mesas.ver",
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
@@ -71,7 +73,8 @@ export const DECLARACIONES = {
     },
   },
   liberarMesa: {
-    accion: "cuentas.anular",
+    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `mesas.ver`; el caso exige las acciones reales de ventas y comandas que usa por dentro (ver su archivo) y la base las valida todas al principio.
+    accion: "mesas.ver",
     repeticion: {
       regla: "YA_ESTABA",
       prueba: {
@@ -86,13 +89,13 @@ export const DECLARACIONES = {
       regla: "YA_ESTABA",
       prueba: {
         archivo: PEDIDO,
-        it: "I8: cambiar dos veces a la misma mesa es ok (yaExistia) y no audita la segunda",
+        it: "I8: cambiar dos veces a la misma mesa es ok (yaExistia) y no audita la segunda; los envíos viejos conservan su rótulo",
       },
     },
   },
   cobrarMesa: {
-    // La declaración admite UNA acción; el caso exige además `cuentas.cerrar` y `cuentas.anular` (ver `cobro.ts`).
-    accion: "tickets.cobrar",
+    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `mesas.ver`; el caso exige las acciones reales de ventas y comandas que usa por dentro (ver su archivo) y la base las valida todas al principio.
+    accion: "mesas.ver",
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
@@ -102,33 +105,35 @@ export const DECLARACIONES = {
     },
   },
   enviarACocina: {
-    accion: "comandas.enviar",
+    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `mesas.ver`; el caso exige las acciones reales de ventas y comandas que usa por dentro (ver su archivo) y la base las valida todas al principio.
+    accion: "mesas.ver",
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
         archivo: PEDIDO,
-        it: "I10: doble toque en «Enviar a cocina» con el mismo envío deja un envío y un trabajo, y devuelve yaExistia",
+        it: "I10: doble toque en «Enviar a cocina» con el mismo envío deja un envío y un trabajo, y devuelve yaExistia; sin nada pendiente, NADA_PARA_ENVIAR",
       },
     },
   },
   pedirQueSalga: {
-    accion: "comandas.enviar",
+    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `mesas.ver`; el caso exige las acciones reales de ventas y comandas que usa por dentro (ver su archivo) y la base las valida todas al principio.
+    accion: "mesas.ver",
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
         archivo: PEDIDO,
-        it: "I11: repetir «Pedir que salga» con el mismo envío no crea otro",
+        it: "I11: repetir «Pedir que salga» con el mismo envío no crea otro; lo que esperaba sale en ese envío",
       },
     },
   },
   anularItemEnviado: {
-    // La declaración admite UNA acción; el caso exige además `cuentas.agregar_linea` (lo parcial crea la línea del resto).
-    accion: "cuentas.anular_linea",
+    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `mesas.ver`; el caso exige las acciones reales de ventas y comandas que usa por dentro (ver su archivo) y la base las valida todas al principio.
+    accion: "mesas.ver",
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
         archivo: PEDIDO,
-        it: "I12: doble clic en anular un ítem enviado deja una anulación y un aviso",
+        it: "I12: doble clic en anular un ítem enviado deja una anulación y un aviso; el total cierra",
       },
     },
   },

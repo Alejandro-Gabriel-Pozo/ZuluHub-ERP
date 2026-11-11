@@ -20,14 +20,11 @@ export type EntradaDelEstado = Readonly<{
   unidaAMesa: number | null;
 }>;
 
-function estadoDeUnaCuenta(cuenta: CuentaParaElEstado): "EN_PEDIDO" | "OCUPADA" {
-  return cuenta.pendientes > 0 || cuenta.envios === 0 ? "EN_PEDIDO" : "OCUPADA";
-}
+const estaEnPedido = (cuenta: CuentaParaElEstado): boolean =>
+  cuenta.pendientes > 0 || cuenta.envios === 0;
 
 export function estadoDeMesa(entrada: EntradaDelEstado): EstadoDeMesa {
   if (entrada.unidaAMesa !== null) return "UNIDA";
   if (entrada.cuentas.length === 0) return "LIBRE";
-  return entrada.cuentas.some((c) => estadoDeUnaCuenta(c) === "EN_PEDIDO")
-    ? "EN_PEDIDO"
-    : "OCUPADA";
+  return entrada.cuentas.some(estaEnPedido) ? "EN_PEDIDO" : "OCUPADA";
 }

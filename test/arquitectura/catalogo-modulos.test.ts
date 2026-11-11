@@ -14,6 +14,14 @@ import {
   DECLARACIONES_DE_CONSULTAS_DE_CATALOGO,
 } from "../../src/modulos/catalogo/publico";
 import {
+  DECLARACIONES_DE_COMANDAS,
+  DECLARACIONES_DE_CONSULTAS_DE_COMANDAS,
+} from "../../src/modulos/comandas/publico";
+import {
+  DECLARACIONES_DE_CONSULTAS_DE_SALON,
+  DECLARACIONES_DE_SALON,
+} from "../../src/modulos/salon/publico";
+import {
   DECLARACIONES_DE_CONSULTAS_DE_STOCK,
   DECLARACIONES_DE_STOCK,
 } from "../../src/modulos/stock/publico";
@@ -73,7 +81,14 @@ const carpetaExiste = (carpeta: string): boolean => {
 type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 
 /** Los módulos declarados en el catálogo cuyas carpetas y casos de uso todavía no existen (T0). */
-const SIN_CONSTRUIR: readonly string[] = ["catalogo", "vidriera", "caja", "ventas"];
+const SIN_CONSTRUIR: readonly string[] = [
+  "catalogo",
+  "vidriera",
+  "caja",
+  "ventas",
+  "comandas",
+  "salon",
+];
 
 function crucesDelCatalogo(
   catalogo: CatalogoComercial,
@@ -244,6 +259,11 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     "modulos/cierre": accionesDe(DECLARACIONES_DE_CIERRE, DECLARACIONES_DE_CONSULTAS_DE_CIERRE),
     "modulos/ventas": accionesDe(DECLARACIONES_DE_VENTAS, DECLARACIONES_DE_CONSULTAS_DE_VENTAS),
     "modulos/stock": accionesDe(DECLARACIONES_DE_STOCK, DECLARACIONES_DE_CONSULTAS_DE_STOCK),
+    "modulos/comandas": accionesDe(
+      DECLARACIONES_DE_COMANDAS,
+      DECLARACIONES_DE_CONSULTAS_DE_COMANDAS,
+    ),
+    "modulos/salon": accionesDe(DECLARACIONES_DE_SALON, DECLARACIONES_DE_CONSULTAS_DE_SALON),
     "modulos/fiscal": accionesDe(
       DECLARACIONES_DE_FISCAL,
       DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
@@ -344,8 +364,15 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ).toEqual([]);
   });
 
-  it("catálogo, carta, caja y ventas son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1); stock salió con E5 y es disponible", () => {
-    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "vidriera", "caja", "ventas"]);
+  it("catálogo, carta, caja, ventas, comandas y salón son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1); stock salió con E5 y es disponible", () => {
+    expect([...SIN_CONSTRUIR]).toEqual([
+      "catalogo",
+      "vidriera",
+      "caja",
+      "ventas",
+      "comandas",
+      "salon",
+    ]);
     expect(SIN_CONSTRUIR).not.toContain("stock");
     expect(CATALOGO_DE_MODULOS.stock.estado).toBe("disponible");
     for (const clave of SIN_CONSTRUIR) {

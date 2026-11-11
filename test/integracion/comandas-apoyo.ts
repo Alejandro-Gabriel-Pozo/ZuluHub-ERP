@@ -24,7 +24,7 @@ import {
  * la empresa) con los repositorios de comandas sumados a la MISMA conexión de cada transacción (como la `TxDeApp` real) y el módulo `comandas` activo y
  * disponible para la empresa (el real está en desarrollo: se inyectan `reglas` y la autorización suma el módulo; el ROL y el ALCANCE salen de la base).
  */
-export const REGLAS_CON_COMANDAS: ReglasDeEmpresa = {
+const REGLAS_CON_COMANDAS: ReglasDeEmpresa = {
   catalogo: {
     ...REGLAS_DE_PRUEBA.catalogo,
     comandas: { ...CATALOGO_DE_MODULOS.comandas, estado: "disponible" },
@@ -33,7 +33,7 @@ export const REGLAS_CON_COMANDAS: ReglasDeEmpresa = {
 };
 
 /** Las reglas reales del catálogo: `comandas` está en desarrollo y nadie puede nada (denegar por defecto). */
-export const REGLAS_REALES: ReglasDeEmpresa = {
+const REGLAS_REALES: ReglasDeEmpresa = {
   catalogo: CATALOGO_DE_MODULOS,
   permisos: PERMISOS_DE_EMPRESA,
 };

@@ -116,10 +116,16 @@ export function repartirPorPorcentaje(
   const exactos = pesos.map((p) => centavos.valor * p); // escala 10^6
   const pisos = exactos.map((e) => e / CIEN_POR_CIENTO);
   const faltan = Number(centavos.valor - pisos.reduce((a, p) => a + p, 0n));
-  const orden = exactos
-    .map((e, i) => ({ i, resto: e % CIEN_POR_CIENTO }))
-    .sort((a, b) => (a.resto === b.resto ? a.i - b.i : a.resto > b.resto ? -1 : 1));
-  const extra = new Set(orden.slice(0, faltan).map((o) => o.i));
+  const restos = exactos.map((e) => e % CIEN_POR_CIENTO);
+  // Los centavos que faltan, de a uno, a la parte de mayor resto que todavía no recibió; con restos iguales, la de menor número (`>` estricto).
+  const extra = new Set<number>();
+  for (let k = 0; k < faltan; k++) {
+    let mejor = -1;
+    for (const [i, resto] of restos.entries()) {
+      if (!extra.has(i) && (mejor === -1 || resto > (restos[mejor] as bigint))) mejor = i;
+    }
+    extra.add(mejor);
+  }
   return ok(
     pisos.map((piso, i) => ({ parte: i + 1, importe: aTexto(piso + (extra.has(i) ? 1n : 0n)) })),
   );

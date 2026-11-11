@@ -19,7 +19,7 @@ export const FILAS_DEL_SALON = 9;
 export type ErrorDeMesa =
   "NUMERO_DE_MESA_INVALIDO" | "FORMA_INVALIDA" | "TAMANO_INVALIDO" | "MESA_FUERA_DEL_SALON";
 
-const esEntero = (n: unknown): n is number => typeof n === "number" && Number.isSafeInteger(n);
+const esEntero = (n: unknown): n is number => Number.isSafeInteger(n);
 
 /** Previene: una mesa «0» o «100», o un número con decimales, que la base rechazaría de todos modos. */
 export function numeroDeMesa(numero: number): Resultado<number, "NUMERO_DE_MESA_INVALIDO"> {

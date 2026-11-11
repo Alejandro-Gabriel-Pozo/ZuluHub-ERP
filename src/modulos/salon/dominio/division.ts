@@ -98,14 +98,12 @@ export function planDeDivision(
   ) {
     return err("PARTES_INVALIDAS");
   }
-  // Una asignación por línea, ni una de más ni una de menos (nada sin asignar, nada repetido ni ajeno).
-  const ids = new Set(lineas.map((l) => l.lineaId));
+  // Una asignación por línea, ni una de más ni una de menos: con las líneas distintas y tantas asignaciones como líneas, una ajena o repetida deja
+  // otra línea sin asignación, y eso lo corta la búsqueda de más abajo (nada sin asignar, nada repetido ni ajeno).
   if (
     lineas.length === 0 ||
-    ids.size !== lineas.length ||
-    asignaciones.length !== lineas.length ||
-    new Set(asignaciones.map((a) => a.lineaId)).size !== asignaciones.length ||
-    !asignaciones.every((a) => ids.has(a.lineaId))
+    new Set(lineas.map((l) => l.lineaId)).size !== lineas.length ||
+    asignaciones.length !== lineas.length
   ) {
     return err("DIVISION_INCOMPLETA");
   }
@@ -175,21 +173,24 @@ export function planDeDivision(
 }
 
 /**
- * La huella de lo que pidió quien divide: sha256 (hex) de la cuenta, la cantidad de partes y las asignaciones en orden canónico (por línea). La
+ * La huella de lo que pidió quien divide: sha256 (hex) de la cuenta, la cantidad de partes y las asignaciones en orden canónico (texto de cada una, ordenado). La
  * misma división con el mismo `divisionId` devuelve lo hecho; con otra huella es un conflicto. Puro: sin reloj ni azar.
  */
 export function huellaDeDivision(
   entrada: Readonly<{ cuentaId: string; partes: number; asignaciones: readonly Asignacion[] }>,
 ): string {
-  const canonicas = [...entrada.asignaciones]
-    .sort((a, b) => (a.lineaId < b.lineaId ? -1 : a.lineaId > b.lineaId ? 1 : 0))
+  // Cada asignación como texto canónico y la lista ordenada por ese texto (orden por defecto, sin comparador): no depende del orden de entrada.
+  const canonicas = entrada.asignaciones
     .map((a) =>
-      a.forma === "ENTERO"
-        ? [a.lineaId, a.forma, a.parte]
-        : a.forma === "POR_UNIDADES"
-          ? [a.lineaId, a.forma, ...a.cantidades]
-          : [a.lineaId, a.forma, ...[...a.partes].sort((x, y) => x - y)],
-    );
+      JSON.stringify(
+        a.forma === "ENTERO"
+          ? [a.lineaId, a.forma, a.parte]
+          : a.forma === "POR_UNIDADES"
+            ? [a.lineaId, a.forma, ...a.cantidades]
+            : [a.lineaId, a.forma, ...[...a.partes].sort((x, y) => x - y)],
+      ),
+    )
+    .sort();
   return createHash("sha256")
     .update(JSON.stringify([entrada.cuentaId, entrada.partes, canonicas]))
     .digest("hex");

@@ -27,13 +27,16 @@ type R<S> = Resultado<S, ErrorDeComandas>;
 /** Hasta cuántos conflictos de serialización se repite un envío: varios mozos envían a la vez en la misma mesa (el repetido es seguro: ids derivados). */
 export const REINTENTOS_AL_ENVIAR = 20;
 
+/** Cuántas líneas se pueden pedir de una vez en «Pedir que salga» (una cuenta no pasa de ahí). */
+const MAXIMO_DE_LINEAS_PEDIDAS = 200;
+
 export type EntradaDeEnviarACocina = Readonly<{
   /** Lo manda la pantalla: es el id del envío (idempotencia). */
   envioId: string;
   cuentaId: string;
   /** «Mesa 5»: lo arma quien llama (el salón) desde la mesa; comandas no sabe qué es una mesa. Es una foto. */
   rotulo: string;
-  /** `^[A-Za-z0-9_-]{16,128}$`, por intento (idempotencia). */
+  /** La clave de idempotencia de la pantalla, por intento (la forma la valida `exigirClave`). */
   claveIdempotencia: string;
 }>;
 
@@ -179,7 +182,7 @@ async function enviarConTipoEnTx(
   if (!clave.ok) return clave;
   const rotulo = rotuloDeEnvio(entrada.rotulo);
   if (!rotulo.ok) return rotulo;
-  if (pedidas !== "TODAS" && (pedidas.length === 0 || pedidas.length > 200)) {
+  if (pedidas !== "TODAS" && (pedidas.length === 0 || pedidas.length > MAXIMO_DE_LINEAS_PEDIDAS)) {
     return err("ENTRADA_VACIA");
   }
 
