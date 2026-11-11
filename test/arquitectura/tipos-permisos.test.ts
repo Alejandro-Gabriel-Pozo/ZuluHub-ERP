@@ -259,6 +259,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       "ventas",
       "clientes",
       "compras",
+      "produccion",
     ]);
   });
 });

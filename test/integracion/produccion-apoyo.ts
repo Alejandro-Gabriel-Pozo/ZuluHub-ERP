@@ -12,12 +12,7 @@ import { llaveDeSaldo } from "../../src/modulos/stock/persistencia/repositorio-d
 import { cantidadConSignoDesdeTexto } from "../../src/primitivas/cantidad/con-signo";
 import { productoDeBase } from "./catalogo-apoyo";
 import type { BaseDePruebas } from "./global";
-import {
-  montarStock,
-  nuevoId,
-  valorDe,
-  type EscenarioDeStock,
-} from "./stock-casos-apoyo";
+import { montarStock, nuevoId, valorDe, type EscenarioDeStock } from "./stock-casos-apoyo";
 
 /**
  * Apoyo de las pruebas de integración de producción (E6-T8): el montaje de stock con el módulo `produccion` ACTIVO y su perilla encendida, los casos de

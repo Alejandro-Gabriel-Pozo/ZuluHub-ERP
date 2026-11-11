@@ -14,6 +14,10 @@ import {
   DECLARACIONES_DE_CONSULTAS_DE_CATALOGO,
 } from "../../src/modulos/catalogo/publico";
 import {
+  DECLARACIONES_DE_CONSULTAS_DE_PRODUCCION,
+  DECLARACIONES_DE_PRODUCCION,
+} from "../../src/modulos/produccion/publico";
+import {
   DECLARACIONES_DE_CONSULTAS_DE_STOCK,
   DECLARACIONES_DE_STOCK,
 } from "../../src/modulos/stock/publico";
@@ -81,7 +85,7 @@ const carpetaExiste = (carpeta: string): boolean => {
 type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 
 /** Los módulos declarados en el catálogo cuyas carpetas y casos de uso todavía no existen (T0). */
-const SIN_CONSTRUIR: readonly string[] = ["catalogo", "vidriera", "caja", "ventas"];
+const SIN_CONSTRUIR: readonly string[] = ["catalogo", "vidriera", "caja", "ventas", "produccion"];
 
 function crucesDelCatalogo(
   catalogo: CatalogoComercial,
@@ -252,6 +256,10 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     "modulos/cierre": accionesDe(DECLARACIONES_DE_CIERRE, DECLARACIONES_DE_CONSULTAS_DE_CIERRE),
     "modulos/ventas": accionesDe(DECLARACIONES_DE_VENTAS, DECLARACIONES_DE_CONSULTAS_DE_VENTAS),
     "modulos/stock": accionesDe(DECLARACIONES_DE_STOCK, DECLARACIONES_DE_CONSULTAS_DE_STOCK),
+    "modulos/produccion": accionesDe(
+      DECLARACIONES_DE_PRODUCCION,
+      DECLARACIONES_DE_CONSULTAS_DE_PRODUCCION,
+    ),
     "modulos/clientes": accionesDe(
       DECLARACIONES_DE_CLIENTES,
       DECLARACIONES_DE_CONSULTAS_DE_CLIENTES,
@@ -357,8 +365,8 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ).toEqual([]);
   });
 
-  it("catálogo, carta, caja y ventas son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1); stock salió con E5, clientes con E9-T4 y compras con E9-T12, y son disponibles", () => {
-    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "vidriera", "caja", "ventas"]);
+  it("catálogo, carta, caja, ventas y producción (hasta E6-T9) son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1); stock salió con E5, clientes con E9-T4 y compras con E9-T12, y son disponibles", () => {
+    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "vidriera", "caja", "ventas", "produccion"]);
     expect(SIN_CONSTRUIR).not.toContain("compras");
     expect(CATALOGO_DE_MODULOS.compras.estado).toBe("disponible");
     expect(SIN_CONSTRUIR).not.toContain("stock");

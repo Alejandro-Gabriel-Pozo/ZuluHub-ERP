@@ -60,7 +60,7 @@ const entradas = Object.entries(CATALOGO_DE_PERILLAS) as [string, DefinicionDePe
 const catalogoComoTabla: Readonly<Record<string, DefinicionDePerilla>> = CATALOGO_DE_PERILLAS;
 
 describe("el catálogo de perillas real", () => {
-  it("trae ocho perillas: empresas_por_tenant (de administración), cuatro de catálogo y stock y dos de E6 (lotes y calidad de lote), interruptores de empresa apagados, y cajas_por_sucursal (de caja, límite por sucursal con base 1)", () => {
+  it("trae nueve perillas: empresas_por_tenant (de administración), cuatro de catálogo y stock y tres de E6 (lotes, calidad de lote y producción), interruptores de empresa apagados, y cajas_por_sucursal (de caja, límite por sucursal con base 1)", () => {
     expect(CATALOGO_DE_PERILLAS).toEqual({
       empresas_por_tenant: {
         ambito: "TENANT",
@@ -103,6 +103,12 @@ describe("el catálogo de perillas real", () => {
         tipo: "INTERRUPTOR",
         base: { encendida: false },
         modulo: "stock",
+      },
+      produccion: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "produccion",
       },
       cajas_por_sucursal: {
         ambito: "SUCURSAL",
@@ -167,6 +173,7 @@ describe("el catálogo de perillas real", () => {
       composiciones_por_tamano: "stock",
       lotes: "stock",
       calidad_de_lote: "stock",
+      produccion: "produccion",
       cajas_por_sucursal: "caja",
     });
   });

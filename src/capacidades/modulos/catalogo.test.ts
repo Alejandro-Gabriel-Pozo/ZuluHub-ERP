@@ -16,7 +16,7 @@ describe("el catálogo comercial de módulos", () => {
     expect(conCapacidad).toEqual([]);
   });
 
-  it("tiene diez módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, carta, caja, ventas, compras (disponible desde E9-T12), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4)", () => {
+  it("tiene once módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, carta, caja, ventas, compras (disponible desde E9-T12), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4) y producción (en desarrollo hasta E6-T9)", () => {
     expect(CATALOGO_DE_MODULOS).toEqual({
       administracion: {
         estado: "disponible",
@@ -253,6 +253,21 @@ describe("el catálogo comercial de módulos", () => {
           "compras.configurar": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
+      produccion: {
+        estado: "en_desarrollo",
+        obligatorio: false,
+        requiere: ["stock"],
+        usaSiExiste: ["catalogo"],
+        datosRequeridos: [],
+        implementadoPor: ["modulos/produccion"],
+        acciones: {
+          "transformaciones.ver": { capacidad: null, efecto: "LECTURA" },
+          "transformaciones.abrir": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "transformaciones.cerrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "transformaciones.cancelar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "transformaciones.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+        },
+      },
     });
   });
 
@@ -274,8 +289,8 @@ describe("el catálogo comercial de módulos", () => {
     // 25 de administración (18 de usuarios, sucursales, gerencia y permisos, y 7 de la configuración fiscal de H7 T5),
     // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 48 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
-    // de E5-T10), 35 de caja, cierre y ventas (E0-T1) y 18 de clientes y compras (E9-T1, sin `compras.corregir` hasta E9-T11) y 6 de lotes de E6-T7: 135 en total.
-    expect(todas).toHaveLength(25 + 9 + 48 + 35 + 18);
+    // de E5-T10), 35 de caja, cierre y ventas (E0-T1) y 18 de clientes y compras (E9-T1, sin `compras.corregir` hasta E9-T11) y 6 de lotes de E6-T7 y 5 de producción de E6-T8: 140 en total.
+    expect(todas).toHaveLength(25 + 9 + 48 + 35 + 18 + 5);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -393,6 +408,7 @@ const EFECTOS_DE_EMPRESA = {
     "stock.ver",
     "stock.verificar_saldos",
     "sucursales.ver",
+    "transformaciones.ver",
     "usuarios.ver",
     "ventas.ver",
     "vidrieras.ver",
@@ -459,6 +475,7 @@ const EFECTOS_DE_EMPRESA = {
     "sucursales.crear",
     "sucursales.editar",
     "sucursales.reactivar",
+    "transformaciones.abrir",
     "usuarios.asignar_sucursales",
     "usuarios.invitar",
     "variantes.editar",
@@ -512,6 +529,9 @@ const EFECTOS_DE_EMPRESA = {
     "sucursales.desactivar",
     "tickets.cobrar",
     "tickets.corregir",
+    "transformaciones.anular",
+    "transformaciones.cancelar",
+    "transformaciones.cerrar",
     "usuarios.apagar",
     "usuarios.reenviar_invitacion",
     "usuarios.revocar_invitacion",

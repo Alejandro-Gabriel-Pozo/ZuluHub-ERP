@@ -625,6 +625,7 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
         "clientes",
         "compras",
         "facturacion",
+        "produccion",
         "stock",
         "ventas",
         "vidriera",

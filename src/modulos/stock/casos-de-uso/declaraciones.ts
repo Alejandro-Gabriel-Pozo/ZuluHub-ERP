@@ -204,7 +204,7 @@ export const DECLARACIONES = {
       regla: "YA_ESTABA",
       prueba: {
         archivo: ARCHIVO_DE_LOTES,
-        it: "dejar de controlar dos veces es ok, no escribe ni audita la segunda y los lotes siguen consultables",
+        it: "deja el control inactivo sin borrar nada; dos veces es ok y no audita la segunda; mientras está apagado el libro no toca lotes y al reactivar lo movido entra al sin asignar",
       },
     },
   },
@@ -234,7 +234,7 @@ export const DECLARACIONES = {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
         archivo: ARCHIVO_DE_LOTES,
-        it: "I9: repetir reasignarLote con la misma clave hace una sola reasignación; con otro contenido, CLAVE_REUTILIZADA",
+        it: "I9: repetir reasignarLote con la misma clave hace una sola reasignación; con otro contenido, CLAVE_REUTILIZADA; a la vez también",
       },
     },
   },
