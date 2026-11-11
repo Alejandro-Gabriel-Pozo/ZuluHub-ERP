@@ -37,7 +37,7 @@ export type ComponenteDeEntrada = Readonly<{
   unidadId: string;
   /**
    * Pérdida en puntos porcentuales. Solo existe para que la perilla `composiciones_con_perdida` la rechace con su error (E6 la abre): con la
-   * perilla apagada es `FUNCION_NO_INCLUIDA`, y con ella encendida sigue siéndolo hasta que la explosión la aplique (SUPUESTO, nace cerrado).
+   * perilla apagada es `FUNCION_NO_INCLUIDA`, y con ella encendida sigue siéndolo hasta que la explosión la aplique (SUPUESTO (DEC-0074), nace cerrado).
    */
   perdida?: string | undefined;
 }>;
@@ -185,7 +185,7 @@ const resumenDeLaVersion = (version: ComposicionGuardada) => ({
 /**
  * Guardar la receta de un producto vendible (E5 §3.2): el CONJUNTO FINAL de componentes con su `rinde`, no una diferencia, como una versión
  * nueva (solo inserción; vale la de mayor número). Guard `composiciones.editar` con alcance TODAS (la receta es de la empresa, no de una
- * sucursal: SUPUESTO, como los artículos). Solo un producto `VENDIBLE` tiene receta (`PRODUCTO_NO_ES_VENDIBLE`, S-6) y cada componente es un
+ * sucursal: SUPUESTO (DEC-0074), como los artículos). Solo un producto `VENDIBLE` tiene receta (`PRODUCTO_NO_ES_VENDIBLE`, S-6) y cada componente es un
  * producto con artículo de stock ACTIVO (`COMPONENTE_NO_CONTROLADO`); el dominio comprueba el resto (`validarComposicion`: no vacía, `rinde`
  * mayor que cero, sin repetidos, cantidad y unidad de la dimensión del artículo y con conversión exacta). Pérdida y compuesto existen en la
  * base para E6 y acá `FUNCION_NO_INCLUIDA` los rechaza (la perilla apagada, y encendida también hasta que la explosión la aplique).

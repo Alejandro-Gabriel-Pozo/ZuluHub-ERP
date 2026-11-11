@@ -3,7 +3,7 @@ import { textoDeUnaLineaDesdeTexto, type MotivoDeTextoInvalido } from "./texto-d
 
 /**
  * FICHA DEL DATO: NOMBRE DE COCINA (decisión 71). Cómo ve la cocina el producto; vacío = ve el nombre. Solo en productos que se
- * venden. Largo 1 a 80 (E2 mínimo §3.2; el tope no tiene fuente del dueño: SUPUESTO, se cambia con una constante y un CHECK).
+ * venden. Largo 1 a 80 (E2 mínimo §3.2; el tope no tiene fuente del dueño: SUPUESTO (DEC-0043), se cambia con una constante y un CHECK).
  */
 export const LARGO_MAXIMO_DEL_NOMBRE_DE_COCINA = 80;
 

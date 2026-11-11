@@ -26,7 +26,7 @@ const FORMATOS = [
 ] as const satisfies readonly { valor: FormatoDeImpresion; clave: string }[];
 
 /**
- * La vista previa para imprimir un comprobante (D-97, D-100): elegir A4 o Ticket (A4 al abrir, SUPUESTO de la maqueta v8), ver la hoja
+ * La vista previa para imprimir un comprobante (D-97, D-100): elegir A4 o Ticket (A4 al abrir, SUPUESTO (DEC-0051) de la maqueta v8), ver la hoja
  * y abrir el diálogo de impresión del navegador, o descargar el PDF A4 (un enlace: la descarga la sirve el servidor, que vuelve a decidir
  * el permiso; el PDF es siempre A4, también con Ticket elegido: el ticket queda para una entrega posterior). Los controles quedan FUERA de la zona de impresión (`ComprobanteImpreso` la marca): al
  * imprimir solo sale la hoja. Sin textos propios: los de las claves `fiscal.pantalla.imprimir_*`.

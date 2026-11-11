@@ -154,7 +154,7 @@ describe.skipIf(base === null)("contacto de la sucursal: la migración 0019", ()
     expect(plano).toMatch(/Es ADITIVA/);
     expect(plano).toMatch(/DEPENDE de 0016/);
     expect(plano).toContain(`reversiones/${await archivoDeLaReversion()}`);
-    expect(plano).toMatch(/SUPUESTO/);
+    expect(plano).toMatch(/SUPUESTO/); // DEC-0045
     const codigo = texto.replace(/--.*$/gm, "");
     expect(codigo).not.toMatch(
       /\b(DROP|TRUNCATE|CASCADE|DELETE|UPDATE\s+public|SECURITY\s+DEFINER|DISABLE\s+TRIGGER|REVOKE|OR\s+REPLACE)\b/i,

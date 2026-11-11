@@ -141,7 +141,7 @@ const ENTEROS_DE_LA_CANTIDAD = 14;
 /**
  * Lo que queda de lo tipeado en el campo «Cantidad»: dígitos con coma decimal (como el importe: un punto que agrupa de a tres es un
  * separador de miles, no un decimal), hasta cuatro decimales. Lo que no es un número se descarta al escribir.
- * SUPUESTO (del ingeniero, sin fuente del dueño): «1.000» es mil, por la convención es-AR de Anular (`partirTipeado`); revertirlo
+ * SUPUESTO (DEC-0052) (del ingeniero, sin fuente del dueño): «1.000» es mil, por la convención es-AR de Anular (`partirTipeado`); revertirlo
  * es cambiar `partirTipeado`, que también usa el importe.
  */
 export function limpiarCantidad(crudo: string): string {

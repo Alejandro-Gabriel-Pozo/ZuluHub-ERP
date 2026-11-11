@@ -51,7 +51,7 @@ const TIENE_LETRA_O_DIGITO = /[A-Za-z0-9]/;
 /**
  * El cupón de la decisión 129: la primitiva `cuponDePagoDesdeTexto` (largo, letras sin tilde, dígitos y `. _ / -`, y que no sea un número
  * de tarjeta por Luhn) MÁS tres reglas de la base (`cobro_cupon_ck`) que la primitiva no tiene: sin espacios, no solo separadores, y
- * ningún tramo de 13 dígitos una vez quitados los separadores (`4509-9535-6623-3704`). SUPUESTO: alinear la primitiva con la base es
+ * ningún tramo de 13 dígitos una vez quitados los separadores (`4509-9535-6623-3704`). SUPUESTO (DEC-0065): alinear la primitiva con la base es
  * trabajo aparte (ver informe); acá se componen para que el dominio rechace lo mismo que la base.
  */
 function motivoDelCupon(valor: unknown): MotivoDeDatoInvalido | null {

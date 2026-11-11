@@ -1,5 +1,5 @@
 /**
- * FICHA DEL DATO: WEB DE CONTACTO. (DECIDIDO = D-98 y D-99, 2026-11-04; SUPUESTO = del ingeniero, revertible; SIN DECIDIR = falta la
+ * FICHA DEL DATO: WEB DE CONTACTO. (DECIDIDO = D-98 y D-99, 2026-11-04; SUPUESTO (DEC-0044) = del ingeniero, revertible; SIN DECIDIR = falta la
  * decisión del dueño.)
  *
  * - Qué es: la dirección web de un local (hoy, la de la sucursal) que se muestra donde se muestran los datos de la sucursal del
@@ -10,12 +10,12 @@
  *   menos un punto ("hotel.com", "www.hotel.com"); puerto opcional; después, `/`, `?` o `#` y texto sin blancos. Cualquier otro
  *   esquema (`ftp:`, `javascript:`, `data:`, `mailto:`…), usuario o contraseña (`a@`), blancos o caracteres de control se
  *   rechazan: lo que se guarda termina como enlace y no puede traer un esquema ejecutable. Hasta `LARGO_MAXIMO_DE_LA_WEB` (200)
- *   caracteres YA SIN el esquema (SUPUESTO). Nombres de dominio con letras fuera de ASCII (ñ, tildes): SIN DECIDIR (hoy se rechazan).
+ *   caracteres YA SIN el esquema (SUPUESTO (DEC-0044)). Nombres de dominio con letras fuera de ASCII (ñ, tildes): SIN DECIDIR (hoy se rechazan).
  *   No se abre ni se resuelve: que el sitio exista no se comprueba.
- * - Obligatorio/opcional: OPCIONAL (D-98). Vacío = «no tiene»: un texto en blanco o `null` borra el dato (SUPUESTO); en la base es
+ * - Obligatorio/opcional: OPCIONAL (D-98). Vacío = «no tiene»: un texto en blanco o `null` borra el dato (SUPUESTO (DEC-0044)); en la base es
  *   NULL, nunca un texto vacío.
  * - Único: NO. La base no le pone unicidad. Si debe serlo: SIN DECIDIR.
- * - Quién lo cambia: quien edita la sucursal (permiso `sucursales.editar`: gerente y administrador; SUPUESTO).
+ * - Quién lo cambia: quien edita la sucursal (permiso `sucursales.editar`: gerente y administrador; SUPUESTO (DEC-0044)).
  * - Verificado o declarado: solo DECLARADO; nadie comprueba que la dirección exista.
  * - Se congela en comprobantes: SÍ, la vigente al darse de alta el comprobante (`comprobante.sucursal_web`, copiada por la base, ya
  *   sin esquema); no cambia nunca después. Los comprobantes anteriores a 0019 quedan sin web (D-98).
@@ -26,7 +26,7 @@
  * - Cómo se compara y cómo se imprime: se compara por igualdad exacta del texto canónico ("Hotel.com" y "https://hotel.com" son el
  *   mismo dato; la ruta distingue mayúsculas). En papel va SIN esquema, como texto (`webParaImprimir`, D-99: un papel no lleva a
  *   ningún lado). Donde el medio lo permite (PDF, mail, pantalla) es un enlace `https://` + el valor (`enlaceDeLaWeb`); que el
- *   enlace use SIEMPRE https es un SUPUESTO del ingeniero (un sitio solo http no se puede enlazar tal cual).
+ *   enlace use SIEMPRE https es un SUPUESTO (DEC-0044) del ingeniero (un sitio solo http no se puede enlazar tal cual).
  * - Código de error: `WEB_INVALIDA` (la sucursal lo expone como `WEB_DE_SUCURSAL_INVALIDA`).
  * - Ejemplos válidos (entrada → se guarda): "www.hotelcentro.com" → "www.hotelcentro.com"; " HTTPS://WWW.Hotel.COM/ " → "www.hotel.com";
  *   "http://hotel.com/Centro" → "hotel.com/Centro"; "hotel.com:8080/x?y=1" → igual. Inválidos: "", "https://", "ftp://hotel.com",
@@ -81,7 +81,7 @@ export function webParaImprimir(web: SitioWeb): string {
   return web;
 }
 
-/** El enlace para PDF, mail y pantalla: `https://` + la web. SUPUESTO: siempre https (D-99). */
+/** El enlace para PDF, mail y pantalla: `https://` + la web. SUPUESTO (DEC-0044): siempre https (D-99). */
 export function enlaceDeLaWeb(web: SitioWeb): string {
   return `https://${web}`;
 }

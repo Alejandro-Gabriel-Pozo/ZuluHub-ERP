@@ -63,7 +63,7 @@ const irAPorDefecto = (ruta: string): void => {
  * la confirmación. Los tres viven en una ruta, con el estado en el cliente («Siguiente» y «Volver» no guardan nada). La pantalla arma
  * el pedido de la factura y el servidor valida todo lo demás (permiso, módulo, punto de venta, receptor, renglones). El envío es
  * idempotente por intento y el botón se bloquea al primer toque (`useEnvioDeLaEmision`). Al terminar abre el detalle del comprobante,
- * donde ya se ve su estado. Los botones van al final del contenido (SUPUESTO heredado de Anular: ya hay una barra inferior fija).
+ * donde ya se ve su estado. Los botones van al final del contenido (SUPUESTO (DEC-0052) heredado de Anular: ya hay una barra inferior fija).
  */
 export function PantallaDeEmitirFactura({
   discriminaIva,

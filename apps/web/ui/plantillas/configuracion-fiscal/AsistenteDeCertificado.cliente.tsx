@@ -192,7 +192,7 @@ export function AsistenteDeCertificado({
             idDelTitulo={idDelTitulo}
           />
           {arranque.vista === "cargar" && arranque.certificadoId === vista.certificadoId ? (
-            // SUPUESTO del ingeniero: con el pedido perdido, la única salida es generar OTRO (decisión del dueño); es un `id` nuevo y
+            // SUPUESTO (DEC-0050) del ingeniero: con el pedido perdido, la única salida es generar OTRO (decisión del dueño); es un `id` nuevo y
             // explícito. Revertirlo es quitar este botón.
             <div className={estilos["botones"]}>
               <Boton

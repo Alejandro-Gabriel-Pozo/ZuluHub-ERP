@@ -91,7 +91,7 @@ export function decidirMovimientoManual(
 
 /**
  * Un egreso mayor al efectivo esperado se PERMITE (el esperado puede quedar negativo) pero deja una entrada de auditoría
- * `EGRESO_SUPERA_EFECTIVO` (SUPUESTO de e3 §3.2; la auditoría vio un egreso de $ 999.999.999 aceptado sin aviso). `egreso` es el
+ * `EGRESO_SUPERA_EFECTIVO` (SUPUESTO (DEC-0027) de e3 §3.2; la auditoría vio un egreso de $ 999.999.999 aceptado sin aviso). `egreso` es el
  * importe con signo (negativo).
  */
 export function egresoSuperaElEfectivo(efectivoEsperado: Importe, egreso: Importe): boolean {

@@ -94,7 +94,7 @@ const ENTERA_PEGADA = /^(?:0|[1-9]\d*|[1-9]\d{0,2}(?:\.\d{3})+)$/;
 /**
  * Interpreta lo PEGADO con la misma regla del campo (decisión 153): `14.000,50`, `1234,5` y `0,5` entran;
  * si un punto no separa miles bien, si hay más de dos decimales o si no tiene la forma de un importe, se
- * rechaza y el campo no cambia. Los espacios de los extremos se ignoran (SUPUESTO: lo copiado suele traerlos).
+ * rechaza y el campo no cambia. Los espacios de los extremos se ignoran (SUPUESTO (DEC-0061): lo copiado suele traerlos).
  */
 export function interpretarImportePegado(crudo: string): ImportePegado {
   const texto = crudo.trim();

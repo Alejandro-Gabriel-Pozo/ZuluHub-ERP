@@ -7,7 +7,7 @@ import { provinciaDesdeCodigo, type CodigoDeProvincia } from "./provincias";
  * Un domicilio no se edita: se crea otro (la tabla es de solo inserción), así que acá no hay
  * operaciones de cambio.
  *
- * Valores configurables, todos SUPUESTOS (ninguno es un requisito verificado de ARCA):
+ * Valores configurables, todos SUPUESTOS (DEC-0047) (ninguno es un requisito verificado de ARCA):
  * - `LIMITES_DE_DOMICILIO`: largo máximo de cada texto;
  * - `FORMATO_DE_CODIGO_POSTAL`: alfanumérico de 4 a 8 (permisivo a propósito, NO VERIFICADO).
  */

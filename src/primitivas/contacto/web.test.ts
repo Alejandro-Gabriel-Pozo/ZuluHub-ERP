@@ -163,7 +163,7 @@ describe("web: cómo se muestra (D-99)", () => {
     expect(webParaImprimir(web)).toBe("www.hotelcentro.com");
   });
 
-  it("donde el medio permite un enlace, es https:// + el valor (SUPUESTO: siempre https)", () => {
+  it("donde el medio permite un enlace, es https:// + el valor (SUPUESTO (DEC-0044): siempre https)", () => {
     expect(enlaceDeLaWeb(web)).toBe("https://www.hotelcentro.com");
     expect(enlaceDeLaWeb(guardada("http://hotel.com/Centro?x=1") as SitioWeb)).toBe(
       "https://hotel.com/Centro?x=1",
