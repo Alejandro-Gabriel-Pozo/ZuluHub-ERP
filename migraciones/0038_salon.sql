@@ -505,13 +505,13 @@ CREATE TABLE division_de_cuenta (                                      -- solo i
 CREATE TABLE parte_de_division (                                       -- solo inserción
   empresa_id   uuid NOT NULL REFERENCES empresa (id),
   division_id  uuid NOT NULL,
-  numero       smallint NOT NULL CONSTRAINT parte_numero_ck CHECK (numero BETWEEN 1 AND 4),
+  numero       smallint NOT NULL CONSTRAINT parte_de_division_numero_ck CHECK (numero BETWEEN 1 AND 4),
   cuenta_id    uuid NOT NULL,
   creado_en    timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT parte_pkey PRIMARY KEY (empresa_id, division_id, numero),
-  CONSTRAINT parte_cuenta_uk UNIQUE (empresa_id, cuenta_id),
-  CONSTRAINT parte_division_fkey FOREIGN KEY (division_id, empresa_id) REFERENCES division_de_cuenta (id, empresa_id),
-  CONSTRAINT parte_cuenta_fkey FOREIGN KEY (cuenta_id, empresa_id) REFERENCES cuenta_consumo (id, empresa_id)
+  CONSTRAINT parte_de_division_pkey PRIMARY KEY (empresa_id, division_id, numero),
+  CONSTRAINT parte_de_division_cuenta_uk UNIQUE (empresa_id, cuenta_id),
+  CONSTRAINT parte_de_division_division_fkey FOREIGN KEY (division_id, empresa_id) REFERENCES division_de_cuenta (id, empresa_id),
+  CONSTRAINT parte_de_division_cuenta_fkey FOREIGN KEY (cuenta_id, empresa_id) REFERENCES cuenta_consumo (id, empresa_id)
 );
 
 -- Una división tiene tantas cuentas hijas como partes declara, numeradas de 1 en adelante sin saltos (se comprueba al confirmar).
