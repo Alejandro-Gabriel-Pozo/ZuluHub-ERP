@@ -405,6 +405,27 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "ventas-sin-salon-ni-comandas",
+      archivos: {
+        "src/modulos/ventas/casos-de-uso/c.ts": importa("../../salon/publico"),
+        "src/modulos/salon/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "comandas-sin-salon",
+      archivos: {
+        "src/modulos/comandas/casos-de-uso/c.ts": importa("../../salon/publico"),
+        "src/modulos/salon/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "base-sin-salon-ni-comandas",
+      archivos: {
+        "src/modulos/caja/dominio/d.ts": importa("../../comandas/publico"),
+        "src/modulos/comandas/publico.ts": exporta,
+      },
+    },
+    {
       regla: "base-sin-ventas",
       archivos: {
         "src/modulos/caja/dominio/d.ts": importa("../../ventas/publico"),
@@ -1707,6 +1728,41 @@ describe("facturación F6: las consultas del facturador (spec H7 facturación §
       "src/modulos/empresas/consultas/c.ts": importa("../dominio/anulacion"),
     });
     expect(ajena).toContain("consultas-sin-dominio");
+  });
+
+  it("una consulta de salón importa el estado de la mesa y una de comandas, el papel y el estado del trabajo; ningún otro archivo del dominio ni los de otro módulo", async () => {
+    const casos: Record<string, readonly string[]> = {
+      salon: ["estado-de-mesa"],
+      comandas: ["documento", "impresion"],
+    };
+    for (const [modulo, permitidos] of Object.entries(casos)) {
+      for (const archivo of permitidos) {
+        const v = await violacionesDe({
+          [`src/modulos/${modulo}/dominio/${archivo}.ts`]: exporta,
+          [`src/modulos/${modulo}/consultas/c.ts`]: importa(`../dominio/${archivo}`),
+        });
+        expect(v, `${modulo}/${archivo}`).not.toContain("consultas-sin-dominio");
+        const ajeno = await violacionesDe({
+          [`src/modulos/empresas/dominio/${archivo}.ts`]: exporta,
+          "src/modulos/empresas/consultas/c.ts": importa(`../dominio/${archivo}`),
+        });
+        expect(ajeno, `empresas/${archivo}`).toContain("consultas-sin-dominio");
+      }
+    }
+    for (const [modulo, otro] of [
+      ["salon", "mesa"],
+      ["salon", "division"],
+      ["salon", "estado-de-mesa-de-otra-cosa"],
+      ["comandas", "envio"],
+      ["comandas", "huella"],
+      ["comandas", "documento-de-otra-cosa"],
+    ] as const) {
+      const prohibido = await violacionesDe({
+        [`src/modulos/${modulo}/dominio/${otro}.ts`]: exporta,
+        [`src/modulos/${modulo}/consultas/c.ts`]: importa(`../dominio/${otro}`),
+      });
+      expect(prohibido, `${modulo}/${otro}`).toContain("consultas-sin-dominio");
+    }
   });
 
   it("la excepción es solo de fiscal: el modelo de impresión, la acreditación y la vigencia de otro módulo siguen prohibidos", async () => {

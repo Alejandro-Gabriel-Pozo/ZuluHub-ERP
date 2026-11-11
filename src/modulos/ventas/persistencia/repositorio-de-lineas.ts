@@ -7,7 +7,7 @@ import {
 import { insertarIdempotente } from "../../catalogo/publico";
 import { cuentaId, esUuid, lineaId, type CuentaId, type LineaId } from "../dominio/identificadores";
 import type { VentasDb } from "./esquema";
-import type { AltaDeLinea, Linea, OpcionDeLinea } from "./modelo-de-cuentas";
+import type { AltaDeLinea, CopiaDeLinea, Linea, OpcionDeLinea } from "./modelo-de-cuentas";
 
 /**
  * Persistencia de las líneas de una cuenta y la foto de sus opciones (E4 §3.3 y §3.4). Todo corre dentro de la transacción del caso de uso,
@@ -16,6 +16,10 @@ import type { AltaDeLinea, Linea, OpcionDeLinea } from "./modelo-de-cuentas";
 export interface RepositorioDeLineas {
   insertarLinea(empresa: EmpresaId, alta: AltaDeLinea): Promise<boolean>;
   obtenerLinea(empresa: EmpresaId, id: LineaId): Promise<Linea | null>;
+  /** Deja constancia de que `lineaNuevaId` es copia de `lineaOrigenId` (solo inserción; 0038). `false` si ya estaba (misma copia repetida). */
+  insertarCopia(empresa: EmpresaId, copia: CopiaDeLinea): Promise<boolean>;
+  /** De qué línea es copia esta (si lo es). */
+  copiaDe(empresa: EmpresaId, lineaNuevaId: LineaId): Promise<CopiaDeLinea | null>;
   /** Las líneas de la cuenta (vigentes y anuladas), por posición, con la foto de sus opciones. */
   lineasDeCuenta(empresa: EmpresaId, id: CuentaId): Promise<Linea[]>;
   /** `VIGENTE → ANULADA` con su motivo; `false` si ya estaba anulada (0 filas). */
@@ -50,6 +54,7 @@ export function crearRepositorioDeLineas(db: Kysely<VentasDb>): RepositorioDeLin
         "paso_de_cantidad",
         "alicuota",
         "controla_stock",
+        "importe_fijo",
         "estado",
         "anulada_por",
         "anulada_en",
@@ -118,6 +123,7 @@ export function crearRepositorioDeLineas(db: Kysely<VentasDb>): RepositorioDeLin
     pasoDeCantidad: f.paso_de_cantidad,
     alicuota: f.alicuota,
     controlaStock: f.controla_stock,
+    importeFijo: f.importe_fijo,
     estado: f.estado,
     anuladaPor: f.anulada_por === null ? null : personaId(f.anulada_por),
     anuladaEn: f.anulada_en,
@@ -149,6 +155,7 @@ export function crearRepositorioDeLineas(db: Kysely<VentasDb>): RepositorioDeLin
           paso_de_cantidad: alta.pasoDeCantidad,
           alicuota: alta.alicuota,
           controla_stock: alta.controlaStock,
+          importe_fijo: alta.importeFijo ?? null,
           creada_por: alta.creadaPor,
           creada_en: alta.creadaEn,
         });
@@ -189,6 +196,38 @@ export function crearRepositorioDeLineas(db: Kysely<VentasDb>): RepositorioDeLin
           .execute();
       }
       return true;
+    },
+
+    async insertarCopia(empresa, copia) {
+      const fila = await db
+        .insertInto("linea_copiada")
+        .values({
+          empresa_id: empresa,
+          linea_nueva_id: copia.lineaNuevaId,
+          linea_origen_id: copia.lineaOrigenId,
+          modo: copia.modo,
+        })
+        .onConflict((oc) => oc.doNothing())
+        .returning("linea_nueva_id")
+        .executeTakeFirst();
+      return fila !== undefined;
+    },
+
+    async copiaDe(empresa, lineaNuevaId) {
+      if (!esUuid(lineaNuevaId)) return null;
+      const fila = await db
+        .selectFrom("linea_copiada")
+        .select(["linea_nueva_id", "linea_origen_id", "modo"])
+        .where("empresa_id", "=", empresa)
+        .where("linea_nueva_id", "=", lineaNuevaId)
+        .executeTakeFirst();
+      return fila === undefined
+        ? null
+        : {
+            lineaNuevaId: lineaId(fila.linea_nueva_id),
+            lineaOrigenId: lineaId(fila.linea_origen_id),
+            modo: fila.modo,
+          };
     },
 
     async obtenerLinea(empresa, id) {

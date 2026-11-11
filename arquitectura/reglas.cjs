@@ -247,10 +247,9 @@ const reglas = [
     from: { path: "^src/modulos/[^/]+/consultas/" },
     to: {
       path: "^src/modulos/[^/]+/dominio/",
-      // Únicas excepciones (funciones puras): en fiscal, el modelo de impresión (§B.7), la acreditación (D-16) y la vigencia (D-43); en
-      // caja, la anulación (e3 §3.10): una sola regla de «anulable». Previene un botón distinto del caso. Chequeo: reglas.test.ts.
+      // Únicas excepciones (funciones puras): en fiscal, el modelo de impresión (§B.7), la acreditación (D-16) y la vigencia (D-43); en caja, la anulación (e3 §3.10); en salón, el estado de la mesa (E7 §3.6); en comandas, el papel y el estado del trabajo (E7 §3.5): una sola regla. Previene un botón o un papel distinto del caso. Chequeo: reglas.test.ts.
       pathNot:
-        "^src/modulos/(fiscal/dominio/(modelo-de-impresion|acreditacion|vigencia)|caja/dominio/anulacion)\\.ts$",
+        "^src/modulos/(fiscal/dominio/(modelo-de-impresion|acreditacion|vigencia)|caja/dominio/anulacion|salon/dominio/estado-de-mesa|comandas/dominio/(documento|impresion))\\.ts$",
     },
   },
   {

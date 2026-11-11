@@ -31,6 +31,25 @@ import {
  * el armado va con `directo` (sin savepoint: un savepoint cambia el `xmin` de lo que escribe) y cada sesión prueba UNA violación.
  */
 
+/** Las tablas de 0038 (E7) que apuntan a la cuenta y a la línea: un TRUNCATE de las de ventas solo pasa el control de claves si van todas juntas. */
+const TABLAS_DE_SALON_Y_COMANDAS = [
+  "linea_copiada",
+  "mesa",
+  "mesa_celda",
+  "union_de_mesas",
+  "linea_unida",
+  "division_de_cuenta",
+  "parte_de_division",
+  "contador_de_envios",
+  "envio_de_comanda",
+  "renglon_de_envio",
+  "linea_de_comanda",
+  "aviso_de_anulacion",
+  "impresora",
+  "trabajo_de_impresion",
+  "intento_de_impresion",
+];
+
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 180_000 });
 
@@ -550,7 +569,6 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
       ["linea_cuenta", "paso_de_cantidad"],
       ["linea_cuenta", "posicion"],
       ["cuenta_consumo", "etiqueta"],
-      ["cuenta_consumo", "ancla_id"],
       ["cuenta_consumo", "sucursal_id"],
       ["numerador_ticket", "empresa_id"],
       ["cobranza_de_ticket", "ejemplar_id"],
@@ -593,7 +611,10 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
     await conA(async (s) => {
       for (const tabla of TABLAS) {
         denegado(await s.intentar(`delete from ${tabla}`));
-        denegado(await s.intentar(`truncate ${tabla}`));
+        // Una tabla a la que apunta una clave foránea (las de salón y comandas, 0038, apuntan a la cuenta y a la línea) la frena Postgres antes (0A000).
+        const vaciado = await s.intentar(`truncate ${tabla}`);
+        expect(vaciado.ok, tabla).toBe(false);
+        if (!vaciado.ok) expect(["42501", "0A000"], tabla).toContain(vaciado.codigo);
       }
     });
     await dueno.query("begin");
@@ -613,7 +634,7 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
       // de cada tabla el que frena.
       const todas = await intentoDelDueno(
         dueno,
-        `truncate ${[...TABLAS, "documento_de_ticket"].join(", ")}`,
+        `truncate ${[...TABLAS, "documento_de_ticket", ...TABLAS_DE_SALON_Y_COMANDAS].join(", ")}`,
       );
       denegado(todas);
       if (!todas.ok) expect(todas.mensaje).toMatch(/no admite borrados|solo inserción/);
@@ -710,10 +731,11 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
       restriccion: "cuenta_inmutable",
     },
     {
-      nombre: "ancla de una cuenta",
+      // Desde 0038 (E7) el ancla de una cuenta ABIERTA se mueve (cambiar de mesa); la de una resuelta sigue congelada.
+      nombre: "ancla de una cuenta cerrada",
       sql: "update cuenta_consumo set ancla_id = $2 where id = $1",
-      parametros: [f.abierta.cuenta, nuevoId()],
-      restriccion: "cuenta_inmutable",
+      parametros: [f.emitido.cuenta, nuevoId()],
+      restriccion: "cuenta_resuelta_congelada",
     },
     {
       nombre: "sucursal de una cuenta",
@@ -2619,6 +2641,8 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
     const ruta = join(CARPETA_DE_MIGRACIONES, "reversiones", "0028_revertir_ventas.sql");
     // Con 0029 aplicada (el puntero `documento_de_ticket` apunta a ticket y ejemplar) hay que revertirla ANTES: las reversiones se hacen en orden inverso.
     const rutaDe0029 = join(CARPETA_DE_MIGRACIONES, "reversiones", "0029_revertir_facturacion.sql");
+    // Y 0038 (salón y comandas, E7) antes que 0029: sus tablas apuntan a la cuenta y a la línea.
+    const rutaDe0038 = join(CARPETA_DE_MIGRACIONES, "reversiones", "0038_revertir_salon.sql");
 
     it("se niega con filas guardadas (sin confirmar), no cambia nada y avisa cuántas son", async () => {
       const sql = await readFile(ruta, "utf8");
@@ -2681,6 +2705,7 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
         // Con la confirmación: borra las once tablas.
         await c.query("begin");
         await c.query("set local pedernal.confirmar_reversion = 'SI'");
+        await c.query(await readFile(rutaDe0038, "utf8"));
         await c.query(await readFile(rutaDe0029, "utf8"));
         await c.query(sql);
         const { rows } = await c.query<{ n: string }>(
@@ -2712,6 +2737,7 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
         );
         expect(antes[0]?.n).toBe("1");
         await c.query("begin");
+        await c.query(await readFile(rutaDe0038, "utf8"));
         await c.query(await readFile(rutaDe0029, "utf8"));
         await c.query(sql);
         await c.query(sql); // repetirla no cambia nada

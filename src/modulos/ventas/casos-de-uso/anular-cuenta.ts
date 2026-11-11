@@ -1,4 +1,5 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
+import type { PersonaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { decidirAnularCuenta } from "../dominio/decisiones";
 import { cuentaId } from "../dominio/identificadores";
@@ -13,20 +14,18 @@ export type EntradaDeAnularCuenta = Readonly<{ cuentaId: string; motivo: string 
 export type SalidaDeAnularCuenta = Readonly<{ yaEstabaAnulada: boolean }>;
 
 /**
- * `anularCuenta` (decisión 155; E4 §3.4). Anula una cuenta ABIERTA con su motivo: no gasta número de ticket ni mueve stock (no hay ticket).
+ * `anularCuentaEnTx` es el cuerpo de `anularCuenta` dentro de la transacción del llamador (E7); el permiso lo exige quien llama. `anularCuenta` (decisión 155; E4 §3.4). Anula una cuenta ABIERTA con su motivo: no gasta número de ticket ni mueve stock (no hay ticket).
  * Con cero líneas vigentes está SIEMPRE permitida: es la salida de la «cuenta con todo anulado» (R5). Una cuenta cerrada tiene ticket y
  * no se anula acá (`CUENTA_CERRADA`); repetir sobre una anulada devuelve `yaEstabaAnulada` sin escribir. No mira la jornada: es la salida de
  * `ventas.cuentas_abiertas` (§3.15). Audita `CUENTA_ANULADA` (quién, cuándo y por qué).
  */
-async function anular(
+export async function anularCuentaEnTx(
   tx: TxDeVentas,
-  dependencias: DependenciasDeVentas,
   contexto: ContextoOperativo,
+  persona: PersonaId,
   entrada: EntradaDeAnularCuenta,
 ): Promise<R<SalidaDeAnularCuenta>> {
   const { empresaId } = contexto;
-  const persona = await prepararComando(tx, contexto, dependencias.reglas, ["cuentas.anular"]);
-  if (!persona.ok) return persona;
   const ids = exigirUuid(entrada.cuentaId);
   if (!ids.ok) return ids;
   const motivo = motivoDeAnulacion(entrada.motivo);
@@ -43,7 +42,7 @@ async function anular(
   const anulada = await tx.cuentas.anular(
     empresaId,
     cuenta.id,
-    persona.valor,
+    persona,
     contexto.ahora,
     motivo.valor,
   );
@@ -56,7 +55,7 @@ async function anular(
   }
   await tx.auditoria.registrar({
     empresaId,
-    actorPersonaId: persona.valor,
+    actorPersonaId: persona,
     accion: "CUENTA_ANULADA",
     entidad: "cuenta_consumo",
     entidadId: cuenta.id,
@@ -64,6 +63,17 @@ async function anular(
     despues: { estado: "ANULADA", motivo: motivo.valor },
   });
   return ok({ yaEstabaAnulada: false });
+}
+
+async function anular(
+  tx: TxDeVentas,
+  dependencias: DependenciasDeVentas,
+  contexto: ContextoOperativo,
+  entrada: EntradaDeAnularCuenta,
+): Promise<R<SalidaDeAnularCuenta>> {
+  const persona = await prepararComando(tx, contexto, dependencias.reglas, ["cuentas.anular"]);
+  if (!persona.ok) return persona;
+  return anularCuentaEnTx(tx, contexto, persona.valor, entrada);
 }
 
 export function armarAnularCuenta(dependencias: DependenciasDeVentas) {

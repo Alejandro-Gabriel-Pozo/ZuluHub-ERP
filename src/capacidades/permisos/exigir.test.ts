@@ -186,6 +186,8 @@ describe("exigirAccion", () => {
       "caja",
       "cierre",
       "ventas",
+      "comandas",
+      "salon",
       "clientes",
       "compras",
     ];

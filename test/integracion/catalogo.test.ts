@@ -117,6 +117,22 @@ const TABLAS_DE_NEGOCIO = [
   "cobranza_de_ticket",
   "aplicacion_de_cobro",
   "ticket_correccion",
+  // Salón y comandas (0038_salon)
+  "mesa",
+  "mesa_celda",
+  "union_de_mesas",
+  "linea_unida",
+  "division_de_cuenta",
+  "parte_de_division",
+  "linea_copiada",
+  "contador_de_envios",
+  "envio_de_comanda",
+  "renglon_de_envio",
+  "linea_de_comanda",
+  "aviso_de_anulacion",
+  "impresora",
+  "trabajo_de_impresion",
+  "intento_de_impresion",
   // Stock (0030_stock): `motivo_de_movimiento` es global y sembrada (sin `empresa_id`)
   "deposito",
   "articulo_de_stock",
@@ -408,6 +424,21 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "cobranza_de_ticket:SELECT", // 0028
           "aplicacion_de_cobro:SELECT", // 0028
           "ticket_correccion:SELECT", // 0028
+          "mesa:SELECT", // 0038
+          "mesa_celda:SELECT", // 0038
+          "union_de_mesas:SELECT", // 0038
+          "linea_unida:SELECT", // 0038
+          "division_de_cuenta:SELECT", // 0038
+          "parte_de_division:SELECT", // 0038
+          "linea_copiada:SELECT", // 0038
+          "contador_de_envios:SELECT", // 0038
+          "envio_de_comanda:SELECT", // 0038
+          "renglon_de_envio:SELECT", // 0038
+          "linea_de_comanda:SELECT", // 0038
+          "aviso_de_anulacion:SELECT", // 0038
+          "impresora:SELECT", // 0038
+          "trabajo_de_impresion:SELECT", // 0038
+          "intento_de_impresion:SELECT", // 0038
           "deposito:SELECT", // 0030
           "articulo_de_stock:SELECT", // 0030
           "motivo_de_movimiento:SELECT", // 0030
@@ -667,6 +698,17 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...["estado", "anulada_por", "anulada_en", "motivo_de_anulacion"].map(
             (c) => `pedernal_app:linea_cuenta.${c}`,
           ),
+          // 0038: el ancla de una cuenta abierta se mueve (cambio de mesa, unión, división)
+          ...["ancla_tipo", "ancla_id"].map((c) => `pedernal_app:cuenta_consumo.${c}`),
+          // 0038: salón y comandas cambian solo lo que sus disparadores permiten (la mesa se edita y se desactiva; la línea de comanda pasa a enviada; el trabajo de impresión mueve su estado)
+          ...["ultimo"].map((c) => `pedernal_app:contador_de_envios.${c}`),
+          ...["activa", "nombre", "papel_mm", "uso"].map((c) => `pedernal_app:impresora.${c}`),
+          ...["envio_id", "salida"].map((c) => `pedernal_app:linea_de_comanda.${c}`),
+          ...["activa", "columna", "fila", "forma", "numero", "tamano"].map(
+            (c) => `pedernal_app:mesa.${c}`,
+          ),
+          ...["activa"].map((c) => `pedernal_app:mesa_celda.${c}`),
+          ...["estado", "intentos"].map((c) => `pedernal_app:trabajo_de_impresion.${c}`),
           ...["vigente", "no_vigente_en"].map((c) => `pedernal_app:documento_de_ticket.${c}`),
           ...["ultimo"].map((c) => `pedernal_app:numerador_ticket.${c}`),
           ...["estado", "ejemplar_vigente"].map((c) => `pedernal_app:ticket.${c}`),
@@ -1358,6 +1400,128 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "recargo",
             "origen_del_recargo",
           ].map((c) => `linea_cuenta_opcion.${c}`),
+          // 0038: salón y comandas nacen sin valores a mano (los contadores y `creado_en` de lo que se mueve los pone la base)
+          "linea_cuenta.importe_fijo",
+          ...[
+            "anulado_en",
+            "anulado_por",
+            "cantidad",
+            "cuenta_id",
+            "detalle_de_cocina",
+            "empresa_id",
+            "envio_id",
+            "id",
+            "linea_origen_id",
+            "motivo",
+            "nombre_de_cocina",
+            "quedan",
+            "rotulo",
+          ].map((c) => `aviso_de_anulacion.${c}`),
+          ...["cuenta_id", "empresa_id"].map((c) => `contador_de_envios.${c}`),
+          ...[
+            "cuenta_madre_id",
+            "dividida_en",
+            "dividida_por",
+            "empresa_id",
+            "huella",
+            "id",
+            "mesa_id",
+            "partes",
+            "sucursal_id",
+          ].map((c) => `division_de_cuenta.${c}`),
+          ...[
+            "clave",
+            "cuenta_id",
+            "empresa_id",
+            "enviado_en",
+            "enviado_por",
+            "huella",
+            "id",
+            "numero",
+            "rotulo",
+            "sucursal_id",
+            "tipo",
+          ].map((c) => `envio_de_comanda.${c}`),
+          ...[
+            "creada_en",
+            "creada_por",
+            "empresa_id",
+            "id",
+            "nombre",
+            "papel_mm",
+            "sucursal_id",
+            "uso",
+          ].map((c) => `impresora.${c}`),
+          ...[
+            "declarado_en",
+            "declarado_por",
+            "empresa_id",
+            "numero",
+            "resultado",
+            "trabajo_id",
+          ].map((c) => `intento_de_impresion.${c}`),
+          ...["empresa_id", "linea_nueva_id", "linea_origen_id", "modo"].map(
+            (c) => `linea_copiada.${c}`,
+          ),
+          ...["cuenta_id", "empresa_id", "envio_id", "linea_id", "salida"].map(
+            (c) => `linea_de_comanda.${c}`,
+          ),
+          ...["empresa_id", "linea_id", "mesa_origen_id", "union_id"].map(
+            (c) => `linea_unida.${c}`,
+          ),
+          ...[
+            "columna",
+            "creada_en",
+            "creada_por",
+            "empresa_id",
+            "fila",
+            "forma",
+            "id",
+            "numero",
+            "sucursal_id",
+            "tamano",
+          ].map((c) => `mesa.${c}`),
+          ...["columna", "empresa_id", "fila", "mesa_id", "sucursal_id"].map(
+            (c) => `mesa_celda.${c}`,
+          ),
+          ...["cuenta_id", "division_id", "empresa_id", "numero"].map(
+            (c) => `parte_de_division.${c}`,
+          ),
+          ...[
+            "cantidad",
+            "detalle_de_cocina",
+            "empresa_id",
+            "envio_id",
+            "linea_id",
+            "nombre_de_cocina",
+            "orden",
+            "rol",
+          ].map((c) => `renglon_de_envio.${c}`),
+          ...[
+            "clave",
+            "documento_id",
+            "documento_tipo",
+            "empresa_id",
+            "es_copia",
+            "huella",
+            "id",
+            "impresora_id",
+            "solicitado_en",
+            "solicitado_por",
+            "sucursal_id",
+          ].map((c) => `trabajo_de_impresion.${c}`),
+          ...[
+            "clave",
+            "cuenta_destino_id",
+            "cuenta_origen_id",
+            "empresa_id",
+            "id",
+            "mesa_destino_id",
+            "mesa_origen_id",
+            "sucursal_id",
+            "unida_en",
+            "unida_por",
+          ].map((c) => `union_de_mesas.${c}`),
           ...[
             "id",
             "empresa_id",

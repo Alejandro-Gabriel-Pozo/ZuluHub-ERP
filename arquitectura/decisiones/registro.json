@@ -802,6 +802,86 @@
     "donde": "migraciones/0041_tope_de_textos_por_marca.sql (vocabulario_valido_ampliado) y test/integracion/marcas-sql.test.ts"
   },
   {
+    "id": "DEC-0201",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "PERMISOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Salón es un extra de pago (perilla `salon`, apagada de base) y comandas va en todos los planes; salón requiere comandas. Los módulos siguen en desarrollo y sin plan; permisos como DEC-0010.",
+    "que_cambia": "Qué se cobra aparte: sin la perilla `salon` no se opera el salón; las comandas funcionan igual.",
+    "donde": "src/capacidades/planes/perillas.ts, src/capacidades/modulos/catalogo.ts y src/capacidades/permisos/empresa.ts"
+  },
+  {
+    "id": "DEC-0202",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "CORREGIDA",
+    "decision": "El papel de la cocina marca un plato en espera con «Sale después» (texto aprobado de salida.html), no con «no preparar todavía».",
+    "que_cambia": "Qué lee la cocina en un plato que espera; corregida a pedido de la sesión padre.",
+    "donde": "src/capacidades/vocabulario/catalogo-comandas.ts"
+  },
+  {
+    "id": "DEC-0203",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Los textos del salón y de las comandas (salon.texto.*, comandas.texto.*) salen de las maquetas; los que no están en la lista aprobada esperan tu OK.",
+    "que_cambia": "Los rótulos y avisos que ven mozos y cocina.",
+    "donde": "src/capacidades/vocabulario/catalogo-salon.ts y src/capacidades/vocabulario/catalogo-comandas.ts"
+  },
+  {
+    "id": "DEC-0204",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El «Tomó:» del papel de cocina muestra el correo de quien tomó el pedido hasta que identidad ofrezca un nombre.",
+    "que_cambia": "Cómo se identifica al mozo en la comanda impresa.",
+    "donde": "src/modulos/comandas/consultas"
+  },
+  {
+    "id": "DEC-0205",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Al dividir por ítems un plato compartido, solo una de las cuentas hijas conserva el control de stock: el descuento sale una sola vez, no una por cuenta.",
+    "que_cambia": "Cuánto stock se descuenta cuando un plato se comparte entre cuentas.",
+    "donde": "src/modulos/ventas/casos-de-uso/copiar-linea.ts"
+  },
+  {
+    "id": "DEC-0206",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Las cuentas de reserva de una mesa unida o dividida que se anulan salen como anulaciones informativas en el control de la jornada; los traslados no cuentan.",
+    "que_cambia": "Qué anulaciones ve el control de la jornada cuando se une o divide una mesa.",
+    "donde": "src/modulos/ventas/consultas y src/modulos/salon/casos-de-uso"
+  },
+  {
+    "id": "DEC-0207",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "La anulación parcial de un ítem enviado exige jornada abierta, como el resto de las anulaciones; no se permite con la jornada cerrada.",
+    "que_cambia": "Si un mozo puede anular una parte de un plato ya enviado con la jornada cerrada.",
+    "donde": "src/modulos/comandas/casos-de-uso/anulaciones.ts"
+  },
+  {
+    "id": "DEC-0208",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Una mesa que fue destino de una unión puede volver a unirse o dividirse; solo la mesa de reserva (la origen) figura como «unida».",
+    "que_cambia": "Qué se puede hacer con una mesa que recibió otra mesa.",
+    "donde": "src/modulos/salon/casos-de-uso/unir.ts y src/modulos/salon/dominio/estado-de-mesa.ts"
+  },
+  {
     "id": "DEC-0300",
     "fecha": "2026-11-11",
     "quien": "sesión",

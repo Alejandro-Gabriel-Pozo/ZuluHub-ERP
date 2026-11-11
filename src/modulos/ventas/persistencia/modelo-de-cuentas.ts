@@ -51,6 +51,8 @@ export type Linea = Readonly<{
   pasoDeCantidad: string;
   alicuota: string;
   controlaStock: boolean;
+  /** El importe exacto de una línea compartida (0038, E7); `null` en toda otra: ahí vale `precio × cantidad`. */
+  importeFijo: string | null;
   estado: EstadoDeLinea;
   anuladaPor: PersonaId | null;
   anuladaEn: Date | null;
@@ -88,7 +90,18 @@ export type AltaDeLinea = Readonly<{
   pasoDeCantidad: string;
   alicuota: string;
   controlaStock: boolean;
+  /** Solo lo escribe la copia COMPARTIDA de una línea (0038, E7). */
+  importeFijo?: string | null | undefined;
   creadaPor: PersonaId;
   creadaEn: Date;
   opciones: readonly OpcionDeLinea[];
+}>;
+
+/** Cómo se copió una línea (`linea_copiada`, 0038). */
+export type ModoDeCopia = "COMPLETA" | "POR_UNIDADES" | "COMPARTIDA" | "RESTO";
+
+export type CopiaDeLinea = Readonly<{
+  lineaNuevaId: LineaId;
+  lineaOrigenId: LineaId;
+  modo: ModoDeCopia;
 }>;

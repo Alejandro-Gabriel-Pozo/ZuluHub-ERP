@@ -187,12 +187,14 @@ export function crearRepositorioDeLecturas(db: Kysely<VentasDb>): LecturasDeVent
          where c.empresa_id = ${empresa} and c.sucursal_id = ${sucursal} and c.estado = 'ANULADA'
            and fecha_de_negocio_de(c.empresa_id, c.sucursal_id, c.resuelta_en) = ${jornada}::date
         union all
-        select 'LINEA', l.cuenta_id, l.id, l.descripcion, round(l.precio_unitario * l.cantidad, 2)::text,
+        select 'LINEA', l.cuenta_id, l.id, l.descripcion, round(coalesce(l.importe_fijo, l.precio_unitario * l.cantidad), 2)::text,
                l.motivo_de_anulacion, l.anulada_por, l.anulada_en
           from linea_cuenta l
           join cuenta_consumo c on c.empresa_id = l.empresa_id and c.id = l.cuenta_id
          where l.empresa_id = ${empresa} and c.sucursal_id = ${sucursal} and l.estado = 'ANULADA'
            and fecha_de_negocio_de(l.empresa_id, c.sucursal_id, l.anulada_en) = ${jornada}::date
+           -- Un traslado (unir, dividir) no es una anulación de negocio (X6, E7); el resto de una anulación parcial (RESTO) sí cuenta.
+           and not exists (select 1 from linea_copiada k where k.empresa_id = l.empresa_id and k.linea_origen_id = l.id and k.modo <> 'RESTO')
          order by 8, 2, 3`.execute(db);
       return filas.rows.map((f) => ({
         tipo: f["tipo"] as "CUENTA" | "LINEA",

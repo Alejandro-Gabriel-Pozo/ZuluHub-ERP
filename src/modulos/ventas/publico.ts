@@ -8,11 +8,31 @@ export { crearConsultasDeVentas, type ConsultasDeVentas } from "./consultas/cons
 export type { DependenciasDeVentas, TxDeVentas } from "./casos-de-uso/contrato";
 export type { DependenciasDeConsultasDeVentas, TxDeConsultasDeVentas } from "./consultas/contrato";
 export type { ErrorDeVentas } from "./casos-de-uso/errores";
-export type { EntradaDeAbrirCuenta, SalidaDeAbrirCuenta } from "./casos-de-uso/abrir-cuenta";
-export type { EntradaDeAgregarLinea, SalidaDeAgregarLinea } from "./casos-de-uso/agregar-linea";
-export type { EntradaDeAnularLinea, SalidaDeAnularLinea } from "./casos-de-uso/anular-linea";
-export type { EntradaDeAnularCuenta, SalidaDeAnularCuenta } from "./casos-de-uso/anular-cuenta";
-export type { EntradaDeCerrarCuenta, SalidaDeCerrarCuenta } from "./casos-de-uso/cerrar-cuenta";
+export {
+  abrirCuentaEnTx,
+  type EntradaDeAbrirCuenta,
+  type SalidaDeAbrirCuenta,
+} from "./casos-de-uso/abrir-cuenta";
+export {
+  agregarLineaEnTx,
+  type EntradaDeAgregarLinea,
+  type SalidaDeAgregarLinea,
+} from "./casos-de-uso/agregar-linea";
+export {
+  anularLineaEnTx,
+  type EntradaDeAnularLinea,
+  type SalidaDeAnularLinea,
+} from "./casos-de-uso/anular-linea";
+export {
+  anularCuentaEnTx,
+  type EntradaDeAnularCuenta,
+  type SalidaDeAnularCuenta,
+} from "./casos-de-uso/anular-cuenta";
+export {
+  cerrarCuentaEnTx,
+  type EntradaDeCerrarCuenta,
+  type SalidaDeCerrarCuenta,
+} from "./casos-de-uso/cerrar-cuenta";
 export type { EntradaDeAnularTicket, SalidaDeAnularTicket } from "./casos-de-uso/anular-ticket";
 export type {
   EntradaDeEmitirComprobanteDeTicket,
@@ -41,7 +61,37 @@ export {
   documentoIdDeLaFactura,
   origenDeLaFactura,
 } from "./dominio/factura-de-ticket";
-export type { EntradaDeCobrar, SalidaDeCobrar, CobroHecho } from "./casos-de-uso/cobrar";
+export {
+  REINTENTOS_AL_COBRAR,
+  type EntradaDeCobrar,
+  type SalidaDeCobrar,
+  type CobroHecho,
+} from "./casos-de-uso/cobrar";
+export { cerrarYCobrarEnTx, type EntradaDeCerrarYCobrar } from "./casos-de-uso/cerrar-y-cobrar";
+export {
+  copiarLineaEnTx,
+  type EntradaDeCopiarLinea,
+  type SalidaDeCopiarLinea,
+} from "./casos-de-uso/copiar-linea";
+export {
+  reanclarCuentaEnTx,
+  type EntradaDeReanclarCuenta,
+  type SalidaDeReanclarCuenta,
+} from "./casos-de-uso/reanclar";
+export {
+  bloquearCuentas,
+  cuentaAbiertaPorAncla,
+  cuentaPorId,
+  cuentasAbiertasPorAncla,
+  lineaPorId,
+  lineasDeCuenta,
+  type CuentaAbiertaDeAncla,
+} from "./casos-de-uso/lecturas-de-cuenta";
+export { idDerivado } from "./dominio/id-derivado";
+export { calcularLasLineas } from "./casos-de-uso/calculo";
+export { anclaValida, type Ancla } from "./dominio/ancla";
+export { esUuid } from "./dominio/identificadores";
+export type { Cuenta, Linea, OpcionDeLinea, ModoDeCopia } from "./persistencia/modelo-de-cuentas";
 export type {
   EntradaDeVenderYCobrar,
   SalidaDeVenderYCobrar,

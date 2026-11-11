@@ -5,6 +5,22 @@
  * de importes o de números): es un defecto del código, no un error del usuario.
  */
 export const ERRORES_DE_VENTAS_POR_RESTRICCION: Readonly<Record<string, string>> = {
+  // 0038 (E7): el importe fijo y la copia de una línea (unir, dividir, anular una parte). Los casos de uso validan antes; si la base salta es un defecto.
+  linea_importe_fijo_ck: "NO_TRADUCIDA",
+  linea_importe_fijo_solo_compartida: "INVARIANTE_DE_VENTAS",
+  linea_copiada_empresa_id_fkey: "NO_TRADUCIDA",
+  linea_copiada_pkey: "NO_TRADUCIDA",
+  linea_copiada_modo_ck: "NO_TRADUCIDA",
+  linea_copiada_distintas_ck: "NO_TRADUCIDA",
+  linea_copiada_nueva_fkey: "NO_TRADUCIDA",
+  linea_copiada_origen_fkey: "NO_TRADUCIDA",
+  linea_copiada_solo_con_la_linea: "INVARIANTE_DE_VENTAS",
+  linea_copiada_origen_invalida: "INVARIANTE_DE_VENTAS",
+  linea_copiada_motivo_invalido: "INVARIANTE_DE_VENTAS",
+  linea_copiada_otra_sucursal: "INVARIANTE_DE_VENTAS",
+  copias_cuadran: "INVARIANTE_DE_VENTAS",
+  copias_cuadran_ck: "NO_TRADUCIDA",
+  linea_importe_fijo_ck_trg: "NO_TRADUCIDA",
   // documento_de_ticket (0029, E1): el puntero de un ticket al comprobante que lo facturó. Los casos de uso validan antes; si la base salta,
   // sale el error de persistencia tipado (ninguno se disfraza). `documento_clave_uk` es la repetición de la misma clave de la pantalla.
   documento_cambio_invalido: "NO_TRADUCIDA",
