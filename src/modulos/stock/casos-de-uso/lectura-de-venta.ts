@@ -2,6 +2,7 @@ import { estadoDeModulos } from "../../../capacidades/modulos/activos";
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
+import { porcentajeDesdeTexto } from "../../../primitivas/cantidad/porcentaje";
 import {
   cantidadConSignoATexto,
   cantidadConSignoDesdeTexto,
@@ -9,6 +10,7 @@ import {
 import { sucursalId as aSucursalId } from "../../../primitivas/identificadores/marca";
 import { situacionDeConsumo, type ProductoParaExplotar } from "../dominio/explosion";
 import { esUnidadConocida } from "../dominio/composicion";
+import { MAXIMO_DE_NIVELES_DE_RECETA } from "../dominio/subcomposicion";
 import { esUuid } from "../persistencia/filas";
 import type { TxDeStock } from "./contrato";
 import type {
@@ -46,8 +48,10 @@ export const unidadConocida = (texto: string) => {
 };
 
 /**
- * Los productos de esos ids en la forma que necesita la explosión (E5 §3.3): su clase, su unidad base, su artículo propio (activo o no) y su
- * receta vigente (la última versión; una versión vacía retira la receta y vale `null`). Los ids que no existen no figuran. Todo se lee en la
+ * Los productos de esos ids en la forma que necesita la explosión (E5 §3.3, E6 §3.3): su clase, su unidad base, su artículo propio (activo o no)
+ * y su receta vigente (la última versión; una versión vacía retira la receta y vale `null`) con la merma de cada componente y los elaborados
+ * que lleva. Los elaborados de las recetas se leen también, hasta `MAXIMO_DE_NIVELES_DE_RECETA` + 1 rondas (una más que las que explota:
+ * la explosión dice `RECETA_DEMASIADO_ANIDADA` en lugar de un producto desconocido). Los ids que no existen no figuran. Todo se lee en la
  * transacción del llamador.
  */
 export async function productosParaExplotar(
@@ -55,6 +59,32 @@ export async function productosParaExplotar(
   contexto: Pick<ContextoOperativo, "empresaId">,
   productoIds: readonly string[],
 ): Promise<Map<string, ProductoParaExplotar>> {
+  const resultado = new Map<string, ProductoParaExplotar>();
+  let pendientes: readonly string[] = [...new Set(productoIds)];
+  for (let ronda = 0; ronda <= MAXIMO_DE_NIVELES_DE_RECETA && pendientes.length > 0; ronda++) {
+    const leidos = await productosDeUnaRonda(tx, contexto, pendientes);
+    const siguientes = new Set<string>();
+    for (const [id, producto] of leidos.productos) {
+      resultado.set(id, producto);
+      for (const hijo of leidos.elaboradosDe.get(id) ?? []) {
+        if (!resultado.has(hijo)) siguientes.add(hijo);
+      }
+    }
+    pendientes = [...siguientes];
+  }
+  return resultado;
+}
+
+async function productosDeUnaRonda(
+  tx: Pick<TxDeLecturaDeStock, "articulosDeStock" | "composicionesDeStock" | "productosParaStock">,
+  contexto: Pick<ContextoOperativo, "empresaId">,
+  productoIds: readonly string[],
+): Promise<
+  Readonly<{
+    productos: Map<string, ProductoParaExplotar>;
+    elaboradosDe: ReadonlyMap<string, readonly string[]>;
+  }>
+> {
   const empresa = contexto.empresaId;
   const productos = await tx.productosParaStock.porIds(empresa, productoIds);
   const ids = productos.map((p) => p.id);
@@ -63,7 +93,9 @@ export async function productosParaExplotar(
   const recetas = await tx.composicionesDeStock.ultimasVersiones(empresa, ids);
   const deComponentes = await tx.articulosDeStock.porIds(
     empresa,
-    [...recetas.values()].flatMap((r) => r.componentes.map((c) => c.articuloId)),
+    [...recetas.values()].flatMap((r) =>
+      r.componentes.flatMap((c) => (c.articuloId === null ? [] : [c.articuloId])),
+    ),
   );
   const unidadDe = new Map(deComponentes.map((a) => [a.id, unidadConocida(a.unidadDeStockId)]));
   const unidadDelComponente = (articuloId: string) => {
@@ -73,9 +105,16 @@ export async function productosParaExplotar(
     return unidad;
   };
   const resultado = new Map<string, ProductoParaExplotar>();
+  const elaboradosDe = new Map<string, readonly string[]>();
   for (const p of productos) {
     const propio = articuloDe.get(p.id);
     const receta = recetas.get(p.id);
+    if (receta !== undefined) {
+      elaboradosDe.set(
+        p.id,
+        receta.componentes.flatMap((c) => (c.compuestoId === null ? [] : [c.compuestoId])),
+      );
+    }
     resultado.set(p.id, {
       claseDeUso: p.claseDeUso,
       unidadBaseId: unidadConocida(p.unidadBaseId),
@@ -93,16 +132,35 @@ export async function productosParaExplotar(
           : {
               composicionId: receta.id,
               rinde: cantidadDesdeTexto(receta.rinde),
-              componentes: receta.componentes.map((c) => ({
-                articuloId: c.articuloId,
-                cantidad: cantidadDesdeTexto(c.cantidad),
-                unidadId: unidadConocida(c.unidadId),
-                unidadDeStockId: unidadDelComponente(c.articuloId),
-              })),
+              componentes: receta.componentes.flatMap((c) =>
+                c.articuloId === null
+                  ? []
+                  : [
+                      {
+                        articuloId: c.articuloId,
+                        cantidad: cantidadDesdeTexto(c.cantidad),
+                        unidadId: unidadConocida(c.unidadId),
+                        unidadDeStockId: unidadDelComponente(c.articuloId),
+                        perdida: porcentajeDesdeTexto(c.perdida),
+                      },
+                    ],
+              ),
+              compuestos: receta.componentes.flatMap((c) =>
+                c.compuestoId === null
+                  ? []
+                  : [
+                      {
+                        compuestoId: c.compuestoId,
+                        cantidad: cantidadDesdeTexto(c.cantidad),
+                        unidadId: unidadConocida(c.unidadId),
+                        perdida: porcentajeDesdeTexto(c.perdida),
+                      },
+                    ],
+              ),
             },
     });
   }
-  return resultado;
+  return { productos: resultado, elaboradosDe };
 }
 
 export const soloUuids = (ids: readonly string[]): string[] => [...new Set(ids.filter(esUuid))];

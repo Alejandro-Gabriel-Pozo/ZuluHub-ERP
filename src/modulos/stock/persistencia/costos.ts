@@ -83,6 +83,16 @@ export interface RepositorioDeCostos {
   ): Promise<CostoDeRenglonGuardado | null>;
   valorizacion(empresa: EmpresaId, filtro: FiltroDeValorizacion): Promise<ResumenDeValorizacion>;
   /**
+   * El costo promedio vigente de cada artículo en sus depósitos de venta activos del alcance (E6: el costo de la receta cuando el artículo
+   * nunca se compró). Si hay varios depósitos con costo, el de mayor cantidad valorizada (el más representativo; a igualdad, por id): SUPUESTO (DEC-0111).
+   * Los que no tienen costo no figuran. Texto decimal con 6 decimales, por unidad de stock.
+   */
+  promediosEnDepositosDeVenta(
+    empresa: EmpresaId,
+    alcance: AlcanceDeSucursales,
+    articuloIds: readonly string[],
+  ): Promise<Map<string, string>>;
+  /**
    * El renglón de entrada por COMPRA con costo definitivo más reciente de ese artículo (por `hecho_en`, luego por registro), sin contar las
    * compras que una anulación revirtió. En los depósitos del alcance.
    */
@@ -232,6 +242,21 @@ export function crearRepositorioDeCostos(db: Kysely<StockDb>): RepositorioDeCost
         if (f.sin_costo) sinCosto += 1;
       }
       return { conCosto, paresConUnidadesSinCosto: sinCosto };
+    },
+    async promediosEnDepositosDeVenta(empresa, alcance, articuloIds) {
+      const promedios = new Map<string, string>();
+      const validos = [...new Set(articuloIds.filter(esUuid))];
+      if (!enAlcance(alcance) || validos.length === 0) return promedios;
+      const { rows } = await sql<{ articulo_id: string; costo_unitario: string }>`
+        select distinct on (c.articulo_id) c.articulo_id, c.costo_unitario::text as costo_unitario
+          from costo_de_articulo c
+          join deposito d on d.empresa_id = c.empresa_id and d.id = c.deposito_id
+         where c.empresa_id = ${empresa} and d.de_venta and d.activo and c.cantidad_valorizada > 0
+           and c.articulo_id in (${sql.join(validos.map((a) => sql`${a}::uuid`))})
+           ${alcance === "TODAS" ? sql`` : sql`and d.sucursal_id in (${sql.join([...alcance])})`}
+         order by c.articulo_id, c.cantidad_valorizada desc, d.id`.execute(db);
+      for (const f of rows) promedios.set(f.articulo_id, f.costo_unitario);
+      return promedios;
     },
     async ultimaCompraConCosto(empresa, alcance, articuloId) {
       if (!enAlcance(alcance) || !esUuid(articuloId)) return null;

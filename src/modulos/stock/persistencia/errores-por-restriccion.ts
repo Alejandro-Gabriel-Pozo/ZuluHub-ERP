@@ -136,7 +136,7 @@ export const ERRORES_DE_STOCK_POR_RESTRICCION: Readonly<Record<string, string>> 
   composicion_producto_fkey: "PRODUCTO_NO_ENCONTRADO",
   composicion_numero_ck: "NO_TRADUCIDA",
   composicion_rinde_ck: "RINDE_INVALIDO",
-  composicion_producto_no_vendible: "PRODUCTO_NO_ES_VENDIBLE",
+  composicion_producto_no_vendible: "PRODUCTO_NO_LLEVA_RECETA",
   composicion_numero_salteado: "COMPOSICION_DESACTUALIZADA",
   // componente_de_composicion
   componente_de_composicion_pkey: "NO_TRADUCIDA",

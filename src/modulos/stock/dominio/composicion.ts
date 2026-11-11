@@ -1,13 +1,13 @@
 import type { Cantidad } from "../../../primitivas/cantidad/cantidad";
-import type { Porcentaje } from "../../../primitivas/cantidad/porcentaje";
+import { porcentajeDesdeTexto, type Porcentaje } from "../../../primitivas/cantidad/porcentaje";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { convertirCantidad } from "../../../primitivas/unidades/convertir-cantidad";
 import { UNIDADES, type CodigoDeUnidad } from "../../../primitivas/unidades/unidades";
 
 /**
- * La validación de una composición (receta simple de un producto vendible, E5 §3.2 `guardarComposicion` y §3.1): lo que se puede decir
- * ANTES de leer la base. Sin ciclos: no aplica (E5 no tiene subcomposiciones; lo suma E6). Que el artículo exista y esté controlado, y
- * que el producto sea `VENDIBLE`, lo comprueba el caso de uso. Puro.
+ * La validación de una composición (receta de un producto vendible o elaborado, E5 §3.2 `guardarComposicion` y E6 §3.2): lo que se puede
+ * decir ANTES de leer la base. Un componente es un artículo de stock O un producto elaborado (`compuestoId`, D96). Los ciclos y los niveles
+ * son de `subcomposicion.ts`. Que el artículo exista y esté controlado, y que el producto lleve receta, lo comprueba el caso de uso. Puro.
  */
 export type PerillaDeComposicion = "composiciones_con_perdida" | "subcomposiciones";
 
@@ -21,6 +21,7 @@ export type ErrorDeComposicion =
         | "UNIDAD_INVALIDA"
         | "DIMENSION_DISTINTA"
         | "CONVERSION_NO_EXACTA"
+        | "PERDIDA_INVALIDA"
         | "FUERA_DE_RANGO";
     }>
   | Readonly<{ codigo: "FUNCION_NO_INCLUIDA"; perilla: PerillaDeComposicion }>;
@@ -29,20 +30,27 @@ export type ErrorDeComposicion =
 export type PerillasDeComposicion = Readonly<Record<PerillaDeComposicion, boolean>>;
 
 export type ComponenteAValidar = Readonly<{
-  articuloId: string;
+  /** El artículo de stock del componente; `null` si es un elaborado (entonces va `compuestoId`). Exactamente uno de los dos. */
+  articuloId: string | null;
   cantidad: Cantidad;
   unidadId: string;
-  /** La unidad de stock del artículo (es la base de su producto). */
+  /** La unidad de stock del artículo, o la unidad base del producto elaborado: la de la dimensión del componente. */
   unidadDeStockId: string;
   perdida: Porcentaje | null;
+  /** El producto `ELABORADO` del componente; `null` si es un artículo. */
   compuestoId: string | null;
 }>;
 
 export type ComponenteValido = Readonly<{
-  articuloId: string;
+  articuloId: string | null;
+  compuestoId: string | null;
   cantidad: Cantidad;
   unidadId: CodigoDeUnidad;
+  perdida: Porcentaje | null;
 }>;
+
+/** La pérdida es un porcentaje de 0 a menos de 100 (la base: `componente_perdida_ck`; un `Porcentaje` ya no es negativo): 100 % no dejaría nada para el plato. */
+const CIEN_PUNTOS = porcentajeDesdeTexto("100").unidades;
 
 export type ComposicionValida = Readonly<{
   rinde: Cantidad;
@@ -54,7 +62,7 @@ export const esUnidadConocida = (texto: string): texto is CodigoDeUnidad =>
   Object.hasOwn(UNIDADES, texto);
 
 /**
- * Valida el conjunto final de una composición: no vacía; `rinde > 0`; sin componentes repetidos (un artículo una sola vez); cada
+ * Valida el conjunto final de una composición: no vacía; `rinde > 0`; sin componentes repetidos (un artículo o un elaborado una sola vez); cada
  * componente con cantidad `> 0`, unidad conocida de la MISMA dimensión que la unidad de stock de su artículo, y llevable a ella en forma
  * exacta (una conversión que no es exacta frenaría después la venta en la explosión, con la cuenta ya cobrada); pérdida y compuesto solo
  * con su perilla. Devuelve el primer error en ese orden.
@@ -66,11 +74,19 @@ export function validarComposicion(
 ): Resultado<ComposicionValida, ErrorDeComposicion> {
   if (componentes.length === 0) return err({ codigo: "COMPOSICION_VACIA" });
   if (rinde.unidades <= 0n) return err({ codigo: "RINDE_INVALIDO" });
-  if (new Set(componentes.map((c) => c.articuloId)).size !== componentes.length) {
+  for (const c of componentes) {
+    if ((c.articuloId === null) === (c.compuestoId === null)) {
+      throw new RangeError("un componente es un artículo o un elaborado, no los dos ni ninguno");
+    }
+  }
+  if (new Set(componentes.map((c) => c.articuloId ?? c.compuestoId)).size !== componentes.length) {
     return err({ codigo: "COMPONENTE_REPETIDO" });
   }
   const validos: ComponenteValido[] = [];
   for (const c of componentes) {
+    if (c.perdida !== null && c.perdida.unidades >= CIEN_PUNTOS) {
+      return err({ codigo: "PERDIDA_INVALIDA" });
+    }
     if (c.perdida !== null && c.perdida.unidades !== 0n && !perillas.composiciones_con_perdida) {
       return err({ codigo: "FUNCION_NO_INCLUIDA", perilla: "composiciones_con_perdida" });
     }
@@ -83,7 +99,13 @@ export function validarComposicion(
     if (c.cantidad.unidades <= 0n) return err({ codigo: "CANTIDAD_INVALIDA" });
     const enStock = convertirCantidad(c.cantidad, c.unidadId, c.unidadDeStockId);
     if (!enStock.ok) return err({ codigo: enStock.error });
-    validos.push({ articuloId: c.articuloId, cantidad: c.cantidad, unidadId: c.unidadId });
+    validos.push({
+      articuloId: c.articuloId,
+      compuestoId: c.compuestoId,
+      cantidad: c.cantidad,
+      unidadId: c.unidadId,
+      perdida: c.perdida !== null && c.perdida.unidades !== 0n ? c.perdida : null,
+    });
   }
   return ok({ rinde, componentes: validos });
 }

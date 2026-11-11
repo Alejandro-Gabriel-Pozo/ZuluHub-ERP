@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { cantidadConSignoDesdeTexto } from "../../../primitivas/cantidad/con-signo";
 import { formatearDecimalFijo } from "../../../primitivas/cantidad/decimal-fijo";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
@@ -13,6 +12,7 @@ import { llaveDeSaldo } from "../persistencia/repositorio-de-movimientos";
 import type { ControlDeLote } from "../persistencia/repositorio-de-lotes";
 import type { TxDeStock } from "./contrato";
 import type { ErrorDeStock } from "./errores";
+import { leerCantidad } from "./movimientos-comun";
 
 /**
  * Los lotes en el libro (E6 §3.2, «Asignación de lotes en el libro»), SOLO para los artículos con control de lote ACTIVO: sin control no se
@@ -51,7 +51,6 @@ export type LotesDelPedido = Readonly<{
 const MOTIVO_DE_INGRESO = "Ingreso del lote";
 const aTexto = (unidades: bigint): string => formatearDecimalFijo(unidades, DECIMALES_DE_CANTIDAD);
 const aUnidades = (texto: string): bigint => BigInt(texto.replace(".", ""));
-const FORMA_DE_CANTIDAD = /^\d{1,14}(\.\d{1,4})?$/;
 
 type FilaNueva = { movimientoId: string; renglonNumero: number; loteId: string; cantidad: string };
 
@@ -201,12 +200,8 @@ async function lotesDeUnaEntrada(
   let suma = 0n;
   const vistos = new Set<string>();
   for (const propio of propios) {
-    const cantidad = FORMA_DE_CANTIDAD.test(propio.cantidad)
-      ? cantidadConSignoDesdeTexto(propio.cantidad)
-      : null;
-    if (cantidad === null || !cantidad.ok || cantidad.valor.unidades <= 0n) {
-      return err("CANTIDAD_INVALIDA");
-    }
+    const cantidad = leerCantidad(propio.cantidad);
+    if (!cantidad.ok) return cantidad;
     const vence = propio.fechaDeVencimiento ?? null;
     const elabora = propio.fechaDeElaboracion ?? null;
     if (vence === null && control.modo === "LOTE_Y_VENCIMIENTO")
@@ -257,7 +252,10 @@ function proximoId(movimiento: Movimiento, renglon: RenglonDeLibro, posicion: nu
       `lote|${movimiento.id}|${renglon.depositoId}|${renglon.articuloId}|${renglon.composicionId ?? ""}|${posicion}`,
     )
     .digest("hex");
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
+  const hex = Array.from(h);
+  hex[12] = "5"; // versión
+  hex[16] = "a"; // variante
+  return hex.join("").replace(/^(.{8})(.{4})(.{4})(.{4})(.{12}).*$/, "$1-$2-$3-$4-$5");
 }
 
 export const ESTADOS_INICIALES_DE_CALIDAD = CALIDADES_DE_LOTE;

@@ -5,9 +5,14 @@ import {
   type Cantidad,
 } from "../../../primitivas/cantidad/cantidad";
 import { cantidadConSignoDesdeTexto } from "../../../primitivas/cantidad/con-signo";
-import { porcentajeDesdeTexto, type Porcentaje } from "../../../primitivas/cantidad/porcentaje";
+import {
+  porcentajeATexto,
+  porcentajeDesdeTexto,
+  type Porcentaje,
+} from "../../../primitivas/cantidad/porcentaje";
 import { exigirPerilla } from "../../../capacidades/planes/derechos";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { pasosDeRecetaDesdeTexto } from "../../../primitivas/texto/pasos-de-receta";
 import {
   esUnidadConocida,
   validarComposicion,
@@ -17,6 +22,7 @@ import {
 } from "../dominio/composicion";
 import { esUuid } from "../persistencia/filas";
 import type { ComposicionGuardada } from "../persistencia/modelo";
+import { comprobarArbolDeRecetas } from "./arbol-de-recetas";
 import { autorizar, exigirAlcanceTotal, traducir } from "./comun";
 import type { DependenciasDeStock, TxDeStock } from "./contrato";
 import type { ErrorDeStock } from "./errores";
@@ -30,14 +36,17 @@ type R<S> = Resultado<S, ErrorDeStock>;
  */
 export const MAXIMO_DE_COMPONENTES = 32_767;
 
-/** Un componente tal como llega de la pantalla: el producto (con artículo de stock), la cantidad en texto decimal y la unidad en que se escribió. */
+/**
+ * Un componente tal como llega de la pantalla: el producto (con artículo de stock, o un `ELABORADO`: subcomposición, D96), la cantidad NETA
+ * en texto decimal y la unidad en que se escribió.
+ */
 export type ComponenteDeEntrada = Readonly<{
   productoId: string;
   cantidad: string;
   unidadId: string;
   /**
-   * Pérdida en puntos porcentuales. Solo existe para que la perilla `composiciones_con_perdida` la rechace con su error (E6 la abre): con la
-   * perilla apagada es `FUNCION_NO_INCLUIDA`, y con ella encendida sigue siéndolo hasta que la explosión la aplique (SUPUESTO (DEC-0074), nace cerrado).
+   * Merma en puntos porcentuales (de 0 a menos de 100, hasta 4 decimales): se SUMA al neto (`merma.ts`, DEC-0100). Con ella hace falta la
+   * perilla `composiciones_con_perdida`; apagada es `FUNCION_NO_INCLUIDA`.
    */
   perdida?: string | undefined;
 }>;
@@ -48,6 +57,8 @@ export type EntradaDeGuardarComposicion = Readonly<{
   versionEsperada: number;
   /** Cuántas unidades vendidas rinde la receta (texto decimal, mayor que cero). */
   rinde: string;
+  /** Los pasos de la ficha de cocina: una línea de texto; ausente o vacío = sin pasos. */
+  pasos?: string | null | undefined;
   /** El conjunto FINAL de componentes (no una diferencia). */
   componentes: readonly ComponenteDeEntrada[];
 }>;
@@ -68,6 +79,14 @@ type ComponenteLeido = Readonly<{
   unidadId: string;
   perdida: Porcentaje | null;
 }>;
+
+/** Los pasos: ausente o vacío es «sin pasos»; si hay texto, una línea de la lista de permitidos (`pasos-de-receta`). */
+function leerPasos(valor: unknown): R<string | null> {
+  if (valor === undefined || valor === null || valor === "") return ok(null);
+  if (typeof valor !== "string") return err("IDENTIFICADOR_INVALIDO");
+  const valido = pasosDeRecetaDesdeTexto(valor);
+  return valido.ok ? ok(valido.valor) : err("IDENTIFICADOR_INVALIDO");
+}
 
 function leerVersionEsperada(valor: unknown): R<number> {
   return typeof valor === "number" &&
@@ -114,7 +133,7 @@ function leerComponentes(valor: unknown): R<readonly ComponenteLeido[]> {
     let perdida: Porcentaje | null = null;
     if (textoDePerdida !== undefined && textoDePerdida !== null) {
       if (typeof textoDePerdida !== "string" || !FORMA_DE_LA_PERDIDA.test(textoDePerdida)) {
-        return err("CANTIDAD_INVALIDA");
+        return err("PERDIDA_INVALIDA");
       }
       perdida = porcentajeDesdeTexto(textoDePerdida);
     }
@@ -138,7 +157,7 @@ function errorDeComposicion(error: ErrorDeComposicion): ErrorDeStock {
   return error.codigo;
 }
 
-/** Las perillas de la receta, leídas del plan solo si alguien pidió pérdida (si no, nada las consulta). */
+/** Las perillas de la receta, leídas del plan solo si alguien pidió pérdida o un elaborado (si no, nada las consulta). */
 async function perillasDeLaReceta(
   tx: TxDeStock,
   contexto: ContextoOperativo,
@@ -153,46 +172,66 @@ async function perillasDeLaReceta(
   };
 }
 
-/** El contenido de una receta en forma canónica (rinde y componentes por artículo, sin depender del orden): sirve para saber si no cambió nada. */
+/** El componente de una receta como lo comparan dos versiones: a quién (artículo o elaborado), cuánto neto, en qué unidad y con cuánta merma. */
+type ComponenteCanonico = Readonly<{
+  articuloId: string | null;
+  compuestoId: string | null;
+  cantidad: string;
+  unidadId: string;
+  /** Texto decimal de la merma; `null` o cero = sin merma. */
+  perdida: string | null;
+}>;
+
+/**
+ * El contenido de una receta en forma canónica (rinde, componentes sin depender del orden, merma y pasos): sirve para saber si no cambió
+ * nada (repetir el guardado devuelve la versión vigente, I8). Una merma en cero y una ausente son lo mismo; unos pasos vacíos y ausentes también.
+ */
 function contenidoCanonico(
   rinde: string,
-  componentes: readonly Readonly<{
-    articuloId: string;
-    cantidad: string;
-    unidadId: string;
-  }>[],
+  pasos: string | null,
+  componentes: readonly ComponenteCanonico[],
 ): string {
   const ordenados = componentes
-    .map((c) => `${c.articuloId}|${cantidadATexto(cantidadDesdeTexto(c.cantidad))}|${c.unidadId}`)
+    .map((c) => {
+      const perdida = porcentajeATexto(porcentajeDesdeTexto(c.perdida ?? "0"));
+      const quien =
+        c.articuloId === null ? `elaborado:${c.compuestoId}` : `articulo:${c.articuloId}`;
+      return `${quien}|${cantidadATexto(cantidadDesdeTexto(c.cantidad))}|${c.unidadId}|${perdida}`;
+    })
     .sort();
-  return JSON.stringify([cantidadATexto(cantidadDesdeTexto(rinde)), ordenados]);
+  return JSON.stringify([cantidadATexto(cantidadDesdeTexto(rinde)), pasos, ordenados]);
 }
 
 const contenidoDeLaVersion = (version: ComposicionGuardada): string =>
-  contenidoCanonico(version.rinde, version.componentes);
+  contenidoCanonico(version.rinde, version.pasos, version.componentes);
 
-/** Los datos de una versión para la auditoría (sin el contenido completo de cada componente repetido: artículo, cantidad y unidad). */
+/** Los datos de una versión para la auditoría: a quién lleva, cuánto, en qué unidad y con qué merma, y los pasos. */
 const resumenDeLaVersion = (version: ComposicionGuardada) => ({
   version: version.numero,
   rinde: version.rinde,
+  pasos: version.pasos,
   componentes: version.componentes.map((c) => ({
     articuloId: c.articuloId,
+    compuestoId: c.compuestoId,
     cantidad: c.cantidad,
     unidadId: c.unidadId,
+    perdida: c.perdida,
   })),
 });
 
 /**
- * Guardar la receta de un producto vendible (E5 §3.2): el CONJUNTO FINAL de componentes con su `rinde`, no una diferencia, como una versión
- * nueva (solo inserción; vale la de mayor número). Guard `composiciones.editar` con alcance TODAS (la receta es de la empresa, no de una
- * sucursal: SUPUESTO (DEC-0074), como los artículos). Solo un producto `VENDIBLE` tiene receta (`PRODUCTO_NO_ES_VENDIBLE`, S-6) y cada componente es un
- * producto con artículo de stock ACTIVO (`COMPONENTE_NO_CONTROLADO`); el dominio comprueba el resto (`validarComposicion`: no vacía, `rinde`
- * mayor que cero, sin repetidos, cantidad y unidad de la dimensión del artículo y con conversión exacta). Pérdida y compuesto existen en la
- * base para E6 y acá `FUNCION_NO_INCLUIDA` los rechaza (la perilla apagada, y encendida también hasta que la explosión la aplique).
- * Repetición (`SIN_CAMBIOS`): el mismo contenido que la versión vigente devuelve esa versión con `yaExistia` sin escribir ni auditar, aunque la
- * versión esperada sea vieja (un reintento tras un éxito no falla). Si no, compara `versionEsperada` (`COMPOSICION_DESACTUALIZADA`): de dos
- * guardados a la vez con la misma versión, gana uno (la base impone `(empresa, producto, numero)` único). La auditoría de configuración queda
- * en la misma transacción.
+ * Guardar la receta de un producto vendible o elaborado (E5 §3.2, E6 §3.2): el CONJUNTO FINAL de componentes con su `rinde` y sus pasos, no una
+ * diferencia, como una versión nueva (solo inserción; vale la de mayor número). Guard `composiciones.editar` con alcance TODAS (la receta es
+ * de la empresa, no de una sucursal: SUPUESTO (DEC-0074), como los artículos). Solo un producto `VENDIBLE` o `ELABORADO` lleva receta
+ * (`PRODUCTO_NO_LLEVA_RECETA`). Cada componente es un producto: un `ELABORADO` entra como elaborado (subcomposición: perilla `subcomposiciones`;
+ * con stock propio la explosión descuenta su artículo y sin él baja a sus ingredientes) y cualquier otro como artículo de stock ACTIVO
+ * (`COMPONENTE_NO_CONTROLADO`). El dominio comprueba el resto (`validarComposicion`: no vacía, `rinde` mayor que cero, sin repetidos, cantidad y
+ * unidad de la dimensión del componente con conversión exacta, merma de 0 a menos de 100 con la perilla `composiciones_con_perdida`) y
+ * `comprobarArbolDeRecetas` los ciclos y los cinco niveles hacia abajo Y hacia arriba. Repetición (`SIN_CAMBIOS`): el mismo contenido que la
+ * versión vigente devuelve esa versión con `yaExistia` sin escribir ni auditar, aunque la versión esperada sea vieja (un reintento tras un
+ * éxito no falla). Si no, compara `versionEsperada` (`COMPOSICION_DESACTUALIZADA`): de dos guardados a la vez con la misma versión, gana
+ * uno (la base impone `(empresa, producto, numero)` único); de dos guardados cruzados (A lleva B, B lleva A) la transacción serializable y el
+ * disparador `composicion_sin_ciclos` dejan pasar a lo sumo uno. La auditoría de configuración queda en la misma transacción.
  */
 export function armarGuardarComposicion(dependencias: DependenciasDeStock) {
   return async function guardarComposicion(
@@ -219,6 +258,8 @@ export function armarGuardarComposicion(dependencias: DependenciasDeStock) {
         const leidos = leerComponentes(entrada.componentes);
         if (!leidos.ok) return leidos;
         const rinde = leerRinde(entrada.rinde);
+        const pasos = leerPasos(entrada.pasos);
+        if (!pasos.ok) return pasos;
 
         // `FOR SHARE`: desactivar el producto a la vez espera a este comando (o este ve el producto ya desactivado).
         const producto = await tx.productosParaStock.bloquearCompartido(
@@ -226,32 +267,57 @@ export function armarGuardarComposicion(dependencias: DependenciasDeStock) {
           entrada.productoId,
         );
         if (producto === null) return err("PRODUCTO_NO_ENCONTRADO");
-        if (producto.claseDeUso !== "VENDIBLE") return err("PRODUCTO_NO_ES_VENDIBLE");
+        if (producto.claseDeUso !== "VENDIBLE" && producto.claseDeUso !== "ELABORADO") {
+          return err("PRODUCTO_NO_LLEVA_RECETA");
+        }
         const vigente = await tx.composicionesDeStock.ultimaVersion(empresaId, producto.id);
 
-        // Cada componente es un producto con artículo (activo o no por ahora: una repetición no depende de cómo esté el catálogo hoy).
-        const articulos = await tx.articulosDeStock.porProductos(
-          empresaId,
-          leidos.valor.map((c) => c.productoId),
-        );
+        // Cada componente es un producto: un elaborado entra como elaborado; el resto, por su artículo (activo o no por ahora: una repetición
+        // no depende de cómo esté el catálogo hoy).
+        const idsDeComponentes = leidos.valor.map((c) => c.productoId);
+        const productos = await tx.productosParaStock.porIds(empresaId, idsDeComponentes);
+        const productoDe = new Map(productos.map((p) => [p.id, p]));
+        const articulos = await tx.articulosDeStock.porProductos(empresaId, idsDeComponentes);
         const articuloDe = new Map(articulos.map((a) => [a.productoId, a]));
         const aValidar: ComponenteAValidar[] = [];
+        const componentesDeStock: Array<(typeof articulos)[number]> = [];
+        const elaborados: Array<(typeof productos)[number]> = [];
+        /** La dimensión de cada componente (artículo o elaborado), por su id: la base exige la unidad de esa dimensión. */
+        const dimensionDe = new Map<string, string>();
         for (const c of leidos.valor) {
+          const componente = productoDe.get(c.productoId);
+          if (componente === undefined) return err("COMPONENTE_NO_CONTROLADO");
+          if (componente.claseDeUso === "ELABORADO") {
+            elaborados.push(componente);
+            dimensionDe.set(componente.id, componente.dimension);
+            aValidar.push({
+              articuloId: null,
+              compuestoId: componente.id,
+              cantidad: c.cantidad,
+              unidadId: c.unidadId,
+              unidadDeStockId: componente.unidadBaseId,
+              perdida: c.perdida,
+            });
+            continue;
+          }
           const articulo = articuloDe.get(c.productoId);
           if (articulo === undefined) return err("COMPONENTE_NO_CONTROLADO");
+          componentesDeStock.push(articulo);
+          dimensionDe.set(articulo.id, articulo.dimension);
           aValidar.push({
             articuloId: articulo.id,
+            compuestoId: null,
             cantidad: c.cantidad,
             unidadId: c.unidadId,
             unidadDeStockId: articulo.unidadDeStockId,
             perdida: c.perdida,
-            compuestoId: null,
           });
         }
         const perillas = await perillasDeLaReceta(
           tx,
           contexto,
-          leidos.valor.some((c) => c.perdida !== null && c.perdida.unidades !== 0n),
+          elaborados.length > 0 ||
+            leidos.valor.some((c) => c.perdida !== null && c.perdida.unidades !== 0n),
         );
         // Con la lista vacía el dominio dice `COMPOSICION_VACIA` antes de mirar el rinde: así el orden de los errores es el de la spec.
         const validada = validarComposicion(
@@ -260,18 +326,25 @@ export function armarGuardarComposicion(dependencias: DependenciasDeStock) {
           perillas,
         );
         if (!validada.ok) return err(errorDeComposicion(validada.error));
-        // Con la perilla encendida la pérdida pasa el dominio, pero la explosión (E6) todavía no la aplica: guardarla sería prometer algo que no se hace.
-        if (leidos.valor.some((c) => c.perdida !== null && c.perdida.unidades !== 0n)) {
-          return err({ error: "FUNCION_NO_INCLUIDA", perilla: "composiciones_con_perdida" });
-        }
 
-        const pedido = contenidoCanonico(
-          cantidadATexto(validada.valor.rinde),
-          validada.valor.componentes.map((c) => ({
+        const componentes = validada.valor.componentes.map((c) => {
+          const dimension = dimensionDe.get(c.articuloId ?? c.compuestoId ?? "");
+          if (dimension === undefined) {
+            throw new Error("el componente de una receta validada no tiene dimensión");
+          }
+          return {
             articuloId: c.articuloId,
+            compuestoId: c.compuestoId,
             cantidad: cantidadATexto(c.cantidad),
             unidadId: c.unidadId,
-          })),
+            dimension,
+            perdida: c.perdida === null ? null : porcentajeATexto(c.perdida),
+          };
+        });
+        const pedido = contenidoCanonico(
+          cantidadATexto(validada.valor.rinde),
+          pasos.valor,
+          componentes,
         );
         if (vigente !== null && contenidoDeLaVersion(vigente) === pedido) {
           return ok({ version: vigente.numero, yaExistia: true });
@@ -280,25 +353,26 @@ export function armarGuardarComposicion(dependencias: DependenciasDeStock) {
         if ((vigente?.numero ?? 0) !== versionEsperada.valor) {
           return err("COMPOSICION_DESACTUALIZADA");
         }
-        if (articulos.some((a) => !a.activo)) return err("COMPONENTE_NO_CONTROLADO");
+        if (componentesDeStock.some((a) => !a.activo)) return err("COMPONENTE_NO_CONTROLADO");
+        if (elaborados.some((e) => !e.activo)) return err("PRODUCTO_INACTIVO");
+        if (elaborados.length > 0) {
+          const arbol = await comprobarArbolDeRecetas(
+            tx,
+            empresaId,
+            producto.id,
+            elaborados.map((e) => e.id),
+          );
+          if (arbol !== null) return err(arbol);
+        }
 
         const guardada = await tx.composicionesDeStock.insertarVersion(empresaId, {
           productoId: producto.id,
           numero: (vigente?.numero ?? 0) + 1,
           rinde: cantidadATexto(validada.valor.rinde),
+          pasos: pasos.valor,
           creadaPor: persona,
           creadaEn: contexto.ahora,
-          componentes: validada.valor.componentes.map((c) => {
-            const articulo = articulos.find((a) => a.id === c.articuloId);
-            if (articulo === undefined)
-              throw new Error("el artículo de un componente validado no está");
-            return {
-              articuloId: c.articuloId,
-              cantidad: cantidadATexto(c.cantidad),
-              unidadId: c.unidadId,
-              dimension: articulo.dimension,
-            };
-          }),
+          componentes,
         });
         await tx.auditoria.registrar({
           empresaId,
@@ -360,6 +434,7 @@ export function armarRetirarComposicion(dependencias: DependenciasDeStock) {
           productoId: producto.id,
           numero: vigente.numero + 1,
           rinde: vigente.rinde,
+          pasos: null,
           creadaPor: persona,
           creadaEn: contexto.ahora,
           componentes: [],

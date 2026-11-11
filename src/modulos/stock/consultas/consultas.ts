@@ -6,6 +6,7 @@ import { armarConsultasDeCostos } from "./costos";
 import { armarConsultasDeDepositos } from "./depositos";
 import { armarConsultasDeExistencias } from "./existencias";
 import { armarConsultasDeLibro } from "./libro";
+import { armarConsultasDeRecetas } from "./recetas";
 
 /**
  * Las consultas por pantalla de stock (ADR-005): solo lectura (`read committed`), cada una pide su acción al guard dentro de su transacción.
@@ -23,6 +24,8 @@ export function crearConsultasDeStock(d: DependenciasDeConsultasDeStock) {
     ...armarConsultasDeConteos(leer, d.reglas),
     // composiciones (E5-T7)
     ...armarConsultasDeComposiciones(leer),
+    // ficha de receta con costo, comparar versiones, ficha de cocina (E6-T6)
+    ...armarConsultasDeRecetas(leer, d.reglas),
     // costos (E5-T10)
     ...armarConsultasDeCostos(leer),
   };

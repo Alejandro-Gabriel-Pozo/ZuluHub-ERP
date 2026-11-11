@@ -1486,6 +1486,7 @@ describe.skipIf(base === null)("stock: repositorios de la persistencia", () => {
         {
           numero: 1,
           articuloId: harina.articulo,
+          compuestoId: null,
           cantidad: "250.0000",
           unidadId: "GRAMO",
           dimension: "MASA",
@@ -1494,6 +1495,7 @@ describe.skipIf(base === null)("stock: repositorios de la persistencia", () => {
         {
           numero: 2,
           articuloId: huevo.articulo,
+          compuestoId: null,
           cantidad: "2.0000",
           unidadId: "UNIDAD",
           dimension: "CONTEO",

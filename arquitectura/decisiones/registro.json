@@ -1061,5 +1061,55 @@
     "decision": "Cerrar una orden exige que la base vea el consumo y el producto en la misma actualización; T8 toma el bloqueo de la fila antes (la spec ponía el UPDATE de estado primero).",
     "que_cambia": "Orden interna del cierre; sin cambio visible.",
     "donde": "migraciones/0033_produccion.sql (E6, S-19)"
+  },
+  {
+    "id": "DEC-0110",
+    "tipo": "DATOS",
+    "decision": "Los pasos de una receta son un texto de una línea de hasta 2000 caracteres, de la lista de permitidos; ausente o vacío es sin pasos.",
+    "que_cambia": "Cuánto y qué se puede escribir en la ficha de cocina; cambia una constante y un CHECK de la base.",
+    "donde": "src/primitivas/texto/pasos-de-receta.ts y migraciones/0032 composicion_pasos_ck (E6, S-7)",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "estado": "PENDIENTE_DE_OK"
+  },
+  {
+    "id": "DEC-0111",
+    "tipo": "DINERO",
+    "decision": "Un ingrediente nunca comprado se costea con el promedio del depósito de venta con más cantidad valorizada; sin costo queda incompleto, nunca cero.",
+    "que_cambia": "Qué costo ve el gerente en una receta sin compras; la especificación no dice qué depósito si hay varias sucursales.",
+    "donde": "src/modulos/stock/persistencia/costos.ts promediosEnDepositosDeVenta (E6-T6)",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "estado": "PENDIENTE_DE_OK"
+  },
+  {
+    "id": "DEC-0112",
+    "tipo": "DATOS",
+    "decision": "Un elaborado como componente se guarda siempre como elaborado, aunque tenga stock propio; la venta decide si descuenta su stock o baja a sus ingredientes.",
+    "que_cambia": "Cambia cómo se guarda la receta ante un cambio de estado del elaborado; revertirlo exige migrar recetas.",
+    "donde": "src/modulos/stock/casos-de-uso/composiciones.ts (E6-T6, D94, D96)",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "estado": "PENDIENTE_DE_OK"
+  },
+  {
+    "id": "DEC-0113",
+    "tipo": "DINERO",
+    "decision": "La ficha de receta da costo por línea, total y por unidad con costos.ver; food cost, margen y costo por opción esperan el lector de precio y la regla de IVA.",
+    "que_cambia": "Lo que muestra la ficha de receta; pendiente de una pregunta al dueño y de un lector de precios en catálogo.",
+    "donde": "src/modulos/stock/consultas/recetas.ts (E6-T6, D147)",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "estado": "PENDIENTE_DE_OK"
+  },
+  {
+    "id": "DEC-0114",
+    "tipo": "DATOS",
+    "decision": "Guardar una receta se rechaza si hace pasar de cinco niveles a una receta que ya la usa más arriba, no solo si la propia pasa de cinco.",
+    "que_cambia": "Qué recetas se pueden guardar; sin esto una venta puede fallar por RECETA_DEMASIADO_ANIDADA con una receta guardada sin error.",
+    "donde": "src/modulos/stock/casos-de-uso/arbol-de-recetas.ts (E6-T6, S-6)",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "estado": "PENDIENTE_DE_OK"
   }
 ]
