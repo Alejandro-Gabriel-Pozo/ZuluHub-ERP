@@ -330,8 +330,8 @@ export const CATALOGO_DE_MODULOS = {
   ...MODULOS_DE_SALON_Y_COMANDAS,
   /**
    * Directorio de clientes y proveedores (E9; `e9-compras-especificacion.md` §3.0 y §3.9, F1 a F4 de `clientes-y-proveedores.md`). `disponible` y
-   * `obligatorio` desde E9-T4 (F5 del 12/10: siempre activo). Ocho acciones; sin `partes.anonimizar`: ningún caso de uso la usa (SUPUESTO S-3 de
-   * E9, DEC-0305). Mirar es `LECTURA`; desactivar cierra; el resto crea o amplía.
+   * `obligatorio` desde E9-T4 (F5 del 12/10: siempre activo). Ocho acciones; sin `partes.anonimizar`: ningún caso de uso la usa
+   * (SUPUESTO S-3 de E9, DEC-0305). Mirar es `LECTURA`; desactivar cierra; el resto crea o amplía.
    */
   clientes: {
     estado: "disponible",
