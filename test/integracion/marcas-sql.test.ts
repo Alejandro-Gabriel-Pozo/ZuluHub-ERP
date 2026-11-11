@@ -1201,7 +1201,7 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
       }
     });
 
-    it("a lo sumo 500 textos (el tope de 0007; 0038 lo sube a 1000); vacío vale; solo un objeto", async () => {
+    it("a lo sumo 500 textos; vacío vale; solo un objeto", async () => {
       const con = (n: number) =>
         Object.fromEntries(Array.from({ length: n }, (_, i) => [`a.k${i}`, "t"]));
       const { rows } = await dueno.query<{ v: boolean }>(
@@ -1216,7 +1216,7 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
       expect(otros.map((r) => r.v)).toEqual([false, false, false, false, false]);
     });
 
-    // El catálogo del código pasó de 500 claves: se mide contra la base con TODAS las migraciones (0038 sube el tope a 1000, DEC-0088), no contra la de 0007.
+    // Se mide contra la base con TODAS las migraciones: 0041 sube el tope a 2000 (DEC-0200); la base de 0007 tiene el viejo de 500.
     it("todo el catálogo de textos del código, como diccionario, es un vocabulario válido para la base", async () => {
       if (base === null) return;
       const diccionario = Object.fromEntries(
@@ -1229,14 +1229,9 @@ describe.skipIf(base === null)("marcas y planes: la migración 0007 contra una b
           "select vocabulario_valido_ampliado($1::jsonb) as v",
           [JSON.stringify(diccionario)],
         );
-        expect(rows).toEqual([{ v: true }]);
-        const con = (n: number) =>
-          Object.fromEntries(Array.from({ length: n }, (_, i) => [`a.k${i}`, "t"]));
-        const { rows: tope } = await completa.query<{ v: boolean }>(
-          `select vocabulario_valido_ampliado(v::jsonb) as v from unnest($1::text[]) as v`,
-          [[con(1000), con(1001)].map((v) => JSON.stringify(v))],
-        );
-        expect(tope.map((r) => r.v)).toEqual([true, false]);
+        expect(rows, `el catálogo tiene ${Object.keys(diccionario).length} textos`).toEqual([
+          { v: true },
+        ]);
       } finally {
         await completa.end();
       }

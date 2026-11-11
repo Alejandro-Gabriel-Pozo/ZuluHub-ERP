@@ -201,12 +201,6 @@ DROP FUNCTION IF EXISTS linea_importe_fijo_solo_compartida();
 DROP FUNCTION IF EXISTS copias_cuadran();
 DROP FUNCTION IF EXISTS linea_copiada_validar_alta();
 
--- El tope de claves del vocabulario vuelve a 500 (0007). No borra filas: si alguna versión de marca ya tiene más de 500 claves, el ADD CONSTRAINT
--- falla y no se pierde nada (hay que recortar ese vocabulario antes de revertir).
-ALTER TABLE version_de_marca DROP CONSTRAINT IF EXISTS version_de_marca_vocabulario_ck;
-ALTER TABLE version_de_marca ADD CONSTRAINT version_de_marca_vocabulario_ck CHECK (vocabulario_valido(vocabulario));
-DROP FUNCTION IF EXISTS vocabulario_valido_ampliado(jsonb);
-
 -- Sin esta fila, la migración figuraría aplicada y el ejecutor no volvería a correrla.
 DO $$
 BEGIN

@@ -549,39 +549,6 @@ describe.skipIf(base === null)("migración 0038: salón, comandas e impresión",
     });
   });
 
-  describe("vocabulario: tope de 1000 claves (DEC-0088)", () => {
-    it("la restricción de la versión de marca usa la función ampliada, y la de 0007 sigue siendo la regla de cada tramo", async () => {
-      const { rows } = await dueno.query<{ def: string }>(
-        `select pg_get_constraintdef(oid) as def from pg_constraint where conname = 'version_de_marca_vocabulario_ck'`,
-      );
-      expect(rows[0]?.def).toContain("vocabulario_valido_ampliado(vocabulario)");
-      const con = (n: number, texto = "t") =>
-        Object.fromEntries(Array.from({ length: n }, (_, i) => [`a.k${i}`, texto]));
-      const { rows: r } = await dueno.query<{ v: boolean }>(
-        `select vocabulario_valido_ampliado(v::jsonb) as v from unnest($1::text[]) as v`,
-        [
-          [
-            {},
-            con(500),
-            con(501),
-            con(1000),
-            con(1001),
-            // un texto inválido en el segundo tramo lo rechaza igual
-            { ...con(600), "b.mala": "con <angulos>" },
-            // una clave mal formada también
-            { ...con(600), "Mala.clave": "x" },
-          ].map((v) => JSON.stringify(v)),
-        ],
-      );
-      expect(r.map((x) => x.v)).toEqual([true, true, true, true, false, false, false]);
-      const { rows: otros } = await dueno.query<{ v: boolean }>(
-        `select vocabulario_valido_ampliado(v) as v from unnest(array['[]', '"x"', '1', 'null']::jsonb[]) as v
-         union all select vocabulario_valido_ampliado(null)`,
-      );
-      expect(otros.map((x) => x.v)).toEqual([false, false, false, false, false]);
-    });
-  });
-
   describe("aislamiento, privilegios y reversión", () => {
     it("otra empresa no ve las mesas ni los envíos (RLS)", async () => {
       const otra = await crearMundo(dueno);
@@ -650,16 +617,6 @@ describe.skipIf(base === null)("migración 0038: salón, comandas e impresión",
         expect(col.rowCount).toBe(0);
         const reg = await c.query(`select 1 from migracion where nombre = '0038_salon.sql'`);
         expect(reg.rowCount).toBe(0);
-        // El tope del vocabulario vuelve al de 0007 y la función ampliada desaparece.
-        const def = await c.query<{ def: string }>(
-          `select pg_get_constraintdef(oid) as def from pg_constraint where conname = 'version_de_marca_vocabulario_ck'`,
-        );
-        expect(def.rows[0]?.def).toContain("vocabulario_valido(vocabulario)");
-        expect(def.rows[0]?.def).not.toContain("ampliado");
-        const ampliada = await c.query(
-          `select 1 from pg_proc where proname = 'vocabulario_valido_ampliado'`,
-        );
-        expect(ampliada.rowCount).toBe(0);
       } finally {
         await c.end();
         await otra.destruir();
