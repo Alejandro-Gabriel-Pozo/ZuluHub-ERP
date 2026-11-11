@@ -54,6 +54,12 @@
     "pruebas": "src/modulos/ventas/dominio"
   },
   {
+    "grupo": "clientes (dominio)",
+    "archivos": "src/modulos/clientes/dominio/**/*.ts",
+    "minutos": 3,
+    "pruebas": "src/modulos/clientes"
+  },
+  {
     "grupo": "stock (dominio)",
     "archivos": "src/modulos/stock/dominio/**/*.ts",
     "minutos": 10,
