@@ -48,13 +48,16 @@ describe.skipIf(base === null)("ventas: la persistencia contra el esquema real",
        select indexname from pg_indexes where schemaname = 'public' and tablename = any($1) and indexdef like 'CREATE UNIQUE%'`,
       [TABLAS],
     );
-    const migracion = (
-      await Promise.all(
-        ["0028_ventas.sql", "0029_facturacion.sql", "0036_ventas_sella_variante.sql"].map((n) =>
-          readFile(join(import.meta.dirname, "../../migraciones", n), "utf8"),
-        ),
-      )
-    ).join("\n");
+    const leer = (n: string) => readFile(join(import.meta.dirname, "../../migraciones", n), "utf8");
+    // De 0038 (E7) solo la parte de ventas: lo que sigue a esta marca es de salón y comandas, que traducen lo suyo.
+    const de0038 =
+      (await leer("0038_salon.sql")).split("-- SALÓN: la mesa y sus casillas")[0] ?? "";
+    const migracion = [
+      ...(await Promise.all(
+        ["0028_ventas.sql", "0029_facturacion.sql", "0036_ventas_sella_variante.sql"].map(leer),
+      )),
+      de0038,
+    ].join("\n");
     const deDisparadores = [...migracion.matchAll(/CONSTRAINT = '(\w+)'/g)].map(
       (m) => m[1] as string,
     );
