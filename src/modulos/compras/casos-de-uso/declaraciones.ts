@@ -1,6 +1,7 @@
 import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/declaracion";
 
 const ARCHIVO_DE_FICHA = "test/integracion/compras-ficha.test.ts";
+const ARCHIVO_DE_FACTURA = "test/integracion/compras-factura.test.ts";
 const ARCHIVO_DE_PAGOS = "test/integracion/compras-pagos.test.ts";
 const ARCHIVO_DE_RECEPCION = "test/integracion/compras-recepcion.test.ts";
 
@@ -90,6 +91,16 @@ export const DECLARACIONES = {
       },
     },
   },
+  registrarCompraConFactura: {
+    accion: "comprobantes_de_proveedor.registrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_FACTURA,
+        it: "I1: repetir la compra con factura devuelve lo mismo (comprobante y avisos) sin escribir; con otra factura y la misma clave, CLAVE_REUTILIZADA",
+      },
+    },
+  },
   anularCompra: {
     accion: "recepciones.anular",
     repeticion: {
@@ -126,7 +137,7 @@ export const DECLARACIONES = {
       regla: "RECHAZA_LA_REPETICION",
       prueba: {
         archivo: ARCHIVO_DE_PAGOS,
-        it: "I5: anular dos veces el mismo pago deja un solo espejo y la segunda da PAGO_YA_ANULADO",
+        it: "I5: anular dos veces el mismo pago deja un solo espejo y la segunda da PAGO_YA_ANULADO; después se puede declarar otro",
       },
     },
   },

@@ -22,6 +22,10 @@ import {
   DECLARACIONES_DE_CONSULTAS_DE_CLIENTES,
 } from "../../src/modulos/clientes/publico";
 import {
+  DECLARACIONES_DE_COMPRAS,
+  DECLARACIONES_DE_CONSULTAS_DE_COMPRAS,
+} from "../../src/modulos/compras/publico";
+import {
   DECLARACIONES_DE_CONSULTAS_DE_VENTAS,
   DECLARACIONES_DE_VENTAS,
 } from "../../src/modulos/ventas/publico";
@@ -77,7 +81,7 @@ const carpetaExiste = (carpeta: string): boolean => {
 type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 
 /** Los módulos declarados en el catálogo cuyas carpetas y casos de uso todavía no existen (T0). */
-const SIN_CONSTRUIR: readonly string[] = ["catalogo", "vidriera", "caja", "ventas", "compras"];
+const SIN_CONSTRUIR: readonly string[] = ["catalogo", "vidriera", "caja", "ventas"];
 
 function crucesDelCatalogo(
   catalogo: CatalogoComercial,
@@ -252,6 +256,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       DECLARACIONES_DE_CLIENTES,
       DECLARACIONES_DE_CONSULTAS_DE_CLIENTES,
     ),
+    "modulos/compras": accionesDe(DECLARACIONES_DE_COMPRAS, DECLARACIONES_DE_CONSULTAS_DE_COMPRAS),
     "modulos/fiscal": accionesDe(
       DECLARACIONES_DE_FISCAL,
       DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
@@ -352,8 +357,10 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ).toEqual([]);
   });
 
-  it("catálogo, carta, caja, ventas y compras son los únicos módulos sin construir, y siguen en desarrollo (T0, E0-T1 y E9-T1); stock salió con E5 y clientes con E9-T4, y son disponibles", () => {
-    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "vidriera", "caja", "ventas", "compras"]);
+  it("catálogo, carta, caja y ventas son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1); stock salió con E5, clientes con E9-T4 y compras con E9-T12, y son disponibles", () => {
+    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "vidriera", "caja", "ventas"]);
+    expect(SIN_CONSTRUIR).not.toContain("compras");
+    expect(CATALOGO_DE_MODULOS.compras.estado).toBe("disponible");
     expect(SIN_CONSTRUIR).not.toContain("stock");
     expect(SIN_CONSTRUIR).not.toContain("clientes");
     expect(CATALOGO_DE_MODULOS.clientes.estado).toBe("disponible");

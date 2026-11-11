@@ -182,7 +182,6 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "comprobantes_de_proveedor.registrar"
       | "comprobantes_de_proveedor.pagar"
       | "comprobantes_de_proveedor.anular_pago"
-      | "compras.corregir"
       | "compras.configurar"
     >();
     // Hoy ninguna acción exige una capacidad de sucursal.

@@ -440,6 +440,27 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "compras-sin-fiscal-ventas-ni-caja",
+      archivos: {
+        "src/modulos/compras/dominio/d.ts": importa("../../caja/publico"),
+        "src/modulos/caja/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "stock-sin-compras",
+      archivos: {
+        "src/modulos/stock/dominio/d.ts": importa("../../compras/publico"),
+        "src/modulos/compras/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "catalogo-sin-compras",
+      archivos: {
+        "src/modulos/catalogo/dominio/d.ts": importa("../../compras/publico"),
+        "src/modulos/compras/publico.ts": exporta,
+      },
+    },
+    {
       regla: "empresas-sin-negocio",
       archivos: {
         "src/modulos/empresas/casos-de-uso/c.ts": importa("../../caja/publico"),
@@ -1538,6 +1559,33 @@ describe("E0-T5: sentido de las dependencias entre módulos de base, ventas y ci
         'import "../../empresas/publico";\nexport const d = 1;\n',
     });
     expect(permitido).not.toContain("clientes-sin-negocio");
+  });
+
+  it("compras no importa fiscal, ventas ni caja; stock y catálogo no importan compras; compras sí usa stock, catálogo y clientes por su publico.ts", async () => {
+    for (const modulo of ["fiscal", "ventas", "caja"]) {
+      const v = await violacionesDe({
+        "src/modulos/compras/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+      });
+      expect(v, modulo).toContain("compras-sin-fiscal-ventas-ni-caja");
+    }
+    for (const [modulo, regla] of [
+      ["stock", "stock-sin-compras"],
+      ["catalogo", "catalogo-sin-compras"],
+    ] as const) {
+      const v = await violacionesDe({
+        [`src/modulos/${modulo}/casos-de-uso/c.ts`]: importa("../../compras/publico"),
+        "src/modulos/compras/publico.ts": exporta,
+      });
+      expect(v, modulo).toContain(regla);
+    }
+    for (const modulo of ["stock", "catalogo", "clientes", "empresas"]) {
+      const permitido = await violacionesDe({
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+        "src/modulos/compras/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+      });
+      expect(permitido, modulo).not.toContain("compras-sin-fiscal-ventas-ni-caja");
+    }
   });
 
   it("cierre no importa ningún módulo de negocio, ni por su publico.ts", async () => {

@@ -135,6 +135,12 @@ export interface RepositorioDeComprobantes {
   bloquear(empresa: EmpresaId, id: string): Promise<ComprobanteGuardado | null>;
   /** El comprobante vigente (registrado si lo hay; si no, el más nuevo) de una recepción, por el puntero de sus líneas. */
   delaRecepcion(empresa: EmpresaId, recepcionId: string): Promise<ComprobanteGuardado | null>;
+  /** Los comprobantes de un proveedor, los más nuevos primero (hasta `limite`). */
+  delProveedor(
+    empresa: EmpresaId,
+    proveedorId: string,
+    limite: number,
+  ): Promise<readonly ComprobanteGuardado[]>;
   /** La recepción a la que apuntan las líneas del comprobante (en N1 y N2, una sola), o `null` si no apunta a ninguna. */
   recepcionIdDe(empresa: EmpresaId, comprobanteId: string): Promise<string | null>;
   insertar(empresa: EmpresaId, alta: AltaDeComprobante): Promise<string | undefined>;
@@ -362,6 +368,20 @@ export function crearRepositorioDeComprobantes(db: Kysely<ComprasDb>): Repositor
         .limit(1)
         .executeTakeFirst();
       return fila === undefined ? null : aComprobante(fila);
+    },
+    async delProveedor(empresa, proveedorId, limite) {
+      if (!esUuid(proveedorId)) return [];
+      const filas = await db
+        .selectFrom("comprobante_de_proveedor")
+        .select(COLUMNAS)
+        .where("empresa_id", "=", empresa)
+        .where("proveedor_id", "=", proveedorId)
+        .orderBy(sql`fecha_negocio`, "desc")
+        .orderBy("registrado_en", "desc")
+        .orderBy("id", "desc")
+        .limit(limite)
+        .execute();
+      return filas.map(aComprobante);
     },
     async recepcionIdDe(empresa, comprobanteId) {
       if (!esUuid(comprobanteId)) return null;

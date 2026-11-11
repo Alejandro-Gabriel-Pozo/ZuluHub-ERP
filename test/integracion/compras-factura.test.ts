@@ -96,7 +96,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
     const m = await armar();
     const cuit = cuitAlAzar();
     const r = valorDe(
-      await c.casos.registrarCompra(m.e.operador, compra(m, { cuitDelProveedor: cuit })),
+      await c.casos.registrarCompraConFactura(m.e.operador, compra(m, { cuitDelProveedor: cuit })),
     );
     expect(r).toMatchObject({ yaExistia: false, avisos: [] });
     expect(r.comprobanteId).not.toBeNull();
@@ -177,7 +177,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
   it("una compra con percepciones: se guarda como un tributo sin clasificar y entra al total; el IVA de una B no se discrimina", async () => {
     const m = await armar();
     const r = valorDe(
-      await c.casos.registrarCompra(
+      await c.casos.registrarCompraConFactura(
         m.e.operador,
         compra(m, { percepciones: "50.00", totalSegunFactura: "2470.00" }),
       ),
@@ -197,7 +197,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
     ).toEqual({ t: "50.00", c: "2470.00" });
     const b = await armar("CON_COMPROBANTE", "RESPONSABLE_INSCRIPTO");
     const rb = valorDe(
-      await c.casos.registrarCompra(
+      await c.casos.registrarCompraConFactura(
         b.e.operador,
         compra(b, {
           tipo: "FACTURA_B",
@@ -214,9 +214,9 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
     ).toEqual({ iva: "0.00", credito: "0.00" });
   });
 
-  it("en N1 no se carga factura (FACTURA_NO_CORRESPONDE_AL_NIVEL) y no queda nada", async () => {
+  it("en N1 no se carga factura (FACTURA_NO_CORRESPONDE_AL_NIVEL) y no queda nada; la compra simple no lleva factura ni pago", async () => {
     const m = await armar("COMPRA_SIMPLE");
-    expect(await c.casos.registrarCompra(m.e.operador, compra(m))).toEqual({
+    expect(await c.casos.registrarCompraConFactura(m.e.operador, compra(m))).toEqual({
       ok: false,
       error: "FACTURA_NO_CORRESPONDE_AL_NIVEL",
     });
@@ -230,20 +230,26 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
 
   it("R4: el punto de venta tiene que estar en la ficha y activo; pedido pendiente o apagado no sirven; las facturas ya cargadas no cambian", async () => {
     const m = await armar();
-    expect(await c.casos.registrarCompra(m.e.operador, compra(m, { puntoDeVenta: 6 }))).toEqual({
+    expect(
+      await c.casos.registrarCompraConFactura(m.e.operador, compra(m, { puntoDeVenta: 6 })),
+    ).toEqual({
       ok: false,
       error: "PUNTO_DE_VENTA_NO_DECLARADO",
     });
     valorDe(await c.casos.pedirPuntoDeVenta(m.e.operador, { parteId: m.proveedor, numero: 6 }));
-    expect(await c.casos.registrarCompra(m.e.operador, compra(m, { puntoDeVenta: 6 }))).toEqual({
+    expect(
+      await c.casos.registrarCompraConFactura(m.e.operador, compra(m, { puntoDeVenta: 6 })),
+    ).toEqual({
       ok: false,
       error: "PUNTO_DE_VENTA_NO_DECLARADO",
     });
-    const cargada = valorDe(await c.casos.registrarCompra(m.e.operador, compra(m)));
+    const cargada = valorDe(await c.casos.registrarCompraConFactura(m.e.operador, compra(m)));
     valorDe(
       await c.casos.dejarDeUsarPuntoDeVenta(m.e.gerente, { parteId: m.proveedor, numero: 5 }),
     );
-    expect(await c.casos.registrarCompra(m.e.operador, compra(m, { numero: 101 }))).toEqual({
+    expect(
+      await c.casos.registrarCompraConFactura(m.e.operador, compra(m, { numero: 101 })),
+    ).toEqual({
       ok: false,
       error: "PUNTO_DE_VENTA_NO_DECLARADO",
     });
@@ -256,7 +262,10 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
     // un proveedor sin ficha tampoco tiene puntos de venta
     const sinFicha = await c.proveedor(m.e.operador);
     expect(
-      await c.casos.registrarCompra(m.e.operador, compra(m, {}, { proveedorId: sinFicha })),
+      await c.casos.registrarCompraConFactura(
+        m.e.operador,
+        compra(m, {}, { proveedorId: sinFicha }),
+      ),
     ).toEqual({ ok: false, error: "PUNTO_DE_VENTA_NO_DECLARADO" });
     expect(
       await cantidadDe("select count(*) as n from recepcion where proveedor_id = $1", [sinFicha]),
@@ -266,7 +275,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
   it("R3: una factura B de un proveedor que debía emitir A se carga igual y avisa la esperada; cambiar su condición en el directorio no cambia la letra de la ficha", async () => {
     const m = await armar();
     const r = valorDe(
-      await c.casos.registrarCompra(
+      await c.casos.registrarCompraConFactura(
         m.e.operador,
         compra(m, {
           tipo: "FACTURA_B",
@@ -295,7 +304,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
         .letraEsperada,
     ).toBe("A");
     const otra = valorDe(
-      await c.casos.registrarCompra(
+      await c.casos.registrarCompraConFactura(
         m.e.operador,
         compra(m, {
           tipo: "FACTURA_C",
@@ -312,7 +321,10 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
   it("R5: el total del papel distinto del calculado se carga igual con aviso y quedan los dos totales", async () => {
     const m = await armar();
     const r = valorDe(
-      await c.casos.registrarCompra(m.e.operador, compra(m, { totalSegunFactura: "2500.00" })),
+      await c.casos.registrarCompraConFactura(
+        m.e.operador,
+        compra(m, { totalSegunFactura: "2500.00" }),
+      ),
     );
     expect(r.avisos).toEqual([{ tipo: "TOTAL_NO_COINCIDE" }]);
     expect(
@@ -323,7 +335,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
     ).toEqual({ c: "2420.00", i: "2500.00" });
     // un centavo de diferencia está dentro de la tolerancia de ARCA
     const tolerada = valorDe(
-      await c.casos.registrarCompra(
+      await c.casos.registrarCompraConFactura(
         m.e.operador,
         compra(m, { numero: 101, totalSegunFactura: "2420.01", cuitDelProveedor: null }),
       ),
@@ -338,8 +350,8 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
       lineas: [lineaFactura({ alicuota: null })],
       totalSegunFactura: "2100.00",
     });
-    const primera = valorDe(await c.casos.registrarCompra(m.e.operador, pedido));
-    const segunda = valorDe(await c.casos.registrarCompra(m.e.operador, pedido));
+    const primera = valorDe(await c.casos.registrarCompraConFactura(m.e.operador, pedido));
+    const segunda = valorDe(await c.casos.registrarCompraConFactura(m.e.operador, pedido));
     expect(segunda).toEqual({ ...primera, yaExistia: true });
     expect(segunda.avisos).toEqual([
       { tipo: "LETRA_NO_ESPERADA", esperada: "A" },
@@ -353,7 +365,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
     ).toBe(1);
     expect(await c.existencia(m.deposito, m.articulo)).toBe("2000.0000");
     expect(
-      await c.casos.registrarCompra(m.e.operador, {
+      await c.casos.registrarCompraConFactura(m.e.operador, {
         ...compra(m, { numero: 999 }),
         clave: pedido.clave,
       }),
@@ -362,8 +374,8 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
 
   it("I3: la misma factura con otra clave es COMPROBANTE_YA_REGISTRADO con el id; anulada la compra, el número se puede volver a cargar", async () => {
     const m = await armar();
-    const primera = valorDe(await c.casos.registrarCompra(m.e.operador, compra(m)));
-    const intento = await c.casos.registrarCompra(
+    const primera = valorDe(await c.casos.registrarCompraConFactura(m.e.operador, compra(m)));
+    const intento = await c.casos.registrarCompraConFactura(
       m.e.operador,
       compra(m, { cuitDelProveedor: null }),
     );
@@ -384,8 +396,12 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
       }),
     );
     expect(
-      valorDe(await c.casos.registrarCompra(m.e.operador, compra(m, { cuitDelProveedor: null })))
-        .yaExistia,
+      valorDe(
+        await c.casos.registrarCompraConFactura(
+          m.e.operador,
+          compra(m, { cuitDelProveedor: null }),
+        ),
+      ).yaExistia,
     ).toBe(false);
   });
 
@@ -396,11 +412,11 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
       c.armarBarrera(2);
       try {
         const resultados = await Promise.all([
-          c.casos.registrarCompra(
+          c.casos.registrarCompraConFactura(
             m.e.operador,
             compra(m, { numero: 200 + ronda, cuitDelProveedor: cuit }),
           ),
-          c.casos.registrarCompra(
+          c.casos.registrarCompraConFactura(
             m.e.administrador,
             compra(m, { numero: 200 + ronda, cuitDelProveedor: cuit }),
           ),
@@ -433,10 +449,13 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
   it("el CUIT: obligatorio en la primera factura; inválido se rechaza; con otro documento ya guardado, PROVEEDOR_CON_OTRO_DOCUMENTO; el mismo CUIT otra vez está bien; el de otra parte, DOCUMENTO_YA_REGISTRADO", async () => {
     const m = await armar();
     expect(
-      await c.casos.registrarCompra(m.e.operador, compra(m, { cuitDelProveedor: null })),
+      await c.casos.registrarCompraConFactura(m.e.operador, compra(m, { cuitDelProveedor: null })),
     ).toEqual({ ok: false, error: "CUIT_REQUERIDO_EN_PRIMERA_FACTURA" });
     expect(
-      await c.casos.registrarCompra(m.e.operador, compra(m, { cuitDelProveedor: "20123456780" })),
+      await c.casos.registrarCompraConFactura(
+        m.e.operador,
+        compra(m, { cuitDelProveedor: "20123456780" }),
+      ),
     ).toMatchObject({ ok: false, error: { error: "DATOS_INVALIDOS" } });
     expect(
       await cantidadDe("select count(*) as n from recepcion where proveedor_id = $1", [
@@ -444,24 +463,26 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
       ]),
     ).toBe(0);
     const cuit = cuitAlAzar();
-    valorDe(await c.casos.registrarCompra(m.e.operador, compra(m, { cuitDelProveedor: cuit })));
+    valorDe(
+      await c.casos.registrarCompraConFactura(m.e.operador, compra(m, { cuitDelProveedor: cuit })),
+    );
     expect(
       valorDe(
-        await c.casos.registrarCompra(
+        await c.casos.registrarCompraConFactura(
           m.e.operador,
           compra(m, { numero: 101, cuitDelProveedor: cuit }),
         ),
       ).yaExistia,
     ).toBe(false);
     expect(
-      await c.casos.registrarCompra(
+      await c.casos.registrarCompraConFactura(
         m.e.operador,
         compra(m, { numero: 102, cuitDelProveedor: cuitAlAzar() }),
       ),
     ).toEqual({ ok: false, error: "PROVEEDOR_CON_OTRO_DOCUMENTO" });
     // sin CUIT en la factura, el guardado se usa y se copia
     const sinCuit = valorDe(
-      await c.casos.registrarCompra(
+      await c.casos.registrarCompraConFactura(
         m.e.operador,
         compra(m, { numero: 103, cuitDelProveedor: null }),
       ),
@@ -475,7 +496,10 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
     const usado = await c.proveedor(otro.e.operador, { condicionIva: "RESPONSABLE_INSCRIPTO" });
     valorDe(await c.casos.agregarPuntoDeVenta(otro.e.gerente, { parteId: usado, numero: 5 }));
     const delOtro = valorDe(
-      await c.casos.registrarCompra(otro.e.operador, compra(otro, {}, { proveedorId: usado })),
+      await c.casos.registrarCompraConFactura(
+        otro.e.operador,
+        compra(otro, {}, { proveedorId: usado }),
+      ),
     );
     const cuitDelOtro = (
       await filaUnica("select proveedor_cuit from comprobante_de_proveedor where id = $1", [
@@ -484,7 +508,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
     )?.["proveedor_cuit"];
     const tercero = await c.proveedor(otro.e.operador, { condicionIva: "RESPONSABLE_INSCRIPTO" });
     valorDe(await c.casos.agregarPuntoDeVenta(otro.e.gerente, { parteId: tercero, numero: 5 }));
-    const choque = await c.casos.registrarCompra(
+    const choque = await c.casos.registrarCompraConFactura(
       otro.e.operador,
       compra(otro, { numero: 300, cuitDelProveedor: cuitDelOtro }, { proveedorId: tercero }),
     );
@@ -500,11 +524,11 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
       c.armarBarrera(2);
       try {
         const resultados = await Promise.all([
-          c.casos.registrarCompra(
+          c.casos.registrarCompraConFactura(
             m.e.operador,
             compra(m, { numero: 1, cuitDelProveedor: cuitAlAzar() }),
           ),
-          c.casos.registrarCompra(
+          c.casos.registrarCompraConFactura(
             m.e.administrador,
             compra(m, { numero: 2, cuitDelProveedor: cuitAlAzar() }),
           ),
@@ -528,7 +552,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
   it("rechaza una factura mal formada: moneda, tipo, renglón inexistente, alícuota faltante en una A, líneas vacías, tipo/punto/número/fecha", async () => {
     const m = await armar();
     const mal = async (factura: Record<string, unknown>) =>
-      c.casos.registrarCompra(m.e.operador, compra(m, factura));
+      c.casos.registrarCompraConFactura(m.e.operador, compra(m, factura));
     expect(await mal({ moneda: "USD" })).toEqual({ ok: false, error: "MONEDA_NO_SOPORTADA" });
     expect(await mal({ tipo: "FACTURA_Z" })).toEqual({
       ok: false,
@@ -568,7 +592,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
   it("si la factura dice más de lo recibido se asigna lo recibido; el saldo nunca supera lo recibido ni lo facturado", async () => {
     const m = await armar();
     const r = valorDe(
-      await c.casos.registrarCompra(
+      await c.casos.registrarCompraConFactura(
         m.e.operador,
         compra(m, {
           lineas: [lineaFactura({ cantidadFacturada: "2500" })],
@@ -594,7 +618,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
     const m = await armar();
     c.inyectarFalla("oferta");
     try {
-      await expect(c.casos.registrarCompra(m.e.operador, compra(m))).rejects.toThrow(
+      await expect(c.casos.registrarCompraConFactura(m.e.operador, compra(m))).rejects.toThrow(
         /falla inyectada/,
       );
     } finally {
@@ -625,7 +649,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
 
   it("anular la compra con factura deja el espejo de la conciliación, los saldos en cero, la factura ANULADA y el stock revertido", async () => {
     const m = await armar();
-    const r = valorDe(await c.casos.registrarCompra(m.e.operador, compra(m)));
+    const r = valorDe(await c.casos.registrarCompraConFactura(m.e.operador, compra(m)));
     valorDe(
       await c.casos.anularCompra(m.e.administrador, {
         recepcionId: r.recepcionId,
@@ -677,8 +701,8 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
   it("R6: la factura de una empresa no se ve ni se duplica contra la de otra (mismo proveedor, tipo, punto y número en dos empresas son dos facturas)", async () => {
     const a = await armar();
     const b = await armar();
-    const fa = valorDe(await c.casos.registrarCompra(a.e.operador, compra(a)));
-    const fb = valorDe(await c.casos.registrarCompra(b.e.operador, compra(b)));
+    const fa = valorDe(await c.casos.registrarCompraConFactura(a.e.operador, compra(a)));
+    const fb = valorDe(await c.casos.registrarCompraConFactura(b.e.operador, compra(b)));
     expect(fa.comprobanteId).not.toBe(fb.comprobanteId);
     expect(
       await c.casos.anularCompra(b.e.gerente, { recepcionId: fa.recepcionId, motivo: "No es mía" }),

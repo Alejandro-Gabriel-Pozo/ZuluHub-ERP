@@ -39,8 +39,61 @@ export type OfertaDeProducto = Readonly<{
   ultimaCompraEn: string;
 }>;
 
+export type ComprobanteDeLista = Readonly<{
+  id: string;
+  clase: string;
+  tipo: string | null;
+  puntoDeVenta: number | null;
+  numero: number | null;
+  fecha: string | null;
+  vencimientoDePago: string | null;
+  totalSegunFactura: string;
+  letraNoEsperada: boolean;
+  estado: string;
+  /** El pago vigente: cuándo y con qué medio; `null` si no está pagada. */
+  pago: Readonly<{ id: string; fechaDePago: string; medio: string }> | null;
+}>;
+
 export function armarConsultasDeFicha(leer: Lector) {
   return {
+    /** «Facturas y notas» de un proveedor con su estado y si están pagadas (E9 §3.10), las más nuevas primero (hasta 200). */
+    comprobantesDelProveedor(
+      contexto: Parameters<Lector>[0],
+      entrada: Readonly<{ parteId: string }>,
+    ): Promise<RDeConsulta<readonly ComprobanteDeLista[]>> {
+      if (!esUuid(entrada.parteId)) return Promise.resolve(err("IDENTIFICADOR_INVALIDO"));
+      return leer(contexto, ["comprobantes_de_proveedor.ver"], async (tx) => {
+        const comprobantes = await tx.comprobantesDeProveedor.delProveedor(
+          contexto.empresaId,
+          entrada.parteId,
+          200,
+        );
+        const pagos = await tx.pagosDeProveedor.vigentesDe(
+          contexto.empresaId,
+          comprobantes.map((c) => c.id),
+        );
+        return comprobantes.map((c) => {
+          const pago = pagos.find((p) => p.comprobanteId === c.id);
+          return {
+            id: c.id,
+            clase: c.clase,
+            tipo: c.tipo,
+            puntoDeVenta: c.puntoDeVenta,
+            numero: c.numero,
+            fecha: c.fechaDelComprobante,
+            vencimientoDePago: c.fechaDeVencimientoDePago,
+            totalSegunFactura: c.totalSegunFactura,
+            letraNoEsperada: c.letraNoEsperada,
+            estado: c.estado,
+            pago:
+              pago === undefined
+                ? null
+                : { id: pago.id, fechaDePago: pago.fechaDePago, medio: pago.medio },
+          };
+        });
+      });
+    },
+
     /** La ficha de compra de un proveedor de la empresa (E9 §3.10). Una parte de otra empresa es indistinguible de una que no existe. */
     fichaDelProveedorParaCompras(
       contexto: Parameters<Lector>[0],

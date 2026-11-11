@@ -64,6 +64,30 @@ module.exports = [
     to: { path: "^src/modulos/(caja|catalogo|cierre|compras|fiscal|reservas|stock|ventas)/" },
   },
   {
+    name: "compras-sin-fiscal-ventas-ni-caja",
+    severity: "error",
+    comment:
+      "E9 (e9 §3.11). compras no importa fiscal, ventas ni caja, ni por su publico.ts: copia lo que necesita (los tipos de comprobante y las alícuotas de fiscal, los medios de caja) con una prueba que compara la copia (`compras-fuente-unica.test.ts`), y lo que necesite de caja (el egreso del pago en efectivo) lo declara como puerto que la composición implementa. Previene que comprar dependa del facturador, de las ventas o del dinero (ciclos, y que un cambio de venta rompa compras); si se elimina, falla la violación inyectada de esta regla.",
+    from: { path: "^src/modulos/compras/" },
+    to: { path: "^src/modulos/(fiscal|ventas|caja)/" },
+  },
+  {
+    name: "stock-sin-compras",
+    severity: "error",
+    comment:
+      "E9 (e9 §3.11). stock no importa compras, ni por su publico.ts: compras usa los puertos de stock (la entrada por origen) y nunca al revés. Previene el ciclo de módulos (que modulos-solo-por-publico no ve porque alcanza publico.ts para cruzar) y que el libro de stock conozca recepciones y facturas; si se elimina, falla la violación inyectada de esta regla.",
+    from: { path: "^src/modulos/stock/" },
+    to: { path: "^src/modulos/compras/" },
+  },
+  {
+    name: "catalogo-sin-compras",
+    severity: "error",
+    comment:
+      "E9 (e9 §3.2, X5). catalogo no importa compras, ni por su publico.ts: la presentación de un producto es del catálogo y compras la lee de él (compras → catálogo), nunca al revés. Previene el ciclo de módulos y que la ficha del producto dependa de proveedores y facturas; si se elimina, falla la violación inyectada de esta regla.",
+    from: { path: "^src/modulos/catalogo/" },
+    to: { path: "^src/modulos/compras/" },
+  },
+  {
     name: "empresas-sin-negocio",
     severity: "error",
     comment:

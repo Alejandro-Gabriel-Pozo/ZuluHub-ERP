@@ -161,7 +161,6 @@ const DEL_OPERADOR_DE_CLIENTES_Y_COMPRAS = [
 
 /** Lo que de clientes y compras pueden el gerente y el administrador pero no el operador: desactivar y reactivar, aprobar la ficha, pagar, anular y corregir. */
 const DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS = [
-  "compras.corregir",
   "comprobantes_de_proveedor.anular_pago",
   "comprobantes_de_proveedor.pagar",
   "partes.desactivar",
@@ -248,9 +247,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 130 acciones: 34 de empresa, configuración fiscal y facturación, 42 de catálogo, carta y stock (39 de T0 y 2 de CE0), 35 de caja, cierre y ventas y 19 de clientes y compras", () => {
+  it("hay 129 acciones: 34 de empresa, configuración fiscal y facturación, 42 de catálogo, carta y stock (39 de T0 y 2 de CE0), 35 de caja, cierre y ventas y 18 de clientes y compras", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(130);
+    expect(todas).toHaveLength(129);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -300,7 +299,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("recepciones"),
       porPrefijo("comprobantes_de_proveedor"),
       porPrefijo("compras"),
-    ]).toEqual([8, 2, 3, 4, 2]);
+    ]).toEqual([8, 2, 3, 4, 1]);
   });
 
   it("las acciones retiradas por las decisiones 138 y 133 ya no existen: ni en la matriz ni en el catálogo", () => {
@@ -648,18 +647,16 @@ describe("el guard con las reglas reales", () => {
     (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
   );
 
-  it("todo módulo en desarrollo del catálogo incluye catalogo, vidriera, caja, ventas y compras (cierre ya es disponible desde E3b, stock desde E5 y clientes desde E9-T4)", () => {
-    expect([...ENDESARROLLO].sort()).toEqual(
-      ["caja", "catalogo", "compras", "ventas", "vidriera"].sort(),
-    );
+  it("todo módulo en desarrollo del catálogo incluye catalogo, vidriera, caja y ventas (cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4 y compras desde E9-T12)", () => {
+    expect([...ENDESARROLLO].sort()).toEqual(["caja", "catalogo", "ventas", "vidriera"].sort());
   });
 
-  it("las 65 acciones sin construir (23 de catálogo y carta, 31 de caja y ventas y 11 de compras) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  it("las 54 acciones sin construir (23 de catálogo y carta y 31 de caja y ventas) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
     const sinConstruir = ENDESARROLLO.flatMap(
       (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
     );
-    expect(sinConstruir).toHaveLength(65);
+    expect(sinConstruir).toHaveLength(54);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
       for (const accion of sinConstruir) {
         expect(

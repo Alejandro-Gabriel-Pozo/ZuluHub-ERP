@@ -69,7 +69,7 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
       },
       ...extra,
     });
-    const r = valorDe(await c.casos.registrarCompra(e.operador, compra()));
+    const r = valorDe(await c.casos.registrarCompraConFactura(e.operador, compra()));
     return {
       e,
       deposito,
@@ -269,7 +269,7 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
       ok: false,
       error: "COMPROBANTE_NO_PAGABLE",
     });
-    const anulada = valorDe(await c.casos.registrarCompra(m.e.operador, m.compra()));
+    const anulada = valorDe(await c.casos.registrarCompraConFactura(m.e.operador, m.compra()));
     valorDe(
       await c.casos.anularCompra(m.e.gerente, {
         recepcionId: anulada.recepcionId,
@@ -296,14 +296,14 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
     });
   });
 
-  it("el pago puede viajar con la compra: queda vigente con el total de la factura; repetir devuelve el mismo pago; sin factura es PAGO_REQUIERE_FACTURA; el operador no puede pagar", async () => {
+  it("el pago puede viajar con la compra: queda vigente con el total de la factura; repetir devuelve el mismo pago; sin factura es FACTURA_REQUERIDA; el operador no puede pagar", async () => {
     const m = await armar();
     const pedido = m.compra({ pago: { fechaDePago: "2026-10-11", medio: "EFECTIVO" } });
-    expect(await c.casos.registrarCompra(m.e.operador, pedido)).toMatchObject({
+    expect(await c.casos.registrarCompraConFactura(m.e.operador, pedido)).toMatchObject({
       ok: false,
       error: "SIN_PERMISO",
     });
-    const r = valorDe(await c.casos.registrarCompra(m.e.gerente, pedido));
+    const r = valorDe(await c.casos.registrarCompraConFactura(m.e.gerente, pedido));
     expect(r.pagoId).not.toBeNull();
     expect(
       await c.filas(
@@ -311,7 +311,7 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
         [r.pagoId],
       ),
     ).toEqual([{ estado: "VIGENTE", importe: "2420.00", medio: "EFECTIVO" }]);
-    expect(valorDe(await c.casos.registrarCompra(m.e.gerente, pedido))).toEqual({
+    expect(valorDe(await c.casos.registrarCompraConFactura(m.e.gerente, pedido))).toEqual({
       ...r,
       yaExistia: true,
     });
@@ -325,12 +325,26 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
       pago: { fechaDePago: "2026-10-11", medio: "EFECTIVO" },
     });
     void _f;
-    expect(await c.casos.registrarCompra(m.e.gerente, sinFactura)).toEqual({
+    expect(await c.casos.registrarCompraConFactura(m.e.gerente, sinFactura)).toEqual({
       ok: false,
-      error: "PAGO_REQUIERE_FACTURA",
+      error: "FACTURA_REQUERIDA",
     });
+    // la compra simple (N1) no lleva ni factura ni pago
     expect(
       await c.casos.registrarCompra(
+        m.e.gerente,
+        m.compra({ pago: { fechaDePago: "2026-10-11", medio: "EFECTIVO" } }),
+      ),
+    ).toEqual({
+      ok: false,
+      error: "COMPRA_SIMPLE_NO_LLEVA_FACTURA",
+    });
+    expect(await c.casos.registrarCompra(m.e.gerente, sinFactura)).toEqual({
+      ok: false,
+      error: "COMPRA_SIMPLE_NO_LLEVA_FACTURA",
+    });
+    expect(
+      await c.casos.registrarCompraConFactura(
         m.e.gerente,
         m.compra({ pago: { fechaDePago: "2027-01-01", medio: "EFECTIVO" } }),
       ),
@@ -340,7 +354,7 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
   it("anular la compra anula también su pago vigente", async () => {
     const m = await armar();
     const r = valorDe(
-      await c.casos.registrarCompra(
+      await c.casos.registrarCompraConFactura(
         m.e.gerente,
         m.compra({ pago: { fechaDePago: "2026-10-11", medio: "QR" } }),
       ),

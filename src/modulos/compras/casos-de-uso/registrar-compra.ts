@@ -115,7 +115,7 @@ type LineaCalculada = Readonly<{
  * manda). El peso variable sin peso real no se confirma, y lo que entra al stock es el peso real. Sin stock activo o con un artículo no controlado, la compra se
  * registra sin entrada y sin error (S-9).
  */
-export function armarRegistrarCompra(dependencias: DependenciasDeCompras) {
+function armarRegistro(dependencias: DependenciasDeCompras, conFactura: boolean) {
   return async function registrarCompra(
     contexto: ContextoOperativo,
     entrada: EntradaDeRegistrarCompra,
@@ -159,9 +159,15 @@ export function armarRegistrarCompra(dependencias: DependenciasDeCompras) {
       if (!leida.ok) return leida;
       factura = leida.valor;
     }
+    if (conFactura && factura === null) return err("FACTURA_REQUERIDA");
+    if (
+      !conFactura &&
+      (factura !== null || (entrada.pago !== undefined && entrada.pago !== null))
+    ) {
+      return err("COMPRA_SIMPLE_NO_LLEVA_FACTURA");
+    }
     let pago: PagoPedido | null = null;
     if (entrada.pago !== undefined && entrada.pago !== null) {
-      if (factura === null) return err("PAGO_REQUIERE_FACTURA");
       const leido = leerPago(entrada.pago, contexto.ahora);
       if (!leido.ok) return leido;
       pago = leido.valor;
@@ -725,3 +731,18 @@ async function calcularRenglon(
     costoPorUnidadDeStock: cuenta.valor.costoPorUnidadDeStock,
   });
 }
+
+/**
+ * «Comprar y recibir» sin factura (N1; guard `recepciones.registrar`): la compra, su entrada de stock y la oferta del proveedor. Si llega una factura o un pago es
+ * `COMPRA_SIMPLE_NO_LLEVA_FACTURA`: para eso está `registrarCompraConFactura`.
+ */
+export const armarRegistrarCompra = (dependencias: DependenciasDeCompras) =>
+  armarRegistro(dependencias, false);
+
+/**
+ * «Comprar y recibir» con la factura del proveedor (N2; guard `comprobantes_de_proveedor.registrar` además de `recepciones.registrar`, y `comprobantes_de_proveedor.pagar`
+ * si viaja el pago). Exige la factura (`FACTURA_REQUERIDA`) y que el nivel de la empresa sea `CON_COMPROBANTE` (`FACTURA_NO_CORRESPONDE_AL_NIVEL`). Misma repetición
+ * que `registrarCompra`: la clave y la huella del pedido completo, y el duplicado único de la factura.
+ */
+export const armarRegistrarCompraConFactura = (dependencias: DependenciasDeCompras) =>
+  armarRegistro(dependencias, true);

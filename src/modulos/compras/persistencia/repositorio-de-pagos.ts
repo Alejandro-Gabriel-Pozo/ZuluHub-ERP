@@ -45,6 +45,11 @@ export interface RepositorioDePagos {
   bloquear(empresa: EmpresaId, id: string): Promise<PagoGuardado | null>;
   /** El pago VIGENTE del comprobante, o `null`. */
   vigenteDe(empresa: EmpresaId, comprobanteId: string): Promise<PagoGuardado | null>;
+  /** Los pagos VIGENTES de esos comprobantes (a lo sumo uno por comprobante). */
+  vigentesDe(
+    empresa: EmpresaId,
+    comprobanteIds: readonly string[],
+  ): Promise<readonly PagoGuardado[]>;
   /** Todos los pagos del comprobante (vigente y anulados), del más viejo al más nuevo. */
   deComprobante(empresa: EmpresaId, comprobanteId: string): Promise<readonly PagoGuardado[]>;
   insertar(empresa: EmpresaId, alta: AltaDePago): Promise<string | undefined>;
@@ -147,6 +152,18 @@ export function crearRepositorioDePagos(db: Kysely<ComprasDb>): RepositorioDePag
         .where("estado", "=", "VIGENTE")
         .executeTakeFirst();
       return fila === undefined ? null : aPago(fila);
+    },
+    async vigentesDe(empresa, comprobanteIds) {
+      const ids = comprobanteIds.filter(esUuid);
+      if (ids.length === 0) return [];
+      const filas = await db
+        .selectFrom("pago_de_comprobante")
+        .select(COLUMNAS)
+        .where("empresa_id", "=", empresa)
+        .where("comprobante_id", "in", ids)
+        .where("estado", "=", "VIGENTE")
+        .execute();
+      return filas.map(aPago);
     },
     async deComprobante(empresa, comprobanteId) {
       if (!esUuid(comprobanteId)) return [];

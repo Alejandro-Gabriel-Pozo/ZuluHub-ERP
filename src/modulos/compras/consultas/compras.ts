@@ -26,7 +26,7 @@ export function armarConsultasDeCompras(leer: Lector) {
       contexto: Parameters<Lector>[0],
       entrada: Readonly<{ recepcionId: string }>,
     ): Promise<RDeConsulta<FichaDeCompra | null>> {
-      const r = await leer(contexto, ["recepciones.ver"], (tx) =>
+      const r = await leer(contexto, ["recepciones.ver", "comprobantes_de_proveedor.ver"], (tx) =>
         fichaDeCompraDentro(tx, contexto, entrada),
       );
       return r.ok ? r.valor : r;

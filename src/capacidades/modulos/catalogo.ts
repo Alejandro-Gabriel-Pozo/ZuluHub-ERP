@@ -359,7 +359,7 @@ export const CATALOGO_DE_MODULOS = {
    * o editar la ficha crean o amplían.
    */
   compras: {
-    estado: "en_desarrollo",
+    estado: "disponible",
     obligatorio: false,
     requiere: ["administracion", "clientes", "catalogo"],
     usaSiExiste: ["stock"],
@@ -375,7 +375,6 @@ export const CATALOGO_DE_MODULOS = {
       "comprobantes_de_proveedor.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "comprobantes_de_proveedor.pagar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "comprobantes_de_proveedor.anular_pago": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "compras.corregir": { capacidad: null, efecto: "CREA_AMPLIA" },
       "compras.configurar": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
