@@ -281,6 +281,7 @@ describe("el catálogo comercial de módulos", () => {
           "comprobantes_de_proveedor.pagar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "comprobantes_de_proveedor.anular_pago": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "compras.configurar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "compras.corregir": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
     });
@@ -299,13 +300,13 @@ describe("el catálogo comercial de módulos", () => {
     ) => Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
     expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([14, 9, 19]);
     expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
-    expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 10]);
+    expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 11]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
     // 25 de administración (18 de usuarios, sucursales, gerencia y permisos, y 7 de la configuración fiscal de H7 T5),
     // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 42 de catálogo, carta y stock (48 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
-    // de E5-T10), 35 de caja, cierre y ventas (E0-T1) y 18 de clientes y compras (E9-T1, sin `compras.corregir` hasta E9-T11) y 16 de salón y comandas (E7): 145 en total.
-    expect(todas).toHaveLength(25 + 9 + 42 + 35 + 18 + 16);
+    // de E5-T10), 35 de caja, cierre y ventas (E0-T1), 19 de clientes y compras (E9-T1 y T11) y 16 de salón y comandas (E7): 146 en total.
+    expect(todas).toHaveLength(25 + 9 + 42 + 35 + 19 + 16);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -441,6 +442,7 @@ const EFECTOS_DE_EMPRESA = {
     "comandas.enviar",
     "composiciones.editar",
     "compras.configurar",
+    "compras.corregir",
     "comprobantes.emitir_manual",
     "comprobantes_de_proveedor.pagar",
     "comprobantes_de_proveedor.registrar",

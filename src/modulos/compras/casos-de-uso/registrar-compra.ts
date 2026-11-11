@@ -4,16 +4,15 @@ import { sucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { crearDirectorioDePartes } from "../../clientes/publico";
 import {
-  calcularRenglon,
+  calcularRenglones,
+  exigirFacturaNueva,
+  leerHechoEn,
+  leerCondicionDeIva,
   guardarFactura,
   prepararFactura,
   salidaDeLoYaHecho,
 } from "./registrar-compra-apoyo";
-import type {
-  EntradaDeRegistrarCompra,
-  LineaCalculada,
-  SalidaDeRegistrarCompra,
-} from "./registrar-compra-tipos";
+import type { EntradaDeRegistrarCompra, SalidaDeRegistrarCompra } from "./registrar-compra-tipos";
 import { camposDeHuellaDeFactura, leerFactura, type FacturaPedida } from "../dominio/factura";
 import { decidirPorHuella, huellaDeComando } from "../dominio/huella";
 import { camposDeHuellaDePago, leerPago, type PagoPedido } from "../dominio/pago";
@@ -64,17 +63,9 @@ function armarRegistro(dependencias: DependenciasDeCompras, conFactura: boolean)
     ) {
       return err("DEPOSITO_NO_ENCONTRADO");
     }
-    let hechoEn = contexto.ahora;
-    if (entrada.hechoEn !== undefined) {
-      if (
-        !(entrada.hechoEn instanceof Date) ||
-        Number.isNaN(entrada.hechoEn.getTime()) ||
-        entrada.hechoEn.getTime() > contexto.ahora.getTime()
-      ) {
-        return err("FECHA_INVALIDA");
-      }
-      hechoEn = entrada.hechoEn;
-    }
+    const leidoHechoEn = leerHechoEn(entrada.hechoEn, contexto.ahora);
+    if (!leidoHechoEn.ok) return leidoHechoEn;
+    const hechoEn = leidoHechoEn.valor;
     let remito: Remito | null = null;
     if (entrada.remito !== undefined && entrada.remito !== null) {
       const leido = leerRemito(entrada.remito);
@@ -172,30 +163,35 @@ function armarRegistro(dependencias: DependenciasDeCompras, conFactura: boolean)
             return err("FACTURA_NO_CORRESPONDE_AL_NIVEL");
           }
           if (factura !== null) {
-            const repetida = await tx.comprobantesDeProveedor.porDuplicado(
-              empresaId,
-              proveedor.valor.id,
-              factura.tipo,
-              factura.puntoDeVenta,
-              factura.numero,
-            );
-            if (repetida !== null) {
-              return err({ error: "COMPROBANTE_YA_REGISTRADO", comprobanteId: repetida.id });
-            }
+            const nueva = await exigirFacturaNueva(tx, empresaId, proveedor.valor.id, factura);
+            if (!nueva.ok) return nueva;
           }
 
-          // 3. Las líneas: producto, presentación, cuenta exacta.
-          const lineas: LineaCalculada[] = [];
-          for (const renglon of renglones.valor) {
-            const calculada = await calcularRenglon(tx, empresaId, renglon);
-            if (!calculada.ok) return calculada;
-            lineas.push(calculada.valor);
-          }
+          // 3. Las líneas: producto, presentación, cuenta exacta. La condición de la empresa frente al IVA (solo con IVA discriminado) y la cuenta de cada renglón con el IVA que le toca al costo (DEC-0322).
+          const condicion = await leerCondicionDeIva(tx, contexto, dependencias, factura);
+          if (!condicion.ok) return condicion;
+          const calculo = await calcularRenglones(
+            tx,
+            empresaId,
+            renglones.valor,
+            factura,
+            condicion.valor,
+          );
+          if (!calculo.ok) return calculo;
+          const lineas = calculo.valor;
 
           const preparada =
             factura === null
               ? null
-              : await prepararFactura(tx, contexto, dependencias, proveedor.valor, factura, lineas);
+              : await prepararFactura(
+                  tx,
+                  contexto,
+                  dependencias,
+                  proveedor.valor,
+                  factura,
+                  lineas,
+                  condicion.valor,
+                );
           if (preparada !== null && !preparada.ok) return preparada;
 
           // 4. Stock: qué renglones entran (los de artículos controlados con stock activo) y a qué depósito.

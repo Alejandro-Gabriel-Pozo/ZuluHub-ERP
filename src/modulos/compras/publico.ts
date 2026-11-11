@@ -7,11 +7,18 @@ export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_COMPRAS } f
 export { crearCasosDeUsoDeCompras, type CasosDeUsoDeCompras } from "./casos-de-uso/casos-de-uso";
 export { crearConsultasDeCompras, type ConsultasDeCompras } from "./consultas/consultas";
 export type {
+  CodigoDeEgresoDeCaja,
   DependenciasDeCompras,
   DependenciasDeConsultasDeCompras,
+  EgresoDeCaja,
+  IvaDeLaEmpresa,
   TxDeCompras,
   TxDeConsultasDeCompras,
 } from "./casos-de-uso/contrato";
+export {
+  CONDICIONES_DE_IVA_DE_LA_EMPRESA,
+  type CondicionDeIvaDeLaEmpresa,
+} from "./dominio/comprobante";
 export type { ErrorDeCompras } from "./casos-de-uso/errores";
 export type {
   EntradaDeComprobanteDeFicha,

@@ -379,6 +379,7 @@ export const CATALOGO_DE_MODULOS = {
       "comprobantes_de_proveedor.pagar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "comprobantes_de_proveedor.anular_pago": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "compras.configurar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "compras.corregir": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
 } as const satisfies CatalogoComercial;

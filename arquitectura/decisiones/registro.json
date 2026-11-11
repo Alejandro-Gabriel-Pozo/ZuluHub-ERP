@@ -1041,5 +1041,95 @@
     "decision": "El tope de 500 textos por marca queda corregido por el padre con la migración 0041 (tope de 2000); el catálogo ya tiene 587.",
     "que_cambia": "Cuántos textos puede redefinir una marca; no se agrega migración propia de compras.",
     "donde": "migraciones/0041_tope_de_textos_por_marca.sql (rama orq/plan8-tope-de-textos)"
+  },
+  {
+    "id": "DEC-0316",
+    "fecha": "2026-11-11",
+    "quien": "padre",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Al pagar una factura en efectivo, la plata puede salir de una caja abierta de esa sucursal, en la misma transacción del pago; sin caja abierta el pago no se declara y se puede pagar por otro medio.",
+    "que_cambia": "El arqueo de la caja baja con el pago; si se corrige, el pago en efectivo vuelve a ser solo una declaración y el egreso se carga a mano en caja.",
+    "donde": "src/modulos/compras/casos-de-uso/pagos.ts y src/modulos/caja/egreso/egreso-por-origen.ts (puerto nuevo de caja, archivo compartido de E3)"
+  },
+  {
+    "id": "DEC-0317",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "PERMISOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Quien puede pagar o anular un pago (gerente y administrador) puede sacar y devolver ese efectivo de la caja sin tener el permiso de movimientos manuales de caja.",
+    "que_cambia": "Si se exigiera además el permiso de caja, el administrador sin ese permiso no podría pagar en efectivo desde la caja; se corrige con una acción más en el guard del pago.",
+    "donde": "src/modulos/compras/casos-de-uso/pagos.ts"
+  },
+  {
+    "id": "DEC-0318",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El efectivo que sale por un pago se registra como un egreso manual de caja (con el motivo que escribe quien paga) y anular el pago lo devuelve con una anulación, solo si la caja sigue abierta.",
+    "que_cambia": "Si la caja ya está en cierre o cerrada el pago no se puede anular y la plata se corrige en caja; si se quisiera permitirlo, haría falta un ajuste de caja.",
+    "donde": "src/modulos/caja/egreso/egreso-por-origen.ts"
+  },
+  {
+    "id": "DEC-0319",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Se puede corregir el precio de una línea de una compra; corregir cantidad o peso real y completar el precio de una compra que entró sin precio quedan para después.",
+    "que_cambia": "Hoy una compra que entró sin precio no se puede completar después, y una cantidad o un peso real equivocado no se corrige: se anula la compra (si no se consumió) o se ajusta a mano; completarlo exige una columna nueva (migración).",
+    "donde": "src/modulos/compras/casos-de-uso/correcciones.ts y src/modulos/compras/dominio/correccion.ts"
+  },
+  {
+    "id": "DEC-0320",
+    "fecha": "2026-11-11",
+    "quien": "padre",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Al corregir el precio de una compra, el costo promedio del depósito se corrige por la diferencia sobre lo que queda de esa compra; lo ya consumido conserva su costo.",
+    "que_cambia": "Cuánto vale el stock y cuánto cuestan las recetas; es una aproximación (supone que lo que queda es lo más reciente): si se corrige, el promedio no se toca y la diferencia queda como ajuste de valorización.",
+    "donde": "src/modulos/stock/dominio/costo.ts (corregirPromedio) y src/modulos/stock/casos-de-uso/ajuste-de-costo.ts"
+  },
+  {
+    "id": "DEC-0321",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "PERMISOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Corregir una compra lo hacen el gerente y el administrador, y además necesitan el permiso de ajustar stock si la compra entró a stock.",
+    "que_cambia": "Quién puede cambiar el costo del stock; se corrige en la matriz de permisos o sacando el permiso de stock del caso de uso.",
+    "donde": "src/capacidades/permisos/empresa.ts (compras.corregir) y src/modulos/compras/casos-de-uso/correcciones.ts"
+  },
+  {
+    "id": "DEC-0322",
+    "fecha": "2026-11-11",
+    "quien": "dueño",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El IVA de una compra es costo o crédito fiscal según la condición de la empresa: inscripta, costo neto; monotributista o exenta, costo con IVA; B o C, el importe de la línea.",
+    "que_cambia": "Cuánto cuesta lo comprado, el valor del stock y de las recetas, y cuánto crédito fiscal figura; el contador puede corregirlo (PC-1, PC-4) y las compras ya hechas se ajustan con una corrección de costo, no con una migración.",
+    "donde": "src/modulos/compras/dominio/comprobante.ts (alicuotaQueEntraAlCosto) y calcular-linea.ts"
+  },
+  {
+    "id": "DEC-0323",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "La condición de la empresa frente al IVA es la de los últimos datos fiscales confirmados de su emisor principal; si no se puede leer, una compra con IVA discriminado no se registra.",
+    "que_cambia": "Una empresa sin datos fiscales confirmados no puede cargar facturas A hasta confirmarlos; si hay otro emisor que debe mandar, se cambia de dónde se lee.",
+    "donde": "src/composicion/iva-de-la-empresa.ts"
+  },
+  {
+    "id": "DEC-0324",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Al corregir el precio de una compra con IVA discriminado se usa la condición de la empresa de hoy y, como costo de antes, el que la línea declaró al registrarse.",
+    "que_cambia": "Si la condición cambió entre la compra y la corrección, el promedio se mueve también por ese cambio; si se corrige, habría que guardar la condición con cada compra.",
+    "donde": "src/modulos/compras/casos-de-uso/correcciones.ts"
   }
 ]

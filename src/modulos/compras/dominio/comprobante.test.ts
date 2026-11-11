@@ -1,3 +1,5 @@
+import { alicuotaQueEntraAlCosto } from "./iva-en-el-costo";
+import { porcentajeDesdeTexto } from "../../../primitivas/cantidad/porcentaje";
 import { describe, expect, it } from "vitest";
 import {
   ALICUOTAS_DE_COMPRA,
@@ -12,7 +14,10 @@ import {
   esLetraNoEsperada,
   esNumeroDeComprobanteValido,
   esPuntoDeVentaValido,
+  CONDICIONES_DE_IVA_DE_LA_EMPRESA,
+  discriminaIva,
   esTipoDeComprobanteDeProveedor,
+  porcentajeDeAlicuota,
   letraEsperadaDesdeCondicion,
   totalCoincide,
   type EntradaDeComprobante,
@@ -30,6 +35,7 @@ const A = (
   tipo: "FACTURA_A",
   lineas,
   totalSegunFactura: "0.00",
+  condicionDeLaEmpresa: "RESPONSABLE_INSCRIPTO",
   ...extra,
 });
 const valor = (e: EntradaDeComprobante) => {
@@ -262,7 +268,12 @@ describe("calcularComprobante: Factura A", () => {
 describe("calcularComprobante: B y C no discriminan IVA", () => {
   it("el importe de la línea es el neto, sin alícuota, sin IVA y sin crédito fiscal", () => {
     for (const tipo of ["FACTURA_B", "FACTURA_C", "NOTA_CREDITO_B", "NOTA_DEBITO_C"]) {
-      const r = valor({ tipo, lineas: [linea("2", "50", null)], totalSegunFactura: "100.00" });
+      const r = valor({
+        tipo,
+        lineas: [linea("2", "50", null)],
+        totalSegunFactura: "100.00",
+        condicionDeLaEmpresa: "RESPONSABLE_INSCRIPTO",
+      });
       expect(r).toMatchObject({
         netoGravado: "100.00",
         iva: "0.00",
@@ -278,7 +289,12 @@ describe("calcularComprobante: B y C no discriminan IVA", () => {
   });
   it("una alícuota en B o C se rechaza", () => {
     expect(
-      error({ tipo: "FACTURA_B", lineas: [linea("1", "1", "21")], totalSegunFactura: "1.00" }),
+      error({
+        tipo: "FACTURA_B",
+        lineas: [linea("1", "1", "21")],
+        totalSegunFactura: "1.00",
+        condicionDeLaEmpresa: "RESPONSABLE_INSCRIPTO",
+      }),
     ).toBe("ALICUOTA_NO_DISCRIMINADA");
   });
 });
@@ -286,7 +302,12 @@ describe("calcularComprobante: B y C no discriminan IVA", () => {
 describe("calcularComprobante: crédito fiscal y notas", () => {
   it("solo la Factura A computa; las notas A no (regla inicial, PC-4)", () => {
     for (const tipo of ["NOTA_CREDITO_A", "NOTA_DEBITO_A"]) {
-      const r = valor({ tipo, lineas: [linea("1", "100", "21")], totalSegunFactura: "121.00" });
+      const r = valor({
+        tipo,
+        lineas: [linea("1", "100", "21")],
+        totalSegunFactura: "121.00",
+        condicionDeLaEmpresa: "RESPONSABLE_INSCRIPTO",
+      });
       expect(r.creditoFiscalComputable).toBe("0.00");
       expect(r.iva).toBe("21.00");
     }
@@ -295,9 +316,14 @@ describe("calcularComprobante: crédito fiscal y notas", () => {
 
 describe("calcularComprobante: errores, en orden", () => {
   it("tipo", () => {
-    expect(error({ tipo: "FACTURA_M", lineas: [], totalSegunFactura: "x" })).toBe(
-      "TIPO_DE_COMPROBANTE_INVALIDO",
-    );
+    expect(
+      error({
+        tipo: "FACTURA_M",
+        lineas: [],
+        totalSegunFactura: "x",
+        condicionDeLaEmpresa: "RESPONSABLE_INSCRIPTO",
+      }),
+    ).toBe("TIPO_DE_COMPROBANTE_INVALIDO");
   });
   it("sin líneas", () => {
     expect(error(A([], { totalSegunFactura: "x" }))).toBe("LINEAS_REQUERIDAS");
@@ -381,5 +407,121 @@ describe("calcularComprobante: errores, en orden", () => {
     expect(
       error(A([linea("99999999999999", "99999999999.999999", "27")], { totalSegunFactura: "1" })),
     ).toBe("FUERA_DE_RANGO");
+  });
+});
+
+describe("IVA como costo o crédito fiscal según la condición de la empresa (DEC-0322)", () => {
+  const TIPOS_A = ["FACTURA_A", "NOTA_DEBITO_A", "NOTA_CREDITO_A"] as const;
+  const TIPOS_B_Y_C = [
+    "FACTURA_B",
+    "FACTURA_C",
+    "NOTA_DEBITO_B",
+    "NOTA_DEBITO_C",
+    "NOTA_CREDITO_B",
+    "NOTA_CREDITO_C",
+  ] as const;
+  const coste = (
+    c: (typeof CONDICIONES_DE_IVA_DE_LA_EMPRESA)[number] | null,
+    tipo: (typeof TIPOS_A)[number] | (typeof TIPOS_B_Y_C)[number],
+    a: Parameters<typeof alicuotaQueEntraAlCosto>[2],
+  ) => alicuotaQueEntraAlCosto(c, tipo, a);
+
+  it("las condiciones de la empresa son las tres de sus datos fiscales", () => {
+    expect([...CONDICIONES_DE_IVA_DE_LA_EMPRESA]).toEqual([
+      "RESPONSABLE_INSCRIPTO",
+      "MONOTRIBUTO",
+      "EXENTO",
+    ]);
+  });
+  it("solo las A discriminan IVA", () => {
+    for (const t of TIPOS_A) expect(discriminaIva(t)).toBe(true);
+    for (const t of TIPOS_B_Y_C) expect(discriminaIva(t)).toBe(false);
+  });
+  it("A + responsable inscripto: el IVA no entra al costo (es crédito fiscal)", () => {
+    for (const a of ["0", "2.5", "5", "10.5", "21", "27", "EXENTO", "NO_GRAVADO"] as const) {
+      expect(coste("RESPONSABLE_INSCRIPTO", "FACTURA_A", a)).toEqual({ ok: true, valor: null });
+    }
+  });
+  it("A + monotributista o exento: la alícuota de la línea entra al costo; exento y no gravado no llevan IVA", () => {
+    for (const c of ["MONOTRIBUTO", "EXENTO"] as const) {
+      for (const a of ["0", "2.5", "5", "10.5", "21", "27"] as const) {
+        expect(coste(c, "FACTURA_A", a)).toEqual({ ok: true, valor: a });
+      }
+      expect(coste(c, "FACTURA_A", "EXENTO")).toEqual({ ok: true, valor: null });
+      expect(coste(c, "FACTURA_A", "NO_GRAVADO")).toEqual({ ok: true, valor: null });
+    }
+  });
+  it("B o C: el costo es el importe de la línea con cualquier condición, y no hace falta leerla", () => {
+    for (const t of TIPOS_B_Y_C) {
+      for (const c of [...CONDICIONES_DE_IVA_DE_LA_EMPRESA, null] as const) {
+        expect(coste(c, t, null)).toEqual({ ok: true, valor: null });
+        expect(coste(c, t, "21")).toEqual({ ok: true, valor: null });
+      }
+    }
+  });
+  it("una A sin condición legible no se calcula (cierra, no supone), salvo una línea sin alícuota", () => {
+    for (const t of TIPOS_A) {
+      expect(coste(null, t, "21")).toEqual({ ok: false, error: "CONDICION_DE_IVA_NO_DISPONIBLE" });
+      expect(coste(null, t, "EXENTO")).toEqual({
+        ok: false,
+        error: "CONDICION_DE_IVA_NO_DISPONIBLE",
+      });
+    }
+    expect(coste(null, "FACTURA_A", null)).toEqual({ ok: true, valor: null });
+    expect(coste("MONOTRIBUTO", "FACTURA_A", null)).toEqual({ ok: true, valor: null });
+  });
+  it("el porcentaje de una alícuota: cero para exento y no gravado", () => {
+    expect(porcentajeDeAlicuota("21")).toBe(porcentajeDesdeTexto("21").unidades);
+    expect(porcentajeDeAlicuota("10.5")).toBe(porcentajeDesdeTexto("10.5").unidades);
+    expect(porcentajeDeAlicuota("0")).toBe(0n);
+    expect(porcentajeDeAlicuota("EXENTO")).toBe(0n);
+    expect(porcentajeDeAlicuota("NO_GRAVADO")).toBe(0n);
+  });
+  it("crédito fiscal computable: el IVA solo en una Factura A de una empresa inscripta; cero en el resto", () => {
+    const entrada = (
+      tipo: string,
+      condicion: (typeof CONDICIONES_DE_IVA_DE_LA_EMPRESA)[number] | null,
+    ): EntradaDeComprobante => ({
+      tipo,
+      lineas: [linea("1", "100", discriminaIva(tipo as "FACTURA_A") ? "21" : null)],
+      totalSegunFactura: "121.00",
+      condicionDeLaEmpresa: condicion,
+    });
+    expect(valor(entrada("FACTURA_A", "RESPONSABLE_INSCRIPTO")).creditoFiscalComputable).toBe(
+      "21.00",
+    );
+    for (const c of ["MONOTRIBUTO", "EXENTO"] as const) {
+      const r = valor(entrada("FACTURA_A", c));
+      expect(r.creditoFiscalComputable).toBe("0.00");
+      expect(r.iva).toBe("21.00");
+    }
+    for (const t of [...TIPOS_B_Y_C, "NOTA_CREDITO_A", "NOTA_DEBITO_A"]) {
+      for (const c of [...CONDICIONES_DE_IVA_DE_LA_EMPRESA, null] as const) {
+        if (discriminaIva(t as "FACTURA_A") && c === null) continue;
+        expect(valor(entrada(t, c)).creditoFiscalComputable).toBe("0.00");
+      }
+    }
+  });
+  it("una A sin condición legible es CONDICION_DE_IVA_NO_DISPONIBLE; una B o C sin condición se calcula", () => {
+    expect(
+      error({
+        tipo: "FACTURA_A",
+        lineas: [linea("1", "100", "21")],
+        totalSegunFactura: "121.00",
+        condicionDeLaEmpresa: null,
+      }),
+    ).toBe("CONDICION_DE_IVA_NO_DISPONIBLE");
+    expect(
+      valor({
+        tipo: "FACTURA_B",
+        lineas: [linea("1", "100", null)],
+        totalSegunFactura: "100.00",
+        condicionDeLaEmpresa: null,
+      }).totalCalculado,
+    ).toBe("100.00");
+    // El tipo inválido y las líneas faltantes se rechazan antes que la condición.
+    expect(
+      error({ tipo: "FACTURA_M", lineas: [], totalSegunFactura: "x", condicionDeLaEmpresa: null }),
+    ).toBe("TIPO_DE_COMPROBANTE_INVALIDO");
   });
 });

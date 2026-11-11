@@ -153,6 +153,16 @@ export type FichaDeCompra = Readonly<{
     letraNoEsperada: boolean;
     estado: string;
   }> | null;
+  /** Las correcciones de precio de las líneas, por línea y número: la línea original no se edita, el precio vigente de cada una es el de su última corrección. */
+  correcciones: readonly Readonly<{
+    linea: number;
+    numero: number;
+    precioAnterior: string | null;
+    precioNuevo: string | null;
+    motivo: string;
+    registradoPor: string;
+    registradoEn: string;
+  }>[];
   /** Todos los pagos de la factura, del más viejo al más nuevo (el vigente tiene `estado: "VIGENTE"`). */
   pagos: readonly Readonly<{
     id: string;
@@ -217,6 +227,17 @@ export async function fichaDeCompraDentro(
             letraNoEsperada: factura.letraNoEsperada,
             estado: factura.estado,
           },
+    correcciones: (
+      await tx.correccionesDeCompra.deLaRecepcion(contexto.empresaId, recepcion.id)
+    ).map((k) => ({
+      linea: k.linea,
+      numero: k.numero,
+      precioAnterior: k.precioAnterior,
+      precioNuevo: k.precioNuevo,
+      motivo: k.motivo,
+      registradoPor: k.registradoPor,
+      registradoEn: k.registradoEn.toISOString(),
+    })),
     pagos: pagos.map((p) => ({
       id: p.id,
       fechaDePago: p.fechaDePago,
