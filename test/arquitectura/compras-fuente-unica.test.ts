@@ -3,9 +3,11 @@ import { TIPOS_DE_MEDIO } from "../../src/modulos/caja/estados";
 import { MEDIOS_DE_PAGO } from "../../src/modulos/compras/dominio/pago";
 import { CODIGO_DE_TIPO_DE_COMPROBANTE } from "../../src/modulos/fiscal/dominio/codigos-de-arca";
 import { CODIGOS_DE_ALICUOTA } from "../../src/modulos/fiscal/dominio/alicuota";
+import { CONDICIONES_DE_IVA } from "../../src/modulos/fiscal/dominio/emisor";
 import { TIPOS_DE_COMPROBANTE } from "../../src/modulos/fiscal/dominio/comprobante-emitido";
 import {
   ALICUOTAS_DE_COMPRA,
+  CONDICIONES_DE_IVA_DE_LA_EMPRESA,
   FICHA_DE_TIPO_DE_COMPROBANTE,
   TIPOS_DE_COMPROBANTE_DE_PROVEEDOR,
 } from "../../src/modulos/compras/dominio/comprobante";
@@ -36,5 +38,8 @@ describe("compras copia de fiscal los tipos de comprobante y las alícuotas, y d
   });
   it("los medios de pago son los tipos de medio de caja, en el mismo orden", () => {
     expect([...MEDIOS_DE_PAGO]).toEqual([...TIPOS_DE_MEDIO]);
+  });
+  it("las condiciones de la empresa frente al IVA son las del emisor de fiscal, en el mismo orden (DEC-0322)", () => {
+    expect([...CONDICIONES_DE_IVA_DE_LA_EMPRESA]).toEqual([...CONDICIONES_DE_IVA]);
   });
 });

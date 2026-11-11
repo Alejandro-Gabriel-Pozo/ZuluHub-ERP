@@ -190,6 +190,7 @@ export const PERMISOS_DE_EMPRESA = {
   "comprobantes_de_proveedor.pagar": ["GERENTE", "ADMINISTRADOR"],
   "comprobantes_de_proveedor.anular_pago": ["GERENTE", "ADMINISTRADOR"],
   "compras.configurar": ["GERENTE"],
+  "compras.corregir": ["GERENTE", "ADMINISTRADOR"],
 } as const satisfies Record<ClaveAccion, readonly RolDeEmpresa[]>;
 
 export type ReglasDeEmpresa = ReglasDelGuard<ClaveModulo, ClaveAccion, ClaveCapacidad>;

@@ -4,6 +4,7 @@ import {
   esClasePagable,
   esMedioDePago,
   leerPago,
+  leerSalidaDeCaja,
   MEDIOS_DE_PAGO,
 } from "./pago";
 
@@ -87,5 +88,72 @@ describe("medios, clases y huella", () => {
       "QR",
       "2420.00",
     ]);
+  });
+  it("con salida de caja la huella suma la caja y el motivo; sin ella, la lista de siempre", () => {
+    const pago = { fechaDePago: "2026-10-11", medio: "EFECTIVO" } as const;
+    const salida = { cajaId: CAJA, motivo: "Pago de la factura" };
+    expect(camposDeHuellaDePago(pago, "2420.00", salida)).toEqual([
+      "2026-10-11",
+      "EFECTIVO",
+      "2420.00",
+      CAJA,
+      "Pago de la factura",
+    ]);
+    expect(camposDeHuellaDePago(pago, "2420.00", null)).toEqual([
+      "2026-10-11",
+      "EFECTIVO",
+      "2420.00",
+    ]);
+  });
+});
+
+const CAJA = "6f1c2a3e-8b4d-4c5e-9a7f-0d1e2f3a4b5c";
+
+describe("leerSalidaDeCaja", () => {
+  it("ausente (undefined o null) no mueve la caja, con cualquier medio", () => {
+    for (const medio of MEDIOS_DE_PAGO) {
+      expect(leerSalidaDeCaja(undefined, medio)).toEqual({ ok: true, valor: null });
+      expect(leerSalidaDeCaja(null, medio)).toEqual({ ok: true, valor: null });
+    }
+  });
+  it("una caja y un motivo bien escritos valen solo con el medio efectivo", () => {
+    expect(leerSalidaDeCaja({ cajaId: CAJA, motivo: "  Pago de la factura " }, "EFECTIVO")).toEqual(
+      { ok: true, valor: { cajaId: CAJA, motivo: "Pago de la factura" } },
+    );
+    for (const medio of MEDIOS_DE_PAGO.filter((m) => m !== "EFECTIVO")) {
+      expect(leerSalidaDeCaja({ cajaId: CAJA, motivo: "Pago" }, medio)).toEqual({
+        ok: false,
+        error: "SALIDA_DE_CAJA_SOLO_EN_EFECTIVO",
+      });
+    }
+  });
+  it("una caja que no es un UUID, un motivo vacío o ausente, o algo que no es un objeto es inválido", () => {
+    const invalido = { ok: false, error: "SALIDA_DE_CAJA_INVALIDA" };
+    for (const malo of [
+      { cajaId: "caja-1", motivo: "Pago" },
+      { cajaId: CAJA, motivo: "" },
+      { cajaId: CAJA, motivo: "   " },
+      { cajaId: CAJA, motivo: 7 },
+      { cajaId: CAJA },
+      { motivo: "Pago" },
+      { cajaId: 7, motivo: "Pago" },
+      { cajaId: { toString: () => CAJA }, motivo: "Pago" },
+      "texto",
+      7,
+      true,
+      [],
+      [CAJA, "Pago"],
+      // Un arreglo o una función con las propiedades puestas a mano no es un objeto del pedido.
+      Object.assign([], { cajaId: CAJA, motivo: "Pago" }),
+      Object.assign(() => 0, { cajaId: CAJA, motivo: "Pago" }),
+    ]) {
+      expect(leerSalidaDeCaja(malo, "EFECTIVO")).toEqual(invalido);
+    }
+  });
+  it("lo inválido gana sobre el medio: un medio que no es efectivo con datos malos es inválido, no «solo efectivo»", () => {
+    expect(leerSalidaDeCaja({ cajaId: "x", motivo: "Pago" }, "QR")).toEqual({
+      ok: false,
+      error: "SALIDA_DE_CAJA_INVALIDA",
+    });
   });
 });

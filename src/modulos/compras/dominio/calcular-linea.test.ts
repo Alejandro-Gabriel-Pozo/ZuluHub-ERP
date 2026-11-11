@@ -424,3 +424,72 @@ describe("calcularLinea: propiedades (R2)", () => {
     );
   });
 });
+
+describe("calcularLinea: IVA al costo (DEC-0322)", () => {
+  const conIva = (
+    alicuota: Parameters<typeof calcularLinea>[0]["alicuotaDeIvaEnElCosto"],
+    cambios: Partial<EntradaDeLinea> = {},
+  ) => valor(con({ alicuotaDeIvaEnElCosto: alicuota, ...cambios }));
+  it("sin IVA al costo (ausente o null) el costo es el importe de la línea: el de siempre", () => {
+    expect(valor(base)).toEqual(conIva(null));
+    expect(conIva(undefined)).toEqual(conIva(null));
+    expect(conIva(null)).toEqual({
+      cantidadEnStock: "10.0000",
+      importe: "1000.00",
+      costoPorUnidadDeStock: "100.000000",
+    });
+  });
+  it("con la alícuota, el costo por unidad incluye el IVA y el importe sigue siendo el neto", () => {
+    expect(conIva("21")).toEqual({
+      cantidadEnStock: "10.0000",
+      importe: "1000.00",
+      costoPorUnidadDeStock: "121.000000",
+    });
+    expect(conIva("10.5").costoPorUnidadDeStock).toBe("110.500000");
+    expect(conIva("27").costoPorUnidadDeStock).toBe("127.000000");
+    expect(conIva("5").costoPorUnidadDeStock).toBe("105.000000");
+    expect(conIva("2.5").costoPorUnidadDeStock).toBe("102.500000");
+  });
+  it("alícuota cero, exento y no gravado no suman nada", () => {
+    for (const a of ["0", "EXENTO", "NO_GRAVADO"] as const) {
+      expect(conIva(a).costoPorUnidadDeStock).toBe("100.000000");
+    }
+  });
+  it("una caja de peso variable cobrada por caja: el IVA entra al importe exacto dividido el peso real", () => {
+    const caja = {
+      presentacion: { cantidadEnBase: "23.5", dePesoVariable: true },
+      cantidadDeCompra: "2",
+      pesoReal: "46.6",
+      precioPor: "PRESENTACION",
+      precio: "250000",
+    } as const;
+    expect(conIva(null, caja).costoPorUnidadDeStock).toBe("10729.613734");
+    expect(conIva("21", caja).costoPorUnidadDeStock).toBe("12982.832618");
+    expect(conIva("10.5", caja).costoPorUnidadDeStock).toBe("11856.223176");
+  });
+  it("redondea UNA vez desde lo exacto (no desde el importe en centavos)", () => {
+    // 0,333333 × 3 kg: el importe exacto es 0,999999 (1,00 al centavo); con 10,5 %: 0,368333 a 6 decimales.
+    const r = conIva("10.5", { cantidadDeCompra: "3", precio: "0.333333" });
+    expect(r).toEqual({
+      cantidadEnStock: "3.0000",
+      importe: "1.00",
+      costoPorUnidadDeStock: "0.368333",
+    });
+    // 1,234567 × 7 con 21 %: desde lo exacto 1,493826; desde el importe redondeado (8,64) daría 1,493827.
+    expect(conIva("21", { cantidadDeCompra: "7", precio: "1.234567" }).costoPorUnidadDeStock).toBe(
+      "1.493826",
+    );
+  });
+  it("sin precio no hay costo con IVA: importe y costo siguen siendo null juntos", () => {
+    expect(conIva("21", { precio: null })).toEqual({
+      cantidadEnStock: "10.0000",
+      importe: null,
+      costoPorUnidadDeStock: null,
+    });
+  });
+  it("un costo con IVA que no entra en numeric(18,6) se rechaza aunque el sin IVA sí entre", () => {
+    const grande = { precio: "900000000000", cantidadDeCompra: "1" } as const;
+    expect(conIva(null, grande).costoPorUnidadDeStock).toBe("900000000000.000000");
+    expect(error(con({ ...grande, alicuotaDeIvaEnElCosto: "27" }))).toBe("FUERA_DE_RANGO");
+  });
+});

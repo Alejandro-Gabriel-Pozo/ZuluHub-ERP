@@ -6,6 +6,7 @@ import {
   type PrecioUnitario,
 } from "../../../primitivas/dinero/precio-unitario";
 import { POLITICA_VIGENTE } from "../../../primitivas/dinero/redondeo";
+import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { cantidadDeUnidades } from "./movimiento";
 
 /**
@@ -121,3 +122,53 @@ export function transferir(
     costo: salida.costo,
   };
 }
+
+export type CorreccionDeCosto = Readonly<{
+  /** El costo por unidad con el que entró la compra y que se corrige; `null` si entró sin costo (se le pone uno). */
+  costoAnterior: PrecioUnitario | null;
+  costoNuevo: PrecioUnitario;
+  /** Lo que entró con esa compra: de ahí se estima cuánto queda. */
+  cantidadQueEntro: Cantidad;
+  /** La existencia que hay hoy en el depósito. */
+  existenciaActual: Cantidad;
+}>;
+
+/**
+ * La corrección del costo de una compra ya hecha (E9 T11, fórmula A de la P-2). Lo ya consumido CONSERVA su costo congelado: no se reescribe. Lo que queda
+ * de la compra se estima como el menor entre lo que entró y la existencia actual (supone que lo que queda es lo más reciente) y a esas unidades se les
+ * aplica la diferencia:
+ *  - con costo anterior: `nuevo = promedio + (costoNuevo − costoAnterior) × queda ÷ cantidadValorizada`, con `queda` acotada a lo valorizado (la existencia sin costo no
+ *    tiene qué corregir) y el redondeo de la política vigente; sin unidades valorizadas, o sin nada que quede, el estado no cambia;
+ *  - sin costo anterior (la compra entró sin precio): lo que queda entra al promedio con el costo nuevo.
+ * `COSTO_RESULTANTE_INVALIDO` si el promedio quedaría en cero o negativo (la estimación se pasó): no se aplica y la corrección no sigue.
+ */
+export function corregirPromedio(
+  estado: EstadoDeCosto,
+  correccion: CorreccionDeCosto,
+): Resultado<EstadoDeCosto, "COSTO_RESULTANTE_INVALIDO"> {
+  const queda = minimoDe(
+    correccion.cantidadQueEntro.unidades,
+    correccion.existenciaActual.unidades,
+  );
+  if (queda <= 0n) return ok(estado);
+  const cantidadQueQueda = cantidadDeUnidades(queda);
+  if (correccion.costoAnterior === null) {
+    return ok(entrar(estado, cantidadQueQueda, costoDefinitivo(correccion.costoNuevo)));
+  }
+  // Stryker disable next-line ConditionalExpression: sin promedio la cantidad valorizada es cero (invariante de `entrar`), y el segundo lado ya lo cubre
+  if (estado.promedio === null || estado.cantidadValorizada.unidades <= 0n) return ok(estado);
+  const aplicable = minimoDe(queda, estado.cantidadValorizada.unidades);
+  const diferencia = correccion.costoNuevo.unidades - correccion.costoAnterior.unidades;
+  const nuevo =
+    estado.promedio.unidades +
+    dividirRedondeando(
+      diferencia * aplicable,
+      estado.cantidadValorizada.unidades,
+      POLITICA_VIGENTE,
+    );
+  if (nuevo <= 0n) return err("COSTO_RESULTANTE_INVALIDO");
+  return ok({ promedio: costoDeUnidades(nuevo), cantidadValorizada: estado.cantidadValorizada });
+}
+
+// Stryker disable next-line EqualityOperator: con los dos iguales cualquiera de los dos lados da lo mismo
+const minimoDe = (a: bigint, b: bigint): bigint => (a < b ? a : b);

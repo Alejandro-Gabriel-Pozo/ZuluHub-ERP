@@ -6,7 +6,8 @@ import type { ErrorDeClientes } from "../../clientes/publico";
 import type { ErrorDeStock } from "../../stock/publico";
 import type { ErrorDeComprobante } from "../dominio/comprobante";
 import type { ErrorDeFactura } from "../dominio/factura";
-import type { ErrorDePago } from "../dominio/pago";
+import type { ErrorDeCorreccion } from "../dominio/correccion";
+import type { ErrorDePago, ErrorDeSalidaDeCaja } from "../dominio/pago";
 import type { ErrorDeLinea } from "../dominio/calcular-linea";
 
 /**
@@ -50,6 +51,18 @@ export const CODIGOS_DE_ERROR_DE_COMPRAS = [
   "COMPROBANTE_ANULADO",
   "COMPROBANTE_NO_PAGABLE",
   "MEDIO_INVALIDO",
+  "SALIDA_DE_CAJA_INVALIDA",
+  "SALIDA_DE_CAJA_SOLO_EN_EFECTIVO",
+  "CAJA_NO_ENCONTRADA",
+  "CAJA_INACTIVA",
+  "CAJA_DE_OTRA_SUCURSAL",
+  "SIN_SESION_ABIERTA",
+  "CAJA_EN_CIERRE",
+  "JORNADA_DE_CAJA_NO_ABIERTA",
+  "EGRESO_DE_CAJA_RECHAZADO",
+  "EGRESO_DE_CAJA_NO_ANULABLE",
+  "LINEA_SIN_PRECIO",
+  "SIN_CAMBIOS",
   "PAGO_NO_ENCONTRADO",
   "PAGO_YA_ANULADO",
   "CONCILIACION_YA_ANULADA",
@@ -68,6 +81,8 @@ export type ErrorDeCompras =
   | ErrorDeComprobante
   | ErrorDeFactura
   | ErrorDePago
+  | ErrorDeSalidaDeCaja
+  | ErrorDeCorreccion
   | ErrorDeStock
   | ErrorDeClientes
   /** El remito ya está cargado: `recepcionId` es la ganadora (`null` solo si lo dijo la base, que no sabe con quién choca). */
