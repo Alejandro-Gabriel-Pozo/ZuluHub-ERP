@@ -21,7 +21,12 @@ import {
 } from "../../src/primitivas/identificadores/marca";
 import { err, ok } from "../../src/primitivas/resultado/resultado";
 import type { Tokens } from "../../src/puertos/tokens";
-import { esConcurrenciaAgotada, perdedorAceptable } from "./concurrencia-apoyo";
+import {
+  agotadaEnElResultado,
+  esConcurrenciaAgotada,
+  perdedorAceptable,
+  repetirSiAgotada,
+} from "./concurrencia-apoyo";
 import {
   AHORA_DE_PRUEBA,
   comoEmpresa,
@@ -691,16 +696,26 @@ describe.skipIf(base === null)("identidad: concurrencia de los casos de uso (K1 
       // Los dos leen quién es el actor (el guard) antes de que cualquiera escriba.
       ronda(2, trasLeer("autorizacion", "delActor"));
 
+      // Quien pierde la carrera puede recibir `ConcurrenciaAgotada` («reintentá»; ver `concurrencia-apoyo.ts`): no deja nada
+      // escrito y repetir el pedido es seguro. Se repite hasta obtener el resultado de negocio, que es el que se juzga abajo
+      // (en CI, con 12 copias en paralelo, la baja agotó los reintentos una vez en 6.732 pruebas).
       const [invitar, apagar] = await Promise.all([
-        casos.invitarUsuario(comoEmpresa(e.empresa, personaId(admin.id)), {
-          email,
-          rol: "OPERADOR",
-          sucursales: [e.sucursal],
+        repetirSiAgotada(
+          () =>
+            casos.invitarUsuario(comoEmpresa(e.empresa, personaId(admin.id)), {
+              email,
+              rol: "OPERADOR",
+              sucursales: [e.sucursal],
+            }),
+          { esAgotada: agotadaEnElResultado, contexto: `ronda ${n}: invitar` },
+        ),
+        repetirSiAgotada(() => casos.apagarMembresia(e.ctx, { personaId: personaId(admin.id) }), {
+          esAgotada: agotadaEnElResultado,
+          contexto: `ronda ${n}: apagar`,
         }),
-        casos.apagarMembresia(e.ctx, { personaId: personaId(admin.id) }),
       ]);
 
-      expect(apagar.ok, `ronda ${n}`).toBe(true);
+      expect(apagar.ok, `ronda ${n}: ${JSON.stringify(apagar)}`).toBe(true);
       expect(
         await contar(
           "select count(*) as n from membresia where empresa_id = $1 and persona_id = $2 and activo",
