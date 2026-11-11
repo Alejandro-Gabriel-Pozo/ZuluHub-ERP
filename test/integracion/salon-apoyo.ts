@@ -1,6 +1,8 @@
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import type { ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import type { Transacciones } from "../../src/puertos/transacciones";
+import { crearRepositoriosDeComandas } from "../../src/modulos/comandas/publico";
+import { crearStockDeVentas } from "../../src/composicion/stock-de-ventas";
 import {
   crearCasosDeUsoDeSalon,
   crearConsultasDeSalon,
@@ -29,9 +31,11 @@ export const REGLAS_DE_SALON: ReglasDeEmpresa = {
 /** Suma a la transacción de prueba los repositorios del salón y deja activos `salon` y `comandas` para el actor (lo demás lo deja `montarVentas`). */
 export function conSalon(tx: TxDePrueba): TxDePrueba {
   const salon = crearRepositoriosDeSalon(tx.db);
+  const comandas = crearRepositoriosDeComandas(tx.db);
   return {
     ...tx,
     ...salon,
+    ...comandas,
     autorizacion: {
       ...tx.autorizacion,
       delActor: async (contexto) => {
@@ -53,13 +57,27 @@ export async function montarSalon(
   opciones: Readonly<{ conexiones?: number; stock?: boolean }> = {},
 ) {
   const m = await montarVentas(base, { ...opciones, ajustarTx: conSalon });
+  const reglas: ReglasDeEmpresa =
+    opciones.stock === true
+      ? {
+          ...REGLAS_DE_SALON,
+          catalogo: {
+            ...REGLAS_DE_SALON.catalogo,
+            stock: { ...CATALOGO_DE_MODULOS.stock, estado: "disponible" },
+          },
+        }
+      : REGLAS_DE_SALON;
   const transacciones = m.entorno as unknown as Transacciones<TxDeSalon>;
   const lecturas = m.entorno as unknown as Transacciones<TxDeConsultasDeSalon>;
   return {
     ...m,
-    reglas: REGLAS_DE_SALON,
-    salon: crearCasosDeUsoDeSalon({ transacciones, reglas: REGLAS_DE_SALON }),
-    consultasDeSalon: crearConsultasDeSalon({ transacciones: lecturas, reglas: REGLAS_DE_SALON }),
+    reglas,
+    salon: crearCasosDeUsoDeSalon({
+      transacciones,
+      reglas,
+      ...(opciones.stock === true ? { stock: crearStockDeVentas(reglas) as never } : {}),
+    }),
+    consultasDeSalon: crearConsultasDeSalon({ transacciones: lecturas, reglas }),
   };
 }
 
