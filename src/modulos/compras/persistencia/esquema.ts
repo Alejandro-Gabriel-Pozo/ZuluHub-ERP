@@ -20,7 +20,6 @@ export type ComprasDb = {
     dimension: string;
     activo: boolean;
   };
-  unidad_de_medida: { id: string; dimension: string; factor_a_base: string; es_base: boolean };
   configuracion_de_compras: {
     empresa_id: string;
     nivel: Generated<string>;

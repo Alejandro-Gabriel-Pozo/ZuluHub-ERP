@@ -2,6 +2,7 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { CODIGOS_DE_ERROR_DE_COMPRAS } from "../../src/modulos/compras/casos-de-uso/errores";
 import { ERRORES_DE_COMPRAS_POR_RESTRICCION } from "../../src/modulos/compras/persistencia/errores-por-restriccion";
 import {
   ALICUOTAS_DE_COMPRA,
@@ -22,6 +23,12 @@ import type { BaseDePruebas } from "./global";
  */
 
 const base = inject("baseDePruebas");
+/** Los tres que el caso de uso devuelve con el id de la ganadora (objeto), no como código simple. */
+const CON_ID = new Set([
+  "REMITO_YA_REGISTRADO",
+  "COMPROBANTE_YA_REGISTRADO",
+  "COMPROBANTE_YA_PAGADO",
+]);
 const TABLAS = [
   "configuracion_de_compras",
   "ficha_de_compra_del_proveedor",
@@ -105,6 +112,15 @@ describe.skipIf(base === null)("compras: la persistencia contra el esquema real"
     ).toEqual([]);
   });
 
+  it("todo error de negocio al que traduce una restricción es un código declarado del módulo", () => {
+    const declarados = new Set<string>(CODIGOS_DE_ERROR_DE_COMPRAS);
+    const traducidos = new Set(
+      Object.values(ERRORES_DE_COMPRAS_POR_RESTRICCION).filter((c) => c !== "NO_TRADUCIDA"),
+    );
+    expect(traducidos.size).toBeGreaterThan(5);
+    expect([...traducidos].filter((c) => !declarados.has(c) && !CON_ID.has(c))).toEqual([]);
+  });
+
   it("toda única de una tabla de empresa incluye `empresa_id` (salvo la clave primaria por `id`)", async () => {
     const { rows } = await c.query<{ indice: string; def: string }>(
       `select indexname as indice, indexdef as def from pg_indexes
@@ -129,6 +145,21 @@ describe.skipIf(base === null)("compras: la persistencia contra el esquema real"
     expect(aTablaDeEmpresa.length).toBeGreaterThan(20);
     expect(
       aTablaDeEmpresa.filter((r) => !r.def.includes("empresa_id")).map((r) => r.nombre),
+    ).toEqual([]);
+  });
+
+  it("toda tabla con el disparador de versión tiene `version` y `actualizado_en` (el disparador los pisa: sin ellos, el primer UPDATE falla)", async () => {
+    const { rows } = await c.query<{ tabla: string; columnas: string[] }>(
+      `select c.relname as tabla,
+              array(select attname::text from pg_attribute a where a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped
+                      and attname in ('version', 'actualizado_en') order by attname) as columnas
+         from pg_trigger t join pg_proc p on p.oid = t.tgfoid join pg_class c on c.oid = t.tgrelid
+        where not t.tgisinternal and p.proname = 'fijar_version_y_fecha' and c.relname = any($1)`,
+      [TABLAS],
+    );
+    expect(rows.length).toBeGreaterThanOrEqual(8);
+    expect(
+      rows.filter((r) => r.columnas.join() !== "actualizado_en,version").map((r) => r.tabla),
     ).toEqual([]);
   });
 

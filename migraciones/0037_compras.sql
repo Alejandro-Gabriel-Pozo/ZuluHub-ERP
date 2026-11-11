@@ -122,6 +122,7 @@ CREATE TABLE pedido_de_ficha (
   pedido_en   timestamptz NOT NULL DEFAULT now(),
   resuelto_por uuid REFERENCES persona (id),
   resuelto_en  timestamptz,
+  actualizado_en timestamptz NOT NULL DEFAULT now(),
   version     integer NOT NULL DEFAULT 1,
   CONSTRAINT pedido_de_ficha_pkey PRIMARY KEY (id),
   CONSTRAINT pedido_de_ficha_id_empresa_uk UNIQUE (id, empresa_id),
