@@ -3,12 +3,12 @@ import { err, ok, type Resultado } from "../resultado/resultado";
 
 /**
  * FICHA DEL DATO: DOCUMENTO EXTRANJERO (el número de identificación de una persona o empresa del exterior: un RUT, un NIF, un RUC). (DECIDIDO =
- * ya implementado; SUPUESTO = del ingeniero, revertible; SIN DECIDIR = falta la decisión del dueño.)
+ * ya implementado; SUPUESTO = del ingeniero, revertible, DEC-0080; SIN DECIDIR = falta la decisión del dueño.)
  *
  * - Qué es: el identificador que un país extranjero le da a una persona o empresa. Va siempre con su país (`pais.ts`). Fuente: D126 de
  *   `catalogo-y-niveles-maqueta.md` («una empresa solo admite CUIT o documento extranjero») y `directorio.html`.
  * - Cómo se escribe y qué se guarda: solo letras de la A a la Z y dígitos, de 3 a 20 caracteres; las minúsculas se guardan en mayúsculas
- *   (como el pasaporte). SUPUESTO del ingeniero: el rango 3 a 20 es el del DDL verificado de `clientes.md` (Anexo C); ninguna decisión del dueño
+ *   (como el pasaporte). SUPUESTO del ingeniero (DEC-0080): el rango 3 a 20 es el del DDL verificado de `clientes.md` (Anexo C); ninguna decisión del dueño
  *   lo fija y los formatos de cada país son otros (guiones, puntos): costo de revertir bajo, una primitiva y un CHECK.
  * - Qué NO se acepta (lista de permitidos): espacios, guiones, puntos, tildes ni ningún otro carácter.
  * - Obligatorio/opcional: lo decide quien la usa. Único: sí, por empresa y país (lo impone la base, `parte_documento_uk`). Quién lo cambia: quien edita la parte.

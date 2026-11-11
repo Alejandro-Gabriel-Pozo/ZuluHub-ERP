@@ -15,7 +15,7 @@ import type { CampoDeHuella } from "./huella";
  * única de la pantalla aprobada (un tributo sin clasificar), el reparto de la conciliación atajo y la razón social copiada. Las cuentas (neto, IVA, totales)
  * son de `calcularComprobante`. Sin reloj ni azar.
  *
- * SUPUESTO (E9-T9): la cantidad y el precio de cada línea de la factura vienen EN LA UNIDAD BASE del producto (la misma en que se guarda lo recibido), para que
+ * SUPUESTO (E9-T9, DEC-0083): la cantidad y el precio de cada línea de la factura vienen EN LA UNIDAD BASE del producto (la misma en que se guarda lo recibido), para que
  * lo asignado, lo recibido y lo facturado se comparen sin convertir. La pantalla convertirá lo que imprime el papel; costo de revertir: medio (una capa de conversión).
  */
 export type LineaDeFacturaPedida = Readonly<{
