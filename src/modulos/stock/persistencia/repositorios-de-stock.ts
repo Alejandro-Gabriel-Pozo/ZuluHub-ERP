@@ -16,6 +16,7 @@ import {
   crearRepositorioDeDepositos,
   type RepositorioDeDepositos,
 } from "./repositorio-de-depositos";
+import { crearRepositorioDeLotes, type RepositorioDeLotes } from "./repositorio-de-lotes";
 import {
   crearRepositorioDeMovimientos,
   type RepositorioDeMovimientos,
@@ -33,6 +34,8 @@ export type RepositoriosDeStock = Readonly<{
   conteosDeStock: RepositorioDeConteos;
   composicionesDeStock: RepositorioDeComposiciones;
   costosDeStock: RepositorioDeCostos;
+  /** E6 (0032): lotes, control de lote y lotes de cada renglón del libro. */
+  lotesDeStock: RepositorioDeLotes;
   productosParaStock: ProductosParaStock;
 }>;
 
@@ -47,6 +50,7 @@ export function crearRepositoriosDeStock(db: {
     conteosDeStock: crearRepositorioDeConteos(conexion),
     composicionesDeStock: crearRepositorioDeComposiciones(conexion),
     costosDeStock: crearRepositorioDeCostos(conexion),
+    lotesDeStock: crearRepositorioDeLotes(conexion),
     productosParaStock: crearProductosParaStock(conexion),
   };
 }
