@@ -1165,7 +1165,7 @@
   {
     "id": "DEC-0120",
     "tipo": "DATOS",
-    "decision": "Al cerrar una orden, el consumo real se registra por artículo (insumos repetidos se fusionan) y el costo del producto se congela con ese consumo; el producto entra con lote OP más el número de la orden.",
+    "decision": "Al cerrar, el consumo real se registra por artículo (insumos repetidos se fusionan), el costo se congela con ese consumo y el producto entra con lote OP más el número.",
     "que_cambia": "Cómo se reparte el costo y el nombre del lote del producto terminado.",
     "donde": "src/modulos/produccion/casos-de-uso/cerrar-orden.ts (E6-T8)",
     "fecha": "2026-11-11",
