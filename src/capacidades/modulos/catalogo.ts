@@ -3,7 +3,6 @@
  * cerrados `ClaveModulo`, `ClaveAccion` y `ClaveCapacidad`, así que una acción sin módulo, o un
  * permiso para una acción que no existe, no compila.
  */
-
 import { MODULOS_DE_SALON_Y_COMANDAS } from "./catalogo-salon-y-comandas";
 
 export type EstadoDeConstruccion = "disponible" | "en_desarrollo";
