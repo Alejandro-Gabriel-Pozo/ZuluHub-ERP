@@ -3,9 +3,8 @@
  * cerrados `ClaveModulo`, `ClaveAccion` y `ClaveCapacidad`, así que una acción sin módulo, o un
  * permiso para una acción que no existe, no compila.
  */
-import { MODULOS_DE_SALON_Y_COMANDAS } from "./catalogo-salon-y-comandas";
-
 import { ACCIONES_DE_LOTES, MODULO_DE_PRODUCCION } from "./catalogo-lotes-y-produccion";
+import { MODULOS_DE_SALON_Y_COMANDAS } from "./catalogo-salon-y-comandas";
 
 export type EstadoDeConstruccion = "disponible" | "en_desarrollo";
 
@@ -330,11 +329,9 @@ export const CATALOGO_DE_MODULOS = {
   },
   ...MODULOS_DE_SALON_Y_COMANDAS,
   /**
-   * Directorio de clientes y proveedores (E9; `e9-compras-especificacion.md` §3.0 y §3.9, decisiones F1 a F4 de
-   * `clientes-y-proveedores.md`). Nació `en_desarrollo` en E9-T1 y E9-T4 lo cerró: `disponible` y `obligatorio` (F5 del 12/10:
-   * siempre activo para toda empresa; un módulo obligatorio tiene que estar disponible). Ocho acciones; no hay
-   * `partes.anonimizar` porque ningún caso de uso la usa (SUPUESTO S-3 de E9, DEC-0305). Mirar es `LECTURA`; desactivar cierra; el
-   * resto crea o amplía.
+   * Directorio de clientes y proveedores (E9; `e9-compras-especificacion.md` §3.0 y §3.9, F1 a F4 de `clientes-y-proveedores.md`). `disponible` y
+   * `obligatorio` desde E9-T4 (F5 del 12/10: siempre activo). Ocho acciones; sin `partes.anonimizar`: ningún caso de uso la usa (SUPUESTO S-3 de
+   * E9, DEC-0305). Mirar es `LECTURA`; desactivar cierra; el resto crea o amplía.
    */
   clientes: {
     estado: "disponible",
