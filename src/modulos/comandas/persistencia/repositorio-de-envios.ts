@@ -477,7 +477,12 @@ export function crearRepositorioDeEnvios(db: Db): RepositorioDeEnvios {
                (select count(*) from linea_cuenta l join linea_de_comanda d on d.empresa_id = l.empresa_id and d.linea_id = l.id
                  where l.empresa_id = c.empresa_id and l.cuenta_id = c.id and l.estado = 'VIGENTE'
                    and d.envio_id is null and d.salida = 'DESPUES') as en_espera,
-               (select count(*) from envio_de_comanda e where e.empresa_id = c.empresa_id and e.cuenta_id = c.id) as envios
+               -- Los envíos de la cuenta, o los de los que vienen sus ítems ya enviados (una cuenta hija de una división o el destino de una unión no tuvo
+               -- envíos propios, pero lo que heredó ya salió a cocina).
+               greatest(
+                 (select count(*) from envio_de_comanda e where e.empresa_id = c.empresa_id and e.cuenta_id = c.id),
+                 (select count(distinct d.envio_id) from linea_cuenta l join linea_de_comanda d on d.empresa_id = l.empresa_id and d.linea_id = l.id
+                   where l.empresa_id = c.empresa_id and l.cuenta_id = c.id and l.estado = 'VIGENTE' and d.envio_id is not null)) as envios
           from cuenta_consumo c
          where c.empresa_id = ${empresa} and c.id in (${sql.join(cuentaIds.map((id) => sql`${id}::uuid`))})`.execute(
         db,

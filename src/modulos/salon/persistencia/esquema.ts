@@ -59,6 +59,7 @@ export type SalonDb = {
     partes: number;
     dividida_por: string;
     dividida_en: Date;
+    huella: string;
     creado_en: Generated<Date>;
   };
   parte_de_division: {
@@ -112,6 +113,7 @@ export const COLUMNAS_DE_SALON = {
     "partes",
     "dividida_por",
     "dividida_en",
+    "huella",
     "creado_en",
   ],
   parte_de_division: ["empresa_id", "division_id", "numero", "cuenta_id", "creado_en"],

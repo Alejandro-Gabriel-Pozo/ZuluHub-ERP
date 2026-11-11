@@ -10,6 +10,7 @@ export const ERRORES_DE_SALON_POR_RESTRICCION: Readonly<Record<string, string>> 
   division_de_cuenta_dividida_por_fkey: "NO_TRADUCIDA",
   division_de_cuenta_empresa_id_fkey: "NO_TRADUCIDA",
   division_de_cuenta_pkey: "NO_TRADUCIDA",
+  division_huella_ck: "NO_TRADUCIDA",
   division_id_empresa_uk: "NO_TRADUCIDA",
   division_madre_fkey: "NO_TRADUCIDA",
   division_madre_uk: "MESA_DIVIDIDA",

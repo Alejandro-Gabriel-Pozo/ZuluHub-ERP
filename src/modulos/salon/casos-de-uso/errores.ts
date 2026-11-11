@@ -4,6 +4,7 @@ import type { EmpresaNoOpera } from "../../../contexto/estados";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { ErrorDeComandas } from "../../comandas/publico";
 import type { ErrorDeVentas } from "../../ventas/publico";
+import type { ErrorDeDivision } from "../dominio/division";
 import type { ErrorDeMesa } from "../dominio/mesa";
 import type { ErrorDeUnion } from "../dominio/union";
 
@@ -18,6 +19,7 @@ export type ErrorDeSalon =
   | ErrorDePersistencia
   | ErrorDeMesa
   | ErrorDeUnion
+  | ErrorDeDivision
   | ErrorDeVentas
   | ErrorDeComandas
   | "IDENTIFICADOR_INVALIDO"
@@ -30,6 +32,7 @@ export type ErrorDeSalon =
   | Readonly<{ error: "MESA_SUPERPUESTA"; numeros: readonly number[] }>
   | "VERSION_DESACTUALIZADA"
   | "MESA_CON_CUENTA"
+  | "DIVISION_ID_EN_USO"
   | "MESA_UNIDA"
   | "MESA_NO_LIBRE"
   | "MESA_CON_PEDIDO"

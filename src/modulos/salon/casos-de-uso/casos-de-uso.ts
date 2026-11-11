@@ -2,6 +2,7 @@ import type { DependenciasDeSalon } from "./contrato";
 import type { DECLARACIONES } from "./declaraciones";
 import { armarCambioDeMesa } from "./cambio-de-mesa";
 import { armarCobro } from "./cobro";
+import { armarDivision } from "./dividir";
 import { armarEnvios } from "./envios";
 import { armarMesas } from "./mesas";
 import { armarPedido } from "./pedido";
@@ -19,6 +20,7 @@ export function crearCasosDeUsoDeSalon(dependencias: DependenciasDeSalon) {
     ...armarCobro(dependencias),
     ...armarEnvios(dependencias),
     ...armarUnion(dependencias),
+    ...armarDivision(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

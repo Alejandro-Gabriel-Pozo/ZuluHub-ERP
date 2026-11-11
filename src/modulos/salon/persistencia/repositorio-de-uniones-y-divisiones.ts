@@ -27,6 +27,8 @@ export type DivisionDeCuenta = Readonly<{
   partes: number;
   divididaPor: PersonaId;
   divididaEn: Date;
+  /** Qué se pidió (cuenta, partes y reparto): el mismo id con otro reparto no se pisa. */
+  huella: string;
 }>;
 
 export type ParteDeDivision = Readonly<{ divisionId: string; numero: number; cuentaId: string }>;
@@ -104,6 +106,7 @@ type FilaDeDivision = Readonly<{
   partes: number;
   dividida_por: string;
   dividida_en: Date;
+  huella: string;
 }>;
 const aDivision = (f: FilaDeDivision): DivisionDeCuenta => ({
   id: f.id,
@@ -113,6 +116,7 @@ const aDivision = (f: FilaDeDivision): DivisionDeCuenta => ({
   partes: f.partes,
   divididaPor: f.dividida_por as PersonaId,
   divididaEn: f.dividida_en,
+  huella: f.huella,
 });
 
 export function crearRepositorioDeUnionesYDivisiones(
@@ -143,6 +147,7 @@ export function crearRepositorioDeUnionesYDivisiones(
         "partes",
         "dividida_por",
         "dividida_en",
+        "huella",
       ]);
   return {
     async insertarUnion(empresa, alta) {
@@ -246,6 +251,7 @@ export function crearRepositorioDeUnionesYDivisiones(
           partes: alta.partes,
           dividida_por: alta.divididaPor,
           dividida_en: alta.divididaEn,
+          huella: alta.huella,
         })
         .onConflict((oc) => oc.doNothing())
         .returning("id")
@@ -283,7 +289,7 @@ export function crearRepositorioDeUnionesYDivisiones(
     async divisionPorHija(empresa, cuentaId) {
       if (!esUuid(cuentaId)) return null;
       const filas = await sql<FilaDeDivision & { numero: number }>`
-        select d.id, d.sucursal_id, d.cuenta_madre_id, d.mesa_id, d.partes, d.dividida_por, d.dividida_en, p.numero
+        select d.id, d.sucursal_id, d.cuenta_madre_id, d.mesa_id, d.partes, d.dividida_por, d.dividida_en, d.huella, p.numero
           from parte_de_division p
           join division_de_cuenta d on d.empresa_id = p.empresa_id and d.id = p.division_id
          where p.empresa_id = ${empresa} and p.cuenta_id = ${cuentaId}`.execute(db);

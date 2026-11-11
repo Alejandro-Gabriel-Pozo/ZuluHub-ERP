@@ -130,6 +130,7 @@ export function planDeDivision(
     } else if (asignacion.forma === "POR_UNIDADES") {
       if (asignacion.cantidades.length !== partes) return err("UNIDADES_NO_SUMAN");
       let suma = 0n;
+      const desde = copias.length;
       for (const [i, texto] of asignacion.cantidades.entries()) {
         const parcial = leerCantidad(texto);
         if (parcial === null) return err("CANTIDAD_INVALIDA");
@@ -145,6 +146,11 @@ export function planDeDivision(
         }
       }
       if (suma !== cantidad.unidades) return err("UNIDADES_NO_SUMAN");
+      // Todas las unidades a UNA sola cuenta es pasar la línea entera (la base pide dos partes o más para repartir por unidades).
+      if (copias.length - desde === 1) {
+        const unica = copias[desde] as CopiaAHacer;
+        copias[desde] = { ...unica, modo: "COMPLETA" };
+      }
     } else {
       if (!asignacion.partes.every((p) => parteValida(p, partes))) return err("PARTES_INVALIDAS");
       const exacto = multiplicarPrecioPorCantidad(ARS, precio, cantidad);

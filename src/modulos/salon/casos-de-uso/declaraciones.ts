@@ -1,6 +1,7 @@
 import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/declaracion";
 
 const MESAS = "test/integracion/salon-mesas.test.ts";
+const DIVISION = "test/integracion/salon-division.test.ts";
 const UNION = "test/integracion/salon-union.test.ts";
 const PEDIDO = "test/integracion/salon-pedido-y-cobro.test.ts";
 
@@ -139,6 +140,17 @@ export const DECLARACIONES = {
       prueba: {
         archivo: UNION,
         it: "I13: repetir unirMesas con la misma unión deja una sola unión, los ítems una vez y devuelve yaExistia",
+      },
+    },
+  },
+  dividirCuenta: {
+    // La declaración admite UNA acción; el caso exige además `cuentas.abrir`, `cuentas.anular_linea` y `cuentas.agregar_linea` (ver `dividir.ts`).
+    accion: "salon.dividir",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: DIVISION,
+        it: "I14: doble clic en «Confirmar división» deja una sola división, las cuentas hijas una vez y devuelve yaExistia",
       },
     },
   },

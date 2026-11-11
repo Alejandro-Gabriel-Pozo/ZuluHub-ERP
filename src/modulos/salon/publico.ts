@@ -15,6 +15,7 @@ export type {
   SalidaDeMesa,
 } from "./casos-de-uso/mesas";
 export type { EntradaDeCobrarMesa } from "./casos-de-uso/cobro";
+export type { EntradaDeDividirCuenta, SalidaDeDividirCuenta } from "./casos-de-uso/dividir";
 export type { EntradaDeUnirMesas, SalidaDeUnirMesas } from "./casos-de-uso/unir";
 export type { EntradaDeCambiarDeMesa, SalidaDeCambiarDeMesa } from "./casos-de-uso/cambio-de-mesa";
 export type {

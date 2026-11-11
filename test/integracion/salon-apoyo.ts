@@ -75,7 +75,7 @@ export async function montarSalon(
     salon: crearCasosDeUsoDeSalon({
       transacciones,
       reglas,
-      ...(opciones.stock === true ? { stock: crearStockDeVentas(reglas) as never } : {}),
+      ...(opciones.stock === true ? { stock: crearStockDeVentas(reglas) } : {}),
     }),
     consultasDeSalon: crearConsultasDeSalon({ transacciones: lecturas, reglas }),
   };

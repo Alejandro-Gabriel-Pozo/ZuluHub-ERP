@@ -165,3 +165,26 @@ describe("huellaDeDivision", () => {
     expect(h).toMatch(/^[0-9a-f]{64}$/);
   });
 });
+
+describe("planDeDivision: todas las unidades a una sola cuenta", () => {
+  it("es pasar la línea entera (COMPLETA), no un reparto por unidades de una sola parte", () => {
+    const r = planDeDivision({
+      partes: 2,
+      lineas: [
+        { lineaId: "a", cantidad: "3", pasoDeCantidad: "1", precioUnitario: "100" },
+        { lineaId: "b", cantidad: "1", pasoDeCantidad: "1", precioUnitario: "50" },
+      ],
+      asignaciones: [
+        { lineaId: "a", forma: "POR_UNIDADES", cantidades: ["3", "0"] },
+        { lineaId: "b", forma: "ENTERO", parte: 2 },
+      ],
+    });
+    expect(r).toEqual({
+      ok: true,
+      valor: [
+        { lineaOrigenId: "a", parte: 1, modo: "COMPLETA", cantidad: "3.0000" },
+        { lineaOrigenId: "b", parte: 2, modo: "COMPLETA", cantidad: "1.0000" },
+      ],
+    });
+  });
+});

@@ -493,6 +493,7 @@ CREATE TABLE division_de_cuenta (                                      -- solo i
   partes            smallint NOT NULL CONSTRAINT division_partes_ck CHECK (partes BETWEEN 2 AND 4),
   dividida_por      uuid NOT NULL REFERENCES persona (id),
   dividida_en       timestamptz NOT NULL,
+  huella            text NOT NULL CONSTRAINT division_huella_ck CHECK (huella ~ '^[0-9a-f]{64}$'),   -- qué se pidió: el mismo id con otro reparto no se pisa
   creado_en         timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT division_id_empresa_uk UNIQUE (id, empresa_id),
   CONSTRAINT division_madre_uk UNIQUE (empresa_id, cuenta_madre_id),   -- una división por cuenta
@@ -1002,7 +1003,7 @@ GRANT UPDATE (activa) ON mesa_celda TO pedernal_app;
 GRANT INSERT (id, empresa_id, sucursal_id, cuenta_destino_id, mesa_destino_id, cuenta_origen_id, mesa_origen_id, clave, unida_por, unida_en)
   ON union_de_mesas TO pedernal_app;
 GRANT INSERT (empresa_id, linea_id, union_id, mesa_origen_id) ON linea_unida TO pedernal_app;
-GRANT INSERT (id, empresa_id, sucursal_id, cuenta_madre_id, mesa_id, partes, dividida_por, dividida_en) ON division_de_cuenta TO pedernal_app;
+GRANT INSERT (id, empresa_id, sucursal_id, cuenta_madre_id, mesa_id, partes, dividida_por, dividida_en, huella) ON division_de_cuenta TO pedernal_app;
 GRANT INSERT (empresa_id, division_id, numero, cuenta_id) ON parte_de_division TO pedernal_app;
 
 GRANT INSERT (empresa_id, cuenta_id) ON contador_de_envios TO pedernal_app;

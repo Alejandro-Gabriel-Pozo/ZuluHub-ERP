@@ -180,7 +180,8 @@ describe.skipIf(base === null)("comandas: las funciones EnTx del salón", () => 
         ),
       ),
     );
-    expect(resumen.get(destino)).toEqual({ paraEnviar: 0, enEspera: 0, envios: 0 });
+    // La cuenta destino no tuvo envíos propios, pero lo que heredó ya salió a cocina: cuenta el envío del que viene.
+    expect(resumen.get(destino)).toEqual({ paraEnviar: 0, enEspera: 0, envios: 1 });
     expect(resumen.get(cuenta)).toEqual({ paraEnviar: 0, enEspera: 0, envios: 1 });
     expect(resumen.size).toBe(2);
   });
