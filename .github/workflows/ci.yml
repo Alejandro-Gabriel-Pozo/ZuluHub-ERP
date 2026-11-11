@@ -102,7 +102,8 @@ jobs:
   pruebas:
     name: Pruebas (con Postgres real)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 25 y no 15: la suite de integración pasó de ~13 a más de 15 min con E4, E1 y E5 (ver #253 y #255); el tope de 15 canceló el job.
+    timeout-minutes: 25
     services:
       postgres:
         # Misma versión mayor que Neon. Sin contraseña: es una base descartable del CI.
@@ -200,7 +201,8 @@ jobs:
     needs: mutacion-plan
     if: github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 25 y no 15: la suite de integración pasó de ~13 a más de 15 min con E4, E1 y E5 (ver #253 y #255); el tope de 15 canceló el job.
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
