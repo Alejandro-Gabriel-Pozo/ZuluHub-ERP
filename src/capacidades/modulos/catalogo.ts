@@ -240,12 +240,12 @@ export const CATALOGO_DE_MODULOS = {
    * Caja (E3; `e0-cimientos-especificacion.md` §3.1.1, lista de `e3-caja-y-cobros-especificacion.md` §3.8 más las dos
    * de `e3b-cierre-del-dia-especificacion.md` §4.7). Nace `en_desarrollo`: el guard rechaza todo con
    * `MODULO_EN_DESARROLLO` hasta que E3 lo construya. `usaSiExiste` solo nombra módulos que existen (cruce X3):
-   * `clientes` se suma cuando exista (SUPUESTO S-1). Ninguna acción exige capacidad de sucursal: el alcance del
+   * `clientes` se suma cuando exista (SUPUESTO (DEC-0058) S-1). Ninguna acción exige capacidad de sucursal: el alcance del
    * operador lo valida el caso de uso con `exigirSucursal`. Cobrar un ticket NO es de caja: es `tickets.cobrar`
    * (ventas). No existen `sesiones_caja.reabrir`, `arqueos.revisar` ni una acción de plataforma para crear cajas
    * (decisiones del dueño, `caja-y-cobros.md:818-821`). Criterio de efectos: alta, edición, reactivar, abrir sesión y
    * movimientos o ajustes nuevos crean o amplían; desactivar, cerrar, anular y corregir cierran lo ya iniciado.
-   * Elegir los datos opcionales de cada medio es `medios_de_pago.editar` (SUPUESTO S-2).
+   * Elegir los datos opcionales de cada medio es `medios_de_pago.editar` (SUPUESTO (DEC-0056) S-2).
    */
   caja: {
     estado: "en_desarrollo",
@@ -305,7 +305,7 @@ export const CATALOGO_DE_MODULOS = {
    * `en_desarrollo`. Las tres `ventas.configurar_*` de `ventas.md:610-611` quedan fuera hasta que haya stock
    * (PP-5, decisión 132). Anular línea, anular cuenta y corregir ticket son de los tres roles con todo auditado
    * (decisión 155). `tickets.cobrar` es la única acción para cobrar un ticket. `usaSiExiste` sin reservas ni
-   * clientes porque no existen (cruce X3, SUPUESTO S-1).
+   * clientes porque no existen (cruce X3, SUPUESTO (DEC-0058) S-1).
    */
   ventas: {
     estado: "en_desarrollo",

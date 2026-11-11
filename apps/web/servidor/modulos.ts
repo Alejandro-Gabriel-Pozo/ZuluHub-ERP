@@ -26,7 +26,7 @@ import type { Pendiente } from "../ui/plantillas/sesion/PantallaDeInicio";
  * Hoy hay uno: el facturador (Comprobantes). Los demás tramos de los módulos agregan sus entradas acá.
  *
  * «Comprobantes» se muestra solo si la persona tiene hoy la acción `comprobantes.ver` Y el módulo `facturacion` está activo o en
- * solo lectura, según `permisosDelActor` (calculado por el servidor). SUPUESTO declarado: en solo lectura SÍ se muestra, porque el
+ * solo lectura, según `permisosDelActor` (calculado por el servidor). SUPUESTO (DEC-0059) declarado: en solo lectura SÍ se muestra, porque el
  * Listado solo consulta (D-59 habla de botones apagados, no de ocultar consultas); revertirlo es quitar `enSoloLectura` de la
  * condición. Si `permisosDelActor` falla, la entrada NO se muestra (cierra, no abre) y la pantalla sigue andando. Ocultar no es
  * autorizar: la consulta vuelve a pasar por el guard.

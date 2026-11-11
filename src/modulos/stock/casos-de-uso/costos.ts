@@ -40,7 +40,7 @@ export type CostosDeclarados = ReadonlyMap<string, PrecioUnitario>;
 
 /**
  * El costo que declara una entrada en un renglón: texto decimal de hasta 6 decimales, estrictamente mayor que cero. Cero NO se acepta: «sin
- * costo» se dice no mandándolo, porque un cero declarado a modo de «no sé» diluiría el promedio en silencio (SUPUESTO S-T10-2: aflojarlo después
+ * costo» se dice no mandándolo, porque un cero declarado a modo de «no sé» diluiría el promedio en silencio (SUPUESTO (DEC-0004) S-T10-2: aflojarlo después
  * es cambiar esta línea; apretarlo con datos cargados no). Cualquier otra cosa, o un valor fuera de `numeric(18,6)`, es `COSTO_INVALIDO`.
  */
 export function leerCostoDeclarado(valor: unknown): Resultado<PrecioUnitario, "COSTO_INVALIDO"> {

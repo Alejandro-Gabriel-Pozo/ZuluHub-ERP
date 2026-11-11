@@ -95,7 +95,7 @@ type Contexto = ContextoOperativo &
 
 /**
  * La letra C no discrimina IVA: ningún renglón lleva alícuota (`ALICUOTA_EN_LETRA_C`). Quien factura un documento ya armado (que trae la
- * alícuota de cada renglón) no sabe qué letra va a salir; la descarta fiscal, que sí lo sabe (SUPUESTO S-2 de E1).
+ * alícuota de cada renglón) no sabe qué letra va a salir; la descarta fiscal, que sí lo sabe (SUPUESTO (DEC-0054) S-2 de E1).
  */
 function sinAlicuotaEnLetraC(
   entrada: EntradaDeComprobanteManual,

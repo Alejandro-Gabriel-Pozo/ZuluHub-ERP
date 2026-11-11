@@ -473,7 +473,7 @@ describe.skipIf(base === null)("las operaciones fiscales y la sucursal", () => {
       },
       {
         nombre:
-          "punto de venta de Centro sobre una factura de «Sur», hoy CERRADA (SUPUESTO: alcanza con tenerla asignada)",
+          "punto de venta de Centro sobre una factura de «Sur», hoy CERRADA (SUPUESTO (DEC-0069): alcanza con tenerla asignada)",
         pv: () => m.pvCentro,
         factura: () => m.facturaSur,
         sucursalDeLaNota: () => m.sur,

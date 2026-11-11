@@ -53,7 +53,7 @@ export function sucursalesEnAlcance<T extends Readonly<{ id: SucursalId }>>(
  *  - eligió una de las elegibles, abierta o cerrada: esa;
  *  - eligió una que no está entre las elegibles (ajena, o no asignada al operador): `SUCURSAL_FUERA_DE_ALCANCE`, aunque
  *    tenga otra sola abierta (no se reemplaza en silencio lo que pidió);
- *  - no eligió y tiene exactamente UNA ABIERTA: esa, sin pedirle nada. Las cerradas no cuentan para esto (SUPUESTO derivado de
+ *  - no eligió y tiene exactamente UNA ABIERTA: esa, sin pedirle nada. Las cerradas no cuentan para esto (SUPUESTO (DEC-0057) derivado de
  *    D-36: «una sola» se entiende entre las abiertas; las cerradas se eligen a mano);
  *  - no eligió y tiene dos o más abiertas, o ninguna abierta pero alguna cerrada: `SUCURSAL_NO_ELEGIDA` (la pantalla la hace
  *    elegir);

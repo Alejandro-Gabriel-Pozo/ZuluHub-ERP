@@ -2,17 +2,17 @@ import { err, ok, type Resultado } from "../resultado/resultado";
 import { textoDeUnaLineaDesdeTexto } from "../texto/texto-de-una-linea";
 
 /**
- * FICHA DEL DATO: DOMICILIO COMO TEXTO LIBRE (el del receptor de un comprobante). (DECIDIDO = ya implementado; SUPUESTO = del
+ * FICHA DEL DATO: DOMICILIO COMO TEXTO LIBRE (el del receptor de un comprobante). (DECIDIDO = ya implementado; SUPUESTO (DEC-0046) = del
  * ingeniero, revertible; SIN DECIDIR = falta la decisión del dueño.) NO es el domicilio estructurado de `domicilio.ts` (calle,
  * número, localidad, provincia…), que es el del emisor y de los puntos de venta.
  *
  * - Qué es: dónde queda el receptor, escrito a mano. Se imprime en la factura.
  * - Cómo se escribe: una sola línea; se recortan los blancos de los extremos, los espacios repetidos pasan a uno solo y queda en NFC.
- *   Entre 1 y `LARGO_MAXIMO_DEL_DOMICILIO_LIBRE` (300: el valor que ya tenía el sistema, sin fuente de ARCA; SUPUESTO) caracteres,
+ *   Entre 1 y `LARGO_MAXIMO_DEL_DOMICILIO_LIBRE` (300: el valor que ya tenía el sistema, sin fuente de ARCA; SUPUESTO (DEC-0046)) caracteres,
  *   contados por carácter. Solo los caracteres permitidos de `texto-de-una-linea.ts` (letras latinas, dígitos, espacio y una lista corta
  *   de signos; cotejada con el PDF y cubierta por la decisión del dueño de «una sola lista», 2026-11-05); lo demás se rechaza. No
  *   puede empezar con `+` ni `-` (Q7, DECIDIDO por el dueño, 2026-11-06: «Mantener», mensaje directo al orquestador). Puede ser todo números o llevar pocas letras («9 de Julio 1234»): la regla de
- *   «al menos una letra» NO le aplica (SUPUESTO).
+ *   «al menos una letra» NO le aplica (SUPUESTO (DEC-0046)).
  * - Obligatorio/opcional: lo decide quien la usa. Esta regla solo dice qué es un domicilio válido: vacío o en blanco = «no tiene» y es
  *   `null`; en la base es NULL, nunca un texto vacío. En un comprobante es OBLIGATORIO salvo con el consumidor final (DECIDIDO, dueño,
  *   2026-11-06, conversación directa con la sesión «Emitir», `Pedernal-docs/11-especificaciones/emitir-plan-factura-a.md` §1,

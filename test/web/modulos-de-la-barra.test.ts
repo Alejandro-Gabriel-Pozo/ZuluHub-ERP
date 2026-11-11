@@ -81,7 +81,7 @@ describe("destinosDeModulos", () => {
     expect(mundo.contextos).toEqual([{ empresaId: "empresa-1" }]);
   });
 
-  it("SUPUESTO: con el módulo en solo lectura también aparece (el Listado solo consulta)", async () => {
+  it("SUPUESTO (DEC-0059): con el módulo en solo lectura también aparece (el Listado solo consulta)", async () => {
     permisos({ enSoloLectura: ["facturacion"] });
     expect(await claves()).toEqual(["comprobantes"]);
   });

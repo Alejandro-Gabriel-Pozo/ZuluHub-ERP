@@ -309,7 +309,7 @@ describe.skipIf(base === null)(
     });
 
     // ===============================================================================================
-    // SUPUESTO del ingeniero: D-79 y D-80 hablan de mudar y de activar un punto de venta, no de cambiar el ambiente; se aplica el mismo
+    // SUPUESTO (DEC-0069) del ingeniero: D-79 y D-80 hablan de mudar y de activar un punto de venta, no de cambiar el ambiente; se aplica el mismo
     // criterio (la sucursal se lee con `FOR SHARE` y tiene que estar abierta). El cierre es el de la base (disparadores de 0005).
     describe("la sucursal del punto de venta contra su cierre", () => {
       async function enUnaSucursalNueva() {
